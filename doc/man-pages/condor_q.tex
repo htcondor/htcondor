@@ -9,6 +9,7 @@
 \oOpt{-analyze}
 \oOpt{-run}
 \oOpt{-goodput}
+\oOpt{-io}
 \oOpt{-long}
 \oOptArg{-format} {formatter attribute}
 \oOpt{-cputime}
@@ -100,6 +101,22 @@ the job has not (yet) checkpointed, this column contains \texttt{[??????]}.
 run-time.
 \end{description}
 
+If the \Opt{-io} option is specified, the ST, PRI, SIZE, and CMD columns
+are replaced with:
+
+\begin{description}
+\item{READ} The total number of bytes the application has read from files and sockets.
+\item{WRITE} The total number of bytes the application has written to files and sockets.
+\item{SEEK} The total number of seek operations the application has performed on files.
+\item{XPUT} The effective throughput (average bytes read and written per second)
+from the application's point of view.
+\item{BUFSIZE} The maximum number of bytes to be buffered per file.
+\item{BLOCKSIZE} The desired block size for large data transfers.
+\end{description}
+
+These fields are updated when a job checkpoints or completes.  If a job
+has not yet checkpointed, this information is not available.
+
 If the \Opt{-cputime} option is specified, the RUN\_TIME 
 column is replaced with:
 
@@ -131,6 +148,7 @@ per machine basis.
 		many resources are available to run the requested jobs}
 	\OptItem{\Opt{-run}}{Get information about running jobs.}
 	\OptItem{\Opt{-goodput}}{Display job goodput statistics.}
+	\OptItem{\Opt{-io}}{Display job input/output summaries.}
 	\OptItem{\OptArg{-name}{name}}{Show only the job queue of the named schedd}
 	\OptItem{\Opt{-long}}{Display job ads in long format}
 	\OptItem{\OptArg{-format}{fmt attr}}{Display attribute \emph{attr} in
@@ -164,7 +182,7 @@ instantaneous and local information.  Therefore, there are some situations
 (such as when several submitters are contending for resources, or if the pool 
 is rapidly changing state) which cannot be accurately diagnosed.
 
-\Arg{-goodput} and \Arg{-cputime} are most useful for STANDARD
+\Arg{-goodput}, \Arg{-cputime}, and \Arg{-io} are most useful for STANDARD
 universe jobs, since they rely on values computed when a job
 checkpoints.
 

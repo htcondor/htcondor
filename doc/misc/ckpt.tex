@@ -66,6 +66,11 @@ restart from the previous checkpoint.  Condor uses a commit style
 algorithm for writing checkpoints: a previous checkpoint is deleted
 only after a new complete checkpoint has been written successfully.
 
+In certain cases, checkpointing may be delayed until a more appropriate
+time.  For example, a Condor job will defer a checkpoint request if
+it is communicating with another process over the network.  When the
+network connection is closed, the checkpoint will occur.
+
 The Condor distributions include a standalone checkpointing library,
 \File{libcondorckpt.a}, which provides checkpointing for Unix
 processes without Condor's remote system call functionality.

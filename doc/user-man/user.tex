@@ -418,10 +418,12 @@ platforms applications must be statically linked (Note: shared library
 checkpoint support is available on IRIX, Solaris, and LINUX). 
 	\item Only single process jobs are supported. The fork(2), exec(2),
 system(3) and similar calls are not implemented.
+	\item Interprocess communication may be done through
+sockets \index{UNIX!sockets} but not through pipes, \index{UNIX!pipes}
+semaphores,  \index{UNIX!semaphores} or shared memory
+\index{UNIX!shared memory}.
 	\item Signals and signal handlers are supported, but Condor reserves the 
 SIGUSR2 and SIGTSTP signals for its own use, and it does not permit their use by user code.
-	\item Most interprocess communication (IPC) calls are not supported.
-The socket(2), send(2), recv(2), and similar calls are not implemented.
 	\item All file operations must be idempotent. Read-only and
 write-only file accesses work correctly, but programs which both
 read and write to the same file may not work correctly.

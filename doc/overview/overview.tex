@@ -260,16 +260,10 @@ and
 alarm(2))
 \index{UNIX system call!alarm(2)}
 will not be saved in the checkpoint.
-	\item Interprocess communication (IPC) is not
-supported, including 
-sockets, 
-\index{UNIX!sockets}
-pipes,
-\index{UNIX!pipes}
-semaphores, 
-\index{UNIX!semaphores}
-and shared memory.
-\index{UNIX!shared memory}
+	\item Interprocess communication may be done through
+sockets \index{UNIX!sockets} but not through pipes, \index{UNIX!pipes}
+semaphores,  \index{UNIX!semaphores} or shared memory
+\index{UNIX!shared memory}.
 	\item Kernel-level threads are not supported.  However, user-level
 threads are supported.
 \index{UNIX!threads}
