@@ -1,3 +1,8 @@
+02/19/04 V6_6-merge-5
+   The state of the V6_6-branch for another merge into V6_7-branch.
+   This is from after the V6_6_1 release, and it also includes a few
+   pre-6.6.2 changes, fixes, build system improvements, etc.
+
 02/16/04 V6_6-cdf-branch
    A new branch off of V6_6-branch created from the V6_6-cdf-root tag.
    This will hold various changed made for CDF, some of which are new
