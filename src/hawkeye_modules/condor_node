@@ -117,7 +117,8 @@ sub RunIt {
 	    if ( 1 == $Ppid )
 	    {
 		if ( ( $CmdString =~ /condor_starter/ ) ||
-		     ( $CmdString =~ /condor_exec/ ) )
+		     ( $CmdString =~ /condor_exec/ ) ||
+		     ( $CmdString =~ /condor\/execute/ ) )
 		{
 		    $CondorInfo{NumRunaway}++;
 		    push( @{$CondorInfo{RunawayPids}}, $Pid );
