@@ -482,6 +482,9 @@ init_params( int first_time)
 		startd_job_exprs = new StringList();
 		startd_job_exprs->initializeFromString( tmp );
 		free( tmp );
+	} else {
+		startd_job_exprs = new StringList();
+		startd_job_exprs->initializeFromString( ATTR_JOB_UNIVERSE );
 	}
 
 	tmp = param( "VIRTUAL_MACHINES_CONNECTED_TO_CONSOLE" );
