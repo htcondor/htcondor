@@ -66,9 +66,9 @@ require 5.002;
 ######################################################################
 
 # These are the modules you actually want to build.
-#@modules = ( "condor", "smp_startd", "view_server", "ckpt_server", "pvm", "mpi" );
-@modules = ( "condor", "smp_startd", "view_server", "ckpt_server", "pvm" );
-#@modules = ( "smp_startd", "view_server", "ckpt_server", "pvm" );
+#@modules = ( "condor", "smp_startd", "view_server", "ckpt_server", "pvm", "mpi", "sdk" );
+@modules = ( "condor", "smp_startd", "view_server", "ckpt_server", "pvm", "sdk" );
+#@modules = ( "smp_startd", "view_server", "ckpt_server", "pvm", "sdk" );
 #@modules = ( "condor" );
 
 # List any special files, other than README, DOC, INSTALL, and
@@ -100,7 +100,8 @@ require 5.002;
   "dagman"        => "DagMan contrib module",
   "pvm"           => "PVM contrib module",
   "ckpt_server"   => "Checkpoint Server contrib module",
-  "mpi"           => "MPI contrib module"
+  "mpi"           => "MPI contrib module",
+  "sdk"           => "software developer's kit"
 );	   
 
 ######################################################################
