@@ -241,7 +241,7 @@ CStarter::InitShadowInfo( void )
 		dprintf( D_FULLDEBUG, "Version of Shadow is %s\n", tmp );
 		ShadowVersion = new CondorVersionInfo( tmp, "SHADOW" );
 	} else {
-		dprintf( D_FULLDEBUG, "Version of Shadow unknown (pre v6.3.2)\n" ); 
+		dprintf( D_FULLDEBUG, "Version of Shadow unknown (pre v6.3.3)\n" ); 
 	}
 }
 
@@ -255,12 +255,12 @@ CStarter::RegisterStarterInfo( void )
 		EXCEPT( "RegisterStarterInfo called with NULL DCShadow object" );
 	}
 
-		// If the shadow is older than 6.3.2, we need to use the
+		// If the shadow is older than 6.3.3, we need to use the
 		// CONDOR_register_machine_info method, which sends a bunch of
-		// strings over the wire.  If we're 6.3.2 or later, we can use
+		// strings over the wire.  If we're 6.3.3 or later, we can use
 		// CONDOR_register_starter_info, which just sends a ClassAd
 		// with all the relevent info.
-	if( ShadowVersion && ShadowVersion->built_since_version(6,3,2) ) {
+	if( ShadowVersion && ShadowVersion->built_since_version(6,3,3) ) {
 		ClassAd* starter_info = new ClassAd;
 		char *tmp = NULL;
 		char* tmp_val = NULL;
@@ -674,7 +674,7 @@ CStarter::InitUserPriv( void )
 		// submitting machine.  If so, we'll try to initialize
 		// user_priv via ATTR_OWNER.  If there's no such user in the
 		// passwd file, SOFT_UID_DOMAIN is True, and we're talking to
-		// at least a 6.3.2 version of the shadow, we'll do a remote 
+		// at least a 6.3.3 version of the shadow, we'll do a remote 
 		// system call to ask the shadow what uid and gid we should
 		// use.  If SOFT_UID_DOMAIN is False and there's no such user
 		// in the password file, but the UID_DOMAIN's match, it's a
@@ -711,7 +711,7 @@ CStarter::InitUserPriv( void )
 					// first, see if the shadow is new enough to
 					// support the RSC we need to do...
 				if( ShadowVersion && 
-					ShadowVersion->built_since_version(6,3,2) ) {
+					ShadowVersion->built_since_version(6,3,3) ) {
 						shadow_is_old = false;
 				}
 			} else {
@@ -733,7 +733,7 @@ CStarter::InitUserPriv( void )
 						 "condor_shadow on the submitting host is too old "
 						 "to support SOFT_UID_DOMAIN.  You must upgrade "
 						 "Condor on the submitting host to at least "
-						 "version 6.3.2.\n", owner ); 
+						 "version 6.3.3.\n", owner ); 
 				free( owner );
 				return false;
 			}
@@ -754,7 +754,7 @@ CStarter::InitUserPriv( void )
 						 "condor_shadow on the submitting host cannot "
 						 "support SOFT_UID_DOMAIN.  You must upgrade "
 						 "Condor on the submitting host to at least "
-						 "version 6.3.2.\n", owner );
+						 "version 6.3.3.\n", owner );
 				free( owner );
 				return false;
 			}

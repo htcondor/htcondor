@@ -3254,7 +3254,7 @@ Scheduler::StartJobHandler()
 	}
 	if( match_version ) {
 		CondorVersionInfo ver_info( match_version );
-		if( ver_info.built_since_version(6, 3, 2) ) {
+		if( ver_info.built_since_version(6, 3, 3) ) {
 			old_resource = false;
 		}
 		free( match_version );
@@ -3299,7 +3299,7 @@ Scheduler::StartJobHandler()
 				shadow_obj = shadow_mgr.findShadow( ATTR_HAS_OLD_VANILLA );
 				if( ! shadow_obj ) {
 					dprintf( D_ALWAYS, "Trying to run a VANILLA job on a "
-							 "pre-6.3.2 resource, but you do not have a "
+							 "pre-6.3.3 resource, but you do not have a "
 							 "condor_shadow that will work, aborting.\n" );
 					return;
 				}
@@ -3307,7 +3307,7 @@ Scheduler::StartJobHandler()
 				shadow_obj = shadow_mgr.findShadow( ATTR_IS_DAEMON_CORE ); 
 				if( ! shadow_obj ) {
 					dprintf( D_ALWAYS, "Trying to run a VANILLA job on a "
-							 "6.3.2 or later resource, but you do not have "
+							 "6.3.3 or later resource, but you do not have "
 							 "condor_shadow that will work, aborting.\n" );
 					return;
 				}

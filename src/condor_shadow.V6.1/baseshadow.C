@@ -167,7 +167,7 @@ void
 BaseShadow::checkFileTransferCruft()
 {
 		/*
-		  If this job was a) submitted by a pre-6.3.2 condor_submit,
+		  If this job was a) submitted by a pre-6.3.3 condor_submit,
 		  b) unix and c) vanilla, it was submitted with an incorrect
 		  default value of "ON_EXIT" for ATTR_TRANSFER_FILES.  So, if
 		  all of those conditions are met, we want to change the value
@@ -188,13 +188,13 @@ BaseShadow::checkFileTransferCruft()
 	jobAd->LookupString( ATTR_VERSION, &version );
 	if( version ) {
 		CondorVersionInfo ver( version, "JOB" );
-		if( ! ver.built_since_version(6,3,2) ) {
+		if( ! ver.built_since_version(6,3,3) ) {
 			is_old = true;
 		}
 		free( version );
 		version = NULL;
 	} else {
-		dprintf( D_FULLDEBUG, "Job has no %s, assuming pre version 6.3.2\n",
+		dprintf( D_FULLDEBUG, "Job has no %s, assuming pre version 6.3.3\n",
 				 ATTR_VERSION ); 
 		is_old = true;
 	}	
@@ -223,7 +223,7 @@ BaseShadow::checkFileTransferCruft()
 	new_attr += ATTR_TRANSFER_FILES;
 	new_attr += " = \"NEVER\"";
 
-	dprintf( D_FULLDEBUG, "Unix Vanilla job is pre version 6.3.2, "
+	dprintf( D_FULLDEBUG, "Unix Vanilla job is pre version 6.3.3, "
 			 "setting '%s'\n", new_attr.Value() );
 
 	if( ! jobAd->Insert(new_attr.Value()) ) {

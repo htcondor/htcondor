@@ -198,7 +198,7 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 ##  Attributes that can be set by hosts with "CONFIG" permission (as
 ##  defined with HOSTALLOW_CONFIG and HOSTDENY_CONFIG above).
 ##  The commented-out value here was the default behavior of Hawkeye
-##  prior to version 6.3.2.  If you don't need this behavior, you
+##  prior to version 6.3.3.  If you don't need this behavior, you
 ##  should leave this commented out.
 #SETTABLE_ATTRS_CONFIG = *
 

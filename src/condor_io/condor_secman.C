@@ -366,7 +366,7 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	if( sec_negotiation == SEC_REQ_REQUIRED && 
 		other_side_can_negotiate == FALSE ) {
 		dprintf (D_SECURITY, "SECMAN: failure! SEC_NEGOTIATION "
-				"is REQUIRED and other daemon is pre 6.3.2.\n");
+				"is REQUIRED and other daemon is pre 6.3.3.\n");
 		return false;
 	}
 

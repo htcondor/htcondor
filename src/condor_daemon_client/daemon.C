@@ -391,12 +391,13 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 	bool    other_side_can_negotiate = true;
 
 	// look at the version if it is available.  we must disable
-	// negotiation when talk to pre-6.3.2.
+	// negotiation when talking to pre-6.3.3.
 	if (_version) {
 		dprintf(D_SECURITY, "DAEMON: talking to a %s daemon.\n", _version);
 		CondorVersionInfo vi(_version);
-		if ( !vi.built_since_version(6,3,2) ) {
-			dprintf(D_SECURITY, "DAEMON: security negotiation not possible, disabling.\n");
+		if ( !vi.built_since_version(6,3,3) ) {
+			dprintf( D_SECURITY, "DAEMON: "
+					 "security negotiation not possible, disabling.\n" );
 			other_side_can_negotiate = false;
 		}
 	}
