@@ -225,6 +225,7 @@ OsProc::StartJob()
 		// // // // // // 
 
 	const char* job_iwd = Starter->jic->jobIWD();
+	dprintf( D_ALWAYS, "IWD: %s\n", job_iwd );
 
 	// handle stdin, stdout, and stderr redirection
 	int fds[3];
