@@ -1,6 +1,7 @@
 #include <math.h>
 #include <float.h>
 #include "condor_common.h"
+#include "condor_state.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_attributes.h"
@@ -258,9 +259,13 @@ obtainAdsFromCollector (ClassAdList &startdAds,
 	char buffer[1024];
 
 	// set the constraints on the various queries
-	// 1.  Fetch all startd ads (no constraint)
+	// 1.  Fetch ads of startds that are CLAIMED or UNCLAIMED
 	dprintf (D_ALWAYS, "\tGetting startd ads ...\n");
-	if ((result = startdQuery.fetchAds(startdAds)) != Q_OK)
+	sprintf (buffer, "(TARGET.%s == %s) || (TARGET.%s == %s)", 
+					ATTR_STATE, state_to_string(claimed_state), 
+					ATTR_STATE, state_to_string(unclaimed_state));
+	if (((result = startdQuery.addConstraint(buffer))	!= Q_OK) ||
+		((result = startdQuery.fetchAds(startdAds))		!= Q_OK))
 	{
 		dprintf (D_ALWAYS, 
 			"Error %s:  failed to fetch startd ads ... aborting\n",
