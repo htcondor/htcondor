@@ -1,71 +1,27 @@
 #if defined(Solaris)
-#	include <nfs/nfs.h>     /* for fhandle_t */
-/* b/c of a system header that this includes which defines MIN(), we
-   want to include it before condor_common.h, so we don't redefine it */
+#include <nfs/nfs.h>		/* for fhandle_t.  Include before
+			condor_common to avoid duplicate definitions of MIN */ 
 #endif
 
 #include "condor_common.h"
+#include "condor_nfs.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_rsc.h"
 #include "condor_io.h"
 #include "condor_sys.h"
-#include "condor_jobqueue.h"
 #include "condor_constants.h"
 #include "startup.h"
 #include "pseudo_ops.h"
 
-#define MODE_T unsigned int	/* use 32 bits on all platforms */
-
-#if defined(HPUX9)
-#   include <time.h>
-#   include <rpc/rpc.h>
-#   include <errno.h>
-#   include <nfs/export.h>
-#   include <nfs/nfs.h> /* for definition of fhandle_t */
-#   include <sys/vfs.h>      /* for struct statfs */
-#	include <sys/signal.h>
-#endif
-
-#if defined(LINUX)
-#	include <signal.h>
-#	include <sys/vfs.h>
-#	include <sys/file.h>  /* for flock() */
-#	include <linux/nfs.h>
-#	include <linux/ipc.h>
-#	include <dirent.h>
-	typedef struct fhandle fhandle_t;
-#endif
-
 #if defined(OSF1)
-#	define _AES_SOURCE
-#	include <sys/poll.h>
-	extern "C" {
-	  int statfs( char*, struct statfs*, int );
-	  int flock( int, int );
-	}
+extern "C" {
+	int statfs( char*, struct statfs*, int );
+	int flock( int, int );
+}
 #endif
 
-#if defined(SUNOS41)
-#	include <sys/poll.h>
-#endif
-
-#if defined(AIX32)
-	struct fsid {
-		long    val[2];
-	};
-	typedef struct fsid fsid_t;
-#	include <sys/statfs.h>		 /* for struct statfs */
-#endif
-
-#if defined(IRIX53)
-#	include <sys/statfs.h>
-#	include <signal.h>
-#endif
-
-#if defined(SUNOS41)
-#	include <sys/vfs.h>
-#endif
+#define MODE_T unsigned int	/* use 32 bits on all platforms */
 
 #include "../condor_syscall_lib/syscall_param_sizes.h"
 
