@@ -304,6 +304,7 @@ class Scheduler : public Service
 	
 	// parameters controling the scheduling and starting shadow
 	int				SchedDInterval;
+	int				SchedDMinInterval;
 	int				QueueCleanInterval;
 	int				JobStartDelay;
 	int				MaxJobsRunning;

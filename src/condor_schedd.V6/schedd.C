@@ -236,6 +236,7 @@ Scheduler::Scheduler()
 	shadowCommandrsock = NULL;
 	shadowCommandssock = NULL;
 	SchedDInterval = 0;
+	SchedDMinInterval = 0;
 	QueueCleanInterval = 0; JobStartDelay = 0;
 	MaxJobsRunning = 0;
 	NegotiateAllJobsInCluster = false;
@@ -369,6 +370,19 @@ Scheduler::~Scheduler()
 void
 Scheduler::timeout()
 {
+	static bool min_interval_timer_set = false;
+	static time_t next_timeout = 0;
+	time_t right_now;
+
+	right_now = time(NULL);
+	if ( right_now < next_timeout ) {
+		if (!min_interval_timer_set) {
+			daemonCore->Reset_Timer(timeoutid,next_timeout - right_now,1);
+			min_interval_timer_set = true;
+		}
+		return;
+	}
+
 	count_jobs();
 
 	clean_shadow_recs();	
@@ -388,6 +402,8 @@ Scheduler::timeout()
 
 	/* Reset our timer */
 	daemonCore->Reset_Timer(timeoutid,SchedDInterval);
+	min_interval_timer_set = false;
+	next_timeout = right_now + SchedDMinInterval;
 }
 
 /*
@@ -5263,6 +5279,8 @@ Scheduler::Init()
 		  SchedDInterval = atoi( tmp );
 		  free( tmp );
 	 }
+
+	SchedDMinInterval = param_integer("SCHEDD_MIN_INTERVAL",5);
 
 	tmp = param( "QUEUE_CLEAN_INTERVAL" );
 	if( ! tmp ) {
