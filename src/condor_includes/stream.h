@@ -204,8 +204,10 @@ public:
 	int code(unsigned int &);
 	int code(long &);
 	int code(unsigned long &);
+#ifndef WIN32
 	int code(long long &);
 	int code(unsigned long long &);
+#endif
 	int code(short &);
 	int code(unsigned short &);
 	int code(float &);
@@ -222,26 +224,26 @@ public:
 	int code(PORTS &);
 	int code(StartdRec &);
 
-#if !defined(WIN32)
 
 	//  UNIX types
 
-	int code(signal_t &);
 	int code(open_flags_t &);
+	int code(struct stat &);
+#if !defined(WIN32)
+	int code(signal_t &);
 	int code(fcntl_cmd_t &);
 	int code(struct rusage &);
-	int code(struct stat &);
 	int code(struct statfs &);
 	int code(struct timezone &);
 	int code(struct timeval &);
 	int code(struct rlimit &);
+#endif // !defined(WIN32)
 
 #if HAS_64BIT_STRUCTS
 	int code(struct stat64 &);
 	int code(struct rlimit64 &);
 #endif
 
-#endif // !defined(WIN32)
 
 	//   allow pointers instead of references to ease XDR compatibility
 	//
@@ -260,18 +262,16 @@ public:
 	int code(PORTS *x)				{ return code(*x); }
 	int code(StartdRec *x)			{ return code(*x); }
 
-#if !defined(WIN32)
-	
-	int code(signal_t *x)			{ return code(*x); }
+	int code(struct stat *x)		{ return code(*x); }
 	int code(open_flags_t *x)		{ return code(*x); }
+#if !defined(WIN32)
+	int code(signal_t *x)			{ return code(*x); }
 	int code(fcntl_cmd_t *x) 		{ return code(*x); }
 	int code(struct rusage *x)		{ return code(*x); }
-	int code(struct stat *x)		{ return code(*x); }
 	int code(struct statfs *x)		{ return code(*x); }
 	int code(struct timezone *x)	{ return code(*x); }
 	int code(struct timeval *x)		{ return code(*x); }
 	int code(struct rlimit *x)		{ return code(*x); }
-
 #endif // !defined(WIN32)
 
 #if HAS_64BIT_STRUCTS
@@ -289,8 +289,10 @@ public:
 	int put(unsigned int);
 	int put(long);
 	int put(unsigned long);
+#ifndef WIN32
 	int put(long long);
 	int put(unsigned long long);
+#endif
 	int put(short);
 	int put(unsigned short);
 	int put(float);
@@ -308,8 +310,10 @@ public:
 	int get(unsigned int &);
 	int get(long &);
 	int get(unsigned long &);
+#ifndef WIN32
 	int get(long long &);
 	int get(unsigned long long &);
+#endif
 	int get(short &);
 	int get(unsigned short &);
 	int get(float &);
@@ -367,7 +371,7 @@ protected:
 	**	Type definitions
 	*/
 
-	enum stream_coding { stream_decode, stream_encode };
+	enum stream_coding { stream_decode, stream_encode, stream_unknown };
 	enum stream_error { stream_valid, stream_invalid };
 
 
