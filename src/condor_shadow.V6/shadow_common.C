@@ -101,6 +101,8 @@ extern char    *MailerPgm;
 extern char My_UID_Domain[];
 extern char *_FileName_;
 
+ClassAd *JobAd = NULL;			// ClassAd which describes this job
+
 char *
 d_format_time( double dsecs )
 {
@@ -561,17 +563,16 @@ part_send_job(
   }
 
   /* Send the job info */
-  ClassAd *ad;
+  if (JobAd) FreeJobAd(JobAd);
   ConnectQ(schedd);
-  ad = GetJobAd( proc->id.cluster, proc->id.proc );
+  JobAd = GetJobAd( proc->id.cluster, proc->id.proc );
   DisconnectQ(NULL);
-  if (!ad) {
+  if (!JobAd) {
 	  EXCEPT( "failed to get job ad" );
   }
-  if( !ad->put(*sock) ) {
+  if( !JobAd->put(*sock) ) {
     EXCEPT( "failed to send job ad" );
   }
-  FreeJobAd(ad);
   if( !sock->end_of_message() ) {
     EXCEPT( "end_of_message failed" );
   }
