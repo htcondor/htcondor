@@ -57,6 +57,11 @@ Authentication::~Authentication()
 {
 #if !defined(SKIP_AUTHENTICATION)
 	mySock = NULL;
+
+	if ( claimToBe ) {
+		delete [] claimToBe;
+		claimToBe = NULL;
+	}
 #endif
 }
 
@@ -147,7 +152,7 @@ Authentication::setAuthAny()
 }
 
 int
-Authentication::setOwner( char *owner ) 
+Authentication::setOwner( const char *owner ) 
 {
 #if defined(SKIP_AUTHENTICATION)
 	return 0;

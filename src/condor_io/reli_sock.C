@@ -873,7 +873,7 @@ ReliSock::authenticate() {
 }
 
 void
-ReliSock::setOwner( char *newOwner ) {
+ReliSock::setOwner( const char *newOwner ) {
 	if ( authob ) {
 		authob->setOwner( newOwner );
 	}
