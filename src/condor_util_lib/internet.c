@@ -149,6 +149,7 @@ string_to_sin(char *string, struct sockaddr_in *sin)
 	
 	string[strlen(string) - 1] = '\0'; /* Chop off the trailing '>' */
 	sin->sin_port = htons(atoi(string));
+	sin->sin_family = AF_INET;
 }
 
 
