@@ -30,8 +30,8 @@
 ** interval is set by constants below.
 */
 
-#include <stdio.h>
 #include "condor_common.h"
+#include <stdio.h>
 #include "condor_debug.h"
 #include <winperf.h>
 #include <pdh.h>
