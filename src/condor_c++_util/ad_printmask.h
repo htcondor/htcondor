@@ -27,12 +27,13 @@
 #include "list.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
+#include "classadList.h" // NAC
 
 enum FormatKind { PRINTF_FMT, INT_CUSTOM_FMT, FLT_CUSTOM_FMT, STR_CUSTOM_FMT };
 
-typedef char *(*IntCustomFmt)(int,AttrList*);
-typedef char *(*FloatCustomFmt)(float,AttrList*);
-typedef char *(*StringCustomFmt)(char*,AttrList*);
+typedef char *(*IntCustomFmt)(int,ClassAd*);
+typedef char *(*FloatCustomFmt)(float,ClassAd*);
+typedef char *(*StringCustomFmt)(char*,ClassAd*);
 
 struct Formatter
 {
@@ -45,13 +46,13 @@ struct Formatter
 	};
 };
 			
-class AttrListPrintMask
+class ClassAdPrintMask
 {
   public:
 	// ctor/dtor
-	AttrListPrintMask ();
-	AttrListPrintMask (const AttrListPrintMask &);
-	~AttrListPrintMask ();
+	ClassAdPrintMask ();
+	ClassAdPrintMask (const ClassAdPrintMask &);
+	~ClassAdPrintMask ();
 
 	// register a format and an attribute
 	void registerFormat (char *fmt, const char *attr, char*alt="");
@@ -63,9 +64,9 @@ class AttrListPrintMask
 	void clearFormats (void);
 
 	// display functions
-	int   display (FILE *, AttrList *);		// output to FILE *
-	int   display (FILE *, AttrListList *); // output a list -> FILE *
-	char *display ( AttrList * );			// return a string
+	int   display (FILE *, ClassAd *);		// output to FILE *
+	int   display (FILE *, ClassAdList *); // output a list -> FILE *
+	char *display ( ClassAd * );			// return a string
 
   private:
 	List<Formatter> formats;

@@ -26,13 +26,13 @@
 
 static char *new_strdup (const char *);
 
-AttrListPrintMask::
-AttrListPrintMask ()
+ClassAdPrintMask::
+ClassAdPrintMask ()
 {
 }
 
-AttrListPrintMask::
-AttrListPrintMask (const AttrListPrintMask &pm)
+ClassAdPrintMask::
+ClassAdPrintMask (const ClassAdPrintMask &pm)
 {
 	copyList (formats, (List<Formatter> &) pm.formats);
 	copyList (attributes, (List<char> &) pm.attributes);
@@ -40,14 +40,14 @@ AttrListPrintMask (const AttrListPrintMask &pm)
 }
 
 
-AttrListPrintMask::
-~AttrListPrintMask ()
+ClassAdPrintMask::
+~ClassAdPrintMask ()
 {
 	clearFormats ();
 }
 
 
-void AttrListPrintMask::
+void ClassAdPrintMask::
 registerFormat (char *fmt, const char *attr, char *alternate)
 {
 	Formatter *newFmt = new Formatter;
@@ -60,7 +60,7 @@ registerFormat (char *fmt, const char *attr, char *alternate)
 	alternates.Append(new_strdup(collapse_escapes(alternate)));
 }
 
-void AttrListPrintMask::
+void ClassAdPrintMask::
 registerFormat (IntCustomFmt fmt, const char *attr, char *alternate)
 {
 	Formatter *newFmt = new Formatter;
@@ -74,7 +74,7 @@ registerFormat (IntCustomFmt fmt, const char *attr, char *alternate)
 	alternates.Append(new_strdup(collapse_escapes(alternate)));
 }
 
-void AttrListPrintMask::
+void ClassAdPrintMask::
 registerFormat (FloatCustomFmt fmt, const char *attr, char *alternate)
 {
 	Formatter *newFmt = new Formatter;
@@ -88,7 +88,7 @@ registerFormat (FloatCustomFmt fmt, const char *attr, char *alternate)
 	alternates.Append(new_strdup(collapse_escapes(alternate)));
 }
 
-void AttrListPrintMask::
+void ClassAdPrintMask::
 registerFormat (StringCustomFmt fmt, const char *attr, char *alternate)
 {
 	Formatter *newFmt = new Formatter;
@@ -102,7 +102,7 @@ registerFormat (StringCustomFmt fmt, const char *attr, char *alternate)
 	alternates.Append(new_strdup(collapse_escapes(alternate)));
 }
 
-void AttrListPrintMask::
+void ClassAdPrintMask::
 clearFormats (void)
 {
 	clearList (formats);
@@ -111,10 +111,10 @@ clearFormats (void)
 }
 
 
-int AttrListPrintMask::
-display (FILE *file, AttrList *al)
+int ClassAdPrintMask::
+display (FILE *file, ClassAd *ad)
 {
-	char * temp = display(al);
+	char * temp = display(ad);
 
 	if (temp != NULL) {
 		fputs(temp, file);
@@ -126,17 +126,22 @@ display (FILE *file, AttrList *al)
 }
 
 // returns a new char * that is your responsibility to delete.
-char * AttrListPrintMask::
-display (AttrList *al)
+char * ClassAdPrintMask::
+display (ClassAd *ad)
 {
 	Formatter *fmt;
 	char 	*attr, *alt;
 	ExprTree *tree;
-	EvalResult result;
+//	EvalResult result;
+	Value 	result;				// NAC
 	char * 	retval = new char[1024 * 8];
 	int		intValue;
 	float 	floatValue;
 	char  	stringValue[1024];
+
+	int 	tempInt;			// NAC
+	double 	tempReal;			// NAC
+	char 	tempString[1024];	// NAC
 
 	formats.Rewind();
 	attributes.Rewind();
@@ -149,11 +154,10 @@ display (AttrList *al)
 				(alt=alternates.Next()))
 	{
 		switch( fmt->fmtKind )
-		{
-		  	case PRINTF_FMT:
+			{
+			case PRINTF_FMT:
 				// get the expression tree of the attribute
-				if (!(tree = al->Lookup (attr)))
-				{
+				if (!(tree = ad->Lookup (attr))){
 					if ( alt ) {
 						sprintf( stringValue, "%s", alt );
 						strcat( retval, stringValue );
@@ -162,24 +166,37 @@ display (AttrList *al)
 				}
 
 				// print the result
-				if (tree->EvalTree (al, NULL, &result))
+//				if (tree->EvalTree (ad, NULL, &result)){
+				if(ad->EvaluateAttr(attr, result))					// NAC
 				{
-					switch (result.type)
+//					switch (result.type)
+					switch (result.GetType())						// NAC
 					{
-					case LX_STRING:
-						sprintf( stringValue, fmt->printfFmt,
-							collapse_escapes(result.s) );
+//					case LX_STRING:
+//						sprintf( stringValue, fmt->printfFmt,
+//							collapse_escapes(result.s) );
+					case (result.STRING_VALUE):					    // NAC
+						result.IsStringValue( tempString, 1024 );		// NAC
+						sprintf( stringValue, fmt->printfFmt,   		// NAC
+								 collapse_escapes(tempString) );		// NAC
 						strcat( retval, stringValue );
 						break;
 
-					case LX_FLOAT:
-						sprintf( stringValue, fmt->printfFmt, result.f);
+//					case LX_FLOAT:
+//						sprintf( stringValue, fmt->printfFmt, result.f);
+					case (result.REAL_VALUE):						// NAC
+						result.IsRealValue( tempReal );		 			// NAC
+						sprintf( stringValue, fmt->printfFmt, 			// NAC
+								 (float)tempReal );						// NAC
 						strcat( retval, stringValue );
 						break;
 
-					case LX_INTEGER:
-						sprintf( stringValue, fmt->printfFmt, result.i);
-						strcat( retval, stringValue );
+//					case LX_INTEGER:
+//						sprintf( stringValue, fmt->printfFmt, result.i);
+					case (result.INTEGER_VALUE):					// NAC
+						result.IsIntegerValue( tempInt );				// NAC
+						sprintf( stringValue, fmt->printfFmt, tempInt );	// NAC
+						strcat( retval, stringValue );				
 						break;
 
 					default:
@@ -188,26 +205,30 @@ display (AttrList *al)
 					}
 				}
 				break;
-
-		  	case INT_CUSTOM_FMT:
-				if( al->EvalInteger( attr, NULL, intValue ) ) {
-					strcat( retval, (fmt->df)( intValue , al ) );
+					
+			case INT_CUSTOM_FMT:
+//				if( ad->EvalInteger( attr, NULL, intValue ) ) {
+				if( ad->EvaluateAttrInt( attr, intValue ) ) {	// NAC
+					strcat( retval, (fmt->df)( intValue , ad ) );
 				} else {
 					strcat( retval, alt );
 				}
 				break;
 
 		  	case FLT_CUSTOM_FMT:
-				if( al->EvalFloat( attr, NULL, floatValue ) ) {
-					strcat( retval, (fmt->ff)( floatValue , al ) );
+//				if( ad->EvalFloat( attr, NULL, floatValue ) ) {
+				if( ad->EvaluateAttrReal( attr, tempReal ) ) {		//NAC
+					floatValue = (float)tempReal;					//NAC
+					strcat( retval, (fmt->ff)( floatValue , ad ) );
 				} else {
 					strcat( retval, alt );
 				}
 				break;
 
 		  	case STR_CUSTOM_FMT:
-				if( al->EvalString( attr, NULL, stringValue ) ) {
-					strcat( retval, (fmt->sf)( stringValue , al ) );
+//				if( ad->EvalString( attr, NULL, stringValue ) ) {
+				if( ad->EvaluateAttrString( attr, stringValue, 1024 ) ) {
+					strcat( retval, (fmt->sf)( stringValue , ad ) );
 				} else {
 					strcat( retval, alt );
 				}
@@ -222,16 +243,16 @@ display (AttrList *al)
 }
 
 
-int AttrListPrintMask::
-display (FILE *file, AttrListList *list)
+int ClassAdPrintMask::
+display (FILE *file, ClassAdList *list)
 {
 	int retval = 1;
-	AttrList *al;
+	ClassAd *ad;
 
 	list->Open();
-    while (al = (AttrList *) list->Next())
+    while (ad = (ClassAd *) list->Next())
     {
-		if (!display (file, al))
+		if (!display (file, ad))
 			retval = 0;
     }
     list->Close ();
@@ -239,7 +260,7 @@ display (FILE *file, AttrListList *list)
 	return retval;
 }
 
-void AttrListPrintMask::
+void ClassAdPrintMask::
 clearList (List<char> &l)
 {
     char *x;
@@ -251,7 +272,7 @@ clearList (List<char> &l)
     }
 }
 
-void AttrListPrintMask::
+void ClassAdPrintMask::
 clearList (List<Formatter> &l)
 {
     Formatter *x;
@@ -264,7 +285,7 @@ clearList (List<Formatter> &l)
     }
 }
 
-void AttrListPrintMask::
+void ClassAdPrintMask::
 copyList (List<Formatter> &to, List<Formatter> &from)
 {
 	Formatter *item, *newItem;
@@ -282,7 +303,7 @@ copyList (List<Formatter> &to, List<Formatter> &from)
 }
 
 
-void AttrListPrintMask::
+void ClassAdPrintMask::
 copyList (List<char> &to, List<char> &from)
 {
 	char *item;

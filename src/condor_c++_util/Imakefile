@@ -7,8 +7,8 @@ LIB = $(STD_LIBS)
 URL_OBJ = url_condor.o cbstp_url.o file_url.o http_url.o filter_url.o \
 	mailto_url.o cfilter_url.o ftp_url.o include_urls.o mkargv.o
 
-API_OBJ = /* generic_query.o condor_query.o condor_q.o ad_printmask.o \
-			condor_event.o user_log.o */
+API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
+			condor_event.o user_log.o classadList.o
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	alarm.o \
@@ -20,7 +20,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
 	limit.o my_subsystem.o daemon_types.o killfamily.o access.o \
 	strnewp.o memory_file.o my_username.o misc_utils.o file_transfer.o \
-	/* daemon.o */ \
+	daemon.o \
 	uids.o metric_units.o condor_ver_info.o
 
 #if !HAS_FLOCK

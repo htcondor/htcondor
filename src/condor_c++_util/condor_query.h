@@ -24,6 +24,7 @@
 #define __CONDOR_QUERY_H__
 
 #include "condor_classad.h"
+#include "classadList.h"	// NAC
 #include "list.h"
 #include "simplelist.h"
 #include "condor_collector.h"

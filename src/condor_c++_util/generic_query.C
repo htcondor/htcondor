@@ -23,7 +23,7 @@
 #include "condor_common.h"
 #include "generic_query.h"
 #include "condor_attributes.h"
-#include "condor_parser.h"
+//#include "condor_parser.h"
 
 static char *new_strdup (const char *);
 
@@ -152,6 +152,7 @@ addString (const int cat, char *value)
 int GenericQuery::
 addCustomOR (char *value)
 {
+
     char *x = new_strdup (value);
 	if (!x) return Q_MEMORY_ERROR;
 	customORConstraints.Append (x);
@@ -251,11 +252,13 @@ makeQuery (ClassAd &ad)
 	float   fvalue;
 	char    req [10240];
 	char    buf [1024];
-	ExprTree *tree;
+	ExprTree	*tree;
+	ClassAdParser 	parser;  // NAC
 
 	// construct query requirement expression
 	bool firstCategory = true;
-	sprintf (req, "%s = ", ATTR_REQUIREMENTS);
+		//sprintf (req, "%s = ", ATTR_REQUIREMENTS);  // NAC
+	sprintf(req, ""); // NAC
 
 	// add string constraints
 	for (i = 0; i < stringThreshold; i++)
@@ -356,9 +359,13 @@ makeQuery (ClassAd &ad)
 	if (firstCategory) strcat (req, "TRUE");
 
 	// parse constraints and insert into query ad
-	if (Parse (req, tree) > 0) return Q_PARSE_ERROR;
-	ad.Insert (tree);
-
+		//if (Parse (req, tree) > 0) return Q_PARSE_ERROR;   // NAC
+		//ad.Insert (tree);
+	if ( !( tree = parser.ParseExpression(req) ) ||
+		   !(ad.Insert( ATTR_REQUIREMENTS,tree ) ) )  {  // NAC
+		return Q_PARSE_ERROR;
+	}
+	
 	return Q_OK;
 }
 

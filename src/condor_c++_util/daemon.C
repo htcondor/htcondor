@@ -569,7 +569,8 @@ Daemon::getDaemonInfo( const char* subsys,
 			newError( buf );
 			return false; 
 		}
-		if(scan->EvalString(attribute, NULL, buf) == FALSE) {
+//		if(scan->EvalString(attribute, NULL, buf) == FALSE) {
+		if( !scan->EvaluateAttrString(attribute, buf, 512) == FALSE) {  // NAC
 			sprintf( buf, "Can't find %s in classad for %s %s",
 					 attribute, daemonString(_type), _name );
 			newError( buf );

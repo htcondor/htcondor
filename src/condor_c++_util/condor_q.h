@@ -24,6 +24,7 @@
 #define __CONDOR_Q_H__
 
 #include "generic_query.h"
+#include "classadList.h" // NAC
 
 // This is for the getFilterAndProcess function
 typedef bool    (*process_function)(ClassAd *);

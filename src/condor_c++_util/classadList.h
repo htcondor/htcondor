@@ -20,24 +20,55 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+// classadList.h
+//
+// definition of ClassAdList object using new classads
+// eventually to be made obsolete by classad collections.
+
+#ifndef __CLASSADLIST_H__
+#define __CLASSADLIST_H__
+
 #include "condor_common.h"
-#include "list.h"
-#include "simplelist.h"
-#include "extArray.h"
-#include "stringSpace.h"
-#include "killfamily.h"
-#include "HashTable.h"
 #include "condor_classad.h"
-#include "ad_printmask.h"
+#include "list.h"
 
-template class List<char>; 		template class Item<char>;
-template class List<int>; 		template class Item<int>;
-template class List<ClassAd>;
-template class List<Formatter>;
-template class SimpleList<int>; 
-template class SimpleList<float>;
-template class ExtArray<char *>;
-template class ExtArray<ProcFamily::a_pid>;
+typedef int (*SortFunctionType)(ClassAd*,ClassAd*,void*);
 
-int 	CondorErrno;
-string	CondorErrMsg;
+class ClassAdList
+{
+  public:
+	ClassAdList();						//constructor
+	ClassAdList(ClassAdList&);			//copy constructor
+	~ClassAdList();						//destructor
+
+		// methods from AttrListList
+	void		Open();
+	void		Close();
+	void 		PrintClassAdList();
+	int			MyLength();
+
+	ClassAd*	Next();
+	void		Rewind();
+	int			Length();
+	void		Insert(ClassAd* ca);
+	//int			Delete(ClassAd* ca){return AttrListList::Delete((AttrList*)ca);}
+    //ClassAd*	Lookup(const char* name);
+
+
+	// User supplied function should define the "<" relation and the list
+	// is sorted in ascending order.  User supplied function should
+	// return a "1" if relationship is less-than, else 0.
+	// NOTE: Sort() is _not_ thread safe!
+	void   Sort(SortFunctionType,void* =NULL);
+
+  private:
+	static int SortCompare(const void*, const void*);
+
+	List<ClassAd> list;
+
+};
+
+#endif
+
+
+
