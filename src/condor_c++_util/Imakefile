@@ -166,9 +166,9 @@ IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib,mkargv.o)
 import(../condor_daemon_client,$(DAEMON_CLIENT_OBJ))
 
-release_library(libcondorapi.a,$(RELEASE_DIR)/lib)
-strip_library(libcondorapi.a,$(STRIP_DIR)/lib)
-static_library(libcondorapi.a,$(STATIC_DIR)/lib)
+release_library(libcondorapi.a,lib)
+strip_library(libcondorapi.a,lib)
+static_library(libcondorapi.a,lib)
 
 release_copy_target(user_log.README,include,user_log.README,TEXT_MODE)
 strip_copy_target(user_log.README,include,user_log.README,TEXT_MODE)

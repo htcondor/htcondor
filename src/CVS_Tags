@@ -1,3 +1,9 @@
+10/22/03 V6_6-externals-merge-1
+   The state of the V6_6-externals-branch when it was merged back into
+   V6_6-branch.  We'll abandon the V6_6-externals-branch after this
+   merge, and move all development on the new system onto the
+   V6_6-branch for the 6.6.x stable series.
+
 9/25/03 V6_6-externals-branch
    A new branch off the V6_6-branch for checking in the solution to
    the "list of shame": the new "externals" directory and related

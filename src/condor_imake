@@ -1,16 +1,6 @@
 #!/bin/sh
 
 ##################################################
-# Make sure that one does not build in a CVS workspace
-##################################################
-
-if [ -d CVS ]; then
-	echo "You probably don't want to do this in your source repository."
-	echo "Try doing it in a build directory instead."
-	exit 1
-fi
-
-##################################################
 # Initialize some variables about our arch/os environment
 ##################################################
 
@@ -39,39 +29,6 @@ if [ "$os" = "IRIX" ]; then
 fi
 
 ##################################################
-# Kereberos Discovery
-##################################################
-if [ -f /p/condor/workspaces/kerberos/lib/libkrb5.a ] ; then
-	KerbPath="-DKERBEROS_PATH=/p/condor/workspaces/kerberos"
-	HasKerb="-DHAS_KERBEROS=YES"
-	if [ -f /p/condor/workspaces/kerberos/lib/libk5crypto.a ] ; then
-		KerbK5="-DKERBEROS_K5=YES"
-	else
-		KerbK5="-DKERBEROS_K5=NO"
-	fi
-
-elif [ -f /usr/kerberos/lib/libkrb5.a ] ; then
-	KerbPath="-DKERBEROS_PATH=/usr/kerberos"
-	HasKerb="-DHAS_KERBEROS=YES"
-	if [ -f /usr/kerberos/lib/libk5crypto.a ] ; then
-		KerbK5="-DKERBEROS_K5=YES"
-	else
-		KerbK5="-DKERBEROS_K5=NO"
-	fi
-
-elif [ -f /usr/local/lib/libkrb5.a ] ; then
-	KerbPath="-DKERBEROS_PATH=/usr/local"
-	HasKerb="-DHAS_KERBEROS=YES"
-	if [ -f /usr/local/lib/libk5crypto.a ] ; then
-		KerbK5="-DKERBEROS_K5=YES"
-	else
-		KerbK5="-DKERBEROS_K5=NO"
-	fi
-
-fi
-KerbFlags="$HasKerb $KerbK5 $KerbPath"
-
-##################################################
 # Determine compiler features and variousl compiler related libraries
 ##################################################
 
@@ -83,7 +40,8 @@ tmp=`gcc -print-libgcc-file-name`
 LibGcc="-DLIB_GCC=$tmp"
 
 # discover the version of gcc I have
-tmp=`((gcc -v) 2>&1) | tail -1 | cut -d' ' -f3`
+tmp=`((gcc -v) 2>&1) | tail -1 | perl  -ne '{/.*gcc version\s*(\S*).*/; print "$1\n"}'`
+
 
 case "$tmp" in
 	"egcs-2.91.66" )
@@ -410,9 +368,6 @@ if [ "X$verbose_info" = "X1" ]; then
 			echo
 			;;
 	esac
-	echo "Kerberos:"
-	echo "---------"
-	echo "$KerbFlags"
 	echo
 	echo "Compiler Path:"
 	echo "--------------"
@@ -440,9 +395,9 @@ fi
 # Finally, call imake with all the flags
 ##################################################
 if [ $verbose_info = 0 ]; then
-	echo ${IMAKE} -s Makefile $ArchFlag $Opsys $Other $Other2 $KerbFlags $LibGcc $CrtBegin $StdCpp $CompilerID -I../config -I../../config $*
+	echo ${IMAKE} -s Makefile $ArchFlag $Opsys $Other $Other2 $LibGcc $CrtBegin $StdCpp $CompilerID -I../config -I../../config $*
 fi
 
-${IMAKE} -s Makefile $ArchFlag $Opsys $Other $Other2 $KerbFlags $LibGcc $CrtBegin $StdCpp $CompilerID -I../config -I../../config $*
+${IMAKE} -s Makefile $ArchFlag $Opsys $Other $Other2 $LibGcc $CrtBegin $StdCpp $CompilerID -I../config -I../../config $*
 
 

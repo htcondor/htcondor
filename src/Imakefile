@@ -49,7 +49,7 @@
 #   define standalone
 #endif
 
-#if WANT_PVM && HAS_PVM
+#if WANT_PVM
 #define PvmProgs starter.jim shadow.jim 
 #else
 #define PvmProgs
@@ -65,12 +65,10 @@
 #define NetmanLibs netman
 #define Eventd eventd
 #define EventdTar eventd.tar
-#define AfsEventdTar afs_eventd.tar
 #else
 #define NetmanLibs
 #define Eventd
 #define EventdTar
-#define AfsEventdTar
 #endif
 
 #define Programs \
@@ -111,77 +109,12 @@
 	strip_contrib/sbin strip_contrib/etc \
 	strip_contrib/etc/examples strip_contrib/include StaticDirectories
 
-all: h h_all condor_includes makefiles Directories Libraries \
+all: h h_all externals condor_includes makefiles Directories Libraries \
 	Programs examples 
 release:: all
 stripped:: all
 static:: all
 libs:: h h_all condor_includes makefiles Directories Libraries
-
-public:: strip.tar 
-
-strip.tar: stripped
-	cd strip_dir; rm -f release.tar; tar -cvf release.tar --owner=root --group=root AllFiles
-
-afs_release.tar:: afs_strip.tar
-
-afs_strip.tar: strip.tar
-	cp strip_dir/release.tar $(PUBLIC_D_TARGET)
-
-#if HAS_STATIC
-public:: static.tar
-
-afs_release.tar:: afs_static.tar
-
-static.tar: static
-	cd static_dir; rm -f release.tar; tar -cvf release.tar --owner=root --group=root AllFiles
-
-afs_static.tar: static.tar
-	cp static_dir/release.tar $(PUBLIC_S_TARGET)
-
-#endif 
-
-release_tarball(submit.tar,SubmitOnlyFiles)
-release_tarball(link.tar,LinkOnlyFiles)
-release_tarball(master.tar,MasterFiles)
-release_tarball(dagman.tar,DAGManFiles)
-
-/* contrib_tarball(view_client.tar,ViewClientFiles) */
-contrib_tarball(ckpt_server.tar,CkptServerFiles)
-contrib_tarball(eventd.tar,EventdFiles)
-/* contrib_tarball(sdk.tar,SDKFiles) */
-
-#if WANT_PVM && HAS_PVM
-#define PvmTar pvm.tar
-#define AfsPvmTar afs_pvm.tar
-contrib_tarball(pvm.tar,PvmFiles)
-#else
-#define PvmTar 
-#define AfsPvmTar 
-#endif 
-
-#if WANT_CONDOR_G && HAS_GLOBUS
-#define CondorGTar condor-g.tar
-both_tarball(condor-g.tar,CondorGFiles,CondorGContribFiles)
-#else
-#define CondorGTar 
-#endif /* Condor-G */
-all_tarballs: ckpt_server.tar eventd.tar PvmTar dagman.tar CondorGTar
-
-afs_tarballs: afs_release.tar \
-	afs_ckpt_server.tar AfsEventdTar AfsPvmTar
-
-public:: all_tarballs
-
-PUBLIC_TARGET_PATH = /p/condor/workspaces/release
-#if defined( PublicTargetName )
-  PUBLIC_TARGET_NAME = PublicTargetName
-  PUBLIC_D_TARGET = $(PUBLIC_TARGET_PATH)/V61_releases/$(PUBLIC_TARGET_NAME)
-  PUBLIC_S_TARGET = $(PUBLIC_TARGET_PATH)/V61_static_releases/$(PUBLIC_TARGET_NAME)
-#else 
-  PUBLIC_D_TARGET = $(PUBLIC_TARGET_PATH)/V61_release
-  PUBLIC_S_TARGET = $(PUBLIC_TARGET_PATH)/V61_static_release
-#endif
 
 simple_dir_target(release_dir)
 simple_dir_target(release_dir/bin)
@@ -265,7 +198,7 @@ object_target(io)
 object_target(classad)
 object_target(daemon_core.V6)
 object_target(daemon_client)
-#if WANT_PVM && HAS_PVM
+#if WANT_PVM
    object_target(starter.jim)
    object_target(shadow.jim)
 #endif
@@ -325,7 +258,8 @@ really-clean:: clean-up
 clean-up:
 	rm -rf *.out Makefile */Makefile* release_* \
 		strip_dir strip_contrib static_dir static_contrib pure_bin \
-		g gpt gpt-2.1  BUILD binaries
+		g gpt gpt-2.1  BUILD binaries \
+		configure config.status config.log config.cache
 
 reallyclean: really-clean
 
@@ -344,9 +278,69 @@ pure_target(condor_collector.V6,condor_collector.pure)
 pure_target(condor_negotiator.V6,condor_negotiator.pure)
 pure_target(condor_dagman,condor_dagman.pure)
 
+
+ext_target(EXT_ZLIB_VERSION,)
+#if !IS_CLIPPED && IS_GLIBC21
+ext_target(EXT_GLIBC21_VERSION,)
+#endif
+#if !IS_CLIPPED && IS_GLIBC22
+ext_target(EXT_GLIBC22_VERSION,)
+#endif
+#if WANT_KERBEROS
+ext_target(EXT_KERBEROS_VERSION,)
+#endif
+#if HAS_GLOBUS
+ext_target(EXT_GLOBUS_VERSION,$(EXT_TRIGGER)/$(EXT_GPT_VERSION))
+ext_target(EXT_GAHP_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION))
+ext_target(EXT_GPT_VERSION,)
+#endif
+ext_target(EXT_MAN_VERSION,)
+#if WANT_PVM
+ext_target(EXT_PVM_VERSION,)
+#endif
+
 clean::
 	rm -rf $(PURE_DIR)
 
 today:
 	/bin/rm -f condor_c++_util/condor_version.o
 	cd condor_c++_util; make
+
+contrib_tarball(ckpt_server.tar,CkptServerFiles)
+contrib_tarball(eventd.tar,EventdFiles)
+release_tarball(dagman.tar,DAGManFiles)
+
+#if WANT_PVM
+#define PvmTar pvm.tar
+contrib_tarball(pvm.tar,PvmFiles)
+#else
+#define PvmTar 
+#endif 
+
+#if WANT_CONDOR_G && HAS_GLOBUS
+#define CondorGTar condor-g.tar
+both_tarball(condor-g.tar,CondorGFiles,CondorGContribFiles)
+#else
+#define CondorGTar 
+#endif /* Condor-G */
+
+#if HAS_STATIC
+#define StaticTar static.tar
+static.tar: static
+	rm -f static_dir/release.tar
+	cd static_dir; $(TAR_CMD) -cvf release.tar AllFiles
+#else
+#define StaticTar
+#endif 
+
+strip.tar: stripped
+	rm -f strip_dir/release.tar
+	cd strip_dir; $(TAR_CMD) -cvf release.tar AllFiles
+
+all_tarballs: strip.tar StaticTar ckpt_server.tar eventd.tar dagman.tar PvmTar CondorGTar
+
+public: release all_tarballs
+	if test ! -d public; then mkdir public; fi
+	rm -f public/unstripped-release.tar.gz
+	cd release_dir; $(TAR_CMD) -zcvf ../public/unstripped-release.tar.gz *
+	perl condor_scripts/make_final_tarballs -sys $(SYSNAME) -target public

@@ -25,6 +25,9 @@ while( $_ = shift( @ARGV ) ) {
     }
     if( /-t.*/ ) {
         $target = shift(@ARGV);
+	if( ! -d $target ) {
+	    die "Target directory $target does not exist!\n";
+	}
         last SWITCH;
     }
     if( /-l.*/ ) {
@@ -55,10 +58,6 @@ $releasev = $3;
 $version = "$majorv.$minorv.$releasev";
 
 # Things you should probably leave alone:
-BEGIN {
-    unshift(@INC, "/p/condor/home/perl");
-}
-
 require 5.002;
 
 ######################################################################
@@ -138,6 +137,7 @@ $realskel="condor_release";
   "i386_rh80"     => "linux",
   "i386_rh9"     => "linux",
   "ia64_linux24"  => "linux",
+  "alpha_rh72"    => "linux",
   "alpha_linux3"  => "linux",
   "alpha_linux22" => "linux",
   "alpha_dux40"   => "dux40",
@@ -170,6 +170,7 @@ $realskel="condor_release";
   "i386_rh9"     => "x86",
   "i386_linux3"   => "x86",
   "ia64_linux24"  => "ia64",
+  "alpha_rh72"    => "Alpha",
   "alpha_linux3"  => "Alpha",
   "alpha_linux22" => "Alpha",
   "alpha_dux40"   => "Alpha",
@@ -196,6 +197,7 @@ $realskel="condor_release";
   "i386_rh80"   => "glibc22",
   "i386_rh9"   => "glibc23",
   "ia64_linux24" => "glibc22",
+  "alpha_rh72"    => "glibc22",
   "alpha_linux3"  => "glibc20",
   "alpha_linux22" => "glibc21"
 );
@@ -316,6 +318,9 @@ foreach $module ( @modules ) {
 	    $targetdir = "$target/v$majorv.$minorv";
 	} else {
 	    $targetdir = "$target/contrib";
+	}
+	if( ! -d $targetdir ) {
+	    mkdir( $targetdir, 0777 ) || die "Can't mkdir $targetdir: $!\n";
 	}
 	$targetfile = "$targetdir/$release-$platform.tar";
 

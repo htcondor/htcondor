@@ -245,7 +245,7 @@ chirp_client_lookup( struct chirp_client *c, const char *logical_name, char **ur
 	return result;
 }
 
-chirp_client_constrain( struct chirp_client *c, const char *expr):
+chirp_client_constrain( struct chirp_client *c, const char *expr)
 {
 	return simple_command(c,"constrain %s\n",expr);
 }
