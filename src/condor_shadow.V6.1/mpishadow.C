@@ -961,7 +961,8 @@ MPIShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 		{
 			sprintf( final, "%s = %s", lhstr, strRh.Value());
 			ad->InsertOrUpdate( final );
-			dprintf( D_ALWAYS, "Replaced using expr: %s\n", final);
+			dprintf( D_FULLDEBUG, "Replaced $(NODE), now using: %s\n", 
+					 final );
 		}
 	}	
 }
