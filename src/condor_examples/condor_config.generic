@@ -633,7 +633,7 @@ SHADOW_LOCK	= $(LOCK)/ShadowLock
 ##  port that the collector and negotiator run on. By default, the
 ##  collector uses port 9618 and the negotiator uses port 9614, but
 ##  you can set the port with a ":port", such as:
-## COLLECTOR_HOST = foo.example.com:1234
+##  COLLECTOR_HOST = $(CONDOR_HOST):1234
 COLLECTOR_HOST  = $(CONDOR_HOST)
 NEGOTIATOR_HOST = $(CONDOR_HOST)
 
