@@ -45,12 +45,10 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 #include "condor_uid.h"
 #include "condor_commands.h"
 #include "condor_config.h"
-
-
-extern "C" 
-{
-	char*			sin_to_string(struct sockaddr_in*);
-}
+#ifdef WIN32
+#include "exphnd.WIN32.h"
+typedef unsigned (__stdcall *CRT_THREAD_HANDLER) (void *);
+#endif
 
 extern char* mySubSystem;	// the subsys ID, such as SCHEDD
 
@@ -1546,6 +1544,12 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 	Stream* sock;
 	int target_has_dcpm = TRUE;		// is process pid a daemon core process?
 
+	// sanity check on the pid.  we don't want to do something silly like
+	// kill pid -1 because the pid has not been initialized yet.
+	int signed_pid = (int) pid;
+	if ( signed_pid > -10 && signed_pid < 10 ) {
+		EXCEPT("Send_Signal: sent unsafe pid (%d)",signed_pid);
+	}
 
 	// First, if not sending a signal to ourselves, lookup the PidEntry struct
 	// so we can determine if our child is a daemon core process or not.
@@ -1783,18 +1787,38 @@ int DaemonCore::Shutdown_Fast(pid_t pid)
 	// even on a shutdown_fast, first try to send a WM_CLOSE because
 	// when we call TerminateProcess, any DLL's do not get a chance to
 	// free allocated memory.
-	Send_WM_CLOSE(pid);
+	// Send_WM_CLOSE(pid);
 	// now call TerminateProcess as a last resort
 	PidEntry *pidinfo;
+	HANDLE pidHandle; 	
+	bool must_free_handle = false;
+	int ret_value;
 	if (pidTable->lookup(pid, pidinfo) < 0) {
-		return FALSE;
+		// could not find a handle to this pid in our table.
+		// try to get a handle from the NT kernel
+		pidHandle = ::OpenProcess(PROCESS_TERMINATE,FALSE,pid);
+		if ( pidHandle == NULL ) {
+			// process must have gone away.... we hope!!!!
+			return FALSE;
+		}
+		must_free_handle = true;
+	} else {
+		// found this pid on our table
+		pidHandle = pidinfo->hProcess;
 	}
-	if (TerminateProcess(pidinfo->hProcess, 0)) {
+	if (TerminateProcess(pidHandle, 0)) {
 		dprintf(D_DAEMONCORE, "Successfully terminated pid %d\n", pid);
-		return TRUE;
+		ret_value = TRUE;
+	} else {
+		// TerminateProcess failed!!!??!
+		// should we try anything else here?
+		dprintf(D_ALWAYS,"Failed to TerminateProcess on pid %d\n",pid);
+		ret_value = FALSE;
 	}
-	// should we try anything else here?
-	return FALSE;
+	if ( must_free_handle ) {
+		::CloseHandle( pidHandle );
+	}
+	return ret_value;
 #else
 	priv_state priv = set_root_priv();
 	int status = kill(pid, SIGKILL);
@@ -1828,6 +1852,86 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 	int status = kill(pid, SIGTERM);
 	set_priv(priv);
 	return (status >= 0);		// return 1 if kill succeeds, 0 otherwise
+#endif
+}
+
+int DaemonCore::Suspend_Thread(int tid)
+{
+	PidEntry *pidinfo;
+	
+	dprintf(D_DAEMONCORE,"called DaemonCore::Suspend_Thread(%d)\n",
+		tid);
+
+	// verify the tid passed in to us is valid
+	if ( (pidTable->lookup(tid, pidinfo) < 0)	// is it not in our table?
+#ifdef WIN32	
+		// is it a process (i.e. not a thread)?
+		|| (pidinfo->hProcess != NULL)	
+		// do we not have a thread handle ?
+		|| (pidinfo->hThread == NULL )
+#endif
+		) 
+	{
+		dprintf(D_ALWAYS,"DaemonCore:Suspend_Thread(%d) failed, bad tid\n",
+			tid);
+		return FALSE;
+	}
+
+#ifndef WIN32
+	// on Unix, a thread is really just a forked process
+	return Suspend_Process(tid);
+#else
+	// on NT, suspend the thread via the handle in our table
+	if ( ::SuspendThread( pidinfo->hThread ) == 0xFFFFFFFF ) {
+		dprintf(D_ALWAYS,"DaemonCore:Suspend_Thread tid %d failed!\n", tid);
+		return FALSE;
+	}
+	// if we made it here, we succeeded
+	return TRUE;
+#endif
+}
+
+int DaemonCore::Continue_Thread(int tid)
+{
+	PidEntry *pidinfo;
+	
+	dprintf(D_DAEMONCORE,"called DaemonCore::Continue_Thread(%d)\n",
+		tid);
+
+	// verify the tid passed in to us is valid
+	if ( (pidTable->lookup(tid, pidinfo) < 0)	// is it not in our table?
+#ifdef WIN32	
+		// is it a process (i.e. not a thread)?
+		|| (pidinfo->hProcess != NULL)	
+		// do we not have a thread handle ?
+		|| (pidinfo->hThread == NULL )
+#endif
+		) 
+	{
+		dprintf(D_ALWAYS,"DaemonCore:Continue_Thread(%d) failed, bad tid\n",
+			tid);
+		return FALSE;
+	}
+
+#ifndef WIN32
+	// on Unix, a thread is really just a forked process
+	return Continue_Process(tid);
+#else
+	// on NT, continue the thread via the handle in our table.
+	// keep calling it until the suspend_count hits 0
+	int suspend_count;
+
+	do {
+		if ((suspend_count=::ResumeThread(pidinfo->hThread)) == 0xFFFFFFFF) 
+		{
+			dprintf(D_ALWAYS,
+				"DaemonCore:Continue_Thread tid %d failed!\n", tid);
+			return FALSE;
+		}
+	} while (suspend_count > 1);
+
+	// if we made it here, we succeeded
+	return TRUE;
 #endif
 }
 
@@ -2528,6 +2632,14 @@ int DaemonCore::Create_Process(
 	else
 		new_process_group =  0;	
 
+    // Re-nice our child -- on WinNT, this means run it at IDLE process
+	// priority class.
+    if ( nice_inc > 0 && nice_inc < 20 ) {
+		// or new_process_group with whatever we set above...
+		new_process_group |= IDLE_PRIORITY_CLASS;
+	}
+
+
 	// Place inheritbuf into the environment as env variable CONDOR_INHERIT.
 	// Add it to the user-specified environment if one specified, else add
 	// it to our environment (which will then be inherited by our child).
@@ -2542,7 +2654,7 @@ int DaemonCore::Create_Process(
 	}
 
 	if ( !::CreateProcess(name,args,NULL,NULL,inherit_handles,
-			new_process_group,env,cwd,&si,&piProcess) ) {
+			new_process_group,newenv,cwd,&si,&piProcess) ) {
 		dprintf(D_ALWAYS,
 			"Create_Process: CreateProcess failed, errno=%d\n",GetLastError());
 		if ( newenv ) {
@@ -2775,23 +2887,9 @@ int DaemonCore::Create_Process(
 		dprintf ( D_DAEMONCORE, "About to exec \"%s\"\n", name );
 
 			// now head into the proper priv state...
-		switch ( priv ) {
-		case PRIV_CONDOR:
-			set_condor_priv();
-			break;
-		case PRIV_USER:
-			set_user_priv();
-			break;
-		case PRIV_USER_FINAL:
-			set_user_priv_final();
-			break;
-		case PRIV_ROOT:
-			set_root_priv();
-			break;
-		case PRIV_UNKNOWN:
-		default:
-			break;
-		} // switch
+		if ( priv != PRIV_UNKNOWN ) {
+			set_priv(priv);
+		}
 
 			// and ( finally ) exec:
 		if( execv(name, unix_args) == -1 )
@@ -2852,6 +2950,144 @@ int DaemonCore::Create_Process(
 	// the stack (rsock and ssock), they will get closed when we return.
 	
 	return newpid;	
+}
+
+#ifdef WIN32
+/* Create_Thread support */
+struct thread_info {
+	ThreadStartFunc start_func;
+	void *arg;
+	Stream *sock;
+};
+
+unsigned
+win32_thread_start_func(void *arg) {
+	dprintf(D_FULLDEBUG,"In win32_thread_start_func\n");
+	thread_info *tinfo = (thread_info *)arg;
+	int rval;
+	rval = tinfo->start_func(tinfo->arg, tinfo->sock);
+	if (tinfo->arg) free(tinfo->arg);
+	if (tinfo->sock) delete tinfo->sock;
+	free(tinfo);
+	return rval;
+}
+#endif
+
+int
+DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
+						  int reaper_id)
+{
+	// check reaper_id validity
+	if ( (reaper_id < 1) || (reaper_id > maxReap) 
+		 || (reapTable[reaper_id - 1].num == 0) ) {
+		dprintf(D_ALWAYS,"Create_Thread: invalid reaper_id\n");
+		return FALSE;
+	}
+
+	// Before we create the thread, call InfoCommandSinfulString once.
+	// This makes certain that InfoCommandSinfulString has allocated its
+	// buffer which will make it thread safe when called from SendSignal().
+	(void)InfoCommandSinfulString();
+
+#ifdef WIN32
+	unsigned tid;
+	HANDLE hThread;
+	// need to copy the sock because our caller is going to delete/close it
+//	Stream *s = sock;
+// #if 0 
+	Stream *s = NULL;
+	if (sock) {
+		switch(sock->type()) {
+		case Stream::reli_sock:
+			s = new ReliSock(*((ReliSock *)sock));
+			break;
+		case Stream::safe_sock:
+			s = new SafeSock(*((SafeSock *)sock));
+			break;
+		default:
+			break;
+		}		
+	}
+// #endif
+	thread_info *tinfo = (thread_info *)malloc(sizeof(thread_info));
+	tinfo->start_func = start_func;
+	tinfo->arg = arg;
+	tinfo->sock = s;
+	hThread = (HANDLE) _beginthreadex(NULL, 1024,
+				 (CRT_THREAD_HANDLER)win32_thread_start_func,
+				 (void *)tinfo, 0, &tid);
+	if ( hThread == NULL ) {
+		EXCEPT("CreateThread failed");
+	}
+#else
+	int tid;
+	tid = fork();
+	if (tid == 0) {				// new thread (i.e., child process)
+		exit(start_func(arg, sock));
+	} else if (tid < 0) {
+		dprintf(D_ALWAYS, "Create_Thread: fork() failed: %s (%d)\n",
+				strerror(errno), errno);
+		return FALSE;
+	}
+	if (arg) free(arg);			// arg should point to malloc()'ed data
+#endif
+	
+	dprintf(D_DAEMONCORE,"Create_Thread: created new thread, tid=%d\n",tid);
+
+	// store the thread info in our pidTable
+	// -- this is safe on Unix since our thread is really a process but
+	//    on NT we need to avoid conflicts between tids and pids - 
+	//	  the DaemonCore reaper code handles this on NT by checking
+	//	  hProcess.  If hProcess is NULL, it is a thread, else a process.
+	PidEntry *pidtmp = new PidEntry;
+	pidtmp->new_process_group = FALSE;
+	pidtmp->sinful_string[0] = '\0';
+	pidtmp->is_local = TRUE;
+	pidtmp->parent_is_local = TRUE;
+	pidtmp->reaper_id = reaper_id;
+	pidtmp->hung_tid = -1;
+	pidtmp->was_not_responding = FALSE;
+#ifdef WIN32
+	// we lie here and set pidtmp->pid to equal the tid.  this allows
+	// the DaemonCore WinNT pidwatcher code to remain mostly ignorant
+	// that this is really a thread instead of a process.  we can get
+	// away with this because currently WinNT pids and tids do not
+	// conflict --- lets hope it stays that way!  
+	pidtmp->pid = tid;	
+	pidtmp->hProcess = NULL;	// setting this to NULL means this is a thread
+	pidtmp->hThread = hThread;
+	pidtmp->tid = tid;
+	pidtmp->hWnd = 0;
+#else
+	pidtmp->pid = tid;
+#endif 
+	assert( pidTable->insert(tid,pidtmp) == 0 );  
+#ifdef WIN32
+	WatchPid(pidtmp);		
+#endif
+	return tid;
+}
+
+int
+DaemonCore::Kill_Thread(int tid)
+{
+	dprintf(D_DAEMONCORE,"called DaemonCore::Kill_Thread(%d)\n", tid);
+#if defined(WIN32)
+	/* 
+	  My Life of Pain:  Yuck.  This is a no-op on WinNT because
+	  the TerminateThread() call is so useless --- calling it could
+	  mess up the entire process, since if the thread is currently 
+	  executing inside of system code, system mutexes are not 
+	  released!!! Thus, calling NT's TerminateThread() could be
+	  the last thing this process does!  
+	 */
+	return 1;
+#else
+	priv_state priv = set_root_priv();
+	int status = kill(tid, SIGKILL);
+	set_priv(priv);
+	return (status >= 0);		// return 1 if kill succeeds, 0 otherwise
+#endif
 }
 
 void
@@ -3018,7 +3254,7 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 
 #ifdef WIN32
 // This function runs in a seperate thread and wathces over children
-DWORD
+unsigned
 pidWatcherThread( void* arg )
 {
 	DaemonCore::PidWatcherEntry* entry;
@@ -3039,6 +3275,11 @@ pidWatcherThread( void* arg )
 	for (i=0; i < entry->nEntries; i++ ) {
 		if ( i != last_pidentry_exited ) {
 			hKids[numentries] = entry->pidentries[i]->hProcess;
+			// if process handle is NULL, it is really a thread
+			if ( hKids[numentries] == NULL ) {
+				// this is a thread entry, not a process entry
+				hKids[numentries] = entry->pidentries[i]->hThread;
+			}
 			entry->pidentries[numentries] = entry->pidentries[i];
 			numentries++;
 		} 
@@ -3062,8 +3303,13 @@ pidWatcherThread( void* arg )
 	// if result < numentries, then result signifies a child process which exited.
 	if ( (result < numentries) && (result >= 0) ) {
 		// notify our main thread which process exited
+		// note: if it was a thread which exited, the entry's pid contains the tid
 		exited_pid = entry->pidentries[result]->pid;	// make it an unsigned int
-		SafeSock sock("127.0.0.1",daemonCore->InfoCommandPort());
+		SafeSock sock;
+		// Can no longer use localhost (127.0.0.1) here because we may
+		// only have our command socket bound to a specific address. -Todd
+		// sock.connect("127.0.0.1",daemonCore->InfoCommandPort());		
+		sock.connect(daemonCore->InfoCommandSinfulString());
 		sock.encode();
 		sent_result = FALSE;
 		while ( sent_result == FALSE ) {
@@ -3139,10 +3385,9 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 	}
 	entry->pidentries[0] = pidentry;
 	entry->nEntries = 1;
-	DWORD threadId;
-	// should we be using _beginthread here instead of ::CreateThread to prevent 
-	//    memory leaks from the standard C lib ?
-	entry->hThread = ::CreateThread(NULL, 1024, (LPTHREAD_START_ROUTINE)pidWatcherThread,
+	unsigned threadId;
+	entry->hThread = (HANDLE) _beginthreadex(NULL, 1024, 
+		(CRT_THREAD_HANDLER)pidWatcherThread,
 		entry, 0, &threadId );
 	if ( entry->hThread == NULL ) {
 		EXCEPT("CreateThread failed");
@@ -3225,6 +3470,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 {
 	PidEntry* pidentry;
 	int i;
+	const char *whatexited = "pid";	// could be changed to "tid"
 
 	// Fetch the PidEntry for this pid from our hash table.
 	if ( pidTable->lookup(pid,pidentry) == -1 ) {
@@ -3241,7 +3487,8 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 			pidentry->reaper_id = 1;
 			pidentry->hung_tid = -1;
 		} else {
-			dprintf(D_DAEMONCORE,"Unknown process exited (popen?) - pid=%d\n",pid);
+			dprintf(D_DAEMONCORE,
+				"Unknown process exited (popen?) - pid=%d\n",pid);
 			return FALSE;
 		}
 			
@@ -3253,15 +3500,27 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 #ifdef WIN32
 	if ( pidentry->is_local ) {
 		DWORD winexit;
-		
-		if ( !::GetExitCodeProcess(pidentry->hProcess,&winexit) ) {
-			dprintf(D_ALWAYS,"WARNING: Cannot get exit status for pid = %d\n",pid);
-			return FALSE;
+	
+		// if hProcess is not NULL, reap process exit status, else
+		// reap a thread's exit code.
+		if ( pidentry->hProcess ) {
+			// a process exited
+			if ( !::GetExitCodeProcess(pidentry->hProcess,&winexit) ) {
+				dprintf(D_ALWAYS,"WARNING: Cannot get exit status for pid = %d\n",pid);
+				return FALSE;
+			}
+		} else {
+			// a thread created with DC Create_Thread exited
+			if ( !::GetExitCodeThread(pidentry->hThread,&winexit) ) {
+				dprintf(D_ALWAYS,"WARNING: Cannot get exit status for tid = %d\n",pid);
+				return FALSE;
+			}
+			whatexited = "tid";
 		}
 		if ( winexit == STILL_ACTIVE ) {	// should never happen
-			EXCEPT("DaemonCore in HandleProcessExit() and process still running");
+			EXCEPT("DaemonCore: HandleProcessExit() and %s %d still running",
+				whatexited, pid);
 		}
-		// TODO: deal with Exception value returns here
 		exit_status = winexit;
 	}
 #endif   // of WIN32
@@ -3274,7 +3533,8 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 		i = pidentry->reaper_id - 1;
 
 		// Invoke the reaper handler if there is one registered
-		if ( (i >= 0) && ((reapTable[i].handler != NULL) || (reapTable[i].handlercpp != NULL)) ) {		
+		if ( (i >= 0) && ((reapTable[i].handler != NULL) || 
+			 (reapTable[i].handlercpp != NULL)) ) {
 			// Set curr_dataptr for Get/SetDataPtr()
 			curr_dataptr = &(reapTable[i].data_ptr);
 
@@ -3282,8 +3542,9 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 			char *hdescrip = reapTable[i].handler_descrip;
 			if ( !hdescrip )
 				hdescrip = EMPTY_DESCRIP;
-			dprintf(D_DAEMONCORE,"DaemonCore: Pid %lu exited with status %d, invoking reaper %d <%s>\n",
-				pid,exit_status,i+1,hdescrip);
+			dprintf(D_DAEMONCORE,
+				"DaemonCore: %s %lu exited with status %d, invoking reaper %d <%s>\n",
+				whatexited,pid,exit_status,i+1,hdescrip);
 
 			if ( reapTable[i].handler )
 				// a C handler
@@ -3297,8 +3558,9 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 			curr_dataptr = NULL;
 		} else {
 			// no registered reaper
-			dprintf(D_DAEMONCORE,"DaemonCore: Pid %lu exited with status %d; no registered reaper\n",
-				pid,exit_status);
+			dprintf(D_DAEMONCORE,
+				"DaemonCore: %s %lu exited with status %d; no registered reaper\n",
+				whatexited,pid,exit_status);
 		}
 	} else {
 		// TODO: the parent for this process is remote.  send the parent a DC_INVOKEREAPER command.
@@ -3310,7 +3572,10 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 #ifdef WIN32
 		// close WIN32 handles 
 	::CloseHandle(pidentry->hThread);
-	::CloseHandle(pidentry->hProcess);
+	// must check hProcess cuz could be NULL if just a thread
+	if (pidentry->hProcess) {
+		::CloseHandle(pidentry->hProcess);
+	}
 #endif
 	// cancel the hung timer if we have one
 	if ( pidentry->hung_tid != -1 ) {
@@ -3329,6 +3594,21 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 
 	return TRUE;
 }
+
+const char* DaemonCore::GetExceptionString(int sig)
+{
+	static char exception_string[80];
+
+#ifdef WIN32
+	sprintf(exception_string,"exception %s",
+		ExceptionHandler::GetExceptionString(sig));
+#else
+	sprintf(exception_string,"signal %d",sig);
+#endif
+
+	return exception_string;
+}
+
 
 int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 {
@@ -3450,7 +3730,7 @@ char *DaemonCore::ParseEnvArgsString(char *incoming, char *inheritbuf)
 		len = strlen(incoming) + strlen(inheritbuf) + 20;
 		answer = (char *)malloc(len);
 		strcpy(answer,incoming);
-		strcat(answer,";CONDOR_INHERIT=");
+		strcat(answer,"|CONDOR_INHERIT=");
 		strcat(answer,inheritbuf);
 	} else {
 		len = strlen(incoming) + 2;
@@ -3460,9 +3740,10 @@ char *DaemonCore::ParseEnvArgsString(char *incoming, char *inheritbuf)
 	answer[ strlen(answer)+1 ] = '\0';
 
 	char *temp = answer;
-	while( (temp = strchr(temp, ';') ) )
+	while( (temp = strchr(temp, '|') ) )
 	{
 		*temp = '\0';
+		temp++;
 	}
 	return answer;
 }

@@ -78,6 +78,9 @@ typedef int     (*ReaperHandler)(Service*,int pid,int exit_status);
 
 ///
 typedef int     (Service::*ReaperHandlercpp)(int pid,int exit_status);
+
+///
+typedef int		(*ThreadStartFunc)(void *,Stream*);
 //@}
 
 // other macros and protos needed on WIN32 for exit status
@@ -130,7 +133,7 @@ class DaemonCore : public Service
   friend class TimerManager; 
 #ifdef WIN32
   friend int dc_main( int argc, char** argv );
-  friend DWORD pidWatcherThread(void*);
+  friend unsigned pidWatcherThread(void*);
   friend BOOL CALLBACK DCFindWindow(HWND, LPARAM);
 #else
   friend int main(int, char**);
@@ -490,12 +493,6 @@ class DaemonCore : public Service
     */
     inline pid_t getppid() { return ppid; };
 
-    /** Not_Yet_Documented
-        @param pid Not_Yet_Documented
-        @return Not_Yet_Documented
-    */
-    int Is_Pid_Alive (pid_t pid);
-
     /** Send a signal to daemonCore processes or non-DC process
         @param pid The receiving process ID
         @param sig The signal to send
@@ -507,6 +504,12 @@ class DaemonCore : public Service
         These work on any process, not just daemon core processes.
     */
     //@{
+
+    /** Not_Yet_Documented
+        @param pid Not_Yet_Documented
+        @return Not_Yet_Documented
+    */
+    int Is_Pid_Alive (pid_t pid);
 
     /** Not_Yet_Documented
         @param pid Not_Yet_Documented
@@ -625,17 +628,56 @@ class DaemonCore : public Service
         int         nice_inc             = 0
         );
 
+		/** Create a "poor man's" thread.  Works for NT (via
+			CreateThread) and Unix (via fork).  The new thread does
+			not have a DaemonCore command socket.
+			@param start_func Function to execute in the thread.
+			   This function must not access any shared memory.
+			   The only DaemonCore command which may be used in this
+			   thread is Send_Signal.
+			   When the function returns, the thread exits and the reaper
+			   is called in the parent, giving the return value as
+			   the thread exit status.
+			   The function must take a single argument of type
+			   (void *) and return an int.
+			@param arg The (void *) argument to be passed to the thread.
+			   If not NULL, this must point to a buffer malloc()'ed by
+			   the caller.  DaemonCore will free() this memory when
+			   appropriate.
+			@param sock A socket to be handed off to the thread.  This
+			   socket is duplicated; one copy is given to the thread
+			   and the other is kept by the caller (parent).  The
+			   caller must not access this socket after handing it off
+			   while the thread is still alive.  DaemonCore will close
+			   the copy given to the thread when the thread exits; the
+			   caller (parent) is responsible for eventually closing
+			   the copy kept with the caller.  
+			@param reaper_id The reaper number to use.  Default = 1.
+			@return The tid of the newly created thread.
+		*/
+	int Create_Thread(
+		ThreadStartFunc	start_func,
+		void			*arg = NULL,
+		Stream			*sock = NULL,
+		int				reaper_id = 1
+		);
+
+	///
+	int Suspend_Thread(int tid);
+
+	///
+	int Continue_Thread(int tid);
+
+	///
+	int Kill_Thread(int tid);
+
     // NULL terminated array of inherited sockets
     Stream **GetInheritedSocks() { return (Stream **)inheritedSocks; }
 
     // see if process was killed because it was hung
     int Was_Not_Responding(pid_t pid);
 
-
-#ifdef FUTURE       
-    int Create_Thread();
-    int Kill_Thread();
-#endif
+	const char *GetExceptionString(int signal);
     
   private:      
     int HandleSigCommand(int command, Stream* stream);
