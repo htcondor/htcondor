@@ -31,6 +31,8 @@
 #include "classad.h"
 #include "source.h"
 #include "sink.h"
+#include "xmlSource.h"
+#include "xmlSink.h"
 #include "matchClassad.h"
 #include "collection.h"
 #include "collectionBase.h"
