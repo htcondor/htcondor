@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "startd.h"
+#include "directory.h"
 
 void
 check_perms()
@@ -53,11 +54,12 @@ cleanup_execute_dir(int pid)
 	if( pid ) {
 		sprintf( buf, "rmdir /s /q %.256s\\dir_%d",
 				 exec_path, pid );
+		system( buf );
 	} else {
-		sprintf( buf, "rmdir /s /q %.256s\\dir_*",
-				 exec_path );
+		// get rid of everything in the execute directory
+		Directory dir(exec_path);
+		dir.Remove_Entire_Directory();
 	}
-	system( buf );
 #else
 	if( pid ) {
 		sprintf( buf, "/bin/rm -rf %.256s/dir_%d",
