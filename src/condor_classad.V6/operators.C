@@ -423,8 +423,9 @@ _Flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind *opPtr ) const
 	Value		val1, val2, val3;
 	OpKind		newOp = operation, op = operation;
 	
-	// if op is not associative, don't allow splitting 
-	if( op == SUBTRACTION_OP || op == DIVISION_OP || op == MODULUS_OP ||
+	// if op is binary, but not associative or commutative, disallow splitting 
+	if( ( op >= __COMPARISON_START__ && op <= __COMPARISON_END__ ) ||
+		op == SUBTRACTION_OP || op == DIVISION_OP || op == MODULUS_OP ||
 		op == LEFT_SHIFT_OP  || op == RIGHT_SHIFT_OP || op == URIGHT_SHIFT_OP) 
 	{
 		if( opPtr ) *opPtr = __NO_OP__;
@@ -450,14 +451,15 @@ _Flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind *opPtr ) const
 			tree = NULL;
 			return false;
 		}
-	} else if( op == TERNARY_OP || op == SUBSCRIPT_OP || op ==  UNARY_PLUS_OP ||
+	} else 
+		// now catch all non-binary operators
+	if( op == TERNARY_OP || op == SUBSCRIPT_OP || op ==  UNARY_PLUS_OP ||
 				op == UNARY_MINUS_OP || op == PARENTHESES_OP || 
 				op == LOGICAL_NOT_OP || op == BITWISE_NOT_OP ) {
 		return flattenSpecials( state, val, tree );
 	}
 					
 	// any op that got past the above is binary, commutative and associative
-
 	// Flatten sub expressions
 	if( child1 && !child1->Flatten( state, val1, fChild1, &childOp1 ) ||
 		child2 && !child2->Flatten( state, val2, fChild2, &childOp2 ) ) {
