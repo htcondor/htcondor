@@ -41,10 +41,24 @@ REMAP_ONE( fsync, __fsync, int , int )
 #else
 	REMAP_THREE_VARARGS( ioctl, __ioctl, int , int , int , int)
 #endif
+
 REMAP_THREE( lseek, __lseek, __off_t, int, __off_t, int )
+
+#if defined(GLIBC21)
 REMAP_THREE( llseek, __llseek, off64_t, int, off64_t, int )
 REMAP_THREE( llseek, __lseek64, off64_t, int, off64_t, int )
 REMAP_THREE( llseek, lseek64, off64_t, int, off64_t, int )
+#elif defined(GLIBC20)
+REMAP_THREE( llseek, __llseek, unsigned long, int, unsigned long, int )
+REMAP_THREE( llseek, __lseek64, unsigned long, int, unsigned long, int )
+REMAP_THREE( llseek, lseek64, unsigned long, int, unsigned long, int )
+#else
+REMAP_THREE( llseek, __llseek, long long int, int, long long int, int )
+REMAP_THREE( llseek, __lseek64, long long int, int, long long int, int )
+REMAP_THREE( llseek, lseek64, long long int, int, long long int, int )
+#endif
+
+
 REMAP_THREE_VARARGS( open, __open, int, const char *, int, int )
 REMAP_THREE( read, __read, ssize_t, int, __ptr_t, size_t )
 REMAP_THREE( write, __write, ssize_t, int, const __ptr_t, size_t )
