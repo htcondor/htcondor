@@ -1,3 +1,13 @@
+4/18/01 V6_3_0-branch
+	A branch off of V6_3 for the 6.3.0 release of Condor.  This is
+	to insulate the 6.3.0 release from other changes to the
+	repository as we get 6.3.0 ready to ship.  Hopefully, this
+	branch will be abandonded once 6.3.0 is out and any changes
+	have been merged back into V6_3-branch.  However, we might
+	have to release a 6.3.1 from this branch, as well, depending
+	on how things go in the V6_3-branch, and how stable it is
+	whenever we need to release 6.3.1.
+
 4/16/01 V6_3-pre-merge-V6_2-merge-4
 	The state of the V6_3-branch before merging the
 	still-slightly- post-6.2.0 V6_2 branch in preparation for
