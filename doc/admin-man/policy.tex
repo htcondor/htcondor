@@ -48,7 +48,7 @@ machines in your pool.
 To define your policy, you set expressions in
 the configuration file (see section~\ref{sec:Configuring-Condor} on
 Configuring Condor for an introduction to Condor's
-configuraton files).
+configuration files).
 The expressions are evaluated in the context of the machine's ClassAd
 and a job ClassAd.
 The expressions can therefore reference attributes from either
@@ -62,7 +62,7 @@ are explained.
 The \Expr{RANK} expression is described.
 It allows the specification of
 the kinds of jobs a machine prefers to run.
-A final discussission details how the \Condor{startd} works.
+A final discussion details how the \Condor{startd} works.
 Included are
 the machine \Term{states} and \Term{activities}, to give
 an idea of what is possible in policy decisions.
@@ -97,6 +97,7 @@ Job ClassAd Attributes}
 The \Expr{START} expression}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{expression!\Expr{START}}
 The most important expression in the startd (and possibly in all of
 Condor) is the \Expr{START} expression.  
 This expression describes the conditions to must be met for a
@@ -157,6 +158,8 @@ how undefined terms are handled in ClassAd expression evaluation.
 The \Expr{RANK} expression}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{expression!\Expr{RANK}}
+\index{configuration!RANK@\Attr{RANK}}
 A machine may be configured to prefer certain jobs over others
 using the \Expr{RANK} expression.
 It is an
@@ -170,6 +173,7 @@ machine to prefer to run jobs from the owner of that machine, or by
 extension, a group of machines to prefer jobs from the owners of those
 machines.
 
+\index{configuration!example}
 For example, imagine there is a small research group with 4 machines
 called tenorsax, piano, bass, and drums.
 These machines are owned by the 4 users
@@ -182,7 +186,7 @@ You want to implement a policy
 that gives priority on your machines to
 anyone in your group.
 To achieve this, set the \Expr{RANK}
-expression on your machines to refererence the \Attr{Owner} attribute and
+expression on your machines to reference the \Attr{Owner} attribute and
 prefer requests where that attribute matches one of the people in your
 group as in
 \begin{verbatim}
@@ -220,82 +224,91 @@ the machine called bass,
 the \Expr{RANK} would evaluate numerically to 0, since none
 of the boolean terms evaluates to 1, and 0+0+0+0 still equals 0.
 
-%editted to here
-
 Suppose Elvin Jones submits a job.
 His job would match this
-machine (assuming the \Expr{START} was true for him at that time) and
-the \Expr{RANK} would numerically evaluate to 1 (since one of the
-boolean terms would evaluate to 1), so Elvin would preempt whoever
-else was using the machine at the time.  After a while, say Jimmy
-decides to submit a job (maybe even from another machine, it doesn't
-matter, all that matters is that it's Jimmy's job).  Now, the
-\Expr{RANK} would evaluate to 10, since the boolean that matches him
-gets multiplied by 10.  So, Jimmy would preempt even Elvin, and his
-job would run on his machine.
+machine (assuming the \Expr{START} was True for him at that time) and
+the \Expr{RANK} would numerically evaluate to 1.
+Therefore, Elvin would preempt the Condor job currently running.
+Assume that later Jimmy submits a job.
+The \Expr{RANK} evaluates to 10, since the boolean that matches Jimmy
+gets multiplied by 10.
+Jimmy would preempt Elvin, and Jimmy's job would run on
+Jimmy's machine.
 
-The \Expr{RANK} expression doesn't just have to refer to the
-\Attr{Owner} of the jobs.  Suppose you have a machine with a ton of
-memory, and others with not much at all.  You could configure your
-big-memory machine to prefer to run jobs with bigger memory
+The \Expr{RANK} expression is not required to reference the
+\Attr{Owner} of the jobs.
+Perhaps there is one machine with an enormous amount of memory,
+and others with not much at all.
+You can configure your
+large-memory machine to prefer to run jobs with larger memory
 requirements:
 \begin{verbatim}
         RANK : ImageSize
 \end{verbatim}
 
-That's all there is to it.  The bigger the job, the more this machine
-wants to run it.  That's pretty altruistic of you, always servicing
-bigger and bigger jobs, even if they're not yours.  So, perhaps you
-still want to be a nice guy, all else being equal, but if you have
-jobs, you want to run them, regardless of everyone else's
+That's all there is to it.
+The bigger the job, the more this machine
+wants to run it.
+It is an altruistic preference, always servicing
+the largest of jobs, no matter who submitted them.
+A little less altruistic is John's \Expr{RANK} that
+prefers his jobs over those with the largest
 \Attr{Imagesize}:
 \begin{verbatim}
         RANK : (Owner == "coltrane" * 1000000000000) + Imagesize
 \end{verbatim}
-This scheme would break down if someone submitted a job with an image
-size of more $10^{12}$ kbytes.  However, if they did, this Rank expression
-preferring their job over yours wouldn't be the only problem Condor
-had. :-)
-
+This \Expr{RANK} breaks if a job is submitted with an image
+size of more $10^{12}$ Kbytes.
+However, with that size, this \Expr{RANK} expression
+preferring that job would not be Condors
+only problem! 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:States}
 Machine States}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-A given machine could be in a number of different \Term{states},
-depending on whether or not the machine is available to run Condor
-jobs, and if so, what stage in the Condor protocol has been reached.
-The possible states are:
+\index{state!of a machine}
+\index{machine state}
+A machine is assigned a \Term{state} by Condor.
+The state
+depends on whether or not the machine is available to run Condor
+jobs, and if so, what point in the negotiations has been reached.
+The possible states are
 
 \begin{description}
   
-\item[Owner] The machine is being used by the machine owner, or at
-  least is not available to run Condor jobs.  When the machine first
-  starts up, it begins in this state.
+\index{machine state!Owner}
+\item[Owner] The machine is being used by the machine owner, and/or
+  is not available to run Condor jobs.
+  When the machine first starts up, it begins in this state.
   
-\item[Unclaimed] The machine is available to run Condor jobs, but is
-  not currently doing so in any way.
+\index{machine state!Unclaimed}
+\item[Unclaimed] The machine is available to run Condor jobs, but it is
+  not currently doing so.
   
-\item[Matched] The machine is available to run jobs, and has been
-  matched by the negotiator with a given schedd.  That schedd just
-  hasn't claimed this machine yet.  In this state, the machine is
-  unavailable for further matches.
+\index{machine state!Matched}
+\item[Matched] The machine is available to run jobs, and it has been
+  matched by the negotiator with a specific schedd.
+  That schedd just has not yet claimed this machine.
+  In this state, the machine is unavailable for further matches.
 
+\index{machine state!Claimed}
 \item[Claimed] The machine has been claimed by a schedd. 
   
+\index{machine state!Preempting}
 \item[Preempting] The machine was claimed by a schedd, but is now
-  preempting that claim because either the owner of the machine came
-  back, the negotiator decided to preempt this match because another
-  user with higher priority has jobs waiting to run, or the negotiator
-  decided to preempt this match because it found another request that
-  this resource would rather serve (see the \Expr{RANK} expression
-  below).
+  preempting that claim for one of the following reasons.
+  \begin{enumerate}
+  \item the owner of the machine came back
+  \item another user with higher priority has jobs waiting to run
+  \item another request that this resource would rather serve was found
+  \end{enumerate}
 
 \end{description}
 
-See figure~\ref{fig:machine-states} on page~\pageref{fig:machine-states}
-for the various states and the possible transitions between them.
+Figure~\ref{fig:machine-states} shows
+the states and the possible transitions between the states.
 
 \begin{figure}[hbt]
 \centering
@@ -308,98 +321,97 @@ for the various states and the possible transitions between them.
 Machine Activities}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Within some of these states, there could be a number of different
-\Term{activities} the machine is in.  The idea is that all the things
-that are true about a given state are true regardless of what activity
-you are in.  However, there are certain important differences between
-each activity, which is why they are separated out from each other
-within a given state.  In general, you must specify both a state and
-an activity to describe what ``state'' the machine is in.  This will be
-denoted in this manual as ``state/activity'' pairs.  For example,
-``Claimed/Busy''.  The following list describes all the possible
-state/activity pairs:
+\index{machine activity}
+\index{activity!of a machine}
+Within some machine states,
+\Term{activities} of the machine are defined.
+The state has meaning regardless of activity.
+Differences between activities are significant.
+Therefore, a ``state/activity'' pair describes
+a machine.
+The following list describes all the possible state/activity pairs.
 
 \begin{itemize}
 
 \item Owner
 \begin{description}
+\index{machine activity!Idle}
 \item[Idle] This is the only activity for Owner state.  As far as
-  Condor is concerned the machine is ``Idle'' (not doing anything for
-  Condor).
+  Condor is concerned the machine is Idle, since it is not doing
+  anything for Condor.
 \end{description}
 
+\index{machine activity!Unclaimed}
 \item Unclaimed
 \begin{description}
-  
-\item[Idle] This is the normal activity of Unclaimed machines.  The
-  machine is still ``Idle'' in that the machine owner is willing to
-  let someone run jobs on it, but Condor is still not using the
+\item[Idle] This is the normal activity of Unclaimed machines.
+  The machine is still Idle in that the machine owner is willing to
+  let Condor jobs run, but Condor is not using the
   machine for anything.
   
-\item[Benchmarking] The machine could also be running benchmarks to
-  determine the speed on this machine.  It only does this when the
-  machine is in the Unclaimed state.  How often it does so is
-  determined by the \Expr{RunBenchmarks} expression described below.
-
+\index{machine activity!Benchmarking}
+\item[Benchmarking] The machine is running benchmarks to
+  determine the speed on this machine.
+  This activity only occurs in the Unclaimed state.
+  How often the activity occurs is
+  determined by the \Expr{RunBenchmarks} expression.
 \end{description}
 
 \item Matched
 \begin{description}
-\item[Idle] When Matched, the machine is still ``Idle'' as far as
-  Condor is concerned.
+\item[Idle] When Matched, the machine is still Idle to Condor.
 \end{description}
 
 \item Claimed
 \begin{description}
-  
 \item[Idle] In this activity, the machine has been claimed, but the
   schedd that claimed it has yet to \Term{activate} the claim by
-  requesting a \Condor{starter} to be spawned which would service a
-  given job.
+  requesting a \Condor{starter} to be spawned to service a job.
   
+\index{machine activity!Busy}
 \item[Busy] Once a \Condor{starter} has been started and the claim is
-  active, the machine moves to the Busy activity to signify that it's
-  actually doing something as far as Condor is concerned.
+  active, the machine moves to the Busy activity to signify that it is
+  doing something as far as Condor is concerned.
   
+\index{machine activity!Suspended}
 \item[Suspended] If the job is suspended by Condor, the machine goes
   into the Suspended activity.
   The match between the schedd and machine has not been broken (the
   claim is still valid), but the job is not making any progress and
   Condor is no longer generating a load on the machine.
-
 \end{description}
 
 \item Preempting
-
   The preempting state is used for evicting a Condor job from a given
-  machine.  When the machine enters the Preempting state, it checks the
-  \Expr{WANT\_VACATE} expression (described below) to decide which of
-  the following activities it should enter:
+  machine.
+  When the machine enters the Preempting state, it checks the
+  \Expr{WANT\_VACATE} expression to determine its activity.
 
 \begin{description}
+\index{machine activity!Vacating}
+\item[Vacating] In the Vacating activity, the job that was running is
+  in the process of checkpointing.
+  As soon as the checkpoint process completes,
+  the machine moves into either the Owner state or the
+  Claimed state, depending on the reason for its preemption.
   
-\item[Vacating] Vacating simply means that the job that was running is
-  in the process of checkpointing.  As soon as the checkpoint process
-  completes, the machine moves into either the Owner state or the
-  Claimed state, depending on why it began preempting in the first
-  place.
-  
+\index{machine activity!Killing}
 \item[Killing] Killing means that the machine has requested the running
   job to exit the machine immediately, without checkpointing.
-
 \end{description}
 
 \end{itemize}
 
 Figure~\ref{fig:machine-activities} on
 page~\pageref{fig:machine-activities} gives the overall view of all
-machine states and activities, and shows all the possible transitions
+machine states and activities and shows the possible transitions
 from one to another within the Condor system.  
 Each transition is labeled with a number on the diagram, and
 transition numbers referred to in this manual will be \Bold{bold}.  
-This may seem pretty daunting, but it's actually easier to handle than
-it looks.
 
+\index{machine state and activities figure}
+\index{state and activities figure}
+\index{activities and state figure}
 \begin{figure}[hbt]
 \centering
 \includegraphics{admin-man/machine-activities.eps}
@@ -417,15 +429,19 @@ conditions that lead to the various state and activity transitions.
 State and Activity Transitions}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-This section will trace through all possible state and activity
-transitions within the machine and describe the conditions under which
+\index{machine state!transitions|(}
+\index{machine activity!transitions|(}
+\index{state!transitions|(}
+\index{activity!transitions|(}
+This section traces through all possible state and activity
+transitions within a machine and describes the conditions under which
 each one occurs.
-Whenever a transition occurs, the machine records when it entered its
+Whenever a transition occurs, Condor records when the machine entered its
 new activity and/or new state.
-These times are often used to write the expressions that determine
-when further transitions occurred (for example, you might only enter
-the Killing activity if you've been in the Vacating activity longer
-than a given amount of time). 
+These times are often used to write expressions that determine
+when further transitions occurred.
+For example, enter the Killing activity if a machine has been in
+the Vacating activity longer than a specified amount of time. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Owner-State}
@@ -435,131 +451,145 @@ Owner State}
 When the startd is first spawned, the machine it represents enters the
 Owner state. 
 The machine will remain in this state as long as the \Expr{START}
-expression locally evaluates to false.
-If the \Expr{START} locally evaluates to true or can't be locally
-evaluated (it evaluates to \Term{undefined}), transition \Bold{1} will
-occur and the machine will enter the Unclaimed state.
+expression locally evaluates to FALSE.
+If the \Expr{START} locally evaluates to TRUE or cannot be locally
+evaluated (it evaluates to UNDEFINED, transition \Bold{1}
+occurs and the machine enters the Unclaimed state.
 
-So long as the \Expr{START} expression locally evaluates to false,
-there is no possible request in the Condor system that could match it,
-so the machine in unavailable to Condor and stays in the Owner state.
-For example, if the \Expr{START} expression was:
+As long as the \Expr{START} expression evaluates locally to FALSE,
+there is no possible request in the Condor system that could match it.
+The machine is unavailable to Condor and stays in the Owner state.
+For example, if the \Expr{START} expression is
 \begin{verbatim}
 START : KeyboardIdle > 15 * $(MINUTE) && Owner == "coltrane" 
 \end{verbatim}
-and if \Attr{KeyboardIdle} was only 34 seconds, then the machine would
-still be in the Owner state, even though it references Owner, which is
-undefined.  \verb@False && anything@ is False, even 
-\verb@False && undefined@
+and if \Attr{KeyboardIdle} is 34 seconds,
+then the machine would remain in the Owner state.
+Owner is undefined, and
+\verb@anything && FALSE@ is FALSE.
 
-If, however, the \Expr{START} expression was:
+If, however, the \Expr{START} expression is
 \begin{verbatim}
         START : KeyboardIdle > 15 * $(MINUTE) || Owner == "coltrane"
 \end{verbatim}
-and \Attr{KeyboardIdle} was still only 34 seconds, then the machine
-would leave the Owner state and go to Unclaimed.  This is because
-``False || undefined'' is undefined.  So, while this machine isn't
-available to just any body, if user ``coltrane'' has jobs submitted,
-the machine is willing to run them.  Anyone else would have to wait
-until \Attr{KeyboardIdle} exceeds 15 minutes.  However, since
-``coltrane'' might claim this resource, but hasn't yet, the machine
-goes to the Unclaimed state.
+and \Attr{KeyboardIdle} is 34 seconds, then the machine
+leaves the Owner state and becomes Unclaimed.
+This is because
+\verb@FALSE || UNDEFINED@ is UNDEFINED.
+So, while this machine is not available to just anybody,
+if user coltrane has jobs submitted, the machine is willing to run them.
+Any other user's jobs have to wait
+until \Attr{KeyboardIdle} exceeds 15 minutes.
+However, since coltrane might claim this resource,
+but has not yet, the machine goes to the Unclaimed state.
 
-While in the Owner state the startd only polls the status of the
+While in the Owner state, the startd polls the status of the
 machine every \Macro{UPDATE\_INTERVAL} to see if anything has changed
-that would lead it to a different state.  The idea is that you don't
-want to put much load on the machine while the Owner is using it
-(frequently waking up, computing load averages, checking the access
-times on files, computing free swap space, etc), and there's nothing
+that would lead it to a different state.
+This minimizes the impact on the Owner
+while the Owner is using the machine.
+Frequently waking up, computing load averages, checking the access
+times on files, computing free swap space take time,
+and there is nothing
 time critical that the startd needs to be sure to notice as soon as it
-happens.  If the \Expr{START} expression evaluates to True and it's 5
-minutes before we notice it, that's a drop in the bucket of High
-Throughput Computing.
+happens.
+If the \Expr{START} expression evaluates to TRUE and five
+minutes pass before the startd notices,
+that's a drop in the bucket of high-throughput computing.
 
-The machine can only go to the Unclaimed state from the Owner state,
-and only does so when the \Expr{START} expression no longer locally
-evaluates to False.  Generally speaking, if the \Expr{START}
-expression locally evaluates to false at any time, the machine will
-either transition directly to the Owner state, or to the Preempting
-state on its way to the Owner state, if there's a job running that
-needs preempting.
+The machine can only transition to the Unclaimed state from the Owner state.
+It only does so when the \Expr{START} expression no longer locally
+evaluates to FALSE.
+In general, if the \Expr{START}
+expression locally evaluates to FALSE at any time,
+the machine will either transition directly to the Owner state
+or to the Preempting state on its way to the Owner state,
+if there is a job running that needs preempting.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Unclaimed-State}Unclaimed State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 While in the Unclaimed state, if the \Expr{START} expression locally
-evaluates to false, the machine will return to the Owner state via
+evaluates to FALSE, the machine returns to the Owner state by
 transition \Bold{2}.
 
-When it's in the Unclaimed state, another expression comes into
-effect, \Expr{RunBenchmarks} \label{param:RunBenchmarks}.  
-Whenever the \Expr{RunBenchmarks} evaluates to True while the machine
-is in the Unclaimed state, the machine will transition from the Idle
+When in the Unclaimed state,
+the \Expr{RunBenchmarks} \label{param:RunBenchmarks}  
+expression is relevant.
+If \Expr{RunBenchmarks} evaluates to TRUE while the machine
+is in the Unclaimed state,
+then the machine will transition from the Idle
 activity to the Benchmarking activity (transition \Bold{3}) and
 perform benchmarks to determine \Attr{MIPS} and \Attr{KFLOPS}.  
 When the benchmarks complete, the machine returns to the Idle activity
 (transition \Bold{4}).
 
 The startd automatically inserts an attribute, \Attr{LastBenchmark},
-whenever it runs benchmarks, so commonly \Attr{LastBenchmark} is
+whenever it runs benchmarks, so commonly \Attr{RunBenchmarks} is
 defined in terms of this attribute, for example:
 \begin{verbatim}
         BenchmarkTimer = (CurrentTime - LastBenchmark)
         RunBenchmarks : $(BenchmarkTimer) >= (4 * $(HOUR))
 \end{verbatim}
-Here, a macro, \Macro{BenchmarkTimer} is defined to help write the
-expression.  The idea is that this macro holds the time since the last
-benchmark, so when this time exceeds 4 hours, we run the benchmarks
-again.  The startd keeps a weighted average of these benchmarking
-results to try to get the most accurate numbers possible.  That's why
-you would want the startd to run them more than once in its lifetime.
+Here, a macro, \MacroNI{BenchmarkTimer} is defined to help write the
+expression.
+This macro holds the time since the last benchmark,
+so when this time exceeds 4 hours, we run the benchmarks again.
+The startd keeps a weighted average of these benchmarking
+results to try to get the most accurate numbers possible.
+This is why
+it is desirable for 
+the startd to run them more than once in its lifetime.
 
-\Note LastBenchmark is initialized to 0 before the benchmarks
+\Note \Attr{LastBenchmark} is initialized to 0 before benchmarks
 have ever been run.
 So, if you want the startd to run benchmarks as soon as the machine is
-unclaimed (if it hasn't done so already), just include a term for
-\Attr{LastBenchmark} as in the example above.
+Unclaimed (if it hasn't done so already),
+include a term for \Attr{LastBenchmark} as in the example above.
 
-\Note If \Expr{RunBenchmarks} is defined, and set to something
-other than ``False'', the startd will automatically run one set of
+\Note If \Expr{RunBenchmarks} is defined and set to something
+other than FALSE, the startd will automatically run one set of
 benchmarks when it first starts up.
-So, if you want to totally disable benchmarks, both at startup, and at
-any time thereafter, just set \Expr{RunBenchmarks} to ``False'' or
-comment it out from your config file.
+To disable benchmarks, both at startup and at any time thereafter,
+set \Expr{RunBenchmarks} to FALSE or comment it out of the
+configuration file.
 
 From the Unclaimed state, the machine can go to two other possible
 states: Matched or Claimed/Idle.
 Once the \Condor{negotiator} matches an Unclaimed machine with a
 requester at a given schedd, the negotiator sends a command to both
 parties, notifying them of the match.  
-If the schedd gets that notification and initiates the claiming
+If the schedd receives that notification and initiates the claiming
 procedure with the machine before the negotiator's message gets to the
-machine, the Match state is skipped entirely, and the machine goes
+machine, the Match state is skipped,
+and the machine goes
 directly to the Claimed/Idle state (transition \Bold{5}).
 However, normally the machine will enter the Matched state (transition
-\Bold{6}), even if it's only for a brief period of time.
+\Bold{6}), even if it is only for a brief period of time.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Matched-State}Matched State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The Matched state is not very interesting to Condor.  The only
-noteworthy things are that the machine lies about its \Expr{START}
+The Matched state is not very interesting to Condor.
+Noteworthy in this state is that the machine lies about its \Expr{START}
 expression while in this state and says that \Expr{Requirements} are
-false to prevent being matched again before it has been claimed, and
-that the startd starts a timer to make sure it doesn't stay in the
-Matched state too long.  This timer is set with the
-\Macro{MATCH\_TIMEOUT} \label{param:MatchTimeout} config file
-parameter.  It is specified in seconds and defaults to 300 (5
-minutes).  If the schedd that was matched with this machine doesn't
-claim it within this period of time, the machine gives up on it, goes
-back into the Owner state via transition \Bold{7} (which it will
-probably leave right away to get to the Unclaimed state again, and
-wait for another match). 
+false to prevent being matched again before it has been claimed.
+Also interesting is that
+the startd starts a timer to make sure it does not stay in the
+Matched state too long.
+The timer is set with the \Macro{MATCH\_TIMEOUT}
+\label{param:MatchTimeout} configuration file macro.
+It is specified in seconds and defaults to 300 (5 minutes).
+If the schedd that was matched with this machine does not
+claim it within this period of time, the machine gives up,
+and goes back into the Owner state via transition \Bold{7}.
+It will probably leave the Owner state right away for the
+Unclaimed state again and wait for another match. 
 
 At any time while the machine is in the Matched state, if the
-\Expr{START} expression locally evaluates to false, the machine enters
+\Expr{START} expression locally evaluates to FALSE, the machine enters
 the Owner state directly (transition \Bold{7}).
 
 If the schedd that was matched with the machine claims it before the
@@ -570,16 +600,15 @@ state (transition \Bold{8}).
 \subsubsection{\label{sec:Claimed-State}Claimed State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The Claimed state is certainly the most complicated state.
-It has the most possible activities, and the most expressions that
-determine what it will do next.
-In addition the \Condor{checkpoint} and \Condor{vacate} commands only
-have any effect on the machine when its in the Claimed state.
-In general, there are two sets of expressions that might take effect,
-depending on if the universe of the request that claimed the machine is
-Standard or Vanilla.
-The Standard Universe expressions are the ``normal'' expressions, for
-example:
+The Claimed state is certainly the most complex state.
+It has the most possible activities and the most expressions that
+determine its next activities.
+In addition, the \Condor{checkpoint} and \Condor{vacate} commands affect
+the machine when it is in the Claimed state.
+In general, there are two sets of expressions that might take effect.
+They depend on the universe of the request: standard or vanilla.
+The standard universe expressions are the normal expressions.
+For example:
 \begin{verbatim}
         WANT_SUSPEND            : True
         WANT_VACATE             : $(ActivationTimer) > 10 * $(MINUTE)
@@ -587,8 +616,8 @@ example:
         ...
 \end{verbatim}
 
-The Vanilla expressions have ``\_VANILLA'' appended to the end, for
-example:
+The vanilla expressions have the string``\_VANILLA'' appended to their names.
+For example:
 \begin{verbatim}
         WANT_SUSPEND_VANILLA    : True
         WANT_VACATE_VANILLA     : True
@@ -596,250 +625,250 @@ example:
         ...
 \end{verbatim}
 
-If you don't specify separate vanilla versions, the normal versions
+Without specific vanilla versions, the normal versions
 will be used for all jobs, including vanilla jobs.  
-For the purposes of this manual, we'll always refer to the regular 
-expressions.
-Keep in mind that if the request was a Vanilla Universe, the Vanilla
-expressions (if they were defined) would be in effect, instead.
-The reason for this is that the resource owner might want the machine
-to behave differently for Vanilla jobs, since they can't checkpoint.
-For example, they might want to let Vanilla jobs remain suspended for
-much longer than standard jobs.
+In this manual, the normal expressions are referenced.
+The difference exists for the
+the resource owner that might want the machine
+to behave differently for vanilla jobs, since they cannot checkpoint.
+For example, owners may want vanilla jobs to remain suspended for
+longer than standard jobs.
 
 While Claimed, the \Macro{POLLING\_INTERVAL} takes effect, and the
-startd starts polling the machine much more frequently to evaluate its
+startd polls the machine much more frequently to evaluate its
 state.
 
-If the owner starts typing on the console again, we want to notice as
-soon as possible and start doing whatever that owner wants at that
-point.
+If the machine owner starts typing on the console again,
+it is best to notice this as
+soon as possible to be able to start doing whatever 
+the machine owner wants at that point.
 For SMP machines, if any virtual machine is in the Claimed state, the
-startd will poll the machine more frequently.
-If we're already polling for one virtual machine, it doesn't really
-cost us any more to evaluate the state of all the virtual machines at
+startd polls the machine frequently.
+If already polling one virtual machine, it does not
+cost much to evaluate the state of all the virtual machines at
 the same time.
 
-In general, when the startd is going to kick a job off a machine
+In general, when the startd is going to take a job off a machine
 (usually because of activity on the machine that signifies that the
-owner is using the machine again) the startd will go through
+owner is using the machine again),
+the startd will go through
 successive levels of getting the job out of the way.
 The first and least costly to the job is suspending it.
-This even works for Vanilla jobs.
-If suspending the job for a little while doesn't satisfy the machine
-owner, (the owner is still using the machine after a certain period of
-time, for example), the startd moves on to vacating the job, which
-involves performing a checkpoint so that the work it had completed up
-until this point is not lost.
-If even that does not satisfy the machine owner (usually because it's
+This works for both standard and vanilla jobs.
+If suspending the job for a short while does not satisfy the machine
+owner (the owner is still using the machine after a specific period of
+time), the startd moves on to vacating the job.
+Vacating a job
+involves performing a checkpoint so that the work already completed
+is not lost.
+If even that does not satisfy the machine owner (usually because it is
 taking too long and the owner wants their machine back \emph{now}),
 the final, most drastic stage is reached: killing.  
-Killing is just quick death to the job, without a checkpoint.  
-For Vanilla jobs, vacating and killing are basically equivalent,
-though a vanilla job can request to have a certain \Term{softkill
-signal} sent to it at vacate time so that it can perform
-application-specific checkpointing, for example.
+Killing is a quick death to the job, without a checkpoint.  
+For vanilla jobs, vacating and killing are equivalent,
+although a vanilla job can request to have a specific
+\Term{softkill signal}
+sent to it at vacate time so that the job itself can perform
+application-specific checkpointing.
 
-The \Expr{WANT\_SUSPEND} expression determines if the machine will even
+The \Expr{WANT\_SUSPEND} expression determines if the machine will
 evaluate the \Expr{SUSPEND} expression to consider entering the
 Suspended activity.
 The \Expr{WANT\_VACATE} expression determines what happens when the
-machine enters the preempting state, whether it will go to the vacating
-activity, or go directly to killing. 
-If one or both of these expressions evaluates to false, the machine
+machine enters the Preempting state.
+It will go to the Vacating
+activity or directly to Killing. 
+If one or both of these expressions evaluates to FALSE, the machine
 will skip that stage of getting rid of the job and proceed directly to
 the more drastic stages.
 
 When the machine first enters the Claimed state, it goes to the Idle
 activity.  From there, it has two options.  
 It can enter the Preempting state via transition \Bold{9} (if a 
-\Condor{vacate} comes in, or if the \Expr{START} expression locally
-evaluates to false).  
-Or, it can enter the busy activity (transition \Bold{10}) if the
+\Condor{vacate} arrives, or if the \Expr{START} expression locally
+evaluates to FALSE),  
+or it can enter the Busy activity (transition \Bold{10}) if the
 schedd that has claimed the machine decides to activate the claim and
 start a job.
 
-From Claimed/Busy, the machine can go to many different state/activity
-combinations.
+From Claimed/Busy, the machine can transition to three other state/activity
+pairs.
 The startd evaluates the \Expr{WANT\_SUSPEND} expression to decide
 which other expressions to evaluate.  
-If \Expr{WANT\_SUSPEND} is true, the startd will evaluate the
-\Expr{SUSPEND} expression, and if it is false, the startd will
+If \Expr{WANT\_SUSPEND} is TRUE, then the startd evaluates the
+\Expr{SUSPEND} expression.
+If \Expr{SUSPEND} is FALSE, then the startd will
 evaluate the \Expr{PREEMPT} expression and skip the Suspended activity
 entirely.
-Here are all the possible state/activity destinations that the
-machine can get to from Claimed/Busy:
+By transition, the possible state/activity destinations from Claimed/Busy:
 
 \begin{description}
   
 \item[Claimed/Idle] If the starter that is serving a given job exits
-  (because the jobs completes, for example), the machine will go back
+  (for example because the jobs completes), the machine will go
   to Claimed/Idle (transition \Bold{11}).
   
-\item[Preempting] If \Expr{WANT\_SUSPEND} is false and the
-  \Expr{PREEMPT} expression is true, the machine will enter the
+\item[Preempting] If \Expr{WANT\_SUSPEND} is FALSE and the
+  \Expr{PREEMPT} expression is TRUE, the machine enters the
   Preempting state (transition \Bold{12}).
-  
-\item[Claimed/Suspended] If both the \Expr{WANT\_SUSPEND} and
-  \Expr{SUSPEND} expressions evaluate to true, the machine will
-  suspend the job (transition \Bold{13}).
-  
   The other reason the machine would go from Claimed/Busy to
   Preempting is if the \Condor{negotiator} matched the machine
   with a ``better'' match.  This better match could either be from the
-  machine's perspective (see section~\ref{sec:Rank-Expression} on the
-  \Expr{RANK} Expression above) or from the negotiator's perspective
-  (because a user with a better user priority has jobs that should be
-  running on this machine).
-  In this case, \Expr{WANT\_VACATE} is assumed to be true, and the
-  machine will always go to Preempting/Vacating.
+  machine's perspective using the \Expr{RANK} Expression above,
+  or it could be from the negotiator's perspective due to
+  a job with a higher user priority.
+  In this case, \Expr{WANT\_VACATE} is assumed to be TRUE, and the
+  machine transitions to Preempting/Vacating.
   
-\item[Claimed/Busy] While it's not really a state change, there is
-  another thing that could happen to the machine while it's in
-  Claimed/Busy, which is that either a \Condor{checkpoint} command
-  could arrive, or the \Expr{PeriodicCheckpoint} expression could
-  evaluate to true.  When either of these things occur, the startd
-  requests that the job begin a periodic checkpoint.  Since the startd
-  has no way to know when this process completes, there's no way
-  periodic checkpointing could be its own state.  However, for the
-  purposes of all the expressions, periodic checkpointing is
-  Claimed/Busy, just like a job was running.
-
+\item[Claimed/Suspended] If both the \Expr{WANT\_SUSPEND} and
+  \Expr{SUSPEND} expressions evaluate to TRUE, the machine
+  suspends the job (transition \Bold{13}).
+  
 \end{description}
+  
+If a \Condor{checkpoint} command arrives,
+or the \Expr{PeriodicCheckpoint} expression evaluates to TRUE,
+there is no state change.
+The startd has no way of knowing when this process completes,
+so periodic checkpointing can not be another state.
+Periodic checkpointing remains in the Claimed/Busy state
+and appears as a running job.
 
-You already know what happens in Claimed/Idle, so now we'll discuss
-what happens in Claimed/Suspended.  Again, there are multiple
-state/activity combinations that you can reach from Claimed/Suspended:
+From the Claimed/Suspended state, the following transitions
+may occur:
 
 \begin{description}
   
 \item[Claimed/Busy] If the \Expr{CONTINUE} expression evaluates to
-  true, the machine will resume the computation and will go back to the
+  TRUE, the machine resumes the job and enters the
   Claimed/Busy state (transition \Bold{14}).
 
-\item[Preempting] If the \Expr{PREEMPT} expression is true, the machine
+\item[Preempting] If the \Expr{PREEMPT} expression is TRUE, the machine
   will enter the Preempting state (transition \Bold{15}).
 
 \end{description}
-
-From the Claimed state, you can only enter other activities in the
-Claimed state (all of which we've already discussed), or the
-Preempting state, which is described next.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Preempting-State}Preempting State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The Preempting state is much less complicated than the Claimed state.
-Basically, there are two possible activities, and two possible
-destinations.  Depending on \Expr{WANT\_VACATE} you either enter the
-Vacating activity (if it's true) or the Killing activity (if it's
-false).  
+The Preempting state is less complex than the Claimed state.
+There are two activities.
+Depending on the value of \Expr{WANT\_VACATE}, a machine will
+be in the
+Vacating activity (if TRUE) or the Killing activity (if FALSE).  
 
 While in the Preempting state (regardless of activity) the machine
-advertises its \Expr{Requirements} expression as False to signify that
-it is not available for further matches, either because it is about to go
-to the owner state anyway, or because it has already been matched with
+advertises its \Expr{Requirements} expression as FALSE to signify that
+it is not available for further matches, either because it is about to
+transition
+to the Owner state, or because it has already been matched with
 one preempting match, and further preempting matches are disallowed
 until the machine has been claimed by the new match.
 
 The main function of the Preempting state is to get rid of the starter
-associated with this resource.  If the \Condor{starter} associated
+associated with the resource.
+If the \Condor{starter} associated
 with a given claim exits while the machine is still in the Vacating
-activity, it means the job successfully completed its checkpoint.
+activity, then the job successfully completed its checkpoint.
 
 If the machine is in the Vacating activity, it keeps evaluating the 
-\Expr{KILL} expression.  As soon as this expression evaluates to true,
+\Expr{KILL} expression.
+As soon as this expression evaluates to TRUE,
 the machine enters the Killing activity (transition \Bold{16}).
 
 When the starter exits, or if there was no starter running when the
-machine enters the Preempting state (because it came from
-Claimed/Idle), the other job of the preempting state is completed:
+machine enters the Preempting state (transition \Bold{9}),
+the other purpose of the Preempting state is completed:
 notifying the schedd that had claimed this machine that the claim is
 broken.
 
-At this point, the machine will either enter the Owner state via
+At this point, the machine enters either the Owner state by
 transition \Bold{17} (if the job was preempted because the machine
-owner came back) or the Claimed/Idle state via transition \Bold{18}
+owner came back) or the Claimed/Idle state by transition \Bold{18}
 (if the job was preempted because a better match was found).
-
-Then the machine enters the Killing activity, it begins a timer, the
+The machine enters the Killing activity, and it starts a timer, the
 length of which is defined by the \Macro{KILLING\_TIMEOUT}
-\label{param:KillingTimeout} macro.  This macro is defined in seconds 
-and defaults to 30.  If this timer expires and the machine is still in
+\label{param:KillingTimeout} macro.
+This macro is defined in seconds and defaults to 30.
+If this timer expires and the machine is still in
 the Killing activity, something has gone seriously wrong with the
 \Condor{starter} and the startd tries to vacate the job immediately by
 sending SIGKILL to all of the \Condor{starter}'s children, and then to
 the \Condor{starter} itself.
 
-Again, once the starter is gone and the schedd that had claimed the
+Once the starter is gone and the schedd that had claimed the
 machine is notified that the claim is broken, the machine will either
-enter the Owner state via transition \Bold{19} (if the job was
+enter the Owner state by transition \Bold{19} (if the job was
 preempted because the machine owner came back) or the Claimed/Idle
-state via transition \Bold{20} (if the job was preempted because a
+state by transition \Bold{20} (if the job was preempted because a
 better match was found). 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:State-Expression-Summary}
 State/Activity Transition Expression Summary}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-The following section is meant to summarize the information from the
-previous sections to serve as a quick reference.  If anything is
-unclear here, please refer to the previous sections for clarification.
+\index{machine state!transitions summary}
+\index{machine activity!transitions summary}
+\index{state!transitions summary}
+\index{activity!transitions summary}
+This section is a summary of the information from the
+previous sections.
+It serves as a quick reference.
 
 \begin{description}
   
-\item[\Expr{START}] When this is true, the machine is willing to spawn
+\item[\Expr{START}] When TRUE, the machine is willing to spawn
   a remote Condor job.
   
 \item[\Expr{RunBenchmarks}] While in the Unclaimed state, the machine
-  will run benchmarks whenever this is true.
+  will run benchmarks whenever TRUE.
   
 \item[\Macro{MATCH\_TIMEOUT}] If the machine has been in the Matched
-  state longer than this, it will go back to the Owner state.
+  state longer than this value, it will transition to the Owner state.
   
-\item[\Expr{WANT\_SUSPEND}] If this is true, the machine will evaluate
+\item[\Expr{WANT\_SUSPEND}] If TRUE, the machine evaluates
   the \Expr{SUSPEND} expression to see if it should transition to the
-  Suspended activity.  If this is false, the machine will look at
+  Suspended activity.  If FALSE, the machine look at
   the \Expr{PREEMPT} expression.
   
-\item[\Expr{SUSPEND}] If \Expr{WANT\_SUSPEND} is true, and the machine
-  is in the Claimed/Busy state, it will enter the Suspended activity
-  if \Expr{SUSPEND} is true.
+\item[\Expr{SUSPEND}] If \Expr{WANT\_SUSPEND} is TRUE, and the machine
+  is in the Claimed/Busy state, it enters the Suspended activity
+  if \Expr{SUSPEND} is TRUE.
   
 \item[\Expr{CONTINUE}] If the machine is in the Claimed/Suspended
-  state, it will enter the Busy activity if \Expr{CONTINUE} is true.
+  state, it enter the Busy activity if \Expr{CONTINUE} is TRUE.
   
 \item[\Expr{PREEMPT}] If the machine is either in the Claimed/Suspended
-  activity, or is in the Claimed/Busy activity and the
-  \Expr{WANT\_SUSPEND} is false, the machine will enter the Preempting
-  state whenever \Expr{PREEMPT} is true. 
+  activity, or is in the Claimed/Busy activity and
+  \Expr{WANT\_SUSPEND} is FALSE, the machine enters the Preempting
+  state whenever \Expr{PREEMPT} is TRUE. 
   
-\item[\Expr{WANT\_VACATE}] This is only checked when the
-  \Expr{PREEMPT} expression is true and the machine enters the
+\item[\Expr{WANT\_VACATE}] This is checked only when the
+  \Expr{PREEMPT} expression is TRUE and the machine enters the
   Preempting state.
-  If \Expr{WANT\_VACATE} is true, the machine will enter the Vacating
+  If \Expr{WANT\_VACATE} is TRUE, the machine enters the Vacating
   activity.  
-  If it is false, the machine will proceed directly to the Killing
+  If it is FALSE, the machine will proceed directly to the Killing
   activity.  
   
 \item[\Expr{KILL}] If the machine is the Preempting/Vacating state, it
-  will enter Preempting/Killing whenever \Expr{KILL} is true. 
+  enters Preempting/Killing whenever \Expr{KILL} is TRUE. 
   
 \item[\Macro{KILLING\_TIMEOUT}] If the machine is in the
   Preempting/Killing state for longer than \Macro{KILLING\_TIMEOUT}
-  seconds, the startd will just send a SIGKILL to the \Condor{starter}
+  seconds, the startd sends a SIGKILL to the \Condor{starter}
   and all its children to try to kill the job as quickly as possible.
   
 \item[\Expr{PERIODIC\_CHECKPOINT}] If the machine is in the
-  Claimed/Busy state and \Expr{PERIODIC\_CHECKPOINT} is true, the
-  user's job will begin a periodic checkpoint.
+  Claimed/Busy state and \Expr{PERIODIC\_CHECKPOINT} is TRUE, the
+  user's job begins a periodic checkpoint.
   
 \item[\Expr{RANK}] If this expression evaluates to a higher number for
   a pending resource request than it does for the current request, the
-  machine will preempt the current request (enter the
+  machine preempts the current request (enters the
   Preempting/Vacating state).  When the preemption is complete, the
-  machine will enter the Claimed/Idle state with the new resource
+  machine enters the Claimed/Idle state with the new resource
   request claiming it.
 
 \end{description}
@@ -854,64 +883,65 @@ actual macros and expressions used are listed and explained with
 comments.  Finally the entire set of macros and expressions are listed
 in one block so you can see them in one place for easy reference.
 
+\index{machine state!transitions|)}
+\index{machine activity!transitions|)}
+\index{state!transitions|)}
+\index{activity!transitions|)}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Default-Policy}Default Policy Settings}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{policy!default with Condor}
+\index{Condor!default policy}
 These settings are the default as shipped with Condor.  They have been
-used for many years with no problems.  The Vanilla expressions are
-identical to the regular ones. (They aren't even listed here.  If you
-don't define them, the regular expressions are used for Vanilla jobs
+used for many years with no problems.  The vanilla expressions are
+identical to the regular ones. (They are not listed here.  If
+not defined, the standard expressions are used for vanilla jobs
 as well).
 
-First, we define a bunch of macros which help us write the expressions
-more clearly.  In particular, we use:
+The following are macros to help write the expressions
+clearly.
 
 \begin{description}
   
-\item[\Macro{StateTimer}] How long we've been in the current state.
+\item[\Macro{StateTimer}] Amount of time in the current state.
 
-\item[\Macro{ActivityTimer}] How long we've been in the current
-  activity. 
+\item[\Macro{ActivityTimer}] Amount of time in the current activity. 
 
-\item[\Macro{ActivationTimer}] How long the has job been running on
+\item[\Macro{ActivationTimer}] Amount of time the job has been running on
   this machine.
 
-\item[\Macro{LastCkpt}] How long it's been since we last performed a
-  periodic checkpoint.
+\item[\Macro{LastCkpt}] Amount of time since the last periodic checkpoint.
 
-\item[\Macro{NonCondorLoadAvg}] The difference of the system load and
-  the Condor load (i.e the load generated by everything but Condor).
+\item[\Macro{NonCondorLoadAvg}] The difference between the system load and
+  the Condor load (the load generated by everything but Condor).
 
-\item[\Macro{BackgroundLoad}] How much background load we're willing
-  to have on our machine and still start a Condor job.
-
-\item[\Macro{BackgroundLoad}] How much background load we're willing
-  to have on our machine and still start a Condor job.
+\item[\Macro{BackgroundLoad}] Amount of background load permitted
+  on the machine and still start a Condor job.
 
 \item[\Macro{HighLoad}] If the \MacroU{NonCondorLoadAvg} goes over
-  this, the CPU is ``busy'' and we want to start evicting the Condor
-  job. 
+  this, the CPU is considered too busy, and eviction of the Condor
+  job should start. 
 
-\item[\Macro{StartIdleTime}] How long the keyboard has to be idle
-  before we'll start a job.
+\item[\Macro{StartIdleTime}] Amount of time the keyboard must to be idle
+  before Condor will start a job.
 
-\item[\Macro{ContinueIdleTime}] How long the keyboard has to be idle
-  before we'll resume a suspended job.
+\item[\Macro{ContinueIdleTime}] Amount of time the keyboard must to be idle
+  before resumption of a suspended job.
 
-\item[\Macro{MaxSuspendTime}] How long we're willing to let the job be
-  suspended before we move on to more drastic measures.
+\item[\Macro{MaxSuspendTime}] Amount of time a job may be
+  suspended before more drastic measures are taken.
 
-\item[\Macro{MaxVacateTime}] How long we're willing to let the job be
-  checkpointing before we give up on it and have to kill it outright.
+\item[\Macro{MaxVacateTime}] Amount of time a job may be
+  checkpointing before we give up kill it outright.
 
-\item[\Macro{KeyboardBusy}] A boolean string that evaluates to true
-    when the keyboard is being used. 
+\item[\Macro{KeyboardBusy}] A boolean string that evaluates to TRUE
+    when the keyboard is being used.
 
-\item[\Macro{CPU\_Idle}] A boolean string that evaluates to true
-    when the CPU is idle is being used.
+\item[\Macro{CPU\_Idle}] A boolean string that evaluates to TRUE
+    when the CPU is idle.
 
-\item[\Macro{CPU\_Busy}] A boolean string that evaluates to true
+\item[\Macro{CPU\_Busy}] A boolean string that evaluates to TRUE
     when the CPU is busy.
 
 \item[\Macro{MachineBusy}] The CPU or the Keyboard is busy.
@@ -940,19 +970,19 @@ CPU_Busy                = $(NonCondorLoadAvg) >= $(HighLoad)
 MachineBusy             = ($(CPU_Busy) || $(KeyboardBusy))
 \end{verbatim}
 
-Now, we define that we always want to suspend jobs.
-If that's not enough, we'll always try to gracefully vacate them,
-unless they've only been running for less than 10 minutes anyway, in
-which case we'll just kill them, instead of trying to checkpoint those
+Macros are defined to always want to suspend jobs.
+If that is not enough, always try to gracefully vacate them,
+unless they have only been running for less than 10 minutes anyway, in
+which case just kill them, instead of trying to checkpoint those
 10 minutes of work.
 \begin{verbatim}
 WANT_SUSPEND            : True
 WANT_VACATE             : $(ActivationTimer) > 10 * $(MINUTE)
 \end{verbatim}
 
-Finally, we define the actual expressions.  Start any job if the CPU
-is idle (as defined by our macro), and the keyboard has been idle long
-enough.
+Finally, definitions of the actual expressions.
+Start any job if the CPU is idle (as defined by the macro)
+and the keyboard has been idle long enough.
 \begin{verbatim}
 START           : $(CPU_Idle) && KeyboardIdle > $(StartIdleTime)
 \end{verbatim}
@@ -968,31 +998,31 @@ idle for long enough.
 CONTINUE        : $(CPU_Idle) && KeyboardIdle > $(ContinueIdleTime)
 \end{verbatim}
 
-There are two conditions that we want to preempt under.
-First, if we have suspended the job, but it's been suspended too long.
-Second, if we don't even want to suspend the job, and the machine is
-busy. 
+There are two conditions that signal preemption.
+The first condition is if the job is suspended,
+but it has been suspended too long.
+The second condition is if suspension is not desired and the machine is busy. 
 \begin{verbatim}
 PREEMPT	        : ( ($(ActivityTimer) > $(MaxSuspendTime)) && \
                    (Activity == "Suspended") ) || \
                   ( $(MachineBusy) && (WANT_SUSPEND == False) )
 \end{verbatim}
 
-Kill a job if we've been vacating for too long.
+Kill a job if it has been vacating for too long.
 \begin{verbatim}
 KILL            : $(ActivityTimer) > $(MaxVacateTime)
 \end{verbatim}
 
-Finally, specify we want periodic checkpointing.  
-For jobs smaller than 60 megs, we periodic checkpoint every 6 hours.  
-For larger jobs, we only checkpoint every 12 hours.
+Finally, specify periodic checkpointing.  
+For jobs smaller than 60 Mbytes, do a periodic checkpoint every 6 hours.  
+For larger jobs, only checkpoint every 12 hours.
 \begin{verbatim}
 PERIODIC_CHECKPOINT     : ( (ImageSize < 60000) && \
                             ($(LastCkpt) > (6 * $(HOUR))) ) || \ 
                           ( $(LastCkpt) > (12 * $(HOUR)) )
 \end{verbatim}
 
-For clarity and reference, the entire set policy settings are included
+For reference, the entire set of policy settings are included
 once more without comments:
 
 \begin{verbatim}
@@ -1038,43 +1068,49 @@ PERIODIC_CHECKPOINT     : ( (ImageSize < 60000) && \
 UW-Madison CS Condor Pool Policy Settings} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{policy!at UW-Madison}
 Due to a recent increase in the number of Condor users and the size of
 their jobs (many users here are submitting jobs with an
-\Attr{Imagesize} of over 100 megs!), we have had to customize our
-policy to try to handle this range of \Attr{Imagesize} better.
+\Attr{Imagesize} of more than 100 Mbytes!), we have had to customize our
+policy to try to better handle this range of \Attr{Imagesize}.
 
-Basically, whether or not we suspend or vacate jobs is now a function
-of the \Attr{Imagesize} of the job that's currently running (which is
-defined in terms of kilobytes).  We have divided the \Attr{Imagesize}
-into three possible categories, which we define with macros.
+Whether or not we suspend or vacate jobs is now a function
+of the \Attr{Imagesize} of the job currently running.
+We divide the \Attr{Imagesize}
+into three possible categories, which are defined with macros.
+\Attr{Imagesize} is defined in terms of kilobytes.
 \begin{verbatim}
 BigJob          = (ImageSize > (30 * 1024))
 MediumJob       = (ImageSize <= (30 * 1024) && ImageSize >= (10 * 1024))
 SmallJob        = (ImageSize < (10 * 1024))
 \end{verbatim}
 
-Our policy can be summed up with the following few sentences: If the
-job is ``small'', it goes through the normal progression of suspend to
-vacate to kill based on the tried and true times.  If the job is
-``medium'', when the user comes back, we start vacating the job right
-away.  The idea is that if we checkpoint immediately, all our pages
-are still in memory, checkpointing will be fast, and we'll free up
-memory pages as soon as we checkpoint.  If we suspend, our pages will
-start getting swapped out and when we finally want to checkpoint (10
-minutes later), we'll have to start swapping out the user's pages
-again, they'll see reduced performance, and checkpointing will take
-much longer.  If the job is ``big'', don't even bother checkpointing,
-since we won't finish before the owner gets too upset and we might as
-well not even bother putting the wasted load on the network and
-checkpoint server.
+The policy may be summarized by: If the
+job is Small, it goes through the normal progression of suspend to
+vacate to kill based on the tried and true times.
+If the job is Medium, then when a user returns,
+the job starts vacating the machine right away.
+The idea is that 
+with an immediate checkpoint, the job will find all its pages
+still in memory, and checkpointing will be fast.
+The memory pages will be freed up as soon as the checkpoint completes.
+If the job was suspended instead, its pages
+start getting swapped out and when it is time to checkpoint (10
+minutes later), the user's pages will be swapped out
+again, and the user will see reduced performance.
+In addition, checkpointing will take much longer.
+If the job is Big, we do not bother checkpointing,
+since the checkpointing will not finish before the owner
+gets too upset.
+It is a waste to
+put the load on the network and checkpoint server.
 
-All the logic for our pool's special policy is tuned with the
+The logic for our special policy is tuned with the
 \Expr{WANT\_\*} expressions. 
-All of the other expressions and macros just use the defaults.
-We only want to suspend jobs if they are ``small'', and we only want
-to vacate jobs that are ``small'' or ``medium''.  
-We still want to always suspend Vanilla jobs, regardless of their
-size.
+All other expressions and macros use defaults.
+We want to suspend jobs if they are Small, and we only want
+to vacate jobs that are Small or Medium.  
+Vanilla jobs are always suspended, regardless of their size.
 \begin{verbatim}
 WANT_SUSPEND            : $(SmallJob)
 WANT_VACATE             : $(MediumJob) || $(SmallJob)
@@ -1082,14 +1118,14 @@ WANT_SUSPEND_VANILLA    : True
 WANT_VACATE_VANILLA     : True
 \end{verbatim}
 
-Now, we define the actual expressions, (which we just use the defaults
-for).
-We really do this with macros and simply define the expressions with
-the macros later on.
-This may seem really strange, but we do it because it makes it easier
-to do special customized settings (for example, for testing purposes)
-and still reference the defaults.
-There will be a brief example of this at the end of this section.
+The following are the expressions.
+It is done with macros and the expressions are defined using
+the macros.
+As strange as it seems,
+we do this because it makes for easier
+customized settings (for example, for testing purposes)
+and still references the defaults.
+There is a brief example of this at the end of this section.
 \begin{verbatim}
 CS_START        = $(CPU_Idle) && KeyboardIdle > $(StartIdleTime)
 CS_SUSPEND      = $(MachineBusy)
@@ -1100,8 +1136,7 @@ CS_PREEMPT      = ( ($(ActivityTimer) > $(MaxSuspendTime)) && \
 CS_KILL         = ($(ActivityTimer) > $(MaxVacateTime))
 \end{verbatim}
 
-Here's where we actually define the expressions in terms of our
-special macros:
+We define the expressions in terms of our special macros.
 \begin{verbatim}
 START       : $(CS_START)
 SUSPEND     : $(CS_SUSPEND)
@@ -1110,19 +1145,21 @@ PREEMPT     : $(CS_PREEMPT)
 KILL        : $(CS_KILL)
 \end{verbatim}
 
-We still don't want to define separate Vanilla versions of any of
+There are no
+separate vanilla versions of any of
 these, since we already have a different \Expr{WANT\_SUSPEND} for
-vanilla jobs and all of the policy expressions are just written in
-terms of that. 
+vanilla jobs, and all of the policy expressions are written in
+terms of that.
 
-Periodic checkpointing also takes image size into account.  
-Since we kill large jobs right away at eviction time, we want to
-periodically checkpoint them more frequently (every 3 hours), since
-that's the only way they make forward progress.
-However, with all those large periodic checkpoints going on on so
-frequently, we don't want to bog down our network or our checkpoint
+Periodic checkpoints also take image size into account.  
+We periodically checkpoint Big jobs more frequently (every 3 hours),
+since the Big jobs are killed right away at eviction time.
+Utilization of checkpoints is the only way Big jobs make forward progress.
+However, with all the Big jobs' periodic checkpoints occurring
+frequently, we do not want to bog down our network or our checkpoint
 servers.
-So, we only periodic checkpoint small or medium jobs every 12 hours,
+Small or Medium jobs receive a periodic checkpoint
+every 12 hours,
 since they get the privilege of checkpointing at eviction time.
 \begin{verbatim}
 PERIODIC_CHECKPOINT  : (($(LastCkpt) > (3 * $(HOUR))) \
@@ -1130,8 +1167,8 @@ PERIODIC_CHECKPOINT  : (($(LastCkpt) > (3 * $(HOUR))) \
       ($(SmallJob) || $(MediumJob)))
 \end{verbatim}
 
-For clarity and reference, the entire set of policy settings are
-included once more, without comments:
+For reference, the entire set of policy settings are
+given here, without comments:
 \begin{verbatim}
 ActivationTimer = (CurrentTime - JobStart)
 StateTimer      = (CurrentTime - EnteredCurrentState)
@@ -1179,15 +1216,19 @@ PERIODIC_CHECKPOINT  : (($(LastCkpt) > (3 * $(HOUR))) \
       ($(SmallJob) || $(MediumJob)))
 \end{verbatim}
 
-As a final example, we show how our default macros can be used to
-setup a given machine for testing.  Suppose we want the machine to
-behave just like normal, but if user ``coltrane'' submits a job, we
-want that job to start regardless of what's happening on the machine,
-and we don't want the job suspended, vacated or killed.  For example,
-we might know ``coltrane'' is just going to be submitting very short
-running programs to test something and he wants to see them execute
-right away.  Anyway, we could configure any machine (or our whole
-pool, for that matter) with the following 5 expressions:
+This last example shows how the default macros can be used to
+set up a machine for testing.
+Suppose we want the machine to
+behave normally, except if user coltrane submits a job.
+In that case, we
+want that job to start regardless of what is happening on the machine.
+We do not want the job suspended, vacated or killed.
+This is reasonable if 
+we know coltrane is submitting very short
+running programs testing purposes. 
+The jobs should be executed right away.
+The following configuration works with any machine
+(or the whole pool, for that matter) with the following 5 expressions:
 \begin{verbatim}
         START      : ($(CS_START)) || Owner == "coltrane"
         SUSPEND    : ($(CS_SUSPEND)) && Owner != "coltrane"
@@ -1195,43 +1236,43 @@ pool, for that matter) with the following 5 expressions:
         PREEMPT    : ($(CS_PREEMPT)) && Owner != "coltrane"
         KILL       : $(CS_KILL)
 \end{verbatim}
-Notice that you don't have to do anything special with either the
+Notice that there is nothing special in either the
 \Expr{CONTINUE} or \Expr{KILL} expressions.
-If Coltrane's jobs never suspend, they'll never even look at
-\Expr{CONTINE}.  
-Similarly, if they never preempt, they'll never look at \Expr{KILL}. 
+If Coltrane's jobs never suspend, they never look at \Expr{CONTINE}.  
+Similarly, if they never preempt, they never look at \Expr{KILL}. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:V60-Policy-diffs}Differences from the 
 Version 6.0 Policy Settings}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-This section describes how the policy expressions just layed out
+\index{policy!version differences}
+This section describes how the current policy expressions
 differ from the policy expressions in previous versions of Condor.
-If you've never used Condor version 6.0 or earlier, or never looked
-closely at the policy settings, you can probably skip this section.
+If you have never used Condor version 6.0 or earlier, or you never looked
+closely at the policy settings, skip this section.
 
 In summary, there is no longer a \Macro{VACATE} expression, and the
 \Macro{KILL} expression is not evaluated while a machine is claimed. 
-There is only a \Macro{PREEMPT} expression which describes the
+There is a \Macro{PREEMPT} expression which describes the
 conditions when a machine will move from the Claimed state to the
 Preempting state.
-Once a machine has decided to go into the Preempting state, the
-\Macro{WANT\_VACATE} expression controls whether or not the job should
-be vacated with a checkpoint or directly killed.  
-The \Macro{KILL} expression only determines when the machine goes from
+Once a machine is transitioning into the Preempting state, the
+\Macro{WANT\_VACATE} expression controls whether the job should
+be vacated with a checkpoint or directly killed.
+The \Macro{KILL} expression determines the transition from
 Preempting/Vacating to Preempting/Killing.  
 
-Before, the \Macro{KILL} expression had to handle three distinct cases
+In previous versions of Condor,
+the \Macro{KILL} expression handled three distinct cases
 (the transitions from Claimed/Busy, Claimed/Suspended and
-Preepting/Vacating) and the \Macro{VACATE} expression had to handle
-two (the transitions from Claimed/Busy and Claimed/Suspended).
-Now, \Macro{PREEMPT} has to handle the same two cases as the previous
-\Macro{VACATE} expression, but the \Macro{KILL} expression only
-handles one.
-In fact, very complicated policies can now be specified using all of
-the default expressions, and only tuning the \Macro{WANT\_VACATE} and
+Preempting/Vacating), and the \Macro{VACATE} expression handled
+two cases (the transitions from Claimed/Busy and Claimed/Suspended).
+In the current version of Condor, \Macro{PREEMPT} handles the
+same two cases as the previous \Macro{VACATE} expression,
+but the \Macro{KILL} expression handles one case.
+Very complex policies can now be specified using all of
+the default expressions, only tuning the \Macro{WANT\_VACATE} and
 \Macro{WANT\_SUSPEND} expressions.
-In previous versions, if you made heavy use of the \Macro{WANT\_*}
-expressions, the \Macro{KILL} expression could become incredibly
-complicated. 
+In previous versions, heavy use of the \Macro{WANT\_*}
+expressions caused a complex \Macro{KILL} expression.
