@@ -161,6 +161,9 @@ char	*FileRemaps = "file_remaps";
 char	*BufferSize = "buffer_size";
 char	*BufferBlockSize = "buffer_block_size";
 
+char	*FetchFiles = "fetch_files";
+char	*CompressFiles = "compress_files";
+
 char	*TransferInputFiles = "transfer_input_files";
 char	*TransferOutputFiles = "transfer_output_files";
 char	*TransferFiles = "transfer_files";
@@ -1122,6 +1125,33 @@ SetTransferFiles()
 		}
 	}
 }
+
+void
+SetFetchFiles()
+{
+	char buffer[ATTRLIST_MAX_EXPRESSION];
+	char *value;
+
+	value = condor_param( FetchFiles );
+	if(value) {
+		sprintf(buffer,"%s = \"%s\"",ATTR_FETCH_FILES,value);
+		InsertJobExpr (buffer);
+	}
+}
+
+void
+SetCompressFiles()
+{
+	char buffer[ATTRLIST_MAX_EXPRESSION];
+	char *value;
+
+	value = condor_param( CompressFiles );
+	if(value) {
+		sprintf(buffer,"%s = \"%s\"",ATTR_COMPRESS_FILES,value);
+		InsertJobExpr (buffer);
+	}
+}
+
 
 void
 SetStdFile( int which_file )
@@ -2157,6 +2187,8 @@ queue(int num)
 		SetStdFile( 1 );
 		SetStdFile( 2 );
 		SetFileOptions();
+		SetFetchFiles();
+		SetCompressFiles();
 		SetTransferFiles();	 // must be called _before_ SetImageSize() 
 		SetImageSize();		// must be called _after_ SetTransferFiles()
 		SetRequirements();	// must be called _after_ SetTransferFiles()
