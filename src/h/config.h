@@ -27,6 +27,8 @@
 ** 
 */ 
 
+#if !defined(__CONFIG_H)
+#define __CONFIG_H
 
 /*
 **	Include file to define macro expansion 
@@ -44,3 +46,5 @@ struct bucket {
 */
 #define EXPAND_LAZY			1
 #define EXPAND_IMMEDIATE	2
+
+#endif
