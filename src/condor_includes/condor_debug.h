@@ -58,7 +58,7 @@
 #define D_PREEMPT		(1<<14)
 #define D_PROTOCOL		(1<<15)
 #define D_PRIV			(1<<16)
-#define D_TAPENET		(1<<17)
+#define D_SECURITY		(1<<17)
 #define D_DAEMONCORE	(1<<18)
 #define D_COMMAND		(1<<19)
 #define D_BANDWIDTH		(1<<20)
