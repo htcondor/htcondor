@@ -1,6 +1,7 @@
 #ifndef __TOTALS_H__
 #define __TOTALS_H__
 
+#include "condor_common.h"
 #include "condor_classad.h"
 #include "HashTable.h"
 #include "MyString.h"
@@ -18,10 +19,10 @@ class ClassTotal
 		static int makeKey( MyString &, ClassAd *, ppOption);
 
 		virtual int update(ClassAd*) 	= 0;
-		virtual void displayHeader()   	= 0;
+		virtual void displayHeader(FILE*)= 0;
 
 		// param is zero for non-final totals
-		virtual void displayInfo(int=0)	= 0;
+		virtual void displayInfo(FILE*, int=0)	= 0;
 
   	protected:
 		ppOption ppo;
@@ -37,7 +38,7 @@ class TrackTotals
 		~TrackTotals();
 
 		int  update(ClassAd *);
-		void displayTotals(int keyLength);
+		void displayTotals(FILE *, int keyLength);
 
 	private:
 		ppOption ppo;
@@ -54,8 +55,8 @@ class StartdNormalTotal : public ClassTotal
 	public:
 		StartdNormalTotal();
 		virtual int update (ClassAd *);
-		virtual void displayHeader();
-		virtual void displayInfo(int);
+		virtual void displayHeader(FILE *);
+		virtual void displayInfo(FILE *, int);
 
   	protected:
 		int machines;
@@ -72,8 +73,8 @@ class StartdRunTotal : public ClassTotal
 	public:
 		StartdRunTotal();
 		virtual int update (ClassAd *);
-		virtual void displayHeader();
-		virtual void displayInfo(int);
+		virtual void displayHeader(FILE *);
+		virtual void displayInfo(FILE *,int);
 
 	protected:
 		int machines;
@@ -88,8 +89,8 @@ class StartdServerTotal : public ClassTotal
 	public:
 		StartdServerTotal();
 		virtual int update (ClassAd *);
-		virtual void displayHeader();
-		virtual void displayInfo(int);
+		virtual void displayHeader(FILE*);
+		virtual void displayInfo(FILE*,int);
 
   	protected:
 		int machines;
@@ -106,8 +107,8 @@ class StartdStateTotal : public ClassTotal
 	public:
 		StartdStateTotal();
 		virtual int update (ClassAd *);
-		virtual void displayHeader();
-		virtual void displayInfo(int);
+		virtual void displayHeader(FILE*);
+		virtual void displayInfo(FILE*,int);
 
   	protected:
 		int machines;
@@ -125,8 +126,8 @@ class ScheddNormalTotal : public ClassTotal
 	public:
 		ScheddNormalTotal();
 		virtual int update (ClassAd *);
-		virtual void displayHeader();
-		virtual void displayInfo(int);
+		virtual void displayHeader(FILE*);
+		virtual void displayInfo(FILE*,int);
 
 	protected:
 		int runningJobs;
@@ -139,8 +140,8 @@ class ScheddSubmittorTotal : public ClassTotal
 	public:
 		ScheddSubmittorTotal();
 		virtual int update (ClassAd *);
-		virtual void displayHeader();
-		virtual void displayInfo(int);
+		virtual void displayHeader(FILE*);
+		virtual void displayInfo(FILE*,int);
 
 	protected:
 		int runningJobs;
@@ -154,8 +155,8 @@ class CkptSrvrNormalTotal : public ClassTotal
 	public:
 		CkptSrvrNormalTotal();
 		virtual int update (ClassAd *);
-		virtual void displayHeader();
-		virtual void displayInfo(int);
+		virtual void displayHeader(FILE*);
+		virtual void displayInfo(FILE*,int);
 
 	protected:
 		int numServers;

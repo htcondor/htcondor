@@ -69,7 +69,7 @@ update (ClassAd *ad)
 
 
 void TrackTotals::
-displayTotals (int keyLength)
+displayTotals (FILE *file, int keyLength)
 {
 	ClassTotal *ct;
 	MyString	key;
@@ -92,23 +92,23 @@ displayTotals (int keyLength)
 
 		
 	// display the lead of the header
-	printf ("%*.*s", keyLength, keyLength, "");
-	topLevelTotal->displayHeader();
-	printf ("\n");
+	fprintf (file, "%*.*s", keyLength, keyLength, "");
+	topLevelTotal->displayHeader(file);
+	fprintf (file, "\n");
 
 	allTotals.startIterations();
 	while (allTotals.iterate(key, ct))
 	{
-		printf ("%*.*s", keyLength, keyLength, key.Value());
-		ct->displayInfo();
+		fprintf (file, "%*.*s", keyLength, keyLength, key.Value());
+		ct->displayInfo(file);
 	}
-	printf ("\n%*.*s", keyLength, keyLength, "Total");
-	topLevelTotal->displayInfo(1);
+	fprintf (file, "\n%*.*s", keyLength, keyLength, "Total");
+	topLevelTotal->displayInfo(file,1);
 
 	if (malformed > 0)
 	{
-		printf("\n%*.*s(Omitted %d malformed ads in computed attribute totals)"
-				"\n\n", keyLength, keyLength, "", malformed);
+		fprintf(file, "\n%*.*s(Omitted %d malformed ads in computed attribute "
+					"totals)\n\n", keyLength, keyLength, "", malformed);
 	}
 }
 
@@ -148,17 +148,17 @@ update (ClassAd *ad)
 
 
 void StartdNormalTotal::
-displayHeader()
+displayHeader(FILE *file)
 {
-	printf ("%9.9s %5.5s %7.7s %9.9s %7.7s %10.10s\n", "Machines", 
+	fprintf (file, "%9.9s %5.5s %7.7s %9.9s %7.7s %10.10s\n", "Machines", 
 					"Owner", "Claimed", "Unclaimed", "Matched", "Preempting");
 }
 
 
 void StartdNormalTotal::
-displayInfo (int)
+displayInfo (FILE *file, int)
 {
-	printf ("%9d %5d %7d %9d %7d %10d\n", machines, owner, claimed,
+	fprintf (file, "%9d %5d %7d %9d %7d %10d\n", machines, owner, claimed,
 					unclaimed, matched, preempting);
 }
 
@@ -211,17 +211,17 @@ update (ClassAd *ad)
 
 
 void StartdServerTotal::
-displayHeader()
+displayHeader(FILE *file)
 {
-	printf ("%9.9s %5.5s %7.7s %11.11s %11.11s %11.11s\n", "Machines", 
+	fprintf (file, "%9.9s %5.5s %7.7s %11.11s %11.11s %11.11s\n", "Machines", 
 					"Avail", "Memory", "Disk", "MIPS", "KFLOPS");
 }
 
 
 void StartdServerTotal::
-displayInfo (int)
+displayInfo (FILE *file, int)
 {
-	printf ("%9d %5d %7d %11d %11d %11d\n", machines, avail, memory,
+	fprintf (file, "%9d %5d %7d %11d %11d %11d\n", machines, avail, memory,
 					disk, condor_mips, kflops);
 }
 
@@ -260,17 +260,17 @@ update (ClassAd *ad)
 
 
 void StartdRunTotal::
-displayHeader()
+displayHeader(FILE *file)
 {
-	printf ("%9.9s  %11.11s  %11.11s  %11.11s\n", "Machines", "MIPS", "KFLOPS",
-				"AvgLoadAvg");
+	fprintf (file, "%9.9s  %11.11s  %11.11s  %11.11s\n", "Machines", "MIPS", 
+				"KFLOPS", "AvgLoadAvg");
 }
 
 
 void StartdRunTotal::
-displayInfo (int)
+displayInfo (FILE *file, int)
 {
-	printf ("%9d  %11d  %11d   %-.3f\n", machines, condor_mips, kflops, 
+	fprintf (file, "%9d  %11d  %11d   %-.3f\n", machines, condor_mips, kflops, 
 				(machines > 0) ? float(loadavg/machines) : 0);
 }
 
@@ -310,17 +310,17 @@ update( ClassAd *ad )
 		
 
 void StartdStateTotal::
-displayHeader()
+displayHeader(FILE *file)
 {
-	printf( "%10.10s %5.5s %9.9s %7.7s %10.10s %7.7s\n", "Machines", "Owner", 
-				"Unclaimed", "Claimed", "Preempting", "Matched" );
+	fprintf( file, "%10.10s %5.5s %9.9s %7.7s %10.10s %7.7s\n", "Machines", 
+				"Owner", "Unclaimed", "Claimed", "Preempting", "Matched" );
 }
 
 
 void StartdStateTotal::
-displayInfo( int )
+displayInfo( FILE *file, int )
 {
-	printf("%10d %5d %9d %7d %10d %7d\n",machines,owner,unclaimed,claimed,
+	fprintf(file,"%10d %5d %9d %7d %10d %7d\n",machines,owner,unclaimed,claimed,
 			preempt,matched);
 }
 
@@ -350,16 +350,16 @@ update (ClassAd *ad)
 
 	
 void ScheddNormalTotal::
-displayHeader()
+displayHeader(FILE *file)
 {
-	printf ("%18s   %18s\n", "TotalRunningJobs", "TotalIdleJobs");
+	fprintf (file, "%18s   %18s\n", "TotalRunningJobs", "TotalIdleJobs");
 }
 
 
 void ScheddNormalTotal::
-displayInfo (int tl)
+displayInfo (FILE *file, int tl)
 {
-	if (tl) printf ("%18d   %18d\n", runningJobs, idleJobs);
+	if (tl) fprintf (file, "%18d   %18d\n", runningJobs, idleJobs);
 }
 
 
@@ -389,16 +389,16 @@ update (ClassAd *ad)
 
 	
 void ScheddSubmittorTotal::
-displayHeader()
+displayHeader(FILE *file)
 {
-	printf ("%18s   %18s\n", "RunningJobs", "IdleJobs");
+	fprintf (file, "%18s   %18s\n", "RunningJobs", "IdleJobs");
 }
 
 
 void ScheddSubmittorTotal::
-displayInfo (int)
+displayInfo (FILE *file, int)
 {
-	printf ("%18d   %18d\n", runningJobs, idleJobs);
+	fprintf (file, "%18d   %18d\n", runningJobs, idleJobs);
 }
 
 
@@ -416,15 +416,15 @@ update (ClassAd *)
 }
 
 void CkptSrvrNormalTotal::
-displayHeader()
+displayHeader(FILE *file)
 {
-	printf ("%-10.10s\n", "NumCkptServers");
+	fprintf (file, "%-10.10s\n", "NumCkptServers");
 }
 
 void CkptSrvrNormalTotal::
-displayInfo (int tl)
+displayInfo (FILE *file, int tl)
 {
-	if (tl) printf ("%10d\n", numServers);
+	if (tl) fprintf (file, "%10d\n", numServers);
 }
 
 ClassTotal::

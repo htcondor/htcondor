@@ -90,7 +90,7 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 	printf ("\n");
 
 	// if totals are required, display totals
-	if (adList.MyLength() > 0 && totals) totals->displayTotals(20);
+	if (adList.MyLength() > 0 && totals) totals->displayTotals(stdout, 20);
 }
 
 
