@@ -16,7 +16,7 @@
 		       "../release_dir/etc/examples/condor_config.submit.generic" );
 &customize_config_file( "condor_config.root.generic",
 		       "../release_dir/etc/examples/condor_config.root.generic" );
-&customize_init_d_script();
+&customize_boot_script();
 
 
 sub get_platform_defaults {
@@ -129,13 +129,13 @@ sub customize_config_file {
 }
 
 
-sub customize_init_d_script {
-    open( GENERIC, "<condor.init.d.generic" ) || 
-	die "Can't open condor.init.d.generic: $!\n";
-    open( TARGET, ">../release_dir/etc/examples/condor.init.d.generic" ) ||
-	die "Can't open target condor.init.d.generic: $!\n";
+sub customize_boot_script {
+    open( GENERIC, "<condor.boot.generic" ) || 
+	die "Can't open condor.boot.generic: $!\n";
+    open( TARGET, ">../release_dir/etc/examples/condor.boot" ) ||
+	die "Can't open target condor.boot: $!\n";
 
-    print "Configuring condor.init.d.generic ... ";
+    print "Configuring condor.boot.generic ... ";
     while( <GENERIC> ) {
 	if( /^PS.*/ ) {
 	    $_ = "PS=\"$ps_path\"\n";
@@ -145,4 +145,5 @@ sub customize_init_d_script {
     print "done.\n";
     close TARGET;
     close GENERIC;
+    chmod( 0755, "../release_dir/etc/examples/condor.boot" );
 }    
