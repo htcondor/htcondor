@@ -21,8 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
 
 #include "condor_common.h"
 #include "condor_constants.h"
@@ -510,6 +508,36 @@ int Stream::code(struct stat &s)
 
 	return TRUE;
 }
+
+#if HAS_64BIT_STRUCTS
+int Stream::code(struct stat64 &s)
+{
+	STREAM_ASSERT(code(s.st_dev));
+	STREAM_ASSERT(code(s.st_ino));
+	STREAM_ASSERT(code(s.st_mode));
+	STREAM_ASSERT(code(s.st_nlink));
+	STREAM_ASSERT(code(s.st_uid));
+	STREAM_ASSERT(code(s.st_gid));
+	STREAM_ASSERT(code(s.st_rdev));
+	STREAM_ASSERT(code(s.st_size));
+	STREAM_ASSERT(code(s.st_atime));
+	STREAM_ASSERT(code(s.st_mtime));
+	STREAM_ASSERT(code(s.st_ctime));
+	STREAM_ASSERT(code(s.st_blksize));
+	STREAM_ASSERT(code(s.st_blocks));
+
+	return TRUE;
+}
+
+int Stream::code(struct rlimit64 &rl)
+{
+	STREAM_ASSERT(code(rl.rlim_cur));
+	STREAM_ASSERT(code(rl.rlim_max));
+
+	return TRUE;
+}
+
+#endif /* HAS_64BIT_STRUCTS */
 
 int Stream::code(struct statfs &s)
 {

@@ -253,6 +253,11 @@ public:
 	int code(struct timeval &);
 	int code(struct rlimit &);
 
+#if defined( HAS_64BIT_STRUCTS )
+	int code(struct stat64 &);
+	int code(struct rlimit64 &);
+#endif
+
 #endif // !defined(WIN32)
 
 	//   allow pointers instead of references to ease XDR compatibility
@@ -285,6 +290,12 @@ public:
 	int code(struct rlimit *x)		{ return code(*x); }
 
 #endif // !defined(WIN32)
+
+#if defined( HAS_64BIT_STRUCTS )
+	int code(struct stat64 *x)		{ return code(*x); }
+	int code(struct rlimit64 *x)	{ return code(*x); }
+#endif
+
 
 	//	Put operations
 	//
