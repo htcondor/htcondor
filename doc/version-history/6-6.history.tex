@@ -97,6 +97,10 @@ Redhat 7.x.
   files related to a valid Computing on Demand (COD) claim on an
   otherwise idle machine.
 
+\item Fixed a bug in which \Condor{preen} would keep reporting that it
+  had successfully removed a directory which was in fact failing to
+  be removed.
+
 \item Fixed the faulty argument parsing in \Condor{rm},
   \Condor{release}, and \Condor{hold}.
   Before you could accidentally type \verb@condor_rm -analyze@, and it
