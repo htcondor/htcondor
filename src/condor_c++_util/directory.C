@@ -27,6 +27,7 @@
 #include "condor_debug.h"
 #include "directory.h"
 #include "condor_string.h"
+#include "condor_config.h"
 
 // Set DEBUG_DIRECTORY_CLASS to 1 to not actually remove
 // files, but instead print out to the log file what would get
@@ -610,4 +611,33 @@ dircat( const char *dirpath, const char *filename )
 	return rval;
 }
 
+/*
+  Returns a path to subdirectory to use for temporary files.
+  The pointer returned must be de-allocated by the caller w/ free().
+*/
+char*
+temp_dir_path()
+{
+	char *prefix = param("TMP_DIR");
+	if  (!prefix) {
+		prefix = param("TEMP_DIR");
+	}
+	if (!prefix) {
+#ifndef WIN32		
+		prefix = strdup("/tmp");
+#else
+			// try to get the temp dir, otherwise just use the root directory
+		prefix = getenv("TEMP");
+		if ( prefix ) {
+			prefix = strdup(prefix);
+		} else {
+			prefix = param("SPOOL");
+			if (!prefix) {
+				prefix = strdup("\\");
+			}
+		}
+#endif
+	}			
+	return prefix;
+}
 

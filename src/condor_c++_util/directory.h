@@ -326,4 +326,9 @@ bool IsDirectory( const char* path );
 */
 char* dircat( const char* dirpath, const char* filename );
 
+/** Returns a path to subdirectory to use for temporary files.
+  @return The pointer returned must be de-allocated by the caller w/ free()
+*/
+char* temp_dir_path();
+
 #endif
