@@ -50,6 +50,8 @@ public:
 
 	static char *get_version_from_file(const char* filename, 
 							char *ver = NULL, int maxlen = 0);
+	static char *get_platform_from_file(const char* filename, 
+							char *platform = NULL, int maxlen = 0);
 
 	/** Return the first number in the version ID.
 		@return -1 on error */

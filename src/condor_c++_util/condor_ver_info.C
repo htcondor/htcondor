@@ -181,6 +181,7 @@ CondorVersionInfo::is_valid(const char* VersionString)
 	return ret_value;		
 }
 
+
 char *
 CondorVersionInfo::get_version_from_file(const char* filename, 
 										 char *ver, int maxlen)
@@ -257,6 +258,81 @@ CondorVersionInfo::get_version_from_file(const char* filename,
 	}
 }
 
+char *
+CondorVersionInfo::get_platform_from_file(const char* filename, 
+										 char *platform, int maxlen)
+{
+	bool must_free = false;
+
+	if (!filename)
+		return NULL;
+	
+	if (platform && maxlen < 40 )
+		return NULL;
+
+	maxlen--;	// save room for the NULL character at the end
+
+#ifdef WIN32
+	static const char *readonly = "rb";	// need binary-mode on NT
+#else
+	static const char *readonly = "r";
+#endif
+
+	FILE *fp = fopen(filename,readonly);
+
+	if ( !fp ) {
+		// file not found
+		return NULL;
+	}
+		
+	if (!platform) {
+		if ( !(platform = (char *)malloc(100)) ) {
+			// out of memory
+			return NULL;
+		}
+		must_free = true;
+		maxlen = 100;
+	}
+
+	int i = 0;
+	bool got_verstring = false;
+	const char* platprefix = CondorPlatform();
+	int ch;
+	while( (ch=fgetc(fp)) != EOF ) {
+		if ( ch != platprefix[i] ) {
+			i = 0;
+			if ( ch != platprefix[0] ) {
+				continue;
+			}
+		}
+
+		platform[i++] = ch;
+
+		if ( ch == ':' ) {
+			while ( (i < maxlen) && ((ch=fgetc(fp)) != EOF) ) {
+				platform[i++] = ch;
+				if ( ch == '$' ) {
+					got_verstring = true;
+					platform[i] = '\0';
+					break;
+				}
+			}
+			break;
+		}
+	}
+
+	fclose(fp);
+
+	if ( got_verstring ) {
+		return platform;
+	} else {
+		// could not find it
+		if ( must_free ) {
+			free( platform );
+		}
+		return NULL;
+	}
+}
 							
 bool
 CondorVersionInfo::string_to_VersionData(const char *verstring, 
