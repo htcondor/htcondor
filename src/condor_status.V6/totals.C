@@ -121,12 +121,26 @@ displayTotals (FILE *file, int keyLength)
 	topLevelTotal->displayHeader(file);
 	fprintf (file, "\n");
 
+	const char **keys = new (const char *) [allTotals.getNumElements()];
 	allTotals.startIterations();
-	while (allTotals.iterate(key, ct))
+	for (int k = 0; k < allTotals.getNumElements(); k++)
 	{
-		fprintf (file, "%*.*s", keyLength, keyLength, key.Value());
+		allTotals.iterate(key, ct);
+		int pos;
+		for (pos = 0; pos < k && strcmp(keys[pos], key.Value()) < 0; pos++);
+		if (pos < k) {
+			memmove(keys+pos+1, keys+pos, (k-pos)*sizeof(char *));
+		}
+		keys[pos] = strdup(key.Value());
+	}
+	for (int k = 0; k < allTotals.getNumElements(); k++)
+	{
+		fprintf (file, "%*.*s", keyLength, keyLength, keys[k]);
+		free((void *)keys[k]);
+		allTotals.lookup(MyString(keys[k]), ct);
 		ct->displayInfo(file);
 	}
+	delete [] keys;
 	fprintf (file, "\n%*.*s", keyLength, keyLength, "Total");
 	topLevelTotal->displayInfo(file,1);
 
