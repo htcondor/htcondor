@@ -159,22 +159,22 @@ image specified by one of the above functions, and to resume the
 program where the checkpoint left off.  This function does
 not return.
 
-\item \verb$void _condor_signals_disable()$\\
+\item \verb$void _condor_ckpt_disable()$\\
 This function temporarily disables checkpointing.  This can
 be handy if your program does something with is not checkpoint-safe.
 For example, if a program must not be interrupted while accessing
-a special file, call \verb$_condor_signals_disable()$, access the
-file, and then call \verb$_condor_signals_enable()$.  Some program
+a special file, call \verb$_condor_ckpt_disable()$, access the
+file, and then call \verb$_condor_ckpt_enable()$.  Some program
 actions, such as opening a socket or a pipe, implicitly cause
 checkpointing to be disabled.
 
-\item \verb$void _condor_signals_enable()$\\
+\item \verb$void _condor_ckpt_enable()$\\
 This function re-enables checkpointing after a call to
-\verb$_condor_signals_disable()$.  If a checkpointing signal arrived
+\verb$_condor_ckpt_disable()$.  If a checkpointing signal arrived
 while checkpointing was disabled, the checkpoint will occur when
 this function is called.  Disabling and enabling of checkpointing
-must occur in matched pairs.  \verb$_condor_signals_enable()$ must
-be called once for every time that \verb$_condor_signals_disable()$
+must occur in matched pairs.  \verb$_condor_ckpt_enable()$ must
+be called once for every time that \verb$_condor_ckpt_disable()$
 is called.
 
 \item \verb$extern int condor_compress_ckpt$\\
