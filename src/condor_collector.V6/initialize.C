@@ -11,6 +11,10 @@
 // about self
 static char *_FileName_ = __FILE__;
 
+// prototypes
+extern void reportToDevelopers (void);
+extern "C" int schedule_event( int , int , int , int , int , void (*)(void));
+
 // variables from the config file
 extern char *Log;
 extern char *CollectorLog;
@@ -20,6 +24,7 @@ extern int   MaxCollectorLog;
 extern int   ClientTimeout; 
 extern int   QueryTimeout;
 extern int   MachineUpdateInterval;
+extern int   MasterCheckInterval;
 
 // communication
 extern int ClientSocket;
@@ -139,6 +144,11 @@ initializeParams (void)
 		EXCEPT ("Variable 'COLLECTOR_LOG' not found in config file.");
 	}
 		
+    if ((CondorAdministrator = param ("CONDOR_ADMIN")) == NULL)
+	{
+		EXCEPT ("Variable 'CONDOR_ADMIN' not found in condfig file.");
+	}
+
     MaxCollectorLog = (tmp = param ("MAX_COLLECTOR_LOG")) ? atoi (tmp) : 64000;
 
     ClientTimeout = (tmp = param ("CLIENT_TIMEOUT")) ? atoi (tmp) : 30;
@@ -148,10 +158,29 @@ initializeParams (void)
     MachineUpdateInterval = (tmp = param ("MACHINE_UPDATE_INTERVAL")) ?
 		atoi (tmp) : 300;
     
-    CondorDevelopers = param ("CONDOR_DEVELOPERS");
-    CondorAdministrator = param ("CONDOR_ADMIN");
+	MasterCheckInterval = (tmp = param ("MASTER_CHECK_INTERVAL")) ? 
+		atoi (tmp) : 10800; 	// three hours
+
+	tmp = param ("CONDOR_DEVELOPERS");
+	if (tmp == NULL) {
+		tmp = "condor@cs.wisc.edu";
+	} else
+	if (strcmp (tmp, "NONE") == 0) {
+		tmp = NULL;
+	}
+	CondorDevelopers = tmp;
 }
 
 
 
+void
+initializeReporter (void)
+{
+	const int STAR = -1;
 
+	// schedule reports to developers
+	schedule_event( STAR, 1,  0, 0, 0, reportToDevelopers );
+	schedule_event( STAR, 8,  0, 0, 0, reportToDevelopers );
+	schedule_event( STAR, 15, 0, 0, 0, reportToDevelopers );
+	schedule_event( STAR, 23, 0, 0, 0, reportToDevelopers );
+}

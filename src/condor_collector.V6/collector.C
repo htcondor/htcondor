@@ -13,7 +13,10 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_network.h"
+#include "internet.h"
+#include "fdprintf.h"
 #include "condor_io.h"
+#include "condor_attributes.h"
 
 #include "condor_daemon_core.h"
 #include "condor_timer_manager.h"
@@ -22,6 +25,7 @@
 #include "collector_engine.h"
 #include "HashTable.h"
 #include "hashkey.h"
+
 #include "condor_uid.h"
 
 // about self
@@ -37,6 +41,7 @@ int   MaxCollectorLog;
 int   ClientTimeout; 
 int   QueryTimeout;
 int   MachineUpdateInterval;
+int	  MasterCheckInterval;
 
 // timer services
 TimerManager timer;
@@ -75,9 +80,11 @@ extern "C" int  xdr_mywrapstring (XDR *, char **);
 extern "C" int  xdr_mach_rec (XDR *, MACH_REC *);
 #endif
 extern "C" int  SetSyscalls () {}
+extern "C" void event_mgr (void);
 extern     void initializeParams (void);
 extern     int  initializeTCPSocket (const char *, int);
 extern     int  initializeUDPSocket (const char *, int);
+extern	   void initializeReporter (void);
 
 // misc external variables
 extern int errno;
@@ -117,6 +124,7 @@ int main (int argc, char *argv[])
 {
 	fd_set readfds;
 	int    count, timerID;
+	int	   numIterations;
 	char** ptr;
 	
 	if(argc > 5)
@@ -172,6 +180,9 @@ int main (int argc, char *argv[])
 	install_sig_handler (SIGHUP, sighup_handler);
 	install_sig_handler (SIGPIPE, sigpipe_handler);
 
+	// setup routine to report to condor developers
+	initializeReporter ();
+
     // setup communication sockets
 	{
 	  const char *coll = "condor_collector";
@@ -195,7 +206,17 @@ int main (int argc, char *argv[])
 		EXCEPT ("Could not initialize housekeeper");
 	}
 
+	// set up routine to check on masters
+	if (!collector.scheduleDownMasterCheck (MasterCheckInterval))
+	{
+		EXCEPT ("Could not initialize master check routine");
+	}
+
+	// set up so that private ads from startds are collected as well
+	collector.wantStartdPrivateAds (true);
+
 	// forever process loop
+	numIterations = 0;
 	for (;;)
 	{
 		// register sockets 
@@ -240,6 +261,14 @@ int main (int argc, char *argv[])
 
 		if (FD_ISSET (CollectorCOMM_UDPSocket, &readfds))
 			processCOMM_UDP_Command ();
+
+		// after 32768 iterations (arbitrary), check with event manager
+		// (we don't wan't to call event_mgr on every iteration to check 
+		// for events which are scheduled four times a month)
+		++numIterations;
+		if (numIterations % 32768 == 0) {
+			event_mgr ();
+		}
 	}
 
 	// we should never quit the above loop
@@ -320,6 +349,11 @@ processXDR_TCP_Command (void)
 			whichAds = CKPT_SRVR_AD;	
 			break;
 		
+		  case QUERY_STARTD_PVT_ADS:
+			dprintf (D_ALWAYS, "Got QUERY_STARTD_PVT_ADS\n");
+			whichAds = STARTD_PVT_AD;
+			break;
+
 		  default:
 			dprintf(D_ALWAYS,"Unknown command %d\n", command);
 			whichAds = (AdTypes) -1;	
@@ -368,9 +402,12 @@ processCOMM_TCP_Command (void)
 	// will not collect on TCP to discourage use of TCP for classad updates
 
 	sock->decode();
-    if (!sock->code(command) || !ad.get((Stream &)*sock) || !sock->eom())
+    if (!sock->code(command) 		|| 
+		!ad.get((Stream &)*sock) 	|| 
+		!sock->end_of_message())
     {
         dprintf(D_ALWAYS,"Failed to receive query on COMM TCP: aborting\n");
+		sock->end_of_message();
 		delete sock;
         (void) close (ClientSocket);
         ClientSocket = -1;
@@ -404,6 +441,11 @@ processCOMM_TCP_Command (void)
 		whichAds = CKPT_SRVR_AD;	
 		break;
 		
+	  case QUERY_STARTD_PVT_ADS:
+		dprintf (D_ALWAYS, "Got QUERY_STARTD_PVT_ADS\n");
+		whichAds = STARTD_PVT_AD;
+		break;
+
 	  default:
 		dprintf(D_ALWAYS,"Unknown command %d\n", command);
 		whichAds = (AdTypes) -1;
@@ -483,6 +525,7 @@ processCOMM_UDP_Command (void)
     {
         dprintf(D_ALWAYS,"Failed to receive command on COMM UDP: aborting\n");
         (void) timer.CancelTimer (timerID);
+		COMM_UDP_sock.end_of_message();
         return;
     }
 
@@ -618,7 +661,7 @@ processCOMM_query (AdTypes whichAds, ClassAd &query, Sock *sock)
 	}
 
 	// flush the output
-	if (!sock->eom())
+	if (!sock->end_of_message())
 	{
 		dprintf (D_ALWAYS, "Error flushing COMM sock\n");
 	}
@@ -627,6 +670,61 @@ processCOMM_query (AdTypes whichAds, ClassAd &query, Sock *sock)
 	(void) timer.CancelTimer (timerID);
 	dprintf (D_ALWAYS, "(Sent %d ads in response to query)\n", __numAds__);
 }	
+
+int 	__mailer__;
+
+int
+reportScanFunc (ClassAd *ad)
+{
+	char buffer[2048];
+	int	 x;
+
+	if (!ad->LookupString (ATTR_NAME, buffer)) return 0;
+	fdprintf (__mailer__, "%15s", buffer);
+
+	if (!ad->LookupString (ATTR_ARCH, buffer)) return 0;
+	fdprintf (__mailer__, "%8s", buffer);
+
+	if (!ad->LookupString (ATTR_OPSYS, buffer)) return 0;
+	fdprintf (__mailer__, "%14s", buffer);
+
+	if (!ad->LookupInteger (ATTR_MIPS, x)) x = -1;
+	fdprintf (__mailer__, "%4d", x);
+
+	if (!ad->LookupInteger (ATTR_KFLOPS, x)) x = -1;
+	fdprintf (__mailer__, "%7d", x);
+
+	if (!ad->LookupString (ATTR_STATE, buffer)) return 0;
+	fdprintf (__mailer__, "%10s\n", buffer);
+
+	return 1;
+}
+
+void
+reportToDevelopers (void)
+{
+	char	whoami[128];
+	char	buffer[128];
+
+	if (get_machine_name (whoami) == -1) {
+		dprintf (D_ALWAYS, "Unable to get_machine_name()\n");
+		return;
+	}
+
+	sprintf (buffer, "Condor Collector (%s):  Monthly report\n", whoami);
+	if ((__mailer__ = email (buffer, CondorDevelopers)) < 0) {
+		dprintf (D_ALWAYS, "Didn't send monthly report (couldn't open url)\n");
+		return;
+	}
+
+	if (!collector.walkHashTable (STARTD_AD, reportScanFunc)) {
+		dprintf (D_ALWAYS, "Error sending monthly report\n");
+	}	
+		
+	close (__mailer__);
+	return;
+}
+
 
 #if defined(USE_XDR)
 int

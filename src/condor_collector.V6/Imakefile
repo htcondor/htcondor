@@ -7,8 +7,9 @@ ENGINE_OBJ = hashkey.o collector_engine.o
 
 SRC = initialize.C collector.C 
 OBJ = initialize.o collector.o
-LIB = ../condor_daemon_core/daemon_core.a collector_engine.a ../condor_classad/expr_lib.a \
-	  ../condor_c++_util/cplus_lib.a ../condor_xdr_lib/xdr_lib.a \
+LIB = ../condor_daemon_core/daemon_core.a collector_engine.a \
+	../condor_xdr_lib/xdr_lib.a \
+		../condor_classad/expr_lib.a ../condor_c++_util/cplus_lib.a \
 	  ../condor_util_lib/util_lib.a ../condor_io/libcondor.a \
 	  RpcLib SocketLib
 
