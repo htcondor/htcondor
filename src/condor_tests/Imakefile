@@ -440,9 +440,11 @@ DESC(job_dagman_uncomlog,"Test Dagmans ability to have sepaarate job log files")
 RUN(job_dagman_uncomlog)
 TESTCLASS(job_dagman_uncomlog,dagman)
 
+/* Valid starting v6_7 branch......
 DESC(job_dagman_unlessexit,"Test that the retries can be stopped with particular exit values from node.")
 RUN(job_dagman_unlessexit)
 TESTCLASS(job_dagman_unlessexit,dagman)
+*/
 
 DESC(job_dagman_xmlcomlog,"Look at Dagmans ability to handle a common XML based log file")
 RUN(job_dagman_xmlcomlog)
