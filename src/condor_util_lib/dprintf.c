@@ -53,8 +53,9 @@
 #include "debug.h"
 #include "clib.h"
 
-#if defined(HPUX8)
-#include "fake_flock.h"
+#if defined(HPUX9)
+#	include <signal.h>
+#	include "fake_flock.h"
 #endif
 
 FILE	*debug_lock();
@@ -315,15 +316,13 @@ preserve_log_file()
 	(void) umask( oumask );
 
 	(void)close( fileno(DebugFP) );
-#if !defined(HPUX8)
-#if defined(LINT) || defined(ULTRIX42) || defined(ULTRIX43) || defined(IRIX331)
+#if defined(HPUX9)
+	DebugFP->__fileL = fd & 0xf0;	/* Low byte of fd */
+	DebugFP->__fileH = fd & 0x0f;	/* High byte of fd */
+#elif defined(ULTRIX43) || defined(IRIX331)
 	((DebugFP)->_file) = fd;
 #else
 	fileno(DebugFP) = fd;
-#endif
-#else /* HPUX8 is defined */
-	DebugFP->__fileL = fd & 0xf0;	/* Low byte of fd */
-	DebugFP->__fileH = fd & 0x0f;	/* High byte of fd */
 #endif
 }
 
