@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_auth.h"
+const char root[] = "root";
 
 Condor_Auth_Base :: Condor_Auth_Base(ReliSock * sock, int mode)
     : mode_          ( mode  ),
@@ -44,9 +45,10 @@ Condor_Auth_Base :: Condor_Auth_Base(ReliSock * sock, int mode)
         // So, we first find out whether this is a daemon or user
         //------------------------------------------
         
-        if (strncmp(username,
-                    STR_DEFAULT_CONDOR_USER,
-                    strlen(STR_DEFAULT_CONDOR_USER)) == 0) {
+        if ((strncmp(username,
+                     STR_DEFAULT_CONDOR_USER,
+                     strlen(STR_DEFAULT_CONDOR_USER)) == 0) ||
+            (strncmp(username, root, strlen(root)) == 0)) {
             // I am a daemon! This is a daemon-daemon authentication
             isDaemon_ = TRUE;
             
