@@ -604,6 +604,12 @@ BaseShadow::terminateJob( void )
 	int reason;
 	reason = getExitReason();
 
+	bool signaled = exitedBySignal();
+	dprintf( D_ALWAYS, "Job %d.%d terminated: %s %d\n",
+			 getCluster(), getProc(), 
+			 signaled ? "killed by signal" : "exited with status",
+			 signaled ? exitSignal() : exitCode() );
+
 	//move intermediate stdout/stderr if necessary
 	moveOutputFiles();
 
