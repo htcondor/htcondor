@@ -56,7 +56,7 @@ pseudo_get_job_info(ClassAd *&ad)
 	the_ad = thisRemoteResource->getJobAd();
 	ASSERT( the_ad );
 
-	thisRemoteResource->filetrans.Init( the_ad );
+	thisRemoteResource->filetrans.Init( the_ad, true );
 
 	ad = the_ad;
 	return 0;
