@@ -44,10 +44,12 @@ struct LineRec {
   float AccUsage;
   float Factor;
   int BeginUsage;
+  int LastUsage;
 };
 
 //-----------------------------------------------------------------
 
+static int CalcTime(int,int,int);
 static void usage(char* name);
 static void ProcessInfo(AttrList* ad);
 static int CountElem(AttrList* ad);
@@ -65,15 +67,19 @@ int CompPrio(LineRec* a, LineRec* b);
 //-----------------------------------------------------------------
 
 int DetailFlag=0;
+time_t MinLastUsageTime;
 
 main(int argc, char* argv[])
 {
 
+  bool LongFlag=false;
   int ResetUsage=0;
   int SetFactor=0;
   int SetPrio=0;
   bool ResetAll=false;
   int GetResList=0;
+
+  MinLastUsageTime=time(0)-60*60*24;  // Default to show only users active in the last day
 
   for (int i=1; i<argc; i++) {
     if (strcmp(argv[i],"-setprio")==0) {
@@ -94,8 +100,23 @@ main(int argc, char* argv[])
     else if (strcmp(argv[i],"-resetall")==0) {
       ResetAll=true;
     }
+    else if (strcmp(argv[i],"-l")==0) {
+      LongFlag=true;
+    }
     else if (strcmp(argv[i],"-all")==0) {
       DetailFlag=1;
+    }
+    else if (strcmp(argv[i],"-activefrom")==0) {
+      if (argc-i<=3) usage(argv[0]);
+      int month=atoi(argv[i+1]);
+      int day=atoi(argv[i+2]);
+      int year=atoi(argv[i+3]);
+      MinLastUsageTime=CalcTime(month,day,year);
+      // printf("Date translation: %d/%d/%d = %d\n",month,day,year,FromDate);
+      i+=3;
+    }
+    else if (strcmp(argv[i],"-nonactive")==0) {
+      MinLastUsageTime=-1;
     }
     else if (strcmp(argv[i],"-usage")==0) {
       DetailFlag=2;
@@ -215,7 +236,7 @@ main(int argc, char* argv[])
 
   }
 
-  else if (GetResList) { // set priority
+  else if (GetResList) { // get resource list
 
     char* tmp;
 	if( ! (tmp = strchr(argv[GetResList+1], '@')) ) {
@@ -246,7 +267,8 @@ main(int argc, char* argv[])
       exit(1);
     }
 
-    PrintResList(ad);
+    if (LongFlag) ad->fPrint(stdout);
+    else PrintResList(ad);
   }
 
   else {  // list priorities
@@ -269,7 +291,8 @@ main(int argc, char* argv[])
       exit(1);
     }
 
-    ProcessInfo(ad);
+    if (LongFlag) ad->fPrint(stdout);
+    else ProcessInfo(ad);
   }
 
   exit(0);
@@ -317,17 +340,21 @@ int CompPrio(LineRec* a, LineRec* b)
 static void CollectInfo(int numElem, AttrList* ad, LineRec* LR)
 {
   char  attrName[32], attrPrio[32], attrResUsed[32], attrFactor[32], attrBeginUsage[32], attrAccUsage[32];
+  char  attrLastUsage[32];
   char  name[128];
   float priority, Factor, AccUsage;
   int   resUsed, BeginUsage;
+  int   LastUsage;
 
   for( int i=1; i<=numElem; i++) {
     LR[i-1].Priority=0;
+    LR[i-1].LastUsage=MinLastUsageTime;
     sprintf( attrName , "Name%d", i );
     sprintf( attrPrio , "Priority%d", i );
     sprintf( attrResUsed , "ResourcesUsed%d", i );
     sprintf( attrFactor , "PriorityFactor%d", i );
     sprintf( attrBeginUsage , "BeginUsageTime%d", i );
+    sprintf( attrLastUsage , "LastUsageTime%d", i );
     sprintf( attrAccUsage , "AccumulatedUsage%d", i );
 
     if( !ad->LookupString	( attrName, name ) 		|| 
@@ -337,15 +364,20 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR)
 	if(	!ad->LookupFloat	( attrFactor, Factor )	||
 		!ad->LookupFloat	( attrAccUsage, AccUsage )	||
 		!ad->LookupInteger	( attrBeginUsage, BeginUsage )	||
+		!ad->LookupInteger	( attrLastUsage, LastUsage )	||
 		!ad->LookupInteger	( attrResUsed, resUsed ) ) 
 			DetailFlag=0;
+
+	if (LastUsage==0) LastUsage=-1;
 
     LR[i-1].Name=name;
     LR[i-1].Priority=priority;
     LR[i-1].Res=resUsed;
     LR[i-1].Factor=Factor;
     LR[i-1].BeginUsage=BeginUsage;
+    LR[i-1].LastUsage=LastUsage;
     LR[i-1].AccUsage=AccUsage;
+
   }
  
   // ad->fPrint(stdout);
@@ -357,6 +389,7 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR)
 
 static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
 {
+  char LastUsageStr[15];
   ExprTree* exp;
   ad->ResetExpr();
   exp=ad->NextExpr();
@@ -370,48 +403,53 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
   
   char* Fmt1="%-30s %14.2f\n";  // Data line format
   char* Fmt2="%-30s %14s\n";    // Title and separator line format
-  char* Fmt3="Number of users: %-13d %14s\n";    // Totals line format
+  char* Fmt3="Number of users shown: %-13d %14s\n";    // Totals line format
 
   if (DetailFlag==1) {
-    Fmt1="%-30s %14.2f %8.2f %12.2f %4d %12.2f %11s\n"; 
-    Fmt2="%-30s %14s %8s %12s %4s %12s %11s\n"; 
-    Fmt3="Number of users: %-13d %14s %8s %12s %4d %12.2f %11s\n"; 
+    Fmt1="%-30s %14.2f %8.2f %12.2f %4d %12.2f %14s %14s\n"; 
+    Fmt2="%-30s %14s %8s %12s %4s %12s %14s %14s\n"; 
+    Fmt3="Number of users: %-13d %14s %8s %12s %4d %12.2f %14s %14s\n"; 
   }
   else if (DetailFlag==2) {
-    Fmt1="%-30s %12.2f %11s\n"; 
-    Fmt2="%-30s %12s %11s\n"; 
-    Fmt3="Number of users: %-13d %12.2f %11s\n"; 
+    Fmt1="%-30s %12.2f %14s %14s\n"; 
+    Fmt2="%-30s %12s %14s %14s\n"; 
+    Fmt3="Number of users: %-13d %12.2f %14s %14s\n"; 
   }
 
   if (DetailFlag==2) {
-    printf(Fmt2,"         ","Accumulated","   Usage  ");
-    printf(Fmt2,"User Name","Usage (hrs)","Start Time");
-    printf(Fmt2,"------------------------------","-----------","----------");
+    printf(Fmt2,"         ","Accumulated","     Usage    ","     Last     ");
+    printf(Fmt2,"User Name","Usage (hrs)","  Start Time  ","  Usage Time  ");
+    printf(Fmt2,"------------------------------","-----------","--------------","--------------");
   }
   else {
-    printf(Fmt2,"         ","Effective","  Real  ","  Priority  ","Res ","Accumulated","   Usage  ");
-    printf(Fmt2,"User Name","Priority ","Priority","   Factor   ","Used","Usage (hrs)","Start Time");
-    printf(Fmt2,"------------------------------","---------","--------","------------","----","-----------","----------");
+    printf(Fmt2,"         ","Effective","  Real  ","  Priority  ","Res ","Accumulated","     Usage    ","     Last     ");
+    printf(Fmt2,"User Name","Priority ","Priority","   Factor   ","Used","Usage (hrs)","  Start Time  ","  Usage Time  ");
+    printf(Fmt2,"------------------------------","---------","--------","------------","----","-----------","--------------","--------------");
   }
 
+  int UserCount=0;
   for (int i=0; i<NumElem; i++) {
+	if (LR[i].LastUsage<MinLastUsageTime) continue;
+    UserCount++;
+    strcpy(LastUsageStr,format_date_year(LR[i].LastUsage));
     if (LR[i].Name.Length()>30) LR[i].Name=LR[i].Name.Substr(0,29);
     if (DetailFlag==2)
-      printf(Fmt1,LR[i].Name.Value(),LR[i].AccUsage/3600.0,format_date(LR[i].BeginUsage));
+      printf(Fmt1,LR[i].Name.Value(),LR[i].AccUsage/3600.0,format_date_year(LR[i].BeginUsage),LastUsageStr);
     else 
-      printf(Fmt1,LR[i].Name.Value(),LR[i].Priority,(LR[i].Priority/LR[i].Factor),LR[i].Factor,LR[i].Res,LR[i].AccUsage/3600.0,format_date(LR[i].BeginUsage));
+      printf(Fmt1,LR[i].Name.Value(),LR[i].Priority,(LR[i].Priority/LR[i].Factor),LR[i].Factor,LR[i].Res,LR[i].AccUsage/3600.0,format_date_year(LR[i].BeginUsage),LastUsageStr);
     Totals.Res+=LR[i].Res;
     Totals.AccUsage+=LR[i].AccUsage;
     if (LR[i].BeginUsage<Totals.BeginUsage || Totals.BeginUsage==0) Totals.BeginUsage=LR[i].BeginUsage;
   }
 
+  strcpy(LastUsageStr,format_date_year(MinLastUsageTime));
   if (DetailFlag==2) {
-    printf(Fmt2,"------------------------------","-----------","----------");
-    printf(Fmt3,NumElem,Totals.AccUsage/3600.0,format_date(Totals.BeginUsage));
+    printf(Fmt2,"------------------------------","-----------","--------------","--------------");
+    printf(Fmt3,NumElem,Totals.AccUsage/3600.0,format_date_year(Totals.BeginUsage),LastUsageStr);
   }
   else {
-    printf(Fmt2,"------------------------------","---------","--------","------------","----","-----------","----------");
-    printf(Fmt3,NumElem,"","","",Totals.Res,Totals.AccUsage/3600.0,format_date(Totals.BeginUsage));
+    printf(Fmt2,"------------------------------","---------","--------","------------","----","-----------","--------------","--------------");
+    printf(Fmt3,UserCount,"","","",Totals.Res,Totals.AccUsage/3600.0,format_date_year(Totals.BeginUsage),LastUsageStr);
   }
 
   return;
@@ -420,7 +458,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
 //-----------------------------------------------------------------
 
 static void usage(char* name) {
-  fprintf( stderr, "usage: %s [ -all | { -setprio | -setfactor }  user value | -resetusage user | -resetall ]\n", name );
+  fprintf( stderr, "usage: %s [ -all | -usage | { -setprio | -setfactor }  user value | -resetusage user | -resetall | -getreslist user ] [-nonactive | -activefrom month day year] [-l]\n", name );
   exit(1);
 }
 
@@ -434,10 +472,10 @@ static void PrintResList(AttrList* ad)
   char  name[128];
   int   StartTime;
 
-  char* Fmt="%-30s %12s\n";
+  char* Fmt="%-30s %12s %12s\n";
 
-  printf(Fmt,"Resource Name"," Match Time");
-  printf(Fmt,"-------------"," ----------");
+  printf(Fmt,"Resource Name"," Start Time"," Match Time");
+  printf(Fmt,"-------------"," ----------"," ----------");
 
   int i;
 
@@ -452,14 +490,26 @@ static void PrintResList(AttrList* ad)
     char* p=strrchr(name,'@');
     *p='\0';
     time_t Now=time(0)-StartTime;
-	printf(Fmt,name,format_time(Now));
+	printf(Fmt,name,format_date(StartTime),format_time(Now));
   }
 
-  printf(Fmt,"-------------"," ----------");
+  printf(Fmt,"-------------"," ----------"," ----------");
   printf("Number of Resources Used: %d\n",i-1);
 
   return;
 } 
 
 //-----------------------------------------------------------------
+
+int CalcTime(int month, int day, int year) {
+  struct tm time_str;
+  if (year>1900) year-=1900;
+  time_str.tm_year=year;  time_str.tm_mon=month-1;
+  time_str.tm_mday=day;
+  time_str.tm_hour=0;
+  time_str.tm_min=0;
+  time_str.tm_sec=0;
+  time_str.tm_isdst=-1;
+  return mktime(&time_str);
+}
 
