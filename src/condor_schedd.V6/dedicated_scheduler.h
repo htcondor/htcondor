@@ -42,6 +42,7 @@ class AllocationNode {
 		// Methods
 	void addResource( ClassAd* r, int proc );
 	void setCapability( const char* new_capab );
+	void display( void );
 
 		// Data
 	int status;

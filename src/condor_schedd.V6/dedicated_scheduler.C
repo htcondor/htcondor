@@ -110,7 +110,37 @@ AllocationNode::setCapability( const char* new_capab )
 		delete [] capability;
 	}
 	capability = strnewp( new_capab );
-}		
+}
+
+
+void
+AllocationNode::display( void )
+{
+	int level = D_FULLDEBUG;
+	if( ! DebugFlags & level ) {
+		return;
+	}
+	dprintf( level, "Allocation for job %d.0, nprocs: %d\n",
+			 cluster, num_procs );
+	int p, n, num_nodes;
+	MRecArray* ma;
+	match_rec* mrec;
+	char buf[256];
+	for( p=0; p<num_procs; p++ ) {
+		ma = (*matches)[p];
+		if( ! ma ) {
+			return;
+		}
+		num_nodes = ma->getlast();
+		for( n=0; n<=num_nodes; n++ ) {
+			mrec = (*ma)[n];
+			if( mrec ) {
+				sprintf( buf, "%d.%d.%d: ", cluster, p, n );
+				displayResource( mrec->my_match_ad, buf, level );
+			}
+		}
+	}
+}
 
 
 //////////////////////////////////////////////////////////////
