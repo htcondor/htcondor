@@ -125,7 +125,7 @@ FunctionCall( )
 		functionTable["ceil"		] =	(void*)doMath;
 		functionTable["round"		] =	(void*)doMath;
 
-		functionTable["ieee754"] = (void *)doIEEE754;
+		functionTable["real"        ] = (void *)doReal;
 
 		initialized = true;
 	}
@@ -2059,10 +2059,8 @@ matchPattern( const char*,const ArgumentList &argList,EvalState &state,
 
 #endif
 
-// function call which takes a string(hexadecimal number) & converts it to the 
-// corresponding 64-bit real number according to the ieee754 norms 
 bool FunctionCall::
-doIEEE754( const char*,const ArgumentList &argList,EvalState &state,
+doReal( const char*,const ArgumentList &argList,EvalState &state,
 	Value &result )
 {
   	Value	arg;
@@ -2077,19 +2075,20 @@ doIEEE754( const char*,const ArgumentList &argList,EvalState &state,
 		return( false );
 	}
 	
-	string ieeestr;
+	string number;
 	// has to be a string argument
-	if(!arg.IsStringValue(ieeestr)) {
+	if(!arg.IsStringValue(number)) {
 		result.SetErrorValue( );
 		return( false );
 	} 
 
 	double real;
-	if (hex_to_double(ieeestr, real)) {
-		result.SetRealValue(real);
-	} else {
+    char   *end;
+    real = strtod(number.c_str(), &end);
+    if (end == number.c_str() && real == 0.0) {
 		result.SetErrorValue();
-		return false;
+    } else {
+		result.SetRealValue(real);
 	}
 	return(true);	
 }

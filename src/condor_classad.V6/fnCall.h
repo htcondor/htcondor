@@ -176,9 +176,7 @@ class FunctionCall : public ExprTree
 	// math (floor, ceil, round)
 	static bool doMath(const char*,const ArgumentList&,EvalState&,Value&);
 	
-	// converts a hexadecimal string into its corresponding 64-bit floating point number,
-	// according to the ieee-754 standard
- 	static bool doIEEE754(const char*,const ArgumentList&,EvalState&,Value&);
+ 	static bool doReal(const char*,const ArgumentList&,EvalState&,Value&);
 };
 
 END_NAMESPACE // classad
