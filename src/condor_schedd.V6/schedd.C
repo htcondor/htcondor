@@ -31,6 +31,9 @@
 **
 ** Modified by : Cai Weiru
 **		Organized most functions and variables into Scheduler class
+** 
+** Cleaned up for V6 by Derek Wright 7/8/97
+** 
 */ 
 
 #define _POSIX_SOURCE
@@ -45,7 +48,6 @@
 #include <sys/file.h>
 #include <netinet/in.h>
 #include <sys/wait.h>
-#include "condor_xdr.h"
 #include "sched.h"
 #include "condor_debug.h"
 #include "proc.h"
@@ -58,6 +60,7 @@
 #include "condor_string.h"
 #include "environ.h"
 #include "url_condor.h"
+#include "condor_updown.h"
 
 #if defined(NDBM)
 #include <ndbm.h>
@@ -68,7 +71,6 @@
 #if defined(HPUX9) || defined(Solaris)
 #include "fake_flock.h"
 #endif
-
 
 #if defined(Solaris)
 #include <fcntl.h>
@@ -93,31 +95,25 @@ extern void	Init();
 
 extern "C"
 {
-    void upDown_ClearUserInfo(void);
-    void upDown_UpdateUserInfo(const char* , const int);
-    int upDown_GetNoOfActiveUsers(void);
-    int upDown_GetUserPriority(const char* , int* );
-    void upDown_UpdatePriority(void);
-    void upDown_SetParameters(const int , const int);
-    void upDown_ReadFromFile(const char* );
-    void upDown_WriteToFile(const char*);
-    void upDown_Display(void);
-    void dprintf(int, char*...);
-	int  proc_id(XDR*, PROC_ID*);
-	int	 calc_virt_memory();
-	int	 rcv_int(XDR*, int*, int);
-	int	 snd_int(XDR*, int, int);
-	int	 snd_string(XDR*, char*, int);
-	int	 snd_context(XDR*, CONTEXT*, int);
-	int	 rcv_string(XDR*, char**, int);
-	int	 getdtablesize();
-	int	 set_root_euid(char*, int);
-	void _EXCEPT_(char*...);
-	char* gen_ckpt_name(char*, int, int, int);
-	int	 do_connect(const char*, const char*, u_int);
-	int	 gethostname(char*, int);
+    void	upDown_ClearUserInfo(void);
+    void 	upDown_UpdateUserInfo(const char* , const int);
+    int 	upDown_GetNoOfActiveUsers(void);
+    int 	upDown_GetUserPriority(const char* , int* );
+    void 	upDown_UpdatePriority(void);
+    void 	upDown_SetParameters(const int , const int);
+    void 	upDown_ReadFromFile(const char* );
+    void 	upDown_WriteToFile(const char*);
+    void 	upDown_Display(void);
+    void 	dprintf(int, char*...);
+	int	 	calc_virt_memory();
+	int	 	getdtablesize();
+	int	 	set_root_euid(char*, int);
+	void 	_EXCEPT_(char*...);
+	char* 	gen_ckpt_name(char*, int, int, int);
+	int	 	do_connect(const char*, const char*, u_int);
+	int	 	gethostname(char*, int);
 	int		send_context_to_machine(DGRAM_IO_HANDLE*, int, CONTEXT*);
-	int	 boolean(char*, char*);
+	int	 	boolean(char*, char*);
 	char*	param(char*);
 	void	block_signal(int);
 	void	unblock_signal(int);
@@ -131,10 +127,10 @@ extern "C"
 	int		prio_compar(prio_rec*, prio_rec*);
 }
 
-extern	int	send_classad_to_machine(DGRAM_IO_HANDLE*, int, const ClassAd*);
-extern	int	get_job_prio(int, int);
+extern	int		send_classad_to_machine(DGRAM_IO_HANDLE*, int, const ClassAd*);
+extern	int		get_job_prio(int, int);
 extern	void	FindRunnableJob(int, int&);
-extern	int			Runnable(PROC_ID*);
+extern	int		Runnable(PROC_ID*);
 
 extern	char*		myName;
 extern	char*		Spool;
@@ -146,8 +142,8 @@ extern	int			ScheddName;
 // shadow records and priority records
 shadow_rec      ShadowRecs[MAX_SHADOW_RECS];
 int             NShadowRecs;
-extern	prio_rec        PrioRec[];
-extern	int             N_PrioRecs;
+extern prio_rec	PrioRec[];
+extern int		N_PrioRecs;
 PROC_ID			IdleSchedUniverseJobIDs[MAX_SCHED_UNIVERSE_RECS];
 int				NSchedUniverseJobIDs;
 
@@ -207,10 +203,9 @@ Scheduler::Scheduler()
 Scheduler::~Scheduler()
 {
 	int		i;
-
     delete ad;
     if (MySockName)
-        free(MySockName);
+        FREE(MySockName);
     delete []CollectorHost;
     delete []NegotiatorHost;
     delete []Shadow;
@@ -218,17 +213,16 @@ Scheduler::~Scheduler()
     delete []Mail;
     delete []filename;
 	for(i = 0; i < nMrec; i++)
-    {
-        delete rec[i];
-    }
+	{
+		delete rec[i];
+    }		
     delete []rec;
     nMrec = 0;
 }
 
-void Scheduler::timeout()
+void
+Scheduler::timeout()
 {
-	char		tmpExpr[200];
-
 	block_signal(SIGCHLD);
 	/* the step size in the UPDOWN algo depends on the time */
 	/* interval of sampling			                */
@@ -257,9 +251,9 @@ void Scheduler::timeout()
 ** Examine the job queue to determine how many CONDOR jobs we currently have
 ** running, and how many individual users own them.
 */
+int
 Scheduler::count_jobs()
 {
-	char	queue[MAXPATHLEN];
 	int		i;
 	int		prio_compar();
 	char	tmp[200];
@@ -296,49 +290,10 @@ Scheduler::count_jobs()
 
 	sprintf(tmp, "%s = %d", ATTR_MAX_JOBS_RUNNING, MaxJobsRunning);
 	ad->InsertOrUpdate(tmp);
-}
-
-prio_comrpar(struct prio_rec* a, struct prio_rec* b )
-{
-	/* compare up down priorities */
-	/* lower values mean more priority */
-	if( a->prio > b->prio ) {
-		return 1;
-	}
-	if( a->prio < b->prio ) {
-		return -1;
-	}
-
-	/* here updown priorities are equal */
-	/* compare job priorities: higher values have more priority */
-	if( a->job_prio < b->job_prio ) {
-		return 1;
-	}
-	if( a->job_prio > b->job_prio ) {
-		return -1;
-	}
-	
-	/* here,updown priority and job_priority are both equal */
-	/* check existence of checkpoint files */
-	if (( a->status == UNEXPANDED) && ( b->status != UNEXPANDED))
-		return ( 1);
-	if (( a->status != UNEXPANDED) && ( b->status == UNEXPANDED))
-		return (-1);
-
-
-	/* finally, check for job submit times */
-	if( a->qdate < b->qdate ) {
-		return -1;
-	}
-	if( a->qdate > b->qdate ) {
-		return 1;
-	}
-
-
-	/* give up!!! */
 	return 0;
 }
 
+int
 count( int cluster, int proc )
 {
 	int		status;
@@ -367,22 +322,18 @@ count( int cluster, int proc )
 	} else {
 		sched->JobsRunning += cur_hosts;
 		sched->JobsIdle += (max_hosts - cur_hosts);
-
 		sched->insert_owner( owner );
-
-#define UpDownRunning	1 /* these shud be same as up_down.h */
-#define UpDownIdle	2
-#define	Error		-1
-
 		if ( status == RUNNING ) {	/* UPDOWN */
 			upDown_UpdateUserInfo(owner,UpDownRunning);
 		} else if ( (status == IDLE)||(status == UNEXPANDED)) {
 			upDown_UpdateUserInfo(owner,UpDownIdle);
-		}
+		}	
 	}
+	return 0;
 }
 
-void Scheduler::insert_owner(char* owner)
+void
+Scheduler::insert_owner(char* owner)
 {
 	int		i;
 	for ( i=0; i<N_Owners; i++ ) {
@@ -394,9 +345,9 @@ void Scheduler::insert_owner(char* owner)
 	N_Owners +=1;
 }
 
-void Scheduler::update_central_mgr()
+void
+Scheduler::update_central_mgr()
 {
-	int			cmd = UPDATE_SCHEDD_AD;
 	SafeSock	sock(CollectorHost, COLLECTOR_UDP_COMM_PORT);
 
 	sock.attach_to_file_desc(UdpSock);
@@ -407,11 +358,11 @@ void Scheduler::update_central_mgr()
 }
 
 extern "C" {
-void abort_job_myself(PROC_ID job_id)
+void
+abort_job_myself(PROC_ID job_id)
 {
 	char	*host;
 	int		i;
-
 
 	for( i=0; i<NShadowRecs; i++ ) {
 		if( ShadowRecs[i].job_id.cluster == job_id.cluster &&
@@ -439,21 +390,17 @@ void abort_job_myself(PROC_ID job_id)
 		}
 	}
 }
-}
+} /* End of extern "C" */
 
-void Scheduler::abort_job(ReliSock* s, struct sockaddr_in*)
+void
+Scheduler::abort_job(ReliSock* s, struct sockaddr_in*)
 {
 	PROC_ID	job_id;
-	char	*host;
-	int		i;
-
-
 	s->decode();
 	if( !s->code(job_id) ) {
 		dprintf( D_ALWAYS, "abort_job() can't read job_id\n" );
 		return;
 	}
-
 	abort_job_myself(job_id);
 }
 
@@ -470,12 +417,12 @@ void Scheduler::abort_job(ReliSock* s, struct sockaddr_in*)
 ** server which is capable of running it.  NOTE: We must keep job queue
 ** locked during this operation.
 */
-void Scheduler::negotiate(ReliSock* s, struct sockaddr_in*)
+void
+Scheduler::negotiate(ReliSock* s, struct sockaddr_in*)
 {
 	int		i;
 	int		op;
 	CONTEXT	*context = NULL;
-	ClassAd	*ad = NULL;
 	PROC_ID	id;
 	char	*match= NULL;				// each match info received from cmgr
 	char*	capability;					// capability for each match made
@@ -542,12 +489,12 @@ void Scheduler::negotiate(ReliSock* s, struct sockaddr_in*)
 		}
 
 		if (GetAttributeInt(PrioRec[i].id.cluster, PrioRec[i].id.proc,
-							"CurrentHosts", &cur_hosts) < 0) {
+							ATTR_CURRENT_HOSTS, &cur_hosts) < 0) {
 			cur_hosts = 0;
 		}
 
 		if (GetAttributeInt(PrioRec[i].id.cluster, PrioRec[i].id.proc,
-						"MaxHosts", &max_hosts) < 0) {
+							ATTR_MAX_HOSTS, &max_hosts) < 0) {
 			max_hosts = 1;
 		}
 
@@ -613,8 +560,6 @@ void Scheduler::negotiate(ReliSock* s, struct sockaddr_in*)
 						RETURN;
 					}
 					
-					
-					
 					/* Send a job description */
 					context = build_context( &id);
 					if( !s->snd_int(JOB_INFO,FALSE) ) {
@@ -626,21 +571,14 @@ void Scheduler::negotiate(ReliSock* s, struct sockaddr_in*)
 					ad.SetTargetTypeName (STARTD_ADTYPE);
 					if( !ad.put(*s) ) {
 						dprintf( D_ALWAYS,
-								"1.Can't send job_context to mgr\n" );
+								"Can't send job_context to mgr\n" );
 						RETURN;
 					}
 					if( !s->end_of_message() ) {
 						dprintf( D_ALWAYS,
-								"1.Can't send job_context to mgr\n" );
+								"Can't send job_context to mgr\n" );
 						RETURN;
 					}
-/*
-					if( !snd_context(xdrs,context,TRUE) ) {
-						dprintf( D_ALWAYS,
-								"1.Can't send job_context to mgr\n" );
-						RETURN;
-					}
-*/
 					free_context( context );
 					context = NULL;
 					dprintf( D_FULLDEBUG,
@@ -656,7 +594,7 @@ void Scheduler::negotiate(ReliSock* s, struct sockaddr_in*)
 					 * Originally there is a limit on how many
 					 * jobs in total can be run concurrently from this schedd,
 					 * and a limit on how many jobs this schedd can start in
-					 * one negotiation cycle. Now these limits are  adopted to
+					 * one negotiation cycle. Now these limits are adopted to
 					 * apply to match records instead.
 					 */
 					if( !s->get(match) ) {
@@ -696,7 +634,6 @@ void Scheduler::negotiate(ReliSock* s, struct sockaddr_in*)
 		}
 	}
 
-
 		/* Out of jobs */
 	if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
 		dprintf( D_ALWAYS, "Can't send NO_MORE_JOBS to mgr\n" );
@@ -716,7 +653,8 @@ void Scheduler::negotiate(ReliSock* s, struct sockaddr_in*)
 #undef RETURN
 
 
-void Scheduler::vacate_service(ReliSock *sock, struct sockaddr_in*)
+void
+Scheduler::vacate_service(ReliSock *sock, struct sockaddr_in*)
 {
 	char	*capability = NULL;
 
@@ -726,13 +664,14 @@ void Scheduler::vacate_service(ReliSock *sock, struct sockaddr_in*)
 		return;
 	}
 	DelMrec (capability);
-	free (capability);
+	FREE (capability);
 	dprintf (D_PROTOCOL, "## 7(*)  Completed vacate_service\n");
 	return;
 }
 
 
-CONTEXT* Scheduler::build_context(PROC_ID* id)
+CONTEXT* 
+Scheduler::build_context(PROC_ID* id)
 {
 	char			req_buf[1000], *requirements;
 	char			pref_buf[1000], *preferences;
@@ -751,8 +690,11 @@ CONTEXT* Scheduler::build_context(PROC_ID* id)
 	GetAttributeString(id->cluster, id->proc, ATTR_OWNER, own_buf);
 	owner = own_buf;
 	GetAttributeInt(id->cluster, id->proc, ATTR_IMAGE_SIZE, &image_size);
+
+#if 0
 	/* Very bad hack! */
 	disk = 10000;
+#endif
 
 	job_context = create_context();
 
@@ -884,7 +826,8 @@ find_idle_sched_universe_jobs( int cluster, int proc )
  *
  * Jim B. -- Also check for SCHED_UNIVERSE jobs that need to be started.
  */
-void Scheduler::StartJobs()
+void
+Scheduler::StartJobs()
 {
 	int		i;							// iterate through match records
 	PROC_ID	id;
@@ -945,7 +888,8 @@ void Scheduler::StartJobs()
 	dprintf(D_ALWAYS, "-------- Done starting jobs --------\n");
 }
 
-void Scheduler::StartSchedUniverseJobs()
+void
+Scheduler::StartSchedUniverseJobs()
 {
 	int i;
 
@@ -956,7 +900,8 @@ void Scheduler::StartSchedUniverseJobs()
 	NSchedUniverseJobIDs = 0;
 }
 
-shadow_rec* Scheduler::StartJob(Mrec* mrec, PROC_ID* job_id)
+shadow_rec*
+Scheduler::StartJob(Mrec* mrec, PROC_ID* job_id)
 {
 	int		universe;
 	int		rval;
@@ -976,7 +921,8 @@ shadow_rec* Scheduler::StartJob(Mrec* mrec, PROC_ID* job_id)
 	return NULL;
 }
 
-shadow_rec* Scheduler::start_std(Mrec* mrec , PROC_ID* job_id)
+shadow_rec*
+Scheduler::start_std(Mrec* mrec , PROC_ID* job_id)
 {
 	char	*argv[7];
 	char	cluster[10], proc[10];
@@ -1099,7 +1045,8 @@ shadow_rec* Scheduler::start_std(Mrec* mrec , PROC_ID* job_id)
 }
 
 
-shadow_rec* Scheduler::start_pvm(Mrec* mrec, PROC_ID *job_id)
+shadow_rec*
+Scheduler::start_pvm(Mrec* mrec, PROC_ID *job_id)
 {
 	char			*argv[8];
 	char			cluster[10], proc_str[10];
@@ -1215,7 +1162,8 @@ shadow_rec* Scheduler::start_pvm(Mrec* mrec, PROC_ID *job_id)
 	return srp;
 }
 
-shadow_rec* Scheduler::start_sched_universe_job(PROC_ID* job_id)
+shadow_rec*
+Scheduler::start_sched_universe_job(PROC_ID* job_id)
 {
 	char 	a_out_name[_POSIX_PATH_MAX];
 	char 	input[_POSIX_PATH_MAX];
@@ -1346,7 +1294,8 @@ shadow_rec* Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	return add_shadow_rec(pid, job_id, NULL, -1);
 }
 
-void Scheduler::display_shadow_recs()
+void
+Scheduler::display_shadow_recs()
 {
 	int		i;
 	struct shadow_rec *r;
@@ -1364,7 +1313,8 @@ void Scheduler::display_shadow_recs()
 	dprintf( D_FULLDEBUG, "..................\n\n" );
 }
 
-struct shadow_rec *add_shadow_rec( int pid, PROC_ID* job_id, Mrec* mrec, int fd )
+struct shadow_rec *
+add_shadow_rec( int pid, PROC_ID* job_id, Mrec* mrec, int fd )
 {
 	ShadowRecs[ NShadowRecs ].pid = pid;
 	ShadowRecs[ NShadowRecs ].job_id = *job_id;
@@ -1379,7 +1329,8 @@ struct shadow_rec *add_shadow_rec( int pid, PROC_ID* job_id, Mrec* mrec, int fd 
 	return &(ShadowRecs[NShadowRecs - 1]);
 }
 
-void Scheduler::delete_shadow_rec(int pid)
+void
+Scheduler::delete_shadow_rec(int pid)
 {
 	int		i;
 
@@ -1407,7 +1358,8 @@ void Scheduler::delete_shadow_rec(int pid)
 }
 
 
-void Scheduler::mark_job_running(PROC_ID* job_id)
+void
+Scheduler::mark_job_running(PROC_ID* job_id)
 {
 #if DBM_QUEUE
 #if defined(NEW_PROC)
@@ -1446,7 +1398,8 @@ void Scheduler::mark_job_running(PROC_ID* job_id)
 ** Mark a job as stopped, (Idle or Unexpanded).  Note: this routine assumes
 ** that the DBM pointer (q) is already locked for writing.
 */
-void Scheduler::mark_job_stopped(PROC_ID* job_id)
+void
+Scheduler::mark_job_stopped(PROC_ID* job_id)
 {
 	int		status;
 	int		orig_max;
@@ -1481,7 +1434,8 @@ void Scheduler::mark_job_stopped(PROC_ID* job_id)
 }
 
 
-void Scheduler::mark_cluster_rejected(int cluster)
+void
+Scheduler::mark_cluster_rejected(int cluster)
 {
 	int		i;
 
@@ -1493,7 +1447,8 @@ void Scheduler::mark_cluster_rejected(int cluster)
 	RejectedClusters[ N_RejectedClusters++ ] = cluster;
 }
 
-int Scheduler::cluster_rejected(int cluster)
+int
+Scheduler::cluster_rejected(int cluster)
 {
 	int		i;
 
@@ -1510,7 +1465,8 @@ int Scheduler::cluster_rejected(int cluster)
 ** is alive.  We use signal '0' which only checks whether a signal is
 ** sendable, it doesn't actually send one.
 */
-int Scheduler::is_alive(int pid)
+int
+Scheduler::is_alive(int pid)
 {
 #if defined(ULTRIX43)
     int stat;				/* on ULTRIX, the schedd needs to seteuid */
@@ -1528,7 +1484,8 @@ int Scheduler::is_alive(int pid)
 #endif 
 }
 
-void Scheduler::clean_shadow_recs()
+void
+Scheduler::clean_shadow_recs()
 {
 	int		i;
 
@@ -1543,7 +1500,8 @@ void Scheduler::clean_shadow_recs()
 	dprintf( D_FULLDEBUG, "============ End clean_shadow_recs =============\n" );
 }
 
-void Scheduler::preempt(int n)
+void
+Scheduler::preempt(int n)
 {
 	int		i;
 
@@ -1567,7 +1525,8 @@ void Scheduler::preempt(int n)
 	}
 }
 
-void send_vacate(Mrec* match,int cmd)
+void
+send_vacate(Mrec* match,int cmd)
 {
 	ReliSock	sock(match->peer, START_PORT);
 
@@ -1598,7 +1557,8 @@ void send_vacate(Mrec* match,int cmd)
 	}
 }
 
-void Scheduler::swap_space_exhausted()
+void
+Scheduler::swap_space_exhausted()
 {
 	int		old_estimate = ShadowSizeEstimate;
 
@@ -1624,7 +1584,8 @@ void Scheduler::swap_space_exhausted()
   jobs.  We will say they are consistent if none of the currently
   runnable jobs are already listed as running jobs.
 */
-int Scheduler::shadow_prio_recs_consistent()
+int
+Scheduler::shadow_prio_recs_consistent()
 {
 	int		i;
 	struct shadow_rec	*srp;
@@ -1653,7 +1614,8 @@ int Scheduler::shadow_prio_recs_consistent()
   Search the shadow record table for a given job id.  Return a pointer
   to the record if it is found, and NULL otherwise.
 */
-struct shadow_rec* find_shadow_rec(PROC_ID* id)
+struct shadow_rec*
+find_shadow_rec(PROC_ID* id)
 {
 	int		i;
 	int		my_cluster;
@@ -1672,7 +1634,8 @@ struct shadow_rec* find_shadow_rec(PROC_ID* id)
 }
 
 #ifdef CARMI_OPS
-struct shadow_rec *find_shadow_by_cluster( PROC_ID *id )
+struct shadow_rec*
+find_shadow_by_cluster( PROC_ID *id )
 {
 	int		i;
 	int		my_cluster;
@@ -1688,7 +1651,8 @@ struct shadow_rec *find_shadow_by_cluster( PROC_ID *id )
 }
 #endif
 
-void Scheduler::mail_problem_message()
+void
+Scheduler::mail_problem_message()
 {
 	char	cmd[512];
 	char	hostname[512];
@@ -1724,7 +1688,8 @@ void Scheduler::mail_problem_message()
 
 }
 
-void NotifyUser(shadow_rec* srec, char* msg, int status)
+void
+NotifyUser(shadow_rec* srec, char* msg, int status)
 {
 	int fd, notification;
 	char owner[20], url[25], buf[80];
@@ -1807,7 +1772,8 @@ void NotifyUser(shadow_rec* srec, char* msg, int status)
 ** the job queue.  Be very careful it is not called when the lock is
 ** already held, or deadlock will occur!
 */
-void Scheduler::reaper(int sig, int code, struct sigcontext* scp)
+void
+Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 {
     pid_t   	pid;
     int     	status;
@@ -1904,7 +1870,8 @@ void Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 	unblock_signal(SIGALRM);
 }
 
-void Scheduler::kill_zombie(int pid, PROC_ID* job_id )
+void
+Scheduler::kill_zombie(int pid, PROC_ID* job_id )
 {
     char    ckpt_name[MAXPATHLEN];
 
@@ -1922,7 +1889,8 @@ void Scheduler::kill_zombie(int pid, PROC_ID* job_id )
 ** be marked as running (a zombie).  Here we check for that conditon,
 ** and mark the job with the appropriate status.
 */
-void Scheduler::check_zombie(int pid, PROC_ID* job_id)
+void
+Scheduler::check_zombie(int pid, PROC_ID* job_id)
 {
     char    queue[MAXPATHLEN];
 
@@ -1955,7 +1923,8 @@ void Scheduler::check_zombie(int pid, PROC_ID* job_id)
     dprintf( D_ALWAYS, "Exited check_zombie( %d, 0x%x )\n", pid, job_id );
 }
 
-void Scheduler::cleanup_ckpt_files(int pid, PROC_ID* job_id)
+void
+Scheduler::cleanup_ckpt_files(int pid, PROC_ID* job_id)
 {
     char    ckpt_name[MAXPATHLEN];
 
@@ -1974,7 +1943,8 @@ void Scheduler::cleanup_ckpt_files(int pid, PROC_ID* job_id)
     (void)unlink( ckpt_name );
 }
 
-void Scheduler::SetClassAd(ClassAd* a)
+void
+Scheduler::SetClassAd(ClassAd* a)
 {
 	if(ad)
 	{
@@ -1984,7 +1954,8 @@ void Scheduler::SetClassAd(ClassAd* a)
 }
 
 // initialize the configuration parameters
-void Scheduler::Init()
+void
+Scheduler::Init()
 {
 	char*					tmp;
 	char					tmpExpr[200];
@@ -2096,7 +2067,7 @@ void Scheduler::Init()
 
     upDown_SetParameters(Step,ScheddHeavyUserPriority); /* UPDOWN */
 
-    /* update upDown objct from disk file */
+    /* update upDown object from disk file */
     /* ignore errors              */
 	filename = new char[MAXPATHLEN];
     sprintf(filename,"%s/%s",Spool, "UserPrio");
@@ -2126,7 +2097,8 @@ void Scheduler::Init()
 	}
 }
 
-void Scheduler::Register(DaemonCore* core)
+void
+Scheduler::Register(DaemonCore* core)
 {
 	// message handlers for schedd commands
 	core->Register(this, NEGOTIATE, (void*)negotiate, REQUEST);
@@ -2154,7 +2126,8 @@ void Scheduler::Register(DaemonCore* core)
 }
 
 extern "C" {
-int prio_compar(prio_rec* a, prio_rec* b)
+int
+prio_compar(prio_rec* a, prio_rec* b)
 {
     /* compare up down priorities */
     /* lower values mean more priority */
@@ -2196,13 +2169,15 @@ int prio_compar(prio_rec* a, prio_rec* b)
 }
 } // end of extern
 
-void Scheduler::sigint_handler()
+void
+Scheduler::sigint_handler()
 {
 	dprintf( D_ALWAYS, "Killed by SIGINT\n" );
 	exit(0);
 }
 
-void Scheduler::sighup_handler()
+void
+Scheduler::sighup_handler()
 {
     dprintf( D_ALWAYS, "Re reading config file\n" );
 
@@ -2213,7 +2188,8 @@ void Scheduler::sighup_handler()
     timeout();
 }
 
-void Scheduler::reschedule_negotiator(ReliSock*, struct sockaddr_in*)
+void
+Scheduler::reschedule_negotiator(ReliSock*, struct sockaddr_in*)
 {
     int     	cmd = RESCHEDULE;
 	ReliSock	sock(NegotiatorHost, NEGOTIATOR_PORT);
@@ -2240,7 +2216,8 @@ void Scheduler::reschedule_negotiator(ReliSock*, struct sockaddr_in*)
     return;
 }
 
-Mrec* Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId)
+Mrec*
+Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId)
 {
 	if(nMrec >= MAXMATCHES)
 	{
@@ -2261,7 +2238,8 @@ Mrec* Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId)
 	return rec[nMrec - 1];
 }
 
-int Scheduler::DelMrec(char* id)
+int
+Scheduler::DelMrec(char* id)
 {
 	if(!id)
 	{
@@ -2282,7 +2260,8 @@ int Scheduler::DelMrec(char* id)
 	}
 }
 
-int Scheduler::DelMrec(Mrec* match)
+int
+Scheduler::DelMrec(Mrec* match)
 {
 	if(!match)
 	{
@@ -2303,7 +2282,8 @@ int Scheduler::DelMrec(Mrec* match)
 	}
 }
 
-int Scheduler::MarkDel(char* id)
+int
+Scheduler::MarkDel(char* id)
 {
 	if(!id)
 	{
@@ -2321,7 +2301,8 @@ int Scheduler::MarkDel(char* id)
 	}
 }
 
-void Scheduler::Agent(char* server, char* capability, char* name, int aliveFrequency)
+void
+Scheduler::Agent(char* server, char* capability, char* name, int aliveFrequency)
 {
     int     	attempt;                            /* # of attempts */
     int     	reply;                              /* reply from the startd */
@@ -2393,7 +2374,8 @@ void Scheduler::Agent(char* server, char* capability, char* name, int aliveFrequ
     }
 }
 
-Mrec* Scheduler::FindMrecByPid(int pid)
+Mrec*
+Scheduler::FindMrecByPid(int pid)
 {
 	int		i;
 
@@ -2408,7 +2390,8 @@ Mrec* Scheduler::FindMrecByPid(int pid)
 	return NULL;
 }
 
-shadow_rec* Scheduler::FindSrecByPid(int pid)
+shadow_rec*
+Scheduler::FindSrecByPid(int pid)
 {
 	int		i;
 
@@ -2427,7 +2410,8 @@ shadow_rec* Scheduler::FindSrecByPid(int pid)
  * Weiru
  * Inform the startd and the accountant of the relinquish of the resource.
  */
-void Scheduler::Relinquish(Mrec* mrec)
+void
+Scheduler::Relinquish(Mrec* mrec)
 {
 	ReliSock	*sock;
 	int	   		flag = FALSE;
@@ -2505,7 +2489,8 @@ void Scheduler::Relinquish(Mrec* mrec)
 	}
 }
 
-void Scheduler::RemoveShadowRecFromMrec(shadow_rec* shadow)
+void
+Scheduler::RemoveShadowRecFromMrec(shadow_rec* shadow)
 {
 	int			i;
 
@@ -2519,7 +2504,8 @@ void Scheduler::RemoveShadowRecFromMrec(shadow_rec* shadow)
 	}
 }
 
-int Scheduler::AlreadyMatched(PROC_ID* id)
+int
+Scheduler::AlreadyMatched(PROC_ID* id)
 {
 	int			i;
 
@@ -2536,7 +2522,8 @@ int Scheduler::AlreadyMatched(PROC_ID* id)
 /*
  * go through match reords and send alive messages to all the startds.
  */
-void Scheduler::send_alive()
+void
+Scheduler::send_alive()
 {
 	ReliSock	*sock;
     int     	i, j;
@@ -2579,12 +2566,14 @@ void Scheduler::send_alive()
     dprintf(D_PROTOCOL,"## 6. (Done sending alive messages to %d startds)\n",j);
 }
 
-void job_prio(int cluster, int proc)
+void
+job_prio(int cluster, int proc)
 {
 	sched->JobsRunning += get_job_prio(cluster, proc);
 }
 
-void Scheduler::SetSockName(int sock)
+void
+Scheduler::SetSockName(int sock)
 {
 	struct hostent*			host = gethostent();
 	struct sockaddr_in		addr;
