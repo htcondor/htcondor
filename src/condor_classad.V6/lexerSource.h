@@ -100,6 +100,8 @@ public:
 
 private:
 	istream *_stream;
+	int      _unread_character;
+	int      _last_character;
 };
 
 // This source allows input from a traditional C string.

@@ -101,6 +101,8 @@ InputStreamLexerSource::~InputStreamLexerSource()
 void InputStreamLexerSource::SetNewSource(istream &stream)
 {
 	_stream = &stream;
+	_last_character = -1;
+	_unread_character = -1;
 	return;
 }
 
@@ -110,9 +112,13 @@ InputStreamLexerSource::ReadCharacter(void)
 	char real_character;
 	int  character;
 
-	if (_stream != NULL && !_stream->eof()) {
+	if (_unread_character != -1) {
+		character = _unread_character;
+		_unread_character = -1;
+	} else if (_stream != NULL && !_stream->eof()) {
 		_stream->get(real_character);
 		character = real_character;
+		_last_character = character;
 	} else {
 		character = -1;
 	}
@@ -123,7 +129,9 @@ InputStreamLexerSource::ReadCharacter(void)
 void 
 InputStreamLexerSource::UnreadCharacter(void)
 {
-	_stream->seekg(-1, ios::cur);
+	//doesn't work on cin
+	//_stream->seekg(-1, ios::cur);
+	_unread_character = _last_character;
 	return;
 }
 
