@@ -2,11 +2,15 @@
 #include "condor_classad.h"
 #include "queryProcessor.h"
 #include "intervalTree.h"
+#include "../gm-oo/gangster-indexed.h"
 
-using namespace std;
+int QueryProcessor::numQueries = 0;
+//extern KeySet givenAway;
 
 QueryProcessor::QueryProcessor( )
 {
+	rectangles = NULL;
+	summarize  = true;
 }
 
 
@@ -30,24 +34,32 @@ QueryProcessor::ClearIndexes( )
 		delete itr->second;
 	}
 	exported.clear( );
-
-	verifyExported.clear( );
-	verifyImported.clear( );
-	unexported.clear( );
 }
 
 
 bool
-QueryProcessor::InitializeIndexes( Rectangles& r )
+QueryProcessor::InitializeIndexes( Rectangles& r, bool useSummaries )
 {
 	AllDimensions::iterator		aitr;
 	ClassAdIndex				*index;
+	Rectangles					*rec = useSummaries ? &summaries : &r;
 	
-
 	ClearIndexes( );
 
+	summarize = useSummaries;
 	rectangles = &r;
-	for( aitr=r.exportedBoxes.begin(); aitr!=r.exportedBoxes.end(); aitr++ ) {
+
+		// summarize the rectangles
+	if( useSummaries ) {
+		if( !summaries.Summarize( r, reps, consts, constRepMap ) ) {
+			printf( "Failed to summarize\n" );
+			return( false );
+		}
+		summaries.Complete( true );
+	}
+	r.Complete( true );
+
+	for(aitr=rec->exportedBoxes.begin();aitr!=rec->exportedBoxes.end();aitr++) {
 		if( (aitr->first)[1] != ':' ) return( false );
 		switch( (aitr->first)[0] ) {
 			case 'n':
@@ -77,7 +89,7 @@ QueryProcessor::InitializeIndexes( Rectangles& r )
 	}
 
 
-	for( aitr=r.importedBoxes.begin(); aitr!=r.importedBoxes.end(); aitr++ ) {
+	for(aitr=rec->importedBoxes.begin();aitr!=rec->importedBoxes.end();aitr++) {
 		if( (aitr->first)[1] != ':' ) return( false );
 		switch( (aitr->first)[0] ) {
 			case 'n':
@@ -106,52 +118,82 @@ QueryProcessor::InitializeIndexes( Rectangles& r )
 		imported[aitr->first] = index;
 	}
 
-	verifyExported = r.verifyExported;
-	verifyImported = r.verifyImported;
-	unexported = r.unexported;
-
 	return( true );
 }
 
 
 void QueryProcessor::
-PurgeIndexEntries( int rId )
+PurgeRectangle( int rId )
 {
 	AllDimensions::iterator		aitr;
 	OneDimension::iterator		oitr;
-	DimRectangleMap::iterator	ditr;
 	Indexes::iterator			iitr;
+	KeyMap::iterator			kitr;
+	Constituents::iterator		citr;
+	int							repId;
+	Rectangles					*rec = summarize ? &summaries : rectangles;
 
-	for( aitr=rectangles->importedBoxes.begin( ); 
-			aitr!=rectangles->importedBoxes.end( ); aitr++ ) {
+	if( summarize ) {
+			// first find representative
+		if( ( kitr = constRepMap.find( rId ) ) == constRepMap.end( ) ) {
+				// enh??
+			printf( "Error: No entry for constituent!\n" );
+			exit( 1 );
+			return;	
+		}
+		repId = kitr->second;
+			// remove constituent from representative
+		if( ( citr = consts.find( repId ) ) == consts.end( ) ) {
+			printf( "Error: No representative for constituent!\n" );
+			exit( 1 );
+			return;
+		}
+		
+		citr->second.erase( rId );
+			// and from the rectangle object
+		rectangles->PurgeRectangle( rId );	
+			// any constituents left?
+		if( !citr->second.empty( ) ) {
+				// done
+			return;
+		}
+	} else {
+		repId = rId;
+	}
+	
+	
+	//givenAway.Insert( repId );
+
+		// first, the imported stuff; indexed imported ...
+	for(aitr=rec->importedBoxes.begin();aitr!=rec->importedBoxes.end();aitr++){
 			// find the interval of the rectangle and the relevant index
 		if( (iitr=imported.find( aitr->first )) == imported.end( ) ||
-			(oitr=aitr->second.find( rId )) == aitr->second.end( ) ) {
+			(oitr=aitr->second.find( repId )) == aitr->second.end( ) ) {
 			continue;
 		}
 			// delete from the index
-		iitr->second->Delete( rId, oitr->second );
+		if( !iitr->second->Delete( repId, oitr->second ) ) {
+			printf( "Error:  Failed delete from imported index %s\n",
+				iitr->first.c_str( ) );
+		}
 	}
 
-
-	for( aitr=rectangles->exportedBoxes.begin( ); 
-			aitr!=rectangles->exportedBoxes.end( ); aitr++ ) {
+		// next, the exported stuff; indexed exported
+	for(aitr=rec->exportedBoxes.begin();aitr!=rec->exportedBoxes.end();aitr++){
 			// find the interval of the rectangle and the relevant index
 		if( (iitr=exported.find( aitr->first )) == exported.end( ) ||
-			(oitr=aitr->second.find( rId )) == aitr->second.end( ) ) {
+			(oitr=aitr->second.find( repId )) == aitr->second.end( ) ) {
 			continue;
 		}
 			// delete from the index
-		iitr->second->Delete( rId, oitr->second );
+		if( !iitr->second->Delete( repId, oitr->second ) ) {
+			printf( "Error:  Failed delete from exported index %s\n",
+				iitr->first.c_str( ) );
+		}
 	}
 
-	for( ditr=verifyImported.begin( ); ditr!=verifyImported.end( ); ditr++ ) {
-		ditr->second.erase( rId );
-	}
-	verifyExported.erase( rId );
-	for( ditr=unexported.begin( ); ditr!=unexported.end( ); ditr++ ) {
-		ditr->second.erase( rId );
-	}
+		// kill rep 
+	rec->PurgeRectangle( repId );
 }
 
 
@@ -159,8 +201,6 @@ void QueryProcessor::
 Display( FILE* fp )
 {
 	Indexes::iterator			itr;
-	DimRectangleMap::iterator	vitr;
-	set<int>::iterator			sitr;
 
 	fprintf( fp, "Exported: " );
 	for( itr = exported.begin( ); itr != exported.end( ); itr++ ) {
@@ -170,448 +210,242 @@ Display( FILE* fp )
 	for( itr = imported.begin( ); itr != imported.end( ); itr++ ) {
 		fprintf( fp, "%s ", itr->first.c_str( ) );
 	}
-	fprintf( fp, "\nVerifyImported:  " );
-	for(vitr = verifyImported.begin( ); vitr != verifyImported.end( ); vitr++){
-		fprintf( fp, "%s ", vitr->first.c_str( ) );
-	}
-	fprintf( fp, "\nVerifyExported:  " );
-	for(sitr = verifyExported.begin( ); sitr != verifyExported.end( ); sitr++){
-		fprintf( fp, "%d ", *sitr );
-	}
-	fprintf( fp, "\nUnexported:  " );
-	for(vitr = unexported.begin( ); vitr != unexported.end( ); vitr++ ) {
-		fprintf( fp, "%s ", vitr->first.c_str( ) );
-	}
-	fprintf( fp, "\n" );
 }
 
 
 void QueryProcessor::
-DumpQState( QueryOutcome &qo, QueryOutcome &qv )
+DumpQState( QueryOutcome &qo )
 {
 	QueryOutcome::iterator	qitr;
-	int						size;
+	KeySet::iterator		kitr;
+	int						elt;
 
 	printf( "\tResult:\n" );
 	for( qitr=qo.begin( ); qitr!=qo.end( ); qitr++ ) {
 		printf( "\t  %d: " , qitr->first );
-		size = qitr->second.getlast()+1;
-		for( int i = 0 ; i < size ; i++ ) {
-			for( int j = 0 ; j < SUINT ; j++ ) {
-				if( qitr->second[i]&(unsigned)(1<<j) ) {
-					printf( "%d ", (i*SUINT)+j );
-				}
-			}
+		kitr.Initialize(qitr->second);
+		while( kitr.Next(elt) ) {
+			printf( "%d ", elt );
 		}
 		printf( "\n" );
 	}
-	printf( "\tVerify:\n" );
-	for( qitr=qv.begin( ); qitr!=qv.end( ); qitr++ ) {
-		printf( "\t  %d: " , qitr->first );
-		size = qitr->second.getlast()+1;
-		for( int i = 0 ; i < size ; i++ ) {
-			for( int j = 0 ; j < SUINT ; j++ ) {
-				if( qitr->second[i]&(unsigned)(1<<j) ) {
-					printf( "%d ", (i*SUINT)+j );
-				}
-			}
-		}
-		printf( "\n" );
-	}
-
 }
 
+
 bool QueryProcessor::
-DoQuery( Rectangles &window, KeySet &result, KeySet &verify )
+DoQuery( Rectangles &window, KeySet &result )
 {
-	
 	AllDimensions::iterator		aitr;
 	OneDimension::iterator		oitr;
 	Indexes::iterator			iitr;
-	ClassAdIndex				*index;
+	KeySet						deviantExportedSet;
 	KeySet						tmpResult;
-	KeySet						tmpVerify;
-	KeySet						tmpUnconstrained;
-	QueryOutcome				qo, qv;
-	QueryOutcome::iterator		qitr;
+	QueryOutcome				qo;
 	string						demangled;
-	int							wrkey, maxIndex;
-	int							n, o;
-	DimRectangleMap::iterator	vitr;
-	set<int>::iterator			sitr;
+	DimRectangleMap::iterator	ditr, daxitr;
+	KeySet::iterator			ksitr;
+	int							tmp;
+	Rectangles					*rec = summarize ? &summaries : rectangles;
 
+	numQueries++;
+
+	//printf( "Doing query\n" );
 		// Phase 0: Initialize 
-	maxIndex = (rectangles->rId+1)/SUINT;
 	for( int i = 0; i <= window.rId ; i++ ) {
-		qo[i].fill( (unsigned int) -1 );// identity for logical AND
-		qv[i].fill( 0 );				// identity for logical OR
+		qo[i].MakeUniversal( );
 	}
-		// Phase 1: Handle verifyImported attrs in the query window
-		//  All object rectangles which place a constraint on a q-vim'd 
-		//  attribute must be verified
-	//printf( "\nQvim on exported: " );
-	for( iitr = exported.begin( ); iitr != exported.end( ); iitr++ ) {
-		demangled.assign( iitr->first, 2, iitr->first.size( ) - 2 );
-		vitr = window.verifyImported.find(demangled);
-		if( vitr != window.verifyImported.end() ){
-			//printf( "%s ", demangled.c_str( ) );
-				// get all rectangles which place a constraint on the imported
-				// attribute
-			tmpResult.fill( 0 );
-			if( !iitr->second->FilterAll( tmpResult ) ) {
-				printf("Error:  Failed when filtering unimported attributes\n");
-				return( false );
-			}
 
-				// for every query rectangle dependent on that attribute
-			for( sitr=vitr->second.begin(); sitr!=vitr->second.end(); sitr++ ){
-				for( int i = 0 ; i <= tmpResult.getlast( ) ; i++ ) {
-					qo[*sitr][i] &= ~(tmpResult[i]); // blank out from outcome
-					qv[*sitr][i] |= tmpResult[i];    // insert into verify
-				}
-			}
-				
-		}
-	}
-	//printf( "\n\n1a. After Qvim on exported:\n" );
-	//DumpQState( qo, qv );
-
-		// Phase 1b: Add verifications for o-vex'd rectangles
-	for(sitr=verifyExported.begin();sitr!=verifyExported.end(); sitr++){
-		n = (*sitr) / SUINT;
-		o = (*sitr) % SUINT;
-		qo[*sitr][n] &= ~(1<<o);	// blank out from result
-		qv[*sitr][n] |= (1<<o);		// add verification
-	}
-	//printf( ")\n\n1b. After adding verifications for Ovex:\n" );
-	//DumpQState( qo, qv );
-		
-
-		// Phase 2: Handle verifyExported constraints in the query window
-		//   All object rectangles must be verified!
-	for( sitr=window.verifyExported.begin();sitr!=window.verifyExported.end(); 
-			sitr++ ) {
-		qo[*sitr].fill( 0 );	// blank out from outcome
-		qv[*sitr].fill( (unsigned) -1 );
-	}
-	/*
-	printf( ")" );
-
-	printf( "\n\n2a. After Qvex on Imported:\n" );
-	DumpQState( qo, qv );
-	
-
-		// Phase 2b: Also check q-vex on o-vim
-	//printf( "\t(Qvex on Ovim: " );
-	for( vitr=window.verifyExported.begin(); vitr!=window.verifyExported.end(); 
-			vitr++ ){
-		if( (ovitr=verifyImported.find(vitr->first)) != verifyImported.end() ){
-			// printf( "%s ", vitr->first.c_str( ) );
-				// for each q-rectangle requiring vexs
-			for( sitr=vitr->second.begin();sitr!=vitr->second.end();sitr++) {
-					// go through o-rectangles requiring vims
-				for(sitr2=ovitr->second.begin();sitr2!=ovitr->second.end();
-						sitr2++){
-					n = (*sitr2) / SUINT;
-					o = (*sitr2) % SUINT;
-					qo[*sitr][n] &= ~(1<<o);	// blank out from result
-					qv[*sitr][n] |= (1<<o);		// add verification
-				}
-			}
-		}
-	}
-	printf( ")\n\n2b. After Qvex on Ovim:\n" );
-	DumpQState( qo, qv );
-	*/
-
-
-		// Phase 3: go through dimensions of query rectangle; imported first
-	//printf( "\n\n3. Processing query imported:" );
-	for( aitr=window.importedBoxes.begin( ); aitr!=window.importedBoxes.end( ); 
+		// Phase 1:  Process imported intervals
+	for( aitr=window.importedBoxes.begin( ); aitr!=window.importedBoxes.end( );
 			aitr++ ) {
-			// get unverified outcome for this dimension; demangle name first
+
 		demangled.assign( aitr->first, 2, aitr->first.size( ) - 2 );
-		/*
-		printf( "\n\tDimension (%s), Demangled (%s)\n\tVerify Exported: ", 
-				aitr->first.c_str( ), demangled.c_str( ) );
-		
-		tmpVerify.fill( 0 );
-		if( ( vitr=verifyExported.find(demangled) ) != verifyExported.end() ) {
-			set<int>::iterator	sitr;
+		ditr = rec->unexported.find( demangled );
 
-			for( sitr=vitr->second.begin(); sitr!=vitr->second.end(); sitr++) {
-				//printf( "%d ", *sitr );
-				n = *sitr / SUINT;
-				o = *sitr % SUINT;
-				tmpVerify[n] |= (1<<o);
-			}
-		}
-		*/
-
-			// identify rectangles which do not constrain this dimension
-			// So, tmpUnconstrained contains rectangles which pass this query
-			// "vacuously"
-		//printf( "\n\tUnconstrained: " );
-		tmpUnconstrained.fill( 0 );
-		if( ( vitr=unexported.find(demangled) ) != unexported.end( ) ) {
-			set<int>::iterator	sitr;
-
-			for( sitr=vitr->second.begin(); sitr!=vitr->second.end(); sitr++) {
-				//printf( "%d ", *sitr );
-				n = *sitr / SUINT;
-				o = *sitr % SUINT;
-				tmpUnconstrained[n] |= (1<<o);
-			}
-		}
-
-			// find appropriate index
-		if( ( iitr = exported.find( aitr->first ) ) == exported.end( ) ) {
-				// no index --- must all be in verify slots
-			//printf( "\n\tNo index (using unconstrained and tmpVerify)\n" );
-			index = NULL;
-		} else {
-			index = iitr->second;
-		}
-
-			// for every query interval (corresponds to a rectangle) in this 
-			// dimension ...
 		for( oitr=aitr->second.begin( ); oitr!=aitr->second.end( ); oitr++ ) {
-			wrkey = oitr->first;
-				// get normal outcome (initialize from unconstrained result)
-			tmpResult.fill( 0 );
-			for( int i = 0 ; i <= tmpUnconstrained.getlast( ) ; i++ ) {
-				tmpResult[i] = tmpUnconstrained[i];
-			}
-			if( index ) {
-				if( !index->Filter( oitr->second, tmpResult ) ) {
-					printf( "Error when filtering with index %s\n",
-						aitr->first.c_str( ) );
+			tmpResult.Clear( );
+				// include all rectangles whose constraints are satisfied
+			if( ( iitr = exported.find( aitr->first ) ) != exported.end( ) ) {
+				if( !iitr->second->Filter( oitr->second, tmpResult ) ) {
+					printf( "Failed exported index lookup\n" );
 					return( false );
 				}
 			}
 
-			unsigned int tmp;
-			for( int i = 0 ; i <= maxIndex; i++ ) {
-					// temporarily hold query result 
-				tmp=qo[wrkey][i] & tmpResult[i] & ~qv[wrkey][i] & ~tmpVerify[i];
-					// patch verify result 
-				qv[wrkey][i] = (qv[wrkey][i]&(tmpResult[i]|tmpVerify[i])) |
-								(qo[wrkey][i]&tmpVerify[i]);
-					// patch query result
-				qo[wrkey][i] = tmp;
-			}
-		}
-		/*
-		printf( "\n\tAfter index filtering\n" );
-		DumpQState( qo, qv );
-		*/
-	}
-
-		// Phase 4: now do the same for the exported boxes
-	//printf( "\n\n4. Processing query exported:" );
-	for( aitr=window.exportedBoxes.begin( ); aitr!=window.exportedBoxes.end( ); 
-			aitr++ ) {
-			// get unverified outcome for this dimension; demangle name first
-		demangled.assign( aitr->first, 2, aitr->first.size( ) - 2 );
-		/*
-		printf( "\n\tDimension (%s), Demangled (%s)\n\tVerify Imported: ", 
-			aitr->first.c_str( ), demangled.c_str( ) );
-		*/
-
-		tmpVerify.fill( 0 );
-		if( ( vitr=verifyImported.find(demangled) ) != verifyImported.end() ) {
-			set<int>::iterator	sitr;
-
-			for( sitr=vitr->second.begin(); sitr!=vitr->second.end(); sitr++) {
-				//printf( "%d ", *sitr );
-				n = *sitr / SUINT;
-				o = *sitr % SUINT;
-				tmpVerify[n] |= (1<<o);
-			}
-		}
-			// find appropriate index
-		if( ( iitr = imported.find( aitr->first ) ) == imported.end( ) ) {
-			//printf( "\n\tNo index (using IDENTITY and tmpVerify)" );
-			index = NULL;
-		} else {
-			index = iitr->second;
-		}
-
-			// for every interval in this dimension ...
-		for( oitr=aitr->second.begin( ); oitr!=aitr->second.end( ); oitr++ ) {
-			wrkey = oitr->first;
-				// get normal outcome
-			if( index ) {
-				tmpResult.fill( 0 );
-				if( !index->Filter( oitr->second, tmpResult ) ) {
-					printf( "Error when filtering with index %s\n",
-						aitr->first.c_str( ) );
-					return( false );
-				}
+				// include deviant exported rectangles and all rectangles
+				// which do not constrain this attribute (if any)
+			if( ditr == rec->unexported.end( ) ) {
+				qo[oitr->first].IntersectWithUnionOf( tmpResult, 
+					rec->deviantExported );
 			} else {
-				tmpResult.fill( (unsigned)-1 );
+				qo[oitr->first].IntersectWithUnionOf( tmpResult, ditr->second,
+					rec->deviantExported );
 			}
-			/*
-			//printf( "\n\tFilter %d: ", oitr->first );
-			for( int i = 0 ; i < tmpResult.getlast()+1; i++ ) {
-				for( int j = 0 ; j < SUINT ; j++ ) {
-					if( tmpResult[i]&(unsigned)(1<<j) ) {
-						//printf( "%d ", (i*SUINT)+j );
-					}
+		}
+	}
+
+		// Phase 2:  Remove candidates which constrain absent attributes
+	for(ditr=window.unimported.begin();ditr!=window.unimported.end();ditr++) {
+			// find all rectangles which constrain this particular attribute
+		daxitr = rec->allExported.find( ditr->first );
+		if( daxitr == rec->allExported.end( ) ) continue;
+			// remove this set from the solution for each query rectangle
+		ksitr.Initialize( ditr->second );
+		while( ksitr.Next( tmp ) ) {
+			qo[tmp].Subtract( daxitr->second );
+		}
+	}
+
+		// Phase 3:  Process exported dimensions
+	for( aitr=window.exportedBoxes.begin( ); aitr!=window.exportedBoxes.end( );
+			aitr++ ) {
+			// need to include rectangles which are deviant on this attribute
+		demangled.assign( aitr->first, 2, aitr->first.size( ) - 2 );
+		ditr = rec->deviantImported.find( demangled );
+
+		for( oitr=aitr->second.begin( ); oitr!=aitr->second.end( ); oitr++ ) {
+			tmpResult.Clear( );
+				// include all rectangles which satisfy this constraint
+			if( ( iitr = imported.find( aitr->first ) ) != imported.end( ) ) {
+				if( !iitr->second->Filter( oitr->second, tmpResult ) ) {
+					printf( "Failed imported index lookup\n" );
+					return( false );
 				}
 			}
-			*/
-
-
-				// patch in normal outcome
-			unsigned int tmp;
-			for( int i = 0 ; i <= maxIndex; i++ ) {
-					// temporarily hold query results
-				tmp=qo[wrkey][i] & tmpResult[i] & ~qv[wrkey][i] & ~tmpVerify[i];
-					// patch unverified results
-				qv[wrkey][i] = (qv[wrkey][i]&(tmpResult[i]|tmpVerify[i])) |
-								(qo[wrkey][i]&tmpVerify[i]);
-					// patch query results
-				qo[wrkey][i] = tmp;
+				// check if there are relevant deviant imported rectangles
+			if( ditr == rec->deviantImported.end( ) ) {
+					// ... if not, just intersect with filtered results
+				qo[oitr->first].Intersect( tmpResult );
+			} else {
+					// ... otherwise, include deviant imported rectangles
+				qo[oitr->first].IntersectWithUnionOf(ditr->second,tmpResult);
 			}
 		}
-		/*
-		printf( "\n\tAfter index filtering\n" );
-		DumpQState( qo, qv );
-		*/
 	}
 
+		// Phase 4:  Aggregate results for all query rectangles
+	result.Clear( );
+	for( int i = 0 ; i <= window.rId ; i++ ) {
+		result.Unify( qo[i] );
+	}
 
-		// Phase 5:  Process disjuncts
-		//   Collapse results of all the q-rectangles into one result and
-		//   verify set
-	result.fill( 0 );
-	for( qitr = qo.begin( ); qitr != qo.end( ); qitr++ ) {
-		for( int i = 0 ; i <= qitr->second.getlast( ) ; i++ ) {
-			result[i] |= qitr->second[i];
-		}
-	}
-	verify.fill( 0 );
-	for( qitr = qv.begin( ); qitr != qv.end( ); qitr++ ) {
-		for( int i = 0 ; i <= qitr->second.getlast( ) ; i++ ) {
-			verify[i] |= qitr->second[i];
-		}
-	}
-	/*
-	printf( "\n5. Collapsing into single result\n\tResult: " );
-	for( int i = 0 ; i < result.getlast()+1; i++ ) {
-		for( int j = 0 ; j < SUINT ; j++ ) {
-			if( result[i]&(unsigned)(1<<j) ) {
-				printf( "%d ", (i*SUINT)+j );
-			}
-		}
-	}
-	printf( "\n\tVerify: " );
-	for( int i = 0 ; i < verify.getlast()+1; i++ ) {
-		for( int j = 0 ; j < SUINT ; j++ ) {
-			if( verify[i]&(unsigned)(1<<j) ) {
-				printf( "%d ", (i*SUINT)+j );
-			}
-		}
-	}
-	printf( "\n" );
-	*/
-
-		// Phase 6:  Blank out rectangles which constrain unimported attributes
-	for( iitr = exported.begin( ); iitr != exported.end( ); iitr++ ) {
-		demangled.assign( iitr->first, 2, iitr->first.size( ) - 2 );
-		if( window.unimported.find( demangled ) != window.unimported.end( ) ) {
-			tmpResult.fill( 0 );
-			if( !iitr->second->FilterAll( tmpResult ) ) {
-				printf("Error:  Failed when filtering unimported attributes\n");
-				return( false );
-			}
-			for( int i = 0 ; i <= tmpResult.getlast( ) ; i++ ) {
-				result[i] &= ~(tmpResult[i]);
-				verify[i] &= ~(tmpResult[i]);
-			}
-		}
-	}
-	/*
-	printf( "\n\n6. Removing rectangles constraining unimported attributes\n\t"
-		"Result: " );
-	for( int i = 0 ; i < result.getlast()+1; i++ ) {
-		for( int j = 0 ; j < SUINT ; j++ ) {
-			if( result[i]&(unsigned)(1<<j) ) {
-				printf( "%d ", (i*SUINT)+j );
-			}
-		}
-	}
-	printf( "\n\tVerify: " );
-	for( int i = 0 ; i < verify.getlast()+1; i++ ) {
-		for( int j = 0 ; j < SUINT ; j++ ) {
-			if( verify[i]&(unsigned)(1<<j) ) {
-				printf( "%d ", (i*SUINT)+j );
-			}
-		}
-	}
-	*/
-
-		// Phase 7:  Remove verifications for rectangles independently verified
-	for( int i = 0 ; i <= maxIndex ; i++ ) {
-		verify[i] &= ~result[i];
-	}
-	/*
-	printf("\n\n7. Removing verifications for verified rectangles\n\tVerify: ");
-	for( int i = 0 ; i < verify.getlast()+1; i++ ) {
-		for( int j = 0 ; j < SUINT ; j++ ) {
-			if( verify[i]&(unsigned)(1<<j) ) {
-				printf( "%d ", (i*SUINT)+j );
-			}
-		}
-	}
-	printf( "\n" );
-	*/		
+		// done
 	return( true );
 }
 
 bool QueryProcessor::
-MapRectangleID( int rId, int &portNum, int &pId, int &cId )
+MapRectangleID( int srId, int &rId, int &portNum, int &pId, int &cId )
 {
-	if( !rectangles ) return( false );
+	if( summarize ) {
+		Constituents::iterator  citr;
+		set<int>::iterator      sitr;
 
-	KeyMap::iterator	kitr;
-
-	if( (kitr=rectangles->rpMap.lower_bound(rId))==rectangles->rpMap.end( ) ) {
-		return( false );
+		if( ( citr = consts.find( srId ) ) == consts.end( ) ) {
+			return( false );
+		}
+		if( citr->second.empty( ) ) {
+			return( false );
+		}
+		
+			// When we map to a classad, we check if the classad is already in
+			// in the bundle.  If it is, we try for another representative in 
+			// the same constituency.  If we run out, return false ; the caller 
+			// will try the next valid representative
+		for( sitr=citr->second.begin( ); sitr!=citr->second.end( ); sitr++ ) {
+			rId = *sitr;
+			if( rectangles->MapRectangleID( rId, portNum, pId, cId ) && 
+				Gangster::keysInBundle.find(cId)==Gangster::keysInBundle.end()){
+				return( true );
+			}
+		}
+	} else {
+		rId = srId;
+		return(rectangles->MapRectangleID( rId, portNum, pId, cId ) &&
+				Gangster::keysInBundle.find(cId)==Gangster::keysInBundle.end());
 	}
-	pId = kitr->second;
 
-	if( (kitr=rectangles->pcMap.lower_bound(pId))==rectangles->pcMap.end( ) ) {
-		return( false );
-	}
-	cId = kitr->second;
-	portNum = kitr->first - pId;
-
-	return( true );
+    return( false );
 }
 
 
 bool QueryProcessor::
 UnMapClassAdID( int cId, int &brId, int &erId )
 {
-	if( !rectangles ) return( false );
-
-	KeyMap::iterator	kitr;
-
-	if( (kitr=rectangles->crMap.find( cId ) ) == rectangles->crMap.end( ) ) {
-		return( false );
-	}
-	erId = kitr->second;
-
-	if( (kitr=rectangles->crMap.find( cId-1 ) ) == rectangles->crMap.end( ) ) {
-		return( false );
-	}
-	brId = kitr->second+1;
-
-	return( true );
+	return(rectangles ? rectangles->UnMapClassAdID( cId, brId, erId ) : false);
 }
 
+//----------------------------------------------------------------------------
+
+Query::
+Query( )
+{
+	op = IDENT;
+	rectangles = NULL;
+	left = right = NULL;
+}
+
+Query::
+~Query( )
+{
+	if( rectangles ) delete rectangles;
+	if( left ) delete left;
+	if( right ) delete right;
+}
+
+Query *Query::
+MakeQuery( Rectangles *r )
+{
+	Query *q = new Query( );
+	q->rectangles = r;
+	return( q );
+}
+
+Query *Query::
+MakeConjunctQuery( Query *q1, Query *q2 )
+{
+	Query *q = new Query( );
+	q->op = AND;
+	q->left = q1;
+	q->right = q2;
+	return( q );
+}
+
+Query *Query::
+MakeDisjunctQuery( Query *q1, Query *q2 )
+{
+	Query *q = new Query( );
+	q->op = OR;
+	q->left = q1;
+	q->right = q2;
+	return( q );
+}
+
+bool Query::
+RunQuery( QueryProcessor &qp, KeySet &result )
+{
+	switch( op ) {
+		case IDENT: {
+			return( qp.DoQuery( *rectangles, result ) );
+		}
+
+		case AND: {
+			KeySet	tmp;
+			if( !left->RunQuery( qp, result ) || !right->RunQuery( qp, tmp ) ) {
+				return( false );
+			}
+			result.Intersect( tmp );
+			return( true );
+		}
+
+		case OR: 
+			return( left->RunQuery(qp,result) && right->RunQuery(qp,result) );
+
+		default:
+			return( false );
+	}
+}
+
+//----------------------------------------------------------------------------
 
 // index implementations
 ClassAdIndex::ClassAdIndex( )
@@ -722,7 +556,6 @@ ClassAdStringIndex::Filter( const Interval &interval, KeySet &result )
 	string					str;
 	StringIndex::iterator	bitr, eitr;
 	IndexEntries::iterator	nitr;
-	int						n, o;
 
 		// figure out iterator position for lower end of interval
 	if( !interval.lower.IsStringValue( str ) ) {
@@ -750,9 +583,7 @@ ClassAdStringIndex::Filter( const Interval &interval, KeySet &result )
 	for(; bitr != eitr; bitr++ ) {
 			// get all keys stored in the these entries
 		for( nitr=bitr->second.begin( ); nitr!=bitr->second.end( ); nitr++ ) {
-			n = (*nitr) / SUINT;
-			o = (*nitr) % SUINT;
-			result[n] = result[n] | (1 << o );
+			result.Insert( *nitr );
 		}
 	}
 
@@ -838,19 +669,14 @@ ClassAdBooleanIndex::Filter( const Interval &interval, KeySet &result )
 
 		// do the queries
 	IndexEntries::iterator	itr;
-	int						n, o;
 	if( qf ) {
 		for( itr = nope.begin( ); itr != nope.end( ); itr++ ) {
-			n = (*itr) / SUINT;
-			o = (*itr) % SUINT;
-			result[n] = result[n] | (1<<o);
+			result.Insert( *itr );
 		}
 	}
 	if( qt ) {
 		for( itr = yup.begin( ); itr != yup.end( ); itr++ ) {
-			n = (*itr) / SUINT;
-			o = (*itr) % SUINT;
-			result[n] = result[n] | (1<<o);
+			result.Insert( *itr );
 		}
 	}	
 
@@ -861,17 +687,12 @@ bool
 ClassAdBooleanIndex::FilterAll( KeySet &result )
 {
 	IndexEntries::iterator	itr;
-	int						n, o;
 
 	for( itr = nope.begin( ); itr != nope.end( ) ; itr++ ) {
-		n = (*itr) / SUINT;
-		o = (*itr) % SUINT;
-		result[n] = result[n] | (1<<o);
+		result.Insert( *itr );
 	}
 	for( itr = yup.begin( ); itr != yup.end( ); itr++ ) {
-		n = (*itr) / SUINT;
-		o = (*itr) % SUINT;
-		result[n] = result[n] | (1<<o);
+		result.Insert( *itr );
 	}
 	return( true );
 }

@@ -27,8 +27,6 @@
 #include "intervalTree.h"
 #include <set>
 
-using namespace std;
-
 IntervalTree::
 IntervalTree( )
 {
@@ -140,6 +138,7 @@ MakeIntervalTree( const OneDimension& intervals )
 
 	// 4. Setup tertiary structure (non-leaf nodes only)
 	int indexL, indexR;
+	intTree->rootT = 0;
 	for( int i = backStart - 1; i >= 0 ; i-- ) {
 		indexL = 2*i + 1;
 		indexR = 2*i + 2;
@@ -154,6 +153,8 @@ MakeIntervalTree( const OneDimension& intervals )
 				// active nodes trivially have active descendants
 			nodes[i].activeDesc = true;
 			nodes[i].closestActive = i;
+				// tentatively set this node as root of the tertiary structure
+			intTree->rootT = i;
 		} else {
 			// 4c. if the node is inactive, at most one of its children has
 			//	   active descendants
@@ -181,8 +182,8 @@ DeleteInterval( const int& key, const Interval &interval )
 	}
 
 		// traverse the active tree to find split point
-	i = 0;
-	while( i >= 0 && i <= size ) {
+	i = rootT; // (start from root of tertiary structure)
+	while( i >= 0 && i < size ) {
 		if( nodes[i].nodeValue > r ) {
 			i = nodes[i].LT;
 			continue;
@@ -208,32 +209,30 @@ DeleteInterval( const int& key, const Interval &interval )
 		return( false );
 	}
 
-		// work towards root and adjust tertiary structure
+		// work towards root (of primary structure) adjusting tertiary structure
 	int 	indexL, indexR;
 	bool 	nowActive;
 	while( 1 ) {
 		indexL = 2*i+1; 
 		indexR = 2*i+2;
 		nowActive = ( nodes[i].LS!=NULL || nodes[i].RS!=NULL ) ||
-				(indexL > 0 && indexL <= size && indexR > 0 && indexR <= size &&
+				(indexL >= 0 && indexL < size && indexR >= 0 && indexR < size &&
 	    		nodes[indexL].activeDesc && nodes[indexR].activeDesc );
-		if( nodes[i].active == nowActive ) {
-				// active status unchanged
+		if( nowActive && nodes[i].active == nowActive ) {
+			// active status unchanged
+				// active->active
 			nodes[i].active = true;
 			nodes[i].activeDesc = true;
 			nodes[i].closestActive = i;
-				// check why we're active ...
-			if( nodes[i].LS!=NULL || nodes[i].RS!=NULL ) {
-					// active because of stuff in the secondary structure; done
-				return( true );
-			}
-				// active because of active descendants; update LS, RS
-			nodes[i].LT = nodes[indexL].closestActive;
-			nodes[i].RT = nodes[indexR].closestActive;
+
+				// reset LT,RT; may have changed even if active status has not
+			nodes[i].LT=nodes[indexL].active?indexL:nodes[indexL].closestActive;
+			nodes[i].RT=nodes[indexR].active?indexR:nodes[indexR].closestActive;
 
 				// done
 			return( true );
 		} 
+
 			// must have gone from active to inactive
 		if( !nodes[i].active && nowActive ) {
 			printf("Error:  Gone from inactive to active when deleting\n" );
@@ -243,8 +242,8 @@ DeleteInterval( const int& key, const Interval &interval )
 		nodes[i].LT = nodes[i].RT = -1;
 
 			// check if the node has active descendants; at most one if any
-		if( ( indexL > 0 && indexL <= size && nodes[indexL].activeDesc ) || 
-				( indexR > 0 && indexR <= size && nodes[indexR].activeDesc ) ) {
+		if( ( indexL >= 0 && indexL < size && nodes[indexL].activeDesc ) || 
+				( indexR >= 0 && indexR < size && nodes[indexR].activeDesc ) ) {
 			nodes[i].activeDesc = true;
 			nodes[i].closestActive = nodes[indexL].activeDesc ?
 				nodes[indexL].closestActive : nodes[indexR].closestActive;
@@ -253,8 +252,12 @@ DeleteInterval( const int& key, const Interval &interval )
 			nodes[i].closestActive = -1;
 		}
 
-			// reached root?
-		if( i == 0 ) return( true );
+			// if this node is the root, designate the new rootT and return
+		if( i == rootT ) {
+			rootT = nodes[i].closestActive;
+			if( rootT < 0 ) rootT = 0;
+			return( true );
+		}
 
 		i = (i-1) / 2;
 	}
@@ -354,38 +357,33 @@ bool IntervalTree::
 WindowQuery( const Interval& interval, KeySet& keys )
 {
 	double		l, r;
-	bool		ol, or;
+	bool		o_l, o_r;
 	int			i, v;
-	int			index, offset;
 	Secondary	*sec;
 
 	if( !interval.lower.IsNumber( l ) || !interval.upper.IsNumber( r ) ) {
 		return( false );
 	}
-	ol = interval.openLower;
-	or = interval.openUpper;
+	o_l = interval.openLower;
+	o_r = interval.openUpper;
 
 		// Phase 1:  find v such that l < val(v) < r
-	i = 0;
+	i = rootT;
 	while( 1 ) {
 		if( i < 0 || i >= size ) {
 			return( true );
 		} else if( nodes[i].nodeValue <= l ) {
 			sec = nodes[i].RS;
-			while(sec&&(sec->value>l || (sec->value==l && !sec->open && !ol))){
-				index = sec->key / SUINT;
-				offset = sec->key % SUINT;
-				keys[index] = keys[index] | (1<<offset);
+			while(sec&&(sec->value>l || (sec->value==l && !sec->open && !o_l))){
+				keys.Insert( sec->key );
 				sec = sec->next;
 			}
 			//i = 2*i + 2;	// search right subtree next
 			i = nodes[i].RT;
 		} else if( r <= nodes[i].nodeValue ) {
 			sec = nodes[i].LS;
-			while(sec&&(sec->value<r || (sec->value==r && !sec->open && !or))){
-				index = sec->key / SUINT;
-				offset = sec->key % SUINT;
-				keys[index] = keys[index] | (1<<offset);
+			while(sec&&(sec->value<r || (sec->value==r && !sec->open && !o_r))){
+				keys.Insert( sec->key );
 				sec = sec->next;
 			}
 			//i = 2*i + 1;	// search left subtree next
@@ -400,9 +398,7 @@ WindowQuery( const Interval& interval, KeySet& keys )
 	v = i;	// found v; report all intervals in secondary structure of v
 	sec = nodes[i].LS;
 	while( sec ) {
-		index = sec->key / SUINT;
-		offset = sec->key % SUINT;
-		keys[index] = keys[index] | (1<<offset);
+		keys.Insert( sec->key );
 		sec = sec->next;
 	}
 
@@ -414,19 +410,15 @@ WindowQuery( const Interval& interval, KeySet& keys )
 				// get all nodes in the secondary structure
 			sec = nodes[i].RS;
 			while( sec ) {
-				index = sec->key / SUINT;
-				offset = sec->key % SUINT;
-				keys[index] = keys[index] | (1<<offset);
+				keys.Insert( sec->key );
 				sec = sec->next;
 			}
 			VisitActive( nodes[i].RT, keys );
 			i = nodes[i].LT;
 		} else {
 			sec = nodes[i].RS;
-			while(sec&&(sec->value>l || (sec->value==l && !sec->open && !ol))){
-				index = sec->key / SUINT;
-				offset = sec->key % SUINT;
-				keys[index] = keys[index] | (1<<offset);
+			while(sec&&(sec->value>l || (sec->value==l && !sec->open && !o_l))){
+				keys.Insert( sec->key );
 				sec = sec->next;
 			}
 			i = nodes[i].RT;
@@ -441,19 +433,15 @@ WindowQuery( const Interval& interval, KeySet& keys )
 				// get all nodes in the secondary structure
 			sec = nodes[i].LS;
 			while( sec ) {
-				index = sec->key / SUINT;
-				offset = sec->key % SUINT;
-				keys[index] = keys[index] | (1<<offset);
+				keys.Insert( sec->key );
 				sec = sec->next;
 			}
 			VisitActive( nodes[i].LT, keys );
 			i = nodes[i].RT;
 		} else {
 			sec = nodes[i].LS;
-			while(sec&&(sec->value<r || (sec->value==r && !sec->open && !or))){
-				index = sec->key / SUINT;
-				offset = sec->key % SUINT;
-				keys[index] = keys[index] | (1<<offset);
+			while(sec&&(sec->value<r || (sec->value==r && !sec->open && !o_r))){
+				keys.Insert( sec->key );
 				sec = sec->next;
 			}
 			i = nodes[i].LT;
@@ -472,11 +460,8 @@ VisitActive( int i, KeySet& keys )
 
 		// get all intervals in this node
 	Secondary 	*sec = nodes[i].LS;
-	int			index, offset;
 	while( sec ) {
-		index = sec->key / SUINT;
-		offset = sec->key % SUINT;
-		keys[index] = keys[index] | (1<<offset);
+		keys.Insert( sec->key );
 		sec = sec->next;
 	}
 
@@ -497,13 +482,14 @@ Display( FILE* fp )
 	int 		j = 1, k = 1;
 	Secondary 	*sec;
 	for( int i = 0 ; i < size; i++ ) {
-		fprintf( fp, " [%g:", nodes[i].nodeValue );
+		fprintf( fp, " [%s%s%g:", i==rootT?"(*)":"", nodes[i].active?"(@)":"",
+			nodes[i].nodeValue );
 		for( sec = nodes[i].LS; sec != NULL; sec = sec->next ) {
-			fprintf( fp, "%g=", sec->value );
+			fprintf( fp, "(%d=%g)", sec->key, sec->value );
 		}
 		putc( ':', fp );
 		for( sec = nodes[i].RS; sec != NULL; sec = sec->next ) {
-			fprintf( fp, "%g=", sec->value );
+			fprintf( fp, "(%d=%g)", sec->key, sec->value );
 		}
 		fprintf( fp, "|%d,%d]  ", nodes[i].LT, nodes[i].RT );
 

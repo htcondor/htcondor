@@ -65,6 +65,7 @@ private:
 
 	IntervalTreeNode 	*nodes;
 	int					size;
+	int					rootT;
 
 	static bool InsertInLeftSecondary(Secondary *&, const int &, double, bool);
 	static bool InsertInRightSecondary(Secondary *&, const int &, double, bool);

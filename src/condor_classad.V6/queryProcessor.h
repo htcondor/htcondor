@@ -14,28 +14,49 @@ class QueryProcessor {
 public:
 	QueryProcessor( );
 	~QueryProcessor( );
-
-	bool InitializeIndexes( Rectangles& );
+	bool InitializeIndexes( Rectangles&, bool useSummaries=true );
 	void ClearIndexes( );
-	bool DoQuery( Rectangles&, KeySet&, KeySet& );
-	void PurgeIndexEntries( int rId );
-	bool MapRectangleID( int rId, int &portNum, int &pId, int &cId );
+	bool DoQuery( Rectangles&, KeySet& );
+	void PurgeRectangle( int rId );
+	bool MapRectangleID( int srId, int &rId, int &portNum, int &pId, int &cId );
+	bool MapPortID( int pId, int &portNum, int &cId );
 	bool UnMapClassAdID( int cId, int &brId, int &erId );
 	void Display( FILE* );
 
+	static int numQueries;
+//private:
+	void DumpQState( QueryOutcome & );
+	int				numRectangles, numSummaries;
+	Rectangles		*rectangles, summaries;
 
-private:
-	void DumpQState( QueryOutcome &, QueryOutcome & );
+	Representatives	reps;
+	Constituents	consts;
+	KeyMap			constRepMap;
+	bool			summarize;
 
-	int				numRectangles;
+		// only indexes here; deviant/absent info in rectangles/summaries
 	Indexes			imported, exported;
-	Rectangles		*rectangles;
-	set<int>		verifyExported;
-	DimRectangleMap	verifyImported;
-	DimRectangleMap	unexported;
 };
 
 
+class Query {
+public:
+	~Query( );
+	Query *MakeQuery( Rectangles* );
+	Query *MakeConjunctQuery( Query*, Query* );
+	Query *MakeDisjunctQuery( Query*, Query* );
+	bool   RunQuery( QueryProcessor&, KeySet& );
+private:
+	Query( );
+	enum Op { IDENT, AND, OR };
+	Op			op;
+	Query		*left, *right;
+	Rectangles 	*rectangles;
+};
+
+
+	
+//----------------------------------------------------------------------------
 
 class ClassAdIndex {
 public:
