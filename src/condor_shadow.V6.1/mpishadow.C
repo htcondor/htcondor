@@ -656,11 +656,24 @@ MPIShadow::modifyNodeAd( ClassAd* ad )
 			// For the root node, we need to set MPICH_ROOT just to
 			// the hostname of the resource where it's executing
 		env += env_delim_str;
-		char* resource_name = NULL;
-		ResourceList[0]->getMachineName( resource_name );
-		sprintf( buf, "MPICH_ROOT=%s", resource_name );
+		char* sinful = NULL;
+		ResourceList[0]->getExecutingHost( sinful );
+			// Now, we've got a sinful string, so, parse out the ip
+			// address of it.
+		char* foo;
+		foo = strchr( sinful, ':' );
+		if( foo ) {
+			*foo = '\0';
+		} else {
+			dprintf( D_ALWAYS, 
+					 "ERROR: can't parse sinful string (%s) of root node!\n", 
+					 sinful );
+			delete [] sinful;
+			shutDown( JOB_NOT_STARTED, 0 );
+		}
+		sprintf( buf, "MPICH_ROOT=%s", &sinful[1] );
 		env += buf;
-		delete [] resource_name;
+		delete [] sinful;
 	}
 
 		// Now that we're done appending stuff, we've got to terminate
