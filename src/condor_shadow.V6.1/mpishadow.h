@@ -32,7 +32,23 @@
 /** This is the MPI Shadow class.  It acts as a shadow for an MPI
 	job submitted to Condor.<p>
 
-	More to come...
+	The basic trick is this.  The MPICH job uses the "ch_p4" device, 
+	which is the lower-layer of communication.  The ch_p4 device uses
+	rsh in the "master" to start up nodes on other machines.  We 
+	(condor) place our own version of rsh in the $path of the master, 
+	(which has been started up on a machine by our starter...) and 
+	this sneaky rsh then calls the shadow, telling it the arguments 
+	that it was given.  This happens for every "slave" mpi process 
+	we wish to start up.  (Being more liberal, we call slaves "comrades")
+	*grin*.  We fire up a comrade on each machine we've got claimed, 
+	and the mpi job is then off to the races...
+
+	Deciding when an MPI job is finished is a bit of work.  The 
+	individual nodes can exit at any time.  If a node SIGSEGVs, p4
+	catches that and makes all nodes exit with a status of 1.  This
+	is hard for us to decipher, but we print a warning if all the nodes
+	exit with status 1.  If one of our supposedly "dedicated" nodes
+	goes away, we kill the entire job.
 
 	@author Mike Yoder
 */
@@ -107,6 +123,9 @@ class MPIShadow : public BaseShadow
         /** The number of the next resource to start...when in start mode */
     int nextResourceToStart;
 
+		/** The number of nodes for this job */
+	int numNodes;
+
         /** TRUE if we're in the process of shutting down a job. */
     bool shutDownMode;
 
@@ -120,6 +139,9 @@ class MPIShadow : public BaseShadow
 		// Perhaps use STL soon.
 	ExtArray<MpiResource *> ResourceList;
 
+		/** Replace $(NODE) with the proper node number */
+	void replaceNode ( ClassAd *ad, int nodenum );
+	
     int printAdToFile(ClassAd *ad, char *JobHistoryFileName);
 
 };

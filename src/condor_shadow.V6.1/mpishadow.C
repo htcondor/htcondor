@@ -34,6 +34,7 @@
 
 MPIShadow::MPIShadow() {
     nextResourceToStart = 0;
+	numNodes = 0;
     shutDownMode = FALSE;
     ResourceList.fill(NULL);
     ResourceList.truncate(-1);
@@ -83,6 +84,10 @@ MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
         shutDown ( JOB_NOT_STARTED, 0 );
     }
 
+	replaceNode ( temp, 0 );
+
+//	printAdToFile ( temp, "mpi-master-ad" );
+
     rr->setJobAd( temp );
 
     ResourceList[ResourceList.getlast()+1] = rr;
@@ -95,7 +100,7 @@ int
 MPIShadow::getResources(int cmd, Stream *s) {
 /* The sender of this command is the Scheduler::pushMPIMatches() function. */
 
-    dprintf ( D_FULLDEBUG, "In getResources, cmd %d\n", cmd );
+    dprintf ( D_FULLDEBUG, "Getting machines from schedd now...\n" );
 
     char *host = NULL;
     char *capability = NULL;
@@ -103,6 +108,8 @@ MPIShadow::getResources(int cmd, Stream *s) {
     int numProcs=0;    // the # of procs to come
     int numInProc=0;   // the # in a particular proc.
     ClassAd *otherAd = NULL;
+	ClassAd *tmpAd = NULL;
+	int nodenum = 1;
 
     s->decode();
 
@@ -110,7 +117,6 @@ MPIShadow::getResources(int cmd, Stream *s) {
     if ( !s->code( numProcs ) ) {
         EXCEPT( "Failed to get number of procs" );
     }
-    dprintf ( D_PROTOCOL, "Got %d procs\n", numProcs );
 
     if ( numProcs>1 ) {
             // will have to connect to schedd to get other ads...
@@ -157,8 +163,9 @@ MPIShadow::getResources(int cmd, Stream *s) {
             rr->setMachineName ( "Unknown" );
             if ( i==0 ) {
                     // First proc; already have jobAd */
-                rr->setJobAd( new ClassAd ( *(getJobAd() ) ) );
-                dprintf ( D_FULLDEBUG, "1st proc case\n" );
+				tmpAd = new ClassAd ( *(getJobAd()) );
+				replaceNode ( tmpAd, nodenum++ );
+                rr->setJobAd( tmpAd );
             }
             else {
                     // Other procs: need jobAd from Schedd....
@@ -169,9 +176,10 @@ MPIShadow::getResources(int cmd, Stream *s) {
                                   errno );
                         EXCEPT( "Failed to get job ad from schedd" );
                     }
-                    dprintf ( D_FULLDEBUG, "got ad %d\n", i );
                 }
-                rr->setJobAd( new ClassAd ( *otherAd ) );
+				tmpAd = new ClassAd ( *otherAd );
+				replaceNode ( tmpAd, nodenum++ );
+                rr->setJobAd( tmpAd );
             }
 
             ResourceList[ResourceList.getlast()+1] = rr;
@@ -199,7 +207,10 @@ MPIShadow::getResources(int cmd, Stream *s) {
 
     s->end_of_message();
 
-    dprintf ( D_PROTOCOL, "#1 - Shadow started; matches gotten.\n" );
+	numNodes = nodenum + 1;  // for later use...
+
+    dprintf ( D_PROTOCOL, "#1 - Shadow started; %d machines gotten.\n", 
+			  numNodes );
 
     startMaster();
 
@@ -231,7 +242,8 @@ MPIShadow::startMaster() {
            ...
 
            We don't know the full path of the executable, so
-           we'll just call it 'condor_exec'
+           we'll just call it 'condor_exec'  This name has absolutely no
+		   effect on the executable started, since condor does that...
         */
 
         /* XXX Note: a future version will have to figure out 
@@ -288,8 +300,6 @@ MPIShadow::startMaster() {
         // alter the master's args...
     hackMasterArgs( rr->getJobAd() );
 
-    printAdToFile( rr->getJobAd(), "AdFile" );
-
         // yak with this startd.  Others will come in startComrade.
     if ( rr->requestIt() == -1 ) {
         shutDown( JOB_NOT_STARTED, 0 );
@@ -312,7 +322,7 @@ int
 MPIShadow::startComrade( int cmd, Stream* s ) {
 /* This command made by sneaky rsh:  condor_starter.V6.1/condor_rsh.C */
 
-    dprintf ( D_FULLDEBUG, "In MPIShadow::startComrade(), cmd %d\n", cmd );
+    dprintf ( D_FULLDEBUG, "Getting information for a comrade node\n" );
     
     char *comradeArgs = NULL;
     if ( !s->code( comradeArgs ) ||
@@ -332,8 +342,6 @@ MPIShadow::startComrade( int cmd, Stream* s ) {
 
     dprintf ( D_PROTOCOL, "#9 - Added args to jobAd, now requesting:\n" );
 
-    printAdToFile( rr->getJobAd(), "AdFile" );
-
         // yak with this startd; 
     if ( rr->requestIt() == -1 ) {
         shutDown( JOB_NOT_STARTED, 0 );
@@ -346,19 +354,14 @@ MPIShadow::startComrade( int cmd, Stream* s ) {
     
     dprintf ( D_PROTOCOL, "#10 - Just requested Comrade resource\n" );
 
-        // maybe do this; maybe not.
-/*
-    char *host = NULL;
-    rr->getExecutingHost( host );
-    if ( host ) {
-        ExecuteEvent event;
-        strcpy( event.executeHost, host );
-        if ( !uLog.writeEvent( &event )) {
-            dprintf ( D_ALWAYS, "Unable to log EXECUTE event for %s.\n", host);
-        }
-        delete [] host;
-    }
-*/
+	if ( nextResourceToStart == numNodes ) {
+			/* This is the last node we're starting...make an execute event. */
+		ExecuteEvent event;
+		strcpy( event.executeHost, "MPI_job" );
+		if ( !uLog.writeEvent( &event )) {
+			dprintf ( D_ALWAYS, "Unable to log EXECUTE event." );
+		}
+	}
 
     return TRUE;
 }
@@ -375,10 +378,8 @@ MPIShadow::hackMasterArgs( ClassAd *ad ) {
 	}
     
     char tmp[_POSIX_ARG_MAX];
-    sprintf ( tmp, "%s = \"%s%s-p4pg %s/procgroup -p4dbg 90\"", 
+    sprintf ( tmp, "%s = \"%s%s-p4pg %s/procgroup\"", 
               ATTR_JOB_ARGUMENTS, args, args[0]?" ":"", getIwd() );
-
-    dprintf ( D_FULLDEBUG, "%s\n", tmp );
 
     ad->Delete( ATTR_JOB_ARGUMENTS );
 
@@ -409,24 +410,18 @@ MPIShadow::hackComradeArgs( char *comradeArgs, ClassAd *ad )
     }
     sprintf( newargs, "%s", &tmparg[12] );
     
-    dprintf ( D_FULLDEBUG, "new args: %s\n", newargs );
-    
-    dprintf ( D_FULLDEBUG, "nextResourceToStart = %d\n", nextResourceToStart);
-    
     char args[2048];
     if ( !ad->LookupString( ATTR_JOB_ARGUMENTS, args )) {
         dprintf ( D_ALWAYS, "Failed to get Job args in hackComradeArgs!\n" );
         shutDown( JOB_NOT_STARTED, 0 );
     }
 
-    dprintf ( D_FULLDEBUG, "Args for resource: \"%s\"\n", args );
-
     char tmp[2048];
-    sprintf ( tmp, "%s = \"%s%s%s -p4dbg 90\"", 
+    sprintf ( tmp, "%s = \"%s%s%s\"", 
               ATTR_JOB_ARGUMENTS, args, args[0]?" ":"", newargs, getIwd() );
     free( comradeArgs );
 
-    dprintf ( D_FULLDEBUG, "Inserting: %s\n", tmp );
+    dprintf ( D_FULLDEBUG, "Inserting args: %s\n", tmp );
 
     ad->Delete( ATTR_JOB_ARGUMENTS );
 
@@ -458,13 +453,11 @@ MPIShadow::shutDown( int exitReason, int exitStatus ) {
         }
     }
 
-		// write stuff to the user log.
-	MpiResource *rr;
-    for ( i=0 ; i<=ResourceList.getlast() ; i++ ) {
-		rr = ResourceList[i];
-		endingUserLog( exitStatus, exitReason, rr );
-	}
+		/* write a terminate event to the user log.  This will
+		   contain only information from the 'master' node. */
+	endingUserLog( exitStatus, exitReason, ResourceList[0] );
 
+	MpiResource *rr;
     if ( getJobAd() ) {
             // For lack of anything better to do here, set the last 
             // executing host to the host the master was on.
@@ -520,20 +513,16 @@ MPIShadow::shutDown( int exitReason, int exitStatus ) {
 		if ( allexitsone ) {
 			fprintf ( mailer, "\nCondor has noticed that all of the " );
 			fprintf ( mailer, "processes in this job \nhave an exit status " );
-			fprintf ( mailer, "of 1.  This may be the result of a core\n" );
-			fprintf ( mailer, "dump - you should check the stdout of " );
-			fprintf ( mailer, "your jobs.\n" );
+			fprintf ( mailer, "of 1.  This *might* be the result of a core\n");
+			fprintf ( mailer, "dump.  Condor can\'t tell for sure - the " );
+			fprintf ( mailer, "MPICH library catches\nSIGSEGV and exits" );
+			fprintf ( mailer, "with a status of one.\n" );
 		}
 
 		fprintf( mailer, "\nHave a nice day.\n" );
 
 		email_close(mailer);
 	}
-    
-    for ( i=0 ; i<=ResourceList.getlast() ; i++ ) {
-        ResourceList[i]->dprintfSelf( D_FULLDEBUG );
-        dprintf ( D_FULLDEBUG, "\n" );
-    }	
     
 		// does not return.
 	DC_Exit( exitReason );
@@ -656,8 +645,44 @@ MPIShadow::handleJobRemoval( int sig ) {
 	return 0;
 }
 
-//---------------------------------------------------------------------
+/* This is basically a search-and-replace "#MpInOdE#" with a number 
+   for that node...so we can address each mpi node in the submit file. */
+void
+MPIShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 
+	ExprTree *tree = NULL, *rhs = NULL, *lhs = NULL;
+	char rhstr[ATTRLIST_MAX_EXPRESSION];
+	char lhstr[128];
+	char final[ATTRLIST_MAX_EXPRESSION];
+	char node[9];
+	char *tmp;
+	int i;
+
+	sprintf ( node, "%d", nodenum );
+
+	ad->ResetExpr();
+	while ( tree = ad->NextExpr() ) {
+		rhstr[0] = '\0';
+		lhstr[0] = '\0';
+		if (lhs = tree->LArg()) lhs->PrintToStr (lhstr);
+		if (rhs = tree->RArg()) rhs->PrintToStr (rhstr);
+		if (!lhs || !rhs) {
+			dprintf ( D_ALWAYS, "Could not replace $(NODE) in ad!\n" );
+			return;
+		}
+		if ( tmp=strstr( rhstr, "#MpInOdE#" ) ) {
+			for ( i=0 ; i<strlen(node) ; i++ ) {
+				*(tmp++) = node[i];
+			}
+			*(tmp++) = '\0';
+			sprintf ( final, "%s = %s%s", 
+					  lhstr, rhstr, tmp+(8-strlen(node)) );
+			ad->InsertOrUpdate ( final );
+		}
+	}	
+}
+
+/* handy for debugging... */
 int 
 MPIShadow::printAdToFile(ClassAd *ad, char* JobHistoryFileName) {
 
