@@ -351,20 +351,26 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 		_is_auth_cap = (cmpres <= 0);
 	}
 
+	bool disable_auth_negotiation = true;	// default
 	paramer = param("DISABLE_AUTH_NEGOTIATION");
 	if (paramer) {
 		dprintf (D_SECURITY, "STARTCOMMAND: param(DISABLE_AUTH_NEGOTIATION)"
 					" == %s\n", paramer);
-		if ((stricmp(paramer, "YES") == 0) ||
-		    (stricmp(paramer, "TRUE") == 0)) {
+		if ( (paramer[0] == 'N') || (paramer[0] == 'n') ||
+		     (paramer[0] == 'F') || (paramer[0] == 'f' ) ) 
+		{
+			disable_auth_negotiation = false;
+		}
+		free(paramer);
+	} 
+
+	if ( disable_auth_negotiation ) {
 			dprintf ( D_SECURITY, "STARTCOMMAND: "
 					      "disabling negotiationg for authentication.\n");
 			_auth_cap_known = true;
 			_is_auth_cap = false;
-		}
-		free(paramer);
-	}
 
+	} 
 
 
 	// possible courses of action:
@@ -411,10 +417,18 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 	// like it was in pre 6.3
 	if (authentication_action == AUTH_OLD) {
 		dprintf(D_SECURITY, "STARTCOMMAND: skipping negotiation\n");
-
 		// just code the command and be done
 		sock->code(cmd);
-		sock->end_of_message();
+		// we must _not_ do an eom() here!  Ques?  See Todd or Zach 9/01
+		// However, we need to set things up so if the caller does an eom(),
+		// it does not trigger an error.  The reason for this: if the
+		// authentication_action is not AUTH_OLD, then eom() will have
+		// already been invoked before we return to the caller.  But if
+		// AUTH_OLD is the method, then eom() will not have been invoked.
+		// So we don't want this screwed up difference, i.e. the semantics
+		// are one way or another depending upon your config file.  So,
+		// in comes the fudge factor!  We should allow one empty message...
+		sock->allow_one_empty_message();
 		return sock;
 	}
 
