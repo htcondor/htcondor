@@ -562,6 +562,21 @@ system.
   Defines the timeout (in seconds) that \Condor{q} uses when trying to
   connect to the \Condor{schedd}.  Defaults to 20.
 
+\item[\Macro{UPDATE\_COLLECTOR\_WITH\_TCP}]
+  \label{param:UpdateCollectorWithTcp}
+  If your site needs to use TCP connections to send ClassAd updates to
+  your collector (which it almost certainly does NOT), you can enable
+  this feature by setting this to TRUE.
+  Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
+  Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
+  for more details and a discussion of when you would need this
+  functionality. 
+  If you enable this feature, you must also define
+  \Macro{COLLECTOR\_SOCKET\_CACHE\_SIZE}] at your central manager, so
+  that the collector will accept TCP connections for updates, and will
+  keep them open for reuse.
+  Defaults to FALSE.
+
 \end{description}
 
 
@@ -2507,6 +2522,20 @@ These macros affect the \Condor{collector}.
   have stale information about the pool due to dropping update packets.  If
   your pool is small or your central manager has very little RAM, considering
   setting this parameter to a lower value (perhaps 256000 or 128000).
+
+\item[\Macro{COLLECTOR\_SOCKET\_CACHE\_SIZE}] 
+  \label{param:CollectorSocketCacheSize} 
+  If your site wants to use TCP connections to send ClassAd updates to
+  the collector, you must use this setting to enable a cache of TCP
+  sockets (in addition to enabling
+  \Macro{UPDATE\_COLLECTOR\_WITH\_TCP}). 
+  Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
+  Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
+  for more details and a discussion of when you would need this
+  functionality. 
+  If you do not enable a socket cache, TCP updates will be refused by
+  the collector.
+  The default value for this setting is 0, with no cache enabled.   
 
 \item[\Macro{KEEP\_POOL\_HISTORY}] \label{param:KeepPoolHistory}
   This boolean macro is used to decide if the collector will write
