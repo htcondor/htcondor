@@ -43,6 +43,13 @@ typedef int		bool_t;
 #define __EXTENSIONS__
 #endif /* Solaris */
 
+/* define _LARGEFILE64_SOURCE so struct stat64, and other 64-bit
+   versions of structures and the like are defined. -Derek 6/24/98 */
+#if defined(Solaris26)
+#define _LARGEFILE64_SOURCE
+#endif /* Solaris26 */
+
+
 /* for IRIX62, we want _BSD_TYPES defined when we include sys/types.h, but
  * then we want to set it back to how it was. -Todd, 1/31/97
  */
