@@ -48,6 +48,15 @@
 \ToolArgsAffect
 }
 
+%% ----- -d option to 
+%% _rm _hold _release
+%% _on _off _reconfig _restart _reschedule _vacate _checkpoint 
+%% _q _status _submit
+\newcommand{\ToolDebugOption}{
+\oOptnm{-debug}
+}
+
+
 %% ----- descriptions of above arguments
 
 \newcommand{\ToolArgsBaseDesc}{
@@ -82,11 +91,16 @@
 
 %% Descriptions of Affected Daemons
 \newcommand{\ToolArgsAffectDesc}{
-\OptItem{\Opt{-master}}{Send the command to the master (default)}
-\OptItem{\Opt{-startd}}{Send the command to the startd daemon}
-\OptItem{\Opt{-schedd}}{Send the command to the schedd daemon}
-\OptItem{\Opt{-collector}}{Send the command to the collector daemon}
-\OptItem{\Opt{-kbdd}}{Send the command to the kbdd daemon}
+\OptItem{\Opt{-master}}{Send the command to the \Condor{master} daemon (default)}
+\OptItem{\Opt{-startd}}{Send the command to the \Condor{startd} daemon}
+\OptItem{\Opt{-schedd}}{Send the command to the \Condor{schedd} daemon}
+\OptItem{\Opt{-collector}}{Send the command to the \Condor{collector} daemon}
+\OptItem{\Opt{-kbdd}}{Send the command to the \Condor{kbdd} daemon}
+}
+
+%% -debug option description
+\newcommand{\ToolDebugDesc}{
+\OptItem{\Opt{-debug}}{Causes debugging information to be sent to \File{stderr} based on the value of the configuration variable \MacroNI{TOOL\_DEBUG}}
 }
 
 %% This is the description of the common arguments

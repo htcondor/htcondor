@@ -362,11 +362,11 @@ system.
 \begin{description}
   
 \item[\Macro{CONDOR\_HOST}] \label{param:CondorHost} This macro is
-  used to define the \MacroU{NEGOTIATOR\_HOST} and
-  \MacroU{COLLECTOR\_HOST} macros.  Normally the \Condor{collector}
+  used to define the \MacroUNI{NEGOTIATOR\_HOST} and
+  \MacroUNI{COLLECTOR\_HOST} macros.  Normally the \Condor{collector}
   and \Condor{negotiator} would run on the same machine.  If for some
   reason they were not run on the same machine,
-  \MacroU{CONDOR\_HOST} would not be needed.  Some
+  \MacroUNI{CONDOR\_HOST} would not be needed.  Some
   of the host-based security macros use \MacroUNI{CONDOR\_HOST} by
   default.  See section~\ref{sec:Host-Security}, Setting up
   IP/host-based security in Condor for details.
@@ -376,7 +376,7 @@ system.
   your pool.  Normally, it is defined relative to
   the \MacroUNI{CONDOR\_HOST}
   macro.  There is no default value for this macro;
-  \Macro{COLLECTOR\_HOST} must be defined for the pool to work
+  \MacroNI{COLLECTOR\_HOST} must be defined for the pool to work
   properly.
 
   In addition to defining the hostname, this setting can optionally be
@@ -401,7 +401,7 @@ system.
   the pool.
   Normally, it is defined relative to the \MacroUNI{CONDOR\_HOST}
   macro.  There is no default value for this macro;
-  \Macro{NEGOTIATOR\_HOST} must be defined for the pool to work
+  \MacroNI{NEGOTIATOR\_HOST} must be defined for the pool to work
   properly.
   This variable may also be used to optionally define a network port for
   the \Condor{negotatior} daemon, as explained for the
@@ -411,7 +411,7 @@ system.
   hostname of the machine where the CondorView server is running.
   This service is optional, and requires additional configuration if
   you want to enable it.  There is no default value for
-  \Macro{CONDOR\_VIEW\_HOST}.  If \Macro{CONDOR\_VIEW\_HOST} is not
+  \MacroNI{CONDOR\_VIEW\_HOST}.  If \MacroNI{CONDOR\_VIEW\_HOST} is not
   defined, no CondorView server is used.
   See section~\ref{sec:Contrib-CondorView-Install} on
   page~\pageref{sec:Contrib-CondorView-Install} for more details.
@@ -479,7 +479,7 @@ system.
   the \MacroUNI{LOG} macro by default.  The log directory also acts as
   the current working directory of the Condor daemons as the run, so
   if one of them should produce a core file for any reason, it would
-  be placed in the directory defined by this macro.  \Macro{LOG} is
+  be placed in the directory defined by this macro.  \MacroNI{LOG} is
   required to be defined.  Normally, \MacroUNI{LOG} is defined in
   terms of \MacroUNI{LOCAL\_DIR}.
   
@@ -502,8 +502,8 @@ system.
   the local machine.  If a given machine is only set up to only submit
   jobs and not execute them, it would not need an execute directory
   (or this macro defined).  There is no default value for
-  \Macro{EXECUTE}, and the \Condor{startd} will not function if
-  \Macro{EXECUTE} is not defined.  Normally, \MacroUNI{EXECUTE} is
+  \MacroNI{EXECUTE}, and the \Condor{startd} will not function if
+  \MacroNI{EXECUTE} is not defined.  Normally, \MacroUNI{EXECUTE} is
   defined in terms of \MacroUNI{LOCAL\_DIR}.
   
 \item[\Macro{LOCAL\_CONFIG\_FILE}] \label{param:LocalConfigFile} The
@@ -589,15 +589,15 @@ system.
   message.  On all platforms, the default shipped with Condor should
   work.  Only if you installed things in a non-standard location on
   your system would you need to change this setting.  There is no
-  default value for \Macro{MAIL}, and the \Condor{schedd} will not
-  function unless \Macro{MAIL} is defined.
+  default value for \MacroNI{MAIL}, and the \Condor{schedd} will not
+  function unless \MacroNI{MAIL} is defined.
 
 \item[\Macro{RESERVED\_SWAP}] \label{param:ReservedSwap} Determines
   how much swap space you want to reserve for your own machine.
   Condor will not start up more \Condor{shadow} processes if the
   amount of free swap space on your machine falls below this level.
-  \Macro{RESERVED\_SWAP} is specified in megabytes.  The default value
-  of \Macro{RESERVED\_SWAP} is 5 megabytes.
+  \MacroNI{RESERVED\_SWAP} is specified in megabytes.  The default value
+  of \MacroNI{RESERVED\_SWAP} is 5 megabytes.
 
 \item[\Macro{RESERVED\_DISK}] \label{param:ReservedDisk} Determines
   how much disk space you want to reserve for your own machine.  When
@@ -624,10 +624,10 @@ system.
   \index{environment variables!CONDOR\_IDS@\texttt{CONDOR\_IDS}}
   \index{CONDOR\_IDS@\texttt{CONDOR\_IDS}!environment variable}
   environment variable, or whatever you define in the
-  \Macro{CONDOR\_IDS} setting in the Condor config files.
+  \MacroNI{CONDOR\_IDS} setting in the Condor config files.
   See section~\ref{sec:uids} on UIDs in Condor for details.
 
-  If no value for \Macro{LOCK} is provided, the value of \Macro{LOG}
+  If no value for \MacroNI{LOCK} is provided, the value of \MacroNI{LOG}
   is used.
 
 
@@ -1107,6 +1107,16 @@ The \Condor{startd} keeps track
   instead of changing all of the individual parameters.  For example,
   to turn on all debugging in all subsystems, set
   \verb$ALL_DEBUG = D_ALL$.
+
+\item[\Macro{TOOL\_DEBUG}] \label{param:ToolDebug} Uses the same
+  values (debugging levels) as \MacroNI{SUBSYS\_DEBUG} to
+  describe the amount of debugging information sent to \File{stderr} 
+  for Condor tools.
+
+\item[\Macro{SUBMIT\_DEBUG}] \label{param:SubmitDebug} Uses the same
+  values (debugging levels) as \MacroNI{SUBSYS\_DEBUG} to
+  describe the amount of debugging information sent to \File{stderr} 
+  for \Condor{submit}.
 
 \end{description}
 
@@ -3229,6 +3239,7 @@ These macros affect the \Condor{negotiator}.
 \item[\Macro{NEGOTIATOR\_INTERVAL}] \label{param:NegotiatorInterval}
   Sets how often the negotiator starts a negotiation cycle.  It is defined
   in seconds and defaults to 300 (5 minutes).
+  The minimum accepted value is 20. Values lower than 20 are treated as 20.
   
 \item[\Macro{NEGOTIATOR\_TIMEOUT}] \label{param:NegotiatorTimeout}
   Sets the timeout that the negotiator uses on its network connections

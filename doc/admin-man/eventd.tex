@@ -18,13 +18,13 @@ activates the event.
 Currently, this daemon supports \Macro{SHUTDOWN} events, which place machines
 in the owner state during scheduled times.
 The eventd causes machines to vacate jobs in an orderly fashion
-in anticipation of \Macro{SHUTDOWN} events.
+in anticipation of \MacroNI{SHUTDOWN} events.
 Scheduling this improves performance, because the machines
 do not all attempt to checkpoint their jobs at the same time.
 Instead, the eventd schedules checkpoint transfers according to
 bandwidth limits defined in its configuration files.
 
-When a \Macro{SHUTDOWN} event is activated, the eventd contacts all startd
+When a \MacroNI{SHUTDOWN} event is activated, the eventd contacts all startd
 daemons
 that match constraints given in the configuration file,
 and instructs them to shut down.
@@ -37,7 +37,7 @@ The eventd then sends a vacate command to each startd
 that is currently running a job.
 Once the job is vacated, the startd transitions to the
 owner state and remains in this state for the duration of the
-\Macro{SHUTDOWN} event.
+\MacroNI{SHUTDOWN} event.
 
 The \Condor{eventd} must run on a machine with \Macro{STARTD}
 \Macro{ADMINISTRATOR} and \Macro{CONFIG} access to your pool.
@@ -90,7 +90,7 @@ example, \verb@MTWRFSU@ would specify that the event occurs daily,
 \verb@SU@ would specificy that the event occurs only on weekends.
 
 Two options can be specified to change the default behavior of
-\Macro{SHUTDOWN} events.
+\MacroNI{SHUTDOWN} events.
 If \MacroNI{\_RUNTIME} is appended to the \MacroNI{SHUTDOWN} event
 specification, the startd shutdown configurations will not be
 persistent.  If a machine reboots or a startd is restarted, the startd
@@ -130,10 +130,10 @@ the file indicated by the \Macro{EVENTD\_CAPACITY\_INFO} parameter, and
 any network routing information required to implement those limits is
 specified in the file indicated by the \Macro{EVENTD\_ROUTING\_INFO}
 parameter.
-The \Macro{EVENTD\_CAPACITY\_INFO} file has the same
+The \MacroNI{EVENTD\_CAPACITY\_INFO} file has the same
 format as the \Macro{NETWORK\_CAPACITY\_INFO} file, described in
 section~\ref{sec:Bandwidth-Alloc-Capinfo}.
-The \Macro{EVENTD\_ROUTING\_INFO} file has the same
+The \MacroNI{EVENTD\_ROUTING\_INFO} file has the same
 format as the \Macro{NETWORK\_ROUTING\_INFO} file, described in
 section~\ref{sec:Bandwidth-Alloc-Routes}.
 

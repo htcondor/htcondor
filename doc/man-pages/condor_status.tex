@@ -1,6 +1,7 @@
 \begin{ManPage}{\label{man-condor-status}\Condor{status}}{1}
 {Display status of the Condor pool}
 \Synopsis \SynProg{\Condor{status}}
+\ToolDebugOption
 \oArg{help options}
 \oArg{query options}
 \oArg{display options}
@@ -36,6 +37,7 @@ At any time, only one \Arg{help option}, one \Arg{query option} and one
 options} may be specified.
 
 \begin{Options}
+    \ToolDebugDesc
     \OptItem{\Opt{-help}}{(Help option) Display usage information}
     \OptItem{\Opt{-diagnose}}{(Help option) Print out query ad without 
 		performing query}

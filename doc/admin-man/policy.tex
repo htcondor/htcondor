@@ -662,7 +662,7 @@ At any time while the machine is in the Matched state, if the
 the Owner state directly (transition \Bold{7}).
 
 If the schedd that was matched with the machine claims it before the
-\Macro{MATCH\_TIMEOUT} expires, the machine goes into the Claimed/Idle
+\MacroNI{MATCH\_TIMEOUT} expires, the machine goes into the Claimed/Idle
 state (transition \Bold{8}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -925,12 +925,12 @@ It serves as a quick reference.
   enters Preempting/Killing whenever \Expr{KILL} is TRUE. 
   
 \item[\Macro{KILLING\_TIMEOUT}] If the machine is in the
-  Preempting/Killing state for longer than \Macro{KILLING\_TIMEOUT}
+  Preempting/Killing state for longer than \MacroNI{KILLING\_TIMEOUT}
   seconds, the startd sends a SIGKILL to the \Condor{starter}
   and all its children to try to kill the job as quickly as possible.
   
 \item[\Expr{PERIODIC\_CHECKPOINT}] If the machine is in the
-  Claimed/Busy state and \Expr{PERIODIC\_CHECKPOINT} is TRUE, the
+  Claimed/Busy state and \MacroNI{PERIODIC\_CHECKPOINT} is TRUE, the
   user's job begins a periodic checkpoint.
   
 \item[\Expr{RANK}] If this expression evaluates to a higher number for
@@ -986,7 +986,7 @@ clearly.
 \item[\Macro{BackgroundLoad}] Amount of background load permitted
   on the machine and still start a Condor job.
 
-\item[\Macro{HighLoad}] If the \MacroU{NonCondorLoadAvg} goes over
+\item[\Macro{HighLoad}] If the \MacroUNI{NonCondorLoadAvg} goes over
   this, the CPU is considered too busy, and eviction of the Condor
   job should start. 
 
@@ -1014,11 +1014,11 @@ clearly.
 \item[\Macro{MachineBusy}] The CPU or the Keyboard is busy.
 
 \item[\Macro{CPUIsBusy}] A boolean value set to the same value as 
-    \Macro{CPUBusy}.
+    \MacroNI{CPUBusy}.
 
-\item[\Macro{CPUBusyTime}] The value 0 if \Macro{CPUBusy}
+\item[\Macro{CPUBusyTime}] The value 0 if \MacroNI{CPUBusy}
     is False; the time in seconds since
-    \Macro{CPUBusy} became True.
+    \MacroNI{CPUBusy} became True.
     
 \end{description}
 
@@ -1266,7 +1266,7 @@ MachineBusy = ( $(WorkHours) || $(CPUBusy) || $(KeyboardBusy) )
 By default, the \Macro{MachineBusy} macro is used to define the
 \Expr{SUSPEND} and \Expr{PREEMPT} expressions.  
 If you have changed these expressions at your site, you will need to
-add \MacroU{WorkHours} to your \Expr{SUSPEND} and \Expr{PREEMPT}
+add \MacroUNI{WorkHours} to your \Expr{SUSPEND} and \Expr{PREEMPT}
 expressions as appropriate.  
 
 Depending on your site, you might also want to avoid suspending jobs
@@ -1433,19 +1433,19 @@ Preempting state.
 Once a machine is transitioning into the Preempting state, the
 \Macro{WANT\_VACATE} expression controls whether the job should
 be vacated with a checkpoint or directly killed.
-The \Macro{KILL} expression determines the transition from
+The \MacroNI{KILL} expression determines the transition from
 Preempting/Vacating to Preempting/Killing.  
 
 In previous versions of Condor,
-the \Macro{KILL} expression handled three distinct cases
+the \MacroNI{KILL} expression handled three distinct cases
 (the transitions from Claimed/Busy, Claimed/Suspended and
-Preempting/Vacating), and the \Macro{VACATE} expression handled
+Preempting/Vacating), and the \MacroNI{VACATE} expression handled
 two cases (the transitions from Claimed/Busy and Claimed/Suspended).
 In the current version of Condor, \Macro{PREEMPT} handles the
 same two cases as the previous \Macro{VACATE} expression,
-but the \Macro{KILL} expression handles one case.
+but the \MacroNI{KILL} expression handles one case.
 Very complex policies can now be specified using all of
-the default expressions, only tuning the \Macro{WANT\_VACATE} and
-\Macro{WANT\_SUSPEND} expressions.
-In previous versions, heavy use of the \Macro{WANT\_*}
-expressions caused a complex \Macro{KILL} expression.
+the default expressions, only tuning the \MacroNI{WANT\_VACATE} and
+\MacroNI{WANT\_SUSPEND} expressions.
+In previous versions, heavy use of the \MacroNI{WANT\_*}
+expressions caused a complex \MacroNI{KILL} expression.
