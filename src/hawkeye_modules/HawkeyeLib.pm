@@ -5,7 +5,10 @@ use HawkeyePublish;
 # Hawkeye interface version number
 my $MyInterfaceVersion = 1;
 my $HawkeyeInterfaceVersion;
-my $InterfaceVersionString = "HAWKEYE_INTERFACE_VERSION";
+my $InterfaceVersionEnv = "HAWKEYE_INTERFACE_VERSION";
+my $StartdNameEnv = "STARTD_CRON_NAME";
+my $StartdName = "Hawkeye";
+my $ConfigVal = "hawkeye_config_val";
 
 # Hard config from the command line
 my %HardConfigs;
@@ -30,10 +33,22 @@ sub DoConfig( )
     }
     $ENV{HAWKEYE_MODULE} = "$0";
 
+    # Get the startd name
+    if ( exists $ENV{$StartdNameEnv} )
+    {
+	$StartdName = $ENV{$StartdNameEnv};
+	my $NameUc = uc( $StartdName );
+	$InterfaceVersionEnv = $NameUc . "_INTERFACE_VERSION";
+	$ConfigVal = "condor_config_val" if ( $NameUc ne "HAWKEYE" );
+    }
+
+    # Get the module name from the command line
     $ModuleName = shift( @ARGV) if ( $#ARGV >= 0 );
+
+    # Handle "--ifversion";
     if ( $ModuleName =~ /^--ifversion/ )
     {
-	print "$InterfaceVersionString=$MyInterfaceVersion\n";
+	print "$InterfaceVersionEnv=$MyInterfaceVersion\n";
 	exit 0;
     }
 
@@ -52,15 +67,21 @@ sub DoConfig( )
 	{
 	    $HardConfigs{$1} = $2;
 	}
+	# Easier for user: --(variable)=value
+	elsif ( $Arg =~ /^--(\w+)=(.*)/ )
+	{
+	    my $Var = $ModuleName . "_" . $1;
+	    $HardConfigs{$Var} = $2;
+	}
 	# Don't queury the config from the startd _at all_
-	elsif ( $Arg =~ /^--noquery/ )
+	elsif ( ( $Arg eq "--noquery" ) || ( $Arg eq "-nq" ) )
 	{
 	    $ConfigQuery = 0;
 	}
 	# Query published interface version
-	elsif ( $Arg =~ /^--ifversion/ )
+	elsif ( $Arg eq "--ifversion" )
 	{
-	    print "$InterfaceVersionString=$MyInterfaceVersion\n";
+	    print "$InterfaceVersionEnv=$MyInterfaceVersion\n";
 	    exit 0;
 	}
 	# Normal param, just keep going..
@@ -80,9 +101,9 @@ sub DoConfig( )
 
     # Interface version stuff...
     $HawkeyeInterfaceVersion = 0;
-    if ( exists $ENV{$InterfaceVersionString} )
+    if ( exists $ENV{$InterfaceVersionEnv} )
     {
-	$HawkeyeInterfaceVersion = $ENV{$InterfaceVersionString};
+	$HawkeyeInterfaceVersion = $ENV{$InterfaceVersionEnv};
     }
 }
 
@@ -128,7 +149,9 @@ sub ReadConfig( $$ )
     if ( exists( $HardConfigs{$Label} )  ) {
 	$String = $HardConfigs{$Label};
     } elsif ( $ConfigQuery ) {
-	$String = `hawkeye_config_val -startd hawkeye_$ModuleName$Ext`;
+	my $Cmd = $ConfigVal . " -startd " . $StartdName . "_$ModuleName$Ext";
+	print STDERR "Running: $Cmd\n";
+	$String = `$Cmd`;
 	$String = "not defined" if ( -1 == $? );
     }
 
