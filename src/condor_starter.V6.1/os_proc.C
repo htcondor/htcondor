@@ -441,39 +441,35 @@ OsProc::renameCoreFile( void )
 	bool rval = false;
 
 	priv_state old_priv;
+
 	char buf[64];
 	sprintf( buf, "core.%d.%d", Cluster, Proc );
-	int size = strlen(job_iwd) + 1;
-	char* old_name = (char*) malloc( (size+5) * sizeof(char) );
-	if( ! old_name ) {
-		EXCEPT( "Out of memory!" );
-	}
-	sprintf( old_name, "%s%c%s", job_iwd, DIR_DELIM_CHAR, "core" );
 
-	size += strlen(buf);
-	char* new_name = (char*) malloc( size * sizeof(char) );
-	if( ! new_name ) {
-		EXCEPT( "Out of memory!" );
-	}
-	sprintf( new_name, "%s%c%s", job_iwd, DIR_DELIM_CHAR, buf );
+	MyString old_name( job_iwd );
+	MyString new_name( job_iwd );
+
+	old_name += DIR_DELIM_CHAR;
+	old_name += "core";
+
+	new_name += DIR_DELIM_CHAR;
+	new_name += buf;
 
 		// we need to do this rename as the user...
 	errno = 0;
 	old_priv = set_user_priv();
-	if( rename(old_name, new_name) >= 0 ) {
+	if( rename(old_name.Value(), new_name.Value()) >= 0 ) {
 		rval = true;
 	}
 	set_priv( old_priv );
-	free( old_name );
-	free( new_name );
 
 	if( rval ) {
 			// make sure it'll get transfered back, too.
 		Starter->addToTransferOutputFiles( buf );
 		dprintf( D_FULLDEBUG, "Found core file, renamed to %s\n", buf );
 	} else if( errno != ENOENT ) {
-		dprintf( D_ALWAYS, "Failed to rename core file: "
-				 "errno %d (%s)\n", errno, strerror(errno) );
+		dprintf( D_ALWAYS, "Failed to rename(%s,%s): errno %d (%s)\n",
+				 old_name.Value(), new_name.Value(), errno,
+				 strerror(errno) );
 	}
 
 	return rval;
