@@ -1,18 +1,4 @@
 /*
-** Set up platform-dependent Imake flags
-*/
-#if IS_SUN4M_SOLARIS251
-#define IMAKE_FLAGS	-I../../config -DIS_SUN4M_SOLARIS251 -s Makefile
-PLATFORM_FLAG=-DIS_SUN4M_SOLARIS251
-#elif IS_X86_SOLARIS25
-#define IMAKE_FLAGS 	-I../../config -DIS_X86_SOLARIS25 -s Makefile
-#elif IS_GLIBC
-#define IMAKE_FLAGS 	-I../../config -DIS_GLIBC -s Makefile
-#else
-#define IMAKE_FLAGS	-I../../config -s Makefile
-#endif
-
-/*
 ** Set up some shared, common rules and defininitions
 */
 .SUFFIXES: .C
