@@ -37,8 +37,8 @@ int open_url(char *, int, int);
 extern "C" char*	get_schedd_addr(const char*, const char*); 
 extern "C" int		strcmp_until(const char *, const char *, const char);
 
-ReliSock *qmgmt_sock;
-static Qmgr_connection *connection = 0;
+ReliSock *qmgmt_sock = NULL;
+static Qmgr_connection connection;
 
 Qmgr_connection *
 ConnectQ(char *qmgr_location, int timeout, bool read_only )
@@ -56,20 +56,7 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
 		scheddAddr = NULL;
 	} 
 
-	if (connection != 0) {
-		connection->count++;
-		if ( localScheddAddr ) free(localScheddAddr);
-		return connection;
-	}
-
-	connection = (Qmgr_connection *) malloc(sizeof(Qmgr_connection));
-	if (connection == 0) {
-		if ( localScheddAddr ) free(localScheddAddr);	
-		return 0;
-	}
-	connection->rendevous_file = 0;
-
-
+		// get the address of the schedd to which we want a connection
 	if( !qmgr_location || !*qmgr_location ) {
 			/* No schedd identified --- use local schedd */
 		scheddAddr = localScheddAddr;
@@ -81,13 +68,22 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
 			/* We were passed the sinful string already */
 		scheddAddr = qmgr_location;
 	}
-		
+
+
+		// do we already have a connection active?
+	if( qmgmt_sock ) {
+			// yes; reject new connection (we can only handle one at a time)
+		if( localScheddAddr ) free( localScheddAddr );
+		return( NULL );
+	}
+
+		// no connection active as of now; create a new one
 	if(scheddAddr) {
 		qmgmt_sock = new ReliSock();
-		if ( timeout > 0 ) {
+		if ( timeout > 0 && qmgmt_sock ) {
 			qmgmt_sock->timeout(timeout);
 		}
-		ok = qmgmt_sock->connect(scheddAddr, QMGR_PORT);
+		ok = qmgmt_sock && qmgmt_sock->connect(scheddAddr, QMGR_PORT);
 		if( !ok ) {
 			dprintf(D_ALWAYS, "Can't connect to queue manager\n");
 		}
@@ -102,8 +98,9 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
 	}
 
 	if( !ok ) {
-		free(connection);
 		if ( localScheddAddr ) free(localScheddAddr);
+		if( qmgmt_sock ) delete qmgmt_sock;
+		qmgmt_sock = NULL;
 		return 0;
 	}
 
@@ -125,6 +122,8 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
 
 	if ( !username ) {
 		dprintf(D_FULLDEBUG,"Failure getting my_username()\n", username );
+		delete qmgmt_sock;
+		qmgmt_sock = NULL;
 		return( 0 );
 	}
 
@@ -143,7 +142,8 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
 	free( username );
 
 	if (rval < 0) {
-		free(connection);
+		delete qmgmt_sock;
+		qmgmt_sock = NULL;
 		return 0;
 	}
 
@@ -151,8 +151,7 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
 		qmgmt_sock->authenticate();
 	}
 
-	connection->count = 1;
-	return connection;
+	return &connection;
 }
 
 
@@ -161,29 +160,13 @@ DisconnectQ(Qmgr_connection *conn)
 {
 	int rval;
 	if (conn == 0) {
-		conn = connection;
+		conn = &connection;
 	}
-	conn->count--;
 
-	if (conn->count == 0) {
-		rval = CloseConnection();
-		delete qmgmt_sock;
-		qmgmt_sock = NULL;
-		//this is conn->rendevous_file, not rendevous_file
-		if (conn->rendevous_file != 0) {
-			unlink(conn->rendevous_file);
-			free(conn->rendevous_file);
-			conn->rendevous_file = 0;
-		}
-		free(conn);
-		if (conn == connection) {
-			connection = 0;
-		}
-	}
-	if( rval < 0 ) {
-		return false;
-	}
-	return true;
+	rval = CloseConnection();
+	delete qmgmt_sock;
+	qmgmt_sock = NULL;
+	return( rval >= 0 );
 }
 
 
@@ -243,8 +226,8 @@ rusage_to_float(struct rusage ru, float *utime, float *stime )
 int
 float_to_rusage(float utime, float stime, struct rusage *ru)
 {
-	ru->ru_utime.tv_sec = utime;
-	ru->ru_stime.tv_sec = stime;
+	ru->ru_utime.tv_sec = (time_t)utime;
+	ru->ru_stime.tv_sec = (time_t)stime;
 	ru->ru_utime.tv_usec = 0;
 	ru->ru_stime.tv_usec = 0;
 	return 0;
@@ -259,10 +242,9 @@ GetProc(int cl, int pr, PROC *p)
 	float	utime,stime;
 	char	*s;
 
-	if (connection == 0) {
+	if (!qmgmt_sock) {
 		disconn_when_done = 1;
-		ConnectQ(0);
-		if (connection == 0) {
+		if( !ConnectQ(0) ) {
 			return -1;
 		}
 	}
@@ -346,7 +328,7 @@ GetProc(int cl, int pr, PROC *p)
 	
 
 	if (disconn_when_done) {
-		DisconnectQ(connection);
+		DisconnectQ(&connection);
 	}
 	return 0;
 }
