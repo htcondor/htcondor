@@ -39,10 +39,10 @@ KeyInfo :: KeyInfo(const KeyInfo& copy)
       protocol_   (copy.protocol_),
       duration_   (copy.duration_)
 {
-    if (copy.keyDataLen_) {
-        keyData_ = new unsigned char[copy.keyDataLen_];
-        memcpy(keyData_, copy.keyData_, keyDataLen_);   
+    if (keyData_) {
+        free( keyData_ );
     }
+    init(copy.keyData_, copy.keyDataLen_);
 }
 
 KeyInfo :: KeyInfo(unsigned char * keyData,
@@ -50,16 +50,32 @@ KeyInfo :: KeyInfo(unsigned char * keyData,
                    Protocol        protocol,
                    int             duration )
     : protocol_   (protocol),
-      keyData_    (new unsigned char[keyDataLen]),
+      keyData_    (0),
       keyDataLen_ (keyDataLen),
       duration_   (duration)
 {
-    memcpy(keyData_, keyData, keyDataLen);
+    init(keyData, keyDataLen);
+}
+
+void KeyInfo :: init(unsigned char * keyData, int keyDataLen)
+{
+    if ((keyDataLen > 0) && keyData) {
+        keyDataLen_ = keyDataLen;
+        keyData_    = (unsigned char *)malloc(keyDataLen_ + 1);
+        memset(keyData_, 0, keyDataLen_ + 1);
+        memcpy(keyData_, keyData, keyDataLen_);   
+    }
+    else {
+        keyDataLen_ = 0;
+    }
 }
 
 KeyInfo :: ~KeyInfo()
 {
-    delete keyData_;
+    if (keyData_) {
+        free(keyData_);
+    }
+    keyData_ = 0;
 }
 
 unsigned char * KeyInfo :: getKeyData()
