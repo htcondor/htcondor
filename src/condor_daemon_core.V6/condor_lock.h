@@ -40,13 +40,17 @@ class CondorLock : public CondorLockBase
 				bool		auto_refresh = false );
 	~CondorLock( void );
 
-	// Actually create the lock
-	virtual int BuildLock( const char	*lock_url,
-						   const char	*lock_name );
+	// Change lock parameters
+	int SetLockParams( const char	*lock_url,
+					   const char	*lock_name,
+					   time_t		poll_period,
+					   time_t		lock_hold_time,
+					   bool			auto_refresh = false ) ;
 
-	// Adjust the periods
+	// Adjust the timing parameters
 	virtual int SetPeriods( time_t	poll_period,
-							time_t	lock_hold_time );
+							time_t	lock_hold_time,
+							bool	auto_refresh = false );
 
 	// Basic lock operations
 	virtual int AcquireLock( bool	background,
@@ -60,9 +64,15 @@ class CondorLock : public CondorLockBase
 
   private:
 
-	// Private member functions
-	int Init( const char	*lock_url,
-			  const char	*lock_name );
+	// Internal function which builds the lock
+	int BuildLock( const char	*lock_url,
+				   const char	*lock_name,
+				   Service		*app_service,
+				   LockEvent	lock_event_acquired,
+				   LockEvent	lock_event_lost,
+				   time_t		poll_period,
+				   time_t		lock_hold_time,
+				   bool			auto_refresh );
 
 	// Private data
 	CondorLockImpl	*real_lock;

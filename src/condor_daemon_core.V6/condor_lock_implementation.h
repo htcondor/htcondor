@@ -44,7 +44,8 @@ class CondorLockImpl : public CondorLockBase
 
 	// Adjust the peeriods
 	virtual int SetPeriods( time_t	poll_period,
-							time_t	lock_hold_time );
+							time_t	lock_hold_time,
+							bool	auto_refresh );
 
 	// Basic lock operations
 	virtual int AcquireLock( bool	background,
@@ -53,8 +54,21 @@ class CondorLockImpl : public CondorLockBase
 	virtual int RefreshLock( int	*callback_status = NULL );
 	virtual bool HaveLock( void );
 
+	// To rebuild a lock, we need to get the service, etc. info
+	// These methods allow that; that's the only reason they're here!!
+	Service *GetAppService( void ) { return app_service; };
+	LockEvent GetAcquiredHandler( void ) { return lock_event_acquired; };
+	LockEvent GetLostHandler( void ) { return lock_event_lost; };
+
 	// Do the lock implementation; called by the actual implementation
 	int ImplementLock( void );
+
+	// Low level function to change the URL / name of the lock
+	//  Returns:
+	//   0: No change / ok
+	//  -1: Fatal error
+	//   1: Can't change w/o rebuilding
+	virtual int ChangeUrlName( const char *url, const char *name ) = 0;
 
   private:
 	time_t			poll_period;
@@ -77,7 +91,7 @@ class CondorLockImpl : public CondorLockBase
 			  time_t		lock_hold_time,
 			  bool			auto_refresh );
 	int DoPoll( void );
-	int StartTimer( void );
+	int SetupTimer( void );
 
 	// Update state & invoke callback
 	int LockAcquired( LockEventSrc event_src );

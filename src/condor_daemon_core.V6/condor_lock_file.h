@@ -60,6 +60,9 @@ class CondorLockFile : public CondorLockImpl
 	int BuildLock( const char	*lock_url,
 				   const char	*lock_name );
 
+	int ChangeUrlName( const char *lock_url,
+					   const char *lock_name );
+
   private:
 	MyString		lock_url;
 	MyString		lock_name;

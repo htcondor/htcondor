@@ -41,13 +41,10 @@ class CondorLockBase : public Service
 	CondorLockBase( void );
 	~CondorLockBase( void );
 
-	// Actually create the lock
-	virtual int BuildLock( const char	*lock_url,
-						   const char	*lock_name ) = 0;
-
 	// Adjust the peeriods
 	virtual int SetPeriods( time_t	poll_period,
-							time_t	lock_hold_time ) = 0;
+							time_t	lock_hold_time,
+							bool	auto_refresh ) = 0;
 
 	// Basic lock operations
 	virtual int AcquireLock( bool	background,

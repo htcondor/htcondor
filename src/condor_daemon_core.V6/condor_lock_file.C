@@ -128,7 +128,7 @@ CondorLockFile::BuildLock( const char	*lock_url,
 
 		// Copy the URL & name out
 	this->lock_url = lock_url;
-	this->lock_name = lock_url;
+	this->lock_name = lock_name;
 
 		// Create the lock file name from it
 	lock_file.sprintf( "%s/%s.lock", lock_url + 5, lock_name );
@@ -148,6 +148,29 @@ CondorLockFile::BuildLock( const char	*lock_url,
 		// Build the lock internals
 	return ImplementLock( );
 
+}
+
+// Low level function to change the URL / name of the lock
+//  Returns:
+//   0: No change / ok
+//  -1: Fatal error
+//   1: Can't change w/o rebuilding
+int 
+CondorLockFile::ChangeUrlName( const char *lock_url,
+							   const char *lock_name )
+{
+	// I don't handle any changes well, at least for now..
+	if ( this->lock_url != lock_url ) {
+		dprintf( D_ALWAYS, "Lock URL Changed -> '%s'\n", lock_name );
+		return 1;
+	}
+	if ( this->lock_name != lock_name ) {
+		dprintf( D_ALWAYS, "Lock name Changed -> '%s'\n", lock_name );
+		return 1;
+	}
+
+	// Otherwiwse, ok
+	return 0;
 }
 
 // Internal "get lock"
@@ -260,11 +283,13 @@ CondorLockFile::FreeLock( void )
 	int		status = unlink( lock_file.Value( ) );
 
 	if ( status ) {
-		dprintf( D_ALWAYS, "UpdateLock: Error unlink lock '%s': %d %s\n",
+		dprintf( D_ALWAYS, "FreeLock: Error unlink lock '%s': %d %s\n",
 				 lock_file.Value(), errno, strerror( errno ) );
-		return -1;
+	} else {
+		dprintf( D_FULLDEBUG, "FreeLock: Lock unlinked ok\n" );
 	}
 
+		// In either case, return ok to the application
 	return 0;
 #endif
 }

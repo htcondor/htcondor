@@ -72,10 +72,15 @@ CondorLockImpl::Init( time_t		poll_period,
 	this->last_poll = 0;
 	this->have_lock = false;
 	this->lock_enabled = false;
-	this->auto_refresh = auto_refresh;
 
-	this->poll_period = poll_period;
-	this->lock_hold_time = lock_hold_time;
+		// Force timing stuff to known state
+	this->poll_period = 0;
+	this->old_poll_period = 0;
+	this->lock_hold_time = 0;
+	this->auto_refresh = false;
+
+		// Store off lock periods, etc
+	return SetPeriods( poll_period, lock_hold_time, auto_refresh );
 
 		// Done
 	return 0;
@@ -84,6 +89,15 @@ CondorLockImpl::Init( time_t		poll_period,
 // Destructor
 CondorLockImpl::~CondorLockImpl( void )
 {
+		// Lock lost; notify application
+	if ( have_lock ) {
+		LockLost( LOCK_SRC_POLL );
+	}
+
+		// Free up the timer
+	if ( timer >= 0 ) {
+		daemonCore->Cancel_Timer( timer );
+	}
 }
 
 // Implement the lock internals
@@ -91,72 +105,91 @@ int
 CondorLockImpl::ImplementLock( void )
 {
 		// Start the timer
-	return StartTimer( );
+	return SetupTimer( );
 }
 
 // Set period information
 int
 CondorLockImpl::SetPeriods( time_t	poll_period,
-							time_t	lock_hold_time )
+							time_t	lock_hold_time,
+							bool	auto_refresh )
 {
+		// Note if some things have changed....
+	bool	hold_changed = ( this->lock_hold_time != lock_hold_time );
+
+		// Store the new parameters
 	this->poll_period = poll_period;
 	this->lock_hold_time = lock_hold_time;
-	return StartTimer( );
+	this->auto_refresh = auto_refresh;
+
+		// Refresh the lock
+	if ( have_lock && hold_changed && auto_refresh ) {
+		int status = UpdateLock( lock_hold_time );
+		if ( status ) {
+			(void) LockLost( LOCK_SRC_POLL );
+		}
+	}
+
+		// Finally, kick off the timer
+	return SetupTimer( );
 }
 
 // Handle new timer reltated configuration
 int
-CondorLockImpl::StartTimer( void )
+CondorLockImpl::SetupTimer( void )
 {
+		// If the poll period hasn't changed, nothing to do here...
+	if ( poll_period == old_poll_period ) {
+		return 0;
+	}
 
-		// If no lock aquired callback, nothing to do!
-	if ( (!lock_event_acquired) && (!lock_event_lost)  ) {
+		// If the poll period is zero, not much to do...
+	if ( 0 == poll_period ) {
 		last_poll = 0;
-		return 0;
-	}
 
-		// Valid time info?
-	if ( ( 0 == poll_period ) || ( 0 == lock_hold_time ) ) {
-		last_poll = 0;
-		return 0;
-	}
-
-		// Has the poll period changed?
-	if ( old_poll_period == poll_period ) {
-		return 0;
-	}
-
-		// Are we waiting on a poll?
-	if ( last_poll ) {
-		time_t	next_poll = last_poll + poll_period;
-		time_t	now = time( NULL );
-
-			// Is it's time up?
-		if ( last_poll <= now ) {
-			DoPoll( );
-			daemonCore->Reset_Timer(
-				timer,
-				poll_period,
-				poll_period );
-		} else {
-			daemonCore->Reset_Timer(
-				timer,
-				next_poll - last_poll,
-				poll_period );
+			// Free up the timer
+		if ( timer >= 0 ) {
+			daemonCore->Cancel_Timer( timer );
 		}
+
+			// Done
+		old_poll_period = poll_period;
+		return 0;
+	}
+
+		// Figure out when then next poll should be, etc...
+	time_t	now = time( NULL );
+	time_t	next_poll;
+	if ( last_poll ) {
+		next_poll = last_poll + poll_period;
 	} else {
-		timer = daemonCore->Register_Timer(
-			poll_period,
+		next_poll = now + poll_period;
+	}
+
+		// If the timer already exists, kill it
+	if ( timer >= 0 ) {
+		daemonCore->Cancel_Timer( timer );
+		timer = -1;
+	}
+
+		// Is it's time up?
+	if ( last_poll && ( last_poll <= now ) ) {
+		DoPoll( );
+	}
+
+		// Create the timer...
+	timer = daemonCore->Register_Timer(
+			next_poll - now,
 			poll_period,
 			(TimerHandlercpp) &CondorLockImpl::DoPoll,
 			"CondorLockImpl",
 			this );
-		if ( timer < 0 ) {
-			dprintf( D_ALWAYS, "CondorLockImpl: Failed to create timer\n" );
-			return -1;
-		}
+	if ( timer < 0 ) {
+		dprintf( D_ALWAYS, "CondorLockImpl: Failed to create timer\n" );
+		return -1;
 	}
 
+		// All done now
 	return 0;
 }
 
@@ -240,18 +273,18 @@ CondorLockImpl::ReleaseLock( int *callback_status )
 
 		// If we don't have the lock, nothing to do!
 	if ( ! have_lock ) {
+		dprintf( D_FULLDEBUG, "ReleaseLock: we don't own the lock; done\n" );
 		return 0;
 	}
 
 		// Try to get the lock
+	dprintf( D_FULLDEBUG, "ReleaseLock: Freeing the lock\n" );
 	int		status = FreeLock( );
 
-		// If it succeeded, notify the application
-	if ( 0 == status ) {
-		int		cb = LockLost( LOCK_SRC_APP );
-		if ( callback_status ) {
-			*callback_status = cb;
-		}
+		// Notify the application
+	int		cb = LockLost( LOCK_SRC_APP );
+	if ( callback_status ) {
+		*callback_status = cb;
 	}
 
 	return status;
