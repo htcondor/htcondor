@@ -27,6 +27,10 @@
 #include <iostream>
 #include "sink.h"
 
+#ifdef WIN32
+#include <sys/timeb.h>
+#endif
+
 using namespace std;
 
 BEGIN_NAMESPACE( classad )
@@ -1689,9 +1693,18 @@ SwitchInClassAd(string key){
 int ClassAdCollection::
 WriteCheckPoint(){
   //get the latest time mark
-          timeval ctime;
+	  timeval ctime;
+
+#ifndef WIN32
 	  gettimeofday(&ctime,NULL);
-	  LatestCheckpoint.tv_sec=ctime.tv_sec;
+#else
+	  struct timeb tb; 
+	  ftime(&tb);
+	  ctime.tv_sec = tb.time;
+	  ctime.tv_usec = tb.millitm*1000; //need microseconds
+#endif
+
+      LatestCheckpoint.tv_sec=ctime.tv_sec;
 	  LatestCheckpoint.tv_usec=ctime.tv_usec;
 	  char arr[20];
 	  sprintf(arr,"%ld.%ld",ctime.tv_sec,ctime.tv_usec);
@@ -1830,7 +1843,7 @@ bool ClassAdCollection::
 dump_collection(){
          ClassAdTable::iterator	itr;
 	 for (itr= classadTable.begin();itr!=classadTable.end();itr++){
-	   cout << "dump_collection key= " << itr->first << endl;
+		 cout << "dump_collection key= " << itr->first << std::endl;
 	 }
 	 return true;
 }
