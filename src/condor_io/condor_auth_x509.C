@@ -361,7 +361,10 @@ StringList * getDaemonList(ReliSock * sock)
             expanded_names->insert(buf);
             free(buf);
         }
-
+        else {
+            // It's not using macro, let's just attach it to the list
+            expanded_names->insert(entry);
+        }
     }
     delete original_names;
     free(daemonNames);
