@@ -34,6 +34,7 @@
 #include "extArray.h"
 #include "Resource.h"
 #include "starter_mgr.h"
+#include "classadList.h"
 
 typedef int (Resource::*ResourceMember)();
 typedef float (Resource::*ResourceFloatMember)();
