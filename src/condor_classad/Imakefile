@@ -1,0 +1,58 @@
+SRC_DIR = $(SRC_TREE)/condor_expressions
+
+#if IS_I386_LINUX
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fexternal-templates -DNEW_PROC
+TEMPLATE_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC
+#else
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fexternal-templates -DNEW_PROC -static
+#endif
+CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
+
+#if IS_SPARC_SUNOS41
+SYSPARAM = sysparam_sun
+#endif
+#if IS_SUN4M_SOLARIS
+SYSPARAM = sysparam_solaris
+#endif
+#if IS_X86_SOLARIS
+SYSPARAM = sysparam_solaris
+#endif
+#if IS_ALPHA_OSF1
+SYSPARAM = sysparam_osf1
+#endif
+#if IS_MIPS_ULTRIX42 || IS_MIPS_ULTRIX43
+SYSPARAM = sysparam_ultrix
+#endif
+#if IS_R6000_AIX32
+SYSPARAM=sysparam_aix
+#endif
+#if IS_HPPAR_HPUX9
+SYSPARAM = sysparam_hpux
+#endif
+#if IS_I386_LINUX
+SYSPARAM = sysparam_linux
+#endif
+
+
+SRC = ast.C astbase.C buildtable.C parser.C scanner.C registration.C \
+	  attrlist.C classad.C classifiedjobs.C
+
+OBJ = ast.o astbase.o buildtable.o parser.o scanner.o registration.o \
+	  attrlist.o classifiedjobs.o
+
+#if IS_R6000_AIX32
+TEST_LIBS = ../condor_util_lib/util_lib.a cplus_lib.a /usr/lib/libbsd.a
+#else
+TEST_LIBS = cplus_lib.a ../condor_util_lib/util_lib.a
+#endif
+
+all_target(expr_lib.a)
+
+library_target( expr_lib.a,$(OBJ))
+
+clean::
+	rm -f *.o expr_lib.a
+
+depend_target($(SRC))
+
+release:
