@@ -469,6 +469,10 @@ OpenFileTable::DoDup2( int orig_fd, int new_fd )
   file[new_fd] = file[orig_fd];
   file[new_fd].duplicate = TRUE;
   file[new_fd].dup_of = orig_fd;
+
+  if (MyImage.GetMode() == STANDALONE) {
+	  file[new_fd].real_fd = new_fd;
+  }
   
   //dprintf(D_ALWAYS,"Just after duplicating %d\n",new_fd);
   //Display();
@@ -2441,7 +2445,6 @@ fcntl(int fd, int cmd, ...)
 #else
                 arg = va_arg( ap, int );
 #endif
-                arg = FileTab->find_avail( arg );
 
 				if( MappingFileDescriptors() ) {
 					rval =  FileTab->DoDup2( fd, arg );
