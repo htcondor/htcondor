@@ -89,6 +89,7 @@ const char ATTR_JOB_CMD					 [] = "Cmd";
 const char ATTR_JOB_CMDEXT				 [] = "CmdExt";
 const char ATTR_JOB_ENVIRONMENT			 [] = "Env";
 const char ATTR_JOB_ERROR				 [] = "Err";
+const char ATTR_JOB_SPOOL_EXECUTABLE	 [] = "SpoolExecutable";
 const char ATTR_JOB_EXIT_STATUS			 [] = "ExitStatus";
 const char ATTR_JOB_ID					 [] = "JobId";
 const char ATTR_JOB_INPUT				 [] = "In";
