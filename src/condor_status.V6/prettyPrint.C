@@ -25,6 +25,7 @@
 #include "status_types.h"
 #include "totals.h"
 #include "format_time.h"
+#include "condor_xml_classads.h"
 
 extern ppOption				ppStyle;
 extern AttrListPrintMask 	pm;
@@ -45,6 +46,7 @@ void printServer 		(ClassAd *);
 void printRun    		(ClassAd *);
 void printState			(ClassAd *);
 void printVerbose   	(ClassAd *);
+void printXML       	(ClassAd *, bool first_ad, bool last_ad);
 void printCustom    	(ClassAd *);
 
 char *formatElapsedTime( int , AttrList* );
@@ -54,7 +56,11 @@ void
 prettyPrint (ClassAdList &adList, TrackTotals *totals)
 {
 	ClassAd	*ad;
+	int     classad_index;
+	int     last_classad_index;
 
+	classad_index = 0;
+	last_classad_index = adList.Length() - 1;
 	adList.Open();
 	while ((ad = adList.Next())) {
 		if (!wantOnlyTotals) {
@@ -86,6 +92,11 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 			  case PP_VERBOSE:
 				printVerbose (ad);
 				break;
+
+			  case PP_XML:
+				  printXML (ad, (classad_index == 0), 
+							(classad_index == last_classad_index));
+				  break;
 
 			  case PP_MASTER_NORMAL:
 				printMasterNormal(ad);
@@ -120,7 +131,7 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 				exit (1);			
 			}
 		}
-
+		classad_index++;
 		totals->update(ad);
 	}
 	adList.Close();
@@ -509,6 +520,26 @@ printVerbose (ClassAd *ad)
 	fputc ('\n', stdout);	
 }
 
+void
+printXML (ClassAd *ad, bool first_ad, bool last_ad)
+{
+	ClassAdXMLUnparser  unparser;
+	MyString            xml;
+
+	if (first_ad) {
+		unparser.AddXMLFileHeader(xml);
+	}
+
+	unparser.SetUseCompactSpacing(false);
+	unparser.Unparse(ad, xml);
+
+	if (last_ad) {
+		unparser.AddXMLFileFooter(xml);
+	}
+
+	printf("%s\n", xml.Value());
+	return;
+}
 
 void
 printCustom (ClassAd *ad)
