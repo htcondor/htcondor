@@ -83,7 +83,7 @@ extern char*		MasterName;
 ///////////////////////////////////////////////////////////////////////////
 // daemon Class
 ///////////////////////////////////////////////////////////////////////////
-daemon::daemon(char *name)
+daemon::daemon(char *name, bool is_daemon_core)
 {
 	char	buf[1000];
 
@@ -140,6 +140,7 @@ daemon::daemon(char *name)
 	newExec = FALSE; 
 	timeStamp = 0;
 	startTime = 0;
+	isDC = is_daemon_core;
 	start_tid = -1;
 	recover_tid = -1;
 	stop_tid = -1;
@@ -321,7 +322,7 @@ daemon::Start()
 {
 	char	*shortname, *tmp;
 	char	buf[512];
-	int 	command_port = TRUE;
+	int 	command_port = isDC ? TRUE : FALSE;
 
 	if( start_tid != -1 ) {
 		daemonCore->Cancel_Timer( start_tid );
@@ -401,8 +402,15 @@ daemon::Start()
 		dprintf(D_FULLDEBUG, "start recover timer (%d)\n", recover_tid);
 	}
 
-	dprintf( D_ALWAYS, "Started \"%s\", pid and pgroup = %d\n",
-		process_name, pid );
+	if (command_port) {
+		dprintf( D_ALWAYS,
+				 "Started DaemonCore process \"%s\", pid and pgroup = %d\n",
+				 process_name, pid );
+	} else {
+		dprintf( D_ALWAYS,
+				 "Started process \"%s\", pid and pgroup = %d\n",
+				 process_name, pid );
+	}
 	
 		// Make sure we've got the current timestamp for updates, etc.
 	timeStamp = GetTimeStamp(process_name);

@@ -34,7 +34,7 @@ enum StopStateT { GRACEFUL, FAST, KILL, NONE };
 class daemon : public Service
 {
 public:
-	daemon(char *name);
+	daemon(char *name, bool is_daemon_core = true);
 	daemon_t type;
 	char*	name_in_config_file;
 	char*	daemon_name; 
@@ -49,6 +49,7 @@ public:
 	int		newExec; 
 	time_t	timeStamp;		// Timestamp of this daemon's binary.
 	time_t	startTime;		// Time this daemon was started
+	bool	isDC;
 
 
 #if 0

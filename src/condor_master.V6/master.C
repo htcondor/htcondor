@@ -115,6 +115,9 @@ char	*default_daemon_list[] = {
 #endif
 	0};
 
+char	default_dc_daemon_list[] =
+"MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD";
+
 // create an object of class daemons.
 class Daemons daemons;
 
@@ -570,7 +573,14 @@ init_daemon_list()
 {
 	char	*daemon_name;
 	daemon	*new_daemon;
-	StringList daemon_names;
+	StringList daemon_names, dc_daemon_names;
+
+	char* dc_daemon_list = param("DC_DAEMON_LIST");
+	if( dc_daemon_list ) {
+		dc_daemon_names.initializeFromString(dc_daemon_list);
+	} else {
+		dc_daemon_names.initializeFromString(default_dc_daemon_list);
+	}
 
 	char* daemon_list = param("DAEMON_LIST");
 	if( daemon_list ) {
@@ -583,7 +593,11 @@ init_daemon_list()
 		daemon_names.rewind();
 		while( (daemon_name = daemon_names.next()) ) {
 			if(daemons.GetIndex(daemon_name) < 0) {
-				new_daemon = new daemon(daemon_name);
+				if( dc_daemon_names.contains(daemon_name) ) {
+					new_daemon = new daemon(daemon_name);
+				} else {
+					new_daemon = new daemon(daemon_name, false);
+				}
 			}
 		}
 	} else {
