@@ -129,6 +129,7 @@ char	*UserLogFile	= "log";
 char	*CoreSize		= "coresize";
 char	*NiceUser		= "nice_user";
 char	*X509CertDir	= "x509certdir";
+char	*RendezvousDirectory	= "rendezvousdirectory";
 char	*FileRemaps = "file_remaps";
 char	*BufferSize = "buffer_size";
 char	*BufferBlockSize = "buffer_block_size";
@@ -171,7 +172,6 @@ void 	queue(int num);
 char * 	check_requirements( char *orig );
 void 	check_open( const char *name, int flags );
 void 	usage();
-char * 	get_owner();
 void 	init_params();
 int 	whitespace( const char *str);
 void 	delete_commas( char *ptr );
@@ -382,6 +382,16 @@ main( int argc, char *argv[] )
 		free( CertDir );
 	}
 
+	//if defined in file, set up to use RendevousDirectory
+	char *Rendezvous;
+	if ( Rendezvous = condor_param( RendezvousDirectory ) ) {
+		dprintf( D_FULLDEBUG,"setting RENDEXVOUS_DIRECTORY=%s from submit file\n",
+				Rendezvous );
+		char tmpstring[1024];
+		sprintf( tmpstring, "RENDEZVOUS_DIRECTORY=%s", Rendezvous );
+		putenv( strdup( tmpstring ) );
+		free( Rendezvous );
+	}
 
 	if (ConnectQ(ScheddAddr) == 0) {
 		if( ScheddName ) {
@@ -405,13 +415,13 @@ main( int argc, char *argv[] )
 	(void) sprintf (buffer, "%s = 0", ATTR_COMPLETION_DATE);
 	InsertJobExpr (buffer);
 
-//	(void) sprintf (buffer, "%s = \"%s\"", ATTR_OWNER, get_owner());
-//this should go away, and the owner name be placed in ad by schedd!!!!!
+	//TODO:this should go away, and the owner name be placed in ad by schedd!
 	char* tmp = my_username();
 	if( tmp ) {
 		(void) sprintf (buffer, "%s = \"%s\"", ATTR_OWNER, tmp);
 		free( tmp );
-	} else {
+	} 
+	else {
 		(void) sprintf (buffer, "%s = \"%s\"", ATTR_OWNER, "unknown" );
 	}
 	InsertJobExpr (buffer);
@@ -1798,28 +1808,6 @@ DoCleanup()
 }
 } /* extern "C" */
 
-char *
-get_owner()
-{
-	if ( ( owner && !strcmp( owner, "nobody" ) ) || (Remote && !owner ) ) {
-		 return ("nobody");
-	}
-
-#if defined(WIN32)
-	char username[UNLEN+1];
-	unsigned long usernamelen = UNLEN+1;
-	if (GetUserName(username, &usernamelen) < 0) {
-		EXCEPT( "GetUserName failed.\n" );
-	}
-	return strdup(username);
-#else
-	struct passwd	*pwd;
-	if( (pwd=getpwuid(getuid())) == NULL ) {
-		EXCEPT( "Can't get passwd entry for uid %d\n", getuid() );
-	}
-	return strdup(pwd->pw_name);
-#endif
-}
 
 void
 init_params()
