@@ -317,6 +317,8 @@ init_params( int first_time)
 	int i;
 	struct hostent *hp;
 
+	resmgr->init_config_classad();
+
 	if( exec_path ) {
 		free( exec_path );
 	}
