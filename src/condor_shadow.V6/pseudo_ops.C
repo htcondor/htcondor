@@ -894,12 +894,8 @@ create_tcp_port( u_short *port, int *fd )
 	}
 	dprintf( D_FULLDEBUG, "\tconnect_sock = %d\n", *fd );
 
-
 		/* bind it to an address */
-	memset( &sin, '\0', sizeof sin );
-	sin.sin_family = AF_INET;
-	sin.sin_port = 0;
-	if( bind(*fd,(struct sockaddr *)&sin, sizeof sin) < 0 ) {
+	if( ! _condor_local_bind(*fd) ) {
 		EXCEPT( "bind" );
 	}
 
