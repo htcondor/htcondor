@@ -10,6 +10,7 @@ template class Item<GlobusJob>;
 
 
 int GlobusResource::probeInterval = 300;	// default value
+int GlobusResource::probeDelay = 15;		// default value
 int GlobusResource::submitLimit = 5;		// default value
 
 GlobusResource::GlobusResource( char *resource_name )
@@ -19,6 +20,7 @@ GlobusResource::GlobusResource( char *resource_name )
 	pingTimerId = daemonCore->Register_Timer( 0,
 								(TimerHandlercpp)&GlobusResource::DoPing,
 								"GlobusResource::DoPing", (Service*)this );
+	lastPing = 0;
 	gahp.setNotificationTimerId( pingTimerId );
 	gahp.setMode( GahpClient::normal );
 	resourceName = strdup( resource_name );
@@ -55,7 +57,12 @@ void GlobusResource::UnregisterJob( GlobusJob *job )
 void GlobusResource::RequestPing( GlobusJob *job )
 {
 	pingRequesters.Append( job );
-	daemonCore->Reset_Timer( pingTimerId, 0 );
+
+	int delay = (lastPing + probeDelay) - time(NULL);
+	if ( delay < 0 ) {
+		delay = 0;
+	}
+	daemonCore->Reset_Timer( pingTimerId, delay );
 }
 
 bool GlobusResource::RequestSubmit( GlobusJob *job )
@@ -143,6 +150,8 @@ int GlobusResource::DoPing()
 	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 		return 0;
 	}
+
+	lastPing = time(NULL);
 
 	if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ) {
 		ping_failed = true;
