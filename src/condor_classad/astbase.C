@@ -35,10 +35,9 @@
 #define AdvancePtr(ptr)  while(*ptr != '\0') ptr++;
 
 #ifdef USE_STRING_SPACE_IN_CLASSADS
-#include "stringSpace.h"
-
-StringSpace classad_string_space;
-#endif 
+StringSpace *ExprTree::string_space = NULL;
+int ExprTree::string_space_references = 0;
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // Tree node constructors.                                                    //
@@ -47,11 +46,11 @@ StringSpace classad_string_space;
 VariableBase::VariableBase(char* name)
 {
 #ifdef USE_STRING_SPACE_IN_CLASSADS
-	this->stringSpaceIndex = classad_string_space.getCanonical(name, SS_DUP);
+	this->stringSpaceIndex = string_space->getCanonical(name, SS_DUP);
 	// I apologize for casting away the const-ness of the char * here
 	// I'm trying to make minimal changes in the code to add string space,
 	// and it is safe. 
-	this->name = (char *) classad_string_space[stringSpaceIndex];
+	this->name = (char *) (*string_space)[stringSpaceIndex];
 #else
     this->name = name;
 #endif
@@ -87,11 +86,11 @@ BooleanBase::BooleanBase(int v)
 StringBase::StringBase(char* str)
 {
 #ifdef USE_STRING_SPACE_IN_CLASSADS
-	stringSpaceIndex = classad_string_space.getCanonical(str, SS_DUP);
+	stringSpaceIndex = string_space->getCanonical(str, SS_DUP);
 	// I apologize for casting away the const-ness of the char * here
 	// I'm trying to make minimal changes in the code to add string space,
 	// and it is safe. 
-	value = (char *) classad_string_space[stringSpaceIndex];
+	value = (char *) (*string_space)[stringSpaceIndex];
 #else
     value = str;
 #endif
@@ -287,7 +286,7 @@ void ExprTree::operator delete(void* exprTree)
 	    	if(((ExprTree*)exprTree)->type == LX_VARIABLE)
 	    	{
 #ifdef USE_STRING_SPACE_IN_CLASSADS
-				classad_string_space.disposeByIndex(
+				string_space->disposeByIndex(
 				    ((VariableBase*)exprTree)->stringSpaceIndex);
 #else
 				delete []((VariableBase*)exprTree)->name;
@@ -296,7 +295,7 @@ void ExprTree::operator delete(void* exprTree)
 	    	if(((ExprTree*)exprTree)->type == LX_STRING)
 	    	{
 #ifdef USE_STRING_SPACE_IN_CLASSADS
-				classad_string_space.disposeByIndex(
+				string_space->disposeByIndex(
 				    ((StringBase*)exprTree)->stringSpaceIndex);
 #else
 				delete []((StringBase*)exprTree)->value;
