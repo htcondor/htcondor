@@ -39,8 +39,8 @@ will help revolutionize your compute environment as well.
 
 In a nutshell, Condor is a specialized batch system 
 \index{batch system}
-for managing
-compute-intensive jobs.  Like most batch systems, Condor provides a
+for managing compute-intensive jobs.
+Like most batch systems, Condor provides a
 queueing mechanism, scheduling policy, priority scheme, and resource
 classifications.  Users submit their compute jobs to Condor, Condor puts
 the jobs in a queue, runs them, and then informs the user as to the
@@ -80,28 +80,21 @@ Understanding the
 unique framework by which Condor matches submitted jobs with machines is
 the key to getting the most from Condor's scheduling algorithm. 
 
-Condor is unlike most other batch systems. The others typically involve
-submitting a job to one of several pre-defined job queues. These
-environments tend to become both constrained and complicated, as
-system administrators add more queues in response to the
-variety of user needs. Likewise, the user is asked to make compromises
-and is given the burden of both keeping track of which queues
-have which properties and deciding which queue would be the
-optimal one to use.
-
-Condor simplifies matters by acting as a matchmaker of ClassAds. Condor's
-ClassAds
+Condor simplifies job submission by acting as a matchmaker of ClassAds.
+Condor's ClassAds
 \index{ClassAd}
 are analogous to the classified advertising section of the
 newspaper. Sellers advertise specifics about what they have to sell,
 hoping to attract a buyer. Buyers may advertise specifics about what
-they wish to purchase. Both buyers and sellers may have constraints that
-need to be satisfied. For instance, perhaps the buyer is not willing to
-spend more than X dollars, and the seller requires to receive a minimum
-of Y dollars. Furthermore, both want to rank requests
-to their own advantage. Certainly a seller would rank
-an offer  of \$50 dollars higher than a different
-offer of \$25 for the same service. In Condor, users submitting
+they wish to purchase. Both buyers and sellers list constraints that
+need to be satisfied.
+For instance, a buyer has a maximum spending limit, 
+and a seller requires a minimum purchase price.
+Furthermore, both want to rank requests to their own advantage.
+Certainly a seller would rank
+one offer of \$50 dollars higher than a different
+offer of \$25.
+In Condor, users submitting
 jobs can be thought of as buyers of compute resources and machine owners
 are sellers. 
 
@@ -251,35 +244,79 @@ LastHeardFrom = 892191963
 \section{Road-map for running jobs with Condor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{job!preparation}
 The road to using Condor effectively is a short one.  The basics
-are quickly and easily learned.  Unlike some other network-cluster
-solutions, Condor typically does not require you to make any
-changes to your program, even to do more advanced tasks such as
-process checkpoint and migration. 
+are quickly and easily learned.
 
-Using Condor can be broken down into the following steps:
-
+Here are all the steps needed to run a job using Condor.
 \begin{description}
 
-\item[Job Preparation.]Prepare your job for
-Condor. This involves preparing it to run as a background batch job,
-deciding which Condor runtime environment (or \Term{universe}) to use,
-and possibly re-linking your program with the Condor library via the
-\Condor{compile} command. 
+\item[Code Preparation.]
+A job run under Condor must be able to 
+run as a background batch job.
+\index{job!batch ready}
+Condor runs the program unattended and in the background. 
+A program that runs in the background will not be able
+to do interactive input and output.
+Condor can redirect console output (stdout and stderr)
+and keyboard input (stdin)
+to and from files for you.
+Create any needed files that contain
+the proper keystrokes needed for program input.
+Make certain the program will run correctly with the files.
 
-\item[Submit Job to Condor.]Submit your program to Condor with
-the \Condor{submit} command.
-\index{Condor commands!condor\_submit}
-With \Condor{submit} you tell Condor
-information about the run, such as what executable to run, what
-filenames to use for keyboard and screen (stdin and stdout) data,
-on what type of platform to run your program, and
-where to send e-mail when the job completes. You can also tell Condor how
-many times to run a program; many users may want to run the same program
+\item[The Condor Universe.]
+Condor has five
+runtime environments (called a \Term{universe}) from which to choose.
+Of the five, two are likely choices when learning
+to submit a job to Condor: the standard universe and the vanilla universe.
+The standard universe allows a job running under Condor to
+handle system calls by returning them to the machine where the
+job was submitted.
+The standard universe also provides the mechanisms necessary
+to take a checkpoint and migrate a partially completed job,
+should the machine on which the job is executing become
+unavailable.
+To use the standard universe, it is necessary to
+relinking the program with the Condor library using the
+\Condor{compile} command.
+The manual page on page~\pageref{man-condor-submit} has details.
+
+The vanilla universe provides a way to run jobs that cannot be
+?.
+It depends on a shared file system for access to input and output
+files,
+and there is no way to take a checkpoint or migrate a job executed
+under the vanilla universe.
+
+Choose a universe under which to run the Condor program,
+and re-link the program if necessary.
+
+\item[Submit description file.]
+Controlling the details of a job submission is a
+submit description file.
+The file contains information
+about the job such as what executable to run, the
+files to use for keyboard and screen data,
+the platform type required to run the program, and
+where to send e-mail when the job completes.
+You can also tell Condor how many times to run a program;
+it is simple to run the same program
 multiple times with multiple data sets.
 
-\item[Condor Runs the Job.]Once submitted, monitor your job's
-progress with the \Condor{q}
+Write a submit description file to go with the job, using
+the examples provided in section~\ref{sec:sample-submit-files}
+for guidance.
+
+\item[Submit the Job.]Submit the program to Condor with
+the \Condor{submit} command.
+\index{Condor commands!condor\_submit}
+
+\end{description}
+
+Once submitted, Condor does the rest toward running
+the job.
+Monitor the job's progress with the \Condor{q}
 \index{Condor commands!condor\_q}
 and \Condor{status} commands.
 \index{Condor commands!condor\_status}
@@ -287,7 +324,7 @@ You may modify the order in which Condor will run your jobs with
 \Condor{prio}. If desired, Condor can even inform you in a log file 
 every time your job is checkpointed and/or migrated to a different machine. 
 
-\item[Job Completion.]When your program completes, Condor will tell you
+When your program completes, Condor will tell you
 (by e-mail, if preferred) the exit status of your program and various
 statistics about its performances, including time used and I/O performed.
 If you are using a logfile for the job(which is recommended) the exit
@@ -296,33 +333,6 @@ You can remove a job from the
 queue prematurely with \Condor{rm}. 
 \index{Condor commands!condor\_rm}
 
-\end{description}  % of Road Map steps
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:job-preparation}Job Preparation}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Before submitting your program to Condor, you make certain
-your program is batch ready.  Next, you decide upon a Condor
-universe, or runtime environment, for your job.
-\index{job!preparation}
-
-%%%%%%%%%%%%%%
-\subsection{A Batch Ready Program}
-%%%%%%%%%%%%%%
-
-Condor runs your program unattended and in the background. 
-\index{job!batch ready}
-A program that runs in the background will not be able
-to do input and output in an interactive way.
-Make certain
-that your program will run this way before submitting it to Condor.
-Condor can
-redirect console output (stdout and stderr) and keyboard input (stdin)
-to and from files for you.
-You may have to create one or more files that contain
-the proper keystrokes needed for program input.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Choosing-Universe}
@@ -597,7 +607,7 @@ first copy will run in directory \File{run\_1}, and the second will run in
 directory \File{run\_2}. For both queued copies, 
 \File{stdin} will be \File{test.data},
 \File{stdout} will be \File{loop.out}, and
-\File{sterr} will be \File{loop.error}.
+\File{stderr} will be \File{loop.error}.
 There will be two sets of files written,
 as the files are each written to their own directories.
 This is a convenient way to organize data if you
@@ -883,7 +893,7 @@ sends it to the resource to be executed correctly.
 \index{running a job!on multiple operating systems}
 \index{heterogeneous pool!submitting a job to}
 \begin{description}
-	\item[Use of a non-existant \AdAttr{MachineAdAttribute}.]
+	\item[Use of a non-existent \AdAttr{MachineAdAttribute}.]
 		If the specified \AdAttr{MachineAdAttribute} does not
 		exist in the machine's ClassAd, then Condor will place
 		your job on hold until the problem is resolved.
@@ -1070,7 +1080,7 @@ About How Condor Jobs Vacate Machines}
 \index{vacate}
 When Condor needs a job to vacate a machine for whatever reason, it
 sends the job an asynchronous signal specified in the \AdAttr{KillSig}
-attribute of the job's classad.
+attribute of the job's ClassAd.
 The value of this attribute can be specified by
 the user at submit time by placing the \Opt{kill\_sig} option in the
 Condor submit description file.  
@@ -1133,7 +1143,7 @@ If a standard universe job, then the host ACL needs
 to give read/write permission to any process on the submit machine.
 If vanilla universe job, then you need to set the ACL such that any host 
 in the pool can access the files without being authenticated.
-If you do not know how to use an AFS host ACL, ask ther person at your 
+If you do not know how to use an AFS host ACL, ask the person at your 
 site responsible for the AFS configuration.
 \end{enumerate}
 
@@ -1205,7 +1215,7 @@ can be overridden by setting the X509\_* variables in your environment
 or the submit description file.
 \Note AFS issues apply here, so you may have to copy your certificate,
 trusted certificates directory, private key, and proxy to a local
-filesystem disk.
+file system disk.
 
 \item[\Condor{glidein}] \index {Globus!\Condor{glidein}} requires a valid 
 Globus X.509 certificate, and the PATH to the \Prog{globusrun} program 
