@@ -1,34 +1,34 @@
 /* 
-** Copyright 1986, 1987, 1988, 1989, 1990, 1991 by the Condor Design Team
-** 
-** Permission to use, copy, modify, and distribute this software and its
-** documentation for any purpose and without fee is hereby granted,
-** provided that the above copyright notice appear in all copies and that
-** both that copyright notice and this permission notice appear in
-** supporting documentation, and that the names of the University of
-** Wisconsin and the Condor Design Team not be used in advertising or
-** publicity pertaining to distribution of the software without specific,
-** written prior permission.  The University of Wisconsin and the Condor
-** Design Team make no representations about the suitability of this
-** software for any purpose.  It is provided "as is" without express
-** or implied warranty.
-** 
-** THE UNIVERSITY OF WISCONSIN AND THE CONDOR DESIGN TEAM DISCLAIM ALL
-** WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
-** OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE UNIVERSITY OF
-** WISCONSIN OR THE CONDOR DESIGN TEAM BE LIABLE FOR ANY SPECIAL, INDIRECT
-** OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
-** OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
-** OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE
-** OR PERFORMANCE OF THIS SOFTWARE.
-** 
-** Author:   Dhrubajyoti Borthakur
-** 	         University of Wisconsin, Computer Sciences Dept.
-** Edited further by : Dhaval N Shah
-** 	         University of Wisconsin, Computer Sciences Dept.
-** Modified by: Cai, Weiru
-** 			 University of Wisconsin, Computer Sciences Dept.
-*/ 
+ ** Copyright 1986, 1987, 1988, 1989, 1990, 1991 by the Condor Design Team
+ ** 
+ ** Permission to use, copy, modify, and distribute this software and its
+ ** documentation for any purpose and without fee is hereby granted,
+ ** provided that the above copyright notice appear in all copies and that
+ ** both that copyright notice and this permission notice appear in
+ ** supporting documentation, and that the names of the University of
+ ** Wisconsin and the Condor Design Team not be used in advertising or
+ ** publicity pertaining to distribution of the software without specific,
+ ** written prior permission.  The University of Wisconsin and the Condor
+ ** Design Team make no representations about the suitability of this
+ ** software for any purpose.  It is provided "as is" without express
+ ** or implied warranty.
+ ** 
+ ** THE UNIVERSITY OF WISCONSIN AND THE CONDOR DESIGN TEAM DISCLAIM ALL
+ ** WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
+ ** OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE UNIVERSITY OF
+ ** WISCONSIN OR THE CONDOR DESIGN TEAM BE LIABLE FOR ANY SPECIAL, INDIRECT
+ ** OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+ ** OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+ ** OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE
+ ** OR PERFORMANCE OF THIS SOFTWARE.
+ ** 
+ ** Author:   Dhrubajyoti Borthakur
+ ** 	         University of Wisconsin, Computer Sciences Dept.
+ ** Edited further by : Dhaval N Shah
+ ** 	         University of Wisconsin, Computer Sciences Dept.
+ ** Modified by: Cai, Weiru
+ ** 			 University of Wisconsin, Computer Sciences Dept.
+ */ 
 
 #include <std.h>
 
@@ -104,9 +104,9 @@ extern "C"
 	int		sigsetmask(int mask);
 	int		sigpause(int mask);
 	int 	gethostname(char* name, int len);
-	#if !defined(Solaris251)
+#if !defined(Solaris251)
 	int		vfork();
-	#endif
+#endif
 #elif defined(IRIX53)
 	int	vfork();
 	int	gethostname(char *name, int len);
@@ -116,7 +116,7 @@ extern "C"
 	int pclose(FILE *stream);
 #endif
 
-/* 	char*	getwd(char* pathname); no longer needed because using getcwdnow */
+	/* 	char*	getwd(char* pathname); no longer needed because using getcwdnow */
 	int		killpg(int pgrp, int sig);
 	int 	dprintf_config( char*, int);
 	int 	detach();
@@ -140,7 +140,7 @@ extern	int		Parse(const char*, ExprTree*&);
 extern	int		xdr_classad(XDR*, ClassAd*);
 char	*param(char*) ;
 void		sigchld_handler(),  sigint_handler(),
-		sigquit_handler(),  sighup_handler();
+sigquit_handler(),  sighup_handler();
 void	RestartMaster();
 void	siggeneric_handler(int); 
 void 	vacate_machine(), vacate_machine_part_two();
@@ -251,16 +251,16 @@ main( int argc, char* argv[] )
 	MyName = argv[0];
 
 #if defined(X86) && defined(Solaris)
-/* Set the environment for the X11 dynamic library for condor_kbdd */
-putenv("LD_LIBRARY_PATH=/s/X11R6-2/sunx86_54/lib");
+	/* Set the environment for the X11 dynamic library for condor_kbdd */
+	putenv("LD_LIBRARY_PATH=/s/X11R6-2/sunx86_54/lib");
 #else if defined(sun4m) && defined(Solaris)
-/* Set the environment for the X11 dynamic library for condor_kbdd */
-putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
+	/* Set the environment for the X11 dynamic library for condor_kbdd */
+	putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 #endif
 
-		/* Run as group condor so we can access log files even if they
-		   are remotely mounted with NFS - needed because
-		   root = nobody on the remote file system */
+	/* Run as group condor so we can access log files even if they
+	   are remotely mounted with NFS - needed because
+	   root = nobody on the remote file system */
 	if( (pwd=getpwnam("condor")) == NULL ) {
 		EXCEPT( "condor not in passwd file" );
 	}
@@ -269,10 +269,10 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 	}
 
 	/*
-	** A NFS bug fix prohibits root from writing to an NFS partition
-	** even if he has group write permission.  We need to be Condor
-	** most of the time.
-	*/
+	 ** A NFS bug fix prohibits root from writing to an NFS partition
+	 ** even if he has group write permission.  We need to be Condor
+	 ** most of the time.
+	 */
 	set_condor_euid();
 
 	for( ptr=argv+1; *ptr; ptr++ ) {
@@ -280,17 +280,17 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 			usage( argv[0] );
 		}
 		switch( ptr[0][1] ) {
-			case 'f':
-				Foreground++;
-				break;
-			case 't':
-				Termlog++;
-				break;
-			case 'n':
-				NotFlag++;
-				break;
-			default:
-				usage( argv[0] );
+		  case 'f':
+			Foreground++;
+			break;
+		  case 't':
+			Termlog++;
+			break;
+		  case 'n':
+			NotFlag++;
+			break;
+		  default:
+			usage( argv[0] );
 		}
 	}
 
@@ -319,21 +319,21 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 	// otherwise.
 	if(read_config(pwd->pw_dir, MASTER_CONFIG, NULL, ConfigTab, TABLESIZE,
 				   EXPAND_LAZY) < 0)
-	// use default configuration files
+		// use default configuration files
 	{
 		config( MyName, (CONTEXT*)0 );
 	}
 	else
-	// try to use configuration server
+		// try to use configuration server
 	{
 		configServer = param("CONFIG_SERVER_HOST");
 		if(!configServer)
-		// use default configuration files
+			// use default configuration files
 		{
 			config(MyName, (CONTEXT*)0);
 		}
 		else
-		// use configuration server
+			// use configuration server
 		{
 			// Check to see if this is the configuration server host. If it is,
 			// start configuration server immediately.
@@ -386,7 +386,7 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 	_EXCEPT_Cleanup = DoCleanup;
 
 
-		/* This is so if we dump core it'll go in the log directory */
+	/* This is so if we dump core it'll go in the log directory */
 	if( chdir(Log) < 0 ) {
 		EXCEPT( "chdir to log directory <%s>", Log );
 	}
@@ -396,7 +396,7 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 	startem = param("START_DAEMONS");
 	if( !startem || *startem == 'f' || *startem == 'F' ) {
 		dprintf( D_ALWAYS, "START_DAEMONS flag was set to %s.  Exiting.\n",
-			startem?startem:"(NULL)");
+				startem?startem:"(NULL)");
 		exit( 0 );
 	}
 
@@ -422,14 +422,14 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 	dprintf( D_ALWAYS,"*************************************************\n" );
 	dprintf( D_ALWAYS,"***          CONDOR_MASTER STARTING UP        ***\n" );
 	dprintf( D_ALWAYS,"***               PID = %-6d                ***\n",
-																	getpid() );
+			getpid() );
 	dprintf( D_ALWAYS,"*************************************************\n" );
 
 
-		// once a day at 3:30 a.m.
+	// once a day at 3:30 a.m.
 	tMgr.NewTimer(NULL, 3600, (void*)daily_housekeeping, 3600 * 24);
 
-		// 6:00 am and 3:30 pm so somebody is around to respond
+	// 6:00 am and 3:30 pm so somebody is around to respond
 	tMgr.NewTimer( NULL, 7200, (void*)hourly_housekeeping, 3600 * 24 );
 	tMgr.NewTimer( NULL, 32400, (void*)hourly_housekeeping, 3600 * 24 );
 	tMgr.NewTimer( &daemons, 100, (void*)(daemons.CheckForNewExecutable), 300);
@@ -439,7 +439,7 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 
 	tMgr.Start();
 	
-		/* Can never get here */
+	/* Can never get here */
 	return 0;
 }
 
@@ -455,14 +455,14 @@ sigchld_handler()
 	errno = 0;
 	while( (pid=waitpid(-1,&status,WNOHANG)) != 0 ) {
 		if( pid == -1 ) {
-        #if defined(Solaris)
+#if defined(Solaris)
 			if(errno == ECHILD)
 			{
 				break;
 			}
-		#else
+#else
 			EXCEPT( "waitpid(), error # = %d", errno );
-		#endif
+#endif
 		}
 		if( WIFSTOPPED(status) ) {
 			continue;
@@ -471,12 +471,12 @@ sigchld_handler()
 			dprintf( D_ALWAYS, "Pid %d died with ", pid );
 			if( WIFEXITED(status) ) {
 				dprintf( D_ALWAYS | D_NOHEADER,
-									"status %d\n", WEXITSTATUS(status) );
+						"status %d\n", WEXITSTATUS(status) );
 				continue;
 			}
 			if( WIFSIGNALED(status) ) {
 				dprintf( D_ALWAYS | D_NOHEADER,
-									"signal %d\n", WTERMSIG(status) );
+						"signal %d\n", WTERMSIG(status) );
 			}
 			continue;
 		}
@@ -632,7 +632,7 @@ collector_runs_here()
 	char	*mgr_host_name;
 	struct hostent	*hp;
 	
-		/* Get the "official" name of our own host */
+	/* Get the "official" name of our own host */
 	if( gethostname(hostname,sizeof(hostname)) < 0 ) {
 		EXCEPT( "gethostname(0x%x,%d)", hostname, sizeof(hostname) );
 	}
@@ -641,7 +641,7 @@ collector_runs_here()
 	}
 	my_host_name = strdup( hp->h_name );
 
-		/* Get the "official" name of the collector host */
+	/* Get the "official" name of the collector host */
 	if( (hp=gethostbyname(CollectorHost)) == NULL ) {
 		EXCEPT( "gethostbyname(%s)", CollectorHost );
 	}
@@ -657,7 +657,7 @@ negotiator_runs_here()
 	char	*mgr_host_name;
 	struct hostent	*hp;
 	
-		/* Get the "official" name of our own host */
+	/* Get the "official" name of our own host */
 	if( gethostname(hostname,sizeof(hostname)) < 0 ) {
 		EXCEPT( "gethostname(0x%x,%d)", hostname, sizeof(hostname) );
 	}
@@ -666,7 +666,7 @@ negotiator_runs_here()
 	}
 	my_host_name = strdup( hp->h_name );
 
-		/* Get the "official" name of the negotiator host */
+	/* Get the "official" name of the negotiator host */
 	if( (hp=gethostbyname(NegotiatorHost)) == NULL ) {
 		EXCEPT( "gethostbyname(%s)", NegotiatorHost );
 	}
@@ -686,11 +686,11 @@ obituary( int pid, int status )
     char    *mail_prog;
 
 
-        /* If daemon with a serious bug gets installed, we may end up
-        ** doing many restarts in rapid succession.  In that case, we
-        ** don't want to send repeated mail to the CONDOR administrator.
-        ** This could overwhelm the administrator's machine.
-        */
+	/* If daemon with a serious bug gets installed, we may end up
+	 ** doing many restarts in rapid succession.  In that case, we
+	 ** don't want to send repeated mail to the CONDOR administrator.
+	 ** This could overwhelm the administrator's machine.
+	 */
     int restart = daemons.NumberRestarts(pid);
     if ( restart == -1 ) {
         EXCEPT( "Pid %d returned by wait3(), but not a child\n", pid );
@@ -705,7 +705,7 @@ obituary( int pid, int status )
     log = daemons.DaemonLog( pid );
 
     dprintf( D_ALWAYS, "Sending obituary for \"%s\" to \"%s\"\n",
-                                                name, CondorAdministrator );
+			name, CondorAdministrator );
 
     if( gethostname(hostname,sizeof(hostname)) < 0 ) {
         EXCEPT( "gethostname(0x%x,%d)", hostname, sizeof(hostname) );
@@ -729,26 +729,26 @@ obituary( int pid, int status )
 
     if( WIFSIGNALED(status) ) {
         fprintf( mailer, "\"%s\" on \"%s\" died due to signal %d\n",
-                                    name, hostname, WTERMSIG(status) );
+				name, hostname, WTERMSIG(status) );
         /*
-        fprintf( mailer, "(%s core was produced)\n",
-                                    status->w_coredump ? "a" : "no" );
-        */
+		   fprintf( mailer, "(%s core was produced)\n",
+		   status->w_coredump ? "a" : "no" );
+		   */
     } else {
         fprintf( mailer,
-        "\"%s\" on \"%s\" exited with status %d\n",
-                                    name, hostname, WEXITSTATUS(status) );
+				"\"%s\" on \"%s\" exited with status %d\n",
+				name, hostname, WEXITSTATUS(status) );
     }
     tail_log( mailer, log, Lines );
 
-        /* Don't do a pclose here, it wait()'s, and may steal an
-        ** exit notification of one of our daemons.  Instead we'll clean
-        ** up popen's child in our SIGCHLD handler.
-        */
+	/* Don't do a pclose here, it wait()'s, and may steal an
+	 ** exit notification of one of our daemons.  Instead we'll clean
+	 ** up popen's child in our SIGCHLD handler.
+	 */
 #if defined(HPUX9)
     /* on HPUX, however, do a pclose().  This is because pclose() on HPUX
-    ** will _not_ steal an exit notification, and just doing an fclose
-    ** can cause problems the next time we try HPUX's popen(). -Todd */
+	 ** will _not_ steal an exit notification, and just doing an fclose
+	 ** can cause problems the next time we try HPUX's popen(). -Todd */
     pclose(mailer);
 #else
     (void)fclose( mailer );
@@ -851,8 +851,8 @@ get_lock( char* file_name )
 		EXCEPT( "open(%s,0,0)", file_name );
 	}
 
-		// This must be a global so that it doesn't go out of scope
-		// cause the destructor releases the lock.
+	// This must be a global so that it doesn't go out of scope
+	// cause the destructor releases the lock.
 	MasterLock = new FileLock( MasterLockFD );
 	MasterLock->set_blocking( FALSE );
 	if( !MasterLock->obtain(WRITE_LOCK) ) {
@@ -869,8 +869,8 @@ do_killpg( int pgrp, int sig )
 	if( !pgrp ) {
 		return;
 	}
-if (getuid()==0)
-	set_root_euid();
+	if (getuid()==0)
+		set_root_euid();
 
 	(void)kill(-pgrp, sig );
 
@@ -887,8 +887,8 @@ do_kill( int pid, int sig )
 		return;
 	}
 
-if (getuid()==0)
-	set_root_euid();
+	if (getuid()==0)
+		set_root_euid();
 
 	status = kill( pid, sig );
 
@@ -901,9 +901,9 @@ if (getuid()==0)
 }
 
 /*
-** Re read the config file, and send all the daemons a signal telling
-** them to do so also.
-*/
+ ** Re read the config file, and send all the daemons a signal telling
+ ** them to do so also.
+ */
 void
 sighup_handler()
 {
@@ -915,8 +915,8 @@ sighup_handler()
 }
 
 /*
-** Kill and restart all daemons.
-*/
+ ** Kill and restart all daemons.
+ */
 void
 sigint_handler()
 {
@@ -929,8 +929,8 @@ sigint_handler()
 	daemons.StartAllDaemons();
 }
 /*
-** Kill all daemons and go away.
-*/
+ ** Kill all daemons and go away.
+ */
 void
 sigquit_handler()
 {
@@ -941,8 +941,8 @@ sigquit_handler()
 }
 
 /*
-** Cause job(s) to vacate and kill all daemons.
-*/
+ ** Cause job(s) to vacate and kill all daemons.
+ */
 void
 vacate_machine()
 {
@@ -993,15 +993,15 @@ NewExecutable(char* file, time_t* tsp)
 {
 	time_t cts = GetTimeStamp(file);
 	dprintf(D_FULLDEBUG, "Time stamp of running %s is %d\n",
-				file, (int)*tsp);
+			file, (int)*tsp);
 	dprintf(D_FULLDEBUG, "GetTime stamp returned %d\n",(int)cts);
 
 	if( cts == (time_t) -1 ) {
 		/*
-		**	We could have been in the process of installing a new
-		**	version, and that's why the 'stat' failed.  Catch it
-		**  next time around.
-		*/
+		 **	We could have been in the process of installing a new
+		 **	version, and that's why the 'stat' failed.  Catch it
+		 **  next time around.
+		 */
 		return( FALSE );
 	}
 
@@ -1025,9 +1025,9 @@ daily_housekeeping(void)
 		return 0;
 	}
 
-		/* Check log, spool, and execute for any junk files left lying around */
+	/* Check log, spool, and execute for any junk files left lying around */
 	dprintf( D_ALWAYS,
-	"Calling execl( \"%s\", \"sh\", \"-c\", \"%s\", 0 )\n", Shell, FS_Preen );
+			"Calling execl( \"%s\", \"sh\", \"-c\", \"%s\", 0 )\n", Shell, FS_Preen );
 
 	if( (child_pid=vfork()) == 0 ) {	/* The child */
 		execl( Shell, "sh", "-c", FS_Preen, 0 );
@@ -1038,13 +1038,13 @@ daily_housekeeping(void)
 	}
 
 	/*
-	Note: can't use system() here.  That calls wait(), but the child's
-	status will be captured our own sigchld_handler().  This would
-	cause the wait() called by system() to hang forever...
-														-- mike
+	   Note: can't use system() here.  That calls wait(), but the child's
+	   status will be captured our own sigchld_handler().  This would
+	   cause the wait() called by system() to hang forever...
+	   -- mike
 
-	(void)system( FS_Preen );
-	*/
+	   (void)system( FS_Preen );
+	   */
 	dprintf(D_FULLDEBUG, "exit daily_housekeeping\n");
 }
 int
@@ -1060,10 +1060,10 @@ hourly_housekeeping(void)
 	}
 
 	dprintf( D_ALWAYS,
-		"Calling execl( \"%s\", \"sh\", \"-c\", \"%s\", 0 )\n",
-		Shell,
-		FS_CheckJobQueue
-	);
+			"Calling execl( \"%s\", \"sh\", \"-c\", \"%s\", 0 )\n",
+			Shell,
+			FS_CheckJobQueue
+			);
 
 	if( (child_pid=vfork()) == 0 ) {	/* The child */
 		execl( Shell, "sh", "-c", FS_CheckJobQueue, 0 );
@@ -1085,8 +1085,8 @@ dump_core()
 
 	install_sig_handler( SIGILL, (SIGNAL_HANDLER)SIG_DFL );
 
-if (getuid()==0)
-	set_root_euid();
+	if (getuid()==0)
+		set_root_euid();
 
 	my_pid = getpid();
 	sigsetmask( 0 );
@@ -1100,7 +1100,7 @@ if (getuid()==0)
 		EXCEPT( "kill(getpid(),SIGILL)" );
 	}
 
-		/* should never get here */
+	/* should never get here */
 	EXCEPT( "Attempt to dump core failed" );
 }
 
@@ -1261,7 +1261,7 @@ int GetConfig(char* config_server_name, char* condor_dir)
 		ad.Insert(tmp);
 		return -1;
 	}
-	timer = tMgr.NewTimer(NULL, 60, (void*)config_server_disconnect, 0);
+	timer = tMgr.NewTimer(NULL, 600, (void*)config_server_disconnect, 0);
 	reqNum = send_request(CONDOR_MASTER, ACTION_GET, reqAd, DELIMITOR, "", 0);
 	if(!reqNum)
 	{
@@ -1299,20 +1299,20 @@ int GetConfig(char* config_server_name, char* condor_dir)
         len = 0;
         while(*ptr != ' ') {
             ptr++;
-        len++;
+			len++;
         }
         strncpy(cond, listPtr, len);
         cond[len] = '\0';
         if(strcmp(cond, "COPY_TO_CONTEXT") == 0) {
             len = 0;
             while((*ptr == ' ') || (*ptr == '=')) { ptr++; }
-        listPtr = ptr;
-        while((*ptr != DELIMITOR) && (*ptr != '\0')) {
-            ptr++; len++;
-        }
-        strncpy(macronames, listPtr, len);
-        macronames[len] = '\0';
-        break;
+			listPtr = ptr;
+			while((*ptr != DELIMITOR) && (*ptr != '\0')) {
+				ptr++; len++;
+			}
+			strncpy(macronames, listPtr, len);
+			macronames[len] = '\0';
+			break;
         }
         while((*ptr != DELIMITOR) && (*ptr != '\0')) { ptr++; }
         listPtr = ptr;
@@ -1328,24 +1328,24 @@ int GetConfig(char* config_server_name, char* condor_dir)
         macroname[len1] = '\0';
         listPtr = configList;
         do {
-          ptr = listPtr;
-          len = 0;
-          while(*ptr != ' '){
-            ptr++;
-        len++;
-          }
-          strncpy(cond, listPtr, len);
-          cond[len] = '\0';
-          if(strcmp(cond, macroname) == 0) {
-            while(*ptr == ' ') { ptr++; }
-        if(*ptr == '=') {
-            *ptr = ':';
-            break;
-        }
-          }
-          while((*ptr != DELIMITOR) && (*ptr != '\0')) { ptr++; }
-          if(*ptr == DELIMITOR) { ptr++; }
-          listPtr = ptr;
+			ptr = listPtr;
+			len = 0;
+			while(*ptr != ' '){
+				ptr++;
+				len++;
+			}
+			strncpy(cond, listPtr, len);
+			cond[len] = '\0';
+			if(strcmp(cond, macroname) == 0) {
+				while(*ptr == ' ') { ptr++; }
+				if(*ptr == '=') {
+					*ptr = ':';
+					break;
+				}
+			}
+			while((*ptr != DELIMITOR) && (*ptr != '\0')) { ptr++; }
+			if(*ptr == DELIMITOR) { ptr++; }
+			listPtr = ptr;
         }while(*listPtr != '\0');
 
         while(*ptr1 == ' ') { ptr1++; }
