@@ -117,9 +117,10 @@ eval_timeout_state(resource_info_t* rip)
 		 ((rip->r_state == SUSPENDED) && (!want_vacate)) ) {
 		if( rip->r_universe == VANILLA ) {
 			if( ((rip->r_classad)->EvalBool("KILL_VANILLA",
-										   rip->r_jobclassad,tmp))==0 &&
-			   ((rip->r_classad)->EvalBool("KILL",rip->r_classad,tmp))==0 ) {
-				EXCEPT("Can't evaluate KILL\n");
+											rip->r_jobclassad,tmp))==0 ) {
+				if( ((rip->r_classad)->EvalBool("KILL",rip->r_classad,tmp))==0 ) {
+					EXCEPT("Can't evaluate KILL\n");
+				}
 			}
 		} else {
 			if( ((rip->r_classad)->EvalBool("KILL",rip->r_jobclassad,tmp))==0 )	{
@@ -135,11 +136,12 @@ eval_timeout_state(resource_info_t* rip)
 	if( (rip->r_state == SUSPENDED) ||
 		 ((rip->r_state == JOB_RUNNING) && (!want_suspend) && (want_vacate)) ) {
 		if( rip->r_universe == VANILLA ) {
-			if( ((((rip->r_classad)->EvalBool("VACATE_VANILLA",
-											  rip->r_jobclassad,tmp))==0)) &&
-				(((rip->r_classad)->EvalBool("VACATE",
-											 rip->r_jobclassad,tmp))==0) ) {
-				EXCEPT("Can't evaluate VACATE\n");
+			if( ((rip->r_classad)->EvalBool("VACATE_VANILLA",
+											 rip->r_jobclassad,tmp))==0 ) {
+				if( ((rip->r_classad)->EvalBool("VACATE",
+												rip->r_jobclassad,tmp))==0 ) {
+					EXCEPT("Can't evaluate VACATE\n");
+				}
 			}
 		} else {
 			if( ((rip->r_classad)->EvalBool("VACATE",
@@ -155,11 +157,12 @@ eval_timeout_state(resource_info_t* rip)
 
 	if( (rip->r_state == JOB_RUNNING) && want_suspend ) {
 		if( rip->r_universe == VANILLA ) {
-			if( (((rip->r_classad)->EvalBool("SUSPEND_VANILLA",
-											rip->r_jobclassad,tmp))==0) &&
-				(((rip->r_classad)->EvalBool("SUSPEND",
-											rip->r_jobclassad,tmp))==0) ) {
-				EXCEPT("Can't evaluate SUSPEND\n");
+			if( ((rip->r_classad)->EvalBool("SUSPEND_VANILLA",
+											rip->r_jobclassad,tmp))==0 ) {
+				if( ((rip->r_classad)->EvalBool("SUSPEND",
+												rip->r_jobclassad,tmp))==0 ) {
+					EXCEPT("Can't evaluate SUSPEND\n");
+				}
 			}
 		} else {
 			if( ((rip->r_classad)->EvalBool("SUSPEND",
@@ -168,10 +171,6 @@ eval_timeout_state(resource_info_t* rip)
 			}
 		}
 		if( tmp ) {
-#if 0
-			if (rip->r_claimed)		/* Why call vacate_client here? */
-				vacate_client(rip->r_rid);
-#endif
 			event_suspend(rip->r_rid, NO_JID, NO_TID);
 			return 0;
 		}
@@ -179,15 +178,16 @@ eval_timeout_state(resource_info_t* rip)
 
 	if( rip->r_state == SUSPENDED ) {
 		if( rip->r_universe == VANILLA ) {
-			if( (((rip->r_classad)->EvalBool("CONTINUE_VANILLA",
-											 rip->r_jobclassad,tmp))==0) &&
-				(((rip->r_classad)->EvalBool("CONTINUE",
-											 rip->r_jobclassad,tmp))==0) ) {
-				EXCEPT("Can't evaluate CONTINUE\n");
+			if( ((rip->r_classad)->EvalBool("CONTINUE_VANILLA",
+											rip->r_jobclassad,tmp))==0 ) {
+				if( ((rip->r_classad)->EvalBool("CONTINUE",
+											 rip->r_jobclassad,tmp))==0 ) {
+					EXCEPT("Can't evaluate CONTINUE\n");
+				}
 			}
 		} else {
 			if( ((rip->r_classad)->EvalBool("CONTINUE",
-										   rip->r_jobclassad,tmp))==0 ) {
+											rip->r_jobclassad,tmp))==0 ) {
 				EXCEPT("Can't evaluate CONTINUE\n");
 			}
 		}
@@ -206,21 +206,13 @@ check_claims(resource_info_t* rip)
 		if ((time(NULL) - rip->r_receivetime) > 2 * rip->r_interval) {
 			dprintf(D_ALWAYS, "Capability (%s) timed out\n",
 					rip->r_capab);
-			rip->r_claimed = FALSE;
-			free(rip->r_capab);
-			free(rip->r_client);
-			rip->r_capab = NULL;
-			rip->r_client = NULL;	
+			resource_free( rip->r_rid );
 		}
 	} else if (rip->r_capab) {
 		if (time(NULL) - rip->r_captime > capab_timeout) {
 			dprintf(D_ALWAYS, "Capability (%s) timed out\n",
 					rip->r_capab);
-			rip->r_claimed = FALSE;
-			free(rip->r_capab);
-			free(rip->r_client);
-			rip->r_capab = NULL;
-			rip->r_client = NULL;
+			resource_free( rip->r_rid );
 		}
 	}
 	return 0;
@@ -291,12 +283,7 @@ event_sigchld(int sig)
 		else
 			dprintf(D_ALWAYS, "pid %d exited with status %d\n",
 					pid, WEXITSTATUS(status));
-#if 0
-		// ??? Why update RemoteUser here?  rip->r_user could be NULL!
-		sprintf(tmp,"RemoteUser=%s",(rip->r_user));
-		(rip->r_classad)->Insert(tmp);
-#endif
-		resmgr_changestate(rip->r_rid, NO_JOB);
+
 		event_exited(rip->r_rid, NO_JID, NO_TID);
 	}
 }
