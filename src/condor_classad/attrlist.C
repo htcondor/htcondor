@@ -1483,6 +1483,7 @@ int AttrListList::Delete(AttrList* attrList)
 				}
 
 				delete cur;
+    			this->length--;
 				break;
 			}
 		}
@@ -1532,6 +1533,7 @@ int AttrListList::Delete(AttrList* attrList)
 				}
 
 				delete cur;
+    			this->length--;
 				break;
 			}
 		} // end of if a rep is used
