@@ -64,6 +64,19 @@ char *_FileName_ = __FILE__;
 static uid_t CondorUid;
 static int CondorUidInited = FALSE;
 
+static int fatal_uid_sets = TRUE;
+
+int
+set_fatal_uid_sets(flag)
+int		flag;
+{
+	int old_val;
+	old_val = fatal_uid_sets;
+	fatal_uid_sets = flag;
+	return old_val;
+}
+
+
 init_condor_uid()
 {
     struct passwd       *pwd, *getpwnam();
@@ -99,37 +112,61 @@ get_condor_uid()
 
 set_condor_euid()
 {
+	int		rval;
+
 	if( !CondorUidInited ) {
 		init_condor_uid();
 	}
 
-	if( SET_EFFECTIVE_ID(CondorUid) < 0 ) {
-        EXCEPT( "SET_EFFECTIVE_ID(%d)", CondorUid);
+	rval = SET_EFFECTIVE_ID(CondorUid);
+	if( rval < 0) {
+		if (fatal_uid_sets) {
+			EXCEPT( "SET_EFFECTIVE_ID(%d)", CondorUid);
+		}
     }
+	return rval;
 }
 
 set_condor_ruid()
 {
+	int		rval;
+
 	if( !CondorUidInited ) {
 		init_condor_uid();
 	}
 
-	if( SET_REAL_ID(CondorUid) < 0 ) {
-		EXCEPT( "SET_REAL_ID(%d)", CondorUid );
+	rval = SET_REAL_ID(CondorUid);
+	if( rval < 0 ) {
+		if (fatal_uid_sets) {
+			EXCEPT( "SET_REAL_ID(%d)", CondorUid );
+		}
 	}
+	return rval;
 }
 
 set_root_euid()
 {
-	if( SET_EFFECTIVE_ID(ROOT) < 0 ) {
-		EXCEPT( "SET_EFFECTIVE_ID(%d)", ROOT );
+	int		rval;
+
+	rval = SET_EFFECTIVE_ID(ROOT);
+	if( rval < 0 ) {
+		if (fatal_uid_sets) {
+			EXCEPT( "SET_EFFECTIVE_ID(%d)", ROOT );
+		}
 	}
+	return rval;
 }
 
 
 set_effective_uid(uid_t new_uid)
 {
-	if( SET_EFFECTIVE_ID(new_uid) < 0 ) {
-		EXCEPT( "SET_EFFECTIVE_ID(%d)", new_uid );
+	int		rval;
+
+	rval = SET_EFFECTIVE_ID(new_uid);
+	if( rval < 0 ) {
+		if (fatal_uid_sets) {
+			EXCEPT( "SET_EFFECTIVE_ID(%d)", new_uid );
+		}
 	}
+	return rval;
 }
