@@ -662,6 +662,7 @@ ShadowExceptionEvent::
 ShadowExceptionEvent ()
 {
 	eventNumber = ULOG_SHADOW_EXCEPTION;
+	message[0] = '\0';
 }
 
 ShadowExceptionEvent::
@@ -672,8 +673,13 @@ ShadowExceptionEvent::
 int ShadowExceptionEvent::
 readEvent (FILE *file)
 {
-	if (fscanf (file, "Shadow exception!") == EOF)
+	if (fscanf (file, "Shadow exception!\n\t") == EOF)
 		return 0;
+	if (fgets(message, BUFSIZ, file) == NULL)
+		return 0;
+
+	// remove '\n' from message
+	message[strlen(message)-1] = '\0';
 
 	return 1;
 }
@@ -681,7 +687,9 @@ readEvent (FILE *file)
 int ShadowExceptionEvent::
 writeEvent (FILE *file)
 {
-	if (fprintf (file, "Shadow exception!\n") < 0)
+	if (fprintf (file, "Shadow exception!\n\t") < 0)
+		return 0;
+	if (fprintf (file, "%s\n", message) < 0)
 		return 0;
 
 	return 1;

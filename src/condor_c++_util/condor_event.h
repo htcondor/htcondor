@@ -556,6 +556,9 @@ class ShadowExceptionEvent : public ULogEvent
         @return 0 for failure, 1 for success
     */
     virtual int writeEvent (FILE *);
+
+	/// exception message
+	char	message[BUFSIZ];
 };
     
 #endif // __CONDOR_EVENT_H__
