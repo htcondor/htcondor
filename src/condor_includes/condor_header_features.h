@@ -37,4 +37,8 @@
 #define DLL_IMPORT_MAGIC  /* a no-op on Unix */
 #endif
 
+#ifndef WIN32
+#define access(x,y) access_euid(x,y)
+#endif
+
 #endif /* CONDOR_SYS_FEATURES_H */
