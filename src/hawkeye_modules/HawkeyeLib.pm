@@ -345,22 +345,22 @@ sub Add
     my $Value = shift;
 
     my $NewElem = ();
-    $NewElem->{Type} = $Type;
-    $NewElem->{TypeNew} = -1;
-    $NewElem->{Value} = $Value;
-    $self->{Hash}{$Name} = $NewElem;
-}
 
-sub AddNew
-{
-    my $self = shift;
-    my $Name = shift;
-    my $Type = shift;
-    my $Value = shift;
-
-    my $NewElem = ();
-    $NewElem->{Type} = "";
-    $NewElem->{TypeNew} = $Type;
+    # If the type is a number, it's modern invocation.
+    if ( $Type =~ /^\d+$/ )
+    {
+	$NewElem->{Type} = $Type;
+    }
+    # Otherwise, we understand "n" == "number"
+    elsif ( $Type =~ /^n/i )
+    {
+	$NewElem->{Type} = HawkeyePublish::TypeNumber;
+    }
+    # Anything else is a string
+    else
+    {
+	$NewElem->{Type} = HawkeyePublish::TypeString;
+    }
     $NewElem->{Value} = $Value;
     $self->{Hash}{$Name} = $NewElem;
 }
@@ -377,20 +377,7 @@ sub Store
 	my $TypeNew = $self->{Hash}{$Key}->{TypeNew};
 	my $Type = $self->{Hash}{$Key}->{Type};
 
-	if ( $TypeNew >= 0 )
-	{
-	    ${$self->{Hawkeye}}->StoreValue( $Name, $Value, $TypeNew );
-	}
-	elsif ( $Type =~ /^n/i )
-        {
-	    ${$self->{Hawkeye}}->StoreValue( $Name, $Value,
-					     HawkeyePublish::TypeNumber );
-        }
-	else
-        {
-	    ${$self->{Hawkeye}}->StoreValue( $Name, $Value,
-					     HawkeyePublish::TypeString );
-        }
+	${$self->{Hawkeye}}->StoreValue( $Name, $Value, $Type );
 	$Count++;
     }
     return $Count;

@@ -84,7 +84,9 @@ sub StoreValue {
     $self->{Publish}{$Attr} = $Rec;
 }
 
-# Publish a value
+# These are depricated methods for storing.  Use StoreValue() instead.
+
+# Publish a string value
 sub Store {
     my $self = shift;
 
@@ -97,7 +99,7 @@ sub Store {
     $self->StoreValue( $Var, $Value, HawkeyePublish::TypeString );
 }
 
-# Publish a value
+# Publish a string value
 sub StoreString {
     my $self = shift;
 
@@ -109,7 +111,7 @@ sub StoreString {
     $self->StoreValue( $Var, $Value, HawkeyePublish::TypeString );
 }
 
-# Publish a value
+# Publish a numeric value
 sub StoreNum {
     my $self = shift;
 
@@ -121,7 +123,7 @@ sub StoreNum {
     $self->StoreValue( $Var, $Value, HawkeyePublish::TypeNumber );
 }
 
-# Publish a boolean value
+# Publish a boolean boolean value
 sub StoreBool {
     my $self = shift;
 
