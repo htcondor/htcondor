@@ -9,6 +9,7 @@
 #include "qmgr.h"
 #include "condor_qmgr.h"
 #include "condor_debug.h"
+#include "condor_attributes.h"
 
 int open_url(char *, int, int);
 extern "C" int gethostname(char *name, int namelen);
@@ -204,39 +205,40 @@ SaveProc(PROC *p)
 
 	cl = p->id.cluster;
 	pr = p->id.proc;
-	SetAttributeInt(cl, pr, "Universe", p->universe);
-	SetAttributeInt(cl, pr, "Checkpoint", p->checkpoint);
-	SetAttributeInt(cl, pr, "Remote_syscalls", p->remote_syscalls);
-	SetAttributeString(cl, pr, "Owner", p->owner);
-	SetAttributeInt(cl, pr, "Q_date", p->q_date);
-	SetAttributeInt(cl, pr, "Completion_date", p->completion_date);
-	SetAttributeInt(cl, pr, "Status", p->status);
-	SetAttributeInt(cl, pr, "Prio", p->prio);
-	SetAttributeInt(cl, pr, "Notification", p->notification);
-	SetAttributeInt(cl, pr, "Image_size", p->image_size);
-	SetAttributeString(cl, pr, "Env", p->env);
+	SetAttributeInt(cl, pr, ATTR_JOB_UNIVERSE, p->universe);
+	SetAttributeInt(cl, pr, ATTR_WANT_CHECKPOINT, p->checkpoint);
+	SetAttributeInt(cl, pr, ATTR_WANT_REMOTE_SYSCALLS, p->remote_syscalls);
+	SetAttributeString(cl, pr, ATTR_OWNER, p->owner);
+	SetAttributeInt(cl, pr, ATTR_Q_DATE, p->q_date);
+	SetAttributeInt(cl, pr, ATTR_COMPLETION_DATE, p->completion_date);
+	SetAttributeInt(cl, pr, ATTR_JOB_STATUS, p->status);
+	SetAttributeInt(cl, pr, ATTR_JOB_PRIO, p->prio);
+	SetAttributeInt(cl, pr, ATTR_JOB_NOTIFICATION, p->notification);
+	SetAttributeInt(cl, pr, ATTR_IMAGE_SIZE, p->image_size);
+	SetAttributeString(cl, pr, ATTR_JOB_ENVIRONMENT, p->env);
 
-	SetAttributeString(cl, pr, "Cmd", p->cmd[0]);
-	SetAttributeString(cl, pr, "Args", p->args[0]);
-	SetAttributeString(cl, pr, "In", p->in[0]);
-	SetAttributeString(cl, pr, "Out", p->out[0]);
-	SetAttributeString(cl, pr, "Err", p->err[0]);
-	SetAttributeInt(cl, pr, "Exit_status", p->exit_status[0]);
+	SetAttributeString(cl, pr, ATTR_JOB_CMD, p->cmd[0]);
+	SetAttributeString(cl, pr, ATTR_JOB_ARGUMENTS, p->args[0]);
+	SetAttributeString(cl, pr, ATTR_JOB_INPUT, p->in[0]);
+	SetAttributeString(cl, pr, ATTR_JOB_OUTPUT, p->out[0]);
+	SetAttributeString(cl, pr, ATTR_JOB_ERROR, p->err[0]);
+	SetAttributeInt(cl, pr, ATTR_JOB_EXIT_STATUS, p->exit_status[0]);
 
-	SetAttributeInt(cl, pr, "CurrentHosts", (p->min_needed >> 16) & 0xffff);
-	SetAttributeInt(cl, pr, "MinHosts", (p->min_needed & 0xffff));
-	SetAttributeInt(cl, pr, "MaxHosts", p->max_needed);
+	SetAttributeInt(cl, pr, ATTR_CURRENT_HOSTS,(p->min_needed >> 16) & 0xffff);
+	SetAttributeInt(cl, pr, ATTR_MIN_HOSTS, (p->min_needed & 0xffff));
+	SetAttributeInt(cl, pr, ATTR_MAX_HOSTS, p->max_needed);
 
-	SetAttributeString(cl, pr, "Rootdir", p->rootdir);
-	SetAttributeString(cl, pr, "Iwd", p->iwd);
-	SetAttributeExpr(cl, pr, "Requirements", p->requirements);
+	SetAttributeString(cl, pr, ATTR_JOB_ROOT_DIR, p->rootdir);
+	SetAttributeString(cl, pr, ATTR_JOB_IWD, p->iwd);
+	SetAttributeExpr(cl, pr, ATTR_REQUIREMENTS, p->requirements);
 	if (*(p->preferences) == '\0') {
 		strcpy(p->preferences, "TRUE");
 	}
-	SetAttributeExpr(cl, pr, "Preferences", p->preferences);
+	SetAttributeExpr(cl, pr, ATTR_PREFERENCES, p->preferences);
 	
-	SetAttributeFloat(cl, pr, "Local_CPU", rusage_to_float(p->local_usage));
-	SetAttributeFloat(cl, pr, "Remote_CPU", 
+	SetAttributeFloat(cl, pr, ATTR_JOB_LOCAL_CPU,
+					  rusage_to_float(p->local_usage));
+	SetAttributeFloat(cl, pr, ATTR_JOB_REMOTE_CPU, 
 					  rusage_to_float(p->remote_usage[0]));
 	
 
@@ -269,18 +271,18 @@ GetProc(int cl, int pr, PROC *p)
 	p->id.cluster = cl;
 	p->id.proc = pr;
 
-	GetAttributeInt(cl, pr, "Universe", &(p->universe));
-	GetAttributeInt(cl, pr, "Checkpoint", &(p->checkpoint));
-	GetAttributeInt(cl, pr, "Remote_syscalls", &(p->remote_syscalls));
-	GetAttributeString(cl, pr, "Owner", buf);
+	GetAttributeInt(cl, pr, ATTR_JOB_UNIVERSE, &(p->universe));
+	GetAttributeInt(cl, pr, ATTR_WANT_CHECKPOINT, &(p->checkpoint));
+	GetAttributeInt(cl, pr, ATTR_WANT_REMOTE_SYSCALLS, &(p->remote_syscalls));
+	GetAttributeString(cl, pr, ATTR_OWNER, buf);
 	p->owner = strdup(buf);
-	GetAttributeInt(cl, pr, "Q_date", &(p->q_date));
-	GetAttributeInt(cl, pr, "Completion_date", &(p->completion_date));
-	GetAttributeInt(cl, pr, "Status", &(p->status));
-	GetAttributeInt(cl, pr, "Prio", &(p->prio));
-	GetAttributeInt(cl, pr, "Notification", &(p->notification));
-	GetAttributeInt(cl, pr, "Image_size", &(p->image_size));
-	GetAttributeString(cl, pr, "Env", buf);
+	GetAttributeInt(cl, pr, ATTR_Q_DATE, &(p->q_date));
+	GetAttributeInt(cl, pr, ATTR_COMPLETION_DATE, &(p->completion_date));
+	GetAttributeInt(cl, pr, ATTR_JOB_STATUS, &(p->status));
+	GetAttributeInt(cl, pr, ATTR_JOB_PRIO, &(p->prio));
+	GetAttributeInt(cl, pr, ATTR_JOB_NOTIFICATION, &(p->notification));
+	GetAttributeInt(cl, pr, ATTR_IMAGE_SIZE, &(p->image_size));
+	GetAttributeString(cl, pr, ATTR_JOB_ENVIRONMENT, buf);
 	p->env = strdup(buf);
 
 	p->n_cmds = 1;
@@ -291,26 +293,26 @@ GetProc(int cl, int pr, PROC *p)
 	p->err = (char **) malloc(p->n_cmds * sizeof(char *));
 	p->exit_status = (int *) malloc(p->n_cmds * sizeof(int));
 
-	GetAttributeString(cl, pr, "Cmd", buf);
+	GetAttributeString(cl, pr, ATTR_JOB_CMD, buf);
 	p->cmd[0] = strdup(buf);
-	GetAttributeString(cl, pr, "Args", buf);
+	GetAttributeString(cl, pr, ATTR_JOB_ARGUMENTS, buf);
 	p->args[0] = strdup(buf);
-	GetAttributeString(cl, pr, "In", buf);
+	GetAttributeString(cl, pr, ATTR_JOB_INPUT, buf);
 	p->in[0] = strdup(buf);
-	GetAttributeString(cl, pr, "Out", buf);
+	GetAttributeString(cl, pr, ATTR_JOB_OUTPUT, buf);
 	p->out[0] = strdup(buf);
-	GetAttributeString(cl, pr, "Err", buf);
+	GetAttributeString(cl, pr, ATTR_JOB_ERROR, buf);
 	p->err[0] = strdup(buf);
-	GetAttributeInt(cl, pr, "Exit_status", &(p->exit_status[0]));
+	GetAttributeInt(cl, pr, ATTR_JOB_EXIT_STATUS, &(p->exit_status[0]));
 
-	GetAttributeInt(cl, pr, "MinHosts", &(p->min_needed));
-	GetAttributeInt(cl, pr, "MaxHosts", &(p->max_needed));
+	GetAttributeInt(cl, pr, ATTR_MIN_HOSTS, &(p->min_needed));
+	GetAttributeInt(cl, pr, ATTR_MAX_HOSTS, &(p->max_needed));
 
-	GetAttributeString(cl, pr, "Rootdir", buf);
+	GetAttributeString(cl, pr, ATTR_JOB_ROOT_DIR, buf);
 	p->rootdir = strdup(buf);
-	GetAttributeString(cl, pr, "Iwd", buf);
+	GetAttributeString(cl, pr, ATTR_JOB_IWD, buf);
 	p->iwd = strdup(buf);
-	GetAttributeExpr(cl, pr, "Requirements", buf);
+	GetAttributeExpr(cl, pr, ATTR_REQUIREMENTS, buf);
 	s = strchr(buf, '=');
 	if (s) {
 		s++;
@@ -318,7 +320,7 @@ GetProc(int cl, int pr, PROC *p)
 	} else {
 		p->requirements = strdup(buf);
 	}
-	GetAttributeExpr(cl, pr, "Preferences", buf);
+	GetAttributeExpr(cl, pr, ATTR_PREFERENCES, buf);
 	s = strchr(buf, '=');
 	if (s) {
 		s++;
@@ -327,11 +329,11 @@ GetProc(int cl, int pr, PROC *p)
 		p->preferences = strdup(buf);
 	}
 
-	GetAttributeFloat(cl, pr, "Local_CPU", &cpu_time);
+	GetAttributeFloat(cl, pr, ATTR_JOB_LOCAL_CPU, &cpu_time);
 	float_to_rusage(cpu_time, &(p->local_usage));
 	p->remote_usage = (struct rusage *) malloc(p->n_cmds * 
 											   sizeof(struct rusage));
-	GetAttributeFloat(cl, pr, "Remote_CPU", &cpu_time);
+	GetAttributeFloat(cl, pr, ATTR_JOB_REMOTE_CPU, &cpu_time);
 	float_to_rusage(cpu_time, &(p->remote_usage[0]));
 	
 

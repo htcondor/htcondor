@@ -861,7 +861,7 @@ Job::~Job()
 		gen_ckpt_name( Spool, cluster->get_cluster_num(), proc, 0 );
 	(void)unlink( ckpt_file_name );
 	/* Also, try to get rid of it from the checkpoint server */
-	GetAttribute("Owner", owner);
+	GetAttribute(ATTR_OWNER, owner);
 	RemoveRemoteFile(owner, ckpt_file_name);
 
 	if (ad != 0) {
@@ -1091,7 +1091,7 @@ Job::OwnerCheck(char *test_owner)
 	}
 
 	// If we don't have an Owner attribute, how can we deny service?
-	if (GetAttribute("Owner", my_owner) < 0) {
+	if (GetAttribute(ATTR_OWNER, my_owner) < 0) {
 		return 1;
 	}
 	if (strcmp(my_owner, test_owner) != 0) {
@@ -1246,7 +1246,7 @@ Cluster::~Cluster()
 	(void)unlink( ickpt_file_name );
 	/* Also, try to get rid of it from the checkpoint server */
 	if (job_list) {
-		job_list->GetAttribute("Owner", owner);
+		job_list->GetAttribute(ATTR_OWNER, owner);
 		RemoveRemoteFile(owner, ickpt_file_name);
 	}
 
@@ -1600,17 +1600,17 @@ int get_job_prio(int cluster, int proc)
     int     cur_hosts;
     int     max_hosts;
 
-    GetAttributeInt(cluster, proc, "Status", &job_status);
-    GetAttributeInt(cluster, proc, "Prio", &job_prio);
-    GetAttributeInt(cluster, proc, "Q_date", &q_date);
-    GetAttributeString(cluster, proc, "Owner", buf);
+    GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &job_status);
+    GetAttributeInt(cluster, proc, ATTR_JOB_PRIO, &job_prio);
+    GetAttributeInt(cluster, proc, ATTR_Q_DATE, &q_date);
+    GetAttributeString(cluster, proc, ATTR_OWNER, buf);
     owner = buf;
     id.cluster = cluster;
     id.proc = proc;
-    if (GetAttributeInt(cluster, proc, "CurrentHosts", &cur_hosts) < 0) {
+    if (GetAttributeInt(cluster, proc, ATTR_CURRENT_HOSTS, &cur_hosts) < 0) {
         cur_hosts = ((job_status == RUNNING) ? 1 : 0);
     }
-    if (GetAttributeInt(cluster, proc, "MaxHosts", &max_hosts) < 0) {
+    if (GetAttributeInt(cluster, proc, ATTR_MAX_HOSTS, &max_hosts) < 0) {
         max_hosts = ((job_status == IDLE || job_status == UNEXPANDED) ? 1 : 0);
     }
 
@@ -1690,10 +1690,10 @@ all_job_prio(int cluster, int proc)
     job_q_date = proc->q_date;
     job_id = proc->id;
 #else
-    GetAttributeInt(cluster, proc, "Prio", &job_prio);
-    GetAttributeInt(cluster, proc, "Status", &job_status);
-    GetAttributeInt(cluster, proc, "Q_date", &job_q_date);
-    GetAttributeString(cluster, proc, "Owner", own_buf);
+    GetAttributeInt(cluster, proc, ATTR_JOB_PRIO, &job_prio);
+    GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &job_status);
+    GetAttributeInt(cluster, proc, ATTR_Q_DATE, &job_q_date);
+    GetAttributeString(cluster, proc, ATTR_OWNER, own_buf);
     owner = own_buf;
     job_id.cluster = cluster;
     job_id.proc = proc;
@@ -1780,7 +1780,7 @@ int mark_idle(int cluster, int proc)
     int     status;
     char    owner[_POSIX_PATH_MAX];
 
-    GetAttributeInt(cluster, proc, "Status", &status);
+    GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &status);
 
     if( status != RUNNING ) {
         return -1;
@@ -1793,7 +1793,7 @@ int mark_idle(int cluster, int proc)
     strcpy(ckpt_name, gen_ckpt_name(Spool, cluster, proc,0) );
 #endif
 
-    GetAttributeString(cluster, proc, "Owner", owner);
+    GetAttributeString(cluster, proc, ATTR_OWNER, owner);
 
     if (FileExists(ckpt_name, owner)) {
         status = IDLE;
@@ -1801,8 +1801,8 @@ int mark_idle(int cluster, int proc)
         status = UNEXPANDED;
     }
 
-    SetAttributeInt(cluster, proc, "Status", status);
-    SetAttributeInt(cluster, proc, "CurrentHosts", 0);
+    SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, status);
+    SetAttributeInt(cluster, proc, ATTR_CURRENT_HOSTS, 0);
 	return 0;
 }
 
@@ -1880,9 +1880,9 @@ int Runnable(PROC_ID* id)
 		return FALSE;
 	}
 	
-	if(GetAttributeInt(id->cluster, id->proc, ATTR_STATUS, &status) < 0)
+	if(GetAttributeInt(id->cluster, id->proc, ATTR_JOB_STATUS, &status) < 0)
 	{
-		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",ATTR_STATUS);
+		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",ATTR_JOB_STATUS);
 		return FALSE;
 	}
 	if(status == HELD)
@@ -1904,14 +1904,16 @@ int Runnable(PROC_ID* id)
 		return FALSE;
 	}
 	
-	if(GetAttributeInt(id->cluster, id->proc, "CurrentHosts", &cur) < 0)
+	if(GetAttributeInt(id->cluster, id->proc, ATTR_CURRENT_HOSTS, &cur) < 0)
 	{
-		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no CurrentHosts)\n");
+		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",
+				ATTR_CURRENT_HOSTS);
 		return FALSE; 
 	}
-	if(GetAttributeInt(id->cluster, id->proc, "MaxHosts", &max) < 0)
+	if(GetAttributeInt(id->cluster, id->proc, ATTR_MAX_HOSTS, &max) < 0)
 	{
-		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no MaxHosts)\n");
+		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (no %s)\n",
+				ATTR_MAX_HOSTS);
 		return FALSE; 
 	}
 	if(cur < max)

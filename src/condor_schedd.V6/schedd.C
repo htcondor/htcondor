@@ -376,7 +376,7 @@ count( int cluster, int proc )
 	if (GetAttributeInt(cluster, proc, ATTR_MAX_HOSTS, &max_hosts) < 0) {
 		max_hosts = ((status == IDLE || status == UNEXPANDED) ? 1 : 0);
 	}
-	if (GetAttributeInt(cluster, proc, "Universe", &universe) < 0) {
+	if (GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &universe) < 0) {
 		universe = STANDARD;
 	}
 	
@@ -768,12 +768,12 @@ CONTEXT* Scheduler::build_context(PROC_ID* id)
 	GetAttributeExpr(id->cluster, id->proc, ATTR_REQUIREMENTS, req_buf);
 	requirements = strchr(req_buf, '=');
 	requirements++;
-	GetAttributeExpr(id->cluster, id->proc, "Preferences", pref_buf);
+	GetAttributeExpr(id->cluster, id->proc, ATTR_PREFERENCES, pref_buf);
 	preferences = strchr(pref_buf, '=');
 	preferences++;
 	GetAttributeString(id->cluster, id->proc, ATTR_OWNER, own_buf);
 	owner = own_buf;
-	GetAttributeInt(id->cluster, id->proc, "Image_size", &image_size);
+	GetAttributeInt(id->cluster, id->proc, ATTR_IMAGE_SIZE, &image_size);
 	/* Very bad hack! */
 	disk = 10000;
 
@@ -857,7 +857,7 @@ find_idle_sched_universe_jobs( int cluster, int proc )
 	int	universe;
 	bool already_found = false;
 
-	if (GetAttributeInt(cluster, proc, "Universe", &universe) < 0) {
+	if (GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &universe) < 0) {
 		universe = STANDARD;
 	}
 
@@ -984,15 +984,15 @@ shadow_rec* Scheduler::StartJob(Mrec* mrec, PROC_ID* job_id)
 	int		universe;
 	int		rval;
 
-	rval = GetAttributeInt(job_id->cluster, job_id->proc, "Universe", 
+	rval = GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE, 
 						   &universe);
 	if (universe == PVM) {
 		return start_pvm(mrec, job_id);
 	} else {
 		if (rval < 0) {
-			dprintf(D_ALWAYS, "Couldn't find Universe Attribute for job "
-					"(%d.%d) assuming standard.\n",	job_id->cluster,
-					job_id->proc);
+			dprintf(D_ALWAYS, "Couldn't find %s Attribute for job "
+					"(%d.%d) assuming standard.\n",	ATTR_JOB_UNIVERSE,
+					job_id->cluster, job_id->proc);
 		}
 		return start_std(mrec, job_id);
 	}
@@ -1317,8 +1317,8 @@ shadow_rec* Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		exit( JOB_NO_MEM );
 	}
 
-	SetAttributeInt(job_id->cluster, job_id->proc, "Status", RUNNING);
-	SetAttributeInt(job_id->cluster, job_id->proc, "CurrentHosts", 1);
+	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, RUNNING);
+	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 1);
 	return add_shadow_rec(pid, job_id, NULL, -1);
 }
 
@@ -1398,9 +1398,10 @@ void Scheduler::mark_job_running(PROC_ID* job_id)
 	int status;
 	int orig_max;
 
-	GetAttributeInt(job_id->cluster, job_id->proc, "Status", &status);
-	GetAttributeInt(job_id->cluster, job_id->proc, "MaxHosts", &orig_max);
-	SetAttributeInt(job_id->cluster, job_id->proc, "OrigMaxHosts", orig_max);
+	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, &status);
+	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_MAX_HOSTS, &orig_max);
+	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_ORIG_MAX_HOSTS,
+					orig_max);
 
 	if( status == RUNNING ) {
 		EXCEPT( "Trying to run job %d.%d, but already marked RUNNING!",
@@ -1409,7 +1410,7 @@ void Scheduler::mark_job_running(PROC_ID* job_id)
 
 	status = RUNNING;
 
-	SetAttributeInt(job_id->cluster, job_id->proc, "Status", status);
+	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, status);
 
 	/*
 	** dprintf( D_FULLDEBUG, "Marked job %d.%d as RUNNING\n",
@@ -1428,7 +1429,7 @@ void Scheduler::mark_job_stopped(PROC_ID* job_id)
 	int		had_orig;
 	char	ckpt_name[MAXPATHLEN];
 
-	GetAttributeInt(job_id->cluster, job_id->proc, "Status", &status);
+	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, &status);
 	had_orig = GetAttributeInt(job_id->cluster, job_id->proc, 
 							   "OrigMaxHosts", &orig_max);
 
@@ -1436,22 +1437,18 @@ void Scheduler::mark_job_stopped(PROC_ID* job_id)
 		EXCEPT( "Trying to stop job %d.%d, but not marked RUNNING!",
 			job_id->cluster, job_id->proc );
 	}
-#if 0
-	(void)sprintf( ckpt_name, "%s/job%06d.ckpt.%d",
-								Spool, job_id->cluster, job_id->proc  );
-#else
 	strcpy(ckpt_name, gen_ckpt_name(Spool,job_id->cluster,job_id->proc,0) );
-#endif
 	if( access(ckpt_name,F_OK) != 0 ) {
 		status = UNEXPANDED;
 	} else {
 		status = IDLE;
 	}
 
-	SetAttributeInt(job_id->cluster, job_id->proc, "Status", status);
-	SetAttributeInt(job_id->cluster, job_id->proc, "CurrentHosts", 0);
+	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, status);
+	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 0);
 	if (had_orig >= 0) {
-		SetAttributeInt(job_id->cluster, job_id->proc, "MaxHosts", orig_max);
+		SetAttributeInt(job_id->cluster, job_id->proc, ATTR_MAX_HOSTS,
+						orig_max);
 	}
 	
 	dprintf( D_FULLDEBUG, "Marked job %d.%d as %s\n", job_id->cluster,
@@ -1617,7 +1614,7 @@ int Scheduler::shadow_prio_recs_consistent()
 		if( (srp=find_shadow_rec(&PrioRec[i].id)) ) {
 			BadCluster = srp->job_id.cluster;
 			BadProc = srp->job_id.proc;
-			GetAttributeInt(BadCluster, BadProc, "Status", &status);
+			GetAttributeInt(BadCluster, BadProc, ATTR_JOB_STATUS, &status);
 			if (status != RUNNING) {
 				dprintf( D_ALWAYS, "Found a consistency problem!!!\n" );
 				return FALSE;
@@ -1813,7 +1810,7 @@ void Scheduler::reaper(int sig, int code, struct sigcontext* scp)
                 DelMrec(mrec);
             }
 		}
-		else if (srec = FindSrecByPid(pid))
+		else if ((srec = FindSrecByPid(pid)) != NULL && srec->match == NULL)
 		{
 			if(WIFEXITED(status))
 			{
@@ -1891,7 +1888,8 @@ void Scheduler::check_zombie(int pid, PROC_ID* job_id)
 
     dprintf( D_ALWAYS, "Entered check_zombie( %d, 0x%x )\n", pid, job_id );
 
-    if (GetAttributeInt(job_id->cluster, job_id->proc, "Status", &status) < 0){
+    if (GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS,
+						&status) < 0){
         status = REMOVED;
     }
 

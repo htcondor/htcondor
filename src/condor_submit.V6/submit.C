@@ -50,6 +50,8 @@
 #include "url_condor.h"
 #include "sched.h"
 #include "condor_classad.h"
+#include "condor_attributes.h"
+#include "condor_adtypes.h"
 #include "condor_io.h"
 #include "condor_parser.h"
 #include "files.h"
@@ -206,8 +208,8 @@ main( int argc, char *argv[] )
 	MyName = argv[0];
 
 	// set up types of the ad
-	job.SetMyTypeName ("Job");
-	job.SetTargetTypeName ("Machine");
+	job.SetMyTypeName (JOB_ADTYPE);
+	job.SetTargetTypeName (STARTD_ADTYPE);
 
 	/* Weiru */
 	Config(MyName);
@@ -251,22 +253,22 @@ main( int argc, char *argv[] )
 	}
 	ProcId = -1;
 
-	(void) sprintf (buffer, "Q_Date = %d", (int)time ((time_t *) 0));
+	(void) sprintf (buffer, "%s = %d", ATTR_Q_DATE, (int)time ((time_t *) 0));
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "Completion_date = 0");
+	(void) sprintf (buffer, "%s = 0", ATTR_COMPLETION_DATE);
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "Owner = \"%s\"", get_owner());
+	(void) sprintf (buffer, "%s = \"%s\"", ATTR_OWNER, get_owner());
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "Local_CPU = 0.0");
+	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_LOCAL_CPU);
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "Remote_CPU = 0.0");
+	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_REMOTE_CPU);
 	InsertJobExpr (buffer);
 
-	(void) sprintf (buffer, "Exit_status = 0");
+	(void) sprintf (buffer, "%s = 0", ATTR_JOB_EXIT_STATUS);
 	InsertJobExpr (buffer);
 
 	//  Parse the file and queue the jobs 
@@ -338,60 +340,66 @@ check_path_length(char *path, char *lhs)
 void
 SetExecutable()
 {
-	char	*ename;
-	static int exec_set = 0;
-	char	*argv[64];
-	int		argc;
+  char	*ename;
+  static int exec_set = 0;
+  char	*argv[64];
+  int		argc;
 
-	if( exec_set ) {
-		return;
-	}
+  if( exec_set ) {
+	return;
+  }
 
-	ename = condor_param(Executable);
+  ename = condor_param(Executable);
 
-	if( ename == NULL ) {
-		EXCEPT("No '%s' parameter was provided", Executable);
-	}
+  if( ename == NULL ) {
+	EXCEPT("No '%s' parameter was provided", Executable);
+  }
 
-	check_path_length(ename, Executable);
+  check_path_length(ename, Executable);
 
-	(void) sprintf (buffer, "Cmd = \"%s\"", ename);
-	InsertJobExpr (buffer);
+  (void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_CMD, ename);
+  InsertJobExpr (buffer);
 
-	InsertJobExpr ("MinHosts = 1");
-	InsertJobExpr ("MaxHosts = 1");
-	InsertJobExpr ("CurrentHosts = 0");
+  InsertJobExpr ("MinHosts = 1");
+  InsertJobExpr ("MaxHosts = 1");
+  InsertJobExpr ("CurrentHosts = 0");
 
-	(void) sprintf (buffer, "Status = %d", UNEXPANDED);
-	InsertJobExpr (buffer);
+  (void) sprintf (buffer, "%s = %d", ATTR_JOB_STATUS, UNEXPANDED);
+  InsertJobExpr (buffer);
 
-	SetUniverse();
+  SetUniverse();
 	
-	switch(JobUniverse) 
+  switch(JobUniverse) 
 	{
 	case STANDARD:
-		InsertJobExpr ("Remote_syscalls = 1");
-		InsertJobExpr ("Checkpoint = 1");
-		break;
+	  (void) sprintf (buffer, "%s = 1", ATTR_WANT_REMOTE_SYSCALLS);
+	  InsertJobExpr (buffer);
+	  (void) sprintf (buffer, "%s = 1", ATTR_WANT_CHECKPOINT);
+	  InsertJobExpr (buffer);
+	  break;
 	case PVM:
 	case PIPE:
-		InsertJobExpr ("Remote_syscalls = 1");
-		InsertJobExpr ("Checkpoint = 0");
-		break;
+	  (void) sprintf (buffer, "%s = 1", ATTR_WANT_REMOTE_SYSCALLS);
+	  InsertJobExpr (buffer);
+	  (void) sprintf (buffer, "%s = 0", ATTR_WANT_CHECKPOINT);
+	  InsertJobExpr (buffer);
+	  break;
 	case VANILLA:
 	case SCHED_UNIVERSE:
-		InsertJobExpr ("Remote_syscalls = 0");
-		InsertJobExpr ("Checkpoint = 0");
-		break;
+	  (void) sprintf (buffer, "%s = 0", ATTR_WANT_REMOTE_SYSCALLS);
+	  InsertJobExpr (buffer);
+	  (void) sprintf (buffer, "%s = 0", ATTR_WANT_CHECKPOINT);
+	  InsertJobExpr (buffer);
+	  break;
 	default:
-		EXCEPT( "Unknown universe (%d)", JobUniverse );
+	  EXCEPT( "Unknown universe (%d)", JobUniverse );
 	}
 
-	// generate initial checkpoint file
-	strcpy( IckptName, gen_ckpt_name(0,ClusterId,ICKPT,0) );
-	_mkckpt(IckptName, ename);
+  // generate initial checkpoint file
+  strcpy( IckptName, gen_ckpt_name(0,ClusterId,ICKPT,0) );
+  _mkckpt(IckptName, ename);
 		
-	exec_set = 1;
+  exec_set = 1;
 }
 
 void
@@ -411,7 +419,7 @@ SetUniverse()
 		int tmp;
 
 		JobUniverse = PVM;
-		(void) sprintf (buffer, "Universe = %d", PVM);
+		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, PVM);
 		InsertJobExpr (buffer);
 		InsertJobExpr ("Checkpoint = 0");
 
@@ -425,7 +433,7 @@ SetUniverse()
 			}
 
 			tmp = atoi(mach_count);
-			(void) sprintf (buffer, "MinHosts = %d", tmp);
+			(void) sprintf (buffer, "%s = %d", ATTR_MIN_HOSTS, tmp);
 			InsertJobExpr (buffer);
 			
 			for ( ; !isdigit(*ptr) && *ptr; ptr++) ;
@@ -433,7 +441,7 @@ SetUniverse()
 				tmp = atoi(ptr);
 			}
 
-			(void) sprintf (buffer, "MaxHosts = %d", tmp);
+			(void) sprintf (buffer, "%s = %d", ATTR_MAX_HOSTS, tmp);
 			InsertJobExpr (buffer);
 		}
 		return;
@@ -441,7 +449,7 @@ SetUniverse()
 
 	if( univ && stricmp(univ,"pipe") == MATCH ) {
 		JobUniverse = PIPE;
-		(void) sprintf (buffer, "Universe = %d", PIPE);
+		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, PIPE);
 		InsertJobExpr (buffer);
 		InsertJobExpr ("Checkpoint = 0");
 		return;
@@ -449,20 +457,20 @@ SetUniverse()
 
 	if( univ && stricmp(univ,"vanilla") == MATCH ) {
 		JobUniverse = VANILLA;
-		(void) sprintf (buffer, "Universe = %d", VANILLA);
+		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, VANILLA);
 		InsertJobExpr (buffer);
 		return;
 	};
 
 	if( univ && stricmp(univ,"scheduler") == MATCH ) {
 		JobUniverse = SCHED_UNIVERSE;
-		(void) sprintf (buffer, "Universe = %d", SCHED_UNIVERSE);
+		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, SCHED_UNIVERSE);
 		InsertJobExpr (buffer);
 		return;
 	}
 
 	JobUniverse = STANDARD;
-	(void) sprintf (buffer, "Universe = %d", STANDARD);
+	(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, STANDARD);
 	InsertJobExpr (buffer);
 
 	return;
@@ -516,7 +524,8 @@ SetImageSize()
 		}
 	}
 
-	(void)sprintf (buffer, "Image_size = %d", mem_req > size ? mem_req : size);
+	(void)sprintf (buffer, "%s = %d", ATTR_IMAGE_SIZE,
+				   mem_req > size ? mem_req : size);
 	InsertJobExpr (buffer);
 }
 
@@ -580,17 +589,17 @@ SetStdFile( int which_file )
 	switch( which_file ) 
 	{
 	  case 0:
-		(void) sprintf (buffer, "In = \"%s\"", macro_value);
+		(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_INPUT, macro_value);
 		InsertJobExpr (buffer);
 		check_open( macro_value, O_RDONLY );
 		break;
 	  case 1:
-		(void) sprintf (buffer, "Out = \"%s\"", macro_value);
+		(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_OUTPUT, macro_value);
 		InsertJobExpr (buffer);
 		check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
 		break;
 	  case 2:
-		(void) sprintf (buffer, "Err = \"%s\"", macro_value);
+		(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_ERROR, macro_value);
 		InsertJobExpr (buffer);
 		check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
 		break;
@@ -603,20 +612,16 @@ SetPriority()
 	char *prio = condor_param(Priority);
 	int  prioval = 0;
 
-	if( prio == NULL ) 
-	{
-		InsertJobExpr ("Prio = 0");
-	} 
-	else 
+	if( prio != NULL ) 
 	{
 		prioval = atoi (prio);
 		if( prioval < -20 || prioval > 20 ) 
 		{
 			EXCEPT("Priority must be in the range -20 thru 20 (%d)", prioval );
 		}
-		(void) sprintf (buffer, "Prio = %d", prioval);
-		InsertJobExpr (buffer);
 	}
+	(void) sprintf (buffer, "%s = %d", ATTR_JOB_PRIO, prioval);
+	InsertJobExpr (buffer);
 }
 
 void
@@ -638,7 +643,7 @@ SetNotification()
 	EXCEPT("Notification must be 'Never', 'Always', 'Complete', or 'Error'");
 	}
 
-	(void) sprintf (buffer, "Notification = %d", notification);
+	(void) sprintf (buffer, "%s = %d", ATTR_JOB_NOTIFICATION, notification);
 	InsertJobExpr (buffer);
 }
 
@@ -649,7 +654,7 @@ SetNotifyUser()
 
 	if (who)
 	{
-		(void) sprintf (buffer, "NotifyUser = \"%s\"", who);
+		(void) sprintf (buffer, "%s = \"%s\"", ATTR_NOTIFY_USER, who);
 		InsertJobExpr (buffer);
 	}
 }
@@ -663,7 +668,7 @@ SetArguments()
 		args = "";
 	}
 
-	sprintf (buffer, "Args = \"%s\"", args);
+	sprintf (buffer, "%s = \"%s\"", ATTR_JOB_ARGUMENTS, args);
 	InsertJobExpr (buffer);
 }
 
@@ -721,7 +726,7 @@ SetEnvironment()
 #endif
 	}
 
-	(void) sprintf (buffer, "Env = \"%s\"", envvalue);
+	(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_ENVIRONMENT, envvalue);
 	InsertJobExpr (buffer);
 }
 
@@ -743,7 +748,7 @@ SetRootDir()
 
 		check_path_length(rootdir, RootDir);
 
-		(void) sprintf (buffer, "Rootdir = \"%s\"", rootdir);
+		(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_ROOT_DIR, rootdir);
 		InsertJobExpr (buffer);
 		(void) strcpy (JobRootdir, rootdir);
 	}
@@ -764,7 +769,7 @@ SetRequirements()
 	}
 
 	tmp = check_requirements( JobRequirements );
-	(void) sprintf (buffer, "Requirements = %s", tmp);
+	(void) sprintf (buffer, "%s = %s", ATTR_REQUIREMENTS, tmp);
 	strcpy (JobRequirements, tmp);
 
 	InsertJobExpr (buffer);
@@ -804,11 +809,12 @@ SetPreferences()
 				
 	if( preferences[0] == '\0' ) 
 	{
-		InsertJobExpr ("Preferences = TRUE");
+		(void) sprintf (buffer, "%s = TRUE", ATTR_PREFERENCES);
+		InsertJobExpr (buffer);
 	} 
 	else 
 	{
-		(void) sprintf (buffer, "Preferences = %s", preferences);
+		(void) sprintf (buffer, "%s = %s", ATTR_PREFERENCES, preferences);
 		InsertJobExpr (buffer);
 	}
 }
@@ -845,7 +851,7 @@ SetIWD()
 	check_path_length(iwd, InitialDir);
 	check_iwd( iwd );
 
-	(void) sprintf (buffer, "Iwd = \"%s\"", iwd);
+	(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_IWD, iwd);
 	InsertJobExpr (buffer);
 	strcpy (JobIwd, iwd);
 }

@@ -37,6 +37,7 @@
 #include "internet.h"
 #include "condor_uid.h"
 #include "condor_adtypes.h"
+#include "condor_attributes.h"
 
 #include <signal.h>
 #include <pwd.h>
@@ -459,7 +460,7 @@ main(int argc, char *argv[], char *envp[])
 
 #ifndef DBM_QUEUE
 	ConnectQ(schedd);
-	SetAttributeInt(Proc->id.cluster, Proc->id.proc, "CurrentHosts", 0);
+	SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_CURRENT_HOSTS, 0);
 	DisconnectQ(NULL);
 #endif
 
@@ -829,8 +830,8 @@ NotifyUser( char *buf )
 
 #ifndef DBM_QUEUE
 	ConnectQ (schedd);
-	if (-1 == GetAttributeString (Proc->id.cluster,Proc->id.proc,"NotifyUser",
-                              notifyUser))
+	if (-1 == GetAttributeString (Proc->id.cluster,Proc->id.proc,
+								  "ATTR_NOTIFY_USER", notifyUser))
 	{
 		strcpy (notifyUser, Proc->owner);
 	}
@@ -963,7 +964,7 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 	status = proc->status;
 #else
 	ConnectQ(schedd);
-	GetAttributeInt(Proc->id.cluster, Proc->id.proc, "Status", &status);
+	GetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS, &status);
 #endif
 	if( status == REMOVED ) {
 		dprintf( D_ALWAYS, "Job %d.%d has been removed by condor_rm\n",
@@ -1003,13 +1004,13 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 			EXCEPT( "StoreProc(%d.%d)", Proc->id.cluster, Proc->id.proc );
 		}
 #else
-		SetAttributeInt(Proc->id.cluster, Proc->id.proc, "Image_size", 
+		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_IMAGE_SIZE, 
 						ImageSize);
-		SetAttributeInt(Proc->id.cluster, Proc->id.proc, "Status", 
+		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS, 
 						Proc->status);
-		SetAttributeFloat(Proc->id.cluster, Proc->id.proc, "Local_CPU", 
+		SetAttributeFloat(Proc->id.cluster, Proc->id.proc, ATTR_JOB_LOCAL_CPU, 
 						  rusage_to_float(Proc->local_usage));
-		SetAttributeFloat(Proc->id.cluster, Proc->id.proc, "Remote_CPU", 
+		SetAttributeFloat(Proc->id.cluster, Proc->id.proc,ATTR_JOB_REMOTE_CPU, 
 						  rusage_to_float(Proc->remote_usage[0]));
 #endif
 		dprintf( D_ALWAYS, "Shadow: marked job status %d\n", Proc->status );
@@ -1382,7 +1383,7 @@ DoCleanup()
 #else
 		ConnectQ(schedd);
 		fetch_rval = GetAttributeInt(Proc->id.cluster, Proc->id.proc, 
-									 "Status", &status);
+									 ATTR_JOB_STATUS, &status);
 #endif
 
 		if( fetch_rval < 0 || status == REMOVED ) {
@@ -1409,7 +1410,7 @@ DoCleanup()
 			status = IDLE;
 		}
 		dprintf(D_FULLDEBUG, "Shadow: setting CurrentHosts back to 0\n");
-		SetAttributeInt(Proc->id.cluster, Proc->id.proc, "CurrentHosts", 0);
+		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_CURRENT_HOSTS,0);
 		Proc->image_size = ImageSize;
 		Proc->status = status;
 
@@ -1421,8 +1422,9 @@ DoCleanup()
 			exit( 1 );
 		}
 #else
-		SetAttributeInt(Proc->id.cluster, Proc->id.proc, "Status", status);
-		SetAttributeInt(Proc->id.cluster, Proc->id.proc, "Image_size", 
+		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS,
+						status);
+		SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_IMAGE_SIZE, 
 						ImageSize);
 #endif
 

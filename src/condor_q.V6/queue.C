@@ -167,13 +167,13 @@ displayJobShort (ClassAd *ad)
 
 	if (!ad->EvalInteger (ATTR_CLUSTER_ID, NULL, cluster)		||
 		!ad->EvalInteger (ATTR_PROC_ID, NULL, proc)				||
-		!ad->EvalInteger ("Q_Date", NULL, date)					||
-		!ad->EvalFloat   ("Remote_CPU", NULL, usage)			||
-		!ad->EvalInteger ("Status", NULL, status)				||
-		!ad->EvalInteger (ATTR_PRIO, NULL, prio)				||
-		!ad->EvalInteger ("Image_size", NULL, image_size)		||
+		!ad->EvalInteger (ATTR_Q_DATE, NULL, date)					||
+		!ad->EvalFloat   (ATTR_JOB_REMOTE_CPU, NULL, usage)			||
+		!ad->EvalInteger (ATTR_JOB_STATUS, NULL, status)				||
+		!ad->EvalInteger (ATTR_JOB_PRIO, NULL, prio)				||
+		!ad->EvalInteger (ATTR_IMAGE_SIZE, NULL, image_size)		||
 		!ad->EvalString  (ATTR_OWNER, NULL, owner)				||
-		!ad->EvalString  ("Cmd", NULL, cmd) )
+		!ad->EvalString  (ATTR_JOB_CMD, NULL, cmd) )
 	{
 		printf (" --- ???? --- \n");
 		return;
