@@ -21,12 +21,7 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
-#define _POSIX_SOURCE
-#include <sys/types.h>
-#include <stdlib.h>
-
+#include "condor_common.h"
 
 void * operator new(size_t size)
 {
@@ -60,3 +55,18 @@ void operator delete( void *to_free )
 		}
 #	endif
 #endif
+
+/* This function is called by egcs when a pure virtual method is called.
+   Since the user job may not be linking with egcs libraries, we need to
+   provide our own version. */
+
+#define MESSAGE "pure virtual method called\n"
+
+extern "C" {
+void
+__pure_virtual()
+{
+	write (2, MESSAGE, sizeof (MESSAGE) - 1);
+	_exit (1);
+}
+}
