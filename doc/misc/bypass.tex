@@ -9,7 +9,7 @@ Bypass can also generate RPC stubs and a simple RPC server according to the ID. 
 
 Bypass is used to implement a portion of the Condor distributed batch system.  A number of the more esoteric features of Bypass exist soley for this purpose.
 
-This chapter consists of a cookbook and a reference.  The cookbook gives several examples of ID files.  The reference section enumerates all the various and sundry options of Bypass.
+This chapter consists of a cookbook and a reference.  The cookbook gives several examples of ID files.  The reference section enumerates all the various and sundry features of Bypass.
 
 \subsection{Cookbook}
 
@@ -300,8 +300,9 @@ Bypass provides a new definition of each procedure you wish to replace.  Because
 There are several complicating factors:
 \begin{enumerate}
 \item Bypass must find a way to invoke the original function.  The default is to invoke a system call by the same name, although there are other methods for situations where this doesn't work.  More on this below.
-\item Header files often include inline definitions or macros that have the same name as the function you are attempting to replace.  Bypass produces macros which rename these definitions before the Bypass definitions are processed.
+\item Header files often include inline definitions or macros that have the same name as the function you are attempting to replace.  Bypass can produce macros to kill these definitions before the Bypass definitions are processed.
 \item Library procedures often have several definitions: \Procedure{open} often calls \Procedure{\_open} or \Procedure{\_\_open}.  Bypass produces a number of these definitions with similar names.
+\item We are unwiling to accept an implementation which requires source modification of the original program.  An implementation which does not require re-linking would be even better.
 \end{enumerate}
 
 Bypass creates several pieces of code for each procedure declaration:
@@ -317,12 +318,12 @@ When building a client and server, the switches and senders become part of the c
 
 \subsubsection{Explicit Link Control}
 
-Bypass knows of three mechansims for invoking a procedure.  A specific mechanism can be selected by adding one of the four keywords below to a procedure declaration.  If no keyword is given, the default is taken from the command line.  If no option is given on the command line, the default is \Keyword{syscall}.
+Bypass knows of three mechanisms for invoking a procedure.  A specific mechanism can be selected by adding one of the four keywords below to a procedure declaration.  If no keyword is given, the default is taken from the command line.  If no option is given on the command line, the default is \Keyword{syscall}.
 
 \begin{enumerate}
 \item[\Keyword{syscall}] Invoke the original procedure by making a system call.  The procedure in question must actually be a system call and must have the appropriate \Code{SYS\_} constant defined in filename{sys/syscall.h}.
-\item[\Keyword{dynamic} \[\"library\"\]] Invoke the original procedure by dynamically linking to at runtime.  This option only works if the client program is dynamically linked.
-\item[\Keyword{static} \[\"library\"\]] Invoke the original procedure by extracting a copy of the procedure from the library at build time.  All the extracted procedures are put into a file named \File{bypass\_extract.o}, which must be linked with the client program.
+\item[\Keyword{dynamic} \oOpt{"library"} ] Invoke the original procedure by dynamically linking to at runtime.  This option only works if the client program is dynamically linked.
+\item[\Keyword{static} \oOpt{"library"}] Invoke the original procedure by extracting a copy of the procedure from the library at build time.  All the extracted procedures are put into a file named \File{bypass\_extract.o}, which must be linked with the client program.
 \item[\Keyword{plain}] Do not create any code for invoking the original procedure.
 \end{enumerate}
 
@@ -350,19 +351,6 @@ int socket( int domain, int type, int protocol ) dynamic "/lib/libsocket.so";
 When using the \Keyword{dynamic} and \Keyword{static} options, Bypass will make a reasonable guess as to the name of your standard library.  (Probably \Code{/usr/lib/libc.a} or \Code{/usr/lib/libc.so}.)  However, library names vary widely between UNIX systems, so it is best to explicitly specify the intended library on the command line using the \Opt{-dynamiclibrary} or \Opt{-staticlibrary} options.
 }
 
-\subsubsection{Dataflow}
-
-Each parameter to a procedure may have an optional control modifier.  The modifiers are:
-\begin{description}
-\item[\Keyword{in}] Before invoking the procedure, copy this parameter from the caller's space into the procedure's space.
-\item[\Keyword{out}] After invoking the procedure, copy this paramter from the procedure's space into the caller's space.
-\item[\Keyword{in out}] Do both of the above.
-\end{description}
-
-Following the control modifier may be a C++ expression in quotes.  If this expression is provided, it is interpreted as the number of bytes to be copied.  If it is ommitted, one object of the given type is transferred.
-
-The expression may contain any of the symbols defined in the parameter list or the symbol \Keyword{result}, which represents the return value of the procedure.
-
 \subsubsection{Variable Arguments}
 
 In general, Bypass does not support procedures with a variable number of arguments.  Occasionally, it is convenient to define a procedure with variable argument syntax when the intent is to simply make one last argument optional.  This is often the case with \Procedure{open}, \Procedure{fcntl}, and the like.
@@ -375,7 +363,7 @@ Bypass does not go to the trouble to support every last possible combination of 
 
 \begin{verbatim}
 type      : [unsigned] [const] [struct] <type-name> <star-list>
-star_list : <nothing> | '*' <star-list>
+star-list : <nothing> | '*' <star-list>
 \end{verbatim}
 
 \subsubsection{Call Numbers}
@@ -435,53 +423,38 @@ invoke a remote \Procedure{open}, without regard to the call mode or
 the \Keyword{client\_action}, invoke \Procedure{bypass\_remote\_open} with the
 same arguments as \Procedure{open}.
 
-\subsubsection{Special Code (Condor Feature)}
+\subsubsection{Interface Definition Syntax}
 
-For some unusual procedures, special code is required that Bypass is unable to create automatically.  Six keywords are provided that allow a fine-grained control over code generation.
+An ID file consists of an optional client prologue block, an optional server prologue block, and zero or more procedure declarations.
 
-The keywords \Keyword{no\_switch}, \Keyword{no\_sender}, and \Keyword{no\_receiver} placed after a prototype indicate that no code at all is to be created for the named part.  you can use this feature to simply remove unecessary code, or you can provide a special version of the named part in another module.
+A procedure declaration looks like a simple C prototype, with additional keywords modifying the parameter types and preceding the final semicolon.
 
-The keywords \Keyword{switch\_code}, \Keyword{sender\_code}, and \Keyword{receiver\_code} allow you to specify replacement code in the input file itself.  The replacement code can be any C++ code fragment placed inside double braces, omitting any procedure headers or brackets.
+The valid keywords are:
+\begin{description}
+\item[\Keyword{client\_action \{\{ code-fragment \}\}}] Execute this code at the client when in remote mode.
+\item[\Keyword{client\_prologue \{\{ code-fragment \}\}}] Place this code before any bypassed procedure definitions.
+\item[\Keyword{dynamic \oOpt{"library"} }] When in local mode, execute this procedure by opening the named dynamic library.  If none is given, use the value from the \Keyword{-dynamiclibrary} command-line option.  If that is not given, use \Code{/usr/lib/libc.so}.
+\item[\Keyword{file\_table}] Route this call through the Condor OpenFileTable when MappingFileDescriptors is in effect.
+\item[\Keyword{file\_table\_name ( name )}] Use this name for OpenFileTable calls.  Implies \Keyword{file\_table}
+\item[\Keyword{in \oOpt{"length"}}] This pointer data should be copied to the remote procedure.  If \Code{length} is given, copy that many bytes, otherwise copy one object.
+\item[\Keyword{in out \oOpt{"length"}}] This pointer data should be copied to and from the remote procedure.  If \Code{length} is given, copy that many bytes, otherwise copy one object.
+\item[\Keyword{kill}] Emit a macro definition which will prevent any static definitions, inline definitions, or prototypes by this name.
+\item[\Keyword{local\_name ( name )}] Use this name when invoking a procedure in local mode.
+\item[\Keyword{no\_receiver}] Do not generate a receiver.
+\item[\Keyword{no\_sender}] Do not generate a sender.
+\item[\Keyword{no\_switch}] Do not generate a switch.
+\item[\Keyword{not\_supported}] Do not generate a receiver.
+\item[\Keyword{out \oOpt{"length"}}] This pointer data should be copied from the remote procedure.  If \Code{length} is given, copy that many bytes, otherwise copy one object.
+\item[\Keyword{plain}] If this procedure is called in local mode, cause an error and return -1.
+\item[\Keyword{sender\_name ( name )}]  When performing a remote call, invoke this sender.
+\item[\Keyword{server\_action \{\{ code-fragment \}\}}] Execute this call at the server when a remote call is received.
+\item[\Keyword{server\_prologue \{\{ code-fragment \}\}}] Place this code in the server before any receiver declarations. 
+\item[\Keyword{static \oOpt{"library"}}] When in local mode, execute this procedure by calling a statically linked function.  At build time, extract this function from given library.  If no library is named, use the value from the \Keyword{-staticlibrary} command-line option.  If that is not given, use \Code{/usr/lib/libc.a}.
+\item[\Keyword{syscall}] When in local mode, execute this procedure by making a system call.
+\item[\Keyword{switch\_code \{\{ code-fragment \}\}}]  Do not automatically generate switch code.  Use this code instead.
+\item[\Keyword{receiver\_code \{\{ code-fragment \}\}}]  Do not automatically generate receiver code.  Use this instead.
+\end{description}
 
-The keyword \Keyword{not\_supported} is equivalent to \Keyword{no\_receiver}.
-If the server does not know how to receive the call, it reports back \Code{BYPASS\_ERROR\_NOT\_HANDLED}, which causes the switch to return -1.
-
-Example:
-
-\begin{quote}
-\begin{verbatim}
-void sync()
-        switch {{
-                /* Always do a local sync */
-                sync();
-
-                /* Do a remote sync if in remote mode */
-                if(bypass_mode_get()==BYPASS_MODE_REMOTE)
-                        bypass_remote_sync();
-        }}
-\end{verbatim}
-\end{quote}
- 
-\subsubsection{Call Names (Condor Feature)}
-
-By default, a switch only invokes related procedures with the same name.  For example, a switch named \Code{x} invokes a sender named \Code{bypass\_remote\_x}, a static local call of \Code{X}, and so on.  It is sometimes necessary to connect multiple components with different names.  The keywords \Keyword{sender\_name}, \Keyword{local\_name}, and \Keyword{file\_table\_name} allow a switch to invoke components with different names from the switch.
-
-Suppose that we want to provide a switch for several related operations, but have them share the same implementation at the server.  This code directs three switches to invoke the same sender:
-
-\begin{quote}
-\begin{verbatim}
-int fsync( int fd );
-int fdsync( int fd ) sender_name( fsync );
-int fdatasync( int fd ) sender_name( fsync );
-\end{verbatim}
-\end{quote}
-
-\subsubsection{File Table (Condor Feature)}
-\label{file-table}
-
-For the purposes of Condor, procedure calls which affect files must pass through an object which tracks the state of the open file table.  This only happens when file descriptor mapping is in effect.  To force a procedure to be dispatched through the file table, use the keyword \Keyword{file\_table}.  The keyword \Keyword{file\_table\_name} also implies this action.
-
-Code created using this option won't even compile unless you are using the full Condor machinery.
 
 
 
