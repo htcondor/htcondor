@@ -59,6 +59,7 @@ extern "C" {
 	int use_fetch( char *method, char *path );
 	int use_append( char *method, char *path );
 	void HoldJob( const char* buf );
+	void reaper();
 }
 
 extern int JobStatus;
@@ -94,7 +95,6 @@ void display_ip_addr( unsigned int addr );
 int has_ckpt_file();
 void update_job_status( struct rusage *localp, struct rusage *remotep );
 void update_job_rusage( struct rusage *localp, struct rusage *remotep );
-void RequestCkptBandwidth(unsigned int ip_addr);
 bool JobPreCkptServerScheddNameChange();
 
 static char Executing_Filesystem_Domain[ MAX_STRING ];
@@ -120,10 +120,13 @@ extern float BytesSent, BytesRecvd;
 const int MaxRetryWait = 3600;
 static bool CkptWanted = true;	// WantCheckpoint from Job ClassAd
 static bool RestoreCkptWithNoScheddName = false; // compat with old naming
-static Daemon Negotiator(DT_NEGOTIATOR);
 
+#ifdef WANT_NETMAN
 bool ManageBandwidth = false;   // notify negotiator about network usage?
-
+int	 NetworkHorizon = 0;		// how often do we request network bandwidth?
+static Daemon Negotiator(DT_NEGOTIATOR);
+void RequestCkptBandwidth();
+#endif
 
 /*
 **	getppid normally returns the parents id, right?  Well in
@@ -503,6 +506,25 @@ is_ickpt_file(const char path[])
 }
 
 
+#if WANT_NETMAN
+enum file_stream_transfer_type {
+	INITIAL_CHECKPOINT, CHECKPOINT_RESTART,
+	PERIODIC_CHECKPOINT, VACATE_CHECKPOINT, COREFILE_TRANSFER
+};
+static 
+struct _file_stream_info {
+	_file_stream_info() : active(false) {}
+	bool active;
+	bool remote;
+	pid_t pid;
+	file_stream_transfer_type type;
+	char src[16], dst[16];
+	int bytes_so_far;
+	int total_bytes;
+	time_t last_update;
+} file_stream_info;
+#endif
+
 /*
    rename() becomes a psuedo system call because the file may be a checkpoint
    stored on the checkpoint server.  If it is a checkpoint file and we're
@@ -539,6 +561,11 @@ pseudo_rename(char *from, char *to)
 			if (rval == 0) {	// if the rename was successful
 				LastCkptTime = time(0);
 				NumCkpts++;
+#if WANT_NETMAN
+				file_stream_info.bytes_so_far = file_stream_info.total_bytes;
+				RequestCkptBandwidth();
+				file_stream_info.active = false;
+#endif
 				commit_rusage();
 					// We just successfully wrote a local checkpoint,
 					// so we should remove the checkpoint we left on
@@ -585,6 +612,11 @@ pseudo_rename(char *from, char *to)
 		if (CkptServerHost) LastCkptServer = strdup(CkptServerHost);
 		LastCkptTime = time(0);
 		NumCkpts++;
+#if WANT_NETMAN
+		file_stream_info.bytes_so_far = file_stream_info.total_bytes;
+		RequestCkptBandwidth();
+		file_stream_info.active = false;
+#endif
 		commit_rusage();
 		return 0;
 
@@ -616,6 +648,22 @@ pseudo_get_file_stream(
 
 	dprintf( D_ALWAYS, "\tEntering pseudo_get_file_stream\n" );
 	dprintf( D_ALWAYS, "\tfile = \"%s\"\n", file );
+#if WANT_NETMAN
+	if (file_stream_info.active) {
+#if !defined(PVM_RECEIVE)
+		if (!file_stream_info.remote) {
+			reaper();
+		}
+#endif
+		if (file_stream_info.active) {
+			dprintf(D_ALWAYS, "\tWarning: previous file_stream transfer "
+					"still active!  Cleaning up...\n");
+			file_stream_info.bytes_so_far = file_stream_info.total_bytes;
+			RequestCkptBandwidth();
+			file_stream_info.active = false;
+		}
+	}
+#endif
 
 	*len = 0;
 
@@ -641,6 +689,22 @@ pseudo_get_file_stream(
 			}
 		} while (rval);
 
+#if WANT_NETMAN
+		file_stream_info.active = true;
+		file_stream_info.remote = true;
+		file_stream_info.pid = getpid();
+		file_stream_info.type = CHECKPOINT_RESTART;
+		struct in_addr sin;
+		memcpy(&sin, ip_addr, sizeof(struct in_addr));
+		strcpy(file_stream_info.src, inet_ntoa(sin));
+		strncpy(file_stream_info.dst, ExecutingHost+1, 16);
+		char *str = strchr(file_stream_info.dst, ':');
+		*str = '\0';
+		file_stream_info.bytes_so_far = 0;
+		file_stream_info.total_bytes = *len;
+		RequestCkptBandwidth();
+#endif
+
 		*ip_addr = ntohl( *ip_addr );
 		display_ip_addr( *ip_addr );
 		*port = ntohs( *port );
@@ -662,8 +726,6 @@ pseudo_get_file_stream(
 
 	if (file_fd < 0) return -1;
 
-	if (CkptFile) NumRestarts++;
-
 	*len = file_size( file_fd );
 	dprintf( D_FULLDEBUG, "\tlen = %d\n", *len );
 	BytesSent += *len;
@@ -674,6 +736,21 @@ pseudo_get_file_stream(
 	create_tcp_port( port, &connect_sock );
 	dprintf( D_FULLDEBUG, "\tPort = %d\n", *port );
 		
+#if WANT_NETMAN
+	if (CkptFile || ICkptFile) {
+		file_stream_info.active = true;
+		file_stream_info.remote = false;
+		file_stream_info.type = CkptFile ? CHECKPOINT_RESTART :
+			INITIAL_CHECKPOINT;
+		strcpy(file_stream_info.src, inet_ntoa(*my_sin_addr()));
+		strncpy(file_stream_info.dst, ExecutingHost+1, 16);
+		char *str = strchr(file_stream_info.dst, ':');
+		*str = '\0';
+		file_stream_info.bytes_so_far = 0;
+		file_stream_info.total_bytes = *len;
+	}
+#endif
+
 	switch( child_pid = fork() ) {
 	case -1:	/* error */
 		dprintf( D_ALWAYS, "fork() failed, errno = %d\n", errno );
@@ -698,7 +775,14 @@ pseudo_get_file_stream(
 	default:	/* the parent */
 		close( file_fd );
 		close( connect_sock );
-		if (CkptFile || ICkptFile) set_priv(priv);
+		if (CkptFile || ICkptFile) {
+			set_priv(priv);
+			if (CkptFile) NumRestarts++;
+#if WANT_NETMAN
+			file_stream_info.pid = child_pid;
+			RequestCkptBandwidth();
+#endif
+		}
 		return 0;
 	}
 
@@ -710,6 +794,13 @@ pseudo_get_file_stream(
   Provide a process which will accept the given file as a
   stream.  The ip_addr and port number passed back are in host
   byte order.
+
+  Note: len can be -1 here, if the sender doesn't know how much it's
+  going to send (for example, in the case of compressed checkpoints).
+  That causes problems for our accounting and network bandwidth
+  allocation.  We really should get an estimate somehow of how much
+  the sender is going to send and record how much it actually ends up
+  sending.
 */
 int
 pseudo_put_file_stream(
@@ -733,6 +824,22 @@ pseudo_put_file_stream(
 	dprintf( D_ALWAYS, "\tfile = \"%s\"\n", file );
 	dprintf( D_ALWAYS, "\tlen = %d\n", len );
 	dprintf( D_ALWAYS, "\towner = %s\n", p->owner );
+#if WANT_NETMAN
+	if (file_stream_info.active) {
+#if !defined(PVM_RECEIVE)
+		if (!file_stream_info.remote) {
+			reaper();
+		}
+#endif
+		if (file_stream_info.active) {
+			dprintf(D_ALWAYS, "\tWarning: previous file_stream transfer "
+					"still active!  Cleaning up...\n");
+			file_stream_info.bytes_so_far = file_stream_info.total_bytes;
+			RequestCkptBandwidth();
+			file_stream_info.active = false;
+		}
+	}
+#endif
 
 	get_host_addr( ip_addr );
 	display_ip_addr( *ip_addr );
@@ -753,6 +860,23 @@ pseudo_put_file_stream(
 				}
 			}
 		} while (rval);
+
+#if WANT_NETMAN
+		file_stream_info.active = true;
+		file_stream_info.remote = true;
+		file_stream_info.pid = getpid();
+		file_stream_info.type = (LastCkptSig == SIGUSR2) ?
+			PERIODIC_CHECKPOINT : VACATE_CHECKPOINT;
+		struct in_addr sin;
+		memcpy(&sin, ip_addr, sizeof(struct in_addr));
+		strcpy(file_stream_info.dst, inet_ntoa(sin));
+		strncpy(file_stream_info.src, ExecutingHost+1, 16);
+		char *str = strchr(file_stream_info.src, ':');
+		*str = '\0';
+		file_stream_info.bytes_so_far = 0;
+		file_stream_info.total_bytes = len;
+#endif
+
 		display_ip_addr( *ip_addr );
 		*ip_addr = ntohl(*ip_addr);
 		*port = ntohs( *port );
@@ -764,10 +888,15 @@ pseudo_put_file_stream(
 	}
 	if (!rval) {
 		/* Checkpoint server says ok */
-		BytesRecvd += len;
-		if (CkptFile && ManageBandwidth) {
-			// tell negotiator that the job is writing a checkpoint
-			RequestCkptBandwidth(*ip_addr);
+		if (len > 0) {
+				// need to handle the len == -1 case someday
+			BytesRecvd += len;
+#if WANT_NETMAN		
+			if (CkptFile && ManageBandwidth) {
+					// tell negotiator that the job is writing a checkpoint
+				RequestCkptBandwidth();
+			}
+#endif
 		}
 		return 0;
 	}
@@ -795,12 +924,21 @@ pseudo_put_file_stream(
 
 	create_tcp_port( port, &connect_sock );
 	dprintf( D_FULLDEBUG, "\tPort = %d\n", *port );
-	BytesRecvd += len;
-	if (CkptFile && ManageBandwidth) {
-		// tell negotiator that the job is writing a checkpoint
-		RequestCkptBandwidth(*ip_addr);
-	}
 	
+#ifdef WANT_NETMAN
+	file_stream_info.active = true;
+	file_stream_info.remote = false;
+	file_stream_info.type = (CkptFile || ICkptFile) ?
+		((LastCkptSig == SIGUSR2) ?	PERIODIC_CHECKPOINT : VACATE_CHECKPOINT) :
+		COREFILE_TRANSFER;
+	strcpy(file_stream_info.dst, inet_ntoa(*my_sin_addr()));
+	strncpy(file_stream_info.src, ExecutingHost+1, 16);
+	char *str = strchr(file_stream_info.src, ':');
+	*str = '\0';
+	file_stream_info.bytes_so_far = 0;
+	file_stream_info.total_bytes = len;
+#endif
+
 	switch( child_pid = fork() ) {
 	  case -1:	/* error */
 		dprintf( D_ALWAYS, "fork() failed, errno = %d\n", errno );
@@ -827,7 +965,23 @@ pseudo_put_file_stream(
 	  default:	/* the parent */
 	    close( file_fd );
 		close( connect_sock );
-		if (CkptFile || ICkptFile) set_priv(priv);	// restore user privileges
+		if (CkptFile || ICkptFile) {
+			set_priv(priv);	// restore user privileges
+#ifdef WANT_NETMAN
+			file_stream_info.pid = child_pid;
+#endif
+			if (CkptFile) NumRestarts++;
+		}
+		if (len > 0) {
+				// need to handle the len == -1 case someday
+			BytesRecvd += len;
+#ifdef WANT_NETMAN
+			if (CkptFile && ManageBandwidth) {
+					// tell negotiator that the job is writing a checkpoint
+				RequestCkptBandwidth();
+			}
+#endif
+		}
 		return 0;
 	}
 
@@ -835,19 +989,137 @@ pseudo_put_file_stream(
 	return -1;
 }
 
+#ifdef WANT_NETMAN
+/* This function is called whenever a child process exits.   */
 void
-RequestCkptBandwidth(unsigned int ip_addr)
+file_stream_child_exit(pid_t pid)
+{
+	if (file_stream_info.active && !file_stream_info.remote &&
+		file_stream_info.pid == pid) {
+		switch(file_stream_info.type) {
+		case INITIAL_CHECKPOINT:
+			file_stream_info.bytes_so_far = file_stream_info.total_bytes;
+			RequestCkptBandwidth();
+			file_stream_info.active = false;
+			break;
+		case COREFILE_TRANSFER:
+			file_stream_info.active = false;
+			break;
+		case CHECKPOINT_RESTART:
+				// handled in pseudo_get_ckpt_mode()
+		case PERIODIC_CHECKPOINT:
+		case VACATE_CHECKPOINT:
+				// handled in rename() (yuk!)
+			break;
+		default:
+			dprintf(D_ALWAYS, "Bad file_stream_transfer_type %d in "
+					"file_stream_child_exit!\n", file_stream_info.type);
+			return;
+		}
+	}
+}
+
+extern "C" {
+void
+file_stream_progress_report(int bytes_moved)
+{
+	if (!file_stream_info.active) {
+		dprintf(D_ALWAYS, "Warning: file_stream_progress_report() called with "
+				"no active file_stream_transfer.\n");
+		return;
+	}
+	if (file_stream_info.remote) {
+		dprintf(D_ALWAYS, "Warning: file_stream_progress_report() called with "
+				"active REMOTE file_stream_transfer.\n");
+		return;
+	}
+	file_stream_info.bytes_so_far = bytes_moved;
+	time_t current_time = time(0);
+	if (current_time >= file_stream_info.last_update + NetworkHorizon) {
+		RequestCkptBandwidth();
+	}
+}
+}
+
+void
+abort_file_stream_transfer()
+{
+	if (file_stream_info.active) {
+		if (!file_stream_info.remote) {
+			priv_state priv = set_condor_priv();
+			kill(file_stream_info.pid, SIGKILL);
+			set_priv(priv);
+		}
+			// invalidate our network bandwidth allocation
+		file_stream_info.bytes_so_far = file_stream_info.total_bytes;
+		RequestCkptBandwidth();
+		file_stream_info.active = false;
+	}
+}
+
+/* 
+   We allocate bandwidth for checkpoint and executable transfers here
+   (i.e., anything transferred using the file_stream protocol).  We
+   include the startd vm id so the matchmaker can uniquely identify
+   checkpoint transfers to/from SMP machines.  The matchmaker may have
+   already allocated the bandwidth for this transfer.  In that case,
+   our request serves as an update on the amount of data we're
+   expecting to transfer.  We can update our request at any time
+   during the transfer.  We must send a final update when the transfer
+   completes, so the matchmaker can free the allocation.  The
+   allocation will timeout if our update is lost.
+*/
+void
+RequestCkptBandwidth()
 {
 	ClassAd request;
-	char buf[100], source[100], owner[100], user[100], *str;
-	int executable_size = 0, nice_user = 0;
+	char buf[100], owner[100], user[100];
+	int nice_user = 0, vm_id = 1;
 
-	ip_addr = htonl(ip_addr);
+	if (!ManageBandwidth) return;
 
-	if (LastCkptSig == SIGUSR2) {
+	if (!file_stream_info.active) {
+		dprintf(D_ALWAYS, "Warning: RequestCkptBandwidth() called with no "
+				"active file_stream_transfer.\n");
+		return;
+	}
+	if (file_stream_info.total_bytes < 0) return; // TODO (someday)
+	
+	switch(file_stream_info.type) {
+	case INITIAL_CHECKPOINT:
+		sprintf(buf, "%s = \"InitialCheckpoint\"", ATTR_TRANSFER_TYPE);
+		dprintf(D_ALWAYS, "Transferring InitialCkpt from %s to %s: "
+				"%d bytes to go.\n", file_stream_info.src,
+				file_stream_info.dst,
+				file_stream_info.total_bytes-file_stream_info.bytes_so_far);
+		break;
+	case CHECKPOINT_RESTART:
+		sprintf(buf, "%s = \"CheckpointRestart\"", ATTR_TRANSFER_TYPE);
+		dprintf(D_ALWAYS, "Transferring RestartCkpt from %s to %s: "
+				"%d bytes to go.\n", file_stream_info.src,
+				file_stream_info.dst,
+				file_stream_info.total_bytes-file_stream_info.bytes_so_far);
+		break;
+	case PERIODIC_CHECKPOINT:
 		sprintf(buf, "%s = \"PeriodicCheckpoint\"", ATTR_TRANSFER_TYPE);
-	} else {
+		dprintf(D_ALWAYS, "Transferring PeriodicCkpt from %s to %s: "
+				"%d bytes to go.\n", file_stream_info.src,
+				file_stream_info.dst,
+				file_stream_info.total_bytes-file_stream_info.bytes_so_far);
+		break;
+	case VACATE_CHECKPOINT:
 		sprintf(buf, "%s = \"VacateCheckpoint\"", ATTR_TRANSFER_TYPE);
+		dprintf(D_ALWAYS, "Transferring VacateCkpt from %s to %s: "
+				"%d bytes to go.\n", file_stream_info.src,
+				file_stream_info.dst,
+				file_stream_info.total_bytes-file_stream_info.bytes_so_far);
+		break;
+	case COREFILE_TRANSFER:
+		return;					// ignore for now
+	default:
+		dprintf(D_ALWAYS, "Bad file_stream_transfer_type %d in "
+				"RequestCkptBandwidth!\n", file_stream_info.type);
+		return;
 	}
 	request.Insert(buf);
 	JobAd->LookupInteger(ATTR_NICE_USER, nice_user);
@@ -856,32 +1128,53 @@ RequestCkptBandwidth(unsigned int ip_addr)
 			My_UID_Domain);
 	sprintf(buf, "%s = \"%s\"", ATTR_USER, user);
 	request.Insert(buf);
+	sprintf(buf, "%s = %d", ATTR_CLUSTER_ID, Proc->id.cluster);
+	request.Insert(buf);
+	sprintf(buf, "%s = %d", ATTR_PROC_ID, Proc->id.proc);
+	request.Insert(buf);
+ 	JobAd->LookupInteger(ATTR_REMOTE_VIRTUAL_MACHINE_ID, vm_id);
+	dprintf(D_ALWAYS, "vm_id = %d\n", vm_id);
+ 	sprintf(buf, "%s = %d", ATTR_VIRTUAL_MACHINE_ID, vm_id);
+ 	request.Insert(buf);
+	sprintf(buf, "%s = \"%u.%d\"", ATTR_TRANSFER_KEY, my_ip_addr(),
+			file_stream_info.pid);
+ 	request.Insert(buf);
 	sprintf(buf, "%s = 1", ATTR_FORCE);
 	request.Insert(buf);
-	strcpy(source, ExecutingHost+1);
-	str = strchr(source, ':');
-	*str = '\0';
-	sprintf(buf, "%s = \"%s\"", ATTR_SOURCE, source);
+	sprintf(buf, "%s = \"%s\"", ATTR_SOURCE, file_stream_info.src);
 	request.Insert(buf);
 	sprintf(buf, "%s = \"%s\"", ATTR_REMOTE_HOST, ExecutingHost);
 	request.Insert(buf);
-	sprintf(buf, "%s = \"%s\"", ATTR_DESTINATION,
-			inet_ntoa(*(struct in_addr *)&ip_addr));
+	sprintf(buf, "%s = \"%s\"", ATTR_DESTINATION, file_stream_info.dst);
 	request.Insert(buf);
-	JobAd->LookupInteger(ATTR_EXECUTABLE_SIZE, executable_size);
-	sprintf(buf, "%s = %f", ATTR_REQUESTED_CAPACITY,
-			(float)(ImageSize-executable_size)*1024.0);
+	sprintf(buf, "%s = %d", ATTR_REQUESTED_CAPACITY,
+			file_stream_info.total_bytes-file_stream_info.bytes_so_far);
 	request.Insert(buf);
 	SafeSock sock;
 	sock.timeout(10);
 	if (!sock.connect(Negotiator.addr())) {
-		dprintf(D_ALWAYS, "Couldn't connect to negotiator!\n");
+		dprintf(D_ALWAYS, "Couldn't connect to negotiator (%s)!\n",
+				Negotiator.addr());
 		return;
 	}
 	sock.put(REQUEST_NETWORK);
 	sock.put(1);
 	request.put(sock);
 	sock.end_of_message();
+	buf[0] = '\0';
+	if (JobAd->LookupString(ATTR_REMOTE_POOL, buf)) {
+		Daemon FlockNegotiator(DT_NEGOTIATOR, buf, buf);
+		if (!sock.connect(FlockNegotiator.addr())) {
+			dprintf(D_ALWAYS, "Couldn't connect to flock negotiator (%s)!\n",
+					FlockNegotiator.addr());
+			return;
+		}
+		sock.put(REQUEST_NETWORK);
+		sock.put(1);
+		request.put(sock);
+		sock.end_of_message();
+	}
+	file_stream_info.last_update = time(0);
 }
 
 /* 
@@ -896,21 +1189,21 @@ void
 RequestRSCBandwidth()
 {
 	static float prev_bytes_sent=0.0, prev_bytes_recvd=0.0;
-	static float send_estimate=0.0, recv_estimate=0.0;
+	static int send_estimate=0, recv_estimate=0;
 	ClassAd send_request, recv_request;
 	char buf[100], endpoint[100], owner[100], user[100], *str;
 	int nice_user = 0;
 
-	if (!syscall_sock) return;
+	if (!syscall_sock || !ManageBandwidth) return;
 
-	float bytes_sent = syscall_sock->get_bytes_sent() - prev_bytes_sent;
-	float bytes_recvd = syscall_sock->get_bytes_recvd() - prev_bytes_recvd;
+	int bytes_sent = (int)(syscall_sock->get_bytes_sent()-prev_bytes_sent);
+	int bytes_recvd = (int)(syscall_sock->get_bytes_recvd()-prev_bytes_recvd);
 
 	prev_bytes_sent = syscall_sock->get_bytes_sent();
 	prev_bytes_recvd = syscall_sock->get_bytes_recvd();
 
-	float prev_send_estimate = send_estimate;
-	float prev_recv_estimate = recv_estimate;
+	int prev_send_estimate = send_estimate;
+	int prev_recv_estimate = recv_estimate;
 
 	send_estimate = (bytes_sent + send_estimate) / 2;
 	recv_estimate = (bytes_recvd + recv_estimate) / 2;
@@ -936,13 +1229,13 @@ RequestRSCBandwidth()
 			My_UID_Domain);
 	sprintf(buf, "%s = \"%s\"", ATTR_USER, user);
 	send_request.Insert(buf);
-	sprintf(buf, "%s = %f", ATTR_BYTES_SENT, bytes_sent);
+	sprintf(buf, "%s = %d", ATTR_BYTES_SENT, bytes_sent);
 	send_request.Insert(buf);
-	sprintf(buf, "%s = %f", ATTR_BYTES_RECVD, bytes_recvd);
+	sprintf(buf, "%s = %d", ATTR_BYTES_RECVD, bytes_recvd);
 	send_request.Insert(buf);
-	sprintf(buf, "%s = %f", ATTR_PREV_SEND_ESTIMATE, prev_send_estimate);
+	sprintf(buf, "%s = %d", ATTR_PREV_SEND_ESTIMATE, prev_send_estimate);
 	send_request.Insert(buf);
-	sprintf(buf, "%s = %f", ATTR_PREV_RECV_ESTIMATE, prev_recv_estimate);
+	sprintf(buf, "%s = %d", ATTR_PREV_RECV_ESTIMATE, prev_recv_estimate);
 	send_request.Insert(buf);
 	strcpy(endpoint, ExecutingHost+1);
 	str = strchr(endpoint, ':');
@@ -958,18 +1251,33 @@ RequestRSCBandwidth()
 	send_request.Insert(buf);
 	sprintf(buf, "%s = \"%s\"", ATTR_DESTINATION, inet_ntoa(*my_sin_addr()));
 	send_request.Insert(buf);
-	sprintf(buf, "%s = %f", ATTR_REQUESTED_CAPACITY, recv_estimate);
+	sprintf(buf, "%s = %d", ATTR_REQUESTED_CAPACITY, recv_estimate);
 	send_request.Insert(buf);
 	send_request.put(sock);
 	sprintf(buf, "%s = \"%s\"", ATTR_DESTINATION, endpoint);
 	recv_request.Insert(buf);
 	sprintf(buf, "%s = \"%s\"", ATTR_SOURCE, inet_ntoa(*my_sin_addr()));
 	recv_request.Insert(buf);
-	sprintf(buf, "%s = %f", ATTR_REQUESTED_CAPACITY, send_estimate);
+	sprintf(buf, "%s = %d", ATTR_REQUESTED_CAPACITY, send_estimate);
 	recv_request.Insert(buf);
 	recv_request.put(sock);
 	sock.end_of_message();
+	buf[0] = '\0';
+	if (JobAd->LookupString(ATTR_REMOTE_POOL, buf)) {
+		Daemon FlockNegotiator(DT_NEGOTIATOR, buf, buf);
+		if (!sock.connect(FlockNegotiator.addr())) {
+			dprintf(D_ALWAYS, "Couldn't connect to flock negotiator (%s)!\n",
+					FlockNegotiator.addr());
+			return;
+		}
+		sock.put(REQUEST_NETWORK);
+		sock.put(2);
+		send_request.put(sock);
+		recv_request.put(sock);
+		sock.end_of_message();
+	}
 }
+#endif
 
 /*
   Accept a TCP connection on the connect_sock.  Close the connect_sock,
@@ -1537,6 +1845,20 @@ pseudo_get_ckpt_mode( int sig )
 		if (PeriodicSync) mode |= CKPT_MODE_MSYNC;
 	} else if (sig == 0) {		// restart
 		if (PeriodicSync) mode |= CKPT_MODE_MSYNC;
+#ifdef WANT_NETMAN
+			// The job has completed its checkpoint restart now, so we
+			// can release the network bandwidth allocation (by
+			// updating our bandwidth request).
+		if (file_stream_info.active &&
+			file_stream_info.type == CHECKPOINT_RESTART) {
+			file_stream_info.bytes_so_far = file_stream_info.total_bytes;
+			RequestCkptBandwidth();
+			file_stream_info.active = false;
+		} else {
+			dprintf( D_ALWAYS, "Warning: received get_ckpt_mode(0) with no "
+					 "info about active checkpoint restart transfer!\n" );
+		}
+#endif
 	} else {
 		dprintf( D_ALWAYS,
 				 "pseudo_get_ckpt_mode called with unknown signal %d\n", sig );
