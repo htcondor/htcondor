@@ -2067,14 +2067,17 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	int inouterr[3];
 	if ((inouterr[0] = open(input, O_RDONLY, 0)) < 0) {
 		dprintf ( D_ALWAYS, "Open of %s failed, errno %d\n", input, errno );
+		set_priv( priv );  // back to regular privs...
 		return NULL;
 	}
 	if ((inouterr[1] = open(input, O_WRONLY, 0)) < 0) {
 		dprintf ( D_ALWAYS, "Open of %s failed, errno %d\n", input, errno );
+		set_priv( priv );  // back to regular privs...
 		return NULL;
 	}
 	if ((inouterr[2] = open(input, O_WRONLY, 0)) < 0) {
 		dprintf ( D_ALWAYS, "Open of %s failed, errno %d\n", input, errno );
+		set_priv( priv );  // back to regular privs...
 		return NULL;
 	}
 	set_priv( priv );  // back to regular privs...
