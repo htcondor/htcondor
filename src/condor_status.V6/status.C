@@ -106,6 +106,10 @@ main (int argc, char *argv[])
 		setPPstyle(PP_CKPT_SRVR_NORMAL, 0, DEFAULT);
 		break;
 
+	  case COLLECTOR_AD:
+		setPPstyle(PP_COLLECTOR_NORMAL, 0, DEFAULT);
+		break;
+
 	  default:
 		setPPstyle(PP_VERBOSE, 0, DEFAULT);
 	}
@@ -117,6 +121,7 @@ main (int argc, char *argv[])
 	  case MODE_CKPT_SRVR_NORMAL:
 	  case MODE_SCHEDD_NORMAL: 
 	  case MODE_SCHEDD_SUBMITTORS:
+	  case MODE_COLLECTOR_NORMAL:
 		break;
 
 
@@ -203,6 +208,7 @@ usage ()
 		"\t[-avail]\t\tPrint information about available resources\n"
 		"\t[-ckptsrvr]\t\tDisplay checkpoint server attributes\n"
 		"\t[-claimed]\t\tPrint information about claimed resources\n"
+//		"\t[-collector]\t\tSame as -world\n"
 		"\t[-constraint <const>]\tAdd constraint on classads\n"
 		"\t[-diagnose]\t\tPrint out query ad without performing query\n"
 		"\t[-format <fmt> <attr>]\tRegister display format and attribute\n"
@@ -217,7 +223,8 @@ usage ()
 		"\t[-state]\t\tDisplay state of resources\n"
 		"\t[-submittors]\tDisplay information about request submittors\n"
 		"\t[-total]\t\tDisplay totals only\n"
-		"\t[-verbose]\t\tSame as -long\n", 
+		"\t[-verbose]\t\tSame as -long\n",
+//		"\t[-world]\t\tDisplay all pools reporting to UW collector\n", 
 		myName);
 }
 
@@ -281,6 +288,12 @@ firstPass (int argc, char *argv[])
 		if (matchPrefix (argv[i], "-master")) {
 			setMode (MODE_MASTER_NORMAL, i, argv[i]);
 		} else
+		if (matchPrefix (argv[i], "-collector")) {
+			setMode (MODE_COLLECTOR_NORMAL, i, argv[i]);
+		} else
+		if (matchPrefix (argv[i], "-world")) {
+			setMode (MODE_COLLECTOR_NORMAL, i, argv[i]);
+		} else
 		if (matchPrefix (argv[i], "-ckptsrvr")) {
 			setMode (MODE_CKPT_SRVR_NORMAL, i, argv[i]);
 		} else
@@ -335,6 +348,7 @@ secondPass (int argc, char *argv[])
 			  case MODE_SCHEDD_NORMAL:
 			  case MODE_SCHEDD_SUBMITTORS:
 			  case MODE_MASTER_NORMAL:
+			  case MODE_COLLECTOR_NORMAL:
 			  case MODE_CKPT_SRVR_NORMAL:
     		  case MODE_STARTD_AVAIL:
 				sprintf (buffer, "TARGET.%s == \"%s\"", ATTR_NAME, daemonname);

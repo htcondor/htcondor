@@ -42,6 +42,7 @@ getPPStyleStr ()
     	case PP_SCHEDD_SUBMITTORS:return "Normal (Schedd)";
     	case PP_MASTER_NORMAL:	return "Normal (Master)";
     	case PP_CKPT_SRVR_NORMAL:return"Normal (CkptSrvr)";
+		case PP_COLLECTOR_NORMAL:return"Normal (Collector)";
     	case PP_STARTD_SERVER:	return "Server";
     	case PP_STARTD_RUN:		return "Run";
 		case PP_STARTD_STATE:	return "State";
@@ -94,6 +95,7 @@ getTypeStr ()
 		case MASTER_AD:		return "MASTER";
 		case CKPT_SRVR_AD:	return "CKPT_SRVR";
 		case GATEWAY_AD:	return "GATEWAYS";
+		case COLLECTOR_AD:	return "COLLECTOR";
 		default: 			return "<Unknown type!>";
 	}
 	// should never get here
@@ -134,6 +136,9 @@ setType (char *dtype, int i, char *argv)
         if (matchPrefix (dtype, "CKPT_SRVR")) {
             type = CKPT_SRVR_AD;
         } else
+        if (matchPrefix (dtype, "COLLECTOR")) {
+            type = COLLECTOR_AD;
+        } else
         if (matchPrefix (dtype, "GATEWAYS")) {
             type = GATEWAY_AD;
         } else {
@@ -162,6 +167,7 @@ getModeStr()
 		case MODE_SCHEDD_SUBMITTORS:	return "Submittors (Schedd)";
 		case MODE_MASTER_NORMAL:		return "Normal (Master)";
 		case MODE_CKPT_SRVR_NORMAL:		return "Normal (CkptSrvr)";
+		case MODE_COLLECTOR_NORMAL:		return "Normal (Collector)";
 		default:				return "<Unknown!>";
 	}
 	// should never get here
@@ -211,6 +217,11 @@ setMode (Mode mod, int i, char *argv)
 		  case MODE_MASTER_NORMAL:
 			setType ("MASTER", i, argv);
 			setPPstyle (PP_MASTER_NORMAL, i, argv);
+			break;
+
+		  case MODE_COLLECTOR_NORMAL:
+			setType ("COLLECTOR", i, argv);
+			setPPstyle (PP_COLLECTOR_NORMAL, i, argv);
 			break;
 
 		  case MODE_CKPT_SRVR_NORMAL:

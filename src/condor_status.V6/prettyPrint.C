@@ -36,6 +36,7 @@ void printStartdNormal 	(ClassAd *);
 void printScheddNormal 	(ClassAd *);
 void printScheddSubmittors(ClassAd *);
 void printMasterNormal 	(ClassAd *);
+void printCollectorNormal (ClassAd *);
 void printCkptSrvrNormal(ClassAd *);
 void printServer 		(ClassAd *);
 void printRun    		(ClassAd *);
@@ -85,6 +86,10 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 
 			  case PP_MASTER_NORMAL:
 				printMasterNormal(ad);
+				break;
+
+			  case PP_COLLECTOR_NORMAL:
+				printCollectorNormal(ad);
 				break;
 
 			  case PP_CKPT_SRVR_NORMAL:
@@ -329,6 +334,35 @@ printScheddSubmittors (ClassAd *ad)
 	}
 }
 
+void
+printCollectorNormal(ClassAd *ad)
+{
+	static bool first = true;
+	static AttrListPrintMask pm; 
+
+	if (ad)
+	{
+		// print header if necessary
+		if (first)
+		{
+			printf ("\n%-20.20s %-20.20s  %-8.8s %-8.8s  %s\n\n",
+				ATTR_NAME, ATTR_MACHINE, "Running", ATTR_IDLE_JOBS, 
+				ATTR_NUM_HOSTS_TOTAL);
+		
+			pm.registerFormat("%-20.20s ", ATTR_NAME, 
+													"[??????????????????] ");
+			pm.registerFormat("%-20.20s ", ATTR_MACHINE, 
+													"[??????????????????] ");
+			pm.registerFormat("%8d ", ATTR_RUNNING_JOBS, " [?????] ");
+			pm.registerFormat("%8d  ", ATTR_IDLE_JOBS, " [?????]  ");
+			pm.registerFormat("%8d\n", ATTR_NUM_HOSTS_TOTAL, "[?????]\n");
+
+			first = false;
+		}
+
+		pm.display (stdout, ad);
+	}
+}
 
 void
 printMasterNormal(ClassAd *ad)
@@ -341,7 +375,7 @@ printMasterNormal(ClassAd *ad)
 		// print header if necessary
 		if (first)
 		{
-			pm.registerFormat("%s\n",ATTR_NAME,"[??????????????????]");
+			pm.registerFormat("%s\n",ATTR_MACHINE,"[??????????????????]");
 			first = false;
 		}
 	}
