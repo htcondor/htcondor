@@ -49,6 +49,12 @@
 #include "condor_qmgr.h"
 #include "sig_install.h"
 
+#if defined(GSS_AUTHENTICATION)
+#include "auth_sock.h"
+#else
+#define AuthSock ReliSock
+#endif
+
 #include "extArray.h"
 #include "HashTable.h"
 #include "MyString.h"
@@ -155,7 +161,7 @@ void	SetKillSig();
 #endif
 void	SetForcedAttributes();
 void 	check_iwd( char *iwd );
-int	read_condor_file( FILE *fp );
+int	read_condor_file( FILE *fp, int stopBeforeQueuing=0 );
 char * 	condor_param( char *name );
 void 	set_condor_param( char *name, char *value );
 void 	queue(int num);
@@ -315,8 +321,63 @@ main( int argc, char *argv[] )
 		fprintf( stderr, "ERROR: Failed to open command file\n");
 		exit(1);
 	}
+
+	//  Parse the file, stopping at "queue" command
+	if( read_condor_file( fp, 1 ) < 0 ) {
+		fprintf(stderr, "ERROR: Failed to parse command file.\n");
+		exit(1);
+	}
+
+	//this section sets up env vars needed by authentication code. //mju
+	char *CondorCertDir;
+	char tmpstring[MAXPATHLEN];
+
+	//try submit file first, then default
+	if ( CondorCertDir = condor_param( CertDir ) ) {
+		dprintf( D_FULLDEBUG, "setting CONDOR_CERT_DIR from submit file\n" );
+	}
+	else {
+
+		dprintf( D_FULLDEBUG, "setting CONDOR_CERT_DIR to default\n" );
+		sprintf( tmpstring, "%s/.condor_certs", getenv( "HOME" ) );
+		CondorCertDir = strdup( tmpstring );
+	}
+
+	//didn't bother re-putting vars which shouldn't change
+	if ( !getenv( "CONDOR_GATEKEEPER" ) ) {
+		struct hostent *host;
+		char tmp[MAXHOSTNAMELEN];
+
+		//this should change for remote submits to be remote machine name!
+		gethostname( tmp, MAXHOSTNAMELEN );
+		host = gethostbyname( tmp );
+		sprintf( tmpstring, "CONDOR_GATEKEEPER=/CN=schedd@%s", host->h_name );
+		putenv( strdup( tmpstring ) );
+	}
+
+	if ( !getenv( "X509_CERT_DIR" ) ) {
+		sprintf( tmpstring, "X509_CERT_DIR=%s/", CondorCertDir );
+		putenv( strdup( tmpstring ) );
+	}
+
+	if ( !getenv( "X509_USER_CERT" ) ) {
+		sprintf( tmpstring, "X509_USER_CERT=%s/newcert.pem", CondorCertDir );
+		putenv( strdup( tmpstring ) );
+	}
+
+	if ( !getenv( "X509_USER_KEY" ) ) {
+		sprintf(tmpstring,"X509_USER_KEY=%s/private/newreq.pem",CondorCertDir);
+		putenv( strdup( tmpstring ) );
+	}
+	free( CondorCertDir );
+	//end of authentication setup
+
 	// connect to the schedd
-	if (ConnectQ(ScheddAddr) == 0) { 
+#if defined(GSS_AUTHENTICATION)
+	if (ConnectQ(ScheddAddr, 1 ) == 0) { //mju
+#else
+	if (ConnectQ(ScheddAddr, 0 ) == 0) { //mju
+#endif
 		if( ScheddName ) {
 			fprintf( stderr, "ERROR: Failed to connect to queue manager %s\n",
 					 ScheddName );
@@ -1181,7 +1242,7 @@ SetKillSig()
 
 
 int
-read_condor_file( FILE *fp)
+read_condor_file( FILE *fp, int stopBeforeQueuing=0 )
 {
 	char	*name, *value;
 	char	*ptr;
@@ -1215,6 +1276,13 @@ read_condor_file( FILE *fp)
 		}
 
 		if( strincmp(name, "queue", strlen("queue")) == 0 ) {
+			//sleazy hack to deal with fact that queue must happen AFTER
+			//connection is authenticated, but cert_dir must be read
+			//before user or connection authentication
+			if ( stopBeforeQueuing ) {
+				rewind( fp );
+				return 0;
+			}
 			if (sscanf(name+strlen("queue"), "%d", &queue_modifier) == EOF) {
 				queue_modifier = 1;
 			}

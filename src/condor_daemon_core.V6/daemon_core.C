@@ -44,6 +44,12 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 #include "condor_debug.h"
 #include "get_daemon_addr.h"
 
+#if defined(GSS_AUTHENTICATION)
+#include "auth_sock.h"
+#else
+#define AuthSock ReliSock
+#endif
+
 static	char*  	_FileName_ = __FILE__;	// used by EXCEPT
 
 extern "C" 
@@ -560,7 +566,7 @@ int DaemonCore::Register_Socket(Stream *iosock, char* iosock_descrip, SocketHand
 	sockTable[i].iosock = iosock;
 	switch ( iosock->type() ) {
 		case Stream::reli_sock :
-			sockTable[i].sockd = ((ReliSock *)iosock)->get_file_desc();
+			sockTable[i].sockd = ((AuthSock *)iosock)->get_file_desc();
 			break;
 		case Stream::safe_sock :
 			sockTable[i].sockd = ((SafeSock *)iosock)->get_file_desc();
@@ -1153,9 +1159,9 @@ int DaemonCore::HandleReq(int socki)
 	if ( is_tcp ) {
 
 		// if the connection was received on a listen socket, do an accept.
-		if ( ((ReliSock *)insock)->_state == Sock::sock_special &&
-			((ReliSock *)insock)->_special_state == ReliSock::relisock_listen ) {
-			stream = (Stream *) ((ReliSock *)insock)->accept();
+		if ( ((AuthSock *)insock)->_state == Sock::sock_special &&
+			((AuthSock *)insock)->_special_state == AuthSock::relisock_listen ) {
+			stream = (Stream *) ((AuthSock *)insock)->accept();
 			if ( !stream ) {
 				dprintf(D_ALWAYS, "DaemonCore: accept() failed!");
 				return KEEP_STREAM;		// return KEEP_STEAM cuz insock is a listen socket
@@ -1440,7 +1446,7 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 	if ( is_local == TRUE )
 		sock = (Stream *) new SafeSock(destination,0,3);
 	else
-		sock = (Stream *) new ReliSock(destination,0,20);
+		sock = (Stream *) new AuthSock(destination,0,20);
 
 	// send the signal out as a DC_RAISESIGNAL command
 	sock->encode();		
@@ -1513,7 +1519,7 @@ int DaemonCore::Create_Process(
 	int i;
 	char *ptmp;
 	char inheritbuf[_INHERITBUF_MAXSIZE];
-	ReliSock rsock;	// tcp command socket for new child
+	AuthSock rsock;	// tcp command socket for new child
 	SafeSock ssock;	// udp command socket for new child
 	pid_t newpid;
 #ifdef WIN32
@@ -1582,7 +1588,7 @@ int DaemonCore::Create_Process(
 		if ( want_command_port == TRUE ) {
 			// choose any old port (dynamic port)
 			if ( !rsock.listen( 0 ) ) {
-				dprintf(D_ALWAYS,"Create_Process:Failed to post listen on command ReliSock\n");
+				dprintf(D_ALWAYS,"Create_Process:Failed to post listen on command AuthSock\n");
 				return FALSE;
 			}
 			// now open a SafeSock _on the same port_ choosen above
@@ -1699,7 +1705,7 @@ int DaemonCore::Create_Process(
 }
 
 void
-DaemonCore::Inherit( ReliSock* &rsock, SafeSock* &ssock ) 
+DaemonCore::Inherit( AuthSock* &rsock, SafeSock* &ssock ) 
 {
 	char inheritbuf[_INHERITBUF_MAXSIZE];
 	char *ptmp;
@@ -1760,11 +1766,11 @@ DaemonCore::Inherit( ReliSock* &rsock, SafeSock* &ssock )
 			switch ( *ptmp ) {
 				case '1' :
 					// inherit a relisock
-					rsock = new ReliSock();
+					rsock = new AuthSock();
 					ptmp=strtok(NULL," ");
 					rsock->serialize(ptmp);
 					rsock->set_inheritable(FALSE);
-					dprintf(D_DAEMONCORE,"Inherited a ReliSock\n");
+					dprintf(D_DAEMONCORE,"Inherited a AuthSock\n");
 					// place into array...
 					break;
 				case '2':
@@ -1776,7 +1782,7 @@ DaemonCore::Inherit( ReliSock* &rsock, SafeSock* &ssock )
 					// place into array...
 					break;
 				default:
-					EXCEPT("Daemoncore: Can only inherit SafeSock or ReliSocks");
+					EXCEPT("Daemoncore: Can only inherit SafeSock or AuthSocks");
 					break;
 			} // end of switch
 			ptmp=strtok(NULL," ");
@@ -1790,8 +1796,8 @@ DaemonCore::Inherit( ReliSock* &rsock, SafeSock* &ssock )
 		ptmp=strtok(NULL," ");
 		if ( ptmp && (strcmp(ptmp,"0") != 0) ) {
 			dprintf(D_DAEMONCORE,"Inheriting Command Sockets\n");
-			rsock = new ReliSock();
-			((ReliSock *)rsock)->serialize(ptmp);
+			rsock = new AuthSock();
+			((AuthSock *)rsock)->serialize(ptmp);
 			rsock->set_inheritable(FALSE);
 		}
 		ptmp=strtok(NULL," ");

@@ -105,9 +105,15 @@ GETMNT_OBJ = getmnt.o
 	lock_file.NON_POSIX.o my_popen.o $(GETMNT_OBJ) \
 	syscall_numbers.o sig_install.o internet.o startup_info.o escapes.o\
 	ckpt_server_api_stubs.o ckpt_util.o get_random_num.o fdprintf.o \
-	setsyscalls.o match_prefix.o sleep.o
+	setsyscalls.o match_prefix.o sleep.o auth_sock.o
 
 all_target( util_lib.a stub_gen )
+
+libauth_io.a:
+	(cd ../condor_io ; make libauth_io.a )
+
+auth_sock.o: ../condor_io/auth_sock.C libauth_io.a
+	gcc $(CFLAGS) -c ../condor_io/auth_sock.C $(AUTH2_LIB)
 
 test.o: test.c
 	gcc $(CFLAGS) -c test.c

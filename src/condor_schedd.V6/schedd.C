@@ -74,6 +74,7 @@ extern	char*		Spool;
 extern	char*		Name;
 extern	char*		JobHistoryFileName;
 extern	char*		mySubSystem;
+extern	char*		CondorCertDir;
 
 extern FILE *DebugFP;
 extern char *DebugFile;
@@ -2533,7 +2534,7 @@ int procIDHash(const PROC_ID &procID, int numBuckets)
 	return ( (procID.cluster+(procID.proc*19)) % numBuckets );
 }
 
-// Initialize the configuration parameters and classad.  Since we call
+// initialize the configuration parameters and classad.  Since we call
 // this again when we reconfigure, we have to be careful not to leak
 // memory. 
 void
@@ -2551,6 +2552,36 @@ Scheduler::Init()
 	if( !(Spool = param("SPOOL")) ) {
 		EXCEPT( "No spool directory specified in config file" );
 	}
+
+#if defined( GSS_AUTHENTICATION )
+	//this section sets up three env vars needed by authentication code. //mju
+	if( ! (CondorCertDir = param("CONDOR_CERT_DIR")) ) {
+		dprintf( D_ALWAYS, "no CONDOR_CERT_DIR, submits not authenticated\n");
+	}
+	else {
+		dprintf( D_ALWAYS, "read CONDOR_CERT_DIR, submits are authenticated\n");
+		char tmpstring[MAXPATHLEN];
+
+		//didn't bother re-putting vars which shouldn't change
+		if ( !getenv( "X509_CERT_DIR" ) ) {
+			sprintf( tmpstring, "X509_CERT_DIR=%s/", CondorCertDir );
+			putenv( strdup( tmpstring ) );
+		}
+
+		if ( !getenv( "X509_USER_CERT" ) ) {
+			sprintf( tmpstring, "X509_USER_CERT=%s/newcert.pem", CondorCertDir );
+			putenv( strdup( tmpstring ) );
+		}
+
+		if ( !getenv( "X509_USER_KEY" ) ) {
+			sprintf(tmpstring,"X509_USER_KEY=%s/private/newreq.pem",CondorCertDir);
+			putenv( strdup( tmpstring ) );
+		}
+
+		free( CondorCertDir );
+	}
+#endif
+
 
 	if( CondorViewHost ) free( CondorViewHost );
 	CondorViewHost = param("CONDOR_VIEW_HOST");
@@ -2606,6 +2637,7 @@ Scheduler::Init()
 			}
 		}
 	}
+
 	dprintf( D_FULLDEBUG, "Using name: %s\n", Name );
 
 	if( AccountantName ) free( AccountantName );

@@ -39,7 +39,7 @@ typedef int (*scan_func)(ClassAd *ad);
 extern "C" {
 #endif
 
-int InitializeConnection(char *, char *);
+int InitializeConnection(char *, char *, int auth=0 );
 int NewCluster();
 int NewProc( int );
 int DestroyProc(int, int);
@@ -73,7 +73,7 @@ void FreeJobAd(ClassAd *&ad);
 int SendSpoolFile(char *filename);		/* prepare for file xfer */
 int SendSpoolFileBytes(char *filename); /* actually do file xfer */
 
-Qmgr_connection *ConnectQ(char *qmgr_location);
+Qmgr_connection *ConnectQ(char *qmgr_location, int auth=0 );
 void DisconnectQ(Qmgr_connection *);
 void WalkJobQueue(scan_func);
 

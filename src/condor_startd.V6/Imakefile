@@ -34,7 +34,7 @@ LDFLAGS = SocketLib RpcLib MldLib KernLib
 
 LIB= $(REMOTE_SYSCALL_LIB) ../condor_daemon_core.V6/daemon_core.a \
 	../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a \
-	../condor_classad/expr_lib.a 
+	../condor_classad/expr_lib.a $(AUTH2_LIB)
 LIBDIRS= ../condor_util_lib ../condor_classad ../condor_daemon_core.V6
 
 all_target(condor_startd)

@@ -18,7 +18,7 @@ CLASSAD_LIB = ../condor_classad/expr_lib.a
 CCTP_LIB = ../condor_config_server/cctp_lib.a
 #endif
 
-LIB = $(DAEMON_CORE_LIB) $(CCTP_LIB) $(CLASSAD_LIB) $(UTIL_LIB) $(CLASS_LIB) $(UTIL_LIB)
+LIB = $(DAEMON_CORE_LIB) $(CCTP_LIB) $(CLASSAD_LIB) $(UTIL_LIB) $(CLASS_LIB) $(UTIL_LIB) $(AUTH2_LIB)
 LIBDIRS = ../condor_util_lib ../condor_c++_util
 
 LDFLAGS = SocketLib

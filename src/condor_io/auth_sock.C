@@ -33,13 +33,13 @@
 #include "condor_debug.h"
 #include "internet.h"
 
-#include "globus_gss_assist.h"
 
 #if !defined(GSS_AUTHENTICATION)
 #define AuthSock ReliSock
 #else
 
 //include rest of file in this #ELSE
+#include "globus_gss_assist.h"
 #include "auth_sock.h"
 
 
@@ -63,43 +63,63 @@ AuthSock::lookup_user( char *client_name ) {
 int 
 authsock_get(void *arg, void **bufp, size_t *sizep)
 {
+dprintf(D_ALWAYS, "entering authsock_get\n" );
 	/* globus code which calls this function expects 0/-1 return vals */
 
 	//authsock must "hold onto" GSS state, pass in struct with comms stuff
 	AuthComms *comms = (AuthComms *) arg;
 	AuthSock *sock = comms->sock;
-	int stat;
+	size_t stat;
 
 	sock->decode();
 
 	//read size of data to read
 	stat = sock->code( *((int *)sizep) );
-	//ensure that buffer is large enough
-	if ( stat ) {
-		//[RE]MALLOCS freed ONCE at the end of loop in 
-		// globus_gss_assist_accept_sec_context(), which calls this f(x)
-		if ( !comms->buffer ) {
-			comms->size = *((int *)sizep);
-			comms->buffer = malloc( comms->size );
-		}
-		else if ( *((int *)sizep) > comms->size ) { //need realloc for more room
-			comms->size = *((int *)sizep);
-			comms->buffer = realloc( comms->buffer, comms->size );
-		}
-		*bufp = comms->buffer;
-	}
 
-	//fail if cannot malloc enough space
-	if ( !(*bufp) )
-		stat = FALSE;
+/***************
+	//ensure that buffer has enuf space allocated to store "stat" bytes
+	if ( stat ) {
+dprintf(D_ALWAYS,"SIZE: %d\n", *((int *)sizep) );
+		if ( (*((int *)sizep)) > comms->size ) { //need more space in buffer
+			if ( *bufp = realloc( comms->buffer, *((int *)sizep) ) ) {
+				comms->size = *((int *)sizep);
+			}
+			else {
+				dprintf( D_ALWAYS, "authsock_get realloc failed-%s\n",
+						strerror( errno ) );
+			}
+		}
+
+		//fail if cannot malloc enough space
+		if ( !(*bufp) ) {
+			stat = FALSE;
+			dprintf( D_ALWAYS, "authsock_get memory allocation failure\n" );
+		}
+	} //end
+	else {
+		dprintf( D_ALWAYS, "cannot read %d bytes from socket\n", stat );
+	}
+*******************/
+if ( !comms->buffer ) {
+	dprintf(D_ALWAYS,"BUFFER WAS NULL\n" );
+	comms->buffer = malloc( 2048 );
+}
+else
+	dprintf(D_ALWAYS,"BUFFER not null\n" );
+if ( comms->buffer ) {
+	dprintf(D_ALWAYS,"MALLOC success\n" );
+	*bufp = comms->buffer;
+}
+else
+	dprintf(D_ALWAYS,"MALLOC FAILURE!!!\n" );
 
 	//if successfully read size and malloced, read data
 	if ( stat )
 		sock->code_bytes( *bufp, *((int *)sizep) );
 
 	//check to ensure comms were successful
-	if ( stat > 0 )
-		stat = sock->end_of_message();
+//	if ( stat > 0 )
+stat = sock->end_of_message();
 	if ( !stat ) {
 		dprintf( D_ALWAYS, "authsock_get (read from socket) failure\n" );
 		return -1;
@@ -111,6 +131,7 @@ authsock_get(void *arg, void **bufp, size_t *sizep)
 int 
 authsock_put(void *arg,  void *buf, size_t size)
 {
+dprintf(D_ALWAYS, "entering authsock_put\n" );
 	//param is just a AS*
 	AuthSock *sock = (AuthSock *) arg;
 	int stat;
@@ -120,12 +141,18 @@ authsock_put(void *arg,  void *buf, size_t size)
 	//send size of data to send
 	stat = sock->code( (int &)size );
 	//if successful, send the data
-	if ( stat )
-		stat = sock->code_bytes( buf, ((int) size ));
+	if ( stat ) {
+		if ( !(stat = sock->code_bytes( buf, ((int) size )) ) ) {
+			dprintf( D_ALWAYS, "failure sending data (%d bytes) over sock\n",size);
+		}
+	}
+	else {
+		dprintf( D_ALWAYS, "failure sending size (%d) over sock\n", size );
+	}
 
 	//ensure data send was successful
-	if ( stat > 0 )
-		stat = sock->end_of_message();
+//	if ( stat > 0 )
+stat = sock->end_of_message();
 	if ( !stat ) {
 		dprintf( D_ALWAYS, "authsock_put (write to socket) failure\n" );
 		return -1;
@@ -139,6 +166,7 @@ AuthSock::authenticate_user()
 {
 	OM_uint32 major_status;
 	OM_uint32 minor_status;
+fprintf(stderr,"entered authenticate_user()\n" );
 
 	if ( credential_handle != GSS_C_NO_CREDENTIAL ) { // user already auth'd 
 		dprintf( D_FULLDEBUG, "user is authenticated\n" );
@@ -289,6 +317,7 @@ AuthSock::auth_connection_server( AuthSock &authsock)
 /*******************************************************************/
 AuthSock::AuthSock():ReliSock() {
 	conn_type = auth_none;
+	auth_setup();
 //	authenticate_user();
 }
 
@@ -299,6 +328,7 @@ AuthSock::AuthSock(					/* listen on port		*/
 	: ReliSock(port)
 {
 	conn_type = auth_server;
+	auth_setup();
 //	authenticate_user();
 }
 
@@ -309,6 +339,7 @@ AuthSock::AuthSock(					/* listen on serv		*/
 	: ReliSock(serv)
 {
 	conn_type = auth_server;
+	auth_setup();
 //	authenticate_user();
 }
 
@@ -321,6 +352,7 @@ AuthSock::AuthSock(
 	: ReliSock(host,port,timeout_val) /* does connect */
 {
 	conn_type = auth_client;
+	auth_setup();
 //	authenticate_user();
 }
 
@@ -333,6 +365,7 @@ AuthSock::AuthSock(
 	: ReliSock(host,serv,timeout_val) /* does connect */
 {
 	conn_type = auth_client;
+	auth_setup();
 //	authenticate_user();
 }
 
@@ -345,11 +378,11 @@ AuthSock::~AuthSock()
 /*******************************************************************/
 int
 AuthSock::accept(
-	AuthSock &c
+	AuthSock &sock
 	)
 {
-	c.Set_conn_type( auth_server );
-	return ReliSock::accept( (ReliSock&) c );
+	sock.Set_conn_type( auth_server );
+	return ReliSock::accept( (ReliSock&) sock );
 }
 
 /*******************************************************************/
@@ -398,6 +431,12 @@ int AuthSock::authenticate() {
 			dprintf( D_ALWAYS,"authenticate:needed to have connected/accepted\n" );
 			return FALSE;
 	}
+}
+
+/*******************************************************************/
+void AuthSock::auth_setup() {
+	authComms.buffer = NULL;
+	authComms.size = 0;
 }
 
 #endif //#!defined GSS_AUTHENTICATION
