@@ -794,7 +794,10 @@ DAEMON_LIST			= MASTER, STARTD, SCHEDD
 
 ##  Which daemons use the Condor DaemonCore library (i.e., not the
 ##  checkpoint server or custom user daemons)?
-#DC_DAEMON_LIST = MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD
+##  Note: Daemons in this list cannot use a static command port.
+DC_DAEMON_LIST = \
+MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, \
+VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE
 
 ##  Where are the binaries for these daemons?
 MASTER				= $(SBIN)/condor_master
@@ -1427,3 +1430,122 @@ GT3_GAHP = $(SBIN)/gt3_gahp
 ## The location of GT3 files. This should normally be lib/gt3
 ##
 GT3_LOCATION = $(LIB)/gt3
+
+## Condor-G and CredD can use MyProxy to refresh GSI proxies which are
+## about to expire.
+#MYPROXY_GET_DELEGATION = /path/to/myproxy-get-delegation
+
+##
+##--------------------------------------------------------------------
+##  condor_credd credential managment daemon
+##--------------------------------------------------------------------
+##  Where is the CredD binary installed?
+CREDD				= $(SBIN)/condor_credd
+
+##  When the credd starts up, it can place it's address (IP and port)
+##  into a file.  This way, tools running on the local machine don't
+##  need an additional "-n host:port" command line option.  This
+##  feature can be turned off by commenting out this setting.
+CREDD_ADDRESS_FILE	= $(LOG)/.credd_address
+
+##  Specify a remote credd server here,
+#CREDD_HOST  = $(CONDOR_HOST):$(CREDD_PORT)
+
+## CredD startup arguments
+## Start the CredD on a well-known port.  Uncomment to to simplify
+## connecting to a remote CredD.  Note: that this interface may change
+## in a future release.
+CREDD_PORT			= 9620
+CREDD_ARGS			= -p $(CREDD_PORT) -f
+
+## CredD daemon debugging log
+CREDD_LOG			= $(LOG)/CredLog
+CREDD_DEBUG			= D_FULLDEBUG
+MAX_CREDD_LOG		= 4000000
+
+## The credential owner submits the credential.  This list specififies
+## other user who are also permitted to see all credentials.  Defaults
+## to root on Unix systems, and Administrator on Windows systems.
+#CRED_SUPER_USERS = 
+
+## Credential storage location.  This directory must exist
+## prior to starting condor_credd.  It is highly recommended to
+## restrict access permissions to _only_ the directory owner.
+CRED_STORE_DIR = $(LOCAL_DIR)/cred_dir
+
+## Index file path of saved credentials.
+## This file will be automatically created if it does not exist.
+#CRED_INDEX_FILE = $(CRED_STORE_DIR/cred-index
+
+## condor_credd  will attempt to refresh credentials when their
+## remaining lifespan is less than this value.  Units = seconds.
+#DEFAULT_CRED_EXPIRE_THRESHOLD = 3600
+
+## condor-credd periodically checks remaining lifespan of stored
+## credentials, at this interval.
+#CRED_CHECK_INTERVAL = 60
+
+##
+##--------------------------------------------------------------------
+##  Stork data placment server
+##--------------------------------------------------------------------
+##  Where is the Stork binary installed?
+STORK				= $(SBIN)/stork_server
+
+##  When Stork starts up, it can place it's address (IP and port)
+##  into a file.  This way, tools running on the local machine don't
+##  need an additional "-n host:port" command line option.  This
+##  feature can be turned off by commenting out this setting.
+STORK_ADDRESS_FILE = $(LOG)/.stork_address
+
+##  Specify a remote Stork server here,
+#STORK_HOST  = $(CONDOR_HOST):$(STORK_PORT)
+
+## STORK_LOG_BASE specifies the basename for heritage Stork log files.
+## Stork uses this macro to create the following output log files:
+## $(STORK_LOG_BASE): Stork server job queue classad collection
+## journal file.
+## $(STORK_LOG_BASE).history: Used to track completed jobs.
+## $(STORK_LOG_BASE).user_log: User level log, also used by DAGMan.
+STORK_LOG_BASE		= $(LOG)/Stork
+
+## Modern Condor DaemonCore logging feature.
+STORK_LOG = $(LOG)/StorkLog
+STORK_DEBUG = D_FULLDEBUG
+MAX_STORK_LOG = 4000000
+
+## Stork startup arguments
+## Start Stork on a well-known port.  Uncomment to to simplify
+## connecting to a remote Stork.  Note: that this interface may change
+## in a future release.
+#STORK_PORT			= 34048
+STORK_PORT			= 9621
+STORK_ARGS = -p $(STORK_PORT) -f -Serverlog $(STORK_LOG_BASE)
+
+## Stork environment.  Stork modules may require external programs and
+## shared object libraries.  These are located using the PATH and
+## LD_LIBRARY_PATH environments.  Further, some modules may require
+## further specific environments.  By default, Stork inherits a full
+## environment when invoked from condor_master or the shell.  If the
+## default environment is not adequate for all Stork modules, specify
+## a replacement environment here.  This environment will be set by
+## condor_master before starting Stork, but does not apply if Stork is
+## started directly from the command line.
+#STORK_ENVIRONMENT = TMP=/tmp;CONDOR_CONFIG=/special/config;PATH=/lib
+
+## Limits the number of concurrent data placements handled by Stork.
+#STORK_MAX_NUM_JOBS = 5
+
+## Limits the number of retries for a failed data placement.
+#STORK_MAX_RETRY = 5
+
+## Limits the run time for a data placement job, after which the
+## placement is considered failed.
+#STORK_MAXDELAY_INMINUTES = 10
+
+## Temporary credential storage directory used by Stork.
+#STORK_TMP_CRED_DIR = /tmp
+
+## Directory containing Stork modules.
+#STORK_MODULE_DIR = $(LIBEXEC)
+
