@@ -5,13 +5,19 @@ non gcc programs (FORTRAN) - especially at sites where gcc isn't
 installed!
 */
 
+#if !defined(LINUX)
+
 #if defined(__GNUC__)
 #	define __WAS_GNUC__
 #	undef __GNUC__
 #endif
+
+#endif /* LINUX */
 
 #include <assert.h>
 
 #if defined(__WAS_GNUC__)
 #	define __GNUC__
 #endif
+
+
