@@ -21,7 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
 
 /*
 ** free_fs_blocks: reports the number of kbytes free for the filesystem where
@@ -34,7 +33,7 @@
 #include <limits.h>
 
 int
-free_fs_blocks(char *filename)
+free_fs_blocks(const char *filename)
 {
 	ULARGE_INTEGER FreeBytesAvailableToCaller, TotalNumberOfBytes, TotalNumberOfFreeBytes;
 	if (GetDiskFreeSpaceEx(filename, &FreeBytesAvailableToCaller, &TotalNumberOfBytes, 
@@ -177,7 +176,7 @@ reserve_for_fs()
 
 
 #if defined(__STDC__)
-int raw_free_fs_blocks( char *filename);
+int raw_free_fs_blocks( const char *filename);
 #else
 int raw_free_fs_blocks();
 #endif
@@ -199,7 +198,7 @@ int raw_free_fs_blocks();
 */
 int
 free_fs_blocks(filename)
-char *filename;
+const char *filename;
 {
 	int		answer;
 	answer =  raw_free_fs_blocks(filename)
@@ -211,7 +210,7 @@ char *filename;
 #if defined(ULTRIX42) || defined(ULTRIX43)
 int
 raw_free_fs_blocks(filename)
-char *filename;
+const char *filename;
 {
 	struct fs_data statfsbuf;
 	struct fs_data_req *fs;
@@ -280,7 +279,7 @@ char *filename;
 
 int
 raw_free_fs_blocks(filename)
-char *filename;
+const char *filename;
 {
 #if defined(Solaris)
 	struct statvfs statfsbuf;

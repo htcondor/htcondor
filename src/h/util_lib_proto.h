@@ -106,7 +106,7 @@ char * format_seconds ( int t_sec );
 char * substr ( char *string, char *pattern );
 int update_rusage ( register struct rusage *ru1, register struct rusage *ru2 );
 int calc_virt_memory ( void );
-int free_fs_blocks(char *filename);
+int free_fs_blocks(const char *filename);
 int calc_disk_needed( PROC * proc );
 char *GetEnvParam( char * param, char * env_string );
 PROC *ConstructProc( int, PROC *);
