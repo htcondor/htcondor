@@ -168,7 +168,7 @@ logandreturn:
 // returns the username of the current user.  Until we finish porting
 // over all the priv_state code, root=condor=user, so we may as well
 // just return the identity of the current user.
-char* get_condor_username() 
+const char* get_condor_username() 
 {
 	HANDLE hProcess = NULL;
 	HANDLE hAccessToken = NULL;
@@ -544,7 +544,7 @@ get_condor_gid()
 
 /* This returns the string containing the username of whatever uid
    priv_state condor gives you. */
-char*
+const char*
 get_condor_username()
 {
 	if( !CondorIdsInited ) {
