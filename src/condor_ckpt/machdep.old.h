@@ -1,4 +1,6 @@
 #include <setjmp.h>
+#include <sys/param.h>
+#include <sys/vmparam.h>
 
 /*
   Portability: A single method works on all the platforms we have tried
