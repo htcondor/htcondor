@@ -38,7 +38,7 @@ AC_INIT
 # user right at the start what they need to do to fix it, instead of
 # having the rest of the tests in here fail...
 my_domain=`echo $ac_hostname | cut -f2- -d.`
-_bad_path_dirs="/s/std/bin /usr/local/bin /usr/bin /bin"
+_bad_path_dirs="/s/std/bin /usr/local/bin /usr/bin /bin /usr/ccs/bin"
 _found_bad_dir=no
 _which_bad_dir=""
 _found_s_std_bin=no
