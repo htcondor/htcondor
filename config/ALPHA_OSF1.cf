@@ -16,6 +16,10 @@
 #define DbmLibrary
 
 #define IS_ALPHA_OSF1			YES
+
+#define DOES_CHECKPOINTING		YES
+#define DOES_REMOTE_SYSCALLS	YES
+
 #define HAS_X					YES
 #define HAS_X_EXTENSIONS		NO
 #define HAS_NDBM				YES
@@ -31,7 +35,6 @@
 #define NEEDS_SPECIAL_SETJMP	NO
 #define HAS_FORTRAN				NO
 #define HAS_FLOCK				YES
-#define DOES_CHECKPOINTING		YES
 #define HAS_ADJTIME				YES
 #define HAS_GETDTABLESIZE		YES
 #define HAS_GETHOSTNAME			YES
