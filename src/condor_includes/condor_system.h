@@ -39,8 +39,13 @@
 /* Things we want defined on all Unix systems */
 
 #ifndef _POSIX_SOURCE
-#define _POSIX_SOURCE
+# define _POSIX_SOURCE
 #endif
+
+#ifndef UNIX
+# define UNIX
+#endif
+
 
 /**********************************************************************
 ** These system-specific files will "fix" anything that needs fixing,
@@ -61,7 +66,6 @@
 #   error "Don't know what Unix this is!"
 #endif
 
-#define UNIX
 
 /**********************************************************************
 ** Files that need to be fixed on all (or nearly all) platforms 
