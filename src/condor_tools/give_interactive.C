@@ -461,7 +461,7 @@ main(int argc, char *argv[])
 				}					
 				NumMachinesWanted = atoi(*ptr);
 				if ( NumMachinesWanted < 1 ) {
-					fprintf( stderr, "%s: -n requires another argument ", 
+					fprintf( stderr, "%s: -n requires another argument "
 							 "which is an integer greater than 0\n",
 							 basename(argv[0]) );
 					exit(1);
