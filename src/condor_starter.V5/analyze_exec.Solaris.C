@@ -126,7 +126,7 @@ library by looking for the symbol "MAIN".
 int symbol_main_check( char *name )
 {
 	int	status;
-	struct nlist nl[2];
+	struct nlist nl[3];
 
 	/* Unlike on some other architectures, we want to look for
 	   MAIN and _condor_prestart on Solaris, not _MAIN and

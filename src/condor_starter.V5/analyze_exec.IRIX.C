@@ -87,7 +87,7 @@ library by looking for the symbol "MAIN".
 int symbol_main_check( char *name )
 {
 	int	status;
-	struct nlist nl[2];
+	struct nlist nl[3];
 
 	nl[0].n_name = "MAIN";
 	nl[1].n_name = "_condor_prestart";
