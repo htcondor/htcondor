@@ -511,11 +511,13 @@ int Authentication::default_auth_methods() {
 		free( methods );
 	} else {
 
-		// try whatever we support
+		// clear the mask
 		bitmask = 0;
 
-        bitmask |= (int) CAUTH_CLAIMTOBE;
-        bitmask |= (int) CAUTH_ANONYMOUS;
+		// these do _not_ go in the default
+		// bitmask |= (int) CAUTH_CLAIMTOBE;
+		// bitmask |= (int) CAUTH_ANONYMOUS;
+
 #if defined(WIN32)
         bitmask |= (int) CAUTH_NTSSPI;
 #else
