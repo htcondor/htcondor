@@ -3,10 +3,6 @@
 \section{\label{sec:Java}Java Applications}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%%%%%
-\subsection{Background}
-%%%%%
-
 Condor allows users to access a wide variety of
 machines distributed around the world.
 The Java Virtual Machine (JVM)
@@ -22,9 +18,6 @@ Compiled Java programs can be submitted to Condor, and Condor
 can execute the programs on any machine in the pool that will run
 the Java Virtual Machine.
 
-%%%%%
-\subsection{Finding Appropriate Machines}
-%%%%%
 
 The \Condor{status} command can be used to see a list of
 machines in the pool for which Condor can use the Java Virtual
@@ -54,7 +47,7 @@ for more information on getting Condor to work together
 with Java.
 
 %%%%%
-\subsection{Example Java Program and Submit Files}
+\subsection{Example Java Program}
 %%%%%
 
 Here is a complete, if simple, example.
@@ -76,8 +69,9 @@ javac Hello.java
 \end{verbatim}
 
 Submission to Condor requires a submit description file.
-This is a simple one that works (if you're submitting from
-a shared file system):
+If submitting where files are accessible using a
+shared file system,
+this simple submit description file works:
 
 \begin{verbatim}
   ####################
@@ -95,9 +89,16 @@ a shared file system):
   queue
 \end{verbatim}
 
+The Java universe must be explicitly selected.
 
-If you are not running on a shared file system, you
-will have to use file transfer, like this:
+The main class of the program is given in the \Code{executable} statement.
+This is a file name which contains the entry point of the program.
+The name of the main class (not a file name) must
+be specified as the first argument to the program.
+
+If submitting the job where a shared file system is \emph{not}
+accessible,
+the submit description file becomes:
 
 \begin{verbatim}
   ####################
@@ -117,20 +118,8 @@ will have to use file transfer, like this:
   when_to_transfer_output = ON_EXIT
   queue
 \end{verbatim}
-
-For more information about using file transfer, see
-section~\ref{sec:file-transfer}.
-
-%%%%%
-\subsection{Submit File Commands}
-%%%%%
-
-The Java universe must be explicitly selected.
-
-The main class of the program is given in the \Code{executable} statement.
-This is a file name which contains the entry point of the program.
-The name of the main class (not a file name) must
-be specified as the first argument to the program.
+For more information about using Condor's file transfer mechanisms,
+see section~\ref{sec:file-transfer}.
 
 To submit the job, where the submit description file
 is named \File{Hello.cmd}, 
@@ -211,15 +200,14 @@ requirements = (JavaMFlops>4.5)
 
 \index{Chirp}
 If a job has more sophisticated I/O requirements that cannot
-be met by the simple file-transfer mechanism (see
-section~\ref{sec:file-transfer}), then
-you may use a facility called Chirp.
-Chirp has two advantages over simple whole-file transfers.
+be met by Condor's file transfer mechanism,
+then the Chirp facility may provide a solution.
+Chirp has two advantages over simple, whole-file transfers.
 First, it permits the input files to be decided upon at run-time
 rather than submit time, and second,
 it permits partial-file I/O with results than can be seen as the
 program executes.
-However, you must make small changes to the program
+However, small changes to the program are required
 in order to take advantage of Chirp.
 Depending on the style of the program, use either Chirp I/O streams
 or UNIX-like I/O functions.
