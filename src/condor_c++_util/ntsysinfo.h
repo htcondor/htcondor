@@ -43,7 +43,7 @@ class CSysinfo
 	~CSysinfo();
 	int GetPIDs (ExtArray<pid_t> & dest);
 	DWORD NumThreads (pid_t pid);
-	BOOL GetProcessName (pid_t pid, char *dest);
+	BOOL GetProcessName (pid_t pid, char *dest, int sz);
 #if 0
 	int GetTIDs (pid_t pid, ExtArray<DWORD> & tids, 
 		ExtArray<DWORD> & status);
@@ -56,6 +56,8 @@ class CSysinfo
 	int GetProcessEntry(pid_t pid, PROCESSENTRY32 &pe32 );
 	void CloseThread (HANDLE hthread);
 	bool IsWin2korXP() { return IsWin2k; }
+	bool GetProcessBirthday(pid_t pid, FILETIME *ft);
+	int ComparePidAge(pid_t pid1, pid_t pid2 );
 #if 0
 	void Explore(DWORD pid);
 #endif
