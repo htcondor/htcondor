@@ -1003,6 +1003,7 @@ GridManager::updateSchedd()
 		setUpdate();
 		return TRUE;
 	}
+dprintf(D_FULLDEBUG,"Connected to schedd\n");
 
 	JobUpdateEventQueue.Rewind();
 
@@ -1144,6 +1145,7 @@ GridManager::updateSchedd()
 			DestroyProc(curr_job->procID.cluster,
 						curr_job->procID.proc);
 
+dprintf(D_FULLDEBUG,"added job %d.%d (%x) to delete queue for event %d\n",curr_job->procID.cluster,curr_job->procID.proc,(int)curr_job,curr_event->event);
 			jobs_to_delete.Append( curr_job );
 
 			handled = true;
@@ -1200,6 +1202,7 @@ GridManager::updateSchedd()
 
 	jobs_to_delete.Rewind();
 
+dprintf(D_FULLDEBUG,"about to delete %d jobs\n",jobs_to_delete.Number());
 	while ( jobs_to_delete.Next( curr_job ) ) {
 
 		// For jobs we just removed from the schedd's queue, remove all
@@ -1207,6 +1210,7 @@ GridManager::updateSchedd()
 		// from the schedd because some of the lists we need to search could
 		// be very long. Most of these lists shouldn't contain the job, but
 		// we're being safe.
+dprintf(D_FULLDEBUG,"deleting job %d.%d (%x)\n",curr_job->procID.cluster,curr_job->procID.proc,(int)curr_job);
 		if ( curr_job->jobContact != NULL ) {
 			JobsByContact->remove( HashKey( curr_job->jobContact ) );
 		}
@@ -1224,6 +1228,7 @@ GridManager::updateSchedd()
 
 	}
 
+dprintf(D_FULLDEBUG,"leaving updateSchedd()\n");
 	return TRUE;
 }
 
@@ -1469,6 +1474,12 @@ GridManager::gramCallbackHandler( void *user_arg, char *job_contact,
 
 	dprintf( D_ALWAYS, "   job is %d.%d\n", this_job->procID.cluster,
 			 this_job->procID.proc );
+
+	// If we get a failed while waiting to commit a job, then it timed out
+	// waiting for our commit signal. Remove the pending commit.
+	if(state==GLOBUS_GRAM_CLIENT_JOB_STATE_FAILED){
+		this_->JobsToCommit.Delete(this_job);
+	}
 
 	this_job->callback( state, errorcode );
 
