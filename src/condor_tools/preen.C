@@ -72,17 +72,14 @@ void init_params();
 void check_spool_dir();
 void check_execute_dir();
 void check_log_dir();
-void bad_file( char *, char * );
-void good_file( char *, char * );
+void bad_file( const char *, const char *, Directory & );
+void good_file( const char *, const char * );
 void produce_output();
 BOOLEAN is_ckpt_file( const char *name );
 BOOLEAN is_v2_ckpt( const char *name );
 BOOLEAN is_v3_ckpt( const char *name );
 BOOLEAN cluster_exists( int );
 BOOLEAN proc_exists( int, int );
-BOOLEAN do_unlink( const char *path );
-BOOLEAN remove_directory( const char *name );
-int do_stat( const char *path, struct stat *buf );
 
 /*
   Tell folks how to use this program.
@@ -213,10 +210,9 @@ produce_output()
 void
 check_spool_dir()
 {
-	char	   		*f;
-	Directory  		dir(Spool);
+	const char  	*f;
+	Directory  		dir(Spool, PRIV_ROOT);
 	StringList 		well_known_list;
-	int				result;
 	Qmgr_connection *qmgr;
 
 	well_known_list.initializeFromString (ValidSpoolFiles);
@@ -241,7 +237,7 @@ check_spool_dir()
 		}
 
 			// must be bad
-		bad_file( Spool, f );
+		bad_file( Spool, f, dir );
 	}
 
 		// Clean up
@@ -397,11 +393,9 @@ proc_exists( int cluster, int proc )
 void
 check_execute_dir()
 {
-	char	*f;
-	Directory dir( Execute );
-	char	pathname[_POSIX_PATH_MAX];
+	const char	*f;
+	Directory dir( Execute, PRIV_ROOT );
 	int		age;
-	struct stat	buf;
 	State	s = get_machine_state();
 
 
@@ -414,7 +408,7 @@ check_execute_dir()
 		case owner_state:	
 		case unclaimed_state:
 		case matched_state:	
-			bad_file( Execute, f );		// directory should be empty
+			bad_file( Execute, f, dir );	// directory should be empty
 			continue;
 		case claimed_state:			// has condor job
 		case preempting_state:		// has condor job
@@ -429,14 +423,8 @@ check_execute_dir()
 		// state of the machine, so we fall back on some messier
 		// heruistics.
 
-			// stat the file
-		if( !do_stat(pathname,&buf) ) {
-			good_file( Execute, f ); // got rm'd while we were doing this - OK
-			continue;
-		}
-
 			// leave subdirectories alone
-		if( S_ISDIR(buf.st_mode) ) {
+		if( dir.IsDirectory() ) {
 			good_file( Execute, f );
 			continue;
 		}
@@ -448,9 +436,9 @@ check_execute_dir()
 			// In that case, we guess there is a problem if the file
 			// is over a day old.  
 
-		age = time(0) - buf.st_ctime;
+		age = time(0) - dir.GetCreateTime();
 		if( age > MaxCkptInterval + 24 * HOUR ) {
-			bad_file( Execute, f );
+			bad_file( Execute, f, dir );
 		} else {
 			good_file( Execute, f );
 		}
@@ -465,15 +453,15 @@ check_execute_dir()
 void
 check_log_dir()
 {
-	char	*f;
-	Directory dir(Log);
+	const char	*f;
+	Directory dir(Log, PRIV_ROOT);
 	StringList invalid;
 
 	invalid.initializeFromString (InvalidLogFiles);
 
 	while( f = dir.Next() ) {
 		if( invalid.contains(f) ) {
-			bad_file( Log, f );
+			bad_file( Log, f, dir );
 		} else {
 			good_file( Log, f );
 		}
@@ -490,8 +478,6 @@ SetSyscalls( int foo ) { return foo; }
 void
 init_params()
 {
-	char	*tmp;
-
 	Spool = param("SPOOL");
     if( Spool == NULL ) {
         EXCEPT( "SPOOL not specified in config file\n" );
@@ -528,113 +514,10 @@ init_params()
 
 
 /*
-  Unlink a file we want to get rid of.  If its a simple file, we do
-  it ourself.  If its a directory, we call remove_directory() to do
-  it.  The remove_directory() routine will call this routine recursively
-  if the directory is not emty.
-*/
-BOOLEAN
-do_unlink( const char *path )
-{
-	int		status;
-	struct stat	buf;
-
-		// stat the file
-	if( !do_stat(path,&buf) ) {
-		return TRUE; /* got rm'd while we were doing this */
-	}
-
-	if( S_ISDIR(buf.st_mode) ) {
-		return remove_directory( path );
-	}
-
-	status = unlink( path );
-	if( status < 0 && errno == EACCES ) {
-		priv_state priv;
-		priv = set_condor_priv(); // Try again as Condor
-		status = unlink( path );
-		set_priv(priv);
-	}
-
-	if( status == 0 || errno == ENOENT ) {
-		return TRUE;
-	} else {
-		return FALSE;
-	}
-}
-
-/*
-  We want to stat the given file. We are operating as root, but root
-  == nobody across most NFS file systems, so we may have to do it as
-  condor.  If we succeed, we return TRUE, and if the file has already
-  been removed we return FALSE.  If we cannot do it as either root
-  or condor, we bomb with an exception.
-*/
-int
-do_stat( const char *path, struct stat *buf )
-{
-	priv_state priv;
-
-		// try it as root
-	if( stat(path,buf) < 0 ) {
-		switch( errno ) {
-		  case ENOENT:	// got rm'd while we were doing this
-			return FALSE;
-		  case EACCES:	// permission denied, try as condor
-			priv = set_condor_priv();
-			if( stat(path,buf) < 0 ) {
-				EXCEPT( "stat(%s,0x%x)", path, &buf );
-			}
-			set_priv(priv);
-		}
-	}
-	return TRUE;
-}
-
-/*
-  Remove a directory and all its children.  We do this by traversing the
-  directory can calling do_unlink() on each file.  If the file turns
-  out to be a subdirectory, then do_unlink() will call this routine
-  recursively to remove it.  After the current directory is empty, we
-  can remove it.
-*/
-BOOLEAN
-remove_directory( const char *name )
-{
-	char		*f;
-	Directory	dir(name);
-	int			status;
-	char		pathname[ _POSIX_PATH_MAX ];
-
-		// Remove files and subdirectories
-	while( f = dir.Next() ) {
-		sprintf( pathname, "%s/%s", name, f );
-		if( !do_unlink(pathname) ) {
-			return FALSE;
-		}
-	}
-
-		// Remove now empty directory
-	status = rmdir( name );
-	if( status < 0 && errno == EACCES) {
-		priv_state priv;
-		priv = set_condor_priv();			// try again as Condor
-		status = rmdir(name);
-		set_priv(priv);
-	}
-
-	if( status == 0 || errno == ENOENT ) {
-		return TRUE;
-	} else {
-		return FALSE;
-	}
-}
-
-/*
   Produce output for a file that has been determined to be legitimate.
 */
 void
-good_file( char *dir, char *name )
+good_file( const char *dir, const char *name )
 {
 
 	if( VerboseFlag ) {
@@ -648,20 +531,20 @@ good_file( char *dir, char *name )
   arguments.
 */
 void
-bad_file( char *dir, char *name )
+bad_file( const char *dirpath, const char *name, Directory & dir )
 {
 	char	pathname [_POSIX_PATH_MAX];
 	char	buf[_POSIX_PATH_MAX + 512];
 
+
+	sprintf( pathname, "%s%c%s", dirpath, DIR_DELIM_CHAR, name );
+
 	if( VerboseFlag ) {
-		printf( "%s/%s - BAD\n", dir, name );
+		printf( "%s - BAD\n", pathname );
 	}
 
-
-	sprintf( pathname, "%s/%s", dir, name );
-
 	if( RmFlag ) {
-		if( do_unlink(pathname) ) {
+		if( dir.Remove_Current_File() ) {
 			sprintf( buf, "\"%s\" - Removed", pathname );
 		} else {
 			sprintf( buf, "\"%s\" - Can't Remove", pathname );
