@@ -38,7 +38,7 @@ void email_close(FILE *mailer);
 
 void email_asciifile_tail( FILE* mailer, char* filename, int lines );
 
-void email_corefile_tail( FILE* mailer );
+void email_corefile_tail( FILE* mailer, const char* subsystem_name );
 
 #if defined(__cplusplus)
 }

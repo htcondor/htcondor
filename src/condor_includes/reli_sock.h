@@ -116,7 +116,7 @@ public:
 	int isAuthenticated();
 	void unAuthenticate();
 	const char *getOwner();
-	void setOwner( char * );
+	void setOwner( const char * );
 	void setGenericAuthentication();
 
 	int isClient() { return is_client; };

@@ -39,7 +39,7 @@ typedef int (*scan_func)(ClassAd *ad);
 extern "C" {
 #endif
 
-int InitializeConnection(char * );
+int InitializeConnection(const char * );
 int NewCluster();
 int NewProc( int );
 int DestroyProc(int, int);

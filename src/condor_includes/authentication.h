@@ -77,7 +77,7 @@ public:
 	void unAuthenticate();
 
 	void setAuthAny();
-	int setOwner( char *owner );
+	int setOwner( const char *owner );
 	const char *getOwner();
 
 private:
