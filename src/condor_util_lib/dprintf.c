@@ -47,19 +47,19 @@
 #include "condor_uid.h"
 
 
-FILE *debug_lock();
-FILE *open_debug_file( char flags[] );
-void debug_unlock();
-void preserve_log_file();
+FILE *debug_lock(int debug_level);
+FILE *open_debug_file( int debug_level, char flags[] );
+void debug_unlock(int debug_level);
+void preserve_log_file(int debug_level);
 void dprintf_exit();
 
 extern int	errno;
 
 int		DebugFlags = D_ALWAYS;
 FILE	*DebugFP = stderr;
-int		MaxLog;
-char	*DebugFile = NULL;
-char	*DebugLock = NULL;
+int		MaxLog[D_NUMLEVELS] = { 0 };
+char	*DebugFile[D_NUMLEVELS] = { NULL };
+char	*DebugLock[D_NUMLEVELS] = { NULL };
 int		(*DebugId)();
 int		SetSyscalls(int mode);
 
@@ -74,10 +74,10 @@ static	int DprintfBroken = 0;
 static char _FileName_[] = __FILE__;
 
 char *DebugFlagNames[] = {
-	"D_ALWAYS", "D_TERMLOG", "D_SYSCALLS", "D_CKPT", "D_XDR", "D_MALLOC", 
-	"D_NOHEADER", "D_LOAD", "D_EXPR", "D_PROC", "D_JOB", "D_MACHINE",
-	"D_FULLDEBUG", "D_NFS", "D_UPDOWN", "D_AFS", "D_PREEMPT",
-	"D_PROTOCOL", "D_PRIV", "D_TAPENET", "D_DAEMONCORE", "D_COMMAND",
+	"D_ALWAYS", "D_SYSCALLS", "D_CKPT", "D_XDR", "D_MALLOC", "D_LOAD",
+	"D_EXPR", "D_PROC", "D_JOB", "D_MACHINE", "D_FULLDEBUG", "D_NFS",
+	"D_UPDOWN", "D_AFS", "D_PREEMPT", "D_PROTOCOL",	"D_PRIV",
+	"D_TAPENET", "D_DAEMONCORE", "D_COMMAND", "D_UNDEF20", "D_UNDEF21",
 	"D_UNDEF22", "D_UNDEF23", "D_UNDEF24", "D_UNDEF25", "D_UNDEF26",
 	"D_UNDEF27", "D_UNDEF28", "D_UNDEF29", "D_UNDEF30", "D_UNDEF31",
 };
@@ -134,6 +134,7 @@ dprintf(int flags, ...)
 	int saved_errno;
 	int	saved_flags;
 	priv_state	priv;
+	int debug_level;
 
 
 		/* If we hit some fatal error in dprintf, this flag is set.
@@ -176,31 +177,40 @@ dprintf(int flags, ...)
 
 #endif
 
+	fmt = va_arg(pvar, char *);
+
 	/* log files owned by condor system acct */
 		/* avoid priv macros so we can bypass priv logging */
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
-		/* Open and lock the log file */
-	(void)debug_lock();
+		/* print debug message to catch-all debug file plus files */
+		/* registered for other debug levels */
+	for (debug_level = 0; debug_level <= D_NUMLEVELS; debug_level++) {
+		if ((debug_level == 0) ||
+			(DebugFile[debug_level] && (flags&(1<<(debug_level-1))))) {
 
-		/* Print the message with the time and a nice identifier */
-	if( ((saved_flags|flags) & D_NOHEADER) == 0 ) {
-		(void)time(  (time_t *)&clock );
-		tm = localtime( (time_t *)&clock );
-		fprintf( DebugFP, "%d/%d %02d:%02d ", tm->tm_mon + 1, tm->tm_mday,
-									tm->tm_hour, tm->tm_min );
+				/* Open and lock the log file */
+			(void)debug_lock(debug_level);
 
-		if( DebugId ) {
-			(*DebugId)( DebugFP );
+			/* Print the message with the time and a nice identifier */
+			if( ((saved_flags|flags) & D_NOHEADER) == 0 ) {
+				(void)time(  (time_t *)&clock );
+				tm = localtime( (time_t *)&clock );
+				fprintf( DebugFP, "%d/%d %02d:%02d ", tm->tm_mon + 1,
+						 tm->tm_mday, tm->tm_hour, tm->tm_min );
+
+				if( DebugId ) {
+					(*DebugId)( DebugFP );
+				}
+			}
+
+			vfprintf( DebugFP, fmt, pvar );
+
+			/* Close and unlock the log file */
+			debug_unlock(debug_level);
+
 		}
 	}
-
-	fmt = va_arg(pvar, char *);
-
-	vfprintf( DebugFP, fmt, pvar );
-
-		/* Close and unlock the log file */
-	debug_unlock();
 
 		/* restore privileges */
 	_set_priv(priv, __FILE__, __LINE__, 0);
@@ -226,7 +236,7 @@ VA_END:
 }
 
 FILE *
-debug_lock()
+debug_lock(int debug_level)
 {
 	int			length;
 	priv_state	priv;
@@ -234,22 +244,26 @@ debug_lock()
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
 		/* Acquire the lock */
-	if( DebugLock ) {
+	if( DebugLock[debug_level] ) {
 #if defined(WIN32)
 		if( LockHandle == INVALID_HANDLE_VALUE ) {
-			// open file with exclusive access (no sharing) -- what happens when we fail to get the
-			// exclusive lock?
-			LockHandle = CreateFile(DebugLock, GENERIC_WRITE, 0, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+			/* open file with exclusive access (no sharing) */
+			/* what happens when we fail to get the exclusive lock? */
+			LockHandle = CreateFile(DebugLock[debug_level], GENERIC_WRITE,
+									0, 0, OPEN_ALWAYS,
+									FILE_ATTRIBUTE_NORMAL, 0);
 			if( LockHandle == INVALID_HANDLE_VALUE ) {
-				fprintf( DebugFP, "Can't open \"%s\", errno = %d\n", DebugLock, errno );
+				fprintf( DebugFP, "Can't open \"%s\", errno = %d\n",
+						 DebugLock[debug_level], errno );
 				dprintf_exit();
 			}
 		}
 #else
 		if( LockFd < 0 ) {
-			LockFd = open(DebugLock,O_CREAT|O_WRONLY,0660);
+			LockFd = open(DebugLock[debug_level],O_CREAT|O_WRONLY,0660);
 			if( LockFd < 0 ) {
-				fprintf( stderr, "Can't open \"%s\"\n", DebugLock );
+				fprintf( stderr, "Can't open \"%s\"\n",
+						 DebugLock[debug_level] );
 				dprintf_exit();
 
 			}
@@ -263,10 +277,10 @@ debug_lock()
 #endif
 	}
 
-	if( DebugFile ) {
+	if( DebugFile[debug_level] ) {
 		errno = 0;
 
-		DebugFP = open_debug_file("a");
+		DebugFP = open_debug_file(debug_level, "a");
 
 		if( DebugFP == NULL ) {
 #if !defined(WIN32)
@@ -284,9 +298,10 @@ debug_lock()
 		}
 
 			/* If it's too big, preserve it and start a new one */
-		if( MaxLog && length > MaxLog ) {
-			fprintf( DebugFP, "MaxLog = %d, length = %d\n", MaxLog, length );
-			preserve_log_file();
+		if( MaxLog[debug_level] && length > MaxLog[debug_level] ) {
+			fprintf( DebugFP, "MaxLog = %d, length = %d\n",
+					 MaxLog[debug_level], length );
+			preserve_log_file(debug_level);
 		}
 	}
 
@@ -296,7 +311,7 @@ debug_lock()
 }
 
 void
-debug_unlock()
+debug_unlock(int debug_level)
 {
 	priv_state priv;
 
@@ -304,23 +319,23 @@ debug_unlock()
 
 	(void)fflush( DebugFP );
 
-	if( DebugLock ) {
+	if( DebugLock[debug_level] ) {
 			/* Don't forget to unlock the file */
 #if defined(WIN32)
 		if( CloseHandle(LockHandle) == 0) {
 				fprintf(DebugFP, "Can't release lock on \"%s\", errno = %d\n",
-					DebugLock, GetLastError() );
+					DebugLock[debug_level], GetLastError() );
 		}
 #else
 		if( flock(LockFd,LOCK_UN) < 0 ) {
 			fprintf(DebugFP,"Can't release exclusive lock on \"%s\"\n",
-															DebugLock );
+					DebugLock[debug_level] );
 			dprintf_exit();
 		}
 #endif
 	}
 
-	if( DebugFile ) {
+	if( DebugFile[debug_level] ) {
 		(void)fclose( DebugFP );
 		DebugFP = NULL;
 	}
@@ -333,14 +348,14 @@ debug_unlock()
 ** Copy the log file to a backup, then truncate the current one.
 */
 void
-preserve_log_file()
+preserve_log_file(int debug_level)
 {
 	char		old[MAXPATHLEN + 4];
 	priv_state	priv;
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
-	(void)sprintf( old, "%s.old", DebugFile );
+	(void)sprintf( old, "%s.old", DebugFile[debug_level] );
 	fprintf( DebugFP, "Saving log file to \"%s\"\n", old );
 	(void)fflush( DebugFP );
 
@@ -351,7 +366,7 @@ preserve_log_file()
 #if defined(WIN32)
 
 	/* use rename on WIN32, since link isn't available */
-	if (rename(DebugFile, old) < 0)
+	if (rename(DebugFile[debug_level], old) < 0)
 		dprintf_exit();
 
 #else
@@ -363,10 +378,10 @@ preserve_log_file()
 	** it for all platforms as there is no need for atomicity.  --RR
     */
 
-	if (link (DebugFile, old) < 0)
+	if (link (DebugFile[debug_level], old) < 0)
 		dprintf_exit();
 
-	if (unlink (DebugFile) < 0)
+	if (unlink (DebugFile[debug_level]) < 0)
 		dprintf_exit();
 
 
@@ -375,20 +390,20 @@ preserve_log_file()
 	/* double check the result of the rename */
 	{
 		struct stat buf;
-		if (stat (DebugFile, &buf) >= 0)
+		if (stat (DebugFile[debug_level], &buf) >= 0)
 		{
 			/* Debug file exists! */
 			fprintf (DebugFP, "Double check on rename failed!\n");
-			fprintf (DebugFP, "%s still exists\n", DebugFile);
+			fprintf (DebugFP, "%s still exists\n", DebugFile[debug_level]);
 			dprintf_exit();
 		}
 	}
 
-	DebugFP = open_debug_file("a");
+	DebugFP = open_debug_file(debug_level, "a");
 
 	if (DebugFP == NULL) dprintf_exit();
 
-	fprintf (DebugFP, "Now in new log file %s\n", DebugFile);
+	fprintf (DebugFP, "Now in new log file %s\n", DebugFile[debug_level]);
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
 }
@@ -407,8 +422,8 @@ char	*file;
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
 	(void)close( 0 );
-	if( DebugFile ) {
-		DebugFP = fopen(DebugFile, "a");
+	if( DebugFile[0] ) {
+		DebugFP = fopen(DebugFile[0], "a");
 	}
 
 	if( DebugFP == NULL ) {
@@ -457,19 +472,20 @@ sigset(){}
 #endif
 
 FILE *
-open_debug_file(char flags[])
+open_debug_file(int debug_level, char flags[])
 {
 	FILE		*fp;
 	priv_state	priv;
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
-	/* Note: The log file shouldn't need to be group writeable anymore, since PRIV_CONDOR changes euid now. */
+	/* Note: The log file shouldn't need to be group writeable anymore,
+	   since PRIV_CONDOR changes euid now. */
 
 #if !defined(WIN32)
 	errno = 0;
 #endif
-	if( (fp=fopen(DebugFile,flags)) == NULL ) {
+	if( (fp=fopen(DebugFile[debug_level],flags)) == NULL ) {
 #if !defined(WIN32)
 		if( errno == EMFILE ) {
 			fd_panic( __LINE__, __FILE__ );
@@ -478,7 +494,7 @@ open_debug_file(char flags[])
 		if (DebugFP == 0) {
 			DebugFP = stderr;
 		}
-		fprintf( DebugFP, "Can't open \"%s\"\n", DebugFile );
+		fprintf( DebugFP, "Can't open \"%s\"\n", DebugFile[debug_level] );
 #if !defined(WIN32)
 		fprintf( DebugFP, "errno = %d, euid = %d, egid = %d\n",
 				 errno, geteuid(), getegid() );
@@ -500,7 +516,7 @@ dprintf_exit()
 	DprintfBroken = 1;
 
 		/* Don't forget to unlock the log file! */
-	debug_unlock();
+	debug_unlock(0);
 
 		/* If _EXCEPT_Cleanup is set for cleaning up during EXCEPT(),
 		   we call that here, as well. */

@@ -39,9 +39,15 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 int		Termlog;
 
+extern int		DebugFlags;
+extern FILE		*DebugFP;
+extern int		MaxLog[D_NUMLEVELS];
+extern char		*DebugFile[D_NUMLEVELS];
+extern char		*DebugLock[D_NUMLEVELS];
+extern char		*DebugFlagNames[];
+
 void set_debug_flags( char *strflags );
-void debug_unlock();
-FILE *open_debug_file( char flags[] );
+FILE *open_debug_file( int debug_level, char flags[] );
 
 void
 dprintf_config( subsys, logfd )
@@ -50,8 +56,9 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 {
 	char pname[ BUFSIZ ];
 	char *pval, *param();
-	static int did_truncate = 0;
-	int want_truncate = 0;
+	static int first_time = 1;
+	int want_truncate;
+	int debug_level;
 
 	/*  
 	**  We want to initialize this here so if we reconfig and the
@@ -76,82 +83,84 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 	**	of the log file, maximum log size, and the name of the
 	**	lock file (if it is specified).
 	*/
-	if( !( DebugFlags & D_TERMLOG) ) {
-		(void)sprintf(pname, "%s_LOG", subsys);
-		if( DebugFile ) {
-			free( DebugFile );
-		}
-		DebugFile = param(pname);
-
-		if( DebugFile == NULL ) {
-			EXCEPT("No '%s' parameter specified.", pname);
-		}
-
-		(void)sprintf(pname, "TRUNC_%s_LOG_ON_OPEN", subsys);
-		pval = param(pname);
-		if( pval ) {
-			if( *pval == 't' || *pval == 'T' ) {
-				want_truncate = 1;
-			} 
-			free(pval);
-		}
-		if( !did_truncate && want_truncate ) {
-			DebugFP = open_debug_file("w");
-			did_truncate = 1;
-		} else {
-			DebugFP = open_debug_file("a");
-		}
-
-		if( DebugFP == NULL ) {
-			EXCEPT("Cannot open log file '%s'", DebugFile);
-		}
-
-		(void)fclose( DebugFP );
-		DebugFP = (FILE *)0;
-
-#ifdef notdef
-		/*
-		**	We don't need these anymore...
-		*/
-		(void) close(0);
-		(void) close(1);
-		(void) close(2);
-#endif notdef
-
-		(void)sprintf(pname, "MAX_%s_LOG", subsys);
-		pval = param(pname);
-		if( pval != NULL ) {
-			MaxLog = atoi( pval );
-			free(pval);
-		}
-
-		if( MaxLog == 0 ) {
-			MaxLog = 65536;
-		}
-
-		(void)sprintf(pname, "%s_LOCK", subsys);
-		if (DebugLock) {
-			free(DebugLock);
-		}
-		DebugLock = param(pname);
-	} else {
-		if( fileno(stderr) != logfd ) {
-			if( dup2(fileno(stderr), logfd) < 0 ) {
-				perror("Can't get error channel:");
-				exit( 1 );
+	if( !( Termlog) ) {
+		for (debug_level = 0; debug_level <= D_NUMLEVELS; debug_level++) {
+			want_truncate = 0;
+			if (debug_level == 0) {
+				/*
+				** the level 0 file gets all debug messages; thus, the
+				** offset into DebugFlagNames is off by one, since the
+				** first level-specific file goes into the other arrays at
+				** index 1
+				*/
+				(void)sprintf(pname, "%s_LOG", subsys);
+			} else {
+				(void)sprintf(pname, "%s_%s_LOG", subsys,
+							  DebugFlagNames[debug_level-1]+2);
 			}
+			if( DebugFile[debug_level] ) {
+				free( DebugFile[debug_level] );
+			}
+			DebugFile[debug_level] = param(pname);
 
-#if defined(HPUX)
-			stderr->__fileL = logfd & 0xf0;	/* Low byte of fd */
-			stderr->__fileH = logfd & 0x0f;	/* High byte of fd */
-#elif defined(ULTRIX43) || defined(IRIX331) || defined(Solaris251) || defined(WIN32)
-			((stderr)->_file) = logfd;
-#elif defined(LINUX)
-			stderr->_fileno = logfd;
-#else
-			fileno(stderr) = logfd;
-#endif
+			if( debug_level == 0 && DebugFile[0] == NULL ) {
+				EXCEPT("No '%s' parameter specified.", pname);
+			} else if ( DebugFile[debug_level] != NULL ) {
+
+				if (debug_level == 0) {
+					(void)sprintf(pname, "TRUNC_%s_LOG_ON_OPEN", subsys);
+				} else {
+					(void)sprintf(pname, "TRUNC_%s_%s_LOG_ON_OPEN", subsys,
+								  DebugFlagNames[debug_level-1]+2);
+				}
+				pval = param(pname);
+				if( pval ) {
+					if( *pval == 't' || *pval == 'T' ) {
+						want_truncate = 1;
+					} 
+					free(pval);
+				}
+				if( first_time && want_truncate ) {
+					DebugFP = open_debug_file(debug_level, "w");
+				} else {
+					DebugFP = open_debug_file(debug_level, "a");
+				}
+
+				if( DebugFP == NULL ) {
+					EXCEPT("Cannot open log file '%s'",
+						   DebugFile[debug_level]);
+				}
+
+				(void)fclose( DebugFP );
+				DebugFP = (FILE *)0;
+
+				if (debug_level == 0) {
+					(void)sprintf(pname, "MAX_%s_LOG", subsys);
+				} else {
+					(void)sprintf(pname, "MAX_%s_%s_LOG", subsys,
+								  DebugFlagNames[debug_level-1]+2);
+				}
+				pval = param(pname);
+				if( pval != NULL ) {
+					MaxLog[debug_level] = atoi( pval );
+					free(pval);
+				} else {
+					MaxLog[debug_level] = 65536;
+				}
+
+				if (debug_level == 0) {
+					(void)sprintf(pname, "%s_LOCK", subsys);
+				} else {
+					(void)sprintf(pname, "%s_%s_LOCK", subsys,
+								  DebugFlagNames[debug_level-1]+2);
+				}
+				if (DebugLock[debug_level]) {
+					free(DebugLock[debug_level]);
+				}
+				DebugLock[debug_level] = param(pname);
+			}
 		}
+	} else {
 
 #if !defined(WIN32)
 		setlinebuf( stderr );
@@ -160,6 +169,8 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 		(void)fflush( stderr );	/* Don't know why we need this, but if not here
 							   the first couple dprintf don't come out right */
 	}
+
+	first_time = 0;
 }
 
 void
@@ -184,7 +195,7 @@ set_debug_flags( char *strflags )
 		bit = 0;
 		if( stricmp(flag, "D_ALL") == 0 ) {
 			bit = D_ALL;
-		} else for( i = 0; i < D_MAXFLAGS; i++ ) {
+		} else for( i = 0; i < D_NUMLEVELS; i++ ) {
 			if( stricmp(flag, DebugFlagNames[i]) == 0 ) {
 				bit = (1 << i);
 				break;
@@ -196,8 +207,5 @@ set_debug_flags( char *strflags )
 		} else {
 			DebugFlags |= bit;
 		}
-	}
-	if( Termlog ) {
-		DebugFlags |= D_TERMLOG;
 	}
 }
