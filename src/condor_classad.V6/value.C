@@ -356,5 +356,88 @@ ostream& operator<<(ostream &stream, Value &value)
 	return stream;
 }
 
+bool convertValueToRealValue(const Value value, Value &realValue)
+{
+    bool                could_convert;
+	string	            buf;
+	char	            *end;
+	int		            ivalue;
+	time_t	            rtvalue;
+	abstime_t           atvalue;
+	bool	            bvalue;
+	double	            rvalue;
+	Value::NumberFactor nf;
+
+	switch(value.GetType()) {
+		case Value::UNDEFINED_VALUE:
+			realValue.SetUndefinedValue();
+			could_convert = false;
+            break;
+
+		case Value::ERROR_VALUE:
+		case Value::CLASSAD_VALUE:
+		case Value::LIST_VALUE:
+			realValue.SetErrorValue();
+			could_convert = false;
+            break;
+
+		case Value::STRING_VALUE:
+			value.IsStringValue(buf);
+			rvalue = strtod(buf.c_str(), (char**) &end);
+			if (end == buf && rvalue == 0.0) {
+				// strtod() returned an error
+				realValue.SetErrorValue();
+				could_convert = false;
+			}
+			switch (toupper( *end )) {
+				case 'B': nf = Value::B_FACTOR; break;
+				case 'K': nf = Value::K_FACTOR; break;
+				case 'M': nf = Value::M_FACTOR; break;
+				case 'G': nf = Value::G_FACTOR; break;
+				case 'T': nf = Value::T_FACTOR; break;
+				case '\0': nf = Value::NO_FACTOR; break;
+				default:
+					realValue.SetErrorValue();
+					could_convert = false;
+                    break;
+			}
+            could_convert = true;
+			realValue.SetRealValue(rvalue*Value::ScaleFactor[nf]);
+            break;
+
+		case Value::BOOLEAN_VALUE:
+			value.IsBooleanValue(bvalue);
+			realValue.SetRealValue(bvalue ? 1.0 : 0.0);
+			could_convert = true;
+            break;
+
+		case Value::INTEGER_VALUE:
+			value.IsIntegerValue(ivalue);
+			realValue.SetRealValue((double)ivalue);
+			could_convert = true;
+            break;
+
+		case Value::REAL_VALUE:
+			realValue.CopyFrom(value);
+			could_convert = true;
+            break;
+
+		case Value::ABSOLUTE_TIME_VALUE:
+			value.IsAbsoluteTimeValue(atvalue);
+			realValue.SetRealValue(atvalue.secs);
+			could_convert = true;
+            break;
+
+		case Value::RELATIVE_TIME_VALUE:
+			value.IsRelativeTimeValue(rtvalue);
+			realValue.SetRealValue(rtvalue);
+			could_convert = true;
+            break;
+
+		default:
+			EXCEPT( "Should not reach here" );
+    }
+    return could_convert;
+}
 
 END_NAMESPACE // classad

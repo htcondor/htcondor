@@ -293,6 +293,7 @@ class Value
 		std::string			strValue;		// has ctor/dtor cannot be in the union
 };
 
+bool convertValueToRealValue(const Value value, Value &realValue);
 
 // implementations of the inlined functions
 inline bool Value::
