@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
+#include "util_lib_proto.h"
 #include "basename.h"
 #include "my_hostname.h"
 #include "condor_version.h"
@@ -306,7 +307,7 @@ set_dynamic_dir( const char* param_name, const char* append_str )
 	char* val;
 	char newdir[_POSIX_PATH_MAX];
 
-	val = param( param_name );
+	val = param( (char *)param_name );
 	if( ! val ) {
 			// nothing to do
 		return;
@@ -321,7 +322,7 @@ set_dynamic_dir( const char* param_name, const char* append_str )
 
 		// Now, set our own config hashtable entry so we start using
 		// this new directory.
-	config_insert( param_name, newdir );
+	config_insert( (char *) param_name, newdir );
 
 		// Finally, insert the _condor_<param_name> environment
 		// variable, so our children get the right configuration.
@@ -608,8 +609,6 @@ unix_sigusr1(int)
 int
 handle_dc_sighup( Service*, int )
 {
-	char *ptmp;
-
 	dprintf( D_ALWAYS, "Got SIGHUP.  Re-reading config files.\n" );
 
 		// Actually re-read the files...  Added by Derek Wright on
