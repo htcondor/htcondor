@@ -1138,7 +1138,8 @@ static int IsSchedulerUniverse(shadow_rec* srec);
 
 extern "C" {
 void
-abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
+abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
+				  bool notify )
 {
 	shadow_rec *srec;
 	int mode;
@@ -1159,8 +1160,8 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
 	// are removing the job).
 
     dprintf( D_FULLDEBUG, 
-			 "abort_job_myself: %d.%d log_hold:%s; notify:%s\n", 
-			 job_id.cluster, job_id.proc, 
+			 "abort_job_myself: %d.%d action:%s log_hold:%s notify:%s\n", 
+			 job_id.cluster, job_id.proc, getJobActionString(action),
 			 log_hold ? "true" : "false",
 			 notify ? "true" : "false" );
 
@@ -1276,17 +1277,36 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
                 dprintf(D_FULLDEBUG, "Found shadow record for job %d.%d\n",
                         job_id.cluster, job_id.proc);
             }
-        
-			if ( daemonCore->Send_Signal(srec->pid,SIGUSR1)==FALSE ) {
-				dprintf(D_ALWAYS,
-						"Error in sending SIGUSR1 to pid %d errno=%d\n",
-						srec->pid, errno);            
+			int shadow_sig;
+			const char* shadow_sig_str;
+			switch( action ) {
+			case JA_HOLD_JOBS:
+					// for now, use the same as remove
+			case JA_REMOVE_JOBS:
+				shadow_sig = SIGUSR1;
+				shadow_sig_str = "SIGUSR1";
+				break;
+			case JA_VACATE_JOBS:
+				shadow_sig = SIGTERM;
+				shadow_sig_str = "SIGTERM";
+				break;
+			case JA_VACATE_FAST_JOBS:
+				shadow_sig = SIGQUIT;
+				shadow_sig_str = "SIGQUIT";
+				break;
+			default:
+				EXCEPT( "unknown action (%d %s) in abort_job_myself()",
+						action, getJobActionString(action) );
+			}
+			if( ! daemonCore->Send_Signal(srec->pid,shadow_sig) ) {
+				dprintf( D_ALWAYS,
+						 "Error in sending %s to pid %d errno=%d (%s)\n",
+						 shadow_sig_str, srec->pid, errno, strerror(errno) );
 			} else {
-				dprintf(D_FULLDEBUG, "Sent SIGUSR1 to Shadow Pid %d\n",
-						srec->pid);
+				dprintf( D_FULLDEBUG, "Sent %s to Shadow Pid %d\n",
+						 shadow_sig_str, srec->pid );
 				srec->preempted = TRUE;
 			}
-
             
         } else {  // Scheduler universe job
             
@@ -1763,7 +1783,7 @@ Scheduler::abort_job(int, Stream* s)
 					nToRemove);
 				return FALSE;
 			}
-			abort_job_myself(job_id, false, true );
+			abort_job_myself(job_id, JA_REMOVE_JOBS, false, true );
 			nToRemove--;
 		}
 		s->end_of_message();
@@ -1801,7 +1821,7 @@ Scheduler::abort_job(int, Stream* s)
 			if ( (ad->LookupInteger(ATTR_CLUSTER_ID,job_id.cluster) == 1) &&
 				 (ad->LookupInteger(ATTR_PROC_ID,job_id.proc) == 1) ) {
 
-				 abort_job_myself(job_id, false, true );
+				 abort_job_myself(job_id, JA_REMOVE_JOBS, false, true );
 
 			}
 			FreeJobAd(ad);
@@ -2139,7 +2159,8 @@ int
 Scheduler::actOnJobs(int, Stream* s)
 {
 	ClassAd command_ad;
-	int action = -1;
+	int action_num = -1;
+	JobAction action = JA_ERROR;
 	int reply, i;
 	int num_matches = 0;
 	char status_str[16];
@@ -2148,6 +2169,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	const char *reason_attr_name = NULL;
 	ReliSock* rsock = (ReliSock*)s;
 	bool notify = true;
+	bool needs_transaction = true;
 	action_result_type_t result_type = AR_TOTALS;
 
 		// Setup array to hold ids of the jobs we're acting on.
@@ -2202,7 +2224,8 @@ Scheduler::actOnJobs(int, Stream* s)
 		   Find out what they want us to do.  This classad should
 		   contain:
 		   ATTR_JOB_ACTION - either JA_HOLD_JOBS, JA_RELEASE_JOBS,
-		                     JA_REMOVE_JOBS, or JA_REMOVE_X_JOBS
+		                     JA_REMOVE_JOBS, JA_REMOVE_X_JOBS, 
+							 JA_VACATE_JOBS, or JA_VACATE_FAST_JOBS
 		   ATTR_ACTION_RESULT_TYPE - either AR_TOTALS or AR_LONG
 		   and one of:
 		   ATTR_ACTION_CONSTRAINT - a string with a ClassAd constraint 
@@ -2215,13 +2238,15 @@ Scheduler::actOnJobs(int, Stream* s)
 		               ATTR_HOLD_REASON
 
 		*/
-	if( ! command_ad.LookupInteger(ATTR_JOB_ACTION, action) ) {
+	if( ! command_ad.LookupInteger(ATTR_JOB_ACTION, action_num) ) {
 		dprintf( D_ALWAYS, 
 				 "actOnJobs(): ClassAd does not contain %s, aborting\n", 
 				 ATTR_JOB_ACTION );
 		refuse( s );
 		return FALSE;
 	}
+	action = (JobAction)action_num;
+
 		// Make sure we understand the action they requested
 	switch( action ) {
 	case JA_HOLD_JOBS:
@@ -2240,16 +2265,25 @@ Scheduler::actOnJobs(int, Stream* s)
 		sprintf( status_str, "%d", REMOVED );
 		reason_attr_name = ATTR_REMOVE_REASON;
 		break;
+	case JA_VACATE_JOBS:
+	case JA_VACATE_FAST_JOBS:
+			// no status_str needed.  also, we're not touching
+			// anything in the job queue, so we don't need a
+			// transaction, either...
+		needs_transaction = false;
+		break;
 	default:
 		dprintf( D_ALWAYS, "actOnJobs(): ClassAd contains invalid "
-				 "%s (%d), aborting\n", ATTR_JOB_ACTION, action );
+				 "%s (%d), aborting\n", ATTR_JOB_ACTION, action_num );
 		refuse( s );
 		return FALSE;
 	}
 		// Grab the reason string if the command ad gave it to us
 	char *tmp = NULL;
 	const char *owner;
-	command_ad.LookupString( reason_attr_name, &tmp );
+	if( reason_attr_name ) {
+		command_ad.LookupString( reason_attr_name, &tmp );
+	}
 	if( tmp ) {
 			// patch up the reason they gave us to include who did
 			// it. 
@@ -2321,6 +2355,14 @@ Scheduler::actOnJobs(int, Stream* s)
 				// Only release held jobs
 			sprintf( buf, "(%s==%d) && (", ATTR_JOB_STATUS, HELD );
 			break;
+		case JA_VACATE_JOBS:
+		case JA_VACATE_FAST_JOBS:
+				// Only vacate running jobs
+			sprintf( buf, "(%s==%d) && (", ATTR_JOB_STATUS, RUNNING );
+			break;
+		default:
+			EXCEPT( "impossible: unknown action (%d) in actOnJobs() after "
+					"it was already recognized", action_num );
 		}
 		int size = strlen(buf) + strlen(tmp) + 3;
 		constraint = (char*) malloc( size * sizeof(char) );
@@ -2365,7 +2407,9 @@ Scheduler::actOnJobs(int, Stream* s)
 	setQSock( rsock );
 
 		// begin a transaction for qmgmt operations
-	BeginTransaction();
+	if( needs_transaction ) { 
+		BeginTransaction();
+	}
 
 		// process the jobs to set status (and optionally, reason) 
 	if( constraint ) {
@@ -2380,6 +2424,27 @@ Scheduler::actOnJobs(int, Stream* s)
 			if(	ad->LookupInteger(ATTR_CLUSTER_ID,tmp_id.cluster) &&
 				ad->LookupInteger(ATTR_PROC_ID,tmp_id.proc) ) 
 			{
+				if( action == JA_VACATE_JOBS || 
+					action == JA_VACATE_FAST_JOBS ) 
+				{
+						// vacate is a special case, since we're not
+						// trying to modify the job in the queue at
+						// all, so we just need to make sure we're
+						// authorized to vacate this job, and if so,
+						// record that we found this job_id and we're
+						// done.
+					if( !OwnerCheck(ad, rsock->getOwner()) ) {
+						results.record( tmp_id, AR_PERMISSION_DENIED );
+						ad = GetNextJobByConstraint( constraint, 0 );
+						continue;
+					}
+					results.record( tmp_id, AR_SUCCESS );
+					jobs[num_matches] = tmp_id;
+					num_matches++;
+					ad = GetNextJobByConstraint( constraint, 0 );
+					continue;
+				}
+
 				if( action == JA_RELEASE_JOBS ) {
 					int on_release_status = IDLE;
 					GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
@@ -2432,6 +2497,13 @@ Scheduler::actOnJobs(int, Stream* s)
 				continue;
 			}
 			switch( action ) {
+			case JA_VACATE_JOBS:
+			case JA_VACATE_FAST_JOBS:
+				if( status != RUNNING ) {
+					results.record( tmp_id, AR_BAD_STATUS );
+					continue;
+				}
+				break;
 			case JA_RELEASE_JOBS:
 				if( status != HELD ) {
 					results.record( tmp_id, AR_BAD_STATUS );
@@ -2471,9 +2543,34 @@ Scheduler::actOnJobs(int, Stream* s)
 					continue;
 				}
 				break;
-			} 
+			default:
+				EXCEPT( "impossible: unknown action (%d) in actOnJobs() "
+						"after it was already recognized", action_num );
+			}
 
 				// Ok, we're happy, do the deed.
+			if( action == JA_VACATE_JOBS || action == JA_VACATE_FAST_JOBS ) {
+					// vacate is a special case, since we're not
+					// trying to modify the job in the queue at
+					// all, so we just need to make sure we're
+					// authorized to vacate this job, and if so,
+					// record that we found this job_id and we're
+					// done.
+				ad = GetJobAd( tmp_id.cluster, tmp_id.proc, false );
+				if( ! ad ) {
+					EXCEPT( "impossible: GetJobAd(%d.%d) returned false "
+							"yet GetAttributeInt(%s) returned success",
+							tmp_id.cluster, tmp_id.proc, ATTR_JOB_STATUS );
+				}
+				if( !OwnerCheck(ad, rsock->getOwner()) ) {
+					results.record( tmp_id, AR_PERMISSION_DENIED );
+					continue;
+				}
+				results.record( tmp_id, AR_SUCCESS );
+				jobs[num_matches] = tmp_id;
+				num_matches++;
+				continue;
+			}
 			if( SetAttribute(tmp_id.cluster, tmp_id.proc,
 							 ATTR_JOB_STATUS, status_str) < 0 ) {
 				results.record( tmp_id, AR_PERMISSION_DENIED );
@@ -2520,7 +2617,9 @@ Scheduler::actOnJobs(int, Stream* s)
 			// abort our transaction.
 		dprintf( D_ALWAYS, 
 				 "actOnJobs: couldn't send results to client: aborting\n" );
-		AbortTransaction();
+		if( needs_transaction ) {
+			AbortTransaction();
+		}
 		unsetQSock();
 		return FALSE;
 	}
@@ -2529,7 +2628,9 @@ Scheduler::actOnJobs(int, Stream* s)
 			// We didn't do anything, so we want to bail out now...
 		dprintf( D_FULLDEBUG, 
 				 "actOnJobs: didn't do any work, aborting\n" );
-		AbortTransaction();
+		if( needs_transaction ) {
+			AbortTransaction();
+		}
 		unsetQSock();
 		return FALSE;
 	}
@@ -2540,12 +2641,16 @@ Scheduler::actOnJobs(int, Stream* s)
 	if( ! (rsock->code(reply) && rsock->eom() && reply == OK) ) {
 			// we couldn't get the reply, or they told us to bail
 		dprintf( D_ALWAYS, "actOnJobs: client not responding: aborting\n" );
-		AbortTransaction();
+		if( needs_transaction ) {
+			AbortTransaction();
+		}
 		unsetQSock();
 		return FALSE;
 	}
 
-	CommitTransaction();
+	if( needs_transaction ) {
+		CommitTransaction();
+	}
 		
 	unsetQSock();
 
@@ -2559,18 +2664,26 @@ Scheduler::actOnJobs(int, Stream* s)
 		// Now that we know the events are logged and commited to
 		// the queue, we can do the final actions for these jobs,
 		// like killing shadows if needed...
-	if( action == JA_HOLD_JOBS || action == JA_REMOVE_JOBS ) {
+	switch( action ) {
+	case JA_HOLD_JOBS:
+	case JA_REMOVE_JOBS:
+	case JA_VACATE_JOBS:
+	case JA_VACATE_FAST_JOBS:
 		for( i=0; i<num_matches; i++ ) {
 			if( i % 10 == 0 ) {
 				daemonCore->ServiceCommandSocket();
 			}
-			abort_job_myself( jobs[i], true, notify );
+			abort_job_myself( jobs[i], action, true, notify );
 		}
-	} else if( action == JA_RELEASE_JOBS ) {
+		break;
+
+	case JA_RELEASE_JOBS:
 		for( i=0; i<num_matches; i++ ) {
 			WriteReleaseToUserLog( jobs[i] );		
 		}
-	} else if( action == JA_REMOVE_X_JOBS ) {
+		break;
+
+	case JA_REMOVE_X_JOBS:
 		for( i=0; i<num_matches; i++ ) {		
 			if( !scheduler.WriteAbortToUserLog( jobs[i] ) ) {
 				dprintf( D_ALWAYS, 
@@ -2578,6 +2691,12 @@ Scheduler::actOnJobs(int, Stream* s)
 			}
 			DestroyProc( jobs[i].cluster, jobs[i].proc );
 		}
+		break;
+
+	default:
+		EXCEPT( "impossible: unknown action (%d) at the end of actOnJobs()",
+				(int)action );
+		break;
 	}
 	return TRUE;
 }
@@ -7828,7 +7947,7 @@ abortJobRaw( ClassAd *jobAd, int cluster, int proc, const char *reason )
 	}
 
 	// Abort the job now
-	abort_job_myself( job_id, true, true );
+	abort_job_myself( job_id, JA_REMOVE_JOBS, true, true );
 	dprintf( D_ALWAYS, "Job %d.%d aborted: %s\n", cluster, proc, reason );
 
 	return true;
@@ -7933,7 +8052,7 @@ holdJobRaw( int cluster, int proc, const char* reason,
 	dprintf( D_ALWAYS, "Job %d.%d put on hold: %s\n", cluster, proc,
 			 reason );
 
-	abort_job_myself( tmp_id, true, notify_shadow );
+	abort_job_myself( tmp_id, JA_HOLD_JOBS, true, notify_shadow );
 
 		// finally, email anyone our caller wants us to email.
 	if( email_user || email_admin ) {
