@@ -384,7 +384,7 @@ UnparseAux( string &buffer, string &fnName, vector<ExprTree*>& args )
 	buffer += fnName + "(";
 	for( itr=args.begin( ); itr!=args.end( ); itr++ ) {
 		Unparse( buffer, *itr );
-		if( itr != args.end( ) ) buffer += ',';
+		if( itr+1 != args.end( ) ) buffer += ',';
 	}
 	buffer += ")";
 }
