@@ -27,6 +27,7 @@
 #include "condor_string.h"
 #include "condor_config.h"
 #include "condor_uid.h"
+#include "condor_file_info.h"
 #include "name_tab.h"
 #include "proto.h"
 #include "condor_io.h"
@@ -1016,15 +1017,16 @@ open_std_file( int which )
 {
 	char	name[ _POSIX_PATH_MAX ];
 	char	buf[ _POSIX_PATH_MAX + 50 ];
-	int	answer;
+	int		pipe_fd;
+	int		answer;
+	int		status;
 
-	answer = REMOTE_syscall( CONDOR_get_std_file_info, which, name );
-	if( answer < 0 ) {
-		EXCEPT("Couldn't get info about standard files!");
-	}
-
-	switch( which ) {
-		case 0:
+	status =  REMOTE_syscall( CONDOR_std_file_info, which, name, &pipe_fd );
+	if( status == IS_PRE_OPEN ) {
+		EXCEPT( "Don't know how to deal with pipelined VANILLA jobs" );
+	} else {
+		switch( which ) {			/* it's an ordinary file */
+		  case 0:
 			answer = open( name, O_RDONLY, 0 );
 			break;
 		  case 1:
@@ -1036,8 +1038,8 @@ open_std_file( int which )
 				answer = open( name, O_WRONLY, 0 );
 			}
 			break;
+		}
 	}
-
 	if( answer < 0 ) {
 		sprintf( buf, "Can't open \"%s\" - %s", name, strerror(errno) );
 		REMOTE_syscall(CONDOR_report_error, buf );
