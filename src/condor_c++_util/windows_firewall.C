@@ -185,7 +185,7 @@ WindowsFirewallHelper::addTrusted( const char *app_path ) {
         hr = fwApp->put_Name(app_basename_bstr);
         if (FAILED(hr))
         {
-            printf("put_Name failed: 0x%08lx\n", hr);
+            dprintf(D_ALWAYS, "WinFirewall: put_Name failed: 0x%08lx\n", hr);
             goto error;
         }
 
@@ -193,11 +193,14 @@ WindowsFirewallHelper::addTrusted( const char *app_path ) {
         hr = fwApps->Add(fwApp);
         if (FAILED(hr))
         {
-            printf("Add failed: 0x%08lx\n", hr);
+           dprintf(D_ALWAYS, "WinFirewall: Add failed: 0x%08lx\n", hr);
             goto error;
         }
 
-        dprintf(D_ALWAYS, "Authorized application %s is now enabled in the firewall.\n",
+		// it seems like we should always inform users somehow that we're 
+		// doing this.
+        dprintf(D_ALWAYS, "Authorized application %s is now enabled in the"
+			   " firewall.\n",
             app_path );
 
 error:
@@ -305,7 +308,8 @@ WindowsFirewallHelper::removeByBasename( const char *name ) {
 		bn = basename(tmp);
 
 		if ( 0 == stricmp(bn, name) ) {
-			printf("%s is the same basename as %s.\n", tmp, name);
+			
+			// basenames match, so remove it from the list.
 			
 			result = removeTrusted(tmp);
 		}
@@ -346,7 +350,8 @@ WindowsFirewallHelper::removeTrusted( const char *app_path ) {
 
 	} else if (FAILED(hr)) {
 
-        dprintf(D_ALWAYS, "WinFirewall: remove trusted app failed: 0x%08lx\n", hr);
+        dprintf(D_ALWAYS, "WinFirewall: remove trusted app failed: 0x%08lx\n",
+			hr);
 		result = false;
 	}
         
