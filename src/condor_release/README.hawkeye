@@ -106,6 +106,25 @@ options - Several options are currently defined:
   next run will start when the current run dies.
 
 
+The modules's command-line arguments, environment, and CWD can also be
+set via the following config parameters:
+
+  Hawkeye_<jobname>_ARGS=<job argv>
+    The module's "logical name" is _always_ assigned to ARGV[1], and
+    these parameters will be appended to the ARGV array.
+
+  Hawkeye_<jobname>_ENV=<job environment>
+    This is used to specify environmennt variables passed to the
+    module.  If a specified variable is already in environment, this
+    will override it.  For example:
+    Hawkeye_<jobname>_ENV=var1=string1:var2=string2 This will add the
+    "var1" and "var2" variables to the module's environment.
+
+  Hawkeye_<jobname>_CWD=<job CWD>
+    This is used to set the initial working directory of the module.
+    By default (if you don't specifiy this), the working directory is
+    the same as that of the startd.
+
 Set the HAWKEYE_CONFIG environment variable to point at the config:
  $ export HAWKEYE_CONFIG=/home/hawkeye/hawkeye_config
 -or-
@@ -165,13 +184,18 @@ Currently the following modules are available:
 4. Creating modules
 
 All current Hawkeye modules are either shell or perl scripts, although
-there is no reason that they need to be scripts.  All scripts need to
-output one or more "attribute / value" pairs, one line at a time.
+there is no reason that they need to be scripts.  Modules are invoked
+with the ARGV array:
+    ARGV[0] = <executable>
+    ARGV[1] = <module's logical name>
+    ARGV[2..n] can be specified via the Hawkeye_<jobname>_ARGS
+    parameter as discussed above.
 
-At the end of each ClassAd, a line starting with a "-" should
-be generated.  While optional for "periodic" modules, This line is
-required for continuous modules (to separate the ClassAds).  In
-general, for periodic modules, it should be the last output:
+All scripts need to output one or more "attribute / value" pairs, one
+line at a time.  At the end of each ClassAd, a line starting with a
+"-" should be generated.  While optional for "periodic" modules, This
+line is required for continuous modules (to separate the ClassAds).
+In general, for periodic modules, it should be the last output:
 
   attr1 = value1
   attr2 = value2
@@ -238,3 +262,4 @@ startd classad attribtes:
   mymod_FIELDS = "a b c"
 
 Note that the "-" is *not* inserted into the ClassAd.
+
