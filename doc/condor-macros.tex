@@ -3,11 +3,11 @@
 %
 \newcommand{\AuthorNotice}{Condor Team, University of Wisconsin--Madison}
 \newcommand{\VersionNotice}{Version 6.0}
-\newcommand{\CopyrightNotice}{Copyright \copyright\ 1990-1998 CONDOR Team, Computer Sciences Department, 
+\newcommand{\CopyrightNotice}{Copyright \copyright\ 1990-1998 Condor Team, Computer Sciences Department, 
   University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
-  No use of the CONDOR Software Program Source Code is authorized 
-  without the express consent of the CONDOR Team.  For more information 
-  contact: CONDOR Team, Attention: Professor Miron Livny, 
+  No use of the Condor Software Program is authorized 
+  without the express consent of the Condor Team.  For more information 
+  contact: Condor Team, Attention: Professor Miron Livny, 
   7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
   (608) 262-0856 or miron@cs.wisc.edu.
  
@@ -16,7 +16,7 @@
   subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
   Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
   (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
-  52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+  52.227-19, as applicable, Condor Team, Attention: Professor Miron 
   Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
   WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu. 
 
@@ -35,7 +35,7 @@
 \newcommand{\File}[1]{\texttt{#1}}        	    	% File name
 \newcommand{\Bs}{$\mathtt{\backslash}$}         	% Backslash
 \newcommand{\Bar}{$\mathtt{|}$}                 	% Pipe (i.e., '|')
-\newcommand{\Tilde}{$\tilde{}$}                 	% tilde
+\newcommand{\Tilde}{\~{}}                 	% tilde
 \newcommand{\Dots}{$\dots$}                     	% ...
 \newcommand{\Circum}{\^{}}                      	% ^
 \newcommand{\Lbr}{[}                            	% [
@@ -56,13 +56,23 @@
 \newcommand{\AdAttr}[1]{\texttt{#1}}	% ClassAd Attribute name
 \newcommand{\Attr}[1]{\texttt{#1}}	% ClassAd Attribute name again
 \newcommand{\Dflag}[1]{\texttt{D\_#1}}		% Debug flag name
+\newcommand{\CondorSmall}{\latex{\small}}	% small font
+\newcommand{\CondorVerySmall}{\latex{\scriptsize}} % very small font
+%\newcommand{\CondorSmall}{}
+%\newcommand{\CondorVerySmall}{}
 \newcommand{\Note}{\underline{NOTE}: }          % NOTE:
 
 % Release directory entry
 \newcommand{\Release}[1]{\texttt{$<$release\_dir$>$/#1}}
 
 %
+% This sets the BODY tag when converted to HTML.
+% It has no effect on the DVI file.
+\bodytext{ BGCOLOR=#FFFFFF }
+
+%
 %  To help with typing in names of condor commands
 %    e.g., condor_submit == \Condor{submit}
 \newcommand{\Condor}[1]{\Prog{condor\_#1}}
 \newcommand{\condor}[1]{condor\_#1}
+
