@@ -29,6 +29,7 @@
 #include "debug.h"
 #include "parse.h"
 #include "my_username.h"
+#include "condor_environ.h"
 
 //---------------------------------------------------------------------------
 char* mySubSystem = "DAGMAN";         // used by Daemon Core
@@ -152,7 +153,7 @@ int main_init (int argc, char ** const argv) {
     if (argc < 2) Usage();  //  Make sure an input file was specified
 
 	// get dagman job id from environment
-	DAGManJobId = getenv( "CONDOR_ID" );
+	DAGManJobId = getenv( EnvGetName( ENV_ID ) );
 	if( DAGManJobId == NULL ) {
 		DAGManJobId = strdup( "unknown (requires condor_schedd >= v6.3)" );
 	}

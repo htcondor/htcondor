@@ -32,6 +32,8 @@
 #include "sig_install.h"
 #include "daemon.h"
 #include "condor_debug.h"
+#include "condor_distribution.h"
+#include "condor_environ.h"
 
 #define _NO_EXTERN_DAEMON_CORE 1	
 #include "condor_daemon_core.h"
@@ -57,6 +59,7 @@ void dc_reconfig( bool is_full );
 int		Foreground = 0;		// run in background by default
 char*	myName;				// set to argv[0]
 DaemonCore*	daemonCore;
+Distribution *myDistro;
 static int is_master = 0;
 char*	logDir = NULL;
 char*	pidFile = NULL;
@@ -140,8 +143,8 @@ DC_Exit( int status )
 	clean_files();
 
 		// Log a message
-	dprintf(D_ALWAYS,"**** %s (CONDOR_%s) EXITING WITH STATUS %d\n",
-		myName,mySubSystem,status);
+	dprintf(D_ALWAYS,"**** %s (%s_%s) EXITING WITH STATUS %d\n",
+		myName,myDistro->Get(),mySubSystem,status);
 
 		// Now, delete the daemonCore object, since we allocated it. 
 	delete daemonCore;
@@ -353,14 +356,18 @@ set_dynamic_dir( char* param_name, const char* append_str )
 		// this new directory.
 	config_insert( (char *) param_name, newdir );
 
-		// Finally, insert the _condor_<param_name> environment
-		// variable, so our children get the right configuration.
-	char* env_str = (char*) malloc( (strlen(param_name) + 10 +
-									 strlen(newdir)) * sizeof(char) ); 
-	sprintf( env_str, "_condor_%s=%s", param_name, newdir );
-	if( putenv(env_str) < 0 ) {
+	// Finally, insert the _condor_<param_name> environment
+	// variable, so our children get the right configuration.
+	MyString env_str( "_" );
+	env_str += myDistro->Get();
+	env_str += "_";
+	env_str += param_name;
+	env_str += "=";
+	env_str += newdir;
+	char *env_cstr = strdup( env_str.Value() );
+	if( putenv(env_cstr) < 0 ) {
 		fprintf( stderr, "ERROR: Can't add %s to the environment!\n", 
-				 env_str );
+				 env_cstr );
 		exit( 4 );
 	}
 }
@@ -386,7 +393,7 @@ handle_dynamic_dirs()
 
 		// Final, evil hack.  Set the _condor_STARTD_NAME environment
 		// variable, so that the startd will have a unique name. 
-	sprintf( buf, "_condor_STARTD_NAME=%d", mypid );
+	sprintf( buf, "_%s_STARTD_NAME=%d", myDistro->Get(), mypid );
 	char* env_str = strdup( buf );
 	if( putenv(env_str) < 0 ) {
 		fprintf( stderr, "ERROR: Can't add %s to the environment!\n", 
@@ -948,8 +955,12 @@ int main( int argc, char** argv )
 		is_master = 1;
 	}
 
-		// set myName to be argv[0] with the path stripped off
+	// set myName to be argv[0] with the path stripped off
 	myName = basename(argv[0]);
+	myDistro = new Distribution( argc, argv );
+	if ( EnvInit() < 0 ) {
+		exit( 1 );
+	}
 
 		// call out to the handler for pre daemonCore initialization
 		// stuff so that our client side can do stuff before we start
@@ -1000,9 +1011,11 @@ int main( int argc, char** argv )
 			if( ptr && *ptr ) {
 				ptmp = *ptr;
 				dcargs += 2;
-				ptmp1 = (char *)malloc( strlen(ptmp) + 25 );
+
+				ptmp1 = 
+					(char *)malloc( strlen(ptmp) + myDistro->GetLen() + 10 );
 				if ( ptmp1 ) {
-					sprintf(ptmp1,"CONDOR_CONFIG=%s",ptmp);
+					sprintf(ptmp1,"%s_CONFIG=%s", myDistro->GetUc(), ptmp);
 					putenv(ptmp1);
 				}
 			} else {
@@ -1222,7 +1235,8 @@ int main( int argc, char** argv )
 		// banner.  Plus, if we're using dynamic dirs, we have dprintf
 		// configured now, so the dprintf()s will work.
 	dprintf(D_ALWAYS,"******************************************************\n");
-	dprintf(D_ALWAYS,"** %s (CONDOR_%s) STARTING UP\n",myName,mySubSystem);
+	dprintf(D_ALWAYS,"** %s (%s_%s) STARTING UP\n",
+			myName,myDistro->GetUc(),mySubSystem);
 	dprintf(D_ALWAYS,"** %s\n", CondorVersion());
 	dprintf(D_ALWAYS,"** %s\n", CondorPlatform());
 	dprintf(D_ALWAYS,"** PID = %lu\n",daemonCore->getpid());

@@ -1,13 +1,17 @@
 #include "procapi_t.h"
 #include <strings.h>
+#include "condor_distribution.h"
 
+Distribution *myDistro;
 bool verbose;
 bool monitor;
 int main(int argc, char* argv[])
 {
-        int success;
-        verbose = false;
-        if (argc > 1)
+	int success;
+	verbose = false;
+	myDistro = new Distribution( argc, argv );
+
+	if (argc > 1)
 	{
 	  if(strcmp(argv[1], "-v") == 0){
 	    verbose = true;

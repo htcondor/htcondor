@@ -40,6 +40,7 @@
 #include "daemon_types.h"
 #include "sig_install.h"
 #include "command_strings.h"
+#include "condor_distribution.h"
 
 void doCommand( char *name );
 void version();
@@ -61,6 +62,8 @@ int all = 0;
 char* subsys = NULL;
 int takes_subsys = 0;
 int cmd_set = 0;
+Distribution *myDistro;
+
 
 // The pure-tools (PureCoverage, Purify, etc) spit out a bunch of
 // stuff to stderr, which is where we normally put our error
@@ -295,6 +298,7 @@ main( int argc, char *argv[] )
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
+	myDistro = new Distribution( argc, argv );
 	config();
 
 	MyName = strrchr( argv[0], DIR_DELIM_CHAR );

@@ -25,6 +25,8 @@
 
 #include "condor_common.h"
 #include "url_condor.h"
+#include "condor_attributes.h"
+#include "condor_environ.h"
 
 #define GZIP_PROG "/s/std/bin/gzip"
 
@@ -49,11 +51,11 @@ int condor_open_cfilter_url( const char *name, int flags, size_t n_bytes )
 		return -1;
 	}
 
-	gzip_prog = getenv("GZIP");
+	gzip_prog = getenv( EnvGetName( ENV_GZIP ) );
 
 #if defined(CONDOR)	/* Detect compilation for Condor */
 	if (gzip_prog == 0) {
-		gzip_prog = param("GZIP");
+		gzip_prog = param( ATTR_GZIP );
 	}
 #endif
 

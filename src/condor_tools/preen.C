@@ -46,6 +46,8 @@
 #include "sig_install.h"
 #include "condor_email.h"
 #include "daemon.h"
+#include "condor_distribution.h"
+
 State get_machine_state();
 
 
@@ -64,6 +66,7 @@ BOOLEAN		MailFlag;			// true if we should send mail about problems
 BOOLEAN		VerboseFlag;		// true if we should produce verbose output
 BOOLEAN		RmFlag;				// true if we should remove extraneous files
 StringList	*BadFiles;			// list of files which don't belong
+Distribution *myDistro;			// Name of our distribution
 
 
 // prototypes of local interest
@@ -106,6 +109,7 @@ main( int argc, char *argv[] )
 
 		// Initialize things
 	MyName = argv[0];
+	myDistro = new Distribution( argc, argv );
 	config();
 	init_params();
 	BadFiles = new StringList;

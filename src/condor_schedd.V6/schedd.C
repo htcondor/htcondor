@@ -4837,6 +4837,7 @@ JobPreCkptServerScheddNameChange(int cluster, int proc)
 {
 	char job_version[150];
 	job_version[0] = '\0';
+	
 	if (GetAttributeString(cluster, proc, ATTR_VERSION, job_version) == 0) {
 		CondorVersionInfo ver(job_version, "JOB");
 		if (ver.built_since_version(6,2,0) &&

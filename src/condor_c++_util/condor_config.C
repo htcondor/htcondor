@@ -66,6 +66,8 @@
 #endif
 #include "directory.h"			// for StatInfo
 #include "condor_scanner.h"		// for MAXVARNAME, etc
+#include "condor_distribution.h"
+#include "condor_environ.h"
 
 extern "C" {
 	
@@ -214,26 +216,33 @@ real_config(char* host, int wantsQuiet)
 		// Try to find the global config file
 	if( ! (config_file = find_global()) ) {
 		if( wantsQuiet ) {
-			fprintf( stderr, "Condor error: can't find config file.\n" ); 
+			fprintf( stderr, "%s error: can't find config file.\n",
+					 myDistro->GetCap() ); 
 			exit( 1 );
 		}
-		fprintf(stderr,"\nNeither the environment variable CONDOR_CONFIG,\n" );
-#ifndef WIN32
-		fprintf(stderr,"/etc/condor/, nor ~condor/ contain a condor_config "
-				"file.\n" );
-#else
-		fprintf(stderr,"nor the registry contains a path to a condor_config "
-				"file.\n" );
-#endif
-		fprintf( stderr,"Either set CONDOR_CONFIG to point to a valid config "
-				"file,\n" );
-		fprintf( stderr,"or put a \"condor_config\" file in %s.\n", 
-#ifndef WIN32
-				 "/etc/condor or ~condor/" 
-#else
-				 "the registry at:\n HKEY_LOCAL_MACHINE\\Software\\Condor\\CONDOR_CONFIG"
-#endif
-				 );
+		fprintf(stderr,"\nNeither the environment variable %s_CONFIG,\n",
+				myDistro->GetUc() );
+#	  if defined UNIX
+		fprintf(stderr,"/etc/%s/, nor ~%s/ contain a %s_config file.\n",
+				myDistro->Get(), myDistro->Get(), myDistro->Get() );
+#	  elif defined WIN32
+		fprintf(stderr,"nor the registry contains a path to a %s_config "
+				"file.\n", myDistro->Get() );
+#	  else
+#		error "Unknown O/S"
+#	  endif
+		fprintf( stderr,"Either set %s_CONFIG to point to a valid config "
+				"file,\n", myDistro->GetUc() );
+#	  if defined UNIX
+		fprintf( stderr,"or put a \"%s_config\" file in /etc/%s or ~%s/\n",
+				 myDistro->Get(), myDistro->Get(), myDistro->Get() );
+#	  elif defined WIN32
+		fprintf( stderr,"or put a \"%s_config\" file in the registry at:\n"
+				 " HKEY_LOCAL_MACHINE\\Software\\%s\\%s_CONFIG",
+				 myDistro->Get(), myDistro->Get(), myDistro->GetUc() );
+#	  else
+#		error "Unknown O/S"
+#	  endif
 		fprintf( stderr, "Exiting.\n\n" );
 		exit( 1 );
 	}
@@ -272,7 +281,10 @@ real_config(char* host, int wantsQuiet)
 		// Now, insert any macros defined in the environment.  Note we do
 		// this before the root config file!
 	for( int i = 0; environ[i]; i++ ) {
-		char* magic_prefix = "_condor_";			// case-insensitive
+		char magic_prefix[MAX_DISTRIBUTION_NAME + 3];	// case-insensitive
+		strcpy( magic_prefix, "_" );
+		strcat( magic_prefix, myDistro->Get() );
+		strcat( magic_prefix, "_" );
 		int prefix_len = strlen( magic_prefix );
 
 		// proceed only if we see the magic prefix
@@ -430,12 +442,12 @@ init_tilde()
 		free( tilde );
 		tilde = NULL;
 	}
-#if !defined(WIN32)
+# if defined UNIX
 	struct passwd *pw;
-	if( (pw=getpwnam( "condor" )) ) {
+	if( (pw=getpwnam( myDistro->Get() )) ) {
 		tilde = strdup( pw->pw_dir );
 	} 
-#endif
+# endif
 }
 
 
@@ -450,14 +462,18 @@ get_tilde()
 char*
 find_global()
 {
-	return find_file( "CONDOR_CONFIG", "condor_config" );
+	char	file[256];
+	sprintf( file, "%s_config", myDistro->Get() );
+	return find_file( EnvGetName( ENV_CONFIG), file );
 }
 
 
 char*
 find_global_root()
 {
-	return find_file( "CONDOR_CONFIG_ROOT", "condor_config.root" );
+	char	file[256];
+	sprintf( file, "%s_config.root", myDistro->Get() );
+	return find_file( EnvGetName( ENV_CONFIG_ROOT ), file );
 }
 
 
@@ -467,9 +483,9 @@ find_file(const char *env_name, const char *file_name)
 {
 
 	char	*config_file = NULL, *env;
-#if defined(CONDOR_G_RELEASE)
+# if defined(CONDOR_G_RELEASE)
 	char	*home_dir;
-#endif
+# endif
 	int		fd;
 
 		// If we were given an environment variable name, try that first. 
@@ -506,9 +522,9 @@ find_file(const char *env_name, const char *file_name)
 		}
 	}
 
-#ifndef WIN32
+# ifdef UNIX
 	// Only look in /etc/condor and in ~condor on Unix.
-#if defined(CONDOR_G_RELEASE)
+#  if defined(CONDOR_G_RELEASE)
     // For Condor-G, first check in the default install path, which is the
     // user's homedirectory/CondorG/etc/condor_config 
 	if( ! config_file ) {
@@ -517,8 +533,9 @@ find_file(const char *env_name, const char *file_name)
 		if( pwent = getpwuid( getuid() ) ) {
 			home_dir = strdup( pwent->pw_dir );
 	
-			config_file = (char *)malloc((strlen(file_name) + strlen(home_dir) +
-                            strlen("CondorG/etc/") + 3 ) * sizeof(char));	
+			config_file = (char *) malloc(
+				(strlen(file_name) + strlen(home_dir) +
+				 strlen("CondorG/etc/") + 3 ) * sizeof(char));	
 			config_file[0] = '\0';
 			strcat(config_file, home_dir);
 			strcat(config_file, "/CondorG/etc/");
@@ -532,14 +549,15 @@ find_file(const char *env_name, const char *file_name)
 			free( home_dir);
 		}
 	}
-#endif /* CONDOR_G_RELEASE */
+#  endif /* CONDOR_G_RELEASE */
 
 	if( ! config_file ) {
 		// try /etc/condor/file_name
-		config_file = (char *)malloc( (strlen(file_name) + 14) * sizeof(char) ); 
-		config_file[0] = '\0';
-		strcat( config_file, "/etc/condor/" );
-		strcat( config_file, file_name );
+		MyString	str( "/etc/" );
+		str += myDistro->Get();
+		str += "/";
+		str += file_name;
+		config_file = strdup( str.Value() );
 		if( (fd = open( config_file, O_RDONLY )) < 0 ) {
 			free( config_file );
 			config_file = NULL;
@@ -548,9 +566,9 @@ find_file(const char *env_name, const char *file_name)
 		}
 	}
 	if( ! config_file && tilde ) {
-			// try ~condor/file_name
+		// try ~condor/file_name
 		config_file = (char *)malloc( 
-						 (strlen(tilde) + strlen(file_name) + 2) * sizeof(char) ); 
+			(strlen(tilde) + strlen(file_name) + 2) * sizeof(char) ); 
 		config_file[0] = '\0';
 		strcat( config_file, tilde );
 		strcat( config_file, "/" );
@@ -562,11 +580,13 @@ find_file(const char *env_name, const char *file_name)
 			close( fd );
 		}
 	}
-#else	/* of ifndef WIN32 */
+# elif defined WIN32	// ifdef UNIX
 	// Only look in the registry on WinNT.
-	HKEY handle;
+	HKEY	handle;
+	char	regKey[256];
 
-	if ( !config_file && RegOpenKeyEx(HKEY_LOCAL_MACHINE,"Software\\Condor",
+	sprintf( regKey, "Software\\%s", myDistro->GetCap() );
+	if ( !config_file && RegOpenKeyEx(HKEY_LOCAL_MACHINE, regKey,
 		0, KEY_READ, &handle) == ERROR_SUCCESS ) {
 		// We have found a registry key for Condor, which
 		// means this user has a pulse and has actually run the
@@ -595,7 +615,9 @@ find_file(const char *env_name, const char *file_name)
 			}
 		}
 	}
-#endif   /* of Win32 */
+# else
+#	error "Unknown O/S"
+# endif		/* ifdef UNIX / Win32 */
 
 	return config_file;
 }
@@ -850,8 +872,9 @@ check_params()
 			// it _and_ the special file we use that maps workstation
 			// models to CPU types doesn't exist either.  Print a
 			// verbose message and exit.  -Derek Wright 8/14/98
-		fprintf( stderr, "ERROR: Condor must know if you are running " 
-				 "on an HPPA1 or an HPPA2 CPU.\n" );
+		fprintf( stderr, "ERROR: %s must know if you are running "
+				 "on an HPPA1 or an HPPA2 CPU.\n",
+				 myDistro->Get() );
 		fprintf( stderr, "Normally, we look in %s for your model.\n",
 				 "/opt/langtools/lib/sched.models" );
 		fprintf( stderr, "This file lists all HP models and the "
@@ -903,9 +926,9 @@ set_toplevel_runtime_config()
 		} else {
 			tmp = param("LOG");
 			if (!tmp) {
-				dprintf( D_ALWAYS, "Condor error: neither %s nor LOG is "
+				dprintf( D_ALWAYS, "%s error: neither %s nor LOG is "
 						 "specified in the configuration file.\n",
-						 filename_parameter );
+						 myDistro->GetCap(), filename_parameter );
 				exit( 1 );
 			}
 			sprintf(toplevel_runtime_config, "%s%c.config.%s", tmp,

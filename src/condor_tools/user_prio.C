@@ -34,6 +34,7 @@
 #include "MyString.h"
 #include "format_time.h"
 #include "daemon.h"
+#include "condor_distribution.h"
 
 //-----------------------------------------------------------------
 
@@ -68,8 +69,10 @@ int CompPrio(const void * a, const void * b);
 
 int DetailFlag=0;
 time_t MinLastUsageTime;
+Distribution *myDistro;
 
-void
+
+int
 main(int argc, char* argv[])
 {
 
@@ -81,6 +84,7 @@ main(int argc, char* argv[])
   int GetResList=0;
   char* pool = NULL;
 
+  myDistro = new Distribution( argc, argv );
   MinLastUsageTime=time(0)-60*60*24;  // Default to show only users active in the last day
 
   for (int i=1; i<argc; i++) {
@@ -337,6 +341,7 @@ main(int argc, char* argv[])
   }
 
   exit(0);
+  return 0;
 }
 
 //-----------------------------------------------------------------

@@ -3,6 +3,7 @@
 #include "condor_debug.h"
 #include "which.h"
 #include "directory.h"
+#include "condor_environ.h"
 
 #ifdef WIN32
 #include <direct.h>
@@ -26,7 +27,7 @@ which( const char* strFilename, const char* strAdditionalSearchDir )
 MyString
 which(const MyString &strFilename, const MyString &strAdditionalSearchDir)
 {
-	MyString strPath = getenv("PATH");
+	MyString strPath = getenv( EnvGetName( ENV_PATH ) );
 	dprintf( D_FULLDEBUG, "Path: %s\n", strPath.Value());
 
 	char path_delim[3];

@@ -23,31 +23,31 @@
 
 #include "condor_common.h"
 #include "condor_distribution.h"
-#define _CONDOR_ATTR_MAIN
-#include "condor_attributes.h"
+#define _CONDOR_ENVIRON_MAIN
+#include "condor_environ.h"
 
 // Initialize our logic
 int
-AttrInit( void )
+EnvInit( void )
 {
     unsigned	i;
-    for ( i=0;  i<sizeof(CondorAttrList)/sizeof(CONDOR_ATTR_ELEM);  i++ )
+    for ( i=0;  i<sizeof(CondorEnvironList)/sizeof(CONDOR_ENVIRON_ELEM);  i++ )
     {
 		// Sanity check
-		if ( (unsigned) CondorAttrList[i].sanity != i ) {
-			fprintf( stderr, "Attribute sanity check failed!!\n" );
+		if ( (unsigned) CondorEnvironList[i].sanity != i ) {
+			fprintf( stderr, "Environ sanity check failed!!\n" );
 			return -1;
 		}
-        CondorAttrList[i].cached = NULL;
+        CondorEnvironList[i].cached = NULL;
     }
 	return 0;
 }
 
-// Get an attribute variable's name
+// Get an environment variable's name
 const char *
-AttrGetName( CONDOR_ATTR which )
+EnvGetName( CONDOR_ENVIRON which )
 {
-    CONDOR_ATTR_ELEM	*local = &CondorAttrList[which];
+    CONDOR_ENVIRON_ELEM   *local = &CondorEnvironList[which];
 
 	// Simple case first; out of cache
     if ( local->cached ) {
@@ -58,26 +58,20 @@ AttrGetName( CONDOR_ATTR which )
 	char	*tmps;
 	switch ( local->flag )
 	{
-	case  ATTR_FLAG_NONE:
+	case  ENV_FLAG_NONE:
         tmps = (char *) local->string;
 		break;
-    case ATTR_FLAG_DISTRO:
+    case ENV_FLAG_DISTRO:
 		// Yeah, this allocates a couple more bytes than required, but
 		// oh well...
         tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
         sprintf( tmps, local->string, myDistro->Get() );
 		break;
-    case ATTR_FLAG_DISTRO_UC:
+    case ENV_FLAG_DISTRO_UC:
 		// Yeah, this allocates a couple more bytes than required, but
 		// oh well...
         tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
         sprintf( tmps, local->string, myDistro->GetUc() );
-		break;
-    case ATTR_FLAG_DISTRO_CAP:
-		// Yeah, this allocates a couple more bytes than required, but
-		// oh well...
-        tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
-        sprintf( tmps, local->string, myDistro->GetCap() );
 		break;
     }
 

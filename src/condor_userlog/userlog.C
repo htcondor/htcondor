@@ -26,6 +26,7 @@
 #include "format_time.h"
 #include "classad_hashtable.h"
 #include "internet.h"
+#include "condor_distribution.h"
 
 /* 
 ** Job Record format: cluster.proc evict_time wall_time good_time cpu_usage
@@ -102,6 +103,7 @@ bool debug_mode = false;
 bool evict_only = false;
 bool raw_data = false;
 bool avoid_dns = true;
+Distribution *myDistro;
 
 int
 main(int argc, char *argv[])
@@ -109,6 +111,7 @@ main(int argc, char *argv[])
 	bool log_read = false;
 	int select_cluster = -1, select_proc = -1;
 
+	myDistro = new Distribution( argc, argv );
 	if (argc == 1) {
 		fprintf(stderr, usage, argv[0]);
 		exit(1);

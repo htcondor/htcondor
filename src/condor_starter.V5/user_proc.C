@@ -34,6 +34,7 @@
 #include "startup.h"
 #include "fileno.h"
 #include "renice_self.h"
+#include "condor_environ.h"
 
 
 #if defined(AIX32)
@@ -332,7 +333,7 @@ UserProc::linked_for_condor()
 		// if env var _CONDOR_NOCHECK=1, then do not do this check.
 		// this allows expert users to submit shell scripts to the
 		// STANDARD universe.
-	char *tmp = env_obj.getenv("_CONDOR_NOCHECK");
+	char *tmp = env_obj.getenv( EnvGetName( ENV_NOCHECK ) );
 	if ( tmp && *tmp=='1' ) {
 			return TRUE;
 	}

@@ -24,6 +24,7 @@
 #if !defined(SKIP_AUTHENTICATION) && !defined(WIN32)
 #include "condor_auth_fs.h"
 #include "condor_string.h"
+#include "condor_environ.h"
 
 Condor_Auth_FS :: Condor_Auth_FS(ReliSock * sock, int remote)
     : Condor_Auth_Base    ( sock, CAUTH_FILESYSTEM ),
@@ -49,7 +50,8 @@ int Condor_Auth_FS::authenticate(const char * remoteHost)
         if ( remote_ ) {
             //send over the directory
             if ( mySock_->isClient() ) {
-                RendezvousDirectory = getenv( "RENDEZVOUS_DIRECTORY" );
+                RendezvousDirectory = 
+					getenv( EnvGetName( ENV_RENDEZVOUS ) );
             }
             mySock_->encode();
             if (!mySock_->code( RendezvousDirectory ) ||

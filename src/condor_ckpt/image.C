@@ -36,6 +36,7 @@
 #include "condor_debug.h"
 #include "condor_ckpt_mode.h"
 #include "signals_control.h"
+#include "condor_environ.h"
 
 static char *_FileName_ = __FILE__;
 
@@ -2039,6 +2040,10 @@ calc_stack_to_save()
 {
 	char	*ptr;
 
+	// NRL 2002-04-22: In an ideal world, this would be something like:
+	//   ptr = getenv( EnvGetName( ENV_STACKSIZE ) );
+	// However, this causes all kinds of linkage problems for programs
+	// that are condor_compiled, and I just don't want to go there.
 	ptr = getenv( "CONDOR_STACK_SIZE" );
 	if( ptr ) {
 		StackSaveSize = (size_t) (atof(ptr) * MEG);

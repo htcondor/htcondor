@@ -40,6 +40,7 @@
 #include "condor_io.h"
 #include "condor_parser.h"
 #include "condor_scanner.h"
+#include "condor_distribution.h"
 #include "files.h"
 #if !defined(WIN32)
 #include <pwd.h>
@@ -107,6 +108,7 @@ bool	NewExecutable = false;
 bool	IsFirstExecutable;
 bool	UserLogSpecified = false;
 bool never_transfer = false;  // never transfer files or do transfer files
+Distribution *myDistro;
 
 // environment vars in the ClassAd attribute are seperated via
 // the env_delimiter character; currently a '|' on NT and ';' on Unix
@@ -434,6 +436,7 @@ main( int argc, char *argv[] )
 	}
 
 	MyName = basename(argv[0]);
+	myDistro = new Distribution( argc, argv );
 	config();
 
 	init_params();

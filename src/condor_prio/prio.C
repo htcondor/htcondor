@@ -32,9 +32,12 @@
 #include "sig_install.h"
 
 #include "condor_qmgr.h"
+#include "condor_distribution.h"
 
 char	*param();
 char	*MyName;
+Distribution *myDistro;
+
 
 int		PrioAdjustment;
 int		NewPriority;
@@ -74,6 +77,7 @@ main( int argc, char *argv[] )
 	Qmgr_connection	*q;
 
 	MyName = argv[0];
+	myDistro = new Distribution( argc, argv );
 
 	config();
 

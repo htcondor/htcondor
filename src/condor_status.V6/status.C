@@ -34,6 +34,7 @@
 #include "string_list.h"
 #include "condor_string.h"   // for strnewp()
 #include "print_wrapped_text.h"
+#include "condor_distribution.h"
 
 // global variables
 AttrListPrintMask pm;
@@ -55,6 +56,7 @@ StringList	*sortConstraints = NULL;
 ExtArray<ExprTree*> sortLessThanExprs( 4 );
 ExtArray<ExprTree*> sortEqualExprs( 4 );
 bool            javaMode = false;
+Distribution *myDistro;
 
 // instantiate templates
 template class ExtArray<ExprTree*>;
@@ -81,6 +83,7 @@ main (int argc, char *argv[])
 #endif
 
 	// initialize to read from config file
+	myDistro = new Distribution( argc, argv );
 	myName = argv[0];
 	config();
 

@@ -21,45 +21,51 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
-#include "classad_collection.h"
 #include "condor_distribution.h"
 
-Distribution *myDistro;
-
-/*template class Set<RankedClassAd>;*/
-/*template class Set<int>;*/
-/*template class HashTable<int, BaseCollection *>;*/
-/*template class SetElem<RankedClassAd>;*/
-/*template class Set<MyString>;*/
-/*template class SetElem<MyString>;*/
-
-int
-main(int argc, char *argv[])
+// Constructor
+Distribution::Distribution( int argc, char **argv )
 {
-	myDistro = new Distribution( argc, argv );
-	if (argc != 2) {
-		fprintf(stderr, "usage: %s collection-file\n", argv[0]);
+	char	*argv0 = argv[0];
+
+	// Are we 'Condor' or 'Hawkeye'?
+	if (  ( strstr ( argv0, "hawkeye" ) ) ||
+		  ( strstr ( argv0, "Hawkeye" ) ) ||
+		  ( strstr ( argv0, "HAWKEYE" ) )  ) {
+		SetDistribution( "hawkeye" );
+	} else {
+		SetDistribution( "condor" );
+	}
+}
+
+// Destructor (does nothing for now)
+Distribution::~Distribution( )
+{
+}
+
+// Set my actual distro name
+void Distribution :: SetDistribution( const char *name )
+{
+	// Make my own private copies of the name
+	strncpy( distribution, name, MAX_DISTRIBUTION_NAME );
+	distribution[MAX_DISTRIBUTION_NAME] = '\0';
+	strcpy( distribution_uc, distribution );
+	strcpy( distribution_cap, distribution );
+
+	// Make the 'uc' version upper case
+	char	*cp = distribution_uc;
+	while ( *cp )
+	{
+		char	c = *cp;
+		*cp = toupper( c );
+		cp++;
 	}
 
-	// rename the collection file to some temporary file, so we don't
-	// mess up the actual collection file
-	char tmpfile[L_tmpnam];
-	tmpnam(tmpfile);
-	char cmd[_POSIX_PATH_MAX];
-	sprintf(cmd, "cp %s %s", argv[1], tmpfile);
-	system(cmd);
+	// Capitalize the first char of the Cap version
+	char	c = distribution_cap[0];
+	distribution_cap[0] = toupper( c );
+
+	// Cache away it's length
+	distribution_length = strlen( distribution );
 	
-	ClassAdCollection c(tmpfile);
-
-	c.StartIterateAllCollections();
-
-	ClassAd *ad = NULL; 
-	while (c.IterateAllClassAds(ad)) {
-		ad->fPrint(stdout);
-		printf("\n");
-	}
-
-	unlink(tmpfile);
-
-	return 0;
 }

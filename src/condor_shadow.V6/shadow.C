@@ -39,6 +39,8 @@
 #include "sig_install.h"
 #include "job_report.h"
 #include "../condor_c++_util/directory.h"
+#include "condor_distribution.h"
+#include "condor_environ.h"
 
 #include "user_job_policy.h"
 
@@ -68,6 +70,7 @@
 int	UsePipes;
 
 char* mySubSystem = "SHADOW";
+Distribution *myDistro;
 
 extern "C" {
 #if defined(LINUX) && defined(GLIBC22)
@@ -264,7 +267,8 @@ printClassAd( void )
 
 
 /*ARGSUSED*/
-main(int argc, char *argv[], char *envp[])
+int
+main(int argc, char *argv[] )
 {
 	char	*tmp = NULL;
 	int		reserved_swap, free_swap;
@@ -274,6 +278,7 @@ main(int argc, char *argv[], char *envp[])
 	char	*capability;
 	int		i;
 
+	myDistro = new Distribution( argc, argv );
 	if( argc == 2 && strincmp(argv[1], "-cl", 3) == MATCH ) {
 		printClassAd();
 		exit( 0 );
@@ -389,7 +394,7 @@ main(int argc, char *argv[], char *envp[])
 		RemoveNewShadowDroppings(cluster, proc);
 		regular_setup( host, cluster, proc, capability );
 	}
-	scheddName = getenv("SCHEDD_NAME");
+	scheddName = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
 
 	GlobalCap = strdup(capability);
 

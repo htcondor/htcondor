@@ -25,6 +25,7 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
+#include "condor_distribution.h"
 
 #include "MyString.h"
 
@@ -39,6 +40,9 @@ static char* format_date( time_t date );
 static char* format_time( int tot_secs );
 static char encode_status( int status );
 static bool EvalBool(AttrList *ad, ExprTree *tree);
+
+Distribution *myDistro;
+
 
 //------------------------------------------------------------------------
 
@@ -59,6 +63,7 @@ main(int argc, char* argv[])
   int cluster, proc;
   char tmp[512];
   int i;
+  myDistro = new Distribution( argc, argv );
 
   for(i=1; i<argc; i++) {
     if (strcmp(argv[i],"-l")==0) {

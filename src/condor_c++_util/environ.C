@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "environ.h"
+#include "condor_environ.h"
 
 
 inline int
@@ -144,7 +145,13 @@ Environ::get_vector()
 }
 
 char *
-Environ::getenv( char *str )
+Environ::getenv( CONDOR_ENVIRON logical )
+{
+	return getenv( EnvGetName( logical ) );
+}
+
+char *
+Environ::getenv( const char *str )
 {
 	char	*ptr;
 	char	*answer;

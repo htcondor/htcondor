@@ -35,6 +35,7 @@
 #include "syscall_numbers.h"
 #include "exit.h"
 #include "condor_uid.h"
+#include "condor_distribution.h"
 #ifdef WIN32
 #include "perm.h"
 #endif
@@ -180,15 +181,19 @@ OsProc::StartJob()
 		// LookupString() so we don't leak any memory.
 	free( env_str );
 
-		// Now, add some env vars the user job might want to see:
-	job_env.Put( "CONDOR_SCRATCH_DIR", Starter->GetWorkingDir() );
+	// Now, add some env vars the user job might want to see:
+	char	envName[256];
+	sprintf( envName, "%s_SCRATCH_DIR", myDistro->GetUc() );
+	job_env.Put( envName, Starter->GetWorkingDir() );
 
 		// Deal with port regulation stuff
 	char* low = param( "LOWPORT" );
 	char* high = param( "HIGHPORT" );
 	if( low && high ) {
-		job_env.Put( "_condor_HIGHPORT", high );
-		job_env.Put( "_condor_LOWPORT", low );
+		sprintf( envName, "_%s_HIGHPORT", myDistro->Get() );
+		job_env.Put( envName, high );
+		sprintf( envName, "_%s_LOWPORT", myDistro->Get() );
+		job_env.Put( envName, low );
 		free( high );
 		free( low );
 	} else if( low ) {

@@ -42,6 +42,10 @@
 #include "reli_sock.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"  // god only knows why I must include this!
+#include "condor_distribution.h"
+#include "condor_environ.h"
+
+Distribution *myDistro;
 
 // uncomment for poop to be left on hard drive.
 // #define MAKE_DROPPINGS
@@ -59,6 +63,7 @@ int main ( int argc, char *argv[] ) {
 
 	char *tmp;
     char *buf = new char[1024];
+	myDistro = new Distribution( argc, argv );
     sprintf ( buf, "%s", argv[1] );
     for ( int i=2 ; i<argc ; i++ ) {
         strcat( buf, " " );
@@ -74,15 +79,15 @@ int main ( int argc, char *argv[] ) {
         strcat( buf, argv[i] );
     }
 
-    char *shadow = NULL;
-    shadow = getenv( "MPI_SHADOW_SINFUL" );
+	const char	*envName = EnvGetName( ENV_MPI_SHADOW_SINFUL );
+    char *shadow = getenv( envName );
 
 #ifdef MAKE_DROPPINGS
 	if ( droppings ) {
 		fprintf ( fp, "\n\n" );
 
 		if ( shadow ) {
-			fprintf ( fp, "MPI_SHADOW_SINFUL = %s\n", shadow );
+			fprintf ( fp, "%s = %s\n", envName, shadow );
 			fprintf ( fp, "args: %s\n", buf );
 		}
 		else {

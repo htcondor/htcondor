@@ -38,8 +38,10 @@
 #include "string_list.h"
 #include "daemon.h"
 #include "dc_schedd.h"
+#include "condor_distribution.h"
 
 
+Distribution *myDistro;
 char	*MyName;
 int mode;
 bool All = false;
@@ -124,6 +126,7 @@ main( int argc, char *argv[] )
 		// Initialize our global variables
 	has_constraint = false;
 
+	myDistro = new Distribution( argc, argv );
 	MyName = strrchr( argv[0], DIR_DELIM_CHAR );
 	if( !MyName ) {
 		MyName = argv[0];

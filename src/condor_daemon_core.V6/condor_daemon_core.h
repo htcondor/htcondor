@@ -1114,6 +1114,7 @@ class DaemonCore : public Service
 
 	bool InitSettableAttrsList( const char* subsys, int i );
 	StringList* SettableAttrsLists[LAST_PERM];
+
 };
 
 #ifndef _NO_EXTERN_DAEMON_CORE

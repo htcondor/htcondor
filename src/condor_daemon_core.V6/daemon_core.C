@@ -56,6 +56,8 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 #include "strupr.h"
 #include "env.h"
 #include "condor_secman.h"
+#include "condor_distribution.h"
+#include "condor_environ.h"
 #ifdef WIN32
 #include "exphnd.WIN32.h"
 typedef unsigned (__stdcall *CRT_THREAD_HANDLER) (void *);
@@ -486,7 +488,7 @@ int DaemonCore::Register_Command(int command, char* command_descrip,
     int     i;		// hash value
     int     j;		// for linear probing
     
-    if( handler == NULL && handlercpp == NULL) {
+    if( handler == NULL && handlercpp == NULL ) {
 		dprintf(D_DAEMONCORE, "Can't register NULL command handler\n");
 		return -1;
     }
@@ -5002,23 +5004,27 @@ DaemonCore::Inherit( void )
 		*	command sockets.  first the rsock, then the ssock, then a "0".
 	*/
 	inheritbuf[0] = '\0';
+	const char	*envName = EnvGetName( ENV_INHERIT );
 #ifdef WIN32
-	if (GetEnvironmentVariable("CONDOR_INHERIT",inheritbuf,
+	if (GetEnvironmentVariable( envName ,inheritbuf,
 							   _INHERITBUF_MAXSIZE) > _INHERITBUF_MAXSIZE-1) {
-		EXCEPT("CONDOR_INHERIT too large");
+		EXCEPT("%s too large", envName);
 	}
-	SetEnvironmentVariable("CONDOR_INHERIT", "");
+	SetEnvironmentVariable( envName, "");
 #else
-	ptmp = getenv("CONDOR_INHERIT");
+	ptmp = getenv( envName );
 	if ( ptmp ) {
 		if ( strlen(ptmp) > _INHERITBUF_MAXSIZE-1 ) {
-			EXCEPT("CONDOR_INHERIT too large");
+			EXCEPT("%s too large", envName );
 		}
-		dprintf ( D_DAEMONCORE, "CONDOR_INHERIT: \"%s\"\n", ptmp );
+		dprintf ( D_DAEMONCORE, "%s: \"%s\"\n", envName, ptmp );
 		strncpy(inheritbuf,ptmp,_INHERITBUF_MAXSIZE);
-		putenv("CONDOR_INHERIT=");
+		char	tmp[50];
+		strcpy( tmp, envName );
+		strcat( tmp, "=" );
+		putenv( tmp );
 	} else {
-		dprintf ( D_DAEMONCORE, "CONDOR_INHERIT: is NULL\n", ptmp );
+		dprintf ( D_DAEMONCORE, "%s: is NULL\n", envName );
 	}		
 #endif
 

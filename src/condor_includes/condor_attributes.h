@@ -65,8 +65,8 @@ const char ATTR_CLOCK_DAY                [] = "ClockDay";
 const char ATTR_CLOCK_MIN                [] = "ClockMin";
 const char ATTR_CLUSTER_ID               [] = "ClusterId";
 const char ATTR_COMPLETION_DATE			 [] = "CompletionDate";
-const char ATTR_CONDOR_LOAD_AVG			 [] = "CondorLoadAvg";
-const char ATTR_CONDOR_ADMIN			 [] = "CondorAdmin";
+#define ATTR_CONDOR_LOAD_AVG			AttrGetName( ATTRE_CONDOR_LOAD_AVG )
+#define ATTR_CONDOR_ADMIN				AttrGetName( ATTRE_CONDOR_ADMIN )
 const char ATTR_CONSOLE_IDLE			 [] = "ConsoleIdle";
 const char ATTR_CONTINUE                 [] = "Continue";
 const char ATTR_CORE_SIZE				 [] = "CoreSize";
@@ -103,6 +103,7 @@ const char ATTR_FLOCKED_JOBS			 [] = "FlockedJobs";
 const char ATTR_FLAVOR                   [] = "Flavor";
 const char ATTR_FORCE					 [] = "Force";
 const char ATTR_GID						 [] = "Gid";
+const char ATTR_GZIP					 [] = "GZIP";
 const char ATTR_GLOBUS_CONTACT_STRING	 [] = "GlobusContactString";
 const char ATTR_GLOBUS_RESOURCE			 [] = "GlobusResource";
 const char ATTR_GLOBUS_RSL				 [] = "GlobusRSL";
@@ -211,7 +212,7 @@ const char ATTR_OPSYS                    [] = "OpSys";
 const char ATTR_ORIG_MAX_HOSTS			 [] = "OrigMaxHosts";
 const char ATTR_OWNER                    [] = "Owner"; 
 const char ATTR_PERIODIC_CHECKPOINT      [] = "PeriodicCheckpoint";
-const char ATTR_PLATFORM                 [] = "CondorPlatform";
+#define ATTR_PLATFORM					AttrGetName( ATTRE_PLATFORM )
 const char ATTR_PREFERENCES				 [] = "Preferences";
 const char ATTR_PREV_SEND_ESTIMATE		 [] = "PrevSendEstimate";
 const char ATTR_PREV_RECV_ESTIMATE		 [] = "PrevRecvEstimate";
@@ -253,7 +254,7 @@ const char ATTR_SUBMITTOR_PRIO           [] = "SubmittorPrio";
 const char ATTR_SUBNET                   [] = "Subnet";
 const char ATTR_SUSPEND                  [] = "Suspend";
 const char ATTR_TARGET_TYPE				 [] = "TargetType";
-const char ATTR_TOTAL_CONDOR_LOAD_AVG	 [] = "TotalCondorLoadAvg";
+#define ATTR_TOTAL_CONDOR_LOAD_AVG			AttrGetName( ATTRE_TOTAL_LOAD )
 const char ATTR_TOTAL_CPUS				 [] = "TotalCpus";
 const char ATTR_TOTAL_DISK				 [] = "TotalDisk";
 const char ATTR_TOTAL_FLOCKED_JOBS		 [] = "TotalFlockedJobs";
@@ -286,7 +287,7 @@ const char ATTR_NUM_HOSTS_TOTAL			 [] = "HostsTotal";
 const char ATTR_NUM_HOSTS_CLAIMED		 [] = "HostsClaimed";
 const char ATTR_NUM_HOSTS_UNCLAIMED		 [] = "HostsUnclaimed";
 const char ATTR_NUM_HOSTS_OWNER			 [] = "HostsOwner";
-const char ATTR_VERSION					 [] = "CondorVersion";
+#define ATTR_VERSION					AttrGetName( ATTRE_VERSION )
 const char ATTR_SHADOW_VERSION			 [] = "ShadowVersion";
 const char ATTR_VIRTUAL_MACHINE_ID		 [] = "VirtualMachineID";
 const char ATTR_TRANSFER_TYPE			 [] = "TransferType";
@@ -338,5 +339,56 @@ const char ATTR_SEC_SESSION_DURATION     [] = "SessionDuration";
 const char ATTR_SEC_USER                 [] = "User";
 const char ATTR_SEC_NEW_SESSION          [] = "NewSession";
 const char ATTR_SEC_USE_SESSION          [] = "UseSession";
+
+// Enumerate the ones that can't be constant strings..
+typedef enum
+{
+	ATTRE_CONDOR_LOAD_AVG = 0,
+	ATTRE_CONDOR_ADMIN,
+	ATTRE_PLATFORM,
+	ATTRE_TOTAL_LOAD,
+	ATTRE_VERSION,
+	// ....
+} CONDOR_ATTR;
+
+// Prototypes
+int AttrInit( void );
+const char *AttrGetName( CONDOR_ATTR );
+
+
+// ------------------------------------------------------
+// Stuff private to the environment variable manager
+// ------------------------------------------------------
+#if defined _CONDOR_ATTR_MAIN
+
+// Flags available
+typedef enum
+{
+	ATTR_FLAG_NONE = 0,			// No special treatment
+	ATTR_FLAG_DISTRO,			// Plug in the distribution name
+	ATTR_FLAG_DISTRO_UC,		// Plug in the UPPER CASE distribution name
+	ATTR_FLAG_DISTRO_CAP,		// Plug in the Capitolized distribution name
+} CONDOR_ATTR_FLAGS;
+
+// Data on each env variable
+typedef struct
+{
+	CONDOR_ATTR			sanity;		// Used to sanity check
+	const char			*string;	// My format string
+	CONDOR_ATTR_FLAGS	flag;		// Flags
+	const char			*cached;	// Cached answer
+} CONDOR_ATTR_ELEM;
+
+// The actual list of variables indexed by CONDOR_ATTR
+static CONDOR_ATTR_ELEM CondorAttrList[] =
+{
+	{ ATTRE_CONDOR_LOAD_AVG,"%sLoadAvg",		ATTR_FLAG_DISTRO_CAP },
+	{ ATTRE_CONDOR_ADMIN,	"%sAdmin",			ATTR_FLAG_DISTRO_CAP },
+	{ ATTRE_PLATFORM,		"%sPlatform",		ATTR_FLAG_DISTRO_CAP },
+	{ ATTRE_TOTAL_LOAD,		"Total%sLoadAvg",	ATTR_FLAG_DISTRO_CAP },
+	{ ATTRE_VERSION,		"%sVersion",		ATTR_FLAG_DISTRO_CAP },
+	// ....
+};
+#endif		// _CONDOR_ATTR_MAIN
 
 #endif

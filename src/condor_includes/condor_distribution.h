@@ -20,46 +20,39 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#include "condor_common.h"
-#include "classad_collection.h"
-#include "condor_distribution.h"
+#ifndef _CONDOR_DISTRIBUTION_H_
+#define _CONDOR_DISTRIBUTION_H_
 
-Distribution *myDistro;
+// Max length of the distribution name
+static const int MAX_DISTRIBUTION_NAME = 20;
 
-/*template class Set<RankedClassAd>;*/
-/*template class Set<int>;*/
-/*template class HashTable<int, BaseCollection *>;*/
-/*template class SetElem<RankedClassAd>;*/
-/*template class Set<MyString>;*/
-/*template class SetElem<MyString>;*/
-
-int
-main(int argc, char *argv[])
+class Distribution
 {
-	myDistro = new Distribution( argc, argv );
-	if (argc != 2) {
-		fprintf(stderr, "usage: %s collection-file\n", argv[0]);
-	}
+# ifdef WIN32
+	friend int dc_main(int argc, char **argv );
+# else
+	friend int main(int argc, char **argv );
+# endif
 
-	// rename the collection file to some temporary file, so we don't
-	// mess up the actual collection file
-	char tmpfile[L_tmpnam];
-	tmpnam(tmpfile);
-	char cmd[_POSIX_PATH_MAX];
-	sprintf(cmd, "cp %s %s", argv[1], tmpfile);
-	system(cmd);
-	
-	ClassAdCollection c(tmpfile);
+  public:
+	Distribution( int argc, char **argv );
+	~Distribution( );
 
-	c.StartIterateAllCollections();
+	// Get my distribution name..
+	const char *Get(void) { return distribution; };
+	const char *GetUc() { return distribution_uc; };
+	const char *GetCap() { return distribution_cap; };
+	int GetLen() { return distribution_length; };
 
-	ClassAd *ad = NULL; 
-	while (c.IterateAllClassAds(ad)) {
-		ad->fPrint(stdout);
-		printf("\n");
-	}
+  private:
+	void	SetDistribution( const char *name = "condor" );
 
-	unlink(tmpfile);
+	char	distribution[ MAX_DISTRIBUTION_NAME + 1 ];
+	char	distribution_uc[ MAX_DISTRIBUTION_NAME + 1];
+	char	distribution_cap[ MAX_DISTRIBUTION_NAME + 1];
+	int		distribution_length;
+};
 
-	return 0;
-}
+extern Distribution* myDistro;
+
+#endif	/* _CONDOR_DISTRIBUTION_H */

@@ -25,6 +25,8 @@
 #include "condor_debug.h"
 #include "condor_syscall_mode.h"
 #include "condor_uid.h"
+#include "condor_environ.h"
+#include "condor_distribution.h"
 
 /* See condor_uid.h for description. */
 static char* CondorUserName = NULL;
@@ -384,7 +386,7 @@ init_condor_ids()
 		free( CondorUserName );
 	}
 
-	pwd=getpwnam("condor");
+	pwd=getpwnam( myDistro->Get() );
 	if( pwd ) {
 		RealCondorUid = pwd->pw_uid;
 		RealCondorGid = pwd->pw_gid;
@@ -396,25 +398,26 @@ init_condor_ids()
 	/* If we're root, set the Condor Uid and Gid to the value
 	   specified in the "CONDOR_IDS" environment variable */
 	if( MyUid == ROOT ) {
-		if( (buf = getenv( "CONDOR_IDS" )) ) {	
+		const char	*envName = EnvGetName( ENV_UG_IDS ); 
+		if( (buf = getenv( envName )) ) {	
 			if( sscanf(buf, "%d.%d", &CondorUid, &CondorGid) != 2 ) {
-				fprintf(stderr, "ERROR: badly formed value in CONDOR_IDS ");
+				fprintf(stderr, "ERROR: badly formed value in %s ", envName );
 				fprintf(stderr, "environment variable.\n");
-				fprintf(stderr, "Please set CONDOR_IDS to ");
+				fprintf(stderr, "Please set %s to ", envName);
 				fprintf(stderr, "the '.' seperated uid, gid pair that\n");
-				fprintf(stderr, "should be used by Condor.\n");
+				fprintf(stderr, "should be used by %s.\n", myDistro->Get() );
 				exit(1);
 			}
 			pwd = getpwuid( CondorUid );
 			if( pwd ) {
 				CondorUserName = strdup( pwd->pw_name );
 			} else {
-				fprintf( stderr, "ERROR: the uid specified in CONDOR_IDS " );
+				fprintf( stderr, "ERROR: the uid specified in %s ", envName );
 				fprintf( stderr, "environment variable (%d)\n", CondorUid );
 				fprintf(stderr, "does not exist in your password information.\n" );
-				fprintf(stderr, "Please set CONDOR_IDS to ");
+				fprintf(stderr, "Please set %s to ", envName);
 				fprintf(stderr, "the '.' seperated uid, gid pair that\n");
-				fprintf(stderr, "should be used by Condor.\n");
+				fprintf(stderr, "should be used by %s.\n", myDistro->Get() );
 				exit(1);
 			}
 		} else {
@@ -422,11 +425,11 @@ init_condor_ids()
 			if( RealCondorUid > 0 ) {
 				CondorUid = RealCondorUid;
 				CondorGid = RealCondorGid;
-				CondorUserName = strdup( "condor" );
+				CondorUserName = strdup( myDistro->Get() );
 			} else {
 				fprintf(stderr,
 						"Can't find \"condor\" in the password file and\n"
-						"CONDOR_IDS environment variable not set\n"); 
+						"%s environment variable not set\n", envName); 
 				exit(1);
 			}
 		}

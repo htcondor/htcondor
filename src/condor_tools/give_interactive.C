@@ -39,6 +39,7 @@
 #include "classad_hashtable.h"
 #include "MyString.h"
 #include "basename.h"
+#include "condor_distribution.h"
 
 // Globals
 
@@ -49,6 +50,7 @@ double priority = 0.00001;
 const char *pool = NULL;
 struct 	PrioEntry { MyString name; float prio; };
 static  ExtArray<PrioEntry> prioTable;
+Distribution *myDistro;
 #ifndef WIN32
 template class ExtArray<PrioEntry>;
 #endif
@@ -447,6 +449,7 @@ main(int argc, char *argv[])
 	virtualMachineCounts = new HashTable <HashKey, int> (25, hashFunction); 
 	mySubSystem = "INTERACTIVE";
 	config();
+	myDistro = new Distribution( argc, argv );
 
 	// parse command line args
 	for( ptr=argv+1,argc--; argc > 0; argc--,ptr++ ) {

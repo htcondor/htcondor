@@ -26,10 +26,14 @@
 #include "condor_debug.h"
 #include "sysapi.h"
 #include "sysapi_externs.h"
+#include "condor_distribution.h"
+
+Distribution *myDistro;
 
 int
 main(int argc, char** argv)
 {
+	myDistro = new Distribution( argc, argv );
 	set_debug_flags("D_ALWAYS");
 	config();
 	sysapi_test_dump_all(argc, argv);
