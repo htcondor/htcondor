@@ -478,7 +478,7 @@ check_globus_rm_contacts(char* resource)
 
 #endif /* 0 */
 
-char *rsl_stringify( char *string )
+char *rsl_stringify( const char *string )
 {
 	static char buffer[5000];
 

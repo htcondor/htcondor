@@ -246,7 +246,7 @@ int have_condor_g();
 int check_globus_rm_contacts( char* resource );
 #endif
 
-char *rsl_stringify( char *string );
+char *rsl_stringify( const char *string );
 
 END_C_DECLS
 
