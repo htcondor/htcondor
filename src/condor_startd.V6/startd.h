@@ -76,7 +76,6 @@ extern	char*	exec_path;
 
 // Sting Lists
 extern	StringList* console_devices;
-extern	StringList* startd_exprs;
 extern	StringList* startd_job_exprs;
 
 // Starter paths

@@ -728,16 +728,8 @@ Resource::make_public_ad(ClassAd* pubCA)
 	caInsert( pubCA, r_classad, ATTR_AFS_CELL );
 
 		// Put everything in the public classad from STARTD_EXPRS. 
-	if( startd_exprs ) {
-		startd_exprs->rewind();   
-		while( (ptr = startd_exprs->next()) ) {
-			expr = param( ptr );
-			if( expr == NULL ) continue;
-			sprintf( tmp, "%s = %s", ptr, expr );
-			pubCA->Insert( tmp );
-			free( expr );
-		}
-	}
+	config_fill_ad( pubCA, "STARTD" );
+
 		// Insert the currently active requirements expression.  If
 		// it's just START, we need to insert that too.
 	if( (r_reqexp->update( pubCA ) == ORIG) ) {

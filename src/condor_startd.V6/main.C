@@ -42,7 +42,6 @@ char*	exec_path = NULL;
 
 // String Lists
 StringList *console_devices = NULL;
-StringList *startd_exprs = NULL;
 StringList *startd_job_exprs = NULL;
 
 // Starter paths
@@ -333,17 +332,6 @@ init_params( int first_time)
 	if( tmp ) {
 		console_devices = new StringList();
 		console_devices->initializeFromString( tmp );
-		free( tmp );
-	}
-
-	if( startd_exprs ) {
-		delete( startd_exprs );
-		startd_exprs = NULL;
-	}
-	tmp = param( "STARTD_EXPRS" );
-	if( tmp ) {
-		startd_exprs = new StringList();
-		startd_exprs->initializeFromString( tmp );
 		free( tmp );
 	}
 
