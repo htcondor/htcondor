@@ -617,8 +617,6 @@ MASTER				= $(SBIN)/condor_master
 STARTD				= $(SBIN)/condor_startd
 SCHEDD				= $(SBIN)/condor_schedd
 KBDD				= $(SBIN)/condor_kbdd
-COLLECTOR   		= $(SBIN)/condor_collector
-NEGOTIATOR  		= $(SBIN)/condor_negotiator
 
 ##  When the master starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
