@@ -712,6 +712,7 @@ getAddrFromClaimId( const char* id )
 char *
 hostname_to_string (const char * hostname, const int default_port) {
 	static char hostname_buff[MAXHOSTNAMELEN+10];
+	struct sockaddr_in sin;
 
 	if (!(hostname) || !(*hostname))
 		return NULL;
@@ -724,7 +725,6 @@ hostname_to_string (const char * hostname, const int default_port) {
 		return NULL;
 	}
 
-	struct sockaddr_in sin;
 	if (!string_to_sin (hostname_buff, &sin)) {
 		return NULL;
 	}
