@@ -74,6 +74,7 @@ sub ParseUptime
 	my $Time = ( $1 * 60 ) + $2;
 	$Time += (12 * 60 ) if ( $3 =~ /p/ );
 	$HashRef->{Time} = $Time;
+	$HashRef->{TimeString} = $Fields[0];
     }
 
     # Parse the actual uptime field

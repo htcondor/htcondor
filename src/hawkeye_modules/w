@@ -46,7 +46,8 @@ sub RunIt {
     HawkeyeLib::ParseUptime( $_, \%Uptime );
     foreach my $Attr ( keys %Uptime )
     {
-	$Hash->Add( "Uptime" . $Attr, "n", $Uptime{$Attr} );
+	my $Type = ( $Attr =~ /string/i ) ? "s" : "n";
+	$Hash->Add( "Uptime" . $Attr, $Type, $Uptime{$Attr} );
     }
 
     # Read & parse the header line

@@ -259,7 +259,8 @@ sub RunIt
 		# And, add it to our summary
 		foreach my $Attr ( keys %Uptime )
 		{
-		    $Summary->Add( $Attr, "n", $Uptime{$Attr} );
+		    my $Type = ( $Attr =~ /string/i ) ? "s" : "n";
+		    $Summary->Add( $Attr, $Type, $Uptime{$Attr} );
 		}
 	    }
 	    # Processes summary?
