@@ -5,7 +5,7 @@
 #define NBBY 8
 
 
-#if defined( ULTRIX42 )
+#if defined( ULTRIX42 ) || defined( ULTRIX43 )
 #	define	FD_SETSIZE	4096
 #	define NFDBITS (sizeof (fd_mask) * NBBY)   /* bits per mask */
 #	define _DEFINE_FD_SET
