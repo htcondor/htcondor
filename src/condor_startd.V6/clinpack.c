@@ -24,7 +24,9 @@ PLEASE NOTE: You can also just 'uncomment' one of the options below.
 
 #include <stdio.h>
 #include <math.h>
+#if !defined(WIN32)
 #include <unistd.h>
+#endif
 
 #ifdef SP
 #define REAL float
@@ -62,6 +64,9 @@ clinpack_kflops ()
    double t1,tm,tm2,dtime();
    static int ipvt[200],n,i,ntimes,info,lda,ldaa,kflops;
 
+#if defined(WIN32)
+   static float one_tick = .0001;
+#else
    static long clock_tick = -1;
    static float one_tick;
    if ( clock_tick < 1 || clock_tick > 1000) {
@@ -70,6 +75,7 @@ clinpack_kflops ()
 				one_tick = (float) 1 / clock_tick;
 					/* one_tick is the length of time for one tick */
    }
+#endif
 
    lda = 201;
    ldaa = 200;

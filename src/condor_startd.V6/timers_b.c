@@ -29,7 +29,9 @@
 /* or compile, for example, with the '-DUNIX' option.          */
 /***************************************************************/
 
+#if !defined(WIN32)
 #define UNIX
+#endif
 
 /*****************************************************/
 /*  UNIX dtime(). This is the preferred UNIX timer.  */
@@ -69,3 +71,15 @@ double dtime()
 }
 #endif
 
+#ifdef WIN32
+#include <windows.h>
+#include <sys/types.h>
+#include <sys/timeb.h>
+
+double dtime()
+{
+	struct _timeb timebuffer;
+	_ftime( &timebuffer );
+	return (double)timebuffer.time + (double)timebuffer.millitm/(double)1000;
+}
+#endif

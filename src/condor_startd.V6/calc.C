@@ -13,6 +13,16 @@ calc_disk()
 }
 
 
+#if defined(WIN32)
+
+void
+calc_idle_time( int & user_idle, int & console_idle)
+{
+	user_idle = console_idle = -1;
+}
+
+#else /* !defined(WIN32) */
+
 #if defined(OSF1)
 #	define MAXINT ((1<<30)-1)
 #else
@@ -198,7 +208,7 @@ tty_idle_time(char* file)
 
 	return answer;
 }
-
+#endif /* defined(WIN32) */
 
 int
 calc_ncpus()
@@ -221,6 +231,10 @@ calc_ncpus()
 	return (int)sysconf(_SC_NPROCESSORS_ONLN);
 #elif defined(IRIX53)
 	return sysmp(MP_NPROCS);
+#elif defined(WIN32)
+	SYSTEM_INFO info;
+	GetSystemInfo(&info);
+	return info.dwNumberOfProcessors;
 #else sequent
 	return 1;
 #endif sequent

@@ -48,24 +48,20 @@ check_perms()
 void
 cleanup_execute_dir()
 {
-	char *execute;
 	char buf[2048];
 
-	execute = strrchr(exec_path, '/');
-	if (execute == NULL) {
-		execute = exec_path;
-	} else {
-		execute++;
-	}
-
-	if(strcmp("execute", execute) != 0) {
-		EXCEPT("EXECUTE parameter (%s) must end with 'execute'.\n",
-			   exec_path);
-	}
-
+#if defined(WIN32)
+	sprintf(buf, "del /f /s /q %.256s\\condor_exec*",
+			exec_path);
+	system(buf);
+	sprintf(buf, "rmdir /s /q %.256s\\dir_1",
+			exec_path);
+	system(buf);
+#else
 	sprintf(buf, "/bin/rm -rf %.256s/condor_exec* %.256s/dir_*",
 			exec_path, exec_path);
 	system(buf);
+#endif
 }
 
 

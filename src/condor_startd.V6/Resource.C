@@ -49,7 +49,9 @@ Resource::init_classad()
 {
 	char 	tmp[80];
 	int 	phys_memory = -1;
+#if !defined(WIN32)
 	char*	host_cell;
+#endif
 	char*	ptr;
 	int		needs_free = 0;
 
@@ -67,6 +69,7 @@ Resource::init_classad()
 	r_classad->Insert( tmp );
 	r_private_classad->Insert( tmp );
 
+#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 		// AFS cell
 	host_cell = get_host_cell();
 	if( host_cell ) {
@@ -77,6 +80,7 @@ Resource::init_classad()
 	} else {
 		dprintf( D_ALWAYS, "AFS_Cell not set\n" );
 	}
+#endif
 
 		// If the UID domain is not set, use our hostname as the
 		// default.   
@@ -364,7 +368,7 @@ Resource::starter_exited()
 
 
 int
-Resource::send_classad_to_sock( Sock* sock, int send_private = FALSE ) 
+Resource::send_classad_to_sock( Sock* sock, int send_private ) 
 {
 	sock->encode();
 

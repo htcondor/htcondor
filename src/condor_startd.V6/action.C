@@ -262,7 +262,7 @@ accept_request_claim( Resource* rip )
 
 	return TRUE;
 }
-#undef ABORT;
+#undef ABORT
 
 
 int
@@ -441,6 +441,7 @@ activate_claim( Resource* rip, Stream* stream )
 	/* now that we sent stRec, free stRec.server_name which we strduped */
 	free( stRec.server_name );
 
+#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 	/* Wait for connection to port1 */
 	len = sizeof frm;
 	memset( (char *)&frm,0, sizeof frm );
@@ -535,6 +536,7 @@ activate_claim( Resource* rip, Stream* stream )
 	(rip->r_classad)->Insert( tmp );
 
 	free( shadow_addr );
+#endif
 	return TRUE;
 }
 #undef ABORT
@@ -543,6 +545,9 @@ activate_claim( Resource* rip, Stream* stream )
 int
 deactivate_claim( Resource* rip )
 {
+#if defined(WIN32) /* NEED TO PORT TO WIN32 */
+	return TRUE;
+#else
 	dprintf(D_ALWAYS, "Called deactivate_claim()\n");
 	if( (rip->state() == claimed_state) &&
 		(rip->r_starter->active()) ) {
@@ -550,12 +555,16 @@ deactivate_claim( Resource* rip )
 	} else {
 		return FALSE;
 	}
+#endif
 }
 
 
 int
 deactivate_claim_forcibly( Resource* rip )
 {
+#if defined(WIN32) /* NEED TO PORT TO WIN32 */
+	return TRUE;
+#else
 	dprintf(D_ALWAYS, "Called deactivate_claim_forcibly()\n");
 	if( (rip->state() == claimed_state) &&
 		(rip->r_starter->active()) ) {
@@ -563,6 +572,7 @@ deactivate_claim_forcibly( Resource* rip )
 	} else {
 		return FALSE;
 	}
+#endif
 }
 
 
@@ -580,11 +590,13 @@ vacate_claim( Resource* rip )
 		return TRUE;
 	case preempting_state:
 		if( rip->r_starter->active() ) {
+#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 			if( rip->r_starter->kill( SIGTSTP ) < 0 ) {
 				return FALSE;
 			} else {
 				return rip->change_state( vacating_act );
 			}
+#endif
 		} else {
 			return rip->change_state( idle_act );
 		}
@@ -610,11 +622,13 @@ kill_claim( Resource* rip )
 		return TRUE;
 	case preempting_state:
 		if( rip->r_starter->active() ) {
+#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 			if( rip->r_starter->kill( SIGINT ) < 0 ) {
 				return FALSE;
 			} else {
 				return rip->change_state( killing_act );
 			}
+#endif
 		} else {
 			return rip->change_state( idle_act );
 		}
@@ -628,6 +642,9 @@ kill_claim( Resource* rip )
 int
 suspend_claim( Resource* rip )
 {
+#if defined(WIN32) /* NEED TO PORT TO WIN32 */
+	return TRUE;
+#else
 	dprintf(D_ALWAYS, "Called suspend_claim()\n");
 	if( rip->state() == claimed_state ) {
 		if( rip->r_starter->kill( SIGUSR1 ) < 0 ) {
@@ -638,12 +655,16 @@ suspend_claim( Resource* rip )
 	} else {
 		return FALSE;
 	}
+#endif
 }
 
 
 int
 continue_claim( Resource* rip )
 {
+#if defined(WIN32) /* NEED TO PORT TO WIN32 */
+	return TRUE;
+#else
 	dprintf(D_ALWAYS, "Called continue_claim()\n");
 	if( rip->state() == claimed_state ) {
 		if( rip->r_starter->kill( SIGCONT ) < 0 ) {
@@ -654,6 +675,7 @@ continue_claim( Resource* rip )
 	} else {
 		return FALSE;
 	}
+#endif
 }
 
 
@@ -769,9 +791,11 @@ periodic_checkpoint( Resource* rip )
 	if( rip->state() != claimed_state ) {
 		return FALSE;
 	}
+#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 	if( rip->r_starter->kill( SIGUSR2 ) < 0 ) {
 		return FALSE;
 	}
+#endif
 	
 	sprintf( tmp, "%s=%d", ATTR_LAST_PERIODIC_CHECKPOINT, (int)time(NULL) );
 	(rip->r_classad)->Insert(tmp);
@@ -783,6 +807,9 @@ periodic_checkpoint( Resource* rip )
 int
 request_new_proc( Resource* rip )
 {
+#if defined(WIN32) /* NEED TO PORT TO WIN32 */
+	return TRUE;
+#else
 	if( rip->state() != claimed_state ) {
 		return FALSE;
 	}
@@ -794,5 +821,6 @@ request_new_proc( Resource* rip )
 		}
 	}
 	return FALSE;
+#endif
 }	
 

@@ -4,8 +4,10 @@
 #include "../condor_daemon_core.V6/condor_timer_manager.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
+#if !defined(WIN32)
 #include <utmp.h>
 #include <sys/wait.h>
+#endif
 
 #include "condor_classad.h"
 #include "condor_adtypes.h"
@@ -16,7 +18,9 @@
 #include "util_lib_proto.h"
 #include "internet.h"
 #include "afs.h"
+#if !defined(WIN32)
 #include "sig_install.h"
+#endif
 #include "condor_state.h"
 
 #include "Match.h"

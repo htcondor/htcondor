@@ -171,6 +171,15 @@ init_params( int first_time)
 		EXCEPT( "No Execute file specified in config file" );
 	}
 
+#if defined(WIN32)
+	// switch delimiter char in exec path on WIN32
+	for (i=0; exec_path[i]; i++) {
+		if (exec_path[i] == '/') {
+			exec_path[i] = '\\';
+		}
+	}
+#endif
+
 	// make sure we have the canonical name for the negotiator host
 	tmp = param( "NEGOTIATOR_HOST" );
 	if( tmp == NULL ) {
@@ -303,6 +312,7 @@ handle_dc_sigchld( Service*, int )
 void
 reaper_loop()
 {
+#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 	int pid, status;
 	Resource* rip;
 
@@ -324,6 +334,7 @@ reaper_loop()
 		}		
 		rip->starter_exited();
 	}
+#endif
 }
 
 

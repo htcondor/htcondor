@@ -65,14 +65,17 @@ Starter::reallykill( int signo, int pg )
 	}
 
 	for (errno = 0; (ret = stat(s_name, &st)) < 0; errno = 0) {
+#if !defined(WIN32)
 		if (errno == ETIMEDOUT)
 			continue;
+#endif
 		EXCEPT( "Starter::kill(%d): cannot stat <%s> - errno = %d\n",
 				signo, s_name, errno);
 	}
 
 	priv = set_root_priv();
 
+#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 	if (signo != SIGSTOP && signo != SIGCONT) {
 		if( pg ) {
 			ret = ::kill( -(s_pid), SIGCONT );
@@ -85,6 +88,7 @@ Starter::reallykill( int signo, int pg )
 	} else {
 		ret = ::kill( (s_pid), signo );
 	}
+#endif
 
 	set_priv(priv);
 
@@ -128,6 +132,9 @@ Starter::exited()
 int
 exec_starter(char* starter, char* hostname, int main_sock, int err_sock)
 {
+#if defined(WIN32) /* NEED TO PORT TO WIN32 */
+	return 0;
+#else
 	int i;
 	int pid;
 	int n_fds = getdtablesize();
@@ -216,6 +223,7 @@ exec_starter(char* starter, char* hostname, int main_sock, int err_sock)
 		EXCEPT( "execl(%s, condor_starter, %s, 0)", starter, hostname );
 	}
 	return pid;
+#endif // !defined(WIN32)
 }
 
 		
