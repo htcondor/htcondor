@@ -375,6 +375,7 @@ int daemon::StartDaemon()
 {
 	char	*shortname;
 	int command_port = TRUE;
+	int i;
 	char argbuf[150];
 
 	if( (shortname = strrchr(process_name,'/')) ) {
@@ -436,6 +437,10 @@ int daemon::StartDaemon()
 		if( setsid() == -1 ) {
 			EXCEPT( "setsid(), errno = %d\n", errno );
 		}
+
+		// Close all inherited sockets and fds
+		for (i=0;i < _NFILE; i++)
+			close(i);
 
 		if( command_port != TRUE ) {
 			sprintf( argbuf, "%d", command_port );
@@ -499,6 +504,7 @@ void Daemons::Restart(int pid)
 void Daemons::RestartMaster()
 {
 	int			index = GetIndex("MASTER");
+	int 		i;
 
 	if ( index == -1 ) {
 		dprintf(D_ALWAYS, "Restart Master:MASTER not specified\n");
@@ -516,7 +522,7 @@ void Daemons::RestartMaster()
 
 		/* Send SIGTERM to all daemons (NOT process groups) and let
 		   them do their own clean up.  -Derek Wright 7/29/97 */
-	for ( int i=0; i < no_daemons; i++) {
+	for ( i=0; i < no_daemons; i++) {
 		if ((daemon_ptr[i]->flag == TRUE )&& ( daemon_ptr[i]->pid )
 				&& ( index != i)) {
 			do_kill(daemon_ptr[i]->pid, SIGTERM);
@@ -539,6 +545,12 @@ void Daemons::RestartMaster()
 
 	dprintf( D_ALWAYS, "Doing exec( \"%s\", \"condor_master\", 0 )", 
 			daemon_ptr[index]->process_name);
+
+	// Now close all sockets and fds so our new invocation of condor_master
+	// does not inherit them.
+	for (i=0; i < _NFILE; i++) 
+		close(i);
+
 	(void)execl(daemon_ptr[index]->process_name, "condor_master", 0);
 	EXCEPT("execl(%s, condor_master, 0)",daemon_ptr[index]->process_name);
 #endif
