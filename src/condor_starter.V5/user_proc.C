@@ -407,13 +407,6 @@ UserProc::execute()
 	int		fd;
 	ReliSock	*new_reli = NULL;
 
-		// Now that we're almost ready to spawn the user job, send a
-		// pseudo syscall to the shadow so it can log the execute
-		// event in the userlog.
-	if( REMOTE_syscall( CONDOR_register_begin_execution ) < 0 ) {
-		EXCEPT( "Failed register_begin_execution - shadow must have died" );
-	}
-
 	pipe_fds[0] = -1;
 	pipe_fds[1] = -1;
 
