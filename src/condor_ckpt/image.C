@@ -18,13 +18,16 @@ static char *_FileName_ = __FILE__;
 #include <signal.h>
 #endif
 
+extern "C" int open_write_stream( const char * ckpt_file );
 
 Image MyImage;
 static jmp_buf Env;
 
 static int CkptMode;
 
-Header::Header()
+
+void
+Header::Init()
 {
 	magic = MAGIC;
 	n_segs = 0;
@@ -35,16 +38,6 @@ Header::Display()
 {
 	DUMP( " ", magic, 0x%X );
 	DUMP( " ", n_segs, %d );
-}
-
-SegMap::SegMap()
-{
-	Init( "XXXXXXXXXXXXX", -1, -1 );
-}
-
-SegMap::SegMap( const char *n, RAW_ADDR c, long l )
-{
-	Init( n, c, l );
 }
 
 void
@@ -65,25 +58,12 @@ SegMap::Display()
 	printf( " len = %d (0x%X)\n", len, len );
 }
 
-Image::Image()
-{
-	Init( "", -1 );
-}
-
-Image::Image( int fd )
-{
-	Init( "", fd );
-}
-
-Image::Image( char *ckpt_name )
-{
-	Init( ckpt_name, -1 );
-}
 
 void
 Image::SetFd( int f )
 {
 	fd = f;
+	pos = 0;
 }
 
 void
@@ -92,21 +72,25 @@ Image::SetFileName( char *ckpt_name )
 		// Save the checkpoint file name
 	file_name = new char [ strlen(ckpt_name) + 1 ];
 	strcpy( file_name, ckpt_name );
+
+	fd = -1;
+	pos = 0;
 }
 
+
+/*
+  These actions must be done on every startup, regardless whether it is
+  local or remote, and regardless whether it is an original invocation
+  or a restart.
+*/
+extern "C"
 void
-Image::Init( char *ckpt_name, int ckpt_fd )
+_condor_prestart()
 {
 	struct sigaction action;
 
-		// Save the checkpoint file name
-	file_name = new char [ strlen(ckpt_name) + 1 ];
-	strcpy( file_name, ckpt_name );
-
-		// Initialize saved image data structures
-	max_segs = SEG_INCR;
-	map = new SegMap[max_segs];
-	valid = FALSE;
+		// Initialize open files table
+	InitFileState();
 
 		// set up to catch SIGTSTP and do a checkpoint
 	action.sa_handler = (SIG_HANDLER)Checkpoint;
@@ -118,15 +102,15 @@ Image::Init( char *ckpt_name, int ckpt_fd )
 		perror( "sigaction" );
 		exit( 1 );
 	}
-
-	fd = ckpt_fd;
-	pos = 0;
 }
 
 
-
-extern char *etext;
-extern char *edata;
+/*
+  Save checkpoint information about our process in the "image" object.  Note:
+  this only saves the information in the object.  You must then call the
+  Write() method to get the image transferred to a checkpoint file (or
+  possibly moved to another process.
+*/
 void
 Image::Save()
 {
@@ -134,6 +118,8 @@ Image::Save()
 	RAW_ADDR	stack_start, stack_end;
 	ssize_t		pos;
 	int			i;
+
+	head.Init();
 
 		// Set up data segment
 	data_start = data_start_addr();
@@ -167,7 +153,6 @@ Image::Display()
 	int		i;
 
 	printf( "===========\n" );
-	DUMP( "", max_segs, %d );
 	printf( "Ckpt File Header:\n" );
 	head.Display();
 	for( i=0; i<head.N_Segs(); i++ ) {
@@ -183,7 +168,7 @@ Image::AddSegment( const char *name, RAW_ADDR start, RAW_ADDR end )
 	long	len = end - start;
 	int idx = head.N_Segs();
 
-	if( idx >= max_segs ) {
+	if( idx >= MAX_SEGS ) {
 		fprintf( stderr, "Don't know how to grow segment map yet!\n" );
 		exit( 1 );
 	}
@@ -214,6 +199,10 @@ SegMap::Contains( void *addr )
 
 
 
+/*
+  Given an "image" object containing checkpoint information which we have
+  just read in, this method actually effects the restart.
+*/
 void
 Image::Restore()
 {
@@ -228,6 +217,9 @@ Image::Restore()
 		// the only thing that has changed is the file descriptor.
 	fd = save_fd;
 
+		// Now we're going to restore the stack, so we move our execution
+		// stack to a temporary area (in the data segment), then call
+		// the RestoreStack() routine.
 	ExecuteOnTmpStk( RestoreStack );
 
 		// RestoreStack() also does the jump back to user code
@@ -270,26 +262,44 @@ Image::Write()
 	return Write( file_name );
 }
 
+/*
+  Set up a stream to write our checkpoint information onto, then write
+  it.  Note: there are two versions of "open_write_stream", one in
+  "local_startup.c" to be linked with programs for "standalone"
+  checkpointing, and one in "remote_startup.c" to be linked with
+  programs for "remote" checkpointing.  Of course, they do very different
+  things, but in either case a file descriptor is returned which we
+  should access in LOCAL and UNMAPPED mode.
+*/
 int
 Image::Write( const char *ckpt_file )
 {
 	int	fd;
 	int	status;
+	int	scm;
 
 	if( ckpt_file == 0 ) {
-		ckpt_file == file_name;
+		ckpt_file = file_name;
 	}
 
-	if( (fd=open(ckpt_file,O_CREAT|O_TRUNC|O_WRONLY,0664)) < 0 ) {
-		perror( "open" );
+	if( (fd=open_write_stream(ckpt_file)) < 0 ) {
+		perror( "open_write_stream" );
 		exit( 1 );
 	}
+
+	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	status = Write( fd );
 	(void)close( fd );
+	SetSyscalls( scm );
 
 	return status;
 }
 
+/*
+  Write our checkpoint "image" to a given file descriptor.  At this level
+  it makes no difference whether the file descriptor points to a local
+  file, a remote file, or another process (for direct migration).
+*/
 int
 Image::Write( int fd )
 {
@@ -322,6 +332,13 @@ Image::Write( int fd )
 }
 
 
+/*
+  Read in our checkpoint "image" from a given file descriptor.  The
+  descriptor could point to a local file, a remote file, or another
+  process (in the case of direct migration).  Here we only read in
+  the image "header" and the maps describing the segments we need to
+  restore.  The Restore() function will do the rest.
+*/
 int
 Image::Read()
 {
@@ -418,6 +435,14 @@ SegMap::Write( int fd, ssize_t pos )
 
 extern "C" {
 
+/*
+  This is the signal handler which actually effects a checkpoint.  This
+  must be implemented as a signal handler, since we assume the signal
+  handling code provided by the system will save and restore important
+  elements of our context (register values, etc.).  A process wishing
+  to checkpoint itself should generate the correct signal, not call this
+  routine directory, (the ckpt()) function does this.
+*/
 void
 Checkpoint( int sig, int code, void *scp )
 {
@@ -456,6 +481,10 @@ init_image_with_file_descriptor( int fd )
 	MyImage.SetFd( fd );
 }
 
+/*
+  Effect a restart by reading in an "image" containing checkpointing
+  information and then overwriting our process with that image.
+*/
 void
 restart( )
 {
@@ -468,6 +497,10 @@ restart( )
 
 
 
+/*
+  Checkpointing must by implemented as a signal handler.  This routine
+  generates the required signal to invoke the handler.
+*/
 void
 ckpt()
 {

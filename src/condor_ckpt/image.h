@@ -20,9 +20,13 @@ typedef int BOOL;
 typedef int ssize_t; // should be included in <sys/types.h>, but some don't
 #endif
 
+const int MAGIC = 0xfeafea;
+const int SEG_INCR = 25;
+const int  MAX_SEGS = 25;
+
 class Header {
 public:
-	Header();
+	void Init();
 	void IncrSegs() { n_segs += 1; }
 	int	N_Segs() { return n_segs; }
 	void Display();
@@ -34,8 +38,6 @@ private:
 
 class SegMap {
 public:
-	SegMap();
-	SegMap( const char *name, RAW_ADDR core_loc, long len );
 	void Init( const char *name, RAW_ADDR core_loc, long len );
 	ssize_t Read( int fd, ssize_t pos );
 	ssize_t Write( int fd, ssize_t pos );
@@ -52,9 +54,6 @@ private:
 
 class Image {
 public:
-	Image( char * ckpt_name );
-	Image( int ckpt_fd );
-	Image();
 	void Save();
 	int	Write();
 	int Write( int fd );
@@ -70,14 +69,12 @@ public:
 	void SetFd( int fd );
 	void SetFileName( char *ckpt_name );
 protected:
-	void Init( char *ckpt_name, int ckpt_fd );
 	RAW_ADDR	GetStackLimit();
 	void AddSegment( const char *name, RAW_ADDR start, RAW_ADDR end );
 	void SwitchStack( char *base, size_t len );
 	char	*file_name;
 	Header	head;
-	int		max_segs;
-	SegMap	*map;
+	SegMap	map[ MAX_SEGS ];
 	BOOL	valid;
 	int		fd;
 	ssize_t	pos;
@@ -90,14 +87,13 @@ void ckpt();
 extern "C" void restart();
 extern "C" void init_image_with_file_name( char *ckpt_name );
 extern "C" void init_image_with_file_descriptor( int ckpt_fd );
+extern "C" void _condor_prestart();
 }
 
 
 #define DUMP( leader, name, fmt ) \
 	printf( "%s%s = " #fmt "\n", leader, #name, name )
 
-const int MAGIC = 0xfeafea;
-const int SEG_INCR = 25;
 
 #include "setjmp.h"
 extern "C" {

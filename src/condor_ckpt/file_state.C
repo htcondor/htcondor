@@ -54,35 +54,30 @@ extern "C" void Set_CWD( const char *working_dir );
 
 extern int errno;
 
-File::File()
+void
+File::Init()
 {
 	open = FALSE;
 	pathname = 0;
 }
 
-File::~File()
+void
+OpenFileTable::Init()
 {
-	delete [] pathname;
-	pathname = NULL;
-}
+	int		i;
 
-OpenFileTable::OpenFileTable()
-{
 	SetSyscalls( SYS_UNMAPPED | SYS_LOCAL );
 
 	MaxOpenFiles = sysconf(_SC_OPEN_MAX);
 	file = new File[ MaxOpenFiles ];
+	for( i=0; i<MaxOpenFiles; i++ ) {
+		file[i].Init();
+	}
 
 	// getcwd( Condor_CWD, sizeof(Condor_CWD) );
 	PreOpen( 0, TRUE, FALSE );
 	PreOpen( 1, FALSE, TRUE );
 	PreOpen( 2, FALSE, TRUE );
-#if 0
-	PreOpen( RSC_SOCK, TRUE, TRUE );
-	PreOpen( CLIENT_LOG, FALSE, TRUE );
-
-	SetSyscalls( SYS_MAPPED | SYS_LOCAL );
-#endif
 
 #if defined(DEBUGGING)
 	srandom( 0 );
@@ -671,6 +666,13 @@ RestoreFileState()
 }
 
 void
+InitFileState()
+{
+	FileTab = new OpenFileTable();
+	FileTab->Init();
+}
+
+void
 Set_CWD( const char *working_dir )
 {
 	strcpy( Condor_CWD, working_dir );
@@ -687,12 +689,5 @@ pre_open( int fd, BOOL readable, BOOL writeable )
 {
 	return FileTab->PreOpen( fd, readable, writeable );
 }
-
-void
-init_file_table()
-{
-	FileTab = new OpenFileTable();
-}
-
 
 } // end of extern "C"

@@ -13,8 +13,7 @@ class OpenFileTable;
 class File {
 friend class OpenFileTable;
 public:
-	File();
-	~File();
+	void	Init();
 	void	Display();
 	BOOL	isOpen()			{ return open; }
 	BOOL	isDup()				{ return duplicate; }
@@ -39,7 +38,7 @@ private:
 
 class OpenFileTable {
 public:
-	OpenFileTable();
+	void Init();
 	void Display();
 	void Save();
 	void Restore();
