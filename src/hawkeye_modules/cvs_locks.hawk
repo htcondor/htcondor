@@ -3,7 +3,6 @@ ModuleFiles: cvs_locks
 
 Description:
 Used to monitor CVS locks
-You should set the REPOSITORIES parameter by hand
 
 Default: cvs
 options: kill
@@ -12,5 +11,7 @@ prefix: cvslocks_
 
 # It's parameters
 parameter: REPOSITORIES
-REPOSITORIES = /dir/to/repository
-Comma-separated List of repositories to monitor
+Flags: required
+Example: REPOSITORIES = Name:/dir/to/repository
+Comma-separated List of repositories to monitor.
+Each repository has the format Name:/path/to/repository
