@@ -165,7 +165,7 @@ int Authentication::authenticate( char *hostAddr, int auth_method )
             methods_to_try &= ~firm;
         }
 
-      	dprintf(D_ALWAYS,"AUTHENTICATE: method %i failed.\n", firm);
+      	dprintf(D_SECURITY,"AUTHENTICATE: method %i failed.\n", firm);
 		return 0;
     }
     else {
@@ -176,7 +176,7 @@ int Authentication::authenticate( char *hostAddr, int auth_method )
 
   //if none of the methods succeeded, we fall thru to default "none" from above
   int retval = ( auth_status != CAUTH_NONE );
-  dprintf(D_FULLDEBUG, "Authentication::authenticate %s\n", 
+  dprintf(D_SECURITY, "Authentication::authenticate %s\n", 
 	  retval == 1 ? "Success" : "FAILURE" );
 
   mySock->allow_one_empty_message();
@@ -434,10 +434,12 @@ int Authentication::exchangeKey(KeyInfo *& key)
         mySock->code(hasKey);
         mySock->end_of_message();
         if (hasKey) {
-            mySock->code(keyLength);// this is not good
-            mySock->code(protocol);
-            mySock->code(duration);
-            mySock->code(inputLen);
+            if (!mySock->code(keyLength) ||
+                !mySock->code(protocol)  ||
+                !mySock->code(duration)  ||
+                !mySock->code(inputLen)) {
+                return 0;
+            }
             encryptedKey = (char *) malloc(inputLen);
             mySock->get_bytes(encryptedKey, inputLen);
             mySock->end_of_message();
@@ -451,7 +453,6 @@ int Authentication::exchangeKey(KeyInfo *& key)
         }
     }
     else {  // server sends the key!
-
         mySock->encode();
         if (key == 0) {
             hasKey = 0;
@@ -461,19 +462,24 @@ int Authentication::exchangeKey(KeyInfo *& key)
         }
         else { // First, wrap it
             hasKey = 1;
-            mySock->code(hasKey);
-            mySock->end_of_message();
+            if (!mySock->code(hasKey) || !mySock->end_of_message()) {
+                return 0;
+            }
             keyLength = key->getKeyLength();
             protocol  = (int) key->getProtocol();
             duration  = key->getDuration();
 
             authenticator_->wrap((char *)key->getKeyData(), keyLength, encryptedKey, outputLen);
-            mySock->code(keyLength);       // this is not good
-            mySock->code(protocol);
-            mySock->code(duration);
-            mySock->code(outputLen);
-            mySock->put_bytes(encryptedKey, outputLen);
-            mySock->end_of_message();
+
+            if (!mySock->code(keyLength) || 
+                !mySock->code(protocol)  ||
+                !mySock->code(duration)  ||
+                !mySock->code(outputLen) ||
+                !mySock->put_bytes(encryptedKey, outputLen) ||
+                !mySock->end_of_message()) {
+                free(encryptedKey);
+                return 0;
+            }
         }
     }
 
