@@ -141,7 +141,7 @@ ResMgr::init_resources()
 						cap->show_totals( D_ALWAYS );
 						dprintf( D_ALWAYS | D_NOHEADER, "\tAvailable:  " );
 						m_avail->show_totals( D_ALWAYS );
-						EXCEPT( "Ran of of system resources" );
+						EXCEPT( "Ran out of system resources" );
 					}
 				}					
 			}
