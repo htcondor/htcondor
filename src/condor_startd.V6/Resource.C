@@ -685,8 +685,7 @@ Resource::make_public_ad(ClassAd* pubCA)
 	char*	expr;
 	char*	ptr;
 	char	tmp[1024];
-
-	StringList	config_file_exprs;
+	State	s;
 
 	pubCA->SetMyTypeName( STARTD_ADTYPE );
 	pubCA->SetTargetTypeName( JOB_ADTYPE );
@@ -707,12 +706,9 @@ Resource::make_public_ad(ClassAd* pubCA)
 	caInsert( pubCA, r_classad, ATTR_AFS_CELL );
 
 		// Put everything in the public classad from STARTD_EXPRS. 
-	ptr = param("STARTD_EXPRS");
-	if( ptr ) {
-		config_file_exprs.initializeFromString( ptr );   
-		free( ptr );
-		config_file_exprs.rewind();   
-		while( (ptr = config_file_exprs.next()) ) {
+	if( startd_exprs ) {
+		startd_exprs->rewind();   
+		while( (ptr = startd_exprs->next()) ) {
 			expr = param( ptr );
 			if( expr == NULL ) continue;
 			sprintf( tmp, "%s = %s", ptr, expr );
@@ -729,15 +725,20 @@ Resource::make_public_ad(ClassAd* pubCA)
 	caInsert( pubCA, r_classad, ATTR_RANK );
 	caInsert( pubCA, r_classad, ATTR_CURRENT_RANK );
 
-	if( this->state() == claimed_state ) {
+	s = this->state();
+	if( s == claimed_state || s == preempting_state ) {
 		caInsert( pubCA, r_classad, ATTR_CLIENT_MACHINE );
 		caInsert( pubCA, r_classad, ATTR_REMOTE_USER );
-		caInsert( pubCA, r_classad, ATTR_JOB_START );
 		caInsert( pubCA, r_classad, ATTR_JOB_ID );
-		caInsert( pubCA, r_classad, ATTR_JOB_UNIVERSE );
+		caInsert( pubCA, r_classad, ATTR_JOB_START );
 		caInsert( pubCA, r_classad, ATTR_LAST_PERIODIC_CHECKPOINT );
+		if( startd_job_exprs ) {
+			startd_job_exprs->rewind();
+			while( (ptr = startd_job_exprs->next()) ) {
+				caInsert( pubCA, r_cur->ad(), ptr );
+			}
+		}
 	}		
-
 }
 
 
