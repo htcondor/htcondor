@@ -1174,7 +1174,7 @@ void reset_priorities(int prio)
 	}
 }
 
-int ScheddAdCmp(ClassAd* ad1, ClassAd* ad2)
+int ScheddAdCmp(ClassAd* ad1, ClassAd* ad2, void*)
 {
 	int		prio1 = 0, prio2 = 0;
 	char	name[100];
