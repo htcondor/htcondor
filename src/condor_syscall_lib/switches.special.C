@@ -89,6 +89,80 @@ syscalls and standalone checkpointing.
 
 #ifdef FILE_TABLE
 
+#undef ngetdents
+#if defined( SYS_ngetdents )
+int   ngetdents ( int fd, struct dirent *buf, size_t nbytes, int *eof )
+{
+	int rval,do_local=0;
+	errno = 0;
+
+	_condor_signals_disable();
+
+	if( MappingFileDescriptors() ) {
+		do_local = _condor_is_fd_local( fd );
+		fd = _condor_get_unmapped_fd( fd );
+	}
+
+		if( LocalSysCalls() || do_local ) {
+			rval = syscall( SYS_getdents, fd , buf , nbytes );
+		} else {
+			rval = REMOTE_syscall( CONDOR_getdents, fd , buf , nbytes );
+		}
+
+	_condor_signals_enable();
+
+	if ( rval == 0 ) {
+		*eof = 1;
+	} else {
+		*eof = 0;
+	}
+
+	return (int  ) rval;
+}
+#undef _ngetdents
+int   _ngetdents ( int fd, struct dirent *buf, size_t nbytes, int *eof )
+{
+	return ngetdents(fd,buf,nbytes,eof);
+}
+#endif
+
+#undef ngetdents64
+#if defined( SYS_ngetdents64 )
+int   ngetdents64 ( int fd, struct dirent64 *buf, size_t nbytes, int *eof )
+{
+	int rval,do_local=0;
+	errno = 0;
+
+	_condor_signals_disable();
+
+	if( MappingFileDescriptors() ) {
+		do_local = _condor_is_fd_local( fd );
+		fd = _condor_get_unmapped_fd( fd );
+	}
+
+		if( LocalSysCalls() || do_local ) {
+			rval = syscall( SYS_getdents64, fd , buf , nbytes );
+		} else {
+			rval = REMOTE_syscall( CONDOR_getdents64, fd , buf , nbytes );
+		}
+
+	_condor_signals_enable();
+
+	if ( rval == 0 ) {
+		*eof = 1;
+	} else {
+		*eof = 0;
+	}
+
+	return (int  ) rval;
+}
+#undef _ngetdents64
+int _ngetdents64(int fd, struct dirent64 *buf, size_t nbytes, int *eof )
+{
+	return ngetdents64(fd,buf,nbytes,eof );
+}
+#endif
+
 /*
   This is some kind of cleanup routine for dynamically linked programs which
   is called by exit.  For some reason it occasionally cuases a SEGV
@@ -685,8 +759,16 @@ _condor_k_stat_convert( int version, const struct kernel_stat *source,
 		break;
 #elif defined(IRIX)
 	case _STAT_VER:
+		/* Source and target are the same, everything already copied. */
+		break;
 	case _STAT64_VER:
-		/* XXX do nothing right now */
+		/* our target is a struct stat64, so let our 64-bit 
+		 * conversion function handle it.
+		 */
+		void _condor_k_stat_convert64( int , 
+								const struct kernel_stat *, 
+								struct stat64 * );
+		_condor_k_stat_convert64(version,source,(struct stat64 *)target);
 		break;
 #endif
 
@@ -697,65 +779,10 @@ _condor_k_stat_convert( int version, const struct kernel_stat *source,
 	}
 }
 
-#if defined(GLIBC21)
+#if defined(GLIBC21) || defined(IRIX)
 void 
 _condor_k_stat_convert64( int version, const struct kernel_stat *source, 
 						struct stat64 *target )
-{
-		/* In all cases, we need to copy the fields we care about. */
-	target->st_dev = source->st_dev;
-	target->st_ino = source->st_ino;
-	target->st_mode = source->st_mode;
-	target->st_nlink = source->st_nlink;
-	target->st_uid = source->st_uid;
-	target->st_gid = source->st_gid;
-	target->st_rdev = source->st_rdev;
-	target->st_size = source->st_size;
-	target->st_blksize = source->st_blksize;
-	target->st_blocks = source->st_blocks;
-	target->st_atime = source->st_atime;
-	target->st_mtime = source->st_mtime;
-	target->st_ctime = source->st_ctime;
-
-		/* Now, handle the different versions we might be passed */
-	switch( version ) {
-	case _STAT_VER_LINUX_OLD:
-			/*
-			  This is the old version, which is identical to the
-			  kernel version.  We already copied all the fields we
-			  care about, so we're done.
-			*/
-		break;
-	case _STAT_VER_LINUX:
-			/* 
-			  This is the new version, that has some extra fields we
-			  need to 0-out.
-			*/
-		target->__pad1 = 0;
-		target->__pad2 = 0;
-		target->__unused1 = 0;
-		target->__unused2 = 0;
-		target->__unused3 = 0;
-		target->__unused4 = 0;
-		target->__unused5 = 0;
-		break;
-	default:
-			/* Some other version: blow-up */
-		EXCEPT( "_condor_k_stat_convert64: unknown version (%d) of struct stat!", version );
-		break;
-	}
-}
-#endif
-
-/*
-  _condor_s_stat_convert() is just like _condor_k_stat_convert(),
-  except that it deals with two struct stat's, instead of a struct
-  kernel_stat and a struct_stat 
-*/
-
-void 
-_condor_s_stat_convert( int version, const struct stat *source, 
-						struct stat *target )
 {
 		/* In all cases, we need to copy the fields we care about. */
 	target->st_dev = source->st_dev;
@@ -796,7 +823,87 @@ _condor_s_stat_convert( int version, const struct stat *source,
 		target->__unused5 = 0;
 		break;
 #elif defined(IRIX)
+	case _STAT64_VER:
+		/* we expect to see _STAT64_VER here, so break so we do
+		 * not hit the default case below.
+		 */
+		break;
+#endif
+	default:
+			/* Some other version: blow-up */
+		EXCEPT( "_condor_k_stat_convert64: unknown version (%d) of struct stat!", version );
+		break;
+	}
+}
+#endif
+
+/*
+  _condor_s_stat_convert() is just like _condor_k_stat_convert(),
+  except that it deals with two struct stat's, instead of a struct
+  kernel_stat and a struct_stat 
+*/
+
+void 
+_condor_s_stat_convert( int version, const struct stat *source, 
+						struct stat *target )
+{
+
+#if defined(IRIX)
+		/* On IRIX, _condor_s_stat_convert and _condor_k_stat_convert
+		 * are identical, because on IRIX type kernel_stat and
+		 * struct_stat are identical.  So instead of repeating
+		 * code, on IRIX just invoke _condor_k_stat_convert to do
+		 * the job.
+		 */
+	_condor_k_stat_convert(version,source,target);
+	return;
+#endif
+		
+		/* In all cases, we need to copy the fields we care about. */
+	target->st_dev = source->st_dev;
+	target->st_ino = source->st_ino;
+	target->st_mode = source->st_mode;
+	target->st_nlink = source->st_nlink;
+	target->st_uid = source->st_uid;
+	target->st_gid = source->st_gid;
+	target->st_rdev = source->st_rdev;
+	target->st_size = source->st_size;
+	target->st_blksize = source->st_blksize;
+	target->st_blocks = source->st_blocks;
+	target->st_atime = source->st_atime;
+	target->st_mtime = source->st_mtime;
+	target->st_ctime = source->st_ctime;
+
+		/* Now, handle the different versions we might be passed */
+	switch( version ) {
+#if defined(LINUX)
+	case _STAT_VER_LINUX_OLD:
+			/*
+			  This is the old version, which is identical to the
+			  kernel version.  We already copied all the fields we
+			  care about, so we're done.
+			*/
+		break;
+	case _STAT_VER_LINUX:
+			/* 
+			  This is the new version, that has some extra fields we
+			  need to 0-out.
+			*/
+		target->__pad1 = 0;
+		target->__pad2 = 0;
+		target->__unused1 = 0;
+		target->__unused2 = 0;
+		target->__unused3 = 0;
+		target->__unused4 = 0;
+		target->__unused5 = 0;
+		break;
+#elif defined(IRIX)
 	case _STAT_VER:
+			/* 
+			  This is the old version, so source and target are identical.
+			  We've already copied all the fields we need, so we're done.
+			*/
+		break;
 	case _STAT64_VER:
 		/* XXX do nothing right now*/
 		/* This crap don't work... */
@@ -864,7 +971,7 @@ _condor_s_stat_convert64( int version, const struct stat *source,
 #if defined(LINUX)
 	#define OPT_STAT_VERSION 
 #elif defined(IRIX)
-	#define OPT_STAT_VERSION version,
+	#define OPT_STAT_VERSION _STAT_VER,
 #endif
 
 /*
