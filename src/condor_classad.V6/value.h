@@ -25,9 +25,8 @@
 #define __VALUES_H__
 
 #include "common.h"
-#include "list.h"
 
-BEGIN_NAMESPACE( classad )
+BEGIN_NAMESPACE( classad );
 
 class Value;
 class Literal;
@@ -38,6 +37,35 @@ class ClassAd;
 class Value 
 {
 	public:
+			/// Value types
+		enum ValueType {
+												NULL_VALUE          = 0,
+		/** The error value */ 					ERROR_VALUE         = 1<<0,
+		/** The undefined value */ 				UNDEFINED_VALUE     = 1<<1,
+		/** A boolean value (false, true)*/ 	BOOLEAN_VALUE 		= 1<<2,
+		/** An integer value */ 				INTEGER_VALUE       = 1<<3,
+		/** A real value */ 					REAL_VALUE          = 1<<4,
+		/** A relative time value */ 			RELATIVE_TIME_VALUE = 1<<5,
+		/** An absolute time value */ 			ABSOLUTE_TIME_VALUE = 1<<6,
+		/** A string value */ 					STRING_VALUE        = 1<<7,
+		/** A classad value */ 					CLASSAD_VALUE       = 1<<8,
+		/** An expression list value */     	LIST_VALUE 			= 1<<9
+		};
+
+			/// Number factors
+		enum NumberFactor {
+	    /** No factor specified */  NO_FACTOR= 0,
+		/** Byte factor */          B_FACTOR = 1,
+		/** Kilo factor */          K_FACTOR = 2,
+		/** Mega factor */          M_FACTOR = 3,
+		/** Giga factor */          G_FACTOR = 4,
+		/** Terra factor*/          T_FACTOR = 5
+		};
+
+			/// Values of number multiplication factors
+		static const double ScaleFactor[];
+
+
 		/// Constructor
 		Value();
 
