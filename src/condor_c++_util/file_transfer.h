@@ -128,6 +128,8 @@ class FileTransfer {
 
 	float TotalBytesReceived() { return bytesRcvd; };
 
+	void RemoveInputFiles(const char *sandbox_path = NULL);
+
 		/** Add the given filename to our list of output files to
 			transfer back.  If we're not managing a list of output
 			files, we return failure.  If we already have this file,
@@ -152,6 +154,7 @@ class FileTransfer {
 	int DoUpload(ReliSock *s);
 
 	void CommitFiles();
+	void ComputeFilesToSend();
 	float bytesSent, bytesRcvd;
 
   private:

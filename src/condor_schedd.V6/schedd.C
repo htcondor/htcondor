@@ -5667,15 +5667,33 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 	strcpy(ckpt_name, gen_ckpt_name(Spool,cluster,proc,0) );
 	if ( owner ) {
 		if ( IsDirectory(ckpt_name) ) {
-			{
-				// Must put this in braces so the Directory object
-				// destructor is called, which will free the iterator
-				// handle.  If we didn't do this, the below rmdir 
-				// would fail.
-				Directory ckpt_dir(ckpt_name);
-				ckpt_dir.Remove_Entire_Directory();
+			if ( param_boolean("KEEP_OUTPUT_SANDBOX",false) ) {
+				// Blow away only the input files from the job's spool.
+				// The user is responsible for garbage collection of the
+				// rest of the sandbox.  Good luck.  
+				FileTransfer sandbox;
+				ClassAd *ad = GetJobAd(cluster,proc);
+				if ( ad ) {
+					sandbox.SimpleInit(ad,
+								false,  // want_check_perms
+								true,	// is_server
+								NULL,	// sock_to_use
+								PRIV_CONDOR		// priv_state to use
+								);
+					sandbox.RemoveInputFiles(ckpt_name);
+				}
+			} else {
+				// Blow away entire sandbox.  This is the default.
+				{
+					// Must put this in braces so the Directory object
+					// destructor is called, which will free the iterator
+					// handle.  If we didn't do this, the below rmdir 
+					// would fail.
+					Directory ckpt_dir(ckpt_name);
+					ckpt_dir.Remove_Entire_Directory();
+				}
+				rmdir(ckpt_name);
 			}
-			rmdir(ckpt_name);
 		} else {
 			if (universe == CONDOR_UNIVERSE_STANDARD) {
 				RemoveLocalOrRemoteFile(owner,Name,ckpt_name);

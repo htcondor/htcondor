@@ -593,52 +593,25 @@ FileTransfer::DownloadFiles(bool blocking)
 	return ret_value;
 }
 
-int
-FileTransfer::UploadFiles(bool blocking, bool final_transfer)
+
+void
+FileTransfer::ComputeFilesToSend()
 {
-    ReliSock sock;
-	ReliSock *sock_to_use;
-
-	StringList changed_files(NULL,",");
-
-	dprintf(D_FULLDEBUG,
-		"entering FileTransfer::UploadFiles (final_transfer=%d)\n",
-		final_transfer ? 1 : 0);
-
-	if (ActiveTransferTid >= 0) {
-		EXCEPT("FileTransfer::UpLoadFiles called during active transfer!\n");
-	}
-
-	// Make certain Init() was called.
-	if ( Iwd == NULL ) {
-		EXCEPT("FileTransfer: Init() never called");
-	}
-
-	// This method should only be called on the client side, so if
-	// we are the server side, there is a programmer error -- do EXCEPT.
-	if ( !simple_init && IsServer() ) {
-		EXCEPT("FileTransfer: UploadFiles called on server side");
-	}
-
-	// set flag saying if this is the last upload (i.e. job exited)
-	m_final_transfer_flag = final_transfer ? 1 : 0;
-
 	if (IntermediateFiles) delete(IntermediateFiles);
 	IntermediateFiles = NULL;
 	FilesToSend = NULL;
 	
-
 	if ( upload_changed_files && last_download_time > 0 ) {
 		// Here we will upload only files in the Iwd which have changed
 		// since we downloaded last.  We only do this if 
 		// upload_changed_files it true, and if last_download_time > 0
 		// which means we have already downloaded something.
 
-		// If this is the file transfer, be certain to send back
+		// If this is the final transfer, be certain to send back
 		// not only the files which have been modified during this run,
 		// but also the files which have been modified during
 		// previous runs (i.e. the SpooledIntermediateFiles).
-		if ( final_transfer && SpooledIntermediateFiles ) {
+		if ( m_final_transfer_flag && SpooledIntermediateFiles ) {
 			IntermediateFiles = 
 				new StringList(SpooledIntermediateFiles,",");
 			FilesToSend = IntermediateFiles;
@@ -683,7 +656,120 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 			}
 		}
 		delete dir;
-	} else {
+	}
+	
+
+}
+
+void
+FileTransfer::RemoveInputFiles(const char *sandbox_path)
+{
+	char *old_iwd;
+	int old_transfer_flag;
+	StringList do_not_remove;
+	const char *f;
+
+	if (!sandbox_path) {
+		ASSERT(SpoolSpace);
+		sandbox_path = SpoolSpace;
+	}
+
+	// See if the sandbox_path exists.  If it does not, we're done.
+	if ( !IsDirectory(sandbox_path) ) {
+		return;
+	}
+
+	old_iwd = Iwd;
+	old_transfer_flag = m_final_transfer_flag;
+
+	Iwd = strdup(sandbox_path);
+	m_final_transfer_flag = 1;
+
+	ComputeFilesToSend();
+
+	// if FilesToSend is still NULL, then the user did not
+	// want anything sent back via modification date.  
+	if ( FilesToSend == NULL ) {
+		FilesToSend = OutputFiles;
+	}
+
+	// Make a new list that only contains file basenames.
+	FilesToSend->rewind();
+	while ( (f=FilesToSend->next()) ) {
+		do_not_remove.append( basename(f) );
+	}
+
+	// Now, remove all files in the sandbox_path EXCEPT
+	// for files in list do_not_remove.
+		Directory* dir;
+		if( want_priv_change ) {
+			dir = new Directory( sandbox_path, desired_priv_state );
+		} else {
+			dir = new Directory( sandbox_path );
+		}
+		while ( (f=dir->Next()) ) {
+			// for now, skip all subdirectory names until we add
+			// subdirectory support into FileTransfer.
+			if ( dir->IsDirectory() )
+				continue;
+			
+			// skip output files
+			if ( do_not_remove.file_contains(f) == TRUE ) {
+				continue;
+			}
+
+			// if we made it here, we are looking at an "input" file.
+			// so remove it.
+			dir->Remove_Current_File();
+		}
+		delete dir;
+
+	m_final_transfer_flag = old_transfer_flag;
+	free(Iwd);
+	Iwd = old_iwd;
+
+	return;
+}
+
+
+int
+FileTransfer::UploadFiles(bool blocking, bool final_transfer)
+{
+    ReliSock sock;
+	ReliSock *sock_to_use;
+
+	StringList changed_files(NULL,",");
+
+	dprintf(D_FULLDEBUG,
+		"entering FileTransfer::UploadFiles (final_transfer=%d)\n",
+		final_transfer ? 1 : 0);
+
+	if (ActiveTransferTid >= 0) {
+		EXCEPT("FileTransfer::UpLoadFiles called during active transfer!\n");
+	}
+
+	// Make certain Init() was called.
+	if ( Iwd == NULL ) {
+		EXCEPT("FileTransfer: Init() never called");
+	}
+
+	// This method should only be called on the client side, so if
+	// we are the server side, there is a programmer error -- do EXCEPT.
+	if ( !simple_init && IsServer() ) {
+		EXCEPT("FileTransfer: UploadFiles called on server side");
+	}
+
+	// set flag saying if this is the last upload (i.e. job exited)
+	m_final_transfer_flag = final_transfer ? 1 : 0;
+
+	// figure out what to send based upon modification date
+	ComputeFilesToSend();
+
+	// if FilesToSend is still NULL, then the user did not
+	// want anything sent back via modification date.  so
+	// send the input or output sandbox, depending what 
+	// direction we are going.
+	if ( FilesToSend == NULL ) {
 		if ( simple_init ) {
 			// condor_submit going to the schedd
 			FilesToSend = InputFiles;
@@ -691,8 +777,9 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 			// starter sending back to the shadow
 			FilesToSend = OutputFiles;
 		}
+
 	}
-	
+
 	if ( !simple_init ) {
 		// Optimization: files_to_send now contains the files to upload.
 		// If files_to_send is NULL, then we have nothing to send, so
