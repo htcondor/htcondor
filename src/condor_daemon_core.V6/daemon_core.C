@@ -65,7 +65,7 @@ typedef unsigned (__stdcall *CRT_THREAD_HANDLER) (void *);
 void zz2printf(KeyInfo *k) {
 	if (k) {
 		char hexout[260];  // holds (at least) a 128 byte key.
-		unsigned char* dataptr = k->getKeyData();
+		const unsigned char* dataptr = k->getKeyData();
 		int   length  =  k->getKeyLength();
 
 		for (int i = 0; (i < length) && (i < 24); i++) {
@@ -1599,6 +1599,7 @@ int DaemonCore::HandleReq(int socki)
     ClassAd *the_policy     = NULL;
     KeyInfo *the_key        = NULL;
     char    *the_sid        = NULL;
+    char    * who = NULL;   // Remote user
 	
 	insock = (*sockTable)[socki].iosock;
 
@@ -1728,6 +1729,10 @@ int DaemonCore::HandleReq(int socki)
 				zz2printf (session->key());
 #endif
 			}
+
+            // Lookup remote user
+            session->policy()->LookupString(ATTR_SEC_USER, &who);
+
 			free( sess_id );
 
 			if (return_address_ss) {
@@ -1736,7 +1741,6 @@ int DaemonCore::HandleReq(int socki)
 		} else {
 			dprintf (D_SECURITY, "DC_AUTHENTICATE: incoming data NOT MD5ed.\n");
 		}
-
 
 		dprintf ( D_SECURITY, "DC_AUTHENTICATE: checking UDP for encryption...\n");
 
@@ -1816,13 +1820,22 @@ int DaemonCore::HandleReq(int socki)
 				zz2printf (session->key());
 #endif
 			}
-			delete sess_id;
+            // Lookup user if necessary
+            if (who == NULL) {
+                session->policy()->LookupString(ATTR_SEC_USER, &who);
+            }
+			free( sess_id );
 			if (return_address_ss) {
-				delete return_address_ss;
+				free( return_address_ss );
 			}
 		} else {
 			dprintf (D_SECURITY, "DC_AUTHENTICATE: incoming data NOT encrypted.\n");
 		}
+
+        if (who != NULL) {
+            ((SafeSock*)stream)->setFullyQualifiedUser(who);
+            ((SafeSock*)stream)->setAuthenticated(true);
+        }
 	}
 	
 	// read in the command from the stream with a timeout value of 20 seconds
@@ -1834,10 +1847,6 @@ int DaemonCore::HandleReq(int socki)
 	// a timeout of 20 seconds on their socket.
 	// stream->timeout(old_timeout);
 	if(!result) {
-		if (is_tcp) {
-			dprintf(D_ALWAYS, "DaemonCore: Command received via TCP from %s\n",
-					sin_to_string(((Sock*)stream)->endpoint()) );
-		}
 		dprintf(D_ALWAYS, 
 			"DaemonCore: Can't receive command request (perhaps a timeout?)\n");
 		if ( insock != stream )	{   // delete stream only if we did an accept
@@ -2144,10 +2153,7 @@ int DaemonCore::HandleReq(int socki)
 
 		}
 
-		
-
-
-		if (is_tcp) {
+        if (is_tcp) {
 
 			// do what we decided
 
@@ -2184,7 +2190,7 @@ int DaemonCore::HandleReq(int socki)
 					goto finalize;
 				}
 
-				delete auth_method;
+				free( auth_method );
 
 
 				// check to see if the kerb IP is the same
@@ -2373,6 +2379,7 @@ int DaemonCore::HandleReq(int socki)
 			// user is filled in above, but we should make it part of
 			// the SafeSock too.
 			((SafeSock*)stream)->setFullyQualifiedUser(user);
+            ((SafeSock*)stream)->setAuthenticated(true);
 		}
 
 		if ( (perm = Verify(comTable[index].perm, ((Sock*)stream)->endpoint(), user)) != USER_AUTH_SUCCESS )
@@ -2455,6 +2462,9 @@ finalize:
     }
     if (the_sid) {
         free(the_sid);
+    }
+    if (who) {
+        free(who);
     }
 	if ( result != KEEP_STREAM ) {
 		stream->encode();	// we wanna "flush" below in the encode direction 
