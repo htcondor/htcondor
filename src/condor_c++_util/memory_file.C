@@ -57,8 +57,10 @@ int memory_file::compare( char *filename )
 		return 100;
 	}
 
-	do {
+	while(1) {
 		chunksize = ::read(fd,cbuffer,COMPARE_BUFFER_SIZE);
+		if(chunksize<=0) break;
+
 		errors += count_errors( cbuffer, &buffer[position], chunksize, position );
 		position += chunksize;
 
@@ -67,9 +69,9 @@ int memory_file::compare( char *filename )
 			break;
 		}
 
-	} while( chunksize==COMPARE_BUFFER_SIZE );
+	}
 
-	if( (position!=filesize) && (chunksize!=COMPARE_BUFFER_SIZE) ) {
+	if(position!=filesize) {
 		cout << "SIZE ERROR:\nFile was " << position
 		     << " bytes, but mem was " << filesize
 		     << " bytes.\n";
