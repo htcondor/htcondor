@@ -33,11 +33,12 @@
 #define JOB_COREDUMPED	3	/* The job was killed and a core file produced   */
 #define JOB_EXCEPTION	4	/* The job exited with an exception              */
 #define JOB_NO_MEM		5	/* Not enough memory to start the shadow 		 */
-#define JOB_SHADOW_USAGE	6	/* incorrect arguments to condor_shadow		 */
+#define JOB_SHADOW_USAGE 6	/* incorrect arguments to condor_shadow		 */
 #define JOB_NOT_CKPTED	7	/* The job was kicked off without a checkpoint	 */
 #define JOB_NOT_STARTED	8	/* Can't connect to startd or request refused	 */
 #define JOB_BAD_STATUS	9	/* Job status != RUNNING on startup				 */
 #define JOB_EXEC_FAILED 10  /* Exec failed for some reason other than ENOMEM */
 #define JOB_NO_CKPT_FILE 11 /* There is no checkpoint file (lost)            */
+#define JOB_SHOULD_HOLD 12	/* The job should be put on hold                 */
 
 #define DPRINTF_ERROR 44	/* There is a fatal error with dprintf()         */
