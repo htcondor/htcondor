@@ -47,6 +47,7 @@
 #include "get_daemon_addr.h"
 #include "enum_utils.h"
 #include "condor_version.h"
+#include "classad_command_util.h"
 
 
 #if !defined(WIN32)

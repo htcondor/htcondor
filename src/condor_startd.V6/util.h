@@ -23,12 +23,9 @@
 #ifndef _UTIL_H
 #define _UTIL_H
 
-#include "enum_utils.h"
-
 class ClassAd;
 class Stream;
 class Resource;
-
 
 // Our utilities 
 void	cleanup_execute_dir(int pid);
@@ -45,8 +42,5 @@ bool	configInsert( ClassAd* ad, const char* param_name,
 Resource* stream_to_rip( Stream* );
 
 VacateType getVacateType( ClassAd* ad );
-int sendCAReply( Stream* s, char* cmd_str, ClassAd* reply );
-int sendErrorReply( Stream* s, char* cmd_str, CAResult result, 
-					const char* err_str );
 
 #endif /* _UTIL_H */

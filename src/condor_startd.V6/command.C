@@ -1102,18 +1102,6 @@ match_info( Resource* rip, char* cap )
 
 
 int
-unknownCmd( Stream* s, char* cmd_str )
-{
-	MyString line = "Unknown command (";
-	line += cmd_str;
-	line += ") in ClassAd";
-	
-	return sendErrorReply( s, cmd_str, CA_INVALID_REQUEST,
-						   line.Value() ); 
-}
-
-
-int
 caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 {
 	char* requirements_str = NULL;
