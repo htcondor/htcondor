@@ -7,6 +7,30 @@
 ** of that here.  (New tags should be added at the top of the file,
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
+ 
+7/9/04  V6_7-pre-merge-V6_7_0-doc-merge-3
+    The state of the doc directory in V6_7-branch before merging
+    changes from the V6_7_0-branch as tagged V6_7_0-doc-merge-3.
+
+7/9/04 V6_7_0-doc-merge-3
+    The state of the doc directory in V6_7_0-branch before a 
+    merge into the V6_7-branch.  This merge will
+    bring changes made in the V6_6-branch (from tag V6_6-doc-merge-6
+    to V6_6-doc-merge-7) into the V6_7-branch;
+    this tag made for a merge into the V6_7-branch.
+
+7/9/04 V6_7_0-post-merge-V6_6-doc-merge-7
+    The state of the doc directory in V6_7_0-branch after merging
+    changes from the V6_6-branch as tagged V6_6-doc-merge-7.
+
+7/9/04 V6_7_0-pre-merge-V6_6-doc-merge-7
+    The state of the doc directory in V6_7_0-branch before merging
+    changes from the V6_6-branch as tagged V6_6-doc-merge-7.
+
+7/9/04 V6_6-doc-merge-7
+    The state of the doc directory in V6_6-branch before a 
+    merge into the V6_7-branch.  This merge goes into the
+    V6_7_0-branch.
 
 6/8/04  V6_7-post-merge-V6_7_0-doc-merge-2
     The state of the doc directory in V6_7-branch after merging
