@@ -14,6 +14,7 @@
 #include "condor_io.h"
 #include "condor_parser.h"
 #include "condor_adtypes.h"
+#include "condor_debug.h"
 
 
 #define XDR_ASSERT(x) {if (!(x)) return Q_COMMUNICATION_ERROR;}
@@ -282,6 +283,7 @@ fetchAds (ClassAdList &adList, const char *poolName)
 			ad = new ClassAd;
 			if (!ad->get (sock)) {
 				sock.end_of_message();
+				delete ad;
 				return Q_COMMUNICATION_ERROR;
 			}
 			adList.Insert (ad);
