@@ -25,8 +25,10 @@
   track of a resource's starter process.  
 
   Written 10/6/97 by Derek Wright <wright@cs.wisc.edu>
+  Adapted 11/98 for new starter/shadow and WinNT happiness by Todd Tannenbaum
 */
 
+#include "condor_common.h"
 #include "startd.h"
 static char *_FileName_ = __FILE__;
 
@@ -34,7 +36,7 @@ static char *_FileName_ = __FILE__;
 Starter::Starter( Resource* rip )
 {
 	this->rip = rip;
-	s_pid = -1;
+	s_pid = 0;		// pid_t can be unsigned, so use 0, not -1
 	s_name = NULL;
 	s_procfam = NULL;
 	s_pidfamily = NULL;
@@ -94,45 +96,68 @@ Starter::reallykill( int signo, int type )
 	char		signame[32];
 	signame[0]='\0';
 
-	if ( s_pid <= 0 ) {
+	if ( s_pid == 0 ) {
 			// If there's no starter, just return.  We've done our task.
 		return TRUE;
+	}
+
+	switch( signo ) {
+	case DC_SIGSUSPEND:
+		sprintf( signame, "DC_SIGSUSPEND" );
+		break;
+	case DC_SIGHARDKILL:
+		signo = DC_SIGQUIT;
+		sprintf( signame, "DC_SIGQUIT" );
+		break;
+	case DC_SIGSOFTKILL:
+		signo = DC_SIGTERM;
+		sprintf( signame, "DC_SIGTERM" );
+		break;
+	case DC_SIGPCKPT:
+		sprintf( signame, "DC_SIGPCKPT" );
+		break;
+	case DC_SIGCONTINUE:
+		sprintf( signame, "DC_SIGCONTINUE" );
+		break;
+	case DC_SIGHUP:
+		sprintf( signame, "DC_SIGHUP" );
+		break;
+	case DC_SIGKILL:
+		sprintf( signame, "DC_SIGKILL" );
+		break;
+	default:
+		EXCEPT( "Unknown signal (%d) in Starter::reallykill", signo );
 	}
 
 #if !defined(WIN32)
 	switch( signo ) {
 	case DC_SIGSUSPEND:
 		sig = SIGUSR1;
-		sprintf( signame, "SIGSUSPEND" );
 		break;
+	case DC_SIGQUIT:
 	case DC_SIGHARDKILL:
 		sig = SIGINT;
-		sprintf( signame, "SIGHARDKILL" );
 		break;
+	case DC_SIGTERM:
 	case DC_SIGSOFTKILL:
 		sig = SIGTSTP;
-		sprintf( signame, "SIGSOFTKILL" );
 		break;
 	case DC_SIGPCKPT:
 		sig = SIGUSR2;
-		sprintf( signame, "SIGPCKPT" );
 		break;
 	case DC_SIGCONTINUE:
 		sig = SIGCONT;
-		sprintf( signame, "SIGCONTINUE" );
 		break;
 	case DC_SIGHUP:
 		sig = SIGHUP;
-		sprintf( signame, "SIGHUP" );
 		break;
 	case DC_SIGKILL:
 		sig = SIGKILL;
-		sprintf( signame, "SIGKILL" );
 		break;
 	default:
 		EXCEPT( "Unknown signal (%d) in Starter::reallykill", signo );
 	}
-#endif
+
 
 		/* 
 		   On sites where the condor binaries are installed on NFS,
@@ -207,7 +232,15 @@ Starter::reallykill( int signo, int type )
 					s_name, errno );
 		}
 	}
+#endif	// if !defined(WIN32)
 
+#ifdef WIN32
+	// On Win32, fow now convert a request to kill a process group
+	// into a request to kill a pid family via ProcFamily
+	if ( type == 1 ) {
+		type = 2;
+	}
+#endif
 
 	switch( type ) {
 	case 0:
@@ -228,15 +261,15 @@ Starter::reallykill( int signo, int type )
 		EXCEPT( "Unknown type (%d) in Starter::reallykill\n" );
 	}
 
-
-#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
-
 	priv = set_root_priv();
+
+#ifndef WIN32
+		// ON UNIX...
 
 		// If we're just doing a plain kill, and the signal we're
 		// sending isn't SIGSTOP or SIGCONT, send a SIGCONT to the
 		// starter just for good measure.
-	if( sig != SIGSTOP && sig != SIGCONT && sig != SIGKILL ) {
+	if( sig != DC_SIGSTOP && sig != SIGCONT && sig != DC_SIGKILL ) {
 		if( type == 1 ) { 
 			ret = ::kill( -(s_pid), SIGCONT );
 		} else if( type == 0 ) {
@@ -260,10 +293,33 @@ Starter::reallykill( int signo, int type )
 		s_procfam->hardkill();  // This really sends SIGKILL
 		break;
 	}
+#else
+	// ON WIN32...
+		// Finally, do the deed.
+	switch( type ) {
+	case 0:
+		ret = daemonCore->Send_Signal( (s_pid), signo );
+		// Translate Send_Signal's return code to Unix's kill()
+		if ( ret == FALSE ) {
+			ret = -1;
+		} else {
+			ret = 0;
+		}
+		break;
+	// note case 2 of switch on type is same on Unix & Win32
+	case 2:
+		if( signo != DC_SIGKILL ) {
+			dprintf( D_ALWAYS, 
+					 "In Starter::killkids() with %s\n", signame );
+			EXCEPT( "Starter::killkids() can only handle DC_SIGKILL!" );
+		}
+		s_procfam->hardkill();  // This really sends SIGKILL
+		break;
+	}
+#endif // of else of ifndef WIN32
 
 	set_priv(priv);
 
-#endif /* WIN32 */
 
 	if( ret < 0 ) {
 		dprintf( D_ALWAYS, "Error sending signal to starter, errno = %d\n", 
@@ -277,13 +333,19 @@ Starter::reallykill( int signo, int type )
 int 
 Starter::spawn( start_info_t* info )
 {
+#ifndef WIN32
+	// Use old icky non-daemoncore starter and shadow
 	s_pid = exec_starter( s_name, info->ji_hname, 
 						  info->ji_sock1,
 						  info->ji_sock2 );
+#else
+	// Use spiffy new starter and shadow
+	s_pid = exec_starter( s_name, info->ji_hname, 
+						  info->shadowCommandSock);
+#endif
 
-	if( s_pid < 0 ) {
+	if( s_pid == 0 ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter returned %d\n", s_pid );
-		s_pid = -1;
 	} else {
 		s_procfam = new ProcFamily( s_pid, PRIV_ROOT, resmgr->m_proc );
 	}
@@ -302,7 +364,7 @@ Starter::exited()
 	cleanup_execute_dir( s_pid );
 
 		// Finally, we can free up our memory and data structures.
-	s_pid = -1;
+	s_pid = 0;
 	free( s_name );
 	s_name = NULL;
 
@@ -317,12 +379,35 @@ Starter::exited()
 	s_family_size = 0;
 }
 
+int
+Starter::exec_starter( char* starter, char* hostname, 
+					   Stream *sock)
+{
+	char args[_POSIX_ARG_MAX];
+	Stream *sock_inherit_list[] = { sock, 0 };
+
+	if ( resmgr->is_smp() ) {
+		// Note: the "-a" option is a daemon core option, so it
+		// must come first on the command line.
+		sprintf(args, "condor_starter -a %s %s", rip->r_id, hostname);
+	} else {
+		sprintf(args, "condor_starter %s", hostname);
+	}
+
+	s_pid = daemonCore->Create_Process( s_name, args, PRIV_ROOT, 1, TRUE, 
+										NULL, NULL, TRUE, sock_inherit_list );
+	if( s_pid == FALSE ) {
+		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
+		s_pid = 0;
+	}
+	return s_pid;
+}
 
 int
 Starter::exec_starter( char* starter, char* hostname, 
 					   int main_sock, int err_sock )
 {
-#if defined(WIN32) /* NEED TO PORT TO WIN32 */
+#if defined(WIN32) /* THIS IS UNIX SPECIFIC */
 	return 0;
 #else
 	int i;
@@ -421,6 +506,9 @@ Starter::exec_starter( char* starter, char* hostname,
 		EXCEPT( "execl(%s, condor_starter, %s, %s, 0)", starter, 
 				daemonCore->InfoCommandSinfulString(), hostname );
 	}
+	if ( pid < 0 ) {
+		pid = 0;
+	}
 	return pid;
 #endif // !defined(WIN32)
 }
@@ -429,7 +517,7 @@ Starter::exec_starter( char* starter, char* hostname,
 bool
 Starter::active()
 {
-	return( (s_pid != -1) );
+	return( (s_pid != 0) );
 }
 	
 
