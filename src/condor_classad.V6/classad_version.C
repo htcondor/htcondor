@@ -28,6 +28,9 @@
 #endif
 
 using namespace std;
+#ifdef WANT_NAMESPACES
+using namespace classad;
+#endif
 
 int main(int argc, char **argv)
 {
