@@ -274,6 +274,11 @@ class Job {
     // the return code of the job
     int retval;
 	
+    // special return code indicating that a node shouldn't be retried
+    int retry_abort_val;
+    // indicates whether retry_abort_val has been set
+    bool have_retry_abort_val;
+
 	// somewhat kludgey, but this indicates to Dag::TerminateJob()
 	// whether Dag::_numJobsDone has been incremented for this node
 	// yet or not (since that method can now be called more than once

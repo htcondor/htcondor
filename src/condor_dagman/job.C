@@ -102,6 +102,8 @@ Init( const char* jobName, const char* cmdFile )
 
     retry_max = 0;
     retries = 0;
+    have_retry_abort_val = false;
+    retry_abort_val = 0xdeadbeef;
 	_visited = false;
 
     MyString logFile = ReadMultipleUserLogs::loadLogFileNameFromSubFile(_cmdFile);
@@ -411,7 +413,7 @@ Job::AddScript( bool post, const char *cmd, MyString &whynot )
 						post ? "POST" : "PRE", GetPreScriptName() );
 		return false;
 	}
-	Script* script = new Script( post, cmd, _jobName );
+	Script* script = new Script( post, cmd, this );
 	if( !script ) {
 		dprintf( D_ALWAYS, "ERROR: out of memory!\n" );
 			// we already know we're out of memory, so filling in
