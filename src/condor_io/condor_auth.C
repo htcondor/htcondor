@@ -85,7 +85,16 @@ int Condor_Auth_Base :: wrap(char *   input,
                              char*&   output, 
                              int&     output_len)
 {
-    return FALSE;
+    // By default, all wrap does is copying the buffer to a newly
+    // allocated buffer of the same size as the input. The derived
+    // class should override this method if it supports
+    // encryption/decryption
+    output_len = input_len;
+    output = (char *) malloc(output_len);
+
+    memcpy(output, input, output_len);
+
+    return 1;
 }
     
 int Condor_Auth_Base :: unwrap(char*   input, 
@@ -93,7 +102,16 @@ int Condor_Auth_Base :: unwrap(char*   input,
                                char*&  output, 
                                int&    output_len)
 {
-    return FALSE;
+    // By default, all unwrap does is copying the buffer to a newly
+    // allocated buffer of the same size as the input. The derived
+    // class should override this method if it supports
+    // encryption/decryption
+    output_len = input_len;
+    output = (char *) malloc(output_len);
+
+    memcpy(output, input, output_len);
+
+    return 1;
 }
 
 const char * Condor_Auth_Base :: getRemoteHost() const
