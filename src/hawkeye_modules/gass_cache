@@ -256,8 +256,14 @@ sub CacheUsage( $$ )
     $Hash->Add( "GlobalDataBytes", "n", $TotalBytes );
     $Hash->Add( "GlobalDataBlocks", "n", $TotalBlocks );
 
+    # Tag & URL counts
+    my $TagCount = keys %TagInodes;
+    my $UrlCount = keys %UrlInodes;
+    $Hash->Add( "TagCount", "n", $TagCount );
+    $Hash->Add( "UrlCount", "n", $UrlCount );
+
     # Run 'du'...
-    my $Cmd = "du -sb global local";
+    my $Cmd = "du -s global local";
     if ( ! open( DU, "$Cmd|" ) )
     {
 	print STDERR "Can't run '$Cmd'\n";
@@ -281,11 +287,29 @@ sub CacheUsage( $$ )
     }
     $Hash->Add( "Du", "n", $TotalDu );
 
-    # Tag & URL counts
-    my $TagCount = keys %TagInodes;
-    my $UrlCount = keys %UrlInodes;
-    $Hash->Add( "TagCount", "n", $TagCount );
-    $Hash->Add( "UrlCount", "n", $UrlCount );
+    # DF
+    $Cmd = "df .";
+    if ( ! open( DF, "$Cmd|" ) )
+    {
+	print STDERR "Can't run '$Cmd'\n";
+	return;
+    }
+    while( <DF> )
+    {
+	chomp;
+	if ( ! /^Filesystem/ )
+	{
+	    my ( $Dev, $Blocks, $Used, $Avail, $UsePct, $Mount ) = split;
+	    $UsePct =~ s/(\d+)\%/$1/;
+	    $Hash->Add( "Free_FileSystem", "s", $Dev );
+	    $Hash->Add( "Free_1k_Blocks", "n", $Blocks );
+	    $Hash->Add( "Free_Used", "n", $Used );
+	    $Hash->Add( "Free_Avail", "n", $Avail );
+	    $Hash->Add( "Free_UsePct", "n", $UsePct );
+	    $Hash->Add( "Free_MountPt", "s", $Mount );
+	}
+    }
+    close( DF );
 }
 
 # Check file ages
@@ -345,5 +369,5 @@ sub CheckAge(  )
 		sprintf "%.1f", $OldTotalBlocks / $OldCount );
 
     # And, the old age threshold that we used...
-    $Hash->Add( "AgeThreshold", "n", $MaxAge );
+    $Hash->Add( "AgeThreshold", "n", $Config{MaxAge} );
 }
