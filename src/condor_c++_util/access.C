@@ -154,6 +154,7 @@ int attempt_access(char *filename, int mode, int uid, int gid,
 
 	if( result == FALSE ) {
 		dprintf(D_ALWAYS, "ATTEMPT_ACCESS: code_access_request failed.\n");
+        delete sock;
 		return FALSE;
 	}
 
@@ -162,12 +163,14 @@ int attempt_access(char *filename, int mode, int uid, int gid,
 	result = sock->code(return_val);
 	if( !result ) {
 		dprintf(D_ALWAYS, "ATTEMPT_ACCESS: failed to recv schedd's answer.\n");
+        delete sock;
 		return FALSE;
 	}
 
 	result = sock->end_of_message();
 	if( !result ) {
 		dprintf(D_ALWAYS, "ATTEMPT_ACCESS: failed to code eom.\n");
+        delete sock;
 		return FALSE;
 	}
 
