@@ -132,71 +132,31 @@ calc_virt_memory()
 }
 #endif /*LINUX*/
 
-#ifdef HPUX9
+#ifdef HPUX
 /* The HPUX code here grabs the amount of free swap in Kbyes.
- * I hope it is portable to all HPUX systems...  It grabs it
- * from /dev/kmem, no messy/expensive pstat running -Todd Tannenbaum */
-#include <nlist.h>
-#include <sys/file.h>
+ * This code doesn't require being root.  -Mike Yoder 7-16-98*/
+#include <pstat.h>
 
-struct nlist swapnl[] = {
-	{ "swapspc_cnt" },
-	{ NULL }
-};
-static int kmem;
-
-close_kmem()
-{
-	close( kmem );
-}
-
+int
 calc_virt_memory()
 {
-	static char *addr;
-	static int initialized = 0;
-	int freeswap;
-	priv_state priv;
+  int pagesize;
+  struct pst_static s;
+  struct pst_dynamic d;
+  
+  if (pstat_getstatic(&s, sizeof(s), (size_t)1, 0) != -1) {
+    pagesize = s.page_size / 1024;   // it's right here....
+  }
+  else {
+    return -1;
+  }
 
-	/* Become root so we have no hassles reading /dev/kmem */
-	priv = set_root_priv();
-
-	if( !initialized ) {
-
-		/*
-         * Look up addresses of variables.
-         */
-#if defined(HPUX10)
-        if ((nlist("/stand/vmunix", swapnl) < 0) || (swapnl[0].n_type == 0)) {
-#else
-        if ((nlist("/hp-ux", swapnl) < 0) || (swapnl[0].n_type == 0)) {
-#endif
-			set_priv(priv);
-			return(-1);
-        }
-		addr = (char *)swapnl[0].n_value;
-
-        /*
-         * Open kernel memory and read variables.
-         */
-        if( (kmem = open("/dev/kmem",O_RDONLY)) < 0 ) {
-			set_priv(priv);
-			return(-1);
-        }
-
-		initialized = 1;
-	}
-
-	if (-1==lseek(kmem, (long) swapnl[0].n_value, 0)){
-		set_priv(priv);
-		return(-1);
-	}
-	if (read(kmem, (char *) &freeswap, sizeof(int)) < 0){
-		set_priv(priv);
-		return(-1);
-	}
-
-	set_priv(priv);
-	return ( 4 * freeswap );
+  if ( pstat_getdynamic ( &d, sizeof(d), (size_t)1, 0) != -1 ) {
+    return d.psd_vm * pagesize;
+  }
+  else {
+    return -1;
+  }
 }
 #endif /* of the code for HPUX */
 
