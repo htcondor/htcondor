@@ -120,3 +120,11 @@ ResMgr::state()
 		// This needs serious help when we get to multiple resources
 	return resources[0]->state();
 }
+
+
+void
+ResMgr::final_update()
+{
+		// This needs serious help when we get to multiple resources
+	return resources[0]->final_update();
+}
