@@ -249,6 +249,31 @@ sock_to_string(SOCKET sockd)
 	return ( sin_to_string( &addr ) );
 }
 
+char *
+sin_to_hostname( const struct sockaddr_in *from)
+{
+    struct hostent  *hp;
+#ifndef WIN32
+	struct hostent  *gethostbyaddr();
+#endif
+
+	if( !from ) {
+		// make certain from is not NULL before derefencing it
+		return NULL;
+	}
+
+    if( (hp=gethostbyaddr((char *)&from->sin_addr,
+                sizeof(struct in_addr), from->sin_family)) == NULL ) {
+		// could not find a name for this address
+        return NULL;
+    } else {
+		// CAREFULL: we are returning a staic buffer from gethostbyaddr.
+		// The caller had better use the result immediately or copy it.
+		return hp->h_name;
+    }
+}
+
+
 void
 display_from( from )
 struct sockaddr_in  *from;
