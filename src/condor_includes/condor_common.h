@@ -65,6 +65,7 @@
 ** Condor specific headers and definitions
 **********************************************************************/
 #include "condor_constants.h"
+#include "condor_macros.h"
 
 /**********************************************************************
 ** C++ specific stuff 
@@ -76,7 +77,7 @@
 
 #endif __cplusplus
 
-#endif CONDOR_COMMON_H
+#endif /* CONDOR_COMMON_H */
 
 
 
