@@ -376,6 +376,8 @@ initialize (const char *filename)
 		return false;
 	}
 
+	is_locked = false;
+
 	return true;
 }
 	
@@ -390,13 +392,15 @@ readEvent (ULogEvent *& event)
 	// we obtain a write lock here not because we want to write
 	// anything, but because we want to ensure we don't read
 	// mid-way through someone else's write
-	lock->obtain( WRITE_LOCK );
+	if (!is_locked)
+		lock->obtain( WRITE_LOCK );
 
 	// store file position so that if we are unable to read the event, we can
 	// rewind to this location
 	if (!_fp || ((filepos = ftell(_fp)) == -1L))
 	{
-		lock->release();
+		if (!is_locked)
+			lock->release();
 		return ULOG_UNK_ERROR;
 	}
 
@@ -410,7 +414,8 @@ readEvent (ULogEvent *& event)
 	event = instantiateEvent ((ULogEventNumber) eventnumber);
 	if (!event) 
 	{
-		lock->release();
+		if (!is_locked)
+			lock->release();
 		return ULOG_UNK_ERROR;
 	}
 
@@ -426,6 +431,8 @@ readEvent (ULogEvent *& event)
 		sleep( 1 );
 		if( fseek( _fp, filepos, SEEK_SET)) {
 			dprintf( D_ALWAYS, "fseek() failed in %s:%d", __FILE__, __LINE__ );
+			if (!is_locked)
+				lock->release();
 			return ULOG_UNK_ERROR;
 		}
 		if( synchronize() )
@@ -434,7 +441,8 @@ readEvent (ULogEvent *& event)
 			if (fseek (_fp, filepos, SEEK_SET))
 			{
 				dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent");
-				lock->release();
+				if (!is_locked)
+					lock->release();
 				return ULOG_UNK_ERROR;
 			}
 			
@@ -449,12 +457,14 @@ readEvent (ULogEvent *& event)
 				delete event;
 				event = NULL;  // To prevent FMR: Free memory read
 				synchronize ();
-				lock->release();
+				if (!is_locked)
+					lock->release();
 				return ULOG_RD_ERROR;
 			}
 			else
 			{
-				lock->release();
+				if (!is_locked)
+					lock->release();
 				return ULOG_OK;
 			}
 		}
@@ -465,13 +475,15 @@ readEvent (ULogEvent *& event)
 			if (fseek (_fp, filepos, SEEK_SET))
 			{
 				dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent");
-				lock->release();
+				if (!is_locked)
+					lock->release();
 				return ULOG_UNK_ERROR;
 			}
 			clearerr (_fp);
 			delete event;
 			event = NULL;  // To prevent FMR: Free memory read
-			lock->release();
+			if (!is_locked)
+				lock->release();
 			return ULOG_NO_EVENT;
 		}
 	}
@@ -480,7 +492,8 @@ readEvent (ULogEvent *& event)
 		// got the event successfully -- synchronize the log
 		if (synchronize ())
 		{
-			lock->release();
+			if (!is_locked)
+				lock->release();
 			return ULOG_OK;
 		}
 		else
@@ -490,16 +503,35 @@ readEvent (ULogEvent *& event)
 			delete event;
 			event = NULL;  // To prevent FMR: Free memory read
 			clearerr (_fp);
-			lock->release();
+			if (!is_locked)
+				lock->release();
 			return ULOG_NO_EVENT;
 		}
 	}
 
 	// will not reach here
-	lock->release();
+	if (!is_locked)
+		lock->release();
 	return ULOG_UNK_ERROR;
 }
 
+void ReadUserLog::
+Lock()
+{
+	if ( !is_locked ) {
+		lock->obtain( WRITE_LOCK );
+		is_locked = true;
+	}
+}
+
+void ReadUserLog::
+Unlock()
+{
+	if ( is_locked ) {
+		lock->release();
+		is_locked = false;
+	}
+}
 
 bool ReadUserLog::
 synchronize ()

@@ -164,13 +164,13 @@ class ReadUserLog
   public:
 
     ///
-    inline ReadUserLog() : _fd(-1), _fp(0) {}
+    inline ReadUserLog() : _fd(-1), _fp(0), is_locked(false) {}
 
     ///
     ReadUserLog (const char * filename);
                                       
     ///
-    inline ~ReadUserLog() { if (_fp) fclose(_fp); }
+    inline ~ReadUserLog() { if (_fp) fclose(_fp); if(is_locked) lock->release(); }
 
     /** Initialize the log file.  This function will abort the program
         (by calling EXCEPT) if it can't open the log file.
@@ -198,14 +198,19 @@ class ReadUserLog
 
     /// Get the log's file descriptor
     inline int getfd() const { return _fd; }
+	inline FILE *getfp() const { return _fp; }
 
 	void outputFilePos(const char *pszWhereAmI);
+
+	void Lock();
+	void Unlock();
 
     private:
 
     /** The log's file descriptor */  int    _fd;
     /** The log's file pointer    */  FILE * _fp;
     /** The log file lock         */  FileLock* lock;
+	/** Is the file locked?       */  bool is_locked;
 };
 
 #endif /* __cplusplus */
