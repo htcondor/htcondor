@@ -9,11 +9,16 @@
 \oOpt{-\hspace{.25 mm}-runonly}
 \oOptArg{-\hspace{.25 mm}-scheduler}{name}
 \oOptArg{-\hspace{.25 mm}-queue}{name}
+\oOptArg{-\hspace{.25 mm}-project}{name}
+\oOptArg{-\hspace{.25 mm}-memory}{MBytes}
 \oOptArg{-\hspace{.25 mm}-count}{CPU count}
-\oOptArg{-\hspace{.25 mm}-runfor}{minutes}
+\oOptArg{-\hspace{.25 mm}-vms}{VM count}
+\oOptArg{-\hspace{.25 mm}-idletime}{minutes}
+\oOptArg{-\hspace{.25 mm}-runtime}{minutes}
 \oOpt{-\hspace{.25 mm}-anybody}
 \oOptArg{-\hspace{.25 mm}-admin}{address}
 \oOpt{-\hspace{.25 mm}-genconfig}
+\oOptArg{-\hspace{.25 mm}-useconfig}{filename}
 \OptArg{\{-\hspace{.25 mm}-contactfile}{filename} \} \Bar \Opt{Globus contact string}
 
 \index{Condor commands!condor\_glidein}
@@ -64,7 +69,7 @@ Setup need only be done once per machine and version of Condor.
 The execution step starts the Condor daemons running through
 the resource's Globus interface.
 
-By default, all files placed on the remote machine are placed, in
+By default, all files placed on the remote machine are placed in
 \File{\MacroUNI{HOME}/Condor\_glidein}.
 Each use of \Condor{glidein} will generate spool and log
 files on the Globus resource that should be occasionally removed.
@@ -122,23 +127,46 @@ files on the Globus resource that should be occasionally removed.
 	The argument \Arg{name} is a string which specifies which
 	job queue is to be used for submission on the Globus resource.
 	}
+    \OptItem{\OptArg{-\hspace{.25 mm}-project}{name}}{
+	The argument \Arg{name} is a string which specifies which
+	project is to be used for submission on the Globus resource.
+	}
+    \OptItem{\OptArg{-\hspace{.25 mm}-memory}{MBytes}}{
+	The maximum memory size to request from the Globus resource
+	(in megabytes).
+	}
     \OptItem{\OptArg{-\hspace{.25 mm}-count}{CPU count}}{
 	Number of CPUs to request, default is 1. }
-    \OptItem{\OptArg{-\hspace{.25 mm}-runfor}{minutes}}{
+    \OptItem{\OptArg{-\hspace{.25 mm}-vms}{VM count}}{
+	Number of of virtual machines to split up the allocated resources
+	into, default is 1.
+	}
+    \OptItem{\OptArg{-\hspace{.25 mm}-idletime}{minutes}}{
 	How long the Condor daemons on the Globus resource
 	can remain idle before the resource reverts back to its
 	former state of not being part of the local Condor pool.
 	If the value is 0 (zero), the resource will not
-	revert back to is former state.
+	revert back to its former state.
 	In this case,
-	the Condor daemons will run until killed with \Condor{rm}.
+	the Condor daemons will run until the \Arg{runtime} time expires,
+	or they are killed by the resource or
+	with \Condor{rm}.
 	The default value is 20 minutes.  }
+    \OptItem{\OptArg{-\hspace{.25 mm}-runtime}{minutes}}{
+	How long the Condor daemons on the Globus resource
+	will run before shutting themselves down. This option is useful
+	for resources with enforced maximum run times. Setting
+	\Arg{runtime} to be a few minutes shorter than the allowable
+	limit gives the daemons time to perform a graceful shutdown.
+	}
     \OptItem{\Arg{-\hspace{.25 mm}-anybody}}{
 	Sets the Condor \Expr{START} expression to TRUE
 	to allow any user job which meets the job's requirements to run on
 	the Globus resource added to the local Condor pool.
 	Without this option, only jobs owned by the user executing
-	\Condor{glidein} can execute on the Globus resource.
+	\Condor{glidein} can execute on the Globus resource. WARNING:
+	Using this option may violate the usage policies of many
+	institutions.
 	}
     \OptItem{\OptArg{-\hspace{.25 mm}-admin}{address}}{
 	Where to send e-mail with problems.
@@ -149,6 +177,10 @@ files on the Globus resource that should be occasionally removed.
 	on the Globus resource.
 	The file is called \File{\condor{config.glidein}}.
         }
+    \OptItem{\OptArg{-\hspace{.25 mm}-useconfig}{filename}}{
+	Install \Arg{filename} as the config file on the Globus resource
+	instead of the default config file during the setup phase.
+	}
 
 \end{Options}
 
