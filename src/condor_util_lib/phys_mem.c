@@ -71,8 +71,7 @@ calc_phys_memory()
                 return(-1);
         }
 
-        if ( kvm_read(kvm_des, (u_long) mynl[0].n_value, &physmem, sizeof(physmem))
-< 0 ) {
+        if ( kvm_read(kvm_des, (u_long) mynl[0].n_value, &physmem, sizeof(physmem)) < 0 ) {
                 return(-1);
         }
  
@@ -193,10 +192,12 @@ calc_phys_memory()
 	factor = pagesz >> 10;
 
 #if defined(X86)
-		/* This is super-ugly.  For some reason, Intel Solaris seems
+		/* 
+		   This is super-ugly.  For some reason, Intel Solaris seems
 		   to have some kind of rounding error for reporting memory.
 		   These values just came from a little trail and error and
 		   seem to work pretty well.  -Derek Wright (1/29/98)
+ 	    */
 	hack = (pages * factor);
 	if( hack > 130000 ) {
 		return (int) (hack / 1020);
@@ -209,6 +210,7 @@ calc_phys_memory()
 	return (int) ((pages * factor) / 1024);
 #endif
 }
+
 #elif defined(LINUX)
 #include <stdio.h>
 
@@ -257,6 +259,7 @@ calc_phys_memory()
 	GlobalMemoryStatus(&status);
 	return (int)(status.dwTotalPhys/(1024*1024));
 }
+
 #elif defined(OSF1)
 
 #include "condor_common.h"
