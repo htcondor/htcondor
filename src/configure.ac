@@ -168,6 +168,8 @@ elif test $os = "Linux" ; then
     _cv_arch="ALPHA"
   elif test $arch = "ia64" ; then
     _cv_arch="IA64"
+  elif test $arch = "ppc" ; then
+    _cv_arch="CONDOR_PPC"
   fi
 
   # next, figure out what linux distribution this is
@@ -202,6 +204,18 @@ elif test $os = "Linux" ; then
        AC_MSG_WARN([Condor is not yet ported to redhat version $_rh_vers])
        AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
        _cv_linux_distro="RH_UNKNOWN"
+       ;;
+    esac
+  elif test -f "/etc/yellowdog-release" ; then
+    _yd_vers=`cat /etc/yellowdog-release|$PERL -ne '/.* (.*) \(.*\)/;print $1;'`
+    case "$_yd_vers" in
+     "3.0" )
+       _cv_linux_distro="YD30"
+       ;;
+     * )
+       AC_MSG_WARN([Condor is not yet ported to yellowdog version $_yd_vers])
+       AC_MSG_WARN([You may have trouble building and/or packaging Condor])
+       _cv_linux_distro="YD_UNKNOWN"
        ;;
     esac
   elif test -f "/etc/SuSE-release" ; then
