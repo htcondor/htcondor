@@ -108,6 +108,8 @@ config(ClassAd *classAd=NULL, char *mySubsystem=NULL)
 		exit( 1 );
 	}
 
+	if (!mySubsystem) return;
+
 	sprintf (buffer, "%s_EXPRS", mySubsystem);
 	tmp = param (buffer);
 	if (tmp && classAd)
