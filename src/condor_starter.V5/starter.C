@@ -22,15 +22,9 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-#include "condor_debug.h"
-#include "condor_jobqueue.h"
-#include "condor_uid.h"
-#include "condor_config.h"
-#include "condor_io.h"
-#include "my_hostname.h"
+#include "starter_common.h"
 
 #include "proto.h"
-#include "condor_sys.h"
 #include "name_tab.h"
 
 #include "state_machine_driver.h"
@@ -84,8 +78,6 @@ Alarm		MyAlarm;			// Don't block forever on user process exits
 char	*InitiatingHost;		// Machine where shadow is running
 char	*ThisHost;				// Machine where we are running
 
-int		UsePipes = FALSE;		// Connect to shadow via pipes for debugging
-
 extern State StateTab[];
 extern Transition TransTab[];
 extern int EventSigs[];
@@ -109,7 +101,6 @@ int needed_fd( int fd );
 void determine_user_ids( uid_t &requested_uid, gid_t &requested_gid );
 int host_in_domain( const char *domain, const char *hostname );
 void init_environment_info();
-extern "C" int exception_cleanup();
 
 StateMachine	*condor_starter_ptr;
 
@@ -150,110 +141,6 @@ main( int argc, char *argv[] )
 	return 0;
 }
 
-void
-initial_bookeeping( int argc, char *argv[] )
-{
-	char*	logAppend = NULL;
-	char*	submitHost = NULL;
-	int		usageError = FALSE;
-	char**	ptr;
-	char*	tmp;
-
-	(void) SetSyscalls( SYS_LOCAL | SYS_MAPPED );
-
-           // Process command line args.
-	submitHost = argv[1];
-	for(ptr = argv + 2; *ptr && !usageError; ptr++) {
-		if(ptr[0][0] == '<') {
-				// We were passed the startd sinful string, which for
-				// now, we're just ignoring.
-			continue;
-		}
-		if(ptr[0][0] == '-') {
-			switch( ptr[0][1] ) {
-			case 'p':
-				UsePipes = TRUE;
-				break;
-			case 'l':
-				ptr++;
-				if( ptr && *ptr ) {
-					logAppend = *ptr;
-				} else {
-					usageError = TRUE;
-				}
-				break;
-			default:
-				fprintf( stderr, "Error:  Unknown option %s\n", *ptr );
-				usageError = TRUE;
-			}
-		}
-	}
-
-	set_condor_priv();
-
-	init_shadow_connections();
-
-	read_config_files();
-
-		// If we're told on the command-line to append something to
-		// the name of our log file (b/c of the SMP startd), we do
-		// that here, so that when we setup logging, we get the right
-		// filename.  -Derek Wright 9/2/98
-	if( logAppend ) {
-		char *tmp1, *tmp2;
-		if( !(tmp1 = param("STARTER_LOG")) ) { 
-			EXCEPT( "STARTER_LOG not defined!" );
-		}
-		tmp2 = (char*)malloc( (strlen(tmp1) + strlen(logAppend) + 2) *
-							  sizeof(char) );
-		if( !tmp2 ) {
-			EXCEPT( "Out of memory!" );
-		}
-		sprintf( tmp2, "%s.%s", tmp1, logAppend );
-		config_insert( "STARTER_LOG", tmp2 );
-		free( tmp1 );
-		free( tmp2 );
-	}
-
-	init_logging();
-
-
-		/* Now if we have an error, we can print a message */
-	if( usageError ) {
-		usage( argv[0] );	/* usage() exits */
-	}
-
-	init_sig_mask();
-
-	if( UsePipes ) {
-		InitiatingHost = my_hostname();
-	} else {
-		InitiatingHost = submitHost;
-	}
-
-	dprintf( D_ALWAYS, "********** STARTER starting up ***********\n" );
-	dprintf( D_ALWAYS, "Submitting machine is \"%s\"\n", InitiatingHost );
-
-	_EXCEPT_Cleanup = exception_cleanup;
-}
-
-/*
-  Unblock all signals except those which will encode asynchronous
-  events.  Those will be unblocked at the proper moment by the finite
-  state machine driver.
-*/
-void
-init_sig_mask()
-{
-	sigset_t	sigmask;
-	int			i;
-
-	sigemptyset( &sigmask );
-	for( i=0; EventSigs[i]; i++ ) {
-		sigaddset( &sigmask, EventSigs[i] );
-	}
-	(void)sigprocmask( SIG_SETMASK, &sigmask, 0 );
-}
 
 /*
   If TESTING is set to TRUE, we delay approximately sec seconds for
@@ -373,18 +260,13 @@ init_shadow_connections()
 	int		scm;
 
 
-	if( UsePipes ) {
-		SyscallStream = init_syscall_connection( TRUE );
-	} else {
-		(void) dup2( 1, RSC_SOCK );
-		(void) dup2( 2, CLIENT_LOG );
-		SyscallStream = init_syscall_connection( FALSE);
+	(void) dup2( 1, RSC_SOCK );
+	(void) dup2( 2, CLIENT_LOG );
+	SyscallStream = init_syscall_connection( FALSE);
 		/* Set a timeout on remote system calls.  This is needed in case
 		   the user job exits in the middle of a remote system call, leaving
 		   the shadow blocked.  -Jim B. */
-		SyscallStream->timeout(300);
-	}
-
+	SyscallStream->timeout(300);
 }
 
 /*
@@ -1323,20 +1205,16 @@ needed_fd( int fd )
 
 	  case 2:
 	  case CLIENT_LOG:
-		return TRUE;
+		  return TRUE;
 
 	  case REQ_SOCK:		// used for remote system calls via named pipes
-		if( UsePipes) {
-			return TRUE;
-		} else {
-			return FALSE;
-		}
+		  return FALSE;
 
 	  case RSC_SOCK:		// for remote system calls TCP sock OR pipes
-		return TRUE;
+		  return TRUE;
 
 	  default:
-		return FALSE;
+		  return FALSE;
 	}
 }
 
