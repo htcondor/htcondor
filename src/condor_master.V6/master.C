@@ -69,6 +69,8 @@ void	usage(const char* );
 int		main_shutdown_graceful();
 int		main_shutdown_fast();
 int		main_config();
+int		agent_starter(ReliSock *);
+int		handle_agent_fetch_log(ReliSock *);
 int		admin_command_handler(Service *, int, Stream *);
 int		handle_subsys_command(int, Stream *);
 
@@ -257,6 +259,12 @@ main_init( int argc, char* argv[] )
 								  (CommandHandler)admin_command_handler, 
 								  "admin_command_handler", 0, ADMINISTRATOR );
 
+	/*
+	daemonCore->Register_Command( START_AGENT, "START_AGENT",
+					  (CommandHandler)admin_command_handler, 
+					  "admin_command_handler", 0, ADMINISTRATOR );
+	*/
+
 	_EXCEPT_Cleanup = DoCleanup;
 
 #if !defined(WIN32)
@@ -324,11 +332,87 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 	case DAEMON_OFF_FAST:
 		return handle_subsys_command( cmd, stream );
 
+			// This function is also special, since it needs to read
+			// off more info.  So, it is handled with a special function.
+	case START_AGENT:
+		if (daemonCore->Create_Thread(
+				(ThreadStartFunc)&agent_starter, (void*)stream, 0 )) {
+			return TRUE;
+		} else {
+			dprintf( D_ALWAYS, "ERROR: unable to create agent thread!\n");
+			return FALSE;
+		}
 	default: 
 		EXCEPT( "Unknown admin command (%d) in handle_admin_commands",
 				cmd );
 	}
 	return FALSE;
+}
+
+int
+agent_starter( ReliSock * s )
+{
+	ReliSock* stream = (ReliSock*)s;
+	char *subsys = NULL;
+
+	stream->decode();
+	if( ! stream->code(subsys) ||
+		! stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "Can't read subsystem name\n" );
+		free( subsys );
+		return FALSE;
+	}
+
+	dprintf ( D_ALWAYS, "Starting agent '%s'\n", subsys );
+
+	if( stricmp(subsys, "fetch_log") == 0 ) {
+		free (subsys);
+		return handle_agent_fetch_log( stream );
+	}
+
+	// default:
+
+	free (subsys);
+	dprintf( D_ALWAYS, "WARNING: unrecognized agent name\n" );
+	return FALSE;
+}
+
+int
+handle_agent_fetch_log (ReliSock* stream) {
+
+	char *daemon_name = NULL;
+	char *daemon_paramname = NULL;
+	char *daemon_filename = NULL;
+	int  res = FALSE;
+
+	if( ! stream->code(daemon_name) ||
+		! stream->end_of_message()) {
+		dprintf( D_ALWAYS, "ERROR: fetch_log can't read daemon name\n" );
+		free( daemon_name );
+		return FALSE;
+	}
+
+	dprintf( D_ALWAYS, "INFO: daemon_name: %s\n", daemon_name );
+
+	daemon_paramname = (char*)malloc (strlen(daemon_name) + 5);
+	strcpy (daemon_paramname, daemon_name);
+	strcat (daemon_paramname, "_LOG");
+
+	dprintf( D_ALWAYS, "INFO: daemon_paramname: %s\n", daemon_paramname );
+
+	if( daemon_filename = param(daemon_paramname) ) {
+		dprintf( D_ALWAYS, "INFO: daemon_filename: %s\n", daemon_filename );
+		stream->encode();
+		res = (stream->put_file(daemon_filename) < 0);
+		free (daemon_filename);
+	} else {
+		dprintf( D_ALWAYS, "ERROR: fetch_log can't param for log name\n" );
+	}
+
+	free (daemon_paramname);
+	free (daemon_name);
+
+	return res;
 }
 
 
