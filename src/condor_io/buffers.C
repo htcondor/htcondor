@@ -69,7 +69,7 @@ int Buf::write(
 			if ( start_time + timeout > curr_time ) {
 				timer.tv_sec = (start_time + timeout) - curr_time;
 			} else {
-				dprintf(D_ALWAYS,"timeout reading in Buf::read()\n");
+				dprintf(D_ALWAYS,"timeout reading in Buf::write()\n");
 				return -1;
 			}
 			curr_time = 0;	// so we call time() next time around
@@ -97,7 +97,7 @@ int Buf::write(
 			}
 		}
 
-		nwo = send(sockd, &_dta[num_touched()], sz-nw, 0);
+		nwo = send(sockd, &_dta[num_touched()+nw], sz-nw, 0);
 		if (nwo <= 0) return -1;
 
 		nw += nwo;
