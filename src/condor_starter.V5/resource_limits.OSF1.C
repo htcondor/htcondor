@@ -26,7 +26,6 @@
 #include "condor_constants.h"
 #include "proto.h"
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
 #define SLOP 50
 

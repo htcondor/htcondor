@@ -49,7 +49,6 @@ Portability:
 #include "proto.h"
 #include <nlist.h>
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
 #if defined(X86)
 #define SOLARIS_MAGIC 043114 /* Ugh! */

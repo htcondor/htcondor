@@ -44,7 +44,6 @@ Portability:
 #include <a.out.h>
 #include <nlist.h>
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
 int magic_check( char *a_out )
 {

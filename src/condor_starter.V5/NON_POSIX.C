@@ -34,7 +34,6 @@ Portability
 #include "startup.h"
 #include "user_proc.h"
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
 /*
 Controlling any of these limits is problematic because the system calls

@@ -30,7 +30,6 @@
 #include "proto.h"
 #include "limit.h"   // for limit() (duh)
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
 #define MEG (1024 * 1024)
 

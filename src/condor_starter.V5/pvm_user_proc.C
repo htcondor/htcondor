@@ -45,7 +45,6 @@ int		shadow_tid;
 
 extern void do_unlink( const char * );
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
 void PVMdProc::execute()
 {

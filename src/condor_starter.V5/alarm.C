@@ -28,7 +28,6 @@
 #include "proto.h"
 #include "alarm.h"
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
 Alarm::Alarm() : saved( 0 ) { }
 

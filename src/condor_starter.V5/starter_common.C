@@ -32,7 +32,6 @@
 #include "starter_common.h"
 #include "basename.h"
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
 extern int		EventSigs[];
 extern char*	InitiatingHost;

@@ -50,7 +50,6 @@ Portability:
 #include <sys/file.h>
 #include <bfd.h>
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
 int magic_check( char *executable )
 {

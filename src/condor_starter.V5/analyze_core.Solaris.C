@@ -51,7 +51,6 @@ Modified for Solaris by : Dhaval N. Shah
 #include "proto.h"
 
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 #if defined(Solaris)
   #define UPAGES 4 
   #define NBPG 0x1000   /*couldnt get this val from header files. Rough

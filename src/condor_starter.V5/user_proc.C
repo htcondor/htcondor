@@ -58,7 +58,6 @@ const mode_t LOCAL_DIR_MODE =
 
 #include "user_proc.h"
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
 extern char	*Execute;			// Name of directory where user procs execute
 extern char VirtualMachineName[];  // Virtual machine where we're allocated (SMP)

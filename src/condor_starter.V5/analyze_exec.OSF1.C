@@ -47,7 +47,6 @@ extern "C" {
 #include <a.out.h>
 }
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
 
 #define COFF_MAGIC ALPHAMAGIC
