@@ -199,3 +199,8 @@ typedef struct {        /* record sent by startd to shadow */
 
 #define LOCK_JOB_QUEUE(q,m) GuardQueue(q,m,__FILE__,__LINE__)
 #define CLOSE_JOB_QUEUE(q) GuardQueue(q,LOCK_UN,__FILE__,__LINE__)
+
+/* new stuff for capability management */
+#define SIZE_OF_CAPABILITY_STRING 16
+#define SIZE_OF_FINAL_STRING 40
+
