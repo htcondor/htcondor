@@ -5518,8 +5518,10 @@ Scheduler::sendAlives()
 			}
 		}
 	}
-	dprintf( D_PROTOCOL, "## 6. (Done sending alive messages to "
-			 "%d startds)\n", numsent );
+	if( numsent ) { 
+		dprintf( D_PROTOCOL, "## 6. (Done sending alive messages to "
+				 "%d startds)\n", numsent );
+	}
 
 		// Just so we don't have to deal with a seperate DC timer for
 		// this, just call the dedicated_scheduler's version of the
