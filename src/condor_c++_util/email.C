@@ -109,4 +109,41 @@ email_user_open( ClassAd *jobAd, const char *subject )
     return email_open( email_addr, subject );
 }
 
+void
+email_custom_attributes( FILE* mailer, ClassAd* job_ad )
+{
+	if( !mailer || !job_ad ) {
+		return;
+	}
+
+	bool first_time = true;
+	char *attr_str = NULL, *tmp = NULL;
+	job_ad->LookupString( ATTR_EMAIL_ATTRIBUTES, &tmp );
+	if( ! tmp ) {
+		return;
+	}
+	StringList email_attrs;
+	email_attrs.initializeFromString( tmp );
+	free( tmp );
+	tmp = NULL;
+		
+	ExprTree* expr_tree;
+	email_attrs.rewind();
+	while( (tmp = email_attrs.next()) ) {
+		expr_tree = job_ad->Lookup(tmp);
+		if( ! expr_tree ) {
+			continue;
+		}
+		if( first_time ) {
+			fprintf( mailer, "\n\n" );
+			first_time = false;
+		}
+		expr_tree->PrintToNewStr( &attr_str );
+		fprintf( mailer, "%s\n", attr_str );
+		free( attr_str );
+		attr_str = NULL;
+	}
+}
+
+
 } /* extern "C" */
