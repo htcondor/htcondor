@@ -898,19 +898,21 @@ void DaemonCore::Driver()
 				FD_SET(sockTable[i].sockd,&readfds);
 		}
 
-		errno = 0;
-
+		
 #if !defined(WIN32)
 		// Unblock all signals so that we can get them during the
 		// select.
 		sigprocmask( SIG_SETMASK, &emptyset, NULL );
 #endif
 
+		errno = 0;
+
 #if defined(HPUX9)
 		rv = select(FD_SETSIZE, (int *) &readfds, NULL, NULL, (const struct timeval *)&m_timer);
 #else
 		rv = select(FD_SETSIZE, &readfds, NULL, NULL, (const struct timeval *)&m_timer);
 #endif
+		
 		tmpErrno = errno;
 
 #ifndef WIN32
@@ -924,7 +926,7 @@ void DaemonCore::Driver()
 			if(tmpErrno != EINTR)
 			// not just interrupted by a signal...
 			{
-				EXCEPT("select, error # = %d", errno);
+				EXCEPT("select, error # = %d", tmpErrno);
 			}
 		}
 #else
