@@ -1545,6 +1545,7 @@ send_proc(int cluster, int proc)
 
 PROC	GlobalqEndMarker;
 
+#if DBM_QUEUE
 int send_all_jobs(XDR* xdrs)
 {
     DBM *q = NULL;
@@ -1581,6 +1582,7 @@ int send_all_jobs(XDR* xdrs)
     dprintf( D_FULLDEBUG, "Finished SEND_ALL_JOBS\n");
 	return TRUE;
 }
+#endif
 
 prio_rec	PrioRec[MAX_PRIO_REC];
 int			N_PrioRecs = 0;
