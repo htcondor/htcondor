@@ -281,7 +281,7 @@ obtainAdsFromCollector (ClassAdList &startdAds,
 	{
 		dprintf (D_ALWAYS, 
 			"Error %s:  failed to fetch startd ads ... aborting\n",
-			StrQueryResult[result]);
+			getStrQueryResult(result));
 		return false;
 	}
 
@@ -293,7 +293,7 @@ obtainAdsFromCollector (ClassAdList &startdAds,
 	{
 		dprintf (D_ALWAYS, 
 			"Error %s:  failed to fetch schedd ads ... aborting\n",
-			StrQueryResult[result]);
+			getStrQueryResult(result));
 		return false;
 	}
 
@@ -303,7 +303,7 @@ obtainAdsFromCollector (ClassAdList &startdAds,
 	{
 		dprintf (D_ALWAYS, 
 			"Error %s:  failed to fetch startd private ads ... aborting\n",
-			StrQueryResult[result]);
+			getStrQueryResult(result));
 		return false;
 	}
 
