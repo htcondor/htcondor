@@ -255,7 +255,7 @@ IO_OBJ = stream.o sock.o safe_sock.o reli_sock.o buffers.o $(CONDOR_TYPE_OBJ) co
 
 OPENSSL_OBJ = md5_dgst.o md5_one.o rand_lib.o md_rand.o sha1dgst.o cryptlib.o \
 	buffer.o stack.o err.o lhash.o mem.o rand_win.o mem_dbg.o b_print.o \
-	bio_lib.o bss_file.o ex_data.o
+	bio_lib.o bss_file.o ex_data.o mem_clr.o
 
 #if defined(CONDOR_ENCRYPTION) || defined(CONDOR_MD)
 CONDOR_CRYPT_OBJ = CryptKey.o condor_crypt.o condor_md.o ../condor_util_lib/get_random_num.o \
