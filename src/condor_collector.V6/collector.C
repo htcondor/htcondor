@@ -257,8 +257,9 @@ int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
 		whichAds = (AdTypes) -1;
     }
 
-    if (whichAds != (AdTypes) -1)
+    if (whichAds != (AdTypes) -1) {
 		process_query (whichAds, ad, sock);
+	}
 
     // all done; let daemon core will clean up connection
 	return TRUE;
@@ -1006,8 +1007,7 @@ void CollectorDaemon::init_classad(int interval)
     }
     ad->Insert(line);
 
-    sprintf(line, "%s = \"%s\"", ATTR_COLLECTOR_IP_ADDR,
-                    daemonCore->InfoCommandSinfulString() );
+    sprintf(line, "%s = \"%s\"", ATTR_COLLECTOR_IP_ADDR, global_dc_sinful() );
     ad->Insert(line);
 
     if ( interval > 0 ) {
@@ -1016,7 +1016,7 @@ void CollectorDaemon::init_classad(int interval)
     }
 
     // In case COLLECTOR_EXPRS is set, fill in our ClassAd with those
-    // expressions. 
+    // expressions.
     config_fill_ad( ad );      
 }
 

@@ -433,7 +433,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 
 		// since we generated the key, it is only good on our socket.
 		// so update TRANSFER_SOCK now as well.
-		char *mysocket = daemonCore->InfoCommandSinfulString();
+		char *mysocket = global_dc_sinful();
 		ASSERT(mysocket);
 		sprintf(tempbuf,"%s=\"%s\"",ATTR_TRANSFER_SOCKET,mysocket);
 		Ad->InsertOrUpdate(tempbuf);
@@ -443,9 +443,8 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 		user_supplied_key = TRUE;
 	}
 
-
 		// Init all the file lists, etc.
-	if ( !SimpleInit(Ad, want_check_perms, IsServer(), 
+	if ( !SimpleInit(Ad, want_check_perms, IsServer(),
 			NULL, priv ) ) 
 	{
 		return 0;
