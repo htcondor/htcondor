@@ -65,6 +65,22 @@ The details of each version are described below.
   \item Fixed a problem that could cause daemons or tools to crash
     when they looked up information about processes running on the
     system.
+
+  \item Fixed a problem with the collector dropping TCP updates with
+    pools larger than roughly 20 machines. This issue only occurs with
+    \Macro{UPDATE\_COLLECTOR\_WITH\_TCP} enabled.
+
+  \item Fixed an issue with \Condor{store\_cred} reporting success when
+   in fact under certain circumstances the store command actually failed.
+
+  \item Removed \Condor{kbdd\_dll}. It is no longer used.
+
+  \item Fixed an issue with \Condor{birdwatcher} that caused it to
+    leak resource handles.
+
+  \item Fixed an issue with the Windows port of \Condor{dagman} that
+    would cause it to crash when POST scripts were used.
+
 \end{itemize}
 
 \item Fixed a bug where the environment of jobs in any universe could
