@@ -58,9 +58,10 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 /*
    The HPUX version of select takes (int *) params, unlike SunOS, Solaris
    which take (fd_set *).  Define an intermediate type for this.  -- Rajesh
+   But HPUX 10 takes fd_set * like all the rest.... -Todd
 */
 
-#if defined(HPUX9)
+#if defined(HPUX9) && !defined(HPUX10)
 typedef int *SELECT_FDSET_PTR;
 #else
 typedef fd_set *SELECT_FDSET_PTR;

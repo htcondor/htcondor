@@ -118,8 +118,11 @@ calc_phys_memory()
   /*
    *   Lookup addresses of variables.
   */
-#if defined(HPUX9) 
+#if defined(HPUX9) && !defined(HPUX10)
   if ((nlist("/hp-ux",memnl) <0) || (memnl[0].n_type ==0)) return(-1); 
+#endif
+#if defined(HPUX10)
+  if ((nlist("/stand/vmunix",memnl) <0) || (memnl[0].n_type ==0)) return(-1);
 #endif
 
 /* for IRIX62, we assume that the kernel is a 32 or 64-bit ELF binary, and

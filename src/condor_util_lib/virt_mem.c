@@ -310,7 +310,11 @@ calc_virt_memory()
 		/*
          * Look up addresses of variables.
          */
+#if defined(HPUX10)
+        if ((nlist("/stand/vmunix", swapnl) < 0) || (swapnl[0].n_type == 0)) {
+#else
         if ((nlist("/hp-ux", swapnl) < 0) || (swapnl[0].n_type == 0)) {
+#endif
 			set_condor_euid();
 			return(-1);
         }
