@@ -234,7 +234,7 @@ UTIL	-a src/condor_c++_util \
 
 # These probably won't need to change
 CONFIG		-a config
-TOOLS		-a config imake
+TOOLS		-a config imake nmi_glue
 DOC		-a doc
 NT_TOOLS	-a NTconfig
 
