@@ -192,7 +192,9 @@ class Lexer
 
 		// initialize methods
 		bool Initialize(LexerSource *source);
-		bool Reinitialize( );
+		bool Reinitialize(void);
+        
+        bool WasInitialized(void);
 
 		// cleanup function --- purges strings from string space
 		void FinishedParse();
@@ -223,6 +225,7 @@ class Lexer
         Lexer &operator=(const Lexer &lexer) { return *this; }
 
 		// internal state of lexical analyzer
+        bool        initialized;
 		TokenType	tokenType;             		// the integer id of the token
 		LexerSource *lexSource;
 		int    		markedPos;              	// index of marked character

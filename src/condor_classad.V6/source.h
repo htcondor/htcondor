@@ -93,6 +93,9 @@ class ClassAdParser
 		bool ParseExpression( const std::string &buffer, ExprTree*& expr, 
 					bool full=false);
 
+		bool ParseExpression( LexerSource *lexer_source, ExprTree*& expr, 
+					bool full=false);
+
 		/** Parse an expression
 			@param buffer Buffer containing the string representation of the
 				expression.
@@ -104,7 +107,15 @@ class ClassAdParser
 		*/
 		ExprTree *ParseExpression( const std::string &buffer, bool full=false);
 
+		ExprTree *ParseExpression( LexerSource *lexer_source, bool full=false);
+
+        ExprTree *ParseNextExpression(void);
+
 		void SetDebug( bool d ) { lexer.SetDebug( d ); }
+
+		Lexer::TokenType PeekToken(void);
+		Lexer::TokenType ConsumeToken(void);
+
 	private:
 		// lexical analyser for parser
 		Lexer	lexer;

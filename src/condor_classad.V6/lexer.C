@@ -43,6 +43,7 @@ Lexer ()
 	inString = false;
 	tokenConsumed = true;
 	accumulating = false;
+    initialized = false;
 
 	// debug flag
 	debug = false;
@@ -71,13 +72,13 @@ Initialize(LexerSource *source)
 	inString = false;
 	tokenConsumed = true;
 	accumulating = false;
-
+    initialized = true;
 	return true;
 }
 
 
 bool Lexer::
-Reinitialize( )
+Reinitialize(void)
 {
 	ch = lexSource->ReadCharacter();
 	// token state initialization
@@ -90,6 +91,11 @@ Reinitialize( )
 	return true;
 }
 
+bool Lexer::
+WasInitialized(void)
+{
+    return initialized;
+}
 
 // FinishedParse:  This function implements the cleanup phase of a parse.
 //   String valued tokens are entered into a string space, and maintained

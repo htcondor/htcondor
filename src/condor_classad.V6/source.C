@@ -63,9 +63,22 @@ ParseExpression( const string &buffer, ExprTree *&tree, bool full )
 	return success;
 }
 
+bool ClassAdParser::
+ParseExpression( LexerSource *lexer_source, ExprTree *&tree, bool full )
+{
+	bool              success;
+
+	success      = false;
+	if (lexer.Initialize(lexer_source)) {
+		success = parseExpression(tree, full);
+	}
+
+	return success;
+}
+
 
 ExprTree *ClassAdParser::
-ParseExpression( const string &buffer, bool full )
+ParseExpression( const string &buffer, bool full)
 {
 	ExprTree          *tree;
 	StringLexerSource lexer_source(&buffer);
@@ -81,6 +94,44 @@ ParseExpression( const string &buffer, bool full )
 		}
 	}
 	return tree;
+}
+
+ExprTree *ClassAdParser::
+ParseExpression( LexerSource *lexer_source, bool full )
+{
+	ExprTree          *tree;
+
+	tree = NULL;
+
+	if (lexer.Initialize(lexer_source)) {
+		if (!parseExpression(tree, full)) {
+			if (tree) {
+				delete tree;
+				tree = NULL;
+			} 
+		}
+	}
+	return tree;
+}
+
+ExprTree *ClassAdParser::
+ParseNextExpression(void)
+{
+    ExprTree *tree;
+
+    tree = NULL;
+
+    if (!lexer.WasInitialized()) {
+        tree = NULL; 
+    } else {
+		if (!parseExpression(tree, false)) {
+			if (tree) {
+				delete tree;
+				tree = NULL;
+            }
+		}
+    }
+    return tree;
 }
 
 /*--------------------------------------------------------------------------
@@ -771,9 +822,14 @@ parsePostfixExpression(ExprTree *&tree)
 					continue;
 				}
 			}
-			if( newTree ) delete newTree; 
-			if( treeL ) delete treeL; 
-			if( treeR ) delete treeR;
+			if( newTree ) {
+                delete newTree;
+            } else {
+                // Deleting newTree (an Operation) will delete treeL and treeR), 
+                // so we should only delete these if we didn't make newTree.
+                if( treeL ) delete treeL;
+                if( treeR ) delete treeR;
+            }
 			tree = NULL;
 			return false;
 		} else if( tt == Lexer::LEX_SELECTION ) {
@@ -1239,6 +1295,24 @@ ExprTree *ClassAdParser::evaluateFunction(
 		tree = FunctionCall::MakeFunctionCall(functionName, argList ); 
 	}
 	return tree;
+}
+
+Lexer::TokenType ClassAdParser::PeekToken(void)
+{
+    if (lexer.WasInitialized()) {
+        return lexer.PeekToken();
+    } else {
+        return Lexer::LEX_TOKEN_ERROR;
+    }
+}
+
+Lexer::TokenType ClassAdParser::ConsumeToken(void)
+{
+    if (lexer.WasInitialized()) {
+        return lexer.ConsumeToken();
+    } else {
+        return Lexer::LEX_TOKEN_ERROR;
+    }
 }
 
 std::istream & operator>>(std::istream &stream, ClassAd &ad)
