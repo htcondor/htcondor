@@ -40,6 +40,20 @@ DAEMON_LIST	= MASTER, CKPT_SERVER, STARTD, SCHEDD
 ##  and STARTD are already defined in the global config file).
 CKPT_SERVER	= $(SBIN)/condor_ckpt_server
 
+##  The checkpoint server creates a child process for each active file
+##  transfer.  What is the maximum number of processes it should
+##  create?  It will deny any requests when at the maximum.  This is
+##  set to 50 processes by default.
+#CKPT_SERVER_MAX_PROCESSES = 50
+
+##  You can also control the maximum number of processes for
+##  checkpoint restores vs. checkpoint stores.  You may want to set a
+##  lower maximum for checkpoint restores, so a large number of
+##  restores can't starve all checkpoint stores.  The default maximum
+##  for both is 50.
+#CKPT_SERVER_MAX_STORE_PROCESSES = 50
+#CKPT_SERVER_MAX_RESTORE_PROCESSES = 50
+
 
 ######################################################################
 ######################################################################
