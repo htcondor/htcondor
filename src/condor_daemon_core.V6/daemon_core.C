@@ -1655,7 +1655,6 @@ void DaemonCore::DumpSocketTable(int flag, const char* indent)
 int
 DaemonCore::ReInit()
 {
-	struct sockaddr_in sin;
 	char *tmp;
 	char buf[50];
 	static int tid = -1;
