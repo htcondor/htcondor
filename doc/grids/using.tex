@@ -69,11 +69,16 @@ can be submitted:
 \item{Install Globus tools.}
 Three ways are listed for obtaining the Globus tools:
    \begin{enumerate}
-   \item{Globus}
-   From the web page at \URL{}, get the resource management
-   client bundle.
-   \item{NMI}
-   \item{VDT}
+   \item{Globus}.
+   From the web page at \URL{http://www.globus.org/}, follow links to the
+   globus toolkit to get the resource management client bundle.
+   \item{NMI}.
+   From the web page at \URL{http://www.nsf-middleware.org/}, follow links
+   to the NMI Release, and then to the Components, and finally to the
+   Globus Toolkit. 
+   \item{VDT}.
+   From the web page at \URL{http://www.griphyn.org},
+   follow link to the Virtual Data Toolkit.
    \end{enumerate}
 
 \item{Obtain the Condor-G contrib module.}
@@ -105,7 +110,7 @@ to the existing configuration file.
 If Condor-G is installed as root, the file
 set by the configuration variable
 \Macro{GRIDMANAGER\_LOG} must have world-write permission.
-All of the parent directories for this file mush
+All of the parent directories for this file must
 also have world-execute permission.
 The Gridmanager runs as the user who submitted the job,
 so the Gridmanager may not be able to write to the ordinary 
