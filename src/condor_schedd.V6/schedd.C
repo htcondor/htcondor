@@ -117,10 +117,11 @@ extern "C"
 extern	int		get_job_prio(ClassAd *ad);
 extern	void	FindRunnableJob(int, int&);
 extern	int		Runnable(PROC_ID*);
+extern 	char*	my_hostname();
 
 extern	char*		Spool;
 extern	char*		CondorAdministrator;
-extern	Scheduler*	sched;
+extern	Scheduler	scheduler;
 extern	char		Name[];
 extern	int			ScheddName;
 
@@ -350,16 +351,16 @@ count( ClassAd *job )
 	}
 	
 	if (universe == SCHED_UNIVERSE) {
-		sched->SchedUniverseJobsRunning += cur_hosts;
-		sched->SchedUniverseJobsIdle += (max_hosts - cur_hosts);
+		scheduler.SchedUniverseJobsRunning += cur_hosts;
+		scheduler.SchedUniverseJobsIdle += (max_hosts - cur_hosts);
 	} else {
-		sched->JobsRunning += cur_hosts;
-		sched->JobsIdle += (max_hosts - cur_hosts);
+		scheduler.JobsRunning += cur_hosts;
+		scheduler.JobsIdle += (max_hosts - cur_hosts);
 
 		// Per owner info
-		int OwnerNum = sched->insert_owner( owner );
-		sched->Owners[OwnerNum].JobsRunning += cur_hosts;
-		sched->Owners[OwnerNum].JobsIdle += (max_hosts - cur_hosts);
+		int OwnerNum = scheduler.insert_owner( owner );
+		scheduler.Owners[OwnerNum].JobsRunning += cur_hosts;
+		scheduler.Owners[OwnerNum].JobsIdle += (max_hosts - cur_hosts);
 
 #if 0
 		if ( status == RUNNING ) {	/* UPDOWN */
@@ -622,11 +623,18 @@ Scheduler::negotiate(int, Stream* s)
 			s->decode();
 			if( !s->code(op) ) {
 				dprintf( D_ALWAYS, "Can't receive request from manager\n" );
+				s->end_of_message();
 				return (!(KEEP_STREAM));
 			}
+				// All commands from CM during the negotiation cycle
+				// just send the command followed by eom, except
+				// PERMISSION, which also sends the capability for the
+				// match.  Do the end_of_message here, except for
+				// PERMISSON.
 			if( op != PERMISSION ) {
 				if( !s->end_of_message() ) {
 					dprintf( D_ALWAYS, "Can't receive eom from manager\n" );
+					return (!(KEEP_STREAM));
 				}
 			}
 
@@ -685,7 +693,8 @@ Scheduler::negotiate(int, Stream* s)
 					}
 					
 					/* Send a job description */
-					if( !s->snd_int(JOB_INFO,FALSE) ) {
+					s->encode();
+					if( !s->put(JOB_INFO) ) {
 						dprintf( D_ALWAYS, "Can't send JOB_INFO to mgr\n" );
 						return (!(KEEP_STREAM));
 					}
@@ -700,12 +709,13 @@ Scheduler::negotiate(int, Stream* s)
 						dprintf( D_ALWAYS,
 								"Can't send job ad to mgr\n" );
 						FreeJobAd(ad);
+						s->end_of_message();
 						return (!(KEEP_STREAM));
 					}
 					FreeJobAd(ad);
 					if( !s->end_of_message() ) {
 						dprintf( D_ALWAYS,
-								"Can't send job ad to mgr\n" );
+								"Can't send job eom to mgr\n" );
 						return (!(KEEP_STREAM));
 					}
 					dprintf( D_FULLDEBUG,
@@ -1415,7 +1425,7 @@ add_shadow_rec( int pid, PROC_ID* job_id, Mrec* mrec, int fd )
 	NShadowRecs++;
 	dprintf( D_FULLDEBUG, "Added shadow record for PID %d, job (%d.%d)\n",
 			pid, job_id->cluster, job_id->proc );
-	sched->display_shadow_recs();
+	scheduler.display_shadow_recs();
 	if ( NShadowRecs == MAX_SHADOW_RECS ) {
 		EXCEPT( "Reached MAX_SHADOW_RECS" );
 	}
@@ -2140,6 +2150,11 @@ Scheduler::Init()
         aliveInterval = atoi(tmp);
         free(tmp);
 	}
+
+		// Put Machine attribute into the schedd classad.
+	sprintf( tmpExpr, "%s = \"%s\"", ATTR_MACHINE, my_hostname() );
+	ad->Insert( tmpExpr );
+
 }
 
 void
@@ -2405,6 +2420,7 @@ Scheduler::Agent(char* server, char* capability,
 {
     int     	reply;                              /* reply from the startd */
 
+
 	// add User = "owner@uiddomain" to ad
 	{
 		char temp[512];
@@ -2663,7 +2679,7 @@ Scheduler::send_alive()
 void
 job_prio(ClassAd *ad)
 {
-	sched->JobsRunning += get_job_prio(ad);
+	scheduler.JobsRunning += get_job_prio(ad);
 }
 
 void
