@@ -87,8 +87,11 @@ usage( char *str )
 		fprintf( stderr, "  -fast\t\t\tquickly shutdown daemons\n" );
 	}
 	fprintf( stderr, "where [targets] can be one or more of:\n" );
+#if 0
+		// This isn't supported yet, so don't mention it now.
 	fprintf( stderr, 
 			 "  -all\t\t\tall hosts in your pool (overrides other targets)\n" );
+#endif
 	fprintf( stderr, "  hostname\t\tgiven host\n" );
 	fprintf( stderr, "  <ip.address:port>\tgiven \"sinful string\"\n" );
 	fprintf( stderr, "  (if no target is specified, the local host is used)\n" );
