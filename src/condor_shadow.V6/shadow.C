@@ -895,7 +895,7 @@ start_job( char *cluster_id, char *proc_id )
 
 extern "C" {
 int
-ExceptCleanup(int line, int errno, char *buf)
+ExceptCleanup(int, int, char *buf)
 {
   log_except(buf);
   return DoCleanup();
