@@ -1,5 +1,10 @@
 SRC_DIR = $(SRC_TREE)/condor_schedd
+
+#if IS_SGI_IRIX53 || IS_SGI_IRIX62
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC
+#else
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -fexternal-templates
+#endif
 
 CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
 
