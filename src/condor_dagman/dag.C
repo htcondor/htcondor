@@ -29,6 +29,7 @@
 #include "debug.h"
 #include "submit.h"
 #include "util.h"
+#include "dagman_main.h"
 
 #include "simplelist.h"
 #include "condor_string.h"  /* for strnewp() */
@@ -670,7 +671,9 @@ Job * Dag::GetJob (const char * jobName) const {
     ListIterator<Job> iList (_jobs);
     Job * job;
     while ((job = iList.Next())) {
-        if (strcmp(job->GetJobName(), jobName) == 0) return job;
+		if( strcasecmp( job->GetJobName(), jobName ) == 0 ) {
+			return job;
+		}
     }
     return NULL;
 }
@@ -752,10 +755,11 @@ Dag::SubmitReadyJobs()
 	ASSERT( job != NULL );
 	ASSERT( job->GetStatus() == Job::STATUS_READY );
 
-	if( job->NumParents() > 0 ) {
-			// Sleep for one second here, so we can be sure that this
-			// job's submit event is unambiguously later than the
-			// termination events of its parents, given that userlogs
+	if( job->NumParents() > 0 && dagman.submit_delay == 0 ) {
+			// if we don't already have a submit_delay, sleep for one
+			// second here, so we can be sure that this job's submit
+			// event will be unambiguously later than the termination
+			// events of its parents, given that userlog timestamps
 			// only have a resolution of one second.  (Because of the
 			// new feature allowing distinct userlogs for each job, we
 			// can't just rely on the physical order in a single log
@@ -766,6 +770,9 @@ Dag::SubmitReadyJobs()
 			// skip the sleep...
 		sleep( 1 );
 	}
+
+		// sleep for a specified time before submitting
+	sleep( dagman.submit_delay );
 
 	debug_printf( DEBUG_VERBOSE, "Submitting %s Job %s ...\n",
 				  job->JobTypeString(), job->GetJobName() );

@@ -473,7 +473,8 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 		bool print_comma = false;
 		Directory spool_space( SpoolSpace, PRIV_CONDOR );
 		while ( (current_file=spool_space.Next()) ) {
-			if ( !file_strcmp(UserLogFile,current_file) ) {
+			if ( UserLogFile && 
+				 !file_strcmp(UserLogFile,current_file) ) {
 					// dont send UserLog file to the starter
 				continue;
 			}

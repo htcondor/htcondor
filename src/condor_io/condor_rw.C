@@ -125,9 +125,8 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout )
 				// subsequently returns 0, that means that the
 				// socket has been closed by our peer.
 			if ( timeout > 0 && nro == 0 ) {
-				dprintf( D_ALWAYS, "condor_write(): "
-						 "Socket closed when trying "
-						 "to read buffer\n" );
+				dprintf( D_FULLDEBUG, "condor_read(): "
+						 "Socket closed when trying to read buffer\n" );
 				return -1;
 			}
 

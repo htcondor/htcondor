@@ -82,10 +82,34 @@ void touch (const char * filename) {
 
 //---------------------------------------------------------------------------
 
+
+bool
+Dagman::Config()
+{
+	const char* submit_delay_attr = "DAGMAN_SUBMIT_DELAY";
+	char* submit_delay_str = param( submit_delay_attr );
+	char* endptr = NULL;
+	if( submit_delay_str ) {
+		dagman.submit_delay = strtol( submit_delay_str, &endptr, 10 );
+		if( !endptr || *endptr != '\0' || dagman.submit_delay < 0 ) {
+			debug_printf( DEBUG_NORMAL, "ERROR: invalid %s: \"%s\"\n",
+						  submit_delay_attr, submit_delay_str );
+			dagman.submit_delay = 0;
+		}
+	}
+	debug_printf( DEBUG_NORMAL, "%s = %d (\"%s\")\n", submit_delay_attr,
+				  dagman.submit_delay, submit_delay_str ? submit_delay_str :
+				  "UNDEFINED" );
+	free( submit_delay_str );
+	return true;
+}
+
+
+// NOTE: this is only called on reconfig, not at startup
 int
 main_config( bool is_full )
 {
-		// nothing to read in from the config files here...
+	dagman.Config();
 	return 0;
 }
 
@@ -165,6 +189,9 @@ int main_init (int argc, char ** const argv) {
 		// wait for a developer to attach with a debugger...
 	volatile int wait_for_debug = 0;
 
+		// process any config vars
+	dagman.Config();
+
 	// The DCpermission (last parm) should probably be PARENT, if it existed
     daemonCore->Register_Signal( SIGUSR1, "SIGUSR1",
                                  (SignalHandler) main_shutdown_remove,
@@ -200,14 +227,14 @@ int main_init (int argc, char ** const argv) {
     // Process command-line arguments
     //
     for (i = 1; i < argc; i++) {
-        if (!strcmp("-Debug", argv[i])) {
+        if( !strcasecmp( "-Debug", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT, "No debug level specified\n" );
                 Usage();
             }
             debug_level = (debug_level_t) atoi (argv[i]);
-        } else if (!strcmp("-Condorlog", argv[i])) {
+        } else if( !strcasecmp( "-Condorlog", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT, "No condor log specified" );
@@ -215,14 +242,14 @@ int main_init (int argc, char ** const argv) {
            }
             condorLogName = argv[i];
 	//-->DAP
-	} else if (!strcmp("-Storklog", argv[i])) {
+		} else if( !strcasecmp( "-Storklog", argv[i] ) ) {
             i++;
             if (argc <= i) {
                 debug_printf( DEBUG_SILENT, "No stork log specified" );
                 Usage();
            }
             dapLogName = argv[i];        
-	} else if (!strcmp("-Storkserver", argv[i])) {
+		} else if( !strcasecmp( "-Storkserver", argv[i] ) ) {
 	    i++;
 	    if (argc <= i) {
 	        debug_printf( DEBUG_SILENT, "No stork server specified" );
@@ -230,30 +257,30 @@ int main_init (int argc, char ** const argv) {
 	  }
 	    DAP_SERVER = argv[i];   
 	//<--DAP
-        } else if (!strcmp("-Lockfile", argv[i])) {
+        } else if( !strcasecmp( "-Lockfile", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT, "No DagMan lockfile specified\n" );
                 Usage();
             }
             lockFileName = argv[i];
-        } else if (!strcmp("-Help", argv[i])) {
+        } else if( !strcasecmp( "-Help", argv[i] ) ) {
             Usage();
-        } else if (!strcmp("-Dag", argv[i])) {
+        } else if (!strcasecmp( "-Dag", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT, "No DAG specified\n" );
                 Usage();
             }
             dagman.datafile = argv[i];
-        } else if (!strcmp("-Rescue", argv[i])) {
+        } else if( !strcasecmp( "-Rescue", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT, "No Rescue DAG specified\n" );
                 Usage();
             }
             dagman.rescue_file = argv[i];
-        } else if (!strcmp("-MaxJobs", argv[i])) {
+        } else if( !strcasecmp( "-MaxJobs", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT,
@@ -261,11 +288,11 @@ int main_init (int argc, char ** const argv) {
                 Usage();
             }
             dagman.maxJobs = atoi( argv[i] );
-        } else if( !strcmp( "-MaxScripts", argv[i] ) ) {
+        } else if( !strcasecmp( "-MaxScripts", argv[i] ) ) {
 			debug_printf( DEBUG_SILENT, "-MaxScripts has been replaced with "
 						   "-MaxPre and -MaxPost arguments\n" );
 			Usage();
-        } else if( !strcmp( "-MaxPre", argv[i] ) ) {
+        } else if( !strcasecmp( "-MaxPre", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT,
@@ -273,7 +300,7 @@ int main_init (int argc, char ** const argv) {
                 Usage();
             }
             dagman.maxPreScripts = atoi( argv[i] );
-        } else if( !strcmp( "-MaxPost", argv[i] ) ) {
+        } else if( !strcasecmp( "-MaxPost", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT,
@@ -281,9 +308,9 @@ int main_init (int argc, char ** const argv) {
                 Usage();
             }
             dagman.maxPostScripts = atoi( argv[i] );
-        } else if( !strcmp( "-NoPostFail", argv[i] ) ) {
+        } else if( !strcasecmp( "-NoPostFail", argv[i] ) ) {
 			run_post_on_failure = FALSE;
-        } else if( !strcmp( "-WaitForDebug", argv[i] ) ) {
+        } else if( !strcasecmp( "-WaitForDebug", argv[i] ) ) {
 			wait_for_debug = 1;
         } else Usage();
     }

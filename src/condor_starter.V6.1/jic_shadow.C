@@ -1263,23 +1263,10 @@ JICShadow::startUpdateTimer( void )
 		return;
 	}
 
-	char* tmp = param( "STARTER_UPDATE_INTERVAL" );
-	int update_interval = 0;
-		// years of careful study show: 20 minutes... :)
-	int def_update_interval = (20*60);
-	int initial_interval = 8;
-	if( tmp ) {
-		update_interval = atoi( tmp );
-		if( ! update_interval ) {
-			dprintf( D_ALWAYS, "Invalid STARTER_UPDATE_INTERVAL: "
-					 "\"%s\", using default value (%d) instead\n",
-					 tmp, def_update_interval );
-		}
-		free( tmp );
-	}
-	if( ! update_interval ) {
-		update_interval = def_update_interval;
-	}
+	// default interval is 20 minutes, with 8 seconds as the initial value.
+	int update_interval = param_integer( "STARTER_UPDATE_INTERVAL", (20*60) );
+	int initial_interval = param_integer( "STARTER_INITIAL_UPDATE_INTERVAL", 8 );
+
 	if( update_interval < initial_interval ) {
 		initial_interval = update_interval;
 	}

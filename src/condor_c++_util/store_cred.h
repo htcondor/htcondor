@@ -38,6 +38,7 @@ const int FAILURE_BAD_PASSWORD = 2; // bad (wrong) password
 const int ADD_MODE = 100;
 const int DELETE_MODE = 101;
 const int QUERY_MODE = 102;
+const int CONFIG_MODE = 103;
 
 const char ADD_CREDENTIAL[] = "add";
 const char DELETE_CREDENTIAL[] = "delete";

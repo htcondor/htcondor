@@ -1137,6 +1137,8 @@ AC_MSG_CHECKING([globus flavor])
 _cv_globus_flavor=gcc32dbg
 if test "$_cv_arch" = "ALPHA" -o "$_cv_arch" = "IA64" ; then
   _cv_globus_flavor=gcc64dbg
+elif test "$_cv_arch" = "SGI" ; then
+  _cv_globus_flavor=vendorcc32dbg
 fi
 AC_MSG_RESULT([$_cv_globus_flavor])
 AC_SUBST(globus_flavor,$_cv_globus_flavor)
@@ -1149,7 +1151,7 @@ AC_SUBST(ext_gpt_version,$_cv_ext_gpt_version)
 
 
 AC_MSG_CHECKING([gahp])
-_cv_ext_gahp_version="gahp-6.5"
+_cv_ext_gahp_version="gahp-1.0.10"
 AC_MSG_RESULT([$_cv_ext_gahp_version])
 AC_SUBST(ext_gahp_version,$_cv_ext_gahp_version)
 

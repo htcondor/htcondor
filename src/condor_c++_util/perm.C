@@ -165,7 +165,9 @@ int perm::get_permissions( const char *file_name, ACCESS_MASK &AccessRights ) {
 				return -1;
 			}
 
-			dprintf(D_FULLDEBUG, "Calling Perm::userInAce() for %s\\%s\n", (Account_name) ? Account_name : "NULL", (Domain_name) ? Domain_name : "NULL" );
+			dprintf(D_FULLDEBUG, "Calling Perm::userInAce() for %s\\%s\n",
+				   (Domain_name) ? Domain_name : "NULL",
+				   (Account_name) ? Account_name : "NULL" );
 			result = userInAce ( current_ace, Account_name, Domain_name );		
 			
 			if (result == 1) {
@@ -503,13 +505,17 @@ perm::~perm() {
 bool perm::init( const char *accountname, char *domain ) 
 {
 	SID_NAME_USE snu;
+	char qualified_account[1024];
 	
 	if ( psid && must_freesid ) FreeSid(psid);
 	must_freesid = false;
 	
 	psid = (PSID) &sidBuffer;
 
-	dprintf(D_FULLDEBUG,"perm::init() starting up for account (%s) domain (%s)\n", accountname, ( domain ? domain : "NULL"));
+	dprintf(D_FULLDEBUG,"perm::init() starting up for account (%s) "
+			"domain (%s)\n", accountname, ( domain ? domain : "NULL"));
+
+	// copy class-wide variables for account and domain
 	
 	Account_name = new char[ strlen(accountname) +1 ];
 	strcpy( Account_name, accountname );
@@ -521,9 +527,19 @@ bool perm::init( const char *accountname, char *domain )
 	} else {
 		Domain_name = NULL;
 	}
+
+	// now concatenate our domain and account name for LookupAccountName()
+	// so that we have domain\username
+	if ( 0 > snprintf(qualified_account, 1023, "%s\\%s",
+			   	domain, accountname) ) {
+		
+		dprintf(D_ALWAYS, "Perm object: domain\\account (%s\\%s) "
+				"string too long!\n", domain, accountname );
+		return false;
+	}
 	
-	if ( !LookupAccountName( domain,		// Domain
-		accountname,						// Account name
+	if ( !LookupAccountName( NULL,			// System
+		qualified_account,					// Account name
 		psid, &sidBufferSize,				// Sid
 		domainBuffer, &domainBufferSize,	// Domain
 		&snu ) )							// SID TYPE

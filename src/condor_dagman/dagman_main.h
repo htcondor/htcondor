@@ -42,8 +42,13 @@ class Dagman {
     int maxPostScripts;  // max. number of POST scripts to run at once
     char *rescue_file;
 	bool paused;
+	// number of seconds to wait before consecutive calls to
+	// condor_submit (or dap_submit, etc.)
+    int submit_delay;
     char *datafile;
 	StringList condorLogFiles;
+
+    bool Config();
 };
 
 extern Dagman dagman;

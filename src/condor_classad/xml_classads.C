@@ -147,7 +147,7 @@ static struct tag_name tag_names[] =
 };
 
 static void debug_check(void);
-static XMLToken *ReadToken(XMLSource &source);
+static XMLToken *ReadToken(XMLSource &source, bool must_be_text);
 static TagName interpret_tagname(const char *tag_text);
 static void fix_entities(const char *source, MyString &dest);
 
@@ -249,6 +249,7 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 	bool      in_classad;
 	bool      in_attribute;
 	bool      done;
+    bool      must_be_text;
 	TagName   attribute_type;
 	MyString  attribute_name;
 	MyString  attribute_value;
@@ -258,14 +259,16 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 	in_classad   = false;
 	in_attribute = false;
 	done         = false;
+    must_be_text = false;
 
 	attribute_type = tag_NoTag;
 	
-	while (!done && (token = ReadToken(source)) != NULL) {
+	while (!done && (token = ReadToken(source, must_be_text)) != NULL) {
 		bool         is_end_tag;
 		TagName      tag_name;
 		XMLTokenType token_type;
 
+        must_be_text = false;
 		//token->Dump();
 		is_end_tag = token->GetTagIsEnd();
 		token_type = token->GetType();
@@ -411,7 +414,6 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 		case tag_Number:
 		case tag_Integer:
 		case tag_Real:
-		case tag_String:
 		case tag_Undefined:
 		case tag_Error:
 		case tag_Time:
@@ -419,6 +421,12 @@ ClassAdXMLParser::_ParseClassAd(XMLSource &source)
 		case tag_Expr:
 			attribute_type = current_tag;
 			break;
+		case tag_String:
+			attribute_type = current_tag;
+			if (!is_end_tag) {
+                must_be_text = true;
+            }
+            break;
 		case tag_NoTag:
 		default:
 			break;
@@ -1308,7 +1316,7 @@ static void debug_check(void)
  *           experiment. 
  *
  **************************************************************************/
-static XMLToken *ReadToken(XMLSource &source)
+static XMLToken *ReadToken(XMLSource &source, bool must_be_text)
 {
 	int       character;
 	XMLToken  *token;
@@ -1325,6 +1333,9 @@ static XMLToken *ReadToken(XMLSource &source)
 			if (character == EOF) {
 				break;
 			}
+            if (must_be_text && character == '<') {
+                break;
+            }
 			text += ((char) character);
 			if (!isspace(character)) {
 				break;
@@ -1332,7 +1343,7 @@ static XMLToken *ReadToken(XMLSource &source)
 		}
 		
 		// Now we determine if it is a tag or some text (PCDATA)
-		if (character == '<') {
+		if (character == '<' && !must_be_text) {
 			// It's a tag. 
 			token->SetType(XMLToken_Tag);
 			text = "";
@@ -1401,6 +1412,10 @@ static XMLToken *ReadToken(XMLSource &source)
 			}
 		} else {
 			token->SetType(XMLToken_Text);
+
+            if (must_be_text && character == '<') {
+                source.PushbackCharacter();
+            }
 			
 			// We read all of the text up to next '<', adding it to 
 			// the text we've been tracking. 

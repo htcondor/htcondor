@@ -83,7 +83,10 @@ char *classad_strings[] =
 
 	/* Test case sensitivity */
 	"DoesMatch = \"Bone Machine\" == \"bone machine\" && \"a\" =?= \"a\" && \"a\" =!= \"A\","
-	"DoesntMatch = \"a\" =?= \"A\""
+	"DoesntMatch = \"a\" =?= \"A\"",
+
+    /* Test XML preservation of spaces */
+    "A = \"\", B=\" \""
 };
 
 /*----------------------------------------------------------
