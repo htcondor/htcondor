@@ -22,14 +22,17 @@ SYSPARAM = sysparam_hpux
 
 
 SRC = state_machine_driver.C event_handler.C name_tab.C NON_POSIX.select.C \
-		NON_POSIX.set_prog_env.C alarm.C string_set.C proc_obj.C alloc.C \
-		filter.C directory.C my_hostname.C file_lock.C disk.C up_down.C \
-		user_log.C environ.C sysparam_main.C $(SYSPARAM).C afs.C subproc.C
+	NON_POSIX.set_prog_env.C alarm.C string_set.C proc_obj.C alloc.C \
+	filter.C directory.C my_hostname.C file_lock.C disk.C up_down.C \
+	user_log.C environ.C sysparam_main.C $(SYSPARAM).C afs.C subproc.C \
+	carmi_context.C
+
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
-		NON_POSIX.set_prog_env.o alarm.o string_set.o proc_obj.o alloc.o \
-		filter.o directory.o my_hostname.o file_lock.o disk.o up_down.o \
-		environ.o sysparam_main.o $(SYSPARAM).o afs.o subproc.o
+	NON_POSIX.set_prog_env.o alarm.o string_set.o proc_obj.o alloc.o \
+	filter.o directory.o my_hostname.o file_lock.o disk.o up_down.o \
+	environ.o sysparam_main.o $(SYSPARAM).o afs.o subproc.o \
+	carmi_context.o
 
 #if IS_R6000_AIX32
 TEST_LIBS = ../condor_util_lib/util_lib.a cplus_lib.a /usr/lib/libbsd.a
