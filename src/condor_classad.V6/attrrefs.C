@@ -360,7 +360,8 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 			}
 		}
 		tree = ExprList::MakeExprList( eVector );
-		((ExprList*)tree)->SetShallowParentScope( adList->GetParentScope( ) );
+		ClassAd *newRoot = new ClassAd( );
+		((ExprList*)tree)->SetParentScope( newRoot );
 		return EVAL_OK;
 	}
 		// lookup with scope; this may side-affect state		
