@@ -3,7 +3,7 @@ directory: /local.chopin/nleroy/Hawkeye-Release/modules
 prefix: Hawkeye_modules_
 
 target: all
-version: 1.0.rc7
+version: 1.0.rc8
 os: Unix-Any
 +condor_jobhist
 +condor_node
@@ -25,91 +25,91 @@ os: Unix-Any
 
 target: condor_jobhist
 os: Unix-Any
-version: 1.0.rc1
+version: 1.0.rc2
 +condor_jobhist
 
 target: condor_node
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +condor_node
 
 target: condor_pool
 os: Unix-Any
-version: 1.0.rc3
+version: 1.0.rc4
 +condor_pool
 
 target: cvs_locks
 os: Unix-Any
-version: 1.0.rc1
+version: 1.0.rc3
 +cvs_locks
 
 target: downlist
 os: Unix-Any
-version: 1.0.rc1
+version: 1.0.rc2
 +downlist
 
 target: df
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +df
 
 target: gass_cache
 os: Unix-Any
-version: 1.0.rc1
+version: 1.0.rc2
 +gass_cache
 
 target: gdmphb
 os: Unix-Any
-version: 1.0.rc1
+version: 1.0.rc2
 +gdmphb
 
 target: grid_probe
 os: Unix-Any
-version: 1.0.rc1
+version: 1.0.rc2
 +grid_probe
 
 target: memory
 os: Unix-Any
-version: 1.0.rc1
+version: 1.0.rc2
 +memory
 
 target: network_stats
 os: Unix-Any
-version: 1.0.rc1
+version: 1.0.rc2
 +network_stats
 
 target: open_files
 os: Unix-Any
-version: 1.0.rc1
+version: 1.0.rc2
 +open_files
 
 target: pbs_qstat
 os: Unix-Any
-version: 1.0.rc1
+version: 1.0.rc3
 +pbs_qstat
 
 target: top
 os: Unix-Any
-version: 1.0.rc3
+version: 1.0.rc4
 +top
 
 target: uptime
 os: Unix-Any
-version: 1.0.rc1
+version: 1.0.rc2
 +uptime
 
 target: vmstat
 os: Unix-Any
-version: 1.0.rc2
+version: 1.0.rc3
 +vmstat
 
 target: w
 os: Unix-Any
-version: 1.0.rc1
+version: 1.0.rc2
 +w
 
 target: who
 os: Unix-Any
-version: 1.0.rc1
+version: 1.0.rc2
 +who
 
