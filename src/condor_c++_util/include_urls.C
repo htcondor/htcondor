@@ -34,6 +34,7 @@ extern URLProtocol CBSTP_URL;
 extern URLProtocol HTTP_URL;
 extern URLProtocol FILTER_URL;
 extern URLProtocol MAILTO_URL;
+extern URLProtocol CFILTER_URL;
 
 URLProtocol	*protocols[] = {
 	&FILE_URL,
@@ -41,6 +42,6 @@ URLProtocol	*protocols[] = {
 	&HTTP_URL,
 	&FILTER_URL,
 	&MAILTO_URL,
+	&CFILTER_URL,
 	0
 	};
-
