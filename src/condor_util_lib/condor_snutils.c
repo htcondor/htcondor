@@ -136,11 +136,7 @@ vprintf_length(const char *format, va_list args)
 	int   length;
 	FILE  *null_output;
 
-#ifdef WIN32
-	null_output = fopen("NUL", "w");
-#else
-	null_output = fopen("/dev/null", "w");
-#endif
+	null_output = fopen(NULL_FILE, "w");
 
 	if (NULL != null_output) {
 		length = vfprintf(null_output, format, args);
