@@ -46,9 +46,12 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/uio.h>
+#include <errno.h>
 
 static int fake_readv( int fd, const struct iovec *iov, int iovcnt );
 static int fake_writev( int fd, const struct iovec *iov, int iovcnt );
+
+char	*getwd( char * );
 
 /*
   The process should exit making the status value available to its parent
@@ -131,13 +134,13 @@ Keep Condor's version of the CWD up to date
 store_working_directory()
 {
 	char	tbuf[ _POSIX_PATH_MAX ];
-	int		status;
+	char	*status;
 
 		/* Get the information */
 	status = getwd( tbuf );
 
 		/* This routine returns 0 on error! */
-	if( status == 0 ) {
+	if( !status ) {
 		fprintf( stderr, tbuf );
 		abort();
 	}
@@ -350,3 +353,67 @@ ioctl( int fd, int request, caddr_t arg )
 		return -1;
 	}
 }
+
+#if defined(AIX32)
+	char *
+	getwd( char *path )
+	{
+		if( LocalSysCalls() ) {
+			return getcwd( path, _POSIX_PATH_MAX );
+		} else {
+			return (char *)REMOTE_syscall( CONDOR_getwd, path );
+		}
+	}
+#endif
+
+#if defined(AIX32)
+	int
+	kwritev( int fd, struct iovec *iov, int iovcnt, int ext )
+	{
+		int rval;
+		int user_fd;
+
+		if( ext != 0 ) {
+			errno = ENOSYS;
+			return -1;
+		}
+
+		if( (user_fd=MapFd(fd)) < 0 ) {
+			return -1;
+		}
+
+		if( LocalSysCalls() ) {
+			rval = syscall( SYS_kwritev, user_fd, iov, iovcnt );
+		} else {
+			rval = fake_writev( user_fd, iov, iovcnt );
+		}
+
+		return rval;
+	}
+#endif
+
+#if defined(AIX32)
+	int
+	kreadv( int fd, struct iovec *iov, int iovcnt, int ext )
+	{
+		int rval;
+		int user_fd;
+
+		if( ext != 0 ) {
+			errno = ENOSYS;
+			return -1;
+		}
+
+		if( (user_fd=MapFd(fd)) < 0 ) {
+			return -1;
+		}
+
+		if( LocalSysCalls() ) {
+			rval = syscall( SYS_kreadv, user_fd, iov, iovcnt );
+		} else {
+			rval = fake_readv( user_fd, iov, iovcnt );
+		}
+
+		return rval;
+	}
+#endif
