@@ -24,6 +24,8 @@
 #ifndef CONDOR_PROC_INCLUDED
 #define CONDOR_PROC_INCLUDED
 
+#define NEW_PROC 1
+
 typedef struct {
 	int		cluster;
 	int		proc;
