@@ -71,8 +71,8 @@ FILE		*fp;
 	fprintf( fp, "%-6.2f ", line->load_avg );
 
 	fprintf( fp, "%12s ", format_seconds(line->kbd_idle) );
-	fprintf( fp, "%-7.7s ", line->arch );
-	fprintf( fp, "%-8.8s ", line->op_sys );
+	fprintf( fp, "%-5.5s ", line->arch );
+	fprintf( fp, "%-10.10s ", line->op_sys );
 
 	fprintf( fp, "\n" );
 }
