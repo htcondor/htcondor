@@ -56,7 +56,7 @@
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 char		*MyName;	// Name by which this program was invoked
-char		*Spool;		// Name of job queue directory
+char		*History;		// Name of history file
 BOOLEAN		Long;		// Whether or not to use long display format.
 
 ProcFilter *PFilter = new ProcFilter();
@@ -110,7 +110,7 @@ main( int argc, char *argv[] )
 	if( special_hist_file ) {
 		(void)strcpy( history_name, special_hist_file );
 	} else {
-		(void)sprintf( history_name, "%s/history", Spool );
+		(void)strcpy( history_name, History );
 	}
 
 	H = OpenHistory( history_name, H, &dummy );
@@ -156,9 +156,9 @@ main( int argc, char *argv[] )
 void
 init_params()
 {
-	Spool = param("SPOOL");
-	if( Spool == NULL ) {
-		EXCEPT( "SPOOL not specified in config file\n" );
+	History = param("HISTORY");
+	if( History == NULL ) {
+		EXCEPT( "HISTORY not specified in config file\n" );
 	}
 }
 
