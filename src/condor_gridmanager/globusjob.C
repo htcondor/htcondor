@@ -982,19 +982,7 @@ int GlobusJob::doEvaluateState()
 			break;
 		case GM_PROXY_EXPIRED:
 			now = time(NULL);
-			if ( condorState == HELD ) {
-				// Should we be setting the GlobusStatus to UNKNOWN here?
-				schedd_actions = UA_FORGET_JOB;
-				if ( globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED &&
-					 globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN ) {
-					globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN;
-					schedd_actions |= UA_UPDATE_GLOBUS_STATE;
-				}
-				addScheddUpdateAction( this, schedd_actions,
-									   GM_PROXY_EXPIRED );
-				// This object will be deleted when the update occurs
-				break;
-			} else if ( Proxy_Expiration_Time > JM_MIN_PROXY_TIME + now ) {
+			if ( Proxy_Expiration_Time > JM_MIN_PROXY_TIME + now ) {
 				if ( jobContact ) {
 					gmState = GM_RESTART;
 				} else {
