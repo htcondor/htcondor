@@ -85,21 +85,22 @@ RemoteResource::~RemoteResource()
 }
 
 
-bool
-RemoteResource::requestIt( int starterVersion )
+int
+RemoteResource::activateClaim( int starterVersion )
 {
 	int reply;
 	
 	if ( ! dc_startd ) {
 		shadow->dprintf( D_ALWAYS, "Shadow doesn't have startd contact "
-						 "information in RemoteResource::requestIt()\n" ); 
+						 "information in RemoteResource::activateClaim()\n" ); 
 		setExitReason(JOB_SHADOW_USAGE);  // no better exit reason available
-		return false;
+		return NOT_OK;
 	}
 
 	if ( !jobAd ) {
 		shadow->dprintf( D_ALWAYS, "JobAd not defined in RemoteResource\n" );
-		return false;
+		setExitReason(JOB_SHADOW_USAGE);  // no better exit reason available
+		return NOT_OK;
 	}
 
 	reply = dc_startd->activateClaim( jobAd, starterVersion,
@@ -108,32 +109,36 @@ RemoteResource::requestIt( int starterVersion )
 	case OK:
 		shadow->dprintf( D_ALWAYS, "Request to run on %s was ACCEPTED.\n",
 						 dc_startd->addr() );
+			// Register the claim_sock for remote system calls.  It's
+			// a bit funky, but works.
+		daemonCore->Register_Socket( claim_sock, "RSC Socket", 
+				   (SocketHandlercpp)&RemoteResource::handleSysCalls, 
+				   "HandleSyscalls", this );
 		setResourceState( RR_EXECUTING );		
-		return true;
+		return OK;
 		break;
 	case CONDOR_TRY_AGAIN:
-			// For right now, treat this as NOT_OK
+		shadow->dprintf( D_ALWAYS, "Request to run on %s was DELAYED.\n",
+						 dc_startd->addr() );
+		return CONDOR_TRY_AGAIN;
+		break;
 	case NOT_OK:
 		shadow->dprintf( D_ALWAYS, "Request to run on %s was REFUSED.\n",
 						 dc_startd->addr() );
 		setExitReason( JOB_NOT_STARTED );
-		if( claim_sock ) {
-			delete claim_sock;
-			claim_sock = NULL;
-		}
-		return false;
+		return NOT_OK;
 		break;
 	default:
 		shadow->dprintf( D_ALWAYS, "Got unknown reply(%d) from "
 						 "request to run on %s\n", reply,
 						 dc_startd->addr() );
 		setExitReason( JOB_NOT_STARTED );
-		return false;
+		return NOT_OK;
 		break;
 	}
 		// should never get here, but keep gcc happy and return
 		// something. 
-	return false;
+	return NOT_OK;
 }
 
 
