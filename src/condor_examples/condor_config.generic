@@ -451,8 +451,6 @@ IsMPI           = (TARGET.JobUniverse == $(MPI))
 IsVanilla       = (TARGET.JobUniverse == $(VANILLA))
 IsStandard      = (TARGET.JobUniverse == $(STANDARD))
 
-SmallJob	= (TARGET.ImageSize <  (15 * 1024))
-
 NonCondorLoadAvg	= (LoadAvg - CondorLoadAvg)
 BackgroundLoad		= 0.3
 HighLoad		= 0.5
