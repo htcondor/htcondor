@@ -90,7 +90,6 @@ extern prio_rec	*PrioRec;
 extern int		N_PrioRecs;
 extern int		grow_prio_recs(int);
 
-void	check_zombie(int, PROC_ID*);
 void	cleanup_ckpt_files(int , int , char*);
 void	send_vacate(match_rec*, int);
 void	mark_job_stopped(PROC_ID*);
@@ -2512,7 +2511,7 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
     }
 	if( ExitWhenDone && numShadows == 0 ) {
 		dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
-		exit(0);
+		DC_Exit(0);
 	}
 
 		// If we're not trying to shutdown, now that either an agent
@@ -3013,7 +3012,7 @@ Scheduler::shutdown_graceful()
 #if !defined(WIN32)
 	if( numShadows == 0 ) {
 		dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
-		exit(0);
+		DC_Exit(0);
 	} else {
 			/* 
 			   There are shadows running, so set a flag that tells the
@@ -3038,7 +3037,7 @@ Scheduler::shutdown_fast()
 		kill( rec->pid, SIGKILL );
 	}
 	dprintf( D_ALWAYS, "All shadows have been killed, exiting.\n" );
-	exit(0);
+	DC_Exit(0);
 #endif
 }
 
