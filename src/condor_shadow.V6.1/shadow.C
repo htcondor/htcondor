@@ -43,7 +43,6 @@ UniShadow::~UniShadow() {
 void UniShadow::init( ClassAd *jobAd, char schedd_addr[], char host[], 
 					  char capability[], char cluster[], char proc[])
 {
-		// jobAd should have been passed to the constructor...
 	if ( !jobAd ) {
 		EXCEPT("No jobAd defined!");
 	}
@@ -81,18 +80,8 @@ void UniShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 
 void UniShadow::shutDown( int reason, int exitStatus ) {
 
-		// update job queue with relavent info
-	if ( getJobAd() ) {
-		char *tmp = NULL;
-		remRes->getExecutingHost( tmp );
-		ConnectQ( getScheddAddr() );
-		DeleteAttribute( getCluster(), getProc(), ATTR_REMOTE_HOST );
-		SetAttributeString( getCluster(), getProc(), 
-							ATTR_LAST_REMOTE_HOST, tmp );
-		DisconnectQ( NULL );
-		delete [] tmp;
-	}
-	else {
+		// exit now if there is no job ad
+	if ( !getJobAd() ) {
 		DC_Exit( reason );
 	}
 	
