@@ -26,6 +26,7 @@ extern "C" {
 #endif
 
 char* CondorVersion( void );
+char* CondorPlatform( void );
 
 #if defined(__cplusplus)
 }

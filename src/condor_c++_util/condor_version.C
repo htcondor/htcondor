@@ -22,7 +22,39 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 /* Here is the version string - update before a public release */
-static char* CondorVersionString = "$CondorVersion: 6.1.10 " __DATE__ " $";
+static char* CondorVersionString = "$CondorVersion: 6.1.11 " __DATE__ " $";
+
+/* 
+   This is some wisdom from Cygnus's web page.  If you just try to use
+   the "stringify" operator on a preprocessor directive, you'd get
+   "PLATFORM", not "Intel Linux" (or whatever the value of PLATFORM
+   is).  That's because the stringify operator is a special case, and
+   the preprocessor isn't allowed to expand things that are passed to
+   it.  However, by defining two layers of macros, you get the right
+   behavior, since the first pass converts:
+
+   xstr(PLATFORM) -> str(Intel Linux)
+
+   and the next pass gives:
+
+   str(Intel Linux) -> "Intel Linux"
+
+   This is exactly what we want, so we use it.  -Derek Wright and Jeff
+   Ballard, 12/2/99 
+
+   Also, because the NT build system is totally different, we have to
+   define the correct platform string right in here. :( -Derek 12/3/99 
+*/
+
+#if defined(WIN32)
+#define PLATFORM INTEL-WINNT40
+#endif
+
+#define xstr(s) str(s)
+#define str(s) #s
+
+/* Here is the platform string.  You don't need to edit this */
+static char* CondorPlatformString = "$CondorPlatform: " xstr(PLATFORM) " $";
 
 extern "C" {
 
@@ -32,4 +64,11 @@ CondorVersion( void )
 	return CondorVersionString;
 }
 
+char*
+CondorPlatform( void )
+{
+	return CondorPlatformString;
+}
+
 } /* extern "C" */
+
