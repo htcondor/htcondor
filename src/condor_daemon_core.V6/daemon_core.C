@@ -967,6 +967,8 @@ void DaemonCore::Driver()
 		sigdelset(&fullset, SIGABRT);    // so assert() failures drop core right away
 		sigdelset(&fullset, SIGILL);     // so we get a core right away
 		sigdelset(&fullset, SIGBUS);     // so we get a core right away
+		sigdelset(&fullset, SIGFPE);     // so we get a core right away
+		sigdelset(&fullset, SIGTRAP);    // so gdb works when it uses SIGTRAP
 	sigemptyset( &emptyset );
 	char asyncpipe_buf[10];
 #endif
