@@ -16,11 +16,12 @@
 #include "proc.h"
 #include "sched.h"
 #include "prio_rec.h"
+#include "HashTable.h"
+#include "list.h"
+#include "classad_hashtable.h"	// for HashKey class
 
-const	int			MAX_SHADOW_RECS	= 1024; 
 const 	int			MAX_NUM_OWNERS = 512;
 const 	int			MAX_REJECTED_CLUSTERS = 1024;
-const 	int			MAX_SCHED_UNIVERSE_RECS = 32;
 
 
 extern	char**		environ;
@@ -29,7 +30,7 @@ struct shadow_rec
 {
     int             pid;
     PROC_ID         job_id;
-    struct Mrec*    match;
+    struct match_rec*    match;
     int             preempted;
     int             conn_fd;
 	int				removed;
@@ -42,9 +43,9 @@ struct OwnerData {
   OwnerData() { Name=NULL; JobsRunning=JobsIdle=0; }
 };
 
-struct Mrec
+struct match_rec
 {
-    Mrec(char*, char*, PROC_ID*);
+    match_rec(char*, char*, PROC_ID*);
    
     char    		id[SIZE_OF_CAPABILITY_STRING];
     char    		peer[50];
@@ -62,8 +63,6 @@ enum
     M_INACTIVE,
     M_DELETED
 };
-
-#define MAXMATCHES      32
 
 class Scheduler : public Service
 {
@@ -101,15 +100,17 @@ class Scheduler : public Service
 	void			send_all_jobs_prioritized(ReliSock*, struct sockaddr_in*);
 	friend	int		count(ClassAd *);
 	friend	void	job_prio(ClassAd *);
+	friend  int		find_idle_sched_universe_jobs(ClassAd *);
 	void			display_shadow_recs();
 
 	// match managing
-    Mrec*       	AddMrec(char*, char*, PROC_ID*);
+    match_rec*       	AddMrec(char*, char*, PROC_ID*);
     int         	DelMrec(char*);
-    int         	DelMrec(Mrec*);
+    int         	DelMrec(match_rec*);
     int         	MarkDel(char*);
-    Mrec*       	FindMrecByPid(int);
+    match_rec*       	FindMrecByPid(int);
 	shadow_rec*		FindSrecByPid(int);
+	shadow_rec*		FindSrecByProcID(PROC_ID);
 	void			RemoveShadowRecFromMrec(shadow_rec*);
 	int				AlreadyMatched(PROC_ID*);
 	void			Agent(char*, char*, char*, char*, int, ClassAd*);
@@ -151,12 +152,6 @@ class Scheduler : public Service
 	time_t			LastTimeout;
 	int				ExitWhenDone;  // Flag set for graceful shutdown
 	
-	// parameters controling updown algorithm
-	int				ScheddScalingFactor;
-	int				ScheddHeavyUserTime;
-	int				Step;
-	int				ScheddHeavyUserPriority; 
-
 	// useful names
 	char*			CollectorHost;
 	char*			NegotiatorHost;
@@ -183,11 +178,11 @@ class Scheduler : public Service
 	void			clean_shadow_recs();
 	void			preempt(int);
 	int				permission(char*, char*, char*, PROC_ID*);
-	shadow_rec*		StartJob(Mrec*, PROC_ID*);
-	shadow_rec*		start_std(Mrec*, PROC_ID*);
-	shadow_rec*		start_pvm(Mrec*, PROC_ID*);
+	shadow_rec*		StartJob(match_rec*, PROC_ID*);
+	shadow_rec*		start_std(match_rec*, PROC_ID*);
+	shadow_rec*		start_pvm(match_rec*, PROC_ID*);
 	shadow_rec*		start_sched_universe_job(PROC_ID*);
-	void			Relinquish(Mrec*);
+	void			Relinquish(match_rec*);
 	void 			swap_space_exhausted();
 	void			delete_shadow_rec(int);
 	void			mark_job_running(PROC_ID*);
@@ -196,9 +191,18 @@ class Scheduler : public Service
 	void			check_zombie(int, PROC_ID*);
 	void			kill_zombie(int, PROC_ID*);
 	void			cleanup_ckpt_files(int, PROC_ID*);
+	shadow_rec*     find_shadow_rec(PROC_ID*);
+	shadow_rec*     add_shadow_rec(int, PROC_ID*, match_rec*, int);
+#ifdef CARMI_OPS
+	shadow_rec*		find_shadow_by_cluster( PROC_ID * );
+#endif
 
-    Mrec**      	rec;
-    int         	nMrec;                     // # of match records
+	HashTable <HashKey, match_rec *> *matches;
+	HashTable <int, shadow_rec *> *shadowsByPid;
+	HashTable <PROC_ID, shadow_rec *> *shadowsByProcID;
+	int				numMatches;
+	int				numShadows;
+	List <PROC_ID>	*IdleSchedUniverseJobIDs;
     int         	aliveInterval;             // how often to broadcast alive
 };
 	

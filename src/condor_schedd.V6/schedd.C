@@ -36,6 +36,11 @@
 ** 
 */ 
 
+#ifdef __GNUG__
+#pragma implementation "HashTable.h"
+#pragma implementation "list.h"
+#endif
+
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "sched.h"
@@ -65,8 +70,6 @@ extern void	Init();
 
 #include "condor_qmgr.h"
 
-#define MAX_SCHED_UNIVERSE_RECS 16
-
 extern "C"
 {
 	int	 	calc_virt_memory();
@@ -90,25 +93,26 @@ extern	Scheduler	scheduler;
 extern	char		Name[];
 extern	int			ScheddName;
 
-// shadow records and priority records
-shadow_rec      ShadowRecs[MAX_SHADOW_RECS];
-int             NShadowRecs;
+// priority records
 extern prio_rec	*PrioRec;
 extern int		N_PrioRecs;
-PROC_ID			IdleSchedUniverseJobIDs[MAX_SCHED_UNIVERSE_RECS];
-int				NSchedUniverseJobIDs;
 extern int		grow_prio_recs(int);
 
 void	check_zombie(int, PROC_ID*);
-void	send_vacate(Mrec*, int);
+void	send_vacate(match_rec*, int);
 shadow_rec*     find_shadow_rec(PROC_ID*);
-shadow_rec*     add_shadow_rec(int, PROC_ID*, Mrec*, int);
+shadow_rec*     add_shadow_rec(int, PROC_ID*, match_rec*, int);
 
 #ifdef CARMI_OPS
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
 #endif
 
-Mrec::Mrec(char* i, char* p, PROC_ID* id)
+bool operator==(const struct PROC_ID a, const struct PROC_ID b)
+{
+	return a.cluster == b.cluster && a.proc == b.proc;
+}
+
+match_rec::match_rec(char* i, char* p, PROC_ID* id)
 {
     strcpy(this->id, i);
     strcpy(peer, p);
@@ -134,10 +138,6 @@ Scheduler::Scheduler()
 	alreadyStashed = false;
 
     ShadowSizeEstimate = 0;
-    ScheddScalingFactor = 0;	// ??
-    ScheddHeavyUserTime = 0;	// ??
-    Step = 0;					// ??
-    ScheddHeavyUserPriority = 0;// ??
 
 	LastTimeout = time(NULL);
     CollectorHost = NULL;
@@ -146,10 +146,15 @@ Scheduler::Scheduler()
     CondorAdministrator = NULL;
     Mail = NULL;
     filename = NULL;
-	rec = new Mrec*[MAXMATCHES];
 	aliveInterval = 0;
 	port = 0;
 	ExitWhenDone = FALSE;
+	matches = NULL;
+	shadowsByPid = NULL;
+	shadowsByProcID = NULL;
+	numMatches = 0;
+	numShadows = 0;
+	IdleSchedUniverseJobIDs = NULL;
 }
 
 Scheduler::~Scheduler()
@@ -169,12 +174,27 @@ Scheduler::~Scheduler()
 	if (Mail)
 		free(Mail);
     delete []filename;
-	for(i = 0; i < nMrec; i++)
-	{
-		delete rec[i];
-    }		
-    delete []rec;
-    nMrec = 0;
+	if (matches) {
+		matches->startIterations();
+		match_rec *rec;
+		HashKey cap;
+		while (matches->iterate(cap, rec) == 1) {
+			delete rec;
+		}
+		delete matches;
+	}
+	if (shadowsByPid) {
+		shadowsByPid->startIterations();
+		shadow_rec *rec;
+		int pid;
+		while (shadowsByPid->iterate(pid, rec) == 1) {
+			delete rec;
+		}
+		delete shadowsByPid;
+	}
+	if (shadowsByProcID) {
+		delete shadowsByProcID;
+	}
 }
 
 void
@@ -186,8 +206,8 @@ Scheduler::timeout()
 	reaper( 0, 0, 0 );
 	clean_shadow_recs();
 
-	if( (NShadowRecs-SchedUniverseJobsRunning) > MaxJobsRunning ) {
-		preempt( NShadowRecs - MaxJobsRunning );
+	if( (numShadows-SchedUniverseJobsRunning) > MaxJobsRunning ) {
+		preempt( numShadows - MaxJobsRunning );
 	}
 }
 
@@ -327,7 +347,7 @@ count( ClassAd *job )
 		// we first check if this job is being submitted by a NiceUser, and
 		// if so, insert it as a new entry in the "Owner" table
 		if( job->LookupInteger( ATTR_NICE_USER, niceUser ) && niceUser ) {
-			owner = NiceUserName;
+			owner = (char *)NiceUserName;
 		}
 
 		int OwnerNum = scheduler.insert_owner( owner );
@@ -371,36 +391,29 @@ extern "C" {
 void
 abort_job_myself(PROC_ID job_id)
 {
-	char	*host;
-	int		i;
-
-	for( i=0; i<NShadowRecs; i++ ) {
-		if( ShadowRecs[i].job_id.cluster == job_id.cluster &&
-		   (ShadowRecs[i].job_id.proc == job_id.proc ||
-			job_id.proc == -1)) {
-			if (ShadowRecs[i].match) {
-				host = ShadowRecs[i].match->peer;
-				dprintf( D_ALWAYS,
-						"Found shadow record for job %d.%d, host = %s\n",
-						job_id.cluster, job_id.proc, host );
+	shadow_rec *srec;
+	if ((srec = scheduler.FindSrecByProcID(job_id)) != NULL) {
+		if (srec->match) {
+			dprintf( D_ALWAYS,
+					 "Found shadow record for job %d.%d, host = %s\n",
+					 job_id.cluster, job_id.proc, srec->match->peer);
 #if !defined(WIN32)	/* NEED TO PORT TO WIN32 */
-				if ( kill( ShadowRecs[i].pid, SIGUSR1) == -1 )
-					dprintf(D_ALWAYS,
-							"Error in sending SIGUSR1 to %d errno = %d\n",
-							ShadowRecs[i].pid, errno);
-				else dprintf(D_ALWAYS, "Send SIGUSR1 to Shadow Pid %d\n",
-							 ShadowRecs[i].pid);
+			if ( kill( srec->pid, SIGUSR1) == -1 )
+				dprintf(D_ALWAYS,
+						"Error in sending SIGUSR1 to %d errno = %d\n",
+						srec->pid, errno);
+			else dprintf(D_ALWAYS, "Send SIGUSR1 to Shadow Pid %d\n",
+						 srec->pid);
 #endif
-			} else {
-				dprintf( D_ALWAYS,
-						"Found record for scheduler universe job %d.%d\n",
-						job_id.cluster, job_id.proc, host );
+		} else {
+			dprintf( D_ALWAYS,
+					 "Found record for scheduler universe job %d.%d\n",
+					 job_id.cluster, job_id.proc);
 #if !defined(WIN32)	/* NEED TO PORT TO WIN32 */
-				kill( ShadowRecs[i].pid, SIGKILL );
+			kill( srec->pid, SIGKILL );
 #endif
-			}
-			ShadowRecs[i].removed = TRUE;
 		}
+		srec->removed = TRUE;
 	}
 }
 } /* End of extern "C" */
@@ -480,7 +493,6 @@ Scheduler::negotiate(int, Stream* s)
 {
 	int		i;
 	int		op;
-	// CONTEXT	*context = NULL;
 	PROC_ID	id;
 	char*	capability = NULL;			// capability for each match made
 	char*	host = NULL;
@@ -622,8 +634,8 @@ Scheduler::negotiate(int, Stream* s)
 					}
 					/* Really, we're trying to make sure we don't have too
 					   many shadows running, so compare here against
-					   NShadowRecs rather than JobsRunning as in the past. */
-					if( NShadowRecs >= MaxJobsRunning ) {
+					   numShadows rather than JobsRunning as in the past. */
+					if( numShadows >= MaxJobsRunning ) {
 						if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
 							dprintf( D_ALWAYS, 
 									"Can't send NO_MORE_JOBS to mgr\n" );
@@ -811,7 +823,7 @@ int
 Scheduler::permission(char* id, char *user, char* server, PROC_ID* jobId)
 {
 #if !defined(WIN32) /* NEED TO PORT TO WIN32 */
-	Mrec*		mrec;						// match record pointer
+	match_rec*		mrec;						// match record pointer
 	int			pid;
 	int			lim = getdtablesize();		// size of descriptor table
 	int			i;
@@ -874,11 +886,11 @@ find_idle_sched_universe_jobs( ClassAd *job )
 	int	cur_hosts;
 	int	max_hosts;
 	int	universe;
-	int cluster, proc;
+	PROC_ID id;
 	bool already_found = false;
 
-	job->LookupInteger(ATTR_CLUSTER_ID, cluster);
-	job->LookupInteger(ATTR_PROC_ID, proc);
+	job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
+	job->LookupInteger(ATTR_PROC_ID, id.proc);
 
 	if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) != 1) {
 		universe = STANDARD;
@@ -895,20 +907,8 @@ find_idle_sched_universe_jobs( ClassAd *job )
 	}
 
 	if (max_hosts > cur_hosts) {
-		for (int i=0; i < NSchedUniverseJobIDs; i++) {
-			if (IdleSchedUniverseJobIDs[i].cluster == cluster &&
-				IdleSchedUniverseJobIDs[i].proc == proc) {
-				already_found = true;
-			}
-		}
-		if (!already_found) {
-			IdleSchedUniverseJobIDs[NSchedUniverseJobIDs].cluster = cluster;
-			IdleSchedUniverseJobIDs[NSchedUniverseJobIDs].proc = proc;
-			NSchedUniverseJobIDs++;
-		}
+		scheduler.IdleSchedUniverseJobIDs->Append(id);
 	}
-
-	if (NSchedUniverseJobIDs == MAX_SCHED_UNIVERSE_RECS) return -1;
 
 	return 0;
 }
@@ -933,56 +933,54 @@ find_idle_sched_universe_jobs( ClassAd *job )
 void
 Scheduler::StartJobs()
 {
-	int		i;							// iterate through match records
-	PROC_ID	id;
+	PROC_ID id;
+	match_rec *rec;
 
 	dprintf(D_ALWAYS, "-------- Begin starting jobs --------\n");
-	for(i = 0; i < nMrec; i++)
-	{
-		if(rec[i]->status == M_INACTIVE)
+	matches->startIterations();
+	while(matches->iterate(rec) == 1) {
+		if(rec->status == M_INACTIVE)
 		{
-			dprintf(D_FULLDEBUG, "match (%s) inactive\n", rec[i]->id);
+			dprintf(D_FULLDEBUG, "match (%s) inactive\n", rec->id);
 			continue;
 		}
-		if(rec[i]->shadowRec)
+		if(rec->shadowRec)
 		{
 			dprintf(D_FULLDEBUG, "match (%s) already running a job\n",
-					rec[i]->id);
+					rec->id);
 			continue;
 		}
 
 		// This is the case we want to try and start a job.
-		id.cluster = rec[i]->cluster;
-		id.proc = rec[i]->proc; 
+		id.cluster = rec->cluster;
+		id.proc = rec->proc; 
 		if(!Runnable(&id))
 		// find the job in the cluster with the highest priority
 		{
-			FindRunnableJob(rec[i]->cluster, id.proc);
+			FindRunnableJob(rec->cluster, id.proc);
 		}
 		if(id.proc < 0)
 		// no more jobs to run
 		{
-			dprintf(D_FULLDEBUG, "match (%s) out of jobs\n", rec[i]->id);
-			dprintf(D_ALWAYS,"Out of jobs (proc id %d); relinquishing\n",
-								id.proc);
-			Relinquish(rec[i]);
-			DelMrec(rec[i]);
-			i--;
+			dprintf(D_ALWAYS,
+					"match (%s) out of jobs (cluster id %d); relinquishing\n",
+					rec->id, id.cluster);
+			Relinquish(rec);
+			DelMrec(rec);
 			continue;
 		}
-		dprintf(D_ALWAYS, "Match (%s) - running %d.%d\n",rec[i]->id,id.cluster,
+		dprintf(D_ALWAYS, "Match (%s) - running %d.%d\n",rec->id,id.cluster,
 				id.proc);
-		if(!(rec[i]->shadowRec = StartJob(rec[i], &id)))
+		if(!(rec->shadowRec = StartJob(rec, &id)))
 		// Start job failed. Throw away the match. The reason being that we
 		// don't want to keep a match around and pay for it if it's not
 		// functioning and we don't know why. We might as well get another
 		// match.
 		{
 			dprintf(D_ALWAYS,"Failed to start job %s; relinquishing\n",
-						rec[i]->id);
-			Relinquish(rec[i]);
-			DelMrec(rec[i]);
-			i--;
+						rec->id);
+			Relinquish(rec);
+			DelMrec(rec);
 			continue;
 		}
 	}
@@ -995,17 +993,20 @@ Scheduler::StartJobs()
 void
 Scheduler::StartSchedUniverseJobs()
 {
-	int i;
+	PROC_ID id;
 
+	IdleSchedUniverseJobIDs = new List <PROC_ID>;
 	WalkJobQueue( (int(*)(ClassAd *))find_idle_sched_universe_jobs );
-	for (i = 0; i < NSchedUniverseJobIDs; i++) {
-		start_sched_universe_job(IdleSchedUniverseJobIDs+i);
+	IdleSchedUniverseJobIDs->Rewind();
+	while (IdleSchedUniverseJobIDs->Next(id)) {
+		start_sched_universe_job(&id);
 	}
-	NSchedUniverseJobIDs = 0;
+	delete IdleSchedUniverseJobIDs;
+	IdleSchedUniverseJobIDs = NULL;
 }
 
 shadow_rec*
-Scheduler::StartJob(Mrec* mrec, PROC_ID* job_id)
+Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 {
 	int		universe;
 	int		rval;
@@ -1026,7 +1027,7 @@ Scheduler::StartJob(Mrec* mrec, PROC_ID* job_id)
 }
 
 shadow_rec*
-Scheduler::start_std(Mrec* mrec , PROC_ID* job_id)
+Scheduler::start_std(match_rec* mrec , PROC_ID* job_id)
 {
 #if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 	char	*argv[7];
@@ -1144,7 +1145,7 @@ Scheduler::start_std(Mrec* mrec , PROC_ID* job_id)
 
 
 shadow_rec*
-Scheduler::start_pvm(Mrec* mrec, PROC_ID *job_id)
+Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 {
 #if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 	char			*argv[8];
@@ -1385,16 +1386,15 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 void
 Scheduler::display_shadow_recs()
 {
-	int		i;
 	struct shadow_rec *r;
 
 	dprintf( D_FULLDEBUG, "\n");
 	dprintf( D_FULLDEBUG, "..................\n" );
-	dprintf( D_FULLDEBUG, ".. Shadow Recs (%d)\n", NShadowRecs );
-	for( i=0; i<NShadowRecs; i++ ) {
-		r = &ShadowRecs[i];
-		dprintf(D_FULLDEBUG, ".. %d: %d, %d.%d, %s, %s\n",
-				i, r->pid, r->job_id.cluster, r->job_id.proc,
+	dprintf( D_FULLDEBUG, ".. Shadow Recs (%d)\n", numShadows );
+	shadowsByPid->startIterations();
+	while (shadowsByPid->iterate(r) == 1) {
+		dprintf(D_FULLDEBUG, ".. %d, %d.%d, %s, %s\n",
+				r->pid, r->job_id.cluster, r->job_id.proc,
 				r->preempted ? "T" : "F" ,
 				r->match ? r->match->peer : "localhost");
 	}
@@ -1402,51 +1402,47 @@ Scheduler::display_shadow_recs()
 }
 
 struct shadow_rec *
-add_shadow_rec( int pid, PROC_ID* job_id, Mrec* mrec, int fd )
+Scheduler::add_shadow_rec( int pid, PROC_ID* job_id, match_rec* mrec, int fd )
 {
-	ShadowRecs[ NShadowRecs ].pid = pid;
-	ShadowRecs[ NShadowRecs ].job_id = *job_id;
-	ShadowRecs[ NShadowRecs ].match = mrec;
-	ShadowRecs[ NShadowRecs ].preempted = FALSE;
-	ShadowRecs[ NShadowRecs ].removed = FALSE;
-	ShadowRecs[ NShadowRecs ].conn_fd = fd;
+	shadow_rec *new_rec = new shadow_rec;
+
+	new_rec->pid = pid;
+	new_rec->job_id = *job_id;
+	new_rec->match = mrec;
+	new_rec->preempted = FALSE;
+	new_rec->removed = FALSE;
+	new_rec->conn_fd = fd;
 	
-	NShadowRecs++;
+	numShadows++;
+	shadowsByPid->insert(pid, new_rec);
+	shadowsByProcID->insert(*job_id, new_rec);
 	dprintf( D_FULLDEBUG, "Added shadow record for PID %d, job (%d.%d)\n",
 			pid, job_id->cluster, job_id->proc );
 	scheduler.display_shadow_recs();
-	if ( NShadowRecs == MAX_SHADOW_RECS ) {
-		EXCEPT( "Reached MAX_SHADOW_RECS" );
-	}
-	return &(ShadowRecs[NShadowRecs - 1]);
+	return new_rec;
 }
 
 void
 Scheduler::delete_shadow_rec(int pid)
 {
-	int		i;
+	shadow_rec *rec;
 
 	dprintf( D_ALWAYS, "Entered delete_shadow_rec( %d )\n", pid );
 
-	for( i=0; i<NShadowRecs; i++ ) {
-		if( ShadowRecs[i].pid == pid ) {
-			
-			dprintf(D_FULLDEBUG,
+	if (shadowsByPid->lookup(pid, rec) == 0) {
+		dprintf(D_FULLDEBUG,
 				"Deleting shadow rec for PID %d, job (%d.%d)\n",
-			pid, ShadowRecs[i].job_id.cluster, ShadowRecs[i].job_id.proc );
-			
-			check_zombie( pid, &(ShadowRecs[i].job_id) );
-			RemoveShadowRecFromMrec(&ShadowRecs[i]);
-			NShadowRecs -= 1;
-			ShadowRecs[i] = ShadowRecs[NShadowRecs];
-			display_shadow_recs();
-			dprintf( D_ALWAYS, "Exited delete_shadow_rec( %d )\n", pid );
-			return;
-		}
+				pid, rec->job_id.cluster, rec->job_id.proc );
+		check_zombie( pid, &(rec->job_id) );
+		RemoveShadowRecFromMrec(rec);
+		shadowsByPid->remove(pid);
+		shadowsByProcID->remove(rec->job_id);
+		delete rec;
+		numShadows -= 1;
+		display_shadow_recs();
+		return;
 	}
-	/*
-	EXCEPT( "Can't find shadow record for process %d\n", pid );
-	*/
+	dprintf( D_ALWAYS, "Exited delete_shadow_rec( %d )\n", pid );
 }
 
 
@@ -1470,10 +1466,6 @@ Scheduler::mark_job_running(PROC_ID* job_id)
 
 	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, status);
 
-	/*
-	** dprintf( D_FULLDEBUG, "Marked job %d.%d as RUNNING\n",
-	**								proc->id.cluster, proc->id.proc );
-	*/
 }
 
 /*
@@ -1562,14 +1554,15 @@ Scheduler::is_alive(int pid)
 void
 Scheduler::clean_shadow_recs()
 {
-	int		i;
+	shadow_rec *rec;
 
 	dprintf( D_FULLDEBUG, "============ Begin clean_shadow_recs =============\n" );
-	for( i=NShadowRecs-1; i >= 0; i-- ) {
-		if( !is_alive(ShadowRecs[i].pid) ) {
+	shadowsByPid->startIterations();
+	while (shadowsByPid->iterate(rec) == 1) {
+		if( !is_alive(rec->pid) ) {
 			dprintf( D_ALWAYS,
-			"Cleaning up ShadowRec for pid %d\n", ShadowRecs[i].pid );
-			delete_shadow_rec( ShadowRecs[i].pid );
+			"Cleaning up ShadowRec for pid %d\n", rec->pid );
+			delete_shadow_rec( rec->pid );
 		}
 	}
 	dprintf( D_FULLDEBUG, "============ End clean_shadow_recs =============\n" );
@@ -1578,30 +1571,47 @@ Scheduler::clean_shadow_recs()
 void
 Scheduler::preempt(int n)
 {
-	int		i;
+	shadow_rec *rec;
+	bool preempt_all;
 
 	dprintf( D_ALWAYS, "Called preempt( %d )\n", n );
-	for( i=NShadowRecs-1; n > 0 && i >= 0; n--, i-- ) {
-		if( is_alive(ShadowRecs[i].pid) ) {
-			if (ShadowRecs[i].match) {
-				if( ShadowRecs[i].preempted ) {
-					send_vacate( ShadowRecs[i].match, KILL_FRGN_JOB );
+	if (n >= numShadows-SchedUniverseJobsRunning) {	// preempt all
+		preempt_all = true;
+	} else {
+		preempt_all = false;
+	}
+	shadowsByPid->startIterations();
+	while (shadowsByPid->iterate(rec) == 1 && n > 0) {
+		if( is_alive(rec->pid) ) {
+			if (rec->match) {
+				if( rec->preempted ) {
+					send_vacate( rec->match, KILL_FRGN_JOB );
 				} else {
-					send_vacate( ShadowRecs[i].match, CKPT_FRGN_JOB );
-					ShadowRecs[i].preempted = TRUE;
+					send_vacate( rec->match, CKPT_FRGN_JOB );
+					rec->preempted = TRUE;
 				}
+				n--;
+			} else if (preempt_all) {
+				if ( rec->preempted ) {
+					kill( rec->pid, SIGKILL );
+				} else {
+					kill( rec->pid, SIGTERM );
+					rec->preempted = TRUE;
+				}
+				n--;
 			}
 		} else {
 			dprintf( D_ALWAYS,
-			"Have ShadowRec for pid %d, but is dead!\n", ShadowRecs[i].pid );
+					 "Have ShadowRec for pid %d, but is dead!\n",
+					 rec->pid );
 			dprintf( D_ALWAYS, "Deleting now...\n" );
-			delete_shadow_rec( ShadowRecs[i].pid );
+			delete_shadow_rec( rec->pid );
 		}
 	}
 }
 
 void
-send_vacate(Mrec* match,int cmd)
+send_vacate(match_rec* match,int cmd)
 {
 	ReliSock	sock(match->peer, START_PORT);
 
@@ -1676,36 +1686,28 @@ Scheduler::shadow_prio_recs_consistent()
   to the record if it is found, and NULL otherwise.
 */
 struct shadow_rec*
-find_shadow_rec(PROC_ID* id)
+Scheduler::find_shadow_rec(PROC_ID* id)
 {
-	int		i;
-	int		my_cluster;
-	int		my_proc;
+	shadow_rec *rec;
 
-	my_cluster = id->cluster;
-	my_proc = id->proc;
-
-	for( i=0; i<NShadowRecs; i++ ) {
-		if( my_cluster == ShadowRecs[i].job_id.cluster &&
-			my_proc == ShadowRecs[i].job_id.proc ) {
-				return &ShadowRecs[i];
-		}
-	}
-	return NULL;
+	if (shadowsByProcID->lookup(*id, rec) < 0)
+		return NULL;
+	return rec;
 }
 
 #ifdef CARMI_OPS
 struct shadow_rec*
-find_shadow_by_cluster( PROC_ID *id )
+Scheduler::find_shadow_by_cluster( PROC_ID *id )
 {
-	int		i;
 	int		my_cluster;
+	shadow_rec	*rec;
 
 	my_cluster = id->cluster;
 
-	for( i=0; i<NShadowRecs; i++ ) {
-		if( my_cluster == ShadowRecs[i].job_id.cluster) {
-				return &ShadowRecs[i];
+	shadowsByProcID->startIterations();
+	while (shadowsByProcID->iterate(rec) == 1) {
+		if( my_cluster == rec->job_id.cluster) {
+				return rec;
 		}
 	}
 	return NULL;
@@ -1842,7 +1844,7 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 #if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 	pid_t   	pid;
     int     	status;
-	Mrec*		mrec;
+	match_rec*		mrec;
 	shadow_rec*	srec;
 
     if( sig == 0 ) {
@@ -1936,7 +1938,7 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
     if( sig == 0 ) {
         dprintf( D_ALWAYS, "***********  End Extra Checking ********\n" );
     }
-	if( ExitWhenDone && NShadowRecs == 0 ) {
+	if( ExitWhenDone && numShadows == 0 ) {
 		dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
 		exit(0);
 	}
@@ -2022,6 +2024,16 @@ Scheduler::SetClassAd(ClassAd* a)
 	ad = a;
 }
 
+int pidHash(const int &pid, int numBuckets)
+{
+	return pid % numBuckets;
+}
+
+int procIDHash(const PROC_ID &procID, int numBuckets)
+{
+	return procID.cluster+procID.proc*17;
+}
+
 // initialize the configuration parameters
 void
 Scheduler::Init()
@@ -2096,6 +2108,17 @@ Scheduler::Init()
         free( tmp );
     }
 
+	/* Initialize the hash tables to size MaxJobsRunning * 1.2 */
+	if (matches == NULL) {
+	matches = new HashTable <HashKey, match_rec *> ((int)(MaxJobsRunning*1.2),
+												   hashFunction);
+	shadowsByPid = new HashTable <int, shadow_rec *>((int)(MaxJobsRunning*1.2),
+													  pidHash);
+	shadowsByProcID =
+		new HashTable<PROC_ID, shadow_rec *>((int)(MaxJobsRunning*1.2),
+											 procIDHash);
+	}
+
     if( (tmp=param("RESERVED_SWAP")) == NULL ) {
         ReservedSwap = 5 * 1024;            /* 5 megabytes */
     } else {
@@ -2113,24 +2136,6 @@ Scheduler::Init()
     if( (CondorAdministrator = param("CONDOR_ADMIN")) == NULL ) {
         EXCEPT( "CONDOR_ADMIN not specified in config file" );
     }
-
-    /* parameters for UPDOWN alogorithm */
-	if( (tmp = param( "SCHEDD_SCALING_FACTOR" )) == NULL ) {
-		ScheddScalingFactor = 60;
-	} else {
-		ScheddScalingFactor = atoi( tmp );
-		free( tmp );
-	}
-    if( ScheddScalingFactor == 0 ) {
-		ScheddScalingFactor = 60;
-	}
-
-    if( (tmp = param( "SCHEDD_HEAVY_USER_TIME" )) == NULL ) {
-		ScheddHeavyUserTime = 120;
-	} else {
-		ScheddHeavyUserTime = atoi( tmp );
-		free( tmp );
-	}
 
     UidDomain = param( "UID_DOMAIN" );
     if( NegotiatorHost == NULL ) {
@@ -2283,7 +2288,7 @@ void
 Scheduler::shutdown_graceful()
 {
 #if !defined(WIN32)
-	if( NShadowRecs == 0 ) {
+	if( numShadows == 0 ) {
 		dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
 		exit(0);
 	} else {
@@ -2294,7 +2299,7 @@ Scheduler::shutdown_graceful()
  		    */
 		MaxJobsRunning = 0;
 		ExitWhenDone = TRUE;
-		preempt( NShadowRecs );
+		preempt( numShadows );
 	}
 #endif
 }
@@ -2304,9 +2309,10 @@ void
 Scheduler::shutdown_fast()
 {
 #if !defined(WIN32)
-	int i;
-	for(i=0; i < NShadowRecs; i++) {
-		kill( ShadowRecs[i].pid, SIGKILL );
+	shadow_rec *rec;
+	shadowsByPid->startIterations();
+	while (shadowsByPid->iterate(rec) == 1) {
+		kill( rec->pid, SIGKILL );
 	}
 	dprintf( D_ALWAYS, "All shadows have been killed, exiting.\n" );
 	exit(0);
@@ -2344,92 +2350,75 @@ Scheduler::reschedule_negotiator(int, Stream *)
     return;
 }
 
-Mrec*
+match_rec*
 Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId)
 {
-	if(nMrec >= MAXMATCHES)
-	{
-		dprintf(D_ALWAYS, "Max # of matches exceeded --- match not added\n"); 
-		return NULL;
-	}
+	match_rec *rec;
+
 	if(!id || !peer)
 	{
 		dprintf(D_ALWAYS, "Null parameter --- match not added\n"); 
 		return NULL;
 	} 
-	rec[nMrec] = new Mrec(id, peer, jobId);
-	if(!rec[nMrec])
+	rec = new match_rec(id, peer, jobId);
+	if(!rec)
 	{
 		EXCEPT("Out of memory!");
 	} 
-	nMrec++;
-	return rec[nMrec - 1];
+	matches->insert(HashKey(id), rec);
+	numMatches++;
+	return rec;
 }
 
 int
 Scheduler::DelMrec(char* id)
 {
+	match_rec *rec;
+	HashKey key(id);
+
 	if(!id)
 	{
 		dprintf(D_ALWAYS, "Null parameter --- match not deleted\n");
 		return -1;
 	}
-	for(int i = 0; rec[i]; i++)
-	{
-		if(strcmp(id, rec[i]->id) == 0)
-		{
-			dprintf(D_FULLDEBUG, "Match record (%s, %s, %d, %d) deleted\n",
-					rec[i]->id, rec[i]->peer, rec[i]->cluster, rec[i]->proc); 
-				// Remove this match from the associated shadowRec.
-			rec[i]->shadowRec->match = NULL;
-			delete rec[i];
-			nMrec--; 
-			rec[i] = rec[nMrec];
-			rec[nMrec] = NULL;
-		}
+	if (matches->lookup(key, rec) == 0) {
+		dprintf(D_FULLDEBUG, "Match record (%s, %s, %d, %d) deleted\n",
+				rec->id, rec->peer, rec->cluster, rec->proc); 
+		matches->remove(key);
+		// Remove this match from the associated shadowRec.
+		if (rec->shadowRec)
+			rec->shadowRec->match = NULL;
+		delete rec;
+		numMatches--; 
 	}
 	return 0;
 }
 
 int
-Scheduler::DelMrec(Mrec* match)
+Scheduler::DelMrec(match_rec* match)
 {
 	if(!match)
 	{
 		dprintf(D_ALWAYS, "Null parameter --- match not deleted\n");
 		return -1;
 	}
-	for(int i = 0; rec[i]; i++)
-	{
-		if(match == rec[i])
-		{
-			dprintf(D_FULLDEBUG, "Match record (%s, %s, %d) deleted\n",
-					rec[i]->id, rec[i]->peer, rec[i]->cluster); 
-			delete rec[i];
-			nMrec--; 
-			rec[i] = rec[nMrec];
-			rec[nMrec] = NULL;
-		}
-	}
-	return 0;
+	return DelMrec(match->id);
 }
 
 int
 Scheduler::MarkDel(char* id)
 {
+	match_rec *rec;
+
 	if(!id)
 	{
 		dprintf(D_ALWAYS, "Null parameter --- match not marked deleted\n");
 		return -1;
 	}
-	for(int i = 0; rec[i]; i++)
-	{
-		if(strcmp(id, rec[i]->id) == 0)
-		{
-			dprintf(D_FULLDEBUG, "Match record (%s, %s, %d) marked deleted\n",
-					rec[i]->id, rec[i]->peer, rec[i]->cluster);
-			rec[i]->status = M_DELETED; 
-		}
+	if (matches->lookup(HashKey(id), rec) == 0) {
+		dprintf(D_FULLDEBUG, "Match record (%s, %s, %d) marked deleted\n",
+				rec->id, rec->peer, rec->cluster);
+		rec->status = M_DELETED; 
 	}
 	return 0;
 }
@@ -2501,17 +2490,15 @@ Scheduler::Agent(char* server, char* capability,
 	exit(EXITSTATUS_OK);
 }
 
-Mrec*
+match_rec*
 Scheduler::FindMrecByPid(int pid)
 {
-	int		i;
+	match_rec *rec;
 
-	for(i = 0; i < nMrec; i++)
-	{
-		if(rec[i]->agentPid == pid)
-		// found the match record
-		{
-			return rec[i];
+	matches->startIterations();
+	while (matches->iterate(rec) == 1) {
+		if(rec->agentPid == pid) {
+			return rec;
 		}
 	}
 	return NULL;
@@ -2520,17 +2507,19 @@ Scheduler::FindMrecByPid(int pid)
 shadow_rec*
 Scheduler::FindSrecByPid(int pid)
 {
-	int		i;
+	shadow_rec *rec;
+	if (shadowsByPid->lookup(pid, rec) < 0)
+		return NULL;
+	return rec;
+}
 
-	for(i = 0; i < NShadowRecs; i++)
-	{
-		if(ShadowRecs[i].pid == pid)
-		// found the match record
-		{
-			return ShadowRecs+i;
-		}
-	}
-	return NULL;
+shadow_rec*
+Scheduler::FindSrecByProcID(PROC_ID proc)
+{
+	shadow_rec *rec;
+	if (shadowsByProcID->lookup(proc, rec) < 0)
+		return NULL;
+	return rec;
 }
 
 /*
@@ -2538,7 +2527,7 @@ Scheduler::FindSrecByPid(int pid)
  * Inform the startd and the accountant of the relinquish of the resource.
  */
 void
-Scheduler::Relinquish(Mrec* mrec)
+Scheduler::Relinquish(match_rec* mrec)
 {
 	ReliSock	*sock;
 	int	   		flag = FALSE;
@@ -2620,17 +2609,14 @@ void
 Scheduler::RemoveShadowRecFromMrec(shadow_rec* shadow)
 {
 	int			i;
-	shadow_rec	*foo;
 	bool		found = false;
-	Mrec**		blah = rec;
+	match_rec	*rec;
 
-	for(i = 0; i < nMrec; i++)
-	{
-		foo = rec[i]->shadowRec;
-		if(rec[i]->shadowRec == shadow)
-		{
-			rec[i]->shadowRec = NULL;
-			rec[i]->proc = -1;
+	matches->startIterations();
+	while (matches->iterate(rec) == 1) {
+		if(rec->shadowRec == shadow) {
+			rec->shadowRec = NULL;
+			rec->proc = -1;
 			found = true;
 		}
 	}
@@ -2642,19 +2628,19 @@ Scheduler::RemoveShadowRecFromMrec(shadow_rec* shadow)
 int
 Scheduler::AlreadyMatched(PROC_ID* id)
 {
-	int			i;
 	int universe;
+	match_rec *rec;
 
-	if (GetAttributeInt(id->cluster, id->proc, ATTR_JOB_UNIVERSE, &universe) < 0)
+	if (GetAttributeInt(id->cluster, id->proc,
+						ATTR_JOB_UNIVERSE, &universe) < 0)
 		dprintf(D_ALWAYS, "GetAttributeInt() failed\n");
 
 	if (universe == PVM)
 		return FALSE;
 
-	for(i = 0; i < nMrec; i++)
-	{
-		if(rec[i]->cluster == id->cluster && rec[i]->proc == id->proc)
-		{
+	matches->startIterations();
+	while (matches->iterate(rec) == 1) {
+		if(rec->cluster == id->cluster && rec->proc == id->proc) {
 			return TRUE;
 		}
 	}
@@ -2668,25 +2654,25 @@ void
 Scheduler::send_alive()
 {
 	SafeSock	*sock;
-    int     	i, j;
+    int     	numsent=0;
 	int			alive = ALIVE;
+	match_rec	*rec;
 
-    for(i = 0, j = 0; i < nMrec; i++)
-    {
-		if(rec[i]->status != M_ACTIVE)
-		{
+	matches->startIterations();
+	while (matches->iterate(rec) == 1) {
+		if(rec->status != M_ACTIVE)	{
 			continue;
 		}
-		dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n",rec[i]->peer);
-		j++;
-		sock = new SafeSock(rec[i]->peer, 0);
+		dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n",rec->peer);
+		numsent++;
+		sock = new SafeSock(rec->peer, 0);
 		sock->encode();
 		if( !sock->put(alive) || 
-			!sock->code((char *&)(rec[i]->id)) || 
+			!sock->code((char *&)(rec->id)) || 
 			!sock->end_of_message() ) {
 				// UDP transport out of buffer space!
 			dprintf(D_ALWAYS, "\t(Can't send alive message to %d)\n",
-					rec[i]->peer);
+					rec->peer);
 			delete sock;
 			continue;
 		}
@@ -2698,7 +2684,8 @@ Scheduler::send_alive()
 			   */
 		delete sock;
     }
-    dprintf(D_PROTOCOL,"## 6. (Done sending alive messages to %d startds)\n",j);
+    dprintf(D_PROTOCOL,"## 6. (Done sending alive messages to %d startds)\n",
+			numsent);
 }
 
 void
