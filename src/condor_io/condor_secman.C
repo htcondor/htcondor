@@ -453,8 +453,8 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 
 		ad->Insert(buf);
 	} else {
-		// default: 1 hour
-		sprintf(buf, "%s=\"3600\"", ATTR_SEC_SESSION_DURATION);
+		// default: 100 days.  this is a temporary workaround for 6.6.0
+		sprintf(buf, "%s=\"8640000\"", ATTR_SEC_SESSION_DURATION);
 
 		ad->Insert(buf);
 	}
