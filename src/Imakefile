@@ -1,3 +1,28 @@
+#define SubmitSbinFiles sbin/condor_master sbin/condor_schedd \
+       sbin/condor_shadow sbin/condor_preen sbin/condor_checkpoint \
+       sbin/condor_off sbin/condor_on sbin/condor_reconfig \
+       sbin/condor_reconfig_schedd sbin/condor_reschedule \
+       sbin/condor_restart sbin/condor_vacate sbin/condor_master_off
+
+#define SubmitOnlyFiles bin lib etc SubmitSbinFiles
+
+#define LinkOnlyFiles lib bin/condor_compile
+
+#define PvmFiles sbin/condor_starter.pvm sbin/condor_shadow.pvm \
+	sbin/condor_pvmd sbin/condor_pvmgs 
+
+#define DagManFiles bin/condor_dagman
+
+#define CkptServerFiles sbin/condor_ckpt_server sbin/condor_cleanckpts \
+	etc/examples/condor_config.local.ckpt.server
+
+#define SMPFiles sbin/condor_startd sbin/condor_starter \
+	sbin/condor_preen bin/condor_status
+
+#define CondorViewServerFiles sbin/condor_collector
+
+#define CondorViewClientFiles sbin/condor_stats
+
 #if HAS_FORTRAN
   TEST_SUITE_F = test_suite_F.V5
 #endif
@@ -12,11 +37,8 @@
 
 #if WANT_PVM && HAS_PVM
    #define PvmProgs starter.jim shadow.jim 
-   #define PvmDirs strip_pvm strip_pvm/lib strip_pvm/sbin \
-			static_pvm static_pvm/lib static_pvm/sbin
 #else
    #define PvmProgs
-   #define PvmDirs
 #endif
 
 #define Programs \
@@ -32,26 +54,21 @@
 #define Directories \
 	release_dir release_dir/bin release_dir/lib release_dir/sbin \
 	strip_dir strip_dir/bin strip_dir/sbin strip_dir/lib \
-	strip_dir/etc strip_dir/etc/examples PvmDirs \
-	strip_ckpt_server strip_ckpt_server/sbin strip_ckpt_server/etc \
-	strip_ckpt_server/etc/examples \
-	static_ckpt_server static_ckpt_server/sbin static_ckpt_server/etc \
-	static_ckpt_server/etc/examples \
+	strip_dir/etc strip_dir/etc/examples \
 	static_dir static_dir/bin static_dir/sbin static_dir/lib \
-	static_dir/etc static_dir/etc/examples
+	static_dir/etc static_dir/etc/examples \
+	strip_contrib strip_contrib/bin strip_contrib/lib \
+	strip_contrib/sbin strip_contrib/etc \
+	strip_contrib/etc/examples \
+	static_contrib static_contrib/bin static_contrib/lib \
+	static_contrib/sbin static_contrib/etc \
+	static_contrib/etc/examples
 
 all: h h_all condor_includes makefiles Directories Libraries Programs examples
 release:: all
 stripped:: all
 static:: all
 libs:: h h_all condor_includes makefiles Directories Libraries
-
-#define SubmitSbinFiles sbin/condor_master sbin/condor_schedd \
-	sbin/condor_shadow sbin/condor_preen sbin/condor_checkpoint \
-	sbin/condor_off sbin/condor_on sbin/condor_reconfig \
-	sbin/condor_reconfig_schedd sbin/condor_reschedule \
-	sbin/condor_restart sbin/condor_vacate sbin/condor_master_off
-
 
 PUBLIC_TARGET_PATH = /p/condor/workspaces/release
 #if defined( PublicTargetName )
@@ -63,37 +80,42 @@ PUBLIC_TARGET_PATH = /p/condor/workspaces/release
   PUBLIC_S_TARGET = $(PUBLIC_TARGET_PATH)/V6_static_release
 #endif
 
-
-#if WantsStatic
-public_all: public public_static
-#else 
-public_all: public
-#endif
-
-public: strip.tar 
+public:: strip.tar 
 	rm -f $(PUBLIC_D_TARGET)/release.tar 
 	cp strip_dir/release.tar $(PUBLIC_D_TARGET)
-
-public_static: static.tar
-	rm -f $(PUBLIC_S_TARGET)/release.tar 
-	cp static_dir/release.tar $(PUBLIC_S_TARGET)
 
 strip.tar: stripped
 	cd strip_dir; rm -f release.tar; tar -cvf release.tar etc bin lib sbin
 
+#if HAS_STATIC
+public:: static.tar
+	rm -f $(PUBLIC_S_TARGET)/release.tar 
+	cp static_dir/release.tar $(PUBLIC_S_TARGET)
+
 static.tar: static
 	cd static_dir; rm -f release.tar; tar -cvf release.tar etc bin lib sbin
+#endif 
 
-submit.tar: stripped
-	cd strip_dir; rm -f submit.tar; tar -cvf submit.tar etc bin lib SubmitSbinFiles
+release_tarball( submit.tar, SubmitOnlyFiles )
+release_tarball( link.tar, LinkOnlyFiles )
+release_tarball( smp.tar, SMPFiles )
+release_tarball( condor_view_server.tar, CondorViewServerFiles )
 
-ckpt.tar: stripped
-	cd strip_ckpt_server; rm -f release.tar; tar -cvf release.tar etc sbin
+contrib_tarball( ckpt_server.tar, CkptServerFiles )
+contrib_tarball( dagman.tar, DagManFiles )
+contrib_tarball( condor_view_client.tar, CondorViewClientFiles )
 
 #if WANT_PVM && HAS_PVM
-pvm.tar: stripped
-	cd strip_pvm; rm -f pvm.tar; tar -cvf pvm.tar lib sbin
-#endif
+#define PvmTar pvm.tar
+contrib_tarball( pvm.tar, PvmFiles )
+#else
+#define PvmTar 
+#endif 
+
+all_tarballs: ckpt_server.tar dagman.tar smp.tar condor_view.tar \
+	PvmTar submit.tar link.tar
+
+public:: all_tarballs
 
 simple_dir_target(release_dir)
 simple_dir_target(release_dir/bin)
@@ -114,24 +136,19 @@ simple_dir_target(static_dir/sbin)
 simple_dir_target(static_dir/etc)
 simple_dir_target(static_dir/etc/examples)
 
-#if WANT_PVM && HAS_PVM
-simple_dir_target(strip_pvm)
-simple_dir_target(strip_pvm/sbin)
-simple_dir_target(strip_pvm/lib)
-simple_dir_target(static_pvm)
-simple_dir_target(static_pvm/sbin)
-simple_dir_target(static_pvm/lib)
-#endif
+simple_dir_target(strip_contrib)
+simple_dir_target(strip_contrib/bin)
+simple_dir_target(strip_contrib/lib)
+simple_dir_target(strip_contrib/sbin)
+simple_dir_target(strip_contrib/etc)
+simple_dir_target(strip_contrib/etc/examples)
 
-simple_dir_target(strip_ckpt_server)
-simple_dir_target(strip_ckpt_server/sbin)
-simple_dir_target(strip_ckpt_server/etc)
-simple_dir_target(strip_ckpt_server/etc/examples)
-
-simple_dir_target(static_ckpt_server)
-simple_dir_target(static_ckpt_server/sbin)
-simple_dir_target(static_ckpt_server/etc)
-simple_dir_target(static_ckpt_server/etc/examples)
+simple_dir_target(static_contrib)
+simple_dir_target(static_contrib/bin)
+simple_dir_target(static_contrib/lib)
+simple_dir_target(static_contrib/sbin)
+simple_dir_target(static_contrib/etc)
+simple_dir_target(static_contrib/etc/examples)
 
 object_target(util_lib)
 object_target(c++_util)
@@ -189,17 +206,14 @@ h/syscall_numbers.o: h/syscall_numbers.tmpl h/Makefile
 
 check_platform_target
 
-clean:: clean-up
+clean:: 
 	cd h; make clean
+	make clean-up
 
 really-clean:: clean-up
 
 clean-up:
-	rm -rf make.out Makefile */Makefile */Makefile.* release_dir \
-		strip_dir strip_pvm strip_ckpt_server \
-		static_dir static_pvm static_ckpt_server
+	rm -rf make.out Makefile */Makefile* release_dir \
+		strip_dir strip_contrib static_dir static_contrib
 
-
-
-
-
+reallyclean: really-clean
