@@ -48,6 +48,8 @@
 #include "basename.h"
 #include "metric_units.h"
 
+#include "../condor_classad_analysis/analysis.h"
+
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
 extern  void short_print_to_buffer(char*,int,int,const char*,int,int,int,int,
@@ -1575,7 +1577,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 				  ( val.IsNumber( matchD ) && !matchD ) ) {			// NAC
 
   			if( verbose ) { 
-				strcat( return_buff, "Failed offer constraint\n");
+				strcat( return_buff, "Failed resource constraint\n");
 			}  
 			fOffConstraint++;
 			offer->SetParentScope( NULL );							// NAC
@@ -1680,25 +1682,25 @@ doRunAnalysisToBuffer( ClassAd *request )
 	}
 	startdAds.Close();
 
-		// this is where we should do additional analysis
-		// params: request, startdAds
-
 	sprintf( return_buff,
-		"%s---\n%03d.%03d:  Run analysis summary.  Of %d resource offers,\n" 
-		"\t%5d do not satisfy the request's constraints\n"
-		"\t%5d resource offer constraints are not satisfied by this request\n"
-		"\t%5d are serving equal or higher priority customers%s\n" 
-		"\t%5d do not prefer this job\n"
-		"\t%5d cannot preempt because PREEMPTION_REQUIREMENTS are false\n"
-		"\t%5d are available to service your request\n",
-
-		return_buff, cluster, proc, totalMachines,
-		fReqConstraint,
-		fOffConstraint,
-		fPreemptPrioCond, niceUser ? "(*)" : "",
-		fRankCond,
-		fPreemptReqTest,
-		available );
+			 "%s---\n%03d.%03d:  Run analysis summary.  Of %d resources,\n" 
+			 "\t%5d were rejected by the request's constraints\n",
+			 return_buff, cluster, proc, totalMachines,
+			 fReqConstraint );
+	
+	if( fReqConstraint < totalMachines ) {
+		sprintf( return_buff,
+				 "\t%5d rejected the request\n"
+				 "\t%5d are serving equal or higher priority customers%s\n" 
+				 "\t%5d do not prefer this job\n"
+				 "\t%5d cannot preempt because PREEMPTION_REQUIREMENTS are false\n"
+				 "\t%5d are available to service your request\n",
+				 fOffConstraint,
+				 fPreemptPrioCond, niceUser ? "(*)" : "",
+				 fRankCond,
+				 fPreemptReqTest,
+				 available );
+	}
 
 	if( niceUser ) {
 		sprintf( return_buff, 
@@ -1709,25 +1711,14 @@ doRunAnalysisToBuffer( ClassAd *request )
 			
 
 	if( fReqConstraint == totalMachines ) {
-		ClassAdUnParser unp;		// NAC
-		unp.SetOldClassAd( true );	// NAC
-		char reqs[2048];
-		string reqsS;				// NAC
-		ExprTree *reqExp;
 		strcat( return_buff, "\nWARNING:  Be advised:\n");
 		strcat( return_buff, "   No resources matched request's constraints\n");
-		sprintf( return_buff, "%s   Check the %s expression below:\n\n" , 
-			return_buff, ATTR_REQUIREMENTS );
-		if( !(reqExp = request->Lookup( ATTR_REQUIREMENTS) ) ) {
-			sprintf( return_buff, "%s   ERROR:  No %s expression found" ,
-				return_buff, ATTR_REQUIREMENTS );
-		} else {
-//			reqs[0] = '\0';
-//			reqExp->PrintToStr( reqs );
-			unp.Unparse( reqsS, reqExp );	// NAC
-			strncpy( reqs, reqsS.c_str( ), 2048 );
-			sprintf( return_buff, "%s%s\n\n", return_buff, reqs );
-		}
+		strcat( return_buff, "\n" ); 	// NAC
+		string buffer_string;			// NAC
+		char buffer[2048];				// NAC
+		AnalyzeJobToBuffer( request, startdAds, buffer_string );	// NAC
+		strncpy( buffer, buffer_string.c_str( ), 2048 );			// NAC
+		strcat( return_buff, buffer );	// NAC
 	}
 
 	if( fOffConstraint == totalMachines ) {
