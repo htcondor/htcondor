@@ -71,6 +71,30 @@ STAR	= *
 PLATFORM_LDFLAGS = PlatformLdFlags
 TEST_PLATFORM_LDFLAGS = TestPlatformLdFlags
 
+##########
+# Orbacus settings
+##########
+#if !defined( PlatformOBLibs )
+#define PlatformOBLibs
+#endif
+
+# Libraries needed to link with OB
+OB_LIBS = -lOB -lJTC -lpthread PlatformOBLibs
+
+# Where are all the OB files kept
+OB_ROOT = /unsup/OB
+
+# IDL is an Orbacus tool for creating source files from .idl files
+IDL = $(OB_ROOT)/bin/idl --c-suffix .C -I$(OB_ROOT)/include 
+
+# In general, we need to use a different version of g++ to build the
+# idl-generated source files (gcc 2.95) than we use to build the rest
+# of Condor (egcs 1.1.2)
+IDL_CC = /s/gcc-2.95.2/bin/g++
+
+# Particle Physics Data Grid CORBA IDL dir
+PPDG_IDL_DIR = /p/condor/workspaces/ppdg/ppdg_idl/idl
+
 /*
    These next few lines are not supposed to be pre-processor
    directives, but GNU-make understood directives.  They don't want a
@@ -223,7 +247,7 @@ VENDOR_C_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) PlatformFlags PlatformGccFlags
 STD_C_PLUS_FLAGS  = $(STD_C_FLAGS)
 INST_C_PLUS_FLAGS = $(C_PLUS_FLAGS) -w
-NON_INST_C_PLUS_FLAGS = $(C_PLUS_FLAGS) -fno-implicit-templates
+NON_INST_C_PLUS_FLAGS = -fno-implicit-templates $(C_PLUS_FLAGS)
 
 TESTSUITE_FLAGS_GCC =  $(STD_C_FLAGS)
 TESTSUITE_FLAGS_GPP = $(STD_C_PLUS_FLAGS)
