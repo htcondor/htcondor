@@ -382,13 +382,6 @@ MPIShadow::hackMasterArgs( ClassAd *ad ) {
 		dprintf( D_ALWAYS, "Unable to update args! Aborting.\n" );
 		shutDown( JOB_NOT_STARTED, 0 );
 	}
-
-
-    if ( !ad->Delete( "Out" ) ||
-         !ad->Insert( "Out = \"/tmp/mpi_master_out.0\"" ) ) {
-        dprintf ( D_ALWAYS, "???????\n" );
-    }
-
 }
 
 void
@@ -436,14 +429,6 @@ MPIShadow::hackComradeArgs( char *comradeArgs, ClassAd *ad )
     if ( !ad->Insert( tmp )) {
         dprintf ( D_ALWAYS, "Failed to insert Job args!\n" );
         shutDown( JOB_NOT_STARTED, 0 );
-    }
-
-    static int asdf=1;
-    char fdsa[100] = "";
-    sprintf( fdsa, "Out = \"/tmp/mpi_worker_out.%d\"", asdf++ ); 
-    if ( !ad->Delete( "Out" ) ||
-         !ad->Insert( fdsa ) ) {
-        dprintf ( D_ALWAYS, "?!?!?!\n" );
     }
 }
 
