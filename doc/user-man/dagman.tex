@@ -53,21 +53,6 @@ described.
 
 \begin{description}
 
-\item[Signature]
-
-The first line of a DAG input file is the signature, which precisely
-identifies which DAG file format follows.  As of this writing, only one DAG
-format exists, and thus only one signature is possible.
-
-\begin{verbatim}
-  ### DAGMan 6.1.0
-\end{verbatim}
-
-This line must appear as it is written here, character for character.
-Anything different will be rejected by DAGMan.  Having a precise signature tag
-will enable future versions of DAGMan to remain backward compatible with older
-DAG input file formats.
-
 \item[Job Section]
 
 The Job Section of the input DAG file declares all the jobs that will appear
@@ -133,7 +118,6 @@ The following \File{diamond.dag} DAG input file shown below is illustrated in
 Figure~\ref{fig:dagman-diamond}.
 
 \begin{verbatim}
-  ### DAGMan 6.1.0
   # Filename: diamond.dag
   #
   Job  A  A.condor 
@@ -184,18 +168,18 @@ be loosened in later versions (see section~\ref{dagman:version}).
 
 For this example, we will write a single \textit{CondorCommandFile} to be used
 by all three jobs in the DAG.  Thus, each job will run the same executable.
-This example is very artificial, because normally separate jobs would need
-output for their child jobs to go to unique output and error files.
-Otherwise, the jobs would be clobbering each other's output.  However, since
-we are sending output and error to \File{/dev/null}, sharing the
-\textit{CondorCommandFile} is OK.
+Notice, that to use the same \textit{CondorCommandFile} and still get
+unique filenames for our output, we use the \MacroU{cluster} macro.
+Since each job is submitted seperately, into its own cluster, this
+will provide unique names for our output files.
+Otherwise, the jobs would be clobbering each other's output.  
 
 \begin{verbatim}
   # Filename: diamond_job.condor
   #
   executable   = /path/diamond.exe
-  output       = /dev/null
-  error        = /dev/null
+  output       = diamond.out.$(cluster)
+  error        = diamond.err.$(cluster)
   log          = diamond_condor.log
   universe     = vanilla
   notification = NEVER
@@ -208,13 +192,17 @@ prefer not to have Condor send you e-mail for every job in a large DAG.
 \subsubsection{\label{dagman:writedag}Writing the DAG File}
 
 The DAG file names the jobs, associates jobs with their
-\textit{CondorCommandFile}, and declares job dependencies.  For our artificial
-DIAMOND example, all three jobs will use the same diamond\_job.condor file
-written earlier.  However, a more typical DAG file would have unique
-\textit{CondorCommandFile} for every job.
+\textit{CondorCommandFile}, and declares job dependencies.  For our
+DIAMOND example, all four jobs will use the same diamond\_job.condor file
+written earlier.
+
+However, a more typical DAG file would have some different 
+\textit{CondorCommandFile} entries, since, presumably, some of the
+jobs in your DAG differ beyond where their output goes.
+If not, you probably don't even need DAGMan, you just need to submit a
+cluster for all your jobs.
 
 \begin{verbatim}
-  ### DAGMan 6.1.0
   # Filename: diamond.dag
   # DIAMOND DAG File for DAGMan
   #
@@ -242,17 +230,37 @@ local schedd does not know the difference between DAGMan submitting a job, and
 the user who originally submitted DAGMan, and could have submitted the DAG
 jobs manually.
 
-A DAG is submitted using the \Condor{submit\_dag} script.  For example, to
-submit the \File{diamond.dag} DAG to Condor, simply type
-``\Condor{submit\_dag} \File{diamond.dag}''.  This script will generate the
-\File{diamond.dag.condor} \textit{CondorCommandFile} for the DAG, and submit
-it to Condor.
+A DAG is submitted using the \Condor{submit\_dag} script.  For
+example, to submit the \File{diamond.dag} DAG to Condor, simply type
+``\Condor{submit\_dag} \File{diamond.dag}''.
+This script will generate the \File{diamond.dag.condor.sub}
+\textit{CondorCommandFile} for the DAG, and submit it to Condor.
+If the user prefers to edit the \File{diamond.dag.condor} file before
+it is submitted to Condor (for example, to change the pre-chosen
+filenames), she can issue ``\Condor{submit\_dag} -no\_submit
+\File{diamond.dag}'', which specifies that \File{diamond.dag.condor}
+is generated, but not submitted to Condor.
+To run the DAG, issue the command \Condor{submit}
+diamond.dag.condor.sub. 
 
-If the user prefers to edit the \File{diamond.dag.condor} file before it is
-submitted to Condor (for example, to change the pre-chosen filenames), she can
-issue ``\Condor{submit\_dag} -n \File{diamond.dag}'', which specifies that
-\File{diamond.dag.condor} is generated, but not submitted to Condor.  To run
-the DAG, issue the command \Condor{submit} diamond.dag.condor.
+Normally, \Condor{submit\_dag} will try to check your DAG input file
+for correctness.
+In particular, it tries to verify that all the jobs in your DAG
+specify the same log file (which is needed for DAGMan to properly
+function, as described above).
+If it finds a problem (a job that's using a different log file), it
+will print out an error message and abort.
+If you use the ``-verbose'' option, it will also print out a list of
+all jobs in your DAG and the corresponding log file each uses.
+However, in some situations, you may not want this check.
+For example, if you have a very large DAG (with thousands of jobs),
+opening up each submit file to verify its correctness might take quite
+a while.
+So, if you want to avoid this check, make sure you're using the same
+log file for all jobs in your DAG, and then just pass this log file's
+name to \Condor{submit\_dag} with the ``-log filename'' option.
+This tells \Condor{submit\_dag} not to bother trying to verify what
+log file to use, and it just uses what you tell it.
 
 \subsection{Removal}
 
@@ -299,13 +307,14 @@ absolutely essential steps to successfully submit a DAG.
 
 \begin{description}
 
-\item[Prepare Jobs] Each job in the DAG must have its own
-\textit{CondorCommandFile}.  Each \textit{CondorCommandFile} can only submit
-one job.  Multi-job clusters (multiple \texttt{queue} lines) are not
-supported.  The \texttt{log=} for all \textit{CondorCommandFile}s must point
-to the same Condor log file, otherwise, DAGMan will not see all the Condor log
-entries for every job in the DAG.  Refer to section~\ref{dagman:prepjob} for
-details on how to prepare jobs.
+\item[Prepare Jobs] 
+Each \textit{CondorCommandFile} can only submit one job.
+Multi-job clusters (multiple \texttt{queue} lines) are not supported.
+The \texttt{log=} for all \textit{CondorCommandFile}s must point to
+the same Condor log file, otherwise, DAGMan will not see all the
+Condor log entries for every job in the DAG.  
+Refer to section~\ref{dagman:prepjob} for details on how to prepare
+jobs.
 
 \item[Write DAG File] Write the DAG file, so that JOB entries refer to the
 \textit{CondorCommandFile}s you wrote in the previous step.  Refer to
