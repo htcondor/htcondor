@@ -1,0 +1,40 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:platform-aix}AIX}
+\index{platform-specific information!AIX}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This section provides information specific to the AIX ports of
+Condor.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:platform-aix}AIX 5.2L}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{platform-specific information!AIX 5.2L}
+
+The version of Condor for AIX 5.2L has the same shortcommings as Condor
+for the AIX5.1L platform.
+
+In addition the Condor binaries for AIX 5.2L will NOT execute on an
+AIX 5.1L machine.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:platform-aix}AIX 5.1L}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{platform-specific information!AIX 5.1L}
+
+This is a relatively new port of Condor to the AIX architecture and as such
+there are a few things that aren't completely finished. Over time, these will
+be fixed.
+
+Condor on AIX 5.1L has a few shortcomings:
+\begin{itemize}
+\item Keyboard Idle and Mouse Idle is wrong and will be fixed in a future
+	release of Condor.
+\item The memory size of threaded programs is reported incorrectly.
+\item The memory/usage statistics of completed jobs is sometimes wrong.
+\item The Standard Universe is not supported.
+\end{itemize}
+
+In addition, Condor for the AIX 5.1L machine WILL execute correctly on an
+AIX 5.2L machine.
+
