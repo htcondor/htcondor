@@ -353,7 +353,8 @@ void Config(char* MyName)
 {
 	struct passwd*		pwd;
 	char*				config_location;
-	
+	int   free_location = 1;
+
 	/* Weiru */
 	if((pwd = getpwnam("condor")) == NULL)
 	{
@@ -370,17 +371,15 @@ void Config(char* MyName)
    		if(!config_location)
    		{
    			config_location = pwd->pw_dir;
-			/* BUG FIXED: Ashish */
-			free (config_location); 
+			free_location = 0;
    		}
 		if(config_from_server(config_location, MyName, NULL) < 0)
 	    	{
 			config(MyName, NULL);
-			/* BUG FIXED: Ashish */
+		}
+		if(free_location) {
 			free (config_location); 
 		}
 	}
-	/* BUG FIXED: Ashish */
-	free(pwd); 
 }	
 
