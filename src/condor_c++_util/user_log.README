@@ -7,7 +7,7 @@ condor_shadow which shows the progress of one or more jobs in a Condor
 pool.  To specify that the condor_shadow should write a user log for a
 given job, add:
 
-  environment = LOG=logfile
+  log = logfile
 
 to your condor_submit command file, where "logfile" is the filename
 (or path) where you want the user log created.  Multiple jobs can use
