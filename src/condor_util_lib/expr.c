@@ -1255,7 +1255,8 @@ int		op;
 			return OpName[i].name;
 		}
 	}
-	EXCEPT( "Can't find op name for elem type (%d)\n", op );
+	dprintf( D_EXPR, "Can't find op name for elem type (%d)\n", op );
+	return 0;
 	/* NOTREACHED */
 }
 
