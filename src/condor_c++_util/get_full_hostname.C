@@ -25,8 +25,10 @@
 #include "condor_config.h"
 
 // Returns the full hostname of the given host in a static buffer.
+// If the optional 2nd arg is non-NULL, set it to point to the hostent
+// we get back. 
 char*
-get_full_hostname( const char* host ) 
+get_full_hostname( const char* host, struct hostent **host_ptrp) 
 {
 	static char full_host[MAXHOSTNAMELEN];
 	char* tmp;
@@ -35,7 +37,13 @@ get_full_hostname( const char* host )
 
 	if( (host_ptr = gethostbyname( host )) == NULL ) {
 			// If the resolver can't find it, just return NULL
+		if( host_ptrp ) {
+			*host_ptrp = NULL;
+		}
 		return NULL;
+	}
+	if( host_ptrp ) {
+		*host_ptrp = host_ptr;
 	}
 
 		// See if it's correct in the hostent we've got.
