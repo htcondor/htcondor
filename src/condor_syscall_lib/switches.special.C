@@ -513,7 +513,7 @@ mmap( MMAP_T a, size_t l, int p, int f, int fd, off_t o )
                 if( LocalSysCalls() ) {
                         rval = (MMAP_T) MAP_FAILED;
                 } else {
-                        rval = REMOTE_syscall( CONDOR_mmap, a, l, p, f, fd, o );
+                        rval = (MMAP_T) REMOTE_syscall( CONDOR_mmap, a,l,p,f,fd,o );
                 }
         }
 
