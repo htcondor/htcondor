@@ -180,9 +180,9 @@ AC_ARG_WITH(condor_analyze,
 AC_SUBST(has_condor_analyze,$ac_has_condor_analyze)
 if test $ac_has_condor_analyze = "YES" ; then
   AC_MSG_RESULT([$ac_condor_analyze_dir])
-  CONDOR_SET_ANALYZE([ac_condor_analyze_release],[release],fatal)
-  CONDOR_SET_ANALYZE([ac_condor_analyze_static],[static],no)
-  CONDOR_SET_ANALYZE([ac_condor_analyze_strip],[strip],fatal)
+  CONDOR_SET_ANALYZE([release],fatal)
+  CONDOR_SET_ANALYZE([strip],fatal)
+  CONDOR_SET_ANALYZE([static],no)
 else
   AC_MSG_RESULT([no])
 fi

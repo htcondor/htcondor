@@ -165,27 +165,26 @@ AC_DEFUN([CONDOR_VERIFY_ANALYZE_DIR],
 # we found the per-type version (release, static, or strip), or just a
 # plain "condor_analyze" binary.
 # Arguments: 
-#  $1 is the per-type shell variable to test
-#  $2 is the keyword used in the output variable to set and filenames
-#  $3 a string, either "fatal" or not, to specify if this macro should
+#  $1 is the keyword used in variable names and filenames
+#  $2 a string, either "fatal" or not, to specify if this macro should
 #     call AC_MSG_ERROR() if neither the per-type nor generic version
 #     of condor_analyze was found
 #######################################################################
 AC_DEFUN([CONDOR_SET_ANALYZE],
 [
- if test "x$[$1]" = "x"; then
+ if test "x$[ac_condor_analyze_[$1]]" = "x"; then
    if test ! "x$ac_condor_analyze" = "x" ; then
-     AC_MSG_WARN([no condor_analyze.$2 found, using $ac_condor_analyze])
-     AC_SUBST([condor_analyze_[$2]],$ac_condor_analyze)
+     AC_MSG_WARN([no condor_analyze.$1 found, using $ac_condor_analyze])
+     AC_SUBST([condor_analyze_[$1]],$ac_condor_analyze)
    else
-     if test "$3" = "fatal" ; then 
-       AC_MSG_ERROR([neither condor_analyze.$2 nor condor_analyze found])
+     if test "$2" = "fatal" ; then 
+       AC_MSG_ERROR([neither condor_analyze.$1 nor condor_analyze found])
      else
-       AC_MSG_WARN([neither condor_analyze.$2 nor condor_analyze found])
+       AC_MSG_WARN([neither condor_analyze.$1 nor condor_analyze found])
      fi
    fi
  else 
-   AC_SUBST([condor_analyze_[$2]],$[$1])
+   AC_SUBST([condor_analyze_[$1]],$[ac_condor_analyze_[$1]])
  fi
 ])
 
