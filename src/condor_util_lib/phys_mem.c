@@ -116,10 +116,10 @@ calc_phys_memory()
 int calc_phys_memory() 
 {	
 
-	FILE        *proc;
-	unsigned long long phys_mem;
-	char        tmp_c[20];
-	char   		c;
+	FILE	*proc;
+	double	phys_mem;
+	char	tmp_c[20];
+	char	c;
 
 	proc=fopen("/proc/meminfo","r");
 	if(!proc) {
@@ -141,9 +141,9 @@ int calc_phys_memory()
 	  //SwapFree:     33656 kB
 	  */	  
 	while((c=fgetc(proc))!='\n');
-	fscanf(proc, "%s %ul", tmp_c, &phys_mem);
+	fscanf(proc, "%s %lf", tmp_c, &phys_mem);
 	fclose(proc);
-	return (int)(phys_mem/(1024000));
+	return (int)(phys_mem/1024000.0);
 }
 
 #elif defined(WIN32)
