@@ -18,6 +18,7 @@
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\condor_q.h"\
 	"..\src\condor_c++_util\condor_query.h"\
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\generic_query.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -49,6 +50,7 @@
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_distribution.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_getmnt.h"\

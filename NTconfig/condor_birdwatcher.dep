@@ -28,7 +28,6 @@
 	
 
 ..\src\condor_birdwatcher\StdAfx.cpp : \
-	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_birdwatcher\StdAfx.h"\
 	
 

@@ -13,6 +13,7 @@
 
 ..\src\condor_tools\preen.C : \
 	"..\src\condor_c++_util\alloc.h"\
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\directory.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -40,6 +41,7 @@
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_distribution.h"\
 	"..\src\condor_includes\condor_email.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
