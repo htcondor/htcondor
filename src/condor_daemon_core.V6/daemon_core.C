@@ -292,10 +292,12 @@ int DaemonCore::Register_Command(int command, char* command_descrip, CommandHand
 	comTable[i].is_cpp = is_cpp;
 	comTable[i].perm = perm;
 	comTable[i].service = s;
+	free_descrip(comTable[i].command_descrip);
 	if ( command_descrip )
 		comTable[i].command_descrip = strdup(command_descrip);
 	else
 		comTable[i].command_descrip = EMPTY_DESCRIP;
+	free_descrip(comTable[i].handler_descrip);
 	if ( handler_descrip )
 		comTable[i].handler_descrip = strdup(handler_descrip);
 	else
@@ -400,10 +402,12 @@ int DaemonCore::Register_Signal(int sig, char* sig_descrip, SignalHandler handle
 	sigTable[i].service = s;
 	sigTable[i].is_blocked = FALSE;
 	sigTable[i].is_pending = FALSE;
+	free_descrip(sigTable[i].sig_descrip);
 	if ( sig_descrip )
 		sigTable[i].sig_descrip = strdup(sig_descrip);
 	else
 		sigTable[i].sig_descrip = EMPTY_DESCRIP;
+	free_descrip(sigTable[i].handler_descrip);
 	if ( handler_descrip )
 		sigTable[i].handler_descrip = strdup(handler_descrip);
 	else
@@ -530,10 +534,12 @@ int DaemonCore::Register_Socket(Stream *iosock, char* iosock_descrip, SocketHand
 	sockTable[i].is_cpp = is_cpp;
 	sockTable[i].perm = perm;
 	sockTable[i].service = s;
+	free_descrip(sockTable[i].iosock_descrip);
 	if ( iosock_descrip )
 		sockTable[i].iosock_descrip = strdup(iosock_descrip);
 	else
 		sockTable[i].iosock_descrip = EMPTY_DESCRIP;
+	free_descrip(sockTable[i].handler_descrip);
 	if ( handler_descrip )
 		sockTable[i].handler_descrip = strdup(handler_descrip);
 	else
@@ -589,10 +595,13 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 	sockTable[i].iosock = NULL;
 	free_descrip( sockTable[i].iosock_descrip );
 	sockTable[i].iosock_descrip = NULL;
+	free_descrip( sockTable[i].handler_descrip );
+	sockTable[i].handler_descrip = NULL;
 	if ( i < nSock - 1 ) {	// if not the last entry in the table, move the last one here
 		sockTable[i] = sockTable[nSock - 1];
 		sockTable[nSock - 1].iosock = NULL;
 		sockTable[nSock - 1].iosock_descrip = NULL;
+		sockTable[nSock - 1].handler_descrip = NULL;
 	}
 	nSock--;
 
