@@ -1146,7 +1146,6 @@ process_runtime_configs()
 					 fd, errno );
 			exit(1);
 		}
-		dprintf( D_ALWAYS, "Writing '%s'\n", rArray[i].config );
 		if (write(fd, rArray[i].config, strlen(rArray[i].config))
 			!= strlen(rArray[i].config)) {
 			dprintf( D_ALWAYS, "write failed with errno %d in "
