@@ -635,7 +635,10 @@ pseudo_put_file_stream(
 			exit( 1 );
 		}
 		bytes_read = stream_file_xfer( data_sock, file_fd, len );
-		fsync( file_fd );
+		if ( fsync( file_fd ) < 0 ) {
+			// if fsync() fails, send failure back to peer 
+			bytes_read = -1;
+		}
 
 			/* Send status assuring peer that we got everything */
 		answer = htonl( bytes_read );
