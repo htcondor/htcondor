@@ -1,3 +1,12 @@
+02/07/03 V6_5_0-pre-merge-V6_4-merge-6
+    The state of the V6_5_0 branch before merging in V6_4-branch as tagged 
+    at V6_4-merge-6. The last merge was at V6_4-merge-5
+
+02/07/03 V6_4-merge-6
+    the state of the V6_4-branch before merging into V6_5_0-branch. 
+    this is slightly past the V6_4-merge-5 tag, with some doc changes 
+    and the new license.
+
 02/04/03 V6_5_0-branch
     A stable branch for the V6.5.0 release. It's off the V6_5-branch.
 
