@@ -431,7 +431,8 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 	dprintf(D_FULLDEBUG, "handle_termination() called.\n");
 
 	switch( WTERMSIG(status) ) {
-
+	 case -1: /* On Digital Unix, WTERMSIG returns -1 if we weren't
+				 killed by a sig.  This is the same case as sig 0 */  
 	 case 0: /* If core, bad executable -- otherwise a normal exit */
 		if( WCOREDUMP(status) && WEXITSTATUS(status) == ENOEXEC ) {
 			(void)sprintf( notification, "is not executable." );
