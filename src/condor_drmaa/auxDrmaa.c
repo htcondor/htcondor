@@ -22,6 +22,7 @@
  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "auxDrmaa.h"
+#include "drmaa_common.h"
 
 int 
 is_number(const char* str)
@@ -52,17 +53,23 @@ create_job_attribute()
     return result;
 }
 
-job_info_t*
+condor_drmaa_job_info_t*
 create_job_info(const char* job_id)
 {
-    job_info_t* result = NULL;
+    condor_drmaa_job_info_t* result = NULL;
 
     if (strlen(job_id)+1 <= MAX_JOBID_LEN){
-	result = (job_info_t*)malloc(sizeof(job_info_t));
+	result = (condor_drmaa_job_info_t*)malloc(sizeof(condor_drmaa_job_info_t));
 	if (result != NULL) {
 	    strncpy(result->id, job_id, MAX_JOBID_LEN);
 	    result->next = NULL;
+#ifdef WIN32
+	    InitializeCriticalSection(&result->lock);
+#else
+#if HAS_PTHREADS
 	    pthread_mutex_init(&result->lock, NULL);
+#endif
+#endif    
 	}
     }
 
@@ -84,8 +91,17 @@ destroy_job_attribute(job_attr_t* ja)
 }
 
 void
-destroy_job_info(job_info_t* job_info)
+destroy_job_info(condor_drmaa_job_info_t* job_info)
 {
+    if (job_info != NULL){
+#ifdef WIN32
+	DeleteCriticalSection(&job_info->lock);
+#else
+#if HAS_PTHREADS
+	pthread_mutex_destroy(&job_info->lock);
+#endif
+#endif
+    }
     free(job_info);
 }
 
@@ -622,7 +638,7 @@ submit_job(char* job_id, size_t job_id_len, const char* submit_file_name,
     FILE* fs;
     char buffer[MAX_READ_LEN];
     char last_buffer[MAX_READ_LEN];
-    char cmd[strlen(SUBMIT_CMD) + 1 + strlen(submit_file_name) + 1];
+    char cmd[SUBMIT_CMD_LEN];
     char cluster_num[MAX_JOBID_LEN];
     char job_num[MAX_JOBID_LEN];
 
@@ -705,8 +721,7 @@ open_log_file(const char* job_id)
 int 
 rm_log_file(const char* job_id)
 {
-    char log_file_nm[strlen(file_dir) + strlen(LOG_FILE_DIR) + strlen(job_id) 
-		     + strlen(LOG_FILE_EXTN) + 1];
+    char log_file_nm[2000];
     sprintf(log_file_nm, "%s%s%s%s", file_dir, LOG_FILE_DIR, job_id, 
 	    LOG_FILE_EXTN);
     return remove(log_file_nm)? FALSE : TRUE;
@@ -853,7 +868,7 @@ int
 mv_jobs_res_to_info(const drmaa_job_ids_t* jobids)
 {
     int i = 0;
-    job_info_t* cur_res, *last;
+    condor_drmaa_job_info_t* cur_res, *last;
 
     while (i < jobids->size){
 	cur_res = reserved_job_list;
@@ -886,11 +901,17 @@ int
 mv_job_res_to_info(const char* jobid)
 {
     int result = FALSE;
-    job_info_t* cur_res, *last;    
+    condor_drmaa_job_info_t* cur_res, *last;    
 
-
-    if (pthread_mutex_lock(&info_list_lock) == 0 &&
-	pthread_mutex_lock(&reserved_list_lock)){
+#ifdef WIN32
+    EnterCriticalSection(&reserved_list_lock);
+    EnterCriticalSection(&info_list_lock);
+#else
+#if HAS_PTHREADS
+    if (pthread_mutex_lock(&reserved_list_lock) == 0 &&
+	pthread_mutex_lock(&info_list_lock)){
+#endif
+#endif
 	cur_res = reserved_job_list;
 	last = cur_res;
 	while (!result && cur_res != NULL){
@@ -914,9 +935,9 @@ mv_job_res_to_info(const char* jobid)
 	}
 
 	rel_locks(0);
+#if (!defined(WIN32) && HAS_PTHREADS)
     }
-    
-
+#endif
     return result;
 }
 
@@ -924,10 +945,16 @@ int
 rm_infolist(const char* job_id)
 {
     int result = FALSE;
-    job_info_t* cur, *last;
+    condor_drmaa_job_info_t* cur, *last;
 
+#ifdef WIN32
+    EnterCriticalSection(&info_list_lock);
+#else
+#if HAS_PTHREADS
     if (pthread_mutex_lock(&info_list_lock) == 0){
-	cur = job_info_list;
+#endif
+#endif    
+ 	cur = job_info_list;
 	last = cur;
 	while (cur != NULL){
 	    if (strcmp(cur->id, job_id) == 0){
@@ -945,9 +972,10 @@ rm_infolist(const char* job_id)
 		cur = cur->next;
 	    }
 	}
-	pthread_mutex_unlock(&info_list_lock);
+	unlock_info_list_lock();
+#if (!defined(WIN32) && HAS_PTHREADS)
     }
-
+#endif
     return result;
 }
 
@@ -955,9 +983,15 @@ int
 rm_reslist(const char* job_id)
 {
     int result = FALSE;
-    job_info_t* cur, *last;
+    condor_drmaa_job_info_t* cur, *last;
 
+#ifdef WIN32
+    EnterCriticalSection(&reserved_list_lock);
+#else
+#if HAS_PTHREADS
     if (pthread_mutex_lock(&reserved_list_lock) == 0){
+#endif
+#endif    
 	cur = reserved_job_list;
 	last = cur;
 	while (cur != NULL){
@@ -976,9 +1010,10 @@ rm_reslist(const char* job_id)
 		cur = cur->next;
 	    }
 	}
-	pthread_mutex_unlock(&reserved_list_lock);
+	unlock_reserved_list_lock();
+#if (!defined(WIN32) && HAS_PTHREADS)
     }
-
+#endif
     return result;
 }
 
@@ -986,9 +1021,14 @@ int
 mark_res_job_finished(const char* job_id)
 {
     int result = FALSE;
-    job_info_t* cur;
-    
+    condor_drmaa_job_info_t* cur;
+#ifdef WIN32
+    EnterCriticalSection(&reserved_list_lock);
+#else
+#if HAS_PTHREADS
     if (pthread_mutex_lock(&reserved_list_lock) == 0){
+#endif
+#endif    
 	cur = reserved_job_list;
 	while (cur != NULL){
 	    if (strcmp(cur->id, job_id) == 0){
@@ -999,17 +1039,18 @@ mark_res_job_finished(const char* job_id)
 	    else
 		cur = cur->next;
 	}
-	pthread_mutex_unlock(&reserved_list_lock);
+	unlock_reserved_list_lock();
+#if (!defined(WIN32) && HAS_PTHREADS)
     }
-
+#endif
     return result;
 }
 
 int 
 rel_locks(const int drmaa_err_code)
 {
-    pthread_mutex_unlock(&reserved_list_lock);
-    pthread_mutex_unlock(&info_list_lock);
+    unlock_info_list_lock();
+    unlock_reserved_list_lock();
     return drmaa_err_code;
 }
 
@@ -1052,8 +1093,8 @@ int
 hold_job(const char* jobid, char* error_diagnosis, size_t error_diag_len)
 {
     int result = DRMAA_ERRNO_DRM_COMMUNICATION_FAILURE;
-    char cmd[strlen(HOLD_CMD) + strlen(jobid) + 3];  // two spaces, one '\0'
-    char clu_proc[strlen(jobid)+1], buf[MAX_READ_LEN];
+    char cmd[HOLD_CMD_LEN];
+    char clu_proc[MAX_JOBID_LEN], buf[MAX_READ_LEN];
     FILE* fs;
 
     // prepare command: "condor_hold -name scheddname cluster.process"
@@ -1109,8 +1150,8 @@ int
 release_job(const char* jobid, char* error_diagnosis, size_t error_diag_len)
 {
     int result = DRMAA_ERRNO_DRM_COMMUNICATION_FAILURE;
-    char cmd[strlen(RELEASE_CMD) + strlen(jobid) + 3];  // 2 spaces, 1 '\0'
-    char clu_proc[strlen(jobid)+1], buf[MAX_READ_LEN];
+    char cmd[RELEASE_CMD_LEN];
+    char clu_proc[MAX_JOBID_LEN], buf[MAX_READ_LEN];
     FILE* fs;
 
     // prepare command: "condor_release -name schedddname cluster.process"
@@ -1169,8 +1210,8 @@ int
 terminate_job(const char* jobid, char* error_diagnosis, size_t error_diag_len)
 {
     int result = DRMAA_ERRNO_DRM_COMMUNICATION_FAILURE;
-    char cmd[strlen(TERMINATE_CMD) + strlen(jobid) + 3];  // 2 spaces, 1 '\0'
-    char clu_proc[strlen(jobid)+1], buf[MAX_READ_LEN];
+    char cmd[TERMINATE_CMD_LEN];
+    char clu_proc[MAX_JOBID_LEN], buf[MAX_READ_LEN];
     FILE* fs;
 
     // prepare command: "condor_rm -name schedddname cluster.process"
@@ -1225,7 +1266,7 @@ terminate_job(const char* jobid, char* error_diagnosis, size_t error_diag_len)
 void
 free_job_info_list()
 {
-    job_info_t* cur = job_info_list, *last = NULL;
+    condor_drmaa_job_info_t* cur = job_info_list, *last = NULL;
 
     while (cur != NULL){
 	free(last);
@@ -1238,7 +1279,7 @@ free_job_info_list()
 void
 free_reserved_job_list()
 {
-    job_info_t* cur = reserved_job_list, *last = NULL;
+    condor_drmaa_job_info_t* cur = reserved_job_list, *last = NULL;
 
     while (cur != NULL){
 	free(last);
@@ -1251,9 +1292,71 @@ free_reserved_job_list()
 void 
 clean_submit_file_dir()
 {
-    char cmd[6 + strlen(file_dir) + strlen(SUBMIT_FILE_DIR) + 1 + 
-	     strlen(SUBMIT_FILE_EXTN) + 2];
+    char cmd[3000];
     snprintf(cmd, sizeof(cmd)-1, "rm -f %s%s%c%s", file_dir, SUBMIT_FILE_DIR,
 	     '*', SUBMIT_FILE_EXTN);
     system(cmd);
+}
+
+void
+unlock_info_list_lock()
+{
+#ifdef WIN32
+    LeaveCriticalSection(&info_list_lock);
+#else
+#if HAS_PTHREADS
+    pthread_mutex_unlock(&info_list_lock);
+#endif
+#endif
+}
+
+void 
+unlock_reserved_list_lock()
+{
+#ifdef WIN32
+    EnterCriticalSection(&reserved_list_lock);
+#else
+#if HAS_PTHREADS
+    pthread_mutex_unlock(&reserved_list_lock);
+#endif
+#endif    
+}
+
+void 
+unlock_job_info(condor_drmaa_job_info_t* job_info)
+{
+#ifdef WIN32
+    EnterCriticalSection(&job_info->lock);
+#else
+#if HAS_PTHREADS
+    pthread_mutex_unlock(&job_info->lock);
+#endif
+#endif    
+}
+
+int 
+get_schedd_name(char *error_diagnosis, size_t error_diag_len)
+{
+    int result = FALSE;
+#ifdef WIN32
+    char tmp[1000];
+    DWORD bufsize;
+
+    if (GetComputerNameEx(ComputerNameDnsFullyQualified, tmp, 
+			  &bufsize)){
+	result = TRUE;
+	schedd_name = strdup(tmp);	
+    }
+#else
+    struct utsname host_info;
+
+    if (uname(&host_info) == -1)
+	strncpy(error_diagnosis, "Failed to obtain name of local schedd",
+		error_diag_len);		
+    else {
+	result = TRUE;
+	schedd_name = strdup(host_info.nodename);
+    }
+#endif
+    return result;
 }

@@ -26,14 +26,16 @@
 
 #include "condor_common.h"
 
-#ifdef __cplusplus
-extern "C" {
+BEGIN_C_DECLS
+
+#include "lib_condor_drmaa.h"
+
+#if HAS_PTHREADS
+    #include <pthread.h> 
+#else
+    // nothng - UNIX platforms without pthreads are not guaranteed thread safety
 #endif
 
-#include <pthread.h>  // not covered via condor_include
-#include "libCondorDrmaa.h"
-
-#define _REENTRANT
 #define YES "Y"
 #define NO "N"
 #define SUCCESS 0
@@ -49,9 +51,13 @@ extern "C" {
 #define MAX_JOBID_LEN DRMAA_JOBNAME_BUFFER
 #define SUBMIT_FILE_COL_SIZE 20   // size of column in submit file
 #define SUBMIT_CMD "condor_submit"
+#define SUBMIT_CMD_LEN 2000
 #define HOLD_CMD "condor_hold -name"
+#define HOLD_CMD_LEN 2000
 #define RELEASE_CMD "condor_release -name"
+#define RELEASE_CMD_LEN 2000
 #define TERMINATE_CMD "condor_rm -name"
+#define TERMINATE_CMD_LEN 2000
 #define MAX_READ_LEN 1024  // max # of bytes to read
 #define JOBID_TOKENIZER "."
 #define NUM_SUPP_SCALAR_ATTR 12  // # of supported scalar attributes
@@ -91,13 +97,19 @@ typedef enum {
     FINISHED    // successfully _synchronized() on and not disposed of
 } job_state_t;
 
-typedef struct job_info_s {
+typedef struct condor_drmaa_job_info_s {
     job_state_t state;  // job's current state
     char id[MAX_JOBID_LEN];  
            // <schedd name, job name on that schedd> (of fixed length) 
-    struct job_info_s* next;  // next job_id
+    struct condor_drmaa_job_info_s* next;  // next job_id
+#ifdef WIN32
+    CRITICAL_SECTION lock;
+#else
+#if HAS_PTHREADS
     pthread_mutex_t lock; // locked when _control() called on it
-} job_info_t;
+#endif
+#endif    
+} condor_drmaa_job_info_t;
 
 typedef struct job_attr_s {
     char name[DRMAA_ATTR_BUFFER];   // name of attribute
@@ -113,29 +125,6 @@ struct drmaa_job_template_s {
     unsigned int num_attr;  // num attributes in this template
     job_attr_t* head;  // head of linked list of attributes
 };
-
-/* Global Variables */
-char* schedd_name; 
-char* file_dir;     // directory for file operations
-pthread_mutex_t info_list_lock;  // locks job_info_list and num_info_jobs 
-  // touched by: 
-  //   1) drmaa_run_jobs() - to add a job
-  //   2) drmaa_run_bulk_jobs() - to add a job
-  //   3) drmaa_control() - verifying job_id validity
-  //                        HOLD and SUSPEND
-  //   4) drmaa_synchronize() - to move jobs to reserved list
-job_info_t* job_info_list; // ptr to linked-list of active jobs
-int num_info_jobs;         // size of job_info_list list
-pthread_mutex_t reserved_list_lock;  // locks job_reserved_list & num_res_jobs
-  // List of reserved job IDs holds job IDs in being 
-  //    1) _control(REMOVE)ed,   job_state == BEING_KILLED
-  //    2) synchronized on.      job_state == SYNCHED
-  // If a job is in this list it cannot be further _control()ed,
-  // or _synchronize()d.  Why keep them in a different list rather than
-  // just changing their status?  A separate list makes it easier to check
-  // for _synchronize().  Terminating a job may take a long time
-job_info_t* reserved_job_list;  // ptr to linked-list of jobs being operated on
-int num_reserved_jobs;
 
 /** Determines if a given string is a number.
     @param str the string to test
@@ -153,13 +142,13 @@ job_attr_t* create_job_attribute();
 */
 void destroy_job_attribute(job_attr_t* ja);
 
-/** Allocates a new job_info_t.  job_id must not be longer than MAX_JOBID_LEN.
+/** Allocates a new condor_drmaa_job_info_t.  job_id must not be longer than MAX_JOBID_LEN.
     @return pointer to a new job info on the heap or NULL on failure
 */
-job_info_t* create_job_info(const char* job_id);
+condor_drmaa_job_info_t* create_job_info(const char* job_id);
 
-/** Deallocates a job_info_t */
-void destroy_job_info(job_info_t* job_info);
+/** Deallocates a condor_drmaa_job_info_t */
+void destroy_job_info(condor_drmaa_job_info_t* job_info);
 
 /** Determines if a given attribute name is valid.
     @param name attribute name
@@ -423,8 +412,21 @@ void free_reserved_job_list();
 /** Removes all files in the submit file directory */
 void clean_submit_file_dir();
 
-#ifdef __cpluscplus
-}
-#endif
+/** Unlocks the info_list_lock */
+void unlock_info_list_lock();
+
+/** Unlocks the reserved_list_lock */
+void unlock_reserved_list_lock();
+
+/** Unlocks the lock of the given condor_drmaa_job_info_t */
+void unlock_job_info(condor_drmaa_job_info_t* job_info);
+
+/** Obtains the name of the local schedd.  Sets the "schedd_name" global
+    variable upon success.  
+    @return TRUE (upon success) or FALSE
+*/
+int get_schedd_name(char *error_diagnosis, size_t error_diag_len);
+
+END_C_DECLS
 
 #endif  /** CONDOR_AUX_DRMAA_H **/

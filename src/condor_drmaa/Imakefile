@@ -1,20 +1,31 @@
-all_target( libCondorDrmaa.a )
+all_target( libcondordrmaa.a )
 
+#if HAS_PTHREADS
+CFLAGS = $(STD_C_FLAGS) -D_REENTRANT -DHAS_PTHREADS
+#else
 CFLAGS = $(STD_C_FLAGS)
-
+#endif
 
 #define ObjectFiles \
-	libDrmaa.o auxDrmaa.o
+	libDrmaa.o auxDrmaa.o drmaa_common.o
 
-library_target(libCondorDrmaa.a,ObjectFiles)
+library_target(libcondordrmaa.a,ObjectFiles)
 
-release_library(libCondorDrmaa.a,lib)
-strip_library(libCondorDrmaa.a,lib)
-static_library(libCondorDrmaa.a,lib)
+release_library(libcondordrmaa.a,lib)
+strip_library(libcondordrmaa.a,lib)
+static_library(libcondordrmaa.a,lib)
 
-release_copy_target(libCondorDrmaa.h,include,libCondorDrmaa.h,TEXT_MODE)
-strip_copy_target(libCondorDrmaa.h,include,libCondorDrmaa.h,TEXT_MODE)
-static_copy_target(libCondorDrmaa.h,include,libCondorDrmaa.h,TEXT_MODE)
+release_copy_target(lib_condor_drmaa.h,include,lib_condor_drmaa.h,TEXT_MODE)
+strip_copy_target(lib_condor_drmaa.h,include,lib_condor_drmaa.h,TEXT_MODE)
+static_copy_target(lib_condor_drmaa.h,include,lib_condor_drmaa.h,TEXT_MODE)
+
+/*object_target(tests)*/
 
 html_target( documentation )
+
+html:
+release::
+stripped:: 
+static:: 
+clean::
 

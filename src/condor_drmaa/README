@@ -7,9 +7,11 @@ GENERAL: libDrmaa.a
   This library was developed from the Distributed Resource Management Application
 API Specification 1.0 of January 2004 and the DRMAA C Bindings v0.9 of September
 2003.  Both were available at time of writing at www.drmaa.org.
-  This is a static C library tested on RedHat 7.2, 
-Solaris, and IRIX platforms.  It employs POSIX threads.  It contains support
-for only the Condor DRMS and has been tested with Condor 6.6.0.
+   This is a static C library.  It expects a POSIX thread model on UNIX systems
+and a Windows thread model on Windows.  Unix systems that don't support POSIX
+threads are not guaranteed thread safety when calling the library's functions.
+It contains support for the Condor DRMS only and has been tested with Condor
+6.6.0.
   The library supports most of the functionality of the DRMAA 1.0 API, certainly
 the core functionality.  See the "Items Not Supported" section below for
 details about what has not yet been fully implemented.
@@ -44,4 +46,21 @@ organized by section number of the specification.
    drmaa_synchronize() - DRMAA_JOB_IDS_SESSION_ALL functionality
    drmaa_wtermsig()
    drmaa_wcoredump()
-	
+
+SUPPORTED JOB ATTRIBUTES:
+
+   The library currently supports the following job attributes:
+     DRMAA_REMOTE_COMMAND,
+     DRMAA_JS_STATE,
+     DRMAA_NATIVE_SPECIFICATION,
+     DRMAA_BLOCK_EMAIL, 
+     DRMAA_INPUT_PATH, 
+     DRMAA_OUTPUT_PATH, 
+     DRMAA_ERROR_PATH, 
+     DRMAA_V_ARGV,  
+     DRMAA_V_ENV, 
+     DRMAA_V_EMAIL
+Note that DRMAA_NATIVE_SPECIFICATION can be used to set all attributes supported
+in Condor submit discription files (see Condor manual's man page for
+condor_submit).
+

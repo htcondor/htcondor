@@ -23,7 +23,7 @@
  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "auxDrmaa.h"
-#include "libCondorDrmaa.h"
+#include "drmaa_common.h"
 
 /* ------------------- private variables ------------------- */
 const char* DRMAA_ERR_MSGS [] = {
@@ -69,12 +69,22 @@ const char* SIGNAL_NAMES[] = {
     "SIGURS1",
     "SIGURS2"
 };
+
+#ifdef WIN32
+static CRITICAL_SECTION is_init_lock;
+static is_init_lock_initialized = FALSE;
+#else
+#if HAS_PTHREADS
 static pthread_mutex_t is_init_lock = PTHREAD_MUTEX_INITIALIZER;
+// #else  // no lib init lock
+#endif
+#endif
 static int is_init = FALSE;
 
 /* ------------------- private helper routines ------------------- */
 int is_lib_init();
 int condor_sig_to_drmaa(const int condor_sig);
+void unlock_is_init_lock();
 
 /* ---------- C/C++ language binding specific interfaces -------- */
 int 
@@ -162,11 +172,20 @@ drmaa_init(const char *contact, char *error_diagnosis, size_t error_diag_len)
 {
     int max_len;
     char* dir;
-    struct utsname host_info;
 
+#ifdef WIN32
+    if (!is_init_lock_initialized) {
+	InitializeCriticalSection(&is_init_lock);
+	is_init_lock_initialized = TRUE;
+    }
+    EnterCriticalSection(&is_init_lock);
+#else
+#if HAS_PTHREADS
     if (pthread_mutex_lock(&is_init_lock) == 0){
+#endif
+#endif    	
         if (is_init){
-	    pthread_mutex_unlock(&is_init_lock);	    
+	    unlock_is_init_lock();
             return DRMAA_ERRNO_ALREADY_ACTIVE_SESSION;
 	}
 	// TODO: contact condor_status
@@ -175,7 +194,7 @@ drmaa_init(const char *contact, char *error_diagnosis, size_t error_diag_len)
 	if (!get_base_dir(&file_dir)){
 	    strncpy(error_diagnosis, "Failed to determine base directory",
 		    error_diag_len);
-	    pthread_mutex_unlock(&is_init_lock);
+	    unlock_is_init_lock();
 	    return DRMAA_ERRNO_INTERNAL_ERROR;
 	}
 
@@ -184,7 +203,7 @@ drmaa_init(const char *contact, char *error_diagnosis, size_t error_diag_len)
 	    errno != EEXIST) {
 	    strncpy(error_diagnosis, "Failed to make base directory", 
 		    error_diag_len);
-	    pthread_mutex_unlock(&is_init_lock);
+	    unlock_is_init_lock();
 	    return DRMAA_ERRNO_INTERNAL_ERROR;
 	}
     
@@ -196,7 +215,7 @@ drmaa_init(const char *contact, char *error_diagnosis, size_t error_diag_len)
 	if (mkdir(dir, S_IXUSR|S_IRUSR|S_IWUSR) == -1 && errno != EEXIST){
 	    strncpy(error_diagnosis, "Failed to make submit file directory", 
 		    error_diag_len);		
-	    pthread_mutex_unlock(&is_init_lock);
+	    unlock_is_init_lock();
 	    return DRMAA_ERRNO_INTERNAL_ERROR;
 	}
 
@@ -205,7 +224,7 @@ drmaa_init(const char *contact, char *error_diagnosis, size_t error_diag_len)
 	if (mkdir(dir, S_IXUSR|S_IRUSR|S_IWUSR) == -1 && errno != EEXIST){
 	    strncpy(error_diagnosis, "Failed to make log file directory", 
 		    error_diag_len);		
-	    pthread_mutex_unlock(&is_init_lock);
+	    unlock_is_init_lock();
 	    return DRMAA_ERRNO_INTERNAL_ERROR;	    
 	}
 	free(dir);
@@ -216,31 +235,41 @@ drmaa_init(const char *contact, char *error_diagnosis, size_t error_diag_len)
 	// all its directories
 
 	// Obtain name of local schedd
-	if (uname(&host_info) == -1){
-	    strncpy(error_diagnosis, "Failed to obtain name of local schedd",
-		    error_diag_len);		
-	    pthread_mutex_unlock(&is_init_lock);
+	if (!get_schedd_name(error_diagnosis, error_diag_len)){
+	    unlock_is_init_lock();
 	    return DRMAA_ERRNO_INTERNAL_ERROR;	    
-	}
-	schedd_name = strdup(host_info.nodename);
+	}	
 
 	// Initialize other local data structures
 	is_init = TRUE;
-	pthread_mutex_init(&info_list_lock, NULL);
+#ifdef WIN32
+	InitializeCriticalSection(&info_list_lock);
+#else
+#if HAS_PTHREADS
+	pthread_mutex_init(&info_list_lock, NULL); 
+#endif
+#endif
 	job_info_list = NULL;
 	num_info_jobs = 0;
+#ifdef WIN32
+	InitializeCriticalSection(&reserved_list_lock);
+#else
+#if HAS_PTHREADS
 	pthread_mutex_init(&reserved_list_lock, NULL);
+#endif
+#endif    
 	reserved_job_list = NULL;
 	num_reserved_jobs = 0;
 
-	pthread_mutex_unlock(&is_init_lock);
+	unlock_is_init_lock();
+#if (!defined(WIN32) && HAS_PTHREADS)
     }    
     else {
 	strncpy(error_diagnosis, "Failed to determine library status", 
 		error_diag_len);	
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }
-
+#endif
     return DRMAA_ERRNO_SUCCESS;
 }
 
@@ -251,7 +280,13 @@ drmaa_exit(char *error_diagnosis, size_t error_diag_len)
     if (!is_lib_init())
         return DRMAA_ERRNO_NO_ACTIVE_SESSION;
 
+#ifdef WIN32
+    EnterCriticalSection(&is_init_lock);
+#else
+#if HAS_PTHREADS
     if (pthread_mutex_lock(&is_init_lock) == 0){
+#endif
+#endif
         is_init = FALSE;
 	clean_submit_file_dir();  
 	free_job_info_list();
@@ -262,12 +297,17 @@ drmaa_exit(char *error_diagnosis, size_t error_diag_len)
 	// TODO: remove all old log files
 
 	result = DRMAA_ERRNO_SUCCESS;	
-	pthread_mutex_unlock(&is_init_lock);
+	unlock_is_init_lock();
+#ifdef WIN32 
+	DeleteCriticalSection(&is_init_lock);
+#else
+#if HAS_PTHREADS
     }
     else 
       strncpy(error_diagnosis, "Failed to determine library status.",
 	      error_diag_len);
-
+#endif
+#endif
     return result;
 }
 
@@ -613,7 +653,7 @@ drmaa_run_job(char *job_id, size_t job_id_len, drmaa_job_template_t *jt,
 {
     int result = DRMAA_ERRNO_TRY_LATER;
     char* submit_file_name;
-    job_info_t* job;
+    condor_drmaa_job_info_t* job;
 
     // 1. Perform Initialization and Validation checks
     if(!is_lib_init()){
@@ -643,7 +683,13 @@ drmaa_run_job(char *job_id, size_t job_id_len, drmaa_job_template_t *jt,
     free(submit_file_name);
 
     // 4. Add job_id to list
+#ifdef WIN32
+    EnterCriticalSection(&info_list_lock);
+#else
+#if HAS_PTHREADS
     if (pthread_mutex_lock(&info_list_lock) == 0){
+#endif
+#endif
 	if ((job = create_job_info(job_id)) == NULL){
 	    strncpy(error_diagnosis, "Unable to create job info",
 		    error_diag_len);
@@ -656,14 +702,15 @@ drmaa_run_job(char *job_id, size_t job_id_len, drmaa_job_template_t *jt,
 	    num_info_jobs++;
 	    result = DRMAA_ERRNO_SUCCESS;
 	}
-	pthread_mutex_unlock(&info_list_lock);
+	unlock_info_list_lock();
+#if (!defined(WIN32) && HAS_PTHREADS)
     }
     else {
         strncpy(error_diagnosis, "Problem acquiring job id list lock", 
 		error_diag_len);
 	result = DRMAA_ERRNO_TRY_LATER;
     }
-
+#endif
     return result;
 }
 
@@ -697,7 +744,7 @@ drmaa_control(const char *jobid, int action, char *error_diagnosis,
 {
     int result = DRMAA_ERRNO_INVALID_JOB;
     int proceed = FALSE;
-    job_info_t* cur_res, *cur_info, *last;   
+    condor_drmaa_job_info_t* cur_res, *cur_info, *last;   
 
     // 1. Argument validation and library state check
     if(!is_lib_init()){
@@ -729,9 +776,15 @@ drmaa_control(const char *jobid, int action, char *error_diagnosis,
 	return DRMAA_ERRNO_INTERNAL_ERROR;
     }
     else {
+#ifdef WIN32
+	EnterCriticalSection(&reserved_list_lock);
+	EnterCriticalSection(&info_list_lock);
+#else
+#if HAS_PTHREADS
 	if (pthread_mutex_lock(&reserved_list_lock) == 0 &&
 	    pthread_mutex_lock(&info_list_lock) == 0){   
-
+#endif
+#endif
 	    // A. Verify job not on reserved list
 	    cur_res = reserved_job_list;
 	    while (cur_res != NULL){
@@ -816,22 +869,30 @@ drmaa_control(const char *jobid, int action, char *error_diagnosis,
 	    }
 	    else if (action == DRMAA_CONTROL_HOLD ||
 		     action == DRMAA_CONTROL_RELEASE){
+#ifdef WIN32
+		EnterCriticalSection(&(cur_info->lock));
+#else
+#if HAS_PTHREADS
 		if (pthread_mutex_lock(&(cur_info->lock)) != 0){
 		    strncpy(error_diagnosis, "Problem acquiring job lock", 
 			    error_diag_len);
 		    return rel_locks(DRMAA_ERRNO_TRY_LATER);    
 		}
 		else
+#endif
+#endif    
 		    cur_info->state = CONTROLLED;
 	    }
 
 	    rel_locks(0);
+#if (!defined(WIN32) && HAS_PTHREADS)
 	}
 	else {
 	    strncpy(error_diagnosis, "Problem acquiring job list locks", 
 		    error_diag_len);
 	    return rel_locks(DRMAA_ERRNO_TRY_LATER);
 	}
+#endif
     }
 
     // 2. Perform action
@@ -864,7 +925,7 @@ drmaa_control(const char *jobid, int action, char *error_diagnosis,
 	    else
 		cur_info->state = HELD;
 
-	    pthread_mutex_unlock(&cur_info->lock);
+	    unlock_job_info(cur_info);
 	}
 	else if (action == DRMAA_CONTROL_TERMINATE){
 	    // job info is on reserved_job_list
@@ -890,7 +951,7 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
     int i, proceed;
     int sync_all_jobs = FALSE;
     time_t start;
-    job_info_t* cur_info, *cur_res, *last;
+    condor_drmaa_job_info_t* cur_info, *cur_res, *last;
 
     // 1. Validation of Lib status and args
     if (!is_lib_init()){
@@ -963,9 +1024,15 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
     }
     else {
 	// not syncing all jobs
+#ifdef WIN32
+	EnterCriticalSection(&reserved_list_lock);
+	EnterCriticalSection(&info_list_lock);
+#else
+#if HAS_PTHREADS
 	if (pthread_mutex_lock(&reserved_list_lock) == 0 &&
 	    pthread_mutex_lock(&info_list_lock) == 0){	
-
+#endif
+#endif
 	    // A. Verify no sync-desired jobs are on reserved list	    
 	    i = 0;		    
 	    while (i < jobids->size){
@@ -1012,9 +1079,15 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
 		last = cur_info;
 		while (cur_info != NULL){
 		    if (strcmp(jobids->values[i], cur_info->id) == 0){
-			// lock job_info_t - prevents sync-ing a job
+			// lock condor_drmaa_job_info_t - prevents sync-ing a job
 			//  being control()ed
-			if (pthread_mutex_lock(&(cur_info->lock)) == 0){
+#ifdef WIN32
+			EnterCriticalSection(&cur_info->lock);
+#else
+#if HAS_PTHREADS
+			if (pthread_mutex_lock(&cur_info->lock) == 0){
+#endif
+#endif    
 			    if (cur_info == last)
 				job_info_list = cur_info->next;
 			    else
@@ -1023,16 +1096,18 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
 			    reserved_job_list = cur_info;
 			    num_info_jobs--;
 			    num_reserved_jobs++;
-			    pthread_mutex_unlock(&(cur_info->lock)); // release
+			    unlock_job_info(cur_info);
 			    cur_info = NULL;  // break
+#if (!defined(WIN32) && HAS_PTHREADS)
 			}
 			else {
-			    // undo all other job_info_t*'s moved
+			    // undo all other condor_drmaa_job_info_t*'s moved
 			    mv_jobs_res_to_info(jobids);
 			    snprintf(error_diagnosis, error_diag_len, 
 				     "Unable to lock job %s", jobids->values[i]);
 			    return rel_locks(DRMAA_ERRNO_TRY_LATER);
 			}
+#endif
 		    }
 		    else {
 			last = cur_info;
@@ -1043,12 +1118,14 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
 	    }
 
 	    rel_locks(0);
+#if (!defined(WIN32) && HAS_PTHREADS)
 	}
 	else {
 	    strncpy(error_diagnosis, "Problem acquiring proper locks", 
 		    error_diag_len);
 	    return rel_locks(DRMAA_ERRNO_TRY_LATER);
 	}
+#endif
     }
 
     // 3. Wait jobs one-by-one
@@ -1065,10 +1142,18 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
 	    if (result != DRMAA_ERRNO_SUCCESS) {		
 		// remove all sync targets not yet completed from reserved list
 		// back to job_info_list
+#ifdef WIN32
+		EnterCriticalSection(&reserved_list_lock);
+		EnterCriticalSection(&info_list_lock);
+#else
+#if HAS_PTHREADS
 		if (pthread_mutex_lock(&reserved_list_lock) == 0 &&
 		    pthread_mutex_lock(&info_list_lock) == 0){
+#endif
+#endif
 		    mv_jobs_res_to_info(jobids);
 		    return rel_locks(result);
+#if (!defined(WIN32) && HAS_PTHREADS)
 		}
 		else {
 		    // this is serious!
@@ -1076,6 +1161,7 @@ drmaa_synchronize(const drmaa_job_ids_t* jobids, signed long timeout,
 			    " Library in inconsistent state!", error_diag_len);
 		    return rel_locks(DRMAA_ERRNO_INTERNAL_ERROR);
 		}
+#endif
 	    }
 	    else {
 		if (dispose)
@@ -1125,9 +1211,9 @@ drmaa_wait(const char *job_id, char *job_id_out, size_t job_id_out_len,
 
     // Determine name of job_id to wait on
     if (strcmp(job_id, DRMAA_JOB_IDS_SESSION_ANY) == 0){
-	// 1) job_info_t* last_job_to_complete?
+	// 1) condor_drmaa_job_info_t* last_job_to_complete?
 	// 2) scan through all log files for any job that has completed?
-	// 3) job_info_t* last_job_submitted?
+	// 3) condor_drmaa_job_info_t* last_job_submitted?
 	strncpy(error_diagnosis, "Feature not currently supported", 
 		error_diag_len);
 	return DRMAA_ERRNO_INVALID_JOB;
@@ -1392,12 +1478,22 @@ int
 is_lib_init()
 {
     int result = FALSE;
-    if (pthread_mutex_lock(&is_init_lock) == 0){
-        if (is_init)
-	  result = TRUE;
-	pthread_mutex_unlock(&is_init_lock);
+#ifdef WIN32
+    if (is_init_lock_initailized){
+	EnterCriticalSection(&is_init_lock);
+	if (is_init)
+	    result = TRUE;
+	LeaveCriticalSection(&is_init_lock);
     }
-
+#else
+    #if HAS_PTHREADS
+        if (pthread_mutex_lock(&is_init_lock) == 0){
+            if (is_init)
+	      result = TRUE;
+	    pthread_mutex_unlock(&is_init_lock);
+        }
+    #endif
+#endif
     return result;
 }
 
@@ -1415,3 +1511,14 @@ condor_sig_to_drmaa(const int condor_sig)
     return result;
 }
 
+void 
+unlock_is_init_lock()
+{
+#ifdef WIN32
+    LeaveCriticalSection(&is_init_lock);
+#else
+    #if HAS_PTHREADS
+        pthread_mutex_unlock(&is_init_lock);
+    #endif
+#endif
+}

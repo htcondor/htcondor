@@ -36,6 +36,8 @@ drmaa_get_vector_attribute()
 	job start time (DRMAA_START_TIME),
 	job name (DRMAA_JOB_NAME),
 	join files (DRMAA_JOIN_FILES)
+ - verify that DRMAA_NATIVE_SPECIFICATION does not conflict with any
+ previously set attributes in the job template
 3.2.3.2 
  - add support for all optional attributes
 3.2.4
