@@ -950,7 +950,7 @@ DaemonCore::ReInit()
 	struct sockaddr_in sin;
 	char *tmp;
 	char buf[50];
-	static tid = -1;
+	static int tid = -1;
 
 	// Fetch the negotiator address for the Verify method to use
 	addr = get_negotiator_addr(NULL);	// get sinful string of negotiator
@@ -973,7 +973,7 @@ DaemonCore::ReInit()
 		// after that, just b/c of a periodic timer.  -Derek 1/28/99
 	if( tid < 0 ) {
 		tid = daemonCore->
-			Register_Timer( 8*60*60, 0, (Eventcpp)DaemonCore::ReInit,
+			Register_Timer( 8*60*60, 0, (Eventcpp)&DaemonCore::ReInit,
 							"DaemonCore::ReInit()", daemonCore );
 	} else {
 		daemonCore->Reset_Timer( tid, 8*60*60, 0 );
