@@ -1,6 +1,12 @@
 #ifndef _CONDOR_SYSCALLS_H
 #define _CONDOR_SYSCALLS_H
 
+#if defined( AIX32)
+#	include "syscall.aix32.h"
+#else
+#	include <syscall.h>
+#endif
+
 
 typedef int BOOL;
 
@@ -21,7 +27,12 @@ BOOL LocalSysCalls();
 BOOL RemoteSysCalls();
 BOOL MappingFileDescriptors();
 int REMOTE_syscall( int syscall_num, ... );
-int syscall( int, ... );
+
+#if defined(AIX32) && defined(__cplusplus)
+	int syscall( ... );
+#else
+	int syscall( int, ... );
+#endif
 
 
 #if defined(__cplusplus)
