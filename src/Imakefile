@@ -37,7 +37,7 @@ ACCOUNTANT = accountant
 		tools kbdd
 
 #define Libraries \
-		util_lib c++_util ckpt io classad daemon_core \
+		util_lib c++_util ckpt io classad daemon_core daemon_core.V6 \
 		syscall_lib
 		
 #elif IS_V5
@@ -124,6 +124,7 @@ object_target(tools)
 	object_target(io)
 	object_target(classad)
 	object_target(daemon_core)
+	object_target(daemon_core.V6)
 makefiles:: h/Makefile
 h/Makefile:
 	cd h; imake IMAKE_FLAGS
