@@ -24,7 +24,9 @@
 #define CONFIG_H
 
 #if defined(__cplusplus)
+
 #include "condor_classad.h"
+#include "MyString.h"
 #endif
 
 typedef struct bucket {
@@ -41,7 +43,13 @@ typedef struct bucket {
 #define TABLESIZE 113
 
 #if defined(__cplusplus)
+	extern MyString global_config_file;
+	extern MyString global_root_config_file;
+	extern MyString local_config_files;
+
 	bool param_boolean( const char *name, const bool default_value );
+	bool param_get_location(const char *parameter, MyString &filename,
+							int &line_number);
 extern "C" {
 	void config( int wantsQuiet=0 );
 	void config_host( char* host=NULL );
