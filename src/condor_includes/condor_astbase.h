@@ -75,7 +75,7 @@ class ExprTree
 
 		virtual int	    	RequireClass(ExprTree*);
 
-        void                Copy();       // increment the ref counter
+        ExprTree*           Copy();       // increment the ref counter
         virtual void        Display();    // display the expression
 		virtual void        PrintToStr(char*) {} // print the expr to a string
 
@@ -224,7 +224,7 @@ class BinaryOpBase : public ExprTree
 		virtual ExprTree*     LArg()   { return lArg; }
 		virtual ExprTree*     RArg()   { return rArg; }
 
-		virtual void          Copy();
+		virtual ExprTree*		Copy();
 
 		friend  ExprTree;
 		friend	class	      AttrList;
