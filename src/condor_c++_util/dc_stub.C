@@ -26,4 +26,5 @@
 #include "condor_common.h"
 
 char* global_dc_sinful() { return 0; }
+bool global_dc_set_cookie(int len, unsigned char* data) { return false; }
 
