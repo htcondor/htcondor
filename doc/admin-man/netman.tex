@@ -1,7 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Bandwidth-Alloc}
-Allocating Bandwidth for Checkpoint and Executable Transfers
-and Remote System Calls}
+Allocating Bandwidth}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 An experimental mechanism for allocating bandwidth for checkpointing
@@ -26,7 +25,8 @@ To allocate bandwidth, the \Condor{negotiator} must have information
 about jobs' bandwidth requirements and bandwidth usage.
 Condor is able to obtain information about the bandwidth requirements
 for checkpoint and executable transfers and remote system calls.
-Other network usage, such as NFS or AFS I/O is currently not tracked.
+Other network usage, such as NFS or AFS I/O is currently not monitored
+or allocated.
 
 The \Condor{negotiator} allocates bandwidth using a sliding window in
 time.
@@ -44,10 +44,10 @@ Configuring Bandwidth Allocation}
 The following parameters must be defined in your central manager's
 configuration file to enable bandwidth allocation.
 \begin{description}
-\item[\MacroU{NETWORK\_ROUTING\_INFO}]
+\item[\Macro{NETWORK\_ROUTING\_INFO}]
   The path to the network routing table configuration file (described
   below).
-\item[\MacroU{NETWORK\_CAPACITY\_INFO}]
+\item[\Macro{NETWORK\_CAPACITY\_INFO}]
   The path to the network capacity configuration file (described
   below).
 \end{description}
@@ -55,18 +55,18 @@ configuration file to enable bandwidth allocation.
 The following optional parameters may also be defined in your central
 manager's configuration file.
 \begin{description}
-\item[\MacroU{NETWORK\_HORIZON}]
+\item[\Macro{NETWORK\_HORIZON}]
   What is the bandwidth allocation granularity (the size of the
   allocation window in seconds)?  This parameter should
   usually be equal to the scheduling granularity set by
   \MacroU{NEGOTIATOR\_INTERVAL}.
-\item[\MacroU{NETWORK\_USAGE\_HORIZON}]
+\item[\Macro{NETWORK\_USAGE\_HORIZON}]
   Over what horizon (in seconds) do we calculate per-user fair-share
   network allocations (3600 by default)?
-\item[\MacroU{NETWORK\_CAPACITY\_ALLOCATION\_LIMIT}]
+\item[\Macro{NETWORK\_CAPACITY\_ALLOCATION\_LIMIT}]
   What is the maximum network capacity (in seconds) allowed in a
   single allocation (900 by default)?
-\item[\MacroU{MAX\_GOODPUT\_NETWORK\_CAPACITY\_PER\_JOB}]
+\item[\Macro{MAX\_GOODPUT\_NETWORK\_CAPACITY\_PER\_JOB}]
   What is the maximum percentage (between 0.0 and 1.0) of network
   capacity for job placement that a qualified goodput transfer may
   request (0.0 by default)?  Jobs that require less network capacity
@@ -74,7 +74,7 @@ manager's configuration file.
   oversubscribed to start running on idle CPUs.  This allows Condor to
   keep CPUs busy even when the network is a bottleneck for higher
   priority jobs.
-\item[\MacroU{NETWORK\_CAPACITY\_RESERVED\_FOR\_GOODPUT}]
+\item[\Macro{NETWORK\_CAPACITY\_RESERVED\_FOR\_GOODPUT}]
   What percentage (between 0.0 and 1.0) of capacity do we reserve for
   qualified goodput transfers when needed (0.0 by default)?  This
   controls how much of a priority boost jobs with low network
@@ -118,7 +118,7 @@ The format of the configuration file is:
 \end{verbatim}
 where IP-ADDR, SUBNET-MASK, and NEXT-HOP are all given in the standard
 numbers-and-dots notation.  The first line defines a network resource
-and the "-->" lines that follow define hops from that network resource
+and the "\verb+-->+" lines that follow define hops from that network resource
 to other network resources.
 A rule applies to a network address when the subnet-masked bits of the
 address match the rule's address.
@@ -153,8 +153,9 @@ are:
 \begin{verbatim}
         128.105.101.5 --> 128.105.101.0 --> 0.0.0.0
           --> 128.105.102.0 --> 128.105.102.3
-        128.105.101.5 --> 128.105.101.7
-        128.105.101.5 --> 128.105.65.3
+        128.105.101.5 --> 128.105.101.0 --> 128.105.101.7
+        128.105.101.5 --> 128.105.101.0 --> 0.0.0.0 
+          --> 128.105.65.3
 \end{verbatim}
 
 Depending on how you intend to use it, the routing table can be very
@@ -170,8 +171,8 @@ Configuring Available Bandwidth}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The configuration file specified by the 
-\MacroU{NETWORK\_CAPACITY\_INFO} defines bandwidth limits for network
-segments and hosts in the network.
+\MacroU{NETWORK\_CAPACITY\_INFO} parameter defines bandwidth limits
+for network segments and hosts in the network.
 An empty file defines no limits.
 
 The format of the configuration file is:
