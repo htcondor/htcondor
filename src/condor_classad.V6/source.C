@@ -8,6 +8,7 @@ static char*_FileName_ = __FILE__;
 Source::
 Source ()
 {
+	src = NULL;
 }
 
 
@@ -16,42 +17,66 @@ Source::
 ~Source ()
 {
 	lexer.FinishedParse ();
+	if( src ) delete src;
 }
 
 
 bool Source::
-SetSource (const char *buf, int len)
+SetSource( const char *str, int len )
 {
-	return (lexer.InitializeWithString (buf, len));
-}
+	StringSource *ss;
 
+	if( src ) delete src;
+	if( ( ss = new StringSource ) == NULL ) {
+		return( false );
+	}
+	ss->Initialize( str, len );
+	src = ss;
+	return( lexer.InitializeWithSource( src ) );
+}
 
 bool Source::
-SetSource (Sock &sock, int len)
+SetSource( FILE *file, int len )
 {
-	return (lexer.InitializeWithCedar (sock, len));
-}
+	FileSource *fs;
 
+	if( src ) delete src;
+	if( ( fs = new FileSource ) == NULL ) {
+		return( false );
+	}
+	fs->Initialize( file, len );
+	src = fs;
+	return( lexer.InitializeWithSource( src ) );
+}
 
 bool Source::
-SetSource (int fd, int len)
+SetSource( int fd, int len )
 {
-	return (lexer.InitializeWithFd (fd, len));
-}
+	FileDescSource *fds;
 
+	if( src ) delete src;
+	if( ( fds = new FileDescSource ) == NULL ) {
+		return( false );
+	}
+	fds->Initialize( fd, len );
+	src = fds;
+	return( lexer.InitializeWithSource( src ) );
+}
 
 bool Source::
-SetSource (FILE *file, int len)
+SetSource( ByteSource *s )
 {
-	return (lexer.InitializeWithFile (file, len));
+	if( src ) delete src;
+	src = NULL;
+	return( lexer.InitializeWithSource( s ) );
 }
+
 
 void Source::
-SetSentinelChar( int s )
+SetSentinelChar( int ch )
 {
-	lexer.SetSentinelChar( s );
+	if( src ) src->SetSentinel( ch );
 }
-
 
 //  Expression ::= LogicalORExpression
 //               | LogicalORExpression '?' Expression ':' Expression

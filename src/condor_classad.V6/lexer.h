@@ -24,11 +24,11 @@
 #ifndef __LEXER_H__
 #define __LEXER_H__
 
-#include "condor_io.h"		// for cedar
 #include "stringSpace.h"
 #include "extArray.h"
 #include "common.h"
 #include "tokens.h"
+#include "classad_io.h"
 
 const int MAX_TOKEN_SIZE = 4096;
 
@@ -168,12 +168,7 @@ class Lexer
 		~Lexer ();
 
 		// initialize methods
-		bool InitializeWithString(const char *,int=-1);	// string 
-		bool InitializeWithCedar (Sock &,int=-1);		// CEDAR
-		bool InitializeWithFd 	(int,int=-1);			// file descriptor
-		bool InitializeWithFile (FILE *,int=-1);		// FILE structure
-
-		void SetSentinelChar( int s ) { sentinel = s; }
+		bool InitializeWithSource( ByteSource *src );
 
 		// cleanup function --- purges strings from string space
 		void FinishedParse();
@@ -182,38 +177,27 @@ class Lexer
 		TokenType PeekToken( TokenValue* = 0 );
 		TokenType ConsumeToken( TokenValue* = 0 );
 
-		// internal buffer for string, CEDAR and file token accumulation
+		// internal buffer for token accumulation
 		ExtArray<char> lexBuffer;					// the buffer itself
 
 		// miscellaneous functions
 		static char *strLexToken (int);				// string rep'n of token
 
+		void SetDebug( bool d ) { debug = d; }
+
 	private:
 			// grant access to FunctionCall --- for tokenize{Abs,Rel}Time fns
 		friend class FunctionCall;
-
-		// types of input streams to the scanner
-		enum LexerInputSource {
-			LEXER_SRC_NONE, LEXER_SRC_STRING, LEXER_SRC_FILE,   
-			LEXER_SRC_FILE_DESC, LEXER_SRC_CEDAR
-		};
-
-		// variables to describe and store the input source
-		LexerInputSource lexInputSource;       	// input source type
-		char    *lexInputStream;      			// input source
-		int     lexInputLength;	   				// length of buffer
 
 		// internal state of lexical analyzer
 		TokenType	tokenType;             		// the integer id of the token
 		int    	markedPos;              		// index of marked character
 		char   	savedChar;          			// stores character when cut
 		int    	ch;                     		// the current character
-		int    	pos;                    		// the cursor
 		int		lexBufferCount;					// current offset in lexBuffer
 		bool	inString;						// lexing a string constant
 		bool	accumulating;					// are we in a token?
 		int 	debug; 							// debug flag
-		int		sentinel;						// the sentinel character
 
 		// cached last token
 		TokenValue yylval;						// the token itself
@@ -235,9 +219,7 @@ class Lexer
 		static bool	tokenizeAbsoluteTime(char*,int&);// absolute time
 
 		// input sources
-		Sock	*sock;							// the Cedar sock
-		int		fd;								// the file descriptor
-		FILE 	*file;							// the file structure
+		ByteSource	*src;
 };
 
 

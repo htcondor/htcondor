@@ -13,21 +13,14 @@ static char _FileName_[] = __FILE__;
 Lexer::
 Lexer ()
 {
-	// initialize input source variables
-	lexInputSource = LEXER_SRC_NONE;
-	lexInputStream = NULL;
-	lexInputLength = 0;
-
 	// initialize lexer state (token, etc.) variables
 	tokenType = LEX_END_OF_INPUT;
 	lexBufferCount = 0;
 	savedChar = 0;
 	ch = 0;
-	pos = 0;	
 	inString = false;
 	tokenConsumed = true;
 	accumulating = false;
-	sentinel = '\0';
 
 	// debug flag
 	debug = false;
@@ -44,19 +37,14 @@ Lexer::
 // Initialization method:  Initialize with immutable string
 //   +  Token will be accumulated in the lexBuffer
 bool Lexer::
-InitializeWithString (const char *buf, int buflen)
+InitializeWithSource( ByteSource *s )
 {
 	// sanity check
-	if( !buf ) return false;
-
-	// Set source characteristics
-	lexInputSource = LEXER_SRC_STRING;
-	lexInputStream = (char *) buf;
-	lexInputLength = buflen;
+	src = s;
+	if( !src || !src->GetChar( ch ) ) return false;
 
 	// token state initialization
-	pos = 0;
-	ch = lexInputStream[pos];
+	lexBuffer[0] = (char) ch;
 	lexBufferCount = 0;
 	inString = false;
 	tokenConsumed = true;
@@ -64,89 +52,6 @@ InitializeWithString (const char *buf, int buflen)
 
 	return true;
 }
-
-
-// Initialization method:  Initialize with cedar
-//   + The tokens will be accumulated in the lexBuffer
-bool Lexer::
-InitializeWithCedar (Sock &s, int buflen)
-{
-	// Set source characteristics
-	lexInputSource = LEXER_SRC_CEDAR;
-	lexInputLength = buflen;		
-	sock           = &s;
-
-	// the following are not used for cedar sources
-	lexInputStream = NULL;
-
-	// token state initialization
-	pos = 0;
-	lexBufferCount = 0;
-	if (!sock->get_bytes(&ch, 1)) return false;
-	lexBuffer[0] = (char) ch;
-	inString = false;
-	tokenConsumed = true;
-	accumulating = false;
-
-	return true;
-}
-
-
-// Initialization method:  Initialize with file descriptor (similar to cedar)
-//   + The tokens will be accumulated in the lex buffer
-bool Lexer::
-InitializeWithFd (int desc, int buflen)
-{
-	// Set source characteristics
-    lexInputSource = LEXER_SRC_FILE_DESC;
-    lexInputLength = buflen;
-	fd             = desc;
-
-	// the following are not used for file desc sources
-    lexInputStream = NULL;
-
-    // token state initialization
-    pos = 0;
-	lexBufferCount = 0;
-	if (read (fd, &ch, 1) < 0) return false;
-	lexBuffer[0] = (char) ch;
-	inString = false;
-	tokenConsumed = true;
-	accumulating = false;
-
-    return true;
-}
-
-
-// Initialization method:  Initialize with file structure (similar to cedar)
-//   + The tokens will be accumulated in the lex buffer
-bool Lexer::
-InitializeWithFile (FILE *fp, int buflen)
-{
-	// Set source characteristics
-    lexInputSource = LEXER_SRC_FILE;
-    lexInputLength = buflen;
-	file           = fp;
-
-	// the following are not used for file desc sources
-    lexInputStream = NULL;
-
-    // token state initialization
-    pos = 0;
-    lexBufferCount = 0;
-	inString = false;
-	tokenConsumed = true;
-	accumulating = false;
-
-	// the first character
-	if ((ch = getc (fp)) == EOF) return false;
-
-	// place the first character in the lexBuffer
-	lexBuffer[pos] = (char) ch;
-
-    return true;
-}
-
 
 
 // FinishedParse:  This function implements the cleanup phase of a parse.
@@ -184,44 +89,10 @@ cut (void)
 void Lexer::
 wind (void)
 {
-	char chr;
-
-		// check if we've gone past the specified input length
-	pos++;
-	if( lexInputLength > 0 && pos > lexInputLength ) {
-		ch = EOF;
-		return;
-	}
-
-	// check the source
-	switch (lexInputSource) {
-		case LEXER_SRC_STRING:
-			ch = lexInputStream[pos];
-			break;
-
-		case LEXER_SRC_CEDAR:
-			if (!sock->get_bytes (&chr, 1)) { ch = EOF; return; }
-			ch = chr;
-			break;
-
-		case LEXER_SRC_FILE:
-			if ((ch = getc (file)) == EOF)	{ return; }
-			break;
-
-		case LEXER_SRC_FILE_DESC:
-			if ((read (fd, &chr, 1)) <= 0) { ch = EOF; return; }
-			ch = chr;
-			break;
-
-		default:
-			ch = EOF;
-			return;
-	}
+	if( !src ) { ch = EOF; return; }
+	src->GetChar( ch );
 	++lexBufferCount;
-	if( ch == sentinel ) {
-		ch = EOF;
-		return;
-	}
+	if( ch == EOF ) return;
 	if( accumulating ) lexBuffer[lexBufferCount] = ch;
 }
 

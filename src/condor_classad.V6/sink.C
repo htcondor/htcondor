@@ -1,163 +1,109 @@
+#include "condor_common.h"
 #include "sink.h"
 
 Sink::
 Sink ()
 {
-	sink  = NO_SINK;
+	sink = NULL;
 	pp = NULL;
-	terminal = '\0';
 }
 
 
 Sink::
 ~Sink()
 {
+	if( sink ) delete sink;
 }
 
+
+void Sink::
+SetTerminalChar( int c )
+{
+	if( sink ) sink->SetTerminal( c );
+}
 
 	
 void Sink::
 SetSink( char *&s, int &len, bool useInitial )
 {
-	sink = STRING_SINK;
-	last = 0;
+	StringBufferSink *snk;
 
-	// we have to perform the memory management for the string
-	if( useInitial ) {
-		buffer = s;
-		bufLen = len;
-	} else {
-		buffer = new char [1024];
-		bufLen = 1024;
+	if( sink ) delete sink;
+	if( ( snk = new StringBufferSink ) == NULL ) {
+		return;
 	}
-
-	// set up references for update; perform first update
-	bufRef = &s;
-	bufLenRef = &len;
-	*bufRef = buffer;
-	*bufLenRef = bufLen;
+	if( !useInitial ) {
+		s = NULL;
+		len = 0;
+	}
+	snk->Initialize( s, len );
+	sink = snk;
 }
-
 
 void Sink::
 SetSink( char *s, int sz )
 {
-	// buffer provided by user, don't use references
-	sink = STRING_SINK;
-	buffer = s;
-	bufLen = sz;
-	bufRef = NULL;
-	bufLenRef = NULL;
-}
+	StringSink	*snk;
 
+	if( sink ) delete sink;
+	if( ( snk = new StringSink ) == NULL ) {
+		return;
+	}
 
-void Sink::
-SetSink (Sock &s)
-{
-	sink = CEDAR_SINK;
-	sock = &s;
+	snk->Initialize( s, sz );
+	sink = snk;
 }
 
 
 void Sink::
 SetSink (int i)
 {
-    sink = FILE_DESC_SINK;
-    fd = i;
+	FileDescSink	*snk;
+
+	if( sink ) delete sink;
+	if( ( snk = new FileDescSink ) == NULL ) {
+		return;
+	}
+
+	snk->Initialize( i );
+	sink = snk;
 }
 
 
 void Sink::
 SetSink (FILE *f)
 {
-	sink = FILE_SINK;
-	file = f;
+	FileSink	*snk;
+
+	if( sink ) delete sink;
+	if( ( snk = new FileSink ) == NULL ) {
+		return;
+	}
+
+	snk->Initialize( f );
+	sink = snk;
 }
 
+void Sink::
+SetSink( ByteSink *snk )
+{
+	if( sink ) delete sink;
+	sink = snk;
+}
 
 bool Sink::
 SendToSink (void *bytes, int len)
 {
-	char 	*buf = (char *) bytes;
-	int 	rval;
-
-	switch (sink)
-	{
-		case STRING_SINK:
-			// first check that we have enough room
-			if (last+len >= bufLen) {
-				// no ... return false if we cannot resize
-				if (bufRef == NULL) return false;
-
-				// resize to twice original size
-				char *temp = new char [2*bufLen];
-				if (!temp) {
-					delete [] buffer;
-					return false;
-				}
-				bufLen *= 2;
-				strcpy( temp, buffer );
-
-				// make the switch
-				delete [] buffer;
-				buffer = temp;
-				*bufRef = buffer;
-				*bufLenRef = bufLen;
-			}
-
-			// have enough room; copy and update lengths
-			strcpy( buffer+last, buf );
-			last += len;
-
-			return true;
-
-
-		case FILE_SINK:
-			// writing 'len' number of objects, each of size 1
-			rval = fwrite (bytes, 1, len, file);
-			return (rval == len);
-
-
-		case FILE_DESC_SINK:
-			rval = write (fd, bytes, len);
-			return (rval == len);
-
-
-		case CEDAR_SINK:
-			rval = sock->put_bytes (bytes, len);
-			return (rval == len);
-
-
-		default:
-			return false;
-	}
-
-	// should not reach here
-	return false;
+	if( !sink ) return( false );
+	return( sink->PutBytes( bytes, len ) );
 }
 
 
 bool Sink::
 FlushSink ()
 {
-	if (!SendToSink((void*)&terminal, 1)) return false;
-
-	switch (sink)
-	{
-		case STRING_SINK:
-			return( terminal == '\0' || SendToSink((void*)"\0", 1) );
-
-		case FILE_SINK:
-			// fflush() returns EOF on error; 0 otherwise
-			return (fflush(file) == 0);
-
-		case FILE_DESC_SINK:
-		case CEDAR_SINK:
-			// no-op
-			return true;
-	}
-
-	return false;
+	if( !sink ) return( false );
+	return( sink->Flush( ) );
 }
 
 

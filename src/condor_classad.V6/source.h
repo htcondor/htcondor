@@ -24,7 +24,6 @@
 #ifndef __SOURCE_H__
 #define __SOURCE_H__
 
-#include "condor_io.h"
 #include "lexer.h"
 
 class ClassAd;
@@ -34,8 +33,8 @@ class FunctionCall;
 
 /**
 	Defines an abstraction for the input source from which expressions
-	can be parsed.  The source may be pointed to a string, a CEDAR socket,
-	a file descriptor or a FILE *.
+	can be parsed.  The source may be pointed to a string, a CEDAR socket
+	(if compiled with WANT_CEDAR), a file descriptor or a FILE *.
 */
 class Source
 {
@@ -52,46 +51,33 @@ class Source
 				encountered.
 			@return false if the operation failed, true otherwise
 		*/
-		bool SetSource (const char *str, int len=-1);	// strings
-
-		/** Points the source at a CEDAR socket.
-			@param sock The CEDAR socket from which the expression can be
-				read.
-			@param len Maximum number of bytes to be read from the source.
-				If the parameter is not supplied, the source will be read 
-				until '\0' or EOF is encountered.
-			@return false if the operation failed, true otherwise
-		*/
-        bool SetSource (Sock &sock, int len=-1);   		// CEDAR
-
-		/** Points the source at a file descriptor.
-			@param file_desc File descriptor from which the expression can
-				be read.
-			@param len Maximum number of bytes to be read from the source.
-				If the parameter is not supplied, the source will be read 
-				until '\0' or EOF is encountered.
-			@return false if the operation failed, true otherwise
-		*/
-        bool SetSource (int file_desc, int len=-1);    // file descriptor
+		bool SetSource( const char *str, int len=-1 );
 
 		/** Points the source at a FILE *.
-			@param file_ptr Pointer to the FILE structure from which the
-				expression can be read.
-			@param len Maximum number of bytes to be read from the source.
-				If the parameter is not supplied, the source will be read 
-				until '\0' or EOF is encountered.
+			@param fp Pointer to the FILE structure from which the expression
+				can be read
+			@param len The length of the string.  If the parameter is not
+				supplied, the source will be read until '\0' or EOF is
+				encountered.
 			@return false if the operation failed, true otherwise
 		*/
-        bool SetSource (FILE *file_ptr, int len=-1);       	// FILE structure
+		bool SetSource( FILE *fp, int len=-1 );
 
-		/** Set a "sentinel" character for the source, which determines
-		    end-of-input just like EOF.  This feature can be used to mark the
-			end of expressions in pure ascii files, but care should be taken
-			to not use a sentinal character which may legitimately be part of
-			the input stream.
-			@param sentinel The sentinel character
+		/** Points the source at a file descriptor.
+			@param fd The file descriptor from which the expression can be read
+			@param len The length of the string.  If the parameter is not
+				supplied, the source will be read until '\0' or EOF is
+				encountered.
+			@return false if the operation failed, true otherwise
 		*/
-		void SetSentinelChar( int s );
+		bool SetSource( int fd, int len=-1 );
+
+		/** Points the source at a ByteSource object.
+			@param b Pointer to a ByteSource object.
+			@return false if the operation failed, true otherwise
+			@see ByteSource
+		*/
+		bool SetSource( ByteSource* b );
 
 		// parser entry points
 		/** Parses a ClassAd from this Source object.
@@ -147,6 +133,16 @@ class Source
 		*/
 		bool ParseExprList( ExprList*& exprList_ptr, bool full=false );
 
+		/** Sets the sentinel character for the source, which is treated
+		 		like an EOF for the stream.  This feature is useful if, for
+				example, the expression is expected to be terminated by an
+				end of line character.  (Semantics of the regular EOF and '\0'
+				characters is unchanged.)
+			@param ch The sentinel character
+		*/
+		void SetSentinelChar( int ch );
+
+		void SetDebug( bool d ) { lexer.SetDebug( d ); }
 	private:
 		// lexical analyser for parser
 		Lexer	lexer;
@@ -166,6 +162,8 @@ class Source
 		bool parsePostfixExpression( ExprTree*& );
 		bool parsePrimaryExpression( ExprTree*& );
 		bool parseArgumentList( FunctionCall* );
+
+		ByteSource *src;
 };
 
 #endif//__SOURCE_H__

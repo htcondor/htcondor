@@ -24,7 +24,7 @@
 #ifndef __DUMPER_H__
 #define __DUMPER_H__
 
-#include "condor_io.h"
+#include "classad_io.h"
 
 class FormatOptions;
 
@@ -69,11 +69,6 @@ class Sink
 		*/
         void SetSink (char *&buf, int &len, bool useInitial );	// strings
 
-		/** Points the sink to a CEDAR socket.
-			@param sock The CEDAR socket.
-		*/
-        void SetSink (Sock &sock);      // CEDAR
-
 		/** Points the sink to a file descriptor.
 			@param file_desc The file descriptor.
 		*/
@@ -85,7 +80,22 @@ class Sink
 		*/
         void SetSink (FILE *file_ptr);      // FILE structure
 
+		/** Points the sink at a ByteSink object
+		 	@param s Pointer to a ByteSink object
+			@see ByteSink
+		*/
+		void SetSink( ByteSink *s );
+
+		/** Set the format options for the sink
+		 	@param fo Pointer to a FormatOptions object
+			@see FormatOptions
+		*/
 		void SetFormatOptions( FormatOptions *fo ) { pp = fo; }
+
+		/** Get the FormatOptions for this sink
+			@return Pointer to the current FormatOptions object.  This pointer
+				should not be deleted.
+		*/
 		FormatOptions *GetFormatOptions( ) { return pp; }
 
 		/** Set the terminating character which will be pushed to the sink
@@ -96,7 +106,7 @@ class Sink
 			character is followed with a '\0'.
 			@param c The terminal character.
 		*/
-		void SetTerminalChar( int c ) { terminal = c; }
+		void SetTerminalChar( int c );
 			
 		/** Performs the cleanup protocol for the medium encapsulated  by the
 			sink object, such as terminating the representation by a '\0'.
@@ -123,22 +133,7 @@ class Sink
 		bool SendToSink( void *, int );
 
 		// sink types
-		enum { NO_SINK, STRING_SINK, FILE_SINK, FILE_DESC_SINK, CEDAR_SINK };
-		int	 sink;
-
-		// the actual sinks
-		FILE 	*file;
-		int		fd;
-		Sock	*sock;
-
-		int		terminal;
-
-		// for the string sink
-		char 	**bufRef;
-		char	*buffer;
-		int		*bufLenRef;
-		int		bufLen;
-		int		last;
+		ByteSink	*sink;
 };
 
 /** Options to set formats of external representations */
@@ -153,9 +148,14 @@ class FormatOptions
 
 		/** Sets the option for indented classads.
 			@param i true if indented classads are required; false otherwise.
-			@param len the indentation length.
+			@param len the indentation length (ignored if i is false)
 		*/
 		void SetClassAdIndentation( bool i=true, int len=4 );
+
+		/** Gets the current classad indentation options.
+		 	@param i true if indentation is set, false otherwise
+			@param len The indentation length if i is true, undefined otherwise
+		*/
 		void GetClassAdIndentation( bool &i, int &len );
 
 		/** Sets the option for indented lists.
@@ -163,17 +163,40 @@ class FormatOptions
 			@param len the indentation length
 		*/
 		void SetListIndentation( bool i=true, int len=4 );
+
+		/** Gets the current list indentation options.
+		 	@param i true if indentation is set, false otherwise
+			@param len The indentation length if i is true, undefined otherwise
+		*/
 		void GetListIndentation( bool &i, int &len );
 
+		/** Sets option if string literals should be wrapped with quotes.  This
+		 	option is useful for display purposes.  Note that an expression
+			that is unparsed to a sink with this option off cannot (in general)
+			be parsed back into an expression.
+			@param w True if quotes are required, false otherwise.
+		*/
 		void SetWantQuotes( bool );
+
+		/** Gets the current quote display option setting
+		 	@return true if quotes are required, false otherwise
+		*/
 		bool GetWantQuotes( );
 
+		/** Sets option for display with minimal parentheses.
+		 	@param m true if minimal parentheses are required, false otherwise.
+		*/
 		void SetMinimalParentheses( bool );
+
+		/** Gets current minimal parentheses option setting
+		 	@return true if minimal parentheses will be displayed, false 
+				otherwise.
+		*/
 		bool GetMinimalParentheses( );
 
+		// unimplemented --- experimental
 		void SetMarginWrap( int cols, int indentLen );
 		void GetMarginWrap( int &cols, int &indentLen );
-	
 	private:
 		friend class ExprTree;
 		friend class ClassAd;
