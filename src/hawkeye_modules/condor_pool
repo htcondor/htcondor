@@ -253,10 +253,14 @@ sub RunTotal( $$ )
 	return;
     }
 
+    # Add it to the prefix list
+    $Hawkeye->StoreIndex( $Prefix );
+
     # "Global" info..
     my @FieldNames;
 
     # Parse the output...
+    my @ArchList;
     while ( <TOTAL> )
     {
 	chomp;
@@ -271,7 +275,7 @@ sub RunTotal( $$ )
 	elsif ( ! /omit/i )
 	{
 	    my ( $Arch, @Values ) = split;
-	    $Hawkeye->StoreIndex( $Prefix . $Arch );
+	    push @ArchList, $Arch;
 	    foreach my $Field ( 0 .. $#Values )
 	    {
 		my $Attr = $Prefix . $Arch . "_" . $FieldNames[$Field];
@@ -279,6 +283,8 @@ sub RunTotal( $$ )
 	    }
 	}
     }
+    $Hash->Add( $Prefix . "ArchList", "s", join( " ", @ArchList ) )
+	if ( $#ArchList >= 0 );
 
     # Done
     close( TOTAL );
@@ -328,6 +334,7 @@ sub RunSubmit(  )
 	    $Hash->Add( $Attr, $Fields[$FieldNo]->{Type}, $Values[$FieldNo] );
 	}
     }
+    $Hash->Add( "Submit_Count", "n", $SubmitNo );
 
     # Done
     close( SUB );
