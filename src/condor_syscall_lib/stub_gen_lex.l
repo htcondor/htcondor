@@ -17,7 +17,7 @@ int		yyline = 1;
 extern YYSTYPE yylval;
 
 int grab(int type);
-char * strdup( char *orig );
+
 void display_token( int type );
 void reset_yyline();
 
@@ -120,7 +120,8 @@ grab( int type )
 	display_token( type );
 #endif
 
-	yylval.tok.val = strdup( (char *)yytext );
+	yylval.tok.val = malloc( strlen(yytext) + 1 );
+	strcpy( yylval.tok.val, yytext );
 	yylval.tok.tok_type = type;
 	return type;
 }
@@ -133,16 +134,6 @@ reset_yyline()
 	for( ptr=(char *)yytext; !isdigit(*ptr); ptr++ )
 		;
 	yyline = atoi( ptr ) - 1;
-}
-
-char *
-strdup( char *orig )
-{
-	char *answer;
-
-	answer = malloc( strlen(orig) + 1 );
-	strcpy( answer, orig );
-	return answer;
 }
 
 void
