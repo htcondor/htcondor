@@ -122,6 +122,7 @@ bool never_transfer = false;  // never transfer files or do transfer files
 static char env_delimiter_string[5];
 
 char* LogNotesVal = NULL;
+char* UserNotesVal = NULL;
 
 List<char> extraLines;  // lines passed in via -a argument
 
@@ -199,7 +200,8 @@ char	*GlobusResubmit = "globus_resubmit";
 
 char	*DAGNodeName = "dag_node_name";
 char	*DAGManJobId = "dagman_job_id";
-char	*LogNotes = "submit_event_notes";
+char	*LogNotesCommand = "submit_event_notes";
+char	*UserNotesCommand = "submit_event_user_notes";
 char	*JarFiles = "jar_files";
 
 char    *ParallelScriptShadow  = "parallel_script_shadow";  
@@ -269,6 +271,7 @@ void	SetExitRemoveCheck(void);
 void SetDAGNodeName();
 void SetDAGManJobId();
 void SetLogNotes();
+void SetUserNotes();
 void SetJarFiles();
 void SetParallelStartupScripts(); //JDB
 
@@ -289,6 +292,7 @@ struct SubmitRec {
 	int lastjob;
 	char *logfile;
 	char *lognotes;
+	char *usernotes;
 };
 
 ExtArray <SubmitRec> SubmitInfo(10);
@@ -1847,9 +1851,20 @@ SetDAGManJobId()
 void
 SetLogNotes()
 {
-	LogNotesVal = condor_param( LogNotes );
+	LogNotesVal = condor_param( LogNotesCommand );
+	// just in case the user forgets the underscores
 	if( !LogNotesVal ) {
 		LogNotesVal = condor_param( "SubmitEventNotes" );
+	}
+}
+
+void
+SetUserNotes()
+{
+	UserNotesVal = condor_param( UserNotesCommand );
+	// just in case the user forgets the underscores
+	if( !UserNotesVal ) {
+		UserNotesVal = condor_param( "SubmitEventUserNotes" );
 	}
 }
 
@@ -2885,6 +2900,7 @@ queue(int num)
 		rval = SaveClassAd();
 
 		SetLogNotes();
+		SetUserNotes();
 
 		switch( rval ) {
 		case 0:			/* Success */
@@ -2914,10 +2930,15 @@ queue(int num)
 			strcmpnull( SubmitInfo[CurrentSubmitInfo].logfile,
 						logfile ) != 0 ||
 			strcmpnull( SubmitInfo[CurrentSubmitInfo].lognotes,
-						LogNotesVal ) != 0 ) {
+						LogNotesVal ) != 0 ||
+			strcmpnull( SubmitInfo[CurrentSubmitInfo].usernotes,
+						UserNotesVal ) != 0 ) {
 			CurrentSubmitInfo++;
 			SubmitInfo[CurrentSubmitInfo].cluster = ClusterId;
 			SubmitInfo[CurrentSubmitInfo].firstjob = ProcId;
+			SubmitInfo[CurrentSubmitInfo].lognotes = NULL;
+			SubmitInfo[CurrentSubmitInfo].usernotes = NULL;
+
 			if (logfile) {
 				// Store the full pathname to the log file
 				SubmitInfo[CurrentSubmitInfo].logfile = strdup(logfile);
@@ -2927,8 +2948,8 @@ queue(int num)
 			if( LogNotesVal ) {
 				SubmitInfo[CurrentSubmitInfo].lognotes = strdup( LogNotesVal );
 			}
-			else {
-				SubmitInfo[CurrentSubmitInfo].lognotes = NULL;
+			if( UserNotesVal ) {
+				SubmitInfo[CurrentSubmitInfo].usernotes = strdup( UserNotesVal );
 			}
 		}
 		SubmitInfo[CurrentSubmitInfo].lastjob = ProcId;
@@ -3453,8 +3474,12 @@ log_submit()
 	strcpy (jobSubmit.submitHost, ScheddAddr);
 
 	if( LogNotesVal ) {
-		jobSubmit.submitEventLogNotes = strnewp( LogNotesVal );
-		free( LogNotesVal );
+		jobSubmit.submitEventLogNotes = LogNotesVal;
+		LogNotesVal = NULL;
+	}
+	if( UserNotesVal ) {
+		jobSubmit.submitEventUserNotes = UserNotesVal;
+		UserNotesVal = NULL;
 	}
 
 	for (int i=0; i <= CurrentSubmitInfo; i++) {
@@ -3464,6 +3489,10 @@ log_submit()
 				delete[] jobSubmit.submitEventLogNotes;
 			}
 			jobSubmit.submitEventLogNotes = strnewp( SubmitInfo[i].lognotes );
+			if( jobSubmit.submitEventUserNotes ) {
+				delete[] jobSubmit.submitEventUserNotes;
+			}
+			jobSubmit.submitEventUserNotes = strnewp( SubmitInfo[i].usernotes );
 
 			usr_log.initialize(owner, ntdomain, simple_name, 0, 0, 0);
 			// Output the information

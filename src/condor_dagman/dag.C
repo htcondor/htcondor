@@ -21,6 +21,8 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#include "helper.h"
+
 //
 // Local DAGMan includes
 //
@@ -647,7 +649,37 @@ Dag::SubmitReadyJobs()
 				  job->GetJobName() );
   
     CondorID condorID(0,0,0);
-    if( ! submit_submit( job->GetCmdFile(), condorID, job->GetJobName() ) ) {
+    MyString cmd_file = job->GetCmdFile();
+
+    char *helper = param( "DAGMAN_HELPER_COMMAND" );
+    if( helper ) {
+      debug_printf( DEBUG_VERBOSE, "  passing original submit file (%s) "
+		    "to helper (%s)\n", cmd_file.Value(), helper );
+      cmd_file = Helper().resolve( cmd_file.Value() ).c_str();
+      if( cmd_file.Length() == 0 ) {
+	debug_printf( DEBUG_QUIET, "ERROR: helper (%s) "
+		      "failed for Job %s: submit aborted\n", helper,
+		      job->GetJobName() );
+	// NOTE: this failure does not currently observe the "retry"
+	// feature (for better or worse)
+        job->_Status = Job::STATUS_ERROR;
+        _numJobsFailed++;
+	sprintf( job->error_text, "helper (%s) failed",
+		 helper );
+	free( helper );
+	helper = NULL;
+	// the problem might be specific to that job, so keep submitting...
+	return SubmitReadyJobs();
+      }
+      debug_printf( DEBUG_VERBOSE,
+		    "  using new submit file (%s) from helper\n",
+		    cmd_file.Value(), job->GetJobName() );
+      free( helper );
+      helper = NULL;
+    }
+    if ( !submit_submit( cmd_file.Value(),
+			 condorID,
+			 job->GetJobName())) {
 		// NOTE: this failure does not observe the "retry" feature
 		// (for better or worse)
         job->_Status = Job::STATUS_ERROR;

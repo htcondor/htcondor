@@ -375,6 +375,7 @@ SubmitEvent()
 {	
 	submitHost [0] = '\0';
 	submitEventLogNotes = NULL;
+	submitEventUserNotes = NULL;
 	eventNumber = ULOG_SUBMIT;
 }
 
@@ -383,6 +384,9 @@ SubmitEvent::
 {
     if( submitEventLogNotes ) {
         delete[] submitEventLogNotes;
+    }
+    if( submitEventUserNotes ) {
+        delete[] submitEventUserNotes;
     }
 }
 
@@ -396,6 +400,12 @@ writeEvent (FILE *file)
 	}
 	if( submitEventLogNotes ) {
 		retval = fprintf( file, "    %.8191s\n", submitEventLogNotes );
+		if( retval < 0 ) {
+			return 0;
+		}
+	}
+	if( submitEventUserNotes ) {
+		retval = fprintf( file, "    %.8191s\n", submitEventUserNotes );
 		if( retval < 0 ) {
 			return 0;
 		}
@@ -431,6 +441,22 @@ readEvent (FILE *file)
 	s[ strlen( s ) - 1 ] = '\0';
 
 	submitEventLogNotes = strnewp( s );
+
+	// see if the next line contains an optional user event notes
+	// string, and, if not, rewind, because that means we slurped in
+	// the next event delimiter looking for it...
+ 
+	fgetpos( file, &filep );
+     
+	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
+		fsetpos( file, &filep );
+		return 1;
+	}
+ 
+	// remove trailing newline
+	s[ strlen( s ) - 1 ] = '\0';
+
+	submitEventUserNotes = strnewp( s );
 	return 1;
 }
 
@@ -451,6 +477,11 @@ toClassAd()
 		MyString buf2;
 		buf2.sprintf("LogNotes = \"%s\"", submitEventLogNotes);
 		if( !myad->Insert(buf2.Value()) ) return NULL;
+	}
+	if( submitEventUserNotes && submitEventUserNotes[0] ) {
+		MyString buf3;
+		buf3.sprintf("UserNotes = \"%s\"", submitEventUserNotes);
+		if( !myad->Insert(buf3.Value()) ) return NULL;
 	}
 
 	return myad;
@@ -473,6 +504,16 @@ initFromClassAd(ClassAd* ad)
 		submitEventLogNotes = new char[strlen(mallocstr) + 1];
 		strcpy(submitEventLogNotes, mallocstr);
 		free(mallocstr);
+		mallocstr = NULL;
+	}
+
+	// this fanagling is to ensure we don't malloc a pointer then delete it
+	ad->LookupString("UserNotes", &mallocstr);
+	if( mallocstr ) {
+		submitEventUserNotes = new char[strlen(mallocstr) + 1];
+		strcpy(submitEventUserNotes, mallocstr);
+		free(mallocstr);
+		mallocstr = NULL;
 	}
 }
 

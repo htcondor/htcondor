@@ -1,12 +1,15 @@
 NAME = condor_dagman
-all_target($(NAME))
+all_target($(NAME) t_helper)
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+C_PLUS_FLAGS = -I. $(STD_C_PLUS_FLAGS) \
+	-I$(CLASSADS_ROOT)/include -DWANT_NAMESPACES \
+	-I../condor_daemon_core.V6 \
+	-I../condor_includes -I- -Wall
 CFLAGS = $(STD_C_FLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
+LIB = $(DAEMONCORE_LIB) $(CLASSADS_ROOT)/lib/libclassad.a $(STD_LIBS)
 
 OBJ = dagman_main.o submit.o dag.o job.o util.o parse.o debug.o types.o \
-	script.o scriptQ.o dagman_instantiate.o
+	script.o scriptQ.o helper.o dagman_instantiate.o
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 release_target($(NAME),$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
@@ -23,3 +26,5 @@ strip_copy_target(condor_submit_dag,$(STRIP_DIR)/bin, \
 		condor_submit_dag,EXECUTABLE_MODE)
 static_copy_target(condor_submit_dag,$(STATIC_DIR)/bin, \
 		condor_submit_dag,EXECUTABLE_MODE)
+
+c_plus_target(t_helper, t_helper.o helper.o, $(LIB))

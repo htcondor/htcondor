@@ -1,3 +1,11 @@
+01/09/03 V6_5-pre-merge-V6_5-edg-branch-1
+	The state of the V6_5-branch before merging in the V6_5-edg-branch
+	as tagged at V6_5-edg-branch-merge-1
+
+01/09/03 V6_5-edg-branch-merge-1
+        The V6_5-edg-branch, before we merged it into the V6_5-branch as
+        tagged at V6_5-pre-merge-V6_5-edg-branch-1
+
 12/19/02 V6_5-post-merge-V6_4-merge-2
 	The state of the V6_5-branch before merging in the V6_4-branch as
 	tagged at V6_4-merge-2.
@@ -61,8 +69,9 @@
 	is also on the V6_3-branch]) as tagged at V6_3-doc-merge-1
 
 09/26/02 V6_3-doc-merge-1
-	Some changes to the manual were accidentally checked into the V6_3-branch
-	after it was abandonded.  This is a tag on V6_3-branch, only on doc/.
+	Some changes to the manual were accidentally checked into the
+	V6_3-branch after it was abandonded.  This is a tag on V6_3-branch,
+	only on doc/.
 
 08/19/02 V6_5-tdp-2-branch
 	 	Branch for all the "TDP" work, which stands for "Tool Daemon
@@ -83,8 +92,8 @@
 		NOW ABANDONED.  Use the V6_5-tdp-2-branch instead.
 
 7/25/02 V6_5_0-PRE-RELEASE-1
-	The first 6.5.0 release to run on our big pool. It lives on the 6_5-branch,
-	and has support for the new parallel universe.
+	The first 6.5.0 release to run on our big pool. It lives on the
+	6_5-branch, and has support for the new parallel universe.
 
 07/19/02 V6_5-branch
 	The V6_5 development series branch.  For important,
@@ -129,8 +138,8 @@
 		trunk-merge-V6_3-branch-1 again.
 
 6/19/02 V6_4_0
-	The 6.4.0 Release tag, which lives on the V6_3-bracnh. NMI-R1 and 6.4.0
-were both built from this tag, with identical flags
+	The 6.4.0 Release tag, which lives on the V6_3-bracnh. NMI-R1 and
+	6.4.0 were both built from this tag, with identical flags
 
 6/19/02 V6_2_3
 	The 6.2.3 Release tag, which lives on the V6_2-bracnh
@@ -153,10 +162,10 @@ were both built from this tag, with identical flags
 	private net stuff, too.
 
 5/15/02 V6_3-NMI-Condor-G-Beta1
-	The 6.3 branch that was released as the first NMI beta. It's a bit before
-	6.3.3, and is built with WANT_GLOBUS=TRUE and IS_CONDORG_RELEASE = Yes,
-	or whatever the settings are. The version string these carry are
-	6.3.2-NMI-Condor-G-Beta
+	The 6.3 branch that was released as the first NMI beta. It's a bit
+	before 6.3.3, and is built with WANT_GLOBUS=TRUE and
+	IS_CONDORG_RELEASE = Yes, or whatever the settings are. The version
+	string these carry are 6.3.2-NMI-Condor-G-Beta
 
 5/01/02 HAWKEYE_V0_1_2
 	The Hawkeye 0.1.2 release tag
@@ -206,10 +215,10 @@ were both built from this tag, with identical flags
 		CondorG-GT2
 
 03/19/02 V6_3_2-Condor-G-Globus113
-		The V6_3-branch, from the tag V6_3-pre-globus2_0-switch, which was
-		the state of the 6_3-branch right before the switchover to GT2.
-		The Condor-G release of this has a version string of 6.3.2
-		CondorG-113
+		The V6_3-branch, from the tag V6_3-pre-globus2_0-switch,
+		which was the state of the 6_3-branch right before the
+		switchover to GT2.  The Condor-G release of this has a
+		version string of 6.3.2 CondorG-113
 
 03/17/02 V6_3-CondorG-VDT-1_0
 		The V6_3-branch tagged for the 1.0 VDT Condor-G release. 
@@ -234,8 +243,8 @@ were both built from this tag, with identical flags
 		V6_3-branch right before V6_3-security-2-branch was merged in.
 
 03/06/02 V6_3-security-2-branch-merge-1
-		V6_3-security-2-branch tagged in case we merge from this branch again.
-		(unlikely, we plan to abandon)
+		V6_3-security-2-branch tagged in case we merge from this
+		branch again.  (unlikely, we plan to abandon)
 
 02/06/02 V6_3-tdp-branch
 	 	Branch for all the "TDP" work, which stands for "Tool Daemon
@@ -244,9 +253,9 @@ were both built from this tag, with identical flags
 	 	main V6_3-branch.  ABANDONED - use the V6_5-tdp-branch.
 
 02/07/02 V6_3-pre-globus2_0-switch
-		The V6_3-branch, right before we switched over to use Globus2.0.
-		There was one release of Condor (6.3.2 Condor-G-113) that was built
-		against this tag
+		The V6_3-branch, right before we switched over to use
+		Globus2.0.  There was one release of Condor (6.3.2
+		Condor-G-113) that was built against this tag
 
 01/15/02 V6_3-new-gridmanager-branch
 		Branch containing Jamie and Todd's rewrite of the 
@@ -278,9 +287,9 @@ were both built from this tag, with identical flags
 		V6_3-security-branch is abandoned.
 
 11/09/01 V6_3-security-branch
-		When the V6_3-security-branch was originally made, only files in
-		src/ were tagged. (See below 10/09/01).  This branches NTconfig,
-		config, and doc as well.
+		When the V6_3-security-branch was originally made, only
+		files in src/ were tagged. (See below 10/09/01).  This
+		branches NTconfig, config, and doc as well.
 
 11/8/01 V6_3-bandwidth-merge-1
         The end of the old bandwidth branch at the point where we

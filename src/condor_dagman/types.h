@@ -83,31 +83,4 @@ class CondorID {
 };
 
 
-//-----------------------------------------------------------------------------
-class string {
-    friend ostream & operator << (ostream & out, const string & s);
-    friend string operator + (const string & s1, const string & s2);
-  public:
-    string () : _str(NULL) {}
-    string (const string & s);
-    string (const char   * s);
-    string (const char c);
-    string (const int  i);
-    const string & operator = (const string & s);
-    const char   * operator = (const char   * s);
-    const string & operator += (const string & s);
-    bool           operator == (const string & s) const;
-    bool           operator != (const string & s) const;
-
-    inline const char * str() const { return _str; }
-
-    ~string () { delete [] _str; }
-  private:
-    string (const string & s1, const string & s2);
-    char * _str;
-};
-
-ostream & operator << (ostream & out, const string & s);
-string operator + (const string & s1, const string & s2);
-
 #endif /* #ifndef _TYPES_H_ */

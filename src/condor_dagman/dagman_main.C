@@ -96,6 +96,7 @@ void touch (const char * filename) {
 int
 main_config( bool is_full )
 {
+	config();
 	return 0;
 }
 

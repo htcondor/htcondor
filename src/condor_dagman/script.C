@@ -62,7 +62,7 @@ Script::BackgroundRun( int reaperId )
 	// construct command line
     const char *delimiters = " \t";
     char * token;
-    string send;
+    MyString send;
     char * cmd = strnewp(_cmd);
     for (token = strtok (cmd,  delimiters) ; token != NULL ;
          token = strtok (NULL, delimiters)) {
@@ -75,7 +75,7 @@ Script::BackgroundRun( int reaperId )
     }
 
 	// char *env = environToString( (const char**)environ );
-	_pid = daemonCore->Create_Process( cmd, (char*) send.str(),
+	_pid = daemonCore->Create_Process( cmd, (char*) send.Value(),
 									   PRIV_UNKNOWN, reaperId, TRUE,
 									   NULL, NULL, FALSE, NULL, NULL, 0 );
 	// delete [] env;

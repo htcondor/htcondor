@@ -3,7 +3,7 @@
  *
  * See LICENSE.TXT for additional notices and disclaimers.
  *
- * Copyright (c)1990-2001 CONDOR Team, Computer Sciences Department, 
+ * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
@@ -21,21 +21,29 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#include "condor_common.h"
-#include "types.h"
-#include "condor_string.h"
+// Author: Francesco Giacomini, INFN <Francesco.Giacomini@cnaf.infn.it>
 
-//---------------------------------------------------------------------------
-int compare(int a, int b) {
-  if (a == b) return 0;
-  return (a > b ? 1 : -1);
-}
+// $Id: helper.h,v 1.1.4.1 2003-01-10 20:22:55 pfc Exp $
 
-//---------------------------------------------------------------------------
-int CondorID::Compare (const CondorID condorID) const {
-  int result = compare (_cluster, condorID._cluster);
-  if (result == 0) result = compare (_proc, condorID._proc);
-  if (result == 0) result = compare (_subproc, condorID._subproc);
-  return result;
-}
+#ifndef HELPER_H
+#define HELPER_H
 
+#include <string>
+
+class Helper
+{
+  class HelperImpl;
+
+  HelperImpl* m_impl;
+
+public:
+  Helper();
+  ~Helper();
+  std::string resolve(std::string const& input_file) const;
+};
+
+#endif
+
+// Local Variables:
+// mode:c++
+// End:
