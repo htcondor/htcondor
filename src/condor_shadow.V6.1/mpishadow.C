@@ -340,7 +340,7 @@ MPIShadow::startMaster()
     rr = ResourceList[0];
 
         // alter the master's args...
-    hackMasterArgs( rr->getJobAd() );
+    hackMasterAd( rr->getJobAd() );
 
         // yak with this startd.  Others will come in startComrade.
     if ( rr->requestIt() == -1 ) {
@@ -381,7 +381,7 @@ MPIShadow::startComrade( int cmd, Stream* s )
     MpiResource *rr = ResourceList[nextResourceToStart++];
     
         // modify this comrade's arguments...using the comradeArgs given.
-    hackComradeArgs( comradeArgs, rr->getJobAd() );
+    hackComradeAd( comradeArgs, rr->getJobAd() );
 
     dprintf ( D_PROTOCOL, "#9 - Added args to jobAd, now requesting:\n" );
 
@@ -410,7 +410,7 @@ MPIShadow::startComrade( int cmd, Stream* s )
 }
 
 void 
-MPIShadow::hackMasterArgs( ClassAd *ad )
+MPIShadow::hackMasterAd( ClassAd *ad )
 {
 /* simple:  get args, add -p4pg (and more...), put args back in */
 
@@ -468,7 +468,7 @@ MPIShadow::hackMasterArgs( ClassAd *ad )
 }
 
 void
-MPIShadow::hackComradeArgs( char *comradeArgs, ClassAd *ad )
+MPIShadow::hackComradeAd( char *comradeArgs, ClassAd *ad )
 {
 
 /* Args are in form:
@@ -490,7 +490,7 @@ MPIShadow::hackComradeArgs( char *comradeArgs, ClassAd *ad )
     
     char args[2048];
     if ( !ad->LookupString( ATTR_JOB_ARGUMENTS, args )) {
-        dprintf ( D_ALWAYS, "Failed to get Job args in hackComradeArgs!\n" );
+        dprintf ( D_ALWAYS, "Failed to get Job args in hackComradeAd!\n" );
         shutDown( JOB_NOT_STARTED, 0 );
     }
 

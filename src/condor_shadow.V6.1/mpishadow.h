@@ -117,11 +117,11 @@ class MPIShadow : public BaseShadow
 
         /** Does necessary things to the args obtained from the 
             sneaky rsh. */
-    void hackComradeArgs( char *comradeArgs, ClassAd *ad );
+    void hackComradeAd( char *comradeArgs, ClassAd *ad );
 
         /** Pretty simple: takes the args, adds a -p4gp ..., puts
             the args back in. */
-    void hackMasterArgs( ClassAd *ad );
+    void hackMasterAd( ClassAd *ad );
     
 		/** A complex function that deals with the end of an MPI
 			job.  It has two functions: 1) figure out if all the 
