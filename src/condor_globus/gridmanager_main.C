@@ -36,9 +36,7 @@ main_activate_globus()
 	static int first_time = true;
 
 	if(gridmanager.X509Proxy && first_time) {
-		// TODD DEBUG TEST test 
-		// NEXT LINE IS COMMENTED OUT - DO NOT CHECK THIS IN!!!
-		// setenv("X509_USER_PROXY", gridmanager.X509Proxy, 1);
+		setenv("X509_USER_PROXY", gridmanager.X509Proxy, 1);
 		first_time = false;
 	}		
 
