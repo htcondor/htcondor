@@ -42,6 +42,7 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 #include "internet.h"
 #include "condor_debug.h"
 #include "get_daemon_addr.h"
+#include "condor_uid.h"
 #include "condor_commands.h"
 
 #if defined(GSS_AUTHENTICATION)
@@ -2138,6 +2139,34 @@ DCFindWindow(HWND hWnd, LPARAM p)
 }
 #endif	// of ifdef WIN32
 
+int DaemonCore::SetEnv(char *key, char *value)
+{
+	assert(key);
+	assert(value);
+#ifdef WIN32
+	if ( !SetEnvironmentVariable(key, value) ) {
+		dprintf(D_ALWAYS,
+				"SetEnvironmentVariable failed, errno=%d\n",
+				GetLastError());
+		return FALSE;
+	}
+#else
+	// XXX: We should actually put all of this in a hash table, so that 
+	// we don't leak memory.  This is just quick and dirty to get something
+	// working.
+	char *buf;
+	buf = new char[strlen(key) + strlen(value) + 1];
+	sprintf(buf, "%s=%s", key, value);
+	if( putenv(buf) != 0 )
+	{
+		dprintf(D_ALWAYS, "SetEnvironmentVariable failed: %s (errno=%d)\n",
+				strerror(errno), errno);
+		return FALSE;
+	}
+#endif
+	return TRUE;
+}
+
 int DaemonCore::Create_Process(
 			char		*name,
 			char		*args,
@@ -2152,6 +2181,8 @@ int DaemonCore::Create_Process(
 {
 	int i;
 	char *ptmp;
+
+
 	char inheritbuf[_INHERITBUF_MAXSIZE];
 	AuthSock rsock;	// tcp command socket for new child
 	SafeSock ssock;	// udp command socket for new child
@@ -2162,8 +2193,44 @@ int DaemonCore::Create_Process(
 	SECURITY_ATTRIBUTES sa;
 	SECURITY_DESCRIPTOR sd;
 	BOOL inherit_handles = FALSE;
+
+	// Change semicolons into nulls.
+	env = ParseEnvArgsString(env, 1, true);
 #else
+
+	char **unix_env;
+	char **unix_args;
 	int inherit_handles;
+
+
+
+	
+	if( env == NULL )
+	{
+		dprintf(D_DAEMONCORE, "Create_Process: Env: NULL\n", env);
+		unix_env = new char*[1];
+		unix_env[0] = 0;
+	}
+	else
+	{
+		dprintf(D_DAEMONCORE, "Create_Process: Env: %s\n", env);
+		unix_env = ParseEnvArgsString(env, 1, true);
+	}
+
+	if( args == NULL )
+	{
+		dprintf(D_DAEMONCORE, "Create_Process: Arg: NULL\n", args);
+		unix_args = new char*[2];
+		unix_args[0] = strdup(name);
+		unix_args[1] = 0;
+	}
+	else
+	{
+		dprintf(D_DAEMONCORE, "Create_Process: Arg: %s\n", args);
+		unix_args = ParseEnvArgsString(args, 0, false);
+	}
+
+
 #endif
 
 	dprintf(D_DAEMONCORE,"In DaemonCore::Create_Process(%s,...)\n",name);
@@ -2171,7 +2238,8 @@ int DaemonCore::Create_Process(
 	// First do whatever error checking we can that is not platform specific
 
 	// check reaper_id validity
-	if ( (reaper_id < 1) || (reaper_id > maxReap) || (reapTable[reaper_id - 1].num == 0) ) {
+	if ( (reaper_id < 1) || (reaper_id > maxReap) 
+		 || (reapTable[reaper_id - 1].num == 0) ) {
 		dprintf(D_ALWAYS,"Create_Process: invalid reaper_id\n");
 		return FALSE;
 	}
@@ -2275,14 +2343,10 @@ int DaemonCore::Create_Process(
 	strcat(inheritbuf," 0");
 	
 	// Place inheritbuf into the environment as env variable CONDOR_INHERIT
-#ifdef WIN32
-	if ( !SetEnvironmentVariable("CONDOR_INHERIT",inheritbuf) ) {
-		dprintf(D_ALWAYS,"Create_Process: SetEnvironmentVariable failed, errno=%d\n",GetLastError());
+	if( !SetEnv("CONDOR_INHERIT", inheritbuf) ) {
+		dprintf(D_ALWAYS, "Create_Process: Failed to set CONDOR_INHERIT env.\n");
 		return FALSE;
 	}
-#else
-#endif
-
 
 #ifdef WIN32
 	// START A NEW PROCESS ON WIN32
@@ -2371,6 +2435,62 @@ int DaemonCore::Create_Process(
 	}
 #else
 	// START A NEW PROCESS ON UNIX
+
+	// First, check to see that the specified executable exists.
+	struct stat stat_struct;
+	if( stat(name, &stat_struct) == -1 )
+	{
+		dprintf(D_ALWAYS, 
+				"Create_Process: Specified executable cannot be found.\n");	   
+		return FALSE;
+	}
+
+	newpid = fork();
+	if( newpid == 0 ) // Child Process
+	{
+
+
+		// Switch to the specified priv level for good.
+		
+		//create a new process group if we are supposed to
+		if( new_process_group == TRUE )
+		{
+			// Set sid is the POSIX way of creating a new proc group
+			if( setsid() == -1 )
+			{
+				dprintf(D_ALWAYS, "Create_Process: setsid() failed: %s\n",
+						strerror(errno) );
+				exit(1); // Yes, we really want to exit here.
+			}
+		}
+		
+		if( cwd != NULL )
+		{
+			if( chdir(cwd) == -1 )
+			{
+				dprintf(D_ALWAYS, "Create_Process: chdir() failed: %s\n",
+						strerror(errno) );
+				exit(1); // Yes, we really want to exit here.
+			}
+		}
+
+		if( execve(name, unix_args, unix_env) == -1 )
+		{
+			dprintf(D_ALWAYS, "Create_Process: execve() failed: %s (%d)\n",
+					strerror(errno), errno );
+			exit(1); // Yes, we really want to exit here.
+		}		
+	}
+	else if( newpid > 0 ) // Parent Process
+	{
+		
+	}
+	else if( newpid < 0 )// Error condition
+	{
+		dprintf(D_ALWAYS, "Create Process: fork() failed: %s\n", 
+				strerror(errno));
+		return FALSE;
+	}
 #endif
 
 	// Now that we have a child, store the info in our pidTable
@@ -2803,6 +2923,63 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 
 	return TRUE;
 }
+
+#ifdef WIN32
+char *DaemonCore::ParseEnvArgsString(char *incomming, int reserve, env)
+{
+	
+	char *answer = strdup(env);
+	char *temp = answer;
+	while( (temp = strchr(temp, env?';':' ') ) )
+	{
+		temp = 0;
+	}
+	return answer;
+}
+#else
+char **DaemonCore::ParseEnvArgsString(char *incomming, int reserve,bool env)
+{
+	char seperator;
+	char **argv = 0;
+	char *temp = 0;
+	char *cur = 0;
+	int num_args = 0;
+	int i = 0;
+	int length = 0;
+
+	if(env) {
+		seperator = ';';
+	} else {
+		seperator = ' ';
+	}
+	// Count the number of arguments
+	temp = incomming;
+	do {
+		num_args++;
+		temp++;
+	} while( ( temp = strchr(temp, seperator) ) != NULL);
+
+	argv = new char *[num_args + reserve + 1];
+
+	cur = incomming;
+	while( (temp = strchr(cur, seperator) ) )
+	{
+		length = temp - cur;
+		argv[i] = new char[length + 1]; 
+		strncpy(argv[i], cur, length);
+		argv[i][length] = 0;
+		cur = temp + 1;
+		i++;
+	}
+
+	argv[i] = new char[strlen(cur) + 1];
+	strcpy(argv[i], cur);
+	
+	argv[num_args + reserve] = 0;
+
+	return argv;
+}
+#endif
 
 int
 BindAnyCommandPort(AuthSock *rsock, SafeSock *ssock)

@@ -1,6 +1,5 @@
-SRC_DIR = $(SRC_TREE)/condor_accountant
 CFLAGS = $(STD_C_FLAGS) $(PLATFORM_C_FLAGS)
-C_PLUS_FLAGS = -Wall $(STD_C_PLUS_FLAGS) -fno-implicit-templates -DNEW_PROC -DALLOC_DEBUG
+C_PLUS_FLAGS = -Wall $(STD_C_PLUS_FLAGS) -fno-implicit-templates -DNEW_PROC -DALLOC_DEBUG -DWANT_DC_PM
 
 SRC = timer_manager.C daemon_core.C daemon_core_main.C test_daemon_core.C instantiate.C condor_ipverify.C
 OBJ = timer_manager.o daemon_core.o daemon_core_main.o instantiate.o condor_ipverify.o

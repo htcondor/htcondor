@@ -126,7 +126,11 @@ Foo::Foo()
 
 	daemonCore->Register_Timer(3,(Eventcpp)timerone,"One-Time Timer",this);
 	daemonCore->Register_Command(1,"Command One",(CommandHandlercpp)com1,"com1()",this);
+
+// Can't catch signal 9 on unix.
+#ifdef WIN32
 	daemonCore->Register_Signal(9,"SIG9",(SignalHandler)sig9,"sig9()");
+#endif
 	daemonCore->Register_Signal(10,"SIG10",(SignalHandler)sig10,"sig10()");
 	daemonCore->Register_Reaper("General Reaper",(ReaperHandler)reaper,"reaper()");
 }
@@ -160,13 +164,15 @@ main_init(int argc, char *argv[])
 
 	f = new Foo();
 
-	daemonCore->Send_Signal(daemonCore->getpid(),9);
+#ifdef WIN32
+	daemonCore->Send_Signal(daemonCore->getpid(), 9);
+#endif
 
 	if ( argc == 1 ) {
 #ifdef WANT_DC_PM
 		result = daemonCore->Create_Process(
-					"C:\\home\\tannenba\\ws_nt\\NTconfig\\daemon_core_test\\Debug\\daemon_core_test.exe",
-					"daemon_core_test.exe -f -t -NOTAGAIN");
+					"/bin/ls",
+					"/bin/ls -l");
 		if ( result == FALSE ) {
 			printf("*** Create_Process failed\n");
 		} else {

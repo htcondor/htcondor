@@ -188,7 +188,8 @@ class DaemonCore : public Service
 		int		SetDataPtr( void * );
 		int		Register_DataPtr( void * );
 		void	*GetDataPtr();
-		
+
+	int SetEnv(char *key, char *value);
 		int		Create_Process(
 			char		*name,
 			char		*args,
@@ -379,6 +380,12 @@ class DaemonCore : public Service
 		void **curr_regdataptr;
 		int inServiceCommandSocket_flag;
 		// end of thread local storage
+		
+#ifdef WIN32
+	static char *ParseEnvArgsString(char *env, int reserve, bool env);
+#else
+	static char **ParseEnvArgsString(char *env, int reserve, bool env);
+#endif
 };
 
 #ifndef _NO_EXTERN_DAEMON_CORE

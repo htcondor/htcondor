@@ -26,7 +26,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
-static	char*  	_FileName_ = __FILE__;	// used by EXCEPT
 
 static char* DEFAULT_INDENT = "DaemonCore--> ";
 

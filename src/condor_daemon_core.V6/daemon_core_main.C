@@ -36,7 +36,6 @@
 #define AuthSock ReliSock
 #endif
 
-static char *_FileName_ = __FILE__;  // used by EXCEPT 
 
 #define _NO_EXTERN_DAEMON_CORE 1	
 #include "condor_daemon_core.h"
