@@ -41,6 +41,15 @@ BEGIN_NAMESPACE( classad )
 
 bool FunctionCall::initialized = false;
 
+static bool doSplitTime(
+    const Value &time, ClassAd * &splitClassAd);
+static void absTimeToClassAd(
+    const abstime_t &asecs, ClassAd * &splitClassAd);
+static void relTimeToClassAd(
+    double rsecs, ClassAd * &splitClassAd);
+static void make_formatted_time(
+    const struct tm &time_components, string &format, Value &result);
+
 // start up with an argument list of size 4
 FunctionCall::
 FunctionCall( )
@@ -101,6 +110,7 @@ FunctionCall( )
 		functionTable["getminutes"	] =	(void*)getField;
 		functionTable["getseconds"	] =	(void*)getField;
         functionTable["splittime"   ] = (void*)splitTime;
+        functionTable["formattime"  ] = (void*)formatTime;
         //functionTable["indays"		] =	(void*)inTimeUnits;
 		//functionTable["inhours"		] =	(void*)inTimeUnits;
 		//functionTable["inminutes"	] =	(void*)inTimeUnits;
@@ -1360,87 +1370,109 @@ getField(const char* name, const ArgumentList &argList, EvalState &state,
 
 bool FunctionCall::
 splitTime(const char* name, const ArgumentList &argList, EvalState &state, 
-	Value &val )
+	Value &result )
 {
 	Value 	arg;
-	abstime_t asecs;
-	double rsecs;
-	time_t	clock;
-	struct  tm tms;
     ClassAd *split;
 
 	if( argList.size( ) != 1 ) {
-		val.SetErrorValue( );
-		return( true );
+		result.SetErrorValue( );
+		return true;
 	}
 
 	if( !argList[0]->Evaluate( state, arg ) ) {
-		val.SetErrorValue( );
+		result.SetErrorValue( );
 		return false;	
 	}
 
-	if( arg.IsAbsoluteTimeValue( asecs ) ) {
-        split = new ClassAd;
-
-	 	clock = asecs.secs;
-		getGMTime( &clock, &tms );
-
-        split->InsertAttr("Type", "AbsoluteTime");
-        split->InsertAttr("Year", tms.tm_year + 1900);
-        split->InsertAttr("Month", tms.tm_mon + 1);
-        split->InsertAttr("Day", tms.tm_mday);
-        split->InsertAttr("Hours", tms.tm_hour);
-        split->InsertAttr("Minutes", tms.tm_min);
-        split->InsertAttr("Seconds", tms.tm_sec);
-        // Note that we convert the timezone from seconds to minutes.
-        split->InsertAttr("Offset",(int) (asecs.offset / 60));
-
-        val.SetClassAdValue(split);
-		return true;
-	} else if( arg.IsRelativeTimeValue( rsecs ) ) {
-        int		days, hrs, mins;
-        double  secs;
-        bool    is_negative;
-        
-        if( rsecs < 0 ) {
-            rsecs = -rsecs;
-            is_negative = true;
-        } else {
-            is_negative = false;
-        }
-        days = (int) rsecs;
-        hrs  = days % 86400;
-        mins = hrs  % 3600;
-        secs = (mins % 60) + (rsecs - trunc(rsecs));
-        days = days / 86400;
-        hrs  = hrs  / 3600;
-        mins = mins / 60;
-        
-        if (is_negative) {
-            if (days > 0) {
-                days = -days;
-            } else if (hrs > 0) {
-                hrs = -hrs;
-            } else if (mins > 0) {
-                mins = -mins;
-            } else {
-                secs = -secs;
-            }
-        }
-        
-        split = new ClassAd;
-        split->InsertAttr("Type", "RelativeTime");
-        split->InsertAttr("Days", days);
-        split->InsertAttr("Hours", hrs);
-        split->InsertAttr("Minutes", mins);
-        split->InsertAttr("Seconds", secs);
-        
-        val.SetClassAdValue(split);
-        return true; 
+    if (!arg.IsClassAdValue() && doSplitTime(arg, split)) {
+        result.SetClassAdValue(split);
     } else {
-        val.SetErrorValue( );
-        return( true );
+        result.SetErrorValue();
     }
+    return true;
+}
+
+bool FunctionCall::
+formatTime(const char* name, const ArgumentList &argList, EvalState &state, 
+	Value &result )
+{
+	Value 	   time_arg;
+    Value      format_arg;
+    time_t     epoch_time;
+	struct  tm time_components;
+    ClassAd    *splitClassAd;
+    string     format;
+    int        number_of_args;
+    bool       did_eval;
+
+    memset(&time_components, 0, sizeof(time_components));
+
+    did_eval = true;
+    number_of_args = argList.size();
+    if (number_of_args == 0) {
+        time(&epoch_time);
+        getLocalTime(&epoch_time, &time_components);
+        format = "%c";
+        make_formatted_time(time_components, format, result);
+    } else if (number_of_args < 3) {
+        // The first argument should be our time and should
+        // not be a relative time.
+        if (!argList[0]->Evaluate(state, time_arg)) {
+            did_eval = false;
+        } else if (time_arg.IsRelativeTimeValue()) {
+            result.SetErrorValue();
+        } else if (!doSplitTime(time_arg, splitClassAd)) {
+            result.SetErrorValue();
+        } else {
+            if (!splitClassAd->EvaluateAttrInt("Seconds", time_components.tm_sec)) {
+                time_components.tm_sec = 0;
+            }
+            if (!splitClassAd->EvaluateAttrInt("Minutes", time_components.tm_min)) {
+                time_components.tm_min = 0;
+            }
+            if (!splitClassAd->EvaluateAttrInt("Hours", time_components.tm_hour)) {
+                time_components.tm_hour = 0;
+            }
+            if (!splitClassAd->EvaluateAttrInt("Day", time_components.tm_mday)) {
+                time_components.tm_mday = 0;
+            }
+            if (!splitClassAd->EvaluateAttrInt("Month", time_components.tm_mon)) {
+                time_components.tm_mon = 0;
+            } else {
+                time_components.tm_mon--;
+            }
+            if (!splitClassAd->EvaluateAttrInt("Year", time_components.tm_year)) {
+                time_components.tm_year = 0;
+            } else {
+                time_components.tm_year -= 1900;;
+            }
+
+            // The second argument, if provided, must be a string
+            if (number_of_args == 1) {
+                format = "%c";
+                make_formatted_time(time_components, format, result);
+            } else {
+                if (!argList[1]->Evaluate(state, format_arg)) {
+                    did_eval = false;
+                } else {
+                    if (!format_arg.IsStringValue(format)) {
+                        result.SetErrorValue();
+                    } else {
+                        make_formatted_time(time_components, format, result);
+                    }
+                }
+            }
+            delete splitClassAd;
+        }
+    } else {
+        did_eval = false;
+    }
+
+    if (!did_eval) {
+        result.SetErrorValue();
+    }
+    return did_eval;
 }
 
 bool FunctionCall::
@@ -2222,5 +2254,114 @@ matchPattern( const char*,const ArgumentList &argList,EvalState &state,
 }
 
 #endif
+
+static bool 
+doSplitTime(const Value &time, ClassAd * &splitClassAd)
+{
+    bool             did_conversion;
+    int              integer;
+    double           real;
+    abstime_t        asecs;
+    double           rsecs;
+    const ClassAd    *classad;
+
+    did_conversion = true;
+    if (time.IsIntegerValue(integer)) {
+        asecs.secs = integer;
+        asecs.offset = timezone_offset();
+        absTimeToClassAd(asecs, splitClassAd);
+    } else if (time.IsRealValue(real)) {
+        asecs.secs = (int) real;
+        asecs.offset = timezone_offset();
+        absTimeToClassAd(asecs, splitClassAd);
+    } else if (time.IsAbsoluteTimeValue(asecs)) {
+        absTimeToClassAd(asecs, splitClassAd);
+    } else if (time.IsRelativeTimeValue(rsecs)) {
+        relTimeToClassAd(rsecs, splitClassAd);
+    } else if (time.IsClassAdValue(classad)) {
+        splitClassAd = new ClassAd;
+        splitClassAd->CopyFrom(*classad);
+    } else {
+        did_conversion = false;
+    }
+    return did_conversion;
+}
+
+static void 
+absTimeToClassAd(const abstime_t &asecs, ClassAd * &splitClassAd)
+{
+	time_t	  clock;
+    struct tm tms;
+
+    splitClassAd = new ClassAd;
+
+    clock = asecs.secs;
+    getGMTime( &clock, &tms );
+
+    splitClassAd->InsertAttr("Type", "AbsoluteTime");
+    splitClassAd->InsertAttr("Year", tms.tm_year + 1900);
+    splitClassAd->InsertAttr("Month", tms.tm_mon + 1);
+    splitClassAd->InsertAttr("Day", tms.tm_mday);
+    splitClassAd->InsertAttr("Hours", tms.tm_hour);
+    splitClassAd->InsertAttr("Minutes", tms.tm_min);
+    splitClassAd->InsertAttr("Seconds", tms.tm_sec);
+    // Note that we convert the timezone from seconds to minutes.
+    splitClassAd->InsertAttr("Offset",(int) (asecs.offset / 60));
+    
+    return;
+}
+
+static void 
+relTimeToClassAd(double rsecs, ClassAd * &splitClassAd) 
+{
+    int		days, hrs, mins;
+    double  secs;
+    bool    is_negative;
+
+    if( rsecs < 0 ) {
+        rsecs = -rsecs;
+        is_negative = true;
+    } else {
+        is_negative = false;
+    }
+    days = (int) rsecs;
+    hrs  = days % 86400;
+    mins = hrs  % 3600;
+    secs = (mins % 60) + (rsecs - trunc(rsecs));
+    days = days / 86400;
+    hrs  = hrs  / 3600;
+    mins = mins / 60;
+    
+    if (is_negative) {
+        if (days > 0) {
+            days = -days;
+        } else if (hrs > 0) {
+            hrs = -hrs;
+        } else if (mins > 0) {
+            mins = -mins;
+        } else {
+            secs = -secs;
+        }
+    }
+    
+    splitClassAd = new ClassAd;
+    splitClassAd->InsertAttr("Type", "RelativeTime");
+    splitClassAd->InsertAttr("Days", days);
+    splitClassAd->InsertAttr("Hours", hrs);
+    splitClassAd->InsertAttr("Minutes", mins);
+    splitClassAd->InsertAttr("Seconds", secs);
+    
+    return;
+}
+
+static void
+make_formatted_time(const struct tm &time_components, string &format,
+                    Value &result)
+{
+    char output[1024]; // yech
+    strftime(output, 1023, format.c_str(), &time_components);
+    result.SetStringValue(output);
+    return;
+}
 
 END_NAMESPACE // classad

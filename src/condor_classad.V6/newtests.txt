@@ -164,6 +164,7 @@ same splitTime($t).seconds, 5
 same splitTime($t).offset, 0
 
 eval t = absTime("1970-01-02T:03:04:05-06:00")
+eval tt = splitTime($t)
 same splitTime($t).year, 1970
 same splitTime($t).month, 1
 same splitTime($t).day, 2
@@ -178,3 +179,13 @@ same splitTime($t).days, 1
 same splitTime($t).hours, 2
 same splitTime($t).minutes, 3
 same splittime($t).seconds, 4.5
+eval tt = splitTime($t)
+
+eval t = absTime("1997-08-30T15:04:05-0600")
+eval f = formatTime($t, "%A %a")
+same $f, "Sunday Sun"
+eval f = formatTime($t, "%B %b")
+same $f, "August Aug"
+eval f = formatTime(splitTime($t), "%H:%M:%S")
+same $f, "15:04:05"
+eval f = formatTime($t)
