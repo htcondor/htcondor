@@ -2470,7 +2470,7 @@ log_submit()
 	 UserLog usr_log;
 	 SubmitEvent jobSubmit;
 
-	if (Quiet) fprintf(stdout, "Logging submit event(s)\n");
+	if (Quiet) fprintf(stdout, "Logging submit event(s)");
 
 	strcpy (jobSubmit.submitHost, ScheddAddr);
 
