@@ -587,10 +587,15 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 	}
 
 	// check if anything bad happened
-	if (ClassAdExprFPE==true || errno==EDOM || errno==ERANGE || comp==HUGE_VAL)
-		result.setErrorValue ();
-	else
-		result.setRealValue (comp);
+	if (ClassAdExprFPE==true || errno==EDOM || errno==ERANGE) {
+	  result.setErrorValue ();
+#ifdef WIN32
+	} else if (comp==HUGE_VAL) {
+	  result.setErrorValue ();
+#endif
+	} else {
+	  result.setRealValue (comp);
+	}
 
 	// restore the state
 #ifndef WIN32 
