@@ -41,6 +41,12 @@ with no arguments or with the \Opt{-master} argument specifying
 a daemon will cause the reconfiguration of the \Condor{master}
 daemon and all the child processes of the \Condor{master}.
 
+For security purposes (authentication and authorization),
+this command requires an administrator's level of access.
+See
+section~\ref{sec:Config-Security} on page~\pageref{sec:Config-Security}
+for further explanation.
+
 \begin{Options}
     \ToolArgsBaseDesc
     \OptItem{\Opt{-full}}{Perform a full reconfiguration.

@@ -35,6 +35,12 @@ all daemons including the \Condor{master}.
 The command \Condor{off -otherdaemon} will shut down
 only the specified daemon.
 
+For security purposes (authentication and authorization),
+this command requires an administrator's level of access.
+See
+section~\ref{sec:Config-Security} on page~\pageref{sec:Config-Security}
+for further explanation.
+
 \begin{Options}
 	\ToolArgsBaseDesc
 	\OptItem{\Opt{-graceful}}{Gracefully shutdown daemons (the default)}
