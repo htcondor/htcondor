@@ -27,6 +27,8 @@
 #include "collectionBase.h"
 #include "classad.h"
 
+using namespace std;
+
 BEGIN_NAMESPACE( classad )
 //-------------classad templates --------------
 
@@ -93,6 +95,11 @@ template hash_map<string, ServerTransaction*, StringHash>::iterator;
 
 // operations in transaction
 template list<XactionRecord>;
+
+#if (__GNUC__>=3)
+template string std::operator+<char, std::char_traits<char>, std::allocator<char> >(const string&, const string&);
+#endif
+
 #endif
 
 class _ClassAdInit 
