@@ -471,7 +471,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
 //-----------------------------------------------------------------
 
 static void usage(char* name) {
-  fprintf( stderr, "usage: %s [ -all | -usage | { -setprio | -setfactor }  user value | -resetusage user | -resetall | -getreslist user ] [-allusers | -activefrom month day year] [-l]\n", name );
+  fprintf( stderr, "usage: %s [ -pool hostname ] [ -all | -usage | { -setprio | -setfactor }  user value | -resetusage user | -resetall | -getreslist user ] [-allusers | -activefrom month day year] [-l]\n", name );
   exit(1);
 }
 
