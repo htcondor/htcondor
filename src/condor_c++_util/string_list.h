@@ -21,7 +21,8 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
+#ifndef __CONDOR_STRING_LIST_H
+#define __CONDOR_STRING_LIST_H
 
 #include "condor_common.h"
 #include "condor_constants.h"
@@ -48,3 +49,5 @@ public:
 private:
 	List<char> strings;
 };
+
+#endif
