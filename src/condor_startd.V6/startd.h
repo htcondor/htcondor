@@ -50,9 +50,7 @@
 #include "sig_install.h"
 #else
 // Windoze specific stuff
-int WINAPI KBInitialize(void);	/* in the Kbdd DLL */
-int WINAPI KBShutdown(void);	/* in the Kbdd DLL */
-int WINAPI KBQuery(void);		/* in the Kbdd DLL */
+extern "C" int WINAPI KBShutdown(void);	/* in the Kbdd DLL */
 #endif
 
 // Startd includes
