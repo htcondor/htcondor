@@ -3,7 +3,7 @@ DESTDIR = /usr/include
 # This include will redefine DESTDIR, if Makefile.config exists
 include Makefile.config
 
-LD_FLAGS = $(EXTRA_LD_FLAGS) -L. -lclassad
+LD_FLAGS = $(EXTRA_LD_FLAGS) -L. -l$(LIB_LINK_NAME)
 
 all:: $(LIB_NAME) classad_functional_tester classad_unit_tester classad_version cxi extra_tests test_xml sample
 

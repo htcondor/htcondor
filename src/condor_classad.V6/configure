@@ -121,18 +121,19 @@ if [ -z "${lib_name}" ]
 then
 	if [ "${enable_shlib}" = 1 ] && [ "${enable_namespace}" = 1 ]
 	then
-		lib_name="libclassad_sh_ns.a"
+		lib_name="classad_sh_ns"
 	elif [ "${enable_shlib}" = 1 ]
 	then 
-		lib_name="libclassad_sh.a"
+		lib_name="classad_sh"
 	elif [ "${enable_namespace}" = 1 ]
 	then 
-		lib_name="libclassad_ns.a"
+		lib_name="classad_ns"
 	else
-		lib_name="libclassad.a"
+		lib_name="classad"
 	fi
 fi
-echo "LIB_NAME = ${lib_name}" >> Makefile.config
+echo "LIB_NAME = lib${lib_name}.a" >> Makefile.config
+echo "LIB_LINK_NAME = ${lib_name}" >> Makefile.config
 
 echo "Creating classad_features.h..."
 rm -f classad_features.h
