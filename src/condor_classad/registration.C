@@ -71,7 +71,7 @@ Registration::~Registration()
 //
 // The type is case-insensitive.
 //
-int Registration::RegisterType(char *type)
+int Registration::RegisterType(const char *type)
 {
     for(int i=0; i<regiNumber; i++)
     {
