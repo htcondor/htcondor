@@ -6,7 +6,6 @@
 #include "classad_collection_ops.h"
 
 static char *_FileName_ = __FILE__;
-static bool makePartitionHashKey( ClassAd *, StringSet &, MyString & );
 static int  hashFunction( const MyString&, int );
 
 //-----------------------------------------------------------------------
@@ -766,6 +765,7 @@ bool ClassAdCollection::ChangeClassAd(const MyString& OID)
 
 bool ClassAdCollection::RemoveCollection(int CoID, BaseCollection* Coll)
 {
+	Coll->NotifyChildItorsDeletion( CoID );
 	delete Coll;
 	if (Collections.remove(CoID)==-1) return false;
 	return true;
@@ -1007,21 +1007,25 @@ partitionHashFcn( const MyString &str, int numBkts )
 	return( hashVal % numBkts );
 }
 
-static bool
+bool ClassAdCollection::
 makePartitionHashKey( ClassAd *ad, StringSet &attrs, MyString &val )
 {
 	Sink	snk;
 	char	*tmp=NULL;
 	int		alen=0;
+	Value	value;
 	MyString attrName;
+	ExprTree *tree;
 
 	snk.SetSink( tmp, alen, false );
 	attrs.StartIterations( );
 	while (attrs.Iterate(attrName)) {
-			// we should perhaps serialize the flattened expression
-		ExprTree* expr=ad->Lookup(attrName.Value());
-		if (!expr) return( false );
-		expr->ToSink( snk );
+		if( ( tree = ad->Lookup( attrName.Value() ) ) == NULL ||
+			!tree->Evaluate( value ) 	||
+			!value.ToSink( snk ) 	|| 
+			!snk.SendToSink( "@@", 2 ) ) {
+				return( false );
+		}
 	}
 	snk.FlushSink( );
 	val = tmp;
