@@ -93,7 +93,7 @@ void
 StateMachine::execute()
 {
 	State		*state_ptr;
-	Transition	*transition;
+	Transition	*transition = 0;
 	int			next_state;
 	int			event;
 	EventHandler	h( fsa_sig_handler, asynch_events );
@@ -106,8 +106,10 @@ StateMachine::execute()
 	h.install();
 
 	while( cur_state != end_state ) {
-		dprintf( D_ALWAYS, "\t*FSM* Transitioning to state \"%s\"\n",
-											StateNames.get_name(cur_state) );
+		if ( transition != no_print_tr ) {
+			dprintf( D_ALWAYS, "\t*FSM* Transitioning to state \"%s\"\n",
+					StateNames.get_name(cur_state) );
+		}
 		state_ptr = find_state( cur_state );
 		next_state = sigsetjmp( JmpBuf, TRUE );
 		if( !next_state ) {
@@ -115,10 +117,13 @@ StateMachine::execute()
 			if( state_ptr->func ) {
 				h.allow_events( state_ptr->asynch_events );
 
-				dprintf( D_ALWAYS, "\t*FSM* Executing state func \"%s\" [ ",
+				if ( transition != no_print_tr ) {
+					dprintf( D_ALWAYS, 
+							"\t*FSM* Executing state func \"%s\" [ ",
 							StateFuncNames.get_name((long)state_ptr->func) );
-				state_ptr->display_events();
-				dprintf( D_ALWAYS | D_NOHEADER, " ]\n" );
+					state_ptr->display_events();
+					dprintf( D_ALWAYS | D_NOHEADER, " ]\n" );
+				}
 
 					
 				event = state_ptr->func();
@@ -129,9 +134,13 @@ StateMachine::execute()
 			}
 
 			transition = find_transition( event );
+
 			if( transition->func ) {
-				dprintf( D_ALWAYS, "\t*FSM* Executing transition function \"%s\"\n",
+				if (transition != no_print_tr) {
+					dprintf( D_ALWAYS, 
+							"\t*FSM* Executing transition function \"%s\"\n",
 							TransFuncNames.get_name((long)transition->func) );
+				}
 				transition->func();
 			}
 			next_state = transition->to;
@@ -150,13 +159,19 @@ fsa_sig_handler( int event )
 {
 	Transition	*transition;
 
-	dprintf( D_ALWAYS, "\t*FSM* Got asynchronous event \"%s\"\n",
-											EventNames.get_name(event) );
-
 	transition = CurFSA->find_transition( event );
+
+	if (transition != CurFSA->no_print_tr) {
+		dprintf( D_ALWAYS, "\t*FSM* Got asynchronous event \"%s\"\n",
+				EventNames.get_name(event) );
+	}
+
 	if( transition->func ) {
-		dprintf( D_ALWAYS, "\t*FSM* Executing transition function \"%s\"\n",
+		if (transition != CurFSA->no_print_tr) {
+			dprintf( D_ALWAYS,
+					"\t*FSM* Executing transition function \"%s\"\n",
 					TransFuncNames.get_name((long)transition->func) );
+		}
 		if ( transition->func() == -2 ) {
 			dprintf( D_ALWAYS,"\t*FSM* Aborting transition function \"%s\"\n",
 					TransFuncNames.get_name((long)transition->func) );
@@ -200,8 +215,33 @@ State::display()
 void
 Transition::display()
 {
-	dprintf( D_ALWAYS,TransFmt, StateNames.get_name(from), EventNames.get_name(event), StateNames.get_name(to), TransFuncNames.get_name((long)func));
+	dprintf( D_ALWAYS,TransFmt, StateNames.get_name(from), 
+			EventNames.get_name(event), StateNames.get_name(to), 
+			TransFuncNames.get_name((long)func));
 }
+
+
+void
+Transition::dot_print(FILE *file, char *color)
+{
+	if (to != 0) {
+		fprintf(file, "\t%s -> %s [label = \"%s(%s)\", color = \"%s\"];\n",
+				StateNames.get_name(from),
+				StateNames.get_name(to),
+				EventNames.get_name(event),
+				TransFuncNames.get_name((long)func),
+				color);
+	} else {
+		fprintf(file, "\t%s -> %s [label = \"%s(%s)\", color = \"%s\"];\n",
+				StateNames.get_name(from),
+				StateNames.get_name(from),
+				EventNames.get_name(event),
+				TransFuncNames.get_name((long)func),
+				color);
+	}
+}
+
+
 
 void
 StateMachine::display()
@@ -228,6 +268,22 @@ StateMachine::display()
 	}
 	dprintf( D_ALWAYS, "}\n" );
 }
+
+void
+StateMachine::dot_print(FILE *file)
+{
+	int		i;
+	char	*color;
+
+	fprintf(file, "digraph FSA {\n");
+
+	for( i=0; i<n_transitions; i++ ) {
+		color = (is_asynch_event(TransitionTab[i].event) ? "red" : "blue");
+		TransitionTab[i].dot_print(file, color);
+	}
+	fprintf(file, "}\n");
+}
+
 
 State *
 StateMachine::find_state( int id )
@@ -257,7 +313,7 @@ StateMachine::find_transition( int event )
 	}
 
 	EXCEPT(
-		"ERROR: Can't find transition out of state \"%s\" for event \"%s\"", 
+		"Can't find transition out of state \"%s\" for event \"%s\"", 
 		StateNames.get_name(cur_state), 
 		EventNames.get_name(event) 
 	);

@@ -28,9 +28,14 @@ public:
 	STATE_FUNC	func;
 };
 
+
+class StateMachine;
+
+
 class Transition {
 public:
 	void display();
+	void dot_print(FILE *, char *);
 
 	int				from;
 	int				event;
@@ -47,6 +52,10 @@ public:
 	void execute();
 	Transition	*find_transition( int event );
 	void display();
+	void dot_print(FILE *);
+	void dont_print_transition( Transition *tr) { no_print_tr = tr; }
+	Transition  *no_print_tr;
+
 private:
 	State		*find_state( int state_id );
 	void		init_asynch_events( State & state );
