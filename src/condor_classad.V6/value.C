@@ -22,10 +22,21 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "common.h"
 #include "operators.h"
 #include "value.h"
 
 BEGIN_NAMESPACE( classad )
+
+const double Value::ScaleFactor[] = {
+	0.0, 						// none
+	1.0, 						// B
+	1024.0,						// Kilo
+	1024.0*1024.0, 				// Mega
+	1024.0*1024.0*1024.0, 		// Giga
+	1024.0*1024.0*1024.0*1024.0	// Terra
+};
+
 
 Value::
 Value( )
