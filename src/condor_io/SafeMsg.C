@@ -72,6 +72,7 @@ void _condorPacket :: init()
     incomingEncKeyId_ = 0;
     outgoingEncKeyId_ = 0;
     outgoingEidLen_   = 0;
+	md_ = NULL;
 }
 
 const char * _condorPacket :: isDataMD5ed()
