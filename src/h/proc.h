@@ -45,6 +45,7 @@ typedef struct {
 #define VANILLA		5	/* Non- condor linked jobs (PVMD) */
 #define PVMD		6	/* Explicit, PVM daemon process */
 #define SCHED_UNIVERSE	7	/* Scheduler universe: run job locally */
+#define MPI         8   /* Parallel app via MPI */
 
 #if !defined(WIN32) // hopefully we won't need PROC structures in V6 so don't bother porting to NT
 /*
