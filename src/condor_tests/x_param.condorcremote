@@ -1,0 +1,17 @@
+startjobs = 10
+incrementjobs = 10
+maxjobs = 30
+duration = 20
+
+universe = vanilla
+type = jobs
+
+condor = install
+condorconfig = condor_config
+condorlocal = condor_config.local
+condortemplate = x_condor_config_template
+
+ports = dynamic
+vms	= 10
+#encryption = 3DES,BLOWFISH
+#authentication = FS,CLAIMTOBE
