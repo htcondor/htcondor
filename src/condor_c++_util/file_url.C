@@ -42,4 +42,4 @@ int condor_file_open_ckpt_file( const char *name, int flags,
 }
 
 
-URLProtocol CondorFileUrl("file", "CondorFileUrl", condor_file_open_ckpt_file);
+URLProtocol FILE_URL("file", "CondorFileUrl", condor_file_open_ckpt_file);

@@ -95,6 +95,6 @@ int condor_bytes_stream_open_ckpt_file( const char *name, int flags,
 }
 
 
-URLProtocol CondorByteStreamProtocol("cbstp", 
-									 "CondorByteStreamProtocol",
-									 condor_bytes_stream_open_ckpt_file);
+URLProtocol CBSTP_URL("cbstp", 
+					 "CondorByteStreamProtocol",
+					 condor_bytes_stream_open_ckpt_file);
