@@ -580,8 +580,8 @@ not_supported{
 #else
 	int fstatfs( map(int fd), struct statfs *buf ) {
 #endif
-	out statfs( buf );
-		alloc( buf, STATFS_SIZE );
+	out code( buf );
+	alloc( buf, STATFS_SIZE );
 	}
 #endif
 
