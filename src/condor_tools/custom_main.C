@@ -173,8 +173,8 @@ main()
 	printf( "\t%s\n", condor_developers.gen() );
 	printf( "\t%s\n", local_dir.gen() );
 	printf( "\t%s\n", has_afs.gen() );
-	printf( "\t%s\n", use_afs.gen() );
 	if( we_have_afs ) {
+		printf( "\t%s\n", use_afs.gen() );
 		printf( "\t%s\n", fs_path.gen() );
 		printf( "\t%s\n", vos_path.gen() );
 	}
