@@ -41,11 +41,7 @@ extern "C" {
 unsigned int
 my_ip_addr()
 {
-	static unsigned int ip_addr = 0;
-	if( ! ip_addr ) {
-		ip_addr = syscall_sock->get_ip_int();
-	}
-	return ip_addr;
+	return syscall_sock->get_ip_int();
 }
 
 } /* extern "C" */
