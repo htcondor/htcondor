@@ -121,14 +121,17 @@ V6_7_SRC		-a V6_6_SRC \
 
 V_TRUNK_SRC		-a \
 			V6_COMMON \
+			src/condor_c-gahp \
 			src/condor_chirp \
 			src/condor_classad.V6 \
 			src/condor_classad_analysis \
 			src/condor_daemon_client \
 			src/condor_data_manager \
 			src/condor_dcskel \
+			src/condor_drmaa \
 			src/condor_gridmanager \
 			src/condor_netman \
+			src/condor_test_suite_base \
 			src/condor_test_suite_java \
 			src/condor_test_suite_pvm \
 			src/condor_test_dagman \
