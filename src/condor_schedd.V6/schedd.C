@@ -788,8 +788,8 @@ count( ClassAd *job )
 {
 	int		status;
 	int		niceUser;
-	char 	buf[100];
-	char 	buf2[100];
+	char 	buf[_POSIX_PATH_MAX];
+	char 	buf2[_POSIX_PATH_MAX];
 	char*	x509userproxy;
 	char*	owner;
 	int		cur_hosts;
@@ -812,7 +812,7 @@ count( ClassAd *job )
 		universe = STANDARD;
 	}
 
-	if(job->LookupString(ATTR_X509_USER_PROXY, buf ) == 0) {
+	if(job->LookupString(ATTR_X509_USER_PROXY, buf, _POSIX_PATH_MAX ) == 0) {
 		x509userproxy = NULL;
 	} else {
 		x509userproxy = strdup(buf);
