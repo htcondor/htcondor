@@ -64,11 +64,8 @@ Condor_Auth_Base :: Condor_Auth_Base(ReliSock * sock, int mode)
 
     free(username);
   
-    if ((localDomain_ = get_uid_domain()) == NULL) {
-        // This is not right!
-        dprintf(D_SECURITY, "Unable to determine local UID domain!");
-        localDomain_ = 0;
-    }
+		// this will *always* succeed
+	localDomain_ = param( "UID_DOMAIN" );
 
     setRemoteHost(inet_ntoa(mySock_->endpoint()->sin_addr));
     // This is done for protocols such as fs, anonymous. Kerberos should

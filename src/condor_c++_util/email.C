@@ -95,7 +95,7 @@ email_user_open( ClassAd *jobAd, const char *subject )
 			// If that's not there, look for UID_DOMAIN in the config
 			// file
 		if( ! domain ) {
-			domain = get_uid_domain();
+			domain = param( "UID_DOMAIN" );
 		} 
 
 			// Now, we can append the domain to our address.
