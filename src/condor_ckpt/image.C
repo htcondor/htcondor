@@ -26,12 +26,21 @@
 **
 */ 
 
+#if !defined(Solaris)
 #define _POSIX_SOURCE
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <sys/types.h>
+#include <unistd.h>
+#if defined(Solaris)
+#include <sys/mman.h>		// for mmap()
+#include <sys/syscall.h>        // for syscall()
+#include <sys/time.h>
+#include </usr/ucbinclude/sys/rusage.h>	// for rusage
+#include <netconfig.h>		// for setnetconfig()
+#endif
 #include <sys/stat.h>
 #include <sys/times.h>
 #if !defined(HPUX9)
@@ -71,6 +80,9 @@ extern "C" void condor_restore_sigstates();
 #	include <net/nh.h>
 #elif defined(HPUX9)
 #	include <netinet/in.h>
+#elif defined(Solaris) && defined(sun4m)
+    #define htonl(x)        (x)
+    #define ntohl(x)        (x)
 #else
 	extern "C" unsigned long htonl( unsigned long );
 	extern "C" unsigned long ntohl( unsigned long );
@@ -125,12 +137,13 @@ Header::Display()
 }
 
 void
-SegMap::Init( const char *n, RAW_ADDR c, long l )
+SegMap::Init( const char *n, RAW_ADDR c, long l, int p )
 {
 	strcpy( name, n );
 	file_loc = -1;
 	core_loc = c;
 	len = l;
+	prot = p;
 }
 
 void
@@ -196,6 +209,16 @@ _condor_prestart( int syscall_mode )
 
 	calc_stack_to_save();
 
+	/* On the first call to setnetconfig(), space is malloc()'ed to store
+	   the net configuration database.  This call is made by Solaris during
+	   a socket() call, which we do inside the Checkpoint signal handler.
+	   So, we call setnetconfig() here to do the malloc() before we are
+	   in the signal handler.  (Doing a malloc() inside a signal handler
+	   can have nasty consequences.)  -Jim B.  */
+#if defined(Solaris)
+	setnetconfig();
+#endif
+
 }
 
 extern "C" void
@@ -235,21 +258,65 @@ _install_signal_handler( int sig, SIG_HANDLER handler )
 void
 Image::Save()
 {
+#if !defined(Solaris)
 	RAW_ADDR	data_start, data_end;
 	RAW_ADDR	stack_start, stack_end;
+#else
+	RAW_ADDR	addr_start, addr_end;
+	int             numsegs, prot, rtn, stackseg;
+#endif
 	ssize_t		pos;
 	int			i;
 
+
 	head.Init();
+
+#if !defined(Solaris)
 
 		// Set up data segment
 	data_start = data_start_addr();
 	data_end = data_end_addr();
-	AddSegment( "DATA", data_start, data_end );
+	AddSegment( "DATA", data_start, data_end, 0 );
 
 		// Set up stack segment
 	find_stack_location( stack_start, stack_end );
-	AddSegment( "STACK", stack_start, stack_end );
+	AddSegment( "STACK", stack_start, stack_end, 0 );
+
+#else
+
+	numsegs = num_segments();
+	for( i=0; i<numsegs; i++ ) {
+		rtn = segment_bounds(i, addr_start, addr_end, prot);
+		switch (rtn) {
+		case -1:
+			EXCEPT( "Internal error, segment_bounds"
+				"returned -1");
+			break;
+		case 0:
+			AddSegment( "SHARED LIB", addr_start, addr_end, prot);
+			break;
+		case 1:
+			break;		// don't checkpoint text segment
+		case 2:
+			stackseg = i;	// don't add STACK segment until the end
+			break;
+		case 3:
+			AddSegment( "DATA", addr_start, addr_end, prot);
+			break;
+		default:
+			EXCEPT( "Internal error, segment_bounds"
+				"returned unrecognized value");
+		}
+	}	
+	// now add stack segment
+	rtn = segment_bounds(stackseg, addr_start, addr_end, prot);
+	AddSegment( "STACK", addr_start, addr_end, prot);
+	dprintf( D_ALWAYS, "stack start = 0x%lx, stack end = 0x%lx\n",
+			addr_start, addr_end);
+	dprintf( D_ALWAYS, "Current segmap dump follows\n");
+	display_prmap();
+
+#endif
 
 		// Calculate positions of segments in ckpt file
 	pos = sizeof(Header) + head.N_Segs() * sizeof(SegMap);
@@ -290,7 +357,7 @@ Image::Display()
 }
 
 void
-Image::AddSegment( const char *name, RAW_ADDR start, RAW_ADDR end )
+Image::AddSegment( const char *name, RAW_ADDR start, RAW_ADDR end, int prot )
 {
 	long	len = end - start;
 	int idx = head.N_Segs();
@@ -300,7 +367,7 @@ Image::AddSegment( const char *name, RAW_ADDR start, RAW_ADDR end )
 		exit( 1 );
 	}
 	head.IncrSegs();
-	map[idx].Init( name, start, len );
+	map[idx].Init( name, start, len, prot );
 }
 
 char *
@@ -325,11 +392,11 @@ SegMap::Contains( void *addr )
 }
 
 
-#if defined(PVM_CHECKPOINTING) || 1
+#if defined(PVM_CHECKPOINTING)
 extern "C" user_restore_pre(char *, int);
 extern "C" user_restore_post(char *, int);
 
-char	global_user_data[256];
+int		global_user_data;
 #endif
 
 /*
@@ -340,21 +407,27 @@ void
 Image::Restore()
 {
 	int		save_fd = fd;
-	char	user_data[256];
+	int		user_data;
 
-#if defined(PVM_CHECKPOINTING) || 1
+#if defined(PVM_CHECKPOINTING)
 	user_restore_pre(user_data, sizeof(user_data));
 #endif
 		// Overwrite our data segment with the one saved at checkpoint
 		// time.
-	RestoreSeg( "DATA" );
+//	RestoreSeg( "DATA" );
+
+		// Overwrite our data segment with the one saved at checkpoint
+		// time *and* restore any saved shared libraries.
+	RestoreAllSegsExceptStack();
+
+
 
 		// We have just overwritten our data segment, so the image
 		// we are working with has been overwritten too.  Fortunately,
 		// the only thing that has changed is the file descriptor.
 	fd = save_fd;
 
-#if defined(PVM_CHECKPOINTING) || 1
+#if defined(PVM_CHECKPOINTING)
 	memcpy(global_user_data, user_data, sizeof(user_data));
 #endif
 
@@ -383,10 +456,35 @@ Image::RestoreSeg( const char *seg_name )
 			}
 		}
 	}
-	fprintf( stderr, "Can't find segment \"%s\"\n", seg_name );
+	dprintf( D_ALWAYS, "Can't find segment \"%s\"\n", seg_name );
 	exit( 1 );
 }
 
+void Image::RestoreAllSegsExceptStack()
+{
+	int		i;
+	int		save_fd = fd;
+
+#if defined(Solaris)
+	dprintf( D_ALWAYS, "Current segmap dump follows\n");
+	display_prmap();
+#endif
+	for( i=0; i<head.N_Segs(); i++ ) {
+		if( strcmp("STACK",map[i].GetName()) != 0 ) {
+			if( (pos = map[i].Read(fd,pos)) < 0 ) {
+				perror( "SegMap::Read()" );
+				exit( 1 );
+			}
+		}
+		else if (i<head.N_Segs()-1) {
+			dprintf( D_ALWAYS, "Checkpoint file error: STACK is not the "
+					"last segment in ckpt file.\n");
+			exit( 1 );
+		}
+		fd = save_fd;
+	}
+
+}
 
 
 
@@ -415,7 +513,7 @@ RestoreStack()
 		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 	}
 
-#if defined(PVM_CHECKPOINTING) || 1
+#if defined(PVM_CHECKPOINTING)
 	user_restore_post(global_user_data, sizeof(global_user_data));
 #endif
 
@@ -425,11 +523,7 @@ RestoreStack()
 int
 Image::Write()
 {
-	if (fd == -1) {
-		return Write( file_name );
-	} else {
-		return Write( fd );
-	}
+	return Write( file_name );
 }
 
 
@@ -586,14 +680,12 @@ Image::Read()
 {
 	int		i;
 	ssize_t	nbytes;
-	char	buf[100];
 
 		// Make sure we have a valid file descriptor to read from
 	if( fd < 0 && file_name && file_name[0] ) {
 		if( (fd=open_url(file_name,O_RDONLY,0)) < 0 ) {
 			if( (fd=open_ckpt_file(file_name,O_RDONLY,0)) < 0 ) {
-				sprintf(buf, "open_ckpt_file(%s)", file_name);
-				perror( buf );
+				perror( "open_ckpt_file" );
 				exit( 1 );
 			}
 		}
@@ -604,6 +696,7 @@ Image::Read()
 		return -1;
 	}
 	pos += nbytes;
+	dprintf( D_ALWAYS, "Read headers OK\n" );
 
 		// Read in the segment maps
 	for( i=0; i<head.N_Segs(); i++ ) {
@@ -611,7 +704,9 @@ Image::Read()
 			return -1;
 		}
 		pos += nbytes;
+		dprintf( D_ALWAYS, "Read SegMap[%d] OK\n", i );
 	}
+	dprintf( D_ALWAYS, "Read all SegMaps OK\n" );
 
 	return 0;
 }
@@ -651,6 +746,53 @@ SegMap::Read( int fd, ssize_t pos )
 		cur_brk = (char *)sbrk(0);
 	}
 
+#if defined(Solaris)
+	else if ( strcmp(name,"SHARED LIB") == 0) {
+//		long pageSize = sysconf(_SC_PAGESIZE);
+		int zfd, dllSize = len;
+		if ((zfd = SYSCALL(SYS_open, "/dev/zero", O_RDWR)) == -1) {
+			perror("open");
+			exit(2);
+		}
+//		dllSize += pageSize - (dllSize % pageSize);
+
+	  /* Some notes about mmap:
+	     - The MAP_FIXED flag will ensure that the memory allocated is
+	       exactly what was requested.
+	     - Both the addr and off parameters must be aligned and sized
+	       according to the value returned by getpagesize() when MAP_FIXED
+	       is used.  If the len parameter is not a multiple of the page
+	       size for the machine, then the system will automatically round
+	       up. 
+	     - Protections must allow writing, so that the dll data can be
+	       copied into memory. 
+	     - Memory should be private, so we don't mess with any other
+	       processes that might be accessing the same library. */
+
+//		fprintf(stderr, "Calling mmap(loc = 0x%lx, size = 0x%lx, "
+//			"prot = %d, fd = %d, offset = 0)\n", core_loc, dllSize,
+//			prot|PROT_WRITE, zfd);
+
+		if ((MMAP((caddr_t)core_loc, (size_t)dllSize,
+				prot|PROT_WRITE,
+				MAP_PRIVATE|MAP_FIXED, zfd,
+				(off_t)0)) == MAP_FAILED) {
+			perror("mmap");
+			fprintf(stderr, "Attempted to mmap /dev/zero at "
+				"address 0x%lx, size 0x%lx\n", core_loc,
+				dllSize);
+			fprintf(stderr, "Current segmap dump follows\n");
+			display_prmap();
+			exit(3);
+		}
+
+		if (SYSCALL(SYS_close, zfd) < 0) {
+			perror("close");
+			exit(4);
+		}
+	}		
+#endif		
+
 		// This overwrites an entire segment of our address space
 		// (data or stack).  Assume we have been handed an fd which
 		// can be read by purely local syscalls, and we don't need
@@ -661,8 +803,13 @@ SegMap::Read( int fd, ssize_t pos )
 	ptr = (char *)core_loc;
 	while( bytes_to_go ) {
 		read_size = bytes_to_go > 4096 ? 4096 : bytes_to_go;
+#if defined(Solaris)
+		nbytes =  SYSCALL(SYS_read, fd, (void *)ptr, read_size );
+#else
 		nbytes =  syscall( SYS_read, fd, (void *)ptr, read_size );
+#endif
 		if( nbytes < 0 ) {
+			fprintf(stderr, "in Segmap::Read(): fd = %d\n");
 			return -1;
 		}
 		bytes_to_go -= nbytes;
@@ -743,6 +890,12 @@ Checkpoint( int sig, int code, void *scp )
 		dprintf( D_ALWAYS, "About to save signal state\n" );
 		condor_save_sigstates();
 		dprintf( D_ALWAYS, "Done saving signal state\n" );
+#endif
+#undef WAIT_FOR_DEBUGGER
+#if defined(WAIT_FOR_DEBUGGER)
+	int		wait_up = 1;
+	while( wait_up )
+		;
 #endif
 		SaveFileState();
 		MyImage.Save();
@@ -861,15 +1014,9 @@ void
 ckpt()
 {
 	int		scm;
-	sigset_t	n_sigmask;
-	sigset_t	o_sigmask;
 
-	sigemptyset(&n_sigmask);
-	sigaddset(&n_sigmask, SIGTSTP);
-	sigaddset(&n_sigmask, SIGUSR1);
 	dprintf( D_ALWAYS, "About to send CHECKPOINT signal to SELF\n" );
 	SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-	sigprocmask(SIG_UNBLOCK, &n_sigmask, &o_sigmask);
 	kill( getpid(), SIGTSTP );
 }
 
