@@ -131,7 +131,7 @@ sub Init {
     $Hawkeye->AutoIndexSet( 0 );
 
     # Pull out the top 'header' info
-    $_ =`top -b -n 1 |grep COMMAND`;
+    $_ =`/bin/top -b -n 1 |grep COMMAND`;
     chomp;
     s/^\s+//;
     @TopHeader = split ( /\s+/, $_ );
