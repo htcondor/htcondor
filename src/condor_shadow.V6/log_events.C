@@ -35,6 +35,9 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "condor_io.h"
+#include "shadow.h"
+#include "condor_config.h"
+#include "condor_qmgr.h"
 
 #if !defined( WCOREDUMP )
 #define  WCOREDUMP(stat)      ((stat)&WCOREFLG)
@@ -386,6 +389,8 @@ void record_suspension_hack(unsigned int action)
 	int total_suspensions;
 	int last_suspension_time;
 	int cumulative_suspension_time;
+	char *rt = NULL;
+	extern char *schedd;
 
 	if (!JobAd)
 	{
@@ -439,6 +444,41 @@ void record_suspension_hack(unsigned int action)
 		cumulative_suspension_time);
 	dprintf(D_FULLDEBUG, "%s = %d\n", ATTR_CUMULATIVE_SUSPENSION_TIME,
 		cumulative_suspension_time);
+	
+	/* If we've been asked to perform real time updates of the suspension
+		information, then connect to the queue and do it here. */
+	rt = param("REAL_TIME_JOB_SUSPEND_UPDATES");
+	if (rt != NULL)
+	{
+		if (strcasecmp(rt, "true") == MATCH)
+		{
+			dprintf( D_ALWAYS, "Updating suspension info to schedd.\n" );
+			if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT)) {
+				/* Since these attributes aren't updated periodically, if
+					the schedd is busy and a resume event update is lost,
+					the the job will be marked suspended when it really isn't.
+					The new shadow eventually corrects this via a periodic
+					update of various calssad attributes, but I 
+					suspect it won't be corrected in the event of a
+					bad connect here for this shadow. */
+				dprintf( D_ALWAYS, 
+					"Timeout connecting to schedd. Suspension update lost.\n");
+				free(rt);
+				rt = NULL;
+				return;
+			}
+
+        	SetAttributeInt(Proc->id.cluster, Proc->id.proc, 
+	            ATTR_TOTAL_SUSPENSIONS, total_suspensions);
+        	SetAttributeInt(Proc->id.cluster, Proc->id.proc, 
+	            ATTR_CUMULATIVE_SUSPENSION_TIME, cumulative_suspension_time);
+        	SetAttributeInt(Proc->id.cluster, Proc->id.proc, 
+	            ATTR_LAST_SUSPENSION_TIME, last_suspension_time);
+
+			DisconnectQ(NULL);
+		}
+
+		free(rt);
+		rt = NULL;
+	}
 }
-
-
