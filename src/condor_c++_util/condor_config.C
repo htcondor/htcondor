@@ -114,15 +114,15 @@ MyString local_config_files;
 void
 config_fill_ad( ClassAd* ad )
 {
-	char 		buffer[1024];
 	char 		*tmp;
 	char		*expr;
 	StringList	reqdExprs;
+	MyString 	buffer;
 	
 	if( !ad ) return;
 
-	sprintf (buffer, "%s_EXPRS", mySubSystem);
-	tmp = param (buffer);
+	buffer.sprintf( "%s_EXPRS", mySubSystem );
+	tmp = param( buffer.Value() );
 	if( tmp ) {
 		reqdExprs.initializeFromString (tmp);	
 		free (tmp);
@@ -131,14 +131,15 @@ config_fill_ad( ClassAd* ad )
 		while ((tmp = reqdExprs.next())) {
 			expr = param(tmp);
 			if (expr == NULL) continue;
-			sprintf (buffer, "%s = %s", tmp, expr);
-			ad->Insert (buffer);
-			free (expr);
+			buffer.sprintf( "%s = %s", tmp, expr );
+			ad->Insert( buffer.Value() );
+			free( expr );
+			expr = NULL;
 		}	
 	}
 	
-	sprintf (buffer, "%s_ATTRS", mySubSystem);
-	tmp = param (buffer);
+	buffer.sprintf( "%s_ATTRS", mySubSystem );
+	tmp = param( buffer.Value() );
 	if( tmp ) {
 		reqdExprs.initializeFromString (tmp);	
 		free (tmp);
@@ -147,18 +148,19 @@ config_fill_ad( ClassAd* ad )
 		while ((tmp = reqdExprs.next())) {
 			expr = param(tmp);
 			if (expr == NULL) continue;
-			sprintf (buffer, "%s = %s", tmp, expr);
-			ad->Insert (buffer);
-			free (expr);
+			buffer.sprintf( "%s = %s", tmp, expr );
+			ad->Insert( buffer.Value() );
+			free( expr );
+			expr = NULL;
 		}	
 	}
 	
 	/* Insert the version into the ClassAd */
-	sprintf(buffer,"%s=\"%s\"", ATTR_VERSION, CondorVersion() );
-	ad->Insert(buffer);
+	buffer.sprintf( "%s=\"%s\"", ATTR_VERSION, CondorVersion() );
+	ad->Insert( buffer.Value() );
 
-	sprintf(buffer,"%s=\"%s\"", ATTR_PLATFORM, CondorPlatform() );
-	ad->Insert(buffer);
+	buffer.sprintf( "%s=\"%s\"", ATTR_PLATFORM, CondorPlatform() );
+	ad->Insert( buffer.Value() );
 }
 
 
