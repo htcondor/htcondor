@@ -58,6 +58,7 @@ void printClassAdExpr( ExprTree *tree )
 	sink.SetSink( stdout );
 	fo.SetClassAdIndentation( );
 	fo.SetListIndentation( );
+	sink.SetFormatOptions( &fo );
 	tree->ToSink( sink );
 	sink.FlushSink( );
 }
@@ -71,6 +72,7 @@ void printClassAdValue( Value &val )
 	sink.SetSink( stdout );
 	fo.SetClassAdIndentation( );
 	fo.SetListIndentation( );
+	sink.SetFormatOptions( &fo );
 	val.ToSink( sink );
 	sink.FlushSink( );
 }
