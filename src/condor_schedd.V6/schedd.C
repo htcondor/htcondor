@@ -2163,6 +2163,8 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 					break;
 				case JOB_KILLED:
 				case JOB_COREDUMPED:
+					SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, ATTR_JOB_STATUS, REMOVED);
+					break;
 				case JOB_EXITED:
 					SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, ATTR_JOB_STATUS, COMPLETED);
 					break;
