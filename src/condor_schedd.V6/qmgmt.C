@@ -58,8 +58,8 @@ extern "C" {
 }
 
 extern	int		Parse(const char*, ExprTree*&);
-extern  void    cleanup_ckpt_files(int, int, char*);
-static ReliSock *Q_SOCK;
+extern  void    cleanup_ckpt_files(int, int, const char*);
+static ReliSock *Q_SOCK = NULL;
 
 int		do_Q_request(ReliSock *);
 void	FindRunnableJob(int, int&);
@@ -266,16 +266,20 @@ grow_prio_recs( int newsize )
 
 // Test if this owner matches my owner, so they're allowed to update me.
 int
-OwnerCheck(ClassAd *ad, char *test_owner)
+OwnerCheck(ClassAd *ad, const char *test_owner)
 {
 	char	my_owner[_POSIX_PATH_MAX];
 	int		i;
 
-	// If we get passed a null test_owner, its probably an internal call,
-	// and we let internal callers do anything.
-	if (test_owner == 0) {
-		dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success), null test_owner\n" );
-		return 1;
+
+	// If test_owner is NULL, then we have no idea who the user is.  We
+	// do not allow anonymous folks to mess around with the queue, so 
+	// have OwnerCheck fail.  Note we only call OwnerCheck in the first place
+	// if Q_SOCK is not null; if Q_SOCK is null, then the schedd is calling
+	// a QMGMT command internally which is allowed.
+	if (test_owner == NULL) {
+		dprintf(D_ALWAYS,"QMGT command failed: anonymous user not permitted\n" );
+		return 0;
 	}
 
 	// The super users are always allowed to do updates.  They are
@@ -298,12 +302,6 @@ OwnerCheck(ClassAd *ad, char *test_owner)
 			return 1;
 		} 
 		else {
-#if 0
-			if ( Q_SOCK->isAuthenticated() ) {
-				dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success),already auth\n");
-				return( 1 );
-			}
-#endif
 
 #if !defined(WIN32)
 			errno = EACCES;
@@ -344,25 +342,6 @@ OwnerCheck(ClassAd *ad, char *test_owner)
 }
 
 
-int
-CheckConnection()
-{
-
-	if ( !Q_SOCK ) {
-		// no one connected yet, clearing out queue from previous jobs
-		return 0;
-	}
-
-	if ( Q_SOCK->isAuthenticated() ) {
-		return 0;
-	}
-	//there was code here to ValidateRendevous if CONNECTION_CLOSED,
-	//but that makes no sense now, since filesystem authentication
-	//does the validation then.
-	return -1;
-}
-
-
 /* We want to be able to call these things even from code linked in which
    is written in C, so we make them C declarations
 */
@@ -375,23 +354,32 @@ handle_q(Service *, int, Stream *sock)
 
 	JobQueue->BeginTransaction();
 
+	// initialize per-connection variables.  back in the day this
+	// was essentially InvalidateConnection().  of particular 
+	// importance is setting Q_SOCK... this tells the rest of the QMGMT
+	// code the request is from an external user instead of originating
+	// from within the schedd itself.
 	Q_SOCK = (ReliSock *)sock;
-
-//	InvalidateConnection();
 	Q_SOCK->unAuthenticate();
+#ifndef WIN32
+	active_owner_uid = 0;
+#endif
+	active_cluster_num = -1;
 
 	do {
 		/* Probably should wrap a timer around this */
 		rval = do_Q_request( (ReliSock *)Q_SOCK );
 	} while(rval >= 0);
 
-//	FreeConnection();
 
-	  //this is closest I could get to simulating old behavior, but when one of 
-	  //the do_Q_req. above fails, we should unAuthenticate() & delete sock
-//Q_SOCK->setGenericAuthentication();
-Q_SOCK->unAuthenticate();
+	// reset the per-connection variables.  of particular 
+	// importance is setting Q_SOCK back to NULL. this tells the rest of 
+	// the QMGMT code the request originated internally, and it should
+	// be permitted (i.e. we only call OwnerCheck if Q_SOCK is not NULL).
+	Q_SOCK->unAuthenticate();
 	uninit_user_ids();
+	// note: Q_SOCK is static...
+	Q_SOCK = NULL;
 
 	dprintf(D_FULLDEBUG, "QMGR Connection closed\n");
 
@@ -399,14 +387,12 @@ Q_SOCK->unAuthenticate();
 	// be committed in CloseConnection().
 	JobQueue->AbortTransaction();
 
-	//mju - added this because Q_SOCK is static...
-	Q_SOCK = NULL;
 	return 0;
 }
 
 
 int
-InitializeConnection( char *owner )
+InitializeConnection( const char *owner )
 {
 	if ( owner ) {
 		init_user_ids( owner );
@@ -425,19 +411,12 @@ InitializeConnection( char *owner )
 }
 
 
-
-
 int
 NewCluster()
 {
-	LogSetAttribute *log;
+//	LogSetAttribute *log;
 	char cluster_str[40];
 	
-	if (CheckConnection() < 0) {
-		dprintf( D_FULLDEBUG, "NewCluser(): CheckConnection failed\n" );
-		return -1;
-	}
-
 	if( Q_SOCK && !OwnerCheck(NULL, Q_SOCK->getOwner()  ) ) {
 		dprintf( D_FULLDEBUG, "NewCluser(): OwnerCheck failed\n" );
 		return -1;
@@ -458,12 +437,8 @@ NewProc(int cluster_id)
 {
 	int				proc_id;
 	char			key[_POSIX_PATH_MAX];
-	LogNewClassAd	*log;
+//	LogNewClassAd	*log;
 	int				*numOfProcs = NULL;
-
-	if (CheckConnection() < 0) {
-		return -1;
-	}
 
 	if( Q_SOCK && !OwnerCheck(NULL, Q_SOCK->getOwner() ) ) {
 		return -1;
@@ -498,12 +473,9 @@ int DestroyProc(int cluster_id, int proc_id)
 	char				key[_POSIX_PATH_MAX];
 	char				*ckpt_file_name;
 	ClassAd				*ad = NULL;
-	LogDestroyClassAd	*log;
+//	LogDestroyClassAd	*log;
 	int					*numOfProcs = NULL;
 
-	if (CheckConnection() < 0) {
-		return -1;
-	}
 	sprintf(key, "%d.%d", cluster_id, proc_id);
 	if (!JobQueue->LookupClassAd(key, ad)) {
 		return -1;
@@ -556,12 +528,8 @@ int DestroyCluster(int cluster_id)
 	ClassAd				*ad=NULL;
 	int					c, proc_id;
 	char				key[_POSIX_PATH_MAX];
-	LogDestroyClassAd	*log;
+//	LogDestroyClassAd	*log;
 	char				*ickpt_file_name;
-
-	if (CheckConnection() < 0) {
-		return -1;
-	}
 
 	JobQueue->StartIterateAllClassAds();
 
@@ -629,14 +597,10 @@ int DestroyClusterByConstraint(const char* constraint)
 	int			flag = 1;
 	ClassAd		*ad=NULL;
 	char		key[_POSIX_PATH_MAX];
-	LogRecord	*log;
+//	LogRecord	*log;
 	char		*ickpt_file_name;
 	int			prev_cluster = -1;
     PROC_ID		job_id;
-
-	if(CheckConnection() < 0) {
-		return -1;
-	}
 
 	JobQueue->StartIterateAllClassAds();
 
@@ -682,10 +646,6 @@ SetAttributeByConstraint(const char *constraint, const char *attr_name, char *at
 	int cluster_num, proc_num;	
 	int found_one = 0, had_error = 0;
 
-	if(CheckConnection() < 0) {
-		return -1;
-	}
-
 	JobQueue->StartIterateAllClassAds();
 	while(JobQueue->IterateAllClassAds(ad)) {
 		// check for CLUSTER_ID to avoid queue header ad
@@ -713,11 +673,12 @@ SetAttributeByConstraint(const char *constraint, const char *attr_name, char *at
 int
 SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_value)
 {
-	LogSetAttribute	*log;
+//	LogSetAttribute	*log;
 	char			key[_POSIX_PATH_MAX];
 	ClassAd			*ad;
-	
-	if (CheckConnection() < 0) {
+
+	// Only an authenticated user or the schedd itself can set an attribute.
+	if ( Q_SOCK && !(Q_SOCK->isAuthenticated()) ) {
 		return -1;
 	}
 
@@ -736,13 +697,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_valu
 			return -1;
 		}
 	}
-
-// TODO: should only set ATTR_OWNER from authenticated owner over socket!
-// so attempts to do so here should be an EXCEPT, and the code which sets
-// ATTR_OWNER should be set elsewhere, perhaps SCHEDD?
-
 		
-	// check for security violations
+	// check for security violations.
+	// first, make certain ATTR_OWNER can only be set to who they really are.
 	if (strcmp(attr_name, ATTR_OWNER) == 0) 
 	{
 		if ( !Q_SOCK ) {
@@ -935,7 +892,7 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 {
 	ClassAd				*ad;
 	char				key[_POSIX_PATH_MAX];
-	LogDeleteAttribute	*log;
+//	LogDeleteAttribute	*log;
 	char				*attr_val;
 
 	sprintf(key, "%d.%d", cluster_id, proc_id);
@@ -980,10 +937,6 @@ GetJobByConstraint(const char *constraint)
 	ClassAd	*ad;
 	int cluster_num;	// check for cluster num to avoid header ad
 
-	if(CheckConnection() < 0) {
-		return NULL;
-	}
-
 	JobQueue->StartIterateAllClassAds();
 	while(JobQueue->IterateAllClassAds(ad)) {
 		if ((ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num) == 1) &&
@@ -1007,10 +960,6 @@ GetNextJobByConstraint(const char *constraint, int initScan)
 {
 	ClassAd	*ad;
 	int cluster_num;	// check for cluster num to avoid header ad
-
-	if(CheckConnection() < 0) {
-		return NULL;
-	}
 
 	if (initScan) {
 		JobQueue->StartIterateAllClassAds();
@@ -1038,10 +987,6 @@ int GetJobList(const char *constraint, ClassAdList &list)
 	int			flag = 1;
 	ClassAd		*ad=NULL, *newad;
 	int			cluster_num;	// check for cluster num to avoid header ad
-
-	if(CheckConnection() < 0) {
-		return -1;
-	}
 
 	JobQueue->StartIterateAllClassAds();
 
