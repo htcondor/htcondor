@@ -475,7 +475,7 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 
 #if defined(LINUX)
 	int readlink( const char *path, char *buf, size_t buf_size ) {
-#elif defined(OSF1)
+#elif defined(OSF1) || defined(AIX32)
 	int readlink( const char *path, char *buf, int buf_size ) {
 #else
 	int readlink( const char *path, void *buf, int buf_size ) {
@@ -912,7 +912,11 @@ not_supported {
 not_supported {
 	int shmctl( int shmid, int cmd, struct shmid_ds *buf );
 	int shmdt( ALPHA_CONST SYSCALL_PTR * addr );
+#if defined(AIX32)
+	int shmget( key_t key, unsigned int size, unsigned int flags );
+#else
 	int shmget( key_t key, size_t size, int flags );
+#endif
 	SYSCALL_PTR * shmat( int shmid, ALPHA_CONST SYSCALL_PTR * shmaddr, int shmflg );
 }
 
