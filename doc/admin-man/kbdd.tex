@@ -36,17 +36,34 @@ the current machine can get to.  This may be the case if you are running AFS
 and have the user's X authority file in an AFS home directory.  There may also
 be cases where you cannot run the daemon with super user privileges because of
 political reasons, but you would still like to be able to monitor X activity.
-In this case, you will need to change your XDM configuration in order to start
-up the keyboard daemon with the permissions of the currently logging in user.
-The specifics of this process are beyond the scope of the manual, however your
-system administrator should understand how to go about implementing this.  The
-important things to remember are to start the daemon with the -t and the -f
-options ( -f means run the daemon in the foreground, and -t means output
-the logging information to STDERR instead of the condor log files which users
-don't have permission to write to. )  You will also want to make sure to
-shutdown the program once the user logs out.  This can be done by saving the
-process id of the daemon, and sending a
-\Env{SIGTERM} to this process id when the user logs out.  
+In these cases, you will need to change your XDM configuration in order to
+start up the keyboard daemon with the permissions of the currently logging in
+user.  Although your situation may differ, if you are running X11R6.3, you
+will probably want to edit the files in /usr/X11R6/lib/X11/xdm.  The Xsession
+file should have the keyboard daemon startup at the end, and the Xreset file
+should have the keyboard daemon shutdown.  As of patch level 4 of Condor
+version 6.0, the keyboard daemon has some additional command line options to
+facilitate this.  The -l option can be used to write the daemons log file to a
+place where the user running the daemon has permission to write a file.  We
+recommend something akin to \$HOME/.kbdd.log since this is a place where every
+user can write and won't get in the way.  The -pidfile and -k options allow
+for easy shutdown of the daemon by storing the process id in a file.  You will
+need to add lines to your XDM config that look something like this:
+
+\begin{verbatim}
+	condor_kbdd -l $HOME/.kbdd.log -pidfile $HOME/.kbdd.pid
+\end{verbatim}
+
+This will start the keyboard daemon as the user who is currently logging in
+and write the log to a file in the directory \$HOME/.kbdd.log/.  Also, this
+will save the process id of the daemon to ~/.kbdd.pid, so that when the user
+logs out, XDM can simply do a:
+
+\begin{verbatim}
+	condor_kbdd -k $HOME/.kbdd.pid
+\end{verbatim}
+
+This will shutdown the process recorded in ~/.kbdd.pid and exit.
 
 To see how well the keyboard daemon is working on your system, review
 the log for the daemon and look for successful connections to the X
