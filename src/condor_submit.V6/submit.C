@@ -142,7 +142,6 @@ char	*UserLogFile	= "log";
 char	*CoreSize		= "coresize";
 char	*NiceUser		= "nice_user";
 
-char	*X509Directory	= "x509directory";
 char	*X509UserProxy	= "x509userproxy";
 
 char	*RendezvousDir	= "rendezvousdir";
@@ -1076,10 +1075,8 @@ SetArguments()
 	if ( JobUniverse == GLOBUS_UNIVERSE ) {
 			//put specified args into RSL, then insert GlobusArgs into Ad
 		if ( strcmp( args, "" ) ) {
-				//unfortunately, Globus args are a pain in the as*. Each 
-				//argument has to be surrounded by double quotes and (probably)
-				//separated by a space. To simplify things, just strip out all
-				//double quotes and add each arg with double quotes.
+				//To simplify things, just strip out all double quotes and 
+				//add each arg with double quotes.
 			StringList newargs( args, ",\"" );
 			char buf[1024];
 			newargs.rewind();
@@ -1100,9 +1097,12 @@ SetArguments()
 			DoCleanup();
 			exit( 1 );
       }
-		strcat( GlobusArgs, " -w -r " );
-		strcat( GlobusArgs, globushost );
-		sprintf( buffer, "%s = \"%s\"", ATTR_JOB_ARGUMENTS, GlobusArgs );
+			//Globus v1.1 no longer allows these -w -r <host> to be last
+			//on the string, so put them first instead.
+		char *GlobusTmp = new char[strlen(GlobusArgs) + 10 + strlen(globushost)];
+		sprintf( GlobusTmp, "-w -r %s %s", globushost, GlobusArgs );
+		sprintf( buffer, "%s = \"%s\"", ATTR_JOB_ARGUMENTS, GlobusTmp );
+		delete [] GlobusTmp;
 	}
 	else 
 #endif
@@ -2344,115 +2344,38 @@ check_umask()
 void 
 setupAuthentication()
 {
-	char *pbuf;
-
-		//RendezvousDir can be specified in submit-description file.
+		//RendezvousDir for remote FS auth can be specified in submit file.
 	char *Rendezvous = NULL;
-	if ( (Rendezvous = condor_param( RendezvousDir ) ) )
+	if ( Rendezvous = condor_param( RendezvousDir ) )
 	{
-		dprintf( D_FULLDEBUG,"setting RENDEZVOUS_DIRECTORY=%s\n",
-				Rendezvous );
+		dprintf( D_FULLDEBUG,"setting RENDEZVOUS_DIRECTORY=%s\n", Rendezvous );
 		sprintf( buffer, "RENDEZVOUS_DIRECTORY=%s", Rendezvous );
 			//putenv because Authentication::authenticate() expects them there.
 		putenv( strdup( buffer ) );
-		if ( Rendezvous )
-			free( Rendezvous );
+		free( Rendezvous );
 	}
 
-		//the order of X509_* definitions is: X509Directory in submit file,
-		//then try the ENV, then try the default $HOME/.condorcerts directory.
-	char *CertDir = NULL;
-	int override = 0;
-	if ( CertDir = condor_param( X509Directory ) ) {
-		override = 1;
-	}
-	else {
-		char *home;
-		if ( home = getenv( "HOME" ) ) {
-			sprintf( buffer, "%s/.condorcerts", home );
-			CertDir = strdup( buffer );
+		//X509_USER_PROXY needed for Globus universe and glideins under condor
+	char *UserProxy = NULL;
+	if ( UserProxy = condor_param( X509UserProxy ) ) {
+		dprintf( D_FULLDEBUG, "setting X509_USER_PROXY=%s\n", UserProxy )
+		sprintf( buffer, "X509_USER_PROXY=%s", UserProxy );
+		if ( == GLOBUS_UNIVERSE ) {
+			strcat( GlobusEnv, buffer );
+			strcat( GlobusEnv, env_delimiter );
 		}
-		else {
-			EXCEPT( "Cannot get environment variable $HOME\n" );
+		else { 
+			putenv( strdup( buffer ) );
 		}
-	}
-	dprintf( D_FULLDEBUG, "using X509_DIRECTORY=%s\n", CertDir );
-
-		//Make sure these vars are in the environment, the ClassAd, and
-		//the environment list if a Globus Universe Job
-	if ( override || !( pbuf = getenv( "X509_CERT_DIR" ) ) ) {
-		sprintf( buffer, "X509_CERT_DIR=%s/certdir", CertDir );
-		putenv( strdup( buffer ) );
-		strcat( GlobusEnv, buffer );
-		sprintf( buffer, "X509_CERT_DIR = \"%s/certdir\"", CertDir );
-	}
-	else {
-		sprintf( buffer, "X509_CERT_DIR=%s", pbuf );
-		strcat( GlobusEnv, buffer );
-		sprintf( buffer, "X509_CERT_DIR = \"%s\"", pbuf );
-	}
-	strcat( GlobusEnv, env_delimiter );
-	InsertJobExpr( buffer );
-
-
-	if ( override || !( pbuf = getenv( "X509_USER_CERT" ) ) ) {
-		sprintf( buffer, "X509_USER_CERT=%s/usercert.pem", CertDir );
-		putenv( strdup( buffer ) );
-		strcat( GlobusEnv, buffer );
-		sprintf( buffer, "X509_USER_CERT = \"%s/usercert.pem\"", CertDir );
-	}
-	else {
-		sprintf( buffer, "X509_USER_CERT=%s", pbuf );
-		strcat( GlobusEnv, buffer );
-		sprintf( buffer, "X509_USER_CERT = \"%s\"", pbuf );
-	}
-	strcat( GlobusEnv, env_delimiter );
-	InsertJobExpr( buffer );
-
-
-	if ( override || !( pbuf = getenv( "X509_USER_KEY" ) ) ) {
-		sprintf( buffer, "X509_USER_KEY=%s/userkey.pem", CertDir );
-		putenv( strdup( buffer ) );
-		strcat( GlobusEnv, buffer );
-		sprintf( buffer, "X509_USER_KEY = \"%s/userkey.pem\"", CertDir );
-	}
-	else {
-		sprintf( buffer, "X509_USER_KEY=%s", pbuf );
-		strcat( GlobusEnv, buffer );
-		sprintf( buffer, "X509_USER_KEY = \"%s\"", pbuf );
-	}
-	strcat( GlobusEnv, env_delimiter );
-	InsertJobExpr( buffer );
-
-
-	free( CertDir );
-	CertDir = NULL;
-
-		//User proxy should be separate, because it usually lives in a 
-		//different directory, /tmp, which is often in a different filesystem 
-		//than the other X509 files, and is often not specified even when
-		//the other X509 values are.
-	if ( CertDir = condor_param( X509UserProxy ) ) {
-		override = 1;
-	}
-	else {
-		char *tmpDir;
-		if ( tmpDir  = getenv( "X509_USER_PROXY" ) ) {
-			CertDir = strdup( tmpDir );
-		}
-		override = 0;
-	}
-
-	if ( CertDir ) {
-		sprintf( buffer, "X509_USER_PROXY=%s", CertDir );
-		strcat( GlobusEnv, buffer );
-		strcat( GlobusEnv, env_delimiter );
 		sprintf( buffer, "X509_USER_PROXY = \"%s\"", CertDir );
 		InsertJobExpr( buffer );
 
-		if ( override ) {
-			putenv( strdup( buffer ) );
-		}
-		free( CertDir );
+			//Put it in the ClassAd as well (per directive from 7th floor...)
+		
+		free( UserProxy );
 	}
+
+		//Either GLOBUS_INSTALL_PATH or GLOBUS_DEPLOY_PATH, as well as
+		//HOME and the path to globus, condor and /bin user programs must 
+		//be in the users environment 
 }
