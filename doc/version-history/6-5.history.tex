@@ -53,6 +53,20 @@ specification of an alternate \Condor{dagman} executable.
 \item Fixed the serious bug with periodic checkpointing that was
   introduced in version 6.5.2.
 
+\item Fixed some bugs in the \Condor{kbdd} that prevented it from
+  communicating with the \Condor{startd} to send updates about console
+  activity (key presses and mouse movements).
+  The \Condor{kbdd} is only needed on Digital Unix and IRIX platforms,
+  so this bug did not effect most Condor users.
+
+\item Fixed a minor problem (introduced in version 6.5.2 while fixing
+  another bug) that made it difficult to use a \Condor{master} to
+  spawn the Hawkeye daemons.
+  Now, if you install Hawkeye on a machine, add \verb@HAWKEYE@ to your
+  \Macro{DAEMON\_LIST}, and define \Macro{HAWKEYE} to be the path to
+  the \Emph{hawkeye\_master} program, the \Condor{master} will spawn
+  everything correctly.
+
 \item PVM: Fixed the \Attr{Environment} attribute in the submit description 
 		to be honored by both the master process and the slave tasks.
 
