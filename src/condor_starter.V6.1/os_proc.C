@@ -225,8 +225,9 @@ OsProc::StartJob()
 
 	// handle stdin, stdout, and stderr redirection
 	int fds[3];
+	int failedStdin, failedStdout, failedStderr;
 	fds[0] = -1; fds[1] = -1; fds[2] = -1;
-	int failedStdin, failedStdout, failedStderr = 0;
+	failedStdin = 0; failedStdout = 0; failedStderr = 0;
 	char filename1[_POSIX_PATH_MAX];
 	char *filename;
 	char infile[_POSIX_PATH_MAX];
@@ -697,12 +698,8 @@ nullFile(const char *filename)
 		return 1;
 	}
 	#endif
-	dprintf(D_FULLDEBUG, "Considering %s as a possible NULL file:..", 
-		filename);
 	if(strcmp(filename, "/dev/null") == 0 ) {
-		dprintf(D_FULLDEBUG, "Yes\n");
 		return 1;
 	}
-	dprintf(D_FULLDEBUG, "No\n");
 	return 0;
 }
