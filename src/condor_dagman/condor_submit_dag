@@ -25,21 +25,22 @@ $force = 0;
 $max_jobs = 0;
 $max_scripts = 0;
 $notification = "";
+$NoPostFail = 0;
 while( $_ = shift ) {
   SWITCH: {	    
-    if( /^-no_s.*/ ) {
+    if( /^-no_s.*/i ) {
 	$submit = 0;
 	last SWITCH;
     } 
-    if( /^-v.*/ ) {
+    if( /^-v.*/i ) {
 	$verbose = 1;
 	last SWITCH;
     } 
-    if( /^-f.*/ ) {
+    if( /^-f.*/i ) {
 	$force = 1;
 	last SWITCH;
     } 
-    if( /^-not.*/ ) {
+    if( /^-not.*/i ) {
 	$notification = shift;
 	if( ! grep(/$notification/i, ("always", "complete", "error", "never")) ) {
 	    print "Invalid argument to -notification option: $notification\n";
@@ -47,14 +48,14 @@ while( $_ = shift ) {
 	}
 	last SWITCH;
     }
-    if( /^-l.*/ ) {
+    if( /^-l.*/i ) {
 	$job_log = shift;
 	if( ! $job_log ) {
 	    &usage();
 	}
 	last SWITCH;
     }
-    if( /^-maxj.*/ ) {
+    if( /^-maxj.*/i ) {
 	$max_jobs = shift;
 	if( ! $max_jobs ) {
 	    &usage();
@@ -66,7 +67,7 @@ while( $_ = shift ) {
 	}
 	last SWITCH;
     }
-    if( /^-maxs.*/ ) {
+    if( /^-maxs.*/i ) {
 	$max_scripts = shift;
 	if( ! $max_scripts ) {
 	    &usage();
@@ -78,7 +79,11 @@ while( $_ = shift ) {
 	}
 	last SWITCH;
     }
-    if( /^-r/ ) {
+    if( /^-NoPostFail.*/i ) {
+	$NoPostFail = 1;
+	last SWITCH;
+    }
+    if( /^-r/i ) {
 	$remote_schedd = shift;
 	if( ! $remote_schedd ) {
 	    &usage();
@@ -171,6 +176,7 @@ sub usage {
     print "    -force              (Overwrite files condor_submit_dag uses if they exist)\n";
     print "    -maxjobs number     (Maximum number of jobs ever submitted at once)\n";
     print "    -maxscripts number  (Maximum number of PRE/POST scripts to run at once)\n";
+    print "    -NoPostFail         (Don't run POST scripts after failed jobs)\n";
     print "    -log filename       (Specify the log file shared by all jobs in the DAG)\n";
     print "    -notification value (Determines how much email you get from Condor\n";
     print "         about the life of the condor_dagman job.  'value' must be\n";
@@ -274,6 +280,9 @@ sub write_submit_file {
     }
     if( $max_scripts ) {
 	$args = $args . " -MaxScripts $max_scripts";
+    }
+    if( $NoPostFail == 1 ) {
+	$args = $args . " -NoPostFail";
     }
     print SUBMIT "arguments\t= $args\n";
     print SUBMIT "environment\t= PATH=$path\n";
