@@ -57,9 +57,16 @@ extern int	errno;
 
 int		DebugFlags = D_ALWAYS;
 FILE	*DebugFP = stderr;
-int		MaxLog[D_NUMLEVELS] = { 0 };
-char	*DebugFile[D_NUMLEVELS] = { NULL };
-char	*DebugLock[D_NUMLEVELS] = { NULL };
+
+/*
+** These arrays must be D_NUMLEVELS+1 in size since we can have a
+** debug file for each level plus an additional catch-all debug file
+** at index 0.
+*/
+int		MaxLog[D_NUMLEVELS+1] = { 0 };
+char	*DebugFile[D_NUMLEVELS+1] = { NULL };
+char	*DebugLock[D_NUMLEVELS+1] = { NULL };
+
 int		(*DebugId)(FILE *);
 int		SetSyscalls(int mode);
 
@@ -77,9 +84,9 @@ char *DebugFlagNames[] = {
 	"D_ALWAYS", "D_SYSCALLS", "D_CKPT", "D_XDR", "D_MALLOC", "D_LOAD",
 	"D_EXPR", "D_PROC", "D_JOB", "D_MACHINE", "D_FULLDEBUG", "D_NFS",
 	"D_UPDOWN", "D_AFS", "D_PREEMPT", "D_PROTOCOL",	"D_PRIV",
-	"D_TAPENET", "D_DAEMONCORE", "D_COMMAND", "D_BANDWIDTH", "D_SECONDS",
+	"D_TAPENET", "D_DAEMONCORE", "D_COMMAND", "D_BANDWIDTH", "D_NETWORK",
 	"D_UNDEF22", "D_UNDEF23", "D_UNDEF24", "D_UNDEF25", "D_UNDEF26",
-	"D_UNDEF27", "D_UNDEF28", "D_UNDEF29", "D_UNDEF30", "D_UNDEF31",
+	"D_UNDEF27", "D_UNDEF28", "D_UNDEF29", "D_SECONDS", "D_NOHEADER",
 };
 
 #if !defined(WIN32)	// Need to port this to WIN32.  It is used when logging to a socket.
