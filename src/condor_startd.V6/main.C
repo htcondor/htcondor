@@ -93,7 +93,7 @@ usage( char* MyName)
 	fprintf( stderr, "  where [option] is one of:\n" );
 	fprintf( stderr, 
 			 "     [-skip-benchmarks]\t(don't run initial benchmarks)\n" );
-	exit( 1 );
+	DC_Exit( 1 );
 }
 
 
@@ -102,7 +102,7 @@ main_init( int argc, char* argv[] )
 {
 	int		skip_benchmarks = FALSE;
 	int		rval;
-	char*	tmp;
+	char*	tmp = NULL;
 	char**	ptr; 
 
 		// Process command line args.
@@ -148,17 +148,18 @@ main_init( int argc, char* argv[] )
 		// Compute all attributes
 	resmgr->compute( A_ALL );
 
-	if( (!skip_benchmarks) &&
-		(tmp = param("RunBenchmarks")) &&
-		(*tmp != 'F' && *tmp != 'f') ) {
+	if( (tmp = param("RunBenchmarks")) ) {
+		if( (!skip_benchmarks) &&
+			(*tmp != 'F' && *tmp != 'f') ) {
 			// There's an expression defined to have us periodically
 			// run benchmarks, so run them once here at the start.
 			// Added check so if people want no benchmarks at all,
 			// they just comment RunBenchmarks out of their config
 			// file, or set it to "False". -Derek Wright 10/20/98
-		dprintf( D_ALWAYS, "About to run initial benchmarks.\n" );
-		resmgr->force_benchmark();
-		dprintf( D_ALWAYS, "Completed initial benchmarks.\n" );
+			dprintf( D_ALWAYS, "About to run initial benchmarks.\n" ); 
+			resmgr->force_benchmark();
+			dprintf( D_ALWAYS, "Completed initial benchmarks.\n" );
+		}
 		free( tmp );
 	}
 
@@ -453,8 +454,11 @@ startd_exit()
 {
 	dprintf( D_FULLDEBUG, "About to send final update to the central manager\n" );
 	resmgr->final_update();
+
+	delete resmgr;
+
 	dprintf( D_ALWAYS, "All resources are free, exiting.\n" );
-	exit(0);
+	DC_Exit(0);
 }
 
 int
