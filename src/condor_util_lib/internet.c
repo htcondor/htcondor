@@ -277,6 +277,8 @@ host_in_domain( const char *host, const char *domain )
   "144.11.11.11") and false if not (like "cs.wisc.edu").  Allow
   wildcard "*".  If we return TRUE, and we were passed in a non-NULL 
   sin_addr, it's filled in with the integer version of the ip address. 
+NOTE: it looks like sin_addr may be modified even if the return
+  value is FALSE.  -zmiller
 */
 int
 is_ipaddr(const char *inbuf, struct in_addr *sin_addr)
@@ -357,6 +359,69 @@ is_ipaddr(const char *inbuf, struct in_addr *sin_addr)
 	return TRUE;
 }
 
+
+// checks to see if 'network' is a valid ip/netmask.  if given pointers to
+// ip_addr structs, they will be filled in.
+int
+is_valid_network( const char *network, struct in_addr *ip, struct in_addr *mask)
+{
+	// copy the string, only 32 is necessary since the lonest
+	// legitimate one is 123.567.901.345/789.123.567.901
+	//                            1         2         3
+	// 31 characters.
+	//
+	// we make a copy because we then find the slash and
+	// overwrite it with a null to create two separate strings.
+	// those are then validated and parsed into the structures
+	// that were optionally passed in.
+	char nmcopy[32];
+	char *tmp;
+	unsigned int tmask;
+	int  numbits;
+	strncpy( nmcopy, network, 31 );
+	nmcopy[31] = '\0';
+
+	// find a slash and make sure both sides are valid
+	tmp = strchr(nmcopy, '/');
+	if (tmp) {
+		// separate by overwriting the slash with a null, and moving tmp
+		// to point to the begining of the second string.
+		*tmp++ = 0;
+
+		// now validate
+		if (is_ipaddr(nmcopy, ip)) {
+			// first part is a valid ip, now validate the netmask.  two
+			// different formats are valid, we check for both.
+			if (is_ipaddr(tmp, mask)) {
+				// format is a.b.c.d/m.a.s.k
+				// is_ipaddr fills in the value for both ip and mask,
+				// so we are done!
+				if (mask) {
+					dprintf ( D_SECURITY, "ISVALIDNETWORK: netmask mask is %lx\n", mask->s_addr );
+				}
+				return TRUE;
+			} else {
+				// try format a.b.c.d/num
+				// this doesn't allow /0, but that isn't useful
+				// anyways... easier to say '*'.
+				numbits = atoi(tmp);
+				if (numbits) {
+					if (mask) {
+						// fill in the structure
+					    mask->s_addr = 0;
+					    mask->s_addr = htonl(~(~(mask->s_addr) >> numbits));
+						dprintf ( D_SECURITY, "ISVALIDNETWORK: netmask mask is %lx\n", mask->s_addr );
+					}
+					return TRUE;
+				} else {
+					dprintf (D_SECURITY, "ISVALIDNETWORK: malformed netmask: %s\n", network);
+				}
+			}
+		}
+	}
+
+	return FALSE;
+}
 
 int
 is_valid_sinful( const char *sinful )
