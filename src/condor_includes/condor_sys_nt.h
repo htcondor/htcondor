@@ -23,6 +23,15 @@
 #ifndef CONDOR_SYS_NT_H
 #define CONDOR_SYS_NT_H
 
+// Disable warning about protected copy constr or assignment ops
+#pragma warning( disable : 4661 )  
+
+// Disable performance warning about casting to a bool
+#pragma warning( disable : 4800 )  
+
+// Disable warnings about multiple template instantiations (done for gcc)
+#pragma warning( disable : 4660 )  
+
 // #define NOGDI
 #define NOSOUND
 #include <winsock2.h>
