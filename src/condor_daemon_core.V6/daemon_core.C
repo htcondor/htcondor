@@ -2417,7 +2417,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 }
 
 int
-BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock)
+BindAnyCommandPort(AuthSock *rsock, SafeSock *ssock)
 {
 	if ( !rsock->bind() ) {
 		dprintf(D_ALWAYS, "Failed to bind to command ReliSock");

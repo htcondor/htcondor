@@ -30,6 +30,13 @@
 #include "sig_install.h"
 
 #include "condor_debug.h"
+
+#if defined(GSS_AUTHENTICATION)
+#include "auth_sock.h"
+#else
+#define AuthSock ReliSock
+#endif
+
 static char *_FileName_ = __FILE__;  // used by EXCEPT 
 
 #define _NO_EXTERN_DAEMON_CORE 1	

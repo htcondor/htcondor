@@ -93,7 +93,10 @@ typedef int		(Service::*ReaperHandlercpp)(int pid,int exit_status);
 #endif
 
 // helper function for finding available port for both TCP and UDP command socket
-int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock);
+#if !defined(GSS_AUTHENTICATION)
+#define AuthSock ReliSock
+#endif
+int BindAnyCommandPort(AuthSock *rsock, SafeSock *ssock);
 
 class DaemonCore : public Service
 {
