@@ -113,7 +113,7 @@ HashTable <PROC_ID, GlobusJob *> JobsByProcID( HASH_TABLE_SIZE,
 HashTable <HashKey, GlobusResource *> ResourcesByName( HASH_TABLE_SIZE,
 													   hashFunction );
 
-bool grabAllJobs = true;
+bool firstScheddContact = true;
 
 char *Owner = NULL;
 
@@ -712,7 +712,7 @@ doContactSchedd()
 
 	// AddJobs
 	/////////////////////////////////////////////////////
-	if ( addJobsSignaled ) {
+	if ( addJobsSignaled || firstScheddContact ) {
 		int num_ads = 0;
 
 		dprintf( D_FULLDEBUG, "querying for new jobs\n" );
@@ -724,7 +724,7 @@ doContactSchedd()
 		// Otherwise, grab all jobs that are unheld and aren't marked as
 		// currently being managed.
 		// If JobManaged is undefined, equate it with false.
-		if ( grabAllJobs ) {
+		if ( firstScheddContact ) {
 //			sprintf( expr_buf, "%s && %s == %d && !(%s == %d && %s =!= TRUE)",
 			sprintf( expr_buf, "%s && %s == %d && (%s == %d && %s =!= TRUE) == FALSE",
 					 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
@@ -795,7 +795,7 @@ doContactSchedd()
 
 		dprintf(D_FULLDEBUG,"Fetched %d new job ads from schedd\n",num_ads);
 
-		grabAllJobs = false;
+		firstScheddContact = false;
 		addJobsSignaled = false;
 	}
 	/////////////////////////////////////////////////////
