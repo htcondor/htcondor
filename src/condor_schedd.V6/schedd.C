@@ -1908,12 +1908,26 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 			if( WIFEXITED(status) ) {
                 dprintf( D_FULLDEBUG, "Shadow pid %d exited with status %d\n",
                                                 pid, WEXITSTATUS(status) );
-                if( WEXITSTATUS(status) == JOB_NO_MEM ) {
-                    swap_space_exhausted();
-                } else if( WEXITSTATUS(status) == JOB_NOT_STARTED ) {
-						/* unable to start job -- throw away match */
+				switch( WEXITSTATUS(status) ) {
+				case JOB_NO_MEM:
+					swap_space_exhausted();
+					break;
+				case JOB_CKPTED:
+				case JOB_NOT_CKPTED:
+				case JOB_NOT_STARTED:
 					Relinquish(srec->match);
 					DelMrec(srec->match);
+					break;
+				case JOB_EXCEPTION:
+					/* some exception happened in this job -- if this keeps
+					   happening, we should put the job in the hold state */
+					break;
+				case JOB_SHADOW_USAGE:
+					EXCEPT("shadow exited with incorrect usage!\n");
+					break;
+				case JOB_BAD_STATUS:
+					EXCEPT("shadow exited because job status != RUNNING");
+					break;
 				}
             } else if( WIFSIGNALED(status) ) {
                 dprintf( D_FULLDEBUG, "Shadow pid %d died with signal %d\n",
