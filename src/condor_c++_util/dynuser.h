@@ -26,7 +26,7 @@
 #ifdef WIN32
 
 #include <aclapi.h>
-#include "ntsecapi.h"
+#include <ntsecapi.h>
 
 
 

@@ -28,7 +28,7 @@
 
 #ifdef WIN32
 
-#include "ntsecapi.h"
+#include <ntsecapi.h>
 
 #define CC_DATA_DELIM L'|' 		// separates data members in a record
 #define CC_RECORD_DELIM L'\n'	// separates different records

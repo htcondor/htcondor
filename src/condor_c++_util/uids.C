@@ -438,6 +438,11 @@ get_real_username( void )
 	return RealUserName;
 }
 
+void
+clear_passwd_cache() {
+	// no-op on Windows
+}
+
 #else  // end of ifdef WIN32, now below starts Unix-specific code
 
 #include <grp.h>
