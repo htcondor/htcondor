@@ -1,7 +1,7 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_negotiator.mak
 
 ..\src\condor_negotiator.V6\main.C : \
-	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -37,7 +37,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -53,7 +53,7 @@
 	
 
 ..\src\condor_negotiator.V6\matchmaker.C : \
-	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\ad_printmask.h"\
 	"..\src\condor_c++_util\condor_api.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -104,7 +104,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\

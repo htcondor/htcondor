@@ -57,6 +57,7 @@ CLEAN :
 	-@erase "$(INTDIR)\dagman_submit.obj"
 	-@erase "$(INTDIR)\dagman_util.obj"
 	-@erase "$(INTDIR)\debug.obj"
+	-@erase "$(INTDIR)\helper.obj"
 	-@erase "$(INTDIR)\job.obj"
 	-@erase "$(INTDIR)\parse.obj"
 	-@erase "$(INTDIR)\script.obj"
@@ -90,6 +91,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\script.obj" \
 	"$(INTDIR)\scriptQ.obj" \
 	"$(INTDIR)\types.obj" \
+	"$(INTDIR)\helper.obj" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_daemon_core.lib" \
 	"$(OUTDIR)\condor_io.lib" \
@@ -132,6 +134,7 @@ CLEAN :
 	-@erase "$(INTDIR)\dagman_submit.obj"
 	-@erase "$(INTDIR)\dagman_util.obj"
 	-@erase "$(INTDIR)\debug.obj"
+	-@erase "$(INTDIR)\helper.obj"
 	-@erase "$(INTDIR)\job.obj"
 	-@erase "$(INTDIR)\parse.obj"
 	-@erase "$(INTDIR)\script.obj"
@@ -163,6 +166,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\script.obj" \
 	"$(INTDIR)\scriptQ.obj" \
 	"$(INTDIR)\types.obj" \
+	"$(INTDIR)\helper.obj" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_daemon_core.lib" \
 	"$(OUTDIR)\condor_io.lib" \
@@ -435,6 +439,12 @@ SOURCE=..\src\condor_dagman\dagman_util.C
 SOURCE=..\src\condor_dagman\debug.C
 
 "$(INTDIR)\debug.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_dagman\helper.C
+
+"$(INTDIR)\helper.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

@@ -1,7 +1,7 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_status.mak
 
 ..\src\condor_status.V6\prettyPrint.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\ad_printmask.h"\
 	"..\src\condor_c++_util\condor_api.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -46,7 +46,7 @@
 	
 
 ..\src\condor_status.V6\setflags.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\ad_printmask.h"\
 	"..\src\condor_c++_util\condor_api.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -89,12 +89,13 @@
 	
 
 ..\src\condor_status.V6\status.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\ad_printmask.h"\
 	"..\src\condor_c++_util\condor_api.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\condor_q.h"\
 	"..\src\condor_c++_util\condor_query.h"\
+	"..\src\condor_c++_util\error_utils.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\generic_query.h"\
 	"..\src\condor_c++_util\get_daemon_addr.h"\
@@ -163,7 +164,7 @@
 	
 
 ..\src\condor_status.V6\totals.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\

@@ -1,7 +1,7 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_schedd.mak
 
 ..\src\condor_schedd.V6\autocluster.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -35,7 +35,7 @@
 	
 
 ..\src\condor_schedd.V6\dedicated_scheduler.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\condor_query.h"\
@@ -112,7 +112,7 @@
 	
 
 ..\src\condor_schedd.V6\grid_universe.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -165,7 +165,7 @@
 	
 
 ..\src\condor_schedd.V6\qmgmt.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_collection.h"\
 	"..\src\condor_c++_util\classad_collection_types.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
@@ -237,7 +237,7 @@
 	
 
 ..\src\condor_schedd.V6\qmgmt_common.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -251,7 +251,7 @@
 	
 
 ..\src\condor_schedd.V6\qmgmt_receivers.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -300,7 +300,7 @@
 	
 
 ..\src\condor_schedd.V6\schedd.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\access.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\classad_helpers.h"\
@@ -397,7 +397,7 @@
 	
 
 ..\src\condor_schedd.V6\schedd_main.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\extArray.h"\
@@ -464,7 +464,7 @@
 	
 
 ..\src\condor_schedd.V6\shadow_mgr.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_merge.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\

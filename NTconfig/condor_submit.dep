@@ -1,7 +1,7 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_submit.mak
 
 ..\src\condor_submit.V6\submit.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\access.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\environ.h"\
@@ -15,6 +15,7 @@
 	"..\src\condor_c++_util\print_wrapped_text.h"\
 	"..\src\condor_c++_util\sig_name.h"\
 	"..\src\condor_c++_util\simplelist.h"\
+	"..\src\condor_c++_util\store_cred.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
 	"..\src\condor_c++_util\url_condor.h"\

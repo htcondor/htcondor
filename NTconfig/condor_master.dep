@@ -1,7 +1,7 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_master.mak
 
 ..\src\condor_master.V6\daemon_master.C : \
-	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\env.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -47,7 +47,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -64,7 +64,7 @@
 	
 
 ..\src\condor_master.V6\master.C : \
-	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\get_daemon_addr.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -111,7 +111,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -133,7 +133,7 @@
 	
 
 ..\src\condor_master.V6\service.WIN32.C : \
-	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -168,7 +168,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\

@@ -39,7 +39,7 @@
 	
 
 ..\src\condor_util_lib\condor_common_c.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -56,14 +56,12 @@
 	
 
 ..\src\condor_util_lib\condor_perms.c : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_perms.h"\
-	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	
 
