@@ -42,15 +42,15 @@ class FunctionCall : public ExprTree
             @param s The Sink object.
             @return false if the expression could not be successfully
                 unparsed into the sink.
-            @see Sink
+            @see Sink 
         */
-		virtual bool toSink (Sink &);
+		virtual bool ToSink( Sink & );
 
 		/** Set the name of the function call
 			@param fnName The name of the function.  The string is duplicated
 				internally.
 		*/
-		void setFunctionName(char *fnName);
+		void SetFunctionName(char *fnName);
 
 		/** Append an actual argument to the call.
 			@param arg The argument to the call.  The expression is adopted
@@ -58,17 +58,18 @@ class FunctionCall : public ExprTree
 				assumes responsibility for further storage management of the
 				expression).
 		*/
-		void appendArgument(ExprTree *arg);
+		void AppendArgument(ExprTree *arg);
+
+		virtual FunctionCall* Copy( );
 
 		typedef	bool (*ClassAdFunc)(char*,ArgumentList&,EvalState&,Value&);
 		typedef HashTable<MyString, ClassAdFunc> FuncTable;
 
 	private:
-		virtual ExprTree* _copy( CopyMode );
-		virtual void _setParentScope( ClassAd* );
-		virtual bool _evaluate( EvalState &, Value & );
-		virtual bool _evaluate( EvalState &, Value &, ExprTree *& );
-		virtual bool _flatten( EvalState&, Value&, ExprTree*&, OpKind* );
+		virtual void _SetParentScope( ClassAd* );
+		virtual bool _Evaluate( EvalState &, Value & );
+		virtual bool _Evaluate( EvalState &, Value &, ExprTree *& );
+		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* );
 
 		// information common to all function calls
 		// a mapping from function names (char*) to static methods
@@ -81,19 +82,44 @@ class FunctionCall : public ExprTree
 		ArgumentList	arguments;
 		int				numArgs;
 
-		// the functions themselves 
-		static bool isUndefined(char*,ArgumentList&,EvalState&,Value&);
-		static bool isError(char*,ArgumentList&,EvalState&,Value&);
-		static bool isInteger(char*,ArgumentList&,EvalState&,Value&);
-		static bool isReal(char*,ArgumentList&,EvalState&,Value&);
-		static bool isString(char*,ArgumentList&,EvalState&,Value&);
-		static bool isList(char*,ArgumentList&,EvalState&,Value&);
-		static bool isClassAd(char*,ArgumentList&,EvalState&,Value&);
-		static bool isMember(char*,ArgumentList&,EvalState&,Value&);
-		static bool isExactMember(char*,ArgumentList&,EvalState&,Value&);
-		static bool sumFrom(char*,ArgumentList&,EvalState&,Value&);
-		static bool avgFrom(char*,ArgumentList&,EvalState&,Value&);
+		// function implementations
+			 // type predicates
+		static bool isType(char*,ArgumentList&,EvalState&,Value&);
+
+			// list membership predicates
+		static bool testMember(char*,ArgumentList&,EvalState&,Value&);
+
+			// sum, average and bounds (max and min)
+		static bool sumAvgFrom(char*,ArgumentList&,EvalState&,Value&);
 		static bool boundFrom(char*,ArgumentList&,EvalState&,Value&);
+
+			// time management (constructors)
+		static bool currentTime(char*,ArgumentList&,EvalState&,Value&);
+		static bool timeZoneOffset(char*,ArgumentList&,EvalState&,Value&);
+		static bool dayTime(char*,ArgumentList&,EvalState&,Value&);
+		static bool makeTime(char*,ArgumentList&,EvalState&,Value&);
+			// time management (selectors)
+		static bool getField(char*,ArgumentList&,EvalState&,Value&);
+			// time management (conversions)
+		static bool inTimeUnits(char*,ArgumentList&,EvalState&,Value&);
+
+			// string management
+		static bool strCat(char*,ArgumentList&,EvalState&,Value&);
+		static bool changeCase(char*,ArgumentList&,EvalState&,Value&);
+		static bool subString(char*,ArgumentList&,EvalState&,Value&);
+
+			// pattern matching
+		static bool matchPattern(char*,ArgumentList&,EvalState&,Value&);
+
+			// type conversion
+		static bool convInt(char*,ArgumentList&,EvalState&,Value&);
+		static bool convReal(char*,ArgumentList&,EvalState&,Value&);
+		static bool convString(char*,ArgumentList&,EvalState&,Value&);
+		static bool convBool(char*,ArgumentList&,EvalState&,Value&);
+		static bool convTime(char*,ArgumentList&,EvalState&,Value&);
+
+			// math (floor, ceil, round)
+		static bool doMath(char*,ArgumentList&,EvalState&,Value&);
 };
 
 

@@ -45,7 +45,7 @@ ClassAd (char *domainName) : attrList( 32 )
 	nodeKind = CLASSAD_NODE;
 
 	// get pointer to schema and stash it for easy access
-	domMan.getDomainSchema (domainName, domainIndex, schema);
+	domMan.GetDomainSchema (domainName, domainIndex, schema);
 
 	// initialize other internal structures
 	attr.valid = false;
@@ -68,12 +68,12 @@ ClassAd (const ClassAd &ad) : attrList( 32 )
 	for( int i = 0 ; i < last ; i++ ) {
 		if( ad.attrList[i].valid ) {
 			if( ad.attrList[i].attrName ) {
-				attrList[i].attrName = strdup( ad.attrList[i].attrName );
+				attrList[i].attrName = strnewp( ad.attrList[i].attrName );
 			} else {
 				attrList[i].attrName = NULL;
 			}
 			attrList[i].expression = 
-				ad.attrList[i].expression->copy(EXPR_DEEP_COPY);
+				ad.attrList[i].expression->Copy();
 			attrList[i].valid = true;
 		} else {
 			attrList[i].valid = false;
@@ -87,7 +87,7 @@ ClassAd::
 {
 	for( int i = 0 ; i < last ; i++ ) {
 		if( attrList[i].valid && attrList[i].attrName ) {
-			free( attrList[i].attrName );
+			delete [] ( attrList[i].attrName );
 			delete attrList[i].expression;
 		}
 	}
@@ -95,12 +95,12 @@ ClassAd::
 
 
 void ClassAd::
-clear( )
+Clear( )
 {
 	for (int i = 0; i < last; i++) {
 		if (!attrList[i].valid) continue;
 
-		if (attrList[i].attrName) free(attrList[i].attrName);
+		if (attrList[i].attrName) delete [] (attrList[i].attrName);
 		if (attrList[i].expression) delete attrList[i].expression;
 
 		attrList[i].valid = false;
@@ -110,7 +110,59 @@ clear( )
 
 
 bool ClassAd::
-insert (char *name, ExprTree *tree)
+InsertAttr( const char* name, int value, NumberFactor f )
+{
+	Literal *lit = new Literal( );
+	lit->SetIntegerValue( value, f );
+	if( !Insert( name, lit ) ) {
+		delete lit;
+		return false;
+	}
+	return true;
+}
+
+
+bool ClassAd::
+InsertAttr( const char* name, double value, NumberFactor f )
+{
+	Literal *lit = new Literal( );
+	lit->SetRealValue( value, f );
+	if( !Insert( name, lit ) ) {
+		delete lit;
+		return false;
+	}
+	return true;
+}
+	
+
+bool ClassAd::
+InsertAttr( const char *name, bool value )
+{
+	Literal *lit = new Literal( );
+	lit->SetBooleanValue( value );
+	if( !Insert( name, lit ) ) {
+		delete lit;
+		return false;
+	}
+	return true;
+}
+
+
+bool ClassAd::
+InsertAttr( const char *name, const char *value, bool dup )
+{
+	const char *val = dup ? strnewp( value ) : value;
+	Literal *lit = new Literal( );
+	lit->SetStringValue( val );
+	if( !Insert( name, lit ) ) {
+		delete lit;
+		return false;
+	} 
+	return true;
+}
+
+bool ClassAd::
+Insert (const char *name, ExprTree *tree)
 {
 	int			index;
 	char		*attr = NULL;
@@ -119,11 +171,8 @@ insert (char *name, ExprTree *tree)
 	if (!name || !tree) return false;
 
 	// parent of the expression is this classad
-	tree->setParentScope( this );
+	tree->SetParentScope( this );
 
-	// get rid of prefix or postfix white space
-	name = strtok( name, " \t\n" );
-	
 	// if the classad is domainized
 	if (schema) {
 		SSString s;
@@ -139,7 +188,7 @@ insert (char *name, ExprTree *tree)
 				break;
 		}
 		if (index == last) {
-			attr = strdup (name);
+			attr = strnewp (name);
 			last++;
 		}
 	}
@@ -168,19 +217,18 @@ insert (char *name, ExprTree *tree)
 
 
 bool ClassAd::
-insert( char *name, char *expr, int len )
+Insert( const char *name, const char *expr, int len )
 {
 	static Source 	src;
 	ExprTree 		*tree;
 
-	if( len < 0 ) len = strlen( expr );	
-	src.setSource( expr, len );
-	return( src.parseExpression( tree ) && insert( name, tree ) );
+	src.SetSource( expr, len );
+	return( src.ParseExpression( tree ) && Insert( name, tree ) );
 }
 
 
 ExprTree *ClassAd::
-lookup (char *name)
+Lookup (const char *name)
 {
 	int			index;
 
@@ -205,14 +253,14 @@ lookup (char *name)
 
 
 ExprTree *ClassAd::
-lookupInScope( char* name, ClassAd *&ad ) 
+LookupInScope( const char* name, ClassAd *&ad ) 
 {
 	EvalState	state;
 	ExprTree	*tree;
 	int			rval;
 
-	state.setScopes( this );
-	rval = lookupInScope( name, tree, state );
+	state.SetScopes( this );
+	rval = LookupInScope( name, tree, state );
 	if( rval == EVAL_OK ) {
 		ad = state.curAd;
 		return( tree );
@@ -224,7 +272,7 @@ lookupInScope( char* name, ClassAd *&ad )
 
 
 int ClassAd::
-lookupInScope( char* name, ExprTree*& expr, EvalState &state )
+LookupInScope( const char* name, ExprTree*& expr, EvalState &state )
 {
 	extern int exprHash( ExprTree* const&, int );
 	HashTable<ExprTree*,bool> superChase( 16, &exprHash );
@@ -251,22 +299,22 @@ lookupInScope( char* name, ExprTree*& expr, EvalState &state )
 		}
 
 		// lookup in current scope
-		if( ( expr = current->lookup( name ) ) ) {
+		if( ( expr = current->Lookup( name ) ) ) {
 			return( EVAL_OK );
 		}
 
 		// not in current scope; try superScope
-		if( !( super = lookup( "super" ) ) ) {
+		if( !( super = current->Lookup( "super" ) ) ) {
 			// no explicit super attribute; get lexical parent
 			superScope = current->parentScope;
 		} else {
 			// explicit super attribute
-			if( !super->evaluate( state, val ) ) {
+			if( !super->Evaluate( state, val ) ) {
 				return( EVAL_FAIL );
 			}
 
-			if( !val.isClassAdValue( superScope ) ) {
-				return( val.isUndefinedValue( ) ? EVAL_UNDEF : EVAL_ERROR );
+			if( !val.IsClassAdValue( superScope ) ) {
+				return( val.IsUndefinedValue( ) ? EVAL_UNDEF : EVAL_ERROR );
 			}
 		}
 
@@ -298,15 +346,12 @@ lookupInScope( char* name, ExprTree*& expr, EvalState &state )
 
 
 bool ClassAd::
-remove (char *name)
+Delete (const char *name)
 {
     int         index;
 
 	// sanity check
-	if (!name) return false;
-
-    // get rid of prefix or postfix white space
-    name = strtok( name, " \t\n" );
+	if (name == NULL) return false;
 
     // if the classad is domainized
     if (schema) {
@@ -317,9 +362,13 @@ remove (char *name)
         for (index = 0; index < last; index ++) {
 			// Case insensitive to attribute names
             if( strcasecmp(attrList[index].attrName, name)==0 ) {
-				free (attrList[index].attrName);
+				delete [] attrList[index].attrName;
 				attrList[last] = attrList[index];
 				attrList[index]= attrList[last-1];
+				attrList[last-1].valid = false;
+				attrList[last-1].attrName = NULL;
+				attrList[last-1].expression = NULL;
+
 				index = last;
 				last --;
 				
@@ -339,8 +388,47 @@ remove (char *name)
 }
 
 
+ExprTree *ClassAd::
+Remove (const char *name)
+{
+    int         index;
+
+	// sanity check
+	if (name == NULL) return NULL;
+
+    // if the classad is domainized
+    if (schema) {
+        // operate on the common schema array
+        index = schema->getCanonical (name);
+    } else {
+        // use the attrlist as a standard unordered list
+        for (index = 0; index < last; index ++) {
+			// Case insensitive to attribute names
+            if( strcasecmp(attrList[index].attrName, name)==0 ) {
+				delete [] attrList[index].attrName;
+				attrList[last] = attrList[index];
+				attrList[index]= attrList[last-1];
+				attrList[last-1].valid = false;
+				attrList[last-1].attrName = NULL;
+				attrList[last-1].expression = NULL;
+				index = last;
+				last --;
+				
+				break;
+			}
+        }
+    }
+
+	if (attrList[index].valid) {
+		attrList[index].valid = false;
+		return( attrList[index].expression );
+	}
+
+	return NULL;
+}
+
 void ClassAd::
-_setParentScope( ClassAd* )
+_SetParentScope( ClassAd* )
 {
 	// already set by base class for this node; we shouldn't propagate 
 	// the call to sub-expressions because this is a new scope
@@ -348,12 +436,32 @@ _setParentScope( ClassAd* )
 
 
 bool ClassAd::
-toSink (Sink &s)
+ToSink( Sink &s )
 {
-	char	*attrName;
-	bool    first = true;
+	FormatOptions *p = s.GetFormatOptions( );
 
-	if (!s.sendToSink ((void*)"[ ", 2)) return false;
+	const char *attrName;
+	bool    first = true;
+	int		indentLevel = p ? p->GetIndentLevel( ) : 0;
+	int		indentLength;
+	bool	wantIndentation;
+
+	if( p ) {
+		p->GetClassAdIndentation( wantIndentation, indentLength );
+	} else {
+		wantIndentation = false;
+		indentLength = 0;
+	}
+
+	if( wantIndentation ) {
+		if( !s.SendToSink( (void*)"\n", 1 ) || !p->Indent( s ) ) return false;
+	}
+
+	if (!s.SendToSink ((void*)"[", 1)) return false;
+
+	if( wantIndentation ) {
+		p->SetIndentLevel( indentLevel+indentLength );
+	}
 
 	for (int index = 0; index < last; index++) {
 		if (attrList[index].valid && attrList[index].attrName && 
@@ -364,87 +472,89 @@ toSink (Sink &s)
 
 			// if this is not the first attribute, print the ";" separator
 			if (!first) {
-				if (!s.sendToSink ((void*)" ; ", 3)) return false;
+				if (!s.SendToSink ((void*)";", 1)) return false;
 			}
 
-			if (!s.sendToSink ((void*)attrName, strlen(attrName))	||
-				!s.sendToSink ((void*)" = ", 3)						||
-				!(attrList[index].expression)->toSink(s))
+			// if indenting is required, indent the appropriate amount
+			if( wantIndentation ) {
+				if( !s.SendToSink( (void*)"\n", 1 ) || !p->Indent( s ) ) 
 					return false;
+			}
+
+			if (!s.SendToSink ((void*)attrName, strlen(attrName))	||
+				!s.SendToSink ((void*)" = ", 3) )
+					return false;
+
+			if( wantIndentation ) p->SetIndentLevel(indentLevel+2*indentLength);
+			if( !(attrList[index].expression)->ToSink(s) ) return false;
+			if( wantIndentation ) p->SetIndentLevel( indentLevel+indentLength );
 
 			first = false;
 		}
 	}
 
-	return (s.sendToSink ((void*)" ] ", 3));
+	if( wantIndentation ) {
+		if( !s.SendToSink( (void*)"\n", 1 ) ) return false;
+		p->SetIndentLevel( indentLevel );
+		if( !p->Indent( s ) ) return false;
+	}
+
+	return (s.SendToSink ((void*)"]", 1));
 }
 
 
-ExprTree* ClassAd::
-_copy( CopyMode cm )
+ClassAd* ClassAd::
+Copy( )
 {
-	if( cm == EXPR_DEEP_COPY ) {
-		ClassAd	*newAd = new ClassAd();
+	ClassAd	*newAd = new ClassAd();
 
-		if( !newAd ) return NULL;
-		newAd->nodeKind = CLASSAD_NODE;
-		newAd->schema = schema;
-		newAd->last = last;
-		newAd->parentScope = parentScope;
+	if( !newAd ) return NULL;
+	newAd->nodeKind = CLASSAD_NODE;
+	newAd->schema = schema;
+	newAd->last = last;
+	newAd->parentScope = parentScope;
 
-		for	( int i = 0 ; i < last ; i++ ) {
-			if( attrList[i].valid ) {
-				if( attrList[i].attrName ) {
-					newAd->attrList[i].attrName=strdup( attrList[i].attrName );
-				} else {
-					newAd->attrList[i].attrName = NULL;
-				}
-				newAd->attrList[i].expression = 
-					attrList[i].expression->copy( EXPR_DEEP_COPY );
-				if( !newAd->attrList[i].expression ) {
-					delete newAd;
-					return NULL;
-				}
-				newAd->attrList[i].valid = true;
+	for	( int i = 0 ; i < last ; i++ ) {
+		if( attrList[i].valid ) {
+			if( attrList[i].attrName ) {
+				newAd->attrList[i].attrName=strnewp( attrList[i].attrName );
 			} else {
-				newAd->attrList[i].valid = false;
+				newAd->attrList[i].attrName = NULL;
 			}
-		}
-
-		return newAd;
-	} else if( cm == EXPR_REF_COUNT ) {
-		// reference counted copy
-		for( int i = 0 ; i < last ; i++ ) {
-			if( attrList[i].valid ) {
-				attrList[i].expression->copy( EXPR_REF_COUNT );
+			newAd->attrList[i].expression = 
+				attrList[i].expression->Copy( );
+			if( !newAd->attrList[i].expression ) {
+				delete newAd;
+				return NULL;
 			}
+			newAd->attrList[i].valid = true;
+		} else {
+			newAd->attrList[i].valid = false;
 		}
-		return this;
 	}
 
-	// will not get here
-	return 0;
+	return newAd;
 }
 
 
 bool ClassAd::
-_evaluate( EvalState&, Value& val )
+_Evaluate( EvalState&, Value& val )
 {
-	val.setClassAdValue( this );
+	val.SetClassAdValue( this );
 	return( this );
 }
 
 
 bool ClassAd::
-_evaluate( EvalState&, Value &val, ExprTree *&tree )
+_Evaluate( EvalState&, Value &val, ExprTree *&tree )
 {
-	val.setClassAdValue( this );
-	return( !( tree = copy( ) ) );
+	val.SetClassAdValue( this );
+	return( !( tree = Copy( ) ) );
 }
 
 
 bool ClassAd::
-_flatten( EvalState& state, Value&, ExprTree*& tree, OpKind* ) 
+_Flatten( EvalState& state, Value&, ExprTree*& tree, OpKind* ) 
 {
 	ClassAd 	*newAd = new ClassAd();
 	Value		eval;
@@ -458,27 +568,27 @@ _flatten( EvalState& state, Value&, ExprTree*& tree, OpKind* )
 		if( attrList[i].valid ) {
 			// copy attribute name
 			if( attrList[i].attrName ) {
-				newAd->attrList[i].attrName = strdup( attrList[i].attrName );
+				newAd->attrList[i].attrName = strnewp( attrList[i].attrName );
 			} else {
 				newAd->attrList[i].attrName = NULL;
 			}
 
 			// flatten expression
-			if( !attrList[i].expression->flatten( state, eval, etree ) ) {
+			if( !attrList[i].expression->Flatten( state, eval, etree ) ) {
 				delete newAd;
 				tree = NULL;
-				eval.clear();
+				eval.Clear();
 				state.curAd = oldAd;
 				return false;
 			}
 
 			// if a value was obtained, convert it to a literal
 			if( !etree ) {
-				etree = Literal::makeLiteral( eval );
+				etree = Literal::MakeLiteral( eval );
 				if( !etree ) {
 					delete newAd;
 					tree = NULL;
-					eval.clear();
+					eval.Clear();
 					state.curAd = oldAd;
 					return false;
 				}
@@ -490,7 +600,7 @@ _flatten( EvalState& state, Value&, ExprTree*& tree, OpKind* )
 			newAd->attrList[i].valid = false;
 		}
 
-		eval.clear();
+		eval.Clear();
 	}
 
 	newAd->last = last;
@@ -501,12 +611,12 @@ _flatten( EvalState& state, Value&, ExprTree*& tree, OpKind* )
 
 
 ClassAd *ClassAd::
-fromSource (Source &s)
+FromSource (Source &s)
 {
 	ClassAd	*ad = new ClassAd;
 
 	if (!ad) return NULL;
-	if (!s.parseClassAd (ad)) {
+	if (!s.ParseClassAd (ad)) {
 		delete ad;
 		return (ClassAd*)NULL;
 	}
@@ -515,32 +625,32 @@ fromSource (Source &s)
 }
 
 ClassAd *ClassAd::
-augmentFromSource (Source &s, ClassAd &ad)
+AugmentFromSource (Source &s, ClassAd &ad)
 {
-    return( s.parseClassAd(&ad) ? &ad : 0 );
+    return( s.ParseClassAd(ad) ? &ad : 0 );
 }
 
 
 bool ClassAd::
-evaluateAttr( char *attr , Value &val )
+EvaluateAttr( const char *attr , Value &val )
 {
 	EvalState	state;
 	ExprTree	*tree;
 
-	state.setScopes( this );
-	switch( lookupInScope( attr, tree, state ) ) {	
+	state.SetScopes( this );
+	switch( LookupInScope( attr, tree, state ) ) {	
 		case EVAL_FAIL:
 			return false;
 
 		case EVAL_OK:
-			return( tree->evaluate( state , val ) );
+			return( tree->Evaluate( state, val ) );
 
 		case EVAL_UNDEF:
-			val.setUndefinedValue( );
+			val.SetUndefinedValue( );
 			return( true );
 
 		case EVAL_ERROR:
-			val.setErrorValue( );
+			val.SetErrorValue( );
 			return( true );
 
 		default:
@@ -550,96 +660,102 @@ evaluateAttr( char *attr , Value &val )
 
 
 bool ClassAd::
-evaluateExpr( char *expr , Value &val , int len )
+EvaluateExpr( const char *expr , Value &val , int len )
 {
 	Source		src;
 	ExprTree	*tree;
 	bool		rval;
 
-	if( len == -1 ) len = strlen( expr );
-	src.setSource( expr , len );
-	src.parseExpression( tree );
+	src.SetSource( expr , len );
+	src.ParseExpression( tree );
 	if( !tree ) {
-		val.setErrorValue();
+		val.SetErrorValue();
 		return false;
 	}
-	rval = evaluateExpr( tree , val );
+	rval = EvaluateExpr( tree , val );
 	delete tree;
 	return( rval );	
 }
 
 
 bool ClassAd::
-evaluateExpr( ExprTree *tree , Value &val )
+EvaluateExpr( ExprTree *tree , Value &val )
 {
 	EvalState	state;
 
-	state.setScopes( this );
-	return( tree->evaluate( state , val ) );
+	state.SetScopes( this );
+	return( tree->Evaluate( state , val ) );
 }
 
 bool ClassAd::
-evaluateExpr( ExprTree *tree , Value &val , ExprTree *&sig )
+EvaluateExpr( ExprTree *tree , Value &val , ExprTree *&sig )
 {
 	EvalState	state;
 
-	state.setScopes( this );
-	return( tree->evaluate( state , val , sig ) );
+	state.SetScopes( this );
+	return( tree->Evaluate( state , val , sig ) );
 }
 
 bool ClassAd::
-evaluateAttrInt( char *attr, int &i ) 
+EvaluateAttrInt( const char *attr, int &i ) 
 {
 	Value val;
-	return( evaluateAttr( attr, val ) && val.isIntegerValue( i ) );
+	return( EvaluateAttr( attr, val ) && val.IsIntegerValue( i ) );
 }
 
 bool ClassAd::
-evaluateAttrReal( char *attr, double &r ) 
+EvaluateAttrReal( const char *attr, double &r ) 
 {
 	Value val;
-	return( evaluateAttr( attr, val ) && val.isRealValue( r ) );
+	return( EvaluateAttr( attr, val ) && val.IsRealValue( r ) );
 }
 
 bool ClassAd::
-evaluateAttrNumber( char *attr, int &i ) 
+EvaluateAttrNumber( const char *attr, int &i ) 
 {
 	Value val;
-	return( evaluateAttr( attr, val ) && val.isNumber( i ) );
+	return( EvaluateAttr( attr, val ) && val.IsNumber( i ) );
 }
 
 bool ClassAd::
-evaluateAttrNumber( char *attr, double &r ) 
+EvaluateAttrNumber( const char *attr, double &r ) 
 {
 	Value val;
-	return( evaluateAttr( attr, val ) && val.isNumber( r ) );
+	return( EvaluateAttr( attr, val ) && val.IsNumber( r ) );
 }
 
 bool ClassAd::
-evaluateAttrString( char *attr, char *buf, int len )
+EvaluateAttrString( const char *attr, char *buf, int len, int &alen )
 {
 	Value val;
-	return( evaluateAttr( attr, val ) && val.isStringValue( buf, len ) );
+	return( EvaluateAttr( attr, val ) && val.IsStringValue( buf, len, alen ) );
 }
 
 bool ClassAd::
-evaluateAttrString( char *attr, char *&str )
+EvaluateAttrString( const char *attr, char *&str )
 {
 	Value val;
-	return( evaluateAttr( attr, val ) && val.isStringValue( str ) );
+	return( EvaluateAttr( attr, val ) && val.IsStringValue( str ) );
 }
 
 bool ClassAd::
-flatten( ExprTree *tree , Value &val , ExprTree *&fexpr )
+EvaluateAttrBool( const char *attr, bool &b )
+{
+	Value val;
+	return( EvaluateAttr( attr, val ) && val.IsBooleanValue( b ) );
+}
+
+bool ClassAd::
+Flatten( ExprTree *tree , Value &val , ExprTree *&fexpr )
 {
 	EvalState	state;
 
-	state.setScopes( this );
-	return( tree->flatten( state , val , fexpr ) );
+	state.SetScopes( this );
+	return( tree->Flatten( state , val , fexpr ) );
 }
 
 bool ClassAdIterator::
-nextAttribute (char *&attr, ExprTree *&expr)
+NextAttribute (const char *&attr, ExprTree *&expr)
 {
 	if (!ad) return false;
 
@@ -654,7 +770,7 @@ nextAttribute (char *&attr, ExprTree *&expr)
 
 
 bool ClassAdIterator::
-previousAttribute (char *&attr, ExprTree *&expr)
+PreviousAttribute (const char *&attr, ExprTree *&expr)
 {
 	if (!ad) return false;
 
@@ -669,7 +785,7 @@ previousAttribute (char *&attr, ExprTree *&expr)
 
 
 bool ClassAdIterator::
-currentAttribute (char *&attr, ExprTree *&expr)
+CurrentAttribute (const char *&attr, ExprTree *&expr)
 {
 	if (!ad || !ad->attrList[index].valid ) return false;
 

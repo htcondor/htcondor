@@ -45,7 +45,7 @@ class AttributeReference : public ExprTree
                 unparsed into the sink.
             @see Sink
         */
-		virtual bool toSink (Sink &s);
+		virtual bool ToSink (Sink &s );
 
 		/** Set the attribute reference.
 			@param expr The expression part of the reference (i.e., in
@@ -57,19 +57,20 @@ class AttributeReference : public ExprTree
 				(i.e., in case of .attr).  This parameter cannot be true if
 				expr is not NULL
 		*/
-    	void setReference (ExprTree *expr, char *attrName, bool absolute=false);
+    	void SetReference (ExprTree *expr, char *attrName, bool absolute=false);
+
+		virtual AttributeReference* Copy( );
 
   	private:
 		// private ctor for internal use
 		AttributeReference( ExprTree*, char*, bool );
 
-		virtual ExprTree* _copy( CopyMode );
-		virtual void _setParentScope( ClassAd* p );
-    	virtual bool _evaluate( EvalState & , Value & );
-    	virtual bool _evaluate( EvalState & , Value &, ExprTree*& );
-    	virtual bool _flatten( EvalState&, Value&, ExprTree*&, OpKind* );
+		virtual void _SetParentScope( ClassAd* p );
+    	virtual bool _Evaluate( EvalState & , Value & );
+    	virtual bool _Evaluate( EvalState & , Value &, ExprTree*& );
+    	virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* );
 
-		int	findExpr( EvalState&, ExprTree*&, ExprTree*&, bool );
+		int	FindExpr( EvalState&, ExprTree*&, ExprTree*&, bool );
 
 		ExprTree	*expr;
 		bool		absolute;

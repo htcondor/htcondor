@@ -2,24 +2,31 @@
 #include "operators.h"
 #include "value.h"
 
+StringSpace Value::stringSpace( 256 );
+
 Value::
-Value()
+Value() : strValue( )
 {
+	valueType = UNDEFINED_VALUE;
+	booleanValue = false;
+	integerValue = 0;
+	realValue = 0.0;
 	listValue = NULL;
 	classadValue = NULL;
-	valueType = UNDEFINED_VALUE;
+	timeValueSecs = 0;
+	timeValueUSecs = 0;
 }
 
 
 Value::
 ~Value()
 {
-	clear();
+	Clear();
 }
 
 
 void Value::
-clear()
+Clear()
 {
 	switch( valueType ) {
 		case LIST_VALUE:
@@ -35,9 +42,7 @@ clear()
 			break;
 
 		case STRING_VALUE:
-			// strValue is assumed to be a pointer to memory that is not
-			// handled by the Value class; so don't attempt to free it
-			strValue = NULL;
+			strValue.dispose( );
 			break;
 
 		default:
@@ -48,7 +53,7 @@ clear()
 
 
 bool Value::
-isNumber (int &i)
+IsNumber (int &i)
 {
 	switch (valueType) {
 		case INTEGER_VALUE:
@@ -66,7 +71,7 @@ isNumber (int &i)
 
 
 bool Value::
-isNumber (double &r)
+IsNumber (double &r)
 {
 	switch (valueType) {
 		case INTEGER_VALUE:
@@ -84,93 +89,145 @@ isNumber (double &r)
 
 
 void Value::
-copyFrom(Value &val)
+CopyFrom( Value &val )
 {
 	switch (val.valueType) {
 		case STRING_VALUE:
-			setStringValue( val.strValue );
+			Clear( );
+			strValue.copy( val.strValue );
+			valueType = STRING_VALUE;
 			return;
 
 		case BOOLEAN_VALUE:
-			setBooleanValue( val.booleanValue );
+			SetBooleanValue( val.booleanValue );
 			return;
 
 		case INTEGER_VALUE:
-			setIntegerValue( val.integerValue );
+			SetIntegerValue( val.integerValue );
 			return;
 
 		case REAL_VALUE:
-			setRealValue( val.realValue );
+			SetRealValue( val.realValue );
 			return;
 
 		case UNDEFINED_VALUE:
-			setUndefinedValue ();
+			SetUndefinedValue( );
 			return;
 
 		case ERROR_VALUE:
-			setErrorValue ();
+			SetErrorValue( );
 			return;
 	
 		case LIST_VALUE:
-			setListValue (val.listValue);
+			SetListValue( val.listValue );
 			return;
 
 		case CLASSAD_VALUE:
-			setClassAdValue (val.classadValue);
+			SetClassAdValue( val.classadValue );
+			return;
+
+		case ABSOLUTE_TIME_VALUE:
+			SetAbsoluteTimeValue( val.timeValueSecs );
+			return;
+
+		case RELATIVE_TIME_VALUE:
+			SetRelativeTimeValue( val.timeValueSecs, val.timeValueUSecs );
 			return;
 
 		default:
-			setUndefinedValue ();
+			SetUndefinedValue ();
 	}	
 }
 
 
 bool Value::
-toSink (Sink &dest)
+ToSink (Sink &dest )
 {
-	char tempBuf[512];
+	char 	tempBuf[512];
+	time_t 	clock;
+	FormatOptions *p = dest.GetFormatOptions( );
+	bool	wantQuotes = p ? p->GetWantQuotes( ) : true;
 
     switch (valueType) {
       	case UNDEFINED_VALUE:
-        	return (dest.sendToSink((void*)"undefined", strlen("undefined")));
+        	return (dest.SendToSink((void*)"undefined", strlen("undefined")));
 
       	case ERROR_VALUE:
-        	return (dest.sendToSink ((void*)"error", strlen("error")));
+        	return (dest.SendToSink ((void*)"error", strlen("error")));
 
 		case BOOLEAN_VALUE:
 			sprintf( tempBuf, "%s", booleanValue ? "true" : "false" );
-			return( dest.sendToSink( (void*)tempBuf, booleanValue?4:5 ) );
+			return( dest.SendToSink( (void*)tempBuf, booleanValue?4:5 ) );
 
       	case INTEGER_VALUE:
 			sprintf (tempBuf, "%d", integerValue);
-			return (dest.sendToSink ((void*)tempBuf, strlen(tempBuf)));
+			return (dest.SendToSink ((void*)tempBuf, strlen(tempBuf)));
 
       	case REAL_VALUE:
         	sprintf (tempBuf, "%f", realValue);
-			return (dest.sendToSink ((void*)tempBuf, strlen(tempBuf)));
+			return (dest.SendToSink ((void*)tempBuf, strlen(tempBuf)));
 
       	case STRING_VALUE:
-			return (dest.sendToSink ((void*) "\"", 1) 					&&
-					dest.sendToSink ((void*)strValue, strlen(strValue))	&&
-					dest.sendToSink ((void*) "\"", 1));
+			return( WriteString( strValue.getCharString( ), dest ) );
 
 		case LIST_VALUE:
 			// sanity check
 			if (!listValue) {
-				clear();
+				Clear();
 				return false;
 			}
-			listValue->toSink( dest );
+			listValue->ToSink( dest );
 			return true;
 
 		case CLASSAD_VALUE:
 			// sanity check
 			if (!classadValue) {
-				clear();
+				Clear();
 				return false;
 			}
-			return classadValue->toSink( dest );
+			return classadValue->ToSink( dest );
 
+		case ABSOLUTE_TIME_VALUE:
+			{
+				struct	tm tms;
+				char	ascTimeBuf[32], timeZoneBuf[32], timeOffSetBuf[64];
+				extern	time_t timezone;
+
+					// format:  `Wed Nov 11 13:11:47 1998 (CST) -6:00`
+
+					// we use localtime()/asctime() instead of ctime() because 
+					// we need the timezone name from strftime() which needs
+					// a 'normalized' struct tm.  localtime() does this for us.
+
+					// get the asctime()-like segment; but remove \n
+				clock = (time_t) timeValueSecs;
+				localtime_r( &clock, &tms );
+				asctime_r( &tms, ascTimeBuf, 31 );
+				ascTimeBuf[24] = '\0';
+
+					// get the timezone name
+				if( !strftime( timeZoneBuf, 31, "%Z", &tms ) ) return false;
+				
+					// output the offSet (use the relative time format)
+					// wierd:  POSIX says regions west of GMT have positive
+					// offSets.  We use negative offSets to not confuse users.
+				WriteRelativeTime( timeOffSetBuf, true, -timezone, 0 );
+
+					// assemble fields together
+				sprintf( tempBuf, "%s (%s) %s", ascTimeBuf, timeZoneBuf, 
+							timeOffSetBuf );
+
+				return( ( wantQuotes ? dest.SendToSink((void*)"\'",1):true ) &&
+					dest.SendToSink( tempBuf, strlen( tempBuf ) ) &&
+					( wantQuotes ? dest.SendToSink( (void*) "\'", 1 ):true ) );
+			}
+
+		case RELATIVE_TIME_VALUE:
+			WriteRelativeTime( tempBuf, false, timeValueSecs, timeValueUSecs );
+			return( ( wantQuotes ? dest.SendToSink( (void*) "\'", 1 ):true ) &&
+				dest.SendToSink( tempBuf, strlen( tempBuf ) ) &&
+				( wantQuotes ? dest.SendToSink( (void*) "\'", 1 ):true ) );
+				
       	default:
         	return false;
     }
@@ -181,71 +238,190 @@ toSink (Sink &dest)
 
 
 void Value::
-setRealValue (double r)
+SetRealValue (double r)
 {
-    clear();
+    Clear();
     valueType=REAL_VALUE;
     realValue = r;
 }
 
 void Value::
-setBooleanValue( bool b )
+SetBooleanValue( bool b )
 {
-	clear();
+	Clear();
 	valueType = BOOLEAN_VALUE;
 	booleanValue = b;
 }
 
 void Value::
-setIntegerValue (int i)
+SetIntegerValue (int i)
 {
-    clear();
+    Clear();
     valueType=INTEGER_VALUE;
     integerValue = i;
 }
 
 void Value::
-setUndefinedValue (void)
+SetUndefinedValue (void)
 {
-    clear();
+    Clear();
     valueType=UNDEFINED_VALUE;
 }
 
 void Value::
-setErrorValue (void)
+SetErrorValue (void)
 {
-    clear();
+    Clear();
     valueType=ERROR_VALUE;
 }
 
 void Value::
-adoptStringValue(char *s, int )
+SetStringValue( const char *s )
 {
-    clear();
+    Clear();
 	valueType = STRING_VALUE;
-    strValue = s;
+	(void) stringSpace.getCanonical( s, strValue, SS_ADOPT_CPLUS_STRING );
 }
 
 void Value::
-setStringValue(char *s)
+SetListValue (ExprList *l)
 {
-    clear();
-    valueType = STRING_VALUE;
-    strValue = s;
-}
-
-void Value::
-setListValue (ExprList *l)
-{
-    clear();
+    Clear();
     valueType = LIST_VALUE;
     listValue = l;
 }
 
 void Value::
-setClassAdValue( ClassAd *ad )
+SetClassAdValue( ClassAd *ad )
 {
-	clear();
+	Clear();
 	valueType = CLASSAD_VALUE;
 	classadValue = ad;
+}
+
+void Value::
+SetRelativeTimeValue( int rsecs, int rusecs ) 
+{
+	Clear( );
+	valueType = RELATIVE_TIME_VALUE;
+	if( ( rsecs >= 0 && rusecs < 0 ) || ( rsecs < 0 && rusecs > 0 ) ) {
+		rusecs = -rusecs;
+	}
+	timeValueSecs = rsecs;
+	timeValueUSecs = rusecs;
+}
+
+
+void Value::
+SetAbsoluteTimeValue( int asecs ) 
+{
+	Clear( );
+	valueType = ABSOLUTE_TIME_VALUE;
+	timeValueSecs = asecs;
+	timeValueUSecs = 0;
+}	
+
+
+void Value::
+WriteRelativeTime( char *buf, bool sign, int timeSecs, int timeUSecs )
+{
+	char tempBuf[64];
+	int days, hrs, mins, secs, usecs;
+
+		// write the sign if necessary
+	if( sign || timeSecs < 0 ) {
+		strcpy( buf, ( timeSecs < 0 ) ? "-" : "+" );
+	} else {
+		buf[0] = '\0';
+	}
+
+    if( timeSecs < 0 ) {
+        days = -timeSecs;
+        usecs = -timeUSecs;
+    } else {
+        days = timeSecs;
+        usecs = timeUSecs;
+    }
+
+    hrs  = days % 86400;
+    mins = hrs  % 3600;
+    secs = mins % 60;
+    days = days / 86400;
+    hrs  = hrs  / 3600;
+    mins = mins / 60;
+
+    if( days ) {
+        sprintf( tempBuf, "%d#", days );
+		strcat( buf, tempBuf );
+    }
+
+    sprintf( tempBuf, "%02d:%02d", hrs, mins );
+	strcat( buf, tempBuf );
+    
+    if( secs ) {
+        sprintf( tempBuf, ":%02d", secs );
+		strcat( buf, tempBuf );
+    }
+
+    if( usecs ) {
+        sprintf( tempBuf, ".%d", usecs );
+		strcat( buf, tempBuf );
+    }
+
+}
+
+bool Value::
+IsStringValue( char *b, int l, int &al )
+{
+    if( valueType == STRING_VALUE ) {
+        const char *s = strValue.getCharString();
+        if( s ) {
+            strncpy( b, s, l );
+            al = strlen( s );
+            return( true );
+        } else {
+        	b[0] = '\0';
+            al = 0;
+            return false;
+        }
+    }
+    return false;
+}
+
+bool Value::
+WriteString( const char* s, Sink &sink )
+{
+	const char *ptr = s;
+	char	buf[32];
+	int		len;
+
+	if( !sink.SendToSink( (void*)"\"", 1 ) ) return false;
+	while( *ptr ) {
+		switch( *ptr ) {
+			case '\a': strcpy( buf, "\\a" ); len = 2; break;
+			case '\b': strcpy( buf, "\\b" ); len = 2; break;
+			case '\f': strcpy( buf, "\\f" ); len = 2; break;
+			case '\n': strcpy( buf, "\\n" ); len = 2; break;
+			case '\r': strcpy( buf, "\\r" ); len = 2; break;
+			case '\t': strcpy( buf, "\\t" ); len = 2; break;
+			case '\v': strcpy( buf, "\\v" ); len = 2; break;
+			case '\\': strcpy( buf, "\\\\" );len = 2; break;
+			case '\?': strcpy( buf, "\\?" ); len = 2; break;
+			case '\'': strcpy( buf, "\\\'" );len = 2; break;
+			case '\"': strcpy( buf, "\\\"" );len = 2; break;
+
+			default:
+				if( !isprint( *ptr ) ) {
+						// print hexadecimal representation
+					sprintf( buf, "\\%x", (int)*ptr );
+					len = strlen( buf );
+				} else {
+					buf[0] = *ptr;
+					len = 1;
+				}
+		}
+		if( !sink.SendToSink( (void*)buf, len ) ) return false;
+		ptr++;
+	}
+	return( sink.SendToSink( (void*)"\"", 1 ) );
 }

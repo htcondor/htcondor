@@ -6,50 +6,36 @@ Literal ()
 {
 	nodeKind = LITERAL_NODE;
 	factor = NO_FACTOR;
-	string = NULL;
 }
 
 
 Literal::
 ~Literal ()
 {
-	if( string ) free( string );
 }
 
 
-ExprTree *Literal::
-_copy( CopyMode cm )
+Literal *Literal::
+Copy( )
 {
-	if( cm == EXPR_DEEP_COPY ) {	
-		Literal *newTree = new Literal;
+	Literal *newTree = new Literal;
 
-		if (newTree == 0) return 0;
-		newTree->value.copyFrom (value);
-		newTree->nodeKind = nodeKind;
-		if( ( newTree->string = strdup( string ) ) == NULL ) {
-			delete newTree;
-			return 0;
-		}
-		return newTree;
-	} else if( cm == EXPR_REF_COUNT ) {
-		// ref count already updated by ExprTree::copy()
-		return this;
-	}
-
-	// will not reach here
-	return 0;
+	if (newTree == 0) return 0;
+	newTree->value.CopyFrom( value );
+	newTree->nodeKind = nodeKind;
+	return newTree;
 }
 
 bool Literal::
-toSink (Sink &s)
+ToSink (Sink &s)
 {
-	if (!value.toSink (s)) return false;
+	if (!value.ToSink( s )) return false;
 
 	// print out any factors --- (factors are set only if 'value' is a
 	// number value, so we don't have to check for that case
-	if ((factor == K_FACTOR && !s.sendToSink ((void*)"K", 1))	||
-		(factor == M_FACTOR && !s.sendToSink ((void*)"M", 1))	||
-		(factor == G_FACTOR && !s.sendToSink ((void*)"G", 1)))
+	if ((factor == K_FACTOR && !s.SendToSink ((void*)"K", 1))	||
+		(factor == M_FACTOR && !s.SendToSink ((void*)"M", 1))	||
+		(factor == G_FACTOR && !s.SendToSink ((void*)"G", 1)))
 			return false;
 
 	return true;
@@ -57,34 +43,64 @@ toSink (Sink &s)
 
 
 Literal* Literal::
-makeLiteral( Value& val ) 
+MakeAbsTime( time_t now )
 {
-	char *s;
+	Literal *lit;
+	if( ( now<0 && time( &now )<0 ) || ( ( lit=new Literal() )==NULL ) ) {
+		return NULL;
+	}
+	lit->SetAbsTimeValue( (int) now );
+	return( lit );
+}
 
+Literal* Literal::
+MakeRelTime( time_t t1, time_t t2 )
+{
+	Literal *lit;
+	if( ( t1<0 && time( &t1 )<0 ) || ( t2<0 && time( &t2 )<0 ) ||
+		( ( lit = new Literal() )==NULL ) ) {
+		return NULL;
+	}
+	lit->SetRelTimeValue( t1 - t2 );
+	return( lit );
+}
+
+
+Literal* Literal::
+MakeRelTime( int secs )
+{
+	Literal *lit = new Literal( );
+	if( lit ) {
+		lit->SetRelTimeValue( secs );
+		return( lit );
+	} 
+	return( NULL );
+}
+
+Literal* Literal::
+MakeLiteral( Value& val ) 
+{
 	Literal* lit = new Literal();
 	if( !lit ) return NULL;
-	lit->value.copyFrom( val );
-	if( val.isStringValue( s ) ) {
-		lit->string = s;
-	}
+	lit->value.CopyFrom( val );
 
 	return lit;
 }
 
 
 bool Literal::
-_evaluate (EvalState &, Value &val)
+_Evaluate (EvalState &, Value &val)
 {
 	int		i;
 	double	r;
 
-	val.copyFrom( value );
+	val.CopyFrom( value );
 
 	// if integer or real, multiply by the factor
-	if (val.isIntegerValue(i)) {
-		val.setIntegerValue (i*factor);
-	} else if (val.isRealValue(r)) {
-		val.setRealValue (r*(double)factor);
+	if (val.IsIntegerValue(i)) {
+		val.SetIntegerValue (i*factor);
+	} else if (val.IsRealValue(r)) {
+		val.SetRealValue (r*(double)factor);
 	}
 
 	return( true );
@@ -92,101 +108,76 @@ _evaluate (EvalState &, Value &val)
 
 
 bool Literal::
-_evaluate( EvalState &state, Value &val, ExprTree *&tree )
+_Evaluate( EvalState &state, Value &val, ExprTree *&tree )
 {
-	_evaluate( state, val );
-	return( !( tree = copy() ) );
+	_Evaluate( state, val );
+	return( !( tree = Copy() ) );
 }
 
 
 bool Literal::
-_flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind*)
+_Flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind*)
 {
 	tree = NULL;
-	return( _evaluate( state, val ) );
+	return( _Evaluate( state, val ) );
 }
 
 
 void Literal::
-setBooleanValue( bool b )
+SetBooleanValue( bool b )
 {
-	value.setBooleanValue( b );
-	if( string ) { 
-		free( string );
-		string = NULL;
-	}
+	value.SetBooleanValue( b );
 	factor = NO_FACTOR;
 }
 
 
 void Literal::
-setIntegerValue (int i, NumberFactor f)
+SetIntegerValue (int i, NumberFactor f)
 {
-	value.setIntegerValue (i);
-	if( string ) { 
-		free( string );
-		string = NULL;
-	}
+	value.SetIntegerValue (i);
 	factor = f;
 }
 
 
 void Literal::
-setRealValue (double d, NumberFactor f)
+SetRealValue (double d, NumberFactor f)
 {
-	value.setRealValue (d);
-	if( string ) { 
-		free( string );
-		string = NULL;
-	}
+	value.SetRealValue (d);
 	factor = f;
 }
 
 
 void Literal::
-adoptStringValue (char *str)
+SetStringValue (const char *str )
 {
-	value.adoptStringValue (str, SS_ADOPT_C_STRING);
-	if( string ) { 
-		free( string );
-		string = NULL;
-	}
+	value.SetStringValue( str );
 	factor = NO_FACTOR;
 }
 
 
 void Literal::
-setStringValue (char *str)
+SetUndefinedValue (void)
 {
-	if( string ) { 
-		free( string );
-		string = NULL;
-	}
-	string = strdup( str );
-	value.setStringValue( string );
+	value.SetUndefinedValue( );
 	factor = NO_FACTOR;
 }
 
 
 void Literal::
-setUndefinedValue (void)
+SetErrorValue (void)
 {
-	value.setUndefinedValue( );
-	if( string ) { 
-		free( string );
-		string = NULL;
-	}
+	value.SetErrorValue( );
 	factor = NO_FACTOR;
 }
 
+void Literal::
+SetAbsTimeValue( int secs )
+{
+	value.SetAbsoluteTimeValue( secs );
+}
 
 void Literal::
-setErrorValue (void)
+SetRelTimeValue( int secs, int usecs )
 {
-	value.setErrorValue( );
-	if( string ) { 
-		free( string );
-		string = NULL;
-	}
-	factor = NO_FACTOR;
+	value.SetRelativeTimeValue( secs, usecs );
 }

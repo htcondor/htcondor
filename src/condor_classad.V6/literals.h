@@ -41,56 +41,87 @@ class Literal : public ExprTree
                 unparsed into the sink.
             @see Sink
         */
-		virtual bool toSink (Sink &s);
+		virtual bool ToSink( Sink &s );
 
 		/** Set this literal as a boolean.
 			@param b The boolean value.
 		*/
-		void setBooleanValue(bool b);
+		void SetBooleanValue(bool b);
+
 		/** Set this literal as an integer.
 			@param i The integer value.
 			@param f The multiplication factor.
 		*/
-    	void setIntegerValue(int i, NumberFactor f = NO_FACTOR);
+    	void SetIntegerValue(int i, NumberFactor f = NO_FACTOR);
 
 		/** Set this literal as a real.
 			@param r The real value.
 			@param f The multiplication factor.
 		*/
-    	void setRealValue(double r, NumberFactor f = NO_FACTOR);
+    	void SetRealValue(double r, NumberFactor f = NO_FACTOR);
 
-		// leave this undocumented for now
-    	void adoptStringValue(char *str);
-
-		/** Set the literal to a string value
-			@param str The string value, which is duplicated internally.
+		/** Set the literal to a string value.  The string is adopted by the
+		  		object, and is assumed to have been created with new char[].
+			@param str The string value
 		*/
-    	void setStringValue(char *str);
+    	void SetStringValue( const char *str );
+
+		/** Set the literal to an absolute time value
+			@param secs Number of seconds since the UNIX epoch
+		*/
+		void SetAbsTimeValue( int secs );
+
+		/** Set the literal to a relative time value
+			@param secs Number of seconds (could be positive or negative)
+			@param usecs Number of microseconds
+		*/
+		void SetRelTimeValue( int secs, int usecs=0 );
 
 		/** Set the literal as an undefined value
 		*/
-    	void setUndefinedValue(void);
+    	void SetUndefinedValue(void);
 
 		/** Set the literal as an error value
 		*/
-    	void setErrorValue(void);
+    	void SetErrorValue(void);
 
-	protected:
+		/** Create an absolute time literal.
+		 * 	@param now The time in UNIX epoch.  If a value of -1 is passed in
+		 * 	the system's current time will be used.
+		 * 	@return The literal expression.
+		 */
+		static Literal* MakeAbsTime( time_t now=-1 );
+
+		/** Create a relative time literal.
+		 * @param secs The number of seconds.
+		 * @return The literal expression.
+		 */
+		static Literal* MakeRelTime( int secs );
+
+		/** Create a relative time interval by subtracting two absolute times.
+		 * @param t1 The end time of the interval.  If -1 is passed in, the
+		 * system's current time will be used.
+		 * @param t2 the start time of the interval  If -1 is passed in, the
+		 * system's current time will be used.
+		 * @return The literal expression of the relative time (t1 - t2).
+		 */
+		static Literal* MakeRelTime( time_t t1=-1, time_t t2=-1 );
+
+		virtual Literal* Copy( );
+
+  	private:
 		friend FunctionCall;
 		friend ClassAd;
 		friend ExprList;
 		friend Operation;
 
-		static Literal* makeLiteral( Value& );
-  	private:
-		virtual ExprTree* _copy( CopyMode );
-		virtual void _setParentScope( ClassAd* ){ }
-		virtual bool _flatten( EvalState&, Value&, ExprTree*&, OpKind* );
- 		virtual bool _evaluate (EvalState &, Value &);
- 		virtual bool _evaluate (EvalState &, Value &, ExprTree *&);
+		static Literal*MakeLiteral(Value&);
+		virtual void _SetParentScope( ClassAd* ){ }
+		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* );
+ 		virtual bool _Evaluate (EvalState &, Value &);
+ 		virtual bool _Evaluate (EvalState &, Value &, ExprTree *&);
 
 		// literal specific information
-		char			*string;
     	Value   		value;
 		NumberFactor	factor;
 };

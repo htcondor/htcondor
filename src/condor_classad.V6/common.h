@@ -26,10 +26,9 @@
 
 enum MmMode
 {
-	MEM_DUP,
-	MEM_ADOPT_PRESERVE,
-	MEM_ADOPT_DISPOSE,
-	MEM_DISPOSE,
+	MEM_NONE	= 0,
+	MEM_DISPOSE = 1,
+	MEM_DUP		= 2
 };
 
 enum {
@@ -57,6 +56,8 @@ enum NumberFactor
 };
 
 /// List of supported operators 
+// The order in this enumeration should be synchronized with the opString[]
+// array in operators.C
 enum OpKind 
 {
     /** No op */ __NO_OP__,              // convenience
@@ -130,5 +131,6 @@ enum OpKind
     __LAST_OP__             = __MISC_END__
 };
 
+char* strnewp( const char* );
 
 #endif//__COMMON_H__

@@ -26,6 +26,7 @@
 
 #include "condor_io.h"		// for cedar
 #include "stringSpace.h"
+#include "extArray.h"
 #include "common.h"
 #include "tokens.h"
 
@@ -41,12 +42,120 @@ struct RealValue {
     NumberFactor    factor;
 };
 
-union TokenValue
+struct AbsTimeValue {
+	int				secs;
+};
+
+struct RelTimeValue {
+	int				secs;
+	int				usecs;
+};
+
+class TokenValue
 {
-    IntValue    intValue;
-    RealValue   realValue;
-	bool		boolValue;
-    char       	strValue[MAX_TOKEN_SIZE];
+	public:
+		TokenValue( ) {
+			tt = LEX_TOKEN_ERROR;
+			factor = NO_FACTOR;
+    		intValue = 0;
+    		realValue = 0.0;
+			boolValue = false;
+			secs = 0;
+			usecs = 0;;
+			strValue = NULL;
+		}
+
+		~TokenValue( ) {
+			if( strValue ) delete [] strValue;
+		}
+
+		void SetTokenType( TokenType t ) {
+			tt = t;
+		}
+
+		void SetIntValue( int i, NumberFactor f) {
+			intValue = i;
+			factor = f;
+		}
+
+		void SetRealValue( double r, NumberFactor f ) {
+			realValue = r;
+			factor = f;
+		}
+
+		void SetBoolValue( bool b ) {
+			boolValue = b;
+		}
+
+		void SetStringValue( char *str ) {
+			if( strValue ) delete [] strValue;
+			strValue = strnewp( str );
+		}
+
+		void SetAbsTimeValue( int asecs ) {
+			secs = asecs;
+		}
+
+		void SetRelTimeValue( int rsecs, int rusecs=0 ) {
+			secs = rsecs;
+			usecs = rusecs;
+		}
+
+		TokenType GetTokenType( ) {
+			return tt;
+		}
+
+		void GetIntValue( int& i, NumberFactor& f) {
+			i = intValue;
+			f = factor;
+		}
+
+		void GetRealValue( double& r, NumberFactor& f ) {
+			r = realValue;
+			f = factor;
+		}
+
+		void GetBoolValue( bool& b ) {
+			b = boolValue;
+		}
+
+		void GetStringValue( const char *&str, bool handOver=false ) {
+			str = strValue;	
+			if( handOver ) strValue = NULL;
+		}	
+
+		void GetAbsTimeValue( int& asecs ) {
+			asecs = secs;
+		}
+
+		void GetRelTimeValue( int& rsecs, int& rusecs ) {
+			rsecs = secs;
+			rusecs= usecs;
+		}
+
+		void CopyFrom( TokenValue &tv ) {
+			tt = tv.tt;
+			factor = tv.factor;
+			intValue = tv.intValue;
+			realValue = tv.realValue;
+			boolValue = tv.boolValue;
+			secs = tv.secs;
+			usecs = tv.usecs;
+			if( strValue ) {
+				delete [] strValue;
+			}
+			strValue = tv.strValue ? strnewp( tv.strValue ) : NULL;
+		}
+			
+	private:
+		TokenType tt;
+		NumberFactor factor;
+    	int intValue;
+    	double realValue;
+		bool boolValue;
+    	const char *strValue;
+		int	secs;
+		int usecs;
 };
 
 
@@ -59,26 +168,30 @@ class Lexer
 		~Lexer ();
 
 		// initialize methods
-		bool initializeWithString(char *,int);		// string 
-		bool initializeWithCedar (Sock &);			// CEDAR
-		bool initializeWithFd 	(int);				// file descriptor
-		bool initializeWithFile (FILE *);			// FILE structure
+		bool InitializeWithString(const char *,int=-1);	// string 
+		bool InitializeWithCedar (Sock &,int=-1);		// CEDAR
+		bool InitializeWithFd 	(int,int=-1);			// file descriptor
+		bool InitializeWithFile (FILE *,int=-1);		// FILE structure
+
+		void SetSentinelChar( int s ) { sentinel = s; }
 
 		// cleanup function --- purges strings from string space
-		void finishedParse();
+		void FinishedParse();
 		
 		// the 'extract token' functions
-		TokenType peekToken (TokenValue * = NULL);
-		TokenType consumeToken (TokenValue * = NULL);
+		TokenType PeekToken( TokenValue* = 0 );
+		TokenType ConsumeToken( TokenValue* = 0 );
 
 		// internal buffer for string, CEDAR and file token accumulation
-		enum 	{ LEX_BUFFER_SIZE = MAX_TOKEN_SIZE };// starting size
-		char   	lexBuffer[LEX_BUFFER_SIZE];		// the buffer itself
+		ExtArray<char> lexBuffer;					// the buffer itself
 
 		// miscellaneous functions
-		static char *strLexToken (int);			// string rep'n of token
+		static char *strLexToken (int);				// string rep'n of token
 
 	private:
+			// grant access to FunctionCall --- for tokenize{Abs,Rel}Time fns
+		friend class FunctionCall;
+
 		// types of input streams to the scanner
 		enum LexerInputSource {
 			LEXER_SRC_NONE, LEXER_SRC_STRING, LEXER_SRC_FILE,   
@@ -100,6 +213,7 @@ class Lexer
 		bool	inString;						// lexing a string constant
 		bool	accumulating;					// are we in a token?
 		int 	debug; 							// debug flag
+		int		sentinel;						// the sentinel character
 
 		// cached last token
 		TokenValue yylval;						// the token itself
@@ -114,7 +228,11 @@ class Lexer
 		int 	tokenizeNumber (void);			// integer or real
 		int 	tokenizeAlphaHead (void);		// identifiers/reserved strings
 		int 	tokenizeStringLiteral (void);	// string constants
+		int		tokenizeTime( void );			// time (absolute and relative)
 		int 	tokenizePunctOperator (void);	// punctuation and operators
+
+		static bool	tokenizeRelativeTime(char*,int&,int&);// relative time
+		static bool	tokenizeAbsoluteTime(char*,int&);// absolute time
 
 		// input sources
 		Sock	*sock;							// the Cedar sock

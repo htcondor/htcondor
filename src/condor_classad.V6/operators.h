@@ -46,7 +46,7 @@ class Operation : public ExprTree
                 unparsed into the sink.
             @see Sink
         */
-		virtual bool toSink (Sink &);
+		virtual bool ToSink( Sink &s );
 
 		/** Sets the type and children of the expression node.
 			@param kind The kind of operation.
@@ -54,7 +54,7 @@ class Operation : public ExprTree
 			@param e2 The second sub-expression child of the node (if any).
 			@param e3 The third sub-expression child of the node (if any).
 		*/
-		void setOperation (OpKind, ExprTree* = NULL, ExprTree* = NULL,
+		void SetOperation (OpKind, ExprTree* = NULL, ExprTree* = NULL,
 				ExprTree* = NULL);
 
 		/// table of string representations of operators; indexed by OpKind
@@ -68,7 +68,7 @@ class Operation : public ExprTree
 			@param result The result of the operation.
 			@see OpKind, Value
 		*/
-		static void operate (OpKind op, Value &op1, Value &op2, Value &result);
+		static void Operate (OpKind op, Value &op1, Value &op2, Value &result);
 
 		/** Convenience method which operates on ternary operators.
 			@param op The kind of operation.
@@ -78,21 +78,29 @@ class Operation : public ExprTree
 			@param result The result of the operation.
 			@see OpKind, Value
 		*/
-		static void operate (OpKind op, Value &op1, Value &op2, Value &op3, 
+		static void Operate (OpKind op, Value &op1, Value &op2, Value &op3, 
 			Value &result);
 
 		/** Predicate which tests if an operator is strict.
 			@param op The operator to be tested.
 			@return true if the operator is strict, false otherwise.
 		*/
-		static bool isStrictOperator( OpKind );
+		static bool IsStrictOperator( OpKind );
+
+		/** Gets the precedence level of an operator.  Higher precedences
+		 * 	get higher values.  (See K&R, p.53)
+		 * 	@param op The operator to get the precedence of
+		 * 	@return The precedence level of the operator.
+		 */
+		static int PrecedenceLevel( OpKind );
+
+		virtual Operation* Copy( );
 
   	private:
-		virtual ExprTree* _copy( CopyMode );
-		virtual void _setParentScope( ClassAd* );
-		virtual bool _evaluate( EvalState &, Value &);
-		virtual bool _evaluate( EvalState &, Value &, ExprTree*& );
-		virtual bool _flatten( EvalState&, Value&, ExprTree*&, OpKind* );
+		virtual void _SetParentScope( ClassAd* );
+		virtual bool _Evaluate( EvalState &, Value &);
+		virtual bool _Evaluate( EvalState &, Value &, ExprTree*& );
+		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* );
 
 		// auxillary functionms
 		bool combine( OpKind&, Value&, ExprTree*&, 
@@ -115,9 +123,12 @@ class Operation : public ExprTree
 		static int doLogical 	(OpKind, Value&, Value&, Value&);
 		static int doBitwise 	(OpKind, Value&, Value&, Value&); 
 		static int doRealArithmetic(OpKind,Value&, Value&, Value&);
+		static int doTimeArithmetic(OpKind,Value&, Value&, Value&);
 		static void compareStrings(OpKind, Value&, Value&, Value&, bool);
 		static void compareReals(OpKind, Value&, Value&, Value&);
 		static void compareIntegers(OpKind, Value&, Value&, Value&);
+		static void compareAbsoluteTimes(OpKind, Value&, Value&, Value& );
+		static void compareRelativeTimes(OpKind, Value&, Value&, Value& );
 
 		// operation specific information
 		OpKind		operation;

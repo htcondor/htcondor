@@ -5,11 +5,11 @@ CFLAGS = -Wall $(STD_C_FLAGS)
 
 SRC = lexer.C source.C operators.C attrrefs.C fnCall.C literals.C exprTree.C \
 		classad.C exprList.C value.C instantiations.C sink.C domain.C \
-		condorClassad.C
+		matchClassad.C util.C
 
 OBJ = lexer.o source.o operators.o attrrefs.o fnCall.o literals.o exprTree.o \
 		classad.o exprList.o value.o instantiations.o sink.o domain.o \
-		condorClassad.o
+		matchClassad.o util.o
 
 LIB =  ./libclassad.a ../condor_c++_util/cplus_lib.a \
       ../condor_util_lib/util_lib.a ../condor_io/libcondor.a \
@@ -32,18 +32,21 @@ all_target(libclassad.a)
 library_target(libclassad.a,$(OBJ))
 
 c_plus_target (cxi, cxi.o, $(LIB))
+c_plus_target (cxi-demo, cxi-demo.o, $(LIB))
 pure_c_plus_target(cxi.pure, cxi.o, $(LIB))
 
 standalone: libcasa.a
 library_target(libcasa.a,$(OBJ) $(S_OBJ))
 
-CONDOR_HEADERS = ../condor_c++_util/list.h ../condor_c++_util/stringSpace.h
+CONDOR_HEADERS = ../condor_c++_util/list.h ../condor_c++_util/stringSpace.h \
+			../condor_includes/condor_debug.h
+
 SPECIAL_HEADERS = distrib/condor_io.h distrib/stream.h distrib/sock.h \
 			distrib/reli_sock.h distrib/safe_sock.h distrib/buffers.h \
 			distrib/HashTable.h distrib/MyString.h distrib/extArray.h
 
 tarball: libcasa.a cxi
-	rm -rf classads
+	rm -rf classads *.gz
 	mkdir -p classads/include classads/lib classads/example
 	cp libcasa.a classads/lib
 	cp cxi.C classads/example

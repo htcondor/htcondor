@@ -27,6 +27,7 @@ Lexer ()
 	inString = false;
 	tokenConsumed = true;
 	accumulating = false;
+	sentinel = '\0';
 
 	// debug flag
 	debug = false;
@@ -43,12 +44,12 @@ Lexer::
 // Initialization method:  Initialize with immutable string
 //   +  Token will be accumulated in the lexBuffer
 bool Lexer::
-initializeWithString (char *buf, int buflen)
+InitializeWithString (const char *buf, int buflen)
 {
 	// sanity check
-	if (!buf || buflen < 1) return false;
+	if( !buf ) return false;
 
-	// set source characteristics
+	// Set source characteristics
 	lexInputSource = LEXER_SRC_STRING;
 	lexInputStream = (char *) buf;
 	lexInputLength = buflen;
@@ -68,26 +69,24 @@ initializeWithString (char *buf, int buflen)
 // Initialization method:  Initialize with cedar
 //   + The tokens will be accumulated in the lexBuffer
 bool Lexer::
-initializeWithCedar (Sock &s)
+InitializeWithCedar (Sock &s, int buflen)
 {
-	// set source characteristics
+	// Set source characteristics
 	lexInputSource = LEXER_SRC_CEDAR;
+	lexInputLength = buflen;		
 	sock           = &s;
 
 	// the following are not used for cedar sources
-	lexInputLength = 0;		
 	lexInputStream = NULL;
 
 	// token state initialization
 	pos = 0;
 	lexBufferCount = 0;
-	if (!sock->get_bytes (lexBuffer, 1)) return false;
+	if (!sock->get_bytes(&ch, 1)) return false;
+	lexBuffer[0] = (char) ch;
 	inString = false;
 	tokenConsumed = true;
 	accumulating = false;
-
-	// the first character
-	ch = *lexBuffer;
 
 	return true;
 }
@@ -96,26 +95,24 @@ initializeWithCedar (Sock &s)
 // Initialization method:  Initialize with file descriptor (similar to cedar)
 //   + The tokens will be accumulated in the lex buffer
 bool Lexer::
-initializeWithFd (int desc)
+InitializeWithFd (int desc, int buflen)
 {
-	// set source characteristics
+	// Set source characteristics
     lexInputSource = LEXER_SRC_FILE_DESC;
+    lexInputLength = buflen;
 	fd             = desc;
 
 	// the following are not used for file desc sources
-    lexInputLength = 0;
     lexInputStream = NULL;
 
     // token state initialization
     pos = 0;
 	lexBufferCount = 0;
-	if (read (fd, lexBuffer, 1) < 0) return false;
+	if (read (fd, &ch, 1) < 0) return false;
+	lexBuffer[0] = (char) ch;
 	inString = false;
 	tokenConsumed = true;
 	accumulating = false;
-
-	// the first character
-	ch = *lexBuffer;
 
     return true;
 }
@@ -124,14 +121,14 @@ initializeWithFd (int desc)
 // Initialization method:  Initialize with file structure (similar to cedar)
 //   + The tokens will be accumulated in the lex buffer
 bool Lexer::
-initializeWithFile (FILE *fp)
+InitializeWithFile (FILE *fp, int buflen)
 {
-	// set source characteristics
+	// Set source characteristics
     lexInputSource = LEXER_SRC_FILE;
+    lexInputLength = buflen;
 	file           = fp;
 
 	// the following are not used for file desc sources
-    lexInputLength = 0;
     lexInputStream = NULL;
 
     // token state initialization
@@ -145,7 +142,7 @@ initializeWithFile (FILE *fp)
 	if ((ch = getc (fp)) == EOF) return false;
 
 	// place the first character in the lexBuffer
-	*lexBuffer = (char) ch;
+	lexBuffer[pos] = (char) ch;
 
     return true;
 }
@@ -157,7 +154,7 @@ initializeWithFile (FILE *fp)
 //   with reference counting.  When a parse is finished, this space is flushed
 //   out.
 void Lexer::
-finishedParse ()
+FinishedParse ()
 {
 	accumulating = false;
 }
@@ -167,7 +164,7 @@ finishedParse ()
 void Lexer::
 mark (void)
 {
-	*lexBuffer = (char) ch;	
+	lexBuffer[0] = (char) ch;	
 	lexBufferCount = 0;
 	accumulating = true;
 }
@@ -189,17 +186,19 @@ wind (void)
 {
 	char chr;
 
+		// check if we've gone past the specified input length
+	pos++;
+	if( lexInputLength > 0 && pos > lexInputLength ) {
+		ch = EOF;
+		return;
+	}
+
 	// check the source
 	switch (lexInputSource) {
 		case LEXER_SRC_STRING:
-			// common operations to both
-			pos++;
-			if (pos >= lexInputLength) { ch = EOF; return; }
 			ch = lexInputStream[pos];
 			break;
 
-		// in the rest of the cases, the cursor is irrelevent --- just
-		// accumulate the token in the lexBuffer
 		case LEXER_SRC_CEDAR:
 			if (!sock->get_bytes (&chr, 1)) { ch = EOF; return; }
 			ch = chr;
@@ -210,7 +209,7 @@ wind (void)
 			break;
 
 		case LEXER_SRC_FILE_DESC:
-			if ((read (fd, &chr, 1)) < 0) { ch = EOF; return; }
+			if ((read (fd, &chr, 1)) <= 0) { ch = EOF; return; }
 			ch = chr;
 			break;
 
@@ -218,17 +217,22 @@ wind (void)
 			ch = EOF;
 			return;
 	}
-	if( accumulating ) lexBuffer[++lexBufferCount] = ch;
+	++lexBufferCount;
+	if( ch == sentinel ) {
+		ch = EOF;
+		return;
+	}
+	if( accumulating ) lexBuffer[lexBufferCount] = ch;
 }
 
 			
 TokenType Lexer::
-consumeToken (TokenValue *lvalp)
+ConsumeToken (TokenValue *lvalp)
 {
-	if (lvalp) *lvalp = yylval;
+	if (lvalp) lvalp->CopyFrom( yylval );
 
 	// if a token has already been consumed, get another token
-	if (tokenConsumed) peekToken (lvalp);
+	if (tokenConsumed) PeekToken (lvalp);
 
 	tokenConsumed = true;
 	return tokenType;
@@ -237,14 +241,14 @@ consumeToken (TokenValue *lvalp)
 
 // peekToken() returns the same token till consumeToken() is called
 TokenType Lexer::
-peekToken (TokenValue *lvalp)
+PeekToken (TokenValue *lvalp)
 {
 	if (!tokenConsumed) {
-		if( lvalp ) *lvalp = yylval;
+		if( lvalp ) lvalp->CopyFrom( yylval );
 		return tokenType;
 	}
 
-	// set the token to unconsumed
+	// Set the token to unconsumed
 	tokenConsumed = false;
 	
 	// consume white space
@@ -273,6 +277,7 @@ peekToken (TokenValue *lvalp)
 				// just a division operator
 				cut( );
 				tokenType = LEX_DIVIDE;
+				yylval.SetTokenType( tokenType );
 				return( tokenType );
 			}
 		} else {
@@ -283,6 +288,7 @@ peekToken (TokenValue *lvalp)
 	// check if this is the end of the input
 	if (ch == 0 || ch == EOF) {
 		tokenType = LEX_END_OF_INPUT;
+		yylval.SetTokenType( tokenType );
 		return tokenType;
 	}
 
@@ -294,6 +300,8 @@ peekToken (TokenValue *lvalp)
 		tokenizeAlphaHead ();
 	} else if (ch == '\"') {
 		tokenizeStringLiteral ();
+	} else if( ch == '\'' ) {
+		tokenizeTime( );
 	} else {
 		tokenizePunctOperator ();
 	}
@@ -302,8 +310,9 @@ peekToken (TokenValue *lvalp)
 		printf ("%s\n", strLexToken(tokenType));
 	}
 
-	if (lvalp) *lvalp = yylval;
+	if (lvalp) lvalp->CopyFrom( yylval );
 
+	yylval.SetTokenType( tokenType );
 	return tokenType;
 }	
 
@@ -408,10 +417,10 @@ tokenizeNumber (void)
 	char *endptr;
 	if( numberType == INTEGER ) {
 		cut( );
-		integer = (int) strtol( lexBuffer, &endptr, 0 );
+		integer = (int) strtol( lexBuffer.getarray(), &endptr, 0 );
 	} else if( numberType == REAL ) {
 		cut( );
-		real = strtod( lexBuffer, &endptr );
+		real = strtod( lexBuffer.getarray(), &endptr );
 	} else {
 		EXCEPT( "Should not reach here" );
 	}
@@ -429,12 +438,12 @@ tokenizeNumber (void)
 	}
 
 	if( numberType == INTEGER ) {
-		yylval.intValue.value = integer;
-		yylval.intValue.factor = f;
+		yylval.SetIntValue( integer, f );
+		yylval.SetTokenType( LEX_INTEGER_VALUE );
 		tokenType = LEX_INTEGER_VALUE;
 	} else {
-		yylval.realValue.value = real;
-		yylval.realValue.factor = f;
+		yylval.SetRealValue( real, f );
+		yylval.SetTokenType( LEX_REAL_VALUE );
 		tokenType = LEX_REAL_VALUE;
 	}
 
@@ -462,35 +471,255 @@ tokenizeAlphaHead (void)
 		cut ();
 
 		tokenType = LEX_IDENTIFIER;
-		yylval.strValue = lexBuffer;
+		yylval.SetStringValue( lexBuffer.getarray( ) );
 		
 		return tokenType;
 	}	
 
 	// check if the string is one of the reserved words; Case insensitive
 	cut ();
-	if (strcasecmp(lexBuffer, "true") == 0) {
+	if (strcasecmp(lexBuffer.getarray(), "true") == 0) {
 		tokenType = LEX_BOOLEAN_VALUE;
-		yylval.boolValue = true;
-	} else if (strcasecmp(lexBuffer, "false") == 0) {
+		yylval.SetBoolValue( true );
+	} else if (strcasecmp(lexBuffer.getarray(), "false") == 0) {
 		tokenType = LEX_BOOLEAN_VALUE;
-		yylval.boolValue = false;
-	} else if (strcasecmp(lexBuffer, "undefined") == 0) {
+		yylval.SetBoolValue( false );
+	} else if (strcasecmp(lexBuffer.getarray(), "undefined") == 0) {
 		tokenType = LEX_UNDEFINED_VALUE;
-	} else if (strcasecmp(lexBuffer, "error") == 0) {
+	} else if (strcasecmp(lexBuffer.getarray(), "error") == 0) {
 		tokenType = LEX_ERROR_VALUE;
-	} else if (strcasecmp(lexBuffer, "is") == 0 ) {
+	} else if (strcasecmp(lexBuffer.getarray(), "is") == 0 ) {
 		tokenType = LEX_META_EQUAL;
-	} else if (strcasecmp(lexBuffer, "isnt") == 0) {
+	} else if (strcasecmp(lexBuffer.getarray(), "isnt") == 0) {
 		tokenType = LEX_META_NOT_EQUAL;
 	} else {
 		// token is a character only identifier
 		tokenType = LEX_IDENTIFIER;
-		yylval.strValue = lexBuffer;
+		yylval.SetStringValue( lexBuffer.getarray() );
 	}
 
 	return tokenType;
 }
+
+// tokenizeTime
+int Lexer::
+tokenizeTime( )
+{
+	int secs, usecs;
+
+	// mark after the quote
+	wind( );
+	mark( );
+	while( ch > 0 && ch != '\'' ) {
+		wind( );
+	}
+
+	// time not terminated by '
+	if( ch != '\'' ) {
+		tokenType = LEX_TOKEN_ERROR;
+		return( tokenType );
+	}
+	cut( );
+	wind( );
+
+		// absolute time starts with an alpha character
+	if( isalpha( lexBuffer[0] ) ) {
+		if( !tokenizeAbsoluteTime( lexBuffer.getarray( ), secs ) ) {
+			tokenType = LEX_TOKEN_ERROR;
+			return( tokenType );
+		}
+		tokenType = LEX_ABSOLUTE_TIME_VALUE;
+		yylval.SetAbsTimeValue( secs );
+		return( tokenType );
+	} else {
+			// relative time value
+		if( !tokenizeRelativeTime( lexBuffer.getarray( ), secs, usecs ) ) {
+			tokenType = LEX_TOKEN_ERROR;
+			return( tokenType );
+		}
+		tokenType = LEX_RELATIVE_TIME_VALUE;
+		yylval.SetRelTimeValue( secs, usecs );
+		return( tokenType );
+	}
+
+		// shouldn't reach here
+	EXCEPT( "Shouldn't reach here" );
+	tokenType = LEX_TOKEN_ERROR;
+	return( tokenType );
+}
+
+
+bool Lexer::
+tokenizeAbsoluteTime( char *buf, int &asecs )
+{
+	struct 	tm timeValue;
+	int		secs, usecs;
+	time_t	absTime;
+	char	*tzStr, *tzOff;
+	extern	time_t timezone;
+
+		// format of abstime:  `Wed Nov 11 13:11:47 1998 (CST) +6:00`
+		// get the position of the timezone string and timezone offSet
+	if( ( ( tzStr = strchr( buf, '(' ) ) == NULL ) || 
+		( ( tzOff = strchr( buf, ')' ) ) == NULL ) ) {
+		return( false );
+	}
+
+		// delimit ctime()-like segment, timezone string and timezone offSet
+	*(tzStr-1) = '\0';
+	*(tzOff+1) = '\0';
+	tzOff += 2;
+
+		// convert the ctime() like segment into a time_t
+	if( ( strptime( buf, "%a %b %d %H:%M:%S %Y", &timeValue ) == 0 ) ||
+		( absTime = mktime( &timeValue ) ) == -1 ) {
+		return( false );
+	}
+
+		// treat the timezone offSet as a relative time value
+	if( !tokenizeRelativeTime( tzOff, secs, usecs ) ) {
+		return( false );
+	}
+
+		//	wierd:  POSIX says that regions west of GMT have *positive*
+		//	offSets.  We have negative offSets to not confuse users.
+	secs = -secs;
+
+		// the actual is the abstime - foreign offSet - timezone (which got
+		// added in by mktime()
+	asecs = (int)absTime + secs - timezone;
+	return( true );
+}
+
+bool Lexer::
+tokenizeRelativeTime( char *buf, int &rsecs, int &rusecs )
+{
+	bool negative = false;
+	int  days=0, hrs=0, mins=0, secs=0, usecs=0;
+	char *ptr = buf, *start, *end;
+	bool secsPresent=false, usecsPresent=false;
+
+		// initial (optional) plus or minus
+	if( *ptr == '-' ) {
+		negative = true;
+		ptr++;
+	} else if( *ptr == '+' ) {
+		negative = false;
+		ptr++;
+	} else if( !isdigit( *ptr ) ) {
+		return false;
+	}
+
+		// start of (optional) days field
+	start = ptr;
+	while( *ptr && isdigit( *ptr ) ) {
+		ptr++;
+	}
+	if( *ptr == '#' ) {
+		*ptr = '\0';
+		days = strtol( start, &end, 10 );  // base 10
+		if( days == 0 && end == start ) {
+			return( false );
+		}
+		// wind pointers past hours field
+		*ptr = '#';
+		ptr++;
+		start = ptr;
+		while( *ptr && isdigit( *ptr ) ) {
+			ptr++;
+		}
+	}
+
+		// now just after (required) hours field
+	if( *ptr == ':' ) {
+		*ptr = '\0';
+		hrs = strtol( start, &end, 10 ); // base 10
+		if( ( hrs < 0 || hrs > 23 ) || ( hrs == 0 && end == start ) ) {
+			// strtol() failed
+			return( false );
+		}
+		// wind past minutes field
+		*ptr = ':';
+		ptr++;
+		start = ptr;
+		while( *ptr && isdigit( *ptr ) ) {
+			ptr++;
+		}
+	} else {
+		// no hours field
+		return( false );
+	}
+
+		// check if (optional) seconds are specified after minutes
+	if( *ptr == ':' ) {
+		secsPresent = true;
+		*ptr = '\0';
+	} else if( *ptr != '\0' ) {
+		return( false );
+	}
+		
+		// get minutes value
+	mins = strtol( start, &end, 10 ); // base 10
+	if( ( mins < 0 || mins > 59 ) || ( mins == 0 && end == start ) ) {
+		// strtol() failed
+		return( false );
+	}
+
+		// if seconds were also specified
+	if( secsPresent ) {
+		*ptr = ':';
+		ptr++;
+		start = ptr;
+		while( *ptr && isdigit( *ptr ) ) {
+			ptr++;
+		}
+	}
+
+		// check if microseconds are specified
+	if( *ptr == '.' ) {
+		usecsPresent = true;
+		*ptr = '\0';
+	} else if( *ptr != '\0' ) {
+		return( false );
+	}
+
+		// get seconds value
+	if( secsPresent ) {
+		secs = strtol( start, &end, 10 ); // base 10
+		if( ( secs < 0 || secs > 59 ) || ( secs == 0 && end == start ) ) {
+			// strtol() failed
+			return( false );
+		}
+	}
+
+		// if microsecs were also specified
+	if( usecsPresent ) {
+		*ptr = '.';
+		ptr++;
+		start = ptr;
+		while( *ptr && isdigit( *ptr ) ) {
+			ptr++;
+		}
+	}
+
+		// there should be no more
+	if( *ptr ) {
+		return( false );
+	}
+
+	if( usecsPresent ) {
+		usecs = strtol( start, &end, 10 ); // base 10
+		if( ( usecs < 0 || usecs>999999 ) || ( usecs == 0 && end == start ) ) {
+			return( false );
+		}
+	}
+
+		// convert all non-usec fields into number of secs
+	rsecs = ( negative ? -1 : +1 ) * ( days*86400 + hrs*3600 + mins*60 + secs );
+	rusecs = usecs;
+	return( true );
+}
+
 
 
 // tokenizeStringLiteral:  Scans strings of the form " ... "
@@ -505,16 +734,16 @@ tokenizeStringLiteral (void)
 	mark ();
 
 	// consume the string literal; read upto " ignoring \"
-	while( ( ch > 0 ) && ( ch != '\"' || ch == '\"' && oldCh == '\\' ) ) {
-		wind( );
+	while( ( ch > 0 ) && ( ch != '\"' || ( ch == '\"' && oldCh == '\\' ) ) ) {
 		oldCh = ch;
+		wind( );
 	}
 
 	if( ch == '\"' ) {
 		cut( );
 		wind( );	// skip over the close quote
-		collapse_escapes( lexBuffer );
-		yylval.strValue = lexBuffer;
+		collapse_escapes( lexBuffer.getarray( ) );
+		yylval.SetStringValue( lexBuffer.getarray( ) );
 		tokenType = LEX_STRING_VALUE;
 	} else {
 		// loop quit due to ch == 0 or ch == EOF

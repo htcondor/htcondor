@@ -38,7 +38,7 @@ class Attribute
 		Attribute ();
 
 		bool		valid;
-		char 		*attrName;
+		const char 	*attrName;
 		ExprTree	*expression;
 		SSString	canonicalAttrName;
 };
@@ -65,13 +65,14 @@ class ClassAd : public ExprTree
 			@param s The sink object.
 			@return false if the ClassAd could not be successfully unparsed
 				into the sink.
+			@see Sink
 		*/
-		virtual bool toSink (Sink &s);	
+		virtual bool ToSink( Sink &s );	
 
 		// Accessors/modifiers
 		/** Clears the ClassAd of all attributes.
 		*/
-		void clear( );
+		void Clear( );
 
 		/** Inserts an attribute into the ClassAd.  The setParentScope() method
 				is invoked on the inserted expression.
@@ -81,7 +82,7 @@ class ClassAd : public ExprTree
 			@return true if the operation succeeded, false otherwise.
 			@see ExprTree::setParentScope
 		*/
-		bool insert( char *attrName, ExprTree *expr );
+		bool Insert( const char *attrName, ExprTree *expr );
 
 		/** Inserts an attribute into the ClassAd.  The contents of the buffer 
 				is parsed into an expression and then inserted into the 
@@ -96,7 +97,53 @@ class ClassAd : public ExprTree
 			@return true if the operation succeeded, false otherwise.
 			@see ExprTree::setParentScope
 		*/
-		bool insert( char *attrName, char *buf, int len=-1 );
+		bool Insert( const char *attrName, const char *buf, int len=-1 );
+
+		/** Inserts an attribute into the ClassAd.  The integer value is
+				converted into a Literal expression, and then inserted into
+				the classad.
+			@param attrName The name of the attribute.  This string is
+				duplicated internally.
+			@param value The integer value of the attribute.
+			@param f The multiplicative factor to be attached to value.
+			@see NumberFactor
+		*/
+		bool InsertAttr( const char *attrName,int value, 
+			NumberFactor f=NO_FACTOR );
+
+		/** Inserts an attribute into the ClassAd.  The real value is
+				converted into a Literal expression, and then inserted into
+				the classad.
+			@param attrName The name of the attribute.  This string is
+				duplicated internally.
+			@param value The real value of the attribute.
+			@param f The multiplicative factor to be attached to value.
+			@see NumberFactor
+		*/
+		bool InsertAttr( const char *attrName,double value, 
+			NumberFactor f=NO_FACTOR);
+
+		/** Inserts an attribute into the ClassAd.  The boolean value is
+				converted into a Literal expression, and then inserted into
+				the classad.
+			@param attrName The name of the attribute.  This string is
+				duplicated internally.
+			@param value The boolean value of the attribute.
+		*/
+		bool InsertAttr( const char *attrName, bool value );
+
+		/** Inserts an attribute into the ClassAd.  The string value is
+				converted into a Literal expression, and then inserted into
+				the classad.
+			@param attrName The name of the attribute.  This string is
+				always duplicated internally.
+			@param value The string attribute
+			@param dup If dup is true, the value is duplicated internally.
+				Otherwise, the string is assumed to have been created with new[]
+				and the classad assumes responsibility for freeing the storage.
+		*/
+		bool InsertAttr( const char *attrName, const char *value, 
+				bool dup=true );
 
 		/** Finds the expression bound to an attribute name.  The lookup only
 				involves this ClassAd; scoping information is ignored.
@@ -104,7 +151,7 @@ class ClassAd : public ExprTree
 			@return The expression bound to the name in the ClassAd, or NULL
 				otherwise.
 		*/
-		ExprTree *lookup( char *attrName );
+		ExprTree *Lookup( const char *attrName );
 
 		/** Finds the expression bound to an attribute name.  The lookup uses
 				the scoping structure (including {\tt super} attributes) to 
@@ -117,40 +164,50 @@ class ClassAd : public ExprTree
 			@return The expression bound to the name in the ClassAd, or NULL
 				otherwise.
 		*/
-		ExprTree *lookupInScope( char *attrName, ClassAd *&ad );
+		ExprTree *LookupInScope( const char *attrName, ClassAd *&ad );
 
-		/** Removes the named attribute from the ClassAd.  Only attributes from
+		/** Deletes the named attribute from the ClassAd.  Only attributes from
 				the local ClassAd are considered; scoping information is 
-				ignored.
-			@param attrName The name of the attribute to be removed.
+				ignored.  The expression bound to the attribute is deleted.
+			@param attrName The name of the attribute to be delete.
 			@return true if the attribute previously existed and was 
 				successfully removed, false otherwise.
 		*/
-		bool remove( char *attrName );
+		bool Delete( const char *attrName );
 	
+		/** Similar to Delete, but the expression is returned rather than 
+		  		deleted from the classad.
+			@param attrName The name of the attribute to be extricated.
+			@return The expression tree of the named attribute, or NULL if
+				the attribute could not be found.
+		*/
+		ExprTree *Remove( const char* attrName );
+
 		// evaluation methods
 		/** Evaluates expression bound to an attribute.
 			@param attrName The name of the attribute in the ClassAd.
 			@param result The result of the evaluation.
 		*/
-		bool evaluateAttr( char* attrName , Value &result );// lookup+eval'n
+		bool EvaluateAttr( const char* attrName, Value &result );
 
 		/** Evaluates an expression.
-			@param buf Buffer containing the character representation of the
-				expression.
+			@param buf Buffer containing the external representation of the
+				expression.  This buffer is parsed to yield the expression to
+				be evaluated.
 			@param result The result of the evaluation.
 			@param len The length of the buffer.  If this parameter is not
 				specified, it is inferred via a strlen(buf).
 			@return true if the operation succeeded, false otherwise.
 		*/
-		bool evaluateExpr( char* buf, Value &result, int len=-1);// parse+eval'n
+		bool EvaluateExpr( const char* buf, Value &result, int len=-1);
 
 		/** Evaluates an expression.  If the expression doesn't already live in
-				this ClassAd, call the setParentScope() method on it first.
+				this ClassAd, the setParentScope() method must be called
+				on it first.
 			@param expr The expression to be evaluated.
 			@param result The result of the evaluation.
 		*/
-		bool evaluateExpr( ExprTree* expr, Value &result );		// eval'n
+		bool EvaluateExpr( ExprTree* expr, Value &result );		// eval'n
 
 		/** Evaluates an expression, and returns the significant subexpressions
 				encountered during the evaluation.  If the expression doesn't 
@@ -160,37 +217,37 @@ class ClassAd : public ExprTree
 			@param result The result of the evaluation.
 			@param sig The significant subexpressions of the evaluation.
 		*/
-		bool evaluateExpr( ExprTree* expr, Value &result, ExprTree *&sig );
+		bool EvaluateExpr( ExprTree* expr, Value &result, ExprTree *&sig );
 
 		/** Evaluates an attribute to an integer.
 			@param attrName The name of the attribute.
 			@param intValue The value of the attribute.
 			@return true if attrName evaluated to an integer, false otherwise.
 		*/
-		bool evaluateAttrInt( char* attrName, int& intValue );
+		bool EvaluateAttrInt( const char* attrName, int& intValue );
 
-		/** Evaluates an attribute to a real..
+		/** Evaluates an attribute to a real.
 			@param attrName The name of the attribute.
 			@param realValue The value of the attribute.
-			@return true if attrName evaluated to an real, false otherwise.
+			@return true if attrName evaluated to a real, false otherwise.
 		*/
-		bool evaluateAttrReal( char* attrName, double& realValue );
+		bool EvaluateAttrReal( const char* attrName, double& realValue );
 
 		/** Evaluates an attribute to an integer. If the attribute evaluated to 
 				a real, it is truncated to an integer.
 			@param attrName The name of the attribute.
 			@param intValue The value of the attribute.
-			@return true if attrName evaluated to an integer, false otherwise.
+			@return true if attrName evaluated to an number, false otherwise.
 		*/
-		bool evaluateAttrNumber( char* attrName, int& intValue );
+		bool EvaluateAttrNumber( const char* attrName, int& intValue );
 
 		/** Evaluates an attribute to a real.  If the attribute evaluated to an 
 				integer, it is promoted to a real.
 			@param attrName The name of the attribute.
 			@param realValue The value of the attribute.
-			@return true if attrName evaluated to a real, false otherwise.
+			@return true if attrName evaluated to a number, false otherwise.
 		*/
-		bool evaluateAttrNumber( char* attrName, double& realValue );
+		bool EvaluateAttrNumber( const char* attrName, double& realValue );
 
 		/** Evaluates an attribute to a string.  If the string value does not 
 				fit into the buffer, only the portion that does fit is copied 
@@ -198,18 +255,29 @@ class ClassAd : public ExprTree
 			@param attrName The name of the attribute.
 			@param buf The buffer for the string value.
 			@param len The size of the buffer.
-			@return true if attrName evaluated to a string which can be fit
-				into the buffer, false otherwise.
+			@param alen The actual length of the string value.  Undefined if the
+				value was not a string.
+			@return true iff attrName evaluated to a string
 		*/
-		bool evaluateAttrString( char* attrName, char* buf, int len );
+		bool EvaluateAttrString( const char* attrName, char* buf, int len, 
+				int &alen );
 
 		/** Evaluates an attribute to a string.  A pointer to the string is 
 				returned.  This memory is NOT to be deallocated by the user.
 			@param attrName The name of the attribute.
 			@param strValue The value of the attribute.
-			@return true if attrName evaluated to an integer, false otherwise.
+			@return true if attrName evaluated to a string, false otherwise.
 		*/
-		bool evaluateAttrString( char* attrName, char*& strValue );
+		bool EvaluateAttrString( const char* attrName, char*& strValue );
+
+		/** Evaluates an attribute to a boolean.  A pointer to the string is 
+				returned.
+			@param attrName The name of the attribute.
+			@param boolValue The value of the attribute.
+			@return true if attrName evaluated to a boolean value, false 
+				otherwise.
+		*/
+		bool EvaluateAttrBool( const char* attrName, bool& boolValue );
 
 		// flattening method
 		/** Flattens the Classad.
@@ -221,14 +289,14 @@ class ClassAd : public ExprTree
 				not flatten to a single value, and NULL otherwise.
 			@return true if the flattening was successful, and false otherwise.
 		*/
-		bool flatten( ExprTree* expr, Value& val, ExprTree *&fexpr );
+		bool Flatten( ExprTree* expr, Value& val, ExprTree *&fexpr );
 		
 		// factory methods to procure classads
 		/** Factory method to create a ClassAd.
 			@param s The source object.
 			@return The ClassAd if the parse was successful, and NULL otherwise.
 		*/
-		static ClassAd *fromSource (Source &s);
+		static ClassAd *FromSource (Source &s);
 
 		/** Factory method to augment a ClassAd with more expressions.  
 				Expressions from the source overwrite similarly named 
@@ -237,7 +305,9 @@ class ClassAd : public ExprTree
 			@param c The ClassAd which is being augmented.
 			@return The ClassAd if the parse was successful, and NULL otherwise.
 		*/
-		static ClassAd *augmentFromSource( Source &s, ClassAd &c);
+		static ClassAd *AugmentFromSource( Source &s, ClassAd &c);
+
+		virtual ClassAd* Copy( );
 
   	private:
 		friend 	class AttributeReference;
@@ -245,13 +315,12 @@ class ClassAd : public ExprTree
 		friend 	class EvalState;
 		friend 	class ClassAdIterator;
 
-		virtual ExprTree* _copy( CopyMode );
-		virtual void _setParentScope( ClassAd* p );
-		virtual bool _evaluate( EvalState& , Value& );
-		virtual bool _evaluate( EvalState&, Value&, ExprTree*& );
-		virtual bool _flatten( EvalState&, Value&, ExprTree*&, OpKind* );
+		virtual void _SetParentScope( ClassAd* p );
+		virtual bool _Evaluate( EvalState& , Value& );
+		virtual bool _Evaluate( EvalState&, Value&, ExprTree*& );
+		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* );
 	
-		int lookupInScope( char* , ExprTree*&, EvalState& );
+		int LookupInScope( const char* , ExprTree*&, EvalState& );
 		static	ClassAdDomainManager 	domMan;
 		ExtArray<Attribute> 			attrList;
 	
@@ -277,7 +346,7 @@ class ClassAdIterator
 		ClassAdIterator (const ClassAd &ca) { ad = &ca; index = -1; }	
 
 		/// Destructor
-		~ClassAdIterator();
+		~ClassAdIterator(){ }
 
         /** Initializes the object to iterate over a ClassAd; the iterator 
 				begins at the "before first" position.  This method must be 
@@ -287,13 +356,13 @@ class ClassAdIterator
 				ClassAds as arguments.
             @param l The expression list to iterate over (i.e., the iteratee).
         */
-		inline void initialize (const ClassAd &ca) { ad = &ca ; index = -1; }
+		inline void Initialize (const ClassAd &ca) { ad = &ca ; index = -1; }
 
         /// Positions the iterator to the "before first" position.
-		inline void toBeforeFirst () { index = -1; }
+		inline void ToBeforeFirst () { index = -1; }
 
         /// Positions the iterator to the "after last" position
-		inline void toAfterLast ()	{ index = ad->last; }
+		inline void ToAfterLast ()	{ index = ad->last; }
 
 		/** Gets the next attribute in the ClassAd.
 			@param attr The name of the next attribute in the ClassAd.
@@ -301,14 +370,14 @@ class ClassAdIterator
             @return false if the iterator has crossed the last attribute in the 
 				ClassAd, or true otherwise.
         */
-		bool nextAttribute( char*& attr, ExprTree*& expr );
+		bool NextAttribute( const char*& attr, ExprTree*& expr );
 
 		/** Gets the attribute currently referred to by the iterator.
             @param attr The name of the next attribute in the ClassAd.
             @param expr The expression of the next attribute in the ClassAd.
             @return false if the operation failed, true otherwise.
 		*/
-		bool currentAttribute( char*& attr, ExprTree*& expr );
+		bool CurrentAttribute( const char*& attr, ExprTree*& expr );
 
 		/** Gets the previous attribute in the ClassAd.
 			@param attr The name of the previous attribute in the ClassAd.
@@ -316,17 +385,17 @@ class ClassAdIterator
             @return false if the iterator has crossed the first attribute in 
 				the ClassAd, or true otherwise.
         */
-		bool previousAttribute( char *&attr, ExprTree *&expr );
+		bool PreviousAttribute( const char *&attr, ExprTree *&expr );
 
         /** Predicate to check the position of the iterator.
             @return true iff the iterator is before the first element.
         */
-		inline bool isBeforeFirst () { return (index == -1); }
+		inline bool IsBeforeFirst () { return (index == -1); }
 
         /** Predicate to check the position of the iterator.
             @return true iff the iterator is after the last element.
         */
-		inline bool isAfterLast () { return (ad ? (index==ad->last) : false); }
+		inline bool IsAfterLast () { return (ad ? (index==ad->last) : false); }
 
 	private:
 		int		index;

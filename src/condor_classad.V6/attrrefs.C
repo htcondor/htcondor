@@ -17,7 +17,7 @@ AttributeReference::
 AttributeReference( ExprTree *tree, char *attrname, bool absolut )
 {
 	nodeKind = ATTRREF_NODE;
-	attributeStr = strdup( attrname );
+	attributeStr = strnewp( attrname );
 	expr = tree;
 	absolute = absolut;
 }
@@ -25,54 +25,46 @@ AttributeReference( ExprTree *tree, char *attrname, bool absolut )
 AttributeReference::
 ~AttributeReference()
 {
-	if( attributeStr ) free( attributeStr );
+	if( attributeStr ) delete []( attributeStr );
 	if( expr ) delete expr;
 }
 
 
-ExprTree *AttributeReference::
-_copy( CopyMode cm )
+AttributeReference *AttributeReference::
+Copy( )
 {
-	if( cm == EXPR_DEEP_COPY ) {
-		AttributeReference *newTree = new AttributeReference ();
-		if (newTree == 0) return NULL;
+	AttributeReference *newTree = new AttributeReference ();
+	if (newTree == 0) return NULL;
 
-		if (attributeStr) newTree->attributeStr = strdup (attributeStr);
-		newTree->attributeName = attributeName;
+	if (attributeStr) newTree->attributeStr = strnewp( attributeStr );
+	newTree->attributeName = attributeName;
 
-		if( expr && ( newTree->expr=expr->copy(EXPR_DEEP_COPY) ) == NULL ) {
-			free( newTree->attributeStr );
-			delete newTree;
-			return NULL;
-		}
-
-		newTree->nodeKind = nodeKind;
-		newTree->absolute = absolute;
-
-		return newTree;
-	} else {
-		if( expr ) expr->copy( EXPR_REF_COUNT );
-		return this;
+	if( expr && ( newTree->expr=expr->Copy( ) ) == NULL ) {
+		delete []( newTree->attributeStr );
+		delete newTree;
+		return NULL;
 	}
 
-	// will not reach here
-	return 0;	
+	newTree->nodeKind = nodeKind;
+	newTree->absolute = absolute;
+
+	return newTree;
 }
 
 void AttributeReference::
-_setParentScope( ClassAd *parent ) 
+_SetParentScope( ClassAd *parent ) 
 {
-	if( expr ) expr->setParentScope( parent );
+	if( expr ) expr->SetParentScope( parent );
 }
 
 
 bool AttributeReference::
-toSink (Sink &s)
+ToSink (Sink &s)
 {
-	if( ( absolute 	&& !s.sendToSink( (void*)".", 1 ) )	 ||
-		( expr && ( !expr->toSink( s ) || !s.sendToSink( (void*) ".", 1 ) ) ) ||
+	if( ( absolute 	&& !s.SendToSink( (void*)".", 1 ) )	 || ( expr 
+			&& ( !expr->ToSink( s ) || !s.SendToSink( (void*) ".", 1 ) ) ) ||
 		( attributeStr && 
-			!s.sendToSink((void*)attributeStr,strlen(attributeStr))))
+			!s.SendToSink((void*)attributeStr,strlen(attributeStr))))
 				return false;
 		
 	return true;
@@ -80,7 +72,7 @@ toSink (Sink &s)
 
 
 bool AttributeReference::
-_evaluate (EvalState &state, Value &val)
+_Evaluate (EvalState &state, Value &val)
 {
 	ExprTree	*tree, *dummy;
 	ClassAd		*curAd;
@@ -88,22 +80,22 @@ _evaluate (EvalState &state, Value &val)
 
 	// find the expression and the evalstate
 	curAd = state.curAd;
-	switch( findExpr( state, tree, dummy, false ) ) {
+	switch( FindExpr( state, tree, dummy, false ) ) {
 		case EVAL_FAIL:
 			return false;
 
 		case EVAL_ERROR:
-			val.setErrorValue();
+			val.SetErrorValue();
 			state.curAd = curAd;
 			return true;
 
 		case EVAL_UNDEF:
-			val.setUndefinedValue();
+			val.SetUndefinedValue();
 			state.curAd = curAd;
 			return true;
 
 		case EVAL_OK:
-			rval = tree->evaluate( state , val );
+			rval = tree->Evaluate( state , val );
 			state.curAd = curAd;
 			return rval;
 
@@ -114,7 +106,7 @@ _evaluate (EvalState &state, Value &val)
 
 
 bool AttributeReference::
-_evaluate (EvalState &state, Value &val, ExprTree *&sig )
+_Evaluate (EvalState &state, Value &val, ExprTree *&sig )
 {
 	ExprTree	*tree;
 	ClassAd		*curAd;
@@ -122,22 +114,22 @@ _evaluate (EvalState &state, Value &val, ExprTree *&sig )
 
 	// find the expression and the evalstate
 	curAd = state.curAd;
-	switch( findExpr( state , tree , sig , true ) ) {
+	switch( FindExpr( state , tree , sig , true ) ) {
 		case EVAL_FAIL:
 			return false;
 
 		case EVAL_ERROR:
-			val.setErrorValue();
+			val.SetErrorValue();
 			state.curAd = curAd;
 			return true;
 
 		case EVAL_UNDEF:
-			val.setUndefinedValue();
+			val.SetUndefinedValue();
 			state.curAd = curAd;
 			return true;
 
 		case EVAL_OK:
-			rval = tree->evaluate( state , val );
+			rval = tree->Evaluate( state , val );
 			state.curAd = curAd;
 			return rval;
 
@@ -148,19 +140,19 @@ _evaluate (EvalState &state, Value &val, ExprTree *&sig )
 
 
 bool AttributeReference::
-_flatten( EvalState &state, Value &val, ExprTree*&ntree, OpKind*)
+_Flatten( EvalState &state, Value &val, ExprTree*&ntree, OpKind*)
 {
 	if( absolute ) {
-		ntree = copy();
+		ntree = Copy();
 		return( ntree != NULL );
 	}
 
-	if( !evaluate( state, val ) ) {
+	if( !Evaluate( state, val ) ) {
 		return false;
 	}
 
-	if( val.isClassAdValue() || val.isListValue() || val.isUndefinedValue() ) {
-		ntree = copy();
+	if( val.IsClassAdValue() || val.IsListValue() || val.IsUndefinedValue() ) {
+		ntree = Copy();
 		return( ntree != NULL );
 	} else {
 		ntree = NULL;
@@ -170,7 +162,7 @@ _flatten( EvalState &state, Value &val, ExprTree*&ntree, OpKind*)
 
 
 int AttributeReference::
-findExpr( EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig )
+FindExpr( EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig )
 {
 	ClassAd 	*current=NULL;
 	ExprTree	*sigXpr = NULL;
@@ -185,16 +177,16 @@ findExpr( EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig )
 		current = absolute ? state.rootAd : state.curAd;
 	} else {
 		// "expr.attr"
-		rval=wantSig?expr->evaluate(state,val,sigXpr):expr->evaluate(state,val);
+		rval=wantSig?expr->Evaluate(state,val,sigXpr):expr->Evaluate(state,val);
 		if( !rval ) {
 			return( EVAL_FAIL );
 		}
 
-		if( val.isUndefinedValue( ) ) {
+		if( val.IsUndefinedValue( ) ) {
 			sig = sigXpr;
 			return( EVAL_UNDEF );
 		}
-		if( !val.isClassAdValue( current ) ) {
+		if( !val.IsClassAdValue( current ) ) {
 			if( wantSig ) {
 				if(!(sig=new AttributeReference(sigXpr,attributeStr,absolute))){
 					return( EVAL_FAIL );
@@ -209,17 +201,17 @@ findExpr( EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig )
 	}
 
 	// lookup with scope; this may side-affect state
-	return( current->lookupInScope( attributeStr, tree, state ) );
+	return( current->LookupInScope( attributeStr, tree, state ) );
 }
 
 
 void AttributeReference::
-setReference (ExprTree *tree, char *attrStr, bool absolut)
+SetReference (ExprTree *tree, char *attrStr, bool absolut)
 {
 	if (expr) delete expr;
-	if (attributeStr) free (attributeStr);
+	if (attributeStr) delete [] (attributeStr);
 
 	expr 		= tree;
 	absolute 	= absolut;
-	attributeStr= attrStr ? strdup(attrStr) : 0;
+	attributeStr= attrStr ? strnewp(attrStr) : 0;
 }

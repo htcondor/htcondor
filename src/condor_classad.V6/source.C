@@ -15,62 +15,68 @@ Source ()
 Source::
 ~Source ()
 {
-	lexer.finishedParse ();
+	lexer.FinishedParse ();
 }
 
 
 bool Source::
-setSource (char *buf, int len)
+SetSource (const char *buf, int len)
 {
-	return (lexer.initializeWithString (buf, len));
+	return (lexer.InitializeWithString (buf, len));
 }
 
 
 bool Source::
-setSource (Sock &sock)
+SetSource (Sock &sock, int len)
 {
-	return (lexer.initializeWithCedar (sock));
+	return (lexer.InitializeWithCedar (sock, len));
 }
 
 
 bool Source::
-setSource (int fd)
+SetSource (int fd, int len)
 {
-	return (lexer.initializeWithFd (fd));
+	return (lexer.InitializeWithFd (fd, len));
 }
 
 
 bool Source::
-setSource (FILE *file)
+SetSource (FILE *file, int len)
 {
-	return (lexer.initializeWithFile (file));
+	return (lexer.InitializeWithFile (file, len));
+}
+
+void Source::
+SetSentinelChar( int s )
+{
+	lexer.SetSentinelChar( s );
 }
 
 
 //  Expression ::= LogicalORExpression
 //               | LogicalORExpression '?' Expression ':' Expression
 bool Source::
-parseExpression( ExprTree *&tree, bool full )
+ParseExpression( ExprTree *&tree, bool full )
 {
 	TokenType 	tt;
 	ExprTree  	*treeL = NULL, *treeM = NULL, *treeR = NULL;
 	Operation 	*newTree;
 
 	if( !parseLogicalORExpression (tree) ) return false;
-	if( ( tt  = lexer.peekToken() ) == LEX_QMARK)
+	if( ( tt  = lexer.PeekToken() ) == LEX_QMARK)
 	{
 		newTree = new Operation();
-		lexer.consumeToken();
+		lexer.ConsumeToken();
 		treeL = tree;
 
-		parseExpression(treeM);
-		if( ( tt = lexer.consumeToken() ) != LEX_COLON ) {
+		ParseExpression(treeM);
+		if( ( tt = lexer.ConsumeToken() ) != LEX_COLON ) {
 			if( treeL ) delete treeL; 
 			if( treeM ) delete treeM;
 			tree = NULL;
 			return false;
 		}
-		parseExpression(treeR);
+		ParseExpression(treeR);
 		if ( !newTree || !treeL || !treeM || !treeR ) {
 			if( newTree ) delete newTree; 
 			if( treeL ) delete treeL; 
@@ -80,13 +86,13 @@ parseExpression( ExprTree *&tree, bool full )
 			return false;
 		}
 
-		newTree->setOperation( TERNARY_OP, treeL, treeM, treeR );
+		newTree->SetOperation( TERNARY_OP, treeL, treeM, treeR );
 		tree = newTree;
 		return true;
 	}
 
 	// if a full parse was requested, ensure that input is exhausted
-	if( full && ( lexer.consumeToken() != LEX_END_OF_INPUT ) ) return false;
+	if( full && ( lexer.ConsumeToken() != LEX_END_OF_INPUT ) ) return false;
 	return true;
 }
 
@@ -100,8 +106,8 @@ parseLogicalORExpression(ExprTree *&tree)
 	TokenType	tt;
 
 	if( !parseLogicalANDExpression(tree) ) return false;
-	while( ( tt = lexer.peekToken() ) == LEX_LOGICAL_OR ) {
-		lexer.consumeToken();
+	while( ( tt = lexer.PeekToken() ) == LEX_LOGICAL_OR ) {
+		lexer.ConsumeToken();
 		treeL = tree;
 		newTree = new Operation();
 		parseLogicalANDExpression(treeR);
@@ -114,7 +120,7 @@ parseLogicalORExpression(ExprTree *&tree)
 			return false;
 		}
 
-		newTree->setOperation( LOGICAL_OR_OP, treeL, treeR );
+		newTree->SetOperation( LOGICAL_OR_OP, treeL, treeR );
 		tree = newTree;
 	}
 	return true;
@@ -130,8 +136,8 @@ parseLogicalANDExpression(ExprTree *&tree)
 	TokenType	tt;
 
 	if( !parseInclusiveORExpression(tree) ) return false;
-	while( ( tt = lexer.peekToken() ) == LEX_LOGICAL_AND ) {
-		lexer.consumeToken();
+	while( ( tt = lexer.PeekToken() ) == LEX_LOGICAL_AND ) {
+		lexer.ConsumeToken();
         treeL = tree;
         newTree = new Operation();
 		parseInclusiveORExpression(treeR);
@@ -144,7 +150,7 @@ parseLogicalANDExpression(ExprTree *&tree)
 			return false;
 		}
 
-		newTree->setOperation( LOGICAL_AND_OP, treeL, treeR );
+		newTree->SetOperation( LOGICAL_AND_OP, treeL, treeR );
 		tree = newTree;
 	}
 	return true;
@@ -160,8 +166,8 @@ parseInclusiveORExpression(ExprTree *&tree)
 	TokenType	tt;
 
 	if( !parseExclusiveORExpression(tree) ) return false;
-	while( ( tt = lexer.peekToken() ) == LEX_BITWISE_OR ) {
-		lexer.consumeToken();
+	while( ( tt = lexer.PeekToken() ) == LEX_BITWISE_OR ) {
+		lexer.ConsumeToken();
         treeL = tree;
         newTree = new Operation();
 		parseExclusiveORExpression(treeR);
@@ -174,7 +180,7 @@ parseInclusiveORExpression(ExprTree *&tree)
             return false;
         }
 
-		newTree->setOperation( BITWISE_OR_OP, treeL, treeR );
+		newTree->SetOperation( BITWISE_OR_OP, treeL, treeR );
 		tree = newTree;
 	}
 	return true;
@@ -190,8 +196,8 @@ parseExclusiveORExpression(ExprTree *&tree)
 	TokenType	tt;
 
 	if( !parseANDExpression(tree) ) return false;
-	while( ( tt = lexer.peekToken() ) == LEX_BITWISE_XOR ) {
-		lexer.consumeToken();
+	while( ( tt = lexer.PeekToken() ) == LEX_BITWISE_XOR ) {
+		lexer.ConsumeToken();
         treeL = tree;
         newTree = new Operation();
 		parseANDExpression(treeR);
@@ -204,7 +210,7 @@ parseExclusiveORExpression(ExprTree *&tree)
             return false;
 		}
 
-		newTree->setOperation( BITWISE_XOR_OP, treeL, treeR );
+		newTree->SetOperation( BITWISE_XOR_OP, treeL, treeR );
 		tree = newTree;
 	}
 	return true;
@@ -220,8 +226,8 @@ parseANDExpression(ExprTree *&tree)
 	TokenType	tt;
 
 	if( !parseEqualityExpression(tree) ) return false;
-	while( ( tt = lexer.peekToken() ) == LEX_BITWISE_AND ) {
-		lexer.consumeToken();
+	while( ( tt = lexer.PeekToken() ) == LEX_BITWISE_AND ) {
+		lexer.ConsumeToken();
         treeL = tree;
         newTree = new Operation();
 		parseEqualityExpression(treeR);
@@ -234,7 +240,7 @@ parseANDExpression(ExprTree *&tree)
             return false;
         }
 
-		newTree->setOperation( BITWISE_AND_OP, treeL, treeR );
+		newTree->SetOperation( BITWISE_AND_OP, treeL, treeR );
 		tree = newTree;
 	}
 	return true;
@@ -254,10 +260,10 @@ parseEqualityExpression(ExprTree *&tree)
 	OpKind 		op;
 
 	if( !parseRelationalExpression(tree) ) return false;
-	tt = lexer.peekToken();
+	tt = lexer.PeekToken();
 	while( tt == LEX_EQUAL || tt == LEX_NOT_EQUAL || 
 			tt == LEX_META_EQUAL || tt == LEX_META_NOT_EQUAL ) {
-		lexer.consumeToken();
+		lexer.ConsumeToken();
         treeL = tree;
         newTree = new Operation();
 		parseRelationalExpression(treeR);
@@ -278,9 +284,9 @@ parseEqualityExpression(ExprTree *&tree)
 			default:	EXCEPT( "ClassAd:  Should not reach here" );
 		}
 
-		newTree->setOperation( op, treeL, treeR);
+		newTree->SetOperation( op, treeL, treeR);
 		tree = newTree;
-		tt = lexer.peekToken();
+		tt = lexer.PeekToken();
 	}
 	return true;
 }
@@ -299,10 +305,10 @@ parseRelationalExpression(ExprTree *&tree)
     OpKind 		op;
 
 	if( !parseShiftExpression(tree) ) return false;
-	tt = lexer.peekToken();
+	tt = lexer.PeekToken();
 	while(  tt == LEX_LESS_THAN 	|| tt == LEX_GREATER_THAN || 
 			tt == LEX_LESS_OR_EQUAL || tt == LEX_GREATER_OR_EQUAL ) {
-		lexer.consumeToken();
+		lexer.ConsumeToken();
         treeL = tree;
         newTree = new Operation();
 		parseShiftExpression(treeR);
@@ -323,9 +329,9 @@ parseRelationalExpression(ExprTree *&tree)
             default:    EXCEPT( "ClassAd:  Should not reach here" );
         }
 
-        newTree->setOperation( op, treeL, treeR);
+        newTree->SetOperation( op, treeL, treeR);
 		tree = newTree;
-		tt = lexer.peekToken();
+		tt = lexer.PeekToken();
 	}
 	return true;
 }
@@ -344,10 +350,10 @@ parseShiftExpression(ExprTree *&tree)
 
 	if( !parseAdditiveExpression(tree) ) return false;
 
-	tt = lexer.peekToken();
+	tt = lexer.PeekToken();
 	while( tt == LEX_LEFT_SHIFT || tt == LEX_RIGHT_SHIFT || 
 			tt == LEX_URIGHT_SHIFT ) {
-		lexer.consumeToken();
+		lexer.ConsumeToken();
         treeL = tree;
         newTree = new Operation();
 		parseAdditiveExpression(treeR);
@@ -367,9 +373,9 @@ parseShiftExpression(ExprTree *&tree)
             default:    EXCEPT( "ClassAd:  Should not reach here" );
         }
 
-        newTree->setOperation( op, treeL, treeR);
+        newTree->SetOperation( op, treeL, treeR);
 		tree = newTree;
-		tt = lexer.peekToken();
+		tt = lexer.PeekToken();
 	}
 	return true;
 }
@@ -386,9 +392,9 @@ parseAdditiveExpression(ExprTree *&tree)
 
 	if( !parseMultiplicativeExpression(tree) ) return false;
 
-	tt = lexer.peekToken();
+	tt = lexer.PeekToken();
 	while( tt == LEX_PLUS || tt == LEX_MINUS ) {
-		lexer.consumeToken();
+		lexer.ConsumeToken();
         treeL = tree;
         newTree = new Operation();
 		parseMultiplicativeExpression(treeR);
@@ -401,10 +407,10 @@ parseAdditiveExpression(ExprTree *&tree)
             return false;
         }
 
-        newTree->setOperation( tt == LEX_PLUS ? ADDITION_OP : SUBTRACTION_OP, 
+        newTree->SetOperation( tt == LEX_PLUS ? ADDITION_OP : SUBTRACTION_OP, 
 			treeL, treeR);
 		tree = newTree;
-		tt = lexer.peekToken();
+		tt = lexer.PeekToken();
 	}
 	return true;
 }
@@ -422,9 +428,9 @@ parseMultiplicativeExpression(ExprTree *&tree)
 	TokenType	tt;
 
 	if( !parseUnaryExpression(tree) ) return false;
-	tt = lexer.peekToken();
+	tt = lexer.PeekToken();
 	while( tt == LEX_MULTIPLY || tt == LEX_DIVIDE || tt == LEX_MODULUS ) {
-		lexer.consumeToken();
+		lexer.ConsumeToken();
         treeL = tree;
         newTree = new Operation();
 		parseUnaryExpression(treeR);
@@ -444,9 +450,9 @@ parseMultiplicativeExpression(ExprTree *&tree)
 			default: EXCEPT( "ClassAd:  Should not reach here" );
 		}
 
-		newTree->setOperation( op, treeL, treeR );
+		newTree->SetOperation( op, treeL, treeR );
 		tree = newTree;
-		tt = lexer.peekToken();
+		tt = lexer.PeekToken();
 	}
 	return true;
 }
@@ -462,11 +468,11 @@ parseUnaryExpression(ExprTree *&tree)
 	OpKind		op;
 	TokenType	tt;
 
-	tt = lexer.peekToken();
+	tt = lexer.PeekToken();
 	if( tt == LEX_MINUS || tt == LEX_PLUS || tt == LEX_BITWISE_NOT || 
 		tt == LEX_LOGICAL_NOT ) 
 	{
-		lexer.consumeToken();
+		lexer.ConsumeToken();
 		parseUnaryExpression(treeM);
 		newTree = new Operation();
 		if( !newTree || !treeM ) {
@@ -481,10 +487,10 @@ parseUnaryExpression(ExprTree *&tree)
 			case LEX_PLUS:			op = UNARY_PLUS_OP;		break;
 			case LEX_BITWISE_NOT:	op = BITWISE_NOT_OP;	break;
 			case LEX_LOGICAL_NOT:	op = LOGICAL_NOT_OP;	break;
-			default: EXCEPT( "ClassAd: Shouldn't get here" );
+			default: EXCEPT( "ClassAd: Shouldn't Get here" );
 		}
 
-		newTree->setOperation( op, treeM );
+		newTree->SetOperation( op, treeM );
 		tree = newTree;
 		return true;
 	} else
@@ -500,18 +506,18 @@ parsePostfixExpression(ExprTree *&tree)
 	ExprTree 	*treeL = NULL, *treeR = NULL;
 	TokenValue	tv;
 	TokenType	tt;
+	char		*s;
 
 	if( !parsePrimaryExpression(tree) ) return false;
-	while( ( tt = lexer.peekToken() ) == LEX_OPEN_BOX || tt == LEX_SELECTION ) 
-	{
-		lexer.consumeToken();
+	while( ( tt = lexer.PeekToken() ) == LEX_OPEN_BOX || tt == LEX_SELECTION ) {
+		lexer.ConsumeToken();
 		treeL = tree;
 
 		if( tt == LEX_OPEN_BOX ) {
 			Operation	*newTree = new Operation();
 
 			// subscript operation
-			parseExpression(treeR);
+			ParseExpression(treeR);
 			if( !newTree || !treeL || !treeR ) {
 				if( newTree ) delete newTree; 
 				if( treeL ) delete treeL; 
@@ -519,26 +525,27 @@ parsePostfixExpression(ExprTree *&tree)
 				tree = NULL;
 				return false;
 			}
-			if( ( lexer.consumeToken() ) != LEX_CLOSE_BOX ) {
+			if( ( lexer.ConsumeToken() ) != LEX_CLOSE_BOX ) {
 				if( !newTree ) delete newTree;
 				if( !treeL ) delete treeL;
 				if( !treeR ) delete treeR;
 				tree = NULL;
 				return false;
 			}
-			newTree->setOperation( SUBSCRIPT_OP, treeL, treeR );
+			newTree->SetOperation( SUBSCRIPT_OP, treeL, treeR );
 			tree = newTree;
-		} else {
+		} else if( tt == LEX_SELECTION ) {
 			AttributeReference *newTree = new AttributeReference();
 		
 			// field selection operation
-			if( ( tt = lexer.consumeToken( &tv ) ) != LEX_IDENTIFIER ) {
+			if( ( tt = lexer.ConsumeToken( &tv ) ) != LEX_IDENTIFIER ) {
 				if( newTree ) delete newTree; 
 				if( treeL ) delete treeL;
 				tree = NULL;
 				return false;
 			}
-			newTree->setReference( treeL, tv.strValue );
+			tv.GetStringValue( s );
+			newTree->SetReference( treeL, s );
 			tree = newTree;
 		}
 	}
@@ -559,21 +566,22 @@ parsePrimaryExpression(ExprTree *&tree)
 	ExprTree 	*treeL = NULL;
 	TokenValue	tv;
 	TokenType	tt;
+	char		*s;
 
-	switch( ( tt = lexer.peekToken(&tv) ) ) {
+	switch( ( tt = lexer.PeekToken(&tv) ) ) {
 		// identifiers
 		case LEX_IDENTIFIER:
-			lexer.consumeToken();
+			lexer.ConsumeToken();
 			// check for funcion call
-			if( ( tt = lexer.peekToken() ) == LEX_OPEN_PAREN ) 	{
+			if( ( tt = lexer.PeekToken() ) == LEX_OPEN_PAREN ) 	{
 				FunctionCall *newTree = new FunctionCall();
 
 				if( !newTree ) {
 					tree = NULL;
 					return false;
 				}
-
-				newTree->setFunctionName( tv.strValue );
+				tv.GetStringValue( s );
+				newTree->SetFunctionName( s );
 
 				if( !parseArgumentList( newTree ) ) {
 					if( newTree ) delete newTree;
@@ -588,16 +596,16 @@ parsePrimaryExpression(ExprTree *&tree)
 					tree = NULL;
 					return false;
 				}
-
-				newTree->setReference( NULL, tv.strValue );
+				tv.GetStringValue( s );
+				newTree->SetReference( NULL, s );
 				tree = newTree;
 			}
 			return true;
 
 		// (absolute) field selection
 		case LEX_SELECTION:
-			lexer.consumeToken();
-			if( ( tt = lexer.consumeToken(&tv) ) == LEX_IDENTIFIER ) {
+			lexer.ConsumeToken();
+			if( ( tt = lexer.ConsumeToken(&tv) ) == LEX_IDENTIFIER ) {
 				AttributeReference *newTree = new AttributeReference();
 
 				if( !newTree ) {
@@ -606,7 +614,8 @@ parsePrimaryExpression(ExprTree *&tree)
 				}
 
 				// the boolean final arg signifies that reference is absolute
-				newTree->setReference( NULL, tv.strValue, true);
+				tv.GetStringValue( s );
+				newTree->SetReference( NULL, s, true);
 				tree = newTree;
 				return true;
 			}
@@ -618,16 +627,16 @@ parsePrimaryExpression(ExprTree *&tree)
 		case LEX_OPEN_PAREN:
 			{
 				Operation *newTree = new Operation();
-				lexer.consumeToken();
-				parseExpression(treeL);
-				tt = lexer.consumeToken();
+				lexer.ConsumeToken();
+				ParseExpression(treeL);
+				tt = lexer.ConsumeToken();
 				if( tt != LEX_CLOSE_PAREN || !newTree || !treeL ) {
 					if( newTree ) delete newTree; 
 					if( treeL ) delete treeL;
 					tree = NULL;
 					return false;
 				}
-				newTree->setOperation( PARENTHESES_OP , treeL );
+				newTree->SetOperation( PARENTHESES_OP , treeL );
 				tree = newTree;
 			}
 			return true;
@@ -635,8 +644,8 @@ parsePrimaryExpression(ExprTree *&tree)
 		// constants
 		case LEX_OPEN_BOX:
 			{
-				ClassAd *newAd = new ClassAd();
-				if( !newAd || !parseClassAd( newAd ) ) {
+				ClassAd *newAd = NULL;
+				if( !ParseClassAd( newAd ) ) {
 					if( newAd ) delete newAd;
 					tree = NULL;
 					return false;
@@ -647,8 +656,8 @@ parsePrimaryExpression(ExprTree *&tree)
 
 		case LEX_OPEN_BRACE:
 			{
-				ExprList *newList = new ExprList();
-				if( !newList || !parseExprList( newList ) ) {
+				ExprList *newList = NULL;
+				if( !ParseExprList( newList ) ) {
 					if( newList ) delete newList;
 					tree = NULL;
 					return false;
@@ -660,12 +669,12 @@ parsePrimaryExpression(ExprTree *&tree)
 		case LEX_UNDEFINED_VALUE:
 			{
 				Literal *newTree = new Literal();
-				lexer.consumeToken();
+				lexer.ConsumeToken();
 				if ( newTree == NULL ) {
 					tree = NULL;
 					return false;
 				}
-				newTree->setUndefinedValue();
+				newTree->SetUndefinedValue();
 				tree = newTree;
 			}
 			return true;
@@ -673,25 +682,28 @@ parsePrimaryExpression(ExprTree *&tree)
 		case LEX_ERROR_VALUE:
 			{
 				Literal *newTree = new Literal();
-				lexer.consumeToken();
+				lexer.ConsumeToken();
 				if ( newTree == NULL ) {
 					tree = NULL;
 					return false;
 				}
-				newTree->setErrorValue();
+				newTree->SetErrorValue();
 				tree = newTree;
 			}
 			return true;
 
 		case LEX_BOOLEAN_VALUE:
 			{
+				bool b;
+
 				Literal *newTree = new Literal();
-				lexer.consumeToken();
+				lexer.ConsumeToken();
 				if( newTree == NULL ) {
 					tree = NULL;
 					return false;
 				}
-				newTree->setBooleanValue( tv.boolValue );
+				tv.GetBoolValue( b );
+				newTree->SetBooleanValue( b );
 				tree = newTree;
 			}
 			return true;
@@ -699,12 +711,16 @@ parsePrimaryExpression(ExprTree *&tree)
 		case LEX_INTEGER_VALUE:
 			{
 				Literal *newTree = new Literal();
-				lexer.consumeToken();
+				int i;
+				NumberFactor f;
+
+				lexer.ConsumeToken();
 				if ( newTree == NULL ) {
 					tree = NULL;
 					return false;
 				}
-				newTree->setIntegerValue(tv.intValue.value,tv.intValue.factor);
+				tv.GetIntValue( i, f );
+				newTree->SetIntegerValue( i, f );
 				tree = newTree;
 			}
 			return true;
@@ -712,25 +728,62 @@ parsePrimaryExpression(ExprTree *&tree)
 		case LEX_REAL_VALUE:
 			{
 				Literal *newTree = new Literal();
-				lexer.consumeToken();
+				double real;
+				NumberFactor f;
+
+				lexer.ConsumeToken();
 				if ( newTree == NULL ) {
 					tree = NULL;
 					return false;
 				}
-				newTree->setRealValue(tv.realValue.value, tv.realValue.factor);
+				tv.GetRealValue( real, f );
+				newTree->SetRealValue( real, f );
 				tree = newTree;
 			}
 			return true;
 
 		case LEX_STRING_VALUE:
 			{
+				char *s;
 				Literal *newTree = new Literal();
-				lexer.consumeToken();
+				lexer.ConsumeToken();
 				if ( newTree == NULL ) {
 					tree = NULL;
 					return false;
 				}
-				newTree->setStringValue( tv.strValue );
+					// handover string from token to the expression
+				tv.GetStringValue( s, true );
+				newTree->SetStringValue( s );
+				tree = newTree;
+			}
+			return true;
+
+		case LEX_ABSOLUTE_TIME_VALUE:
+			{
+				int asecs;
+				Literal *newTree = new Literal( );
+				lexer.ConsumeToken( );
+				if( newTree == NULL ) {
+					tree = NULL;
+					return false;
+				}
+				tv.GetAbsTimeValue( asecs );
+				newTree->SetAbsTimeValue( asecs );
+				tree = newTree;
+			}
+			return true;
+
+		case LEX_RELATIVE_TIME_VALUE:
+			{
+				int secs, usecs;
+				Literal *newTree = new Literal( );
+				lexer.ConsumeToken( );
+				if( newTree == NULL ) {
+					tree = NULL;
+					return false;
+				}
+				tv.GetRelTimeValue( secs, usecs );
+				newTree->SetRelTimeValue( secs, usecs );
 				tree = newTree;
 			}
 			return true;
@@ -751,28 +804,28 @@ parseArgumentList( FunctionCall *fncall )
 	TokenType 	tt;
 	ExprTree	*tree = NULL;
 
-	if( ( tt = lexer.consumeToken() ) != LEX_OPEN_PAREN ) return false;
+	if( ( tt = lexer.ConsumeToken() ) != LEX_OPEN_PAREN ) return false;
 
-	tt = lexer.peekToken();
+	tt = lexer.PeekToken();
 
 	while( tt != LEX_CLOSE_PAREN ) {
 		// parse the expression
-		parseExpression( tree );
+		ParseExpression( tree );
 		if( tree == NULL ) return false;
 
 		// insert the expression into the argument list
-		fncall->appendArgument( tree );
+		fncall->AppendArgument( tree );
 
 		// the next token must be a ',' or a ')'
-		tt = lexer.peekToken();
+		tt = lexer.PeekToken();
 		if( tt == LEX_COMMA )
-			lexer.consumeToken();
+			lexer.ConsumeToken();
 		else
 		if( tt != LEX_CLOSE_PAREN )
 			return false;
 	}
 
-	lexer.consumeToken();
+	lexer.ConsumeToken();
 	return true;
 		
 }
@@ -783,59 +836,70 @@ parseArgumentList( FunctionCall *fncall )
 //                  | AttributeList ';' Attribute
 //  Attribute     ::= Identifier '=' Expression
 bool Source::
-parseClassAd( ClassAd *ad , bool full )
+ParseClassAd( ClassAd *&ad, bool full )
+{
+	if( !ad && !( ad = new ClassAd() ) ) return false;
+	if( !ParseClassAd( *ad, full ) ) {
+		delete ad;
+		return( false );
+	}
+	return( true );
+}
+
+bool Source::
+ParseClassAd( ClassAd &ad , bool full )
 {
 	TokenType 	tt;
 	TokenValue	tv;
 	ExprTree	*tree = NULL;
+	char		*s;
 
-	if( !ad ) return false;
-
-	if( ( tt = lexer.consumeToken() ) != LEX_OPEN_BOX ) return false;
-	tt = lexer.peekToken();
+	if( ( tt = lexer.ConsumeToken() ) != LEX_OPEN_BOX ) return false;
+	tt = lexer.PeekToken();
 	while( tt != LEX_CLOSE_BOX ) {
-		// get the name of the expression
-		if( ( tt = lexer.consumeToken( &tv ) ) != LEX_IDENTIFIER ) {
-			ad->clear();
+		// Get the name of the expression
+		if( ( tt = lexer.ConsumeToken( &tv ) ) != LEX_IDENTIFIER ) {
+			ad.Clear();
 			return false;
 		}
 
 		// consume the intermediate '='
-		if( ( tt = lexer.consumeToken() ) != LEX_BOUND_TO ) {
-			ad->clear();
+		if( ( tt = lexer.ConsumeToken() ) != LEX_BOUND_TO ) {
+			ad.Clear();
 			return false;
 		}
 
 		// parse the expression
-		parseExpression( tree );
+		ParseExpression( tree );
 		if( tree == NULL ) {
-			ad->clear();
+			ad.Clear();
 			return false;
 		}
 
 		// insert the attribute into the classad
-		if( !ad->insert( tv.strValue, tree ) ) {
+		tv.GetStringValue( s );
+		if( !ad.Insert( s, tree ) ) {
 			delete tree;
-			ad->clear();
+			ad.Clear();
 			return false;
 		}
 
 		// the next token must be a ';' or a ']'
-		tt = lexer.peekToken();
+		tt = lexer.PeekToken();
 		if( tt == LEX_SEMICOLON )
-			lexer.consumeToken();
+			lexer.ConsumeToken();
 		else
 		if( tt != LEX_CLOSE_BOX ) {
-			ad->clear();
+			ad.Clear();
 			return false;
 		}
 	}
 
-	lexer.consumeToken();
+	lexer.ConsumeToken();
 
 	// if a full parse was requested, ensure that input is exhausted
-	if( full && ( lexer.consumeToken() != LEX_END_OF_INPUT ) ) {
-		ad->clear();
+	if( full && ( lexer.ConsumeToken() != LEX_END_OF_INPUT ) ) {
+		ad.Clear();
 		return false;
 	}
 
@@ -847,33 +911,44 @@ parseClassAd( ClassAd *ad , bool full )
 //  ListOfExpressions ::= (epsilon)
 //                      | ListOfExpressions ',' Expression
 bool Source::
-parseExprList( ExprList *list , bool full )
+ParseExprList( ExprList *&list , bool full )
+{
+	if( !list && !( list = new ExprList( ) ) ) return( false );
+	if( !ParseExprList( *list, full ) ) {
+		delete list;
+		return( false );
+	}
+	return( true );
+}
+
+bool Source::
+ParseExprList( ExprList &list , bool full )
 {
 	TokenType 	tt;
 	ExprTree	*tree = NULL;
 
-	if( ( tt = lexer.consumeToken() ) != LEX_OPEN_BRACE ) return false;
-	tt = lexer.peekToken();
+	if( ( tt = lexer.ConsumeToken() ) != LEX_OPEN_BRACE ) return false;
+	tt = lexer.PeekToken();
 	while( tt != LEX_CLOSE_BRACE ) {
 		// parse the expression
-		parseExpression( tree );
+		ParseExpression( tree );
 		if( tree == NULL ) return false;
 
 		// insert the expression into the list
-		list->appendExpression( tree );
+		list.AppendExpression( tree );
 
 		// the next token must be a ',' or a '}'
-		tt = lexer.peekToken();
+		tt = lexer.PeekToken();
 		if( tt == LEX_COMMA )
-			lexer.consumeToken();
+			lexer.ConsumeToken();
 		else
 		if( tt != LEX_CLOSE_BRACE )
 			return false;
 	}
 
-	lexer.consumeToken();
+	lexer.ConsumeToken();
 
 	// if a full parse was requested, ensure that input is exhausted
-	if( full && ( lexer.consumeToken() != LEX_END_OF_INPUT ) ) return false;
+	if( full && ( lexer.ConsumeToken() != LEX_END_OF_INPUT ) ) return false;
 	return true;
 }

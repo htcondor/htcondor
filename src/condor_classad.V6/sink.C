@@ -4,6 +4,8 @@ Sink::
 Sink ()
 {
 	sink  = NO_SINK;
+	pp = NULL;
+	terminal = '\0';
 }
 
 
@@ -15,34 +17,42 @@ Sink::
 
 	
 void Sink::
-setSink( char *&s )
+SetSink( char *&s, int &len, bool useInitial )
 {
 	sink = STRING_SINK;
 	last = 0;
 
 	// we have to perform the memory management for the string
-	buffer = new char [1024];
-	bufLen = 1024;
+	if( useInitial ) {
+		buffer = s;
+		bufLen = len;
+	} else {
+		buffer = new char [1024];
+		bufLen = 1024;
+	}
 
 	// set up references for update; perform first update
 	bufRef = &s;
+	bufLenRef = &len;
 	*bufRef = buffer;
+	*bufLenRef = bufLen;
 }
 
 
 void Sink::
-setSink( char *s, int sz )
+SetSink( char *s, int sz )
 {
 	// buffer provided by user, don't use references
 	sink = STRING_SINK;
 	buffer = s;
 	bufLen = sz;
 	bufRef = NULL;
+	bufLenRef = NULL;
 }
 
 
 void Sink::
-setSink (Sock &s)
+SetSink (Sock &s)
 {
 	sink = CEDAR_SINK;
 	sock = &s;
@@ -50,7 +60,7 @@ setSink (Sock &s)
 
 
 void Sink::
-setSink (int i)
+SetSink (int i)
 {
     sink = FILE_DESC_SINK;
     fd = i;
@@ -58,7 +68,7 @@ setSink (int i)
 
 
 void Sink::
-setSink (FILE *f)
+SetSink (FILE *f)
 {
 	sink = FILE_SINK;
 	file = f;
@@ -66,7 +76,7 @@ setSink (FILE *f)
 
 
 bool Sink::
-sendToSink (void *bytes, int len)
+SendToSink (void *bytes, int len)
 {
 	char 	*buf = (char *) bytes;
 	int 	rval;
@@ -86,16 +96,17 @@ sendToSink (void *bytes, int len)
 					return false;
 				}
 				bufLen *= 2;
-				strcpy (temp, buffer);
+				strcpy( temp, buffer );
 
 				// make the switch
 				delete [] buffer;
 				buffer = temp;
 				*bufRef = buffer;
+				*bufLenRef = bufLen;
 			}
 
 			// have enough room; copy and update lengths
-			strcpy (buffer+last, buf);
+			strcpy( buffer+last, buf );
 			last += len;
 
 			return true;
@@ -127,15 +138,14 @@ sendToSink (void *bytes, int len)
 
 
 bool Sink::
-flushSink ()
+FlushSink ()
 {
-	if (!sendToSink((void*)"\0", 1)) return false;
+	if (!SendToSink((void*)&terminal, 1)) return false;
 
 	switch (sink)
 	{
 		case STRING_SINK:
-			// already null terminated
-			return (true);
+			return( terminal == '\0' || SendToSink((void*)"\0", 1) );
 
 		case FILE_SINK:
 			// fflush() returns EOF on error; 0 otherwise
@@ -148,4 +158,139 @@ flushSink ()
 	}
 
 	return false;
+}
+
+
+FormatOptions::
+FormatOptions( )
+{
+	indentClassAds = false;
+	indentLists = false;
+	indentLevel = 0;
+	classadIndentLen = 4;
+	listIndentLen = 4;
+	wantQuotes = true;
+	precedenceLevel = -1;
+	marginWrapCols = 79;
+	marginIndentLen = 3;
+}
+
+
+FormatOptions::
+~FormatOptions( )
+{
+}
+
+
+void FormatOptions::
+SetClassAdIndentation( bool i, int len )
+{
+	indentClassAds = i;
+	classadIndentLen = len;
+}
+
+
+void FormatOptions::
+SetListIndentation( bool i, int len )
+{
+	indentLists = i;
+	listIndentLen = len;
+}	
+
+void FormatOptions::
+GetClassAdIndentation( bool &i, int &len )
+{
+	i = indentClassAds;
+	len = classadIndentLen;
+}
+
+
+void FormatOptions::
+GetListIndentation( bool &i, int &len )
+{
+	i = indentLists;
+	len = listIndentLen;
+}	
+
+
+bool FormatOptions::
+Indent( Sink& s )
+{
+	for( int i = 0 ; i < indentLevel/4; i++ ) {
+		if( !s.SendToSink( (void*)"    ", 4 ) ) {
+			return false;
+		}
+	}
+
+	for( int i = 0 ; i < indentLevel%4; i++ ) {
+		if( !s.SendToSink( (void*)" ", 1 ) ) {
+			return false;
+		}
+	}
+	
+	return true;
+}
+
+
+void FormatOptions::
+SetIndentLevel( int i )
+{
+	indentLevel = i;
+}
+
+
+int FormatOptions::
+GetIndentLevel( )
+{
+	return indentLevel;
+}
+
+void FormatOptions::
+SetWantQuotes( bool wq )
+{
+	wantQuotes = wq;
+}
+
+bool FormatOptions::
+GetWantQuotes( )
+{
+	return( wantQuotes );
+}
+
+void FormatOptions::
+SetMinimalParentheses( bool m )
+{
+	minimalParens = m;
+}
+
+bool FormatOptions::
+GetMinimalParentheses( )
+{
+	return( minimalParens );
+}
+
+void FormatOptions::
+SetPrecedenceLevel( int pl )
+{
+	precedenceLevel = pl;
+}
+
+int FormatOptions::
+GetPrecedenceLevel( )
+{
+	return( precedenceLevel );
+}
+
+void FormatOptions::
+SetMarginWrap( int cols, int indentLen )
+{
+	marginWrapCols = cols;
+	marginIndentLen = indentLen;
+}
+
+void FormatOptions::
+GetMarginWrap( int &cols, int &indentLen )
+{
+	cols = marginWrapCols;
+	indentLen = marginIndentLen;
 }

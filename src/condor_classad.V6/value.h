@@ -24,8 +24,8 @@
 #ifndef __VALUES_H__
 #define __VALUES_H__
 
-#include "list.h"
 #include "stringSpace.h"
+#include "list.h"
 #include "sink.h"
 
 /// The various kinds of values
@@ -38,7 +38,9 @@ enum ValueType
 	/** A real value */					REAL_VALUE,
 	/** A string value */				STRING_VALUE,
 	/** An expression list value */		LIST_VALUE,
-	/** A classad value */				CLASSAD_VALUE
+	/** A classad value */				CLASSAD_VALUE,
+	/** An absolute time value */		ABSOLUTE_TIME_VALUE,
+	/** A relative time value */		RELATIVE_TIME_VALUE
 };
 
 class Value;
@@ -56,276 +58,347 @@ class Value
 
 		/** Sends the value to a sink.
 			@param s The sink object.
+			@param p Pretty printing options
 			@return true if the operation succeeded, false otherwise.
 			@see Sink
 		*/
-		bool toSink( Sink &s );
+		bool ToSink( Sink &s );
 
 		/** Discards the previous value and sets the value to UNDEFINED */
-		void clear (void);
+		void Clear (void);
 
 		/** Copies the value of another value object.
 			@param v The value copied from.
 		*/
-		void copyFrom(Value &v);
+		void CopyFrom( Value &v );
 
 		/** Sets a boolean value; previous value discarded.
 			@param b The boolean value.
 		*/
-		void setBooleanValue(bool b);
+		void SetBooleanValue(bool b);
 
 		/** Sets a real value; previous value discarded.
 			@param r The real value.
 		*/
-		void setRealValue(double r);
+		void SetRealValue(double r);
 
 		/** Sets an integer value; previous value discarded.
 			@param i The integer value.
 		*/
-		void setIntegerValue(int i);
+		void SetIntegerValue(int i);
 
 		/** Sets the undefined value; previous value discarded.
 		*/
-		void setUndefinedValue	(void);
+		void SetUndefinedValue	(void);
 
 		/** Sets the error value; previous value discarded.
 		*/
-		void setErrorValue (void);
+		void SetErrorValue (void);
 
 		/** Sets an expression list value; previous value discarded.
 			@param l The list value.
 		*/
-		void setListValue(ExprList* l);
+		void SetListValue(ExprList* l);
 
 		/** Sets a ClassAd value; previous value discarded.
 			@param c The ClassAd value.
 		*/
-		void setClassAdValue(ClassAd* c);	
+		void SetClassAdValue(ClassAd* c);	
 
 		/** Sets a string value; previous value discarded.  This function
-				just stores the pointer to the buffer, and does not perform 
-				any other memory management for the string.
+				adopts the string passed in.  The storage is assumed to have
+				been created with new char[].
 			@param str The string value.
 		*/
-		void setStringValue(char *str);
+		void SetStringValue( const char *str );
 
-		// Undocumented, experimental and perhaps broken; --Rajesh
-		void adoptStringValue(char *str, int i);
+		/** Sets an absolute time value in seconds since the UNIX epoch.
+			@param secs Number of seconds since the UNIX epoch.
+		*/
+		void SetAbsoluteTimeValue( int secs );
+
+		/** Sets a relative time value.
+			@param secs Number of seconds.
+			@param usecs Number of micro seconds
+		*/
+		void SetRelativeTimeValue( int secs, int usecs=0 );
 
 		/** Gets the type of the value.
 			@return The value type.
 			@see ValueType
 		*/
-		inline ValueType getType() { return valueType; }
+		inline ValueType GetType() { return valueType; }
 
 		/** Checks if the value is boolean.
 			@param b The boolean value if the value is boolean.
 			@return true iff the value is boolean.
 		*/
-		inline bool isBooleanValue(bool& b);	
+		inline bool IsBooleanValue(bool& b);	
 		/** Checks if the value is boolean.
 			@return true iff the value is boolean.
 		*/	
-		inline bool isBooleanValue();
+		inline bool IsBooleanValue();
 		/** Checks if the value is integral.
 			@param i The integer value if the value is integer.
 			@return true iff the value is an integer.
 		*/
-		inline bool isIntegerValue(int &i); 	
+		inline bool IsIntegerValue(int &i); 	
 		/** Checks if the value is integral.
 			@return true iff the value is an integer.
 		*/
-		inline bool isIntegerValue();
+		inline bool IsIntegerValue();
 		/** Checks if the value is real.
 			@param r The real value if the value is real.
 			@return true iff the value is real.
 		*/	
-		inline bool isRealValue(double &r); 	
+		inline bool IsRealValue(double &r); 	
 		/** Checks if the value is real.
 			@return true iff the value is real.
 		*/
-		inline bool isRealValue();
-		/** Checks if the value is a string.  The storage pointed to by str 
-				should NOT be deallocated by the user.
+		inline bool IsRealValue();
+		/** Checks if the value is a string.  The user should \emph{not}
+				deallocate the storage pointed to by str.
 			@param str A reference to a string which points to the character
 				string.
 			@return true iff the value is a string.
 		*/
-		inline bool isStringValue(char *&str); 	
+		bool IsStringValue( const char *&str ); 	
 		/** Checks if the value is a string.
 			@return true iff the value is string.
 		*/
-		inline bool isStringValue();
+		inline bool IsStringValue();
 		/** Checks if the value is a string.  If the string does not fit in the 
 				buffer, only the portion of it which does is copied.
 			@param str Pointer to a buffer which is filled with the string
 				value if the value is a string.	
 			@param len Length of the buffer.
-			@return true iff the value is a string which fits in the given 
-				buffer.
+			@param alen The actual length of the string.  Undefined if the 
+				value is not a string.
+			@return true iff the value is a string
 		*/
-		inline bool isStringValue( char* buf, int len );
+		bool IsStringValue( char* buf, int len, int &alen );
 		/** Checks if the value is an expression list.
 			@param l The expression list if the value is an expression list.
 			@return true iff the value is an expression list.
 		*/
-		inline bool isListValue(ExprList*& l);
+		inline bool IsListValue(ExprList*& l);
 		/** Checks if the value is an expression list.
 			@return true iff the value is an expression list.
 		*/
-		inline bool isListValue();
+		inline bool IsListValue();
 		/** Checks if the value is a ClassAd.
 			@param c The ClassAd if the value is a ClassAd.
 			@return true iff the value is a ClassAd.
 		*/
-		inline bool isClassAdValue(ClassAd *&c); 
+		inline bool IsClassAdValue(ClassAd *&c); 
 		/** Checks if the value is a ClassAd.
 			@return true iff the value is a ClassAd value.
 		*/
-		inline bool isClassAdValue();
+		inline bool IsClassAdValue();
 		/** Checks if the value is the undefined value.
 			@return true iff the value if the undefined value.
 		*/
-		inline bool isUndefinedValue();
+		inline bool IsUndefinedValue();
 		/** Checks if the value is the error value.
 			@return true iff the value if the error value.
 		*/
-		inline bool isErrorValue();
+		inline bool IsErrorValue();
 		/** Checks if the value is exceptional.
 			@return true iff the value is either undefined or error.
 		*/
-		inline bool isExceptional();
+		inline bool IsExceptional();
 		/** Checks if the value is numerical. If the value is a real, it is 
 				converted to an integer through truncation.
 			@param i The integer value of the value if the value is a number.
 			@return true iff the value is a number
 		*/
-		bool isNumber (int &i);
+		bool IsNumber (int &i);
 		/** Checks if the value is numerical. If the value is an integer, it 
 				is promoted to a real.
 			@param r The real value of the value if the value is a number.
 			@return true iff the value is a number
 		*/
-		bool isNumber (double &r);
+		bool IsNumber (double &r);
+		/** Checks if the value is an absolute time value.
+			@return true iff the value is an absolute time value.
+		*/
+		bool IsAbsoluteTimeValue( );
+		/** Checks if the value is an absolute time value.
+			@param secs Number of seconds since the UNIX epoch.
+			@return true iff the value is an absolute time value.
+		*/
+		bool IsAbsoluteTimeValue( int& secs );
+		/** Checks if the value is a relative time value.
+			@return true iff the value is a relative time value
+		*/
+		bool IsRelativeTimeValue( );
+		/** Checks if the value is a relative time value.
+			@param secs Number of seconds
+			@return true iff the value is a relative time value
+		*/
+		bool IsRelativeTimeValue( int& secs );
+		/** Checks if the value is a relative time value.
+			@param secs Number of seconds.
+			@param usecs Number of microseconds
+			@return true iff the value is a relative time value
+		*/
+		bool IsRelativeTimeValue( int& secs, int& usecs );
 
 	private:
-		friend	class Literal;
+		friend class Literal;
+		friend class ClassAd;
+		friend class ExprTree;
+
+		void WriteRelativeTime( char*, bool, int, int );
+		bool WriteString( const char*, Sink& );
 
 		ValueType 	valueType;		// the type of the value
 		bool		booleanValue;
 		int			integerValue;
 		double 		realValue;
-		char		*strValue;
+		SSString	strValue;
 		ExprList	*listValue;
 		ClassAd		*classadValue;
+		int			timeValueSecs;
+		int			timeValueUSecs;
+
+		static		StringSpace stringSpace;
 };
 
 
 // implementations of the inlined functions
 inline bool Value::
-isBooleanValue( bool& b )
+IsBooleanValue( bool& b )
 {
 	b = booleanValue;
 	return( valueType == BOOLEAN_VALUE );
 }
 
 inline bool Value::
-isBooleanValue()
+IsBooleanValue()
 {
 	return( valueType == BOOLEAN_VALUE );
 }
 
 inline bool Value::
-isIntegerValue (int &i)
+IsIntegerValue (int &i)
 {
     i = integerValue;
     return (valueType == INTEGER_VALUE);
 }  
 
 inline bool Value::
-isIntegerValue ()
+IsIntegerValue ()
 {
     return (valueType == INTEGER_VALUE);
 }  
 
 inline bool Value::
-isRealValue (double &r)
+IsRealValue (double &r)
 {
     r = realValue;
     return (valueType == REAL_VALUE);
 }  
 
 inline bool Value::
-isRealValue ()
+IsRealValue ()
 {
     return (valueType == REAL_VALUE);
 }  
 
 inline bool Value::
-isListValue (ExprList *&l)
+IsListValue (ExprList *&l)
 {
 	l = listValue;
 	return (valueType == LIST_VALUE);
 }
 
 inline bool Value::
-isListValue ()
+IsListValue ()
 {
 	return (valueType == LIST_VALUE);
 }
 
-inline bool Value::
-isStringValue(char *&s)
-{
-    s = strValue;
-    return (valueType == STRING_VALUE);
-}
 
 inline bool Value::
-isStringValue()
+IsStringValue()
 {
     return (valueType == STRING_VALUE);
 }
 
+
 inline bool Value::
-isStringValue( char *b, int l )
+IsStringValue( const char *&s )
 {
-	if( valueType == STRING_VALUE ) {
-		strncpy( b, strValue, l );
-		return( strcmp( strValue, b ) == 0 );
-	}
-	return false;
+    if( valueType == STRING_VALUE ) {
+        return( ( s = strValue.getCharString() ) != NULL );
+    }
+    return( false );
 }
 
 inline bool Value::
-isClassAdValue(ClassAd *&ad)
+IsClassAdValue(ClassAd *&ad)
 {
 	ad = classadValue;
 	return( valueType == CLASSAD_VALUE );	
 }
 
 inline bool Value:: 
-isClassAdValue() 
+IsClassAdValue() 
 {
 	return( valueType == CLASSAD_VALUE );	
 }
 
 inline bool Value::
-isUndefinedValue (void) 
+IsUndefinedValue (void) 
 { 
 	return (valueType == UNDEFINED_VALUE);
 }
 
 inline bool Value::
-isErrorValue(void)       
+IsErrorValue(void)       
 { 
 	return (valueType == ERROR_VALUE); 
 }
 
 inline bool Value::
-isExceptional(void)
+IsExceptional(void)
 {
 	return( valueType == UNDEFINED_VALUE || valueType == ERROR_VALUE );
+}
+
+inline bool Value::
+IsAbsoluteTimeValue( )
+{
+	return( valueType == ABSOLUTE_TIME_VALUE );
+}
+
+inline bool Value::
+IsAbsoluteTimeValue( int &secs )
+{
+	secs = timeValueSecs;
+	return( valueType == ABSOLUTE_TIME_VALUE );
+}
+
+inline bool Value::
+IsRelativeTimeValue( )
+{
+	return( valueType == RELATIVE_TIME_VALUE );
+}
+
+inline bool Value::
+IsRelativeTimeValue( int &secs )
+{
+	secs = timeValueSecs;
+	return( valueType == RELATIVE_TIME_VALUE );
+}
+
+inline bool Value::
+IsRelativeTimeValue( int &secs, int &usecs )
+{
+	secs = timeValueSecs;
+	usecs = timeValueUSecs;
+	return( valueType == RELATIVE_TIME_VALUE );
 }
 
 #endif//__VALUES_H__

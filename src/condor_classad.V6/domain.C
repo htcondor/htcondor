@@ -22,7 +22,7 @@ ClassAdDomainManager::
 
 
 void ClassAdDomainManager::
-getDomainSchema (char *domainName, int &index, StringSpace *&schema)
+GetDomainSchema (char *domainName, int &index, StringSpace *&schema)
 {
 	index = domainNameSpace.getCanonical (domainName);
 	if (index == -1) {

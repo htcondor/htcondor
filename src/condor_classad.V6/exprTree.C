@@ -3,12 +3,9 @@
 
 extern int exprHash( ExprTree* const&, int );
 
-CopyMode ExprTree::defaultCopyMode = EXPR_DEEP_COPY;
-
 ExprTree::
 ExprTree ()
 {
-	refCount = 1;
 	flattenFlag = false;
 	parentScope = NULL;
 }
@@ -21,30 +18,30 @@ ExprTree::
 
 
 bool ExprTree::
-evaluate (EvalState &state, Value &val)
+Evaluate (EvalState &state, Value &val)
 {
 	Value 	cv;
 	bool	rval;
 
 	if( state.cache.lookup( this, cv ) == 0 ) {
 		// found in cache; return cached value
-		val.copyFrom( cv );
+		val.CopyFrom( cv );
 		return true;
 	} 
 
 	// not found in cache; insert a cache entry
-	cv.setUndefinedValue( );
-	if( state.cache.insert( this, cv) < 0 ) {
-		val.setErrorValue( );
+	cv.SetUndefinedValue( );
+	if( state.cache.insert( this, cv ) < 0 ) {
+		val.SetErrorValue( );
 		return false;
 	}
 
 	// evaluate the expression
-	rval = _evaluate( state, val );
+	rval = _Evaluate( state, val );
 
-	// cache the value
-	if( state.cache.insert( this, val ) < 0 ) {
-		val.setErrorValue( );
+	// remove old value and cache actual value 
+	if( state.cache.remove( this )<0 || state.cache.insert( this, val )<0 ) {
+		val.SetErrorValue( );
 		return false;
 	}
 
@@ -52,30 +49,30 @@ evaluate (EvalState &state, Value &val)
 }
 
 bool ExprTree::
-evaluate( EvalState &state, Value &val, ExprTree *&sig )
+Evaluate( EvalState &state, Value &val, ExprTree *&sig )
 {
 	Value	cv;
 	bool	rval;
 
 	if( state.cache.lookup( this, cv ) == 0 ) {
 		// found in cache; return cached value
-		val.copyFrom( cv );
+		val.CopyFrom( cv );
 		return true;
 	} 
 
 	// not found in cache; insert a cache entry
-	cv.setUndefinedValue( );
-	if( state.cache.insert( this, cv) < 0 ) {
-		val.setErrorValue( );
+	cv.SetUndefinedValue( );
+	if( state.cache.insert( this, cv ) < 0 ) {
+		val.SetErrorValue( );
 		return false;
 	}
 
 	// evaluate the expression
-	rval = _evaluate( state, val, sig );
+	rval = _Evaluate( state, val, sig );
 
 	// cache the value
-	if( state.cache.insert( this, val ) < 0 ) {
-		val.setErrorValue( );
+	if( state.cache.remove( this )<0 || state.cache.insert( this, val )<0 ) {
+		val.SetErrorValue( );
 		return false;
 	}
 
@@ -84,87 +81,66 @@ evaluate( EvalState &state, Value &val, ExprTree *&sig )
 
 
 void ExprTree::
-setParentScope( ClassAd* scope ) 
+SetParentScope( ClassAd* scope ) 
 {
 	parentScope = scope;
-	_setParentScope( scope );
+	_SetParentScope( scope );
 }
 
 
 bool ExprTree::
-evaluate( Value& val )
+Evaluate( Value& val )
+{
+	EvalState 	state;
+
+	state.SetScopes( parentScope );
+	return( Evaluate( state, val ) );
+}
+
+
+bool ExprTree::
+Evaluate( Value& val, ExprTree*& sig )
+{
+	EvalState 	state;
+
+	state.SetScopes( parentScope );
+	return( Evaluate( state, val, sig  ) );
+}
+
+
+bool ExprTree::
+Flatten( Value& val, ExprTree *&tree )
 {
 	EvalState state;
 
-	state.setScopes( parentScope );
-	return( evaluate( state, val ) );
+	state.SetScopes( parentScope );
+	return( Flatten( state, val, tree ) );
 }
 
 
 bool ExprTree::
-evaluate( Value& val, ExprTree*& sig )
-{
-	EvalState state;
-
-	state.setScopes( parentScope );
-	return( evaluate( state, val, sig ) );
-}
-
-
-bool ExprTree::
-flatten( Value& val, ExprTree *&tree )
-{
-	EvalState state;
-
-	state.setScopes( parentScope );
-	return( flatten( state, val, tree ) );
-}
-
-
-bool ExprTree::
-flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind* op)
+Flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind* op)
 {
 	bool rval;
 
 	if(flattenFlag) {
-		val.setErrorValue ();
+		val.SetErrorValue ();
 		flattenFlag = false; 
 		return true;
 	}
 
 	flattenFlag = true; 	
-	rval = _flatten( state, val, tree, op );
+	rval = _Flatten( state, val, tree, op );
 	flattenFlag = false; 
 
 	return rval;
 }
 
-void ExprTree::
-setDefaultCopyMode( CopyMode cm )
-{
-	if( cm == EXPR_DEEP_COPY || cm == EXPR_REF_COUNT ) {
-		defaultCopyMode = cm;
-	} else {
-		cm = EXPR_DEEP_COPY;
-	}
-}
-
 ExprTree *ExprTree::
-copy( CopyMode cm )
-{
-	if( cm == EXPR_DEFAULT_COPY ) cm = defaultCopyMode;
-	if( cm == EXPR_REF_COUNT ) {
-		refCount++;
-	}
-	return( _copy( cm ) );
-}
-
-
-ExprTree *ExprTree::
-fromSource (Source &s)
+FromSource (Source &s)
 {
 	ExprTree *tree = NULL;
-	if (!s.parseExpression(tree) && tree) {
+	if (!s.ParseExpression(tree) && tree) {
 		delete tree;
 		return (ExprTree*)NULL;
 	}
@@ -183,24 +159,33 @@ exprHash( ExprTree* const& expr, int numBkts )
 }
 
 
+
 EvalState::
 EvalState( ) : cache( 128, &exprHash )
 {
 	rootAd = NULL;
 	curAd  = NULL;
+	strings.fill( NULL );
 }
 
+EvalState::
+~EvalState( )
+{
+	for( int i = 0 ; i <= strings.getlast() ; i++ ) {
+		delete [] strings[i];
+	}
+}
 
 void EvalState::
-setScopes( ClassAd *curScope )
+SetScopes( ClassAd *curScope )
 {
 	curAd = curScope;
-	setRootScope( );
+	SetRootScope( );
 }
 
 
 void EvalState::
-setRootScope( )
+SetRootScope( )
 {
 	ClassAd *prevScope = curAd, *curScope = curAd->parentScope;
 

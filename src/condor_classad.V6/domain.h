@@ -33,22 +33,22 @@ class ClassAdDomainManager
 		ClassAdDomainManager ();
 		~ClassAdDomainManager ();
 
-		void getCanonicalDomain (char *domainName, SSString &canonical)
+		void GetCanonicalDomain (char *domainName, SSString &canonical)
 		{
    			domainNameSpace.getCanonical (domainName, canonical);
 		}
 
-		void getDomainSchema (SSString domainName, StringSpace *&schema)
+		void GetDomainSchema (SSString domainName, StringSpace *&schema)
 		{
 			schema = schemaArray[domainName.getIndex ()];
 		}
 
-		void getDomainSchema (int index, StringSpace *&schema)
+		void GetDomainSchema (int index, StringSpace *&schema)
 		{
 			schema = schemaArray[index];
 		}
 
-		void getDomainSchema (char *, int &, StringSpace *&);
+		void GetDomainSchema (char *, int &, StringSpace *&);
 
   	private:
 		ExtArray<StringSpace *> 	schemaArray;

@@ -3,42 +3,44 @@
 
 static char *_FileName_ = __FILE__;
 
+	// the order in this array should be the same as the OpKind enumeration
+	// in common.h
 char *Operation::opString[] = 
 {
 	"",		// no-op
 
-	"<",	// comparisons
-	"<=",
-	"!=",
-	"==",
-	"=?=",
-	"=!=",
-	">=",
-	">",
+	" < ",	// comparisons
+	" <= ",
+	" != ",
+	" == ",
+	" >= ",
+	" > ",
+	" is ",
+	" isnt ",
 
-	"+",	// arithmetic
-	"-",
-	"+",
-	"-",
-	"*",
-	"/",
-	"%",
+	" + ",	// arithmetic
+	" - ",
+	" + ",
+	" - ",
+	" * ",
+	" / ",
+	" % ",
 
-	"!",	// logical
-	"||",
-	"&&",
+	" !",	// logical
+	" || ",
+	" && ",
 
-	"~",	// bitwise
-	"|",
-	"^",
-	"&",
-	"<<",
-	">>",
-	">>>",
+	" ~",	// bitwise
+	" | ",
+	" ^ ",
+	" & ",
+	" << ",
+	" >> ",
+	" >>> ",
 
-	"()",	//misc --- no "single token" representation
-	"[]",
-	"?:"
+	" () ",	//misc --- no "single token" representation
+	" [] ",
+	" ?: "
 };
 
 
@@ -62,131 +64,115 @@ Operation::
 }
 
 
-ExprTree *Operation::
-_copy( CopyMode cm )
+Operation *Operation::
+Copy( )
 {
-	if( cm == EXPR_DEEP_COPY ) {
-		Operation *newTree = new Operation ();
-		if (newTree == 0) return NULL;
+	Operation *newTree = new Operation ();
+	if (newTree == 0) return NULL;
 
-		if( child1 && (newTree->child1=child1->copy( EXPR_DEEP_COPY ))==NULL ){
-			delete newTree;
-			return NULL;
-		}
-
-		if( child2 && (newTree->child2=child2->copy( EXPR_DEEP_COPY ))==NULL ){
-			delete newTree;
-			return NULL;
-		}
-
-		if( child3 && (newTree->child3=child3->copy( EXPR_DEEP_COPY ))==NULL ){
-			delete newTree;
-			return NULL;
-		}
-
-		newTree->operation = operation;
-		newTree->nodeKind = nodeKind;
-		return newTree;
-	} else if( cm == EXPR_REF_COUNT ) {
-		if( child1 ) child1->copy( EXPR_REF_COUNT );
-		if( child2 ) child2->copy( EXPR_REF_COUNT );
-		if( child3 ) child3->copy( EXPR_REF_COUNT );
-		return this;
+	if( child1 && ( newTree->child1=child1->Copy( ) )==NULL ){
+		delete newTree;
+		return NULL;
 	}
 
-	// will not reach here
-	return 0;
+	if( child2 && ( newTree->child2=child2->Copy( ) )==NULL ){
+		delete newTree;
+		return NULL;
+	}
+
+	if( child3 && ( newTree->child3=child3->Copy( ) )==NULL ){
+		delete newTree;
+		return NULL;
+	}
+
+	newTree->operation = operation;
+	newTree->nodeKind = nodeKind;
+	return newTree;
 }
 
 void Operation::
-_setParentScope( ClassAd* parent ) 
+_SetParentScope( ClassAd* parent ) 
 {
-	if( child1 ) child1->setParentScope( parent );
-	if( child2 ) child2->setParentScope( parent );
-	if( child3 ) child3->setParentScope( parent );
+	if( child1 ) child1->SetParentScope( parent );
+	if( child2 ) child2->SetParentScope( parent );
+	if( child3 ) child3->SetParentScope( parent );
 }
 
 bool Operation::
-toSink (Sink &s)
+ToSink( Sink &s )
 {
-	bool flag;
+	FormatOptions *p = s.GetFormatOptions( );
+	bool minimalParens = p ? p->GetMinimalParentheses( ) : false;
+	int  precLevel;
 
-	// trivial case
+		// trivial case
 	if (operation == __NO_OP__) return true;
 
-	// parentheses
-	if (operation == PARENTHESES_OP) {
-		if ((!s.sendToSink((void*)"(", 1)) 	||
-			(!child1 || !child1->toSink(s))	||
-			(!s.sendToSink((void*)")", 1)))
-				return false;
-		else
-			return true;
+		// parentheses (put only if minimal parens is not set)
+	if( operation == PARENTHESES_OP ) {
+		if( minimalParens ) return( child1 && child1->ToSink( s ) );
+
+		return( s.SendToSink((void*)"(", 1) && child1 && child1->ToSink(s) &&
+					s.SendToSink((void*)")", 1) );
 	}
 
-	// unary operators
-	if ((operation == UNARY_PLUS_OP  && !s.sendToSink((void*)"+", 1)) 	||
-		(operation == UNARY_MINUS_OP && !s.sendToSink((void*)"-", 1))	||
-		(operation == LOGICAL_NOT_OP && !s.sendToSink((void*)"!", 1))	||
-		(operation == BITWISE_NOT_OP && !s.sendToSink((void*)"~", 1)))
-			return false;
-
-	// there must be at least one child
-	if (!child1 || !child1->toSink (s))	return false;
-
-	// ternary operator
-	if (operation == TERNARY_OP) {
-		if ((!s.sendToSink ((void*)" ? ", 3))	||
-			(!child2 || !child2->toSink(s))		||
-			(!s.sendToSink ((void*)" : ", 3))	||
-			(!child3 || !child3->toSink(s)))
-				return false;
-		else
-			return true;
-	} else if( operation == SUBSCRIPT_OP ) {
-		if( ( !s.sendToSink( (void*)"[", 1 ) )	||	
-			( !child2 || !child2->toSink( s ) ) ||
-			( !s.sendToSink( (void*)"]", 1 ) ) )
-				return false;
-		else
-			return true;
-	}
-
-	// the rest are infix binary operators
-	switch (operation) {
-		case LESS_THAN_OP:		flag = s.sendToSink ((void*)" < ",  3);	break;
-    	case LESS_OR_EQUAL_OP:	flag = s.sendToSink ((void*)" <= ", 4); break;
-    	case NOT_EQUAL_OP:		flag = s.sendToSink ((void*)" != ", 4); break;
-    	case EQUAL_OP:			flag = s.sendToSink ((void*)" == ", 4); break;
-    	case META_EQUAL_OP:		flag = s.sendToSink ((void*)" =?= ",5); break;
-    	case META_NOT_EQUAL_OP:	flag = s.sendToSink ((void*)" =!= ",5); break;
-    	case GREATER_OR_EQUAL_OP:flag= s.sendToSink ((void*)" >= ", 4); break;
-    	case GREATER_THAN_OP:	flag = s.sendToSink ((void*)" > ",  3); break;
-    	case ADDITION_OP:		flag = s.sendToSink ((void*)" + ",  3); break;
-    	case SUBTRACTION_OP:	flag = s.sendToSink ((void*)" - ",  3); break;
-    	case MULTIPLICATION_OP:	flag = s.sendToSink ((void*)" * ",  3); break;
-    	case DIVISION_OP:		flag = s.sendToSink ((void*)" / ",  3); break;
-    	case MODULUS_OP:		flag = s.sendToSink ((void*)" % ",  3); break;
-    	case LOGICAL_OR_OP:		flag = s.sendToSink ((void*)" || ", 4); break;
-    	case LOGICAL_AND_OP:	flag = s.sendToSink ((void*)" && ", 4); break;
-    	case BITWISE_OR_OP:		flag = s.sendToSink ((void*)" | ",  3); break;
-    	case BITWISE_XOR_OP:	flag = s.sendToSink ((void*)" ^ ",  3); break;
-    	case BITWISE_AND_OP:	flag = s.sendToSink ((void*)" & ",  3); break;
-    	case LEFT_SHIFT_OP:		flag = s.sendToSink ((void*)" << ", 4); break;
-    	case RIGHT_SHIFT_OP:	flag = s.sendToSink ((void*)" >> ", 5); break;
-    	case URIGHT_SHIFT_OP:	flag = s.sendToSink ((void*)" >>> ",4); break;
-
+		// unary operators ( we don't care about minimal parens for unary ops)
+	switch( operation ) {
+		case UNARY_PLUS_OP: 
+		case UNARY_MINUS_OP: 
+		case LOGICAL_NOT_OP:
+		case BITWISE_NOT_OP:
+			return( s.SendToSink( (void*)opString[operation], 
+				strlen( opString[operation] ) ) &&
+				child1 && child1->ToSink( s ) );
 		default:
-			return false;
+			break;
 	}
-	
-	// ensure operator was written ok; dump right hand operand of expression
-	return (flag && child2 && child2->toSink(s));
+
+		// ternary and subscript (don't care about minimal parens here either)
+	if( operation == TERNARY_OP ) {
+		return( child1 && child1->ToSink(s) && s.SendToSink((void*)" ? ",3) &&
+				child2 && child2->ToSink(s) && s.SendToSink((void*)" : ",3) &&
+				child3 && child3->ToSink(s) );
+	} else if( operation == SUBSCRIPT_OP ) {
+		return( child1 && child1->ToSink(s) && s.SendToSink((void*)"[",1) &&
+				child2 && child2->ToSink(s) && s.SendToSink((void*)"]",1 ) );
+	}
+
+		// remaining operations are binary; we care about minimal parens
+		// if minimal parens have been requested, stash old precedence level
+	if( minimalParens ) {
+		precLevel = p->GetPrecedenceLevel( );
+		p->SetPrecedenceLevel( PrecedenceLevel( operation ) );
+
+			// put parens if required by minimal parens
+		if( precLevel > PrecedenceLevel( operation ) ) {
+			if( !s.SendToSink( (void*)"(",1 ) ) return false;
+		}
+	}
+
+		// send the operation to the sink
+	if( !child1 || !child1->ToSink( s ) || 
+		!s.SendToSink((void*)opString[operation],strlen(opString[operation])) ||
+		!child2 || !child2->ToSink( s ) ) {
+		return( false );
+	}
+
+		// check for minimal parens --- close up if required
+	if( minimalParens ) {
+		if( precLevel > PrecedenceLevel( operation ) && 
+			!s.SendToSink( (void*)")",1) ) {
+			return false;
+		}
+		p->SetPrecedenceLevel( precLevel );
+	}
+
+	return( true );
 }
 
 
 void Operation::
-operate (OpKind op, Value &op1, Value &op2, Value &result)
+Operate (OpKind op, Value &op1, Value &op2, Value &result)
 {
 	Value dummy;
 	_doOperation(op, op1, op2, dummy, true, true, false, result);
@@ -194,7 +180,7 @@ operate (OpKind op, Value &op1, Value &op2, Value &result)
 
 
 void Operation::
-operate (OpKind op, Value &op1, Value &op2, Value &op3, Value &result)
+Operate (OpKind op, Value &op1, Value &op2, Value &op3, Value &result)
 {
 	_doOperation(op, op1, op2, op3, true, true, true, result);
 }
@@ -207,53 +193,53 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 	ValueType	vt1,  vt2,  vt3;
 
 	// get the types of the values
-	vt1 = val1.getType ();
-	vt2 = val2.getType ();
-	vt3 = val3.getType ();
+	vt1 = val1.GetType ();
+	vt2 = val2.GetType ();
+	vt3 = val3.GetType ();
 
 	// take care of the easy cases
 	if (op == __NO_OP__ || op == PARENTHESES_OP) {
-		result.copyFrom( val1 );
+		result.CopyFrom( val1 );
 		return SIG_LEFT;
 	} else if (op == UNARY_PLUS_OP) {
-		if (vt1 == BOOLEAN_VALUE || vt1 == STRING_VALUE || 
-			vt1 == LIST_VALUE || vt1 == CLASSAD_VALUE) {
-			result.setErrorValue();
+		if (vt1 == BOOLEAN_VALUE || vt1 == STRING_VALUE || vt1 == LIST_VALUE || 
+			vt1 == CLASSAD_VALUE || vt1 == ABSOLUTE_TIME_VALUE) {
+			result.SetErrorValue();
 		} else {
-			// applies for ERROR, UNDEFINED and numbers
-			result.copyFrom( val1 );
+			// applies for ERROR, UNDEFINED and Numbers
+			result.CopyFrom( val1 );
 		}
 		return SIG_LEFT;
 	}
 
 	// test for cases when evaluation is strict
-	if( isStrictOperator( op ) ) {
+	if( IsStrictOperator( op ) ) {
 		// check for error values
 		if( vt1==ERROR_VALUE ) {
-			result.setErrorValue ();
+			result.SetErrorValue ();
 			return SIG_LEFT;
 		}
 		if( valid2 && vt2==ERROR_VALUE ) {
-			result.setErrorValue ();
+			result.SetErrorValue ();
 			return( !valid3 ? SIG_RIGHT : SIG_MIDDLE );
 		}
 		if( valid3 && vt3==ERROR_VALUE ) {
-			result.setErrorValue ();
+			result.SetErrorValue ();
 			return SIG_RIGHT;
 		}
 
 		// check for undefined values.  we need to check if the corresponding
 		// tree exists, because these values would be undefined" anyway then.
 		if( valid1 && vt1==UNDEFINED_VALUE ) {
-			result.setUndefinedValue();
+			result.SetUndefinedValue();
 			return SIG_LEFT;
 		}
 		if( valid2 && vt2==UNDEFINED_VALUE ) {
-			result.setUndefinedValue();
+			result.SetUndefinedValue();
 			return( !valid3 ? SIG_RIGHT :  SIG_MIDDLE );
 		}
 		if( valid3 && vt3==UNDEFINED_VALUE ) {
-			result.setUndefinedValue();
+			result.SetUndefinedValue();
 			return SIG_RIGHT;
 		}
 	}
@@ -285,21 +271,21 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 
 		// if the selector is UNDEFINED, the result is undefined
 		if (vt1==UNDEFINED_VALUE) {
-			result.setUndefinedValue();
+			result.SetUndefinedValue();
 			return SIG_LEFT;
 		}
 
 		// otherwise, if the selector is not boolean propagate error
 		if( vt1 != BOOLEAN_VALUE ) {
-			result.setErrorValue();	
+			result.SetErrorValue();	
 			return SIG_LEFT;
 		}
 
-		if( val1.isBooleanValue(b) && b ) {
-			result.copyFrom(val2 );
+		if( val1.IsBooleanValue(b) && b ) {
+			result.CopyFrom( val2 );
 			return( SIG_LEFT | SIG_MIDDLE );
 		} else {
-			result.copyFrom(val3 );
+			result.CopyFrom( val3 );
 			return( SIG_LEFT | SIG_RIGHT );
 		}
 	} else if( op == SUBSCRIPT_OP ) {
@@ -309,35 +295,35 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 
 		// subscripting from a list (strict)
 		if( vt1 != LIST_VALUE || vt2 != INTEGER_VALUE) {
-			result.setErrorValue();
+			result.SetErrorValue();
 			return( SIG_LEFT | SIG_RIGHT );
 		}
 
-		val1.isListValue( elist );		
-		val2.isIntegerValue( index );
+		val1.IsListValue( elist );		
+		val2.IsIntegerValue( index );
 
 		// check bounds
-		if( elist->number() <= index || index < 0 ) {
-			result.setUndefinedValue();
+		if( elist->Number() <= index || index < 0 ) {
+			result.SetUndefinedValue();
 			return SIG_RIGHT;
 		}
 
 		// access the index'th element (0-based)
-		elist->rewind();
+		elist->Rewind();
 		index++;
-		while( index && ( tree = elist->next() ) ) {
+		while( index && ( tree = elist->Next() ) ) {
 			index --;
 		}
 
 		if( es ) {
 			// if an EvalState has been provided, use it
-			if( !tree->evaluate( *es, result ) ) {
-				result.setErrorValue( );
+			if( !tree->Evaluate( *es, result ) ) {
+				result.SetErrorValue( );
 				return( SIG_NONE );
 			}
 		} else {
 			// this needs to be changed
-			result.setUndefinedValue( );
+			result.SetUndefinedValue( );
 		}
 
 		return( SIG_LEFT | SIG_RIGHT );
@@ -350,7 +336,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 
 
 bool Operation::
-_evaluate (EvalState &state, Value &result)
+_Evaluate (EvalState &state, Value &result)
 {
 	Value	val1, val2, val3;
 	bool	valid1, valid2, valid3;
@@ -360,25 +346,25 @@ _evaluate (EvalState &state, Value &result)
 	valid2 = false;
 	valid3 = false;
 
-	// evaluate all valid children
+	// Evaluate all valid children
 	if (child1) { 
-		if( !child1->evaluate (state, val1) ) {
-			result.setErrorValue( );
+		if( !child1->Evaluate (state, val1) ) {
+			result.SetErrorValue( );
 			return( false );
 		}
 		valid1 = true;
 	}
 
 	if (child2) {
-		if( !child2->evaluate (state, val2) ) {
-			result.setErrorValue( );
+		if( !child2->Evaluate (state, val2) ) {
+			result.SetErrorValue( );
 			return( false );
 		}
 		valid2 = true;
 	}
 	if (child3) {
-		if( !child3->evaluate (state, val3) ) {
-			result.setErrorValue( );
+		if( !child3->Evaluate (state, val3) ) {
+			result.SetErrorValue( );
 			return( false );
 		}
 		valid3 = true;
@@ -392,33 +378,33 @@ _evaluate (EvalState &state, Value &result)
 
 
 bool Operation::
-_evaluate( EvalState &state, Value &result, ExprTree *& tree )
+_Evaluate( EvalState &state, Value &result, ExprTree *& tree )
 {
 	int			sig;
 	Value		val1, val2, val3;
 	ExprTree 	*tl=NULL, *tm=NULL, *tr=NULL;
 	bool		valid1=false, valid2=false, valid3=false;
 
-	// evaluate all valid children
+	// Evaluate all valid children
 	tree = NULL;
 	if (child1) { 
-		if( !child1->evaluate (state, val1) ) {
-			result.setErrorValue( );
+		if( !child1->Evaluate (state, val1) ) {
+			result.SetErrorValue( );
 			return( false );
 		}
 		valid1 = true;
 	}
 
 	if (child2) {
-		if( !child2->evaluate (state, val2) ) {
-			result.setErrorValue( );
+		if( !child2->Evaluate (state, val2) ) {
+			result.SetErrorValue( );
 			return( false );
 		}
 		valid2 = true;
 	}
 	if (child3) {
-		if( !child3->evaluate (state, val3) ) {
-			result.setErrorValue( );
+		if( !child3->Evaluate (state, val3) ) {
+			result.SetErrorValue( );
 			return( false );
 		}
 		valid3 = true;
@@ -434,19 +420,19 @@ _evaluate( EvalState &state, Value &result, ExprTree *& tree )
 	if( valid3 && !( sig & SIG_MIDDLE )){ delete tm; tm = NULL; }
 
 	if( sig == SIG_NONE ) {
-		result.setErrorValue( );
+		result.SetErrorValue( );
 		tree = NULL;
 		return( false );
 	}
 
 	// in case of strict operators, if a subexpression is significant and the
 	// corresponding value is UNDEFINED or ERROR, propagate only that tree
-	if( isStrictOperator( operation ) ) {
+	if( IsStrictOperator( operation ) ) {
 		// strict unary operators:  unary -, unary +, !, ~, ()
 		if( operation == UNARY_MINUS_OP || operation == UNARY_PLUS_OP ||
 		  	operation == LOGICAL_NOT_OP || operation == BITWISE_NOT_OP ||
 			operation == PARENTHESES_OP ) {
-			if( val1.isExceptional() ) {
+			if( val1.IsExceptional() ) {
 				// the operator is only propagating the value;  only the
 				// subexpression is significant
 				tree = tl;
@@ -458,7 +444,7 @@ _evaluate( EvalState &state, Value &result, ExprTree *& tree )
 			return( true );	
 		} else {
 			// strict binary operators
-			if( val1.isExceptional() || val2.isExceptional() ) {
+			if( val1.IsExceptional() || val2.IsExceptional() ) {
 				// exceptional values are only being propagated
 				if( sig & SIG_LEFT ) {
 					tree = tl;
@@ -500,8 +486,8 @@ _evaluate( EvalState &state, Value &result, ExprTree *& tree )
 		// selector is *always* significant
 		if( operation == TERNARY_OP ) {
 			Value tmpVal;
-			tmpVal.setUndefinedValue( );
-			tree = Literal::makeLiteral( tmpVal );
+			tmpVal.SetUndefinedValue( );
+			tree = Literal::MakeLiteral( tmpVal );
 
 			// "true" consequent taken
 			if( sig & SIG_MIDDLE ) {
@@ -523,7 +509,7 @@ _evaluate( EvalState &state, Value &result, ExprTree *& tree )
 
 
 bool Operation::
-_flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind *opPtr )
+_Flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind *opPtr )
 {
 	OpKind		childOp1=__NO_OP__, childOp2=__NO_OP__;
 	ExprTree	*fChild1=NULL, *fChild2=NULL;
@@ -535,8 +521,8 @@ _flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind *opPtr )
 		op == LEFT_SHIFT_OP  || op == RIGHT_SHIFT_OP || op == URIGHT_SHIFT_OP) 
 	{
 		if( opPtr ) *opPtr = __NO_OP__;
-		if( child1->flatten( state, val1, fChild1 ) &&
-			child2->flatten( state, val2, fChild2 ) ) {
+		if( child1->Flatten( state, val1, fChild1 ) &&
+			child2->Flatten( state, val2, fChild2 ) ) {
 			if( !fChild1 && !fChild2 ) {
 				_doOperation(op, val1, val2, val3, true, true, false, val);	
 				tree = NULL;
@@ -565,9 +551,9 @@ _flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind *opPtr )
 					
 	// any op that got past the above is binary, commutative and associative
 
-	// flatten sub expressions
-	if( child1 && !child1->flatten( state, val1, fChild1, &childOp1 ) ||
-		child2 && !child2->flatten( state, val2, fChild2, &childOp2 ) ) {
+	// Flatten sub expressions
+	if( child1 && !child1->Flatten( state, val1, fChild1, &childOp1 ) ||
+		child2 && !child2->Flatten( state, val2, fChild2, &childOp2 ) ) {
 		tree = NULL;
 		return false;
 	}
@@ -608,7 +594,7 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 		( op==LOGICAL_OR_OP || op==LOGICAL_AND_OP ) ) {
 		_doOperation( op, !tree1?val1:dummy , !tree2?val2:dummy , dummy , 
 						true, true, false, val );
-		if( val.isBooleanValue() ) {
+		if( val.IsBooleanValue() ) {
 			tree = NULL;
 			op = __NO_OP__;
 			return true;
@@ -624,17 +610,17 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 	} else if( !tree1 && (tree2 && op2 == __NO_OP__ ) ) {
 		// leftson is a value, rightson is a tree
 		tree = tree2;
-		val.copyFrom( val1 );
+		val.CopyFrom( val1 );
 		return true;
 	} else if( !tree2 && (tree1 && op1 == __NO_OP__ ) ) {
 		// rightson is a value, leftson is a tree
 		tree = tree1;
-		val.copyFrom( val2 );
+		val.CopyFrom( val2 );
 		return true;
 	} else if( ( tree1 && op1 == __NO_OP__ ) && ( tree2 && op2 == __NO_OP__ ) ){
 		// left and rightsons are trees only
 		if( !( newOp = new Operation() ) ) return false;
-		newOp->setOperation( op, tree1, tree2 );
+		newOp->SetOperation( op, tree1, tree2 );
 		tree = newOp;
 		op   = __NO_OP__;
 		return true;
@@ -651,7 +637,7 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 		} else if( tree1 ) {
 			newOp1 = tree1;
 		} else {
-			newOp1 = Literal::makeLiteral( val1 );
+			newOp1 = Literal::MakeLiteral( val1 );
 		}
 		
 		if( op2 != __NO_OP__ ) {
@@ -659,7 +645,7 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 		} else if( tree2 ) {
 			newOp2 = tree2;
 		} else {
-			newOp2 = Literal::makeLiteral( val2 );
+			newOp2 = Literal::MakeLiteral( val2 );
 		}
 
 		if( !newOp1 || !newOp2 ) {
@@ -674,7 +660,7 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 			tree = NULL; op = __NO_OP__;
 			return false;
 		}
-		newOp->setOperation( op, newOp1, newOp2 );
+		newOp->SetOperation( op, newOp1, newOp2 );
 		op = __NO_OP__;
 		tree = newOp;
 		return true;
@@ -684,7 +670,7 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 		// same operators on both children . since op!=NO_OP, neither are op1, 
 		// op2.  so they both make tree and value contributions
 		if( !( newOp = new Operation() ) ) return false;
-		newOp->setOperation( op, tree1, tree2 );
+		newOp->SetOperation( op, tree1, tree2 );
 		_doOperation( op, val1, val2, dummy, true, true, false, val );
 		tree = newOp;
 		return true;
@@ -702,8 +688,8 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 				tree = NULL; op = __NO_OP__;	
 				return false;
 			}
-			newOp->setOperation( op, tree1, tree2 );
-			val.copyFrom( val1 );
+			newOp->SetOperation( op, tree1, tree2 );
+			val.CopyFrom( val1 );
 			return true;
 		}
 	} else if( op == op2 ) {
@@ -720,8 +706,8 @@ combine( OpKind &op, Value &val, ExprTree *&tree,
 				tree = NULL; op = __NO_OP__;	
 				return false;
 			}
-			newOp->setOperation( op, tree1, tree2 );
-			val.copyFrom( val2 );
+			newOp->SetOperation( op, tree1, tree2 );
+			val.CopyFrom( val2 );
 			return true;
 		}
 	}
@@ -740,37 +726,37 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 
 	// do numerical type promotions --- other types/values are unchanged
 	coerceResult = coerceToNumber(v1, v2);
-	vt1 = v1.getType();
-	vt2 = v2.getType();
+	vt1 = v1.GetType();
+	vt2 = v2.GetType();
 
 	// perform comparison for =?= ; true iff same types and same values
 	if (op == META_EQUAL_OP) {
 		if (vt1 != vt2) {
-			result.setBooleanValue( false );
+			result.SetBooleanValue( false );
 			return( SIG_LEFT | SIG_RIGHT );
 		}
 		
 		// undefined or error
 		if (vt1 == UNDEFINED_VALUE || vt1 == ERROR_VALUE) {
-			result.setBooleanValue( true );
+			result.SetBooleanValue( true );
 			return( SIG_LEFT | SIG_RIGHT );
 		}
 
-		// if not the above cases, =?= is just like == ; but remember =?=
+		// if not the above cases, =?= is like == ; but remember =?=
 		exact = true;
 		op = EQUAL_OP;
 	}
 	// perform comparison for =!= ; negation of =?=
 	if (op == META_NOT_EQUAL_OP) {
 		if (vt1 != vt2) {
-			result.setBooleanValue( true );
+			result.SetBooleanValue( true );
 			return( SIG_LEFT | SIG_RIGHT );
 		}
 
 		// undefined or error
 		if (vt1 == UNDEFINED_VALUE || vt1 == ERROR_VALUE ||
 			vt2 == UNDEFINED_VALUE || vt2 == ERROR_VALUE) {
-			result.setBooleanValue( false );
+			result.SetBooleanValue( false );
 			return( SIG_LEFT | SIG_RIGHT );
 		}
 
@@ -786,7 +772,7 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 			if (vt1 != STRING_VALUE || vt2 != STRING_VALUE) {
 				// comparison between strings and non-exceptional non-string 
 				// values is error
-				result.setErrorValue();
+				result.SetErrorValue();
 				return( SIG_LEFT | SIG_RIGHT );
 			}
 			compareStrings (op, v1, v2, result, exact);
@@ -805,17 +791,33 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 				bool b1, b2;
 
 				// check if both are bools
-				if( !v1.isBooleanValue( b1 ) || !v2.isBooleanValue( b2 ) ) {
-					result.setErrorValue();
+				if( !v1.IsBooleanValue( b1 ) || !v2.IsBooleanValue( b2 ) ) {
+					result.SetErrorValue();
 					return( SIG_LEFT | SIG_RIGHT );
 				}
-				result.setBooleanValue( b1 == b2 );
+				result.SetBooleanValue( b1 == b2 );
 				return( SIG_LEFT | SIG_RIGHT );
 			}
 
 		case LIST_VALUE:
 		case CLASSAD_VALUE:
-			result.setErrorValue();
+			result.SetErrorValue();
+			return( SIG_LEFT | SIG_RIGHT );
+
+		case ABSOLUTE_TIME_VALUE:
+			if( !v1.IsAbsoluteTimeValue( ) || !v2.IsAbsoluteTimeValue( ) ) {
+				result.SetErrorValue( );
+				return( SIG_LEFT | SIG_RIGHT );
+			}
+			compareAbsoluteTimes( op, v1, v2, result );
+			return( SIG_LEFT | SIG_RIGHT );
+
+		case RELATIVE_TIME_VALUE:
+			if( !v1.IsRelativeTimeValue( ) || !v2.IsRelativeTimeValue( ) ) {
+				result.SetErrorValue( );
+				return( SIG_LEFT | SIG_RIGHT );
+			}
+			compareRelativeTimes( op, v1, v2, result );
 			return( SIG_LEFT | SIG_RIGHT );
 
 		default:
@@ -833,58 +835,63 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 	double 	r1;
 
 	// ensure the operands have arithmetic types
-	if( ( !v1.isIntegerValue() && !v1.isRealValue() ) || ( op!=UNARY_MINUS_OP 
-			&& !v2.isIntegerValue() && !v2.isRealValue() ) ) {
-		result.setErrorValue ();
+	if( ( !v1.IsIntegerValue() && !v1.IsRealValue() && !v1.IsAbsoluteTimeValue()
+			&& !v1.IsRelativeTimeValue() ) || ( op!=UNARY_MINUS_OP 
+			&& !v2.IsIntegerValue() && !v2.IsRealValue() 
+			&& !v2.IsAbsoluteTimeValue() && !v2.IsRelativeTimeValue() ) ) {
+		result.SetErrorValue ();
 		return( SIG_LEFT | SIG_RIGHT );
 	}
 
 	// take care of the unary arithmetic operators
 	if (op == UNARY_MINUS_OP) {
-		if (v1.isIntegerValue (i1)) {
-			result.setIntegerValue (-i1);
+		if (v1.IsIntegerValue (i1)) {
+			result.SetIntegerValue (-i1);
 			return SIG_LEFT;
-		} else	if (v1.isRealValue (r1)) {
-			result.setRealValue (-r1);
+		} else	if (v1.IsRealValue (r1)) {
+			result.SetRealValue (-r1);
+			return SIG_LEFT;
+		} else if( v1.IsExceptional() ) {
+			// undefined or error --- same as operand
+			result.CopyFrom( v1 );
 			return SIG_LEFT;
 		}
-
-		// v1 is either UNDEFINED or ERROR ... the result is the same as v1
-		result.copyFrom (v1);
-		return SIG_LEFT;
+		// unary minus not defined on any other operand type
+		result.SetErrorValue( );
+		return( SIG_LEFT );
 	}
 
 	// perform type promotions and proceed with arithmetic
 	switch (coerceToNumber (v1, v2)) {
 		case INTEGER_VALUE:
-			v1.isIntegerValue (i1);
-			v2.isIntegerValue (i2);
+			v1.IsIntegerValue (i1);
+			v2.IsIntegerValue (i2);
 			switch (op) {
 				case ADDITION_OP:		
-					result.setIntegerValue(i1+i2);	
+					result.SetIntegerValue(i1+i2);	
 					return( SIG_LEFT | SIG_RIGHT );
 
 				case SUBTRACTION_OP:	
-					result.setIntegerValue(i1-i2);	
+					result.SetIntegerValue(i1-i2);	
 					return( SIG_LEFT | SIG_RIGHT );
 
 				case MULTIPLICATION_OP:	
-					result.setIntegerValue(i1*i2);	
+					result.SetIntegerValue(i1*i2);	
 					return( SIG_LEFT | SIG_RIGHT );
 
 				case DIVISION_OP:		
 					if (i2 != 0) {
-						result.setIntegerValue(i1/i2);
+						result.SetIntegerValue(i1/i2);
 					} else {
-						result.setErrorValue ();
+						result.SetErrorValue ();
 					}
 					return( SIG_LEFT | SIG_RIGHT );
 					
 				case MODULUS_OP:
 					if (i2 != 0) {
-						result.setIntegerValue(i1%i2);
+						result.SetIntegerValue(i1%i2);
 					} else {
-						result.setErrorValue ();
+						result.SetErrorValue ();
 					}
 					return( SIG_LEFT | SIG_RIGHT );
 							
@@ -896,6 +903,10 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 
 		case REAL_VALUE:
 			return( doRealArithmetic (op, v1, v2, result) );
+
+		case ABSOLUTE_TIME_VALUE:
+		case RELATIVE_TIME_VALUE:
+			return( doTimeArithmetic( op, v1, v2, result ) );
 
 		default:
 			// should not get here
@@ -909,64 +920,64 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 int Operation::
 doLogical (OpKind op, Value &v1, Value &v2, Value &result)
 {
-	ValueType	vt1 = v1.getType();
-	ValueType	vt2 = v2.getType();
+	ValueType	vt1 = v1.GetType();
+	ValueType	vt2 = v2.GetType();
 	bool		b1, b2;
 
 	if( vt1!=UNDEFINED_VALUE && vt1!=ERROR_VALUE && vt1!=BOOLEAN_VALUE ) {
-		result.setErrorValue();
+		result.SetErrorValue();
 		return SIG_LEFT;
 	}
 	if( vt2!=UNDEFINED_VALUE && vt2!=ERROR_VALUE && vt2!=BOOLEAN_VALUE ) { 
-		result.setErrorValue();
+		result.SetErrorValue();
 		return SIG_RIGHT;
 	}
 	
-	v1.isBooleanValue( b1 );
-	v2.isBooleanValue( b2 );
+	v1.IsBooleanValue( b1 );
+	v2.IsBooleanValue( b2 );
 
 	// handle unary operator
 	if (op == LOGICAL_NOT_OP) {
 		if( vt1 == BOOLEAN_VALUE ) {
-			result.setBooleanValue( !b1 );
+			result.SetBooleanValue( !b1 );
 		} else {
-			result.copyFrom( v1 );
+			result.CopyFrom( v1 );
 		}
 		return SIG_LEFT;
 	}
 
 	if (op == LOGICAL_OR_OP) {
 		if( vt1 == BOOLEAN_VALUE && b1 ) {
-			result.setBooleanValue( true );
+			result.SetBooleanValue( true );
 			return SIG_LEFT;
 		} else if( vt1 == ERROR_VALUE ) {
-			result.setErrorValue( );
+			result.SetErrorValue( );
 			return SIG_LEFT;
 		} else if( vt1 == BOOLEAN_VALUE && !b1 ) {
-			result.copyFrom( v2 );
+			result.CopyFrom( v2 );
 		} else if( vt2 != BOOLEAN_VALUE ) {
-			result.copyFrom( v2 );
+			result.CopyFrom( v2 );
 		} else if( b2 ) {
-			result.setBooleanValue( true );
+			result.SetBooleanValue( true );
 		} else {
-			result.setUndefinedValue( );
+			result.SetUndefinedValue( );
 		}
 		return( SIG_LEFT | SIG_RIGHT );
 	} else if (op == LOGICAL_AND_OP) {
         if( vt1 == BOOLEAN_VALUE && !b1 ) {
-            result.setBooleanValue( false );
+            result.SetBooleanValue( false );
 			return SIG_LEFT;
 		} else if( vt1 == ERROR_VALUE ) {
-			result.setErrorValue( );
+			result.SetErrorValue( );
 			return SIG_LEFT;
 		} else if( vt1 == BOOLEAN_VALUE && b1 ) {
-			result.copyFrom( v2 );
+			result.CopyFrom( v2 );
 		} else if( vt2 != BOOLEAN_VALUE ) {
-			result.copyFrom( v2 );
+			result.CopyFrom( v2 );
 		} else if( !b2 ) {
-			result.setBooleanValue( false );
+			result.SetBooleanValue( false );
 		} else {
-			result.setUndefinedValue( );
+			result.SetUndefinedValue( );
 		}
 		return( SIG_LEFT | SIG_RIGHT );
 	}
@@ -986,33 +997,33 @@ doBitwise (OpKind op, Value &v1, Value &v2, Value &result)
 
 	// bitwise operations are defined only on integers
 	if (op == BITWISE_NOT_OP) {
-		if (!v1.isIntegerValue(i1)) {
-			result.setErrorValue();
+		if (!v1.IsIntegerValue(i1)) {
+			result.SetErrorValue();
 			return SIG_LEFT;
 		}
-	} else if (!v1.isIntegerValue(i1) || !v2.isIntegerValue(i2)) {
-		result.setErrorValue();
+	} else if (!v1.IsIntegerValue(i1) || !v2.IsIntegerValue(i2)) {
+		result.SetErrorValue();
 		return( SIG_LEFT | SIG_RIGHT );
 	}
 
 	switch (op) {
-		case BITWISE_NOT_OP:	result.setIntegerValue(~i1);	break;
-		case BITWISE_OR_OP:		result.setIntegerValue(i1|i2);	break;
-		case BITWISE_AND_OP:	result.setIntegerValue(i1&i2);	break;
-		case BITWISE_XOR_OP:	result.setIntegerValue(i1^i2);	break;
-		case LEFT_SHIFT_OP:		result.setIntegerValue(i1<<i2);	break;
+		case BITWISE_NOT_OP:	result.SetIntegerValue(~i1);	break;
+		case BITWISE_OR_OP:		result.SetIntegerValue(i1|i2);	break;
+		case BITWISE_AND_OP:	result.SetIntegerValue(i1&i2);	break;
+		case BITWISE_XOR_OP:	result.SetIntegerValue(i1^i2);	break;
+		case LEFT_SHIFT_OP:		result.SetIntegerValue(i1<<i2);	break;
 
 		case URIGHT_SHIFT_OP:
 			if (i1 >= 0) {
 				// sign bit is not on;  >> will work fine
-				result.setIntegerValue (i1 >> i2);
+				result.SetIntegerValue (i1 >> i2);
 				break;
 			} else {
 				// sign bit is on
 				val = i1 >> 1;	    // shift right 1; the sign bit *may* be on
-				val &= (~signMask);	// clear the sign bit for sure
-				val >>= (i2 - 1);	// shift remaining number of positions
-				result.setIntegerValue (val);
+				val &= (~signMask);	// Clear the sign bit for sure
+				val >>= (i2 - 1);	// shift remaining Number of positions
+				result.SetIntegerValue (val);
 				break;
 			}
 			// will not reach here
@@ -1021,14 +1032,14 @@ doBitwise (OpKind op, Value &v1, Value &v2, Value &result)
 		case RIGHT_SHIFT_OP:
 			if (i1 >= 0) {
 				// sign bit is off;  >> will work fine
-				result.setIntegerValue (i1 >> i2);
+				result.SetIntegerValue (i1 >> i2);
 				break;
 			} else {
 				// sign bit is on; >> *may* not set the sign
 				val = i1;
 				for (int i = 0; i < i2; i++)
 					val = (val >> 1) | signMask;	// make sure that it does
-				result.setIntegerValue (val);
+				result.SetIntegerValue (val);
 				break;
 			}
 			// will not reach here
@@ -1062,8 +1073,8 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 	// trap sigfpe and set the ClassAdExprFPE flag to true; on NT check the 
 	// result against HUGE_VAL.  check errno for EDOM and ERANGE for kicks.
 
-	v1.isRealValue (r1);
-	v2.isRealValue (r2);
+	v1.IsRealValue (r1);
+	v2.IsRealValue (r2);
 
 #ifndef WIN32
     struct sigaction sa1, sa2;
@@ -1093,9 +1104,9 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 
 	// check if anything bad happened
 	if (ClassAdExprFPE==true || errno==EDOM || errno==ERANGE || comp==HUGE_VAL)
-		result.setErrorValue ();
+		result.SetErrorValue ();
 	else
-		result.setRealValue (comp);
+		result.SetRealValue (comp);
 
 	// restore the state
 #ifndef WIN32 
@@ -1108,16 +1119,86 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 }
 
 
+int Operation::
+doTimeArithmetic( OpKind op, Value &v1, Value &v2, Value &result )
+{
+	int secs1=0, secs2=0, usecs1=0, usecs2=0;
+	ValueType vt1=v1.GetType( ), vt2=v2.GetType( );
+
+		// addition
+	if( op==ADDITION_OP ) {
+		if( vt1==ABSOLUTE_TIME_VALUE && vt2==RELATIVE_TIME_VALUE ) {
+			v1.IsAbsoluteTimeValue( secs1 );
+			v2.IsRelativeTimeValue( secs2 );
+			result.SetAbsoluteTimeValue( secs1 + secs2 );
+			return( SIG_LEFT | SIG_RIGHT );
+		}
+
+		if( vt1==RELATIVE_TIME_VALUE && vt2==ABSOLUTE_TIME_VALUE ) {
+			v1.IsRelativeTimeValue( secs1 );
+			v2.IsAbsoluteTimeValue( secs2 );
+			result.SetAbsoluteTimeValue( secs1 + secs2 );
+			return( SIG_LEFT | SIG_RIGHT );
+		}
+
+		if( vt1==RELATIVE_TIME_VALUE && vt2==RELATIVE_TIME_VALUE ) {
+			int tusecs, tsecs;
+			v1.IsRelativeTimeValue( secs1, usecs1 );
+			v2.IsRelativeTimeValue( secs2, usecs2 );
+			tusecs = usecs1 + usecs2;
+			tsecs = secs1 + secs2 + tusecs / 1000000;
+			tusecs = tusecs % 1000000;	
+			result.SetRelativeTimeValue( tsecs, tusecs );
+			return( SIG_LEFT | SIG_RIGHT );
+		}
+	}
+
+	if( op == SUBTRACTION_OP ) {
+		if( vt1==ABSOLUTE_TIME_VALUE && vt2==ABSOLUTE_TIME_VALUE ) {
+			v1.IsAbsoluteTimeValue( secs1 );
+			v2.IsAbsoluteTimeValue( secs2 );
+			result.SetRelativeTimeValue( secs1 - secs2 );
+			return( SIG_LEFT | SIG_RIGHT );
+		}
+
+		if( vt1==ABSOLUTE_TIME_VALUE && vt2==RELATIVE_TIME_VALUE ) {
+			v1.IsAbsoluteTimeValue( secs1 );
+			v2.IsRelativeTimeValue( secs2 );
+			result.SetAbsoluteTimeValue( secs1 - secs2 );
+			return( SIG_LEFT | SIG_RIGHT );
+		}
+
+		if( vt1==RELATIVE_TIME_VALUE && vt2==RELATIVE_TIME_VALUE ) {
+			int dsecs, dusecs;
+			v1.IsRelativeTimeValue( secs1, usecs1 );
+			v2.IsRelativeTimeValue( secs2, usecs2 );
+			dusecs = usecs1 - usecs2;
+			if( dusecs < 0 ) {
+				secs1--;
+				dusecs += 1000000;
+			}
+			dsecs = secs1 - secs2;
+			result.SetRelativeTimeValue( dsecs, dusecs );
+			return( SIG_LEFT | SIG_RIGHT );
+		}
+	}
+
+	// no other operations are supported on times
+	result.SetErrorValue( );
+	return( SIG_LEFT | SIG_RIGHT );
+}
+
+
 void Operation::
 compareStrings (OpKind op, Value &v1, Value &v2, Value &result, bool exact)
 {
 	char *s1, *s2;
 	int  cmp;
 	
-	v1.isStringValue (s1);
-	v2.isStringValue (s2);
+	v1.IsStringValue (s1);
+	v2.IsStringValue (s2);
 
-	result.setBooleanValue( false );
+	result.SetBooleanValue( false );
 	if( exact ) {
 		cmp = strcmp( s1, s2 );
 	} else {
@@ -1128,23 +1209,92 @@ compareStrings (OpKind op, Value &v1, Value &v2, Value &result, bool exact)
 		if (op == LESS_THAN_OP 		|| 
 			op == LESS_OR_EQUAL_OP 	|| 
 			op == NOT_EQUAL_OP) {
-			result.setBooleanValue( true );
+			result.SetBooleanValue( true );
 		}
 	} else if (cmp == 0) {
 		// s1 == s2
 		if (op == LESS_OR_EQUAL_OP 	|| 
 			op == EQUAL_OP			||
 			op == GREATER_OR_EQUAL_OP) {
-			result.setBooleanValue( true );
+			result.SetBooleanValue( true );
 		}
 	} else {
 		// s1 > s2
 		if (op == GREATER_THAN_OP	||
 			op == GREATER_OR_EQUAL_OP	||
 			op == NOT_EQUAL_OP) {
-			result.setBooleanValue( true );
+			result.SetBooleanValue( true );
 		}
 	}
+}
+
+
+void Operation::
+compareAbsoluteTimes( OpKind op, Value &v1, Value &v2, Value &result )
+{
+	int asecs1, asecs2;
+	bool compResult;
+
+	v1.IsAbsoluteTimeValue( asecs1 );
+	v2.IsAbsoluteTimeValue( asecs2 );
+
+	switch( op ) {
+		case LESS_THAN_OP: 			compResult = (asecs1 < asecs2); 	break;
+		case LESS_OR_EQUAL_OP: 		compResult = (asecs1 <= asecs2); 	break;
+		case EQUAL_OP: 				compResult = (asecs1 == asecs2); 	break;
+		case NOT_EQUAL_OP: 			compResult = (asecs1 != asecs2); 	break;
+		case GREATER_THAN_OP: 		compResult = (asecs1 > asecs2); 	break;
+		case GREATER_OR_EQUAL_OP: 	compResult = (asecs1 >= asecs2); 	break;
+		default:
+			// should not get here
+			EXCEPT ("Should not get here");
+			return;
+	}
+
+	result.SetBooleanValue( compResult );
+}
+
+void Operation::
+compareRelativeTimes( OpKind op, Value &v1, Value &v2, Value &result )
+{
+	int rsecs1, rsecs2, rusecs1, rusecs2;
+	bool compResult;
+
+	v1.IsRelativeTimeValue( rsecs1, rusecs1 );
+	v2.IsRelativeTimeValue( rsecs2, rusecs2 );
+
+	switch( op ) {
+		case LESS_THAN_OP: 			
+			compResult = (rsecs1<rsecs2) || (rsecs1==rsecs2 && rusecs1<rusecs2);
+			break;
+
+		case LESS_OR_EQUAL_OP:
+			compResult = (rsecs1<=rsecs2)||(rsecs1==rsecs2 && rusecs1<=rusecs2);
+			break;
+
+		case EQUAL_OP:
+			compResult = ( rsecs1 == rsecs2 && rusecs1 == rusecs2 );
+			break;
+
+		case NOT_EQUAL_OP:
+			compResult = ( rsecs1 != rsecs2 || rusecs1 != rusecs2 );
+			break;
+
+		case GREATER_THAN_OP:
+			compResult = (rsecs1>rsecs2) || (rsecs1==rsecs2 && rusecs1>rusecs2);
+			break;
+
+		case GREATER_OR_EQUAL_OP:
+			compResult = (rsecs1>=rsecs2)||(rsecs1==rsecs2 && rusecs1>=rusecs2);
+			break;
+
+		default:
+			// should not get here
+			EXCEPT ("Should not get here");
+			return;
+	}
+
+	result.SetBooleanValue( compResult );
 }
 
 
@@ -1154,8 +1304,8 @@ compareIntegers (OpKind op, Value &v1, Value &v2, Value &result)
 	int 	i1, i2; 
 	bool	compResult;
 
-	v1.isIntegerValue (i1); 
-	v2.isIntegerValue (i2);
+	v1.IsIntegerValue (i1); 
+	v2.IsIntegerValue (i2);
 
 	switch (op) {
 		case LESS_THAN_OP: 			compResult = (i1 < i2); 	break;
@@ -1170,7 +1320,7 @@ compareIntegers (OpKind op, Value &v1, Value &v2, Value &result)
 			return;
 	}
 
-	result.setBooleanValue( compResult );
+	result.SetBooleanValue( compResult );
 }
 
 
@@ -1180,8 +1330,8 @@ compareReals (OpKind op, Value &v1, Value &v2, Value &result)
 	double 	r1, r2;
 	bool	compResult;
 
-	v1.isRealValue (r1);
-	v2.isRealValue (r2);
+	v1.IsRealValue (r1);
+	v2.IsRealValue (r2);
 
 	switch (op) {
 		case LESS_THAN_OP:          compResult = (r1 < r2);     break;
@@ -1196,13 +1346,13 @@ compareReals (OpKind op, Value &v1, Value &v2, Value &result)
 			return;
 	}
 
-	result.setBooleanValue( compResult );
+	result.SetBooleanValue( compResult );
 }
 
 
 // This function performs type promotions so that both v1 and v2 are of the
 // same numerical type: (v1 and v2 are not ERROR or UNDEFINED)
-//  + if both v1 and v2 are numbers and of the same type, return type
+//  + if both v1 and v2 are Numbers and of the same type, return type
 //  + if v1 is an int and v2 is a real, convert v1 to real; return REAL_VALUE
 //  + if v1 is a real and v2 is an int, convert v2 to real; return REAL_VALUE
 ValueType Operation::
@@ -1213,30 +1363,34 @@ coerceToNumber (Value &v1, Value &v2)
 	double 	r;
 
 	// either of v1, v2 not numerical?
-	if (v1.isClassAdValue()   || v2.isClassAdValue())   return CLASSAD_VALUE;
-	if (v1.isListValue()      || v2.isListValue())   	return LIST_VALUE;
-	if (v1.isStringValue (s)  || v2.isStringValue (s))  return STRING_VALUE;
-	if (v1.isUndefinedValue() || v2.isUndefinedValue()) return UNDEFINED_VALUE;
-	if (v1.isErrorValue ()    || v2.isErrorValue ())    return ERROR_VALUE;
-	if (v1.isBooleanValue()	  || v2.isBooleanValue())	return BOOLEAN_VALUE;
+	if (v1.IsClassAdValue()   || v2.IsClassAdValue())   return CLASSAD_VALUE;
+	if (v1.IsListValue()      || v2.IsListValue())   	return LIST_VALUE;
+	if (v1.IsStringValue (s)  || v2.IsStringValue (s))  return STRING_VALUE;
+	if (v1.IsUndefinedValue() || v2.IsUndefinedValue()) return UNDEFINED_VALUE;
+	if (v1.IsErrorValue ()    || v2.IsErrorValue ())    return ERROR_VALUE;
+	if (v1.IsBooleanValue()	  || v2.IsBooleanValue())	return BOOLEAN_VALUE;
+	if (v1.IsAbsoluteTimeValue()||v2.IsAbsoluteTimeValue()) 
+		return ABSOLUTE_TIME_VALUE;
+	if( v1.IsRelativeTimeValue() || v2.IsRelativeTimeValue() )
+		return RELATIVE_TIME_VALUE;
 
 	// both v1 and v2 of same numerical type
-	if (v1.isIntegerValue(i) && v2.isIntegerValue(i)) return INTEGER_VALUE;
-	if (v1.isRealValue(r) && v2.isRealValue(r)) return REAL_VALUE;
+	if (v1.IsIntegerValue(i) && v2.IsIntegerValue(i)) return INTEGER_VALUE;
+	if (v1.IsRealValue(r) && v2.IsRealValue(r)) return REAL_VALUE;
 
 	// type promotions required
-	if (v1.isIntegerValue(i) && v2.isRealValue(r))
-		v1.setRealValue ((double)i);
+	if (v1.IsIntegerValue(i) && v2.IsRealValue(r))
+		v1.SetRealValue ((double)i);
 	else
-	if (v1.isRealValue(r) && v2.isIntegerValue(i))
-		v2.setRealValue ((double)i);
+	if (v1.IsRealValue(r) && v2.IsIntegerValue(i))
+		v2.SetRealValue ((double)i);
 
 	return REAL_VALUE;
 }
 
  
 void Operation::
-setOperation (OpKind op, ExprTree *e1, ExprTree *e2, ExprTree *e3)
+SetOperation (OpKind op, ExprTree *e1, ExprTree *e2, ExprTree *e3)
 {
 	operation = op;
 	child1    = e1;
@@ -1254,12 +1408,12 @@ makeOperation( OpKind op, Value &val, ExprTree *tree )
 	if( !tree ) return NULL;
 
 	if( !( newOp = new Operation() ) ) return NULL;
-	if( !( lit = Literal::makeLiteral( val ) ) ) {
+	if( !( lit = Literal::MakeLiteral( val ) ) ) {
 		delete newOp;
 		return NULL;
 	}
 
-	newOp->setOperation( op, lit, tree );
+	newOp->SetOperation( op, lit, tree );
 	return newOp;
 }
 	
@@ -1273,12 +1427,12 @@ makeOperation( OpKind op, ExprTree *tree, Value &val )
 	if( tree == NULL ) return NULL;
 
 	if( !( newOp = new Operation() ) ) return NULL;
-	if( !( lit = Literal::makeLiteral( val ) ) ) {
+	if( !( lit = Literal::MakeLiteral( val ) ) ) {
 		delete newOp;
 		return NULL;
 	}
 
-	newOp->setOperation( op, tree, lit );
+	newOp->SetOperation( op, tree, lit );
 	return newOp;
 }
 
@@ -1290,7 +1444,7 @@ makeOperation( OpKind op, ExprTree *tree1 )
 	if( !tree1 ) return NULL;
 
 	if( !( newOp = new Operation() ) ) return NULL;
-	newOp->setOperation( op, tree1 );
+	newOp->SetOperation( op, tree1 );
 	return newOp;
 }
 
@@ -1303,7 +1457,7 @@ makeOperation( OpKind op, ExprTree *tree1, ExprTree *tree2 )
 	if( !tree1 || !tree2 ) return NULL;
 
 	if( !( newOp = new Operation() ) ) return NULL;
-	newOp->setOperation( op, tree1, tree2 );
+	newOp->SetOperation( op, tree1, tree2 );
 	return newOp;
 }
 
@@ -1316,7 +1470,7 @@ makeOperation( OpKind op, ExprTree *tree1, ExprTree *tree2, ExprTree *tree3 )
 	if( !tree1 || !tree2 || !tree3) return NULL;
 
 	if( !( newOp = new Operation() ) ) return NULL;
-	newOp->setOperation( op, tree1, tree2, tree3 );
+	newOp->SetOperation( op, tree1, tree2, tree3 );
 	return newOp;
 }
 
@@ -1333,7 +1487,7 @@ flattenSpecials( EvalState &state, Value &val, ExprTree *&tree )
 		case PARENTHESES_OP:
 		case LOGICAL_NOT_OP:
 		case BITWISE_NOT_OP:
-			if( !child1->flatten( state, eval1, fChild1 ) ) {
+			if( !child1->Flatten( state, eval1, fChild1 ) ) {
 				tree = NULL;
 				return false;
 			} 
@@ -1344,42 +1498,42 @@ flattenSpecials( EvalState &state, Value &val, ExprTree *&tree )
 				_doOperation( operation, eval1, dummy, dummy, true, false, 
 					false, val );
 				tree = NULL;
-				eval1.clear();
+				eval1.Clear();
 				return true;
 			}
 			break;
 
 
 		case TERNARY_OP:
-			// flatten the selector expression
-			if( !flatten( state, eval1, fChild1 ) ) {
+			// Flatten the selector expression
+			if( !Flatten( state, eval1, fChild1 ) ) {
 				tree = NULL;
 				return false;
 			}
 
 			// check if selector expression collapsed to a non-undefined value
-			if( !fChild1 && !eval1.isUndefinedValue() ) {
+			if( !fChild1 && !eval1.IsUndefinedValue() ) {
 				bool   		b; 
-				ValueType	vt = eval1.getType();
+				ValueType	vt = eval1.GetType();
 
 				// if the selector is not boolean, propagate error
 				if( vt!=BOOLEAN_VALUE ) {
-					val.setErrorValue();	
-					eval1.clear();
+					val.SetErrorValue();	
+					eval1.Clear();
 					tree = NULL;
 					return true;
 				}
 
 				// eval1 is either a real or an integer
-				if(	eval1.isBooleanValue(b) && b!=0 ) {
-					return child1->flatten( state, val, tree );	
+				if(	eval1.IsBooleanValue(b) && b!=0 ) {
+					return child1->Flatten( state, val, tree );	
 				} else {
-					return child2->flatten( state, val, tree );	
+					return child2->Flatten( state, val, tree );	
 				}
 			} else {
-				// flatten arms of the if expression
-				if( !child2->flatten( state, eval2, fChild2 ) ||
-					!child3->flatten( state, eval3, fChild3 ) ) {
+				// Flatten arms of the if expression
+				if( !child2->Flatten( state, eval2, fChild2 ) ||
+					!child3->Flatten( state, eval3, fChild3 ) ) {
 					// clean up
 					if( fChild1 ) delete fChild1;
 					if( fChild2 ) delete fChild2;
@@ -1389,8 +1543,8 @@ flattenSpecials( EvalState &state, Value &val, ExprTree *&tree )
 				}
 
 				// if any arm collapsed into a value, make it a Literal
-				if( !fChild2 ) fChild2 = Literal::makeLiteral( eval2 );
-				if( !fChild3 ) fChild3 = Literal::makeLiteral( eval3 );
+				if( !fChild2 ) fChild2 = Literal::MakeLiteral( eval2 );
+				if( !fChild3 ) fChild3 = Literal::MakeLiteral( eval3 );
 				if( !fChild2 || !fChild3 ) {
 					// clean up
 					if( fChild1 ) delete fChild1;
@@ -1400,9 +1554,9 @@ flattenSpecials( EvalState &state, Value &val, ExprTree *&tree )
 					return false;
 				}
 	
-				// fChild1 may be NULL if child1 flattened to UNDEFINED
+				// fChild1 may be NULL if child1 Flattened to UNDEFINED
 				if( !fChild1 ) {
-					fChild1 = child1->copy();
+					fChild1 = child1->Copy();
 				}
 
 				tree = Operation::makeOperation( operation, fChild1, fChild2, 
@@ -1421,16 +1575,16 @@ flattenSpecials( EvalState &state, Value &val, ExprTree *&tree )
 			return false;
 
 		case SUBSCRIPT_OP:
-			// flatten both arguments
-			if( !child1->flatten( state, eval1, fChild1 ) ||
-				!child2->flatten( state, eval2, fChild2 ) ) {
+			// Flatten both arguments
+			if( !child1->Flatten( state, eval1, fChild1 ) ||
+				!child2->Flatten( state, eval2, fChild2 ) ) {
 				if( fChild1 ) delete fChild1;
 				if( fChild2 ) delete fChild2;
 				tree = NULL;
 				return false;
 			}
 
-			// if both arguments flattened to values, evaluate now
+			// if both arguments Flattened to values, Evaluate now
 			if( !fChild1 && !fChild2 ) {
 				_doOperation( operation, eval1, eval2, dummy, true, true, false,
 						val );
@@ -1438,9 +1592,9 @@ flattenSpecials( EvalState &state, Value &val, ExprTree *&tree )
 				return true;
 			} 
 
-			// otherwise convert flattened values into literals
-			if( !fChild1 ) fChild1 = Literal::makeLiteral( eval1 );
-			if( !fChild2 ) fChild2 = Literal::makeLiteral( eval2 );
+			// otherwise convert Flattened values into literals
+			if( !fChild1 ) fChild1 = Literal::MakeLiteral( eval1 );
+			if( !fChild2 ) fChild2 = Literal::MakeLiteral( eval2 );
 			if( !fChild1 || !fChild2 ) {
 				if( fChild1 ) delete fChild1;
 				if( fChild2 ) delete fChild2;
@@ -1465,7 +1619,7 @@ flattenSpecials( EvalState &state, Value &val, ExprTree *&tree )
 }
 
 bool Operation::
-isStrictOperator( OpKind op ) 
+IsStrictOperator( OpKind op ) 
 {
 	switch( op ) {
 		case META_EQUAL_OP:
@@ -1479,4 +1633,56 @@ isStrictOperator( OpKind op )
 			return true;
 	}
 	return true;
+}
+
+
+	// get precedence levels for operators (see K&R p.53 )
+int Operation::
+PrecedenceLevel( OpKind op )
+{
+	switch( op ) {
+		case SUBSCRIPT_OP: 
+			return( 12 );
+
+		case LOGICAL_NOT_OP: case BITWISE_NOT_OP: case UNARY_PLUS_OP: 
+		case UNARY_MINUS_OP: 
+			return( 11 );
+
+		case MULTIPLICATION_OP: case DIVISION_OP: case MODULUS_OP:
+			return( 10 );
+
+		case ADDITION_OP: case SUBTRACTION_OP:
+			return( 9 );
+
+		case LEFT_SHIFT_OP: case RIGHT_SHIFT_OP: case URIGHT_SHIFT_OP:
+			return( 8 );
+
+		case LESS_THAN_OP: case LESS_OR_EQUAL_OP: case GREATER_OR_EQUAL_OP:
+		case GREATER_THAN_OP:
+			return( 7 );
+
+		case NOT_EQUAL_OP: case EQUAL_OP: case IS_OP: case ISNT_OP: 
+			return( 6 );
+
+		case BITWISE_AND_OP:
+			return( 5 );
+
+		case BITWISE_XOR_OP:
+			return( 4 );
+
+		case BITWISE_OR_OP:
+			return( 3 );
+
+		case LOGICAL_AND_OP:
+			return( 2 );
+
+		case LOGICAL_OR_OP:
+			return( 1 );
+
+		case TERNARY_OP:
+			return( 0 );
+
+		default:
+			return( -1 );
+	}
 }

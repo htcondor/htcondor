@@ -51,10 +51,12 @@ enum NodeKind
 class EvalState {
 	public:
 		EvalState( );
+		~EvalState( );
 
-		void setRootScope( );
-		void setScopes( ClassAd* );
+		void SetRootScope( );
+		void SetScopes( ClassAd* );
 
+		ExtArray<const char*> strings;
 		HashTable<ExprTree*,Value> cache;
 		ClassAd	*rootAd;
 		ClassAd *curAd;
@@ -77,15 +79,8 @@ class ExprTree
 			@return The expression, or NULL on parse failure.
 			@see Source
 		*/
-		static ExprTree *fromSource (Source &s);
+		static ExprTree *FromSource (Source &s);
 
-		/** Static method to set the default copy mode when copying	
-				expressions (deep copies or reference counted copies.)  This
-				is an experimental feature; its use is discouraged.
-			@param c The mode to be used for copying.
-		*/
-		static void setDefaultCopyMode( CopyMode c );
-		
 		/** Sets the lexical parent scope of the expression, which is used to 
 				determine the lexical scoping structure for resolving attribute
 				references. (However, the semantic parent may be different from 
@@ -96,37 +91,33 @@ class ExprTree
 				into a ClassAd.
 			@param p The parent ClassAd.
 		*/
-		void setParentScope( ClassAd* p );
+		void SetParentScope( ClassAd* p );
 
 		/** Sends the expression object to a Sink.
 			@param s The Sink object.
 			@return false if the expression could not be successfully
 				unparsed into the sink.
-			@see Sink
+			@see Sink 
 		*/
-		virtual bool toSink (Sink &s)  = 0;
+		virtual bool ToSink( Sink &s ) = 0;
 
-		/** Makes a copy of the expression tree.  Explicitly specifying the 
-				copy mode is an experimental feature; its use is discouraged.
-			@param c The copy mode to be used (i.e., deep copy, reference 
-				counting, or the default copy mode).
-			@return The copy of the expression, or NULL if the copy failed.
-			@see setDefaultCopyMode, CopyMode
+		/** Makes a deep copy of the expression tree
+		 * 	@return A deep copy of the expression, or NULL on failure.
 		*/
-		ExprTree *copy( CopyMode c=EXPR_DEFAULT_COPY );
+		virtual ExprTree *Copy( ) = 0;
 
 		/** Gets the node kind of this expression node.
 			@return The node kind.
 			@see NodeKind
 		*/
-		NodeKind getKind (void) { return nodeKind; }
+		NodeKind GetKind (void) { return nodeKind; }
 
 
 		/** Evaluates the expression.
 			@param v The value of the expression.
 			@return true if the operation succeeded, and false otherwise.
 		*/
-		bool evaluate( Value& v );
+		bool Evaluate( Value& v );
 
 		/** Evaluates the expression and identifies significant sub-expressions
 				that determined the value of the expression.
@@ -134,7 +125,7 @@ class ExprTree
 			@param t The expression composed of the significant sub-expressions.
 			@return true if the operation succeeded, and false otherwise.
 		*/
-		bool evaluate( Value& v, ExprTree*& t );
+		bool Evaluate( Value& v, ExprTree*& t );
 
 		/** Performs a ``partial evaluation'' of the expression.  This method 
 				evaluates as much of the expression as possible without 
@@ -148,20 +139,18 @@ class ExprTree
 				could not be fully flattened to a value, and NULL otherwise.
 			@return true if the flattening was successful, and false otherwise.
 		*/
-		bool flatten( Value& val, ExprTree*& tree);
+		bool Flatten( Value& val, ExprTree*& tree);
 
 		
   	protected:
 		ExprTree ();
 
-		bool flatten( EvalState&, Value&, ExprTree*&, OpKind* = NULL );
-		bool evaluate( EvalState &, Value & ); 
-		bool evaluate( EvalState &, Value &, ExprTree *& );
+		bool Flatten( EvalState&, Value&, ExprTree*&, OpKind* = NULL );
+		bool Evaluate( EvalState &, Value & ); 
+		bool Evaluate( EvalState &, Value &, ExprTree *& );
 
-		static CopyMode	defaultCopyMode;
 		ClassAd		*parentScope;
 		NodeKind	nodeKind;
-		int			refCount;
 
   	private:
 		friend class Operation;
@@ -172,11 +161,10 @@ class ExprTree
 		friend class ExprListIterator;
 		friend class ClassAd; 
 
-		virtual ExprTree *_copy( CopyMode = EXPR_DEEP_COPY )=0;
-		virtual void _setParentScope( ClassAd* )=0;
-		virtual bool _evaluate( EvalState&, Value& )=0;
-		virtual bool _evaluate( EvalState&, Value&, ExprTree*& )=0;
-		virtual bool _flatten( EvalState&, Value&, ExprTree*&, OpKind* )=0;
+		virtual void _SetParentScope( ClassAd* )=0;
+		virtual bool _Evaluate( EvalState&, Value& )=0;
+		virtual bool _Evaluate( EvalState&, Value&, ExprTree*& )=0;
+		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* )=0;
 
 		bool flattenFlag;
 };

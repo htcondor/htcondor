@@ -24,8 +24,13 @@
 #ifndef __CLASSAD_PACKAGE_H__
 #define __CLASSAD_PACKAGE_H__
 
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdarg.h>
+
 #include "common.h"
 #include "exprTree.h"
-#include "condorClassad.h"
+#include "matchClassad.h"
 
 #endif
