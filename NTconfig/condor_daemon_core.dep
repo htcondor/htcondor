@@ -44,6 +44,7 @@
 
 ..\src\condor_daemon_core.V6\daemon_core.C : \
 	"..\src\condor_c++_util\command_strings.h"\
+	"..\src\condor_c++_util\condor_version.h"\
 	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\env.h"\
 	"..\src\condor_c++_util\extArray.h"\

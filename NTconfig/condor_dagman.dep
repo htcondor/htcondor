@@ -19,6 +19,7 @@
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_dagman\dag.h"\
+	"..\src\condor_dagman\dagman_main.h"\
 	"..\src\condor_dagman\debug.h"\
 	"..\src\condor_dagman\job.h"\
 	"..\src\condor_dagman\script.h"\
@@ -225,6 +226,7 @@
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_dagman\dag.h"\
+	"..\src\condor_dagman\dagman_main.h"\
 	"..\src\condor_dagman\debug.h"\
 	"..\src\condor_dagman\job.h"\
 	"..\src\condor_dagman\script.h"\

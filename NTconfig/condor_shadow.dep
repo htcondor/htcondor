@@ -219,7 +219,6 @@
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_c++_util\MyString.h"\
-	"..\src\condor_c++_util\perm.h"\
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
@@ -228,7 +227,6 @@
 	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
-	"..\src\condor_includes\condor_attributes.h"\
 	"..\src\condor_includes\condor_attrlist.h"\
 	"..\src\condor_includes\condor_classad.h"\
 	"..\src\condor_includes\condor_common.h"\

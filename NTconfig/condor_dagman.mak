@@ -78,7 +78,7 @@ BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_dagman.bsc"
 BSC32_SBRS= \
 	
 LINK32=link.exe
-LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib ../Debug/condor_common.obj ..\Debug\condor_common_c.obj imagehlp.lib /nologo /subsystem:console /incremental:yes /pdb:"$(OUTDIR)\condor_dagman.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_dagman.exe" /pdbtype:sept /SWAPRUN:NET 
+LINK32_FLAGS=../Debug/condor_common.obj ..\Debug\condor_common_c.obj kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib imagehlp.lib Crypt32.lib /nologo /subsystem:console /incremental:yes /pdb:"$(OUTDIR)\condor_dagman.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_dagman.exe" /pdbtype:sept /SWAPRUN:NET 
 LINK32_OBJS= \
 	"$(INTDIR)\dag.obj" \
 	"$(INTDIR)\dagman_instantiate.obj" \
@@ -153,7 +153,7 @@ BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_dagman.bsc"
 BSC32_SBRS= \
 	
 LINK32=link.exe
-LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib ../Release/condor_common.obj ../Release/condor_common_c.obj imagehlp.lib /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_dagman.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_dagman.exe" /SWAPRUN:NET 
+LINK32_FLAGS=../Release/condor_common.obj ../Release/condor_common_c.obj kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib imagehlp.lib Crypt32.lib /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_dagman.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_dagman.exe" /SWAPRUN:NET 
 LINK32_OBJS= \
 	"$(INTDIR)\dag.obj" \
 	"$(INTDIR)\dagman_instantiate.obj" \
