@@ -1211,9 +1211,19 @@ Scheduler::negotiate(int, Stream* s)
 		// first, check if this is our local negotiator
 		struct in_addr endpoint_addr = (sock->endpoint())->sin_addr;
 		struct hostent *hent;
-		char *addr;
 		bool match = false;
-		hent = gethostbyname(Negotiator->fullHostname());
+		char *negotiator_hostname = Negotiator->fullHostname();
+		if (!negotiator_hostname) {
+			dprintf(D_ALWAYS, "Negotiator hostname lookup failed!");
+			return (!(KEEP_STREAM));
+		}
+		hent = gethostbyname(negotiator_hostname);
+		if (!hent) {
+			dprintf(D_ALWAYS, "gethostbyname for local negotiator (%s) failed!"
+					"  Aborting negotiation.\n", negotiator_hostname);
+			return (!(KEEP_STREAM));
+		}
+		char *addr;
 		if (hent->h_addrtype == AF_INET) {
 			for (int a=0; !match && (addr = hent->h_addr_list[a]); a++) {
 				if (memcmp(addr, &endpoint_addr, sizeof(struct in_addr)) == 0){
