@@ -103,8 +103,14 @@ my %TopFields =
      cpu =>
      {
       enabled => 0,
-       type => "%",
-       l => [ "%CPU", "CPU", ],
+      type => "%",
+      l => [ "%CPU", "CPU" ],
+     },
+     cpunum =>
+     {
+      enabled => 0,
+      type => HawkeyePublish::TypeNumber,
+       l => [ "CPU", ],
      },
      mem =>
      {
@@ -385,6 +391,7 @@ sub Configure( )
 	{
 	    foreach my $Label ( @{$TopFields{$Key}{l}} )
 	    {
+		next if ( $TopFields{$Key}{offset} >= 0 );
 		if ( $Label eq $tf )
 		{
 		    $TopFields{$Key}{offset} = $Offset;
