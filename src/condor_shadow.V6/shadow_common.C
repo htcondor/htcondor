@@ -351,7 +351,7 @@ rm()
 */
 whoami( FILE *fp )
 {
-        if( Proc->id.cluster || Proc->id.proc ) {
+        if ((Proc) && (Proc->id.cluster || Proc->id.proc)) {
                 fprintf( fp, "(%d.%d) (%d):", Proc->id.cluster, Proc->id.proc, MyPid );
         } else {
                 fprintf( fp, "(?.?) (%d):", MyPid );
