@@ -58,6 +58,7 @@ int command_pckpt_all( Service*, int, Stream* );
 int command_x_event( Service*, int, Stream* );
 int	command_give_state( Service*, int, Stream* );
 int	command_give_classad( Service*, int, Stream* );
+int	command_give_totals_classad( Service*, int, Stream* );
 int command_give_request_ad( Service*, int, Stream* );
 
 /*
