@@ -54,6 +54,7 @@ Queue<int> GahpClient::waitingToSubmit;
 	// Explicit template instantiation.  Sigh.
 	template class HashTable<int,GahpClient*>;
 	template class ExtArray<Gahp_Args*>;
+	template class Queue<int>;
 #endif	
 
 #define NULLSTRING "NULL"
