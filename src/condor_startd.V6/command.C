@@ -27,6 +27,8 @@
 /* XXX fix me */
 #include "../condor_sysapi/sysapi.h"
 
+extern bool ShuttingDown;
+
 int
 command_handler( Service*, int cmd, Stream* stream )
 {
@@ -95,6 +97,14 @@ command_activate_claim( Service*, int, Stream* stream )
 		return FALSE;
 	}
 	free( cap );
+
+	if ( ShuttingDown ) {
+		dprintf( D_FULLDEBUG, 
+			 "Activate Claim request ignored - shutting down\n");
+		stream->end_of_message();
+		reply( stream, NOT_OK );
+		return FALSE;
+	}
 
 	State s = rip->state();
 	Activity a = rip->activity();
@@ -190,6 +200,13 @@ command_request_claim( Service*, int, Stream* stream )
 
 	if( ! stream->code(cap) ) {
 		dprintf( D_ALWAYS, "Can't read capability\n" );
+		free( cap );
+		return FALSE;
+	}
+
+	if ( ShuttingDown ) {
+		dprintf(D_FULLDEBUG,
+				"Ignoring request_claim -- shutting down\n");
 		free( cap );
 		return FALSE;
 	}

@@ -50,6 +50,7 @@ char*	condor_view_host = NULL;
 char*	accountant_host = NULL;
 
 // Others
+bool	ShuttingDown = false;	// Are we trying to shutdown?
 int		match_timeout;		// How long you're willing to be
 							// matched before claimed 
 int		killing_timeout;	// How long you're willing to be in
@@ -483,6 +484,9 @@ main_shutdown_fast()
 		// If the machine is free, we can just exit right away.
 	check_free();
 
+		// do not allow new claims
+	ShuttingDown = true;
+
 	daemonCore->Reset_Reaper( 1, "shutdown_reaper", 
 								 (ReaperHandler)shutdown_reaper,
 								 "shutdown_reaper" );
@@ -502,6 +506,9 @@ main_shutdown_graceful()
 {
 		// If the machine is free, we can just exit right away.
 	check_free();
+
+		// do not allow new claims
+	ShuttingDown = true;
 
 	daemonCore->Reset_Reaper( 1, "shutdown_reaper", 
 								 (ReaperHandler)shutdown_reaper,
