@@ -5,7 +5,7 @@ CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
 
 CPP = PreProcessCmd
 
-LDFLAGS = RpcLib KernLib SocketLib
+LDFLAGS = RpcLib SocketLib
 
 CLASS_AD_LIB = ../condor_classad/expr_lib.a
 DAEMON_CORE_LIB = ../condor_daemon_core.V6/daemon_core.a

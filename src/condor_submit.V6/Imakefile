@@ -3,7 +3,7 @@ CFLAGS = $(STD_C_FLAGS) -I../condor_c++_util
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I../condor_c++_util -DALLOC_DEBUG -fno-implicit-templates
 
-LDFLAGS = RpcLib KernLib SocketLib
+LDFLAGS = RpcLib SocketLib
 
 SRC = submit.C
 OBJ = submit.o

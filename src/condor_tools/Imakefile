@@ -7,7 +7,7 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fno-implicit-templates
 #endif
 
-LDFLAGS = RpcLib KernLib SocketLib
+LDFLAGS = RpcLib SocketLib
 
 CLASSAD_LIB = ../condor_classad/expr_lib.a
 

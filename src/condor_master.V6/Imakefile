@@ -24,7 +24,7 @@ CCTP_LIB = ../condor_config_server/cctp_lib.a
 LIB = $(DAEMON_CORE_LIB) $(CCTP_LIB) $(CLASSAD_LIB) $(UTIL_LIB) $(CLASS_LIB) $(UTIL_LIB)
 LIBDIRS = ../condor_util_lib ../condor_c++_util
 
-LDFLAGS = SocketLib KernLib
+LDFLAGS = SocketLib
 
 all_target(condor_master)
 tags_target($(SRC),$(LIBDIRS))
