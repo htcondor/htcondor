@@ -65,7 +65,7 @@ sample: sample.o libclassad.a
 shared: shared.C
 	$(CPlusPlus) -fPIC -shared -o libshared.so shared.C
 
-install:: libclassad.a classad_functional_tester classad_unit_tester
+install:: libclassad.a classad_functional_tester classad_unit_tester classad_version
 	mkdir -p $(LIB_INSTALL)
 	mkdir -p $(BIN_INSTALL)
 	mkdir -p $(INCLUDE_INSTALL)
