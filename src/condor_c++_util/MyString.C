@@ -88,19 +88,27 @@ MyString::operator[](int pos) const
     return Data[pos];
 }
 
-// Hmm -- this seems pretty dangerous.  What if the string is zero-length
-// and the caller changes the returned char& to something other than '\0'?
-// Or what if we return a character from the string and the caller changes
-// it to '\0'?  Either way, bad things will probably happen!
-// wenger 2003-04-28.
-char& 
-MyString::operator[](int pos) 
+const char&
+MyString::operator[](int pos)
 {
 	if (pos >= Len || pos < 0) {
 		dummy = '\0';
 		return dummy;
 	}	
 	return Data[pos];
+}
+
+void
+MyString::setChar(int pos, char value)
+{
+	if ( pos >= 0 && pos < Len ) {
+		Data[pos] = value;
+		if ( value == '\0' ) {
+			Len = pos;
+		}
+	} else {
+		// No op.
+	}
 }
 
 /*--------------------------------------------------------------------

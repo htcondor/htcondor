@@ -482,7 +482,7 @@ ReadMultipleUserLogs::CombineLines(StringList &listIn, char continuation,
 		while ( logicalLine[logicalLine.Length()-1] == continuation ) {
 
 				// Remove the continuation character.
-			logicalLine[logicalLine.Length()-1] = 0;
+			logicalLine.setChar(logicalLine.Length()-1, '\0');
 
 				// Append the next physical line.
 			physicalLine = listIn.next();
