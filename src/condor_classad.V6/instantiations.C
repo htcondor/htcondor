@@ -30,9 +30,15 @@
 BEGIN_NAMESPACE( classad )
 //-------------classad templates --------------
 
+template map<string, bool>;
+
 // function table
 template map<string, void*, CaseIgnLTStr>;
 template map<string, void*, CaseIgnLTStr>::iterator;
+
+// XML attributes
+template map<string, string>;
+template map<string, string>::iterator;
 
 // attribute list
 template hash_map<string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr>;
