@@ -1,5 +1,5 @@
 Universe   = vanilla
-Executable = job_env_bigenv.exe
+Executable = job_core_bigenv.exe
 Log        = job_core_bigenv_van.log
 Output     = job_core_bigenv_van.out
 Error      = job_core_bigenv_van.err

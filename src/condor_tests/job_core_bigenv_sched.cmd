@@ -1,5 +1,5 @@
 Universe   = scheduler
-Executable = job_env_bigenv.exe
+Executable = job_core_bigenv.exe
 Log        = job_core_bigenv_sched.log
 Output     = job_core_bigenv_sched.out
 Error      = job_core_bigenv_sched.err

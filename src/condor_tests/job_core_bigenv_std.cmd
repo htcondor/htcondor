@@ -1,6 +1,6 @@
 Universe   = standard
 Arguments  = -_condor_aggravate_bugs
-Executable = job_env_bigenv.cndr.exe.$$(OPSYS).$$(ARCH)
+Executable = job_core_bigenv.cndr.exe.$$(OPSYS).$$(ARCH)
 Log        = job_core_bigenv_std.log
 Output     = job_core_bigenv_std.out
 Error      = job_core_bigenv_std.err
