@@ -85,6 +85,7 @@ displayTotals (int keyLength)
     	case PP_STARTD_NORMAL:
     	case PP_STARTD_SERVER:
     	case PP_STARTD_RUN:
+		case PP_STARTD_STATE:
     	case PP_SCHEDD_NORMAL:
     	case PP_SCHEDD_SUBMITTORS:   
     	case PP_CKPT_SRVR_NORMAL:
@@ -279,6 +280,56 @@ displayInfo (int)
 }
 
 
+StartdStateTotal::
+StartdStateTotal()
+{
+	machines = 0;
+	owner = 0;
+	unclaimed = 0;
+	claimed = 0;
+	preempt = 0;
+	matched = 0;
+}
+
+int StartdStateTotal::
+update( ClassAd *ad )
+{
+	char	stateStr[32];
+	State	state;
+
+	machines ++;
+
+	if( !ad->LookupString( ATTR_STATE , stateStr ) ) return false;
+	state = string_to_state( stateStr );
+	switch( state ) {
+		case owner_state	:	owner++;		break;
+		case unclaimed_state:	unclaimed++;	break;
+		case claimed_state	:	claimed++;		break;
+		case preempting_state:	preempt++;		break;
+		case matched_state	:	matched++;		break;
+		default				:	return false;
+	}
+
+	return 1;
+}
+		
+
+void StartdStateTotal::
+displayHeader()
+{
+	printf( "%10.10s %5.5s %9.9s %7.7s %10.10s %7.7s\n", "Machines", "Owner", 
+				"Unclaimed", "Claimed", "Preempting", "Matched" );
+}
+
+
+void StartdStateTotal::
+displayInfo( int )
+{
+	printf("%10d %5d %9d %7d %10d %7d\n",machines,owner,unclaimed,claimed,
+			preempt,matched);
+}
+
+
 ScheddNormalTotal::
 ScheddNormalTotal()
 {
@@ -404,6 +455,7 @@ makeTotalObject (ppOption ppo)
 		case PP_STARTD_NORMAL: 		ct = new StartdNormalTotal; break;
 		case PP_STARTD_SERVER:		ct = new StartdServerTotal;	break;
 		case PP_STARTD_RUN:			ct = new StartdRunTotal;	break;
+		case PP_STARTD_STATE:		ct = new StartdStateTotal;	break;
 		case PP_SCHEDD_NORMAL:		ct = new ScheddNormalTotal; break;
 		case PP_SCHEDD_SUBMITTORS:	ct = new ScheddSubmittorTotal; break;
 		case PP_CKPT_SRVR_NORMAL:	ct = new CkptSrvrNormalTotal; break;
@@ -430,6 +482,13 @@ makeKey (MyString &key, ClassAd *ad, ppOption ppo)
 				!ad->LookupString(ATTR_OPSYS, p2))
 					return 0;
 			sprintf(buf, "%s/%s", p1, p2);
+			key = buf;
+			return 1;
+
+		case PP_STARTD_STATE:
+			if( !ad->LookupString( ATTR_ACTIVITY , p1 ) )
+				return 0;
+			sprintf( buf, "%s", p1 );
 			key = buf;
 			return 1;
 

@@ -101,6 +101,24 @@ class StartdServerTotal : public ClassTotal
 };
 
 
+class StartdStateTotal : public ClassTotal
+{
+	public:
+		StartdStateTotal();
+		virtual int update (ClassAd *);
+		virtual void displayHeader();
+		virtual void displayInfo(int);
+
+  	protected:
+		int machines;
+		int owner;
+		int unclaimed;
+		int claimed;
+		int preempt;
+		int matched;
+};
+
+
 // schedd totals
 class ScheddNormalTotal : public ClassTotal
 {
