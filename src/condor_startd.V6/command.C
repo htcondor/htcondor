@@ -153,10 +153,20 @@ command_activate_claim( Service*, int cmd, Stream* stream )
 
 
 int
-command_vacate_all( Service*, int, Stream* ) 
+command_vacate_all( Service*, int cmd, Stream* ) 
 {
 	dprintf( D_ALWAYS, "command_vacate_all() called.\n" );
-	resmgr->walk( &Resource::release_claim );
+	switch( cmd ) {
+	case VACATE_ALL_CLAIMS:
+		resmgr->walk( &Resource::release_claim );
+		break;
+	case VACATE_ALL_FAST:
+		resmgr->walk( &Resource::kill_claim );
+		break;
+	default:
+		EXCEPT( "Unknown command (%d) in command_vacate_all", cmd );
+		break;
+	}
 	return TRUE;
 }
 
@@ -291,6 +301,19 @@ command_name_handler( Service*, int cmd, Stream* stream )
 		} else {
 			rip->log_ignore( cmd, s );
 			return FALSE;
+		}
+		break;
+	case VACATE_CLAIM_FAST:
+		switch( s ) {
+		case claimed_state:
+		case matched_state:
+		case preempting_state:
+			return rip->kill_claim();
+			break;
+		default:
+			rip->log_ignore( cmd, s );
+			return FALSE;
+			break;
 		}
 		break;
 	case PCKPT_JOB:
