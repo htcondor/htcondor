@@ -1,3 +1,0 @@
-gcc -g -Wall getOStype.c -o getOStype
-env | grep OSTYPE | getOStype > OS
-make $1

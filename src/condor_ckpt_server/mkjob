@@ -1,1 +1,0 @@
-gcc -static -nostartfiles ~tsao/public/condor/release_dir/lib/condor_rt0.o jobsim.c ~tsao/public/condor/release_dir/lib/condor_syscall_lib.a ~tsao/public/condor/condor_ckpt/c_plus_alloc.o -o jobsim
