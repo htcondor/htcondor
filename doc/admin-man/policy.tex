@@ -15,22 +15,31 @@ either the owners of machines in your pool (in which case they might
 ask to be removed from the pool entirely) or the users of your pool
 (in which case they might stop using Condor).
 
-Much of this section refers to ClassAd expressions.  You probably want
-to read through section~\ref{classad-reference} on ClassAd expressions
-before continuing with this.
+Before we get into the details, there are a few things to note:
+\begin{itemize}
+\item Much of this section refers to ClassAd expressions.  You
+probably want to read through section~\ref{classad-reference} on
+ClassAd expressions before continuing with this.
 
-\Note If you are defining the policy for an SMP (multi-CPU) machine,
+\item If you are familiar with the version 6.0 policy expressions and
+what they do, you might want to skip to
+section~\ref{sec:V60-Policy-diffs} on
+page~\pageref{sec:V60-Policy-diffs} which explains the differences
+between the version 6.0 policy expressions and the later versions.  
+
+\item If you are defining the policy for an SMP (multi-CPU) machine,
 be sure to also read section~\ref{sec:Configuring-SMP} on
 ``Configuring The Startd for SMP Machines''.  
 Each \Term{virtual machine} represented by the \condor{startd} on an
 SMP machine will have its own \Term{state} and \Term{activity}
 (described below). 
 In the future, each virtual machine will even be able to have its
-own policy defined.
+own policy expressions defined.
 For the rest of this section, whenever you see the word ``machine'',
 that really just means an individual virtual machine, if you're
 talking about an SMP machine that is showing up as multiple virtual
 machines in your pool.  
+\end{itemize}
 
 To define your policy, you basically set a number of expressions in
 the config file (see section~\ref{sec:Configuring-Condor} on
@@ -64,7 +73,7 @@ machine in its ClassAd to help in match-making with resource requests.
 The values of all these attributes can be found by using
 \Prog{\condor{status} -l hostname}.
 On an SMP machine, the startd will break the machine up and advertise
-it as seperate virtual machines, each with its own name and ClassAd.
+it as separate virtual machines, each with its own name and ClassAd.
 The attributes themselves and what they represent are described below:
 
 \input{user-man/machad.tex}
@@ -362,7 +371,7 @@ page~\pageref{fig:machine-activities} gives the overall view of all
 machine states and activities, and shows all the possible transitions
 from one to another within the Condor system.  
 Each transition is labeled with a number on the diagram, and
-transition numbers refered to in this manual will be \Bold{bold}.  
+transition numbers referred to in this manual will be \Bold{bold}.  
 This may seem pretty daunting, but it's actually easier to handle than
 it looks.
 
@@ -455,7 +464,7 @@ needs preempting.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 While in the Unclaimed state, if the \Expr{START} expression locally
-evalutes to false, the machine will return to the Owner state via
+evaluates to false, the machine will return to the Owner state via
 transition \Bold{2}.
 
 When it's in the Unclaimed state, another expression comes into
@@ -533,8 +542,7 @@ If the schedd that was matched with the machine claims it before the
 state (transition \Bold{8}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Claimed State}
-\label{sec:Claimed-State}
+\subsubsection{\label{sec:Claimed-State}Claimed State}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The Claimed state is certainly the most complicated state.
@@ -563,7 +571,7 @@ example:
         ...
 \end{verbatim}
 
-If you don't specify seperate vanilla versions, the normal versions
+If you don't specify separate vanilla versions, the normal versions
 will be used for all jobs, including vanilla jobs.  
 For the purposes of this manual, we'll always refer to the regular 
 expressions.
@@ -630,11 +638,11 @@ From Claimed/Busy, the machine can go to many different state/activity
 combinations.
 The startd evaluates the \Expr{WANT\_SUSPEND} expression to decide
 which other expressions to evaluate.  
-If \Expr{WANT\_SUSPEND} is true, the startd will evalutate the
+If \Expr{WANT\_SUSPEND} is true, the startd will evaluate the
 \Expr{SUSPEND} expression, and if it is false, the startd will
 evaluate the \Expr{PREEMPT} expression and skip the Suspended activity
 entirely.
-Here are all the possibile state/activity destinations that the
+Here are all the possible state/activity destinations that the
 machine can get to from Claimed/Busy:
 
 \begin{description}
@@ -1077,7 +1085,7 @@ PREEMPT     : $(CS_PREEMPT)
 KILL        : $(CS_KILL)
 \end{verbatim}
 
-We still don't want to define seperate Vanilla versions of any of
+We still don't want to define separate Vanilla versions of any of
 these, since we already have a different \Expr{WANT\_SUSPEND} for
 vanilla jobs and all of the policy expressions are just written in
 terms of that. 
@@ -1167,3 +1175,38 @@ Notice that you don't have to do anything special with either the
 If Coltrane's jobs never suspend, they'll never even look at
 \Expr{CONTINE}.  
 Similarly, if they never preempt, they'll never look at \Expr{KILL}. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:V60-Policy-diffs}Differences from the 
+Version 6.0 Policy Settings}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This section describes how the policy expressions just layed out
+differ from the policy expressions in previous versions of Condor.
+If you've never used Condor version 6.0 or earlier, or never looked
+closely at the policy settings, you can probably skip this section.
+
+In summary, there is no longer a \Macro{VACATE} expression, and the
+\Macro{KILL} expression is not evaluated while a machine is claimed. 
+There is only a \Macro{PREEMPT} expression which describes the
+conditions when a machine will move from the Claimed state to the
+Preempting state.
+Once a machine has decided to go into the Preempting state, the
+\Macro{WANT\_VACATE} expression controls whether or not the job should
+be vacated with a checkpoint or directly killed.  
+The \Macro{KILL} expression only determines when the machine goes from
+Preempting/Vacating to Preempting/Killing.  
+
+Before, the \Macro{KILL} expression had to handle three distinct cases
+(the transitions from Claimed/Busy, Claimed/Suspended and
+Preepting/Vacating) and the \Macro{VACATE} expression had to handle
+two (the transitions from Claimed/Busy and Claimed/Suspended).
+Now, \Macro{PREEMPT} has to handle the same two cases as the previous
+\Macro{VACATE} expression, but the \Macro{KILL} expression only
+handles one.
+In fact, very complicated policies can now be specified using all of
+the default expressions, and only tuning the \Macro{WANT\_VACATE} and
+\Macro{WANT\_SUSPEND} expressions.
+In previous versions, if you made heavy use of the \Macro{WANT\_*}
+expressions, the \Macro{KILL} expression could become incredibly
+complicated. 
