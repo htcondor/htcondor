@@ -519,8 +519,16 @@ count( ClassAd *job )
 	int		max_hosts;
 	int		universe;
 
-	job->LookupInteger(ATTR_JOB_STATUS, status);
-	job->LookupString(ATTR_OWNER, buf);
+	if (job->LookupInteger(ATTR_JOB_STATUS, status) < 0) {
+		dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
+				ATTR_JOB_STATUS);
+		return 0;
+	}
+	if (job->LookupString(ATTR_OWNER, buf) < 0) {
+		dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
+				ATTR_OWNER);
+		return 0;
+	}
 	owner = buf;
 	if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) < 0) {
 		cur_hosts = ((status == RUNNING) ? 1 : 0);
@@ -660,6 +668,7 @@ abort_job_myself(PROC_ID job_id)
                      job_id.cluster, job_id.proc);
             
 			char owner[_POSIX_PATH_MAX];
+			owner[0] = '\0';
 			GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
 			dprintf(D_FULLDEBUG,"Sending SIGUSR1 to scheduler universe job pid=%d owner=%s\n",srec->pid,owner);
 			init_user_ids(owner);
@@ -708,6 +717,7 @@ bool Scheduler::WriteAbortToUserLog(PROC_ID job_id)
 		sprintf(logfilename, "%s/%s", iwd, tmp);
 	}
 
+	owner[0] = '\0';
 	GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
 
 	dprintf(D_FULLDEBUG,"Writing abort record to user logfile=%s owner=%s\n",logfilename,owner);
