@@ -180,7 +180,7 @@
 	This is not a syscall in AIX.  The library routine will exercise the
 	kfcntl() routine which we handle.
 	*/
-	int fcntl( int fd, int req, int arg );
+	int fcntl( int fd, fcntl_cmd_t req, int arg );
 #endif
 
 #if defined( BufferCondorIO )
@@ -407,7 +407,7 @@
 	  the "clipped" version.
 	*/
 
-#if !defined(AIX32) && !defined(Solaris)
+#if !defined(AIX32)
 #	if defined(IRIX53)
 	uid_t geteuid() : dl_extract, pseudo;
 	gid_t getegid() : dl_extract, pseudo;
@@ -418,10 +418,12 @@
 #	else
 	uid_t geteuid() : extract, pseudo;
 	gid_t getegid() : extract, pseudo;
+#if !defined(Solaris) || !defined(SWITCH)
 	char * getwd( char *path_name ) : pseudo, extract {
 		GET_PATH( path_name );
 		ALLOC_PATH( path_name );
 	}
+#endif
 #	endif
 #endif
 int unlink( const char *path ) {
@@ -678,13 +680,19 @@ int rename( const char *from, const char *to ) : pseudo {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
-#	if !defined(SUNOS41) && !defined(ULTRIX43)
+#	if !defined(SUNOS41) && !defined(ULTRIX43) && !defined(Solaris) && !defined(LINUX)
 		int getfsstat( struct statfs buf[], long bufsize, int flags ) {
 			out code_bytes_bool( buf, STATFS_ARRAY_SIZE );
 			alloc( buf, bufsize );
 		}
 #	endif
+#if defined(Solaris)
+	not_supported {
+		int flock( map(int fd), int op );
+	}
+#else	
 	int flock( map(int fd), int op );
+#endif
 #if defined(Solaris)
 not_supported{
 	int fstatfs( map(int fd), struct statfs *buf ) {
@@ -733,12 +741,7 @@ not_supported{
 		out code_bytes_bool( grouplist, gidsetsize * GID_T_SIZE );
 		alloc( grouplist, gidsetsize * GID_T_SIZE );
 	}
-#if	defined(HPUX9)
-	int	setpgrp();
-#else
-	int setpgrp( int pid, int pgrp );
-#endif
-#	if defined(SUNOS41)
+#	if defined(SUNOS41) || defined(Solaris)
 		int getdents( map(int fd), char *buf, int nbytes ) {
 			out code_bytes_bool( buf, nbytes );
 			alloc( buf, nbytes );
@@ -752,10 +755,12 @@ not_supported{
 			alloc( basep, LONG_SIZE );
 		}
 #	endif
+#if !defined(Solaris) && !defined(LINUX)
 	int table( int id, int index, char *addr, int nel, unsigned int lel ) {
 		out code_bytes_bool( addr, nel * lel );
 		alloc( addr, nel * lel );
 	}
+#endif
 
 	int gethostname( char *address, int address_len ) {
 		out code_bytes_bool( address, address_len );
@@ -789,7 +794,7 @@ not_supported{
 		alloc( tzp, TIMEZONE_SIZE );
 	}
 	int fchown( map(int fd), uid_t owner, gid_t group );
-#	if !defined(AIX32)
+#	if !defined(AIX32) && !defined(LINUX)
 		int lchown( const char *path, uid_t owner, gid_t group ) {
 			SEND_PATH( path );
 			ALLOC_PATH( path );
@@ -923,17 +928,30 @@ not_supported{
 
 
 #	if !defined(AIX32)
+#if !defined(Solaris) && !defined(LINUX)
+		int getaddressconf( struct addressconf *buf, size_t length ) {
+			out code_bytes_bool( buf, length );
+			alloc( buf, length );
+		}
+#endif
+		pid_t getpgid( pid_t pid );
+#if defined(Solaris) || defined(LINUX)
+	not_supported { 
 		int mvalid( char * addr, size_t len, int prot ) {
 			out code_bytes_bool( addr, len );
 			alloc( addr, len );
 		}
 
-		int getaddressconf( struct addressconf *buf, size_t length ) {
-			out code_bytes_bool( buf, length );
-			alloc( buf, length );
-		}
-		pid_t getpgid( pid_t pid );
 		int uswitch( int cmd, int value );
+	}
+#else
+		int mvalid( char * addr, size_t len, int prot ) {
+			out code_bytes_bool( addr, len );
+			alloc( addr, len );
+		}
+
+		int uswitch( int cmd, int value );
+#endif
 #	endif
 
 
@@ -1123,6 +1141,7 @@ not_supported {
 						unsigned long data );
 #endif
 	int setpgid( pid_t process_id, pid_t gid );
+	pid_t setpgrp( );
 }
 
 	/* Calls relating to sockets - implies multiple communicating processes */
@@ -1210,8 +1229,7 @@ not_supported {
 #endif /* not CLIP */
 
 	/* System calls unique to AIX - needed even in CLIPPED version */ 
-	/* Also needed by Solaris - Jim B. */
-#if defined(AIX32) || defined(Solaris)
+#if defined(AIX32)
 	uid_t getuidx( int which );
 	gid_t getgidx( int which );
 #	if !defined(SWITCH)
