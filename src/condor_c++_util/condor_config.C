@@ -642,7 +642,7 @@ param( const char *name )
 {
 	char *val = lookup_macro( name, ConfigTab, TABLESIZE );
 
-	if( val == NULL ) {
+	if( val == NULL || val[0] == '\0' ) {
 		return( NULL );
 	}
 	return( expand_macro(val, ConfigTab, TABLESIZE) );
