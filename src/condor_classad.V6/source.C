@@ -141,7 +141,7 @@ bool ClassAdParser::ParseClassAd(FILE *file, ClassAd &classad, bool full)
 	return success;
 }
 
-bool ClassAdParser::ParseClassAd(istream *stream, ClassAd &classad, bool full)
+bool ClassAdParser::ParseClassAd(istream &stream, ClassAd &classad, bool full)
 {
 	bool                    success;
 	InputStreamLexerSource lexer_source(stream);
@@ -239,7 +239,7 @@ ParseClassAd(FILE *file, bool full)
 }
 
 ClassAd *ClassAdParser::
-ParseClassAd(istream *stream, bool full)
+ParseClassAd(istream &stream, bool full)
 {
 	ClassAd                *ad;
 	InputStreamLexerSource lexer_source(stream);
@@ -1179,6 +1179,14 @@ parseExprList( ExprList *&list , bool full )
 		return false;
 	}
 	return true;
+}
+
+std::istream & operator>>(std::istream &stream, ClassAd &ad)
+{
+	ClassAdParser parser;
+
+	parser.ParseClassAd(stream, ad);
+	return stream;
 }
 
 END_NAMESPACE // classad

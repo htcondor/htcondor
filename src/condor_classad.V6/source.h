@@ -58,7 +58,7 @@ class ClassAdParser
 		ClassAd *ParseClassAd(const char *buffer, bool full=false);
 		ClassAd *ParseClassAd(const char *buffer, int &offset);
 		ClassAd *ParseClassAd(FILE *file, bool full=false);
-		ClassAd *ParseClassAd(istream *stream, bool full=false);
+		ClassAd *ParseClassAd(istream &stream, bool full=false);
 
 		ClassAd *ParseClassAd(LexerSource *lexer_source, bool full=false);
 
@@ -76,7 +76,7 @@ class ClassAdParser
 		bool ParseClassAd(const char *buffer, ClassAd &classad, bool full=false);
 		bool ParseClassAd(const char *buffer, ClassAd &classad, int &offset);
 		bool ParseClassAd(FILE *file, ClassAd &classad, bool full=false);
-		bool ParseClassAd(istream *stream, ClassAd &classad, bool full=false);
+		bool ParseClassAd(istream &stream, ClassAd &classad, bool full=false);
 
 		bool ParseClassAd(LexerSource *lexer_source, ClassAd &ad, bool full=false);
 
@@ -127,6 +127,8 @@ class ClassAdParser
 		bool parsePrimaryExpression( ExprTree*& );
 		bool parseArgumentList( std::vector<ExprTree*>& );
 };
+
+std::istream & operator>>(std::istream &stream, ClassAd &ad);
 
 END_NAMESPACE // classad
 
