@@ -752,6 +752,7 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 	int		status = -1;
 	float utime = 0.0;
 	float stime = 0.0;
+	int tot_sus=0, cum_sus=0, last_sus=0;
 
 	// If the job completed, and there is no HISTORY file specified,
 	// the don't bother to update the job ClassAd since it is about to be
@@ -765,6 +766,14 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 		free(myHistoryFile);
 	}
 
+	if (!JobAd)
+	{
+		EXCEPT( "update_job_status(): No job ad\n");
+	}
+	JobAd->LookupInteger(ATTR_TOTAL_SUSPENSIONS, tot_sus);
+	JobAd->LookupInteger(ATTR_CUMULATIVE_SUSPENSION_TIME, cum_sus);
+	JobAd->LookupInteger(ATTR_LAST_SUSPENSION_TIME, last_sus);
+
 	//new syntax, can use filesystem to authenticate
 	if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT) ||
 		GetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS,
@@ -777,6 +786,15 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 		dprintf( D_ALWAYS, "update_job_status(): Job %d.%d has been removed "
 				 "by condor_rm\n", Proc->id.cluster, Proc->id.proc );
 	} else {
+
+		SetAttributeInt(Proc->id.cluster, Proc->id.proc, 
+			ATTR_TOTAL_SUSPENSIONS, tot_sus);
+
+		SetAttributeInt(Proc->id.cluster, Proc->id.proc, 
+			ATTR_CUMULATIVE_SUSPENSION_TIME, cum_sus);
+
+		SetAttributeInt(Proc->id.cluster, Proc->id.proc, 
+			ATTR_LAST_SUSPENSION_TIME, last_sus);
 
 		update_job_rusage( localp, remotep );
 
