@@ -3,7 +3,7 @@
  *
  * See LICENSE.TXT for additional notices and disclaimers.
  *
- * Copyright (c)1990-2001 CONDOR Team, Computer Sciences Department, 
+ * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
@@ -39,14 +39,13 @@
 #endif
 
 //---------------------------------------------------------------------------
-Dag::Dag( const char* condorLogName, const int maxJobsSubmitted,
+Dag::Dag( StringList &condorLogFiles, const int maxJobsSubmitted,
 		  const int maxPreScripts, const int maxPostScripts,
 		  const char* dapLogName ) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
-    _condorLogName        (NULL),
+    _condorLogFiles       (condorLogFiles),
     _condorLogInitialized (false),
-    _condorLogSize        (0),
     _dapLogName           (NULL),
     _dapLogInitialized    (false),             //<--DAP
     _dapLogSize           (0),                 //<--DAP
@@ -55,11 +54,8 @@ Dag::Dag( const char* condorLogName, const int maxJobsSubmitted,
     _numJobsSubmitted     (0),
     _maxJobsSubmitted     (maxJobsSubmitted)
 {
-	ASSERT( condorLogName || dapLogName );
-	if( condorLogName ) {
-		_condorLogName = strnewp( condorLogName );
-		ASSERT( _condorLogName );
-	}
+
+	ASSERT( condorLogFiles.number() > 0 || dapLogName );
 	if( dapLogName ) {
 		_dapLogName = strnewp( dapLogName );
 		ASSERT( _dapLogName );
@@ -91,7 +87,6 @@ Dag::Dag( const char* condorLogName, const int maxJobsSubmitted,
 //-------------------------------------------------------------------------
 Dag::~Dag() {
 		// remember kids, delete is safe *even* if ptr == NULL...
-    delete[] (char*) _condorLogName;
     delete[] (char*) _dapLogName;
 
     delete _preScriptQ;
@@ -124,7 +119,7 @@ bool Dag::Bootstrap (bool recovery) {
     if (recovery) {
         debug_printf( DEBUG_NORMAL, "Running in RECOVERY mode...\n" );
 
-		if( _condorLogName ) {
+		if( _condorLogFiles.number() > 0 ) {
 			if( !ProcessLogEvents( CONDORLOG, recovery ) ) {
 				return false;
 			}
@@ -186,39 +181,28 @@ Job * Dag::GetJob (const JobID_t jobID) const {
 }
 
 //-------------------------------------------------------------------------
-bool Dag::DetectCondorLogGrowth () {
-	if( !_condorLogName ) {
+bool
+Dag::DetectCondorLogGrowth () {
+
+	if( _condorLogFiles.number() <= 0 ) {
 		debug_printf( DEBUG_VERBOSE, "WARNING: DetectCondorLogGrowth() called "
 					  "but no Condor log defined\n" );
 		return false;
 	}
+
     if (!_condorLogInitialized) {
-		_condorLogInitialized = _condorLog.initialize( _condorLogName );
+		_condorLogInitialized = _condorLog.initialize( _condorLogFiles );
 		if( !_condorLogInitialized ) {
 				// this can be normal before we've actually submitted
 				// any jobs and the log doesn't yet exist, but is
 				// likely a problem if it persists...
 			debug_printf( DEBUG_VERBOSE, "ERROR: failed to initialize condor "
-						  "job log (%s) -- ignore unless error repeats\n",
-						  _condorLogName );
+						  "job log -- ignore unless error repeats\n");
 			return false;
 		}
     }
-    
-    int fd = _condorLog.getfd();
-    ASSERT( fd != 0 );
-    struct stat buf;
-    
-    if( fstat( fd, &buf ) == -1 ) {
-		debug_printf( DEBUG_QUIET, "ERROR: can't stat condor log (%s): %s\n",
-					  _condorLogName, strerror( errno ) );
-		return false;
-	}
-    
-    int oldSize = _condorLogSize;
-    _condorLogSize = buf.st_size;
-    
-    bool growth = (buf.st_size > oldSize);
+
+	bool growth = _condorLog.detectLogGrowth();
     debug_printf( DEBUG_DEBUG_4, "%s\n",
 				  growth ? "Log GREW!" : "No log growth..." );
     return growth;
@@ -268,7 +252,7 @@ bool Dag::DetectDaPLogGrowth () {
 bool Dag::ProcessLogEvents (int logsource, bool recovery) {
  if (logsource == CONDORLOG){
     if (!_condorLogInitialized) {
-      _condorLogInitialized = _condorLog.initialize(_condorLogName);
+      _condorLogInitialized = _condorLog.initialize(_condorLogFiles);
     }
   }
   else if (logsource == DAPLOG){
@@ -735,6 +719,14 @@ Dag::SubmitReadyJobs()
         return 0;
     }
 
+        // Sleep for one second here, so we can be sure that this submit
+		// event is unambiguously later than the termination event of the
+		// previous job, given that the jogs only have a resolution of
+		// one second.  (Because of the new feature of allowing separate
+		// logs for each job, we can't just rely on the physical order
+		// in a single log file.)  wenger 2003-04-12.
+	sleep(1);
+
 	// remove & submit first job from ready queue
 	Job* job;
 	_readyQ->Rewind();
@@ -754,7 +746,6 @@ Dag::SubmitReadyJobs()
 	}
 	//<-- DAP
 
-  
     CondorID condorID(0,0,0);
     MyString cmd_file = job->GetCmdFile();
 
@@ -912,7 +903,7 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 		e.returnValue = WEXITSTATUS( status );
 	}
 
-	ulog.initialize( _condorLogName, job->_CondorID._cluster,
+	ulog.initialize( job->_logFile, job->_CondorID._cluster,
 					 job->_CondorID._proc, job->_CondorID._subproc );
 
 	if( !ulog.writeEvent( &e ) ) {

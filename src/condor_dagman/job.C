@@ -3,7 +3,7 @@
  *
  * See LICENSE.TXT for additional notices and disclaimers.
  *
- * Copyright (c)1990-2001 CONDOR Team, Computer Sciences Department, 
+ * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
@@ -25,6 +25,7 @@
 #include "job.h"
 #include "condor_string.h"
 #include "condor_debug.h"
+#include "read_multiple_logs.h"
 
 //---------------------------------------------------------------------------
 JobID_t Job::_jobID_counter = 0;  // Initialize the static data memeber
@@ -51,6 +52,7 @@ const char * Job::status_t_names[] = {
 Job::~Job() {
     delete [] _cmdFile;
     delete [] _jobName;
+    delete [] _logFile;
 }
 
 //---------------------------------------------------------------------------
@@ -75,6 +77,10 @@ Job::Job (const char *jobName, const char *cmdFile):
     retry_max = 0;
     retries = 0;
 	_visited = false;
+
+    MyString logFile = ReadMultipleUserLogs::loadLogFileNameFromSubFile(_cmdFile);
+    _logFile = strnewp (logFile.Value());
+
 }
 
 //---------------------------------------------------------------------------

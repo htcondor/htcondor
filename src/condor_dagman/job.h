@@ -3,7 +3,7 @@
  *
  * See LICENSE.TXT for additional notices and disclaimers.
  *
- * Copyright (c)1990-2001 CONDOR Team, Computer Sciences Department, 
+ * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
@@ -256,6 +256,10 @@ class Job {
 	
 	//DFS ordering of the node
 	int _dfsOrder; 
+
+	//The log file for this job -- needed because we're now allowing
+	//each job to have its own log file.
+	const char *_logFile;
   private:
   
 	bool AddDependency( Job* parent, Job* child );

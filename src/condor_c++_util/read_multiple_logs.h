@@ -43,6 +43,9 @@ public:
 
 	~ReadMultipleUserLogs();
 
+	    /** Sets the list of log files to monitor; throws away any
+		    previous list of files to monitor.
+		 */
     bool initialize(StringList &listLogFileNames);
 
     	/** Returns the "next" event from any log file.  The event pointer 
@@ -50,34 +53,58 @@ public:
     	*/
     ULogEventOutcome readEvent (ULogEvent * & event);
 
+	    /** Returns true iff any of the logs we're monitoring grew since
+		    the last time this method was called.
+		 */
+	bool detectLogGrowth();
+
+	    /** Deletes the given log files.
+		 */
+	static void DeleteLogs(StringList &logFileNames);
+
+	    /** Gets the userlog files used by a dag
+		    on success, the return value will be ""
+		    on failure, it will be an appropriate error message
+	    */
+    static MyString getJobLogsFromSubmitFiles(StringList &listLogFilenames, 
+									const MyString &strDagFile);
+
+	    /** Gets the log file from a Condor submit file.
+		    on success, the return value will be the log file name
+		    on faileure, it will be ""
+		 */
+    static MyString loadLogFileNameFromSubFile(const MyString &strSubFilename);
+
 private:
 	void cleanup();
 
 	struct LogFileEntry
 	{
+		bool isInitialized;
 		MyString strFilename;
 		ReadUserLog readUserLog;
 		ULogEvent *pLastLogEvent;
+		off_t logSize;
 	};
 
 	int iLogFileCount;
 	LogFileEntry *pLogFileEntries;
+
+	    /** Goes through the list of logs and tries to initialize (open
+		    the file of) any that aren't initialized yet.
+			Returns true iff it successfully initialized *any* previously-
+			uninitialized log.
+		 */
+	bool initializeUninitializedLogs();
+
+		/** Returns true iff the given log grew since the last time
+		    we called this method on it.
+		 */
+	static bool LogGrew(LogFileEntry &log);
+
+	    /** Read the entire contents of the given file into a MyString.
+		 */
+    static MyString readFileToString(const MyString &strFilename);
 };
-
-	/** Gets the userlog files used by a dag
-		on success, the return value will be ""
-		on failure, it will be an appropriate error message
-	*/
-MyString getJobLogsFromSubmitFiles(StringList &listLogFilenames, 
-									const MyString &strDagFile);
-
-	// some misc. self-explanatory fcns which maybe could find a better home
-MyString loadLogFileNameFromSubFile(const MyString &strSubFilename);
-
-MyString readFileToString(const MyString &strFilename);
-
-bool fileExists(const MyString &strFile);
-
-MyString makeString(int iValue);
 
 #endif

@@ -21,6 +21,7 @@ class Global {
     char *rescue_file;
 	bool paused;
     char *datafile;
+	StringList condorLogFiles;
 };
 
 extern Global G;

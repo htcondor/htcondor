@@ -231,7 +231,6 @@ bool
 dap_submit( const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName )
 {
-  char prependLines[8192];
   char* command;
   int cmdLen;
   const char * exe = "dap_submit";

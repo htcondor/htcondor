@@ -181,12 +181,6 @@ if( $job_log ) {
     print "Done.\n";
 }
 
-if (!$job_log) {
-    print "\n";
-    print "ERROR: no log was specified in any submit files!\n";
-    exit (1);
-}
-
 # Create the submit file used to submit DAGMan as a scheduler universe
 # job to Condor. 
 &write_submit_file();
@@ -249,7 +243,7 @@ sub usage {
 }
 
 sub parse_dag_file {
-    local( %cmd_files, %log_names, $log_name, $had_error, $did_one, $len );
+    local( %cmd_files, %log_names, $log_name, $had_error, $did_one );
     $had_error = 0;
     $did_one = 0;
     open( DAG, "<$dagfile" ) || die "Can't open $dagfile for reading: $!\n";
@@ -289,28 +283,6 @@ sub parse_dag_file {
 	}
 	close FOO;
 	$did_one = 1;
-    }
-    foreach $file (sort keys %log_names ) {
-	$len = length $file;
-	if( $log_names{$file} ne $log_name ) {
-	    print "ERROR: log file specified in $file is not \"$log_name\".\n";
-	    $had_error = 1;
-	}
-    }
-    if( $had_error ) {
-	print "\nAll jobs submitted in this DAG must share the same log file.  ";
-	print "Please look\nat all the submit files and make sure they each specify ";
-	print "the same filename\nin their \"log = filename\" settings.\n\n";
-	if( $verbose ) {
-	    print "The submit files your DAG file mentions and the log file each uses are:\n";
-	    foreach $file (sort keys %cmd_files ) {
-		printf( "   %-20s%s\n", $file, $log_names{$file} );
-	    }
-	} else {
-	    print "To see all the log files you mention in each submit file you use, ";
-	    print "run\ncondor_submit_dag again with the -verbose option.\n";
-	}
-	exit( 1 );
     }
     # -->DAP
     # if( ! $did_one ) {

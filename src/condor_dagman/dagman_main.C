@@ -3,7 +3,7 @@
  *
  * See LICENSE.TXT for additional notices and disclaimers.
  *
- * Copyright (c)1990-2001 CONDOR Team, Computer Sciences Department, 
+ * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
@@ -287,10 +287,6 @@ int main_init (int argc, char ** const argv) {
         debug_printf( DEBUG_SILENT, "-MaxPost must be non-negative\n" );
         Usage();
     }
-	if( condorLogName ) {
-		debug_printf( DEBUG_VERBOSE, "Condor log will be written to %s\n",
-					  condorLogName );
-	}
 	if( dapLogName ) {
 		debug_printf( DEBUG_VERBOSE, "DaP log will be written to %s\n",
 					  dapLogName );
@@ -325,15 +321,36 @@ int main_init (int argc, char ** const argv) {
     //
     // Create the DAG
     //
-  
 
-    G.dag = new Dag( condorLogName, G.maxJobs, G.maxPreScripts,
+		// Attempt to get the log file name(s) from the submit files;
+		// if that doesn't work, use the value from the command-line
+		// argument.
+	MyString dagFileName(G.datafile);
+    MyString msg = ReadMultipleUserLogs::getJobLogsFromSubmitFiles(
+				G.condorLogFiles, dagFileName);
+    if( msg != "" || G.condorLogFiles.number() == 0 ) {
+		G.condorLogFiles.rewind();
+		while( G.condorLogFiles.next() ) {
+		    G.condorLogFiles.deleteCurrent();
+		}
+
+		G.condorLogFiles.append(condorLogName);
+	}
+
+	if( G.condorLogFiles.number() > 0 ) {
+		G.condorLogFiles.rewind();
+		debug_printf( DEBUG_VERBOSE, "Condor log will be written to %s, etc.\n",
+					  G.condorLogFiles.next() );
+	}
+
+    G.dag = new Dag( G.condorLogFiles, G.maxJobs, G.maxPreScripts,
 		     G.maxPostScripts, dapLogName); //<-- DaP
 
     if( G.dag == NULL ) {
         EXCEPT( "ERROR: out of memory!\n");
     }
   
+
     //
     // Parse the input file.  The parse() routine
     // takes care of adding jobs and dependencies to the DagMan
@@ -379,13 +396,7 @@ int main_init (int argc, char ** const argv) {
             // if there is an older version of the log files,
             // we need to delete these.
       
-            if ( access( condorLogName, F_OK) == 0 ) {
-                debug_printf( DEBUG_VERBOSE, "Deleting older version of %s\n",
-                               condorLogName);
-                if (remove (condorLogName) == -1)
-                    debug_error( 1, DEBUG_QUIET, "Error: can't remove %s\n",
-								 condorLogName );
-            }
+            ReadMultipleUserLogs::DeleteLogs(G.condorLogFiles);
 
 	    if ( access( dapLogName, F_OK) == 0 ) {
 	      debug_printf( DEBUG_VERBOSE, "Deleting older version of %s\n",

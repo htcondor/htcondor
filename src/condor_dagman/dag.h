@@ -3,7 +3,7 @@
  *
  * See LICENSE.TXT for additional notices and disclaimers.
  *
- * Copyright (c)1990-2001 CONDOR Team, Computer Sciences Department, 
+ * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
@@ -32,6 +32,7 @@
 #include "condor_constants.h"      /* from condor_includes/ directory */
 #include "HashTable.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "read_multiple_logs.h"
 
 // for DAGMAN_RUN_POST_ON_FAILURE config setting
 extern bool run_post_on_failure;
@@ -58,7 +59,8 @@ class Dag {
   public:
   
     /** Create a DAG
-        @param condorLog the condor log where job events are being written to
+		@param condorLogFiles the list of log files for all of the jobs
+		       in the DAG
         @param maxJobsSubmitted the maximum number of jobs to submit to Condor
                at one time
         @param maxPreScripts the maximum number of PRE scripts to spawn at
@@ -67,7 +69,7 @@ class Dag {
 		       one time
     */
 
-    Dag( const char* condorLogName, const int maxJobsSubmitted,
+    Dag( StringList &condorLogFiles, const int maxJobsSubmitted,
 		 const int maxPreScripts, const int maxPostScripts, 
 		 const char *dapLogName );
 
@@ -254,16 +256,13 @@ class Dag {
 	void DFSVisit (Job * job);
 	
     // name of consolidated condor log
-    const char* _condorLogName;
+	StringList &_condorLogFiles;
 
     // Documentation on ReadUserLog is present in condor_c++_util
-    ReadUserLog   _condorLog;
+	ReadMultipleUserLogs _condorLog;
 
     //
     bool          _condorLogInitialized;
-
-    //  Last known size of condor log, used by DetectLogGrowth()
-    off_t         _condorLogSize;
 
     //-->DAP
     const char* _dapLogName;

@@ -54,25 +54,31 @@ ReadMultipleUserLogs::~ReadMultipleUserLogs()
 bool
 ReadMultipleUserLogs::initialize(StringList &listLogFileNames)
 {
+    dprintf(D_FULLDEBUG, "ReadMultipleUserLogs::initialize()\n");
+
 	cleanup();
 
 	iLogFileCount = listLogFileNames.number();
 	if (iLogFileCount) {
 		pLogFileEntries = new LogFileEntry[iLogFileCount];
+		if( !pLogFileEntries ) {
+		    EXCEPT( "ERROR: out of memory!\n");
+		}
 	}
 
 	listLogFileNames.rewind();
 
 	for (int i = 0; i < iLogFileCount; i++) {
 		char *psFilename = listLogFileNames.next();
+		pLogFileEntries[i].isInitialized = FALSE;
 		pLogFileEntries[i].pLastLogEvent = NULL;
 		pLogFileEntries[i].strFilename = psFilename;
-		if (!pLogFileEntries[i].readUserLog.initialize(psFilename)) {
-			return false;
-		}
+		pLogFileEntries[i].logSize = 0;
 	}
 
-	return true;
+	bool result = initializeUninitializedLogs();
+
+	return result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -115,32 +121,40 @@ operator>(const tm &lhs, const tm &rhs)
 ULogEventOutcome
 ReadMultipleUserLogs::readEvent (ULogEvent * & event)
 {
+    dprintf(D_FULLDEBUG, "ReadMultipleUserLogs::readEvent()\n");
+
 	if (!iLogFileCount) {
 		return ULOG_UNK_ERROR;
 	}
+
+    initializeUninitializedLogs();
+
 	int iOldestEventIndex = -1;
 
 	for (int i = 0; i < iLogFileCount; i++) {
-		ULogEventOutcome eOutcome = ULOG_OK;
-		if (!pLogFileEntries[i].pLastLogEvent) {
-			eOutcome = pLogFileEntries[i].readUserLog.readEvent(
-					pLogFileEntries[i].pLastLogEvent);
-		}
+		LogFileEntry &log = pLogFileEntries[i];
+		if (log.isInitialized) {
+		    ULogEventOutcome eOutcome = ULOG_OK;
+		    if (!log.pLastLogEvent) {
+			    eOutcome = log.readUserLog.readEvent(log.pLastLogEvent);
 
-		if (eOutcome == ULOG_RD_ERROR || eOutcome == ULOG_UNK_ERROR) {
-			// peter says always return an error immediately,
-			// then go on our merry way trying again if they call us again.
-			dprintf(D_ALWAYS, "read error on log %s\n",
-					pLogFileEntries[i].strFilename.Value());
-			return eOutcome;
-		}
+		        if (eOutcome == ULOG_RD_ERROR || eOutcome == ULOG_UNK_ERROR) {
+			        // peter says always return an error immediately,
+			        // then go on our merry way trying again if they
+					// call us again.
+			        dprintf(D_ALWAYS, "read error on log %s\n",
+					    log.strFilename.Value());
+			        return eOutcome;
+		        }
+		    }
 
-		if (eOutcome != ULOG_NO_EVENT) {
-			if (iOldestEventIndex == -1 || 
-				pLogFileEntries[iOldestEventIndex].pLastLogEvent->eventTime >
-				pLogFileEntries[i].pLastLogEvent->eventTime) {
-				iOldestEventIndex = i;
-			}
+		    if (eOutcome != ULOG_NO_EVENT) {
+			    if (iOldestEventIndex == -1 || 
+				        (pLogFileEntries[iOldestEventIndex].pLastLogEvent->eventTime >
+				        log.pLastLogEvent->eventTime)) {
+				    iOldestEventIndex = i;
+			    }
+		    }
 		}
 	}
 
@@ -152,6 +166,46 @@ ReadMultipleUserLogs::readEvent (ULogEvent * & event)
 	pLogFileEntries[iOldestEventIndex].pLastLogEvent = NULL;
 
 	return ULOG_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool
+ReadMultipleUserLogs::detectLogGrowth()
+{
+    dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::detectLogGrowth()\n");
+
+    initializeUninitializedLogs();
+
+	bool grew = false;
+
+	    // Note: we must go through the whole loop even after we find a
+		// log that grew, so we have the right log lengths for next time.
+		// wenger 2003-04-11.
+    for (int index = 0; index < iLogFileCount; index++) {
+	    if (LogGrew(pLogFileEntries[index])) {
+		    grew = true;
+		}
+	}
+
+    return grew;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void
+ReadMultipleUserLogs::DeleteLogs(StringList &logFileNames)
+{
+    logFileNames.rewind();
+	char *filename;
+	while ( (filename = logFileNames.next()) ) {
+        if ( access( filename, F_OK) == 0 ) {
+		    dprintf( D_ALWAYS, "Deleting older version of %s\n", filename);
+		    if (remove (filename) == -1) {
+		        dprintf( D_ALWAYS, "Error: can't remove %s\n", filename );
+		    }
+		}
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -175,34 +229,61 @@ ReadMultipleUserLogs::cleanup()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// end of ReadMultipleUserLogs member functions
-///////////////////////////////////////////////////////////////////////////////
 
-MyString
-makeString(int iValue)
+bool
+ReadMultipleUserLogs::initializeUninitializedLogs()
 {
-	char psToReturn[16];
-	sprintf(psToReturn,"%d",iValue);
-	return MyString(psToReturn);
+    bool result = false;
+
+	for (int index = 0; index < iLogFileCount; index++) {
+	    LogFileEntry &log = pLogFileEntries[index];
+		if (!log.isInitialized) {
+		    if (log.readUserLog.initialize(log.strFilename.GetCStr())) {
+				log.isInitialized = true;
+			    result = true;
+			}
+		}
+	}
+
+	return result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 bool
-fileExists(const MyString &strFile)
+ReadMultipleUserLogs::LogGrew(LogFileEntry &log)
 {
-	int fd = open(strFile.Value(), O_RDONLY);
-	if (fd == -1) {
+    dprintf( D_FULLDEBUG, "ReadMultipleUserLogs::LogGrew(%s)\n",
+			log.strFilename.GetCStr());
+
+	if (!log.isInitialized) {
+	    return false;
+	}
+
+    int fd = log.readUserLog.getfd();
+    ASSERT( fd != -1 );
+    struct stat buf;
+    
+    if( fstat( fd, &buf ) == -1 ) {
+		dprintf( D_FULLDEBUG, "ERROR: can't stat condor log (%s): %s\n",
+					  log.strFilename.GetCStr(), strerror( errno ) );
 		return false;
 	}
-	close(fd);
-	return true;
+    
+    int oldSize = log.logSize;
+    log.logSize = buf.st_size;
+    
+    bool grew = (buf.st_size > oldSize);
+    dprintf( D_FULLDEBUG, "%s\n",
+				  grew ? "Log GREW!" : "No log growth..." );
+
+	return grew;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 MyString
-readFileToString(const MyString &strFilename)
+ReadMultipleUserLogs::readFileToString(const MyString &strFilename)
 {
 	FILE *pFile = fopen(strFilename.Value(), "r");
 	if (!pFile) {
@@ -213,25 +294,29 @@ readFileToString(const MyString &strFilename)
 	int iLength = ftell(pFile);
 	MyString strToReturn;
 	strToReturn.reserve_at_least(iLength+1);
+
 	fseek(pFile, 0, SEEK_SET);
 	char *psBuf = new char[iLength+1];
 	fread(psBuf, 1, iLength, pFile);
+	fclose(pFile);
+
 	psBuf[iLength] = 0;
 	strToReturn = psBuf;
 	delete [] psBuf;
 
-	fclose(pFile);
 	return strToReturn;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 MyString
-loadLogFileNameFromSubFile(const MyString &strSubFilename)
+ReadMultipleUserLogs::loadLogFileNameFromSubFile(const MyString &strSubFilename)
 {
 	MyString strSubFile = readFileToString(strSubFilename);
 	
+	// Note: StringList constructor removes leading whitespace from lines.
 	StringList listLines( strSubFile.Value(), "\r\n");
+
 	listLines.rewind();
 	const char *psLine;
 	MyString strPreviousLogFilename;
@@ -264,7 +349,7 @@ loadLogFileNameFromSubFile(const MyString &strSubFilename)
 ///////////////////////////////////////////////////////////////////////////////
 
 MyString
-getJobLogsFromSubmitFiles(StringList &listLogFilenames,
+ReadMultipleUserLogs::getJobLogsFromSubmitFiles(StringList &listLogFilenames,
 				const MyString &strDagFileName)
 {
 	MyString strDagFile = readFileToString(strDagFileName);
@@ -272,13 +357,13 @@ getJobLogsFromSubmitFiles(StringList &listLogFilenames,
 		return "Unable to read dag file";
 	}
 
-	StringList listLines( strDagFile.Value(), "\n");
+	StringList listLines( strDagFile.Value(), "\r\n");
 	listLines.rewind();
 	const char *psLine;
 	while( (psLine = listLines.next()) ) {
 		MyString strLine = psLine;
 		
-		// this internal loop is for '/' line continuation
+		// this internal loop is for '\' line continuation
 		while (strLine[strLine.Length()-1] == '\\') {
 			strLine[strLine.Length()-1] = 0;
 			psLine = listLines.next();
@@ -296,24 +381,19 @@ getJobLogsFromSubmitFiles(StringList &listLogFilenames,
 		int iEndOfSubFileName = strLine.Length()-1;
 		if (!stricmp(strFirstThree.Value(), "job") ||
 				!stricmp(strFirstThree.Value(), "dap")) {
-			int iLastWhitespace = strLine.Length();
-			int iPos;
-			for (iPos = strLine.Length()-1; iPos >= 0; iPos--) {
-				if (strLine[iPos] == '\t' || strLine[iPos] == ' ') {	
-					if (!bFoundNonWhitespace) {
-						iEndOfSubFileName--;
-						continue;
-					}
 
-					iLastWhitespace = iPos;
-					break;
-				} else {
-					bFoundNonWhitespace = true;
-				}
+                // Format of a job line should be:
+				// JOB <name> <script> [DONE]
+			StringList tokens (strLine.Value(), " \t");
+			tokens.rewind();
+			tokens.next(); // Skip JOB
+			tokens.next(); // Skip <name>
+			const char *submitFile = tokens.next();
+			if( !submitFile ) {
+			    return "Improperly-formatted DAG file";
 			}
+			MyString strSubFile(submitFile);
 
-			MyString strSubFile = strLine.Substr(iLastWhitespace+1,
-								iEndOfSubFileName);
 
 			// get the log= value from the sub file
 
@@ -333,6 +413,7 @@ getJobLogsFromSubmitFiles(StringList &listLogFilenames,
 			}
 
 			if (!bAlreadyInList) {
+				// Note: append copies the string here.
 				listLogFilenames.append(strLogFilename.Value());
 			}
 		}
