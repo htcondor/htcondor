@@ -57,13 +57,10 @@ file. If submitting into the Standard Universe, which is the default,
 then the named executable must have been re-linked with the Condor
 libraries (such as via the \Condor{compile} command). If submitting into
 the Vanilla Universe, then the named executable need not be re-linked and
-<<<<<<< condor_submit.tex
 can be any process which can run in the background (shell scripts work
 fine as well).  If submitting into the Java Universe, then the argument
 must be a compiled \File{.class} file.
-=======
-can be any process which can run in the background (such as shell scripts).
->>>>>>> 1.32.2.12
+
 
 %%%%%%%%%%%%%%%%%%%
 %% input
@@ -845,37 +842,11 @@ character are ignored by the submit description file parser.
 
 \begin{Options}
 
-<<<<<<< condor_submit.tex
-	\OptItem{\Opt{--}}{Accept the command file from stdin.}
-    \OptItem{\Opt{-v}}{Verbose output - display the created job class-ad}
-=======
 \OptItem{\Opt{--}}{Accept the command file from stdin.}
 \OptItem{\Opt{-v}}{Verbose output - display the created job class-ad}
->>>>>>> 1.32.2.12
 
-<<<<<<< condor_submit.tex
-    \OptItem{\OptArg{-n}{schedd\_name}}{Submit to the specified schedd. This option is used when there is more than one schedd running on the submitting machine}
-=======
 \OptItem{\OptArg{-n}{schedd\_name}}{Submit to the specified schedd. This option is used when there is more than one schedd running on the submitting machine}
->>>>>>> 1.32.2.12
 
-<<<<<<< condor_submit.tex
-	\OptItem{\OptArg{-r}{schedd\_name}}{Submit to a remote schedd. The jobs
-	will be submitted to the schedd on the specified remote host. On Unix
-	systems, the Condor administrator for you site must override the default 
-	AUTHENTICATION\_METHODS configuration setting to enable remote filesystem 
-	(FS\_REMOTE) authentication.}
-
-	\OptItem{\Opt{-d}}{Disable file permission checks.}
-
-	\OptItem{\OptArg{-a}{command}}{Augment the commands in the submit
-    file with the given command. This command will be considered to
-    immediately precede the Queue command in the submit file and come
-    after all other previous commands. The submit file is not
-    modified. You can append multiple commands by using the -a option
-    multiple times. If your command has spaces in it, make sure you
-    quote it.}
-=======
 \OptItem{\OptArg{-r}{schedd\_name}}{Submit to a remote schedd. The jobs
 will be submitted to the schedd on the specified remote host. On Unix
 systems, the Condor administrator for you site must override the default 
@@ -884,10 +855,16 @@ AUTHENTICATION\_METHODS configuration setting to enable remote file system
 
 \OptItem{\Opt{-d}}{Disable file permission checks.}
 
+\OptItem{\OptArg{-a}{command}}{Augment the commands in the submit file
+with the given command. This command will be considered to immediately
+precede the Queue command in the submit file and come after all other
+previous commands. The submit file is not modified. You can append
+multiple commands by using the -a option multiple times. If your
+command has spaces in it, make sure you quote it.}
+
 \OptItem{submit description file}{The pathname to the submit description
 file. If this optional argument is missing, then the commands are
 taken from standard input.}
->>>>>>> 1.32.2.12
 
 \end{Options}
 
