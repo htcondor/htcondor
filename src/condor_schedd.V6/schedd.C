@@ -6061,9 +6061,19 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
     // string (''), so we have to avoid that
     sprintf(job_args, "condor_scheduniv_exec.%d.%d%s%s",
 		job_id->cluster, job_id->proc, args[0] != '\0' ? " " : "", args );
+
+        // get the job's nice increment
+    char *nice_config = param( "SCHED_UNIV_RENICE_INCREMENT" );
+    int niceness = 0;
+    if( nice_config ) {
+        niceness = atoi( nice_config );
+        free( nice_config );
+        nice_config = NULL;
+    }
 	
 	pid = daemonCore->Create_Process( a_out_name, job_args, PRIV_USER_FINAL, 
-								1, FALSE, newenv, iwd, FALSE, NULL, inouterr );
+								1, FALSE, newenv, iwd, FALSE, NULL, inouterr,
+									  niceness );
 	
 	// now close those open fds - we don't want them here.
 	for ( int i=0 ; i<3 ; i++ ) {
