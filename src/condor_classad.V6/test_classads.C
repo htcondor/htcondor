@@ -22,7 +22,7 @@
 
 #include "classad_distribution.h"
 #include "lexerSource.h"
-#include <fstream.h>
+#include <fstream>
 #include <iostream>
 #include <ctype.h>
 
