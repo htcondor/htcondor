@@ -1209,7 +1209,7 @@ readEvent (FILE *file)
 {
 	if (fscanf (file, "Job was held.\n\t") == EOF)
 		return 0;
-	if (fscanf (file, "Action caused by: %s\n", &msg) == EOF)
+	if (fscanf (file, "Action caused by: %s\n", msg) == EOF)
 		return 1;				// backwards compatibility
 
 	return 1;
