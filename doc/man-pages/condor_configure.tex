@@ -1,0 +1,123 @@
+\begin{ManPage}{\label{man-condor-configure}\Condor{configure}}{1}
+{Configure or install Condor}
+
+\Synopsis \SynProg{\Condor{configure}}
+[\verb@--@\textbf{help}] $|$ [\verb@--@\textbf{version}]
+
+\SynProg{\Condor{configure}}
+[\verb@--@\textbf{install}]
+[\verb@--@\textbf{install-dir=$<$path$>$}]
+[\verb@--@\textbf{local-dir=$<$path$>$}]
+[\verb@--@\textbf{make-personal-condor}]
+[\verb@--@\textbf{type = $<$ submit, execute, manager $>$}]
+[\verb@--@\textbf{central-manager = $<$ hostname$>$}]
+[\verb@--@\textbf{owner = $<$ ownername $>$}]
+[\verb@--@\textbf{verbose}]
+
+% 2 hyphens in a row, without any spaces inbetween poses a problem
+% for LaTeX.  Things tried, without success.
+%   --      results in a single hyphen
+%   - -     results in a 2 hyphens, with too much space inbetween
+%   -\--    results in a 2 hyphens, with too much space inbetween
+%  $--$     results in 2 long, very high up dashes, with nice spacing
+%  $-$$-$   results in 2 long, very high up dashes, with too much spacing
+
+% Alain's fix
+%   {\tt--}          makes one nice dash in html
+%                    makes 2 nice dashes in postscript
+%   {\tt--}{\tt--}   makes 2 nice dashes that collide with following letter
+%                       in html
+%                    makes 4  nice dashes in postscript
+%   {\small{\tt--}}{\small{\tt--}}  2 nice dashes in html
+%                                   4 nice dashes in postscript
+
+% Peter's fix
+%   ---            makes 2 dashes exactly as required in the html
+%                  makes 1 very long dash in postscript
+
+% Karen's final fix:  do everything manually (no LaTeX macros),
+%  and use the verbatim.
+
+\index{Condor commands!condor\_configure}
+\index{condor\_configure command}
+
+\Description 
+
+\Condor{configure} is a Perl script that installs and/or configures
+Condor.
+It will run with Perl 5 or more recent versions.
+
+\Condor{configure} is designed to be run more than one time
+where required.
+It can install Condor (with a correct configuration),
+or it can change the configuration files.
+Note that changes in the configuration files do not result
+in changes while Condor is running.
+To effect changes while Condor is running,
+it is necessary to further do \Condor{reconfig} or \Condor{restart}.
+\Condor{reconfig}  is required where the currently executing
+daemons need to be informed of configuration changes.
+\Condor{restart} is required where the options
+\verb@--@\textbf{make-personal-condor} or
+\verb@--@\textbf{type}
+are used, since these affect which daemons are running.
+
+Running \Condor{configure} with no options results in the
+help screen being printed.
+
+\begin{Options}
+	\OptItem{\Opt{---help}} {Print help screen and exit}
+	\OptItem{\Opt{---version}} {Print Condor version number and exit}
+	\OptItem{\Opt{---install}} {Perform installation, assuming that
+	the current working directory contains the \File{release.tar}
+	file.  Without further options, the configuration is that of
+	a Personal Condor.  If used as an upgrade within an existing
+	installation directory, existing configuration files and local
+	directory are preserved.}
+	\OptItem{\Opt{---install-dir=$<$path$>$}} {Provides the path to the
+	directory for the installation.  The default is the current
+	working directory.  When \Condor{configure} is not used to
+	install Condor, this command-line argument provides the path
+	to the directory containing the configuration files.}
+	\OptItem{\Opt{---local-dir=$<$path$>$}} {Specifies the
+	location of the \MacroUNI{LOCAL} directory}
+	\OptItem{\Opt{---make-personal-condor}} {Installs and configures
+	for Personal Condor (a 1-node pool running on a local machine)}
+	\OptItem{\Opt{---type= $<$ submit, execute, manager $>$}} {One
+	or more of the types may be listed.
+	This determines the roles that a machine may play.
+	All roles are played by a Personal Condor installation.}
+	\OptItem{\Opt{---central-manager=$<$hostname$>$}} {Modifies
+	the configuration variables \MacroNI{COLLECTOR\_HOST}
+	and \MacroNI{NEGOTIATOR\_HOST} to be the given host name.}
+	\OptItem{\Opt{---owner=$<$ownername$>$}} {Set configuration
+	such that Condor daemons will be executed as the given owner.
+	This is only applicable when \Condor{configure} is run by root.
+	If not run as root,
+	use the owner is the user running the \Condor{configure} command.
+	}
+	\OptItem{\Opt{---verbose}} {Print information about changes
+	to configuration variables as they occur.}
+\end{Options}
+
+\ExitStatus
+
+\Condor{configure} will exit with a status value of 0 (zero) upon success,
+and it will exit with a nonzero value upon failure.
+
+\Examples
+To install Condor on the machine that is to be the pool's central manager:
+\begin{verbatim}
+% condor_configure --install --type = submit, execute, manager
+\end{verbatim}
+This assumes that the current working directory contains the
+file \File{release.tar}, and it also assumes that this machine
+may be used to both submit and execute Condor jobs.
+
+To change the location of the \MacroUNI{LOCAL} directory
+in the configuration file, use the following format for
+the \Condor{configure} command:
+\begin{verbatim}
+% condor_configure --local-dir = /path/to/local/directory
+\end{verbatim}
+\end{ManPage}
