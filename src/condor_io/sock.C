@@ -374,6 +374,12 @@ int Sock::do_connect(
 				if (test_connection()) {
 					_state = sock_connect;
 					return TRUE;
+				} else {
+					if (!failed_once) {
+						dprintf( D_ALWAYS, 
+								 "getpeername failed so connect must have failed\n");
+						failed_once = true;
+					}
 				}
 				break;
 			default:
@@ -405,8 +411,6 @@ bool Sock::test_connection()
 	test_addr.sin_family = AF_INET;
 	int nbytes = sizeof(test_addr);
 	if (getpeername(_sock, (struct sockaddr *) &test_addr, &nbytes) < 0) {
-		dprintf( D_ALWAYS, 
-				 "getpeername failed so connect must have failed\n" );
 		return false;
 	}
 	return true;
