@@ -192,4 +192,102 @@ getJobAd(int cluster_id, int proc_id)
     return 0;
 }
 
+/* queue printing routines moved here from proc_obj.C, which is being
+   taken out of cplus_lib.a.  -Jim B. */
+
+/*
+  Format a date expressed in "UNIX time" into "month/day hour:minute".
+*/
+static char *
+format_date( time_t date )
+{
+	static char	buf[ 12 ];
+	struct tm	*tm;
+
+	tm = localtime( &date );
+	sprintf( buf, "%2d/%-2d %02d:%02d",
+		(tm->tm_mon)+1, tm->tm_mday, tm->tm_hour, tm->tm_min
+	);
+	return buf;
+}
+
+/*
+  Format a time value which is encoded as seconds since the UNIX
+  "epoch".  We return a string in the format dd+hh:mm:ss, indicating
+  days, hours, minutes, and seconds.  The string is in static data
+  space, and will be overwritten by the next call to this function.
+*/
+static char	*
+format_time( int tot_secs )
+{
+	int		days;
+	int		hours;
+	int		min;
+	int		secs;
+	static char	answer[25];
+
+	days = tot_secs / DAY;
+	tot_secs %= DAY;
+	hours = tot_secs / HOUR;
+	tot_secs %= HOUR;
+	min = tot_secs / MINUTE;
+	secs = tot_secs % MINUTE;
+
+	(void)sprintf( answer, "%3d+%02d:%02d:%02d", days, hours, min, secs );
+	return answer;
+}
+
+/*
+  Encode a status from a PROC structure as a single letter suited for
+  printing.
+*/
+static char
+encode_status( int status )
+{
+	switch( status ) {
+	  case UNEXPANDED:
+		return 'U';
+	  case IDLE:
+		return 'I';
+	  case RUNNING:
+		return 'R';
+	  case COMPLETED:
+		return 'C';
+	  case REMOVED:
+		return 'X';
+	  default:
+		return ' ';
+	}
+}
+
+/*
+  Print a line of data for the "short" display of a PROC structure.  The
+  "short" display is the one used by "condor_q".  N.B. the columns used
+  by this routine must match those defined by the short_header routine
+  defined above.
+*/
+void
+short_print(
+	int cluster,
+	int proc,
+	const char *owner,
+	int date,
+	int time,
+	int status,
+	int prio,
+	int image_size,
+	const char *cmd
+	) {
+	printf( "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %-18s\n",
+		cluster,
+		proc,
+		owner,
+		format_date(date),
+		format_time(time),
+		encode_status(status),
+		prio,
+		image_size/1024.0,
+		cmd
+	);
+}
 
