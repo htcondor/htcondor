@@ -115,10 +115,9 @@ Global::Config()
 						  submit_delay_attr, submit_delay_str );
 			G.submit_delay = 0;
 		}
+		free( submit_delay_str );
 	}
-	debug_printf( DEBUG_NORMAL, "%s = %d (\"%s\")\n", submit_delay_attr,
-				  G.submit_delay, submit_delay_str );
-	free( submit_delay_str );
+	debug_printf( DEBUG_NORMAL, "%s = %d\n", submit_delay_attr, G.submit_delay );
 	return true;
 }
 
