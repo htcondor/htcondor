@@ -41,35 +41,14 @@
 **
 *************************************************************/
 
-#include <string.h>
-#define _POSIX_SOURCE
-#if defined(AIX32)
-#	define _G_USE_PROTOS
-#endif
-
-#if defined(IRIX62)
-typedef struct fd_set fd_set;
-#endif
-
-#include <std.h>
-#include <stdio.h>
-#include <signal.h>
-#include "fcntl.h"
-#include <errno.h>
-#include <unistd.h>
-#include <stdlib.h>
+#include "condor_common.h"
 #include "condor_syscalls.h"
 #include <stdarg.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <malloc.h>
-#include <memory.h>
 #include "file_state.h"
-#include "condor_constants.h"
 #include "file_table_interf.h"
-#include <assert.h>
 #include "condor_sys.h"
 #include "condor_file_info.h"
+
 #if defined(LINUX)
 #include <sys/socketcall.h>
 #endif
