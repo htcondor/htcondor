@@ -105,6 +105,14 @@
 #	define LONGJMP longjmp
 	extern "C" int kill( pid_t, int );
 
+#elif defined(IRIX53)
+
+	extern "C" int brk( void * );
+	extern "C" void *sbrk( int );
+	typedef void (*SIG_HANDLER)();
+#	define SETJMP setjmp
+#	define LONGJMP longjmp
+
 #elif defined(HPUX9)
 
 	extern "C" int brk( void * );
