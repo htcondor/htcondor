@@ -336,7 +336,7 @@ getline( FILE *fp )
 			/* See if a continuation is indicated */
 		line = ltrunc( read_buf );
 		if( line != read_buf ) {
-			(void)strcpy( read_buf, line );
+			(void)memmove( read_buf, line, strlen(line)+1 );
 		}
 			/* Start the strrchr() search one character back from
 			 * the beginning of the line, if possible, because it is possible
