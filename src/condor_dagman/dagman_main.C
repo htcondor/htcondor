@@ -74,7 +74,7 @@ static void Usage() {
             "\t\t[-MaxPre] <int N>\n\n"
             "\t\t[-MaxPost] <int N>\n\n"
             "\t\t[-NoPostFail]\n\n"
-            "\twhere NAME is the name of your DAG.\n"
+            "\twherei NAME is the name of your DAG.\n"
             "\twhere N is Maximum # of Jobs to run at once "
             "(0 means unlimited)\n"
             "\tdefault -Debug is -Debug %d\n", DEBUG_NORMAL);
@@ -139,7 +139,6 @@ int main_init (int argc, char ** const argv) {
                                  "main_shutdown_remove", NULL,
                                  IMMEDIATE_FAMILY);
 		
-	cout<<"Here   2"<<endl;
     debug_progname = basename(argv[0]);
     debug_level = DEBUG_NORMAL;  // Default debug level is normal output
 
@@ -149,7 +148,7 @@ int main_init (int argc, char ** const argv) {
     for (i = 0 ; i < argc ; i++) {
         debug_printf( DEBUG_NORMAL, "argv[%d] == \"%s\"\n", i, argv[i] );
     }
-	cout<<"Here   3	"<<endl;	
+
     if (argc < 2) Usage();  //  Make sure an input file was specified
 
 	// get dagman job id from environment
@@ -157,7 +156,7 @@ int main_init (int argc, char ** const argv) {
 	if( DAGManJobId == NULL ) {
 		DAGManJobId = strdup( "unknown (requires condor_schedd >= v6.3)" );
 	}
-	cout<<"Here   4"<<endl;	
+
     //
     // Process command-line arguments
     //
@@ -174,7 +173,7 @@ int main_init (int argc, char ** const argv) {
             if (argc <= i) {
                 debug_printf( DEBUG_SILENT, "No condor log specified" );
                 Usage();
-            }
+           }
             condorLogName = argv[i];
         } else if (!strcmp("-Lockfile", argv[i])) {
             i++;
