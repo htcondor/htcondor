@@ -14,6 +14,7 @@
 #include "CondorPrefExps.h"
 #include "condor_io.h"
 #include "condor_classad.h"
+#include "condor_attributes.h"
 
 #include "resource.h"
 #include "resmgr.h"
@@ -510,7 +511,7 @@ command_startjob(Sock *sock,struct sockaddr_in* from, resource_id_t rid,
 	 * TODO: store universe in resource parameters; extract one level up.
 	 */
 
-	sprintf(tmp,"JobUniverse=%d",universe);
+	sprintf(tmp,"%s=%d",ATTR_JOB_UNIVERSE, universe);
 	(rip->r_context)->Insert(tmp);
 
 	ji.ji_hname = hp->h_name;
@@ -620,7 +621,7 @@ MatchInfo(resource_info_t* rip, char* str)
    */
   if (rip->r_capab) {
     dprintf(D_PROTOCOL | D_FULLDEBUG,
-	    "Capability (%s) has %d seconds before timing out",
+	    "Capability (%s) has %d seconds before timing out\n",
 	    rip->r_capab,
 	    capab_timeout - (time(NULL) - rip->r_captime));
     dprintf(D_ALWAYS, "Throw match (%s) away.\n", str);
@@ -717,8 +718,6 @@ command_reqservice(Sock *sock, struct sockaddr_in* from, resource_id_t rid)
 		if (!CondorPendingJobs::AreTherePendingJobs(rid)&&(rip->r_capab != NULL && !strcmp(rip->r_capab, check_string)))
 		{
 			rip->r_claimed = TRUE;
-			sock->end_of_message();
-			sock->encode();
 			cmd = OK;
 			dprintf(D_ALWAYS, "Request accepted.\n");
 		} 
@@ -730,8 +729,6 @@ command_reqservice(Sock *sock, struct sockaddr_in* from, resource_id_t rid)
 		  if(PendingJobCapab && !strcmp(PendingJobCapab,check_string))
 		  {
 		    rip->r_claimed = TRUE;
-			sock->end_of_message();
-			sock->encode();
 		    cmd = OK;
 		    dprintf(D_ALWAYS, "Request accepted for job on hold.\n");
 		  } 
@@ -760,6 +757,8 @@ command_reqservice(Sock *sock, struct sockaddr_in* from, resource_id_t rid)
 			CondorPendingJobs::DequeueJob();
 		}
 
+		sock->end_of_message();
+		sock->encode();
 		if (!sock->code(cmd)) {
 			dprintf(D_ALWAYS, "Failed to send cmd to agent.\n");
 			return -1;
