@@ -18,8 +18,11 @@ STATIC_PVM	=	../static_pvm
 
 SSL_DIR		=	/p/condor/workspaces/ssl
 SSL_LIB		=	$(SSL_DIR)/lib
+SSL_INC		=	$(SSL_DIR)/include
 GLOBUS_DIR	=	/p/condor/workspaces/globus
 GLOBUS_LIB	=	$(GLOBUS_DIR)/lib
+GLOBUS_INC	=	$(GLOBUS_DIR)/include
+
 AUTH_LIB	=	-L$(GLOBUS_LIB) -l globus_gss_assist -lglobus_gss \
 			-L$(SSL_LIB) -lssl -lcrypto \
 			-lresolv
@@ -128,7 +131,8 @@ DEBUG_FLAG = -g
 
 STD_C_PLUS_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
  -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) \
- SigFlag CompatFlags UidFlags $(DEBUG_FLAG) PlatformFlags
+ SigFlag CompatFlags UidFlags $(DEBUG_FLAG) PlatformFlags \
+ -I$(SSL_INC) -I$(GLOBUS_INC)
 
 STD_C_FLAGS = $(STD_C_PLUS_FLAGS)
 
