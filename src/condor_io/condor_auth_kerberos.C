@@ -35,10 +35,12 @@ const char STR_KRB_FORMAT[]             = "FILE:%s/krb_condor_%s.stash";
 const char STR_DEFAULT_CONDOR_SERVICE[] = "host";
 const char STR_CONDOR_CACHE_PREFIX[]    = "krb_condor_";
 
+#define KERBEROS_ABORT   -1
 #define KERBEROS_DENY    0
 #define KERBEROS_GRANT   1
 #define KERBEROS_FORWARD 2
 #define KERBEROS_MUTUAL  3
+#define KERBEROS_PROCEED 4
 
 //----------------------------------------------------------------------
 // Kerberos Implementation
@@ -103,7 +105,7 @@ int Condor_Auth_Kerberos :: authenticate(const char * remoteHost)
     //MUST do this even on server side, since client side might call
     
     int time = mySock_->timeout(60 * 5); 
-    int status = 0;          // Default is false
+    int status = 0;
     char * principal = NULL;
     
     //------------------------------------------
@@ -155,19 +157,43 @@ int Condor_Auth_Kerberos :: authenticate(const char * remoteHost)
             }
         }
         
+        mySock_->encode();
+        dprintf(D_ALWAYS, "status is %d\n", status);
         if (status) {
+            // We are ready to go
+            mySock_->code(KERBEROS_PROCEED);
+            mySock_->end_of_message();
             status = authenticate_client_kerberos();
+        }
+        else {
+            // abort!
+            mySock_->code(KERBEROS_ABORT);
+            mySock_->end_of_message();
         }
     }
     else {
+        int ready;
+        server_acquire_credential();
+
         keytabName_ = param(STR_CONDOR_SERVER_KEYTAB);
-        dprintf(D_ALWAYS,"About to authenticate client using Kerberos\n" );
-        status = authenticate_server_kerberos();
+
+        mySock_->decode();
+        if (!mySock_->code(ready) || !mySock_->end_of_message()) {
+            status = FALSE;
+        }
+        else {
+            if (ready == KERBEROS_PROCEED) {
+                dprintf(D_ALWAYS,"About to authenticate client using Kerberos\n" );
+                status = authenticate_server_kerberos();
+            }
+            else {
+                status = FALSE;
+            }
+        }
     }
     
     mySock_->timeout(time); //put it back to what it was before
     
-    dprintf(D_ALWAYS, "Successfull!\n");
     return( status );
 }
 
@@ -473,6 +499,8 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
     krb5_ccache            ccdef = (krb5_ccache) NULL;
     int                    reply, rc = FALSE;
     
+    request.data = 0;
+    request.length = 0;
     //------------------------------------------
     // Set up the flags
     //------------------------------------------
@@ -577,8 +605,11 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
     goto cleanup;
     
  error:
-    
     dprintf(D_ALWAYS, "%s\n", error_message(code));
+    // Abort
+    mySock_->encode();
+    mySock_->code(KERBEROS_ABORT);
+    mySock_->end_of_message();
 
     rc = FALSE;
     
@@ -591,7 +622,7 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
     }
     
     if (request.data) {
-    free(request.data);
+        free(request.data);
     }
     
     krb5_cc_close(krb_context_, ccdef);
@@ -611,13 +642,6 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
 
     request.data = 0;
     reply.data   = 0;
-    
-    //------------------------------------------
-    // First, acquire credential
-    //------------------------------------------
-    if ( !server_acquire_credential() ) {
-        return rc;
-    }
     
     //------------------------------------------
     // Now, accept the connection
@@ -669,13 +693,12 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
         if (code = krb5_mk_rep(krb_context_, auth_context_, &reply)) {
             goto error;
         }
-        
-        message = KERBEROS_MUTUAL;
+
         mySock_->encode();
-        if (!(mySock_->code(message)) || !(mySock_->end_of_message())) {
-            goto cleanup;
+        if (!mySock_->code(KERBEROS_MUTUAL) || !mySock_->end_of_message()) {
+            goto error;
         }
-        
+
         // send the message
         if (send_request(&reply) != KERBEROS_GRANT) {
             goto cleanup;
@@ -702,16 +725,16 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
         goto cleanup;
     }
 
-    // Next, see if we need client to forward the credential as well
-    if (receive_tgt_creds(ticket)) {
-        goto cleanup;
-    }
-    
     // copy the session key
     if (code = krb5_copy_keyblock(krb_context_, 
                                   ticket->enc_part2->session, 
                                   &sessionKey_)){
         goto error;
+    }
+    
+    // Next, see if we need client to forward the credential as well
+    if (receive_tgt_creds(ticket)) {
+        goto cleanup;
     }
     
     //------------------------------------------
@@ -965,6 +988,7 @@ int Condor_Auth_Kerberos :: map_kerberos_name(krb5_ticket * ticket)
 int Condor_Auth_Kerberos :: send_request(krb5_data * request)
 {
     int reply = KERBEROS_DENY;
+    int message = KERBEROS_PROCEED;
     //------------------------------------------
     // Send the AP_REQ object
     //------------------------------------------
@@ -972,7 +996,7 @@ int Condor_Auth_Kerberos :: send_request(krb5_data * request)
     
     //fprintf(stderr, "size of the message is %d:\n", request->length);
     
-    if (!mySock_->code(request->length)) {
+    if (!mySock_->code(message) || !mySock_->code(request->length)) {
         dprintf(D_ALWAYS, "Faile to send request length\n");
         return reply;
     }
@@ -1190,22 +1214,32 @@ int Condor_Auth_Kerberos :: receive_tgt_creds(krb5_ticket * ticket)
     
 int Condor_Auth_Kerberos :: read_request(krb5_data * request)
 {
-    int code = TRUE;
+    int code = TRUE, message;
     
     mySock_->decode();
     
-    if (!mySock_->code(request->length)) {
-        dprintf(D_ALWAYS, "Incorrect message 1!\n");
-        code = FALSE;
+    if (!mySock_->code(message)) {
+        return FALSE;
     }
-    else {
-        request->data = (char *) malloc(request->length);
-        
-        if ((!mySock_->get_bytes(request->data, request->length)) ||
-            (!mySock_->end_of_message())) {
-            dprintf(D_ALWAYS, "Incorrect message 2!\n");
+
+    if (message == KERBEROS_PROCEED) {
+        if (!mySock_->code(request->length)) {
+            dprintf(D_ALWAYS, "Incorrect message 1!\n");
             code = FALSE;
         }
+        else {
+            request->data = (char *) malloc(request->length);
+            
+            if ((!mySock_->get_bytes(request->data, request->length)) ||
+                (!mySock_->end_of_message())) {
+                dprintf(D_ALWAYS, "Incorrect message 2!\n");
+                code = FALSE;
+            }
+        }
+    }
+    else {
+        mySock_->end_of_message();
+        code = FALSE;
     }
     
     return code;
