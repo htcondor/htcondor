@@ -198,6 +198,7 @@ class Scheduler : public Service
 	Queue<contactStartdArgs*> startdContactQueue;
 	void            checkContactQueue();
 	int             MAX_STARTD_CONTACTS;
+	int				checkContactQueue_tid;	// DC Timer ID to check queue
 	
 	// useful names
 	char*			CondorViewHost;
