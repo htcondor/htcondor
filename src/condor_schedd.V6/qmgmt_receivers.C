@@ -58,8 +58,18 @@ do_Q_request(ReliSock *syscall_sock)
 
 	case CONDOR_InitializeConnection:
 	{
+		bool authenticated = true;
+	
+			// Authenticate socket, if not already done by daemonCore
+		if( !syscall_sock->isAuthenticated() ) {
+			dprintf(D_SECURITY,"Calling authenticate() in qmgmt_receivers\n");
+			if( ! syscall_sock->authenticate() ) {
+					// Failed to authenticate
+				authenticated = false;
+			}
+		}
 
-		if ( syscall_sock->authenticate() ) {
+		if ( authenticated ) {
 			InitializeConnection( syscall_sock->getOwner() );			
 		} else {
 			InitializeConnection( NULL );			
