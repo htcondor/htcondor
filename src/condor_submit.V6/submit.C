@@ -1807,6 +1807,10 @@ SetEnvironment()
 	if ( shouldgetenv && ( shouldgetenv[0] == 'T' || shouldgetenv[0] == 't' ) )
  	{
 
+		// escape the double quote
+		MyString CHARS_TO_ESCAPE("\"");
+		char     ESCAPE_CHAR = '\\';
+
 		for (int i=0; environ[i]; i++) {
 
 			// ignore env settings that contain env_delimiter to avoid 
@@ -1827,7 +1831,12 @@ SetEnvironment()
 					} else {
 						newenv += env_delimiter_string;
 					}
-					newenv += environ[i];
+
+					// convert to a MyString for easy manipulation
+					MyString E = environ[i];
+
+					// escape any illegal chars
+					newenv += E.EscapeChars(CHARS_TO_ESCAPE, ESCAPE_CHAR);
 				}
 			}
 		}
@@ -3309,7 +3318,6 @@ InsertJobExpr (const char *expr, bool clustercheck)
 			exit( 1 );
 		}
 	}
-
 
 	delete tree;
 }
