@@ -299,11 +299,9 @@ Otherwise, identify the ClassAd corresponding to the scope, and re-evaluate.
 
 int Variable::_EvalTreeRecursive( char *name, const AttrList* my_classad, const AttrList* target_classad, EvalResult* val)
 {
-	ClassAd *other_classad;
 	char prefix[ATTRLIST_MAX_EXPRESSION];
 	char rest[ATTRLIST_MAX_EXPRESSION];
 	int fields;
-	int result;
 
 	if( !val || !name ) return FALSE;
 
@@ -321,6 +319,14 @@ int Variable::_EvalTreeRecursive( char *name, const AttrList* my_classad, const 
 			return _EvalTreeRecursive(rest,my_classad,target_classad,val);
 		} else if(!strcasecmp(prefix,"TARGET")) {
 			return _EvalTreeRecursive(rest,target_classad,my_classad,val);
+        }
+        /*
+         * This code has been deprecated. 
+         * It was written by Doug Thain for research relating to his
+         * paper titled "Gathering at the Well: Creating Communities for 
+         * Grid I/O". It hasn't been used since, and the fact that this 
+         * causes ClassAds to need to talk to Daemons is causing linking
+         * problems for libcondorapi.a, so we're just ditching it. 
 		} else {
 			ExprTree *expr;
 			char expr_string[ATTRLIST_MAX_EXPRESSION];
@@ -338,6 +344,7 @@ int Variable::_EvalTreeRecursive( char *name, const AttrList* my_classad, const 
 				}
 			}
 		}
+        */
 	} else {
 		return this->_EvalTreeSimple(rest,my_classad,target_classad,val);
 	}
