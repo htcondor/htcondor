@@ -1647,7 +1647,7 @@ output_switch( struct node *n )
 	}
 
 	if( Ignored ) {
-		printf("\t\t\treturn 0;\n");
+		printf("\t\t\trval = 0;\n");
 	} else {
 		output_remote_call(  n, n->param_list );
 	}
