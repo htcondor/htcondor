@@ -125,10 +125,10 @@ NEGOTIATOR    = $(SBIN)/condor_negotiator
 #COLLECTOR_SOCKET_CACHE_SIZE = 300
 
 ## Turn on update statistics in the collector.  These fields cause the
-## collectively turn on some statistics that the collector gathers about
-## lost updates.  All updates that are sent to the collector are now
+## collector to gather and publish some statistics about lost UDP
+## updates.  All updates that are sent to the collector will be
 ## stamped with a sequence number that the collector can use to detect
-## that previous updates have been missed.  Setting 
+## that previous updates have been missed.  Setting
 ## "COLLECTOR_DAEMON_STATS = True" enables the collector to publish
 ## UpdatesTotal, UpdatesSquenced and UpdatesLost fields into each ClassAd
 ## that it receives and sends out.  To turn these off, set this value
