@@ -911,6 +911,17 @@ int DestroyProc(int cluster_id, int proc_id)
 		}
 	}
 
+	int job_finished_hook_done = -1;
+	ad->LookupInteger( ATTR_JOB_FINISHED_HOOK_DONE, job_finished_hook_done );
+	if( job_finished_hook_done == -1 ) {
+			// our cleanup hook hasn't finished yet for this job.  so,
+			// we just want to add it to our queue of job ids to call
+			// the hook on and return immediately
+		scheduler.enqueueFinishedJob( cluster_id, proc_id,
+									  "DestroyProc() called" );
+		return 1;
+	}
+
 		// should we leave the job in the queue?
 	int leave_job_in_q = 0;
 	ad->EvalBool(ATTR_JOB_LEAVE_IN_QUEUE,NULL,leave_job_in_q);

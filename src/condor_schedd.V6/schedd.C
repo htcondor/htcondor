@@ -234,7 +234,8 @@ ContactStartdArgs::~ContactStartdArgs()
 
 
 Scheduler::Scheduler() :
-	job_is_finished_queue( "job_is_finished_queue", 1 )
+	job_is_finished_queue( "job_is_finished_queue", 1,
+						   &CondorID::ServiceDataCompare )
 {
 	ad = NULL;
 	MySockName = NULL;
@@ -2112,6 +2113,8 @@ jobIsFinishedDone( int cluster, int proc, void*, int )
 	dprintf( D_FULLDEBUG,
 			 "jobIsFinished() completed, calling DestroyProc(%d.%d)\n",
 			 cluster, proc );
+	SetAttributeInt( cluster, proc, ATTR_JOB_FINISHED_HOOK_DONE,
+					 (int)time(NULL) );
 	return DestroyProc( cluster, proc );
 }
 
@@ -10005,8 +10008,16 @@ Scheduler::jobIsFinishedHandler( ServiceData* data )
 bool
 Scheduler::enqueueFinishedJob( int cluster, int proc, const char* reason )
 {
-	dprintf( D_FULLDEBUG, "Job %d.%d is finished: %s\n", cluster, proc, 
-			 reason );
 	CondorID* id = new CondorID( cluster, proc, -1 );
-	return job_is_finished_queue.enqueue( id );
+	bool rval = job_is_finished_queue.enqueue( id, false );
+	if( rval ) { 
+		dprintf( D_FULLDEBUG, "Job %d.%d is finished: %s\n",
+				 cluster, proc, reason );
+	} else {
+		dprintf( D_FULLDEBUG, "enqueueFinishedJob(): job %d.%d already "
+				 "in queue to run jobIsFinished()\n", cluster, proc );
+		delete id;
+		id = NULL;
+	}
+	return rval;
 }

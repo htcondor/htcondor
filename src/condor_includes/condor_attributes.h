@@ -181,6 +181,7 @@ const char ATTR_JOB_SPOOL_EXECUTABLE	 [] = "SpoolExecutable";
 const char ATTR_JOB_EXIT_STATUS			 [] = "ExitStatus";
 const char ATTR_JOB_EXIT_REQUIREMENTS	 [] = "ExitRequirements";
 const char ATTR_JOB_ID					 [] = "JobId";
+const char ATTR_JOB_FINISHED_HOOK_DONE   [] = "JobFinishedHookDone";
 const char ATTR_JOB_INPUT				 [] = "In";
 const char ATTR_JOB_IWD					 [] = "Iwd";
 const char ATTR_JOB_JAVA_VM_ARGS         [] = "JavaVMArgs";
