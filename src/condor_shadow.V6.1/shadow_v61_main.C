@@ -30,14 +30,15 @@
 #include "condor_debug.h"
 #include "condor_attributes.h"
 #include "condor_qmgr.h"
+#include "shadow_initializer.h"
 
-BaseShadow *Shadow;
+BaseShadow *Shadow = NULL;
+ShadowInitializer *shad_init = NULL;
 
 static void
 usage()
 {
-	printf( "Usage: condor_shadow schedd_addr host"
-			 "capability cluster proc\n" );
+	printf( "Usage: condor_shadow schedd_addr host capability cluster proc\n" );
 	exit( JOB_SHADOW_USAGE );
 }
 
@@ -94,75 +95,25 @@ main_init(int argc, char *argv[])
 							(ReaperHandler)&dummy_reaper,
 							"dummy_reaper",NULL);
 
-		// We have to figure out what sort of shadow to make.
-		// That's why so much processing goes on here....
-
-		// Get the jobAd from the schedd:
-	ClassAd *jobAd = NULL;
-	char schedd_addr[128];
-	int cluster, proc;
-	strncpy ( schedd_addr, argv[1], 128 );
-	cluster = atoi(argv[4]);
-	proc = atoi(argv[5]);
-
-		// talk to the schedd to get job ad & set remote host:
-	if (!ConnectQ(schedd_addr, SHADOW_QMGMT_TIMEOUT, true)) {
-		EXCEPT("Failed to connect to schedd!");
+	/* Get the job ad and figure what kind of shadow to instantiate. */
+	shad_init = new ShadowInitializer(argc, argv);
+	if (shad_init == NULL)
+	{
+		EXCEPT("Out of memory in main_init()!");
 	}
-	jobAd = GetJobAd(cluster, proc);
-	DisconnectQ(NULL);
-	if (!jobAd) {
-		dprintf( D_ALWAYS, "errno: %d\n", errno );
-		EXCEPT("Failed to get job ad from schedd.");
-	}
-
-		// For debugging, see if there's a special attribute in the
-		// job ad that sends us into an infinite loop, waiting for
-		// someone to attach with a debugger
-	int shadow_should_wait = 0;
-	jobAd->LookupInteger( ATTR_SHADOW_WAIT_FOR_DEBUG,
-						  shadow_should_wait );
-	if( shadow_should_wait ) {
-		dprintf( D_ALWAYS, "Job requested shadow should wait for "
-				 "debugger with %s=%d, going into infinite loop\n",
-				 ATTR_SHADOW_WAIT_FOR_DEBUG, shadow_should_wait ); 
-		while( shadow_should_wait );
-	}
-
-	int universe;
-	if (jobAd->LookupInteger(ATTR_JOB_UNIVERSE, universe) < 0) {
-			// change to standard when they work...
-		universe = CONDOR_UNIVERSE_VANILLA;
-	}
-	
-	dprintf(D_ALWAYS,"Starting shadow for universe %s\n",CondorUniverseName(universe));
-
-	switch ( universe ) {
-	case CONDOR_UNIVERSE_VANILLA:
-	case CONDOR_UNIVERSE_STANDARD:
-	case CONDOR_UNIVERSE_JAVA:
-		Shadow = new UniShadow();
-		break;
-	case CONDOR_UNIVERSE_MPI:
-		Shadow = new MPIShadow();
-		break;
-	case CONDOR_UNIVERSE_PVM:
-		EXCEPT( "PVM...hopefully one day..." );
-//		Shadow = new PVMShadow();
-		break;
-	default:
-		dprintf ( D_ALWAYS, "I don't support universe %d (%s)\n", universe, CondorUniverseName(universe) );
-		EXCEPT( "Universe not supported" );
-	}
-
-	Shadow->init( jobAd, argv[1], argv[2], argv[3], argv[4], argv[5]);
-
+	shad_init->Bootstrap();
 	return 0;
 }
 
 int
 main_config( bool is_full )
 {
+	if (Shadow == NULL)
+	{
+		dprintf(D_ALWAYS,
+			"Failed to config shadow because it is of unknown type.\n");
+		return 0;
+	}
 	Shadow->config();
 	return 0;
 }
@@ -170,6 +121,12 @@ main_config( bool is_full )
 int
 main_shutdown_fast()
 {
+	if (Shadow == NULL)
+	{
+		dprintf(D_ALWAYS,
+			"Failed to fast shutdown shadow because it is of unknown type.\n");
+		return 0;
+	}
 	Shadow->shutDown(JOB_NOT_CKPTED, 0);
 	return 0;
 }
