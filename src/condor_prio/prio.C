@@ -37,6 +37,7 @@
 #include "condor_constants.h"
 #include "condor_debug.h"
 #include "condor_config.h"
+#include "condor_attributes.h"
 #include "filter.h"
 #include "alloc.h"
 
@@ -203,14 +204,14 @@ extern "C" int SetSyscalls( int foo ) { return foo; }
 void UpdateJobAd(int cluster, int proc)
 {
 	int old_prio, new_prio;
-	if (GetAttributeInt(cluster, proc, "Prio", &old_prio) < 0)
+	if (GetAttributeInt(cluster, proc, ATTR_JOB_PRIO, &old_prio) < 0)
 	{
 		fprintf(stderr, "Couldn't retrieve current prio for %d.%d.\n",
 				cluster, proc);
 		return;
 	}
 	new_prio = calc_prio( old_prio );
-	SetAttributeInt(cluster, proc, "Prio", new_prio);
+	SetAttributeInt(cluster, proc, ATTR_JOB_PRIO, new_prio);
 }
 
 void ProcArg(const char* arg)
@@ -230,14 +231,18 @@ void ProcArg(const char* arg)
 		if(*tmp == '\0')
 		// update prio for all jobs in the cluster
 		{
-			int next_cluster = cluster;
-			proc = -1;
-			while(next_cluster == cluster) {
-				if (GetNextJob(cluster, proc, &next_cluster, &proc) < 0) {
-					return;
-				}
+			ClassAd	*ad = new ClassAd;
+			char constraint[100];
+			sprintf(constraint, "%s == %d", ATTR_CLUSTER_ID, cluster);
+			int firstTime = 1;
+			while(GetNextJobByConstraint(constraint, ad, firstTime) >= 0) {
+				ad->LookupInteger(ATTR_PROC_ID, proc);
+				delete ad;
+				ad = new ClassAd;
 				UpdateJobAd(cluster, proc);
+				firstTime = 0;
 			}
+			delete ad;
 			return;
 		}
 		if(*tmp == '.')
@@ -259,27 +264,38 @@ void ProcArg(const char* arg)
 		}
 		fprintf(stderr, "Warning: unrecognized \"%s\" skipped\n", arg);
 	}
-	else if(isalpha(*arg) || (arg[0] == '-' && arg[1] == 'a'))
+	else if(arg[0] == '-' && arg[1] == 'a')
+	{
+		ClassAd *ad = new ClassAd;
+		int firstTime = 1;
+		while(GetNextJob(ad, firstTime) >= 0) {
+			ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
+			ad->LookupInteger(ATTR_PROC_ID, proc);
+			delete ad;
+			ad = new ClassAd;
+			UpdateJobAd(cluster, proc);
+			firstTime = 0;
+		}
+		delete ad;
+	}
+	else if(isalpha(*arg))
 	// update prio by user name
 	{
-		char	owner[1000];
+		char	constraint[100];
+		ClassAd	*ad = new ClassAd;
+		int firstTime = 1;
+		
+		sprintf(constraint, "%s == \"%s\"", ATTR_OWNER, arg);
 
-		cluster = proc = -1;
-		while (GetNextJob(cluster, proc, &cluster, &proc) >= 0) {
-			if (arg[0] == '-' && arg[1] == 'a') {
-				UpdateJobAd(cluster, proc);
-			}
-			else {
-				if (GetAttributeString(cluster, proc, "Owner", owner) < 0) {
-					fprintf(stderr, "Couldn't retrieve owner attribute for "
-							"%d.%d\n", cluster, proc);
-					return;
-				}
-				if (strcmp(owner, arg) == MATCH) {
-					UpdateJobAd(cluster, proc);
-				}
-			}
+		while (GetNextJobByConstraint(constraint, ad, firstTime) >= 0) {
+			ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
+			ad->LookupInteger(ATTR_PROC_ID, proc);
+			delete ad;
+			ad = new ClassAd;
+			UpdateJobAd(cluster, proc);
+			firstTime = 0;
 		}
+		delete ad;
 	}
 	else
 	{
