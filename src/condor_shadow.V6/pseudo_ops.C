@@ -1634,7 +1634,7 @@ pseudo_sync()
    Specify checkpoint server host.
 */
 int
-pseudo_choose_ckpt_server(const char *host)
+pseudo_register_ckpt_server(const char *host)
 {
 	if (StarterChoosesCkptServer) {
 		if (CkptServerHost) free(CkptServerHost);

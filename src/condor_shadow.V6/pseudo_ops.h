@@ -28,7 +28,7 @@ BEGIN_C_DECLS
 
 int pseudo_register_arch( const char *arch );
 int pseudo_register_opsys( const char *opsys );
-int pseudo_choose_ckpt_server( const char *host );
+int pseudo_register_ckpt_server( const char *host );
 int pseudo_get_ckpt_mode( int sig );
 int pseudo_getppid();
 int pseudo_getpid();

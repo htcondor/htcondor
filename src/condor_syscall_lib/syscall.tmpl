@@ -577,7 +577,7 @@ int rename( const char *from, const char *to ) : pseudo {
 		alloc( port_num, U_SHORT_SIZE );
 	}
 
-	int choose_ckpt_server( const char *host ): pseudo {
+	int register_ckpt_server( const char *host ): pseudo {
 		SEND_PATH( host );
 		ALLOC_PATH( host );
 	}
