@@ -256,10 +256,10 @@ XInterface::Connect()
 		}
 	}
 	int fclose_ret = fclose( utmp_fp );
- 	if ( !fclose_ret ) {
-		EXCEPT("fclose of \"%s\" (or \"%s\") failed!"
+ 	if( fclose_ret ) {
+		EXCEPT("fclose of \"%s\" (or \"%s\") failed!\n"
 			"This message brought to you by the fatal error %d",
-			UtmpName, AltUtmpName, fclose_ret);
+			UtmpName, AltUtmpName, errno);
 	}
 
 
