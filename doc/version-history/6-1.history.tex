@@ -45,6 +45,25 @@ memory and result in a signal 11 (SIGSEGV, or segmentation violation).
 \item Fixed a bug that would cause the ``execute event'' to not be
 logged to the UserLog if the binary for the job resided on AFS.
 
+\item Fixed a race-condition in Condor's PVM support on SMP machines
+(introduced in version 6.1.16) that caused PVM tasks to be associated
+with the wrong daemon.
+
+\item Fixed a bug in the job completion email statistics.
+Run Time was being underreported when the job completed after doing a
+periodic checkpoint.
+
+\item Fixed a bug that caused CondorLoadAvg to get stuck at 0.0 on
+Linux when the system clock was adjusted.
+
+\item Fixed a \Condor{submit} bug that caused all machine\_count
+commands after the first queue statement to be ignored for PVM jobs.
+
+\item PVM tasks now run as the user when appropriate instead of always
+running under the UNIX ``nobody'' account.
+
+\item Fixed support for the PVM group server.
+
 \end{itemize}
 
 \noindent Known Bugs:
