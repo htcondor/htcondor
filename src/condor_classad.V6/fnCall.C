@@ -629,7 +629,7 @@ makeDate( char*, ArgumentList &argList, EvalState &state, Value &val )
 
 		// the second argument must be integer or string
 	if( arg1.IsIntegerValue( mm ) ) {
-		if( snprintf( buffer, 64, "%d %d %d", dd, mm, yy ) > 63 ||
+		if( sprintf( buffer, "%d %d %d", dd, mm, yy ) > 63 ||
 			strptime( buffer, "%d %m %Y", &tms ) == NULL ) {
 			val.SetErrorValue( );
 			return( true );
