@@ -174,6 +174,13 @@ ConsumeToken(Token *token)
 	}
 	token_is_valid = false;
 
+    /*
+    if (have_token) {
+        printf("Consuming token: ");
+        current_token.DumpToken();
+    }
+    */
+
 	return have_token;
 }
 
@@ -193,6 +200,10 @@ PeekToken(Token *token)
 			*token = current_token;
 		}
 		token_is_valid = true;
+        /*
+        printf("Peeking token: ");
+        current_token.DumpToken();
+        */
 	}
 	return have_token;
 }
