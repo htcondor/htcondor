@@ -45,9 +45,9 @@ The commands which can appear in the submit-description file are:
 \item[executable = $<$name$>$]The name of the executable file for this
 job cluster. Only one executable command may be present in a description
 file. If submitting into the Standard Universe, which is the default,
-then the named executable must have been relinked with the Condor
+then the named executable must have been re-linked with the Condor
 libraries (such as via the \Condor{compile} command). If submitting into
-the Vanilla Universe, then the named executable need not be relinked and
+the Vanilla Universe, then the named executable need not be re-linked and
 can be any process which can run in the background (shell scripts work
 fine as well). 
 
@@ -94,7 +94,7 @@ to the program on the command line.
 %%%%%%%%%%%%%%%%%%%
 
 \item[initaldir = $<$directory-path$>$] Used to specify the current
-working directory for the Condor job. Should be a path to a prexisting
+working directory for the Condor job. Should be a path to a preexisting
 directory. If not specified, \Condor{submit} will automatically insert
 the user's current working directory at the time \Condor{submit} was run
 as the value for \Opt{initialdir}. 
@@ -108,7 +108,7 @@ command is a boolean ClassAd expression which uses C\-like operators. In
 order for any job in this cluster to run on a given machine, this
 requirements expression must evaluate to true on the given machine. For
 example, to require that whatever machine executes your program has a
-least 64 megs of RAM and has a MIPS performance rating greater than 45,
+least 64 Meg of RAM and has a MIPS performance rating greater than 45,
 use: 
 \begin{verbatim}
         requirements = Memory >= 64 && Mips > 45
@@ -215,7 +215,7 @@ of the form :
 \begin{verbatim}
         <parameter> = <value>
 \end{verbatim}
-Multiple environment variables can be specified by seperating them with a
+Multiple environment variables can be specified by separating them with a
 semicolon (`` ; ''). These environment variables will be placed into the
 job's environment before execution. The length of all characters
 specified in the environment is currently limited to 4096 characters. 
@@ -238,7 +238,7 @@ handy; its use is recommended.
 \item[universe = $<$vanilla \Bar\ standard \Bar\ pvm \Bar\ scheduler$>$] Specifies 
 which Condor Universe to use when running this job.  The Condor Universe
 specifies a Condor execution environment.  The \Arg{standard} Universe
-is the default, and tells Condor that this job has been relinked via
+is the default, and tells Condor that this job has been re-linked via
 \Condor{compile} with the Condor libraries and therefore supports
 checkpointing and remote system calls.  The \Arg{vanilla} Universe is an
 execution environment for jobs which have not been linked with the
@@ -295,11 +295,11 @@ becomes available to Condor, Condor decides which job to run based upon
 user and job priorities. Setting \Opt{nice\_user} equal to \Arg{True}
 tells Condor not to use your regular user priority, but that this job
 should have last priority amongst all users and all jobs. So jobs
-submitted in this fasion run only on machines which no other
+submitted in this fashion run only on machines which no other
 non-nice\_user job wants --- a true ``bottom-feeder'' job! This is very
 handy if a user has some jobs they wish to run, but do not wish to use
 resources they could instead be used to run other people's Condor jobs. Jobs
-submitted in this fasion have ``nice-user.'' pre-appended in front of
+submitted in this fashion have ``nice-user.'' pre-appended in front of
 the owner name when viewed from \Condor{q} or \Condor{userprio}.  The
 default value if \Arg{False}.
 
@@ -353,7 +353,7 @@ Condor process with its own cluster and process numbers on the command
 line. 
 
 \item[Comments] Blank lines and lines beginning with a '\#' (pound-sign)
-chracater are ignored by the submit-description file parser. 
+character are ignored by the submit-description file parser. 
 
 \end{description}
 
