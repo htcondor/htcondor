@@ -8,7 +8,6 @@
 #include <malloc.h>
 
 #include "condor_debug.h"
-#include "except.h"
 #include "condor_sysparam.h"
 
 // C definitions

@@ -4,7 +4,6 @@
 
 
 #include "condor_debug.h"
-#include "except.h"
 #include "condor_sysparam.h"
 #include "_condor_fix_resource.h"
 
