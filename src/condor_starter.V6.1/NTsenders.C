@@ -98,6 +98,36 @@ REMOTE_CONDOR_get_job_info(ClassAd *ad)
 	return rval;
 }
 
+
+int
+REMOTE_CONDOR_get_user_info(ClassAd *ad)
+{
+	condor_errno_t		terrno;
+	int		rval=-1;
+
+	dprintf ( D_SYSCALLS, "Doing CONDOR_get_user_info\n" );
+
+	CurrentSysCall = CONDOR_get_user_info;
+
+	syscall_sock->encode();
+	assert( syscall_sock->code(CurrentSysCall) );
+	assert( syscall_sock->end_of_message() );
+
+	syscall_sock->decode();
+	assert( syscall_sock->code(rval) );
+	if( rval < 0 ) {
+		assert( syscall_sock->code(terrno) );
+		assert( syscall_sock->end_of_message() );
+		errno = terrno;
+		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		return rval;
+	}
+	assert( ad->initFromStream(*syscall_sock) );
+	assert( syscall_sock->end_of_message() );
+	return rval;
+}
+
+
 #if 0
 int
 REMOTE_CONDOR_get_executable(char *destination)
