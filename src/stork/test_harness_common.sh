@@ -14,13 +14,16 @@ LEAK_TESTS=false	# run memory leak tests.  implies MEM_TESTS
 # Optional memory debugger harness. Uncomment VALGRIND definition to enable
 # memory debugging.
 VALGRIND=~nleroy/local/bin/valgrind		# FIXME
+#VALGRIND_OPTS="$VALGRIND_OPTS --verbose"
 VALGRIND_OPTS="$VALGRIND_OPTS --tool=addrcheck"
 VALGRIND_OPTS="$VALGRIND_OPTS --time-stamp=yes"
 #VALGRIND_OPTS="$VALGRIND_OPTS --trace-children=yes"
 #VALGRIND_OPTS="$VALGRIND_OPTS --show-below-main=yes"
 VALGRIND_OPTS="$VALGRIND_OPTS --num-callers=60"
-#VALGRIND_OPTS="$VALGRIND_OPTS -v"
 VALGRIND_LEAK_OPTS="$VALGRIND_LEAK_OPTS --leak-check=yes"
+#VALGRIND_OPTS="$VALGRIND_OPTS --gen-suppressions=yes" # blocking promtp to tty
+VALGRIND_LEAK_SUPPRESS=vg_leak.supp
+VALGRIND_OPTS="$VALGRIND_OPTS --suppressions=$VALGRIND_LEAK_SUPPRESS"
 #VALGRIND_LEAK_OPTS="$VALGRIND_LEAK_OPTS --show-reachable=yes"	#too noisy
 #VALGRINDCMD="$VALGRIND $VALGRIND_OPTS"
 
@@ -39,8 +42,6 @@ CRED_STORE_OPTS="$CRED_STORE_OPTS -t x509"
 
 
 PERL=perl	# Perl program
-PERL_GLOBUS_BIN_FIND='/^\s*globus_bin_dir\s*=\s*"(\S+)"\s*/ && print $1,"\n"'
-PERL_GLOBUS_LIB_FIND='/^\s*ld_library_path\s*=\s*"(\S+)"\s*/ && print $1,"\n"'
 PERL_PROXY_PATH_FIND='/^path\s+:\s+(\S+)/ && print $1,"\n"'
 
 GRID_PROXY_INFO="grid-proxy-info"
@@ -104,13 +105,31 @@ register_log_file () {
 
 register_memory_error_file () {
 	if $MEMORY_TESTS; then
-		MEM_ERR_FILES="$MEM_ERR_FILES $1"
+		MEM_ERR_FILES="$MEM_ERR_FILES $TESTDIR/$1"
 	fi
 }
 
 register_memory_leak_file () {
 	if $LEAK_TESTS; then
-		MEM_LEAK_FILES="$MEM_LEAK_FILES $1"
+		MEM_LEAK_FILES="$MEM_LEAK_FILES $TESTDIR/$1"
+	fi
+}
+
+suppress_known_leaks () {
+	if $LEAK_TESTS; then
+		echo leak report supression file $TESTDIR/$VALGRIND_LEAK_SUPPRESS
+		# Create a Valgrind leak suppression file for false leaks, or leaks we
+		# don't want to hear about.
+		cat <<EOF >$VALGRIND_LEAK_SUPPRESS
+{
+   Alleged SOAP memory leak
+   Addrcheck:Leak
+   fun:malloc
+   fun:soap_register_plugin_arg
+   fun:_ZN10DaemonCore14InitHTTPSocketEi
+   fun:main
+}
+EOF
 	fi
 }
 
@@ -128,7 +147,9 @@ err
 fail
 EOF
 	grep_exclude=log-exclude.grep
-	touch $grep_exclude
+	cat <<EOF >$grep_exclude
+module standard error redirected to
+EOF
 	if $MEMORY_TESTS && [ `uname -s` = "Linux" ] ; then
 		# This error occurs when running daemons from under valgrind
 		cat <<EOF >>$grep_exclude
@@ -340,6 +361,7 @@ setup_common () {
 	if $MEMORY_TESTS; then
 		echo memory tests are enabled
 		MEMTEST="$VALGRIND $VALGRIND_OPTS"
+
 	else
 		echo memory tests are disabled
 	fi

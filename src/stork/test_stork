@@ -16,6 +16,7 @@ CREDD_TESTS=false		# run CredD interface tests
 
 STORKD_HOST=`hostname`	# stork_server host
 STORKD_START_DELAY=4	# daemon startup/shutdown delay
+STORKD_RECONFIG_DELAY=2	# daemon reconfig delay
 FILE_FILE_TO=10			# file->file xfer timeout
 GSI_TO=30				# GSI xfer timeout
 
@@ -28,23 +29,31 @@ STORKD_PORT=`next_port`
 STORKD_HOST_PORT="${STORKD_HOST}:${STORKD_PORT}"
 STORKD_OPTS="$STORKD_OPTS -p $STORKD_PORT"
 STORKD_OPTS="$STORKD_OPTS -f"
-DAP_XFER_FILE_FILE=DaP.transfer.file-file
+DAP_XFER_FILE_FILE=stork.transfer.file-file
 
 # stork_q invocation
 STORK_Q=stork_q
-STORK_Q_OPTS=$STORKD_HOST_PORT
+STORK_Q_OPTS=
+STORK_Q_OPTS="$STORK_Q_OPTS -debug"
+STORK_Q_OPTS="$STORK_Q_OPTS $STORKD_HOST_PORT"
 
 #stork_submit invocation
 STORK_SUBMIT=stork_submit
-STORK_SUBMIT_OPTS=$STORKD_HOST_PORT
+STORK_SUBMIT_OPTS=
+STORK_SUBMIT_OPTS="$STORK_SUBMIT_OPTS -debug"
+STORK_SUBMIT_OPTS="$STORK_SUBMIT_OPTS $STORKD_HOST_PORT"
 
 #stork_status invocation
 STORK_STATUS=stork_status
-STORK_STATUS_OPTS=$STORKD_HOST_PORT
+STORK_STATUS_OPTS=
+STORK_STATUS_OPTS="$STORK_STATUS_OPTS -debug"
+#STORK_STATUS_OPTS="$STORK_STATUS_OPTS $STORKD_HOST_PORT"
 
 #stork_rm invocation
 STORK_RM=stork_rm
-STORK_RM_OPTS=$STORKD_HOST_PORT
+STORK_RM_OPTS=
+STORK_RM_OPTS="$STORK_RM_OPTS -debug"
+STORK_RM_OPTS="$STORK_RM_OPTS $STORKD_HOST_PORT"
 
 TERMCAP=/etc/termcap
 
@@ -74,10 +83,10 @@ parse_cmd() {
 		case $1 in 
 			-d|-debug|--debug)
 				set -x
-				local _DEBUG="D_FULLDEBUG D_SECURITY D_COMMAND D_IO"
+				local _DEBUG="D_FULLDEBUG D_SECURITY D_COMMAND D_IO D_HOSTNAME"
 				export _CONDOR_CREDD_DEBUG=$_DEBUG
-				export _STORK_DEBUG=$_DEBUG
-				export _TOOL_DEBUG=$_DEBUG
+				export _CONDOR_STORK_DEBUG=$_DEBUG
+				export _CONDOR_TOOL_DEBUG=$_DEBUG
 				;;
 			-a|-all|--all) parse_cmd -stork -gsi -leak -credd;;
 			-stork) STORK_CORE_TESTS=true ;;
@@ -153,40 +162,19 @@ setup() {
 	# Verify X509PROXY
 	$X509PROXY_REQD && x509proxy
 
-	# Parse Globus locations from etc/stork.config file.  This is a shakey
-	# method, but it's all we have, for now.
-	etc=`dirname $CONDOR_CONFIG`
-	STORK_CONFIG="$etc/stork.config"
-	echo parsing $STORK_CONFIG
-	[ -r $STORK_CONFIG ] || fatal $STORK_CONFIG file is not readable
-
-	if $GLOBUS_TESTS; then
-		GLOBUS_BIN=`$PERL -ne "$PERL_GLOBUS_BIN_FIND" $STORK_CONFIG`
-		if [ -d $GLOBUS_BIN ]; then
-			export PATH="$GLOBUS_BIN:$PATH"
-		else
-			fatal globus_bin_dir directory not found in $STORK_CONFIG
-		fi
-		GLOBUS_LIB=`$PERL -ne "$PERL_GLOBUS_LIB_FIND" $STORK_CONFIG`
-		if [ -d $GLOBUS_LIB ]; then
-			export LD_LIBRARY_PATH="$GLOBUS_LIB:$LD_LIBRARY_PATH"
-		else
-			fatal globus_bin_dir directory not found in $STORK_CONFIG
-		fi
-	fi
-
 	# Create a unique test subdirectory, from current directory. Change to new
 	# test subdirectory.
 	cd_test_dir
 	#Create credential subdirectory
 	cred_dir || exit 1
+	# Suppress known memory leaks
+	suppress_known_leaks
 }
 
 # start stork daemon
 storkd () {
 	name="$1"; shift;
 	STORKD_OPTS="$STORKD_OPTS -Serverlog $TESTDIR/Stork"
-	STORKD_OPTS="$STORKD_OPTS -Config $STORK_CONFIG"
 	cmd="$STORKD $STORKD_OPTS"
 	echo starting $cmd ...
 	test_announce "$name"
@@ -201,6 +189,21 @@ storkd () {
 	test_status $status
 	if [ $status -ne 0 ];then
 		error $cmd failed
+	fi
+	return $status
+}
+
+# Test daemon reconfig
+reconfig () {
+	name="$1"; shift;
+	test_announce "$name"
+	kill -s SIGHUP $STORKD_PID
+	sleep $STORKD_RECONFIG_DELAY
+	grep --silent RECONFIGURING `condor_config_val STORK_LOG`
+	status=$?
+	test_status $status
+	if [ $status -ne 0 ]; then
+		error reconfig failed
 	fi
 	return $status
 }
@@ -256,11 +259,97 @@ stork_q_1dap() {
 }
 
 # stork_status should see one dap job
-stork_1status() {
+# specify host:port using heritage command line positional paramter
+stork_1status_heritage_hostport() {
 	name="$1"; shift;
 	test_announce "$name"
-	cmd="$STORK_STATUS $STORK_STATUS_OPTS $DAP_ID"
+	_STORK_STATUS_OPTS="$STORK_STATUS_OPTS $STORKD_HOST_PORT"
+	cmd="$STORK_STATUS $_STORK_STATUS_OPTS $DAP_ID"
 	run_fg $name $cmd
+	status=$?
+	if [ $status -ne 0 ];then
+		test_status $status
+		error $cmd failed
+		return $status
+	fi
+	regex="dap_id = *$DAP_ID;"
+	grep --silent "$regex" "$name.out"
+	status=$?
+	test_status $status
+	if [ $status -ne 0 ]; then
+		error dap_id $DAP_ID not found in $STORK_STATUS output "$name.out"
+	fi
+	return $status
+}
+
+# stork_status should see one dap job
+# specify host:port using STORK_ADDRESS_FILE
+stork_1status_addr_file_hostport() {
+	name="$1"; shift;
+	test_announce "$name"
+	#STORK_STATUS_OPTS="$STORK_STATUS_OPTS $STORKD_HOST_PORT"
+	cmd="$STORK_STATUS $STORK_STATUS_OPTS $DAP_ID"
+	export _CONDOR_STORK_ADDRESS_FILE='$(LOG)/.stork_address'
+	export _CONDOR_STORK_HOST=
+	run_fg $name $cmd
+	unset _CONDOR_STORK_ADDRESS_FILE
+	unset _CONDOR_STORK_HOST
+	status=$?
+	if [ $status -ne 0 ];then
+		test_status $status
+		error $cmd failed
+		return $status
+	fi
+	regex="dap_id = *$DAP_ID;"
+	grep --silent "$regex" "$name.out"
+	status=$?
+	test_status $status
+	if [ $status -ne 0 ]; then
+		error dap_id $DAP_ID not found in $STORK_STATUS output "$name.out"
+	fi
+	return $status
+}
+
+# stork_status should see one dap job
+# specify host:port using STORK_HOST
+stork_1status_stork_host_hostport() {
+	name="$1"; shift;
+	test_announce "$name"
+	#STORK_STATUS_OPTS="$STORK_STATUS_OPTS $STORKD_HOST_PORT"
+	cmd="$STORK_STATUS $STORK_STATUS_OPTS $DAP_ID"
+	export _CONDOR_STORK_ADDRESS_FILE=
+	export _CONDOR_STORK_HOST=$STORKD_HOST_PORT
+	run_fg $name $cmd
+	unset _CONDOR_STORK_ADDRESS_FILE
+	unset _CONDOR_STORK_HOST
+	status=$?
+	if [ $status -ne 0 ];then
+		test_status $status
+		error $cmd failed
+		return $status
+	fi
+	regex="dap_id = *$DAP_ID;"
+	grep --silent "$regex" "$name.out"
+	status=$?
+	test_status $status
+	if [ $status -ne 0 ]; then
+		error dap_id $DAP_ID not found in $STORK_STATUS output "$name.out"
+	fi
+	return $status
+}
+
+# stork_status should see one dap job
+# specify host:port using -name cmd line arg
+stork_1status_name_hostport() {
+	name="$1"; shift;
+	test_announce "$name"
+	_STORK_STATUS_OPTS="$STORK_STATUS_OPTS -name $STORKD_HOST_PORT"
+	cmd="$STORK_STATUS $_STORK_STATUS_OPTS $DAP_ID"
+	export _CONDOR_STORK_ADDRESS_FILE=
+	export _CONDOR_STORK_HOST=
+	run_fg $name $cmd
+	unset _CONDOR_STORK_ADDRESS_FILE
+	unset _CONDOR_STORK_HOST
 	status=$?
 	if [ $status -ne 0 ];then
 		test_status $status
@@ -585,10 +674,14 @@ if $STORK_CORE_TESTS; then
 	stork_submit_file_file "stork_submit_file_file"
 	if stork_submit_long_xfer "stork_submit_long_xfer"; then
 		stork_q_1dap "stork_q_1dap"
-		stork_1status "stork_1status"
+		stork_1status_heritage_hostport "stork_1status_heritage_hostport"
+		stork_1status_addr_file_hostport "stork_1status_addr_file_hostport"
+		stork_1status_stork_host_hostport "stork_1status_stork_host_hostport"
+		stork_1status_name_hostport "stork_1status_name_hostport"
 		if stork_1rm "stork_1rm"; then
 			stork_q_0dap "stork_q_0dap"
 		fi
+		reconfig "reconfig"
 	fi
 fi
 

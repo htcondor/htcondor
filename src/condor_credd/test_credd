@@ -63,7 +63,7 @@ parse_cmd() {
 				set -x
 				local _DEBUG="D_FULLDEBUG D_SECURITY D_COMMAND D_IO"
 				export _CONDOR_CREDD_DEBUG=$_DEBUG
-				export _TOOL_DEBUG=$_DEBUG
+				export _CONDOR_TOOL_DEBUG=$_DEBUG
 				;;
 			-a|-all|--all) parse_cmd -credd -leak -myproxy ;;
 			-credd) CRED_CORE_TESTS=true ;;
@@ -157,8 +157,10 @@ setup() {
 	# Create a unique test subdirectory, from current directory. Change to new
 	# test subdirectory.
 	cd_test_dir
-	#Create credential subdirectory
+	# Create credential subdirectory
 	cred_dir || exit 1
+	# Suppress known memory leaks
+	suppress_known_leaks
 }
 
 count_dir_credentials () {

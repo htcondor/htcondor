@@ -31,7 +31,7 @@ echo "TEST: nominal file->srb-file roundtrip"
 cleanup
 Sinit -v
 
-prog="./DaP.transfer.srb"
+prog="./stork.transfer.srb"
 
 src="file:/etc/termcap"
 dest="srb://weber.condor:Wx12TpZk5@orion.sdsc.edu:8588/home/weber.condor/termcap"
