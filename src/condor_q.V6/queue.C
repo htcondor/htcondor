@@ -120,11 +120,13 @@ int main (int argc, char **argv)
 	// local queue 
 	if (!global && !querySchedds && !querySubmittors) {
 		Daemon schedd( DT_SCHEDD, 0, 0 );
-		sprintf( scheddAddr, "%s", schedd.addr() );
-		sprintf( scheddName, "%s", schedd.name() );
-		sprintf( scheddMachine, "%s", schedd.fullHostname() );
-		if( show_queue(scheddAddr, scheddName, scheddMachine) ) {
-			exit( 0 );
+		if ( schedd.locate() ) {
+			sprintf( scheddAddr, "%s", schedd.addr() );
+			sprintf( scheddName, "%s", schedd.name() );
+			sprintf( scheddMachine, "%s", schedd.fullHostname() );
+			if( show_queue(scheddAddr, scheddName, scheddMachine) ) {
+				exit( 0 );
+			}
 		} else {
 			fprintf( stderr, "Can't display queue of local schedd\n" );
 			exit( 1 );
@@ -646,7 +648,7 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 
 		// fetch queue from schedd	
 	if( Q.fetchQueueFromHost(jobs, scheddAddr) != Q_OK ) {
-		printf ("\n-- Timed out fetching ads from: %s : %s\n", 
+		printf ("\n-- Failed to fetch ads from: %s : %s\n", 
 									scheddAddr, scheddMachine);	
 		return false;
 	}

@@ -229,8 +229,8 @@ main( int argc, char* argv[] )
 	if( ask_a_daemon ) {
 		addr = get_daemon_addr( dt, name, pool );
 		if( ! addr ) {
-			fprintf( stderr, "Can't find address for %s %s\n", 
-					 daemonString(dt), name );
+			fprintf( stderr, "Can't find address for this %s\n", 
+					 daemonString(dt) );
 			fprintf( stderr, "Perhaps you need to query another pool.\n" );
 			my_exit( 1 );
 		}
