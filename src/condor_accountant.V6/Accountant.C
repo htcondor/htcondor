@@ -60,6 +60,7 @@ Accountant::Accountant()
 {
   MinPriority=0.5;
   AcctLog=NULL;
+  GroupNamesList = NULL;
 }
 
 //------------------------------------------------------------------
@@ -69,6 +70,7 @@ Accountant::Accountant()
 Accountant::~Accountant()
 {
   if (AcctLog) delete AcctLog;
+  if (GroupNamesList) delete GroupNamesList;
 }
 
 //------------------------------------------------------------------
@@ -86,6 +88,19 @@ void Accountant::Initialize()
   RemoteUserPriorityFactor=10000;
   DefaultPriorityFactor=1;
   HalfLifePeriod=86400;
+
+  // get group names
+  if ( GroupNamesList ) {
+	  delete GroupNamesList;
+	  GroupNamesList = NULL;
+  }
+  char *groups = param("GROUP_NAMES");
+  if ( groups ) {
+		GroupNamesList = new StringList;
+		ASSERT(GroupNamesList);
+		GroupNamesList->initializeFromString(groups);
+		free(groups);
+  }
 
   // get half life period
   
@@ -187,8 +202,15 @@ void Accountant::Initialize()
 	  AcctLog->table.startIterations();
 	  while (AcctLog->table.iterate(HK,ad)) {
 		HK.sprint(key);
+			// skip records that are not customer records...
 		if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
-		users.append( &(key[CustomerRecord.Length()]) );
+			// for now, skip records that are "group" customer records. 
+			// TODO: we should fix the below sanity check code so it understands
+			// fixing up group customer records as well.
+		char *user = &(key[CustomerRecord.Length()]);
+		if (GroupNamesList && GroupNamesList->contains_anycase(user)) continue;
+			// if we made it here, append to our list of users
+		users.append( user );
 	  }
 		// ok, now StringList users has all the users.  for each user,
 		// compare what the customer record claims for usage -vs- actual
@@ -382,6 +404,26 @@ void Accountant::AddMatch(const MyString& CustomerName, const MyString& Resource
   int UnchargedTime=0;
   GetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
 
+	// Determine if we need to update a second customer record w/ the group name.
+  bool update_group_info = false;
+  MyString GroupName;
+  int GroupResourcesUsed=0;
+  int GroupUnchargedTime=0;
+  if ( GroupNamesList ) {
+	  GroupName = CustomerName;
+	  int pos = GroupName.FindChar('.');	// '.' is the group seperater
+	  GroupName.setChar(pos,'\0');
+		// if there is a group seperater character, and if the group name
+		// is a valid one listed in the GroupNamesList, then we want to update
+		// two customer records: one with the full name of the customer (group.user),
+		// and one with just the name of the group (group).
+	  if ( pos != -1 && GroupNamesList->contains_anycase(GroupName.Value()) ) {
+			update_group_info = true;			
+			GetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
+			GetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
+	  }
+  }
+
   AcctLog->BeginTransaction(); 
   
   // Update customer's resource usage count
@@ -390,6 +432,18 @@ void Accountant::AddMatch(const MyString& CustomerName, const MyString& Resource
   // add negative "uncharged" time if match starts after last update
   UnchargedTime-=T-LastUpdateTime;
   SetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
+
+  // Do everything we just to update the customer's record a second time if
+  // there is a group record to update
+  if ( update_group_info ) {
+	  // Update customer's group resource usage count
+	  GroupResourcesUsed++;
+	  SetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
+	  // add negative "uncharged" time if match starts after last update 
+	  GroupUnchargedTime-=T-LastUpdateTime;
+	  SetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
+  }
+
   // Set reosurce's info: user, and start-time
   SetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,CustomerName);
   SetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,T);
@@ -421,6 +475,27 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
     int UnchargedTime=0;
     GetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
 
+	// Determine if we need to update a second customer record w/ the group name.
+	bool update_group_info = false;
+	MyString GroupName;
+	int GroupResourcesUsed=0;
+	int GroupUnchargedTime=0;
+	if ( GroupNamesList ) {
+	  GroupName = CustomerName;
+	  int pos = GroupName.FindChar('.');	// '.' is the group seperater
+	  GroupName.setChar(pos,'\0');
+		// if there is a group seperater character, and if the group name
+		// is a valid one listed in the GroupNamesList, then we want to update
+		// two customer records: one with the full name of the customer (group.user),
+		// and one with just the name of the group (group).
+	  if ( pos != -1 && GroupNamesList->contains_anycase(GroupName.Value()) ) {
+			update_group_info = true;			
+			GetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
+			GetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
+	  }
+	}
+
+
 	AcctLog->BeginTransaction();
     // Update customer's resource usage count
     if (ResourcesUsed>0) ResourcesUsed--;
@@ -429,6 +504,18 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
     if (StartTime<LastUpdateTime) StartTime=LastUpdateTime;
     UnchargedTime+=T-StartTime;
     SetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
+
+	// Do everything we just to update the customer's record a second time if
+	// there is a group record to update
+	if ( update_group_info ) {
+	  // Update customer's group resource usage count
+      if (GroupResourcesUsed>0) GroupResourcesUsed--;
+	  SetAttributeInt(CustomerRecord+GroupName,ResourcesUsedAttr,GroupResourcesUsed);
+	  // update uncharged time
+	  GroupUnchargedTime+=T-StartTime;
+	  SetAttributeInt(CustomerRecord+GroupName,UnchargedTimeAttr,GroupUnchargedTime);
+	}
+
 	DeleteClassAd(ResourceRecord+ResourceName);
 	AcctLog->CommitTransaction();
 
@@ -607,6 +694,7 @@ void Accountant::CheckMatches(ClassAdList& ResourceList)
       RemoveMatch(ResourceName);
     }
 	else {
+		// Here we need to figure out the CustomerName.
       ad->LookupString(RemoteUserAttr.Value(),key);
       CustomerName=key;
       if (!CheckClaimedOrMatched(ResourceAd, CustomerName)) {
