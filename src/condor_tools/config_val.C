@@ -51,6 +51,7 @@ usage()
 			 MyName );
 	fprintf( stderr, 
 			 "  given parameter as it is configured on the requested host).\n" );
+	fflush( stderr );
 	exit( 1 );
 }
 
@@ -123,17 +124,20 @@ main( int argc, char* argv[] )
 	if( pt == CONDOR_TILDE ) {
 		if( (tmp = get_tilde()) ) {
 			printf( "%s\n", tmp );
+			fflush( stdout );
 			exit( 0 );
 		} else {
 			fprintf( stderr,
 					 "Error: Specified -tilde but can't find %s\n",
 					 "condor's home directory." );
+			fflush( stderr );
 			exit( 1 );
 		}
 	}		
 
 	if( pt == CONDOR_OWNER ) {
 		printf( "%s\n", get_condor_username() );
+		fflush( stdout );
 		exit( 0 );
 	}
 
@@ -152,12 +156,14 @@ main( int argc, char* argv[] )
 		}
 		if( value == NULL ) {
 			fprintf(stderr, "Not defined: %s\n", tmp);
+			fflush( stderr );
 			exit( 1 );
 		} else {
 			printf("%s\n", value);
 			free( value );
 		}
 	}
+	fflush( stdout );
 	exit( 0 );
 }
 
@@ -178,6 +184,7 @@ GetRemoteParam( char* name, char* param_name )
 
 	if( ! s.connect( addr, 0 ) ) {
 		fprintf( stderr, "Can't connect to %s (%s)\n", name, addr );
+		fflush( stderr );
 		exit(1);
 	}
 
