@@ -812,6 +812,17 @@ SetExecutable()
 			exit( 1 );
 		}
 
+		// print a helpful, specific error if the specified job
+		// executable is not found, or can't be accessed
+		if( access( ename, R_OK ) == -1 ) {
+		  fprintf( stderr,
+			   "\nERROR: Cannot access the executable you "
+			   "specified (\"%s\"): %s\n",
+			   ename, strerror( errno ) );
+		  DoCleanup( 0, 0, NULL );
+		  exit( 1 );
+		}
+
 		if (SendSpoolFileBytes(full_path(ename,false)) < 0) {
 			fprintf( stderr,
 					 "\nERROR: failed to transfer executable file %s\n", 
@@ -3284,7 +3295,7 @@ usage()
 			 "	-r schedd_name\tsubmit to the specified remote schedd\n" );
 	fprintf( stderr,
 			 "	-a line       \tadd line to submit file before processing\n"
-			 "                \t(overrides submit file; multiple -a lines ok)\n" );
+			 "                \t(overrides submit file; multiple -a arguments ok)\n" );
 	fprintf( stderr, "	-d\t\tdisable file permission checks\n\n" );
 	fprintf( stderr, "	If [cmdfile] is omitted, input is read from stdin\n" );
 	exit( 1 );
