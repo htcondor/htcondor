@@ -83,7 +83,7 @@ int calc_prio( int old_prio );
 void init_user_credentials();
 
 #if !DBM_QUEUE
-extern "C" int gethostname(char*, int);
+extern "C" int gethostname();
 #endif
 
 char	hostname[512];
