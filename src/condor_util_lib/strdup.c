@@ -27,11 +27,7 @@
 
 char *
 strdup( s )
-#if defined(OSF1) || defined(IRIX62)
 const char *s;
-#else
-char	*s;
-#endif
 {
 	char	*answer;
 
