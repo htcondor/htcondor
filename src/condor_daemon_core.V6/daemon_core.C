@@ -1635,6 +1635,7 @@ int DaemonCore::HandleReq(int socki)
 			dprintf (D_ALWAYS, "ZKM: sending following classad telling client to authenticate: \n");
 			auth_response.dPrint (D_ALWAYS);
 			auth_response.code(*sock);
+			sock->end_of_message();
 			dprintf (D_ALWAYS, "ZKM: authenticating RIGHT NOW.\n");
 			sock->authenticate(getAuthBitmask(auth_types));
 		}

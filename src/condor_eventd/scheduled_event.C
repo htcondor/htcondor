@@ -547,14 +547,25 @@ ScheduledShutdownEvent::Timeout()
 		}
 
 
-		Daemon my_startd (DT_STARTD, NULL, NULL);
+		Daemon my_startd (DT_STARTD, startd_addr, NULL);
 
 		Sock* sock = my_startd.startCommand( VACATE_CLAIM, Stream::reli_sock, 10 );
-		if ( !sock || !sock->put(startd_name) || !sock->eom()) {
-			dprintf(D_ALWAYS, "Failed to send VACATE_CLAIM to %s %s.\n",
-					startd_name, startd_addr);
+		if ( !sock ) {
+			dprintf(D_ALWAYS, "Failed to get sock for VACATE_CLAIM"
+				" to %s %s.\n", startd_name, startd_addr);
 			continue;
 		}
+
+		if ( !sock->put(startd_name) || !sock->eom()) {
+			dprintf(D_ALWAYS, "Failed to send VACATE_CLAIM"
+				" to %s %s.\n", startd_name, startd_addr);
+
+			sock->close();
+			delete sock;
+			continue;
+		}
+
+		sock->close();
 		delete sock;
 
 		dprintf(D_ALWAYS, "Sent VACATE_CLAIM to %s.\n", startd_name);
@@ -618,19 +629,30 @@ int
 ScheduledShutdownEvent::EnterShutdownMode(const char startd_name[],
 										  const char startd_addr[])
 {
-	Daemon my_startd(DT_STARTD, NULL, NULL);
+	Daemon my_startd(DT_STARTD, startd_addr, NULL);
 
 	Sock* sock = my_startd.startCommand (DC_CONFIG_PERSIST, Stream::reli_sock, 10);
 
 	char *config = (char *)malloc(strlen(ShutdownConfig)+20);
 	sprintf(config, ShutdownConfig, EndTime+SlowStartPos);
-	if (!sock || !sock->put((char *)ShutdownAdminId) ||
+	if ( !sock ) {
+		dprintf(D_ALWAYS, "Failed to get sock for  DC_CONFIG_PERSIST"
+				" to %s %s.\n", startd_name, startd_addr);
+		free(config);
+		return -1;
+	}
+
+	if ( !sock->put((char *)ShutdownAdminId) ||
 		!sock->code(config) || !sock->eom()) {
 		dprintf(D_ALWAYS, "Failed to send DC_CONFIG_PERSIST to "
 				"%s %s.\n", startd_name, startd_addr);
 		free(config);
+
+		sock->close();
+		delete sock;
 		return -1;
 	}
+
 	free(config);
 	sock->close();
 	delete sock;
@@ -652,16 +674,25 @@ static int
 CleanupShutdownModeConfig(const char startd_machine[],
 						  const char startd_addr[])
 {
-	Daemon my_startd(DT_STARTD, NULL, NULL);
+	Daemon my_startd(DT_STARTD, startd_addr, NULL);
 
 	Sock* sock = my_startd.startCommand (DC_CONFIG_PERSIST, Stream::reli_sock, 10);
 
-	if (!sock  || !sock->put((char *)ShutdownAdminId) ||
+	if ( !sock ) {
+		dprintf(D_ALWAYS, "Failed to get sock for DC_CONFIG_PERSIST"
+				" to %s %s.\n", startd_machine, startd_addr);
+		return -1;
+	}
+	
+	if ( !sock->put((char *)ShutdownAdminId) ||
 		!sock->put("") || !sock->eom()) {
 		dprintf(D_ALWAYS, "Failed to send DC_CONFIG_PERSIST to "
 				"%s %s.\n", startd_machine, startd_addr);
+		sock->close();
+		delete sock;
 		return -1;
 	}
+
 	sock->close();
 	delete sock;
 

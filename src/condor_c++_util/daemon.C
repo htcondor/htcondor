@@ -310,6 +310,26 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 
 	sock->encode();
 
+        paramer = param("SKIP_AUTHENTICATION");
+	if (paramer != NULL) {
+		dprintf ( D_ALWAYS, "ZKM: param(SKIP_AUTHENTICATION) == %s\n", paramer);
+		if (strcasecmp(paramer, "YES") == 0) {
+			dprintf ( D_ALWAYS, "ZKM: skipping negotiationg for authentication.\n" );
+
+			// just code the command and be done
+			sock->code(cmd);
+			free(paramer);
+			return sock;
+
+		}
+
+		// this still needs to be freed
+		free(paramer);
+
+	} else {
+		dprintf ( D_ALWAYS, "ZKM: param(SKIP_AUTHENTICATION) failed!\n" );
+	}
+
 
 	// start with whatever the command asked for
 	// HACK: start with AUTH_ASK
@@ -332,16 +352,15 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
         // package the ClassAd together
 
 	// allocate a buffer big enough to work with all fields
-	int buflen;
+	int buflen = 128;
 
 	paramer = param("AUTHENTICATION_METHODS");
 	if (paramer != NULL) {
 		dprintf ( D_ALWAYS, "ZKM: param(AUTHENTICATION_METHODS) == %s\n",
 				paramer );
-		buflen = 128 + strlen(paramer);
+		buflen += strlen(paramer);
 	} else {
 		dprintf ( D_ALWAYS, "ZKM: param(AUTHENTICATION_METHODS) failed!\n" );
-		buflen = 128;
 	}
 
 	buf = new char[buflen];
@@ -391,9 +410,6 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 	dprintf ( D_ALWAYS, "ZKM: sending following classad:\n");
 	auth_info.dPrint ( D_ALWAYS );
 
-	// this is redundant:
-	// sock->encode();
-
 	if (! auth_info.code(*sock)) {
 		dprintf ( D_ALWAYS, "ZKM: failed to send auth_info\n");
 	}
@@ -415,6 +431,7 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 				ClassAd auth_response;
 				sock->decode();
 				auth_response.code(*sock);
+				sock->end_of_message();
 
 				dprintf ( D_ALWAYS, "ZKM: server responded with:\n");
 				auth_response.dPrint( D_ALWAYS );
