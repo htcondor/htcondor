@@ -249,6 +249,12 @@ int pclose(FILE *stream);
 
 #if defined(IRIX65)
 #	include <sys/file.h>
+
+/* Need these so we can use sysget() */
+#	include<inttypes.h>
+#	include<sys/types.h>
+#	include<sys/cellkernstats.h>
+#	include<sys/sysget.h>
 #endif
 
 #define HAS_64BIT_SYSCALLS 1
