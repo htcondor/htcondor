@@ -2066,15 +2066,15 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		// now open future in|out|err files
 	int inouterr[3];
 	if ((inouterr[0] = open(input, O_RDONLY, 0)) < 0) {
-		dprintf ( D_ALWAYS, "Open of %s failed, errno %d\n", errno );
+		dprintf ( D_ALWAYS, "Open of %s failed, errno %d\n", input, errno );
 		return NULL;
 	}
 	if ((inouterr[1] = open(input, O_WRONLY, 0)) < 0) {
-		dprintf ( D_ALWAYS, "Open of %s failed, errno %d\n", errno );
+		dprintf ( D_ALWAYS, "Open of %s failed, errno %d\n", input, errno );
 		return NULL;
 	}
 	if ((inouterr[2] = open(input, O_WRONLY, 0)) < 0) {
-		dprintf ( D_ALWAYS, "Open of %s failed, errno %d\n", errno );
+		dprintf ( D_ALWAYS, "Open of %s failed, errno %d\n", input, errno );
 		return NULL;
 	}
 	set_priv( priv );  // back to regular privs...
