@@ -2777,13 +2777,12 @@ int DaemonCore::HandleReq(int socki)
 			"DaemonCore: Can't receive command request (perhaps a timeout?)\n");
 		if ( insock != stream )	{   // delete stream only if we did an accept
 			delete stream;		   
-			return KEEP_STREAM;		// keep it cuz it is a listen socket
 		} else {
 			stream->set_crypto_key(false, NULL);
 			stream->set_MD_mode(MD_OFF, NULL);
 			stream->end_of_message();
-			return FALSE;	// delete socket cuz it isn't a listen sock
 		}        
+		return KEEP_STREAM;
 	}
 
 	if (req == DC_AUTHENTICATE) {
