@@ -71,51 +71,60 @@ help screen being printed.
 	\OptItem{\Opt{---install}} {Perform installation, assuming that
 	the current working directory contains the \File{release.tar}
 	file.  Without further options, the configuration is that of
-	a Personal Condor, i.e a complete one-machine pool.  If used as an 
+	a Personal Condor, a complete one-machine pool.
+	If used as an 
 	upgrade within an existing installation directory, existing 
 	configuration files and local directory are preserved.}
 	\OptItem{\Opt{---install-dir=$<$path$>$}} {Specifies the path
-	where Condor should be installed (or the path where it already is
-	installed). The default is the current working directory.}
+	where Condor should be installed or the path where it already is
+	installed. The default is the current working directory.}
 	\OptItem{\Opt{---local-dir=$<$path$>$}} {Specifies the
 	location of the local directory, which is the directory that generally 
 	contains the local (machine-specific) configuration file as well as the
 	directories where Condor daemons write their run-time information 
-	(spool, log, execute). This location is indicated  by the \MacroNI{LOCAL\_DIR} 
-	setting in the configuration file. 
-	When installing (i.e. if ---install is specified) \Condor{configure} 
-	will properly create the local directory in the location specified. If
-	none is specified, the default value is 
-\Arg{\$(RELEASE\_DIR)/local.\$(HOSTNAME)}.
+	(\File{spool}, \File{log}, \File{execute}).
+	This location is indicated  by the \MacroNI{LOCAL\_DIR} 
+	variable in the configuration file. 
+	When installing (that is, if ---install is specified),
+	\Condor{configure} 
+	will properly create the local directory in the location specified.
+	If none is specified, the default value is given by the evaluation of
+        \File{\$(RELEASE\_DIR)/local.\$(HOSTNAME)}.
 
-	During subsequent invocations of \Condor{configure} (i.e. w/o the 
-	---install option), if the ---local-dir is specified, the new directory
+	During subsequent invocations of \Condor{configure}
+	(that is, without the ---install option),
+	if the ---local-dir option is specified, the new directory
 	will be created and the \File{log}, \File{spoool} and \File{execute} 
 	directories will be moved there from their current location.}
 	\OptItem{\Opt{---make-personal-condor}} {Installs and configures for 
-	  Personal Condor (i.e. a fully-functional one-machine pool)}
+	  Personal Condor, a fully-functional, one-machine pool}.
 	\OptItem{\Opt{---type= $<$ submit, execute, manager $>$}} {One
 	or more of the types may be listed.
-	This determines the roles that a machine may play in a pool (in general any
-	machine can be a submit and/or execute machine, and there is one central manager
-	per pool). In case of a Personal Condor, the machine fulfills all three of those
-	roles.}
-	\OptItem{\Opt{---central-manager=$<$hostname$>$}} {Instructs the current
-	Condor installation to use the specified machine as the central manager. 
-	(This effectively modifies the configuration variables \MacroNI{COLLECTOR\_HOST}
-	and \MacroNI{NEGOTIATOR\_HOST} to point to the given host name). The central \
-	manager machine's Condor configuration needs to be independently configured to 
-	act as a manager (using --type=manager). }
+	This determines the roles that a machine may play in a pool.
+	In general, any machine can be a submit and/or execute machine,
+	and there is one central manager per pool.
+	In the case of a Personal Condor,
+	the machine fulfills all three of these roles.}
+	\OptItem{\Opt{---central-manager=$<$hostname$>$}} {Instructs
+	the current Condor installation to use the specified machine
+	as the central manager. 
+	This modifies the configuration variables \MacroNI{COLLECTOR\_HOST}
+	and \MacroNI{NEGOTIATOR\_HOST} to point to the given host name).
+	The central manager machine's Condor configuration needs
+	to be independently configured to 
+	act as a manager using the option ---type=manager. }
 	\OptItem{\Opt{---owner=$<$ownername$>$}} {Set configuration
-	such that Condor daemons will be executed as the given owner. This modifies the 
-	ownership on the \File{log}, \File{spool} and \File{execute} directories and sets
-	\MacroNI{CONDOR\_IDS} value in the config file, to ensure that Condor daemons start up as the specified effective user. See section~\ref{sec:uids} on
-UIDs in Condor on page~\pageref{sec:uids} in the Administrator's
-Manual for details.
+	such that Condor daemons will be executed as the given owner.
+	This modifies the 
+	ownership on the \File{log}, \File{spool} and \File{execute}
+	directories and sets the \MacroNI{CONDOR\_IDS} value
+	in the configuration file,
+	to ensure that Condor daemons start up as the specified effective user.
+	See section~\ref{sec:uids} on
+        UIDs in Condor on page~\pageref{sec:uids} for details.
 	This is only applicable when \Condor{configure} is run by root.
-	If not run as root, the owner is the user running the \Condor{configure} 
-	command.
-	}
+	If not run as root, the owner is the user running
+	the \Condor{configure} command.  }
 	\OptItem{\Opt{---verbose}} {Print information about changes
 	to configuration variables as they occur.}
 \end{Options}
@@ -126,26 +135,43 @@ Manual for details.
 and it will exit with a nonzero value upon failure.
 
 \Examples
-To install Condor on the machine  (e.g. \Arg{machine1@cs.wisc.edu}) that is to be the pool's central manager, do (on \Arg{machine1}, from the directory where you've unzipped the Condor distribution .tar.gz file):
+Install Condor on the machine (machine1@cs.wisc.edu)
+to be the pool's central manager.
+On machine1,
+within the directory that contains the unzipped Condor
+distribution \File{.tar.gz} file:
+\footnotesize
 \begin{verbatim}
 % condor_configure --install --type=submit,execute,manager
 \end{verbatim}
-This will alow the machine to submit and execute Condor jobs (in addition to being the central manager of the pool).
+\normalsize
+This will allow the machine to submit and execute Condor jobs, 
+in addition to being the central manager of the pool.
 
 
-To make an execute-only machine (i.e. dedicate computing node) join a pool with central manager on \Arg{machine1@cs.wisc.edu}, do (on that machine from the directory where Condor is installed):
+To change the configuration such that
+machine2@cs.wisc.edu is an execute-only machine
+(that is, a dedicated computing node)
+within a pool with central manager on machine1@cs.wisc.edu,
+issue the command on that machine2@cs.wisc.edu
+from within the directory where Condor is installed:
+\footnotesize
 \begin{verbatim}
 % condor_configure --central-manager=machine1@cs.wisc.edu --type=execute
 \end{verbatim}
+\normalsize
 
 
 
 To change the location of the \MacroNI{LOCAL\_DIR} directory
 in the configuration file, do (from the directory where Condor is installed):
+\footnotesize
 \begin{verbatim}
 % condor_configure --local-dir=/path/to/new/local/directory
 \end{verbatim}
-This will move the \File{log},\File{spool},\File{execute} directories to \File{/path/to/new/local/directory} from the current local directory.
+\normalsize
+This will move the \File{log},\File{spool},\File{execute} directories
+to \File{/path/to/new/local/directory} from the current local directory.
 
 
 
