@@ -191,7 +191,8 @@ sub ScanFiles( )
 	    }
 	}
     }
-    close( FIND );
+    close( FIND ) or
+	warn $! ? "Error closing $Cmd pipe: $!" : "Exit status $? from $Cmd";
 }
 
 # Scan for empty directories
@@ -208,7 +209,8 @@ sub ScanDirs( )
 	chomp;
 	push @EmptyDirs, $_;
     }
-    close( FIND );
+    close( FIND ) or
+	warn $! ? "Error closing $Cmd pipe: $!" : "Exit status $? from $Cmd";
 }
 
 # Find orphaned files here...
@@ -289,7 +291,8 @@ sub CacheUsage( $$ )
 	    $Du{$2} = $1;
 	}
     }
-    close( DU );
+    close( DU ) or
+	warn $! ? "Error closing $Cmd pipe: $!" : "Exit status $? from $Cmd";
     my $TotalDu = 0;
     foreach my $Dir ( keys %Du )
     {
@@ -320,7 +323,8 @@ sub CacheUsage( $$ )
 	    $Hash->Add( "Free_MountPt", "s", $Mount );
 	}
     }
-    close( DF );
+    close( DF ) or
+	warn $! ? "Error closing $Cmd pipe: $!" : "Exit status $? from $Cmd";
 }
 
 # Check file ages
