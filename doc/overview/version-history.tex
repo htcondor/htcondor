@@ -56,7 +56,7 @@ the daemon gracefully shut down after the given number of minutes.
 \item Added support for statfs(2) and fstatfs(2) in user jobs. We support 
 only the fields
 \textit{f\_bsize, f\_blocks, f\_bfree, f\_bavail, f\_files, f\_ffree} from
-the structure statfs.
+the structure statfs. This is still in the experimental stage.
 
 \item Added the \Opt{-direct} option to \Condor{status}.
 After you give \Opt{-direct}, you supply a hostname, and
@@ -97,6 +97,17 @@ directory for you instead of giving up right away.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug where we couldn't ever open more than \_POSIX\_PATH\_MAX
+file descriptors in our OpenFileTable implementation. \_POSIX\_PATH\_MAX
+was not the right constant that should have been used in that context.
+
+\item Fixed a standalone checkpointing bug where we weren't blocking signals
+in critical sections and causing file table corruption at checkpoint
+time.
+
+\item Fixed a linker bug on Digital Unix 4.0 concerning fortran where
+the linker would fail on \_\_uname and \_\_sigsuspend.
 
 \item Fixed a bug in \Condor{shadow} that would send incorrect job
 completion email under Linux.
