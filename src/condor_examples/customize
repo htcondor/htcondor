@@ -75,6 +75,7 @@ sub get_platform_defaults {
 	  last SWITCH;
       }
       if(/^HP-UX/) {
+	  $ps_path="/bin/ps -ef";
 	  $os_name="HPUX10";
 	  $arch_name="HPPA1";
 	  $console_devs="ps2mouse, ps2kbd, hil1, hil2, hil3, hil4, hil5, hil6, hil7";
@@ -95,6 +96,7 @@ sub get_platform_defaults {
 	  last SWITCH;
       }
       if(/^IRIX5/) {
+	  $ps_path="/bin/ps -ef";
 	  $os_name="IRIX5";
 	  $arch_name="SGI";
 	  $mail_path="/usr/sbin/Mail";
@@ -102,6 +104,7 @@ sub get_platform_defaults {
 	  last SWITCH;
       }
       if(/^IRIX/) {
+	  $ps_path="/bin/ps -ef";
 	  $os_name="IRIX6";
 	  $arch_name="SGI";
 	  $mail_path="/usr/sbin/mailx";
@@ -109,6 +112,7 @@ sub get_platform_defaults {
 	  last SWITCH;
       }
       if(/^OSF1/)  {
+	  $ps_path="/bin/ps -ef";
 	  $os_name="OSF1";
 	  $arch_name="ALPHA";
 	  $mail_path="/usr/ucb/mailx";
