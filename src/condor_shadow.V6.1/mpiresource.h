@@ -91,6 +91,11 @@ class MpiResource : public RemoteResource {
 		/** Change this resource's state */
 	void setResourceState( Resource_State s );
 
+	int node( void ) { return node_num; };
+	void setNode( int node ) { node_num = node; };
+
+	void resourceExit( int exit_reason, int exit_status );
+
  private:
 
 		// Making these private PREVENTS copying.
@@ -99,6 +104,7 @@ class MpiResource : public RemoteResource {
 
 	Resource_State state;
 
+	int node_num;
 };
 
 
