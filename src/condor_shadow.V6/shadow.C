@@ -386,11 +386,14 @@ main(int argc, char *argv[], char *envp[])
 	block_signal(SIGUSR1);      
 
 	HandleSyscalls();
-	Wrapup();
 
+	/* Set CurrentHosts to 0 before we call Wrapup(), since Wrapup will
+	   delete the job from the queue if it just finished. */
 	ConnectQ(schedd);
 	SetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_CURRENT_HOSTS, 0);
 	DisconnectQ(NULL);
+
+	Wrapup();
 
 	dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
 	exit( ExitReason );
