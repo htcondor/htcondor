@@ -2358,10 +2358,18 @@ void Scheduler::StartJobHandler() {
 	sh_is_dc = TRUE;
 #else
 	if ( strincmp(match_opsys,"winnt",5) == MATCH ) {
-		Shadow = param("SHADOWNT");
+		Shadow = param("SHADOW_NT");
+		if( ! Shadow ) {
+			Shadow = param("SHADOWNT");
+			if( Shadow ) {
+				dprintf( D_ALWAYS, 
+						 "WARNING: \"SHADOWNT\" is depricated. "
+						 "Use \"SHADOW_NT\" in your config file, instead\n" );
+			}
+		}
 		sh_is_dc = TRUE;
 		if ( !Shadow ) {
-			EXCEPT("Parameter SHADOWNT not defined!");
+			EXCEPT("Parameter SHADOW_NT not defined!");
 		}
 	} else {
 		Shadow = param("SHADOW");
