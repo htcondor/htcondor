@@ -47,6 +47,12 @@ unnecessarily restricted.
       which had no PRE script defined), DAGMan could dereference a
       nonexistent pointer and segfault.  This has now been fixed.
 
+\item Fixed a minor bug in the \Opt{-jobad} option for the
+  \Condor{cod} command-line tool when activiating Computing On Demand
+  (COD) jobs.
+  Now, the parser for the user-specified ClassAd will ignore comments
+  and whitespace.
+
 \end{itemize}
 
 \noindent Known Bugs:
