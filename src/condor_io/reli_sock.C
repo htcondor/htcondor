@@ -32,7 +32,7 @@
 /**************************************************************/
 
 ReliSock::ReliSock() : Sock(), ignore_next_encode_eom(FALSE),
-		ignore_next_decode_eom(FALSE) 
+		ignore_next_decode_eom(FALSE), _bytes_sent(0.0), _bytes_recvd(0.0)
 {
 	is_client = 0;
 	authob = NULL;
@@ -92,7 +92,8 @@ ReliSock::ReliSock(
 	char	*serv,
 	int		timeout_val
 	)
-	: Sock(), ignore_next_encode_eom(FALSE), ignore_next_decode_eom(FALSE)
+	: Sock(), ignore_next_encode_eom(FALSE), ignore_next_decode_eom(FALSE),
+	  _bytes_sent(0.0), _bytes_recvd(0.0)
 {
 	timeout(timeout_val);
 	if (!Sock::connect(host, serv)) {
