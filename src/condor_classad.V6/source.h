@@ -84,6 +84,8 @@ class Source
 		*/
 		bool SetSource( ByteSource* b );
 
+		bool Reinitialize( ) { return( lexer.Reinitialize( ) ); }
+
 		ByteSource *GetSource( ) { return( src ); }
 
 		// parser entry points

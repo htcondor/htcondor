@@ -803,15 +803,15 @@ parsePrimaryExpression(ExprTree *&tree)
 
 		case LEX_RELATIVE_TIME_VALUE:
 			{
-				int secs, usecs;
+				int secs;
 				Literal *newTree = new Literal( );
 				lexer.ConsumeToken( );
 				if( newTree == NULL ) {
 					tree = NULL;
 					return false;
 				}
-				tv.GetRelTimeValue( secs, usecs );
-				newTree->SetRelTimeValue( secs, usecs );
+				tv.GetRelTimeValue( secs );
+				newTree->SetRelTimeValue( secs );
 				tree = newTree;
 			}
 			return true;
