@@ -87,8 +87,9 @@ submit_try( const char *command, CondorID &condorID, Job::job_type_t type )
 	submitExec = "condor_submit";
 
   } else if ( type == Job::TYPE_STORK ) {
-    marker = "dap_id";
-    scanfStr = "Requests accepted by the server and assigned a dap_id: %d";
+    marker = "assigned id";
+    //scanfStr = "Requests accepted by the server and assigned a dap_id: %d";
+    scanfStr = "Request assigned id: %d";
 	submitExec = "stork_submit";
 
   } else {
@@ -126,6 +127,13 @@ submit_try( const char *command, CondorID &condorID, Job::job_type_t type )
 	  debug_printf( DEBUG_QUIET, "ERROR: %s failed:\n\t%s\n",
 					submitExec, buffer );
 	  return false;
+  }
+
+  // Stork job specs have only 1 dimension.  The Stork user log forces the proc
+  // and sub-proc ids to "-1", so do the same here for the returned submit id.
+  if ( type == Job::TYPE_STORK ) {
+	  condorID._proc = -1;
+	  condorID._subproc = -1;
   }
   
   return true;
@@ -207,8 +215,8 @@ dap_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
   const char * exe = "stork_submit";
 
   // we use 2>&1 to make sure we get both stdout and stderr from command
-  command.sprintf("%s %s %s -lognotes \"DAG Node: %s\" 2>&1", 
-  	   exe, dm.stork_server, cmdFile, DAGNodeName );
+  command.sprintf("%s -lognotes \"DAG Node: %s\" %s 2>&1", 
+  	   exe, DAGNodeName, cmdFile );
 
   bool success = do_submit( dm, command.Value(), condorID, Job::TYPE_STORK,
   	  exe );
