@@ -9,7 +9,8 @@ require Exporter;
 package HawkeyePublish;
 
 # Constructor
-sub new {
+sub new
+{
     my $class = shift;
     my $self = {};
     bless $self, $class;
@@ -24,7 +25,8 @@ sub TypeBool   { 4 }
 sub TypePercent { 5 }
 
 # Perform initializations..
-sub _initialize {
+sub _initialize
+{
     my $self = shift;
 
     # Hashes
@@ -42,13 +44,15 @@ sub _initialize {
 }
 
 # Quiet attribute warnings
-sub Quiet {
+sub Quiet
+{
     my $self = shift;
     $self->{Quiet} = shift;
 }
 
 # Publish a value
-sub StoreValue {
+sub StoreValue
+{
     my $self = shift;
 
     # Check that we're passed the correct # of args...
@@ -64,11 +68,12 @@ sub StoreValue {
     # Auto; let's guess
     if ( $Type == HawkeyePublish::TypeAuto )
     {
-	if ( $Value =~ /(^\d+(\.\d+)?$)|(^\.\d+$)/ )
+	my $Orig = $Value;
+	if ( $Value =~ /^((\d+(\.\d+)?)|(\.\d+))$/ )
 	{
 	    $Type = HawkeyePublish::TypeNumber;
 	}
-	elsif ( $Value =~ /(^\d+(\.\d+)?\%$)|(^\.\d+\%$)/ )
+	elsif ( $Value =~ /^((?:\d+(?:\.\d+)?)|(?:\.\d+))\%$/ )
 	{
 	    $Value = $1 * 0.01;
 	    $Type = HawkeyePublish::TypePercent;
@@ -88,16 +93,21 @@ sub StoreValue {
 	{
 	    print STDERR "Attempting to store non-number: ".
 		"'$Attr = $Value'\n";
-	    Carp::confess( "Store: Bad number" );
+	    Carp::carp( "Store: Bad number '$Value' to '$Var'" );
 	}
     }
     elsif ( $Type == HawkeyePublish::TypePercent )
     {
-	if ( ! ( $Value =~ /(^\d+(\.\d+)?\%$)|(^\.\d+\%$)/ ) )
+	if ( $Value =~ /^((?:\d+(?:\.\d+)?)|(?:\.\d+))(\%?)$/ )
+	{
+	    $Value = $1;
+	    $Value *= 0.01 if ( defined $2 and $2 eq "%");
+	}
+	else
 	{
 	    print STDERR "Attempting to store non-number percent: ".
 		"'$Attr = $Value'\n";
-	    Carp::confess( "Store: Bad percent number" );
+	    Carp::carp( "Store: Bad percent number '$Value' to '$Var'" );
 	}
     }
 
@@ -111,7 +121,8 @@ sub StoreValue {
 # These are depricated methods for storing.  Use StoreValue() instead.
 
 # Publish a string value
-sub Store {
+sub Store
+{
     my $self = shift;
 
     # Check that we're passed the correct # of args...
@@ -124,7 +135,8 @@ sub Store {
 }
 
 # Publish a string value
-sub StoreString {
+sub StoreString
+{
     my $self = shift;
 
     # Check that we're passed the correct # of args...
@@ -136,7 +148,8 @@ sub StoreString {
 }
 
 # Publish a numeric value
-sub StoreNum {
+sub StoreNum
+{
     my $self = shift;
 
     # Check that we're passed the correct # of args...
@@ -148,7 +161,8 @@ sub StoreNum {
 }
 
 # Publish a boolean boolean value
-sub StoreBool {
+sub StoreBool
+{
     my $self = shift;
 
     # Check that we're passed the correct # of args...
@@ -160,7 +174,8 @@ sub StoreBool {
 }
 
 # Publish a boolean boolean value
-sub StorePercent {
+sub StorePercent
+{
     my $self = shift;
 
     # Check that we're passed the correct # of args...
@@ -172,7 +187,8 @@ sub StorePercent {
 }
 
 # Turn on/off auto indexing
-sub AutoIndexSet {
+sub AutoIndexSet
+{
     my $self = shift;
 
     # Check that we're passed the correct # of args...
@@ -181,7 +197,8 @@ sub AutoIndexSet {
 }
 
 # Add to the index
-sub StoreIndex {
+sub StoreIndex
+{
     my $self = shift;
 
     # Check that we're passed the correct # of args...
@@ -212,7 +229,8 @@ sub UnStore {
 }
 
 # Do the real work..
-sub Publish {
+sub Publish
+{
     my $self = shift;
     my $Key;
 
@@ -229,6 +247,12 @@ sub Publish {
 	my $Rec = $self->{Publish}{$Key};
 	my $Value;
 
+	if ( ! defined $Rec->{Value} )
+	{
+	    print STDERR "Attempt to publish attribute w/o value: '$Attr'\n";
+	    next;
+	}
+
 	# Publish it
 	if ( $Rec->{Type} == HawkeyePublish::TypeString )
 	{
@@ -242,34 +266,39 @@ sub Publish {
 	}
 	elsif ( $Rec->{Type} == HawkeyePublish::TypeNumber )
 	{
-	    if ( ! ( $Rec->{Value} =~ /(^\d+(\.\d+)?$)|(^\.\d+$)/ ) )
+	    if ( ! ( $Rec->{Value} =~ /(?:(?:\d+(?:\.\d+)?)|(?:\.\d+))/ ) )
 	    {
 		print STDERR "Attempting to publish non-number: ".
 		    "'$Attr = $Rec->{Value}'\n";
+		next;
 	    }
 	    $Value = $Rec->{Value} * 1.0;
 	    print "$Attr = $Value\n";
 	}
 	elsif ( $Rec->{Type} == HawkeyePublish::TypePercent )
 	{
-	    if ( ! ( $Rec->{Value} =~ /(^\d+(\.\d+)?\%$)|(^\.\d+\%$)/ ) )
+	    if ( ! ( $Rec->{Value} =~ /(?:(?:\d+(?:\.\d+)?)|(?:\.\d+))/ ) )
 	    {
 		print STDERR "Attempting to publish non-number as percent: ".
 		    "'$Attr = $Rec->{Value}'\n";
+		next;
 	    }
 	    $Value = $Rec->{Value} * 100.0;
 	    print "$Attr = \"$Value%\"\n";
 	}
 	else
 	{
-	    print STDERR "Unknown type " . $Rec->{Type} . " of " . $Rec->{Attr} . "\n";
+	    print STDERR "Unknown type " .
+		$Rec->{Type} . " of " . $Rec->{Attr} . "\n";
+	    next;
 	}
     }
     print "--\n";
 }
 
 # Check an attribute
-sub AttrCheck() {
+sub AttrCheck()
+{
     my $self = shift;
     my $String = shift;
     my $Attr = shift;

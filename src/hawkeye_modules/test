@@ -71,6 +71,16 @@ sub RunIt()
     # Start things off
     $Hash = HawkeyeHash->new( \$Hawkeye, "" );
 
+    my $TestFailFile = "/tmp/hawkeye_test_fail";
+    if ( -f $TestFailFile )
+    {
+	print STDERR "Simulating failure: $TestFailFile exists\n";
+	$Hash->Add( "Status", "Failed" );
+	$Hash->Store( );
+	$Hawkeye->Publish( );
+    }
+
+    $Hash->Add( "Status", "OK" );
     $Hash->Add( "CmdLine", HawkeyePublish::TypeString, $CmdLine );
     $Hash->Add( "ModuleName", HawkeyePublish::TypeString,
 		HawkeyeLib::GetModuleName() );
@@ -93,7 +103,10 @@ sub RunIt()
     $Hash->Add( "True", HawkeyePublish::TypeBool, "True" );
     $Hash->Add( "False", HawkeyePublish::TypeBool, "False" );
     $Hash->Add( "string", HawkeyePublish::TypeString, "string #1" );
-    $Hash->Add( "string2", HawkeyePublish::TypeString, "string #2" );
+    $Hash->Add( "string2", HawkeyePublish::TypeAuto, "string #2" );
+    $Hash->Add( "string3", HawkeyePublish::TypeAuto, "3 3" );
+    $Hash->Add( "string4", HawkeyePublish::TypeAuto, "4 strings" );
+    $Hash->Add( "string5", HawkeyePublish::TypeAuto, "5strings" );
     $Hash->Add( "pi", HawkeyePublish::TypeAuto, "3.1415926" );
     $Hash->Add( "IP", HawkeyePublish::TypeAuto, "192.168.1.1" );
     $Hash->Add( "three", HawkeyePublish::TypeAuto, "3" );

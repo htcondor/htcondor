@@ -361,7 +361,8 @@ package HawkeyeHash;
 @EXPORT = qw( new Add Store );
 
 # Constructor
-sub new {
+sub new
+{
     my $class = shift;
     my $self = {};
     $self->{Hash} = {};
@@ -376,9 +377,22 @@ sub new {
 sub Add
 {
     my $self = shift;
+
+    Carp::confess( "HawkeyeHash::Add: Bad args" ) if ( scalar @_ < 2 );
     my $Name = shift;
-    my $Type = shift;
-    my $Value = shift;
+    my $Type;
+    my $Value;
+
+    if ( scalar @_ == 1 )
+    {
+	$Value = shift;
+	$Type = HawkeyePublish::TypeAuto;
+    }
+    else
+    {
+	$Type = shift;
+	$Value = shift;
+    }
 
     my $NewElem = ();
 
