@@ -54,6 +54,8 @@
 #include "globus_utils.h"
 #include "env.h"
 #include "dc_schedd.h"  // for JobActionResults class and enums we use  
+#include "nullfile.h"
+#include "store_cred.h"
 
 #define DEFAULT_SHADOW_SIZE 125
 
@@ -3729,11 +3731,37 @@ Scheduler::start_pvm(match_rec* mrec, PROC_ID *job_id)
 #endif /* !defined(WIN32) */
 }
 
+void
+email_and_hold_failed_sched_univ_job(PROC_ID* job_id,
+	   	const char* failure_reason)
+{
+	dprintf( D_ALWAYS, "Putting job %d.%d on hold\n",
+		job_id->cluster, job_id->proc );
+	SetAttributeInt( job_id->cluster, job_id->proc,
+		ATTR_JOB_STATUS, HELD );
+	ClassAd *jobAd = GetJobAd( job_id->cluster, job_id->proc );
+	char buf[256];
+	sprintf( buf, "Your job (%d.%d) is on hold", job_id->cluster,
+		job_id->proc ); 
+	FILE* email = email_user_open( jobAd, buf );
+	if( ! email ) {
+		return;
+	}
+	fprintf( email, "Condor failed to start your scheduluer universe " );
+	fprintf( email, "job (%d.%d).\n", job_id->cluster, job_id->proc );
+	fprintf( email, "The reason for the failure was:\n%s", failure_reason );
+	fprintf( email, "\nPlease correct this problem and release your "
+		"job with:\n" );
+	fprintf( email, "\"condor_release %d.%d\"\n\n", job_id->cluster,
+		job_id->proc ); 
+	email_close ( email );
+	return;
+}
+
 
 shadow_rec*
 Scheduler::start_sched_universe_job(PROC_ID* job_id)
 {
-#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
 
 	char	a_out_name[_POSIX_PATH_MAX];
 	char	input[_POSIX_PATH_MAX];
@@ -3744,110 +3772,167 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	char	args[_POSIX_ARG_MAX];
 	char	owner[20], iwd[_POSIX_PATH_MAX];
 	int		pid;
+	StatInfo* filestat;
+	bool is_executable;
 
+	is_executable = false;
+	
 	dprintf( D_FULLDEBUG, "Starting sched universe job %d.%d\n",
-			job_id->cluster, job_id->proc );
-
+		job_id->cluster, job_id->proc );
+	
 	// make sure file is executable
 	strcpy(a_out_name, gen_ckpt_name(Spool, job_id->cluster, ICKPT, 0));
 	errno = 0;
-	if( chmod(a_out_name, 0755) < 0 ) {
-		dprintf( D_FAILURE|D_ALWAYS, "ERROR: Can't chmod(%s, 0755), errno: %d\n",
-				 a_out_name, errno );
-		dprintf( D_ALWAYS, "Putting job %d.%d on hold\n",
-				 job_id->cluster, job_id->proc );
-		SetAttributeInt( job_id->cluster, job_id->proc,
-						 ATTR_JOB_STATUS, HELD );
-		SetAttributeInt( job_id->cluster, job_id->proc,
-						 ATTR_ENTERED_CURRENT_STATUS, (int)time(0) );
-		fixReasonAttrs( *job_id, JA_HOLD_JOBS );
-		ClassAd *jobAd = GetJobAd( job_id->cluster, job_id->proc );
-		char buf[256];
-		sprintf( buf, "Your job (%d.%d) is on hold", job_id->cluster,
-				 job_id->proc ); 
-		FILE* email = email_user_open( jobAd, buf );
-		if( ! email ) {
+#ifndef WIN32
+	if( chmod(a_out_name, 0755) < 0 ) { 
+#else
+// WIN32
+// We can't change execute permissions on NT with chmod 
+// (we'd have to change the file extension to .exe, .com, .bat or .cmd)
+// So instead, just check if it is executable. 
+	filestat = new StatInfo(a_out_name);
+	is_executable = false;
+	if ( filestat ) {
+		is_executable = filestat->IsExecutable();
+		delete filestat;
+		filestat = NULL;
+	}
+	if ( !is_executable ) {
+#endif
+		// If the chmod failed, it could be because the user submitted
+		// the job with copy_to_spool = false and therefore it is not
+		// in the SPOOL directory.  So check where the 
+		// ClassAd says the executable is.
+		ClassAd *userJob = GetJobAd(job_id->cluster,job_id->proc);
+		a_out_name[0] = '\0';
+		userJob->LookupString(ATTR_JOB_CMD,a_out_name,sizeof(a_out_name));
+		FreeJobAd(userJob);
+		if (a_out_name[0]=='\0') {
+			email_and_hold_failed_sched_univ_job(job_id,
+				"Executable unknown - not specified in job ad!");
 			return NULL;
 		}
-		fprintf( email, "Condor failed to start your scheduluer universe " );
-		fprintf( email, "job (%d.%d).\n", job_id->cluster, job_id->proc );
-		fprintf( email, "The initial executable for the job,\n\"%s\"\n",
-				 a_out_name );
-		fprintf( email, "is not executable or does not exist.\n" );
-		fprintf( email, "\nPlease correct this problem and release your "
-				 "job with:\n" );
-		fprintf( email, "\"condor_release %d.%d\"\n\n", job_id->cluster,
-				 job_id->proc ); 
-		email_close ( email );
-		return NULL;
+		
+		// at least make certain the file is still there, and that
+		// it is exectuable by at least user or group or other.
+		filestat = new StatInfo(a_out_name);
+		is_executable = false;
+		if ( filestat ) {
+			is_executable = filestat->IsExecutable();
+			delete filestat;
+		}
+		if ( !is_executable ) {
+			char tmpstr[255];
+			snprintf(tmpstr, 255, "File '%s' is missing or not executable", a_out_name);
+			email_and_hold_failed_sched_univ_job(job_id, tmpstr);
+			return NULL;
+		}
 	}
-
+	
 	if (GetAttributeString(job_id->cluster, job_id->proc, 
-						   ATTR_OWNER, owner) < 0) {
+		ATTR_OWNER, owner) < 0) {
 		dprintf(D_FULLDEBUG, "Scheduler::start_sched_universe_job"
-				"--setting owner to \"nobody\"\n" );
+			"--setting owner to \"nobody\"\n" );
 		sprintf(owner, "nobody");
 	}
 	if (stricmp(owner, "root") == 0 ) {
 		dprintf(D_ALWAYS, "Aborting job %d.%d.  Tried to start as root.\n",
-				job_id->cluster, job_id->proc);
+			job_id->cluster, job_id->proc);
 		return NULL;
 	}
-
-	init_user_ids(owner);
-
-		// Get std(in|out|err)
+	
+	if (! init_user_ids(owner) ) {
+		char tmpstr[255];
+#ifdef WIN32
+		snprintf(tmpstr, 255, "Bad or missing credential for user: %s", owner);
+#else
+		snprintf(tmpstr, 255, "Unable to switch to user: %s", owner);
+#endif
+		email_and_hold_failed_sched_univ_job(job_id,
+			tmpstr);
+		return NULL;
+	}
+	
+	// Get std(in|out|err)
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_INPUT,
-							input) < 0) {
-		sprintf(input, "/dev/null");
+		input) < 0) {
+		sprintf(input, NULL_FILE); 
+		
 	}
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_OUTPUT,
-							output) < 0) {
-		sprintf(output, "/dev/null");
+		output) < 0) {
+		sprintf(output, NULL_FILE);
 	}
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_ERROR,
-							error) < 0) {
-		sprintf(error, "/dev/null");
+		error) < 0) {
+		sprintf(error, NULL_FILE);
 	}
-
+	
 	priv_state priv = set_user_priv(); // need user's privs...
-
+	
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_IWD,
-							iwd) < 0) {
+		iwd) < 0) {
+#ifndef WIN32		
 		sprintf(iwd, "/tmp");
+#else
+		// try to get the temp dir, otherwise just use the root directory
+		char* tempdir = getenv("TEMP");
+		sprintf(iwd, "%s", ((tempdir) ? tempdir : "\\") );		
+		
+#endif
 	}
-
+	
 	//change to IWD before opening files, easier than prepending 
 	//IWD if not absolute pathnames
 	char tmpCwd[_POSIX_PATH_MAX];
 	char *p_tmpCwd = tmpCwd;
 	p_tmpCwd = getcwd( p_tmpCwd, _POSIX_PATH_MAX );
 	chdir(iwd);
-
-		// now open future in|out|err files
+	
+	// now open future in|out|err files
 	int inouterr[3];
 	bool cannot_open_files = false;
-	if ((inouterr[0] = open(input, O_RDONLY, 0)) < 0) {
+	
+#ifdef WIN32
+	
+	// submit gives us /dev/null regardless of the platform.
+	// normally, the starter would handle this translation,
+	// but since we're the schedd, we'll have to do it ourselves.
+	// At least for now. --stolley
+	
+	if (nullFile(input)) {
+		sprintf(input, WINDOWS_NULL_FILE);
+	}
+	if (nullFile(output)) {
+		sprintf(output, WINDOWS_NULL_FILE);
+	}
+	if (nullFile(error)) {
+		sprintf(error, WINDOWS_NULL_FILE);
+	}
+	
+#endif
+	
+	if ((inouterr[0] = open(input, O_RDONLY, S_IREAD)) < 0) {
 		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", input, errno );
 		cannot_open_files = true;
 	}
-	if ((inouterr[1] = open(output, O_WRONLY | O_CREAT | O_TRUNC, 0)) < 0) {
+	if ((inouterr[1] = open(output, O_WRONLY | O_CREAT | O_TRUNC, S_IREAD|S_IWRITE)) < 0) {
 		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", output, errno );
 		cannot_open_files = true;
 	}
-	if ((inouterr[2] = open(error, O_WRONLY | O_CREAT | O_TRUNC, 0)) < 0) {
+	if ((inouterr[2] = open(error, O_WRONLY | O_CREAT | O_TRUNC, S_IREAD|S_IWRITE)) < 0) {
 		dprintf ( D_FAILURE|D_ALWAYS, "Open of %s failed, errno %d\n", error, errno );
 		cannot_open_files = true;
 	}
-
+	
 	//change back to whence we came
 	if ( p_tmpCwd ) {
 		chdir( p_tmpCwd );
 	}
-
+	
 	if ( cannot_open_files ) {
-		/* I'll close the opened files in the same priv state I opened them
-			in just in case the OS cares about such things. */
+	/* I'll close the opened files in the same priv state I opened them
+		in just in case the OS cares about such things. */
 		if (inouterr[0] >= 0) {
 			if (close(inouterr[0]) == -1) {
 				dprintf(D_ALWAYS, 
@@ -3872,62 +3957,59 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		set_priv( priv );  // back to regular privs...
 		return NULL;
 	}
-
+	
 	set_priv( priv );  // back to regular privs...
-
+	
 	if (GetAttributeStringNew(job_id->cluster, job_id->proc, ATTR_JOB_ENVIRONMENT,
-							&env) < 0) {
+		&env) < 0) {
 		// Note that GetAttributeStringNew always fills in the env variable,
 		// even if it's an empty string. We get back -1 if it's empty. 
 		// Filling it in with 0 is redundant, I suppose. 
-			env[0] = '\0';
+		env[0] = '\0';
 	}
-
+	
 	// stick a CONDOR_ID environment variable in job's environment
 	char condor_id_string[64];
 	sprintf( condor_id_string, "%d.%d", job_id->cluster, job_id->proc );
 	AppendEnvVariableSafely(&env, "CONDOR_ID", condor_id_string );
-
+	
 	if (GetAttributeString(job_id->cluster, job_id->proc, ATTR_JOB_ARGUMENTS,
-							args) < 0) {
+		args) < 0) {
 		args[0] = '\0';
 	}
-
-		// Don't use a_out_name for argv[0], use
-		// "condor_scheduniv_exec.cluster.proc" instead. 
+	
+	// Don't use a_out_name for argv[0], use
+	// "condor_scheduniv_exec.cluster.proc" instead. 
     // NOTE: a trailing space with no args causes Create_Process to
     // call the program with a single arg consisting of the null
     // string (''), so we have to avoid that
     sprintf(job_args, "condor_scheduniv_exec.%d.%d%s%s",
-            job_id->cluster, job_id->proc, args[0] != '\0' ? " " : "", args );
-
+		job_id->cluster, job_id->proc, args[0] != '\0' ? " " : "", args );
+	
 	pid = daemonCore->Create_Process( a_out_name, job_args, PRIV_USER_FINAL, 
 								1, FALSE, env, iwd, FALSE, NULL, inouterr );
-
-		// now close those open fds - we don't want them here.
+	
+	// now close those open fds - we don't want them here.
 	for ( int i=0 ; i<3 ; i++ ) {
 		if ( close( inouterr[i] ) == -1 ) {
 			dprintf ( D_ALWAYS, "FD closing problem, errno = %d\n", errno );
 		}
 	}
-
+	
 	if (env) {
 		free(env);
 	}
-
+	
 	if ( pid <= 0 ) {
 		dprintf ( D_FAILURE|D_ALWAYS, "Create_Process problems!\n" );
 		return NULL;
 	}
-
+	
 	dprintf ( D_ALWAYS, "Successfully created sched universe process\n" );
 	mark_job_running(job_id);
 	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 1);
 	WriteExecuteToUserLog( *job_id );
 	return add_shadow_rec(pid, job_id, NULL, -1);
-#else
-	return NULL;
-#endif /* !defined(WIN32) */
 }
 
 void
@@ -5533,6 +5615,14 @@ Scheduler::Register()
 								  (CommandHandler)&attempt_access_handler, 
 								  "attempt_access_handler", NULL, WRITE, 
 								  D_FULLDEBUG );
+#ifdef WIN32
+	// Command handler for stashing credentials.  
+	daemonCore->Register_Command( STORE_CRED, "STORE_CRED", 
+								(CommandHandler)&store_cred_handler, 
+								"cred_access_handler", NULL, WRITE, 
+								D_FULLDEBUG );
+#endif
+
 
 	// handler for queue management commands
 	// Note: We make QMGMT_CMD a READ command.  The command handler
