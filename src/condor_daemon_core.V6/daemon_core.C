@@ -116,6 +116,8 @@ int ZZZ_always_increase() {
 	return ZZZZZ++;
 }
 
+extern int LockFd;
+
 extern void drop_addr_file( void );
 
 extern char* mySubSystem;	// the subsys ID, such as SCHEDD
@@ -4828,6 +4830,13 @@ int DaemonCore::Create_Process(
 	newpid = fork();
 	if( newpid == 0 ) // Child Process
 	{
+			// make sure we're not going to try to share the lock file
+			// with our parent (if it's been defined).
+		if( LockFd >= 0 ) {
+			close( LockFd );
+			LockFd = -1;
+		}
+
 			// close the read end of our error pipe and set the
 			// close-on-exec flag on the write end
 		close(errorpipe[0]);
@@ -4934,6 +4943,10 @@ int DaemonCore::Create_Process(
 							 errno );
 				}
 				close( std[0] );  // We don't need this in the child...
+			} else { 
+					// if we don't want to inherit it, we better close
+					// what's there
+				close( 0 );
 			}
 			if ( std[1] > -1 ) {
 				if ( ( dup2 ( std[1], 1 ) ) == -1 ) {
@@ -4941,6 +4954,8 @@ int DaemonCore::Create_Process(
 							 errno );
 				}
 				close( std[1] );  // We don't need this in the child...
+			} else { 
+				close( 1 );
 			}
 			if ( std[2] > -1 ) {
 				if ( ( dup2 ( std[2], 2 ) ) == -1 ) {
@@ -4948,45 +4963,20 @@ int DaemonCore::Create_Process(
 							 errno );
 				}
 				close( std[2] );  // We don't need this in the child...
+			} else { 
+				close( 2 );
 			}
-		}
-        else {
+		} else {
+			MyString msg = "Just closed standard file fd(s): ";
                 // if we don't want to re-map these, close 'em.
-			dprintf ( D_DAEMONCORE, "Just closed fd " );
             for ( int q=0 ; (q<openfds) && (q<3) ; q++ ) {
                 if ( close ( q ) != -1 ) {
-                    dprintf ( D_DAEMONCORE | D_NOHEADER, "%d ", q );
+					msg += q;
+					msg += ' ';
                 }
             }
-			dprintf ( D_DAEMONCORE | D_NOHEADER, "\n" );
+			dprintf( D_DAEMONCORE, "%s\n", msg.Value() );
         }
-
-        dprintf ( D_DAEMONCORE, "Printing fds to inherit: " );
-        for ( int a=0 ; a<numInheritSockFds ; a++ ) {
-            dprintf ( D_DAEMONCORE | D_NOHEADER, 
-					  "%d ", inheritSockFds[a] );
-        }
-        dprintf (  D_DAEMONCORE | D_NOHEADER, "\n" );
-
-			// Now we want to close all fds that aren't in sock_inherit_list
-		bool found;
-		dprintf ( D_DAEMONCORE, "Just closed fd " );
-		for ( int j=3 ; j < openfds ; j++ ) {
-			if ( j == errorpipe[1] ) continue; // don't close our errorpipe!
-			found = FALSE;
-			for ( int k=0 ; k < numInheritSockFds ; k++ ) {
-                if ( inheritSockFds[k] == j ) {
-					found = TRUE;
-					break;
-				}
-			}
-			if ( !found ) {
-				if ( close( j ) != -1 ) {
-                    dprintf ( D_DAEMONCORE | D_NOHEADER, "%d ", j );
-                }
-            }
-		}
-		dprintf ( D_DAEMONCORE | D_NOHEADER, "\n" );
 
 			/* here we want to put all the unix_env stuff into the 
 			   environment.  We also want to drop CONDOR_INHERIT in.
@@ -5021,11 +5011,11 @@ int DaemonCore::Create_Process(
 
             /* Re-nice ourself */
         if ( nice_inc > 0 && nice_inc < 20 ) {
-            dprintf ( D_FULLDEBUG, "calling nice(%d)\n", nice_inc );
+            dprintf ( D_DAEMONCORE, "calling nice(%d)\n", nice_inc );
             nice( nice_inc );
         }
         else if ( nice_inc >= 20 ) {
-            dprintf ( D_FULLDEBUG, "calling nice(19)\n" );
+            dprintf ( D_DAEMONCORE, "calling nice(19)\n" );
             nice( 19 );
         }
 
@@ -5047,14 +5037,57 @@ int DaemonCore::Create_Process(
         }
 #endif
 
+		MyString msg = "Printing fds to inherit: ";
+        for ( int a=0 ; a<numInheritSockFds ; a++ ) {
+			msg += inheritSockFds[a];
+			msg += ' ';
+        }
+        dprintf( D_DAEMONCORE, "%s\n", msg.Value() );
+
 		dprintf ( D_DAEMONCORE, "About to exec \"%s\"\n", namebuf );
+
+			// !! !! !! !! !! !! !! !! !! !! !! !! 
+			// !! !! !! !! !! !! !! !! !! !! !! !! 
+			/* No dprintfs allowed after this! */
+			// !! !! !! !! !! !! !! !! !! !! !! !! 
+			// !! !! !! !! !! !! !! !! !! !! !! !! 
+
+
+			// Now we want to close all fds that aren't in the
+			// sock_inherit_list.  however, this can really screw up
+			// dprintf() because if we've still got a value in
+			// DebugLock and therefore in LockFd, once we close that
+			// fd, we're going to get a fatal error if we try to
+			// dprintf().  so, we cannot print anything to the logs
+			// once we start this process!!!
+
+			// once again, make sure that if the dprintf code opened a
+			// lock file and has an fd, that we close it before we
+			// exec() so we don't leak it.
+		if( LockFd >= 0 ) {
+			close( LockFd );
+			LockFd = -1;
+		}
+
+		bool found;
+		for ( int j=3 ; j < openfds ; j++ ) {
+			if ( j == errorpipe[1] ) continue; // don't close our errorpipe!
+			found = FALSE;
+			for ( int k=0 ; k < numInheritSockFds ; k++ ) {
+                if ( inheritSockFds[k] == j ) {
+					found = TRUE;
+					break;
+				}
+			}
+			if( !found ) {
+				close( j );
+            }
+		}
 
 			// now head into the proper priv state...
 		if ( priv != PRIV_UNKNOWN ) {
 			set_priv(priv);
 		}
-
-			/* No dprintfs allowed after this! */
 
 		if ( priv != PRIV_ROOT ) {
 				// Final check to make sure we're not root anymore.
