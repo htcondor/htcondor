@@ -182,7 +182,18 @@ segment_bounds( int seg_num, RAW_ADDR &start, RAW_ADDR &end, int &prot )
 		return -1;
 	start = (long) my_map[seg_num].pr_vaddr;
 	end = start + my_map[seg_num].pr_size;
-	prot = my_map[seg_num].pr_mflags;
+
+	prot = 0;
+	if (my_map[seg_num].pr_mflags & MA_READ) {
+		prot |= PROT_READ;
+	}
+	if (my_map[seg_num].pr_mflags & MA_WRITE) {
+		prot |= PROT_WRITE;
+	}
+	if (my_map[seg_num].pr_mflags & MA_EXEC) {
+		prot |= PROT_EXEC;
+	}
+
 	if (seg_num == text_loc)
 		return 1;
 	else if (seg_num == stack_loc)
