@@ -40,4 +40,4 @@ void unblock_signal( int sig );
 }
 #endif
 
-#endif _CONDOR_SIG_INSTALL_H
+#endif /* _CONDOR_SIG_INSTALL_H */
