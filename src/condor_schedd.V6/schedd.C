@@ -2321,26 +2321,6 @@ void Scheduler::StartJobHandler() {
 		}
 	}
 
-	// Set CmdExtention attribute, based on the opsys & arch of the match
-	char opsys_buf[100], *match_opsys=opsys_buf;
-	char arch_buf[100], *match_arch=arch_buf;
-	match_opsys[0] = '\0';
-	match_arch[0] = '\0';
-	if (mrec->my_match_ad) {
-		mrec->my_match_ad->LookupString(ATTR_ARCH,match_arch);
-		mrec->my_match_ad->LookupString(ATTR_OPSYS,match_opsys);
-		if ( match_arch[0] && match_opsys[0] ) {
-			char tmpbuf[500];
-			ClassAd *thejob = GetJobAd(job_id->cluster,job_id->proc);
-			sprintf(tmpbuf,"%s = \"%s.%s\"",ATTR_JOB_CMDEXT,
-				match_opsys,match_arch);
-			dprintf(D_FULLDEBUG,"adding attribute %s\n",tmpbuf);
-			if ( thejob ) {
-				thejob->InsertOrUpdate(tmpbuf);
-			}
-		}
-	}
-
 
 	//-------------------------------
 	// Actually fork the shadow
