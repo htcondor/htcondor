@@ -998,9 +998,10 @@ int main( int argc, char** argv )
 
 		// this handler receives keepalive pings from our children, so
 		// we can detect if any of our kids are hung.
-		daemonCore->Register_Command(DC_CHILDALIVE,"DC_CHILDALIVE",
+		daemonCore->Register_Command( DC_CHILDALIVE,"DC_CHILDALIVE",
 			(CommandHandlercpp)&DaemonCore::HandleChildAliveCommand,
-			"HandleChildAliveCommand",daemonCore,IMMEDIATE_FAMILY);
+			"HandleChildAliveCommand",daemonCore,IMMEDIATE_FAMILY, 
+			D_FULLDEBUG );
 	}
 	
 		// Install DaemonCore signal handlers common to all daemons.
