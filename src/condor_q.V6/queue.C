@@ -1411,6 +1411,7 @@ fetchSubmittorPrios()
 		exit( 1 );
 	}
 
+	sock->eom();
 	sock->decode();
 	if( !al.initFromStream(*sock) || !sock->end_of_message() ) {
 		fprintf( stderr, 

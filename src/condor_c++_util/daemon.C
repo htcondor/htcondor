@@ -420,15 +420,6 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 		// just code the command and be done
 		sock->code(cmd);
 		// we must _not_ do an eom() here!  Ques?  See Todd or Zach 9/01
-		// However, we need to set things up so if the caller does an eom(),
-		// it does not trigger an error.  The reason for this: if the
-		// authentication_action is not AUTH_OLD, then eom() will have
-		// already been invoked before we return to the caller.  But if
-		// AUTH_OLD is the method, then eom() will not have been invoked.
-		// So we don't want this screwed up difference, i.e. the semantics
-		// are one way or another depending upon your config file.  So,
-		// in comes the fudge factor!  We should allow one empty message...
-		sock->allow_one_empty_message();
 		return sock;
 	}
 
@@ -571,6 +562,7 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 	if (retval) {
 		dprintf ( D_SECURITY, "STARTCOMMAND: setting sock->encode()\n");
 		sock->encode();
+		sock->allow_one_empty_message();
 		return sock;
 	} else {
 		dprintf (D_SECURITY, "STARTCOMMAND: authenticate failed.\n");
@@ -588,7 +580,6 @@ Daemon::sendCommand( int cmd, Sock* sock, int sec )
 	if( ! tmp ) {
 		return false;
 	}
-#if 0  // don't need this block, the cmd int was sent in startCommand
 	if( ! tmp->eom() ) {
 		char err_buf[256];
 		sprintf( err_buf, "Can't send eom for %d to %s", cmd,  
@@ -596,7 +587,6 @@ Daemon::sendCommand( int cmd, Sock* sock, int sec )
 		newError( err_buf );
 		return false;
 	}
-#endif
 	return true;
 }
 
@@ -608,7 +598,6 @@ Daemon::sendCommand( int cmd, Stream::stream_type st, int sec )
 	if( ! tmp ) {
 		return false;
 	}
-#if 0
 	if( ! tmp->eom() ) {
 		char err_buf[256];
 		sprintf( err_buf, "Can't send eom for %d to %s", cmd,  
@@ -617,7 +606,6 @@ Daemon::sendCommand( int cmd, Stream::stream_type st, int sec )
 		delete tmp;
 		return false;
 	}
-#endif
 	delete tmp;
 	return true;
 }

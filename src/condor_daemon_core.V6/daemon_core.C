@@ -1704,6 +1704,26 @@ int DaemonCore::HandleReq(int socki)
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: restored result to %i\n", result);
 
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: continuing with command %i\n", req);
+	} else {
+		// determine the value of config.ALWAYS_AUTHENTICATE
+		char *paramer;
+		paramer = param("ALWAYS_AUTHENTICATE");
+
+		bool always_authenticate = false;
+		if (paramer) {
+			if ((stricmp(paramer, "YES") == 0) ||
+			    (stricmp(paramer, "TRUE") == 0)) {
+				always_authenticate = true;
+			}
+			free (paramer);
+		}
+
+		if (always_authenticate) {
+			dprintf (D_SECURITY, "DaemonCore received UNAUTHENTICATED command %i.\n");
+			dprintf (D_SECURITY, "\tNormally, this would not be allowed.  For now, it is.\n");
+			// ZKM
+			// return error.
+		}
 	}
 	
 	// get the handler function

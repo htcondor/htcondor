@@ -317,6 +317,9 @@ main(int argc, char* argv[])
       exit(1);
     }
 
+	// ship it out
+	sock->eom();
+
     // get reply
     sock->decode();
     AttrList* ad=new AttrList();
