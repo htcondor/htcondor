@@ -54,8 +54,7 @@ static bool GetIds( const char *path, uid_t *owner, gid_t *group );
 #endif
 
 #ifdef WIN32
-static bool recursive_chown_win32(const char * path, 
-		const char *username, const char *domain, perm *po);
+static bool recursive_chown_win32(const char * path, perm *po);
 #endif
 
 StatInfo::StatInfo( const char *path )
@@ -1013,7 +1012,7 @@ recursive_chown(const char *path, const char *username, const char *domain) {
 		return false;
 	}
 	
-	return recursive_chown_win32(path, username, domain, &po);
+	return recursive_chown_win32(path, &po);
 
 #else
 	// UNIX - needs implementation.
@@ -1026,8 +1025,7 @@ recursive_chown(const char *path, const char *username, const char *domain) {
 // actual implementation that passes a pointer to the perm object
 // instead of creating a new one with every recursive call.
 bool 
-recursive_chown_win32(const char * path, 
-		const char *username, const char *domain, perm *po) {
+recursive_chown_win32(const char * path, perm *po) {
 
 	bool result = true;
 
@@ -1064,8 +1062,7 @@ recursive_chown_win32(const char * path,
 		const char * filename = 0;
 		while( (filename = dir.Next()) ) {
 			filename = dir.GetFullPath();
-			if( ! recursive_chown_win32(filename, username,
-					domain, po) ) {
+			if( ! recursive_chown_win32(filename, po) ) {
 				dprintf(D_FULLDEBUG, "recursive_chown() failed for %s; "
 						"iteration stopping.\n", path);
 				return false;
