@@ -8,7 +8,7 @@ move ..\src\condor_c++_util\email_cpp.C ..\src\condor_c++_util\email.C
 move ..\src\condor_mail\condor_email_main.cpp ..\src\condor_mail\main.cpp
 move ..\src\condor_dagman\dagman_submit.C ..\src\condor_dagman\submit.C
 move ..\src\condor_dagman\dagman_util.C ..\src\condor_dagman\util.C
-goto end
+exit /B 1
 :happywindows
 echo Making happy for the Windows build...
 move ..\src\condor_master.V6\daemon.C ..\src\condor_master.V6\daemon_master.C
@@ -18,4 +18,4 @@ move ..\src\condor_c++_util\email.C ..\src\condor_c++_util\email_cpp.C
 move ..\src\condor_mail\main.cpp ..\src\condor_mail\condor_email_main.cpp
 move ..\src\condor_dagman\submit.C ..\src\condor_dagman\dagman_submit.C
 move ..\src\condor_dagman\util.C ..\src\condor_dagman\dagman_util.C
-:end
+exit /B 2

@@ -77,6 +77,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_dagman
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_findhost
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -225,7 +228,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_give_interactive"=.\condor_give_interactive.dsp - Package Owner=<4>
+Project: "condor_findhost"=.\condor_findhost.dsp - Package Owner=<4>
 
 Package=<5>
 {{{

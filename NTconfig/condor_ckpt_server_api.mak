@@ -32,10 +32,10 @@ NULL=nul
 
 !IF  "$(CFG)" == "condor_ckpt_server_api - Win32 Release"
 
-OUTDIR=.\..\src\condor_ckpt_server
-INTDIR=.\..\src\condor_ckpt_server
+OUTDIR=..\src\condor_ckpt_server
+INTDIR=..\src\condor_ckpt_server
 # Begin Custom Macros
-OutDir=.\..\src\condor_ckpt_server
+OutDir=..\src\condor_ckpt_server
 # End Custom Macros
 
 !IF "$(RECURSE)" == "0" 
@@ -112,10 +112,10 @@ LIB32_OBJS= \
 
 !ELSEIF  "$(CFG)" == "condor_ckpt_server_api - Win32 Debug"
 
-OUTDIR=.\..\src\condor_ckpt_server
-INTDIR=.\..\src\condor_ckpt_server
+OUTDIR=..\src\condor_ckpt_server
+INTDIR=..\src\condor_ckpt_server
 # Begin Custom Macros
-OutDir=.\..\src\condor_ckpt_server
+OutDir=..\src\condor_ckpt_server
 # End Custom Macros
 
 !IF "$(RECURSE)" == "0" 
