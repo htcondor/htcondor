@@ -175,7 +175,7 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 	IRIX )		
 		oscrt0="crt1.o"
 		if [ $osver = "6.5" ]; then
-			ldargs="-LD_MSG:verbose=131,84,85 $abi $abiisa "
+			ldargs="-rpath /usr/lib32/mips3 -LD_MSG:verbose=131,84,85 $abi $abiisa "
 		else
 			ldargs="$abi $abiisa "
 		fi
