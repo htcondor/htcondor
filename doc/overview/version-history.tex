@@ -53,10 +53,7 @@ instead of total hours or total minutes.
 \Condor{submit} for submitting a shell command-line as a vanilla
 universe job.
 
-\item Solaris 2.8 SPARC has been added to the list of ports that now
-support remote system calls and checkpointing.
-
-\item Solaris 2.7 SPARC and Solaris 2.7 INTEL have been added to the
+\item Solaris 2.8 SPARC, 2.7 SPARC, 2.7 INTEL have been added to the
 list of ports that now support remote system calls and checkpointing.
 
 \item Any mail being sent from Condor now shows up as having been sent from
@@ -98,6 +95,9 @@ they are not tested or supported.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a long standing bug where Fortran 90 would occasionally
+truncate its output files to random sizes and fill them with zeros.
 
 \item If a SIGTERM was delivered to a \Condor{shadow}, it used to
 remove the job it was running from the job queue, as if \Condor{rm}
