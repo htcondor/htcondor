@@ -31,6 +31,14 @@ ExprList::
 ExprList()
 {
 	nodeKind = EXPR_LIST_NODE;
+	return;
+}
+
+ExprList::
+ExprList(std::vector<ExprTree*>& list)
+{
+    std::copy(list.begin(), list.end(), std::back_inserter(exprList));
+	return;
 }
 
 
@@ -109,6 +117,40 @@ GetComponents( vector<ExprTree*> &exprs ) const
 	for( itr=exprList.begin( ); itr!=exprList.end( ); itr++ ) {
 		exprs.push_back( *itr );
 	}
+	return;
+}
+
+void ExprList::
+insert(iterator it, ExprTree* t)
+{
+    exprList.insert(it, t);
+	return;
+}
+
+void ExprList::
+append(ExprTree* t)
+{
+    exprList.push_back(t);
+	return;
+}
+
+void ExprList::
+erase(iterator it)
+{
+    delete *it;
+    exprList.erase(it);
+	return;
+}
+
+void ExprList::
+erase(iterator f, iterator l)
+{
+    for (iterator it = f; it != l; ++it) {
+		delete *it;
+    }
+	
+    exprList.erase(f,l);
+	return;
 }
 
 bool ExprList::

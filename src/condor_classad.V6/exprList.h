@@ -35,6 +35,9 @@ class ExprListIterator;
 class ExprList : public ExprTree
 {
 	public:
+		ExprList();
+		ExprList(std::vector<ExprTree*>& list);
+
 		/// Destructor
 		~ExprList();
 
@@ -52,11 +55,21 @@ class ExprList : public ExprTree
 
 		/// Make a deep copy of the expression
 		virtual ExprList* Copy( ) const;
+		
+		// STL-like iterators and functions
+	    typedef std::vector<ExprTree*>::iterator       iterator;
+    	typedef std::vector<ExprTree*>::const_iterator const_iterator;
 
-	protected:
-		/// Constructor
-		ExprList();
+        iterator begin()             { return exprList.begin(); }
+		iterator end()               { return exprList.end();   }
+		const_iterator begin() const { return exprList.begin(); }
+		const_iterator end() const   { return exprList.end();   }
 
+		void insert(iterator it, ExprTree* t);
+		void append(ExprTree* t);
+		void erase(iterator it);
+		void erase(iterator f, iterator l);
+	
 	private:
 		friend class ExprListIterator;
 
