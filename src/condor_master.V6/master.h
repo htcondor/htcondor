@@ -109,6 +109,7 @@ public:
 	void	SetAllGoneAction( AllGoneT a ) {all_daemons_gone_action=a;};
 	void	StartTimers();
 	int		immediate_restart;
+	int		immediate_restart_master;
 private:
 	daemon **daemon_ptr;
 	int	no_daemons;
