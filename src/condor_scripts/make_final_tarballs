@@ -1,0 +1,213 @@
+#!/s/std/bin/perl
+
+# This script performs all steps necessary to take the release.tar
+# files for whatever platforms you want and put them onto the web as
+# the completed binary release with all the right support files, name,
+# etc, etc.  Read the README file in this directory for details on how
+# to release a new patch level or revision of Condor.
+#
+# This should be run in the top-level src directory.
+#
+
+# Grab any command-line args we were passed, just in case.
+($arch, $opsys, $glibc) = @ARGV;
+
+# Now, grab the version of this release.
+$_=`ident strip_dir/sbin/condor_master`;
+/\$Version: (\d*)\.(\d*)\.(\d*).*/;
+$majorv = $1;
+$minorv = $2;
+$releasev = $3;
+$version = "$majorv.$minorv.$releasev";
+
+# Things you should probably leave alone:
+BEGIN {
+    unshift(@INC, "/p/condor/home/perl");
+}
+
+require 5.002;
+use Archive::Tar;
+
+$skel="release_skeleton";
+$target="/p/condor/public/binaries/v$majorv.$minorv";
+$realskel="condor_release";
+$condor_install="condor_scripts/condor_install";
+
+#@modules = ( "condor", "smp" );
+@modules = (  "smp" );
+
+%skelfiles = (
+  "condor"   => [ "README", "DOC", "INSTALL", "LICENSE.TXT", "condor_install",
+		  "examples", ],
+  "smp"      => [ "README.smp", "DOC.contrib", "INSTALL.smp", "LICENSE.TXT", ]
+);
+
+%filesource = (
+  "condor_install" => "condor_scripts/condor_install",
+);	   
+
+%filedest = (
+  "README.smp" => "README",
+  "INSTALL.smp" => "INSTALL",
+  "DOC.contrib" => "DOC"
+);	   
+
+%tarfile = (
+  "condor" => "release.tar",
+);	   
+
+%releaselocation = (
+  "static"        => "static_dir",
+  "dynamic"       => "strip_dir"
+);
+
+%opsysname = (
+  "sun4x_55"      => "solaris251",
+  "sun4x_56"      => "solaris26",
+  "sunx86_55"     => "solaris251",
+  "sunx86_56"     => "solaris26",
+  "i386_linux2"   => "linux",
+  "alpha_dux40"   => "dux40",
+  "sgi_62"        => "irix6",
+  "sgi_63"        => "irix6",
+  "sgi_64"        => "irix6",
+  "sgi_65"        => "irix6",
+  "hp_ux102"      => "hpux10.20"
+);
+
+%archname = (
+  "sun4x_55"      => "Sparc",
+  "sun4x_56"      => "Sparc",
+  "sunx86_55"     => "x86",
+  "sunx86_56"     => "x86",
+  "i386_linux2"   => "x86",
+  "alpha_dux40"   => "Alpha",
+  "sgi_62"        => "SGI",
+  "sgi_63"        => "SGI",
+  "sgi_64"        => "SGI",
+  "sgi_65"        => "SGI",
+  "hp_ux102"      => "HPPAR"
+);
+
+umask(022);
+
+# Actual work begins...
+
+# Make sure we know what platform we are:
+if( ! ($arch && $opsys) ) {
+    $mysys=`sys`;
+    chomp($mysys);
+    $arch = $archname{$mysys};
+    $opsys = $opsysname{$mysys};
+}
+if( ! $glibc ) {
+    $glibc = "";
+    if( $opsys =~ /linux/i && -f "/lib/libc.so.6" ) {
+	$glibc = "glibc";
+    } 
+}
+
+`rm -rf $skel`;
+mkdir( "$skel", 0777 );
+
+foreach $module ( @modules ) {
+
+    $release="$module-$version";
+
+# Setup skeleton directory
+    print "Setting up skeleton directory for \"$module\"... ";  $| = 1;
+    mkdir( "$skel/$release", 0777 );
+    foreach $file ( @{$skelfiles{$module}} ) {
+	if( $filesource{$file} ) {
+	    $src = $filesource{$file};
+	} else {
+	    $src = "$realskel/$file";
+	}
+	if( $filedest{$file} ) {
+	    $dest = $filedest{$file};
+	} else {
+	    $dest = $file;
+	}
+	`cp -r $src $skel/$release/$dest`;
+    }
+    print "done.\n";
+
+    # Now, handle static and/or dynamic versions, whatever exists... 
+
+    foreach $linktype ( "static", "dynamic" ) {
+	# Make sure the proper tar file exists
+	if( $tarfile{$module} ) {
+	    $tarfile=$tarfile{$module};
+	} else {
+	    $tarfile="$module.tar";
+	}
+	if( ! (-d $releaselocation{$linktype} && 
+	       -f "$releaselocation{$linktype}/$tarfile") ) {
+	    print "There's no $tarfile file for $linktype on this platform, skipping.\n";
+	    next;
+	}
+
+	# Figure out what our filenames should look like.
+	$platform="$opsys-$arch";
+	if( $glibc ) {
+	    $platform = "$platform-glibc";
+	}
+	if( $linktype =~ /dynamic/ ) {
+	    $platform = "$platform-dynamic";
+	}
+
+	# Copy the tarfile with the right permissions into the skeleton. 
+	fix_tar( "$releaselocation{$linktype}/$tarfile", 
+		"$skel/$release/$tarfile" );
+
+	# Create full archive 
+	chdir( $skel ) || die "Can't chdir to $skel: $!\n";
+	print "Creating full archive: $release.tar\n";
+	$foo = `tar -cvf $release.tar $release`;
+	print "Tar output: $foo\n";
+	chdir( ".." ) || die "Can't chdir to ..: $!\n";
+
+	# Delete the release.tar we're now done with.
+	unlink( "$skel/$release/$tarfile" );
+
+	# Fix ownerships in the full archive.
+	fix_tar( "$skel/$release.tar", "$skel/$release-$platform.tar" );
+
+	# Delete the tar file we're now done with.
+	unlink( "$skel/$release.tar" );
+
+	# Make sure there's nothing in the way where we want to put it.
+	$targetfile = "$target/$release-$platform.tar";
+	unlink( "$targetfile", "$targetfile.Z", "$targetfile.gz" );
+
+	# Compress as appropriate, and move to the final location.
+	if( $platform =~ /.*linux.*/ ) {
+	    print "gzipping $skel/$release-$platform.tar\n";
+	    system( "gzip $skel/$release-$platform.tar" );
+	    print "Moving $release-$platform.tar.gz into $target ... "; $| = 1;
+	    `mv $skel/$release-$platform.tar.gz $target`;
+	    print "done.\n";
+	} else {
+	    print "compressing $skel/$release-$platform.tar\n";
+	    system( "compress $skel/$release-$platform.tar" );
+	    print "Moving $release-$platform.tar.Z into $target ... "; $| = 1;
+	    `mv $skel/$release-$platform.tar.Z $target`;
+	    print "done.\n";
+	}
+    }
+}
+
+sub fix_tar {
+    local( $src, $target ) = @_;
+    local( $tar );
+
+    $tar = Archive::Tar->new();
+
+    print "\nReading $src\n"; $| = 1;
+    $tar->read( $src );
+    print "Fixing ownerships\n"; $| = 1;
+    $tar->change_owner( 0,0 );
+    print "Writing $target ... ";  $| = 1;
+    $tar->write( $target );
+    print "done.\n";
+}
