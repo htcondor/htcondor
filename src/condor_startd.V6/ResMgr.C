@@ -28,6 +28,7 @@ ResMgr::ResMgr()
 {
 	coll_sock = NULL;
 	view_sock = NULL;
+	totals_classad = NULL;
 	up_tid = -1;
 	poll_tid = -1;
 
@@ -162,7 +163,7 @@ ResMgr::init_resources()
 void
 ResMgr::reconfig_resources()
 {
-	int i, num = -1;
+	int i, num = 0, num_set = 0;
 	char buf[64], *tmp;
 	CpuAttributes* cap;
 	float share;
@@ -173,12 +174,11 @@ ResMgr::reconfig_resources()
 		type_nums[i] = 0;
 		sprintf( buf, "NUM_VIRTUAL_MACHINES_TYPE_%d", i );
 		if( (tmp = param(buf)) ) {
+			num_set = 1;
 			type_nums[i] = atoi( tmp );
 			free( tmp );
 			num += type_nums[i];
 		}
-	}
-	if( !num ) {
 	}
 }
 
