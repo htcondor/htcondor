@@ -115,6 +115,7 @@ const char ATTR_GID						 [] = "Gid";
 const char ATTR_GLOBAL_JOB_ID            [] = "GlobalJobId";
 const char ATTR_GZIP					 [] = "GZIP";
 const char ATTR_GLOBUS_CONTACT_STRING	 [] = "GlobusContactString";
+const char ATTR_GLOBUS_DELEGATION_URI	 [] = "GlobusDelegationUri";
 const char ATTR_GLOBUS_GRAM_VERSION		 [] = "GlobusGramVersion";
 const char ATTR_GLOBUS_RESOURCE			 [] = "GlobusResource";
 const char ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME [] = "GlobusResourceUnavailableTime";
@@ -123,6 +124,8 @@ const char ATTR_GLOBUS_RSL				 [] = "GlobusRSL";
 const char ATTR_GLOBUS_STATUS			 [] = "GlobusStatus";
 const char ATTR_X509_USER_PROXY          [] = "x509userproxy";
 const char ATTR_X509_USER_PROXY_SUBJECT	 [] = "x509userproxysubject";
+const char ATTR_GLOBUS_JOBMANAGER_TYPE   []	= "JobmanagerType";	// for gt4
+const char ATTR_GLOBUS_SUBMIT_ID	     [] = "GlobusSubmitId"; // for gt4
 // ckireyev myproxy
 const char ATTR_MYPROXY_SERVER_DN		 [] = "MyProxyServerDN";
 const char ATTR_MYPROXY_HOST_NAME		 [] = "MyProxyHost";

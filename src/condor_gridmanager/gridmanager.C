@@ -49,6 +49,7 @@
 #include "mirrorjob.h"
 #include "condorjob.h"
 #include "gt3job.h"
+#include "gt4job.h"
 #include "infnbatchjob.h"
 
 #define QMGMT_TIMEOUT 15
@@ -366,6 +367,15 @@ Init()
 	new_type->AdMatchConst = GT3JobAdConst;
 	new_type->AdMustExpandFunc = GT3JobAdMustExpand;
 	new_type->CreateFunc = GT3JobCreate;
+	jobTypes.Append( new_type );
+
+	new_type = new JobType;
+	new_type->Name = strdup( "GT4" );
+	new_type->InitFunc = GT4JobInit;
+	new_type->ReconfigFunc = GT4JobReconfig;
+	new_type->AdMatchConst = GT4JobAdConst;
+	new_type->AdMustExpandFunc = GT4JobAdMustExpand;
+	new_type->CreateFunc = GT4JobCreate;
 	jobTypes.Append( new_type );
 
 	new_type = new JobType;
