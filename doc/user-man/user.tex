@@ -816,23 +816,27 @@ running as root on a given machine, enter the following command:
 \begin{verbatim}
         condor_status -master -l <machine-name>
 \end{verbatim}
-where \Opt{machine-name} is the name of the machine you want to inspect.
-This command will display a \condor{master} ClassAd; if the attribute ``RealUid'' equals
-zero, then the Condor daemons are indeed running with root access and
-you can skip this section.  If the ``RealUid'' attribute is not zero,
-then the Condor daemons do not have root access, and you should read
-on.
 
-Please realize that using ``ps'' is
-\textu{not} an effective method of determining if Condor is running with
-root access.  When using the "ps" command, it may often appear that the daemons are
+where \Opt{machine-name} is the name of the machine you want to
+inspect.  This command will display a \condor{master} ClassAd; if the
+attribute ``RealUid'' equals zero, then the Condor daemons are indeed
+running with root access and you can skip this section.  If the
+``RealUid'' attribute is not zero, then the Condor daemons do not have
+root access, and you should read on.
+
+Please realize that using ``ps'' is \underline{not} an effective
+method of determining if Condor is running with root access.  When
+using the "ps" command, it may often appear that the daemons are
 running as the condor user instead of root.  However, note that the
-``ps'' command shows the current \emph{effective}
-owner of the process, not the \emph{real} owner.  (See the \verbatim{getuid(2)} and
-\verbatim{geteuid(2)} Unix man pages for details.)  In Unix, a process running
-under the real uid of root may switch its effective uid.  (See the
-\verbatim{seteuid(2)} man page.)  For security reasons, the daemons only set effective uid to
-root when absolutely necessary (to perform a privileged operation).
+``ps'' command shows the current \emph{effective} owner of the
+process, not the \emph{real} owner.  (See the \Cmd{getuid}{2} and
+\Cmd{geteuid}{2} Unix man pages for details.)  In Unix, a process
+running under the real uid of root may switch its effective uid.  (See
+the \Cmd{seteuid}{2} man page.)  For security reasons, the daemons
+only set effective uid to root when absolutely necessary (to perform a
+privileged operation).
+
+
 
 If they are not running with root access, you need to make any/all files
 and/or directories that your job will touch readable and/or writable by
