@@ -62,7 +62,8 @@ main_init( int argc, char **argv )
 
 	err = globus_module_activate( GLOBUS_GRAM_CLIENT_MODULE );
 	if ( err != GLOBUS_SUCCESS ) {
-		dprintf( D_ALWAYS, "Error initializing GRAM, err=%d\n", err );
+		dprintf( D_ALWAYS, "Error initializing GRAM, err=%d - %s\n", 
+			err, globus_gram_client_error_string(err) );
 		DC_Exit( 1 );
 	}
 
@@ -70,7 +71,8 @@ main_init( int argc, char **argv )
 											 &gridmanager,
 											 &gramCallbackContact );
 	if ( err != GLOBUS_SUCCESS ) {
-		dprintf( D_ALWAYS, "Error enabling GRAM callback, err=%d\n", err );
+		dprintf( D_ALWAYS, "Error enabling GRAM callback, err=%d - %s\n", 
+			err, globus_gram_client_error_string(err) );
 		globus_module_deactivate( GLOBUS_GRAM_CLIENT_MODULE );
 		DC_Exit( 1 );
 	}
