@@ -29,13 +29,17 @@
 #	include <dirent.h>
 #endif
 
+// DON'T include "stat_wrapper.h"; just pre-declare the StatWrapper
+// class below.  This way, we avoid the possible problems of including
+// all of the system includes into places where we don't want them.
+class StatWrapper;	// See comment above
+
 enum si_error_t { SIGood = 0, SINoFile, SIFailure };
 
 /** Class to store information when you stat a file on either Unix or
     NT.  This class is used by the Directory class defined below.
 	@see Directory
 */
-class StatBuf;
 class StatInfo
 {
 public:
@@ -198,7 +202,7 @@ private:
 	char* fullpath;
 	void stat_file( const char *path );
 	void stat_file( int fd );
-	void init( StatBuf *buf = NULL );
+	void init( StatWrapper *buf = NULL );
 	char* make_dirpath( const char* dir );
 };
 

@@ -28,6 +28,7 @@
 #include "condor_string.h"
 #include "status_string.h"
 #include "condor_config.h"
+#include "stat_wrapper.h"
 
 // Set DEBUG_DIRECTORY_CLASS to 1 to not actually remove
 // files, but instead print out to the log file what would get
@@ -50,116 +51,6 @@
 #ifndef WIN32
 static bool GetIds( const char *path, uid_t *owner, gid_t *group );
 #endif
-
-// Ugly hack: stat64 prototyps are wacked on HPUX, so define them myself
-// These are cut & pasted from the HPUX man pages...
-#if defined( HPUX )
-extern "C" {
-	extern int stat64(const char *path, struct stat64 *buf);
-	extern int fstat64(int fildes, struct stat64 *buf);
-}
-#endif
-
-	// Define a "standard" StatBuf type
-#if defined HAS_STAT64
-typedef struct stat64 StatStructType;
-#elif defined HAS__STATI64
-typedef struct _stati64 StatStructType;
-#else
-typedef struct stat StatStructType;
-#endif
-
-class StatBuf
-{
-public:
-	StatBuf( const char *path );
-	StatBuf( int fd );
-	~StatBuf( );
-	int Retry( void );
-
-	const char *GetStatFn( void ) { return name; };
-	int GetStatus( void ) { return status; };
-	int GetErrno( void ) { return stat_errno; };
-	const StatStructType *GetStatBuf( void ) { return &buf; };
-
-private:
-	int DoStat( const char *path );
-	int DoStat( int fd );
-	StatStructType	buf;
-	const char *name;
-	int status;
-	int stat_errno;
-	int	fd;
-	const char *path;
-};
-
-StatBuf::StatBuf( const char *path )
-{
-	this->path = strdup( path );
-	this->fd = -1;
-	DoStat( this->path );
-}
-
-StatBuf::StatBuf( int fd )
-{
-	this->path = NULL;
-	this->fd = fd;
-	DoStat( fd );
-}
-
-StatBuf::~StatBuf( void )
-{
-	if ( path ) {
-		free ( (void*) path );
-		path = NULL;
-	}
-}
-
-int
-StatBuf::Retry( void )
-{
-	if ( fd ) {
-		return DoStat( fd );
-	} else {
-		return DoStat( path );
-	}
-}
-
-int
-StatBuf::DoStat( const char *path )
-{
-#if defined HAS_STAT64
-	name = "stat64";
-	status = ::stat64( path, &buf );
-#elif defined HAS__STATI64
-	name = "_stati64";
-	status = ::_stati64( path, &buf );
-#else
-	name = "stat";	
-	status = ::stat( path, &buf );
-#endif
-
-	stat_errno = errno;
-	return status;
-}
-
-int
-StatBuf::DoStat( int fd )
-{
-#if defined HAS_STAT64
-	name = "fstat64";
-	status = ::fstat64( fd, &buf );
-#elif defined HAS__STATI64
-	name = "_fstati64";
-	status = ::_fstati64( fd, &buf );
-#else
-	name = "fstat";
-	status = ::fstat( fd, &buf );
-#endif
-
-	stat_errno = errno;
-	return status;
-}
 
 StatInfo::StatInfo( const char *path )
 {
@@ -247,7 +138,7 @@ StatInfo::stat_file( const char *path )
 	init( );
 
 		// Ok, run stat
-	StatBuf statbuf( path );
+	StatWrapper statbuf( path );
 	int status = statbuf.GetStatus( );
 
 		// How'd it go?
@@ -290,7 +181,7 @@ StatInfo::stat_file( int fd )
 	init( );
 
 		// Ok, run stat
-	StatBuf statbuf( fd );
+	StatWrapper statbuf( fd );
 	int status = statbuf.GetStatus( );
 
 		// How'd it go?
@@ -327,7 +218,7 @@ StatInfo::stat_file( int fd )
 }
 
 void
-StatInfo::init( StatBuf *statbuf )
+StatInfo::init( StatWrapper *statbuf )
 {
 		// Initialize
 	if ( NULL == statbuf )
