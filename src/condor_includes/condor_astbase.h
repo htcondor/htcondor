@@ -102,7 +102,7 @@ class ExprTree
 		int					MyRef()	 { return ref; }
 		virtual ExprTree*   LArg()   { return NULL; }
 		virtual ExprTree*   RArg()   { return NULL; }
-        ExprTree*           Copy();       // increment the ref counter
+        virtual ExprTree*   Copy();       // increment the ref counter
 		virtual ExprTree*   DeepCopy(void) const = 0;
         virtual void        Display();    // display the expression
 		virtual void        PrintToStr(char*) {} // print the expr to a string
@@ -306,14 +306,14 @@ class BinaryOpBase : public ExprTree
 		virtual ExprTree*     LArg()   { return lArg; }
 		virtual ExprTree*     RArg()   { return rArg; }
 
-		virtual ExprTree*		Copy();
+		virtual ExprTree*	  Copy();
 
-		friend  ExprTree;
+		friend  class         ExprTree;
 		friend	class	      AttrList;
 		friend	class	      AggOp;
 
     protected :
-		virtual int         _EvalTree(class AttrList*, EvalResult*);
+		virtual int         _EvalTree(AttrList*, EvalResult*);
 		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*);
 
 		ExprTree* 	      lArg;
