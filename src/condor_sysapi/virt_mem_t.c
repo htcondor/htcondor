@@ -50,7 +50,7 @@ int virt_memory_test(int	test_blocksize,
 					"above %d%% of the average,\n", max_sd_varation_ratio);
 	dprintf(D_ALWAYS, "        the swap space reported are erratic and the test block is "
 					"considered a failure\n");
-	dprintf(D_ALWAYS, "        I will run %d test blocks, and if more than %d%% of those blocks "
+	dprintf(D_ALWAYS, "        I will run %d test blocks, and if more than %f%% of those blocks "
 					"fail, this entire test fails.\n", test_blocksize, 
 					max_failed_test_ratio*100);
 
