@@ -38,12 +38,31 @@ enum {
 	EVAL_ERROR
 };
 
-/// The modes in which an expression can be copied.
-enum CopyMode 
-{ 
-	/** Default copy mode (EXPR_DEEP_COPY or EXPR_REF_COUNT)*/EXPR_DEFAULT_COPY,
-	/** Make deep copies */ EXPR_DEEP_COPY, 
-	/** Use reference counts */ EXPR_REF_COUNT 
+/// The kinds of nodes in expression trees
+enum NodeKind
+{
+	/** Literal node (string, integer, real, boolean, undefined, error) */
+																LITERAL_NODE,
+	/** Attribute reference node (attr, .attr, expr.attr) */    ATTRREF_NODE,
+	/** Expression operation node (unary, binary, ternary) */   OP_NODE,
+	/** Function call node */                                   FN_CALL_NODE,
+	/** ClassAd node */                                         CLASSAD_NODE,
+	/** Expression list node */                                 EXPR_LIST_NODE
+};
+
+/// The various kinds of values
+enum ValueType
+{
+	/** The undefined value */          UNDEFINED_VALUE,
+	/** The error value */              ERROR_VALUE,
+	/** A boolean value (false, true)*/ BOOLEAN_VALUE,
+	/** An integer value */             INTEGER_VALUE,
+	/** A real value */                 REAL_VALUE,
+	/** A string value */               STRING_VALUE,
+	/** An expression list value */     LIST_VALUE,
+	/** A classad value */              CLASSAD_VALUE,
+	/** An absolute time value */       ABSOLUTE_TIME_VALUE,
+	/** A relative time value */        RELATIVE_TIME_VALUE
 };
 
 /// The multiplicative factors for a numeric literal.
