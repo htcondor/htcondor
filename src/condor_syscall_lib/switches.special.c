@@ -869,8 +869,10 @@ getlogin()
 		return (  GETLOGIN() );
 #endif
 	} else {
-		if (loginbuf == NULL)
+		if (loginbuf == NULL) {
 			loginbuf = (char *)malloc(35);
+			memset( loginbuf, 0, 35 );
+		}
 		rval = REMOTE_syscall( CONDOR_getlogin, loginbuf );
 	}
 
