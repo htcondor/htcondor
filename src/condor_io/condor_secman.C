@@ -725,12 +725,16 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 		if (the_method) {
 			sprintf (buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION_METHODS, the_method);
 			action_ad->Insert(buf);
-			delete the_method;
+			free( the_method );
 		}
 	}
 
-	if (cli_methods) delete cli_methods;
-	if (srv_methods) delete srv_methods;
+	if (cli_methods) {
+        free(cli_methods);
+    }
+	if (srv_methods) {
+        free(srv_methods);
+    }
 
 	cli_methods = NULL;
 	srv_methods = NULL;
@@ -741,13 +745,16 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 		if (the_method) {
 			sprintf (buf, "%s=\"%s\"", ATTR_SEC_CRYPTO_METHODS, the_method);
 			action_ad->Insert(buf);
-			delete the_method;
+			free( the_method );
 		}
 	}
 
-	if (cli_methods) delete cli_methods;
-	if (srv_methods) delete srv_methods;
-
+	if (cli_methods) {
+        free( cli_methods );
+    }
+	if (srv_methods) {
+        free( srv_methods );
+    }
 
 	// reconcile the session expiration.  it is the SHORTER of
 	// client's and server's value.
