@@ -168,9 +168,19 @@ UniShadow::logExecuteEvent( void )
 void
 UniShadow::cleanUp( void )
 {
-		// Deactivate the claim
+		// Deactivate (fast) the claim
 	if ( remRes ) {
 		remRes->killStarter();
+	}
+}
+
+
+void
+UniShadow::gracefulShutDown( void )
+{
+		// Deactivate (gracefully) the claim
+	if ( remRes ) {
+		remRes->killStarter( true );
 	}
 }
 

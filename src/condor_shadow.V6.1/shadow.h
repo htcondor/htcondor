@@ -120,6 +120,9 @@ class UniShadow : public BaseShadow
 		*/
 	virtual void cleanUp( void );
 
+		/** Do a graceful shutdown of the remote starter */
+	virtual void gracefulShutDown( void );
+
  private:
 	RemoteResource *remRes;
 };
