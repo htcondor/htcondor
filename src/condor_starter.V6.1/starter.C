@@ -33,8 +33,10 @@
 #include "java_proc.h"
 #include "mpi_master_proc.h"
 #include "mpi_comrade_proc.h"
+#ifndef WIN32
 #include "parallel_master_proc.h"
 #include "parallel_comrade_proc.h"
+#endif
 #include "syscall_numbers.h"
 #include "my_hostname.h"
 #include "internet.h"
@@ -597,6 +599,7 @@ CStarter::TransferCompleted( FileTransfer *ftrans )
 			}
 			break;
 		}
+#ifndef WIN32
 		case CONDOR_UNIVERSE_PARALLEL: {
 			int is_master = FALSE;
 			if ( jobAd->LookupBool(ATTR_PARALLEL_IS_MASTER, is_master) < 1 ) {
@@ -611,6 +614,7 @@ CStarter::TransferCompleted( FileTransfer *ftrans )
 			}
 			break;
 		}
+#endif
 		default:
 			dprintf( D_ALWAYS, "Starter doesn't support universe %d (%s)\n",
 					 jobUniverse, CondorUniverseName(jobUniverse) ); 

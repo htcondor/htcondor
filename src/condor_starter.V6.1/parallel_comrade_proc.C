@@ -21,6 +21,7 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#ifndef WIN32
 #include "condor_common.h"
 #include "parallel_comrade_proc.h"
 #include "condor_attributes.h"
@@ -154,3 +155,4 @@ ParallelComradeProc::PublishUpdateAd( ClassAd* ad )
 	return VanillaProc::PublishUpdateAd( ad );
 }
 
+#endif

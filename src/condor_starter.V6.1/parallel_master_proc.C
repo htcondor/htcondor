@@ -21,6 +21,7 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#ifndef WIN32
 #include "condor_common.h"
 #include "parallel_master_proc.h"
 #include "NTsenders.h"
@@ -178,3 +179,4 @@ ParallelMasterProc::alterEnv()
 
     return 1;
 }
+#endif
