@@ -338,7 +338,6 @@ SetExecutable()
 	static int exec_set = 0;
 	char	*argv[64];
 	int		argc;
-	int		i;
 
 	if( exec_set ) {
 		return;
@@ -386,7 +385,7 @@ SetExecutable()
 	}
 
 	// generate initial checkpoint file
-	strcpy( IckptName, gen_ckpt_name(0,ClusterId,ICKPT,i) );
+	strcpy( IckptName, gen_ckpt_name(0,ClusterId,ICKPT,0) );
 	_mkckpt(IckptName, ename);
 		
 	exec_set = 1;
