@@ -132,25 +132,29 @@ class StringSpace
 	/** Check if a string is in the string space. If it is, we return
      * the index of the string, otherwise we return -1.  
      */
-	inline 	int checkFor (char *str);		// check if str is in the space
+	inline 	int checkFor (char *str);
 
     /** Return the number of strings in the string space.
      */
-	inline 	int getNumStrings (void);		// number of strings in space
+	inline 	int getNumStrings (void);
 
 	inline const char  *operator[] (SSString);
 
 	/** Return the string corresponding to the given index. NULL is
      * returned if the index is invalid. 
 	 */
-	inline const char  *operator[] (int); 	// less safe than the above
+	inline const char  *operator[] (int);
+
+	/** Dispose of a string given its index. This is useful when we
+	 *  don't have an SSString */
+	void disposeByIndex(int index);
 
 	/** Print the contents of the StringSpace to stdout */
 	void  dump ();			
 
     /** Remove all strings in the StringSpace. Be careful not to use
 	 *  any references to strings that previously were in the StringSpace:
-	 *  they will all be dangling now. 
+	 *  they will all be dangling now.
 	 */
 	void  purge(); 
 
@@ -158,12 +162,23 @@ class StringSpace
 	friend class SSString;
 
 	// the shared storage cell for the strings
-	struct SSStringEnt { int refCount; const char *string; int adoptMode; };
+	struct SSStringEnt 
+    { 
+		bool        inUse;
+		int         refCount; 
+		const char  *string; 
+		int         adoptMode; 
+	};
 
-	HashTable<MyString,int> stringSpace;	
-	ExtArray<SSStringEnt> strTable;
-	int					  current;
-	bool				  caseSensitive;
+	HashTable<MyString,int>  stringSpace;	
+	bool                     caseSensitive;
+	ExtArray<SSStringEnt>    strTable;
+	// The next couple of variables help us keep
+	// track of where we can put things into the strTable.
+	//int					  current;
+	int                      first_free_slot;
+	int                      highest_used_slot;
+	int                      number_of_slots_filled;
 };
 
 
@@ -223,7 +238,7 @@ inline const char * StringSpace::
 operator[] (SSString ssstr)
 {
 	const char *the_string;
-    if (ssstr.index >= 0 && ssstr.index < current && ssstr.context == this) {
+    if (ssstr.index >= 0 && ssstr.index <= highest_used_slot && ssstr.context == this) {
         the_string = strTable[ssstr.index].string;
 	} else {
         the_string = NULL;
@@ -235,7 +250,7 @@ inline const char * StringSpace::
 operator[] (int id)
 {
 	const char *the_string;
-    if (id >= 0 && id < current) {
+    if (id >= 0 && id <= highest_used_slot) {
 		the_string = strTable[id].string;
 	} else {
 		the_string = NULL;
@@ -256,7 +271,7 @@ StringSpace::checkFor (char *str)		// check if string is in the space
 inline int 
 StringSpace::getNumStrings (void)			// number of strings in the space
 {
-	return current;
+	return number_of_slots_filled;
 }
 
 
