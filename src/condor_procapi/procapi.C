@@ -610,7 +610,8 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 #ifndef WIN32
 // used in UNIX versions for sampling the cpu usage and page faults over time.
 void
-ProcAPI::do_usage_sampling( piPTR& pi, double ustime, long nowmajf, long nowminf ) {
+ProcAPI::do_usage_sampling( piPTR& pi, double ustime, 
+                            long nowmajf, long nowminf ) {
 
 	struct timeval thistime;
 	double timediff, now;
@@ -633,32 +634,48 @@ ProcAPI::do_usage_sampling( piPTR& pi, double ustime, long nowmajf, long nowminf
 		(phn->creation_time == pi->creation_time) )  {
 			// success; pid in hash table
 		timediff = now - phn->lasttime;
-		if ( timediff < 1.0 ) {  // less than one second since last poll
-			pi->cpuusage = phn->oldusage;
-			pi->minfault = phn->oldminf;
-			pi->majfault = phn->oldmajf;
-			now     = phn->lasttime;  // we want old values preserved...
-			ustime  = phn->oldtime;
-			nowminf = phn->oldminf;
-			nowmajf = phn->oldmajf;
-		} else {
-			pi->cpuusage = ( ( ustime - phn->oldtime ) / timediff ) * 100;
-			pi->minfault = (long unsigned)((nowminf - phn->oldminf)/timediff);
-			pi->majfault = (long unsigned)((nowmajf - phn->oldmajf)/timediff);
-		}
-	} else {
-			// pid not in hash table; first time.  Use age of
-			// process as guide 
-		if( pi->age == 0 ) {
-			pi->cpuusage = 0.0;
-			pi->minfault = 0;
-			pi->majfault = 0;
-		} else {
-			pi->cpuusage = ( ustime / (double) pi->age ) * 100;
-			pi->minfault = (long unsigned)(nowminf / (double) pi->age);
-			pi->majfault = (long unsigned)(nowmajf / (double) pi->age);
-		}
-	}
+            /* do some sanity checking now.  The Solaris 2.6 kernel
+               has lied to us about the user & sys time.  They will 
+               have a value at one reading, then 5 seconds later
+               they will be back to zero.  This results in a negative
+               cpuusage and problems for us.  Check for this and 
+               use old values if it happens.  -MEY 4-9-1999 */
+        if ( ustime < phn->oldtime ) {
+                // lying bastard OS! (use old vals)
+            pi->cpuusage = phn->oldusage;
+            pi->minfault = phn->oldminf;
+            pi->majfault = phn->oldmajf;
+        } else { 
+                // OS not lying:
+            if ( timediff < 1.0 ) {  // less than one second since last poll
+                pi->cpuusage = phn->oldusage;
+                pi->minfault = phn->oldminf;
+                pi->majfault = phn->oldmajf;
+                now     = phn->lasttime;  // we want old values preserved...
+                ustime  = phn->oldtime;
+                nowminf = phn->oldminf;
+                nowmajf = phn->oldmajf;
+            } else {
+                pi->cpuusage = ( ( ustime - phn->oldtime ) / timediff ) * 100;
+                pi->minfault = (long unsigned)
+                    ((nowminf - phn->oldminf)/timediff);
+                pi->majfault = (long unsigned)
+                    ((nowmajf - phn->oldmajf)/timediff);
+            }
+        } // end OS not lying case
+    } else {
+            // pid not in hash table; first time.  Use age of
+            // process as guide 
+        if( pi->age == 0 ) {
+            pi->cpuusage = 0.0;
+            pi->minfault = 0;
+            pi->majfault = 0;
+        } else {
+            pi->cpuusage = ( ustime / (double) pi->age ) * 100;
+            pi->minfault = (long unsigned)(nowminf / (double) pi->age);
+            pi->majfault = (long unsigned)(nowmajf / (double) pi->age);
+        }
+    } 
 
 		// if we got that phn from the hashtable, remove it now.
 	if ( phn ) {
@@ -682,39 +699,10 @@ ProcAPI::do_usage_sampling( piPTR& pi, double ustime, long nowmajf, long nowminf
 		// a bug in the Linux SMP kernel, or there may be a problem 
 		// in the above code.
 	if( pi->cpuusage < 0.0 ) {
-		if ( pi->cpuusage > -10.0 ) {
-				// let's call this a roundoff error and forget about it.
-			pi->cpuusage = 0.0;
-		}
-		else {
-				// damn, we've got a "rather negative" cpu usage number.
-				// Scream loudly!
-			dprintf ( D_ALWAYS, "AAAAG!  Large neg. number in cpuusage.\n");
-			dprintf ( D_ALWAYS, "Dumping everything I know:\n" );
-			dprintf ( D_ALWAYS, "pi->cpuusage       %f\n", pi->cpuusage );
-			dprintf ( D_ALWAYS, "ustime             %f\n", ustime );
-			dprintf ( D_ALWAYS, "now                %f\n", now );
-			dprintf ( D_ALWAYS, "timediff           %f\n", timediff );
-			dprintf ( D_ALWAYS, "pi->user_time      %ld\n", pi->user_time );
-			dprintf ( D_ALWAYS, "pi->sys_time       %ld\n", pi->sys_time );
-			dprintf ( D_ALWAYS, "pi->age            %ld\n", pi->age );
-            dprintf ( D_ALWAYS, "pi->creation_time  %ld\n", pi->creation_time);
-            dprintf ( D_ALWAYS, "pi->pid            %ld\n", pi->pid );
-            dprintf ( D_ALWAYS, "pi->ppid           %ld\n", pi->ppid );
-            dprintf ( D_ALWAYS, "getpid()           %ld\n", getpid() );
-			if ( phn ) {
-				dprintf ( D_ALWAYS, "old_phn->lasttime  %f\n", phn->lasttime );
-				dprintf ( D_ALWAYS, "old_phn->oldtime   %f\n", phn->oldtime );
-				dprintf ( D_ALWAYS, "old_phn->oldusage  %f\n", phn->oldusage );
-                dprintf ( D_ALWAYS, "old_phn->creation_time  %ld\n", 
-                          phn->creation_time );
-			}
-			assert(0);
-		}
+        dprintf ( D_ALWAYS, "ProcAPI sanity failure, cpuusage = %f\n", 
+                  pi->cpuusage );
+        pi->cpuusage = 0.0;
 	}
-
-		// do some other checking...
-
 	if( pi->user_time < 0 ) {
 		dprintf ( D_ALWAYS, "ProcAPI sanity failure, user_time = %ld\n", 
 				  pi->user_time );
@@ -731,7 +719,7 @@ ProcAPI::do_usage_sampling( piPTR& pi, double ustime, long nowmajf, long nowminf
 		pi->age = 0;
 	}
 
-		// now we can delete this, we may have used it in checking...
+		// now we can delete this.
 	if ( phn ) delete phn;
 	
 }
