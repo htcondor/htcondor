@@ -573,6 +573,7 @@ doContactSchedd()
 			 !curr_job->submitLogged ) {
 			WriteGlobusSubmitEventToUserLog( curr_job );
 			curr_job->submitLogged = true;
+			curr_job->increment_globus_submits = true;
 		}
 		if ( curr_action->actions & UA_LOG_EXECUTE_EVENT &&
 			 !curr_job->executeLogged ) {
@@ -622,6 +623,16 @@ doContactSchedd()
 
 		curr_job = curr_action->job;
 
+		if ( curr_job->increment_globus_submits ) {
+				// Increment the number of times we've
+				// successfully submitted to Globus
+			(curr_job->numGlobusSubmits)++;
+			SetAttributeInt( curr_job->procID.cluster,
+						curr_job->procID.proc,
+						ATTR_NUM_GLOBUS_SUBMITS, curr_job->numGlobusSubmits );
+			curr_job->increment_globus_submits = false;
+		}
+
 		if ( (curr_action->actions & UA_UPDATE_CONDOR_STATE) ||
 			 (curr_action->actions & UA_HOLD_JOB) ) {
 			int curr_status;
@@ -641,6 +652,14 @@ doContactSchedd()
 					SetAttributeInt( curr_job->procID.cluster, 
 									 curr_job->procID.proc,
 						ATTR_ENTERED_CURRENT_STATUS, (int)time(0) );
+					int sys_holds = 0;
+					GetAttributeInt(curr_job->procID.cluster, 
+								curr_job->procID.proc, ATTR_NUM_SYSTEM_HOLDS,
+								&sys_holds);
+					sys_holds++;
+					SetAttributeInt(curr_job->procID.cluster, 
+								curr_job->procID.proc, ATTR_NUM_SYSTEM_HOLDS,
+								sys_holds);
 				}
 				SetAttributeString( curr_job->procID.cluster,
 									curr_job->procID.proc,

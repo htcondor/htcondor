@@ -185,9 +185,12 @@ char	*TransferError = "transfer_error";
 char	*CopyToSpool = "copy_to_spool";
 
 char	*PeriodicHoldCheck = "periodic_hold";
+char	*PeriodicReleaseCheck = "periodic_release";
 char	*PeriodicRemoveCheck = "periodic_remove";
 char	*OnExitHoldCheck = "on_exit_hold";
 char	*OnExitRemoveCheck = "on_exit_remove";
+
+char	*GlobusResubmit = "globus_resubmit";
 
 char	*DAGNodeName = "dag_node_name";
 char	*DAGManJobId = "dagman_job_id";
@@ -387,6 +390,9 @@ init_job_ad()
 	InsertJobExpr (buffer);
 
 	(void) sprintf (buffer, "%s = 0", ATTR_NUM_RESTARTS);
+	InsertJobExpr (buffer);
+
+	(void) sprintf (buffer, "%s = 0", ATTR_NUM_SYSTEM_HOLDS);
 	InsertJobExpr (buffer);
 
 	(void) sprintf (buffer, "%s = 0", ATTR_JOB_COMMITTED_TIME);
@@ -1618,6 +1624,22 @@ SetPeriodicHoldCheck(void)
 	}
 
 	InsertJobExpr( buffer );
+
+	phc = condor_param(PeriodicReleaseCheck, ATTR_PERIODIC_RELEASE_CHECK);
+
+	if (phc == NULL)
+	{
+		/* user didn't have one, so add one */
+		sprintf( buffer, "%s = FALSE", ATTR_PERIODIC_RELEASE_CHECK );
+	}
+	else
+	{
+		/* user had a value for it, leave it alone */
+		sprintf( buffer, "%s = %s", ATTR_PERIODIC_RELEASE_CHECK, phc );
+		free(phc);
+	}
+
+	InsertJobExpr( buffer );
 }
 
 void
@@ -2294,6 +2316,18 @@ SetGlobusParams()
 	sprintf( buffer, "%s = %d", ATTR_GLOBUS_STATUS,
 			 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED );
 	InsertJobExpr (buffer, false );
+
+	sprintf( buffer, "%s = 0", ATTR_NUM_GLOBUS_SUBMITS );
+	InsertJobExpr (buffer, false );
+
+	if ( tmp = condor_param(GlobusResubmit,ATTR_GLOBUS_RESUBMIT_CHECK) ) {
+		sprintf( buff, "%s = %s", ATTR_GLOBUS_RESUBMIT_CHECK, tmp );
+		free(tmp);
+		InsertJobExpr (buff, false );
+	} else {
+		sprintf( buff, "%s = FALSE", ATTR_GLOBUS_RESUBMIT_CHECK);
+		InsertJobExpr (buff, false );
+	}
 
 	if ( tmp = condor_param(GlobusRSL) ) {
 		sprintf( buff, "%s = \"%s\"", ATTR_GLOBUS_RSL, tmp );

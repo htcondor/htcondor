@@ -102,6 +102,10 @@ class GlobusJob : public Service
 	bool restartingJM;
 	time_t restartWhen;
 
+	bool increment_globus_submits;
+	int wantResubmit;
+	int numGlobusSubmits;
+
  protected:
 	bool callbackRegistered;
 	//Classad *ad;

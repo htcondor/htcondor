@@ -803,6 +803,26 @@ count( ClassAd *job )
 				ATTR_JOB_STATUS);
 		return 0;
 	}
+
+		// If job is HELD, evaluate PeriodicRelease and release if TRUE
+	if ( status == HELD ) {
+		int release_it = 0;
+		job->EvalBool(ATTR_PERIODIC_RELEASE_CHECK,NULL,release_it);
+		if ( release_it ) {
+			char buf[200];
+			sprintf(buf,"job %s attribute evaluated to TRUE",
+				ATTR_PERIODIC_RELEASE_CHECK);
+			int cluster = -5;
+			int proc = -5;
+			job->LookupInteger(ATTR_CLUSTER_ID, cluster);
+			job->LookupInteger(ATTR_PROC_ID, proc);
+			if (releaseJob(cluster,proc,buf,true)) {
+				// job released, so reset status
+				status = IDLE;
+			}
+		}
+	}
+			
 	if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) < 0) {
 		cur_hosts = ((status == RUNNING) ? 1 : 0);
 	}
@@ -6312,12 +6332,13 @@ moveStrAttr( PROC_ID job_id, const char* old_attr, const char* new_attr,
 bool
 holdJob( int cluster, int proc, const char* reason,
 		 bool use_transaction, bool notify_shadow, bool email_user,
-		 bool email_admin )
+		 bool email_admin, bool system_hold )
 {
 	int status;
 	PROC_ID tmp_id;
 	tmp_id.cluster = cluster;
 	tmp_id.proc = proc;
+	int system_holds = 0;
 
 	if( use_transaction ) {
 		 BeginTransaction();
@@ -6332,6 +6353,10 @@ holdJob( int cluster, int proc, const char* reason,
 		dprintf( D_ALWAYS, "Job %d.%d is already on hold\n",
 				 cluster, proc );
 		return false;
+	}
+
+	if ( system_hold ) {
+		GetAttributeInt(cluster, proc, ATTR_NUM_SYSTEM_HOLDS, &system_holds);
 	}
 
 	if( reason ) {
@@ -6363,6 +6388,11 @@ holdJob( int cluster, int proc, const char* reason,
 						(int)time(0)) < 0 ) {
 		dprintf( D_ALWAYS, "WARNING: Failed to set %s for job %d.%d\n",
 				 ATTR_ENTERED_CURRENT_STATUS, cluster, proc );
+	}
+
+	if ( system_hold ) {
+		system_holds++;
+		SetAttributeInt(cluster, proc, ATTR_NUM_SYSTEM_HOLDS, system_holds);
 	}
 
 	if( use_transaction ) {
@@ -6422,4 +6452,111 @@ holdJob( int cluster, int proc, const char* reason,
 	return true;
 }
 
+
+bool
+releaseJob( int cluster, int proc, const char* reason,
+		 bool use_transaction, bool email_user,
+		 bool email_admin )
+{
+	int status;
+	PROC_ID tmp_id;
+	tmp_id.cluster = cluster;
+	tmp_id.proc = proc;
+
+	if( use_transaction ) {
+		 BeginTransaction();
+	}
+
+	if( GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &status) < 0 ) {   
+		dprintf( D_ALWAYS, "Job %d.%d has no %s attribute.  Can't release\n",
+				 cluster, proc, ATTR_JOB_STATUS );
+		return false;
+	}
+	if( status != HELD ) {
+		return false;
+	}
+
+	if( reason ) {
+		MyString fixed_reason;
+		if( reason[0] == '"' ) {
+			fixed_reason += reason;
+		} else {
+			fixed_reason += '"';
+			fixed_reason += reason;
+			fixed_reason += '"';
+		}
+		if( SetAttribute(cluster, proc, ATTR_RELEASE_REASON, 
+						 fixed_reason.Value()) < 0 ) {
+			dprintf( D_ALWAYS, "WARNING: Failed to set %s to \"%s\" for "
+					 "job %d.%d\n", ATTR_RELEASE_REASON, reason, cluster,
+					 proc );
+		}
+	}
+
+	if( SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, IDLE) < 0 ) {
+		dprintf( D_ALWAYS, "ERROR: Failed to set %s to IDLE for "
+				 "job %d.%d\n", ATTR_JOB_STATUS, cluster, proc );
+		return false;
+	}
+
+	fixReasonAttrs( tmp_id, JA_RELEASE_JOBS );
+
+	if( SetAttributeInt(cluster, proc, ATTR_ENTERED_CURRENT_STATUS, 
+						(int)time(0)) < 0 ) {
+		dprintf( D_ALWAYS, "WARNING: Failed to set %s for job %d.%d\n",
+				 ATTR_ENTERED_CURRENT_STATUS, cluster, proc );
+	}
+
+	if( use_transaction ) {
+		 CommitTransaction();
+	}
+
+	dprintf( D_ALWAYS, "Job %d.%d released from hold: %s\n", cluster, proc,
+			 reason );
+
+		// finally, email anyone our caller wants us to email.
+	if( email_user || email_admin ) {
+		ClassAd* job_ad;
+		job_ad = GetJobAd( cluster, proc );
+		if( ! job_ad ) {
+			dprintf( D_ALWAYS, "ERROR: Can't find ClassAd for job %d.%d "
+					 "can't send email to anyone about it\n", cluster,
+					 proc );
+				// even though we can't send the email, we still held
+				// the job, so return true.
+			return true;  
+		}
+
+		char id_buf[64];
+		sprintf( id_buf, "%d.%d", cluster, proc );
+		MyString msg_buf;
+		msg_buf += "Condor job ";
+		msg_buf += id_buf;
+		msg_buf += " has been released from being on hold.\n";
+		msg_buf += reason;
+
+		MyString msg_subject;
+		msg_subject += "Condor job ";
+		msg_subject += id_buf;
+		msg_subject += " released from hold state";
+
+		FILE* fp;
+		if( email_user ) {
+			fp = email_user_open( job_ad, msg_subject.Value() );
+			if( fp ) {
+				fprintf( fp, msg_buf.Value() );
+				email_close( fp );
+			}
+		}
+		FreeJobAd( job_ad );
+		if( email_admin ) {
+			fp = email_admin_open( msg_subject.Value() );
+			if( fp ) {
+				fprintf( fp, msg_buf.Value() );
+				email_close( fp );
+			}
+		}			
+	}
+	return true;
+}
 

@@ -200,6 +200,12 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	if ( !full_rsl_given ) {
 		RSL = buildRSL( classad );
 	}
+
+	wantResubmit = 0;
+	classad->EvalBool(ATTR_GLOBUS_RESUBMIT_CHECK,NULL,wantResubmit);
+	increment_globus_submits = false;
+	numGlobusSubmits = 0;
+	classad->LookupInteger(	ATTR_NUM_GLOBUS_SUBMITS, numGlobusSubmits );
 }
 
 GlobusJob::~GlobusJob()
@@ -281,7 +287,7 @@ int GlobusJob::doEvaluateState()
 			if ( resourceStateKnown == false ) {
 				break;
 			}
-			if ( jobContact == NULL ) {
+			if ( jobContact == NULL || wantResubmit ) {
 				gmState = GM_CLEAR_REQUEST;
 			} else {
 				if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING ||
@@ -439,7 +445,7 @@ int GlobusJob::doEvaluateState()
 			// Start a new gram submission for this job.
 			char *job_contact;
 			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
-				holdReason = strdup( "Maximum submit attempts exceeded" );
+				holdReason = strdup( "Attempts to submit failed" );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -1013,9 +1019,17 @@ int GlobusJob::doEvaluateState()
 			// forgetting about current submission and trying again.
 			// TODO: Let our action here be dictated by the user preference
 			// expressed in the job ad.
-			if ( (jobContact != NULL || (globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED && globusStateErrorCode != GLOBUS_GRAM_PROTOCOL_ERROR_JOB_UNSUBMITTED)) && condorState != REMOVED ) {
+			if ( (jobContact != NULL || (globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED && globusStateErrorCode != GLOBUS_GRAM_PROTOCOL_ERROR_JOB_UNSUBMITTED)) 
+				     && condorState != REMOVED 
+					 && wantResubmit == 0 ) {
 				gmState = GM_HOLD;
 				break;
+			}
+			if ( wantResubmit ) {
+				wantResubmit = 0;
+				dprintf(D_ALWAYS,
+					"(%d.%d) Resubmitting to Globus because %s==TRUE\n",
+						procID.cluster, procID.proc, ATTR_GLOBUS_RESUBMIT_CHECK );
 			}
 			schedd_actions = 0;
 			if ( globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
