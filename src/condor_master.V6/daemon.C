@@ -88,14 +88,17 @@ extern int 		RestartsPerHour;
 extern int 		MasterLockFD;
 extern char *		_FileName_ ;
 extern FileLock*	MasterLock;
-extern char*   	config_file;
- 
+extern int		doConfigFromServer; 
+extern char*	config_location;
+
 extern int     collector_runs_here();
 extern int     negotiator_runs_here();
 extern time_t  GetTimeStamp(char* file);
 extern void    do_killpg(int, int);
 extern void	   do_kill( int pid, int sig );
 extern int 	   NewExecutable(char* file, time_t* tsp);
+extern int		DoCleanup();
+
 int		hourly_housekeeping(void);
 extern "C"
 {
@@ -104,6 +107,7 @@ extern "C"
 #endif
 	extern	int		event_mgr();
 	extern	int		gethostname(char*, int);
+	void	set_machine_status(int); 
 }
 
 // to add a new process as a condor daemon, just add one line in 
@@ -153,7 +157,7 @@ daemon::daemon(char *name)
 	timeStamp = 0;
 	recoverTimer = -1;
 	port = NULL;
-	config_file = NULL;
+	config_info_file = NULL;
 	daemons.RegisterDaemon(this);
 }
 
@@ -411,17 +415,17 @@ int daemon::StartDaemon()
 
 		if(strcmp(name_in_config_file, "CONFIG_SERVER") == 0)
 		{
-			if(port && config_file)
+			if(port && config_info_file)
 			{
-				(void)execl( process_name, shortname, "-f", "-l", log_name, "-p", port, "-c", config_file, 0 );
+				(void)execl( process_name, shortname, "-f", "-l", log_name, "-p", port, "-c", config_info_file, 0 );
 			}
 			else if(port)
 			{
 				(void)execl( process_name, shortname, "-f", "-l", log_name, "-p", port, 0 );
 			}
-			else if(config_file)
+			else if(config_info_file)
 			{
-				(void)execl( process_name, shortname, "-f", "-l", log_name, "-c", config_file, 0 );
+				(void)execl( process_name, shortname, "-f", "-l", log_name, "-c", config_info_file, 0 );
 			}
 			else
 			{
@@ -430,9 +434,9 @@ int daemon::StartDaemon()
 		}
 		else
 		{
-			if(config_file)
+			if(doConfigFromServer && config_location)
 			{
-				(void)execl( process_name, shortname, "-f", "-c", config_file, 0 );
+				(void)execl( process_name, shortname, "-f", "-c", config_location, 0 );
 			}
 			else
 			{
@@ -460,8 +464,6 @@ int daemon::StartDaemon()
 
 void Daemons::Restart(int pid)
 {
-	sleep(30);
-
 	// find out which daemon died
 	for ( int i=0; i < no_daemons; i++) {
 		if (( pid == daemon_ptr[i]->pid)&&(daemon_ptr[i]->flag == TRUE)) {
@@ -570,8 +572,17 @@ void Daemons::CheckForNewExecutable()
 void Daemons::Vacate()
 {
 	int startd_index = GetIndex( "STARTD" );
-	do_kill( daemon_ptr[startd_index]->pid, SIGTERM );
-}
+	if(startd_index >= 0)
+	{
+		do_kill( daemon_ptr[startd_index]->pid, SIGTERM );
+	}
+	else
+	{
+		DoCleanup();
+        set_machine_status( CONDOR_DOWN );
+        exit( 0 );
+	} 
+} 
 
 
 char* Daemons::DaemonLog( int pid )

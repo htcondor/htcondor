@@ -179,13 +179,13 @@ char	*CollectorHost;
 #if 0
 char	*NegotiatorHost;
 #endif
-int		ceiling;
-float	e_factor;								// exponential factor
-int		r_factor;								// recover factor
-int		Foreground;
+int		ceiling = 3600;
+float	e_factor = 2.0;								// exponential factor
+int		r_factor = 300;								// recover factor
+int		Foreground = 0;
 int		Termlog;
-char*  	config_file = NULL;						// config file name from server
 char*	config_location;						// config file from server
+int		doConfigFromServer = FALSE; 
 char	*CondorAdministrator;
 char	*FS_Preen;
 char	*Log;
@@ -272,7 +272,6 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 	install_sig_handler( SIGCHLD, sigchld_handler );
 	install_sig_handler( SIGINT, sigint_handler );
 	install_sig_handler( SIGQUIT, sigquit_handler );
-//	install_sig_handler( SIGTERM, sigquit_handler );
 	install_sig_handler( SIGHUP, sighup_handler );
 	install_sig_handler( SIGUSR1, RestartMaster );
 	install_sig_handler( SIGTERM, vacate_machine );
@@ -327,8 +326,7 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 			else
 			{
 				config_from_server(config_location, MyName, NULL);
-				config_file = new char[MAXPATHLEN];
-				sprintf(config_file, "%s/%s", config_location, SERVER_CONFIG);
+				doConfigFromServer = TRUE;				
 			}
 		}
 	}
@@ -418,7 +416,7 @@ putenv("LD_LIBRARY_PATH=/s/X11R6-2/sun4m_54/lib");
 	daemons.StartAllDaemons();
 
 	tMgr.Start();
-
+	
 		/* Can never get here */
 	return 0;
 }
@@ -435,7 +433,14 @@ sigchld_handler()
 	errno = 0;
 	while( (pid=waitpid(-1,&status,WNOHANG)) != 0 ) {
 		if( pid == -1 ) {
+        #if defined(Solaris)
+			if(errno == ECHILD)
+			{
+				break;
+			}
+		#else
 			EXCEPT( "waitpid(), error # = %d", errno );
+		#endif
 		}
 		if( WIFSTOPPED(status) ) {
 			continue;
@@ -556,7 +561,7 @@ init_params()
 
 	if( param("MASTER_DEBUG") ) {
 		if( boolean("MASTER_DEBUG","Foreground") ) {
-			Foreground++;
+			Foreground = 1;
 		}
 	}
 
@@ -1384,7 +1389,7 @@ void StartConfigServer()
 				newDaemon->name_in_config_file);
 		EXCEPT("Can't continue...");
 	}
-	newDaemon->config_file = param("CONFIG_SERVER_FILE");
+	newDaemon->config_info_file = param("CONFIG_SERVER_FILE");
 	newDaemon->port = param("CONFIG_SERVER_PORT");
 
 	// check that log file is necessary
@@ -1403,6 +1408,6 @@ void StartConfigServer()
 	
 	// sleep for a while because we want the config server to stable down
 	// before doing anything else
-	sleep(10); 
+	sleep(5); 
 }
 
