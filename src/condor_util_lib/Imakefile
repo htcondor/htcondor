@@ -62,7 +62,7 @@ INET_NTOA_OBJ = inet_ntoa.o
 	blankline.o do_connect.o dprintf.o dprintf_config.o except.o \
 	ltrunc.o mkargv.o proc.o signames.o killkids.o \
 	strdup.o stricmp.o expr.o perror.o condor_errlst.o \
-	ctrace.o detach.o update_rusage.o uids.o cronos.o \
+	ctrace.o detach.o update_rusage.o cronos.o \
 	$(FLOCK_OBJ) \
 	$(SETREUID_OBJ) email.o email_file.o \
 	$(GETDTABLESIZE_OBJ) $(SETRGID_OBJ) $(SETREGID_OBJ) $(MALLOC_OBJ)\
