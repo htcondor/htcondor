@@ -372,7 +372,7 @@ renice_shadow()
 	int i = 0;
 
 #ifndef WIN32
-	ptmp = param("SHADOW_RENICE_INCREMENT");
+	char* ptmp = param("SHADOW_RENICE_INCREMENT");
 	if ( ptmp ) {
 		i = atoi(ptmp);
 		if ( i > 0 && i < 20 )
@@ -1927,6 +1927,17 @@ NotifyUser(shadow_rec* srec, char* msg, int status)
 #endif
 }
 
+// Check scheduler universe
+static int IsSchedulerUniverse(shadow_rec* srec)
+{
+	dprintf(D_FULLDEBUG,"Scheduler::Reaper - checking job universe\n");
+	if (srec==NULL || srec->match!=NULL) return FALSE;
+	int universe=STANDARD;
+	GetAttributeInt(srec->job_id.cluster, srec->job_id.proc, ATTR_JOB_UNIVERSE,&universe);
+	if (universe!=SCHED_UNIVERSE) return FALSE;
+	return TRUE;
+}
+
 /*
 ** Allow child processes to die a decent death, don't keep them
 ** hanging around as <defunct>.
@@ -1951,13 +1962,17 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
         dprintf( D_ALWAYS, "Entered reaper( %d, %d, 0x%x )\n", sig, code, scp );
     }
 
-    for(;;) {
+	for(;;) {
         if( (pid = waitpid(-1,&status,WNOHANG)) <= 0 ) {
             dprintf( D_FULLDEBUG, "waitpid() returned %d, errno = %d\n",
                                                             pid, errno );
             break;
         }
-		if((mrec = FindMrecByPid(pid))) {
+	
+		mrec = FindMrecByPid(pid);
+		srec = FindSrecByPid(pid);
+
+		if(mrec) {
 			if(WIFEXITED(status)) {
                 dprintf(D_FULLDEBUG, "agent pid %d exited with status %d\n",
                         pid, WEXITSTATUS(status) );
@@ -1973,7 +1988,7 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
                         pid, WTERMSIG(status));
                 DelMrec(mrec);
             }
-		} else if ((srec = FindSrecByPid(pid)) != NULL && srec->match == NULL) {
+		} else if (IsSchedulerUniverse(srec)) {
 				// Shadow record without a capability... must be a
 				// scheduler universe process.
 			if(WIFEXITED(status)) {
@@ -2033,8 +2048,8 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
                                                 pid, WTERMSIG(status) );
             }
 			delete_shadow_rec( pid );
-        }
-    }
+        }  // big if..else if...
+    } // for loop
     if( sig == 0 ) {
         dprintf( D_ALWAYS, "***********  End Extra Checking ********\n" );
     }
@@ -2631,6 +2646,11 @@ Scheduler::Relinquish(match_rec* mrec)
 {
 	ReliSock	*sock;
 	int	   		flag = FALSE;
+
+	if (!mrec) {
+		dprintf(D_ALWAYS, "Scheduler::Relinquish - mrec is NULL, can't relinquish\n");
+		return;
+	}
 
 	// inform the startd
 
