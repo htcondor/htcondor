@@ -418,6 +418,24 @@ system.
   and \Condor{history}, the user-level program that is used to view
   the history file.
 
+\item[\Macro{DEFAULT\_DOMAIN\_NAME}] \label{param:DefaultDomainName}
+  If you don't use a fully qualified name in your \File{/etc/hosts}
+  file (or NIS, etc.) for either your official hostname or as an
+  alias, Condor wouldn't normally be able to use fully qualified names
+  in places that it'd like to.  You can set this parameter to the
+  domain you'd like appended to your hostname, if changing your host
+  information isn't a good option.  This parameter must be set in the
+  global config file (not the \Macro{LOCAL\_CONFIG\_FILE} specified
+  above.  The reason for this is that the \Macro{FULL\_HOSTNAME}
+  special macro is used by the config file code in Condor which needs
+  to know the full hostname.  So, for \Macro{DEFAULT\_DOMAIN\_NAME} to
+  take effect, Condor must already have read in its value.  However,
+  Condor must set the \Macro{FULL\_HOSTNAME} special macro since you
+  might use that to define where your local config file is.  So, after
+  reading the global config file, Condor figures out the right values
+  for \Macro{HOSTNAME} and \Macro{FULL\_HOSTNAME} and inserts them
+  into its configuration table.
+
 \end{description}
 
 
@@ -1142,6 +1160,12 @@ These settings control the \Condor{schedd}.
   number of \Condor{shadow}'s might be less than that if you reached
   your \Macro{RESERVED\_SWAP} limit.
 
+\item[\Macro{MAX\_SHADOW\_EXCEPTIONS}]
+  \label{param:MaxShadowExceptions} This setting controls the maximum
+  number of times that a \Condor{shadow} processes can have a fatal
+  error (exception) before the \Condor{schedd} will simply relinquish
+  the match associated with the dying shadow.  Defaults to 5.
+
 \item[\Macro{SCHEDD\_INTERVAL}] \label{param:ScheddInterval}  This
   entry determines how often the \Condor{schedd} should send a ClassAd
   update to the \Condor{collector}.  It is defined in terms of seconds
@@ -1238,7 +1262,15 @@ These settings control the \Condor{schedd}.
 This setting effects the \Condor{shadow}
 
 \begin{description}
-  
+
+\item[\Macro{MAX\_DISCARDED\_RUN\_TIME}]
+  \label{param:MaxDiscardedRunTime} If the shadow is unable to read a
+  checkpoint file from the checkpoint server, it keeps trying only if
+  the job has accumulated more than this many seconds of CPU usage.
+  Otherwise, the job is started from scratch.  Defaults to 3600 (1
+  hour). This setting is only used if \Macro{USE\_CKPT\_SERVER} is
+  True.
+
 \item[\Macro{SHADOW\_LOCK}] \label{param:ShadowLock} This entry
   specifies what lock file should be used for access to the
   \File{ShadowLog} file.  It must be a separate file from the
@@ -1441,6 +1473,11 @@ These settings control the \Condor{collector}.
   not wish this information to be sent to the Condor Team, you could
   enter ``NONE'' which disables this feature, or put in some other
   address that you want the weekly status report sent to.
+
+\item[\Macro{COLLECTOR\_NAME}] \label{param:CollectorName}
+  The parameter is used to specify a short description of your pool.
+  It should be about 20 characters long.  For example, the name of the
+  UW-Madison Computer Science Condor Pool is ``UW-Madison CS''.  
 
 \end{description}
 
