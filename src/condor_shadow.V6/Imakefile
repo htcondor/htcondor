@@ -21,7 +21,7 @@ RC_OBJ = extern_path.o FAKE_GETMNT_OBJ
 
 CKPT_SERV_LIB = ../condor_ckpt_server/ckpt_server_api.a
 QMGMT_LIB = ../condor_schedd.V6/libqmgmt.a
-CLASSAD_LIB = ../condor_classad/expr_lib.a
+CLASSAD_LIB = ../condor_classad/expr_lib.a ../condor_io/libcondor.a
 UTIL_LIB = ../condor_util_lib/util_lib.a
 
 OBJ = $(RC_OBJ) ops.o pseudo_ops.o perm_err.o shadow.o shadow_common.o \
@@ -42,6 +42,14 @@ depend_target($(SRC))
 
 c_plus_target(condor_shadow,$(OBJ),$(LIB))
 release_target(condor_shadow,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+
+#if IS_SGI_CRAP
+CMNT
+CMNT Bypass a bug in gcc.
+CMNT
+CMNT receivers.o: receivers.C
+CMNT    CC -I../h -I../condor_includes -I../condor_c++_util -DSGI -D$(OS_FLAG) -DNFSFIX -DNDBM -D_BSD_COMPAT -g -DNEW_PROC -c receivers.C
+#endif 
 
 IMPORT_LINKS = ../../config/import_links
 import(../condor_syscall_lib,receivers.C)
