@@ -607,7 +607,7 @@ matchmakingAlgorithm(ClassAd &request,ClassAdList &startdAds,double preemptPrio)
 		{
 			// if there is a remote user who has a higher priority, dont preempt
 			if (candidate->LookupString (ATTR_REMOTE_USER, remoteUser) &&
-				accountant.GetPriority(remoteUser) <= preemptPrio) 
+				preemptPrio-accountant.GetPriority(remoteUser)<=PriorityDelta) 
 					continue;
 
 			// if the PreemptionHold expression evaluates to true, dont preempt
