@@ -9,6 +9,7 @@
 #include "match_prefix.h"
 #include "my_hostname.h"
 #include "get_daemon_addr.h"
+#include "get_full_hostname.h"
 #include "files.h"
 
 extern 	"C" int SetSyscalls(int val){return val;}
@@ -36,6 +37,7 @@ static	ClassAdList	scheddList;
 static	bool		querySchedds 	= false;
 static	bool		querySubmittors = false;
 static	char		constraint[4096];
+static	char		*pool = NULL;
 
 extern 	"C"	int		Termlog;
 
@@ -89,8 +91,15 @@ int main (int argc, char **argv)
 	}
 
 	// get the list of ads from the collector
-	result = querySchedds ? scheddQuery.fetchAds(scheddList) : 
-							submittorQuery.fetchAds(scheddList);
+
+	if( pool ) {
+		result = querySchedds ? scheddQuery.fetchAds(scheddList, pool) : 
+			submittorQuery.fetchAds(scheddList, pool);
+	} else {
+		result = querySchedds ? scheddQuery.fetchAds(scheddList) : 
+			submittorQuery.fetchAds(scheddList);
+	}
+
 	if (result != Q_OK)
 	{
 		fprintf (stderr, "Error %d: %s\n", result, getStrQueryResult(result));
@@ -144,6 +153,19 @@ processCommandLineArguments (int argc, char *argv[])
 			summarize = 0;
 		} 
 		else
+		if (match_prefix (arg, "pool")) {
+			if( pool ) {
+				free( pool );
+			}
+			pool = get_full_hostname(argv[++i]);
+			if( ! pool ) {
+				fprintf( stderr, "%s: unknown host %s\n", 
+						 argv[0], argv[i] );
+				exit(1);
+			}
+			pool = strdup( pool );
+		} 
+		else
 		if (match_prefix (arg, "D")) {
 			Termlog = 1;
 			set_debug_flags( argv[++i] );
@@ -165,7 +187,7 @@ processCommandLineArguments (int argc, char *argv[])
 
 			if( !(daemonname = get_daemon_name(argv[i+1])) ) {
 				fprintf( stderr, "%s: unknown host %s\n",
-						 argv[0], get_host_part(argv[1+1]) );
+						 argv[0], get_host_part(argv[i+1]) );
 				exit(1);
 			}
 			sprintf (constraint, "%s == \"%s\"", ATTR_NAME, daemonname);
@@ -341,11 +363,13 @@ usage (char *myName)
 		"\t\t-submittor <submittor>\tGet queue of specific submittor\n"
 		"\t\t-help\t\t\tThis screen\n"
 		"\t\t-name <name>\t\tName of schedd\n"
+		"\t\t-pool <host>\t\tUse host as the central manager to query\n"
 		"\t\t-constraint <expr>\tAdd constraint on classads\n"
 		"\t\t-long\t\t\tVerbose output\n"
 		"\t\t<cluster>\t\tGet information about specific cluster\n"
 		"\t\t<cluster>.<proc>\tGet information about specific job\n"
 		"\t\t<owner>\t\t\tInformation about jobs owned by <owner>\n", myName);
+
 }
 
 
