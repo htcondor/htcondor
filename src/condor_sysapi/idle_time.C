@@ -343,6 +343,9 @@ time_t
 all_pty_idle_time( time_t now )
 {
 	char	*f;
+
+	/* XXX this shouldn't be static, it gets it wrong under redhat 7.1 where
+		pts entries come and go in the /dev structure as they are needed */
 	static Directory *dev = NULL;
 	static Directory *dev_pts = NULL;
 	time_t	idle_time;
@@ -444,8 +447,8 @@ dev_idle_time( char *path, time_t now )
 	
 	strcpy( &pathname[5], path );
 	if (stat(pathname,&buf) < 0) {
-		dprintf( D_FULLDEBUG, "Error on stat(%s,0x%x), errno = %d\n",
-				 pathname, &buf, errno );
+		dprintf( D_FULLDEBUG, "Error on stat(%s,0x%x), errno = %d(%s)\n",
+				 pathname, &buf, errno, strerror(errno) );
 		buf.st_atime = 0;
 	}
 	if ( null_major_device > -1 && null_major_device == major(buf.st_rdev) ) {
