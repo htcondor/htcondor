@@ -2219,7 +2219,15 @@ close( int fd )
   
         
 	if( MappingFileDescriptors() ) {
-		return FileTab->DoClose( fd );
+		int rval = FileTab->DoClose( fd );
+		// In standalone mode, this fd might be a socket or pipe which
+		// we didn't catch.  Allow the application to close it
+		// successfully, to allow socket and pipes to be used
+		// successfully between checkpoints.
+		if (rval < 0 && MyImage.GetMode() == STANDALONE) {
+			return syscall( SYS_close, fd );
+		}
+		return rval;
 	} else {
 		if( LocalSysCalls() ) {
 			return syscall( SYS_close, fd );
