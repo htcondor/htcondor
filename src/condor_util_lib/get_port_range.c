@@ -27,9 +27,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 
-#include <stdlib.h>
-
-
 int get_port_range(int *low_port, int *high_port)
 {
 	char *low = NULL, *high = NULL;
