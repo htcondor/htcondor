@@ -28,6 +28,7 @@
 #include "mpishadow.h"
 #include "exit.h"
 #include "condor_debug.h"
+#include "condor_version.h"
 #include "condor_attributes.h"
 #include "condor_qmgr.h"
 #include "shadow_initializer.h"
