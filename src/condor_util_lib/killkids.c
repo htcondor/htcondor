@@ -137,11 +137,12 @@ killkids(pid_t inpid, int sig)
 	child = treescan(pid);
 	parent = treescan(ppid);
 
-	if ( pid != inpid ) {
+	if ( pid != inpid && mypstree[parent].child != child ) {
 		temp = mypstree[parent].child;
 		mypstree[parent].child = child;
-		while ( mypstree[child].child != 0 )
+		while ( mypstree[child].child != 0 ) {
 			child = mypstree[child].child;
+		}
 		mypstree[child].child = temp;
 	}
    }
