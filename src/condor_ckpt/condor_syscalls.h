@@ -63,6 +63,12 @@ int REMOTE_syscall( int syscall_num, ... );
 	int syscall( int, ... );
 #endif
 
+#if defined(Solaris)
+  #include <sys/types.h>
+  #include <sys/mman.h>
+  caddr_t MMAP(caddr_t  addr,  size_t  len,  int  prot, int flags,
+	  		   int fildes, off_t off);
+#endif
 
 #if defined(__cplusplus)
 }
