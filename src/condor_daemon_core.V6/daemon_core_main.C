@@ -23,6 +23,7 @@ extern int main_shutdown_graceful();
 int		Foreground = 0;		// run in background by default
 char*	myName;				// set to argv[0]
 DaemonCore*	daemonCore;
+static int is_master = 0;
 
 
 #ifndef WIN32
@@ -62,7 +63,11 @@ handle_dc_sighup( Service*, int )
 		// Actually re-read the files...  Added by Derek Wright on
 		// 12/8/97 (long after this function was first written... 
 		// nice goin', Todd).  *grin*
-	config(NULL);
+	if( is_master ) {
+		config_master(NULL);
+	} else {
+		config(NULL);
+	}
 
 	// Reinitialize logging system; after all, LOG may have been changed.
 	dprintf_config(mySubSystem,2);
@@ -89,7 +94,28 @@ handle_dc_sighup( Service*, int )
 int
 handle_dc_sigterm( Service*, int )
 {
+	static int been_here = FALSE;
+	if( been_here ) {
+		dprintf( D_FULLDEBUG, 
+				 "Got SIGTERM, but we've already done graceful shutdown.  Ignoring.\n" );
+		return TRUE;
+	}
+	been_here = TRUE;
+
 	dprintf(D_ALWAYS, "Got SIGTERM. Performing graceful shutdown.\n");
+
+	int timeout = 30 * MINUTE;
+	char* tmp = param( "SHUTDOWN_GRACEFUL_TIMEOUT" );
+	if( tmp ) {
+		timeout = atoi( tmp );
+		free( tmp );
+	}
+	daemonCore->Register_Timer( timeout, 0, 
+								(TimerHandler)main_shutdown_fast,
+								"main_shutdown_fast" );
+	dprintf( D_FULLDEBUG, 
+			 "Started timer to call main_shutdown_fast in %d seconds\n", 
+			 timeout );
 	main_shutdown_graceful();
 	return TRUE;
 }
@@ -98,6 +124,13 @@ handle_dc_sigterm( Service*, int )
 int
 handle_dc_sigquit( Service*, int )
 {
+	static int been_here = FALSE;
+	if( been_here ) {
+		dprintf( D_FULLDEBUG, 
+				 "Got SIGQUIT, but we've already done fast shutdown.  Ignoring.\n" );
+		return TRUE;
+	}
+	been_here = TRUE;
 	dprintf(D_ALWAYS, "Got SIGQUIT.  Performing fast shutdown.\n");
 	main_shutdown_fast();
 	return TRUE;
@@ -148,6 +181,14 @@ int main( int argc, char** argv )
 	install_sig_handler_with_mask(SIGCHLD, &fullset, unix_sigchld);
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif // WIN32
+
+		// Figure out if we're the master or not.  The master is a
+		// special case daemon in many ways, so we want to just set a
+		// flag that we can check instead of doing this strcmp all the
+		// time.  -Derek Wright 1/13/98
+	if ( strcmp(mySubSystem,"MASTER") == 0 ) {
+		is_master = 1;
+	}
 
 		// set myName to be argv[0] with the path stripped off
 	if ( (ptmp=strrchr(argv[0],'/')) == NULL )			
@@ -210,7 +251,7 @@ int main( int argc, char** argv )
 
 	// call config so we can call param.  If we're the master, call config_master
 	// which will parse in condor_config.master as well.
-	if ( strcmp(mySubSystem,"MASTER") == 0 ) {
+	if( is_master ) {
 		config_master(NULL);
 	} else {
 		config(NULL);
@@ -259,7 +300,7 @@ int main( int argc, char** argv )
 			exit(0);
 		}
 		// and close stdin, out, err if we are the MASTER.  
-		if ( strcmp(mySubSystem,"MASTER") == 0 ) {
+		if ( is_master ) {
 			close(0); close(1); close(2);
 		}
 		// and detach from the controlling tty
