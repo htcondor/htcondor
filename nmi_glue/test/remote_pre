@@ -1,0 +1,268 @@
+#!/usr/bin/perl
+
+####################################################################################################
+# app_pre.pl 
+# script to set up for Condor testsuite run
+# 06/21/04 Becky Gietzel 
+####################################################################################################
+
+use Cwd;
+use Env; 
+
+#my $release_tarball = "condor-6.6.6-linux-Alpha-glibc22-dynamic.tar.gz";
+my $source_tarball= "condor-src.tar.gz";
+my $logsize = "50000000"; # size for logs of personal Condor
+
+####################################################################################################
+# set up path and create path file for the rest of the scripts
+####################################################################################################
+
+my $HomeDir = getcwd();
+
+open(ENVSETUP, ">setup_test_env") || die "cannot open setup_test_env for writing\n";
+print ENVSETUP "HOME=$HomeDir;\n";
+print ENVSETUP "CONDOR_CONFIG=$ENV{HOME}/condor/etc/condor_config\n";
+print ENVSETUP "PATH=$ENV{HOME}/condor/bin:$ENV{HOME}/condor/sbin:$PATH\n";
+print ENVSETUP "SRC_DIR=$ENV{HOME}/src\n";
+
+my $MakeDir = $ENV{SRC_DIR};
+
+# for debugging
+print "PATH is $ENV{PATH}\n";
+
+####################################################################################################
+# untar pre-built tarball
+####################################################################################################
+
+chdir("$HomeDir");
+print "Untarring RELEASE tarball\n";
+
+# find the name of the binary
+$location = "$BuildDir/$platform/";
+if (opendir(FILES, ".")) {
+   @files = grep(!/^\.\.?$/, readdir (FILES));
+    close ($location);
+}
+foreach $file (@files) {
+  if ($file =~ /condor-6/ && ($file =~ /dynamic/) ) {
+    $release_tarball = $file;
+  }
+}
+ 
+my $configure;
+my $reltar;
+
+open( UNTAR, "tar -zxvf $release_tarball |" ) ||
+     die "Can't untar $release_tarball: $!\n";
+print "Untarring $release_tarball ...\n";
+while( <UNTAR> ) {
+  if( /.*\/condor_configure/ ) {
+    $configure = "$HomeDir/$_";
+     chomp( $configure );
+  }
+  if( /.*\/release.tar/ ) {
+    $reltar = "$HomeDir/$_";
+    chomp( $reltar );
+  }
+  print;
+}
+close UNTAR;
+
+# can't use since macosx fails on this even though untar is successful  
+#( !($configure == "") && !($reltar == "") ) || die "cannot find files condor_configure $configure or reltar $reltar\n";
+
+####################################################################################################
+# setup the personal condor
+####################################################################################################
+
+# find the version - macosx doesn't work w/the "old" way  
+my $version = substr($release_tarball, 7, 5);
+print "VERSION string is $version\n";
+
+my $configure = "$HomeDir/condor-$version/condor_configure";
+my $reltar = "$HomeDir/condor-$version/release.tar";
+
+print "Set up PERSONAL CONDOR\n";
+&verbose_system("mkdir -p $HomeDir/local");
+&verbose_system("mkdir -p $HomeDir/condor");
+$conf = &verbose_system("$configure --make-personal-condor --local-dir=$HomeDir/local --install=$reltar --install-dir=$HomeDir/condor");
+
+($conf > 0) || die "Problem installing Personal Condor. Return val $conf\n";
+
+# make sure ports for Personal Condor are valid  
+# high ports are a concern for irix, dux and aix. 
+my $col_port = $PID;
+if ($col_port > 65535){
+   $col_port = int($col_port / 10000) + 1024;
+} 
+
+if ($col_port < 1024){
+   $col_port = $col_port + 1024;
+}
+
+my $neg_port = $col_port + 1;
+
+rename "$HomeDir/local/condor_config.local", "$HomeDir/local/condor_config.local.orig";
+open( ORIG, "<$HomeDir/local/condor_config.local.orig" );
+open( FIX, ">$HomeDir/local/condor_config.local" );
+while( <ORIG> ) {
+  if( /CONDOR_HOST.*/ ) {
+    print FIX;
+    print FIX "COLLECTOR_HOST = \$(CONDOR_HOST):$col_port\n";
+    print FIX "NEGOTIATOR_HOST = \$(CONDOR_HOST):$neg_port\n";
+  } else {
+    print FIX;
+  }
+}
+
+# ADD NUM_CPUS and NUM_VMS to speed up tests
+print FIX "NUM_CPUS = 3\n";
+print FIX "NUM_VIRTUAL_MACHINES = 3\n";
+print FIX "STARTD_EXPRS = NUM_CPUS\n";
+
+# ADD size for log files and debug level
+# default settings are in condor_config, set here to override 
+print FIX "ALL_DEBUG               = ";
+
+print FIX "MAX_COLLECTOR_LOG       = $logsize\n";
+print FIX "COLLECTOR_DEBUG         = ";
+
+print FIX "MAX_KBDD_LOG            = $logsize\n";
+print FIX "KBDD_DEBUG              = ";
+
+print FIX "MAX_NEGOTIATOR_LOG      = $logsize\n";
+print FIX "NEGOTIATOR_DEBUG        = D_MATCH\n";
+print FIX "MAX_NEGOTIATOR_MATCH_LOG = $logsize\n";
+
+print FIX "MAX_SCHEDD_LOG          = $logsize\n";
+print FIX "SCHEDD_DEBUG            = D_COMMAND";
+
+print FIX "MAX_SHADOW_LOG          = $logsize\n";
+print FIX "SHADOW_DEBUG            = D_FULLDEBUG\n";
+
+print FIX "MAX_STARTD_LOG          = $logsize\n";
+print FIX "STARTD_DEBUG            = D_COMMAND\n";
+
+print FIX "MAX_STARTER_LOG         = $logsize\n";
+print FIX "STARTER_DEBUG           = D_NODATE\n";
+
+print FIX "MAX_MASTER_LOG          = $logsize\n";
+print FIX "MASTER_DEBUG            = D_COMMAND\n";
+
+close ORIG;
+close FIX; 
+
+print "PERSONAL CONDOR installed!\n";
+
+####################################################################################################
+# unpackage source
+####################################################################################################
+
+print "Untarring SOURCE tarball\n";
+open( UNTAR, "tar -zxvf $source_tarball |" ) ||
+  die "Can't untar $source_tarball: $!\n";
+print "Untarring $source_tarball ...\n";
+while( <UNTAR> ) {
+  print;
+}
+close UNTAR;
+
+####################################################################################################
+#  setup the src tree so the test suite finds condor_compile and its other dependencies.
+####################################################################################################
+
+chdir("$MakeDir");
+print "run CONFIGURE ...\n"; 
+open ( TESTCONFIG, "./configure --without-externals 2>&1 |");
+while ( <TESTCONFIG> ) {
+  print $_;
+}
+close (TESTCONFIG);
+$configstat = $?;
+print "CONFIGURE returned a code of $configstat\n"; 
+($configstat == 0) || die "CONFIGURE failed, aborting testsuite run.\n";  
+
+chdir("$MakeDir");
+&verbose_system("mkdir -p condor_syscall_lib");
+chdir( "condor_syscall_lib" );
+opendir(DIR, "$HomeDir/condor/lib") ||
+  die "can't opendir $HomeDir/condor/lib to symlink condor_syscall_lib: $!\n";
+@files = readdir(DIR);
+closedir DIR;
+foreach $file ( @files ) {
+  if( $file =~ /.*\.[oa]/ ) {
+    symlink( "$HomeDir/condor/lib/$file", "$file" );
+  }
+}
+
+chdir("$HomeDir/condor/lib");
+#system("ls -al");
+chdir( "condor_syscall_lib" );
+
+&verbose_system("mkdir -p  ../condor_scripts");
+chdir( "../condor_scripts" );
+unlink( "condor_compile" );
+unlink( "ld" );
+symlink( "$HomeDir/condor/lib/ld", "ld" );
+symlink( "$HomeDir/condor/bin/condor_compile", "condor_compile" );
+
+# debug statement - make sure binaries for Personal Condor exist
+chdir("$HomeDir/condor/bin");
+system("ls -al");
+
+####################################################################################################
+# spawn the personal condor
+####################################################################################################
+
+chdir($HomeDir);
+print "Starting condor master, about to FORK in $HomeDir\n";
+
+$master_pid = fork();
+if( $master_pid == 0) {
+  exec("$HomeDir/condor/sbin/condor_master -f");
+  print "MASTER EXEC FAILED!!!!!\n";
+  exit;
+}
+
+# we need the value of the master pid to kill the master in another script later on
+print "Master PID is $master_pid\n";
+open(PIDFILE, ">$HomeDir/condor_master_pid") || die "cannot open file to store Condor master PID\n";
+print PIDFILE "$master_pid";
+close PIDFILE;   
+
+# Give the master time to start before jobs are submitted.
+print "Sleeping for 30 seconds to give the master time to start.\n";
+sleep 30;
+
+
+sub verbose_system {
+
+  my @args = @_;
+  my $rc = 0xffff & system @args;
+
+  printf "system(%s) returned %#04x: ", @args, $rc;
+
+  if ($rc == 0) {
+   print "ran with normal exit\n";
+   return $rc;
+  }
+  elsif ($rc == 0xff00) {
+   print "command failed: $!\n";
+   return $rc;
+  }
+  elsif (($rc & 0xff) == 0) {
+   $rc >>= 8;
+   print "ran with non-zero exit status $rc\n";
+   return $rc;
+  }
+  else {
+   print "ran with ";
+   if ($rc &   0x80) {
+       $rc &= ~0x80;
+       print "coredump from ";
+   return $rc;
+   }
+   print "signal $rc\n"
+  }
+}
+
