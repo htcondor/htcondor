@@ -5,13 +5,14 @@
 #include "condor_fix_timeval.h"
 #include "_condor_fix_resource.h"
 #include "condor_xdr.h"
-#include "proc.h"
 #include <ndbm.h>
 
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
+
+#include "proc.h"
 
 #if defined(__STDC__) || defined(__cplusplus) /* ANSI style prototypes */
 

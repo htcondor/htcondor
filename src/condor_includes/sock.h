@@ -88,7 +88,7 @@ protected:
 	**	Methods
 	*/
 
-	Sock() : Stream(), _state(sock_virgin), _sock(-1) {}
+	Sock() : Stream(),  _sock(-1), _state(sock_virgin) {}
 
 	int getportbyserv(char *);
 	int do_connect(char *, int);
