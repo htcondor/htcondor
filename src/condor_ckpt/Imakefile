@@ -184,11 +184,11 @@ depend_target($(SRC) )
 #if (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS25)
 program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) dprintf.o except.o condor_errlst.o $(FLOCK_OBJ) MMAP.o SYSCALL.o uids.o, )
 #elif (IS_HPPAR_HPUX9)
-program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) seteuid.o flock.o setegid.o, dprintf.o except.o condor_errlst.o uids.o )
+program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) seteuid.o flock.o setegid.o, dprintf.o except.o condor_errlst.o uids.o, )
 #elif (IS_I386_LINUX)
-program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) dprintf.o except.o condor_errlst.o uids.o )
+program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) dprintf.o except.o condor_errlst.o uids.o, )
 #else
-program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ), dprintf.o except.o condor_errlst.o uids.o )
+program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ), dprintf.o except.o condor_errlst.o uids.o, )
 #endif
 
 program_target(ToUpper,ToUpper.o,$(NULL))
