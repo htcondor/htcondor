@@ -44,6 +44,7 @@ public:
 
 	void	init_socks();
 	void	init_resources();
+	void	reconfig_resources();
 
 	void	compute( amask_t );
 	void	publish( ClassAd*, amask_t );
@@ -116,6 +117,7 @@ public:
 	void report_updates();		// Log updates w/ dprintf()
 
 	MachAttributes*	m_attr;		// Machine-wide attribute object
+	AvailAttributes* m_avail;	// Available attributes object
 	
 	ProcAPI*		m_proc;		// Info from /proc about this machine 
 
@@ -131,15 +133,21 @@ private:
 	int		up_tid;		// DaemonCore timer id for update timer
 	int		poll_tid;	// DaemonCore timer id for polling timer
 
+	StringList**	type_strings;	// Array of StringLists that
+		// define the resource types specified in the config file.  
+	int*		type_nums;		// Number of each type.
+	int			max_types;		// Maximum # of types.
+
 		// Builds a CpuAttributes object to represent the virtual
-		// machine described by the given config file string list.  
-	CpuAttributes*	build_vm( StringList* );	
+		// machine described by the given machine type.
+	CpuAttributes*	build_vm( int );	
 	    // Returns the percentage represented by the given fraction or
 		// percent string.
-	float			parse_value( char* );
-		// All the logic of computing an integer number of cpus out of
-		// a percentage share.   
-	int				compute_cpus( float share );
+	float		parse_value( const char* );
+		// All the logic of computing an integer number of cpus or
+		// physical memory out of a percentage share.   
+	int			compute_cpus( float share );
+	int			compute_phys_mem( float share );
 };
 
 // Comparison functions for sorting resources:
