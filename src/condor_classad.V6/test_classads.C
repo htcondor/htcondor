@@ -550,7 +550,7 @@ static void process_evaluate(const string &line,
 				Value  value;
 				expr->SetParentScope(classad);
 				if (!classad->EvaluateExpr(expr, value)) {
-					cout << "Error: Can't parse expression (" << expression_string 
+					cout << "Error: Can't evaluate expression (" << expression_string 
 						 << ") on line " <<line_number << "." << endl;
 					errors->IncrementErrors();
 				}
