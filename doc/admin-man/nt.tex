@@ -253,7 +253,10 @@ the \Condor{startd} will clean up when Condor is restarted.
 On the execute machine, the user job is run using the access token of an
 account dynamically created by Condor which has bare-bones access rights and
 privileges.  For instance, if your machines are configured so that only
-Administrators have write access to \File{C:\Bs WINNT}, then certainly no
+Administrators have write access to
+%\File{C:\Bs WINNT},
+\verb@C:\WINNT@,
+then certainly no
 Condor job run on that machine would be able to write anything there.  The
 only files the job should be able to access on the execute machine are files
 accessible by group Everybody and files in the job's temporary working
@@ -262,7 +265,10 @@ directory.
 On the submit machine, Condor permits the File Transfer mechanism to only
 read files which the submitting user has access to read, and only write
 files to which the submitting user has access to write.  For example, say
-only Administrators can write to \File{C:\Bs WINNT} on the submit machine,
+only Administrators can write to 
+%\File{C:\Bs WINNT}
+\verb@C:\WINNT@
+on the submit machine,
 and a user gives the following to \Condor{submit} :
 \begin{verbatim}
          executable = mytrojan.exe
