@@ -122,6 +122,10 @@ SOURCE="..\src\condor_c++_util\condor_query.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\condor_state.C"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\config.C"
 # End Source File
 # Begin Source File
