@@ -1332,6 +1332,13 @@ DedicatedScheduler::reaper( int pid, int status )
 		case JOB_BAD_STATUS:
 			EXCEPT("shadow exited because job status != RUNNING");
 			break;
+		case JOB_SHOULD_REMOVE:
+			dprintf( D_ALWAYS, "Removing job %d.%d\n",
+					 srec->job_id.cluster, srec->job_id.proc );
+				// set this flag in our shadow record so we treat this
+				// just like a condor_rm
+			srec->removed = true;
+					// no break, fall through and do the action
 		case JOB_NO_CKPT_FILE:
 		case JOB_KILLED:
 		case JOB_COREDUMPED:
