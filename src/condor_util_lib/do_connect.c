@@ -41,6 +41,7 @@
 #include "clib.h"
 #include <string.h>
 #include "dgram_io_handle.h"
+#include "condor_fdset.h"
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
