@@ -6,8 +6,10 @@
 #include "condor_classad.h"
 #include "MyString.h"
 #include "globus_utils.h"
-#include "gahp-client.h"
+
+#include "proxymanager.h"
 #include "globusresource.h"
+#include "gahp-client.h"
 
 #define JM_COMMIT_TIMEOUT	600
 
@@ -84,6 +86,8 @@ class GlobusJob : public Service
 	bool retryStdioSize;
 	char *resourceManagerString;
 
+	bool gahp_proxy_id_set;
+	Proxy *myProxy;
 	GahpClient gahp;
 
 	MyString *buildSubmitRSL();

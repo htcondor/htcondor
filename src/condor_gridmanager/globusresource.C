@@ -30,11 +30,14 @@ GlobusResource::GlobusResource( const char *resource_name )
 	submitLimit = DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE;
 	jobLimit = DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE;
 
+	myProxy = AcquireProxy( NULL, pingTimerId );
+
 	Reconfig();
 }
 
 GlobusResource::~GlobusResource()
 {
+	ReleaseProxy( NULL, pingTimerId );
 	daemonCore->Cancel_Timer( pingTimerId );
 	if ( resourceName != NULL ) {
 		free( resourceName );
@@ -158,11 +161,7 @@ void GlobusResource::RequestPing( GlobusJob *job )
 {
 	pingRequesters.Append( job );
 
-	int delay = (lastPing + probeDelay) - time(NULL);
-	if ( delay < 0 ) {
-		delay = 0;
-	}
-	daemonCore->Reset_Timer( pingTimerId, delay );
+	daemonCore->Reset_Timer( pingTimerId, 0 );
 }
 
 bool GlobusResource::RequestSubmit( GlobusJob *job )
@@ -288,7 +287,33 @@ int GlobusResource::DoPing()
 	bool ping_failed = false;
 	GlobusJob *job;
 
+	// Don't perform a ping if we have no requesters and the resource is up
+	if ( pingRequesters.IsEmpty() && resourceDown == false &&
+		 firstPingDone == true ) {
+		daemonCore->Reset_Timer( pingTimerId, TIMER_NEVER );
+		return TRUE;
+	}
+
+	// Don't start a new ping too soon after the previous one. If the
+	// resource is up, the minimum time between pings is probeDelay. If the
+	// resource is down, the minimum time between pings is probeInterval.
+	int delay;
+	if ( resourceDown == false ) {
+		delay = (lastPing + probeDelay) - time(NULL);
+	} else {
+		delay = (lastPing + probeInterval) - time(NULL);
+	}
+	if ( delay > 0 ) {
+		daemonCore->Reset_Timer( pingTimerId, delay );
+		return TRUE;
+	}
+
 	daemonCore->Reset_Timer( pingTimerId, TIMER_NEVER );
+
+	if ( PROXY_NEAR_EXPIRED( myProxy ) ) {
+		dprintf( D_ALWAYS,"proxy near expiration or invalid, delaying ping\n" );
+		return TRUE;
+	}
 
 	rc = gahp.globus_gram_client_ping( resourceName );
 

@@ -5,8 +5,10 @@
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
-#include "gahp-client.h"
+#include "proxymanager.h"
 #include "globusjob.h"
+#include "gahp-client.h"
+
 
 class GlobusJob;
 
@@ -51,6 +53,7 @@ class GlobusResource : public Service
 	int pingTimerId;
 	time_t lastPing;
 	time_t lastStatusChange;
+	Proxy *myProxy;
 	List<GlobusJob> registeredJobs;
 	List<GlobusJob> pingRequesters;
 	// jobs that are currently executing a submit

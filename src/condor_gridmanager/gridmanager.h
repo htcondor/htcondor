@@ -8,9 +8,10 @@
 #include "classad_hashtable.h"
 #include "list.h"
 
-#include "gahp-client.h"
+#include "proxymanager.h"
 #include "globusresource.h"
 #include "globusjob.h"
+#include "gahp-client.h"
 
 
 #define UA_UPDATE_JOB_AD			0x0001
@@ -28,6 +29,8 @@ extern char *gramCallbackContact;
 extern char *ScheddAddr;
 extern char *X509Proxy;
 extern bool useDefaultProxy;
+extern char *ScheddJobConstraint;
+extern char *GridmanagerScratchDir;
 
 extern time_t Proxy_Expiration_Time;
 
@@ -42,6 +45,8 @@ void Register();
 // maintainence
 void Reconfig();
 	
+bool InitializeGahp( const char *proxy_filename );
+
 bool addScheddUpdateAction( GlobusJob *job, int actions, int request_id = 0 );
 void removeScheddUpdateAction( GlobusJob *job );
 void rehashJobContact( GlobusJob *job, const char *old_contact,

@@ -95,7 +95,7 @@ char *GMStateNames[] = {
 // TODO: once we can set the jobmanager's proxy timeout, we should either
 // let this be set in the config file or set it to
 // GRIDMANAGER_MINIMUM_PROXY_TIME + 60
-#define JM_MIN_PROXY_TIME	300
+#define JM_MIN_PROXY_TIME		(minProxy_time + 60)
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
@@ -239,15 +239,30 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	outputWaitLastGrowth = 0;
 	// HACK!
 	retryStdioSize = true;
+	gahp_proxy_id_set = false;
 
 	evaluateStateTid = daemonCore->Register_Timer( TIMER_NEVER,
 								(TimerHandlercpp)&GlobusJob::doEvaluateState,
 								"doEvaluateState", (Service*) this );;
+
 	gahp.setNotificationTimerId( evaluateStateTid );
 	gahp.setMode( GahpClient::normal );
 	gahp.setTimeout( gahpCallTimeout );
 
 	ad = classad;
+
+	buff[0] = '\0';
+	ad->LookupString( ATTR_X509_USER_PROXY, buff );
+	if ( buff[0] != '\0' ) {
+		myProxy = AcquireProxy( buff, evaluateStateTid );
+		if ( myProxy == NULL ) {
+			dprintf( D_ALWAYS, "(%d.%d) error acquiring proxy!\n",
+					 procID.cluster, procID.proc );
+		}
+	} else {
+		dprintf( D_ALWAYS, "(%d.%d) %s not set in job ad!\n",
+				 procID.cluster, procID.proc, ATTR_X509_USER_PROXY );
+	}
 
 	// In GM_HOLD, we assme HoldReason to be set only if we set it, so make
 	// sure it's unset when we start.
@@ -366,6 +381,9 @@ GlobusJob::~GlobusJob()
 	if ( localError ) {
 		free( localError );
 	}
+	if ( myProxy ) {
+		ReleaseProxy( myProxy, evaluateStateTid );
+	}
 	if (daemonCore) {
 		daemonCore->Cancel_Timer( evaluateStateTid );
 	}
@@ -440,6 +458,21 @@ int GlobusJob::doEvaluateState()
     dprintf(D_ALWAYS,
 			"(%d.%d) doEvaluateState called: gmState %s, globusState %d\n",
 			procID.cluster,procID.proc,GMStateNames[gmState],globusState);
+
+	if ( myProxy->gahp_proxy_id == -1 ) {
+		dprintf( D_ALWAYS, "(%d.%d) proxy not cached yet, waiting...\n",
+				 procID.cluster, procID.proc );
+		return TRUE;
+	} else if ( gahp_proxy_id_set == false ) {
+		gahp.setDelegProxyCacheId( myProxy->gahp_proxy_id );
+		gahp_proxy_id_set = true;
+	}
+
+	if ( PROXY_NEAR_EXPIRED( myProxy ) && gmState != GM_PROXY_EXPIRED ) {
+		dprintf( D_ALWAYS, "(%d.%d) proxy is about to expire, changing state to GM_PROXY_EXPIRED\n",
+				 procID.cluster, procID.proc );
+		gmState = GM_PROXY_EXPIRED;
+	}
 
 	if ( jmUnreachable || resourceDown ) {
 		gahp.setMode( GahpClient::results_only );
@@ -656,7 +689,7 @@ int GlobusJob::doEvaluateState()
 					break;
 				}
 				numSubmitAttempts++;
-				jmProxyExpireTime = Proxy_Expiration_Time;
+				jmProxyExpireTime = myProxy->expiration_time;
 				if ( rc == GLOBUS_SUCCESS ) {
 					jmVersion = GRAM_V_1_0;
 					UpdateJobAdInt( ATTR_GLOBUS_GRAM_VERSION, GRAM_V_1_0 );
@@ -790,7 +823,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) jobmanager timed out on commit, clearing request\n"
 						reevaluate_state = true;
 						break;
 					}
-					if ( jmProxyExpireTime < Proxy_Expiration_Time &&
+					if ( jmProxyExpireTime < myProxy->expiration_time &&
 						 ( jmVersion == GRAM_V_UNKNOWN ||
 						   jmVersion >= GRAM_V_1_6) ) {
 						gmState = GM_REFRESH_PROXY;
@@ -839,7 +872,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) jobmanager timed out on commit, clearing request\n"
 					gmState = GM_STOP_AND_RESTART;
 					break;
 				}
-				jmProxyExpireTime = Proxy_Expiration_Time;
+				jmProxyExpireTime = myProxy->expiration_time;
 				gmState = GM_SUBMITTED;
 			}
 			} break;
@@ -1156,7 +1189,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_UNDEFINED_EXE ) {
 					gmState = GM_CLEAR_REQUEST;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
-					jmProxyExpireTime = Proxy_Expiration_Time;
+					jmProxyExpireTime = myProxy->expiration_time;
 					rehashJobContact( this, jobContact, job_contact );
 					jobContact = strdup( job_contact );
 					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
@@ -1578,18 +1611,12 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 			// This object will be deleted when the update occurs
 			} break;
 		case GM_PROXY_EXPIRED: {
-			// The jobmanager has exited because the proxy is about to
-			// expire. If we get a new proxy, try to restart the jobmanager.
-			// Otherwise, just wait for the imminent death of the
-			// gridmanager.
+			// The proxy for this job is either expired or about to expire.
+			// If requested, put the job on hold. Otherwise, wait for the
+			// proxy to be refreshed, then resume handling the job.
 			now = time(NULL);
-			if ( Proxy_Expiration_Time > JM_MIN_PROXY_TIME + now ) {
-				if ( jobContact ) {
-					globusError = 0;
-					gmState = GM_RESTART;
-				} else {
-					gmState = GM_UNSUBMITTED;
-				}
+			if ( myProxy->expiration_time > JM_MIN_PROXY_TIME + now ) {
+				gmState = GM_INIT;
 			} else {
 				// Do nothing. Our proxy is about to expire.
 			}
@@ -2109,6 +2136,11 @@ MyString *GlobusJob::buildSubmitRSL()
 		attr_value = NULL;
 	}
 
+	if ( jmVersion == GRAM_V_UNKNOWN || jmVersion >= GRAM_V_1_6 ) {
+		buff.sprintf( ")(proxy_timeout=%d", JM_MIN_PROXY_TIME );
+		*rsl += buff;
+	}
+
 	buff.sprintf( ")(save_state=yes)(two_phase=%d)"
 				  "(remote_io_url=$(GRIDMANAGER_GASS_URL))",
 				  JM_COMMIT_TIMEOUT );
@@ -2143,6 +2175,10 @@ MyString *GlobusJob::buildRestartRSL()
 		buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localError );
 		*rsl += rsl_stringify( buff.Value() );
 		*rsl += ")(stderr_position=0)";
+	}
+	if ( jmVersion == GRAM_V_UNKNOWN || jmVersion >= GRAM_V_1_6 ) {
+		buff.sprintf( "(proxy_timeout=%d)", JM_MIN_PROXY_TIME );
+		*rsl += buff;
 	}
 
 	return rsl;

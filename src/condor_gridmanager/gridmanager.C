@@ -110,6 +110,8 @@ char *gassServerUrl = NULL;
 char *ScheddAddr = NULL;
 char *X509Proxy = NULL;
 bool useDefaultProxy = true;
+char *ScheddJobConstraint = NULL;
+char *GridmanagerScratchDir = NULL;
 
 HashTable <HashKey, GlobusJob *> JobsByContact( HASH_TABLE_SIZE,
 												hashFunction );
@@ -122,12 +124,6 @@ bool firstScheddContact = true;
 
 char *Owner = NULL;
 
-int checkProxy_tid = TIMER_UNSET;
-int checkProxy_interval;
-int minProxy_time;
-
-time_t Proxy_Expiration_Time = 0;
-
 int checkResources_tid = TIMER_UNSET;
 
 GahpClient GahpMain;
@@ -139,7 +135,6 @@ int checkResources();
 // handlers
 int ADD_JOBS_signalHandler( int );
 int REMOVE_JOBS_signalHandler( int );
-int checkProxy();
 
 
 // return value of true means requested update has been committed to schedd.
@@ -254,6 +249,52 @@ Init()
 	if ( Owner == NULL ) {
 		EXCEPT( "Can't determine username" );
 	}
+
+	if ( ScheddJobConstraint == NULL ) {
+		// CRUFT: Backwards compatibility with pre-6.5.1 schedds that don't
+		//   give us a constraint expression for querying our jobs. Build
+		//   it ourselves like the old gridmanager did.
+		MyString buf;
+		MyString expr = "";
+
+		if ( myUserName ) {
+			if ( strchr(myUserName,'@') ) {
+				// we were given a full name : owner@uid-domain
+				buf.sprintf("%s == \"%s\"", ATTR_USER, myUserName);
+			} else {
+				// we were just give an owner name without a domain
+				buf.sprintf("%s == \"%s\"", ATTR_OWNER, myUserName);
+			}
+		} else {
+			buf.sprintf("%s == \"%s\"", ATTR_OWNER, Owner);
+		}
+		expr += buf;
+
+		if(useDefaultProxy == false) {
+			buf.sprintf(" && %s =?= \"%s\" ", ATTR_X509_USER_PROXY, X509Proxy);
+		} else {
+			buf.sprintf(" && %s =?= UNDEFINED ", ATTR_X509_USER_PROXY);
+		}
+		expr += buf;
+
+		ScheddJobConstraint = strdup( expr.Value() );
+
+		if ( X509Proxy == NULL ) {
+			EXCEPT( "Old schedd didn't specify proxy with -x" );
+		}
+		if ( UseSingleProxy( X509Proxy, InitializeGahp ) == false ) {
+			EXCEPT( "Failed to initialize ProxyManager" );
+		}
+
+	} else {
+
+		if ( GridmanagerScratchDir == NULL ) {
+			EXCEPT( "Schedd didn't specify scratch dir with -S" );
+		}
+		if ( UseMultipleProxies( GridmanagerScratchDir, InitializeGahp ) == false ) {
+			EXCEPT( "Failed to initialize Proxymanager" );
+		}
+	}
 }
 
 void
@@ -301,8 +342,8 @@ Reconfig()
 	tmp_int = param_integer("GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT",3);
 	GlobusJob::setConnectFailureRetry( tmp_int );
 
-	checkProxy_interval = param_integer( "GRIDMANAGER_CHECKPROXY_INTERVAL",
-										 10 * 60 );
+	CheckProxies_interval = param_integer( "GRIDMANAGER_CHECKPROXY_INTERVAL",
+										   10 * 60 );
 
 	minProxy_time = param_integer( "GRIDMANAGER_MINIMUM_PROXY_TIME", 3 * 60 );
 
@@ -331,118 +372,38 @@ Reconfig()
 	}
 
 	// Always check the proxy on a reconfig.
-	checkProxy();
+	doCheckProxies();
 }
 
-int
-checkProxy()
+bool
+InitializeGahp( const char *proxy_filename )
 {
-	time_t now = 	time(NULL);
-	ASSERT(X509Proxy);
-	int seconds_left = x509_proxy_seconds_until_expire(X509Proxy);
-	time_t current_expiration_time = now + seconds_left;
-	static time_t last_expiration_time = 0;
+	int err;
 
-	if ( seconds_left < 0 ) {
-		// Proxy file is gone. Since the GASS needs the proxy file for
-		// new connections, we should treat this as an expired proxy.
-		seconds_left = 0;
-		current_expiration_time = now;
-		Proxy_Expiration_Time = current_expiration_time;
+	if ( GahpMain.Initialize( proxy_filename ) == false ) {
+		dprintf( D_ALWAYS, "Error initializing GAHP\n" );
+		return false;
 	}
 
-	if ( Proxy_Expiration_Time == 0 ) {
-		// First time through....
-		Proxy_Expiration_Time = current_expiration_time;
-		dprintf(D_ALWAYS,
-			"Condor-G proxy cert valid for %s\n",format_time(seconds_left));
+	GahpMain.setMode( GahpClient::blocking );
+
+	err = GahpMain.globus_gram_client_callback_allow( gramCallbackHandler,
+													  NULL,
+													  &gramCallbackContact );
+	if ( err != GLOBUS_SUCCESS ) {
+		dprintf( D_ALWAYS, "Error enabling GRAM callback, err=%d - %s\n", 
+				 err, GahpMain.globus_gram_client_error_string(err) );
+		return false;
 	}
 
-	if ( last_expiration_time == 0 ) {
-		// First time through....
-		last_expiration_time = Proxy_Expiration_Time;
+	err = GahpMain.globus_gass_server_superez_init( &gassServerUrl, 0 );
+	if ( err != GLOBUS_SUCCESS ) {
+		dprintf( D_ALWAYS, "Error enabling GASS server, err=%d\n", err );
+		return false;
 	}
+	dprintf( D_FULLDEBUG, "GASS server URL: %s\n", gassServerUrl );
 
-	// If our proxy expired in the past, make it seem like it expired
-	// right now so we don't have to deal with time_t negative overflows
-	if ( now > Proxy_Expiration_Time ) {
-		Proxy_Expiration_Time = now;
-	}
-	if ( now > last_expiration_time ) {
-		last_expiration_time = now;
-	}
-
-	// Check if we have a refreshed proxy
-	if ( (current_expiration_time > Proxy_Expiration_Time) &&
-		 (current_expiration_time > last_expiration_time) ) 
-	{
-		// We have a refreshed proxy!
-		dprintf(D_FULLDEBUG,"New proxy found, valid for %s\n",
-				format_time(seconds_left));
-		last_expiration_time = current_expiration_time;
-
-		// Try to refresh the proxy cached in the gahp server
-		int res = GahpMain.globus_gram_client_set_credentials( X509Proxy );
-		if ( res == 0  ) {
-			// Success!  Gahp server has refreshed the proxy
-			Proxy_Expiration_Time = current_expiration_time;
-			// signal every job, in case some were waiting for a new proxy
-			GlobusJob *next_job;
-			JobsByProcID.startIterations();
-			while ( JobsByProcID.iterate( next_job ) != 0 ) {
-				next_job->SetEvaluateState();
-			}
-		} else {
-			// Failed to refresh proxy in the gahp server
-			dprintf(D_FULLDEBUG,"Failed to reset credentials to new proxy\n");
-		}
-	}
-
-	// Verify our proxy is longer than the minimum allowed
-	if ((Proxy_Expiration_Time - now) <= minProxy_time) 
-	{
-		// Proxy is either already expired, or will expire in
-		// a very short period of time.
-		// Write something out to the log and send a signal to shutdown.
-		// The schedd will try to restart us every few minutes.
-		// TODO: should email the user somewhere around here....
-
-		char *formated_minproxy = strdup(format_time(minProxy_time));
-		dprintf(D_ALWAYS,
-			"ERROR: Condor-G proxy expiring; "
-			"valid for %s - minimum allowed is %s\n",
-			format_time((int)(Proxy_Expiration_Time - now) ), 
-			formated_minproxy);
-		free(formated_minproxy);
-
-			// Shutdown with haste!
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );  
-		return FALSE;
-	}
-
-	// Setup timer to automatically check it next time.  We want the
-	// timer to go off either at the next user-specified interval,
-	// or right before our credentials expire, whichever is less.
-	int interval = MIN(checkProxy_interval, 
-						Proxy_Expiration_Time - now - minProxy_time);
-
-	if ( interval ) {
-		if ( checkProxy_tid != TIMER_UNSET ) {
-			daemonCore->Reset_Timer(checkProxy_tid,interval);
-		} else {
-			checkProxy_tid = daemonCore->Register_Timer( interval,
-												(TimerHandler)&checkProxy,
-												"checkProxy", NULL );
-		}
-	} else {
-		// interval is 0, cancel any timer if we have one
-		if (checkProxy_tid != TIMER_UNSET ) {
-			daemonCore->Cancel_Timer(checkProxy_tid);
-			checkProxy_tid = TIMER_UNSET;
-		}
-	}
-
-	return TRUE;
+	return true;
 }
 
 int
@@ -553,10 +514,10 @@ doContactSchedd()
 	ScheddUpdateAction *curr_action;
 	GlobusJob *curr_job;
 	ClassAd *next_ad;
-	char owner_buf[1200];
 	char expr_buf[12000];
 
 	dprintf(D_FULLDEBUG,"in doContactSchedd()\n");
+//bool foo=false;while(!foo)sleep(1);
 
 	contactScheddTid = TIMER_UNSET;
 
@@ -735,27 +696,6 @@ dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",curr_job->procID.cluster,
 	}
 
 
-	// setup for AddJobs and RemoveJobs
-	if ( myUserName ) {
-		if ( strchr(myUserName,'@') ) {
-			// we were given a full name : owner@uid-domain
-			sprintf(owner_buf, "%s == \"%s\"", ATTR_USER, myUserName);
-		} else {
-			// we were just give an owner name without a domain
-			sprintf(owner_buf, "%s == \"%s\"", ATTR_OWNER, myUserName);
-		}
-	} else {
-		sprintf(owner_buf, "%s == \"%s\"", ATTR_OWNER, Owner);
-	}
-
-	int obuflen = strlen(owner_buf);
-	if(useDefaultProxy == false) {
-		sprintf(&(owner_buf[obuflen]), " && %s =?= \"%s\" ", 
-				ATTR_X509_USER_PROXY, X509Proxy);
-	} else {
-		sprintf(&(owner_buf[obuflen]), " && %s =?= UNDEFINED ", ATTR_X509_USER_PROXY);
-	}
-
 	// AddJobs
 	/////////////////////////////////////////////////////
 	if ( addJobsSignaled || firstScheddContact ) {
@@ -774,14 +714,14 @@ dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",curr_job->procID.cluster,
 		if ( firstScheddContact ) {
 //			sprintf( expr_buf, "%s && %s == %d && !(%s == %d && %s =!= TRUE)",
 			sprintf( expr_buf, 
-				"%s && %s == %d && (%s =!= FALSE || %s =?= TRUE) && ((%s == %d || %s == %d || %s == %d) && %s =!= TRUE) == FALSE",
-					 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS, 
+				"(%s) && %s == %d && (%s =!= FALSE || %s =?= TRUE) && ((%s == %d || %s == %d || %s == %d) && %s =!= TRUE) == FALSE",
+					 ScheddJobConstraint, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS, 
 					 ATTR_JOB_MATCHED, ATTR_JOB_MANAGED, ATTR_JOB_STATUS, HELD,
 					 ATTR_JOB_STATUS, COMPLETED, ATTR_JOB_STATUS, REMOVED, ATTR_JOB_MANAGED );
 		} else {
 			sprintf( expr_buf, 
 				"%s && %s == %d && %s =!= FALSE && %s != %d && %s != %d && %s != %d && %s =!= TRUE",
-					 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
+					 ScheddJobConstraint, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
 					 ATTR_JOB_MATCHED, ATTR_JOB_STATUS, HELD, 
 					 ATTR_JOB_STATUS, COMPLETED, ATTR_JOB_STATUS, REMOVED, ATTR_JOB_MANAGED );
 		}
@@ -923,8 +863,8 @@ dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",curr_job->procID.cluster,
 		// Grab jobs marked as REMOVED or marked as HELD that we haven't
 		// previously indicated that we're done with (by setting JobManaged
 		// to FALSE. If JobManaged is undefined, equate it with false.
-		sprintf( expr_buf, "%s && %s == %d && (%s == %d || (%s == %d && %s =?= TRUE))",
-				 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
+		sprintf( expr_buf, "(%s) && %s == %d && (%s == %d || (%s == %d && %s =?= TRUE))",
+				 ScheddJobConstraint, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
 				 ATTR_JOB_STATUS, REMOVED, ATTR_JOB_STATUS, HELD,
 				 ATTR_JOB_MANAGED );
 
