@@ -81,9 +81,9 @@ if( $#ARGV < 0 ) {
 }
 
 # determine username & hostname and then open logfile
-$user = scalar getpwuid( $UID );
+$username = scalar getpwuid( $UID );
 $hostname = hostname();
-$user = "$user\@$hostname";
+$user = "$username\@$hostname";
 open( LOG, ">>$LOGFILE" ) || warn "$0: error opening $LOGFILE: $!\n";
 
 # make sure initial logging occurs even if user kills us mid-way
@@ -193,10 +193,54 @@ sub check_auth()
     }
 }
 
+sub everyone() {
+
+	foreach $n ($STARTNODE .. 9)
+	{
+	    push @allnodes, "c0$n";
+	}
+	foreach $n (10 .. $NUMNODES)
+	{
+	    push @allnodes, "c$n";
+	}
+	foreach $n ($STARTNODE .. 9)
+	{
+	    push @allnodes, "db0$n";
+	}
+	foreach $n (10 .. $DBNODES)
+	{
+	    push @allnodes, "db$n";
+	}
+
+	return(@allnodes);
+}
 
 sub start_condor
 {
-    my @hosts = @_;
+    my (@hosts);
+    %nodes = ();
+    foreach $arg (@_) {
+        if( $arg eq "-a") {
+            @allhosts = everyone();
+            parse_logfile();
+            foreach $host (@allhosts)
+            {
+                $reserver = ${$nodes{$host}}[1];
+                $reserver =~ s/\@.*$//;
+                if ( $reserver eq $username)
+                {
+                    #print " (reserved by $reserver at ";
+                    #print "${$nodes{$host}}[0])";
+                    #print "$user has $host checked out\n";
+                    #push(@hosts, $host);
+                }
+            }
+         }
+         else {
+             push(@hosts, $arg);
+        }
+    }
+
     foreach $host ( @hosts )
     {
 	# if the user just specified a number, translate to a "cXX" node name
@@ -212,6 +256,7 @@ sub start_condor
 	    }
 	}
 	print LOG timestamp() . " $user    (returned $host)\n";
+	print timestamp() . " $user    (returned $host)\n";
 	system( "$CONDOR_ON $host" );
 	system( "$CONFIG_ON -name $host > /dev/null" );
 	system( "$CONDOR_RECONFIG $host > /dev/null" );
@@ -293,32 +338,13 @@ sub kill_condor {
     system( "$CONDOR_RECONFIG $host > /dev/null" );
 }
 
+sub parse_logfile {
+    my( $date, $user, $checkedout);
 
-sub check_condor {
-    my( @hosts ) = @_;
-    
-    %nodes = ();
     $date = '';
     $user = '';
     $checkedOut = 'returned';
-    
-    foreach $host ( @hosts )
-    {
-	#if the user just specifies a number, prepend the "cXX" node name
-	if( $host =~ /^\d+$/ ) 
-	{
-	    if( $host < 10 ) 
-	    {
-		$host = "c0$host";
-	    }
-	    else
-	    {
-		$host = "c$host";
-	    }
-	}
-	push( @{$nodes{"$host"}}, $date, $user, $checkedOut);  
-    }
-    
+
     open( CLUSTER_LOG, $LOGFILE ) || die "$0: error opening $LOGFILE: $!\n";
     while( <CLUSTER_LOG> )
     {
@@ -358,8 +384,34 @@ sub check_condor {
 
 	}
     }
+}
+
+sub check_condor {
+    my( @hosts ) = @_;
+    
+    %nodes = ();
+    
+    foreach $host ( @hosts )
+    {
+	#if the user just specifies a number, prepend the "cXX" node name
+	if( $host =~ /^\d+$/ ) 
+	{
+	    if( $host < 10 ) 
+	    {
+		$host = "c0$host";
+	    }
+	    else
+	    {
+		$host = "c$host";
+	    }
+	}
+	push( @{$nodes{"$host"}}, $date, $user, $checkedOut);  
+    }
+
+    parse_logfile();
 
     #foreach $node (sort keys %nodes) 
+
     foreach $host (@hosts)
     {
 	$isUp = check_host($host);
@@ -374,7 +426,6 @@ sub check_condor {
         print"\n";
     }
 }
-
 
 sub check_host
 {
