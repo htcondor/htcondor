@@ -7,7 +7,7 @@ sub Main( );
 sub CommandLine( @ );
 sub FindConfigFile( );
 sub ReadConfigFile( );
-sub ReadDataFile( $$ );
+sub ReadDescriptionFile( $$ );
 sub InstallModules( );
 sub InstallModule( $ );
 sub ConfigureModule( $ );
@@ -20,26 +20,28 @@ sub Help ( );
 # ******************************************************
 # Command line options
 # ******************************************************
-my $Program = "hawkeye_install_module";
+my $Distribution = "hawkeye";
 my %Options =
     (
-     "[-d=dir]"		=> "Specify modules directory",
-     "[-c=file]"	=> "Specify Hawkeye config file",
-     "[-n]"		=> "Don't update the config file",
-     "[-m]"		=> "Manual mode; asks lots of questions",
-     "[-a]"		=> "Ask before installing each module",
-     "File [File..]"	=> "List of module files to install",
-     #"[-v]"		=> "Verbose",
-     "[-h]"		=> "Dump help",
+     "[--modules=dir]"	=> "Specify modules directory",
+     "[--config=file]"	=> "Specify $Distribution config file",
+     "[--noupdate|-n]"	=> "Don't update the config file",
+     "[--manual|-m]"	=> "Manual mode; asks lots of questions",
+     "[--defaults]"	=> "Use defaults if possible",
+     "[--all|-a]"	=> "Install all modules found in packages",
+     "[--ask]"		=> "Ask before installing each module",
+     "File [File..]"	=> "List of module package files to install",
+     "[--help|-h]"	=> "Dump help",
     );
 
 # Hash of directories & files
 my %Config = (
-	      HawkeyeDir => "",
-	      HawkeyeConfig => "",
+	      RootDir => "",
+	      ConfigFile => "",
 	      ModulesDir => "",
-	      UpdateConfig => 1,
+	      UpdateConfig => 0,
 	      UseDefaults => 1,
+	      AskAll => 0,
 	      InstallAll => 1,
 	      Startd => -1,
 	      );
@@ -47,7 +49,7 @@ my %ConfigMacros;
 my @ConfigLines;
 
 # Valid "Options"
-my @ModuleOptions = qw ( continuous kill nokill );
+my @ModuleOptions = qw ( continuous kill nokill reconfig waitforexit );
 my $ModuleOptionsRe =
     "(" . join( ")|(", @ModuleOptions ) . ")";
 
@@ -56,12 +58,26 @@ if ( ! exists $ENV{PWD} )
 {
     $ENV{PWD} = `/bin/pwd`; chomp $ENV{PWD};
 }
+
+# Look at $0, see what we can gleen from it...
+if ( $0 =~ /(condor|hawkeye)_install/ )
+{
+    $Distribution = $1;
+}
+if ( exists $ENV{CONDOR_DISTRIBUTION} )
+{
+    $Distribution = $1;
+}
+my $Program = $Distribution . "_install_module";
+my $ConfigEnv = uc $Distribution . "_CONFIG";
+
+# Process command line, etc..
 CommandLine( @ARGV );
 $#ARGV = -1;
 $| = 1;
 
 # Find the config file to use
-$ENV{HAWKEYE_CONFIG} = $Config{HawkeyeConfig} if ( ! exists $ENV{HAWKEYE_CONFIG} );
+$ENV{$ConfigEnv} = $Config{ConfigFile} if ( ! exists $ENV{$ConfigEnv} );
 FindConfigFile( );
 
 # Read the config file
@@ -81,13 +97,13 @@ sub CommandLine( @ )
     foreach my $Arg ( @_ )
     {
 	# Speicfy modules directory
-	if ( $Arg =~ /^-d=(.+)/ )
+	if ( $Arg =~ /^--modules=(.+)/ )
 	{
 	    die "Directory '$1' does not exist" if ( ! -d $1 );
 	    $Config{ModulesDir} = $1;
 	}
 	# Speicify config file
-	elsif ( $Arg =~ /-c=(.+)/ )
+	elsif ( $Arg =~ /--config=(.+)/ )
 	{
 	    die "Config file '$1' does not exist" if ( ! -f $1 );
 	    my $File = $1;
@@ -95,25 +111,42 @@ sub CommandLine( @ )
 	    {
 		$File = $ENV{PWD} . "/$File";
 	    }
-	    $Config{HawkeyeConfig} = $File;
+	    $Config{ConfigFile} = $File;
 	}
 	# No config update
-	elsif ( $Arg eq "-n")
+	elsif ( ( $Arg eq "-u") || ( $Arg eq "--update" ) )
 	{
-	    $Config{UpdateConfig} = 0;
+	    $Config{UpdateConfig} = 1;
+	}
+	# "Install all modules" mode
+	elsif ( ( $Arg eq "-a" ) || ( $Arg eq "--all" ) )
+	{
+	    $Config{InstallAll} = 1;
 	}
 	# "Ask" mode
-	elsif ( $Arg eq "-a" )
+	elsif ( $Arg eq "--ask" )
 	{
 	    $Config{InstallAll} = 0;
 	}
 	# Manual mode
-	elsif ( $Arg eq "-m" )
+	elsif ( ( $Arg eq "-m" ) || ( $Arg eq "--manual" ) )
 	{
 	    $Config{InstallAll} = 0;
 	    $Config{UseDefaults} = 0;
+	    $Config{AskAll} = 1;
 	}
-	elsif ( $Arg =~ /^-h/ )
+	# Hawkeye mode
+	elsif ( $Arg eq "--hawkeye" )
+	{
+	    $Distribution = "hawkeye";
+	}
+	# Condor mode
+	elsif ( $Arg eq "--condor" )
+	{
+	    $Distribution = "condor";
+	}
+	# Help
+	elsif ( ( $Arg =~ /^-h/ ) || ( $Arg eq "--help" ) )
 	{
 	    Help( );
 	    exit 0;
@@ -160,31 +193,32 @@ sub FindConfigFile( )
 {
 
     # Check the config env variable...
-    if ( ( $Config{HawkeyeConfig} eq "" ) && ( exists $ENV{HAWKEYE_CONFIG} ) )
+    if ( ( $Config{ConfigFile} eq "" ) && ( exists $ENV{$ConfigEnv} ) )
     {
-	warn "$ENV{HAWKEYE_CONFIG} (from ENV) does not exist!"
-	    if ( ! -f $ENV{HAWKEYE_CONFIG} );
-	$Config{HawkeyeConfig} = $ENV{HAWKEYE_CONFIG};
+	warn "$ENV{$ConfigEnv} (from ENV) does not exist!"
+	    if ( ! -f $ENV{$ConfigEnv} );
+	$Config{ConfigFile} = $ENV{$ConfigEnv};
     }
 
     # Fallbacks...
-    my @FallbackConfigs = [ "/home/hawkeye", ];
-    unshift @FallbackConfigs, $ENV{HAWKEYE_ROOT_DIR}
-	if ( exists $ENV{HAWKEYE_ROOT_DIR} );
+    my @FallbackConfigs = [ "/home/$Distribution", ];
+    my $RootEnv = uc $Distribution . "_ROOT_DIR";
+    unshift @FallbackConfigs, $ENV{$RootEnv}
+	if ( exists $ENV{$RootEnv} );
     foreach my $TempConfig ( @FallbackConfigs )
     {
-	if (  ( $Config{HawkeyeConfig} eq "" ) && ( -f $TempConfig )  )
+	if (  ( $Config{ConfigFile} eq "" ) && ( -f $TempConfig )  )
 	{
-	    $Config{HawkeyeConfig}{HawkeyeConfig} = $TempConfig;
+	    $Config{ConfigFile}{ConfigFile} = $TempConfig;
 	}
     }
 
     # Finally, let's go check the config
-    if ( $Config{HawkeyeConfig} eq "" )
+    if ( $Config{ConfigFile} eq "" )
     {
 	print STDERR "No config found\n";
 	Usage( "" );
-	print STDERR "\tOr, set the HAWKEYE_CONFIG env variable\n";
+	print STDERR "\tOr, set the $ConfigEnv env variable\n";
 	exit 1;
     }
 
@@ -196,9 +230,9 @@ sub FindConfigFile( )
 # ******************************************************
 sub ReadConfigFile( )
 {
-    print "Reading config file $Config{HawkeyeConfig}...";
-    open( CONFIG, $Config{HawkeyeConfig} ) ||
-	die "Can't read config @ $Config{HawkeyeConfig}";
+    print "Reading config file $Config{ConfigFile}...";
+    open( CONFIG, $Config{ConfigFile} ) ||
+	die "Can't read config @ $Config{ConfigFile}";
     my $Line = "";
     while( <CONFIG> )
     {
@@ -240,7 +274,7 @@ sub ReadConfigFile( )
     # Last resort
     if ( $Config{ModulesDir} eq "" )
     {
-	if ( $Config{HawkeyeConfig} =~ /(.*)\/hawkeye_config/ )
+	if ( $Config{ConfigFile} =~ /(.*)\/hawkeye_config/ )
 	{
 	    my $Tmp = $1 . "/modules";
 	    $Config{ModulesDir} = $Tmp if ( -d $Tmp );
@@ -262,7 +296,7 @@ sub ReadConfigFile( )
     my $Modules = Expand( "MODULES" );
     if ( ! defined $Modules )
     {
-	my $Value = $Config{HawkeyeConfig};
+	my $Value = $Config{ConfigFile};
 	my $Hawkeye = Expand( "HAWKEYE" );
 	if ( defined $Hawkeye )
 	{
@@ -298,6 +332,7 @@ sub InstallModules ( )
     # Summary info
     my @Ok;
     my @Failed;
+    my $ConfigUpdated = 0;
 
     # Walk through the list of modules...
     print "Installing modules\n";
@@ -315,7 +350,7 @@ sub InstallModules ( )
 	my @Files = grep { /^[^\.]/ } readdir( DIR );
 	closedir( DIR );
 
-	# Find the meta-data ".hawk" file...
+	# Find the description ".hawk" file...
 	my @DatFiles = grep { /\.hawk$/ } @Files;
 	if ( $#DatFiles < 0 )
 	{
@@ -325,15 +360,16 @@ sub InstallModules ( )
 	}
 
 	# Loop through the list of modules to install...
-	foreach my $Data ( @DatFiles )
+	foreach my $Description ( @DatFiles )
 	{
 	    my %ModuleData;
 
-	    # Read the data file for this module..
-	    my $Errors = ReadDataFile( $Data, \%ModuleData );
+	    # Read the description file for this module..
+	    my $Errors = ReadDescriptionFile( $Description, \%ModuleData );
 	    if ( $Errors )
 	    {
-		print "Errors encountered in data file; skipping $Module\n";
+		print "Errors encountered in description " .
+		  "file; skipping $Module\n";
 		push @Failed, $Module;
 		next;
 	    }
@@ -369,17 +405,7 @@ sub InstallModules ( )
 	    }
 
 	    # Configure it?
-	    if ( ! $Config{UseDefaults} )
-	    {
-		$Status = ConfigureModule( \%ModuleData );
-	    }
-	    else
-	    {
-		$Status = ConfigureModuleDefaults( \%ModuleData );
-	    }
-
-	    # Add to the failed list?
-	    if ( $Status )
+	    if ( ! ConfigureModule( \%ModuleData ) )
 	    {
 		push @Failed, $Module if ( $Status < 0 );
 		next;
@@ -393,9 +419,10 @@ sub InstallModules ( )
 	    {
 		push @Failed, $Module
 	    }
-	    elsif ( $Status == 0 )
+	    elsif ( $Status == 1 )
 	    {
 		push @Ok, $Name;
+		$ConfigUpdated += $ModuleData{ConfigChanged};
 	    }
 	}
 
@@ -405,7 +432,14 @@ sub InstallModules ( )
     }
 
     # Create the new config file
-    WriteConfig( );
+    if ( $ConfigUpdated )
+    {
+	WriteConfig( );
+    }
+    else
+    {
+	print "No configuration updates required\n";
+    }
 
     # Final clean-up
     chdir $OrigDir;
@@ -429,21 +463,20 @@ sub InstallModules ( )
 	}
     }
 
-
 } # InstallModules()
 # ******************************************************
 
 # ******************************************************
-# Read the module data file
+# Read the module description file
 # ******************************************************
-sub ReadDataFile( $$ )
+sub ReadDescriptionFile( $$ )
 {
-    my $DataFile = shift;
+    my $DescriptionFile = shift;
     my $Data = shift;
 
-    if ( ! open( DATA, $DataFile ) )
+    if ( ! open( DESCRIPTION, $DescriptionFile ) )
     {
-	print "Can't read data file '$DataFile'; skipping\n";
+	print "Can't read description file '$DescriptionFile'; skipping\n";
 	return -1;
     }
 
@@ -454,10 +487,10 @@ sub ReadDataFile( $$ )
 	"^(" . join( ":)|(", @KeyWords ) . ":)";
     #print "KeyWordsRe='$KeyWordsRe'\n";
 
-    # Read the data file
+    # Read the description file
     my $Errors = 0;
   READLINE:
-    while( <DATA> )
+    while( <DESCRIPTION> )
     {
 	chomp;
 	my $Orig = $_;
@@ -496,7 +529,7 @@ sub ReadDataFile( $$ )
 
 	    # Read the module description
 	    my @Description;
-	    while( <DATA> )
+	    while( <DESCRIPTION> )
 	    {
 		chomp;
 		s/\s+$//;
@@ -549,7 +582,7 @@ sub ReadDataFile( $$ )
 	    @{$Data->{Options}} = split( /\s+/, $1 );
 	    foreach my $Opt ( @{$Data->{Options}} )
 	    {
-		if ( ! $Opt =~ /$ModuleOptionsRe/ )
+		if ( ! $Opt =~ /$ModuleOptionsRe/i )
 		{
 		    print STDERR "Line $.: Unknown option '$Opt'\n";
 		    $Errors++;
@@ -565,7 +598,8 @@ sub ReadDataFile( $$ )
 	    my $OrigName = $1;
 	    $p->{Default} = $3 if ( defined $3 );
 
-	    # For backward compatibility, message the old HAKWEYE_<NAME>_<PARAM>
+	    # For backward compatibility, mesage the old
+	    # HAWKEYE_<NAME>_<PARAM>
 	    # parameter names to just plain <PARAM>
 	    my $Pat1 = "hawkeye_" . $Data->{DefaultName} . "_(\\w+)";
 	    my $Pat2 = "hawkeye_[a-zA-Z]+_(\\w+)";
@@ -579,11 +613,14 @@ sub ReadDataFile( $$ )
 	    }
 	    $p->{Name} = $ParamName;
 	    $p->{OrigName} = $OrigName;
+	    $p->{Required} = 0;
 	    my @Description;
-	    while( <DATA> )
+	    while( <DESCRIPTION> )
 	    {
 		chomp;
 		s/\s+$//;
+
+		# Is it a keyword (ie the start of something else)?
 		my $Key = $_; $Key =~ s/\s.*$//;
 		if ( ( $_ eq "" ) || ( /^\#/ ) || ( $Key =~ /$KeyWordsRe/i ) )
 		{
@@ -593,8 +630,30 @@ sub ReadDataFile( $$ )
 		    redo READLINE;
 		}
 
-		s/$OrigName/$ParamName/ if ( $OrigName ne $ParamName );
-		push @Description, $_;
+		# Parse flags, if provided
+		elsif ( /^flags:\s*(.*)/i )
+		{
+		    foreach my $Flag ( split( /[\s+\,]+/, lc $1 ) )
+		    {
+			if ( $Flag eq "required" )
+			{
+			    $p->{Required} = 1;
+			}
+			else
+			{
+			    print STDERR "Line $.: Unknown flag '$Flag'\n";
+			    $Errors++;
+			}
+		    }
+		    next;
+		}
+
+		# Must be a description line; add it
+		else
+		{
+		    s/$OrigName/$ParamName/ if ( $OrigName ne $ParamName );
+		    push @Description, $_;
+		}
 	    }
 
 	    # Store it
@@ -609,15 +668,15 @@ sub ReadDataFile( $$ )
 	# Unknown
 	else
 	{
-	    print "Can't parse dat file '$DataFile' line $.\n";
+	    print "Can't parse dat file '$DescriptionFile' line $.\n";
 	    print "$Orig\n";
 	    $Errors++;
 	}
     }
-    close( DATA );
+    close( DESCRIPTION );
 
 
-    # For backward compatibility, message the old HAKWEYE_<NAME>_<PARAM>
+    # For backward compatibility, message the old HAWKEYE_<NAME>_<PARAM>
     # parameter names to just plain <PARAM>
     # Clean up the description, too
     for my $Param ( @{$Data->{Parameters}} )
@@ -652,7 +711,7 @@ sub ReadDataFile( $$ )
 
     return $Errors;
 
-} # ReadDataFile()
+} # ReadDescriptionFile()
 # ******************************************************
 
 # ******************************************************
@@ -690,7 +749,7 @@ sub InstallModule( $ )
     $| = 1;
     foreach my $File ( $Data->{ModuleFile}, @{$Data->{OtherFiles}} )
     {
-	print "File = '$File'\n";
+	print "  File = '$File'\n";
 	my $Cmd = "cp $File $Config{ModulesDir}";
 	print "\t$File -> $Config{ModulesDir}...";
 	system $Cmd;
@@ -702,9 +761,26 @@ sub InstallModule( $ )
     my $JobString = Expand( "HAWKEYE_JOBS" );
     foreach my $Job ( split( /\s+/, $JobString ) )
     {
-	if ( $Job =~ /([^:]+):([^:]*):([^:]+):([^:]+)(:?).*/ )
+	my @Fields = split( /:/, $Job );
+	if ( scalar @Fields >= 4 )
 	{
-	    $Found++ if ( $1 eq $Name );
+	    if ( $Fields[0] eq $Name )
+	    {
+		$Found++;
+		$Data->{Current}{Name} = shift @Fields;
+		$Data->{Current}{Prefix} = shift @Fields;
+		$Data->{Current}{Path} = shift @Fields;
+		$Data->{Current}{Period} = shift @Fields;
+		if ( scalar @Fields )
+		{
+		    @{$Data->{Current}{Options}} = @Fields;
+		}
+		else
+		{
+		    $#{@{$Data->{Current}{Options}}} = -1;
+		}
+		last;
+	    }
 	}
     }
     $Data->{Configured} = $Found;
@@ -722,142 +798,264 @@ sub ConfigureModule( $ )
 {
     my $Data = shift;
     my $Name = $Data->{Name};
+    my $NeedsConfig = $Config{AskAll};
+    my $OldLineNum = -1;
+    my $Errors = 0;
 
-    # Is it already configured?
+    # By default, nothing has changed.
+    $Data->{ConfigChanged} = 0;
+
+    # If we've already found this one, try to use the old values
     if ( $Data->{Configured} )
     {
-	$Data->{ConfigChanged} = 0;
-	print "  $Name appears to be previously configured; good\n";
-	return 0;
-    }
-
-    # Note modified config...
-    $Data->{ConfigChanged} = 1;
-
-    # What name to give it?
-    print "  What logical name do you wish to use <default=$Name>: ";
-    $_ = <>; chomp;
-    if ( /\S/ )
-    {
-	$Data->{Name} = $Name = $_;
-	print "  New name -> '$Name'\n";
-    }
-
-    # Options
-    print "  Default options for $Name = " . join( " ", @{$Data->{Options}} ) . "\n";
-    while( 1 )
-    {
-	print "  What options would you like set ".
-	    "<enter = default; \"none\"; list>: ";
-	$_ = <>; chomp; s/^\s+//;
-	if ( $_ eq "none" )
+	my $Match = uc( $Distribution . "_JOBS" ) . ".*\\s$Name:";
+	for my $i ( 0 .. $#ConfigLines )
 	{
-	    $#{@{$Data->{Options}}} = -1;
-	    last;
-	}
-	elsif ( $_ ne "" )
-	{
-	    @{$Data->{Options}} = split;
-	    my $Errors = 0;
-	    foreach my $Opt ( @{$Data->{Options}} )
+	    my $Line = $ConfigLines[$i];
+	    $Line =~ s/\#.*$//;
+	    if ( $Line =~ /$Match/ )
 	    {
-		if ( ! ( $Opt =~ /$ModuleOptionsRe/i ) )
-		{
-		    print STDERR "  -> Unknown option '$Opt'\n";
-		    $Errors++;
-		}
+		$OldLineNum = $i;
+		last;
 	    }
-	    last if ( ! $Errors );
+	}
+
+	my $Import = 0;
+	if ( $Config{NoAsk} )
+	{
+	    $Import = 1;
 	}
 	else
 	{
-	    # Empty line; use defaults
-	    last;
+	    print "  Previous configuration for $Name found; import it? ";
+	    $_ = <>;
+	    if ( $_ =~ /^y/i )
+	    {
+		$Import = 1;
+	    }
 	}
-    }
 
-    # Period
-    my $Default = "";
-    my $DefString = "<no default>";
-    if ( defined $Data->{Period} )
-    {
-	$Default = $Data->{Period};
-	$DefString = "<enter = $Default>";
-    }
-    print "  Default period for $Name = $Default\n";
-    while( 1 )
-    {
-	print "  At what period should this module run " .
-	    "(s/m/h/d modifiers ok) $DefString? ";
-	$_ = <>; chomp;
-	last if ( ( $_ eq "" ) && ( $Default ne "" ) );
-	if ( /^(\d+[sSmMhHdD]?)$/)
+	# Ok, import from the old
+	if ( $Import )
 	{
-	    $Data->{Period} = $1;
-	    last;
+	    $Data->{Options} = $Data->{Current}{Options};
+	    $Data->{Prefix}  = $Data->{Current}{Prefix};
+	    $Data->{Period}  = $Data->{Current}{Period};
+
+	    # UPdate the defaults with the old values
+	    foreach my $Param ( @{$Data->{Parameters}} )
+	    {
+		my $ParamName =
+		    uc( $Distribution . "_" . $Name . "_" . $Param->{Name} );
+		my $Current = Expand( $ParamName );
+		$Param->{Current} = $Current;
+		$Param->{Default} = $Current
+		    if ( ( defined $Current ) && ( $Current ne "" ) );
+	    }
 	}
-	print "  '$_' is invalid.  Please enter a number ".
-	    "optionally followed by an s, an m, h, or a d\n";
+    }
+    else
+    {
+	# Nothing to import; by definition modified!!
+	$Data->{ConfigChanged}++;
     }
 
-    # Prefix
-    print "  What prefix would you like for the ClassAd <enter = $Data->{Prefix}> ";
-    $_ = <>; chomp;
-    if ( $_ ne "" )
+    # Give the user an update
+    my @Required;
+    print "  Logical name: $Name\n";
+    print "  Options: " . join( " ", @{$Data->{Options}} ) . "\n";
+    print "  ClassAd prefix: " . $Data->{Prefix} . "\n";
+    print "  Parameters:\n";
+    foreach my $Param ( @{$Data->{Parameters}} )
     {
-	$Data->{Prefix} = $_;
-    }
-
-    # Parameter questions
-    if ( $#{@{$Data->{Parameters}}} >= 0 )
-    {
-	print "  Parameters for module $Name:\n";
-	foreach my $Param ( @{$Data->{Parameters}} )
+	$Param->{String} = "<NONE>";
+	if ( exists $Param->{Default} && $Param->{Default} ne "" )
 	{
-	    print "     $Param->{Name}\n";
-	    print "\t" . join( "\n\t", @{$Param->{Description}} );
-	    print "\n\tDefault: " .
-		( $Param->{Default} eq "" ? "<NONE>" : $Param->{Default} ) .
-		    "\n";
-	    print "\tWhat value would you like for $Param->{Name}?".
-		" <enter for default> ";
-	    $_ = <>; chomp;
-	    $Param->{Value} = ( $_ eq "" ) ? $Param->{Default} : $_;
+	    $Param->{String} = $Param->{Default};
 	}
-    }
-
-    return 0;
-
-} # ConfigureModule()
-# ******************************************************
-
-# ******************************************************
-# Configure the module for defaults
-# ******************************************************
-sub ConfigureModuleDefaults( $ )
-{
-    my $Data = shift;
-    my $Name = $Data->{Name};
-
-    # Already configured?
-    if ( $Data->{Configured} )
-    {
-	$Data->{ConfigChanged} = 0;
-	print "  $Name appears to be previously configured; good\n";
-	return 0;
+	print "    $Param->{Name} = $Param->{String}\n";
+	if ( $Param->{Required} )
+	{
+	    if ( !exists $Param->{Default} || $Param->{Default} eq "" )
+	    {
+		push( @Required, $Param->{Name} );
+		$NeedsConfig++;
+	    }
+	}
     }
 
     # Fill in the default parameter values
     foreach my $Param ( @{$Data->{Parameters}} )
     {
+	next if ( ! exists $Param->{Default} );
+	if ( exists $Param->{Current} && $Param->{Current} ne $Param->{Default} )
+	{
+	    $Data->{ConfigChanged}++;
+	}
 	$Param->{Value} = $Param->{Default};
     }
-    $Data->{ConfigChanged} = 1;
 
-    # Done
-    return 0;
+    # Fill in the location of the original config
+    $Data->{OriginalConfigLines} = $OldLineNum;
 
-} # ConfigureModuleDefaults()
+    # Check the results
+    if ( $Config{NoAsk} )
+    {
+	# Done
+	if ( $Data->{ConfigChanged} && ( $OldLineNum >= 0 ) )
+	{
+	    print "  Check original configuration lines around line ".
+		"$OldLineNum\n";
+	}
+	return 1;
+    }
+
+    # Are we done?
+    if ( $NeedsConfig )
+    {
+	print "  $NeedsConfig parameters require configuration; forcing\n";
+    }
+    else
+    {
+	print "  Would you like to change these settings (N/y): ";
+	$_ = <>;
+	$NeedsConfig = 1 if ( $_ =~ /^y/i );
+    }
+
+    # What name to give it?
+    if ( $NeedsConfig )
+    {
+	print "  What logical name do you wish to use <default=$Name>: ";
+	$_ = <>; chomp;
+	if ( /\S/ )
+	{
+	    my $NewName = $_;
+	    if ( $NewName ne $Name )
+	    {
+		$Data->{Name} = $Name = $NewName;
+		$Data->{ConfigChanged}++;
+	    }
+	    print "  New name -> '$Name'\n";
+	}
+    }
+
+    # Options
+    if ( $NeedsConfig )
+    {
+	print "  Default options for $Name = " .
+	    join( " ", @{$Data->{Options}} ) . "\n";
+
+	# Get options from the user
+	while( 1 )
+	{
+	    print "  What options would you like set ".
+		"<enter = default; \"none\"; list>: ";
+	    $_ = <>; chomp; s/^\s+//;
+	    if ( $_ eq "none" )
+	    {
+		$#{@{$Data->{Options}}} = -1;
+		last;
+	    }
+	    elsif ( $_ ne "" )
+	    {
+		my @Options = split;
+		foreach my $Opt ( @Options )
+		{
+		    if ( ! ( $Opt =~ /$ModuleOptionsRe/i ) )
+		    {
+			print STDERR "  -> Unknown option '$Opt'\n";
+			$Errors++;
+		    }
+		}
+		if ( ! $Errors )
+		{
+		    $Data->{Options} = @Options;
+		    $Data->{ConfigChanged}++;
+		    last;
+		}
+	    }
+	    else
+	    {
+		# Empty line; use defaults
+		last;
+	    }
+	}
+    }
+
+    # Period
+    if ( $NeedsConfig )
+    {
+	my $Default = "";
+	my $DefString = "<no default>";
+	if ( defined $Data->{Period} )
+	{
+	    $Default = $Data->{Period};
+	    $DefString = "<enter = $Default>";
+	}
+	print "  Default period for $Name = $Default\n";
+	while( 1 )
+	{
+	    print "  At what period should this module run " .
+		"(s/m/h/d modifiers ok) $DefString? ";
+	    $_ = <>; chomp;
+	    last if ( ( $_ eq "" ) && ( $Default ne "" ) );
+	    if ( /^(\d+[sSmMhHdD]?)$/)
+	    {
+		$Data->{Period} = $1;
+		$Data->{ConfigChanged}++;
+		last;
+	    }
+	    print "  '$_' is invalid.  Please enter a number ".
+		"optionally followed by an s, an m, h, or a d\n";
+	}
+    }
+
+    # Prefix
+    if ( $Config{AskAll} )
+    {
+	print "  What prefix would you like for the ClassAd ".
+	    "<enter = $Data->{Prefix}> ";
+	$_ = <>; chomp;
+	if ( $_ ne "" )
+	{
+	    $Data->{Prefix} = $_;
+	    $Data->{ConfigChanged}++;
+	}
+    }
+
+    # Parameter questions
+    if ( $#{@{$Data->{Parameters}}} >= 0 )
+    {
+	if ( $NeedsConfig || scalar( @Required ) )
+	{
+	    print "  Parameters for module $Name:\n";
+	    foreach my $Param ( @{$Data->{Parameters}} )
+	    {
+		next if ( !$NeedsConfig &&
+			  !$Param->{Required} && $Param->{Value} eq "" );
+
+		print "     $Param->{Name}\n";
+		print "\t" . join( "\n\t", @{$Param->{Description}} );
+		print "\n\tDefault: " . $Param->{String} . "\n";
+		print "\tWhat value would you like for $Param->{Name}?".
+		    " <enter for default> ";
+		$_ = <>; chomp;
+
+		$Param->{Value} = ( $_ eq "" ) ? $Param->{Default} : $_;
+		$Data->{ConfigChanged}++;
+	    }
+	}
+    }
+
+    # Problems?
+    if ( $Errors )
+    {
+	return 0;
+    }
+    return 1;
+
+} # ConfigureModule()
+# ******************************************************
 
 # ******************************************************
 # UpdateConfig
@@ -868,7 +1066,7 @@ sub UpdateConfig( $ )
     my $Name = $Data->{Name};
 
     # Config changed?
-    return 0 if ( ! $Data->{ConfigChanged} );
+    return 1 if ( ! $Data->{ConfigChanged} );
 
     # Do it
     print "  Updating config for $Name\n";
@@ -895,7 +1093,7 @@ sub UpdateConfig( $ )
 	my $Default= (defined $Param->{Default} ) ? $Param->{Default} : "";
 	push( @ConfigLines, "##    Default: $Default" );
 
-	my $ParamName = uc( "HAKWEYE_" . $Name . "_"  . $Param->{Name} );
+	my $ParamName = uc( "HAWKEYE_" . $Name . "_"  . $Param->{Name} );
 	if ( defined $Param->{Value} )
 	{
 	    push( @ConfigLines, "$ParamName = $Param->{Value}" );
@@ -906,7 +1104,20 @@ sub UpdateConfig( $ )
 	}
     }
 
-    return 0;
+    # Check these lines
+    push( @ConfigLines, "##" );
+    if ( $Data->{OriginalConfigLines} >= 0 )
+    {
+	my $LineNo = $Data->{OriginalConfigLines} + 1;
+	my $Text = "## Check original configuration around line $LineNo "
+	       . "in config file";
+	push( @ConfigLines, $Text );
+
+    }
+    push( @ConfigLines, "## End of Configuration for Module $Name" );
+    push( @ConfigLines, "##" );
+
+    return 1;
 
 } # UpdateConfig()
 # ******************************************************
@@ -916,7 +1127,7 @@ sub UpdateConfig( $ )
 # ******************************************************
 sub WriteConfig( )
 {
-    my $TmpFile = "/tmp/config.$$";
+    my $TmpFile = "Config{ConfigFile}.$$";
     open( TMP, ">$TmpFile" ) || die "Can't create temp config '$TmpFile'";
     foreach my $Line ( @ConfigLines )
     {
@@ -924,17 +1135,27 @@ sub WriteConfig( )
     }
     close( TMP );
 
-    # Write it?
-    if ( $Config{UpdateConfig} )
+    # Ask the user unless they explicietly asked us to overwrite it
+    my $OverWrite = $Config{UpdateConfig};
+    if ( ! $OverWrite )
     {
-	system( "/bin/cp $TmpFile $Config{HawkeyeConfig}" );
-	print "\n$Config{HawkeyeConfig} updated\n";
+	print "About to overwrite $Config{ConfigFile}; ok? ";
+	$OverWrite = 1 if ( <> =~ /^y/ );
+    }
+
+    # OverWrite it?
+    if ( $OverWrite )
+    {
+	system( "/bin/cp $TmpFile $Config{ConfigFile}" );
+	print "\n$Config{ConfigFile} updated\n";
     }
     else
     {
-	system( "/bin/cp $TmpFile $Config{HawkeyeConfig}.$$" );
-	print "New config in $Config{HawkeyeConfig}.$$\n";
+	system( "/bin/cp $TmpFile $Config{ConfigFile}.$$" );
+	print "New config in $Config{ConfigFile}.$$\n";
     }
+
+    return 1;
 
 } # WriteConfig()
 # ******************************************************
@@ -955,6 +1176,12 @@ sub ProcessConfigLine( $ )
     {
 	my $Macro = uc( $1 );
 	my $Value = $2;
+
+	if ( exists $ConfigMacros{$Macro} )
+	{
+	    my $CurValue = $ConfigMacros{$Macro};
+	    $Value =~ s/\$\($Macro\)/$CurValue/g;
+	}
 	$ConfigMacros{$Macro} = $Value;
     }
     elsif ( $Line =~ /^(\S+)\s*=$/ )
@@ -983,6 +1210,7 @@ sub Expand( $ )
 
 	    if ( $Tmp eq "" )
 	    {
+		print "-- Unable to contact the startd --\n";
 		$Config{Startd} = 0;
 	    }
 	    else
@@ -1003,9 +1231,13 @@ sub Expand( $ )
 
     # Now, expand it out...
     my $Value = $ConfigMacros{$Var};
-    while( $Value =~ /(.*)\$\(([^\$]+)\)(.*)/ )
+    while( $Value =~ /(.*)\$\((\w+)\)(.*)/ )
     {
-	if ( exists ( $ConfigMacros{$2} ) )
+	if ( $2 eq $Var )
+	{
+	    $Value = $1 . $3;
+	}
+	elsif ( exists ( $ConfigMacros{$2} ) )
 	{
 	    $Value = $1 . $ConfigMacros{$2} . $3;
 	    last if ( $2 eq $Var );
