@@ -49,31 +49,33 @@
 //----------------------------------------------------------------------------
 /** Enumeration of all possible events.
     If you modify this enum, you must also modify ULogEventNumberNames array
+	WARNING: DO NOT CHANGE THE NUMBERS OF EXISTING EVENTS !!!
+	         ^^^^^^           
 */
 enum ULogEventNumber {
-    /** Job submitted             */  ULOG_SUBMIT,
-    /** Job now running           */  ULOG_EXECUTE,
-    /** Error in executable       */  ULOG_EXECUTABLE_ERROR,
-    /** Job was checkpointed      */  ULOG_CHECKPOINTED,
-    /** Job evicted from machine  */  ULOG_JOB_EVICTED,
-    /** Job terminated            */  ULOG_JOB_TERMINATED,
-    /** Image size of job updated */  ULOG_IMAGE_SIZE,
-    /** Shadow threw an exception */  ULOG_SHADOW_EXCEPTION,
-	/** Job was suspended         */  ULOG_JOB_SUSPENDED,
-	/** Job was unsuspended       */  ULOG_JOB_UNSUSPENDED,
-	/** Job was held              */  ULOG_JOB_HELD,
-	/** Job was released          */  ULOG_JOB_RELEASED,
+    /** Job submitted             */  ULOG_SUBMIT 					= 0,
+    /** Job now running           */  ULOG_EXECUTE 					= 1,
+    /** Error in executable       */  ULOG_EXECUTABLE_ERROR 		= 2,
+    /** Job was checkpointed      */  ULOG_CHECKPOINTED 			= 3,
+    /** Job evicted from machine  */  ULOG_JOB_EVICTED 				= 4,
+    /** Job terminated            */  ULOG_JOB_TERMINATED 			= 5,
+    /** Image size of job updated */  ULOG_IMAGE_SIZE 				= 6,
+    /** Shadow threw an exception */  ULOG_SHADOW_EXCEPTION 		= 7,
 #if defined(GENERIC_EVENT)
-    /** Generic Log Event         */  ULOG_GENERIC,
+    /** Generic Log Event         */  ULOG_GENERIC 					= 8,
 #endif      
-    /** Job Aborted               */  ULOG_JOB_ABORTED,
-    /** Node executed   	      */  ULOG_NODE_EXECUTE,
-    /** Node terminated	    	  */  ULOG_NODE_TERMINATED,
-    /** POST script terminated    */  ULOG_POST_SCRIPT_TERMINATED,
-	/** Job Submitted to Globus   */  ULOG_GLOBUS_SUBMIT,
-	/** Globus Submit failed      */  ULOG_GLOBUS_SUBMIT_FAILED,
-	/** Globus Resource Up        */  ULOG_GLOBUS_RESOURCE_UP,
-	/** Globus Resource Down      */  ULOG_GLOBUS_RESOURCE_DOWN
+    /** Job Aborted               */  ULOG_JOB_ABORTED 				= 9,
+	/** Job was suspended         */  ULOG_JOB_SUSPENDED 			= 10,
+	/** Job was unsuspended       */  ULOG_JOB_UNSUSPENDED 			= 11,
+	/** Job was held              */  ULOG_JOB_HELD 				= 12,
+	/** Job was released          */  ULOG_JOB_RELEASED 			= 13,
+    /** Parallel Node executed    */  ULOG_NODE_EXECUTE 			= 14,
+    /** Parallel Node terminated  */  ULOG_NODE_TERMINATED 			= 15,
+    /** POST script terminated    */  ULOG_POST_SCRIPT_TERMINATED 	= 16,
+	/** Job Submitted to Globus   */  ULOG_GLOBUS_SUBMIT 			= 17,
+	/** Globus Submit failed      */  ULOG_GLOBUS_SUBMIT_FAILED 	= 18,
+	/** Globus Resource Up        */  ULOG_GLOBUS_RESOURCE_UP 		= 19,
+	/** Globus Resource Down      */  ULOG_GLOBUS_RESOURCE_DOWN 	= 20,
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
