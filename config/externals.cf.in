@@ -14,6 +14,7 @@ EXT_ZLIB_VERSION = @ext_zlib_version@
 EXT_PVM_VERSION = @ext_pvm_version@
 EXT_MAN_VERSION = man-current
 EXT_GT3GAHP_VERSION = @ext_gt3gahp_version@
+EXT_GT4GAHP_VERSION = @ext_gt4gahp_version@
 EXT_CLASSADS_VERSION = @ext_classads_version@
 EXT_SRB_VERSION = @ext_srb_version@
 EXT_GSOAP_VERSION = @ext_gsoap_version@
@@ -104,6 +105,7 @@ PVM_DIR = $(EXT_INSTALL)/$(EXT_PVM_VERSION)
 
 GT3GAHP_DIR = $(EXT_INSTALL)/$(EXT_GT3GAHP_VERSION)
 
+GT4GAHP_DIR = $(EXT_INSTALL)/$(EXT_GT4GAHP_VERSION)
 
 GSOAP_DIR = $(EXT_INSTALL)/$(EXT_GSOAP_VERSION)
 SOAPCPP2 = $(GSOAP_DIR)/bin/soapcpp2
