@@ -120,7 +120,7 @@ void	Init();
 
 void usage(char* name)
 {
-	dprintf( D_ALWAYS, "Usage: %s [-f] [-t]\n", name );
+	dprintf( D_ALWAYS, "Usage: %s [-f] [-t] [-n schedd_name]\n", name );
 	exit( 1 );
 }
 
@@ -130,10 +130,10 @@ main(int argc, char* argv[])
 	ClassAd*	myAd; 
 	char		job_queue_name[_POSIX_PATH_MAX];
 	char		Name[MAXHOSTNAMELEN];
-	int			ScheddName = 0;
+	int		ScheddName = 0;
 	struct		utsname	name;
 #ifdef WAIT_FOR_DEBUG
-	int			i;
+	int		i;
 #endif
 
 	myName = argv[0];
@@ -154,7 +154,7 @@ main(int argc, char* argv[])
 	myAd = new ClassAd(MachineContext); 
 	Init();
 	
-	if(argc > 3)
+	if(argc > 5)
 	{
 		usage(argv[0]);
 	}
