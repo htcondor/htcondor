@@ -115,6 +115,7 @@ usage()
 	fprintf( stderr, "   -tilde\t\t(return the path to the Condor home directory)\n" );
 	fprintf( stderr, "   -owner\t\t(return the owner of the condor_config_val process)\n" );
 	fprintf( stderr, "   -verbose\t\t(print information about where variables are defined)\n" );
+	fprintf( stderr, "   -config\t\t(print the locations of found config files)\n" );
 	my_exit( 1 );
 }
 
