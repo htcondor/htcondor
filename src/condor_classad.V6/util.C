@@ -192,13 +192,10 @@ int classad_isinf(double x)
 		return 0;
 	}
 }
-#elif defined (__APPLE_CC__)
-int classad_isinf(double x)
-{
-    return __isinf(x);
-}
-#elif defined (__SVR4) && defined (__sun)
+#elif (defined (__SVR4) && defined (__sun)) || defined(__APPLE_CC__)
+#ifndef __APPLE_CC__
 #include <ieeefp.h>
+#endif
 int classad_isinf(double x) 
 { 
     if (finite(x) || x != x) {
