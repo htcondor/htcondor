@@ -21,6 +21,7 @@ strip_copy_target(condor_init,$(STRIP_DIR)/sbin,condor_init,EXECUTABLE_MODE)
 strip_copy_target(condor_compile,$(STRIP_DIR)/bin,condor_compile,EXECUTABLE_MODE)
 strip_copy_target(ld,$(STRIP_DIR)/lib,ld,EXECUTABLE_MODE)
 link_tostrip_target($(STRIP_DIR)/lib/ld,lib,real-ld)
+strip_copy_target(condor_cleanckpts,../strip_ckpt_server/sbin,condor_cleanckpts,EXECUTABLE_MODE)
 
 #if IS_SGI_IRIX53 || IS_SGI_IRIX62
 link_torelease_target($(RELEASE_DIR)/lib/ld,lib,uld)
