@@ -5446,7 +5446,6 @@ Scheduler::find_shadow_by_cluster( PROC_ID *id )
 void
 Scheduler::mail_problem_message()
 {
-#if !defined(WIN32)
 	FILE	*mailer;
 
 	dprintf( D_ALWAYS, "Mailing administrator (%s)\n", CondorAdministrator );
@@ -5466,13 +5465,11 @@ Scheduler::mail_problem_message()
 	fprintf( mailer, "but we already have a shadow record for it.\n" );
 
 	email_close(mailer);
-#endif /* !defined(WIN32) */
 }
 
 void
 Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 {
-#if !defined(WIN32)
 	int notification;
 	char owner[2048], subject[2048];
 	char cmd[_POSIX_PATH_MAX], args[_POSIX_ARG_MAX];
@@ -5567,7 +5564,6 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 	close(fd);
 */
 
-#endif
 }
 
 // Check scheduler universe
