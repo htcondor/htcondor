@@ -511,7 +511,7 @@ PlayClassAdOp( int opType, ClassAd *rec )
 
 			ad->Update( *update );
 			if( !viewTree.ClassAdModified( this, key, ad ) ) {
-				CondorErrMsg += "; failed when modifying classad";
+				CondorErrMsg += "; failed when updating classad";
 				return( false );
 			}
 			return( true );
