@@ -38,7 +38,7 @@ my $password = "nmi-nwo-nmi";
 my $DB_CONNECT_STR = "DBI:mysql:database=$database;host=localhost";
 my $RUN_TABLE = "Run";
 
-my $PLATFORMS = "x86_rh_9, x86_rh_8.0, x86_rh_7.2, sun4u_sol_5.9, sun4u_sol_5.8";
+my $PLATFORMS = "x86_rh_9, x86_rh_8.0, x86_rh_7.2, sun4u_sol_5.9, sun4u_sol_5.8, ppc_aix_5.2";
 
 my $notify;
 my %tags;
@@ -107,9 +107,14 @@ sub generate_cmdfile() {
     my $desc = $release;
     $release =~ s/-branch-.*//;
     $release =~ s/V//;
-    my @versions = split("_", $release);
-    if( ! $versions[2] ) {
-        $versions[2] = "x";
+    if( $release =~ /(\d+)(\D*)_(\d+)(\D*)_?(\d+)?(\D*)/ ) {
+        $versions[0] = $1;
+        $versions[1] = $3;
+	if( $5 ) {
+            $versions[2] = $5;
+        } else {
+            $versions[2] = "x";
+	}
     }
     my $vers_string = "$versions[0], $versions[1], $versions[2]";
 
@@ -150,6 +155,7 @@ sub generate_cmdfile() {
     # platform-specific prereqs
     print CMDFILE "prereqs_sun4u_sol_5.9 = gcc-2.95.3\n";
     print CMDFILE "prereqs_sun4u_sol_5.8 = gcc-2.95.3\n";
+    print CMDFILE "prereqs_ppc_aix_5.2 = vac-6, vacpp-6\n";
 
     print CMDFILE "notify = $notify\n";
     print CMDFILE "priority = 1\n";
