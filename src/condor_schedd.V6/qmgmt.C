@@ -136,6 +136,9 @@ InitQmgmt()
 	char* tmp;
 	int i;
 	if( super_users ) {
+		for( i=0; i<num_super_users; i++ ) {
+			delete [] super_users[i];
+		}
 		delete [] super_users;
 	}
 	tmp = param( "QUEUE_SUPER_USERS" );
@@ -153,7 +156,7 @@ InitQmgmt()
 	s_users.rewind();
 	i = 0;
 	while( (tmp = s_users.next()) ) {
-		super_users[i] = new char[ sizeof( tmp ) ];
+		super_users[i] = new char[ strlen( tmp ) + 1 ];
 		strcpy( super_users[i], tmp );
 		i++;
 	}
