@@ -254,4 +254,12 @@ const char ATTR_TOTAL_SUSPENSIONS        [] = "TotalSuspensions";
 const char ATTR_LAST_SUSPENSION_TIME     [] = "LastSuspensionTime";
 const char ATTR_CUMULATIVE_SUSPENSION_TIME[] = "CumulativeSuspensionTime";
 
+const char ATTR_ON_EXIT_BY_SIGNAL        [] = "ExitBySignal";
+const char ATTR_ON_EXIT_CODE		     [] = "ExitCode";
+const char ATTR_ON_EXIT_HOLD_CHECK		 [] = "OnExitHold";
+const char ATTR_ON_EXIT_REMOVE_CHECK	 [] = "OnExitRemove";
+const char ATTR_ON_EXIT_SIGNAL		     [] = "ExitSignal";
+const char ATTR_PERIODIC_HOLD_CHECK		 [] = "PeriodicHold";
+const char ATTR_PERIODIC_REMOVE_CHECK	 [] = "PeriodicRemove";
+
 #endif
