@@ -53,7 +53,7 @@ public class CondorJavaInfo {
 
 		Properties p = System.getProperties();
 		Enumeration e = p.propertyNames();
-		String name;
+		String name, value;
 
 		if( newmode ) {
 			System.out.println("[");
@@ -61,10 +61,11 @@ public class CondorJavaInfo {
 
 		while( e.hasMoreElements() ) {
 			name = (String) e.nextElement();
+			value = p.getProperty(name);
 
 			if( name.equals("line.separator") ) continue;
 
-			System.out.print( UnDotString(name) + " = \"" + p.getProperty(name) + "\"");
+			System.out.print( UnDotString(name) + " = \"" + BackwhackString(value) + "\"");
 
 			if( newmode ) {
 				System.out.println(";");
@@ -78,6 +79,25 @@ public class CondorJavaInfo {
 		}
 
 		System.out.flush();
+	}
+
+	/*
+	Look for backwhacks in the input string,
+	and prepend them with another backwhack.
+	*/
+    
+	static String BackwhackString( String s ) {
+		String result = new String("");
+		int i;
+
+		for( i=0; i<s.length(); i++ ) {
+			char c = s.charAt(i);
+			if( c=='\\' ) {
+				result = result + '\\';
+			}
+			result = result + c;
+		}
+		return result;
 	}
 
 	/*
