@@ -803,6 +803,7 @@ gmState=GM_SUBMIT;
 		} break;
 		case GM_GENERATE_ID: {
 
+			// TODO: allow REMOVED or HELD jobs to break out of this state
 			if (submit_id) {
 				gmState = GM_SUBMIT_ID_SAVE;
 				break;
