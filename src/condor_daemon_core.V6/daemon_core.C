@@ -4259,7 +4259,30 @@ DCFindWinSta(LPTSTR winsta_name, LPARAM p)
 			entry->pid,winsta_name);
 		ret_value = FALSE;
 	} else {
+
+		// Now in a post NT4 world, we have to use a different 
+		// method for searching for console applications (like
+		// batch scripts or anything that isn't GUI). So we'll
+		// do that now before declaring our search for the HWND
+		// a bust.
+
+		HWND hwnd = NULL;
 		ret_value = TRUE;
+		pid_t pid = 0;
+
+		while (hwnd = FindWindowEx(HWND_MESSAGE, hwnd, 
+			"ConsoleWindowClass", NULL)) {
+
+			GetWindowThreadProcessId(hwnd, &pid);
+
+			if (pid == entry->pid) {
+				entry->hWnd = hwnd;	
+				ret_value = FALSE; // stop enumerating...we've got it.
+
+				dprintf(D_PROCFAMILY, "Found console window, pid=%d\n", pid);
+				break;
+			}
+		}
 	}
 
 	CloseDesktop(hdesk);
