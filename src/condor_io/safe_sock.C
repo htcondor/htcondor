@@ -30,6 +30,7 @@
 #include "condor_io.h"
 #include "condor_debug.h"
 #include "internet.h"
+#include "condor_socket_types.h"
 
 _condorMsgID SafeSock::_outMsgID = {0, 0, 0, 0};
 /* 
@@ -386,7 +387,7 @@ int SafeSock::peek(char &c)
  */
 int SafeSock::handle_incoming_packet()
 {
-	int fromlen = sizeof(struct sockaddr_in);
+	SOCKET_LENGTH_TYPE fromlen = sizeof(struct sockaddr_in);
 	bool last;
 	int seqNo, length;
 	_condorMsgID mID;

@@ -28,6 +28,7 @@
 #include "condor_debug.h"
 #include "internet.h"
 #include "condor_rw.h"
+#include "condor_socket_types.h"
 
 #ifdef WIN32
 #include <mswsock.h>	// For TransmitFile()
@@ -102,9 +103,8 @@ ReliSock::listen()
 int 
 ReliSock::accept( ReliSock	&c )
 {
-	int			c_sock;
-	int			addr_sz;
-
+	int c_sock;
+	SOCKET_LENGTH_TYPE addr_sz;
 
 	if (_state != sock_special || _special_state != relisock_listen ||
 													c._state != sock_virgin)

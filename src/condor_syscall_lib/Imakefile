@@ -494,22 +494,22 @@ STUB_GEN_FLAGS = $(STUB_GEN_PLATFORM) $(DL_EXTRACT) -D$(OS) \
 	$(HAS_64BIT_SYSCALLS) $(HAS_64BIT_STRUCTS) -Wall
 
 switches.C: syscall.tmpl switches.prologue stub_gen switches.epilogue
-	$(CPP) -DSWITCH $(STUB_GEN_FLAGS) syscall.tmpl | \
+	$(CPP) -DSWITCH $(STUB_GEN_FLAGS) -I../condor_includes syscall.tmpl | \
 	./stub_gen -mode switches  -p switches.prologue -e switches.epilogue \
 	> switches.C
 
 senders.C: syscall.tmpl stub_gen senders.prologue senders.epilogue
-	$(CPP) -DSENDER $(STUB_GEN_FLAGS) syscall.tmpl | \
+	$(CPP) -DSENDER $(STUB_GEN_FLAGS) -I../condor_includes syscall.tmpl | \
 	./stub_gen -mode senders -p senders.prologue -e senders.epilogue \
 	$(STUB_CLUMP_SIZE) > senders.C
 
 receivers.C: syscall.tmpl stub_gen receivers.prologue receivers.epilogue pseudo_ops.h
-	$(CPP) -DRECEIVER $(STUB_GEN_FLAGS) syscall.tmpl | \
+	$(CPP) -DRECEIVER $(STUB_GEN_FLAGS) -I../condor_includes syscall.tmpl | \
 	./stub_gen -mode receivers -p receivers.prologue \
 	-e receivers.epilogue -n syscheck $(STUB_CLUMP_SIZE) > receivers.C
 
 syscall-list: syscall.tmpl stub_gen 
-	$(CPP) -DSWITCH $(STUB_GEN_FLAGS) syscall.tmpl | \
+	$(CPP) -DSWITCH $(STUB_GEN_FLAGS) -I../condor_includes syscall.tmpl | \
 	./stub_gen -mode listcalls > syscall-list
 
 clean::

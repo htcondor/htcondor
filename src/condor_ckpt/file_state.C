@@ -29,7 +29,6 @@
 #include "condor_syscall_mode.h"
 
 #include "condor_debug.h"
-static char *_FileName_ = __FILE__;
 
 #include "file_state.h"
 #include "file_table_interf.h"
@@ -45,9 +44,6 @@ static char *_FileName_ = __FILE__;
 
 #include <stdarg.h>
 #include <sys/errno.h>
-
-// XXX Where is the header for this?
-extern int errno;
 
 CondorFileTable *FileTab=0;
 

@@ -29,6 +29,7 @@
 #include "internet.h"
 #include "my_hostname.h"
 #include "condor_debug.h"
+#include "condor_socket_types.h"
 
 #if !defined(WIN32)
 #define closesocket close
@@ -364,7 +365,7 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 	int attempt_size = 0;
 	int command;
 	int ret_val;
-	int temp;
+	SOCKET_LENGTH_TYPE temp;
 
 	if (_state == sock_virgin) assign();
 	
@@ -676,7 +677,7 @@ bool Sock::test_connection()
 	struct sockaddr_in test_addr;
 	memset((char *) &test_addr, 0, sizeof(test_addr));
 	test_addr.sin_family = AF_INET;
-	int nbytes = sizeof(test_addr);
+	SOCKET_LENGTH_TYPE nbytes = sizeof(test_addr);
 	if (getpeername(_sock, (struct sockaddr *) &test_addr, &nbytes) < 0) {
 		sleep(1);	// try once more -- sometimes it fails the first time
 		if (getpeername(_sock, (struct sockaddr *) &test_addr, &nbytes) < 0) {
@@ -832,7 +833,7 @@ int
 Sock::get_port()
 {
 	sockaddr_in	addr;
-	int			addr_len = sizeof(sockaddr_in);
+	SOCKET_LENGTH_TYPE addr_len = sizeof(sockaddr_in);
 
 	if (getsockname(_sock, (sockaddr *)&addr, &addr_len) < 0) return -1;
 	return (int) ntohs(addr.sin_port);
@@ -843,7 +844,7 @@ unsigned int
 Sock::get_ip_int()
 {
 	sockaddr_in	addr;
-	int			addr_len = sizeof(sockaddr_in);
+	SOCKET_LENGTH_TYPE addr_len = sizeof(sockaddr_in);
 
 	if (getsockname(_sock, (sockaddr *)&addr, &addr_len) < 0) return 0;
 	return (unsigned int) ntohl(addr.sin_addr.s_addr);

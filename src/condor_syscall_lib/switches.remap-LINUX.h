@@ -181,7 +181,7 @@ REMAP_TWO( truncate, __truncate, int , const char *, size_t )
 
 #endif
 
-#include "socket_types.h"
+#include "condor_socket_types.h"
 
 REMAP_THREE( accept, __accept, int, int, SOCKET_ADDR_CONST_ACCEPT SOCKET_ADDR_TYPE, SOCKET_ALTERNATE_LENGTH_TYPE *)
 REMAP_THREE( bind, __bind, int, int, SOCKET_ADDR_CONST_BIND SOCKET_ADDR_TYPE, SOCKET_LENGTH_TYPE )
