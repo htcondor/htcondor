@@ -1115,9 +1115,11 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 	Resource* rip;
 	Claim* claim;
 	MyString err_msg;
-	ExprTree *tree, *rhs;
+	ExprTree *tree;
 	ReliSock* rsock = (ReliSock*)s;
 	const char* owner = rsock->getOwner();
+	ClassAdUnParser unp;
+	string bufString;
 
 	if( ! authorizedForCOD(owner) ) {
 		err_msg = "User '";
@@ -1139,10 +1141,10 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 		requirements_str = strdup( "TRUE" );
 		req_ad->Insert( "Requirements = TRUE" );
 	} else {
-		rhs = tree->RArg();
-		if( rhs ) {
-			rhs->PrintToNewStr( &requirements_str );
-		}
+		unp.Unparse( bufString, tree );
+		const char *bufCString = bufString.c_str( );
+		requirements_str = (char *) malloc( strlen( bufCString ) + 1 );
+		strcpy( requirements_str, bufCString );
 	}
 
 		// Find the right resource for this claim

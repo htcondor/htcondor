@@ -278,6 +278,8 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 {
 	MyString err_msg;
 	ClassAd *mach_classad = rip->r_classad;
+	ClassAdUnParser unp;
+	string bufString;
 
 	switch( claim->state() ) {
 	case CLAIM_IDLE:
@@ -303,7 +305,7 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 	Starter* tmp_starter;
 	tmp_starter = resmgr->starter_mgr.findStarter( req, mach_classad );
 	if( ! tmp_starter ) {
-		ExprTree *tree, *rhs;
+		ExprTree *tree;
 		char* tmp = NULL;
 		tree = req->Lookup( ATTR_REQUIREMENTS );
 		if( ! tree ) {
@@ -313,10 +315,11 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 			return sendErrorReply( s, "CA_ACTIVATE_CLAIM",
 								   CA_INVALID_REQUEST, err_msg.Value() ); 
 		}
-		rhs = tree->RArg();
-        if( rhs ) {
-            rhs->PrintToNewStr( &tmp );
-        }
+		unp.Unparse( bufString, tree );
+		const char *bufCString = bufString.c_str( );
+		tmp = (char *) malloc( strlen( bufCString ) + 1 );
+		strcpy( tmp, bufCString );
+
 		err_msg = "Cannot find starter that satisfies requirements '";
 		err_msg += tmp;
 		err_msg += "'";
