@@ -34,10 +34,12 @@ float	compute_rank( ClassAd*, ClassAd* );
 int 	create_port( ReliSock* );
 char*	command_to_string( int );
 int		reply( Stream*, int );
-int		caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose = 0 );
+int		caInsert( ClassAd* target, ClassAd* source, const char* attr,
+				  int verbose = 0 ); 
 		// Send given classads to the given sock.  If either pointer
 		// is NULL, the class ad is not sent.  
-int		send_classad_to_sock( Sock* sock, ClassAd* pubCA, ClassAd* privCA );
+int		send_classad_to_sock( int cmd, Sock* sock, ClassAd* pubCA,
+							  ClassAd* privCA ); 
 Resource* stream_to_rip( Stream* );
 
 #endif _UTIL_H

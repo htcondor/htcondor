@@ -179,10 +179,11 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose )
 
 
 int
-send_classad_to_sock( Sock* sock, ClassAd* pubCA, ClassAd* privCA ) 
+send_classad_to_sock( int cmd, Sock* sock, ClassAd* pubCA, ClassAd*
+					  privCA )  
 {
 	sock->encode();
-	if( ! sock->put( UPDATE_STARTD_AD ) ) {
+	if( ! sock->put( cmd ) ) {
 		dprintf( D_ALWAYS, "Can't send command\n");
 		sock->end_of_message();
 		return FALSE;
