@@ -348,7 +348,7 @@ c_plus_target(DaP.reserve.ibp,$(DAP_RESERVE_IBP_OBJ),$(LIB) -lpthread)
 c_plus_target(DaP.release.nest,$(DAP_RELEASE_NEST_OBJ),$(LIB))
 
 
-library_target(libstork_client.a, dap_client_interface.o)
+library_target(libstork_client.a, dap_client_interface.o dc_stork.o)
 
 test: test_url
 c_plus_target(test_url, dap_url.o test_url.o,)
