@@ -59,7 +59,10 @@ void Daemon::common_init() {
 Daemon::Daemon( char* sinful_addr, int port ) 
 {
 	common_init();
+	
+	// override the default initializion
 	_type = DT_ANY;
+	_tried_locate = true;
 
 	if( sinful_addr && is_valid_sinful(sinful_addr) ) {
 		if (port) {
