@@ -1,4 +1,6 @@
 Changes for version 0.9.6: 
+* Added tester.
+
 * Fixed a bug where the parser would choke on any input ending in a quotation
   mark because the lexer wasn't consuming the entire string token.
 
@@ -9,6 +11,9 @@ Changes for version 0.9.6:
   with a bad pointer.
 
 * operator<<() now takes any ExprTree instead of just a ClassAd.
+
+* Fixed a bug in the configure script that caused inappropriate
+  parsing of arguments.
 
 Changes for version 0.9.5: 
 * Fixed a bug in printing parenthesized expressions with minimal
