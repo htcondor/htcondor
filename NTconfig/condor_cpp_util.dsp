@@ -162,7 +162,7 @@ SOURCE="..\src\condor_c++_util\generic_query.h"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\condor_c++_util\get_schedd_addr.C"
+SOURCE="..\src\condor_c++_util\get_daemon_addr.C"
 # End Source File
 # Begin Source File
 
