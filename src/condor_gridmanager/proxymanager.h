@@ -82,6 +82,7 @@ extern int CheckProxies_interval;
 extern int minProxy_time;
 
 bool InitializeProxyManager( const char *proxy_dir );
+void ReconfigProxyManager();
 
 Proxy *AcquireProxy( const char *proxy_path, int notify_tid = -1 );
 Proxy *AcquireProxy( Proxy *proxy, int notify_tid = -1 );

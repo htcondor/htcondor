@@ -124,6 +124,20 @@ bool InitializeProxyManager( const char *proxy_dir )
 	return true;
 }	
 
+// Read config values from the config file. Call this function when the
+// ProxyManager is first initialized and whenever a condor reconfig signal
+// is received.
+void ReconfigProxyManager()
+{
+	CheckProxies_interval = param_integer( "GRIDMANAGER_CHECKPROXY_INTERVAL",
+										   10 * 60 );
+
+	minProxy_time = param_integer( "GRIDMANAGER_MINIMUM_PROXY_TIME", 3 * 60 );
+
+	// Always check the proxies on a reconfig.
+	doCheckProxies();
+}
+
 // Set the host:port of the MyProxy server for a given proxy
 // Proxymanager will talk to the given server when the proxy is about to expire
 /*int SetMyProxyHostForProxy ( const char* hostport, const char* server_dn, const char* myproxy_pwd, const Proxy * proxy ) {

@@ -298,6 +298,8 @@ Reconfig()
 
 	GahpReconfig();
 
+	ReconfigProxyManager();
+
 	JobType *job_type;
 	jobTypes.Rewind();
 	while ( jobTypes.Next( job_type ) ) {

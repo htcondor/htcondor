@@ -303,14 +303,6 @@ void GlobusJobReconfig()
 	tmp_bool = param_boolean("ENABLE_GRID_MONITOR",false);
 	GlobusResource::setEnableGridMonitor( tmp_bool );
 
-	CheckProxies_interval = param_integer( "GRIDMANAGER_CHECKPROXY_INTERVAL",
-										   10 * 60 );
-
-	minProxy_time = param_integer( "GRIDMANAGER_MINIMUM_PROXY_TIME", 3 * 60 );
-
-	// Always check the proxy on a reconfig.
-	doCheckProxies();
-
 	// Tell all the resource objects to deal with their new config values
 	GlobusResource *next_resource;
 

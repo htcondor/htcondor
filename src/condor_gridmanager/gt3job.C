@@ -205,14 +205,6 @@ void GT3JobReconfig()
 	tmp_int = param_integer("GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT",3);
 	GT3Job::setConnectFailureRetry( tmp_int );
 
-	CheckProxies_interval = param_integer( "GRIDMANAGER_CHECKPROXY_INTERVAL",
-										   10 * 60 );
-
-	minProxy_time = param_integer( "GRIDMANAGER_MINIMUM_PROXY_TIME", 3 * 60 );
-
-	// Always check the proxy on a reconfig.
-	doCheckProxies();
-
 	// Tell all the resource objects to deal with their new config values
 	GT3Resource *next_resource;
 
