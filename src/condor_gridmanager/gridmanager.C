@@ -254,8 +254,13 @@ DELETE_OBJS_signalHandler( Service *srvc, int signal )
 	ObjectDeleteList.Rewind();
 
 	while ( ObjectDeleteList.Next( curr_obj ) ) {
-		delete curr_obj;
+		// The deletion of an object may involve the appending of other
+		// objects to ObjectDeleteList. Therefore, we remove the current
+		// object before the delete and rewind the list after (because the
+		// Append() function modifies the cuurent position in the list).
 		ObjectDeleteList.DeleteCurrent();
+		delete curr_obj;
+		ObjectDeleteList.Rewind();
 	}
 
 	return TRUE;
