@@ -376,7 +376,9 @@ Resource::setStarter( Starter* s )
 		EXCEPT( "Resource::setStarter() called with existing starter!" );
 	}
 	r_starter = s;
-	s->setResource( this );
+	if( s ) {
+		s->setResource( this );
+	}
 }
 
 
