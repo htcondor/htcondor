@@ -2673,6 +2673,7 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 	assert( sig == DC_SIGCHLD );
 
 	for(;;) {
+		errno = 0;
         if( (pid = waitpid(-1,&status,WNOHANG)) <= 0 ) {
 			if( errno == EINTR ) {
 					// Even though we're not supposed to be getting
