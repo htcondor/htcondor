@@ -1,3 +1,6 @@
+04/30/04 V6_6-vdt_globus
+   Changing the globus external to be 2.4.3 + VDT patches from 1.1.14
+
 04/23/04 V6_6-merge-10
    The state of the V6_6-branch for yet another merge into
    V6_7-branch.  More build system fixes for AIX 5.1 compatibility,
