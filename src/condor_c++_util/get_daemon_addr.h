@@ -39,7 +39,6 @@ extern char* get_collector_addr(const char* name = NULL);
 extern char* get_daemon_name(const char* name);
 extern const char* get_host_part(const char* name);
 extern char* build_valid_daemon_name(char* name);
-extern char* my_daemon_name(const char* subsys);
 extern int	is_valid_sinful( char *sinful );
 
 #ifdef __cplusplus
