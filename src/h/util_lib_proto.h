@@ -80,7 +80,10 @@ int flock ( int fd, int op );
 int getdtablesize ( void );
 int getmnt ( int *start, struct fs_data buf[], unsigned bufsize, int mode, char *path );
 
+#ifndef WIN32	// on WIN32, it messes with our getwd macro in condor_sys_nt.h
 char * getwd ( char *path );
+#endif
+
 #if defined(LINUX)
 void insque ( struct qelem *elem, struct qelem *pred );
 void remque ( struct qelem *elem );
