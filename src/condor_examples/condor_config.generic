@@ -393,9 +393,8 @@ KeyboardBusy		= (KeyboardIdle < $(MINUTE))
 ConsoleBusy		= (ConsoleIdle  < $(MINUTE))
 CPUIdle			= ($(NonCondorLoadAvg) <= $(BackgroundLoad))
 CPUBusy			= ($(NonCondorLoadAvg) >= $(HighLoad))
-
 KeyboardNotBusy		= ($(KeyboardBusy) == False)
-MachineBusy		= ($(CPUBusy) || $(KeyboardBusy))
+
 
 ##  The RANK expression controls which jobs this machine prefers to
 ##  run over others.  Some examples from the manual include:
@@ -464,7 +463,7 @@ UWCS_SUSPEND = ( $(KeyboardBusy) || \
 # 1) the cpu is idle, AND 
 # 2) we've been suspended more than 10 seconds, AND
 # 3) the keyboard hasn't been touched in a while
-UWCS_CONTINUE = ( $(CPU_Idle) && ($(ActivityTimer) > 10) \
+UWCS_CONTINUE = ( $(CPUIdle) && ($(ActivityTimer) > 10) \
                   && (KeyboardIdle > $(ContinueIdleTime)) )
 
 # Preempt jobs if:
@@ -482,7 +481,7 @@ UWCS_KILL = $(ActivityTimer) > $(MaxVacateTime)
 ##  different from the above settings.
 #SUSPEND_VANILLA  = ( $(KeyboardBusy) || \
 #       ((CpuBusyTime > 2 * $(MINUTE)) && $(ActivationTimer) > 90) )
-#CONTINUE_VANILLA = ( $(CPU_Idle) && ($(ActivityTimer) > 10) \
+#CONTINUE_VANILLA = ( $(CPUIdle) && ($(ActivityTimer) > 10) \
 #                     && (KeyboardIdle > $(ContinueIdleTime)) )
 #PREEMPT_VANILLA  = ( ((Activity == "Suspended") && \
 #                     ($(ActivityTimer) > $(MaxSuspendTime))) \
