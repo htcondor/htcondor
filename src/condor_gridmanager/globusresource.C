@@ -5,9 +5,6 @@
 #include "globusresource.h"
 #include "gridmanager.h"
 
-template class List<GlobusJob>;
-template class Item<GlobusJob>;
-
 
 int GlobusResource::probeInterval = 300;	// default value
 int GlobusResource::probeDelay = 15;		// default value
