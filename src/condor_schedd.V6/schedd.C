@@ -7327,7 +7327,7 @@ abortJobRaw( int cluster, int proc, const char *reason )
 
 	// Add the remove reason to the job's attributes
 	if ( reason && *reason ) {
-		SetAttribute( cluster, proc, ATTR_REMOVE_REASON, reason );
+		SetAttributeString( cluster, proc, ATTR_REMOVE_REASON, reason );
 	}
 
 	// Abort the job now
