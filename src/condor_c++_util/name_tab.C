@@ -36,7 +36,7 @@ static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 NameTable::NameTable( NAME_VALUE t[] )
 {
 	tab = t;
-	for( n_entries=0; tab[n_entries].value >= 0; n_entries++ )
+	for( n_entries=0; tab[n_entries].value != -1; n_entries++ )
 		;
 }
 
