@@ -557,6 +557,7 @@ WriteExecuteEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
 	char hostname[128];
+	char *host_ptr;
 
 	UserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
@@ -571,13 +572,21 @@ WriteExecuteEventToUserLog( ClassAd *job_ad )
 			 "(%d.%d) Writing execute record to user logfile\n",
 			 cluster, proc );
 
+		// TODO This formating assumes the hostname to be placed in the
+		//   log event can be found in ATTR_GLOBUS_RESOURCE and is formatted
+		//   like a gt2 or gt4 resource name. What about other job types?
 	hostname[0] = '\0';
 	job_ad->LookupString( ATTR_GLOBUS_RESOURCE, hostname,
 						  sizeof(hostname) - 1 );
-	int hostname_len = strcspn( hostname, ":/" );
+	if ( strncmp( "https://", hostname, 8 ) == 0 ) {
+		host_ptr = &hostname[8];
+	} else {
+		host_ptr = hostname;
+	}
+	int hostname_len = strcspn( host_ptr, ":/" );
 
 	ExecuteEvent event;
-	strncpy( event.executeHost, hostname, hostname_len );
+	strncpy( event.executeHost, host_ptr, hostname_len );
 	event.executeHost[hostname_len] = '\0';
 	int rc = ulog->writeEvent(&event);
 	delete ulog;
