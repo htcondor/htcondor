@@ -831,10 +831,17 @@ may occur:
   
 \item[Claimed/Busy] If the \Expr{CONTINUE} expression evaluates to
   TRUE, the machine resumes the job and enters the
-  Claimed/Busy state (transition \Bold{15}).
+  Claimed/Busy state (transition \Bold{15}) or the Claimed/Retiring
+  state (transition \Bold{16}), depending on whether the claim
+  has been preempted.
 
 \item[Claimed/Retiring] If the \Expr{PREEMPT} expression is TRUE, the machine
   will enter the Claimed/Retiring activity (transition \Bold{16}).
+
+\item[Preempting] If the claim is in suspended retirement and the
+  retirement time expires, the job enters the Preempting state
+  (transition \Bold{18b}).  This is only possible if
+  \Expr{MaxJobRetirementTime} \emph{decreases}  during the suspension.
 
 \end{description}
 
