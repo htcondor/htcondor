@@ -1,0 +1,97 @@
+
+#define SEND_PATH(name) in xdr_string(&name,_POSIX_PATH_MAX)
+#define GET_PATH(name) out xdr_string(&name,_POSIX_PATH_MAX)
+#define ALLOC_PATH(name) alloc(name,_POSIX_PATH_MAX)
+
+int InitializeConnection( char *owner, char *tmp_file ) {
+	SEND_PATH( owner );
+	ALLOC_PATH( owner );
+	GET_PATH( tmp_file );
+	ALLOC_PATH( tmp_file );
+}
+int NewCluster();
+int NewProc(int cluster_id);
+int DestroyProc(int cluster_id, int proc_id);
+int DestroyCluster(int cluster_id);
+int DestroyClusterByConstraint(char* constraint)
+{
+	SEND_PATH(constraint);
+	ALLOC_PATH(constraint);
+}
+int SetAttribute(int cluster_id, int proc_id, char *attr_name, 
+				 char *attr_value) {
+	SEND_PATH( attr_name );
+	ALLOC_PATH( attr_name );
+	SEND_PATH( attr_value );
+	ALLOC_PATH( attr_value );
+}
+int CloseConnection();
+
+int GetAttributeFloat(int cluster_id, int proc_id, char *attr_name, 
+					  float *value)
+{
+	SEND_PATH( attr_name );
+	ALLOC_PATH( attr_name );
+	out xdr_float(value);
+	alloc(value, FLOAT_SIZE);
+}
+
+
+int GetAttributeInt(int cluster_id, int proc_id, char *attr_name, 
+					int *value)
+{
+	SEND_PATH( attr_name );
+	ALLOC_PATH( attr_name );
+	out xdr_int(value);
+	alloc(value, INT_SIZE);
+}
+
+
+int GetAttributeString(int cluster_id, int proc_id, char *attr_name, 
+					   char *value)
+{
+	SEND_PATH( attr_name );
+	ALLOC_PATH( attr_name );
+	GET_PATH( value );
+	ALLOC_PATH( value );
+}
+
+
+int GetAttributeExpr(int cluster_id, int proc_id, char *attr_name, 
+					 char *value)
+{
+	SEND_PATH( attr_name );
+	ALLOC_PATH( attr_name );
+	GET_PATH( value );
+	ALLOC_PATH( value );
+}
+
+
+int DeleteAttribute(int cluster_id, int proc_id, char *attr_name)
+{
+	SEND_PATH(attr_name);
+	ALLOC_PATH(attr_name);
+}
+
+
+int GetNextJob(int cluster_id, int proc_id, int *next_cluster, int *next_proc)
+{
+	out xdr_int(next_cluster);
+	alloc(next_cluster, INT_SIZE);
+	out xdr_int(next_proc);
+	alloc(next_proc, INT_SIZE);
+}
+
+
+int FirstAttribute(int cluster_id, int proc_id, char *attr_name)
+{
+	GET_PATH( attr_name );
+	ALLOC_PATH( attr_name );
+}
+
+
+int NextAttribute(int cluster_id, int proc_id, char *attr_name)
+{
+	GET_PATH( attr_name );
+	ALLOC_PATH( attr_name );
+}

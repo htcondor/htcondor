@@ -1,0 +1,37 @@
+#define _POSIX_SOURCE
+#include "condor_common.h"
+#include "condor_xdr.h"
+#include "condor_debug.h"
+#include "condor_fix_assert.h"
+
+#include "../condor_syscall_lib/syscall_param_sizes.h"
+
+#include "condor_qmgr.h"
+#include "qmgmt_constants.h"
+
+#define xdr_syscall xdr_qmgmt
+
+#if defined(assert)
+#undef assert
+#endif
+
+#define assert(x) if (!(x)) return -1;
+
+int
+do_Q_request(XDR *xdr_syscall)
+{
+	int	request_num;
+	int	rval;
+
+	xdr_syscall->x_op = XDR_DECODE;
+
+	if (!xdrrec_skiprecord(xdr_syscall)) {
+		return -1;
+	}
+	if (!xdr_int(xdr_syscall, &request_num)) {
+		return -1;
+	}
+
+	dprintf(D_SYSCALLS, "Got request #%d\n", request_num);
+
+	switch( request_num ) {

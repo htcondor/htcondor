@@ -1,0 +1,70 @@
+SRC_DIR = $(SRC_TREE)/condor_schedd
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -fexternal-templates
+
+CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
+
+#if IS_ALPHA_OSF1
+CPP = /usr/ucb/cpp
+#elif IS_I386_LINUX
+CPP = /lib/cpp
+#else
+CPP = ansi_cpp -
+#endif
+
+#if IS_I386_LINUX
+LDFLAGS = $(LIBDBM) -liostream
+#else
+LDFLAGS = $(LIBDBM)
+#endif
+
+CLASS_AD_LIB = ../condor_classad/expr_lib.a
+DAEMON_CORE_LIB = ../condor_daemon_core/daemon_core.a
+
+QMGMT_SRC = qmgmt.C qmgmt_receivers.C qmgmt_transaction.C log.C \
+	qmgmt_log.C
+QMGMT_OBJ = qmgmt.o qmgmt_receivers.o qmgmt_transaction.o log.o \
+	qmgmt_log.o qmgr_lib_support.o
+
+HISTORY_SRC = get_history.57.c
+SRC = stub.C schedd.C schedd_main.C $(QMGMT_SRC) stub.57.C event.c $(HISTORY_SRC) schedd.c
+OBJ = stub.o schedd.o schedd_main.o $(QMGMT_OBJ)
+OBJ.57 = event.57.o $(HISTORY_OBJ) schedd.57.o stub.57.o $(QMGMT_OBJ)
+
+LIB= $(CLASS_AD_LIB) $(DAEMON_CORE_LIB) ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a RpcLib KernLib SocketLib
+LIBDIRS=../condor_util_lib ../condor_xdr_lib
+
+QMGR_LIB = $(LIB)
+
+QMGR_SRC = qmgr.C $(QMGMT_SRC)
+QMGR_OBJ = qmgr.o $(QMGMT_OBJ)
+
+QMGMT_LIB_OBJ = qmgmt_send_stubs.o qmgr_lib_support.o
+
+all_target(condor_schedd libqmgmt.a)
+tags_target($(SRC),$(LIBDIRS))
+depend_target($(SRC))
+c_plus_target(condor_schedd,$(OBJ),$(LIB))
+c_plus_target(condor_schedd.57,$(OBJ.57),$(LIB))
+c_plus_target(qmgr,$(QMGR_OBJ), $(CLASS_AD_LIB) $(QMGR_LIB))
+library_target(libqmgmt.a,$(QMGMT_LIB_OBJ))
+release_target(condor_schedd,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+c_plus_target(qmgr_test, qmgr_test.o libqmgmt.a, $(LIB))
+CMNT c_plus_target(qmgr_rm, qmgr_rm.o libqmgmt.a, $(LIB))
+
+5.7: condor_schedd.57
+
+IMPORT_LINKS = ../../config/import_links
+import(../condor_util_lib, stub_gen)
+
+qmgmt_receivers.C: qmgmt.tmpl stub_gen qmgmt_receivers.prologue qmgmt_receivers.epilogue
+	$(CPP) -DRECEIVER  < qmgmt.tmpl | \
+	stub_gen -n syscheck -mode receivers -p qmgmt_receivers.prologue \
+	-e qmgmt_receivers.epilogue > qmgmt_receivers.C
+
+qmgmt_send_stubs.c: qmgmt.tmpl stub_gen qmgmt_send_stubs.prologue
+	$(CPP) -DSWITCHES  < qmgmt.tmpl | \
+	stub_gen -mode send_stub -n syscheck -n localcalls \
+	-p qmgmt_send_stubs.prologue > qmgmt_send_stubs.c
+
+clean::
+	rm -f qmgmt_receivers.C qmgmt_send_stubs.c
