@@ -4,22 +4,10 @@
 #include "my_hostname.h"
 #include "condor_query.h"
 
-#include <netdb.h>
-#include <errno.h>
-#include <pwd.h>
-#include <signal.h>
-#include <ctype.h>
-#include <sys/types.h>
 #include <utmp.h>
-#include <sys/socket.h>
-#include <sys/param.h>
 #include <sys/file.h>
-#include <sys/time.h>
-#include <sys/resource.h>
 #include <netinet/in.h>
 #include <rpc/types.h>
-
-#include <stdio.h>
 #include <X11/Xlib.h>
 
 
@@ -32,29 +20,24 @@ int
 update_startd()
 {
     static int cmd_num = X_EVENT_NOTIFICATION;
-    static char *my_name = my_hostname();
-    static char * my_addr = get_startd_addr(my_name);
+    static char *my_addr = get_startd_addr(NULL);
     static SafeSock ssock(my_addr, 0, 0);
 
-    dprintf( D_FULLDEBUG, "Activity on display.\n");
-    dprintf( D_FULLDEBUG, "My hostname is: %s.\n", my_name);
-    dprintf( D_FULLDEBUG, "Sent update to startd at: %s.\n", my_addr);
     dprintf( D_FULLDEBUG, "X_EVENT_NOTIFICATION is: %d.\n",
-	     X_EVENT_NOTIFICATION);
-    
-    if(ssock.ok())
-    {
-	ssock.encode();
-	ssock.timeout(3);
-	ssock.code(cmd_num);
-	ssock.end_of_message();
-    }
-    else
-    {
-	return -1;
-    }
+			 X_EVENT_NOTIFICATION);
 
-    return 0;
+    if(ssock.ok()) {
+		ssock.encode();
+		ssock.timeout(3);
+		if( !ssock.code(cmd_num) || !ssock.end_of_message() ) {
+			dprintf( D_ALWAYS, "Can't send command to startd\n" );
+			return -1;
+		}
+    } else {
+		return -1;
+    }
+	dprintf( D_FULLDEBUG, "Sent update to startd at: %s.\n", my_addr);
+	return 0;		
 }
 
 int 
