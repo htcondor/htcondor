@@ -100,7 +100,6 @@ class Condor_Crypt_Base {
     //------------------------------------------
  private:
     KeyInfo       keyInfo_;
-    static int    count_;
 };
 
 #endif

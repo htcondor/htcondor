@@ -70,19 +70,17 @@ Protocol Condor_Crypt_Base :: protocol()
 unsigned char * Condor_Crypt_Base :: randomKey(int length)
 {
     unsigned char * key = (unsigned char *)(malloc(length));
+	static bool already_seeded = false;
 
 #if defined(CONDOR_ENCRYPTION)
     char * file = 0;
     int size = 4096;
-    if (count_ == 0) {
+    if( ! already_seeded ) {
         unsigned char * buf = (unsigned char *) malloc(size);
 
         RAND_seed(buf, size);
-
         free(buf);
-    }
-    else {
-        count_++;
+		already_seeded = true;
     }
 
     RAND_bytes(key, length);
@@ -110,6 +108,3 @@ unsigned char * Condor_Crypt_Base :: oneWayHashKey(const char * initialKey)
     return 0;
 #endif
 }
-
-int Condor_Crypt_Base :: count_ = 0;
-
