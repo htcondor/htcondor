@@ -92,7 +92,6 @@ class ExprTree
 {
     public :
 
-        void            	operator delete(void*);
 		virtual int	    	operator ==(ExprTree&);
 		virtual int	    	operator >(ExprTree&);
 		virtual int	    	operator >=(ExprTree&);
@@ -104,6 +103,7 @@ class ExprTree
 		virtual ExprTree*   LArg()   { return NULL; }
 		virtual ExprTree*   RArg()   { return NULL; }
         ExprTree*           Copy();       // increment the ref counter
+		virtual ExprTree*   DeepCopy(void) const = 0;
         virtual void        Display();    // display the expression
 		virtual void        PrintToStr(char*) {} // print the expr to a string
 
@@ -142,7 +142,9 @@ class ExprTree
 #endif
 			return;
 		}
+
     protected :
+		virtual void        CopyBaseExprTree(class ExprTree *const recipient) const;
 		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
 		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
 
@@ -164,6 +166,7 @@ class VariableBase : public ExprTree
     public :
   
 	  	VariableBase(char*);
+	    virtual ~VariableBase();
 
 		virtual int	    operator ==(ExprTree&);
 
@@ -231,6 +234,7 @@ class StringBase : public ExprTree
     public :
 
 	StringBase(char*);
+	virtual ~StringBase();
 
 	virtual int	    operator ==(ExprTree&);
 
@@ -252,7 +256,7 @@ class StringBase : public ExprTree
 class BooleanBase : public ExprTree
 {
     public :
-
+	  
   	BooleanBase(int);
 	virtual int	    operator ==(ExprTree&);
 
@@ -272,7 +276,6 @@ class UndefinedBase : public ExprTree
     public :
 
   	UndefinedBase();
-
 	virtual void        Display();
 
     protected :
@@ -297,6 +300,7 @@ class BinaryOpBase : public ExprTree
 {
     public :
 
+		virtual ~BinaryOpBase();
 		virtual int		      operator ==(ExprTree&);
 		
 		virtual ExprTree*     LArg()   { return lArg; }

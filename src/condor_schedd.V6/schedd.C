@@ -2660,9 +2660,16 @@ void Scheduler::StartJobHandler() {
 		 if (RunnableJobQueue.dequeue(srec)) return;
 		job_id=&srec->job_id;
 		mrec=srec->match;
+		// Check to see if job ad is still around; it may 
+		// have been removed while we were waiting in RunnableJobQueue
+		if ( GetJobAd(job_id->cluster,job_id->proc,false) == NULL ) {
+			// job ad disappeared!  set mrec to NULL so we don't start shadow
+			mrec = NULL;
+		}
 		if (!mrec) {
 			dprintf(D_ALWAYS,
-				"match for job %d.%d was deleted - not forking a shadow\n",
+				"match or classad for job %d.%d was deleted - "
+				"not forking a shadow\n",
 				job_id->cluster,job_id->proc);
 			mark_job_stopped(job_id);
 			RemoveShadowRecFromMrec(srec);
@@ -5041,7 +5048,22 @@ Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, ClassAd* my_match_ad,
 	{
 		EXCEPT("Out of memory!");
 	} 
-	matches->insert(HashKey(id), rec);
+
+	// spit out a warning and return NULL if we already have this mrec
+	match_rec *tempRec;
+	if( matches->lookup( HashKey( id ), tempRec ) == 0 ) {
+		dprintf( D_ALWAYS,
+				 "attempt to add pre-existing match \"%s\" ignored\n",
+				 id ? id : "(null)" );
+		delete rec;
+		return NULL;
+	}
+	if( matches->insert( HashKey( id ), rec ) != 0 ) {
+		dprintf( D_ALWAYS, "match \"%s\" insert failed\n",
+				 id ? id : "(null)" );
+		delete rec;
+		return NULL;
+	}
 	numMatches++;
 
 		/*

@@ -11,8 +11,8 @@ goto end
 echo Copying files...
 copy ..\Release\*.exe %1
 copy ..\Release\*.dll %1
-copy c:\winnt\system32\msvcrt.dll %1
-copy c:\winnt\system32\msvcirt.dll %1
+copy msvcrt.dll %1
+copy msvcirt.dll %1
 copy pdh.dll %1
 echo Stripping out debug symbols from files...
 pushd %1

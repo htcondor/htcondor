@@ -270,7 +270,7 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 	 # Make certain condor_syscall_lib appears on the link line before any of
 	 # the following language-helper libraries.  Note variable $brokenbase is
 	 # currently set to the library name we may match on.
-     -lstdc++ | -lg++ | -lf2c | -lg2c | -lp2c | -lftn | -lf77)  
+     -lstdc++ | -lg++ | -lf2c | -lg2c | -lp2c | -lftn | -lf77 | -lF77)
 	 		if [ $lgcc = false ]; then
 				if [ $osfull = "SunOS5" ]; then
                  	ldargs=`echo $ldargs $CONDOR_CLIB -Bdynamic -lsocket -lnsl $brokenbase`

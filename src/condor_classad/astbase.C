@@ -249,62 +249,37 @@ AssignOpBase::AssignOpBase(ExprTree* l, ExprTree* r)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// A dummy class used by the delete operator to avoid recursion               //
+// Destructors
 ////////////////////////////////////////////////////////////////////////////////
-class Dummy
+VariableBase::~VariableBase()
 {
-};
-
-////////////////////////////////////////////////////////////////////////////////
-// Delete operator member functions                                           //
-////////////////////////////////////////////////////////////////////////////////
-
-void ExprTree::operator delete(void* exprTree)
-{
-    if(exprTree)
-    {
-	if(((ExprTree*)exprTree)->cardinality > 0)
-	// this is a binary operator, delete the children
-	{
-	    if(((BinaryOpBase*)exprTree)->lArg)
-	    {
-	        delete ((BinaryOpBase*)exprTree)->lArg;
-	    }
-	    if(((BinaryOpBase*)exprTree)->rArg)
-	    {
-	        delete ((BinaryOpBase*)exprTree)->rArg;
-	    }
-	}
-        if(((ExprTree*)exprTree)->ref > 0)
-        // there are more than one pointer to this expression tree
-        {
- 	    ((ExprTree*)exprTree)->ref--;
-        }
-        else
-        // no more pointer to this expression tree
-        {
-	    	if(((ExprTree*)exprTree)->type == LX_VARIABLE)
-	    	{
 #ifdef USE_STRING_SPACE_IN_CLASSADS
-				string_space->disposeByIndex(
-				    ((VariableBase*)exprTree)->stringSpaceIndex);
+	string_space->disposeByIndex(stringSpaceIndex);
 #else
-				delete []((VariableBase*)exprTree)->name;
+	delete [] name;
 #endif
-	    	}
-	    	if(((ExprTree*)exprTree)->type == LX_STRING)
-	    	{
-#ifdef USE_STRING_SPACE_IN_CLASSADS
-				string_space->disposeByIndex(
-				    ((StringBase*)exprTree)->stringSpaceIndex);
-#else
-				delete []((StringBase*)exprTree)->value;
-#endif
-	    	}
-	    	delete (Dummy*)exprTree;
-        }
-    }
 }
+
+StringBase::~StringBase()
+{
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+	string_space->disposeByIndex(stringSpaceIndex);
+#else
+	delete [] value;
+#endif
+}
+
+BinaryOpBase::~BinaryOpBase()
+{
+	if (lArg != NULL) {
+		delete lArg;
+	}
+	if (rArg != NULL) {
+		delete rArg;
+	}
+	return;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Comparison operator                                                        //
@@ -533,6 +508,19 @@ ExprTree* ExprTree::Copy()
     }
     this->ref++;
 	return this;
+}
+
+// This is used by the various CopyDeep()s to get the variables from the base
+// ExprTree class.
+void ExprTree::CopyBaseExprTree(ExprTree * const recipient) const
+{
+	recipient->unit         = unit;
+	recipient->ref          = ref;
+	recipient->type         = type;
+	recipient->cardinality  = cardinality;
+	recipient->sumFlag      = sumFlag;
+	recipient->evalFlag     = evalFlag;
+	return;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

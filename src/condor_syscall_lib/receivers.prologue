@@ -53,6 +53,12 @@ extern "C" {
 }
 #endif
 
+#if defined(LINUX)
+extern "C" {
+	ssize_t getdirentries(int fd, char *buf, size_t nbytes, off_t *basep);	
+}
+#endif
+
 #include "../condor_syscall_lib/syscall_param_sizes.h"
 
 extern ReliSock *syscall_sock;

@@ -385,14 +385,21 @@ email_close(FILE *mailer)
 	priv = set_condor_priv();
 
 	/* Put a signature on the bottom of the email */
-	if ( (temp = param("CONDOR_ADMIN")) != NULL ) { 
-		fprintf(mailer,"\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n");
-		fprintf(mailer,"Questions about this message or Condor in general?\n");
-		fprintf(mailer,"Email address of the local Condor administrator: %s\n",
-			temp);
-		fprintf(mailer,"The Official Condor Homepage is http://www.cs.wisc.edu/condor\n");
-		free(temp);
+	fprintf( mailer, "\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n" );
+	fprintf( mailer, "Questions about this message or Condor in general?\n" );
+
+		/* See if there's an address users should use for help */
+	temp = param( "CONDOR_SUPPORT_EMAIL" );
+	if( ! temp ) {
+		temp = param( "CONDOR_ADMIN" );
 	}
+	if( temp ) {
+		fprintf( mailer, "Email address of the local Condor administrator: "
+				 "%s\n", temp );
+		free( temp );
+	}
+	fprintf( mailer, "The Official Condor Homepage is "
+			 "http://www.cs.wisc.edu/condor\n" );
 
 	fflush(mailer);
 	/* there are some oddities with how pclose can close a file. In some

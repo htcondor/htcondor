@@ -36,7 +36,7 @@ OPENSSL_LIB = $(OpenSSLPath)/lib/libssl.a $(OpenSSLPath)/lib/libcrypto.a
 /* Top should be the root of the source directory you want to use if
 you want our top-level Makefile to build the directory tree with all
 the soft links.  The links will point back to Top/src/... */
-#define Top /local.cardinal/zmiller/THREE/V6_3
+#define Top /local.perdita/tannenba/merge/arena
 
 #define TmpDir		/tmp
 

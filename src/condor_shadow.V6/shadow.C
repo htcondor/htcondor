@@ -37,6 +37,7 @@
 #include "../condor_ckpt_server/server_interface.h"
 #include "sig_install.h"
 #include "job_report.h"
+#include "../condor_c++_util/directory.h"
 
 #if defined(AIX31) || defined(AIX32)
 #include "syscall.aix.h"
@@ -214,8 +215,9 @@ extern "C" int ExceptCleanup(int,int,char*);
 extern int Termlog;
 
 ReliSock	*sock_RSC1 = NULL, *RSC_ShadowInit(int rscsock, int errsock);
-ReliSock	*RSC_MyShadowInit(int rscsock, int errsock);;
+ReliSock	*RSC_MyShadowInit(int rscsock, int errsock);
 int HandleLog();
+void RemoveNewShadowDroppings(char *cluster, char *proc);
 
 int MainSymbolExists = 1;
 
@@ -348,6 +350,8 @@ main(int argc, char *argv[], char *envp[])
 		capability = argv[2];
 		cluster = argv[3];
 		proc = argv[4];
+		// read the big comment in the function for why this is here.
+		RemoveNewShadowDroppings(cluster, proc);
 		pipe_setup( cluster, proc, capability );
 	} else {
 		schedd = argv[1];
@@ -361,6 +365,8 @@ main(int argc, char *argv[], char *envp[])
 		} else {
 			IpcFile = NULL;
 		}
+		// read the big comment in the function for why this is here.
+		RemoveNewShadowDroppings(cluster, proc);
 		regular_setup( host, cluster, proc, capability );
 	}
 	scheddName = getenv("SCHEDD_NAME");
@@ -375,6 +381,7 @@ main(int argc, char *argv[], char *envp[])
 
 	// initialize the user log
 	initializeUserLog();
+
 
 	my_fs_domain = param( "FILESYSTEM_DOMAIN" );
 	if( my_fs_domain ) {
@@ -525,6 +532,7 @@ main(int argc, char *argv[], char *envp[])
 
 		// SIGQUIT is sent for a fast shutdow.
 	install_sig_handler_with_mask( SIGQUIT, &fullset, handle_sigquit );
+
 
 	/* Here we block the async signals.  We do this mainly because on HPUX,
 	 * XDR wigs out if it is interrupted by a signal.  We do it on all
@@ -1433,4 +1441,93 @@ count_open_fds( const char *file, int line )
 	dprintf( D_ALWAYS,
 		"At %d in %s %d files are open\n", line, file, open_files );
 	return open_files;
+}
+
+void RemoveNewShadowDroppings(char *cluster, char *proc)
+{
+	char names[2][1024] = {0};
+	int j;
+	char *ckpt_name;
+	char *myspool;
+	struct stat buf;
+	int clusternum, procnum;
+
+	/* XXX I'm sorry.
+		There are some incompatibilities between the new
+		shadow and the old shadow. The new shadow now makes a
+		_directory_ with the usual ckeckpoint name because there
+		might eventually be more than one file that has to get
+		checkpointed with a job. The old shadow is dumb, and it
+		only makes a _file_ named the usual checkpoint name. So a
+		contention happens when we are using opsys/arch to choose
+		an executable name for both NT and UNIX between vanilla
+		only jobs and standard universe jobs. What happens is
+		that the old shadow gets back a correct stat() on the new
+		shadow created directory but misinterprets it as a file
+		and hilarity ensues. So, my nasty hack is to make the
+		old shadow determine if the file it found is actually
+		a directory and if so, then remove it and everything
+		underneath it.	I somehow feel that this might bite us
+		in the ass in the future, so each time the shadow does
+		this, it logs it so a human can figure out what happened.
+		I don't have to worry about the converse issue of a new
+		shadow starting up with an old file-based checkpoint
+		because whomever adds standard universe support to
+		the new shadow will have to do something intelligent,
+		and our submit program places expressions into the
+		requirements attribute in the job forcing a checkpointed
+		job to always run on the architecture it checkpointed
+		on. 
+
+		-psilord 7/30/01
+	*/
+
+	myspool = param("SPOOL");
+	if (myspool == NULL)
+	{
+		EXCEPT ("RemoveNewShadowDroppings(): No Spool directory!?!\n");
+	}
+	clusternum = atoi(cluster);
+	procnum = atoi(proc);
+	if (clusternum < 0 || procnum < 0) /* sanity checks */
+	{
+		dprintf(D_ALWAYS, "RemoveNewShadowDroppings(): Asked to deal with "
+			"negative cluster or proc numbers. Ignoring.\n");
+		free(myspool);
+		return;
+	}
+	ckpt_name = gen_ckpt_name( myspool, clusternum, procnum, 0 );
+
+	strcpy(names[0], ckpt_name);
+	strcpy(names[1], ckpt_name);
+	strcat(names[1], ".tmp");
+	
+	for (j = 0; j < 2; j++)
+	{
+		if (stat(names[j], &buf) == 0) {
+			/* ok, we have a hit, let's see if it is a directory... */
+			if (IsDirectory(names[j]) == true) {
+				/* it is, so blow away everything inside it */
+				{
+					Directory todd_droppings(names[j]);
+					if (todd_droppings.Remove_Entire_Directory() == false) {
+						dprintf(D_ALWAYS, "RemoveNewShadowDroppings(): Old "
+							"shadow failed to remove new shadow ckpt directory "
+							"contents: %s\n", names[j]);
+						}
+				}
+				/* now delete the directory itself */
+				if (rmdir(names[j]) < 0) {
+					dprintf(D_ALWAYS, "RemoveNewShadowDroppings(): Old shadow "
+						"failed to remove new shadow ckpt directory: %s (%s)\n",
+						names[j], strerror(errno));
+				} else {
+					dprintf(D_ALWAYS, "RemoveNewShadowDroppings(): Old shadow "
+						"removed new shadow ckpt directory: %s\n", names[j]);
+				}
+			}
+		}
+	}
+
+	free(myspool);
 }

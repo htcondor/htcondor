@@ -540,20 +540,20 @@ static_dir/##name##: static					@@\
 
 #define	pure_c_plus_target( program, objlist, libs )	@@\
 ##program: objlist libs					@@\
-	purify -g++=yes -collector=PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)	@@\
+	purify -g++=yes PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(TEST_LDFLAGS)	@@\
 clean::							@@\
 	rm -f program objlist
 
 #define	purecov_c_plus_target( program, objlist, libs )	@@\
 ##program: objlist libs					@@\
-	purecov -g++=yes -collector=PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)						@@\
+	purecov -g++=yes PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(TEST_LDFLAGS)						@@\
 clean:: 						@@\
 	rm -f program objlist
 
 
 #define	quantify_c_plus_target( program, objlist, libs )	@@\
 ##program: objlist libs						@@\
-	quantify -g++=yes -collector=PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)	                                 @@\
+	quantify -g++=yes PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(TEST_LDFLAGS)	                                 @@\
 clean::		 						@@\
 	rm -f program objlist
 
