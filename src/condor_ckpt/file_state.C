@@ -778,7 +778,7 @@ openx( const char *path, int flags, mode_t creat_mode, int ext )
 	}
 
 	if( MappingFileDescriptors() ) {
-		return FileTab->DoOpen( path, flags );
+		return FileTab->DoOpen( path, flags, creat_mode, ext );
 	} else {
 		if( LocalSysCalls() ) {
 			return syscall( SYS_openx, path, flags, creat_mode, ext );
