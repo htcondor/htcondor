@@ -1,3 +1,7 @@
+04/04/02 V6_3-privnet-branch
+	A new branch for a second generation of sonny's private
+	network support, including a first pass of udp w/ ack. 
+
 03/28/02 V6_3-post-merge-V6_3-new-gridmanager-branch-merge-1
 		The V6_3-branch right after merging in the
 		V6_3-new-gridmanager-branch as tagged at 
