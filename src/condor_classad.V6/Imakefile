@@ -67,6 +67,7 @@ tarball: libclassads.a html
 	cp -r html classads/html-docs
 	cp $(CONDOR_HEADERS) classads/include
 	cp *.h classads/include
+	cp ../condor_release/LICENSE.TXT classads
 	tar cvf classads.tar classads
 	gzip classads.tar
 
