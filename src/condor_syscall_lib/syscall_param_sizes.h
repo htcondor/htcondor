@@ -31,6 +31,7 @@
 #define GID_T_SIZE sizeof(gid_t)
 #define INT_SIZE sizeof(int)
 #define LONG_SIZE sizeof(long)
+#define FLOAT_SIZE sizeof(float)
 #define FD_SET_SIZE sizeof(fd_set)
 #define TIMEVAL_SIZE sizeof(struct timeval)
 #define TIMEVAL_ARRAY_SIZE (sizeof(struct timeval) * 2)
