@@ -259,7 +259,7 @@ class Job {
 
 	//The log file for this job -- needed because we're now allowing
 	//each job to have its own log file.
-	const char *_logFile;
+	char *_logFile;
   private:
   
 	bool AddDependency( Job* parent, Job* child );
