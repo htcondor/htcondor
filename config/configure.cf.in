@@ -1,15 +1,49 @@
-TMP_DIR = @TMPDIR@
+/*
+  System identification settings
 
-TAR_CMD = @TarCmd@
+  Warning: the order of all the IS_* settings is important so the
+  pre-processor doesn't screw things up by clobbering parts of one
+  variable's name with another variable that's now defined as "YES".
+  So, start from the most specific combination and work down to the
+  smallest pieces... 
+*/
 
-#if HAS_PURIFY
-PURE_CACHE_DIR = @pure_cache_dir@
+SYSNAME = @_cv_sysname@
+#define OperatingSystem @_cv_opsys@
+#define Architecture @_cv_arch@
+#define Platform @_cv_arch@-@_cv_opsys_vers@
+#define IS_@_cv_arch@_@_cv_opsys_vers@ YES
+#define IS_@_cv_arch@_@_cv_opsys@ YES
+#define IS_@_cv_opsys_vers@ YES
+#define IS_@_cv_opsys@ YES
+#define IS_@_cv_arch@ YES
+
+/*
+  If we're glibc, the next few lines will define what version we are,
+  if not, they'll just be blank.
+*/
+@_cv_libc_full@
+@_cv_libc_majmin@
+@_cv_libc_is_kind@
+
+
+/*
+  This is all stupid, but there's this discrepancy between "SOLARIS"
+  and "Solaris".  The OperatingSystem should really be "Solaris",
+  even though we want "IS_SOLARIS" in all the #defines.  Ugh.
+*/
+#if IS_SOLARIS
+#undef OperatingSystem
+#define OperatingSystem Solaris
 #endif
 
-#define HAS_CONDOR_ANALYZE @has_condor_analyze@
-CONDOR_ANALYZE_RELEASE = @condor_analyze_release@
-CONDOR_ANALYZE_STATIC = @condor_analyze_static@
-CONDOR_ANALYZE_STRIP = @condor_analyze_strip@
+/* 
+  More stupidity, this time on DUX/OSF1.  Confusion abounds.  
+*/
+#if IS_DUX
+#undef OperatingSystem
+#define OperatingSystem OSF1
+#endif
 
 /* compiler version and info the configure script discovers for us */
 /* we use the #defines for the Imakefiles */
@@ -29,6 +63,7 @@ GCC_LIBC = @gcc_libc@
 CRT_BEGIN = @crt_begin@
 GCC_STATIC_LD_FLAG = @gcc_static_ld_flag@
 GCC_STATIC_LIBS = $(GCC_STATIC_LD_FLAG) -lstdc++ -lgcc
+
 
 /* Settings related to the vendor compilers used for the test suites */
 
@@ -53,3 +88,20 @@ VENDOR_CC = @_cv_vendor_cc@
 #define HAS_VENDOR_CPLUS @has_vendor_cplus@
 VENDOR_CPLUS = @_cv_vendor_cplus@ 
 VENDOR_CPLUS_NAME = @_cv_vendor_cplus_name@ 
+
+
+/* Other miscellaneous settings we need */
+
+TMP_DIR = @TMPDIR@
+
+TAR_CMD = @TarCmd@
+
+#if HAS_PURIFY
+PURE_CACHE_DIR = @pure_cache_dir@
+#endif
+
+#define HAS_CONDOR_ANALYZE @has_condor_analyze@
+CONDOR_ANALYZE_RELEASE = @condor_analyze_release@
+CONDOR_ANALYZE_STATIC = @condor_analyze_static@
+CONDOR_ANALYZE_STRIP = @condor_analyze_strip@
+
