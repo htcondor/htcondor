@@ -16,6 +16,7 @@
 #include "condor_ast.h"
 #include "condor_attrlist.h"
 
+//for the shipping functions -- added by Lei Cao
 #include "stream.h"
 
 struct AdType                   // type of a ClassAd.
@@ -52,6 +53,7 @@ class ClassAd : public AttrList
 		friend bool operator>=(ClassAd&,ClassAd&);// lhs satisfies rhs
 		friend bool operator<=(ClassAd&,ClassAd&);// rhs satisifes lhs
 
+        // shipping functions -- added by Lei Cao
         int put(Stream& s);
         int get(Stream& s);
         int code(Stream& s);
