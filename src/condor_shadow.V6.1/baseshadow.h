@@ -298,6 +298,8 @@ class BaseShadow : public Service
 
 	const char* getCoreName( void );
 
+	virtual void resourceBeganExecution( RemoteResource* rr ) = 0;
+
  protected:
 	
 		/** Note that this is the base, "unexpanded" ClassAd for the job.
