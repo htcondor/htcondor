@@ -103,7 +103,6 @@ this will cause one job to overwrite the errors of another.
 to the program on the command line.   In the Java Universe, the first
 argument must be the main of the class containing \Code{main}.
 
-
 %%%%%%%%%%%%%%%%%%%
 %% initialdir
 %%%%%%%%%%%%%%%%%%%
@@ -113,6 +112,73 @@ working directory for the Condor job. Should be a path to a preexisting
 directory. If not specified, \Condor{submit} will automatically insert
 the user's current working directory at the time \Condor{submit} was run
 as the value for \Opt{initialdir}. 
+
+%%%%%%%%%%%%%%%%%%%
+%% transfer_input_files
+%%%%%%%%%%%%%%%%%%%
+
+\item[transfer\_input\_files = $<$ file1, file2, file... $>$] 
+Lists all the files to be transferred into the 
+working directory for the job before the job is started.
+Separate multiple filenames with a comma.
+By default, the file specified in the
+\Opt{executable} command and any file specified in the \Opt{input}
+command (for example, \File{stdin}) are transferred.
+
+To ensure
+that Condor picks a machine with enough local disk space for the job,
+add to the \Opt{Requirements}
+expression in the submit description file such that it includes
+the \AdAttr{Disk} attribute.
+A \Opt{requirements} example of that specifies only the \AdAttr{Disk} attribute:
+\begin{verbatim}
+        # The machine which runs the job must have more than
+	# 10Mbytes of free disk space.  The "Disk" attribute
+        # is expressed in kilobytes; 10 Mbytes is 10000 kbytes.
+        requirements = Disk > 10000
+\end{verbatim}
+
+Only the transfer of files is available; the transfer of
+subdirectories is not supported.
+
+%%%%%%%%%%%%%%%%%%%
+%% transfer_output_files
+%%%%%%%%%%%%%%%%%%%
+
+\item[transfer\_output\_files = $<$ file1, file2, file... $>$] This
+command forms an explicit list of output files to be transferred
+back from the
+temporary working directory on the execute machine to the submit machine.
+Most of the time, there is no need to use this command.
+If \Opt{transfer\_output\_files} is not specified,
+Condor will automatically transfer back all files in the job's
+temporary working directory which have been
+modified or created by the job.
+This is usually the desired behavior.
+Explicitly listing output files is typically only done when the job creates
+many files, and the user wants to keep a subset of
+those files. 
+\Warn Do not specify \Opt{transfer\_output\_file} in the
+submit description file unless there is a really good reason -- it is
+best to let Condor figure things out by itself based upon what
+the job.
+
+%%%%%%%%%%%%%%%%%%%
+%% transfer_files
+%%%%%%%%%%%%%%%%%%%
+
+\item[transfer\_files = $<$ONEXIT \Bar\ ALWAYS$>$] Setting
+\Opt{transfer\_files} equal to \Arg{ONEXIT} will cause Condor to transfer the
+job's output files back to the submitting machine only when the job
+completes (exits).  If not specified, \Arg{ONEXIT} is used as the default.
+Specifying \Arg{ALWAYS} forces Condor to transfer output files either when
+the job completes or when the job is preempted or killed
+prior to job completion.
+The \Arg{ALWAYS} option is intended
+for fault tolerant jobs which periodically save their own state and
+can restart where they left off.  Any output files transferred back to the
+submit machine are automatically sent back
+out again as input files when the job restarts.
 
 
 %%%%%%%%%%%%%%%%%%%
@@ -130,15 +196,26 @@ use:
         requirements = Memory >= 64 && Mips > 45
 \end{verbatim}
 Only one requirements command may be present in a
-description file. By default, \Condor{submit} 
-appends the following clauses to the requirements expression:
+submit description file.
+By default, \Condor{submit} appends the following clauses to
+the requirements expression:
 \begin{enumerate}
 	\item Arch and OpSys are set equal to the Arch and OpSys of the
 submit machine.  In other words: unless you request otherwise, Condor will give your
 job machines with the same architecture and operating system version as
 the machine running \Condor{submit}.
-	\item Disk $>$ ExecutableSize.  To ensure there is enough disk space on the 
-target machine for Condor to copy over your executable.
+	\item Disk $>=$ DiskUsage. 
+The \AdAttr{DiskUsage} attribute is initialized to the size of the
+executable plus the size of any files specified in a
+\Opt{transfer\_input\_files} command.
+It exists to ensure there is enough disk space on the 
+target machine for Condor to copy over both the executable
+and needed input files.
+The \AdAttr{DiskUsage} attribute represents the maximum amount of
+total disk space required by the job in kilobytes.
+Condor automatically updates the \AdAttr{DiskUsage} attribute
+approximately every 20 minutes while the job runs with the
+amount of space being used by the job on the execute machine.  
 	\item VirtualMemory $>=$ ImageSize.  To ensure the target machine
 has enough virtual memory to run your job.
 	\item If Universe is set to Vanilla, FileSystemDomain is set equal to
@@ -150,6 +227,7 @@ job ClassAd) with the command \Condor{q -l}; see the command reference for
 \Condor{q} on page~\pageref{man-condor-q}.  Also, see the Condor Users
 Manual for complete information on the syntax and available attributes
 that can be used in the ClassAd expression.
+
 
 %%%%%%%%%%%%%%%%%%%
 %% rank
@@ -168,6 +246,29 @@ asks Condor to find all available machines with more than 60 megabytes of memory
 and give the job the one with the most amount of memory.  See the Condor Users
 Manual for complete information on the syntax and available attributes
 that can be used in the ClassAd expression.
+
+%%%%%%%%%%%%%%%%%%%
+%% universe
+%%%%%%%%%%%%%%%%%%%
+
+\item[universe = $<$vanilla \Bar\ standard \Bar\ pvm \Bar\ scheduler
+\Bar\ globus \Bar\ mpi \Bar\ java$>$] 
+Specifies which Condor Universe to use when running this job.  The Condor 
+Universe specifies a Condor execution environment.  The \Arg{standard} 
+Universe is the default, and tells Condor that this job has been re-linked 
+via \Condor{compile} with the Condor libraries and therefore supports
+checkpointing and remote system calls.  The \Arg{vanilla} Universe is an
+execution environment for jobs which have not been linked with the
+Condor libraries.  \textit{Note:} use the \Arg{vanilla} Universe to
+submit shell scripts to Condor.  The \Arg{pvm} Universe is for a
+parallel job written with PVM 3.4. The \Arg{scheduler} is for a job that
+should act as a metascheduler.
+The \Arg{globus} universe uses the Globus
+GRAM API to contact the Globus resource specified and requests it run the job.
+The \Arg{mpi} universe is
+for running mpi jobs made with the MPICH package.
+The \Arg{java} Universe is for programs written to the Java Virtual Machine.
+See the Condor User's Manual for more information about using Universe.
 
 %%%%%%%%%%%%%%%%%%%
 %% on_exit_remove
@@ -410,29 +511,6 @@ begins running, when the job is checkpointed and/or migrated, when the
 job completes, etc. Most users find specifying a \Opt{log} file to be very
 handy; its use is recommended. If no \Opt{log} entry is specified, 
 Condor does not create a log for this cluster.
-
-%%%%%%%%%%%%%%%%%%%
-%% universe
-%%%%%%%%%%%%%%%%%%%
-
-\item[universe = $<$vanilla \Bar\ standard \Bar\ pvm \Bar\ scheduler
-\Bar\ globus \Bar\ mpi \Bar\ java$>$] 
-Specifies which Condor Universe to use when running this job.  The Condor 
-Universe specifies a Condor execution environment.  The \Arg{standard} 
-Universe is the default, and tells Condor that this job has been re-linked 
-via \Condor{compile} with the Condor libraries and therefore supports
-checkpointing and remote system calls.  The \Arg{vanilla} Universe is an
-execution environment for jobs which have not been linked with the
-Condor libraries.  \textit{Note:} use the \Arg{vanilla} Universe to
-submit shell scripts to Condor.  The \Arg{pvm} Universe is for a
-parallel job written with PVM 3.4. The \Arg{scheduler} is for a job that
-should act as a metascheduler.
-The \Arg{globus} universe uses the Globus
-GRAM API to contact the Globus resource specified and requests it run the job.
-The \Arg{mpi} universe is
-for running mpi jobs made with the MPICH package.
-The \Arg{java} Universe is for programs written to the Java Virtual Machine.
-See the Condor User's Manual for more information about using Universe.
 
 %%%%%%%%%%%%%%%%%%%
 %% jar_files
