@@ -178,7 +178,7 @@ XInterface::XInterface()
 	sleep(1);
     }
     
-    dprintf(D_ALWAYS, "Connected to X server: %s\n", XDisplayName(NULL));
+    dprintf(D_ALWAYS, "Connected to X server: localhost:0.0\n");
 
     // See note above the function to see why we need to do this.
     XSetErrorHandler((XErrorHandler) CatchFalseAlarm);
@@ -213,7 +213,7 @@ XInterface::Connect()
     dprintf(D_FULLDEBUG, "XDisplayName(NULL) returns: %s.\n", 
 	    XDisplayName(NULL));
     _tried_root = false;
-    while(!(_display = XOpenDisplay(NULL)))
+    while(!(_display = XOpenDisplay("localhost:0.0") ))
     {
 	
 	fflush(stderr);
