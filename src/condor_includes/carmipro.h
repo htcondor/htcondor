@@ -22,7 +22,13 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #if !defined(_CARMIPRO_H)
 #define _CARMIPRO_H
+
+#ifdef PVM34
+#include "pvmproto.h"
+#else
 #include "pvmsdpro.h"
+#endif
+
 
 #define CARMI_FIRST	(SM_LAST+1)
 
