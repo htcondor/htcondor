@@ -37,6 +37,7 @@
 #include "except.h"
 #include "debug.h"
 #include "clib.h"
+#include <string.h>
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
@@ -185,8 +186,7 @@ unsigned short	dflt_port;
 
 */
 char *
-mk_config_name( service_name )
-char *service_name;
+mk_config_name( const char *service_name )
 {
 	static char answer[ 512 ];
 	char	*ptr;

@@ -74,6 +74,7 @@ char *param();
 
 extern int	errno;
 
+static init_machine_status( int flags, int mode );
 
 set_machine_status( status )
 int		status;

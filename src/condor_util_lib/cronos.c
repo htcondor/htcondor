@@ -90,6 +90,8 @@
 #define SECOND	4
 #define N_ELEM	5
 
+typedef void (*FUNC_P)();
+
 /*
 ** Events are to occur at times which match a pattern.  Patterns are
 ** represented by the same tuples, but may contain "*" as one or more
@@ -98,7 +100,7 @@
 #define STAR -1
 typedef struct {
 	int		pattern[N_ELEM];
-	int		(*func)();
+	FUNC_P	func;
 } EVENT;
 
 static EVENT	Schedule[128];
@@ -107,10 +109,25 @@ static int	Initialized = FALSE;
 static int	prev[N_ELEM];
 static int	now[N_ELEM];
 
+
+int schedule_event( int , int , int , int , int , FUNC_P );
+int event_mgr();
+static int event_due( int pattern[], int prev[], int now[] );
+static int before( int t1[], int t2[] );
+static int next_rightmost( int pattern[], int i );
+static int get_moment( int cur[] );
+static int display_moment( int mom[] );
+static int check_schedule( int prev[], int now[] );
+
+
+
+
+
+
+
 /* Exported function */
-schedule_event( month, day, hour, minute, second, func )
-int		month, day, hour, minute, second;
-int 	(*func)();
+schedule_event( int month, int day, int hour, int minute, int second,
+															FUNC_P func )
 {
 	Schedule[N_Events].pattern[MONTH] = month;
 	Schedule[N_Events].pattern[DAY] = day;
@@ -137,9 +154,7 @@ event_mgr()
 
 
 static
-check_schedule( prev, now )
-int	prev[];
-int	now[];
+check_schedule( int prev[], int now[] )
 {
 	int		i;
 
@@ -162,9 +177,7 @@ int	now[];
 ** see if the event is due, (or overdue), now.
 */
 static
-event_due( pattern, prev, now )
-int	pattern[];
-int	prev[], now[];
+event_due( int pattern[], int prev[], int now[] )
 {
 	int		alpha[N_ELEM];
 	int		i;
@@ -205,9 +218,7 @@ int	prev[], now[];
 ** Return true if t1 is before t2, and false otherwise.
 */
 static
-before( t1, t2 )
-int	t1[];
-int	t2[];
+before( int t1[], int t2[] )
 {
 	int		i;
 
@@ -227,9 +238,7 @@ int	t2[];
 ** the next rightmost STAR in the pattern.  If there is none, return -1.
 */
 static
-next_rightmost( pattern, i )
-int	pattern[];
-int	i;
+next_rightmost( int pattern[], int i )
 {
 	for( i--; i >= 0; i-- ) {
 		if( pattern[i] == STAR ) {
@@ -243,8 +252,7 @@ int	i;
 ** Fill in a tuple with the current time.
 */
 static
-get_moment( cur )
-int	cur[];
+get_moment( int cur[] )
 {
 	struct tm	*tm;
 	time_t	clock;
@@ -262,8 +270,7 @@ int	cur[];
 }
 
 static
-display_moment( mom )
-int	mom[];
+display_moment( int mom[] )
 {
 	printf( "%02d/%02d %02d:%02d:%02d\n",
 			mom[MONTH], mom[DAY], mom[HOUR], mom[MINUTE], mom[SECOND] );

@@ -29,13 +29,8 @@ typedef unsigned int u_int;
 
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
-#if defined(__STDC__)
-int ckpt_wanted( PROC *proc );
-int ickpt_size( PROC *proc );
-#else
-int ckpt_wanted();
-int ickpt_size();
-#endif
+static int ckpt_wanted( PROC *proc );
+static int ickpt_size( PROC *proc );
 
 extern char *Spool;
 
@@ -48,7 +43,7 @@ extern char *Spool;
 */
 int
 calc_disk_needed( proc )
-V2_PROC	*proc;
+PROC	*proc;
 {
 	int	answer;
 

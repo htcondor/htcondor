@@ -127,12 +127,42 @@ static PROC_ID ClusterId = { 0, 0 };
 static datum	ClusterKey = { (char *)&ClusterId, sizeof(ClusterId) };
 static ClusterVersion;
 
+typedef void (*PROC_FUNC_PTR)( PROC * );
+
+DBM	* OpenJobQueue( char *path, int flags, int mode );
+int CloseJobQueue( DBM *Q );
+int LockJobQueue( DBM *Q, int op );
+int CreateCluster( DBM *Q );
+int StoreProc( DBM *Q, PROC *proc );
+int FetchProc( DBM *Q, PROC *proc );
+int ScanJobQueue( DBM *Q, PROC_FUNC_PTR func );
+int ScanCluster( DBM *Q, int cluster, PROC_FUNC_PTR func );
+int TerminateCluster( DBM *Q, int cluster, int status );
+int TerminateProc( DBM *Q, PROC_ID *pid, int status );
+static int store_cluster_list( DBM *Q, CLUSTER_LIST *list );
+CLUSTER_LIST * fetch_cluster_list( DBM *Q );
+static CLUSTER_LIST * grow_cluster_list( CLUSTER_LIST *list, int incr );
+static CLUSTER_LIST	* make_cluster_list( int len );
+static CLUSTER_LIST * add_new_cluster( CLUSTER_LIST *list );
+static CLUSTER_LIST * copy_cluster_list( CLUSTER_LIST *list );
+void terminate( PROC *p );
+void check_empty_cluster( PROC *p );
+void delete_cluster( DBM *Q, int cluster );
+void data_too_big( int size );
+
+
+
+
+
+
+
+
+
 /*
 ** Prepare the local job queue for reading/writing with these routines.
 */
 DBM	*
-OpenJobQueue( path, flags, mode )
-char	*path;
+OpenJobQueue( char *path, int flags, int mode )
 {
 	return dbm_open(path,flags,mode);
 }
@@ -140,8 +170,7 @@ char	*path;
 /*
 ** Close the job queue.
 */
-CloseJobQueue( Q )
-DBM		*Q;
+CloseJobQueue( DBM *Q )
 {
 	dbm_close( Q );
 }
@@ -150,9 +179,7 @@ DBM		*Q;
 /*
 ** Put a reader's/writer's lock on an open job queue.
 */
-LockJobQueue( Q, op )
-DBM		*Q;
-int		op;
+LockJobQueue( DBM *Q, int op )
 {
 	int		blocking;
 
@@ -174,8 +201,7 @@ int		op;
 ** Allocate a new cluster id, and store it in the list of active
 ** cluster id's.
 */
-CreateCluster( Q )
-DBM		*Q;
+CreateCluster( DBM *Q )
 {
 	CLUSTER_LIST	*list, *fetch_cluster_list(), *add_new_cluster();
 	int				answer;
@@ -193,9 +219,7 @@ DBM		*Q;
 /*
 ** Store a PROC in the database.
 */
-StoreProc( Q, proc )
-DBM		*Q;
-PROC	*proc;
+StoreProc( DBM *Q, PROC *proc )
 {
 	XDR		xdr, *xdrs = &xdr;
 	static char	buf[10 * MAXPATHLEN];
@@ -230,9 +254,7 @@ PROC	*proc;
 ** We are given a process structure with the id filled in.  We look up
 ** the id in the database, and fill in the rest of the structure.
 */
-FetchProc( Q, proc )
-DBM		*Q;
-PROC	*proc;
+FetchProc( DBM *Q, PROC *proc )
 {
 	XDR		xdr, *xdrs = &xdr;
 	datum	key;
@@ -259,9 +281,7 @@ PROC	*proc;
 /*
 ** Apply the given function to every process in the queue.
 */
-ScanJobQueue( Q, func )
-DBM		*Q;
-int		(*func)();
+ScanJobQueue( DBM *Q, PROC_FUNC_PTR func )
 {
 	int				i;
 	CLUSTER_LIST	*list;
@@ -279,10 +299,7 @@ int		(*func)();
 /*
 ** Apply the function to every process in the specified cluster.
 */
-ScanCluster( Q, cluster, func )
-DBM		*Q;
-int		cluster;
-int		(*func)();
+ScanCluster( DBM *Q, int cluster, PROC_FUNC_PTR func )
 {
 	PROC	proc;
 	int		proc_id;
@@ -308,12 +325,8 @@ static XDR	*CurHistory;
 ** includes storing the proc structs in the history file and removing
 ** the cluster from the active cluster list.
 */
-TerminateCluster( Q, cluster, status )
-DBM		*Q;
-int		cluster;
-int		status;
+TerminateCluster( DBM *Q, int cluster, int status )
 {
-	int		terminate();
 	XDR		xdr, *OpenHistory();
 	int		fd;
 	char	ickpt_name[MAXPATHLEN];
@@ -358,15 +371,11 @@ static int	EmptyCluster;
 ** Terminate a particular process.  We also check to see if this is the last
 ** active process in the cluster, and if so, we terminate the cluster.
 */
-TerminateProc( Q, pid, status )
-DBM		*Q;
-PROC_ID	*pid;
-int		status;
+TerminateProc( DBM *Q, PROC_ID *pid, int status )
 {
 	GENERIC_PROC	gen_proc;
 	V2_PROC			*v2_ptr = (V2_PROC *)&gen_proc;
 	V3_PROC			*v3_ptr = (V3_PROC *)&gen_proc;
-	int		check_empty_cluster();
 	char	ckpt_name[MAXPATHLEN];
 	char	*ckpt_file_name;
 	int		i;
@@ -436,9 +445,7 @@ int		status;
 ** THIS ONE MUST NOT MAKE ANY USE OF THE LIST AFTERWARD!
 */
 static
-store_cluster_list( Q, list )
-DBM				*Q;
-CLUSTER_LIST	*list;
+store_cluster_list( DBM *Q, CLUSTER_LIST *list )
 {
 	datum	data;
 	int		rval;
@@ -462,8 +469,7 @@ CLUSTER_LIST	*list;
 ** malloc'd, and should be free'd later.
 */
 CLUSTER_LIST *
-fetch_cluster_list( Q )
-DBM		*Q;
+fetch_cluster_list( DBM *Q )
 {
 	datum	data;
 	CLUSTER_LIST	*answer, *make_cluster_list(), *copy_cluster_list();
@@ -484,9 +490,7 @@ DBM		*Q;
 */
 static
 CLUSTER_LIST *
-grow_cluster_list( list, incr )
-CLUSTER_LIST	*list;
-int				incr;
+grow_cluster_list( CLUSTER_LIST *list, int incr )
 {
 	list->array_len += incr;
 
@@ -499,8 +503,7 @@ int				incr;
 */
 static
 CLUSTER_LIST	*
-make_cluster_list( len )
-int		len;
+make_cluster_list( int len )
 {
 	CLUSTER_LIST	*answer;
 
@@ -517,8 +520,7 @@ int		len;
 
 static
 CLUSTER_LIST *
-add_new_cluster( list )
-CLUSTER_LIST	*list;
+add_new_cluster( CLUSTER_LIST *list )
 {
 	CLUSTER_LIST	*grow_cluster_list();
 
@@ -537,8 +539,7 @@ CLUSTER_LIST	*list;
 */
 static
 CLUSTER_LIST *
-copy_cluster_list( list )
-CLUSTER_LIST	*list;
+copy_cluster_list( CLUSTER_LIST *list )
 {
 	CLUSTER_LIST	*answer;
 
@@ -554,9 +555,8 @@ CLUSTER_LIST	*list;
 }
 
 
-static
-terminate( p )
-PROC	*p;
+void
+terminate( PROC *p )
 {
 	datum	key;
 	V2_PROC	*v2_ptr = (V2_PROC *)p;
@@ -594,9 +594,8 @@ PROC	*p;
 	}
 }
 
-static
-check_empty_cluster( p )
-PROC	*p;
+void
+check_empty_cluster( PROC * p )
 {
 	V2_PROC	*v2_ptr = (V2_PROC *)p;
 	V3_PROC	*v3_ptr = (V3_PROC *)p;
@@ -631,10 +630,8 @@ PROC	*p;
 ** processes within the structure.  That should be done by a higher level
 ** routine which also calls this one.
 */
-static
-delete_cluster( Q, cluster )
-DBM		*Q;
-int		cluster;
+void
+delete_cluster( DBM *Q, int cluster )
 {
 	CLUSTER_LIST	*list, *fetch_cluster_list();
 	int				src, dst;
@@ -653,8 +650,8 @@ int		cluster;
 	store_cluster_list( Q, list );
 }
 
-data_too_big( size )
-int		size;
+void
+data_too_big( int size )
 {
 	int	flags;
 
@@ -686,10 +683,7 @@ int		size;
 
 
 DBM *
-dbm_open( file, flags, mode )
-char	*file;
-int		flags;
-int		mode;
+dbm_open( char *file, int flags, int mode )
 {
 	static DBM dbm;
 	char	name[MAXPATHLEN];
@@ -712,8 +706,7 @@ int		mode;
 	return &dbm;
 }
 
-dbm_close( Q )
-DBM	*Q;
+dbm_close( DBM *Q )
 {
 	(void)close( Q->dbm_pagf );
 	(void)close( Q->dbm_dirf );
@@ -721,28 +714,20 @@ DBM	*Q;
 }
 
 /* ARGSUSED */
-dbm_store(Q,key,data,flags)
-DBM		*Q;
-datum	key;
-datum	data;
-int		flags;
+dbm_store( DBM *Q, datum key, datum data, int flags )
 {
 	return store( key, data );
 }
 
 /* ARGSUSED */
 datum
-dbm_fetch( Q, key )
-DBM		*Q;
-datum	key;
+dbm_fetch( DBM *Q, datum key )
 {
 	return fetch( key );
 }
 
 /* ARGSUSED */
-dbm_delete( Q, key )
-DBM		*Q;
-datum	key;
+dbm_delete( DBM *Q, datum key )
 {
 	return delete( key );
 }

@@ -88,6 +88,7 @@ ELEM	*get_number(), *get_int(), *get_float(), *get_string(), *get_name(),
 		*float_compare(), *string_compare(), *eval(), *integer_arithmetic(),
 		*float_arithmetic(), *unstack_elem(), *create_elem();
 EXPR	*create_expr(), *scan(), *search_expr();
+static do_op( ELEM *elem, STACK *stack );
 
 EXPR *
 scan( line )
