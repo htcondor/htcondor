@@ -863,9 +863,9 @@ count( ClassAd *job )
 			// per owner.
 			int thisJobGlobusUnsubmitted = 0;
 			scheduler.Owners[OwnerNum].GlobusJobs++;
-			globus_status = GLOBUS_JOB_UNSUBMITTED;
+			globus_status = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
 			job->LookupInteger(ATTR_GLOBUS_STATUS, globus_status);
-			if ( globus_status == GLOBUS_JOB_UNSUBMITTED ) {
+			if ( globus_status == GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
 				scheduler.Owners[OwnerNum].GlobusUnsubmittedJobs++;
 				thisJobGlobusUnsubmitted = 1;
 			}

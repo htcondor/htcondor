@@ -908,10 +908,11 @@ int GlobusJob::doEvaluateState()
 		case GM_HOLD:
 			// TODO: what happens if we learn here that the job is removed?
 			condorState = HELD;
-			if ( jobContact && globusState != GLOBUS_JOB_STATE_UNKNOWN ) {
-				globusState = GLOBUS_JOB_STATE_UNKNOWN;
+			if ( jobContact &&
+				 globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN ) {
+				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN;
 				addScheddUpdateAction( this, UA_UPDATE_GLOBUS_STATE, 0 );
-				//UpdateGlobusState( GLOBUS_JOB_STATE_UNKNOWN, 0 );
+				//UpdateGlobusState( GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN, 0 );
 			}
 			done = addScheddUpdateAction( this, UA_HOLD_JOB, GM_HOLD );
 			if ( !done ) {
