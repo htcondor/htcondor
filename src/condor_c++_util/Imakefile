@@ -29,7 +29,7 @@ SRC = state_machine_driver.C event_handler.C name_tab.C NON_POSIX.select.C \
 	classad_collection.C usagemon.C \
 	get_full_hostname.C format_time.C renice_self.C condor_version.C \
 	limit.C my_arch.C my_subsystem.C daemon_types.C killfamily.C strnewp.C \
-	access.C access.t.C killfamily.t.C
+	access.C access.t.C killfamily.t.C memory_file.C
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	alarm.o alloc.o \
@@ -41,7 +41,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	classad_collection.o usagemon.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
 	limit.o my_arch.o my_subsystem.o daemon_types.o killfamily.o access.o \
-	strnewp.o
+	strnewp.o memory_file.o
 
 CEDAR_LIBS = ../condor_io/libcondor.a
 CLASS_AD_LIB = ../condor_classad/expr_lib.a
