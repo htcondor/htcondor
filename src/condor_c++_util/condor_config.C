@@ -159,8 +159,9 @@ real_config(const char *env_name, const char *file_name,
 	int				rval, fd;
 	char			hostname[1024];
 	int				scm;
-	char			*arch, *op_sys;
+	char			*arch, *op_sys, *filesys_domain, *uid_domain;
 	char			*env, *config_file = NULL, *tilde = NULL;
+	char			line[256];
   
 		/*
 		  N.B. if we are using the yellow pages, system calls which are
@@ -281,19 +282,22 @@ real_config(const char *env_name, const char *file_name,
 		free( config_file );
 	}
 
-  /* If ARCH is not defined in config file, then try to get value
-     using uname().  Note that the config file parameter overrides
-     the uname() value.  -Jim B. */
-  /* Jim's insertion into context changed to insertion into
-     classAd -> N Anand */
-  
-	arch = param("ARCH");
-	if( arch == NULL) {
+		/* Now that we've read in the whole config file, there are a
+		   few attributes that we want to insert values for even if 
+		   they're not defined in the file.  These are: ARCH, OPSYS,
+		   UID_DOMAIN and FILESYSTEM_DOMAIN.  ARCH and OPSYS we get
+		   from uname().  If either UID_DOMAIN or FILESYSTEM_DOMAIN
+		   are not defined, we use the fully qualified hostname of
+		   this host.  In all cases, the value in the config file
+		   overrides these defaults.  Arch and OpSys by Jim B.  Uid
+		   and FileSys by Derek Wright, 1/12/98 */
+
+  	arch = param("ARCH");
+	if( !arch ) {
 		if( (arch = get_arch()) != NULL ) {
 			insert( "ARCH", arch, ConfigTab, TABLESIZE );
 			if(classAd)	{
-				char line[80];
-				sprintf( line, "%s=%s", ATTR_ARCH, arch );
+				sprintf( line, "%s=\"%s\"", ATTR_ARCH, arch );
 				classAd->Insert(line);
 			}
 		}
@@ -301,18 +305,12 @@ real_config(const char *env_name, const char *file_name,
 		free( arch );
 	}
 
-		/* If OPSYS is not defined in config file, then try to get value
-		   using uname().  Note that the config file parameter overrides
-		   the uname() value.  -Jim B. */
-		/* Jim's insertion into context changed to insertion into
-		   classAd -> N Anand */
 	op_sys = param("OPSYS");
-	if( op_sys == NULL ) {
+	if( !op_sys ) {
 		if( (op_sys = get_op_sys()) != NULL ) {
 			insert( "OPSYS", op_sys, ConfigTab, TABLESIZE );
 			if(classAd) {
-				char line[80];
-				sprintf( line, "%s=%s", ATTR_OPSYS, op_sys );
+				sprintf( line, "%s=\"%s\"", ATTR_OPSYS, op_sys );
 				classAd->Insert(line);
 			}
 		}
@@ -320,6 +318,30 @@ real_config(const char *env_name, const char *file_name,
 		free( op_sys );
 	}
 
+	filesys_domain = param("FILESYSTEM_DOMAIN");
+	if( !filesys_domain ) {
+		filesys_domain = my_full_hostname();
+		insert( "FILESYSTEM_DOMAIN", filesys_domain, ConfigTab, TABLESIZE );
+		if(classAd) {
+			sprintf( line, "%s=\"%s\"", ATTR_FILE_SYSTEM_DOMAIN, filesys_domain );
+			classAd->Insert(line);
+		}
+	} else {
+		free( filesys_domain );
+	}
+
+	uid_domain = param("UID_DOMAIN");
+	if( !uid_domain ) {
+		uid_domain = my_full_hostname();
+		insert( "UID_DOMAIN", uid_domain, ConfigTab, TABLESIZE );
+		if(classAd) {
+			sprintf( line, "%s=\"%s\"", ATTR_FILE_SYSTEM_DOMAIN, uid_domain );
+			classAd->Insert(line);
+		}
+	} else {
+		free( uid_domain );
+	}
+	
 #if !defined(WIN32)
 	(void)endpwent();
 #endif
