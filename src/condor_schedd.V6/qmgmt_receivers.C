@@ -68,6 +68,7 @@ do_Q_request(AuthSock *syscall_sock)
 	switch( request_num ) {
 
 	case CONDOR_InitializeConnectionAuth:
+#if defined(GSS_AUTHENTICATION)
 	{
 		char *owner=NULL;
 		// XXX: shouldn't need a fixed size here -- at least keep
@@ -128,6 +129,7 @@ do_Q_request(AuthSock *syscall_sock)
 		assert( syscall_sock->end_of_message() );
 		return 0;
 	}
+#endif
 
 	case CONDOR_InitializeConnection:
 	{
