@@ -172,7 +172,10 @@ class DaemonCore : public Service
     int Verify (DCpermission perm, const struct sockaddr_in *sin, const char * fqu);
     int AddAllowHost( const char* host, DCpermission perm );
 
-    
+    /** clear all sessions associated with the child 
+     */
+    void clearSession(pid_t pid);
+
 	/** @name Command Events
 	 */
 	//@{
@@ -770,6 +773,11 @@ class DaemonCore : public Service
 			@return true if we should allow this, false if not
 		*/
 	bool CheckConfigSecurity( const char* config, Sock* sock );
+
+
+    /** Invalidate all session related cache since the configuration
+     */
+    void invalidateSessionCache();
 
   private:      
 

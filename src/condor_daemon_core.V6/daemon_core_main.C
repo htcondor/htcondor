@@ -574,7 +574,7 @@ handle_nop( Service*, int, Stream* )
 int
 handle_invalidate_key( Service*, int, Stream* stream)
 {
-
+    int result = 0;
 	char *key_id = NULL;
 
 	stream->decode();
@@ -588,20 +588,9 @@ handle_invalidate_key( Service*, int, Stream* stream)
 		return FALSE;
 	}
 
-	if (daemonCore->getSecMan()->session_cache) {
-		if (daemonCore->getSecMan()->session_cache->remove(key_id)) {
-			dprintf ( D_SECURITY, "DC_INVALIDATE_KEY: removed key id %s.\n", key_id);
-		} else {
-			dprintf ( D_SECURITY, "DC_INVALIDATE_KEY: ignoring request to invalidate non-existant key %s.\n", key_id);
-		}
-	} else {
-		dprintf ( D_ALWAYS, "DC_INVALIDATE_KEY: did not remove %s, no KeyCache exists!\n", key_id);
-	}
-
-    if (key_id) {
-        free(key_id);
-    }
-	return TRUE;
+    result = daemonCore->getSecMan()->invalidateKey(key_id);
+    free(key_id);
+    return result;
 }
 
 

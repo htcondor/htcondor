@@ -1144,7 +1144,7 @@ DaemonCore::ReInit()
 	ipverify.Init();
 
 		// Reset our SecMan object (clears the cached info)
-	sec_man->ClearCache();
+    invalidateSessionCache();
 
 		// Handle our timer.  If this is the first time, we need to
 		// register it.  Otherwise, we just reset its value to go off
@@ -2803,6 +2803,9 @@ int DaemonCore::Shutdown_Fast(pid_t pid)
 	if ( pid == ppid )
 		return FALSE;		// cannot shut down our parent
 
+    // Clear sessions associated with the child
+    clearSession(pid);
+
 #if defined(WIN32)
 	// even on a shutdown_fast, first try to send a WM_CLOSE because
 	// when we call TerminateProcess, any DLL's do not get a chance to
@@ -2871,6 +2874,9 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 
 	if ( pid == ppid )
 		return FALSE;		// cannot shut down our parent
+
+    // Clear sessions associated with the child
+    clearSession(pid);
 
 #if defined(WIN32)
 
@@ -4834,6 +4840,7 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 		}
 
 	}
+   
 	return TRUE;
 }
 
@@ -5112,6 +5119,9 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 			return FALSE;
 		}
 	}
+
+    //Now the child is gone, clear all sessions asssociated with the child
+    clearSession(pid);
 
 	// If process is Unix, we are passed the exit status.
 	// If process is NT and is remote, we are passed the exit status.
@@ -5698,4 +5708,25 @@ DaemonCore::getKeyCache() {
 	return sec_man->session_cache;
 }
 
+SecMan* DaemonCore :: getSecMan()
+{
+    return sec_man;
+}
 
+void DaemonCore :: clearSession(pid_t pid)
+{
+    PidEntry * pidentry = NULL;
+
+    if ( pidTable->lookup(pid,pidentry) != -1 ) {
+        if (sec_man && pidentry) {
+            sec_man->invalidateHost(pidentry->sinful_string);
+        }
+    }
+}
+
+void DaemonCore :: invalidateSessionCache()
+{
+    if (sec_man) {
+        sec_man->invalidateAllCache();
+    }
+}
