@@ -24,7 +24,28 @@
 #include "condor_common.h"
 #include "killfamily.h"
 #include "../condor_procapi/procapi.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 static char *_FileName_ = __FILE__;         // Used by EXCEPT (see except.h)
+
+// We do all this stuff here so killfamily.C can be linked in
+// with program using DaemonCore as well as programs which are
+// completely DaemonCore ignorant (like the old starter).
+#ifdef WANT_DC_PM
+#	ifdef SIGCONT
+#		undef SIGCONT
+#	endif
+#	define SIGCONT DC_SIGCONT
+
+#	ifdef SIGSTOP
+#		undef SIGSTOP
+#	endif
+#	define SIGSTOP DC_SIGSTOP
+
+#	ifdef SIGKILL
+#		undef SIGKILL
+#	endif
+#	define SIGKILL DC_SIGKILL
+#endif // of WANT_DC_PM
 
 ProcFamily::ProcFamily( pid_t pid, priv_state priv, int test_only )
 {
@@ -114,11 +135,20 @@ ProcFamily::safe_kill(pid_t inpid,int sig)
 			inpid, sig);
 	}
 
-	if ( !test_only_flag )
-	if ( kill(inpid,sig) < 0 ) {
-		dprintf(D_FULLDEBUG,
-			"ProcFamily::safe_kill: kill() failed, errno=%d\n",
-			errno);
+	if ( !test_only_flag ) {
+#ifdef WANT_DC_PM
+		if ( daemonCore->Send_Signal(inpid,sig) == FALSE ) {
+			dprintf(D_FULLDEBUG,
+				"ProcFamily::safe_kill: Send_Signal(%d,%d) failed\n",
+				inpid,sig);
+		}
+#else
+		if ( kill(inpid,sig) < 0 ) {
+			dprintf(D_FULLDEBUG,
+				"ProcFamily::safe_kill: kill(%d,%d) failed, errno=%d\n",
+				inpid,sig,errno);
+		}
+#endif
 	}
 
 	set_priv(priv);
@@ -196,12 +226,10 @@ ProcFamily::takesnapshot()
 				if ( pidfamily[j] == 0 ) {
 					
 					// currpid does not exist in our new pidfamily list !
-					// So, if currpid still exists on the system 
-					// with init as the parent, and
+					// So, if currpid still exists on the system, and 
 					// the birthdate matches, grab decendants of currpid.
 
-					if ( procAPI->getProcInfo(currpid,pinfo) == 0 
-							&& pinfo->ppid == 1 ) {
+					if ( procAPI->getProcInfo(currpid,pinfo) == 0 ) {
 						// compare birthdays; allow 3 seconds "slack"
 						birth = (time(NULL) - pinfo->age) - 
 									(*old_pids)[i].birthday;
