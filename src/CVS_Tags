@@ -1,6 +1,16 @@
 3/28/01 V6_3-pre-merge-V6_2-merge-3
     The state of the V6_3-branch before merging the V6_2 branch 
 
+3/28/01 V6_2-merge-3
+   V6_2-branch state, slightly post 6.2.0. Used for the merge into
+   6.3 at the end of March (right around the CondorG merge back in, and the
+   split-off of the Minnesota DAGMan branch)
+
+3/15/01 V6_2_0 
+	6.2.0 release tags, which lives on the V6_2-branch. The date 
+    on this release is probably bogus, since I forgot to add it to this
+    file til well after the fact.
+
 3/6/01  V6_3-galileo-1
 	This is a tag of the V6_3 branch for the purposes of giving
 	a company called Galileo some experimental/new features 
@@ -12,6 +22,10 @@
 	at 5:45pm on 2/28/01.  Only Condor-G development should go on
 	on this branch, and it should be merged back into the regular
 	V6_3-branch at the appropriate time.
+
+2/9/01  V6_1_17
+	6.1.17 release tag, which lives on the V6_2-branch. The good
+	lord willing this will be the last 6.1
 
 12/22/00 V6_3-post-merge-V6_2-merge-2
 	The state of the V6_3-branch after merging in the V6_2-branch
