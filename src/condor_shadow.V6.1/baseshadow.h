@@ -336,6 +336,9 @@ class BaseShadow : public Service
 
 	virtual void emailTerminateEvent( int exitReason ) = 0;
 
+	//move output data from intermediate files to user-specified locations
+	void moveOutputFiles( int exitReason );
+
 		/** Initialize our StringLists for attributes we want to keep
 			updated in the job queue itself
 		*/ 

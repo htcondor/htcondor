@@ -1186,6 +1186,10 @@ calc_image_size( char *name)
 // SetTransferFiles also sets a global "never_transfer", which is 
 // used by SetRequirements().  So, SetTransferFiles must be called _before_
 // calling SetRequirements() as well.
+// If we are transfering files, and stdout or stderr contains
+// path information, SetTransferFiles renames the output file to a plain
+// file (and stores the original) in the ClassAd, so SetStdFile() should
+// be called before getting here too.
 void
 SetTransferFiles()
 {
@@ -1427,6 +1431,54 @@ SetTransferFiles()
 
 		sprintf(buffer,"%s = FALSE",ATTR_TRANSFER_EXECUTABLE);
 		InsertJobExpr( buffer );
+	}
+
+	// If either stdout or stderr contains path information, and
+	// the file is being transfered back, use an intermediate
+	// file in the working directory.  The shadow will move the
+	// output data to the user-specified path when the job finishes.
+
+	if ( !never_transfer && job ) {
+		char output[_POSIX_PATH_MAX + 32];
+		char error[_POSIX_PATH_MAX + 32];
+
+		output[0] = error[0] = '\0';
+		job->LookupString(ATTR_JOB_OUTPUT,output,sizeof(output));
+		job->LookupString(ATTR_JOB_ERROR,error,sizeof(error));
+
+		if(*output && basename(output) != output && 
+		   strcmp(output,"/dev/null") != 0)
+		{
+			sprintf(buffer,"%s = \"%s\"",ATTR_JOB_OUTPUT_ORIG,output);
+			InsertJobExpr(buffer);
+			sprintf(
+					buffer,
+					"%s = \"_condor_stdout_%d.%d\"",
+					ATTR_JOB_OUTPUT,ClusterId,ProcId);
+			InsertJobExpr(buffer);
+		}
+
+		if(*error && basename(error) != error && 
+		   strcmp(error,"/dev/null") != 0)
+		{
+			sprintf(buffer,"%s = \"%s\"",ATTR_JOB_ERROR_ORIG,error);
+			InsertJobExpr(buffer);
+			
+			if(strcmp(error,output) == 0) {
+				//stderr will use same file as stdout
+				sprintf(
+						buffer,
+						"%s = \"_condor_stdout_%d.%d\"",
+						ATTR_JOB_ERROR,ClusterId,ProcId);
+			}
+			else {
+				sprintf(
+						buffer,
+						"%s = \"_condor_stderr_%d.%d\"",
+						ATTR_JOB_ERROR,ClusterId,ProcId);
+			}
+			InsertJobExpr(buffer);
+		}
 	}
 
 	// if we did not set ATTR_TRANSFER_FILES to NEVER, 
