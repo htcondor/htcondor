@@ -1239,6 +1239,29 @@ GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 
 
 int
+GetAttributeBool(int cluster_id, int proc_id, const char *attr_name, int *val)
+{
+	ClassAd	*ad;
+	char	key[_POSIX_PATH_MAX];
+	char	*attr_val;
+
+	strcpy(key, IdToStr(cluster_id,proc_id) );
+
+	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
+		sscanf(attr_val, "%d", val);
+		free( attr_val );
+		return 1;
+	}
+
+	if (!JobQueue->LookupClassAd(key, ad)) {
+		return -1;
+	}
+
+	if (ad->LookupBool(attr_name, *val) == 1) return 0;
+	return -1;
+}
+
+int
 GetAttributeString( int cluster_id, int proc_id, const char *attr_name, 
 					char *val )
 {
