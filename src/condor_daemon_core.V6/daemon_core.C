@@ -197,6 +197,8 @@ DaemonCore::~DaemonCore()
 		delete []reapTable;
 	}
 
+	delete pidTable;
+
 	t.CancelAllTimers();
 }
 
