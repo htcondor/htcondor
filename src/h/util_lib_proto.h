@@ -54,7 +54,6 @@ void ProcessLogging ( int request, int extraInteger );
 void detach ( void );
 int do_connect ( const char *host, const char *service, u_int port );
 int udp_connect ( char *host, u_int port );
-/* void dprintf_init ( int fd ); change */
 void dprintf ( int flags, char* fmt, ... );
 FILE * debug_lock ( void );
 void debug_unlock ( void );
@@ -109,7 +108,6 @@ void ProcessLogging ();
 void detach ();
 int do_connect ();
 int udp_connect ();
-void dprintf_init ();
 void dprintf ();
 FILE * debug_lock ();
 void debug_unlock ();
