@@ -25,6 +25,8 @@ fi
 
 if [ -f /usr/include/syscall-list.h ]; then
 	SYSCALL=/usr/include/syscall-list.h
+elif [ -f /usr/include/bits/syscall.h ]; then
+	SYSCALL=/usr/include/bits/syscall.h
 elif [ -f /usr/include/sys.s ]; then
 	SYSCALL=/usr/include/sys.s
 elif [ -f /usr/include/sys/syscall.h ]; then
