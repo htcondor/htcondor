@@ -1,20 +1,37 @@
 #include "condor_common.h"
 #include "string_list.h"
+#include "condor_debug.h"
 #include "which.h"
 #include "directory.h"
-#include "parse_util.h"
 
 #ifdef WIN32
 #include <direct.h>
 #endif
 
-MyString which(const MyString &strFilename, const MyString &strAdditionalSearchDir)
+
+// A version that doesn't require having MyStrings passed to it, in
+// case we find this easier to use...
+MyString
+which( const char* strFilename, const char* strAdditionalSearchDir )
+{
+	MyString file( strFilename );
+	if( strAdditionalSearchDir ) {
+		MyString additionalSearch( strAdditionalSearchDir );
+		return which( file, additionalSearch );
+	} 
+	return which( file );
+}
+
+
+MyString
+which(const MyString &strFilename, const MyString &strAdditionalSearchDir)
 {
 	MyString strPath = getenv("PATH");
-	printf("Path: %s\n", strPath.GetCStr());
+	dprintf( D_FULLDEBUG, "Path: %s\n", strPath.GetCStr());
 
-	StringList listDirectoriesInPath;
-	breakStringByDelimiter(listDirectoriesInPath, strPath, ';');
+	char path_delim[3];
+	sprintf( path_delim, "%c", PATH_DELIM_CHAR );
+	StringList listDirectoriesInPath( strPath.GetCStr(), path_delim );
 
 #ifdef WIN32
 	int iLength = strFilename.Length();
@@ -73,23 +90,25 @@ MyString which(const MyString &strFilename, const MyString &strAdditionalSearchD
 	listDirectoriesInPath.rewind();
 	listDirectoriesInPath.next();
 
-	if (strAdditionalSearchDir != "")
+	if( strAdditionalSearchDir != "" ) {
 		listDirectoriesInPath.insert(strAdditionalSearchDir.GetCStr());
+	}
 	
 	listDirectoriesInPath.rewind();
 
 	const char *psDir;
 	while (psDir = listDirectoriesInPath.next())
 	{
-		printf("Checking dir: %s\n", psDir);
+		dprintf( D_FULLDEBUG, "Checking dir: %s\n", psDir );
 
 		char *psFullDir = dircat(psDir, strFilename.GetCStr());
 		MyString strFullDir = psFullDir;
 		delete [] psFullDir;
 
 		StatInfo info(strFullDir.GetCStr());
-		if (info.Error() == SIGood)
+		if( info.Error() == SIGood ) {
 			return strFullDir;
+		}
 	}
 	return "";
 }
