@@ -57,6 +57,8 @@ class GlobusJob : public Service
 	void ClearCallbacks();
 	GlobusResource *GetResource();
 
+	void SetJobContact(const char * contact);
+
 	/* If true, then ATTR_ON_EXIT_BY_SIGNAL, ATTR_ON_EXIT_SIGNAL, and
 	   ATTR_ON_EXIT_CODE are valid.  If false, no exit status is available.
 	   At the moment this only returns true for gridshell jobs.

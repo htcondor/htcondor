@@ -520,7 +520,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 					procID.cluster, procID.proc);
 		}
 		rehashJobContact( this, jobContact, buff );
-		jobContact = strdup( buff );
+		SetJobContact(buff);
 		job_already_submitted = true;
 	}
 
@@ -952,7 +952,7 @@ int GlobusJob::doEvaluateState()
 					}
 					callbackRegistered = true;
 					rehashJobContact( this, jobContact, job_contact );
-					jobContact = strdup( job_contact );
+					SetJobContact(job_contact);
 					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
 									   job_contact );
 					gahp.globus_gram_client_job_contact_free( job_contact );
@@ -1298,9 +1298,8 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 				// subsequently does a condor_rm.
 			if ( jobContact != NULL ) {
 				rehashJobContact( this, jobContact, NULL );
-				free( jobContact );
 				myResource->CancelSubmit( this );
-				jobContact = NULL;
+				SetJobContact(NULL);
 				UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
 								   NULL_JOB_CONTACT );
 				addScheddUpdateAction( this, UA_UPDATE_JOB_AD, 0 );
@@ -1431,7 +1430,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
 					jmProxyExpireTime = myProxy->expiration_time;
 					rehashJobContact( this, jobContact, job_contact );
-					jobContact = strdup( job_contact );
+					SetJobContact(job_contact);
 					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
 									   job_contact );
 					gahp.globus_gram_client_job_contact_free( job_contact );
@@ -1630,9 +1629,8 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 				}
 
 				rehashJobContact( this, jobContact, NULL );
-				free( jobContact );
 				myResource->CancelSubmit( this );
-				jobContact = NULL;
+				SetJobContact(NULL);
 				UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
 								   NULL_JOB_CONTACT );
 				jmVersion = GRAM_V_UNKNOWN;
@@ -1765,9 +1763,8 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 			retryStdioSize = true;
 			if ( jobContact != NULL ) {
 				rehashJobContact( this, jobContact, NULL );
-				free( jobContact );
 				myResource->CancelSubmit( this );
-				jobContact = NULL;
+				SetJobContact(NULL);
 				UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
 								   NULL_JOB_CONTACT );
 				schedd_actions |= UA_UPDATE_JOB_AD;
@@ -2214,6 +2211,15 @@ void GlobusJob::ClearCallbacks()
 GlobusResource *GlobusJob::GetResource()
 {
 	return myResource;
+}
+
+void GlobusJob::SetJobContact(const char * contact)
+{
+	free(jobContact);
+	if(contact)
+		jobContact = strdup( contact );
+	else
+		jobContact = NULL;
 }
 
 bool GlobusJob::IsExitStatusValid()
