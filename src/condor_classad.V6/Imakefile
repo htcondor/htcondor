@@ -11,10 +11,10 @@ CFLAGS 				= -Wall $(STD_C_FLAGS)
 /* The basic classad source and object files */
 CLASSAD_SRC_0 		= lexer.C source.C operators.C attrrefs.C fnCall.C \
 						literals.C exprTree.C classad.C exprList.C value.C \
-						instantiations.C sink.C matchClassad.C util.C 
+						instantiations.C sink.C xmlSink.C matchClassad.C util.C 
 CLASSAD_OBJ_0 		= lexer.o source.o operators.o attrrefs.o fnCall.o \
 						literals.o exprTree.o classad.o exprList.o value.o \
-						instantiations.o sink.o matchClassad.o util.o 
+						instantiations.o sink.o xmlSink.o matchClassad.o util.o 
 
 
 /* Are collections required? */
@@ -48,9 +48,10 @@ OBJ = $(CLASSAD_OBJ_2)
 
 
 LIB =  ./libclassad.a ../condor_c++_util/cplus_lib.a \
-      ../condor_util_lib/util_lib.a ../condor_io/libcedar.a \
-      ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a \
-	  ../condor_sysapi/libsysapi.a
+	../condor_util_lib/util_lib.a ../condor_sysapi/libsysapi.a
+
+#      ../condor_util_lib/util_lib.a ../condor_io/libcedar.a \
+#      ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a \
 
 
 /* The S_* files are for standalone classads */
@@ -88,7 +89,7 @@ exprTree.h fnCall.C fnCall.h instantiations.C lexer.C lexer.h \
 literals.C literals.h matchClassad.C matchClassad.h operators.C \
 operators.h query.C query.h sample.C sink.C sink.h source.C source.h \
 test_classads.C tests.txt transaction.C transaction.h value.C value.h \
-view.C view.h classad_distribution.h LICENSE README
+view.C view.h xmlSink.h xmlSink.C classad_distribution.h LICENSE README
 
 dist: $(DIST_FILES)
 	rm -rf $(DISTRIBUTION_DIR) *.gz
