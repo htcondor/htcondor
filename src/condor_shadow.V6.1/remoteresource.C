@@ -49,6 +49,7 @@ static char *Resource_State_String [] = {
 	"PENDING_DEATH", 
 	"FINISHED",
 	"SUSPENDED",
+	"STARTUP"
 };
 
 
@@ -72,7 +73,9 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	disk_usage = 0;
 	image_size = 0;
 	state = RR_PRE;
+	began_execution = false;
 }
+
 
 RemoteResource::~RemoteResource()
 {
@@ -125,7 +128,7 @@ RemoteResource::activateClaim( int starterVersion )
 			daemonCore->Register_Socket( claim_sock, "RSC Socket", 
 				   (SocketHandlercpp)&RemoteResource::handleSysCalls, 
 				   "HandleSyscalls", this );
-			setResourceState( RR_EXECUTING );		
+			setResourceState( RR_STARTUP );		
 			return true;
 			break;
 		case CONDOR_TRY_AGAIN:
@@ -979,3 +982,21 @@ rrStateToString( ResourceState s )
 	}
 	return Resource_State_String[s];
 }
+
+
+void 
+RemoteResource::beginExecution( void )
+{
+	if( began_execution ) {
+			// Only call this function once per remote resource
+		return;
+	}
+
+	began_execution = true;
+	setResourceState( RR_EXECUTING );
+
+		// Let our shadow know so it can make global decisions (for
+		// example, should it log a JOB_EXECUTE event)
+	shadow->resourceBeganExecution( this );
+}
+
