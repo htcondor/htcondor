@@ -26,7 +26,6 @@
 #include "proto.h"
 #include "name_tab.h"
 #include "fileno.h"
-#include "condor_rsc.h"
 #include "util_lib_proto.h"
 #include "list.h"
 #include "starter.h"

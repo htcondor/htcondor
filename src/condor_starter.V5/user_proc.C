@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "starter_common.h"
 #include "condor_debug.h"
 #include "condor_string.h"
 #include "condor_config.h"
@@ -32,9 +33,8 @@
 #include "condor_io.h"
 #include "startup.h"
 #include "fileno.h"
-#include "condor_rsc.h"
 #include "renice_self.h"
-#include "starter_common.h"
+
 
 #if defined(AIX32)
 #	include <sys/id.h>
@@ -57,7 +57,6 @@ const mode_t LOCAL_DIR_MODE =
 
 
 #include "user_proc.h"
-
 
 extern char	*Execute;			// Name of directory where user procs execute
 extern char VirtualMachineName[];  // Virtual machine where we're allocated (SMP)
