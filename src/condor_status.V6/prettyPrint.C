@@ -21,6 +21,7 @@ void printState			(ClassAd *);
 void printVerbose   	(ClassAd *);
 void printCustom    	(ClassAd *);
 
+char *formatElapsedTime( int );
 
 void
 prettyPrint (ClassAdList &adList, TrackTotals *totals)
@@ -175,45 +176,40 @@ printState (ClassAd *ad)
 {
 	static bool first = true;
 	static AttrListPrintMask pm; 
-	static time_t now;
-	int	   stateTime, activityTime, kbdIdle;
 
 	if (ad)
 	{
 		// print header if necessary
 		if (first)
 		{
-			(void) time( &now );
-
-			printf ("\n%-10.10s %-3.3s %-5.5s %-6.6s "
-					"%-8.8s %-4.4s %-12.12s %-12.12s "
-					"%-12.12s\n\n", 
+			printf ("\n%-10.10s %-3.3s %-5.5s %-6.6s  "
+					"%-10.10s %-7.7s   %-11.11s"
+					"%-4.4s %-12.12s\n\n",
 				ATTR_NAME, ATTR_CPUS, ATTR_MEMORY, "LoadAv", 
-				ATTR_STATE, ATTR_ACTIVITY, ATTR_KEYBOARD_IDLE, "StateTime",
-				"ActvtyTime");
+				"KbdIdle", ATTR_STATE, "StateTime",
+				ATTR_ACTIVITY, "ActvtyTime");
 		
 			pm.registerFormat("%-10.10s ", ATTR_NAME, "[????????] ");
 			pm.registerFormat("%-3d " , ATTR_CPUS, "[??] ");
 			pm.registerFormat("%-5d " , ATTR_MEMORY, "[???] ");
 			pm.registerFormat("%-.3f ", ATTR_LOAD_AVG, "[????]  ");
-			pm.registerFormat("%-8.8s ",  ATTR_STATE, "[????????]  ");
-			pm.registerFormat("%-4.4s ",  ATTR_ACTIVITY, "[????????]  ");
+			pm.registerFormat( (IntCustomFmt) format_time,
+									ATTR_KEYBOARD_IDLE,
+									"[??????????] ");
+			pm.registerFormat(" %-7.7s ",  ATTR_STATE, "[????????]  ");
+			pm.registerFormat( (IntCustomFmt) formatElapsedTime, 
+									ATTR_ENTERED_CURRENT_STATE,
+									"[??????????] ");
+			pm.registerFormat(" %-4.4s ",  ATTR_ACTIVITY, "[????????]  ");
+			pm.registerFormat( (IntCustomFmt) formatElapsedTime, 
+									ATTR_ENTERED_CURRENT_ACTIVITY,
+									"[??????????] ");
+			pm.registerFormat("\n", "*bogus*", "\n");  // force newline
 
 			first = false;
 		}
 
 		pm.display (stdout, ad);
-
-		if( ad->LookupInteger( ATTR_ENTERED_CURRENT_STATE, stateTime )		&&
-			ad->LookupInteger( ATTR_ENTERED_CURRENT_ACTIVITY, activityTime )&&
-			ad->LookupInteger( ATTR_KEYBOARD_IDLE, kbdIdle ) )
-		{
-			stateTime = now - stateTime;
-			activityTime = now - activityTime;
-			kbdIdle = now - kbdIdle;
-			printf( "%s %s %s\n", format_time( stateTime ), 
-						format_time( activityTime ), format_time( kbdIdle ) );
-		}
 	}
 }
 
@@ -366,4 +362,20 @@ void
 printCustom (ClassAd *ad)
 {
 	(void) pm.display (stdout, ad);
+}
+
+
+char *
+formatElapsedTime( int t )
+{
+	static time_t 	now;
+	static bool 	first = true;
+
+	if( first ) {
+		(void) time( &now );
+		first = false;
+	}
+	
+	t = now - t;
+	return format_time( t );
 }
