@@ -270,43 +270,6 @@ init_shadow_connections()
 }
 
 /*
-  Set up file descriptor for log file.  If LOCAL_LOGGING is TRUE, we
-  put the log in "/tmp/starter_log".  In this case we just seek to the
-  end and continue writing.  This is convenient if we are "tail'ing"
-  the log on several runs in a row.
-
-  If LOCAL_LOGGING is FALSE, we will send all our logging information
-  to the shadow, where it will show up in the shadow's log file.
-*/
-void
-init_logging()
-{
-	int	log_fd;
-	char	*pval;
-
-	pval = param( "STARTER_LOCAL_LOGGING" );
-	if( pval && (pval[0] == 't' || pval[0] == 'T') ) {
-		dprintf_config( mySubSystem, -1 );	// Log file on local machine
-		free( pval );
-		return;
-	}
-
-		// Set up to do logging through the shadow
-
-	close( fileno(stderr) );
-	dup2( CLIENT_LOG, fileno(stderr) );
-	setvbuf( stderr, NULL, _IOLBF, 0 ); // line buffering
-
-	pval = param( "STARTER_DEBUG" );
-	if( pval ) {
-		set_debug_flags( pval );
-		free( pval );
-	}
-	// DebugFlags |= D_NOHEADER;
-
-}
-
-/*
   Get relevant information from "condor_config" and "condor_config.local"
   files.
 */

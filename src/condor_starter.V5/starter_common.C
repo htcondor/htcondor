@@ -35,6 +35,7 @@ static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
 extern int		EventSigs[];
 extern char*	InitiatingHost;
+extern char*	mySubSystem;
 
 /*
   Unblock all signals except those which will encode asynchronous
@@ -134,3 +135,44 @@ initial_bookeeping( int argc, char *argv[] )
 
 	_EXCEPT_Cleanup = exception_cleanup;
 }
+
+
+/*
+  Set up file descriptor for log file.  If LOCAL_LOGGING is TRUE, we
+  use regular dprintf() logging to the file specified in STARTER_LOG. 
+
+  If LOCAL_LOGGING is FALSE, we will send all our logging information
+  to the shadow, where it will show up in the shadow's log file.
+*/
+void
+init_logging()
+{
+	int		is_local = TRUE;
+	char	*pval;
+	
+	pval = param( "STARTER_LOCAL_LOGGING" );
+	if( pval ) {
+		if( pval[0] == 'f' || pval[0] == 'F' ) {
+			is_local=FALSE;
+		}
+		free( pval );
+	}
+
+	if( is_local ) {
+			// Use regular, local logging.
+		dprintf_config( mySubSystem, -1 );	// Log file on local machine 
+	} else {
+			// Set up to do logging through the shadow
+		close( fileno(stderr) );
+		dup2( CLIENT_LOG, fileno(stderr) );
+		setvbuf( stderr, NULL, _IOLBF, 0 ); // line buffering
+
+		pval = param( "STARTER_DEBUG" );
+		if( pval ) {
+			set_debug_flags( pval );
+			free( pval );
+		}
+	}
+	return;
+}
+
