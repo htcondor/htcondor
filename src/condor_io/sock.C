@@ -865,9 +865,15 @@ char * Sock::serializeCryptoInfo() const
 	// here we want to save our state into a buffer
 	char * outbuf = NULL;
     if (len > 0) {
-        outbuf = new char[len+14];
-        memset(outbuf, 0, len+14);
-        sprintf(outbuf,"%d*%d*%s",len, (int)get_crypto_key().getProtocol(), kserial);
+        int buflen = len*2+32;
+        outbuf = new char[buflen];
+        sprintf(outbuf,"%d*%d*", len*2, (int)get_crypto_key().getProtocol());
+
+        // Hex encode the binary key
+        char * ptr = outbuf + strlen(outbuf);
+        for (int i=0; i < len; i++, kserial++, ptr+=2) {
+            sprintf(ptr, "%02X", *kserial);
+        }
     }
     else {
         outbuf = new char[2];
@@ -879,8 +885,9 @@ char * Sock::serializeCryptoInfo() const
 
 char * Sock::serializeCryptoInfo(char * buf)
 {
-	char * kserial = NULL, * ptmp = buf;
-    int    len = 0;
+	unsigned char * kserial = NULL;
+    char * ptmp = buf;
+    int    len = 0, encoded_len = 0;
     int protocol = CONDOR_NO_PROTOCOL;
 
     // kserial may be a problem since reli_sock also has stuff after
@@ -888,23 +895,39 @@ char * Sock::serializeCryptoInfo(char * buf)
     // other crap from reli_sock as well. Hence the code below. Hao
     ASSERT(ptmp);
 
-    sscanf(ptmp, "%d*", &len);
-    if ( len > 0 ) {
-        kserial = (char *) malloc(len+1);
-        memset(kserial, 0, len+1);
+    sscanf(ptmp, "%d*", &encoded_len);
+    if ( encoded_len > 0 ) {
+        len = encoded_len/2;
+        kserial = (unsigned char *) malloc(len);
+
+        // skip the *
         ptmp = strchr(ptmp, '*');
+		ASSERT( ptmp );
         ptmp++;
+
+        // Reading protocol
         sscanf(ptmp, "%d*", &protocol);
         ptmp = strchr(ptmp, '*');
+		ASSERT( ptmp );
         ptmp++;
-        memcpy(kserial, ptmp, len);
+
+        // Now, convert from Hex back to binary
+        unsigned char * ptr = kserial;
+        unsigned int hex;
+        for(int i = 0; i < len; i++) {
+            sscanf(ptmp, "%2X", &hex);
+            *ptr = (unsigned char)hex;
+			ptmp += 2;  // since we just consumed 2 bytes of hex
+			ptr++;      // since we just stored a single byte of binary
+        }        
 
         // Initialize crypto info
         KeyInfo k((unsigned char *)kserial, len, (Protocol)protocol);
         set_crypto_key(&k, 0);
         free(kserial);
+		ASSERT( *ptmp == '*' );
         // Now, skip over this one
-        ptmp = ptmp + len + 1; // skip over the "*" as well
+        ptmp++;
     }
     else {
         ptmp = strchr(ptmp, '*');
@@ -936,7 +959,7 @@ char * Sock::serialize(char *buf)
 	ASSERT(buf);
 
 	// here we want to restore our state from the incoming buffer
-	sscanf(buf,"%u*%d*%d",&passed_sock,&_state,&_timeout);
+	sscanf(buf,"%u*%d*%d*",&passed_sock,&_state,&_timeout);
 
 	// replace _sock with the one from the buffer _only_ if _sock
 	// is currently invalid.  if it is not invalid, it has already
