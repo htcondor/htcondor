@@ -112,6 +112,7 @@ extern "C" int exception_cleanup();
 
 StateMachine	*condor_starter_ptr;
 
+
 /*
   Main routine for condor_starter.  DEBUGGING can be turned on if we
   need to attach a debugger at run time.  Everything is driven by the
@@ -1105,7 +1106,7 @@ update_cpu()
 
 /* looks to me like this is not getting called anymore, and CONDOR_send_rusage
    is now used by the new condor 5.6 periodic checkpointing mechanism */
-#ifdef 0
+#if 0
  
 		// Grab a pointer to proc which just exited
 	proc = UProcList.Current();
@@ -1249,7 +1250,7 @@ int	AvoidNFS = 0;
 
 char Condor_CWD[ _POSIX_PATH_MAX ];
 
-#if defined(ULTRIX42) || defined(ULTRIX43) || defined(SUNOS41) || defined(OSF1) || defined(HPUX9)
+#if defined(OSF1) || defined(HPUX)
 /*
   None of this stuff is ever used, but it must be here so that we
   can link with the remote system call library without getting
@@ -1270,31 +1271,6 @@ void ckpt(){}
 extern "C"	void _updateckpt( char *foo, char *bar, char *glarch ) {}
 #endif
 
-#if defined(AIX32)
-
-void sigdanger_handler( int signo );
-
-void
-set_sigdanger_handler()
-{
-	struct sigaction action;
-
-	action.sa_handler = sigdanger_handler;
-	sigemptyset( &action.sa_mask );
-	action.sa_flags = 0;
-
-	if( sigaction(SIGDANGER,&action,0) < 0 ) {
-		EXCEPT( "Can't set handler for SIGDANGER" );
-	}
-	
-}
-
-void
-sigdanger_handler( int signo )
-{
-	EXCEPT( "GOT SIGDANGER!!!" );
-}
-#endif
 
 /*
   Return true if we need to keep this fd open.  Any other random file
@@ -1381,7 +1357,7 @@ determine_user_ids( uid_t &requested_uid, gid_t &requested_gid )
 
 		// otherwise, we run the process an "nobody"
 	if( (pwd_entry = getpwnam("nobody")) == NULL ) {
-#ifdef HPUX9
+#ifdef HPUX
 		// the HPUX9 release does not have a default entry for nobody,
 		// so we'll help condor admins out a bit here...
 		requested_uid = 59999;
@@ -1395,7 +1371,7 @@ determine_user_ids( uid_t &requested_uid, gid_t &requested_gid )
 	requested_uid = pwd_entry->pw_uid;
 	requested_gid = pwd_entry->pw_gid;
 
-#ifdef HPUX9
+#ifdef HPUX
 	// HPUX9 has a bug in that getpwnam("nobody") always returns
 	// a gid of 60001, no matter what the group file (or NIS) says!
 	// on top of that, legal UID/GIDs must be -1<x<60000, so unless we
@@ -1407,7 +1383,7 @@ determine_user_ids( uid_t &requested_uid, gid_t &requested_gid )
 		requested_gid = 59999;
 #endif
 
-#ifdef IRIX53
+#ifdef IRIX
 		// Same weirdness on IRIX.  60001 is the default uid for
 		// nobody, lets hope that works.
 	if ( (requested_uid >= UID_MAX ) || (requested_uid < 0) )
