@@ -156,7 +156,7 @@ int GlobusResource::DoPing()
 
 	if ( ping_failed == resourceDown && firstPingDone == true ) {
 		// State of resource hasn't changed. Notify ping requesters only.
-		dprintf(D_FULLDEBUG,"resource %s is still %s\n",resourceName,
+		dprintf(D_ALWAYS,"resource %s is still %s\n",resourceName,
 				ping_failed?"down":"up");
 
 		pingRequesters.Rewind();
@@ -170,7 +170,7 @@ int GlobusResource::DoPing()
 		}
 	} else {
 		// State of resource has changed. Notify every job.
-		dprintf(D_FULLDEBUG,"resource %s is now %s\n",resourceName,
+		dprintf(D_ALWAYS,"resource %s is now %s\n",resourceName,
 				ping_failed?"down":"up");
 
 		resourceDown = ping_failed;
