@@ -1180,7 +1180,10 @@ terminate_with_sig( int sig )
 	struct sigaction act;
 
 	/* Note: If InRestart, avoid accessing any non-local data, as it
-	   may be corrupt.  This includes calling dprintf().  -Jim B. */
+	   may be corrupt.  This includes calling dprintf().  Also avoid
+	   calling any libc functions, since libc might be corrupt during
+	   a restart. Since sigaction and sigsuspend are defined in
+	   signals_support.C, they should be safe to call. -Jim B. */
 
 		// Make sure all system calls handled "straight through"
 	if (!InRestart) SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
@@ -1204,12 +1207,12 @@ terminate_with_sig( int sig )
 	}
 
 		// Send ourself the signal
-	my_pid = getpid();
+	my_pid = SYSCALL(SYS_getpid);
 	if (!InRestart) {
 		dprintf( D_ALWAYS, "About to send signal %d to process %d\n",
 				sig, my_pid );
 	}
-	if( kill(my_pid,sig) < 0 ) {
+	if( SYSCALL(SYS_kill, my_pid, sig) < 0 ) {
 		EXCEPT( "kill" );
 	}
 
