@@ -1081,7 +1081,11 @@ ELEM	*elem;
 		case NAME:
 		case STRING:
 			answer->type = elem->type;
-			answer->s_val = strdup( elem->s_val );
+			if ( elem->s_val != 0 ) {
+				answer->s_val = strdup( elem->s_val );
+			} else {
+				answer->s_val = strdup( "" );
+			}
 			break;
 		default:
 			bcopy( (char *)elem, (char *)answer, sizeof(ELEM) );
@@ -1555,7 +1559,11 @@ CONTEXT	*context2;
 											name, op_name(elem->type) );
 		return -1;
 	}
-	*answer = strdup( elem->s_val );
+	if ( elem->s_val != 0 ) {
+		*answer = strdup( elem->s_val );
+	} else {
+		*answer = strdup( "" );
+	}
 	free_elem( elem );
 	dprintf( D_EXPR, "evaluate_string(\"%s\") returns \"%s\"\n",
 										name, *answer );
