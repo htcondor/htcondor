@@ -639,6 +639,9 @@ doContactSchedd()
 				SetAttributeString( curr_job->procID.cluster,
 									curr_job->procID.proc,
 									ATTR_HOLD_REASON, curr_job->holdReason );
+				DeleteAttribute(curr_job->procID.cluster,
+								curr_job->procID.proc,
+								ATTR_RELEASE_REASON );
 			} else {	// UA_UPDATE_CONDOR_STATE && !UA_HOLD_JOB
 				// If we have a
 				// job marked as HELD, it's because of an earlier hold
