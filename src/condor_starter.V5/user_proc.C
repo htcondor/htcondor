@@ -82,6 +82,20 @@ extern "C" {
 	int free_fs_blocks(char *filename);
 }
 
+/*
+  With bytestream checkpointing, there is no updating of checkpoints - the
+  user process does everything on its own.
+*/
+#if defined(OSF1)
+extern "C" {
+void
+_updateckpt( char *a, char *b, char *c )
+{
+	EXCEPT( "Should never get here" );
+}
+}
+#endif
+
 extern sigset_t	ChildSigMask;
 extern NameTable SigNames;
 extern char *ThisHost;
@@ -101,7 +115,7 @@ int connect_to_port( int );
 int send_file( char *src, char *dst, mode_t mode );
 int get_file( char *src, char *dst, mode_t mode );
 
-UserProc::UserProc( V3_PROC &p, char *orig, char *targ, uid_t u, uid_t g, int id, int soft ) :
+UserProc::UserProc( V3_PROC &p, char *exec, char *orig, char *targ, uid_t u, uid_t g, int id, int soft ) :
 	cluster( p.id.cluster ),
 	proc( p.id.proc),
 	uid( u ),
@@ -151,6 +165,9 @@ UserProc::UserProc( V3_PROC &p, char *orig, char *targ, uid_t u, uid_t g, int id
 	env = new char [ strlen(p.env) + 1 ];
 	strcpy( env, p.env );
 
+	a_out = new char [ strlen(exec) + 1 ];
+	strcpy( a_out, exec );
+
 	orig_ckpt = new char [ strlen(orig) + 1 ];
 	strcpy( orig_ckpt, orig );
 
@@ -178,14 +195,21 @@ UserProc::UserProc( V3_PROC &p, char *orig, char *targ, uid_t u, uid_t g, int id
 	strcpy( core_name, buf );
 
 		// Find out if user wants checkpointing
-#if DOES_CHECKPOINTING
-	ckpt_wanted = p.checkpoint;
-#else
+#if defined(NO_CKPT)
 	ckpt_wanted = FALSE;
 	dprintf(D_ALWAYS,
 			"This platform doesn't implement checkpointing yet\n"
 	);
+#else
+	ckpt_wanted = p.checkpoint;
 #endif
+
+		// Figure out if this is a restart from a checkpoint
+	if( strcmp(a_out,orig_ckpt) == MATCH ) {
+		restart = FALSE;
+	} else {
+		restart = TRUE;
+	}
 
 		// find out if user wants to limit size of coredumps
 	env_obj.add_string( env );	// set up environment as an object
@@ -198,7 +222,7 @@ UserProc::UserProc( V3_PROC &p, char *orig, char *targ, uid_t u, uid_t g, int id
 	}
 }
 
-UserProc::UserProc( V2_PROC &p, char *orig, char *targ, uid_t u, uid_t g ,int soft) :
+UserProc::UserProc( V2_PROC &p, char *exec, char *orig, char *targ, uid_t u, uid_t g ,int soft) :
 	cluster( p.id.cluster ),
 	proc( p.id.proc),
 	uid( u ),
@@ -247,6 +271,9 @@ UserProc::UserProc( V2_PROC &p, char *orig, char *targ, uid_t u, uid_t g ,int so
 
 	env = new char [ strlen(p.env) + 1 ];
 	strcpy( env, p.env );
+
+	a_out = new char [ strlen(exec) + 1 ];
+	strcpy( a_out, exec );
 
 	orig_ckpt = new char [ strlen(orig) + 1 ];
 	strcpy( orig_ckpt, orig );
@@ -404,8 +431,13 @@ UserProc::expand_exec_name( int &on_this_host )
 	char	*path_part;
 	char	*tmp;
 
+#if defined(OSF1)		// using bytestream checkpointing
+	if( strchr(a_out,':') ) {		// form is <hostname>:<path>
+		host_part = strtok( a_out, " \t:" );
+#else
 	if( strchr(orig_ckpt,':') ) {		// form is <hostname>:<path>
 		host_part = strtok( orig_ckpt, " \t:" );
+#endif
 		if( host_part == NULL ) {
 			EXCEPT( "Can't find host part" );
 		}
@@ -425,7 +457,11 @@ UserProc::expand_exec_name( int &on_this_host )
 		}
 	} else {	// form is <path>
 		on_this_host = FALSE;
+#if defined(OSF1)		// using bytestream checkpointing
+		path_part = a_out;
+#else
 		path_part = orig_ckpt;
+#endif
 	}
 
 		// expand macros in the pathname part
@@ -574,6 +610,7 @@ UserProc::fetch_ckpt()
 #define TAB '\t'
 #define SEMI ';'
 
+#if 0
 inline int
 UserProc::is_restart()
 {
@@ -583,6 +620,7 @@ UserProc::is_restart()
 		return TRUE;
 	}
 }
+#endif
 
 void
 UserProc::execute()
@@ -763,11 +801,26 @@ UserProc::execute()
 	close( pipe_fds[READ_END] );
 	cmd_fp = fdopen( pipe_fds[WRITE_END], "w" );
 	dprintf( D_ALWAYS, "cmd_fp = 0x%x\n", cmd_fp );
-	fprintf( cmd_fp, "iwd %s\n", iwd );
-	fprintf( cmd_fp, "fd 0 %s O_RDONLY\n", in );
-	fprintf( cmd_fp, "fd 1 %s O_WRONLY\n", out );
-	fprintf( cmd_fp, "fd 2 %s O_WRONLY\n", err );
-	fprintf( cmd_fp, "end\n" );
+
+	if( is_restart() ) {
+		fprintf( cmd_fp, "restart %s\n", target_ckpt );
+		dprintf( D_ALWAYS, "restart %s\n", target_ckpt );
+		fprintf( cmd_fp, "end\n" );
+		dprintf( D_ALWAYS, "end\n" );
+	} else {
+		fprintf( cmd_fp, "iwd %s\n", iwd );
+		dprintf( D_ALWAYS, "iwd %s\n", iwd );
+		fprintf( cmd_fp, "fd 0 %s O_RDONLY\n", in );
+		dprintf( D_ALWAYS, "fd 0 %s O_RDONLY\n", in );
+		fprintf( cmd_fp, "fd 1 %s O_WRONLY\n", out );
+		dprintf( D_ALWAYS, "fd 1 %s O_WRONLY\n", out );
+		fprintf( cmd_fp, "fd 2 %s O_WRONLY\n", err );
+		dprintf( D_ALWAYS, "fd 2 %s O_WRONLY\n", err );
+		fprintf( cmd_fp, "ckpt %s\n", target_ckpt );
+		dprintf( D_ALWAYS, "ckpt %s\n", target_ckpt );
+		fprintf( cmd_fp, "end\n" );
+		dprintf( D_ALWAYS, "end\n" );
+	}
 	fclose( cmd_fp );
 #endif
 	delete [] tmp;
@@ -833,7 +886,14 @@ UserProc::handle_termination( int exit_st )
 			"Process %d killed by signal %d\n", pid, WTERMSIG(exit_status)
 		);
 		switch( WTERMSIG(exit_status) ) {
-		  case SIGQUIT:				// exited for a checkpoint
+#if defined(OSF1)
+		  case SIGUSR2:			// synchronous ckpt exit - execute again
+			dprintf( D_ALWAYS, "Process eixted for checkpoint\n" );
+			state = CHECKPOINTING;
+			commit_cpu_time();
+			break;
+#endif
+		  case SIGQUIT:			// exited for a checkpoint
 			dprintf( D_ALWAYS, "Process eixted for checkpoint\n" );
 			state = CHECKPOINTING;
 			break;
@@ -1163,6 +1223,18 @@ UserProc::kill_forcibly()
 {
 	send_sig( SIGKILL );
 }
+
+#if defined(OSF1)
+void
+UserProc::make_runnable()
+{
+	if( state != CHECKPOINTING ) {
+		EXCEPT( "make_runnable() - state != CHECKPOINTING" );
+	}
+	state = RUNNABLE;
+	restart = TRUE;
+}
+#endif
 
 /*
   Create a new connection to the shadow using the existing remote
