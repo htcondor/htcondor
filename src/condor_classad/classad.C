@@ -15,6 +15,7 @@
 # include "condor_registration.h"
 # include "condor_expressions.h"
 # include "condor_attrlist.h"
+# include "condor_attributes.h"
 # include "condor_classad.h"
 
 static Registration regi;                   // this is the registration for 
@@ -70,18 +71,30 @@ ClassAd::ClassAd() : AttrList()
 {
 	myType = NULL;
 	targetType = NULL;
+	requirementExpr = NULL;
+	rankExpr = NULL;
+	SetRankExpr ("Rank = 0");
+	SetRequirement ("Requirement = TRUE");
 }
 
 ClassAd::ClassAd(class ProcObj* procObj) : AttrList(procObj)
 {
 	myType = NULL;
 	targetType = NULL;
+	requirementExpr = NULL;
+	 rankExpr = NULL;
+    SetRankExpr ("Rank = 0");
+	SetRequirement ("Requirement = TRUE");
 }
 
 ClassAd::ClassAd(const CONTEXT* context) : AttrList((CONTEXT *) context)
 {
 	myType = NULL;
 	targetType = NULL;
+	requirementExpr = NULL;
+    rankExpr = NULL;
+    SetRankExpr ("Rank = 0");
+	SetRequirement ("Requirement = TRUE");
 }
 
 ClassAd::ClassAd(FILE* f, char* d, int& i) : AttrList(f, d, i)
@@ -91,6 +104,10 @@ ClassAd::ClassAd(FILE* f, char* d, int& i) : AttrList(f, d, i)
 
 	myType = NULL;
 	targetType = NULL;
+	requirementExpr = NULL;
+    rankExpr = NULL;
+    SetRankExpr ("Rank = 0");
+	SetRequirement ("Requirement = TRUE");
 	val = new EvalResult;
     tree = Lookup("MyType");
 	if(!tree)
@@ -144,6 +161,10 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
 
 	myType = NULL;
 	targetType = NULL;
+	requirementExpr = NULL;
+    rankExpr = NULL;
+    SetRankExpr ("Rank = 0");
+	SetRequirement ("Requirement = TRUE");
     val = new EvalResult;
     if(val == NULL)
     {
@@ -203,6 +224,8 @@ ClassAd::ClassAd(const ClassAd& old) : AttrList((AttrList&) old)
 {
 	myType = NULL;
 	targetType = NULL;
+	SetRankExpr (old.rankExpr);
+	SetRequirement (old.requirementExpr);
     if(old.myType)
     {
         this->myType = new AdType(old.myType->name);
@@ -230,9 +253,16 @@ ClassAd::~ClassAd()
         exprList = exprList->next;
         delete tmp;
     }
+
+	// free storage used by the requirement expression
+	delete requirementExpr;
+
+	// free storage used by the rank expression
+	delete rankExpr;
+
     if(associatedList)
     {
-	associatedList->associatedAttrLists->Delete(this);
+		associatedList->associatedAttrLists->Delete(this);
     }
     if(myType)
     {
@@ -354,6 +384,101 @@ int ClassAd::GetTargetTypeNumber()
     {
         return targetType->number;
     }
+}
+
+
+// Requirement expression management functions
+int ClassAd::
+SetRequirement (char *expr)
+{
+	ExprTree *tree;
+	int result = Parse (expr, tree);
+	if (result != 0)
+	{
+		delete tree;
+		return -1;		
+	}
+	SetRequirement (tree);	
+	return 0;
+}
+
+void ClassAd::
+SetRequirement (ExprTree *tree)
+{
+	// the requirement expression is maintained both in requirementExpr *and*
+    // in the attribute list.  We have to make sure that a copy of the tree is
+	// made (i.e., reference counted) to prevent unexpected results.  Also,
+    // delete both copies to prevent leaks  --RR
+
+	if (requirementExpr != NULL)
+	{
+		Delete (ATTR_REQUIREMENT);
+		delete (requirementExpr);
+	}
+
+	requirementExpr = tree->Copy();
+	Insert (tree);
+}
+
+
+ExprTree *ClassAd::
+GetRequirement (void)
+{
+	return Lookup (ATTR_REQUIREMENT);
+}
+
+//
+// Implementation of rank expressions is same as the requirement --RR
+//
+int ClassAd::
+SetRankExpr (char *expr)
+{
+    ExprTree *tree;
+    int result = Parse (expr, tree);
+    if (result != 0)
+    {
+        delete tree;
+        return -1;     
+    }
+    SetRankExpr (tree); 
+    return 0;
+}
+
+void ClassAd::
+SetRankExpr (ExprTree *tree)
+{
+    if (rankExpr != NULL)
+    {
+        Delete (ATTR_RANK);
+        delete (rankExpr);
+    }
+
+    rankExpr = tree->Copy();
+    Insert (tree);
+}
+
+
+ExprTree *ClassAd::
+GetRankExpr (void)
+{
+    return Lookup (ATTR_RANK);
+}
+
+
+//
+// Set and get sequence numbers --- stored in the attrlist
+//
+void ClassAd::
+SetSequenceNumber (int num)
+{
+	seq = num;
+}
+
+
+int ClassAd::
+GetSequenceNumber (void)
+{
+	return seq;
 }
 
 //
