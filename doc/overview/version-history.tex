@@ -52,6 +52,14 @@ that user an older \Condor{pvmd}.
 \item The \Condor{shadow.pvm} should now correctly return core files
 when a task or \Condor{pvmd} crashes.
 
+\item This release fixes a memory error introduced in version
+6.1.15 that could crash the \Condor{shadow.pvm}.
+
+\item Some \Condor{pvmd} binaries in previous releases included
+debugging code we added that could cause the \Condor{pvmd} to crash.
+This release includes new \Condor{pvmd} binaries for all platforms
+with the problematic debugging code removed.
+
 \end{itemize}
 
 \noindent Known Bugs:
