@@ -1,0 +1,320 @@
+ClassAds are a flexible mechanism for representing the characteristics and
+constraints of machines and jobs in the Condor system.  ClassAds are used
+extensively in the Condor system to represent jobs, resources, submitters
+and other Condor daemons.  An understanding of this mechanism is required
+to harness the full flexibility of the Condor system.
+
+A ClassAd is is a set of uniquely named expressions.  Each named expression
+is called an \Term{attribute}.  Figure~\ref{ClassAd:example} shows an example 
+of a ClassAd with ten attributes.
+\begin{figure}[h]
+\begin{verbatim}
+MyType       = "Machine"
+TargetType   = "Job"
+Machine      = "froth.cs.wisc.edu"
+Arch         = "INTEL"
+OpSys        = "SOLARIS251"
+Disk         = 35882
+Memory       = 128
+KeyboardIdle = 173
+LoadAvg      = 0.1000
+Requirements = TARGET.Owner=="smith" || LoadAvg<=0.3 && KeyboardIdle>15*60
+\end{verbatim}
+\caption{\label{ClassAd:example}An example ClassAd}
+\end{figure}
+
+ClassAd expressions look very much like expressions in C, and are composed
+of literals and attribute references composed with operators.  The difference
+between ClassAd expressions and C expressions arise from the fact that ClassAd
+expressions operate in a much more dynamic environment.  For example, an
+expression from a machine's ClassAd may refer to an attribute in a job's 
+ClassAd, such as \verb+TARGET.Owner+ in the above example.  The value and type 
+of the attribute is not known until the expression is evaluated in an 
+environment which pairs a specific job ClassAd with the machine ClassAd.
+
+ClassAd expressions handle these uncertainties by defining all operators
+to be \Term{total} operators, which means that they have well defined
+behavior regardless of supplied operands.  This functionality is provided
+through two distinguished values, \texttt{UNDEFINED} and \texttt{ERROR},
+and defining all operators so that they can operate on all possible values
+in the ClassAd system.  For example, the multiplication operator which usually
+only operates on numbers, has a well defined behavior if supplied with values
+which are not meaningful to multiply.  Thus, the expression 
+\verb+10 * "A string"+ evaluates to the value \texttt{ERROR}.  Most operators
+are \Term{strict} with respect to \texttt{ERROR}, which means that they evaluate
+to \texttt{ERROR} if any of their operands are \texttt{ERROR}.  Similarly,
+most operators are strict with respect to \texttt{UNDEFINED}.
+
+\subsection{Syntax}
+ClassAd expressions are formed by composing literals, attribute references and 
+other sub-expressions with operators. 
+\subsubsection{Literals}
+Literals in the ClassAd language may be of integer, real, string, undefined or 
+error types.  The syntax of these literals is as follows:
+\begin{description}
+	\item[Integer]  A sequence of continuous digits (i.e., \verb@[0-9]@).
+		Additionally, the keywords \verb+TRUE+ and \verb+FALSE+ (case
+		insensitive) are syntactic representations of the integers 1 and 0 
+		respectively.
+
+	\item[Real] Two sequences of continuous digits separated by a period
+		(i.e., \verb@[0-9]+.[0-9]+@).
+
+	\item[String] A double quote character, followed by an list of characters
+		terminated by a double quote character.  A backslash character inside
+		the string causes the following character to be considered as part of
+		the string, irrespective of what that character is.
+
+	\item[Undefined] The keyword \texttt{UNDEFINED} (case insensitive)
+		represents the \texttt{UNDEFINED} value.
+
+	\item[Error] The keyword \texttt{ERROR} (case insensitive)
+		represents the \texttt{ERROR} value.
+\end{description}
+
+\subsubsection{Attributes}
+Every expression in a ClassAd is named by an \Term{attribute name}.  Together,
+the (name,expression) pair is called an \Term{attribute}.  An attributes may be
+referred to in other expressions through its attribute name.
+
+Attribute names are sequences of alphabetic characters, digits and underscores,
+and may not begin with a digit.  All characters in the name are significant,
+but case is \emph{not} significant.  Thus, \verb+Memory+, \verb+memory+ and 
+\verb+MeMoRy+ all refer to the same attribute.
+
+An \Term{attribute reference} consists of the name of the attribute being 
+referenced, and an optional \Term{scope resolution prefix}.  The three 
+prefixes that may be used are \texttt{MY.}, \texttt{TARGET.} and \texttt{ENV.}.
+The semantics of supplying a prefix are discussed in 
+Section~\ref{ClassAd:evaluation}.
+
+\subsubsection{Operators}
+The operators that may be used in ClassAd expressions are similar to those
+available in C.  The available operators and their relative precedence is shown 
+in figure~\ref{ClassAd:operator-fig}.
+\begin{figure}[h]
+\begin{verbatim}
+  -                    (high precedence)
+  *   / 
+  +   -
+  <   <=   >=   >
+  ==  !=  =?=  =!=
+  &&
+  ||                   (low precedence) 
+\end{verbatim}
+\caption{\label{ClassAd:operator-fig}Relative precedence of ClassAd expression
+operators}
+\end{figure}
+The operator with the highest precedence is the unary minus operator.  The
+only operators which are unfamiliar are the \verb+=?=+ and \verb+=!=+
+operators, which are discussed in Section~\ref{ClassAd:evaluation-meta}.
+
+\subsection{Evaluation Semantics}
+\label{ClassAd:evaluation}
+The ClassAd mechanism's primary purpose is for matching entities who supply
+constraints on candidate matches.  The mechanism is therefore defined to
+carry out expression evaluations in the context of two ClassAds which are
+testing each other for a potential match.  For example, the \Condor{negotiator}
+evaluates the \Attr{Requirements} expressions of machine and job ClassAds to
+test if they can be matched.  The semantics of evaluating such constraints
+is defined below.
+
+\subsubsection{Literals}
+Literals are self-evaluating, Thus, integer, string, real, undefined and
+error values evaluate to themselves.
+
+\subsubsection{Attribute References}
+Since the expression evaluation is being carried out in the context of two
+ClassAds, there is a potential for namespace ambiguities.  The following
+rules define the semantics of attribute references made by ad $A$ that is being 
+evaluated in a context with another ad $B$:
+\begin{enumerate}
+	\item If the reference is prefixed by a scope resolution prefix, 
+	\begin{itemize}
+		\item If the prefix is \texttt{MY.}, the attribute is looked up in 
+			ClassAd $A$.  If the named attribute does not exist in $A$, the
+			value of the reference is \texttt{UNDEFINED}.  Otherwise, the
+			value of the reference is the value of the expression bound to
+			the attribute name.
+
+		\item Similarly, if the prefix is \texttt{TARGET.}, the attribute is 
+			looked up in ClassAd $B$.  If the named attribute does not exist in 
+			$B$, the value of the reference is \texttt{UNDEFINED}.  Otherwise, 
+			the value of the reference is the value of the expression bound to
+			the attribute name.
+
+		\item Finally, if the prefix is \texttt{ENV.}, the attribute is
+			evaluated in the ``environment.''  Currently, the only attribute
+			of the environment is \Attr{CurrentTime}, which evaluates to the
+			integer value returned by the system call \texttt{time(2)}.
+	\end{itemize}
+
+	\item If the reference is not prefixed by a scope resolution prefix,
+	\begin{itemize}
+		\item If the attribute is defined in $A$, the value of the reference
+			is the value of the expression bound to the attribute name in $A$.
+		\item Otherwise, if the attribute is defined in $B$, the value of the
+			reference is the value of the expression bound to the attribute
+			name in $B$.
+		\item Otherwise, if the attribute is defined in the environment, the
+			value of the reference is the evaluated value in the environment.
+		\item Otherwise, the value of the reference is \texttt{UNDEFINED}.
+	\end{itemize}
+
+	\item Finally, if the reference refers to an expression that is itself in 
+	the process of being evaluated, there is a circular dependency in the 
+	evaluation.  The value of the reference is \texttt{ERROR}.
+\end{enumerate}
+
+\subsubsection{Operators}
+\label{ClassAd:evaluation-meta}
+All operators in the ClassAd language are \Term{total}, and thus have well
+defined behavior regardless of the supplied operands.  Furthermore, most
+operators are \Term{strict} with respect to \texttt{ERROR} and 
+\texttt{UNDEFINED}, and thus evaluate to \texttt{ERROR} (or \texttt{UNDEFINED})
+if either of their operands have these exceptional values.
+
+\begin{itemize}
+	\item\textbf{Arithmetic operators:}  
+	\begin{enumerate}
+		\item The operators \verb@*@, \verb@/@, \verb@+@ and \verb@-@ operate 
+		arithmetically only on integers and reals.
+
+		\item Arithmetic is carried out in the same type as both operands,
+		and type promotions from integers to reals are performed if one operand 
+		is an integer and the other real.
+
+		\item The operators are strict with respect to both \texttt{UNDEFINED} 
+		and \texttt{ERROR}.  
+
+		\item If either operand is not a numerical type, the value of the
+		operation is \texttt{ERROR}.
+	\end{enumerate}
+
+	\item\textbf{Comparison operators:}
+	\begin{enumerate}
+		\item The comparison operators \verb@==@, \verb@!=@, \verb@<=@, 
+		\verb@<@, \verb@>=@ and \verb@>@ operate on integers, reals and strings.
+
+		\item Comparisons are carried out in the same type as both operands,
+		and type promotions from integers to reals are performed if one operand
+		is a real, and the other an integer.  Strings may not be converted to
+		any other type, so comparing a string and an integer results in 
+		\texttt{ERROR}.
+
+		\item The operators \verb@==@, \verb@!=@, \verb@<=@, \verb@<@ and 
+		\verb@>=@ \verb@>@ are strict with respect to both \texttt{UNDEFINED} 
+		and \texttt{ERROR}.
+
+		\item In addition, the operators \verb@=?=@ and \verb@=!=@ behave
+		similar to \verb@==@ and \verb@!=@, but are not strict.  Semantically,
+		the \verb@=?=@ tests if its operands are ``identical,'' i.e., have
+		the same type and the same value.  For example, \verb@10 == UNDEFINED@ 
+		and \verb@UNDEFINED == UNDEFINED@ both evaluate to \texttt{UNDEFINED},
+		but \verb@10 =?= UNDEFINED@ and \verb@UNDEFINED =?= UNDEFINED@ 
+		evaluate to \texttt{FALSE} and \texttt{TRUE} respectively.  The
+		\verb@=!=@ operator test for the ``is not identical to'' condition.
+	\end{enumerate}
+
+	\item\textbf{Logical operators:}
+	\begin{enumerate}
+		\item The logical operators \verb@&&@ and \verb@||@ operate on 
+		integers and reals.  The zero value of these types are considered 
+		\texttt{FALSE} and non-zero values \texttt{TRUE}.
+
+		\item The operators are \emph{not} strict, and exploit the 
+		``don't care'' properties of the operators to squash \texttt{UNDEFINED}
+		and \texttt{ERROR} values when possible.  For example,
+		\verb@UNDEFINED && FALSE@ evaluates to \texttt{FALSE}, but	
+		\verb@UNDEFINED || FALSE@ evaluates to \texttt{UNDEFINED}.
+
+		\item Any string operand is equivalent to an \texttt{ERROR} operand.
+	\end{enumerate}
+\end{itemize}
+
+\subsection{ClassAds in the Condor System}
+The simplicity and flexibility of ClassAds is heavily exploited in the Condor
+system.  ClassAds are not only used to represent machines and jobs in the 
+Condor pool, but also other entities that exist in the pool such as 
+checkpoint servers, submitters of jobs and master daemons.  Since arbitrary
+expressions may be supplied and evaluated over these ads, users have a uniform
+and powerful mechanism to specify constraints over these ads.  These constraints
+may take the form of \Attr{Requirements} expressions in resource and job ads,
+or queries over other ads.
+
+\subsubsection{Requirements and Ranks}
+This is the mechanism by which users specify the constraints over machines
+and jobs respectively.  Requirements for machines are specified through
+configuration files, while requirements for jobs are specified through the
+submit command file.
+
+In both cases, the \Attr{Requirements} expression specifies the correctness
+criterion that the match must meet, and the \Attr{Rank} expression specifies
+the desirability of the match (where higher numbers mean better matches).
+For example, a job ad may contain the following expressions:
+\begin{verbatim}
+Requirements = Arch=="SUN4u" && OpSys == "SOLARIS251"
+Rank         = TARGET.Memory + TARGET.Mips
+\end{verbatim}
+In this case, the customer requires an UltraSparc computer running the Solaris 
+2.5.1 operating system.  Among all such computers, the customer prefers those
+with large physical memories and high MIPS ratings.  Since the \Attr{Rank} is
+a user specified metric, \emph{any} expression may be used to specify the
+perceived desirability of the match.  The \Condor{negotiator} runs algorithms
+to deliver the ``best'' resource (as defined by the \Attr{Rank} expression)
+while satisfying other criteria.
+
+Similarly, owners of resources may place constraints and preferences on 
+their machines.  For example,
+\begin{verbatim}
+    Friend        = Owner == "tannenba" || Owner == "wright"
+    ResearchGroup = Owner == "jbasney" || Owner == "raman"
+    Trusted       = Owner != "rival" && Owner != "riffraff"
+    Requirements  = Trusted && ( ResearchGroup || LoadAvg < 0.3 &&
+                         KeyboardIdle > 15*60 )
+    Rank          = Friend + ResearchGroup*10
+\end{verbatim}
+The above policy states that the computer will never run jobs owned by
+users ``rival'' and ``riffraff,'' while the computer will always run a 
+job submitted by members of the research group.  Furthermore, jobs
+submitted by friends are preferred to other foreign jobs, and jobs submitted
+by the research group are preferred to jobs submitted by friends. 
+
+\textbf{Note:}  Because of the dynamic nature of ClassAd expressions, there
+is no \emph{a priori} notion of an integer valued expression, a real valued
+expression, etc.  However, it is intuitive to think of the \Attr{Requirements}
+and \Attr{Rank} expressions as integer valued and real valued expressions
+respectively.  If the actual type of the expression is not of the expected 
+type, the value is assumed to be zero.
+
+\subsubsection{Querying with ClassAd Expressions}
+The flexibility of this system may also be used when querying ClassAds
+through the \Condor{status} and \Condor{q} tools which allow users to
+supply ClassAd constraint expressions from the command line.
+
+For example, to find all computers which have had their keyboards idle for 
+more than 20 minutes and have more than 100 MB of memory:
+\begin{verbatim}
+% condor_status -const 'KeyboardIdle > 20*60 && Memory > 100'
+
+Name       Arch     OpSys        State      Activity   LoadAv Mem  ActvtyTime
+
+amul.cs.wi SUN4u    SOLARIS251   Claimed    Busy       1.000  128   0+03:45:01
+aura.cs.wi SUN4u    SOLARIS251   Claimed    Busy       1.000  128   0+00:15:01
+balder.cs. INTEL    SOLARIS251   Claimed    Busy       1.000  1024  0+01:05:00
+beatrice.c INTEL    SOLARIS251   Claimed    Busy       1.000  128   0+01:30:02
+...
+...
+                     Machines Owner Claimed Unclaimed Matched Preempting
+
+    SUN4u/SOLARIS251        3     0       3         0       0          0
+    INTEL/SOLARIS251       21     0      21         0       0          0
+    SUN4x/SOLARIS251        3     0       3         0       0          0
+           SGI/IRIX6        1     0       0         1       0          0
+         INTEL/LINUX        1     0       1         0       0          0
+
+               Total       29     0      28         1       0          0
+\end{verbatim}
+
+The similar flexibility exists in querying job queues in the Condor system.
+
