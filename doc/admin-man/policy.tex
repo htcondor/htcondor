@@ -16,8 +16,8 @@ ask to be removed from the pool entirely) or the users of your pool
 (in which case they might stop using Condor).  
 
 Much of this section refers to ClassAd expressions.  You probably want
-to read through the appendix on ClassAd expressions before continuing
-with this. 
+to read through section~\ref{classad-ref} on ClassAd expressions before 
+continuing with this. 
 
 First, we describe in some detail how the \Condor{startd} works, to
 give you an idea of what is possible.  Then, we'll describe all the
@@ -212,9 +212,9 @@ startd.  However, by locally evaluating an expression, the startd only
 evaluates the expression against its own ClassAd.  If an expression
 cannot be locally evaluated (because it references other expressions
 that are only found in a request ad, such as \Attr{Owner} or
-\Attr{Imagesize}), the expression is (usually) undefined.  See the
-ClassAd appendix for specifics of how undefined terms are handled in
-ClassAd expression evaluation.
+\Attr{Imagesize}), the expression is (usually) undefined.  See 
+section~\ref{classad-ref} for specifics of how undefined terms are handled 
+in ClassAd expression evaluation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Owner State}
