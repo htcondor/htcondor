@@ -179,6 +179,7 @@ class Scheduler : public Service
 	int				negotiate(int, Stream *);
 	void			reschedule_negotiator(int, Stream *);
 	void			vacate_service(int, Stream *);
+	void			sendReschedule( void );
 
 	// job managing
 	int				abort_job(int, Stream *);
