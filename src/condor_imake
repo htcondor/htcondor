@@ -1,10 +1,29 @@
 #!/bin/sh
 
-if [ -d CVS ]; then
-	echo "You probably don't want to do this in your source repository."
-	echo "Try doing it in a build directory instead."
-	exit 1
-fi
+#if [ -d CVS ]; then
+#	echo "You probably don't want to do this in your source repository."
+#	echo "Try doing it in a build directory instead."
+#	exit 1
+#fi
+
+#
+# A function to find executables in the path.
+#
+
+check_path ()
+{
+        IFS=":"
+        for dir in $PATH
+        do
+                if [ -x $dir/$1 ]
+                then
+                        IFS=" "
+                        return 0
+                fi
+        done
+        IFS=" "
+        return 1
+}
 
 gss="no"
 if [ "$1" = "-DGSS_AUTHENTICATION" ]; then
@@ -41,20 +60,18 @@ LIBGCC=`gcc -print-libgcc-file-name`
 EgcsLib="-DLIB_GCC=$LIBGCC"
 
 # advertise Java only if we have all the necessary tools
-`which java 2>&1 > /dev/null`
-HasJava=$?
 
-`which javac 2>&1 > /dev/null`
-HasJavac=$?
+JavaFlags="-DHAS_JAVA=NO"
 
-`which jar 2>&1 > /dev/null`
-HasJar=$?
-
-if [ $HasJava -eq 0 -a $HasJavac -eq 0 -a $HasJar -eq 0 ]
+if check_path "java"
 then
-	JavaFlags="-DHAS_JAVA=YES"
-else
-	JavaFlags="-DHAS_JAVA=NO"
+	if check_path "javac"
+	then
+		if check_path "jar"
+		then
+			JavaFlags="-DHAS_JAVA=YES"
+		fi
+	fi
 fi
 
 if [ $os = "HP-UX" -a $osversion = "B.10.20" ] ; then
