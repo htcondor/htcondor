@@ -328,6 +328,7 @@ MASK_TYPE mask;
 }
 #endif
 
+#if defined(SYS_sigaction)
 int
 sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
 {
@@ -355,12 +356,13 @@ sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
 		}
 	}
 
-#if !defined(SYS_sigaction) || defined(OSF1) || defined(ULTRIX43)
+#if defined(OSF1) || defined(ULTRIX43)
 	return SIGACTION( sig, my_act, oact);
 #else
 	return syscall(SYS_sigaction, sig, my_act, oact);
 #endif
 }
+#endif
 
 
 
