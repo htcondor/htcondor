@@ -85,6 +85,12 @@ hostnames or addresses, the new flags are not required.
 \item Added \Opt{-pool} and \Opt{-addr} options to \Condor{rm},
 \Condor{hold} and \Condor{release}.
 
+\item When you start up the \Condor{master} or \Condor{schedd} as any
+user other than ``root'' or ``condor'' on Unix, or ``SYSTEM'' on NT,
+the daemon will have a default \Attr{Name} attribute that includes
+both the username of the user who the daemon is running as and the
+full hostname of the machine where it is running.
+
 \item Clarified our Linux platform support.  We now officially
 support the RedHat 5.2 and 6.x distributions, and although other Linux
 distributions (especially those with similar libc versions) may work,
