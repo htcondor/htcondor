@@ -91,7 +91,7 @@ int Buf::write(
 			if ( start_time + timeout > curr_time ) {
 				timer.tv_sec = (start_time + timeout) - curr_time;
 			} else {
-				dprintf(D_ALWAYS,"timeout reading in Buf::write()\n");
+				dprintf(D_ALWAYS,"timeout writing in Buf::write()\n");
 				return -1;
 			}
 			curr_time = 0;	// so we call time() next time around
