@@ -35,11 +35,11 @@
 static int hashFunction (const StatsHashKey &key, int numBuckets)
 {
     unsigned int bkt = 0;
-    int i;
+	const char *p;
 
-    for (i = 0; key.type[i]   ; bkt += key.type[i++]);
-    for (i = 0; key.name[i]   ; bkt += key.name[i++]);
-    for (i = 0; key.ip_addr[i]; bkt += key.ip_addr[i++]);
+    for (p = key.type.GetCStr(); p && *p; bkt += *p++);
+    for (p = key.name.GetCStr(); p && *p; bkt += *p++);
+    for (p = key.ip_addr.GetCStr(); p && *p; bkt += *p++);
 
     bkt %= numBuckets;
 
@@ -48,12 +48,11 @@ static int hashFunction (const StatsHashKey &key, int numBuckets)
 
 bool operator== (const StatsHashKey &lhs, const StatsHashKey &rhs)
 {
-    return (strcmp (lhs.name, rhs.name) == 0    &&
-			strcmp (lhs.ip_addr, rhs.ip_addr) == 0);
+    return ( ( lhs.name == rhs.name) && ( lhs.ip_addr == rhs.ip_addr) );
 }
 
 // utility function:  parse the string <aaa.bbb.ccc.ddd:pppp>
-void parseIpPort (char *ip_port_pair, char *ip_addr);
+void parseIpPort( const MyString &ip_port_pair, MyString &ip_addr );
 
 // Instantiate things
 template class ExtArray<CollectorClassStats *>;
@@ -486,7 +485,10 @@ CollectorDaemonStatsList::updateStats( const char *class_name,
 	if ( hashTable->lookup ( key, daemon ) == -1 ) {
 		daemon = new CollectorBaseStats( historySize );
 		hashTable->insert( key, daemon );
-		dprintf( D_ALWAYS, "stats: Inserting new hashent for %s\n", key.getstr() );
+
+		MyString	string;
+		key.getstr( string );
+		dprintf( D_ALWAYS, "stats: Inserting new hashent for %s\n", string.GetCStr() );
 	}
 
 	// Compute the size of the string we need..
@@ -571,11 +573,10 @@ CollectorDaemonStatsList::enable( bool enable )
 }
 
 // Get string of the hash key (for debugging)
-const char *
-StatsHashKey::getstr( void )
+void
+StatsHashKey::getstr( MyString &buf )
 {
-	sprintf( buf, "'%s':'%s':'%s'", type, name, ip_addr );
-	return buf;
+	buf.sprintf( "'%s':'%s':'%s'", type.GetCStr(), name.GetCStr(), ip_addr.GetCStr()  );
 }
 
 // Generate a hash key
@@ -587,7 +588,7 @@ CollectorDaemonStatsList::hashKey (StatsHashKey &key,
 	char	*string = NULL;
 
 	// Fill in pieces..
-	strcpy( key.type, class_name );
+	key.type = class_name;
 
 	// The 'name'
 	if (  ( ! ad->LookupString( ATTR_NAME, &string ) ) &&
@@ -595,14 +596,14 @@ CollectorDaemonStatsList::hashKey (StatsHashKey &key,
 		dprintf (D_ALWAYS, "Error: Neither 'Name' nor 'Machine' specified\n");
 		return false;
 	}
-	strncpy( key.name, string, sizeof( key.name ) );
-	key.name[sizeof(key.name)-1] = '\0';
+	key.name = string;
 	free( string );
 	string = NULL;
 
 	// get the IP and port of the daemon
 	if ( ad->LookupString (ATTR_MY_ADDRESS, &string ) ) {
-		parseIpPort( string, key.ip_addr );
+		MyString	myString( string );
+		parseIpPort( myString, key.ip_addr );
 		free( string );
 	} else {
 		return false;

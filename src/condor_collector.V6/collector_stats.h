@@ -92,13 +92,12 @@ class CollectorClassStatsList
 class StatsHashKey
 {
   public:
-	char type[32];
-    char name [64];
-    char ip_addr [16];
+	MyString type;
+    MyString name;
+    MyString ip_addr;
     friend bool operator== (const HashKey &, const HashKey &);
-	const char *getstr( void );
+	void getstr( MyString & );
   private:
-	char buf[128];
 };
 
 // Type for the hash tables ...
@@ -123,7 +122,7 @@ class CollectorDaemonStatsList
 
 	enum { STATS_TABLE_SIZE = 1024 };
 	StatsHashTable		*hashTable;
-	int					historySize;
+	int				historySize;
 	bool				enabled;
 };
 

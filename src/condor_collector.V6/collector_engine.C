@@ -296,24 +296,6 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 	return 1;
 }
 
-/*
-static bool printAdToFile(ClassAd& ad, char* JobHistoryFileName) {
-  FILE* LogFile=fopen(JobHistoryFileName,"a");
-  if ( !LogFile ) {
-    dprintf(D_ALWAYS,"ERROR saving to history file; cannot open %s\n",JobHistoryFileName);
-    return false;
-  }
-  if (!ad.fPrint(LogFile)) {
-    dprintf(D_ALWAYS, "ERROR in Scheduler::LogMatchEnd - failed to write clas ad to log file %s\n",JobHistoryFileName);
-    fclose(LogFile);
-    return false;
-  }
-  fprintf(LogFile,"***\n");   // separator
-  fclose(LogFile);
-  return true;
-}
-*/
-
 ClassAd *CollectorEngine::
 collect (int command, Sock *sock, sockaddr_in *from, int &insert)
 {
@@ -354,11 +336,11 @@ collect (int command, Sock *sock, sockaddr_in *from, int &insert)
 ClassAd *CollectorEngine::
 collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 {
-	ClassAd	*retVal;
-	ClassAd	*pvtAd;
+	ClassAd		*retVal;
+	ClassAd		*pvtAd;
 	int		insPvt;
-	HashKey hk;
-	char    hashString [64];
+	HashKey		hk;
+	HashString	hashString;
 	
 	// mux on command
 	switch (command)
@@ -371,7 +353,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			break;
 		}
 		checkMasterStatus (clientAd);
-		sprintf (hashString, "< %s , %s >", hk.name, hk.ip_addr);
+		hashString.Build( hk );
 		retVal=updateClassAd (StartdAds, "StartdAd     ", "Start",
 							  clientAd, hk, hashString, insert, from );
 
@@ -410,7 +392,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			break;
 		}
 		checkMasterStatus (clientAd);
-		sprintf (hashString, "< %s , %s >", hk.name, hk.ip_addr);
+		hashString.Build( hk );
 		retVal=updateClassAd (ScheddAds, "ScheddAd     ", "Schedd",
 							  clientAd, hk, hashString, insert, from );
 		break;
@@ -425,7 +407,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		}
 		// since submittor ads always follow a schedd ad, and a master check is
 		// performed for schedd ads, we don't need a master check in here
-		sprintf (hashString, "< %s , %s >", hk.name, hk.ip_addr);
+		hashString.Build( hk );
 		retVal=updateClassAd (SubmittorAds, "SubmittorAd  ", "Submittor",
 							  clientAd, hk, hashString, insert, from );
 		break;
@@ -440,7 +422,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		}
 		// since submittor ads always follow a schedd ad, and a master check is
 		// performed for schedd ads, we don't need a master check in here
-		sprintf (hashString, "< %s , %s >", hk.name, hk.ip_addr);
+		hashString.Build( hk );
 		retVal=updateClassAd (LicenseAds, "LicenseAd  ", "License",
 							  clientAd, hk, hashString, insert, from );
 		break;
@@ -452,7 +434,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			retVal = 0;
 			break;
 		}
-		sprintf (hashString, "< %s >", hk.name);
+		hashString.Build( hk );
 		retVal=updateClassAd (MasterAds, "MasterAd     ", "Master",
 							  clientAd, hk, hashString, insert, from );
 		break;
@@ -465,7 +447,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			break;
 		}
 		checkMasterStatus (clientAd);
-		sprintf (hashString, "< %s >", hk.name);
+		hashString.Build( hk );
 		retVal=updateClassAd (CkptServerAds, "CkptSrvrAd   ", "CkptSrvr",
 							  clientAd, hk, hashString, insert, from );
 		break;
@@ -477,7 +459,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			retVal = 0;
 			break;
 		}
-		sprintf (hashString, "< %s >", hk.name);
+		hashString.Build( hk );
 		retVal=updateClassAd (CollectorAds, "CollectorAd  ", "Collector",
 							  clientAd, hk, hashString, insert, from );
 		break;
@@ -489,7 +471,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			retVal = 0;
 			break;
 		}
-		sprintf (hashString, "< %s >", hk.name);
+		hashString.Build( hk );
 		retVal=updateClassAd (StorageAds, "StorageAd  ", "Storage",
 							  clientAd, hk, hashString, insert, from );
 		break;
@@ -629,21 +611,21 @@ updateClassAd (CollectorHashTable &hashTable,
 			   const char *label,
 			   ClassAd *ad, 
 			   HashKey &hk,
-			   char *hashString,
+			   const MyString &hashString,
 			   int  &insert,
 			   const sockaddr_in *from )
 {
-	ClassAd  *old_ad, *new_ad;
-	char     buf [40];
-	time_t   now;
+	ClassAd		*old_ad, *new_ad;
+	MyString	buf;
+	time_t		now;
 
 	(void) time (&now);
 	if (now == (time_t) -1)
 	{
 		EXCEPT ("Error reading system time!");
 	}	
-	sprintf (buf, "%s = %d", ATTR_LAST_HEARD_FROM, (int)now);
-	ad->Insert (buf);
+	buf.sprintf( "%s = %d", ATTR_LAST_HEARD_FROM, (int)now);
+	ad->Insert ( buf.GetCStr() );
 
 	// this time stamped ad is the new ad
 	new_ad = ad;
@@ -652,7 +634,7 @@ updateClassAd (CollectorHashTable &hashTable,
 	if ( hashTable.lookup (hk, old_ad) == -1)
     {	 	
 		// no ... new ad
-		dprintf (D_ALWAYS, "%s: Inserting ** %s\n", adType, hashString);
+		dprintf (D_ALWAYS, "%s: Inserting ** \"%s\"\n", adType, hashString.GetCStr() );
 
 		// Update statistics
 		collectorStats->update( label, NULL, new_ad );
@@ -669,13 +651,13 @@ updateClassAd (CollectorHashTable &hashTable,
 	else
     {
 		// yes ... old ad must be updated
-		dprintf (D_FULLDEBUG, "%s: Updating ... %s\n", adType, hashString);
+		dprintf (D_FULLDEBUG, "%s: Updating ... \"%s\"\n", adType, hashString.GetCStr() );
 
 		// check if it has special status (master ads)
 		if (old_ad < CollectorEngine::THRESHOLD)
 		{
-			dprintf (D_ALWAYS, "** Master %s rejuvenated from %s\n", hashString,
-								strStatus(old_ad));
+			dprintf (D_ALWAYS, "** Master %s rejuvenated from %s\n",
+					 hashString.GetCStr(), strStatus(old_ad));
 			if (hashTable.remove (hk)==-1 || hashTable.insert (hk, new_ad)==-1)
 			{
 				EXCEPT ("Error updating ad (probably out of memory)");
@@ -716,7 +698,7 @@ checkMasterStatus (ClassAd *ad)
 	if (MasterAds.lookup (hk, old) == -1)
 	{
 		// ad was not there ... enter status as RECENTLY_DOWN
-		dprintf(D_ALWAYS,"WARNING:  No master ad for < %s >\n",hk.name);
+		dprintf(D_ALWAYS,"WARNING:  No master ad for < %s >\n", hk.name.GetCStr() );
 		if (MasterAds.insert (hk, RECENTLY_DOWN) == -1)
 		{
 			EXCEPT ("Out of memory");
@@ -794,7 +776,7 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now,
 	int		 updateInterval;
 	HashKey  hk;
 	double   timeDiff;
-	char     hkString [128];
+	MyString	hkString;
 
 	hashTable.startIterations ();
 	while (hashTable.iterate (ad))
@@ -820,8 +802,8 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now,
 		{
 			// then remove it from the segregated table
 			(*makeKey) (hk, ad, NULL);
-			hk.sprint (hkString);
-			dprintf (D_ALWAYS,"\t\t**** Removing stale ad: %s\n", hkString);
+			hk.sprint( hkString );
+			dprintf (D_ALWAYS,"\t\t**** Removing stale ad: \"%s\"\n", hkString.GetCStr() );
 			if (hashTable.remove (hk) == -1)
 			{
 				dprintf (D_ALWAYS, "\t\tError while removing ad\n");
@@ -837,13 +819,13 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now,
 int CollectorEngine::
 masterCheck ()
 {
-	ClassAd  *ad;
-	ClassAd	 *nextStatus;
-	HashKey  hk;
-	char     hkString [128];
-	char	 buffer [128];
-	FILE* 	 mailer = NULL;
-	int		 more;
+	ClassAd		*ad;
+	ClassAd		*nextStatus;
+	HashKey		hk;
+	MyString	hkString;
+	MyString	buffer;
+	FILE*		mailer = NULL;
+	int		more;
 
 	char *tmp = param("COLLECTOR_PERFORM_MASTERCHECK");
 	bool do_check = true;	// default should be to do the check
@@ -883,7 +865,7 @@ masterCheck ()
 
 		// if the master has been dead for a while and children are dead ...
 		if (ad == LONG_GONE) {
-			dprintf (D_ALWAYS,"\tMaster %s: purging dead entry\n", hkString);
+			dprintf (D_ALWAYS,"\tMaster %s: purging dead entry\n", hkString.GetCStr() );
 			if (MasterAds.remove (hk) == -1) 
 			{
 				dprintf (D_ALWAYS, "\tError while removing LONG_GONE ad\n");
@@ -895,23 +877,23 @@ masterCheck ()
 		// need to report for recently down masters (children still alive)
 		if (ad == RECENTLY_DOWN) {
 			if (mailer == NULL) {
-				sprintf( buffer, "Collector (%s): Dead condor_masters", 
-						 my_full_hostname() );
-				if ((mailer = email_admin_open(buffer)) == NULL) {
+				buffer.sprintf( "Collector (%s): Dead condor_masters", 
+								my_full_hostname() );
+				if ((mailer = email_admin_open(buffer.GetCStr())) == NULL) {
 					dprintf (D_ALWAYS, "Error sending email --- aborting\n");
 					return FALSE;
 				}
 				fprintf (mailer, "The following masters are dead, leaving"
 							" orphaned daemons\n\n");
 			}
-			fprintf (mailer, "\t\t%s\n", hkString);
-			dprintf (D_ALWAYS, "\tMaster %s: recently went down\n", hkString);
+			fprintf (mailer, "\t\t%s\n", hkString.GetCStr() );
+			dprintf (D_ALWAYS, "\tMaster %s: recently went down\n", hkString.GetCStr() );
 			nextStatus = DONE_REPORTING;
 		}	
 		else 
 		// the master is dead, but we've already sent mail about it
 		if (ad == DONE_REPORTING) {
-			dprintf(D_ALWAYS,"\tMaster %s: death already reported\n",hkString);
+			dprintf(D_ALWAYS,"\tMaster %s: death already reported\n",hkString.GetCStr() );
 			nextStatus = LONG_GONE;
 		}
 
