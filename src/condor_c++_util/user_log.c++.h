@@ -217,7 +217,7 @@ class ReadUserLog
 		attempt to figure this out on its own.
 		@param is_xml should be true if we have a XML log file, false otherwise
 	*/
-	void setIsXMLLog(bool is_xml);
+	void setIsXMLLog( bool val );
 
 	/** Determine whether this ReadUserLog thinks its log file is XML.
 		@return true if XML, false otherwise

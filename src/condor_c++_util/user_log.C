@@ -402,6 +402,7 @@ EndUserLogBlock( LP *lp )
 ReadUserLog::
 ReadUserLog (const char * filename)
 {
+	is_xml = false;
     if (!initialize(filename))
 		dprintf(D_ALWAYS, "Failed to open %s", filename);
 }
@@ -789,18 +790,18 @@ void ReadUserLog::
 Lock()
 {
 	if ( !is_locked ) {
-		lock->obtain( WRITE_LOCK );
-		is_locked = true;
+		is_locked = lock->obtain( WRITE_LOCK );
 	}
+	ASSERT( is_locked );
 }
 
 void ReadUserLog::
 Unlock()
 {
 	if ( is_locked ) {
-		lock->release();
-		is_locked = false;
+		is_locked = ! lock->release();
 	}
+	ASSERT( !is_locked );
 }
 
 bool ReadUserLog::
@@ -821,9 +822,9 @@ void ReadUserLog::outputFilePos(const char *pszWhereAmI)
 }
 
 void ReadUserLog::
-setIsXMLLog(bool is_xml)
+setIsXMLLog( bool val )
 {
-	this->is_xml = is_xml;
+	is_xml = val;
 }
 
 bool ReadUserLog::
