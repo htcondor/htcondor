@@ -83,6 +83,7 @@ public:
 	void 					invalidateAllCache();
 	bool  					invalidateKey(const char * keyid);
 	bool  					invalidateHost(const char * sin);
+    void                    invalidateExpiredCache();
 
 	ClassAd *				CreateSecurityPolicyAd(const char *auth_level, bool otherside_can_neg = true);
 	ClassAd * 				ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad);
