@@ -593,7 +593,7 @@ init_params()
 	ad.Insert(tree);
 	delete tmp;
 	ad.SetMyTypeName("MasterAd");
-	ad.SetTargetTypeName("");
+	ad.SetTargetTypeName("(void)");
 
 	if( param("MASTER_DEBUG") ) {
 		if( boolean("MASTER_DEBUG","Foreground") ) {
