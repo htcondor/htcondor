@@ -50,6 +50,7 @@ public:
 	void AltHeap(RAW_ADDR loc) { alt_heap = loc; }
 	void Display();
 	int Magic() { return magic; }
+	void ResetMagic();
 private:
 	int		magic;
 	int		n_segs;
@@ -67,6 +68,7 @@ public:
 	char *GetName() { return name; }
 	RAW_ADDR GetLoc() { return core_loc; }
 	long GetLen() { return len; }
+	void MSync();
 	void Display();
 private:
 	char		name[14];
@@ -96,6 +98,7 @@ public:
 	void SetFd( int fd );
 	void SetFileName( char *ckpt_name );
 	void SetMode( int syscall_mode );
+	void MSync();
 #if defined(COMPRESS_CKPT)
 	void *FindAltHeap();
 #endif
