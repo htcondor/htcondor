@@ -1,5 +1,10 @@
 #!/bin/sh
 
+gss="no"
+if [ "$1" = "-DGSS_AUTHENTICATION" ]; then
+	gss="Y"
+	shift;
+fi
 
 if [ $# -gt 0 ]; then
 	imake -s Makefile $* -I../config -I../../config
@@ -56,8 +61,10 @@ elif [ $os = "IRIX" ] ; then
 fi
 
 GssAuth=""
-if [ -f /p/condor/workspaces/globus/lib/libglobus_gss.a ] ; then
-	GssAuth="-DGSS_AUTHENTICATION"
+if [ $gss = "Y" ]; then
+	if [ -f /p/condor/workspaces/globus/lib/libglobus_gss.a ] ; then
+		GssAuth="-DGSS_AUTHENTICATION"
+	fi
 fi
 
 imake -s Makefile $ArchFlag $Opsys $Other $GssAuth -I../config -I../../config
