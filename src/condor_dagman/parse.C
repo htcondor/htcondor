@@ -140,7 +140,7 @@ bool parse (char *filename, Dag *dag) {
 		}
 			
 		// Handle a Retry spec
-		// Example Syntax is:  Retry JobName 3
+		// Example Syntax is:  Retry JobName 3 UNLESS-EXIT 42
 		else if( strcasecmp( token, "Retry" ) == 0 ) {
 			parsed_line_successfully = parse_retry(dag, filename, lineNumber);
 		} 
@@ -443,7 +443,7 @@ parse_parent(
 //-----------------------------------------------------------------------------
 // 
 // Function: parse_retry
-// Purpose:  Parse a line of the format "Retry jobname num-times"
+// Purpose:  Parse a line of the format "Retry jobname num-times [UNLESS-EXIT 42]"
 // 
 //-----------------------------------------------------------------------------
 static bool 
@@ -452,7 +452,7 @@ parse_retry(
 	char *filename, 
 	int  lineNumber)
 {
-	const char *example = "Retry JobName 3";
+	const char *example = "Retry JobName 3 [UNLESS-EXIT 42]";
 	
 	char *jobName = strtok( NULL, DELIMITERS );
 	if( jobName == NULL ) {
@@ -489,6 +489,38 @@ parse_retry(
 		exampleSyntax( example );
 		return false;
 	}
+
+    // Check for optional retry-abort value
+    s = strtok( NULL, DELIMITERS );
+    if ( s != NULL ) {
+        if ( strcasecmp ( s, "UNLESS-EXIT" ) != 0 ) {
+            debug_printf( DEBUG_NORMAL, "%s (line %d) Invalid retry option: %s\n", 
+                          filename, lineNumber, s);
+            exampleSyntax( example );
+            return false;
+        }
+        else {
+            s = strtok( NULL, DELIMITERS );
+            if ( s == NULL ) {
+                debug_printf( DEBUG_NORMAL, "%s (line %d) Missing parameter for UNLESS-EXIT\n",
+                              filename, lineNumber);
+                exampleSyntax( example );
+                return false;
+            } 
+            char *unless_exit_end;
+            int unless_exit = strtol(s, &unless_exit_end, 10);
+            if (*unless_exit_end != 0) {
+                debug_printf( DEBUG_NORMAL, "%s (line %d) Bad parameter for UNLESS-EXIT: %s\n",
+                              filename, lineNumber, s);
+                exampleSyntax( example );
+                return false;
+            }
+            job->have_retry_abort_val = true;
+            job->retry_abort_val = unless_exit;
+            debug_printf( DEBUG_QUIET, "Retry Abort Value for %s is %d\n", 
+                          jobName, job->retry_abort_val );
+        }
+    }
 	
 	return true;
 }
