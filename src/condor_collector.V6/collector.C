@@ -806,7 +806,7 @@ void CollectorDaemon::Config()
 			delete updateCollector;
 			updateCollector = NULL;
         }
-		int collector_port = param_get_collector_port();
+		int collector_port = param_get_condor_developers_collector_port();
 		updateCollector = new DCCollector( tmp, collector_port, 
 										   DCCollector::UDP );
 		if( UpdateTimerId < 0 ) {
