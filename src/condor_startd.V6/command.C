@@ -14,6 +14,12 @@ command_handler( Service*, int cmd, Stream* stream )
 		return FALSE;
 	}
 
+	if( ! stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "Can't read end_of_message\n" );
+		free( cap );
+		return FALSE;
+	}
+
 	rip = resmgr->get_by_cur_cap( cap );
 
 	if( !rip ) {
@@ -38,9 +44,6 @@ command_handler( Service*, int cmd, Stream* stream )
 	case RELEASE_CLAIM:
 		rval = release_claim( rip );
 		break;
-	case ACTIVATE_CLAIM:
-		rval = activate_claim( rip, stream );
-		break;
 	case DEACTIVATE_CLAIM:
 		rval = deactivate_claim( rip );
 		break;
@@ -55,6 +58,43 @@ command_handler( Service*, int cmd, Stream* stream )
 		break;
 	}
 	return rval;
+}
+
+
+int
+command_activate_claim( Service*, int, Stream* stream )
+{
+	char* cap = NULL;
+	Resource* rip;
+
+	if( ! stream->code(cap) ) {
+		dprintf( D_ALWAYS, "Can't read capability\n" );
+		free( cap );
+		return FALSE;
+	}
+
+	rip = resmgr->get_by_cur_cap( cap );
+
+	if( !rip ) {
+		dprintf( D_ALWAYS, 
+				 "Error: can't find resource with capability (%s)\n",
+				 cap );
+		free( cap );
+		stream->end_of_message();
+		reply( stream, NOT_OK );
+		return FALSE;
+	}
+	free( cap );
+
+	State s = rip->state();
+	if( s != claimed_state ) {
+		log_ignore( ACTIVATE_CLAIM, s );
+		stream->end_of_message();
+		reply( stream, NOT_OK );
+		return FALSE;
+	}
+
+	return activate_claim( rip, stream );
 }
 
 
@@ -95,6 +135,18 @@ command_give_state( Service*, int, Stream* stream )
 	stream->code( tmp );
 	stream->end_of_message();
 	free( tmp );
+	return TRUE;
+}
+
+
+int
+command_give_classad( Service*, int, Stream* stream ) 
+{
+	ClassAd* cp = resmgr->rip()->r_classad;
+	dprintf( D_FULLDEBUG, "command_give_classad() called.\n" );
+	stream->encode();
+	cp->put( *stream );
+	stream->end_of_message();
 	return TRUE;
 }
 
