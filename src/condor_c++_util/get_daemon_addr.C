@@ -286,4 +286,16 @@ get_collector_addr(const char* name)
 }
 
 
+int
+is_valid_sinful( char *sinful )
+{
+	char* tmp;
+	if( !sinful ) return FALSE;
+	if( !(sinful[0] == '<') ) return FALSE;
+	if( !(tmp = strchr(sinful, ':')) ) return FALSE;
+	if( !(tmp = strrchr(sinful, '>')) ) return FALSE;
+	return TRUE;
+}
+
+
 } /* extern "C" */
