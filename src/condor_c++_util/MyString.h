@@ -142,8 +142,10 @@ public:
   }
 
   char& operator[](int pos) {
-	static char dummy='\0';
-	if (pos>=Len || pos<0) return dummy;
+	if (pos>=Len || pos<0) {
+		dummy = '\0';
+		return dummy;
+	}	
 	return Data[pos];
   }
 
@@ -211,6 +213,7 @@ public:
 private:
 
   char* Data;	
+  char dummy;
   int Len;
   int capacity;
   
