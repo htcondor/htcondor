@@ -327,7 +327,7 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 	ClassAd		*offer;
 
 	// 0.  connect to the schedd --- ask the cache for a connection
-	if (!(sock = sockCache.getReliSock(scheddAddr, NegotiatorTimeout)))
+	if (!sockCache.getReliSock((Sock *&)sock, scheddAddr, NegotiatorTimeout))
 	{
 		dprintf (D_ALWAYS, "\t\tFailed to connect to %s\n", scheddAddr);
 		return MM_ERROR;
