@@ -58,6 +58,8 @@ use Archive::Tar;
 
 # These are the modules you actually want to build.
 @modules = ( "condor", "smp_startd", "view_server", "ckpt_server", "pvm" );
+#@modules = ( "smp_startd", "view_server", "ckpt_server", "pvm" );
+#@modules = ( "condor" );
 
 # List any special files, other than README, DOC, INSTALL, and
 # LICENSE.TXT (which are included in all releases) that you want in
@@ -118,7 +120,7 @@ $target="/p/condor/public/binaries";
   "sgi_62"        => "irix6",
   "sgi_63"        => "irix6",
   "sgi_64"        => "irix6",
-  "sgi_65"        => "irix6",
+  "sgi_65"        => "irix65",
   "hp_ux102"      => "hpux10.20"
 );
 
@@ -221,6 +223,9 @@ foreach $module ( @modules ) {
 	}
 	`cp -r $src $skel/$release/$dest`;
     }
+    `rm -rf $skel/$release/CVS`;
+    `rm -rf $skel/$release/*/CVS`;
+    `rm -rf $skel/$release/*/*/CVS`;
 
     print "done.\n";
 
@@ -250,8 +255,7 @@ foreach $module ( @modules ) {
 	# Create full archive 
 	chdir( $skel ) || die "Can't chdir to $skel: $!\n";
 	print "Creating full archive: $release.tar\n";
-	$foo = `tar -cvf $release.tar $release`;
-	print "Tar output: $foo\n";
+	print `tar -cvf $release.tar $release`;
 	chdir( ".." ) || die "Can't chdir to ..: $!\n";
 
 	# Delete the release.tar we're now done with.
