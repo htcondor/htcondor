@@ -370,7 +370,11 @@ main( int argc, char *argv[] )
 	//end of authentication setup
 
 	// connect to the schedd
+#if defined(GSS_AUTHENTICATION)
 	if (ConnectQ(ScheddAddr, 1 ) == 0) { //mju
+#else
+	if (ConnectQ(ScheddAddr, 0 ) == 0) { //mju
+#endif
 		if( ScheddName ) {
 			fprintf( stderr, "ERROR: Failed to connect to queue manager %s\n",
 					 ScheddName );
