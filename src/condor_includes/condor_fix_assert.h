@@ -25,12 +25,31 @@ Get rid of __GNUC__, otherwise gcc will assume its own library when
 generating code for asserts.  This will complicate linking of
 non gcc programs (FORTRAN) - especially at sites where gcc isn't
 installed!
+
+Please note the way of doing things like this... what does NOT
+work:
+
+#define SAVE_FOO FOO
+#undef FOO
+
+...
+
+#define FOO SAVE_FOO
+
+so, please.... don't use it... okay?
+
 */
+#ifndef __CONDOR_FIX_ASSERT_H
+#define __CONDOR_FIX_ASSERT_H
 
 #if !defined(LINUX)
 
 #if defined(__GNUC__)
-#	define CONDOR_HAD_GNUC __GNUC__
+#if __GNUC__ == 2
+#	define CONDOR_HAD_GNUC 2
+#else
+#	error "Please fix the definition of CONDOR_HAD_GNUC."
+#endif
 #	undef __GNUC__
 #endif
 
@@ -45,5 +64,8 @@ installed!
 #if defined(CONDOR_HAD_GNUC)
 #	define __GNUC__ CONDOR_HAD_GNUC
 #endif
+
+
+#endif /* CONDOR_FIX_ASSERT_H */
 
 
