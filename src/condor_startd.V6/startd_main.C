@@ -266,8 +266,16 @@ main_init( int, char* argv[] )
 								  "VACATE_ALL_CLAIMS",
 								  (CommandHandler)command_vacate_all,
 								  "command_vacate_all", 0, OWNER );
+	daemonCore->Register_Command( VACATE_ALL_FAST,
+								  "VACATE_ALL_FAST",
+								  (CommandHandler)command_vacate_all,
+								  "command_vacate_all", 0, OWNER );
 	daemonCore->Register_Command( VACATE_CLAIM,
 								  "VACATE_CLAIM",
+								  (CommandHandler)command_name_handler,
+								  "command_name_handler", 0, OWNER );
+	daemonCore->Register_Command( VACATE_CLAIM_FAST,
+								  "VACATE_CLAIM_FAST",
 								  (CommandHandler)command_name_handler,
 								  "command_name_handler", 0, OWNER );
 
