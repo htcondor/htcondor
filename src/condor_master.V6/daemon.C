@@ -33,6 +33,7 @@
 #include "condor_email.h"
 #include "condor_environ.h"
 #include "string_list.h"
+#include "sig_name.h"
 
 // these are defined in master.C
 extern int		RestartsPerHour;
@@ -55,8 +56,6 @@ extern void		tail_log( FILE*, char*, int );
 extern int		run_preen(Service*);
 
 int		hourly_housekeeping(void);
-
-extern "C" 	char	*SigNames[];
 
 // to add a new process as a condor daemon, just add one line in 
 // the structure below. The first elemnt is the string that is 
@@ -706,12 +705,18 @@ daemon::Kill( int sig )
 	else
 		status = 1;
 
+	const char* sig_name = signalName( sig );
+	char buf[32];
+	if( ! sig_name ) {
+		sprintf( buf, "signal %d", sig );
+		sig_name = buf;
+	}
 	if( status < 0 ) {
 		dprintf( D_ALWAYS, "ERROR: failed to send %s to pid %d\n",
-				 SigNames[sig], pid );
+				 sig_name, pid );
 	} else {
 		dprintf( D_ALWAYS, "Sent %s to %s (pid %d)\n",
-				 SigNames[sig], name_in_config_file, pid );
+				 sig_name, name_in_config_file, pid );
 	}
 }
 
