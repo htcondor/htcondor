@@ -286,7 +286,7 @@ LOCK		= $(LOG)
 ##  it's set to "False", we set the limit at 0 (which means that no
 ##  core files are even created).  Core files greatly help the Condor
 ##  developers debug any problems you might be having.
-#CREATE_CORE_FILES	= True
+CREATE_CORE_FILES	= True
 
 
 ##--------------------------------------------------------------------
