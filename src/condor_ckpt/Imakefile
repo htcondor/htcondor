@@ -32,19 +32,31 @@ ASSEMBLER_OBJ = _longjmp.AIX32.o
 UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o
 SRC =	image.C machdep.$(OS).C file_state.C tmp_stack.C syscall_mode.c \
 		local_startup.c fake_remote_syscall.c
+
+#if DOES_CHECKPOINTING
 OBJ =	image.o machdep.$(OS).o file_state.o tmp_stack.o syscall_mode.o \
 		local_startup.o fake_remote_syscall.o $(ASSEMBLER_OBJ) $(UTIL_OBJ)
+#else
+OBJ =	syscall_mode.o
+#endif
 
+#if DOES_CHECKPOINTING
+	all_target(machdep_test libckpt.a c_plus_alloc.o)
+	library_target(libckpt.a,$(OBJ))
+	release_library(libckpt.a,$(RELEASE_DIR)/lib)
+	release_target(c_plus_alloc.o,$(RELEASE_DIR)/lib,OBJECT_MODE)
+#else
+	all_target(syscall_mode.o)
+release:: all
+#endif
 
-all_target(machdep_test libckpt.a c_plus_alloc.o)
 depend_target($(SRC) )
 
-program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o,,no_release)
+program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o, )
 
-library_target(libckpt.a,$(OBJ),release)
 
 IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib,$(UTIL_OBJ))
 
-release:: c_plus_alloc.o
-	cp c_plus_alloc.o $(RELEASE_DIR)/lib/c_plus_alloc.o
+clean::
+	rm -f c_plus_alloc.o syscall_mode.o
