@@ -899,16 +899,24 @@ DaemonCore::ReInit()
 int
 DaemonCore::Verify(DCpermission perm, const struct sockaddr_in *sin )
 {
+	/*
+	 * Be Warned:  careful about parameter "sin" being NULL.  It could be, in
+	 * which case we should return FALSE (unless perm is ALLOW)
+	 *
+	 */
+
 	switch (perm) {
 	case ALLOW:
 		return TRUE;
 		break;
 
 	case NEGOTIATOR:
-		if ( memcmp(&negotiator_sin_addr,&(sin->sin_addr),sizeof(negotiator_sin_addr)) == 0 )
+		if ( sin && 
+		  memcmp(&negotiator_sin_addr,&(sin->sin_addr),sizeof(negotiator_sin_addr)) == 0 ) {
 			return TRUE;
-		else
+		} else {
 			return FALSE;
+		}
 		break;
 
 	case IMMEDIATE_FAMILY:
@@ -917,7 +925,11 @@ DaemonCore::Verify(DCpermission perm, const struct sockaddr_in *sin )
 		break;
 
 	default:
-		return ipverify.Verify(perm,sin);
+		if ( sin ) {
+			return ipverify.Verify(perm,sin);
+		} else {
+			return FALSE;
+		}
 		break;
 	}
 
