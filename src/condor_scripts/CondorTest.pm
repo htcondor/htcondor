@@ -138,7 +138,7 @@ sub RunTest
     $cluster = Condor::Submit( $submit_file );
     
     # if condor_submit failed for some reason return an error
-    return -1 if $cluster == 0;
+    return 0 if $cluster == 0;
 
     # this is kludgey
     $Condor::submit_info{'handle'} = $handle;
