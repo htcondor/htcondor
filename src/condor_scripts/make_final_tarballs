@@ -49,23 +49,33 @@ while( $_ = shift( @ARGV ) ) {
 
 # Now, grab the version of this release.
 if( $versarg ) {
-    $_ = $versarg;
+    $vers_string = $versarg;
 } else {
-    # If we weren't told on the command line, try to run ident
-    # directly on the condor_master binary.
+    # If we weren't told on the command line, use the condor_master
+    # binary with -version to find the version string.
     if( -f "strip_dir/sbin/condor_master" ) {
-        $_=`strip_dir/sbin/condor_master -version`;
+        $vers_string=`strip_dir/sbin/condor_master -version`;
     } elsif ( -f "static_dir/sbin/condor_master" ) {
-        $_=`static_dir/sbin/condor_master -version`;
+        $vers_string=`./static_dir/sbin/condor_master -version`;
     } else {
-	die "ERROR: can't find a condor_master, and no -v specified";
+	die "ERROR: can't find a condor_version, and no -v specified";
+    }
+    if( ! $vers_string ) {
+	die "ERROR: Can't find version string, and no -v specified";
     }
 }
-/.*\$CondorVersion: (\d*)\.(\d*)\.(\d*).*/;
-$majorv = $1;
-$minorv = $2;
-$releasev = $3;
+
+$vers_string =~ /(.*\$CondorVersion: )?(\d+)\.(\d+)\.(\d+).*/;
+$majorv = $2;
+$minorv = $3;
+$releasev = $4;
 $version = "$majorv.$minorv.$releasev";
+
+if( $version =~ /(\d+)\.(\d+)\.(\d+)/ ) {
+    print "Making final tarballs for Condor Version $version\n";
+} else {
+    die "ERROR: Can't parse the version string!";
+}
 
 # Things you should probably leave alone:
 require 5.002;
@@ -75,7 +85,7 @@ require 5.002;
 ######################################################################
 
 # These are the modules you actually want to build.
-@modules = ( "condor", "ckpt_server", "pvm", "sdk","eventd", "dagman", "condor-g" );
+@modules = ( "condor", "ckpt_server", "pvm", "sdk","eventd", "dagman" );
 #@modules = ( "smp_startd", "ckpt_server", "pvm", "sdk" );
 #@modules = ( "condor", "ckpt_server", "pvm", "mpi" );
 #@modules = ( "ckpt_server", "pvm" );
@@ -110,7 +120,6 @@ require 5.002;
   "pvm"           => "PVM contrib module",
   "ckpt_server"   => "Checkpoint Server contrib module",
   "mpi"           => "MPI contrib module",
-  "condor-g"      => "Condor-G technology",
   "sdk"           => "software developer's kit",
   "eventd"        => "Condor Eventd contrib module"
 );	   

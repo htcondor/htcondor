@@ -167,10 +167,10 @@ main( int argc, char* argv[] )
 					addr = strdup( argv[i] );
 				} else {
 					fprintf( stderr, "%s: invalid address %s\n"
-							 "Address must be of the form \"<111.222.333.444:555>\n"
-							 "   where 111.222.333.444 is the ip address and"
-							 "555 is the port\n  you wish to connect to (the"
-							 "punctuation is important.\n", MyName, argv[i] );
+						 "Address must be of the form \"<111.222.333.444:555>\n"
+						 "   where 111.222.333.444 is the ip address and 555 is the port\n"
+						 "   you wish to connect to (the punctuation is important).\n", 
+						 MyName, argv[i] );
 					my_exit( 1 );
 				}
 			} else {

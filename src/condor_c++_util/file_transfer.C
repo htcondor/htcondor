@@ -921,7 +921,7 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 
 	transobject->Info.duration = time(NULL)-transobject->TransferStart;
 	transobject->Info.in_progress = false;
-	if (WEXITSTATUS(exit_status) > 0) {
+	if (WEXITSTATUS(exit_status) != 0) {
 		dprintf(D_ALWAYS, "File transfer completed successfully.\n");
 		transobject->Info.success = true;
 	} else {

@@ -597,7 +597,16 @@ dprintf(D_FULLDEBUG,"***Trying job type %s\n",job_type->Name);
 							commit_transaction = false;
 							goto contact_schedd_disconnect;
 						}
-						ASSERT(next_ad);
+//						ASSERT(next_ad);
+						if ( next_ad == NULL ) {
+							// We may get here if it was not possible to expand
+							// one of the $$() expressions.  We don't want to
+							// roll back the transaction and blow away the
+							// hold that the schedd just put on the job, so
+							// simply skip over this ad.
+							dprintf(D_ALWAYS,"Failed to get expanded job ClassAd from Schedd for %d.%d.  errno=%d\n",procID.cluster,procID.proc,errno);
+							goto contact_schedd_next_add_job;
+						}
 					}
 					new_job = job_type->CreateFunc( next_ad );
 				} else {
@@ -641,6 +650,7 @@ dprintf(D_FULLDEBUG,"***Trying job type %s\n",job_type->Name);
 
 			}
 
+contact_schedd_next_add_job:
 			next_ad = GetNextJobByConstraint( expr_buf, 0 );
 		}	// end of while next_ad
 		if ( errno == ETIMEDOUT ) {

@@ -2,7 +2,7 @@
 /* AIX need to use a GNU ld prelinker before it can link the executable with
 	the vendor linker */
 #undef NEEDS_PRELINKER
-#define NEEDS_PRELINKER	YES
+#define NEEDS_PRELINKER	NO
 
 PRELINK_C = /usr/local/bin/ld.gnu
 PRELINK_C_FLAGS = -Ur -u main
@@ -10,7 +10,7 @@ PRELINK_CPP = /usr/local/bin/ld.gnu
 PRELINK_CPP_FLAGS = -Ur -u main
 
 /* specifically ask for the C++ libraries to be statically linked */
-#define PlatformLdFlags -Wl,-bstatic -lstdc++ -Wl,-bdynamic -lcfg -lodm -lcrypt -lc -static-libgcc
+#define PlatformLdFlags -Wl,-berok -Wl,-bstatic -lstdc++ -Wl,-bdynamic -lcfg -lodm -lcrypt -lc -static-libgcc
 
 #define IS_V5				YES
 

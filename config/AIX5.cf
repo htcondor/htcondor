@@ -17,9 +17,6 @@
 
 #define HAS_DYNAMIC_USER_JOBS	NO
 
-#undef WANT_MAN_PAGES
-#define WANT_MAN_PAGES  NO
-
 #define HAS_GLOBUS			NO
 #define HAS_GSI				NO
 #define HAS_OPENSSL			NO
@@ -33,7 +30,7 @@
 #undef WANT_CONDOR_G
 #define WANT_CONDOR_G  	NO
 #undef WANT_NETMAN
-#define WANT_NETMAN     NO
+#define WANT_NETMAN     YES
 #undef WANT_X509
 #define WANT_X509       NO
 #undef WANT_KERBEROS

@@ -355,7 +355,11 @@ GPP_SHARED_FLAGS = -fno-implicit-templates $(GPP_VERS_FLAGS)
 
 STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) $(CC_PIC_FLAG) PlatformFlags PlatformGccFlags $(CCOMPILER_ID) $(HEADER_FEATURE_SET) $(FUNC_FEATURE_SET) $(CTYPE_FEATURE_SET) $(AUTOCONF_DEFS)
 STD_C_PLUS_FLAGS = $(STD_C_FLAGS) $(GPP_SHARED_FLAGS) PlatformGppFlags 
-INST_C_PLUS_FLAGS = $(STD_C_FLAGS)
+/* We basically want INST_C_PLUS_FLAGS to be equal to STD_C_PLUS_FLAGS,
+	but make sure there isn't -fno-implicit-templates in it
+	since we want any templates which need to be created to be created in 
+	template instantiation files. */
+INST_C_PLUS_FLAGS = $(STD_C_FLAGS) $(GPP_VERS_FLAGS) PlatformGppFlags
 
 TESTSUITE_FLAGS_GCC =  $(STD_C_FLAGS)
 TESTSUITE_FLAGS_GPP = $(STD_C_PLUS_FLAGS)

@@ -114,6 +114,9 @@ static char *GMStateNames[] = {
 	"GM_START"
 };
 
+#define MIN_SUPPORTED_GRAM_V GRAM_V_1_6
+#define MIN_SUPPORTED_GRAM_V_STRING "1.6"
+
 // TODO: once we can set the jobmanager's proxy timeout, we should either
 // let this be set in the config file or set it to
 // GRIDMANAGER_MINIMUM_PROXY_TIME + 60
@@ -1008,6 +1011,17 @@ int GlobusJob::doEvaluateState()
 			// constructor is called while we're connected to the schedd).
 			int err;
 
+			if ( jmVersion != GRAM_V_UNKNOWN &&
+				 jmVersion < MIN_SUPPORTED_GRAM_V ) {
+				const char * OLD_GRAM_ERROR 
+					= "Job is attempting to use obsolete GRAM protocol.";
+				dprintf(D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc,
+						OLD_GRAM_ERROR);
+				errorString = OLD_GRAM_ERROR;
+				gmState = GM_HOLD;
+				break;
+			}
+
 			if ( !myProxy ) {
 				UpdateJobAdString( ATTR_HOLD_REASON,
 								   "Proxy file missing or corrupted" );
@@ -1084,18 +1098,7 @@ int GlobusJob::doEvaluateState()
 					executeLogged = true;
 				}
 
-				if ( jmVersion >= GRAM_V_1_0 ) {
-					gmState = GM_REGISTER;
-				} else {
-						// Bad state.
-						// NOTE: This means that if you upgrade from v6.4.x 
-						// Condor-G to v6.5.x Condor-G, you had better
-						// remove all jobs from the queue first!
-					dprintf(D_ALWAYS,
-							"(%d.%d) Bad GRAM version %d in GM_START!\n",
-							procID.cluster, procID.proc,jmVersion);
-					gmState = GM_HOLD;
-				}
+				gmState = GM_REGISTER;
 			}
 			} break;
 		case GM_REGISTER: {
@@ -1141,15 +1144,7 @@ int GlobusJob::doEvaluateState()
 				// Now handle the case of we got GLOBUS_SUCCESS...
 			callbackRegistered = true;
 			UpdateGlobusState( status, error );
-			if ( jmVersion >= GRAM_V_1_5 ) {
-				gmState = GM_STDIO_UPDATE;
-			} else {
-				if ( streamOutput || streamError ) {
-					gmState = GM_CANCEL;
-				} else {
-					gmState = GM_SUBMITTED;
-				}
-			}
+			gmState = GM_STDIO_UPDATE;
 			} break;
 		case GM_STDIO_UPDATE: {
 			// Update an already-running jobmanager to send its I/O to us
@@ -1264,15 +1259,10 @@ int GlobusJob::doEvaluateState()
 				numSubmitAttempts++;
 				jmProxyExpireTime = myProxy->expiration_time;
 				if ( rc == GLOBUS_SUCCESS ) {
-					jmVersion = GRAM_V_1_0;
-					UpdateJobAdInt( ATTR_GLOBUS_GRAM_VERSION, GRAM_V_1_0 );
-					callbackRegistered = true;
-					rehashJobContact( this, jobContact, job_contact );
-					jobContact = strdup( job_contact );
-					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-									   job_contact );
-					gahp.globus_gram_client_job_contact_free( job_contact );
-					gmState = GM_SUBMIT_SAVE;
+					// Previously this supported GRAM 1.0
+					dprintf(D_ALWAYS, "(%d.%d) Unexpected remote response.  GRAM %s is now required.\n", procID.cluster, procID.proc, MIN_SUPPORTED_GRAM_V_STRING);
+					errorString.sprintf("Unexpected remote response.  Remote server must speak GRAM %s", MIN_SUPPORTED_GRAM_V_STRING);
+					gmState = GM_HOLD;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
 					if ( jmVersion == GRAM_V_UNKNOWN ) {
 						jmVersion = GRAM_V_1_6;
@@ -1287,17 +1277,13 @@ int GlobusJob::doEvaluateState()
 					gmState = GM_SUBMIT_SAVE;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_RSL_EVALUATION_FAILED &&
 							(jmVersion == GRAM_V_UNKNOWN || jmVersion >= GRAM_V_1_6) ) {
-					dprintf(D_ALWAYS,
-							"(%d.%d) gram request failed, will retry with older format\n",
-							procID.cluster, procID.proc);
-					jmVersion = GRAM_V_1_5;
-					UpdateJobAdInt( ATTR_GLOBUS_GRAM_VERSION, GRAM_V_1_5 );
-					// TODO Should we be changing these?
-					numSubmitAttempts--;
-					lastSubmitAttempt = 0;
-					delete RSL;
-					RSL = NULL;
-					reevaluate_state = true;
+					// Previously this supported GRAM 1.5
+					// There shouldn't be a special case for this.
+					// It should be handled with all the other errors below.
+					// Talk to Alan about it.
+					dprintf(D_ALWAYS, "(%d.%d) Unexpected remote response.  GRAM %s is now required.\n", procID.cluster, procID.proc, MIN_SUPPORTED_GRAM_V_STRING);
+					errorString.sprintf("Unexpected remote response.  Remote server must speak GRAM %s", MIN_SUPPORTED_GRAM_V_STRING);
+					gmState = GM_HOLD;
 				} else {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
@@ -1328,11 +1314,7 @@ int GlobusJob::doEvaluateState()
 				if ( !done ) {
 					break;
 				}
-				if ( jmVersion >= GRAM_V_1_5 ) {
-					gmState = GM_SUBMIT_COMMIT;
-				} else {
-					gmState = GM_SUBMITTED;
-				}
+				gmState = GM_SUBMIT_COMMIT;
 			}
 			} break;
 		case GM_SUBMIT_COMMIT: {
@@ -1382,11 +1364,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) jobmanager timed out on commit, clearing request\n"
 			// jobmanager). Wait for completion or failure, and probe the
 			// jobmanager occassionally to make it's still alive.
 			if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ) {
-				if ( jmVersion >= GRAM_V_1_5 ) {
-					gmState = GM_CHECK_OUTPUT;
-				} else {
-					gmState = GM_DONE_SAVE;
-				}
+				gmState = GM_CHECK_OUTPUT;
 			} else if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 				gmState = GM_FAILED;
 			} else if ( condorState == REMOVED || condorState == HELD ) {
@@ -1398,9 +1376,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) jobmanager timed out on commit, clearing request\n"
 					reevaluate_state = true;
 					break;
 				}
-				if ( jmProxyExpireTime < myProxy->expiration_time &&
-					 ( jmVersion == GRAM_V_UNKNOWN ||
-					   jmVersion >= GRAM_V_1_6) ) {
+				if ( jmProxyExpireTime < myProxy->expiration_time ) {
 					gmState = GM_REFRESH_PROXY;
 					break;
 				}
@@ -1617,29 +1593,27 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 			} break;
 		case GM_DONE_COMMIT: {
 			// Tell the jobmanager it can clean up and exit.
-			if ( jmVersion >= GRAM_V_1_5 ) {
-				GOTO_RESTART_IF_JM_DOWN;
-				CHECK_PROXY;
-				rc = gahp.globus_gram_client_job_signal( jobContact,
+			GOTO_RESTART_IF_JM_DOWN;
+			CHECK_PROXY;
+			rc = gahp.globus_gram_client_job_signal( jobContact,
 									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_END,
 									NULL, &status, &error );
-				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-					 rc == GAHPCLIENT_COMMAND_PENDING ) {
-					break;
-				}
-				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
-					 //rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
-					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
-					connect_failure_jobmanager = true;
-					break;
-				}
-				if ( rc != GLOBUS_SUCCESS ) {
-					// unhandled error
-					LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_END)", rc );
-					globusError = rc;
-					gmState = GM_STOP_AND_RESTART;
-					break;
-				}
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
+				 //rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
+				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
+				connect_failure_jobmanager = true;
+				break;
+			}
+			if ( rc != GLOBUS_SUCCESS ) {
+				// unhandled error
+				LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_END)", rc );
+				globusError = rc;
+				gmState = GM_STOP_AND_RESTART;
+				break;
 			}
 				// Clear the contact string here because it may not get
 				// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
@@ -2615,13 +2589,6 @@ MyString *GlobusJob::buildSubmitRSL()
 	rsl->sprintf( "&(rsl_substitution=(GRIDMANAGER_GASS_URL %s))",
 				  gassServerUrl );
 
-	//This is the ugly hack to determine if the jobmanager is pre-gram 1.6.
-	//This attribute will cause an error in older jobmanagers. It will be
-	//over-ridden by the real executable attribute in later jobmanagers.
-	if ( jmVersion == GRAM_V_UNKNOWN || jmVersion >= GRAM_V_1_6 ) {
-		*rsl += "(executable=$(GLOBUS_CACHED_STDOUT))";
-	}
-
 	//We're assuming all job clasads have a command attribute
 	//First look for executable in the spool area.
 	MyString executable_path;
@@ -2717,17 +2684,13 @@ MyString *GlobusJob::buildSubmitRSL()
 		*rsl += rsl_stringify( attr_value );
 
 		riwd = attr_value;
-	} else if ( jmVersion == GRAM_V_UNKNOWN || jmVersion >= GRAM_V_1_6 ) {
+	} else {
 		// The user didn't specify a remote IWD, so tell the jobmanager to
 		// create a scratch directory in its default location and make that
 		// the remote IWD.
 		*rsl += ")(scratchdir='')(directory=$(SCRATCH_DIRECTORY)";
 
 		riwd = "$(SCRATCH_DIRECTORY)";
-	} else {
-		// The jobmanager can't create a directory for us, so use its
-		// default of $(HOME).
-		riwd = "$(HOME)";
 	}
 	if ( riwd[riwd.Length()-1] != '/' ) {
 		riwd += '/';
@@ -2818,16 +2781,6 @@ MyString *GlobusJob::buildSubmitRSL()
 	bool has_input_files = ad->LookupString(ATTR_TRANSFER_INPUT_FILES, &attr_value) && *attr_value;
 
 	if ( ( useGridShell && transfer_executable ) || has_input_files) {
-		if ( jmVersion < GRAM_V_1_6 && jmVersion != GRAM_V_UNKNOWN ) {
-			// the jobmanager doesn't support file transfers.
-			dprintf(D_ALWAYS,
-					"(%d.%d) jobmanager doesn't support file transfer\n",
-					procID.cluster, procID.proc );
-			free( attr_value );
-			delete rsl;
-			errorString = "Remote jobmanager doesn't support file transfer";
-			return NULL;
-		}
 		StringList filelist( NULL, "," );
 		if( attr_value ) {
 			filelist.initializeFromString( attr_value );
@@ -2866,16 +2819,6 @@ MyString *GlobusJob::buildSubmitRSL()
 
 	if ( ( ad->LookupString(ATTR_TRANSFER_OUTPUT_FILES, &attr_value) &&
 		   *attr_value ) || stageOutput || stageError || useGridShell) {
-		if ( jmVersion < GRAM_V_1_6 && jmVersion != GRAM_V_UNKNOWN ) {
-			// the jobmanager doesn't support file transfers.
-			dprintf(D_ALWAYS,
-					"(%d.%d) jobmanager doesn't support file transfer\n",
-					procID.cluster, procID.proc );
-			free( attr_value );
-			delete rsl;
-			errorString = "Remote jobmanager doesn't support file transfer";
-			return NULL;
-		}
 		StringList filelist( NULL, "," );
 		if( attr_value ) {
 			filelist.initializeFromString( attr_value );
@@ -2964,10 +2907,8 @@ MyString *GlobusJob::buildSubmitRSL()
 		attr_value = NULL;
 	}
 
-	if ( jmVersion == GRAM_V_UNKNOWN || jmVersion >= GRAM_V_1_6 ) {
-		buff.sprintf( ")(proxy_timeout=%d", JM_MIN_PROXY_TIME );
-		*rsl += buff;
-	}
+	buff.sprintf( ")(proxy_timeout=%d", JM_MIN_PROXY_TIME );
+	*rsl += buff;
 
 	int commit_timeout = param_integer("GRIDMANAGER_GLOBUS_COMMIT_TIMEOUT", JM_COMMIT_TIMEOUT);
 
@@ -3007,10 +2948,9 @@ MyString *GlobusJob::buildRestartRSL()
 		*rsl += rsl_stringify( buff.Value() );
 		*rsl += ")(stderr_position=0)";
 	}
-	if ( jmVersion == GRAM_V_UNKNOWN || jmVersion >= GRAM_V_1_6 ) {
-		buff.sprintf( "(proxy_timeout=%d)", JM_MIN_PROXY_TIME );
-		*rsl += buff;
-	}
+
+	buff.sprintf( "(proxy_timeout=%d)", JM_MIN_PROXY_TIME );
+	*rsl += buff;
 
 	return rsl;
 }
@@ -3157,18 +3097,22 @@ void GlobusJob::DeleteOutput()
 
 bool GlobusJob::FailureIsRestartable( int error_code )
 {
-	if ( jmVersion == GRAM_V_1_0 ) {
-		return false;
-	}
 	switch( error_code ) {
 		// Normally, 0 isn't a valid error_code, but it can be returned
 		// when a poll of the job by the jobmanager fails, which is not
 		// restartable.
 	case 0:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_EXECUTABLE_NOT_FOUND:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_STDIN_NOT_FOUND:
 	case GLOBUS_GRAM_PROTOCOL_ERROR_STAGING_EXECUTABLE:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_STAGING_STDIN:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_EXECUTABLE_PERMISSIONS:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_BAD_DIRECTORY:
 	case GLOBUS_GRAM_PROTOCOL_ERROR_COMMIT_TIMED_OUT:
 	case GLOBUS_GRAM_PROTOCOL_ERROR_USER_CANCELLED:
 	case GLOBUS_GRAM_PROTOCOL_ERROR_SUBMIT_UNKNOWN:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_JOBTYPE_NOT_SUPPORTED:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_TEMP_SCRIPT_FILE_FAILED:
 		return false;
 	case GLOBUS_GRAM_PROTOCOL_ERROR_STAGE_OUT_FAILED:
 	case GLOBUS_GRAM_PROTOCOL_ERROR_TTL_EXPIRED:
@@ -3181,9 +3125,6 @@ bool GlobusJob::FailureIsRestartable( int error_code )
 
 bool GlobusJob::FailureNeedsCommit( int error_code )
 {
-	if ( jmVersion == GRAM_V_1_0 ) {
-		return false;
-	}
 	switch( error_code ) {
 	case GLOBUS_GRAM_PROTOCOL_ERROR_COMMIT_TIMED_OUT:
 	case GLOBUS_GRAM_PROTOCOL_ERROR_TTL_EXPIRED:
@@ -3198,9 +3139,6 @@ bool GlobusJob::FailureNeedsCommit( int error_code )
 bool
 GlobusJob::JmShouldSleep()
 {
-	if ( jmVersion == GRAM_V_1_0 ) {
-		return false;
-	}
 	if ( jmProxyExpireTime < myProxy->expiration_time ) {
 		return false;
 	}

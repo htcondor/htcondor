@@ -734,13 +734,18 @@ MyString Accountant::GetResourceName(ClassAd* ResourceAd)
   char startdAddr[64];
   
   if (!ResourceAd->LookupString (ATTR_NAME, startdName)) {
+    //This should never happen, because unnamed startd ads are rejected.
     EXCEPT ("ERROR in Accountant::GetResourceName - Name not specified\n");
   }
   MyString Name=startdName;
   Name+="@";
 
   if (!ResourceAd->LookupString (ATTR_STARTD_IP_ADDR, startdAddr)) {
-    EXCEPT ("ERROR in Accountant::GetResourceName - No IP addr in class ad\n");
+    //This may happen for grid site ClassAds.
+    //Actually, the collector now inserts an IP address if none is provided,
+    //but it is more robust to not assume that behavior here.
+    startdAddr[0] = '\0';
+	dprintf(D_FULLDEBUG,"in Account::GetResourceName - no IP address for %s (no problem if this is a grid site ClassAd).\n",startdName);
   }
   Name+=startdAddr;
   

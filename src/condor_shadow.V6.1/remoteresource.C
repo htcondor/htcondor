@@ -606,6 +606,7 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 		*/
 	char *ip = string_to_ipstr( dc_startd->addr() );
 	if( ip ) {
+		daemonCore->AddAllowHost( ip, WRITE );
 		daemonCore->AddAllowHost( ip, DAEMON );
 	} else {
 		dprintf( D_ALWAYS, "ERROR: Can't convert \"%s\" to an IP address!\n", 
