@@ -114,6 +114,15 @@
 #	define LONGJMP longjmp
 	extern "C" int kill( pid_t, int );
 
+#elif defined(LINUX)
+
+	extern "C" int brk( void *);
+	extern "C" void *sbrk( int );
+	typedef void (*SIG_HANDLER)( int );
+#	define SETJMP setjmp
+#	define LONGJMP longjmp
+	extern "C" int kill( pid_t, int );
+
 #else
 
 #	error UNKNOWN PLATFORM
