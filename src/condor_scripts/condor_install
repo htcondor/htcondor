@@ -1,0 +1,1326 @@
+#!/usr/bin/perl
+
+###########################################################################
+#
+#  This is condor_install.  It should be run to install and configure
+#  Condor on a given machine.  It can be run to customize a given
+#  release directory, to initialize Condor on the local host, or to
+#  initialize Condor for many hosts (if run on a file server).  Please
+#  read the INSTALL file or the Installation chapter of the Condor
+#  Administrator's Manual.
+#
+#  Other than setting the proper path to perl above, you should not
+#  need to edit this script at all.
+#
+#  condor_install by Derek Wright <wright@cs.wisc.edu> 2/19/98
+#
+###########################################################################
+
+# Set some global settings
+umask 0022;
+
+# Initialize some global variables:
+@tool_names=("checkpoint", "off", "on", "reconfig", "reconfig_schedd", 
+	       "reschedule", "restart", "vacate" );
+@bin_names=( "q", "rm", "submit", "status", "prio", "userprio", 
+		"compile", "history", "config_val" );
+@sbin_master_names=( "master", "preen" );
+@lib_names=( "c_plus_alloc.o", "condor_rt0.o", "condor_syscall_lib.a",
+	    "libckpt.a", "ld" );
+
+###  Figure out who and where we are:
+@pwdent = getpwuid($<);
+$who=$pwdent[0];
+$tilde=$pwdent[7];
+chop($host=`hostname`);
+$host =~ s/(.*)\..*/$1/;
+$fullhost=(gethostbyname($host))[0];
+
+###  Find condor's home directory, if it exists.
+@pwdent = getpwnam( "condor" );
+$condor_home=$pwdent[7];
+$condor_uid=$pwdent[2];
+if( $condor_uid ) {
+    $owner = $condor_uid;
+} else {
+    $owner = $<;
+}
+
+
+# Print the opening remarks:
+print "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+    "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+    "Welcome to condor_install.  You are going to need to answer a few\n",
+    "questions about how you want Condor configured on this machine, what\n",
+    "pool(s) you want to join, and if this is machine is going to serve as\n",
+    "the Central Manager for its own pool.  If you are unsure about how to\n",
+    "answer any of the questions asked here, please consult the INSTALL\n",
+    "file or the Installation chapter of the Condor Administrator's Manual.\n",
+    "\n",
+    "The installation is broken down into various steps.  Please consult the\n",
+    "INSTALL file to refer to a specific step if you have trouble with it.\n",
+    "\n",
+    "For most questions, defaults will be given in []'s.  To accept the\n",
+    "default, just press return.\n",
+    "\n",
+    "If you have problems installing or using Condor, please consult the\n",
+    "Condor Administrator's Manual, which is included in your binary\n",
+    "distrubution in the \"doc\" directory.  The Condor Manual can also be\n",
+    "found on the World Wide Web at: http://www.cs.wisc.edu/condor/manual/\n",
+    "If you still have problems, send email to condor-admin\@cs.wisc.edu.\n\n",
+    "Press enter to begin Condor installation\n";
+$_ = <STDIN>;
+
+###  Figure out what we should do:
+print "\n***************************************************************************\n",
+    "\tSTEP 1: What type of Condor installation do you want?\n",
+    "***************************************************************************\n";
+if( !($who eq "root") && !($who eq "condor") ) {
+    print "\nSince you are not running condor_install as condor or root, I'm going ",
+    "to\nperform a submit-only installation of Condor.  This means that you will\n",
+    "be able to submit Condor jobs into an existing pool, but Condor will not\n",
+    "run jobs on the machine(s) you set up.\n\n",
+    "If you want to setup this machine to run Condor jobs, exit condor_install\n",
+    "now and re-run this script either as root or as user condor.\n\n",
+    "Continue with submit-only installation? [yes] ";
+    chop( $_ = <STDIN> );
+    if( ! /^([Yy].*)|^$/ ) {
+	print "Aborting condor_install\n";
+	exit(0);
+    }
+    push( @install_type, "submit" );
+} else {
+    @install_type = &prompt_install_type();
+}
+if( ! @install_type ) {
+    print "\nI have nothing to do.  Exiting.\n";
+    exit(1);
+}
+
+print "\n***************************************************************************\n",
+    "\tSTEP 2: How many machines are you setting up for Condor?\n",
+    "***************************************************************************\n";
+if( grep(/central_manager/, @install_type) ) { 
+    print "\nYou can only have 1 machine set up as a central manager.\n";
+} else {
+    @machines = &prompt_multi_machines();
+}
+
+
+print "\n***************************************************************************\n",
+    "\tSTEP 3: Install the Condor \"release directory\", which holds\n",
+    "\tvarious binaries, libraries, scripts and files used by Condor.\n",
+    "***************************************************************************\n";
+$release_dir = &install_release_dir();
+
+
+print "\n***************************************************************************\n",
+    "\tSTEP 4: How and where should Condor send email if things go wrong?\n",
+    "***************************************************************************\n";
+&prompt_mail_settings();
+
+
+print "\n***************************************************************************\n",
+    "\tSTEP 5: Where should public programs be installed?\n",
+    "***************************************************************************\n";
+print "\n",
+    "When I'm done, I'm going to need to install some binaries and scripts.\n",
+    "I can either install these files into a directory that is already in\n",
+    "your PATH that you have write access to, or I can put them into any\n",
+    "directory you specify (in which case you would have to add that\n",
+    "directory to your PATH or explicity use a full pathname to access the\n",
+    "Condor tools).\n";
+$path = &prompt_install_path();
+print "\nInstalling public binaries and scripts into $path\n";
+
+
+###  Do what we need to do:
+if( grep(/submit/, @install_type) ) {
+    if( grep(/execute/, @install_type) ) {
+        &configure_full_install();
+    } else {
+        &configure_submit_only();
+    }
+} elsif( grep(/central_manager/, @install_type) ) { 
+    &configure_central_manager();
+}
+
+print "\ncondor_install has completed successfully.\n";
+
+###  Print out message explaining what to do now.
+
+
+###########################################################################
+# Subroutines:
+###########################################################################
+
+sub prompt_multi_machines {
+    local( @machines );
+    print "\nAre you planning to setup Condor on multiple machines? [yes] ";
+    chop( $_ = <STDIN> );
+    if( ! /(^[Yy].*)|^$/ ) {
+	return @machines;
+    }
+    print "Will all the machines share files via a file server? [yes] ";
+    chop( $_ = <STDIN> );
+    if( ! /(^[Yy].*)|^$/ ) {
+	print "\nYou will need to run condor_install locally on each",
+	"machine.\nSetting up host \"$host\" for Condor.\n";
+	return @machines;
+    }
+    print "\n",
+    "What are the hostnames of the machines you wish to setup?\n",
+    "(Just type the hostnames, not the fully qualified names.\n",
+    "When you are done, just hit enter.)\n";
+    while( chop($_ = <STDIN>) ) {
+	if( /^.*\/.*/ ) {
+	    # Started with '/', try to open it and read:
+	    print "Don't know how to read from a file yet.\n";
+	} elsif (/^$/ ) {
+	    last;
+	} else {
+	    push( @machines, $_ );
+	}
+    }
+    print "Setting up Condor for the following machines:\n",
+    "@machines\n";
+    return @machines;
+}
+
+sub prompt_install_type {
+    local( @type );
+    if( $_ = &prompt_full_install() ) {
+	push( @type, ("submit", "execute") );
+    } elsif( $_ = &prompt_submit_only() ) {
+	push( @type, "submit" );
+    } elsif( $_ = &prompt_install_central_manager() ) {
+	push( @type, "central_manager" );
+    }
+    return @type;
+}
+
+sub prompt_submit_only {
+    if( @machines ) {
+	print "\nWould you like to setup these hosts as submit-only machines? [yes] ";
+    } else {
+	print "\nWould you like to setup this host as a submit-only machine? [yes] ";
+    }
+    $_ = <STDIN>;
+    /(^[Yy].*)|^$/;
+}
+
+sub prompt_install_central_manager {
+    print "\nWould you like to setup this host as a Condor Central Manager? [no] ";
+    $_ = <STDIN>;
+    /^[Yy].*/;
+}
+
+
+sub prompt_full_install {
+    print "\nWould you like to do a full installation of Condor? [yes] ";
+    $_ = <STDIN>;
+    /(^[Yy].*)|^$/;
+}
+
+
+sub configure_submit_only {
+    local( $pool, $config_file, $name, %pool_config_file, %pool_user_name );
+    print "\n***************************************************************************\n",
+    "\tConfiguring for a submit-only installation.\n",
+    "***************************************************************************\n";
+
+    $root_dir = &prompt_root_dir();
+
+    @pools = &prompt_pools();
+    if( $pools[0] ) {
+	$default_pool = $pools[0];
+	print "\nSetting up for the following pools: @pools\n",
+	"Using \"$default_pool\" as the default pool.\n";
+	foreach $pool (@pools) {
+	    print "\n---------------------------------------------------------------------------\n",
+	    "Configuring pool: $pool\n",
+	    "---------------------------------------------------------------------------\n";
+
+	    ($config_file, $name) = &configure_pool($pool);
+	    $pool_config_file{$pool} = $config_file;
+	    $pool_user_name{$pool} = $name;
+	}
+    } else {
+	print "\n---------------------------------------------------------------------------\n",
+	"Setting up for a single pool.\n",
+	"---------------------------------------------------------------------------\n";
+	($config_file, $name) = &configure_pool("");
+	$pool_config_file{"default"} = $config_file;
+	$pool_user_name{"default"} = $name;
+	push( @pools, "default" );
+    }
+
+    &customize_condor_script( *pools, *pool_config_file, *pool_user_name );
+}
+
+
+sub find_perl {
+    local( $perl );
+    chop($_ = `which perl`);
+    if( /^\/.*$/ ) {
+	print "\nIt looks like perl is installed in: $_\n",
+	"Is this the version of perl I should use? [yes] ";
+	$perl = $_;
+	chop( $_ = <STDIN> );
+	if( /(^[Yy].*)|^$/ ) {
+	    return $perl;
+	}
+    } else {
+	print "\nI can't find perl in your PATH.\n";
+    }
+    while( 1 ) {
+	print "Where is perl installed? ";
+	chop( $_ = <STDIN> );
+	if( -x $_ ) {
+	    return $_;
+	} else {
+	    print "I can't execute $_, try again.\n";
+	}
+    }
+}
+
+
+sub customize_condor_script {
+    local( *pool_ref, *conf_ref, *name_ref ) = @_;
+    local( $def_pool, $pool, $tool, $perl_path );
+    $def_pool = $pool_ref[0];
+
+    print "\nCustomizing the \"condor\" script ... ";
+    
+    if( ! -x "/usr/bin/perl" ) {
+	print "\n\nWARNING: perl is installed in a non-standard location ",
+	"on this machine.\nDo you want me to put the right path to perl ",
+	"in the condor script? [yes] ";
+	chop( $_ = <STDIN> );
+	if( /(^[Yy].*)|^$/ ) {
+	    $perl_path = &find_perl();
+	} else {
+	    print "\nYou're either going to have to edit the script when this ",
+	    "completes, or\nyou're going to have to invoke the script with:\n",
+	    "\"perl condor\" or something.\n";
+	    $perl_path = "";
+	}
+    } else {
+	$perl_path = "";
+    }
+    print "perl_path is: $perl_path\n";
+
+    open( GENERIC, "<$release_dir/etc/examples/condor.generic" ) || 
+	die "\nCan't open generic condor script: $release_dir/etc/examples/condor.generic\n";
+    open( CONDOR, ">$path/condor" ) || die "\nCan't open condor script: $path/condor\n";
+
+    while( <GENERIC> ) {
+      SWITCH: {	
+	  if( /^\$default_pool.*$/ ) {
+	      print CONDOR "\$default_pool=\"$def_pool\";\n";
+	      last SWITCH;
+	  }
+	  if( /^\$release_dir.*$/ ) {
+	      print CONDOR "\$release_dir=\"$release_dir\";\n";
+	      last SWITCH;
+	  }
+	  if( /^\%configlocation.*$/ ) {
+	      print CONDOR $_;
+	      foreach $pool (@pool_ref) {
+		  print CONDOR "\t\"$pool\",\t\"$conf_ref{$pool}\",\n";
+	      }
+	      last SWITCH;
+	  }
+	  if( /^\%nameused.*$/ ) {
+	      print CONDOR $_;
+	      foreach $pool (@pool_ref) {
+		  print CONDOR "\t\"$pool\",\t\"$name_ref{$pool}\",\n";
+	      }
+	      last SWITCH;
+	  } 
+	  if( /^\#\!\/usr\/bin\/perl.*$/ && $perl_path ) {
+	      print CONDOR "#!$perl_path\n";
+	      last SWITCH;
+	  }	     
+	  print CONDOR $_;
+      }
+    }
+    close CONDOR;
+    close GENERIC;
+    chmod(0755, "$path/condor") || die "\nCan't chmod $path/condor: $!\n";
+    print "\nCreated $path/condor.\n";
+
+    foreach $tool ( "master", @bin_names, @tool_names ) {
+	if( -f "$path/condor_$tool" ) {
+	    unlink "$path/condor_$tool" ||
+		die "Can't remove $path/condor_$tool: $!\n";
+	}
+	link( "$path/condor", "$path/condor_$tool" ) || 
+	    die "Can't create link: $path/condor_$tool: $!\n";
+    }
+}
+
+
+sub prompt_root_dir {
+    local( $dir );
+    print "\nCondor needs to create some directories for its own use.  Where would\n";
+    print "you like to put these directories?\n[$tilde/condor] ";
+    chop( $_ = <STDIN> );
+    if( /^$/ ) { 
+	$dir = "$tilde/condor";
+    } else {
+	$dir = $_;
+    }
+    if( ! -d $dir ) {
+	print "$dir does not exist, shall I create it now? [yes] ";
+	chop( $_ = <STDIN> );
+	if( /(^[Yy].*)|^$/ ) {
+	    if( ! mkdir($dir, 0777) ) {
+		print "I can't create \"$dir\", try again.\n";
+		return &prompt_root_dir();
+	    }
+	} else {
+	    print "I've got to create a directory for Condor to work, try again.\n";
+	    return &prompt_root_dir();	    
+	}
+    }
+    return $dir;
+}
+
+
+sub prompt_central_manager {
+    local( $cm, $submit );
+    $submit = $_[0];
+    while(1) {
+	print "\nWhat is the full hostname of the central manager?\n";
+	if( $submit ) {
+	    print "(condor.cs.wisc.edu is the central manager for the UW-Madison ",
+	    "Computer\nScience Department Condor pool.) [condor.cs.wisc.edu]\n";
+	} else {
+	    print "[$fullhost] ";
+	}
+	chop( $_ = <STDIN> );
+	if( /^$/ ) {
+	    if( $submit ) {
+		$cm = "condor.cs.wisc.edu";
+	    } else {
+		$cm = $fullhost;
+	    }
+	} else {
+	    $cm = $_;
+	}
+	# Try to ping the machine
+	#print "Making sure I can talk to host \"$cm\" ... ";
+	#if( ! pingecho($cm, 10) ) {
+	#    print "\nI can't ping \"$cm\", do you still want to use it? [no] ";
+	#    chop( $_ = <STDIN> );
+	#    if( /^[Yy].*/ ) {
+	#	last;
+	#    }
+	#} else {
+	#    print "success.\n";
+	#    last;
+	#}
+	# Try to lookup what we were told with DNS:
+	if( (gethostbyname($cm))[0] ) {
+	    last;
+	} else {
+	    print "\nI can't find host information for $cm from a nameserver.\n",
+	    "Do you still want to use it? [no] ";
+	    chop( $_ = <STDIN> );
+	    if( /^[Yy].*/ ) {
+		last;
+	    }
+	}
+    }
+    return $cm;
+}
+
+
+sub prompt_pool_dir {
+    local( $pool, $pool_dir );
+    $pool = $_[0];
+    while(1) {
+	$pool_dir = "$root_dir/$pool";
+	print "\nFor each pool you are going to join, Condor will need ",
+	"a seperate directory.\nWhere do you want this pool-specific ",
+	"directory?\n[$pool_dir] ";
+	chop( $_ = <STDIN> );
+	if( ! /^$/ ) {
+	    $pool_dir = $_;
+	}
+	if( -d $pool_dir ) {
+	    last;
+	} else {
+	    print "\"$pool_dir\" doesn't exist, should I create it now? [yes] ";
+	    chop( $_ = <STDIN> );
+	    if( /(^[Yy].*)|^$/ ) {
+		if( ! mkdir($pool_dir, 0777) ) {
+		    print "I can't create \"$pool_dir\", try again.\n";
+		} else {
+		    last;
+		}
+	    } else {
+		print "I've got to have a pool-specific directory, try again.\n";
+	    }		    
+	}
+    }
+    return $pool_dir;
+}
+
+
+sub prompt_global_config_file {
+    local( $config_file, $dir );
+    $dir = $_[0];
+
+    while(1) {
+	print "\nWhere do you want to put Condor's configuration file ",
+	"for this pool?\n[$dir/etc/condor_config] ";
+	chop( $_ = <STDIN> );
+	if( /^$/ ) {
+	    -d "$dir/etc" || mkdir("$dir/etc", 0777) || 
+		die "Can't create \"$dir/etc\"\n";
+	    $config_file = "$dir/etc/condor_config";
+	} else {
+	    $config_file = $_;
+	}
+	if( system("touch", "$config_file") ) {
+	    print "I can't create \"$config_file\", try again.\n";
+	} else {
+	    last;
+	}
+    }
+    return $config_file;
+}
+
+
+sub prompt_pool_user_name {
+    local( $name );
+    print "\nWhat name do you want to use for your schedd in this pool?\n",
+    "(If you don't understand this question, just accept the default.)\n",
+    "[$who\@$fullhost] ";
+    chop( $_ = <STDIN> );
+    if( /^$/ ) {    
+	$name = "$who\\\@$fullhost";
+    } elsif( ! /^.*\@.*$/ ) {
+	# There's no '@' in the name, append one.
+	$name = "$_\\\@";
+    } else {
+	# There's a '@' in the name, make sure we add a '\' in front of it:
+	s/^(.*)\@(.*)$/$1\\\@$2/;
+	$name = $_;
+    }
+    return $name;
+}
+
+sub configure_pool {
+    local( $pool, $cm, $pool_dir, $local_dir_str, $config_file, $mach,
+       $local_config_str, $local_config_dir, $name, @args );
+    $pool = $_[0];
+
+    # Initialize the local_config_str so that if we don't set it,
+    # we'll have a null string by default.
+    $local_config_str = "";
+
+    # Figure out the central manager.
+    $cm = &prompt_central_manager( 1 );
+
+    # Figure out where the files should go for this pool.
+    if( $pool ) {
+	$pool_dir = &prompt_pool_dir( $pool );
+    } else {
+	$pool_dir = $root_dir;
+    }
+
+    $config_file = &prompt_global_config_file( $pool_dir );
+
+    $name = &prompt_pool_user_name();
+
+    if( @machines ) {
+	print "\nEach machine you want to add to this pool will need ", 
+	"its own directory.\nShould I name them by hostname and put them",
+	"in $pool_dir?\n(for example: \"$pool_dir/$host\") [yes] ";
+	chop( $_ = <STDIN> );
+	if( ! /(^[Yy].*)|^$/ ) {
+	    print "\nSo, you want to make trouble, eh?  Ok, I give up.  ",
+	    "Install things yourself!\n\n";
+	    exit(1);
+	}
+	foreach $mach (@machines) {
+	    &condor_init( "$pool_dir/$mach", $<, "log", "spool" );
+	}
+	$local_dir_str = "$pool_dir/\$(HOSTNAME)";
+	$local_config_str = &prompt_local_config_file( $pool_dir, $pool_dir, 1, 0 );
+    } else {
+	# Single machine
+	$local_dir_str = "$pool_dir";
+	&condor_init( $pool_dir, $<, "log", "spool" );
+    }
+
+    @args=( $config_file, 
+	   "$release_dir/etc/examples/condor_config.submit.generic", 
+	   $cm, $local_dir_str, $local_config_str );
+    &customize_config_file( @args );
+
+    return( $config_file, $name );
+}
+
+
+sub prompt_local_config_file {
+    local( $local_config_dir );
+    local( $pool_dir, $local_dir, $has_mach, $force ) = @_;
+
+    print "\nCondor allows you to have a machine-specific config file ",
+    "that overrides\nsettings in the global config file.\n";
+
+    if( ! $force ) {
+	print "\nDo you want to use a machine-specific config file? [yes] ";
+	chop( $_ = <STDIN> );
+	if( ! /(^[Yy].*)|^$/ ) {
+	    return "";
+	}
+    } else {
+	print "\nYou must specify a machine-specific config file.\n";
+    }
+
+    while( 1 ) {
+	if( @machines ) {
+	    print "\nDo you want all the machine-specific config files for ",
+	    "each host in one\ndirectory? [yes] ";
+	    
+	    chop( $_ = <STDIN> );
+	    if( /(^[Yy].*)|^$/ ) {
+		while(1) {
+		    print "What directory should I use? [$pool_dir/etc] ";
+		    chop( $_ = <STDIN> );
+		    if( /^$/ ) {
+			$local_config_dir = "$pool_dir/etc";
+		    } else {
+			$local_config_dir = $_;
+		    }
+		    if( ! -d $local_config_dir ) {
+			print "\"$local_config_dir\" doesn't exist, should ",
+			"I create it? [yes] ";
+			chop( $_ = <STDIN> );
+			if( /(^[Yy].*)|^$/ ) {
+			    if( ! mkdir($local_config_dir, 0777) ) {
+				print "I can't create \"$local_config_dir\", ",
+				"try again.\n";
+			    } else {
+				last;
+			    }
+			}
+		    } else {
+			last;
+		    }
+		}
+		print "\nNaming each config file [hostname].local\n",
+		"Creating config files in \"$local_config_dir\" ... ";
+		foreach $mach (@machines) {
+		    system( "touch $local_config_dir/$mach.local") && 
+			die "\nCan't create \"$local_config_dir/$mach.local\"\n";
+		}
+		print "done.\n";
+		return "$local_config_dir/\$(HOSTNAME).local";
+	    }
+
+	    print "\nShould I put a \"condor_config.local\" file in each machine's ",
+	    "local\ndirectory? [yes] ";
+	} else {
+	    print "\nShould I put a \"condor_config.local\" file in $local_dir?\n[yes] ";
+	}
+	chop( $_ = <STDIN> );
+	if( /(^[Yy].*)|^$/ ) {
+	    print "Creating config files in \"$local_dir\" ... ";
+	    if( $has_mach ) {
+		foreach $mach (@machines) {
+		    system( "touch", "$local_dir/$mach/condor_config.local")
+			&& die "\nCan't create \"$local_dir/$mach/condor_config.local\"\n";
+		}
+	    } else {
+		system( "touch", "$local_dir/condor_config.local")
+		    && die "\nCan't create \"$local_dir/condor_config.local\"\n";
+	    }
+	    print "done.\n";
+	    return "\$(LOCAL_DIR)/condor_config.local";
+	}
+
+	if( $force ) {
+	    print "\nYou have to have a local config file, please choose one of the",
+	    "\noptions I presented.\n";
+	    print "\nPress enter to continue. ";
+	    $_ = <STDIN>;
+	} else {
+	    print "\nI'm going to assume, therefore, that you don't want a ",
+	    "machine-specific\nconfig file.\n";
+	    return "";
+	}
+    }
+}
+
+sub condor_init {
+    local( $local_dir, $mode );
+    $local_dir = $_[0];
+    shift;
+
+    (-d "$local_dir") || mkdir("$local_dir", 0755) || 
+	die "\nCan't create \"$local_dir\"\n\n";
+    chmod(0755, "$local_dir") || die "\nCan't chmod \"$local_dir\"\n\n"; 
+
+    foreach $_ (@_) {
+      SWITCH: {
+	  if( /^log$/ )     { $mode = 0755; last SWITCH; }
+	  if( /^spool$/ )   { $mode = 0755; last SWITCH; }
+	  if( /^execute$/ ) { $mode = oct(1777); last SWITCH; }
+	  $mode = 0755;
+      }
+	(-d "$local_dir/$_") || mkdir("$local_dir/$_", $mode) || 
+	    die "\nCan't create \"$local_dir/$_\"\n\n";
+	chmod($mode, "$local_dir/$_") || 
+	    die "\nCan't chmod \"$local_dir/$_\"\n\n";
+	chown($owner, -1, "$local_dir/$_") ||
+	    die "\nCan't chmod $local_dir/$_\n\n";
+    }
+}
+
+
+sub customize_config_file {
+    local( $config_file, $generic_file, $cm, $local_dir_str, $local_config_str ) = @_;
+
+    open( CONFIG, ">$config_file" ) || 
+	die "Can't open config file $config_file: $!\n";
+    open( GENERIC, "<$generic_file" ) || 
+	die "Can't open generic config file $generic_file: $!\n";
+    
+    print "\nConfiguring global condor config file ... ";
+    while( <GENERIC> ) {
+      SWITCH: {
+	  if( /^CONDOR_HOST.*$/ ) { $_ = "CONDOR_HOST\t\t= $cm\n"; last SWITCH; }
+	  if( /^RELEASE_DIR.*$/ ) { $_ = "RELEASE_DIR\t\t= $release_dir\n"; last SWITCH; }
+	  if( /^LOCAL_DIR.*$/ ) { $_ = "LOCAL_DIR\t\t= $local_dir_str\n"; last SWITCH; }
+	  if( /^LOCAL_CONFIG_FILE.*$/ ) { 
+	      if( $local_config_str ) {
+		  $_ = "LOCAL_CONFIG_FILE\t\t= $local_config_str\n";
+	      } else {
+		  $_ = "#LOCAL_CONFIG_FILE\t\t= \$(LOCAL_DIR)/condor_config.local\n";
+	      }
+	      last SWITCH;
+	  }  
+	  if( /^CONDOR_ADMIN.*$/ ) {
+	      $_ = "CONDOR_ADMIN\t\t= $condor_admin\n";
+	      last SWITCH;
+	  }
+	  if( /^MAIL.*$/ ) { $_ = "MAIL\t\t\t= $mail_path\n"; last SWITCH; }
+      }
+	print CONFIG "$_";
+    }
+    print "done.\n";
+    print "Created $config_file.\n";
+    close CONFIG;
+    close GENERIC;
+}
+
+
+sub prompt_mail_settings {
+    local( $def_mail_path );
+    print "\nIf something goes wrong with Condor, who should get email ",
+    "about it?\n[$who\@$fullhost] ";
+    chop($_ = <STDIN>);
+    if( /^$/ ) {
+	$condor_admin = "$who\@$fullhost";
+    } else {
+	$condor_admin = $_;
+    }
+
+    $def_mail_path = &get_default_mail_path();
+    while(1) {
+	print "\nWhat is the full path to a mail program that understands ",
+	"\"-s\" means\nyou want to specify a subject? [$def_mail_path] ";
+	chop($_ = <STDIN>);
+	if( /^$/ ) {
+	    $mail_path = $def_mail_path;
+	} else {
+	    $mail_path = $_;
+	}
+	if( ! -x $mail_path ) {
+	    print "I can't execute \"$mail_path\", try again.\n";
+	} else {
+	    last;
+	}
+    }
+}
+
+sub get_default_mail_path {
+    local( $mail_path );
+    chop($_ = `uname`);
+  SWITCH: {
+      if(/^Linux/) { $mail_path="/usr/bin/mail";   last SWITCH; }
+      if(/^SunOS/) { $mail_path="/usr/ucb/mail";   last SWITCH; }
+      if(/^HP-UX/) { $mail_path="/bin/mailx";      last SWITCH; }
+      if(/^IRIX6/) { $mail_path="/usr/sbin/mailx"; last SWITCH; }
+      if(/^IRIX5/) { $mail_path="/usr/sbin/Mail";  last SWITCH; }
+      if(/^OSF1/)  { $mail_path="/usr/ucb/mailx";  last SWITCH; }
+      $mail_path="/bin/mail";
+  }   
+    return $mail_path
+}
+
+
+sub install_release_dir {
+    local( $release_dir, $def_rel_dir );
+    
+    $release_dir = &find_release_dir();
+
+    if( $release_dir ) {
+	print "\nIt looks like you've installed a Condor release ",
+	"directory in:\n$release_dir\nDo you want to use this ",
+	"release directory? [yes] ";
+	chop( $_ = <STDIN> );
+	if( /(^[Yy].*)|^$/ ) {
+	    return $release_dir;
+	}
+    } else {
+	print "\nI can't find a complete Condor release directory.\n";
+    }
+
+    while( 1 ) {
+	print "\nHave you installed a release directory already? [no] ";
+	chop( $_ = <STDIN> );
+	if( /(^[Nn].*)|^$/ ) {
+	    last;
+	} else {
+	    print "What's the full path to the release directory? ";
+	    chop( $_ = <STDIN> );
+	    if( &check_release_dir( $_ ) ) {
+		return $_;
+	    } else {
+		print "$_ doesn't contain a complete release directory,\n",
+		"try again.\n";
+	    }
+	}
+    }
+
+    # If we're still here, there's no release directory installed already.
+    if( $< ) {
+	$def_rel_dir = "$tilde/condor";
+    } else {
+	$def_rel_dir = "/usr/local/condor";
+    }
+    while( 1 ) {
+	print "\nWhere would you like to install the Condor release ",
+	"directory?\n[$def_rel_dir] ";
+	chop( $_ = <STDIN> );
+	if( /^$/ ) {
+	    $release_dir = $def_rel_dir;
+	} else {
+	    $release_dir = $_;
+	}
+	if( -d $release_dir ) {
+	    last;
+	} else {
+	    print "That directory doesn't exist, should I create it now? [yes] ";
+	    chop( $_ = <STDIN> );
+	    if( /(^[Yy].*)|^$/ ) {
+		if( ! mkdir( $release_dir, 0777 ) ) {
+		    print "Can't create $release_dir: $!.\nTry again.\n";
+		} else {
+		    last;
+		}
+	    } else {
+		print "I have to install a release directory, try again.\n";
+	    }
+	}
+    }
+
+    &install_release_tar( $release_dir );
+
+    # Final sanity check... make sure the release.tar we had was complete: 
+    if( &check_release_dir( $release_dir ) ) {
+	return $release_dir;
+    } else {
+	print "Error installing the release.tar file, try again.\n";
+	return &install_release_dir();
+    }
+}
+
+
+sub install_release_tar {
+    local( $rel_tar, $install_path, $dir );
+    $install_path = $_[0];
+    chop($dir = `pwd`);
+    if( ! -f "release.tar" ) {
+	print "\nThere's no \"release.tar\" file in the current directory.\n",
+	"The Condor binary distribution contains a \"release.tar\" file, which\n",
+	"is a tar file archive of the entire Condor release directory.\n";
+	while( 1 ) {
+	    print "What's the full path to the release.tar file?\n";
+	    chop( $_ = <STDIN> );
+	    if( ! /^.*release\.tar$/ ) {
+		$rel_tar = "$_/release.tar";
+	    } else {
+		$rel_tar = $_;
+	    }
+	    if( -f $rel_tar ) {
+		last;
+	    } else {
+		print "\"$rel_tar\" doesn't exist, try again.\n";
+	    }
+	}
+    } else {
+	$rel_tar = "$dir/release.tar";
+    }
+    print "Installing a release directory into $install_path ... \n";
+    chdir $install_path || die "\nCan't cd to $install_path: $!\n";
+    system( "tar -xvf $rel_tar") && die "\nCan't untar $rel_tar\n";
+    chdir $dir || die "\nCan't cd to $dir: $!\n";
+    print "done.\n";
+}
+
+
+sub find_release_dir {
+    local( $path );
+    chop($_ = `which condor_config_val`);
+    if( /^\/.*$/ ) {
+	chop($path = `condor_config_val RELEASE_DIR 2> /dev/null`);
+	if( &check_release_dir($path) ) {
+	    return $path;
+	}
+    }
+    if( &check_release_dir("/usr/local/condor") ) {
+	return "/usr/local/condor";
+    } 
+    return "";
+}
+
+
+sub check_release_dir {
+    local( $dir, $tmp );
+    $dir = $_[0];
+    -d $dir || return "";
+    -d "$dir/lib" || return "";
+    -d "$dir/bin" || return "";
+    -d "$dir/sbin" || return "";
+    -d "$dir/etc" || return "";
+    -d "$dir/etc/examples" || return "";
+    -f "$dir/etc/examples/condor.generic" || return "";
+    -f "$dir/etc/examples/condor_config.generic" || return "";
+    -f "$dir/etc/examples/condor_config.submit.generic" || return "";
+    -f "$dir/etc/examples/condor_config.root.generic" || return "";
+    -f "$dir/etc/examples/condor_config.local.central.manager" || return "";
+    foreach $tmp( @lib_names ) {
+	-f "$dir/lib/$tmp" || return "";
+    }
+    foreach $tmp( @bin_names ) {
+	-x "$dir/bin/condor_$tmp" || return "";
+    }
+    foreach $tmp( @sbin_master_names ) {
+	-x "$dir/sbin/condor_$tmp" || return "";
+    }
+    return $dir;
+}
+
+
+sub prompt_install_path {
+    local( $path, $def_path );
+    if( $< ) {
+	$def_path = "$tilde/bin";
+    } else {
+	$def_path = "/usr/local/bin";
+    }
+    while(1) {
+	print "\nWhere should I install the user-level scripts and binaries?\n",
+	"[$def_path] ";
+	chop( $_ = <STDIN> );
+	if( /^$/ ) {
+	    $path = $def_path;
+	} else {
+	    $path = $_;
+	}
+	if( ! -d $path ) {
+	    print "$path is not a directory, should I create it? [yes] ";
+	    chop( $_ = <STDIN> );
+	    if( /(^[Yy].*)|^$/ ) {
+		if( ! mkdir($path, 0777) ) {
+		    print "I can't create $path: $!.\nTry again.\n";
+		    next;
+		}
+	    } else {
+		next;
+	    }
+	} elsif( ! -w $path ) {
+	    print "You don't have permission to write into $path, ",
+	    "try again.\n";
+	    next;
+	}
+	if( ! grep(/$path/, ($ENV{PATH})) ) {
+	    print "$path isn't in your PATH, do you still want to use it? [no] ";
+	    chop( $_ = <STDIN> );
+	    if( ! /(^[Nn].*)|^$/ ) {
+		last;
+	    }
+	} else {
+	    last;
+	}
+    }
+    if( ! grep(/$path/, ($ENV{PATH})) ) {
+	print "Be sure to add $path to your PATH when this is done\n",
+	"so you can access the files I install.\n";
+    }
+    return $path;
+}    
+
+
+sub configure_full_install {
+    local( $cm, $local_dir_str, $config_file, $mach, $local_config_str,
+	  $has_mach, $is_cm, $name );
+
+    print "\n***************************************************************************\n",
+    "\tConfiguring for a full install.\n",
+    "***************************************************************************\n";
+
+    # Initialize some variables
+    $local_config_str = "";
+    $local_dir_str = "";
+    $has_mach = 0;
+    $is_cm = 0;
+
+
+    print "\n***************************************************************************\n",
+    "\tSTEP 6: What machine will be your central manager?\n",
+    "***************************************************************************\n";
+    $cm = &prompt_central_manager( 0 );
+    
+    if( $cm eq $host || $cm eq $fullhost ) {
+	print "\nYour central manager will be on the local machine.\n";
+	$is_cm = 1;
+    }
+    
+    print "\n***************************************************************************\n",
+    "\tSTEP 7: Where will the \"local directory\" go?\n",
+    "***************************************************************************\n";
+    
+    if( @machines ) {
+	# Figure out where the local_dir should be.
+	print "\nEach machine in your pool will need a unique directory\n";
+	if( $condor_home ) {
+	    # There's a condor user
+	    print "\nYou have a \"condor\" user on this machine.  Is the home ",
+	    "directory for\nthis account ($condor_home) shared among all ",
+	    "machines in your pool?\n[yes] ";
+	    $_ = <STDIN>;
+	    if( /(^[Yy].*)|^$/ ) {
+		print "\nDo you want to put all the Condor directories for ",
+		"each machine in\nsubdirectories of $condor_home? [yes] ";
+		$_ = <STDIN>;
+		if( /(^[Yy].*)|^$/ ) {
+		    $local_dir = "$condor_home/hosts";
+		    -d $local_dir || mkdir( $local_dir, 0777) || 
+			die "Can't create $local_dir: $!\n";
+		    print "\nUsing $local_dir/[hostname] as the local ",
+		    "directory for each host.\n";
+		    $local_dir_str = "\$(TILDE)/hosts/\$(HOSTNAME)";
+		    $has_mach = 1;
+		}
+	    } else {
+		# Condor's home directory is local
+		print "\nDo you want to put all the Condor directories for ",
+		"each machine in\n$condor_home? [yes] ";
+		$_ = <STDIN>;
+		if( /(^[Yy].*)|^$/ ) {
+		    $local_dir = $condor_home;
+		    -d $local_dir || mkdir( $local_dir, 0777) || 
+			die "Can't create $local_dir: $!\n";
+		    print "\nUsing $local_dir as the local directory for each host.\n",
+		    "\nYou will have to run condor_init on the other machines before\n",
+		    "you can start up Condor on them.\n";
+		    $local_dir_str = "\$(TILDE)";
+		}
+	    }
+	}
+	if( ! $local_dir_str && -w $release_dir) {
+	    # We still haven't found a local dir we want, but
+	    #     $release_dir is writable to us.
+	    print "\nDo you want to put all the Condor directories for ",
+	    "each machine in\nsubdirectories of $release_dir? [yes] ";
+	    $_ = <STDIN>;
+	    if( /(^[Yy].*)|^$/ ) {
+		$local_dir = "$release_dir/hosts";
+		-d $local_dir || mkdir( $local_dir, 0777) || 
+		    die "Can't create $local_dir: $!\n";
+		print "\nUsing $local_dir/[hostname] as the local ",
+		"directory for each host.\n";
+		$local_dir_str = "\$(RELEASE_DIR/hosts/\$(HOSTNAME)";
+		$has_mach = 1;
+	    }
+	}
+	if( ! $local_dir_str ) {
+	    # We still haven't found a local dir we want, just ask.
+	    print "\nWhere do you want the local directory for each host?\n",
+	    "(The directory you specify must be unique for all machines in ",
+	    "your\npool.  If you include \"\$(HOSTNAME)\", that will get ",
+	    "expanded to the\nhostname of each machine you are setting up.)\n";
+	    chop( $_ = <STDIN> );
+	    $local_dir_str = $_;
+	    if( $_ =~ s/^(.*)\/\$\(HOSTNAME\)$/$1/ ) {
+		$local_dir = $_;
+		$has_mach = 1;
+	    }
+	    if( ! -d $local_dir ) {
+		mkdir($local_dir, 0777) || 
+		    die "\nCan't create $local_dir: $!\n\n";
+	    }
+	}
+    } else {
+	# Only setting up one machine
+	print "\nCondor will need to create a few directories for its own use\n";
+	if( $condor_home ) {
+	    print "\nYou have a \"condor\" user on this machine.  Do you want to ",
+	    "put all the\nCondor directories in $condor_home? [yes] ";
+	    $_ = <STDIN>;
+	    if( /(^[Yy].*)|^$/ ) {
+		$local_dir = $condor_home;
+		-d $local_dir || mkdir( $local_dir, 0777) || 
+		    die "Can't create $local_dir: $!\n";
+		$local_dir_str = "\$(TILDE)";
+	    }
+	}
+	if( ! $local_dir_str && -w $release_dir) {
+	    # We still haven't found a local dir we want, but
+	    #     $release_dir is writable to us.
+	    print "\nDo you want to put all the Condor directories in\n",
+	    "$release_dir/home? [yes] ";
+	    $_ = <STDIN>;
+	    if( /(^[Yy].*)|^$/ ) {
+		$local_dir = "$release_dir/home";
+		-d $local_dir || mkdir( $local_dir, 0777) || 
+		    die "Can't create $local_dir: $!\n";
+		$local_dir_str = "\$(RELEASE_DIR)/home";
+	    }
+	}
+	if( ! $local_dir_str ) {
+	    # We still haven't found a local dir we want, just ask.
+	    print "\nWhere do you want the Condor directories?\n";
+	    chop( $_ = <STDIN> );
+	    $local_dir_str = $_;
+	    if( $_ =~ s/^(.*)\/\$\(HOSTNAME\)$/$1/ ) {
+		$local_dir = $_;
+	    }
+	    if( ! -d $local_dir ) {
+		mkdir($local_dir, 0777) || 
+		    die "\nCan't create $local_dir: $!\n\n";
+	    }
+	    # Now, put $host on there instead of "$(HOSTNAME)"
+	    $local_dir = "$local_dir/$host";
+	    if( ! -d $local_dir ) {
+		mkdir($local_dir, 0777) || 
+		    die "\nCan't create $local_dir: $!\n\n";
+	    }
+	}
+    }
+
+    print "\nCreating all necessary Condor directories ... ";
+    if( @machines && $has_mach ) {
+	foreach $mach (@machines) {
+	    &condor_init( "$local_dir/$mach", "log", "spool",  
+			 "execute" );
+	}
+    } else {
+	&condor_init( $local_dir, "log", "spool", "execute" );
+    }	    
+    print "done.\n";
+    
+    print "\nPress enter to continue. ";
+    $_ = <STDIN>;
+    print "\n***************************************************************************\n",
+    "\tSTEP 8: Where will the local (machine-specific) config files go?\n",
+    "***************************************************************************\n";
+
+    if( @machines ) {
+	# If there are multiple machines, force a local config file.
+	$local_config_str = &prompt_local_config_file( $release_dir, 
+						      $local_dir, 
+						      $has_mach, 1 );
+    } else {
+	# If we're on the CM, we want to force a local config file. 
+	$local_config_str = &prompt_local_config_file( $release_dir, 
+						      $local_dir, 0, $is_cm );
+    }
+
+    $config_file = "$release_dir/etc/condor_config";
+    @args=( $config_file,
+	   "$release_dir/etc/examples/condor_config.generic", 
+	   $cm, $local_dir_str, $local_config_str );
+    &customize_config_file( @args );
+
+    if( $is_cm ) {
+	$_ = $local_config_str;
+	s/(.*)\$\(HOSTNAME\)(.*)/$1$host$2/;
+	s/(.*)\$\(LOCAL_DIR\)(.*)/$1$local_dir$2/;
+	&configure_central_manager( $_ );
+    }
+
+    print "\nPress enter to continue. ";
+    $_ = <STDIN>;
+    print "\n***************************************************************************\n",
+    "\tSTEP 9: How do you want Condor to find its config file?\n",
+    "***************************************************************************\n";
+
+    if( $condor_home ) {
+	print "\nShould I put in a soft link from $condor_home/condor_config to\n",
+	"$config_file [yes] ";
+	$_ = <STDIN>;
+	if( /(^[Yy].*)|^$/ ) {
+	    unlink( "$condor_home/condor_config" );
+	    symlink( $config_file, "$condor_home/condor_config" ) ||
+		die "Can't create symbolic link: $!\n";
+	} 
+    }
+    if( ( ! -f "$condor_home/condor_config") && (-w "/etc") ) {
+	print "\nShould I put in a soft link from /etc/condor/condor_config to\n",
+	"$config_file [yes] ";
+	$_ = <STDIN>;
+	if( /(^[Yy].*)|^$/ ) {
+	    (-d "/etc/condor") || mkdir("/etc/condor", 777) || 
+		die "Can't create /etc/condor: $!\n";
+	    symlink( $config_file, "/etc/condor/condor_config" ) ||
+		die "Can't create symbolic link: $!\n";
+	} 
+    }	
+
+    print "\nInstalling links for public binaries into $path ... ";
+    foreach $name (@bin_names) {
+	if( -f "$path/condor_$name" ) {
+	    rename( "$path/condor_$name", "$path/condor_$name.old" );
+	}
+	symlink( "$release_dir/bin/condor_$name", "$path/condor_$name" ) ||
+	    die "Can't create symbolic link $path/condor_$name:\n$!\n";
+    }
+    print "done.\n";
+
+    # Customize the boot script, just in case they use it.
+    &customize_boot_script(0);
+
+    # Dump out the @machines list
+    &create_roster_file();
+
+    print "\nPress enter to continue. ";
+    $_ = <STDIN>;
+
+    # Now that we're done, print out a message explaining what to do next:
+    print "\n",
+    "Condor has been fully installed on this machine.\n\n",
+    "$release_dir/sbin contains various administrative tools.\n",
+    "If you are going to administer Condor, you should probably place that\n",
+    "directory in your PATH.\n\n",
+    "To start Condor on any machine, just execute:\n",
+    "$release_dir/sbin/condor_master\n\n";
+    if( $is_cm ) {
+	print "Since this is your central manager, you should start Condor here first.\n";
+    } else {
+	print "You should start Condor on your central manager ($cm) first.\n";
+    }
+    print "\nYou should probably setup your machines to start Condor automatically at\n",
+    "boot time.  If your machine uses System-V style init scripts, look in\n",
+    "$release_dir/etc/examples/condor.boot\n",
+    "for a script that you can use to start and stop Condor.\n",
+    "\nPlease read the \"Condor is installed... now what?\" section of the INSTALL\n",
+    "file for things you should do before and after starting the Condor daemons.\n";
+}
+
+
+sub configure_central_manager {
+    local( $local_config, $generic );
+    $local_config = $_[0];
+    $generic = "$release_dir/etc/examples/condor_config.local.central.manager";
+
+    if( ! $local_config ) {
+	chop($_ = `$release_dir/bin/condor_config_val LOCAL_CONFIG_FILE 2> /dev/null`);
+	if( ! /^\/.*/ ) {
+	    print "\nCan't find the local config file for this host.\n";
+	    return "";
+	}
+	$local_config = $_;
+    }
+
+    print "\nCopying default central manager config file to\n$local_config ... ";
+    system( "/bin/cp -f $generic $local_config" ) && 
+	die "\nCan't copy default central manager config file to\n$local_config:\n$!\n";
+    print "done.\n";
+}
+
+
+sub customize_boot_script {
+    local( $use_script ) = $_[0];
+    if( $use_script ) {
+	$master = "$path/condor_master";
+    } else {
+	$master = "$release_dir/sbin/condor_master";
+    }
+    rename( "$release_dir/etc/examples/condor.boot",
+	   "$release_dir/etc/examples/condor.boot.generic" );
+    open( GENERIC, "<$release_dir/etc/examples/condor.boot.generic" );
+    open( BOOT, ">$release_dir/etc/examples/condor.boot" );
+    while( <GENERIC> ) {
+	if( /^MASTER.*/ ) {
+	    print BOOT "MASTER=$master\n";
+	} else {
+	    print BOOT $_;
+	}
+    }
+    close GENERIC;
+    close BOOT;
+    unlink( "$release_dir/etc/examples/condor.boot.generic" );
+}
+
+
+sub create_roster_file {
+    @machines || return;
+    local( $mach );
+    open( ROSTER, "$release_dir/etc/roster" );
+    foreach $mach (@machines) {
+	print ROSTER "$mach\n";
+    }
+    close ROSTER;
+    print "\nCreated $release_dir/etc/roster,\n",
+    "the list of all machines in your pool.\n";
+}
+
+
+# Figure out how many pools we want to join and what their nicknames
+# are.  Returns a list of pools.  If the list is empty, we're only
+# adding ourself to one pool.  If not, the first element in the list
+# is the default pool.
+sub prompt_pools {
+    local( @pools, $pool, $i, $num_pools );
+    print "\nHow many different pools would you like to add this machine to? [1] ";
+    chop($_ = <STDIN>);
+    if( /^$/ ) {
+	$num_pools = 1;
+    } else {
+	$num_pools = $_;
+    }
+    if( $num_pools < 1 ) {
+	print "That's an invalid number of pools, try again\n\n";
+	return &prompt_pools();
+    } elsif( $num_pools > 1 ) {
+	print "\n",
+"Since you want to add this machine to multiple pools, you will be asked\n",
+"to give each one a nickname, used to identify it when you run the\n",
+"various Condor tools and daemons.  One pool will be the default, which\n", 
+"will be used if you don't specify a pool explicitly.\n\n";
+
+	print "What's the nickname of the pool you want to use by default?\n";
+	chop($pool = <STDIN>);
+	push( @pools, $pool );
+	for( $i=1; $i<$num_pools; $i++ ) {
+	    print "What's the nickname of the next pool you want to use?\n";
+	    chop($pool = <STDIN>);
+            if( grep(/$pool/, @pools) ) {
+                print "\"$pool\" is already in use as a nickname, try again.\n";
+                redo;
+            }
+	    push( @pools, $pool );
+	}
+    }
+    return @pools;
+}
