@@ -41,7 +41,7 @@ char* get_schedd_addr(const char* name)
 {
 	char*				scheddAddr = (char*)malloc(sizeof(char)*100);
 
-	sprintf(scheddAddr, "<localhost:%d>", SCHED_PORT);
+	sprintf(scheddAddr, "<%s:%d>", name, SCHED_PORT);
 	return scheddAddr;
 }
 }
