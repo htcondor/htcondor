@@ -42,6 +42,7 @@ public:
 	BOOLEAN substring( const char * );
 	void print (void);
 	void rewind (void) { strings.Rewind(); }
+	void append (char* str) { strings.Append( str ); }
 	char *next (void) { return strings.Next(); }
 	int number (void) { return strings.Number(); }
 private:
