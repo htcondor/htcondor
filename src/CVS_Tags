@@ -1,3 +1,8 @@
+02/16/04 V6_6-cdf-branch
+   A new branch off of V6_6-branch created from the V6_6-cdf-root tag.
+   This will hold various changed made for CDF, some of which are new
+   features.
+
 02/12/04 V6_6-infn-branch
    A new branch off of V6_6-branch (post V6_6_1) that will be used for
    various startd enhancements for the Bolonga Batch System (BBS) at
