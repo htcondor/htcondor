@@ -15,7 +15,9 @@
 #include "condor_astbase.h"
 
 //for the shipping functions -- added by Lei Cao
+#include <rpc/xdr.h>
 #include "stream.h"
+
 
 enum							// various AttrLists
 {
@@ -87,7 +89,7 @@ class AttrList : public AttrListAbstract
         AttrList(AttrListList*);			// Associated with AttrList list
         AttrList(FILE *, char *, int &);	// Constructor, read from file.
 		AttrList(class ProcObj*);			// create from a proc object
-		AttrList(const CONTEXT*);			// create from a CONTEXT
+		AttrList(CONTEXT*);			// create from a CONTEXT
         AttrList(char *, char);				// Constructor, from string.
         AttrList(AttrList&);				// copy constructor
         virtual ~AttrList();				// destructor
@@ -107,14 +109,14 @@ class AttrList : public AttrListAbstract
 
 		int			fPrintExpr(FILE*, char*);	// print an expression
         virtual int	fPrint(FILE*);				// print the AttrList to a file
-
+		int         MakeContext (CONTEXT *);    // create a context
         // shipping functions -- added by Lei Cao
         int put(Stream& s);
         int get(Stream& s);
         int code(Stream& s);
 
-		int put (class XDR *);
-		int get (class XDR *);
+		int put (XDR *);
+		int get (XDR *);
 
 		friend	class	AttrListRep;			// access "next" 
 		friend	class	AttrListList;			// access "UpdateAgg()"
