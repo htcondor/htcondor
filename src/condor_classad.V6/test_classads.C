@@ -76,6 +76,10 @@ typedef map<string, ClassAdCollection *>::iterator CollectionMapIterator;
  * Private Functions
  *
  *--------------------------------------------------------------------*/
+static void cleanup(void);
+static void mark_classad_in_collection(string name);
+static void unmark_classad_in_collection(string name);
+static bool is_classad_in_collection(string name);
 static void process_file(
 	ifstream &input_file, const Parameters &parameters,
     ErrorCount *errors);
@@ -138,10 +142,76 @@ main(int argc, char **argv)
 	else {
 		input_file.flags(0);
 		process_file(input_file, parameters, &errors);
+		cleanup();
 		errors.PrintErrors();
 	}
 
 	return 0;
+}
+
+static void
+cleanup(void)
+{
+	// We want to only delete a ClassAd once. So we remove 
+	// each classad in each collection, then delete all of the ClassAds. 
+	CollectionMapIterator ci;
+
+	printf("####### Cleaning Up Collections.\n");
+	for (ci = collections.begin(); ci != collections.end(); ci++ ) {
+		ClassAdCollection *collection;
+
+		collection = ci->second;
+
+		LocalCollectionQuery  query;
+		
+		query.Bind(collection);
+		assert(query.Query("root", NULL));
+		
+		string classad_key;
+		
+		for (query.ToFirst(), query.Current(classad_key); 
+			 !query.IsAfterLast(); query.Next(classad_key)) {
+			collection->RemoveClassAd(classad_key);
+			break;
+		}
+		collections.erase(ci);
+		delete collection;
+	}
+
+	printf("####### Cleaning Up ClassAds.\n");
+	ClassAdMapIterator i;
+	for (i = classads.begin(); i != classads.end(); i++) {
+		ClassAd *classad;
+
+		
+		classad = i->second;
+		classads.erase(i);
+		if (!is_classad_in_collection(i->first)) {
+			delete classad;
+		}
+	}
+
+	return;
+
+	
+}
+
+map<string, bool> in_collection;
+
+static void mark_classad_in_collection(string name)
+{
+	in_collection[name] = true;
+	return;
+}
+
+static void unmark_classad_in_collection(string name)
+{
+	in_collection[name] = false;	
+}
+
+static bool is_classad_in_collection(string name)
+{
+	return in_collection[name];
 }
 
 /*********************************************************************
@@ -273,6 +343,7 @@ static void process_classad(ifstream &input_file, const string &line,
 			 << "\", Line " << starting_line_number << endl;
 	}
 	classads[name] = classad;
+	unmark_classad_in_collection(name);
 
 	return;
 }
@@ -624,6 +695,7 @@ static void process_add_to_collection(const string &line,
 					cout << "OK: added " << classad_name << " to "
 						 << collection_name << ", on line " 
 						 << line_number << ".\n";
+					mark_classad_in_collection(classad_name);
 				}
 			}
 		}
