@@ -124,6 +124,23 @@ files on the Globus resource that should be occasionally removed.
 	}
     \OptItem{\OptArg{-\hspace{.25 mm}-count}{CPU count}}{
 	Number of CPUs to request, default is 1. }
+    \OptItem{\OptArg{-\hspace{.25 mm}-vms}{VM count}{
+	Number of virtual machines to split up allocated resources
+	into.
+	By default, Condor divides multiple-CPU resources into one
+	virtual machine for each CPU, with an equal share of RAM,
+	disk, and swap space.
+	This option configures the number of virtual machines, so that
+	multi-threaded jobs can run in a virtual machine with multiple
+	CPUs.
+	For example, if 4 CPUs are requested and 
+	\Opt{-\hspace{.25 mm}-vms} is not specified, Condor will
+	divide the request up into 4 virtual machines with 1 CPU each.
+	However, if \OptArg{-\hspace{.25 mm}-vms}{2} is specified,
+	Condor will divide the request up into 2 virtual machines with
+	2 CPUs each, and if \OptArg{-\hspace{.25 mm}-vms}{1} is
+	specified, Condor will put all 4 CPUs into one virtual
+	machine. }
     \OptItem{\OptArg{-\hspace{.25 mm}-runfor}{minutes}}{
 	How long the Condor daemons on the Globus resource
 	can remain idle before the resource reverts back to its
