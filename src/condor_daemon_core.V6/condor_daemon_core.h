@@ -735,7 +735,7 @@ class DaemonCore : public Service
 	SafeSock* dc_ssock;	// udp command socket
 
     void Inherit( void );  // called in main()
-	void InitCommandPort( int command_port );  // called in main()
+	void InitCommandSocket( int command_port );  // called in main()
 
     int HandleSigCommand(int command, Stream* stream);
     int HandleReq(int socki);

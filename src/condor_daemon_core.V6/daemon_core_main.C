@@ -1301,7 +1301,7 @@ int main( int argc, char** argv )
 	daemonCore->Inherit();
 
 	// SETUP COMMAND SOCKET
-	daemonCore->InitCommandPort( command_port );
+	daemonCore->InitCommandSocket( command_port );
 	
 		// Install DaemonCore signal handlers common to all daemons.
 	daemonCore->Register_Signal( DC_SIGHUP, "DC_SIGHUP", 

@@ -3707,7 +3707,7 @@ DaemonCore::Inherit( void )
 
 
 void
-DaemonCore::InitCommandPort( int command_port )
+DaemonCore::InitCommandSocket( int command_port )
 {
 	if( command_port == 0 ) {
 			// No command port wanted, just bail.
