@@ -61,6 +61,7 @@ void debug_unlock ( void );
 void _EXCEPT_ ( char *fmt, ... );
 int flock ( int fd, int op );
 int getdtablesize ( void );
+char* strupr( char* );
 
 #ifndef WIN32	// on WIN32, it messes with our getwd macro in condor_sys_nt.h
 char * getwd ( char *path );
