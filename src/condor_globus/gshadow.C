@@ -79,7 +79,6 @@ main( int argc, char *argv[] ) {
 	char buffer[2048] = "";
 	char args[ATTRLIST_MAX_EXPRESSION] = "";
 	int delay = QUERY_DELAY_SECS_DEFAULT;
-	int rc = 0;
 
 		//install sig handlers
 	signal( SIGUSR1, remove_job );
@@ -128,7 +127,7 @@ main( int argc, char *argv[] ) {
 
 		//these values *might* be in ClassAd
 	GetAttributeString( cluster, proc, "GlobusContactString", buffer );
-	if ( buffer[0] && strcmp( buffer, "X" ) ) {
+	if ( buffer[0] ) {
 		contactString = strdup( buffer );
 	}
 	GetAttributeInt( cluster, proc, "GlobusQueryDelay", &delay );
@@ -148,7 +147,7 @@ main( int argc, char *argv[] ) {
 
 		//if there was no contactString in the ad, it hasn't 
 		//been submitted to globusrun yet
-	if ( contactString == NULL )
+	if ( !strcmp( contactString, "X" ) ) 
 	{
 		sprintf( buffer, "%s %s", globusrun, args );
 
@@ -167,11 +166,6 @@ main( int argc, char *argv[] ) {
 				break;
 			}
 		}
-		rc = pclose( run );
-		if ( rc ) {
-			fprintf( stderr, "globusrun exited with status %d on job submission\n", rc );
-			exit( 6 );
-		}
 		if ( contactString ) {
 			if ( schedd = ConnectQ( argv[2], QMGMT_TIMEOUT ) ) {
 				SetAttributeString( cluster, proc, "GlobusContactString", 
@@ -182,14 +176,14 @@ main( int argc, char *argv[] ) {
 				//FATAL error if we can't set GlobusContactString!
 //				dprintf( D_ALWAYS, "Error contacting schedd %s\n", argv[2] );
 				fprintf( stderr, "Error contacting schedd %s\n", argv[2] );
-				exit( 7 );
+				exit( 6 );
 			}
 	
 		}
 		else {
 //			dprintf( D_ALWAYS, "Error reading contactString from globusrun\n" );
 			fprintf( stderr, "Error reading contactString from globusrun\n" );
-			exit( 8 );
+			exit( 7 );
 		}
 	}
 	schedd = NULL;
@@ -204,7 +198,7 @@ main( int argc, char *argv[] ) {
 		if ( !(statusfp = popen( buffer, "r" ) ) ) {
 //			dprintf( D_ALWAYS, "cannot popen( %s )\n", buffer );
 			fprintf( stderr, "cannot popen( %s )\n", buffer );
-			exit( 9 );
+			exit( 8 );
 		}
 		if ( !fgets( status, 80, statusfp ) ) {
 //			dprintf( D_ALWAYS, "pipe read errno %d\n", errno );
@@ -212,21 +206,15 @@ main( int argc, char *argv[] ) {
 		}
 		chomp( status );
 
-		rc = pclose( statusfp );
-		if ( rc ) {
-			fprintf( stderr, "globusrun exited with status %d on job status check\n", rc );
-			exit( 10 );
-		}
-		//In Globus 1.1.1 and earlier, on certain errors, globusrun will
-		//exit with a false status of 0 (success). In these cases, nothing
-		//is printed to stdout. To work with these versions of Globus, we
-		//should treat empty stdout as an error (otherwise, we may end up
-		//with an infinite loop..
+		//I might have to close stderr at this point, a bug in globus reports
+		//Error to stderr, but nothing to stdout. 
+		//I am currently using a modified Globusrun until they fix the bug.
 
 		if ( !strncasecmp( status, "ERROR", 5 ) ) {
 			strcpy( status, "DONE" ); 
 		}
 
+		pclose( statusfp );
 		if ( strcasecmp( Gstatus, status ) ) {
 			strcpy( Gstatus, status );	
 
