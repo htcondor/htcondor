@@ -6,6 +6,7 @@
 #include "simplelist.h"
 #include "condor_collector.h"
 #include "condor_attributes.h"
+#include "query_result_type.h"
 
 // Please read the documentation for the API before you use it (RTFM :-)  --RR
 
@@ -75,20 +76,6 @@ enum StartdCustomCategory
 	STARTD_CUSTOM,
 
 	STARTD_CUSTOM_THRESHOLD
-};
-
-
-// users of the API must check the results of their calls, which will be one
-// of the following
-enum QueryResult
-{
-	Q_OK 					= 0,	// ok
-	Q_INVALID_CATEGORY    	= 1,	// category not supported by query type
-	Q_MEMORY_ERROR 			= 2,	// memory allocation error within API
-	Q_PARSE_ERROR		 	= 3,	// constraints could not be parsed
-	Q_COMMUNICATION_ERROR 	= 4,	// failed communication with collector
-	Q_INVALID_QUERY			= 5,	// query type not supported/implemented
-	Q_NO_COLLECTOR_HOST     = 6		// could not determine collector host
 };
 
 

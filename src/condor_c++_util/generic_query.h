@@ -4,17 +4,7 @@
 #include "condor_classad.h"
 #include "list.h"
 #include "simplelist.h"
-
-
-// error values
-enum 
-{
-	Q_OK,
-	Q_INVALID_CATEGORY,
-	Q_MEMORY_ERROR,
-	Q_PARSE_ERROR,
-};
-	
+#include "query_result_type.h"	
 
 class GenericQuery
 {
