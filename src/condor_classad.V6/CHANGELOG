@@ -1,4 +1,6 @@
 Changes for version 0.9.6: 
+* Added new ClassAd functions: splitTime(), formatTime(), and random()
+
 * Added tester, which is a significantly better than the old
 test_classads. Soon this will replace test_classads, which will be
 removed completely.
