@@ -667,6 +667,32 @@ server, shadow, and starter, none of which use DaemonCore yet).
   IP/host-based security in Condor'' for details on all of these
   settings and how to configure them.
 
+\item[\Macro{AUTHENTICATION\_METHODS}]\label{param:AuthenticationMethods}
+  There are many instances when the Condor system needs to authenticate
+  the identity of the user.  For instance, when a job is submitted with
+  \Condor{submit}, Condor needs to authenticate the user so that the job
+  goes into the queue and runs with the proper credentials.  The
+  \Macro{AUTHENTICATION\_METHODS} parameter should be a list of
+  permitted authentication methods.  The list should be ordered by
+  preference.  The actual authentication method used is the first method
+  in this list that both the server and client are able to perform.
+  Possible values are:
+  \begin{itemize}
+		\item FS Use the filesystem to authenticate the user.  
+			The server requests the client to create a specified temporary
+			file, then the server verifies the ownership of that file. \Note
+			This is the default method used on Unix systems.
+		\item NTSSPI Use NT's standard LAN-MANAGER challenge-reponse protocol.
+			\Note This is the default method used on Windows NT.
+		\item GSS Use Generic Security Subsystem, which is implemented in
+			Condor with X.509 certificates.  
+			These X.509 certificates are compatible with the Globus system from
+			Argonne National Labs.
+		\item CLAIMTOBE The server should simply trust the client.  
+			\Note You had better trust all users who have access to your Condor
+			pool if you enable CLAIMTOBE authentication.
+  \end{itemize}
+
 \item[\Macro{SHUTDOWN\_GRACEFUL\_TIMEOUT}]
   \label{param:ShutdownGracefulTimeout} This entry determines how long
   you are willing to let daemons try their graceful shutdown methods
