@@ -27,7 +27,7 @@ my %Config = (
 	      Description	=> "",
 	      NumContacts	=> 0,
 	      CondorHost	=> "",
-	      ProbePath		=> "",
+	      Probe		=> "GridProbe.pl",
 	      TmpDir		=> "",
 	      GlobusDir		=> "",
 	      LogFile		=> "",
@@ -172,7 +172,7 @@ sub Init (){
     $Config{ProbeArgs} = HawkeyeLib::ReadConfig( "_ProbeArgs", "" );
 
     # The probe itself...
-    $Config{ProbePath} = HawkeyeLib::ReadConfig( "_ProbePath", "" );
+    $Config{Probe} = HawkeyeLib::ReadConfig( "_Probe", "" );
 
     # The user's globus directory
     $Config{GlobusDir} = HawkeyeLib::ReadConfig( "_GlobusDir", "" );
@@ -186,16 +186,6 @@ sub Init (){
 }
 
 # #############################
-# #############################
-sub RunItOld {
-
-    foreach my $Contact ( keys %{$Config{ContactStrings}} )
-    {
-	RunTest( $Contact, $Config{ContactStrings}{$Contact} );
-    }
-}
-
-# #############################
 # Do the real work here...
 # #############################
 sub RunIt ( )
@@ -203,40 +193,39 @@ sub RunIt ( )
     my %Fields;
     my %GlobalFields;
 
+    # ###############################################
     # Create the script to actually run the probe
     my ($Fh, $File) = mkstemp( "/tmp/tmpfileXXXXX" );
     local(*FH) = $Fh;
     my $ProbeCmd;
-    if ( $Config{ProbePath} ne "" )
-    {
-	$ProbeCmd = "$Config{ProbePath}/GridProbe.pl ";
-    }
-    else
-    {
-	$ProbeCmd = "GridProbe.pl ";
-    }
-    $ProbeCmd .= " --non-stop ";
+    $ProbeCmd = "$Config{Probe} --non-stop ";
+
+    # Add contacts
     foreach my $Contact ( keys %{$Config{ContactStrings}} )
     {
 	my $ContactString = $Config{ContactStrings}{$Contact};
 	$ProbeCmd .= " --contact \"$ContactString\"";
     }
+
+    # Other random args
     $ProbeCmd .= " --tmpdir \"$Config{TmpDir}\"" if ( $Config{TmpDir} ne "" );
     $ProbeCmd .= " --globusdir \"$Config{GlobusDir}\""
 	if ( $Config{GlobusDir} ne "" );
     $ProbeCmd .= " --condor \"$Config{CondorHost}\""
 	if ( $Config{CondorHost} ne "" );
     $ProbeCmd .= " $Config{ProbeArgs} ";
+
+    # Build the temp file (that we'll execute below)
     print FH "GLOBUS_LOCATION=$ENV{GLOBUS_LOCATION}\n";
     print FH "export GLOBUS_LOCATION\n";
     print FH "source $ENV{GLOBUS_LOCATION}/etc/globus-user-env.sh\n";
-    if ( $Config{CondorPath} ne "" )
-    {
-	print FH "PATH=$Config{CondorPath}:\$PATH; export PATH\n";
-    }
+    print FH "PATH=$Config{CondorPath}:\$PATH; export PATH\n"
+	if ( $Config{CondorPath} ne "" );
     print FH "echo \$PATH\n";
     print FH "$ProbeCmd\n";
     close( FH );
+
+    # Check for NoExecute option (for testing!!)
     if ( $Config{NoExecute} )
     {
 	print STDERR "Script name '$File'\n";
@@ -244,7 +233,7 @@ sub RunIt ( )
 	exit 0;
     }
 
-    # Log file?
+    # Log file handling
     my $Log = 0;
     if ( $Config{LogFile} ne "" )
     {
