@@ -71,7 +71,7 @@ explicitly redirect input from a file to the shell command.  For
 example:
 
 \begin{verbatim}
-$ condor_run "cat input.dat | myprog > output.dat"
+$ condor_run "myprog < input.dat > output.dat"
 \end{verbatim}
 
 \Files
