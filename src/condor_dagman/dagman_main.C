@@ -82,7 +82,7 @@ void touch (const char * filename) {
 int
 main_config( bool is_full )
 {
-	config();
+		// nothing to read in from the config files here...
 	return 0;
 }
 
