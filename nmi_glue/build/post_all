@@ -1,8 +1,7 @@
 #!/usr/bin/env perl
 
-# $Id: post_all,v 1.1.2.1 2004-06-25 23:44:59 wright Exp $
-
 ######################################################################
+# $Id: post_all,v 1.1.2.2 2004-06-26 00:37:52 wright Exp $
 # Submit-side NMI build system infrastructure to save results after
 # all the platform-specific jobs have completed
 ######################################################################
