@@ -279,7 +279,7 @@ DoCommitProtocol( const string &xactionName, int &outcome,
 
 		// log only if the transaction is active (i.e., no commit rec in log)
 	if( xactionState == ClientTransaction::ACTIVE && log_fp && 
-			!xaction->LogCommit( log_fp, unparser ) ) {
+			!xaction->LogCommit( log_fp, &unparser ) ) {
 		CondorErrMsg += "; FATAL ERROR: failed to log commit record";
 		return( false );
 	} 
@@ -294,7 +294,7 @@ DoCommitProtocol( const string &xactionName, int &outcome,
 
 		// check if there was a server error (xaction was aborted)
 	if( CondorErrno != ERR_OK ) {
-		if( log_fp ) xaction->LogAbort( log_fp, unparser );
+		if( log_fp ) xaction->LogAbort( log_fp, &unparser );
 		delete xaction;
 		localXactionTable.erase( xactionName );
 		outcome = XACTION_ABORTED;

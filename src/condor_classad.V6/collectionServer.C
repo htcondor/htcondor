@@ -318,7 +318,7 @@ OperateInNetworkMode( int opType, ClassAd *logRec, Sock *clientSock )
 				// after it is played on the in-memory data structure so that
 				// we make a persistent record of the xaction iff the
 				// in-memory commit succeeds)
-				if( !xaction || !xaction->Log( log_fp, unparser ) ) {
+				if( !xaction || !xaction->Log( log_fp, &unparser ) ) {
 					delete logRec;
 					CondorErrno = ERR_FATAL_ERROR;
 					CondorErrMsg = "FATAL ERROR: in memory commit succeeded, "
@@ -1524,7 +1524,7 @@ CloseTransaction( const string &transactionName, bool commit, int &outcome )
 
 		// commit and log xaction
 	outcome = ( rval=xtn->Commit( ) ) ? XACTION_COMMITTED : XACTION_ABORTED;
-	if( rval && !xtn->Log( log_fp, unparser ) ) {
+	if( rval && !xtn->Log( log_fp, &unparser ) ) {
 		CondorErrMsg += "; could not log transaction";
 		rval = false;
 	}
