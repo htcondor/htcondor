@@ -171,6 +171,12 @@ report_image_size( int kbytes )
 	/* noop in local mode */
 }
 
+int
+get_ckpt_mode(int sig)
+{
+	/* noop in local mode */
+}
+
 
 char	*
 condor_get_executable_name()
