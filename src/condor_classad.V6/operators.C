@@ -794,17 +794,13 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 			return( SIG_CHLD1 | SIG_CHLD2 );
 	
 		case BOOLEAN_VALUE:
-			{
-				bool b1, b2;
-
-				// check if both are bools
-				if( !v1.IsBooleanValue( b1 ) || !v2.IsBooleanValue( b2 ) ) {
-					result.SetErrorValue();
-					return( SIG_CHLD1 | SIG_CHLD2 );
-				}
-				result.SetBooleanValue( b1 == b2 );
-			return( SIG_CHLD1 | SIG_CHLD2 );
+			// check if both are bools
+			if( !v1.IsBooleanValue( ) || !v2.IsBooleanValue( ) ) {
+				result.SetErrorValue();
+				return( SIG_CHLD1 | SIG_CHLD2 );
 			}
+			compareBools( op, v1, v2, result );
+			return( SIG_CHLD1 | SIG_CHLD2 );
 
 		case LIST_VALUE:
 		case CLASSAD_VALUE:
@@ -858,6 +854,9 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 		} else	if (v1.IsRealValue (r1)) {
 			result.SetRealValue (-r1);
 			return SIG_CHLD1;
+		} else if( v1.IsRelativeTimeValue( i1 ) ) {
+			result.SetRelativeTimeValue( -i1 );
+			return( SIG_CHLD1 );
 		} else if( v1.IsExceptional() ) {
 			// undefined or error --- same as operand
 			result.CopyFrom( v1 );
@@ -1129,7 +1128,7 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 int Operation::
 doTimeArithmetic( OpKind op, Value &v1, Value &v2, Value &result )
 {
-	int secs1=0, secs2=0, usecs1=0, usecs2=0;
+	int secs1=0, secs2=0;
 	ValueType vt1=v1.GetType( ), vt2=v2.GetType( );
 
 		// addition
@@ -1149,13 +1148,9 @@ doTimeArithmetic( OpKind op, Value &v1, Value &v2, Value &result )
 		}
 
 		if( vt1==RELATIVE_TIME_VALUE && vt2==RELATIVE_TIME_VALUE ) {
-			int tusecs, tsecs;
-			v1.IsRelativeTimeValue( secs1, usecs1 );
-			v2.IsRelativeTimeValue( secs2, usecs2 );
-			tusecs = usecs1 + usecs2;
-			tsecs = secs1 + secs2 + tusecs / 1000000;
-			tusecs = tusecs % 1000000;	
-			result.SetRelativeTimeValue( tsecs, tusecs );
+			v1.IsRelativeTimeValue( secs1 );
+			v2.IsRelativeTimeValue( secs2 );
+			result.SetRelativeTimeValue( secs1 + secs2 );
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 	}
@@ -1176,16 +1171,56 @@ doTimeArithmetic( OpKind op, Value &v1, Value &v2, Value &result )
 		}
 
 		if( vt1==RELATIVE_TIME_VALUE && vt2==RELATIVE_TIME_VALUE ) {
-			int dsecs, dusecs;
-			v1.IsRelativeTimeValue( secs1, usecs1 );
-			v2.IsRelativeTimeValue( secs2, usecs2 );
-			dusecs = usecs1 - usecs2;
-			if( dusecs < 0 ) {
-				secs1--;
-				dusecs += 1000000;
+			v1.IsRelativeTimeValue( secs1 );
+			v2.IsRelativeTimeValue( secs2 );
+			result.SetRelativeTimeValue( secs1 - secs2 );
+			return( SIG_CHLD1 | SIG_CHLD2 );
+		}
+	}
+
+	if( op == MULTIPLICATION_OP || op == DIVISION_OP ) {
+		if( vt1==RELATIVE_TIME_VALUE && vt2==INTEGER_VALUE ) {
+			int num, msecs;
+			v1.IsRelativeTimeValue( secs1 );
+			v2.IsIntegerValue( num );
+			if( op == MULTIPLICATION_OP ) {
+				msecs = secs1 * num;
+			} else {
+				msecs = secs1 / num;
 			}
-			dsecs = secs1 - secs2;
-			result.SetRelativeTimeValue( dsecs, dusecs );
+			result.SetRelativeTimeValue( msecs );
+			return( SIG_CHLD1 | SIG_CHLD2 );
+		}
+
+		if( vt1==RELATIVE_TIME_VALUE &&  vt2==REAL_VALUE ) {
+			double 	num;
+			int		msecs;
+			v1.IsRelativeTimeValue( secs1 );
+			v2.IsRealValue( num );
+			if( op == MULTIPLICATION_OP ) {
+				msecs = (int) ( secs1 * num );
+			} else {
+				msecs = (int) ( secs1 / num );
+			}
+			result.SetRelativeTimeValue( msecs );
+			return( SIG_CHLD1 | SIG_CHLD2 );
+		}
+
+		if( vt1==INTEGER_VALUE && vt2==RELATIVE_TIME_VALUE && 
+				op==MULTIPLICATION_OP ) {
+			int num;
+			v1.IsIntegerValue( num );
+			v2.IsRelativeTimeValue( secs1 );
+			result.SetRelativeTimeValue( num * secs1 );
+			return( SIG_CHLD1 | SIG_CHLD2 );
+		}
+
+		if( vt2==RELATIVE_TIME_VALUE &&  vt1==REAL_VALUE &&
+				op==MULTIPLICATION_OP ) {
+			double 	num;
+			v1.IsRelativeTimeValue( secs1 );
+			v2.IsRealValue( num );
+			result.SetRelativeTimeValue( (int) ( secs1 * num ) );
 			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 	}
@@ -1264,37 +1299,62 @@ compareAbsoluteTimes( OpKind op, Value &v1, Value &v2, Value &result )
 void Operation::
 compareRelativeTimes( OpKind op, Value &v1, Value &v2, Value &result )
 {
-	int rsecs1, rsecs2, rusecs1, rusecs2;
+	int rsecs1, rsecs2;
 	bool compResult;
 
-	v1.IsRelativeTimeValue( rsecs1, rusecs1 );
-	v2.IsRelativeTimeValue( rsecs2, rusecs2 );
+	v1.IsRelativeTimeValue( rsecs1 );
+	v2.IsRelativeTimeValue( rsecs2 );
 
 	switch( op ) {
 		case LESS_THAN_OP: 			
-			compResult = (rsecs1<rsecs2) || (rsecs1==rsecs2 && rusecs1<rusecs2);
+			compResult = ( rsecs1 < rsecs2 );
 			break;
 
 		case LESS_OR_EQUAL_OP:
-			compResult = (rsecs1<=rsecs2)||(rsecs1==rsecs2 && rusecs1<=rusecs2);
+			compResult = ( rsecs1 <= rsecs2 );
 			break;
 
 		case EQUAL_OP:
-			compResult = ( rsecs1 == rsecs2 && rusecs1 == rusecs2 );
+			compResult = ( rsecs1 == rsecs2 );
 			break;
 
 		case NOT_EQUAL_OP:
-			compResult = ( rsecs1 != rsecs2 || rusecs1 != rusecs2 );
+			compResult = ( rsecs1 != rsecs2 );
 			break;
 
 		case GREATER_THAN_OP:
-			compResult = (rsecs1>rsecs2) || (rsecs1==rsecs2 && rusecs1>rusecs2);
+			compResult = ( rsecs1 > rsecs2 );
 			break;
 
 		case GREATER_OR_EQUAL_OP:
-			compResult = (rsecs1>=rsecs2)||(rsecs1==rsecs2 && rusecs1>=rusecs2);
+			compResult = ( rsecs1 >= rsecs2 );
 			break;
 
+		default:
+			// should not get here
+			EXCEPT ("Should not get here");
+			return;
+	}
+
+	result.SetBooleanValue( compResult );
+}
+
+
+void Operation::
+compareBools( OpKind op, Value &v1, Value &v2, Value &result )
+{
+	bool b1, b2, compResult;
+
+	v1.IsBooleanValue( b1 );
+	v2.IsBooleanValue( b2 );
+
+	switch( op ) {
+		case LESS_THAN_OP: 			compResult = (b1 < b2); 	break;
+		case LESS_OR_EQUAL_OP: 		compResult = (b1 <= b2); 	break;
+		case EQUAL_OP: 				compResult = (b1 == b2); 	break;
+		case NOT_EQUAL_OP: 			compResult = (b1 != b2); 	break;
+		case GREATER_THAN_OP: 		compResult = (b1 > b2); 	break;
+		case GREATER_OR_EQUAL_OP: 	compResult = (b1 >= b2); 	break;
 		default:
 			// should not get here
 			EXCEPT ("Should not get here");

@@ -119,18 +119,19 @@ class Operation : public ExprTree
 		enum SigValues { SIG_NONE=0, SIG_CHLD1=1 , SIG_CHLD2=2 , SIG_CHLD3=4 };
 
 		static int _doOperation(OpKind,Value&,Value&,Value&,
-								bool,bool,bool, Value&, EvalState* = NULL);
-		static int doComparison(OpKind, Value&, Value&, Value&);
-		static int doArithmetic(OpKind, Value&, Value&, Value&);
-		static int doLogical 	(OpKind, Value&, Value&, Value&);
-		static int doBitwise 	(OpKind, Value&, Value&, Value&); 
-		static int doRealArithmetic(OpKind,Value&, Value&, Value&);
-		static int doTimeArithmetic(OpKind,Value&, Value&, Value&);
-		static void compareStrings(OpKind, Value&, Value&, Value&, bool);
-		static void compareReals(OpKind, Value&, Value&, Value&);
-		static void compareIntegers(OpKind, Value&, Value&, Value&);
-		static void compareAbsoluteTimes(OpKind, Value&, Value&, Value& );
-		static void compareRelativeTimes(OpKind, Value&, Value&, Value& );
+								bool,bool,bool,  Value&, EvalState* = NULL);
+		static int 	doComparison		(OpKind, Value&, Value&, Value&);
+		static int 	doArithmetic		(OpKind, Value&, Value&, Value&);
+		static int 	doLogical 			(OpKind, Value&, Value&, Value&);
+		static int 	doBitwise 			(OpKind, Value&, Value&, Value&); 
+		static int 	doRealArithmetic	(OpKind, Value&, Value&, Value&);
+		static int 	doTimeArithmetic	(OpKind, Value&, Value&, Value&);
+		static void compareStrings		(OpKind, Value&, Value&, Value&,bool);
+		static void compareReals		(OpKind, Value&, Value&, Value&);
+		static void compareBools		(OpKind, Value&, Value&, Value&);
+		static void compareIntegers		(OpKind, Value&, Value&, Value&);
+		static void compareAbsoluteTimes(OpKind, Value&, Value&, Value&);
+		static void compareRelativeTimes(OpKind, Value&, Value&, Value&);
 
 		// operation specific information
 		OpKind		operation;
