@@ -85,12 +85,6 @@ _SetParentScope( const ClassAd *parent )
 	}
 }
 
-void ExprList::
-SetShallowParentScope( const ClassAd* p )
-{
-	parentScope = p;
-}
-
 ExprList *ExprList::
 MakeExprList( const vector<ExprTree*> &exprs )
 {
