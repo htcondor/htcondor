@@ -83,5 +83,5 @@ servers
 parameter: FPING_EXE = /usr/local/bin/fping
 FPING_EXE = /path/to/fping
 Specifies a path to fping that condor_pool can run to determine
-which pools are up faster than with standard ping
+which pools are up.  fping is much faster than standard ping.
 
