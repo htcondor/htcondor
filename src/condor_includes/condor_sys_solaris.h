@@ -41,7 +41,7 @@ int getpagesize();
 int getdtablesize();
 int getpriority( int, id_t );
 int setpriority( int, id_t, int );
-int utimes( const char*, struct timeval* );
+int utimes( const char*, const struct timeval* );
 int getdomainname( char*, size_t );
 END_C_DECLS
 
