@@ -89,4 +89,11 @@ findRmKillSig( ClassAd* ad )
 }
 
 
+int
+findHoldKillSig( ClassAd* ad )
+{
+	return findSignal( ad, ATTR_HOLD_KILL_SIG );
+}
+
+
 } // end of extern "C"

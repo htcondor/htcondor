@@ -38,5 +38,8 @@ int findSoftKillSig( ClassAd* ad );
 // same as findSoftKillSig(), but for ATTR_REMOVE_KILL_SIG
 int findRmKillSig( ClassAd* ad );
 
+// same as findSoftKillSig(), but for ATTR_HOLD_KILL_SIG
+int findHoldKillSig( ClassAd* ad );
+
 END_C_DECLS
 
