@@ -37,7 +37,6 @@ static void add_tag(
 	XMLLexer::TagType tag_type,
 	const char *attribute_name = NULL,
 	const char *attribute_value = NULL);
-static void UnparseRelativeTime(string &buffer, time_t rsecs);
 
 
 ClassAdXMLUnParser::
@@ -140,25 +139,14 @@ Unparse(
 
 		case Value::STRING_VALUE: {
 			string	               s;
-			string::const_iterator itr;
-			val.IsStringValue( s );
 			add_tag(buffer, XMLLexer::tagID_String, XMLLexer::tagType_Start);
-			for (itr = s.begin(); itr != s.end(); itr++ ) {
-				switch( *itr ) {
-				case '&':  buffer += "&amp;";  break;
-				case '<':  buffer += "&lt;";   break;
-				case '>':  buffer += "&gt;";   break;
-				//case '"':  buffer += "&quot;"; break;
-				//case '\'': buffer += "&apos;"; break;
-				default:
-					if(!isprint(*itr)) {
-						sprintf(tempBuf, "&#%d;", (unsigned char)*itr);
-						buffer += tempBuf;
-					} else {
-						buffer += *itr;
-					}
-				}
-			}
+			ClassAdUnParser unp;
+			unp.setXMLUnparse(true); 
+			unp.setDelimiter(0); // change the default delimiter from \" to no delimiter
+			unp.Unparse(s,val);			
+			s.erase(0,1);
+			s.erase(s.length()-1,1);
+			buffer += s;
 			add_tag(buffer, XMLLexer::tagID_String, XMLLexer::tagType_End);
 			break;
 		}
@@ -166,18 +154,18 @@ Unparse(
 			int	i;
 			val.IsIntegerValue(i);
 			sprintf(tempBuf, "%d", i);
-			add_tag(buffer, XMLLexer::tagID_Number, XMLLexer::tagType_Start);
+			add_tag(buffer, XMLLexer::tagID_Integer, XMLLexer::tagType_Start);
 			buffer += tempBuf;
-			add_tag(buffer, XMLLexer::tagID_Number, XMLLexer::tagType_End);
+			add_tag(buffer, XMLLexer::tagID_Integer, XMLLexer::tagType_End);
 			break;
 		}
-		case Value::REAL_VALUE: {
-			double	r;
-			val.IsRealValue(r);
-			sprintf(tempBuf, "%g", r);
-			add_tag(buffer, XMLLexer::tagID_Number, XMLLexer::tagType_Start);
+		case Value::REAL_VALUE: {   
+			union { double d; long long l; } u;
+			val.IsRealValue(u.d);   
+			sprintf(tempBuf, "%016llx", u.l);
+			add_tag(buffer, XMLLexer::tagID_Real, XMLLexer::tagType_Start);
 			buffer += tempBuf;
-			add_tag(buffer, XMLLexer::tagID_Number, XMLLexer::tagType_End);
+			add_tag(buffer, XMLLexer::tagID_Real, XMLLexer::tagType_End);
 			break;
 		}
 		case Value::BOOLEAN_VALUE: {
@@ -203,47 +191,25 @@ Unparse(
 			break;
 		}
 		case Value::ABSOLUTE_TIME_VALUE: {
-			struct  tm tms;
-			char    ascTimeBuf[32], timeZoneBuf[32];
-			time_t	asecs;
-			val.IsAbsoluteTimeValue( asecs );
-
-			// format:  `Wed Nov 11 13:11:47 1998 (CST) -6:00`
-			// we use localtime()/asctime() instead of ctime() 
-			// because we need the timezone name from strftime() 
-			// which needs a 'normalized' struct tm.  localtime() 
-			// does this for us.
-
-			// get the asctime()-like segment; but remove \n
-			localtime_r(&asecs, &tms);
-			asctime_r(&tms, ascTimeBuf);
-			//asctime_r( &tms, ascTimeBuf, 31 );
-			ascTimeBuf[24] = '\0';
-			add_tag(buffer, XMLLexer::tagID_Time, XMLLexer::tagType_Start);
-			buffer += ascTimeBuf;
-
-				// get the timezone name
-			if( !strftime(timeZoneBuf, 31, "%Z", &tms)) {
-				buffer += "<error:strftime></t>";
-				return;
-			}
-			buffer += " (";
-			buffer += timeZoneBuf;
-			buffer += ") ";
-			
-			// output the offet (use the relative time format)
-			// wierd:  POSIX says regions west of GMT have positive
-			// offsets.We use negative offsets to not confuse users.
-			UnparseRelativeTime(buffer, -timezone);
-			add_tag(buffer, XMLLexer::tagID_Time, XMLLexer::tagType_End);
+       			add_tag(buffer, XMLLexer::tagID_AbsoluteTime, XMLLexer::tagType_Start);
+			ClassAdUnParser unp;
+			string abstimestr;
+			unp.Unparse(abstimestr,val);
+			abstimestr.erase(0,9); 
+			abstimestr.erase(abstimestr.length()-2,2);
+			buffer += abstimestr;
+			add_tag(buffer, XMLLexer::tagID_AbsoluteTime, XMLLexer::tagType_End);
 			break;
 		}
 		case Value::RELATIVE_TIME_VALUE: {
-			time_t	rsecs;
-			val.IsRelativeTimeValue( rsecs );
-			add_tag(buffer, XMLLexer::tagID_Time, XMLLexer::tagType_Start);
-			UnparseRelativeTime(buffer, rsecs);
-			add_tag(buffer, XMLLexer::tagID_Time, XMLLexer::tagType_End);
+			add_tag(buffer, XMLLexer::tagID_RelativeTime, XMLLexer::tagType_Start);
+			ClassAdUnParser unp;
+			string reltimestr;
+			unp.Unparse(reltimestr,val);
+			reltimestr.erase(0,9);
+			reltimestr.erase(reltimestr.length()-2,2);
+			buffer += reltimestr;
+			add_tag(buffer, XMLLexer::tagID_RelativeTime, XMLLexer::tagType_End);
 			break;
 		}
 		case Value::CLASSAD_VALUE: {
@@ -280,8 +246,16 @@ UnparseAux(string                           &buffer,
 		if (!compact_spacing) {
 			buffer.append(indent+4, ' ');
 		}
+		Value val; 
+		val.SetStringValue(itr->first);
+		string idstr;
+		ClassAdUnParser unp;
+		unp.setXMLUnparse(true); 
+		unp.Unparse(idstr,val); 
+		idstr.erase(0,1);
+		idstr.erase(idstr.length()-1,1);
 		add_tag(buffer, XMLLexer::tagID_Attribute, XMLLexer::tagType_Start,
-				"n", itr->first.c_str());
+				"n", idstr.c_str());
 		Unparse(buffer, itr->second, indent+4);
 		add_tag(buffer, XMLLexer::tagID_Attribute, XMLLexer::tagType_End);
 		if (!compact_spacing) {
@@ -339,6 +313,7 @@ static void add_tag(
 	buffer += '>';
 }
 
+/*
 static void 
 UnparseRelativeTime(string &buffer, time_t rsecs)
 {
@@ -371,6 +346,6 @@ UnparseRelativeTime(string &buffer, time_t rsecs)
 	}
 	return;
 }
-
+*/
 
 END_NAMESPACE
