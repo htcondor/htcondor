@@ -96,8 +96,10 @@ export CONDOR_CPLUS
 export CONDOR_LD_DIR
 
 # Since uname and awk live in different places on various
-# platforms, use a PATH.
-PATH=/bin:/usr/bin:$PATH
+# platforms, use a PATH.  NOTE: we want to add these things to the END
+# of the PATH, to make sure people get the version of the compiler
+# they thought they were using. 
+PATH=$PATH:/bin:/usr/bin
 
 # Figure out what architecture we're running on 
 os=`uname`
