@@ -118,14 +118,13 @@ static ClusterSizeHashTable_t *ClusterSizeHashTable = 0;
 
 static char	**super_users = NULL;
 static int	num_super_users = 0;
-static char *default_super_users[] = {
+static char *default_super_user = 
 #if defined(WIN32)
-	"Administrator",
+	"Administrator";
 #else
-	"root",
+	"root";
 #endif
-	"condor"	
-};
+
 static int allow_remote_submit = FALSE;
 
 // Read out any parameters from the config file that we need and
@@ -133,36 +132,37 @@ static int allow_remote_submit = FALSE;
 void
 InitQmgmt()
 {
-	static int is_default = FALSE;
 	StringList s_users;
 	char* tmp;
 	int i;
-
-	if( super_users && !is_default ) {
+	if( super_users ) {
 		delete [] super_users;
 	}
 	tmp = param( "QUEUE_SUPER_USERS" );
 	if( tmp ) {
-		is_default = FALSE;
 		s_users.initializeFromString( tmp );
 		free( tmp );
-		num_super_users = s_users.number();
-		super_users = new char* [ num_super_users ];
-		s_users.rewind();
-		i = 0;
-		while( (tmp = s_users.next()) ) {
-			super_users[i] = new char[ sizeof( tmp ) ];
-			strcpy( super_users[i], tmp );
-			i++;
-		}
 	} else {
-		is_default = TRUE;
-		super_users = default_super_users;
-		num_super_users = 2;
+		s_users.initializeFromString( default_super_user );
 	}
-	dprintf( D_FULLDEBUG, "Queue Management Super Users:\n" );
-	for( i=0; i<num_super_users; i++ ) {
-		dprintf( D_FULLDEBUG, "\t%s\n", super_users[i] );
+	if( ! s_users.contains(get_condor_username()) ) {
+		s_users.append( get_condor_username() );
+	}
+	num_super_users = s_users.number();
+	super_users = new char* [ num_super_users ];
+	s_users.rewind();
+	i = 0;
+	while( (tmp = s_users.next()) ) {
+		super_users[i] = new char[ sizeof( tmp ) ];
+		strcpy( super_users[i], tmp );
+		i++;
+	}
+
+	if( DebugFlags & D_FULLDEBUG ) {
+		dprintf( D_FULLDEBUG, "Queue Management Super Users:\n" );
+		for( i=0; i<num_super_users; i++ ) {
+			dprintf( D_FULLDEBUG, "\t%s\n", super_users[i] );
+		}
 	}
 
 	allow_remote_submit = FALSE;
@@ -318,6 +318,7 @@ FreeConnection()
 #if !defined(WIN32)
 	active_owner_uid = 0;
 #endif
+	uninit_user_ids();
 	connection_state = CONNECTION_ACTIVE;
 }
 
