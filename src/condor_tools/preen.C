@@ -145,6 +145,7 @@ char *ValidLogFiles[] = {
 	"GetHistoryLog",
 	"GetHistoryLog.old",
 	"ShadowLock",
+	"ULogLock",
 	"priorities.pag",
 	"priorities.dir",
 	"machine_status",
