@@ -1955,6 +1955,7 @@ initFromClassAd(ClassAd* ad)
 // ----- TerminatedEvent baseclass
 TerminatedEvent::TerminatedEvent()
 {
+	normal = false;
 	core_file = NULL;
 	returnValue = signalNumber = -1;
 
