@@ -91,6 +91,10 @@ display_from( struct sockaddr_in *from );
    host, 0 if they don't, and -1 on error. */
 int same_host(const char *h1, const char *h2);
 
+
+char* calc_subnet_name( char* host );
+
+
 #if defined(__cplusplus)
 }
 #endif
