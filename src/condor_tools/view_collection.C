@@ -23,12 +23,12 @@
 #include "condor_common.h"
 #include "classad_collection.h"
 
-template class Set<RankedClassAd>;
-template class Set<int>;
-template class HashTable<int, BaseCollection *>;
-template class SetElem<RankedClassAd>;
-template class Set<MyString>;
-template class SetElem<MyString>;
+/*template class Set<RankedClassAd>;*/
+/*template class Set<int>;*/
+/*template class HashTable<int, BaseCollection *>;*/
+/*template class SetElem<RankedClassAd>;*/
+/*template class Set<MyString>;*/
+/*template class SetElem<MyString>;*/
 
 int
 main(int argc, char *argv[])
