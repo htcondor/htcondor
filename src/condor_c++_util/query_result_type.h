@@ -14,4 +14,15 @@ enum QueryResult
 	Q_NO_COLLECTOR_HOST     = 6		// could not determine collector host
 };
 
+static char *StrQueryResult[] = 
+{
+	"ok",
+	"invalid_category",
+	"memory_error",
+	"parse_error",
+	"communication_error",
+	"invalid_query",
+	"no_collector_host"
+};
+
 #endif
