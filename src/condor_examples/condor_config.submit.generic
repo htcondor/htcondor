@@ -367,6 +367,7 @@ PREEN_ARGS			= -m -r
 SHADOW			= $(SBIN)/condor_shadow
 SHADOW_PVM		= $(SBIN)/condor_shadow.pvm
 SHADOW_GLOBUS		= $(SBIN)/condor_shadow.globus
+SHADOW_NT		= $(SBIN)/condor_shadow.v61
 
 ##  When the schedd starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
