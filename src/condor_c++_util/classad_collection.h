@@ -39,12 +39,16 @@ public:
   */
   //@{
 
-  /** Constructor (initialization)
-    input: filename - the name of the log file
+  /** Constructor (initialization). It reads the log file and initializes
+      the class-ads (that are read from the log file) in memory.
+    @param filename the name of the log file.
+    @return nothing
   */
   ClassAdCollection(const char* filename);
 
-  /// Destructor - frees the memory used by the collections
+  /** Destructor - frees the memory used by the collections
+    @return nothing
+  */
   ~ClassAdCollection();
 
   //@}
@@ -57,21 +61,32 @@ public:
   */
   //@{
 
-  /// Begin a transaction
+  /** Begin a transaction
+    @return nothing
+  */
   void BeginTransaction() { ClassAdLog::BeginTransaction(); }
 
-  /// Commit a transaction
+  /** Commit a transaction
+    @return nothing
+  */
   void CommitTransaction() { ClassAdLog::CommitTransaction(); }
 
-  /// Abort a transaction
+  /** Abort a transaction
+    @return nothing
+  */
   void AbortTransaction() { ClassAdLog::AbortTransaction(); }
 
   /** Lookup an attribute's value in the current transaction. 
-      Returns true on success, false otherwise.
+      @param key the key with which the class-ad was inserted into the repository.
+      @param name the name of the attribute.
+      @param val the value of the attrinute (output parameter).
+      @return true on success, false otherwise.
   */
   bool LookupInTransaction(const char *key, const char *name, char *&val) { return (ClassAdLog::LookupInTransaction(key,name,val)==1); }
   
-  /// Truncate the log file by creating a new "checkpoint" of the repository
+  /** Truncate the log file by creating a new "checkpoint" of the repository
+    @return nothing
+  */
   void TruncLog() { ClassAdLog::TruncLog(); }
 
   //@}
@@ -82,28 +97,39 @@ public:
 
   /** Insert a new empty class-ad with the specified key.
       Also set it's type and target type attributes.
-      Returns true on success, false otherwise.
+      @param key The class-ad's key.
+      @param mytype The class-ad's MyType attribute value.
+      @param targettype The class-ad's TargetType attribute value.
+      @return true on success, false otherwise.
   */
   bool NewClassAd(const char* key, const char* mytype, const char* targettype);
 
   /** Destroy the class-ad with the specified key.
-      Returns true on success, false otherwise.
+      @param key The class-ad's key.
+      @return true on success, false otherwise.
   */
   bool DestroyClassAd(const char* key);
 
   /** Set an attribute in a class-ad.
-      Returns true on success, false otherwise.
+      @param key The class-ad's key.
+      @param name the name of the attribute.
+      @param value the value of the attrinute.
+      @return true on success, false otherwise.
   */
   bool SetAttribute(const char* key, const char* name, const char* value);
 
   /** Delete an attribute in a class-ad.
-      Returns true on success, false otherwise.
+      @param key The class-ad's key.
+      @param name the name of the attribute.
+      @return true on success, false otherwise.
   */
   bool DeleteAttribute(const char* key, const char* name);
 
   /** Get a class-ad from the repository.
       Note that the class-ad returned cannot be modified directly.
-      Returns true on success, false otherwise.
+      @param key The class-ad's key.
+      @param Ad A pointer to the class-ad (output parameter).
+      @return true on success, false otherwise.
   */
   bool LookupClassAd(const char* key, ClassAd*& Ad) { return (table.lookup(HashKey(key), Ad)==0); }
   
@@ -117,26 +143,28 @@ public:
   /** Create an explicit collection, as a child of another collection.
       An explicit collection can include any subset of ads which are in its parent.
       The user can actively include and exclude ads from this collection.
-      The Rank string determines how the ads will be ordered in the collection.
-      The FullFlag determines if the ads in the parent collection are automatically
-      added to the new collection (and also new ads inserted into the parent).
-      Returns the ID of the new collection, or -1 in case of failure.
+      @param ParentCoID The ID of the parent collection.
+      @param Rank The rank expression. Determines how the ads will be ordered in the collection.
+      @param FullFlag The flag which indicates automatic insertion of class-ads from the parent.
+      @return the ID of the new collection, or -1 in case of failure.
   */
   int CreateExplicitCollection(int ParentCoID, const MyString& Rank, bool FullFlag=false);
 
   /** Create a constraint collection, as a child of another collection.
       A constraint collection always contains the subset of ads from the parent, which
       match the constraint.
-      The Rank string determines how the ads will be ordered in the collection.
-      The Constraint string sets the constraint expression for this collection.
-      Returns the ID of the new collection, or -1 in case of failure.
+      @param ParentCoID The ID of the parent collection.
+      @param Rank The rank expression. Determines how the ads will be ordered in the collection.
+      @param Constraint sets the constraint expression for this collection.
+      @return the ID of the new collection, or -1 in case of failure.
   */
   int CreateConstraintCollection(int ParentCoID, const MyString& Rank, const MyString& Constraint);
 
   // int CreatePartition(int ParentCoID, const MyString& Rank, char** AttrList);
 
   /** Deletes a collection and all of its descendants from the collection tree.
-      Returns true on success, false otherwise.
+      @param CoID The ID of the collection to be deleted.
+      @return true on success, false otherwise.
   */
   bool DeleteCollection(int CoID);
 
@@ -146,31 +174,38 @@ public:
   */
   //@{
 
-  /// Start iterations on all collections
+  /** Start iterations on all collections
+    @return nothing
+  */
   void StartIterateAllCollections();
 
   /** Get the next collection ID
-      Returns true on success, false otherwise.
+      @param CoID The ID of the next collection (output parameter).
+      @return true on success, false otherwise.
   */
   bool IterateAllCollections(int& CoID);
 
   /** Start iterations on child collections of a specified collection.
-      Returns true on success, false otherwise.
+      @param ParentCoID The ID of the parent of the collections to be iterated on.
+      @return true on success, false otherwise.
   */
   bool StartIterateChildCollections(int ParentCoID);
 
   /** Get the next child of the specified parent collection.
-      Returns true on success, false otherwise.
+      @param ParentCoID The ID of the parent of the collections to be iterated on.
+      @param CoID The ID of the next collection (output parameter).
+      @return true on success, false otherwise.
   */
   bool IterateChildCollections(int ParentCoID, int& CoID);
 
   /** Start iterations on all class-ads in the repository.
-      Returns true on success, false otherwise.
+      @return nothing.
   */
   void StartIterateAllClassAds() { table.startIterations(); }
 
   /** Get the next class-ad in the repository.
-      Returns true on success, false otherwise.
+      @param Ad A pointer to next the class-ad (output parameter).
+      @return true on success, false otherwise.
   */
   bool IterateAllClassAds(ClassAd*& Ad) { return (table.iterate(Ad)==1); }
 
@@ -180,16 +215,22 @@ public:
   */
   //@{
 
-  /// Returns the type of the specified collection: explicit(0), constraint(1).
+  /** Find out a collection's type (explicit, constraint, ...).
+      @return the type of the specified collection: 0=explicit, 1=constraint.
+  */
   int GetCollectionType(int CoID);
 
-  /// Prints the whole repository (for debugging purposes).
+  /** Prints the whole repository (for debugging purposes).
+      @return nothing.
+  */
   void Print();
 
-  /// Prints a single collection in the repository (for debugging purposes).
+  /** Prints a single collection in the repository (for debugging purposes).
+      @return nothing.
+  */
   void Print(int CoID);
 
-  /// A hash function used by the hash table objects
+  /// A hash function used by the hash table objects (used internally).
   static int HashFunc(const int& Key, int TableSize) { return (Key % TableSize); }
 
   //@}
