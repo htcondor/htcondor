@@ -184,6 +184,11 @@ main_init( int, char* argv[] )
 
 	resmgr->walk( &(Resource::init_classad) );
 
+		// Now that we have our classads, we can compute things that
+		// need to be evaluated
+	resmgr->walk( &(Resource::compute), A_EVALUATED );
+	resmgr->walk( &(Resource::refresh_classad), A_PUBLIC | A_EVALUATED ); 
+
 		// Do a little sanity checking and cleanup
 	check_perms();
 	cleanup_execute_dir( 0 );	// 0 indicates we should clean everything.
