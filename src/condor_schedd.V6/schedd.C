@@ -1463,7 +1463,7 @@ int Scheduler::startdContactSockHandler( Stream *sock )
 			BAILOUT;
 		}
 		if( !sock->snd_int(aliveInterval, TRUE) ) {
-			dprintf( D_ALWAYS, "Couldn't receive response from startd.\n" );
+			dprintf( D_ALWAYS, "Couldn't send aliveInterval to startd.\n" );
 			BAILOUT;
 		}
 	} else if( reply == NOT_OK ) {
