@@ -879,7 +879,7 @@ setReason( const char* reason_str )
 		delete [] reason;
 		reason = NULL;
 	}
-	if( reason_str ) { 
+	if( reason_str ) {
 		reason = strnewp( reason_str );
 	}
 }
@@ -1235,38 +1235,83 @@ writeEvent (FILE *file)
 	return 1;
 }
 
-JobHeldEvent::
-JobHeldEvent ()
+
+JobHeldEvent::JobHeldEvent ()
 {
 	eventNumber = ULOG_JOB_HELD;
+	reason = NULL;
 }
 
-JobHeldEvent::
-~JobHeldEvent ()
+
+JobHeldEvent::~JobHeldEvent ()
 {
+	if( reason ) {
+		delete [] reason;
+	}
 }
 
-int JobHeldEvent::
-readEvent (FILE *file)
+
+void
+JobHeldEvent::setReason( const char* reason_str )
 {
-	if (fscanf (file, "Job was held.\n\t") == EOF)
+	if( reason ) {
+		delete [] reason;
+		reason = NULL;
+	}
+	if( reason_str ) { 
+		reason = strnewp( reason_str );
+	}
+}
+
+
+const char* 
+JobHeldEvent::getReason( void )
+{
+	return reason;
+}
+
+
+int
+JobHeldEvent::readEvent( FILE *file )
+{
+	if( fscanf(file, "Job was held\n") == EOF ) { 
 		return 0;
-	if (fscanf (file, "Action caused by: %s\n", msg) == EOF)
-		return 1;				// backwards compatibility
-
+	}
+		// try to read the reason, but don't fail if it's not there.
+		// a user of this event might not set a reason before calling
+		// writeEvent()
+	if( reason ) {
+		delete [] reason;
+		reason = NULL;
+	}
+	char reason_buf[BUFSIZ];
+	if( fgets(reason_buf, BUFSIZ, file) == NULL) {
+		return 1;		// fake it :)
+	}
+	chomp( reason_buf );  // strip the newline
+	reason = strnewp( reason_buf );
 	return 1;
 }
 
-int JobHeldEvent::
-writeEvent (FILE *file)
-{
-	if (fprintf (file, "Job was held.\n\t") < 0)
-		return 0;
-	if (fprintf (file, "Action caused by: %s\n", msg) < 0)
-		return 0;
 
+int
+JobHeldEvent::writeEvent( FILE *file )
+{
+	if( fprintf(file, "Job was held\n") < 0 ) {
+		return 0;
+	}
+	if( reason ) {
+		if( fprintf(file, "\t%s\n", reason) < 0 ) {
+			return 0;
+		} else {
+			return 1;
+		}
+	} 
+		// do we want to do anything else if there's no reason?
+		// should we fail?  EXCEPT()?  
 	return 1;
 }
+
 
 JobReleasedEvent::
 JobReleasedEvent ()

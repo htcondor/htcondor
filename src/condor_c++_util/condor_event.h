@@ -891,8 +891,16 @@ class JobHeldEvent : public ULogEvent
     */
     virtual int writeEvent (FILE *);
 
-	/** message about why a job became held */
-	char msg[BUFSIZ];
+		/// @return pointer to our copy of the reason, or NULL if not set
+	const char* getReason();
+
+		/// makes a copy of the string in our "reason" member
+	void setReason( const char* );
+
+ private:
+
+		/// why the job was held 
+	char* reason;
 };
 
 //------------------------------------------------------------------------
