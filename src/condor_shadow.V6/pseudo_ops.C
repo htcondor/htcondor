@@ -141,7 +141,6 @@ pseudo_getpid()
 int
 pseudo_getlogin(char *loginbuf)
 {
-	int		rval;
 	char *temp;
 
 	temp = ((PROC *)Proc)->owner; 
@@ -590,13 +589,7 @@ pseudo_get_file_stream(
 	int		data_sock;
 	int		file_fd;
 	int		bytes_sent;
-	int		bytes_read;
 	pid_t	child_pid;
-#if defined(ALPHA)
-	unsigned int	status;		/* 32 bit unsigned */
-#else
-	unsigned long	status;		/* 32 bit unsigned */
-#endif
 	int		rval;
 	PROC *p = (PROC *)Proc;
 	int		retry_wait;
@@ -681,25 +674,6 @@ pseudo_get_file_stream(
 			exit(1);
 		}
 
-#if 0	/* For compressed checkpoints, we need to close the socket
-		   so the client knows we are done sending (i.e., so the client's
-		   read will return), so we no longer require this confirmation. */
-			/*
-			  Here we should get a confirmation that our peer was able to
-			  read the same number of bytes we sent, but the starter doesn't
-			  send it, so if our peer just closes his end, we let that go.
-			*/
-		bytes_read = read( data_sock, &status, sizeof(status) );
-		if( bytes_read == 0 ) {
-			exit( 0 );
-		}
-				
-		assert( bytes_read == sizeof(status) );
-		status = ntohl( status );
-		assert( status == *len );
-		dprintf( D_ALWAYS,
-				 "\tSTREAM FILE SENT OK (%d bytes)\n", status );
-#endif
 		exit( 0 );
 	default:	/* the parent */
 		close( file_fd );
@@ -1134,8 +1108,6 @@ char *Strdup( const char *str)
 int
 pseudo_startup_info_request( STARTUP_INFO *s )
 {
-	struct stat	st_buf;
-	char	*env_string;
 	PROC *p = (PROC *)Proc;
 
 	s->version_num = STARTUP_VERSION;
@@ -1377,8 +1349,6 @@ pseudo_get_iwd( char *path )
 int
 pseudo_get_ckpt_name( char *path )
 {
-	PROC	*p = (PROC *)Proc;
-
 	strcpy( path, RCkptName );
 	dprintf( D_SYSCALLS, "\tanswer = \"%s\"\n", path );
 	return 0;
@@ -1490,6 +1460,7 @@ pseudo_register_fs_domain( const char *fs_domain )
 {
 	strcpy( Executing_Filesystem_Domain, fs_domain );
 	dprintf( D_SYSCALLS, "\tFS_Domain = \"%s\"\n", fs_domain );
+	return 0;
 }
 
 /*
@@ -1500,6 +1471,7 @@ pseudo_register_uid_domain( const char *uid_domain )
 {
 	strcpy( Executing_UID_Domain, uid_domain );
 	dprintf( D_SYSCALLS, "\tUID_Domain = \"%s\"\n", uid_domain );
+	return 0;
 }
 
 int
