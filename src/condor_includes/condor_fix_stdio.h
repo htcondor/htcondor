@@ -1,6 +1,9 @@
 #ifndef FIX_STDIO_H
 #define FIX_STDIO_H
 
+
+
+
 #include <stdio.h>
 
 #if defined(__cplusplus)
@@ -37,6 +40,17 @@ extern "C" {
 	int  pclose();
 #endif
 #endif	/* ULTRIX43 */
+
+
+/*
+
+  For some reason the stdio.h on IRIX 5.3 fails to provide prototypes
+  for popen() and pclose() if _POSIX_SOURCE is defined.
+*/
+#if defined(IRIX53)
+	FILE *popen (const char *command, const char *type);
+	int pclose(FILE *stream);
+#endif /* IRIX53 */
 
 #if defined(__cplusplus)
 }
