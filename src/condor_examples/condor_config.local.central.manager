@@ -73,6 +73,12 @@ QUERY_TIMEOUT		= 60
 ##  Email address of the condor-developers at UW-Madison.  
 CONDOR_DEVELOPERS	= condor-admin@cs.wisc.edu
 
+##  Every pool can have a name associated with it.  This should be a
+##  short description (20 characters or so) that describes your site.
+##  For example, the name for the UW-Madison Computer Science Condor
+##  Pool is: "UW-Madison CS" (you don't need to put in the " marks).
+#COLLECTOR_NAME		= Short Description of your pool
+
 
 ##--------------------------------------------------------------------
 ##  condor_negotiator
