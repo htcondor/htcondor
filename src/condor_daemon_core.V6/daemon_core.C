@@ -36,6 +36,8 @@ static const int DEFAULT_MAXPIPES = 8;
 static const int DEFAULT_MAXREAPS = 100;
 static const int DEFAULT_PIDBUCKETS = 11;
 static const int ERRNO_EXEC_AS_ROOT = 666666;
+static const int ERRNO_PID_COLLISION = 666667;
+static const int DEFAULT_MAX_PID_COLLISIONS = 9;
 static const char* DEFAULT_INDENT = "DaemonCore--> ";
 
 
@@ -4532,6 +4534,8 @@ int DaemonCore::Create_Process(
 
 #else
 	int inherit_handles;
+	int max_pid_retry = 0;
+	static int num_pid_collisions = 0;
 #endif
 
 	dprintf(D_DAEMONCORE,"In DaemonCore::Create_Process(%s,...)\n",namebuf);
@@ -5078,6 +5082,47 @@ int DaemonCore::Create_Process(
 		close(errorpipe[0]);
 		fcntl(errorpipe[1], F_SETFD, FD_CLOEXEC);
 
+			/********************************************************
+			  Make sure we're not about to re-use a PID that
+			  DaemonCore still thinks is valid.  We have this problem
+			  because our reaping code on UNIX makes use of a
+			  WaitpidQueue.  Whenever we get SIGCHLD, we call
+			  waitpid() as many times as we can, and save each result
+			  into a structure we stash in a queue.  Then, when we get
+			  the chance, we service the queue and call the associated
+			  reapers.  Unfortunately, this means that once we call
+			  waitpid(), the OS thinks the PID is gone and can be
+			  re-used.  In some pathological cases, we've had shadow
+			  PIDs getting re-used, such that the schedd thought there
+			  were two shadows with the same PID, and then all hell
+			  breaks loose with exit status values getting crossed,
+			  etc.  This is the infamous "jobs-run-twice" bug.  (GNATS
+			  #PR-256).  So, if we're in the very rare, unlucky case
+			  where we just fork()'ed a new PID that's sitting in the
+			  WaitpidQueue that daemoncore still hasn't called the
+			  reaper for and removed from the PID table, we need to
+			  write out a special errno to the errorpipe and exit.
+			  The parent will recognize the errno, and just re-try.
+			  Luckily, we've got a free copy of the PID table sitting
+			  in our address space (3 cheers for copy-on-write), so we
+			  can just do the lookup directly and be done with it.
+			  Derek Wright <wright@cs.wisc.edu> 2004-12-15
+			********************************************************/
+
+		pid_t pid = ::getpid();   // must use the real getpid, not DC's
+		PidEntry* pidinfo = NULL;
+		if( (pidTable->lookup(pid, pidinfo) >= 0) ) {
+				// we've already got this pid in our table! we've got
+				// to bail out immediately so our parent can retry.
+			errno = ERRNO_PID_COLLISION;
+			write(errorpipe[1], &errno, sizeof(errno));
+			exit(4);
+		}
+			// If we made it here, we didn't find the PID in our
+			// table, so it's safe to continue and eventually do the
+			// exec() in this process...
+
+
 			// make the args / env  into something we can use:
 
 		char **unix_env;
@@ -5418,21 +5463,75 @@ int DaemonCore::Create_Process(
 			waitpid(newpid, &child_status, 0);
 			errno = child_errno;
 			return_errno = errno;
-			if( errno == ERRNO_EXEC_AS_ROOT ) {
+			switch( errno ) {
+
+			case ERRNO_EXEC_AS_ROOT:
 				dprintf( D_ALWAYS, "Create_Process: child failed because "
 						 "%s process was still root before exec()\n",
 						 priv_to_string(priv) );
-			} else {
+				break;
+
+			case ERRNO_PID_COLLISION:
+					/*
+					  see the big comment in the top of the child code
+					  above for why this can happen.  if it does, we
+					  need to increment our counter, make sure we
+					  haven't gone over our maximum allowed collisions
+					  before we give up, and if not, recursively
+					  re-try the whole call to Create_Process().
+					*/
+				dprintf( D_ALWAYS, "Create_Process: child failed because "
+						 "PID %d is still in use by DaemonCore\n",
+						 (int)newpid );
+				num_pid_collisions++;
+				max_pid_retry = param_integer( "MAX_PID_COLLISION_RETRY", 
+											   DEFAULT_MAX_PID_COLLISIONS );
+				if( num_pid_collisions > max_pid_retry ) {
+					dprintf( D_ALWAYS, "Create_Process: ERROR: we've had "
+							 "%d consecutive pid collisions, giving up!\n",
+							 num_pid_collisions );
+						// if we break out of the switch(), we'll hit
+						// the default failure case, goto the wrapup
+						// code, and just return failure...
+					break;
+				}
+					// if we're here, it means we had a pid collision,
+					// but it's not (yet) fatal, and we should just
+					// re-try the whole Create_Process().  however,
+					// before we do, we need to do a little bit of the
+					// default cleanup ourselves so we don't leak any
+					// memory or fds...
+				close(errorpipe[0]);
+				free( (void *) namebuf );
+					// we also need to close the command sockets we've
+					// got open sitting on our stack, so that if we're
+					// trying to spawn using a fixed port, we won't
+					// still be holding the port open in this lower
+					// stack frame...
+				rsock.close();
+				ssock.close();
+				dprintf( D_ALWAYS, "Re-trying Create_Process() to avoid "
+						 "PID re-use\n" );
+				return Create_Process( name, args, priv, reaper_id,
+									   want_command_port, env, cwd,
+									   new_process_group,
+									   sock_inherit_list, std,
+									   nice_inc, job_opt_mask );
+				break;
+
+			default:
 				dprintf( D_ALWAYS, "Create_Process: child failed with "
 						 "errno %d (%s) before exec()\n", errno,
 						 strerror(errno) );
+				break;
+
 			}
 			close(errorpipe[0]);
 			newpid = FALSE;
 			goto wrapup;
 		}
 		close(errorpipe[0]);
-		
+
 	}
 	else if( newpid < 0 )// Error condition
 	{
@@ -5482,6 +5581,11 @@ int DaemonCore::Create_Process(
  wrapup:
 	// Free up the name buffer
 	free( (void *) namebuf );
+
+		// if we're here, it means we did NOT have a pid collision, or
+		// we had too many and gave up.  either way, we should clear
+		// out our static counter.
+	num_pid_collisions = 0;
 
 	errno = return_errno;
 	return newpid;	
@@ -5565,16 +5669,88 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 		EXCEPT("CreateThread failed");
 	}
 #else
+		// we have to do the same checking for pid collision here as
+		// we do in the Create_Process() case (see comments there).
+	static int num_pid_collisions = 0;
+	int max_pid_retry = 0;
+	bool had_child_error = false;
+	int errorpipe[2];
+    if (pipe(errorpipe) < 0) {
+        dprintf( D_ALWAYS,
+				 "Create_Thread: pipe() failed with errno %d (%s)\n",
+				 errno, strerror(errno) );
+		return FALSE;
+    }
 	int tid;
 	tid = fork();
 	if (tid == 0) {				// new thread (i.e., child process)
 		_condor_exit_with_exec = 1;
+            // close the read end of our error pipe and set the
+            // close-on-exec flag on the write end
+        close(errorpipe[0]);
+        fcntl(errorpipe[1], F_SETFD, FD_CLOEXEC);
+		pid_t pid = ::getpid();
+		PidEntry* pidinfo = NULL;
+        if( (pidTable->lookup(pid, pidinfo) >= 0) ) {
+                // we've already got this pid in our table! we've got
+                // to bail out immediately so our parent can retry.
+            errno = ERRNO_PID_COLLISION;
+            write(errorpipe[1], &errno, sizeof(errno));
+			close( errorpipe[1] );
+            exit(4);
+        }
+			// if we got this far, we know we don't need the errorpipe
+			// anymore, so we can close it now...
+		close( errorpipe[1] );
 		exit(start_func(arg, sock));
-	} else if (tid < 0) {
-		dprintf(D_ALWAYS, "Create_Thread: fork() failed: %s (%d)\n",
-				strerror(errno), errno);
+	} else if ( tid > 0 ) {  // parent process
+			// close the write end of our error pipe
+        close( errorpipe[1] );
+            // check our error pipe for any problems before the exec
+        int child_errno = 0;
+        if( read(errorpipe[0], &child_errno, sizeof(int)) == sizeof(int) ) {
+			had_child_error = true;
+		}
+		close( errorpipe[0] );
+		if( had_child_error ) { 
+                // If we were able to read the errno from the
+                // errorpipe before it was closed, then we know the
+                // error happened before the exec.  We need to reap
+                // the child and return FALSE.
+            int child_status;
+            waitpid(tid, &child_status, 0);
+			if( errno != ERRNO_PID_COLLISION ) {
+				EXCEPT( "Impossible: Create_Thread child_errno (%d) is not "
+						"ERRNO_PID_COLLISION!", (int)tid );
+			}
+			dprintf( D_ALWAYS, "Create_Thread: child failed because "
+					 "PID %d is still in use by DaemonCore\n",
+					 (int)tid );
+			num_pid_collisions++;
+			max_pid_retry = param_integer( "MAX_PID_COLLISION_RETRY", 
+										   DEFAULT_MAX_PID_COLLISIONS );
+			if( num_pid_collisions > max_pid_retry ) {
+				dprintf( D_ALWAYS, "Create_Thread: ERROR: we've had "
+						 "%d consecutive pid collisions, giving up!\n",
+						 num_pid_collisions );
+				num_pid_collisions = 0;
+				return FALSE;
+			}
+				// if we're here, it means we had a pid collision,
+				// but it's not (yet) fatal, and we should just
+				// re-try the whole Create_Thread().
+			dprintf( D_ALWAYS, "Re-trying Create_Thread() to avoid "
+					 "PID re-use\n" );
+			return Create_Thread( start_func, arg, sock, reaper_id );
+		}
+	} else {  // fork() failure
+		dprintf( D_ALWAYS, "Create_Thread: fork() failed: %s (%d)\n",
+				 strerror(errno), errno );
+		num_pid_collisions = 0;
 		return FALSE;
 	}
+		// if we got here, there's no collision, so reset our counter
+	num_pid_collisions = 0;
 	if (arg) free(arg);			// arg should point to malloc()'ed data
 #endif
 	
