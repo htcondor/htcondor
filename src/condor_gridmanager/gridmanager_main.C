@@ -78,6 +78,10 @@ main_deactivate_globus()
 int
 main_init( int argc, char **argv )
 {
+
+	dprintf(D_FULLDEBUG,
+		"Welcome to the all-singing, all dancing, \"amazing\" GridManager!\n");
+
 	// handle specific command line args
 	int i = 1;
 	while ( i < argc ) {
