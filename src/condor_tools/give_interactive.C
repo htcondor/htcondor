@@ -35,10 +35,14 @@
 #include "condor_uid.h"
 #include "daemon.h"
 #include "extArray.h"
+#include "HashTable.h"
+#include "classad_hashtable.h"
 #include "MyString.h"
 #include "basename.h"
 
 // Globals
+
+template class HashTable<HashKey, int>;
 
 double priority = 0.00001;
 const char *pool = NULL;
@@ -100,12 +104,15 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 	bool			newBestFound;
 		// to store results of evaluations
 	char			remoteUser[128];
+	char			remoteHost[256];
 	EvalResult		result;
 	float			tmp;
+	
 
 
 
 	// scan the offer ads
+
 	startdAds.Open ();
 	while ((candidate = startdAds.Next ())) {
 
@@ -197,7 +204,7 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 		}
 	}
 	startdAds.Close ();
-
+	
 
 	// this is the best match
 	return bestSoFar;
@@ -398,7 +405,9 @@ main(int argc, char *argv[])
 	char *tmp;
 	int i;
 	char buffer[1024];
+	HashTable<HashKey, int>	*virtualMachineCounts;
 
+	virtualMachineCounts = new HashTable <HashKey, int> (25, hashFunction); 
 	mySubSystem = "INTERACTIVE";
 	config();
 
@@ -524,11 +533,57 @@ main(int argc, char *argv[])
 			exit(1);
 		}
 
+		// If we want the entire machine, and not just a VM...
+		if(WantMachineNames) {
+			if (offer->LookupString (ATTR_MACHINE, remoteHost) ) {
+				int virtMachCount;
+				int virtMachID;
+				int vmCountThusFar;
+
+				HashKey key(remoteHost);
+
+				// How many VM's are on that machine?
+				if(! offer->LookupInteger (ATTR_TOTAL_VIRTUAL_MACHINES,
+										 virtMachCount) ) {
+						//printf("DEBUG: Setting virtMachineCount to 1\n");
+						virtMachCount = 1;
+				}
+
+				vmCountThusFar = 0;
+				// Keep track of what we've seen in a hashtable
+				if(!virtualMachineCounts->lookup(key, vmCountThusFar)) {
+					//printf("DEBUG: Already seen a %s %d times\n",
+					//		 remoteHost, vmCountThusFar);
+					virtualMachineCounts->remove(key);
+				}			
+
+				// If we don't have enough virtual machines to complete
+				// the set, stick it in the hash table, remove it from the
+				// list of startd ads, and keep looking.
+				// FIXME(?) This would probably blow up with bogus ads 
+				// (ie duplicate ads, but I dunno if those can happen)
+				if(++vmCountThusFar < virtMachCount) {
+					//printf("DEBUG: Adding %s with %d\n", remoteHost, 
+					//		vmCountThusFar);
+					virtualMachineCounts->insert(key, vmCountThusFar);
+					startdAds.Delete(offer);
+					i--;
+					continue;
+				}
+			}
+		} //end if(WantMachineNames) 
+
 		// here we found a machine; spit out the name to stdout
 		remoteHost[0] = '\0';
-		offer->LookupString(ATTR_NAME, remoteHost);
+		if(WantMachineNames)
+			offer->LookupString(ATTR_MACHINE, remoteHost);
+		else
+			offer->LookupString(ATTR_NAME, remoteHost);
+
+		remoteUser[0] = '\0';
+		offer->LookupString(ATTR_REMOTE_USER, remoteUser);
 		if ( remoteHost[0] ) {
-			printf("%s\n", remoteHost);
+			printf("%s (%s)\n", remoteHost, remoteUser);
 		}
 
 		// remote this startd ad from our list 
