@@ -41,7 +41,7 @@ public:
 	void Shutdown();         // main_shutdown_graceful
 
 	static int ReceiveHistoryQuery(Service*, int, Stream*);
-	static HandleQuery(Stream*, int cmd, int FromDate, int ToDate, int Options, MyString Arg);
+	static int HandleQuery(Stream*, int cmd, int FromDate, int ToDate, int Options, MyString Arg);
 	static int SendListReply(Stream*,const MyString& FileName, int FromDate, int ToDatei, Set<MyString>& Names);
 	static int SendDataReply(Stream*,const MyString& FileName, int FromDate, int ToDate, int Options, const MyString& Arg);
 

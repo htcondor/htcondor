@@ -42,6 +42,7 @@ usage()
 }
 
 extern "C" {
+int
 ExceptCleanup(int, int, char *buf)
 {
   BaseShadow::log_except(buf);
