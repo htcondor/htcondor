@@ -46,7 +46,7 @@ template class Item<PROC_ID>;
 
 char	*MyName;
 BOOLEAN	TroubleReported;
-BOOLEAN All;
+BOOLEAN All = FALSE;
 int nToRemove = 0;
 List<PROC_ID> ToRemove;
 
@@ -54,6 +54,7 @@ List<PROC_ID> ToRemove;
 void ProcArg(const char*);
 void notify_schedd();
 void usage();
+void remove_all();
 
 char	DaemonName[512];
 
@@ -132,10 +133,13 @@ main( int argc, char *argv[] )
 		exit(1);
 	}
 
-	// Set status of requested jobs to REMOVED
-	for(i = 0; i < nArgs; i++)
-	{
-		ProcArg(args[i]);
+	if( All ) {
+		remove_all();
+	} else {
+			// Set status of requested jobs to REMOVED
+		for(i = 0; i < nArgs; i++) {
+			ProcArg(args[i]);
+		}
 	}
 
 	// Close job queue
@@ -312,8 +316,24 @@ void ProcArg(const char* arg)
 			nToRemove = -1;
 		}
 	}
-	else
+	else 
 	{
 		fprintf( stderr, "Warning: unrecognized \"%s\" skipped.\n", arg );
 	}
+}
+
+void
+remove_all()
+{
+	char	constraint[1000];
+
+		// Remove all jobs... let queue management code decide
+		// which ones we can and can not remove.
+	sprintf(constraint, "%s >= %d", ATTR_CLUSTER_ID, 0 );
+	if( SetAttributeIntByConstraint(constraint,ATTR_JOB_STATUS,REMOVED) < 0 ) {
+		fprintf( stdout, "Removed all of your jobs.\n" );
+	} else {
+		fprintf( stdout, "Removed all jobs.\n" );
+	}
+	nToRemove = -1;
 }
