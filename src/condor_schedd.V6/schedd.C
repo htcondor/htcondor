@@ -1892,7 +1892,8 @@ Scheduler::shadow_prio_recs_consistent()
 {
 	int		i;
 	struct shadow_rec	*srp;
-	int		status;
+	int		status, universe;
+	int CurHosts, MaxHosts;
 
 	dprintf( D_ALWAYS, "Checking consistency running and runnable jobs\n" );
 	BadCluster = -1;
@@ -1902,12 +1903,23 @@ Scheduler::shadow_prio_recs_consistent()
 		if( (srp=find_shadow_rec(&PrioRec[i].id)) ) {
 			BadCluster = srp->job_id.cluster;
 			BadProc = srp->job_id.proc;
-			GetAttributeInt(BadCluster, BadProc, ATTR_JOB_STATUS, &status);
-			if (status != RUNNING) {
-				// display_shadow_recs();
-				// dprintf(D_ALWAYS,"shadow_prio_recs_consistent(): PrioRec %d - id = %d.%d, owner = %s\n",i,PrioRec[i].id.cluster,PrioRec[i].id.proc,PrioRec[i].owner);
-				dprintf( D_ALWAYS, "Found a consistency problem!!!\n" );
-				return FALSE;
+			GetAttributeInt(BadCluster, BadProc, ATTR_JOB_UNIVERSE, &universe);
+			if (universe==PVM) {
+				if (GetAttributeInt(BadCluster, BadProc, ATTR_MAX_HOSTS, &MaxHosts)<0) MaxHosts=1;
+				if (GetAttributeInt(BadCluster, BadProc, ATTR_CURRENT_HOSTS, &CurHosts)<0) CurHosts=0;
+				if (CurHosts>=CurHosts) {
+					dprintf( D_ALWAYS, "Found a consistency problem in PVM job: cur=%d , max=%d\n",CurHosts,MaxHosts);
+					return FALSE;
+				}
+			}
+			else {
+				GetAttributeInt(BadCluster, BadProc, ATTR_JOB_STATUS, &status);
+				if (status != RUNNING && universe!=PVM) {
+					// display_shadow_recs();
+					// dprintf(D_ALWAYS,"shadow_prio_recs_consistent(): PrioRec %d - id = %d.%d, owner = %s\n",i,PrioRec[i].id.cluster,PrioRec[i].id.proc,PrioRec[i].owner);
+					dprintf( D_ALWAYS, "Found a consistency problem!!!\n" );
+					return FALSE;
+				}
 			}
 		}
 	}
