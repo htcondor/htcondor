@@ -66,6 +66,7 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 	switch (WTERMSIG(JobStatus))
 	{
 	  case 0:
+	  case -1: 
 		// if core, bad exectuable --- otherwise, a normal exit
 		if (WCOREDUMP(JobStatus) && WEXITSTATUS(JobStatus) == ENOEXEC)
 		{
