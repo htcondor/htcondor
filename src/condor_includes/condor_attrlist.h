@@ -132,8 +132,12 @@ class AttrList : public AttrListAbstract
 		AttrList& operator=(const AttrList& other);
 
 		// insert expressions into the ad
-        int        	Insert(const char*);	// insert at the tail
-        int        	Insert(ExprTree*);		// insert at the tail
+        int        	Insert(const char*, 
+							bool check_for_dups=true);	// insert at the tail
+
+        int        	Insert(ExprTree*, 
+							bool check_for_dups=true);	// insert at the tail
+
 		int			InsertOrUpdate(const char *expr) { return Insert(expr); }
 
 		// The Assign() functions are equivalent to Insert("variable = value"),

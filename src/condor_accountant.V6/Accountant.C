@@ -787,38 +787,43 @@ AttrList* Accountant::ReportState() {
     HK.sprint(key);
     if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
 
+	// The following Insert() calls are passed 'false' to prevent
+	// AttrList from checking for duplicates. This is to enhance
+	// performance, but is admittedly dangerous if we're not certain
+	// that the items we're inserting are unique. Use caution.
+
     CustomerName=key+CustomerRecord.Length();
     sprintf(tmp,"Name%d = \"%s\"",OwnerNum,CustomerName.Value());
-    ad->Insert(tmp);
+    ad->Insert(tmp, false);
 
     sprintf(tmp,"Priority%d = %f",OwnerNum,GetPriority(CustomerName));
-    ad->Insert(tmp);
+    ad->Insert(tmp, false);
 
     if (CustomerAd->LookupInteger(ResourcesUsedAttr.Value(),ResourcesUsed)==0) ResourcesUsed=0;
     sprintf(tmp,"ResourcesUsed%d = %d",OwnerNum,ResourcesUsed);
-    ad->Insert(tmp);
+    ad->Insert(tmp, false);
 
     if (CustomerAd->LookupFloat(AccumulatedUsageAttr.Value(),AccumulatedUsage)==0) AccumulatedUsage=0;
     sprintf(tmp,"AccumulatedUsage%d = %f",OwnerNum,AccumulatedUsage);
-    ad->Insert(tmp);
+    ad->Insert(tmp, false);
 
     if (CustomerAd->LookupInteger(BeginUsageTimeAttr.Value(),BeginUsageTime)==0) BeginUsageTime=0;
     sprintf(tmp,"BeginUsageTime%d = %d",OwnerNum,BeginUsageTime);
-    ad->Insert(tmp);
+    ad->Insert(tmp, false);
 
     if (CustomerAd->LookupInteger(LastUsageTimeAttr.Value(),LastUsageTime)==0) LastUsageTime=0;
     sprintf(tmp,"LastUsageTime%d = %d",OwnerNum,LastUsageTime);
-    ad->Insert(tmp);
+    ad->Insert(tmp, false);
 
     if (CustomerAd->LookupFloat(PriorityFactorAttr.Value(),PriorityFactor)==0) PriorityFactor=0;
     sprintf(tmp,"PriorityFactor%d = %f",OwnerNum,PriorityFactor);
-    ad->Insert(tmp);
+    ad->Insert(tmp, false);
 
     OwnerNum++;
   }
 
   sprintf(tmp,"NumSubmittors = %d", OwnerNum-1);
-  ad->Insert(tmp);
+  ad->Insert(tmp, false);
   return ad;
 }
 
@@ -931,7 +936,8 @@ ClassAd* Accountant::GetClassAd(const MyString& Key)
 bool Accountant::DeleteClassAd(const MyString& Key)
 {
   ClassAd* ad=NULL;
-  if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) return false;
+  if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) 
+	  return false;
 
   LogDestroyClassAd* log=new LogDestroyClassAd(Key.Value());
   AcctLog->AppendLog(log);

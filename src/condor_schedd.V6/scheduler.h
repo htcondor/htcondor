@@ -50,7 +50,7 @@
 #include "enum_utils.h"
 
 const 	int			MAX_REJECTED_CLUSTERS = 1024;
-const   int         STARTD_CONTACT_TIMEOUT = 45;
+extern  int         STARTD_CONTACT_TIMEOUT;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
 
 extern	DLL_IMPORT_MAGIC char**		environ;
@@ -89,7 +89,7 @@ struct OwnerData {
 class match_rec
 {
  public:
-    match_rec(char*, char*, PROC_ID*, ClassAd*, char*, char* pool);
+    match_rec(char*, char*, PROC_ID*, const ClassAd*, char*, char* pool);
 	~match_rec();
     char*    		id;
     char*   		peer;
@@ -222,7 +222,7 @@ class Scheduler : public Service
 	void				PeriodicExprHandler( void );
 
 	// match managing
-    match_rec*      AddMrec(char*, char*, PROC_ID*, ClassAd*, char*, char*);
+    match_rec*      AddMrec(char*, char*, PROC_ID*, const ClassAd*, char*, char*);
     int         	DelMrec(char*);
     int         	DelMrec(match_rec*);
 	shadow_rec*		FindSrecByPid(int);
@@ -276,7 +276,7 @@ class Scheduler : public Service
 		*/
 	bool			enqueueReconnectJob( PROC_ID job );
 	void			checkReconnectQueue( void );
-	void			makeReconnectRecords( PROC_ID* job, ClassAd* match_ad );
+	void			makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad );
 
 		// Useful public info
 	char*			shadowSockSinful( void ) { return MyShadowSockName; };

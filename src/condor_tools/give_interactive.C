@@ -134,7 +134,9 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 
 		candidatePreemptState = NO_PREEMPTION;
 		// if there is a remote user, consider preemption ....
-		if (candidate->LookupString (ATTR_REMOTE_USER, remoteUser) ) {
+		if (candidate->LookupString (ATTR_ACCOUNTING_GROUP, remoteUser) ||
+			candidate->LookupString (ATTR_REMOTE_USER, remoteUser)) 
+		{
 				// check if we are preempting for rank or priority
 			if( rankCondStd->EvalTree( candidate, &request, &result ) && 
 					result.type == LX_INTEGER && result.i == TRUE ) {
@@ -554,7 +556,9 @@ main(int argc, char *argv[])
 	int index;
 	startdAds.Open();
 	while( ( ad = startdAds.Next() ) ) {
-		if( ad->LookupString( ATTR_REMOTE_USER , remoteUser ) ) {
+		if( ad->LookupString( ATTR_ACCOUNTING_GROUP , remoteUser ) ||
+			ad->LookupString( ATTR_REMOTE_USER , remoteUser )) 
+		{
 			if( ( index = findSubmittor( remoteUser ) ) != -1 ) {
 				sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , 
 							prioTable[index].prio );

@@ -2018,12 +2018,14 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 			//In windows, the delimiter is '|'.  In Unix, it is ';'.
 			char* new_env = NULL;
 			char* job_env = NULL;
-			ad->LookupString( ATTR_JOB_ENVIRONMENT, &job_env );
+			expanded_ad->LookupString( ATTR_JOB_ENVIRONMENT, &job_env );
 			Env env_obj;
-			env_obj.Merge( job_env );
 			bool has_env = (job_env != NULL && *job_env);
-			free( job_env );
-			job_env = NULL; 
+			if ( job_env ) {
+				env_obj.Merge( job_env );
+				free( job_env );
+				job_env = NULL; 
+			}
 
 			if(has_env) {
 				char* opsys = NULL;

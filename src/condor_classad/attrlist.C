@@ -787,10 +787,9 @@ AttrList& AttrList::operator=(const AttrList& other)
 ////////////////////////////////////////////////////////////////////////////////
 // Insert an expression tree into a AttrList. If the expression is not an
 // assignment expression, FALSE is returned. Otherwise, it is inserted at the
-// end of the expression list. It is not checked if the attribute already
-// exists in the list!
+// end of the expression list. 
 ////////////////////////////////////////////////////////////////////////////////
-int AttrList::Insert(const char* str)
+int AttrList::Insert(const char* str, bool check_for_dups)
 {
 	ExprTree*	tree = NULL;
 	int result = FALSE;
@@ -799,14 +798,14 @@ int AttrList::Insert(const char* str)
 	{
 		return FALSE;
 	}
-	result = Insert(tree);
+	result = Insert(tree, check_for_dups);
 	if ( result == FALSE ) {
 		delete tree;
 	}
 	return result;
 }
 
-int AttrList::Insert(ExprTree* expr)
+int AttrList::Insert(ExprTree* expr, bool check_for_dups)
 {
     if(expr->MyType() != LX_ASSIGN)
     {
@@ -815,7 +814,7 @@ int AttrList::Insert(ExprTree* expr)
 
 	inside_insert = true;
 
-	if(Lookup(expr->LArg()))
+	if(check_for_dups && Lookup(expr->LArg()))
 	{
 		Delete(((Variable*)expr->LArg())->Name());
 	}

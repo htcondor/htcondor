@@ -1388,7 +1388,8 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 			char	remoteHost[MAXHOSTNAMELEN];
 			double	remotePriority;
 
-			if (offer->LookupString(ATTR_REMOTE_USER, remoteUser) == 1)
+			if ((offer->LookupString(ATTR_ACCOUNTING_GROUP, remoteUser)==1) ||
+			    (offer->LookupString(ATTR_REMOTE_USER, remoteUser)==1))
 			{
 				offer->LookupString(ATTR_NAME, remoteHost);
 				remotePriority = accountant.GetPriority (remoteUser);
@@ -1619,7 +1620,9 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 		candidatePreemptState = NO_PREEMPTION;
 
 		remoteUser[0] = '\0';
-		candidate->LookupString(ATTR_REMOTE_USER, remoteUser);
+		if (!candidate->LookupString(ATTR_ACCOUNTING_GROUP, remoteUser)) {
+			candidate->LookupString(ATTR_REMOTE_USER, remoteUser);
+		}
 
 		// if only_for_startdrank flag is true, check if the offer strictly
 		// prefers this request.  Since this is the only case we care about
@@ -1825,7 +1828,9 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	int  cluster, proc;
 	char startdAddr[32];
 	char startdName[64];
-	char remoteUser[128];
+	char remoteUser[512];
+	char accountingGroup[256];
+	char remoteOwner[256];
 	char *capability;
 	SafeSock startdSock;
 	bool send_failed;
@@ -1929,8 +1934,14 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		return MM_ERROR;
 	}
 
-	if (offer->LookupString(ATTR_REMOTE_USER, remoteUser) == 0) {
-		strcpy(remoteUser, "none");
+	if (offer->LookupString(ATTR_REMOTE_USER, remoteOwner) == 0) {
+		strcpy(remoteOwner, "none");
+	}
+	if (offer->LookupString(ATTR_ACCOUNTING_GROUP, accountingGroup)) {
+		snprintf(remoteUser,sizeof(remoteUser),"%s (%s=%s)",
+			remoteOwner,ATTR_ACCOUNTING_GROUP,accountingGroup);
+	} else {
+		strcpy(remoteUser,remoteOwner);
 	}
 	if (offer->LookupString (ATTR_STARTD_IP_ADDR, startdAddr) == 0) {
 		strcpy(startdAddr, "<0.0.0.0:0>");
@@ -2039,7 +2050,9 @@ addRemoteUserPrios( ClassAdList &cal )
 
 	cal.Open();
 	while( ( ad = cal.Next() ) ) {
-		if( ad->LookupString( ATTR_REMOTE_USER , remoteUser ) ) {
+		if( ad->LookupString( ATTR_ACCOUNTING_GROUP , remoteUser ) ||
+			ad->LookupString( ATTR_REMOTE_USER , remoteUser ) ) 
+		{
 			prio = (float) accountant.GetPriority( remoteUser );
 			(void) sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , prio );
 			ad->Insert( buffer );

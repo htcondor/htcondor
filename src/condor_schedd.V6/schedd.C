@@ -127,6 +127,7 @@ bool service_this_universe(int, ClassAd*);
 
 int	WallClockCkptInterval = 0;
 static bool gridman_per_job = false;
+int STARTD_CONTACT_TIMEOUT = 45;
 
 #ifdef CARMI_OPS
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
@@ -148,7 +149,7 @@ dc_reconfig()
 
 
 match_rec::match_rec( char* claim_id, char* p, PROC_ID* job_id, 
-					  ClassAd *match, char *the_user, char *my_pool )
+					  const ClassAd *match, char *the_user, char *my_pool )
 {
 	id = strdup( claim_id );
 	peer = strdup( p );
@@ -160,12 +161,12 @@ match_rec::match_rec( char* claim_id, char* p, PROC_ID* job_id,
 	alive_countdown = 0;
 	num_exceptions = 0;
 	if( match ) {
+		my_match_ad = new ClassAd( *match );
 		if( DebugFlags && D_MACHINE ) {
 			dprintf( D_MACHINE, "*** ClassAd of Matched Resource ***\n" );
-			match->dPrint( D_MACHINE );
+			my_match_ad->dPrint( D_MACHINE );
 			dprintf( D_MACHINE | D_NOHEADER, "*** End of ClassAd ***\n" );
-		}
-		my_match_ad = new ClassAd( *match );
+		}		
 	} else {
 		my_match_ad = NULL;
 	}
@@ -4190,8 +4191,10 @@ Scheduler::checkReconnectQueue( void )
 		while( jobsToReconnect.Next(job) ) {
 			if( job.cluster == tmp_job.cluster && job.proc == tmp_job.proc ) {
 				jobsToReconnect.DeleteCurrent();
-					// We have to make a copy, since the ClassAdList
-					// object on our stack will destroy everything
+					// Normally, we'd have to make a copy, since the ClassAdList
+					// object on our stack will destroy everything.
+					// However, makeReconnectRecords() will make its own copy
+					// of the ad whenever it needs to do so.  
 				ad = new ClassAd( *scan );
 				makeReconnectRecords( &job, ad );
 				break;
@@ -4216,7 +4219,7 @@ Scheduler::checkReconnectQueue( void )
 
 
 void
-Scheduler::makeReconnectRecords( PROC_ID* job, ClassAd* match_ad ) 
+Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad ) 
 {
 	int cluster = job->cluster;
 	int proc = job->proc;
@@ -4226,12 +4229,14 @@ Scheduler::makeReconnectRecords( PROC_ID* job, ClassAd* match_ad )
 	char* startd_addr = NULL;
 	char* startd_name = NULL;
 
+	// NOTE: match_ad could be deallocated when this function returns,
+	// so if we need to keep it around, we must make our own copy of it.
+
 	if( GetAttributeStringNew(cluster, proc, ATTR_OWNER, &owner) < 0 ) {
 			// we've got big trouble, just give up.
 		free( owner );
 		dprintf( D_ALWAYS, "WARNING: %s no longer in job queue for %d.%d\n", 
 				 ATTR_OWNER, cluster, proc );
-		delete( match_ad );
 		mark_job_stopped( job );
 		return;
 	}
@@ -4240,7 +4245,6 @@ Scheduler::makeReconnectRecords( PROC_ID* job, ClassAd* match_ad )
 		free( claim_id );
 		dprintf( D_ALWAYS, "WARNING: %s no longer in job queue for %d.%d\n", 
 				 ATTR_CLAIM_ID, cluster, proc );
-		delete( match_ad );
 		mark_job_stopped( job );
 		free( owner );
 		return;
@@ -4250,7 +4254,6 @@ Scheduler::makeReconnectRecords( PROC_ID* job, ClassAd* match_ad )
 		free( startd_name );
 		dprintf( D_ALWAYS, "WARNING: %s no longer in job queue for %d.%d\n", 
 				 ATTR_REMOTE_HOST, cluster, proc );
-		delete( match_ad );
 		mark_job_stopped( job );
 		free( claim_id );
 		free( owner );
@@ -4265,15 +4268,19 @@ Scheduler::makeReconnectRecords( PROC_ID* job, ClassAd* match_ad )
 	}
 
 	UserLog* ULog = this->InitializeUserLog( *job );
-	JobDisconnectedEvent event;
-	const char* txt = "Local schedd and job shadow died, "
-		"schedd now running again";
-	event.setDisconnectReason( txt );
-	event.setStartdAddr( startd_addr );
-	event.setStartdName( startd_name );
+	if ( ULog ) {
+		JobDisconnectedEvent event;
+		const char* txt = "Local schedd and job shadow died, "
+			"schedd now running again";
+		event.setDisconnectReason( txt );
+		event.setStartdAddr( startd_addr );
+		event.setStartdName( startd_name );
 
-	if( !ULog->writeEvent(&event) ) {
-		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_DISCONNECTED event\n" );
+		if( !ULog->writeEvent(&event) ) {
+			dprintf( D_ALWAYS, "Unable to log ULOG_JOB_DISCONNECTED event\n" );
+		}
+		delete ULog;
+		ULog = NULL;
 	}
 
 	dprintf( D_FULLDEBUG, "Adding match record for disconnected job %d.%d "
@@ -4282,6 +4289,7 @@ Scheduler::makeReconnectRecords( PROC_ID* job, ClassAd* match_ad )
 	if( pool ) {
 		dprintf( D_FULLDEBUG, "Pool: %s (via flocking)\n", pool );
 	}
+		// note: AddMrec will makes its own copy of match_ad
 	match_rec *mrec = AddMrec( claim_id, startd_addr, job, match_ad, 
 							   owner, pool );
 	if( pool ) {
@@ -4309,7 +4317,6 @@ Scheduler::makeReconnectRecords( PROC_ID* job, ClassAd* match_ad )
 	if( !mrec ) {
 		dprintf( D_ALWAYS, "ERROR: failed to create match_rec for %d.%d\n",
 				 cluster, proc );
-		delete( match_ad );
 		mark_job_stopped( job );
 		return;
 	}
@@ -4693,6 +4700,8 @@ Scheduler::StartJobHandler()
 	int		sh_is_dc = FALSE;
 	char* 	shadow_path = NULL;
 
+	wants_reconnect = srec->is_reconnect;
+
 #ifdef WIN32
 		// nothing to choose on NT, there's only 1 shadow
 	shadow_path = param("SHADOW");
@@ -4705,7 +4714,6 @@ Scheduler::StartJobHandler()
 	bool nt_resource = false;
  	char* match_opsys = NULL;
  	char* match_version = NULL;
-	wants_reconnect = srec->is_reconnect;
 
 		// Until we're restorting the match ClassAd on reconnected, we
 		// wouldn't know if the startd we want to talk to supports the
@@ -4808,17 +4816,22 @@ Scheduler::StartJobHandler()
 
 	sh_is_dc = (int)shadow_obj->isDC();
 	bool sh_reads_file = shadow_obj->provides( ATTR_HAS_JOB_AD_FROM_FILE );
+	shadow_path = strdup( shadow_obj->path() );
+	if ( shadow_obj ) {
+		delete( shadow_obj );
+		shadow_obj = NULL;
+	}
+
+#endif /* ! WIN32 */
+
 	if( wants_reconnect && !(sh_is_dc && sh_reads_file) ) {
 		dprintf( D_ALWAYS, "Trying to reconnect but you do not have a "
 				 "condor_shadow that will work, aborting.\n" );
 		noShadowForJob( srec, NO_SHADOW_RECONNECT );
 		delete( shadow_obj );
 		tryNextJob();
+		return;
 	}
-	shadow_path = strdup( shadow_obj->path() );
-	delete( shadow_obj );
-
-#endif /* ! WIN32 */
 
 	int* std_fds_p = NULL;
 	int std_fds[3];
@@ -7043,6 +7056,8 @@ Scheduler::Init()
 	}
 	if( tmp ) free( tmp );
 
+	STARTD_CONTACT_TIMEOUT = param_integer("STARTD_CONTACT_TIMEOUT",45);
+
 	/* Initialize the hash tables to size MaxJobsRunning * 1.2 */
 		// Someday, we might want to actually resize these hashtables
 		// on reconfig if MaxJobsRunning changes size, but we don't
@@ -7607,7 +7622,7 @@ Scheduler::sendReschedule( void )
 
 
 match_rec*
-Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, ClassAd* my_match_ad,
+Scheduler::AddMrec(char* id, char* peer, PROC_ID* jobId, const ClassAd* my_match_ad,
 				   char *user, char *pool)
 {
 	match_rec *rec;

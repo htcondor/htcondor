@@ -1,3 +1,7 @@
+11/09/04 V6_7-mirror-2-merge-3
+   The state of the V6_7-mirror-2-branch for another (probably final)
+   merge into the V6_7-branch.
+
 11/09/04 V6_7-pre_merge-V6_7-mirror-2-merge-3
    The state of the V6_7-branch before merging in the
    V6_7-mirror-2-branch as tagged at V6_7-mirror-2-merge-3
@@ -317,7 +321,6 @@ V6_7-credd-root. By ckireyev.
    The state of the V6_7-branch before merging in the V6_6-branch as
    tagged at V6_6-merge-12.
 
-
 05/16/04 V6_6-merge-12
    The state of the V6_6-branch for yet another merge into
    V6_7-branch.  fixes getExecPath() on OSX which was breaking the
@@ -335,6 +338,12 @@ V6_7-credd-root. By ckireyev.
    The state of the V6_6-branch for yet another merge into
    V6_7-branch.  Lots of random fixes, especially the schedd fix for
    abortJob() that was causing conflicts for the SOAP-branch.
+
+05/14/04 V6_7-mirror-2-CORE_snapshot4
+   The state of the V6_7-mirror-2-branch for another snapshot release
+   given to CORE. This includes a memory leak fix to the schedd.
+   The version string in this release looks like this:
+   $CondorVersion: 6.7.0 Mar 1 2004 MIRROR-2-BRANCH CORE_snapshot4 $
 
 05/12/04 V6_6_5_NMI
    This is the tag for NMI_R5 condor. It is identical to Condor 6.6.5, 
@@ -357,6 +366,13 @@ V6_7-credd-root. By ckireyev.
    V6_7-branch has new syntax for specifying grid universe job subtypes
    and parsing to/from new classad native format that we now want on the
    condorc branch.
+
+05/07/04 V6_7-mirror-2-CORE_snapshot3
+   The state of the V6_7-mirror-2-branch for another snapshot release
+   given to CORE. This includes a fix to the accountant code so that
+   they can specify user priorities before any jobs are run.
+   The version string in this release looks like this:
+   $CondorVersion: 6.7.0 Mar 1 2004 MIRROR-2-BRANCH CORE_snapshot3 $
 
 05/04/04 V6_6_5_WINDOWS
    The is the 6.6.5 release tag for windoze.  The version string was:
