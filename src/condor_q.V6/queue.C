@@ -249,10 +249,27 @@ processCommandLineArguments (int argc, char *argv[])
 	for (i = 1; i < argc; i++)
 	{
 		if( *argv[i] != '-' ) {
-			// no dash means this arg is the desired job owner
+			// Check for cluster.proc, cluster, or owner first 
+			if (sscanf (argv[i], "%d.%d", &cluster, &proc) == 2) {
+				sprintf (constraint, "((%s == %d) && (%s == %d))", 
+						ATTR_CLUSTER_ID, cluster,
+						ATTR_PROC_ID, proc);
+				Q.addOR (constraint);
+				summarize = 0;
+			} 
+			else
+			if (sscanf (argv[i], "%d", &cluster) == 1) {
+				sprintf (constraint, "(%s == %d)", 
+					ATTR_CLUSTER_ID, cluster);
+				Q.addOR (constraint);
+				summarize = 0;
+			} 
+			else
 			if( Q.add( CQ_OWNER, argv[i] ) != Q_OK ) {
-				// this error doesn't seem very helpful... can't we say more?
-				fprintf( stderr, "Error: Argument %d (%s)\n", i, argv[i] );
+				// this error doesn't seem very helpful...
+				// can't we say more?
+				fprintf( stderr, "Error: Argument %d (%s)\n", 
+					i, argv[i] );
 				exit( 1 );
 			}
 			continue;
@@ -441,20 +458,6 @@ processCommandLineArguments (int argc, char *argv[])
 			usingPrintMask = true;
 			i+=2;
 		}
-		else
-		if (sscanf (argv[i], "%d.%d", &cluster, &proc) == 2) {
-			sprintf (constraint, "((%s == %d) && (%s == %d))", 
-									ATTR_CLUSTER_ID, cluster,
-									ATTR_PROC_ID, proc);
-			Q.addOR (constraint);
-			summarize = 0;
-		} 
-		else
-		if (sscanf (argv[i], "%d", &cluster) == 1) {
-			sprintf (constraint, "(%s == %d)", ATTR_CLUSTER_ID, cluster);
-			Q.addOR (constraint);
-			summarize = 0;
-		} 
 		else
 		if (match_prefix (arg, "global")) {
 			global = 1;
