@@ -99,6 +99,7 @@ private:
 
 static void test_classad(const Parameters &parameters, Results &results);
 static void test_exprlist(const Parameters &parameters, Results &results);
+static void test_value(const Parameters &parameters, Results &results);
 static void test_collection(const Parameters &parameters, Results &results);
 static bool check_in_view(ClassAdCollection *collection, string view_name, string classad_name);
 static void print_version(void);
@@ -273,6 +274,7 @@ int main(
         test_exprlist(parameters, results);
     }
     if (parameters.check_all || parameters.check_value) {
+        test_value(parameters, results);
     }
     if (parameters.check_all || parameters.check_literal) {
     }
@@ -407,7 +409,15 @@ static void test_classad(const Parameters &parameters, Results &results)
                 }
             }
         }
+        delete c;
     }
+
+    // This ClassAd may cause problems. Perhaps a memory leak. 
+    // This test is only useful when run under valgrind.
+    string memory_problem_classad = 
+        "[ Updates = [status = \"request_completed\"; timestamp = absTime(\"2004-12-16T18:10:59-0600]\")] ]";
+    c = parser.ParseClassAd(memory_problem_classad);
+    delete c;
 }
 
 /*********************************************************************
@@ -521,6 +531,96 @@ static void test_exprlist(const Parameters &parameters, Results &results)
     
     // Note that we do not delete the Literals that we created, because
     // they should have been deleted when the list was deleted.
+
+    return;
+}
+
+/*********************************************************************
+ *
+ * Function: test_value
+ * Purpose:  Test the Value class.
+ *
+ *********************************************************************/
+static void test_value(const Parameters &parameters, Results &results)
+{
+    Value v;
+    bool  is_expected_type;
+
+    cout << "Testing the Value class...\n";
+
+    TEST("New value is undefined", (v.IsUndefinedValue()));
+    TEST("New value isn't boolean", !(v.IsBooleanValue()));
+    TEST("GetType gives UNDEFINED_VALUE", (v.GetType() == Value::UNDEFINED_VALUE));
+
+    v.SetErrorValue();
+    TEST("Is error value", (v.IsErrorValue()));
+    TEST("GetType gives ERROR_VALUE", (v.GetType() == Value::ERROR_VALUE));
+
+    bool  b;
+    v.SetBooleanValue(true);
+    b = false;
+    is_expected_type = v.IsBooleanValue(b);
+    TEST("Value is not undefined", !(v.IsUndefinedValue()));
+    TEST("Value is boolean", (v.IsBooleanValue()));
+    TEST("Try 2: New value is boolean", (is_expected_type == true))
+    TEST("Boolean is true", (b == true));
+    TEST("GetType gives BOOLEAN_VALUE", (v.GetType() == Value::BOOLEAN_VALUE));
+
+    double r = 0.0;
+    v.SetRealValue(1.0);
+    is_expected_type = v.IsRealValue(r);
+    TEST("Value is real", is_expected_type);
+    TEST("Real is 1.0", (r == 1.0));
+    TEST("GetType gives REAL_VALUE", (v.GetType() == Value::REAL_VALUE));
+    TEST("Real is a number", v.IsNumber());
+
+    int i = 0;
+    v.SetIntegerValue(1);
+    is_expected_type = v.IsIntegerValue(i);
+    TEST("Value is integer", is_expected_type);
+    TEST("Integer is 1", (i == 1));
+    TEST("GetType gives INTEGER_VALUE", (v.GetType() == Value::INTEGER_VALUE));
+    TEST("Integer is a number", v.IsNumber());
+
+    const char *s;
+    v.SetStringValue("Robert-Houdin");
+    is_expected_type = v.IsStringValue(s);
+    TEST("Value is string", is_expected_type);
+    TEST("String is 'Robert-Houdin'", (0 == strcmp(s, "Robert-Houdin")));
+    TEST("GetType gives STRING_VALUE", (v.GetType() == Value::STRING_VALUE));
+
+    abstime_t at = { 10, 10 };
+    v.SetAbsoluteTimeValue(at);
+    at.secs = at.offset = 0;
+    is_expected_type = v.IsAbsoluteTimeValue(at);
+    TEST("Value is absolute time", is_expected_type);
+    TEST("Absolute time is 10, 0", (10 == at.secs && 10 == at.offset));
+    TEST("GetType gives ABSOLUTE_TIME_VALUE", (v.GetType() == Value::ABSOLUTE_TIME_VALUE));
+
+    time_t rt = 0;
+    v.SetRelativeTimeValue((time_t) 10);
+    is_expected_type = v.IsRelativeTimeValue(rt);
+    TEST("Value is relative time", is_expected_type);
+    TEST("Relative time is 10", (10 == rt));
+    TEST("GetType gives RELATIVE_TIME_VALUE", (v.GetType() == Value::RELATIVE_TIME_VALUE));
+
+    ExprList *l = new ExprList();
+    ExprList *ll = NULL;
+    v.SetListValue(l);
+    is_expected_type = v.IsListValue(ll);
+    TEST("Value is list value", is_expected_type);
+    TEST("List value is correct", l == ll);
+    TEST("GetType gives LIST_VALUE", (v.GetType() == Value::LIST_VALUE));
+    delete l;
+
+    ClassAd *c = new ClassAd();
+    ClassAd *cc = NULL;
+    v.SetClassAdValue(c);
+    is_expected_type = v.IsClassAdValue(cc);
+    TEST("Value is ClassAd value", is_expected_type);
+    TEST("ClassAd value is correct", c == cc);
+    TEST("GetType gives LIST_VALUE", (v.GetType() == Value::CLASSAD_VALUE));
+    delete c;
 
     return;
 }
