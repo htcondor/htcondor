@@ -4676,6 +4676,10 @@ Scheduler::schedd_exit()
 		// quickly recover on restart
 	CleanJobQueue();
 
+		// Deallocate the memory in the job queue so we don't think
+		// we're leaking anything. 
+	DestroyJobQueue();
+
 		// Invalidate our classads at the collector, since we're now
 		// gone.  
 	invalidate_ads();
