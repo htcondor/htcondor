@@ -40,9 +40,6 @@
 ************************************************************************/
 
 #include "condor_common.h"
-
-#include <varargs.h>
-
 #include "condor_sys.h"
 #include "debug.h"
 #include "clib.h"
@@ -123,11 +120,9 @@ int InDBX = 0;
 */
 /* VARARGS1 */
 void
-dprintf(va_alist)
-va_dcl
+dprintf(int flags, ...)
 {
 	va_list pvar;
-	int flags;
 	char *fmt;
 	struct tm *tm, *localtime();
 	long *clock;
@@ -144,8 +139,7 @@ va_dcl
 		   trys to dprintf, we just return to avoid infinite loops. */
 	if( DprintfBroken ) return;
 
-	va_start(pvar);
-	flags = va_arg(pvar, int);
+	va_start(pvar, flags);
 
 		/* See if this is one of the messages we are logging */
 	if( !(flags&DebugFlags) ) {
@@ -461,6 +455,10 @@ open_debug_file(char flags[])
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
 	/* Note: The log file shouldn't need to be group writeable anymore, since PRIV_CONDOR changes euid now. */
+
+#if !defined(WIN32)
+	errno = 0;
+#endif
 	if( (fp=fopen(DebugFile,flags)) == NULL ) {
 #if !defined(WIN32)
 		if( errno == EMFILE ) {
