@@ -151,7 +151,7 @@ public:
     ///
 	int authenticate( KeyInfo *& key, int clientFlags = 0 );
     ///
-    const char * getFullyQualifiedUser() const;
+    virtual const char * getFullyQualifiedUser() const;
     ///
 	const char *getOwner();
     ///

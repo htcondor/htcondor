@@ -90,6 +90,9 @@ public:
     const char * isIncomingDataMD5ed();
     const char * isIncomingDataEncrypted();
 
+	virtual void         setFullyQualifiedUser(char * u);
+	virtual const char * getFullyQualifiedUser();
+
 #ifdef DEBUG
 	int getMsgSize();
 	void dumpSock();
@@ -144,6 +147,7 @@ protected:
 	bool _msgReady;
 	_condorInMsg *_longMsg;
 	int _tOutBtwPkts;
+	char* _fqu;  // fully qualified username
 
 	// statistics variables
 	static unsigned long _noMsgs;

@@ -233,6 +233,9 @@ protected:
 	char * serialize(char *);
 	char * serialize() const;
 
+	virtual void setFullyQualifiedUser(char * u);
+	///
+	virtual const char * getFullyQualifiedUser();
 	///
 	virtual int encrypt(bool);
 	///
