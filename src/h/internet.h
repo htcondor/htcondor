@@ -87,6 +87,10 @@ char *sin_to_hostname(const struct sockaddr_in *sin, char ***aliases);
 void
 display_from( struct sockaddr_in *from );
 
+/* Returns 1 if h1 and h2 are both hostnames which refer to the same
+   host, 0 if they don't, and -1 on error. */
+int same_host(const char *h1, const char *h2);
+
 #if defined(__cplusplus)
 }
 #endif
