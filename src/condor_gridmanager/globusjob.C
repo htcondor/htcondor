@@ -1328,7 +1328,7 @@ int GlobusJob::doEvaluateState()
 					if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED &&
 						 (globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_COMMIT_TIMED_OUT ||
 						  globusStateErrorCode == 0) ) {
-dprintf(D_FULLDEBUG,"(%d.%d) jobmanager timed out on commit, clearing request\n",procID.cluster, procID.proc);
+						dprintf(D_FULLDEBUG,"(%d.%d) jobmanager timed out on commit, clearing request\n",procID.cluster, procID.proc);
 						doResubmit = 1;
 						gmState = GM_CLEAR_REQUEST;
 						break;
@@ -1548,23 +1548,23 @@ dprintf(D_FULLDEBUG,"(%d.%d) jobmanager timed out on commit, clearing request\n"
 				GetOutputSize( new_output_size, new_error_size );
 
 				if ( new_output_size > outputWaitOutputSize ) {
-dprintf(D_FULLDEBUG,"(%d.%d) saw new output size %d\n",procID.cluster,procID.proc,new_output_size);
+					dprintf(D_FULLDEBUG,"(%d.%d) saw new output size %d\n",procID.cluster,procID.proc,new_output_size);
 					outputWaitOutputSize = new_output_size;
 					outputWaitLastGrowth = now;
 				}
 
 				if ( new_error_size > outputWaitErrorSize ) {
-dprintf(D_FULLDEBUG,"(%d.%d) saw new error size %d\n",procID.cluster,procID.proc,new_error_size);
+					dprintf(D_FULLDEBUG,"(%d.%d) saw new error size %d\n",procID.cluster,procID.proc,new_error_size);
 					outputWaitErrorSize = new_error_size;
 					outputWaitLastGrowth = now;
 				}
 			}
 			if ( now > outputWaitLastGrowth + outputWaitGrowthTimeout ) {
-dprintf(D_FULLDEBUG,"(%d.%d) no new output/error for %d seconds, retrying STDIO_SIZE\n",procID.cluster,procID.proc,outputWaitGrowthTimeout);
+				dprintf(D_FULLDEBUG,"(%d.%d) no new output/error for %d seconds, retrying STDIO_SIZE\n",procID.cluster,procID.proc,outputWaitGrowthTimeout);
 				outputWaitLastGrowth = 0;
 				gmState = GM_CHECK_OUTPUT;
 			} else if ( GetCallbacks() ) {
-dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.cluster,procID.proc);
+				dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.cluster,procID.proc);
 				outputWaitLastGrowth = 0;
 				gmState = GM_CHECK_OUTPUT;
 			} else {
@@ -2275,10 +2275,12 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 			reevaluate_state = true;
 		}
 		if ( globusState != old_globus_state ) {
-//			dprintf(D_FULLDEBUG, "(%d.%d) globus state change: %s -> %s\n",
-//					procID.cluster, procID.proc,
-//					GlobusJobStatusName(old_globus_state),
-//					GlobusJobStatusName(globusState));
+			/*
+			dprintf(D_FULLDEBUG, "(%d.%d) globus state change: %s -> %s\n",
+					procID.cluster, procID.proc,
+					GlobusJobStatusName(old_globus_state),
+					GlobusJobStatusName(globusState));
+			*/
 			enteredCurrentGlobusState = time(NULL);
 		}
 		if ( gmState != old_gm_state ) {
