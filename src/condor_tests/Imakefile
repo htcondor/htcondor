@@ -22,8 +22,8 @@ all_lists:: compiler_list
    and that deal with the testing build framework itself.
 ************************************************************************/
 
-LD_DIR = -condor_ld_dir ../condor_scripts
-LIB_DIR = -condor_lib ../condor_syscall_lib
+LD_DIR = -condor_ld_dir $(PRE_BUILT_RELEASE)/lib
+LIB_DIR = -condor_lib $(PRE_BUILT_RELEASE)/lib
 INCLUDE_FLAGS = -I$(PRE_BUILT_RELEASE)/include -I../condor_includes -I../h -I../condor_c++_util
 BUILD_FLAGS = $(TESTSUITE_FLAGS_GCC)
 CC = gcc
