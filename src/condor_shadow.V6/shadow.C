@@ -1214,6 +1214,7 @@ get_client_ids( PROC *proc )
 										ClientUid, ClientGid );
 }
 
+#if 0 /* dead code??? */
 send_job_info( ReliSock *sock, V2_PROC *proc )
 {
 	struct stat st_buf;
@@ -1255,6 +1256,7 @@ send_job_info( ReliSock *sock, V2_PROC *proc )
 
 	ASSERT( sock->end_of_message() );
 }
+#endif
 
 
 extern char	*SigNames[];
