@@ -142,7 +142,6 @@ Scheduler::Scheduler()
     JobsRunning = 0;
     ReservedSwap = 0;
 	SwapSpace = 0;
-	alreadyStashed = false;
 
     ShadowSizeEstimate = 0;
 
@@ -641,7 +640,12 @@ abort_job_myself(PROC_ID job_id)
 bool Scheduler::WriteAbortToUserLog(PROC_ID job_id)
 {
 	char tmp[_POSIX_PATH_MAX];
-    if (GetAttributeString(job_id.cluster, job_id.proc, ATTR_ULOG_FILE, tmp) < 0) return false;
+
+    if (GetAttributeString(job_id.cluster, job_id.proc, ATTR_ULOG_FILE,
+						   tmp) < 0) {
+		// if there is no userlog file defined, then our work is done...
+		return true;
+	}
 	
 	char owner[_POSIX_PATH_MAX];
 	char logfilename[_POSIX_PATH_MAX];
@@ -750,7 +754,6 @@ Scheduler::negotiatorSocketHandler (Stream *stream)
 	{
 		dprintf (D_ALWAYS, "Socket activated, but could not read command\n");
 		dprintf (D_ALWAYS, "(Negotiator probably invalidated cached socket)\n");
-		alreadyStashed = false;
 		return (!KEEP_STREAM);
 	}
 
@@ -761,12 +764,10 @@ Scheduler::negotiatorSocketHandler (Stream *stream)
 	{
 		dprintf(D_ALWAYS,
 				"Negotiator command was %d (not NEGOTIATE) --- aborting\n", command);
-		alreadyStashed = false;
 		return (!(KEEP_STREAM));
 	}
 
 	rval = negotiate(NEGOTIATE, stream);
-	if (rval != KEEP_STREAM) alreadyStashed = false;
 	return rval;	
 }
 
@@ -775,13 +776,18 @@ int
 Scheduler::doNegotiate (int i, Stream *s)
 {
 	int rval = negotiate(i, s);
-	if (rval == KEEP_STREAM && !alreadyStashed)
+	if (rval == KEEP_STREAM)
 	{
-		dprintf (D_ALWAYS, "Stashing socket to negotiator for future reuse\n");
-		daemonCore->Register_Socket(s, "<Negotiator Socket>", 
-			(SocketHandlercpp) negotiatorSocketHandler, "<Negotiator Command>",
-			this, ALLOW);
-		alreadyStashed = true;
+		// if socket is not already registered, then register it
+		if (daemonCore->Lookup_Socket(s) == -1) {
+			dprintf (D_ALWAYS,
+					 "Stashing socket to negotiator for future reuse\n");
+			daemonCore->
+				Register_Socket(s, "<Negotiator Socket>", 
+								(SocketHandlercpp)negotiatorSocketHandler,
+								"<Negotiator Command>",
+								this, ALLOW);
+		}
 	}
 	return rval;
 }
