@@ -175,7 +175,7 @@ do_Q_request(AuthSock *syscall_sock)
 		errno = 0;
 		rval = NewCluster( );
 		terrno = errno;
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+		dprintf(D_SYSCALLS,"\tNewCluster: trval = %d, errno = %d\n",rval,terrno );
 
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
