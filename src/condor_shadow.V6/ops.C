@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "condor_sys.h"
-#include "condor_rsc.h"
 #include "condor_debug.h"
 #include "fileno.h"
 #include "condor_io.h"
@@ -31,8 +30,6 @@
 #include "shadow.h"
 
 FILE	*fdopen();
-
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 static int RSCSock;
 static int LogSock;
@@ -48,7 +45,6 @@ extern int UsePipes;
 
 extern V2_PROC *Proc;
 
-/* XDR xdr_RSC, *xdr_syscall = &xdr_RSC; */
 ReliSock *syscall_sock = NULL;
 
 ReliSock *
@@ -58,9 +54,6 @@ RSC_ShadowInit( int rscsock, int errsock )
 	syscall_sock = new ReliSock();
 	syscall_sock->attach_to_file_desc(RSCSock);
 
-/*	xdrrec_create( xdr_syscall, XDR_BUFSIZE, XDR_BUFSIZE, (caddr_t)&RSCSock,
-			(void*)XDR_ShadowRead, (void*)XDR_ShadowWrite ); */
-	
 	syscall_sock->encode();
 
 	LogSock = errsock;
@@ -69,23 +62,6 @@ RSC_ShadowInit( int rscsock, int errsock )
 
 	return( syscall_sock );
 }
-
-#ifdef CARMI_OPS
-XDR *
-RSC_MyShadowInit( int *rscsock, int *errsock )
-{
-   XDR* xdrs;
-/* AT --- have added this line here to make the streams dynamically 
-   allocated, rather than being a single statoc stream */
-	xdrs = (XDR *) malloc(sizeof(XDR));
-	
-	xdrrec_create( xdrs, XDR_BUFSIZE, XDR_BUFSIZE, (caddr_t)rscsock,
-			XDR_ShadowRead, XDR_ShadowWrite );
-/*        xdrrec_skiprecord( xdrs ); */     /* flush input buffer */
-	xdrs->x_op = XDR_ENCODE;
-	return( xdrs );
-}
-#endif
 
 
 #if 0
