@@ -95,7 +95,7 @@ void restart();
 const int MAGIC = 0xfeafea;
 const int SEG_INCR = 25;
 
-#include "condor_fix_setjmp.h"
+#include "setjmp.h"
 extern "C" {
 	int SETJMP( jmp_buf env );
 	void LONGJMP( jmp_buf env, int retval );
