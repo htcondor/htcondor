@@ -12,12 +12,26 @@ The details of each version are described below.
 \noindent New Features:
 \begin{itemize}
 
-\item None.
+\item Added a \Opt{-hold} and \Opt{-held} option to \Condor{q} which 
+displays the reason that the job had been held.
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 \begin{itemize}
+
+\item Fixed a bug where more than one space between arguments to a job
+in the java universe would result in it being invoked with and incorrect
+list arguments.
+
+\item Removed renaming of the executable to ``condor_exec'' in the java
+universe. This fixes a bug where the JVM was looking at its path to determine
+its installation directory.
+
+\item Fixed a bug and resulting null pointer exception in the java universe
+because under certain conditions, Condor would invoke the JVM incorrectly.
+
+\item Fixed serveral error reporting messages to be more precise.
 
 \item When the NIS environment was being used, the \Condor{starter} daemon
 would produce heavy amounts of NIS traffic. This has been fixed.
@@ -31,7 +45,7 @@ segmentation fault have been fixed.
 username for ``niceuser'' jobs.
 
 \item Fixed a bug where, in the standard universe, you could not open a file
-with spaces in it.
+whose name had spaces in it.
 
 \item Fixed a bug in DAGMan where pre and post scripts would fail to
 run if the DAG description file had extra whitespace.
@@ -58,7 +72,7 @@ colon ``:''.
 \noindent New Features:
 \begin{itemize}
 
-\item None.
+\item. This release mirrored the Condor-G release, and has no new features.
 
 \end{itemize}
 
