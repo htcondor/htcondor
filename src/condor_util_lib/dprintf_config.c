@@ -64,6 +64,7 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 int		Termlog;
 
 void set_debug_flags( char *strflags );
+void debug_unlock();
 FILE *open_debug_file( char flags[] );
 
 void
@@ -93,6 +94,9 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 	*/
 	if( !( DebugFlags & D_TERMLOG) ) {
 		(void)sprintf(pname, "%s_LOG", subsys);
+		if( DebugFile ) {
+			free( DebugFile );
+		}
 		DebugFile = param(pname);
 
 		if( DebugFile == NULL ) {
@@ -101,12 +105,14 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 
 		(void)sprintf(pname, "TRUNC_%s_LOG_ON_OPEN", subsys);
 		pval = param(pname);
-		if( pval && (*pval == 't' || *pval == 'T') ) {
-			DebugFP = open_debug_file("a");
+		if( pval ) {
+			if( *pval == 't' || *pval == 'T') {
+				DebugFP = open_debug_file("w");
+			} 
+			free(pval);
 		} else {
 			DebugFP = open_debug_file("a");
 		}
-		free(pval); 	/* BUG: Ashish */
 
 		if( DebugFP == NULL ) {
 			EXCEPT("Cannot open log file '%s'", DebugFile);
@@ -136,9 +142,7 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 		}
 
 		(void)sprintf(pname, "%s_LOCK", subsys);
-		/* BUG FIXED: Harit */
-		if (DebugLock)
-		{
+		if (DebugLock) {
 			free(DebugLock);
 		}
 		DebugLock = param(pname);
