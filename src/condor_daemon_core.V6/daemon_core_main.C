@@ -536,7 +536,31 @@ handle_off_graceful( Service*, int, Stream* )
 	return TRUE;
 }
 
-	
+int
+handle_off_peaceful( Service*, int, Stream* )
+{
+	// Peaceful shutdown is the same as graceful, except
+	// there is no timeout waiting for things to finish.
+
+	daemonCore->SetPeacefulShutdown(true);
+	daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+	return TRUE;
+}
+
+int
+handle_set_peaceful_shutdown( Service*, int, Stream* )
+{
+	// If the master could send peaceful shutdown signals, it would
+	// not be necessary to have a message for turning on the peaceful
+	// shutdown toggle.  Since the master only sends fast and graceful
+	// shutdown signals, condor_off is responsible for first turning
+	// on peaceful shutdown in appropriate daemons.
+
+	daemonCore->SetPeacefulShutdown(true);
+	return TRUE;
+}
+
+
 int
 handle_reconfig( Service*, int cmd, Stream* )
 {
@@ -1039,18 +1063,24 @@ handle_dc_sigterm( Service*, int )
 	}
 #endif
 
-	int timeout = 30 * MINUTE;
-	char* tmp = param( "SHUTDOWN_GRACEFUL_TIMEOUT" );
-	if( tmp ) {
-		timeout = atoi( tmp );
-		free( tmp );
+	if( daemonCore->GetPeacefulShutdown() ) {
+		dprintf( D_FULLDEBUG, 
+				 "Peaceful shutdown in effect.  No timeout enforced.\n");
 	}
-	daemonCore->Register_Timer( timeout, 0, 
-								(TimerHandler)main_shutdown_fast,
-								"main_shutdown_fast" );
-	dprintf( D_FULLDEBUG, 
-			 "Started timer to call main_shutdown_fast in %d seconds\n", 
-			 timeout );
+	else {
+		int timeout = 30 * MINUTE;
+		char* tmp = param( "SHUTDOWN_GRACEFUL_TIMEOUT" );
+		if( tmp ) {
+			timeout = atoi( tmp );
+			free( tmp );
+		}
+		daemonCore->Register_Timer( timeout, 0, 
+									(TimerHandler)main_shutdown_fast,
+									"main_shutdown_fast" );
+		dprintf( D_FULLDEBUG, 
+				 "Started timer to call main_shutdown_fast in %d seconds\n", 
+				 timeout );
+	}
 	main_shutdown_graceful();
 	return TRUE;
 }
@@ -1621,6 +1651,14 @@ int main( int argc, char** argv )
 	daemonCore->Register_Command( DC_OFF_GRACEFUL, "DC_OFF_GRACEFUL",
 								  (CommandHandler)handle_off_graceful,
 								  "handle_off_graceful()", 0, ADMINISTRATOR );
+
+	daemonCore->Register_Command( DC_OFF_PEACEFUL, "DC_OFF_PEACEFUL",
+								  (CommandHandler)handle_off_peaceful,
+								  "handle_off_peaceful()", 0, ADMINISTRATOR );
+
+	daemonCore->Register_Command( DC_SET_PEACEFUL_SHUTDOWN, "DC_SET_PEACEFUL_SHUTDOWN",
+								  (CommandHandler)handle_set_peaceful_shutdown,
+								  "handle_set_peaceful_shutdown()", 0, ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_NOP, "DC_NOP",
 								  (CommandHandler)handle_nop,

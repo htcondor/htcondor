@@ -137,6 +137,9 @@
 #define SPOOL_JOB_FILES		(SCHED_VERS+80)	// spool all job files via filetransfer object
 #define GET_MYPROXY_PASSWORD (SCHED_VERS+81) // gmanager->schedd: Give me MyProxy password
 #define DELETE_USER			(SCHED_VERS+82)		// negotiator  (actually, accountant)
+#define DAEMON_OFF_PEACEFUL  (SCHED_VERS+83)		// specific daemon, subsys follows
+#define DAEMONS_OFF_PEACEFUL (SCHED_VERS+84)
+#define RESTART_PEACEFUL     (SCHED_VERS+85)
 
 
 
@@ -249,6 +252,8 @@ const int QUERY_ANY_ADS = 48;
 #define DC_RECONFIG_FULL	(DC_BASE+12)
 #define DC_FETCH_LOG        (DC_BASE+13)
 #define DC_INVALIDATE_KEY   (DC_BASE+14)
+#define DC_OFF_PEACEFUL     (DC_BASE+15)
+#define DC_SET_PEACEFUL_SHUTDOWN (DC_BASE+16)
 
 /*
 *** Log type supported by DC_FETCH_LOG

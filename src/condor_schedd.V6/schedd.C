@@ -255,6 +255,7 @@ Scheduler::Scheduler()
 	SchedDInterval = 0;
 	SchedDMinInterval = 0;
 	QueueCleanInterval = 0; JobStartDelay = 0;
+	RequestClaimTimeout = 0;
 	MaxJobsRunning = 0;
 	NegotiateAllJobsInCluster = false;
 	JobsStarted = 0;
@@ -450,6 +451,25 @@ Scheduler::timeout()
 	daemonCore->Reset_Timer(timeoutid,SchedDInterval);
 	min_interval_timer_set = false;
 	next_timeout = right_now + SchedDMinInterval;
+}
+
+void
+Scheduler::check_claim_request_timeouts()
+{
+	if(RequestClaimTimeout > 0) {
+		matches->startIterations();
+		match_rec *rec;
+		while(matches->iterate(rec) == 1) {
+			if(rec->status == M_STARTD_CONTACT_LIMBO) {
+				time_t time_left = rec->entered_current_status + \
+				                 RequestClaimTimeout - time(NULL);
+				if(time_left < 0) {
+					dprintf(D_ALWAYS,"timed out requesting claim from %s\n",rec->peer);
+					send_vacate(rec, RELEASE_CLAIM);
+				}
+			}
+		}
+	}
 }
 
 /*
@@ -844,6 +864,8 @@ Scheduler::count_jobs()
 		  }
 	  }
 	}
+
+	check_claim_request_timeouts();
 
 	return 0;
 }
@@ -7090,6 +7112,15 @@ Scheduler::Init()
 			gridman_per_job = true;
 		}
 		if( tmp ) free( tmp );
+	}
+
+	tmp = param("REQUEST_CLAIM_TIMEOUT");
+	if(!tmp) {
+		RequestClaimTimeout = 60*30; //30 minutes by default
+	} else {
+		RequestClaimTimeout = atoi(tmp);
+		free(tmp);
+		tmp = NULL;
 	}
 
 		////////////////////////////////////////////////////////////////////

@@ -242,6 +242,9 @@ main_init( int argc, char* argv[] )
 	daemonCore->Register_Command( DAEMONS_OFF_FAST, "DAEMONS_OFF_FAST",
 								  (CommandHandler)admin_command_handler, 
 								  "admin_command_handler", 0, ADMINISTRATOR );
+	daemonCore->Register_Command( DAEMONS_OFF_PEACEFUL, "DAEMONS_OFF_PEACEFUL",
+								  (CommandHandler)admin_command_handler, 
+								  "admin_command_handler", 0, ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMONS_ON, "DAEMONS_ON",
 								  (CommandHandler)admin_command_handler, 
 								  "admin_command_handler", 0, ADMINISTRATOR );
@@ -258,6 +261,9 @@ main_init( int argc, char* argv[] )
 								  (CommandHandler)admin_command_handler, 
 								  "admin_command_handler", 0, ADMINISTRATOR );
 	daemonCore->Register_Command( DAEMON_OFF_FAST, "DAEMON_OFF_FAST",
+								  (CommandHandler)admin_command_handler, 
+								  "admin_command_handler", 0, ADMINISTRATOR );
+	daemonCore->Register_Command( DAEMON_OFF_PEACEFUL, "DAEMON_OFF_PEACEFUL",
 								  (CommandHandler)admin_command_handler, 
 								  "admin_command_handler", 0, ADMINISTRATOR );
 
@@ -304,6 +310,10 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 		daemons.immediate_restart = TRUE;
 		daemons.RestartMaster();
 		return TRUE;
+	case RESTART_PEACEFUL:
+		daemons.immediate_restart = TRUE;
+		daemons.RestartMasterPeaceful();
+		return TRUE;
 	case DAEMONS_ON:
 		daemons.DaemonsOn();
 		return TRUE;
@@ -312,6 +322,9 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 		return TRUE;
 	case DAEMONS_OFF_FAST:
 		daemons.DaemonsOff( 1 );
+		return TRUE;
+	case DAEMONS_OFF_PEACEFUL:
+		daemons.DaemonsOff();
 		return TRUE;
 	case MASTER_OFF:
 		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
@@ -326,6 +339,7 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 	case DAEMON_ON:
 	case DAEMON_OFF:
 	case DAEMON_OFF_FAST:
+	case DAEMON_OFF_PEACEFUL:
 		return handle_subsys_command( cmd, stream );
 
 			// This function is also special, since it needs to read
@@ -456,6 +470,10 @@ handle_subsys_command( int cmd, Stream* stream )
 	case DAEMON_OFF_FAST:
 		daemon->on_hold = TRUE;
 		daemon->StopFast();
+		return TRUE;
+	case DAEMON_OFF_PEACEFUL:
+		daemon->on_hold = TRUE;
+		daemon->StopPeaceful();
 		return TRUE;
 	default:
 		EXCEPT( "Unknown command (%d) in handle_subsys_command", cmd );

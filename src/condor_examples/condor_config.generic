@@ -491,6 +491,7 @@ PREEMPTION_REQUIREMENTS	= $(UWCS_PREEMPTION_REQUIREMENTS)
 PREEMPTION_RANK		= $(UWCS_PREEMPTION_RANK)
 NEGOTIATOR_PRE_JOB_RANK = $(UWCS_NEGOTIATOR_PRE_JOB_RANK)
 NEGOTIATOR_POST_JOB_RANK = $(UWCS_NEGOTIATOR_POST_JOB_RANK)
+MaxJobRetirementTime    = $(UWCS_MaxJobRetirementTime)
 
 #####################################################################
 ## This is the UWisc - CS Department Configuration.
@@ -534,6 +535,17 @@ UWCS_CONTINUE = ( $(CPUIdle) && ($(ActivityTimer) > 10) \
 UWCS_PREEMPT = ( ((Activity == "Suspended") && \
                   ($(ActivityTimer) > $(MaxSuspendTime))) \
 		 || (SUSPEND && (WANT_SUSPEND == False)) )
+
+# Maximum time (in seconds) to wait for a job to finish before kicking
+# it off (due to PREEMPT, a higher priority claim, or the startd
+# gracefully shutting down).  This is computed from the time the job
+# was started, minus any suspension time.  Once the retirement time runs
+# out, the usual preemption process will take place.  The job may
+# self-limit the retirement time to _less_ than what is given here.
+# By default, nice user jobs and standard universe jobs set their
+# MaxJobRetirementTime to 0, so they will usually not wait in retirement.
+
+UWCS_MaxJobRetirementTime = 0
 
 # Kill jobs if they have taken too long to vacate gracefully
 UWCS_KILL = $(ActivityTimer) > $(MaxVacateTime) 

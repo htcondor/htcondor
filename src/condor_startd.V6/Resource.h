@@ -40,7 +40,8 @@ public:
 	~Resource();
 
 		// Public methods that can be called from command handlers
-	int		release_claim( void );	// Gracefully kill starter and release claim
+	int		retire_claim( void );	// Gracefully finish job and release claim
+	int		release_claim( void );	// Send softkill to starter; release claim
 	int		kill_claim( void );		// Quickly kill starter and release claim
 	int		got_alive( void );		// You got a keep alive command
 	int 	periodic_checkpoint( void );	// Do a periodic checkpoint
@@ -157,6 +158,10 @@ public:
 	int		eval_start( void );			// returns -1 on undefined
 	int		eval_cpu_busy( void );		// returns FALSE on undefined
 
+	int		retirementExpired( void );
+	int		mayUnretire( void );
+	int		hasPreemptingClaim( void );
+
 		// Data members
 	ResState*		r_state;	// Startd state object, contains state and activity
 	ClassAd*		r_classad;	// Resource classad (contains everything in config file)
@@ -178,6 +183,7 @@ private:
 	unsigned	update_sequence;	// Update sequence number
 
 	int		fast_shutdown;	// Flag set if we're in fast shutdown mode.
+	bool    peaceful_shutdown;
 	void	remove_pre( void );	// If r_pre is set, refuse and delete it.
 	int		r_cpu_busy;
 	time_t	r_cpu_busy_start_time;

@@ -882,6 +882,12 @@ class DaemonCore : public Service
 	bool get_cookie( int &len, unsigned char* &data );
 	bool cookie_is_valid( unsigned char* data );
 
+	/* The peaceful shutdown toggle controls whether graceful shutdown
+	   avoids any hard killing.
+	*/
+	bool GetPeacefulShutdown();
+	void SetPeacefulShutdown(bool value);
+
   private:      
 
 	ReliSock* dc_rsock;	// tcp command socket
@@ -1164,6 +1170,7 @@ class DaemonCore : public Service
 	bool InitSettableAttrsList( const char* subsys, int i );
 	StringList* SettableAttrsLists[LAST_PERM];
 
+	bool peaceful_shutdown;
 };
 
 #ifndef _NO_EXTERN_DAEMON_CORE

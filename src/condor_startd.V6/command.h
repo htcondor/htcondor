@@ -48,6 +48,7 @@ int command_activate_claim( Service*, int, Stream* );
 */
 int command_request_claim( Service*, int, Stream* );
 int command_match_info( Service*, int, Stream* );
+int command_release_claim( Service*, int, Stream* );
 
 /* 
    These commands all act startd-wide, and therefore, should be handled

@@ -88,6 +88,7 @@ ResMgr::init_config_classad( void )
 	configInsert( config_classad, "KILL", true );
 	configInsert( config_classad, "WANT_SUSPEND", true );
 	configInsert( config_classad, "WANT_VACATE", true );
+	configInsert( config_classad, ATTR_MAX_JOB_RETIREMENT_TIME, false );
 
 		// Now, bring in things that we might need
 	configInsert( config_classad, "PERIODIC_CHECKPOINT", false );

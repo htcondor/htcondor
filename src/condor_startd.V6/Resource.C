@@ -117,11 +117,22 @@ Resource::~Resource()
 
 
 int
-Resource::release_claim( void )
+Resource::retire_claim( void )
 {
 	switch( state() ) {
 	case claimed_state:
-		return change_state( preempting_state, vacating_act );
+		// Do not allow backing out of retirement (e.g. if a
+		// preempting claim goes away) because this function called
+		// for irreversible events such as condor_vacate or PREEMPT.
+		if(r_cur) {
+			r_cur->disallowUnretire();
+			if(resmgr->isShuttingDown() && daemonCore->GetPeacefulShutdown()) {
+				// Admin is shutting things down but does not want any killing,
+				// regardless of MaxJobRetirementTime configuration.
+				r_cur->setRetirePeacefully(true);
+			}
+		}
+		return change_state( retiring_act );
 	case matched_state:
 		return change_state( owner_state );
 	default:
@@ -134,6 +145,24 @@ Resource::release_claim( void )
 	return TRUE;
 }
 
+int
+Resource::release_claim( void )
+{
+	switch( state() ) {
+	case claimed_state:
+		return change_state( preempting_state, vacating_act );
+	case preempting_state:
+		if( activity() != killing_act ) {
+			return change_state( preempting_state, vacating_act );
+		}
+		break;
+	case matched_state:
+		return change_state( owner_state );
+	default:
+		return (int)r_cur->starterKillHard();
+	}
+	return TRUE;
+}
 
 int
 Resource::kill_claim( void )
@@ -233,7 +262,7 @@ Resource::removeClaim( Claim* c )
 		return;
 	}
 	if( c == r_pre ) {
-		delete r_pre;
+		remove_pre();
 		r_pre = new Claim( this );
 		return;
 	}
@@ -269,7 +298,7 @@ Resource::shutdownAllClaims( bool graceful )
 	r_cod_mgr->shutdownAllClaims( graceful );
 
 	if( graceful ) {
-		release_claim();
+		retire_claim();
 	} else {
 		kill_claim();
 	}
@@ -455,10 +484,16 @@ Resource::starterExited( Claim* cur_claim )
 	dprintf( D_ALWAYS, "State change: starter exited\n" );
 
 	State s = state();
+	Activity a = activity();
 	switch( s ) {
 	case claimed_state:
 		r_cur->client()->setuser( r_cur->client()->owner() );
-		change_state( idle_act );
+		if(a == retiring_act) {
+			change_state(preempting_state);
+		}
+		else {
+			change_state( idle_act );
+		}
 		break;
 	case preempting_state:
 		leave_preempting_state();
@@ -881,6 +916,72 @@ Resource::wants_pckpt( void )
 	return want_pckpt;
 }
 
+int
+Resource::hasPreemptingClaim()
+{
+	return (r_pre && r_pre->requestStream());
+}
+
+int
+Resource::mayUnretire()
+{
+	if(r_cur && r_cur->mayUnretire()) {
+		if(!hasPreemptingClaim()) {
+			// preempting claim has gone away
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int
+Resource::retirementExpired()
+{
+	//This function evaulates to true if the job has run longer than
+	//its maximum alloted graceful retirement time.
+
+	int MaxJobRetirementTime = 0;
+	int JobMaxJobRetirementTime = 0;
+	int JobAge = 0;
+
+	if (r_cur && r_cur->isActive() && r_cur->ad()) {
+		//look up the maximum retirement time specified by the startd
+		if(!r_classad->LookupElem(ATTR_MAX_JOB_RETIREMENT_TIME) ||
+		   !r_classad->EvalInteger(
+		          ATTR_MAX_JOB_RETIREMENT_TIME,
+		          r_cur->ad(),
+		          MaxJobRetirementTime)) {
+			MaxJobRetirementTime = 0;
+		}
+		if(r_cur->getRetirePeacefully()) {
+			// Override startd's MaxJobRetirementTime setting.
+			// Make it infinite.
+			MaxJobRetirementTime = INT_MAX;
+		}
+		//look up the maximum retirement time specified by the job
+		if(r_cur->ad()->LookupElem(ATTR_MAX_JOB_RETIREMENT_TIME) &&
+		   r_cur->ad()->EvalInteger(
+		          ATTR_MAX_JOB_RETIREMENT_TIME,
+		          r_classad,
+		          JobMaxJobRetirementTime)) {
+			if(JobMaxJobRetirementTime < MaxJobRetirementTime) {
+				//The job wants _less_ retirement time than the startd offers,
+				//so let it have its way.
+				MaxJobRetirementTime = JobMaxJobRetirementTime;
+			}
+		}
+	}
+
+	if (r_cur && r_cur->isActive()) {
+		JobAge = r_cur->getJobTotalRunTime();
+	}
+	else {
+		//There is no job running, so there is no point in waiting any longer
+		MaxJobRetirementTime = 0;
+	}
+
+	return (JobAge >= MaxJobRetirementTime);
+}
 
 int
 Resource::eval_kill()
@@ -1033,6 +1134,7 @@ void
 Resource::publish( ClassAd* cap, amask_t mask ) 
 {
 	char line[256];
+	MyString my_line;
 	State s;
 	char* ptr;
 
@@ -1158,6 +1260,12 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 		// Put in requirement expression info
 	r_reqexp->publish( cap, mask );
+
+		// Put in max job retirement time expression
+	ptr = param(ATTR_MAX_JOB_RETIREMENT_TIME);
+	if(!ptr || !*ptr) ptr = "0";
+	my_line.sprintf("%s=%s",ATTR_MAX_JOB_RETIREMENT_TIME,ptr);
+	cap->Insert(my_line.Value());
 
 		// Update info from the current Claim object, if it exists.
 	if( r_cur ) {

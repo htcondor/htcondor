@@ -39,18 +39,6 @@ command_handler( Service*, int cmd, Stream* stream )
 	}
 	State s = rip->state();
 
-		// RELEASE_CLAIM only makes sense in two states
-	if( cmd == RELEASE_CLAIM ) {
-		if( (s == claimed_state) || (s == matched_state) ) {
-			rip->dprintf( D_ALWAYS, 
-						  "State change: received RELEASE_CLAIM command\n" );
-			return rip->release_claim();
-		} else {
-			rip->log_ignore( cmd, s );
-			return FALSE;
-		}
-	}
-
 		// The rest of these only make sense in claimed state 
 	if( s != claimed_state ) {
 		rip->log_ignore( cmd, s );
@@ -160,7 +148,7 @@ command_vacate_all( Service*, int cmd, Stream* )
 	switch( cmd ) {
 	case VACATE_ALL_CLAIMS:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_CLAIMS command\n" );
-		resmgr->walk( &Resource::release_claim );
+		resmgr->walk( &Resource::retire_claim );
 		break;
 	case VACATE_ALL_FAST:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_FAST command\n" );
@@ -269,6 +257,54 @@ command_request_claim( Service*, int cmd, Stream* stream )
 	return rval;
 }
 
+int
+command_release_claim( Service*, int cmd, Stream* stream ) 
+{
+	char* id = NULL;
+	Resource* rip;
+
+	if( ! stream->code(id) ) {
+		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
+		if( id ) { 
+			free( id );
+		}
+		refuse( stream );
+		return FALSE;
+	}
+
+	rip = resmgr->get_by_any_id( id );
+	if( !rip ) {
+		dprintf( D_ALWAYS, 
+				 "Error: can't find resource with ClaimId (%s)\n", id );
+		free( id );
+		refuse( stream );
+		return FALSE;
+	}
+	State s = rip->state();
+
+	//There are two cases: claim id is the current or the preempting claim
+	if( rip->r_pre && rip->r_pre->idMatches(id) ) {
+		// preempting claim is being canceled by schedd
+		rip->dprintf( D_ALWAYS, 
+		              "State change: received RELEASE_CLAIM command from preempting claim\n" );
+		rip->removeClaim(rip->r_pre);
+		return TRUE;
+	}
+	else if( rip->r_cur && rip->r_cur->idMatches(id) ) {
+		if( (s == claimed_state) || (s == matched_state) ) {
+			rip->dprintf( D_ALWAYS, 
+						  "State change: received RELEASE_CLAIM command\n" );
+			return rip->release_claim();
+		} else {
+			rip->log_ignore( cmd, s );
+			return FALSE;
+		}
+	}
+
+	// This should never happen unless get_by_any_id() changes.
+	EXCEPT("Neither pre nor cur claim matches claim id: %s",id);
+	return FALSE;
+}
 
 int
 command_name_handler( Service*, int cmd, Stream* stream ) 
@@ -302,7 +338,7 @@ command_name_handler( Service*, int cmd, Stream* stream )
 		if( (s == claimed_state) || (s == matched_state) ) {
 			rip->dprintf( D_ALWAYS, 
 						  "State change: received VACATE_CLAIM command\n" );
-			return rip->release_claim();
+			return rip->retire_claim();
 		} else {
 			rip->log_ignore( cmd, s );
 			return FALSE;
@@ -658,7 +694,13 @@ request_claim( Resource* rip, char* id, Stream* stream )
 					rip->dprintf( D_ALWAYS, 
 					 "State change: preempting claim based on user priority\n" );
 				}
-				rip->release_claim();
+
+				    // Force resource to take note of the preempting claim.
+				    // This results in a reversible transition to the
+				    // retiring activity.  If the preempting claim goes
+				    // away before the current claim retires, the current
+				    // claim can unretire and continue without any disturbance.
+				rip->eval_state();
 
 					// Tell daemon core not to do anything to the stream.
 				return KEEP_STREAM;

@@ -258,6 +258,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	
 	_cookie_len_old  = _cookie_len  = 0;
 	_cookie_data_old = _cookie_data = NULL;
+
+	peaceful_shutdown = false;
 }
 
 // DaemonCore destructor. Delete the all the various handler tables, plus
@@ -7010,3 +7012,12 @@ bool DaemonCore :: cookie_is_valid( unsigned char* data ) {
 	return false; // to make MSVC++ happy
 }
 
+bool
+DaemonCore::GetPeacefulShutdown() {
+	return peaceful_shutdown;
+}
+
+void
+DaemonCore::SetPeacefulShutdown(bool value) {
+	peaceful_shutdown = value;
+}

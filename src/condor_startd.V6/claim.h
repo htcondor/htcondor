@@ -174,6 +174,9 @@ public:
 	bool		hasJobAd()		{return c_has_job_ad != 0;};
 	int  		pendingCmd()	{return c_pending_cmd;};
 	bool		wantsRemove()	{return c_wants_remove;};
+	time_t      getJobTotalRunTime();
+	bool        mayUnretire()   {return c_may_unretire;}
+	bool        getRetirePeacefully() {return c_retire_peacefully;}
 
 		// Functions that set the values of data
 	void setrank(float rank)	{c_rank=rank;};
@@ -181,6 +184,8 @@ public:
 	void setad(ClassAd *ad);		// Set our ad to the given pointer
 	void setRequestStream(Stream* stream);	
 	void setaliveint(int alive);
+	void disallowUnretire()     {c_may_unretire=false;}
+	void setRetirePeacefully(bool value) {c_retire_peacefully=value;}
 
 		// starter-related functions
 	int	 spawnStarter( time_t, Stream* = NULL );
@@ -269,6 +274,8 @@ private:
 	ClaimState	c_last_state;	// the state when a release was requested
 	int			c_pending_cmd;	// the pending command, or -1 if none
 	bool		c_wants_remove;	// are we trying to remove this claim?
+	bool        c_may_unretire;
+	bool        c_retire_peacefully;
 
 
 		// Helper methods

@@ -178,25 +178,60 @@ ResState::eval( void )
 			return 0;
 		}
 		want_suspend = rip->wants_suspend();
-		if( ((r_act == busy_act) && (!want_suspend)) ||
-			(r_act == suspended_act) ) {
+		if( (r_act == busy_act && !want_suspend) ||
+			(r_act == retiring_act && rip->mayUnretire() && !want_suspend) ||
+			(r_act == suspended_act && rip->mayUnretire()) ) {
+
+			//Explanation for the above conditions:
+			//The want_suspend check is there because behavior is
+			//potentially confusing without it.  Derek says:)
+			//The mayUnretire check is there to see if we are already
+			//in irreversible retirement, in which case, we don't need
+			//to keep trying to retire over and over.
+
 			if( rip->eval_preempt() ) {
 				dprintf( D_ALWAYS, "State change: PREEMPT is TRUE\n" );
-				return change( preempting_state ); 
+				// irreversible retirement
+				// STATE TRANSITION #12 or #16
+				return rip->retire_claim();
 			}
 		}
-		if( (r_act == busy_act) && want_suspend ) {
+		if( (r_act == busy_act || r_act == retiring_act) && want_suspend ) {
 			if( rip->eval_suspend() ) {
-				// STATE TRANSITION #12
+				// STATE TRANSITION #14 or #17
 				dprintf( D_ALWAYS, "State change: SUSPEND is TRUE\n" );
 				return change( suspended_act );
 			}
 		}
 		if( r_act == suspended_act ) {
 			if( rip->eval_continue() ) {
-				// STATE TRANSITION #13
+				// STATE TRANSITION #15
 				dprintf( D_ALWAYS, "State change: CONTINUE is TRUE\n" );
+				if( rip->mayUnretire() ) {
+					return change( busy_act );
+				}
+				else {
+					// STATE TRANSITION #16
+					return change( retiring_act );
+				}
+			}
+		}
+		if( (r_act == busy_act) && rip->hasPreemptingClaim() ) {
+			dprintf( D_ALWAYS, "State change: retiring due to preempting claim\n" );
+			// reversible retirement (e.g. if preempting claim goes away)
+			// STATE TRANSITION #12
+			return change( retiring_act );
+		}
+		if( r_act == retiring_act ) {
+			if( rip->mayUnretire() ) {
+				dprintf( D_ALWAYS, "State change: unretiring because no preempting claim exists\n" );
+				// STATE TRANSITION #13
 				return change( busy_act );
+			}
+			if( rip->retirementExpired() ) {
+				dprintf( D_ALWAYS, "State change: retirement ended/expired; soft-killing next\n" );
+				// STATE TRANSITION #18
+				return change( preempting_state );
 			}
 		}
 		if( (r_act == idle_act) && (rip->eval_start() == 0) ) {
@@ -209,7 +244,7 @@ ResState::eval( void )
 			dprintf( D_ALWAYS, "State change: START is false\n" );
 			return change( preempting_state ); 
 		}
-		if( (r_act == busy_act) && (rip->wants_pckpt()) ) {
+		if( (r_act == busy_act || r_act == retiring_act) && (rip->wants_pckpt()) ) {
 			rip->periodic_checkpoint();
 		}
 		if( rip->r_reqexp->restore() ) {
@@ -222,7 +257,7 @@ ResState::eval( void )
 		if( r_act == vacating_act ) {
 			if( rip->eval_kill() ) {
 				dprintf( D_ALWAYS, "State change: KILL is TRUE\n" );
-					// STATE TRANSITION #18
+					// STATE TRANSITION #19
 				return change( killing_act );
 			}
 		}
@@ -281,6 +316,7 @@ act_to_load( Activity act )
 		break;
 	case busy_act:
 	case benchmarking_act:
+	case retiring_act:
 	case vacating_act:
 	case killing_act:
 		return 1;
@@ -395,6 +431,22 @@ ResState::enter_action( State s, Activity a,
 		}
 		if( a == busy_act ) {
 			resmgr->start_poll_timer();
+
+			if( rip->hasPreemptingClaim() || !rip->mayUnretire() ) {
+
+				// We have returned to a busy state (e.g. from
+				// suspension) and there is a preempting claim or we
+				// are in irreversible retirement, so retire.
+
+				return change( retiring_act );
+			}
+		}
+		if( a == retiring_act ) {
+			if( ! rip->claimIsActive() ) {
+				// The starter exited by the time we got here.
+				// No need to wait around in retirement.
+				return change( preempting_state );
+			}
 		}
 		break;
 

@@ -28,7 +28,7 @@ static char* condor_states [] =
   "Shutdown", "Delete" };
 
 static char* condor_activities [] = 
-{ "None", "Idle", "Busy", "Vacating", "Suspended", "Benchmarking",
+{ "None", "Idle", "Busy", "Retiring", "Vacating", "Suspended", "Benchmarking",
   "Killing" };
 
 State 

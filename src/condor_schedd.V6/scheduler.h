@@ -325,6 +325,7 @@ private:
 	int				SchedDMinInterval;
 	int				QueueCleanInterval;
 	int				PeriodicExprInterval;
+	int             RequestClaimTimeout;
 	int				JobStartDelay;
 	int				MaxJobsRunning;
 	bool			NegotiateAllJobsInCluster;
@@ -392,6 +393,7 @@ private:
 	int				cluster_rejected(int);
 	void   			mark_cluster_rejected(int); 
 	int				count_jobs();
+	void   			check_claim_request_timeouts( void );
 	int				insert_owner(char*, char*);
 	void			child_exit(int, int);
 	void			clean_shadow_recs();

@@ -74,6 +74,8 @@ Claim::Claim( Resource* rip, bool is_cod )
 	c_job_total_suspend_time = 0;
 	c_claim_total_run_time = 0;
 	c_claim_total_suspend_time = 0;
+	c_may_unretire = true;
+	c_retire_peacefully = false;
 }
 
 
@@ -291,6 +293,17 @@ Claim::publishCOD( ClassAd* ad )
 	}
 }
 
+time_t
+Claim::getJobTotalRunTime()
+{
+	time_t my_job_run = c_job_total_run_time;
+	time_t now;
+	if( c_state == CLAIM_RUNNING ) { 
+		now = time(NULL);
+		my_job_run += now - c_entered_state;
+	}
+	return my_job_run;
+}
 
 void
 Claim::publishStateTimes( ClassAd* ad )
@@ -1285,6 +1298,7 @@ Claim::resetClaim( void )
 	c_has_job_ad = 0;
 	c_job_total_run_time = 0;
 	c_job_total_suspend_time = 0;
+	c_may_unretire = true;
 }
 
 

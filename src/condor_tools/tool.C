@@ -50,6 +50,7 @@
 void computeRealAction( void );
 bool resolveNames( DaemonList* daemon_list, StringList* name_list );
 void doCommand( Daemon* d );
+int doCommands(int argc,char *argv[],char *MyName);
 void version();
 void handleAll();
 void doSquawk( char *addr );
@@ -66,6 +67,7 @@ daemon_t dt = DT_NONE;
 daemon_t real_dt = DT_NONE;
 DCCollector* pool = NULL;
 bool fast = false;
+bool peaceful_shutdown = false;
 bool full = false;
 bool all = false;
 char* subsys = NULL;
@@ -115,6 +117,7 @@ usage( char *str )
 		fprintf( stderr, "    -graceful\t\tgracefully shutdown daemons %s\n", 
 				 "(the default)" );
 		fprintf( stderr, "    -fast\t\tquickly shutdown daemons\n" );
+		fprintf( stderr, "    -peaceful\t\twait indefinitely for jobs to finish\n" );
 	}
 	if( cmd == VACATE_CLAIM ) {
 		fprintf( stderr, 
@@ -239,12 +242,19 @@ cmdToStr( int c )
 		return "Kill-All-Daemons";
 	case DAEMONS_OFF_FAST:
 		return "Kill-All-Daemons-Fast";
+	case DAEMONS_OFF_PEACEFUL:
+		return "Kill-All-Daemons-Peacefully";
 	case DAEMON_OFF:
 	case DC_OFF_GRACEFUL:
 		return "Kill-Daemon";
 	case DAEMON_OFF_FAST:
 	case DC_OFF_FAST:
 		return "Kill-Daemon-Fast";
+	case DAEMON_OFF_PEACEFUL:
+	case DC_OFF_PEACEFUL:
+		return "Kill-Daemon-Peacefully";
+	case DC_SET_PEACEFUL_SHUTDOWN:
+		return "Set-Peaceful-Shutdown";
 	case DAEMONS_ON:
 		return "Spawn-All-Daemons";
 	case DAEMON_ON:
@@ -252,6 +262,8 @@ cmdToStr( int c )
 	case RESTART:
 		if( fast ) {
 			return "Restart-Fast";
+		} else if( peaceful_shutdown ) {
+			return "Restart-Peaceful";
 		} else {
 			return "Restart";
 		}
@@ -303,13 +315,10 @@ subsys_check( char* MyName )
 int
 main( int argc, char *argv[] )
 {
-	char *daemonname, *MyName = argv[0];
+	char *MyName = argv[0];
 	char *cmd_str, **tmp;
 	int size;
-	bool found_one = false;
-	StringList names;
-	StringList addrs;
-	DaemonList daemons;
+	int rc;
 
 #ifndef WIN32
 	// Ignore SIGPIPE so if we cannot connect to a daemon we do not
@@ -405,15 +414,36 @@ main( int argc, char *argv[] )
 			usage( MyName );
 			break;
 		case 'p':
-			tmp++;
-			if( tmp && *tmp ) {
-				pool = new DCCollector( *tmp );
-				if( ! pool->addr() ) {
-					fprintf( stderr, "%s: %s\n", MyName, pool->error() );
-					exit( 1 );
+			if((*tmp)[2] == 'e') { // -peaceful
+				peaceful_shutdown = true;
+				fast = false;
+				switch( cmd ) {
+				case DAEMONS_OFF:
+				case DC_OFF_GRACEFUL:
+				case RESTART:
+					break;
+				default:
+					fprintf( stderr, "ERROR: \"-peaceful\" "
+							 "is not valid with %s\n", MyName );
+					usage( NULL );
 				}
-			} else {
-				fprintf( stderr, "ERROR: -pool requires another argument\n" );
+			}
+			else if( (*tmp)[2] == '\0' || (*tmp)[2] == 'o' ) { //-pool
+				tmp++;
+				if( tmp && *tmp ) {
+					pool = new DCCollector( *tmp );
+					if( ! pool->addr() ) {
+						fprintf( stderr, "%s: %s\n", MyName, pool->error() );
+						exit( 1 );
+					}
+				} else {
+					fprintf( stderr, "ERROR: -pool requires another argument\n" );
+					usage( NULL );
+				}
+			}
+			else {
+				fprintf( stderr, "ERROR: \"%s\" "
+						 "is not a valid option\n", (*tmp) );
 				usage( NULL );
 			}
 			break;
@@ -431,6 +461,7 @@ main( int argc, char *argv[] )
 					break;
 				case 'a':
 					fast = true;
+					peaceful_shutdown = false;
 					switch( cmd ) {
 					case DAEMONS_OFF:
 					case DC_OFF_GRACEFUL:
@@ -465,6 +496,7 @@ main( int argc, char *argv[] )
 			break;
 		case 'g':
 			fast = false;
+			peaceful_shutdown = false;
 			break;
 		case 'a':
 			if( (*tmp)[2] ) {
@@ -639,6 +671,50 @@ main( int argc, char *argv[] )
 		subsys = (char*)daemonString( dt );
 	}
 
+
+	// If we are sending peaceful daemon shutdown/restart commands to
+	// the master (i.e. we want no timeouts resulting in killing),
+	// then we have to deal here with the fact that the master only
+	// transmits a graceful (not peaceful) signal to its children.  In
+	// anticipation of this, we need to turn on peaceful mode in the
+	// relavent children.
+
+	if( peaceful_shutdown && real_dt == DT_MASTER ) {
+		if( (real_cmd == DAEMONS_OFF) ||
+			(real_cmd == DAEMON_OFF && !strcmp(subsys,"startd")) ||
+			(real_cmd == DC_OFF_GRACEFUL) ||
+			(real_cmd == RESTART)) {
+
+			// Temporarily override globals so we can send a different command.
+			daemon_t orig_real_dt = real_dt;
+			int orig_real_cmd = real_cmd;
+			int orig_cmd = cmd;
+
+			cmd = real_cmd = DC_SET_PEACEFUL_SHUTDOWN;
+
+			// We only care about peacefully shutting down the startd.
+			real_dt = DT_STARTD;
+			rc = doCommands(argc,argv,MyName);
+			if(rc) return rc;
+
+			// Restore globals.
+			real_dt = orig_real_dt;
+			real_cmd = orig_real_cmd;
+			cmd = orig_cmd;
+		}
+	}
+
+	return doCommands(argc,argv,MyName);
+}
+
+int
+doCommands(int argc,char *argv[],char *MyName) {
+	StringList names;
+	StringList addrs;
+	DaemonList daemons;
+	char *daemonname;
+	bool found_one = false;
+
 	if( all ) {
 			// If we were told -all, we can just ignore any other
 			// options and send the specifed command to every machine
@@ -662,7 +738,7 @@ main( int argc, char *argv[] )
 		switch( (*argv)[0] ) {
 		case '-':
 				// Some command-line arg we already dealt with
-			if( (*argv)[1] == 'p' || 
+			if( ( (*argv)[1] == 'p' && ((*argv)[1] == '\0' || (*argv)[1] == 'o')) || 
 				((*argv)[1] == 'c' && (*argv)[2] == 'm') ) {
 					// If it's -pool or -cmd, we want to skip the next
 					// arg, too.
@@ -1105,6 +1181,8 @@ doCommand( Daemon* d )
 			// if -fast is used, we need to send a different command.
 		if( fast ) {
 			my_cmd = DAEMON_OFF_FAST;
+		} else if( peaceful_shutdown ) {
+			my_cmd = DAEMON_OFF_PEACEFUL;
 		}
 		if( !d->startCommand( my_cmd, &sock, 0, &errstack) ) {
 			fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
@@ -1135,6 +1213,8 @@ doCommand( Daemon* d )
 			// if -fast is used, we need to send a different command.
 		if( fast ) {
 			my_cmd = DAEMONS_OFF_FAST;
+		} else if( peaceful_shutdown ) {
+			my_cmd = DAEMONS_OFF_PEACEFUL;
 		}
 		if( d_type != DT_MASTER ) {
  				// if we're trying to send this to anything other than
@@ -1143,6 +1223,8 @@ doCommand( Daemon* d )
  				// we've got to send a different command. 
 			if( fast ) {
 				my_cmd = DC_OFF_FAST;
+			} else if( peaceful_shutdown ) {
+				my_cmd = DC_OFF_PEACEFUL;
 			} else {
 				my_cmd = DC_OFF_GRACEFUL;
 			}
@@ -1153,6 +1235,8 @@ doCommand( Daemon* d )
 			// if -fast is used, we need to send a different command.
 		if( fast ) {
 			my_cmd = DC_OFF_FAST;
+		} else if( peaceful_shutdown ) {
+			my_cmd = DC_OFF_PEACEFUL;
 		}
 		break;
 

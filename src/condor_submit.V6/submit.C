@@ -107,6 +107,7 @@ int	  JobUniverse;
 int		Remote=0;
 int		ClusterCreated = FALSE;
 int		ActiveQueueConnection = FALSE;
+bool    nice_user_setting = false;
 bool	NewExecutable = false;
 bool	IsFirstExecutable;
 bool	UserLogSpecified = false;
@@ -211,6 +212,8 @@ char	*JarFiles = "jar_files";
 char    *ParallelScriptShadow  = "parallel_script_shadow";  
 char    *ParallelScriptStarter = "parallel_script_starter"; 
 
+char    *MaxJobRetirementTime = "max_job_retirement_time";
+
 #if !defined(WIN32)
 char	*KillSig			= "kill_sig";
 char	*RmKillSig			= "remove_kill_sig";
@@ -285,6 +288,7 @@ void SetUserNotes();
 void SetJarFiles();
 void SetParallelStartupScripts(); //JDB
 bool mightTransfer( int universe );
+void SetMaxJobRetirementTime();
 
 char *owner = NULL;
 char *ntdomain = NULL;
@@ -813,7 +817,6 @@ check_and_universalize_path(MyString &path, char *lhs)
 	}
 	return retval;
 }
-
 
 void
 SetExecutable()
@@ -2086,12 +2089,37 @@ SetPriority()
 		sprintf( buffer, "%s = TRUE", ATTR_NICE_USER );
 		InsertJobExpr( buffer );
 		free(nice_user);
+		nice_user_setting = true;
 	}
 	else
 	{
 		sprintf( buffer, "%s = FALSE", ATTR_NICE_USER );
 		InsertJobExpr( buffer );
+		nice_user_setting = false;
+	}
+}
 
+void
+SetMaxJobRetirementTime()
+{
+	// Assume that SetPriority() has been called before getting here.
+	char *value = NULL;
+
+	value = condor_param( MaxJobRetirementTime, ATTR_MAX_JOB_RETIREMENT_TIME );
+	if(!value && (nice_user_setting || JobUniverse == 1)) {
+		// Regardless of the startd graceful retirement policy,
+		// nice_user and standard universe jobs that do not specify
+		// otherwise will self-limit their retirement time to 0.  So
+		// the user plays nice by default, but they have the option to
+		// override this (assuming, of course, that the startd policy
+		// actually gives them any retirement time to play with).
+
+		value = "0";
+	}
+	if(value) {
+		MyString expr;
+		expr.sprintf("%s = %s",ATTR_MAX_JOB_RETIREMENT_TIME, value);
+		InsertJobExpr(expr.Value());
 	}
 }
 
@@ -3559,6 +3587,7 @@ queue(int num)
 		// is very important!
 		SetJobStatus();
 		SetPriority();
+		SetMaxJobRetirementTime();
 		SetEnvironment();
 		SetNotification();
 		SetNotifyUser();

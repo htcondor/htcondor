@@ -665,6 +665,43 @@ daemon::Stop()
 
 
 void
+daemon::StopPeaceful() 
+{
+	// Peaceful shutdown is the same as graceful shutdown, but
+	// we never time out waiting for the process to finish.
+
+	if( type == DT_MASTER ) {
+			// Never want to stop master.
+		return;
+	}
+	if( start_tid != -1 ) {
+			// If we think we need to start this in the future, don't. 
+		dprintf( D_ALWAYS, "Canceling timer to re-start %s\n", 
+				 name_in_config_file );
+		daemonCore->Cancel_Timer( start_tid );
+		start_tid = -1;
+	}
+	if( !pid ) {
+			// We're not running, just return.
+		return;
+	}
+	if( stop_state == PEACEFUL ) {
+			// We've already been here, just return.
+		return;
+	}
+	stop_state = PEACEFUL;
+
+	// Ideally, we would somehow tell the daemon to die peacefully
+	// (only currently applies to startd).  However, we only have
+	// two signals to work with: fast and graceful.  Until a better
+	// mechanism comes along, we depend on the peaceful state
+	// being pre-set in the daemon via a message sent by condor_off.
+
+	Kill( SIGTERM );
+}
+
+
+void
 daemon::StopFast()
 {
 	if( type == DT_MASTER ) {
@@ -1310,6 +1347,17 @@ Daemons::DaemonsOff( int fast )
 	}
 }
 
+void
+Daemons::DaemonsOffPeaceful( )
+{
+		// Maybe someday we'll add code here to edit the config file.
+	StartDaemons = FALSE;
+	GotDaemonsOff = TRUE;
+	all_daemons_gone_action = MASTER_RESET;
+	CancelNewExecTimer();
+	StopPeacefulAllDaemons();
+}
+
 
 void
 Daemons::StartAllDaemons()
@@ -1359,6 +1407,22 @@ Daemons::StopFastAllDaemons()
 	}	   
 }
 
+void
+Daemons::StopPeacefulAllDaemons()
+{
+	daemons.SetAllReaper();
+	int running = 0;
+	for( int i=0; i < no_daemons; i++ ) {
+		if( daemon_ptr[i]->pid && daemon_ptr[i]->runs_here ) {
+			daemon_ptr[i]->StopPeaceful();
+			running++;
+		}
+	}
+	if( !running ) {
+		AllDaemonsGone();
+	}	   
+}
+
 
 void
 Daemons::ReconfigAllDaemons()
@@ -1397,6 +1461,18 @@ Daemons::RestartMaster()
 	all_daemons_gone_action = MASTER_RESTART;
 	StartDaemons = FALSE;
 	StopAllDaemons();
+}
+
+void
+Daemons::RestartMasterPeaceful()
+{
+	immediate_restart_master = immediate_restart;
+	if( NumberOfChildren() == 0 ) {
+		FinishRestartMaster();
+	}
+	all_daemons_gone_action = MASTER_RESTART;
+	StartDaemons = FALSE;
+	StopPeacefulAllDaemons();
 }
 
 // This function is called when all the children have finally exited

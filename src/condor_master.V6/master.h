@@ -30,7 +30,7 @@
 
 enum AllGoneT { MASTER_RESTART, MASTER_EXIT, MASTER_RESET };
 enum ReaperT { DEFAULT_R, ALL_R, NO_R };
-enum StopStateT { GRACEFUL, FAST, KILL, NONE };
+enum StopStateT { PEACEFUL, GRACEFUL, FAST, KILL, NONE };
 
 class daemon : public Service
 {
@@ -67,6 +67,7 @@ public:
 	int		Restart();
 	void	Stop();
 	void	StopFast();
+	void	StopPeaceful();
 	void	HardKill();
 	void	Exited( int );
 	void	Obituary( int );
@@ -129,13 +130,16 @@ public:
 	void	CheckForNewExecutable();
 	void	DaemonsOn();
 	void	DaemonsOff( int fast = 0 );
+	void	DaemonsOffPeaceful();
 	void 	StartAllDaemons();
 	void	StopAllDaemons();
 	void	StopFastAllDaemons();
+	void	StopPeacefulAllDaemons();
 	void	ReconfigAllDaemons();
 
 	void	InitMaster();
 	void    RestartMaster();
+	void    RestartMasterPeaceful();
 	void	FinishRestartMaster();
 	void	FinalRestartMaster();
 

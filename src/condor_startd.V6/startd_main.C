@@ -236,9 +236,6 @@ main_init( int, char* argv[] )
 								  (CommandHandler)command_handler,
 								  "command_handler", 0, DAEMON,
 								  D_FULLDEBUG ); 
-	daemonCore->Register_Command( RELEASE_CLAIM, "RELEASE_CLAIM", 
-								  (CommandHandler)command_handler,
-								  "command_handler", 0, DAEMON );
 	daemonCore->Register_Command( DEACTIVATE_CLAIM,
 								  "DEACTIVATE_CLAIM",  
 								  (CommandHandler)command_handler,
@@ -278,6 +275,9 @@ main_init( int, char* argv[] )
 	daemonCore->Register_Command( REQUEST_CLAIM, "REQUEST_CLAIM", 
 								  (CommandHandler)command_request_claim,
 								  "command_request_claim", 0, DAEMON );
+	daemonCore->Register_Command( RELEASE_CLAIM, "RELEASE_CLAIM", 
+								  (CommandHandler)command_release_claim,
+								  "command_release_claim", 0, DAEMON );
 	daemonCore->Register_Command( X_EVENT_NOTIFICATION,
 								  "X_EVENT_NOTIFICATION",
 								  (CommandHandler)command_x_event,
