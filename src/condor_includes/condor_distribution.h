@@ -38,7 +38,7 @@ class Distribution
 # endif
 
   public:
-  	DECLARE_SINGLTON(Distribution);
+  	DECLARE_SINGLETON(Distribution);
 	int Init( int argc, char **argv );
 
 	// Get my distribution name..
