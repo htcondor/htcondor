@@ -107,7 +107,7 @@ unsigned char * Condor_Crypt_Base :: randomKey(int length)
 
 unsigned char * Condor_Crypt_Base :: oneWayHashKey(const char * initialKey)
 {
-#if defined(CONDOR_ENCRYPT)
+#if defined(CONDOR_ENCRYPTION)
     return Condor_MD_MAC::computeOnce((unsigned char *)initialKey, strlen(initialKey));
 #else 
     return 0;
