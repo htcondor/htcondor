@@ -36,7 +36,7 @@
 #endif
 
 int
-sysapi_ncpus_raw()
+sysapi_ncpus_raw(void)
 {
 #ifdef sequent
 	int     cpus = 0;
@@ -136,7 +136,7 @@ bogomips        : 299.01
 
 /* the cooked version */
 int
-sysapi_ncpus()
+sysapi_ncpus(void)
 {	
 	sysapi_internal_reconfig();
 	return sysapi_ncpus_raw();

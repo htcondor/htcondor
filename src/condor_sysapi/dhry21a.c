@@ -358,14 +358,14 @@ register int    l;
 
 
 int
-sysapi_mips_raw()
+sysapi_mips_raw(void)
 {
 	sysapi_internal_reconfig();
 	return dhry_mips();
 }
 
 int
-sysapi_mips()
+sysapi_mips(void)
 {
 	sysapi_internal_reconfig();
 	return sysapi_mips_raw();

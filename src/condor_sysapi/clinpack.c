@@ -1008,14 +1008,14 @@ function, references to m[i][j] are written m[ldm*i+j].  */
 
 /* Here are the entry points to this file */
 
-int sysapi_kflops_raw()
+int sysapi_kflops_raw(void)
 {
 	sysapi_internal_reconfig();
 	return clinpack_kflops();
 }
 
 /* if you need to modify kflops, do it here. */
-int sysapi_kflops()
+int sysapi_kflops(void)
 {
 	sysapi_internal_reconfig();
 	return sysapi_kflops_raw();

@@ -28,7 +28,7 @@
 #include <sys/pstat.h>
 
 int
-sysapi_phys_memory_raw()
+sysapi_phys_memory_raw(void)
 {
 	struct pst_static s;
 	unsigned long pages, pagesz;
@@ -50,7 +50,7 @@ sysapi_phys_memory_raw()
 #include <sys/sysmp.h>
 
 int
-sysapi_phys_memory_raw()
+sysapi_phys_memory_raw(void)
 {
 	struct rminfo rmstruct;
 	long pages, pagesz;
@@ -81,7 +81,7 @@ sysapi_phys_memory_raw()
 #include <unistd.h>
 
 int
-sysapi_phys_memory_raw()
+sysapi_phys_memory_raw(void)
 {
 	long pages, pagesz, hack;
 
@@ -119,7 +119,7 @@ sysapi_phys_memory_raw()
 #include <stdio.h>
 
 int 
-sysapi_phys_memory_raw() 
+sysapi_phys_memory_raw(void) 
 {	
 
 	FILE	*proc;
@@ -158,7 +158,7 @@ sysapi_phys_memory_raw()
 #include "condor_common.h"
 
 int
-sysapi_phys_memory_raw()
+sysapi_phys_memory_raw(void)
 {
 	MEMORYSTATUS status;
 	sysapi_internal_reconfig();
@@ -179,7 +179,7 @@ sysapi_phys_memory_raw()
 #include <sys/table.h>
 
 int
-sysapi_phys_memory_raw()
+sysapi_phys_memory_raw(void)
 {
 	struct tbl_pmemstats s;
 	sysapi_internal_reconfig();
@@ -191,7 +191,7 @@ sysapi_phys_memory_raw()
 
 #else	/* Don't know how to do this on other than SunOS and HPUX yet */
 int
-sysapi_phys_memory_raw()
+sysapi_phys_memory_raw(void)
 {
 	sysapi_internal_reconfig();
 	return -1;
@@ -204,7 +204,7 @@ sysapi_phys_memory_raw()
 	for you for some reason and return that instead.
 */
 int
-sysapi_phys_memory()
+sysapi_phys_memory(void)
 {
 	sysapi_internal_reconfig();
 	/* right now, it is an idenity mapping from the raw version */
