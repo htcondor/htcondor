@@ -33,16 +33,24 @@ public:
 	virtual void	display() = 0;
 	virtual void	display_short() = 0;
 	virtual void	display_special() = 0;
+	virtual void    print_special() = 0;
 	virtual int		get_status() = 0;
 	virtual int		get_prio() = 0;
 	virtual char	*get_owner() = 0;
 	virtual char	*get_arch() = 0;
 	virtual char	*get_opsys() = 0;
-	virtual char	*get_requirements() = 0;
+	virtual char    *get_date() = 0;
+	virtual time_t  get_time() = 0;
+	virtual char    *get_cmd() = 0;
 	virtual int		get_cluster_id() = 0;
 	virtual int		get_proc_id() = 0;
 	virtual float	get_local_cpu() = 0;
 	virtual float	get_remote_cpu() = 0;
+	virtual int     get_procId() = 0;
+	virtual float   get_procCpu() = 0;
+	virtual char    get_procStatus() = 0;
+	virtual float   get_procSize() = 0;
+	virtual char**  get_proc_long_info() = 0;
 	virtual BOOLEAN perm_to_modify();
 
 
@@ -59,18 +67,27 @@ public:
 	void	display();
 	void	display_short();
 	void	display_special();
+	void    print_special() {};
 	int		get_status();
 	int		get_prio();
 	char	*get_owner();
 	char	*get_arch();
 	char	*get_opsys();
-	char	*get_requirements();
+	char    *get_date() {};
+	time_t  get_time() {};
+	char    *get_cmd() {};
 	int		get_cluster_id();
 	int		get_proc_id();
 	float	get_local_cpu();
 	float	get_remote_cpu();
 
-		// Modification functions
+	int     get_procId() {};
+	float   get_procCpu() {};
+	char    get_procStatus() {};
+	float   get_procSize() {};
+	char**  get_proc_long_info() {};
+	
+	// Modification functions
 	void	set_prio( int prio );
 	void	store( DBM *Q );
 private:
@@ -80,23 +97,32 @@ private:
 class V3_ProcObj : public ProcObj {
 public:
 	V3_ProcObj( const V3_PROC *proc );
-	V3_ProcObj() { p = NULL; }
 	~V3_ProcObj();
 
 		// "Read-Only" access functions
 	void	display();
 	void	display_short();
 	void	display_special();
+	void    print_special();
 	int		get_status();
 	int		get_prio();
 	char	*get_owner();
 	char	*get_arch();
 	char	*get_opsys();
-	char	*get_requirements();
+	char    *get_date();
+	time_t	get_time();
+	char    *get_cmd();
 	int		get_cluster_id();
 	int		get_proc_id();
 	float	get_local_cpu();
 	float	get_remote_cpu();
+
+	int     get_procId();
+	float   get_procCpu();
+	char    get_procStatus();
+	float   get_procSize();
+	
+	char**  get_proc_long_info();
 
 		// Modification functions
 	void	set_prio( int prio );
@@ -106,3 +132,6 @@ private:
 };
 
 #endif /* PROC_OBJ_H */
+
+
+

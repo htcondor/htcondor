@@ -34,7 +34,6 @@
 
 #define _POSIX_SOURCE
 
-#include "_condor_fix_types.h"
 #include "condor_common.h"
 #include "condor_constants.h"
 #include "condor_debug.h"
@@ -44,15 +43,6 @@
 #include <pwd.h>
 #include "proc_obj.h"
 #include "proc_obj_tmpl.h"
-/*Solaris specific change ..dhaval 6/27 */
-/*Solaris 2.5.1 specific change ..weiru */
-/*
-#if defined(Solaris) && !defined(Solaris251)
-#include</usr/ucbinclude/sys/rusage.h>
-#endif
-*/
-
-/* include "proc_obj_tmpl.h" seems redundant ..dhaval 6/26 */ 
 
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
@@ -65,7 +55,7 @@ static char *Notifications[] = {
 static char	*Status[] = {
 	"Unexpanded", "Idle", "Running", "Removed", "Completed", "Submission Err"
 };
-
+ 
 static char	*Universe[] = {
 	"", "STANDARD", "PIPE", "LINDA", "PVM", "VANILLA"
 };
@@ -76,6 +66,8 @@ static char	*InvokingUserName;	// user name of person ivoking this program
 
 
 static char	*format_time( int secs );
+static char     *format_date(time_t);
+static char     *shorten(char*, const char*, const char*, int);
 static void copy_string_array( char ** &dst, char **src, int n );
 static void do_indent();
 static void d_msg( const char *name, char *val );
@@ -87,8 +79,7 @@ static void d_string( const char *name, char *val );
 static void d_rusage( const char *name, struct rusage &val );
 static void d_exit_status( const char *name, int val );
 static void init_user_credentials();
-extern "C" 	BOOLEAN xdr_proc( XDR *, GENERIC_PROC * );
-extern "C"	int	xdr_free_proc(PROC *proc);
+extern "C" BOOLEAN xdr_proc( XDR *, GENERIC_PROC * );
 
 /*
   Create a ProcObj given an XDR stream from which to read the data.
@@ -98,38 +89,25 @@ ProcObj::create( XDR * xdrs )
 {
 	GENERIC_PROC	proc;
 	const V2_PROC	*v2 = (V2_PROC *)&proc;
-	V2_ProcObj      *newV2;
-	const V3_PROC	*v3 = (V3_PROC *)&proc;
-	V3_ProcObj      *newV3;
-	int             i;
+	const V3_PROC	*v3 = (V3_PROC *)&proc;	// 
 
 	xdrs->x_op = XDR_DECODE;
 	memset( &proc, 0, sizeof(proc) );
 
 	if( !xdr_proc( xdrs, &proc ) ) {
-		xdrs->x_op = XDR_FREE;
-		xdr_proc(xdrs, &proc);
 		dprintf(D_ALWAYS, "Error reading proc struct from XDR stream\n" );
 		return 0;
 	}
 
 	if (v2->id.cluster == 0 && v2->id.proc == 0) {
-		xdrs->x_op = XDR_FREE;
-		xdr_proc(xdrs, &proc);
 		return 0;
 	}
 
 	switch( v2->version_num ) {
 	  case 2:
-		newV2 = new V2_ProcObj( v2 );
-		xdrs->x_op = XDR_FREE;
-		xdr_proc(xdrs, &proc);
-		return newV2;
+		return new V2_ProcObj( v2 );
 	  case 3:
-		newV3 = new V3_ProcObj( v3 );
-		xdrs->x_op = XDR_FREE;
-		xdr_proc(xdrs, &proc);
-		return newV3;
+		return new V3_ProcObj( v3 );
 	  default:
 		EXCEPT( "Unknown proc type" );
 	}
@@ -185,27 +163,33 @@ V3_ProcObj::~V3_ProcObj()
 {
 	int		i;
 
-	delete p->owner;
-	delete p->env;
-	for(i = 0; i < p->n_cmds; i++)
-	{
-		delete p->cmd[i];
-		delete p->args[i];
-		delete p->in[i];
-		delete p->out[i];
-		delete p->err[i];
+	delete [] p->owner;
+	delete [] p->env;
+	delete [] p->rootdir;
+	delete [] p->iwd;
+	delete [] p->requirements;
+	delete [] p->preferences;
+
+
+		// per command items
+	for( i=0; i<p->n_cmds; i++ ) {
+		delete [] p->cmd[i];
+		delete [] p->args[i];
+		delete [] p->in[i];
+		delete [] p->out[i];
+		delete [] p->err[i];
 	}
-	delete p->cmd;
-	delete p->args;
-	delete p->in;
-	delete p->out;
-	delete p->err;
-	delete p->remote_usage;
-	delete p->exit_status;
-	delete p->rootdir;
-	delete p->iwd;
-	delete p->requirements;
-	delete p->preferences;
+	delete [] p->cmd;
+	delete [] p->args;
+	delete [] p->in;
+	delete [] p->out;
+	delete [] p->err;
+	delete [] p->remote_usage;
+	delete [] p->exit_status;
+
+		// per pipe items
+	// deal with pipes later...
+	// delete [] p->pipe;
 
 	delete p;
 
@@ -340,10 +324,6 @@ string_copy( const char *str )
 {
 	char	*answer;
 
-	if(!str)
-	{
-		return NULL;
-	}
 	answer = new char [ strlen(str) + 1 ];
 	strcpy( answer, str );
 	return answer;
@@ -375,6 +355,15 @@ d_msg( const char *name, char *val )
 	printf( "%s: (%s)\n", name, val );
 }
 
+static char*
+b_msg( const char *name, char *val )
+{
+	char* temp = new char[50];
+	sprintf(temp,  "%s\t(%s)\n", name, val );
+	return temp;
+}
+
+
 /*
   Display a boolean value.
 */
@@ -384,6 +373,15 @@ d_bool( const char *name, int val )
 	do_indent();
 	printf( "%s: %s\n", name, val?"TRUE":"FALSE" );
 }
+
+static char*
+b_bool( const char *name, int val )
+{
+	char *temp = new char[50];
+	sprintf( temp, "%s\t%s\n", name, val?"TRUE":"FALSE" );
+	return temp;
+}
+
 
 /*
   Display an integer value.
@@ -395,6 +393,15 @@ d_int( const char *name, int val )
 	printf( "%s: %d\n", name, val );
 }
 
+static char*
+b_int( const char *name, int val )
+{
+        char *temp = new char[50];
+	sprintf(temp,  "%s\t%d\n", name, val );
+	return temp;
+}
+
+
 /*
   Display an "enumeration" value.  These are really just #defined
   constants, and we have a table with corresponding strings.  This
@@ -402,11 +409,20 @@ d_int( const char *name, int val )
   to be defined in the same include file where the constants (or
   enum) are defined.
 */
+
 static void
 d_enum( char *table[], const char *name, int val )
 {
 	do_indent();
 	printf( "%s: %s\n", name, table[val] );
+}
+
+static char*
+b_enum( char *table[], const char *name, int val )
+{
+	char *temp = new char[50];
+	sprintf(temp, "%s\t%s\n", name, table[val] );
+	return temp;
 }
 
 /*
@@ -419,6 +435,16 @@ d_date( const char *name, int val )
 	printf( "%s: %s", name, ctime((time_t *)&val) );
 }
 
+static char*
+b_date( const char *name, int val )
+{
+	char *temp = new char[50];
+	sprintf( temp, "%s\t%s\n", name, ctime((time_t *)&val) );
+	return temp;
+}
+
+
+
 /*
   Display a string value.
 */
@@ -429,30 +455,71 @@ d_string( const char *name, char *val )
 	printf( "%s: \"%s\"\n", name, val );
 }
 
+static char*
+b_string( const char *name, char *val )
+{
+	char *temp = new char[150];
+	sprintf(temp,  "%s\t\"%s\"\n", name, val );
+	return temp;
+}
+
+
 /*
   Display an rusage value.
 */
 static void
 d_rusage( const char *name, struct rusage &val )
 {
+        int             usr_sec = val.ru_utime.tv_sec;
+        int             sys_sec = val.ru_stime.tv_sec;
+        int             tot_sec = usr_sec + sys_sec;
+
+        do_indent();
+        printf( 
+                "%s %s: %s\n<BR>", name, "(user)", format_time(usr_sec)
+        );
+
+        do_indent();
+        printf( 
+                "%s %s: %s\n<BR>", name, "(system)", format_time(sys_sec)
+        );
+
+        do_indent();
+        printf( 
+                "%s %s: %s\n<BR>", name, "(total)", format_time(tot_sec)
+        );
+}
+
+
+static void
+b_rusage( const char *name, struct rusage &val, char** long_info, int &counter)
+{
+        char *temp = new char[100];
+
 	int		usr_sec = val.ru_utime.tv_sec;
 	int		sys_sec = val.ru_stime.tv_sec;
 	int		tot_sec = usr_sec + sys_sec;
 
-	do_indent();
-	printf( 
-		"%s %s: %s\n", name, "(user)", format_time(usr_sec)
+	sprintf( temp, 
+		"%s\t%s %s\n", name, "(user)", format_time(usr_sec)
 	);
+	long_info[counter] = temp;
+	counter++;
 
-	do_indent();
-	printf( 
-		"%s %s: %s\n", name, "(system)", format_time(sys_sec)
-	);
 
-	do_indent();
-	printf( 
-		"%s %s: %s\n", name, "(total)", format_time(tot_sec)
+	temp = new char[100];
+	sprintf( temp, 
+		"%s\t%s %s\n", name, "(system)", format_time(sys_sec)
 	);
+	long_info[counter] = temp;
+	counter++;
+
+	temp = new char[100];
+	sprintf( temp,
+		"%s\t%s %s\n", name, "(total)", format_time(tot_sec)
+	);
+	long_info[counter] = temp;
+	counter++;
 }
 
 /*
@@ -485,6 +552,37 @@ d_exit_status( const char *name, int val )
 	}
 }
 
+static char*
+b_exit_status( const char *name, int val )
+{
+//        printf("%s\n", "*** Enter b_exit_status ***");
+	char *temp = new char[50];
+
+	if( WIFEXITED(val) ) {
+		sprintf(temp,  
+			"%s\t%s %d\n", name, "Exited normally with status", WEXITSTATUS(val)
+		);
+	//	printf("%s\n", "*** Exit b_exit_status 1 ***");
+		return temp;
+	}
+
+	if( WIFSIGNALED(val) ) {
+		sprintf( temp, "%s\t%s %d\n",
+			name, "Exited abnormally with signal", WTERMSIG(val)
+		);
+	//	printf("%s\n", "*** Exit b_exit_status 2 ***");
+		return temp;
+	}
+
+	if( WIFSTOPPED(val) ) {
+		sprintf(temp, "%s\t%s %d\n", 
+			name, "Stopped with signal %d", WSTOPSIG(val)
+		);
+	//	printf("%s\n", "*** Exit b_exit_status 3 ***");
+		return temp;
+	}
+}
+
 /*
   Display all those elements in the proc structure which exist
   on a per/process basis.
@@ -505,6 +603,32 @@ d_per_cmd( V3_PROC *p, int i )
 	CurIndent -= 1;
 }
 
+
+void
+b_per_cmd( V3_PROC *p, int i, char** long_info, int &counter )
+{
+  
+	long_info[counter] = b_string( "cmd", p->cmd[i] );
+	counter ++;
+
+	long_info[counter] = b_string( "args", p->args[i] );
+	counter ++;
+	long_info[counter] = b_string( "in", p->in[i] );
+	counter ++;
+	long_info[counter] = b_string( "out", p->out[i] );
+	counter ++;
+	long_info[counter] = b_string( "err", p->err[i] );
+	counter ++;
+	b_rusage( "remote_usage", p->remote_usage[i], long_info, counter );
+	if( p->status == COMPLETED ) {
+		long_info[counter] = b_exit_status( "exit_status", p->exit_status[i] );
+		counter++;
+	}
+       
+}
+
+
+
 /*
   Display all those elements in a proc structure which exist on
   a per/pipe basis.
@@ -519,10 +643,144 @@ d_per_pipe( V3_PROC *p, int i )
 	);
 }
 
+char *
+b_per_pipe( V3_PROC *p, int i )
+{
+        char *temp = new char[50];
+	P_DESC	*t = &p->pipe[1];
+	sprintf( temp, "pipe\t%s < %s > %s\n",
+		p->cmd[t->writer], t->name, p->cmd[t->reader]
+	);
+	return temp;
+}
+
+
+
 
 /*
   Display the V3_ProcObj in painstaking detail.
 */
+
+void
+build_common_elements( V3_PROC  *p, char** long_info, int &counter)
+{  
+//        printf("%s\n", "*** Enter bulid_common ***");
+	long_info[counter] = b_int( "version_num", p->version_num );
+	counter ++;
+	
+	long_info[counter] = b_int( "prio", p->prio );
+	counter ++;
+
+	long_info[counter] = b_string( "owner", p->owner );
+	counter ++;
+
+	long_info[counter] = b_date( "q_date", p->q_date );
+	counter ++;
+
+//	printf("%s\n", "*** Enter b_group1 ***");
+	if( p->status == COMPLETED ) {
+		if( p->completion_date == 0 ) {
+		        long_info[counter] = b_msg( "completion_date", "not recorded" );
+			counter ++;			
+		      } else {
+			long_info[counter] = b_date( "completion_date", p->completion_date );
+			counter ++;
+		}
+	} else {
+	  long_info[counter] = b_msg( "completion_date", "not completed" );
+	  counter ++;
+	}
+
+	long_info[counter] = b_enum( Status, "status", p->status );
+	counter ++;
+
+	long_info[counter] = b_int( "prio", p->prio );
+	counter ++;
+
+	long_info[counter] = b_enum( Notifications, "notification", p->notification );
+	counter ++;
+
+//	printf("%s\n", "*** Enter b_group2 ***");
+	if( p->image_size ) {
+		long_info[counter] = b_int( "image_size", p->image_size );
+		counter ++;
+	} else {
+		long_info[counter] = b_msg( "image_size", "not recorded" );
+		counter ++;
+	}
+
+//	printf("%s\n", "*** Enter b_group3 ***");
+	
+	long_info[counter] = b_string( "env", p->env );
+	counter ++;
+	long_info[counter] = b_string( "rootdir", p->rootdir );
+	counter ++;
+	long_info[counter] = b_string( "iwd", p->iwd );
+	counter ++;
+	long_info[counter] = b_string( "requirements", p->requirements );
+	counter ++;
+	long_info[counter] = b_string( "preferences", p->preferences );
+	counter ++;
+	b_rusage( "local_usage", p->local_usage, long_info, counter );
+	
+//	printf("%s\n", "*** Exit bulid_common ***");
+}
+
+
+char **
+V3_ProcObj::get_proc_long_info()
+{
+        char**          long_info;
+	int		i;
+	int             counter = 0;
+     
+	long_info = new char*[100];
+	for(i = 0; i < 100; i ++) long_info[i] = 0;
+ 
+	char *temp = new char[50];
+	
+	sprintf( temp, "%s\t%d.%d\n", "Proc", p->id.cluster, p->id.proc );
+	long_info[counter] = temp;
+	counter++;
+
+		// Display stuff which is common between V2 and V3
+	build_common_elements( p, long_info, counter);
+
+		// Display stuff which is new to V3
+
+//	printf("%s\n", "*** Enter group1 ***");
+	long_info[counter] = b_bool( "checkpoint", p->checkpoint );
+	counter++;
+
+	long_info[counter] = b_bool( "remote_syscalls", p->remote_syscalls );
+	counter++;
+
+	long_info[counter] = b_enum( Universe, "universe", p->universe );
+	counter++;
+
+	long_info[counter] = b_int( "min_needed", p->min_needed );
+	counter++;
+
+	long_info[counter] = b_int( "max_needed", p->max_needed );
+	counter++;
+
+		// Display stuff which exists on a per/command basis
+//	printf("%s\n", "*** Enter group 2 ***");
+	for( i=0; i<p->n_cmds; i++ ) {
+		b_per_cmd( p, i , long_info, counter);
+	}
+
+		// Display stuff which exists on a per/pipe basis
+
+//	printf("%s\n", "*** Enter group 3 ***");
+	for( i=0; i<p->n_pipes; i++ ) {
+	  long_info[counter] = b_per_pipe( p, i );
+	  counter ++;
+	}
+
+	return long_info;
+}
+
 void
 V3_ProcObj::display()
 {
@@ -799,18 +1057,6 @@ V3_ProcObj::get_owner()
 	return p->owner;
 }
 
-char *
-V2_ProcObj::get_requirements()
-{
-    return p->requirements;
-}
-
-char*
-V3_ProcObj::get_requirements()
-{
-    return p->requirements;
-}
-
 /*
   Given a string which is in the form of an expression, and an lvalue to
   look for, find and return the matching rvlaue.  This routine is very
@@ -945,6 +1191,31 @@ V3_ProcObj::get_opsys()
 	}
 	return answer;
 }
+
+
+
+char *
+V3_ProcObj::get_date()
+{
+        return (format_date(p->q_date));
+}
+
+time_t 
+V3_ProcObj::get_time()     
+{
+	return(p->q_date);
+}
+
+
+char *
+V3_ProcObj::get_cmd()
+{
+        char cmd[8];
+	
+	shorten(cmd, p->cmd[0], p->args[0], 7);
+        return(cmd);
+}
+
 
 /*
   Format a date expressed in "UNIX time" into "month/day hour:minute".
@@ -1166,7 +1437,7 @@ V3_ProcObj::display_special()
 	char		arch[7];
 	char		opsys[11];
 	char		cmd[8];
-	int		remote_cpu = 0;
+	int		remote_cpu = 0; 
 	int		i;
 
 	shorten( owner, p->owner, "", 8 );
@@ -1193,6 +1464,73 @@ V3_ProcObj::display_special()
 	);
 			
 }
+
+
+
+void 
+V3_ProcObj::print_special()
+{
+
+	int		remote_cpu = 0; 
+	int		i;
+
+	for( i=0; i<p->n_cmds; i++ ) {
+		remote_cpu += p->remote_usage[i].ru_utime.tv_sec;
+	}
+
+
+	printf("\t%d\t%s  \t",
+	       p->id.proc,
+	       format_time(remote_cpu)
+	       );
+
+	if(encode_status(p->status) == 'C')
+	        printf("%c", ' ');
+
+	printf("%c\t%-4.1f\n",
+	       encode_status(p->status),
+	       p->image_size/1024.0
+	       );
+			
+}
+
+
+int 
+V3_ProcObj::get_procId()
+{
+  return p -> id.proc;
+}
+
+
+float
+V3_ProcObj::get_procCpu()
+{
+  
+	int		remote_cpu = 0; 
+	int		i;
+
+	for( i=0; i<p->n_cmds; i++ ) {
+		remote_cpu += p->remote_usage[i].ru_utime.tv_sec;
+	}
+
+	return(remote_cpu);
+}
+
+
+char 
+V3_ProcObj::get_procStatus()
+{
+  return (encode_status(p -> status));
+}
+
+
+float 
+V3_ProcObj::get_procSize()
+{
+  return (p->image_size/1024.0);
+}
+
+
 
 /*
   Given a V2_ProcObj, marshall the arguments and call short_print().
@@ -1322,21 +1660,13 @@ ProcObj::perm_to_modify()
 		init_user_credentials();
 	}
 
-	// allow root to modify
 	if( InvokingUid == 0 )
 		return TRUE;
 
-	// allow user condor to modify (Todd, 10/95)
-	if( strcmp(InvokingUserName,"condor") == MATCH ) {
-		return TRUE;
-	}
-
-	// allow the user who owns/created this job to modify
 	if( strcmp(InvokingUserName,get_owner()) == MATCH ) {
 		return TRUE;
 	}
 
-	// anyone else is out of luck.  tough cookies, buddy.
 	return FALSE;
 }
 
