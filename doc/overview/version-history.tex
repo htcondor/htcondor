@@ -43,6 +43,13 @@ handling for the answers of a few different questions.
 In addition, we now avoid one installation step in cases were it is
 not needed. 
 
+\item Added the \Opt{-direct} option to \Condor{status}.
+After you give \Opt{-direct}, you supply a hostname, and
+\Condor{status} will query the \Condor{startd} on the specified host
+and display information directly from there, instead of querying the
+\Condor{collector}.
+See the manual page on page~\pageref{man-condor-submit} for details. 
+
 \item Added more checking to the various arguments that might be
 passed to \Condor{status}, so that in the case of bad input,
 \Condor{status} will print an error message and exit, instead of
@@ -56,6 +63,9 @@ Using this config setting can cause unexpected results, and is not
 recommended. 
 This feature is only provided for sites that specifically want this
 behavior and know what they are doing.
+
+\item Fixed a rare race condition that could delay the completion of
+large clusters of short running jobs. 
 
 \end{itemize}
 
