@@ -31,6 +31,9 @@ static const int D_JOB			= (1<<10);
 static const int D_MACHINE		= (1<<11);
 static const int D_FULLDEBUG	= (1<<12);
 static const int D_NFS			= (1<<13);
+static const int D_UPDOWN       = (1<<14);
+static const int D_AFS          = (1<<15);
+static const int D_PREEMPT		= (1<<16);
 static const int D_MAXFLAGS		= 32;
 static const int D_ALL			= (~(1<<6));
 
