@@ -100,8 +100,19 @@ public:
 		/** Return the version string of the Shadow */
 	const char *GetShadowVersion() const { return ShadowVersion; }
 
-		/** Compare our own UIDDomain vs. the submitting host */
+		/** Compare our own UIDDomain vs. the submitting host.
+			@return true if they match, false if not
+		*/
 	bool SameUidDomain( void );
+
+		/** Initialize the priv_state code with the appropriate user
+			for this job.  This function deals with all the logic for
+			checking UID_DOMAIN compatibility, SOFT_UID_DOMAIN
+			support, and so on.
+			@param jobAd ClassAd of the job we're trying to run
+			@return true on success, false on failure
+		*/
+	bool InitUserPriv( ClassAd* jobAd );
 
 protected:
 	List<UserProc> JobList;
