@@ -43,6 +43,14 @@ Condor's DaemonCore inter-process communication mechanisms.  This
 allows the \Condor{master} to monitor both processes developed with or
 without the Condor DaemonCore library.
 
+\item The new \Macro{NEGOTIATE\_ALL\_JOBS\_IN\_CLUSTER} macro can be
+use to configure the \Condor{schedd} to not assume (for efficiency)
+that if one job in a cluster can't be scheduled, then no other jobs in
+the cluster can be scheduled.
+If \Macro{NEGOTIATE\_ALL\_JOBS\_IN\_CLUSTER} is set to True, the
+\Condor{schedd} will now always try to schedule each individual job in
+a cluster.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -59,6 +67,18 @@ a \Condor{reconfig} command is received by the \Condor{master}.
 machines (claimed resources) which would, under certain circumstances,
 cause some jobs to remain idle until other jobs in the queue complete
 or are preempted.
+
+\item A number of PVM universe bugs are fixed in this release.
+Bugs in how the \Condor{shadow.pvm} exited, which caused jobs to hang
+at exit or to run multiple times, have been fixed.
+The \Condor{schedd} now sets the status correctly on multi-class PVM
+jobs and removes them from the job queue correctly on exit.
+\Condor{submit} no longer ignores the machine\_count command for PVM
+jobs.
+And, a problem which caused \func{pvm\_exit() to hang was diagnosed:
+PVM tasks which call \func{pvm\_catchout()} to catch the output of
+child tasks should be sure to call it again with a NULL argument to
+disable output collection before calling \func{pvm\_exit()}.
 
 \item The change introduced in 6.1.13 to the \Condor{shadow} regarding
 when it logged the execute event to the user log produced situations
