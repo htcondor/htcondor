@@ -25,11 +25,6 @@
 
 BEGIN_NAMESPACE( classad );
 
-#ifdef CLASSAD_DISTRIBUTION
-string CondorErrMsg;
-int CondorErrno;
-#endif
-
 int IndexFile::
 dump_index()
 {
