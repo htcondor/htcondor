@@ -530,7 +530,11 @@ you wish to control logging for.
 \label{list:debug-level-description}
   
 \item[\Dflag{FULLDEBUG}] \label{dflag:fulldebug} Generally, turning on
-  this setting provides very verbose output in the log files.
+  this setting provides very verbose output in the log files.  
+  Only exceptionally frequent log messages for very specific debugging
+  purposes would be excluded, and in those cases, the messages would
+  be viewd by having that specific flag and \Dflag{FULLDEBUG} both
+  listed in your config file.
 
 \item[\Dflag{DAEMONCORE}] \label{dflag:daemoncore} This provides log
   file entries for things that are specific to DaemonCore, such as
@@ -546,13 +550,12 @@ you wish to control logging for.
   Any daemon that uses DaemonCore will print out a log message
   whenever a command comes in.  The name and integer of the command
   are printed, whether the command was sent via UDP or TCP, and where
-  the command was sent from.  Because the \Condor{kbdd} works by
-  sending UDP commands to the \Condor{startd} whenever there is
-  activity on the X server, we don't recommend turning on
-  \Dflag{COMMAND} login in the \Condor{startd}, since you will get so
-  many messages that the log file will be fairly useless to you.  On
-  platforms that use the \Condor{kbdd}, this is turned off in the
-  \Condor{startd} by default.
+  the command was sent from.  
+  Because the messages about the command used by the \Condor{kbdd} to
+  communicate with the \Condor{startd} whenever there is activity on
+  the X server, and the command used for ``keep-alives'' are both only
+  printed with \Dflag{FULLDEBUG} enabled, we recomend this setting
+  turned on for all daemons.
 
 \item[\Dflag{LOAD}] \label{dflag:load} The \Condor{startd} keeps track
   of the load average on the machine where it is running.  Both the
@@ -562,6 +565,11 @@ you wish to control logging for.
   load averages whenever it computes them.  This flag only effects the
   \Condor{startd}.
   
+\item[\Dflag{KEYBOARD}] \label{dflag:keyboard} 
+  With this flag set, the \Condor{startd} will print out a log message
+  with the current values for remote and local keyboard idle time.
+  This flag only effects the \Condor{startd}.
+
 \item[\Dflag{JOB}] \label{dflag:job} When this flag is set, the
   \Condor{startd} will dump out to its log file the contents of any
   job ClassAd that the \Condor{schedd} sends to claim the
