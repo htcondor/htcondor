@@ -6,12 +6,11 @@
 \ToolArgsBase
 
 \SynProg{\Condor{wait}}
-\ToolArgsBase
 \oOpt{-debug}
-\oOpt{-wait seconds}
-\oOpt{-num number}
+\oOptArg{-wait}{seconds}
+\oOptArg{-num}{number-of-jobs}
 \Arg{log-file}
-\oOpt{job-number}
+\oOpt{job ID}
 
 
 \index{Condor commands!condor\_wait}
@@ -19,29 +18,39 @@
 
 \Description
 
-\Condor{wait} watches a user log file (created with the \emph{log}
-option in the submit file) and returns when one or more jobs from the
+\Condor{wait} watches a user log file
+(created with the \Opt{log} command within a submit description file)
+and returns when one or more jobs from the
 log have completed or aborted.
 
-Because \Condor{wait} expects to find at least a ``job submitted''
-event in the log file, the job must have been successfully submitted
-with \Condor{submit} before you run \Condor{wait}.
+Because \Condor{wait} expects to find at least one job submitted
+event in the log file, at least one job must have been successfully submitted
+with \Condor{submit} before \Condor{wait} is executed.
 
-\Condor{wait} will wait forever for jobs to finish, unless you
-specify a shorter waiting time.
+\Condor{wait} will wait forever for jobs to finish, unless
+a shorter wait time is specified.
 
 \begin{Options}
     \ToolArgsBaseDesc
     \OptItem{\Opt{-debug}}{Show extra debugging information.}
-    \OptItem{\OptArgnm{-wait}{seconds}}{Wait no more than this
-    time. The default is unlimited time.} 
-    \OptItem{\OptArgnm{-num}{number}}{Wait only for this many 
-    jobs to end. The default is all jobs in the logfile.} 
-    \OptItem{log file}{The log file to watch for information about the
-    job.}
-    \OptItem{job number}{A specific job to watch. If this option is
-    not specified, all jobs that exist in the file when \Condor{wait} is
-    invoked will be watched.}
+    \OptItem{\OptArgnm{-wait}{seconds}}{Wait no more than the
+    integer number of \Arg{seconds}.
+    The default is unlimited time.} 
+    \OptItem{\OptArgnm{-num}{number-of-jobs}}{Wait for the integer
+    \Arg{number-of-jobs} jobs to end. The default is all jobs in the
+    log file.} 
+    \OptItem{log file}{The name of the log file to watch for
+    information about the job.}
+    \OptItem{job ID}{A specific job or set of jobs to watch.
+    \index{job ID!use in \Condor{wait}}
+    If the \Opt{job ID} is only the job ClassAd attribute \Attr{ClusterId},
+    then \Condor{wait} waits for all jobs with the given 
+    \Attr{ClusterId}.
+    If the \Opt{job ID} is a pair of the 
+    job ClassAd attributes, given by \Attr{ClusterId}.\Attr{ProcId},
+    then \Condor{wait} waits for the specific job with this \Opt{job ID}.
+    If this option is not specified, all jobs that exist in the log file
+    when \Condor{wait} is invoked will be watched.}
 
 \end{Options}
 
@@ -64,8 +73,9 @@ This command waits for all jobs that exist in \File{logfile} to complete.
 \begin{verbatim}
 condor_wait logfile 40
 \end{verbatim}
-This command waits for all jobs that exist in \File{logfile} and are part
-of cluster 40 to complete.
+This command waits for all jobs that exist in \File{logfile} 
+with a job ClassAd attribute \Attr{ClusterId} of
+40 to complete.
 
 \begin{verbatim}
 condor_wait -num 2 logfile
