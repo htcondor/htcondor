@@ -18,7 +18,7 @@ my %Options =
 
 # Invoke main..
 main( @ARGV );
-#$ARGV = -1;
+$#ARGV = -1;
 
 # ******************************************************
 # Main program..
@@ -29,9 +29,11 @@ sub main( @ )
     my $ModulesFile = "Hawkeye.modules";
     my %KnownTargets;
     my $DefaultDir = ".";
+    my $TestDir = ".";
     my $ModulePrefix = "";
     my $TargetDir = "";
     my $Force = 0;
+    my $ReleaseMode = 0;
 
     # Process the command line...
     foreach my $Arg ( @_ )
@@ -51,6 +53,10 @@ sub main( @ )
 	    elsif ( $Opt =~ /^f$/ )
 	    {
 		$Force = 1;
+	    }
+	    elsif ( $Opt =~ /^r$/ )
+	    {
+		$ReleaseMode = 1;
 	    }
 	    else
 	    {
@@ -73,6 +79,10 @@ sub main( @ )
 	if ( /^directory:\s+(\S+)/i )
 	{
 	    $DefaultDir = $1;
+	}
+	elsif ( /^test-directory:\s+(\S+)/i )
+	{
+	    $TestDir = $1;
 	}
 	elsif ( /^prefix:\s+(\S+)/i )
 	{
@@ -115,7 +125,7 @@ sub main( @ )
     # Dir logic
     if ( $TargetDir eq "" )
     {
-	$TargetDir = $DefaultDir;
+	$TargetDir = $ReleaseMode ? $DefaultDir : $TestDir;
     }
 
     # Create the directory?
