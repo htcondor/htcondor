@@ -70,7 +70,7 @@ my_ip_addr()
 
 } /* extern "C" */
 
-#if !defined(WIN32)
+#if !defined(WIN32) && !defined(Solaris)
 #include <arpa/nameser.h>
 #include <resolv.h>
 #endif
