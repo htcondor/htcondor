@@ -48,6 +48,12 @@ from one \condor{schedd} to another.
   (SOAP) interface to Condor.
   This bug has been fixed and COD support is now working again.
 
+\item In version 6.7.3, the value of the X509UserProxySubject job attribute
+was changed in such a way that Condor-G jobs submitted by a newer
+\condor{submit} to an older \condor{schedd} could fail to run. Now,
+\condor{submit} reverts to the old behavior when talking to an old
+\condor{schedd}.
+
 \end{itemize}
 
 
