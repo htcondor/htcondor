@@ -58,12 +58,11 @@ usage()
 		dprintf( D_ALWAYS, "argv[%d] = %s\n", i, my_argv[i] );
 	}
 	dprintf(D_ALWAYS, "usage: condor_starter initiating_host\n");
-	dprintf(D_ALWAYS, "   or: condor_starter -job_keyword keyword\n");
-	dprintf(D_ALWAYS, "                      -job_cluster number\n");
-	dprintf(D_ALWAYS, "                      -job_proc    number\n");
-	dprintf(D_ALWAYS, "                      -job_subproc number\n");
-	dprintf(D_ALWAYS, "   or: condor_starter -job_on_stdin\n");
-//	dprintf(D_ALWAYS, "   or: condor_starter -localfile filename\n");
+	dprintf(D_ALWAYS, "   or: condor_starter -job-keyword keyword\n");
+	dprintf(D_ALWAYS, "                      -job-input-ad path\n");
+	dprintf(D_ALWAYS, "                      -job-cluster number\n");
+	dprintf(D_ALWAYS, "                      -job-proc    number\n");
+	dprintf(D_ALWAYS, "                      -job-subproc number\n");
 	DC_Exit(1);
 }
 
@@ -200,7 +199,7 @@ JobInfoCommunicator*
 parseArgs( int argc, char* argv [] )
 {
 	JobInfoCommunicator* jic = NULL;
-	char* job_ad_path = NULL; 
+	char* job_input_ad = NULL; 
 	char* job_keyword = NULL; 
 	int job_cluster = -1;
 	int job_proc = -1;
@@ -209,7 +208,7 @@ parseArgs( int argc, char* argv [] )
 
 
 	bool warn_multi_keyword = false;
-	bool warn_multi_path = false;
+	bool warn_multi_input_ad = false;
 	bool warn_multi_cluster = false;
 	bool warn_multi_proc = false;
 	bool warn_multi_subproc = false;
@@ -217,11 +216,11 @@ parseArgs( int argc, char* argv [] )
 	char *opt, *arg;
 	int opt_len;
 
-	char _jobadpath[] = "-job_ad_path";
-	char _jobkeyword[] = "-job_keyword";
-	char _jobcluster[] = "-job_cluster";
-	char _jobproc[] = "-job_proc";
-	char _jobsubproc[] = "-job_subproc";
+	char _jobinputad[] = "-job-input-ad";
+	char _jobkeyword[] = "-job-keyword";
+	char _jobcluster[] = "-job-cluster";
+	char _jobproc[] = "-job-proc";
+	char _jobsubproc[] = "-job-subproc";
 	char _header[] = "-header";
 	char* target = NULL;
 
@@ -250,7 +249,7 @@ parseArgs( int argc, char* argv [] )
 			continue;
 		}
 
-		if( strncmp( "-job_", opt, MIN(opt_len,5)) ) {
+		if( strncmp( "-job-", opt, MIN(opt_len,5)) ) {
 			invalid( opt );
 		}
 		if( opt_len < 6 ) {
@@ -272,11 +271,11 @@ parseArgs( int argc, char* argv [] )
 			target = _jobkeyword;
 			break;
 
-		case 'a':
-			if( strncmp(_jobadpath, opt, opt_len) ) {
+		case 'i':
+			if( strncmp(_jobinputad, opt, opt_len) ) {
 				invalid( opt );
 			} 
-			target = _jobadpath;
+			target = _jobinputad;
 			break;
 
 		case 'p':
@@ -313,12 +312,12 @@ parseArgs( int argc, char* argv [] )
 				free( job_keyword );
 			}
 			job_keyword = strdup( arg );
-		} else if( target == _jobadpath ) {
-			if( job_ad_path ) {
-				warn_multi_path = true;
-				free( job_ad_path );
+		} else if( target == _jobinputad ) {
+			if( job_input_ad ) {
+				warn_multi_input_ad = true;
+				free( job_input_ad );
 			}
-			job_ad_path = strdup( arg );
+			job_input_ad = strdup( arg );
 		} else if( target == _jobcluster ) {
 			if( job_cluster >= 0 ) {
 				warn_multi_cluster = true;
@@ -364,10 +363,10 @@ parseArgs( int argc, char* argv [] )
 				 "multiple '%s' options given, using \"%s\"\n",
 				 _jobkeyword, job_keyword );
 	}
-	if( warn_multi_path ) {
+	if( warn_multi_input_ad ) {
 		dprintf( D_ALWAYS, "WARNING: "
 				 "multiple '%s' options given, using \"%s\"\n",
-				 _jobadpath, job_ad_path );
+				 _jobinputad, job_input_ad );
 	}
 	if( warn_multi_cluster ) {
 		dprintf( D_ALWAYS, "WARNING: "
@@ -397,21 +396,21 @@ parseArgs( int argc, char* argv [] )
 		return jic;
 	}
 
-	if( ! (job_keyword || job_ad_path) ) {
+	if( ! (job_keyword || job_input_ad) ) {
 		dprintf( D_ALWAYS, "ERROR: You must specify either '%s' or '%s'\n",
-				 _jobkeyword, _jobadpath ); 
+				 _jobkeyword, _jobinputad ); 
 		usage();
 	}
 
 		// If the user didn't specify it, use -1 for cluster and/or
 		// proc, and the JIC subclasses will know they weren't on the
 		// command-line.
-	if( job_ad_path ) {
+	if( job_input_ad ) {
 		if( job_keyword ) {
-			jic = new JICLocalFile( job_ad_path, job_keyword, 
+			jic = new JICLocalFile( job_input_ad, job_keyword, 
 									job_cluster, job_proc, job_subproc );
 		} else {
-			jic = new JICLocalFile( job_ad_path, job_cluster, job_proc,
+			jic = new JICLocalFile( job_input_ad, job_cluster, job_proc,
 									job_subproc );
 		}
 	} else {
@@ -422,8 +421,8 @@ parseArgs( int argc, char* argv [] )
 	if( job_keyword ) {
 		free( job_keyword );
 	}
-	if( job_ad_path ) {
-		free( job_ad_path );
+	if( job_input_ad ) {
+		free( job_input_ad );
 	}
 	return jic;
 }
