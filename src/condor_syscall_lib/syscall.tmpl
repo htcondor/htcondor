@@ -630,7 +630,7 @@ int rename( const char *from, const char *to ) : pseudo {
 
 #	if !defined(AIX32)
 
-#if defined(LINUX)
+#if defined(LINUX) && !defined(GLIBC)
 	int fstat( map(int fd), struct stat *buf ) : extract, no_sys_chk {
 #else
 	int fstat( map(int fd), struct stat *buf ) {
@@ -640,7 +640,7 @@ int rename( const char *from, const char *to ) : pseudo {
 		}
 
 
-#if defined(LINUX)
+#if defined(LINUX) && !defined(GLIBC)
     int stat( const char *path, struct stat *buf ) : extract, no_sys_chk {
 #else
     int stat( const char *path, struct stat *buf ) {
@@ -651,7 +651,7 @@ int rename( const char *from, const char *to ) : pseudo {
 			alloc( buf, STAT_SIZE );
 		}
 
-#if defined(LINUX)
+#if defined(LINUX) && !defined(GLIBC)
     int lstat( const char *path, struct stat *buf ) : extract, no_sys_chk {
 #else
     int lstat( const char *path, struct stat *buf ) {
