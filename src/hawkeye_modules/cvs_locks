@@ -41,18 +41,18 @@ sub RunIt {
 
     # Lock fields that we publish
     my %Fields = (
-		  Full => "s",
-		  Dir => "s",
-		  Type => "s",
-		  Host => "s",
-		  Pid => "n",
-		  Uid => "n",
-		  User => "s",
-		  Age => "n",
+		  Full => HawkeyePublish::TypeString,
+		  Dir => HawkeyePublish::TypeString,
+		  Type => HawkeyePublish::TypeString,
+		  Host => HawkeyePublish::TypeString,
+		  Pid => HawkeyePublish::TypeNumber,
+		  Uid => HawkeyePublish::TypeNumber,
+		  User => HawkeyePublish::TypeString,
+		  Age => HawkeyePublish::TypeNumber,
 		);
 
     # Store off the fields
-    $Hash->Add( "FIELDS", "s", join( " ", keys %Fields ) );
+    $Hash->Add( "FIELDS", HawkeyePublish::TypeString, join( " ", keys %Fields ) );
 
     # List of valid repositories
     my @CheckedRepositories;
@@ -121,8 +121,12 @@ sub RunIt {
 	close( FIND );
 
 	# Publish bas info
-	$Hash->Add( $RepoName . "_locks", "n", $#Locks + 1 );
-	$Hash->Add( $RepoName . "_directory", "s", $RepoDir );
+	$Hash->Add( $RepoName . "_locks",
+		    HawkeyePublish::TypeNumber,
+		    $#Locks + 1 );
+	$Hash->Add( $RepoName . "_directory",
+		    HawkeyePublish::TypeString,
+		    $RepoDir );
 
 	# Publish lock info
 	for my $LockNo ( 0 .. $#Locks )
@@ -132,7 +136,7 @@ sub RunIt {
 	    my $Lock = $Locks[$LockNo];
 	    foreach my $Key ( keys %{$Lock} )
 	    {
-		my $Type = "s";
+		my $Type = HawkeyePublish::TypeString;
 		if ( ! exists $Fields{$Key} )
 		{
 		    print STDERR "Warning: Lock field '$Key' unknown\n";
@@ -147,7 +151,9 @@ sub RunIt {
 
     }
 
-    $Hash->Add( "REPOSITORIES", "s", join( " ", @CheckedRepositories ) );
+    $Hash->Add( "REPOSITORIES",
+		HawkeyePublish::TypeString,
+		join( " ", @CheckedRepositories ) );
 
     # Ok, summary is done...
     $Hash->Store( );
