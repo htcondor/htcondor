@@ -76,8 +76,7 @@ outside of the Condor batch environment. Standalone checkpointing
 is described in section~\ref{sec:standalone-ckpt}.
 
 Condor can now read and write compressed checkpoints.  This new
-functionality is provided in the \File{libcondorzsyscall.a} and
-\File{libcondorzckpt.a} libraries.  
+functionality is provided in the \File{libcondorzsyscall.a} library.
 If \File{/usr/lib/libz.a} exists on your workstation, \Condor{compile}
 will automatically link your job with the compression-enabled version
 of the checkpointing library.
