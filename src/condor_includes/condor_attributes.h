@@ -132,5 +132,10 @@ const char ATTR_VACATE                   [] = "Vacate";
 const char ATTR_VIRTUAL_MEMORY           [] = "VirtualMemory";
 const char ATTR_WANT_CHECKPOINT		 	 [] = "WantCheckpoint";
 const char ATTR_WANT_REMOTE_SYSCALLS 	 [] = "WantRemoteSyscalls";
+const char ATTR_COLLECTOR_IP_ADDR        [] = "CollectorIpAddr";
+const char ATTR_NUM_HOSTS_TOTAL			 [] = "HostsTotal";
+const char ATTR_NUM_HOSTS_CLAIMED		 [] = "HostsClaimed";
+const char ATTR_NUM_HOSTS_UNCLAIMED		 [] = "HostsUnclaimed";
+const char ATTR_NUM_HOSTS_OWNER			 [] = "HostsOwner";
 
 #endif

@@ -20,7 +20,7 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-/* Copyright 1997, Condor Team */
+
 
 #ifndef _CONDOR_COMMANDS_H
 #define _CONDOR_COMMANDS_H
@@ -134,6 +134,10 @@ const int INVALIDATE_MASTER_ADS	= 15;
 const int INVALIDATE_GATEWAY_ADS	= 16;
 const int INVALIDATE_CKPT_SRVR_ADS	= 17;
 const int INVALIDATE_SUBMITTOR_ADS	= 18;
+
+const int UPDATE_COLLECTOR_AD	= 19;
+const int QUERY_COLLECTOR_ADS	= 20;
+const int INVALIDATE_COLLECTOR_ADS	= 21;
 
 /*
 *** Daemon Core Signals

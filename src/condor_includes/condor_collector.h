@@ -34,6 +34,7 @@ enum AdTypes
     CKPT_SRVR_AD,
 	STARTD_PVT_AD,
 	SUBMITTOR_AD,
+	COLLECTOR_AD,
 
     NUM_AD_TYPES
 };

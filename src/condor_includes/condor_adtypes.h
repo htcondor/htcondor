@@ -35,5 +35,6 @@ static char MASTER_ADTYPE		[] = "DaemonMaster";
 static char CKPT_SRVR_ADTYPE	[] = "CkptServer";
 static char JOB_ADTYPE	 		[] = "Job";
 static char QUERY_ADTYPE		[] = "Query";
+static char COLLECTOR_ADTYPE	[] = "Collector";
 
 #endif
