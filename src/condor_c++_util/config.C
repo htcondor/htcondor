@@ -382,6 +382,8 @@ lower_case( register char	*str )
 ** If self is not NULL, then we only expand references to to the parameter
 ** specified by self.  This is used when we want to expand self-references
 ** only.
+** Also expand references of the form "left$ENV(middle)right",
+** replacing $ENV(middle) with getenv(middle).
 */
 char *
 expand_macro( const char *value, BUCKET **table, int table_size, char *self )
@@ -389,6 +391,20 @@ expand_macro( const char *value, BUCKET **table, int table_size, char *self )
 	char *tmp = strdup( value );
 	char *left, *name, *tvalue, *right;
 	char *rval;
+
+	if (!self)
+	while( get_env(tmp, &left, &name, &right) ) {
+		tvalue = getenv(name);
+		if( tvalue == NULL ) {
+			EXCEPT("Can't find %s in environment!",name);
+		}
+
+		rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
+										  strlen(right) + 1));
+		(void)sprintf( rval, "%s%s%s", left, tvalue, right );
+		FREE( tmp );
+		tmp = rval;
+	}
 
 	while( get_var(tmp, &left, &name, &right, self) ) {
 		tvalue = lookup_macro( name, table, table_size );
@@ -419,6 +435,64 @@ expand_macro( const char *value, BUCKET **table, int table_size, char *self )
 	}
 
 	return( tmp );
+}
+
+/*
+** Same as get_var() below, but finds $ENV() references.
+*/
+int
+get_env( register char *value, register char **leftp, 
+		 register char **namep, register char **rightp )
+{
+	char *left, *left_end, *name, *right;
+	char *tvalue;
+
+	tvalue = value;
+	left = value;
+
+	for(;;) {
+tryagain:
+		if (tvalue) {
+			value = (char *)strstr( (const char *)tvalue, "$ENV" );
+		}
+		
+		if( value == NULL ) {
+			return( 0 );
+		}
+
+		value += 4;
+		if( *value == '(' ) {
+			left_end = value - 4;
+			name = ++value;
+			while( *value && *value != ')' ) {
+				char c = *value++;
+				if( !ISIDCHAR(c) ) {
+					tvalue = name;
+					goto tryagain;
+				}
+			}
+
+			if( *value == ')' ) {
+				right = value;
+				break;
+			} else {
+				tvalue = name;
+				goto tryagain;
+			}
+		} else {
+			tvalue = value;
+			goto tryagain;
+		}
+	}
+
+	*left_end = '\0';
+	*right++ = '\0';
+
+	*leftp = left;
+	*namep = name;
+	*rightp = right;
+
+	return( 1 );
 }
 
 /*
