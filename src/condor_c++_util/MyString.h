@@ -234,6 +234,10 @@ class MyString
 	*/  
 	bool chomp( void );
 
+	/** Trim leading and trailing whitespace from this string.
+	*/
+	void trim( void );
+
 	//@}
 
 	// ----------------------------------------

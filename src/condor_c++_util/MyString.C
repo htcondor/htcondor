@@ -566,6 +566,19 @@ MyString::chomp( void )
 	return chomped;
 }
 
+void
+MyString::trim( void )
+{
+	int		begin = 0;
+	while ( isspace(Data[begin]) ) { ++begin; }
+
+	int		end = Length() - 1;
+	while ( isspace(Data[end]) ) { --end; }
+
+	if ( begin != 0 || end != Length() - 1 ) {
+		*this = Substr(begin, end);
+	}
+}
 
 void
 MyString::init()

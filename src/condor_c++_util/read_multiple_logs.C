@@ -457,16 +457,18 @@ ReadMultipleUserLogs::getParamFromSubmitLine(MyString &submitLine,
 {
 	MyString	paramValue("");
 
-	const char *DELIM = " \t";
+	const char *DELIM = "=";
 
 	submitLine.Tokenize();
-	const char *	token = submitLine.GetNextToken(DELIM, true);
-	if ( token && !strcasecmp(token, paramName) ) {
-		token = submitLine.GetNextToken(DELIM, true);
-		if ( token && !strcasecmp(token, "=") ) {
-			token = submitLine.GetNextToken(DELIM, true);
-			if ( token ) {
-				paramValue = token;
+	const char *	rawToken = submitLine.GetNextToken(DELIM, true);
+	if ( rawToken ) {
+		MyString	token(rawToken);
+		token.trim();
+		if ( !strcasecmp(token.Value(), paramName) ) {
+			rawToken = submitLine.GetNextToken(DELIM, true);
+			if ( rawToken ) {
+				paramValue = rawToken;
+				paramValue.trim();
 			}
 		}
 	}
