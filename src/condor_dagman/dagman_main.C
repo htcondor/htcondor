@@ -312,11 +312,12 @@ void main_timer () {
     // we are ready to proceed with jobs yet unsubmitted.
     //------------------------------------------------------------------------
     
-	debug_printf( DEBUG_DEBUG_1,
-				  "%d Jobs Total / %d Submitted / %d Failed / %d Done "
-				  "(%d Scripts Running)\n", G.dag->NumJobs(),
-				  G.dag->NumJobsSubmitted(), G.dag->NumJobsFailed(),
-				  G.dag->NumJobsDone(), G.dag->NumScriptsRunning() );
+    debug_printf( DEBUG_DEBUG_1,
+				  "%d Jobs Total / %d Done / %d Submitted / %d Ready / "
+				  "%d Failed / %d Scripts Running\n", G.dag->NumJobs(),
+				  G.dag->NumJobsDone(), G.dag->NumJobsSubmitted(),
+				  G.dag->NumJobsReady(), G.dag->NumJobsFailed(), 
+				  G.dag->NumScriptsRunning() );
     
     // If the log has grown
     if (G.dag->DetectLogGrowth()) {
