@@ -2158,21 +2158,10 @@ Scheduler::cluster_rejected(int cluster)
 /*
  * Ask daemonCore to check to see if a given process is still alive
  */
-int
+inline int
 Scheduler::is_alive(shadow_rec* srec)
 {
-	int status;
-	if (IsSchedulerUniverse(srec)) {
-		char owner[_POSIX_PATH_MAX];
-		GetAttributeString(srec->job_id.cluster, srec->job_id.proc, ATTR_OWNER, owner);
-			init_user_ids(owner);
-		priv_state priv = set_user_priv();
-		status=daemonCore->Is_Pid_Alive(srec->pid);
-		set_priv(priv);
-	} else {
-		status=daemonCore->Is_Pid_Alive(srec->pid);
-	}
-	return status;
+	return daemonCore->Is_Pid_Alive(srec->pid);
 }
 
 void
@@ -2540,20 +2529,25 @@ Scheduler::child_exit(int pid, int status)
 
 	if(mrec) {
 		if(WIFEXITED(status)) {
-					dprintf(D_FULLDEBUG, "agent pid %d exited with status %d\n",
-							  pid, WEXITSTATUS(status) );
-					if(WEXITSTATUS(status) == EXITSTATUS_NOTOK) {
-						 dprintf(D_ALWAYS, "capability rejected by startd\n");
-						 DelMrec(mrec);
-					} else {
-						 dprintf(D_ALWAYS, "Agent contacting startd successful\n");
-					mrec->status = M_ACTIVE;
-					}
-		  } else if(WIFSIGNALED(status)) {
-					dprintf(D_ALWAYS, "Agent pid %d died with signal %d\n",
-							  pid, WTERMSIG(status));
-					DelMrec(mrec);
-		  }
+			dprintf(D_FULLDEBUG, "agent pid %d exited with status %d\n",
+					  pid, WEXITSTATUS(status) );
+			if(WEXITSTATUS(status) == EXITSTATUS_NOTOK) {
+				dprintf(D_ALWAYS, "capability rejected by startd\n");
+				DelMrec(mrec);
+			} else {
+				dprintf(D_ALWAYS, "Agent contacting startd successful\n");
+				mrec->status = M_ACTIVE;
+				// be certain to clear out agentPid value, otherwise
+				// if this match lives long enough that the PID gets
+				// reused by the operating system, we will mistake a 
+				// shadow exit for an agent exit!  -Todd Tannenbaum, 3/99
+				mrec->agentPid = -1;
+			}
+		} else if(WIFSIGNALED(status)) {
+			dprintf(D_ALWAYS, "Agent pid %d died with signal %d\n",
+					  pid, WTERMSIG(status));
+			DelMrec(mrec);
+		}
 	} else if (IsSchedulerUniverse(srec)) {
 		// scheduler universe process
 		if(WIFEXITED(status)) {
@@ -3382,6 +3376,12 @@ match_rec*
 Scheduler::FindMrecByPid(int pid)
 {
 	match_rec *rec;
+
+	// We only fork an agent on Unix; thus, no need wasting
+	// cycles on this if we are on WIN32.
+#ifdef WIN32
+	return NULL;
+#endif
 
 	matches->startIterations();
 	while (matches->iterate(rec) == 1) {
