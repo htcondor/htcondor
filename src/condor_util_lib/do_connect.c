@@ -28,22 +28,27 @@
 #include "dgram_io_handle.h"
 
 
-unsigned short find_port_num( char *service_name, unsigned short dflt_port );
+unsigned short find_port_num( const char *service_name, 
+							  unsigned short dflt_port );
 char *mk_config_name( const char *service_name );
 char *param( const char *name );
 
-do_connect( host, service, port )
-const char 	*host, *service;
-u_short	port;
+int tcp_connect_timeout( int sockfd, struct sockaddr *sin, int len,
+						int timeout );
+int do_connect_with_timeout( const char* host, const char* service, 
+							 u_short port, int timeout );
+
+
+int
+do_connect( const char* host, const char* service, u_short port )
 {
 	return do_connect_with_timeout(host, service, port, 0);
 }
 
 
-do_connect_with_timeout( host, service, port, timeout )
-char	*host, *service;
-u_short		port;
-int		timeout;
+int
+do_connect_with_timeout( const char* host, const char* service, 
+						 u_short port, int timeout ) 
 {
 	struct sockaddr_in	sin;
 	struct hostent		*hostentp;
@@ -86,7 +91,8 @@ int		timeout;
 	if (timeout == 0) {
 		status = connect(fd,(struct sockaddr *)&sin,sizeof(sin));
 	} else {
-		status = tcp_connect_timeout(fd, &sin, sizeof(sin), timeout);
+		status = tcp_connect_timeout(fd, (struct sockaddr*)&sin, 
+									 sizeof(sin), timeout);
 		if (status == fd) {
 			status = 0;
 		}
@@ -101,9 +107,9 @@ int		timeout;
 	}
 }
 
-udp_connect( host, port )
-char	*host;
-u_short port;
+
+int
+udp_connect( char* host, u_short port )
 {
 	int		sock;
 	struct sockaddr_in	sin;
@@ -142,9 +148,7 @@ u_short port;
 
 
 unsigned short
-find_port_num( service_name, dflt_port )
-char	*service_name;
-unsigned short	dflt_port;
+find_port_num( const char* service_name, unsigned short dflt_port )
 {
 	struct servent		*servp;
 	char				*config_name;
@@ -316,7 +320,6 @@ int tcp_accept_timeout(int ConnectionSock, struct sockaddr *sin, int *len,
 	int             count;
 	fd_set  		readfds;
 	struct timeval 	timer;
-	struct sockaddr dummy;
 	int				newsock;
 
     timer.tv_sec = timeout;
