@@ -28,18 +28,20 @@
 #include "condor_constants.h"
 #include "condor_classad.h"
 #include "condor_sys.h"
+#include "starter.h"
 
 #include "NTsenders.h"
 
 int CurrentSysCall;
 extern ReliSock *syscall_sock;
+extern CStarter *Starter;
 
 extern "C" {
 int
 REMOTE_CONDOR_register_machine_info(char *uiddomain, char *fsdomain,
 	char *address, char *fullHostname, int key)
 {
-	int		terrno=0;
+	condor_errno_t		terrno;
 	int		rval=-1;
 
 	dprintf ( D_SYSCALLS, "Doing CONDOR_register_machine_info\n" );
@@ -71,7 +73,7 @@ REMOTE_CONDOR_register_machine_info(char *uiddomain, char *fsdomain,
 int
 REMOTE_CONDOR_get_job_info(ClassAd *ad)
 {
-	int		terrno=0;
+	condor_errno_t		terrno;
 	int		rval=-1;
 
 	dprintf ( D_SYSCALLS, "Doing CONDOR_get_job_info\n" );
@@ -100,7 +102,7 @@ REMOTE_CONDOR_get_job_info(ClassAd *ad)
 int
 REMOTE_CONDOR_get_executable(char *destination)
 {
-	int		terrno=0;
+	condor_errno_t		terrno=0;
 	int		rval=-1;
 
 	dprintf ( D_SYSCALLS, "Doing CONDOR_get_executable\n" );
@@ -130,7 +132,7 @@ REMOTE_CONDOR_get_executable(char *destination)
 int
 REMOTE_CONDOR_job_exit(int status, int reason, ClassAd *ad)
 {
-	int		terrno=0;
+	condor_errno_t		terrno;
 	int		rval=-1;
 	
 	dprintf ( D_SYSCALLS, "Doing CONDOR_job_exit\n" );
@@ -141,7 +143,9 @@ REMOTE_CONDOR_job_exit(int status, int reason, ClassAd *ad)
 	assert( syscall_sock->code(CurrentSysCall) );
 	assert( syscall_sock->code(status) );
 	assert( syscall_sock->code(reason) );
-	assert( ad->put(*syscall_sock) );
+	if ( ad ) {
+		assert( ad->put(*syscall_sock) );
+	}
 	assert( syscall_sock->end_of_message() );
 
 	syscall_sock->decode();
@@ -161,7 +165,7 @@ int
 REMOTE_CONDOR_open( char *  path , open_flags_t flags , int   lastarg)
 {
         int     rval;
-        int     terrno;
+        condor_errno_t     terrno;
 
         CurrentSysCall = CONDOR_open;
 
@@ -188,7 +192,7 @@ int
 REMOTE_CONDOR_close(int   fd)
 {
         int     rval;
-        int     terrno;
+        condor_errno_t     terrno;
 
         CurrentSysCall = CONDOR_close;
 
@@ -213,7 +217,7 @@ int
 REMOTE_CONDOR_read(int   fd , void *  buf , size_t   len)
 {
         int     rval;
-        int     terrno;
+        condor_errno_t     terrno;
 
         CurrentSysCall = CONDOR_read;
 
@@ -240,7 +244,7 @@ int
 REMOTE_CONDOR_write(int   fd , void *  buf , size_t   len)
 {
         int     rval;
-        int     terrno;
+        condor_errno_t     terrno;
 
         CurrentSysCall = CONDOR_write;
 
@@ -267,7 +271,7 @@ int
 REMOTE_CONDOR_lseek(int   fd , off_t   offset , int   whence)
 {
         int     rval;
-        int     terrno;
+        condor_errno_t     terrno;
 
         CurrentSysCall = CONDOR_lseek;
 
@@ -294,7 +298,7 @@ int
 REMOTE_CONDOR_unlink( char *  path )
 {
         int     rval;
-        int     terrno;
+        condor_errno_t     terrno;
 
         CurrentSysCall = CONDOR_unlink;
 
@@ -319,7 +323,7 @@ int
 REMOTE_CONDOR_rename( char *  from , char *  to)
 {
         int     rval;
-        int     terrno;
+        condor_errno_t     terrno;
 
         CurrentSysCall = CONDOR_rename;
 
@@ -344,7 +348,7 @@ REMOTE_CONDOR_rename( char *  from , char *  to)
 int
 REMOTE_CONDOR_register_mpi_master_info( char* str )
 {
-	int		terrno=0;
+	condor_errno_t		terrno;
 	int		rval=-1;
 	
 	dprintf ( D_SYSCALLS, "Doing CONDOR_register_mpi_master_info\n" );
@@ -373,7 +377,7 @@ int
 REMOTE_CONDOR_mkdir( char *  path, int mode )
 {
         int     rval;
-        int     terrno;
+        condor_errno_t     terrno;
 
         CurrentSysCall = CONDOR_mkdir;
 
@@ -399,7 +403,7 @@ int
 REMOTE_CONDOR_rmdir( char *  path )
 {
         int     rval;
-        int     terrno;
+        condor_errno_t     terrno;
 
         CurrentSysCall = CONDOR_rmdir;
 
