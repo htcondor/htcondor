@@ -3006,13 +3006,36 @@ int DaemonCore::Create_Process(
 	} else {
 		// here we want to create a process as user for PRIV_USER_FINAL
 
+			// Get the token for the user
+		HANDLE user_token = priv_state_get_handle();
+		ASSERT(user_token);
+
 			// making this a NULL string tells NT to dynamically
 			// create a new Window Station for the process we are about
 			// to create....
 		si.lpDesktop = "";
 
-		HANDLE user_token = priv_state_get_handle();
-		ASSERT(user_token);
+			// Check USE_VISIBLE_DESKTOP in condor_config.  If set to TRUE,
+			// then run the job on the visible desktop, otherwise create
+			// a new non-visible desktop for the job.
+		char *use_visible = param("USE_VISIBLE_DESKTOP");
+		if (use_visible && (*use_visible=='T' || *use_visible=='t') ) {
+				// user wants visible desktop.
+				// place the user_token into the proper access control lists.
+			int GrantDesktopAccess(HANDLE hToken);	// prototype
+			if ( GrantDesktopAccess(user_token) == 0 ) {
+					// Success!!  The user now has permission to use
+					// the visible desktop, so change si.lpDesktop
+				si.lpDesktop = "winsta0\\default";
+			} else {
+					// The system refuses to grant access to the visible 
+					// desktop.  Log a message & we'll fall back on using
+					// the dynamically created non-visible desktop.
+				dprintf(D_ALWAYS,
+					"Create_Process: Unable to use visible desktop\n");
+			}
+		} 
+		if (use_visible) free(use_visible);
 
 			// we need to make certain to specify CREATE_NEW_CONSOLE, because
 			// our ACLs will not let us use the current console which is
