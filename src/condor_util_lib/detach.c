@@ -47,21 +47,18 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 detach()
 {
-	int		fd;
-
-	(void)close( 0 );
-	(void)close( 1 );
-	(void)close( 2 );
-
 #if !defined(HPUX9) && !defined(Solaris)
+	int		fd;
 	if( (fd=open("/dev/tty",O_RDWR,0)) < 0 ) {
-		dprintf( D_ALWAYS, "Can't open /dev/tty, errno: %d\n", errno );
+			/* There's no /dev/tty, nothing to detach from */
 		return;
 	}
 	if( ioctl(fd,TIOCNOTTY,(char *)0) < 0 ) {
-		EXCEPT( "ioctl(%d,TIOCNOTTY,(char *)0)", fd );
+		dprintf( D_ALWAYS, 
+				 "ioctl(%d, TIOCNOTTY) to detach from /dev/tty failed, errno: %d\n",
+				 fd, errno );
+		return;
 	}
-
 	(void)close( fd );
 #endif
 }
