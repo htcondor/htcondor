@@ -182,7 +182,6 @@ Scheduler::Scheduler()
     Mail = NULL;
     filename = NULL;
 	rec = new Mrec*[MAXMATCHES];
-	aliveFrequency = 0;
 	aliveInterval = 0;
 	port = 0;
 	ExitWhenDone = 0;
@@ -714,7 +713,7 @@ Scheduler::permission(char* id, char* server, PROC_ID* jobId)
             for(i = 3; i < lim; i++) {
                 close(i);
             }
-            Agent(server, id, MySockName, aliveFrequency, jobId);
+            Agent(server, id, MySockName, aliveInterval, jobId);
 			
 
         default:    /* the parent */
@@ -1977,17 +1976,12 @@ Scheduler::Init()
         EXCEPT( "MAIL not specified in config file\n" );
     }
 
-	tmp = param("ALIVE_FREQUENCY");
+	tmp = param("ALIVE_INTERVAL");
     if(!tmp) {
-		aliveFrequency = SchedDInterval;
+		aliveInterval = 300;
     } else {
-        aliveFrequency = atoi(tmp);
+        aliveInterval = atoi(tmp);
         free(tmp);
-	}
-	if(aliveFrequency < SchedDInterval) {
-		aliveInterval = 1;
-	} else {
-		aliveInterval = aliveFrequency / SchedDInterval;
 	}
 }
 
@@ -2013,15 +2007,7 @@ Scheduler::Register(DaemonCore* core)
 
 #if !defined(WIN32) /* not sure what the WIN32 equivalents of these will be yet */
 	// signal handlers
-	// core->Register(this, SIGCHLD, (void*)reaper, SIGNAL);
-	install_sig_handler(SIGCHLD, reaper);
-	// core->Register(this, SIGINT, (void*)sigint_handler, SIGNAL);
-	// core->Register(this, SIGHUP, (void*)sighup_handler, SIGNAL);
-	// core->Register(this, SIGQUIT, (void*)sigquit_handler, SIGNAL);
-	// core->Register(this, SIGTERM, (void*)sigterm_handler, SIGNAL);
-	// Daemon_core doesn't handle SIG_IGN, properly, just use the
-	// system for signal handling in this case. -Derek 6/27/97
-	install_sig_handler(SIGPIPE, SIG_IGN);
+	core->Register_Signal( DC_SIGCHLD, "SIGCHLD", (SignalHandler)reaper, "reaper" );
 #endif
 
 }
@@ -2250,7 +2236,7 @@ Scheduler::MarkDel(char* id)
 
 void
 Scheduler::Agent(char* server, char* capability, 
-				 char* name, int aliveFrequency, PROC_ID* jobId) 
+				 char* name, int aliveInterval, PROC_ID* jobId) 
 {
     int     	reply;                              /* reply from the startd */
 
@@ -2294,11 +2280,11 @@ Scheduler::Agent(char* server, char* capability,
 			dprintf( D_ALWAYS, "Couldn't send schedd string to startd.\n" );	
 			exit(EXITSTATUS_NOTOK);
 		}
-		if( !sock.snd_int(aliveFrequency, TRUE) ) {
+		if( !sock.snd_int(aliveInterval, TRUE) ) {
 			dprintf( D_ALWAYS, "Couldn't receive response from startd.\n" );	
 			exit(EXITSTATUS_NOTOK);
 		}
-		dprintf( D_ALWAYS, "alive frequency %d secs\n", aliveFrequency );
+		dprintf( D_ALWAYS, "alive interval %d secs\n", aliveInterval );
 	} else if( reply == NOT_OK ) {
 		dprintf( D_PROTOCOL, "(Request was NOT accepted)\n" );
 		exit(EXITSTATUS_NOTOK);
@@ -2470,8 +2456,6 @@ Scheduler::send_alive()
 	SafeSock	*sock;
     int     	i, j;
 
-	if(aliveFrequency == 0)
-	/* no need to send alive message */
 	{
 		return;
 	}
@@ -2481,32 +2465,26 @@ Scheduler::send_alive()
 		{
 			continue;
 		}
-        rec[i]->alive_countdown--;
-        if(rec[i]->alive_countdown <= 0)
-        /* time to send alive message */
-        {
-            rec[i]->alive_countdown = aliveInterval;
-			dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n",rec[i]->peer);
-			j++;
-			sock = new SafeSock(rec[i]->peer, 0);
-			sock->encode();
-			if( !sock->put(ALIVE) || 
-				!sock->code(rec[i]->id) || 
-				!sock->end_of_message() ) {
-					// UDP transport out of buffer space!
-                dprintf(D_ALWAYS, "\t(Can't send alive message to %d)\n",
-                        rec[i]->peer);
-				delete sock;
-                continue;
-            }
-				/* TODO: Someday, espcially once the accountant is done, the startd
-				should send a keepalive ACK back to the schedd.  if there is no shadow
-				to this machine, and we have not had a startd keepalive ACK in X amount
-				of time, then we should relinquish the match.  Since the accountant 
-				is not done and we are in fire mode, leave this for V6.1.  :^) -Todd 9/97
-				*/
+		dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n",rec[i]->peer);
+		j++;
+		sock = new SafeSock(rec[i]->peer, 0);
+		sock->encode();
+		if( !sock->put(ALIVE) || 
+			!sock->code(rec[i]->id) || 
+			!sock->end_of_message() ) {
+				// UDP transport out of buffer space!
+			dprintf(D_ALWAYS, "\t(Can't send alive message to %d)\n",
+					rec[i]->peer);
 			delete sock;
-        }
+			continue;
+		}
+			/* TODO: Someday, espcially once the accountant is done, the startd
+			   should send a keepalive ACK back to the schedd.  if there is no shadow
+			   to this machine, and we have not had a startd keepalive ACK in X amount
+			   of time, then we should relinquish the match.  Since the accountant 
+			   is not done and we are in fire mode, leave this for V6.1.  :^) -Todd 9/97
+			   */
+		delete sock;
     }
     dprintf(D_PROTOCOL,"## 6. (Done sending alive messages to %d startds)\n",j);
 }
