@@ -7,9 +7,9 @@ JobID_t Job::_jobID_counter = 0;  // Initialize the static data memeber
 
 //---------------------------------------------------------------------------
 const char *Job::queue_t_names[] = {
-    "QUEUE_INCOMING",
-    "QUEUE_WAITING ",
-    "QUEUE_OUTGOING",
+    "Q_PARENTS",
+    "Q_WAITING",
+    "Q_CHILDREN",
 };
 
 //---------------------------------------------------------------------------

@@ -14,10 +14,10 @@
 
 /**  The job class represents a job in the DAG and it's state in the Condor
      system.  A job is given a name, a CondorID, and three queues.  The
-     incoming queue is a list of parent jobs that this one depends on.  That
+     parents queue is a list of parent jobs that this one depends on.  That
      queue never changes once set.  The waiting queue is the same as the
-     incoming queue, but shrinks to emptiness has the parent jobs complete.
-     The outgoing queue is a list of child jobs that depend on this one.
+     parents queue, but shrinks to emptiness has the parent jobs complete.
+     The children queue is a list of child jobs that depend on this one.
      Once set, this queue never changes.<p>
 
      From DAGMan's point of view, a job has six basic states in the
@@ -35,7 +35,7 @@
      state either changes to PRERUN while the job's PRE script runs,
      or the job is submitted and its state changes immediately to
      SUBMITTED.  If the job completes successfully, its state is
-     changed to DONE, and the children (listed in this jobs OUTGOING
+     changed to DONE, and the children (listed in this jobs CHILDREN
      queue) are put on the DAG's ready list.  */
 class Job {
   public:
@@ -47,7 +47,7 @@ class Job {
         /** Parents of this job.  The list of parent jobs, which does not
             change while DAGMan is running.
         */
-        Q_INCOMING,
+        Q_PARENTS,
 
         /** Parents of this job not finished.  The list of parents that
             have not yet finished.  Once this queue is empty, this job may
@@ -58,17 +58,17 @@ class Job {
         /** Children of this job.  The list of child jobs, which does not
             change while DAGMan is running.
         */
-        Q_OUTGOING
+        Q_CHILDREN
     };
 
     /** The string names for the queue_t enumeration.  Use this for printing
-        the names "Q_INCOMING", "Q_WAITING", or "Q_OUTGOING".  For example,
-        to print out whether the outgoing queue is empty:<p>
+        the names "Q_PARENTS", "Q_WAITING", or "Q_CHILDREN".  For example,
+        to print out whether the children queue is empty:<p>
         <pre>
           Job * job;  // Assume this is assigned to a job
           printf ("The %s queue of job %s is %s empty\n",
-                  Job::queue_t_names[Q_OUTGOING], job->GetJobName(),
-                  job->IsEmpty(Q_OUTGOING) ? "", "not");
+                  Job::queue_t_names[Q_CHILDREN], job->GetJobName(),
+                  job->IsEmpty(Q_CHILDREN) ? "", "not");
         </pre>
     */
     static const char *queue_t_names[];
@@ -114,7 +114,7 @@ class Job {
     }
 
     /** Add a job to one of the queues.  Adds the job with ID jobID to
-        the incoming, outgoing, or waiting queue of this job.
+        the parents, children, or waiting queue of this job.
         @param jobID ID of the job to be added.  Should not be this job's ID
         @param queue The queue to add the job to
         @return true: success, false: failure (lack of memory)
@@ -131,7 +131,7 @@ class Job {
     }
 
     /** Remove a job from one of the queues.  Removes the job with ID
-        jobID from the incoming, outgoing, or waiting queue of this job.
+        jobID from the parents, children, or waiting queue of this job.
         @param jobID ID of the job to be removed.  Should not be this job's ID
         @param queue The queue to add the job to
         @return true: success, false: failure (jobID not found in queue)
@@ -172,8 +172,8 @@ class Job {
   
     /*  Job queue's
       
-        incoming -> dependencies coming into the Job
-        outgoing -> dependencies going out of the Job
+        parents -> dependencies coming into the Job
+        children -> dependencies going out of the Job
         waiting -> Jobs on which the current Job is waiting for output 
     */
     SimpleList<JobID_t> _queues[3];
