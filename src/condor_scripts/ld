@@ -61,12 +61,11 @@ fi
 # figure out if this version of the Condor syscall libraries were built with 
 # gcc3 or later. 
 is_gcc3=0
-ccv_lib=`condor_config_val lib`
-if [ -f $ccv_lib/libcompiler_libgcc.a ]; then
+if [ -f $CONDOR_LIBDIR/libcompiler_libgcc.a ]; then
 	is_gcc3=1
-	libcompiler_libstdcpp="$ccv_lib/libcompiler_libstdc++.a"
-	libcompiler_libgcc="$ccv_lib/libcompiler_libgcc.a"
-	libcompiler_libgcc_eh="$ccv_lib/libcompiler_libgcc_eh.a"
+	libcompiler_libstdcpp="$CONDOR_LIBDIR/libcompiler_libstdc++.a"
+	libcompiler_libgcc="$CONDOR_LIBDIR/libcompiler_libgcc.a"
+	libcompiler_libgcc_eh="$CONDOR_LIBDIR/libcompiler_libgcc_eh.a"
 fi
 
 # now, if we are gcc3 or later, add the stdc++ archive automatically to the
