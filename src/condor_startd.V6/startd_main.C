@@ -166,6 +166,11 @@ main_init( int, char* argv[] )
 	command_x_event( 0, 0, 0 );
 #endif
 
+		// Do a little sanity checking and cleanup
+	check_perms();
+	cleanup_execute_dir( 0 );	// 0 indicates we should clean everything.
+
+
 		// Instantiate Resource objects in the ResMgr
 	resmgr->init_resources();
 
@@ -195,10 +200,6 @@ main_init( int, char* argv[] )
 		// need to be evaluated
 	resmgr->walk( &(Resource::compute), A_EVALUATED );
 	resmgr->walk( &(Resource::refresh_classad), A_PUBLIC | A_EVALUATED ); 
-
-		// Do a little sanity checking and cleanup
-	check_perms();
-	cleanup_execute_dir( 0 );	// 0 indicates we should clean everything.
 
 		// If we EXCEPT, don't leave any starters lying around.
 	_EXCEPT_Cleanup = do_cleanup;
