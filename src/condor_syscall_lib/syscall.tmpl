@@ -587,7 +587,7 @@ int rename( const char *from, const char *to ) {
 		one day soon.  ...and now we do on some platforms -Todd 1/95 
 		*/
 	not_supported {
-#	if !defined(SUNOS41) && !defined(HPUX9)
+#	if !defined(SAVE_SIGSTATE)
 		int sigprocmask( int how, const sigset_t *set, sigset_t *o_set );
 		int sigpending( sigset_t *set );
 		int sigreturn( struct sigcontext *scp );
@@ -609,10 +609,10 @@ int rename( const char *from, const char *to ) {
 		for the benefit of Fortran compilers...
 		*/
 	ignored {
-#	if defined( AIX32)
+#	if defined( AIX32) && !defined(SAVE_SIGSTATE)
 		int sigaction( int sig, const struct sigaction *act,
 						struct sigaction *o_act );
-#	elif !defined (SUNOS41) && !defined (HPUX9)
+#	elif !defined (SAVE_SIGSTATE)
 		int sigaction( int sig, const struct sigaction *act,
 						struct sigaction *o_act ) : extract;
 #	endif
