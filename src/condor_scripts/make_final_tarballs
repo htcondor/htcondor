@@ -66,10 +66,10 @@ require 5.002;
 ######################################################################
 
 # These are the modules you actually want to build.
-@modules = ( "condor", "smp_startd", "view_server", "ckpt_server", "pvm", "sdk","eventd", "dagman", "condor-g" );
-#@modules = ( "smp_startd", "view_server", "ckpt_server", "pvm", "sdk" );
-#@modules = ( "condor", "view_server", "ckpt_server", "pvm", "mpi" );
-#@modules = ( "view_server", "ckpt_server", "pvm" );
+@modules = ( "condor", "ckpt_server", "pvm", "sdk","eventd", "dagman", "condor-g" );
+#@modules = ( "smp_startd", "ckpt_server", "pvm", "sdk" );
+#@modules = ( "condor", "ckpt_server", "pvm", "mpi" );
+#@modules = ( "ckpt_server", "pvm" );
 #@modules = ( "condor" );
 
 # List any special files, other than README, DOC, INSTALL, and
@@ -95,7 +95,6 @@ require 5.002;
 # English descriptions of the modules, used in the README, etc. 
 %module_descriptions = (
   "condor"        => "Main release",
-  "view_server"   => "CondorView server contrib module",
   "view_client"   => "CondorView client contrib module",
   "dagman"        => "DagMan contrib module",
   "pvm"           => "PVM contrib module",
