@@ -1,3 +1,9 @@
+		
+11/09/01 V6_3-security-branch
+		When the V6_3-security-branch was originally made, only files in
+		src/ were tagged. (See below 10/09/01).  This branches NTconfig,
+		config, and doc as well.
+
 11/8/01 V6_3-bandwidth-merge-1
         The end of the old bandwidth branch at the point where we
         merged it into V6_3-bandwidth-2-branch.  Hopefully, we'll
@@ -17,8 +23,9 @@
         It's just slightly post V6_3_1, with just a few GridManager changes.
 
 10/09/01 V6_3-security-branch
-        Branch for Zach's security-related changes.  Taken off the
-        V6_3-branch right after the V6_3_1 release tag.
+		Branch for Zach's security-related changes.  Taken off the
+		V6_3-branch right after the V6_3_1 release tag.  Only the
+		src/ directory was branched by mistake, see above (11/09)
 
 10/08/01 V6_3_1
         The 6.3.1 release tag, for UNIX. It lives on the V6_3-branch
