@@ -717,7 +717,7 @@ ParallelShadow::handleJobRemoval( int sig ) {
 void
 ParallelShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 
-	ExprTree *tree = NULL, *rhs = NULL, *lhs = NULL;
+	ExprTree *rhs = NULL;
 	char rhstr[ATTRLIST_MAX_EXPRESSION];
 	char lhstr[128];
 	char final[ATTRLIST_MAX_EXPRESSION];
@@ -725,17 +725,19 @@ ParallelShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 
 	sprintf( node, "%d", nodenum );
 
-	ad->ResetExpr();
-	while( (tree = ad->NextExpr()) ) {
+	ClassAd::iterator adIter;
+	ClassAdUnParser unp;
+	string rhstring;
+	for( adIter = ad->begin( ); adIter != ad->end( ); adIter++ ) {
 		rhstr[0] = '\0';
 		lhstr[0] = '\0';
-		if( (lhs = tree->LArg()) ) {
-			lhs->PrintToStr (lhstr);
+		strcpy( lhstr, adIter->first.c_str( ) );
+		if( adIter->second ) {
+			unp.Unparse( rhstring, adIter->second );
+			strcpy( rhstr, rhstring.c_str( ) );
 		}
-		if( (rhs = tree->RArg()) ) {
-			rhs->PrintToStr (rhstr);
-		}
-		if( !lhs || !rhs ) {
+		if( !rhs ) {
+			dprintf( D_ALWAYS, "Could not replace $(NODE) in ad!\n" );
 			dprintf( D_ALWAYS, "Could not replace $(NODE) in ad!\n" );
 			return;
 		}
