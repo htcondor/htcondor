@@ -74,8 +74,22 @@ reinitialize ()
 	char *tmp;
 
 	// get timeout values
-	NegotiatorInterval 	= (tmp=param("NEGOTIATOR_INTERVAL")) ? atoi(tmp): 300;
-	NegotiatorTimeout  	= (tmp=param("NEGOTIATOR_TIMEOUT"))  ? atoi(tmp): 30;
+
+	tmp = param("NEGOTIATOR_INTERVAL");
+	if( tmp ) {
+		NegotiatorInterval = atoi(tmp);
+		free( tmp );
+	} else {
+		NegotiatorInterval = 300;
+	}
+
+	tmp = param("NEGOTIATOR_TIMEOUT");
+	if( tmp ) {
+		NegotiatorTimeout = atoi(tmp);
+		free( tmp );
+	} else {
+		NegotiatorTimeout = 30;
+	}
 
 	// get PreemptionHold expression
 	if (PreemptionHold) delete PreemptionHold;
@@ -443,7 +457,7 @@ negotiate (char *scheddName, char *scheddAddr, float priority, int scheddLimit,
 		startdAds.Delete (offer);
 	}
 
-	// 3.  check if we hit out resource limit
+	// 3.  check if we hit our resource limit
 	if (i == scheddLimit)
 	{
 		dprintf (D_ALWAYS, 	
@@ -451,6 +465,7 @@ negotiate (char *scheddName, char *scheddAddr, float priority, int scheddLimit,
 	}
 
 	// break off negotiations
+	sock.encode();
 	if (!sock.put (END_NEGOTIATE) || !sock.end_of_message())
 		dprintf (D_ALWAYS, "\t\tCould not send END_NEGOTIATE/eom\n");
 
@@ -583,9 +598,9 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		return MM_BAD_MATCH;
 	}
 
-	// 2.  pass the startd MATCH_INFO and capability strings
+	// 2.  pass the startd MATCH_INFO and capability string
 	dprintf (D_FULLDEBUG, "\t\t\tSending MATCH_INFO/capability( \"%s\" )/eom to"
-				" startd", capability);
+				" startd\n", capability);
 	startdSock.encode();
 	if (!startdSock.put (MATCH_INFO) || 
 		!startdSock.put (capability) || 
