@@ -1,0 +1,439 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+/* implements a simple cache. Also handles refreshes to keep cache
+elements from getting stale. */
+
+#include "condor_common.h"
+#include "passwd_cache.h"
+
+int compute_user_hash(const MyString &key, int numBuckets) {
+    return ( key.Hash() % numBuckets );
+};
+
+passwd_cache::passwd_cache() {
+
+	uid_table = new UidHashTable(10, compute_user_hash);
+	group_table = new GroupHashTable(10, compute_user_hash);
+		/* figure out the max number of groups a user can have */
+//	Entry_lifetime = paramInteger("NIS_CACHE_ENTRY_LIFETIME", 3600);
+	Entry_lifetime = 60*60*1; /* seconds */
+}
+
+passwd_cache::~passwd_cache() {
+	group_entry *gent;
+	uid_entry *uent;
+	MyString index;
+
+	group_table->startIterations();
+	while ( group_table->iterate(index, gent) ) {
+		delete[] gent->gidlist;
+		delete gent;
+		group_table->remove(index);
+	}
+	delete group_table;
+
+	uid_table->startIterations();
+	while ( uid_table->iterate(index, uent) ) {
+		delete uent;
+		uid_table->remove(index);
+	}
+	delete uid_table;
+}
+
+/* uses initgroups() and getgroups() to get the supplementary
+   group info, then stashes it in our cache. We must be root when calling
+ this function, since it calls initgroups(). */
+bool passwd_cache::cache_groups(const char* user) {
+
+	bool result;
+	group_entry *group_cache_entry;
+	gid_t user_gid;
+	int count;
+   
+	count = 0;
+	result = true;
+
+	if ( user == NULL ) {
+		return false;
+	} else { 
+
+		if ( !lookup_group(user, group_cache_entry) ) {
+			init_group_entry(group_cache_entry);
+		}
+
+		if ( !get_user_gid(user, user_gid) ) {
+			dprintf(D_ALWAYS, "cache_groups(): get_user_gid() failed! "
+				   "errno=%s\n", strerror(errno));
+			return false;
+		}
+
+		/* We need to get the primary and supplementary group info, so
+		 * we're going to call initgroups() first, then call get groups
+		 * so we can cache whatever we get.*/
+
+		count = 0;
+		if ( initgroups(user, user_gid) != 0 ) {
+			dprintf(D_ALWAYS, "passwd_cache: initgroups() failed! errno=%s\n",
+					strerror(errno));
+			return false;
+		}
+
+		/* get the number of groups from the OS first */
+		group_cache_entry->gidlist_sz = ::getgroups(0, NULL);
+
+		if ( group_cache_entry->gidlist_sz < 0 ) {
+			result = false;
+		} else {
+			/* now get the group list */
+	   		group_cache_entry->gidlist = new
+			  		 	gid_t[group_cache_entry->gidlist_sz];
+			if (getgroups( 	group_cache_entry->gidlist_sz,
+					 		group_cache_entry->gidlist) < 0) {
+				dprintf(D_ALWAYS, "cache_groups(): getgroups() failed! "
+						"errno=%s\n", strerror(errno));
+				result = false;
+			} else {
+				/* finally, insert info into our cache */
+				group_table->insert(user, group_cache_entry);
+			}
+		}
+		return result;
+	}
+
+}
+
+/* this is the public interface to cache a user's uid.
+ * give it a username, and it stashes its uid in our cache.*/
+bool
+passwd_cache::cache_uid(const char* user) {
+
+	struct passwd *pwent;
+
+	pwent = getpwnam(user);
+	if ( pwent == NULL ) {
+		dprintf(D_ALWAYS, "passwd_cache: getpwnam() failed at line %d "
+				"with error %s\n", __LINE__, strerror(errno));
+		return false;
+	} else {
+	   	return cache_uid(user, pwent);
+	}
+}
+
+/* uses standard system functions to get user's uid, 
+ * then stashes it in our cache. This function is kept private
+ * since we don't want to expose the ability to supply your own 
+ * passwd struct to the end user. Internally, we can supply our
+ * own passwd struct if we've already looked it up for some other
+ * reason. */
+bool
+passwd_cache::cache_uid(const char* user, struct passwd *pwent) {
+	
+	uid_entry *cache_entry;
+   
+	if ( user == NULL || pwent == NULL ) {
+			/* a little sanity check */
+		return false;
+	} else {
+
+		if ( !lookup_uid(user, cache_entry) ) {
+				/* if we don't already have this entry, create a new one */
+			init_uid_entry(cache_entry);
+		}
+
+	   	cache_entry->uid = pwent->pw_uid;
+	   	cache_entry->gid = pwent->pw_gid;
+			/* reset lastupdated */
+		cache_entry->lastupdated = time(NULL);
+		uid_table->insert(user, cache_entry);
+		return true;
+	}
+}
+
+/* gives us the number of groups a user is a member of */
+int
+passwd_cache::num_groups(const char* user) {
+
+	group_entry *cache_entry;
+
+	if ( !lookup_group( user, cache_entry) ) {
+			/* CACHE MISS */
+
+			/* the user isn't cached, so load it in first */
+		if ( cache_groups(user) ) {
+				/* if cache user succeeded, this should always succeed */
+			lookup_group(user, cache_entry);
+		} else {
+			dprintf(D_ALWAYS, "Failed to cache info for user %s\n",
+				   	user);
+			return -1;
+		}
+	} else {
+		/* CACHE HIT */
+	}
+	return cache_entry->gidlist_sz;
+}
+
+/* retrieves user's groups from cache */
+bool
+passwd_cache::get_groups( const char *user, size_t groupsize, gid_t gid_list[] ) {
+
+    unsigned int i;
+	group_entry *cache_entry;
+
+
+		/* , check the cache for an existing entry */
+	if ( !lookup_group( user, cache_entry) ) {
+			/* CACHE MISS */
+
+			/* the user isn't cached, so load it in first */
+		if ( cache_groups(user) ) {
+				/* if cache user succeeded, this should always succeed */
+			lookup_group(user, cache_entry);
+		} else {
+			dprintf(D_ALWAYS, "Failed to cache info for user %s\n",
+				   	user);
+			return false;
+		}
+	} else {
+			/* CACHE HIT */
+	}
+
+	if ( cache_entry->gidlist_sz > groupsize ) {
+		dprintf(D_FULLDEBUG, "Inadequate size for gid list!\n");
+		return false;
+	}
+
+		/* note that if groupsize is 0, only the size is returned. */
+	for (i=0; (i<groupsize && i<cache_entry->gidlist_sz); i++) {
+		gid_list[i] = cache_entry->gidlist[i];
+	}
+	return true;
+}
+
+bool
+passwd_cache::get_user_uid( const char* user, uid_t &uid ) {
+
+	uid_entry *cache_entry;
+
+	if ( !lookup_uid( user, cache_entry) ) {
+			/* CACHE MISS */
+		if ( cache_uid(user) ) {
+			if ( !lookup_uid(user, cache_entry) ) {
+				dprintf(D_ALWAYS, "Failed to cache user info for user %s\n",
+					   	user);
+				return false;
+			}
+		} else {
+				// cache_user() failed. not much we can do there.
+			return false;
+		}
+	} 
+	uid = cache_entry->uid;
+	return true;
+}
+
+bool
+passwd_cache::get_user_gid( const char* user, gid_t &gid ) {
+
+	uid_entry *cache_entry;
+
+	if ( !lookup_uid( user, cache_entry) ) {
+			/* CACHE MISS */
+		if ( cache_uid(user) ) {
+			if ( !lookup_uid(user, cache_entry) ) {
+				dprintf(D_ALWAYS, "Failed to cache user info for user %s\n", 
+						user);
+				return false;
+			}
+		} else {
+				// cache_user() failure. Not much we can do there.
+			return false;
+		}
+	} 
+	gid = cache_entry->gid;
+	return true;
+}
+
+bool
+passwd_cache::get_user_name(const uid_t uid, char *&user) {
+
+	uid_entry *ent;
+	struct passwd *pwd;
+	MyString index;
+
+	uid_table->startIterations();
+	while ( uid_table->iterate(index, ent) ) {
+		if ( ent->uid == uid ) {
+			user = strdup(index.Value());
+			return true;
+		}
+	}
+	
+	/* no cached entry, so we need to look up 
+	 * the entry and cache it */
+
+	pwd=getpwuid(uid);
+	if ( pwd ) {
+
+		/* get the user in the cache */
+		cache_uid(pwd->pw_name);
+
+		user = strdup(pwd->pw_name);
+		return true;
+	} else {
+
+		user = NULL;
+		/* can't find a user with that uid, so fail. */
+		return false;
+	}
+}
+
+bool
+passwd_cache::init_groups( const char* user ) {
+
+	gid_t *gid_list;
+	bool result;
+	int siz;
+
+	siz = num_groups(user);
+	result = true;
+	gid_list = NULL;
+
+	if ( siz > 0 ) {
+
+		gid_list = new gid_t[siz];
+
+		if ( get_groups(user, siz, gid_list) ) { 
+
+			if ( setgroups(siz, gid_list) != 0 ) {
+				dprintf(D_ALWAYS, "passwd_cache: setgroups( %s ) failed.\n", user);
+				result = false;
+			} else {
+					/* success */
+				result = true;
+			}
+		} else {
+			dprintf(D_ALWAYS, "passwd_cache: getgroups( %s ) failed.\n", user);
+			result = false;
+		}
+
+
+	} else {
+			/* error */
+		dprintf(D_ALWAYS, "passwd_cache: getgroups( %s ) failed.\n", user);
+		result = false;
+	}
+
+	if ( gid_list ) { delete[] gid_list; }
+	return result;
+}
+
+/* wrapper function around hashtable->lookup() that also decides 
+ * when to refresh the requested entry */
+bool
+passwd_cache::lookup_uid(const char *user, uid_entry *&uce) {
+
+	if ( uid_table->lookup(user, uce) < 0 ) {
+		/* cache miss */
+		return false;
+	} else {
+		if ( (time(NULL) - uce->lastupdated) > Entry_lifetime ) {
+			/* time to refresh the entry! */
+			dprintf(D_FULLDEBUG, "uid cache entry expired for user %s\n", user);
+			cache_uid(user);
+			return uid_table->lookup(user, uce);
+		} else {
+			/* entry is still considered valid, so just return */
+			return true;
+		}
+	}
+}
+
+/* wrapper function around hashtable->lookup() that also decides 
+ * when to refresh the requested entry */
+
+bool
+passwd_cache::lookup_group(const char *user, group_entry *&gce) {
+
+	if ( group_table->lookup(user, gce) < 0 ) {
+			/* cache miss */
+		return false;
+	} else {
+		if ( (time(NULL) - gce->lastupdated) > Entry_lifetime ) {
+				/* time to refresh the entry! */
+			dprintf(D_FULLDEBUG, "uid cache entry expired for user %s\n", user);
+			cache_groups(user);
+			return group_table->lookup(user, gce);
+		} else {
+			/* entry is still considered valid, so just return */
+			return true;
+		}
+	}
+}
+
+/* For testing purposes only */
+int
+passwd_cache::get_uid_entry_age(const char *user) {
+
+	uid_entry *uce;
+
+	if ( !lookup_uid(user, uce) ) {
+		return -1;
+	} else {
+		return (time(NULL) - uce->lastupdated);
+	}
+}
+
+/* For testing purposes only */
+int
+passwd_cache::get_group_entry_age(const char *user) {
+
+	group_entry *gce;
+
+	if ( !lookup_group(user, gce) ) {
+		return -1;
+	} else {
+		return (time(NULL) - gce->lastupdated);
+	}
+}
+
+/* allocates new cache entry and zeros out all the fields */
+void
+passwd_cache::init_uid_entry(uid_entry *&uce) {
+		
+	uce = new uid_entry();
+	uce->uid = INT_MAX; 
+	uce->gid = INT_MAX; 
+	uce->lastupdated = time(NULL);
+}
+
+/* allocates new cache entry and zeros out all the fields */
+void
+passwd_cache::init_group_entry(group_entry *&gce) {
+		
+	gce = new group_entry();
+	gce->gidlist = NULL;
+	gce->gidlist_sz = 0;
+	gce->lastupdated = time(NULL);
+}
