@@ -61,6 +61,7 @@ class Server
 	int            num_peers;
 	int		       replication_level;
 	int			   reclaim_interval;
+	int			   clean_interval;
 	ClassAdCollection	*CkptClassAds;
     int SetUpPort(u_short port);
 	void SetUpPeers();
