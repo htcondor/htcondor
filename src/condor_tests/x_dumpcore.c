@@ -1,6 +1,17 @@
+#include <stdio.h>
+#include <stdlib.h>
 
-main( int argc, char **argv )
+int main( int argc, char **argv )
 {
-	char *space = malloc(600000);
-	int dumpnow = 7/0;
+	char *null = NULL;
+	char *space;
+	int dumpnow;
+
+	space = malloc(600000);
+
+	/* try a couple of different ways to dump core. */
+	dumpnow = 7 / 0;
+	*null = '\0';
+
+	return 0;
 }
