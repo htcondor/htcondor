@@ -574,62 +574,30 @@ BaseShadow::updateExprTree( ExprTree* tree )
 		return false;
 	}
 	char* name = ((Variable*)lhs)->Name();
-
-	switch( rhs->MyType() ) {
-	case LX_FLOAT:
-		if( SetAttributeFloat(cluster, proc, name,
-							  (float)((Float*)rhs)->Value()) < 0 ) {
-			dprintf( D_ALWAYS, 
-					 "updateExprTree: Failed SetAttributeFloat(%s, %f)\n",
-					 name, (float)((Float*)rhs)->Value() );
-			return false;
-		}
-		dprintf( D_FULLDEBUG, 
-				 "updateExprTree: SetAttributeFloat(%s, %f)\n",
-				 name, (float)((Float*)rhs)->Value() );
-		break;
-	case LX_INTEGER:
-		if( SetAttributeInt(cluster, proc, name,
-							  (int)((Integer*)rhs)->Value()) < 0 ) {
-			dprintf( D_ALWAYS, 
-					 "updateExprTree: Failed SetAttributeInt(%s, %d)\n",
-					 name, (int)((Integer*)rhs)->Value() );
-			return false;
-		}
-		dprintf( D_FULLDEBUG, 
-				 "updateExprTree: SetAttributeInt(%s, %d)\n",
-				 name, (int)((Integer*)rhs)->Value() );
-		break;
-	case LX_STRING:
-		if( SetAttributeString(cluster, proc, name,
-							   (char*)((String*)rhs)->Value()) < 0 ) {
-			dprintf( D_ALWAYS, 
-					 "updateExprTree: Failed SetAttributeString(%s, %s)\n",
-					 name, (char*)((String*)rhs)->Value() );
-			return false;
-		}
-		dprintf( D_FULLDEBUG, 
-				 "updateExprTree: SetAttributeString(%s, \"%s\")\n",
-				 name, (char*)((String*)rhs)->Value() );
-		break;
-	default:
-		{
-			char* tmp = NULL;
-			rhs->PrintToNewStr( &tmp );
-			if( SetAttribute(cluster, proc, name, tmp) < 0 ) {
-				dprintf( D_ALWAYS, 
-						 "updateExprTree: Failed SetAttribute(%s, %s)\n",
-						 name, tmp );
-				free( tmp );
-				return false;
-			}
-			dprintf( D_FULLDEBUG, 
-					 "updateExprTree: SetAttribute(%s, %s)\n",
-					 name, tmp );
-			free( tmp );
-			break;
-		}
+	if( ! name ) {
+		return false;
+	}		
+		// This code used to be smart about figuring out what type of
+		// expression this is and calling SetAttributeInt(), 
+		// SetAttributeString(), or whatever it needed.  However, all
+		// these "special" versions of SetAttribute*() just force
+		// everything back down into the flat string representation
+		// and call SetAttribute(), so it was both a waste of effort
+		// here, and made this code needlessly more complex.  
+		// Derek Wright, 3/25/02
+	char* tmp = NULL;
+	rhs->PrintToNewStr( &tmp );
+	if( SetAttribute(cluster, proc, name, tmp) < 0 ) {
+		dprintf( D_ALWAYS, 
+				 "updateExprTree: Failed SetAttribute(%s, %s)\n",
+				 name, tmp );
+		free( tmp );
+		return false;
 	}
+	dprintf( D_FULLDEBUG, 
+			 "updateExprTree: SetAttribute(%s, %s)\n",
+			 name, tmp );
+	free( tmp );
 	return true;
 }
 
