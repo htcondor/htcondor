@@ -54,7 +54,7 @@ int _libc_FORK(...);
 int SYSCONF(...);
 int SYSCALL(...);
 
-#if defined(LINUX)
+#if defined(LINUX) || defined(IRIX65)
 int _condor_xstat(int version, const char *path, struct stat *buf);
 int _condor_lxstat(int version, const char *path, struct stat *buf);
 int _condor_fxstat(int version, int fd, struct stat *buf);
@@ -66,7 +66,7 @@ int __xstat(int, const char *, struct stat *);
 int __fxstat(int, int, struct stat *);
 int __lxstat(int, const char *, struct stat *);
 
-#if defined(GLIBC21)
+#if defined(GLIBC21) || defined(IRIX65)
 int _condor_xstat64(int version, const char *path, struct stat64 *buf);
 int _condor_lxstat64(int version, const char *path, struct stat64 *buf);
 int _condor_fxstat64(int versino, int fd, struct stat64 *buf);
@@ -79,7 +79,7 @@ int __fxstat64(int, int, struct stat64 *);
 int __lxstat64(int, const char *, struct stat64 *);
 #endif
 
-#endif /* LINUX */
+#endif /* LINUX or IRIX65 */
 
 /*************************************************************
 The following switches are for syscalls that affect the open
@@ -441,7 +441,7 @@ int munmap( MMAP_T addr, size_t length )
 }
 #endif /* defined( LINUX ) */
 
-#if defined(LINUX)
+#if defined(LINUX) || defined(IRIX65)
 
 /* 
    There's a whole bunch of Linux-specific evilness w/ [_fxl]*stat.
@@ -492,34 +492,52 @@ int munmap( MMAP_T addr, size_t length )
    have.
 */
 
-#if defined(SYS_prev_stat)
-#   define CONDOR_SYS_stat SYS_prev_stat
-#elif defined(SYS_stat)
-#   define CONDOR_SYS_stat SYS_stat
-#elif defined(SYS_old_stat)
-#   define CONDOR_SYS_stat SYS_old_stat
+#if defined(LINUX)
+#	if defined(SYS_prev_stat)
+#	   define CONDOR_SYS_stat SYS_prev_stat
+#	elif defined(SYS_stat)
+#	   define CONDOR_SYS_stat SYS_stat
+#	elif defined(SYS_old_stat)
+#	   define CONDOR_SYS_stat SYS_old_stat
+#	else
+#	   error "No local version of SYS_*_stat on this platform!"
+#	endif
+#elif defined(IRIX65)
+#	define CONDOR_SYS_stat SYS_xstat
 #else
-#   error "No local version of SYS_*_stat on this platform!"
+#	error "Do not understand the stat syscall mapping on this platform!"
 #endif
 
-#if defined(SYS_prev_fstat)
-#   define CONDOR_SYS_fstat SYS_prev_fstat
-#elif defined(SYS_fstat)
-#   define CONDOR_SYS_fstat SYS_fstat
-#elif defined(SYS_old_fstat)
-#   define CONDOR_SYS_fstat SYS_old_fstat
+#if defined(LINUX)
+#	if defined(SYS_prev_fstat)
+#	   define CONDOR_SYS_fstat SYS_prev_fstat
+#	elif defined(SYS_fstat)
+#	   define CONDOR_SYS_fstat SYS_fstat
+#	elif defined(SYS_old_fstat)
+#	   define CONDOR_SYS_fstat SYS_old_fstat
+#	else
+#		error "No local version of SYS_*_fstat on this platform!"
+#	endif
+#elif defined(IRIX65)
+#	define CONDOR_SYS_fstat SYS_fxstat
 #else
-#error "No local version of SYS_*_fstat on this platform!"
+#	error "Do not understand the stat syscall mapping on this platform!"
 #endif
 
-#if defined(SYS_prev_lstat)
-#   define CONDOR_SYS_lstat SYS_prev_lstat
-#elif defined(SYS_lstat)
-#   define CONDOR_SYS_lstat SYS_lstat
-#elif defined(SYS_old_lstat)
-#   define CONDOR_SYS_lstat SYS_old_lstat
+#if defined(LINUX)
+#	if defined(SYS_prev_lstat)
+#	   define CONDOR_SYS_lstat SYS_prev_lstat
+#	elif defined(SYS_lstat)
+#	   define CONDOR_SYS_lstat SYS_lstat
+#	elif defined(SYS_old_lstat)
+#	   define CONDOR_SYS_lstat SYS_old_lstat
+#	else
+#		error "No local version of SYS_*_lstat on this platform!"
+#	endif
+#elif defined(IRIX65)
+#	define CONDOR_SYS_lstat SYS_lxstat
 #else
-#error "No local version of SYS_*_lstat on this platform!"
+#	error "Do not understand the stat syscall mapping on this platform!"
 #endif
 
 
@@ -605,7 +623,11 @@ int __lxstat64(int version, const char *path, struct stat64 *buf)
 */
 
 
-#include "linux_kernel_stat.h"
+#if defined(LINUX)
+	#include "linux_kernel_stat.h"
+#elif defined(IRIX65)
+	#define kernel_stat /*struct*/ stat
+#endif /* LINUX */
 
 void 
 _condor_k_stat_convert( int version, const struct kernel_stat *source, 
@@ -628,6 +650,7 @@ _condor_k_stat_convert( int version, const struct kernel_stat *source,
 
 		/* Now, handle the different versions we might be passed */
 	switch( version ) {
+#if defined(LINUX)
 	case _STAT_VER_LINUX_OLD:
 			/*
 			  This is the old version, which is identical to the
@@ -635,7 +658,7 @@ _condor_k_stat_convert( int version, const struct kernel_stat *source,
 			  care about, so we're done.
 			*/
 		break;
-    case _STAT_VER_LINUX:
+	case _STAT_VER_LINUX:
 			/* 
 			  This is the new version, that has some extra fields we
 			  need to 0-out.
@@ -648,6 +671,12 @@ _condor_k_stat_convert( int version, const struct kernel_stat *source,
 		target->__unused4 = 0;
 		target->__unused5 = 0;
 		break;
+#elif defined(IRIX65)
+	case _STAT_VER:
+		/* XXX do nothing right now */
+		break;
+#endif
+
 	default:
 			/* Some other version: blow-up */
 		EXCEPT( "_condor_k_stat_convert: unknown version (%d) of struct stat!", version );
@@ -732,6 +761,7 @@ _condor_s_stat_convert( int version, const struct stat *source,
 
 		/* Now, handle the different versions we might be passed */
 	switch( version ) {
+#if defined(LINUX)
 	case _STAT_VER_LINUX_OLD:
 			/*
 			  This is the old version, which is identical to the
@@ -752,6 +782,13 @@ _condor_s_stat_convert( int version, const struct stat *source,
 		target->__unused4 = 0;
 		target->__unused5 = 0;
 		break;
+#elif defined(IRIX65)
+	case _STAT_VER:
+		/* XXX do nothing right now*/
+		/* This crap don't work... */
+		dprintf(D_FULLDEBUG, "_condor_s_stat_convert() did as instructed\n");
+		break;
+#endif
 	default:
 			/* Some other version: blow-up */
 		EXCEPT( "_condor_s_stat_convert: unknown version (%d) of struct stat!", version );
@@ -810,6 +847,12 @@ _condor_s_stat_convert64( int version, const struct stat *source,
 }
 #endif
 
+#if defined(LINUX)
+	#define OPT_STAT_VERSION 
+#elif defined(IRIX65)
+	#define OPT_STAT_VERSION version,
+#endif
+
 /*
    Finally, implement the _condor_[xlf]stat() functions which do all
    the work of checking if we want local or remote, and handle the
@@ -825,7 +868,7 @@ int _condor_xstat(int version, const char *path, struct stat *buf)
 	_condor_signals_disable();
 
 	if( LocalSysCalls() ) {
-		rval = syscall( CONDOR_SYS_stat, path, &kbuf );
+		rval = syscall( CONDOR_SYS_stat, OPT_STAT_VERSION path, &kbuf );
 		_condor_k_stat_convert( version, &kbuf, buf );
 	} else {
 		rval = REMOTE_syscall( CONDOR_stat, path, &sbuf );
@@ -870,7 +913,7 @@ _condor_fxstat(int version, int fd, struct stat *buf)
 		rval = -1;
 	} else {
 		if( LocalSysCalls() || _condor_file_is_local(fd) ) {
-			rval = syscall( CONDOR_SYS_fstat, fd, &kbuf );
+			rval = syscall( CONDOR_SYS_fstat, OPT_STAT_VERSION fd, &kbuf );
 			_condor_k_stat_convert( version, &kbuf, buf );
 		} else {
 			rval = REMOTE_syscall( CONDOR_fstat, real_fd, &sbuf );
@@ -920,7 +963,7 @@ int _condor_lxstat(int version, const char *path, struct stat *buf)
 	_condor_signals_disable();
 
 	if( LocalSysCalls() ) {
-		rval = syscall( CONDOR_SYS_lstat, path, &kbuf );
+		rval = syscall( CONDOR_SYS_lstat, OPT_STAT_VERSION path, &kbuf );
 		_condor_k_stat_convert( version, &kbuf, buf );
 	} else {
 		rval = REMOTE_syscall( CONDOR_lstat, path, &sbuf );
@@ -962,9 +1005,9 @@ These definitions look wrong to me.  I think they may need to change
 to be similar to the Linux definitions.  thain, 28 Dec 1999.
 */
 
-#if defined(IRIX) || defined(Solaris)
+#if defined(IRIX62) || defined(Solaris)
 
-#if defined(Solaris) || defined(IRIX)
+#if defined(Solaris) || defined(IRIX62)
 int _xstat(const int ver, const char *path, struct stat *buf)
 #endif
 {
@@ -982,7 +1025,7 @@ int _xstat(const int ver, const char *path, struct stat *buf)
 	return rval;
 }
 
-#if defined(Solaris) || defined(IRIX)
+#if defined(Solaris) || defined(IRIX62)
 int _lxstat(const int ver, const char *path, struct stat *buf)
 #endif
 {
@@ -1000,7 +1043,7 @@ int _lxstat(const int ver, const char *path, struct stat *buf)
 	return rval;
 }
 
-#if defined(Solaris) || defined(IRIX)
+#if defined(Solaris) || defined(IRIX62)
 int _fxstat(const int ver, int fd, struct stat *buf)
 #endif
 {
