@@ -1694,6 +1694,149 @@ EXPR	*expr;
 	expr->len++;
 }
 		
+/*
+** deletes an expression from the context : replaces this expression
+** by a TRUE or FALSE whichever is appropriate
+*/
+int
+delete_stmt(expr, context)
+EXPR    *expr;
+CONTEXT *context;
+{
+    int     i;
+    char    *name;
 
-	    
+	dprintf(D_ALWAYS, "Trying to delete this expr:\n");
+	display_expr(expr);
 
+    if( expr->data[0]->type != NAME ) {
+        dprintf( D_ALWAYS, "First element in statement not a NAME" );
+        return FALSE;
+    }
+    name = expr->data[0]->s_val;
+
+    for( i=0; i<context->len; i++ ) 
+	{
+        if( context->data[i]->data[0]->type != NAME ) 
+		{
+            dprintf( D_ALWAYS,
+                "Bad machine context, first elem in expr [%d] is type %d",
+                i, context->data[i]->data[0]->type );
+            return FALSE;
+        }
+		if( strcmp(name,context->data[i]->data[0]->s_val) == MATCH )
+		{
+			/* found where to delete */
+			return delete_expr(context->data[i], expr,AND);
+		}
+	}
+	dprintf(D_ALWAYS,"delete_stmt : Expression not found\n");
+	return FALSE;
+}
+
+int
+delete_expr(expr, this, operator)
+EXPR	*expr, *this;
+int operator;
+{
+	int i, loop;
+	int	no_elem;
+	int start, end, flag;
+	int	to,from;
+
+	no_elem = this->len -3; /* number of elements to be compared */
+	start   = 1;                /* index of first elem to be compared */
+	end     = start + no_elem - 1;
+
+	while ( end < (expr->len-2))
+	{
+		dprintf(D_FULLDEBUG, "start = %d end = %d\n", start,end);
+		for ( i=1,loop=start,flag =TRUE; i < this->len-2; i++, loop++)
+			if ( !cmp_elem(expr->data[loop], this->data[i]) ) 
+			{
+				flag = FALSE;
+				break;
+			}
+
+		if ( flag == TRUE ) /* matching pattern found */
+		{
+			/* replace this tree with an appripriate boolean */
+			if (expr->data[end+1]->type != operator )
+			{
+				dprintf(D_ALWAYS, " Types do not match\n");
+				return FALSE;
+			}
+			switch ( expr->data[end+1]->type )
+			{
+				case AND : 	
+					expr->data[end]->type = BOOL;
+					expr->data[end]->b_val= 1;
+					break;
+				case OR : 	
+					expr->data[end]->type = BOOL;
+					expr->data[end]->b_val= 0;
+					break;
+				default:
+					dprintf(D_ALWAYS, "Do not know how to delete\n");
+					break;
+			}
+			/* remove unnecessary elements */
+			for ( i=start; i < end-1; i++ )
+				if ( expr->data[i] ) free (expr->data[i]);
+			for ( to=start, from=end; from < expr->len; to++, from++)
+				expr->data[to] = expr->data[from];
+			expr->len -= (no_elem -1);
+			return TRUE;
+		}
+		start++;
+		end++;
+	}                                 /* end of while */
+	dprintf(D_ALWAYS,"Delete_expr: expr not matched \n");
+	return FALSE;
+}
+
+/*
+** returns TRUE if both elements are same, else FALSE
+*/
+int
+cmp_elem(elem1, elem2)
+ELEM	*elem1, *elem2;
+{
+	if ( elem1->type != elem2->type) return FALSE;
+	switch ( elem1->type )
+	{
+		case FLOAT: if ( elem1->f_val != elem2->f_val) return FALSE;
+					break;
+		case INT  : if ( elem1->i_val != elem2->i_val) return FALSE;
+					break;
+		case NAME:
+		case STRING:if ( strcmp(elem1->s_val, elem2->s_val) != 0)
+					return FALSE;
+	}
+	return TRUE;
+}
+
+#if 0
+/*
+**	for debugging, prints out an element : dhruba
+*/
+int
+my_display_elem(elem)
+ELEM*	elem;
+{
+	switch ( elem->type )
+	{
+		case FLOAT: dprintf(D_FULLDEBUG, "Type = FLOAT,val = %f\n", elem->f_val);
+					break;
+		case INT  : dprintf(D_FULLDEBUG, "Type = INT,  val = %d\n", elem->i_val);
+					break;
+		case STRING:dprintf(D_FULLDEBUG, "Type = STR  ,val = %s\n", elem->s_val);
+					break;
+		case NAME:dprintf(D_FULLDEBUG, "Type = NAME  ,val = %s\n", elem->s_val);
+					break;
+		default   : dprintf(D_FULLDEBUG, "Type = %d \n", elem->type);
+					break;
+	}
+}
+#endif
+	
