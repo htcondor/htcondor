@@ -6,7 +6,7 @@
 typedef struct procinfo ProcInfo;
 #endif
 
-#if defined(ULTRIX42) || defined(ULTRIX43) || defined(SUNOS41)
+#if defined(ULTRIX42) || defined(ULTRIX43) || defined(SUNOS41) || defined(OSF1)
 typedef struct proc ProcInfo;
 #endif
 
