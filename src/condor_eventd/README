@@ -22,8 +22,8 @@ For example:
   EVENTD_DEBUG = D_FULLDEBUG
   EVENTD_INTERVAL = 900
   EVENT_LIST = TestEvent, TestEvent2
-  TestEvent = SHUTDOWN W 16:00 3600 2 TestEventConstraint TestEventRank
-  TestEvent = SHUTDOWN F 14:00 1200 2 TestEventConstraint2 TestEventRank
+  TestEvent = SHUTDOWN W 16:00 1:00 2 TestEventConstraint TestEventRank
+  TestEvent2 = SHUTDOWN F 14:00 0:30 2 TestEventConstraint2 TestEventRank
   TestEventConstraint = (Machine == "froth.cs.wisc.edu")
   TestEventConstraint2 = (Machine == "perdita.cs.wisc.edu")
   TestEventRank = (0 - ImageSize)
@@ -52,8 +52,10 @@ SHUTDOWN EVENTS
 ---------------
 
 Format: SHUTDOWN DAY TIME DURATION BANDWIDTH CONSTRAINT RANK
-  example: SHUTDOWN MTWRFSU 04:00 3600 5 MyConst MyRank
-  example: SHUTDOWN MTWRF 23:00 3600 20 MyConst MyRank
+  example: SHUTDOWN MTWRFSU 04:00 1:00 5 MyConst MyRank
+  example: SHUTDOWN MTWRF 23:00 1:00 20 MyConst MyRank
+
+TIME and DURATION are specified in an hours:minutes format.
 
 To determine the estimate of the time required to complete a SHUTDOWN
 event, the ImageSize values for all running standard universe jobs are
