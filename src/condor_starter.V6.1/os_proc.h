@@ -65,8 +65,15 @@ public:
 
 		/// Send a DC_SIGKILL
 	virtual void ShutdownFast();
+
 protected:
+
+	// flag to TRUE is job suspended, else FALSE
 	int job_suspended;
+
+	// sinfull string of our shadow
+	char ShadowAddr[35];
+
 };
 
 #endif
