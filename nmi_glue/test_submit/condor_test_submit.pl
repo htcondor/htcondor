@@ -28,7 +28,7 @@ GetOptions (
     'notify'          => $opt_notify,
 );
 
-my $NIGHTLY_IDS_FILE = "/nmi/condor_nightly/test_ids";
+my $NIGHTLY_IDS_FILE = "test_ids";
 my $NMIDIR = "/nmi/run";
 
 #format of test_ids file
