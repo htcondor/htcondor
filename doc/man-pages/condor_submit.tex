@@ -361,7 +361,7 @@ that can be used in the ClassAd expression.
 %%%%%%%%%%%%%%%%%%%
 
 \item[universe = $<$vanilla \Bar\ standard \Bar\ pvm \Bar\ scheduler
-\Bar\ globus \Bar\ mpi \Bar\ java$>$] 
+\Bar\ globus \Bar\ grid \Bar\ mpi \Bar\ java$>$] 
 \index{submit commands!universe}
 Specifies which Condor Universe to use when running this job.  The Condor 
 Universe specifies a Condor execution environment.  The standard 
@@ -369,18 +369,30 @@ Universe is the default (except where the configuration variable
 \Macro{DEFAULT\_UNIVERSE} defines it otherwise),
 and tells Condor that this job has been re-linked 
 via \Condor{compile} with the Condor libraries and therefore supports
-checkpointing and remote system calls.  The \Arg{vanilla} Universe is an
+checkpointing and remote system calls.  The \Opt{vanilla} Universe is an
 execution environment for jobs which have not been linked with the
-Condor libraries.  \emph{Note:} Use the \Arg{vanilla} Universe to
-submit shell scripts to Condor.  The \Arg{pvm} Universe is for a
-parallel job written with PVM 3.4. The \Arg{scheduler} is for a job that
+Condor libraries.  \emph{Note:} Use the \Opt{vanilla} Universe to
+submit shell scripts to Condor.  The \Opt{pvm} Universe is for a
+parallel job written with PVM 3.4. The \Opt{scheduler} is for a job that
 should act as a metascheduler.
-The \Arg{globus} universe uses the Globus
+The \Opt{globus} universe by default uses the Globus
 GRAM API to contact the Globus resource specified and requests it run the job.
+The \Opt{globus} and \Opt{grid} universes default to using Globus 2.
+Further specification of the \Opt{grid} universe is done with the
+\Opt{grid\_type} command.
 The \Arg{mpi} universe is
 for running mpi jobs made with the MPICH package.
 The \Arg{java} Universe is for programs written to the Java Virtual Machine.
 See the Condor User's Manual for more information about using Universe.
+
+%%%%%%%%%%%%%%%%%%%
+%% grid_type
+%%%%%%%%%%%%%%%%%%%
+\item[grid\_type = " $<$ gt2 \Bar\ gt3 \Bar\ oracle \Bar\ nordugrid $>$  "] A
+\index{submit commands!grid\_type}
+case insensitive string to further specify the intended type of resource
+for \Opt{grid} or \Opt{globus} universe jobs.
+The default value is \Opt{"gt2"}.
 
 %%%%%%%%%%%%%%%%%%%
 %% on_exit_remove

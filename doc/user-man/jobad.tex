@@ -87,6 +87,21 @@ executable.  When the job checkpoints, the \AdAttr{ImageSize}
 attribute is set to the size of the checkpoint file (since the
 checkpoint file contains the job's memory image).
 
+%%% ClassAd attribute: JobGridType
+\index{ClassAd job attribute!JobGridType}
+\item[\AdAttr{JobGridType}] : A case-insensitive string which indicates
+the external batch system intended for a globus or grid universe job.
+Defined values are
+\footnotesize
+\begin{verbatim}
+   "gt2" to indicate jobs intended for resources under Globus 2
+   "gt3" to indicate jobs intended for resources under Globus 3
+   "oracle" to indicate jobs intended for resources under the Oracle batch system
+   "nordugrid" to indicate jobs intended for resources under Nordugrid
+\end{verbatim}
+\normalsize
+
+
 %%% ClassAd attribute: JobPrio
 \index{ClassAd job attribute!JobPrio}
 \item[\AdAttr{JobPrio}] : Integer priority for this job, set by
@@ -110,7 +125,7 @@ Completed, and 5 = Held.
 \index{ClassAd job attribute!JobUniverse}
 \item[\AdAttr{JobUniverse}] : Integer which indicates the job
 universe, where 1 = Standard, 4 = PVM, 5 = Vanilla, 7 = Scheduler,
-8 = MPI, 9 = Globus, and 10 = Java.
+8 = MPI, 9 = Globus, 9 = Grid, and 10 = Java.
 \index{job!universe}
 \index{universe!job attribute definitions}
 

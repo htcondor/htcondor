@@ -357,7 +357,7 @@ universes for user jobs:
 	\item Vanilla
 	\item PVM
  	\item MPI
-	\item Globus
+	\item Globus or Grid
 	\item Java
 	\item Scheduler
 \end{itemize}
@@ -378,8 +378,12 @@ Machine interface.  See section~\ref{sec:PVM} for more about PVM and Condor.
 The \Expr{MPI} universe is for programs written to the MPICH interface.
 See section~\ref{sec:MPI} for more about MPI and Condor.
 \index{universe!Globus}
-The Globus universe allows users to submit Globus jobs through the
-Condor interface.  See \URL{http://www.globus.org} for more about Globus.
+\index{universe!Grid}
+The Globus or Grid universe allows users to submit 
+jobs using Condor's interface.
+These jobs are submitted for execution on grid resources.
+For Globus jobs,
+see \URL{http://www.globus.org} for more information.
 \index{universe!Java}
 \index{Java}
 \index{Java Virtual Machine}
