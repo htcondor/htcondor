@@ -41,7 +41,7 @@
 #include "condor_random_num.h"
 #include "io_proxy.h"
 #include "condor_ver_info.h"
-
+#include "../condor_sysapi/sysapi.h"
 
 extern ReliSock *syscall_sock;
 
@@ -100,7 +100,7 @@ CStarter::Init( char peer[] )
 	daemonCore->Register_Reaper("Reaper", (ReaperHandlercpp)&CStarter::Reaper,
 		"Reaper", this);
 
-	set_resource_limits();
+	sysapi_set_resource_limits();
 
 	return StartJob();
 }

@@ -25,7 +25,7 @@ OS = OperatingSystem
 
 # this can (and will have to) be made better, but
 # it will suffice for now:
-OBJ = starter_v61_main.o resource_limits.$(OS).o starter.o NTsenders.o \
+OBJ = starter_v61_main.o starter.o NTsenders.o \
 	os_proc.o vanilla_proc.o mpi_master_proc.o mpi_comrade_proc.o \
 	starter_v61_instantiate.o io_proxy.o io_proxy_handler.o java_proc.o
 
@@ -49,9 +49,3 @@ release_copy_target($(WRAPPER_CLASS),$(RELEASE_DIR)/lib,$(WRAPPER_CLASS),EXECUTA
 strip_copy_target($(WRAPPER_CLASS),$(STRIP_DIR)/lib,$(WRAPPER_CLASS),EXECUTABLE_MODE)
 static_copy_target($(WRAPPER_CLASS),$(STATIC_DIR)/lib,$(WRAPPER_CLASS),EXECUTABLE_MODE)
 #endif
-
-IMPORT_LINKS = ../../config/import_links
-import( ../condor_starter.V5,resource_limits.$(OS).C)
-
-
-
