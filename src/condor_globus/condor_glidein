@@ -326,6 +326,11 @@ sub parse_command_line() {
 	}
 	chomp( @CONTACTS );
 
+	if ( $#CONTACTS == 0 ) {
+	    print "No resources specified\n";
+	    exit( -1 );
+	}
+
 	if ( $gen_config ) {
 		gen_main_config();
 		exit( 0 );
