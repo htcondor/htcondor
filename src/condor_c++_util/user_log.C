@@ -153,8 +153,8 @@ initialize( const char *owner, const char *file, int c, int p, int s )
 
 		// create the file
 	set_user_id();
-	if( (fd = open( path, O_CREAT | O_WRONLY, 0644 )) < 0 ) {
-		EXCEPT( "path" );
+	if( (fd = open( path, O_CREAT | O_WRONLY, 0664 )) < 0 ) {
+		EXCEPT( "open(%s) failed with errno %d", path, errno );
 	}
 
 		// attach it to stdio stream
