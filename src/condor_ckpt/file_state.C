@@ -804,6 +804,21 @@ open_stream( const char *local_path, int flags, int *_FileStreamLen )
 
 	}
 
+	__open( const char *path, int flags, ... )
+	{
+		va_list ap;
+		int		creat_mode = 0;
+
+		if( flags & O_CREAT ) {
+			va_start( ap, flags );
+			creat_mode = va_arg( ap, int );
+			return open( path, flags, creat_mode );
+		} else {
+			return open( path, flags );
+		}
+
+	}
+
 	/* Force isatty() to be undefined so programs that use it get it from
 	   the condor library rather than libc.a.
 	*/
