@@ -129,10 +129,12 @@ dprintf(int flags, ...)
 	int scm;
 #if !defined(WIN32)
 	sigset_t	mask, omask;
+	mode_t		old_umask;
 #endif
 	int saved_errno;
 	int	saved_flags;
 	priv_state	priv;
+
 
 		/* If we hit some fatal error in dprintf, this flag is set.
 		   If dprintf is broken and someone (like _EXCEPT_Cleanup)
@@ -153,7 +155,7 @@ dprintf(int flags, ...)
 
 	scm = SetSyscalls( SYS_LOCAL | SYS_RECORDED );
 
-#if !defined(WIN32) // signals don't exist in WIN32
+#if !defined(WIN32) /* signals don't exist in WIN32 */
 
 	/* Block any signal handlers which might try to print something */
 	sigfillset( &mask );
@@ -168,6 +170,11 @@ dprintf(int flags, ...)
 	sigprocmask( SIG_BLOCK, &mask, &omask );
 
 #endif
+
+		/* Make sure our umask is reasonable, in case we're the shadow
+		   and the remote job has tried to set its umask or
+		   something.  -Derek Wright 6/11/98 */
+	old_umask = umask( 022 );
 
 		/* log files owned by condor system acct */
 		/* avoid priv macros so we can bypass priv logging */
@@ -197,6 +204,9 @@ dprintf(int flags, ...)
 
 		/* restore privileges */
 	_set_priv(priv, __FILE__, __LINE__, 0);
+
+		/* restore umask */
+	(void)umask( old_umask );
 
 #if !defined(WIN32) // signals don't exist in WIN32
 
