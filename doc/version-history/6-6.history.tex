@@ -33,7 +33,30 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item In version 6.6.7, we fixed a number of bugs related to the
+  \Opt{-format} option to various Condor tools.
+  However, some sites were using \Opt{-format} in ways we didn't
+  expect, by not specifying any '%' conversion string in the format
+  string at all.
+  This used to work, given the old buggy code that handled
+  \Opt{-format}, but the changes in version 6.6.7 broke this, and
+  format strings without a '%' conversion string were ignored.
+  Now, if the format string does not contain a '%' conversion string,
+  the attribute name which follows it is once again ignored, and the
+  format string is printed directly without any modification.
+  For example, to print out the machine's \Attr{Name} (always defined)
+  and the \Attr{RemoteUser} (only defined if the machine is claimed),
+  and always print a newline (to keep the formatting legible), this
+  command will now work:
+\begin{verbatim}
+% condor_status -f "%s " Name -f "%s " RemoteUser -f "\n" bogus
+bird.cs.wisc.edu biguser@raven.cs.wisc.edu
+condor.cs.wisc.edu
+dodo.cs.wisc.edu biguser@raven.cs.wisc.edu
+lark.cs.wisc.edu biguser@raven.cs.wisc.edu
+raven.cs.wisc.edu
+...
+\end{verbatim}
 
 \end{itemize}
 
