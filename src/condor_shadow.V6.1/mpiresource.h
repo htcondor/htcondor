@@ -37,11 +37,6 @@ class MpiResource : public RemoteResource {
 		*/
 	MpiResource( BaseShadow *shadow );
 
-		/** See the RemoteResource's constructor.
-		*/
-	MpiResource( BaseShadow *shadow, const char * executingHost, 
-				 const char * capability );
-
 		/// Destructor
 	~MpiResource() {};
 
