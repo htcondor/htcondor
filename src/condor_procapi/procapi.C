@@ -626,6 +626,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	pi->age = secsSinceEpoch() - pi->creation_time; 
 	pi->pid = pid;
 	pi->ppid = kp->kp_eproc.e_ppid;
+	pi->owner = kp->kp_eproc.e_pcred.p_ruid; 
 
 	long nowminf, nowmajf;
 	double ustime = pi->user_time + pi->sys_time;
