@@ -63,7 +63,6 @@ private:
   //--------------------------------------------------------
 
   double MinPriority;        // Minimum priority (if no resources used)
-  double Epsilon;            // used to compare priority to zero
   double HalfLifePeriod;     // The time in sec in which the priority is halved by aging
   MyString LogFileName;      // Name of Log file
 
