@@ -27,7 +27,6 @@ pure_c_plus_target(condor_dagman.pure,$(OBJ),$(LIB))
 
 depend_target($(SRC) $(LIB))
 
-release:
-stripped:
-static:
-
+release_target(condor_dagman,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+strip_target(condor_dagman,$(STRIP_CONTRIB)/bin,EXECUTABLE_MODE)
+static_target(condor_dagman,$(OBJ),$(LIB),$(STATIC_CONTRIB)/bin)
