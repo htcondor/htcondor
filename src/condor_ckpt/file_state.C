@@ -2423,6 +2423,10 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 	int user_fd;
 	int use_local_access = FALSE;
 	int rval;
+	struct flock *lockarg;
+#if HAS_64BIT_SYSCALLS
+	struct flock64 *lock64arg;
+#endif
 	
 	if ( FileTab == NULL )
 		InitFileState();
@@ -2497,7 +2501,6 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 	case F_GETLK:
 	case F_SETLK: 
 	case F_SETLKW: 
-		struct flock *lockarg;
 		lockarg = va_arg ( ap, struct flock* );
 		if ( LocalSysCalls() || use_local_access ) {
 			return syscall( SYS_fcntl, user_fd, cmd, lockarg );
@@ -2511,7 +2514,6 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 	case F_GETLK64:
 	case F_SETLK64: 
 	case F_SETLKW64: 
-		struct flock64 *lock64arg;
 		lock64arg = va_arg ( ap, struct flock64* );
 		if ( LocalSysCalls() || use_local_access ) {
 			return syscall( SYS_fcntl, user_fd, cmd, lock64arg );
@@ -2520,6 +2522,29 @@ _condor_fcntl( int fd, int cmd, va_list ap )
 			return -1;
 		}
 #endif /* HAS_64BIT_SYSCALLS */
+#if defined( F_FREESP ) 
+	case F_FREESP:
+#if defined( F_FREESP64 )
+	case F_FREESP64:
+#endif
+		lockarg = va_arg ( ap, struct flock* );
+		if ( LocalSysCalls() || use_local_access ) {
+			return syscall( SYS_fcntl, user_fd, cmd, lockarg );
+		} else {
+			if( lockarg->l_whence == 0 && 
+				lockarg->l_start == 0 &&
+				lockarg->l_len == 0 ) {
+					// This is the same as ftruncate(), and we'll trap
+					// ftruncate() and send that on the wire,
+					// instead.  -Derek Wright 10/14/98
+				return ftruncate( fd, 0 );
+			} else {
+				dprintf( D_ALWAYS, "Unsupported fcntl() command %d\n", cmd );
+				return -1;
+			}
+		}
+#endif /* defined( F_FREESP ) */
+
 	default:
 		dprintf( D_ALWAYS, "Unsupported fcntl() command %d\n", cmd );
 	}
