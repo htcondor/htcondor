@@ -8,11 +8,21 @@
  * Tests for FULL ports
  ********************************/
 
+
+/****************************
+ * Core Condor Functionality
+ ***************************/
+
 DESC(job_core_bigenv_std,"Standard job with an enormous environment")
 CBUILD($(CC),job_core_bigenv,c)
 DEPS(job_core_bigenv_std,job_core_bigenv.exe)
 RUN(job_core_bigenv_std)
 TESTCLASS(job_core_bigenv_std,quick)
+
+
+/****************************
+ * Remote System Calls
+ ***************************/
 
 DESC(job_rsc_hello_std,"Tests various RSC I/O methods")
 CBUILD($(CC),job_rsc_hello_std,c)
@@ -25,6 +35,11 @@ CBUILD($(CC),job_rsc_fcntl_std,c)
 RUN(job_rsc_fcntl_std)
 TESTCLASS(job_rsc_fcntl_std,quick)
 
+
+/****************************
+ * Checkpointing
+ ***************************/
+
 DESC(job_ckpt_floats_std,"ckpt/restore floating point registers")
 CBUILD($(CC),job_ckpt_floats_std,c)
 RUN(job_ckpt_floats_std)
@@ -34,6 +49,10 @@ DESC(job_ckpt_integers_std,"ckpt/restore integer registers")
 CBUILD($(CC),job_ckpt_integers_std,c)
 RUN(job_ckpt_integers_std)
 TESTCLASS(job_ckpt_integers_std,quick)
+
+DESC(job_ckpt_signals_std,"ckpt/restore signal state")
+CBUILD($(CC),job_ckpt_signals_std,c)
+RUN(job_ckpt_signals_std)
 
 DESC(job_ckpt_getrusage-loop_std,"Does getrusage() work across ckpts?")
 CBUILD_DEP($(CC),job_ckpt_getrusage-loop_std,c,x_waste_second.o)
