@@ -23,20 +23,26 @@ while( $_ = shift( @ARGV ) ) {
 	$versarg = shift(@ARGV);
 	last SWITCH;
     }
+    if( /-l.*/ ) {
+	$libc = shift(@ARGV);
+	last SWITCH;
+    }
+    if( /-tarcmd.*/ ) {
+	$tar_cmd = shift(@ARGV);
+	last SWITCH;
+    }
+    if( /-cpcmd.*/ ) {
+	$cp_cmd = shift(@ARGV);
+	last SWITCH;
+    }
     if( /-t.*/ ) {
+	# this is short for "-target".  if we get "-tarcmd", we'll
+	# already catch it above, so we can leave this test alone...
         $target = shift(@ARGV);
 	if( ! -d $target ) {
 	    die "Target directory $target does not exist!\n";
 	}
         last SWITCH;
-    }
-    if( /-l.*/ ) {
-	$libc = shift(@ARGV);
-	last SWITCH;
-    }
-    if( /-c.*/ ) {
-	$tar_cmd = shift(@ARGV);
-	last SWITCH;
     }
   }
 }
@@ -198,6 +204,20 @@ $libc = $libcname{$sys};
 if( ! $tar_cmd ) {
     $tar_cmd = "tar --owner=root --group=root";
 }
+if( ! $cp_cmd ) {
+  # the condor build system always tells us the right thing, so
+  # hopefully we never hit this code.  however, if we need a default,
+  # it really depends on if we're using GNU cp or not.  on linux, we
+  # can safely use the GNU flags, and on the others, we'll just have
+  # to live without and hope for the best.  luckily, the configure
+  # script figures it out for us and tells us, so it's not really an
+  # issue inside here anymore...
+  if( $opsys =~ /.*linux.*/ ) {
+    $cp_cmd = "cp -rL";
+  } else {  
+    $cp_cmd = "cp -r";
+  }
+}
 
 `rm -rf $skel`;
 mkdir( "$skel", 0777 );
@@ -239,12 +259,7 @@ foreach $module ( @modules ) {
 		} else {
 	   	 $dest = $file;
 		}
-		# under linux, or hpux11(with fileutils), use the GNU fileutils flags
-		if( $libc =~ /.*glibc2[23].*/ || $opsys =~ /.*hp_ux110.*/) {	
-			`cp -rL $src $skel/$release/$dest`;
-		} else {
-			`cp -r $src $skel/$release/$dest`;
-		}	
+		`$cp_cmd $src $skel/$release/$dest`;
     }
     `rm -rf $skel/$release/CVS`;
     `rm -rf $skel/$release/*/CVS`;
