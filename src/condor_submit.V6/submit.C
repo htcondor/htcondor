@@ -331,52 +331,68 @@ main( int argc, char *argv[] )
 	//this section sets up env vars needed by authentication code. //mju
 	char *CondorCertDir;
 	char tmpstring[MAXPATHLEN];
+	int useAuth = 0;
 
-	//try submit file first, then default
+	//if defined in file, set up to use condor cert dir
 	if ( CondorCertDir = condor_param( CertDir ) ) {
 		dprintf( D_FULLDEBUG, "setting CONDOR_CERT_DIR from submit file\n" );
+		useAuth = 1;
 	}
-	else {
+	//could probably stat for dir to do minimal idiot checking of existance
+	if ( useAuth ) {
+		struct stat statbuf;
 
-		dprintf( D_FULLDEBUG, "setting CONDOR_CERT_DIR to default\n" );
-		sprintf( tmpstring, "%s/.condor_certs", getenv( "HOME" ) );
-		CondorCertDir = strdup( tmpstring );
-	}
-
-	//didn't bother re-putting vars which shouldn't change
-	if ( !getenv( "CONDOR_GATEKEEPER" ) ) {
-		struct hostent *host;
-		char tmp[MAXHOSTNAMELEN];
-
-		//this should change for remote submits to be remote machine name!
-		gethostname( tmp, MAXHOSTNAMELEN );
-		host = gethostbyname( tmp );
-		sprintf( tmpstring, "CONDOR_GATEKEEPER=/CN=schedd@%s", host->h_name );
-		putenv( strdup( tmpstring ) );
+		if ( stat( CondorCertDir, &statbuf ) ) {
+			useAuth = 0;
+		}
+		else if ( !( statbuf.st_mode & ( S_IFDIR | S_IREAD ) ) ) {
+			useAuth = 0;
+		}
+		if ( !useAuth ) {
+			fprintf( stderr, "unable to read cert_dir %s directory\n",
+					CondorCertDir );
+		}
 	}
 
-	if ( !getenv( "X509_CERT_DIR" ) ) {
-		sprintf( tmpstring, "X509_CERT_DIR=%s/", CondorCertDir );
-		putenv( strdup( tmpstring ) );
+	if ( useAuth ) {
+		//didn't bother re-putting vars which shouldn't change
+		if ( !getenv( "CONDOR_GATEKEEPER" ) ) {
+			struct hostent *host;
+			char tmp[MAXHOSTNAMELEN];
+	
+			//this should change for remote submits to be remote machine name!
+			gethostname( tmp, MAXHOSTNAMELEN );
+			host = gethostbyname( tmp );
+			sprintf( tmpstring, "CONDOR_GATEKEEPER=/CN=schedd@%s", host->h_name );
+			putenv( strdup( tmpstring ) );
+		}
+	
+		if ( !getenv( "X509_CERT_DIR" ) ) {
+			sprintf( tmpstring, "X509_CERT_DIR=%s/", CondorCertDir );
+			putenv( strdup( tmpstring ) );
+		}
+	
+		if ( !getenv( "X509_USER_CERT" ) ) {
+			sprintf( tmpstring, "X509_USER_CERT=%s/newcert.pem", CondorCertDir );
+			putenv( strdup( tmpstring ) );
+		}
+	
+		if ( !getenv( "X509_USER_KEY" ) ) {
+			sprintf(tmpstring,"X509_USER_KEY=%s/private/newkey.pem",CondorCertDir);
+			putenv( strdup( tmpstring ) );
+		}
+		free( CondorCertDir );
+		//end of authentication setup
 	}
-
-	if ( !getenv( "X509_USER_CERT" ) ) {
-		sprintf( tmpstring, "X509_USER_CERT=%s/newcert.pem", CondorCertDir );
-		putenv( strdup( tmpstring ) );
-	}
-
-	if ( !getenv( "X509_USER_KEY" ) ) {
-		sprintf(tmpstring,"X509_USER_KEY=%s/private/newreq.pem",CondorCertDir);
-		putenv( strdup( tmpstring ) );
-	}
-	free( CondorCertDir );
-	//end of authentication setup
 
 	// connect to the schedd
 #if defined(GSS_AUTHENTICATION)
-	if (ConnectQ(ScheddAddr, 1 ) == 0) { //mju
+	if (ConnectQ(ScheddAddr, useAuth ) == 0) {
 #else
-	if (ConnectQ(ScheddAddr, 0 ) == 0) { //mju
+	if (ConnectQ(ScheddAddr, 0 ) == 0) {
+#endif
+#if 0
+} //balancing paren
 #endif
 		if( ScheddName ) {
 			fprintf( stderr, "ERROR: Failed to connect to queue manager %s\n",
