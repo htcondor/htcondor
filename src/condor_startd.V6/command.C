@@ -458,6 +458,7 @@ stream->end_of_message();
 
 #define ABORT \
 delete req_classad;						\
+if (client_addr) free(client_addr);		\
 if( s == claimed_state ) {				\
 	delete rip->r_pre;					\
 	rip->r_pre = new Match( rip );		\
@@ -475,6 +476,8 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 	int cmd, mach_requirements = 1, req_requirements = 1;
 	float rank = -1;
 	float oldrank = -1;
+	char *client_addr = NULL;
+	int interval;
 	State s = rip->state();
 
 	if( !rip->r_cur ) {
@@ -501,6 +504,28 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 	if( !req_classad->get(*stream) ) {
 		rip->dprintf( D_ALWAYS, "Can't receive classad from schedd-agent\n" );
 		ABORT;
+	}
+
+		// Try now to read the schedd addr and aline interval.
+		// Do _not_ abort if we fail, since older (pre v6.1.11) schedds do 
+		// not send this information until after we accept the request, and we
+		// want to make an attempt to be backwards-compatibile.
+	if ( stream->code(client_addr) ) {
+		// We got the schedd addr, we must be talking to a post 6.1.11 schedd
+		rip->dprintf( D_FULLDEBUG, "Schedd addr = %s\n", client_addr );
+		if( !stream->code(interval) ) {
+			rip->dprintf( D_ALWAYS, "Can't receive alive interval\n" );
+			ABORT;
+		} else {
+			rip->dprintf( D_FULLDEBUG, "Alive interval = %d\n", interval );
+		}
+			// Now, store them into r_cur
+		rip->r_cur->setaliveint( interval );
+		rip->r_cur->client()->setaddr( client_addr );
+		free( client_addr );
+		client_addr = NULL;
+	} else {
+		rip->dprintf(D_FULLDEBUG, "Schedd using pre-v6.1.11 claim protocol\n");
 	}
 
 	if( !stream->end_of_message() ) {
@@ -659,26 +684,33 @@ accept_request_claim( Resource* rip )
 		ABORT;
 	}
 
-		// Grab the schedd addr and alive interval.
-	stream->decode();
-	if( ! stream->code(client_addr) ) {
-		rip->dprintf( D_ALWAYS, "Can't receive schedd addr.\n" );
-		ABORT;
-	} else {
-		rip->dprintf( D_FULLDEBUG, "Schedd addr = %s\n", client_addr );
-	}
-	if( !stream->code(interval) ) {
-		rip->dprintf( D_ALWAYS, "Can't receive alive interval\n" );
-		ABORT;
-	} else {
-		rip->dprintf( D_FULLDEBUG, "Alive interval = %d\n", interval );
-	}
-	stream->end_of_message();
+		// Grab the schedd addr and alive interval if the alive interval is still
+		// unitialized (-1) which means we are talking to an old (post v6.1.11) schedd.
+		// Normally, we want to get this information from the schedd when the claim request
+		// first arrives.  This prevents a deadlock in the claiming protocol between the
+		// schedd and startd when the startd is running on an SMP.  -Todd 1/2000
+	if ( rip->r_cur->getaliveint() == -1 ) {
+		stream->decode();
+		if( ! stream->code(client_addr) ) {
+			rip->dprintf( D_ALWAYS, "Can't receive schedd addr.\n" );
+			ABORT;
+		} else {
+			rip->dprintf( D_FULLDEBUG, "Schedd addr = %s\n", client_addr );
+		}
+		if( !stream->code(interval) ) {
+			rip->dprintf( D_ALWAYS, "Can't receive alive interval\n" );
+			ABORT;
+		} else {
+			rip->dprintf( D_FULLDEBUG, "Alive interval = %d\n", interval );
+		}
+		stream->end_of_message();
 
-		// Now, store them into r_cur
-	rip->r_cur->setaliveint( interval );
-	rip->r_cur->client()->setaddr( client_addr );
-	free( client_addr );
+			// Now, store them into r_cur
+		rip->r_cur->setaliveint( interval );
+		rip->r_cur->client()->setaddr( client_addr );
+		free( client_addr );
+		client_addr = NULL;
+	}
 
 		// Figure out the hostname of our client.
 	if( ! (tmp = sin_to_hostname(sock->endpoint(), NULL)) ) {

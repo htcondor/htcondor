@@ -47,6 +47,7 @@
 #include "../condor_ckpt_server/server_interface.h"
 #include "generic_query.h"
 #include "directory.h"
+#include "condor_ver_info.h"
 
 #define DEFAULT_SHADOW_SIZE 125
 
@@ -136,6 +137,7 @@ match_rec::match_rec(char* i, char* p, PROC_ID* id, ClassAd *match,
         // start the mpi shadow every time through StartJob()...
     isMatchedMPI = FALSE;
 	pool = my_pool;
+	sent_alive_interval = false;
 }
 
 match_rec::~match_rec()
@@ -1764,6 +1766,34 @@ Scheduler::contactStartd( char* capability, char *user,
 		BAILOUT;
 	}	
 
+	char startd_version[150];
+	startd_version[0] = '\0';
+	if ( my_match_ad  &&
+		 my_match_ad->LookupString(ATTR_VERSION,startd_version) ) 
+	{	
+		CondorVersionInfo ver(startd_version,"STARTD");
+
+		if (ver.built_since_version(6,1,11) && ver.built_since_date(1,28,2000))
+		{
+				// We are talking to a startd which understands sending the
+				// post 6.1.11 change to the claim protocol.
+			if( !sock->code(MySockName) ) {
+				dprintf(D_ALWAYS, "Couldn't send schedd string to startd.\n");
+				BAILOUT;
+			}
+			if( !sock->snd_int(aliveInterval, FALSE) ) {
+				dprintf(D_ALWAYS, "Couldn't send aliveInterval to startd.\n");
+				BAILOUT;
+			}
+			mrec->sent_alive_interval = true;
+		}
+	}
+
+	if ( !mrec->sent_alive_interval ) {
+		dprintf(D_FULLDEBUG,"Startd expects pre-v6.1.11 claim protocol\n");
+	}
+
+		
 	if( !sock->end_of_message() ) {
 		dprintf( D_ALWAYS, "Couldn't send eom to startd.\n" );	
 		BAILOUT;
@@ -1843,14 +1873,16 @@ int Scheduler::startdContactSockHandler( Stream *sock )
 
 	if( reply == OK ) {
 		dprintf (D_PROTOCOL, "(Request was accepted)\n");
-	 	sock->encode();
-		if( !sock->code(MySockName) ) {
-			dprintf( D_ALWAYS, "Couldn't send schedd string to startd.\n" );
-			BAILOUT;
-		}
-		if( !sock->snd_int(aliveInterval, TRUE) ) {
-			dprintf( D_ALWAYS, "Couldn't send aliveInterval to startd.\n" );
-			BAILOUT;
+		if ( !mrec->sent_alive_interval ) {
+	 		sock->encode();
+			if( !sock->code(MySockName) ) {
+				dprintf( D_ALWAYS, "Couldn't send schedd string to startd.\n");
+				BAILOUT;
+			}
+			if( !sock->snd_int(aliveInterval, TRUE) ) {
+				dprintf( D_ALWAYS, "Couldn't send aliveInterval to startd.\n");
+				BAILOUT;
+			}
 		}
 	} else if( reply == NOT_OK ) {
 		dprintf( D_PROTOCOL, "(Request was NOT accepted)\n" );

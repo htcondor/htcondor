@@ -130,6 +130,7 @@ public:
 	int			proc()			{return m_proc;};
 	int			job_start() 	{return m_job_start;};
 	int			last_pckpt() 	{return m_last_pckpt;};
+	int			getaliveint()	{return m_aliveint;};
 
 		// Functions that set the values of data
 	void setrank(float rank)	{m_rank=rank;};

@@ -89,6 +89,7 @@ struct match_rec
 	ClassAd*		my_match_ad;
 	char*			user;
 	char*			pool;		// negotiator hostname if flocking; else NULL
+	bool			sent_alive_interval;
 };
 
 enum MrecStatus {
