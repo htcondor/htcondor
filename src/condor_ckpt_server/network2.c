@@ -216,68 +216,6 @@ char* gethostnamebyaddr(struct in_addr* addr)
 }
 
 
-
-
-/******************************************************************************
-*                                                                             *
-*   Function: gethostaddr(void)                                               *
-*                                                                             *
-*******************************************************************************
-*                                                                             *
-*   This function returns a pointer to the IP address of the machine          *
-*   executing the function.  The pointer is a character pointer (char*) since *
-*   the gethostbyname() function is used and returns a char** pointer.        *
-*   Therefore, even though this is a character pointer, it points to an IP    *
-*   address, and it is NOT guaranteed that the IP address falls on a fullword *
-*   boundary (required for RISC machines).  Thus, the IP address should be    *
-*   copied using memcpy() and the return char* pointer.                       *
-*                                                                             *
-*******************************************************************************
-*                                                                             *
-*   Parameters:                                                               *
-*        <none>                                                               *
-*                                                                             *
-*******************************************************************************
-*                                                                             *
-*   Return Type:                                                              *
-*        char* - a pointer to a static area where a machine's IP address is   *
-*                held                                                         *
-*                                                                             *
-******************************************************************************/
-
-
-char* gethostaddr(void)
-{
-  struct hostent* h;
-  char            hostname[256];
-
-  if (gethostname(hostname, 256) < 0)
-    {
-      fprintf(stderr, "\nERROR:\n");
-      fprintf(stderr, "ERROR:\n");
-      fprintf(stderr, "ERROR: cannot get host name (pid=%d)\n", 
-	      (int) getpid());
-      fprintf(stderr, "ERROR:\n");
-      fprintf(stderr, "ERROR:\n\n");
-      return NULL;
-    }
-  h = gethostbyname(hostname);
-  if (h == NULL)
-    {
-      fprintf(stderr, "\nERROR:\n");
-      fprintf(stderr, "ERROR:\n");
-      fprintf(stderr, "ERROR: cannot get host information (pid=%d)\n", 
-	      (int) getpid());
-      fprintf(stderr, "ERROR:\n");
-      fprintf(stderr, "ERROR:\n\n");
-      return NULL;
-    }
-  return(h->h_addr);
-}
-
-
-
-
 /******************************************************************************
 *                                                                             *
 *   Function: I_socket(int exit_status)                                       *
@@ -308,10 +246,10 @@ int I_socket()
 	int sd;
 	
 	sd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (sd < 0)
-		if ((errno == EMFILE) || (errno == ENOBUFS))
+	if (sd < 0) {
+		if ((errno == EMFILE) || (errno == ENOBUFS)) {
 			return INSUFFICIENT_RESOURCES;
-		else {
+		} else {
 			fprintf(stderr, "\nERROR:\n");
 			fprintf(stderr, "ERROR:\n");
 			fprintf(stderr, "ERROR: cannot open the server request socket ");
@@ -320,7 +258,8 @@ int I_socket()
 			fprintf(stderr, "ERROR:\n\n");
 			return CKPT_SERVER_SOCKET_ERROR;
 		}
-	return(sd);
+	}
+	return sd;
 #else
 	return 0;
 #endif
