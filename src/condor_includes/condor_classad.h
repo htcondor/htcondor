@@ -53,9 +53,9 @@ class ClassAd : public AttrList
         int			GetTargetTypeNumber();		// target type number returned.
 
 		// Requirement operations
-		int			SetRequirement(char *);
-		void        SetRequirement(ExprTree *);
-		ExprTree	*GetRequirement(void);
+		int			SetRequirements(char *);
+		void        SetRequirements(ExprTree *);
+		ExprTree	*GetRequirements(void);
 
 		// Ranking operations
 		int 		SetRankExpr(char *);
