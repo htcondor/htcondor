@@ -153,42 +153,21 @@ int
 sysapi_phys_memory_raw(void) 
 {	
 
-	FILE	*proc;
-	double	phys_mem;
-	char	tmp_c[20];
-	char	c;
+	double bytes;
+	double megs;
 
-	sysapi_internal_reconfig();
-	proc=fopen("/proc/meminfo","r");
-	if(!proc) {
-		return -1;
-	}
+	/* in bytes */
+	bytes = 
+		(double)sysconf(_SC_PHYS_PAGES) * (double)sysconf(_SC_PAGESIZE);
 
-	  /*
-	  // The /proc/meminfo looks something like this:
+	/* convert it to Megabytes */
+	megs = bytes / (1024.0*1024.0);
 
-	  //       total:    used:    free:  shared: buffers:  cached:
-	  //Mem:  19578880 19374080   204800  7671808  1191936  8253440
-	  //Swap: 42831872  8368128 34463744
-	  //MemTotal:     19120 kB
-	  //MemFree:        200 kB
-	  //MemShared:     7492 kB
-	  //Buffers:       1164 kB
-	  //Cached:        8060 kB
-	  //SwapTotal:    41828 kB
-	  //SwapFree:     33656 kB
-	  */	  
-	while((c=fgetc(proc))!='\n');
-	fscanf(proc, "%s %lf", tmp_c, &phys_mem);
-	fclose(proc);
-
-	phys_mem /= (1024*1024);
-
-	if (phys_mem > INT_MAX) {
+	if (megs > INT_MAX) {
 		return INT_MAX;
 	}
 
-	return (int)phys_mem;
+	return (int)megs;
 }
 
 #elif defined(WIN32)
