@@ -21,14 +21,19 @@ RC_OBJ = extern_path.o FAKE_GETMNT_OBJ
 
 CKPT_SERV_LIB = ../condor_ckpt_server/ckpt_server_api.a
 QMGMT_LIB = ../condor_schedd.V6/libqmgmt.a
+CLASSAD_LIB = ../condor_classad/expr_lib.a
+UTIL_LIB = ../condor_util_lib/util_lib.a
 
 OBJ = $(RC_OBJ) ops.o pseudo_ops.o perm_err.o shadow.o receivers.o ulog.o \
 	$(CKPT_SERV_OBJ)
 
-LIB =   $(CKPT_SERV_LIB) ../condor_util_lib/util_lib.a \
+LIB =   $(CKPT_SERV_LIB) \
 		../condor_xdr_lib/xdr_lib.a \
 		$(QMGMT_LIB) \
-		../condor_c++_util/cplus_lib.a RpcLib KernLib SocketLib
+		../condor_c++_util/cplus_lib.a \
+		$(CLASSAD_LIB) \
+		$(UTIL_LIB) \
+		RpcLib KernLib SocketLib
 
 LIBDIRS = ../condor_util_lib ../condor_xdr_lib
 
@@ -36,7 +41,7 @@ all_target(condor_shadow)
 tags_target($(SRC),$(LIBDIRS))
 depend_target($(SRC))
 
-program_target(condor_shadow,$(OBJ),$(LIB))
+c_plus_target(condor_shadow,$(OBJ),$(LIB))
 release_target(condor_shadow,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
 IMPORT_LINKS = ../../config/import_links
