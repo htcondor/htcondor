@@ -650,7 +650,6 @@ GlobusResource::ReadMonitorJobStatusFile()
 			int rc;
 			GlobusJob *job;
 
-dprintf(D_ALWAYS,"***    %s %d\n",contact,status);
 			rc = JobsByContact.lookup( HashKey( globusJobId(contact) ), job );
 			if ( rc == 0 & job != NULL ) {
 				if ( status == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ) {
