@@ -138,5 +138,6 @@ const char ATTR_NUM_HOSTS_TOTAL			 [] = "HostsTotal";
 const char ATTR_NUM_HOSTS_CLAIMED		 [] = "HostsClaimed";
 const char ATTR_NUM_HOSTS_UNCLAIMED		 [] = "HostsUnclaimed";
 const char ATTR_NUM_HOSTS_OWNER			 [] = "HostsOwner";
+const char ATTR_VERSION					 [] = "CondorVersion";
 
 #endif

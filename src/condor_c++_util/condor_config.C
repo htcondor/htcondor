@@ -21,6 +21,8 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+/* Here is the version string - update before a public release */
+static char * CondorVersion = "$Version: 6.0 patchlevel 2 1998/5/5 $";
  
 
 /* 
@@ -104,6 +106,13 @@ config_fill_ad(ClassAd* ad, char* mySubsys)
 			free (expr);
 		}	
 	}
+	
+	/* Insert the version into the ClassAd */
+	if (ad) {
+		sprintf(buffer,"%s=\"%s\"", ATTR_VERSION, CondorVersion );
+		ad->Insert(buffer);
+	}
+
 }
 
 
@@ -428,6 +437,7 @@ fill_attributes(ClassAd* classAd)
 	} else {
 		free( uid_domain );
 	}
+
 }
 
 
