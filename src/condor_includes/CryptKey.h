@@ -54,28 +54,28 @@ class KeyInfo {
 
     ~KeyInfo();
 
-    unsigned char * getKeyData();
+    const unsigned char * getKeyData() const;
     //------------------------------------------
     // PURPOSE: Return the key
     // REQUIRE: None
     // RETURNS: unsigned char * 
     //------------------------------------------
     
-    int getKeyLength();
+    int getKeyLength() const;
     //------------------------------------------
     // PURPOSE: Return length of the key
     // REQUIRE: None
     // RETURNS: length
     //------------------------------------------
 
-    Protocol getProtocol();
+    Protocol getProtocol() const;
     //------------------------------------------
     // PURPOSE: Return protocol
     // REQUIRE: None
     // RETURNS: protocol
     //------------------------------------------
 
-    int getDuration();
+    int getDuration() const;
     //------------------------------------------
     // PURPOSE: Return duration
     // REQUIRE: None
