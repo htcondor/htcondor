@@ -82,7 +82,7 @@ char *ClassAdUnParser::opString[] =
 };
 
 void ClassAdUnParser::
-Unparse( string &buffer, Value &val )
+Unparse( string &buffer, const Value &val )
 {
 	char	tempBuf[512];
 	switch( val.GetType( ) ) {
@@ -250,7 +250,7 @@ Unparse( string &buffer, Value &val )
 
 
 void ClassAdUnParser::
-Unparse( string &buffer, ExprTree *tree )
+Unparse( string &buffer, const ExprTree *tree )
 {
 	if( !tree ) {
 		buffer = "<error:null expr>";
@@ -316,7 +316,7 @@ Unparse( string &buffer, ExprTree *tree )
 
 
 void ClassAdUnParser::
-UnparseAux( string &buffer, Value &val, Value::NumberFactor factor )
+UnparseAux( string &buffer, const Value &val, Value::NumberFactor factor )
 {
 	Unparse( buffer, val );
 	if( val.IsNumber( ) && factor != Value::NO_FACTOR ) {
@@ -331,7 +331,7 @@ UnparseAux( string &buffer, Value &val, Value::NumberFactor factor )
 }
 
 void ClassAdUnParser::
-UnparseAux( string &buffer, ExprTree *expr, string &attrName, bool absolute )
+UnparseAux( string &buffer, const ExprTree *expr, string &attrName, bool absolute )
 {
 	if( expr ) {
 		Unparse( buffer, expr );

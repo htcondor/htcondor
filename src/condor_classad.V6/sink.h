@@ -45,21 +45,23 @@ class ClassAdUnParser
 		 * 	@param buffer The string to unparse to
 		 * 	@param val The value to unparse
 		 */
-		void Unparse( std::string &buffer, Value &val );
+		void Unparse( std::string &buffer, const Value &val );
 
 		/** Unparse an expression 
 		 * 	@param buffer The string to unparse to
 		 * 	@param expr The expression to unparse
 		 */
-		void Unparse( std::string &buffer, ExprTree *expr );
+		void Unparse( std::string &buffer, const ExprTree *expr );
 
 			//	for backcompatibility only - NAC
 		void SetOldClassAd( bool );
 		bool GetOldClassAd();
 
-		virtual void UnparseAux( std::string &buffer,Value&,Value::NumberFactor );	
-		virtual void UnparseAux( std::string &buffer, ExprTree *tree, 
-					std::string &ref, bool absolute=false );
+		virtual void UnparseAux( std::string &buffer,
+								 const Value&,Value::NumberFactor );
+		virtual void UnparseAux( std::string &buffer, 
+								 const ExprTree *tree, 
+								 std::string &ref, bool absolute=false );
 		virtual void UnparseAux( std::string &buffer, Operation::OpKind op, 
 					ExprTree *op1, ExprTree *op2, ExprTree *op3 );
 		virtual void UnparseAux(std::string &buffer, std::string &fnName, 
