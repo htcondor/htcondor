@@ -27,7 +27,7 @@ my %Options =
      "[-c=file]"	=> "Specify Hawkeye config file",
      "[-n]"		=> "Don't update the config file",
      "[-m]"		=> "Manual mode; asks lots of questions",
-     "[-d]"		=> "Use defaults (don't ask questions)",
+     "[-a]"		=> "Ask before installing each module)",
      "File [File..]"	=> "List of module files to install",
      #"[-v]"		=> "Verbose",
      "[-h]"		=> "Dump help",
@@ -76,11 +76,13 @@ sub CommandLine( @ )
 {
     foreach my $Arg ( @_ )
     {
+	# Speicfy modules directory
 	if ( $Arg =~ /^-d=(.+)/ )
 	{
 	    die "Directory '$1' does not exist" if ( ! -d $1 );
 	    $Config{ModulesDir} = $1;
 	}
+	# Speicify config file
 	elsif ( $Arg =~ /-c=(.+)/ )
 	{
 	    die "Config file '$1' does not exist" if ( ! -f $1 );
@@ -91,14 +93,17 @@ sub CommandLine( @ )
 	    }
 	    $Config{HawkeyeConfig} = $File;
 	}
+	# No config update
 	elsif ( $Arg =~ /^-n$/ )
 	{
 	    $Config{UpdateConfig} = 0;
 	}
-	elsif ( $Arg =~ /^-d$/ )
+	# "Ask" mode
+	elsif ( $Arg =~ /^-a$/ )
 	{
-	    $Config{UseDefaults} = 1;
+	    $Config{InstallAll} = 0;
 	}
+	# Manual mode
 	elsif ( $Arg =~ /^-m$/ )
 	{
 	    $Config{InstallAll} = 0;
@@ -286,11 +291,14 @@ sub InstallModules ( )
     mkdir $TmpDir || die "Can't mkdir '$TmpDir'";
     chdir $TmpDir || die "Can't chdir to $TmpDir";
 
+    # Summary info
+    my @Ok;
+    my @Failed;
+
     # Walk through the list of modules...
     print "Installing modules\n";
     foreach my $Module ( @{$Config{Modules}} )
     {
-	print "$Module:\n";
 	my $Cmd = "gzip -d < $Module | tar xvfp -";
 	system "$Cmd 2>&1 > /dev/null";
 
@@ -317,16 +325,39 @@ sub InstallModules ( )
 	    if ( $Errors )
 	    {
 		print "Errors encountered in data file; skipping $Module\n";
+		push @Failed, $Module;
 		next;
 	    }
 
 	    # Get it's name..
 	    my $Name = $ModuleData{Name};
-	    print "Module $Name:\n";
+	    print "\n\nModule $Name:\n";
 
 	    # Install it?
 	    my $Status = InstallModule( \%ModuleData );
-	    next if ( $Status );
+	    if ( $Status )
+	    {
+		push @Failed, $Module if ( $Status < 0 );
+		next;
+	    }
+
+	    # Enable it?
+	    if ( ! $Config{InstallAll} )
+	    {
+		print "  Do you wish to enable this module? ";
+		my $Answer = "";
+		while( <> )
+		{
+		    chomp;
+		    if ( /^[yn]/i )
+		    {
+			$Answer = lc($_);
+			last;
+		    }
+		    print "  Please answer 'y' or 'n': ";
+		}
+		next if ( $Answer ne "y" );
+	    }
 
 	    # Configure it?
 	    if ( ! $Config{UseDefaults} )
@@ -337,10 +368,26 @@ sub InstallModules ( )
 	    {
 		$Status = ConfigureModuleDefaults( \%ModuleData );
 	    }
-	    next if ( $Status );
+
+	    # Add to the failed list?
+	    if ( $Status )
+	    {
+		push @Failed, $Module if ( $Status < 0 );
+		next;
+	    }
 
 	    # Update the config file
 	    $Status = UpdateConfig( \%ModuleData );
+
+	    # Add to the failed list?
+	    if ( $Status < 0 )
+	    {
+		push @Failed, $Module
+	    }
+	    elsif ( $Status == 0 )
+	    {
+		push @Ok, $Name;
+	    }
 	}
 
 	# Clean up
@@ -354,6 +401,25 @@ sub InstallModules ( )
     # Final clean-up
     chdir $OrigDir;
     system "/bin/rm -fr $TmpDir";
+
+    # Summary
+    if ( $#Ok >= 0 )
+    {
+	print "Fully installed modules:\n";
+	foreach my $Tmp ( @Ok )
+	{
+	    print "   $Tmp\n";
+	}
+    }
+    if ( $#Failed >= 0 )
+    {
+	print "Failed modules:\n";
+	foreach my $Tmp ( @Failed )
+	{
+	    print "   $Tmp\n";
+	}
+    }
+
 
 } # InstallModules()
 # ******************************************************
@@ -627,21 +693,6 @@ sub ConfigureModule( $ )
     # Note modified config...
     $Data->{ConfigChanged} = 1;
 
-    # Enable it?
-    print "  Do you wish to enable this module? ";
-    my $Answer = "";
-    while( <> )
-    {
-	chomp;
-	if ( /^[yn]/i )
-	{
-	    $Answer = lc($_);
-	    last;
-	}
-	print "  Please answer 'y' or 'n': ";
-    }
-    return 1 if ( $Answer ne "y" );
-
     # What name to give it?
     print "  What logical name do you wish to use <default=$Name>: ";
     $_ = <>; chomp;
@@ -810,6 +861,8 @@ sub UpdateConfig( $ )
 	}
     }
 
+    return 0;
+
 } # UpdateConfig()
 # ******************************************************
 
@@ -830,7 +883,7 @@ sub WriteConfig( )
     if ( $Config{UpdateConfig} )
     {
 	system( "/bin/cp $TmpFile $Config{HawkeyeConfig}" );
-	print "$Config{HawkeyeConfig} updated\n";
+	print "\n$Config{HawkeyeConfig} updated\n";
     }
     else
     {
