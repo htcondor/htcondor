@@ -211,6 +211,9 @@ main( int argc, char** argv )
 	char	**ptr;
 	fd_set	readfds;
 	struct timeval timer;
+int	i = 1;
+
+while(i);
 
 #ifdef NFSFIX
 	/* Must be condor to write to log files. */
@@ -944,7 +947,7 @@ int simple_negotiate( char* addr, ClassAd* rec, XDR* xdrs, int& prio )
 				if( server = find_server(job_context) ) {
 					dprintf( D_ALWAYS, "\tAllowing %s to run on %s\n",
 						addr, server->name);
-					if( evaluate_string("STARTD_IP_ADDR",&address,server->machine_context,0 ) < 0 ) {
+					if( evaluate_string(ATTR_STARTD_IP_ADDR,&address,server->machine_context,0 ) < 0 ) {
 						dprintf(D_ALWAYS,"\tDidn't receive startd_ip_addr\n");
 					}
 
