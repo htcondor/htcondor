@@ -345,6 +345,8 @@ all_pty_idle_time( time_t now )
 #include <sys/sysmacros.h>  /* needed for major() below */
 #elif defined( OSF1 )
 #include <sys/types.h>
+#elif defined( HPUX )
+#include <sys/sysmacros.h>
 #else
 #include <sys/mkdev.h>
 #endif
