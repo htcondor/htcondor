@@ -22,8 +22,8 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-#include "stringSpace.h"
 #include "exprTree.h"
+#include "sink.h"
 
 BEGIN_NAMESPACE( classad )
 
@@ -84,7 +84,7 @@ Evaluate( Value& val, ExprTree*& sig ) const
 
 
 bool ExprTree::
-Flatten( Value& val, ExprTree *&tree )
+Flatten( Value& val, ExprTree *&tree ) const
 {
 	EvalState state;
 
@@ -98,6 +98,7 @@ Flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind* op) const
 {
 	Value				cv;
 	bool				rval;
+
 	EvalCache::iterator	itr = state.cache.find( this );
 
 	if( itr != state.cache.end( ) ) {
@@ -113,10 +114,21 @@ Flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind* op) const
 	// flatten the expression
 	rval = _Flatten( state, val, tree, op );
 
-	// cache the value
-	state.cache[ this ] = val;
+	// we may not have a value here, so don't cache
+	state.cache.erase( this ); 
 
 	return( rval );
+}
+
+
+void ExprTree::
+Puke( ) const
+{
+	PrettyPrint	unp;
+	string		buffer;
+
+	unp.Unparse( buffer, (ExprTree*)this );
+	printf( "%s\n", buffer.c_str( ) );
 }
 
 
@@ -147,7 +159,7 @@ EvalState::
 void EvalState::
 SetScopes( const ClassAd *curScope )
 {
-	curAd = curScope;
+	curAd = (ClassAd*)curScope;
 	SetRootScope( );
 }
 
@@ -155,11 +167,11 @@ SetScopes( const ClassAd *curScope )
 void EvalState::
 SetRootScope( )
 {
-	const ClassAd *prevScope = curAd, *curScope = curAd->parentScope;
+	ClassAd *prevScope = curAd, *curScope = (ClassAd*)(curAd->parentScope);
 
 	while( curScope ) {
 		prevScope = curScope;
-		curScope  = curScope->parentScope;
+		curScope  = (ClassAd*)(curScope->parentScope);
 	}
 
 	rootAd = prevScope;
