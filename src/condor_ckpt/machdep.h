@@ -53,7 +53,7 @@
 #	define SETJMP _setjmp
 #	define LONGJMP _longjmp
 
-#elif defined(SOLARIS2)
+#elif defined(SOLARIS2) || defined(Solaris)
 
 	extern "C" int brk( void * );
 	extern "C" void *sbrk( int );
