@@ -153,7 +153,6 @@ AvailTimeList::display( int debug_level )
 {
 	Item<ResTimeNode> *cur;
 	ResTimeNode *tmp;
-	ClassAd *res;
 
 	dprintf( debug_level, "Begining AvailTimeList::display()\n" );
 
@@ -162,12 +161,7 @@ AvailTimeList::display( int debug_level )
 	cur = current;
 	Rewind();
 	while( (tmp = Next()) ) {
-		dprintf( debug_level, "Resources available at time %d:\n", 
-				 tmp->time );
-		tmp->res_list->Rewind();
-		while( (res = tmp->res_list->Next()) ) {
-			displayResource( res, "   ", debug_level );
-		}
+		tmp->display( debug_level );
 	}
 	dprintf( debug_level, "Finished AvailTimeList::display()\n" );
 }
@@ -330,6 +324,19 @@ ResTimeNode::satisfyJob( ClassAd* job, int max_hosts,
 		}
 	}
 	return false;
+}
+
+
+void
+ResTimeNode::display( int debug_level )
+{
+	ClassAd* res;
+	dprintf( debug_level, "Resources available at time %d:\n", 
+			 time );
+	res_list->Rewind();
+	while( (res = res_list->Next()) ) {
+		displayResource( res, "   ", debug_level );
+	}
 }
 
 
