@@ -118,13 +118,15 @@ public:
 	void	cancel_kill_timer( void );	// be in preempting/killing state. 
 
  		// Helper functions to evaluate resource expressions
-	int		wants_vacate( void );
-	int		wants_suspend( void );
-	int		wants_pckpt( void );
-	int		eval_kill( void );
-	int		eval_preempt( void );
-	int		eval_suspend( void );
-	int		eval_continue( void );
+	int		wants_vacate( void );		// EXCEPT's on undefined
+	int		wants_suspend( void );		// EXCEPT's on undefined
+	int		wants_pckpt( void );		// Defaults to FALSE on undefined
+	int		eval_kill( void );			// EXCEPT's on undefined
+	int		eval_preempt( void );		// EXCEPT's on undefined
+	int		eval_suspend( void );		// EXCEPT's on undefined
+	int		eval_continue( void );		// EXCEPT's on undefined
+	int		eval_is_owner( void );		// EXCEPT's on undefined
+	int		eval_start( void );			// returns -1 on undefined
 
 		// Data members
 	ResState*		r_state;	// Startd state object, contains state and activity
