@@ -50,6 +50,20 @@ install_sig_handler( int sig, SIG_HANDLER handler )
 }
 
 void
+install_sig_handler_with_mask( int sig, sigset_t* set, SIG_HANDLER handler )
+{
+	struct sigaction act;
+
+	act.sa_handler = handler;
+	act.sa_mask = *set;
+	act.sa_flags = 0;
+
+	if( sigaction(sig,&act,0) < 0 ) {
+		EXCEPT( "sigaction" );
+	}
+}
+
+void
 unblock_signal( int sig)
 {
     sigset_t    set;
