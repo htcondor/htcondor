@@ -354,7 +354,7 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
                   _numJobsSubmitted--;
                   ASSERT( _numJobsSubmitted >= 0 );
 
-				  if( job->retries++ < job->GetRetryMax() ) {
+				  if( job->GetRetries() < job->GetRetryMax() ) {
 					  RestartNode( job, recovery );
 					  break;
 				  }
@@ -1184,13 +1184,16 @@ void
 Dag::RestartNode( Job *node, bool recovery )
 {
 	node->_Status = Job::STATUS_READY;
+	node->retries++;
+	ASSERT( node->GetRetries() <= node->GetRetryMax() );
 	if( node->_scriptPre ) {
 		// undo PRE script completion
 		node->_scriptPre->_done = false;
 	}
 	strcpy( node->error_text, "" );
-	debug_printf( DEBUG_VERBOSE, "Retrying node %s ...\n",
-				  node->GetJobName() );
+	debug_printf( DEBUG_VERBOSE, "Retrying node %s (retry #%d of %d)...\n",
+				  node->GetJobName(), node->GetRetries(),
+				  node->GetRetryMax() );
 	if( !recovery ) {
 		StartNode( node );
 	}
