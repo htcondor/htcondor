@@ -151,7 +151,7 @@ void ShadowInitializer::ShadowInitialize(void)
 		Shadow = new MPIShadow();
 		break;
 	case CONDOR_UNIVERSE_PARALLEL:
-		Shadow = new ParallelShadow();
+		Shadow = new MPIShadow();
 		break;
 	case CONDOR_UNIVERSE_PVM:
 			// some day we'll support this.  for now, fall through and
