@@ -32,7 +32,7 @@
 /* Top should be the root of the source directory you want to use if
 you want our top-level Makefile to build the directory tree with all
 the soft links.  The links will point back to Top/src/... */
-#define Top /home/psilord/condor_src/v63/v63-linux24-glibc22
+#define Top /p/condor/workspaces/zmiller/V6_3
 
 #define TmpDir		/tmp
 
@@ -66,7 +66,7 @@ the soft links.  The links will point back to Top/src/... */
 
 #define WANT_NETMAN	YES
 
-#define WANT_KERBEROS   NO
+#define WANT_KERBEROS   YES
 
 /*------------------------------------------
  * Condor Credential API related
