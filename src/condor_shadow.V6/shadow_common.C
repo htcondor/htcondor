@@ -595,7 +595,7 @@ part_send_job(
 		  return -1;
 		  break;
 
-	  case TRY_AGAIN:
+	  case CONDOR_TRY_AGAIN:
 		  num_retries++;
 		  delete sock;
 		  dprintf( D_ALWAYS,

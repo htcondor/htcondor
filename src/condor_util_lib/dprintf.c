@@ -280,8 +280,10 @@ debug_lock(int debug_level)
 								/* It worked as root, so chown() the
 								   new directory and set a flag so we
 								   retry the open(). */
+#ifndef WIN32
 								chown( dirpath, get_condor_uid(),
 									   get_condor_gid() );
+#endif
 								retry = 1;
 							}
 							_set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);

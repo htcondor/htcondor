@@ -1344,7 +1344,7 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 			// If job ad and resource ad match, put into prio rec array.
 			// If we do not have a resource ad, it is because this pool
 			// has an old negotiator -- so put it in prio rec array anyway.
-		if ( (my_match_ad && (ad == my_match_ad)) || (my_match_ad == NULL) ) 
+		if ( (my_match_ad && (*ad == ((ClassAd &)(*my_match_ad)))) || (my_match_ad == NULL) ) 
 		{
 			get_job_prio(ad);
 		} 
@@ -1381,7 +1381,7 @@ void FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 		ad = GetNextJobByConstraint(constraint, 1);	// init a new scan
 		while ( ad ) {
 			// If job ad and resource ad match, put into prio rec array.
-			if ( (my_match_ad && (ad == my_match_ad)) ) 
+			if ( (my_match_ad && (*ad == ((ClassAd &)(*my_match_ad)))) ) 
 			{
 				get_job_prio(ad);
 			}
@@ -1493,7 +1493,8 @@ void FindPrioJob(PROC_ID & job_id)
 	}
 	for(i = 1; i < N_PrioRecs; i++)
 	{
-		if(PrioRec[0].id.proc == PrioRec[i].id.proc)
+		if( (PrioRec[0].id.proc == PrioRec[i].id.proc) &&
+			(PrioRec[0].id.cluster == PrioRec[i].id.cluster) )
 		{
 			continue;
 		}

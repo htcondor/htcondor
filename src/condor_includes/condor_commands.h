@@ -283,7 +283,7 @@ const int INVALIDATE_LICENSE_ADS	= 44;
 #endif
 
 /* Other replies */
-#define TRY_AGAIN	2
+#define CONDOR_TRY_AGAIN	2
 
 
 #endif  /* of ifndef _CONDOR_COMMANDS_H */

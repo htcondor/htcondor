@@ -133,7 +133,7 @@ command_activate_claim( Service*, int cmd, Stream* stream )
 		rip->dprintf( D_ALWAYS, 
 					  "Telling shadow to try again later.\n" );
 		stream->end_of_message();
-		reply( stream, TRY_AGAIN );
+		reply( stream, CONDOR_TRY_AGAIN );
 		return FALSE;
 	}
 	

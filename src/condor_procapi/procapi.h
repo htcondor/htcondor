@@ -421,8 +421,6 @@ class ProcAPI {
 #endif  // of WANT_STANDALONE_DEBUG
 
 #ifdef WIN32 // some windoze-specific thingies:
-	//Todd's system info class, for getting parent:
-  //static CSysinfo ntSysInfo;
 
   static void makeFamily( pid_t dadpid, pid_t *allpids, int numpids, 
 						  pid_t* &fampids, int &famsize );

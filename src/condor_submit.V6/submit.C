@@ -703,16 +703,21 @@ SetExecutable()
 	// generate initial checkpoint file
 	strcpy( IckptName, gen_ckpt_name(0,ClusterId,ICKPT,0) );
 
-	if (SendSpoolFile(IckptName) < 0) {
-		fprintf(stderr,"permission to transfer executable %s denied\n",IckptName);
-		DoCleanup(0,0,NULL);
-		exit( 1 );
-	}
+	// spool executable only if no $$(arch).$$(opsys) specified
+	if ( !strstr(ename,"$$") ) {			
 
-	if (SendSpoolFileBytes(full_path(ename,false)) < 0) {
-		fprintf(stderr,"failed to transfer executable file %s\n", ename);
-		DoCleanup(0,0,NULL);
-		exit( 1 );
+		if (SendSpoolFile(IckptName) < 0) {
+			fprintf(stderr,"permission to transfer executable %s denied\n",IckptName);
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
+
+		if (SendSpoolFileBytes(full_path(ename,false)) < 0) {
+			fprintf(stderr,"failed to transfer executable file %s\n", ename);
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		}
+
 	}
 
 	free(ename);
@@ -963,7 +968,8 @@ calc_image_size( char *name)
 	struct stat	buf;
 
 	if( stat(full_path(name),&buf) < 0 ) {
-		EXCEPT( "Cannot stat \"%s\"", name );
+		// EXCEPT( "Cannot stat \"%s\"", name );
+		return 0;
 	}
 	return (buf.st_size + 1023) / 1024;
 }

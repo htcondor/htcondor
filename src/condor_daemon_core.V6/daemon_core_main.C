@@ -1043,12 +1043,12 @@ int main( int argc, char** argv )
 
 		// register the command handler to take care of signals
 		daemonCore->Register_Command(DC_RAISESIGNAL,"DC_RAISESIGNAL",
-				(CommandHandlercpp)&(daemonCore->HandleSigCommand),
+			(CommandHandlercpp)&DaemonCore::HandleSigCommand,
 				"HandleSigCommand()",daemonCore,IMMEDIATE_FAMILY);
 
 		// this handler receives process exit info
 		daemonCore->Register_Command(DC_PROCESSEXIT,"DC_PROCESSEXIT",
-				(CommandHandlercpp)&(daemonCore->HandleProcessExitCommand),
+			(CommandHandlercpp)&DaemonCore::HandleProcessExitCommand,
 				"HandleProcessExitCommand()",daemonCore,IMMEDIATE_FAMILY);
 
 		// this handler receives keepalive pings from our children, so

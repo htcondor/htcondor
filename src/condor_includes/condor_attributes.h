@@ -72,6 +72,7 @@ const char ATTR_IMAGE_SIZE				 [] = "ImageSize";
 const char ATTR_INACTIVE                 [] = "Inactive";
 const char ATTR_JOB_ARGUMENTS			 [] = "Args";
 const char ATTR_JOB_CMD					 [] = "Cmd";
+const char ATTR_JOB_CMDEXT				 [] = "CmdExt";
 const char ATTR_JOB_ENVIRONMENT			 [] = "Env";
 const char ATTR_JOB_ERROR				 [] = "Err";
 const char ATTR_JOB_EXIT_STATUS			 [] = "ExitStatus";

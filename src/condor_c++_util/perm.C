@@ -262,31 +262,33 @@ bool perm::volume_has_acls( const char *filename )
 
 int perm::set_acls( const char *filename )
 {
-  BOOL ret;
-  LONG err;
-  SECURITY_DESCRIPTOR *sdData;
-  SECURITY_DESCRIPTOR absSD;
-  PACL pacl;
-  PACL pNewACL;
-  DWORD newACLSize;
-  BOOL byDef;
-  BOOL haveDACL;
-  DWORD sizeRqd;
-  UINT x;
-  ACL_SIZE_INFORMATION aclSize;
-  ACCESS_ALLOWED_ACE *pace;
+	BOOL ret;
+	LONG err;
+	SECURITY_DESCRIPTOR *sdData;
+	SECURITY_DESCRIPTOR absSD;
+	PACL pacl;
+	PACL pNewACL;
+	DWORD newACLSize;
+	BOOL byDef;
+	BOOL haveDACL;
+	DWORD sizeRqd;
+	UINT x;
+	ACL_SIZE_INFORMATION aclSize;
+	ACCESS_ALLOWED_ACE *pace,*pace2;
 
-    // If this is not on an NTFS volume, we're done.  In fact, we'll
+	// If this is not on an NTFS volume, we're done.  In fact, we'll
 	// likely crash if we try all the below ACL crap on a volume which
 	// does not support ACLs. Dooo!
-    if ( !volume_has_acls(filename) ) {
+	if ( !volume_has_acls(filename) ) 
+	{
 		dprintf(D_FULLDEBUG, "perm::set_acls(%s): volume has no ACLS\n",filename);
 		return 1;
 	}
 
 	// Make sure we have the sid.
 
-	if ( psid == NULL ) {
+	if ( psid == NULL ) 
+	{
 		dprintf(D_ALWAYS, "perm::set_acls(%s): do not have SID for user\n",filename);
 		return -1;
 	}
@@ -296,10 +298,9 @@ int perm::set_acls( const char *filename )
 	// find out how much mem is needed
 	// to hold existing SD w/DACL
 	sizeRqd=0;
-	
-	if (GetFileSecurity( filename,
-		DACL_SECURITY_INFORMATION,
-		NULL, 0, &sizeRqd )) {
+
+	if (GetFileSecurity( filename, DACL_SECURITY_INFORMATION, NULL, 0, &sizeRqd )) 
+	{
 		dprintf(D_ALWAYS,"perm::set_acls() Unable to get SD size.\n");
 		return -1;
 	}
@@ -307,7 +308,8 @@ int perm::set_acls( const char *filename )
 	err = GetLastError();
 
 
-	if ( err != ERROR_INSUFFICIENT_BUFFER ) {
+	if ( err != ERROR_INSUFFICIENT_BUFFER ) 
+	{
 		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to get SD size.\n", filename);
 		return -1;
 	}
@@ -315,27 +317,24 @@ int perm::set_acls( const char *filename )
 	// allocate that memory
 	sdData=( SECURITY_DESCRIPTOR * ) malloc( sizeRqd );
 
-	if ( sdData == NULL ) {
-		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to allocate memory.\n", filename);
+	if ( sdData == NULL ) 
+	{
+		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to allocate memory.\n",filename);
 		return -1;
 	}
 
-  // actually get the SD info
-	if (!GetFileSecurity( filename,
-		DACL_SECURITY_INFORMATION,
-		sdData, sizeRqd, &sizeRqd )) {
-		
+	// actually get the SD info
+	if (!GetFileSecurity( filename,	DACL_SECURITY_INFORMATION,sdData, sizeRqd, &sizeRqd )) 
+	{
 		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to get SD info.\n", filename);
 		free(sdData);
 		return -1;
 	}
 
-  // ----- Create a new absolute SD and DACL -----
+	// ----- Create a new absolute SD and DACL -----
 
-  // initialize absolute SD
-	ret=InitializeSecurityDescriptor(&absSD,
-		SECURITY_DESCRIPTOR_REVISION);
-
+	// initialize absolute SD
+	ret=InitializeSecurityDescriptor(&absSD,SECURITY_DESCRIPTOR_REVISION);
 	if (!ret)
 	{
 		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to init new SD.\n", filename);
@@ -344,12 +343,10 @@ int perm::set_acls( const char *filename )
 	}
 
 	// get the DACL info
-	ret=GetSecurityDescriptorDacl(sdData,
-		&haveDACL, &pacl, &byDef);
-	
+	ret=GetSecurityDescriptorDacl(sdData,&haveDACL, &pacl, &byDef);
 	if (!ret)
 	{
-		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to get DACL info.\n", filename);
+		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to get DACL info.\n",	filename);
 		free(sdData);
 		return -1;
 	}
@@ -357,39 +354,41 @@ int perm::set_acls( const char *filename )
 	if (!haveDACL)
 	{
 		// compute size of new DACL
-		newACLSize= sizeof(ACCESS_ALLOWED_ACE) +
-			GetLengthSid(psid) - sizeof(DWORD);
+		//
+		// Modified: 11/1/1999 J.Drews
+		// The new code requires TWO ACL's to be added to work correctly
+		//
+		newACLSize= (sizeof(ACCESS_ALLOWED_ACE) + GetLengthSid(psid) - sizeof(DWORD))*2;
 	}
 	else
 	{
 		// get size info about existing DACL
-		ret=GetAclInformation(pacl, &aclSize,
-			sizeof(ACL_SIZE_INFORMATION),
-			AclSizeInformation);
-		
+		ret=GetAclInformation(pacl, &aclSize, sizeof(ACL_SIZE_INFORMATION), AclSizeInformation);
+
 		// compute size of new DACL
-		newACLSize=aclSize.AclBytesInUse +
-			sizeof(ACCESS_ALLOWED_ACE) +
-			GetLengthSid(psid) -
-			sizeof(DWORD);
+		//
+		// Modified: 11/1/1999 J.Drews
+		// The new code requires TWO ACL's to be added to work correctly
+		//
+		newACLSize = aclSize.AclBytesInUse + (sizeof(ACCESS_ALLOWED_ACE) +
+			GetLengthSid(psid) - sizeof(DWORD))*2;
 	}
 
 	// allocate memory
-//	pNewACL=(PACL) GlobalAlloc(GPTR, newACLSize);
+	//	pNewACL=(PACL) GlobalAlloc(GPTR, newACLSize);
 	pNewACL=(PACL) malloc(newACLSize);
 	if (pNewACL == NULL)
 	{
-		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to allocate memory.\n", filename);
+		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to allocate memory.\n",filename);
 		free(sdData);
 		return -1;
 	}
 
 	// initialize the new DACL
-	ret=InitializeAcl(pNewACL, newACLSize,
-		ACL_REVISION);
+	ret=InitializeAcl(pNewACL, newACLSize, ACL_REVISION);
 	if (!ret)
 	{
-		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to init new DACL.\n", filename);
+		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to init new DACL.\n",filename);
 		free(pNewACL);
 		free(sdData);
 		return -1;
@@ -397,6 +396,12 @@ int perm::set_acls( const char *filename )
 
 	// ----- Copy existing DACL into new DACL -----
 
+	// BUG Notice by J.Drews
+	// Not sure what NT will do if the DACL we are going to add already
+	// exists. For condor this shouldn't happen, but it would be a good
+	// thing to check to see if any of the DACLs we are copying are for
+	// the SID we are adding. If so, don't add them. Will leave to the
+	// condor team to fix that if they desire.
 	if (haveDACL)
 	{
 		// copy ACEs from existing DACL
@@ -411,9 +416,8 @@ int perm::set_acls( const char *filename )
 				free(sdData);
 				return -1;
 			}
-			
-			ret=AddAce(pNewACL, ACL_REVISION, MAXDWORD,
-				pace, pace->Header.AceSize);
+
+			ret=AddAce(pNewACL, ACL_REVISION, MAXDWORD,	pace, pace->Header.AceSize);
 			if (!ret)
 			{
 				dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to add ACE.\n", filename);
@@ -426,28 +430,94 @@ int perm::set_acls( const char *filename )
 
 	// ----- Add the new ACE to the new DACL -----
 
-	// add access allowed ACE to new
-	// DACL
-	ret=AddAccessAllowedAce(pNewACL,
-		ACL_REVISION, GENERIC_ALL, psid);
-	
-	if (!ret)
+	// add access allowed ACE to new DACL
+	// Removed 11/1/1999 J.Drews, we can't use this as it doesn't set
+	// the flags correctly. Have to build the ACE by hand.
+	// ret=AddAccessAllowedAce(pNewACL, ACL_REVISION, GENERIC_ALL, psid);
+	// if (!ret)
+	// {
+	//	dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to add access allowed ACE.\n", filename);
+	//	free(pNewACL);
+	//	free(sdData);
+	//	return -1;
+	// }
+
+	//
+	// Added 11/1/1999 J.Drews
+	// We have to build the ACE ourselves to get the flags and such
+	// set correctly. The old way only set the "special directory access"
+	// bits and not the "special file access" bits. This prevented condor
+	// from working as expected (could not modify any files copied over by
+	// the condor system).
+	DWORD acelen = GetLengthSid(psid) +sizeof(ACCESS_ALLOWED_ACE) -sizeof(DWORD);
+	pace = (ACCESS_ALLOWED_ACE *)  malloc(acelen);
+
+	if (pace == NULL)
 	{
-		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to add access allowed ACE.\n", filename);
+		dprintf(D_ALWAYS,"perm::set_acls(%s): unable to allocate memory",filename);
 		free(pNewACL);
 		free(sdData);
 		return -1;
 	}
 
+	// Fill in ACCESS_ALLOWED_ACE structure.
+	pace->Mask = GENERIC_ALL; /* 0x10000000 */
+	pace->Header.AceType = ACCESS_ALLOWED_ACE_TYPE; 
+	pace->Header.AceFlags = INHERIT_ONLY_ACE|OBJECT_INHERIT_ACE; /*0x09*/
+	pace->Header.AceSize = (WORD) acelen; 
+	memcpy(&(pace->SidStart),psid,GetLengthSid(psid) );      
+	ret = AddAce(pNewACL, ACL_REVISION, MAXDWORD, pace, pace->Header.AceSize);
+	if(!ret)
+	{
+		// Handle AddAce error.
+		dprintf(D_ALWAYS,"perm::set_acls(%s): unable to add accesses allowed ACE. (%d)\n",filename,ret);
+		free(pNewACL);
+		free(sdData);
+		free(pace);
+		return -1;
+	}
+
+	pace2 = (ACCESS_ALLOWED_ACE *)  malloc(acelen);
+	if (pace2 == NULL)
+	{
+		dprintf(D_ALWAYS,"perm::set_acls(%s): unable to allocate memory",filename);
+		free(pNewACL);
+		free(sdData);
+		return -1;
+	}
+
+	// Fill in ACCESS_ALLOWED_ACE structure.
+	
+	pace2->Mask = STANDARD_RIGHTS_ALL | 0x000001ff; /*0x001f01ff*/
+	/* couldn't find a define for the lower end bits - J.Drews */
+	pace2->Header.AceType = ACCESS_ALLOWED_ACE_TYPE; 
+	pace2->Header.AceFlags = CONTAINER_INHERIT_ACE; /*0x02*/
+	pace2->Header.AceSize = (WORD) acelen;
+	memcpy(&(pace2->SidStart),psid,GetLengthSid(psid) );      
+	ret = AddAce(pNewACL, ACL_REVISION, MAXDWORD, pace2, pace2->Header.AceSize);
+	if(!ret)
+	{
+		ret = GetLastError();
+		// Handle AddAce error.
+		dprintf(D_ALWAYS,"perm::set_acls(%s): unable to add accesses allowed ACE.(%d)\n",filename,ret);
+		free(pNewACL);
+		free(sdData);
+		free(pace);
+		free(pace2);
+		return -1;
+	}
+
+
 	// set the new DACL
 	// in the absolute SD
-	ret=SetSecurityDescriptorDacl(&absSD,
-		TRUE, pNewACL, FALSE);
+	ret=SetSecurityDescriptorDacl(&absSD, TRUE, pNewACL, FALSE);
 	if (!ret)
 	{
 		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to install DACL.\n", filename);
 		free(pNewACL);
 		free(sdData);
+		free(pace);
+		free(pace2);
 		return -1;
 	}
 
@@ -458,27 +528,31 @@ int perm::set_acls( const char *filename )
 		dprintf(D_ALWAYS, "perm::set_acls(%s): SD invalid.\n", filename);
 		free(pNewACL);
 		free(sdData);
+		free(pace);
+		free(pace2);
 		return -1;
 	}
 
 	// ----- Install the new DACL -----
 
 	// install the updated SD
-	err=SetFileSecurity( filename,
-		DACL_SECURITY_INFORMATION,
-		&absSD);
+	err=SetFileSecurity( filename, DACL_SECURITY_INFORMATION, &absSD);
 	if (!err)
 	{
-		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to set file SD (err=%d).\n", 
-			filename,GetLastError() );
+		dprintf(D_ALWAYS, "perm::set_acls(%s): Unable to set file SD (err=%d).\n", filename,GetLastError() );
 		free(pNewACL);
 		free(sdData);
+		free(pace);
+		free(pace2);
 		return 0;
 	}
 
 	// release memory
 	free(pNewACL);
 	free(sdData);
+	free(pace);
+	free(pace2);
 
 	return 1;
 }
+

@@ -39,7 +39,7 @@ LPARAM lParam)
 	return CallNextHookEx(hHook,nCode,wParam,lParam);
 }
 
-HANDLE g_hinstDLL = NULL;
+HINSTANCE g_hinstDLL = NULL;
 
 extern "C"
 int __declspec( dllexport) WINAPI KBInitialize(void)
@@ -71,8 +71,8 @@ BOOL WINAPI DllMain(HANDLE hInstDLL, ULONG fdwReason, LPVOID lpReserved)
 	switch (fdwReason)
 	{
 		case DLL_PROCESS_ATTACH:
-			g_hinstDLL = hInstDLL;
-			DisableThreadLibraryCalls(hInstDLL);
+			g_hinstDLL = (HINSTANCE)hInstDLL;
+			DisableThreadLibraryCalls(g_hinstDLL);
 			break;
 	}
 	return 1;

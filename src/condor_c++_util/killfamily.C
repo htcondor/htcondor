@@ -58,11 +58,17 @@ ProcFamily::ProcFamily( pid_t pid, priv_state priv, int test_only )
 #ifdef WITH_DAEMONCORE
 	dc_tid = -1;
 #endif
+
 	searchLogin = NULL;
+
 #ifdef WIN32
+	// Always find the family via the Condor run login on NT, for now
+	searchLogin = strdup("condor-run-dir");
+
 	// On Win32, all ProcFamily activity needs to be done as LocalSystem
 	mypriv = PRIV_ROOT;
 #endif
+
 	dprintf( D_PROCFAMILY, 
 			 "Created new ProcFamily w/ pid %d as parent\n", daddy_pid );
 }

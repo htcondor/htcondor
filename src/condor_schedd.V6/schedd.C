@@ -387,6 +387,10 @@ Scheduler::count_jobs()
 	sprintf(tmp, "%s = %d", ATTR_TOTAL_RUNNING_JOBS, JobsRunning);
 	ad->Insert (tmp);
 
+		// Tell negotiator to send us the startd ad
+	sprintf(tmp, "%s = True", ATTR_WANT_RESOURCE_AD );
+	ad->InsertOrUpdate(tmp);
+
 		// Port doesn't matter, since we've got the sinful string. 
 	update_central_mgr( UPDATE_SCHEDD_AD, Collector->addr(), 0 );
 	dprintf( D_FULLDEBUG, 
@@ -1760,7 +1764,7 @@ Scheduler::contactStartd( char* capability, char *user,
 	char to_startd[256];
 	sprintf ( to_startd, "to startd %s", server );
 	daemonCore->Register_Socket( sock, "<Startd Contact Socket>",
-								 (SocketHandlercpp)&startdContactSockHandler,
+								 (SocketHandlercpp)&Scheduler::startdContactSockHandler,
 								 to_startd, this, ALLOW );
 
 	daemonCore->Register_DataPtr( mrec );
@@ -2197,63 +2201,64 @@ void Scheduler::StartJobHandler() {
 		job_id=&srec->job_id;
 		mrec=srec->match;
 		if (!mrec) {
-			dprintf(D_ALWAYS,"match for job %d.%d was deleted - not forking a shadow\n",job_id->cluster,job_id->proc);
+			dprintf(D_ALWAYS,
+				"match for job %d.%d was deleted - not forking a shadow\n",
+				job_id->cluster,job_id->proc);
 			mark_job_stopped(job_id);
 			delete srec;
 		}
 	}
+
+	// Set CmdExtention attribute, based on the opsys & arch of the match
+	char opsys_buf[100], *match_opsys=opsys_buf;
+	char arch_buf[100], *match_arch=arch_buf;
+	match_opsys[0] = '\0';
+	match_arch[0] = '\0';
+	if (mrec->my_match_ad) {
+		mrec->my_match_ad->LookupString(ATTR_ARCH,match_arch);
+		mrec->my_match_ad->LookupString(ATTR_OPSYS,match_opsys);
+		if ( match_arch[0] && match_opsys[0] ) {
+			char tmpbuf[500];
+			ClassAd *thejob = GetJobAd(job_id->cluster,job_id->proc);
+			sprintf(tmpbuf,"%s = \"%s.%s\"",ATTR_JOB_CMDEXT,
+				match_opsys,match_arch);
+			dprintf(D_FULLDEBUG,"adding attribute %s\n",tmpbuf);
+			if ( thejob ) {
+				thejob->InsertOrUpdate(tmpbuf);
+			}
+		}
+	}
+
 
 	//-------------------------------
 	// Actually fork the shadow
 	//-------------------------------
 
 	int		pid;
-
-#ifdef CARMI_OPS
-	struct shadow_rec *srp;
-	char out_buf[80];
-	int pipes[2];
-	srp = find_shadow_by_cluster( job_id );
-	
-	if (srp != NULL) /* mean that the shadow exists */
-	{
-		if (!find_shadow_rec( job_id )) /* means the shadow rec for this
-							process does not exist */
-			add_shadow_rec( srp->pid, job_id, server, srp->conn_fd);
-		  /* next write out the server cluster and proc on conn_fd */
-		dprintf( D_ALWAYS, "Sending job %d.%d to shadow pid %d\n", 
-			job_id->cluster, job_id->proc, srp->pid);
-		 sprintf(out_buf, "%s %d %d\n", server, job_id->cluster, 
-			job_id->proc);
-		dprintf( D_ALWAYS, "sending %s", out_buf);
-		if (write(srp->conn_fd, out_buf, strlen(out_buf)) <= 0)
-			dprintf(D_ALWAYS, "error in write %d \n", errno);
-		else
-			dprintf(D_ALWAYS, "done writting to %d \n", srp->conn_fd);
-		return 1;	
-	}
-	
-	 /* now the case when the shadow is absent */
-	socketpair(AF_UNIX, SOCK_STREAM, 0, pipes);
-	dprintf(D_ALWAYS, "Got the socket pair %d %d \n", pipes[0], pipes[1]);
-#endif  // of CARMI_OPS
+	int sh_is_dc;
 
 #ifdef WANT_DC_PM
 	char	args[_POSIX_ARG_MAX];
 
-	sprintf(args, "condor_shadow %s %s %s %d %d", MyShadowSockName, mrec->peer,
-			mrec->id, job_id->cluster, job_id->proc);
 	if (Shadow) free(Shadow);
+#ifdef WIN32
 	Shadow = param("SHADOW");
+	sh_is_dc = TRUE;
+#else
+	if ( strnicmp(match_opsys,"winnt",5) == MATCH ) {
+		Shadow = param("SHADOWNT");
+		sh_is_dc = TRUE;
+		if ( !Shadow ) {
+			EXCEPT("Parameter SHADOWNT not defined!");
+		}
+	} else {
+		Shadow = param("SHADOW");
+		sh_is_dc = FALSE;
+	}
+#endif
 
 	char *shadow_is_dc;
 	shadow_is_dc = param( "SHADOW_IS_DC" );
-	int sh_is_dc;
-#ifdef WIN32
-	sh_is_dc = TRUE;
-#else
-	sh_is_dc = FALSE;
-#endif
 
 	if (shadow_is_dc) {
 		if ( (shadow_is_dc[0] == 'T') || (shadow_is_dc[0] == 't') ) {  

@@ -41,6 +41,8 @@
 #include "syscall_numbers.h"
 
 typedef int BOOL;
+#endif
+
 static const int 	SYS_LOCAL = 1;
 static const int 	SYS_REMOTE = 0;
 static const int	SYS_RECORDED = 2;
@@ -48,7 +50,6 @@ static const int	SYS_MAPPED = 2;
 
 static const int	SYS_UNRECORDED = 0;
 static const int	SYS_UNMAPPED = 0;
-#endif
 
 #if defined(__cplusplus)
 extern "C" {
