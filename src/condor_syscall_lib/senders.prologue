@@ -1,12 +1,12 @@
 #if defined(Solaris251)
 #include <nfs/nfs.h>	
-    /* 
+	/* 
 	nfs.h defines fhandle_t.  Include before condor_common to
 	avoid duplicate definitions of MIN.  However, only do this on 
 	Solaris251, since in Solaris26, all the 64-bit interface stuff
 	gets broken if you do this and you don't have the problem with
 	MIN.  -Derek 6/24/98
-    */  
+	*/  
 #endif
 
 #include "condor_common.h"
@@ -34,6 +34,7 @@ extern ReliSock *syscall_sock;
 
 extern "C" {
 
+/* if you modify this, then make sure to modify it in local_startup.c too */
 sigset_t
 block_condor_signals()
 {
@@ -66,9 +67,12 @@ void restore_condor_sigmask(sigset_t omask)
 		return;
 	}
 	SetSyscalls( sigscm );
-}	
+}
 
-} // extern "C"
+
+} // extern C
+
+
 
 int
 REMOTE_syscall( int syscall_num, ... )
