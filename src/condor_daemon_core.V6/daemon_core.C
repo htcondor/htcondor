@@ -2711,7 +2711,7 @@ int DaemonCore::Create_Process(
 	// START A NEW PROCESS ON UNIX
 
 	// First, check to see that the specified executable exists.
-	if( access(source,F_OK | X_OK) < 0 ) {
+	if( access(name,F_OK | X_OK) < 0 ) {
 		dprintf(D_ALWAYS, 
 				"Create_Process: File %s is not executable or non-existant.\n",
 				name);	   
