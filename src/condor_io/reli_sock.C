@@ -88,11 +88,11 @@ ReliSock::listen()
 	return TRUE;
 }
 
+
 int 
 ReliSock::accept( ReliSock	&c )
 {
 	int			c_sock;
-	sockaddr_in	addr;
 	int			addr_sz;
 
 
@@ -130,8 +130,8 @@ ReliSock::accept( ReliSock	&c )
 		}
 	}
 
-	addr_sz = sizeof(addr);
-	if ((c_sock = ::accept(_sock, (sockaddr *)&addr, &addr_sz)) < 0)
+	addr_sz = sizeof(c._who);
+	if ((c_sock = ::accept(_sock, (sockaddr *)&c._who, &addr_sz)) < 0)
 		return FALSE;
 
 	c._sock = c_sock;
@@ -183,7 +183,7 @@ int
 ReliSock::connect( char	*host, int port )
 {
 	is_client = 1;
-   hostAddr = strdup( host );
+	hostAddr = strdup( host );
 	return do_connect( host, port );
 }
 
@@ -656,39 +656,6 @@ int ReliSock::SndMsg::snd_packet( int _sock, int end, int _timeout )
 	return TRUE;
 }
 
-struct sockaddr_in * 
-ReliSock::endpoint()
-{
-	int addr_len;
-
-	addr_len = sizeof(sockaddr_in);
-
-	if (getpeername(_sock, (struct sockaddr *) &_who, &addr_len) < 0) {
-		return NULL;	// socket not connected
-	}
-
-	return( &_who );
-}
-		
-int 
-ReliSock::get_port()
-{
-	sockaddr_in	addr;
-	int addr_len = sizeof(sockaddr_in);
-
-	if (getsockname(_sock, (sockaddr *)&addr, &addr_len) < 0) {
-		return -1;
-	}
-
-	return( (int) ntohs(addr.sin_port) );
-}
-
-
-int 
-ReliSock::get_file_desc()
-{
-	return _sock;
-}
 
 #ifndef WIN32
 	// interface no longer supported
