@@ -1,6 +1,8 @@
 #ifndef JAVA_CONFIG_H
 #define JAVA_CONFIG_H
 
+#include "string_list.h"
+
 /*
 Extract the java configuration from the local config files.
 The name of the java executable gets put in 'cmd', and the necessary
