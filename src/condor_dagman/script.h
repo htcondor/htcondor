@@ -49,7 +49,7 @@ class Script {
 	int BackgroundRun( int reaperId );
 
     inline const char* GetCmd() const { return _cmd; }
-    Script( bool post, char* cmd, Job* job );
+    Script( bool post, const char* cmd, Job* job );
     ~Script();
 
     char * _cmd;

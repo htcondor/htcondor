@@ -36,7 +36,7 @@
 extern DLL_IMPORT_MAGIC char **environ;
 
 //-----------------------------------------------------------------------------
-Script::Script( bool post, char* cmd, Job* job ) :
+Script::Script( bool post, const char* cmd, Job* job ) :
     _post         (post),
     _retValScript (-1),
     _retValJob    (-1),
