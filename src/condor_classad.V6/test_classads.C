@@ -21,6 +21,7 @@
  *********************************************************************/
 
 #include "classad_distribution.h"
+#include "lexerSource.h"
 #include <fstream.h>
 #include <iostream>
 #include <ctype.h>
@@ -486,21 +487,29 @@ static void process_test_lexer_one_token(const string &line,
 	Lexer             lexer;
 	Lexer::TokenType  token_type;
 	char              *token_name;
+	StringLexerSource   *lexer_source;
 
-	lexer.Initialize(token_string);
-	token_type = lexer.PeekToken(NULL);
-	token_name = lexer.strLexToken(token_type);
-	lexer.FinishedParse();
-	if (!strcmp(expected_token_type.c_str(), token_name)) {
-		cout << "OK: Token type for \"" << token_string << "\" is "
-			 << token_name << " on line " << line_number
-			 << "." << endl;
-	}
-	else {
-		cout << "Error: Token type for \"" << token_string << "\" is not "
-			 << expected_token_type << " but is \"" << token_name 
-			 << "\" on line " << line_number << "." << endl;
-		errors->IncrementErrors();
+	lexer_source = new StringLexerSource(&token_string);
+	if (lexer_source == NULL) {
+		cout << "Error: Couldn't allocate LexerSource! on line ";
+		cout << line_number << "." << endl;
+	} else {
+		lexer.Initialize(lexer_source);
+		token_type = lexer.PeekToken(NULL);
+		token_name = lexer.strLexToken(token_type);
+		lexer.FinishedParse();
+		if (!strcmp(expected_token_type.c_str(), token_name)) {
+			cout << "OK: Token type for \"" << token_string << "\" is "
+				 << token_name << " on line " << line_number
+				 << "." << endl;
+		}
+		else {
+			cout << "Error: Token type for \"" << token_string << "\" is not "
+				 << expected_token_type << " but is \"" << token_name 
+				 << "\" on line " << line_number << "." << endl;
+			errors->IncrementErrors();
+		}
+		delete lexer_source;
 	}
 	
 	return;
