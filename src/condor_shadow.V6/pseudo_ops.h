@@ -64,7 +64,7 @@ int pseudo_get_std_file_info( int which, char *logical_name );
 int pseudo_std_file_info( int which, char *name, int *pipe_fd );
 int pseudo_get_file_info( const char *logical_name, char *actual_url );
 int pseudo_file_info( const char *name, int *pipe_fd, char *extern_path );
-int pseudo_get_buffer_info( int *bytes, int *block_size );
+int pseudo_get_buffer_info( int *bytes, int *block_size, int *prefetch_bytes );
 int pseudo_get_iwd( char *path );
 int pseudo_get_ckpt_name( char *path );
 int pseudo_get_a_out_name( char *path );

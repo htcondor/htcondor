@@ -173,10 +173,11 @@ void job_report_display_file_info( FILE *f, int total_time )
 
 	int	buffer_size;
 	int	buffer_block_size;
+	int	temp;
 
 	sum_file_info( &total );
 
-	pseudo_get_buffer_info( &buffer_size, &buffer_block_size );
+	pseudo_get_buffer_info( &buffer_size, &buffer_block_size, &temp );
 	
 	fprintf(f,"\nBuffer Configuration:\n");
 	fprintf(f,"\t%s max buffer space per open file\n",

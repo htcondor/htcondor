@@ -1342,7 +1342,7 @@ Return the buffer configuration.  If the classad contains nothing,
 assume it is zero.
 */
 
-int pseudo_get_buffer_info( int *bytes_out, int *block_size_out )
+int pseudo_get_buffer_info( int *bytes_out, int *block_size_out, int *prefetch_bytes_out )
 {
 	int bytes=0, block_size=0;
 
@@ -1355,6 +1355,7 @@ int pseudo_get_buffer_info( int *bytes_out, int *block_size_out )
 
 	*bytes_out = bytes;
 	*block_size_out = block_size;
+	*prefetch_bytes_out = 0;
 
 	dprintf(D_SYSCALLS,"\tbytes=%d block_size=%d\n",bytes, block_size );
 
