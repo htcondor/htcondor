@@ -1,0 +1,24 @@
+/* Things specific to x86_64 machines (all versions) */
+
+/* XXX Not really the right thing to do here... */
+#define	ArchOptimizeFlag
+
+#define IS_CLIPPED YES
+
+/* These are turned off because globus 2.4.3 and gpt 3.0 don't compile on 
+	the opteron. gpt 3.2 will compile, though. It looks like gt4 will
+	compile on the opteron, but it isn't officially in Condor's externals
+	yet. */
+#define HAS_GLOBUS      NO
+#define HAS_GSI         NO
+#define HAS_OPENSSL     NO
+
+/* pvm was never ported (cause it is old and dead) to this architecture */
+#undef WANT_PVM
+#define WANT_PVM NO
+
+/* kerberos 1.2.7 is too old for this architecture, kerberos 1.4 will probably
+	work, but the condor code changes for it aren't in Condor yet. */
+#undef WANT_KERBEROS
+#define WANT_KERBEROS NO
+
