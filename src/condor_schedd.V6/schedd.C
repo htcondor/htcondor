@@ -450,7 +450,6 @@ Scheduler::count_jobs()
 	int		i, j;
 	int		prio_compar();
 	char	tmp[512];
-	int     collector_port;
 
 	ExtArray<OwnerData> SubmittingOwners;
 
@@ -467,7 +466,6 @@ Scheduler::count_jobs()
 	JobsRemoved = 0;
 	SchedUniverseJobsIdle = 0;
 	SchedUniverseJobsRunning = 0;
-	collector_port = param_get_collector_port();
 
 	// clear owner table contents
 	time_t current_time = time(0);
