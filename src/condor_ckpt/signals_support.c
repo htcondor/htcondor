@@ -435,7 +435,7 @@ sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
 int
 _SIGPROCMASK( int how, const sigset_t *set, sigset_t *oset)
 {
-	_sigprocmask( how, set, oset );
+	return _sigprocmask( how, set, oset );
 }
 #endif
 
