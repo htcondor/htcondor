@@ -1045,7 +1045,7 @@ ProcAPI::getPidFamily( pid_t daddypid, pid_t *pidFamily ) {
 	DWORD dwStatus;  // return status of fn. calls
 
 	if ( pidFamily == NULL ) {
-		dprintf( D_FULLDEBUG, 
+		dprintf( D_ALWAYS, 
 				 "ProcAPI::getPidFamily: no space allocated for pidFamily\n" );
 		return -1;
 	}
@@ -1239,7 +1239,7 @@ ProcAPI::getPidFamily( pid_t pid, pid_t *pidFamily ) {
   // instead of just pids...but it's a lot quicker to write.
 
 	if( pidFamily == NULL ) {
-		dprintf( D_FULLDEBUG, 
+		dprintf( D_ALWAYS, 
 				 "ProcAPI::getPidFamily: no space allocated for pidFamily\n" );
 		return -1;
 	}
@@ -1535,90 +1535,92 @@ ProcAPI::buildProcInfoList() {
 int
 ProcAPI::buildFamily( pid_t daddypid ) {
 
-  // array of pids in family.  Size # pids.
-  pid_t *familypids;
-  int familysize = 0;
-  int numprocs;
+		// array of pids in family.  Size # pids.
+	pid_t *familypids;
+	int familysize = 0;
+	int numprocs;
 
-  numprocs = getNumProcs();
-  procFamily = NULL;
+	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_PROCFAMILY) ) {
+		dprintf( D_FULLDEBUG, 
+				 "ProcAPI::buildFamily called w/ parent: %d\n", daddypid );
+	}
 
-  // make an array of size # processes for quick lookup of pids in family
-  familypids = new pid_t[numprocs];
+	numprocs = getNumProcs();
+	procFamily = NULL;
 
-  // get the daddypid's procInfo struct
+		// make an array of size # processes for quick lookup of pids in family
+	familypids = new pid_t[numprocs];
 
-  piPTR pred, current, familyend;
-  current = allProcInfos;
+		// get the daddypid's procInfo struct
+	piPTR pred, current, familyend;
+	current = allProcInfos;
 
-  while ( ( current != NULL ) && ( current->pid != daddypid ) ) {
-    pred = current;
-    current = current->next;
-  }
+	while( (current != NULL) && (current->pid != daddypid) ) {
+		pred = current;
+		current = current->next;
+	}
 
-  // el problemo : if daddypid not in list at all, return -1
-  if ( current == NULL ) {
-    delete [] familypids;
-    return -1;
-  }
+		// el problemo : if daddypid not in list at all, return -1
+	if( current == NULL ) {
+		delete [] familypids;
+		dprintf( D_ALWAYS, 
+				 "ProcAPI::buildFamily failed: parent %d not found on system.\n",
+				 daddypid );
+		return -1;
+	}
 
-  // special case: daddys is first on list:
-  if ( allProcInfos == current ) {
-    procFamily = allProcInfos;
-    allProcInfos = allProcInfos->next;
-    procFamily->next = NULL;
-  }
-  else {  // regular case: daddy somewhere in middle
-    procFamily = current;
-    pred->next = current->next;
-    procFamily->next = NULL;
-  }
+		// special case: daddys is first on list:
+	if( allProcInfos == current ) {
+		procFamily = allProcInfos;
+		allProcInfos = allProcInfos->next;
+		procFamily->next = NULL;
+	} else {  // regular case: daddy somewhere in middle
+		procFamily = current;
+		pred->next = current->next;
+		procFamily->next = NULL;
+	}
 
-  familypids[0] = daddypid;
-  familyend = procFamily;
-  familysize = 1;
+	familypids[0] = daddypid;
+	familyend = procFamily;
+	familysize = 1;
 
-  // now, procFamily points at the procInfo struct for the ancestral
-  // pid ( daddypid ).  Its pid is the 0th element in familypids, and
-  // familyend will always point to the end of the procFamily list.
+		// now, procFamily points at the procInfo struct for the
+		// ancestral pid ( daddypid ).  Its pid is the 0th element in
+		// familypids, and familyend will always point to the end of
+		// the procFamily list.
 
-  int numadditions = 1;
+	int numadditions = 1;
   
-  while ( numadditions != 0 ) {
-    numadditions = 0;
-    current = allProcInfos;
-    while ( current != NULL ) {
+	while( numadditions != 0 ) {
+		numadditions = 0;
+		current = allProcInfos;
+		while( current != NULL ) {
+			if( isinfamily(familypids, familysize, current->ppid) ) {
+				familypids[familysize] = current->pid;
+				familysize++;
 
-      if ( isinfamily ( familypids, familysize, current->ppid ) ) {
+				familyend->next = current;
 
-        familypids[familysize] = current->pid;
-        familysize++;
+				if( current != allProcInfos ) {
+					current = current->next;
+					pred->next = current;
+				} else {
+					current = allProcInfos = allProcInfos->next;          
+				}
 
-        familyend->next = current;
+				familyend = familyend->next;
+				familyend->next = NULL;
+				
+				numadditions++;
 
-        if ( current != allProcInfos ) {
-          current = current->next;
-          pred->next = current;
-        }
-        else {
-          current = allProcInfos = allProcInfos->next;          
-        }
-
-        familyend = familyend->next;
-        familyend->next = NULL;
-
-        numadditions++;
-
-      }
-      else {
-        pred = current;
-        current = current->next;    
-      }
-    }
-  }
-  delete [] familypids;
-
-  return 0;
+			} else {
+				pred = current;
+				current = current->next;    
+			}
+		}
+	}
+	delete [] familypids;
+	return 0;
 }
 
 /* This function returns the nuber of processes that allProcInfos 
