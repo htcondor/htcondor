@@ -103,6 +103,7 @@ extern const char ATTR_FILE_WRITE_COUNT[];
 extern const char ATTR_FLAVOR[];
 extern const char ATTR_FLOCKED_JOBS[];
 extern const char ATTR_FORCE[];
+extern const char ATTR_GID[];
 extern const char ATTR_GLOBUS_CONTACT_STRING[];
 extern const char ATTR_GLOBUS_RESOURCE[];
 extern const char ATTR_GLOBUS_RSL[];
