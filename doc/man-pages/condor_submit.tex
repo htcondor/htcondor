@@ -214,6 +214,14 @@ ClassAd. The job will therefore execute with the same set of environment
 variables that the user had at submit time. Defaults to \Arg{False}.
 
 %%%%%%%%%%%%%%%%%%%
+%% hold
+%%%%%%%%%%%%%%%%%%%
+
+\item[hold = $<$True \Bar\ False$>$] If \Opt{hold} is set to
+\Arg{True}, then the job will be submitted in the hold state.  Jobs in
+the hold state will not run until released by \Condor{release}.
+
+%%%%%%%%%%%%%%%%%%%
 %% environment
 %%%%%%%%%%%%%%%%%%%
 
