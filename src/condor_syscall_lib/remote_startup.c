@@ -150,6 +150,7 @@
 #include <signal.h>
 
 #include "condor_debug.h"
+#include "condor_file_info.h"
 static char *_FileName_ = __FILE__;
 
 
@@ -190,6 +191,11 @@ COMMAND CmdTable[] = {
 
 typedef int BOOLEAN;
 
+#if 0
+	static int		DebugFd;
+	void debug_msg( const char *msg );
+#endif
+
 void _condor_interp_cmd_stream( int fd );
 static void scan_cmd( char *buf, int *argc, char *argv[] );
 static enum result do_cmd( int argc, char *argv[] );
@@ -198,7 +204,7 @@ static void display_cmd( int argc, char *argv[] );
 static BOOLEAN condor_iwd( const char *path );
 static BOOLEAN condor_fd( const char *num, const char *path, const char *open_mode );
 static BOOLEAN condor_ckpt( const char *path );
-static BOOLEAN condor_restart( const char *path );
+static BOOLEAN condor_restart( );
 static BOOLEAN condor_migrate_to( const char *host_addr, const char *port_num );
 static BOOLEAN condor_migrate_from( const char *fd_no );
 static BOOLEAN condor_exit( const char *status );
@@ -207,6 +213,8 @@ static int open_read_stream( const char *path );
 	   int open_write_stream( const char * ckpt_file, size_t n_bytes );
 void unblock_signals();
 void display_ip_addr( unsigned int addr );
+void open_std_file( int which );
+void set_iwd();
 
 extern int _Ckpt_Via_TCP_Stream;
 
@@ -318,6 +326,18 @@ MAIN( int argc, char *argv[], char **envp )
 	dprintf( D_ALWAYS, "END\n\n" );
 #endif
 
+#if 0
+	DebugFd = syscall( SYS_open, "/tmp/mike", O_WRONLY | O_CREAT | O_TRUNC, 0664 );
+	syscall( SYS_dup2, DebugFd, 23 );
+	DebugFd = 23;
+	debug_msg( "Hello World!\n" );
+#endif
+
+	set_iwd();
+	open_std_file( 0 );
+	open_std_file( 1 );
+	open_std_file( 2 );
+
 		/* Now start running user code */
 #if defined(HPUX9)
 	exit(_start( argc, argv, envp ));
@@ -388,10 +408,10 @@ do_cmd( int argc, char *argv[] )
 		assert( argc == 4 );
 		return condor_fd( argv[1], argv[2], argv[3] );
 	  case RESTART:
-		if( argc != 2 ) {
+		if( argc != 1 ) {
 			return FALSE;
 		}
-		return condor_restart( argv[1] );
+		return condor_restart();
 	  case CKPT:
 		if( argc != 2 ) {
 			return FALSE;
@@ -451,10 +471,13 @@ condor_fd( const char *num, const char *path, const char *open_mode )
 	int		remote_fd;
 	int		scm;
 
-#if 0
+#if 1				/* no longer used  - ignore */
+	return TRUE;
+#else
+#	if 0
 	dprintf( D_ALWAYS, "condor_fd( %s, %s, %s\n", num, path, open_mode );
 	delay();
-#endif
+#	endif
 	n = strtol( num, &extra, 0 );
 	assert( extra[0] == '\0' );
 	if( strcmp("O_RDONLY",open_mode) == MATCH ) {
@@ -489,6 +512,7 @@ condor_fd( const char *num, const char *path, const char *open_mode )
 	SetSyscalls( scm );
 
 	return TRUE;
+#endif
 }
 
 static BOOLEAN
@@ -502,13 +526,13 @@ condor_ckpt( const char *path )
 
 
 static BOOLEAN
-condor_restart( const char *path )
+condor_restart()
 {
 	int		fd;
 
-	dprintf( D_FULLDEBUG, "condor_restart: file = \"%s\"\n", path );
+	dprintf( D_ALWAYS, "condor_restart:\n" );
 
-	fd = open_read_stream( path );
+	fd = open_read_stream( "" );
 	init_image_with_file_descriptor( fd );
 	restart();
 
@@ -588,7 +612,15 @@ open_tcp_stream( unsigned int ip_addr, unsigned short port )
 	memset( &sin, '\0', sizeof sin );
 	memcpy( &sin.sin_addr, &ip_addr, sizeof(ip_addr) );
 	sin.sin_family = AF_INET;
+/*
+  This is incorrect!  Everything should be kept in network order so machines
+  of different architectures can communicate these numbers.  The correct
+  code is:
+
+	sin.sin_port = port;
+*/
 	sin.sin_port = htons( port );
+
 	dprintf( D_FULLDEBUG, "Internet address structure set up\n" );
 
 	status = connect( fd,( struct sockaddr *)&sin, sizeof(sin) );
@@ -611,14 +643,27 @@ open_tcp_stream( unsigned int ip_addr, unsigned short port )
 int
 open_write_stream( const char * ckpt_file, size_t n_bytes )
 {
-	int		st;
-	unsigned int ip_addr;
-	int		fd;
+	int				st;
+	unsigned int	ip_addr;
+	int				fd;
 	unsigned short	port;
+	char			file_name[ _POSIX_PATH_MAX ];
+	int				status;
 
 	dprintf( D_ALWAYS, "Entering open_write_stream()\n" );
 
-	if( (fd=try_via_afs(ckpt_file,O_CREAT|O_WRONLY,0664)) >= 0 ) {
+		/*
+		  We ignore the checkpoint file name we were given, and
+		  get it directly from the shadow.  This is to keep with
+		  our new policy of not having the starter know about such
+		  stuff. */
+	status = REMOTE_syscall( CONDOR_get_ckpt_name, file_name );
+	if( status < 0 ) {
+		EXCEPT( "Can't get checkpoint file name" );
+	}
+	dprintf( D_ALWAYS, "Checkpoint file name is \"%s\"\n", file_name );
+
+	if( (fd=try_via_afs(file_name,O_CREAT|O_WRONLY,0664)) >= 0 ) {
 		dprintf( D_ALWAYS, "Checkpoint AFS Connection Ready, fd = %d\n", fd );
 		_Ckpt_Via_TCP_Stream = FALSE;
 		return fd;
@@ -628,7 +673,7 @@ open_write_stream( const char * ckpt_file, size_t n_bytes )
 		Get the ip address and port number of a process to which we
 		can send the checkpoint data.
 		*/
-	st = REMOTE_syscall( CONDOR_put_file_stream, ckpt_file, n_bytes, &ip_addr, &port );
+	st = REMOTE_syscall( CONDOR_put_file_stream, file_name, n_bytes, &ip_addr, &port );
 
 	display_ip_addr( ip_addr );
 	dprintf( D_FULLDEBUG, "Port = %d\n", port );
@@ -710,16 +755,28 @@ int perm;
 int
 open_read_stream( const char *path )
 {
-	int		st;
-	size_t	len;
+	int				st;
+	size_t			len;
 	unsigned short	port;
 	unsigned int	ip_addr;
-	int		fd;
+	int				fd;
+	char			file_name[ _POSIX_PATH_MAX ];
+	int				status;
 
 	dprintf( D_ALWAYS, "Entering open_read_stream()\n" );
 
+		/*
+		  We ignore the checkpoint file name we were given, and
+		  get it directly from the shadow.  This is to keep with
+		  our new policy of not having the starter know about such
+		  stuff. */
+	status = REMOTE_syscall( CONDOR_get_ckpt_name, file_name );
+	if( status < 0 ) {
+		EXCEPT( "Can't get checkpoint file name" );
+	}
+	dprintf( D_ALWAYS, "Checkpoint file name is \"%s\"\n", file_name );
 
-	if( (fd=try_via_afs(path,O_RDONLY,0)) >= 0 ) {
+	if( (fd=try_via_afs(file_name,O_RDONLY,0)) >= 0 ) {
 		dprintf( D_ALWAYS, "Checkpoint AFS Connection Ready, fd = %d\n", fd );
 		return fd;
 	}
@@ -729,7 +786,7 @@ open_read_stream( const char *path )
 		send us the checkpoint data.
 		*/
 	SetSyscalls( SYS_REMOTE | SYS_MAPPED );
-	st = REMOTE_syscall( CONDOR_get_file_stream, path, &len, &ip_addr, &port );
+	st = REMOTE_syscall( CONDOR_get_file_stream, file_name, &len, &ip_addr, &port );
 	display_ip_addr( ip_addr );
 	dprintf( D_FULLDEBUG, "Port = %d\n", port );
 
@@ -814,3 +871,81 @@ display_ip_addr( unsigned int addr )
 		dprintf( D_FULLDEBUG, "0x%x\n", addr );
 	}
 }
+
+/*
+  Open a standard file (0, 1, or 2), given its fd number.
+*/
+void
+open_std_file( int which )
+{
+	char	name[ _POSIX_PATH_MAX ];
+	char	buf[ _POSIX_PATH_MAX + 50 ];
+	int		pipe_fd;
+	int		answer;
+	int		status;
+
+		/* The ckpt layer assumes the process is attached to a terminal,
+		   so these are "pre_opened" in our open file table.  Here we must
+		   get rid of those entries so we can open them properly for
+		   remotely running jobs.
+		*/
+	close( which );
+
+	status =  REMOTE_syscall( CONDOR_std_file_info, which, name, &pipe_fd );
+	if( status == IS_PRE_OPEN ) {
+		answer = pipe_fd;			/* it's a pipe */
+	} else {
+		switch( which ) {			/* it's an ordinary file */
+		  case 0:
+			answer = open( name, O_RDONLY, 0 );
+			break;
+		  case 1:
+		  case 2:
+			answer = open( name, O_WRONLY, 0 );
+			break;
+		}
+	}
+	if( answer < 0 ) {
+		sprintf( buf, "Can't open \"%s\"", name );
+		REMOTE_syscall(CONDOR_perm_error, buf );
+		exit( 4 );
+	} else {
+		if( answer != which ) {
+			dup2( answer, which );
+		}
+	}
+}
+
+void
+set_iwd()
+{
+	char	iwd[ _POSIX_PATH_MAX ];
+	char	buf[ _POSIX_PATH_MAX + 50 ];
+
+	if( REMOTE_syscall(CONDOR_get_iwd,iwd) < 0 ) {
+		REMOTE_syscall(
+			CONDOR_perm_error,
+			"Can't determine initial working directory"
+		);
+		exit( 4 );
+	}
+	if( REMOTE_syscall(CONDOR_chdir,iwd) < 0 ) {
+		sprintf( buf, "Can't open working directory \"%s\"", iwd );
+		REMOTE_syscall( CONDOR_perm_error, buf );
+		exit( 4 );
+	}
+	Set_CWD( iwd );
+}
+
+#if 0
+void
+debug_msg( const char *msg )
+{
+	int		status;
+
+	status = syscall( SYS_write, DebugFd, msg, strlen(msg) );
+	if( status < 0 ) {
+		exit( errno );
+	}
+}
+#endif
