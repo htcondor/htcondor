@@ -22,15 +22,28 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 /*
-    This file defines the StarterMgr class, the "starter manager".
-	This object is responsible for reading the STARTER_LIST config
-	file attribute, getting the classads for all the starters listed
-	there, and managing those ClassAds.  It knows how to publish
-	information about the starter capabilities into a given classad,
-	(like a resource ad for each vm), and how to do match making
-	between a given job and the various starters.
 
-	Written on 4/16/02 by Derek Wright <wright@cs.wisc.edu>
+  This file defines the StarterMgr class, the "starter manager".  This
+  object is responsible for reading the STARTER_LIST config file
+  attribute, getting the classads for all the starters listed there,
+  and managing those ClassAds.  It knows how to publish information
+  about the starter capabilities into a given classad, (like a
+  resource ad for each vm), and how to do match making between a given
+  job and the various starters.
+
+  Written on 4/16/02 by Derek Wright <wright@cs.wisc.edu>
+	
+  ! ! ! BEWARE ! ! !
+
+  The ShadowMgr object in the schedd is based pretty heavily on this
+  object.  There was no easy way to share the code via common base
+  classes, and the Starter and Shadow objects are very different from
+  each other.  However, most of the code in
+  condor_schedd.V6/shadow_mgr.[Ch] was lifted from here.  If you
+  change anything in here, you should check in those two files, too,
+  and make sure you don't need to make the same change on that side.
+
+  ! ! ! BEWARE ! ! !
 */
 
 #ifndef _CONDOR_STARTER_MGR_H
