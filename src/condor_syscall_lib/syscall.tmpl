@@ -138,8 +138,10 @@
 	}
 	void sync();
 
-		// These get special treatment by the shadow, but should work normally
-		// in local mode.
+		/*
+		These get special treatment by the shadow, but should work normally
+		in local mode.
+		*/
 	pid_t getppid() : extract, pseudo;
 	pid_t getpid()  : pseudo;
 	uid_t getuid()  : pseudo;
@@ -186,7 +188,7 @@ int rename( const char *from, const char *to ) {
 		ALLOC_PATH( pathname );
 	}
 	int reallyexit( int *status, struct rusage *use_p ) : pseudo {
-		in xdr_int( status, INT_SIZE );
+		in xdr_int( status );
 		alloc( status, INT_SIZE );
 		in xdr_rusage( use_p );
 		alloc( use_p, RUSAGE_SIZE );
@@ -213,13 +215,15 @@ int rename( const char *from, const char *to ) {
 		out xdr_int( kill_sig );
 		alloc( kill_sig, INT_SIZE );
 	}
-		// This function is intended for setting up the transfer
-		// of a whole file via a TCP stream.  This allows more
-		// flexibility than the similar get_file() protocol, and may
-		// be more efficient as well, since we bypass XDR.  The name
-		// of the file is the single parameter sent to the shadow, and
-		// the result is the length of the file, a hostname, and a port
-		// number from which the actual bytes can be read.
+		/*
+		This function is intended for setting up the transfer
+		of a whole file via a TCP stream.  This allows more
+		flexibility than the similar get_file() protocol, and may
+		be more efficient as well, since we bypass XDR.  The name
+		of the file is the single parameter sent to the shadow, and
+		the result is the length of the file, a hostname, and a port
+		number from which the actual bytes can be read.
+		*/
 	int get_file_stream(
 		const char *file, size_t *len, char *host, u_short *port_num ): pseudo {
 
@@ -236,13 +240,15 @@ int rename( const char *from, const char *to ) {
 		alloc( port_num, U_SHORT_SIZE );
 	}
 
-		// This function is intended for setting up the transfer
-		// of a whole file via a TCP stream.  This allows more
-		// flexibility than the similar put_file() protocol, and may
-		// be more efficient as well, since we bypass XDR.  The name
-		// of the file is the single parameter sent to the shadow, and
-		// the result is a hostname and a port number to which the
-		// actual bytes can be written.
+		/*
+		This function is intended for setting up the transfer
+		of a whole file via a TCP stream.  This allows more
+		flexibility than the similar put_file() protocol, and may
+		be more efficient as well, since we bypass XDR.  The name
+		of the file is the single parameter sent to the shadow, and
+		the result is a hostname and a port number to which the
+		actual bytes can be written.
+		*/
 	int put_file_stream(
 		const char *file, size_t len,  char *host, u_short *port_num ): pseudo {
 
@@ -454,11 +460,11 @@ int rename( const char *from, const char *to ) {
 	pid_t getpgid( pid_t pid );
 	int uswitch( int cmd, int value );
 
-		// Speical (PSEUDO) operations provided by the shadow.  These look
-		// like remote system calls, but aren't really system calls.
 
-		// Things having to do with signals - we may support these
-		// one day soon.
+		/*
+		Things having to do with signals - we may support these
+		one day soon.
+		*/
 	not_supported {
 		int sigprocmask( int how, const sigset_t *set, sigset_t *o_set );
 		int sigpending( sigset_t *set );
@@ -470,8 +476,10 @@ int rename( const char *from, const char *to ) {
 		int kill( pid_t pid, int sig ) : extract;
 	}
 
-		// We don't support these, but we ignore attempts to do them remotely
-		// for the benefit of Fortran compilers...
+		/*
+		We don't support these, but we ignore attempts to do them remotely
+		for the benefit of Fortran compilers...
+		*/
 	ignored {
 		int sigaction( int sig, const struct sigaction *act,
 						struct sigaction *o_act ) : extract;
@@ -482,8 +490,10 @@ int rename( const char *from, const char *to ) {
 
 #if 0
 		/* Caused problems in local mode on Alpha - leave out for now */
-	// Things having to do with memory mapped files - we may support these
-	// one day soon.
+	/*
+	Things having to do with memory mapped files - we may support these
+	one day soon.
+	*/
 not_supported {
 	char * mmap( char * a, size_t l, int p, int f, map(int fd),
 														off_t o ) : extract;
@@ -495,7 +505,7 @@ not_supported {
 #endif
 
 #if !defined( CLIP )
-	// Calls intended only for the super user or system managers
+	/* Calls intended only for the super user or system managers */
 not_supported {
 	int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
 	int setuid( uid_t uid );
@@ -517,7 +527,7 @@ not_supported {
 	int swapon( char *path, int flags, int lo_water, int hi_water );
 }
 
-	// Calls having to do with multiple process jobs
+	/* Calls having to do with multiple process jobs */
 not_supported {
 	pid_t fork() : extract;
 	pid_t vfork();
@@ -531,7 +541,7 @@ not_supported {
 	int pipe( int fd[] ) : extract;
 }
 
-	// Calls relating to sockets - implies multiple communicating processes
+	/* Calls relating to sockets - implies multiple communicating processes */
 not_supported {
 	int recvmsg( int socket, struct msghdr *message, int flags );
 	int sendmsg( int socket, struct msghdr *message, int flags );
@@ -558,8 +568,10 @@ not_supported {
 }
 
 
-	// Things we perhaps ought to support, but aren't in the
-	// current implementation
+	/*
+	Things we perhaps ought to support, but aren't in the
+	current implementation
+	*/
 not_supported {
 	void profil( short *buf, unsigned int buf_size, unsigned int offset,
 				 unsigned int scale );
@@ -570,12 +582,16 @@ not_supported {
 }
 
 
-	// Returns a pointer to a static buffer - our generator is not
-	// yet sophisticated enough to generate correct stubs for this.
+	/*
+	Returns a pointer to a static buffer - our generator is not
+	yet sophisticated enough to generate correct stubs for this.
+	*/
 not_supported char *getlogin();
 
-	// Stuff having to do with message queues.  Probably won't support
-	// these unless they become a standard across all the platforms.
+	/*
+	Stuff having to do with message queues.  Probably won't support
+	these unless they become a standard across all the platforms.
+	*/
 not_supported {
 	int msgctl( int msgid, int cmd, struct msqid_ds *buf );
 	int msgget( key_t key, int msgflg );
@@ -583,15 +599,17 @@ not_supported {
 	int msgsnd( int msqid, void *msgp, size_t msgsz, int msgflg );
 }
 
-	// Stuff having to do with semaphores.  Probably won't support
-	// these unless they become a standard across all the platforms.
+	/*
+	Stuff having to do with semaphores.  Probably won't support
+	these unless they become a standard across all the platforms.
+	*/
 not_supported {
 	int semctl( int semid, int semnum, int cmd, void *arg );
 	int semget( key_t key, int nsems, int semflag );
 	int semop( int semid, struct sembuf *sops, unsigned int nsops );
 }
 
-	// Stuff having to do with shared memory.
+	/* Stuff having to do with shared memory. */
 not_supported {
 	int shmctl( int shmid, int cmd, struct shmid_ds *buf );
 	int shmdt( char * addr );

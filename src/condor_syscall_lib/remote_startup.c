@@ -132,13 +132,16 @@
 
 
 #define _POSIX_SOURCE
+
+#if defined(OSF1)
 #define __STDC__
+#endif
+
 #include "condor_common.h"
 #include "condor_syscall_mode.h"
 #include "syscall_numbers.h"
 #include <assert.h>
 
-typedef unsigned short u_short;
 #include <sys/socket.h>
 
 #include <netinet/in.h>
@@ -229,8 +232,10 @@ MAIN( int argc, char *argv[], char **envp )
 	dprintf( D_ALWAYS, "END\n\n" );
 #endif
 
-		// We must be started by a parent providing a command stream,
-		// therefore there must be at least 3 arguments.
+		/*
+		We must be started by a parent providing a command stream,
+		therefore there must be at least 3 arguments.
+		*/
 	assert( argc >= 3 );
 
 	if( strcmp("-_condor_cmd_fd",argv[1]) == MATCH ) {
@@ -241,7 +246,7 @@ MAIN( int argc, char *argv[], char **envp )
 			exit( 1 );
 		}
 		dprintf( D_FULLDEBUG, "fd number is %d\n", cmd_fd );
-		// scm = SetSyscalls( SYS_LOCAL | SYS_MAPPED );
+		/* scm = SetSyscalls( SYS_LOCAL | SYS_MAPPED ); */
 		pre_open( cmd_fd, TRUE, FALSE );
 
 #if 0
@@ -254,7 +259,7 @@ MAIN( int argc, char *argv[], char **envp )
 	} else if( strcmp("-_condor_cmd_file",argv[1]) == MATCH ) {
 
 		dprintf( D_FULLDEBUG, "Found condor_cmd_file\n" );
-		// scm = SetSyscalls( SYS_LOCAL | SYS_MAPPED );
+		/* scm = SetSyscalls( SYS_LOCAL | SYS_MAPPED ); */
 		cmd_fd = open( argv[2], O_RDONLY);
 		if( cmd_fd < 0 ) {
 			dprintf( D_ALWAYS, "Can't read cmd file \"%s\"\n", argv[2] );
@@ -572,13 +577,15 @@ open_write_stream( const char * ckpt_file, size_t n_bytes )
 	int		fd;
 	unsigned short	port;
 
-		// Get the hostname and port number of a process to which we
-		// can send the checkpoint data.
+		/*
+		Get the hostname and port number of a process to which we
+		can send the checkpoint data.
+		*/
 	st = REMOTE_syscall( CONDOR_put_file_stream, ckpt_file, n_bytes, hostname, &port );
 	dprintf( D_FULLDEBUG, "Hostname = \"%s\"\n", hostname );
 	dprintf( D_FULLDEBUG, "Port = %d\n", port );
 
-		// Connect to the specified party
+		/* Connect to the specified party */
 	fd = open_tcp_stream( hostname, port );
 	dprintf( D_FULLDEBUG, "Checkpoint Data Connection Ready, fd = %d\n", fd );
 
@@ -595,8 +602,10 @@ open_read_stream( const char *path )
 	int		fd;
 
 
-		// Get the hostname and port number of a process which will
-		// send us the checkpoint data.
+		/*
+		Get the hostname and port number of a process which will
+		send us the checkpoint data.
+		*/
 	SetSyscalls( SYS_REMOTE | SYS_MAPPED );
 	st = REMOTE_syscall( CONDOR_get_file_stream, path, &len, hostname, &port );
 	dprintf( D_FULLDEBUG, "Hostname = \"%s\"\n", hostname );
