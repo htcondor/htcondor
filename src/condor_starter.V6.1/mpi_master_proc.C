@@ -291,7 +291,7 @@ MPIMasterProc::preparePortFile( void )
 	sprintf( buf, "%cMPICH_EXTRA=%s\"", env_delimiter, port_file );
 	env += buf;
 
-	if( JobAd->Insert(env.GetCStr()) ) {
+	if( JobAd->Insert(env.Value()) ) {
 		return true;
 	} 
 	return false;

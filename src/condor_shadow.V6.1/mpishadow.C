@@ -686,7 +686,7 @@ MPIShadow::modifyNodeAd( ClassAd* ad )
 
 		// Now, the env MyString contains the modified environment
 		// attribute, so we just need to re-insert that into our ad. 
-	if( ad->Insert(env.GetCStr()) ) {
+	if( ad->Insert(env.Value()) ) {
 		return true;
 	} 
 	return false;
@@ -973,7 +973,7 @@ MPIShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 		MyString strRh(rhstr);
 		if (strRh.replaceString("#MpInOdE#", node))
 		{
-			sprintf( final, "%s = %s", lhstr, strRh.GetCStr());
+			sprintf( final, "%s = %s", lhstr, strRh.Value());
 			ad->InsertOrUpdate( final );
 			dprintf( D_ALWAYS, "Replaced using expr: %s\n", final);
 		}
