@@ -39,6 +39,8 @@ void HashKey::sprint(char *s)
 
 HashKey& HashKey::operator= (const HashKey& from)
 {
+	if (this->key)
+		free(this->key);
 	this->key = strdup(from.key);
 	return *this;
 }
