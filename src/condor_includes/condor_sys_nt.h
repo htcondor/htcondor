@@ -178,6 +178,16 @@ struct rusage {
 #define	SIGSTOP		19	/* Stop, unblockable (POSIX).  */
 #define	SIGTSTP		20	/* Keyboard stop (POSIX).  */
 
+// other macros and protos needed on WIN32 for exit status
+#define WEXITSTATUS(stat) ((int)(stat))
+#define WTERMSIG(stat) ((int)(stat))
+#define WIFSTOPPED(stat) ((int)(0))
+// these two are usually macros, but in fact, we implement our own
+// C versions of them...  
+BEGIN_C_DECLS
+int WIFEXITED(DWORD stat);
+int WIFSIGNALED(DWORD stat);
+END_C_DECLS
 
 /* Some Win32 specifics */
 #if defined(WIN32)

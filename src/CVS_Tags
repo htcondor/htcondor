@@ -2,6 +2,12 @@
    The state of the V6_7-branch before merging in the V6_6-branch as
    tagged at V6_6_4_OSX
 
+04/15/04 V6_6_4_OSX
+   The is the 6.6.4 release tag for the OSX 6.6.4 build.  This fixes
+   the bug in file transfer.  6.6.3 users only have to upgrade their
+   starter, but new downloaders might as well just get the latest
+   version in the first place, instead of having to patch.
+
 04/13/04 V6_7-post_merge-V6_6-merge-8
    The state of the V6_7-branch after merging in the V6_6-branch as
    tagged at V6_6-merge-8.
