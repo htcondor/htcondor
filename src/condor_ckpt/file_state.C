@@ -813,8 +813,6 @@ int CondorFileTable::select( int n, fd_set *r, fd_set *w, fd_set *e, struct time
 	int	n_real, fd, fd_real;
 	int	result, scm;
 
-	fprintf(stderr,"select: %d\n",n);
-
 	FD_ZERO( &r_real );
 	FD_ZERO( &w_real );
 	FD_ZERO( &e_real );
