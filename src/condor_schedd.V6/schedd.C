@@ -180,18 +180,6 @@ Scheduler::~Scheduler()
 void
 Scheduler::timeout()
 {
-#if 0
-	/* the step size in the UPDOWN algo depends on the time */
-	/* interval of sampling			                */
-	Step = ( time((time_t*)0) - LastTimeout) /ScheddScalingFactor;
-	upDown_SetParameters(Step, ScheddHeavyUserPriority);
-
-	upDown_ClearUserInfo();	/* UPDOWN */
-	upDown_UpdatePriority(); /* UPDOWN */
-	upDown_Display();        /* UPDOWN */
-	upDown_WriteToFile(filename);    /* UPDOWN */
-#endif
-
 	count_jobs();
 
 	/* Neither of these should be needed! */
@@ -346,14 +334,6 @@ count( ClassAd *job )
 		scheduler.Owners[OwnerNum].JobsRunning += cur_hosts;
 		scheduler.Owners[OwnerNum].JobsIdle += (max_hosts - cur_hosts);
 
-#if 0
-		if ( status == RUNNING ) {	/* UPDOWN */
-			upDown_UpdateUserInfo(owner,UpDownRunning);
-		} else if ( (status == IDLE)||(status == UNEXPANDED)) {
-			upDown_UpdateUserInfo(owner,UpDownIdle);
-		}	
-#endif
-
 	}
 	return 0;
 }
@@ -419,6 +399,7 @@ abort_job_myself(PROC_ID job_id)
 				kill( ShadowRecs[i].pid, SIGKILL );
 #endif
 			}
+			ShadowRecs[i].removed = TRUE;
 		}
 	}
 }
@@ -1427,6 +1408,7 @@ add_shadow_rec( int pid, PROC_ID* job_id, Mrec* mrec, int fd )
 	ShadowRecs[ NShadowRecs ].job_id = *job_id;
 	ShadowRecs[ NShadowRecs ].match = mrec;
 	ShadowRecs[ NShadowRecs ].preempted = FALSE;
+	ShadowRecs[ NShadowRecs ].removed = FALSE;
 	ShadowRecs[ NShadowRecs ].conn_fd = fd;
 	
 	NShadowRecs++;
@@ -1928,8 +1910,10 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 				case JOB_CKPTED:
 				case JOB_NOT_CKPTED:
 				case JOB_NOT_STARTED:
-					Relinquish(srec->match);
-					DelMrec(srec->match);
+					if (!srec->removed) {
+						Relinquish(srec->match);
+						DelMrec(srec->match);
+					}
 					break;
 				case JOB_EXCEPTION:
 					/* some exception happened in this job -- if this keeps
@@ -2153,19 +2137,6 @@ Scheduler::Init()
         EXCEPT( "No UID_DOMAIN specified in config file\n" );
     }
 
-#if 0
-    Step                    = SchedDInterval/ScheddScalingFactor;
-    ScheddHeavyUserPriority = Step * ScheddHeavyUserTime;
-
-    upDown_SetParameters(Step,ScheddHeavyUserPriority); /* UPDOWN */
-
-    /* update upDown object from disk file */
-    /* ignore errors              */
-	filename = new char[MAXPATHLEN];
-    sprintf(filename,"%s/%s",Spool, "UserPrio");
-    upDown_ReadFromFile(filename);                /* UPDOWN */
-#endif
-
     if( (Mail=param("MAIL")) == NULL ) {
         EXCEPT( "MAIL not specified in config file\n" );
     }
@@ -2185,41 +2156,67 @@ Scheduler::Init()
 }
 
 void
-Scheduler::Register(DaemonCore* core)
+Scheduler::Register()
 {
     // message handlers for schedd commands
-    core->Register_Command(NEGOTIATE, "NEGOTIATE", 
+    daemonCore->Register_Command(NEGOTIATE, "NEGOTIATE", 
 			(CommandHandlercpp)doNegotiate, "negotiate", this, NEGOTIATOR);
-    core->Register_Command(RESCHEDULE, "RESCHEDULE", 
+    daemonCore->Register_Command(RESCHEDULE, "RESCHEDULE", 
 			(CommandHandlercpp)reschedule_negotiator, "reschedule_negotiator", 
                                this, ALLOW);
-    core->Register_Command(VACATE_SERVICE, "VACATE_SERVICE", 
+    daemonCore->Register_Command(VACATE_SERVICE, "VACATE_SERVICE", 
 			(CommandHandlercpp)vacate_service, "vacate_service", this, WRITE);
-    core->Register_Command(KILL_FRGN_JOB, "KILL_FRGN_JOB", 
+    daemonCore->Register_Command(KILL_FRGN_JOB, "KILL_FRGN_JOB", 
 			(CommandHandlercpp)abort_job, "abort_job", this, WRITE);
 
     // handler for queue management commands
     // Note: This could either be a READ or a WRITE command.  Too bad we have 
 	// to lump both together here.
-    core->Register_Command(QMGMT_CMD, "QMGMT_CMD", (CommandHandler)handle_q, 
-			"handle_q", NULL, WRITE);
+    daemonCore->Register_Command(QMGMT_CMD, "QMGMT_CMD",
+								 (CommandHandler)handle_q, 
+								 "handle_q", NULL, WRITE);
 
-    // timer handler
-    core->Register_Timer(10,SchedDInterval,(Eventcpp)timeout,"timeout",this);
-	core->Register_Timer(10,SchedDInterval,(Eventcpp)StartJobs,"StartJobs",
-						 this);
-    core->Register_Timer(aliveInterval, aliveInterval, (Eventcpp)send_alive, 
-						 "send_alive", this);
-	core->Register_Timer(QueueCleanInterval, QueueCleanInterval,
-						 (Event)CleanJobQueue, "CleanJobQueue");
-
-#if !defined(WIN32) /* not sure what the WIN32 equivalents of these will be yet */
     // signal handlers
-    core->Register_Signal( DC_SIGCHLD, "SIGCHLD", (SignalHandlercpp)reaper, 
+    daemonCore->Register_Signal( DC_SIGCHLD, "SIGCHLD", (SignalHandlercpp)reaper, 
 			"reaper", this );
-#endif
 
+	RegisterTimers();
 }
+
+void
+Scheduler::RegisterTimers()
+{
+	static int timeoutid = -1, startjobsid = -1, aliveid = -1, cleanid = -1;
+
+	// clear previous timers
+	if (timeoutid >= 0) {
+		daemonCore->Cancel_Timer(timeoutid);
+	}
+	if (startjobsid >= 0) {
+		daemonCore->Cancel_Timer(startjobsid);
+	}
+	if (aliveid >= 0) {
+		daemonCore->Cancel_Timer(aliveid);
+	}
+	if (cleanid >= 0) {
+		daemonCore->Cancel_Timer(cleanid);
+	}
+
+    // timer handlers
+    timeoutid = daemonCore->Register_Timer(10,SchedDInterval,(Eventcpp)timeout,
+										   "timeout",this);
+	startjobsid = daemonCore->Register_Timer(10,SchedDInterval,
+											 (Eventcpp)StartJobs,"StartJobs",
+											 this);
+    aliveid = daemonCore->Register_Timer(aliveInterval, aliveInterval,
+										 (Eventcpp)send_alive, 
+										 "send_alive", this);
+	cleanid = daemonCore->Register_Timer(QueueCleanInterval,
+										 QueueCleanInterval,
+										 (Event)CleanJobQueue,
+										 "CleanJobQueue");
+}
+
 
 extern "C" {
 int
@@ -2276,6 +2273,7 @@ Scheduler::reconfig()
 
 	Init();
 	::Init();
+	RegisterTimers();			// reset timers
     timeout();
 }
 
@@ -2622,14 +2620,22 @@ void
 Scheduler::RemoveShadowRecFromMrec(shadow_rec* shadow)
 {
 	int			i;
+	shadow_rec	*foo;
+	bool		found = false;
+	Mrec**		blah = rec;
 
 	for(i = 0; i < nMrec; i++)
 	{
+		foo = rec[i]->shadowRec;
 		if(rec[i]->shadowRec == shadow)
 		{
 			rec[i]->shadowRec = NULL;
 			rec[i]->proc = -1;
+			found = true;
 		}
+	}
+	if (!found) {
+		dprintf(D_ALWAYS, "failed to remove shadow rec from mrec!\n");
 	}
 }
 

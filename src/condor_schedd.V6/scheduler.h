@@ -32,6 +32,7 @@ struct shadow_rec
     struct Mrec*    match;
     int             preempted;
     int             conn_fd;
+	int				removed;
 };
 
 struct OwnerData {
@@ -73,7 +74,8 @@ class Scheduler : public Service
 	
 	// initialization
 	void			Init();
-	void			Register(DaemonCore*);
+	void			Register();
+	void			RegisterTimers();
 
 	// accessing
    	int				Port() { return port; }
