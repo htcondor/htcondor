@@ -57,7 +57,7 @@ if( ! $append ) {
 open FILE, "<$file" || die "Can't open $file: $!\n";
 @contents = <FILE>;
 close FILE;
-if( grep( {$_ eq "$append\n"} @contents) ) {
+if( grep {$_ eq "$append\n"} @contents ) {
     # nothing to do;
     exit 0;
 }
