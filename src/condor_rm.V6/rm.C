@@ -35,6 +35,7 @@
 #include "alloc.h"
 #include "get_daemon_addr.h"
 #include "condor_attributes.h"
+#include "match_prefix.h"
 #include  "list.h"
 #include "sig_install.h"
 
@@ -51,6 +52,7 @@ int nToProcess = 0;
 List<PROC_ID> ToProcess;
 
 	// Prototypes of local interest
+void handle_constraint(const char *);
 void ProcArg(const char*);
 void notify_schedd();
 void usage();
@@ -64,7 +66,7 @@ void
 usage()
 {
 	fprintf( stderr,
-		"Usage: %s [-n schedd_name] { -a | cluster | cluster.proc | user } ... \n",
+		"Usage: %s [-n schedd_name] { -a | -constraint <constraint> |  cluster | cluster.proc | user } ... \n",
 		MyName
 	);
 	exit( 1 );
@@ -149,7 +151,12 @@ main( int argc, char *argv[] )
 	} else {
 			// Set status of requested jobs to REMOVED/HELD
 		for(i = 0; i < nArgs; i++) {
-			ProcArg(args[i]);
+			if( match_prefix( args[i], "-constraint" ) ) {
+				i++;
+				handle_constraint( args[i] );
+			} else {
+				ProcArg(args[i]);
+			}
 		}
 	}
 
@@ -275,7 +282,7 @@ void ProcArg(const char* arg)
 
 			sprintf(constraint, "%s == %d", ATTR_CLUSTER_ID, c);
 
-			if (SetAttributeIntByConstraint(constraint,ATTR_JOB_STATUS,mode) < 0)
+			if(SetAttributeIntByConstraint(constraint,ATTR_JOB_STATUS,mode)<0)
 			{
 				fprintf( stderr, "Couldn't find/%s cluster %d.\n",
 						 (mode==REMOVED)?"remove":"hold", c);
@@ -340,6 +347,20 @@ void ProcArg(const char* arg)
 		fprintf( stderr, "Warning: unrecognized \"%s\" skipped.\n", arg );
 	}
 }
+
+void
+handle_constraint( const char *constraint )
+{
+	if( SetAttributeIntByConstraint( constraint, ATTR_JOB_STATUS, mode ) < 0 ) {
+		fprintf( stderr, "Couldn't find/%s jobs matching constraint %s\n",
+			(mode==REMOVED)?"remove":"hold", constraint );
+	} else {
+		fprintf( stdout, "Jobs matching constraint %s %s\n", constraint,
+			(mode==REMOVED)?"removed":"held" );
+		nToProcess = -1;
+	}
+}
+
 
 void
 handle_all()
