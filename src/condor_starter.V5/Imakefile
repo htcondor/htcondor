@@ -95,7 +95,7 @@ TOY_OBJ = state_machine_driver.o signals.o name_tab.o starter.toy.o \
 	alarm.o
 TOY_LIB =  $(UTIL_LIB) $(XDR_LIB)
 
-all_target(condor_starter.pvm.mike test_it hound)
+all_target(condor_starter.V5.mike test_it hound)
 tags_target($(SRC),$(LIBDIRS))
 depend_target($(SRC))
 c_plus_target(test_it,test_it.o,$(NULL))
@@ -103,13 +103,13 @@ c_plus_target(hound,hound.o,$(NULL))
 
 #if IS_R6000_AIX31 || IS_R6000_AIX32
 G++_DIR = /usr/gnu/lib/gcc-lib/rs6000-ibm-aix/2.5.0
-condor_starter.pvm.mike: $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(LIB)
+condor_starter.V5.mike: $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(LIB)
 	$(G++_DIR)/ld \
 	-T512 -H512 -btextro -bhalt:4 -bnodelcsect \
 	-L/usr/gnu/lib \
 	-L$(RELEASE_DIR)/lib \
 	-L$(INSTALL_DIR)/lib \
-	-o condor_starter.pvm.mike \
+	-o condor_starter.V5.mike \
 	/lib/crt0.o \
 	$(PORTABLE_OBJ) \
 	$(NON_PORTABLE_OBJ) \
@@ -119,12 +119,12 @@ condor_starter.pvm.mike: $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(LIB)
 	$(RELEASE_DIR)/lib/syscall.shr.o \
 	-lg++ $(G++_DIR)/libgcc.a -lc
 clean::
-	rm -f condor_starter.pvm.mike $(OBJ)
+	rm -f condor_starter.V5.mike $(OBJ)
 release::
- 	cp condor_starter.pvm.mike $(RELEASE_DIR)/bin
+ 	cp condor_starter.V5.mike $(RELEASE_DIR)/bin
 #else
-c_plus_target(condor_starter.pvm.mike,$(OBJ),$(LIB))
-release_target(condor_starter.pvm.mike,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+c_plus_target(condor_starter.V5.mike,$(OBJ),$(LIB))
+release_target(condor_starter.V5.mike,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 #endif
 
 c_plus_target(toy,$(TOY_OBJ),$(TOY_LIB))
