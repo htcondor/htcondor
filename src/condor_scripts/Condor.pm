@@ -442,6 +442,35 @@ sub Wait
     return $?;
 }
 
+sub IsAbsolutePath
+{
+	my $testpath = shift;
+	my $os = "$^O";
+	chomp($os);
+
+	#print "---$os---\n";
+
+	# 3 cases to consider
+	# / window or unix slash
+	# \ windows slash
+	# a: drive letter windows
+	if($os eq "MSWin32") # XP, WIN2k & server 2003 return this
+	{
+		if( $testpath =~ /^([a-zA-Z]:)?[\\\/].*/ )
+		{
+			return(1);
+		}
+	}
+	else # some Unix
+	{
+		if( $testpath =~ /^\\.*/ )
+		{
+			return(1);
+		}
+	}
+	return(0); #false
+}
+
 # spawn process to monitor the submit log file and execute callbacks
 # upon seeing registered events
 sub Monitor
@@ -469,13 +498,27 @@ sub Monitor
     # open submit log
 	if( exists $submit_info{'initialdir'} )
 	{
-		$reallog = $submit_info{'initialdir'} . "/" .  $submit_info{'log'};
-    	unless( open( SUBMIT_LOG, "<$reallog" ) )
-    	{
-			warn "error opening $reallog: $!\n";
-			print "Trying to open $reallog!!!!! Initialdir ...NOT... ignored!\n";
-			return 0;
-    	}
+		my $logrequest = $submit_info{'log'};
+		if( IsAbsolutePath($logrequest) )
+		{
+			#print "SLASH RELATIVE Log file, LEAVE IT ALONE!\n";
+			unless( open( SUBMIT_LOG, "<$submit_info{'log'}" ) )
+			{
+				warn "error opening $submit_info{'log'}: $!\n";
+				print "Trying to open $submit_info{'log'}!!!!! Initialdir ignored!\n";
+				return 0;
+			}
+		}
+		else
+		{
+			$reallog = $submit_info{'initialdir'} . "/" .  $submit_info{'log'};
+			unless( open( SUBMIT_LOG, "<$reallog" ) )
+			{
+				warn "error opening $reallog: $!\n";
+				print "Trying to open $reallog!!!!! Initialdir ...NOT... ignored!\n";
+				return 0;
+			}
+		}
 	}
 	else
 	{
