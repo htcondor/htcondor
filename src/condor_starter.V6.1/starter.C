@@ -63,12 +63,24 @@ CStarter::CStarter()
 
 CStarter::~CStarter()
 {
-	if (Execute) free(Execute);
-	if (UIDDomain) free(UIDDomain);
-	if (FSDomain) free(FSDomain);
-	if (Arch) free(Arch);
-	if (Opsys) free(Opsys);
-	if (ShadowVersion) delete ShadowVersion;
+	if( Execute ) {
+		free(Execute);
+	}
+	if( UIDDomain ) {
+		free(UIDDomain);
+	}
+	if( FSDomain ) {
+		free(FSDomain);
+	}
+	if( Arch ) {
+		free(Arch);
+	}
+	if( Opsys ) {
+		free(Opsys);
+	}
+	if( ShadowVersion ) {
+		delete ShadowVersion;
+	}
 }
 
 bool
