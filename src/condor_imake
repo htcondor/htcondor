@@ -128,6 +128,12 @@ elif [ $os = "Linux" ]; then
 		Other2="-DIS_GLIBC21"
 	elif [ -f /lib/libc-2.2.* ]; then
 		Other2="-DIS_GLIBC22"
+	else
+		# if we got here, it means it isn't a redhat distribution since
+		# redhat names the libc versions as detailed in the above code.
+		# So, for now, assume SuSE linux and glibc22. Later I might have
+		# to define proper distinctions between redhat and SuSE.
+		Other2="-DIS_GLIBC22"
 	fi
 	if [ $arch = "i686" -o $arch = "i586" -o $arch = "i486" ] ; then
 		ArchFlag="-DIS_I386"
