@@ -90,6 +90,9 @@ class ShadowUserPolicy : public Service
 		*/
 	void doAction( int action, bool is_periodic );
 
+	void UpdateJobTime( float *old_run_time );
+	void RestoreJobTime( float old_run_time );
+
 		// Data
 	UserPolicy user_policy;
 	BaseShadow* shadow;
