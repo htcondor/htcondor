@@ -126,7 +126,7 @@
 
 #if defined(OSF1)
 #  include <sys/mount.h>
-#elif defined(LINUX)
+#elif defined(LINUX) || defined(HPUX9)
 #  include <sys/vfs.h>
 #else
 #  include <sys/statfs.h>
