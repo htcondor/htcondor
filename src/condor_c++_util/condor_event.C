@@ -1422,10 +1422,15 @@ writeEvent( FILE* file )
 int PostScriptTerminatedEvent::
 readEvent( FILE* file )
 {
-	if( fscanf( file, "POST Script terminated.\n\t(%d) ", &normal ) != 1 ) {
+	int tmp;
+	if( fscanf( file, "POST Script terminated.\n\t(%d) ", &tmp ) != 1 ) {
 		return 0;
 	}
-
+	if( tmp == 1 ) {
+		normal = true;
+	} else {
+		normal = false;
+	}
     if( normal ) {
         if( fscanf( file, "Normal termination (return value %d)",
 					&returnValue ) != 1 ) {
