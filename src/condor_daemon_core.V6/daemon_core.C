@@ -1448,6 +1448,13 @@ DaemonCore::CheckPrivState( void )
 		// already in Condor priv, this is just a no-op.
 	priv_state old_priv = set_priv( Default_Priv_State );
 
+#ifdef WIN32
+		// TODD - TEMPORARY HACK UNTIL WIN32 HAS FULL USER_PRIV SUPPORT
+	if ( Default_Priv_State == PRIV_USER ) {
+		return;
+	}
+#endif
+
 		// See if our old state was something else.
 	if( old_priv != Default_Priv_State ) {
 		dprintf( D_ALWAYS, 
@@ -2217,7 +2224,7 @@ int DaemonCore::Shutdown_Fast(pid_t pid)
 				pid,pidHandle,check_name);
 	}
 
-	if (TerminateProcess(pidHandle, 0)) {
+	if (TerminateProcess(pidHandle,0)) {
 		dprintf(D_PROCFAMILY, 
 			"Shutdown_Fast:Successfully terminated pid %d\n", pid);
 		ret_value = TRUE;
