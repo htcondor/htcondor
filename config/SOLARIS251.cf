@@ -5,6 +5,7 @@
 
 #define HAS_PVM	YES
 
+#define HAS_GLOBUS YES
 
 #define		IS_SOLARIS251		YES
 #define		ImakeOpsysFlag		-DIS_SOLARIS251
