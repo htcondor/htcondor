@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre_declare,v 1.1.2.4 2004-06-26 03:10:30 wright Exp $
+# $Id: remote_pre_declare,v 1.1.2.5 2004-06-29 00:34:06 wright Exp $
 # script to set up for Condor testsuite run
 ######################################################################
 
@@ -66,7 +66,7 @@ print ENVSETUP "CONDOR_CONFIG=$BaseDir/condor/etc/condor_config\n";
 print ENVSETUP "export CONDOR_CONFIG\n";
 print ENVSETUP "CONDOR_VERSION=$vers\n";
 print ENVSETUP "export CONDOR_VERSION\n";
-print ENVSETUP "PATH=$BaseDir/condor/bin:$BaseDir/condor/sbin:\$PATH\n";
+print ENVSETUP "PATH=$BaseDir/nmi_glue/test:$BaseDir/condor/bin:$BaseDir/condor/sbin:\$PATH\n";
 print ENVSETUP "export PATH\n";
 print ENVSETUP "SRC_DIR=$SrcDir\n";
 print ENVSETUP "export SRC_DIR\n";

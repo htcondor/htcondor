@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# $Id: remote_pre,v 1.1.2.10 2004-06-28 22:17:58 wright Exp $
+# $Id: remote_pre,v 1.1.2.11 2004-06-29 00:34:06 wright Exp $
 
 # Condor implementation of NMI test infrastructure interface
 # Simple wrapper to source the environment file and spawn the
@@ -15,4 +15,4 @@ if [ ! -f $ENV_FILE ]; then
 fi
 . $ENV_FILE
 
-exec ./remote_pre.pl $*
+exec remote_pre.pl $*
