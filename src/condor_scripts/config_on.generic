@@ -3,7 +3,7 @@ CSH
 echo "Configuring Condor on... "
 
 set CONFIG_VAL=$RELEASEDIR/bin/config_val
-eval `$CONFIG_VAL LOCAL_CONFIG_FILE`
+set LOCAL_CONFIG_FILE=`$CONFIG_VAL LOCAL_CONFIG_FILE`
 
 grep ^START_DAEMONS $LOCAL_CONFIG_FILE >& /dev/null || \
 	echo START_DAEMONS >> $LOCAL_CONFIG_FILE

@@ -7,7 +7,7 @@ if ( $#argv != 1 ) then
 endif
 
 set CONFIG_VAL=$RELEASEDIR/bin/config_val
-eval `$CONFIG_VAL LOCAL_CONFIG_FILE`
+set LOCAL_CONFIG_FILE=`$CONFIG_VAL LOCAL_CONFIG_FILE`
 
 grep ^MAX_JOBS_RUNNING $LOCAL_CONFIG_FILE >& /dev/null || \
 	echo MAX_JOBS_RUNNING >> $LOCAL_CONFIG_FILE

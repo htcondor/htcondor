@@ -10,7 +10,7 @@
 # These defaults can be overidden with command-line args.
 # Customize these if desired.  The defaults provided should be
 # correct for most installations, however.
-CONDOR_LIBDIR=`config_val -value LIB`
+CONDOR_LIBDIR=`config_val LIB`
 CONDOR_CLIB=$CONDOR_LIBDIR/condor_syscall_lib.a
 CONDOR_RT0=$CONDOR_LIBDIR/condor_rt0.o
 CONDOR_CPLUS=$CONDOR_LIBDIR/c_plus_alloc.o

@@ -1,28 +1,27 @@
 -------- Do not delete this line, awk uses it ---------------------
 CSH
 
-set CHMOD=/bin/chmod
-
-#if IS_HPPAR_HPUX9 || IS_ALPHA_OSF1 || IS_SGI_IRIX53
-set CHOWN=/bin/chown
-#else
-set CHOWN=/etc/chown
-#endif
-set CHGRP=/bin/chgrp
 set CONFIG_VAL=$RELEASEDIR/bin/config_val
+set PATH=/bin:/sbin:/usr/bin:/usr/sbin:/etc:$PATH
 
 rm -f ~condor/condor_config
 ln -s $RELEASEDIR/lib/condor_config ~condor/condor_config
-rm -f ~condor/condor_config.local
-touch ~condor/condor_config.local
-$CHMOD 664 ~condor/condor_config.local
-$CHOWN condor ~condor/condor_config.local
-$CHGRP condor ~condor/condor_config.local
-eval `$CONFIG_VAL LOG EXECUTE SPOOL`
+
+set LOCAL_CONFIG_FILE=`$CONFIG_VAL LOCAL_CONFIG_FILE`
+rm -f $LOCAL_CONFIG_FILE
+touch $LOCAL_CONFIG_FILE
+chmod 664 $LOCAL_CONFIG_FILE
+chown condor $LOCAL_CONFIG_FILE
+chgrp condor $LOCAL_CONFIG_FILE
+
+set LOG=`$CONFIG_VAL LOG`
+set EXECUTE=`$CONFIG_VAL EXECUTE` 
+set SPOOL=`$CONFIG_VAL SPOOL`
+
 mkdir $LOG $EXECUTE $SPOOL
-$CHMOD 777 $EXECUTE
-$CHMOD 775 $SPOOL
-$CHMOD 775 $LOG
-$CHOWN condor $LOG $EXECUTE $SPOOL
-$CHGRP condor $LOG $EXECUTE $SPOOL
-echo Condor has been initialized, but not started.
+chmod 777 $EXECUTE
+chmod 775 $SPOOL $LOG
+chown condor $LOG $EXECUTE $SPOOL
+chgrp condor $LOG $EXECUTE $SPOOL
+
+echo "Condor has been initialized, but not started."
