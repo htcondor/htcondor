@@ -670,6 +670,7 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now,
 {
 	ClassAd  *ad;
 	int   	 timeStamp;
+	int		 updateInterval;
 	HashKey  hk;
 	double   timeDiff;
 	char     hkString [128];
@@ -681,15 +682,20 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now,
 		if (ad < THRESHOLD) continue;
 
 		// Read the timestamp of the ad
-		if (!ad->LookupInteger (ATTR_LAST_HEARD_FROM, timeStamp))
-		{
+		if (!ad->LookupInteger (ATTR_LAST_HEARD_FROM, timeStamp)) {
 			dprintf (D_ALWAYS, "\t\tError looking up time stamp on ad\n");
 			continue;
 		}
 
+		// how long has it been since the last update?
+		timeDiff = difftime( now, timeStamp );
+
+		if( !ad->LookupInteger( ATTR_UPDATE_INTERVAL, updateInterval ) ) {
+			updateInterval = machineUpdateInterval;
+		}
+
 		// check if it has expired
-		timeDiff = difftime (now, timeStamp);
-		if (timeDiff > (double) machineUpdateInterval)
+		if (timeDiff > (double) updateInterval )
 		{
 			(*makeKey) (hk, ad, NULL);
 			hk.sprint (hkString);
