@@ -78,27 +78,11 @@ LIB32=link.exe -lib
 # Name "condor_util_lib - Win32 Debug"
 # Begin Source File
 
-SOURCE=..\src\condor_includes\_condor_fix_nt.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\_condor_fix_types.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_util_lib\blankline.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\h\clib.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_common.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_debug.h
+SOURCE=..\src\condor_util_lib\ckpt_name.c
 # End Source File
 # Begin Source File
 
@@ -106,23 +90,7 @@ SOURCE=..\src\condor_util_lib\condor_errlst.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_includes\condor_expressions.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_string.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\h\condor_sys.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_includes\condor_uid.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\h\debug.h
 # End Source File
 # Begin Source File
 
@@ -139,14 +107,6 @@ SOURCE=..\src\condor_util_lib\except.c
 # Begin Source File
 
 SOURCE=..\src\h\except.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\h\exit.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\h\expr.h
 # End Source File
 # Begin Source File
 
@@ -171,14 +131,6 @@ SOURCE=..\src\condor_util_lib\mkargv.c
 # Begin Source File
 
 SOURCE=..\src\condor_util_lib\phys_mem.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\h\proc.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\h\syscall_numbers.h
 # End Source File
 # Begin Source File
 

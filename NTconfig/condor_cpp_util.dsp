@@ -78,83 +78,11 @@ LIB32=link.exe -lib
 # Name "condor_cpp_util - Win32 Debug"
 # Begin Source File
 
-SOURCE=..\src\condor_includes\_condor_fix_nt.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\_condor_fix_types.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\h\clib.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_adtypes.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_ast.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_astbase.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_attributes.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_attrlist.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_classad.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_collector.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_common.h
-# End Source File
-# Begin Source File
-
 SOURCE="..\src\condor_c++_util\condor_config.C"
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\condor_includes\condor_config.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_constants.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_debug.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_expressions.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_exprtype.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_mach_status.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_network.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_parser.h
 # End Source File
 # Begin Source File
 
@@ -166,10 +94,6 @@ SOURCE="..\src\condor_c++_util\condor_q.h"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_includes\condor_qmgr.h
-# End Source File
-# Begin Source File
-
 SOURCE="..\src\condor_c++_util\condor_query.C"
 # End Source File
 # Begin Source File
@@ -178,27 +102,11 @@ SOURCE="..\src\condor_c++_util\condor_query.h"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_includes\condor_string.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\h\condor_sys.h
-# End Source File
-# Begin Source File
-
 SOURCE="..\src\condor_c++_util\config.C"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\h\debug.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\h\except.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\h\expr.h
+SOURCE="..\src\condor_c++_util\disk.C"
 # End Source File
 # Begin Source File
 
@@ -226,19 +134,11 @@ SOURCE="..\src\condor_c++_util\query_result_type.h"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\h\sched.h
-# End Source File
-# Begin Source File
-
 SOURCE="..\src\condor_c++_util\simplelist.h"
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\h\startup.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\stream.h
+SOURCE="..\src\condor_c++_util\up_down.C"
 # End Source File
 # End Target
 # End Project

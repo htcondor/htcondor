@@ -76,55 +76,7 @@ LIB32=link.exe -lib
 # Name "condor_qmgmt - Win32 Debug"
 # Begin Source File
 
-SOURCE=..\src\condor_includes\_condor_fix_nt.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\_condor_fix_types.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\buffers.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_attributes.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_common.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_constants.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_debug.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_fix_assert.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_io.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_mach_status.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\condor_network.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_includes\condor_qmgr.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\h\proc.h
 # End Source File
 # Begin Source File
 
@@ -141,30 +93,6 @@ SOURCE=..\src\condor_schedd.V6\qmgr.h
 # Begin Source File
 
 SOURCE=..\src\condor_schedd.V6\qmgr_lib_support.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\reli_sock.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\safe_sock.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\h\sched.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\sock.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\h\startup.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\stream.h
 # End Source File
 # End Target
 # End Project

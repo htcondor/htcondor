@@ -77,18 +77,6 @@ LIB32=link.exe -lib
 # Name "condor_classad - Win32 Debug"
 # Begin Source File
 
-SOURCE=..\src\condor_includes\_condor_fix_nt.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\_condor_fix_resource.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\_condor_fix_types.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_classad\ast.C
 # End Source File
 # Begin Source File
@@ -149,7 +137,7 @@ SOURCE=..\src\condor_includes\condor_classifiedjobs.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_includes\condor_common.h
+SOURCE=..\src\condor_includes\condor_commands.h
 # End Source File
 # Begin Source File
 
@@ -169,10 +157,6 @@ SOURCE=..\src\condor_includes\condor_mach_status.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_includes\condor_network.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_includes\condor_registration.h
 # End Source File
 # Begin Source File
@@ -181,23 +165,11 @@ SOURCE=..\src\condor_includes\condor_scanner.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\h\debug.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_classad\environment.C
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\h\except.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\condor_classad\parser.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\h\proc.h
 # End Source File
 # Begin Source File
 
@@ -206,18 +178,6 @@ SOURCE=..\src\condor_classad\registration.C
 # Begin Source File
 
 SOURCE=..\src\condor_classad\scanner.C
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\h\sched.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\h\startup.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\condor_includes\stream.h
 # End Source File
 # End Target
 # End Project
