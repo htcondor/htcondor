@@ -542,6 +542,12 @@ void condor_event_timer () {
     static int prevJobsReady = 0;
     static int prevScriptsRunning = 0;
 
+	int justSubmitted;
+	justSubmitted = G.dag->SubmitReadyJobs();
+	debug_printf( DEBUG_DEBUG_1, "Just submitted %d jobs this cycle...\n",
+				  justSubmitted );
+
+
     // If the log has grown
     if (G.dag->DetectCondorLogGrowth()) {              //-->DAP
       if (G.dag->ProcessLogEvents(CONDORLOG) == false) { //-->DAP
@@ -591,6 +597,7 @@ void condor_event_timer () {
     // exists.
     // 
     if( G.dag->NumJobsSubmitted() == 0 &&
+		G.dag->NumJobsReady() == 0 &&
 		G.dag->NumScriptsRunning() == 0 ) {
 		if( G.dag->NumJobsFailed() > 0 ) {
 			if( DEBUG_LEVEL( DEBUG_QUIET ) ) {

@@ -461,7 +461,6 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 				  else {
 					  TerminateJob( job, recovery );
 				  }
-				  SubmitReadyJobs();
 				  PrintReadyQ( DEBUG_DEBUG_2 );
 
 				  break;
@@ -697,7 +696,6 @@ Dag::StartNode( Job *node )
     }
 	// no PRE script exists or is done, so add job to the queue of ready jobs
 	_readyQ->Append( node );
-	SubmitReadyJobs();
 	return TRUE;
 }
 
@@ -874,7 +872,6 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 					  "successfully.\n", job->GetJobName() );
 		job->_Status = Job::STATUS_READY;
 		_readyQ->Append( job );
-		SubmitReadyJobs();
 	}
 	return true;
 }
