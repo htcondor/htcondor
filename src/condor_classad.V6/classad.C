@@ -313,6 +313,7 @@ LookupInScope(const string &name, ExprTree*& expr, EvalState &state) const
 	expr = NULL;
 
 	while( !expr && current ) {
+
 		// lookups/eval's being done in the 'current' ad
 		state.curAd = current;
 
@@ -341,6 +342,9 @@ LookupInScope(const string &name, ExprTree*& expr, EvalState &state) const
 		} else {
 			// continue searching from the superScope ...
 			current = superScope;
+			if( current == this ) {		// NAC - simple loop checker
+				return( EVAL_UNDEF );
+			}
 		}
 	}	
 
