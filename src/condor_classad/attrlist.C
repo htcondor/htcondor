@@ -1698,7 +1698,7 @@ int AttrList::put(Stream& s)
     if(!s.code(numExprs))
         return 0;
 
-    line = new char[MAX_STRING];
+    line = new char[ATTRLIST_MAX_EXPRESSION];
     for(elem = exprList; elem; elem = elem->next) {
         strcpy(line, "");
         elem->tree->PrintToStr(line);
@@ -1729,7 +1729,7 @@ int AttrList::get(Stream& s)
     if(!s.code(numExprs))
         return 0;
     
-    line = new char[200];
+    line = new char[ATTRLIST_MAX_EXPRESSION];
     for(int i = 0; i < numExprs; i++) {
         if(!s.code(line)) {
             delete [] line;
@@ -1773,7 +1773,7 @@ int AttrList::put(XDR *xdrs)
         return 0;
 
 	// ship expressions themselves
-    line = new char[200];
+    line = new char[ATTRLIST_MAX_EXPRESSION];
     for(elem = exprList; elem; elem = elem->next) {
         strcpy(line, "");
         elem->tree->PrintToStr(line);
@@ -1804,7 +1804,7 @@ int AttrList::get(XDR *xdrs)
     if(!xdr_int (xdrs, &numExprs))
         return 0;
     
-    line = new char[200];
+    line = new char[ATTRLIST_MAX_EXPRESSION];
 	if (!line)
 	{
 		return 0;

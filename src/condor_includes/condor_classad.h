@@ -17,6 +17,8 @@
 #include "proc_obj.h"
 #include "condor_attrlist.h"
 
+#define		CLASSAD_MAX_ADTYPE			50
+
 //for the shipping functions -- added by Lei Cao
 #include "stream.h"
 

@@ -20,6 +20,7 @@
 #include <rpc/xdr.h>
 #include "stream.h"
 
+#define		ATTRLIST_MAX_EXPRESSION		1024
 
 enum							// various AttrLists
 {

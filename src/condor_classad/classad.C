@@ -514,7 +514,7 @@ int ClassAd::put(Stream& s)
     if(!s.code(numExprs))
         return 0;
 
-    line = new char[200];
+    line = new char[ATTRLIST_MAX_EXPRESSION];
     for(elem = exprList; elem; elem = elem->next) {
         strcpy(line, "");
         elem->tree->PrintToStr(line);
@@ -552,7 +552,7 @@ int ClassAd::get(Stream& s)
     if(!s.code(numExprs)) 
         return 0;
     
-    line = new char[200];
+    line = new char[ATTRLIST_MAX_EXPRESSION];
     for(int i = 0; i < numExprs; i++) {
         if(!s.code(line)) {
             delete [] line;
@@ -565,7 +565,7 @@ int ClassAd::get(Stream& s)
     }
     delete [] line;
 
-    name = new char[50];
+    name = new char[CLASSAD_MAX_ADTYPE];
     if(!s.code(name)) {
         delete [] name;
         return 0;
@@ -573,7 +573,7 @@ int ClassAd::get(Stream& s)
     SetMyTypeName(name);
     delete [] name;
 
-    name = new char[50];
+    name = new char[CLASSAD_MAX_ADTYPE];
     if(!s.code(name)) {
         delete [] name;
         return 0;
