@@ -1,0 +1,111 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{User Priorities in the Condor System}
+\label{sec:UserPrio}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+For accounting purposes, each user is identified by ``username@uid\_domain''
+so users have the same priority value even if they begin submitting from a 
+different machine in the same domain, or even submit from multiple machines 
+in the same domain.
+
+The numerical priorities values assigned to users is inversely related to the 
+``goodness'' of the priority, so a user with a numerical priority of 5 will get 
+more resources than a user with a numerical priority of 50.  There are two 
+priority values assigned to Condor users:
+\begin{itemize}
+	\item The Real User Priority (RUP), which measures resource usage of the 
+		user, and
+	\item The Effective User Priority (EUP), which determines the number of
+		resources the user can get.
+\end{itemize}
+This section describes these two priorities and how they effect resource
+allocations in Condor.  Documentation on configuring and controlling 
+priorities may be found in section~\ref{sec:Negotiator-Config-File-Entries}.
+
+\subsection{Real User Priority (RUP)}
+The real user priority of a user measures the resource usage of the user 
+through time.  Every user begins with a RUP of half (i.e., 0.5) and,
+at steady state, the RUP of a user equilibrates to the number of resources 
+used by that user.  Therefore, if a particular user continuously uses exactly 
+ten resources for a long period of time, the RUP of that user stabilizes at 
+ten.
+
+However, if the user decreases the number of resources used, the RUP value of 
+user drops (i.e., gets better).  The rate at which the priority value decays 
+can be set by the macro \Macro{PRIORITY\_HALFLIFE}, which is a time period 
+defined in seconds.   Intuitively, if the \Macro{PRIORITY\_HALFLIFE} in a pool 
+is set to 86400 (i.e., one day) and if a user whose RUP was 10 removes all his 
+jobs, the user's RUP would be 5 one day later, 2.5 two days hence, etc.
+
+\subsection{Effective User Priority (EUP)}
+The effective user priority of a user is used to determine how many resources 
+that user can get.  The EUP of a user is always linearly related to the RUP
+by a \emph{priority factor} which may be defined on a per-user basis.  Unless 
+otherwise configured, the priority factor for all users is 1.0, and so the EUP 
+is the same as the the RUP.  However, if required, the priority factors of
+particular users (such as remote submitters) can be increased so that 
+remaining users are served preferentially.
+
+The number of resources that a user can claim is inversely related to the ratio 
+between the EUPs of submitting users.  Therefore user $A$ with EUP 5 will get 
+twice as many resources as user $B$ with EUP 10, and four times as many 
+resources as user $C$ with EUP 20.  However, if $A$ does not use his ``quota''
+of resources, the available resources are repartitioned and distributed among
+remaining users in accordance to the inverse ratio rule.
+
+Condor supplies mechanisms to directly support two scenarios in which EUP may
+be useful:
+\begin{description}
+	\item[Nice users]  A job may be submitted with the parameter 
+	\texttt{nice\_user} set to true in the submit command file.  A nice user
+	job automatically gets its RUP boosted by the 
+	\Macro{NICE\_USER\_PRIO\_FACTOR} priority factor specified in the 
+	configuration file, leading to a (usually very large) EUP.  These jobs are 
+	therefore equivalent to ``background jobs'' which use resources not used 
+	by other users of Condor.
+
+	\item[Remote Users]  The flocking feature of Condor (see 
+	section~\ref{sec:Flocking}) allows the \Condor{schedd} to submit to more
+	than one pool.  In such situations, one may have submitters from other
+	domains submitting into the local pool.  It is often desirable to have
+	Condor treat local users preferentially over such remote users.  If
+	configured, Condor will boost the RUPs of remote users by 
+	\Macro{REMOTE\_PRIO\_FACTOR}, specified in the configuration file.
+\end{description}
+
+The priority boost factors for individual users can be set with the 
+\Opt{setfactor} option of \Condor{userprio}, for which documentation can
+be found in section~\ref{man-condor-userprio}.
+
+\subsection{Priorities and Preemption}
+Priorities are used to ensure that users get their fair share of resources.  
+The priority values are used at allocation time as discussed previously, and
+the system additionally preempts machines (by performing a checkpoint and
+vacate) and reallocates them to avoid priority inversion.
+
+To ensure that preemptions do not lead to ``thrashing,'' a 
+\Macro{PREEMPTION\_HOLD} expression may be defined to deny preemption.  This
+expression is usually defined to deny preemption if the current running job
+has been running there for a relatively short period of time, effectively
+limiting the number of preemptions per resource per time interval.
+
+\subsection{Priority Calculation}
+This section may be skipped if the reader so feels, but for the curious,
+we now describe Condor's priority calculation algorithm.
+
+The RUP of a user $u$ at time $t$, $\pi_r(u,t)$, is calculated 
+every time interval $\delta t$ using the formula 
+$$\pi_r(u,t) = \beta\times\pi(u,t-\delta t) + (1-\beta)\times\rho(u,t)$$
+where $\rho(u,t)$ is the number of resources used by user $u$ at time $t$,
+and $\beta=0.5^{{\delta t}/h}$ ($h$ is the half life period set by 
+\Macro{PRIORITY\_HALFLIFE}).  The EUP of user $u$ at time $t$, $\pi_e(u,t)$
+is calculated by
+$$\pi_e(u,t) = \pi_r(u,t)\times f(u,t)$$
+where $f(u,t)$ is the priority boost factor for user $u$ at time $t$.
+
+As mentioned previously, the RUP calculation is designed so that at steady
+state, each user's RUP stabilizes at the number of resources used by that user. 
+The definition of $\beta$ ensures that the calculation of $\pi_r(u,t)$ can be 
+calculated over non-uniform time intervals $\delta t$ without affecting the 
+calculation.  The time interval $\delta t$ varies due to events internal to 
+the system, but Condor guarantees that unless the Central Manager machine is 
+down, no matches will be unaccounted for due to this variance.
