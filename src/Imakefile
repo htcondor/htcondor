@@ -1,32 +1,26 @@
 CFLAGS = $(STD_C_FLAGS)
 
-
 #if HAS_FORTRAN
-#	if IS_V5 || IS_V6
-TEST_SUITE_F = test_suite_F.V5
-#	else
-TEST_SUITE_F = test_suite_F
-#	endif
+  TEST_SUITE_F = test_suite_F.V5
 #endif
 
 #if !HAS_X
-#define kbdd
+#   define kbdd
 #endif
 
 #if !DOES_CHECKPOINTING
-#	define standalone
+#   define standalone
 #endif
 
 #if WANT_PVM && HAS_PVM
-PVM_LIBRARY = pvmd
+   PVM_LIBRARY = pvmd
 #endif
 
 #if USE_CONFIG_SERVER
-CONFIG_SERVER = config_server
+   CONFIG_SERVER = config_server
 #endif
 
-#if IS_V6
-#	define Programs \
+#define Programs \
 		accountant.V6 ckpt_server collector.V6 $(CONFIG_SERVER) \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts shadow.V6 startd.V6 starter.V5 submit.V6 status.V6 \
@@ -35,26 +29,11 @@ CONFIG_SERVER = config_server
 #define Libraries \
 		util_lib c++_util ckpt io classad daemon_core.V6 \
 		syscall_lib
-		
-#elif IS_V5
-#	define Programs \
-		scripts tools shadow.V5 starter.V5 startd \
-		schedd kbdd  negotiator collector globalq master.dhruba prio q rm \
-		submit.v3  on off test_suite_C.V5 $(TEST_SUITE_F)
-#		define Libraries	util_lib c++_util ckpt syscall_lib
-#else
-#	define Programs \
-		scripts standalone tools shadow starter startd \
-		schedd kbdd  negotiator collector globalq master prio q rm \
-		submit.v2 submit.v3  on off \
-		test_suite_C $(TEST_SUITE_F)
-#		define Libraries	util_lib c++_util $(SYSCALL_LIB) $(PVM_LIBRARY)
-#endif
-
 
 #define Directories release_dir release_dir/bin release_dir/lib \
-	release_dir/sbin release_dir/etc
-all: h makefiles Directories Libraries Programs
+	release_dir/sbin release_dir/etc release_dir/etc/examples
+
+all: h makefiles Directories Libraries Programs examples
 release:: all
 
 #define Tools condor_checkpoint condor_off condor_on condor_reconfig \
@@ -64,14 +43,14 @@ release:: all
 	sbin/condor_shadow sbin/condor_preen sbin/condor_vacate \
 	sbin/condor_checkpoint sbin/condor_off sbin/condor_on \
 	sbin/condor_reconfig sbin/condor_reconfig_schedd \
-	sbin/condor_reschedule sbin/condor_restart
+	sbin/condor_reschedule sbin/condor_restart sbin/condor.generic
 
 release.tar: stripped
 	cd release_dir; rm -f release.tar; tar -cvf release.tar etc bin lib sbin
 
 submit.tar: stripped
 	cd release_dir; rm -f submit.tar; tar -cvf submit.tar etc bin lib SubmitSbinFiles
-	
+
 stripped: release
 	cd release_dir/bin; strip *; echo 
 	cd release_dir/sbin; rm Tools; strip *; echo 
@@ -82,95 +61,50 @@ simple_dir_target(release_dir/bin)
 simple_dir_target(release_dir/lib)
 simple_dir_target(release_dir/sbin)
 simple_dir_target(release_dir/etc)
+simple_dir_target(release_dir/etc/examples)
 object_target(util_lib)
 object_target(c++_util)
 
 #if WANT_PVM && HAS_PVM
-	object_target($(PVM_LIBRARY))
+   object_target($(PVM_LIBRARY))
 #endif
-
 
 object_target(tools)
-
-
-#if IS_V6
-	object_target(accountant.V6)
-	object_target(ckpt_server)
+object_target(examples)
+object_target(accountant.V6)
+object_target(ckpt_server)
 #if USE_CONFIG_SERVER
-	object_target(config_server)
+   object_target(config_server)
 #endif
-	object_target(shadow.V6)
-	object_target(starter.V5)
-	object_target(startd.V6)
-	object_target(schedd.V6)
-	object_target(status.V6)
+object_target(shadow.V6)
+object_target(starter.V5)
+object_target(startd.V6)
+object_target(schedd.V6)
+object_target(status.V6)
 #if HAS_X
-	object_target(kbdd)
+   object_target(kbdd)
 #endif
-	object_target(negotiator.V6)
-	object_target(collector.V6)
-	object_target(master.V6)
-	object_target(q.V6)
-	object_target(rm.V6)
-	object_target(submit.V6)
-	object_target(test_suite_C.V5)
-#	if HAS_FORTRAN
-		object_target($(TEST_SUITE_F))
-#	endif
-	object_target(ckpt)
-	object_target(syscall_lib)
-	object_target(io)
-	object_target(classad)
-	object_target(daemon_core.V6)
-makefiles:: h/Makefile
-h/Makefile:
-	cd h; imake IMAKE_FLAGS
-h: h/Makefile
-	cd h; make
-#elif IS_V5
-	object_target(shadow.V5)
-	object_target(starter.V5)
-	object_target(test_suite_C.V5)
-#	if HAS_FORTRAN
-		object_target($(TEST_SUITE_F))
-#	endif
-	object_target(ckpt)
-	object_target(syscall_lib)
-makefiles:: h/Makefile
-h/Makefile:
-	cd h; imake IMAKE_FLAGS
-h: h/Makefile
-	cd h; make
-#else
-	object_target(shadow)
-	object_target(starter)
-	object_target(submit.v2)
-	object_target($(SYSCALL_LIB))
-	object_target(test_suite_C)
-#	if HAS_FORTRAN
-		object_target($(TEST_SUITE_F))
-#	endif
-#	if DOES_CHECKPOINTING
-		object_target(standalone)
-#	endif
+object_target(negotiator.V6)
+object_target(collector.V6)
+object_target(master.V6)
+object_target(q.V6)
+object_target(rm.V6)
+object_target(submit.V6)
+object_target(test_suite_C.V5)
+#if HAS_FORTRAN
+   object_target($(TEST_SUITE_F))
 #endif
+object_target(ckpt)
+object_target(syscall_lib)
+object_target(io)
+object_target(classad)
+object_target(daemon_core.V6)
 
-#if !IS_V6
-object_target(submit.v3)
-object_target(startd)
-object_target(schedd)
-#if HAS_X
-object_target(kbdd)
-#endif
-object_target(negotiator)
-object_target(collector)
-object_target(master.dhruba)
-object_target(q)
-object_target(rm)
-object_target(globalq)
-object_target(on)
-object_target(off)
-#endif
+makefiles:: h/Makefile
+h/Makefile:
+	cd h; imake IMAKE_FLAGS
+h: h/Makefile
+	cd h; make
 
 object_target(prio)
 object_target(scripts)
