@@ -111,6 +111,7 @@ shadow_rec * add_shadow_rec(int, PROC_ID*, match_rec*, int);
 bool service_this_universe(int);
 
 int	WallClockCkptInterval = 0;
+static bool gridman_per_job = false;
 
 #ifdef CARMI_OPS
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
@@ -701,10 +702,13 @@ Scheduler::count_jobs()
 
 	 // Tell our GridUniverseLogic class what we've seen in terms
 	 // of Globus Jobs per owner.
-	for (i=0; i < N_Owners; i++) {
-		if ( Owners[i].GlobusJobs > 0 ) {
-			GridUniverseLogic::JobCountUpdate(Owners[i].Name,Owners[i].X509,
-				Owners[i].GlobusJobs,Owners[i].GlobusUnsubmittedJobs);
+	 // Don't bother if we are starting a gridmanager per job.
+	if ( !gridman_per_job ) {
+		for (i=0; i < N_Owners; i++) {
+			if ( Owners[i].GlobusJobs > 0 ) {
+				GridUniverseLogic::JobCountUpdate(Owners[i].Name,Owners[i].X509,
+					0, 0, Owners[i].GlobusJobs,Owners[i].GlobusUnsubmittedJobs);
+			}
 		}
 	}
 
@@ -855,11 +859,22 @@ count( ClassAd *job )
 			// for Globus, count jobs in G_UNSUBMITTED state by owner.
 			// later we make certain there is a grid manager daemon
 			// per owner.
+			int thisJobGlobusUnsubmitted = 0;
 			scheduler.Owners[OwnerNum].GlobusJobs++;
 			globus_status = G_UNSUBMITTED;
 			job->LookupInteger(ATTR_GLOBUS_STATUS, globus_status);
-			if ( globus_status == G_UNSUBMITTED ) 
+			if ( globus_status == G_UNSUBMITTED ) {
 				scheduler.Owners[OwnerNum].GlobusUnsubmittedJobs++;
+				thisJobGlobusUnsubmitted = 1;
+			}
+			if ( gridman_per_job ) {
+				int cluster = 0;
+				int proc = 0;
+				job->LookupInteger(ATTR_CLUSTER_ID, cluster);
+				job->LookupInteger(ATTR_PROC_ID, proc);
+				GridUniverseLogic::JobCountUpdate(owner,x509userproxy,
+					cluster, proc, 1, thisJobGlobusUnsubmitted);
+			}
 		}
 			// We want to record the cluster id of all idle MPI jobs  
 		if( universe == CONDOR_UNIVERSE_MPI && status == IDLE ) {
@@ -995,7 +1010,11 @@ abort_job_myself(PROC_ID job_id)
 		GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
 		GetAttributeString(job_id.cluster, job_id.proc, ATTR_X509_USER_PROXY, 
 							proxy);
-		GridUniverseLogic::JobRemoved(owner,proxy);
+		if ( gridman_per_job ) {
+			GridUniverseLogic::JobRemoved(owner,proxy,job_id.cluster,job_id.proc);
+		} else {
+			GridUniverseLogic::JobRemoved(owner,proxy,0,0);
+		}
 		return;
 	}
 
@@ -4429,6 +4448,7 @@ Scheduler::Init()
 	char*					tmp;
 	char					expr[1024];
 	static	int				schedd_name_in_config = 0;
+	static  bool			first_time_in_init = true;
 
 		////////////////////////////////////////////////////////////////////
 		// Grab all the essential parameters we need from the config file.
@@ -4583,7 +4603,7 @@ Scheduler::Init()
 		NegotiateAllJobsInCluster = true;
 	}
 	if( tmp ) free( tmp );
-	
+
 	/* Initialize the hash tables to size MaxJobsRunning * 1.2 */
 		// Someday, we might want to actually resize these hashtables
 		// on reconfig if MaxJobsRunning changes size, but we don't
@@ -4683,6 +4703,17 @@ Scheduler::Init()
 		 free(tmp);
 	 }
 
+
+	if ( first_time_in_init ) {	  // cannot be changed on the fly
+		tmp = param( "GRIDMANAGER_PER_JOB" );
+		if( !tmp || tmp[0] == 'f' || tmp[0] == 'F' ) {
+			gridman_per_job = false;
+		} else {
+			gridman_per_job = true;
+		}
+		if( tmp ) free( tmp );
+	}
+
 		////////////////////////////////////////////////////////////////////
 		// Initialize the queue managment code
 		////////////////////////////////////////////////////////////////////
@@ -4743,6 +4774,7 @@ Scheduler::Init()
 		sent_shadow_failure_email = FALSE;
 	}
 
+	first_time_in_init = false;
 }
 
 void

@@ -93,7 +93,8 @@ GridUniverseLogic::~GridUniverseLogic()
 
 
 void 
-GridUniverseLogic::JobCountUpdate(const char* owner, const char* proxy, int num_globus_jobs,
+GridUniverseLogic::JobCountUpdate(const char* owner, const char* proxy, 
+			int cluster, int proc, int num_globus_jobs,
 			int num_globus_unsubmitted_jobs)
 {
 	// Quick sanity checks - this should never be...
@@ -105,7 +106,7 @@ GridUniverseLogic::JobCountUpdate(const char* owner, const char* proxy, int num_
 	// does not know they are in the queue. so tell it some jobs
 	// were added.
 	if ( num_globus_unsubmitted_jobs > 0 ) {
-		JobAdded(owner, proxy);
+		JobAdded(owner, proxy, cluster, proc);
 		return;
 	}
 
@@ -113,7 +114,7 @@ GridUniverseLogic::JobCountUpdate(const char* owner, const char* proxy, int num_
 	// are any globus jobs at all.  if there are, make certain that there
 	// is a grid manager watching over the jobs and start one if there isn't.
 	if ( num_globus_jobs > 0 ) {
-		StartOrFindGManager(owner, proxy);
+		StartOrFindGManager(owner, proxy, cluster, proc);
 		return;
 	}
 
@@ -123,11 +124,12 @@ GridUniverseLogic::JobCountUpdate(const char* owner, const char* proxy, int num_
 
 
 void 
-GridUniverseLogic::JobAdded(const char* owner, const char* proxy)
+GridUniverseLogic::JobAdded(const char* owner, const char* proxy,
+					int cluster, int proc)
 {
 	gman_node_t* node;
 
-	node = StartOrFindGManager(owner, proxy);
+	node = StartOrFindGManager(owner, proxy, cluster, proc);
 
 	if (!node) {
 		// if we cannot find nor start a gridmanager, there's
@@ -148,11 +150,12 @@ GridUniverseLogic::JobAdded(const char* owner, const char* proxy)
 }
 
 void 
-GridUniverseLogic::JobRemoved(const char* owner, const char* proxy)
+GridUniverseLogic::JobRemoved(const char* owner, const char* proxy,
+			int cluster, int proc)
 {
 	gman_node_t* node;
 
-	node = StartOrFindGManager(owner, proxy);
+	node = StartOrFindGManager(owner, proxy, cluster, proc);
 
 	if (!node) {
 		// if we cannot find nor start a gridmanager, there's
@@ -279,13 +282,20 @@ GridUniverseLogic::GManagerReaper(Service *,int pid, int exit_status)
 
 
 GridUniverseLogic::gman_node_t *
-GridUniverseLogic::lookupGmanByOwner(const char* owner, const char* proxy)
+GridUniverseLogic::lookupGmanByOwner(const char* owner, const char* proxy,
+					int cluster, int proc)
 {
 	gman_node_t* result = NULL;
 	MyString owner_key(owner);
 	if(proxy){
 		MyString proxy_key(proxy);
 		owner_key += proxy_key; 
+	}
+	if (cluster) {
+		char tmp[100];
+		sprintf(tmp,"-%d.%d",cluster,proc);
+		MyString job_key(tmp);
+		owner_key += job_key;
 	}
 
 	if (!gman_pid_table) {
@@ -300,12 +310,13 @@ GridUniverseLogic::lookupGmanByOwner(const char* owner, const char* proxy)
 }
 
 GridUniverseLogic::gman_node_t *
-GridUniverseLogic::StartOrFindGManager(const char* owner, const char* proxy)
+GridUniverseLogic::StartOrFindGManager(const char* owner, const char* proxy,
+					int cluster, int proc)
 {
 	gman_node_t* gman_node;
 	int pid;
 
-	if ( (gman_node=lookupGmanByOwner(owner, proxy)) ) {
+	if ( (gman_node=lookupGmanByOwner(owner, proxy, cluster, proc)) ) {
 		// found it
 		return gman_node;
 	}
@@ -327,8 +338,8 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* proxy)
 	}
 #endif
 
-	dprintf( D_FULLDEBUG, "Starting condor_gmanager for owner %s\n",
-			owner);
+	dprintf( D_FULLDEBUG, "Starting condor_gmanager for owner %s (%d.%d)\n",
+			owner, cluster, proc);
 
 	char *gman_binary;
 	gman_binary = param("GRIDMANAGER");
@@ -350,6 +361,10 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* proxy)
 	if(proxy && proxy[0] != '\0') {
 		sprintf(proxy_buf, " -x %s", proxy);
 		// Really should be strncat...
+		strcat(gman_final_args, proxy_buf);
+	}
+	if (cluster) {
+		sprintf(proxy_buf, " -j %d.%d", cluster, proc);
 		strcat(gman_final_args, proxy_buf);
 	}
 	dprintf(D_FULLDEBUG,"Really Execing %s\n",gman_final_args);
@@ -381,7 +396,12 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* proxy)
 		MyString proxy_key(proxy);
 		owner_key += proxy_key;
 	}
-
+	if (cluster) {
+		char tmp[100];
+		sprintf(tmp,"-%d.%d",cluster,proc);
+		MyString job_key(tmp);
+		owner_key += job_key;
+	}
 
 	ASSERT( gman_pid_table->insert(owner_key,gman_node) == 0 );
 
