@@ -114,7 +114,7 @@ HashTable <PROC_ID, GlobusJob *> JobsByProcID( HASH_TABLE_SIZE,
 HashTable <HashKey, GlobusResource *> ResourcesByName( HASH_TABLE_SIZE,
 													   hashFunction );
 
-static void EmailTerminateEvent(ClassAd * jobAd);
+static void EmailTerminateEvent(ClassAd * jobAd, bool exit_status_valid);
 
 bool firstScheddContact = true;
 
@@ -574,8 +574,9 @@ doContactSchedd()
 		}
 		if ( curr_action->actions & UA_LOG_TERMINATE_EVENT &&
 			 !curr_job->terminateLogged ) {
-			EmailTerminateEvent(curr_job->ad);
-			WriteTerminateEventToUserLog( curr_job->ad );
+			EmailTerminateEvent(curr_job->ad,
+				curr_job->IsExitStatusValid());
+			WriteTerminateEventToUserLog( curr_job );
 			curr_job->terminateLogged = true;
 		}
 		if ( curr_action->actions & UA_LOG_ABORT_EVENT &&
@@ -1346,7 +1347,7 @@ d_format_time( double dsecs )
 
 static
 void
-EmailTerminateEvent(ClassAd * jobAd)
+EmailTerminateEvent(ClassAd * jobAd, bool exit_status_valid)
 {
 	if ( !jobAd ) {
 		dprintf(D_ALWAYS, 
@@ -1404,18 +1405,16 @@ EmailTerminateEvent(ClassAd * jobAd)
 	int q_date = 0;
 	jobAd->LookupInteger(ATTR_Q_DATE,q_date);
 	
-	/*
-	// Present, but probably doesn't make sense for Globus
 	float remote_sys_cpu = 0.0;
 	jobAd->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, remote_sys_cpu);
 	
-	// Present, but probably doesn't make sense for Globus
 	float remote_user_cpu = 0.0;
 	jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, remote_user_cpu);
 	
 	int image_size = 0;
 	jobAd->LookupInteger(ATTR_IMAGE_SIZE, image_size);
 	
+	/*
 	int shadow_bday = 0;
 	jobAd->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
 	*/
@@ -1436,7 +1435,39 @@ EmailTerminateEvent(ClassAd * jobAd)
 	if ( JobName[0] ) {
 		fprintf(mailer,"\t%s %s\n",JobName,Args);
 	}
-	fprintf(mailer,"has exited normally.\n");
+	if(exit_status_valid) {
+		fprintf(mailer, "has ");
+
+		int int_val;
+		if( jobAd->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_val) ) {
+			if( int_val ) {
+				if( jobAd->LookupInteger(ATTR_ON_EXIT_SIGNAL, int_val) ) {
+					fprintf(mailer, "exited with the signal %d.\n", int_val);
+				} else {
+					fprintf(mailer, "exited with an unknown signal.\n");
+					dprintf( D_ALWAYS, "(%d.%d) Job ad lacks %s.  "
+						 "Signal code unknown.\n", cluster, proc, 
+						 ATTR_ON_EXIT_SIGNAL);
+				}
+			} else {
+				if( jobAd->LookupInteger(ATTR_ON_EXIT_CODE, int_val) ) {
+					fprintf(mailer, "exited normally with status %d.\n",
+						int_val);
+				} else {
+					fprintf(mailer, "exited normally with unknown status.\n");
+					dprintf( D_ALWAYS, "(%d.%d) Job ad lacks %s.  "
+						 "Return code unknown.\n", cluster, proc, 
+						 ATTR_ON_EXIT_CODE);
+				}
+			}
+		} else {
+			fprintf(mailer,"has exited.\n");
+			dprintf( D_ALWAYS, "(%d.%d) Job ad lacks %s.  ",
+				 cluster, proc, ATTR_ON_EXIT_BY_SIGNAL);
+		}
+	} else {
+		fprintf(mailer,"has exited.\n");
+	}
 
 	/*
 	if( had_core ) {
@@ -1457,20 +1488,25 @@ EmailTerminateEvent(ClassAd * jobAd)
 
 	fprintf( mailer, "\n" );
 	
-	/*
-	// None of this is valid for Globus jobs.
-	fprintf(mailer, "Virtual Image Size:  %d Kilobytes\n\n", image_size);
+	if( exit_status_valid ) {
+		fprintf(mailer, "Virtual Image Size:  %d Kilobytes\n\n", image_size);
+	}
 	
 	double rutime = remote_user_cpu;
 	double rstime = remote_sys_cpu;
 	double trtime = rutime + rstime;
+	/*
 	double wall_time = now - shadow_bday;
 	fprintf(mailer, "Statistics from last run:\n");
 	fprintf(mailer, "Allocation/Run time:     %s\n",d_format_time(wall_time) );
-	fprintf(mailer, "Remote User CPU Time:    %s\n", d_format_time(rutime) );
-	fprintf(mailer, "Remote System CPU Time:  %s\n", d_format_time(rstime) );
-	fprintf(mailer, "Total Remote CPU Time:   %s\n\n", d_format_time(trtime));
+	*/
+	if( exit_status_valid ) {
+		fprintf(mailer, "Remote User CPU Time:    %s\n", d_format_time(rutime) );
+		fprintf(mailer, "Remote System CPU Time:  %s\n", d_format_time(rstime) );
+		fprintf(mailer, "Total Remote CPU Time:   %s\n\n", d_format_time(trtime));
+	}
 	
+	/*
 	double total_wall_time = previous_runs + wall_time;
 	fprintf(mailer, "Statistics totaled from all runs:\n");
 	fprintf(mailer, "Allocation/Run time:     %s\n",
@@ -1599,9 +1635,25 @@ WriteAbortEventToUserLog( ClassAd *job_ad )
 	return true;
 }
 
+// TODO: We could do this with the jobad (as it was called before)
+// and just probe for the ATTR_USE_GRID_SHELL...?
 bool
-WriteTerminateEventToUserLog( ClassAd *job_ad )
+WriteTerminateEventToUserLog( GlobusJob *curr_job ) 
 {
+	if( ! curr_job) {
+		dprintf( D_ALWAYS, 
+			"Internal Error: WriteTerminateEventToUserLog passed invalid "
+			"GlobusJob (null curr_job).\n");
+		return false;
+	}
+	ClassAd *job_ad = curr_job->ad;
+	if( ! job_ad) {
+		dprintf( D_ALWAYS, 
+			"Internal Error: WriteTerminateEventToUserLog passed invalid "
+			"GlobusJob (null ad).\n");
+		return false;
+	}
+
 	int cluster, proc;
 	UserLog *ulog = InitializeUserLog( job_ad );
 	if ( ulog == NULL ) {
@@ -1633,8 +1685,35 @@ WriteTerminateEventToUserLog( ClassAd *job_ad )
 
 	// Globus doesn't tell us how the job exited, so we'll just assume it
 	// exited normally.
-	event.normal = true;
 	event.returnValue = 0;
+
+	if( curr_job->IsExitStatusValid() ) {
+		int int_val;
+		if( job_ad->LookupBool(ATTR_ON_EXIT_BY_SIGNAL, int_val) ) {
+			if( int_val ) {
+				if( job_ad->LookupInteger(ATTR_ON_EXIT_SIGNAL, int_val) ) {
+					event.signalNumber = int_val;
+				} else {
+					dprintf( D_ALWAYS, "(%d.%d) Job ad lacks %s.  "
+						 "Signal code unknown.\n", cluster, proc, 
+						 ATTR_ON_EXIT_SIGNAL);
+				}
+			} else {
+				if( job_ad->LookupInteger(ATTR_ON_EXIT_CODE, int_val) ) {
+					event.returnValue = int_val;
+				} else {
+					dprintf( D_ALWAYS, "(%d.%d) Job ad lacks %s.  "
+						 "Return code unknown.\n", cluster, proc, 
+						 ATTR_ON_EXIT_CODE);
+				}
+			}
+		} else {
+			dprintf( D_ALWAYS,
+				 "(%d.%d) Job ad lacks %s.  Final state unknown.\n",
+				 cluster, proc, ATTR_ON_EXIT_BY_SIGNAL);
+		}
+
+	}
 
 	int rc = ulog->writeEvent(&event);
 	delete ulog;

@@ -81,7 +81,7 @@ void gramCallbackHandler( void *user_arg, char *job_contact, int state,
 UserLog *InitializeUserLog( ClassAd *job_ad );
 bool WriteExecuteEventToUserLog( ClassAd *job_ad );
 bool WriteAbortEventToUserLog( ClassAd *job_ad );
-bool WriteTerminateEventToUserLog( ClassAd *job_ad );
+bool WriteTerminateEventToUserLog( GlobusJob *job_ad );
 bool WriteEvictEventToUserLog( ClassAd *job_ad );
 bool WriteHoldEventToUserLog( ClassAd *job_ad );
 bool WriteGlobusSubmitEventToUserLog( ClassAd *job_ad );
