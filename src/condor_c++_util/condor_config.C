@@ -55,7 +55,6 @@
 #include "string_list.h"
 #include "condor_attributes.h"
 #include "my_hostname.h"
-#include "my_arch.h"
 #include "condor_version.h"
 #include "util_lib_proto.h"
 
@@ -487,20 +486,21 @@ fill_attributes()
 		/* There are a few attributes that specify what platform we're
 		   on that we want to insert values for even if they're not
 		   defined in the config files.  These are ARCH and OPSYS,
-		   which we compute with the my_arch() and my_opsys()
+		   which we compute with the sysapi_condor_arch() and sysapi_opsys()
 		   functions.  We also insert the subsystem here.  Moved all
 		   the domain stuff to check_domain_attributes() on
 		   10/20.  Also, since this is called before we read in any
 		   config files, there's no reason to check to see if any of
-		   these are already defined.  -Derek Wright */
+		   these are already defined.  -Derek Wright
+		   Amended -Pete Keller 06/01/99 */
 
 	char *arch, *opsys;
 
-	if( (arch = my_arch()) != NULL ) {
+	if( (arch = sysapi_condor_arch()) != NULL ) {
 		insert( "ARCH", arch, ConfigTab, TABLESIZE );
 	}
 
-	if( (opsys = my_opsys()) != NULL ) {
+	if( (opsys = sysapi_opsys()) != NULL ) {
 		insert( "OPSYS", opsys, ConfigTab, TABLESIZE );
 	}
 
@@ -660,7 +660,7 @@ check_params()
 		fprintf( stderr, "This file lists all HP models and the "
 				 "corresponding CPU type.  However,\n" );
 		fprintf( stderr, "this file does not exist on your machine " 
-				 "or your model (%s)\n", my_uname_arch() );
+				 "or your model (%s)\n", sysapi_uname_arch() );
 		fprintf( stderr, "was not listed.  You should either explicitly "
 				 "set the ARCH parameter\n" );
 		fprintf( stderr, "in your config file, or install the "
