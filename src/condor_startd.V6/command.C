@@ -1077,7 +1077,7 @@ activate_claim( Resource* rip, Stream* stream )
 		// Finally, update all these things into the resource classad.
 	rip->r_cur->publish( rip->r_classad, A_PUBLIC );
 
-	rip->dprintf( D_ALWAYS, 
+	rip->dprintf( D_FAILURE|D_ALWAYS, 
 				  "State change: claim-activation protocol successful\n" );
 	rip->change_state( busy_act );
 
