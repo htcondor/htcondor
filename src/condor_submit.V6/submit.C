@@ -1784,7 +1784,8 @@ SetEnvironment()
 	newenv += " = \"";
 
 	if (env) {
-		newenv += env;
+		MyString E(env);
+		newenv += E.EscapeChars("\"", '\\');
 		envobject.add_string(env);
 		first = false;
 	}
