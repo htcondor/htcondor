@@ -28,11 +28,10 @@
 ** 
 */ 
 
-#include <stdlib.h>
-#include <sys/types.h>
+#include "condor_common.h"
 #include <sys/param.h>
 #include <sys/time.h>
-#include <sys/resource.h>
+
 
 #include "trace.h"
 #include "except.h"
