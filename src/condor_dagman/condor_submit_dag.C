@@ -82,6 +82,7 @@ int printUsage(); // NOTE: printUsage calls exit(1), so it doesnt return
 void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[]);
 void submitDag(SubmitDagOptions &opts);
 bool isWhiteSpace(const char c);
+bool readFileToString(const MyString &strFilename, MyString &strFileData);
 
 int main(int argc, char *argv[])
 {
@@ -201,27 +202,27 @@ bool fileExists(const MyString &strFile)
 	return true;
 }
 
-MyString readFileToString(const MyString &strFilename)
+bool readFileToString(const MyString &strFilename, MyString &strFileData)
 {
 	FILE *pFile = fopen(strFilename.Value(), "r");
 	if (!pFile)
 	{
-		return "";
+		return false;
 	}
 
 	fseek(pFile, 0, SEEK_END);
 	int iLength = ftell(pFile);
-	MyString strToReturn;
-	strToReturn.reserve_at_least(iLength+1);
+
+	strFileData.reserve_at_least(iLength+1);
 	fseek(pFile, 0, SEEK_SET);
 	char *psBuf = new char[iLength+1];
 	fread(psBuf, 1, iLength, pFile);
 	psBuf[iLength] = 0;
-	strToReturn = psBuf;
+	strFileData = psBuf;
 	delete [] psBuf;
 
 	fclose(pFile);
-	return strToReturn;
+	return true;
 }
 
 void ensureOutputFilesExist(const SubmitDagOptions &opts)
@@ -351,8 +352,9 @@ void writeSubmitFile(const SubmitDagOptions &opts)
 void getJobLogFilenameFromSubmitFiles(SubmitDagOptions &opts)
 {
 
-	MyString strDagFile = readFileToString(opts.strDagFile);
-	if (strDagFile == "")
+	MyString strDagFile;
+	bool status = readFileToString(opts.strDagFile, strDagFile);
+	if (status == false)
 	{
 		printf("Unable to read dag file %s\n", opts.strDagFile.Value());
 		exit(2);
@@ -542,9 +544,12 @@ int printUsage()
 MyString loadLogFileNameFromSubFile(const MyString &strSubFilename, 
 	const SubmitDagOptions &opts)
 {
-	MyString strSubFile = readFileToString(strSubFilename);
+	MyString strSubFile;
+	bool status = false;
 
-	if ( strSubFile == "" ) {
+	status = readFileToString(strSubFilename, strSubFile);
+
+	if ( status == false ) {
 		printf( "\nCan't open command file %s for reading: %s\n"
 			"Either create %s or re-run with the \"-log\" option.\n", 
 			strSubFilename.Value(), strerror(errno), strSubFilename.Value());
