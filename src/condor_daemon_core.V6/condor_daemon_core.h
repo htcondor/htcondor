@@ -320,6 +320,8 @@ class DaemonCore : public Service
 
 		struct in_addr		negotiator_sin_addr;	// used by Verify method
 
+		int					reinit_timer_id;
+
 #ifdef WIN32
 		DWORD	dcmainThreadId;		// the thread id of the thread running the main daemon core
 #endif
