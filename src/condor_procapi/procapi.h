@@ -31,6 +31,8 @@
 #include "condor_common.h"
 #include "HashTable.h"
 
+#ifndef WIN32 // all the below is for UNIX
+
 #include <strings.h>       // sprintf, atol
 #include <dirent.h>        // get /proc entries (directory stuff)
 #include <ctype.h>         // isdigit
@@ -62,6 +64,54 @@
 #ifdef IRIX62              // this is the include for memory info in Irix.
 #include <sys/sysmp.h>
 #endif
+
+#else // It's WIN32...
+// Warning: WIN32 stuff below.
+
+typedef DWORD pid_t;
+
+#define UNICODE 1
+#define _UNICODE 1
+
+#include "ntsysinfo.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <malloc.h>
+
+#include <windows.h>
+#include <winperf.h>
+#include <tchar.h>
+#include <largeint.h>
+
+#define INITIAL_SIZE    40960L    // init. size for getting pDataBlock
+#define EXTEND_SIZE	     4096L    // incremental addition to pDataBlock
+
+//LPTSTR is a point to a null-terminated windows or Unicode string.
+//TEXT() basically puts a string into unicode.
+// Here are some Windows specific strings.
+const LPTSTR NamesKey = 
+      TEXT("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Perflib");
+const LPTSTR DefaultLangId = TEXT("009");  //english!
+const LPTSTR Counters = TEXT("Counters");
+const LPTSTR Help = TEXT("Help");
+const LPTSTR LastHelp = TEXT("Last Help");
+const LPTSTR LastCounter = TEXT("Last Counter");
+const LPTSTR Slash = TEXT("\\");
+
+struct Offset {       // There will be one instance of this structure in
+	DWORD imgsize;      // the ProcAPI class - it will hold the offsets of
+	DWORD rssize;       // the data that reside in the pDataBlock
+	DWORD faults;
+	DWORD pctcpu;       // this info is gotten by grabOffsets()
+	DWORD utime;
+	DWORD stime;
+	DWORD elapsed;
+	DWORD procid;
+};
+
+
+#endif // WIN32
 
 /** This is the structure that is returned from the getProcInfo() 
     member of ProcAPI.  It is returned all at once so that multiple
@@ -265,7 +315,7 @@ class ProcAPI {
   /** This function returns a list of pids that are 'descendents' of that pid.
       I call this a 'family' of pids.  This list is put into pidFamily, which
       I assume is an already-allocated array.  This array will be terminated
-      with a 0 at its end.  This array will never exceed 128 elemets.
+      with a 0 at its end.  This array will never exceed 512 elemets.
 
       @param pid The 'elder' pid of the family you want a list of pids for.
       @param pidFamily An array for holding pids in the family
@@ -322,26 +372,57 @@ class ProcAPI {
 
  private:
   void initpi ( piPTR& );                  // initialization of pi.
-  pid_t getAndRemNextPid();                // used in pidList deconstruction
+  int isinfamily ( pid_t *, int, pid_t );  // used by buildFamily & NT equiv.
+#ifndef WIN32
   int buildPidList();                      // just what it says
   int buildProcInfoList();                 // ditto.
   int buildFamily( pid_t );                // builds + sums procInfo list
-  int isinfamily ( pid_t *, int, pid_t );  // used by buildFamily
   int getNumProcs();                       // guess.
   long secsSinceEpoch();                   // used for wall clock age
   double convertTimeval ( struct timeval );// convert timeval to double
+  pid_t getAndRemNextPid();                // used in pidList deconstruction
   void deallocPidList();                   // these deallocate their
   void deallocAllProcInfos();              // respective lists.
   void deallocProcFamily();
+#endif // not defined WIN32
+
 #ifdef WANT_STANDALONE_DEBUG
   void sprog1 ( pid_t *, int, int );       // used by test1.
   void sprog2 ( int, int );                // used by test2.
 #endif  // of WANT_STANDALONE_DEBUG
 
+#ifdef WIN32 // some windoze-specific thingies:
+	//Todd's system info class, for getting parent:
+  CSysinfo ntSysInfo;
+
+  void makeFamily( pid_t dadpid, pid_t *allpids, int numpids, 
+				 pid_t* &fampids, int &famsize );
+  void getAllPids( pid_t* &pids, int &numpids );
+  int multiInfo ( pid_t *pidlist, int numpids, piPTR &pi );
+  int isinlist( pid_t pid, pid_t *pidlist, int numpids ); 
+  DWORD GetSystemPerfData ( LPTSTR pValue );
+  double LI_to_double ( LARGE_INTEGER );
+  PPERF_OBJECT_TYPE firstObject( PPERF_DATA_BLOCK pPerfData );
+  PPERF_OBJECT_TYPE nextObject( PPERF_OBJECT_TYPE pObject );
+  PERF_COUNTER_DEFINITION *firstCounter( PERF_OBJECT_TYPE *pObjectDef );
+  PERF_COUNTER_DEFINITION *nextCounter( PERF_COUNTER_DEFINITION *pCounterDef);
+  PERF_INSTANCE_DEFINITION *firstInstance( PERF_OBJECT_TYPE *pObject );
+  PERF_INSTANCE_DEFINITION *nextInstance(PERF_INSTANCE_DEFINITION *pInstance);
+  
+  void grabOffsets ( PPERF_OBJECT_TYPE );
+      // pointer to perfdata block - where all the performance data lives.
+  PPERF_DATA_BLOCK pDataBlock;
+  
+  struct Offset *offsets;
+  
+#endif // WIN32 poop.
+
   /* Using condor's HashTable template class.  I'm storing a procHashNode, 
      hashed on a pid. */
   HashTable <pid_t, procHashNode *> *procHash;
   friend int hashFunc ( const pid_t& pid, int numbuckets );
+
+#ifndef WIN32 // these aren't used by the NT version...
 
   // private data structures:
   pidlistPTR pidList;      // this will be a linked list of all processes
@@ -373,6 +454,7 @@ class ProcAPI {
   // allocates "MEMFACTOR" Megs.  The second allocates MEMFACTOR * 2 Megs.
   // etc, etc.  Be careful of thrashing...unless that's what you want.
   const int MEMFACTOR = 3;
+#endif // ndef WIN32
 
 }; 
 

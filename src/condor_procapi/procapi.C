@@ -27,170 +27,195 @@
 
 ProcAPI::ProcAPI() {
 
-  // use condor's hashtable
-  procHash = new HashTable <pid_t, procHashNode *> ( PHBUCKETS, hashFunc );
+        // use condor's hashtable
+    procHash = new HashTable <pid_t, procHashNode *> ( PHBUCKETS, hashFunc );
 
-  allProcInfos = NULL;
-  procFamily   = NULL;
-  pidList      = NULL;
-  pagesize     = 0;
+#ifndef WIN32
+    allProcInfos = NULL;
+    procFamily   = NULL;
+    pidList      = NULL;
+    pagesize     = 0;
 #ifdef LINUX
-  boottime     = 0;
+    boottime     = 0;
+#endif
+#endif // ndef WIN32
+
+#ifdef WIN32
+    pDataBlock = NULL;
+    offsets = NULL;
 #endif
 }
 
 ProcAPI::~ProcAPI() {
-  // deallocate stuff like crazy.
-  deallocPidList();
-  deallocAllProcInfos();
-  deallocProcFamily();
-  
-  struct procHashNode * phn;
-  procHash->startIterations();
-  while ( procHash->iterate( phn ) )
-    delete phn;
+        // deallocate stuff like crazy.
+#ifndef WIN32
+    deallocPidList();
+    deallocAllProcInfos();
+    deallocProcFamily();
+#endif
 
-  delete procHash;
+    struct procHashNode * phn;
+    procHash->startIterations();
+    while ( procHash->iterate( phn ) )
+        delete phn;
+    
+    delete procHash;
+    
+#ifdef WIN32
+    if ( offsets )
+        free ( offsets );
+    
+    if ( pDataBlock )
+        free ( pDataBlock );
+#endif
 }    
 
 // this version works for Solaris 2.5.1, IRIX, OSF/1 
 #if ( defined(Solaris251) || defined(IRIX62) || defined(OSF1) )
 int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
-	char path[64];
-	struct prpsinfo pri;
-	struct prstatus prs;
+  char path[64];
+  struct prpsinfo pri;
+  struct prstatus prs;
 #ifndef OSF1
-	struct prusage pru;   // prusage doesn't exist in OSF/1
+  struct prusage pru;   // prusage doesn't exist in OSF/1
 #endif
 
-	int fd;
-	int retval;
-	
-	initpi ( pi );
+  int fd;
+  int retval;
 
-		// if the page size has not yet been found, get it.
-	if ( pagesize == 0 ) {
-		pagesize = getpagesize() / 1024;  // pagesize is in k now
-	}
-	sprintf ( path, "/proc/%d", pid );
-	if ( ( fd = open( path, O_RDONLY ) ) >= 0 ) {
+  initpi ( pi );
 
-			// PIOCPSINFO gets memory sizes, pids, and age.
-		retval = ioctl ( fd, PIOCPSINFO, &pri );
-		if ( retval >= 0 ) {
-			pi->imgsize = pri.pr_size * pagesize;
-			pi->rssize  = pri.pr_rssize * pagesize;
-			pi->pid     = pri.pr_pid;
-			pi->ppid    = pri.pr_ppid;
-			pi->age     = secsSinceEpoch() - pri.pr_start.tv_sec;
-		} else {
-			pi->pid = pid;
-			perror ( "PIOCPSINFO Error occurred" );
-			close( fd );
-			return -2;
-		}
+  // if the page size has not yet been found, get it.
+  if ( pagesize == 0 )
+    pagesize = getpagesize() / 1024;  // pagesize is in k now
 
-		long nowminf, nowmajf;
+  sprintf ( path, "/proc/%d", pid );
+  if ( ( fd = open( path, O_RDONLY ) ) >= 0 ) {
 
-			// PIOCUSAGE is used for page fault info
-			// solaris 2.5.1 and Irix only - unsupported by osf/1
+    // PIOCPSINFO gets memory sizes, pids, and age.
+    retval = ioctl ( fd, PIOCPSINFO, &pri );
+    if ( retval >= 0 ) {
+      pi->imgsize = pri.pr_size * pagesize;
+      pi->rssize  = pri.pr_rssize * pagesize;
+      pi->pid     = pri.pr_pid;
+      pi->ppid    = pri.pr_ppid;
+      pi->age     = secsSinceEpoch() - pri.pr_start.tv_sec;
+    } else {
+      pi->pid = pid;
+      perror ( "PIOCPSINFO Error occurred" );
+	  close( fd );
+      return -2;
+    }
+
+    long nowminf, nowmajf;
+
+    // PIOCUSAGE is used for page fault info
+    // solaris 2.5.1 and Irix only - unsupported by osf/1
 #ifndef OSF1
-		retval = ioctl ( fd, PIOCUSAGE, &pru );
-		if ( retval >= 0 ) {
+    retval = ioctl ( fd, PIOCUSAGE, &pru );
+    if ( retval >= 0 ) {
 
 #ifdef Solaris251   
-			nowminf = pru.pr_minf;  
-			nowmajf = pru.pr_majf;  
+      nowminf = pru.pr_minf;  
+      nowmajf = pru.pr_majf;  
 #endif
 
 #ifdef IRIX62   // dang things named differently in irix.
-			nowminf = pru.pu_minf;  // Irix:  pu_minf, pu_majf.
-			nowmajf = pru.pu_majf;  
+      nowminf = pru.pu_minf;  // Irix:  pu_minf, pu_majf.
+      nowmajf = pru.pu_majf;  
 #endif
-		} else {
-			pi->pid = pid;
-			perror ( "PIOCUSAGE Error occurred" );
-			close( fd );
-			return -2;
-		}
+    } else {
+      pi->pid = pid;
+      perror ( "PIOCUSAGE Error occurred" );
+	  close( fd );
+      return -2;
+    }
 #else  //here we are in osf/1, which doesn't give this info.
-		nowminf = 0;   // let's default to zero in osf1
-		nowmajf = 0;
+    nowminf = 0;   // let's default to zero in osf1
+    nowmajf = 0;
 #endif
 
-			// PIOCSTATUS gets process user & sys times
-			// this following bit works for Sol 2.5.1, Irix, Osf/1
-		retval = ioctl ( fd, PIOCSTATUS, &prs );
-		if ( retval >= 0 ) {
-			pi->user_time   = prs.pr_utime.tv_sec;
-			pi->sys_time    = prs.pr_stime.tv_sec;
+    // PIOCSTATUS gets process user & sys times
+    // this following bit works for Sol 2.5.1, Irix, Osf/1
+    retval = ioctl ( fd, PIOCSTATUS, &prs );
+    if ( retval >= 0 ) {
+      pi->user_time   = prs.pr_utime.tv_sec;
+      pi->sys_time    = prs.pr_stime.tv_sec;
 
       /* here we've got to do some sampling ourself.  If the pid is not in
          the hashtable, put it there using (user+sys time) / age as %cpu.
          If it is there, use ((user+sys time) - old time) / timediff.
       */
-			struct timeval thistime;
-			double timediff, lasttime, oldustime, now, ustime, oldusage;
-			long oldminf, oldmajf;
+      struct timeval thistime;
+      double timediff, lasttime, oldustime, now, ustime, oldusage;
+      long oldminf, oldmajf;
 
-			gettimeofday ( &thistime, 0 );
-			now    = convertTimeval ( thistime );
-			ustime = ( prs.pr_utime.tv_sec + ( prs.pr_utime.tv_nsec * 1.0e-9 ) ) +
-				( prs.pr_stime.tv_sec + ( prs.pr_stime.tv_nsec * 1.0e-9 ) );
+      gettimeofday ( &thistime, 0 );
+      now    = convertTimeval ( thistime );
+      ustime = ( prs.pr_utime.tv_sec + ( prs.pr_utime.tv_nsec * 1.0e-9 ) ) +
+               ( prs.pr_stime.tv_sec + ( prs.pr_stime.tv_nsec * 1.0e-9 ) );
 
-			struct procHashNode * phn;
+      struct procHashNode * phn;
 
-			if ( procHash->lookup( pid, phn ) == 0 ) {
-					// success; pid in hash table
-				timediff = now - phn->lasttime;
-				if ( timediff < 1.0 ) {  // less than one second since last poll
-					pi->cpuusage = phn->oldusage;
-					pi->minfault = phn->oldminf;
-					pi->majfault = phn->oldmajf;
-					now = phn->lasttime;
-				} else {
-					pi->cpuusage = ( ( ustime - phn->oldtime ) / timediff ) * 100;
-					pi->minfault = (long unsigned)((nowminf - phn->oldminf) / timediff);
-					pi->majfault = (long unsigned)((nowmajf - phn->oldmajf) / timediff);
-				}
-				delete phn;
-				procHash->remove(pid);
-			} else {
-					// pid not in hash table; first time.  Use age of
-					// process as guide 
-				if ( pi->age == 0 ) {
-					pi->cpuusage = 0.0;
-					pi->minfault = (long unsigned int)(nowminf);
-					pi->majfault = (long unsigned int)(nowmajf);
-				} else {
-					pi->cpuusage = ( ustime / (double) pi->age ) * 100;
-					pi->minfault = (long unsigned int)(nowminf / (double) pi->age);
-					pi->majfault = (long unsigned int)(nowmajf / (double) pi->age);
-				}
-					// put new vals back into hashtable
-				phn = new procHashNode; 
-				phn->lasttime = now;
-				phn->oldtime  = ustime;
-				phn->oldusage = pi->cpuusage;
-				phn->oldminf  = nowminf;
-				phn->oldmajf  = nowmajf;
-				procHash->insert( pid, phn );
-			} 
-		} else {
-			pi->pid = pid;
-			perror ( "PIOCSTATUS Error occurred" );
-			close( fd );
-			return -2;
-		}
-			// close the /proc/pid file
-		close ( fd );
+      if ( procHash->lookup( pid, phn ) == 0 ) {
+        // success; pid in hash table
+        timediff = now - phn->lasttime;
+        if ( timediff < 1.0 ) {  // less than one second since last poll
+          pi->cpuusage = phn->oldusage;
+          pi->minfault = phn->oldminf;
+          pi->majfault = phn->oldmajf;
+          now = phn->lasttime;
+        }
+        else {
+          pi->cpuusage = ( ( ustime - phn->oldtime ) / timediff ) * 100;
+          pi->minfault = (long unsigned)((nowminf - phn->oldminf) / timediff);
+          pi->majfault = (long unsigned)((nowmajf - phn->oldmajf) / timediff);
+        }
+        delete phn;
+        procHash->remove(pid);
+      }
+      else {
+        // pid not in hash table; first time.  Use age of process as guide
+          if ( pi->age == 0 ) {
+              pi->cpuusage = 0.0;
+			  // Should minfault and majfault be set to zero here, or now info?
+			  // pi->minfault = (long unsigned int)(nowminf);
+			  // pi->majfault = (long unsigned int)(nowmajf);
+              pi->minfault = 0;
+              pi->majfault = 0;
+          }
+          else {
+              pi->cpuusage = ( ustime / (double) pi->age ) * 100;
+              pi->minfault = (long unsigned int)(nowminf / (double) pi->age);
+              pi->majfault = (long unsigned int)(nowmajf / (double) pi->age);
+          }
+      }
+      // put new vals back into hashtable
+      phn = new procHashNode; 
+      phn->lasttime = now;
+      phn->oldtime  = ustime;
+      phn->oldusage = pi->cpuusage;
+      phn->oldminf  = nowminf;
+      phn->oldmajf  = nowmajf;
+      procHash->insert( pid, phn );
+    } 
+    else {
+      pi->pid = pid;
+      perror ( "PIOCSTATUS Error occurred" );
+	  close( fd );
+      return -2;
+    }
+    // close the /proc/pid file
+    close ( fd );
 
-	} else {
-			//printf ( "error opening %s.\n", path );
-		pi->pid = pid;
-		return -1;
-	}
-	return retval;
+  }
+  else {
+    dprintf ( D_FULLDEBUG, "ProcAPI: error opening %s.\n", path );
+    pi->pid = pid;
+    return -1;
+  }
+
+  return retval;
 }
 #endif
 
@@ -296,12 +321,16 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
   }
   else {
     // pid not in hash table; first time.  Use age of process as guide
-    if ( pi->age == 0 )
-      pi->cpuusage = 0.0;
-    else
-      pi->cpuusage = ( ustime / (double) pi->age ) * 100;
-    pi->minfault = (long unsigned int)(nowminf / (double) pi->age);
-    pi->majfault = (long unsigned int)(nowmajf / (double) pi->age);
+      if ( pi->age == 0 ) {
+          pi->cpuusage = 0.0;
+          pi->minfault = 0;
+          pi->majfault = 0;
+      }
+      else {
+          pi->cpuusage = ( ustime / (double) pi->age ) * 100;
+          pi->minfault = (long unsigned int)(nowminf / (double) pi->age);
+          pi->majfault = (long unsigned int)(nowmajf / (double) pi->age);
+      }
   }
   // put new vals back into hashtable
   phn = new procHashNode;
@@ -427,12 +456,16 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
   }
   else {
     // pid not in hash table; first time.  Use age of process as guide
-    if ( pi->age == 0 )
-      pi->cpuusage = 0.0;
-    else
-      pi->cpuusage = ( ustime / (double) pi->age ) * 100;
-    pi->minfault = (unsigned long)(nowminf / (double) pi->age);
-    pi->majfault = (unsigned long)(nowmajf / (double) pi->age);
+      if ( pi->age == 0 ) {
+          pi->cpuusage = 0.0;
+          pi->minfault = 0;
+          pi->majfault = 0;
+      }
+      else {
+          pi->cpuusage = ( ustime / (double) pi->age ) * 100;
+          pi->minfault = (unsigned long)(nowminf / (double) pi->age);
+          pi->majfault = (unsigned long)(nowmajf / (double) pi->age);
+      }
   }
   // put new vals back into hashtable
   phn = new procHashNode;
@@ -529,12 +562,16 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
   }
   else {
     // pid not in hash table; first time.  Use age of process as guide
-    if ( pi->age == 0 )
-      pi->cpuusage = 0.0;
-    else
-      pi->cpuusage = ( ustime / (double) pi->age ) * 100;
-    pi->minfault = (long unsigned int)(nowminf / (double) pi->age);
-    pi->majfault = (long unsigned int)(nowmajf / (double) pi->age);
+      if ( pi->age == 0 ) {
+          pi->cpuusage = 0.0;
+          pi->minfault = 0;
+          pi->majfault = 0;
+      }
+      else {
+          pi->cpuusage = ( ustime / (double) pi->age ) * 100;
+          pi->minfault = (long unsigned int)(nowminf / (double) pi->age);
+          pi->majfault = (long unsigned int)(nowmajf / (double) pi->age);
+      }
   }
   // put new vals back into hashtable
   phn = new procHashNode;
@@ -548,6 +585,134 @@ int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
   return 0;
 }
 #endif
+
+#ifdef WIN32
+/* Danger....WIN32 code follows....
+   The getProcInfo call for WIN32 actually gets *all* the information
+   on all the processes, but that's not preventable. */
+int ProcAPI::getProcInfo ( pid_t pid, piPTR& pi ) {
+
+    DWORD dwStatus;  // return status of fn. calls
+
+    initpi ( pi );
+
+        // '2' is the 'system' , '230' is 'process'  
+        // I hope these numbers don't change over time... 
+    dwStatus = GetSystemPerfData ( TEXT("230") );
+
+    if ( dwStatus != ERROR_SUCCESS ) {
+        dprintf( D_ALWAYS, "ProcAPI::getProcInfo failed to get performance info.\n");
+        return -1;
+    }
+
+        // somehow we don't have the process data -> panic
+    if ( pDataBlock == NULL ) {
+        dprintf ( D_ALWAYS, "ProcAPI::getProcInfo failed to make pDataBlock.\n");
+        return -1;
+    }
+    
+    PPERF_OBJECT_TYPE pThisObject;
+    PPERF_INSTANCE_DEFINITION pThisInstance;
+    long instanceNum;
+    DWORD ctrblk;
+
+    double sampleObjectTime;
+    double objectFrequency;
+
+    pThisObject = firstObject (pDataBlock);
+  
+    sampleObjectTime = LI_to_double ( pThisObject->PerfTime );
+    objectFrequency  = LI_to_double ( pThisObject->PerfFreq );
+
+    if ( !offsets )      // If we haven't yet gotten the offsets, grab 'em.
+        grabOffsets( pThisObject );
+    
+        // at this point we're all set to march through the data block to find
+        // the instance with the pid we want.  
+
+    pThisInstance = firstInstance(pThisObject);
+    instanceNum = 0;
+    bool found = false;
+    pid_t thispid;
+
+    while ( (!found) && ( instanceNum < pThisObject->NumInstances ) ) {
+
+        ctrblk = ((DWORD)pThisInstance) + pThisInstance->ByteLength;
+        thispid = (long) *((long*)(ctrblk + offsets->procid));
+
+        if ( thispid == pid ) {
+            found = true;
+        }
+        else {
+            instanceNum++;
+            pThisInstance = nextInstance(pThisInstance);
+        }
+    }
+
+    if ( !found ) {
+        dprintf ( D_FULLDEBUG, "ERROR: pid # %d was not found!\n", pid );
+        return -1;
+    }
+
+    LARGE_INTEGER elt= (LARGE_INTEGER) 
+        *((LARGE_INTEGER*)(ctrblk + offsets->elapsed));
+    LARGE_INTEGER pt = (LARGE_INTEGER) 
+        *((LARGE_INTEGER*)(ctrblk + offsets->pctcpu));
+    LARGE_INTEGER ut = (LARGE_INTEGER) 
+        *((LARGE_INTEGER*)(ctrblk + offsets->utime));
+    LARGE_INTEGER st = (LARGE_INTEGER) 
+        *((LARGE_INTEGER*)(ctrblk + offsets->stime));
+
+    pi->pid       = (long) *((long*)(ctrblk + offsets->procid  ));
+    pi->ppid      = ntSysInfo.GetParentPID(pi->pid);
+    pi->imgsize   = (long) *((long*)(ctrblk + offsets->imgsize ));
+    pi->rssize    = (long) *((long*)(ctrblk + offsets->rssize  ));
+    pi->minfault  = 0;  // not supported by NT; all faults lumped into major.
+    pi->user_time = (long) (LI_to_double( ut ) / objectFrequency);
+    pi->sys_time  = (long) (LI_to_double( st ) / objectFrequency);
+    pi->age       = (long) ((sampleObjectTime - LI_to_double ( elt )) 
+                         / objectFrequency);
+
+    double nowcpu;
+    long nowfault;
+    struct procHashNode * phn;
+
+    nowfault = (long) *((long*)(ctrblk + offsets->faults  ));
+    nowcpu   = LI_to_double( pt );
+
+    if ( procHash->lookup ( pid, phn ) == 0 ) {
+        pi->majfault = (long) ( ( nowfault - phn->oldmajf ) / 
+                    ((sampleObjectTime - phn->lasttime) / objectFrequency));
+        pi->cpuusage = ((nowcpu - phn->oldusage) / 
+            (sampleObjectTime - phn->lasttime)) * 100;
+
+        delete phn;
+        procHash->remove(pid);
+    }
+    else {  // doesn't exist in hash table or error....
+		if ( (sampleObjectTime - LI_to_double (elt)) == 0.0 ) {
+			pi->majfault = 0;
+			pi->cpuusage = 0.0;
+		}
+		else {
+	        pi->majfault = (long) (nowfault / 
+		          ((sampleObjectTime - LI_to_double ( elt ))  / objectFrequency));
+			pi->cpuusage = (nowcpu / 
+				            ((sampleObjectTime - LI_to_double ( elt )) )) * 100;
+		}
+    }
+    
+    phn = new procHashNode;
+    phn->lasttime = sampleObjectTime;
+    phn->oldmajf  = nowfault;
+    phn->oldusage = nowcpu;
+    procHash->insert( pid, phn );
+
+    return 0;
+}
+#endif  // WIN32 getProcInfo
+   
+
 
 /* The next function, getMemInfo, is different for each *&^%$#@! OS.
    Each uses something quite different than other OS's use...
@@ -663,37 +828,323 @@ int ProcAPI::getMemInfo ( int& totalmem, int& availmem ) {
 }
 #endif
 
+/* This version for windows is obviously broken. :-) */
+#ifdef WIN32
+int ProcAPI::getMemInfo ( int& totalmem, int& availmem ) {
+    totalmem = 0;
+    availmem = 0;
+    return 0;
+}
+#endif
+
+#ifndef WIN32
 /* getProcSetInfo returns the sum of the procInfo structs for a set
    of pids.  These pids are specified by an array of pids ('pids') that
    has 'numpids' elements. */
 int ProcAPI::getProcSetInfo ( pid_t *pids, int numpids, piPTR& pi ) {
 
-	initpi ( pi );
-	piPTR temp = NULL;
+  initpi ( pi );
+  piPTR temp = NULL;
 
-	for ( int i=0 ; i<numpids ; i++ ) {
-		if ( getProcInfo ( pids[i], temp ) >= 0 ) {
-			pi->imgsize   += temp->imgsize;
-			pi->rssize    += temp->rssize;
-			pi->minfault  += temp->minfault;
-			pi->majfault  += temp->majfault;
-			pi->user_time += temp->user_time;
-			pi->sys_time  += temp->sys_time;
-			pi->cpuusage  += temp->cpuusage;
-			if ( temp->age > pi->age ) {
-				pi->age = temp->age;
-			}
-		} else {
-			dprintf (D_FULLDEBUG, "ProcAPI: Can't get info for pid %d!\n", pids[i] );
-			return -1;
-		}
-	}
+  for ( int i=0 ; i<numpids ; i++ ) {
+    if ( getProcInfo ( pids[i], temp ) >= 0 ) {
+      pi->imgsize   += temp->imgsize;
+      pi->rssize    += temp->rssize;
+      pi->minfault  += temp->minfault;
+      pi->majfault  += temp->majfault;
+      pi->user_time += temp->user_time;
+      pi->sys_time  += temp->sys_time;
+      pi->cpuusage  += temp->cpuusage;
+      if ( temp->age > pi->age )
+        pi->age = temp->age;
+    }
+    else {
+      dprintf (D_FULLDEBUG, "Can't get info for pid %d!\n", pids[i] );
+      return -1;
+    }
+  }
 
-	delete temp;
+  delete temp;
+  
+  return 0;
+}
+#endif
+
+#ifdef WIN32
+// There is a much better way to do this in WIN32...we get all instances
+// of all processes at once anyway...
+int ProcAPI::getProcSetInfo ( pid_t *pids, int numpids, piPTR& pi ) {
+
+	DWORD dwStatus;  // return status of fn. calls
+
+        // '2' is the 'system' , '230' is 'process'  
+        // I hope these numbers don't change over time... 
+    dwStatus = GetSystemPerfData ( TEXT("230") );
+    
+    if ( dwStatus != ERROR_SUCCESS ) {
+        dprintf( D_ALWAYS, "ProcAPI::getProcSetInfo failed to get performance info.\n");
+        return -1;
+    }
+
+        // somehow we don't have the process data -> panic
+    if ( pDataBlock == NULL ) {
+        dprintf ( D_ALWAYS, "ProcAPI::getProcSetInfo failed to make pDataBlock.\n");
+        return -1;
+    }
+    
+    PPERF_OBJECT_TYPE pThisObject = firstObject (pDataBlock);
+
+    if ( !offsets )      // If we haven't yet gotten the offsets, grab 'em.
+        grabOffsets( pThisObject );
+    
+    initpi ( pi );
+
+        // create local copy of pids.
+	pid_t *localpids = (pid_t*) malloc ( sizeof (pid_t) * numpids );
+	for ( int i=0 ; i<numpids ; i++ )
+		localpids[i] = pids[i];
+ 
+	multiInfo ( localpids, numpids, pi );
 
 	return 0;
 }
 
+int ProcAPI::getFamilyInfo ( pid_t daddypid, piPTR& pi ) {
+
+    initpi ( pi );
+
+	if ( daddypid == 0 ) {
+		return 0;
+	}
+	
+	DWORD dwStatus;  // return status of fn. calls
+
+		// '2' is the 'system' , '230' is 'process'  
+        // I hope these numbers don't change over time... 
+    dwStatus = GetSystemPerfData ( TEXT("230") );
+    
+    if ( dwStatus != ERROR_SUCCESS ) {
+        dprintf( D_ALWAYS, "ProcAPI::getProcSetInfo failed to get performance info.\n");
+        return -1;
+    }
+
+        // somehow we don't have the process data -> panic
+    if ( pDataBlock == NULL ) {
+        dprintf ( D_ALWAYS, "ProcAPI::getProcSetInfo failed to make pDataBlock.\n");
+        return -1;
+    }
+    
+    PPERF_OBJECT_TYPE pThisObject = firstObject (pDataBlock);
+
+    if ( !offsets )      // If we haven't yet gotten the offsets, grab 'em.
+        grabOffsets( pThisObject );
+    
+	pid_t *allpids;
+	pid_t *familypids;
+	int numpids, familysize;
+
+	// allpids gets allocated and filled in with pids.  numpids also returned.
+	getAllPids( allpids, numpids );
+
+	// returns the familypids resulting from the daddypid
+	makeFamily( daddypid, allpids, numpids, familypids, familysize );
+
+	multiInfo( familypids, familysize, pi );
+
+	delete [] allpids;
+	delete [] familypids;
+
+	return 0;
+}
+
+int ProcAPI::getPidFamily( pid_t daddypid, pid_t *pidFamily ) {
+
+	if ( daddypid == 0 ) {
+		pidFamily[0] = 0;
+		return 0;
+	}
+
+	DWORD dwStatus;  // return status of fn. calls
+
+	if ( pidFamily == NULL ) {
+		dprintf (D_FULLDEBUG, 
+			"ProcAPI::getPidFamily: no space allocated for pidFamily\n" );
+		return -1;
+	}
+
+        // '2' is the 'system' , '230' is 'process'  
+        // I hope these numbers don't change over time... 
+    dwStatus = GetSystemPerfData ( TEXT("230") );
+    
+	if ( dwStatus != ERROR_SUCCESS ) {
+        dprintf( D_ALWAYS, "ProcAPI::getProcSetInfo failed to get performance info.\n");
+        return -1;
+    }
+
+        // somehow we don't have the process data -> panic
+    if ( pDataBlock == NULL ) {
+        dprintf ( D_ALWAYS, "ProcAPI::getProcSetInfo failed to make pDataBlock.\n");
+        return -1;
+    }
+    
+    PPERF_OBJECT_TYPE pThisObject = firstObject (pDataBlock);
+
+    if ( !offsets )      // If we haven't yet gotten the offsets, grab 'em.
+        grabOffsets( pThisObject );
+    
+	pid_t *allpids;
+	pid_t *familypids;
+	int numpids, familysize;
+
+	// allpids gets allocated and filled in with pids.  numpids also returned.
+	getAllPids( allpids, numpids );
+
+	// returns the familypids resulting from the daddypid
+	makeFamily( daddypid, allpids, numpids, familypids, familysize );
+	
+	for ( int q=0 ; q<familysize ; q++ ) {
+		pidFamily[q] = familypids[q];
+	}
+
+	pidFamily[familysize] = 0;
+
+	delete [] allpids;
+	delete [] familypids;
+
+	return 0;
+
+}
+
+void ProcAPI::makeFamily( pid_t dadpid, pid_t *allpids, int numpids, 
+			        	 pid_t* &fampids, int &famsize ) {
+
+	pid_t *parentpids = new pid_t[numpids];
+	fampids = new pid_t[numpids];  // just might include everyone...
+
+	for ( int i=0 ; i<numpids ; i++ ) {
+		parentpids[i] = ntSysInfo.GetParentPID( allpids[i] );
+	}
+
+	famsize = 1;
+	fampids[0] = dadpid;
+	int numadditions = 1;
+
+	while ( numadditions > 0 ) {
+		numadditions = 0;
+		for ( int j=0 ; j<numpids ; j++ ) {
+			if ( isinfamily ( fampids, famsize, parentpids[j] ) ) {
+				fampids[famsize] = allpids[j];
+				parentpids[j] = 0;
+				allpids[j] = 0;
+				famsize++;
+				numadditions++;
+			}
+		}
+	}
+	delete [] parentpids;
+}
+
+// allocate space for pids and fill in.
+void ProcAPI::getAllPids( pid_t* &pids, int &numpids ) {
+
+    PPERF_OBJECT_TYPE pThisObject = firstObject (pDataBlock);
+    PPERF_INSTANCE_DEFINITION pThisInstance = firstInstance(pThisObject);
+	numpids = pThisObject->NumInstances;
+	pids = new pid_t[numpids];
+	DWORD ctrblk;
+		
+	for ( int i=0 ; i<numpids ; i++ ) {
+        ctrblk = ((DWORD)pThisInstance) + pThisInstance->ByteLength;
+        pids[i] = (pid_t) *((pid_t*)(ctrblk + offsets->procid));
+        pThisInstance = nextInstance(pThisInstance);        
+	}
+}
+
+// We assume that the pDataBlock and offsets are all set up, and we have a
+// set of pids (pidslist) to get info on.  Totals returned in pi.
+int ProcAPI::multiInfo ( pid_t *pidlist, int numpids, piPTR &pi ) {
+
+    PPERF_OBJECT_TYPE pThisObject = firstObject (pDataBlock);
+    PPERF_INSTANCE_DEFINITION pThisInstance = firstInstance(pThisObject);
+
+    double sampleObjectTime = LI_to_double ( pThisObject->PerfTime );
+    double objectFrequency  = LI_to_double ( pThisObject->PerfFreq );
+
+		// at this point we're all set to march through the data block to find
+        // the pids that we want
+    DWORD ctrblk;
+	int instanceNum = 0;
+    pid_t thispid;
+    
+        // loop through each instance in data, checking to see if on list
+
+    while ( instanceNum < pThisObject->NumInstances ) {
+        
+        ctrblk = ((DWORD)pThisInstance) + pThisInstance->ByteLength;
+        thispid = (pid_t) *((pid_t*)(ctrblk + offsets->procid));
+
+        if ( isinlist ( thispid, pidlist, numpids ) != -1 ) {
+
+            LARGE_INTEGER elt= (LARGE_INTEGER) 
+                *((LARGE_INTEGER*)(ctrblk + offsets->elapsed));
+			LARGE_INTEGER pt = (LARGE_INTEGER) 
+                *((LARGE_INTEGER*)(ctrblk + offsets->pctcpu));
+			LARGE_INTEGER ut = (LARGE_INTEGER) 
+                *((LARGE_INTEGER*)(ctrblk + offsets->utime));
+			LARGE_INTEGER st = (LARGE_INTEGER) 
+                *((LARGE_INTEGER*)(ctrblk + offsets->stime));
+
+			pi->pid       = 0;  // it's the sum of many pids...
+			pi->ppid      = -1; // ditto.
+			pi->imgsize  += (long) *((long*)(ctrblk + offsets->imgsize ));
+			pi->rssize   += (long) *((long*)(ctrblk + offsets->rssize  ));
+			pi->minfault  = 0;  // not supported by NT; 
+                                //all faults lumped into major.
+			pi->user_time+= (long) (LI_to_double( ut ) / objectFrequency);
+			pi->sys_time += (long) (LI_to_double( st ) / objectFrequency);
+			pi->age      += (long) ((sampleObjectTime - LI_to_double ( elt )) 
+                              / objectFrequency);
+
+            double nowcpu;
+			long nowfault;
+            struct procHashNode * phn;
+            
+			nowfault = (long) *((long*)(ctrblk + offsets->faults  ));
+			nowcpu   = LI_to_double( pt );
+            
+			if ( procHash->lookup ( thispid, phn ) == 0 ) {
+				pi->majfault += (long) ( ( nowfault - phn->oldmajf ) / 
+                     ((sampleObjectTime - phn->lasttime) / objectFrequency));
+				pi->cpuusage += ((nowcpu - phn->oldusage) / 
+                                 (sampleObjectTime - phn->lasttime)) * 100;
+			}
+			else {  // doesn't exist in hash table or error....
+				if ( (sampleObjectTime - LI_to_double (elt) ) != 0.0 ) {
+					pi->majfault += (long) (nowfault / 
+		                            ((sampleObjectTime - LI_to_double ( elt )) 
+			                         / objectFrequency));
+					pi->cpuusage += (nowcpu / 
+					        ((sampleObjectTime - LI_to_double ( elt )) )) * 100;
+				}
+            }
+
+            phn = new procHashNode;
+            phn->lasttime = sampleObjectTime;
+            phn->oldmajf  = nowfault;
+            phn->oldusage = nowcpu;
+            procHash->insert( thispid, phn );
+        }
+
+    // go to the next one...
+		instanceNum++;
+        pThisInstance = nextInstance(pThisInstance);        
+    }    
+    return 0;
+}
+
+#endif // WIN32
+
+#ifndef WIN32
 /* This function returns a list of pids that are 'descendents' of that pid.
      I call this a 'family' of pids.  This list is put into pidFamily, which
      I assume is an already-allocated array.  This array will be terminated
@@ -724,9 +1175,9 @@ int ProcAPI::getPidFamily( pid_t pid, pid_t *pidFamily ) {
 
   piPTR current = procFamily;  // get descendents and elder pid.
   int i=0;
-  // we'll only return the first 127.  No self-respecting job should have
+  // we'll only return the first 511.  No self-respecting job should have
   // more.  :-)  
-  while (( current != NULL ) && ( i<127 ) ) {
+  while (( current != NULL ) && ( i<511 ) ) {
     pidFamily[i] = current->pid;
     i++;
     current = current->next;
@@ -799,6 +1250,7 @@ int ProcAPI::getFamilyInfo ( pid_t daddypid, piPTR& pi ) {
 
   return 0;
 }
+#endif // not defined WIN32
 
 /* initpi is a simple function that sets everything in a procInfo
    structure to a default value.  */
@@ -818,6 +1270,9 @@ void ProcAPI::initpi ( piPTR& pi ) {
   pi->ppid     = -1;
   pi->next     = NULL;
 }
+
+
+#ifndef WIN32  // Doesn't come close to working in WIN32...sigh.
 
 /* This function returns the next pid in the pidlist.  That pid is then 
    removed from the pidList.  A -1 is returned when there are no more pids.
@@ -910,15 +1365,6 @@ int ProcAPI::buildProcInfoList() {
   temp = allProcInfos;
   allProcInfos = allProcInfos->next;
   delete temp;
-  /*  
-  printf ( "A list of process - parent pairs:\n");
-  current = allProcInfos;
-
-  while ( current != NULL ) {
-    printf ( "%5d  %5d\n", current->pid, current->ppid );
-    current = current->next;
-  }
-  */
   return 0;
 }
 #else
@@ -1080,20 +1526,6 @@ int ProcAPI::buildFamily( pid_t daddypid ) {
   return 0;
 }
 
-int ProcAPI::isinfamily ( pid_t *fam, int size, pid_t target ) {
-  int n = 0;
-  int found = false;
-
-  while ( !found && ( n != size ) ) {
-    if ( fam[n] == target )
-      found = true;
-    else
-      n++;
-  }
-
-  return found;
-}
-
 /* This function returns the nuber of processes that allProcInfos 
    points at.  It is assumed that allProcInfos points to all the 
    processes in the system ( that buildProcInfoList has been called )
@@ -1125,6 +1557,17 @@ double ProcAPI::convertTimeval ( struct timeval t ) {
   return (double) t.tv_sec + ( t.tv_usec * 1.0e-6 );
 }   
 
+#endif // not defined WIN32...sigh.
+
+// Hey, here are two functions that can be used by both win32 and unix....
+int ProcAPI::isinfamily ( pid_t *fam, int size, pid_t target ) {
+	for ( int i=0 ; i<size ; i++ ) {
+		if ( fam[i] == target )
+			return true;
+	}
+	return false;
+}
+
 void ProcAPI::printProcInfo ( piPTR pi ) {
 
   if ( pi == NULL )
@@ -1139,6 +1582,8 @@ void ProcAPI::printProcInfo ( piPTR pi ) {
   printf ( "\n" );
 }
 
+#ifndef WIN32
+ 
 void ProcAPI::deallocPidList() {
   if ( pidList != NULL ) {
     pidlistPTR prev;
@@ -1151,7 +1596,7 @@ void ProcAPI::deallocPidList() {
     pidList = NULL;
   }
 }
- 
+
 void ProcAPI::deallocAllProcInfos() {
   if ( allProcInfos != NULL ) {
     piPTR prev;
@@ -1178,9 +1623,203 @@ void ProcAPI::deallocProcFamily() {
   }
 }
 
+#endif // not defined WIN32
+
 int hashFunc ( const pid_t& pid, int numbuckets ) {
   return pid % numbuckets;   
 }
+
+// Warning: WIN32 stuff below.  Not for the faint of heart.
+#ifdef WIN32
+
+/* pointer functions, used to walk down various structures in 
+   the perf data block returned by the call to RegQueryValueEx
+*/
+
+PPERF_OBJECT_TYPE ProcAPI::
+firstObject ( PPERF_DATA_BLOCK pPerfData ) {
+  return ((PPERF_OBJECT_TYPE) ((PBYTE) pPerfData + pPerfData->HeaderLength));
+}
+
+PPERF_OBJECT_TYPE ProcAPI::
+nextObject ( PPERF_OBJECT_TYPE pObject ) {
+  return ((PPERF_OBJECT_TYPE) ((PBYTE) pObject + pObject->TotalByteLength));
+}
+
+PERF_COUNTER_DEFINITION * ProcAPI::
+firstCounter ( PERF_OBJECT_TYPE *pObjectDef ) {
+    return ( PERF_COUNTER_DEFINITION * ) ((PCHAR) pObjectDef + 
+                                          pObjectDef->HeaderLength);
+}
+
+PERF_COUNTER_DEFINITION * ProcAPI::
+nextCounter ( PERF_COUNTER_DEFINITION *pCounterDef ) {
+    return ( PERF_COUNTER_DEFINITION * ) ((PCHAR) pCounterDef + 
+                                          pCounterDef->ByteLength);
+}
+
+PERF_INSTANCE_DEFINITION * ProcAPI::
+firstInstance ( PERF_OBJECT_TYPE *pObject ) {
+    return ( PERF_INSTANCE_DEFINITION * ) ((PBYTE) pObject + 
+                                           pObject->DefinitionLength);
+}
+
+PERF_INSTANCE_DEFINITION * ProcAPI::
+nextInstance ( PERF_INSTANCE_DEFINITION *pInstance ) {
+  
+        // next instance is after this instance + this instances counter data
+    PERF_COUNTER_BLOCK *pCtrBlk;
+    
+    pCtrBlk = ( PERF_COUNTER_BLOCK *)
+        ((PBYTE) pInstance + pInstance->ByteLength);
+    
+    return ( PERF_INSTANCE_DEFINITION * ) ((PBYTE) pInstance + 
+                                           pInstance->ByteLength + 
+                                           pCtrBlk->ByteLength  );
+}
+
+/* End pointer manip thingies */
+
+/* This function serves to get the offsets of all the offsets for the 
+   process counters.  These offsets tell where in the data block the
+   counters for each instance can be found.
+*/
+void ProcAPI::grabOffsets ( PPERF_OBJECT_TYPE pThisObject ) {
+  
+    PPERF_COUNTER_DEFINITION pThisCounter;
+  
+    offsets = (struct Offset*) malloc ( sizeof ( struct Offset ));
+
+    pThisCounter = firstCounter(pThisObject);
+//    printcounter ( stdout, pThisCounter );
+    offsets->pctcpu = pThisCounter->CounterOffset; // % cpu
+    
+    pThisCounter = nextCounter(pThisCounter);
+//    printcounter ( stdout, pThisCounter );
+    offsets->utime = pThisCounter->CounterOffset;  // % user time
+  
+    pThisCounter = nextCounter(pThisCounter);
+//    printcounter ( stdout, pThisCounter );
+    offsets->stime = pThisCounter->CounterOffset;  // % sys time
+  
+    pThisCounter = nextCounter(pThisCounter);
+    pThisCounter = nextCounter(pThisCounter);
+//    printcounter ( stdout, pThisCounter );
+    offsets->imgsize = pThisCounter->CounterOffset;  // image size
+  
+    pThisCounter = nextCounter(pThisCounter);
+//    printcounter ( stdout, pThisCounter );
+    offsets->faults = pThisCounter->CounterOffset;   // page faults
+    
+    pThisCounter = nextCounter(pThisCounter);
+    pThisCounter = nextCounter(pThisCounter);
+//    printcounter ( stdout, pThisCounter );
+    offsets->rssize = pThisCounter->CounterOffset;   // working set
+    
+    pThisCounter = nextCounter(pThisCounter);
+    pThisCounter = nextCounter(pThisCounter);
+    pThisCounter = nextCounter(pThisCounter);
+    pThisCounter = nextCounter(pThisCounter);
+    pThisCounter = nextCounter(pThisCounter);
+    pThisCounter = nextCounter(pThisCounter);
+//    printcounter ( stdout, pThisCounter );
+    offsets->elapsed = pThisCounter->CounterOffset;  // elapsed time (age)
+    
+    pThisCounter = nextCounter(pThisCounter);
+//    printcounter ( stdout, pThisCounter );
+    offsets->procid = pThisCounter->CounterOffset;   // process id
+}
+
+
+int ProcAPI::isinlist( pid_t pid, pid_t *pidlist, int numpids ) {
+	bool found = false;
+	int i = 0;
+    
+	while ( ( !found ) && ( i < numpids ) ) {
+		if ( pidlist[i] == pid )
+			found = true;
+		else
+            i++;
+	}
+    
+	if ( !found ) {
+		return -1;
+	}
+	else {
+		return i;
+	}
+}
+
+/* This function exists to convert a LARGE_INTEGER into a double.  This is
+   Needed because several numbers returned by my performance monitoring stuff
+   are in the LARGE_INTEGER format, which is a struct of two longs, the LowPart
+   and the HighPart.  I could have done something fancier, but just hacking
+   everything into a double seems like the simplest thing to do.
+ */
+double ProcAPI::LI_to_double ( LARGE_INTEGER bigun ) {
+  
+  double ret;
+  ret = (double) bigun.LowPart;
+  ret += (double) bigun.HighPart * (unsigned long) 0xffffffff;
+  return ret;
+}
+
+DWORD ProcAPI::GetSystemPerfData ( LPTSTR pValue ) 
+{
+  // Allocates data buffer as required and queries performance
+  // data specified in Pvalue from registry
+  
+  /*  
+      pValue      : Value string to return from registry
+                    '230' is 'Process'.
+
+      pDataBlock   : address of pointer to allocated perf data block that 
+                    is filled in by call to RegQueryValue
+                    NOTE : this is a class data member.
+                    
+      return      : error/ok
+  */
+  
+  LONG lError;
+  DWORD Size;    // size of data buffer passed to fn. call
+  DWORD Type;    // type ....
+  
+  if ( pDataBlock == NULL) {
+    pDataBlock = (PPERF_DATA_BLOCK) malloc ( INITIAL_SIZE );
+    if ( pDataBlock == NULL )
+      return ERROR_OUTOFMEMORY;
+  }
+  
+  while ( TRUE ) {
+    Size = _msize ( pDataBlock ); 
+    
+    lError = RegQueryValueEx ( HKEY_PERFORMANCE_DATA, pValue, 0, &Type, 
+             (LPBYTE) pDataBlock, &Size );
+    
+    // check for success & valid perf data bolck struct.
+    
+    if ( (!lError) && (Size>0) && 
+         (pDataBlock)->Signature[0] == (WCHAR)'P' &&
+         (pDataBlock)->Signature[1] == (WCHAR)'E' &&
+         (pDataBlock)->Signature[2] == (WCHAR)'R' &&
+         (pDataBlock)->Signature[3] == (WCHAR)'F' )
+      return ERROR_SUCCESS;
+    
+    // if buffer not big enough, reallocate and try again.
+    
+    if ( lError == ERROR_MORE_DATA ) {
+      pDataBlock = (PPERF_DATA_BLOCK) realloc ( pDataBlock, 
+                                                _msize (pDataBlock ) + 
+                                                EXTEND_SIZE );
+      if ( !pDataBlock)
+        return lError;
+    }
+    else
+      return lError;
+  }
+}
+#endif // WIN32
+
 
 #ifdef WANT_STANDALONE_DEBUG
 void ProcAPI::runTests() {
