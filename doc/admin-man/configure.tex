@@ -423,6 +423,16 @@ system.
   Configuring Condor for Multiple Platforms on
   page~\pageref{sec:Multiple-Platforms}.
 
+\item[\Macro{REQUIRE\_LOCAL\_CONFIG\_FILE}] \label{param:RequireLocalConfigFile}
+  Beginning in Condor 6.5.5, it is permissiable for the files listed as the
+  local config file to be missing. This is most useful for sites that have 
+  large numbers of machines in the pool, and a local config file that uses
+  the hostname builtin macro - instead of having an empty file for every host
+  in the pool, some files can simply be omitted. The default setting is True,
+  and Condor will exit with an error if the file listed as the local config 
+  file cannot be read, unless \MacroUNI{REQUIRE\_LOCAL\_CONFIG\_FILE} is set 
+  to False 
+
 \item[\Macro{CONDOR\_IDS}] \label{param:CondorIds}
   The User ID (UID) and Group ID (GID) pair that the Condor daemons
   should run as, if the daemons are spawned as root.
