@@ -88,7 +88,12 @@ Dag::Dag( StringList &condorLogFiles, const int maxJobsSubmitted,
 //-------------------------------------------------------------------------
 Dag::~Dag() {
 		// remember kids, delete is safe *even* if ptr == NULL...
-    delete[] _dapLogName;
+    // NOTE: we cast this to char* because older MS compilers
+    // (contrary to the ISO C++ spec) won't allow you to delete a
+    // const.  This has apparently been fixed in Visual C++ .NET, but
+    // as of 6/2004 we don't yet use that.  For details, see:
+    // http://support.microsoft.com/support/kb/articles/Q131/3/22.asp
+    delete[] (char*) _dapLogName;
 
     // delete all jobs in _jobs
     Job *job = NULL;
