@@ -1,10 +1,4 @@
-#ifdef IS_DARWIN
-/* DARWIN Specific stuff */
-#define PlatformFlags			-DCONDOR_DARWIN=CONDOR_DARWIN 
-#define PlatformLdFlags			-framework IOKit -framework Carbon
-#undef WANT_KERBEROS
-#define	WANT_KERBEROS			NO
-#endif
+/* shared BSD-specific settings... */
 
 #define HAS_ADJTIME			YES
 #define HAS_GETDTABLESIZE		YES
@@ -19,11 +13,4 @@
 #define HAS_INSQUE			YES
 #define NEEDS_FAKE_GETMNT		YES
 
-#define HAS_DYNAMIC_USER_JOBS	NO
 
-#define IS_CLIPPED YES
-#define HAS_OPENSSL YES
-#define HAS_GLOBUS YES
-#define HAS_GSI    YES
-
-#define WANT_PVM   NO
