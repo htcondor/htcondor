@@ -1,3 +1,9 @@
+4/15/99 V6_1_5
+	The 6.1.5 release.  Lots of new features, including Condor for
+	machines w/ multiple network interfaces, the new Daemon
+	object, removed some dead APIs in internet.c, converted some
+	things to CEDAR that weren't using it, and tons of bug fixes. 
+
 3/16/99 V6_1-NewAds-2-branch
 	This is the second branch for the New-Classads/egcs/STL
 	conversion process.  We created the new branch, then we will
