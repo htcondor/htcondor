@@ -31,6 +31,8 @@
 
 /* also note that these return the cooked versions of the functions */
 
+/*
+
 int
 calc_phys_memory()
 {
@@ -96,5 +98,5 @@ calc_virt_memory()
 {	
 	return sysapi_swap_space();
 }
-
+*/
 

@@ -518,7 +518,7 @@ calc_ncpus()
 int main()
 {
 	while (1) {
-		printf("%f\n", calc_load_avg());
+		printf("%f\n", sysapi_load_avg());
 		Sleep(5000);
 	}
 
