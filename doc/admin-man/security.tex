@@ -111,31 +111,30 @@ daemons running as root.
 \index{UIDs in Condor|(}
 
 On a Unix system,
-UIDs form part of an operating systems tools for maintaining
-access control.
-Each executing program has a UID (user identification), a
-unique identifier of a user executing the program.
+UIDs (User IDentification numbers) form part of an operating system's
+tools for maintaining access control.
+Each executing program has a UID,
+a unique identifier of a user executing the program.
 This is also called the real UID.
 \index{UID!real}
 A common situation has one user executing the program owned
 by another user.
 Many system commands work this way, with a user (corresponding
-to a person) executing a program belonging to root.
+to a person) executing a program belonging to (owned by) root.
 Since the program may require privileges that root has which
 the user does not have, a special bit in the program's
 protection specification (a setuid bit) allows the program
 to run with the UID of the program's owner, instead of the
 user that executes the program.
-This is called an effective UID.
+This UID of the program's owner is called an effective UID.
 \index{UID!effective}
 
 %GID (group identification)
-
 Condor works most smoothly when its daemons run as root.
-The daemons then have the ability to switch their real UIDs and
+The daemons then have the ability to switch their 
 effective UIDs at will.
 When the daemons run as root,
-they normally leave their effective UID and GID (group identification)
+they normally leave their effective UID and GID (Group IDentification)
 to be those of user and group condor.
 This allows access to the log files without
 changing the ownership of the log files.
@@ -143,109 +142,136 @@ It also allows access to these files when
 the user condor's home directory resides on an NFS server.
 root can not normally access NFS files.
 
-% editted to this point
 On a machine where a job is submitted,
-the schedd daemon
-Before the shadow is created, the schedd
-switches back to root, so that it can start up the shadow with the UID
-of the user who submitted the job.  Since the shadow runs as the owner
-of the job, all remote system calls are performed under his or her UID
-and GID.  This ensures that as the Condor job executes, it can only
-access files that its owner could access if it were running locally,
-without Condor.  On the executing machine, the starter starts off the
-job running as user nobody, to help ensure that it can not access any
-local resources or do any harm.  
+the \Condor{schedd} daemon
+changes its effective UID to root
+such that it has the capability to start up a \Condor{shadow} daemon
+for the job.
+Before a \Condor{shadow} daemon is created,
+the \Condor{schedd} daemon
+switches back to root,
+so that it can start up the \Condor{shadow} daemon with the (real) UID
+of the user who submitted the job.
+Since the \Condor{shadow} runs as the owner of the job,
+all remote system calls are performed under the owner's UID
+and GID.
+This ensures that as the job executes,
+it can access only files that its owner could access if the job
+were running locally, without Condor.
+On the machine where the job executes, the 
+job runs as user nobody, to help ensure that the job cannot access
+local resources or do harm.  
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:norootaccess}What if I do not have root access?}
+\subsubsection{\label{sec:norootaccess}What if Condor is not run as root?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Condor can also function on all platforms by starting up as
 user condor.  Since user condor does not have the ability to switch
-UID or GID, all daemons run as user and group condor.  Also, the
-shadow and actual condor executable run as condor.  This means that
-the remote job can only access the files and directories that are
-accessible to the condor user on the submitting machine.  Owners of
-jobs have to make their input readable to the condor user.  If the job
-creates output, it must be placed in a directory that is writable by
-the condor user as well.  In practice, this means creating
-world-writable directories for output from Condor jobs.  This creates
-a potential security risk, in that any user on the submitting machine
-can alter the data, remove it, and do other undesirable things.
-However, most users can trust the other users on their own machine not
-to do this.
+UID or GID, all daemons run with both the UID and GID belonging
+to user condor.
+The \Condor{shadow} daemon and the job's executable also
+run as user condor.
+This has the effect that
+the job can access only the files and directories that are
+accessible to the user condor on the machine where the job
+was submitted.
+Owners of
+jobs must make their input readable to the user condor.
+A job's output must be placed in a directory that is writable by
+the user condor as well.
+In practice, this means creating
+world-writable directories for output from Condor jobs.
+This creates a potential security risk,
+in that any user on the machine where the job is submitted
+can alter the data, remove it, or do other undesirable things.
+It is acceptable in an environment where users can trust other users.
 
-On platforms where root access is not needed, Condor can even function
-without a condor user or group.  A directory to act as the condor home
-directory is still required, with the configuration files, spool,
-execute and log directories.  This directory is not technically the
-home directory of any user, and in this case, a condor user may or may
-not even exist, but it is still referred to as the "condor home
-directory" since that is its function.  In this case, you must use the
-CONDOR\_CONFIG environment variable so that all Condor daemons and
-tools can find their configuration file (which in turn defines the
-locations of the other files and directories needed by Condor), or you
-must place a configuration file in \File{/etc/condor/condor\_config}.  The
-Condor daemons can then be started up by whatever UID and GID has
-access to the local Condor directory.  Normally, users without root
-access who wish to use Condor on their machines would create a condor
-home directory somewhere within their own accounts and start up the
-daemons to run as themselves.  As in the case where the daemons run as
-condor, there is no ability to switch UIDs or GIDs of any sort.  The
-daemons all run as the UID and GID of the user who started them.  If
-the machine is acting as a submit machine, the shadows all run as this
-same user.  This is the normal behavior for the user who started the
-daemons: the shadows for any jobs she submits run as herself.
-However, if other people on the machine are using Condor in this
-environment, their shadows run as the user who started the daemons.
-This is a security risk, since anyone else on the machine who submits
-a Condor job effectively runs as the user who started the daemons, and
-has access to all her files and directories.  Some users have this
-level of trust for the other accounts on the machine, but for others,
-this is unacceptable.  In these situations, it is best to set up a
+On platforms where root access is not needed,
+Condor can even function without a UID or GID of the user condor.
+A directory to act as the condor home directory is still required,
+containing the configuration files, spool,
+execute and log directories.
+This home directory is not technically the
+home directory of any user.
+In this case, a user condor may or may not even exist,
+but the directory is still referred to as the condor home
+directory.
+If the user condor does not exist,
+use the CONDOR\_CONFIG environment variable such
+that all Condor daemons and tools
+can find their configuration file
+(which in turn defines the
+locations of other needed files and directories),
+or place a configuration file in \File{/etc/condor/condor\_config}.
+The Condor daemons can then be started up by whatever UID and GID has
+access to the local \File{condor} directory.
+Normally, users without root
+access who wish to use Condor on their machines create a
+\File{condor} home directory somewhere within their own accounts
+and start up the daemons (to run with the UID of the user).
+As in the case where the daemons run as user condor,
+there is no ability to switch UIDs or GIDs.
+The daemons run as the UID and GID of the user who started them.
+On a machine where jobs are submitted, the \Condor{shadow} daemons
+all run as this same user.
+However, if other users on the machine are using Condor in this
+environment, the \Condor{shadow} daemons for these other users'
+jobs execute with the UID of the user who started the daemons.
+This is a security risk, since the Condor job of the other user
+has access to all the files and directories of the user
+who started the daemons.
+Some installations have this level of trust,
+but others do not.
+Where this level of trust does not exist, it is best to set up a
 condor account and group, or to have each user start up their own
-"personal Condor" submit installation.  When the machine is an
-execution site, the Condor job runs as the user who started the
-startd.  This is potentially a security risk, which is why we do not
+Personal Condor submit installation.
+
+When a machine is an execution site for a Condor job,
+the Condor job executes with the UID of the user who started the
+\Condor{startd} daemon.
+This is also potentially a security risk, which is why we do not
 recommend starting up the execution site daemons as a regular user.
-You should either use root, or a user (such as "condor") that only
-exists to run Condor jobs.
+Use either root or a user (such as the user condor) that 
+exists only to run Condor jobs.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:DirOfJob}What directory does a job run in?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-When any process runs, it has a notion of its current working
-directory (cwd), the directory that acts as the base for all
-filesystem access.  Since there are two sides of the Condor job, the
-submit side and the execution side, there are two cwds, respectively.
-When a job is submitted to Condor, the owner specifies what the cwd
-for it should be.  This defaults to the cwd of the user at the point
-of submission, but can be changed in the file that describes to Condor
-how the job should be run, the "submit file".  Many jobs can be
-submitted at the same time with the same cwd, or different ones for
-each job.  This directory acts as the effective cwd for the entire
-life of the job, regardless of what machine it runs on.  The
-submit-side cwd is the cwd of the shadow.  The shadow changes to this
-directory before it starts to service requests from the remote job.
-Since filesystem access for the job goes through the shadow, the cwd
-of the shadow behaves as the cwd of the job if it were executing
-without Condor.  This is the directory of most concern to a user of
-Condor.
+Any executing process has a notion of its current working
+directory (cwd),
+the directory that acts as the base for all file system access.
+There are two sides to any Condor job:
+the submit side and the execution side.
+This implies that there are two cwds.
+On the submit side, the owner's cwd sets
+a default cwd as a job is submitted.
+The cwd can be changed with a command in the submit description file.
+Since many jobs can be submitted at the same time,
+the commands are flexible in order to set the cwd individually for
+each job if desired.
+This submit side cwd remains for the entire life of a job.
+The submit side cwd is also used as the cwd of the \Condor{shadow} daemon.
+Since file system access for the job goes through the \Condor{shadow}
+daemon,
+all accesses behave as if they were executing without Condor.
 
-The Condor job on the execution machine also has a cwd.  This
-is set to the execute subdirectory in Condor's home directory.  This
-directory is world-writable since a condor job usually runs as user
-nobody.  Normally, the executable would never access this directory,
-since all I/O system calls are executed by the shadow on the submit
-machine.  However, in the event of a fatal bug in the job that creates
-a core dump, the cwd on the execute machine needs to be accessible by
-the job so that it can write the core file.  The starter then moves
-this core file back to the submit machine, and sends a message to the
-shadow, telling it the job has crashed and to perform any necessary
-clean up.  The shadow sends email to the job owner announcing the
-crash and providing a pointer to the core file which would then reside
-in the user's directory on the submit machine.
+There is also a cwd associated with the Condor job on the execution machine.
+It is set to the \File{execute} subdirectory of Condor's home directory.
+This directory is world-writable, since a Condor job usually runs as user
+nobody.
+Normally, the executable would never access this directory,
+since all I/O system calls are passed back to the \Condor{shadow} daemon
+on the submit machine.
+However, in the event that the job that creates a core dump,
+the cwd on the execute machine needs to be accessible by
+the job so that it can write the core file.
+The core file is moved back to the submit machine,
+and the \Condor{shadow} daemon is informed.
+The \Condor{shadow} daemon sends e-mail to the job owner announcing the
+crash and providing a pointer to the core file, then residing
+in the submit side cwd.
 
 \index{UIDs in Condor|)}
 
@@ -498,7 +524,7 @@ For the daemon, there are eight macros:
 \end{description}
 
 As an example, the macro defined in the configuration file
-for a deamon as
+for a daemon as
 \begin{verbatim}
 SEC_WRITE_AUTHENTICATION = REQUIRED
 \end{verbatim}
@@ -577,7 +603,7 @@ For the daemon, there are eight macros:
 \end{description}
 
 As an example, the macro defined in the configuration file
-for a deamon as
+for a daemon as
 \begin{verbatim}
 SEC_DAEMON_ENCRYPTION = REQUIRED
 \end{verbatim}
@@ -655,7 +681,7 @@ For the daemon, there are eight macros:
 \end{description}
 
 As an example, the macro defined in the configuration file
-for a deamon as
+for a daemon as
 \begin{verbatim}
 SEC_DAEMON_INTEGRITY = REQUIRED
 \end{verbatim}
