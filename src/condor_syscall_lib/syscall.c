@@ -21,10 +21,9 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
 
 #include <stdio.h>
-#include <varargs.h>
+#include <stdarg.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/uio.h>
@@ -152,14 +151,12 @@ int		CondorErrno;
 
 #include </usr/include/sys/errno.h>
 
-syscall(va_alist)
-	va_dcl
-{	va_list ap;
-	int		number;
+syscall(int number, ...)
+{
+	va_list ap;
 	int		rval;
 
-	va_start( ap );
-	number = va_arg( ap, int );
+	va_start( ap, number );
 
 	switch( number ) {
 		TWO(access,char *,int)
