@@ -469,11 +469,20 @@ daemon::Start()
 			sprintf( buf, "%s -f -n %s", shortname, MasterName ); 
 		}
 	} else {
-		if( tmp ) { 
-			sprintf( buf, "%s -f %s", shortname, tmp );
-			free( tmp );
+		if( isDC ) {
+			if( tmp ) { 
+				sprintf( buf, "%s -f %s", shortname, tmp );
+				free( tmp );
+			} else {
+				sprintf( buf, "%s -f", shortname );
+			}
 		} else {
-			sprintf( buf, "%s -f", shortname );
+			if( tmp ) { 
+				sprintf( buf, "%s %s", shortname, tmp );
+				free( tmp );
+			} else {
+				sprintf( buf, "%s", shortname );
+			}
 		}
 	}
 
