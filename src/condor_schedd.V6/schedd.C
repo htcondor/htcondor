@@ -434,7 +434,7 @@ Scheduler::count_jobs()
 
 	// clear owner table contents
 	time_t current_time = time(0);
-	for ( i = 0; i < Owners.getlast(); i++) {
+	for ( i = 0; i < Owners.getsize(); i++) {
 		Owners[i].Name = NULL;
 		Owners[i].JobsRunning = 0;
 		Owners[i].JobsIdle = 0;
