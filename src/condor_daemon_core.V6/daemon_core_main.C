@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "basename.h"
+#include "my_hostname.h"
 #include "condor_version.h"
 #include "limit.h"
 #include "sig_install.h"
@@ -57,6 +58,7 @@ char*	addrFile = NULL;
 #ifdef WIN32
 int line_where_service_stopped = 0;
 #endif
+bool	DynamicDirs = false;
 
 #ifndef WIN32
 // This function polls our parent process; if it is gone, shutdown.
@@ -72,6 +74,7 @@ check_parent()
 	}
 }
 #endif
+
 
 void
 clean_files()
@@ -235,33 +238,165 @@ do_kill()
 }
 
 
+// Create the directory we were given, with extra error checking.  
+void
+make_dir( const char* logdir )
+{
+	mode_t mode = S_IRWXU | S_IRWXG | S_IRWXO;
+	struct stat stats;
+	if( stat(logdir, &stats) >= 0 ) {
+		if( ! S_ISDIR(stats.st_mode) ) {
+			fprintf( stderr, 
+					 "DaemonCore: ERROR: %s exists and is not a directory.\n", 
+					 logdir );
+			exit( 1 );
+		}
+	} else {
+		if( mkdir(logdir, mode) < 0 ) {
+			fprintf( stderr, 
+					 "DaemonCore: ERROR: can't create directory %s\n", 
+					 logdir );
+			fprintf( stderr, 
+					 "\terrno: %d (%s)\n", errno, strerror(errno) );
+			exit( 1 );
+		}
+	}
+}
+
+
+// Set our log directory in our config hash table, and create it.
 void
 set_log_dir()
 {
 	if( !logDir ) {
 		return;
 	}
-	mode_t mode = S_IRWXU | S_IRWXG | S_IRWXO;
-	struct stat stats;
-	if( stat(logDir, &stats) >= 0 ) {
-		if( ! S_ISDIR(stats.st_mode) ) {
-			fprintf( stderr, 
-					 "DaemonCore: ERROR: %s exists and is not a directory.\n", 
-					 logDir );
-			exit( 1 );
+	config_insert( "LOG", logDir );
+	make_dir( logDir );
+}
+
+
+void
+handle_log_append( char* logAppend )
+{
+	if( ! logAppend ) {
+		return;
+	}
+	char *tmp1, *tmp2;
+	char buf[100];
+	sprintf( buf, "%s_LOG", mySubSystem );
+	if( !(tmp1 = param(buf)) ) { 
+		EXCEPT( "%s not defined!", buf );
+	}
+	tmp2 = (char*)malloc( (strlen(tmp1) + strlen(logAppend) + 2)
+						  * sizeof(char) );
+	if( !tmp2 ) {	
+		EXCEPT( "Out of memory!" );
+	}
+	sprintf( tmp2, "%s.%s", tmp1, logAppend );
+	config_insert( buf, tmp2 );
+	free( tmp1 );
+	free( tmp2 );
+}
+
+
+void
+set_dynamic_dir( const char* param_name, const char* append_str )
+{
+	char* val;
+	char newdir[_POSIX_PATH_MAX];
+
+	val = param( param_name );
+	if( ! val ) {
+			// nothing to do
+		return;
+	}
+
+		// First, create the new name.
+	sprintf( newdir, "%s.%s", val, append_str );
+	
+		// Next, try to create the given directory, if it doesn't
+		// already exist.
+	make_dir( newdir );
+
+		// Now, set our own config hashtable entry so we start using
+		// this new directory.
+	config_insert( param_name, newdir );
+
+		// Finally, insert the _condor_<param_name> environment
+		// variable, so our children get the right configuration.
+	char* env_str = (char*) malloc( (strlen(param_name) + 10 +
+									 strlen(newdir)) * sizeof(char) ); 
+	sprintf( env_str, "_condor_%s=%s", param_name, newdir );
+	putenv( env_str );
+}
+
+
+void
+handle_dynamic_dirs()
+{
+		// We want the log, spool and execute directory of ourselves
+		// and our children to have our pid appended to them.  If the
+		// directories aren't there, we should create them, as Condor,
+		// if possible.
+	if( ! DynamicDirs ) {
+		return;
+	}
+	int mypid = daemonCore->getpid();
+	char buf[256];
+	sprintf( buf, "%s-%d", inet_ntoa(*(my_sin_addr())), mypid );
+
+	set_dynamic_dir( "LOG", buf );
+	set_dynamic_dir( "SPOOL", buf );
+	set_dynamic_dir( "EXECUTE", buf );
+	
+		// Final, evil hack.  Set the _condor_STARTD_NAME environment
+		// variable, so that the startd will have a unique name. 
+	char env_str[64];
+	sprintf( env_str, "_condor_STARTD_NAME=%d", mypid );
+	putenv( env_str );
+}
+
+
+void
+drop_core_in_log( void )
+{
+	// chdir to the LOG directory so that if we dump a core
+	// it will go there.
+	// and on Win32, tell our ExceptionHandler class to drop
+	// its pseudo-core file to the LOG directory as well.
+	char* ptmp = param("LOG");
+	if ( ptmp ) {
+		if ( chdir(ptmp) < 0 ) {
+			EXCEPT("cannot chdir to dir <%s>",ptmp);
 		}
 	} else {
-		if( mkdir(logDir, mode) < 0 ) {
-			fprintf( stderr, 
-					 "DaemonCore: ERROR: can't create directory %s\n", 
-					 logDir );
-			fprintf( stderr, 
-					 "\terrno: %d (%s)\n", errno, strerror(errno) );
-			exit( 1 );
+		EXCEPT("No LOG directory specified in config file(s)");
+	}
+#ifdef WIN32
+	{
+		// give our Win32 exception handler a filename for the core file
+		char pseudoCoreFileName[MAX_PATH];
+		sprintf(pseudoCoreFileName,"%s\\core.%s.WIN32",ptmp,
+			mySubSystem);
+		g_ExceptionHandler.SetLogFileName(pseudoCoreFileName);
+
+		// set the path where our Win32 exception handler can find
+		// debug symbols
+		char *binpath = param("BIN");
+		if ( binpath ) {
+			sprintf(pseudoCoreFileName,"_NT_SYMBOL_PATH=%s",
+				binpath);
+			putenv( strdup(pseudoCoreFileName) );
+			free(binpath);
 		}
 	}
-	config_insert( "LOG", logDir );
+#endif
+	free(ptmp);
 }
+
+
+
 
 
 // See if we should set the limits on core files.  If the parameter is
@@ -474,28 +609,24 @@ handle_dc_sighup( Service*, int )
 		// nice goin', Todd).  *grin*
 	config(NULL);
 
+		// See if we're supposed to be allowing core files or not
+	check_core_files();
+
+	if( DynamicDirs ) {
+		handle_dynamic_dirs();
+	}
+
 		// If we're supposed to be using our own log file, reset that here. 
 	if( logDir ) {
 		set_log_dir();
 	}
-
-		// See if we're supposed to be allowing core files or not
-	check_core_files();
 
 	// Reinitialize logging system; after all, LOG may have been changed.
 	dprintf_config(mySubSystem,2);
 	
 	// again, chdir to the LOG directory so that if we dump a core
 	// it will go there.  the location of LOG may have changed, so redo it here.
-	ptmp = param("LOG");
-	if ( ptmp ) {
-		if ( chdir(ptmp) < 0 ) {
-			EXCEPT("cannot chdir to dir <%s>",ptmp);
-		}
-	} else {
-		EXCEPT("No LOG directory specified in config file(s)");
-	}
-	free(ptmp);
+	drop_core_in_log();
 
 	// call daemon-core's ReInit
 	daemonCore->ReInit();
@@ -633,57 +764,43 @@ int main( int argc, char** argv )
 	// strip off any daemon-core specific command line arguments
 	// from the front of the command line.
 	i = 0;
+	bool done = false;
 	for(ptr = argv + 1; *ptr && (i < argc - 1); ptr++,i++) {
-		int done = FALSE;
-
 		if(ptr[0][0] != '-') {
 			break;
 		}
+
+			/*
+			  NOTE!  If you're adding a new command line argument to
+			  this switch statement, YOU HAVE TO ADD IT TO THE #ifdef
+			  WIN32 VERSION OF "main()" NEAR THE END OF THIS FILE,
+			  TOO.  You should actually deal with the argument here,
+			  but you need to add it there to be skipped over because
+			  of NT weirdness with starting as a service, etc.  Also,
+			  please add your argument in alphabetical order, so we
+			  can maintain some semblance of order in here, and make
+			  it easier to keep the two switch statements in sync.
+			  Derek Wright <wright@cs.wisc.edu> 11/11/99
+			*/
 		switch(ptr[0][1]) {
-		case 'f':		// run in foreground
-			Foreground = 1;
-			dcargs++;
+		case 'a':		// Append to the log file name.
+			ptr++;
+			if( ptr && *ptr ) {
+				logAppend = *ptr;
+				dcargs += 2;
+			} else {
+				fprintf( stderr, 
+						 "DaemonCore: ERROR: -append needs another argument.\n" );
+				fprintf( stderr, 
+					 "   Please specify a string to append to our log's filename.\n" );
+				exit( 1 );
+			}
 			break;
-		case 't':		// log to terminal (stderr)
-			Termlog = 1;
-			dcargs++;
-			break;
-		case 'b':		// run in background (default)
+		case 'b':		// run in Background (default)
 			Foreground = 0;
 			dcargs++;
 			break;
-		case 'p':		
-			if( ptr[0][2] && ptr[0][2] == 'i' ) {
-					// Specify a pidfile
-				ptr++;
-				if( ptr && *ptr ) {
-					pidFile = *ptr;
-					dcargs += 2;
-				} else {
-					fprintf( stderr, 
-							 "DaemonCore: ERROR: -pidfile needs another argument.\n" );
-					fprintf( stderr, 
-							 "   Please specify a filename to store the pid.\n" );
-					exit( 1 );
-				}
-			} else {
-					// use well-known port for command socket				
-					// note: "-p 0" means _no_ command socket
-				ptr++;
-				if( ptr && *ptr ) {
-					command_port = atoi( *ptr );
-					dcargs += 2;
-				} else {
-					fprintf( stderr, 
-							 "DaemonCore: ERROR: -port needs another argument.\n" );
-					fprintf( stderr, 
-					   "   Please specify the port to use for the command socket.\n" );
-
-					exit( 1 );
-				}
-			}
-			break;
-		case 'c':		// specify directory where config file lives
+		case 'c':		// specify directory where Config file lives
 			ptr++;
 			if( ptr && *ptr ) {
 				ptmp = *ptr;
@@ -701,25 +818,16 @@ int main( int argc, char** argv )
 				exit( 1 );
 			}				  
 			break;
-		case 'v':		// display version info and exit
-			printf( "%s\n", CondorVersion() );
-			exit(0);
+		case 'd':		// Dynamic local directories
+			DynamicDirs = true;
+			dcargs++;
 			break;
-		case 'l':
-			ptr++;
-			if( ptr && *ptr ) {
-				logDir = *ptr;
-				dcargs += 2;
-			} else {
-				fprintf( stderr, 
-						 "DaemonCore: ERROR: -log needs another argument.\n" );
-				fprintf( stderr, 
-						 "   Please specify a directory to use for logging.\n" );
-				exit( 1 );
-			}				  
+		case 'f':		// run in Foreground
+			Foreground = 1;
+			dcargs++;
 			break;
 #ifndef WIN32
-		case 'k':
+		case 'k':		// Kill the pid in the given pid file
 			ptr++;
 			if( ptr && *ptr ) {
 				pidFile = *ptr;
@@ -734,25 +842,56 @@ int main( int argc, char** argv )
 			}
 			break;
 #endif
-		case 'q':
-			wantsQuiet = TRUE;
-			dcargs++;
-			break;			
-		case 'a':
+		case 'l':		// specify Log directory
 			ptr++;
 			if( ptr && *ptr ) {
-				logAppend = *ptr;
+				logDir = *ptr;
 				dcargs += 2;
 			} else {
 				fprintf( stderr, 
-						 "DaemonCore: ERROR: -append needs another argument.\n" );
+						 "DaemonCore: ERROR: -log needs another argument.\n" );
 				fprintf( stderr, 
-					 "   Please specify a string to append to our log's filename.\n" );
+						 "   Please specify a directory to use for logging.\n" );
 				exit( 1 );
+			}				  
+			break;
+		case 'p':		// use well-known Port for command socket, or
+				        // specify a Pidfile to drop your pid into
+			if( ptr[0][2] && ptr[0][2] == 'i' ) {
+					// Specify a Pidfile
+				ptr++;
+				if( ptr && *ptr ) {
+					pidFile = *ptr;
+					dcargs += 2;
+				} else {
+					fprintf( stderr, 
+							 "DaemonCore: ERROR: -pidfile needs another argument.\n" );
+					fprintf( stderr, 
+							 "   Please specify a filename to store the pid.\n" );
+					exit( 1 );
+				}
+			} else {
+					// use well-known Port for command socket				
+					// note: "-p 0" means _no_ command socket
+				ptr++;
+				if( ptr && *ptr ) {
+					command_port = atoi( *ptr );
+					dcargs += 2;
+				} else {
+					fprintf( stderr, 
+							 "DaemonCore: ERROR: -port needs another argument.\n" );
+					fprintf( stderr, 
+					   "   Please specify the port to use for the command socket.\n" );
+
+					exit( 1 );
+				}
 			}
 			break;
-		case 'r':   //run for <arg> minutes then gracefully exit
-		{
+		case 'q':		// Quiet output
+			wantsQuiet = TRUE;
+			dcargs++;
+			break;			
+		case 'r':	   // Run for <arg> minutes, then gracefully exit
 			ptr++;
 			if( ptr && *ptr ) {
 				runfor = atoi( *ptr );
@@ -767,13 +906,20 @@ int main( int argc, char** argv )
 				exit( 1 );
 			}
 			//call Register_Timer below after intialized...
-		}
+			break;
+		case 't':		// log to Terminal (stderr)
+			Termlog = 1;
+			dcargs++;
+			break;
+		case 'v':		// display Version info and exit
+			printf( "%s\n", CondorVersion() );
+			exit(0);
 			break;
 		default:
-			done = TRUE;
+			done = true;
 			break;	
 		}
-		if ( done == TRUE ) {
+		if ( done ) {
 			break;		// break out of for loop
 		}
 	}
@@ -786,36 +932,6 @@ int main( int argc, char** argv )
 		// call config so we can call param.  
 	config(NULL, wantsQuiet);
 
-		// If want to override which thing is our config file, we've
-		// got to set that here, between where we config and where we
-		// setup logging.  Note: we also have to do this in reconfig.
-	if( logDir ) {
-		set_log_dir();
-	}
-
-		// If we're told on the command-line to append something to
-		// the name of our log file, we do that here, so that when we
-		// setup logging, we get the right filename.  -Derek Wright
-		// 11/20/98
-
-	if( logAppend ) {
-		char *tmp1, *tmp2;
-		char buf[100];
-		sprintf( buf, "%s_LOG", mySubSystem );
-		if( !(tmp1 = param(buf)) ) { 
-			EXCEPT( "%s not defined!", buf );
-		}
-		tmp2 = (char*)malloc( (strlen(tmp1) + strlen(logAppend) + 2) *
-							  sizeof(char) );
-		if( !tmp2 ) {
-			EXCEPT( "Out of memory!" );
-		}
-		sprintf( tmp2, "%s.%s", tmp1, logAppend );
-		config_insert( buf, tmp2 );
-		free( tmp1 );
-		free( tmp2 );
-	}
-
 		// See if we're supposed to be allowing core files or not
 	check_core_files();
 
@@ -824,16 +940,35 @@ int main( int argc, char** argv )
 		do_kill();
 	}
 
-		// Set up logging
-	dprintf_config(mySubSystem,2);
+	if( ! DynamicDirs ) {
+
+			// We need to setup logging.  Normally, we want to do this
+			// before the fork(), so that if there are problems and we
+			// fprintf() to stderr, we'll still see them.  However, if
+			// we want DynamicDirs, we can't do this yet, since we
+			// need our pid to specify the log directory...
+
+		// If want to override what's set in our config file, we've
+		// got to do that here, between where we config and where we
+		// setup logging.  Note: we also have to do this in reconfig.
+		if( logDir ) {
+			set_log_dir();
+		}
+
+		// If we're told on the command-line to append something to
+		// the name of our log file, we do that here, so that when we
+		// setup logging, we get the right filename.  -Derek Wright
+		// 11/20/98
+		if( logAppend ) {
+			handle_log_append( logAppend );
+		}
+		
+			// Actually set up logging.
+		dprintf_config(mySubSystem,2);
+	}
 
 		// run as condor 99.9% of the time, so studies tell us.
 	set_condor_priv();
-
-		// Print out opening banner
-	dprintf(D_ALWAYS,"******************************************************\n");
-	dprintf(D_ALWAYS,"** %s (CONDOR_%s) STARTING UP\n",myName,mySubSystem);
-	dprintf(D_ALWAYS,"** %s\n", CondorVersion());
 
 	// we want argv[] stripped of daemoncore options
 	ptmp = argv[0];			// save a temp pointer to argv[0]
@@ -842,39 +977,6 @@ int main( int argc, char** argv )
 	argc -= dcargs;
 	if ( argc < 1 )
 		argc = 1;
-
-	// chdir to the LOG directory so that if we dump a core
-	// it will go there.
-	// and on Win32, tell our ExceptionHandler class to drop
-	// its pseudo-core file to the LOG directory as well.
-	ptmp = param("LOG");
-	if ( ptmp ) {
-		if ( chdir(ptmp) < 0 ) {
-			EXCEPT("cannot chdir to dir <%s>",ptmp);
-		}
-	} else {
-		EXCEPT("No LOG directory specified in config file(s)");
-	}
-#ifdef WIN32
-	{
-		// give our Win32 exception handler a filename for the core file
-		char pseudoCoreFileName[MAX_PATH];
-		sprintf(pseudoCoreFileName,"%s\\core.%s.WIN32",ptmp,
-			mySubSystem);
-		g_ExceptionHandler.SetLogFileName(pseudoCoreFileName);
-
-		// set the path where our Win32 exception handler can find
-		// debug symbols
-		char *binpath = param("BIN");
-		if ( binpath ) {
-			sprintf(pseudoCoreFileName,"_NT_SYMBOL_PATH=%s",
-				binpath);
-			putenv( strdup(pseudoCoreFileName) );
-			free(binpath);
-		}
-	}
-#endif
-	free(ptmp);
 
 	// Arrange to run in the background.
 	// SPECIAL CASE: if this is the MASTER, and we are to run in the background,
@@ -909,9 +1011,24 @@ int main( int argc, char** argv )
 		daemonCore = new DaemonCore();
 	}
 
-		// Now that we have the daemonCore object, we can finally
-		// print out what our pid is.
+	if( DynamicDirs ) {
+			// If we want to use dynamic dirs for log, spool and
+			// execute, we now have our real pid, so we can actually
+			// give it the correct name.
 
+		handle_dynamic_dirs();
+
+			// Actually set up logging.
+		dprintf_config(mySubSystem,2);
+	}
+
+		// Now that we have the daemonCore object, we can finally
+		// know what our pid is, so we can print out our opening
+		// banner.  Plus, if we're using dynamic dirs, we have dprintf
+		// configured now, so the dprintf()s will work.
+	dprintf(D_ALWAYS,"******************************************************\n");
+	dprintf(D_ALWAYS,"** %s (CONDOR_%s) STARTING UP\n",myName,mySubSystem);
+	dprintf(D_ALWAYS,"** %s\n", CondorVersion());
 	dprintf(D_ALWAYS,"** PID = %lu\n",daemonCore->getpid());
 
 #ifndef WIN32
@@ -926,6 +1043,10 @@ int main( int argc, char** argv )
 #endif
 
 	dprintf(D_ALWAYS,"******************************************************\n");
+
+		// chdir() into our log directory so if we drop core, that's
+		// where it goes.  We also do some NT-specific stuff in here.
+	drop_core_in_log();
 
 #ifdef WIN32
 		// On NT, we need to make certain we have a console allocated,
@@ -1159,41 +1280,50 @@ main( int argc, char** argv)
 	// Scan our command line arguments for a "-f".  If we don't find a "-f",
 	// or a "-v", then we want to register as an NT Service.
 	i = 0;
+	bool done = false;
 	for( ptr = argv + 1; *ptr && (i < argc - 1); ptr++,i++)
 	{
-		int done = FALSE;
-
-		if(ptr[0][0] != '-') {
+		if( ptr[0][0] != '-' ) {
 			break;
 		}
-		switch(ptr[0][1])
-		{
-		  case 'f':		// run in foreground
+		switch( ptr[0][1] ) {
+		case 'a':		// Append to the log file name.
+			ptr++;
+			break;
+		case 'b':		// run in Background (default)
+			break;
+		case 'c':		// specify directory where Config file lives
+			ptr++;
+			break;
+		case 'd':		// Dynamic local directories
+			break;
+		case 'f':		// run in Foreground
 			Foreground = 1;
 			break;
-		  case 't':		// log to terminal (stderr)
+		case 'l':		// specify Log directory
+			 ptr++;
+			 break;
+		case 'p':		// Use well-known Port for command socket.		
+			ptr++;		// Also used to specify a Pid file, but both
+			break;		// versions require a 2nd arg, so we're safe. 
+		case 'q':		// Quiet output
 			break;
-		  case 'b':		// run in background (default)
+		case 'r':		// Run for <arg> minutes, then gracefully exit
+			ptr++;
 			break;
-		  case 'v':		// version info
+		case 't':		// log to Terminal (stderr)
+			break;
+		case 'v':		// display Version info and exit
 			printf( "%s\n", CondorVersion() );
 			exit(0);
 			break;
-		  case 'l':		// specify log directory
-			 ptr++;
-			 break;
-		  case 'p':		// use well-known port for command socket				
-			ptr++;
-			break;
-		  case 'c':		// specify directory where config file lives
-			ptr++;
-			break;
-		  default:
-			done = TRUE;
+		default:
+			done = true;
 			break;	
 		}
-		if ( done == TRUE )
+		if( done ) {
 			break;		// break out of for loop
+		}
 	}
 	if ( (Foreground != 1) && (strcmp(mySubSystem,"MASTER") == 0) ) {
 		main_init(-1,NULL);	// passing the master main_init a -1 will register as an NT service
