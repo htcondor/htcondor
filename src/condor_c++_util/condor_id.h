@@ -72,6 +72,15 @@ class CondorID : public ServiceData
         return Compare (condorID) == 0;
     }
 
+		/** Comparison function for use with SelfDrainingQueue.
+			This method is static (to live in the CondorID namespace).
+			Takes pointers to two CondorID objects (though the
+			pointers are of type ServiceData* to work properly w/
+			SelfDrainingQueue and all the rest.
+			@return -1 if a < b, 0 if a == b, and 1 if a > b
+		*/
+	static int ServiceDataCompare( ServiceData* a, ServiceData* b );
+
     /// The job cluster
     int _cluster;
 

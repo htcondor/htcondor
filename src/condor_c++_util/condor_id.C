@@ -48,3 +48,21 @@ CondorID::SetFromString( const char* s )
     }
     return sscanf( s, "%d.%d.%d", &_cluster, &_proc, &_subproc );
 }
+
+
+int
+CondorID::ServiceDataCompare( ServiceData* lhs, ServiceData* rhs )
+{
+	CondorID* id_lhs = (CondorID*)lhs;
+	CondorID* id_rhs = (CondorID*)rhs;
+	if( id_lhs && ! id_rhs ) {
+		return -1;
+	}
+	if( ! id_lhs && ! id_rhs ) {
+		return 0;
+	}
+	if( ! id_lhs && id_rhs ) {
+		return -1;
+	}
+	return id_lhs->Compare( *id_rhs );
+}
