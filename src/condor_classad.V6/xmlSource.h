@@ -34,8 +34,10 @@ class ClassAdXMLParser
 	public:
 		ClassAdXMLParser();
 		~ClassAdXMLParser();
+		ClassAd *ParseClassAd( const string &buffer);
 		ClassAd *ParseClassAd( const string &buffer, int &offset);
 		bool ParseClassAd( const string &buffer, ClassAd &ad, int &offset);
+		bool ParseClassAd( const string &buffer, ClassAd &ad);
 	private:
 
 		ClassAd *ClassAdXMLParser::ParseClassAd(void);

@@ -42,6 +42,13 @@ ClassAdXMLParser::
 }
 
 bool ClassAdXMLParser::
+ParseClassAd( const string &buffer, ClassAd &classad)
+{
+	int offset = 0;
+	return ParseClassAd(buffer, classad, offset);
+}
+
+bool ClassAdXMLParser::
 ParseClassAd( const string &buffer, ClassAd &classad, int &offset)
 {
 	return false;
@@ -49,12 +56,22 @@ ParseClassAd( const string &buffer, ClassAd &classad, int &offset)
 
 
 ClassAd *ClassAdXMLParser::
+ParseClassAd( const string &buffer)
+{
+	int offset = 0;
+
+	return ParseClassAd(buffer, offset);
+}
+
+ClassAd *ClassAdXMLParser::
 ParseClassAd( const string &buffer, int &offset)
 {
 	ClassAd          *classad;
 
 	lexer.SetLexText(buffer);
+	lexer.SetOffset(offset);
 	classad = ParseClassAd();
+	offset = lexer.GetOffset();
 
 	return classad;
 }
