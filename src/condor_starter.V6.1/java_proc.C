@@ -261,6 +261,8 @@ int JavaProc::JobExit(int pid, int status)
 	if(pid==JobPid) {
 		dprintf(D_ALWAYS,"JavaProc: JVM pid %d has finished\n",pid);
 
+#ifndef WIN32 // this is a quick fix - please fill in the window 
+							// equivalant of this block, if any exists
 		switch( ClassifyExit(status) ) {
 			case JAVA_EXIT_NORMAL:
 				/* status is unchanged */
@@ -274,7 +276,7 @@ int JavaProc::JobExit(int pid, int status)
 				Requested_Exit = TRUE;
 				break;
 		}
-
+#endif
 		return VanillaProc::JobExit(pid,status);
 
 	} else {
