@@ -43,14 +43,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed an error in \Condor{dagman}: if submit files for individual
+  nodes referred to the same log file with different paths, \Condor{dagman}
+  would read log events incorrectly and the DAG would fail.  \Condor{dagman}
+  is now able to recognize that the different paths actually refer to
+  the same log file.
+
 \item Fixed a bug where the environment of jobs in any universe could be
 	corrupted.
-
-\item Fixed an error in the \Condor{dagman} submit file parsing code:
-  if one job referred to a log file with a relative path, and another
-  job referred to the same log file with an absolute path, the log file
-  reading failed.  Note: things can still get goofed up by symbolic
-  links or paths with ".." in them.
 
 \item The kerberos map file now tolerates spaces on either side of the equals sign instead of generating a parse error.
 
