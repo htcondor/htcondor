@@ -768,7 +768,6 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 			if (!offer->LookupInteger (ATTR_JOB_UNIVERSE, job_universe)) {
 				job_universe = STANDARD; // err on the safe side
 			}
-			preempt_bw = 0;
 			if (job_universe == STANDARD) {
 				// if preempted job is a STANDARD universe job, it will
 				// need to write a checkpoint, so we include image size
@@ -776,6 +775,8 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 				if (offer->LookupInteger (ATTR_IMAGE_SIZE, preempt_bw) == 0) {
 					preempt_bw = 0;
 				}
+			} else {
+				preempt_bw = 0;
 			}
 			if (offer->LookupString (ATTR_STARTD_IP_ADDR, startdAddr) == 0) {
 				strcpy(startdAddr, "<0.0.0.0:0>");
