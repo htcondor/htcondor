@@ -88,6 +88,10 @@ sysapi_reconfig(void)
     tmp = param( "CONSOLE_DEVICES" );
     if( tmp ) {
         _sysapi_console_devices = new StringList();
+		if (_sysapi_console_devices == NULL)
+		{
+			EXCEPT( "Out of memory in sysapi_reconfig()!" );
+		}
         _sysapi_console_devices->initializeFromString( tmp );
         free( tmp );
     }
