@@ -60,6 +60,7 @@ bool WriteExecuteEventToUserLog( GlobusJob * );
 bool WriteAbortEventToUserLog( GlobusJob * );
 bool WriteTerminateEventToUserLog( GlobusJob * );
 bool WriteEvictEventToUserLog( GlobusJob * );
+bool WriteHoldEventToUserLog( GlobusJob * );
 bool WriteGlobusSubmitEventToUserLog( GlobusJob * );
 bool WriteGlobusSubmitFailedEventToUserLog( GlobusJob * );
 bool WriteGlobusResourceUpEventToUserLog( GlobusJob * );

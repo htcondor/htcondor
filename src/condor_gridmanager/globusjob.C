@@ -89,6 +89,10 @@ char *GMStateNames[] = {
 // GRIDMANAGER_MINIMUM_PROXY_TIME + 60
 #define JM_MIN_PROXY_TIME	300
 
+// TODO: Let the maximum submit attempts be set in the job ad or, better yet,
+// evalute PeriodicHold expression in job ad.
+#define MAX_SUBMIT_ATTEMPTS	1
+
 #define LOG_GLOBUS_ERROR(func,error) \
     dprintf(D_ALWAYS, \
 		"(%d.%d) gmState %s, globusState %d: %s returned Globus error %d\n", \
@@ -121,7 +125,6 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	globusStateBeforeFailure = 0;
 	callbackGlobusState = 0;
 	callbackGlobusStateErrorCode = 0;
-	jmFailureCode = 0;
 	exitValue = 0;
 	submitLogged = false;
 	executeLogged = false;
@@ -129,6 +132,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	terminateLogged = false;
 	abortLogged = false;
 	evictLogged = false;
+	holdLogged = false;
 	stateChanged = false;
 	newJM = false;
 	restartingJM = false;
@@ -145,6 +149,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	syncedOutputSize = 0;
 	syncedErrorSize = 0;
 	shadowBirthday = 0;
+	holdReason = NULL;
 
 	evaluateStateTid = daemonCore->Register_Timer( TIMER_NEVER,
 								(TimerHandlercpp)&GlobusJob::doEvaluateState,
@@ -194,6 +199,9 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 
 GlobusJob::~GlobusJob()
 {
+	if ( myResource ) {
+		myResource->UnregisterJob( this );
+	}
 	if ( jobContact ) {
 		free( jobContact );
 	}
@@ -209,8 +217,8 @@ GlobusJob::~GlobusJob()
 	if ( userLogFile ) {
 		free( userLogFile );
 	}
-	if ( myResource ) {
-		myResource->UnregisterJob( this );
+	if ( holdReason ) {
+		free( holdReason );
 	}
 //	if ( ad ) {
 //		delete ad;
@@ -251,9 +259,18 @@ int GlobusJob::doEvaluateState()
 
 		switch ( gmState ) {
 		case GM_INIT:
+			if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD ) {
+				// A globusState of HELD means UNSUBMITTED with a
+				// condorState of HELD, used to mean that the gridmanager
+				// has finished handling it. Since we're handling it again
+				// (probably because it got released), translate it back.
+				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
+				addScheddUpdateAction( this, UA_UPDATE_GLOBUS_STATE, 0 );
+			}
 			if ( resourceStateKnown == false ) {
 				break;
-			} else if ( jobContact == NULL ) {
+			}
+			if ( jobContact == NULL ) {
 				gmState = GM_CLEAR_REQUEST;
 			} else {
 				if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING ||
@@ -313,6 +330,7 @@ int GlobusJob::doEvaluateState()
 			if ( rc != GLOBUS_SUCCESS ) {
 				// unhandled error
 				LOG_GLOBUS_ERROR( "globus_gram_client_job_callback_register()", rc );
+				globusError = rc;
 				gmState = GM_STOP_AND_RESTART;
 				break;
 			}
@@ -383,6 +401,10 @@ int GlobusJob::doEvaluateState()
 			break;
 		case GM_SUBMIT:
 			char *job_contact;
+			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
+				gmState = GM_HOLD;
+				break;
+			}
 			now = time(NULL);
 			if ( now >= lastSubmitAttempt + submitInterval ) {
 				rc = gahp.globus_gram_client_job_request( 
@@ -469,6 +491,7 @@ int GlobusJob::doEvaluateState()
 				if ( rc != GLOBUS_SUCCESS ) {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_REQUEST)", rc );
+					globusError = rc;
 					WriteGlobusSubmitFailedEventToUserLog( this );
 					gmState = GM_CANCEL;
 				} else {
@@ -688,6 +711,7 @@ int GlobusJob::doEvaluateState()
 				} else {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
+					globusError = rc;
 					gmState = GM_CLEAR_REQUEST;
 				}
 			}
@@ -736,6 +760,7 @@ int GlobusJob::doEvaluateState()
 				if ( rc != GLOBUS_SUCCESS ) {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_cancel()", rc );
+					globusError = rc;
 					gmState = GM_CLEAR_REQUEST;
 					break;
 				}
@@ -777,6 +802,7 @@ int GlobusJob::doEvaluateState()
 					if ( rc != GLOBUS_SUCCESS ) {
 						// unhandled error
 						LOG_GLOBUS_ERROR( "globus_gram_client_job_status()", rc );
+						globusError = rc;
 						gmState = GM_CLEAR_REQUEST;
 					}
 					UpdateGlobusState( status, error );
@@ -798,6 +824,10 @@ int GlobusJob::doEvaluateState()
 				gmState = GM_PROXY_EXPIRED;
 			} else {
 				if ( newJM ) {
+					// Sending a COMMIT_END here means we no longer care
+					// about this job submission. Either we know the job
+					// isn't pending/running or the user has told us to
+					// forget lost job submissions.
 					rc = gahp.globus_gram_client_job_signal( jobContact,
 									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_END,
 									NULL, &status, &error );
@@ -817,9 +847,24 @@ int GlobusJob::doEvaluateState()
 						break;
 					}
 				}
-				// TODO: evaluate if the failure is permanent or temporary
+
+				// Since we just sent a COMMIT_END, there is no state file
+				// to restart from, so there's no reason to keep the job
+				// contact around. We clear it here in case this failure
+				// triggers a hold on the job, so the contact is not in
+				// the held classad. That way, we don't waste our time
+				// with a restart doomed to failure when the job is
+				// released or removed.
+				rehashJobContact( this, jobContact, NULL );
+				free( jobContact );
+				jobContact = NULL;
+				addScheddUpdateAction( this, UA_UPDATE_CONTACT_STRING, 0 );
+
+				// TODO: Evaluate if the failure is permanent or temporary
 				//   if it's temporary, try a restart, but put a limit so
-				//   that we don't go into an infinite restart loop
+				//   that we don't go into an infinite restart loop. If we
+				//   do decide to try a restart, we need to stop the
+				//   jobmanager instead of sending COMMIT_END.
 				// Note: Up through globus 2.0 beta, the FAILED state
 				//   following a cancel request has an error code of 0
 				//   instead of GLOBUS_GRAM_PROTOCOL_ERROR_USER_CANCELLED
@@ -845,6 +890,14 @@ int GlobusJob::doEvaluateState()
 			DeleteJob( this );
 			break;
 		case GM_CLEAR_REQUEST:
+			// For now, put problem jobs on hold instead of
+			// forgetting about current submission and trying again.
+			// TODO: Let our action here be dictated by the user preference
+			// expressed in the job ad.
+			if ( (jobContact != NULL || globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED) && condorState != REMOVED ) {
+				gmState = GM_HOLD;
+				break;
+			}
 			schedd_actions = 0;
 			if ( globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
 				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED;
@@ -913,6 +966,28 @@ int GlobusJob::doEvaluateState()
 				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN;
 				addScheddUpdateAction( this, UA_UPDATE_GLOBUS_STATE, 0 );
 				//UpdateGlobusState( GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN, 0 );
+			} else if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
+				globusState = GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD;
+				addScheddUpdateAction( this, UA_UPDATE_GLOBUS_STATE, 0 );
+				//UpdateGlobusState( GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD, 0 );
+			}
+			// Set the hold reason as best we can
+			// TODO: set the hold reason in a more robust way.
+			if ( holdReason == NULL && globusStateErrorCode != 0 ) {
+				char buf[1024];
+				snprintf( buf, 1024, "Globus error %d: %s",
+						  globusStateErrorCode,
+						  gahp.globus_gram_client_error_string( globusStateErrorCode ) );
+				holdReason = strdup( buf );
+			}
+			if ( holdReason == NULL && globusError != 0 ) {
+				char buf[1024];
+				snprintf( buf, 1024, "Globus error %d: %s", globusError,
+						gahp.globus_gram_client_error_string( globusError ) );
+				holdReason = strdup( buf );
+			}
+			if ( holdReason == NULL ) {
+				holdReason = strdup( "Unspecified gridmanager error" );
 			}
 			done = addScheddUpdateAction( this, UA_HOLD_JOB, GM_HOLD );
 			if ( !done ) {

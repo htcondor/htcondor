@@ -598,6 +598,11 @@ doContactSchedd()
 			WriteEvictEventToUserLog( curr_job );
 			curr_job->evictLogged = true;
 		}
+		if ( curr_action->actions & UA_HOLD_JOB &&
+			 !curr_job->holdLogged ) {
+			WriteHoldEventToUserLog( curr_job );
+			curr_job->holdLogged = true;
+		}
 
 	}
 
@@ -626,17 +631,22 @@ doContactSchedd()
 			// change it. Instead, modify our state to match it.
 			if ( curr_status == REMOVED || curr_status == HELD ) {
 				curr_job->UpdateCondorState( curr_status );
-			} else {
-				// If we're actively initiating a hold, always update the
-				// the job status on the schedd. Otherwise, if we have a
+			} else if ( curr_action->actions & UA_HOLD_JOB ) {
+				SetAttributeInt( curr_job->procID.cluster,
+								 curr_job->procID.proc,
+								 ATTR_JOB_STATUS, curr_job->condorState );
+				SetAttributeString( curr_job->procID.cluster,
+									curr_job->procID.proc,
+									ATTR_HOLD_REASON, curr_job->holdReason );
+			} else {	// UA_UPDATE_CONDOR_STATE && !UA_HOLD_JOB
+				// If we have a
 				// job marked as HELD, it's because of an earlier hold
 				// (either by us or the user). In this case, we don't want
 				// to undo a subsequent unhold done on the schedd. Instead,
 				// we keep our HELD state, kill the job, forget about it,
 				// then relearn about it later (this makes it easier to
 				// ensure that we pick up changed job attributes).
-				if ( curr_job->condorState != HELD ||
-					 (curr_action->actions & UA_HOLD_JOB) ) {
+				if ( curr_job->condorState != HELD ) {
 					SetAttributeInt( curr_job->procID.cluster,
 									 curr_job->procID.proc,
 									 ATTR_JOB_STATUS, curr_job->condorState );
@@ -736,16 +746,27 @@ doContactSchedd()
 
 		dprintf( D_FULLDEBUG, "querying for new jobs\n" );
 
-		// Make sure we grab all Globus Universe jobs when we first start up
-		// in case we're recovering from a shutdown/meltdown.
+		// Make sure we grab all Globus Universe jobs (except held ones
+		// that we previously indicated we were done with)
+		// when we first start up in case we're recovering from a
+		// shutdown/meltdown.
+		// Otherwise, grab all jobs that are unheld and unsubmitted or
+		// have been recently unheld (globus status UNKNOWN or HELD).
 		if ( grabAllJobs ) {
-			sprintf( expr_buf, "%s  && %s == %d",
-					 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS );
-		} else {
-			sprintf( expr_buf, "%s  && %s == %d && %s == %d",
+//			sprintf( expr_buf, "%s  && %s == %d && !(%s == %d && (%s == %d || %s == %d))",
+			sprintf( expr_buf, "%s  && %s == %d && (%s != %d || (%s != %d && %s != %d))",
 					 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
+					 ATTR_JOB_STATUS, HELD, ATTR_GLOBUS_STATUS,
+					 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN,
+					 ATTR_GLOBUS_STATUS, GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD);
+		} else {
+			sprintf( expr_buf, "%s  && %s == %d && %s != %d && (%s == %d || %s == %d || %s == %d)",
+					 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
+					 ATTR_JOB_STATUS, HELD, ATTR_GLOBUS_STATUS,
+					 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED,
 					 ATTR_GLOBUS_STATUS,
-					 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED );
+					 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN,
+					 ATTR_GLOBUS_STATUS, GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD);
 		}
 
 		next_ad = GetNextJobByConstraint( expr_buf, 1 );
@@ -770,7 +791,7 @@ doContactSchedd()
 
 					dprintf( D_ALWAYS, "Job %d.%d has no Globus resource name!\n",
 							 procID.cluster, procID.proc );
-					// TODO: What do we do about this job?
+					// TODO: What do we do about this job? (put it on hold)
 
 				} else {
 
@@ -815,35 +836,66 @@ doContactSchedd()
 
 		dprintf( D_FULLDEBUG, "querying for removed/held jobs\n" );
 
-		sprintf( expr_buf, "%s && %s == %d && (%s == %d || %s == %d)",
+		// Grab jobs marked as REMOVED or marked as HELD that we haven't
+		// previously indicated that we're done with (by setting globus
+		// status to UNKNOWN or HELD.
+		sprintf( expr_buf, "%s && %s == %d && (%s == %d || (%s == %d && %s != %d && %s != %d))",
 				 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
-				 ATTR_JOB_STATUS, REMOVED, ATTR_JOB_STATUS, HELD );
+				 ATTR_JOB_STATUS, REMOVED, ATTR_JOB_STATUS, HELD,
+				 ATTR_GLOBUS_STATUS, GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN,
+				 ATTR_GLOBUS_STATUS, GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD );
 
 		next_ad = GetNextJobByConstraint( expr_buf, 1 );
 		while ( next_ad != NULL ) {
 			PROC_ID procID;
 			GlobusJob *next_job;
+			int curr_status;
 
 			next_ad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 			next_ad->LookupInteger( ATTR_PROC_ID, procID.proc );
+			next_ad->LookupInteger( ATTR_JOB_STATUS, curr_status );
 
 			if ( JobsByProcID.lookup( procID, next_job ) == 0 ) {
 				// Should probably skip jobs we already have marked as
 				// held or removed
 
-				int curr_status;
-				next_ad->LookupInteger( ATTR_JOB_STATUS, curr_status );
 				next_job->UpdateCondorState( curr_status );
 				num_ads++;
 
-			} else {
+			} else if ( curr_status == REMOVED ) {
 
 				// If we don't know about the job, remove it immediately
+				// I don't think this can happen in the normal case,
+				// but I'm not sure.
 				dprintf( D_ALWAYS, 
 						 "Don't know about removed job %d.%d. "
 						 "Deleting it immediately\n", procID.cluster,
 						 procID.proc );
+				// TODO: log abort event here. This will be easy once
+				// start keeping job classads in the gridmanager.
 				DestroyProc( procID.cluster, procID.proc );
+
+			} else {
+
+				// This can happen if someone submits a job and holds
+				// it immediately. Need to change GlobusStatus to HELD if
+				// it's UNSUBMITTED and UNKNOWN otherwise.
+				int globus_status;
+
+				dprintf( D_ALWAYS, "Don't know about held job %d.%d. "
+						 "Setting GlobusStatus and ignoring it\n",
+						 procID.cluster, procID.proc );
+
+				next_ad->LookupInteger( ATTR_GLOBUS_STATUS, globus_status );
+				if ( globus_status == GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
+					SetAttributeInt( procID.cluster, procID.proc,
+									 ATTR_GLOBUS_STATUS,
+									 GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD );
+				} else if ( globus_status != GLOBUS_GRAM_PROTOCOL_JOB_STATE_HELD ) {
+					SetAttributeInt( procID.cluster, procID.proc,
+									 ATTR_GLOBUS_STATUS,
+									 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN );
+				}
 
 			}
 
@@ -1125,6 +1177,35 @@ WriteEvictEventToUserLog( GlobusJob *job )
 	return true;
 }
 
+bool
+WriteHoldEventToUserLog( GlobusJob *job )
+{
+	UserLog *ulog = InitializeUserLog( job );
+	if ( ulog == NULL ) {
+		// User doesn't want a log
+		return true;
+	}
+
+	dprintf( D_FULLDEBUG, 
+			 "(%d.%d) Writing hold record to user logfile=%s\n",
+			 job->procID.cluster, job->procID.proc, job->userLogFile );
+
+	JobHeldEvent event;
+
+	event.setReason( job->holdReason );
+
+	int rc = ulog->writeEvent(&event);
+	delete ulog;
+
+	if (!rc) {
+		dprintf( D_ALWAYS,
+				 "(%d.%d) Unable to log ULOG_JOB_HELD event\n",
+				 job->procID.cluster, job->procID.proc );
+		return false;
+	}
+
+	return true;
+}
 
 bool
 WriteGlobusSubmitEventToUserLog( GlobusJob *job )

@@ -62,6 +62,7 @@ class GlobusJob : public Service
 	int syncedOutputSize;
 	int syncedErrorSize;
 	int shadowBirthday;
+	char *holdReason;
 
 	GahpClient gahp;
 
@@ -75,7 +76,6 @@ class GlobusJob : public Service
 	char *localOutput;
 	char *localError;
 	int globusError;
-	int jmFailureCode;
 	char *userLogFile;
 	int exitValue;
 	bool submitLogged;
@@ -84,6 +84,7 @@ class GlobusJob : public Service
 	bool terminateLogged;
 	bool abortLogged;
 	bool evictLogged;
+	bool holdLogged;
 
 	bool stateChanged;
 	bool newJM;		// This means a jobmanager that supports restart
