@@ -74,3 +74,7 @@ Therefore, administrators should be careful not to define a cache that
 is larger than the number of file descriptors the underlying operating
 system allocates for a single process.
 
+\Note At this time, \MacroNI{UPDATE\_COLLECTOR\_WITH\_TCP}, only
+effects the main \Condor{collector} for your site, not any sites that
+a \Condor{schedd} might flock to.
+

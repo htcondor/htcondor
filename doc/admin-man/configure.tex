@@ -571,6 +571,8 @@ system.
   Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
   for more details and a discussion of when you would need this
   functionality. 
+  At this time, this setting only effects the main \Condor{collector}
+  for your site, not any sites that a \Condor{schedd} might flock to. 
   If you enable this feature, you must also define
   \Macro{COLLECTOR\_SOCKET\_CACHE\_SIZE}] at your central manager, so
   that the collector will accept TCP connections for updates, and will
