@@ -997,13 +997,17 @@ int AttrList::LookupFloat (const char *name, float &value)
     ExprTree *tree, *rhs;   
 
     tree = Lookup (name);   
-    if (tree && (rhs=tree->RArg()) && (rhs->MyType() == LX_FLOAT))
-    {
-        value = ((Float *) rhs)->Value();
-        return 1;   
-    }   
-
-    return 0;   
+    if( tree && (rhs=tree->RArg()) ) {
+		if( rhs->MyType() == LX_FLOAT ) {
+			value = ((Float *) rhs)->Value();
+			return 1;   
+		} 
+		if( rhs->MyType() == LX_INTEGER ) {
+			value = (float)(((Integer *) rhs)->Value());
+			return 1;   
+		} 
+	}		
+	return 0;   
 }
 
 int AttrList::LookupBool (const char *name, int &value)  
@@ -1091,21 +1095,28 @@ int AttrList::EvalFloat (const char *name, AttrList *target, float &value)
             tree = target->Lookup(name);
         } else {
 			evalFromEnvironment (name, &val);
-			if (val.type == LX_FLOAT)
-			{
+			if( val.type == LX_FLOAT ) {
 				value = val.f;
+				return 1;
+			}
+			if( val.type == LX_INTEGER ) {
+				value = (float)val.i;
 				return 1;
 			}
             return 0;
         }
     }
 
-    if (tree && tree->EvalTree (this, target, &val) && val.type == LX_FLOAT)
-    {
-        value = val.f;
-        return 1;
+    if( tree && tree->EvalTree (this, target, &val) ) {
+		if( val.type == LX_FLOAT ) {
+			value = val.f;
+			return 1;
+		}
+		if( val.type == LX_INTEGER ) {
+			value = (float)val.i;
+			return 1;
+		}
     }
-
     return 0;
 }
 
