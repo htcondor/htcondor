@@ -11,6 +11,10 @@
 #define IS_N32			YES
 #define MIPS_VERSION		3
 
+#define IS_EGCS_BUILD YES
+#define EgcsPath /usr/local/lib/gcc-lib/mips-sgi-irix6.5/egcs-2.91.66
+#define EgcsLibc /usr/local/lib/gcc-lib/mips-sgi-irix6.5/egcs-2.91.66/libgcc.a
+
 /* inet_ntoa is broken in GCC for -n32 and -64 ABIs */
 #define HAS_INET_NTOA NO
 
