@@ -68,7 +68,8 @@ char* find_global();
 char* find_global_root();
 char* find_file(const char*, const char*);
 void init_tilde();
-void fill_attributes(ClassAd*);
+void fill_attributes();
+void check_domain_attributes();
 void init_config();
 void clear_config();
 void reinsert_specials(char*);
@@ -135,7 +136,7 @@ config_host( ClassAd* classAd, char* host )
 void
 real_config(ClassAd *classAd, char* host, int wantsQuiet)
 {
-	char		*config_file;
+	char		*config_file, *tmp;
 	int			scm, rval;
 	StringList	*local_files;
 
@@ -167,14 +168,16 @@ real_config(ClassAd *classAd, char* host, int wantsQuiet)
 	}
 
 		// Insert some default values for attributes we want even if
-		// they're not defined in the config files: ARCH, OPSYS,
-		// FILESYSTEM_DOMAIN and UID_DOMAIN.  We do this now since if
-		// they are defined in the config files, these values will get
-		// overridden.  However, we want them defined to begin with so
-		// that people can use them in the global config file to
-		// specify the location of platform-specific config files,
-		// etc.  -Derek Wright 6/8/98
-	fill_attributes( classAd );
+		// they're not defined in the config files: ARCH and OPSYS.
+		// We also want to insert the special "SUBSYSTEM" macro here. 
+		// We do this now since if they are defined in the config
+		// files, these values will get overridden.  However, we want
+		// them defined to begin with so that people can use them in
+		// the global config file to specify the location of
+		// platform-specific config files, etc.  -Derek Wright 6/8/98
+		// Moved all the domain-specific stuff to a seperate function
+		// since we might not know our full hostname yet. -Derek 10/20/98
+	fill_attributes();
 
 		// Try to find the global config file
 	if( ! (config_file = find_global()) ) {
@@ -238,9 +241,20 @@ real_config(ClassAd *classAd, char* host, int wantsQuiet)
 		process_locals( "LOCAL_ROOT_CONFIG_FILE", host, classAd );
 	}
 
+		// Now that we're done reading files, if DEFAULT_DOMAIN_NAME
+		// is set, we need to re-initilize my_full_hostname(). 
+	if( (tmp = param("DEFAULT_DOMAIN_NAME")) ) {
+		free( tmp );
+		init_full_hostname();
+	}
+
 		// Re-insert the special macros.  We don't want the user to 
 		// override them, since it's not going to work.
 	reinsert_specials( host );
+
+		// Make sure our FILESYSTEM_DOMAIN and UID_DOMAIN settings are
+		// correct.
+	check_domain_attributes();
 
 		// If mySubSystem_EXPRS is set, insert those expressions into
 		// the given classad.
@@ -390,55 +404,47 @@ find_file(const char *env_name, const char *file_name)
 
 
 void
-fill_attributes( ClassAd* classAd )
+fill_attributes()
 {
+		/* There are a few attributes that specify what platform we're
+		   on that we want to insert values for even if they're not
+		   defined in the config files.  These are ARCH and OPSYS,
+		   which we compute with the my_arch() and my_opsys()
+		   functions.  We also insert the subsystem here.  Moved all
+		   the domain stuff to check_domain_attributes() on
+		   10/20.  Also, since this is called before we read in any
+		   config files, there's no reason to check to see if any of
+		   these are already defined.  -Derek Wright */
 
-		/* There are a few attributes that we want to insert values
-		   for even if they're not defined in the config files.  These
-		   are: ARCH, OPSYS, UID_DOMAIN and FILESYSTEM_DOMAIN.  ARCH
-		   and OPSYS we get from uname().  If either UID_DOMAIN or
-		   FILESYSTEM_DOMAIN are not defined, we use the fully
-		   qualified hostname of this host.  In all cases, the value
-		   in the config file overrides these defaults.  Arch and
-		   OpSys by Jim B.  Uid and FileSys by Derek Wright, 1/12/98 */
+	char *arch, *opsys;
 
-	char *arch, *opsys, *uid_domain, *filesys_domain;
-	char line[1024];
-
-  	arch = param("ARCH");
-	if( !arch ) {
-		if( (arch = my_arch()) != NULL ) {
-			insert( "ARCH", arch, ConfigTab, TABLESIZE );
-			if(classAd)	{
-				sprintf( line, "%s=\"%s\"", ATTR_ARCH, arch );
-				classAd->Insert(line);
-			}
-		}
-	} else {
-		free( arch );
+	if( (arch = my_arch()) != NULL ) {
+		insert( "ARCH", arch, ConfigTab, TABLESIZE );
 	}
 
-	opsys = param("OPSYS");
-	if( !opsys ) {
-		if( (opsys = my_opsys()) != NULL ) {
-			insert( "OPSYS", opsys, ConfigTab, TABLESIZE );
-			if(classAd) {
-				sprintf( line, "%s=\"%s\"", ATTR_OPSYS, opsys );
-				classAd->Insert(line);
-			}
-		}
-	} else {
-		free( opsys );
+	if( (opsys = my_opsys()) != NULL ) {
+		insert( "OPSYS", opsys, ConfigTab, TABLESIZE );
 	}
 
+	insert( "subsystem", mySubSystem, ConfigTab, TABLESIZE );
+}
+
+
+void
+check_domain_attributes()
+{
+		/* Make sure the FILESYSTEM_DOMAIN and UID_DOMAIN attributes
+		   are set to something reasonable.  If they're not already
+		   defined, we default to our own full hostname.  Moved this
+		   to its own function so we're sure we have our full hostname
+		   by the time we call this. -Derek Wright 10/20/98 */
+
+	char *uid_domain, *filesys_domain;
+		   
 	filesys_domain = param("FILESYSTEM_DOMAIN");
 	if( !filesys_domain ) {
 		filesys_domain = my_full_hostname();
 		insert( "FILESYSTEM_DOMAIN", filesys_domain, ConfigTab, TABLESIZE );
-		if(classAd) {
-			sprintf( line, "%s=\"%s\"", ATTR_FILE_SYSTEM_DOMAIN, filesys_domain );
-			classAd->Insert(line);
-		}
 	} else {
 		free( filesys_domain );
 	}
@@ -447,14 +453,9 @@ fill_attributes( ClassAd* classAd )
 	if( !uid_domain ) {
 		uid_domain = my_full_hostname();
 		insert( "UID_DOMAIN", uid_domain, ConfigTab, TABLESIZE );
-		if(classAd) {
-			sprintf( line, "%s=\"%s\"", ATTR_FILE_SYSTEM_DOMAIN, uid_domain );
-			classAd->Insert(line);
-		}
 	} else {
 		free( uid_domain );
 	}
-	insert( "subsystem", mySubSystem, ConfigTab, TABLESIZE );
 }
 
 
