@@ -959,7 +959,7 @@ Job::SetAttribute(const char *name, char *value)
 		
 	Parse(tmp_expr, expr_tree);
 		
-	delete tmp_expr;
+	delete []tmp_expr;
 
 	ad->Insert(expr_tree);
 	return 0;
@@ -1096,6 +1096,7 @@ Job::NextAttributeName(char *attr_name)
 		return -1;
 	}
 	strcpy(attr_name, this_name);
+	delete [] this_name;
 	return 0;
 }
 
