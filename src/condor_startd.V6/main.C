@@ -586,7 +586,11 @@ do_cleanup()
 
 	if ( already_excepted == FALSE ) {
 		already_excepted = TRUE;
-		main_shutdown_fast();  // this will exit if successful
+			// If the machine is already free, we can exit right away.
+		check_free();		
+			// Otherwise, quickly kill all the active starters.
+		resmgr->walk( &Resource::kill_claim );
+		dprintf( D_ALWAYS, "Exiting because of fatal exception.\n" );
 	}
 	return TRUE;
 }
