@@ -36,8 +36,6 @@
 #include "condor_common.h"
 #include "ntsysinfo.h"
 
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
-
 // Initialize static members in the class
 int CSysinfo::reference_count = 0;
 HINSTANCE CSysinfo::hNtDll = NULL;
