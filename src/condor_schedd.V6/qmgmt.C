@@ -1794,10 +1794,14 @@ int mark_idle(ClassAd *job)
 	job_id.cluster = cluster;
 	job_id.proc = proc;
 
-	if ( status == COMPLETED || status == REMOVED ) {
+	if ( status == COMPLETED ) {
 		DestroyProc(cluster,proc);
-	}
-	else if ( status == UNEXPANDED ) {
+	} else if ( status == REMOVED ) {
+		dprintf( D_FULLDEBUG, "Job %d.%d was left marked as removed, "
+				 "cleaning up now\n", cluster, proc );
+		scheduler.WriteAbortToUserLog( job_id );
+		DestroyProc( cluster, proc );
+	} else if ( status == UNEXPANDED ) {
 		SetAttributeInt(cluster,proc,ATTR_JOB_STATUS,IDLE);
 	}
 	else if ( status == RUNNING || hosts > 0 ) {
