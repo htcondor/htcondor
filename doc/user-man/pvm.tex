@@ -30,7 +30,7 @@ which would have otherwise been idle.   In Condor-PVM, Condor acts as the
 resource manager for the PVM daemon.  Whenever your PVM program asks
 for nodes (machines), the request is re-mapped to Condor.  Condor then
 finds a machine in the Condor pool via the usual mechanisms, and adds it
-the the PVM virtual machine.  If a machine needs to leave the pool, your
+to the PVM virtual machine.  If a machine needs to leave the pool, your
 PVM program is notified of that as well via the normal PVM mechanisms.
 
 \subsection{The Master-Worker Paradigm}
@@ -54,7 +54,7 @@ has disappeared, it puts the piece of work it assigned to that worker
 back into the pool of tasks, and sends it out again to the next
 available worker. If the master notices that the number of workers has
 dropped below an acceptable level, it could request for more workers
-(via \func{pvm\_addhosts()}. Or perhaps the master will request
+(via \func{pvm\_addhosts()}). Or perhaps perhaps the master will request
 a replacement node every single time it is notified that a worker has
 gone away. The point is that in this paradigm, the number of workers is
 not important (although more is better!) and changes in the size of
@@ -153,7 +153,7 @@ program \Prog{master\_sum.c}, which, we hope, will help you to
 write PVM code that is better suited for a non-dedicated opportunistic
 environment like Condor.
 
-\scriptsize
+\CondorVerySmall
 \begin{verbatim}
 /* 
  * master_sum.c
@@ -615,7 +615,7 @@ a submit-description file for a PVM job.  This job has a master PVM program call
 \func{master\_pvm}.
 
 \begin{figure}[hbt]
-\small
+\CondorSmall
 \begin{verbatim}
 ###########################################################
 # sample_submit
