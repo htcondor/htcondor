@@ -44,6 +44,8 @@ EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 #	elif (IS_SUN4M_SOLARIS) || (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS)
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o GETCWD.o
+#	elif IS_SGI_IRIX53
+EXTRACT = /* don't extract anything */
 #	else
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 		  MMAP.o PIPE.o
@@ -67,6 +69,10 @@ EXTRACT = GETEUID.o GETEGID.o GETWD.o
 UTIL_EXTRACT = GETWD.o
 HP_SPECIFIC_FILES = $(FLOCK_OBJ) seteuid.o setegid.o
 HP_CKPT = get_reginfo.HPUX.o
+#endif
+
+#if IS_SGI_IRIX53
+SGI_CKPT = MMAP.MIPS.IRIX53.o SYSCALL.MIPS.IRIX53.o
 #endif
 
 #if !HAS_FLOCK
@@ -133,7 +139,7 @@ URL_OBJ = url_condor.o include_urls.o cbstp_url.o file_url.o http_url.o \
 #if DOES_CHECKPOINTING
 CKPT_OBJ =	$(FLOCK_OBJ) file_state.o image.o tmp_stack.o machdep.$(OS).o \
 	syscall_mode.o fake_hooks.o condor_rt0.o $(LONGJMP) $(HP_CKPT) \
-	$(SIG_CKPT_OBJS) $(URL_OBJ)
+	$(SGI_CKPT) $(SIG_CKPT_OBJS) $(URL_OBJ)
 #else
 CKPT_OBJ = syscall_mode.o
 #endif
@@ -234,6 +240,14 @@ senders.c: syscall.tmpl stub_gen senders.prologue senders.epilogue
 	$(CPP) -DSENDER $(CLIP) $(SAVE_SIGSTATE) -D$(OS) < syscall.tmpl | \
 	stub_gen -mode senders -p senders.prologue -e senders.epilogue \
 	> senders.c
+
+#if IS_SGI_IRIX53
+CMNT
+CMNT Bypass a bug in gcc.
+CMNT
+senders.o: senders.c
+	cc -I../h -I../condor_includes -I../condor_c++_util -DSGI -DIRIX53 -DNFSFIX -DNDBM -D_BSD_COMPAT -g -DNEW_PROC -c senders.c
+#endif
 
 receivers.c: syscall.tmpl stub_gen receivers.prologue receivers.epilogue
 	$(CPP) -DRECEIVER $(CLIP) $(SAVE_SIGSTATE) -D$(OS) < syscall.tmpl | \
