@@ -109,6 +109,7 @@ main( void )
 				}
 				if( !parser.ParseExpression( buffer1, expr, true ) ) {
 					cout << "Error parsing expression: " <<  buffer1 << endl;
+                    cout << "(" << CondorErrMsg << ")\n";
 					break;
 				}
                 cin >> buffer2;
@@ -119,6 +120,7 @@ main( void )
                 getline(cin, buffer3, '\n');
 				if( !parser.ParseExpression( buffer3, fexpr, true ) ) {
 					cout << "Error parsing expression: " << buffer3 << endl;
+                    cout << "(" << CondorErrMsg << ")\n";
 					break;
 				} 
 				expr->SetParentScope( ad );
