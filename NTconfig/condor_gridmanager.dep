@@ -1,13 +1,6 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_gridmanager.mak
 
 "..\src\condor_gridmanager\gahp-client.C" : \
-	"..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
@@ -45,6 +38,7 @@
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -57,7 +51,6 @@
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\globus_utils.h"\
 	"..\src\h\proc.h"\
@@ -65,13 +58,6 @@
 	
 
 ..\src\condor_gridmanager\globusjob.C : \
-	"..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -124,6 +110,7 @@
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -135,7 +122,6 @@
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\globus_utils.h"\
 	"..\src\h\proc.h"\
@@ -143,13 +129,6 @@
 	
 
 ..\src\condor_gridmanager\globusresource.C : \
-	"..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -194,6 +173,7 @@
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -205,7 +185,6 @@
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\globus_utils.h"\
 	"..\src\h\proc.h"\
@@ -213,13 +192,6 @@
 	
 
 ..\src\condor_gridmanager\gridmanager.C : \
-	"..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -279,6 +251,7 @@
 	"..\src\condor_includes\condor_secman.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -291,7 +264,6 @@
 	"..\src\condor_includes\stream.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\condor_types.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\globus_utils.h"\
 	"..\src\h\proc.h"\
@@ -300,13 +272,6 @@
 	
 
 ..\src\condor_gridmanager\gridmanager_main.C : \
-	"..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
@@ -351,6 +316,7 @@
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -362,7 +328,6 @@
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
 	"..\src\condor_sysapi\sysapi.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\globus_utils.h"\
 	"..\src\h\proc.h"\
@@ -370,13 +335,6 @@
 	
 
 ..\src\condor_gridmanager\proxymanager.C : \
-	"..\..\program files\microsoft sdk\include\basetsd.h"\
-	"..\..\program files\microsoft sdk\include\guiddef.h"\
-	"..\..\program files\microsoft sdk\include\propidl.h"\
-	"..\..\program files\microsoft sdk\include\reason.h"\
-	"..\..\program files\microsoft sdk\include\stralign.h"\
-	"..\..\program files\microsoft sdk\include\tvout.h"\
-	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\CondorError.h"\
@@ -420,6 +378,7 @@
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
 	"..\src\condor_includes\condor_status.h"\
+	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -432,7 +391,6 @@
 	"..\src\condor_includes\stream.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\condor_types.h"\
-	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\globus_utils.h"\
 	"..\src\h\proc.h"\

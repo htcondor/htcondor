@@ -96,6 +96,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_perms.obj" \
 	"$(INTDIR)\condor_snutils.obj" \
 	"$(INTDIR)\condor_universe.obj" \
+	"$(INTDIR)\copy_file.obj" \
 	"$(INTDIR)\cronos.obj" \
 	"$(INTDIR)\d_format_time.obj" \
 	"$(INTDIR)\dprintf.obj" \
@@ -120,8 +121,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\rotate_file.obj" \
 	"$(INTDIR)\setsyscalls.obj" \
 	"$(INTDIR)\signames.obj" \
-	"$(INTDIR)\strcmp_until.obj" \
-	"$(INTDIR)\copy_file.obj"
+	"$(INTDIR)\strcmp_until.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -195,6 +195,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_perms.obj" \
 	"$(INTDIR)\condor_snutils.obj" \
 	"$(INTDIR)\condor_universe.obj" \
+	"$(INTDIR)\copy_file.obj" \
 	"$(INTDIR)\cronos.obj" \
 	"$(INTDIR)\d_format_time.obj" \
 	"$(INTDIR)\dprintf.obj" \
@@ -219,8 +220,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\rotate_file.obj" \
 	"$(INTDIR)\setsyscalls.obj" \
 	"$(INTDIR)\signames.obj" \
-	"$(INTDIR)\strcmp_until.obj" \
-	"$(INTDIR)\copy_file.obj"
+	"$(INTDIR)\strcmp_until.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -568,7 +568,7 @@ SOURCE=..\src\h\syscall_numbers.tmpl
 
 !IF  "$(CFG)" == "condor_util_lib - Win32 Debug"
 
-InputDir=\condor-v66\src\h
+InputDir=..\src\h
 InputPath=..\src\h\syscall_numbers.tmpl
 
 "..\src\h\syscall_numbers.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
@@ -580,7 +580,7 @@ InputPath=..\src\h\syscall_numbers.tmpl
 
 !ELSEIF  "$(CFG)" == "condor_util_lib - Win32 Release"
 
-InputDir=\condor-v66\src\h
+InputDir=..\src\h
 InputPath=..\src\h\syscall_numbers.tmpl
 
 "..\src\h\syscall_numbers.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
