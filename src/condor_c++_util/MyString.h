@@ -292,7 +292,7 @@ class MyString
 		@param fp The file you want to read from
 		@returns True if we found data, false if we're at the EOF 
 	 */
-	bool readLine( FILE* fp );
+	bool readLine( FILE* fp, bool append = false);
 
 private:
 
