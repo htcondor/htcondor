@@ -302,7 +302,7 @@ handle_log_append( char* logAppend )
 
 
 void
-set_dynamic_dir( const char* param_name, const char* append_str )
+set_dynamic_dir( char* param_name, const char* append_str )
 {
 	char* val;
 	char newdir[_POSIX_PATH_MAX];
@@ -646,6 +646,18 @@ handle_dc_sighup( Service*, int )
 		drop_pid_file();
 	}
 
+		// If requested to do so in the config file, do a segv now.
+		// This is to test our handling/writing of a core file.
+	if ( (ptmp=param("DROP_CORE_ON_RECONFIG")) && 
+		 (*ptmp=='T' || *ptmp=='t') ) {
+			// on purpose, derefernce a null pointer.
+			ptmp = NULL;
+			char crap = *ptmp;		// should blow up here
+			
+			// should never make it to here!
+			EXCEPT("FAILED TO DROP CORE");	
+	}
+		
 	// call this daemon's specific main_config()
 	main_config();
 
