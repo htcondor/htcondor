@@ -54,7 +54,7 @@ public:
 	void GetRankValue( Value &rankValue ) const;
 
 	ViewMember	operator=( const ViewMember& );
-
+	friend bool operator<(const ViewMember &vm1, const ViewMember &vm2);
 private:
 	string	key;
 	Value	rank;
