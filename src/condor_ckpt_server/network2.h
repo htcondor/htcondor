@@ -49,6 +49,8 @@
 
 /* External Functions */
 
+#if 0
+
 #ifdef OSF1
 extern "C" { unsigned int ntohl(unsigned int); }
 extern "C" { unsigned int htonl(unsigned int); }
@@ -57,8 +59,8 @@ extern "C" { unsigned short int htons(unsigned short int); }
 #else
 extern "C" { unsigned long int ntohl(unsigned long int); }
 extern "C" { unsigned long int htonl(unsigned long int); }
-extern "C" { unsigned short int ntohs(unsigned short int); }
-extern "C" { unsigned short int htons(unsigned short int); }
+extern "C" { unsigned short int ntohs(unsigned int); }
+extern "C" { unsigned short int htons(unsigned int); }
 #endif
 extern "C" { void bzero(char*, int); }
 extern "C" { pid_t getpid(void); }
@@ -73,11 +75,8 @@ extern "C" { int listen(int, int); }
 extern "C" { int getsockname(int, struct sockaddr*, int*); }
 extern "C" { int getsockopt(int, int, int, void*, int*); }
 extern "C" { int setsockopt(int, int, int, const void*, int); }
-#if 0
-extern "C" { struct hostent* gethostbyname( const char*); }
-extern "C" { struct hostent* gethostbyaddr( const char*, int, int); }
-#endif
 
+#endif
 
 
 
