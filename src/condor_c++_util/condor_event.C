@@ -1239,6 +1239,8 @@ TerminatedEvent::readEvent( FILE *file, const char* header )
 		return 0;
 	
 		// THIS CODE IS TOTALLY BROKEN.  Please fix me.
+		// In particular: fscanf() when you don't convert anything to
+		// a local variable returns 0, but we think that's failure.
 	if( fscanf (file, "\t%f  -  Run Bytes Sent By ", &sent_bytes) == 0 ||
 		fscanf (file, header) == 0 ||
 		fscanf (file, "\n") == 0 ||
