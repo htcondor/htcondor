@@ -693,9 +693,20 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 	if (cli_ad.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &cli_methods) &&
 		srv_ad.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &srv_methods)) {
 
+		// send the list for 6.5.0 and higher
 		MyString the_methods = ReconcileMethodLists( cli_methods, srv_methods );
-		sprintf (buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION_METHODS, the_methods.Value());
+		sprintf (buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION_METHODS_LIST, the_methods.Value());
 		action_ad->Insert(buf);
+
+		// send the single method for pre 6.5.0
+		StringList  tmpmethodlist( the_methods.Value() );
+		char* first;
+		tmpmethodlist.rewind();
+		first = tmpmethodlist.next();
+		if (first) {
+			sprintf (buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION_METHODS, first);
+			action_ad->Insert(buf);
+		}
 	}
 
 	if (cli_methods) {
@@ -1238,6 +1249,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 
 			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_VERSION );
 			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_ENACT );
+			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_AUTHENTICATION_METHODS_LIST );
 			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_AUTHENTICATION_METHODS );
 			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_CRYPTO_METHODS );
 			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_AUTHENTICATION );
@@ -1293,11 +1305,20 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 				dprintf ( D_SECURITY, "SECMAN: authenticating RIGHT NOW.\n");
 			}
 			char * auth_methods = NULL;
-			auth_info.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &auth_methods );
+			auth_info.LookupString( ATTR_SEC_AUTHENTICATION_METHODS_LIST, &auth_methods );
+			if (auth_methods) {
+				dprintf (D_ALWAYS, "SECMAN: ZKM: %s\n", auth_methods);
+			} else {
+				dprintf (D_ALWAYS, "SECMAN: ZKM: (null)\n", auth_methods);
+				auth_info.LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &auth_methods );
+			}
+
 			if (!auth_methods) {
 				// there's no auth methods.
 				dprintf ( D_ALWAYS, "SECMAN: no auth method!, failing.\n");
 				return false;
+			} else {
+				dprintf ( D_ALWAYS, "SECMAN: zkm: %s\n", auth_methods);
 			}
 
 			if (!sock->authenticate(ki, auth_methods)) {
