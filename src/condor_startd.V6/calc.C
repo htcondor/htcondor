@@ -27,12 +27,7 @@ static char *_FileName_ = __FILE__;
 int
 calc_disk()
 {
-	int free_disk;
-
-	free_disk = free_fs_blocks(exec_path);
-	if (free_disk <= 512)
-		return 0;
-	return free_disk - 512;
+	return free_fs_blocks( exec_path );
 }
 
 
