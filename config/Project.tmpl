@@ -80,9 +80,13 @@ LIBDBM = DbmLibrary
 	ranlib libname
 #endif
 
-#if IS_SGI_IRIX331 || IS_HPPAR_HPUX8
+
+#if 0	/* Don't think we need this cause HPUX cp has "-p" option */
+#if IS_SGI_IRIX331 || IS_HPPAR_HPUX9
 #define RANLIB_TOUCH(libname) /**/
-#else
+#endif
+#endif
+
 
 #if HAS_CP_PRESERVE			/* cp lib w/o changing modify time - don't ranlib */
 #define COPY_LIBRARY(src,dst) cp -p src dst
@@ -178,7 +182,7 @@ program: objlist libs startup libc							@@\
 #define BuildCondor_C(p,o,l) Build_C(p,o,l,CONDOR_RT0,CONDOR_LIBC)
 #endif
 
-#if IS_HPPAR_HPUX8
+#if IS_HPPAR_HPUX9
 #define Build_C(program,objlist,libs,startup,libc)			@@\
 program: objlist libs startup libc							@@\
 	ld -o program -a archive startup objlist libs libc /usr/lib/end.o
@@ -241,7 +245,7 @@ name: obj lib startup libc									@@\
 #define BuildCondor_F(p,o,l) Build_F(p,o,l,CONDOR_RT0,CONDOR_LIBC)
 #endif
 
-#if IS_HPPAR_HPUX8
+#if IS_HPPAR_HPUX9
 #define Build_F(name,obj,lib,startup,libc)					@@\
 name: obj lib startup libc									@@\
 	ld -o name -a archive -x startup obj lib -lcl libc
