@@ -78,6 +78,11 @@ SWITCH: {
 	$toolpath="$bin/$tool";
 	last SWITCH;
     }
+    if( /^condor_config_val/ ) {
+	$tool="condor_config_val";
+	$toolpath="$bin/$tool";
+	last SWITCH;
+    }
     if( /^condor_master/ ) {
 	$tool="condor_master";
 	$toolpath="$sbin/$tool";
@@ -134,37 +139,36 @@ SWITCH: {
 }
 
 # Make sure we can execute the specified tool:
--x $toolpath or die "Can't execute $toolpath: $!\n";
+-x $toolpath || die "Can't execute $toolpath: $!\n";
 
 # Now, parse the arguments.  Process any -pool option (and don't pass
 # it on to the real condor program, unless it's condor_status, and we
 # don't know what pool they're talking about) and notice if we see a
 # -name. 
 while( $_ = $ARGV[0] ) {
+    shift;
+    if( /^-p/ ) { 
+	$pool = $ARGV[0];
 	shift;
-	if( /^-p/ ) { 
-	    $pool = $ARGV[0];
-	    shift;
-	    if( $tool eq "condor_status" ) {
-		$config=$configlocation{$pool};
-		if( ! $config ) {
-		    # We're condor_status, and we were passed a -pool 
-		    # followed by something that's not in our table of
-		    # nicknames, pass it along to condor_status.
-		    push @args, "-pool";
-		    push @args, $pool;
-		}
+	if( $tool eq "condor_status" ) {
+	    $config=$configlocation{$pool};
+	    if( ! $config ) {
+		# We're condor_status, and we were passed a -pool 
+		# followed by something that's not in our table of
+		# nicknames, pass it along to condor_status.
+		push( @args, "-pool" );
+		push( @args, $pool );
 	    }
-	    next;
 	}
-
-	if( /^-n/ )	{ $saw_name++; }
-	push @args, $_;
+	next;
+    }
+    if( /^-n/ )	{ $saw_name++; }
+    push( @args, $_ );
 }
 
 # If we didn't see -pool, use the default:
 if( ! $pool ) {
-	$pool=$default_pool;
+    $pool=$default_pool;
 }
 
 # Now figure out the right settings, based on the value of $POOL:
@@ -172,13 +176,13 @@ $name=$nameused{$pool};
 $config=$configlocation{$pool};
 
 # Make sure those settings make sense:
--f $config or die "Can't read config file $config\n";
-$name or die "Can't find name to use with pool $pool\n";
+-f $config || die "Can't read config file $config\n";
+$name || die "Can't find name to use with pool $pool\n";
 
 # If we didn't see a -n option but need one, add it to our arg list: 
 if( $needs_name && ! $saw_name ) {
-	push @args, "-n";
-	push @args, $name;
+    push( @args, "-n" );
+    push( @args, $name );
 }
 
 # Now, set the CONDOR_CONFIG environment variable 
