@@ -258,6 +258,7 @@ printClassAd( void )
 	printf( "%s = False\n", ATTR_IS_DAEMON_CORE );
 	printf( "%s = True\n", ATTR_HAS_REMOTE_SYSCALLS );
 	printf( "%s = True\n", ATTR_HAS_CHECKPOINTING );
+	printf( "%s = True\n", ATTR_HAS_OLD_VANILLA );
 	printf( "%s = \"%s\"\n", ATTR_VERSION, CondorVersion() );
 }
 
