@@ -2814,7 +2814,7 @@ queue(int num)
 			char *proxy_env_var = (char *)getenv( "X509_USER_PROXY" );
 			char *proxy_file = condor_param( X509UserProxy );
 
-			if(proxy_file == NULL) proxy_file = proxy_env_var;
+			if(proxy_file == NULL) proxy_file = strdup(proxy_env_var);
 
 			char *rm_contact = condor_param( GlobusScheduler );
 
