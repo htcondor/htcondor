@@ -177,7 +177,8 @@ URL_OBJ = url_condor.o include_urls.o cbstp_url.o file_url.o http_url.o \
 CKPT_OBJ = $(FILE_TABLE_OBJ)\
 	image.o tmp_stack.o machdep.$(DEP_OS).o malloc-user.o \
 	syscall_mode.o fake_hooks.o $(LONGJMP) $(HP_CKPT) \
-	$(SGI_CKPT) $(SIG_CKPT_OBJS) eprintf.o shared_utils.o condor_error.o
+	$(SGI_CKPT) $(SIG_CKPT_OBJS) eprintf.o shared_utils.o condor_error.o \
+	gtodc.o
 #else
 CKPT_OBJ = $(FILE_TABLE_OBJ) syscall_mode.o eprintf.o shared_utils.o condor_error.o
 #endif
