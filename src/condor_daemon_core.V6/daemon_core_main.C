@@ -209,6 +209,57 @@ check_core_files()
 }
 
 
+int
+handle_config_val( Service*, int, Stream* stream ) 
+{
+	char *param_name = NULL, *tmp;
+
+	stream->decode();
+
+	if( ! stream->code(param_name) ) {
+		dprintf( D_ALWAYS, "Can't read parameter name\n" );
+		free( param_name );
+		return FALSE;
+	}
+
+	if( ! stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "Can't read end_of_message\n" );
+		free( param_name );
+		return FALSE;
+	}
+
+	stream->encode();
+
+	tmp = param( param_name );
+	if( ! tmp ) {
+		dprintf( D_FULLDEBUG, 
+				 "Got CONFIG_VAL request for unknown parameter (%s)\n", 
+				 param_name );
+		if( ! stream->put("Not defined") ) {
+			dprintf( D_ALWAYS, "Can't send reply for CONFIG_VAL\n" );
+			return FALSE;
+		}
+		if( ! stream->end_of_message() ) {
+			dprintf( D_ALWAYS, "Can't send end of message for CONFIG_VAL\n" );
+			return FALSE;
+		}
+		return FALSE;
+	} else {
+		if( ! stream->code(tmp) ) {
+			dprintf( D_ALWAYS, "Can't send reply for CONFIG_VAL\n" );
+			free( tmp );
+			return FALSE;
+		}
+		if( ! stream->end_of_message() ) {
+			dprintf( D_ALWAYS, "Can't send end of message for CONFIG_VAL\n" );
+			free( tmp );
+			return FALSE;
+		}
+
+	}
+	return TRUE;
+}
+
 #ifndef WIN32
 void
 unix_sighup(int)
@@ -729,6 +780,10 @@ int main( int argc, char** argv )
 								 (SignalHandler)handle_dc_sigterm,
 								 "handle_dc_sigterm" );
 
+		// Install handler for the CONFIG_VAL 
+	daemonCore->Register_Command( CONFIG_VAL, "CONFIG_VAL",
+								  (CommandHandler)handle_config_val,
+								  "handle_config_val()", 0, ADMINISTRATOR );
 
 	// call daemon-core ReInit
 	daemonCore->ReInit();
