@@ -642,6 +642,11 @@ abort_job_myself(PROC_ID job_id)
 
 	if ((srec = scheduler.FindSrecByProcID(job_id)) != NULL) {
 
+		// if we have already preempted this shadow, we're done.
+		if ( srec->preempted ) {
+			return;
+		}
+
 		// PVM jobs may not have a match  -Bin
 		if (! IsSchedulerUniverse(srec)) {
             
@@ -657,14 +662,16 @@ abort_job_myself(PROC_ID job_id)
                         job_id.cluster, job_id.proc);
             }
         
-            if ( daemonCore->Send_Signal( srec->pid, DC_SIGUSR1 ) == FALSE )
-                dprintf(D_ALWAYS,
-                        "Error in sending SIGUSR1 to pid %d errno = %d\n",
-                        srec->pid, errno);
-            
-            else 
-                dprintf(D_FULLDEBUG, "Sent SIGUSR1 to Shadow Pid %d\n",
-                        srec->pid);
+			if ( daemonCore->Send_Signal(srec->pid,DC_SIGUSR1)==FALSE) {
+				dprintf(D_ALWAYS,
+						"Error in sending SIGUSR1 to pid %d errno=%d\n",
+						srec->pid, errno);            
+			} else {
+				dprintf(D_FULLDEBUG, "Sent SIGUSR1 to Shadow Pid %d\n",
+						srec->pid);
+				srec->preempted = TRUE;
+			}
+
             
         } else {  // Scheduler universe job
             
@@ -680,7 +687,10 @@ abort_job_myself(PROC_ID job_id)
 				" pid=%d owner=%s\n",srec->pid,owner);
 			init_user_ids(owner);
 			priv_state priv = set_user_priv();
-			daemonCore->Send_Signal( srec->pid, DC_SIGUSR1 );
+			if ( daemonCore->Send_Signal( srec->pid, DC_SIGUSR1 ) == TRUE ) {
+				// successfully sent signal
+				srec->preempted = TRUE;
+			}
 			set_priv(priv);
 		}
 
@@ -773,6 +783,8 @@ Scheduler::abort_job(int, Stream* s)
 		// We are being told to scan the queue ourselves and abort
 		// any jobs which have a status = REMOVED or HELD
 		ClassAd *ad;
+		static bool already_removing = false;	// must be static!!!
+		unsigned int count=1;
 		char constraint[120];
 
 		// This could take a long time if the queue is large; do the
@@ -782,10 +794,21 @@ Scheduler::abort_job(int, Stream* s)
 
 		dprintf(D_FULLDEBUG,"abort_job: asked to abort all status REMOVED/HELD jobs\n");
 
+		// if already_removing is true, it means the user sent a second condor_rm
+		// command before the first condor_rm command completed, and we are
+		// already in the below job scan/removal loop in a different stack frame.
+		// so we should just return here.
+		if ( already_removing ) {
+			return TRUE;
+		}
+
 		sprintf(constraint,"%s == %d || %s == %d",ATTR_JOB_STATUS,REMOVED,
 				ATTR_JOB_STATUS,HELD);
 
 		ad = GetNextJobByConstraint(constraint,1);
+		if ( ad ) {
+			already_removing = true;
+		}
 		while ( ad ) {
 			if ( (ad->LookupInteger(ATTR_CLUSTER_ID,job_id.cluster) == 1) &&
 				 (ad->LookupInteger(ATTR_PROC_ID,job_id.proc) == 1) ) {
@@ -795,8 +818,25 @@ Scheduler::abort_job(int, Stream* s)
 			}
 			FreeJobAd(ad);
 			ad = NULL;
-			ad = GetNextJobByConstraint(constraint,0);
+
+			// users typically do a condor_q immediately after a condor_rm.
+			// if they condor_rm a lot of jobs, it could take a really long
+			// time since we need to twiddle the job_queue.log, move classads
+			// to the history file, and maybe write to the user log.  So, we
+			// service the command socket here so condor_q does not timeout.
+			// However, the command we service may start a new iteration
+			// thru the queue.  Thus if we serviced any commands we must
+			// start our iteration over from the beginning to make certain
+			// our iterator is not corrupt. -Todd <tannenba@cs.wisc.edu>
+			if ( (++count % 10 == 0) && daemonCore->ServiceCommandSocket() ) {
+				// we just handled a command, restart the iteration
+				ad = GetNextJobByConstraint(constraint,1);
+			} else {
+				// no command handled, iterator still safe - get next ad
+				ad = GetNextJobByConstraint(constraint,0);
+			}
 		}
+		already_removing = false;
 	}
 
 	return TRUE;
@@ -2647,6 +2687,17 @@ Scheduler::mark_job_running(PROC_ID* job_id)
 
 	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, status);
 
+	// Also clear out ATTR_SHADOW_BIRTHDATE.  We'll set it to be the
+	// current time when we actually start the shadow (in add_shadow_rec), 
+	// since that is more accurate (esp if JOB_START_DELAY is large or we
+	// just got lots of resources from the central manager).
+	// By setting it to zero, we prevent condor_q from getting confused by
+	// seeing a job status of running and an old (or non-existant) 
+	// ATTR_SHADOW_BIRTHDATE; this could result in condor_q temporarily
+	// displaying huge run times until the shadow is started. 
+	// -Todd <tannenba@cs.wisc.edu>
+	SetAttributeInt(job_id->cluster, job_id->proc,
+		ATTR_SHADOW_BIRTHDATE, 0);
 }
 
 /*
