@@ -1222,8 +1222,11 @@ Daemons::StartTimers()
 		if( update_tid != -1 ) {
 			daemonCore->Cancel_Timer( update_tid );
 		}
+			// Start updating the CM in 5 seconds, since if we're the
+			// CM, we want to give ourself the chance to start the
+			// collector before we try to send an update to it.
 		update_tid = daemonCore->
-			Register_Timer( 0, update_interval,
+			Register_Timer( 5, update_interval,
 							(TimerHandler)update_collector,
 							"update_collector" );
 		old_update_int = update_interval;
