@@ -1,6 +1,5 @@
 // Includes 
 #include "condor_common.h"
-#include "caseSensitivity.h"
 #include "escapes.h"
 #include "lexer.h"
 
@@ -156,12 +155,10 @@ initializeWithFile (FILE *fp)
 // FinishedParse:  This function implements the cleanup phase of a parse.
 //   String valued tokens are entered into a string space, and maintained
 //   with reference counting.  When a parse is finished, this space is flushed
-//   out.  Functionally, this is a memory manager for strings in the same
-//   spirit as the ParserMemoryManager is for expressions.
+//   out.
 void Lexer::
 finishedParse ()
 {
-	strings.purge ();
 	accumulating = false;
 }
 
@@ -465,31 +462,31 @@ tokenizeAlphaHead (void)
 		cut ();
 
 		tokenType = LEX_IDENTIFIER;
-		yylval.strValue = strings.getCanonical(lexBuffer);
+		yylval.strValue = lexBuffer;
 		
 		return tokenType;
 	}	
 
-	// check if the string is one of the reserved words
+	// check if the string is one of the reserved words; Case insensitive
 	cut ();
-	if (CLASSAD_RESERVED_STRCMP(lexBuffer, "true") == 0) {
+	if (strcasecmp(lexBuffer, "true") == 0) {
 		tokenType = LEX_BOOLEAN_VALUE;
 		yylval.boolValue = true;
-	} else if (CLASSAD_RESERVED_STRCMP(lexBuffer, "false") == 0) {
+	} else if (strcasecmp(lexBuffer, "false") == 0) {
 		tokenType = LEX_BOOLEAN_VALUE;
 		yylval.boolValue = false;
-	} else if (CLASSAD_RESERVED_STRCMP(lexBuffer, "undefined") == 0) {
+	} else if (strcasecmp(lexBuffer, "undefined") == 0) {
 		tokenType = LEX_UNDEFINED_VALUE;
-	} else if (CLASSAD_RESERVED_STRCMP(lexBuffer, "error") == 0) {
+	} else if (strcasecmp(lexBuffer, "error") == 0) {
 		tokenType = LEX_ERROR_VALUE;
-	} else if (CLASSAD_RESERVED_STRCMP(lexBuffer, "is") == 0 ) {
+	} else if (strcasecmp(lexBuffer, "is") == 0 ) {
 		tokenType = LEX_META_EQUAL;
-	} else if (CLASSAD_RESERVED_STRCMP(lexBuffer, "isnt") == 0) {
+	} else if (strcasecmp(lexBuffer, "isnt") == 0) {
 		tokenType = LEX_META_NOT_EQUAL;
 	} else {
 		// token is a character only identifier
 		tokenType = LEX_IDENTIFIER;
-		yylval.strValue = strings.getCanonical (lexBuffer);
+		yylval.strValue = lexBuffer;
 	}
 
 	return tokenType;
@@ -517,7 +514,7 @@ tokenizeStringLiteral (void)
 		cut( );
 		wind( );	// skip over the close quote
 		collapse_escapes( lexBuffer );
-		yylval.strValue = strings.getCanonical( lexBuffer );
+		yylval.strValue = lexBuffer;
 		tokenType = LEX_STRING_VALUE;
 	} else {
 		// loop quit due to ch == 0 or ch == EOF

@@ -21,7 +21,7 @@ union TokenValue
     IntValue    intValue;
     RealValue   realValue;
 	bool		boolValue;
-    int         strValue;
+    char*       strValue;
 };
 
 
@@ -38,9 +38,6 @@ class Lexer
 		bool initializeWithCedar (Sock &);			// CEDAR
 		bool initializeWithFd 	(int);				// file descriptor
 		bool initializeWithFile (FILE *);			// FILE structure
-
-		// return the character string from the string space given the ID
-		inline char *getCharString (int);
 
 		// cleanup function --- purges strings from string space
 		void finishedParse();
@@ -79,8 +76,6 @@ class Lexer
 		bool	accumulating;					// are we in a token?
 		int 	debug; 							// debug flag
 
-		StringSpace strings;					// identifiers/constants
-
 		// cached last token
 		TokenValue yylval;						// the token itself
 		bool	tokenConsumed;					// has the token been consumed?
@@ -101,13 +96,6 @@ class Lexer
 		int		fd;								// the file descriptor
 		FILE 	*file;							// the file structure
 };
-
-
-inline char *Lexer::
-getCharString (int id)
-{
-	return (strings[id]);
-}
 
 
 #endif //__LEXER_H__
