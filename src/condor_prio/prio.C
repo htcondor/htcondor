@@ -27,12 +27,11 @@
 */ 
 
 #include "condor_common.h"
-#include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_attributes.h"
 #include "alloc.h"
-
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
+#include "my_hostname.h"
+#include "get_full_hostname.h"
 
 #include "condor_qmgr.h"
 
@@ -75,6 +74,7 @@ main( int argc, char *argv[] )
 	int				nArgs = 0;
 	int				i;
 	Qmgr_connection	*q;
+	char*	fullname;
 
 	MyName = argv[0];
 
@@ -103,7 +103,12 @@ main( int argc, char *argv[] )
 		} else if( arg[0] == '-' && arg[1] == 'r' ) {
 			// use the given name as the host name to connect to
 			argv++;
-			strcpy (hostname, *argv);
+			if( !(fullname = get_full_hostname(*argv)) ) { 
+				fprintf( stderr, "%s: unknown host %s\n", 
+						 MyName, *argv );
+				exit(1);
+			}
+			strcpy( hostname, fullname );
 		} else {
 			args[nArgs] = arg;
 			nArgs++;
@@ -127,15 +132,12 @@ main( int argc, char *argv[] )
 		/* Open job queue */
 	if (hostname[0] == '\0')
 	{
-		// hostname was not set at command line; obtain from system
-		if(gethostname(hostname, 200) < 0)
-		{
-			EXCEPT("gethostname failed, errno = %d", errno);
-		}
+		strcpy( hostname, my_full_hostname() );
 	}
 	if((q = ConnectQ(hostname)) == 0)
 	{
-		EXCEPT("Failed to connect to qmgr on host %s", hostname);
+		fprintf( stderr, "Failed to connect to qmgr on host %s", hostname );
+		exit(1);
 	}
 	for(i = 0; i < nArgs; i++)
 	{
