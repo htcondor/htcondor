@@ -45,7 +45,7 @@ struct AdType                   // type of a ClassAd.
     int		number;             // type number, internal thing.
     char*	name;               // type name.
     
-    AdType(char * = NULL);      // constructor.
+    AdType(const char * = NULL);      // constructor.
     ~AdType();                  // destructor.
 };
 
@@ -65,10 +65,10 @@ class ClassAd : public AttrList
 		ClassAd& operator=(const ClassAd& other);
 
 		// Type operations
-        void		SetMyTypeName(char *);		// my type name set.
-        const char*		GetMyTypeName();			// my type name returned.
-        void 		SetTargetTypeName(char *);	// target type name set.
-        char*		GetTargetTypeName();		// target type name returned.
+        void		SetMyTypeName(const char *); /// my type name set.
+        const char*	GetMyTypeName();		// my type name returned.
+        void 		SetTargetTypeName(const char *);// target type name set.
+        const char*	GetTargetTypeName();	// target type name returned.
         int			GetMyTypeNumber();			// my type number returned.
         int			GetTargetTypeNumber();		// target type number returned.
 
@@ -109,6 +109,7 @@ class ClassAd : public AttrList
 		// misc
 		class ClassAd*	FindNext();
         virtual int	fPrint(FILE*);				// print the AttrList to a file
+		int         sPrint(MyString &output);   
 		void		dPrint( int );				// dprintf to given dprintf level
 		void		clear( void );				// clear out all attributes
 
