@@ -293,6 +293,7 @@ Resource::starter_exited( void )
 	State s = state();
 	switch( s ) {
 	case claimed_state:
+		r_cur->client()->setuser( r_cur->client()->owner() );
 		change_state( idle_act );
 		break;
 	case preempting_state:
