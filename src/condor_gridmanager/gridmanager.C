@@ -308,16 +308,16 @@ Reconfig()
 	}
 	GlobusResource::setProbeInterval( tmp_int );
 
-	tmp_int = -1;
+	int max_pending_submits = -1;
 	tmp = param("GRIDMANAGER_MAX_PENDING_SUBMITS");
 	if ( tmp ) {
-		tmp_int = atoi(tmp);
+		max_pending_submits = atoi(tmp);
 		free(tmp);
 	}
-	if ( tmp_int < 0 ) {
-		tmp_int = 5; // default limit is 5
+	if ( max_pending_submits < 0 ) {
+		max_pending_submits = 5; // default limit is 5
 	}
-	GlobusResource::setSubmitLimit( tmp_int );
+	GlobusResource::setSubmitLimit( max_pending_submits );
 
 	tmp_int = -1;
 	tmp = param("GRIDMANAGER_GAHP_CALL_TIMEOUT");
@@ -367,6 +367,9 @@ Reconfig()
 		free(tmp);
 		if ( max_requests < 1 ) {
 			max_requests = 50;
+		}
+		if ( max_requests < max_pending_submits * 5 ) {
+		        max_requests = max_pending_submits * 5;
 		}
 	}
 	GahpMain.setMaxPendingRequests(max_requests);
