@@ -90,7 +90,7 @@ int		check_new_exec_interval;
 int		preen_interval;
 int		new_bin_delay;
 char	*MasterName = NULL;
-char	*CollectorHost = NULL;
+Daemon	*Collector = NULL;
 
 int		ceiling = 3600;
 float	e_factor = 2.0;								// exponential factor
@@ -201,7 +201,7 @@ main_init( int argc, char* argv[] )
 			if( ! *ptr ) {
 				EXCEPT( "-n requires another arugment" );
 			}
-			MasterName = strdup( build_valid_daemon_name(*ptr) );
+			MasterName = build_valid_daemon_name( *ptr );
 			dprintf( D_ALWAYS, "Using name: %s\n", MasterName );
 			break;
 		default:
@@ -392,15 +392,15 @@ init_params()
 				// Not set on command line
 			tmp = param( "MASTER_NAME" );
 			if( tmp ) {
-				MasterName = strdup( build_valid_daemon_name(tmp) );
+				MasterName = build_valid_daemon_name( tmp );
 				master_name_in_config = 1;
 				free( tmp );
 			} 
 		}
 	} else {
-		free( MasterName );
+		delete [] MasterName;
 		tmp = param( "MASTER_NAME" );
-		MasterName = strdup( build_valid_daemon_name(tmp) );
+		MasterName = build_valid_daemon_name( tmp );
 		free( tmp );
 	}
 	if( MasterName ) {
@@ -425,12 +425,10 @@ init_params()
 		free( tmp );
 	}
 
-	if( CollectorHost ) {
-		free( CollectorHost );
+	if( Collector ) {
+		delete( Collector );
 	}
-	if( (CollectorHost = param("COLLECTOR_HOST")) == NULL ) {
-		EXCEPT( "COLLECTOR_HOST not specified in config file" );
-	}
+	Collector = new Daemon( DT_COLLECTOR );
 	
 	StartDaemons = TRUE;
 	tmp = param("START_DAEMONS");
