@@ -67,6 +67,34 @@ calc_virt_memory()
 }
 #endif OSF1
 
+#ifdef LINUX
+/*
+** Try to determine the swap space available on our own machine.  The answer
+** is in kilobytes.
+*/
+close_kmem(){}
+calc_virt_memory()
+{
+	FILE	*proc;
+	int	free_swap;
+	char	tmp_c[20];
+	int	tmp_i;
+
+	proc = fopen("/proc/meminfo", "r");
+	if(!proc)	{
+		dprintf(D_ALWAYS, "Can't open /proc/meminfo to get free swap.");
+		return 0;
+	}
+	
+	fscanf(proc, "%s %s %s %s %s", tmp_c, tmp_c, tmp_c, tmp_c, tmp_c);
+	fscanf(proc, "%s %d %d %d %d %d", tmp_c, &tmp_i, &tmp_i, &tmp_i, &tmp_i, &tmp_i);
+	fscanf(proc, "%s %d %d %d", tmp_c, &tmp_i, &tmp_i, &free_swap);
+	fclose(proc);
+
+	return free_swap / 1024;
+}
+#endif /*LINUX*/
+
 #ifdef IRIX331
 /*
 ** Try to determine the swap space available on our own machine.  The answer
@@ -278,7 +306,7 @@ calc_virt_memory()
 #endif /* of the code for HPUX */
 
 	
-#if !defined(IRIX331) && !defined(AIX31) && !defined(AIX32) && !defined(SUNOS40) && !defined(SUNOS41) && !defined(CMOS) && !defined(HPUX9) && !defined(OSF1)
+#if !defined(LINUX) && !defined(IRIX331) && !defined(AIX31) && !defined(AIX32) && !defined(SUNOS40) && !defined(SUNOS41) && !defined(CMOS) && !defined(HPUX9) && !defined(OSF1)
 /*
 ** Try to determine the swap space available on our own machine.  The answer
 ** is in kilobytes.
