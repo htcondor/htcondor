@@ -40,6 +40,6 @@ condor.generic				Perl script wrapper for the
 					Condor tools in a submit-only
 					installation 
 
-condor.init.d.generic			Default condor script for
+condor.boot				Default condor script for
 					SysV-style init boot scripts 
 
