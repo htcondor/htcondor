@@ -164,6 +164,23 @@ CollectorBaseStats::setHistorySize ( int new_size )
 int
 CollectorBaseStats::updateStats ( bool sequenced, int dropped )
 {
+	// Store this update
+	storeStats( sequenced, dropped );
+
+	// If this one is a "dropped", however, it means that we
+	// detected it with a "not dropped".  Insert this one.
+	if ( dropped ) {
+		storeStats( true, 0 );
+	}
+
+	// Done
+	return 0;
+}
+
+// Update our statistics
+int
+CollectorBaseStats::storeStats ( bool sequenced, int dropped )
+{
 	int		count = 1;
 	if ( sequenced ) {
 		if ( dropped ) {
@@ -210,11 +227,9 @@ CollectorBaseStats::getHistoryString ( char *buf )
 {
 	unsigned		outbit = 0;				// Current bit # to output
 	unsigned		outword = 0x0;			// Current word to ouput
-	int			outoff;					// Offset char * in output str.
+	int			outoff = 0;				// Offset char * in output str.
 	int			offset = historyBitnum;	// History offset
 	int			loop;					// Loop variable
-
-	outoff = 0;
 
 	// If history's not enable, nothing to do..
 	if ( ( ! historyBuffer ) || ( ! historySize ) ) {

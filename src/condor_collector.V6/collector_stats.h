@@ -45,6 +45,8 @@ class CollectorBaseStats
 	int getHistoryStringLen( void ) { return 1 + ( (historySize + 3) / 4 ); };
 
   private:
+	int storeStats( bool sequened, int dropped );
+
 	int			updatesTotal;			// Total # of updates
 	int			updatesSequenced;		// # of updates "sequenced"
 	int			updatesDropped;			// # of updates dropped
