@@ -26,18 +26,15 @@
 #ifndef __CONDOR_ADTYPES__
 #define __CONDOR_ADTYPES__
 
-/* these should really be const, but that causes problems with 
-   ClassAd::SetMyTypeName and ClassAd::SetTargetTypeName.  -Jim B. */
-
-static char STARTD_ADTYPE		[] = "Machine";
-static char SCHEDD_ADTYPE		[] = "Scheduler";
-static char MASTER_ADTYPE		[] = "DaemonMaster";
-static char CKPT_SRVR_ADTYPE	[] = "CkptServer";
-static char JOB_ADTYPE	 		[] = "Job";
-static char QUERY_ADTYPE		[] = "Query";
-static char COLLECTOR_ADTYPE	[] = "Collector";
-static char CKPT_FILE_ADTYPE	[] = "CkptFile";
-static char USERAUTH_ADTYPE   [] = "Authentication"; //mikeu added 
-static char LICENSE_ADTYPE		[] = "License";
+#define STARTD_ADTYPE		"Machine"
+#define SCHEDD_ADTYPE		"Scheduler"
+#define MASTER_ADTYPE		"DaemonMaster"
+#define CKPT_SRVR_ADTYPE	"CkptServer"
+#define JOB_ADTYPE			"Job"
+#define QUERY_ADTYPE		"Query"
+#define COLLECTOR_ADTYPE	"Collector"
+#define CKPT_FILE_ADTYPE	"CkptFile"
+#define USERAUTH_ADTYPE		"Authentication"
+#define LICENSE_ADTYPE		"License"
 
 #endif
