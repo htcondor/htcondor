@@ -97,7 +97,7 @@ extern const char ATTR_USER_ERROR_REASON[];
 
 /* NEW INTERFACE */
 
-enum { STAYS_IN_QUEUE = 0, REMOVE_FROM_QUEUE, HOLD_IN_QUEUE, UNDEFINED_EVAL };
+enum { STAYS_IN_QUEUE = 0, REMOVE_FROM_QUEUE, HOLD_IN_QUEUE, UNDEFINED_EVAL, RELEASE_FROM_HOLD };
 enum { PERIODIC_ONLY = 0, PERIODIC_THEN_EXIT };
 
 /* ok, here is the first set of expressions that should be available
@@ -105,6 +105,7 @@ enum { PERIODIC_ONLY = 0, PERIODIC_THEN_EXIT };
 
 	ATTR_PERIODIC_HOLD_CHECK
 	ATTR_PERIODIC_REMOVE_CHECK
+	ATTR_PERIODIC_RELEASE_CHECK
 	ATTR_ON_EXIT_HOLD_CHECK
 	ATTR_ON_EXIT_REMOVE_CHECK
 
@@ -175,7 +176,7 @@ class UserPolicy
 
 		/* mode is PERIODIC_ONLY or PERIODIC_THEN_EXIT */
 		/* returns STAYS_IN_QUEUE, REMOVE_FROM_QUEUE, HOLD_IN_QUEUE, 
-			UNDEFINED_EVAL */
+			UNDEFINED_EVAL, or RELEASE_FROM_HOLD */
 		int AnalyzePolicy(int mode);
 
 		/* This explains what expression caused the above action, if no 
