@@ -52,6 +52,8 @@ static void Usage(char* name)
 
 //------------------------------------------------------------------------
 
+
+int
 main(int argc, char* argv[])
 {
   char* JobHistoryFileName=NULL;
