@@ -1,4 +1,4 @@
-NAME = condor_shadow
+NAME = condor_shadow.std
 all_target($(NAME))
 
 CFLAGS = $(STD_C_FLAGS) -DSYSCALL_DEBUG
