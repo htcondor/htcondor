@@ -32,6 +32,8 @@
 #define CONDOR_TYPES_INCLUDED
 
 
+#include "condor_expressions.h"
+
 #if !defined(AIX31) && !defined(AIX32)
 #define NFDS(x) (x)
 #endif
@@ -44,29 +46,6 @@ struct qelem {
 	char	q_data[1];
 };
 #endif
-
-typedef struct {
-	int		type;
-	union {
-		int		integer_val;	/* Integer value */
-		float	float_val;		/* Floating point value */
-		char	*string_val;	/* String value */
-	} val;
-} ELEM;
-
-
-typedef struct {
-	int		len;
-	int		max_len;
-	ELEM	**data;
-} EXPR;
-
-typedef struct {
-	int		len;
-	int		max_len;
-	EXPR	**data;
-} CONTEXT;
-
 
 typedef struct bucket BUCKET;
 struct bucket {
