@@ -2055,7 +2055,7 @@ int AttrList::put(Stream& s)
 							   + 3   // for " = "
 							   + 12  // for integer
 							   + 1); // for null termination
-		sprintf(line,"%s = %ld",ATTR_SERVER_TIME,time(NULL));
+		sprintf( line, "%s = %ld", ATTR_SERVER_TIME, (long)time(NULL) );
 		if(!s.code(line)) {
 			free(line);
 			return 0;
