@@ -131,8 +131,8 @@ net_read(int fd, void *buf, int size)
 	bytes_read = 0;
 	do {
 		this_read = read(fd, buf, size - bytes_read);
-		if (this_read < 0) {
-			return this_read;
+		if (this_read <= 0) {
+			return -1;
 		}
 		bytes_read += this_read;
 		buf = (void *) ( (char *) buf + this_read );
@@ -1416,7 +1416,7 @@ SegMap::Read( int fd, ssize_t pos )
 #else
 		nbytes =  syscall( SYS_read, fd, (void *)ptr, read_size );
 #endif
-		if( nbytes < 0 ) {
+		if( nbytes <= 0 ) {
 			dprintf(D_ALWAYS, "in Segmap::Read(): fd = %d, read_size=%d\n", fd,
 				read_size);
 			dprintf(D_ALWAYS, "core_loc=%x, nbytes=%d\n",
