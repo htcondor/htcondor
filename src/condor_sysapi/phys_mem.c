@@ -33,6 +33,7 @@ sysapi_phys_memory_raw()
 	struct pst_static s;
 	unsigned long pages, pagesz;
 						   
+	sysapi_internal_reconfig();
 	if (pstat_getstatic(&s, sizeof(s), (size_t)1, 0) != -1) {
 		pages = s.physical_memory;
 		pagesz = s.page_size >> 10;
@@ -53,6 +54,8 @@ sysapi_phys_memory_raw()
 {
 	struct rminfo rmstruct;
 	long pages, pagesz;
+
+	sysapi_internal_reconfig();
 	pagesz = (sysconf(_SC_PAGESIZE) >> 10);		// We want kbytes.
 	
 	if( (sysmp(MP_SAGET,MPSA_RMINFO,&rmstruct,sizeof(rmstruct)) < 0) ||
@@ -82,6 +85,7 @@ sysapi_phys_memory_raw()
 {
 	long pages, pagesz, hack;
 
+	sysapi_internal_reconfig();
 	pages = sysconf(_SC_PHYS_PAGES);
 	pagesz = (sysconf(_SC_PAGESIZE) >> 10);		// We want kbytes.
 
@@ -123,6 +127,7 @@ sysapi_phys_memory_raw()
 	char	tmp_c[20];
 	char	c;
 
+	sysapi_internal_reconfig();
 	proc=fopen("/proc/meminfo","r");
 	if(!proc) {
 		return -1;
@@ -156,6 +161,7 @@ int
 sysapi_phys_memory_raw()
 {
 	MEMORYSTATUS status;
+	sysapi_internal_reconfig();
 	GlobalMemoryStatus(&status);
 	return (int)( ceil(status.dwTotalPhys/(1024*1024)+.4 ) );
 }
@@ -176,6 +182,7 @@ int
 sysapi_phys_memory_raw()
 {
 	struct tbl_pmemstats s;
+	sysapi_internal_reconfig();
 	if (table(TBL_PMEMSTATS,0,(void *)&s,1,sizeof(s)) < 0) {
 		return -1;
 	}
@@ -186,6 +193,7 @@ sysapi_phys_memory_raw()
 int
 sysapi_phys_memory_raw()
 {
+	sysapi_internal_reconfig();
 	return -1;
 }
 #endif
@@ -198,8 +206,9 @@ sysapi_phys_memory_raw()
 int
 sysapi_phys_memory()
 {
+	sysapi_internal_reconfig();
 	/* right now, it is an idenity mapping from the raw version */
-	sysapi_phys_memory_raw();
+	return sysapi_phys_memory_raw();
 }
 
 
