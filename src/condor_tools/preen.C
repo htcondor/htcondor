@@ -33,8 +33,9 @@
 * and/or mail appropriate authorities about it.
 *********************************************************************/
 
-
-/* #pragma implementation "list.h" */
+#if defined(IRIX53)
+#pragma implementation "list.h" 
+#endif
 
 #define _POSIX_SOURCE
 
