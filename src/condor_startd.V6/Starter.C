@@ -87,6 +87,10 @@ Starter::reallykill( int signo, int pg )
 		sig = SIGHUP;
 		sprintf( signame, "SIGHUP" );
 		break;
+	case DC_SIGKILL:
+		sig = SIGKILL;
+		sprintf( signame, "SIGKILL" );
+		break;
 	default:
 		EXCEPT( "Unknown signal (%d) in Starter::kill", signo );
 	}
