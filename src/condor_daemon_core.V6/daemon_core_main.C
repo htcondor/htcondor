@@ -1014,8 +1014,16 @@ int main( int argc, char** argv )
 								  "handle_config()", 0, ADMINISTRATOR );
 
 
-	// call daemon-core ReInit
+	// call daemon-core ReInit, and register a periodic timer to call
+	// it every 8 hours.  This just clears the cached DNS info.  The
+	// reason we don't just register it as a periodic timer with 0 for
+	// the initial value is b/c we need to make sure these data
+	// structures are setup now, and we can't be sure of the order of
+	// timers, etc, if we just leave it to chance.  -Derek 1/19/99
 	daemonCore->ReInit();
+	daemonCore->Register_Timer( 8*60*60, 8*60*60, 
+								(Eventcpp)DaemonCore::ReInit,
+								"DaemonCore::ReInit", daemonCore );
 
 	// call the daemons main_init()
 	main_init( argc, argv );
