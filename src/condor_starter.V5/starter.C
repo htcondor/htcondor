@@ -43,7 +43,6 @@ typedef List<UserProc> listuserproc;
 #endif 
 
 extern "C" {
-int free_fs_blocks(const char *);
 void display_startup_info( const STARTUP_INFO *s, int flags );
 }
 
@@ -1127,7 +1126,7 @@ exception_cleanup()
 int
 calc_free_disk_blocks()
 {
-	return free_fs_blocks( "." );
+	return sysapi_disk_space( "." );
 }
 
 int	AvoidNFS = 0;
