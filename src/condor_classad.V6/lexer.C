@@ -23,6 +23,7 @@
 
 // Includes 
 #include "condor_common.h"
+#include "condor_debug.h"
 #include "common.h"
 #include "escapes.h"
 #include "lexer.h"
