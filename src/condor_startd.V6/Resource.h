@@ -88,6 +88,7 @@ public:
 		// came in while we were in an unexpected state, or while
 		// we're shutting down.
 	void	log_ignore( int cmd, State s );
+	void	log_ignore( int cmd, State s, Activity a );
 	void	log_shutdown_ignore( int cmd );
 
 		// Called from the reaper to handle things for this rip
