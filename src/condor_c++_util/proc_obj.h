@@ -38,6 +38,7 @@ public:
 	virtual char	*get_owner() = 0;
 	virtual char	*get_arch() = 0;
 	virtual char	*get_opsys() = 0;
+	virtual char	*get_requirements() = 0;
 	virtual int		get_cluster_id() = 0;
 	virtual int		get_proc_id() = 0;
 	virtual float	get_local_cpu() = 0;
@@ -63,6 +64,7 @@ public:
 	char	*get_owner();
 	char	*get_arch();
 	char	*get_opsys();
+	char	*get_requirements();
 	int		get_cluster_id();
 	int		get_proc_id();
 	float	get_local_cpu();
@@ -89,6 +91,7 @@ public:
 	char	*get_owner();
 	char	*get_arch();
 	char	*get_opsys();
+	char	*get_requirements();
 	int		get_cluster_id();
 	int		get_proc_id();
 	float	get_local_cpu();

@@ -94,7 +94,10 @@ ProcObj::create( XDR * xdrs )
 {
 	GENERIC_PROC	proc;
 	const V2_PROC	*v2 = (V2_PROC *)&proc;
+	V2_ProcObj      *newV2;
 	const V3_PROC	*v3 = (V3_PROC *)&proc;
+	V3_ProcObj      *newV3;
+	int             i;
 
 	xdrs->x_op = XDR_DECODE;
 	memset( &proc, 0, sizeof(proc) );
@@ -110,9 +113,49 @@ ProcObj::create( XDR * xdrs )
 
 	switch( v2->version_num ) {
 	  case 2:
-		return new V2_ProcObj( v2 );
+		newV2 = new V2_ProcObj( v2 );
+		xdr_free_proc(xdrs, v2);
+		/*
+	    free(v2->owner);
+	    free(v2->cmd);
+	    free(v2->args);
+	    free(v2->env);
+	    free(v2->in);
+	    free(v2->out);
+	    free(v2->err);
+	    free(v2->rootdir);
+	    free(v2->iwd);
+		free(v2->requirements);
+		free(v2->preferences);
+		*/
+		return newV2;
 	  case 3:
-		return new V3_ProcObj( v3 );
+		newV3 = new V3_ProcObj( v3 );
+		xdr_free_proc(xdrs, v3);
+		/*
+		free(v3->owner);
+		free(v3->env);
+		for(i = 0; i < v3->n_cmds; i++)
+		{
+			free(v3->cmd[i]);
+			free(v3->args[i]);
+			free(v3->in[i]);
+			free(v3->out[i]);
+			free(v3->err[i]);
+		}
+		free(v3->cmd);
+		free(v3->args);
+		free(v3->in);
+		free(v3->out);
+		free(v3->err);
+		free(v3->remote_usage);
+		free(v3->exit_status);
+		free(v3->rootdir);
+		free(v3->iwd);
+		free(v3->requirements);
+		free(v3->preferences);
+		*/
+		return newV3;
 	  default:
 		EXCEPT( "Unknown proc type" );
 	}
@@ -168,33 +211,27 @@ V3_ProcObj::~V3_ProcObj()
 {
 	int		i;
 
-	delete [] p->owner;
-	delete [] p->env;
-	delete [] p->rootdir;
-	delete [] p->iwd;
-	delete [] p->requirements;
-	delete [] p->preferences;
-
-
-		// per command items
-	for( i=0; i<p->n_cmds; i++ ) {
-		delete [] p->cmd[i];
-		delete [] p->args[i];
-		delete [] p->in[i];
-		delete [] p->out[i];
-		delete [] p->err[i];
+	free(p->owner);
+	free(p->env);
+	for(i = 0; i < p->n_cmds; i++)
+	{
+		free(p->cmd[i]);
+		free(p->args[i]);
+		free(p->in[i]);
+		free(p->out[i]);
+		free(p->err[i]);
 	}
-	delete [] p->cmd;
-	delete [] p->args;
-	delete [] p->in;
-	delete [] p->out;
-	delete [] p->err;
-	delete [] p->remote_usage;
-	delete [] p->exit_status;
-
-		// per pipe items
-	// deal with pipes later...
-	// delete [] p->pipe;
+	free(p->cmd);
+	free(p->args);
+	free(p->in);
+	free(p->out);
+	free(p->err);
+	free(p->remote_usage);
+	free(p->exit_status);
+	free(p->rootdir);
+	free(p->iwd);
+	free(p->requirements);
+	free(p->preferences);
 
 	delete p;
 
@@ -782,6 +819,18 @@ char *
 V3_ProcObj::get_owner()
 {
 	return p->owner;
+}
+
+char *
+V2_ProcObj::get_requirements()
+{
+    return p->requirements;
+}
+
+char*
+V3_ProcObj::get_requirements()
+{
+    return p->requirements;
 }
 
 /*
