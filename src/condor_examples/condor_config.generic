@@ -157,6 +157,15 @@ MAX_JOBS_RUNNING	= 200
 ##  manual for details on this.
 LOCK		= $(LOCAL_DIR)/log
 
+##  If you don't use a fully qualified name in your /etc/hosts file
+##  (or NIS, etc.) for either your official hostname or as an alias,
+##  Condor wouldn't normally be able to use fully qualified names in
+##  places that it'd like to.  You can set this parameter to the
+##  domain you'd like appended to your hostname, if changing your host
+##  information isn't a good option.  This parameter must be set in
+##  the global config file (not the LOCAL_CONFIG_FILE from above). 
+#DEFAULT_DOMAIN_NAME = your.domain.name
+
 
 ##--------------------------------------------------------------------
 ##  Settings that control the daemon's debuging output:
@@ -478,6 +487,12 @@ JOB_START_DELAY		= 2
 ##  startds it has claimed?  (5 minutes)
 ALIVE_INTERVAL		= 300
 
+##  This setting controls the maximum number of times that a
+##  condor_shadow processes can have a fatal error (exception) before
+##  the condor_schedd will simply relinquish the match associated with
+##  the dying shadow.
+MAX_SHADOW_EXCEPTIONS = 5
+
 ##  Estimated virtual memory size of each condor_shadow process. 
 ##  Specified in kilobytes.
 SHADOW_SIZE_ESTIMATE	= 1800
@@ -501,6 +516,17 @@ ALLOW_REMOTE_SUBMIT	= False
 ##  What users do you want to grant super user access to this job
 ##  queue?  (These users will be able to remove other user's jobs). 
 QUEUE_SUPER_USERS	= root, condor
+
+
+##--------------------------------------------------------------------
+##  condor_shadow
+##--------------------------------------------------------------------
+##  If the shadow is unable to read a checkpoint file from the
+##  checkpoint server, it keeps trying only if the job has accumulated
+##  more than MAX_DISCARDED_RUN_TIME seconds of CPU usage.  Otherwise,
+##  the job is started from scratch.  Defaults to 1 hour.  This
+##  setting is only used if USE_CKPT_SERVER (from above) is True.
+MAX_DISCARDED_RUN_TIME = 3600 
 
 
 ##--------------------------------------------------------------------
