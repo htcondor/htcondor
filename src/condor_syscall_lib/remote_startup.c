@@ -783,3 +783,34 @@ debug_msg( const char *msg )
 	}
 }
 #endif
+
+sigset_t
+block_condor_signals()
+{
+	int sigscm;
+	sigset_t mask, omask;
+
+		/* Block signals requesting an exit or checkpoint for duration of
+		   system call. */
+	sigscm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+	sigemptyset( &mask );
+	sigaddset( &mask, SIGTSTP );
+	sigaddset( &mask, SIGUSR1 );
+	if( sigprocmask(SIG_BLOCK,&mask,&omask) < 0 ) {
+		EXCEPT( "sigprocmask" );
+	}
+	SetSyscalls( sigscm );
+	return omask;
+}
+
+void restore_condor_sigmask(sigset_t omask)
+{
+	int sigscm;
+
+	sigscm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+		/* Restore previous signal mask - generally unblocks TSTP and USR1 */
+	if( sigprocmask(SIG_SETMASK,&omask,0) < 0 ) {
+		EXCEPT( "sigprocmask" );
+	}
+	SetSyscalls( sigscm );
+}	
