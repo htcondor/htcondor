@@ -9,6 +9,24 @@ The details of each version are described below.
 \subsection{\label{sec:New-6-5-3}Version 6.5.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\noindent Known Bugs:
+\begin{itemize}
+
+\item There is a serious bug with periodic checkpointing that was
+  introduced in version 6.5.2.
+  This bug only effects jobs submitted to the Standard universe, since
+  those are the only jobs that can perform periodic checkpoints in
+  Condor. 
+  As soon as the \Macro{PERIODIC\_CHECKPOINT} expression evaluates to
+  TRUE on a machine, the \Condor{startd} will get in a loop where it
+  continues to request a periodic checkpoint every 5 seconds until the
+  job is evicted from the machine.
+  The work-around for this bug in version 6.5.2 is to set
+  \verb@PERIODIC_CHECKPOINT = False@ in your \File{condor\_config}
+  file.
+
+\end{itemize}
+
 \noindent New Features:
 \begin{itemize}
 
@@ -152,13 +170,6 @@ by globus-url-copy on the remote site.)
 
 \item The files specified in \Opt{transfer\_input\_files} can now
   contain spaces in the filenames.
-
-\end{itemize}
-
-\noindent Known Bugs:
-\begin{itemize}
-
-\item None.
 
 \end{itemize}
 
