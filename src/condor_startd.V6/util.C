@@ -97,8 +97,22 @@ cleanup_execute_dir(int pid)
 	} else {
 		sprintf( buf, "%.256s", exec_path );
 	}
-	Directory dir( buf );
+	
+		// Evil kludge.  Since the Directory object currently calls
+		// EXCEPT() if you instantiate it with a path that doesn't
+		// exist, we need to call stat() here, first, to make sure
+		// there's a directory to clean up.
+	struct stat statbuf;
+	errno = 0;
+	if( stat(buf, &statbuf) < 0 ) {
+		if( errno == ENOENT ) {
+				// directory is gone, our work is done.
+			return;
+		}
+	}
+
 	priv_state old_priv = set_root_priv();
+	Directory dir( buf );
 	if( ! dir.Remove_Entire_Directory() ) {
 		dprintf( D_ALWAYS, "Error deleting contents of \"%s\"\n", 
 				 buf );
