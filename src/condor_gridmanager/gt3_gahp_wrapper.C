@@ -52,7 +52,6 @@ main( int argc, char* argv[] ) {
     exit (1);
   }
 
-  char * gt3gahplog = param ("GT3_GAHP_LOG");
 
   // Verify GT3_LOCATION
   struct stat stat_buff;
@@ -66,6 +65,10 @@ main( int argc, char* argv[] ) {
 
   const char * jarfiles [] = {
     "axis.jar",
+    "casClients.jar",
+    "cas.jar",
+    "casServer.jar",
+    "casTests.jar",
     "cog-axis.jar",
     "cog-jglobus.jar",
     "cog-tomcat.jar",
@@ -84,10 +87,10 @@ main( int argc, char* argv[] ) {
     "gt3-gahp.jar",
     "jaxrpc.jar",
     "jboss-j2ee.jar",
-    "jce-jdk13-117.jar",
-    "jdom.jar",
+    "jce-jdk13-120.jar",
     "jgss.jar",
-    "log4j-core.jar",
+    "jug-1.0.1.jar",
+    "log4j-1.2.8.jar",
     "mds-aggregator.jar",
     "mds-db.jar",
     "mds-index.jar",
@@ -99,6 +102,7 @@ main( int argc, char* argv[] ) {
     "ogsa_messaging_jms.jar",
     "ogsa-samples.jar",
     "openjms-0.7.5.jar",
+    "opensaml.jar",
     "pg73jdbc2.jar",
     "puretls.jar",
     "saaj.jar",
@@ -108,7 +112,7 @@ main( int argc, char* argv[] ) {
     "wsif.jar",
     "xalan.jar",
     "xercesImpl.jar",
-    "xindice-1.1b.jar",
+    "xindice-1.1b3.jar",
     "xindice-servicegroup.jar",
     "xindice-servicegroup-stub.jar",
     "xml-apis-1.1.jar",
@@ -150,7 +154,14 @@ main( int argc, char* argv[] ) {
 
   putenv( strdup( classpath.Value() ) );
 
-  char * params [] = { java, "condor.gahp.Gahp", gt3gahplog, (char*)0 };
+  MyString webroot="-Dorg.globus.ogsa.server.webroot=";
+  webroot += gt3location;
+  char * _webroot = strdup(webroot.Value());
+
+  char * const params [] = { java, 
+			     _webroot,
+		       "condor.gahp.Gahp", 
+		       (char*)0 };
 
   // Changed to the gt3 directory
   // This is cruicial believe it or not !!!!
@@ -163,9 +174,8 @@ main( int argc, char* argv[] ) {
   int rc = execv ( java, params );  
 
   free (java);
+  free (_webroot);
   free (gt3location);
-  if (gt3gahplog != NULL)
-    free (gt3gahplog);
 
   return rc;
 
