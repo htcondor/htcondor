@@ -24,9 +24,12 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_config.h"
+#include "starter.h"
 
 #include "java_proc.h"
 #include "java_config.h"
+
+extern CStarter * Starter;
 
 JavaProc::JavaProc( ClassAd * jobAd, const char *xdir ) : VanillaProc(jobAd)
 {
@@ -81,7 +84,7 @@ int JavaProc::StartJob()
 			   DIR_DELIM_CHAR,
 			   base_name);
 
-		  if (stat (local_name, &stat_buff) == 0) {
+		  if ((Starter->jic->iwdIsChanged()) && (stat (local_name, &stat_buff) == 0)) {
 		    // Jar file exists locally, use local name
 		    jarfiles_final_list.append (local_name);
 
