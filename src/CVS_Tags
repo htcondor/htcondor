@@ -1,3 +1,8 @@
+05/25/04 V6_7-infn_batch-branch
+   A new branch off V6_7-branch for collaborative work with INFN to
+   add support for submitting jobs to a local batch system. Created
+   from V6_7-infn_batch-root.
+
 05/25/04 V6_7-gcb-branch
    A new branch off V6_7 for adding support for GCB (Generic
    Connection Broker) which will enable Condor to play nicely with
