@@ -220,7 +220,7 @@ char	config_file[MAXPATHLEN] = "";
 
 usage()
 {
-	dprintf( D_ALWAYS, "Usage: shadow host cluster proc\n" );
+	dprintf( D_ALWAYS, "Usage: shadow schedd_addr host capability cluster proc\n" );
 	dprintf( D_ALWAYS, "or\n" );
 	dprintf( D_ALWAYS, "Usage: shadow -pipe cluster proc\n" );
 	exit( 1 );
@@ -239,6 +239,8 @@ usage()
 #if defined(SYSCALL_DEBUG)
 	char	*SyscallLabel;
 #endif
+
+char*		schedd;
 
 /*ARGSUSED*/
 main(argc,argv,envp)
@@ -339,7 +341,7 @@ char *envp[];
     {
         dprintf(D_FULLDEBUG, "argv[%d] = %s\n", i, argv[i]);
     }
-	if( argc != 5 ) {
+	if( argc != 6 ) {
 		usage();
 	}
 
@@ -349,10 +351,11 @@ char *envp[];
 		proc = argv[4];
 		pipe_setup( cluster, proc, capability );
 	} else {
-		host = argv[1];
-		capability = argv[2];
-		cluster = argv[3];
-		proc = argv[4];
+		schedd = argv[1];
+		host = argv[2];
+		capability = argv[3];
+		cluster = argv[4];
+		proc = argv[5];
 		regular_setup( host, cluster, proc, capability );
 	}
 
@@ -434,7 +437,7 @@ char *envp[];
 	Wrapup();
 
 #ifndef DBM_QUEUE
-	ConnectQ(NULL);
+	ConnectQ(schedd);
 	SetAttributeInt(Proc->id.cluster, Proc->id.proc, "CurrentHosts", 0);
 	DisconnectQ(NULL);
 #endif
@@ -790,7 +793,7 @@ char *buf;
 	*/
 
 #ifndef DBM_QUEUE
-	ConnectQ (NULL);
+	ConnectQ (schedd);
 	if (-1 == GetAttributeString (Proc->id.cluster,Proc->id.proc,"NotifyUser",
                               notifyUser))
 	{
@@ -926,7 +929,7 @@ struct rusage *localp, *remotep;
 	}
 	status = proc->status;
 #else
-	ConnectQ(NULL);
+	ConnectQ(schedd);
 	GetAttributeInt(Proc->id.cluster, Proc->id.proc, "Status", &status);
 #endif
 	if( status == REMOVED ) {
@@ -1289,7 +1292,7 @@ char	*proc_id;
 	cluster_num = atoi( cluster_id );
 	proc_num = atoi( proc_id );
 
-	ConnectQ(NULL);
+	ConnectQ(schedd);
 	if (GetProc(cluster_num, proc_num, Proc) < 0) {
 		EXCEPT("GetProc(%d.%d)", cluster_num, proc_num);
 	}
@@ -1350,7 +1353,7 @@ DoCleanup()
 		fetch_rval = FetchProc(QueueD,Proc);
 		status = Proc->status;
 #else
-		ConnectQ(NULL);
+		ConnectQ(schedd);
 		fetch_rval = GetAttributeInt(Proc->id.cluster, Proc->id.proc, 
 									 "Status", &status);
 #endif
