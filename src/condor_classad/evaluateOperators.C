@@ -57,6 +57,10 @@ _EvalTree( AttrList *myScope, AttrList *targetScope, EvalResult *result )
 	if( op == SUBTRACTION_OP && lArg == NULL ) {
 		operate( UNARY_MINUS_OP, rValue, resultValue );
 	} else
+	// convert overloaded addition operator to parenthesis operator
+	if( op == ADDITION_OP && lArg == NULL ) {
+		resultValue = rValue;
+	} else
 	if( op == TERNARY_OP ) {
 		// operator was assignment operator
 		resultValue = rValue;

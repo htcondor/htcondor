@@ -631,233 +631,54 @@ void Error::PrintToStr(char* str)
 
 void AddOp::PrintToStr(char* str)
 {
-    if(lArg)
-    {
-  		switch(lArg->MyType())
-		{
-			case LX_ADD:
-            case LX_SUB:
-            case LX_MULT:
-            case LX_DIV : 
-			case LX_VARIABLE:
-			case LX_BOOL:
-			case LX_INTEGER:
-			case LX_FLOAT:
-			case LX_UNDEFINED:
-			case LX_ERROR:
-			case LX_STRING:
-				((ExprTree*)lArg)->PrintToStr(str);
-				break;
+	if( !lArg ) {
+		// HACK!!  No lArg implies user-directed parenthesization
+		strcat( str, "(" );
+		((ExprTree*)rArg)->PrintToStr( str );
+		strcat( str, ")" );
+		return;
+	}
 
-			default:
-				strcat(str, "(");
-				((ExprTree*)lArg)->PrintToStr(str);
-				strcat(str, ")");
-    	}
-    }
+	// lArg available --- regular addition operation
+	((ExprTree*)lArg)->PrintToStr(str);
     strcat(str, " + ");
-    if(rArg)
-    {
-  		switch(rArg->MyType())
-		{
-			case LX_ADD:
-			case LX_SUB:
-			case LX_MULT:
-			case LX_DIV : 
-			case LX_VARIABLE:
-			case LX_BOOL:
-			case LX_INTEGER:
-			case LX_FLOAT:
-			case LX_UNDEFINED:
-			case LX_ERROR:
-			case LX_STRING:
-				((ExprTree*)rArg)->PrintToStr(str);
-				break;
-
-			default:
-				strcat(str, "(");
-				((ExprTree*)rArg)->PrintToStr(str);
-				strcat(str, ")");
-    	}
-    }
+	((ExprTree*)rArg)->PrintToStr(str);
     if(unit == 'k') strcat(str, " k");
 }
 
 void SubOp::PrintToStr(char* str)
 {
-    if(lArg)
-    {
-  		switch(lArg->MyType())
-		{
-			case LX_ADD:
-			case LX_SUB:
-			case LX_MULT:
-			case LX_DIV : 
-			case LX_VARIABLE:
-			case LX_BOOL:
-			case LX_INTEGER:
-			case LX_FLOAT:
-			case LX_UNDEFINED:
-			case LX_ERROR:
-			case LX_STRING:
-				((ExprTree*)lArg)->PrintToStr(str);
-				break;
-
-			default:
-				strcat(str, "(");
-				((ExprTree*)lArg)->PrintToStr(str);
-				strcat(str, ")");
-    	}
+    if(lArg) {
+		((ExprTree*)lArg)->PrintToStr(str);
     }
     strcat(str, " - ");
-    if(rArg)
-    {
-		int rt = rArg->MyType();
-
-		// ugly hack:  in case of unary minus, we should force parenthesization
-		// if the expression is anything but a constant or a variable.
-		if (!lArg) 
-		{
-			switch (rt)
-			{
-				case LX_VARIABLE:
-				case LX_INTEGER:
-				case LX_FLOAT:
-				case LX_STRING:
-				case LX_UNDEFINED:
-				case LX_ERROR:
-				case LX_BOOL:
-					rt = LX_ADD;	// force no parenthesization
-					break;
-
-				default:
-					rt = LX_AND;	// force parenthesization
-					break;
-			}
-		}
-
-  		switch(rt)
-		{
-			case LX_ADD:
-			case LX_SUB:
-			case LX_MULT:
-			case LX_DIV : 
-			case LX_VARIABLE:
-			case LX_BOOL:
-			case LX_INTEGER:
-			case LX_FLOAT:
-			case LX_UNDEFINED:
-			case LX_ERROR:
-			case LX_STRING:
-				((ExprTree*)rArg)->PrintToStr(str);
-				break;
-
-			default:
-				strcat(str, "(");
-				((ExprTree*)rArg)->PrintToStr(str);
-				strcat(str, ")");
-    	}
-    }
+    if(rArg) {
+		((ExprTree*)rArg)->PrintToStr(str);
+	}
     if(unit == 'k') strcat(str, " k"); 
 }
 
 
 void MultOp::PrintToStr(char* str)
 {
-    if(lArg)
-    {
-  		switch(lArg->MyType())
-		{
-			case LX_MULT:
-			case LX_DIV : 
-			case LX_VARIABLE:
-			case LX_BOOL:
-			case LX_INTEGER:
-			case LX_FLOAT:
-			case LX_UNDEFINED:
-			case LX_ERROR:
-			case LX_STRING:
-				((ExprTree*)lArg)->PrintToStr(str);
-				break;
-
-			default:
-				strcat(str, "(");
-				((ExprTree*)lArg)->PrintToStr(str);
-				strcat(str, ")");
-    	}
+    if(lArg) {
+		((ExprTree*)lArg)->PrintToStr(str);
     }
     strcat(str, " * ");
-    if(rArg)
-    {
-  		switch(rArg->MyType())
-		{
-			case LX_MULT:
-			case LX_DIV : 
-			case LX_VARIABLE:
-			case LX_BOOL:
-			case LX_INTEGER:
-			case LX_FLOAT:
-			case LX_UNDEFINED:
-			case LX_ERROR:
-			case LX_STRING:
-				((ExprTree*)rArg)->PrintToStr(str);
-				break;
-
-			default:
-				strcat(str, "(");
-				((ExprTree*)rArg)->PrintToStr(str);
-				strcat(str, ")");
-    	}
+    if(rArg) {
+		((ExprTree*)rArg)->PrintToStr(str);
     }
     if(unit == 'k') strcat(str, " k");
 }
 
 void DivOp::PrintToStr(char* str)
 {
-    if(lArg)
-    {
-  		switch(lArg->MyType())
-		{
-			case LX_MULT:
-			case LX_DIV : 
-			case LX_VARIABLE:
-			case LX_BOOL:
-			case LX_INTEGER:
-			case LX_FLOAT:
-			case LX_UNDEFINED:
-			case LX_ERROR:
-			case LX_STRING:
-				((ExprTree*)lArg)->PrintToStr(str);
-				break;
-
-			default:
-				strcat(str, "(");
-				((ExprTree*)lArg)->PrintToStr(str);
-				strcat(str, ")");
-    	}
+    if(lArg) {
+		((ExprTree*)lArg)->PrintToStr(str);
     }
     strcat(str, " / ");
-    if(rArg)
-    {
-  		switch(rArg->MyType())
-		{
-			case LX_MULT:
-			case LX_DIV : 
-			case LX_VARIABLE:
-			case LX_BOOL:
-			case LX_INTEGER:
-			case LX_FLOAT:
-			case LX_UNDEFINED:
-			case LX_STRING:
-			case LX_ERROR:
-				((ExprTree*)rArg)->PrintToStr(str);
-				break;
-
-			default:
-				strcat(str, "(");
-				((ExprTree*)rArg)->PrintToStr(str);
-				strcat(str, ")");
-    	}
+    if(rArg) {
+		((ExprTree*)rArg)->PrintToStr(str);
     }
     if(unit == 'k') strcat(str, " k");
 }
@@ -904,28 +725,12 @@ void LeOp::PrintToStr(char* str)
 
 void AndOp::PrintToStr(char* str)
 {
-	LexemeType	tt;
-
     if(lArg) {
-		tt = lArg->MyType();
-		if( tt == LX_OR ) {
-			strcat(str, "(");
-			((ExprTree*)lArg)->PrintToStr(str);
-			strcat(str, ")");
-		} else {
-			((ExprTree*)lArg)->PrintToStr(str);
-		}
+		((ExprTree*)lArg)->PrintToStr(str);
 	}
     strcat(str, " && ");
     if(rArg) {
-		tt = rArg->MyType();
-		if( tt == LX_OR ) {
-			strcat(str, "(");
-			((ExprTree*)rArg)->PrintToStr(str);
-			strcat(str, ")");
-		} else {
-			((ExprTree*)rArg)->PrintToStr(str);
-		}
+		((ExprTree*)rArg)->PrintToStr(str);
 	}
 }
 
@@ -948,30 +753,11 @@ void AssignOp::PrintToStr(char* str)
 static void 
 printComparisonOpToStr (char *str, ExprTree *lArg, ExprTree *rArg, char *op)
 {
-	bool 	inequality = (op[1] == '<' || op[1] == '>'); // maybe followed by =
-	LexemeType	tt;
-
     if(lArg) {
-		tt = lArg->MyType();
-		if( ( inequality && ( tt == LX_EQ || tt == LX_META_EQ || tt == LX_NEQ 
-				|| tt == LX_META_NEQ ) ) || tt == LX_OR || tt == LX_AND ) {
-			strcat(str, "(");
-		  	((ExprTree*)lArg)->PrintToStr(str);
-		  	strcat(str, ")");
-		} else {
-			((ExprTree*)lArg)->PrintToStr(str);
-   		}
+		((ExprTree*)lArg)->PrintToStr(str);
     }
     strcat(str, op);
     if(rArg) {
-		tt = rArg->MyType();
-		if( ( inequality && ( tt == LX_EQ || tt == LX_META_EQ || tt == LX_NEQ 
-				|| tt == LX_META_NEQ ) ) || tt == LX_OR || tt == LX_AND ) {
-			strcat(str, "(");
-		  	((ExprTree*)rArg)->PrintToStr(str);
-		  	strcat(str, ")");
-		} else {
-			((ExprTree*)rArg)->PrintToStr(str);
-   		}
+		((ExprTree*)rArg)->PrintToStr(str);
     }
 }

@@ -578,10 +578,14 @@ void ErrorBase::Display()
 
 void AddOpBase::Display()
 {
-    if(lArg)
-    {
+	if( !lArg ) {
+		dprintf( D_NOHEADER | D_ALWAYS, "(" );
+		rArg->Display( );
+		dprintf( D_NOHEADER | D_ALWAYS, ")" );
+	}
+		
 	lArg->Display();
-    }
+
     dprintf(D_NOHEADER | D_ALWAYS, " + ");
     if(rArg)
     {

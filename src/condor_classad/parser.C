@@ -169,15 +169,15 @@ int ParseFactor(char*& s, ExprTree*& newTree, int& count)
         case LX_LPAREN :
 
             Match(LX_LPAREN, s, count);
-            if(ParseExpr(s, newTree, count))
-			{
-                if(!Match(LX_RPAREN, s, count))
-				{
+            if(ParseExpr(s, newTree, count)) {
+                if(!Match(LX_RPAREN, s, count)) {
 					return FALSE;
+				} else {
+					// parsed parenthesised expr correctly
+					ExprTree *ptree = newTree;
+					newTree = new AddOp( NULL, ptree );
 				}
-			}
-			else
-			{
+			} else {
 				return FALSE;
 			}
 			return TRUE;
