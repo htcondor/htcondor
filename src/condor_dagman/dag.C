@@ -40,10 +40,12 @@
 
 //---------------------------------------------------------------------------
 Dag::Dag( const char* condorLogName, const int maxJobsSubmitted,
-	  const int maxPreScripts, const int maxPostScripts,
-	  const char* dapLogName = NULL) :
+		  const int maxPreScripts, const int maxPostScripts,
+		  const char* dapLogName ) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
+    _condorLogName        (NULL),
+    _dapLogName           (NULL),
     _condorLogInitialized (false),
     _condorLogSize        (0),
     _numJobsDone          (0),
@@ -54,7 +56,11 @@ Dag::Dag( const char* condorLogName, const int maxJobsSubmitted,
     _dapLogSize           (0)                  //<--DAP
 {
     _condorLogName = strnewp (condorLogName);
-    _dapLogName = strnewp (dapLogName);        //<--DAP
+	ASSERT( _condorLogName );
+	if( dapLogName ) {
+		_dapLogName = strnewp( dapLogName );
+		ASSERT( _dapLogName );
+	}
 
  	_readyQ = new SimpleList<Job*>;
 	_preScriptQ = new ScriptQ( this );
