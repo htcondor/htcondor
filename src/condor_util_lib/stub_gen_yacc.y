@@ -72,10 +72,11 @@ int has_out_params( struct node *action_func_list );
 #	define FALSE 0
 #endif
 
-#define SWITCHES 1
-#define SENDERS 2
-#define RECEIVERS 3
+#define SWITCHES	1
+#define SENDERS		2
+#define RECEIVERS	3
 #define SEND_STUB	4
+#define LISTCALLS	5
 
 int Supported = TRUE;
 int Ignored = FALSE;
@@ -178,6 +179,9 @@ stub_spec
 				break;
 			  case SEND_STUB:
 				output_send_stub( $$ );
+				break;
+			  case LISTCALLS:
+				output_listcalls( $$ );
 				break;
 			}
 		  }
@@ -465,6 +469,8 @@ main( int argc, char *argv[] )
 					Mode = RECEIVERS;
 				} else if( strcmp("send_stub",arg) == 0 ) {
 					Mode = SEND_STUB;
+				} else if( strcmp("listcalls",arg) == 0 ) {
+					Mode = LISTCALLS;
 				} else {
 					usage();
 				}
@@ -710,7 +716,7 @@ output_param_type( struct node *n )
 }
 
 void
-output_param_node( struct node *n )
+output_param_node( struct node *n, int want_id )
 {
 	assert( n->node_type == PARAM );
 
@@ -728,7 +734,8 @@ output_param_node( struct node *n )
 		printf( " const " );
 	}
 
-	printf( "%s", n->id );
+	if ( want_id )
+		printf( "%s", n->id );
 
 	if( n->is_array ) {
 		printf( "[]" );
@@ -763,21 +770,71 @@ display_node( struct node *n )
 }
 
 void
-output_switch_decl( struct node *dum )
+output_switch_generic( struct node *dum, int want_normal )
 {
 	struct node	*p;
+	int num_args = 0;
 
-	printf( "(" );
+	if ( want_normal ) {
+		printf( "(" );
+	} 
+	
 	for( p=dum->next; p != dum; p = p->next ) {
-		printf( " " );
-		output_param_node( p );
-		if( p->next != dum ) {
+		if ( !want_normal ) {
 			printf( "," );
-		} else {
-			printf( " " );
 		}
+		printf( " " );
+		output_param_node( p , want_normal );
+		if ( want_normal ) {
+			if( p->next != dum ) {
+				printf( "," );
+			} else {
+				printf( " " );
+			}
+		}
+		num_args++;
 	}
-	printf( ")\n" );
+
+	if ( !want_normal ) {
+		switch ( num_args ) {
+			case 0:
+				printf( "|ZERO"); break;
+			case 1:
+				printf( "|ONE"); break;
+			case 2:
+				printf( "|TWO"); break;
+			case 3:
+				printf( "|THREE"); break;
+			case 4:
+				printf( "|FOUR"); break;
+			case 5:
+				printf( "|FIVE"); break;
+			case 6:
+				printf( "|SIX"); break;
+			case 7:
+				printf( "|SEVEN"); break;
+			case 8:
+				printf( "|EIGHT"); break;
+			case 9:
+				printf( "|NINE"); break;
+		}; 
+	}
+
+	if ( want_normal ) {
+		printf( ")\n" );
+	}
+}
+
+void
+output_switch_decl( struct node *dum )
+{
+	output_switch_generic( dum, 1 );
+} 
+
+void
+output_switch_listcalls( struct node *dum )
+{
+	output_switch_generic( dum, 0 );
 }
 
 void
@@ -1341,6 +1398,43 @@ output_switch( struct node *n )
 	} else {
 		printf( "#endif\n\n" );
 	}
+}
+
+/*
+ * Output an entry to be consumed by the analyze_syscalls shell script
+ */
+
+output_listcalls( struct node *n )
+{
+	struct node *param_list = n->param_list;
+	struct node *p, *q;
+
+	assert( n->node_type == FUNC );
+
+	/* don't spit out anything for pseudo syscalls */
+	if ( n->pseudo )
+		return;
+
+	/* output func name */
+	printf( "%s|",n->id );
+
+	/* output type: I = ignored, U = unsupported, S = supported */
+	if( !Supported  ) {
+		printf( "U|"  );
+	} else if( Ignored ) {
+		printf( "I|"  );
+	} else {
+		printf( "S|" );
+	}
+
+	/* output return type followed by  prototype args */
+	if( n->is_ptr ) {
+		printf( "%s * ", n->type_name );
+	} else {
+		printf( "%s ", n->type_name );
+	}
+	output_switch_listcalls( n->param_list );
+	printf( "\n" );
 }
 
 /*
