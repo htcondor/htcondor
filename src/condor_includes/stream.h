@@ -129,6 +129,8 @@
 
 #include "condor_common.h"
 
+#define eom end_of_message
+
 #include "proc.h"
 
 /* now include sched.h.  cleanup namespace if user has not
@@ -213,6 +215,7 @@ public:
 	int code(char *&);
 	int code(char *&, int &);
 	int code_bytes(void *, int);
+	int code_bytes_bool(void *, int);
 
 	//	Condor types
 
@@ -314,7 +317,7 @@ public:
 	virtual int get_ptr(void *&, char) { assert(0); return 0; }
 	virtual int peek(char &) { assert(0); return 0; }
 	virtual int end_of_message() { assert(0); return 0; }
-	inline int eom() { return end_of_message(); }
+//	int eom() { return end_of_message(); }
 
 	// peer information operations (virtually defined by each stream)
 	//
