@@ -76,6 +76,11 @@ to use on that machine.
 See section~\ref{sec:Multiple-Interfaces} on
 page~\pageref{sec:Multiple-Interfaces} for more details.
 
+\item The support for multiple network interfaces introduced bugs in
+\Condor{userprio}, \Condor{stats}, CondorPVM, and the \Opt{-pool}
+option to many Condor tools.
+All of these will be fixed in version 6.1.6.
+
 \item Fixed a bug in the remote system call library that was
 preventing certain Fortran operations from working correctly on
 Linux.  
