@@ -9,6 +9,15 @@ typedef struct {
 } SYSCALL_NAME;
 
 SYSCALL_NAME SyscallNameTab[] = {
+	-35, "CONDOR_register_afs_cell",
+	-34, "CONDOR_register_fs_domain",
+	-33, "CONDOR_register_uid_domain",
+	-32, "CONDOR_get_a_out_name",
+	-31, "CONDOR_file_info",
+	-30, "CONDOR_get_ckpt_name",
+	-29, "CONDOR_get_iwd",
+	-28, "CONDOR_std_file_info",
+	-27, "CONDOR_startup_info_request",
 	-26, "CONDOR_put_file_stream",
 	-25, "CONDOR_get_file_stream",
 	-24, "CONDOR_get_file_chunk",

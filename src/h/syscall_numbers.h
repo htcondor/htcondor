@@ -2,6 +2,15 @@
 This file is generated automatically by an awk script - DO NOT EDIT
 ************************************************************/
 
+#define CONDOR_register_afs_cell -35
+#define CONDOR_register_fs_domain -34
+#define CONDOR_register_uid_domain -33
+#define CONDOR_get_a_out_name -32
+#define CONDOR_file_info -31
+#define CONDOR_get_ckpt_name -30
+#define CONDOR_get_iwd -29
+#define CONDOR_std_file_info -28
+#define CONDOR_startup_info_request -27
 #define CONDOR_put_file_stream -26
 #define CONDOR_get_file_stream -25
 #define CONDOR_get_file_chunk -24
