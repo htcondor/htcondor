@@ -22,14 +22,30 @@ COLLECTOR\_CLASS\_HISTORY\_SIZE updates and is also published in the
 Collector's ClassAd as a hex string.
 
 \item The collector and negotiator can now run on configurable
- ports. There are four new configuration parameters you can use:
+ports, instead of relying on hard-coded values.
+To use this feature, many places in Condor where you could previously
+only provide a hostname now understand ``hostname:port'' notation.
+For example, in your config file, you can now use:
 
-  \begin{itemize}
-  \item \Macro{COLLECTOR\_PORT}
-  \item \Macro{NEGOTIATOR\_PORT}
-  \item \Macro{CONDOR\_VIEW\_PORT}
-  \item \Macro{CONDOR\_DEVELOPERS\_COLLECTOR\_PORT}
-  \end{itemize}
+\begin{verbatim}
+  COLLECTOR_HOST = $(CONDOR_HOST):9650
+  NEGOTIATOR_HOST = $(CONDOR_HOST):9651
+  FLOCK_TO = your-other.collector.domain.org:7002
+\end{verbatim}
+
+If you define \Macro{COLLECTOR\_HOST} in this way, all Condor tools
+will automatically use the specified port if you are using them in the
+local pool (so you do not need to use any special options to the tools
+to get them to find your \Condor{collector} listening on the new port).
+
+In addition, the \Opt{-pool} option to all Condor tools now
+understands the ``hostname:port'' notation for remote pools.
+To query a remote pool with a collector listening on a non-standard
+port, you can use this:
+
+\begin{verbatim}
+condor_status -pool your-other.collector.domain.org:7002
+\end{verbatim}
 
 \item When the Condor daemons start up, they now log the names of the
 Configuration files they are using, right after the startup banner.
@@ -47,8 +63,27 @@ Configuration files they are using, right after the startup banner.
 \item You no longer need to define \Macro{FLOCK\_VIEW\_SERVERS} in
   your config file if you have configured a \Condor{schedd} to flock
   to other pools.
-  This is now handled automatically, so you only have to define the
+  This is now handled automatically, so you only have to define
   \Macro{FLOCK\_HOSTS}.
+
+\item On all Unix platforms, the \Condor{master} no longer spawns the
+  \Condor{collector} and \Condor{negotiator} with root privileges,
+  since they were not used by those daemons.
+  This is a security enhancement, since it is better for daemons not
+  to have root powers unless they really need them.
+
+\item The \Condor{schedd} can now use TCP connections to send updates
+  to pools that it is configured to flock to.
+  You can now define \Macro{TCP\_UPDATE\_COLLECTORS} list and any
+  collectors listed there, including ones the \Condor{schedd} is
+  flocking with, will be updated with TCP.
+  Also, the \Condor{master} uses the same list to decide if it should
+  use TCP to update any collectors listed in the
+  \Macro{SECONDARY\_COLLECTORS\_LIST}.
+  For more infomation on TCP collector updates in Condor and if your
+  site would want to enable them, read
+  section~\ref{sec:tcp-collector-update} on ``Using TCP to Send 
+  Collector Updates'' on page~\pageref{sec:tcp-collector-update}.
 
 \end{itemize}
 
