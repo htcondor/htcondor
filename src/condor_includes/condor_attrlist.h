@@ -9,6 +9,7 @@
 #define _ATTRLIST_H
 
 #include <stdio.h>
+#include <rpc/xdr.h>
 
 #include "condor_expressions.h"
 #include "condor_exprtype.h"
@@ -112,6 +113,9 @@ class AttrList : public AttrListAbstract
         int put(Stream& s);
         int get(Stream& s);
         int code(Stream& s);
+
+		int put (XDR *);
+		int get (XDR *);
 
 		friend	class	AttrListRep;			// access "next" 
 		friend	class	AttrListList;			// access "UpdateAgg()"

@@ -58,6 +58,10 @@ class ClassAd : public AttrList
         int get(Stream& s);
         int code(Stream& s);
 
+		// xdr shipping
+		int put (XDR *);
+		int get (XDR *);
+
     private :
 
 		AdType*		myType;						// my type field.

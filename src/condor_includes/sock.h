@@ -62,7 +62,7 @@ public:
 	int assign(int =-1);
 	int bind(int =0);
 	inline int bind(char *s) { return bind(getportbyserv(s)); }
-
+	inline int get_socket (void) { return _sock; }
 
 
 	/*
@@ -88,7 +88,7 @@ protected:
 	**	Methods
 	*/
 
-	Sock() : Stream(), _state(sock_virgin) {}
+	Sock() : Stream(), _state(sock_virgin), _sock(-1) {}
 
 	int getportbyserv(char *);
 	int do_connect(char *, int);
