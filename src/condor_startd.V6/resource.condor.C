@@ -682,6 +682,9 @@ kill_starter(int pid, int signo)
 #if defined(OSF1)
 	static char *UtmpName = "/var/adm/utmp";
 	static char *AltUtmpName = "/etc/utmp";
+#elif defined(LINUX)
+	static char *AltUtmpName = "/var/run/utmp";
+	static char *UtmpName = "/var/adm/utmp";
 #else
 	static char *UtmpName = "/etc/utmp";
 	static char *AltUtmpName = "/var/adm/utmp";
