@@ -1,3 +1,11 @@
+03/09/04 V6_6-post-aix-checkin
+	This is the state of the V6_6-branch after the checkin of the 
+	clipped AIX port.
+
+03/09/04 V6_6-pre-aix-checkin
+	This is the state of the V6_6-branch before the checkin of the 
+	clipped AIX port.
+
 02/19/04 V6_6-merge-5
    The state of the V6_6-branch for another merge into V6_7-branch.
    This is from after the V6_6_1 release, and it also includes a few
