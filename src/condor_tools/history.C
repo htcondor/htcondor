@@ -44,7 +44,7 @@ static bool EvalBool(AttrList *ad, ExprTree *tree);
 
 static void Usage(char* name) 
 {
-  printf("Usage: %s [-l] [-f history-filename] [ cluster_id | cluster_id.proc_id | owner]\n",name);
+  printf("Usage: %s [-l] [-f history-filename] [-constraint expr | cluster_id | cluster_id.proc_id | owner]\n",name);
   exit(1);
 }
 
@@ -72,6 +72,12 @@ main(int argc, char* argv[])
     else if (strcmp(argv[i],"-help")==0) {
 	  Usage(argv[0]);
     }
+    else if (strcmp(argv[i],"-constraint")==0) {
+      if (i+1==argc || constraint) break;
+      sprintf(tmp,"(%s)",argv[i+1]);
+      constraint=tmp;
+      i++;
+    }
     else if (sscanf (argv[i], "%d.%d", &cluster, &proc) == 2) {
       if (constraint) break;
       sprintf (tmp, "((%s == %d) && (%s == %d))", 
@@ -90,6 +96,8 @@ main(int argc, char* argv[])
     }
   }
   if (i<argc) Usage(argv[0]);
+
+if (constraint) puts(constraint);
 
   config( 0 );
   if (!JobHistoryFileName) {
