@@ -40,27 +40,112 @@ my %Config =
 # Valid field list:
 my %TopFields =
     (
-     pid	=> { enabled => 0, type => "n", l => [ "PID", ], },
-     user	=> { enabled => 0, type => "s", l => [ "USER", "USERNAME", ], },
-     priority	=> { enabled => 0, type => "s", l => [ "PRI", ], },
-     thread	=> { enabled => 0, type => "n", l => [ "THR", ], },
-     nice	=> { enabled => 0, type => "n", l => [ "NI", "NICE", ], },
-     size	=> { enabled => 0, type => "n", l => [ "SIZE", ] },
-     rss	=> { enabled => 0, type => "n", l => [ "RSS", "RES" ], },
-     share	=> { enabled => 0, type => "n", l => [ "SHARE", ], },
-     state	=> { enabled => 0, type => "s", l => [ "STAT", "STATE", ], },
-     lib	=> { enabled => 0, type => "n", l => [ "LIB", ], },
-     cpu	=> { enabled => 0, type => "%", l => [ "%CPU", "CPU", ], },
-     mem	=> { enabled => 0, type => "%", l => [ "%MEM", ], },
-     time	=> { enabled => 0, type => "t", l => [ "TIME", ], },
-     command	=> { enabled => 0, type => "s", l => [ "COMMAND", ], },
+     pid =>
+     {
+      enabled => 0,
+      type => HawkeyePublish::TypeNumber,
+      l => [ "PID", ],
+     },
+     user =>
+     {
+      enabled => 0,
+      type => HawkeyePublish::TypeString,
+      l => [ "USER", "USERNAME", ],
+     },
+     priority =>
+     {
+      enabled => 0,
+      type => HawkeyePublish::TypeString,
+      l => [ "PRI", ],
+     },
+     thread =>
+     {
+      enabled => 0,
+      type => HawkeyePublish::TypeNumber,
+      l => [ "THR", ],
+     },
+     nice =>
+     {
+      enabled => 0,
+      type => HawkeyePublish::TypeNumber,
+      l => [ "NI", "NICE", ],
+     },
+     size =>
+     {
+      enabled => 0,
+      type => HawkeyePublish::TypeNumber,
+      l => [ "SIZE", ],
+     },
+     rss =>
+     {
+      enabled => 0,
+      type => HawkeyePublish::TypeNumber,
+      l => [ "RSS", "RES" ],
+     },
+     share =>
+     {
+      enabled => 0,
+      type => HawkeyePublish::TypeNumber,
+      l => [ "SHARE", ],
+     },
+     state =>
+     {
+      enabled => 0,
+      type => HawkeyePublish::TypeString,
+      l => [ "STAT", "STATE", ],
+     },
+     lib =>
+     {
+      enabled => 0,
+      type => HawkeyePublish::TypeNumber,
+      l => [ "LIB", ],
+     },
+     cpu =>
+     {
+      enabled => 0,
+       type => "%",
+       l => [ "%CPU", "CPU", ],
+     },
+     mem =>
+     {
+      enabled => 0,
+      type => "%",
+      l => [ "%MEM", ],
+     },
+     time =>
+     {
+      enabled => 0,
+      type => "t",
+      l => [ "TIME", ],
+     },
+     command =>
+     {
+      enabled => 0,
+      type => HawkeyePublish::TypeString,
+      l => [ "COMMAND", ],
+     },
     );
 my %TopTypes =
     (
-     "s"		=> { pubtype => "s", prefix => "" },
-     "n"		=> { pubtype => "n", prefix => "" },
-     "t"		=> { pubtype => "n", prefix => "" },
-     "%"		=> { pubtype => "n", prefix => "pct_" },
+     HawkeyePublish::TypeString =>
+     {
+      pubtype => HawkeyePublish::TypeString,
+      prefix => ""
+     },
+     HawkeyePublish::TypeNumber =>
+     {
+      pubtype => HawkeyePublish::TypeNumber,
+      prefix => "" },
+     "t" =>
+     {
+      pubtype => HawkeyePublish::TypeNumber,
+      prefix => ""
+     },
+     "%" =>
+     {
+      pubtype => HawkeyePublish::TypeNumber,
+      prefix => "pct_"
+     },
     );
 my %SortOut;
 
@@ -241,7 +326,7 @@ sub Configure( )
     if ( $ConfigStringPeriod =~ /(\d+)([sSmMhH]?)/ )
     {
 	$Config{TopPeriod} = $1;
-	if ( ( $2 eq "s" ) || ( $2 eq "S" ) )
+	if ( ( $2 eq HawkeyePublish::TypeString ) || ( $2 eq HawkeyePublish::TypeString ) )
 	{
 	    # Do nothing
 	}
@@ -288,7 +373,7 @@ sub Configure( )
 	if ( $PubType eq "%" )
 	{
 	    $Pre = "ptc_";
-	    $PubType = "s";
+	    $PubType = HawkeyePublish::TypeString;
 	}
 	$TopFields{$Name}{pubname} = $Pre . $Name;
 	$TopFields{$Name}{pubtype} = $PubType;
@@ -427,7 +512,7 @@ sub RunIt( )
 		# And, add it to our summary
 		foreach my $Attr ( keys %Uptime )
 		{
-		    my $Type = ( $Attr =~ /string/i ) ? "s" : "n";
+		    my $Type = ( $Attr =~ /string/i ) ? HawkeyePublish::TypeString : HawkeyePublish::TypeNumber;
 		    $Summary->Add( $Attr, $Type, $Uptime{$Attr} );
 		}
 	    }
@@ -465,7 +550,7 @@ sub RunIt( )
 		    # And, add it to our summary
 		    foreach my $Attr ( keys %Load )
 		    {
-			my $Type = ( $Attr =~ /string/i ) ? "s" : "n";
+			my $Type = ( $Attr =~ /string/i ) ? HawkeyePublish::TypeString : HawkeyePublish::TypeNumber;
 			$Summary->Add( $Attr, $Type, $Load{$Attr} );
 		    }
 		}
@@ -483,7 +568,7 @@ sub RunIt( )
 		# Openning summary #?
 		if ( $Num ne "" )
 		{
-		    $Summary->Add( $Name, "n", $Num );
+		    $Summary->Add( $Name, HawkeyePublish::TypeNumber, $Num );
 		    $NumProcesses = $Num if ( $Name eq "processes" );
 		}
 
@@ -545,7 +630,7 @@ sub RunIt( )
 
 	    # Unfortunately, the "State" field can be space separated, so
 	    # split screws it up (bad split, bad bad).
-	    # Here, we combine, say, ("N" "R") into "N R"...
+	    # Here, we combine, say, (HawkeyePublish::TypeNumber "R") into "N R"...
 	    # Note: This assumes that the next "valid" field cannot be a
 	    #   single non-digit
 	    my $State = $TopFields{state}{offset};
@@ -745,7 +830,7 @@ sub FixString( $ )
 	$$String = $Value * 1e3 if ( $Modifier =~ /k/i );
 	$$String = $Value * 1e6 if ( $Modifier =~ /m/i );
 	$$String = $Value * 1e9 if ( $Modifier =~ /g/i );
-	return "n";
+	return HawkeyePublish::TypeNumber;
     }
     # Clean up hrs:minutes
     elsif ( $$String =~ /^(\d+):(\d+)$/ )
@@ -757,13 +842,13 @@ sub FixString( $ )
     elsif ( $$String =~ /^(\d+)m$/ )
     {
 	$$String = $1;
-	return "n";
+	return HawkeyePublish::TypeNumber;
     }
     # Clean up nnnnH (ie 12345H = 12345 hours)
     elsif ( $$String =~ /^([\d\.]+)H$/ )
     {
 	$$String = $1 * 60;
-	return "n";
+	return HawkeyePublish::TypeNumber;
     }
     # Percentages (just return the number portion, strip the %)
     elsif ( $$String =~ /^(\d+\.?\d*)\%$/ )
@@ -774,10 +859,10 @@ sub FixString( $ )
     # Just a plain 'ol number?
     elsif ( $$String =~ /^(\d+)$/ )
     {
-	return "n";
+	return HawkeyePublish::TypeNumber;
     }
     else
     {
-	return "s";
+	return HawkeyePublish::TypeString;
     }
 }
