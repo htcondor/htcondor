@@ -49,6 +49,7 @@ CLEAN :
 	-@erase "$(INTDIR)\daemon_core.obj"
 	-@erase "$(INTDIR)\daemon_core_main.obj"
 	-@erase "$(INTDIR)\exphnd.WIN32.obj"
+	-@erase "$(INTDIR)\self_monitor.obj"
 	-@erase "$(INTDIR)\timer_manager.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(INTDIR)\vc60.pdb"
@@ -67,14 +68,15 @@ LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_daemon_core.lib"
 LIB32_OBJS= \
 	"$(INTDIR)\accessdesktop.WIN32.obj" \
 	"$(INTDIR)\condor_ipverify.obj" \
+	"$(INTDIR)\condor_lock.obj" \
+	"$(INTDIR)\condor_lock_base.obj" \
+	"$(INTDIR)\condor_lock_file.obj" \
+	"$(INTDIR)\condor_lock_implementation.obj" \
 	"$(INTDIR)\daemon_core.obj" \
 	"$(INTDIR)\daemon_core_main.obj" \
 	"$(INTDIR)\exphnd.WIN32.obj" \
 	"$(INTDIR)\timer_manager.obj" \
-	"$(INTDIR)\condor_lock_base.obj" \
-	"$(INTDIR)\condor_lock_file.obj" \
-	"$(INTDIR)\condor_lock_implementation.obj" \
-	"$(INTDIR)\condor_lock.obj"
+	"$(INTDIR)\self_monitor.obj"
 
 "$(OUTDIR)\condor_daemon_core.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -102,6 +104,7 @@ CLEAN :
 	-@erase "$(INTDIR)\daemon_core.obj"
 	-@erase "$(INTDIR)\daemon_core_main.obj"
 	-@erase "$(INTDIR)\exphnd.WIN32.obj"
+	-@erase "$(INTDIR)\self_monitor.obj"
 	-@erase "$(INTDIR)\timer_manager.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(OUTDIR)\condor_daemon_core.lib"
@@ -119,14 +122,15 @@ LIB32_FLAGS=/nologo /out:"$(OUTDIR)\condor_daemon_core.lib"
 LIB32_OBJS= \
 	"$(INTDIR)\accessdesktop.WIN32.obj" \
 	"$(INTDIR)\condor_ipverify.obj" \
+	"$(INTDIR)\condor_lock.obj" \
+	"$(INTDIR)\condor_lock_base.obj" \
+	"$(INTDIR)\condor_lock_file.obj" \
+	"$(INTDIR)\condor_lock_implementation.obj" \
 	"$(INTDIR)\daemon_core.obj" \
 	"$(INTDIR)\daemon_core_main.obj" \
 	"$(INTDIR)\exphnd.WIN32.obj" \
 	"$(INTDIR)\timer_manager.obj" \
-	"$(INTDIR)\condor_lock_base.obj" \
-	"$(INTDIR)\condor_lock_file.obj" \
-	"$(INTDIR)\condor_lock_implementation.obj" \
-	"$(INTDIR)\condor_lock.obj"
+	"$(INTDIR)\self_monitor.obj"
 
 "$(OUTDIR)\condor_daemon_core.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -247,6 +251,12 @@ CPP_SWITCHES=/nologo /MT /W3 /GX /Z7 /O1 /I "..\src\h" /I "..\src\condor_include
 
 
 !ENDIF 
+
+SOURCE=..\src\condor_daemon_core.V6\self_monitor.C
+
+"$(INTDIR)\self_monitor.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
 
 SOURCE=..\src\condor_daemon_core.V6\timer_manager.C
 

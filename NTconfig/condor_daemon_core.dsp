@@ -151,6 +151,14 @@ SOURCE=..\src\condor_daemon_core.V6\exphnd.WIN32.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_daemon_core.V6\self_monitor.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_daemon_core.V6\self_monitor.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_daemon_core.V6\timer_manager.C
 # End Source File
 # End Target
