@@ -38,11 +38,15 @@ ResMgr::ResMgr()
 
 ResMgr::~ResMgr()
 {
+	int i;
 	delete m_attr;
 	delete m_proc;
 	delete coll_sock;
 	if( view_sock ) {
 		delete view_sock;
+	}
+	for( i = 0; i < nresources; i++ ) {
+		delete resources[i];
 	}
 	delete [] resources;
 }
