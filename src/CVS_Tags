@@ -136,3 +136,6 @@
 9/7/94 V5_a3
 	Runs on SunOs, AIX, and OSF1.  Released in dept on "steves" and
 	"huey", "louie", and "frigg".  Given to DoIt this date.
+
+11/1/94 V5_a4
+	Runs on HPUX, ULTRIX, AIX . Released on snakes and dec-stations.
