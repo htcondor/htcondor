@@ -2116,6 +2116,14 @@ as:
   command will override this default.  If this macro is undefined, a
   default size of 32 KB will be used.
 
+\item[\Macro{SUBMIT\_SKIP\_FILECHECK}] \label{param:SubmitSkipFilecheck}
+  If True, \Condor{submit} behaves as if the \Opt{-d} 
+  command-line option is used.
+  This tells \Condor{submit} to disable file permission checks when
+  submitting a job.
+  This can significantly decrease the amount of time required to submit
+  a large group of jobs.
+  The default value is False.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
