@@ -29,6 +29,7 @@
 #include "condor_string.h"
 #include "condor_ckpt_name.h"
 #include "environ.h"
+#include "basename.h"
 #include <time.h>
 #include "user_log.c++.h"
 #include "url_condor.h"
@@ -91,6 +92,7 @@ char GlobusEnv[2048];
 char GlobusExec[_POSIX_PATH_MAX];
 char	*MyName;
 int		Quiet = 1;
+int		DisableFileChecks = 0;
 int	  ClusterId = -1;
 int	  ProcId = -1;
 int	  JobUniverse;
@@ -98,6 +100,7 @@ int		Remote=0;
 int		ClusterCreated = FALSE;
 int		ActiveQueueConnection = FALSE;
 bool	NewExecutable = false;
+bool	IsFirstExecutable;
 bool	UserLogSpecified = false;
 bool never_transfer = false;  // never transfer files or do transfer files
 // environment vars in the ClassAd attribute are seperated via
@@ -275,6 +278,80 @@ void TestFilePermissions( char *scheddAddr = NULL )
 	}
 }
 
+void
+init_job_ad()
+{
+	ASSERT(owner);
+
+	if ( job ) {
+		delete job;
+		job = NULL;
+	}
+
+	// set up types of the ad
+	if ( !job ) {
+		job = new ClassAd();
+		job->SetMyTypeName (JOB_ADTYPE);
+		job->SetTargetTypeName (STARTD_ADTYPE);
+	}
+
+	(void) sprintf (buffer, "%s = %d", ATTR_Q_DATE, (int)time ((time_t *) 0));	
+	InsertJobExpr (buffer);
+
+	(void) sprintf (buffer, "%s = 0", ATTR_COMPLETION_DATE);
+	InsertJobExpr (buffer);
+
+	(void) sprintf (buffer, "%s = \"%s\"", ATTR_OWNER, owner);
+	InsertJobExpr (buffer);
+
+#ifdef WIN32
+	// put the NT domain into the ad as well
+	char *ntdomain = strnewp(get_condor_username());
+	if (ntdomain) {
+		char *slash = strchr(ntdomain,'/');
+		if ( slash ) {
+			*slash = '\0';
+			if ( strlen(ntdomain) > 0 ) {
+				if ( strlen(ntdomain) > 80 ) {
+					fprintf(stderr,"NT DOMAIN OVERFLOW (%s)\n",ntdomain);
+					exit(1);
+				}
+				(void) sprintf (buffer, "%s = \"%s\"", ATTR_NT_DOMAIN, 
+										ntdomain);
+				InsertJobExpr (buffer);
+			}
+		}
+		delete [] ntdomain;
+	}
+#endif
+		
+	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_LOCAL_USER_CPU);
+	InsertJobExpr (buffer);
+
+	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_LOCAL_SYS_CPU);
+	InsertJobExpr (buffer);
+
+	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_REMOTE_USER_CPU);
+	InsertJobExpr (buffer);
+
+	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_REMOTE_SYS_CPU);
+	InsertJobExpr (buffer);
+
+	(void) sprintf (buffer, "%s = 0", ATTR_JOB_EXIT_STATUS);
+	InsertJobExpr (buffer);
+
+	(void) sprintf (buffer, "%s = 0", ATTR_NUM_CKPTS);
+	InsertJobExpr (buffer);
+
+	(void) sprintf (buffer, "%s = 0", ATTR_NUM_RESTARTS);
+	InsertJobExpr (buffer);
+
+	(void) sprintf (buffer, "%s = 0", ATTR_JOB_COMMITTED_TIME);
+	InsertJobExpr (buffer);
+
+	config_fill_ad( job );
+}
+
 int
 main( int argc, char *argv[] )
 {
@@ -294,7 +371,13 @@ main( int argc, char *argv[] )
 	}
 #endif /* not WIN32 */
 
-	MyName = argv[0];
+	//TODO:this should go away, and the owner name be placed in ad by schedd!
+	owner = my_username();
+	if( !owner ) {
+		owner = "unknown";
+	}
+
+	MyName = basename(argv[0]);
 	config( 0 );
 	init_params();
 
@@ -315,6 +398,9 @@ main( int argc, char *argv[] )
 			switch( ptr[0][1] ) {
 			case 'v': 
 				Quiet = 0;
+				break;
+			case 'd':
+				DisableFileChecks = 1;
 				break;
 			case 'p':
 					// the -p option will cause condor_submit to pause for about
@@ -362,12 +448,6 @@ main( int argc, char *argv[] )
 		}
 	}
 	
-	// set up types of the ad
-	if ( !job ) {
-		job = new ClassAd();
-		job->SetMyTypeName (JOB_ADTYPE);
-		job->SetTargetTypeName (STARTD_ADTYPE);
-	}
 
 	if( !(ScheddAddr = get_schedd_addr(ScheddName)) ) {
 		if( ScheddName ) {
@@ -397,67 +477,8 @@ main( int argc, char *argv[] )
 	// in case things go awry ...
 	_EXCEPT_Cleanup = DoCleanup;
 
-	(void) sprintf (buffer, "%s = %d", ATTR_Q_DATE, (int)time ((time_t *) 0));
-	dprintf(D_FULLDEBUG,"about to InsertJobExpr with \"%s\"\n", buffer);
-	InsertJobExpr (buffer);
-
-	(void) sprintf (buffer, "%s = 0", ATTR_COMPLETION_DATE);
-	InsertJobExpr (buffer);
-
-	//TODO:this should go away, and the owner name be placed in ad by schedd!
-	owner = my_username();
-	if( !owner ) {
-		owner = "unknown";
-	}
-	(void) sprintf (buffer, "%s = \"%s\"", ATTR_OWNER, owner);
-	InsertJobExpr (buffer);
-
-#ifdef WIN32
-	// put the NT domain into the ad as well
-	char *ntdomain = get_condor_username();
-	if (ntdomain) {
-		char *slash = strchr(ntdomain,'/');
-		if ( slash ) {
-			*slash = '\0';
-			if ( strlen(ntdomain) > 0 ) {
-				if ( strlen(ntdomain) > 80 ) {
-					fprintf(stderr,"NT DOMAIN OVERFLOW (%s)\n",ntdomain);
-					exit(1);
-				}
-				(void) sprintf (buffer, "%s = \"%s\"", ATTR_NT_DOMAIN, 
-										ntdomain);
-				InsertJobExpr (buffer);
-			}
-		}
-		free(ntdomain);
-	}
-#endif
-		
-	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_LOCAL_USER_CPU);
-	InsertJobExpr (buffer);
-
-	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_LOCAL_SYS_CPU);
-	InsertJobExpr (buffer);
-
-	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_REMOTE_USER_CPU);
-	InsertJobExpr (buffer);
-
-	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_REMOTE_SYS_CPU);
-	InsertJobExpr (buffer);
-
-	(void) sprintf (buffer, "%s = 0", ATTR_JOB_EXIT_STATUS);
-	InsertJobExpr (buffer);
-
-	(void) sprintf (buffer, "%s = 0", ATTR_NUM_CKPTS);
-	InsertJobExpr (buffer);
-
-	(void) sprintf (buffer, "%s = 0", ATTR_NUM_RESTARTS);
-	InsertJobExpr (buffer);
-
-	(void) sprintf (buffer, "%s = 0", ATTR_JOB_COMMITTED_TIME);
-	InsertJobExpr (buffer);
-
-	config_fill_ad( job );
+	IsFirstExecutable = true;
+	init_job_ad();
 
 	if (Quiet) {
 		fprintf(stdout, "Submitting job(s)");
@@ -469,7 +490,10 @@ main( int argc, char *argv[] )
 		exit(1);
 	}
 
-	DisconnectQ(0);
+	if ( !DisconnectQ(0) ) {
+		fprintf(stderr, "\nERROR: Failed to commit job submission into the queue.\n");
+		exit(1);
+	}
 
 	if (Quiet) {
 		fprintf(stdout, "\n");
@@ -511,11 +535,12 @@ main( int argc, char *argv[] )
 		exit( 1 );
 	}
 
-	TestFilePermissions( ScheddAddr );
+	if ( !DisableFileChecks ) {
+		TestFilePermissions( ScheddAddr );
+	}
 
 	if (dag_pause)
 		sleep(4);
-
 
 	return 0;
 }
@@ -2044,7 +2069,14 @@ queue(int num)
 				fprintf(stderr, "\nERROR: Failed to create cluster\n");
 				exit(1);
 			}
+				// We only need to call init_job_ad the second time we see
+				// a new Executable, because we call init_job_ad() in main()
+			if ( !IsFirstExecutable ) {
+				init_job_ad();
+			}
+			IsFirstExecutable = false;
 			ProcId = -1;
+			ClusterAdAttrs.clear();
 		}
 
 		if ( ClusterId == -1 ) {
@@ -2359,12 +2391,14 @@ check_open( const char *name, int flags )
 void
 usage()
 {
-	fprintf( stderr, "Usage: %s [options] cmdfile\n", MyName );
+	fprintf( stderr, "Usage: %s [options] [cmdfile]\n", MyName );
 	fprintf( stderr, "	Valid options:\n" );
 	fprintf( stderr, "	-v\t\tverbose output\n" );
 	fprintf( stderr, "	-n schedd_name\tsubmit to the specified schedd\n" );
 	fprintf( stderr, 
 			 "	-r schedd_name\tsubmit to the specified remote schedd\n" );
+	fprintf( stderr, "	-d\t\tdisable file permission checks\n\n" );
+	fprintf( stderr, "	If [cmdfile] is omitted, input is read from stdin\n" );
 	exit( 1 );
 }
 
@@ -2382,13 +2416,14 @@ DoCleanup(int,int,char*)
 			ActiveQueueConnection = (ConnectQ(ScheddAddr) != 0);
 		}
 		if (ActiveQueueConnection) {
+			// Call DestroyCluster() now in an attempt to get the schedd
+			// to unlink the initial checkpoint file (i.e. remove the 
+			// executable we sent earlier from the SPOOL directory).
 			DestroyCluster( ClusterId );
-			DisconnectQ(0);
+
+			// We purposefully do _not_ call DisconnectQ() here, since 
+			// we do not want the current transaction to be committed.
 		}
-	}
-	if( IckptName[0] ) 
-	{
-		(void)unlink( IckptName );
 	}
 
 	return 0;		// For historical reasons...
