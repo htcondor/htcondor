@@ -529,7 +529,7 @@ main(int argc, char *argv[])
 	PreemptionReq = NULL;
 	tmp = param("PREEMPTION_REQUIREMENTS");
 	if( tmp ) {
-		if( !parser.ParseExpression( ( string )tmp, PreemptionReq ) ) {	// NAC
+		if( !parser.ParseExpression( ( std::string )tmp, PreemptionReq ) ) {	// NAC
 			fprintf(stderr, 
 				"\nERROR: Failed to parse PREEMPTION_REQUIREMENTS.\n");
 			exit(1);
@@ -540,7 +540,7 @@ main(int argc, char *argv[])
 	PreemptionRank = NULL;
 	tmp = param("PREEMPTION_RANK");
 	if( tmp ) {
-		if( !parser.ParseExpression( ( string )tmp, PreemptionRank ) ) {// NAC
+		if( !parser.ParseExpression( ( std::string )tmp, PreemptionRank ) ) {// NAC
 			fprintf(stderr, 
 				"\nERROR: Failed to parse PREEMPTION_RANK.\n");
 			exit(1);
