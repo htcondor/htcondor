@@ -130,6 +130,7 @@ int open_ftp( const char *name, int flags, size_t n_bytes )
 	if (status < 0) {
 		fprintf(stderr, "http connect() FAILED, errno = %d\n", errno);
 		fflush(stderr);
+		close( sock_fd );
 		return status;
 	}
 
