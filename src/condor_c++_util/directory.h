@@ -1,11 +1,23 @@
 #ifndef DIRECTORY_H
 #define DIRECTORY_H
 
-#if defined (ULTRIX42) || defined(ULTRIX43)	/* _POSIX_SOURCE should have taken care of this, */
-#define __POSIX			/* but for some reason the ULTRIX version of dirent.h */
-#endif					/* is not POSIX conforming without it... */
+#if defined (ULTRIX42) || defined(ULTRIX43)
+	/* _POSIX_SOURCE should have taken care of this,
+		but for some reason the ULTRIX version of dirent.h
+		is not POSIX conforming without it...
+	*/
+#	define __POSIX
+#endif
+
 #include <dirent.h>
 
+#if defined(SUNOS41)
+	/* Note that function seekdir() is not required by POSIX, but the sun
+	   implementation of rewinddir() (which is required by POSIX) is
+	   a macro utilizing seekdir().  Thus we need the prototype.
+	*/
+	extern "C" void seekdir( DIR *dirp, int loc );
+#endif
 
 class Directory
 {
