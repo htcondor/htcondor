@@ -46,7 +46,6 @@
 #include "user_log.c++.h"
 #include "shadow_mgr.h"
 
-const 	int			MAX_NUM_OWNERS = 512;
 const 	int			MAX_REJECTED_CLUSTERS = 1024;
 const   int         STARTD_CONTACT_TIMEOUT = 45;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
@@ -328,7 +327,7 @@ class Scheduler : public Service
 	//int				RejectedClusters[MAX_REJECTED_CLUSTERS];
 	ExtArray<int>   RejectedClusters;
 	int				N_RejectedClusters;
-    OwnerData			Owners[MAX_NUM_OWNERS];
+	ExtArray<OwnerData> Owners;
 	int				N_Owners;
 	time_t			LastTimeout;
 	int				ExitWhenDone;  // Flag set for graceful shutdown

@@ -47,6 +47,7 @@ template class List<PROC_ID>;
 template class Item<PROC_ID>;
 template class ExtArray<int>;
 template class ExtArray<PROC_ID>;
+template class ExtArray<OwnerData>;
 template class SimpleList<Shadow*>;
 
 // for condor-G
