@@ -1382,6 +1382,21 @@ int main( int argc, char** argv )
 		dprintf( D_ALWAYS,"DaemonCore: Command Socket at %s\n",
 				 daemonCore->InfoCommandSinfulString());
 
+		// check if our command socket is on 127.0.0.1, and spit out a
+		// warning if it is, since it probably means that /etc/hosts
+		// is misconfigured [to preempt RUST like rust-admin #2915]
+
+		const unsigned int my_ip = rsock->get_ip_int();
+		const unsigned int loopback_ip = ntohl( inet_addr( "127.0.0.1" ) );
+
+		if( my_ip == loopback_ip ) {
+			dprintf( D_ALWAYS, "WARNING: Condor is running on the loopback address (127.0.0.1)\n" );
+			dprintf( D_ALWAYS, "         of this machine, and is not visible to other hosts!\n" );
+			dprintf( D_ALWAYS, "         This may be due to a misconfigured /etc/hosts file.\n" );
+			dprintf( D_ALWAYS, "         Please make sure your hostname is not listed on the\n" );
+			dprintf( D_ALWAYS, "         same line as localhost in /etc/hosts.\n" );
+		}
+
 			// Now, drop this sinful string into a file, if
 			// mySubSystem_ADDRESS_FILE is defined.
 		drop_addr_file();
