@@ -39,8 +39,10 @@ typedef struct {
 
 	/* Condor "universes" */
 #define STANDARD	1	/* Original - single process jobs, 1 per machine */
-#define PIPE		2	/* Pipes - all processes on single machine */
-#define LINDA		3	/* Parallel applications via Linda */
+/* 
+   2 and 3 used to be "PIPE" and "LINDA", which never worked and just
+   cluttered the namespace.
+*/
 #define PVM			4	/* Parallel applications via Parallel Virtual Machine */
 #define VANILLA		5	/* Non- condor linked jobs (PVMD) */
 #define PVMD		6	/* Explicit, PVM daemon process */

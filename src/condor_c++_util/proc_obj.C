@@ -36,8 +36,9 @@ static char	*Status[] = {
 	"Unexpanded", "Idle", "Running", "Removed", "Completed", "Submission Err"
 };
  
+// 0 wasn't anything, 2 was PIPE and 3 was LINDA.
 static char	*Universe[] = {
-	"", "STANDARD", "PIPE", "LINDA", "PVM", "VANILLA", 
+	"", "STANDARD", "", "", "PVM", "VANILLA", 
 	"PVMD", "SCHED_UNIVERSE", "MPI"
 };
 

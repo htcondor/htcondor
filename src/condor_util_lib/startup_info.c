@@ -38,12 +38,6 @@ display_startup_info( const STARTUP_INFO *s, int flags )
 		case STANDARD:
 			dprintf( flags, "\tJobClass: Standard\n" );
 			break;
-		case PIPE:
-			dprintf( flags, "\tJobClass: Pipe\n" );
-			break;
-		case LINDA:
-			dprintf( flags, "\tJobClass: Linda\n" );
-			break;
 		case PVM:
 			dprintf( flags, "\tJobClass: PVM\n" );
 			break;

@@ -196,12 +196,6 @@ PROC	*proc;
 		case STANDARD:
 			printf( "Universe: Standard\n" );
 			break;
-		case PIPE:
-			printf( "Universe: Pipe\n" );
-			break;
-		case LINDA:
-			printf( "Universe: Linda\n" );
-			break;
 		case PVM:
 			printf( "Universe: PVM\n" );
 			break;
@@ -259,18 +253,7 @@ PROC	*proc;
 		}
 	}
 
-		/* Per pipe information */
-	if ( proc->universe == PIPE ) {
-		for( i=0; i<proc->n_pipes; ) {
-			printf( "\n" );
-			printf( "Writer: %d\n", proc->pipe[i].writer );
-			printf( "Reader: %d\n", proc->pipe[i].reader );
-			printf( "Name: %s\n", proc->pipe[i].name );
-			if( ++i == proc->n_pipes ) {
-				printf( "\n" );
-			}
-		}
-	} else if ( proc->universe == PVM ) {
+	if ( proc->universe == PVM ) {
 		printf("\n");
 		printf("Machine Requirements: %d..", (proc->min_needed));
 		if (proc->max_needed == -1) {

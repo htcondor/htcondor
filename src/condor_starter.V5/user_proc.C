@@ -356,7 +356,6 @@ UserProc::fetch_ckpt()
 	switch( job_class ) {
 
 	  case STANDARD:
-	  case PIPE:
 		if( linked_for_condor() ) {
 			state = RUNNABLE;
 			return TRUE;
@@ -426,7 +425,6 @@ UserProc::execute()
 	switch( job_class ) {
 
 	  case STANDARD:
-	  case PIPE:
 		if( pipe(pipe_fds) < 0 ) {
 			EXCEPT( "pipe()" );}
 
@@ -474,7 +472,7 @@ UserProc::execute()
 
 		// We may run more than one of these, so each needs its own
 		// remote system call connection to the shadow
-	if( job_class == PVM || job_class == PIPE ) {
+	if( job_class == PVM ) {
 		new_reli = NewConnection( v_pid );
 		user_syscall_fd = new_reli->get_file_desc();
 	}
@@ -535,7 +533,6 @@ UserProc::execute()
 			break;
 
 		  case PVM:
-		  case PIPE:
 			if( chdir(local_dir) < 0 ) {
 				EXCEPT( "chdir(%s)", local_dir );
 			}

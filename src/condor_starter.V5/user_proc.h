@@ -65,21 +65,12 @@ static NAME_VALUE	ProcStateNames[] = {
 NameTable ProcStates( ProcStateNames );
 #endif
 
-/*
-  The following are already defined in "proc.h".
-#	define STANDARD 1	// Original - single process jobs, 1 per machine
-#	define PIPE	 2	// Pipes - all processes on single machine
-#	define LINDA	 3	// Parallel applications via Linda
-#	define PVM		 4	// Parallel applications via Parallel Virtual Machine
-*/
 typedef int JOB_CLASS;
 
 	// N.B. This name table *must* match the above enumerator.
 #if defined(INSERT_TABLES)
 static NAME_VALUE	JobClassNames[] = {
 	{ STANDARD,		"STANDARD"	},
-	{ PIPE,			"PIPE"		},
-	{ LINDA,		"LINDA",	},
 	{ PVM,			"PVM",		},
 	{ VANILLA,		"VANILLA",	},
     { PVMD,			"PVMD",		},

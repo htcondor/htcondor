@@ -27,7 +27,7 @@ typedef struct {
 	int		version_num;			/* version of this structure */
 	int		cluster;				/* Condor Cluster # */
 	int		proc;					/* Condor Proc # */
-	int		job_class;				/* STANDARD, VANILLA, PVM, PIPE, ... */
+	int		job_class;				/* STANDARD, VANILLA, PVM, ... */
 #if !defined(WIN32)	// don't know how to port these yet
 	uid_t	uid;					/* Execute job under this UID */ 
 	gid_t	gid;					/* Execute job under this gid */

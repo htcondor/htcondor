@@ -684,12 +684,6 @@ SetExecutable()
 		InsertJobExpr (buffer);
 		break;
 	case PVM:
-	case PIPE:
-		(void) sprintf (buffer, "%s = TRUE", ATTR_WANT_REMOTE_SYSCALLS);
-		InsertJobExpr (buffer);
-		(void) sprintf (buffer, "%s = FALSE", ATTR_WANT_CHECKPOINT);
-		InsertJobExpr (buffer);
-		break;
 	case VANILLA:
 	case SCHED_UNIVERSE:
 	case MPI:  // for now
@@ -804,15 +798,6 @@ SetUniverse()
 		free(univ);
 		return;
 	}
-
-	if( univ && stricmp(univ,"pipe") == MATCH ) {
-		JobUniverse = PIPE;
-		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, PIPE);
-		InsertJobExpr (buffer);
-		InsertJobExpr ("Checkpoint = 0");
-		free(univ);
-		return;
-	};
 
 	if( univ && stricmp(univ,"scheduler") == MATCH ) {
 		JobUniverse = SCHED_UNIVERSE;
