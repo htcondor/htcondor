@@ -25,6 +25,7 @@
 
 
 #define _XOPEN_SOURCE 1
+#define _XOPEN_SOURCE_EXTENDED 1
 #define _BSD_COMPAT 1
 
 /* While we want _BSD_TYPES defined, we can't just define it ourself,
@@ -34,6 +35,11 @@
    This also includes <sys/types.h>, so we don't need to include that
    ourselves anymore. */
 #include <rpc/types.h>
+
+/* For strdup to get prototyped, we need to still have the XOPEN stuff 
+   defined when we include string.h */
+#include <string.h>
+
 
 /******************************
 ** unistd.h
