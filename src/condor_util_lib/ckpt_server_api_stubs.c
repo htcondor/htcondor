@@ -37,17 +37,18 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <netinet/in.h>
+
+#ifndef TRUE
+#define TRUE 1
+#endif
+
+#ifndef FALSE
+#define FALSE 0
+#endif
 
 typedef unsigned long int u_lint;
 typedef int service_type;
-
-#if !defined(TRUE)
-#define TRUE (1)
-#endif
-
-#if !defined(FALSE)
-#define FALSE (0)
-#endif
 
 int FileExists(const char *filename, const char *owner)
 {
