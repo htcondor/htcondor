@@ -945,7 +945,7 @@ rc=0;
 				}
 				UpdateGlobusState( status, 0 );
 				ClearCallbacks();
-				lastProbeTime = now;
+				lastProbeTime = time(NULL);
 				gmState = GM_SUBMITTED;
 			}
 			} break;
