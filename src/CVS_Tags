@@ -1,3 +1,6 @@
+11/16/04 V6_7-pre-merge-V6_7-condorc-3-m-1
+   Prior to merging V6_7-condorc-3-branch into V6_7-branch.
+
 11/10/04 V6_7_3-pre-2004-11-10
    The state of the V6_7-branch for another snapshot release given to
    CORE (see condor_support #1168).  This was just a regular
@@ -185,6 +188,34 @@
 07/27/04 V6_6_6
    The official 6.6.6 release tag (at long last!).  this lives on
    V6_6_ALL and V6_6_6_EXT 
+
+11/11/05 V6_7-condorc-3-merge-1
+   Terminating V6_7-condorc-3-branch, merging into V6_7-branch.
+   This is the merge-from tag on V6_7-condorc-3-branch.
+
+07/27/04 V6_7-condorc-3-post_merge-V6_7-condorc-2-merge-1
+   The end of a merge of V6_7-condorc-2-branch into
+   V6_7-condorc-3-branch.
+
+07/27/04 V6_7-condorc-3-pre_merge-V6_7-condorc-2-merge-1
+   The beginning of a merge of V6_7-condorc-2-branch into
+   V6_7-condorc-3-branch.
+
+07/27/04 V6_7-condorc-2-merge-1
+   The state of the V6_7-condorc-2-branch when merged into
+   V6_7-condorc-3-branch.
+
+05/12/04 V6_7-condorc-merge-1
+   The state of the V6_7-condorc-branch when merged into
+   V6_7-condorc-2-branch.
+
+05/12/04 V6_7-condorc-2-post_merge-V6_7-condorc-merge-1
+   The state of the V6_7-condorc-2-branch after merging in the
+   V6_7-condorc-branch as tagged at V6_7-condorc-merge-1.
+
+05/12/04 V6_7-condorc-2-pre_merge-V6_7-condorc-merge-1
+   The state of the V6_7-condorc-2-branch before merging in the
+   V6_7-condorc-branch as tagged at V6_7-condorc-merge-1.
 
 07/27/04 V6_7-post_merge-V6_6-merge-18
    The end of a merge of V6_6-branch into V6_7-branch.
