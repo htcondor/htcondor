@@ -328,6 +328,7 @@ if ( $Config{DoPing} )
 	    close( IN );
 	}
     }
+    $#TempAbsent = -1;
 
     # Now, remove the unreachable hosts from the absent list
     foreach my $Host ( keys %Absent )
@@ -376,11 +377,14 @@ if ( scalar keys %Absent > 0 )
 }
 
 # Report hosts that are listed as down, but ping ok
-if ( $Config{DoPingOk} )
+if ( ( $Config{DoPingOk} ) && ( $#NotDown >= 0 ) )
 {
-    foreach my $Host ( @NotDown )
+    my $Num = $#NotDown + 1;
+    print "\n# Hosts listed as down, but ping ok ($Num):\n" 
+	if ( ! $Config{DoScriptOut} );
+    foreach my $Host ( sort @NotDown )
     {
-	print "# Host listed as down, but ping ok: '$Host'\n";
+	print "Host down, but ping ok: '$Host'\n";
     }
 }
 
