@@ -291,6 +291,14 @@ CondorCronMgr::~CondorCronMgr( )
 	// Kill all running jobs
 	Cron.DeleteAll( );
 
+	// Free up name, etc. buffers
+	if ( NULL != Name ) {
+		free( (char *) Name );
+	}
+	if ( NULL != ParamBase ) {
+		free( (void *) ParamBase );
+	}
+
 	// Log our death
 	dprintf( D_FULLDEBUG, "CronMgr: bye\n" );
 }

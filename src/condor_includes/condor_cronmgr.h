@@ -49,7 +49,6 @@ class CondorCronMgr : public Service
 	CondorCron	Cron;
 	const char	*Name;			// Logical name
 	const char	*ParamBase;		// Used for base of calls to param()
-	const char	*Args;
 
 	// Private member functions
 	int ParseJobList( const char *JobListString );
