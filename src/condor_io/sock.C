@@ -726,3 +726,165 @@ Sock::get_ip_int()
 	return (unsigned int) ntohl(addr.sin_addr.s_addr);
 }
 
+#if !defined(WIN32)
+
+/*
+These arrays form the asynchronous handler table.  The number of entries is stored in "table_size".  Each entry in "handler_table" points to the asynchronous handler registered for each fd.  Each entry in "stream_table" gives the Stream object associated with each fd.  When a SIGIO comes in, we will consult this table to find the correct handler.
+*/
+
+static CedarHandler ** handler_table  = 0;
+static Stream ** stream_table = 0;
+static int table_size = 0;
+
+/*
+This function is invoked whenever a SIGIO arrives.  When this happens, we don't even know what fd is begging for attention, so we must use select() (or poll()) to figure this out.  With the fd in hand, we can look up the appropriate Stream and Handler in the table above.  Each Stream that is active will have its handler invoked.
+*/
+
+static void async_handler( int s )
+{
+	int i;
+	fd_set set;
+	int success;
+	struct timeval zero;
+
+	zero.tv_sec = 0;
+	zero.tv_usec = 0;
+
+	FD_ZERO( &set );
+
+	for( i=0; i<table_size; i++ ) {
+		if( handler_table[i] ) {
+			FD_SET( i, &set );
+		}
+	}
+
+	success = select( table_size, &set, 0, 0, &zero );
+
+	if( success>0 ) {
+		for( i=0; i<table_size; i++ ) {
+			if( FD_ISSET( i, &set ) ) {
+				handler_table[i](stream_table[i]);
+			}
+		}
+	}
+
+	signal( SIGIO, async_handler );
+}
+
+/*
+Set this fd up for asynchronous operation.  There are many ways of accomplishing this.  Some systems require multiple calls, some systems only support a few of these calls, and some support multiple, but only require one.  On top of that, many calls with defined constants are known to fail.  So, we will throw all of our knives at once and ignore return values.
+*/
+
+static void make_fd_async( int fd )
+{
+	int bits;
+	int on=1;
+	int pid = getpid();
+
+	/* Make the owner of this fd be this process */
+
+	#if defined(FIOSSAIOOWN)
+		ioctl( fd, FIOSSAIOOWN, &pid );
+		fprintf(stderr,"FIOSSAIOOWN\n");
+	#endif
+
+	#if defined(F_SETOWN)
+		fcntl( fd, F_SETOWN, pid);
+		fprintf(stderr,"F_SETOWN\n");
+	#endif
+
+	/* make the fd asynchronous -- signal when ready */
+
+	#if defined(O_ASYNC)
+		bits = fcntl( fd, F_GETFL, 0 );
+		fcntl( fd, F_SETFL, bits | O_ASYNC );
+		fprintf(stderr,"O_ASYNC\n");
+	#endif
+
+	#if defined(FASYNC)
+		bits = fcntl( fd, F_GETFL, 0 );
+		fcntl( fd, F_SETFL, bits | FASYNC );
+		fprintf(stderr,"FASYNC\n");
+	#endif
+
+	#if defined(FIOASYNC) && !defined(linux)
+		/* In some versions of linux, FIOASYNC results in
+		   _synchronous_ I/O.  Bug!  Fortunately, FASYNC
+		   is defined in these cases. */
+		ioctl( fd, FIOASYNC, &on );
+		fprintf(stderr,"FIOASYNC\n");
+	#endif
+
+	#if defined(FIOSSAIOSTAT)
+		ioctl( fd, FIOSSAIOSTAT, &on );
+		fprintf(stderr,"FIOSSASIOSTAT\n");
+	#endif
+}
+
+/* change this fd back to synchronous mode */
+
+static void  make_fd_sync( int fd )
+{
+	int bits;
+
+	bits = fcntl( fd, F_GETFL, 0 );
+
+	#if defined(O_ASYNC)
+		bits = bits & ~O_ASYNC;
+	#endif
+
+	#if defined(FASYNC)
+		bits = bits & ~FASYNC;
+	#endif
+
+	fcntl( fd, F_SETFL, bits );
+}
+
+/*
+This function adds a new entry to the handler table and marks the fd as asynchronous.  If the table does not exist yet, it is allocated and the async_handler is installed as the handler for SIGIO.  If "handler" is null, then async notification is disabled for that fd.
+*/
+
+static int install_async_handler( int fd, CedarHandler *handler, Stream *stream )
+{
+	int i;
+
+	if( !handler_table ) {
+		table_size = sysconf(_SC_OPEN_MAX);
+		if(table_size<=0) return 0;
+
+		handler_table = (CedarHandler **) malloc( sizeof(handler) * table_size );
+		if(!handler_table) return 0;
+
+		stream_table = (Stream **) malloc( sizeof(stream) * table_size );
+		if(!stream_table) return 0;
+
+		for( i=0; i<table_size; i++ ) {
+			handler_table[i] = 0;
+			stream_table[i] = 0;
+		}
+
+		signal( SIGIO, async_handler );
+	}
+
+	handler_table[fd] = handler;
+	stream_table[fd] = stream;
+
+	if(handler) {
+		make_fd_async(fd);
+	} else {
+		make_fd_sync(fd);
+	}
+
+	return 1;
+}
+
+/*
+Install the given handler for this stream.
+*/
+
+int Sock::set_async_handler( CedarHandler *handler )
+{
+	return install_async_handler( _sock, handler, this );
+}
+
+#endif
