@@ -28,7 +28,7 @@ PACKAGE = \
 	image.o stubs.o machdep.$(OS).o $(ASSEMBLER_OBJ) \
 	file_state.o syscall_stubs.o condor_syscalls.o
 
-all_target(gen_test test3 file_test)
+all_target(noenv gen_test test3 file_test)
 depend_target($(SRC) )
 
 lex.yy.c: stub_gen_lex.l scanner.h y.tab.h
