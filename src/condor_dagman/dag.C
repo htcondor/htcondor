@@ -907,7 +907,7 @@ Job * Dag::GetSubmittedJob (bool recovery) {
     if (recovery && job_found != NULL) {
         job_found->_Status = Job::STATUS_SUBMITTED;
 		_numJobsSubmitted++;
-		assert( _numJobsSubmitted == 0 || 
+		assert( _maxJobsSubmitted == 0 || 
 				(_numJobsSubmitted <= _maxJobsSubmitted) );
     }
     return job_found;
