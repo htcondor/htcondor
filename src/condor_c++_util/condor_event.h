@@ -62,7 +62,9 @@ enum ULogEventNumber {
 #if defined(GENERIC_EVENT)
     /** Generic Log Event         */  ULOG_GENERIC,
 #endif      
-    /** Job Aborted               */  ULOG_JOB_ABORTED
+    /** Job Aborted               */  ULOG_JOB_ABORTED,
+    /** Node executed   	      */  ULOG_NODE_EXECUTE,
+    /** Node terminated	    	  */  ULOG_NODE_TERMINATED
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
@@ -452,47 +454,56 @@ class JobEvictedEvent : public ULogEvent
 
 
 //----------------------------------------------------------------------------
-/** Framework for a single Job Terminated Event Log object.
-    Below is an example Job Termination Event Log entry for Condor v6.<p>
 
-<PRE>
-005 (5170.000.000) 10/20 17:04:41 Job terminated.
-        (1) Normal termination (return value 0)
-                Usr 0 00:01:16, Sys 0 00:00:00  -  Run Remote Usage
-                Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
-                Usr 0 00:01:16, Sys 0 00:00:00  -  Total Remote Usage
-                Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
-...
-</PRE>
+/** This is an abstract base class for TerminatedEvents.  Both
+	JobTerminatedEvent and NodeTerminatedEvent are derived from this.  
 */
-class JobTerminatedEvent : public ULogEvent
+class TerminatedEvent : public ULogEvent
 {
   public:
     ///
-    JobTerminatedEvent();
+    TerminatedEvent();
     ///
-    ~JobTerminatedEvent();
+    ~TerminatedEvent();
 
     /** Read the body of the next Terminated event.
+		This is pure virtual to make sure this is an abstract base class
         @param file the non-NULL readable log file
         @return 0 for failure, 1 for success
     */
-    virtual int readEvent (FILE *);
+    virtual int readEvent( FILE * file ) = 0;
+
+    /** Read the body of the next Terminated event.
+        @param file the non-NULL readable log file
+		@param header the header to use for this event (either "Job"
+		or "Node")
+        @return 0 for failure, 1 for success
+    */
+    int readEvent( FILE *, const char* header );
+
 
     /** Write the body of the next Terminated event.
+		This is pure virtual to make sure this is an abstract base class
         @param file the non-NULL writable log file
         @return 0 for failure, 1 for success
     */
-    virtual int writeEvent (FILE *);
+    virtual int writeEvent (FILE * file) = 0;
 
+    /** Write the body of the next Terminated event.
+        @param file the non-NULL writable log file
+		@param header the header to use for this event (either "Job"
+		or "Node")
+        @return 0 for failure, 1 for success
+    */
+    int writeEvent( FILE * file, const char* header );
 
-    /// Did the job terminate normally?
+    /// Did it terminate normally?
     bool    normal;
 
-    /// Job's return value (valid only on normal exit)
+    /// return value (valid only on normal exit)
     int     returnValue;
 
-    /// The signal that terminated the job (valid only on abnormal exit)
+    /// The signal that terminated it (valid only on abnormal exit)
     int     signalNumber;
 
     /// name of core file
@@ -512,6 +523,66 @@ class JobTerminatedEvent : public ULogEvent
 	/// total bytes received by the job over the network for the lifetime
 	/// of the job
 	float total_recvd_bytes;
+};
+
+
+/** Framework for a single Job Terminated Event Log object.
+    Below is an example Job Termination Event Log entry for Condor v6.<p>
+
+<PRE>
+005 (5170.000.000) 10/20 17:04:41 Job terminated.
+        (1) Normal termination (return value 0)
+                Usr 0 00:01:16, Sys 0 00:00:00  -  Run Remote Usage
+                Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+                Usr 0 00:01:16, Sys 0 00:00:00  -  Total Remote Usage
+                Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+...
+</PRE>
+*/
+class JobTerminatedEvent : public TerminatedEvent
+{
+  public:
+    ///
+    JobTerminatedEvent();
+    ///
+    ~JobTerminatedEvent();
+
+    /** Read the body of the next Terminated event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next Terminated event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+};
+
+
+class NodeTerminatedEvent : public TerminatedEvent
+{
+  public:
+    ///
+    NodeTerminatedEvent();
+    ///
+    ~NodeTerminatedEvent();
+
+    /** Read the body of the next Terminated event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next Terminated event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+		/// node identifier for this event
+	int node;
 };
 
 
@@ -575,5 +646,34 @@ class ShadowExceptionEvent : public ULogEvent
 	float recvd_bytes;
 };
     
+
+class NodeExecuteEvent : public ULogEvent
+{
+  public:
+    ///
+    NodeExecuteEvent();
+    ///
+    ~NodeExecuteEvent();
+
+    /** Read the body of the next Execute event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next Execute event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+    /// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
+    char executeHost[128];
+
+		/// Node identifier
+	int node;
+};
+
+
 #endif // __CONDOR_EVENT_H__
 
