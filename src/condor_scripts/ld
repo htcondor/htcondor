@@ -30,7 +30,7 @@ CONDOR_FULLINSTALL=false
 os=`uname -s | sed 's/IRIX.*/IRIX/'`
 osver=`uname -r`
 
-LINUX_LIB=
+LINUX_LIB="NOT_SO_LINUX"
 if [ $os = "Linux" ]; then
         if [ -f /lib/libc-2.1* ]; then
                 LINUX_LIB="glibc21"
