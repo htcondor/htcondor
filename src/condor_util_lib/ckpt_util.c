@@ -73,6 +73,11 @@ stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes )
 			/* Send it */
 		bytes_written = write( dst_fd, buf, bytes_read );
 		if( bytes_written != bytes_read ) {
+			dprintf( D_ALWAYS, "stream_file_xfer: %d bytes written, "
+					 "%d bytes to go\n", bytes_moved, bytes_to_go );
+			dprintf( D_ALWAYS, "stream_file_xfer: write returns %d (errno=%d) " 
+					 "when attempting to write %d bytes\n", bytes_written,
+					 errno, bytes_read );
 			return -1;
 		}
 
