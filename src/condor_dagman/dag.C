@@ -1075,8 +1075,14 @@ Dag::TerminateJob( Job* job, bool bootstrap )
 			StartNode( child );
 		}
     }
-    _numJobsDone++;
-    ASSERT( _numJobsDone <= _jobs.Number() );
+		// this is a little ugly, but since this function can be
+		// called multiple times for the same job, we need to be
+		// careful not to double-count...
+	if( job->countedAsDone == false ) {
+		_numJobsDone++;
+		job->countedAsDone = true;
+		ASSERT( _numJobsDone <= _jobs.Number() );
+	}
 }
 
 void Dag::
