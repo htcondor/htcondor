@@ -178,7 +178,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	// name inside the submit event in the userlog
 
 	prependLines = prependLines +
-		" -a " + quote + "+" + ATTR_DAG_NODE_NAME + " = \"" + DAGNodeName + "\"" + quote +
+		" -a " + quote + "dag_node_name = " + DAGNodeName + quote +
 		" -a " + quote + "+DAGParentNodeNames = \"" + DAGParentNodeNames + "\"" + quote +
 		" -a " + quote + "+" + DAGManJobIdAttrName + " = " + DAGManJobId + quote +
 		" -a " + quote + "submit_event_notes = DAG Node: " + DAGNodeName + quote;
