@@ -135,7 +135,7 @@ get_file( const char *remote, const char *local, int mode )
 	remote_fd = open_file_stream( remote, O_RDONLY, &len );
 	if( remote_fd < 0 ) {
 		dprintf( D_ALWAYS, "open_file_stream(%s,O_RDONLY,0x%x) failed\n",
-														remote_fd, &len );
+														remote, &len );
 	}
 
 		/* open the local file */
