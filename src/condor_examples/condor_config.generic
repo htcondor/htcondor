@@ -183,10 +183,13 @@ HOSTALLOW_NEGOTIATOR = $(NEGOTIATOR_HOST)
 ##--------------------------------------------------------------------
 ##  Checkpoint server:
 ##--------------------------------------------------------------------
-##  Do you want to use a checkpoint server?
-#USE_CKPT_SERVER	= False
+##  Do you want to use a checkpoint server if one is available?  If a
+##  checkpoint server isn't available or USE_CKPT_SERVER is set to
+##  False, checkpoints will be written to the local SPOOL directory on
+##  the submission machine.
+#USE_CKPT_SERVER	= True
 
-##  If so, what's the hostname?
+##  What's the hostname of this machine's nearest checkpoint server?
 #CKPT_SERVER_HOST	= checkpoint-server-hostname.your.domain
 
 ##  Do you want the starter on the execute machine to choose the
