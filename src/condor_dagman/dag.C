@@ -959,22 +959,36 @@ void Dag::RemoveRunningJobs () const {
     ListIterator<Job> iList(_jobs);
     Job * job;
     while (iList.Next(job)) {
-		// if the job has been submitted, condor_rm it
+		// if the job has been submitted, remove it
         if (job->GetStatus() == Job::STATUS_SUBMITTED) {
-			sprintf( cmd, "condor_rm %d", job->_CondorID._cluster );
-			util_popen( cmd );
+			switch(job->job_type) {
+			case Job::CONDOR_JOB:
+				sprintf( cmd, "condor_rm %d", job->_CondorID._cluster );
+				util_popen( cmd );
+				break;
+			case Job::DAP_JOB:
+				sprintf( cmd, "dap_rm %d", job->_CondorID._cluster );
+				util_popen( cmd );
+				break;
+			}
         }
 		// if node is running a PRE script, hard kill it
         else if( job->GetStatus() == Job::STATUS_PRERUN ) {
 			ASSERT( job->_scriptPre->_pid != 0 );
-			sprintf( cmd, "kill -9 %d", job->_scriptPre->_pid );
-			util_popen( cmd );
+			if(kill(job->_scriptPre->_pid,SIGKILL)) {
+				debug_printf(DEBUG_QUIET,
+				             "WARNING: failed to kill process %d: %s",
+				             job->_scriptPre->_pid, strerror(errno));
+			}
         }
 		// if node is running a POST script, hard kill it
         else if( job->GetStatus() == Job::STATUS_POSTRUN ) {
 			ASSERT( job->_scriptPost->_pid != 0 );
-			sprintf( cmd, "kill -9 %d", job->_scriptPost->_pid );
-			util_popen( cmd );
+			if(kill(job->_scriptPre->_pid,SIGKILL)) {
+				debug_printf(DEBUG_QUIET,
+				             "WARNING: failed to kill process %d: %s",
+				             job->_scriptPre->_pid, strerror(errno));
+			}
         }
 	}
 	return;
