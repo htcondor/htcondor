@@ -169,7 +169,7 @@ Thus, we will basically never attempt to kick an MPI job off of
 a machine once it starts running on that machine.  Some machine
 owners may not like this setup, so your mileage may vary.  The most
 important thing to remember when creating your Startd policy is that
-MPI jobs are hosed if one node of the MPI job is removed.
+MPI jobs are immediately killed if one node of the MPI job is removed.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:MPI-submit}Submitting to Condor}
