@@ -159,7 +159,7 @@
 #define PlatformIncludeFile <ALPHA_OSF1.cf>
 #endif
 
-#if defined(i386) && defined(sun) 
+#if defined(i386) && defined(sun) || defined(IS_X86_SOLARIS25)
 #	undef i386
 #   undef sun
 #   define Platform X86_SOLARIS
