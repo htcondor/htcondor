@@ -22,7 +22,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added an option to DAGMan's retry ability. If a DAG specifies
+  something like ``RETRY job 10 unless-exit 9'', then the retries will
+  only happen if the node doesn't exit with a value of 9. 
 
 \end{itemize}
 
