@@ -8,6 +8,10 @@
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
  
+8/17/04 V6_7_1-branch
+    A release branch for the 6.7.1 manual.  Created from the
+    V6_7_1-root tag.  The V6_7_0-branch should now be abandoned.
+
 8/17/04 V6_7-post-merge-V6_7_0-doc-merge-4
     The state of the doc directory in V6_7-branch after merging
     changes from the V6_7_0-branch as tagged V6_7_0-doc-merge-4.
