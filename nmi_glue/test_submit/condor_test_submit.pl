@@ -256,7 +256,7 @@ This screen
 --nightly (default)
 This pulls the nightly tags file from http://www.cs.wisc.edu/condor/nwo-build-tags and submits builds for all the tags
 
---runid 
+--buildid 
 build runid to test
 
 --platforms
