@@ -113,22 +113,18 @@ sub generate_cmdfile() {
     my $srcsfile = "condor_srcsfile-$tag";
 
     # Generate the source code file
-    open(SRCSFILE, ">$srcsfile") || die "Can't open $srcsfile for writing.";
-    print SRCSFILE "method = cvs\n";
-    print SRCSFILE "cvs_root = :ext:cndr-cvs\@chopin.cs.wisc.edu:/p/condor/repository/CONDOR_SRC\n";
-    print SRCSFILE "cvs_server = /afs/cs.wisc.edu/p/condor/public/bin/auth-cvs\n";
-    print SRCSFILE "cvs_rsh = /nmi/scripts/ssh_no_x11\n";
-    print SRCSFILE "cvs_tag = $tag\n";
-    print SRCSFILE "cvs_module = $module\n";
-    close SRCSFILE;
-
+    CondorGlue::makeFetchFile( $srcsfile, $tag, $module );
 
     # Generate the cmdfile
     open(CMDFILE, ">$cmdfile") || die "Can't open $cmdfile for writing.";
 
     CondorGlue::printIdentifiers( *CMDFILE, $tag );
+    print CMDFILE "run_type = build\n";
 
+    # define inputs
     print CMDFILE "inputs = $srcsfile\n";
+
+    # define the glue scripts we want
     print CMDFILE "pre_all = nmi_glue/build/pre_all\n";
     print CMDFILE "remote_declare = nmi_glue/build/remote_declare\n";
     print CMDFILE "remote_pre = nmi_glue/build/remote_pre\n";
@@ -137,13 +133,13 @@ sub generate_cmdfile() {
     print CMDFILE "platform_post = nmi_glue/build/platform_post\n";
     print CMDFILE "post_all = nmi_glue/build/post_all\n";
     print CMDFILE "post_all_args = $tag $module\n";
+
+    # misc administrative stuff
     print CMDFILE "platforms = $PLATFORMS\n";
-
     CondorGlue::printPrereqs( *CMDFILE );
-
     print CMDFILE "notify = $notify\n";
     print CMDFILE "priority = 1\n";
-    print CMDFILE "run_type = build\n";
+
     close CMDFILE;
 
     return $cmdfile;

@@ -120,21 +120,17 @@ sub generate_cmdfile() {
     my ($tag, $module) = split(/ /, $tag_module_string); 
     print "++tag is $tag\n";
     print "++module is $module\n";
- 
+
     my $cmdfile = "condor_cmdfile-$tag";
     my $srcsfile = "condor_srcsfile-$tag";
     my $gluefile = "condor_test.src";
     my $runidfile = "input_build_runid.src";
 
     # generate the test glue file - may be symlinked eventually
-    open(GLUEFILE, ">$gluefile") || die "Can't open $gluefile for writing.";
-    print GLUEFILE "method = cvs\n";
-    print GLUEFILE "cvs_root = :ext:cndr-cvs\@chopin.cs.wisc.edu:/p/condor/repository/CONDOR_SRC\n";
-    print GLUEFILE "cvs_server = /afs/cs.wisc.edu/p/condor/public/bin/auth-cvs\n";
-    print GLUEFILE "cvs_rsh = /nmi/scripts/ssh_no_x11\n";
-    print GLUEFILE "cvs_tag = $tag\n"; 
-    print GLUEFILE "cvs_module = nmi_glue/test\n";
-    close GLUEFILE;
+    CondorGlue::makeFetchFile( $gluefile, $tag, "nmi_glue/test" );
+
+    # Generate the source code file
+    CondorGlue::makeFetchFile( $srcsfile, $tag, $module );
 
     # generate the runid input file
     open(RUNIDFILE, ">$runidfile") || die "Can't open $runidfile for writing.";
@@ -142,16 +138,6 @@ sub generate_cmdfile() {
     print RUNIDFILE "input_runids = $id\n";
     print RUNIDFILE "untar_results = false\n";     
     close RUNIDFILE;
-
-    # Generate the source code file
-    open(SRCSFILE, ">$srcsfile") || die "Can't open $srcsfile for writing.";
-    print SRCSFILE "method = cvs\n";
-    print SRCSFILE "cvs_root = :ext:cndr-cvs\@chopin.cs.wisc.edu:/p/condor/repository/CONDOR_SRC\n";
-    print SRCSFILE "cvs_server = /afs/cs.wisc.edu/p/condor/public/bin/auth-cvs\n";
-    print SRCSFILE "cvs_rsh = /nmi/scripts/ssh_no_x11\n";
-    print SRCSFILE "cvs_tag = $tag\n";
-    print SRCSFILE "cvs_module = $module\n";
-    close SRCSFILE;
 
     # Generate the cmdfile
     open(CMDFILE, ">$cmdfile") || die "Can't open $cmdfile for writing.";

@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.2.1 2004-12-31 03:00:06 wright Exp $
+# $Id: CondorGlue.pm,v 1.1.2.2 2004-12-31 03:23:20 wright Exp $
 #
 ######################################################################
 
@@ -193,6 +193,22 @@ List of users to be notified about the results
 
 END_USAGE
 }
+
+
+sub makeFetchFile
+{
+    my ( $file, $tag, $module ) = @_;
+
+    open( FILE, ">$srcsfile" ) || die "Can't open $file for writing.";
+    print FILE "method = cvs\n";
+    print FILE "cvs_root = :ext:cndr-cvs\@chopin.cs.wisc.edu:/p/condor/repository/CONDOR_SRC\n";
+    print FILE "cvs_server = /afs/cs.wisc.edu/p/condor/public/bin/auth-cvs\n";
+    print FILE "cvs_rsh = /nmi/scripts/ssh_no_x11\n";
+    print FILE "cvs_tag = $tag\n";
+    print FILE "cvs_module = $module\n";
+    close FILE;
+}
+
 
 1;
 
