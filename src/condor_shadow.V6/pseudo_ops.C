@@ -29,7 +29,6 @@
 #include "condor_io.h"
 #include "condor_file_info.h"
 #include "condor_uid.h"
-#include "afs.h"
 #include "../condor_syscall_lib/syscall_param_sizes.h"
 #include "my_hostname.h"
 #include "pseudo_ops.h"
@@ -82,12 +81,10 @@ void display_ip_addr( unsigned int addr );
 int has_ckpt_file();
 void update_job_status( struct rusage *localp, struct rusage *remotep );
 
-static char Executing_AFS_Cell[ MAX_STRING ];
 static char Executing_Filesystem_Domain[ MAX_STRING ];
 static char Executing_UID_Domain[ MAX_STRING ];
 char *Executing_Arch=NULL, *Executing_OpSys=NULL;
 
-extern char My_AFS_Cell[];
 extern char My_Filesystem_Domain[];
 extern char My_UID_Domain[];
 extern int	UseAFS;
@@ -1311,15 +1308,6 @@ pseudo_chdir( const char *path )
 }
 
 /*
-  Take note of the executing machine's AFS cell.
-*/
-pseudo_register_afs_cell( const char *cell )
-{
-	strcpy( Executing_AFS_Cell, cell );
-	dprintf( D_SYSCALLS, "\tCell = \"%s\"\n", cell );
-}
-
-/*
   Take note of the executing machine's filesystem domain
 */
 pseudo_register_fs_domain( const char *fs_domain )
@@ -1346,8 +1334,6 @@ use_local_access( const char *file )
 
 access_via_afs( const char *file )
 {
-	char *file_cell;
-
 	dprintf( D_SYSCALLS, "\tentering access_via_afs()\n" );
 
 	if( !UseAFS ) {
@@ -1356,34 +1342,26 @@ access_via_afs( const char *file )
 		return FALSE;
 	}
 
-	if( !Executing_AFS_Cell[0] ) {
-		dprintf( D_SYSCALLS, "\tdon't know cell of executing machine" );
-		dprintf( D_SYSCALLS, "\taccess_via_afs() returning FALSE\n" );
-		return FALSE;
-	}
-
-	file_cell = get_file_cell( file );
-
-	if( !file_cell ) {
-		dprintf( D_SYSCALLS, "\t- not an AFS file\n" );
+	if( !Executing_Filesystem_Domain[0] ) {
+		dprintf( D_SYSCALLS, "\tdon't know FS domain of executing machine\n" );
 		dprintf( D_SYSCALLS, "\taccess_via_afs() returning FALSE\n" );
 		return FALSE;
 	}
 
 	dprintf( D_SYSCALLS,
-		"\tfile_cell = \"%s\", executing_cell = \"%s\"\n",
-		file_cell,
-		Executing_AFS_Cell
+		"\tMy_FS_Domain = \"%s\", Executing_FS_Domain = \"%s\"\n",
+		My_Filesystem_Domain,
+		Executing_Filesystem_Domain
 	);
-	if( strcmp(file_cell,Executing_AFS_Cell) == MATCH ) {
-		dprintf( D_SYSCALLS, "\tAFS cells do match\n" );
-		dprintf( D_SYSCALLS, "\taccess_via_afs() returning TRUE\n" );
-		return TRUE;
-	} else {
-		dprintf( D_SYSCALLS, "\tAFS cells don't match\n" );
+
+	if( strcmp(My_Filesystem_Domain,Executing_Filesystem_Domain) != MATCH ) {
+		dprintf( D_SYSCALLS, "\tFilesystem domains don't match\n" );
 		dprintf( D_SYSCALLS, "\taccess_via_afs() returning FALSE\n" );
 		return FALSE;
 	}
+
+	dprintf( D_SYSCALLS, "\taccess_via_afs() returning TRUE\n" );
+	return TRUE;
 }
 
 access_via_nfs( const char *file )

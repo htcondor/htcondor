@@ -26,9 +26,6 @@
 
 MachAttributes::MachAttributes()
 {
-#if !defined(WIN32)
-	m_afs_info = new AFS_Info();
-#endif
 	m_mips = -1;
 	m_kflops = -1;
 	m_last_benchmark = 0;
@@ -72,9 +69,6 @@ MachAttributes::MachAttributes()
 
 MachAttributes::~MachAttributes()
 {
-#if !defined(WIN32)
-	delete m_afs_info;
-#endif
 	if( m_arch ) free( m_arch );
 	if( m_opsys ) free( m_opsys );
 	if( m_uid_domain ) free( m_uid_domain );
@@ -99,16 +93,6 @@ MachAttributes::compute( amask_t how_much )
 			// MachAttributes object is instantiated, we handle number
 			// of CPUs and physical memory in the constructor, not
 			// here.  -Derek Wright 2/5/99 
-
-#if !defined(WIN32) /* NEED TO PORT TO WIN32 */
-			// AFS cell
-		if( m_afs_info->my_cell() ) {
-			dprintf( D_FULLDEBUG, "%s = \"%s\"\n", ATTR_AFS_CELL, 
-					 m_afs_info->my_cell() );
-		} else {
-			dprintf( D_FULLDEBUG, "AFS_Cell not set\n" );
-		}
-#endif
 
 			// Arch, OpSys, FileSystemDomain and UidDomain.  Note:
 			// these will always return something, since config() will
@@ -184,14 +168,6 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 	char line[100];
 
 	if( IS_STATIC(how_much) || IS_PUBLIC(how_much) ) {
-
-#ifndef WIN32
-		if( m_afs_info->my_cell() ) {
-			sprintf( line, "%s = \"%s\"", ATTR_AFS_CELL,
-					 m_afs_info->my_cell() );
-			cp->Insert( line );
-		}
-#endif
 
 			// STARTD_IP_ADDR 
 		sprintf( line, "%s = \"%s\"", ATTR_STARTD_IP_ADDR, 

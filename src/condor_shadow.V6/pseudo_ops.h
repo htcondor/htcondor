@@ -65,7 +65,6 @@ int pseudo_get_iwd( char *path );
 int pseudo_get_ckpt_name( char *path );
 int pseudo_get_a_out_name( char *path );
 int pseudo_chdir( const char *path );
-int pseudo_register_afs_cell( const char *cell );
 int pseudo_register_fs_domain( const char *fs_domain );
 int pseudo_register_uid_domain( const char *uid_domain );
 int pseudo_get_universe( int *my_universe );

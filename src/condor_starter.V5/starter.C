@@ -34,7 +34,6 @@
 #include "ckpt_file.h"
 #include "startup.h"
 #include "alarm.h"
-#include "afs.h"
 #include "list.h"
 #include "user_proc.h"
 #include "sig_install.h"
@@ -1277,23 +1276,17 @@ determine_user_ids( uid_t &requested_uid, gid_t &requested_gid )
 
 
 /*
-  Find out information about our AFS cell, UID domain, and file sharing
+  Find out information about our UID domain and file sharing
   domain.  Register this information with the shadow.
 */
 void
 init_environment_info()
 {
-	AFS_Info	info;
 	char		*my_cell;
 	char 		*my_fs_domain;
 	char		*my_uid_domain;
 	char		*ckpt_server_host;
 	char		*arch, *opsys;
-
-	my_cell = info.my_cell();
-	if( my_cell ) {
-		REMOTE_syscall( CONDOR_register_afs_cell, my_cell );
-	}
 
 	my_fs_domain = param( "FILESYSTEM_DOMAIN" );
 	if( my_fs_domain ) {

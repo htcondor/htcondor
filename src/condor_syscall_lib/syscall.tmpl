@@ -297,10 +297,6 @@
 
 #if !defined(SWITCH)
 /* No switches for pseudo_syscalls */
-	int register_afs_cell( const char *cell ) : pseudo {
-		SEND_PATH( cell );
-		ALLOC_PATH( cell );
-	}
 	int register_fs_domain( const char *domain ) : pseudo {
 		SEND_PATH( domain );
 		ALLOC_PATH( domain );

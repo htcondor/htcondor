@@ -47,7 +47,6 @@
 
 #if !defined(WIN32)
 // Unix specific stuff
-#include "afs.h"
 #include "sig_install.h"
 #else
 // Windoze specific stuff

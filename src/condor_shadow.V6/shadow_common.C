@@ -40,7 +40,6 @@
 #include "clib.h"
 #include "shadow.h"
 #include "subproc.h"
-#include "afs.h"
 
 extern "C" {
 	void NotifyUser( char *buf, PROC *proc, char *email_addr );

@@ -31,10 +31,6 @@
 #ifndef _RES_ATTRIBUTES_H
 #define _RES_ATTRIBUTES_H
 
-#if !defined(WIN32)
-#include "afs.h"
-#endif
-
 typedef char amask_t;
 
 const amask_t A_PUBLIC	= 1;
@@ -104,9 +100,6 @@ private:
 	char*			m_uid_domain;
 	char*			m_filesystem_domain;
 	char*			m_subnet;
-#if !defined(WIN32)
-	AFS_Info*		m_afs_info;
-#endif
 };	
 
 

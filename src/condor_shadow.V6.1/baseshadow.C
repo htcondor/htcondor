@@ -28,7 +28,6 @@
 #include "condor_qmgr.h"         // have to talk to schedd's Q manager
 #include "condor_attributes.h"   // for ATTR_ ClassAd stuff
 #include "condor_config.h"       // for param()
-#include "afs.h"                 // for get_host_cell()
 #include "condor_email.h"        // for (you guessed it) email stuff
 
 static char *_FileName_ = __FILE__;   /* Used by EXCEPT (see except.h) */
@@ -46,7 +45,6 @@ BaseShadow::BaseShadow() {
 	owner[0] = '\0';
 	iwd[0] = '\0';
 	scheddAddr = NULL;
-	afsCell = NULL;
 }
 
 BaseShadow::~BaseShadow() {
@@ -77,13 +75,6 @@ void BaseShadow::baseInit( ClassAd *jobAd, char schedd_addr[],
 	
 	DebugId = display_dprintf_header;
 	
-#ifndef WIN32  // NEED TO PORT TO WIN32
-	afsCell = get_host_cell();
-	if (!afsCell) {
-		afsCell = "(NO CELL)";
-	}
-#endif
-
 	config();
 
 	initUserLog();

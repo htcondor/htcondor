@@ -180,9 +180,6 @@ class BaseShadow : public Service
 	char *scheddAddr;
 	bool jobExitedGracefully;
 
-	// others
-	char *afsCell;
-
 		// This makes this class un-copy-able:
 	BaseShadow( const BaseShadow& );
 	BaseShadow& operator = ( const BaseShadow& );

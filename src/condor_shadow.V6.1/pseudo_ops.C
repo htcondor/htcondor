@@ -33,7 +33,6 @@
 #include "condor_debug.h"
 #include "condor_io.h"
 #include "condor_uid.h"
-#include "afs.h"
 #include "shadow.h"
 #include "pseudo_ops.h"
 #include "exit.h"

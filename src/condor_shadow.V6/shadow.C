@@ -57,7 +57,6 @@
 #include "clib.h"
 #include "shadow.h"
 #include "subproc.h"
-#include "afs.h"
 
 int	UsePipes;
 
@@ -109,7 +108,6 @@ char *strcpy();
 UserLog ULog;
 
 #define SMALL_STRING 128
-char My_AFS_Cell[ SMALL_STRING ];
 char My_Filesystem_Domain[ SMALL_STRING ];
 char My_UID_Domain[ SMALL_STRING ];
 int  UseAFS;
@@ -228,7 +226,7 @@ main(int argc, char *argv[], char *envp[])
 	char	*tmp;
 	int		reserved_swap, free_swap;
 	char	*host, *cluster, *proc;
-	char	*my_cell, *my_fs_domain, *my_uid_domain, *use_afs, *use_nfs;
+	char	*my_fs_domain, *my_uid_domain, *use_afs, *use_nfs;
 	char	*use_ckpt_server;
 	char	*capability;
 	int		i;
@@ -339,14 +337,6 @@ main(int argc, char *argv[], char *envp[])
 	// by this time, the job has been sent and accepted to run, so
 	// log a ULOG_EXECUTE event
 	log_execute(host);
-
-	my_cell = get_host_cell();
-	if( my_cell ) {
-		strcpy( My_AFS_Cell, my_cell );
-	} else {
-		strcpy( My_AFS_Cell, "(NO CELL)" );
-	}
-	dprintf( D_ALWAYS, "My_AFS_Cell = \"%s\"\n", My_AFS_Cell );
 
 	my_fs_domain = param( "FILESYSTEM_DOMAIN" );
 	if( my_fs_domain ) {
