@@ -33,7 +33,8 @@
  * read/write system calls under unix except that they are portable, use
  * a timeout, and make sure that all data is read or written.
  */
-int condor_read(SOCKET fd, char *buf, int sz, int timeout)
+int
+condor_read( SOCKET fd, char *buf, int sz, int timeout )
 {
 	int nr = 0, nro;
 	unsigned int start_time, cur_time;
@@ -63,7 +64,8 @@ int condor_read(SOCKET fd, char *buf, int sz, int timeout)
 			if( start_time + timeout > cur_time ) {
 				timer.tv_sec = (start_time + timeout) - cur_time;
 			} else {
-				dprintf(D_ALWAYS, "Timeout reading buffer.\n");
+				dprintf( D_ALWAYS, 
+						 "condor_read(): timeout reading buffer.\n" );
 				return -1;
 			}
 			
@@ -78,46 +80,61 @@ int condor_read(SOCKET fd, char *buf, int sz, int timeout)
 			nfound = select( nfds, &readfds, 0, 0, &timer );
 
 			switch(nfound) {
-			  case 0:
-				dprintf(D_ALWAYS, "Timeout reading buffer.\n");
+			case 0:
+				dprintf( D_ALWAYS, 
+						 "condor_read(): timeout reading buffer.\n" );
 				return -1;
 
-			  case 1:
+			case 1:
 				break;
 
-			  default:
-				dprintf( D_ALWAYS, "select returns %d, assuming failure.\n",
-						 nfound );
+			default:
+				dprintf( D_ALWAYS, "condor_read(): select() "
+						 "returns %d, assuming failure.\n", nfound );
 				return -1;
 			}
 		}
 
 		nro = recv(fd, &buf[nr], sz - nr, 0);
-		
 		if( nro <= 0 ) {
-			dprintf( D_ALWAYS, 
-					 "recv returned %d, errno = %d, assuming failure.\n",
-					 nro, errno );
+			int the_error;
+#ifdef WIN32
+			the_error = WSAGetLastError();
+			if ( the_error == WSAEWOULDBLOCK ) {
+				dprintf( D_FULLDEBUG, "condor_read(): "
+						 "recv() returns WSAEWOULDBLOCK, try again\n" );
+				continue;
+			}
+#else
+			the_error = errno;
+#endif
+			dprintf( D_ALWAYS, "condor_read(): recv() returned %d, "
+					 "errno = %d, assuming failure.\n",
+					 nro, the_error );
 			return -1;
-		} else if( nro == 0 ) {
-			return nr;
 		}
-
 		nr += nro;
-	}	
+	}
 	
 /* Post Conditions */
-	ASSERT(nr > 0); /* We should have read at least SOME data */
+	ASSERT( nr == sz );  // we should have read *ALL* the data
 	return nr;
 }
 
-int condor_write(SOCKET fd, char *buf, int sz, int timeout) {
 
+int
+condor_write( SOCKET fd, char *buf, int sz, int timeout )
+{
 	int nw = 0, nwo = 0;
 	unsigned int start_time = 0, cur_time = 0;
 	struct timeval timer;
 	fd_set writefds;
+	fd_set readfds;
 	int nfds = 0, nfound = 0;
+	char tmpbuf[1];
+	int nro;
+	bool select_for_read = true;
+	bool needs_select = true;
 
 	/* Pre-conditions. */
 	ASSERT(sz > 0);      /* Can't write buffers that are have no data */
@@ -127,6 +144,7 @@ int condor_write(SOCKET fd, char *buf, int sz, int timeout) {
 	
 	memset( &timer, 0, sizeof( struct timeval ) );
 	memset( &writefds, 0, sizeof( fd_set ) );
+	memset( &readfds, 0, sizeof( fd_set ) );
 	
 	if(timeout > 0) {
 		start_time = time(NULL);
@@ -136,47 +154,78 @@ int condor_write(SOCKET fd, char *buf, int sz, int timeout) {
 	while( nw < sz ) {
 
 		if( timeout > 0 ) {
+			while( needs_select ) {
+				if( cur_time == 0 ) {
+					cur_time = time(NULL);
+				}
 
-			if( cur_time == 0 ) {
-				cur_time = time(NULL);
-			}
-
-			if( start_time + timeout > cur_time ) {
-				timer.tv_sec = (start_time + timeout) - cur_time;
-			} else {
-				dprintf(D_ALWAYS, "Timed out writing buffer\n" );
-				return -1;
-			}
+				if( start_time + timeout > cur_time ) {
+					timer.tv_sec = (start_time + timeout) - cur_time;
+				} else {
+					dprintf( D_ALWAYS, "condor_write(): "
+							 "timed out writing buffer\n" );
+					return -1;
+				}
 			
-			cur_time = 0;
-			timer.tv_usec = 0;
+				cur_time = 0;
+				timer.tv_usec = 0;
 
 #ifndef WIN32
-			nfds = fd + 1;
+				nfds = fd + 1;
 #endif
-			FD_ZERO( &writefds );
-			FD_SET( fd, &writefds );
-
-			nfound = select( nfds, 0, &writefds, &writefds, &timer );
-			
-			switch(nfound) {
-			  case 0:
-				dprintf( D_ALWAYS, "Timed out writing buffer\n" );
-				return -1;
+				FD_ZERO( &writefds );
+				FD_SET( fd, &writefds );
 				
-			  case 1:
-				break;
+				FD_ZERO( &readfds );
+				if( select_for_read ) {
+						// Also, put it in the read fds, so we'll wake
+						// up if the socket is closed
+					FD_SET( fd, &readfds );
+				}
+				nfound = select( nfds, &readfds, &writefds, &writefds, 
+								 &timer ); 
 
-			  default:
-				dprintf( D_ALWAYS, 
-						"Select returns %d, assuming failure.\n");
-				return -1;
+					// unless we decide we need to select() again, we
+					// want to break out of our while() loop now that
+					// we've actually performed a select()
+				needs_select = false;
+
+				switch(nfound) {
+				case 0:
+					dprintf( D_ALWAYS, "condor_write(): "
+							 "timed out writing buffer\n" );
+					return -1;
 				
+				case 1:
+					if( FD_ISSET(fd, &readfds) ) {
+							// see if the socket was closed
+						nro = recv(fd, &tmpbuf, 1, MSG_PEEK);
+						if( ! nro ) {
+							dprintf( D_ALWAYS, "condor_write(): "
+									 "Socket closed when trying "
+									 "to write buffer\n" );
+							return -1;
+						}
+
+							/*
+							  otherwise, there's real data to consume
+							  on the read side, and we don't want to
+							  put our fd in the readfds anymore or
+							  select() will never block.  also, we
+							  need to re-do the select()
+							*/
+						needs_select = true;
+						select_for_read = false;
+					}
+					break;
+				default:
+					dprintf( D_ALWAYS, "condor_write(): select() "
+							 "returns %d, assuming failure.\n", nfound );
+					return -1;
+				}
 			}
 		}
 		
-
-
 		nwo = send(fd, &buf[nw], sz - nw, 0);
 
 		if( nwo <= 0 ) {
@@ -184,16 +233,16 @@ int condor_write(SOCKET fd, char *buf, int sz, int timeout) {
 #ifdef WIN32
 			the_error = WSAGetLastError();
 			if ( the_error == WSAEWOULDBLOCK ) {
-				dprintf(D_FULLDEBUG,"send return WSAEWOULDBLOCK, try again\n");
+				dprintf( D_FULLDEBUG, "condor_write(): "
+						 "send() returns WSAEWOULDBLOCK, try again\n" );
 				continue;
 			}
 #else
 			the_error = errno;
 #endif
-
-			dprintf( D_ALWAYS, 
-					"send returned %d, timeout=%d, errno=%d. Assuming failure.\n",
-					nwo, timeout, the_error);
+			dprintf( D_ALWAYS, "condor_write(): send() returned %d, "
+					 "timeout=%d, errno=%d.  Assuming failure.\n",
+					 nwo, timeout, the_error );
 			return -1;
 		}
 		
