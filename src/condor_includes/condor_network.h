@@ -8,6 +8,7 @@
 #define NEGOTIATOR_PORT					9614
 
 #define ACCOUNTANT_PORT					9616
+#define CONDOR_VIEW_PORT				9616
 
 #define START_PORT					9611
 #define START_UDP_PORT					9611
