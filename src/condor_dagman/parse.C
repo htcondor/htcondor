@@ -128,7 +128,17 @@ bool parse (char *filename, Dag *dag) {
                 fclose(fp);
                 return false;
             }
-			
+
+            // The JobName cannot be an existing JobName
+            if( dag->NodeExists( jobName ) ) {
+	      debug_printf( DEBUG_QUIET,
+			    "ERROR: invalid DAG (%s:%d): node name \"%s\" "
+			    "already used\n", filename, lineNumber, jobName );
+	      fclose( fp );
+	      return false;
+            }
+
+
             // Next token is the condor command file
             //
             char *cmd = strtok(NULL, DELIMITERS);
