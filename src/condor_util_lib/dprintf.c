@@ -605,7 +605,7 @@ dprintf_exit()
 		/* If _EXCEPT_Cleanup is set for cleaning up during EXCEPT(),
 		   we call that here, as well. */
 	if( _EXCEPT_Cleanup ) {
-		(*_EXCEPT_Cleanup)();
+		(*_EXCEPT_Cleanup)( __LINE__, errno, "dprintf hit fatal errors\n" );
 	}
 
 		/* Actually exit now */
