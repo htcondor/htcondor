@@ -2132,7 +2132,7 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 						srec->job_id.proc);
 			}
 			delete_shadow_rec( pid );
-		} else {
+		} else if (srec) {
 				// Shadow record with capability... must be a real shadow.
 			if( WIFEXITED(status) ) {
                 dprintf( D_FULLDEBUG, "Shadow pid %d exited with status %d\n",
