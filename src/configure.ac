@@ -1232,13 +1232,11 @@ AC_SUBST(ext_kerberos_version,$_cv_ext_kerberos_version)
 
 
 AC_MSG_CHECKING([globus])
-if test "$os" = "Darwin"; then
-  _cv_ext_globus_version="globus-2.4.3"
-else
-  _cv_ext_globus_version="globus-2.2.4"
-fi
+_cv_ext_globus_version="globus-2.4.3.vdt.1.1.14"
+_cv_ext_globus_data_version="globus-2.4.3.data"
 AC_MSG_RESULT([$_cv_ext_globus_version])
 AC_SUBST(ext_globus_version,$_cv_ext_globus_version)
+AC_SUBST(ext_globus_data_version,$_cv_ext_globus_data_version)
 
 AC_MSG_CHECKING([globus flavor])
 _cv_globus_flavor=gcc32dbg
