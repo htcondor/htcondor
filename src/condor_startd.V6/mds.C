@@ -39,7 +39,7 @@ int MdsGenerate(ClassAd *machine, const char *file )
 	if ( NULL != Host ) {
 		fprintf( fp,
 				 "dn: Mds-Device-Group-name=machine, Mds-Host-hn=%s, "
-				 "mds-Vo-name=local, o=grid", Host );
+				 "mds-Vo-name=local, o=grid\n", Host );
 		free( Host );
 	}
 
