@@ -25,8 +25,13 @@
 // and the qmgmt server (i.e. the schedd).
 
 #include "condor_common.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "dedicated_scheduler.h"
+#include "scheduler.h"
 #include "condor_qmgr.h"
+#include "qmgmt.h"
 #include "MyString.h"
+
 
 int
 SetAttributeInt(int cl, int pr, const char *name, int val)
@@ -98,3 +103,5 @@ SetAttributeStringByConstraint(const char *con, const char *name,
 	rval = SetAttributeByConstraint(con,name,buf.Value());
 	return(rval);
 }
+
+

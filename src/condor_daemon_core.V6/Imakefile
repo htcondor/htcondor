@@ -22,10 +22,10 @@ CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(FIX_BROKEN_GCC) $(PURIFY_FLAG)
 LIB = $(STD_LIBS)
 
-OBJ = timer_manager.o daemon_core.o daemon_core_main.o \
+OBJ = stdsoap2.o timer_manager.o daemon_core.o daemon_core_main.o \
   daemon_core_instantiate.o condor_ipverify.o condor_perms.o \
   condor_lock_base.o condor_lock_implementation.o condor_lock_file.o \
-  condor_lock.o self_monitor.o
+  condor_lock.o self_monitor.o httpget.o
 
 library_target(daemon_core.a,$(OBJ))
 c_plus_target(testit,test_daemon_core.o daemon_core.a,$(LIB))
@@ -35,6 +35,10 @@ release:: all
 stripped:: all
 static:: all
 
+stdsoap2.C:
+	cp $(GSOAP_INC)/stdsoap2.h ../condor_includes/
+	cp $(GSOAP_DIR)/src/stdsoap2.cpp stdsoap2.C
+
+
 IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib,condor_perms.o)
-

@@ -16,6 +16,7 @@ EXT_MAN_VERSION = man-current
 EXT_GT3GAHP_VERSION = @ext_gt3gahp_version@
 EXT_CLASSADS_VERSION = @ext_classads_version@
 EXT_SRB_VERSION = @ext_srb_version@
+EXT_GSOAP_VERSION = @ext_gsoap_version@
 
 #define WANT_EXT_GLIBC @want_ext_glibc@
 #if WANT_EXT_GLIBC && HAS_EXTERNALS
@@ -102,3 +103,10 @@ SRB_INC =
 PVM_DIR = $(EXT_INSTALL)/$(EXT_PVM_VERSION)
 
 GT3GAHP_DIR = $(EXT_INSTALL)/$(EXT_GT3GAHP_VERSION)
+
+
+GSOAP_DIR = $(EXT_INSTALL)/$(EXT_GSOAP_VERSION)
+SOAPCPP2 = $(GSOAP_DIR)/bin/soapcpp2
+GSOAP_LIB = $(GSOAP_DIR)/lib
+GSOAP_INC = $(GSOAP_DIR)/include
+

@@ -24,3 +24,5 @@ EXT_GT3GAHP_VERSION=@ext_gt3gahp_version@
 EXT_CLASSADS_VERSION=@ext_classads_version@
 
 EXT_SRB_VERSION=@ext_srb_version@
+
+EXT_GSOAP_VERSION=@ext_gsoap_version@

@@ -146,6 +146,7 @@ const char ATTR_HAS_PVM                  [] = "HasPVM";
 const char ATTR_HAS_RECONNECT            [] = "HasReconnect";
 const char ATTR_HAS_REMOTE_SYSCALLS      [] = "HasRemoteSyscalls";
 const char ATTR_HAS_TDP                  [] = "HasTDP";
+const char ATTR_HAS_SOAP_API            [] = "HasSOAPInterface";
 const char ATTR_HELD_JOBS				 [] = "HeldJobs";
 const char ATTR_HOLD_KILL_SIG            [] = "HoldKillSig";
 const char ATTR_IDLE_JOBS                [] = "IdleJobs";

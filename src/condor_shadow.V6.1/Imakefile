@@ -6,9 +6,11 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -I../condor_schedd.V6
 
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
+soapobjs(shadow)
+
 OBJ = shadow_v61_main.o baseshadow.o shadow.o mpishadow.o \
 	remoteresource.o mpiresource.o pseudo_ops.o NTreceivers.o \
-	shadow_v61_instantiate.o shadow_user_policy.o
+	shadow_v61_instantiate.o shadow_user_policy.o $(SOAP_OBJS)
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 release_target($(NAME),sbin,EXECUTABLE_MODE)
@@ -25,3 +27,5 @@ import(../condor_syscall_lib,extern_path.o)
 #endif
 
 clean::
+
+gen_soapfiles(shadow,condorShadow)

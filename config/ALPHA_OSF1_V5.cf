@@ -1,4 +1,5 @@
-#define PlatformFlags	-DDUX=DUX -DDUX5=DUX5
+/* gSOAP headers files require TRU64. */
+#define PlatformFlags	-DDUX=DUX -DDUX5=DUX5 -DTRU64
 
 #define IS_CLIPPED	YES
 #undef NEED_SNPRINTF

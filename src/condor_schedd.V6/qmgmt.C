@@ -655,20 +655,35 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 */
 extern "C" {
 
+
 bool
 setQSock( ReliSock* rsock )
 {
-	if( ! rsock ) {
-		return false;
-	}
+	// initialize per-connection variables.  back in the day this
+	// was essentially InvalidateConnection().  of particular 
+	// importance is setting Q_SOCK... this tells the rest of the QMGMT
+	// code the request is from an external user instead of originating
+	// from within the schedd itself.
+	// If rsock is NULL, that means the request is internal to the schedd
+	// itself, and thus anything goes!
+
+	// store the cluster num so when we commit the transaction, we can easily
+	// see if new clusters have been submitted and thus make links to cluster ads
+	old_cluster_num = next_cluster_num;	
+	active_cluster_num = -1;
 	Q_SOCK = rsock;
 	return true;
 }
 
 
 void
-unsetQSock( void )
+unsetQSock()
 {
+	// reset the per-connection variables.  of particular 
+	// importance is setting Q_SOCK back to NULL. this tells the rest of 
+	// the QMGMT code the request originated internally, and it should
+	// be permitted (i.e. we only call OwnerCheck if Q_SOCK is not NULL).
+
 	Q_SOCK = NULL;
 }
 
@@ -677,6 +692,8 @@ int
 handle_q(Service *, int, Stream *sock)
 {
 	int	rval;
+
+	setQSock((ReliSock*)sock);
 
 	JobQueue->BeginTransaction();
 
@@ -700,51 +717,13 @@ handle_q(Service *, int, Stream *sock)
 	} while(rval >= 0);
 
 
-	// reset the per-connection variables.  of particular
-	// importance is setting Q_SOCK back to NULL. this tells the rest of
-	// the QMGMT code the request originated internally, and it should
-	// be permitted (i.e. we only call OwnerCheck if Q_SOCK is not NULL).
-	//Q_SOCK->unAuthenticate();
-	// note: Q_SOCK is static...
-	Q_SOCK = NULL;
+	unsetQSock();
 
 	dprintf(D_FULLDEBUG, "QMGR Connection closed\n");
 
 	// Abort any uncompleted transaction.  The transaction should
 	// be committed in CloseConnection().
-	if ( JobQueue->AbortTransaction() ) {
-		/*	If we made it here, a transaction did exist that was not
-			committed, and we now aborted it.  This would happen if
-			somebody hit ctrl-c on condor_rm or condor_status, etc,
-			or if any of these client tools bailed out due to a fatal error.
-			Because the removal of ads from the queue has been backed out,
-			we need to "back out" from any changes to the ClusterSizeHashTable,
-			since this may now contain incorrect values.  Ideally, the size of
-			the cluster should just be kept in the cluster ad -- that way, it
-			gets committed or aborted as part of the transaction.  But alas,
-			it is not; same goes a bunch of other stuff: removal of ckpt and
-			ickpt files, appending to the history file, etc.  Sigh.
-			This should be cleaned up someday, probably with the new schedd.
-			For now, to "back out" from changes to the ClusterSizeHashTable, we
-			use brute force and blow the whole thing away and recompute it.
-			-Todd 2/2000
-		*/
-		ClusterSizeHashTable->clear();
-		TotalJobsCount = 0;
-		ClassAd *ad;
-		HashKey key;
-		const char *tmp;
-		int cluster_num;
-		JobQueue->StartIterateAllClassAds();
-		while (JobQueue->IterateAllClassAds(ad,key)) {
-			tmp = key.value();
-			if ( *tmp == '0' ) continue;	// skip cluster & header ads
-			if ( (cluster_num = atoi(tmp)) ) {
-				// count up number of procs in cluster, update ClusterSizeHashTable
-				IncrementClusterSize(cluster_num);
-			}
-		}
-	}	// end of if JobQueue->AbortTransaction == True
+	AbortTransactionAndRecomputeClusters();
 
 	return 0;
 }
@@ -986,7 +965,7 @@ int DestroyProc(int cluster_id, int proc_id)
 }
 
 
-int DestroyCluster(int cluster_id)
+int DestroyCluster(int cluster_id, const char* reason)
 {
 	ClassAd				*ad=NULL;
 	int					c, proc_id;
@@ -1019,6 +998,24 @@ int DestroyCluster(int cluster_id)
 					if ( !completion_time ) {
 						SetAttributeInt(cluster_id,proc_id,
 							ATTR_COMPLETION_DATE,(int)time(NULL));
+					}
+				}
+
+				// Take care of ATTR_REMOVE_REASON
+				if( reason ) {
+					MyString fixed_reason;
+					if( reason[0] == '"' ) {
+						fixed_reason += reason;
+					} else {
+						fixed_reason += '"';
+						fixed_reason += reason;
+						fixed_reason += '"';
+					}
+					if( SetAttribute(cluster_id, proc_id, ATTR_REMOVE_REASON, 
+									 fixed_reason.Value()) < 0 ) {
+						dprintf( D_ALWAYS, "WARNING: Failed to set %s to \"%s\" for "
+								 "job %d.%d\n", ATTR_REMOVE_REASON, reason, cluster_id,
+								 proc_id );
 					}
 				}
 
@@ -1227,13 +1224,14 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 #if !defined(WIN32)
 			errno = EACCES;
 #endif
+			dprintf(D_ALWAYS,"Interting new ad into non-active cluster cid=%d acid=%d\n",cluster_id,active_cluster_num);
 			return -1;
 		}
 	}
 
 	// check for security violations.
 	// first, make certain ATTR_OWNER can only be set to who they really are.
-	if (stricmp(attr_name, ATTR_OWNER) == 0)
+	if (Q_SOCK && stricmp(attr_name, ATTR_OWNER) == 0) // TODD SOAP CHANGE!  REVIEW!  TODO
 	{
 		if ( !Q_SOCK ) {
 			EXCEPT( "Trying to setAttribute( ATTR_OWNER ) and Q_SOCK is NULL" );
@@ -1256,7 +1254,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				return -1;
 			}
 		}
+	}
 
+	if (stricmp(attr_name, ATTR_OWNER) == 0) {
 			// If we got this far, we're allowing the given value for
 			// ATTR_OWNER to be set.  However, now, we should try to
 			// insert a value for ATTR_USER, too, so that's always in
@@ -1520,6 +1520,51 @@ void
 AbortTransaction()
 {
 	JobQueue->AbortTransaction();
+}
+
+void
+AbortTransactionAndRecomputeClusters()
+{
+	if ( JobQueue->AbortTransaction() ) {
+		/*	If we made it here, a transaction did exist that was not
+			committed, and we now aborted it.  This would happen if 
+			somebody hit ctrl-c on condor_rm or condor_status, etc,
+			or if any of these client tools bailed out due to a fatal error.
+			Because the removal of ads from the queue has been backed out,
+			we need to "back out" from any changes to the ClusterSizeHashTable,
+			since this may now contain incorrect values.  Ideally, the size of
+			the cluster should just be kept in the cluster ad -- that way, it 
+			gets committed or aborted as part of the transaction.  But alas, 
+			it is not; same goes a bunch of other stuff: removal of ckpt and 
+			ickpt files, appending to the history file, etc.  Sigh.  
+			This should be cleaned up someday, probably with the new schedd.
+			For now, to "back out" from changes to the ClusterSizeHashTable, we
+			use brute force and blow the whole thing away and recompute it. 
+			-Todd 2/2000
+		*/
+		ClusterSizeHashTable->clear();
+		ClassAd *ad;
+		HashKey key;
+		const char *tmp;
+		int 	*numOfProcs = NULL;	
+		int cluster_num;
+		JobQueue->StartIterateAllClassAds();
+		while (JobQueue->IterateAllClassAds(ad,key)) {
+			tmp = key.value();
+			if ( *tmp == '0' ) continue;	// skip cluster & header ads
+			if ( (cluster_num = atoi(tmp)) ) {
+				// count up number of procs in cluster, update ClusterSizeHashTable
+				if ( ClusterSizeHashTable->lookup(cluster_num,numOfProcs) == -1 ) {
+					// First proc we've seen in this cluster; set size to 1
+					ClusterSizeHashTable->insert(cluster_num,1);
+				} else {
+					// We've seen this cluster_num go by before; increment proc count
+					(*numOfProcs)++;
+				}
+
+			}
+		}
+	}	// end of if JobQueue->AbortTransaction == True
 }
 
 int

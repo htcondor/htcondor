@@ -1323,6 +1323,12 @@ else
 fi
 # end of if $ac_cv_has_externals = "YES" 
 
+AC_MSG_CHECKING([gsoap])
+_cv_ext_gsoap_version="gsoap-2.7"
+AC_MSG_RESULT([$_cv_ext_gsoap_version])
+AC_SUBST(ext_gsoap_version,$_cv_ext_gsoap_version)
+
+
 ############################################################
 # Configure-generated output
 ############################################################

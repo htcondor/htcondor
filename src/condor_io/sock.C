@@ -812,7 +812,9 @@ int Sock::close()
 						sock_to_string(_sock), _sock );
 	}
 
-	if (::closesocket(_sock) < 0) return FALSE;
+	if ( _sock != INVALID_SOCKET ) {
+		if (::closesocket(_sock) < 0) return FALSE;
+	}
 
 	_sock = INVALID_SOCKET;
 	_state = sock_virgin;

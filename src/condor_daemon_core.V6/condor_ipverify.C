@@ -40,8 +40,8 @@ extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc.
   enums into strings, you need to use PermString() (in the util lib) for
   that.
 */
-const char* IpVerify::perm_names[] = {"READ","WRITE","DAEMON", "ADMINISTRATOR","OWNER","NEGOTIATOR","CONFIG",NULL};
-const int IpVerify::perm_ints[] = {READ,WRITE,DAEMON,ADMINISTRATOR,OWNER,NEGOTIATOR,CONFIG_PERM,-1};  // must end with -1
+const char* IpVerify::perm_names[] = {"READ","WRITE","DAEMON", "ADMINISTRATOR","OWNER","NEGOTIATOR","CONFIG","SOAP",NULL};
+const int IpVerify::perm_ints[] = {READ,WRITE,DAEMON,ADMINISTRATOR,OWNER,NEGOTIATOR,CONFIG_PERM,SOAP_PERM,-1};  // must end with -1
 const char TotallyWild[] = "*";
 
 

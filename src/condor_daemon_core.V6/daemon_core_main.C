@@ -1154,6 +1154,7 @@ int main( int argc, char** argv )
 {
 	char**	ptr;
 	int		command_port = -1;
+	int		http_port = -1;
 	int		dcargs = 0;		// number of daemon core command-line args found
 	char	*ptmp, *ptmp1;
 	int		i;
@@ -1324,6 +1325,23 @@ int main( int argc, char** argv )
 						 "argument\n" );
 				exit( 1 );
 			}				  
+			break;
+		case 'h':		// -http <port> : specify port for HTTP and SOAP requests
+			if ( ptr[0][2] && ptr[0][2] == 't' ) {
+					// specify an HTTP port
+				ptr++;
+				if( ptr && *ptr ) {
+					http_port = atoi( *ptr );
+					dcargs += 2;
+				} else {
+					fprintf( stderr, 
+							 "DaemonCore: ERROR: -http needs another argument.\n" );
+					fprintf( stderr, 
+					   "   Please specify the port to use for the HTTP socket.\n" );
+
+					exit( 1 );
+				}
+			}
 			break;
 		case 'p':		// use well-known Port for command socket, or
 				        // specify a Pidfile to drop your pid into
@@ -1605,7 +1623,7 @@ int main( int argc, char** argv )
 
 		// SETUP COMMAND SOCKET
 	daemonCore->InitCommandSocket( command_port );
-	
+
 		// Install DaemonCore signal handlers common to all daemons.
 	daemonCore->Register_Signal( SIGHUP, "SIGHUP", 
 								 (SignalHandler)handle_dc_sighup,
@@ -1732,6 +1750,9 @@ int main( int argc, char** argv )
 		// will allow people to set with condor_config_val from
 		// various kinds of hosts (ADMINISTRATOR, CONFIG, WRITE, etc). 
 	daemonCore->InitSettableAttrsLists();
+
+		// SETUP HTTP SOCKET
+	daemonCore->InitHTTPSocket( http_port );
 
 	// call the daemon's main_init()
 	main_init( argc, argv );

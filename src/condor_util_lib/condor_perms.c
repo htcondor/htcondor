@@ -45,6 +45,8 @@ PermString( DCpermission perm )
 		return "OWNER";
 	case CONFIG_PERM:
 		return "CONFIG";
+	case SOAP_PERM:
+		return "SOAP";
 	default:
 		return "Unknown";
 	}

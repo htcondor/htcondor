@@ -13,8 +13,11 @@ CFLAGS = $(STD_C_FLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 TOOL_LIB = $(STD_LIBS)
 
+soapobjs(dagman)
+
 OBJ = dagman_main.o submit.o dag.o job.o util.o parse.o debug.o types.o \
-	script.o scriptQ.o helper.o dagman_instantiate.o dagman_commands.o
+	script.o scriptQ.o helper.o dagman_instantiate.o dagman_commands.o \
+	$(SOAP_OBJS)
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 release_target($(NAME),bin,EXECUTABLE_MODE)
@@ -33,3 +36,5 @@ html_target( documentation )
 #if defined(DAGMAN_HELPER)
 c_plus_target(t_helper,t_helper.o helper.o,$(LIB))
 #endif
+
+gen_soapfiles(dagman,condorDagman)

@@ -69,11 +69,12 @@ public:
 	virtual void Shutdown();         // main_shutdown_graceful
 
 	// command handlers
-	static int receive_query(Service*, int, Stream*);
+	static int receive_query_cedar(Service*, int, Stream*);
+	static int receive_query_public(int, ClassAd*, List<ClassAd>*);
 	static int receive_invalidation(Service*, int, Stream*);
 	static int receive_update(Service*, int, Stream*);
 
-	static void process_query(AdTypes, ClassAd&, Stream*);
+	static void process_query(AdTypes, ClassAd*, List<ClassAd>*);
 	static ClassAd * process_global_query( const char *constraint, void *arg );
 	static int select_by_match( ClassAd *ad );
 	static void process_invalidation(AdTypes, ClassAd&, Stream*);
@@ -109,7 +110,7 @@ protected:
 	static ClassAd *query_any_result;
 
 	static ClassAd* __query__;
-	static Stream* __sock__;
+	static List<ClassAd>* __ClassAdResultList__;
 	static int __numAds__;
 	static int __failed__;
 

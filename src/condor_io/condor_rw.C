@@ -55,7 +55,7 @@ static int errno_is_temporary( int e )
  * a timeout, and make sure that all data is read or written.
  */
 int
-condor_read( SOCKET fd, char *buf, int sz, int timeout )
+condor_read( SOCKET fd, char *buf, int sz, int timeout, int flags )
 {
 	int nr = 0, nro;
 	unsigned int start_time, cur_time;
@@ -116,7 +116,7 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout )
 			}
 		}
 
-		nro = recv(fd, &buf[nr], sz - nr, 0);
+		nro = recv(fd, &buf[nr], sz - nr, flags);
 		if( nro <= 0 ) {
 
 				// If timeout > 0, and we made it here, then
@@ -162,7 +162,7 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout )
 
 
 int
-condor_write( SOCKET fd, char *buf, int sz, int timeout )
+condor_write( SOCKET fd, char *buf, int sz, int timeout, int flags )
 {
 	int nw = 0, nwo = 0;
 	unsigned int start_time = 0, cur_time = 0;
@@ -272,7 +272,7 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout )
 			}
 		}
 		
-		nwo = send(fd, &buf[nw], sz - nw, 0);
+		nwo = send(fd, &buf[nw], sz - nw, flags);
 
 		if( nwo <= 0 ) {
 			int the_error;

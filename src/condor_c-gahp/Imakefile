@@ -7,7 +7,9 @@ CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
 
-OBJ = FdBuffer.o io_loop.o schedd_client.o schedd_client_main.o SchedDCommands.o
+soapobjs(cgahp)
+
+OBJ = FdBuffer.o io_loop.o schedd_client.o schedd_client_main.o SchedDCommands.o $(SOAP_OBJS)
 
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
@@ -23,3 +25,5 @@ html:
 
 IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib, setsyscalls.o )
+
+gen_soapfiles(cgahp,condorCgahp)

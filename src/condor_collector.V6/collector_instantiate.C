@@ -28,3 +28,5 @@
 template class HashTable<MyString,ClassAd*>;
 template class HashTable<MyString, GeneralRecord*>;
 template class HashBucket<MyString, GeneralRecord*>;
+template class List<ClassAd>;
+template class Item<ClassAd>; 

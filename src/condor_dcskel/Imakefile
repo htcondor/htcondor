@@ -5,7 +5,9 @@ CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
-OBJ = dcskel_main.o
+soapobjs(dcskel)
+
+OBJ = dcskel_main.o $(SOAP_OBJS)
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 
@@ -14,3 +16,5 @@ release:: all
 stripped:: all
 static:: all
 clean::
+
+gen_soapfiles(dcskel,condorDcskel)

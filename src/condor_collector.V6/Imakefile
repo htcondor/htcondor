@@ -6,8 +6,12 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LIB = collector_engine.a $(DAEMONCORE_LIB) $(STD_LIBS)
 
 ENGINE_OBJ = hashkey.o collector_engine.o
+
+soapobjs(collector)
+
 OBJ = collector_main.o collector.o view_server.o \
-      collector_instantiate.o totals.o collector_stats.o forkwork.o
+      collector_instantiate.o totals.o collector_stats.o forkwork.o \
+      $(SOAP_OBJS)
 
 library_target(collector_engine.a, $(ENGINE_OBJ))
 
@@ -20,5 +24,7 @@ purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 
 IMPORT_LINKS = ../../config/import_links
 import(../condor_status.V6,totals.o)
+
+gen_soapfiles(collector,condorCollector)
 
 html:

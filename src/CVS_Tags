@@ -1,3 +1,11 @@
+02/03/05 V6_7-post_merge-V6_7-soap-3-merge-1
+	The state of the V6_7-branch after merging the V6_7-soap-3-branch
+	as tagged V6_7-soap-3-merge-1
+
+02/03/05 V6_7-pre_merge-V6_7-soap-3-merge-1
+	The state of the V6_7-branch before merging the V6_7-soap-3-branch
+	as tagged V6_7-soap-3-merge-1
+
 01/31/05 V6_6_8
    The official 6.6.8 release tag. This lives on V6_6_ALL and V6_6_7_EXT.
 
@@ -515,12 +523,23 @@ V6_7-branch.
 	The state of the V6_6-imake-branch before a merge into the V6_6-branch.
 	Contains the imake fixes to enable functioning on gcc 3.3.
 
-
 05/27/04 V6_7-soap-2-branch
    A new branch off of V6_7-branch created from the V6_7-soap-2-root
    tag.  This is the 2nd generation of the V6_7-soap-branch.  The
    V6_7-branch now has LoS support and a number of other improvements
    since the V6_7-soap-root tag.
+
+05/27/04 V6_7-soap-2-post_merge-V6_7-soap
+   The state of the V6_7-soap-2-branch after merging in the 
+   V6_7-soap-branch as tagged at V6_7-soap-merge-1.
+
+05/27/04 V6_7-soap-2-pre_merge-V6_7-soap
+   The state of the V6_7-soap-2-branch before merging in the 
+   V6_7-soap-branch as tagged at V6_7-soap-merge-1.
+
+5/27/04 V6_7-soap-merge-1
+    The state of the V6_7-soap-branch when it was merged into
+    V6_7-soap-2-branch and then abandoned.   
 
 05/26/04 V6_7-credd-branch
 	A new branch for the new Condor daemon - condor_credd. Created from 

@@ -189,7 +189,7 @@ void ViewServer::Config()
 
 	for (int i=0; i<DataSetCount; i++) {
 		for (int j=0; j<HistoryLevels; j++) {
-			DataSet[i][j].MaxSamples=4*((int) pow(4,j));
+			DataSet[i][j].MaxSamples=4*((int) pow((double)4,(double)j));
 			DataSet[i][j].NumSamples=0;
 			DataSet[i][j].OldFileName.sprintf("%s/viewhist%d.%d.old",history_dir,i,j);
 			DataSet[i][j].OldStartTime=FindFileStartTime(DataSet[i][j].OldFileName.Value());

@@ -52,6 +52,7 @@
 #include "ntsysinfo.h"
 #endif
 #include "self_monitor.h"
+#include "stdsoap2.h"
 
 #define DEBUG_SETTABLE_ATTR_LISTS 0
 
@@ -893,6 +894,12 @@ class DaemonCore : public Service
 	bool GetPeacefulShutdown();
 	void SetPeacefulShutdown(bool value);
 
+	/** Disable all daemon core callbacks for duration seconds, except for the
+		processing of SOAP calls.
+		@param seconds The number of seconds to only permit SOAP callbacks
+	*/
+	void Only_Allow_Soap(int duration);
+
     SelfMonitorData monitor_data;
 
   private:      
@@ -902,6 +909,7 @@ class DaemonCore : public Service
 
     void Inherit( void );  // called in main()
 	void InitCommandSocket( int command_port );  // called in main()
+	void InitHTTPSocket( int http_port );
 
     int HandleSigCommand(int command, Stream* stream);
     int HandleReq(int socki);
@@ -1020,6 +1028,10 @@ class DaemonCore : public Service
     int               nSock;      // number of socket handlers used
     ExtArray<SockEnt> *sockTable; // socket table; grows dynamically if needed
     int               initial_command_sock;  
+	
+	int				  initial_http_sock;
+	struct soap		  soap;
+	time_t			  only_allow_soap;
 
 	struct PidEntry;  // forward reference
     struct PipeEnt

@@ -1,5 +1,5 @@
 NAME = condor_schedd
-all_target($(NAME) libqmgmt.a)
+all_target(libqmgmt.a $(NAME))
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 CFLAGS = $(STD_C_FLAGS)
@@ -9,8 +9,18 @@ LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
 QMGMT_OBJ = qmgmt.o qmgmt_receivers.o qmgmt_common.o
 QMGMT_LIB_OBJ = qmgmt_send_stubs.o qmgr_lib_support.o qmgmt_common.o \
 	qmgr_job_updater.o
+
+soapobjs(schedd)
+
 OBJ = schedd.o schedd_main.o $(QMGMT_OBJ) schedd_instantiate.o \
-	dedicated_scheduler.o grid_universe.o shadow_mgr.o autocluster.o
+	dedicated_scheduler.o grid_universe.o shadow_mgr.o autocluster.o \
+	loose_file_transfer.o schedd_api.o $(SOAP_OBJS)
+
+schedd_api.C: soap_scheddH.h ../condor_c++_util/soap_helpers.cpp
+
+soap_scheddStub.C: ../condor_c++_util/soap_helpers.cpp
+
+schedd_instantiate.C: soap_scheddH.h
 
 $(QMGMT_LIB) : libqmgmt.a
 
@@ -26,3 +36,6 @@ purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 c_plus_target(qmgr_test,qmgr_test.o libqmgmt.a,$(LIB))
 
 html_target( documentation )
+
+gen_soapfiles(schedd,condorSchedd)
+

@@ -42,6 +42,7 @@ typedef enum {
   /** The machine owner (vacate) */          OWNER = 6,
   /** Changing config settings remotely */   CONFIG_PERM = 7,
   /** Daemon to daemon communcation     */   DAEMON = 8,
+  /** SOAP interface (http PUT) */			 SOAP_PERM = 9,
   /** Place holder, must be last */          LAST_PERM
 } DCpermission;
 

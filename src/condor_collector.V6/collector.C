@@ -67,9 +67,9 @@ Sock* CollectorDaemon::view_sock;
 SocketCache* CollectorDaemon::sock_cache;
 
 ClassAd* CollectorDaemon::__query__;
-Stream* CollectorDaemon::__sock__;
 int CollectorDaemon::__numAds__;
 int CollectorDaemon::__failed__;
+List<ClassAd>* CollectorDaemon::__ClassAdResultList__;
 
 TrackTotals* CollectorDaemon::normalTotals;
 int CollectorDaemon::submittorRunningJobs;
@@ -127,27 +127,27 @@ void CollectorDaemon::Init()
 
 	// install command handlers for queries
 	daemonCore->Register_Command(QUERY_STARTD_ADS,"QUERY_STARTD_ADS",
-		(CommandHandler)receive_query,"receive_query",NULL,READ);
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_Command(QUERY_STARTD_PVT_ADS,"QUERY_STARTD_PVT_ADS",
-		(CommandHandler)receive_query,"receive_query",NULL,NEGOTIATOR);
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,NEGOTIATOR);
 	daemonCore->Register_Command(QUERY_SCHEDD_ADS,"QUERY_SCHEDD_ADS",
-		(CommandHandler)receive_query,"receive_query",NULL,READ);
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_Command(QUERY_MASTER_ADS,"QUERY_MASTER_ADS",
-		(CommandHandler)receive_query,"receive_query",NULL,READ);
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_Command(QUERY_CKPT_SRVR_ADS,"QUERY_CKPT_SRVR_ADS",
-		(CommandHandler)receive_query,"receive_query",NULL,READ);
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_Command(QUERY_SUBMITTOR_ADS,"QUERY_SUBMITTOR_ADS",
-		(CommandHandler)receive_query,"receive_query",NULL,READ);
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_Command(QUERY_LICENSE_ADS,"QUERY_LICENSE_ADS",
-		(CommandHandler)receive_query,"receive_query",NULL,READ);
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_Command(QUERY_COLLECTOR_ADS,"QUERY_COLLECTOR_ADS",
-		(CommandHandler)receive_query,"receive_query",NULL,ADMINISTRATOR);
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,ADMINISTRATOR);
 	daemonCore->Register_Command(QUERY_STORAGE_ADS,"QUERY_STORAGE_ADS",
-		(CommandHandler)receive_query,"receive_query",NULL,READ);
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_Command(QUERY_NEGOTIATOR_ADS,"QUERY_NEGOTIATOR_ADS",
-		(CommandHandler)receive_query,"receive_query",NULL,READ);
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_Command(QUERY_ANY_ADS,"QUERY_ANY_ADS",
-		(CommandHandler)receive_query,"receive_query",NULL,READ);
+		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	
 		// // // // // // // // // // // // // // // // // // // // //
 		// WARNING!!!! If you add other invalidate commands here, you
@@ -213,13 +213,9 @@ void CollectorDaemon::Init()
 	forkQuery.Initialize( );
 }
 
-int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
+int CollectorDaemon::receive_query_cedar(Service* s, int command, Stream* sock)
 {
-    struct sockaddr_in *from;
-	AdTypes whichAds;
 	ClassAd ad;
-
-	from = ((Sock*)sock)->endpoint();
 
 	sock->decode();
 	sock->timeout(ClientTimeout);
@@ -229,9 +225,50 @@ int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
         return FALSE;
     }
 
-    // cancel timeout --- collector engine sets up its own timeout for
-    // collecting further information
-    sock->timeout(0);
+		// here we set up a network timeout of a longer duration
+	sock->timeout(QueryTimeout);
+
+	// perform the query
+	List<ClassAd> results;
+	receive_query_public(command, &ad, &results);
+
+	// send the results via cedar
+	sock->encode();
+	results.Rewind();
+	ClassAd *curr_ad = NULL;
+	int more = 1;
+	
+	while ( (curr_ad=results.Next()) ) 
+    {
+        if (!sock->code(more) || !curr_ad->put(*sock))
+        {
+            dprintf (D_ALWAYS, 
+                    "Error sending query result to client -- aborting\n");
+            return 0;
+        }
+    }
+
+	// end of query response ...
+	more = 0;
+	if (!sock->code(more))
+	{
+		dprintf (D_ALWAYS, "Error sending EndOfResponse (0) to client\n");
+	}
+
+	// flush the output
+	if (!sock->end_of_message())
+	{
+		dprintf (D_ALWAYS, "Error flushing CEDAR socket\n");
+	}
+
+
+    // all done; let daemon core will clean up connection
+	return TRUE;
+}
+
+int CollectorDaemon::receive_query_public(int command, ClassAd* request, List<ClassAd>* result)
+{
+	AdTypes whichAds;
 
     switch (command)
     {
@@ -291,7 +328,7 @@ int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
 		break;
 
 	  default:
-		dprintf(D_ALWAYS,"Unknown command %d in process_query()\n", command);
+		dprintf(D_ALWAYS,"Unknown command %d in receive_query_public()\n", command);
 		whichAds = (AdTypes) -1;
     }
 
@@ -300,17 +337,19 @@ int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
 		ForkStatus	status = forkQuery.NewJob( );
 		if ( FORK_FAILED == status || FORK_BUSY == status ) {
 			// Fork failed / busy
-			process_query (whichAds, ad, sock);
+			dprintf(D_ALWAYS,"TODD - here is the query ad:");
+			request->fPrint(stderr);
+
+			process_query (whichAds, request, result);
 		} else if ( FORK_CHILD == status ) {
 			// Fork ok, worker
-			process_query (whichAds, ad, sock);			
+			process_query (whichAds, request, result);			
 			forkQuery.WorkerDone( );		// Never returns
 		} else {
 			// Fork ok, parent
 		}
 	}
 
-    // all done; let daemon core will clean up connection
 	return TRUE;
 }
 
@@ -579,12 +618,8 @@ int CollectorDaemon::query_scanFunc (ClassAd *ad)
 
     if ((*ad) >= (*__query__))
     {
-        if (!__sock__->code(more) || !ad->put(*__sock__))
-        {
-            dprintf (D_ALWAYS, 
-                    "Error sending query result to client -- aborting\n");
-            return 0;
-        }
+		// Found a match --- append to our results list
+		__ClassAdResultList__->Append(ad);
         __numAds__++;
     }
 
@@ -635,38 +670,20 @@ ClassAd * CollectorDaemon::process_global_query( const char *constraint, void *a
 }
 #endif
 
-void CollectorDaemon::process_query (AdTypes whichAds, ClassAd &query, Stream *sock)
+void CollectorDaemon::process_query (AdTypes whichAds, ClassAd *query, List<ClassAd>* results)
 {
-	int		more;
-
-	// here we set up a network timeout of a longer duration
-	sock->timeout(QueryTimeout);
-
 	// set up for hashtable scan
-	__query__ = &query;
+	__query__ = query;
 	__numAds__ = 0;
-	__sock__ = sock;
-	sock->encode();
+	__ClassAdResultList__ = results;
 
 	if (!collector.walkHashTable (whichAds, query_scanFunc))
 	{
 		dprintf (D_ALWAYS, "Error sending query response\n");
 	}
 
-	// end of query response ...
-	more = 0;
-	if (!sock->code(more))
-	{
-		dprintf (D_ALWAYS, "Error sending EndOfResponse (0) to client\n");
-	}
 
-	// flush the output
-	if (!sock->end_of_message())
-	{
-		dprintf (D_ALWAYS, "Error flushing CEDAR socket\n");
-	}
-
-	dprintf (D_ALWAYS, "(Sent %d ads in response to query)\n", __numAds__);
+	dprintf (D_ALWAYS, "(Sending %d ads in response to query)\n", __numAds__);
 }	
 
 int CollectorDaemon::invalidation_scanFunc (ClassAd *ad)
@@ -694,7 +711,7 @@ void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, St
 	// set up for hashtable scan
 	__query__ = &query;
 	__numAds__ = 0;
-	__sock__ = sock;
+
 	sock->encode();
 	if (!sock->put(0) || !sock->end_of_message()) {
 		dprintf( D_ALWAYS, "Unable to acknowledge invalidation\n" );

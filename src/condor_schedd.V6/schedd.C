@@ -623,7 +623,14 @@ Scheduler::count_jobs()
 
     daemonCore->monitor_data.ExportData(ad);
     
-		// Tell negotiator to send us the startd ad
+	if ( param_boolean("ENABLE_SOAP", false) ) {
+			// If we can support the SOAP API let's let the world know!
+		sprintf(tmp, "%s = True", ATTR_HAS_SOAP_API);
+		ad->Insert(tmp);
+	}
+
+
+        // Tell negotiator to send us the startd ad
 	sprintf(tmp, "%s = True", ATTR_WANT_RESOURCE_AD );
 	ad->InsertOrUpdate(tmp);
 
@@ -1268,6 +1275,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 	}
 
 	mode = -1;
+	//job_ad->LookupInteger(ATTR_JOB_STATUS,mode);
 	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_STATUS, &mode);
 	if ( mode == -1 ) {
 		EXCEPT("In abort_job_myself: %s attribute not found in job %d.%d\n",
@@ -8909,6 +8917,23 @@ abortJobRaw( int cluster, int proc, const char *reason )
 	job_id.cluster = cluster;
 	job_id.proc = proc;
 
+	if( reason ) {
+		MyString fixed_reason;
+		if( reason[0] == '"' ) {
+			fixed_reason += reason;
+		} else {
+			fixed_reason += '"';
+			fixed_reason += reason;
+			fixed_reason += '"';
+		}
+		if( SetAttribute(cluster, proc, ATTR_REMOVE_REASON, 
+						 fixed_reason.Value()) < 0 ) {
+			dprintf( D_ALWAYS, "WARNING: Failed to set %s to \"%s\" for "
+					 "job %d.%d\n", ATTR_REMOVE_REASON, reason, cluster,
+					 proc );
+		}
+	}
+
 	if( SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, REMOVED) < 0 ) {
 		dprintf(D_ALWAYS,"Couldn't change state of job %d.%d\n",cluster,proc);
 		return false;
@@ -8953,6 +8978,62 @@ abortJob( int cluster, int proc, const char *reason, bool use_transaction )
 
 	return result;
 }
+
+bool
+abortJobsByConstraint( const char *constraint,
+					   const char *reason,
+					   bool use_transaction )
+{
+	bool result = true;
+
+	ExtArray<PROC_ID> jobs;
+	int job_count;
+
+	dprintf(D_FULLDEBUG, "abortJobsByConstraint: '%s'\n", constraint);
+
+	if ( use_transaction ) {
+		BeginTransaction();
+	}
+
+	job_count = 0;
+	ClassAd *ad = GetNextJobByConstraint(constraint, 1);
+	while ( ad ) {
+			// MATT: What happens if these fail?
+		ad->LookupInteger(ATTR_CLUSTER_ID, jobs[job_count].cluster);
+		ad->LookupInteger(ATTR_PROC_ID, jobs[job_count].proc);
+
+		dprintf(D_FULLDEBUG, "remove by constrain matched: %d.%d\n",
+				jobs[job_count].cluster, jobs[job_count].proc);
+
+		job_count++;
+
+		ad = GetNextJobByConstraint(constraint, 0);
+	}
+
+	job_count--;
+	while ( job_count >= 0 ) {
+		dprintf(D_FULLDEBUG, "removing: %d.%d\n",
+				jobs[job_count].cluster, jobs[job_count].proc);
+
+		result = result && abortJobRaw(jobs[job_count].cluster,
+									   jobs[job_count].proc,
+									   reason);
+
+		job_count--;
+	}
+
+	if ( use_transaction ) {
+		if ( result ) {
+			CommitTransaction();
+		} else {
+			AbortTransaction();
+		}
+	}
+
+	return result;
+}
+
+
 
 /*
 Hold a job by stopping the shadow, changing the job state,
