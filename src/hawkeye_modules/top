@@ -525,7 +525,7 @@ sub RunIt( )
 	# Read the header
       READHEADER:
 	my @Buffer;
-	while ( <TOP> )
+	while ( ( $_ = shift @Buffer ) or ( $_ = <TOP> ) )
 	{
 	    # Uptime line?
 	    if ( /.*up.*load average:/ )
@@ -585,12 +585,11 @@ sub RunIt( )
 	    }
 
 	    # Processes summary information?
-	    elsif ( /^(\d*)(.*):(.*)/ )
+	    elsif ( /^(\d+)\s*(.+):(.*)/ )
 	    {
 		my $Num = $1;
 		my $Name = $2;
 		my $Rest = $3;
-		$Name =~ s/^\s+//g;
 		$Name =~ s/\s+/_/g;
 
 		# Openning summary #?
@@ -621,6 +620,57 @@ sub RunIt( )
 		}
 	    }
 
+	    # CPU Summary
+	    elsif ( /CPU(\d*) states:(.+)/ )
+	    {
+		my $Cpu = $1;
+		$Cpu = 0 if ( $Cpu eq "" );
+		my $Rest = $2;
+		$Rest =~ s/^\s+//;
+		my @Stuff = split( /\s+/, $Rest );
+		for( my $i = 0;  $i+1 < $#Stuff;  $i += 2 )
+		{
+		    my $Value = $Stuff[$i];
+		    my $Type = FixString( \$Value );
+		    my $Var = $Stuff[$i+1];
+		    my $Name = $Cpu . "_" . $TopTypes{$Type}{prefix} . $Var;
+		    $Summary->Add( $Name,
+				   $TopTypes{$Type}{pubtype},
+				   $Value );
+		}
+	    }
+
+	    # Memory info
+	    elsif ( /^(Mem|Swap):(.+)/ )
+	    {
+		my $MemSwap = $1;
+		my $Rest = $2;
+		$Rest =~ s/^\s+//;
+
+		# Maybe add the next line to it
+		$_ = <TOP>;
+		if ( /^\s+(\d+)/ )
+		{
+		    $Rest =~ s/\s+$//;
+		    $Rest .= ",";
+		    $Rest .= $_;
+		}
+		else
+		{
+		    push( @Buffer, $_ );
+		}
+
+		# Now, parse it out...
+		foreach my $Field ( split( /\s*,\s*/, $Rest ) )
+		{
+		    my ( $Value, $What ) = split( /\s+/, $Field );
+		    $Summary->Add( $MemSwap . "_" . $What,
+				   HawkeyePublish::TypeAuto,
+				   $Value
+				 );
+		}
+	    }
+
 	    # Header line?
 	    elsif ( /\s+PID\s+USER/ )
 	    {
@@ -648,7 +698,13 @@ sub RunIt( )
 	{
 	    chomp;
 
+	    # Ooops; did we go to far???
 	    last if ( $Config{TopOpt}{BlankSep} && ( /^\s*$/ ) );
+	    if ( /\s+load average:/ )
+	    {
+		push( @Buffer, $_ );
+		last;
+	    }
 
 	    # Verify that we start with a process ID type thingy,
 	    # then parse it..
@@ -712,7 +768,8 @@ sub RunIt( )
 	my $CurTime = time();
 	my $TimeDiff = $CurTime - $LastTime;
 	my $MaxTime = $Config{TopPeriod} * 1.5;
-	if ( ( $LastTime > 0 ) && ( $TimeDiff < $Config{TopPeriod} ) )
+	my $MinTime = $Config{TopPeriod} * 0.5;
+	if ( ( $LastTime > 0 ) && ( $TimeDiff < $MinTime ) )
 	{
 	    print STDERR "output looped in $TimeDiff seconds ($Proc lines)!\n";
 	    $Done++ if ( ++$FastCount > 1 );
