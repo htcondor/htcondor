@@ -228,6 +228,9 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 		/* restore privileges */
 	_set_priv(priv, __FILE__, __LINE__, 0);
 
+	errno = saved_errno;
+	DebugFlags = saved_flags;
+
 #if !defined(WIN32) // signals and umasks don't exist in WIN32
 
 		/* restore umask */
@@ -237,9 +240,6 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 	(void) sigprocmask( SIG_SETMASK, &omask, 0 );
 
 #endif
-
-	errno = saved_errno;
-	DebugFlags = saved_flags;
 
 #ifdef WIN32
 	LeaveCriticalSection(_condor_dprintf_critsec);
