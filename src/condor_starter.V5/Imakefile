@@ -14,7 +14,7 @@ CKPT_FLAG = -DNO_CKPT
 
 CFLAGS = $(STD_C_FLAGS) $(CKPT_FLAG) -DNEW_PROC
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CKPT_FLAG) -DNEW_PROC $(PVM_INCLUDE)\
-	$(PVM_FLAG) -fexternal-templates
+	$(PVM_FLAG) -fno-implicit-templates
 
 /*
   The OS dependent files are the same for Ultrix 4.2 and Ultrix 4.3, so

@@ -45,8 +45,6 @@
 #include "startup.h"
 #include "alarm.h"
 #include "afs.h"
-
-#pragma implementation "list.h"
 #include "list.h"
 #include "user_proc.h"
 
@@ -63,11 +61,6 @@ extern "C" {
 int free_fs_blocks(const char *);
 void display_startup_info( const STARTUP_INFO *s, int flags );
 }
-
-#if defined(OSF1) 
-#pragma define_template List<UserProc>
-#pragma define_template Item<UserProc>
-#endif
 
 #if defined(LINK_PVM)
 #include "pvm_user_proc.h"
@@ -90,7 +83,6 @@ const pid_t	ANY_PID = -1;		// arg to waitpid() for any process
 
 ReliSock	*SyscallStream;		// stream to shadow for remote system calls
 List<UserProc>	UProcList;		// List of user processes
-//listuserproc	UProcList;		// List of user processes
 char	*Execute;				// Name of directory where user procs execute
 int		DoDelays;				// Insert artificial delays for testing
 char	*UidDomain;				// Machines we share UID space with
@@ -109,6 +101,10 @@ extern NameTable ProcStates;
 extern NameTable PvmMsgNames;
 
 extern int shadow_tid;
+
+	// instantiate template
+template class List<UserProc>;
+template class Item<UserProc>;
 
 	// Prototypes of local interest only
 int update_one( UserProc *proc );
