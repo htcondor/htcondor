@@ -587,7 +587,7 @@ pseudo_get_file_stream(
 				sleep(retry_wait);
 				retry_wait *= 2;
 				if (retry_wait > MaxRetryWait) {
-					retry_wait = MaxRetryWait;
+					EXCEPT("ckpt server restore failed");
 				}
 			}
 		} while (rval);
@@ -619,7 +619,7 @@ pseudo_get_file_stream(
 				sleep(retry_wait);
 				retry_wait *= 2;
 				if (retry_wait > MaxRetryWait) {
-					retry_wait = MaxRetryWait;
+					EXCEPT("ckpt server restore failed");
 				}
 			}
 		} 
@@ -744,7 +744,7 @@ pseudo_put_file_stream(
 				sleep(retry_wait);
 				retry_wait *= 2;
 				if (retry_wait > MaxRetryWait) {
-					retry_wait = MaxRetryWait;
+					EXCEPT("ckpt server store failed");
 				}
 			}
 		} while (rval);
@@ -1400,7 +1400,7 @@ has_ckpt_file()
 			sleep(retry_wait);
 			retry_wait *= 2;
 			if (retry_wait > MaxRetryWait) {
-				retry_wait = MaxRetryWait;
+				EXCEPT("failed to contact ckpt server");
 			}
 		}
 	} while (rval == -1 && UseCkptServer && accum_usage > MaxDiscardedRunTime);
