@@ -673,7 +673,8 @@ _condorOutMsg::~_condorOutMsg() {
         free(EncKeyId_);
         EncKeyId_ = 0;
     }
-    free(key_);
+
+    delete key_;
 }
 
 bool _condorOutMsg :: set_encryption_id(const char * keyId)
@@ -702,7 +703,7 @@ bool _condorOutMsg::init_MD(KeyInfo * key, const char * keyId)
     }
     else {
         // There is one more possibilites: what if the md key is set consectively?
-        free(key_);
+        delete key_;
         key_ = 0; // just to be safe
 
         if (MDKeyId_) {

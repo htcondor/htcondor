@@ -2155,20 +2155,19 @@ claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated )
 {
 
 	Daemon matched_startd ( DT_STARTD, mrec->peer, NULL );
-	Sock* sock;
+	Sock* sock = NULL;
 
 	dprintf( D_PROTOCOL, "Requesting resource from %s ...\n",
 			 mrec->peer ); 
 
 	if (!(sock = matched_startd.startCommand(REQUEST_CLAIM, Stream::reli_sock,
-						STARTD_CONTACT_TIMEOUT ))) {
+                                             STARTD_CONTACT_TIMEOUT ))) {
 		dprintf( D_FAILURE|D_ALWAYS, "Couldn't send REQUEST_CLAIM to startd at %s\n",
 				 mrec->peer );
 		return false;
 	}
 
 	sock->encode();
-
 
 	if( !sock->put( mrec->id ) ) {
 		dprintf( D_ALWAYS, "Couldn't send capability to startd.\n" );	
@@ -2245,6 +2244,7 @@ claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated )
 #define BAILOUT               \
 		DelMrec( mrec );      \
 		checkContactQueue();  \
+        delete sock;          \
 		return FALSE;
 
 int
@@ -2590,7 +2590,9 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 	sprintf(buf, "%s = %d", ATTR_VIRTUAL_MACHINE_ID, vm);
 	request.Insert(buf);
 
-	SafeSock* sock = (SafeSock*)Negotiator->startCommand(REQUEST_NETWORK, Stream::safe_sock, NEGOTIATOR_CONTACT_TIMEOUT);
+	SafeSock* sock = (SafeSock*)Negotiator->startCommand(REQUEST_NETWORK, 
+                                                         Stream::safe_sock, 
+                                                         NEGOTIATOR_CONTACT_TIMEOUT);
 	if (!sock) {
 		dprintf(D_ALWAYS, "Couldn't connect to negotiator!\n");
 		return;
@@ -2607,11 +2609,12 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
 				(float)ckptsize*1024.0);
 		request.Insert(buf);
 		if ((GetAttributeString(cluster, proc,
-							 ATTR_LAST_CKPT_SERVER, source)) == 0) {
+                                ATTR_LAST_CKPT_SERVER, source)) == 0) {
 			struct hostent *hp = gethostbyname(source);
 			if (!hp) {
 				dprintf(D_FAILURE|D_ALWAYS, "DNS lookup for %s %s failed!\n",
 						ATTR_LAST_CKPT_SERVER, source);
+                delete sock;
 				return;
 			}
 			sprintf(buf, "%s = \"%s\"", ATTR_SOURCE,
@@ -5388,6 +5391,7 @@ sendAlive( match_rec* mrec )
 		   not done and we are in fire mode, leave this 
 		   for V6.1.  :^) -Todd 9/97
 		*/
+    delete sock;
 	return true;
 }
 
