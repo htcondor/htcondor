@@ -1,0 +1,106 @@
+#!/bin/sh
+
+# This script expects that /opt/classads_0.9.4 exists and is writable by me. 
+# Currently, I make /opt/classads_0.9.4 a symlink to /scratch/roy/classads
+
+PATH=/s/gcc-2.95.2/bin:${PATH}; export PATH
+LD_LIBRARY_PATH=/s/gcc-2.95.2/lib:${LD_LIBRARY_PATH}; export PATH
+
+classad_package=classads_0.9.4
+tarball=${classad_package}.tar.gz
+install=/opt/${classad_package}
+
+rpm_dir=`pwd`/rpmbuild
+build_dir=${rpm_dir}/BUILD
+rpms_dir=${rpm_dir}/RPMS
+sources_dir=${rpm_dir}/SOURCES
+specs_dir=${rpm_dir}/SPECS
+srpms_dir=${rpm_dir}/SRPMS
+
+echo "Cleaning up old RPM build..."
+rm -rf ${rpm_dir}
+rm -rf ${install}/*
+
+echo "Creating RPM build directory structure..."
+mkdir ${rpm_dir}
+mkdir ${build_dir}
+mkdir ${rpms_dir}
+mkdir ${sources_dir}
+mkdir ${specs_dir}
+mkdir ${srpms_dir}
+
+echo "Copying tarball to sources..."
+cp ${tarball} ${sources_dir}
+
+echo "Creating spec file..."
+rm -f ${specs_dir}/classad.spec
+
+cat > ${specs_dir}/classad.spec <<EOF
+Summary: ClassAd 0.9.4 package
+Name: classads
+Version: 0.9.4
+Release: 1
+Copyright: LGPL
+Source: ftp://ftp.cs.wisc.edu/condor/classad/c++/classads_0.9.4.tar.gz
+URL: http://www.cs.wisc.edu/condor/
+Vendor: Condor Project
+Packager: Condor Project
+Prefix: ${install}
+Group: Libraries
+
+%description
+The ClassAd library provides a semi-structured representation fo data
+that is powerful and flexible.
+
+%prep
+rm -rf ${build_dir}/${classad_package}
+cd ${build_dir}
+zcat ${sources_dir}/${tarball} | tar -xf -
+
+%build
+cd ${build_dir}/${classad_package}
+./configure --prefix ${install}
+make
+
+%install
+cd ${build_dir}/${classad_package}
+make install
+
+%files
+${install}/bin/test_classads
+${install}/lib/libclassad.a
+${install}/include/attrrefs.h
+${install}/include/cclassad.h
+${install}/include/classad_distribution.h
+${install}/include/classadErrno.h
+${install}/include/classad_features.h
+${install}/include/classad.h
+${install}/include/classadItor.h
+${install}/include/collectionBase.h
+${install}/include/collection.h
+${install}/include/common.h
+${install}/include/debug.h
+${install}/include/exprList.h
+${install}/include/exprTree.h
+${install}/include/fnCall.h
+${install}/include/indexfile.h
+${install}/include/lexer.h
+${install}/include/lexerSource.h
+${install}/include/literals.h
+${install}/include/matchClassad.h
+${install}/include/operators.h
+${install}/include/query.h
+${install}/include/sink.h
+${install}/include/source.h
+${install}/include/transaction.h
+${install}/include/value.h
+${install}/include/view.h
+${install}/include/xmlLexer.h
+${install}/include/xmlSink.h
+${install}/include/xmlSource.h
+
+EOF
+
+echo "Beginning to build..."
+cd ${specs_dir}
+rpm --define "_topdir ${rpm_dir}" -ba classad.spec;
