@@ -314,8 +314,8 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
   time_t T=((Integer*) exp->RArg())->Value();
   printf("Last Priority Update: %s\n",format_date(T));
 
-  char* Fmt1="%-30s %12.2f\n";
-  char* Fmt2="%-30s %12s\n";
+  char* Fmt1="%-30s %14.2f\n";
+  char* Fmt2="%-30s %14s\n";
 
   if (DetailFlag) {
     Fmt1="%-30s %14.2f %8.2f %12.2f %4d %12.2f %11s\n"; 
