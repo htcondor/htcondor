@@ -41,9 +41,9 @@ int		Termlog;
 
 extern int		DebugFlags;
 extern FILE		*DebugFP;
-extern int		MaxLog[D_NUMLEVELS];
-extern char		*DebugFile[D_NUMLEVELS];
-extern char		*DebugLock[D_NUMLEVELS];
+extern int		MaxLog[D_NUMLEVELS+1];
+extern char		*DebugFile[D_NUMLEVELS+1];
+extern char		*DebugLock[D_NUMLEVELS+1];
 extern char		*DebugFlagNames[];
 
 void set_debug_flags( char *strflags );
@@ -195,7 +195,7 @@ set_debug_flags( char *strflags )
 		bit = 0;
 		if( stricmp(flag, "D_ALL") == 0 ) {
 			bit = D_ALL;
-		} else for( i = 0; i < D_NUMLEVELS; i++ ) {
+		} else for( i = 0; i < D_MAXFLAGS; i++ ) {
 			if( stricmp(flag, DebugFlagNames[i]) == 0 ) {
 				bit = (1 << i);
 				break;
