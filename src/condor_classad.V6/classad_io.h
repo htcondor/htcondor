@@ -313,6 +313,8 @@ class ByteStream {
     ///
     virtual bool _Close () = 0;
 
+  private:
+
     ///
     int m_socktype;
 };
