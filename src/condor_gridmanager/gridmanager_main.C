@@ -118,10 +118,6 @@ main_init( int argc, char **argv )
 	Init();
 	Register();
 
-	// Trigger a check of the schedd's jobs here to make certain we start
-	// managing any globus universe jobs already in the queue at the time we're born
-	daemonCore->Send_Signal( getpid(), GRIDMAN_ADD_JOBS );
-
 	return TRUE;
 }
 
