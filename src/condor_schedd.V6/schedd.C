@@ -4883,7 +4883,19 @@ Scheduler::StartJobHandler()
 			// out of the startd ad before we give it to the shadow. 
 		ClassAd* ad = GetJobAd( job_id->cluster, job_id->proc, true );
 		FILE* fp = fdopen( pipe_fds[1], "w" );
-		ad->fPrint( fp );
+		if ( ad ) {
+			ad->fPrint( fp );
+
+			// Note that ONLY when GetJobAd() is called with expStartdAd==true
+			// do we want to delete the result.
+			delete ad;
+		} else {
+			// This should never happen
+
+			EXCEPT( "Impossible: GetJobAd() returned NULL for %d.%d but that" 
+				"job is already known to exist",
+				 job_id->cluster, job_id->proc );
+		}
 
 			// since this is probably a DC pipe that we have to close
 			// with Close_Pipe(), we can't call fclose() on it.  so,
