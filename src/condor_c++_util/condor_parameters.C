@@ -35,6 +35,10 @@ const char *PARAM_CONDOR_DEVELOPERS_COLLECTOR_PORT = "CONDOR_DEVELOPERS_COLLECTO
 // Negotiator parameters
 const char *PARAM_NEGOTIATOR_PORT   = "NEGOTIATOR_PORT";
 
+// Gridmanager parameters
+const char *PARAM_HOLD_IF_CRED_EXPIRED = "HOLD_JOB_IF_CREDENTIAL_EXPIRES";
+const char *PARAM_GLOBUS_GATEKEEPER_TIMEOUT = "GLOBUS_GATEKEEPER_TIMEOUT";
+
 /****************************************************************************
  *
  * Function: param_get_collector_port
