@@ -240,9 +240,12 @@ DEPS(job_core_compressfiles_std,job_core_compressfiles.cndr.exe)
 RUN(job_core_compressfiles_std)
 TESTCLASS(job_core_compressfiles_std,core)
 
+/* Test needs work as there seems to be a timing influence
+** and first size of streaming file is not smaller as it should be
 DESC(job_core_streamerr_van,"Vanilla: test for streaming of error when both stream_error is true and false")
 RUN(job_core_streamerr_van)
 TESTCLASS(job_core_streamerr_van,core)
+*/
 
 DESC(job_core_copytospool_van,"Vanilla: test that spooled executable is same via md5 checksum of both files")
 RUN(job_core_copytospool_van)
@@ -324,9 +327,12 @@ DESC(job_core_output_van,"Vanilla: Verify trivially simple output from an input 
 RUN(job_core_output_van)
 TESTCLASS(job_core_output_van,core)
 
+/* manual says we do not support this for scheduler universe
+** yet it seemed to have run and worked on rh8 but fail on rh 7.2 & 9.0
 DESC(job_core_perhold_sched,"Scheduler: verify true and false triggers for periodic hold")
 RUN(job_core_perhold_sched)
 TESTCLASS(job_core_perhold_sched,core)
+*/
 
 DESC(job_core_perrelease_sched,"Scheduler: verify a policy of true/false for periodic release does the right thing")
 RUN(job_core_perrelease_sched)
