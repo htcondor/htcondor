@@ -10,6 +10,7 @@
 #include "fdprintf.h"
 #include "condor_io.h"
 #include "condor_attributes.h"
+#include "condor_email.h"
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "../condor_status.V6/status_types.h"
@@ -34,7 +35,6 @@ extern char* mySubSystem;
 CollectorEngine CollectorDaemon::collector;
 int CollectorDaemon::ClientTimeout;
 int CollectorDaemon::QueryTimeout;
-char* CollectorDaemon::CondorDevelopers;
 char* CollectorDaemon::CollectorName;
 
 ClassAd* CollectorDaemon::__query__;
@@ -72,7 +72,6 @@ void CollectorDaemon::Init()
 	dprintf(D_ALWAYS, "In CollectorDaemon::Init()\n");
 
 	// read in various parameters from condor_config
-	CondorDevelopers=NULL;
 	CollectorName=NULL;
 	ad=NULL;
 	UpdateTimerId=-1;
@@ -448,13 +447,11 @@ int CollectorDaemon::reportMiniStartdScanFunc( ClassAd *ad )
     return 1;
 }
 
-#ifndef WIN32
 void CollectorDaemon::reportToDevelopers (void)
 {
 	char	whoami[128];
 	char	buffer[128];
 	FILE	*mailer;
-	int		mailfd;
 	TrackTotals	totals( PP_STARTD_NORMAL );
 
 	if (get_machine_name (whoami) == -1) {
@@ -462,16 +459,14 @@ void CollectorDaemon::reportToDevelopers (void)
 		return;
 	}
 
-	sprintf (buffer, "Condor Collector (%s):  Monthly report\n", whoami);
-	if( ( mailfd = email( buffer, CondorDevelopers ) ) < 0	||
-		( mailer = fdopen( mailfd, "w" ) ) == NULL ) {
-		dprintf (D_ALWAYS, "Didn't send monthly report (couldn't open url)\n");
-		close( mailfd );
+	if( ( normalTotals = new TrackTotals( PP_STARTD_NORMAL ) ) == NULL ) {
+		dprintf( D_ALWAYS, "Didn't send monthly report (failed totals)\n" );
 		return;
 	}
 
-	if( ( normalTotals = new TrackTotals( PP_STARTD_NORMAL ) ) == NULL ) {
-		dprintf( D_ALWAYS, "Didn't send monthly report (failed totals)\n" );
+	sprintf (buffer, "Collector (%s):  Monthly report\n", whoami);
+	if( ( mailer = email_developers_open(buffer) ) == NULL ) {
+		dprintf (D_ALWAYS, "Didn't send monthly report (couldn't open mailer)\n");		
 		return;
 	}
 
@@ -492,10 +487,9 @@ void CollectorDaemon::reportToDevelopers (void)
 	fprintf( mailer , "%20s\t%20s\n" , ATTR_RUNNING_JOBS , ATTR_IDLE_JOBS );
 	fprintf( mailer , "%20d\t%20d\n" , submittorRunningJobs,submittorIdleJobs );
 	
-	fclose( mailer );
+	email_close( mailer );
 	return;
 }
-#endif  // of ifndef WIN32
 	
 void CollectorDaemon::Config()
 {
@@ -504,12 +498,6 @@ void CollectorDaemon::Config()
     char *tmp;
     int     ClassadLifetime;
     int     MasterCheckInterval;
-
-	if (CollectorEngine::CondorAdministrator) free (CollectorEngine::CondorAdministrator);
-    if ((CollectorEngine::CondorAdministrator = param ("CONDOR_ADMIN")) == NULL)
-    {
-        EXCEPT ("Variable 'CONDOR_ADMIN' not found in condfig file.");
-    }
 
     tmp = param ("CLIENT_TIMEOUT");
     if( tmp ) {
@@ -543,17 +531,6 @@ void CollectorDaemon::Config()
         MasterCheckInterval = 0;
         // MasterCheckInterval = 10800;    // three hours
     }
-
-    if (CondorDevelopers) free (CondorDevelopers);
-    tmp = param ("CONDOR_DEVELOPERS");
-    if (tmp == NULL) {
-        tmp = strdup("condor-admin@cs.wisc.edu");
-    } else
-    if (stricmp (tmp, "NONE") == 0) {
-        free (tmp);
-        tmp = NULL;
-    }
-    CondorDevelopers = tmp;
 
     if (CollectorName) free (CollectorName);
     CollectorName = param("COLLECTOR_NAME");
