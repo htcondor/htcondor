@@ -31,14 +31,12 @@ SocketCache::
 void SocketCache::
 clearCache()
 {
-	for (int i = 0; i < cacheSize; i++)
-	{
-		if (sockCache[i].valid);
-		{
+	for (int i = 0; i < cacheSize; i++) {
+		if (sockCache[i].valid) {
 			sockCache[i].sock->close();
 			delete sockCache[i].sock;
 			sockCache[i].valid = false;
-		}
+		}	
 	}
 }
 
