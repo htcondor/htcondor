@@ -229,7 +229,7 @@ bool Dag::DetectDaPLogGrowth () {
 	}
 
     int fd = _dapLog.getfd();
-    assert (fd != 0);
+    ASSERT( fd );
     struct stat buf;
     
     if( fstat( fd, &buf ) == -1 ) {
@@ -1081,7 +1081,7 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) const {
 
 //-------------------------------------------------------------------------
 void
-Dag::TerminateJob( Job* job, bool bootstrap )
+Dag::TerminateJob( Job* job, bool recovery )
 {
     ASSERT( job != NULL );
 
@@ -1101,7 +1101,7 @@ Dag::TerminateJob( Job* job, bool bootstrap )
         child->Remove(Job::Q_WAITING, job->GetJobID());
 		// if child has no more parents in its waiting queue, submit it
 		if( child->GetStatus() == Job::STATUS_READY &&
-			child->IsEmpty( Job::Q_WAITING ) && bootstrap == FALSE ) {
+			child->IsEmpty( Job::Q_WAITING ) && recovery == FALSE ) {
 			StartNode( child );
 		}
     }
