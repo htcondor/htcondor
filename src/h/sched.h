@@ -160,6 +160,10 @@ typedef struct {        /* record sent by startd to shadow */
 #define PCKPT_FRGN_JOB                (SCHED_VERS+36)
 #define SEND_RUNNING_JOBS     (SCHED_VERS+37)
 #define CHECK_CAPABILITY    (SCHED_VERS+38)
+#define GIVE_PRIORITY		(SCHED_VERS+39)
+#define	MATCH_INFO			(SCHED_VERS+40)
+#define	ALIVE				(SCHED_VERS+41)
+#define	REQUEST_SERVICE		(SCHED_VERS+42)
 
 #define SCHED_PORT		9605
 #define START_PORT		9611
@@ -184,6 +188,14 @@ typedef struct {        /* record sent by startd to shadow */
 #define MATCH 0		/* "Equality" return for strcmp() */
 #endif
 
+#ifndef ACCEPTED
+#define ACCEPTED 1
+#endif
+
+#ifndef REJECTED
+#define REJECTED 0
+#endif
+
 #define OK		TRUE
 #define NOT_OK	FALSE
 
@@ -198,13 +210,15 @@ typedef struct {        /* record sent by startd to shadow */
 #define SYSTEM			8
 #define CONDOR_DOWN		-1
 
-#define CONNECTION_FAILED	1
-#define	CAPABILITY_FAILED	2
-
 #define LOCK_JOB_QUEUE(q,m) GuardQueue(q,m,__FILE__,__LINE__)
 #define CLOSE_JOB_QUEUE(q) GuardQueue(q,LOCK_UN,__FILE__,__LINE__)
 
 /* new stuff for capability management */
 #define SIZE_OF_CAPABILITY_STRING 16
-#define SIZE_OF_FINAL_STRING 40
+#define SIZE_OF_FINAL_STRING 40					/* ipaddr:port + capability */
 
+#define	EXITSTATUS_OK		0					/* exit status of the agent */
+#define EXITSTATUS_NOTOK	1
+
+#define	MATCHED				1					/* match record status */
+#define	NOTMATCHED			0
