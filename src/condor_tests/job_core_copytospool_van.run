@@ -1,0 +1,66 @@
+#! /usr/bin/env perl
+use CondorTest;
+use Digest::MD5;
+
+my $stats = 0;
+
+$cmd = 'job_core_copytospool_van.cmd';
+$testname = 'Does copytospool work - vanilla U';
+
+$aborted = sub {
+	my %info = @_;
+	my $done;
+	print "Abort event expected as we clear job\n";
+};
+
+$submitted = sub {
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $program = $info{"executable"};
+	my $spool = `condor_config_val SPOOL`;
+	chomp($spool);
+
+	print "Checking spool dir --$spool--\n";
+	print "Executable is $program\n";
+	print "Transfer job worked..... need to check spool file.\n";
+
+	print "MD5 of $program is needed first\n";
+
+	open(DATA,"<$program") || die "Can't open input file $!\n";
+	my $datamd5 = Digest::MD5->new;
+	$datamd5->addfile(DATA);
+	close(DATA);
+	my $hexexemd5 = $datamd5->hexdigest;
+	print "executable md5: $hexexemd5\n";
+
+	my $spoolfile = $spool . "/cluster$cluster" . ".ickpt.subproc0";
+	print "Spool file should be $spoolfile\n";
+	#system("ls $spool");
+
+	open(DATA,"<$spoolfile") || die "Can't open input file $!\n";
+	my $sdatamd5 = Digest::MD5->new;
+	$sdatamd5->addfile(DATA);
+	close(DATA);
+	my $shexexemd5 = $sdatamd5->hexdigest;
+	print "spooled executable md5: $shexexemd5\n";
+
+	print "OK remove the job!\n";
+	system("condor_rm $cluster");
+
+	if( $hexexemd5 != $shexexemd5 )
+	{
+		die "Spooled executable and executable have DIFFERENT MD5 checksums!!!\n";
+	}
+
+};
+
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterSubmit($testname, $submitted);
+
+if(CondorTest::RunTest($testname, $cmd, 0)) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

@@ -1,0 +1,63 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = "job_core_compressfiles_std.cmd";
+$input = "job_core_compressfiles_std.data";
+$gzinput = "job_core_compressfiles_std.datain";
+$gzinputgz = "job_core_compressfiles_std.datain.gz";
+$gzoutput = "job_core_compressfiles_std.dataout.gz";
+$output = "job_core_compressfiles_std.dataout";
+
+$testname = 'condor_submit compressfiles works - standard U';
+
+system("rm -f $gzinput $gzinputgz $gzoutput $output");
+system("cp $input $gzinput");
+system("gzip $gzinput");
+
+@CondorTest::expected_output =
+(
+'first',
+'second',
+'third',
+'fourth',
+);
+
+
+
+$ExitSuccess = sub {
+	my %info = @_;
+	my @input;
+
+	system("gunzip $gzoutput");
+
+	open(OUT, "<$output" ) || die "Can't open $output: $!\n";
+	open(IN, "<$input" ) || die "Can't open $input: $!\n";
+	# load up inputs in order
+	while(<IN>)
+	{
+		chomp($_);
+		push @input, $_; # add to beginning
+	}
+	close(IN);
+	while(<OUT>)
+	{
+		my $in = shift @input;
+		chomp($_);
+		if( $in ne $_ )
+		{
+			die "Input and output vary! $in ne $_\n";
+		}
+	}
+};
+
+
+#CondorTest::RegisterExitedSuccess( $testname, \&CondorTest::DefaultOutputTest );
+CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+
