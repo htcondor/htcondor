@@ -156,8 +156,12 @@ int main( int argc, char** argv )
 		// do not open up a dialog window!
 	::SetErrorMode( SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX );
 #else // UNIX
-		// Handle Unix signals
 
+		// Set a umask value so we get reasonable permissions on the
+		// files we create.  Derek Wright <wright@cs.wisc.edu> 3/3/98
+	umask( 022 );
+
+		// Handle Unix signals
 		// Block all signals now.  We'll unblock them right before we
 		// do the select.
 	sigset_t fullset;
