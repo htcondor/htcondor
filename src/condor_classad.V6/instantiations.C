@@ -23,6 +23,7 @@
 
 #include "condor_common.h"
 #include "common.h"
+#include "extArray.h"
 #include "exprTree.h"
 
 BEGIN_NAMESPACE( classad )
