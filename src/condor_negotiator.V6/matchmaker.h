@@ -79,8 +79,9 @@ class Matchmaker : public Service
 		UsageMonitor NetUsage;
 
 		// rank condition on matches
-		ExprTree *rankCondStd;;		// non-preemption (Rank > CurrentRank)
-		ExprTree *rankCondPreempt;;	// preemption (Rank >= CurrentRank)
+		ExprTree *rankCondStd;// no preemption or machine rank-preemption 
+							  // i.e., (Rank > CurrentRank)
+		ExprTree *rankCondPrioPreempt;// prio preemption (Rank >= CurrentRank)
 
 		// the accounting subsystem
 		Accountant accountant;

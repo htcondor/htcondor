@@ -58,7 +58,7 @@ Matchmaker ()
 	Parse (buf, rankCondStd);
 
 	sprintf (buf, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
-	Parse (buf, rankCondPreempt);
+	Parse (buf, rankCondPrioPreempt);
 
 	negotiation_timerID = -1;
 	GotRescheduleCmd=false;
@@ -70,7 +70,7 @@ Matchmaker::
 {
 	if (AccountantHost) free (AccountantHost);
 	delete rankCondStd;
-	delete rankCondPreempt;
+	delete rankCondPrioPreempt;
 	delete PreemptionReq;
 	delete PreemptionRank;
 	delete sockCache;
@@ -422,7 +422,8 @@ negotiationTime ()
 
 	// ----- Get all required ads from the collector
 	dprintf( D_ALWAYS, "Phase 1:  Obtaining ads from collector ...\n" );
-	if( !obtainAdsFromCollector( startdAds, scheddAds, startdPvtAds, ClaimedStartdAds ) )
+	if( !obtainAdsFromCollector( startdAds, scheddAds, startdPvtAds, 
+		ClaimedStartdAds ) )
 	{
 		dprintf( D_ALWAYS, "Aborting negotiation cycle\n" );
 		// should send email here
@@ -448,7 +449,8 @@ negotiationTime ()
 		numStartdAds = startdAds.MyLength();
 		MaxscheddLimit = 0;
 		// ----- Negotiate with the schedds in the sorted list
-		dprintf( D_ALWAYS, "Phase 4.%d:  Negotiating with schedds ...\n",spin_pie );
+		dprintf( D_ALWAYS, "Phase 4.%d:  Negotiating with schedds ...\n",
+			spin_pie );
 		dprintf (D_FULLDEBUG, "    NumStartdAds = %d\n", numStartdAds);
 		dprintf (D_FULLDEBUG, "    NormalFactor = %f\n", normalFactor);
 		dprintf (D_FULLDEBUG, "    MaxPrioValue = %f\n", maxPrioValue);
@@ -459,11 +461,12 @@ negotiationTime ()
 			if( !schedd->LookupString( ATTR_NAME, scheddName ) ||
 				!schedd->LookupString( ATTR_SCHEDD_IP_ADDR, scheddAddr ) )
 			{
-				dprintf (D_ALWAYS, "  Error!  Could not get %s and %s from ad\n",
+				dprintf (D_ALWAYS,"  Error!  Could not get %s and %s from ad\n",
 							ATTR_NAME, ATTR_SCHEDD_IP_ADDR);
 				return FALSE;
 			}	
-			dprintf(D_ALWAYS,"  Negotiating with %s at %s\n",scheddName,scheddAddr);
+			dprintf(D_ALWAYS,"  Negotiating with %s at %s\n",scheddName,
+				scheddAddr);
 
 			// should we send the startd ad to this schedd?
 			send_ad_to_schedd = FALSE;
@@ -477,7 +480,8 @@ negotiationTime ()
 			if (scheddLimit>MaxscheddLimit) MaxscheddLimit=scheddLimit;
 
 			// print some debug info
-			dprintf (D_FULLDEBUG, "  Calculating schedd limit with the following parameters\n");
+			dprintf (D_FULLDEBUG, "  Calculating schedd limit with the "
+				"following parameters\n");
 			dprintf (D_FULLDEBUG, "    ScheddPrio     = %f\n", scheddPrio);
 			dprintf (D_FULLDEBUG, "    scheddShare    = %f\n", scheddShare);
 			dprintf (D_FULLDEBUG, "    ScheddUsage    = %d\n", scheddUsage);
@@ -488,27 +492,28 @@ negotiationTime ()
 				// Optimization: If limit is 0, don't waste time with negotiate
 				result = MM_RESUME;
 			} else {
-				result = negotiate( scheddName, scheddAddr, scheddPrio, scheddLimit, 
+				result=negotiate( scheddName,scheddAddr,scheddPrio,scheddLimit, 
 							startdAds, startdPvtAds, send_ad_to_schedd);
 			}
 
 			switch (result)
 			{
 				case MM_RESUME:
-					// the schedd hit its resource limit.  must resume negotiations
-					// at a later negotiation cycle.
+					// the schedd hit its resource limit.  must resume 
+					// negotiations at a later negotiation cycle.
 					dprintf(D_FULLDEBUG,"  This schedd hit its scheddlimit.\n");
 					hit_schedd_prio_limit = TRUE;
 					break;
 				case MM_DONE: 
-					// the schedd got all the resources it wanted. delete this schedd
-					// ad.
-					dprintf(D_FULLDEBUG,"  This schedd got all it wants; removing it.\n");
+					// the schedd got all the resources it wanted. delete this 
+					// schedd ad.
+					dprintf(D_FULLDEBUG,"  This schedd got all it wants; "
+						"removing it.\n");
 					scheddAds.Delete( schedd);
 					break;
 				case MM_ERROR:
 				default:
-					dprintf( D_ALWAYS,"  Error: Ignoring schedd for this cycle\n" );
+					dprintf(D_ALWAYS,"  Error: Ignoring schedd for this cycle\n" );
 					scheddAds.Delete( schedd );
 			}
 		}
@@ -889,116 +894,113 @@ ClassAd *Matchmaker::
 matchmakingAlgorithm(char *, ClassAd &request,ClassAdList &startdAds,
 			double preemptPrio)
 {
-	ClassAd 	*candidate;
-	double		candidateRank;
-	double		candidatePreemptRank;
-	ClassAd 	*bestSoFar = NULL;	// using best match
-	double		bestRank = -(FLT_MAX);
-	double		bestPreemptRank = -(FLT_MAX);
-	double		bestOffer= -(FLT_MAX);
-	ExprTree	*requestRank;
-	ExprTree	*offerRank;
-	ExprTree 	*matchCriterion;
-	char		remoteUser[128];
-	EvalResult	result;
-	bool		preempting;
+		// the order of values in this enumeration is important!
+	enum PreemptState {PRIO_PREEMPTION,RANK_PREEMPTION,NO_PREEMPTION};
+		// to store values pertaining to a particular candidate offer
+	ClassAd 		*candidate;
+	double			candidateRankValue;
+	double			candidatePreemptRankValue;
+	PreemptState	candidatePreemptState;
+		// to store the best candidate so far
+	ClassAd 		*bestSoFar = NULL;	
+	double			bestRankValue = -(FLT_MAX);
+	double			bestPreemptRankValue = -(FLT_MAX);
+	PreemptState	bestPreemptState;
+	bool			newBestFound;
+		// to store results of evaluations
+	char			remoteUser[128];
+	EvalResult		result;
+	float			tmp;
 
-	// stash the rank expression of the request
-	requestRank = request.Lookup (ATTR_RANK);
 
 	// scan the offer ads
 	startdAds.Open ();
 	while ((candidate = startdAds.Next ())) {
 		// the candidate offer and request must match
-		if (*candidate == request) {
-			preempting = false;
-			// if there is a remote user, we try preemption ....
-			if (candidate->LookupString (ATTR_REMOTE_USER, remoteUser) ) {
-				preempting = true;
-				// check if the remote user has better priority
-				if( preemptPrio + PriorityDelta >= 
-					accountant.GetPriority(remoteUser) ) {
-					// yes ... ignore this candidate
+		if( !( *candidate == request ) ) {
+				// they don't match; continue
+			continue;
+		}
+
+		candidatePreemptState = NO_PREEMPTION;
+		// if there is a remote user, consider preemption ....
+		if (candidate->LookupString (ATTR_REMOTE_USER, remoteUser) ) {
+				// check if we are preempting for rank or priority
+			if( rankCondStd->EvalTree( candidate, &request, &result ) && 
+					result.type == LX_INTEGER && result.i == TRUE ) {
+					// offer strictly prefers this request to the one
+					// currently being serviced; preempt for rank
+				candidatePreemptState = RANK_PREEMPTION;
+			} else if( accountant.GetPriority(remoteUser) >= preemptPrio +
+				PriorityDelta ) {
+					// RemoteUser on machine has *worse* priority than request
+					// so we can preempt this machine *but* we need to check
+					// on two things first
+				candidatePreemptState = PRIO_PREEMPTION;
+					// (1) we need to make sure that PreemptionReq's hold (i.e.,
+					// if the PreemptionReq expression isn't true, dont preempt)
+				if (PreemptionReq && 
+						!(PreemptionReq->EvalTree(candidate,&request,&result) &&
+						result.type == LX_INTEGER && result.i == TRUE) ) {
 					continue;
 				}
-
-				// if the PreemptionReq expression is false, dont preempt
-				if (PreemptionReq 											&& 
-					PreemptionReq->EvalTree(candidate,&request,&result)		&&
-					result.type == LX_INTEGER && result.i == FALSE)
+					// (2) we need to make sure that the machine ranks the job
+					// at least as well as the one it is currently running 
+					// (i.e., rankCondPrioPreempt holds)
+				if(!(rankCondPrioPreempt->EvalTree(candidate,&request,&result)&&
+						result.type == LX_INTEGER && result.i == TRUE ) ) {
+						// machine doesn't like this job as much -- find another
 					continue;
-			}
-
-			// rank condition depends on if we are in preemption mode or not
-			matchCriterion = (preempting) ? rankCondPreempt : rankCondStd;
-
-			// if the offer has no Rank expr, the symmetric match is enough
-			// if the offer has a Rank expr, the match criterion must hold
-			offerRank = candidate->Lookup(ATTR_RANK);
-			if ((!offerRank) || (offerRank && 
-				matchCriterion->EvalTree(candidate,&request, &result) 	&&
-				(result.type == LX_INTEGER) && (result.i == TRUE)))
-			{
-
-				float tmp;
-				// calculate the request's rank of the offer
-				if(!request.EvalFloat(ATTR_RANK,candidate,tmp)) {
-					tmp = 0.0;
 				}
-				candidateRank = tmp;
-
-				// Use the PREEMPTION_RANK expression to rank matches when
-				// request rank is the same for both matches.  We always
-				// prefer to avoid preemption, so if we are not preempting
-				// we set candidatePreemptRank to FLT_MAX.
-				if (preempting) {
-					// calculate the global rank of the offer
-					if(PreemptionRank &&
-					   PreemptionRank->EvalTree(candidate,&request,&result) &&
-					   result.type == LX_FLOAT) {
-						candidatePreemptRank = result.f;
-					} else {
-						if (PreemptionRank) {
-							dprintf(D_ALWAYS, "Failed to evaluate "
-									"PREEMPTION_RANK expression.\n");
-						}
-						candidatePreemptRank = 0.0;
-					}
-				} else {
-					candidatePreemptRank = FLT_MAX;
-				}
-
-				// if this rank is the best so far, choose it
-				if (candidateRank > bestRank ||
-					(candidateRank == bestRank &&
-					 candidatePreemptRank > bestPreemptRank))
-				{
-					bestSoFar = candidate;
-					bestRank = candidateRank;
-					bestPreemptRank = candidatePreemptRank;
-				}
-				else 
-				{
-					// break ties on the basis of the best offer rank
-					if (offerRank && candidateRank == bestRank)
-					{
-						float rankOfOffer;
-						if(candidate->EvalFloat(ATTR_RANK,&request,rankOfOffer))
-						{
-							if (rankOfOffer > bestOffer)
-							{
-								bestSoFar = candidate;
-								bestOffer = rankOfOffer;
-								bestRank  = candidateRank;
-							}
-						}
-					}
-				}
+			} else {
+					// don't have better priority *and* offer doesn't prefer
+					// request --- find another machine
+				continue;
 			}
 		}
-		else
-		{
-			// fprintf (stderr, "Failed match\n");
+
+
+		// calculate the request's rank of the offer
+		if(!request.EvalFloat(ATTR_RANK,candidate,tmp)) {
+			tmp = 0.0;
+		}
+		candidateRankValue = tmp;
+
+		// the quality of a match is determined by a lexicographic sort on
+		// the following values, but more is better for each component
+		//  1. job rank of offer 
+		//	2. preemption state (2=no preempt, 1=rank-preempt, 0=prio-preempt)
+		//  3. preemption rank (if preempting)
+		newBestFound = false;
+		if( ( candidateRankValue > bestRankValue ) || 	// first by job rank
+				( candidateRankValue==bestRankValue && 	// then by preempt state
+				candidatePreemptState > bestPreemptState ) ) {
+			newBestFound = true;
+		} else if( candidateRankValue==bestRankValue && // then by preempt rank
+				candidatePreemptState==bestPreemptState && 
+				bestPreemptState != NO_PREEMPTION ) {
+			// calculate the preemption rank
+			candidatePreemptRankValue = 0.0;
+			if( PreemptionRank &&
+			   		PreemptionRank->EvalTree(candidate,&request,&result) &&
+					result.type == LX_FLOAT) {
+				candidatePreemptRankValue = result.f;
+			}
+				// check if the preemption rank is better than the best
+			if( candidatePreemptRankValue > bestPreemptRankValue ) {
+				newBestFound = true;
+			}
+		} else if( PreemptionRank ) {
+			dprintf(D_ALWAYS, "Failed to evaluate PREEMPTION_RANK expression "
+				"to a float.\n");
+		}
+
+
+		if( newBestFound ) {
+			bestSoFar = candidate;
+			bestRankValue = candidateRankValue;
+			bestPreemptState = candidatePreemptState;
+			bestPreemptRankValue = candidatePreemptRankValue;
 		}
 	}
 	startdAds.Close ();
