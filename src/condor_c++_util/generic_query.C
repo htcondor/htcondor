@@ -33,9 +33,9 @@ GenericQuery::
 	clearQueryObject ();
 	
 	// release memory
-	delete stringConstraints;
-	delete floatConstraints;
-	delete integerConstraints;
+	if (stringConstraints) delete [] stringConstraints;
+	if (floatConstraints)  delete [] floatConstraints;
+	if (integerConstraints)delete [] integerConstraints;
 }
 
 
