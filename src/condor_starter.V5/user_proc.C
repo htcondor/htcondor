@@ -609,6 +609,21 @@ UserProc::execute()
 			exit( 4 );
 		}
 
+#if defined(LINUX)
+		// alter the personality of this process to use i386 memory layout
+		// methods and no exec_shield(brk & stack segment randomization).
+		// We must use a syscall() here because the personality() call was
+		// defined in redhat 9 and not earlier, even though the kernel
+		// entry point existed. Even though the personality has been altered
+		// it will not become active in this process space until an exec()
+		// happens.
+		if (syscall(SYS_personality, PER_LINUX32) == -1) {
+			EXCEPT("Unable to set i386 personality: %d(%s)! "
+					"Memory layout will be uncheckpointable!\n", errno,
+					strerror(errno));
+		}
+#endif
+
 			// Everything's ready, start it up...
 		errno = 0;
 		execve( a_out_name, argv, envp );
