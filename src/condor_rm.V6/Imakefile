@@ -1,0 +1,17 @@
+SRC_DIR = $(SRC_TREE)/condor_rm
+CFLAGS = $(STD_C_FLAGS)  $(PLATFORM_C_FLAGS)
+C_PLUS_FLAGS = -I../condor_schedd $(STD_C_PLUS_FLAGS) -DNEW_PROC -DALLOC_DEBUG
+LDFLAGS = $(LIBDBM)
+
+SRC = rm.C
+OBJ = rm.o
+LIB = ../condor_schedd/libqmgmt.a ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a KernLib SocketLib
+LIBDIRS = ../condor_util_lib ../condor_xdr_lib ../condor_c++_util
+#LDFLAGS = $(LIBDBM)
+
+all_target(condor_rm)
+tags_target($(SRC),$(LIBDIRS))
+depend_target($(SRC))
+
+c_plus_target(condor_rm,$(OBJ),$(LIB))
+release_target(condor_rm,$(RELEASE_DIR)/bin,SET_GID_MODE)
