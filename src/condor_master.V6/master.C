@@ -1051,7 +1051,7 @@ void init_firewall_exceptions() {
 #ifdef WIN32
 
 	bool add_exception;
-	char *master_image_path, *schedd_image_path;
+	char *master_image_path, *schedd_image_path, *startd_image_path;
 
 	WindowsFirewallHelper wfh;
 	
@@ -1066,7 +1066,13 @@ void init_firewall_exceptions() {
 		// (and ignored).
 		
 		master_image_path = getExecPath();
+		
+		// We want to add exceptions for the SCHEDD and the STARTD
+		// so that (1) shadows can accept incoming connections on their 
+		// command port and (2) so starters can do the same.
+	
 		schedd_image_path = param("SCHEDD");
+		startd_image_path = param("STARTD");
 
 		if ( master_image_path ) {
 
@@ -1084,7 +1090,16 @@ void init_firewall_exceptions() {
 				}
 			}
 
+			if ( (! (daemons.GetIndex("STARTD") < 0) ) && startd_image_path ) {
+				if ( !wfh.addTrusted(startd_image_path) ) {
+					dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
+						"windows firewall exception list.\n",
+						startd_image_path);
+				}
+			}
+
 			if ( schedd_image_path ) { free(schedd_image_path); }
+			if ( startd_image_path ) { free(startd_image_path); }
 			free(master_image_path);
 
 		} else {
