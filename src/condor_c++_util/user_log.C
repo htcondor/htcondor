@@ -81,7 +81,7 @@ get_env_val( const char *str )
     for( src=str; *src && *src != '='; src++ )
         ;
     if( *src != '=' ) {
-        EXCEPT( "Invalid environment string" );
+        return NULL;
     }
 
         /* Skip over any white space */
@@ -113,17 +113,19 @@ initialize( const char *file, int c, int p, int s )
 	if (fp) fclose(fp);
 
 	if( (fd = open( path, O_CREAT | O_WRONLY, 0664 )) < 0 ) {
-		EXCEPT( "open(%s) failed with errno %d", path, errno );
+		dprintf( D_ALWAYS, "open(%s) failed with errno %d", path, errno );
+		return;
 	}
 
 		// attach it to stdio stream
 	if( (fp = fdopen(fd,"w")) == NULL ) {
-		EXCEPT( "fdopen(%d)", fd );
+		dprintf( D_ALWAYS, "fdopen(%d) failed in UserLog::initialize", fd );
+		return;
 	}
 
 		// set the stdio stream for line buffering
 	if( setvbuf(fp,NULL,_IOLBF,BUFSIZ) < 0 ) {
-		EXCEPT( "setvbuf" );
+		dprintf( D_ALWAYS, "setvbuf failed in UserLog::initialize" );
 	}
 
 	// prepare to lock the file
@@ -150,17 +152,19 @@ initialize( const char *owner, const char *file, int c, int p, int s )
 	if (fp) fclose(fp);
 
 	if( (fd = open( path, O_CREAT | O_WRONLY, 0664 )) < 0 ) {
-		EXCEPT( "open(%s) failed with errno %d", path, errno );
+		dprintf( D_ALWAYS, "open(%s) failed with errno %d", path, errno );
+		return;
 	}
 
 		// attach it to stdio stream
 	if( (fp = fdopen(fd,"w")) == NULL ) {
-		EXCEPT( "fdopen(%d)", fd );
+		dprintf( D_ALWAYS, "fdopen(%d) failed in UserLog::initialize", fd );
+		return;
 	}
 
 		// set the stdio stream for line buffering
 	if( setvbuf(fp,NULL,_IOLBF,BUFSIZ) < 0 ) {
-		EXCEPT( "setvbuf" );
+		dprintf( D_ALWAYS, "setvbuf failed in UserLog::initialize" );
 	}
 
 		// prepare to lock the file
@@ -201,7 +205,7 @@ int UserLog::
 writeEvent (ULogEvent *event)
 {
 	// the the log is not initialized, don't bother --- just return OK
-	if (path == 0) return 1;
+	if (!fp) return 1;
 	if (!lock) return 0;
 	if (!event) return 0;
 
@@ -357,7 +361,8 @@ EndUserLogBlock( LP *lp )
 ReadUserLog::
 ReadUserLog (const char * filename)
 {
-    if (!initialize(filename)) EXCEPT ("Failed to open %s", filename);
+    if (!initialize(filename))
+		dprintf(D_ALWAYS, "Failed to open %s", filename);
 }
 
 
@@ -406,7 +411,8 @@ readEvent (ULogEvent *& event)
 			// if synchronization was successful, reset file position and ...
 			if (fseek (_fp, filepos, SEEK_SET))
 			{
-				EXCEPT ("fseek()");
+				dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent");
+				return ULOG_UNK_ERROR;
 			}
 			
 			// ... attempt to read the event again
@@ -433,7 +439,8 @@ readEvent (ULogEvent *& event)
 			// event in the stream yet; restore file position and return
 			if (fseek (_fp, filepos, SEEK_SET))
 			{
-				EXCEPT ("fseek()");
+				dprintf(D_ALWAYS, "fseek() failed in ReadUserLog::readEvent");
+				return ULOG_UNK_ERROR;
 			}
 			clearerr (_fp);
 			delete event;
