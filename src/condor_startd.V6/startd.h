@@ -1,39 +1,35 @@
 #ifndef _CONDOR_STARTD_H
 #define _CONDOR_STARTD_H
 
+#include "condor_common.h"
+
 #include "../condor_daemon_core.V6/condor_timer_manager.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
-#if !defined(WIN32)
-#include <utmp.h>
-#include <sys/wait.h>
-#endif
-
+// Condor includes
 #include "condor_classad.h"
 #include "condor_adtypes.h"
 #include "condor_types.h"
 #include "condor_debug.h"
-#include "condor_expressions.h"
 #include "condor_attributes.h"
 #include "util_lib_proto.h"
 #include "internet.h"
 #include "afs.h"
+#include "my_hostname.h"
+#include "condor_state.h"
 #if !defined(WIN32)
 #include "sig_install.h"
 #endif
-#include "condor_state.h"
 
+// Startd includes
 #include "Match.h"
 #include "Starter.h"
 #include "Reqexp.h"
-
 class Resource;
 #include "ResState.h"
 #include "ResAttributes.h"
 #include "Resource.h"
-
 #include "ResMgr.h"
-
 #include "calc.h"
 #include "command.h"
 #include "util.h"
