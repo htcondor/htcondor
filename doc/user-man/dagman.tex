@@ -257,13 +257,22 @@ The fourth type of item in the DAG input file provides a
 way (optional) to retry failed nodes.
 The syntax for retry is
 
-\Arg{RETRY} \Arg{JobName} \Arg{NumberOfRetries}
+\Arg{RETRY} \Arg{JobName} \Arg{NumberOfRetries} \oArg{UNLESS-EXIT <value>}
 
 where the \Arg{JobName} is the same as the name given in
 a Job Entry line, and \Arg{NumberOfRetries} is an integer,
 the number of times to retry the node after failure.
 The default number of retries for any node is 0,
-the same as not having a retry line in the file.
+the same as not having a retry line in the file. 
+
+In some cases, it is inappropriate to retry for the number of times
+specified. For example, a PRE script may edit the job's submit file to
+indicate what it should do, and if it runs out of possibilities after
+a few retries, then there is no point in continuing to retry the
+node. In this case, you can specify UNLESS-EXIT, and if any of the
+parts of the node (PRE script, job, or POST script) exits with the
+specified value, then the node will be aborted and will not be
+retried.
 
 In the event of retry, all parts of a node within the DAG
 are redone, following the same rules regarding node failure
