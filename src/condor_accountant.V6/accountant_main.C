@@ -64,7 +64,7 @@ int main_init(int argc, char* argv[])
 
   // for(int i=0;i<5; i++) { sleep(1); accountant.UpdatePriorities(); }
 
-  // accountant.SaveState();
+  // while(1) accountant.AddMatch("Yuval",Ad6);
 
 #endif
 

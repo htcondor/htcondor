@@ -199,7 +199,9 @@ void Accountant::LogAction(int AddMatch, const MyString& CustomerName, const MyS
     return;
   }
   WriteLogEntry(MatchFile, AddMatch, CustomerName, ResourceName, T); 
+  int FilePos=MatchFile.tellp();
   MatchFile.close(); 
+  if (FilePos>=64000) SaveState();
 }
 
 //------------------------------------------------------------------
