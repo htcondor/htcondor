@@ -43,6 +43,9 @@ public:
     return 0;
   }
 
+  friend int operator==(const char* S1, const MyString& S2) { return (MyString(S1)==S2); }
+  friend int operator==(const MyString& S1, const char* S2) { return (S1==MyString(S2)); } 
+
   MyString& operator=(const MyString& S) {
     if (Data) delete[] Data;
     Data=NULL;
