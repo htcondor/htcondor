@@ -21,14 +21,11 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
 
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_io.h"
 #include "condor_syscall_mode.h"
-#include "condor_jobqueue.h"
 
 extern "C" {
 
