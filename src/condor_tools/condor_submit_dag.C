@@ -97,7 +97,7 @@ void submitDag(SubmitDagOptions &opts)
 
 	if (opts.strJobLog != "")
 	{
-		printf("Assuming %s is the log file shared by all jobs in this DAG.\n", opts.strJobLog.GetCStr());
+		printf("Assuming %s is the log file shared by all jobs in this DAG.\n", opts.strJobLog.Value());
 		printf("Please be sure you know what you're doing and that all jobs use this file.\n");
 	}
 	else
@@ -123,7 +123,7 @@ void submitDag(SubmitDagOptions &opts)
 	if (opts.bSubmit)
 	{
 		MyString strCmdLine = "condor_submit " + opts.strRemoteSchedd + " " + opts.strSubFile;
-		system(strCmdLine.GetCStr());
+		system(strCmdLine.Value());
 	}
 	else
 	{
@@ -142,7 +142,7 @@ MyString makeString(int iValue)
 
 bool fileExists(const MyString &strFile)
 {
-	int fd = open(strFile.GetCStr(), O_RDONLY);
+	int fd = open(strFile.Value(), O_RDONLY);
 	if (fd == -1)
 		return false;
 	close(fd);
@@ -151,7 +151,7 @@ bool fileExists(const MyString &strFile)
 
 MyString readFileToString(const MyString &strFilename)
 {
-	FILE *pFile = fopen(strFilename.GetCStr(), "r");
+	FILE *pFile = fopen(strFilename.Value(), "r");
 	if (!pFile)
 	{
 		return "";
@@ -176,11 +176,11 @@ void ensureOutputFilesExist(const SubmitDagOptions &opts)
 {
 	if (opts.bForce)
 	{
-		unlink(opts.strSubFile.GetCStr());
-		unlink(opts.strDebugLog.GetCStr());
-		unlink(opts.strSchedLog.GetCStr());
-		unlink(opts.strLibLog.GetCStr());
-		unlink(opts.strRescueFile.GetCStr());
+		unlink(opts.strSubFile.Value());
+		unlink(opts.strDebugLog.Value());
+		unlink(opts.strSchedLog.Value());
+		unlink(opts.strLibLog.Value());
+		unlink(opts.strRescueFile.Value());
 	}
 
 	bool bHadError = false;
@@ -227,7 +227,7 @@ void ensureOutputFilesExist(const SubmitDagOptions &opts)
 
 void writeSubmitFile(const MyString &strDagmanPath, const SubmitDagOptions &opts)
 {
-	FILE *pSubFile = fopen(opts.strSubFile.GetCStr(), "w");
+	FILE *pSubFile = fopen(opts.strSubFile.Value(), "w");
 	if (!pSubFile)
 	{
 		printf("ERROR: unable to create submit file %s\n", opts.strSubFile.Value());
@@ -266,11 +266,11 @@ void writeSubmitFile(const MyString &strDagmanPath, const SubmitDagOptions &opts
 		strArgs += " -NoPostFail";
     }
 
-    fprintf(pSubFile, "arguments\t= %s\n", strArgs.GetCStr());
+    fprintf(pSubFile, "arguments\t= %s\n", strArgs.Value());
     fprintf(pSubFile, "environment\t= _CONDOR_DAGMAN_LOG=%s;_CONDOR_MAX_DAGMAN_LOG=0\n", opts.strDebugLog.Value());
     if(opts.strNotification != "") 
 	{	
-		fprintf(pSubFile, "notification\t= %s\n", opts.strNotification.GetCStr());
+		fprintf(pSubFile, "notification\t= %s\n", opts.strNotification.Value());
     }
     fprintf(pSubFile, "queue\n");
 
@@ -285,11 +285,11 @@ void getJobLogFilenameFromSubmitFiles(SubmitDagOptions &opts)
 	MyString strDagFile = readFileToString(opts.strDagFile);
 	if (strDagFile == "")
 	{
-		printf("Unable to read dag file %s\n", opts.strDagFile.GetCStr());
+		printf("Unable to read dag file %s\n", opts.strDagFile.Value());
 		exit(2);
 	}
 
-	StringList listLines( strDagFile.GetCStr(), "\n");
+	StringList listLines( strDagFile.Value(), "\n");
 	listLines.rewind();
 	const char *psLine;
 	MyString strPreviousLogFilename;
@@ -331,7 +331,7 @@ void getJobLogFilenameFromSubmitFiles(SubmitDagOptions &opts)
 
 			if (strLogFilename != strPreviousLogFilename && strPreviousLogFilename != "")
 			{
-				printf("ERROR: submit files use different log files (detected in: %s)\n", strSubFile.GetCStr());
+				printf("ERROR: submit files use different log files (detected in: %s)\n", strSubFile.Value());
 				opts.strJobLog = "";
 				return;
 			}
@@ -425,7 +425,7 @@ void parseCommandLine(SubmitDagOptions &opts, int argc, char *argv[])
 		}
 		else
 		{
-			printf("Unknown option %s\n", strArg.GetCStr());
+			printf("Unknown option %s\n", strArg.Value());
 			printUsage();
 		}
 	}
@@ -457,14 +457,14 @@ MyString loadLogFileNameFromSubFile(const MyString &strSubFilename)
 {
 	MyString strSubFile = readFileToString(strSubFilename);
 	
-	StringList listLines( strSubFile.GetCStr(), "\r\n");
+	StringList listLines( strSubFile.Value(), "\r\n");
 	listLines.rewind();
 	const char *psLine;
 	MyString strPreviousLogFilename;
 	while( (psLine = listLines.next()) )
 	{
 		MyString strLine = psLine;
-		if (!stricmp(strLine.Substr(0, 2).GetCStr(), "log"))
+		if (!stricmp(strLine.Substr(0, 2).Value(), "log"))
 		{
 			int iEqPos = strLine.FindChar('=',0);
 			if (iEqPos == -1)
