@@ -28,6 +28,37 @@ machines in your pool to the same version.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{itemize}
+\item Changed the way that \Condor{master} spawns daemons and
+\Condor{preen} which allows you to specify command line arguments for
+any of them, though a \Macro{SUBSYS\_ARGS} setting.
+Previously, when you specified \Macro{PREEN}, you added the command
+line arguments directly to that setting, but that caused some
+problems, and only worked for \Condor{preen}.
+\Bold{Once you upgrade to version 6.1.6, if you continue to use your
+old \File{condor\_config} files, you must change the \Macro{PREEN}
+setting to remove any arguments you have defined and place those
+arguments into a separate config setting, \Macro{PREEN\_ARGS}.}
+See section~\ref{sec:Master-Config-File-Entries}, ``\condor{master}
+Config File Entries'', on
+page~\pageref{sec:Master-Config-File-Entries} for more details.
+
+\item Fixed a very serious bug in the Condor library linked in with
+\Condor{compile} to create standard jobs that was causing
+checkpointing to fail in many cases.  
+Any jobs that were linked with the 6.1.5 Condor libraries should
+probably be removed, re-linked, and re-submitted. 
+
+\item Fixed a bug in \Condor{userprio} that was introduced in version
+6.1.5 that was preventing it from finding the address of the
+\Condor{negotiator} for your pool.
+
+\item Fixed a bug in \Condor{stats} that was introduced in version
+6.1.5 that was preventing it from finding the address of the
+\Condor{collector} for your pool.
+
+\item Fixed a bug in the way the \Opt{-pool} option was handled by
+many Condor tools that was introduced in version 6.1.5. 
+
 
 \item \Condor{q} now displays job \emph{allocation time} by default, instead
 of displaying CPU time.  
@@ -69,37 +100,6 @@ page~\pageref{sec:Starter-Config-File-Entries}, for more details.
 \item \Condor{dagman} now permits the backslash character (``\Bs'') to be used
 as a line-continuation character for DAG Input Files, just like the
 \condor{config} files.
-
-\item Changed the way that \Condor{master} spawns daemons and
-\Condor{preen} which allows you to specify command line arguments for
-any of them, though a \Macro{SUBSYS\_ARGS} setting.
-Previously, when you specified \Macro{PREEN}, you added the command
-line arguments directly to that setting, but that caused some
-problems, and only worked for \Condor{preen}.
-\Bold{Once you upgrade to version 6.1.6, if you continue to use your
-old \File{condor\_config} files, you must change the \Macro{PREEN}
-setting to remove any arguments you have defined and place those
-arguments into a separate config setting, \Macro{PREEN\_ARGS}.}
-See section~\ref{sec:Master-Config-File-Entries}, ``\condor{master}
-Config File Entries'', on
-page~\pageref{sec:Master-Config-File-Entries} for more details.
-
-\item Fixed a very serious bug in the Condor library linked in with
-\Condor{compile} to create standard jobs that was causing
-checkpointing to fail in many cases.  
-Any jobs that were linked with the 6.1.5 Condor libraries should
-probably be removed, re-linked, and re-submitted. 
-
-\item Fixed a bug in \Condor{userprio} that was introduced in version
-6.1.5 that was preventing it from finding the address of the
-\Condor{negotiator} for your pool.
-
-\item Fixed a bug in \Condor{stats} that was introduced in version
-6.1.5 that was preventing it from finding the address of the
-\Condor{collector} for your pool.
-
-\item Fixed a bug in the way the \Opt{-pool} option was handled by
-many Condor tools that was introduced in version 6.1.5. 
 
 \item The Condor version string is now included in all Condor
 libraries.
