@@ -3,7 +3,7 @@
 
 #define ImakeOpsysFlag	-DIS_DUX4
 
-#define Platform	ALPHA/DUX4
+#define Platform	ALPHA-DUX4
 #define GccArch		alpha-dec-osf4.0
 
 #define PlatformFlags	-DDUX=DUX

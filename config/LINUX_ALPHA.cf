@@ -8,15 +8,15 @@
 #define	ArchOptimizeFlag
 
 #if defined( IS_GLIBC21 )
-#   define Platform		ALPHA/LINUX/GLIBC21
+#   define Platform		ALPHA-LINUX-GLIBC21
 #   define PublicTargetName	alpha_linux2-glibc21
 #   define LIB_NAME		glibc21
 #elif defined( IS_GLIBC20 )
-#   define Platform		ALPHA/LINUX/GLIBC20
+#   define Platform		ALPHA-LINUX-GLIBC20
 #   define PublicTargetName	alpha_linux2-glibc20
 #   define LIB_NAME		glibc20
 #else
-#   define Platform		ALPHA/LINUX/LIBC5
+#   define Platform		ALPHA-LINUX-LIBC5
 #   define PublicTargetName	alpha_linux2-libc5
 #   define LIB_NAME		libc5
 #endif
