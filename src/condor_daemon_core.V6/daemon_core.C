@@ -569,9 +569,47 @@ int DaemonCore::Register_Socket(Stream *iosock, char* iosock_descrip, SocketHand
 	return i;
 }
 
-int DaemonCore::Cancel_Socket( Stream* )
+
+int DaemonCore::Cancel_Socket( Stream* insock)
 {
-	// stub
+	int i,j;
+
+	i = -1;
+	for (j=0;j<nSock;j++) {
+		if ( sockTable[j].iosock == insock ) {
+			i = j;
+			break;
+		}
+	}
+
+	if ( i == -1 ) {
+		dprintf(D_ALWAYS,"Cancel_Socket: called on non-registered socket!\n");
+		return FALSE;
+	}
+
+	// Remove entry at index i by moving the last one in the table here.
+
+	// Clear any data_ptr which go to this entry we just removed
+	if ( curr_regdataptr == &(sockTable[i].data_ptr) )
+		curr_regdataptr = NULL;
+	if ( curr_dataptr == &(sockTable[i].data_ptr) )
+		curr_dataptr = NULL;
+
+	// Log a message
+	dprintf(D_DAEMONCORE,"Cancel_Socket: cancelled socket %d <%s>\n",i,sockTable[i].iosock_descrip);
+	
+	// Remove entry, move the last one in the list into this spot
+	sockTable[i].iosock = NULL;
+	free_descrip( sockTable[i].iosock_descrip );
+	sockTable[i].iosock_descrip = NULL;
+	if ( i < nSock - 1 ) {	// if not the last entry in the table, move the last one here
+		sockTable[i] = sockTable[nSock - 1];
+		sockTable[nSock - 1].iosock = NULL;
+		sockTable[nSock - 1].iosock_descrip = NULL;
+	}
+	nSock--;
+
+	DumpSocketTable(D_FULLDEBUG | D_DAEMONCORE);
 
 	return TRUE;
 }
@@ -810,6 +848,7 @@ void DaemonCore::Driver()
 	struct timeval	timer;
 	struct timeval *ptimer;
 	int temp;
+	int result;
 #ifndef WIN32
 	sigset_t fullset, emptyset;
 	sigfillset( &fullset );
@@ -925,17 +964,30 @@ void DaemonCore::Driver()
 						curr_dataptr = &(sockTable[i].data_ptr);
 						if ( sockTable[i].handler )
 							// a C handler
-							(*(sockTable[i].handler))(sockTable[i].service,sockTable[i].iosock);
+							result = (*(sockTable[i].handler))(sockTable[i].service,sockTable[i].iosock);
 						else
 						if ( sockTable[i].handlercpp )
 							// a C++ handler
-							(sockTable[i].service->*(sockTable[i].handlercpp))(sockTable[i].iosock);
+							result = (sockTable[i].service->*(sockTable[i].handlercpp))(sockTable[i].iosock);
 						else
 							// no handler registered, so this is a command socket.  call
 							// the DaemonCore handler which takes care of command sockets.
-							HandleReq(i);
+							result = HandleReq(i);
+						
 						// Clear curr_dataptr
 						curr_dataptr = NULL;
+
+						// Check result from socket handler, and if not KEEP_STREAM, then
+						// delete the socket and the socket handler.
+						if ( result != KEEP_STREAM ) {
+							// delete the cedar socket
+							delete sockTable[i].iosock;
+							// cancel the socket handler
+							Cancel_Socket( sockTable[i].iosock );
+							// decrement i, since sockTable[i] may now point to a new valid socket
+							i--;
+						}
+
 					}	// if FD_ISSET
 				}	// if valid entry in sockTable
 			}	// for 0 thru nSock
@@ -944,7 +996,7 @@ void DaemonCore::Driver()
 	}	// end of infinite for loop
 }
 
-void DaemonCore::HandleReq(int socki)
+int DaemonCore::HandleReq(int socki)
 {
 	Stream				*stream = NULL;
 	Stream				*insock;
@@ -967,15 +1019,25 @@ void DaemonCore::HandleReq(int socki)
 			break;
 		default:
 			// unrecognized Stream sock
-			return;
+			dprintf(D_ALWAYS,"DaemonCore: HandleReq(): unrecognized Stream sock\n");
+			return FALSE;
 	}
 
 	// set up a connection for a tcp socket	
 	if ( is_tcp ) {
-		stream = (Stream *) ((ReliSock *)insock)->accept();
-		if ( !stream ) {
-			dprintf(D_ALWAYS, "DaemonCore: accept() failed!");
-			return;
+
+		// if the connection was received on a listen socket, do an accept.
+		if ( ((ReliSock *)insock)->_state == Sock::sock_special &&
+			((ReliSock *)insock)->_special_state != ReliSock::relisock_listen ) {
+			stream = (Stream *) ((ReliSock *)insock)->accept();
+			if ( !stream ) {
+				dprintf(D_ALWAYS, "DaemonCore: accept() failed!");
+				return KEEP_STREAM;		// return KEEP_STEAM cuz insock is a listen socket
+			}
+		} 
+		// if the not a listen socket, then just assign stream to insock
+		else {
+			stream = insock;
 		}
 
 		dprintf(D_ALWAYS, "DaemonCore: Command received via TCP\n");
@@ -999,11 +1061,12 @@ void DaemonCore::HandleReq(int socki)
 	stream->timeout(old_timeout);
 	if(!result) {
 		dprintf(D_ALWAYS, "DaemonCore: Can't receive command request (perhaps a timeout?)\n");
-		if ( is_tcp )
-			delete stream;
-		else
-			((SafeSock *)stream)->end_of_message();
-		return;
+		if ( insock != stream )	{   // delete the stream only if we did an accept
+			delete stream;		   //     
+		} else {
+			stream->end_of_message();
+		}
+		return KEEP_STREAM;
 	}
 	
 	// If UDP, display who message is from now, since we could not do it above
@@ -1062,15 +1125,27 @@ void DaemonCore::HandleReq(int socki)
 	// from accept and our listen socket is still out there.  on udp, however, we
 	// cannot just delete it or we will not be "listening" anymore, so we just do
 	// an eom to flush buffers, etc.
+	// HACK: keep all UDP sockets as well for now.  
 	if ( result != KEEP_STREAM ) {
+		stream->encode();	// we wanna "flush" below in the encode direction only
 		if ( is_tcp ) {
-			delete stream;
+			stream->end_of_message();  // make certain data flushed to the wire
+			if ( insock != stream )	   // delete the stream only if we did an accept; if we
+				delete stream;		   //     did not do an accept, Driver() will delete the stream.
 		} else {
-			((SafeSock *)stream)->end_of_message();
+			stream->end_of_message();
+			result = KEEP_STREAM;	// HACK: keep all UDP sockets for now.  The only ones
+									// in Condor so far are Intial command socks, so keep it.
 		}
 	}
 
-	return;
+	// Now return KEEP_STREAM only if the user said to _OR_ if insock is a listen socket.
+	// Why?  we always wanna keep a listen socket.  also, if we did an accept, we already
+	// deleted the stream socket above.
+	if ( result == KEEP_STREAM || insock != stream )
+		return KEEP_STREAM;
+	else
+		return TRUE;
 }
 
 int DaemonCore::HandleSigCommand(int command, Stream* stream)
@@ -1284,9 +1359,10 @@ int DaemonCore::Create_Process(
 	int i;
 	char *ptmp;
 	char inheritbuf[_INHERITBUF_MAXSIZE];
-	ReliSock* rsock = NULL;	// tcp command socket for new child
-	SafeSock* ssock = NULL;	// udp command socket for new child
+	ReliSock rsock;	// tcp command socket for new child
+	SafeSock ssock;	// udp command socket for new child
 	pid_t newpid;
+	struct linger linger = {0,0};
 #ifdef WIN32
 	STARTUPINFO si;
 	PROCESS_INFORMATION piProcess;
@@ -1352,37 +1428,49 @@ int DaemonCore::Create_Process(
 	if ( want_command_port != FALSE ) {
 		if ( want_command_port == TRUE ) {
 			// choose any old port (dynamic port)
-			rsock = new ReliSock( 0 );
+			if ( !rsock.listen( 0 ) ) {
+				dprintf(D_ALWAYS,"Create_Process:Failed to post listen on command ReliSock\n");
+				return FALSE;
+			}
 			// now open a SafeSock _on the same port_ choosen above
-			if ( rsock )
-				ssock = new SafeSock( rsock->get_port() );
+			if ( !ssock.bind(rsock.get_port()) ) {
+				dprintf(D_ALWAYS,"Create_Process:Failed to post listen on command SafeSock\n");
+				return FALSE;				
+			}
 		} else {
-			// use well-known port specified by want_command_port
-			rsock = new ReliSock( want_command_port );
-			ssock = new SafeSock( want_command_port );
-		}
-		if ( !rsock ) {
-			dprintf(D_ALWAYS,"Create_Process:Unable to create command Relisock\n");
-		}
-		if ( !ssock ) {
-			dprintf(D_ALWAYS,"Create_Process:Unable to create command SafeSock\n");
+			// use well-known port specified by command_port
+			int on = 1;
+	
+			// Set options on this socket, SO_REUSEADDR, so that
+			// if we are binding to a well known port, and we crash, we can be
+			// restarted and still bind ok back to this same port. -Todd T, 11/97
+			if( (!rsock.setsockopt(SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on))) ||
+				(!ssock.setsockopt(SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on))) ) {
+				dprintf(D_ALWAYS,"ERROR: setsockopt() SO_REUSEADDR failed\n");
+				int crap = GetLastError();
+				return FALSE;
+			}
+
+			if ( (!rsock.listen( want_command_port)) ||
+				 (!ssock.bind( want_command_port)) ) {
+				dprintf(D_ALWAYS,"Create_Process:Failed to post listen on command socket(s)\n");
+				return FALSE;
+			}
 		}
 
 		// now duplicate the underlying SOCKET to make it inheritable
-		if ( !(rsock->set_inheritable(TRUE)) ) {
-			return FALSE;
-		}
-		if ( !(ssock->set_inheritable(TRUE)) ) {
+		if ( (!(rsock.set_inheritable(TRUE))) || (!(ssock.set_inheritable(TRUE))) ) {
+			dprintf(D_ALWAYS,"Create_Process:Failed to set command socks inheritable\n");
 			return FALSE;
 		}
 
 		// and now add these new command sockets to the inheritbuf
 		strcat(inheritbuf," ");
-		ptmp = rsock->serialize();
+		ptmp = rsock.serialize();
 		strcat(inheritbuf,ptmp);
 		delete []ptmp;
 		strcat(inheritbuf," ");
-		ptmp = ssock->serialize();
+		ptmp = ssock.serialize();
 		strcat(inheritbuf,ptmp);
 		delete []ptmp;		 
 	}
@@ -1434,8 +1522,8 @@ int DaemonCore::Create_Process(
 	// Now that we have a child, store the info in our pidTable
 	PidEntry *pidtmp = new PidEntry;
 	pidtmp->pid = newpid;
-	if ( rsock )
-		strcpy(pidtmp->sinful_string,sock_to_string(rsock->_sock));
+	if ( want_command_port != FALSE )
+		strcpy(pidtmp->sinful_string,sock_to_string(rsock._sock));
 	else
 		pidtmp->sinful_string[0] = '\0';
 	pidtmp->is_local = TRUE;
@@ -1452,12 +1540,9 @@ int DaemonCore::Create_Process(
 #endif
 
 	// Now that child exists, we (the parent) should close up our copy of
-	// the childs command listen cedar sockets.
-	if (ssock)
-		delete ssock;
-	if (rsock)
-		delete rsock;
-
+	// the childs command listen cedar sockets.  Since these are on
+	// the stack (rsock and ssock), they will get closed when we return.
+	
 	return newpid;	
 }
 
@@ -1785,7 +1870,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 				// a C handler
 				(*(reapTable[i].handler))(reapTable[i].service,pid,exit_status);
 			else
-			if ( sockTable[i].handlercpp )
+			if ( reapTable[i].handlercpp )
 				// a C++ handler
 				(reapTable[i].service->*(reapTable[i].handlercpp))(pid,exit_status);
 
