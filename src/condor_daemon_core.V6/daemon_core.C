@@ -15,11 +15,6 @@ static const int DEFAULT_PIDBUCKETS = 8;
 static const char* DEFAULT_INDENT = "DaemonCore--> ";
 
 
-#ifdef __GNUG__
-#pragma implementation "HashTable.h"
-#pragma implementation "list.h"
-#endif
-
 #include "condor_timer_manager.h"
 #include "condor_daemon_core.h"
 #include "condor_io.h"
