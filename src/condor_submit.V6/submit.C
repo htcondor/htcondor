@@ -212,6 +212,7 @@ char    *ParallelScriptStarter = "parallel_script_starter";
 #if !defined(WIN32)
 char	*KillSig			= "kill_sig";
 char	*RmKillSig			= "remove_kill_sig";
+char	*HoldKillSig		= "hold_kill_sig";
 #endif
 
 void 	reschedule();
@@ -3056,6 +3057,15 @@ SetKillSig()
 		sprintf( buffer, "%s=\"%s\"", ATTR_REMOVE_KILL_SIG, sig_name );
 		InsertJobExpr( buffer );
 		free( sig_name );
+		sig_name = NULL;
+	}
+
+	sig_name = findKillSigName( HoldKillSig, ATTR_HOLD_KILL_SIG );
+	if( sig_name ) {
+		sprintf( buffer, "%s=\"%s\"", ATTR_HOLD_KILL_SIG, sig_name );
+		InsertJobExpr( buffer );
+		free( sig_name );
+		sig_name = NULL;
 	}
 }
 #endif  // of ifndef WIN32
