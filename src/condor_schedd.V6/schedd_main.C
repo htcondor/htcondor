@@ -62,6 +62,7 @@ extern	void	mark_jobs_idle();
 
 // global variables to control the daemon's running and logging
 char*		Spool;							// spool directory
+char* 		JobHistoryFileName=NULL;
 char*		mySubSystem = "SCHEDD";
 
 // global objects
@@ -137,6 +138,7 @@ void Init()
 	{
 		EXCEPT("No spool directory specified");
 	}
+	JobHistoryFileName=param("JOB_HISTORY_FILE");
 }
 
 

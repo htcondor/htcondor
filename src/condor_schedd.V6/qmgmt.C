@@ -57,9 +57,8 @@ static char *_FileName_ = __FILE__;	 /* Used by EXCEPT (see condor_debug.h) */
 #include "condor_uid.h"
 #include "condor_adtypes.h"
 
-#include "MyString.h"
-
 extern char *Spool;
+extern char* JobHistoryFileName;
 
 extern "C" {
 	char *gen_ckpt_name(char *, int, int, int);
@@ -1397,29 +1396,17 @@ void FindPrioJob(int& p)
 
 static void AppendHistory(ClassAd* ad)
 {
-  static MyString LogFileName="";
-  if (LogFileName=="") {
-    LogFileName=param("SPOOL");
-    LogFileName+="/job_history.log";
-  }
-
+  if (!JobHistoryFileName) return;
   dprintf(D_FULLDEBUG, "Saving classad to history file\n");
 
-  MyString AccMode="a";
-  struct stat buf;
-  if (stat(LogFileName, &buf)==0) {
-    if (buf.st_size>64000) AccMode="w";
-  }
-
   // save job ad to the log
-  FILE* LogFile=fopen(LogFileName,AccMode);
-  
+  FILE* LogFile=fopen(JobHistoryFileName,"a");
   if ( !LogFile ) {
-	dprintf(D_ALWAYS,"ERROR saving to history file; cannot open %s\n",LogFileName.Value());
+	dprintf(D_ALWAYS,"ERROR saving to history file; cannot open %s\n",JobHistoryFileName);
   }
 
   if (!ad->fPrint(LogFile)) {
-    dprintf(D_ALWAYS, "ERROR in Scheduler::LogMatchEnd - failed to write clas ad to log file %s\n",LogFileName.Value());
+    dprintf(D_ALWAYS, "ERROR in Scheduler::LogMatchEnd - failed to write clas ad to log file %s\n",JobHistoryFileName);
 	fclose(LogFile);
     return;
   }
