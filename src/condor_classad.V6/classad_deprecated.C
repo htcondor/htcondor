@@ -533,7 +533,6 @@ AddExplicitConditionals( ExprTree *expr )
 	if( expr == NULL ) {
 		return NULL;
 	}
-	ExprTree *currentExpr = expr;
 	ExprTree::NodeKind nKind = expr->GetKind( );
 	switch( nKind ) {
 	case ExprTree::ATTRREF_NODE: {
@@ -592,14 +591,15 @@ AddExplicitConditionals( ExprTree *expr )
 		ExprTree * expr2 = NULL;
 		ExprTree * expr3 = NULL;
 		( ( Operation * )expr )->GetComponents( oKind, expr1, expr2, expr3 );
-		while( oKind == Operation::PARENTHESES_OP ) {
-			currentExpr = expr1;
-			( ( Operation * )expr1 )->GetComponents(oKind,expr1,expr2,expr3);
+		if ( oKind == Operation::PARENTHESES_OP ) {
+			ExprTree *newExpr1 = AddExplicitConditionals( expr1 );
+			return Operation::MakeOperation( Operation::PARENTHESES_OP,
+											 newExpr1, NULL, NULL );
 		}
-		if( ( Operation::__COMPARISON_START__ <= oKind &&
-			  oKind <= Operation::__COMPARISON_END__ ) ||
-			( Operation::__LOGIC_START__ <= oKind &&
-			  oKind <= Operation::__LOGIC_END__ ) ) {
+		else if( ( Operation::__COMPARISON_START__ <= oKind &&
+				   oKind <= Operation::__COMPARISON_END__ ) ||
+				 ( Operation::__LOGIC_START__ <= oKind &&
+				   oKind <= Operation::__LOGIC_END__ ) ) {
 				// Comparison/Logic Operation expression
 				// replace "expr" with "expr ? 1 : 0"
 
