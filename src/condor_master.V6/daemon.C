@@ -412,6 +412,9 @@ daemon::Start()
 		// record the time we were started
 	startTime = time(0);
 
+		// Since we just started it, we know it's not a new executable. 
+	newExec = FALSE;
+
 	if( needs_update ) {
 		needs_update = FALSE;
 		daemons.UpdateCollector();
@@ -655,6 +658,22 @@ daemon::CancelAllTimers()
 		recover_tid = -1;
 	}
 	if( start_tid != -1 ) {
+		daemonCore->Cancel_Timer( start_tid );
+		start_tid = -1;
+	}
+}
+
+
+void
+daemon::CancelRestartTimers()
+{
+	if( recover_tid  != -1 ) {
+		daemonCore->Cancel_Timer( recover_tid );
+		recover_tid = -1;
+	}
+	if( start_tid != -1 ) {
+		dprintf( D_ALWAYS, "Canceling timer to re-start %s\n", 
+				 name_in_config_file );
 		daemonCore->Cancel_Timer( start_tid );
 		start_tid = -1;
 	}
@@ -1362,4 +1381,24 @@ Daemons::FindDaemon( daemon_t dt )
 		}
 	}
 	return NULL;
+}
+
+
+void
+Daemons::CancelRestartTimers( void )
+{
+		// We don't need to be checking for new executables anymore. 
+	if( check_new_exec_tid != -1 ) {
+		daemonCore->Cancel_Timer( check_new_exec_tid );
+		check_new_exec_tid = -1;
+	}
+	if( preen_tid != -1 ) {
+		daemonCore->Cancel_Timer( preen_tid );
+		preen_tid = -1;
+	}
+
+		// Finally, cancel the start/restart timers for each daemon.  
+	for( int i=0; i < no_daemons; i++ ) {
+		daemon_ptr[i]->CancelRestartTimers();
+	}
 }
