@@ -234,7 +234,7 @@ ContactStartdArgs::~ContactStartdArgs()
 
 
 Scheduler::Scheduler() :
-	job_is_finished_queue( "job_is_finished_queue", 0 )
+	job_is_finished_queue( "job_is_finished_queue", 1 )
 {
 	ad = NULL;
 	MySockName = NULL;
@@ -8452,6 +8452,11 @@ Scheduler::Init()
 		free(tmp);
 		tmp = NULL;
 	}
+
+
+	int int_val = param_integer( "JOB_IS_FINISHED_INTERVAL", 1, 0 );
+	job_is_finished_queue.setPeriod( int_val );	
+
 
 		////////////////////////////////////////////////////////////////////
 		// Initialize the queue managment code
