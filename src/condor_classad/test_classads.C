@@ -68,7 +68,7 @@ char *classad_strings[] =
 
 	// A classad to test PrintToNewStr()--we need to ensure everything
 	// we can print is properly accounted for. 
-	"Requirements = (a > 3) && (b >= 1.3) && (c < MY.rank) && ((d <= TARGET__RANK) "
+	"Requirements = (a > 3) && (b >= 1.3) && (c < MY.rank) && ((d <= TARGET.RANK) "
     "|| (g == \"alain\") || (g != \"roy\") || (h =?= 5) || (i =!= 6)) "
     "&& ((a + b) < (c-d)) && ((e * f) > (g / h)) && x == false && y == true "
     "&& z == f && j == t",
@@ -79,7 +79,7 @@ char *classad_strings[] =
 	"&& (AvailableDisk > Disk) && (AvailableDisk > Memory) && (ImageSize > Disk))",
 	/* The second one is to test MY and TARGET. OTHER should be treated like target. */
 	"Memory = 60, Disk = 40, OS = Linux, Requirements = ((TARGET.ImageSize > MY.Memory) "
-	"&& (AvailableDisk > Disk) && (OTHER.AvailableDisk > MY.Memory) && (TARGET__ImageSize > MY__Disk))",
+	"&& (AvailableDisk > Disk) && (OTHER.AvailableDisk > MY.Memory) && (TARGET.ImageSize > MY.Disk))",
 
 	/* Test case sensitivity */
 	"DoesMatch = \"Bone Machine\" == \"bone machine\" && \"a\" =?= \"a\" && \"a\" =!= \"A\","
@@ -349,7 +349,7 @@ main(
 		test_printed_version(classads[3], "Env",          classad_strings[3],
 							 __LINE__, &test_results);
 		test_printed_version(classads[8], "Requirements", 
-			"Requirements = (a > 3) && (b >= 1.300000) && (c < MY.rank) && ((d <= TARGET__RANK) "
+			"Requirements = (a > 3) && (b >= 1.300000) && (c < MY.rank) && ((d <= TARGET.RANK) "
 		    "|| (g == \"alain\") || (g != \"roy\") || (h =?= 5) || (i =!= 6)) "
             "&& ((a + b) < (c - d)) && ((e * FALSE) > (g / h)) && x == FALSE && y == TRUE "
             "&& z == FALSE && j == TRUE",
