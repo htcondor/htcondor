@@ -6,6 +6,8 @@
 #include "condor_accountant.h"
 #include "condor_debug.h"
 #include "condor_config.h"
+#include "condor_state.h"
+#include "condor_common.h"
 #include "condor_attributes.h"
 
 //------------------------------------------------------------------
@@ -177,11 +179,12 @@ MyString Accountant::GetResourceName(ClassAd* ResourceAd)
 //------------------------------------------------------------------
 
 int Accountant::NotClaimed(ClassAd* ResourceAd) {
-  int state;
-  if (!ResourceAd->LookupInteger (ATTR_STATE, state)) {
-    dprintf (D_ALWAYS, "Warning in Accountant::NotClaimed - Could not lookup state... assuming CLAIMED\n");
-    return 0;
-  }
-  
-  return 0;
+  char state[16];
+  if (!ResourceAd->LookupString (ATTR_STATE, state))
+    {
+        dprintf (D_ALWAYS, "Could not lookup state --- assuming CLAIMED\n");
+        return 0;
+    }
+
+  return (string_to_state(state) != claimed_state);
 }
