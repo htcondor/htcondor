@@ -3360,9 +3360,25 @@ void Float::PrintToStr(char* str)
 
 void String::PrintToStr(char* str)
 {
-  strcat(str, "\"");
-  strcat(str, value);
-  strcat(str, "\"");
+  char*		ptr1 = value;
+  char*		ptr2 = str;
+
+  while(*ptr2 != '\0') ptr2++;
+  *ptr2 = '"';
+  ptr2++;
+  while(*ptr1 != '\0')
+  {
+	if(*ptr1 == '"')
+	{
+		*ptr2 = '\\';
+		ptr2++;
+	}
+	*ptr2 = *ptr1;
+	ptr1++;
+	ptr2++;
+  }
+  *ptr2 = '"';
+  *ptr2 = '\0';
 }
 
 void Boolean::PrintToStr(char* str)
