@@ -3403,7 +3403,7 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 		destination = pidinfo->sinful_string;
 	}
 
-	Daemon d(destination);
+	Daemon d( DT_ANY, destination );
 	// now destination process is local, send via UDP; if remote, send via TCP
 	if ( is_local == TRUE ) {
 		sock = (Stream *)(d.startCommand(DC_RAISESIGNAL, Stream::safe_sock, 3));
@@ -6228,7 +6228,7 @@ int DaemonCore::SendAliveToParent()
 		return FALSE;
 	}
 
-	Daemon d(parent_sinful_string);
+	Daemon d( DT_ANY, parent_sinful_string );
 	if (!d.startCommand(DC_CHILDALIVE, &sock, 0)) {
 		dprintf(D_FULLDEBUG,"DaemonCore: startCommand() failed. SendAliveToParent() failed.\n");
 		return FALSE;

@@ -553,7 +553,7 @@ FileTransfer::DownloadFiles(bool blocking)
 			EXCEPT("FileTransfer: DownloadFiles called on server side");
 		}
 
-		Daemon d(TransSock);
+		Daemon d( DT_ANY, TransSock );
 
 		if ( !sock.connect(TransSock,0) ) {
 			EXCEPT("Unable to connect to server %s\n", TransSock);
@@ -788,7 +788,7 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 			return 1;
 		}
 
-		Daemon d(TransSock);
+		Daemon d( DT_ANY, TransSock );
 
 		if ( !sock.connect(TransSock,0) ) {
 			EXCEPT("Unable to connect to server %s\n", TransSock);
