@@ -141,7 +141,7 @@ class TokenValue
 			if( strValue ) {
 				delete [] strValue;
 			}
-			strValue = tv.strValue ? strnewp( tv.strValue ) : NULL;
+			strValue = tv.strValue ? strnewp( tv.strValue ) : (char*)NULL;
 		}
 			
 	private:
