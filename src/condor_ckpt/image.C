@@ -1149,7 +1149,10 @@ restart( )
 /*
   Checkpointing must by implemented as a signal handler.  This routine
   generates the required signal to invoke the handler.
+  ckpt() = periodic ckpt
+  ckpt_and_exit() = ckpt and "vacate"
 */
+extern "C" {
 void
 ckpt()
 {
@@ -1160,16 +1163,29 @@ ckpt()
 	kill( getpid(), SIGUSR2 );
 	SetSyscalls( scm );
 }
+void
+ckpt_and_exit()
+{
+	int		scm;
+
+	dprintf( D_ALWAYS, "About to send CHECKPOINT and EXIT signal to SELF\n" );
+	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+	kill( getpid(), SIGTSTP );
+	SetSyscalls( scm );
+}
 
 /*
 ** Some FORTRAN compilers expect "_" after the symbol name.
 */
-extern "C" {
 void
 ckpt_() {
     ckpt();
 }
+void
+ckpt_and_exit_() {
+    ckpt();
 }
+}   /* end of extern "C" */
 
 /*
   Arrange to terminate abnormally with the given signal.  Note: the
