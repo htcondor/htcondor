@@ -1,7 +1,7 @@
 all_target(libdaemonclient.a)
 
 CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = -Wall $(STD_C_PLUS_FLAGS) -DWANT_DC_PM $(FIX_BROKEN_GCC)
+C_PLUS_FLAGS = -Wall $(STD_C_PLUS_FLAGS) $(FIX_BROKEN_GCC)
 LIB = $(STD_LIBS)
 
 ### NOTE!  If you add anything here, also add it to the
