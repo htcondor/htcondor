@@ -184,8 +184,10 @@ init_condor_ids()
 void
 init_user_ids(const char username[])
 {
-    struct passwd       *pwd, *getpwnam();
+    struct passwd       *pwd;
 	int					scm;
+	uid_t				myuid;
+	gid_t				mygid;
 
 	/*
 	** N.B. if we are using the yellow pages, system calls which are
@@ -193,15 +195,25 @@ init_user_ids(const char username[])
 	** mapping will occur.  Thus we must be in LOCAL/UNRECORDED mode here.
 	*/
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
-    if( (pwd=getpwnam(username)) == NULL ) {
-        dprintf(D_ALWAYS, "%s not in passwd file", username );
-		return;
-    }
-	(void)endpwent();
-	(void)SetSyscalls( scm );
 
-	initgroups(username, UserGid);
-	set_user_ids(pwd->pw_uid, pwd->pw_gid);
+	myuid = getuid();
+	mygid = getgid();
+
+
+	if (myuid == ROOT) {
+		if( (pwd=getpwnam(username)) == NULL ) {
+			dprintf(D_ALWAYS, "%s not in passwd file", username );
+			return;
+		}
+		(void)endpwent();
+		(void)SetSyscalls( scm );
+		set_user_ids(pwd->pw_uid, pwd->pw_gid);
+		initgroups(username, UserGid);
+	} else {
+		/* if we're not root, then set user ids to what we're currently
+		   running as, since we can't switch anyway */
+		set_user_ids(myuid, mygid);
+	}
 }
 
 
