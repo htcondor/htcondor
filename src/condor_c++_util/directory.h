@@ -371,13 +371,16 @@ private:
 	bool want_priv_change;
 	priv_state desired_priv_state;
 	bool do_remove( const char *path, bool is_curr, dir_rempriv_t RemPriv );
+	bool do_remove_dir( const char *path );
+	bool do_remove_file( const char *path );
 	void initialize( priv_state priv );
+	bool rmdirAttempt( const char* path, priv_state priv );
+
 #ifdef WIN32
 	long dirp;
 	struct _finddata_t filedata;
 #else
 	DIR *dirp;
-	bool rmdirAsOwner( const char* path, bool is_curr );
 	priv_state setOwnerPriv( const char* path, uid_t owner = 0,
 							 gid_t group = 0 );
 	uid_t owner_uid;
