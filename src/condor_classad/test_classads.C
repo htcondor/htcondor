@@ -387,6 +387,7 @@ main(
 		test_integer_value(classad_from_file, "B", 2, __LINE__, &test_results);
 		test_integer_value(classad_from_file, "C", 3, __LINE__, &test_results);
 		test_string_value(classad_from_file, "D", "alain", __LINE__, &test_results);
+        delete classad_from_file;
 	}
 
 	if (parameters.test_references) {
@@ -1512,6 +1513,7 @@ static void test_functions(
 				   __LINE__);
 			results->AddResult(false);
 		}
+        delete classad;
 	}
 	return;
 }
@@ -1641,5 +1643,6 @@ void test_random(
                __LINE__);
         results->AddResult(false);
     }
-
+    delete classad;
+    return;
 }
