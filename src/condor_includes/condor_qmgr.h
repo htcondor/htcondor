@@ -28,8 +28,7 @@ class ClassAd;
 
 
 typedef struct {
-	int		count;
-	char	*rendevous_file;
+	bool dummy;
 } Qmgr_connection;
 
 typedef int (*scan_func)(ClassAd *ad);
