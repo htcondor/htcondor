@@ -482,15 +482,18 @@ This section addresses the features and limitations that exist in the current
 version of DAGMan, and how they may change in future versions.
 
 This first public release of DAGMan was written and tested in the Condor 6.1.0
-environment.  It is shipped separate from the main Condor system as a
-contribution program.  As such, it is not as rigorously tested as the core
-components of Condor.  A reasonable effort has been made to test large DAGS
-(on the order of 5000 jobs) on Solaris x86 and Sparc.  However, the DAGMan is
-not arrogant enough to claim itself bug free.  Users are encouraged to send
-e-mail to \Email{condor-admin@cs.wisc.edu}.
+environment.  Originally the plan was to release it as a separate contribution
+module.  However, DAGMan functionality depends on the implementation of the
+schedd and \Condor{submit}, which sometimes changes from release to release of
+Condor.  Therefore, DAGMan is also release as part of each Condor release.
+
+A reasonable effort has been made to test large DAGS (on the order of 5000
+jobs) on Solaris x86 and Sparc.  Users are encouraged to send e-mail to
+\Email{condor-admin@cs.wisc.edu} if a bug is found.
 
 The following feature summary compares the current version with future
-versions of DAGMan still to come.
+versions of DAGMan still to come.  All of these new features will likely be
+seen with Condor 6.3 development releases.
 
 \begin{description}
 \item[Feature] : Command Socket
