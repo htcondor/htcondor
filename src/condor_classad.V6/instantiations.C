@@ -35,13 +35,11 @@ BEGIN_NAMESPACE( classad )
 template class ExtArray<ExprTree*>;
 template class ExtArray<char>;
 
-template class HashTable<const ExprTree*, Value>;
-template class HashBucket<const ExprTree*, Value>;
 template class HashTable<const ExprTree*, bool>;
 template class HashBucket<const ExprTree*, bool>;
 
-template class map<string, FunctionCall::ClassAdFunc, CaseIgnLTStr>;
-template class map<string, FunctionCall::ClassAdFunc, CaseIgnLTStr>::iterator;
+template class map<string, void*, CaseIgnLTStr>;
+template class map<string, void*, CaseIgnLTStr>::iterator;
 template class map<string, ExprTree*, CaseIgnLTStr>;
 template class map<string, ExprTree*, CaseIgnLTStr>::iterator;
 template class vector< pair<string, ExprTree*> >;
@@ -57,6 +55,8 @@ template class hash_map<string,multiset<ViewMember,ViewMemberLT>::iterator,
 template class hash_map<string,multiset<ViewMember,ViewMemberLT>::iterator,
 	StringHash>;
 
+template class hash_map<const ExprTree*, Value, ExprHash >;
+template class hash_map<const ExprTree*, Value, ExprHash >::iterator;
 template class hash_map<string, ClassAdProxy, StringHash>;
 template class hash_map<string, ClassAdProxy, StringHash>::iterator;
 template class hash_map<string, ClientTransaction*, StringHash>;
@@ -70,7 +70,6 @@ template class vector<string>;
 template class vector<ExprTree*>;
 template class list<XactionRecord>;
 template class list< pair<string,ClassAd*> >;
-
 
 class _ClassAdInit 
 {
