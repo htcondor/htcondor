@@ -54,7 +54,7 @@ extern "C" {
 /* Convert a string of the form "<xx.xx.xx.xx:pppp>" to a sockaddr_in  TCP */
 int string_to_sin(char *addr, struct sockaddr_in *sin);
 
-char *sin_to_string(struct sockaddr_in *sin);
+char *sin_to_string(const struct sockaddr_in *sin);
 
 /* Extract the port from a string of the form "<xx.xx.xx.xx:pppp>" */
 int string_to_port( const char* addr );
