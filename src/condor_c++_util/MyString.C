@@ -505,17 +505,22 @@ MyString::sprintf(const char *format,...)
 }
 
 
-
-void MyString::
-lower_case(void)
+void
+MyString::lower_case(void)
 {
-	::lower_case(Data);
+	::strlwr(Data);
 	return;
 }
 
 
-// TODO: This breaks libcondorapi!  we need to fix that before we
-// merge it back into a real version of Condor... 
+void
+MyString::strlwr(void)
+{
+	::strlwr(Data);
+	return;
+}
+
+
 void
 MyString::upper_case(void)
 {
@@ -523,6 +528,13 @@ MyString::upper_case(void)
 	return;
 }
 
+
+void
+MyString::strupr(void)
+{
+	::strupr(Data);
+	return;
+}
 
 
 bool
