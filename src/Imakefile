@@ -27,6 +27,8 @@ CFLAGS = $(STD_C_FLAGS)
 	cmos_specials test_suite_CMOS test_suite_C test_suite_F
 #define Directories release_dir release_dir/bin release_dir/lib
 all: makefiles Directories Libraries Programs
+release:: all
+
 simple_dir_target(release_dir)
 simple_dir_target(release_dir/bin)
 simple_dir_target(release_dir/lib)
@@ -72,4 +74,3 @@ object_target(test_suite_F)
 #endif
 
 check_platform_target
-release:: all
