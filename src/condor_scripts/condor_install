@@ -1491,7 +1491,7 @@ sub find_lock_dir {
 
 
 sub configure_central_manager {
-    local( $local_config, $generic );
+    local( $local_config, $generic, $name );
     $local_config = $_[0];
     $generic = "$release_dir/etc/examples/condor_config.local.central.manager";
 
@@ -1519,9 +1519,38 @@ sub configure_central_manager {
 	    "Can't rename $local_config\n";
     }
 
-    print "\nCopying default central manager config file to\n$local_config ... ";
-    system( "/bin/cp -f $generic $local_config" ) && 
-	die "\nCan't copy default central manager config file to\n$local_config:\n$!\n";
+    print "\nWhat name would you like to use for this pool?  This should be a\n",
+    "short description (20 characters or so) that describes your site.\n",
+    "For example, the name for the UW-Madison Computer Science Condor\n",
+    "Pool is: \"UW-Madison CS\".  This value is stored in your central\n", 
+    "manager's local config file as \"COLLECTOR_NAME\", if you decide to\n",
+    "change it later.  (This shouldn't include any \" marks).\n";
+    chop($_ = <STDIN>);
+    if( /^$/ ) {
+	$name = "";
+    } else {
+	s/"//g;
+	$name = $_;
+    }
+
+    print "\nSetting up central manager config file $local_config ... ";
+    if( $name ) {
+	open( GENERIC, "<$generic" ) || die "Can't open file $generic: $!\n";
+	open( LOCAL, ">$local_config" ) || die "Can't open file $local_config: $!\n";
+	while( <GENERIC> ) {
+	    if( /^#COLLECTOR_NAME.*/ ) {
+	       print LOCAL "COLLECTOR_NAME\t\t= $name\n";
+	   } else {
+	       print LOCAL $_;
+	   }
+	}
+	close GENERIC;
+	close LOCAL;
+    } else {
+	system( "/bin/cp -f $generic $local_config" ) && 
+	    die "\nCan't copy default central manager config file to\n$local_config:\n$!\
+n";
+    }
     print "done.\n";
 }
 
