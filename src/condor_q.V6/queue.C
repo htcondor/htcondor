@@ -32,7 +32,6 @@ static	CondorQuery	scheddQuery(SCHEDD_AD);
 static	CondorQuery submittorQuery(SUBMITTOR_AD);
 static	ClassAdList	scheddList;
 
-static	bool		localQueue 		= false;
 static	bool		querySchedds 	= false;
 static	bool		querySubmittors = false;
 static	char		constraint[4096];
@@ -61,8 +60,8 @@ int main (int argc, char **argv)
 
 	// make sure we are querying schedd's or submittors
 	if (!global && !querySchedds && !querySubmittors) {
-		char *host = my_hostname();
-		localQueue = true;
+		char *host = my_full_hostname();
+		//localQueue = true;
 		querySchedds = true;
 		result = scheddQuery.addConstraint (SCHEDD_NAME, host);
 		if (result != Q_OK) {
@@ -112,7 +111,7 @@ int main (int argc, char **argv)
 		jobs.Sort( (SortFunctionType)JobSort );
 
 		// display the jobs from this submittor
-		if (jobs.MyLength() != 0 || localQueue)
+		if (jobs.MyLength() != 0 || !global)
 		{
 			// print header
 			if (querySchedds) {
