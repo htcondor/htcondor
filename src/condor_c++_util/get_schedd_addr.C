@@ -24,6 +24,7 @@
 ** 
 ** Authors:  Cai, Weiru
 ** 	         University of Wisconsin, Computer Sciences Dept.
+** Modified by Jim Basney: added startd functionality
 ** 
 */ 
 
@@ -44,15 +45,21 @@ char* get_schedd_addr(const char* name)
 	sprintf(scheddAddr, "<%s:%d>", name, SCHED_PORT);
 	return scheddAddr;
 }
+char* get_startd_addr(const char* name)
+{
+	char*				startdAddr = (char*)malloc(sizeof(char)*100);
+
+	sprintf(startdAddr, "<%s:%d>", name, START_PORT);
+	return startdAddr;
 }
 #else
 extern "C"
 {
-char* get_schedd_addr(const char* name)
+char* get_daemon_addr(const char* name, AdTypes adtype, const char* attribute)
 {
-	CondorQuery			query(SCHEDD_AD);
+	CondorQuery			query(adtype);
 	ClassAd*			scan;
-	char*				scheddAddr = (char*)malloc(sizeof(char)*100);
+	char*				daemonAddr = (char*)malloc(sizeof(char)*100);
 	char				constraint[500];
 	ClassAdList			ads;
 	
@@ -63,15 +70,23 @@ char* get_schedd_addr(const char* name)
 	scan = ads.Next();
 	if(!scan)
 	{
-		delete scheddAddr;
+		delete daemonAddr;
 		return NULL; 
 	}
-	if(scan->EvalString(ATTR_SCHEDD_IP_ADDR, NULL, scheddAddr) == FALSE)
+	if(scan->EvalString(attribute, NULL, daemonAddr) == FALSE)
 	{
-		delete scheddAddr;
+		delete daemonAddr;
 		return NULL; 
 	}
-	return scheddAddr;
+	return daemonAddr;
+}
+char* get_schedd_addr(const char* name)
+{
+	return get_daemon_addr(name, SCHEDD_AD, ATTR_SCHEDD_IP_ADDR);
+} 
+char* get_startd_addr(const char* name)
+{
+	return get_daemon_addr(name, STARTD_AD, ATTR_STARTD_IP_ADDR);
 } 
 }
 #endif
