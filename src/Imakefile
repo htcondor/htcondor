@@ -143,22 +143,22 @@ afs_static.tar: static.tar
 
 #endif 
 
-release_tarball( submit.tar, SubmitOnlyFiles )
-release_tarball( link.tar, LinkOnlyFiles  )
-release_tarball( master.tar, MasterFiles )
-release_tarball( dagman.tar, DAGManFiles )
+release_tarball(submit.tar,SubmitOnlyFiles)
+release_tarball(link.tar,LinkOnlyFiles)
+release_tarball(master.tar,MasterFiles)
+release_tarball(dagman.tar,DAGManFiles)
 
-/* contrib_tarball( view_client.tar, ViewClientFiles ) */
-contrib_tarball( ckpt_server.tar, CkptServerFiles )
-contrib_tarball( eventd.tar, EventdFiles )
-/* contrib_tarball( sdk.tar, SDKFiles ) */
+/* contrib_tarball(view_client.tar,ViewClientFiles) */
+contrib_tarball(ckpt_server.tar,CkptServerFiles)
+contrib_tarball(eventd.tar,EventdFiles)
+/* contrib_tarball(sdk.tar,SDKFiles) */
 
-both_tarball( view_server.tar, ViewServerFiles, ViewServerContribFiles )
+both_tarball(view_server.tar,ViewServerFiles,ViewServerContribFiles)
 
 #if WANT_PVM && HAS_PVM
 #define PvmTar pvm.tar
 #define AfsPvmTar afs_pvm.tar
-contrib_tarball( pvm.tar, PvmFiles )
+contrib_tarball(pvm.tar,PvmFiles)
 #else
 #define PvmTar 
 #define AfsPvmTar 
@@ -293,9 +293,9 @@ object_dir_target(condor_sdk)
 
 single_target(condor_procapi,libprocapi.a)
 single_target(condor_sysapi,libsysapi.a)
-single_target(condor_schedd.V6, libqmgmt.a)
-single_target(condor_accountant.V6, libacct.a)
-single_target(condor_ckpt_server, ckpt_server_api.a)
+single_target(condor_schedd.V6,libqmgmt.a)
+single_target(condor_accountant.V6,libacct.a)
+single_target(condor_ckpt_server,ckpt_server_api.a)
 
 object_target(test_suite_C.V5)
 #if HAS_FORTRAN
@@ -336,15 +336,15 @@ reallyclean: really-clean
 htmldocs: html docs
 	cd html; ./build_doc++_index
 
-pure_target( condor_startd.V6, condor_startd.pure )
-pure_target( condor_schedd.V6, condor_schedd.pure )
-pure_target( condor_master.V6, condor_master.pure )
-pure_target( condor_shadow.V6, condor_shadow.std.pure )
-pure_target( condor_starter.V5, condor_starter.std.pure )
-pure_target( condor_shadow.V6.1, condor_shadow.pure )
-pure_target( condor_starter.V6.1, condor_starter.pure )
-pure_target( condor_collector.V6, condor_collector.pure )
-pure_target( condor_negotiator.V6, condor_negotiator.pure )
+pure_target(condor_startd.V6,condor_startd.pure)
+pure_target(condor_schedd.V6,condor_schedd.pure)
+pure_target(condor_master.V6,condor_master.pure)
+pure_target(condor_shadow.V6,condor_shadow.std.pure)
+pure_target(condor_starter.V5,condor_starter.std.pure)
+pure_target(condor_shadow.V6.1,condor_shadow.pure)
+pure_target(condor_starter.V6.1,condor_starter.pure)
+pure_target(condor_collector.V6,condor_collector.pure)
+pure_target(condor_negotiator.V6,condor_negotiator.pure)
 
 clean::
 	rm -rf $(PURE_DIR)
