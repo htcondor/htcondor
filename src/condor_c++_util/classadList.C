@@ -26,6 +26,7 @@
 // Implementation of ClassadList class
 //
 
+#include "condor_common.h"
 #include "classadList.h"
 
 static	SortFunctionType SortSmallerThan;
@@ -80,7 +81,7 @@ PrintClassAdList()
   	calist.Rewind();
   	while( calist.Next( tmpClassAd ) ) {
 		pp.Unparse( buffer, tmpClassAd );
-		cout << buffer << endl;
+		cout << buffer << std::endl;
 		buffer = "";
   	}
 }
