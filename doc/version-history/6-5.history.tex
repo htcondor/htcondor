@@ -6,7 +6,7 @@ This is the development release series of Condor,
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-5-2}Version 6.5.2}
+\subsection{\label{sec:New-6-5-3}Version 6.5.3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent New Features:
@@ -133,6 +133,11 @@ Collector's ClassAd as a hex string.
 
 \item Fixed a minor bug whereby DAGMan was not removing its lock file
       after successful completion.
+
+\item Fixed a bug introduced in version 6.5.0 whereby the
+      \Macro{UID\_DOMAIN} attributes of jobs and resources were being
+      compared in a case-sensitive manner, resulting in erroneous
+      failures.
 
 \item The \Condor{master} used to always pass a \Opt{-f} on the
   command line to all daemons defined in the \Macro{DAEMON\_LIST}
