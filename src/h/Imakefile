@@ -4,3 +4,4 @@ awk_target( syscall_numbers.c, syscall_numbers.tmpl, awk_prog.name_table )
 
 clean::
 	rm -f syscall_numbers.o
+	rm -f Makefile
