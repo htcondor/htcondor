@@ -34,7 +34,7 @@ typedef std::vector<ExprTree*> ArgumentList;
 
 typedef struct 
 {
-	string       functionName;
+	std::string       functionName;
 
 	// The function should be a ClassAdFunc. Because we use this structure
 	// as part of the interface with a shared library that uses an extern
