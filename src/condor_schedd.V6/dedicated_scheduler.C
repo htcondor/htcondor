@@ -352,6 +352,7 @@ DedicatedScheduler::DedicatedScheduler()
 	resource_requests = NULL;
 	unclaimed_resources = NULL;
 	hdjt_tid = -1;
+	sanity_tid = -1;
 
 		// TODO: Be smarter about the sizes of these tables
 	allocations = new HashTable < int, AllocationNode*> 
@@ -364,6 +365,8 @@ DedicatedScheduler::DedicatedScheduler()
 		( 199, hashFunction );
 
 	num_matches = 0;
+
+	unused_timeout = 0;
 
 	ds_owner = NULL;
 	ds_name = NULL;
@@ -381,6 +384,9 @@ DedicatedScheduler::~DedicatedScheduler()
 
 	if( hdjt_tid != -1 ) {
 		daemonCore->Cancel_Timer( hdjt_tid );
+	}
+	if( sanity_tid != -1 ) {
+		daemonCore->Cancel_Timer( sanity_tid );
 	}
 
         // for the stored claim records
@@ -496,7 +502,30 @@ DedicatedScheduler::initialize( void )
 int
 DedicatedScheduler::reconfig( void )
 {
-		// Nothing to do for now!
+	static int old_unused_timeout = 0;
+
+	char* tmp;
+	tmp = param( "UNUSED_CLAIM_TIMEOUT" );
+	if( tmp ) {
+		unused_timeout = atoi( tmp );
+		if( !unused_timeout && tmp[0] != '0' ) {
+			dprintf( D_ALWAYS, "ERROR: invalid value for "
+					 "UNUSED_CLAIM_TIMEOUT: \"%s\", "
+					 "using 10 minute default\n", tmp );
+			unused_timeout = 600;
+		}
+		free( tmp );
+	} else {
+		unused_timeout = 600;
+	}
+	if( old_unused_timeout && (old_unused_timeout != unused_timeout) ) {
+			// We've got a new value.  We should re-check our sanity. 
+		dprintf( D_FULLDEBUG, "New value for UNUSED_CLAIM_TIMEOUT (%d)\n", 
+				 unused_timeout );
+		checkSanity();
+	}
+	old_unused_timeout = unused_timeout;
+
 	return TRUE;
 }
 
@@ -1039,6 +1068,7 @@ DedicatedScheduler::contactStartd( ContactStartdArgs *args )
 		return true;
 	} else {
 		m_rec->status = M_UNCLAIMED;
+		m_rec->entered_current_status = (int)time(0);
 		return false;
 	}
 }
@@ -1048,6 +1078,7 @@ DedicatedScheduler::contactStartd( ContactStartdArgs *args )
 // the contact queue.
 #define BAILOUT                        \
         mrec->status = M_UNCLAIMED;    \
+		mrec->entered_current_status = (int)time(0);	\
 		scheduler.checkContactQueue(); \
 		return FALSE;
 
@@ -1088,6 +1119,7 @@ DedicatedScheduler::startdContactSockHandler( Stream *sock )
 	}
 	
 	mrec->status = M_CLAIMED; // we assume things will work out.
+	mrec->entered_current_status = (int)time(0);
 
 	// Now, we set the timeout on the socket to 1 second.  Since we 
 	// were called by as a Register_Socket callback, this should not 
@@ -1667,7 +1699,7 @@ DedicatedScheduler::handleDedicatedJobs( void )
 	dprintf( D_FULLDEBUG, "Starting "
 			 "DedicatedScheduler::handleDedicatedJobs\n" );
 
-// 	now = time(NULL);
+// 	now = (int)time(0);
 		// Just for debugging, set now to 0 to make everything easier
 		// to parse when looking at log files.
 	now = 0;
@@ -1679,6 +1711,7 @@ DedicatedScheduler::handleDedicatedJobs( void )
 			// No jobs, we're done.
 		dprintf( D_FULLDEBUG, "No idle dedicated jobs, "
 				 "handleDedicatedJobs() returning\n" );
+		checkSanity();
 		return TRUE;
 	}
 
@@ -1712,6 +1745,9 @@ DedicatedScheduler::handleDedicatedJobs( void )
 				 "aborting handleDedicatedJobs\n" );
 		return FALSE;
 	}
+
+		// See if we should release claims we're not using.
+	checkSanity();
 
 		// Now that we're done, free up the memory we allocated, so we
 		// don't use up these resources when we don't need them.  If
@@ -1950,6 +1986,9 @@ DedicatedScheduler::spawnJobs( void )
 			for( i=0; i<=n; i++ ) {
 				(*(*allocation->matches)[p])[i]->shadowRec = srec;
 				(*(*allocation->matches)[p])[i]->status = M_ACTIVE;
+				(*(*allocation->matches)[p])[i]->
+					entered_current_status = (int)time(0);
+
 			}
 		}
 			// TODO: Deal w/ pushing matches (this is just a
@@ -2679,6 +2718,105 @@ DedicatedScheduler::setScheduler( ClassAd* job_ad )
 }
 
 
+// Make sure we're not holding onto any resources we're not using for
+// longer than the unused_timeout.
+void
+DedicatedScheduler::checkSanity( void )
+{
+	if( ! unused_timeout ) {
+			// Without a value for the timeout, there's nothing to
+			// do (yet).
+		return;
+	}
+
+	dprintf( D_FULLDEBUG, "Entering DedicatedScheduler::checkSanity()\n" );
+
+		// Maximum unused time for all claims that aren't already over
+		// the config-file-specified limit.
+	int max_unused_time = 0;
+	int tmp;
+	match_rec* mrec;
+
+	all_matches->startIterations();
+    while( all_matches->iterate( mrec ) ) {
+		tmp = getUnusedTime( mrec );
+		if( tmp >= unused_timeout ) {
+			char namebuf[1024];
+			namebuf[0] = '\0';
+			mrec->my_match_ad->LookupString( ATTR_NAME, namebuf );
+			dprintf( D_ALWAYS, "Resource %s has been unused for %d seconds, "
+					 "limit is %d, releasing\n", namebuf, tmp,
+					 unused_timeout );
+			releaseClaim( mrec );
+			continue;
+		}
+		if( tmp > max_unused_time ) {
+			max_unused_time = tmp;
+		}
+	}
+
+	if( max_unused_time ) {
+			// we've got some unused claims.  we need to make sure
+			// we're going to wake up in time to get rid of them, if
+			// they're still unused.
+		tmp = unused_timeout - max_unused_time;
+		ASSERT( tmp > 0 );
+		if( sanity_tid == -1 ) {
+				// This must be the first time we've called
+				// checkSanity(), so we actually have to register a
+				// timer, instead of just resetting it.
+			sanity_tid = daemonCore->Register_Timer( tmp, 0,
+  				         (Eventcpp)&DedicatedScheduler::checkSanity,
+						 "checkSanity", this );
+			if( sanity_tid == -1 ) {
+				EXCEPT( "Can't register DC timer!" );
+			}
+		} else {
+				// We've already got a timer.  Whether we got here b/c
+				// the timer went off, or b/c we just called
+				// checkSanity() ourselves, we can just reset the
+				// timer for the new value and everything will work.
+			daemonCore->Reset_Timer( sanity_tid, tmp );
+		}
+		dprintf( D_FULLDEBUG, "Timer (%d) will call checkSanity() "
+				 "again in %d seconds\n", sanity_tid, tmp );
+	} else {
+			// We have no unused claims, so we don't need to call
+			// checkSanity() again ourselves.  It'll get called when
+			// something we care about changes (like a shadow exiting,
+			// etc).  So, if we've got a timer now, just reset it to
+			// go off in a Long Time so we don't have to worry about
+			// managing the sanity_tid in funny ways.  If we never had
+			// a timer in the first place, don't set it now.
+		if( sanity_tid != -1 ) {
+			daemonCore->Reset_Timer( sanity_tid, 100000000 );
+		}
+	}
+}
+
+
+int
+DedicatedScheduler::getUnusedTime( match_rec* mrec )
+{
+	switch( mrec->status ) {
+	case M_UNCLAIMED:
+	case M_STARTD_CONTACT_LIMBO:
+    case M_ACTIVE:
+		return 0;
+		break;
+	case M_CLAIMED:
+			// This is the case we're really interested in.  We're
+			// claimed, but not active (a.k.a "Claimed/Idle").  We
+			// need to see how long we've been like this.
+		return( (int)time(0) - mrec->entered_current_status );
+		break;
+	default:
+		EXCEPT( "Unknown status in match rec (%d)", mrec->status );
+	}
+	return 0;
+}
+
+
 //////////////////////////////////////////////////////////////
 //  Utility functions
 //////////////////////////////////////////////////////////////
@@ -2853,4 +2991,5 @@ deallocMatchRec( match_rec* mrec )
 	mrec->num_exceptions = 0;
 		// Status is no longer active, but we're still claimed
 	mrec->status = M_CLAIMED;
+	mrec->entered_current_status = (int)time(0);
 }
