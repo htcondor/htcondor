@@ -29,8 +29,7 @@
 /*
 ** Return true iff the given string is a blank line.
 */
-blankline( str )
-char *str;
+blankline( char *str )
 {
 	while(isspace(*str))
 		str++;

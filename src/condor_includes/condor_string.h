@@ -24,19 +24,18 @@
 #define _STRING
 
 #include "condor_header_features.h"
+#include "util_lib_proto.h"
 
 BEGIN_C_DECLS
 
 #if defined(__STDC__) || (__cplusplus)
 int mkargv ( int *argc, char *argv[], char *line );
 void lower_case ( char *str );
-int blankline ( const char *str );
 char * getline ( FILE *fp );
 char * ltrunc ( register char *str );
 #else
 int mkargv();
 void lower_case();
-int blankline();
 char * getline();
 char * ltrunc ();
 #endif

@@ -28,7 +28,7 @@ extern "C" {
 #endif
 
 #if defined(__STDC__) || (__cplusplus)
-char *gen_ckpt_name ( const char *dir, int cluster, int proc, int subproc );
+char *gen_ckpt_name ( char *dir, int cluster, int proc, int subproc );
 #else
 char *gen_ckpt_name();
 #endif

@@ -21,8 +21,8 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#ifndef DEBUG_H
-#define DEBUG_H
+#ifndef CONDOR_DEBUG_H
+#define CONDOR_DEBUG_H
 
 #if !defined(__STDC__) && !defined(__cplusplus)
 #define const
@@ -121,8 +121,6 @@ extern void _EXCEPT_(char*, ...);
 }
 #endif
 
-#endif
-
 /* On Win32, define assert() to really do an ASSERT(), which does EXCEPT */
 #ifdef WIN32
 #	ifdef assert
@@ -137,12 +135,12 @@ extern void _EXCEPT_(char*, ...);
 #ifndef ASSERT
 #define ASSERT(cond) \
 	if( !(cond) ) { EXCEPT("Assertion ERROR on (%s)",#cond); }
-#endif
+#endif ASSERT
 
 #ifndef TRACE
 #define TRACE \
 	fprintf( stderr, "TRACE at line %d in file \"%s\"\n",  __LINE__, __FILE__ );
-#endif
+#endif TRACE
 
 #ifdef MALLOC_DEBUG
 #define MALLOC(size) mymalloc(__FILE__,__LINE__,size)
@@ -155,7 +153,7 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
 #define CALLOC(nelem,size) calloc(nelem,size)
 #define REALLOC(ptr,size) realloc(ptr,size)
 #define FREE(ptr) free(ptr)
-#endif
+#endif MALLOC_DEBUG
 
 #define D_RUSAGE( flags, ptr ) { \
         dprintf( flags, "(ptr)->ru_utime = %d.%06d\n", (ptr)->ru_utime.tv_sec,\
@@ -163,3 +161,6 @@ char    *mymalloc(), *myrealloc(), *mycalloc();
         dprintf( flags, "(ptr)->ru_stime = %d.%06d\n", (ptr)->ru_stime.tv_sec,\
         (ptr)->ru_stime.tv_usec ); \
 }
+
+#endif DEBUG_H
+
