@@ -87,7 +87,7 @@ extern "C" BOOLEAN	xdr_proc_id(XDR *, PROC_ID *);
 #endif
 
 #if !DBM_QUEUE
-extern "C" int gethostname(char*, int);
+extern "C" int gethostname();
 #endif
 
 char				hostname[512];
