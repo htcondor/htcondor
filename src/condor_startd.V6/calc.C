@@ -321,7 +321,7 @@ all_pty_idle_time( time_t now )
 		dev = new Directory( "/dev" );
 	}
 
-	for( dev->Rewind();  (f = dev->Next()); ) {
+	for( dev->Rewind();  (f = (char*)dev->Next()); ) {
 		if( strncmp("tty",f,3) == MATCH || strncmp("pty",f,3) == MATCH ) {
 			idle_time = dev_idle_time( f, now );
 			if( idle_time < answer ) {
