@@ -12,55 +12,57 @@ class Time {
 
 private:
 
-  long Sec;
-  long MicroSec;
+  double Sec;
 
 public:
 
-  Time(long S=0, long MS=0) { Sec=S; MicroSec=MS; }
-  Time(const Time& T) { Sec=T.Sec; MicroSec=T.MicroSec; }
+  Time(double d=0) { Sec=d; }
+  Time(const Time& T) { Sec=T.Sec; }
 
   Time& operator=(const Time& T) {
     Sec=T.Sec;
-    MicroSec=T.MicroSec;
     return *this;
   }
 
-  int operator==(const Time& T) const { return (Sec==T.Sec && MicroSec==T.MicroSec); }
-  int operator<(const Time& T) const { return (Sec==T.Sec ? MicroSec<T.MicroSec : Sec<T.Sec); }
-  int operator<=(const Time& T) const { return (Sec==T.Sec ? MicroSec<=T.MicroSec : Sec<T.Sec); }
-  int operator>(const Time& T) const { return (Sec==T.Sec ? MicroSec>T.MicroSec : Sec>T.Sec); }
-  int operator>=(const Time& T) const { return (Sec==T.Sec ? MicroSec>=T.MicroSec : Sec>T.Sec); }
+  int operator==(const Time& T) const { return (Sec==T.Sec); }
+  int operator<(const Time& T) const { return (Sec<T.Sec); }
+  int operator<=(const Time& T) const { return (Sec<=T.Sec); }
+  int operator>(const Time& T) const { return (Sec>T.Sec); }
+  int operator>=(const Time& T) const { return (Sec>=T.Sec); }
   
   static Time Now() {
 #if defined(WIN32)
-	  return Time(time(NULL), 0);
+	  return Time(time(NULL));
 #else
     struct timeval tp;
     if (gettimeofday(&tp,NULL)==-1) {
       EXCEPT ("gettimeofday()");
     }
-    return Time(tp.tv_sec,tp.tv_usec);
+    double d=((double)tp.tv_sec)+((double)tp.tv_usec)/1000000;
+    return Time(d);
 #endif
   }
 
-  static double DiffTime(Time From, Time To) {
-    return double(To.Sec-From.Sec)+double(To.MicroSec-From.MicroSec)/1000000;
+/*
+  friend Time operator-(const Time& T1, const Time& T2) {
+    return Time(T1.Sec-T2.Sec);
   }
 
   friend ostream& operator<<(ostream& os, const Time& T) {
-    os << T.Sec << ' ' << T.MicroSec;
+    double d=T.Sec;
+    os << d;
     return os;
   }
 
   friend istream& operator>>(istream& is, Time& T) {
-    long l;
-    is >> l;
-    T.Sec=l;
-    is >> l;
-    T.MicroSec=l;
+    double d;
+    is >> d;
+    T.Sec=d;
     return is;
   }
+*/
+
+  operator double() const { return Sec; }
 
 };
 
