@@ -114,7 +114,7 @@ class Operation : public ExprTree
 		static Operation* makeOperation( OpKind, ExprTree* );
 		static ValueType  coerceToNumber (Value&, Value &);
 
-		enum SigValues { SIG_NONE=0 , SIG_LEFT=1 , SIG_MIDDLE=2 , SIG_RIGHT=4 };
+		enum SigValues { SIG_NONE=0, SIG_CHLD1=1 , SIG_CHLD2=2 , SIG_CHLD3=4 };
 
 		static int _doOperation(OpKind,Value&,Value&,Value&,
 								bool,bool,bool, Value&, EvalState* = NULL);

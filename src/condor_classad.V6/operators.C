@@ -200,7 +200,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 	// take care of the easy cases
 	if (op == __NO_OP__ || op == PARENTHESES_OP) {
 		result.CopyFrom( val1 );
-		return SIG_LEFT;
+		return SIG_CHLD1;
 	} else if (op == UNARY_PLUS_OP) {
 		if (vt1 == BOOLEAN_VALUE || vt1 == STRING_VALUE || vt1 == LIST_VALUE || 
 			vt1 == CLASSAD_VALUE || vt1 == ABSOLUTE_TIME_VALUE) {
@@ -209,7 +209,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 			// applies for ERROR, UNDEFINED and Numbers
 			result.CopyFrom( val1 );
 		}
-		return SIG_LEFT;
+		return SIG_CHLD1;
 	}
 
 	// test for cases when evaluation is strict
@@ -217,30 +217,30 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 		// check for error values
 		if( vt1==ERROR_VALUE ) {
 			result.SetErrorValue ();
-			return SIG_LEFT;
+			return SIG_CHLD1;
 		}
 		if( valid2 && vt2==ERROR_VALUE ) {
 			result.SetErrorValue ();
-			return( !valid3 ? SIG_RIGHT : SIG_MIDDLE );
+			return SIG_CHLD2;
 		}
 		if( valid3 && vt3==ERROR_VALUE ) {
 			result.SetErrorValue ();
-			return SIG_RIGHT;
+			return SIG_CHLD3;
 		}
 
 		// check for undefined values.  we need to check if the corresponding
 		// tree exists, because these values would be undefined" anyway then.
 		if( valid1 && vt1==UNDEFINED_VALUE ) {
 			result.SetUndefinedValue();
-			return SIG_LEFT;
+			return SIG_CHLD1;
 		}
 		if( valid2 && vt2==UNDEFINED_VALUE ) {
 			result.SetUndefinedValue();
-			return( !valid3 ? SIG_RIGHT :  SIG_MIDDLE );
+			return SIG_CHLD2;
 		}
 		if( valid3 && vt3==UNDEFINED_VALUE ) {
 			result.SetUndefinedValue();
-			return SIG_RIGHT;
+			return SIG_CHLD3;
 		}
 	}
 
@@ -272,21 +272,21 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 		// if the selector is UNDEFINED, the result is undefined
 		if (vt1==UNDEFINED_VALUE) {
 			result.SetUndefinedValue();
-			return SIG_LEFT;
+			return SIG_CHLD1;
 		}
 
 		// otherwise, if the selector is not boolean propagate error
 		if( vt1 != BOOLEAN_VALUE ) {
 			result.SetErrorValue();	
-			return SIG_LEFT;
+			return SIG_CHLD1;
 		}
 
 		if( val1.IsBooleanValue(b) && b ) {
 			result.CopyFrom( val2 );
-			return( SIG_LEFT | SIG_MIDDLE );
+			return( SIG_CHLD2 );
 		} else {
 			result.CopyFrom( val3 );
-			return( SIG_LEFT | SIG_RIGHT );
+			return( SIG_CHLD3 );
 		}
 	} else if( op == SUBSCRIPT_OP ) {
 		int			index;
@@ -296,7 +296,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 		// subscripting from a list (strict)
 		if( vt1 != LIST_VALUE || vt2 != INTEGER_VALUE) {
 			result.SetErrorValue();
-			return( SIG_LEFT | SIG_RIGHT );
+			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 
 		val1.IsListValue( elist );		
@@ -305,7 +305,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 		// check bounds
 		if( elist->Number() <= index || index < 0 ) {
 			result.SetUndefinedValue();
-			return SIG_RIGHT;
+			return SIG_CHLD2;
 		}
 
 		// access the index'th element (0-based)
@@ -326,7 +326,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 			result.SetUndefinedValue( );
 		}
 
-		return( SIG_LEFT | SIG_RIGHT );
+		return( SIG_CHLD1 | SIG_CHLD2 );
 	}	
 	
 	// should not reach here
@@ -382,13 +382,13 @@ _Evaluate( EvalState &state, Value &result, ExprTree *& tree )
 {
 	int			sig;
 	Value		val1, val2, val3;
-	ExprTree 	*tl=NULL, *tm=NULL, *tr=NULL;
+	ExprTree 	*t1=NULL, *t2=NULL, *t3=NULL;
 	bool		valid1=false, valid2=false, valid3=false;
 
 	// Evaluate all valid children
 	tree = NULL;
 	if (child1) { 
-		if( !child1->Evaluate (state, val1) ) {
+		if( !child1->Evaluate (state, val1, t1) ) {
 			result.SetErrorValue( );
 			return( false );
 		}
@@ -396,14 +396,14 @@ _Evaluate( EvalState &state, Value &result, ExprTree *& tree )
 	}
 
 	if (child2) {
-		if( !child2->Evaluate (state, val2) ) {
+		if( !child2->Evaluate (state, val2, t2) ) {
 			result.SetErrorValue( );
 			return( false );
 		}
 		valid2 = true;
 	}
 	if (child3) {
-		if( !child3->Evaluate (state, val3) ) {
+		if( !child3->Evaluate (state, val3, t3) ) {
 			result.SetErrorValue( );
 			return( false );
 		}
@@ -415,9 +415,9 @@ _Evaluate( EvalState &state, Value &result, ExprTree *& tree )
 			&state );
 
 	// delete trees which were not significant
-	if( valid1 && !( sig & SIG_LEFT ) ) { delete tl; tl = NULL; }
-	if( valid2 && !( sig & SIG_RIGHT ))	{ delete tr; tr = NULL; }
-	if( valid3 && !( sig & SIG_MIDDLE )){ delete tm; tm = NULL; }
+	if( valid1 && !( sig & SIG_CHLD1 )) { delete t1; t1 = NULL; }
+	if( valid2 && !( sig & SIG_CHLD2 ))	{ delete t2; t2 = NULL; }
+	if( valid3 && !( sig & SIG_CHLD3 )) { delete t3; t3 = NULL; }
 
 	if( sig == SIG_NONE ) {
 		result.SetErrorValue( );
@@ -435,28 +435,28 @@ _Evaluate( EvalState &state, Value &result, ExprTree *& tree )
 			if( val1.IsExceptional() ) {
 				// the operator is only propagating the value;  only the
 				// subexpression is significant
-				tree = tl;
+				tree = t1;
 			} else {
 				// the node operated on the value; the operator is also
 				// significant
-				tree = makeOperation( operation, tl );
+				tree = makeOperation( operation, t1 );
 			}
 			return( true );	
 		} else {
 			// strict binary operators
 			if( val1.IsExceptional() || val2.IsExceptional() ) {
 				// exceptional values are only being propagated
-				if( sig & SIG_LEFT ) {
-					tree = tl;
+				if( sig & SIG_CHLD1 ) {
+					tree = t1;
 					return( true );
-				} else if( sig & SIG_RIGHT ) {
-					tree = tr;
+				} else if( sig & SIG_CHLD2 ) {
+					tree = t2;
 					return( true );
 				} 
 				EXCEPT( "Should not reach here" );
 			} else {
 				// the node is also significant
-				tree = makeOperation( operation, tl, tr );
+				tree = makeOperation( operation, t1, t2 );
 				return( true );
 			}
 		}
@@ -464,41 +464,46 @@ _Evaluate( EvalState &state, Value &result, ExprTree *& tree )
 		// non-strict operators
 		if( operation == IS_OP || operation == ISNT_OP ) {
 			// the operation is *always* significant for IS and ISNT
-			tree = makeOperation( operation, tl, tr );
+			tree = makeOperation( operation, t1, t2 );
 			return( true );
 		}
 		// other non-strict binary operators
 		if( operation == LOGICAL_AND_OP || operation == LOGICAL_OR_OP ) {
-			if( ( sig & SIG_LEFT ) && ( sig & SIG_RIGHT ) ) {
-				tree = makeOperation( operation, tl, tr );
+			if( ( sig & SIG_CHLD1 ) && ( sig & SIG_CHLD2 ) ) {
+				tree = makeOperation( operation, t1, t2 );
 				return( true );
-			} else if( sig & SIG_LEFT ) {
-				tree = tl;
+			} else if( sig & SIG_CHLD1 ) {
+				tree = t1;
 				return( true );
-			} else if( sig & SIG_RIGHT ) {
-				tree = tr;
+			} else if( sig & SIG_CHLD2 ) {
+				tree = t2;
 				return( true );
 			} else {
 				EXCEPT( "Shouldn't reach here" );
 			}
 		}
 		// non-strict ternary operator (conditional operator) s ? t : f
-		// selector is *always* significant
+		// selector is always significant (???)
 		if( operation == TERNARY_OP ) {
 			Value tmpVal;
 			tmpVal.SetUndefinedValue( );
 			tree = Literal::MakeLiteral( tmpVal );
 
 			// "true" consequent taken
-			if( sig & SIG_MIDDLE ) {
-				tree = makeOperation( TERNARY_OP, tl, tm, tree );
+			if( sig & SIG_CHLD2 ) {
+				tree = t2;
+				delete t1;
+				delete t3;
 				return( true );
-			} else if( sig & SIG_RIGHT ) {
-				tree = makeOperation( TERNARY_OP, tl, tree, tr );
+			} else if( sig & SIG_CHLD3 ) {
+				tree = t3;
+				delete t1;
+				delete t2;
 				return( true );
 			}
 			// neither consequent; selector was exceptional; return ( s )
-			tree = tl;
+			tree = t1;
+			delete tree;
 			return( true );
 		}
 	}
@@ -733,13 +738,13 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 	if (op == META_EQUAL_OP) {
 		if (vt1 != vt2) {
 			result.SetBooleanValue( false );
-			return( SIG_LEFT | SIG_RIGHT );
+			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 		
 		// undefined or error
 		if (vt1 == UNDEFINED_VALUE || vt1 == ERROR_VALUE) {
 			result.SetBooleanValue( true );
-			return( SIG_LEFT | SIG_RIGHT );
+			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 
 		// if not the above cases, =?= is like == ; but remember =?=
@@ -750,14 +755,14 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 	if (op == META_NOT_EQUAL_OP) {
 		if (vt1 != vt2) {
 			result.SetBooleanValue( true );
-			return( SIG_LEFT | SIG_RIGHT );
+			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 
 		// undefined or error
 		if (vt1 == UNDEFINED_VALUE || vt1 == ERROR_VALUE ||
 			vt2 == UNDEFINED_VALUE || vt2 == ERROR_VALUE) {
 			result.SetBooleanValue( false );
-			return( SIG_LEFT | SIG_RIGHT );
+			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 
 		// if not the above cases, =!= is just like !=; but remember =?=
@@ -773,18 +778,18 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 				// comparison between strings and non-exceptional non-string 
 				// values is error
 				result.SetErrorValue();
-				return( SIG_LEFT | SIG_RIGHT );
+				return( SIG_CHLD1 | SIG_CHLD2 );
 			}
 			compareStrings (op, v1, v2, result, exact);
-			return( SIG_LEFT | SIG_RIGHT );
+			return( SIG_CHLD1 | SIG_CHLD2 );
 
 		case INTEGER_VALUE:
 			compareIntegers (op, v1, v2, result);
-			return( SIG_LEFT | SIG_RIGHT );
+			return( SIG_CHLD1 | SIG_CHLD2 );
 
 		case REAL_VALUE:
 			compareReals (op, v1, v2, result);
-            return( SIG_LEFT | SIG_RIGHT );
+			return( SIG_CHLD1 | SIG_CHLD2 );
 	
 		case BOOLEAN_VALUE:
 			{
@@ -793,37 +798,37 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 				// check if both are bools
 				if( !v1.IsBooleanValue( b1 ) || !v2.IsBooleanValue( b2 ) ) {
 					result.SetErrorValue();
-					return( SIG_LEFT | SIG_RIGHT );
+					return( SIG_CHLD1 | SIG_CHLD2 );
 				}
 				result.SetBooleanValue( b1 == b2 );
-				return( SIG_LEFT | SIG_RIGHT );
+			return( SIG_CHLD1 | SIG_CHLD2 );
 			}
 
 		case LIST_VALUE:
 		case CLASSAD_VALUE:
 			result.SetErrorValue();
-			return( SIG_LEFT | SIG_RIGHT );
+			return( SIG_CHLD1 | SIG_CHLD2 );
 
 		case ABSOLUTE_TIME_VALUE:
 			if( !v1.IsAbsoluteTimeValue( ) || !v2.IsAbsoluteTimeValue( ) ) {
 				result.SetErrorValue( );
-				return( SIG_LEFT | SIG_RIGHT );
+				return( SIG_CHLD1 | SIG_CHLD2 );
 			}
 			compareAbsoluteTimes( op, v1, v2, result );
-			return( SIG_LEFT | SIG_RIGHT );
+			return( SIG_CHLD1 | SIG_CHLD2 );
 
 		case RELATIVE_TIME_VALUE:
 			if( !v1.IsRelativeTimeValue( ) || !v2.IsRelativeTimeValue( ) ) {
 				result.SetErrorValue( );
-				return( SIG_LEFT | SIG_RIGHT );
+				return( SIG_CHLD1 | SIG_CHLD2 );
 			}
 			compareRelativeTimes( op, v1, v2, result );
-			return( SIG_LEFT | SIG_RIGHT );
+			return( SIG_CHLD1 | SIG_CHLD2 );
 
 		default:
 			// should not get here
 			EXCEPT ("Should not get here");
-			return( SIG_LEFT | SIG_RIGHT );
+			return( SIG_CHLD1 | SIG_CHLD2 );
 	}
 }
 
@@ -840,25 +845,25 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 			&& !v2.IsIntegerValue() && !v2.IsRealValue() 
 			&& !v2.IsAbsoluteTimeValue() && !v2.IsRelativeTimeValue() ) ) {
 		result.SetErrorValue ();
-		return( SIG_LEFT | SIG_RIGHT );
+		return( SIG_CHLD1 | SIG_CHLD2 );
 	}
 
 	// take care of the unary arithmetic operators
 	if (op == UNARY_MINUS_OP) {
 		if (v1.IsIntegerValue (i1)) {
 			result.SetIntegerValue (-i1);
-			return SIG_LEFT;
+			return SIG_CHLD1;
 		} else	if (v1.IsRealValue (r1)) {
 			result.SetRealValue (-r1);
-			return SIG_LEFT;
+			return SIG_CHLD1;
 		} else if( v1.IsExceptional() ) {
 			// undefined or error --- same as operand
 			result.CopyFrom( v1 );
-			return SIG_LEFT;
+			return SIG_CHLD1;
 		}
 		// unary minus not defined on any other operand type
 		result.SetErrorValue( );
-		return( SIG_LEFT );
+		return( SIG_CHLD1 );
 	}
 
 	// perform type promotions and proceed with arithmetic
@@ -869,15 +874,15 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 			switch (op) {
 				case ADDITION_OP:		
 					result.SetIntegerValue(i1+i2);	
-					return( SIG_LEFT | SIG_RIGHT );
+					return( SIG_CHLD1 | SIG_CHLD2 );
 
 				case SUBTRACTION_OP:	
 					result.SetIntegerValue(i1-i2);	
-					return( SIG_LEFT | SIG_RIGHT );
+					return( SIG_CHLD1 | SIG_CHLD2 );
 
 				case MULTIPLICATION_OP:	
 					result.SetIntegerValue(i1*i2);	
-					return( SIG_LEFT | SIG_RIGHT );
+					return( SIG_CHLD1 | SIG_CHLD2 );
 
 				case DIVISION_OP:		
 					if (i2 != 0) {
@@ -885,7 +890,7 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 					} else {
 						result.SetErrorValue ();
 					}
-					return( SIG_LEFT | SIG_RIGHT );
+					return( SIG_CHLD1 | SIG_CHLD2 );
 					
 				case MODULUS_OP:
 					if (i2 != 0) {
@@ -893,12 +898,12 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 					} else {
 						result.SetErrorValue ();
 					}
-					return( SIG_LEFT | SIG_RIGHT );
+					return( SIG_CHLD1 | SIG_CHLD2 );
 							
 				default:
 					// should not reach here
 					EXCEPT ("Should not get here");
-					return( SIG_LEFT | SIG_RIGHT );
+					return( SIG_CHLD1 | SIG_CHLD2 );
 			}
 
 		case REAL_VALUE:
@@ -926,11 +931,11 @@ doLogical (OpKind op, Value &v1, Value &v2, Value &result)
 
 	if( vt1!=UNDEFINED_VALUE && vt1!=ERROR_VALUE && vt1!=BOOLEAN_VALUE ) {
 		result.SetErrorValue();
-		return SIG_LEFT;
+		return SIG_CHLD1;
 	}
 	if( vt2!=UNDEFINED_VALUE && vt2!=ERROR_VALUE && vt2!=BOOLEAN_VALUE ) { 
 		result.SetErrorValue();
-		return SIG_RIGHT;
+		return SIG_CHLD2;
 	}
 	
 	v1.IsBooleanValue( b1 );
@@ -943,16 +948,16 @@ doLogical (OpKind op, Value &v1, Value &v2, Value &result)
 		} else {
 			result.CopyFrom( v1 );
 		}
-		return SIG_LEFT;
+		return SIG_CHLD1;
 	}
 
 	if (op == LOGICAL_OR_OP) {
 		if( vt1 == BOOLEAN_VALUE && b1 ) {
 			result.SetBooleanValue( true );
-			return SIG_LEFT;
+			return SIG_CHLD1;
 		} else if( vt1 == ERROR_VALUE ) {
 			result.SetErrorValue( );
-			return SIG_LEFT;
+			return SIG_CHLD1;
 		} else if( vt1 == BOOLEAN_VALUE && !b1 ) {
 			result.CopyFrom( v2 );
 		} else if( vt2 != BOOLEAN_VALUE ) {
@@ -962,14 +967,14 @@ doLogical (OpKind op, Value &v1, Value &v2, Value &result)
 		} else {
 			result.SetUndefinedValue( );
 		}
-		return( SIG_LEFT | SIG_RIGHT );
+		return( SIG_CHLD1 | SIG_CHLD2 );
 	} else if (op == LOGICAL_AND_OP) {
         if( vt1 == BOOLEAN_VALUE && !b1 ) {
             result.SetBooleanValue( false );
-			return SIG_LEFT;
+			return SIG_CHLD1;
 		} else if( vt1 == ERROR_VALUE ) {
 			result.SetErrorValue( );
-			return SIG_LEFT;
+			return SIG_CHLD1;
 		} else if( vt1 == BOOLEAN_VALUE && b1 ) {
 			result.CopyFrom( v2 );
 		} else if( vt2 != BOOLEAN_VALUE ) {
@@ -979,7 +984,7 @@ doLogical (OpKind op, Value &v1, Value &v2, Value &result)
 		} else {
 			result.SetUndefinedValue( );
 		}
-		return( SIG_LEFT | SIG_RIGHT );
+		return( SIG_CHLD1 | SIG_CHLD2 );
 	}
 
 	EXCEPT( "Shouldn't reach here" );
@@ -999,11 +1004,11 @@ doBitwise (OpKind op, Value &v1, Value &v2, Value &result)
 	if (op == BITWISE_NOT_OP) {
 		if (!v1.IsIntegerValue(i1)) {
 			result.SetErrorValue();
-			return SIG_LEFT;
+			return SIG_CHLD1;
 		}
 	} else if (!v1.IsIntegerValue(i1) || !v2.IsIntegerValue(i2)) {
 		result.SetErrorValue();
-		return( SIG_LEFT | SIG_RIGHT );
+		return( SIG_CHLD1 | SIG_CHLD2 );
 	}
 
 	switch (op) {
@@ -1051,10 +1056,10 @@ doBitwise (OpKind op, Value &v1, Value &v2, Value &result)
 	}
 
 	if( op == BITWISE_NOT_OP ) {
-		return SIG_LEFT;
+		return SIG_CHLD1;
 	}
 
-	return( SIG_LEFT | SIG_RIGHT );
+	return( SIG_CHLD1 | SIG_CHLD2 );
 }
 
 
@@ -1115,7 +1120,7 @@ doRealArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 			errno);
     }
 #endif
-	return( SIG_LEFT | SIG_RIGHT );
+	return( SIG_CHLD1 | SIG_CHLD2 );
 }
 
 
@@ -1131,14 +1136,14 @@ doTimeArithmetic( OpKind op, Value &v1, Value &v2, Value &result )
 			v1.IsAbsoluteTimeValue( secs1 );
 			v2.IsRelativeTimeValue( secs2 );
 			result.SetAbsoluteTimeValue( secs1 + secs2 );
-			return( SIG_LEFT | SIG_RIGHT );
+			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 
 		if( vt1==RELATIVE_TIME_VALUE && vt2==ABSOLUTE_TIME_VALUE ) {
 			v1.IsRelativeTimeValue( secs1 );
 			v2.IsAbsoluteTimeValue( secs2 );
 			result.SetAbsoluteTimeValue( secs1 + secs2 );
-			return( SIG_LEFT | SIG_RIGHT );
+			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 
 		if( vt1==RELATIVE_TIME_VALUE && vt2==RELATIVE_TIME_VALUE ) {
@@ -1149,7 +1154,7 @@ doTimeArithmetic( OpKind op, Value &v1, Value &v2, Value &result )
 			tsecs = secs1 + secs2 + tusecs / 1000000;
 			tusecs = tusecs % 1000000;	
 			result.SetRelativeTimeValue( tsecs, tusecs );
-			return( SIG_LEFT | SIG_RIGHT );
+			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 	}
 
@@ -1158,14 +1163,14 @@ doTimeArithmetic( OpKind op, Value &v1, Value &v2, Value &result )
 			v1.IsAbsoluteTimeValue( secs1 );
 			v2.IsAbsoluteTimeValue( secs2 );
 			result.SetRelativeTimeValue( secs1 - secs2 );
-			return( SIG_LEFT | SIG_RIGHT );
+			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 
 		if( vt1==ABSOLUTE_TIME_VALUE && vt2==RELATIVE_TIME_VALUE ) {
 			v1.IsAbsoluteTimeValue( secs1 );
 			v2.IsRelativeTimeValue( secs2 );
 			result.SetAbsoluteTimeValue( secs1 - secs2 );
-			return( SIG_LEFT | SIG_RIGHT );
+			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 
 		if( vt1==RELATIVE_TIME_VALUE && vt2==RELATIVE_TIME_VALUE ) {
@@ -1179,13 +1184,13 @@ doTimeArithmetic( OpKind op, Value &v1, Value &v2, Value &result )
 			}
 			dsecs = secs1 - secs2;
 			result.SetRelativeTimeValue( dsecs, dusecs );
-			return( SIG_LEFT | SIG_RIGHT );
+			return( SIG_CHLD1 | SIG_CHLD2 );
 		}
 	}
 
 	// no other operations are supported on times
 	result.SetErrorValue( );
-	return( SIG_LEFT | SIG_RIGHT );
+	return( SIG_CHLD1 | SIG_CHLD2 );
 }
 
 
