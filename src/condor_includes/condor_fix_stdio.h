@@ -4,27 +4,41 @@
 #include <stdio.h>
 
 
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
+/*
+  For some reason the stdio.h on OSF1 fails to provide prototypes
+  for popen() and pclose() if _POSIX_SOURCE is defined.
+*/
+#if defined(OSF1)
+#if defined(__STDC__) || defined(__cplusplus)
+	FILE *popen( char *, char * );
+	int  pclose( FILE *__stream );
+#else
+	FILE *popen();
+	int  pclose();
+#endif
+#endif	/* OSF1 */
+
 /*
   For some reason the stdio.h on Ultrix 4.3 fails to provide a prototype
   for pclose() if _POSIX_SOURCE is defined - even though it does
   provide a prototype for popen().
 */
 #if defined(ULTRIX43)
-
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 #if defined(__STDC__) || defined(__cplusplus)
-int  pclose( FILE *__stream );
+	int  pclose( FILE *__stream );
 #else
-int  pclose();
+	int  pclose();
 #endif
+#endif	/* ULTRIX43 */
 
 #if defined(__cplusplus)
 }
 #endif
 
-#endif	/* ULTRIX43 */
 
 #endif
