@@ -223,6 +223,20 @@ publishNotifyEmail( FILE* mailer, char* buf, PROC* proc )
 
 	job_report_display_errors( mailer );
 
+	char* user = NULL;
+	char* full_user = NULL;
+	if( ! JobAd->LookupString(ATTR_USER, &user) ) {
+		JobAd->LookupString(ATTR_OWNER, &user); 
+	}
+	if( user ) {
+		full_user = email_check_domain( user, JobAd );
+		fprintf( mailer, "\nSubmitted by: %s\n", full_user );
+		free( full_user );
+		full_user = NULL;
+		free( user );
+		user = NULL;
+	}
+
 	arch_time = proc->q_date;
 	fprintf(mailer, "\nTime:\n");
         fprintf(mailer, "\tSubmitted at:        %s", ctime(&arch_time));
