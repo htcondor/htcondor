@@ -24,12 +24,12 @@
 #if defined( IS_GLIBC20 )
 #   undef IS_GLIBC20
 #	define IS_GLIBC20	YES
-#   define GlibCFlag		-DGLIBC -DGLIBC20
+#   define GlibCFlag		-DGLIBC=GLIBC -DGLIBC20=GLIBC20
 #   define ImakeOtherFlag	-DIS_GLIBC -DIS_GLIBC20
 #elif defined( IS_GLIBC21 )
 #	undef IS_GLIBC21
 #	define IS_GLIBC21	YES
-#   define GlibCFlag		-DGLIBC -DGLIBC21
+#   define GlibCFlag		-DGLIBC=GLIBC -DGLIBC21=GLIBC21
 #   define ImakeOtherFlag	-DIS_GLIBC -DIS_GLIBC21
 #endif
 
