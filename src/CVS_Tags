@@ -67,3 +67,7 @@
 	from the checkpointing code.  Also uses CONDOR_get_file_stream
 	to read checkpoint files and CONDOR_put_file_stream to write
 	them - faster and symmetric.
+5/19/94 DecAlpha_Task4
+	Dec Alpha OSF/1 v1.3 - runs test jobs submitted in normal way using
+	Shaodow, Startd, and Starter.  Done with normal remote system call
+	connection via TCP.
