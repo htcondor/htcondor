@@ -1,0 +1,77 @@
+/* Handy Stork Imake Rules */
+
+/* Build a core (supported) module target */
+#define stork_module_target(program,objlist,libs) @@\
+XCOMM Begin translation of func(stork_module_target) @@\
+c_plus_public_target(program,$(STORK_MODULE_DIR),objlist,libs) @@\
+XCOMM End translation of func(stork_module_target)
+
+/* Build a contrib (unsupported) target */
+#define contrib_target(targetlist)				@@\
+XCOMM Begin translation of func(contrib_target) @@\
+contrib:: targetlist @@\
+XCOMM End translation of func(contrib_target)
+
+#ifndef stork_contrib_release_target
+#define stork_contrib_release_target(file,dir,mode)		@@\
+XCOMM Begin translation of func(stork_contrib_release_target) @@\
+$(STORK_CONTRIB_RELEASE_DIR)/dir/file: file			@@\
+	/bin/rm -f $(STORK_CONTRIB_RELEASE_DIR)/dir/file	@@\
+	cp file $(STORK_CONTRIB_RELEASE_DIR)/dir			@@\
+	chmod mode $(STORK_CONTRIB_RELEASE_DIR)/dir/file	@@\
+contrib-release:: $(STORK_CONTRIB_RELEASE_DIR)/dir/file			@@\
+XCOMM End translation of func(stork_contrib_release_target)
+#endif /* stork_contrib_release_target */
+
+#ifndef stork_contrib_strip_target
+#define stork_contrib_strip_target(file,dir,mode)			@@\
+XCOMM Begin translation of func(stork_contrib_strip_target) @@\
+$(STORK_CONTRIB_STRIP_DIR)/dir/file: file			@@\
+	/bin/rm -f $(STORK_CONTRIB_STRIP_DIR)/dir/file		@@\
+	cp file $(STORK_CONTRIB_STRIP_DIR)/dir			@@\
+	$(STRIP) $(STORK_CONTRIB_STRIP_DIR)/dir/file		@@\
+	chmod mode $(STORK_CONTRIB_STRIP_DIR)/dir/file		@@\
+contrib-stripped:: $(STORK_CONTRIB_STRIP_DIR)/dir/file @@\
+XCOMM End translation of func(stork_contrib_strip_target) 
+#endif  /* stork_contrib_strip_target */
+
+#ifndef stork_module_release_link_target
+#define stork_module_release_link_target(src,dir,dest)		@@\
+XCOMM Begin translation of func(stork_module_release_link_target) @@\
+contrib-release:: $(STORK_CONTRIB_RELEASE_DIR)/dir/dest		@@\
+							@@\
+$(STORK_CONTRIB_RELEASE_DIR)/dir/dest: src			@@\
+	/bin/rm -f $(STORK_CONTRIB_RELEASE_DIR)/dir/dest	@@\
+	ln src $(STORK_CONTRIB_RELEASE_DIR)/dir/dest		@@\
+XCOMM End translation of func(stork_module_release_link_target)
+#endif /* stork_module_release_link_target */
+
+#ifndef stork_module_strip_link_target
+#define stork_module_strip_link_target(src,dir,dest)		@@\
+XCOMM Begin translation of func(stork_module_strip_link_target) @@\
+contrib-stripped:: $(STORK_CONTRIB_STRIP_DIR)/dir/dest		@@\
+							@@\
+$(STORK_CONTRIB_STRIP_DIR)/dir/dest: src			@@\
+	/bin/rm -f $(STORK_CONTRIB_STRIP_DIR)/dir/dest		@@\
+	ln src $(STORK_CONTRIB_STRIP_DIR)/dir/dest		@@\
+XCOMM End translation of func(stork_module_strip_link_target)
+#endif /* stork_module_strip_link_target */
+
+/* Build a Stork contrib module from C++ source.
+   Also build all required binary variants
+*/
+#define stork_contrib_module_target(program,objlist,libs) @@\
+XCOMM Begin translation of func(stork_contrib_module_target) @@\
+contrib_target(program) @@\
+c_plus_target(program,objlist,libs) @@\
+stork_contrib_release_target(program,$(STORK_MODULE_DIR),EXECUTABLE_MODE) @@\
+stork_contrib_strip_target(program,$(STORK_MODULE_DIR),EXECUTABLE_MODE) @@\
+XCOMM End translation of func(stork_contrib_module_target)
+
+/* Build a contrib Stork module target, linked from another module */
+#define stork_contrib_module_link_target(src,dest) @@\
+XCOMM Begin translation of func(stork_contrib_module_link_target) @@\
+stork_module_release_link_target($(STORK_CONTRIB_RELEASE_DIR)/$(STORK_MODULE_DIR)/src,$(STORK_MODULE_DIR),dest)		@@\
+stork_module_strip_link_target($(STORK_CONTRIB_STRIP_DIR)/$(STORK_MODULE_DIR)/src,$(STORK_MODULE_DIR),dest)		@@\
+XCOMM End translation of func(stork_contrib_module_link_target)
+
