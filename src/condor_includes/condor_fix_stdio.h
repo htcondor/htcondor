@@ -32,7 +32,7 @@ extern "C" {
   for pclose() if _POSIX_SOURCE is defined - even though it does
   provide a prototype for popen().
 */
-#if defined(ULTRIX43) || defined(SUNOS41)
+#if defined(ULTRIX43) || defined(SUNOS41) || defined(ULTRIX42)
 #if defined(__STDC__) || defined(__cplusplus)
 	int  pclose( FILE *__stream );
 #else
