@@ -77,6 +77,10 @@ class ExprTree
 		/// Virtual destructor
 		virtual ~ExprTree ();
 
+		// Copy constructor?
+
+		// Assignment operator?
+
 		/** Sets the lexical parent scope of the expression, which is used to 
 				determine the lexical scoping structure for resolving attribute
 				references. (However, the semantic parent may be different from 
