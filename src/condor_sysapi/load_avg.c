@@ -635,13 +635,37 @@ int main()
 #endif
 
 /* END WIN32 */
-#endif /* #if defined(WIN32) */
+
+#elif defined(AIX)
+
+/* For now, just get this value out of uptime.... */
+
+float
+sysapi_load_avg_raw(void)
+{
+
+	float val;
+
+	sysapi_internal_reconfig();
+	val = lookup_load_avg_via_uptime();
+
+	if( (DebugFlags & D_LOAD) && (DebugFlags & D_FULLDEBUG) ) {
+		dprintf( D_LOAD, "Load avg: %.2f\n", val );
+	}
+	return val;
+}
+
+#else
+
+#error You must define sysapi_load_avg_raw() for this platform!
+
+#endif 
 
 
 /*----------------------------------------------------------------------*/
 /* only include this helper function on these architectures */
 
-#if defined(Solaris) || defined(IRIX53) || defined(IRIX62)
+#if defined(Solaris) || defined(AIX)
 
 /*
  *  We will use uptime(1) to get the load average.  We will return the one
