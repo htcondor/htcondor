@@ -51,6 +51,8 @@ Matchmaker ()
 
 	AccountantHost  = NULL;
 	PreemptionHold = NULL;
+	PreemptionInterval = 0;
+	LastPreemptionTime = 0;
 
 	sprintf (buf, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
 	Parse (buf, rankCondStd);
@@ -123,6 +125,12 @@ reinitialize ()
 		NegotiatorTimeout = 30;
 	}
 
+	tmp = param("PREEMPTION_INTERVAL");
+	if( tmp ) {
+		PreemptionInterval = (time_t)atoi(tmp);
+		free( tmp );
+	}
+
 	// get PreemptionHold expression
 	if (PreemptionHold) delete PreemptionHold;
 	PreemptionHold = NULL;
@@ -138,6 +146,8 @@ reinitialize ()
 	dprintf (D_ALWAYS,"NEGOTIATOR_INTERVAL = %d sec\n",NegotiatorInterval);
 	dprintf (D_ALWAYS,"NEGOTIATOR_TIMEOUT  = %d sec\n",NegotiatorTimeout);
 	dprintf (D_ALWAYS,"PREEMPTION_HOLD     = %s\n", (tmp?tmp:"None"));
+	dprintf (D_ALWAYS,"PREEMPTION_INTERVAL = %d sec\n",
+			 (int)PreemptionInterval);
 
 	if( tmp ) free( tmp );
 
@@ -524,44 +534,64 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 			// 2e(i).  find a compatible offer
 			if (!(offer = matchmakingAlgorithm(scheddName, request, startdAds)))
 			{
+
+				// check if PreemptionInterval has passed since last preempt
+				time_t current_time = time(NULL);
+				if (current_time < LastPreemptionTime+PreemptionInterval) {
+					dprintf(D_ALWAYS, "      Rejected --- no offer and reached"
+							" preemption interval limit.\n");
+					sock->encode();
+					if (!sock->put(REJECTED) || !sock->end_of_message())
+						{
+							dprintf (D_ALWAYS, "      Could not send rejection\n");
+							sock->end_of_message ();
+							sockCache.invalidateSock(scheddAddr);
+							return MM_ERROR;
+						}
+					result = MM_NO_MATCH;
+					continue;
+				}
+				
 				// no offer ...
 				dprintf(D_ALWAYS, "      No offer --- trying preemption\n");
 			
 				// try matchmaking algorithm with preemption mode enabled
 				// (i.e., with priority == priority threshold)
 				if (!(offer=matchmakingAlgorithm(scheddName, request, startdAds,
-							priority)))
-				{
-					// no preemptable resource offer either ... 
-					dprintf(D_ALWAYS,
-						"      Rejected (no preemptible offers)\n");
-					sock->encode();
-					if (!sock->put(REJECTED) || !sock->end_of_message())
+												 priority)))
 					{
-						dprintf (D_ALWAYS, "      Could not send rejection\n");
-						sock->end_of_message ();
-            			sockCache.invalidateSock(scheddAddr);
+						// no preemptable resource offer either ... 
+						dprintf(D_ALWAYS,
+								"      Rejected (no preemptible offers)\n");
+						sock->encode();
+						if (!sock->put(REJECTED) || !sock->end_of_message())
+							{
+								dprintf (D_ALWAYS, "      Could not send rejection\n");
+								sock->end_of_message ();
+								sockCache.invalidateSock(scheddAddr);
 
-						return MM_ERROR;
+								return MM_ERROR;
+							}
+						result = MM_NO_MATCH;
+						continue;
 					}
-					result = MM_NO_MATCH;
-					continue;
-				}
 				else
-				{
-					char	remoteUser[128];
-					double	remotePriority;
+					{
+						char	remoteUser[128];
+						char	remoteHost[MAXHOSTNAMELEN];
+						double	remotePriority;
 
-					offer->LookupString(ATTR_REMOTE_USER, remoteUser);
-					remotePriority = accountant.GetPriority (remoteUser);
+						offer->LookupString(ATTR_REMOTE_USER, remoteUser);
+						offer->LookupString(ATTR_NAME, remoteHost);
+						remotePriority = accountant.GetPriority (remoteUser);
 
-					// got a candidate preemption --- print a helpful message
-					dprintf( D_ALWAYS, "      Attempting preemption of %s "
-								"(who has a priority of %f)\n", remoteUser,
-								remotePriority);
-					dprintf( D_ALWAYS, "      (schedd's priority is %f)\n", 
-								priority);
-				}
+						// got a candidate preemption --- print a helpful message
+						dprintf( D_ALWAYS, "      Preempting %s (prio=%.2f) on %s "
+								 "for %s (prio=%.2f)\n", remoteUser,
+								 remotePriority, remoteHost, scheddName,
+								 priority );
+						LastPreemptionTime = current_time;
+					}
 			}
 
 			// 2e(ii).  perform the matchmaking protocol
