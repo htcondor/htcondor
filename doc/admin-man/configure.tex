@@ -1915,6 +1915,15 @@ These macros affect the \Condor{collector}.
   these updates to be sent from your pool, set this macro to
   NONE. 
 
+\item[\Macro{COLLECTOR\_SOCKET\_BUFSIZE}] 
+  \label{param:CollectorSocketBufsize} This specifies the buffer size, in
+  bytes, reserved for \Condor{collector} network sockets.  The default is
+  1024000, or a one megabyte buffer.  This is a healthy size, even for a large
+  pool.  The larger this value, the less likely the \Condor{collector} will
+  have stale information about the pool due to dropping update packets.  If
+  your pool is small or your central manager has very little RAM, considering
+  setting this parameter to a lower value (perhaps 256000 or 128000).
+
 \item[\Macro{KEEP\_POOL\_HISTORY}] \label{param:KeepPoolHistory}
   This boolean macro is used to decide if the collector will write
   out statistical information about the pool to history files. The default
