@@ -21,6 +21,7 @@ static int verbose = 0, summarize = 1;
 static int malformed, unexpanded, running, idle;
 
 extern	"C" BUCKET*		ConfigTab[];
+extern int Termlog;
 
 int main (int argc, char **argv)
 {
@@ -41,6 +42,12 @@ int main (int argc, char **argv)
 		{
 			verbose = 1;
 			summarize = 0;
+		}
+		else
+		if (strcmp (argv[i], "-D") == 0)
+		{
+			Termlog = 1;
+			set_debug_flags( argv[++i] );
 		}
 		else
 		if (strcmp (argv[i], "-h") == 0)
