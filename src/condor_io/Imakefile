@@ -12,10 +12,16 @@ OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o sockCache.o \
 		$(CONDOR_TYPE_OBJ) condor_rw.o
 AUTH_OBJ = auth_sock.o
 
+LIB = libcondor.a ../condor_c++_util/cplus_lib.a \
+	../condor_util_lib/util_lib.a \
+        ../condor_classad/expr_lib.a
+
 all_target(libcondor.a libauth_io.a)
 
 library_target( libcondor.a,$(OBJ))
 library_target( libauth_io.a,$(AUTH_OBJ))
+
+c_plus_target( cedar.t, cedar.t.o, $(LIB))
 
 tags_target($(SRC),$(NULL))
 depend_target($(SRC))
