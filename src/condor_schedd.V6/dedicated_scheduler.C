@@ -2952,6 +2952,7 @@ DedicatedScheduler::hasDedicatedShadow( void )
 void
 DedicatedScheduler::holdAllDedicatedJobs( void ) 
 {
+	static bool should_notify_admin = true;
 	int i, last_cluster, cluster;
 
 	if( ! idle_clusters ) {
@@ -2975,7 +2976,12 @@ DedicatedScheduler::holdAllDedicatedJobs( void )
 		cluster = (*idle_clusters)[i];
 		holdJob( cluster, 0, 
 				 "No condor_shadow installed that supports MPI jobs",
-				 true, true, true, true );
+				 true, true, true, should_notify_admin );
+		if( should_notify_admin ) {
+				// only send email to the admin once per lifetime of
+				// the schedd, so we don't swamp them w/ email...
+			should_notify_admin = false;
+		}
 	}
 }
 
