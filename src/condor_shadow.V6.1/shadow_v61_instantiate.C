@@ -34,7 +34,5 @@ template class ExtArray<MpiResource *>;
 template class ExtArray<ParallelResource *>;
 
 // for the file transfer object.
-template class HashTable<MyString, FileTransfer *>;
 template class HashBucket<MyString, FileTransfer *>;
-template class HashTable<int, FileTransfer *>;
 
