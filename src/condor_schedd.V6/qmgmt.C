@@ -430,17 +430,27 @@ int DestroyCluster(int cluster_id)
 	LogDestroyCluster	*log;
 	int					rval;
 	Cluster				*cl;
+	Job					*job;
 
 	if (CheckConnection() < 0) {
 		return -1;
 	}
 
 	cl = FindCluster(cluster_id);
-
 	if (cl == 0) {
 		return -1;
 	}
 	
+	job = cl->FirstJob();
+	if (job == 0) {
+		return -1;
+	}
+
+	// Only the owner can delete a cluster.
+	if (!job->OwnerCheck(active_owner)) {
+		return -1;
+	}
+
 	cl->DeleteSelf();
 	log = new LogDestroyCluster(cluster_id);
 	AppendLog(log, 0, cl);
