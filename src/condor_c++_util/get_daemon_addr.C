@@ -240,16 +240,4 @@ get_daemon_addr( daemon_t dt, const char* name, const char* pool )
 }
 
 
-int
-is_valid_sinful( const char *sinful )
-{
-	char* tmp;
-	if( !sinful ) return FALSE;
-	if( !(sinful[0] == '<') ) return FALSE;
-	if( !(tmp = strchr(sinful, ':')) ) return FALSE;
-	if( !(tmp = strrchr(sinful, '>')) ) return FALSE;
-	return TRUE;
-}
-
-
 } /* extern "C" */
