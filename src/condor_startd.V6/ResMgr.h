@@ -33,6 +33,7 @@
 #include "simplelist.h"
 #include "extArray.h"
 #include "Resource.h"
+#include "starter_mgr.h"
 
 typedef int (Resource::*ResourceMember)();
 typedef float (Resource::*ResourceFloatMember)();
@@ -163,6 +164,8 @@ public:
 
 	void		markShutdown() { is_shutting_down = true; };
 	bool		isShuttingDown() { return is_shutting_down; };
+
+	StarterMgr starter_mgr;
 
 private:
 
