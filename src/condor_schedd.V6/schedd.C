@@ -2500,7 +2500,7 @@ Scheduler::reaper(int sig)
     if( sig == 0 ) {
         dprintf( D_FULLDEBUG, "***********  Begin Extra Checking ********\n" );
     } else {
-        dprintf( D_ALWAYS, "Entered reaper( %d, %d )\n", sig, code );
+        dprintf( D_ALWAYS, "Entered reaper( %d, %d )\n", sig );
     }
 
 	for(;;) {
