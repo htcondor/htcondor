@@ -41,8 +41,7 @@
 #include "internet.h"
 #include "sig_install.h"
 #include "format_time.h"
-
-static char *_FileName_ = __FILE__;
+#include "daemon.h"
 
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
@@ -115,14 +114,10 @@ int main (int argc, char **argv)
 	// if we haven't figured out what to do yet, just display the
 	// local queue 
 	if (!global && !querySchedds && !querySubmittors) {
-		char *tmp = get_schedd_addr(0);
-		if( !tmp ) {
-			fprintf( stderr, "Can't find address of local schedd\n" );
-			exit( 1 );
-		}
-		sprintf( scheddAddr, "%s", tmp );
-		sprintf( scheddName, "%s", my_daemon_name("SCHEDD") );		
-		sprintf( scheddMachine, "%s", my_full_hostname() );
+		Daemon schedd( DT_SCHEDD, 0, 0 );
+		sprintf( scheddAddr, "%s", schedd.addr() );
+		sprintf( scheddName, "%s", schedd.name() );
+		sprintf( scheddMachine, "%s", schedd.fullHostname() );
 		if( show_queue(scheddAddr, scheddName, scheddMachine) ) {
 			exit( 0 );
 		} else {
@@ -246,6 +241,7 @@ processCommandLineArguments (int argc, char *argv[])
 				exit(1);
 			}
 			sprintf (constraint, "%s == \"%s\"", ATTR_NAME, daemonname);
+			delete [] daemonname;
 
 			result = scheddQuery.addConstraint (constraint);
 			if (result != Q_OK) {
@@ -691,7 +687,6 @@ setupAnalysis()
 static void
 fetchSubmittorPrios()
 {
-	char	*negotiator = param("NEGOTIATOR_HOST");
 	AttrList	al;
 	int		numSub;
 	char  	attrName[32], attrPrio[32];
@@ -699,28 +694,27 @@ fetchSubmittorPrios()
   	float 	priority;
 	int		i = 1;
 
-	if( !negotiator ) {
-		fprintf( stderr, "Error:  Could not find NEGOTIATOR_HOST in config "
-			"file\n" );
-		exit( 1 );
-	}
+		// Minor hack, if we're talking to a remote pool, assume the
+		// negotiator is on the same host as the collector.
+	Daemon	negotiator( DT_NEGOTIATOR, pool, pool );
 
 	// connect to negotiator
 	ReliSock sock;
-	if ( pool ) {
-		sock.connect(pool, NEGOTIATOR_PORT);
-	} else {
-		sock.connect(negotiator, NEGOTIATOR_PORT);
-	}
+	sock.connect( negotiator.addr(), 0 );
+
 	sock.encode();
 	if( !sock.put( GET_PRIORITY ) || !sock.end_of_message() ) {
-		fprintf( stderr, "Error:  Could not get priorities from negotiator\n" );
+		fprintf( stderr, 
+				 "Error:  Could not get priorities from negotiator (%s)\n",
+				 negotiator.fullHostname() );
 		exit( 1 );
 	}
 
 	sock.decode();
 	if( !al.get(sock) || !sock.end_of_message() ) {
-		fprintf( stderr, "Error:  Could not get priorities from negotiator\n" );
+		fprintf( stderr, 
+				 "Error:  Could not get priorities from negotiator (%s)\n",
+				 negotiator.fullHostname() );
 		exit( 1 );
 	}
 
