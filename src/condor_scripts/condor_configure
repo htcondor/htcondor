@@ -19,7 +19,9 @@ use Text::Wrap;
 umask 0022;			# default file creation permissions
 use Getopt::Long;	# "long" command line options parser
 use strict;			# restrict unsafe constructs
-use warnings;		# emit warnings text
+#use warnings;		# Doesn't work on 5.004_05 built for irix-n32
+BEGIN { $^W = 1; }	# "heritage" way to enable warnings from #!/usr/bin/env perl
+
 
 my $Program; ($Program = $0) =~ s|.*/||;    # This program name.
 my $Usage = <<END_USAGE;
