@@ -253,8 +253,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 
 	Default_Priv_State = PRIV_CONDOR;
 	
-	_cookie_len = 0;
-	_cookie_data = NULL;
+	_cookie_len_old  = _cookie_len  = 0;
+	_cookie_data_old = _cookie_data = NULL;
 }
 
 // DaemonCore destructor. Delete the all the various handler tables, plus
@@ -357,6 +357,9 @@ DaemonCore::~DaemonCore()
 
 	if (_cookie_data) {
 		free(_cookie_data);
+	}
+	if (_cookie_data_old) {
+		free(_cookie_data_old);
 	}
 
 #ifdef WIN32
@@ -2573,23 +2576,17 @@ int DaemonCore::HandleReq(int socki)
 
 		bool new_session        = false;
 		bool using_cookie       = false;
+		bool valid_cookie		= false;
 
 		// check if we are using a cookie
 		char *incoming_cookie   = NULL;
 		if( auth_info.LookupString(ATTR_SEC_COOKIE, &incoming_cookie)) {
 			// compare it to the one we have internally
-			char *real_cookie       = NULL;
-			int   len = 0;
-			get_cookie( len, (unsigned char*&)real_cookie );
 
-			MyString t1 = incoming_cookie;
-			MyString t2 = real_cookie;
-
+			valid_cookie = cookie_is_valid((unsigned char*)incoming_cookie);
 			free (incoming_cookie);
-			free (real_cookie);
-			set_cookie( 0, NULL );
 
-			if ( t1 == t2 ) {
+			if ( valid_cookie ) {
 				// we have a match... trust this command.
 				using_cookie = true;
 			} else {
@@ -6788,10 +6785,20 @@ void DaemonCore :: invalidateSessionCache()
 
 bool DaemonCore :: set_cookie( int len, unsigned char* data ) {
 	if (_cookie_data) {
-		free(_cookie_data);
+		  // if we have a cookie already, keep it
+		  // around in case some packet that's already
+		  // queued uses it.
+		if ( _cookie_data_old ) {
+			free(_cookie_data_old);
+		}
+		_cookie_data_old = _cookie_data;
+		_cookie_len_old  = _cookie_len;
+
+		// now clear the current cookie data
 		_cookie_data = NULL;
-		_cookie_len = 0;
+		_cookie_len  = 0;
 	}
+		
 	if (data) {
 		_cookie_data = (unsigned char*) malloc (len);
 		if (!_cookie_data) {
@@ -6819,4 +6826,30 @@ bool DaemonCore :: get_cookie( int &len, unsigned char* &data ) {
 	memcpy (data, _cookie_data, _cookie_len);
 
 	return true;
+}
+
+bool DaemonCore :: cookie_is_valid( unsigned char* data ) {
+
+	if ( data == NULL || _cookie_data == NULL ) {
+		return false;
+	}
+	
+	if ( strcmp((char*)_cookie_data, (char*)data) == 0 ) {
+		// we have a match... trust this command.
+		return true;
+	} else if ( _cookie_data_old != NULL ) {
+
+		// maybe this packet was queued before we 
+		// rotated the cookie. So check it with 
+		// the old cookie.
+
+		if ( strcmp((char*)_cookie_data_old, (char*)data) == 0 ) {
+			return true;
+		} else {
+
+			// failure. No match.
+			return false;
+		}
+	}
+	return false; // to make MSVC++ happy
 }

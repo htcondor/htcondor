@@ -102,6 +102,30 @@ bool global_dc_set_cookie(int len, unsigned char* data) {
 	}
 }
 
+bool global_dc_get_cookie(int &len, unsigned char* &data) {
+	if (daemonCore) {
+		return daemonCore->get_cookie(len, data);
+	} else {
+		return false;
+	}
+}
+
+void
+handle_cookie_refresh()
+{
+	unsigned char randomjunk[256];
+	char symbols[16] = { '0', '1', '2', '3', '4', '5', '6', '7',
+		'8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+	for (int i = 0; i < 128; i++) {
+		randomjunk[i] = symbols[rand() % 16];
+	}
+	
+	// good ol null terminator
+	randomjunk[127] = 0;
+
+	global_dc_set_cookie (128, randomjunk);	
+}
+
 char* global_dc_sinful() {
 	if (daemonCore) {
 		return daemonCore->InfoCommandSinfulString();
@@ -1374,6 +1398,7 @@ int main( int argc, char** argv )
 			if ( fd_null > 2 ) {
 				close( fd );
 			}
+
 		}
 		// and detach from the controlling tty
 		detach();
@@ -1528,6 +1553,15 @@ int main( int argc, char** argv )
 
 	daemonCore->Register_Timer( 5 * 60, 0,
 				(TimerHandler)check_session_cache, "check_session_cache" );
+	
+
+	// set the timer for half the session duration, 
+	// since we retain the old cookie. Also make sure
+	// the value is atleast 1.
+	int cookie_refresh = (param_integer("SEC_DEFAULT_SESSION_DURATION", 3600)/2)+1;
+
+	daemonCore->Register_Timer( 0, cookie_refresh, 
+				(TimerHandler)handle_cookie_refresh, "handle_cookie_refresh");
 
 		// Install DaemonCore command handlers common to all daemons.
 	daemonCore->Register_Command( DC_RECONFIG, "DC_RECONFIG",

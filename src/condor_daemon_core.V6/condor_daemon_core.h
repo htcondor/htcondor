@@ -866,6 +866,7 @@ class DaemonCore : public Service
 	/* manage the secret cookie data */
 	bool set_cookie( int len, unsigned char* data );
 	bool get_cookie( int &len, unsigned char* &data );
+	bool cookie_is_valid( unsigned char* data );
 
   private:      
 
@@ -1078,8 +1079,8 @@ class DaemonCore : public Service
 
 	SecMan	    		*sec_man;
 
-	int					_cookie_len;
-	unsigned char*		_cookie_data;
+	int					_cookie_len, _cookie_len_old;
+	unsigned char		*_cookie_data, *_cookie_data_old;
 
     IpVerify            ipverify;   
 
