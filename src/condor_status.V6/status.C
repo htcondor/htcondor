@@ -133,6 +133,10 @@ main (int argc, char *argv[])
 		setPPstyle(PP_STORAGE_NORMAL, 0, DEFAULT);
 		break;
 
+	  case NEGOTIATOR_AD:
+		setPPstyle(PP_NEGOTIATOR_NORMAL, 0, DEFAULT);
+		break;
+
 	  case ANY_AD:
 		setPPstyle(PP_ANY_NORMAL, 0, DEFAULT);
 		break;
@@ -149,6 +153,7 @@ main (int argc, char *argv[])
 	  case MODE_SCHEDD_NORMAL: 
 	  case MODE_SCHEDD_SUBMITTORS:
 	  case MODE_COLLECTOR_NORMAL:
+	  case MODE_NEGOTIATOR_NORMAL:
 	  case MODE_STORAGE_NORMAL:
 	  case MODE_ANY_NORMAL:
 		break;
@@ -241,6 +246,9 @@ main (int argc, char *argv[])
 		case MODE_SCHEDD_NORMAL: 
 		case MODE_SCHEDD_SUBMITTORS:
 			d = new Daemon( DT_SCHEDD, direct, addr );
+			break;
+		case MODE_NEGOTIATOR_NORMAL:
+			d = new Daemon( DT_NEGOTIATOR, direct, addr );
 			break;
 		case MODE_CKPT_SRVR_NORMAL:
 		case MODE_COLLECTOR_NORMAL:
@@ -337,6 +345,7 @@ usage ()
 		"\t-schedd\t\t\tDisplay attributes of schedds\n"
 		"\t-server\t\t\tDisplay important attributes of resources\n"
 		"\t-startd\t\t\tDisplay resource attributes\n"
+		"\t-negotiator\t\tDisplay negotiator attributes\n"
 		"\t-storage\t\tDisplay network storage resources\n"
 		"\t-any\t\t\tDisplay any resources\n"
 		"\t-state\t\t\tDisplay state of resources\n"
@@ -483,6 +492,9 @@ firstPass (int argc, char *argv[])
 		if (matchPrefix (argv[i], "-storage")) {
 			setMode (MODE_STORAGE_NORMAL, i, argv[i]);
 		} else
+		if (matchPrefix (argv[i], "-negotiator")) {
+			setMode (MODE_NEGOTIATOR_NORMAL, i, argv[i]);
+		} else
 		if (matchPrefix (argv[i], "-any")) {
 			setMode (MODE_ANY_NORMAL, i, argv[i]);
 		} else
@@ -611,6 +623,7 @@ secondPass (int argc, char *argv[])
 			  case MODE_MASTER_NORMAL:
 			  case MODE_COLLECTOR_NORMAL:
 			  case MODE_CKPT_SRVR_NORMAL:
+  			  case MODE_NEGOTIATOR_NORMAL:
 			  case MODE_STORAGE_NORMAL:
 			  case MODE_ANY_NORMAL:
     		  case MODE_STARTD_AVAIL:

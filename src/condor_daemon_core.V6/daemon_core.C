@@ -1649,17 +1649,6 @@ DaemonCore::ReInit()
 	char buf[50];
 	static int tid = -1;
 
-	Daemon nego( DT_NEGOTIATOR );
-	// Fetch the negotiator address for the Verify method to use
-	if( nego.locate() ) {
-		string_to_sin( nego.addr(), &sin );
-		memcpy(&negotiator_sin_addr,&(sin.sin_addr),
-						sizeof(negotiator_sin_addr));
-	} else {
-		// we failed to get the address of the negotiator
-		memset(&negotiator_sin_addr,'\0',sizeof(negotiator_sin_addr));
-	}
-
 		// Reset our IpVerify object
 	ipverify.Init();
 

@@ -43,6 +43,7 @@ getPPStyleStr ()
     	case PP_MASTER_NORMAL:	return "Normal (Master)";
     	case PP_CKPT_SRVR_NORMAL:return"Normal (CkptSrvr)";
 		case PP_COLLECTOR_NORMAL:return"Normal (Collector)";
+	    case PP_NEGOTIATOR_NORMAL: return "Normal (Negotiator)";
     	case PP_STARTD_SERVER:	return "Server";
     	case PP_STARTD_RUN:		return "Run";
     	case PP_STARTD_COD:		return "COD";
@@ -100,6 +101,7 @@ getTypeStr ()
 		case CKPT_SRVR_AD:	return "CKPT_SRVR";
 		case GATEWAY_AD:	return "GATEWAYS";
 		case COLLECTOR_AD:	return "COLLECTOR";
+	    case NEGOTIATOR_AD: return "NEGOTIATOR";
 		case LICENSE_AD:	return "LICENSE";
 		case STORAGE_AD:		return "STORAGE";
 		case ANY_AD:		return "ANY";
@@ -148,6 +150,9 @@ setType (char *dtype, int i, char *argv)
         } else
         if (matchPrefix (dtype, "COLLECTOR")) {
             type = COLLECTOR_AD;
+		} else
+        if (matchPrefix (dtype, "NEGOTIATOR")) {
+            type = NEGOTIATOR_AD;
         } else
         if (matchPrefix (dtype, "GATEWAYS")) {
             type = GATEWAY_AD;
@@ -185,6 +190,7 @@ getModeStr()
 		case MODE_MASTER_NORMAL:		return "Normal (Master)";
 		case MODE_CKPT_SRVR_NORMAL:		return "Normal (CkptSrvr)";
 		case MODE_COLLECTOR_NORMAL:		return "Normal (Collector)";
+	    case MODE_NEGOTIATOR_NORMAL:	return "Normal (Negotiator)";
 		case MODE_STORAGE_NORMAL:			return "Normal (Storage)";
 		case MODE_ANY_NORMAL:			return "Normal (Any)";
 		default:				return "<Unknown!>";
@@ -251,6 +257,11 @@ setMode (Mode mod, int i, char *argv)
 		  case MODE_COLLECTOR_NORMAL:
 			setType ("COLLECTOR", i, argv);
 			setPPstyle (PP_COLLECTOR_NORMAL, i, argv);
+			break;
+
+		  case MODE_NEGOTIATOR_NORMAL:
+			setType ("NEGOTIATOR", i, argv);
+			setPPstyle (PP_NEGOTIATOR_NORMAL, i, argv);
 			break;
 
 		  case MODE_CKPT_SRVR_NORMAL:

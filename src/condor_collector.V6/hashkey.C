@@ -313,6 +313,22 @@ makeStorageAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	return true;
 }
 
+bool
+makeNegotiatorAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
+{
+	char	*name = NULL;
+	if( !ad->LookupString( ATTR_NAME, &name ) ) {
+		dprintf( D_ALWAYS, "Error: No '%s' attribute\n", ATTR_NAME );
+		return false;
+	}
+
+	hk.name = name;
+	free( name );
+	hk.ip_addr = "";
+
+	return true;
+}
+
 // utility function:  parse the string <aaa.bbb.ccc.ddd:pppp>
 void 
 parseIpPort (const MyString &ip_port_pair, MyString &ip_addr)

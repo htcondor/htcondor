@@ -51,6 +51,7 @@ ClassAd* CollectorEngine::LONG_GONE	  = (ClassAd *) 0x3;
 ClassAd* CollectorEngine::THRESHOLD	  = (ClassAd *) 0x4;
 
 static void killHashTable (CollectorHashTable &);
+static void purgeHashTable (CollectorHashTable &);
 
 int 	engine_clientTimeoutHandler (Service *);
 int 	engine_housekeepingHandler  (Service *);
@@ -66,7 +67,8 @@ CollectorEngine::CollectorEngine (CollectorStats *stats ) :
 	StorageAds       (GREATER_TABLE_SIZE, &hashFunction),
 	CkptServerAds (LESSER_TABLE_SIZE , &hashFunction),
 	GatewayAds    (LESSER_TABLE_SIZE , &hashFunction),
-	CollectorAds  (LESSER_TABLE_SIZE , &hashFunction)
+	CollectorAds  (LESSER_TABLE_SIZE , &hashFunction),
+	NegotiatorAds     (LESSER_TABLE_SIZE, &hashFunction)
 {
 	clientTimeout = 20;
 	machineUpdateInterval = 30;
@@ -90,6 +92,7 @@ CollectorEngine::
 	killHashTable (StorageAds);
 	killHashTable (CkptServerAds);
 	killHashTable (GatewayAds);
+	killHashTable (NegotiatorAds);
 }
 
 
@@ -175,6 +178,10 @@ invokeHousekeeper (AdTypes adtype)
 
 		case STORAGE_AD:
 			cleanHashTable (StorageAds, now, makeStorageAdHashKey);
+			break;
+
+		case NEGOTIATOR_AD:
+			cleanHashTable (NegotiatorAds, now, makeStorageAdHashKey);
 			break;
 
 		default:
@@ -267,6 +274,10 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 		table = &StorageAds;
 		break;
 
+	  case NEGOTIATOR_AD:
+		table = &NegotiatorAds;
+		break;
+
 	  case ANY_AD:
 		return
 			StorageAds.walk(scanFunction) &&
@@ -275,7 +286,8 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 			StartdAds.walk(scanFunction) &&
 			ScheddAds.walk(scanFunction) &&
 			MasterAds.walk(scanFunction) &&
-			SubmittorAds.walk(scanFunction);
+			SubmittorAds.walk(scanFunction) &&
+			NegotiatorAds.walk(scanFunction);
 	  default:
 		dprintf (D_ALWAYS, "Unknown type %d\n", adType);
 		return 0;
@@ -525,6 +537,23 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 							  clientAd, hk, hashString, insert, from );
 		break;
 
+	  case UPDATE_NEGOTIATOR_AD:
+		if (!makeNegotiatorAdHashKey (hk, clientAd, from))
+		{
+			dprintf (D_ALWAYS, "Could not make hashkey --- ignoring ad\n");
+			insert = -3;
+			retVal = 0;
+			break;
+		}
+		hashString.Build( hk );
+			// first, purge all the existing negotiator ads, since we
+			// want to enforce that *ONLY* 1 negotiator is in the
+			// collector any given time.
+		purgeHashTable( NegotiatorAds );
+		retVal=updateClassAd (NegotiatorAds, "NegotiatorAd  ", "Negotiator",
+							  clientAd, hk, hashString, insert, from );
+		break;
+
 	  case QUERY_STARTD_ADS:
 	  case QUERY_SCHEDD_ADS:
 	  case QUERY_MASTER_ADS:
@@ -533,6 +562,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 	  case QUERY_CKPT_SRVR_ADS:
 	  case QUERY_STARTD_PVT_ADS:
 	  case QUERY_COLLECTOR_ADS:
+  	  case QUERY_NEGOTIATOR_ADS:
 	  case INVALIDATE_STARTD_ADS:
 	  case INVALIDATE_SCHEDD_ADS:
 	  case INVALIDATE_MASTER_ADS:
@@ -540,6 +570,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 	  case INVALIDATE_CKPT_SRVR_ADS:
 	  case INVALIDATE_SUBMITTOR_ADS:
 	  case INVALIDATE_COLLECTOR_ADS:
+	  case INVALIDATE_NEGOTIATOR_ADS:
 		// these are not implemented in the engine, but we allow another
 		// daemon to detect that these commands have been given
 	    insert = -2;
@@ -608,6 +639,11 @@ lookup (AdTypes adType, HashKey &hk)
 				return 0;
 			break;
 
+		case NEGOTIATOR_AD:
+			if (NegotiatorAds.lookup (hk, val) == -1)
+				return 0;
+			break;
+
 		default:
 			val = 0;
 	}
@@ -647,6 +683,9 @@ remove (AdTypes adType, HashKey &hk)
 
 		case STORAGE_AD:
 			return !StorageAds.remove (hk);
+
+		case NEGOTIATOR_AD:
+			return !NegotiatorAds.remove (hk);
 
 		default:
 			return 0;
@@ -806,6 +845,9 @@ housekeeper()
 	dprintf (D_ALWAYS, "\tCleaning StorageAds ...\n");
 	cleanHashTable (StorageAds, now, makeStorageAdHashKey);
 
+	dprintf (D_ALWAYS, "\tCleaning NegotiatorAds ...\n");
+	cleanHashTable (NegotiatorAds, now, makeNegotiatorAdHashKey);
+
 	// add other ad types here ...
 
 
@@ -864,6 +906,24 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now,
 		}
 	}
 }
+
+
+static void
+purgeHashTable( CollectorHashTable &table )
+{
+	ClassAd* ad;
+	HashKey hk;
+	table.startIterations();
+	while( table.iterate(hk,ad) ) {
+		if( table.remove(hk) == -1 ) {
+			dprintf( D_ALWAYS, "\t\tError while removing ad\n" );
+		}		
+		if( ad > CollectorEngine::THRESHOLD ) {
+			delete ad;
+		}
+	}
+}
+
 
 int CollectorEngine::
 masterCheck ()

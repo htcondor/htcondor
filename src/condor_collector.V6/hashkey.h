@@ -64,6 +64,7 @@ bool makeMasterAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
 bool makeCkptSrvrAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
 bool makeCollectorAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
 bool makeStorageAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
+bool makeNegotiatorAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
 
 class HashString : public MyString
 {

@@ -43,6 +43,7 @@ void printMasterNormal 	(ClassAd *);
 void printCollectorNormal (ClassAd *);
 void printCkptSrvrNormal(ClassAd *);
 void printStorageNormal(ClassAd *);
+void printNegotiatorNormal (ClassAd *);
 void printAnyNormal(ClassAd *);
 void printServer 		(ClassAd *);
 void printRun    		(ClassAd *);
@@ -91,6 +92,11 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 			  case PP_SCHEDD_NORMAL:
 				printScheddNormal (ad);
 				break;
+
+			  case PP_NEGOTIATOR_NORMAL:
+				printNegotiatorNormal (ad);
+				break;
+
 
 			  case PP_SCHEDD_SUBMITTORS:
 				printScheddSubmittors (ad);
@@ -551,6 +557,32 @@ printStorageNormal(ClassAd *ad)
 			pm.registerFormat("%-30.30s ", ATTR_NAME, "[??????????????????]");
 			pm.registerFormat("%9d ", ATTR_DISK, "[?????]");
 			pm.registerFormat("%-11s\n", ATTR_SUBNET, "[?????]\n");
+			first = false;
+		}
+	}
+
+	pm.display (stdout, ad);
+}
+
+void
+printNegotiatorNormal(ClassAd *ad)
+{
+	static bool first = true;
+	static AttrListPrintMask pm;
+
+	if (ad)
+	{
+		// print header if necessary
+		if (first)
+		{
+			printf ("\n%-20.20s %-20.20s\n\n",
+				ATTR_NAME, ATTR_MACHINE);
+		
+			pm.registerFormat("%-20.20s ", ATTR_NAME, 
+													"[??????????????????] ");
+			pm.registerFormat("%-20.20s ", ATTR_MACHINE, 
+													"[??????????????????] ");
+
 			first = false;
 		}
 	}

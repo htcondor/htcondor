@@ -144,6 +144,8 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_query,"receive_query",NULL,ADMINISTRATOR);
 	daemonCore->Register_Command(QUERY_STORAGE_ADS,"QUERY_STORAGE_ADS",
 		(CommandHandler)receive_query,"receive_query",NULL,READ);
+	daemonCore->Register_Command(QUERY_NEGOTIATOR_ADS,"QUERY_NEGOTIATOR_ADS",
+		(CommandHandler)receive_query,"receive_query",NULL,READ);
 	daemonCore->Register_Command(QUERY_ANY_ADS,"QUERY_ANY_ADS",
 		(CommandHandler)receive_query,"receive_query",NULL,READ);
 	
@@ -175,6 +177,9 @@ void CollectorDaemon::Init()
 	daemonCore->Register_Command(INVALIDATE_STORAGE_ADS,
 		"INVALIDATE_STORAGE_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,DAEMON);
+	daemonCore->Register_Command(INVALIDATE_NEGOTIATOR_ADS,
+		"INVALIDATE_NEGOTIATOR_ADS", (CommandHandler)receive_invalidation,
+		"receive_invalidation",NULL,DAEMON);
 
 		// // // // // // // // // // // // // // // // // // // // //
 		// WARNING!!!! If you add other update commands here, you
@@ -198,6 +203,8 @@ void CollectorDaemon::Init()
 	daemonCore->Register_Command(UPDATE_COLLECTOR_AD,"UPDATE_COLLECTOR_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,ALLOW);
 	daemonCore->Register_Command(UPDATE_STORAGE_AD,"UPDATE_STORAGE_AD",
+		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
+	daemonCore->Register_Command(UPDATE_NEGOTIATOR_AD,"UPDATE_NEGOTIATOR_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 
 	// ClassAd evaluations use this function to resolve names
@@ -271,6 +278,11 @@ int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
 	  case QUERY_STORAGE_ADS:
 		dprintf (D_FULLDEBUG,"Got QUERY_STORAGE_ADS\n");
 		whichAds = STORAGE_AD;
+		break;
+
+	  case QUERY_NEGOTIATOR_ADS:
+		dprintf (D_FULLDEBUG,"Got QUERY_NEGOTIATOR_ADS\n");
+		whichAds = NEGOTIATOR_AD;
 		break;
 
 	  case QUERY_ANY_ADS:
@@ -359,6 +371,11 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 	  case INVALIDATE_COLLECTOR_ADS:
 		dprintf (D_ALWAYS, "Got INVALIDATE_COLLECTOR_ADS\n");
 		whichAds = COLLECTOR_AD;
+		break;
+
+	  case INVALIDATE_NEGOTIATOR_ADS:
+		dprintf (D_ALWAYS, "Got INVALIDATE_NEGOTIATOR_ADS\n");
+		whichAds = NEGOTIATOR_AD;
 		break;
 
 	  case INVALIDATE_STORAGE_ADS:
@@ -522,6 +539,7 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 	case UPDATE_CKPT_SRVR_AD:
 	case UPDATE_SUBMITTOR_AD:
 	case UPDATE_COLLECTOR_AD:
+	case UPDATE_NEGOTIATOR_AD:
 	case UPDATE_LICENSE_AD:
 	case UPDATE_STORAGE_AD:
 		return receive_update( NULL, cmd, sock );
@@ -534,6 +552,7 @@ CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
 	case INVALIDATE_CKPT_SRVR_ADS:
 	case INVALIDATE_SUBMITTOR_ADS:
 	case INVALIDATE_COLLECTOR_ADS:
+	case INVALIDATE_NEGOTIATOR_ADS:
 	case INVALIDATE_LICENSE_ADS:
 	case INVALIDATE_STORAGE_ADS:
 		return receive_invalidation( NULL, cmd, sock );

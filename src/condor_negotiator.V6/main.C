@@ -38,6 +38,7 @@ int main_init (int, char *[])
 
 int main_shutdown_graceful()
 {
+	matchMaker.invalidateNegotiatorAd();
 	DC_Exit(0);
 	return 0;
 }

@@ -281,7 +281,7 @@ Scheduler::Scheduler()
 	LastTimeout = time(NULL);
 
 	Collectors = NULL;
-	Negotiator = NULL;
+		//gotiator = NULL;
 	CondorAdministrator = NULL;
 	Mail = NULL;
 	filename = NULL;
@@ -345,9 +345,6 @@ Scheduler::~Scheduler()
 
 	if ( Collectors ) {
 		delete( Collectors );
-	}
-	if( Negotiator ) {
-		delete( Negotiator );
 	}
 	if (CondorAdministrator)
 		free(CondorAdministrator);
@@ -3257,7 +3254,8 @@ Scheduler::negotiate(int, Stream* s)
 		struct in_addr endpoint_addr = (sock->endpoint())->sin_addr;
 		struct hostent *hent;
 		bool match = false;
-		char *negotiator_hostname = Negotiator->fullHostname();
+		Daemon negotiator (DT_NEGOTIATOR);
+		char *negotiator_hostname = negotiator.fullHostname();
 		if (!negotiator_hostname) {
 			dprintf(D_ALWAYS, "Negotiator hostname lookup failed!");
 			return (!(KEEP_STREAM));
@@ -4703,12 +4701,13 @@ Scheduler::RequestBandwidth(int cluster, int proc, match_rec *rec)
     
     SafeSock sock;
 	sock.timeout(NEGOTIATOR_CONTACT_TIMEOUT);
-	if (!sock.connect(Negotiator->addr())) {
+	Daemon negotiator (DT_NEGOTIATOR);
+	if (!sock.connect(negotiator.addr())) {
 		dprintf(D_FAILURE|D_ALWAYS, "Couldn't connect to negotiator!\n");
 		return;
 	}
 
-	Negotiator->startCommand(REQUEST_NETWORK, &sock);
+	negotiator.startCommand(REQUEST_NETWORK, &sock);
 
 	GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &universe);
 	float cputime = 1.0;
@@ -7098,9 +7097,6 @@ Scheduler::Init()
 	if ( Collectors ) delete ( Collectors );
 	Collectors = CollectorList::create();
 
-	if( Negotiator ) delete( Negotiator );
-	Negotiator = new Daemon( DT_NEGOTIATOR );
-
 	if( CondorAdministrator ) free( CondorAdministrator );
 	if( ! (CondorAdministrator = param("CONDOR_ADMIN")) ) {
 		dprintf(D_FULLDEBUG, 
@@ -7790,7 +7786,8 @@ Scheduler::sendReschedule( void )
 {
 	dprintf( D_FULLDEBUG, "Sending RESCHEDULE command to negotiator(s)\n" );
 
-	if( !Negotiator->sendCommand(RESCHEDULE, Stream::safe_sock, NEGOTIATOR_CONTACT_TIMEOUT) ) {
+	Daemon negotiator(DT_NEGOTIATOR);
+	if( !negotiator.sendCommand(RESCHEDULE, Stream::safe_sock, NEGOTIATOR_CONTACT_TIMEOUT) ) {
 		dprintf( D_ALWAYS,
 				 "failed to send RESCHEDULE command to negotiator\n" );
 		return;

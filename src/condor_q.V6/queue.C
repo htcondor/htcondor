@@ -1573,9 +1573,7 @@ fetchSubmittorPrios()
   	float 	priority;
 	int		i = 1;
 
-		// Minor hack, if we're talking to a remote pool, assume the
-		// negotiator is on the same host as the collector.
-	Daemon	negotiator( DT_NEGOTIATOR, pool ? pool->addr() : NULL, NULL );
+	Daemon	negotiator( DT_NEGOTIATOR, NULL, pool ? pool->addr() : NULL );
 
 	// connect to negotiator
 	Sock* sock;

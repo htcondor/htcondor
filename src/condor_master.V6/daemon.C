@@ -533,11 +533,16 @@ int daemon::RealStart( )
 		command_port = d.port();
 			// We can't do this b/c of needing to read host certs as root 
 			// wants_condor_priv = true;
-	} else if( strcmp(name_in_config_file,"NEGOTIATOR") == 0 ) {
-		Daemon d( DT_NEGOTIATOR );
-		command_port = d.port();
+	} 
+	else if( strcmp(name_in_config_file,"NEGOTIATOR") == 0 ) {
+		char* host = getCmHostFromConfig( "NEGOTIATOR" );
+		if( host ) {
+			free (host);
+			Daemon d( DT_NEGOTIATOR );
+			command_port = d.port();
 			// We can't do this b/c of needing to read host certs as root 
 			// wants_condor_priv = true;
+		}
 	}
 
 	priv_state priv_mode = PRIV_ROOT;

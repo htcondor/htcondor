@@ -76,11 +76,13 @@ class CollectorEngine : public Service
 	CollectorHashTable MasterAds;
 	CollectorHashTable StorageAds;
 
+
 	// the lesser tables
 	enum {LESSER_TABLE_SIZE = 32};
 	CollectorHashTable CkptServerAds;
 	CollectorHashTable GatewayAds;
 	CollectorHashTable CollectorAds;
+	CollectorHashTable NegotiatorAds;
 
 	// relevant variables from the config file
 	int	clientTimeout; 

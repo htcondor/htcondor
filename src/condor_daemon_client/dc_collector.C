@@ -498,41 +498,7 @@ DCCollector::initDestinationStrings( void )
 		tcp_update_destination = strnewp( dest.Value() );
 	}
 }
-/*
-DaemonList *
-DCCollector::getCollectors() {
 
-	DaemonList * result = new DaemonList();
-	DCCollector * collector = NULL;
-
-
-		// Read the new names from config file
-	StringList collector_name_list;
-	char * collector_name_param = NULL;
-	getCmHostFromConfig ( "COLLECTOR", collector_name_param );
-	
-	if (collector_name_param  && *collector_name_param) {
-		collector_name_list.initializeFromString(collector_name_param);
-	
-			// Create collector objects
-		collector_name_list.rewind();
-		char * collector_name = NULL;
-		while ((collector_name = collector_name_list.next()) != NULL) {
-			dprintf (D_FULLDEBUG, "Adding collector %s\n", collector_name);
-			collector = new DCCollector (collector_name);
-			result->append (collector);
-		}
-	} else {
-			// Otherwise, just return an empty list
-		dprintf (D_ALWAYS, "ERROR: Unable to find collector info in configuration file!!!\n");
-	}
-
-	if (collector_name_param)
-		free ( collector_name_param );
-
-	return result;
-}
-*/
 
 // Constructor for the Ad Sequence Number
 DCCollectorAdSeq::DCCollectorAdSeq( const char *inName,

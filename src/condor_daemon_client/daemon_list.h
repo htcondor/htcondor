@@ -105,7 +105,7 @@ class CollectorList : public DaemonList {
 
 		// Create the list of collectors for the pool
 		// based on configruation settings
-	static CollectorList * create();
+	static CollectorList * create(const char * pool = NULL);
 
 	static CollectorList * createForNegotiator();
 

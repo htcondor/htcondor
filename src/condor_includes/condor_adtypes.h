@@ -37,6 +37,7 @@
 #define USERAUTH_ADTYPE		"Authentication"
 #define LICENSE_ADTYPE		"License"
 #define STORAGE_ADTYPE		"Storage"
+#define NEGOTIATOR_ADTYPE	"Negotiator"
 #define ANY_ADTYPE			"Any"
 #define SUBMITTER_ADTYPE	"Submitter"
 #define COMMAND_ADTYPE		"Command"

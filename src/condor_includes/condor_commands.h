@@ -221,6 +221,10 @@ const int INVALIDATE_STORAGE_ADS = 47;
 
 const int QUERY_ANY_ADS = 48;
 
+const int UPDATE_NEGOTIATOR_AD 	= 49;
+const int QUERY_NEGOTIATOR_ADS	= 50;
+const int INVALIDATE_NEGOTIATOR_ADS = 51;
+
 /*
 *** Daemon Core Signals
 */

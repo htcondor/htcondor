@@ -361,7 +361,7 @@ fetchSubmittorPrios()
 
 		// Minor hack, if we're talking to a remote pool, assume the
 		// negotiator is on the same host as the collector.
-	Daemon	negotiator( DT_NEGOTIATOR, pool, pool );
+	Daemon	negotiator( DT_NEGOTIATOR, NULL, pool );
 
 	Sock* sock;
 

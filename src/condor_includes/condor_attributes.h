@@ -385,6 +385,7 @@ const char ATTR_WANT_LAST_CKPT_SERVER_NET_STATS[] = "WantLastCkptServerNetStats"
 const char ATTR_WANT_CKPT_SERVER_NET_STATS[] = "WantCkptServerNetStats";
 const char ATTR_WANT_AD_REVAULATE        [] = "WantAdRevaluate";
 const char ATTR_COLLECTOR_IP_ADDR        [] = "CollectorIpAddr";
+const char ATTR_NEGOTIATOR_IP_ADDR		 []	= "NegotiatorIpAddr";
 const char ATTR_NUM_HOSTS_TOTAL			 [] = "HostsTotal";
 const char ATTR_NUM_HOSTS_CLAIMED		 [] = "HostsClaimed";
 const char ATTR_NUM_HOSTS_UNCLAIMED		 [] = "HostsUnclaimed";
