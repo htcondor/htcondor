@@ -147,6 +147,8 @@ char	*NiceUser		= "nice_user";
 char	*X509UserProxy	= "x509userproxy";
 char	*X509Directory	= "x509directory";
 char	*GlobusScheduler = "globusscheduler";
+char	*GlobusArguments = "globusarguments";
+char	*GlobusExecutable = "globusexecutable";
 char	*RendezvousDir	= "rendezvousdir";
 char	*SsleayConf	= "ssleayconf";
 
@@ -597,9 +599,18 @@ check_path_length(const char *path, char *lhs)
 void
 SetExecutable()
 {
-	char	*ename;
+	char	*ename = NULL;
 
-	ename = condor_param(Executable);
+#if !defined(WIN32)
+		//Allow GlobusExecutable to override executable
+	if ( JobUniverse == GLOBUS_UNIVERSE ) {
+		ename = condor_param( GlobusExecutable );
+	}
+#endif
+
+	if ( ename == NULL ) {
+		ename = condor_param(Executable);
+	}
 
 	if( ename == NULL ) {
 		fprintf( stderr, "No '%s' parameter was provided\n", Executable);
@@ -621,7 +632,7 @@ SetExecutable()
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
-			//check for existence & size of globusrun pgm
+			//check for existence & size of globusshadow pgm
 /*
 		if ( stat( globusshadow, &statbuf ) ) {
 			fprintf(stderr, "cannot get stat() on %s\n", globusshadow );
@@ -629,7 +640,7 @@ SetExecutable()
 			exit( 1 );
 		}
 */
-			//value in submit file is probably for globus job, not globusrun pgm
+			//value in submit file is probably for globus job, not globusshadow pgm
 			//so just override it here
 		sprintf(size,"%d", ( statbuf.st_size / 1024 ) + 1 );
 		forcedAttributes.remove( MyString( "MemoryRequirements" ) );
@@ -637,18 +648,12 @@ SetExecutable()
 
 			//executable named in the submit file should be inserted in the
 			//arguments list to be passed to the globus shadow
-		strcpy( GlobusExec, "'&(executable=$(GLOBUSRUN_GASS_URL)" );
-		if ( ename[0] != '/' ) {
-			//GLOBUSRUN_GASS_URL notation for CWD
-			strcat( GlobusExec, "./" );
-		}
-		strcat( GlobusExec, ename );
-		strcat( GlobusExec, ")" );
+		sprintf( GlobusExec, "'&(executable=%s)",ename );
 
-			//now, replace ename with globusrun value from config file
+			//now, replace ename with globusshadow value from config file
 			//ename wasn't getting freed anywhere, free old value anyway
 		free( ename );
-			//we want (full path to) globusrun placed in the ad as the executable
+			//we want (path to) globusshadow placed in the ad as the executable
 		ename = globusshadow;
 	}
 #endif !defined(WIN32)
@@ -1090,7 +1095,7 @@ SetTransferFiles()
 void
 SetStdFile( int which_file )
 {
-	char	*macro_value;
+	char	*macro_value = NULL;
 	char	*generic_name;
 	char	 buffer[_POSIX_PATH_MAX + 32];
 
@@ -1112,6 +1117,12 @@ SetStdFile( int which_file )
 
 
 	macro_value = condor_param( generic_name );
+#if !defined(WIN32)
+		//if no files in Globus job, don't set anything
+	if ( !macro_value && ( JobUniverse == GLOBUS_UNIVERSE ) ) {
+		return;
+	}
+#endif
 	
 	if( !macro_value || *macro_value == '\0') 
 	{
@@ -1271,7 +1282,18 @@ SetNotifyUser()
 void
 SetArguments()
 {
-	char	*args = condor_param(Arguments);
+	char	*args = NULL;
+
+#if !defined(WIN32)
+	//allow GlobusArguments to override arguments
+	if ( JobUniverse == GLOBUS_UNIVERSE ) {
+		args = condor_param(GlobusArguments);
+	}
+#endif
+
+	if ( args == NULL ) {
+		args = condor_param(Arguments);
+	}
 
 	if( args == NULL ) {
 		args = strdup("");
@@ -1288,21 +1310,18 @@ SetArguments()
 	if ( JobUniverse == GLOBUS_UNIVERSE ) {
 			//put specified args into RSL, then insert GlobusArgs into Ad
 		if ( strcmp( args, "" ) ) {
-				//unfortunately, Globus args are a pain in the as*. Each 
-				//argument has to be surrounded by double quotes and (probably)
-				//separated by a space. To simplify things, just strip out all
-				//double quotes and add each arg with double quotes.
+				//handle args in either Condor format or Globus RSL format
 			StringList newargs( args, " ,\"" );
 			char buf[1024];
 			newargs.rewind();
 			strcat( GlobusArgs, "(arguments=" );
 			for ( char *nextarg = NULL; nextarg = newargs.next();  ) {
 				if ( strcmp( nextarg, "" ) ) {
-					sprintf( buf, "\\\"%s\\\" ", nextarg );
-					strcat( GlobusArgs, buf );
+					strcat( GlobusArgs, nextarg );
+					strcat( GlobusArgs, " " );
 				}
 			}
-			strcat( GlobusArgs, ")" ); 
+			strcat( GlobusArgs, ")" );
 		}
          //if the universe is Globus, need to specify GlobusScheduler
       char *globushost;
@@ -1337,7 +1356,7 @@ SetArguments()
 		InsertJobExpr (buffer, false );
 
 			//this is the command line string to pass to globusrun itself
-		sprintf( buffer, "%s = \"-w -r %s %s'\"", "GlobusArgs", globushost, 
+		sprintf( buffer, "%s = \"-b -r '%s' %s'\"", "GlobusArgs", globushost, 
 				GlobusArgs );
 		InsertJobExpr (buffer, false );
 		delete [] GlobusTmp;
@@ -1904,7 +1923,6 @@ read_condor_file( FILE *fp )
 				fprintf(stderr, "\nERROR: Failed to expand macros in: %s\n", name);
 				return( -1 );
 			}
-
 		}
 
 		/* if the user wanted to force the parameter into the classad, do it 
@@ -1917,7 +1935,9 @@ read_condor_file( FILE *fp )
 
 		lower_case( name );
 
-		if (strcmp(name, Executable) == 0) {
+		if ( (strcmp(name, Executable) == 0)
+			|| ( strcmp(name, GlobusExecutable) == 0) )
+		{
 			NewExecutable = true;
 		}
 
@@ -1941,11 +1961,15 @@ condor_param( char *name )
 		return( NULL );
 	}
 
-	pval = expand_macro(pval, ProcVars, PROCVARSIZE);
+	//DON'T expand values that start with "globus", they need to
+	//be passed unexpanded to globusrun
+	if ( strncasecmp( name, "GLOBUS", strlen( "GLOBUS" ) ) ) {
+		pval = expand_macro(pval, ProcVars, PROCVARSIZE);
 
-	if (pval == NULL) {
-		fprintf(stderr, "\nERROR: Failed to expand macros in: %s\n", name);
-		exit(1);
+		if (pval == NULL) {
+			fprintf(stderr, "\nERROR: Failed to expand macros in: %s\n", name);
+			exit(1);
+		}
 	}
 
 	return( pval );
