@@ -1,7 +1,6 @@
 /* Things that are specific to Solaris 2.8 */
 
 #define		IS_SOLARIS28		YES
-#define		ImakeOpsysFlag		-DIS_SOLARIS28
 
 #define NEEDS_64BIT_SYSCALLS    YES
 #define NEEDS_64BIT_STRUCTS YES

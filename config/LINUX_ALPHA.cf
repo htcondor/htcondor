@@ -3,7 +3,6 @@
 #define Architecture		ALPHA
 #define IS_ALPHA		YES
 #define IS_ALPHA_LINUX		YES
-#define ImakeArchFlag		-DIS_ALPHA
 
 #define	ArchOptimizeFlag
 

@@ -1,7 +1,6 @@
 /* Things that are specific to Solaris 2.7 */
 
 #define		IS_SOLARIS27		YES
-#define		ImakeOpsysFlag		-DIS_SOLARIS27
 
 #define NEEDS_64BIT_SYSCALLS    YES
 #define NEEDS_64BIT_STRUCTS YES

@@ -135,7 +135,6 @@
 
 #if IS_EGCS_BUILD
 #  define Crt0 concat(EgcsPath,/crt1.o)
-#  define EgcsLibc concat(EgcsPath,/libgcc.a)
 #else 
 #  define Crt0 concat(CrtLibPath,/crt1.o)
 #endif

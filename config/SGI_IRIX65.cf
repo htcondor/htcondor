@@ -5,7 +5,6 @@
 #define HAS_DYNAMIC_USER_JOBS	YES
 
 #define Platform		SGI-IRIX65
-#define ImakeOpsysFlag		-DIS_IRIX65
 #define IS_SGI_IRIX65		YES
 #define IS_IRIX65		YES
 #define VersionPlatformFlags	-DIRIX65=IRIX65
@@ -15,7 +14,6 @@
 
 #define IS_EGCS_BUILD YES
 #define EgcsPath /usr/local/lib/gcc-lib/mips-sgi-irix6.5/egcs-2.91.66
-#define EgcsLibc /usr/local/lib/gcc-lib/mips-sgi-irix6.5/egcs-2.91.66/libgcc.a
 
 /* inet_ntoa is broken in GCC for -n32 and -64 ABIs */
 #define HAS_INET_NTOA NO

@@ -8,7 +8,6 @@
 #define HAS_GLOBUS YES
 
 #define		IS_SOLARIS26		YES
-#define		ImakeOpsysFlag		-DIS_SOLARIS26
 
 #if IS_X86
 #define		IS_X86_SOLARIS26	YES
