@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "condor_debug.h"
 #include "fileindex2.h"
 #include "gen_lib.h" 
 
@@ -79,12 +80,7 @@ machine_node* FileIndex::FindOrAddMachine(struct in_addr machine_IP,
           ptr = new machine_node;
           if (ptr == NULL)
             {
-              cerr << endl << "ERROR:" << endl;
-              cerr << "ERROR:" << endl;
-              cerr << "ERROR: cannot allocate sufficient dynamic memory" 
-		   << endl;
-              cerr << "ERROR:" << endl;
-              cerr << "ERROR:" << endl;
+              dprintf(D_ALWAYS, "ERROR: cannot allocate sufficient dynamic memory\n");
               exit(DYNAMIC_ALLOCATION);
             }
           ptr->left = NULL;
@@ -102,12 +98,7 @@ machine_node* FileIndex::FindOrAddMachine(struct in_addr machine_IP,
           if (mkdir(pathname, (mode_t) INT_MAX) != 0)
             if (errno != EEXIST)
               {
-                cerr << endl << "ERROR:" << endl;
-                cerr << "ERROR:" << endl;
-                cerr << "ERROR: cannot make directory \"" << pathname << "\""
-                     << endl;
-                cerr << "ERROR:" << endl;
-                cerr << "ERROR:" << endl;
+                dprintf(D_ALWAYS, "ERROR: cannot make directory '%s'\n", pathname);
                 exit(MKDIR_ERROR);
               }
         }
@@ -142,12 +133,7 @@ owner_node* FileIndex::FindOrAddOwner(machine_node* m,
           ptr = new owner_node;
           if (ptr == NULL)
             {
-              cerr << endl << "ERROR:" << endl;
-              cerr << "ERROR:" << endl;
-              cerr << "ERROR: cannot allocate sufficient dynamic memory"
-		   << endl;
-              cerr << "ERROR:" << endl;
-              cerr << "ERROR:" << endl;
+              dprintf(D_ALWAYS, "ERROR: cannot allocate sufficient dynamic memory\n");
               exit(DYNAMIC_ALLOCATION);
             }
           ptr->left = NULL;
@@ -166,12 +152,7 @@ owner_node* FileIndex::FindOrAddOwner(machine_node* m,
           if (mkdir(pathname, (mode_t) INT_MAX) != 0)
             if (errno != EEXIST)
               {
-                cerr << endl << "ERROR:" << endl;
-                cerr << "ERROR:" << endl;
-                cerr << "ERROR: cannot make directory \"" << pathname << "\""
-                     << endl;
-                cerr << "ERROR:" << endl;
-                cerr << "ERROR:" << endl;
+                dprintf(D_ALWAYS, "ERROR: cannot make directory '%s'\n", pathname);
                 exit(MKDIR_ERROR);
               }
         }
@@ -205,11 +186,7 @@ file_node* FileIndex::FindOrAddFile(file_node*& file_root,
 	  ptr = new file_node;
 	  if (ptr == NULL)
 	    {
-	      cerr << endl << "ERROR:" << endl;
-	      cerr << "ERROR:" << endl;
-	      cerr << "ERROR:" << endl;
-	      cerr << "ERROR:" << endl;
-	      cerr << "ERROR:" << endl;
+		  dprintf(D_ALWAYS, "ERROR: cannot allocate sufficient dynamic memory\n");
 	      exit(DYNAMIC_ALLOCATION);
 	    }
 	  ptr->left = NULL;
@@ -247,11 +224,7 @@ int FileIndex::Exists(struct in_addr machine_IP,
     return DOES_NOT_EXIST;
   if (f->file_data == NULL)
     {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: IMDS index is inconsistent" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
+      dprintf(D_ALWAYS, "ERROR: IMDS index is inconsistent\n");
       exit(IMDS_INDEX_ERROR);
     }
   return EXISTS;
@@ -414,12 +387,7 @@ int FileIndex::DeleteFile(struct in_addr machine_IP,
 			machine_ptr = machine_ptr->right;
     }
 	if (machine_ptr == NULL) {
-		cerr << endl << "ERROR:" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR: IMDS inconsistency; file exists but cannot be found" 
-			<< endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR:" << endl;
+		dprintf(D_ALWAYS, "ERROR: IMDS inconsistency; file exists but cannot be found\n");
 		exit(IMDS_INDEX_ERROR);
     }
 	owner_ptr = machine_ptr->owner_root;
@@ -433,12 +401,7 @@ int FileIndex::DeleteFile(struct in_addr machine_IP,
 			owner_ptr = owner_ptr->right;
     }
 	if (owner_ptr == NULL) {
-		cerr << endl << "ERROR:" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR: IMDS inconsistency; file exists but cannot be found" 
-			<< endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR:" << endl;
+		dprintf(D_ALWAYS, "ERROR: IMDS inconsistency; file exists but cannot be found\n");
 		exit(IMDS_INDEX_ERROR);
     }
 	file_ptr = owner_ptr->file_root;
@@ -453,12 +416,7 @@ int FileIndex::DeleteFile(struct in_addr machine_IP,
 			file_ptr = file_ptr->right;
     }
 	if (file_ptr == NULL) {
-		cerr << endl << "ERROR:" << endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR: IMDS inconsistency; file exists but cannot be found" 
-			<< endl;
-		cerr << "ERROR:" << endl;
-		cerr << "ERROR:" << endl;
+		dprintf(D_ALWAYS, "ERROR: IMDS inconsistency; file exists but cannot be found\n");
 		exit(IMDS_INDEX_ERROR);
     }
 
