@@ -27,6 +27,9 @@
 ** 
 */ 
 
+#ifndef _EXCEPT_H
+#define _EXCEPT_H
+
 
 /*
 **	Definition of exception macro
@@ -46,3 +49,5 @@ static int	_EXCEPT_Line;			/* Line number of the exception              */
 static char	*_EXCEPT_File;		/* File name of the exception                */
 static int	_EXCEPT_Errno;			/* Error number from most recent system call */
 static int (*_EXCEPT_Cleanup)();	/* Function to call to clean up (or NULL)    */
+
+#endif /* _EXCEPT_H */
