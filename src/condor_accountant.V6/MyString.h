@@ -73,9 +73,8 @@ public:
     return *this;
   }
 
-  char* Value() { return Data; }
-
-  operator char*() { return Data; }
+  const char* Value() const { return Data; }
+  operator const char*() const { return Data; }
     
 private:
 
