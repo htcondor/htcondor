@@ -28,6 +28,7 @@ DOC_TREE =		$(TOP)/doc
 INCLUDE_DIR =		../h
 NEW_INCLUDE_DIR =	../condor_includes
 C_PLUS_INCLUDE =	../condor_c++_util
+DAEMONCLIENT_INCLUDE =	../condor_daemon_client
 
 #ifdef X11Include
 X11_INCLUDE = X11Include
@@ -295,7 +296,8 @@ NETMAN_FLAGS =
 VENDOR_C_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG)=$(ARCH_FLAG) \
 		 -D$(OS_FLAG)=$(OS_FLAG) $(KERBEROS_FLAG) $(ENCRYPTION_FLAGS) \
-		 $(SITE_C_FLAGS) $(X509_FLAGS) $(GLOBUS_FLAGS) $(NETMAN_FLAGS)
+		 $(SITE_C_FLAGS) $(X509_FLAGS) $(GLOBUS_FLAGS) \
+		 $(NETMAN_FLAGS) -I$(DAEMONCLIENT_INCLUDE)
 
 /*
 Generally, compile with -fPIC for position-independent code.
@@ -331,6 +333,7 @@ PROCAPI_LIB = ../condor_procapi/libprocapi.a
 SYSAPI_LIB = ../condor_sysapi/libsysapi.a
 ACCT_LIB    = ../condor_accountant.V6/libacct.a
 DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a
+DAEMONCLIENT_LIB = ../condor_daemon_client/libdaemonclient.a
 
 ALL_LDFLAGS = -lm $(LDFLAGS) $(PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
 TEST_LDFLAGS = -lm $(LDFLAGS) $(TEST_PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
@@ -341,6 +344,7 @@ CONDOR_CRED_LIB =
 STD_LIBS = \
   $(CUTIL_LIB) \
   $(CPLUS_LIB) \
+  $(DAEMONCLIENT_LIB) \
   $(CKPT_SERV_LIB) \
   $(QMGMT_LIB) \
   $(ACCT_LIB) \
@@ -359,6 +363,7 @@ STD_LIBS = \
   $(CLASSAD_LIB) \
   $(IO_LIB) \
   $(CPLUS_LIB) \
+  $(DAEMONCLIENT_LIB) \
   $(IO_LIB) \
   $(CPLUS_LIB) \
   $(CUTIL_LIB) \
