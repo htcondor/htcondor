@@ -21,20 +21,9 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
-#define _POSIX_SOURCE
-
-#if defined(Solaris)
-#include "_condor_fix_types.h"
-#include </usr/ucbinclude/sys/rusage.h>
-#endif
-
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "condor_constants.h"
 #include "condor_jobqueue.h"
-#include <signal.h>
 #include "starter.h"
 
 extern int errno;
