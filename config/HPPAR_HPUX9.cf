@@ -1,7 +1,7 @@
 #define OperatingSystem HPUX9
 #define Architecture HPPAR
 
-#define Tilde /usr/staff/condor
+#define Tilde /home/caepub/src.hp/condor.v55
 #define RpcLib /**/
 #define MldLib /**/
 #define KernLib /**/
@@ -16,13 +16,8 @@
 #define XLibPath /**/
 #define XExtLibPath /**/
 
-#if IS_PUMA
-#define DbmLibrary /home/puma/condor/db/my_db.a
-#define BSDLibrary /home/puma/condor/lib/libBSD.a
-#else
-#define DbmLibrary /p/condor/ws1/gdbm-1.7.3/libgdbm.a
+#define DbmLibrary ../../libgdbm.a
 #define BSDLibrary /usr/lib/libBSD.a
-#endif
 
 #define MALLOC_DEBUG 			NO
 
@@ -35,6 +30,7 @@
 
 #define DOES_CHECKPOINTING		YES
 #define DOES_REMOTE_SYSCALLS	YES
+#define DOES_SAVE_SIGSTATE		YES
 
 
 #define HAS_NDBM				YES
@@ -91,5 +87,5 @@
 #define MkDepend ../../GENERIC/mdepend.sh
 #endif MkDepend
 
-#define TypicalMemory 12
+#define TypicalMemory 16
 #define ShadowSizeEstimate 200
