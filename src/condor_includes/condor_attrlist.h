@@ -157,6 +157,8 @@ class AttrList : public AttrListAbstract
 		int         LookupString(const char *, char *); 
 		int         LookupString(const char *, char *, int); //uses strncpy
 		int         LookupString (const char *name, char **value);
+		int         LookupTime(const char *name, char **value);
+		int         LookupTime(const char *name, struct tm *time, bool *is_utc);
         int         LookupInteger(const char *, int &);
         int         LookupFloat(const char *, float &);
         int         LookupBool(const char *, int &);
