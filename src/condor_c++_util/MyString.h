@@ -138,7 +138,7 @@ public:
   const char* Value() const { return (Data ? Data : ""); }
   // operator const char*() const { return (Data ? Data : ""); }
     
-  MyString Substr(int pos1, int pos2) {
+  MyString Substr(int pos1, int pos2) const {
     MyString S;
     if (pos2>Len) pos2=Len;
     if (pos1<0) pos1=0;
@@ -151,6 +151,13 @@ public:
     return S;
   }
     
+  int FindChar(int Char, int FirstPos=0) const {
+    if (FirstPos>=Len || FirstPos<0) return -1;
+    char* tmp=strchr(Data+FirstPos,Char);
+    if (!tmp) return -1;
+    return tmp-Data;
+  }
+ 
   friend ostream& operator<<(ostream& os, const MyString& S) {
     if (S.Data) os << S.Data;
     return os;
