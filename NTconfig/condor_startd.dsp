@@ -103,6 +103,14 @@ SOURCE=..\src\condor_startd.V6\command.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_startd.V6\JavaInfo.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_startd.V6\JavaInfo.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\condor_startd.V6\LoadQueue.C
 # End Source File
 # Begin Source File
