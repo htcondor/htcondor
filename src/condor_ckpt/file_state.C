@@ -2386,6 +2386,7 @@ fcntl(int fd, int cmd, ...)
 	va_list ap;
         int user_fd;
         int use_local_access = FALSE;
+		int rval;
 
         if ((user_fd = MapFd(fd)) < 0) {
                 return -1;
@@ -2407,14 +2408,28 @@ fcntl(int fd, int cmd, ...)
                 arg = va_arg( ap, int );
 #endif
                 arg = FileTab->find_avail( arg );
-                return dup2( fd, arg );
+
+				if( MappingFileDescriptors() ) {
+					rval =  FileTab->DoDup2( fd, arg );
+		// In STANDALONE mode, this must make an actual dup of the fd. -Jim B. 
+					if (rval == arg && MyImage.GetMode() == STANDALONE)
+                        rval = syscall( SYS_fcntl, fd, cmd, arg );
+					return rval;
+				}
+
+                if ( LocalSysCalls() || use_local_access ) {
+                        return syscall( SYS_fcntl, fd, cmd, arg );
+				} else {
+						return REMOTE_syscall( CONDOR_fcntl, fd, cmd, arg );
+				}
+
         case F_GETFD:
         case F_GETFL:
                 if ( LocalSysCalls() || use_local_access ) {
                         return syscall( SYS_fcntl, fd, cmd, arg );
-		} else {
-			return REMOTE_syscall( CONDOR_fcntl, fd, cmd, arg );
-		}
+				} else {
+						return REMOTE_syscall( CONDOR_fcntl, fd, cmd, arg );
+				}
         case F_SETFD:
         case F_SETFL:
                 va_start( ap, cmd );
@@ -2448,6 +2463,16 @@ fcntl(int fd, int cmd, ...)
 	default:
 		EXCEPT( "Unsupported fcntl() command" );
 	}
+}
+int
+_fcntl(int fd, int cmd, int arg)
+{
+	return fcntl(fd,cmd,arg);
+}
+int
+__fcntl(int fd, int cmd, int arg)
+{
+	return fcntl(fd,cmd,arg);
 }
 #endif
 
