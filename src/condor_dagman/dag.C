@@ -200,13 +200,10 @@ bool Dag::ProcessLogEvents (bool recovery) {
             //----------------------------------------------------------------
           case ULOG_OK:
             
-            if (DEBUG_LEVEL(DEBUG_VERBOSE)) {
-                putchar (' ');
-                condorID.Print();
-                putchar (' ');
-                printf( "\n  Event: %s for Job ",
-						ULogEventNumberNames[e->eventNumber] );
-            }
+			debug_printf( DEBUG_VERBOSE, " " );
+			condorID.Print();
+			debug_printf( DEBUG_VERBOSE, "\n  Event: %s for Job ",
+						  ULogEventNumberNames[e->eventNumber] );
             
             switch(e->eventNumber) {
                 
@@ -348,9 +345,13 @@ bool Dag::ProcessLogEvents (bool recovery) {
               //--------------------------------------------------
               case ULOG_SUBMIT:
                 
-				// find the first job we submitted that hasn't yet
+				// find the first job in the termQ that hasn't yet
 				// been matched with a submit event, and match it with
 				// this one
+
+				// WARNING: THIS IS KNOWN TO BE BUGGY!
+				// See GetSubmittedJob() for details...
+
 				Job* job = GetSubmittedJob( recovery );
 				if( job == NULL ) {
 					if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
@@ -361,22 +362,51 @@ bool Dag::ProcessLogEvents (bool recovery) {
 					break;
 				}
 
-				// _submitQ is redundant for now, but a nice sanity-check
-				Job* double_check_job;
-				if( _submitQ->dequeue( double_check_job ) == -1 ) {
-					if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
-						printf( "Unknown submitted job found in log\n" );
-					}
-					done = true;
-					result = false;
+				// for now, we simply detect the bug when it occurs
+				// and abort the DAG, since that's better than
+				// silently incorrect behavior...
+
+				SubmitEvent* submit_event = (SubmitEvent*) e;
+				char submit_event_job_name[1024];
+				sscanf( submit_event->submitEventLogNotes, "DAG Node: %1023s",
+						submit_event_job_name );
+				Job* submit_event_job = GetJob( submit_event_job_name );
+				if( ! submit_event_job ) {
+					debug_printf( DEBUG_QUIET,
+								  "Unknown submit event (job \"%s\") found "
+								  "in log\n", submit_event_job_name );
+                    done = true;
+                    result = false;
+                    break;
+				}
+				if( job != submit_event_job ) {
+					debug_printf( DEBUG_QUIET,
+								  "\nknown GetSubmittedJob() bug: "
+								  "Job \"%s\" != Submit Event Job \"%s\"\n",
+								  job->GetJobName(),
+								  submit_event_job->GetJobName() );
+					done = TRUE;
+					result = FALSE;
 					break;
 				}
-				if( job != double_check_job ) {
-					debug_printf( DEBUG_DEBUG_1,
-								  "GetSubmittedJob() bug: Job %s != Job %s\n",
-								  job->GetJobName(),
-								  double_check_job->GetJobName() );
-					assert( job == double_check_job );
+
+				// sanity-check to compare then job we see in the
+				// submit event to the job we expect to see based on
+				// our submit queue
+				if( !recovery ) {
+					Job* submitQ_job = NULL;
+					if( (_submitQ->dequeue( submitQ_job ) == -1) || 
+						(submitQ_job != submit_event_job) ) {
+						debug_printf( DEBUG_QUIET,
+									  "Unknown submit event found in log\n"
+									  "submit_event_job = \"%s\", "
+									  "submitQ_job = \"%s\"\n",
+									  submit_event_job->GetJobName(),
+									  submitQ_job->GetJobName() );
+						done = true;
+						result = false;
+						break;
+					}
 				}
 
 				job->_CondorID = condorID;
@@ -461,7 +491,7 @@ Dag::SubmitCondor( Job* job )
 	debug_printf( DEBUG_NORMAL, "Submitting Job %s", job->GetJobName() );
   
     CondorID condorID(0,0,0);
-    if (!submit_submit (job->GetCmdFile(), condorID)) {
+    if( ! submit_submit( job->GetCmdFile(), condorID, job->GetJobName() ) ) {
         job->_Status = Job::STATUS_ERROR;
         _numJobsFailed++;
 		sprintf( job->error_text, "Job submit failed" );
