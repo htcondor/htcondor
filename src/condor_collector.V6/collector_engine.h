@@ -54,10 +54,10 @@ class CollectorEngine : public Service
 	ClassAd *collect (int, ClassAd *, sockaddr_in *, int &, Sock* = NULL);
 
 	// lookup classad in the specified table with the given hashkey
-	ClassAd *lookup (AdTypes, HashKey &);
+	ClassAd *lookup (AdTypes, AdNameHashKey &);
 
 	// remove classad in the specified table with the given hashkey
-	int remove (AdTypes, HashKey &);
+	int remove (AdTypes, AdNameHashKey &);
 
 	// walk specified hash table with the given visit procedure
 	int walkHashTable (AdTypes, int (*)(ClassAd *));
@@ -98,9 +98,9 @@ class CollectorEngine : public Service
 	int  housekeeper ();
 	int  housekeeperTimerID;
 	void cleanHashTable (CollectorHashTable &, time_t,
-				bool (*) (HashKey &, ClassAd *,sockaddr_in *));
+				bool (*) (AdNameHashKey &, ClassAd *,sockaddr_in *));
 	ClassAd* updateClassAd(CollectorHashTable&,const char*, const char *,
-						   ClassAd*,HashKey&, const MyString &, int &, 
+						   ClassAd*,AdNameHashKey&, const MyString &, int &, 
 						   const sockaddr_in * );
 
 	// Statistics

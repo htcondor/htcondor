@@ -33,10 +33,10 @@
 
 extern "C" char * sin_to_string(struct sockaddr_in *);
 
-template class HashTable<HashKey, ClassAd *>;
+template class HashTable<AdNameHashKey, ClassAd *>;
 extern void parseIpPort (const MyString &, MyString &);
 
-void HashKey::sprint (MyString &s)
+void AdNameHashKey::sprint (MyString &s)
 {
 	if (ip_addr.Length() )
 		s.sprintf( "< %s , %s >", name.GetCStr(), ip_addr.GetCStr() );
@@ -44,19 +44,19 @@ void HashKey::sprint (MyString &s)
 		s.sprintf( "< %s >", name.GetCStr() );
 }
 
-bool operator== (const HashKey &lhs, const HashKey &rhs)
+bool operator== (const AdNameHashKey &lhs, const AdNameHashKey &rhs)
 {
     return (  ( lhs.name == rhs.name ) && ( lhs.ip_addr == rhs.ip_addr ) );
 }
 
-ostream &operator<< (ostream &out, const HashKey &hk)
+ostream &operator<< (ostream &out, const AdNameHashKey &hk)
 {
 	out << "Hashkey: (" << hk.name << "," << hk.ip_addr;
 	out << ")" << endl;
 	return out;
 }
 
-int hashFunction (const HashKey &key, int numBuckets)
+int adNameHashFunction (const AdNameHashKey &key, int numBuckets)
 {
     unsigned int bkt = 0;
 	const char *p;
@@ -71,7 +71,7 @@ int hashFunction (const HashKey &key, int numBuckets)
 // functions to make the hashkeys ...
 // make hashkeys from the obtained ad
 bool
-makeStartdAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
+makeStartdAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
 	ExprTree	*tree;
 	MyString	buffer;
@@ -125,7 +125,7 @@ makeStartdAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 
 
 bool
-makeScheddAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
+makeScheddAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
 	ExprTree	*tree;
 	MyString	buffer;
@@ -188,7 +188,7 @@ makeScheddAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 
 
 bool
-makeLicenseAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
+makeLicenseAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
 	ExprTree *tree;
 	MyString buffer;
@@ -240,7 +240,7 @@ makeLicenseAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 
 
 bool
-makeMasterAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
+makeMasterAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
 	ExprTree *tree;
 
@@ -271,7 +271,7 @@ makeMasterAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 
 
 bool
-makeCkptSrvrAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
+makeCkptSrvrAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
 	char	*name = NULL;
 	if (!ad->LookupString ("Machine", &name ))
@@ -288,7 +288,7 @@ makeCkptSrvrAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 }
 
 bool
-makeCollectorAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
+makeCollectorAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
 	char	*name = NULL;
 	if (!ad->LookupString ("Machine", &name ))
@@ -305,7 +305,7 @@ makeCollectorAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 }
 
 bool
-makeStorageAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
+makeStorageAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
 	char	*name = NULL;
 	if (!ad->LookupString ("Name", &name ))
@@ -322,7 +322,7 @@ makeStorageAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 }
 
 bool
-makeNegotiatorAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
+makeNegotiatorAdHashKey (AdNameHashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
 	char	*name = NULL;
 	if( !ad->LookupString( ATTR_NAME, &name ) ) {
@@ -357,14 +357,14 @@ HashString::HashString( void )
 {
 }
 
-HashString::HashString( const HashKey &hk )
+HashString::HashString( const AdNameHashKey &hk )
 		: MyString( )
 {
 	Build( hk );
 }
 
 void
-HashString::Build( const HashKey &hk )
+HashString::Build( const AdNameHashKey &hk )
 {
 	if ( hk.ip_addr.Length() ) {
 		sprintf( "< %s , %s >", hk.name.GetCStr(), hk.ip_addr.GetCStr() );

@@ -58,17 +58,17 @@ int 	engine_housekeepingHandler  (Service *);
 char	*strStatus (ClassAd *);
 
 CollectorEngine::CollectorEngine (CollectorStats *stats ) : 
-	StartdAds     (GREATER_TABLE_SIZE, &hashFunction),
-	StartdPrivateAds(GREATER_TABLE_SIZE, &hashFunction),
-	ScheddAds     (GREATER_TABLE_SIZE, &hashFunction),
-	SubmittorAds  (GREATER_TABLE_SIZE, &hashFunction),
-	LicenseAds    (GREATER_TABLE_SIZE, &hashFunction),
-	MasterAds     (GREATER_TABLE_SIZE, &hashFunction),
-	StorageAds       (GREATER_TABLE_SIZE, &hashFunction),
-	CkptServerAds (LESSER_TABLE_SIZE , &hashFunction),
-	GatewayAds    (LESSER_TABLE_SIZE , &hashFunction),
-	CollectorAds  (LESSER_TABLE_SIZE , &hashFunction),
-	NegotiatorAds     (LESSER_TABLE_SIZE, &hashFunction)
+	StartdAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
+	StartdPrivateAds(GREATER_TABLE_SIZE, &adNameHashFunction),
+	ScheddAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
+	SubmittorAds  (GREATER_TABLE_SIZE, &adNameHashFunction),
+	LicenseAds    (GREATER_TABLE_SIZE, &adNameHashFunction),
+	MasterAds     (GREATER_TABLE_SIZE, &adNameHashFunction),
+	StorageAds       (GREATER_TABLE_SIZE, &adNameHashFunction),
+	CkptServerAds (LESSER_TABLE_SIZE , &adNameHashFunction),
+	GatewayAds    (LESSER_TABLE_SIZE , &adNameHashFunction),
+	CollectorAds  (LESSER_TABLE_SIZE , &adNameHashFunction),
+	NegotiatorAds     (LESSER_TABLE_SIZE, &adNameHashFunction)
 {
 	clientTimeout = 20;
 	machineUpdateInterval = 30;
@@ -356,7 +356,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 	ClassAd		*retVal;
 	ClassAd		*pvtAd;
 	int		insPvt;
-	HashKey		hk;
+	AdNameHashKey		hk;
 	HashString	hashString;
 	static int repeatStartdAds = -1;		// for debugging
 	ClassAd		*clientAdToRepeat = NULL;
@@ -588,7 +588,7 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 }
 
 ClassAd *CollectorEngine::
-lookup (AdTypes adType, HashKey &hk)
+lookup (AdTypes adType, AdNameHashKey &hk)
 {
 	ClassAd *val;
 
@@ -653,7 +653,7 @@ lookup (AdTypes adType, HashKey &hk)
 
 
 int CollectorEngine::
-remove (AdTypes adType, HashKey &hk)
+remove (AdTypes adType, AdNameHashKey &hk)
 {
 	switch (adType)
 	{
@@ -698,7 +698,7 @@ updateClassAd (CollectorHashTable &hashTable,
 			   const char *adType,
 			   const char *label,
 			   ClassAd *ad, 
-			   HashKey &hk,
+			   AdNameHashKey &hk,
 			   const MyString &hashString,
 			   int  &insert,
 			   const sockaddr_in *from )
@@ -772,7 +772,7 @@ updateClassAd (CollectorHashTable &hashTable,
 void CollectorEngine::
 checkMasterStatus (ClassAd *ad)
 {
-	HashKey 	hk;
+	AdNameHashKey 	hk;
 	ClassAd		*old;
 
 	// make the master ad's hashkey
@@ -860,12 +860,12 @@ housekeeper()
 
 void CollectorEngine::
 cleanHashTable (CollectorHashTable &hashTable, time_t now, 
-				bool (*makeKey) (HashKey &, ClassAd *, sockaddr_in *) )
+				bool (*makeKey) (AdNameHashKey &, ClassAd *, sockaddr_in *) )
 {
 	ClassAd  *ad;
 	int   	 timeStamp;
 	int		 updateInterval;
-	HashKey  hk;
+	AdNameHashKey  hk;
 	double   timeDiff;
 	MyString	hkString;
 
@@ -912,7 +912,7 @@ static void
 purgeHashTable( CollectorHashTable &table )
 {
 	ClassAd* ad;
-	HashKey hk;
+	AdNameHashKey hk;
 	table.startIterations();
 	while( table.iterate(hk,ad) ) {
 		if( table.remove(hk) == -1 ) {
@@ -930,7 +930,7 @@ masterCheck ()
 {
 	ClassAd		*ad;
 	ClassAd		*nextStatus;
-	HashKey		hk;
+	AdNameHashKey		hk;
 	MyString	hkString;
 	MyString	buffer;
 	FILE*		mailer = NULL;

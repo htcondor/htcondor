@@ -35,43 +35,43 @@
 #include "HashTable.h"
 
 // this is the tuple that we will be hashing on
-class HashKey
+class AdNameHashKey
 {
   public:
     MyString name;
     MyString ip_addr;
 
 	void   sprint (MyString &);
-	friend ostream& operator<< (ostream &out, const HashKey &); 
-    friend bool operator== (const HashKey &, const HashKey &);
+	friend ostream& operator<< (ostream &out, const AdNameHashKey &); 
+    friend bool operator== (const AdNameHashKey &, const AdNameHashKey &);
 
 };
 
 // the hash functions
-int hashFunction (const HashKey &, int);
+int adNameHashFunction (const AdNameHashKey &, int);
 #if 0
-int hashOnName   (const HashKey &, int);
+int hashOnName   (const AdNameHashKey &, int);
 #endif
 
 // type for the hash tables ...
-typedef HashTable <HashKey, ClassAd *> CollectorHashTable;
+typedef HashTable <AdNameHashKey, ClassAd *> CollectorHashTable;
 
 // functions to make the hashkeys
-bool makeStartdAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
-bool makeScheddAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
-bool makeLicenseAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
-bool makeMasterAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
-bool makeCkptSrvrAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
-bool makeCollectorAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
-bool makeStorageAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
-bool makeNegotiatorAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
+bool makeStartdAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
+bool makeScheddAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
+bool makeLicenseAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
+bool makeMasterAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
+bool makeCkptSrvrAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
+bool makeCollectorAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
+bool makeStorageAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
+bool makeNegotiatorAdHashKey (AdNameHashKey &, ClassAd *, sockaddr_in *);
 
 class HashString : public MyString
 {
   public:
 	HashString( void );
-	HashString( const HashKey & );
-	void Build( const HashKey & );
+	HashString( const AdNameHashKey & );
+	void Build( const AdNameHashKey & );
 };
 
 #endif /* __COLLHASH_H__ */
