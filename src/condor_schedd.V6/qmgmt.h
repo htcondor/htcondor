@@ -44,6 +44,7 @@ int handle_q(Service *, int, Stream *sock);
 void BeginTransaction();
 void CommitTransaction();
 void AbortTransaction();
+void dirtyJobQueue( void );
 #if defined(__cplusplus)
 }
 #endif
