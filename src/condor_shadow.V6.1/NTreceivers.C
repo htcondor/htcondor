@@ -83,7 +83,7 @@ do_REMOTE_syscall()
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			assert( syscall_sock->code( (condor_errno_t)terrno ) );
 		}
 		assert( syscall_sock->end_of_message() );
 		free(uiddomain);
@@ -107,7 +107,7 @@ do_REMOTE_syscall()
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			assert( syscall_sock->code( (condor_errno_t)terrno ) );
 		} else {
 			assert( ad->put(*syscall_sock) );
 		}
@@ -135,7 +135,7 @@ do_REMOTE_syscall()
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			assert( syscall_sock->code( (condor_errno_t)terrno ) );
 		}
 		assert( syscall_sock->end_of_message() );
 		return -1;
@@ -165,7 +165,7 @@ do_REMOTE_syscall()
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			assert( syscall_sock->code( (condor_errno_t)terrno ) );
 		}
 		free( (char *)path );
 		assert( syscall_sock->end_of_message() );;
@@ -189,7 +189,7 @@ do_REMOTE_syscall()
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			assert( syscall_sock->code( (condor_errno_t)terrno ) );
 		}
 		assert( syscall_sock->end_of_message() );;
 		return 0;
@@ -217,7 +217,7 @@ do_REMOTE_syscall()
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			assert( syscall_sock->code( (condor_errno_t)terrno ) );
 		}
 		if( rval >= 0 ) {
 			assert( syscall_sock->code_bytes_bool(buf, rval) );
@@ -251,7 +251,7 @@ do_REMOTE_syscall()
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			assert( syscall_sock->code( (condor_errno_t)terrno ) );
 		}
 		free( (char *)buf );
 		assert( syscall_sock->end_of_message() );;
@@ -283,7 +283,7 @@ do_REMOTE_syscall()
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			assert( syscall_sock->code( (condor_errno_t)terrno ) );
 		}
 		assert( syscall_sock->end_of_message() );;
 		return 0;
@@ -307,7 +307,7 @@ do_REMOTE_syscall()
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			assert( syscall_sock->code( (condor_errno_t)terrno ) );
 		}
 		free( (char *)path );
 		assert( syscall_sock->end_of_message() );;
@@ -336,7 +336,7 @@ do_REMOTE_syscall()
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			assert( syscall_sock->code( (condor_errno_t)terrno ) );
 		}
 		free( (char *)to );
 		free( (char *)from );
@@ -359,7 +359,7 @@ do_REMOTE_syscall()
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			assert( syscall_sock->code( (condor_errno_t)terrno ) );
 		}
 		assert( syscall_sock->end_of_message() );
 
@@ -388,7 +388,7 @@ do_REMOTE_syscall()
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			assert( syscall_sock->code( (condor_errno_t)terrno ) );
 		}
 		free( (char *)path );
 		assert( syscall_sock->end_of_message() );;
@@ -413,7 +413,7 @@ do_REMOTE_syscall()
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			assert( syscall_sock->code( (condor_errno_t)terrno ) );
 		}
 		free( (char *)path );
 		assert( syscall_sock->end_of_message() );;
