@@ -163,7 +163,7 @@ void NordugridJobReconfig()
 	NordugridJob::setProbeInterval( tmp_int );
 }
 
-const char *NordugridJobAdConst = "JobUniverse =?= 9 && (SubUniverse == \"nordugrid\") =?= True";
+const char *NordugridJobAdConst = "JobUniverse =?= 9 && (JobGridType == \"nordugrid\") =?= True";
 
 bool NordugridJobAdMustExpand( const ClassAd *jobad )
 {

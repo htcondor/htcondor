@@ -150,7 +150,7 @@ char	*Preferences	= "preferences";
 char	*Rank				= "rank";
 char	*ImageSize		= "image_size";
 char	*Universe		= "universe";
-char	*SubUniverse	= "subuniverse";
+char	*Grid_Type		= "grid_type";
 char	*MachineCount	= "machine_count";
 char	*NotifyUser		= "notify_user";
 char	*ExitRequirements = "exit_requirements";
@@ -995,8 +995,8 @@ SetUniverse()
 		InsertJobExpr (buffer);
 		free(univ);
 	
-		// Set SubUniverse (for Globus jobs)
-		univ = condor_param( SubUniverse, ATTR_JOB_SUBUNIVERSE );
+		// Set Grid_Type (for Globus jobs)
+		univ = condor_param( Grid_Type, ATTR_JOB_GRID_TYPE );
 		if( !univ ) {
 			univ = strdup("globus");
 		} else {
@@ -1009,12 +1009,13 @@ SetUniverse()
 				// We're ok	
 				// Values are case-insensitive for gridmanager, so we don't need to change case			
 			} else {
-				fprintf( stderr, "\nERROR: Invalid value '%s' for SubUniverse\n", univ );
+				fprintf( stderr, "\nERROR: Invalid value '%s' for grid_type\n", univ );
+				fprintf( stderr, "Must be one of: globus, gt3, nordugrid, or oracle\n" );
 				exit( 1 );
 			}
 		}			
 		
-		(void) sprintf (buffer, "%s = %s", ATTR_JOB_SUBUNIVERSE, univ);
+		(void) sprintf (buffer, "%s = %s", ATTR_JOB_GRID_TYPE, univ);
 		InsertJobExpr (buffer);
 		free (univ);
 		
@@ -2954,18 +2955,18 @@ SetGlobusParams()
 		return;
 
 	if ( !(globushost = condor_param( GlobusScheduler ) ) ) {
-		char * subuniverse = condor_param( SubUniverse, ATTR_JOB_SUBUNIVERSE );
-		if ((subuniverse == NULL ||
-				(stricmp (subuniverse, "globus") == MATCH) ||
-				(stricmp (subuniverse, "gt3") == MATCH) ||
-				(stricmp (subuniverse, "nordugrid") == MATCH))) {
+		char * grid_type = condor_param( Grid_Type, ATTR_JOB_GRID_TYPE );
+		if ((grid_type == NULL ||
+				(stricmp (grid_type, "globus") == MATCH) ||
+				(stricmp (grid_type, "gt3") == MATCH) ||
+				(stricmp (grid_type, "nordugrid") == MATCH))) {
 			fprintf(stderr, "\nERROR: Globus/gt3 jobs require a \"%s\" parameter\n",
 					GlobusScheduler );
 			DoCleanup( 0, 0, NULL );
 			exit( 1 );
 		}
-		if (subuniverse != NULL)
-			free (subuniverse);
+		if (grid_type != NULL)
+			free (grid_type);
 	}
 
 	sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_RESOURCE, globushost );
@@ -3480,12 +3481,12 @@ queue(int num)
 
 		// Issue an error if (no proxy) && (universe=globus,gt3,nordugrid)
 		if ( proxy_file == NULL) {
-			char * subuniverse = condor_param( SubUniverse, ATTR_JOB_SUBUNIVERSE );
+			char * grid_type = condor_param( Grid_Type, ATTR_JOB_GRID_TYPE );
 			if (JobUniverse == CONDOR_UNIVERSE_GLOBUS &&
-				(subuniverse == NULL ||
-					(stricmp (subuniverse, "globus") == MATCH) ||
-					(stricmp (subuniverse, "gt3") == MATCH) ||
-					(stricmp (subuniverse, "nordugrid") == MATCH))) {
+				(grid_type == NULL ||
+					(stricmp (grid_type, "globus") == MATCH) ||
+					(stricmp (grid_type, "gt3") == MATCH) ||
+					(stricmp (grid_type, "nordugrid") == MATCH))) {
 				fprintf( stderr, "\nERROR: can't determine proxy filename\n" );
 				fprintf( stderr, "x509 user proxy is required for globus, gt3 or nordugrid jobs\n");
 				exit (1);

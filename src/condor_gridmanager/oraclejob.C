@@ -120,7 +120,7 @@ void OracleJobReconfig()
 //	}
 }
 
-const char *OracleJobAdConst = "JobUniverse =?= 9 && (SubUniverse == \"oracle\") =?= True";
+const char *OracleJobAdConst = "JobUniverse =?= 9 && (JobGridType == \"oracle\") =?= True";
 
 bool OracleJobAdMustExpand( const ClassAd *jobad )
 {

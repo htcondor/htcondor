@@ -52,7 +52,7 @@ grid_monitor.sh: grid_monitor_wrapper grid_manager_monitor_agent
 
 gt3gahp: 
 	cp -R $(GT3GAHP_DIR)/gt3 $(RELEASE_DIR)/lib/
-	chmod -R 0644 $(RELEASE_DIR)/lib/gt3
+	chmod -R 0644 $(RELEASE_DIR)/lib/gt3/*
 
 $(GAHP_DIR)/gahp_server:
 	/bin/true
