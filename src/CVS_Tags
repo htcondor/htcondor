@@ -1,3 +1,8 @@
+12/28/04 V6_7-negotiator_ad-branch
+   A branch that has implementation of Negotiator reporting to the 
+   Collector (and backward-compatibility adjustments it requires).
+   Forked off 6_7-branch at V6_7-negotiator_ad-root. ckireyev.
+
 12/28/04 V6_7-honda-2-branch
    A new branch for honda-specific changes (mostly parallel universe).
    The old V6_7-honda-branch will be merged directly into this and
