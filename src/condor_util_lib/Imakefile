@@ -1,5 +1,16 @@
 SRC_DIR = $(SRC_TREE)/condor_util_lib
+
+CMNT
+CMNT This is for testing only.  Whomever is running "make" will get
+CMNT their USER name compiled into condor_config.o.  The effect will
+CMNT be that their home directory is searched for the "condor_config"
+CMNT file.
+CMNT
+#if IS_ALPHA_OSF1
+CFLAGS = $(STD_C_FLAGS) $(RONALD) -DNEW_PROC '-DUSER_NAME="$(USER)"'
+#else
 CFLAGS = $(STD_C_FLAGS) $(RONALD) -DNEW_PROC
+#endif
 
 #define MALLOC_DEBUG 1
 #if MALLOC_DEBUG
