@@ -25,6 +25,9 @@ NULL=
 NULL=nul
 !ENDIF 
 
+CPP=cl.exe
+RSC=rc.exe
+
 !IF  "$(CFG)" == "classad_dist - Win32 Debug"
 
 OUTDIR=.\Debug
@@ -37,7 +40,6 @@ ALL : "$(OUTDIR)\classad.lib"
 
 
 CLEAN :
-	-@erase "$(INTDIR)\attrrefs.obj"
 	-@erase "$(INTDIR)\classad.obj"
 	-@erase "$(INTDIR)\collection.obj"
 	-@erase "$(INTDIR)\collectionBase.obj"
@@ -68,40 +70,7 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP=cl.exe
 CPP_PROJ=/nologo /MDd /W3 /Gm /Gi /GX /ZI /Od /D "_DEBUG" /D "WIN32" /D "_WINDOWS" /D "CLASSAD_DISTRIBUTION" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
-
-.c{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.c{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\classad_dist.bsc" 
 BSC32_SBRS= \
@@ -109,7 +78,6 @@ BSC32_SBRS= \
 LIB32=link.exe -lib
 LIB32_FLAGS=/nologo /out:"$(OUTDIR)\classad.lib" 
 LIB32_OBJS= \
-	"$(INTDIR)\attrrefs.obj" \
 	"$(INTDIR)\classad.obj" \
 	"$(INTDIR)\collection.obj" \
 	"$(INTDIR)\collectionBase.obj" \
@@ -151,7 +119,6 @@ ALL : "$(OUTDIR)\classad.lib"
 
 
 CLEAN :
-	-@erase "$(INTDIR)\attrrefs.obj"
 	-@erase "$(INTDIR)\classad.obj"
 	-@erase "$(INTDIR)\collection.obj"
 	-@erase "$(INTDIR)\collectionBase.obj"
@@ -181,40 +148,7 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP=cl.exe
 CPP_PROJ=/nologo /MD /W3 /GX /Z7 /O1 /D "NDEBUG" /D "CLASSAD_DISTRIBUTION" /D "WIN32" /D "_WINDOWS" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
-
-.c{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.c{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\classad_dist.bsc" 
 BSC32_SBRS= \
@@ -222,7 +156,6 @@ BSC32_SBRS= \
 LIB32=link.exe -lib
 LIB32_FLAGS=/nologo /out:"$(OUTDIR)\classad.lib" 
 LIB32_OBJS= \
-	"$(INTDIR)\attrrefs.obj" \
 	"$(INTDIR)\classad.obj" \
 	"$(INTDIR)\collection.obj" \
 	"$(INTDIR)\collectionBase.obj" \
@@ -254,6 +187,36 @@ LIB32_OBJS= \
 
 !ENDIF 
 
+.c{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.c{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
 
 !IF "$(NO_EXTERNAL_DEPS)" != "1"
 !IF EXISTS("classad_dist.dep")
@@ -267,25 +230,49 @@ LIB32_OBJS= \
 !IF "$(CFG)" == "classad_dist - Win32 Debug" || "$(CFG)" == "classad_dist - Win32 Release"
 SOURCE=..\attrrefs.C
 
-"$(INTDIR)\attrrefs.obj" : $(SOURCE) "$(INTDIR)"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
+!IF  "$(CFG)" == "classad_dist - Win32 Debug"
 
+InputPath=..\attrrefs.C
+
+"..\classad_features.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	<<tempfile.bat 
+	@echo off 
+	echo #ifndef __CLASSAD_FEATURES_H > ..\classad_features.h 
+	echo #define __CLASSAD_FEATURES_H >> ..\classad_features.h 
+	echo #endif >> ..\classad_features.h
+<< 
+	
+
+!ELSEIF  "$(CFG)" == "classad_dist - Win32 Release"
+
+InputPath=..\attrrefs.C
+
+"..\classad_features.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	<<tempfile.bat 
+	@echo off 
+	echo #ifndef __CLASSAD_FEATURES_H > ..\classad_features.h 
+	echo #define __CLASSAD_FEATURES_H >> ..\classad_features.h 
+	echo #endif >> ..\classad_features.h
+<< 
+	
+
+!ENDIF 
 
 SOURCE=..\classad.C
 
-"$(INTDIR)\classad.obj" : $(SOURCE) "$(INTDIR)"
+"$(INTDIR)\classad.obj" : $(SOURCE) "$(INTDIR)" "..\classad_features.h"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
 SOURCE=..\collection.C
 
-"$(INTDIR)\collection.obj" : $(SOURCE) "$(INTDIR)"
+"$(INTDIR)\collection.obj" : $(SOURCE) "$(INTDIR)" "..\classad_features.h"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
 SOURCE=..\collectionBase.C
 
-"$(INTDIR)\collectionBase.obj" : $(SOURCE) "$(INTDIR)"
+"$(INTDIR)\collectionBase.obj" : $(SOURCE) "$(INTDIR)" "..\classad_features.h"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
@@ -297,19 +284,19 @@ SOURCE=..\debug.C
 
 SOURCE=..\exprList.C
 
-"$(INTDIR)\exprList.obj" : $(SOURCE) "$(INTDIR)"
+"$(INTDIR)\exprList.obj" : $(SOURCE) "$(INTDIR)" "..\classad_features.h"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
 SOURCE=..\exprTree.C
 
-"$(INTDIR)\exprTree.obj" : $(SOURCE) "$(INTDIR)"
+"$(INTDIR)\exprTree.obj" : $(SOURCE) "$(INTDIR)" "..\classad_features.h"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
 SOURCE=..\fnCall.C
 
-"$(INTDIR)\fnCall.obj" : $(SOURCE) "$(INTDIR)"
+"$(INTDIR)\fnCall.obj" : $(SOURCE) "$(INTDIR)" "..\classad_features.h"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
@@ -333,43 +320,43 @@ SOURCE=..\lexerSource.C
 
 SOURCE=..\literals.C
 
-"$(INTDIR)\literals.obj" : $(SOURCE) "$(INTDIR)"
+"$(INTDIR)\literals.obj" : $(SOURCE) "$(INTDIR)" "..\classad_features.h"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
 SOURCE=..\matchClassad.C
 
-"$(INTDIR)\matchClassad.obj" : $(SOURCE) "$(INTDIR)"
+"$(INTDIR)\matchClassad.obj" : $(SOURCE) "$(INTDIR)" "..\classad_features.h"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
 SOURCE=..\operators.C
 
-"$(INTDIR)\operators.obj" : $(SOURCE) "$(INTDIR)"
+"$(INTDIR)\operators.obj" : $(SOURCE) "$(INTDIR)" "..\classad_features.h"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
 SOURCE=..\query.C
 
-"$(INTDIR)\query.obj" : $(SOURCE) "$(INTDIR)"
+"$(INTDIR)\query.obj" : $(SOURCE) "$(INTDIR)" "..\classad_features.h"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
 SOURCE=..\sink.C
 
-"$(INTDIR)\sink.obj" : $(SOURCE) "$(INTDIR)"
+"$(INTDIR)\sink.obj" : $(SOURCE) "$(INTDIR)" "..\classad_features.h"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
 SOURCE=..\source.C
 
-"$(INTDIR)\source.obj" : $(SOURCE) "$(INTDIR)"
+"$(INTDIR)\source.obj" : $(SOURCE) "$(INTDIR)" "..\classad_features.h"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
 SOURCE=..\transaction.C
 
-"$(INTDIR)\transaction.obj" : $(SOURCE) "$(INTDIR)"
+"$(INTDIR)\transaction.obj" : $(SOURCE) "$(INTDIR)" "..\classad_features.h"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
@@ -381,13 +368,13 @@ SOURCE=..\util.C
 
 SOURCE=..\value.C
 
-"$(INTDIR)\value.obj" : $(SOURCE) "$(INTDIR)"
+"$(INTDIR)\value.obj" : $(SOURCE) "$(INTDIR)" "..\classad_features.h"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
 SOURCE=..\view.C
 
-"$(INTDIR)\view.obj" : $(SOURCE) "$(INTDIR)"
+"$(INTDIR)\view.obj" : $(SOURCE) "$(INTDIR)" "..\classad_features.h"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
@@ -399,13 +386,13 @@ SOURCE=..\xmlLexer.C
 
 SOURCE=..\xmlSink.C
 
-"$(INTDIR)\xmlSink.obj" : $(SOURCE) "$(INTDIR)"
+"$(INTDIR)\xmlSink.obj" : $(SOURCE) "$(INTDIR)" "..\classad_features.h"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
 SOURCE=..\xmlSource.C
 
-"$(INTDIR)\xmlSource.obj" : $(SOURCE) "$(INTDIR)"
+"$(INTDIR)\xmlSource.obj" : $(SOURCE) "$(INTDIR)" "..\classad_features.h"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

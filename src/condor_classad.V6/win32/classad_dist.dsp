@@ -85,6 +85,35 @@ LIB32=link.exe -lib
 # Begin Source File
 
 SOURCE=..\attrrefs.C
+
+!IF  "$(CFG)" == "classad_dist - Win32 Debug"
+
+# PROP Ignore_Default_Tool 1
+# Begin Custom Build
+InputPath=..\attrrefs.C
+
+"..\classad_features.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	echo #ifndef __CLASSAD_FEATURES_H > ..\classad_features.h 
+	echo #define __CLASSAD_FEATURES_H >> ..\classad_features.h 
+	echo #endif >> ..\classad_features.h 
+	
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "classad_dist - Win32 Release"
+
+# PROP Ignore_Default_Tool 1
+# Begin Custom Build
+InputPath=..\attrrefs.C
+
+"..\classad_features.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	echo #ifndef __CLASSAD_FEATURES_H > ..\classad_features.h 
+	echo #define __CLASSAD_FEATURES_H >> ..\classad_features.h 
+	echo #endif >> ..\classad_features.h 
+	
+# End Custom Build
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
