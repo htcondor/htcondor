@@ -328,6 +328,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
   printf(Fmt2,"---------","---------","--------","------------","----","-----------","----------");
 
   for (int i=0; i<NumElem; i++) {
+    if (LR[i].Name.Length()>30) LR[i].Name=LR[i].Name.Substr(0,29);
     printf(Fmt1,LR[i].Name.Value(),LR[i].Priority,(LR[i].Priority/LR[i].Factor),LR[i].Factor,LR[i].Res,LR[i].AccUsage/3600.0,format_date(LR[i].BeginUsage));
   }
 
