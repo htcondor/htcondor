@@ -34,6 +34,7 @@
 #include "condor_environ.h"
 #include "string_list.h"
 #include "sig_name.h"
+#include "env.h"
 
 // these are defined in master.C
 extern int		RestartsPerHour;
@@ -113,6 +114,17 @@ daemon::daemon(char *name, bool is_daemon_core)
 	log_filename_in_config_file = strdup(buf);
 	sprintf(buf, "%s_FLAG", name);
 	flag_in_config_file = param(buf);
+
+	// get env settings from config file if present
+	sprintf(buf, "%s_ENVIRONMENT", name);
+	env = param(buf);
+	Env envStrParser;
+	if( !envStrParser.Merge(env) ) {
+		// this is an invalid env string
+		dprintf(D_ALWAYS, "Warning! Configuration file variable `%s_ENVIRONME"
+				"NT' has invalid value `%s'; ignoring.\n", name, env);
+		env = NULL;
+	}
 
 	// Weiru
 	// In the case that we have several for example schedds running on the
@@ -382,7 +394,7 @@ daemon::Start()
 				PRIV_ROOT,		// privledge level
 				1,				// which reaper ID to use; use default reaper
 				command_port,	// port to use for command port; TRUE=choose one dynamically
-				NULL,			// environment
+				env,			// environment
 				NULL,			// current working directory
 				TRUE);			// new_process_group flag; we want a new group
 
