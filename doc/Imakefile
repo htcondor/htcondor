@@ -2,11 +2,15 @@ PRINTABLE = POSTSCRIPT CAT
 
 all: distrib
 
-DOC_DIR = ../src/release_dir/doc
+RELEASE_DIR = ../src/release_dir
+DOC_DIR = $(RELEASE_DIR)/doc
 
 $(DOC_DIR):
 	- mkdir $(DOC_DIR)
 
 distrib: $(DOC_DIR)
+	cp README $(RELEASE_DIR)
+	cp -r release_notes $(DOC_DIR)
+	rm -r $(DOC_DIR)/release_notes/CVS
 	cp -r $(PRINTABLE) $(DOC_DIR)
 
