@@ -360,7 +360,7 @@ utmp_pty_idle_time( time_t now )
 	}
 
 	while (fread((char *)&utmp_info, sizeof(struct UTMP_KIND), 1, fp)) {
-#if defined(AIX31) || defined(AIX32) || defined(AIX5) || defined(IRIX331) || defined(IRIX53) || defined(LINUX) || defined(OSF1) || defined(IRIX62) || defined(IRIX65)
+#if defined(AIX) || defined(LINUX) || defined(OSF1) || defined(IRIX65)
 		if (utmp_info.ut_type != USER_PROCESS)
 #else
 			if (utmp_info.ut_name[0] == '\0')
