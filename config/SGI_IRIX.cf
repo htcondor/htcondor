@@ -17,20 +17,20 @@
 /*** This should change to define all these things for all three ABIs ***
 **** but for now, at least make it work for one of them               ***
 **** see also Platform_CFLAGS below                                   ***/
-#if !defined( IRIXABI )
+/* #if !defined( IRIXABI )
 #	define IRIXABI -n32
 #endif
 
-#define RealMldLib /**/
+#define RealMldLib 
 #define IRIX_ABI IRIXABI
 #if IRIXABI == -n32
 #	define BaseLibPath /usr/lib32
 #elif IRIXABI == -64
 #	define BaseLibPath /usr/lib64
-#else
+#else */
 #	define BaseLibPath /usr/lib
 #	define RealMldLib concat(BaseLibPath,/libmld.a)
-#endif
+/* #endif */
 
 
 #define MldLib concat(BaseLibPath,/libelf.a)
