@@ -171,7 +171,8 @@ void config( char* a_out_name, CONTEXT* context )
 	}
 }
 
-void config_from_server( a_out_name, context )
+void config_from_server( dir, a_out_name, context )
+char*	dir; 
 char    *a_out_name;
 CONTEXT *context;
 {
@@ -211,7 +212,7 @@ CONTEXT *context;
 
     /* Different cases for default configuration or server configuration */
     /* weiru */
-	rval = read_config(".", SERVER_CONFIG, context, ConfigTab, TABLESIZE,
+	rval = read_config(dir, SERVER_CONFIG, context, ConfigTab, TABLESIZE,
 					   EXPAND_LAZY);
 	if(rval < 0)
 	{
