@@ -6,6 +6,7 @@
 #define		REMDIR		"job_chirp_io_mkdir"
 #define 	TSTMSG		"Testing message"
 
+int 
 main(int argc, char **argv)
 {
 	char filebuff[10000];
@@ -16,7 +17,6 @@ main(int argc, char **argv)
 	int writefd = 0;
 	int writecnt = 0;
 	int writetot = 0;
-	char * folderptr = REMDIR;
 	char filenmbuf[1024];
 	char newfilenmbuf[1024];
 	char tstmessage[20];
@@ -41,7 +41,7 @@ main(int argc, char **argv)
 			//printf("read %d bytes\n",readcnt);
 
 		// read in entire file
-		while(readcnt = chirp_client_read(chirp_clnt, readfd, (void *)buffptr, 1024))
+		while((readcnt = chirp_client_read(chirp_clnt, readfd, (void *)buffptr, 1024)))
 		{
 			readtot += readcnt;
 			printf("read %d bytes\n",readcnt);
@@ -126,6 +126,8 @@ main(int argc, char **argv)
 		res = chirp_client_rmdir(chirp_clnt, newfilenmbuf );
 		printf("rmdir result %d\n",res);
 		chirp_client_disconnect(chirp_clnt);
+		printf("All tests passed!\n");
+		return(0);
 	}
 	else
 	{
