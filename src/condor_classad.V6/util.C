@@ -23,6 +23,7 @@
 
 #include "common.h"
 #include "util.h"
+#include "limits.h"
 
 using namespace std;
 
