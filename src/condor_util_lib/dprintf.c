@@ -201,9 +201,9 @@ va_dcl
 		int *argaddr = &va_arg(pvar, int);
 		_doprnt( fmt, argaddr, DebugFP );
 	}
-#else vax || (i386 && !LINUX && !defined(Solaris)) || bobcat || ibm032
+#else 
 	vfprintf( DebugFP, fmt, pvar );
-#endif vax || (i386 && !LINUX && !defined(Solaris)) || bobcat || ibm032
+#endif 
 
 		/* Close and unlock the log file */
 	debug_unlock();
