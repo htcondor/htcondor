@@ -1,9 +1,12 @@
 #!/bin/sh 
 # Analyzes and compares condor_syscall_lib.a to libc.a
 # Todd Tannenbaum, 7/97
-# Made portable by Derek Wright, 6/98
+# Made portable and added super perl-tastic man page parsing, 
+# Derek Wright, 6/98
 
+######################################################################
 # Figure out the platform-specific crap:
+######################################################################
 
 UNAME=`uname`
 
@@ -35,22 +38,10 @@ else
 	NM="nm -P"
 fi
 
-if [ -d /usr/man/man2 ]; then
-	MANDIR=/usr/man/man2
-else 
-	MANDIR=/notthere
-fi
+######################################################################
+## Real work begins
+######################################################################
 
-if [ -f $MANDIR/open.2 ]; then
-	MANEXT=2
-	CAT=cat
-elif [ -f $MANDIR/open.2.gz ]; then
-	MANEXT=2.gz
-	CAT=zcat
-elif [ -f $MANDIR/open.2.Z ]; then
-	MANEXT=2.Z
-	CAT=zcat
-fi
 
 # place all the system calls on this platform sorted into /tmp/asc1.$$
 grep "#define" $SYSCALL | grep "SYS_" | awk -F'_' '{print $2}' - | awk '{print $1}' | tr "[:upper:]" "[:lower:]" | sort | uniq > /tmp/asc1.$$
@@ -149,27 +140,7 @@ NOTTRAPPED=`comm -23 /tmp/asc1.$$ /tmp/asc3.$$`
 for SYSCALL in $NOTTRAPPED 
 do
 	echo $SYSCALL | awk '{printf "%20.20s - ",sprintf("%s()",$0)}' - 
-	if [ -f $MANDIR/$SYSCALL.$MANEXT ]; then
-		$CAT $MANDIR/$SYSCALL.$MANEXT |			\
-		perl -e 'undef $/;' -e '$_ = <STDIN>;'		\
-			-e '/.*SH NAME(.|\n)*?\\-(.*)/;'	\
-			-e 'print $2;'
-
-# This perl one-liner does the following:
-# "undef $/" just undefines the line delimiter, so that we can grab
-#            the whole file all at once.
-# "$_ = <STDIN>" grabs all of STDIN and puts it in $_
-# "/.*SH NAME(.|\n)*?\\-(.*)/" = match a regexp to find the synopsis: 
-#   ".*SH NAME" = everything upto and including "SH NAME"
-#   "(.|\n)*" = anything, including a newline
-#   "?" = only match what you need, not everything you can
-#   "\\-" = match exactly "\-", which is what begins the synopsis
-#   "(.*)" = everything upto a newline, save it into $2 ($2, since we 
-#           already used ()'s around something earlier in this regexp)  
-# "print $2" just prints out the synopsis we matched to STDOUT.
-
-	fi
-	echo " "
+	perl ./display_syscall_man $SYSCALL
 done
 echo " "
 
@@ -317,3 +288,4 @@ rm -f /tmp/asc6.$$
 rm -f /tmp/asc7.$$
 rm -f /tmp/asc8.$$
 rm -f /tmp/asc9.$$
+
