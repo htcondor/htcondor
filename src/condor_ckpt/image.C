@@ -34,14 +34,21 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
-#if defined(Solaris)
+#if defined(IRIX53)
+#define MA_SHARED	0x0008	/* mapping is a shared or mapped object */
 #include <sys/mman.h>		// for mmap()
 #include <sys/syscall.h>        // for syscall()
 #include <sys/time.h>
+#include <values.h>
+#endif
+#elif defined(Solaris)
 #if !defined(Solaris251)
 #include </usr/ucbinclude/sys/rusage.h>	// for rusage
 #endif
 #include <netconfig.h>		// for setnetconfig()
+#include <sys/mman.h>		// for mmap()
+#include <sys/syscall.h>        // for syscall()
+#include <sys/time.h>
 #endif
 #include <sys/stat.h>
 #include <sys/times.h>
@@ -273,7 +280,7 @@ _install_signal_handler( int sig, SIG_HANDLER handler )
 void
 Image::Save()
 {
-#if !defined(Solaris)
+#if !defined(Solaris) && !defined(IRIX53)
 	RAW_ADDR	stack_start, stack_end;
 #else
 	RAW_ADDR	addr_start, addr_end;
@@ -286,7 +293,7 @@ Image::Save()
 
 	head.Init();
 
-#if !defined(Solaris)
+#if !defined(Solaris) && !defined(IRIX53)
 
 		// Set up data segment
 	data_start = data_start_addr();
@@ -308,12 +315,35 @@ Image::Save()
 	// restore segments in order, and the STACK segment must be restored
 	// last so that we can immediately return to user code.  - Jim B.
 
+	numsegs = num_segments();
+
+#if !defined(IRIX53)
+
 	// data segment is saved and restored as before, using sbrk()
 	data_start = data_start_addr();
 	data_end = data_end_addr();
+	dprintf( D_ALWAYS, "data start = 0x%lx, data end = 0x%lx\n",
+			data_start, data_end );
 	AddSegment( "DATA", data_start, data_end, 0 );
 
-	numsegs = num_segments();
+#else
+
+	// sbrk() doesn't give reliable values on IRIX53 - use ioctl info
+	data_start=MAXLONG;
+	data_end=0;
+	for( i=0; i<numsegs; i++ ) {
+		rtn = segment_bounds(i, addr_start, addr_end, prot);
+		if (rtn == 3) {
+			if (data_start > addr_start)
+				data_start = addr_start;
+			if (data_end < addr_end)
+				data_end = addr_end;
+		}
+	}
+	AddSegment( "DATA", data_start, data_end, prot );
+
+#endif	
+
 	for( i=0; i<numsegs; i++ ) {
 		rtn = segment_bounds(i, addr_start, addr_end, prot);
 		switch (rtn) {
@@ -503,7 +533,7 @@ void Image::RestoreAllSegsExceptStack()
 	int		i;
 	int		save_fd = fd;
 
-#if defined(Solaris)
+#if defined(Solaris) || defined(IRIX53)
 	dprintf( D_ALWAYS, "Current segmap dump follows\n");
 	display_prmap();
 #endif
@@ -695,6 +725,7 @@ Image::Write( int fd )
 		if( (nbytes=map[i].Write(fd,pos)) < 0 ) {
 			dprintf( D_ALWAYS, "Write() of segment %d failed\n", i );
 			dprintf( D_ALWAYS, "errno = %d, nbytes = %d\n", errno, nbytes );
+			abort();
 			return -1;
 		}
 		pos += nbytes;
@@ -785,6 +816,7 @@ SegMap::Read( int fd, ssize_t pos )
 	size_t	bytes_to_go;
 	size_t	read_size;
 	long	saved_len = len;
+	int 	saved_prot = prot;
 	RAW_ADDR	saved_core_loc = core_loc;
 
 	if( pos != file_loc ) {
@@ -800,7 +832,7 @@ SegMap::Read( int fd, ssize_t pos )
 		cur_brk = (char *)sbrk(0);
 	}
 
-#if defined(Solaris)
+#if defined(Solaris) || defined(IRIX53)
 	else if ( mystrcmp(name,"SHARED LIB") == 0) {
 //		long pageSize = sysconf(_SC_PAGESIZE);
 		int zfd, segSize = len;
@@ -826,14 +858,20 @@ SegMap::Read( int fd, ssize_t pos )
 //		fprintf(stderr, "Calling mmap(loc = 0x%lx, size = 0x%lx, "
 //			"prot = %d, fd = %d, offset = 0)\n", core_loc, segSize,
 //			prot|PROT_WRITE, zfd);
-
+#if defined(Solaris)
 		if ((MMAP((caddr_t)core_loc, (size_t)segSize,
 				prot|PROT_WRITE,
 				MAP_PRIVATE|MAP_FIXED, zfd,
 				(off_t)0)) == MAP_FAILED) {
+#else /* defined(IRIX53) */
+		if (MMAP((caddr_t)saved_core_loc, (size_t)segSize,
+					 (saved_prot|PROT_WRITE)&(~MA_SHARED),
+					 MAP_PRIVATE|MAP_FIXED, zfd,
+					 (off_t)0) == -1) {
+#endif
 			perror("mmap");
 			fprintf(stderr, "Attempted to mmap /dev/zero at "
-				"address 0x%lx, size 0x%lx\n", core_loc,
+				"address 0x%lx, size 0x%lx\n", saved_core_loc,
 				segSize);
 			fprintf(stderr, "Current segmap dump follows\n");
 			display_prmap();
@@ -857,7 +895,7 @@ SegMap::Read( int fd, ssize_t pos )
 	ptr = (char *)saved_core_loc;
 	while( bytes_to_go ) {
 		read_size = bytes_to_go > 4096 ? 4096 : bytes_to_go;
-#if defined(Solaris)
+#if defined(Solaris) || defined(IRIX53)
 		nbytes =  SYSCALL(SYS_read, fd, (void *)ptr, read_size );
 #else
 		nbytes =  syscall( SYS_read, fd, (void *)ptr, read_size );
@@ -879,6 +917,8 @@ SegMap::Write( int fd, ssize_t pos )
 	if( pos != file_loc ) {
 		fprintf( stderr, "Checkpoint sequence error\n" );
 	}
+	dprintf( D_ALWAYS, "write(fd=%d,core_loc=0x%lx,len=0x%lx)\n",
+			fd, core_loc, len );
 	return write(fd,(void *)core_loc,(size_t)len);
 }
 
