@@ -1,304 +1,679 @@
-/* 
- * ast.h
- * Interface definition for the Abstract Syntax Tree (AST) module of the
- * condor submit.
- */
+//******************************************************************************
+// ast.h
+//
+// Interface definition for the Abstract Syntax Tree (AST) module. This module
+// has an interface to the Context module. It provides the following methods:
+//
+//     int EvalTree(ContextList* list, EvalResult* result)
+//     int EvalTree(Context* context,  EvalResult* result)
+//
+//         EvalTree() evaluates an expression tree either in a context or in a
+//         context list. The result of the evaluation and the type of the result
+//         is put into "result".
+//
+//     ExprTree* MinTree(ContextList* list)
+//
+//         If the result of the expression tree in a context list is true, a new
+//         expression tree which is the "minimum" part of the original
+//         expression tree that contributed to the result of the evaluation is
+//         returned.
+//
+//     void Diff(ContextList* list, VarTypeTable* table)
+//
+//         Diff() "subtracts" the resources required by the expression from
+//         "list". "table" provides information on whether a variable is a range
+//         type variable or a fixed-value type variable.
+//
+//     void AnalTree(FILE* f, ContextList* list)
+//
+//         AnalTree() prints out parts of an expression which can not be
+//         satisfied in "list". It also attempts to provide some alternatives
+//         for these unsatisfiable parts in "list".
+//
+//     void SumTree(FILE* f, ContextList* list)
+//
+//         SumTree() prints out parts of an expression which can not be
+//         satisfied in any of the contexts in "list". It also attempts to
+//         provide some alternatives for these unsatisfiable parts in the
+//         contexts in "list". "table" provides statistical information about
+//         the contexts in "list".
+//
+//******************************************************************************
 
-#include "type.h"
+#ifndef _AST_H_
+#define _AST_H_
 
-class Expression
+#include "exprtype.h"
+#include "astbase.h"
+
+////////////////////////////////////////////////////////////////////////////////
+// Class EvalResult is passed to ExprTree::EvalTree() to buffer the result of
+// the evaluation. The result can be integer, floating point, string, boolean,
+// null or error type. The type field specifies the type of the result.
+////////////////////////////////////////////////////////////////////////////////
+class EvalResult
 {
- public:
-  Expression() {};
-  virtual ~Expression() {};
-  virtual void Display() = 0;
-  virtual void EvalTree(class Context *, class Context *, class Max_factor *) = 0;
-  char unit;
+    public :
+
+    	EvalResult() {};
+  	~EvalResult() { if(type == LX_STRING) delete s; }
+
+	void fPrintResult(FILE *); // for debugging
+
+   	union
+    	{
+   	    int i;
+   	    float f;
+   	    char* s;
+   	    int b;
+        };
+  	LexemeType type;
 };
 
-
-class Variable : public Expression
+class Variable : public VariableBase
 {
- public:
+    public :
   
-  Variable(char *n)
-  {
-    name = new char[strlen(n) + 1];
-    strcpy(name, n);
-  }
+  	Variable(char*name) : VariableBase(name) {}
 
-  virtual ~Variable() { delete name; }
+  	virtual int         EvalTree(ContextList*, EvalResult*);
+  	virtual int         EvalTree(Context*, EvalResult*);
 
-  virtual void Display();
-  virtual void EvalTree(class Context *, class Context *, class Max_factor *);
+  	virtual ExprTree*   MinTree(ContextList*);
+  	virtual void        Diff(ContextList*, VarTypeTable*);
+/*
+  	virtual void        AnalTree(FILE*, ContextList*);
+  	virtual void        SumTree(FILE*, ContextList*);
 
- private:
-  char *name;
+*/
+        virtual void        PrintToStr(char*);
+	/*
+
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
 };
 
-class Factor : public Expression
+class Integer : public IntegerBase
 {
- public:
-  virtual lexeme_type MyType() = 0;
+    public :
+
+  	Integer(int i) : IntegerBase(i) {}
+
+	virtual	int	    operator >(ExprTree&);
+	virtual	int	    operator >=(ExprTree&);
+	virtual	int	    operator <(ExprTree&);
+	virtual	int	    operator <=(ExprTree&);
+ 
+  	virtual int         EvalTree(ContextList*, EvalResult*);
+  	virtual int         EvalTree(Context*, EvalResult*);
+
+/*
+  	virtual void        AnalTree(FILE*, ContextList*);
+  	virtual void        SumTree(FILE*, ContextList*);
+
+*/
+        virtual void        PrintToStr(char*);
+	/*
+
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
 };
 
-class Max_factor
+
+class Float: public FloatBase
 {
- public:
-  Max_factor() {};
-  ~Max_factor() { if(type == LX_STRING) delete s; }
-  lexeme_type ValType() { return type; }
-  void AssignType(lexeme_type t) { type = t; }
+    public :
 
-  union {
-   int i;
-   float f;
-   char *s;
-   int b;
-  };
+  	Float(float f) : FloatBase(f) {}
 
- private:
-  lexeme_type type;
+	virtual	int	    operator >(ExprTree&);
+	virtual	int	    operator >=(ExprTree&);
+	virtual	int	    operator <(ExprTree&);
+	virtual	int	    operator <=(ExprTree&);
+
+  	virtual int         EvalTree(ContextList*, EvalResult*);
+  	virtual int         EvalTree(Context*, EvalResult*);
+
+/*
+  	virtual void        AnalTree(FILE*, ContextList*);
+  	virtual void        SumTree(FILE*, ContextList*);
+
+*/
+        virtual void        PrintToStr(char*);
+	/*
+
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
 };
 
-class Integer : public Factor
+
+class String : public StringBase
 {
- public:
-  Integer(int v) { value = v; }
-  virtual ~Integer() {}
-  virtual void Display();
-  virtual lexeme_type MyType() { return LX_INTEGER; }
-  virtual void EvalTree(Context *, Context *, Max_factor *);
-  int MyValue() { return value; }
-  void AssignValue(int v) { value  = v; }
+    public :
 
- private:
-  int value;
+  	String(char* s) : StringBase(s) {}
+
+  	virtual int         EvalTree(ContextList*, EvalResult*);
+  	virtual int         EvalTree(Context*, EvalResult*);
+
+/*
+  	virtual void        AnalTree(FILE*, ContextList*);
+  	virtual void        SumTree(FILE*, ContextList*);
+
+	*/
+        virtual void        PrintToStr(char*);
+	/*
+
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
 };
 
 
-class Float: public Factor
+class Boolean : public BooleanBase
 {
- public:
+    public :
 
-  Float(float v) { value = v; }
-  virtual ~Float() {}
-  virtual void Display();
-  virtual lexeme_type MyType() { return LX_FLOAT; }
-  virtual void EvalTree(Context *, Context *, Max_factor *);
-  float MyValue() { return value; }
-  void AssignValue(float v) { value = v; }
+  	Boolean(int b) : BooleanBase(b) {}
 
- private:
-  float value;
+  	virtual int         EvalTree(ContextList*, EvalResult*);
+  	virtual int         EvalTree(Context*, EvalResult*);
+
+/*
+  	virtual void        AnalTree(FILE*, ContextList*);
+  	virtual void        SumTree(FILE*, ContextList*);
+
+	*/
+        virtual void        PrintToStr(char*);
+/*
+
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
 };
 
-
-class String : public Factor
+class Null : public NullBase
 {
- public:
+    public :
 
-  String (char *s)
-  {
-    value = new char[strlen(s) + 1];
-    strcpy(value, s);
-  }
-  virtual ~String() { delete value; }
-  virtual void Display();
-  virtual lexeme_type MyType(){ return LX_STRING; }
-  virtual void EvalTree(Context *, Context *, Max_factor *);
-  char *MyValue() { return value; }
+  	Null() : NullBase() {}
 
- private:
-  char *value;
+  	virtual int         EvalTree(ContextList*, EvalResult*);
+  	virtual int         EvalTree(Context*, EvalResult*);
+
+/*
+  	virtual void        AnalTree(FILE*, ContextList*);
+  	virtual void        SumTree(FILE*, ContextList*);
+
+	*/
+        virtual void        PrintToStr(char*);
+	/*
+
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
 };
 
-
-class Boolean : public Factor
+class Error : public ErrorBase
 {
- public:
-  Boolean (int v) { value = v; }
-  virtual ~Boolean() {}
-  virtual void Display();
-  virtual lexeme_type MyType() { return LX_BOOL; }
-  virtual void EvalTree(Context *, Context *, Max_factor *);
-  int MyValue() { return value; }
+    public :
 
- private:
-  int value;
+	Error() : ErrorBase() {}
+
+  	virtual int         EvalTree(ContextList*, EvalResult*);
+  	virtual int         EvalTree(Context*, EvalResult*);
+
+/*
+  	virtual void        AnalTree(FILE*, ContextList*);
+  	virtual void        SumTree(FILE*, ContextList*);
+
+	*/
+        virtual void        PrintToStr(char*);
+	/*
+
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
 };
 
-class Binary_op: public Expression
+class BinaryOp: public BinaryOpBase
 {
- public:
-  virtual lexeme_type OpType() = 0;
+    public :
+
+/*
+  	virtual void        AnalTree(FILE*, ContextList*);
+  	virtual void        SumTree(FILE*, ContextList*);
+
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
 };
 
-class Add_op: public Binary_op
+class AddOp: public AddOpBase
 {
- public:
-  Add_op(Expression *l, Expression *r) { larg = l; rarg = r; }
-  virtual ~Add_op() { delete larg; delete rarg; }
-  virtual lexeme_type OpType() { return LX_ADD; }
-  virtual void EvalTree(Context *, Context *, Max_factor *);
-  virtual void Display();
+    public :
 
- private:
-  Expression *larg, *rarg;
+  	AddOp(ExprTree* l, ExprTree* r) : AddOpBase(l, r) {}
+
+  	virtual int         EvalTree(ContextList*, EvalResult*);
+  	virtual int         EvalTree(Context*, EvalResult*);
+
+/*
+  	virtual void        AnalTree(FILE*, ContextList*);
+  	virtual void        SumTree(FILE*, ContextList*);
+
+	*/
+        virtual void        PrintToStr(char*);
+	/*
+
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
 };
 
 
-class Sub_op: public Binary_op
+class SubOp: public SubOpBase
 {
- public:
-  Sub_op(Expression *l, Expression *r) { larg = l; rarg = r; }
-  virtual ~Sub_op() { delete larg; delete rarg; }
-  virtual lexeme_type OpType() { return LX_SUB; }
-  virtual void EvalTree(Context *, Context *, Max_factor *);
-  virtual void Display();
+    public :
 
- private:
-  Expression *larg, *rarg;
+  	SubOp(ExprTree* l, ExprTree* r) : SubOpBase(l, r) {}
+
+  	virtual int         EvalTree(ContextList*, EvalResult*);
+  	virtual int         EvalTree(Context*, EvalResult*);
+
+/*
+  	virtual void        AnalTree(FILE*, ContextList*);
+  	virtual void        SumTree(FILE*, ContextList*);
+
+	*/
+        virtual void        PrintToStr(char*);
+	/*
+
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
 };
 
 
-class Mult_op: public Binary_op
+class MultOp: public MultOpBase
 {
- public:
-  Mult_op(Expression *l, Expression *r) { larg = l; rarg = r; }
-  virtual ~Mult_op() { delete larg; delete rarg; }
-  virtual lexeme_type OpType() { return LX_MULT; }
-  virtual void EvalTree(Context *, Context *, Max_factor *);
-  virtual void Display();
+    public :
 
- private:
-  Expression *larg, *rarg;
+  	MultOp(ExprTree* l, ExprTree* r) : MultOpBase(l, r) {}
+
+  	virtual int         EvalTree(ContextList*, EvalResult*);
+  	virtual int         EvalTree(Context*, EvalResult*);
+
+/*
+  	virtual void        AnalTree(FILE*, ContextList*);
+  	virtual void        SumTree(FILE*, ContextList*);
+
+	*/
+        virtual void        PrintToStr(char*);
+	/*
+
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
 };
 
 
-class Div_op: public Binary_op
+class DivOp: public DivOpBase
 {
- public:
-  Div_op(Expression *l, Expression *r) { larg = l; rarg = r; }
-  virtual ~Div_op() { delete larg; delete rarg; }
-  virtual lexeme_type OpType() { return LX_DIV; }
-  virtual void EvalTree(Context *, Context *, Max_factor *);
-  virtual void Display();
+    public :
 
- private:
-  Expression *larg, *rarg;
+  	DivOp(ExprTree* l, ExprTree* r) : DivOpBase(l, r) {}
+
+  	virtual int         EvalTree(ContextList*, EvalResult*);
+  	virtual int         EvalTree(Context*, EvalResult*);
+
+/*
+  	virtual void        AnalTree(FILE*, ContextList*);
+  	virtual void        SumTree(FILE*, ContextList*);
+
+	*/
+        virtual void        PrintToStr(char*);
+	/*
+
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
 };
 
 
-class Eq_op: public Binary_op
+class EqOp: public EqOpBase
 {
- public:
-  Eq_op(Expression *l, Expression *r) { larg = l; rarg = r; }
-  virtual ~Eq_op() { delete larg; delete rarg; }
-  virtual lexeme_type OpType() { return LX_EQ; }
-  virtual void EvalTree(Context *, Context *, Max_factor *);
-  virtual void Display();
+    public :
 
- private:
-  Expression *larg, *rarg;
+  	EqOp(ExprTree* l, ExprTree* r) : EqOpBase(l, r) {}
+
+  	virtual int         EvalTree(ContextList*, EvalResult*);
+  	virtual int         EvalTree(Context*, EvalResult*);
+
+  	virtual ExprTree*   MinTree(ContextList*);
+  	virtual void        Diff(ContextList*, VarTypeTable*);
+/*
+  	virtual void        AnalTree(FILE*, ContextList*);
+  	virtual void        SumTree(FILE*, ContextList*);
+
+	*/
+        virtual void        PrintToStr(char*);
+	/*
+
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
 };
 
 
-class Neq_op: public Binary_op
+class NeqOp: public NeqOpBase
 {
- public:
-  Neq_op(Expression *l, Expression *r) { larg = l; rarg = r; }
-  virtual ~Neq_op() { delete larg; delete rarg; }
-  virtual lexeme_type OpType() { return LX_NEQ; }
-  virtual void EvalTree(Context *, Context *, Max_factor *);
-  virtual void Display();
+    public :
 
- private:
-  Expression *larg, *rarg;
+  	NeqOp(ExprTree* l, ExprTree* r) : NeqOpBase(l, r) {}
+
+  	virtual int         EvalTree(ContextList*, EvalResult*);
+  	virtual int         EvalTree(Context*, EvalResult*);
+
+  	virtual ExprTree*   MinTree(ContextList*);
+  	virtual void        Diff(ContextList*, VarTypeTable*);
+/*
+  	virtual void        AnalTree(FILE*, ContextList*);
+  	virtual void        SumTree(FILE*, ContextList*);
+
+	*/
+        virtual void        PrintToStr(char*);
+	/*
+
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
 };
 
 
-class Gt_op: public Binary_op
+class GtOp: public GtOpBase
 {
- public:
-  Gt_op(Expression *l, Expression *r) { larg = l; rarg = r; }
-  virtual ~Gt_op() { delete larg; delete rarg; }
-  virtual lexeme_type OpType() { return LX_GT; }
-  virtual void EvalTree(Context *, Context *, Max_factor *);
-  virtual void Display();
+    public :
 
- private:
-  Expression *larg, *rarg;
+  	GtOp(ExprTree* l, ExprTree* r) : GtOpBase(l, r) {}
+
+  	virtual int         EvalTree(ContextList*, EvalResult*);
+  	virtual int         EvalTree(Context*, EvalResult*);
+
+  	virtual ExprTree*   MinTree(ContextList*);
+  	virtual void        Diff(ContextList*, VarTypeTable*);
+/*
+  	virtual void        AnalTree(FILE*, ContextList*);
+  	virtual void        SumTree(FILE*, ContextList*);
+
+	*/
+        virtual void        PrintToStr(char*);
+	/*
+
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
 };
 
 
-class Ge_op: public Binary_op
+class GeOp: public GeOpBase
 {
- public:
-  Ge_op(Expression *l, Expression *r) { larg = l; rarg = r; }
-  virtual ~Ge_op() { delete larg; delete rarg; }
-  virtual lexeme_type OpType() { return LX_GE; }
-  virtual void EvalTree(Context *, Context *, Max_factor *);
-  virtual void Display();
+    public :
 
- private:
-  Expression *larg, *rarg;
+  	GeOp(ExprTree* l, ExprTree* r) : GeOpBase(l, r) {}
+
+  	virtual int         EvalTree(ContextList*, EvalResult*);
+  	virtual int         EvalTree(Context*, EvalResult*);
+
+  	virtual ExprTree*   MinTree(ContextList*);
+  	virtual void        Diff(ContextList*, VarTypeTable*);
+/*
+  	virtual void        AnalTree(FILE*, ContextList*);
+  	virtual void        SumTree(FILE*, ContextList*);
+
+	*/
+        virtual void        PrintToStr(char*);
+	/*
+
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
 };
 
 
-class Lt_op: public Binary_op
+class LtOp: public LtOpBase
 {
- public:
-  Lt_op(Expression *l, Expression *r) { larg = l; rarg = r; }
-  virtual ~Lt_op() { delete larg; delete rarg; }
-  virtual lexeme_type OpType() { return LX_LT; }
-  virtual void EvalTree(Context *, Context *, Max_factor *);
-  virtual void Display();
+    public :
 
- private:
-  Expression *larg, *rarg;
+  	LtOp(ExprTree* l, ExprTree* r) : LtOpBase(l, r) {}
+
+  	virtual int         EvalTree(ContextList*, EvalResult*);
+  	virtual int         EvalTree(Context*, EvalResult*);
+
+  	virtual ExprTree*   MinTree(ContextList*);
+  	virtual void        Diff(ContextList*, VarTypeTable*);
+/*
+  	virtual void        AnalTree(FILE*, ContextList*);
+  	virtual void        SumTree(FILE*, ContextList*);
+
+	*/
+        virtual void        PrintToStr(char*);
+	/*
+
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
 };
 
 
-class Le_op: public Binary_op
+class LeOp: public LeOpBase
 {
- public:
-  Le_op(Expression *l, Expression *r) { larg = l; rarg = r; }
-  virtual ~Le_op() { delete larg; delete rarg; }
-  virtual lexeme_type OpType() { return LX_LE; }
-  virtual void EvalTree(Context *, Context *, Max_factor *);
-  virtual void Display();
+    public :
 
- private:
-  Expression *larg, *rarg;
+  	LeOp(ExprTree* l, ExprTree* r) : LeOpBase(l, r) {}
+
+  	virtual int         EvalTree(ContextList*, EvalResult*);
+  	virtual int         EvalTree(Context*, EvalResult*);
+
+  	virtual ExprTree*   MinTree(ContextList*);
+  	virtual void        Diff(ContextList*, VarTypeTable*);
+/*
+  	virtual void        AnalTree(FILE*, ContextList*);
+  	virtual void        SumTree(FILE*, ContextList*);
+
+	*/
+        virtual void        PrintToStr(char*);
+	/*
+
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
 };
 
-
-class And_op: public Binary_op
+class AndOp: public AndOpBase
 {
- public:
-  And_op(Expression *l, Expression *r) { larg = l; rarg = r; }
-  virtual ~And_op() { delete larg; delete rarg; }
-  virtual lexeme_type OpType() { return LX_AND; }
-  virtual void EvalTree(Context *, Context *, Max_factor *);
-  virtual void Display();
+    public :
 
- private:
-  Expression *larg, *rarg;
+  	AndOp(ExprTree* l, ExprTree* r) : AndOpBase(l, r) {}
+
+  	virtual int         EvalTree(ContextList*, EvalResult*);
+  	virtual int         EvalTree(Context*, EvalResult*);
+
+  	virtual ExprTree*   MinTree(ContextList*);
+  	virtual void        Diff(ContextList*, VarTypeTable*);
+/*
+  	virtual void        AnalTree(FILE*, ContextList*);
+  	virtual void        SumTree(FILE*, ContextList*);
+
+	*/
+        virtual void        PrintToStr(char*);
+	/*
+
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
 };
 
 
-class Or_op: public Binary_op
+class OrOp : public OrOpBase
 {
- public:
-  Or_op(Expression *l, Expression *r) { larg = l; rarg = r; } 
-  virtual ~Or_op() { delete larg; delete rarg; }
-  virtual lexeme_type OpType() { return LX_OR; }
-  virtual void EvalTree(Context *, Context *, Max_factor *);
-  virtual void Display();
+    public :
 
- private:
-  Expression *larg, *rarg;
+  	OrOp(ExprTree* l, ExprTree* r) : OrOpBase(l, r) {}
+
+  	virtual int         EvalTree(ContextList*, EvalResult*);
+  	virtual int         EvalTree(Context*, EvalResult*);
+
+  	virtual ExprTree*   MinTree(ContextList*);
+/*
+  	virtual void        AnalTree(FILE*, ContextList*);
+  	virtual void        SumTree(FILE*, ContextList*);
+
+	*/
+        virtual void        PrintToStr(char*);
+	/*
+
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
 };
 
-extern "C" void dprintf(int, char *fmt, ...);
+class AssignOp: public AssignOpBase
+{
+    public :
+
+  	AssignOp(ExprTree* l, ExprTree* r) : AssignOpBase(l, r) {}
+
+  	virtual int         EvalTree(ContextList*, EvalResult*);
+  	virtual int         EvalTree(Context*, EvalResult*);
+
+  	virtual ExprTree*   MinTree(ContextList*);
+  	virtual void        Diff(ContextList*, VarTypeTable*);
+/*
+  	virtual void        AnalTree(FILE*, ContextList*);
+  	virtual void        SumTree(FILE*, ContextList*);
+
+	*/
+        virtual void        PrintToStr(char*);
+
+	friend		    class Context;
+
+	/*
+
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
+};
+
+class AggOp : public BinaryOp // aggregate operator
+{
+    public :
+	
+	virtual int	    DeleteChild(AssignOp*);
+
+	friend	class	    Context;
+
+/*
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
+};
+
+class AggAddOp: public AggOp // aggregate add operator
+{
+    public :
+
+  	AggAddOp(ExprTree*, ExprTree*);
+
+  	virtual int         EvalTree(ContextList*, EvalResult*);
+  	virtual int         EvalTree(Context*, EvalResult*);
+
+/*
+  	virtual void        AnalTree(FILE*, ContextList*);
+  	virtual void        SumTree(FILE*, ContextList*);
+
+	*/
+        virtual void        PrintToStr(char*);
+	/*
+
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
+};
+
+class AggEqOp: public AggOp	// aggregate equal operator
+{
+    public :
+
+  	AggEqOp(ExprTree*, ExprTree*);
+
+  	virtual int         EvalTree(ContextList*, EvalResult*);
+  	virtual int         EvalTree(Context*, EvalResult*);
+
+  	virtual ExprTree*   MinTree(ContextList*);
+  	virtual void        Diff(ContextList*, VarTypeTable*);
+/*
+  	virtual void        AnalTree(FILE*, ContextList*);
+  	virtual void        SumTree(FILE*, ContextList*);
+
+	*/
+        virtual void        PrintToStr(char*);
+	/*
+
+    private :
+
+        virtual int         MyLength();
+        virtual void        Indent(char**);
+	*/
+};
+
+#endif
