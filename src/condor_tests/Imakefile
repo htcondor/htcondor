@@ -182,19 +182,6 @@ DESC(job_filexfer_trans-nodflts_van,"Vanilla: all transfers explicitely off - co
 RUN(job_filexfer_trans-nodflts_van)
 TESTCLASS(job_filexfer_trans-nodflts_van,filexfer)
 
-
-
-/*
-** 
-** Leave Off for now
-**
-**
-**DESC(job_core_plus_sched,"Scheduler: Verify +entries go to job ad")
-**RUN(job_core_plus_sched)
-**TESTCLASS(job_core_plus_sched,core)
-**
-*/
-
 /* Tests which fail in groups but run singly reliably */
 
 /*
@@ -348,6 +335,10 @@ DESC(job_core_plus_van,"Vanilla: Verify +entries go to job ad")
 RUN(job_core_plus_van)
 TESTCLASS(job_core_plus_van,core)
 
+DESC(job_core_plus_sched,"Scheduler: Verify +entries go to job ad")
+RUN(job_core_plus_sched)
+TESTCLASS(job_core_plus_sched,core)
+
 DESC(job_core_priority_sched,"Scheduler: Verify respect for job priority")
 RUN(job_core_priority_sched)
 TESTCLASS(job_core_priority_sched,core)
@@ -374,12 +365,9 @@ DESC(job_filexfer_base_van,"Vanilla: Is executable moved correctly to initialdir
 RUN(job_filexfer_base_van)
 TESTCLASS(job_filexfer_base_van,filexfer)
 
-/* On solaris we run into /bin/cp not having and arg 0 which matches
-** solaris expectation so it fails...
-**DESC(job_filexfer_basic_sched,"Scheduler: exercise of file transfer via cp in to out")
-**RUN(job_filexfer_basic_sched)
-**TESTCLASS(job_filexfer_basic_sched,filexfer)
-*/
+DESC(job_filexfer_basic_sched,"Scheduler: exercise of file transfer via cp in to out")
+RUN(job_filexfer_basic_sched)
+TESTCLASS(job_filexfer_basic_sched,filexfer)
 
 DESC(job_filexfer_input-onegone_van,"Vanilla: test for failure when specified input file is missing")
 RUN(job_filexfer_input-onegone_van)
