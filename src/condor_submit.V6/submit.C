@@ -2295,8 +2295,9 @@ ComputeRootDir()
 			exit( 1 );
 		}
 
-		check_path_length(rootdir, RootDir);
-		(void) strcpy (JobRootdir, rootdir);
+		MyString rootdir_str = rootdir;
+		check_and_universalize_path(rootdir_str, RootDir);
+		(void) strcpy (JobRootdir, rootdir_str.Value());
 		free(rootdir);
 	}
 }
