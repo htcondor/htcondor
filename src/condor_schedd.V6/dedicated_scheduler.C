@@ -1831,7 +1831,6 @@ DedicatedScheduler::sortResources( void )
 	ClassAd* res;
 	match_rec* mrec;
 	char buf[256];
-	buf[0] = '\0';
 
 		// We want to sort all the resources we have into the
 		// avail_time_list
@@ -1841,15 +1840,7 @@ DedicatedScheduler::sortResources( void )
 	avail_time_list = new AvailTimeList;
 	resources->Rewind();
 	while( (res = resources->Next()) ) {
-		if( ! res->LookupString(ATTR_NAME, buf) ) {
-			dprintf( D_ALWAYS, "DedicatedScheduler::sortResources: ERROR: "
-					 "%s not found in ClassAd, skipping resource",
-					 ATTR_NAME ); 
-				// Don't do anything w/ this resource, just go on. 
-			continue;
-		}
-		HashKey key(buf);
-		if( all_matches->lookup(key, mrec) < 0 ) {
+		if( ! (mrec = getMrec(res, buf)) ) {
 				// We don't have a match_rec for this resource yet, so
 				// put it in our unclaimed_resources list
 			dprintf( D_FULLDEBUG, "sortResources(): No match_rec for %s, "
@@ -2086,15 +2077,12 @@ DedicatedScheduler::computeSchedule( void )
 				last = 1;
 			}
 			candidates->Rewind();
+			char buf[512];
 			while( (ad = candidates->Next()) ) {
-				char name_buf[256];
-				name_buf[0] = '\0';
-				ad->LookupString(ATTR_NAME, name_buf);
-				HashKey key(name_buf);
-				if( all_matches->lookup(key, mrec) < 0 ) {
+				if( ! (mrec = getMrec(ad, buf)) ) {
 					EXCEPT( "no match for %s in all_matches table, yet " 
 							"allocated to dedicated job %d.0!",
-							name_buf, cluster ); 
+							buf, cluster ); 
 				}
 				char* tmp_ip = &(mrec->peer)[1];
 				if( master_ip && 
@@ -2814,6 +2802,33 @@ DedicatedScheduler::getUnusedTime( match_rec* mrec )
 		EXCEPT( "Unknown status in match rec (%d)", mrec->status );
 	}
 	return 0;
+}
+
+
+match_rec*
+DedicatedScheduler::getMrec( ClassAd* ad, char* buf )
+{
+	char my_buf[512];
+	char* name;
+	match_rec* mrec;
+
+	if( buf ) {
+		name = buf;
+	} else {
+		name = my_buf;
+	}
+	name[0] = '\0';
+
+	if( ! ad->LookupString(ATTR_NAME, name) ) {
+		dprintf( D_ALWAYS, "ERROR in DedicatedScheduler::getMrec(): "
+				 "No %s in ClassAd!\n", ATTR_NAME );
+		return NULL;
+	}
+	HashKey key(name);
+	if( all_matches->lookup(key, mrec) < 0 ) {
+		return NULL;
+	}
+	return mrec;
 }
 
 

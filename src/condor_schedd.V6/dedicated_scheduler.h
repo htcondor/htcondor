@@ -258,6 +258,16 @@ class DedicatedScheduler : public Service {
 		*/
 	int getUnusedTime( match_rec* mrec );
 
+		/** Find the match record that corresponds to the given
+			resource classad.  If the second argument is non-NULL, the
+			value of ATTR_NAME from the given resource ad will be
+			printed there.
+			@param ad ClassAd for the resource you want to find
+			@param buf An optional buffer to store ATTR_NAME
+			@return pointer to the mrec if found, NULL if not
+		*/
+	match_rec* getMrec( ClassAd* ad, char* buf = NULL );
+
 
 		// // // // // // 
 		// Data members 
