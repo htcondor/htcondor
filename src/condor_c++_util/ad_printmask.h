@@ -15,7 +15,7 @@ class AttrListPrintMask
 	~AttrListPrintMask ();
 
 	// register a format and an attribute
-	void registerFormat (char *, const char *);
+	void registerFormat (char *fmt, const char *attr, char*alternate="");
 	
 	// clear all formats
 	void clearFormats (void);
@@ -27,6 +27,7 @@ class AttrListPrintMask
   private:
 	List<char> formats;
 	List<char> attributes;
+	List<char> alternates;
 
 	void clearList (List<char> &);
 	void copyList  (List<char> &, List<char> &);

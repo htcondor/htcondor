@@ -12,6 +12,7 @@ AttrListPrintMask (const AttrListPrintMask &pm)
 {
 	copyList (formats, (List<char> &) pm.formats);
 	copyList (attributes, (List<char> &) pm.attributes);
+	copyList (alternates, (List<char> &) pm.alternates);
 }
 
 
@@ -23,10 +24,11 @@ AttrListPrintMask::
 
 
 void AttrListPrintMask::
-registerFormat (char *fmt, const char *attr)
+registerFormat (char *fmt, const char *attr, char *alternate)
 {
-	formats.Append (new_strdup (fmt));
-	attributes.Append (new_strdup (attr));
+	formats.Append   (new_strdup (fmt));
+	attributes.Append(new_strdup (attr));
+	alternates.Append(new_strdup(alternate));
 }
 
 
@@ -35,26 +37,32 @@ clearFormats (void)
 {
 	clearList (formats);
 	clearList (attributes);
+	clearList (alternates);
 }
 
 
 int AttrListPrintMask::
 display (FILE *file, AttrList *al)
 {
-	char *fmt, *attr;
+	char *fmt, *attr, *alt;
 	ExprTree *tree;
 	EvalResult result;
 	int retval = 1;
 
 	formats.Rewind();
 	attributes.Rewind();
+	alternates.Rewind();
 
 	// for each item registered in the print mask
-	while ((fmt = formats.Next()) && (attr = attributes.Next()))
+	while ((fmt=formats.Next()) && (attr=attributes.Next()) &&
+				(alt=alternates.Next()))
 	{
 		// get the expression tree of the attribute
 		if (!(tree = al->Lookup (attr)))
+		{
+			if (alt) printf ("%s", alt);
 			continue;
+		}
 
 		// print the result
 		if (tree->EvalTree (al, NULL, &result))
