@@ -21,10 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-/* Here is the version string - update before a public release */
-static char * CondorVersion = "$Version: 6.0 patchlevel 2 1998/5/5 $";
- 
-
 /* 
 
   This file implements config(), the function all daemons call to
@@ -51,6 +47,7 @@ static char * CondorVersion = "$Version: 6.0 patchlevel 2 1998/5/5 $";
 #include "string_list.h"
 #include "condor_attributes.h"
 #include "my_hostname.h"
+#include "condor_version.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -71,6 +68,7 @@ void init_tilde();
 void fill_attributes(ClassAd*);
 void init_config();
 void clear_config();
+void reinsert_specials( char* );
 
 // External variables
 extern int	ConfigLineNo;
@@ -108,11 +106,8 @@ config_fill_ad(ClassAd* ad, char* mySubsys)
 	}
 	
 	/* Insert the version into the ClassAd */
-	if (ad) {
-		sprintf(buffer,"%s=\"%s\"", ATTR_VERSION, CondorVersion );
-		ad->Insert(buffer);
-	}
-
+	sprintf(buffer,"%s=\"%s\"", ATTR_VERSION, CondorVersion() );
+	ad->Insert(buffer);
 }
 
 
@@ -155,20 +150,12 @@ real_config(ClassAd *classAd, char *mySubsystem, char* host)
 		// Try to find user "condor" in the passwd file.
 	init_tilde();
 
-		// Insert entries for "tilde" and "hostname". Note that
-		// "hostname" ends up as just the machine name w/o the
-		// . separators.  "full_hostname" is the full hostname. 
+		// Insert an entry for "tilde", (~condor)
 	if( tilde ) {
 		insert( "tilde", tilde, ConfigTab, TABLESIZE );
 	} else {
 			// What about tilde if there's no ~condor? 
 	}
-	if( host ) {
-		insert( "hostname", host, ConfigTab, TABLESIZE );
-	} else {
-		insert( "hostname", my_hostname(), ConfigTab, TABLESIZE );
-	}
-	insert( "full_hostname", my_full_hostname(), ConfigTab, TABLESIZE );
 
 		// Try to find the global config file
 	if( ! (config_file = find_global()) ) {
@@ -194,7 +181,25 @@ real_config(ClassAd *classAd, char *mySubsystem, char* host)
 	}
 	free( config_file );
 
-	
+		// Insert entries for "hostname" and "full_hostname".  We do
+		// this here b/c we need these macros defined so that we can
+		// find the local config file if that's defined in terms of
+		// hostname or something.  However, we do this after reading
+		// the global config file so people can put the
+		// DEFAULT_DOMAIN_NAME parameter somewhere if they need it. 
+		// -Derek Wright <wright@cs.wisc.edu> 5/11/98
+	if( host ) {
+		insert( "hostname", host, ConfigTab, TABLESIZE );
+	} else {
+		insert( "hostname", my_hostname(), ConfigTab, TABLESIZE );
+	}
+	insert( "full_hostname", my_full_hostname(), ConfigTab, TABLESIZE );
+
+		// Also insert tilde since we don't want that over-written.
+	if( tilde ) {
+		insert( "tilde", tilde, ConfigTab, TABLESIZE );
+	}
+
 		// Try to find and read the local config file
 	if( config_file = find_local() ) {
 		if( access( config_file, R_OK ) != 0 ) {
@@ -216,6 +221,9 @@ real_config(ClassAd *classAd, char *mySubsystem, char* host)
 		free( config_file );
 	}
 
+		// Re-insert the special macros.  We don't want the user to 
+		// override them, since it's not going to work.
+	reinsert_specials( host );
 
 		// Try to find and read the global root config file
 	if( config_file = find_global_root() ) {
@@ -229,6 +237,10 @@ real_config(ClassAd *classAd, char *mySubsystem, char* host)
 		}
 		free( config_file );
 	}
+
+		// Re-insert the special macros.  We don't want the user to 
+		// override them, since it's not going to work.
+	reinsert_specials( host );
 
 		// Try to find and read the local root config file
 	if( config_file = find_local_root() ) {
@@ -250,6 +262,10 @@ real_config(ClassAd *classAd, char *mySubsystem, char* host)
 		}
 		free( config_file );
 	}
+
+		// Re-insert the special macros.  We don't want the user to 
+		// override them, since it's not going to work.
+	reinsert_specials( host );
 
 		// Now that we've read all the config files, there are some
 		// attributes we want to define with defaults if they're not
@@ -301,7 +317,6 @@ char*
 find_local()
 {
 	return param( "LOCAL_CONFIG_FILE" );
-
 }
 
 
@@ -608,6 +623,21 @@ get_op_sys()
 }
 
 #endif
+
+void
+reinsert_specials( char* host )
+{
+	if( tilde ) {
+		insert( "tilde", tilde, ConfigTab, TABLESIZE );
+	}
+	if( host ) {
+		insert( "hostname", host, ConfigTab, TABLESIZE );
+	} else {
+		insert( "hostname", my_hostname(), ConfigTab, TABLESIZE );
+	}
+	insert( "full_hostname", my_full_hostname(), ConfigTab, TABLESIZE );
+}
+
 
 
 #if defined(__cplusplus)
