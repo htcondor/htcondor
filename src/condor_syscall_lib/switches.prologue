@@ -419,3 +419,8 @@ REMAP_SIX( mmap, _mmap, char *, char *, size_t, int, int, int, off_t )
 #define FORK _FORK_sys
 #define PIPE _PIPE_sys
 #endif
+
+#if defined(OSF1)
+#define FORK _FORK
+#endif
+
