@@ -72,13 +72,13 @@ usage()
 	char word[10];
 	switch( mode ) {
 	case IDLE:
-		sprintf( word, "Releases" );
+		sprintf( word, "Release" );
 		break;
 	case HELD:
-		sprintf( word, "Holds" );
+		sprintf( word, "Hold" );
 		break;
 	case REMOVED:
-		sprintf( word, "Removes" );
+		sprintf( word, "Remove" );
 		break;
 	default:
 		fprintf( stderr, "ERROR: Unknown mode: %d\n", mode );
@@ -89,6 +89,11 @@ usage()
 	fprintf( stderr, " where [options] is zero or more of:\n" );
 	fprintf( stderr, "  -help               Display this message and exit\n" );
 	fprintf( stderr, "  -version            Display version information and exit\n" );
+
+// i'm not sure we want -debug documented.  if we change our minds, we
+// should just uncomment the next line
+//	fprintf( stderr, "  -debug              Display debugging information while running\n" );
+
 	fprintf( stderr, "  -name schedd_name   Connect to the given schedd\n" );
 	fprintf( stderr, "  -pool hostname      Use the given central manager to find daemons\n" );
 	fprintf( stderr, "  -addr <ip:port>     Connect directly to the given \"sinful string\"\n" );
@@ -96,8 +101,9 @@ usage()
 	fprintf( stderr, "  cluster.proc        %s the given job\n", word );
 	fprintf( stderr, "  cluster             %s the given cluster of jobs\n", word );
 	fprintf( stderr, "  user                %s all jobs owned by user\n", word );
+	fprintf( stderr, "  -constraint expr    %s all jobs matching the boolean expression\n", word );
 	fprintf( stderr, "  -all                %s all jobs "
-			 "(Cannot be used with other constraints)\n", word );
+			 "(cannot be used with other constraints)\n", word );
 	exit( 1 );
 }
 
@@ -146,6 +152,8 @@ main( int argc, char *argv[] )
 
 
 	if( argc < 2 ) {
+			// We got no indication of what to act on
+		fprintf( stderr, "You did not specify any jobs\n" ); 
 		usage();
 	}
 
@@ -236,8 +244,11 @@ main( int argc, char *argv[] )
 			case 'v':
 				version();
 				break;
+			case 'h':
+				usage();
+				break;
 			default:
-					// This gets hit for "-h", too
+				fprintf( stderr, "Unrecognized option: %s\n", arg ); 
 				usage();
 				break;
 			}
@@ -253,7 +264,10 @@ main( int argc, char *argv[] )
 	}
 
 	if( ! (All || nArgs) ) {
-			// We got no indication of what to remove
+			// We got no indication of what to act on
+
+
+		fprintf( stderr, "You did not specify any jobs\n" ); 
 		usage();
 	}
 
