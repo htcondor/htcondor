@@ -52,17 +52,13 @@ on the machine you are using.  To do this, edit the local config file
 START : Owner == "your user name" || Owner == "condor"
 SUSPEND : False
 CONTINUE : True
-VACATE : False
+PREEMPT : False
 KILL : False
 
-To force "vanilla jobs" to run (see the manual, or the condor_submit
-man page for full details on vanilla jobs) to run, you will also want
-to set the vanilla versions of these expressions as well:
+Of course, you should change "your user name" to the string containing
+your actual user name.  For example:
 
-SUSPEND_VANILLA : False
-CONTINUE_VANILLA : True
-VACATE_VANILLA : False
-KILL_VANILLA : False
+START : Owner == "coltrane" || Owner == "condor"
 
 To make these changes take effect, use "condor_reconfig" to
 reconfigure the local host, or "condor_reconfig [hostname1]
@@ -91,39 +87,39 @@ After running submit, your job queue should look something like:
 -- Schedd: perdita.cs.wisc.edu : <128.105.73.32:63364>
    ID    OWNER           SUBMITTED    CPU_USAGE  ST PRI SIZE CMD
 
-   1.0   condor          6/13 10:58   0+00:00:00 U  0   0.5  io.remote         
-   2.0   condor          6/13 10:58   0+00:00:00 U  0   0.5  env.remote        
-   3.0   condor          6/13 10:58   0+00:00:00 U  0   0.5  fstream.remote    
-   4.0   condor          6/13 10:58   0+00:00:00 U  0   0.5  loop.remote       
-   4.1   condor          6/13 10:58   0+00:00:00 U  0   0.5  loop.remote       
-   4.2   condor          6/13 10:58   0+00:00:00 U  0   0.5  loop.remote       
-   4.3   condor          6/13 10:58   0+00:00:00 U  0   0.5  loop.remote       
-   4.4   condor          6/13 10:58   0+00:00:00 U  0   0.5  loop.remote       
-   5.0   condor          6/13 10:58   0+00:00:00 U  0   0.5  registers.remote  
-   6.0   condor          6/13 10:58   0+00:00:00 U  0   0.5  reader.remote     
-   7.0   condor          6/13 10:58   0+00:00:00 U  0   0.5  printer.remote    
-   8.0   condor          6/13 10:58   0+00:00:00 U  0   0.5  fortIO.remote     
-   9.0   condor          6/13 10:58   0+00:00:00 U  0   0.0  sh_loop           
+   1.0   condor          6/13 10:58   0+00:00:00 I  0   0.5  io.remote         
+   2.0   condor          6/13 10:58   0+00:00:00 I  0   0.5  env.remote        
+   3.0   condor          6/13 10:58   0+00:00:00 I  0   0.5  fstream.remote    
+   4.0   condor          6/13 10:58   0+00:00:00 I  0   0.5  loop.remote       
+   4.1   condor          6/13 10:58   0+00:00:00 I  0   0.5  loop.remote       
+   4.2   condor          6/13 10:58   0+00:00:00 I  0   0.5  loop.remote       
+   4.3   condor          6/13 10:58   0+00:00:00 I  0   0.5  loop.remote       
+   4.4   condor          6/13 10:58   0+00:00:00 I  0   0.5  loop.remote       
+   5.0   condor          6/13 10:58   0+00:00:00 I  0   0.5  registers.remote  
+   6.0   condor          6/13 10:58   0+00:00:00 I  0   0.5  reader.remote     
+   7.0   condor          6/13 10:58   0+00:00:00 I  0   0.5  printer.remote    
+   8.0   condor          6/13 10:58   0+00:00:00 I  0   0.5  fortIO.remote     
+   9.0   condor          6/13 10:58   0+00:00:00 I  0   0.0  sh_loop           
 
-13 jobs; 13 unexpanded, 0 idle, 0 running, 0 malformed
+13 jobs; 13 idle, 0 running, 0 held
 
 Notice that loop.remote is in the queue with 5 entries 4.0, 4.1, etc.
 This is a "job cluster".  See the section on loop.c below for
 details. 
 
-All of these jobs have a status (listed in the "ST" column) of "U",
-unexpanded, meaning they have never been started by Condor.  If a job
-starts executing, it will have a status of "R", running:
+All of these jobs have a status (listed in the "ST" column) of "I",
+idle, meaning they are not being run by Condor.  If a job starts
+executing, it will have a status of "R", running:
 
    ID    OWNER           SUBMITTED    CPU_USAGE  ST PRI SIZE COMMAND           
 
    1.0   condor          6/13 10:58   0+00:00:00 R  0   0.5  io.remote         
-   2.0   condor          6/13 10:58   0+00:00:00 U  0   0.5  env.remote        
-   3.0   condor          6/13 10:58   0+00:00:00 U  0   0.5  fstream.remote    
+   2.0   condor          6/13 10:58   0+00:00:00 I  0   0.5  env.remote        
+   3.0   condor          6/13 10:58   0+00:00:00 I  0   0.5  fstream.remote    
 
    ...
 
-13 jobs; 12 unexpanded, 0 idle, 1 running, 0 malformed
+13 jobs; 12 idle, 1 running, 0 held
 
 At this point, if you do a ps command to find all the Condor daemons
 on your machine, (such as "ps -aux | egrep condor_") you should see a
