@@ -31,6 +31,8 @@
 #include "util.h"
 #include "debug.h"
 
+extern char * DAP_SERVER;
+
 static bool
 submit_try( const char *exe, const char *command, CondorID &condorID )
 {
@@ -92,6 +94,7 @@ submit_try( const char *exe, const char *command, CondorID &condorID )
   return true;
 }
 
+
 //-------------------------------------------------------------------------
 bool
 submit_submit( const char* cmdFile, CondorID& condorID,
@@ -151,3 +154,123 @@ submit_submit( const char* cmdFile, CondorID& condorID,
   delete [] command;
   return success;
 }
+
+//-------------------------------------------------------------------------
+//-------------------------------------------------------------------------
+//-------------------------------------------------------------------------
+
+//--> DAP
+static bool
+dap_try( const char *exe, const char *command, CondorID &condorID )
+{
+  MyString  command_output("");
+
+  FILE * fp = popen(command, "r");
+  if (fp == NULL) {
+    debug_printf( DEBUG_NORMAL, "%s: popen() in submit_try failed!\n", command);
+    return false;
+  }
+  
+  //----------------------------------------------------------------------
+  // Parse DAP server's return message for dap_id.  This desperately
+  // needs to be replaced by a DAP Submit API.
+  //
+  // Typical dap_submit output looks like:
+
+  //skywalker(6)% dap_submit skywalker 1.dap
+  //Trying 128.105.165.17...
+  //connected to skywalker..
+  //sending request:
+  //     [
+  //        dap_type = "transfer";
+  //        src_url = "nest://db16.cs.wisc.edu/test4.txt"; 
+  //        dest_url = "nest://db18.cs.wisc.edu/test8.txt"; 
+  //    ]
+  //request accepted by the server and assigned a dap_id: 1
+  //----------------------------------------------------------------------
+
+  char buffer[UTIL_MAX_LINE_LENGTH];
+  buffer[0] = '\0';
+  
+  // Look for the line containing the word "dap_id".
+  // If we get an EOF, then something went wrong with _submit, so
+  // we return false.  The caller of this function can retry the submit
+  // by repeatedly calling this function.
+
+  do {
+    if (util_getline(fp, buffer, UTIL_MAX_LINE_LENGTH) == EOF) {
+      pclose(fp);
+	  debug_printf(DEBUG_NORMAL, "failed while reading from pipe.\n");
+	  debug_printf(DEBUG_NORMAL, "Read so far: %s\n", command_output.Value());
+      return false;
+    }
+	command_output += buffer;
+  } while (strstr(buffer, "dap_id") == NULL);
+  
+  {
+    int status = pclose(fp);
+    if (status == -1) {
+		debug_printf(DEBUG_NORMAL, "Read from pipe: %s\n", 
+					 command_output.Value());
+		debug_error( 1, DEBUG_NORMAL, "%s: pclose() in submit_try failed!\n", 
+					 command );
+		return false;
+    }
+  }
+
+
+  if (1 == sscanf(buffer, "request accepted by the server and assigned a dap_id: %d",
+                  & condorID._cluster)) {
+  }
+  
+  return true;
+}
+
+//-------------------------------------------------------------------------
+bool
+dap_submit( const char* cmdFile, CondorID& condorID,
+			   const char* DAGNodeName )
+{
+  char prependLines[8192];
+  char* command;
+  int cmdLen;
+  const char * exe = "dap_submit";
+
+  cmdLen = strlen( exe ) + strlen( cmdFile ) + 512;
+  command = new char[cmdLen];
+  if (command == NULL) {
+	  debug_error( 1, DEBUG_SILENT, "\nERROR: out of memory (%s:%d)!\n",
+				   __FILE__, __LINE__ );
+  }
+
+  // we use 2>&1 to make sure we get both stdout and stderr from command
+  sprintf( command, "%s %s %s -lognotes \"DAG Node: %s\" 2>&1", 
+  	   exe, DAP_SERVER, cmdFile, DAGNodeName );
+
+
+  //  dprintf( D_ALWAYS, "submit command is: %s\n", command );
+
+  bool success = false;
+  const int tries = 6;
+  int wait = 1;
+  
+  success = dap_try( exe, command, condorID );
+  for (int i = 1 ; i < tries && !success ; i++) {
+      debug_printf( DEBUG_NORMAL, "dap_submit try %d/%d failed, "
+                     "will try again in %d second%s\n", i, tries, wait,
+					 wait == 1 ? "" : "s" );
+      sleep( wait );
+	  success = dap_try( exe, command, condorID );
+	  wait = wait * 2;
+  }
+  if (!success && DEBUG_LEVEL(DEBUG_QUIET)) {
+    dprintf( D_ALWAYS, "dap_submit failed after %d tr%s.\n", tries,
+			tries == 1 ? "y" : "ies" );
+    dprintf( D_ALWAYS, "submit command was: %s\n", command );
+	delete[] command;
+	return false;
+  }
+  delete [] command;
+  return success;
+}
+//<-- DAP

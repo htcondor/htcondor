@@ -40,17 +40,21 @@
 
 //---------------------------------------------------------------------------
 Dag::Dag( const char* condorLogName, const int maxJobsSubmitted,
-		  const int maxPreScripts, const int maxPostScripts ) :
-	_maxPreScripts        (maxPreScripts),
-	_maxPostScripts       (maxPostScripts),
+	  const int maxPreScripts, const int maxPostScripts,
+	  const char* dapLogName = NULL) :
+    _maxPreScripts        (maxPreScripts),
+    _maxPostScripts       (maxPostScripts),
     _condorLogInitialized (false),
     _condorLogSize        (0),
     _numJobsDone          (0),
     _numJobsFailed        (0),
     _numJobsSubmitted     (0),
-    _maxJobsSubmitted     (maxJobsSubmitted)
+    _maxJobsSubmitted     (maxJobsSubmitted),
+    _dapLogInitialized    (false),             //<--DAP
+    _dapLogSize           (0)                  //<--DAP
 {
     _condorLogName = strnewp (condorLogName);
+    _dapLogName = strnewp (dapLogName);        //<--DAP
 
  	_readyQ = new SimpleList<Job*>;
 	_preScriptQ = new ScriptQ( this );
@@ -78,18 +82,22 @@ Dag::Dag( const char* condorLogName, const int maxJobsSubmitted,
 //-------------------------------------------------------------------------
 Dag::~Dag() {
     delete [] _condorLogName;
-	delete _preScriptQ;
-	delete _postScriptQ;
-	delete _submitQ;
-	delete _readyQ;
+    if (_dapLogName != NULL) delete [] _dapLogName;  //<--DAP
 
-	if (_dot_file_name != NULL) {
-		delete _dot_file_name;
-	}
-	if (_dot_include_file_name != NULL) {
-		delete _dot_include_file_name;
-	}
-	return;
+    delete _preScriptQ;
+    delete _postScriptQ;
+    delete _submitQ;
+    delete _readyQ;
+
+    if (_dot_file_name != NULL) {
+      delete _dot_file_name;
+    }
+    if (_dot_include_file_name != NULL) {
+      delete _dot_include_file_name;
+    }
+
+    
+    return;
 }
 
 //-------------------------------------------------------------------------
@@ -110,7 +118,11 @@ bool Dag::Bootstrap (bool recovery) {
     
     if (recovery) {
         debug_printf( DEBUG_NORMAL, "Running in RECOVERY mode...\n" );
-        if (!ProcessLogEvents (recovery)) return false;
+
+	//--> DAP
+        if (!ProcessLogEvents (CONDORLOG, recovery))  return false;
+        if (!ProcessLogEvents (DAPLOG, recovery))  return false;
+	//<-- DAP
 
 		// all jobs stuck in STATUS_POSTRUN need their scripts run
 		jobs.ToBeforeFirst();
@@ -163,7 +175,7 @@ Job * Dag::GetJob (const JobID_t jobID) const {
 }
 
 //-------------------------------------------------------------------------
-bool Dag::DetectLogGrowth () {
+bool Dag::DetectCondorLogGrowth () {
     if (!_condorLogInitialized) {
         _condorLog.initialize(_condorLogName);
         _condorLogInitialized = true;
@@ -174,7 +186,7 @@ bool Dag::DetectLogGrowth () {
     struct stat buf;
     
     if( fstat( fd, &buf ) == -1 ) {
-		debug_error( 2, DEBUG_QUIET, "Error: can't stat %s\n", _condorLogName );
+		debug_error( 2, DEBUG_QUIET, "Error: can't stat condor log: %s\n", _condorLogName );
 	}
     
     int oldSize = _condorLogSize;
@@ -187,25 +199,69 @@ bool Dag::DetectLogGrowth () {
 }
 
 //-------------------------------------------------------------------------
-// Developer's Note: returning false tells main_timer to abort the DAG
-bool Dag::ProcessLogEvents (bool recovery) {
+bool Dag::DetectDaPLogGrowth () {
+
+  if (!_dapLogInitialized) {
+    if (_dapLog.initialize(_dapLogName)) 
+      _dapLogInitialized = true;
+    else 
+      return 0;
+  }
     
-    if (!_condorLogInitialized) {
-        _condorLogInitialized = _condorLog.initialize(_condorLogName);
+
+    int fd = _dapLog.getfd();
+    assert (fd != 0);
+    struct stat buf;
+    
+    if( fstat( fd, &buf ) == -1 ) {
+      //		debug_error( 2, DEBUG_QUIET, "Error: can't stat dap log : %s\n", _dapLogName );
+      debug_printf( DEBUG_QUIET, "Error: can't stat dap log : %s\n", _dapLogName );
+      return 0;
     }
     
-    bool done = false;  // Keep scaning until ULOG_NO_EVENT
-    bool result = true;
-    static int log_unk_count = 0;
-	static int ulog_rd_error_count = 0;
+    int oldSize = _dapLogSize;
+    _dapLogSize = buf.st_size;
+    
+    bool growth = (buf.st_size > oldSize);
+    debug_printf( DEBUG_DEBUG_4, "%s\n",
+				  growth ? "Log GREW!" : "No log growth..." );
+    return growth;
+}
 
-    while (!done) {
+//-------------------------------------------------------------------------
+// Developer's Note: returning false tells main_timer to abort the DAG
+bool Dag::ProcessLogEvents (int logsource, bool recovery) {
+    
+ if (logsource == CONDORLOG){
+    if (!_condorLogInitialized) {
+      _condorLogInitialized = _condorLog.initialize(_condorLogName);
+    }
+  }
+  else if (logsource == DAPLOG){
+    if (!_dapLogInitialized) {
+      _dapLogInitialized = _dapLog.initialize(_dapLogName);
+    }
+  }
+
+ bool done = false;  // Keep scaning until ULOG_NO_EVENT
+ bool result = true;
+ static int log_unk_count = 0;
+ static int ulog_rd_error_count = 0;
+
+ while (!done) {
         
         ULogEvent* e = NULL;
-        ULogEventOutcome outcome = _condorLog.readEvent(e);
+        ULogEventOutcome outcome;
 
-		Job* job = NULL;
-		const char* eventName = NULL;
+	if (logsource == CONDORLOG){
+	  outcome = _condorLog.readEvent(e);
+	}
+	else if (logsource == DAPLOG){
+	  outcome = _dapLog.readEvent(e);
+	}
+
+	Job* job = NULL;
+	const char* eventName = NULL;
         
         CondorID condorID;
         if (e != NULL) condorID = CondorID (e->cluster, e->proc, e->subproc);
@@ -652,8 +708,17 @@ Dag::SubmitReadyJobs()
 	ASSERT( job != NULL );
 	ASSERT( job->GetStatus() == Job::STATUS_READY );
 
-	debug_printf( DEBUG_VERBOSE, "Submitting Job %s ...\n",
-				  job->GetJobName() );
+	//--> DAP
+	if (job->job_type == Job::CONDOR_JOB){
+	  debug_printf( DEBUG_VERBOSE, "Submitting Condor Job %s ...\n",
+			job->GetJobName() );
+	}
+	else if (job->job_type == Job::DAP_JOB){
+	  debug_printf( DEBUG_VERBOSE, "Submitting DaP Job %s ...\n",
+			job->GetJobName() );
+	}
+	//<-- DAP
+
   
     CondorID condorID(0,0,0);
     MyString cmd_file = job->GetCmdFile();
@@ -686,28 +751,53 @@ Dag::SubmitReadyJobs()
       helper = NULL;
     }
 #endif //BUILD_HELPER
-    if ( !submit_submit( cmd_file.Value(),
-			 condorID,
-			 job->GetJobName())) {
-		// NOTE: this failure does not observe the "retry" feature
-		// (for better or worse)
-        job->_Status = Job::STATUS_ERROR;
-        _numJobsFailed++;
-		sprintf( job->error_text, "Job submit failed" );
-		// the problem might be specific to that job, so keep submitting...
-        return SubmitReadyJobs();
-    }
+    //--> DAP
+    if (job->job_type == Job::CONDOR_JOB){
+      if( ! submit_submit( cmd_file.Value(), condorID, job->GetJobName() ) ) {
+	// if( ! submit_submit( job->GetCmdFile(), condorID, job->GetJobName() ) ) {
+	// NOTE: this failure does not observe the "retry" feature
+	// (for better or worse)
+	job->_Status = Job::STATUS_ERROR;
+	_numJobsFailed++;
+	sprintf( job->error_text, "Job submit failed" );
+	// the problem might be specific to that job, so keep submitting...
+	return SubmitReadyJobs();
+      }
+    } //job ==  condor_job
+    
+    else if (job->job_type == Job::DAP_JOB) {
+      if( ! dap_submit( cmd_file.Value(), condorID, job->GetJobName() ) ) {
+      //if( ! dap_submit( job->GetCmdFile(), condorID, job->GetJobName() ) ) {
+	// NOTE: this failure does not observe the "retry" feature
+	// (for better or worse)
+	job->_Status = Job::STATUS_ERROR;
+	_numJobsFailed++;
+	sprintf( job->error_text, "Job submit failed" );
+	// the problem might be specific to that job, so keep submitting...
+	return SubmitReadyJobs();
+      }
+    }//<-- DAP
 
-	// append job to the submit queue so we can match it with its
-	// submit event once the latter appears in the Condor job log
-	_submitQ->enqueue( job );
+
+    // append job to the submit queue so we can match it with its
+    // submit event once the latter appears in the Condor job log
+    _submitQ->enqueue( job );
 
     job->_Status = Job::STATUS_SUBMITTED;
-	_numJobsSubmitted++;
-
+    _numJobsSubmitted++;
+    
+    //--> DAP
+    if (job->job_type == Job::CONDOR_JOB){
 	debug_printf( DEBUG_VERBOSE, "\tassigned Condor ID (%d.%d.%d)\n",
 		      condorID._cluster, condorID._proc, condorID._subproc );
+    }
+    else{
+      debug_printf( DEBUG_VERBOSE, "\tassigned DaP ID (%d)\n",
+		    condorID._cluster);
+    }
+    //<-- DAP
 
+    
     return SubmitReadyJobs() + 1;
 }
 
@@ -899,27 +989,35 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) const {
     //
     it.ToBeforeFirst();
     while (it.Next(job)) {
-        fprintf (fp, "JOB %s %s %s\n", job->GetJobName(), job->GetCmdFile(),
-                 job->GetStatus() == Job::STATUS_DONE ? "DONE" : "");
-        if (job->_scriptPre != NULL) {
-            fprintf (fp, "SCRIPT PRE  %s %s\n", job->GetJobName(),
-                     job->_scriptPre->GetCmd());
-        }
-        if (job->_scriptPost != NULL) {
-            fprintf (fp, "SCRIPT POST %s %s\n", job->GetJobName(),
-                     job->_scriptPost->GetCmd());
-        }
-		if( job->GetRetryMax() > 0 ) {
-			ASSERT( job->GetRetries() <= job->GetRetryMax() );
-			// print (job->GetRetryMax() - job->GetRetries()) so that
-			// job->retries isn't reset upon recovery
-			int retries = (job->GetRetryMax() - job->GetRetries());
-			fprintf( fp,
-					 "# %d of %d retries already performed; %d remaining\n",
-					 job->GetRetries(), job->GetRetryMax(), retries );
-			fprintf( fp, "Retry %s %d\n", job->GetJobName(), retries );
-		}
-		fprintf( fp, "\n" );
+      //-->DAP
+      if (job->job_type == Job::CONDOR_JOB){
+	fprintf (fp, "JOB %s %s %s\n", job->GetJobName(), job->GetCmdFile(),
+                 job->_Status == Job::STATUS_DONE ? "DONE" : "");
+      }
+      else if (job->job_type == Job::DAP_JOB){
+	fprintf (fp, "DAP %s %s %s\n", job->GetJobName(), job->GetCmdFile(),
+                 job->_Status == Job::STATUS_DONE ? "DONE" : "");
+      }
+      //<--DAP
+      if (job->_scriptPre != NULL) {
+	fprintf (fp, "SCRIPT PRE  %s %s\n", job->GetJobName(),
+		 job->_scriptPre->GetCmd());
+      }
+      if (job->_scriptPost != NULL) {
+	fprintf (fp, "SCRIPT POST %s %s\n", job->GetJobName(),
+		 job->_scriptPost->GetCmd());
+      }
+      if( job->retry_max > 0 ) {
+	ASSERT( job->retries <= job->retry_max );
+	// print (job->retry_max - job->retries) so that
+	// job->retries isn't reset upon recovery
+	int retries = (job->retry_max - job->retries);
+	fprintf( fp,
+		 "# %d of %d retries already performed; %d remaining\n",
+		 job->retries, job->retry_max, retries );
+	fprintf( fp, "Retry %s %d\n", job->GetJobName(), retries );
+      }
+      fprintf( fp, "\n" );
     }
 
     //
@@ -985,15 +1083,32 @@ void Dag::
 PrintEvent( debug_level_t level, const char* eventName, Job* job,
 			CondorID condorID )
 {
+
+ //--> DAP
 	if( job ) {
-		debug_printf( level, "Event: %s for Job %s (%d.%d.%d)\n", eventName,
-					  job->GetJobName(), job->_CondorID._cluster,
-					  job->_CondorID._proc, job->_CondorID._subproc );
+	  if (job->job_type == Job::CONDOR_JOB){
+	    debug_printf( level, "Event: %s for Condor Job %s (%d.%d.%d)\n", eventName,
+			  job->GetJobName(), job->_CondorID._cluster,
+			  job->_CondorID._proc, job->_CondorID._subproc );
+	  }
+	  else if (job->job_type == Job::DAP_JOB){
+	    debug_printf( level, "Event: %s for DaP Job %s (%d)\n", eventName,
+			  job->GetJobName(), job->_CondorID._cluster);
+	  }
+	  
+	  
 	} else {
-		debug_printf( level, "Event: %s for Unknown Job (%d.%d.%d): "
-					  "ignoring...\n", eventName, condorID._cluster,
-					  condorID._proc, condorID._subproc );
+	  if (job->job_type == Job::CONDOR_JOB){
+	    debug_printf( level, "Event: %s for Unknown Condor Job (%d.%d.%d): "
+			  "ignoring...\n", eventName, condorID._cluster,
+			  condorID._proc, condorID._subproc );
+	  }
+	  else if (job->job_type == Job::DAP_JOB){
+	    debug_printf( level, "Event: %s for Unknown DaP Job (%d): "
+			  "ignoring...\n", eventName, condorID._cluster);
+	  }
 	}
+	//<-- DAP
 }
 
 void

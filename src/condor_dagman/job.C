@@ -107,12 +107,28 @@ void Job::Dump () const {
 	if( retry_max > 0 ) {
 		dprintf( D_ALWAYS, "          Retry: %d\n", retry_max );
 	}
+	//-->DAP
 	if( _CondorID._cluster == -1 ) {
-		dprintf( D_ALWAYS, "  Condor Job ID: [not yet submitted]\n" );
-	} else {
-		dprintf( D_ALWAYS, "  Condor Job ID: (%d.%d.%d)\n", _CondorID._cluster,
-				 _CondorID._proc, _CondorID._subproc );
+	  if (job_type == CONDOR_JOB){
+	    dprintf( D_ALWAYS, "  Condor Job ID: [not yet submitted]\n" );
+	  }
+	  else if (job_type == DAP_JOB){
+	    dprintf( D_ALWAYS, "     DaP Job ID: [not yet submitted]\n" );
+	  }
 	}
+	else {
+	  if (job_type == CONDOR_JOB){
+	  dprintf( D_ALWAYS, "  Condor Job ID: (%d.%d.%d)\n", _CondorID._cluster,
+		   _CondorID._proc, _CondorID._subproc );
+	  }
+	  else if (job_type == DAP_JOB){
+	    dprintf( D_ALWAYS, "     DaP Job ID: (%d)\n", _CondorID._cluster);
+	  }
+	}
+	//<--DAP
+
+
+
   
     for (int i = 0 ; i < 3 ; i++) {
         dprintf( D_ALWAYS, "%15s: ", queue_t_names[i] );

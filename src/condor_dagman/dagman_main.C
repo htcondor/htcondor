@@ -40,6 +40,7 @@ bool run_post_on_failure = TRUE;
 
 char* lockFileName = NULL;
 char* DAGManJobId;
+char* DAP_SERVER = "skywalker.cs.wisc.edu";
 
 // Required for linking with condor libs
 extern "C" int SetSyscalls() { return 0; }
@@ -51,6 +52,8 @@ static void Usage() {
     debug_printf( DEBUG_SILENT, "\nUsage: condor_dagman -f -t -l .\n"
             "\t\t[-Debug <level>]\n"
             "\t\t-Condorlog <NAME.dag.condor.log>\n"
+	    "\t\t-Daplog <dap_userlog>\n"                       //-->DAP
+	    "\t\t-Dapserver <dap server name>\n"                //-->DAP
             "\t\t-Lockfile <NAME.dag.lock>\n"
             "\t\t-Dag <NAME.dag>\n"
             "\t\t-Rescue <Rescue.dag>\n"
@@ -107,8 +110,8 @@ int main_shutdown_remove(Service *, int) {
 	main_shutdown_graceful();
 	return FALSE;
 }
-
-void main_timer();
+void condor_event_timer();
+void dap_event_timer();
 void print_status();
 
 /****** FOR TESTING *******
@@ -148,6 +151,7 @@ int main_init (int argc, char ** const argv) {
     debug_level = DEBUG_NORMAL;  // Default debug level is normal output
 
     char *condorLogName  = NULL;
+    char *dapLogName  = NULL;                      //<--DAP
 
 	int i;
     for (i = 0 ; i < argc ; i++) {
@@ -180,6 +184,22 @@ int main_init (int argc, char ** const argv) {
                 Usage();
            }
             condorLogName = argv[i];
+	//-->DAP
+	} else if (!strcmp("-Daplog", argv[i])) {
+            i++;
+            if (argc <= i) {
+                debug_printf( DEBUG_SILENT, "No dap log specified" );
+                Usage();
+           }
+            dapLogName = argv[i];        
+	} else if (!strcmp("-Dapserver", argv[i])) {
+	    i++;
+	    if (argc <= i) {
+	        debug_printf( DEBUG_SILENT, "No dap server specified" );
+	        Usage();
+	  }
+	    DAP_SERVER = argv[i];   
+	//<--DAP
         } else if (!strcmp("-Lockfile", argv[i])) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
@@ -246,6 +266,19 @@ int main_init (int argc, char ** const argv) {
         debug_printf( DEBUG_SILENT, "No DAG file was specified\n" );
         Usage();
     }
+    //-->DAP
+    if ((condorLogName == NULL) && (dapLogName == NULL)) {
+        debug_printf( DEBUG_SILENT, "No Condor or DaP Log files were specified\n" );
+        Usage();
+    }
+
+    if (condorLogName == NULL) {
+      debug_printf( DEBUG_SILENT, "Warning: No Condor Log file was specified\n" );
+    }
+    if (dapLogName == NULL) {
+      debug_printf( DEBUG_SILENT, "Warning: No DaP Log file was specified\n" );
+    }
+    //<--DAP
     if (condorLogName == NULL) {
         debug_printf( DEBUG_SILENT, "No Condor Log file was specified\n" );
         Usage();
@@ -269,6 +302,8 @@ int main_init (int argc, char ** const argv) {
  
     debug_printf( DEBUG_VERBOSE, "Condor log will be written to %s\n",
                    condorLogName);
+    debug_printf( DEBUG_VERBOSE, "DaP log will be written to %s\n",
+		  dapLogName); //-->DAP
     debug_printf( DEBUG_VERBOSE, "DAG Lockfile will be written to %s\n",
                    lockFileName);
     debug_printf( DEBUG_VERBOSE, "DAG Input file is %s\n", G.datafile);
@@ -302,7 +337,7 @@ int main_init (int argc, char ** const argv) {
   
 
     G.dag = new Dag( condorLogName, G.maxJobs, G.maxPreScripts,
-					 G.maxPostScripts );
+		     G.maxPostScripts, dapLogName); //<-- DaP
 
     if( G.dag == NULL ) {
         EXCEPT( "ERROR: out of memory!\n");
@@ -316,12 +351,12 @@ int main_init (int argc, char ** const argv) {
     if (!parse (G.datafile, G.dag)) {
         debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n", G.datafile);
     }
+
 #ifndef NOT_DETECT_CYCLE
 	if (G.dag->isCycle())
 	{
 		debug_error (1, DEBUG_QUIET, "ERROR: a cycle exists in the dag, plese check input\n");
 	}
-
 #endif
     debug_printf( DEBUG_VERBOSE, "Dag contains %d total jobs\n",
                    G.dag->NumJobs());
@@ -339,9 +374,12 @@ int main_init (int argc, char ** const argv) {
     // mode
   
     {
-        bool recovery = (access(lockFileName,  F_OK) == 0 &&
-                         access(condorLogName, F_OK) == 0);
-    
+      bool recovery = ( (access(lockFileName,  F_OK) == 0 &&
+			 access(condorLogName, F_OK) == 0) 
+			
+			|| (access(lockFileName,  F_OK) == 0 &&
+			    access(dapLogName, F_OK) == 0) ) ; //--> DAP
+      
         if (recovery) {
             debug_printf( DEBUG_VERBOSE, "Lock file %s detected, \n",
                            lockFileName);
@@ -358,7 +396,15 @@ int main_init (int argc, char ** const argv) {
 								 condorLogName );
             }
 
-            touch (condorLogName);
+	    if ( access( dapLogName, F_OK) == 0 ) {
+	      debug_printf( DEBUG_VERBOSE, "Deleting older version of %s\n",
+			    dapLogName);
+	      if (remove (dapLogName) == -1)
+		debug_error( 1, DEBUG_QUIET, "Error: can't remove %s\n",
+			     dapLogName );
+            }
+
+	    //            touch (condorLogName);  //<-- DAP
             touch (lockFileName);
         }
 
@@ -369,8 +415,20 @@ int main_init (int argc, char ** const argv) {
         }
     }
 
-    daemonCore->Register_Timer( 1, 5, (TimerHandler)main_timer,
-								"main_timer" );
+    debug_printf( DEBUG_VERBOSE, "Running timers...\n");
+    
+    
+    //<--DAP
+    if (condorLogName != NULL ){
+      daemonCore->Register_Timer( 1, 5, (TimerHandler)condor_event_timer,
+				  "condor_event_timer" );
+    }
+    if (dapLogName != NULL){
+      daemonCore->Register_Timer( 1, 5, (TimerHandler)dap_event_timer,
+				  "dap_event_timer" );
+    }
+    //--DAP
+
     return 0;
 }
 
@@ -384,7 +442,7 @@ print_status() {
 				  G.dag->NumPostScriptsRunning() );
 }
 
-void main_timer () {
+void condor_event_timer () {
 
 	ASSERT( G.dag != NULL );
 
@@ -412,8 +470,8 @@ void main_timer () {
     static int prevScriptsRunning = 0;
 
     // If the log has grown
-    if (G.dag->DetectLogGrowth()) {
-        if (G.dag->ProcessLogEvents() == false) {
+    if (G.dag->DetectCondorLogGrowth()) {              //-->DAP
+      if (G.dag->ProcessLogEvents(CONDORLOG) == false) { //-->DAP
 			G.dag->PrintReadyQ( DEBUG_DEBUG_1 );
             debug_printf( DEBUG_QUIET, "Aborting DAG...\n"
                            "removing running jobs");
@@ -490,6 +548,104 @@ void main_timer () {
 		main_shutdown_graceful();
     }
 }
+
+//-->DAP
+void dap_event_timer () {
+
+    //------------------------------------------------------------------------
+    // Proceed with normal operation
+    //
+    // At this point, the DAG is bootstrapped.  All jobs premarked DONE
+    // are in a STATUS_DONE state, and all their children have been
+    // marked ready to submit.
+    //
+    // If recovery was needed, the log file has been completely read and
+    // we are ready to proceed with jobs yet unsubmitted.
+    //------------------------------------------------------------------------
+
+    static int prevJobsDone = 0;
+    static int prevJobs = 0;
+    static int prevJobsFailed = 0;
+    static int prevJobsSubmitted = 0;
+    static int prevJobsReady = 0;
+    static int prevScriptsRunning = 0;
+
+    // If the log has grown
+    if (G.dag->DetectDaPLogGrowth()) {
+        if (G.dag->ProcessLogEvents(DAPLOG) == false) {
+			G.dag->PrintReadyQ( DEBUG_DEBUG_1 );
+            debug_printf( DEBUG_QUIET, "Aborting DAG...\n"
+                           "removing running jobs");
+            G.dag->RemoveRunningJobs();
+            debug_printf( DEBUG_NORMAL, "Writing Rescue DAG file...\n");
+            G.dag->Rescue(G.rescue_file, G.datafile);
+			unlink( lockFileName );
+			main_shutdown_graceful();
+			return;
+        }
+    }
+  
+    // print status if anything's changed (or we're in a high debug level)
+    if( prevJobsDone != G.dag->NumJobsDone()
+        || prevJobs != G.dag->NumJobs()
+        || prevJobsFailed != G.dag->NumJobsFailed()
+        || prevJobsSubmitted != G.dag->NumJobsSubmitted()
+        || prevJobsReady != G.dag->NumJobsReady()
+        || prevScriptsRunning != G.dag->NumScriptsRunning()
+		|| DEBUG_LEVEL( DEBUG_DEBUG_4 ) ) {
+		print_status();
+        prevJobsDone = G.dag->NumJobsDone();
+        prevJobs = G.dag->NumJobs();
+        prevJobsFailed = G.dag->NumJobsFailed();
+        prevJobsSubmitted = G.dag->NumJobsSubmitted();
+        prevJobsReady = G.dag->NumJobsReady();
+        prevScriptsRunning = G.dag->NumScriptsRunning();
+	}
+
+    ASSERT( G.dag->NumJobsDone() + G.dag->NumJobsFailed() <= G.dag->NumJobs() );
+
+    //
+    // If DAG is complete, hurray, and exit.
+    //
+    if( G.dag->Done() ) {
+        ASSERT( G.dag->NumJobsSubmitted() == 0 );
+        debug_printf( DEBUG_NORMAL, "All jobs Completed!\n" );
+		G.CleanUp();
+		DC_Exit( 0 );
+    }
+
+    //
+
+    // If no jobs are submitted and no scripts are running, but the
+    // dag is not complete, then at least one job failed, or a cycle
+    // exists.
+    // 
+    if( G.dag->NumJobsSubmitted() == 0 &&
+		G.dag->NumScriptsRunning() == 0 ) {
+		if( G.dag->NumJobsFailed() > 0 ) {
+			if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
+				debug_printf( DEBUG_QUIET,
+							  "ERROR: the following job(s) failed:\n" );
+				G.dag->PrintJobList( Job::STATUS_ERROR );
+			}
+		}
+		else {
+			// no jobs failed, so a cycle must exist
+			debug_printf( DEBUG_QUIET, "ERROR: a cycle exists in the DAG\n" );
+		}
+
+		if( G.rescue_file != NULL ) {
+			debug_printf( DEBUG_NORMAL, "Writing Rescue DAG file...\n");
+			G.dag->Rescue(G.rescue_file, G.datafile);
+		}
+		else {
+			debug_printf( DEBUG_NORMAL, "Rescue file not defined...\n" );
+		}
+		unlink( lockFileName );
+		main_shutdown_graceful();
+    }
+}
+//<--DAP
 
 
 void

@@ -55,4 +55,7 @@ const char commandLineQuoteChar = '\'';
 bool submit_submit( const char* cmdFile, CondorID& condorID,
 					const char* DAGNodeName );
 
+bool dap_submit( const char* cmdFile, CondorID& condorID,
+		 const char* DAGNodeName );  //--> DAP
+
 #endif /* #ifndef CONDOR_SUBMIT_H */

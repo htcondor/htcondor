@@ -39,6 +39,11 @@ extern bool run_post_on_failure;
 // for the Condor job id of the DAGMan job
 extern char* DAGManJobId;
 
+enum Log_source{
+  CONDORLOG,
+  DAPLOG
+};
+
 //------------------------------------------------------------------------
 /** A Dag instance stores information about a job dependency graph,
     and the state of jobs as they are running. Jobs are run by
@@ -61,8 +66,10 @@ class Dag {
         @param maxPostScripts the maximum number of POST scripts to spawn at
 		       one time
     */
-    Dag( const char* condorLog, const int maxJobsSubmitted,
-		 const int maxPreScripts, const int maxPostScripts );
+
+    Dag( const char* condorLogName, const int maxJobsSubmitted,
+	 const int maxPreScripts, const int maxPostScripts, 
+	 const char *dapLogName = NULL); //--> DAP
 
     ///
     ~Dag();
@@ -87,7 +94,11 @@ class Dag {
     /** Blocks until the Condor Log file grows.
         @return true: log file grew, false: timeout or shrinkage
     */
-    bool DetectLogGrowth();
+
+    
+    //    bool DetectLogGrowth();
+    bool DetectCondorLogGrowth();         //<--DAP 
+    bool DetectDaPLogGrowth();            //<--DAP
 
     /** Force the Dag to process all new events in the condor log file.
         This may cause the state of some jobs to change.
@@ -95,7 +106,9 @@ class Dag {
         @param recover Process Log in Recover Mode, from beginning to end
         @return true on success, false on failure
     */
-    bool ProcessLogEvents (bool recover = false);
+    //    bool ProcessLogEvents (bool recover = false);
+
+    bool ProcessLogEvents (int logsource, bool recovery = false); //<--DAP
 
     /** Get pointer to job with id jobID
         @param the handle of the job in the DAG
@@ -247,6 +260,13 @@ class Dag {
 
     //  Last known size of condor log, used by DetectLogGrowth()
     off_t         _condorLogSize;
+
+    //-->DAP
+    char        * _dapLogName;
+    ReadUserLog   _dapLog;
+    bool          _dapLogInitialized;
+    off_t         _dapLogSize;
+    //<--DAP
 
     /// List of Job objects
     List<Job>     _jobs;

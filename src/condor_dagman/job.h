@@ -66,6 +66,16 @@
 class Job {
   public:
   
+  //--> DAP
+  enum job_type_t{
+    CONDOR_JOB,
+    DAP_JOB
+  };
+  
+  job_type_t job_type;
+  
+  //<-- DAP
+  
     /** Enumeration for specifying which queue for Add() and Remove().
         If you change this enum, you *must* also update queue_t_names
     */
