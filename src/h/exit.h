@@ -36,4 +36,8 @@
 #define JOB_KILLED		2	/* The job was killed                            */
 #define JOB_COREDUMPED	3	/* The job was killed and a core file produced   */
 #define JOB_EXCEPTION	4	/* The job exited with an exception              */
-#define JOB_NO_MEM		5	/* Not enough memory to start the shadow */
+#define JOB_NO_MEM		5	/* Not enough memory to start the shadow 		 */
+#define JOB_SHADOW_USAGE	6	/* incorrect arguments to condor_shadow		 */
+#define JOB_NOT_CKPTED	7	/* The job was kicked off without a checkpoint	 */
+#define JOB_NOT_STARTED	8	/* Can't connect to startd or request refused	 */
+#define JOB_BAD_STATUS	9	/* Job status != RUNNING on startup				 */
