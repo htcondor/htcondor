@@ -1911,7 +1911,7 @@ SendSpoolFile(char *filename)
 		return -1;
 	}
 
-	chmod(path,755);
+	chmod(path,00755);
 
 	// Q_SOCK->eom();
 	dprintf(D_FULLDEBUG, "done with transfer, errno = %d\n", errno);
