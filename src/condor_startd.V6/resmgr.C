@@ -10,6 +10,7 @@
 #include "condor_debug.h"
 #include "condor_expressions.h"
 #include "condor_mach_status.h"
+#include "condor_attributes.h"
 #include "sched.h"
 
 #include "cdefs.h"
@@ -287,7 +288,7 @@ void resmgr_changestate(resource_id_t rid, int new_state)
   switch (new_state) 
   {
    case NO_JOB:
-    cp->EvalBool("START", template_ClassAd, start);
+    cp->EvalBool(ATTR_REQUIREMENTS, template_ClassAd, start);
     if(start && claimed == FALSE ) 
     {
       set_machine_status(M_IDLE);
@@ -333,66 +334,3 @@ void resmgr_changestate(resource_id_t rid, int new_state)
 
   update_central_mgr();
 }
-	
-/*void
-resmgr_changestate(rid, new_state)
-	resource_id_t rid;
-	int new_state;
-{
-	CONTEXT *cp;
-	ELEM tmp;
-	char *name;
-	int start = FALSE;
-	int claimed;
-	resource_info_t *rip;
-
-	if (!(rip = resmgr_getbyrid(rid)))
-		return;
-
-	cp = rip->r_context;
-	claimed = rip->r_claimed;
-
-	switch (new_state) {
-	case NO_JOB:
-		evaluate_bool("START", &start, rip->r_context,template_context);
-		if(start && claimed == FALSE ) {
-			set_machine_status(M_IDLE);
-		} else {
-			set_machine_status(USER_BUSY);
-		}
-		insert_context("ClientMachine", "", cp);
-		break;
-	case JOB_RUNNING:
-		set_machine_status(JOB_RUNNING);
-		break;
-	case KILLED:
-		set_machine_status(KILLED);
-		break;
-	case CHECKPOINTING:
-		set_machine_status(CHECKPOINTING);
-		break;
-	case SUSPENDED:
-		set_machine_status(SUSPENDED);
-		break;
-	case BLOCKED:
-		set_machine_status(BLOCKED);
-		break;
-	case SYSTEM:
-		set_machine_status(SYSTEM);
-		break;
-	default:
-		EXCEPT("Change states, unknown state (%d)", new_state);
-	}
-
-	name = state_to_string(new_state);
-	rip->r_state = new_state;
-
-	tmp.type = STRING;
-	tmp.s_val = name;
-	store_stmt(build_expr("State",&tmp), cp);
-
-	tmp.type = INT;
-	tmp.i_val = (int)time( (time_t *)0 );
-	store_stmt(build_expr("EnteredCurrentState",&tmp), cp);
-}
-*/
