@@ -307,6 +307,24 @@ OsProc::StartJob()
 		}
 	}
 
+	/* Bail out if we couldn't open the std files correctly */
+	if (fds[0] == -1 || fds[1] == -1 || fds[2] == -1) {
+		/* only close ones that had been opened correctly */
+		if (fds[0] != -1) {
+			close(fds[0]);
+		}
+		if (fds[1] != -1) {
+			close(fds[1]);
+		}
+		if (fds[2] != -1) {
+			close(fds[2]);
+		}
+		set_priv(priv); /* so logging works again */
+		dprintf(D_ALWAYS, "Failed to open some/all of the std files...\n");
+		dprintf(D_ALWAYS, "Aborting OsProc::StartJob.\n");
+		return 0;
+	}
+
 		// // // // // // 
 		// Misc + Exec
 		// // // // // // 
