@@ -5106,7 +5106,7 @@ Scheduler::StartJobHandler()
 
 			// Now that all the data is written to the pipe, we can
 			// safely close the other end, too.  
-		daemonCore->Close_Pipe( pipe_fds[1] );
+		daemonCore->Close_Pipe( fp );
 	}
 		/*
 		  If we just spawned a reconnect shadow, we want to update
