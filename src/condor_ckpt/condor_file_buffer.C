@@ -120,7 +120,7 @@ static int should_combine( CondorChunk *a, CondorChunk *b )
 			&&
 			b->dirty
 			&&
-			( (a->size+b->size) < FileTab->get_buffer_block_size() )
+			( (a->size+b->size) <= FileTab->get_buffer_block_size() )
 			&&
 			adjacent(a,b)
 		)
