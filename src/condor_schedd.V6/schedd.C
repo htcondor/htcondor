@@ -419,10 +419,13 @@ Scheduler::count_jobs()
 	  // also update all of the flock hosts
 	  char *host;
 	  int i;
-	  for (i=1, FlockHosts->rewind();
-		   i <= OldFlockLevel && (host = FlockHosts->next()); i++) {
-		  update_central_mgr(UPDATE_SUBMITTOR_AD, host,
-							 COLLECTOR_UDP_COMM_PORT);
+	
+	  if (FlockHosts) {
+	    for (i=1, FlockHosts->rewind();
+		     i <= OldFlockLevel && (host = FlockHosts->next()); i++) {
+		    update_central_mgr(UPDATE_SUBMITTOR_AD, host,
+			  				   COLLECTOR_UDP_COMM_PORT);
+	    }
 	  }
 	}
 
