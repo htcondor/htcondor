@@ -12,6 +12,7 @@
 
 GlobusJob::GlobusJob( GlobusJob& copy )
 {
+	callback_already_registered = copy.callback_already_registered;
 	procID = copy.procID;
 	jobContact = (copy.jobContact == NULL) ? NULL : strdup( copy.jobContact );
 	jobState = copy.jobState;
@@ -25,6 +26,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 {
 	char buf[4096];
 
+	callback_already_registered = false;
 	classad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 	classad->LookupInteger( ATTR_PROC_ID, procID.proc );
 	buf[0] = '\0';
@@ -73,9 +75,35 @@ bool GlobusJob::start()
 		addJobUpdateEvent( this, JOB_UE_UPDATE_STATE );
 		addJobUpdateEvent( this, JOB_UE_UPDATE_CONTACT );
 
+		callback_already_registered = true;
+
 		return true;
 	} else {
 		errorCode = rc;
+		return false;
+	}
+}
+
+bool GlobusJob::callback_register()
+{
+	int status;
+	int failure_code;
+	int rc;
+
+	if ( callback_already_registered ) {
+		// we're already done, probably because we called start()
+		return true;
+	}
+
+    rc = globus_gram_client_job_callback_register( jobContact, 
+        GLOBUS_GRAM_CLIENT_JOB_STATE_ALL, gramCallbackContact,
+        &status, &failure_code );
+
+    if ( rc == GLOBUS_SUCCESS ) {
+		callback_already_registered = true;
+		return true;
+	} else {
+		errorCode = failure_code;
 		return false;
 	}
 }
@@ -186,7 +214,7 @@ char *GlobusJob::buildRSL( ClassAd *classad )
 	char buff[2048];
 	char *iwd;
 
-	if ( classad->LookupString( ATTR_JOB_IWD, buff ) ) {
+	if ( classad->LookupString(ATTR_JOB_IWD, buff) && *buff ) {
 		strcat( buff, "/" );
 		iwd = strdup( buff );
 	} else {
@@ -201,12 +229,12 @@ char *GlobusJob::buildRSL( ClassAd *classad )
 		strcat( rsl, iwd );
 	strcat( rsl, buff );
 
-	if ( classad->LookupString( ATTR_JOB_ARGUMENTS, buff ) ) {
+	if ( classad->LookupString(ATTR_JOB_ARGUMENTS, buff) && *buff ) {
 		strcat( rsl, ")(arguments=" );
 		strcat( rsl, buff );
 	}
 
-	if ( classad->LookupString( ATTR_JOB_INPUT, buff ) ) {
+	if ( classad->LookupString(ATTR_JOB_INPUT, buff) && *buff ) {
 		strcat( rsl, ")(stdin=" );
 		strcat( rsl, gassServerUrl );
 		if ( buff[0] != '/' )
@@ -214,7 +242,7 @@ char *GlobusJob::buildRSL( ClassAd *classad )
 		strcat( rsl, buff );
 	}
 
-	if ( classad->LookupString( ATTR_JOB_OUTPUT, buff ) ) {
+	if ( classad->LookupString(ATTR_JOB_OUTPUT, buff) && *buff ) {
 		strcat( rsl, ")(stdout=" );
 		strcat( rsl, gassServerUrl );
 		if ( buff[0] != '/' )
@@ -222,7 +250,7 @@ char *GlobusJob::buildRSL( ClassAd *classad )
 		strcat( rsl, buff );
 	}
 
-	if ( classad->LookupString( ATTR_JOB_ERROR, buff ) ) {
+	if ( classad->LookupString(ATTR_JOB_ERROR, buff) && *buff ) {
 		strcat( rsl, ")(stderr=" );
 		strcat( rsl, gassServerUrl );
 		if ( buff[0] != '/' )
@@ -232,7 +260,7 @@ char *GlobusJob::buildRSL( ClassAd *classad )
 
 	strcat( rsl, ")" );
 
-	if ( classad->LookupString( ATTR_GLOBUS_RSL, buff ) ) {
+	if ( classad->LookupString(ATTR_GLOBUS_RSL, buff) && *buff ) {
 		strcat( rsl, buff );
 	}
 
