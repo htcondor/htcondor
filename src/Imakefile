@@ -25,7 +25,7 @@ PVM_LIBRARY = pvmd
 #if IS_V5
 #	define Programs \
 		scripts tools shadow.V5 starter.V5 startd \
-		schedd kbdd  negotiator collector globalq master prio q rm \
+		schedd kbdd  negotiator collector globalq master.dhruba prio q rm \
 		submit.v3  on off test_suite_C.V5 $(TEST_SUITE_F)
 #		define Libraries	c++_util util_lib xdr_lib ckpt syscall_lib
 #else
@@ -117,7 +117,7 @@ object_target(kbdd)
 object_target(negotiator)
 object_target(collector)
 object_target(globalq)
-object_target(master)
+object_target(master.dhruba)
 object_target(prio)
 object_target(q)
 object_target(rm)
