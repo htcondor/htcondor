@@ -178,22 +178,46 @@ _Evaluate (EvalState &state, Value &val, ExprTree *&sig ) const
 bool AttributeReference::
 _Flatten( EvalState &state, Value &val, ExprTree*&ntree, OpKind*) const
 {
-	if( absolute ) {
-		ntree = Copy();
-		return( ntree != NULL );
-	}
+	ExprTree		*tree, *dummy;
+	const ClassAd	*curAd;
+	bool			rval;
 
-	if( !Evaluate( state, val ) ) {
-		return false;
-	}
+		// find the expression and the evalstate
+	curAd = state.curAd;
+	switch( FindExpr( state, tree, dummy, false ) ) {
+		case EVAL_FAIL:
+			return false;
 
-	if( val.IsClassAdValue() || val.IsListValue() || val.IsUndefinedValue() ) {
-		ntree = Copy();
-		return( ntree != NULL );
-	} else {
-		ntree = NULL;
+		case EVAL_ERROR:
+		case PROP_ERROR:
+			val.SetErrorValue();
+			state.curAd = curAd;
+			return true;
+
+		case EVAL_UNDEF:
+		case PROP_UNDEF:
+			if( !(ntree = Copy( ) ) ) {
+				CondorErrno = ERR_MEM_ALLOC_FAILED;
+				CondorErrMsg = "";
+				return( false );
+			}
+			state.curAd = curAd;
+			return true;
+
+		case EVAL_OK:
+			rval = tree->Flatten( state, val, ntree );
+				// don't inline if it didn't flatten to a value
+			if( ntree ) {
+				delete ntree;
+				ntree = Copy( );
+				val.SetUndefinedValue( );
+			}
+			state.curAd = curAd;
+			return rval;
+
+		default:  EXCEPT( "ClassAd:  Should not reach here" );
 	}
-	return true;
+	return false;
 }
 
 
