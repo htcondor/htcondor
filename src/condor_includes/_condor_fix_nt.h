@@ -64,5 +64,6 @@ typedef unsigned short mode_t;
 #	undef _POSIX_
 #	undef _CONDOR_DEFINED_POSIX_
 #endif
+#define getwd(path) (int)_getcwd(path, _POSIX_PATH_MAX)
 
 #endif
