@@ -661,13 +661,20 @@ part_send_job(
 	  // startd always uses the same IP address for all of its
 	  // communication.
   char sinfulstring[40];
-  snprintf(sinfulstring, 40, "<%s:%d>", sock->endpoint_ip_str(), ports.port1);
+
+  // We can't use snprintf as it isn't availble on all platforms. We'll put
+  // it in the util lib post-6.2.0
+  // epaulson 7-21-2000
+  //snprintf(sinfulstring, 40, "<%s:%d>", sock->endpoint_ip_str(), ports.port1);
+  sprintf(sinfulstring, "<%s:%d>", sock->endpoint_ip_str(), ports.port1);
   if( (sd1 = do_connect(sinfulstring, (char *)0, (u_short)ports.port1)) < 0 ) {
     dprintf( D_ALWAYS, "failed to connect to scheduler on %s", sinfulstring );
 	goto returnfailure;
   }
-  
-  snprintf(sinfulstring, 40, "<%s:%d>", sock->endpoint_ip_str(), ports.port2);
+ 
+  // No snprintf. See above - epaulson 7-21-2000
+  //snprintf(sinfulstring, 40, "<%s:%d>", sock->endpoint_ip_str(), ports.port2);
+  sprintf(sinfulstring, "<%s:%d>", sock->endpoint_ip_str(), ports.port2);
   if( (sd2 = do_connect(sinfulstring, (char *)0, (u_short)ports.port2)) < 0 ) {
     dprintf( D_ALWAYS, "failed to connect to scheduler on %s", sinfulstring );
 	close(sd1);
