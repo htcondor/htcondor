@@ -326,7 +326,8 @@ CStarter::RegisterStarterInfo( void )
 		}
 
 		rval = REMOTE_CONDOR_register_starter_info( starter_info );
-		
+		delete( starter_info );
+
 	} else {
 			// We've got to use the old method.
 		char *mfhn = strnewp ( my_full_hostname() );
