@@ -292,6 +292,8 @@ MAIN( int argc, char *argv[], char **envp )
 	delay();
 #endif
 
+	set_iwd();
+
 	if( strcmp("-_condor_cmd_fd",argv[1]) == MATCH ) {
 #if 0
 		dprintf( D_ALWAYS, "Found condor_cmd_fd\n" );
@@ -378,7 +380,6 @@ MAIN( int argc, char *argv[], char **envp )
 	debug_msg( "Hello World!\n" );
 #endif
 
-	set_iwd();
 	get_ckpt_name();
 	open_std_file( 0 );
 	open_std_file( 1 );
