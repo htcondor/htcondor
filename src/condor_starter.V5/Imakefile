@@ -1,0 +1,114 @@
+
+SRC_DIR = $(SRC_TREE)/condor_starter
+
+#if WANT_PVM && HAS_PVM
+PVM_INCLUDE = -I../condor_pvmd/include
+PVM_SRC = pvm_user_proc.C
+PVM_OBJ = pvm_user_proc.o
+PVM_FLAG = -DLINK_PVM
+PVM_LIB = ../condor_pvmd/src/libpvm3.a
+#endif
+
+#if !DOES_CHECKPOINTING
+CKPT_FLAG = -DNO_CKPT
+#endif
+
+CFLAGS = $(STD_C_FLAGS) $(CKPT_FLAG) -DNEW_PROC
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CKPT_FLAG) -DNEW_PROC $(PVM_INCLUDE)\
+	$(PVM_FLAG) $(STATIC)
+LDFLAGS = -lmld
+
+/*
+  The OS dependent files are the same for Ultrix 4.2 and Ultrix 4.3, so
+  we set up to use the 4.2 code on 4.3 systems rather than create
+  new (identical) versions.
+*/
+#if IS_MIPS_ULTRIX43
+OS = ULTRIX42
+#else
+OS = OperatingSystem
+#endif
+
+#if !IS_ALPHA_OSF1
+CLASS_LIB_SRC = alarm.C state_machine_driver.C name_tab.C 
+CLASS_LIB_OBJ = alarm.o state_machine_driver.o name_tab.o 
+#else
+CLASS_LIB_SRC = alarm.C
+CLASS_LIB_OBJ = alarm.o
+#endif
+
+PORTABLE_SRC = $(CLASS_LIB_SRC) signals.C starter.C \
+	user_proc.C environ.C starter.toy.C tables.C $(PVM_SRC)
+PORTABLE_OBJ = $(CLASS_LIB_OBJ) signals.o starter.o \
+	user_proc.o environ.o tables.o $(PVM_OBJ)
+
+NON_PORTABLE_SRC = NON_POSIX.C resource_limits.$(OS).C analyze_exec.$(OS).C \
+	analyze_core.$(OS).C
+NON_PORTABLE_OBJ = NON_POSIX.o resource_limits.$(OS).o analyze_exec.$(OS).o \
+	analyze_core.$(OS).o
+
+SRC = $(PORTABLE_SRC) $(NON_PORTABLE_SRC)
+OBJ = $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ)
+
+XDR_LIB = ../condor_xdr_lib/xdr_lib.a
+UTIL_LIB = ../condor_util_lib/util_lib.a
+CLASS_LIB = ../condor_c++_util/cplus_lib.a
+
+
+#if IS_ALPHA_OSF1
+REMOTE_SYSCALL_LIB = ../condor_ckpt/libcondor.a $(UTIL_LIB)\
+ $(XDR_LIB) $(CLASS_LIB) $(PVM_LIB)
+#else
+#if IS_R6000_AIX32
+REMOTE_SYSCALL_LIB = ../condor_$(SYSCALL_LIB)/libremote.a $(PVM_LIB)
+#else
+REMOTE_SYSCALL_LIB = ../condor_$(SYSCALL_LIB)/libremote.a $(UTIL_LIB) $(XDR_LIB) $(PVM_LIB)
+#endif
+#endif
+
+#if IS_MIPS_ULTRIX42
+LIB = $(REMOTE_SYSCALL_LIB) /usr/lib/libcP.a
+#else
+LIB = $(REMOTE_SYSCALL_LIB) 
+#endif
+
+LIBDIRS = ../condor_util_lib ../condor_xdr_lib
+
+TOY_SRC = state_machine_driver.C signals.C name_tab.C starter.toy.C \
+	alarm.C
+TOY_OBJ = state_machine_driver.o signals.o name_tab.o starter.toy.o \
+	alarm.o
+TOY_LIB =  $(UTIL_LIB) $(XDR_LIB)
+
+all_target(condor_starter test_it hound)
+tags_target($(SRC),$(LIBDIRS))
+depend_target($(SRC))
+c_plus_target(test_it,test_it.o,$(NULL),no_release)
+c_plus_target(hound,hound.o,$(NULL),no_release)
+
+#if IS_R6000_AIX31 || IS_R6000_AIX32
+G++_DIR = /usr/gnu/lib/gcc-lib/rs6000-ibm-aix/2.5.0
+condor_starter: $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(LIB)
+	$(G++_DIR)/ld \
+	-T512 -H512 -btextro -bhalt:4 -bnodelcsect \
+	-L/usr/gnu/lib \
+	-L$(RELEASE_DIR)/lib \
+	-L$(INSTALL_DIR)/lib \
+	-o condor_starter \
+	/lib/crt0.o \
+	$(PORTABLE_OBJ) \
+	$(NON_PORTABLE_OBJ) \
+	$(UTIL_LIB) \
+	$(XDR_LIB) \
+	$(REMOTE_SYSCALL_LIB) \
+	$(RELEASE_DIR)/lib/syscall.shr.o \
+	-lg++ $(G++_DIR)/libgcc.a -lc
+clean::
+	rm -f condor_starter $(OBJ)
+release::
+ 	cp condor_starter $(RELEASE_DIR)/bin
+#else
+c_plus_target(condor_starter,$(OBJ),$(LIB),release)
+#endif
+
+c_plus_target(toy,$(TOY_OBJ),$(TOY_LIB),dont_release)

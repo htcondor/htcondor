@@ -1,0 +1,3527 @@
+%!PS-Adobe-2.0 EPSF-1.2
+%%DocumentFonts: Helvetica
+%%Pages: 1
+%%BoundingBox: 4 5 604 764
+%%EndComments
+
+/IdrawDict 51 dict def
+IdrawDict begin
+
+/reencodeISO {
+dup dup findfont dup length dict begin
+{ 1 index /FID ne { def }{ pop pop } ifelse } forall
+/Encoding ISOLatin1Encoding def
+currentdict end definefont
+} def
+
+/ISOLatin1Encoding [
+/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef
+/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef
+/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef
+/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef
+/space/exclam/quotedbl/numbersign/dollar/percent/ampersand/quoteright
+/parenleft/parenright/asterisk/plus/comma/minus/period/slash
+/zero/one/two/three/four/five/six/seven/eight/nine/colon/semicolon
+/less/equal/greater/question/at/A/B/C/D/E/F/G/H/I/J/K/L/M/N
+/O/P/Q/R/S/T/U/V/W/X/Y/Z/bracketleft/backslash/bracketright
+/asciicircum/underscore/quoteleft/a/b/c/d/e/f/g/h/i/j/k/l/m
+/n/o/p/q/r/s/t/u/v/w/x/y/z/braceleft/bar/braceright/asciitilde
+/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef
+/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef/.notdef
+/.notdef/dotlessi/grave/acute/circumflex/tilde/macron/breve
+/dotaccent/dieresis/.notdef/ring/cedilla/.notdef/hungarumlaut
+/ogonek/caron/space/exclamdown/cent/sterling/currency/yen/brokenbar
+/section/dieresis/copyright/ordfeminine/guillemotleft/logicalnot
+/hyphen/registered/macron/degree/plusminus/twosuperior/threesuperior
+/acute/mu/paragraph/periodcentered/cedilla/onesuperior/ordmasculine
+/guillemotright/onequarter/onehalf/threequarters/questiondown
+/Agrave/Aacute/Acircumflex/Atilde/Adieresis/Aring/AE/Ccedilla
+/Egrave/Eacute/Ecircumflex/Edieresis/Igrave/Iacute/Icircumflex
+/Idieresis/Eth/Ntilde/Ograve/Oacute/Ocircumflex/Otilde/Odieresis
+/multiply/Oslash/Ugrave/Uacute/Ucircumflex/Udieresis/Yacute
+/Thorn/germandbls/agrave/aacute/acircumflex/atilde/adieresis
+/aring/ae/ccedilla/egrave/eacute/ecircumflex/edieresis/igrave
+/iacute/icircumflex/idieresis/eth/ntilde/ograve/oacute/ocircumflex
+/otilde/odieresis/divide/oslash/ugrave/uacute/ucircumflex/udieresis
+/yacute/thorn/ydieresis
+] def
+/Helvetica reencodeISO def
+
+/arrowHeight 8 def
+/arrowWidth 4 def
+/none null def
+/numGraphicParameters 17 def
+/stringLimit 65535 def
+
+/Begin {
+save
+numGraphicParameters dict begin
+} def
+
+/End {
+end
+restore
+} def
+
+/SetB {
+dup type /nulltype eq {
+pop
+false /brushRightArrow idef
+false /brushLeftArrow idef
+true /brushNone idef
+} {
+/brushDashOffset idef
+/brushDashArray idef
+0 ne /brushRightArrow idef
+0 ne /brushLeftArrow idef
+/brushWidth idef
+false /brushNone idef
+} ifelse
+} def
+
+/SetCFg {
+/fgblue idef
+/fggreen idef
+/fgred idef
+} def
+
+/SetCBg {
+/bgblue idef
+/bggreen idef
+/bgred idef
+} def
+
+/SetF {
+/printSize idef
+/printFont idef
+} def
+
+/SetP {
+dup type /nulltype eq {
+pop true /patternNone idef
+} {
+dup -1 eq {
+/patternGrayLevel idef
+/patternString idef
+} {
+/patternGrayLevel idef
+} ifelse
+false /patternNone idef
+} ifelse
+} def
+
+/BSpl {
+0 begin
+storexyn
+newpath
+n 1 gt {
+0 0 0 0 0 0 1 1 true subspline
+n 2 gt {
+0 0 0 0 1 1 2 2 false subspline
+1 1 n 3 sub {
+/i exch def
+i 1 sub dup i dup i 1 add dup i 2 add dup false subspline
+} for
+n 3 sub dup n 2 sub dup n 1 sub dup 2 copy false subspline
+} if
+n 2 sub dup n 1 sub dup 2 copy 2 copy false subspline
+patternNone not brushLeftArrow not brushRightArrow not and and { ifill } if
+brushNone not { istroke } if
+0 0 1 1 leftarrow
+n 2 sub dup n 1 sub dup rightarrow
+} if
+end
+} dup 0 4 dict put def
+
+/Circ {
+newpath
+0 360 arc
+patternNone not { ifill } if
+brushNone not { istroke } if
+} def
+
+/CBSpl {
+0 begin
+dup 2 gt {
+storexyn
+newpath
+n 1 sub dup 0 0 1 1 2 2 true subspline
+1 1 n 3 sub {
+/i exch def
+i 1 sub dup i dup i 1 add dup i 2 add dup false subspline
+} for
+n 3 sub dup n 2 sub dup n 1 sub dup 0 0 false subspline
+n 2 sub dup n 1 sub dup 0 0 1 1 false subspline
+patternNone not { ifill } if
+brushNone not { istroke } if
+} {
+Poly
+} ifelse
+end
+} dup 0 4 dict put def
+
+/Elli {
+0 begin
+newpath
+4 2 roll
+translate
+scale
+0 0 1 0 360 arc
+patternNone not { ifill } if
+brushNone not { istroke } if
+end
+} dup 0 1 dict put def
+
+/Line {
+0 begin
+2 storexyn
+newpath
+x 0 get y 0 get moveto
+x 1 get y 1 get lineto
+brushNone not { istroke } if
+0 0 1 1 leftarrow
+0 0 1 1 rightarrow
+end
+} dup 0 4 dict put def
+
+/MLine {
+0 begin
+storexyn
+newpath
+n 1 gt {
+x 0 get y 0 get moveto
+1 1 n 1 sub {
+/i exch def
+x i get y i get lineto
+} for
+patternNone not brushLeftArrow not brushRightArrow not and and { ifill } if
+brushNone not { istroke } if
+0 0 1 1 leftarrow
+n 2 sub dup n 1 sub dup rightarrow
+} if
+end
+} dup 0 4 dict put def
+
+/Poly {
+3 1 roll
+newpath
+moveto
+-1 add
+{ lineto } repeat
+closepath
+patternNone not { ifill } if
+brushNone not { istroke } if
+} def
+
+/Rect {
+0 begin
+/t exch def
+/r exch def
+/b exch def
+/l exch def
+newpath
+l b moveto
+l t lineto
+r t lineto
+r b lineto
+closepath
+patternNone not { ifill } if
+brushNone not { istroke } if
+end
+} dup 0 4 dict put def
+
+/Text {
+ishow
+} def
+
+/idef {
+dup where { pop pop pop } { exch def } ifelse
+} def
+
+/ifill {
+0 begin
+gsave
+patternGrayLevel -1 ne {
+fgred bgred fgred sub patternGrayLevel mul add
+fggreen bggreen fggreen sub patternGrayLevel mul add
+fgblue bgblue fgblue sub patternGrayLevel mul add setrgbcolor
+eofill
+} {
+eoclip
+originalCTM setmatrix
+pathbbox /t exch def /r exch def /b exch def /l exch def
+/w r l sub ceiling cvi def
+/h t b sub ceiling cvi def
+/imageByteWidth w 8 div ceiling cvi def
+/imageHeight h def
+bgred bggreen bgblue setrgbcolor
+eofill
+fgred fggreen fgblue setrgbcolor
+w 0 gt h 0 gt and {
+l b translate w h scale
+w h true [w 0 0 h neg 0 h] { patternproc } imagemask
+} if
+} ifelse
+grestore
+end
+} dup 0 8 dict put def
+
+/istroke {
+gsave
+brushDashOffset -1 eq {
+[] 0 setdash
+1 setgray
+} {
+brushDashArray brushDashOffset setdash
+fgred fggreen fgblue setrgbcolor
+} ifelse
+brushWidth setlinewidth
+originalCTM setmatrix
+stroke
+grestore
+} def
+
+/ishow {
+0 begin
+gsave
+fgred fggreen fgblue setrgbcolor
+printFont printSize scalefont setfont
+/descender 0 printFont /FontBBox get 1 get printFont /FontMatrix
+get transform exch pop def
+/vertoffset 1 printSize sub descender sub def {
+0 vertoffset moveto show
+/vertoffset vertoffset printSize sub def
+} forall
+grestore
+end
+} dup 0 2 dict put def
+
+/patternproc {
+0 begin
+/patternByteLength patternString length def
+/patternHeight patternByteLength 8 mul sqrt cvi def
+/patternWidth patternHeight def
+/patternByteWidth patternWidth 8 idiv def
+/imageByteMaxLength imageByteWidth imageHeight mul
+stringLimit patternByteWidth sub min def
+/imageMaxHeight imageByteMaxLength imageByteWidth idiv patternHeight idiv
+patternHeight mul patternHeight max def
+/imageHeight imageHeight imageMaxHeight sub store
+/imageString imageByteWidth imageMaxHeight mul patternByteWidth add string def
+0 1 imageMaxHeight 1 sub {
+/y exch def
+/patternRow y patternByteWidth mul patternByteLength mod def
+/patternRowString patternString patternRow patternByteWidth getinterval def
+/imageRow y imageByteWidth mul def
+0 patternByteWidth imageByteWidth 1 sub {
+/x exch def
+imageString imageRow x add patternRowString putinterval
+} for
+} for
+imageString
+end
+} dup 0 12 dict put def
+
+/min {
+dup 3 2 roll dup 4 3 roll lt { exch } if pop
+} def
+
+/max {
+dup 3 2 roll dup 4 3 roll gt { exch } if pop
+} def
+
+/arrowhead {
+0 begin
+transform originalCTM itransform
+/taily exch def
+/tailx exch def
+transform originalCTM itransform
+/tipy exch def
+/tipx exch def
+/dy tipy taily sub def
+/dx tipx tailx sub def
+/angle dx 0 ne dy 0 ne or { dy dx atan } { 90 } ifelse def
+gsave
+originalCTM setmatrix
+tipx tipy translate
+angle rotate
+newpath
+0 0 moveto
+arrowHeight neg arrowWidth 2 div lineto
+arrowHeight neg arrowWidth 2 div neg lineto
+closepath
+patternNone not {
+originalCTM setmatrix
+/padtip arrowHeight 2 exp 0.25 arrowWidth 2 exp mul add sqrt brushWidth mul
+arrowWidth div def
+/padtail brushWidth 2 div def
+tipx tipy translate
+angle rotate
+padtip 0 translate
+arrowHeight padtip add padtail add arrowHeight div dup scale
+arrowheadpath
+ifill
+} if
+brushNone not {
+originalCTM setmatrix
+tipx tipy translate
+angle rotate
+arrowheadpath
+istroke
+} if
+grestore
+end
+} dup 0 9 dict put def
+
+/arrowheadpath {
+newpath
+0 0 moveto
+arrowHeight neg arrowWidth 2 div lineto
+arrowHeight neg arrowWidth 2 div neg lineto
+closepath
+} def
+
+/leftarrow {
+0 begin
+y exch get /taily exch def
+x exch get /tailx exch def
+y exch get /tipy exch def
+x exch get /tipx exch def
+brushLeftArrow { tipx tipy tailx taily arrowhead } if
+end
+} dup 0 4 dict put def
+
+/rightarrow {
+0 begin
+y exch get /tipy exch def
+x exch get /tipx exch def
+y exch get /taily exch def
+x exch get /tailx exch def
+brushRightArrow { tipx tipy tailx taily arrowhead } if
+end
+} dup 0 4 dict put def
+
+/midpoint {
+0 begin
+/y1 exch def
+/x1 exch def
+/y0 exch def
+/x0 exch def
+x0 x1 add 2 div
+y0 y1 add 2 div
+end
+} dup 0 4 dict put def
+
+/thirdpoint {
+0 begin
+/y1 exch def
+/x1 exch def
+/y0 exch def
+/x0 exch def
+x0 2 mul x1 add 3 div
+y0 2 mul y1 add 3 div
+end
+} dup 0 4 dict put def
+
+/subspline {
+0 begin
+/movetoNeeded exch def
+y exch get /y3 exch def
+x exch get /x3 exch def
+y exch get /y2 exch def
+x exch get /x2 exch def
+y exch get /y1 exch def
+x exch get /x1 exch def
+y exch get /y0 exch def
+x exch get /x0 exch def
+x1 y1 x2 y2 thirdpoint
+/p1y exch def
+/p1x exch def
+x2 y2 x1 y1 thirdpoint
+/p2y exch def
+/p2x exch def
+x1 y1 x0 y0 thirdpoint
+p1x p1y midpoint
+/p0y exch def
+/p0x exch def
+x2 y2 x3 y3 thirdpoint
+p2x p2y midpoint
+/p3y exch def
+/p3x exch def
+movetoNeeded { p0x p0y moveto } if
+p1x p1y p2x p2y p3x p3y curveto
+end
+} dup 0 17 dict put def
+
+/storexyn {
+/n exch def
+/y n array def
+/x n array def
+n 1 sub -1 0 {
+/i exch def
+y i 3 2 roll put
+x i 3 2 roll put
+} for
+} def
+
+%%EndProlog
+
+%I Idraw 9 Grid 8 
+
+%%Page: 1 1
+
+Begin
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 0.782609 0 0 0.782609 0 0 ] concat
+/originalCTM matrix currentmatrix def
+
+Begin %I Pict
+%I b 65535
+1 0 0 [] 0 SetB
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 1 0 0 1 5 -124 ] concat
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 724 429 ] concat
+%I
+[
+(END)
+] Text
+End
+
+Begin %I Elli
+%I b 65535
+2 0 0 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 1076 -93 ] concat
+%I
+537 348 51 20 Elli
+End
+
+End %I eop
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -0.681319 0 646.672 -137 ] concat
+%I 5
+422 492
+396 474
+372 452
+337 430
+312 408
+5 BSpl
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.661639 0.749822 -0.749822 -0.661639 536.68 577.011 ] concat
+%I
+[
+(DO_QUIT)
+] Text
+End
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 0.998285 -0.0585322 0.0585322 0.998285 -85.692 -64.664 ] concat
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 368.5 612 ] concat
+%I
+[
+(ALARM)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 381.5 612 ] concat
+%I
+[
+(stop_all)
+] Text
+End
+
+End %I eop
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+%I p
+0 SetP
+%I t
+[ 0 1 -1 0 846 -156 ] concat
+%I 5
+445 525
+406 505
+379 485
+357 472
+334 465
+5 BSpl
+End
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+%I p
+0 SetP
+%I t
+[ 0 -1 -1 0 928 774 ] concat
+%I 5
+346 601
+317 582
+258 578
+162 563
+132 572
+5 BSpl
+End
+
+Begin %I BSpl
+%I b 65535
+1 0 1 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+%I p
+0 SetP
+%I t
+[ 0 1 -0.802721 0 817.856 29 ] concat
+%I 4
+127 526
+211 357
+271 275
+323 271
+4 BSpl
+End
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+%I p
+0 SetP
+%I t
+[ 0 1 -1 0 846 -156 ] concat
+%I 5
+594 529
+647 537
+693 538
+742 531
+793 518
+5 BSpl
+End
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 1 0 0 1 3 13 ] concat
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 64.5 784 ] concat
+%I
+[
+(init)
+] Text
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 47.0001 770 ] concat
+%I
+[
+(START)
+] Text
+End
+
+Begin %I Elli
+%I b 65535
+1 0 0 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1.6 -1.26331 0 935.869 -66.2001 ] concat
+%I
+537 694 41 20 Elli
+End
+
+End %I eop
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 0.136637 -0.990621 0.990621 0.136637 -543.472 1177.74 ] concat
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ -0.99763 -0.068802 0.068802 -0.99763 1122.13 1351.5 ] concat
+%I 5
+742 369
+745 310
+788 260
+784 308
+749 377
+5 BSpl
+End
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 0.980498 0.196534 -0.196534 0.980498 105.764 36.0354 ] concat
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 482.5 833 ] concat
+%I
+[
+(CKPT&VACATE)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 497.5 835 ] concat
+%I
+[
+(set_quit)
+] Text
+End
+
+End %I eop
+
+End %I eop
+
+Begin %I BSpl
+%I b 65535
+1 0 1 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 739 -156 ] concat
+%I 4
+803 424
+748 452
+686 456
+597 437
+4 BSpl
+End
+
+Begin %I BSpl
+%I b 65535
+1 0 1 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 742 -124 ] concat
+%I 4
+527 598
+531 535
+527 497
+524 469
+4 BSpl
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 361 70.5 ] concat
+%I
+[
+(TERMINATE)
+] Text
+End
+
+Begin %I Elli
+%I b 65535
+1 0 0 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 0.996352 -1.78915 0 1486.07 -402.993 ] concat
+%I
+517 623 61 20 Elli
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 106 316 ] concat
+%I
+[
+(GET_EXEC)
+] Text
+End
+
+Begin %I Elli
+%I b 65535
+3 0 0 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1.56445 -1.64177 0 1261.38 -485.558 ] concat
+%I
+537 694 41 20 Elli
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 119.5 321 ] concat
+%I
+[
+(get_exec)
+] Text
+End
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t u
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 292.125 318 ] concat
+%I
+[
+(SUPERVISE)
+] Text
+End
+
+Begin %I Elli
+%I b 65535
+3 0 0 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1.08145 -1.63765 0 1160.97 -207.005 ] concat
+%I
+527 521 71 20 Elli
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 304.5 317 ] concat
+%I
+[
+(supervise_all)
+] Text
+End
+
+End %I eop
+
+Begin %I BSpl
+%I b 65535
+1 0 1 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 964 -300.5 ] concat
+%I 4
+999 590
+942 500
+888 437
+787 387
+4 BSpl
+End
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 1 0 0 1 -76.9999 -78 ] concat
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -0.40566 0 533.598 -116 ] concat
+%I 5
+520 438
+517 490
+525 539
+528 494
+529 453
+5 BSpl
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.995784 0.0917294 -0.0917293 -0.995784 352.524 382.016 ] concat
+%I
+[
+(susp_all)
+] Text
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.995784 0.0917294 -0.0917293 -0.995784 349.34 369.255 ] concat
+%I
+[
+(SUSP)
+] Text
+End
+
+End %I eop
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 0.38964 -0.920967 0.920967 0.38964 -306.783 178.946 ] concat
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 27.5002 350 ] concat
+%I
+[
+(SUSP)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 40.0002 350.5 ] concat
+%I
+[
+(susp_all)
+] Text
+End
+
+End %I eop
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 0.37686 0.92627 -0.92627 0.37686 1057.68 236.848 ] concat
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 786 -59 ] concat
+%I 5
+920 445
+1007 405
+1010 381
+978 383
+922 430
+5 BSpl
+End
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 0.865426 -0.501036 0.501036 0.865426 -478.722 326.604 ] concat
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 409.5 903 ] concat
+%I
+[
+(SUSP)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 422 904.5 ] concat
+%I
+[
+(susp_self)
+] Text
+End
+
+End %I eop
+
+End %I eop
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t u
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.362769 0.931879 -0.931879 0.362769 258.278 585.239 ] concat
+%I
+[
+(SUCCESS)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.362769 0.931879 -0.931879 0.362769 269.823 581.818 ] concat
+%I
+[
+(spawn_all)
+] Text
+End
+
+End %I eop
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg Red
+1 0 0 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 700 -135 ] concat
+%I 5
+567 408
+618 425
+669 467
+693 515
+735 604
+5 BSpl
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.877184 0.480154 -0.480154 0.877184 453.819 177.479 ] concat
+%I
+[
+(DONT_XFER)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 373.5 69 ] concat
+%I
+[
+(terminate_all)
+] Text
+End
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 0.993884 -0.110432 0.110432 0.993884 -129.052 -23.7135 ] concat
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 440.5 579 ] concat
+%I
+[
+(handle_vacate_req)
+] Text
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 425.5 578 ] concat
+%I
+[
+(CKPT&VACATE)
+] Text
+End
+
+End %I eop
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.891642 0.45274 -0.45274 -0.891642 239.172 538.3 ] concat
+%I
+[
+(NEW_PROC)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.891642 0.45274 -0.45274 -0.891642 249.996 553.509 ] concat
+%I
+[
+(susp_ckpt_timer)
+] Text
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 322 660.5 ] concat
+%I
+[
+(UPDATE_ALL)
+] Text
+End
+
+Begin %I Elli
+%I b 65535
+1 0 0 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 0.95004 -1.82641 0 1306.3 -73.5886 ] concat
+%I
+822 531 71 20 Elli
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 337.5 672 ] concat
+%I
+[
+(update_all)
+] Text
+End
+
+Begin %I BSpl
+%I b 65535
+1 0 1 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 687 -61 ] concat
+%I 4
+545 74
+548 60
+553 27
+559 -3
+4 BSpl
+End
+
+Begin %I BSpl
+%I b 65535
+1 0 1 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+%I p
+0 SetP
+%I t
+[ 0 1 -0.802721 0 849.856 11 ] concat
+%I 4
+129 558
+183 406
+309 161
+451 178
+4 BSpl
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.68491 0.728628 -0.728628 0.68491 557.255 257.38 ] concat
+%I
+[
+(DO_XFER)
+] Text
+End
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 0.816416 0.577465 -0.577465 0.816416 168.647 -169.318 ] concat
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 392.5 222 ] concat
+%I
+[
+(DIE)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 405.5 221 ] concat
+%I
+[
+(req_die)
+] Text
+End
+
+End %I eop
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 806 -135 ] concat
+%I 4
+556 682
+875 675
+850 569
+848 510
+4 BSpl
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.125973 0.992034 -0.992034 -0.125973 142.382 210.613 ] concat
+%I
+[
+(VACATE)
+] Text
+End
+
+Begin %I BSpl
+%I b 65535
+1 0 1 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ -0.0312348 0.999512 -0.999512 -0.0312348 687.421 -435.262 ] concat
+%I 4
+822 509
+821 484
+830 446
+818 390
+4 BSpl
+End
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ -0.0778932 -0.996962 0.996962 -0.0778932 -302.645 689.877 ] concat
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 223.5 496 ] concat
+%I
+[
+(spawn_all)
+] Text
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 209.5 494 ] concat
+%I
+[
+(SUCCESS)
+] Text
+End
+
+End %I eop
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0.613941 0.789352 -0.789352 0.613941 368.974 -610.675 ] concat
+%I 5
+959 424
+990 387
+1009 345
+965 378
+948 413
+5 BSpl
+End
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 0.789352 -0.613941 0.613941 0.789352 -151.077 405.703 ] concat
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.846233 0.532813 -0.532813 0.846233 599.339 512.104 ] concat
+%I
+[
+(SUSP)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.846233 0.532813 -0.532813 0.846233 607.482 501.656 ] concat
+%I
+[
+(susp_self)
+] Text
+End
+
+End %I eop
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 801 6.00006 ] concat
+%I 4
+497 199
+513 185
+528 163
+531 118
+4 BSpl
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.970296 0.241921 -0.241921 0.970296 618.147 543.448 ] concat
+%I
+[
+(DIE)
+] Text
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.993151 0.116841 -0.116841 0.993151 620.142 477.61 ] concat
+%I
+[
+(DEFAULT)
+] Text
+End
+
+Begin %I BSpl
+%I b 65535
+1 0 1 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+%I p
+0 SetP
+%I t
+[ 0 1 -1 0 697 105 ] concat
+%I 2
+633 630
+516 625
+2 BSpl
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.0204776 0.99979 -0.99979 -0.0204776 53.6446 646.24 ] concat
+%I
+[
+(DEFAULT)
+] Text
+End
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 0.9968 -0.0799336 0.0799336 0.9968 -132.212 -225.898 ] concat
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 165.5 861 ] concat
+%I
+[
+(CKPT&VACATE)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 178.5 861 ] concat
+%I
+[
+(handle_vacate_req)
+] Text
+End
+
+End %I eop
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.204538 0.978859 -0.978859 -0.204538 83.6057 185.254 ] concat
+%I
+[
+(DIE)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.152808 0.988256 -0.988256 -0.152808 156.374 211.033 ] concat
+%I
+[
+(req_vacate)
+] Text
+End
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 822 -284 ] concat
+%I 5
+627 736
+619 755
+601 812
+577 800
+610 738
+5 BSpl
+End
+
+Begin %I Pict
+%I b 65535
+3 0 0 [] 0 SetB
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t u
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1.27273 0 582.674 367.5 ] concat
+%I
+[
+(SEND_CKPT_ALL)
+] Text
+End
+
+Begin %I Elli
+%I b 65535
+2 0 0 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 0.923793 -0.649744 0 908.449 -133.631 ] concat
+%I
+606 482 82 43 Elli
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 600.5 380 ] concat
+%I
+[
+(send_ckpt_all)
+] Text
+End
+
+End %I eop
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 772 -215 ] concat
+%I 4
+504 649
+404 640
+347 580
+322 441
+4 BSpl
+End
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 1 0 0 1 -33 -50 ] concat
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 92.5005 575 ] concat
+%I
+[
+(GET_PROC)
+] Text
+End
+
+Begin %I Elli
+%I b 65535
+1 0 0 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 0.617487 -1.36813 0 706.671 292.759 ] concat
+%I
+517 440 91 21 Elli
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 108.5 583 ] concat
+%I
+[
+(get_proc)
+] Text
+End
+
+End %I eop
+
+Begin %I BSpl
+%I b 65535
+1 0 1 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+%I p
+0 SetP
+%I t
+[ 0 1 -1 0 701 -130 ] concat
+%I 2
+636 626
+549 591
+2 BSpl
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.331175 0.943569 -0.943569 -0.331175 82.7113 433.206 ] concat
+%I
+[
+(SUCCESS)
+] Text
+End
+
+Begin %I BSpl
+%I b 65535
+1 0 1 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 691 -413 ] concat
+%I 4
+938 597
+796 494
+588 490
+546 355
+4 BSpl
+End
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 751 -233 ] concat
+%I 4
+530 645
+404 640
+357 571
+330 420
+4 BSpl
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.818624 0.57433 -0.57433 -0.818624 499.325 799.411 ] concat
+%I
+[
+(reaper)
+] Text
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.823544 0.567254 -0.567254 -0.823544 511.421 770.663 ] concat
+%I
+[
+(CHILD_EXIT)
+] Text
+End
+
+Begin %I BSpl
+%I b 65535
+1 0 1 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg Red
+1 0 0 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 813 -133.25 ] concat
+%I 4
+711 380
+748 392
+786 396
+823 441
+4 BSpl
+End
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t u
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.229436 0.973324 -0.973324 -0.229436 453.767 581.276 ] concat
+%I
+[
+(stop_all)
+] Text
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.229436 0.973324 -0.973324 -0.229436 439.397 576.862 ] concat
+%I
+[
+(CKPT_EXIT)
+] Text
+End
+
+End %I eop
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 0.869496 0.49394 -0.49394 0.869496 188.579 -138.715 ] concat
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.996982 0.0776421 -0.0776421 0.996982 426.601 388.869 ] concat
+%I
+[
+(reaper)
+] Text
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.996276 0.0862321 -0.0862321 0.996276 405.189 400.121 ] concat
+%I
+[
+(CHILD_EXIT)
+] Text
+End
+
+End %I eop
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t u
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 705 472 ] concat
+%I
+[
+(SEND_STATUS_ALL)
+] Text
+End
+
+Begin %I Elli
+%I b 65535
+1 0 0 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 0.841804 -1.36813 0 1316.67 104.901 ] concat
+%I
+517 440 91 21 Elli
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 722.5 500.5 ] concat
+%I
+[
+(dispose_all)
+] Text
+End
+
+End %I eop
+
+Begin %I BSpl
+%I b 65535
+1 1 0 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 0.966666 -1 0 806 -263.415 ] concat
+%I 4
+655 76
+696 80
+731 79
+750 85
+4 BSpl
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 734.5 393 ] concat
+%I
+[
+(DEFAULT)
+] Text
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 406 798.5 ] concat
+%I
+[
+(UPDATE_WAIT)
+] Text
+End
+
+Begin %I Elli
+%I b 65535
+3 0 0 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 0.827013 -1.42835 0 1172.64 170.451 ] concat
+%I
+822 531 71 20 Elli
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 420.5 810 ] concat
+%I
+[
+(asynch_wait)
+] Text
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.455745 0.890111 -0.890111 0.455745 335.162 782.992 ] concat
+%I
+[
+(DO_WAIT)
+] Text
+End
+
+Begin %I Pict
+%I b 65535
+3 0 0 [] 0 SetB
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 1 0 0 1 -74.9999 -57 ] concat
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 607 741.5 ] concat
+%I
+[
+(UPDATE_ONE)
+] Text
+End
+
+Begin %I Elli
+%I b 65535
+3 0 0 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 0.95004 -1.45176 0 1390.56 7.41119 ] concat
+%I
+822 531 71 20 Elli
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 621.5 752 ] concat
+%I
+[
+(update_one)
+] Text
+End
+
+End %I eop
+
+Begin %I BSpl
+%I b 65535
+1 0 1 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 781 -184 ] concat
+%I 3
+956 429
+997 411
+1014 396
+3 BSpl
+End
+
+Begin %I BSpl
+%I b 65535
+1 0 1 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 781 -184 ] concat
+%I 3
+920 267
+939 338
+933 416
+3 BSpl
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.974485 0.224455 -0.224455 -0.974484 482.536 711.72 ] concat
+%I
+[
+(SUCCESS)
+] Text
+End
+
+Begin %I BSpl
+%I b 65535
+1 0 1 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 781 -184 ] concat
+%I 2
+847 230
+684 192
+2 BSpl
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.113353 0.993555 -0.993555 -0.113353 573.87 577.349 ] concat
+%I
+[
+(FAILURE)
+] Text
+End
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg Red
+1 0 0 SetCBg
+none SetP %I p n
+%I t
+[ -0.736227 0.676734 -0.676734 -0.736227 1587.41 677.092 ] concat
+%I 5
+961 642
+941 638
+914 634
+890 632
+858 627
+5 BSpl
+End
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg Red
+1 0 0 SetCBg
+none SetP %I p n
+%I t
+[ 0.235675 -0.971832 0.971832 0.235676 -490.583 1663.74 ] concat
+%I 5
+988 657
+987 609
+968 568
+958 532
+914 471
+5 BSpl
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.993484 0.113973 -0.113973 -0.993484 319.322 875.981 ] concat
+%I
+[
+(VACATE)
+] Text
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.996904 0.0786329 -0.0786329 -0.996904 309.331 820.724 ] concat
+%I
+[
+(DIE)
+] Text
+End
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg Red
+1 0 0 SetCBg
+none SetP %I p n
+%I t
+[ 0.216196 -0.97635 0.97635 0.216196 -464.848 1671.6 ] concat
+%I 5
+971 655
+958 602
+951 577
+939 531
+895 472
+5 BSpl
+End
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0.102243 0.99476 -0.99476 0.102243 871.314 -48.664 ] concat
+%I 5
+741 376
+745 310
+788 260
+784 308
+754 372
+5 BSpl
+End
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 0.0265405 -0.999649 0.999649 0.0265405 -271.672 1171.04 ] concat
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 482.5 833 ] concat
+%I
+[
+(CKPT&VACATE)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 497.5 835 ] concat
+%I
+[
+(set_quit)
+] Text
+End
+
+End %I eop
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 0.848484 -0.529221 0.529221 0.848484 -175.96 214.158 ] concat
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 786 -59 ] concat
+%I 5
+920 445
+1007 405
+1010 381
+978 383
+922 430
+5 BSpl
+End
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 0.865426 -0.501036 0.501036 0.865426 -478.722 326.604 ] concat
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 409.5 903 ] concat
+%I
+[
+(SUSP)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 422 904.5 ] concat
+%I
+[
+(susp_self)
+] Text
+End
+
+End %I eop
+
+End %I eop
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.998655 -0.0518605 0.0518606 0.998655 573.322 933.93 ] concat
+%I
+[
+(\(TERMINATE\))
+] Text
+End
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg Red
+1 0 0 SetCBg
+none SetP %I p n
+%I t
+[ -0.992223 0.124483 -0.124483 -0.992223 1617.28 1327.42 ] concat
+%I 5
+998 656
+995 615
+987 574
+980 553
+977 541
+5 BSpl
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.354138 0.935193 -0.935193 0.354138 579.013 829.324 ] concat
+%I
+[
+(VACATE)
+] Text
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.270458 0.962732 -0.962732 0.270458 524.642 854.137 ] concat
+%I
+[
+(DIE)
+] Text
+End
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg Red
+1 0 0 SetCBg
+none SetP %I p n
+%I t
+[ -0.992221 0.124483 -0.124483 -0.992221 1599.95 1317.19 ] concat
+%I 5
+970 648
+958 602
+951 576
+947 555
+943 535
+5 BSpl
+End
+
+Begin %I BSpl
+%I b 65535
+1 1 0 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 776 -158 ] concat
+%I 3
+902 262
+926 333
+918 418
+3 BSpl
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.996209 -0.0870043 0.0870044 0.996208 383.943 782.877 ] concat
+%I
+[
+(UPDATE_ONE)
+] Text
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.991375 0.131064 -0.131064 0.991374 662.587 172.985 ] concat
+%I
+[
+(ALARM)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.991375 0.131064 -0.131064 0.991374 665.544 158.245 ] concat
+%I
+[
+(cleanup)
+] Text
+End
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0.560388 0.828231 -0.828231 0.560388 958.386 -713.613 ] concat
+%I 5
+448 754
+398 822
+372 832
+373 804
+439 743
+5 BSpl
+End
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ -0.0562051 -0.99842 0.99842 -0.056205 449.446 258.37 ] concat
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 208.5 59 ] concat
+%I
+[
+(SUSP)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 221 61.5 ] concat
+%I
+[
+(susp_self)
+] Text
+End
+
+End %I eop
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 940 -70 ] concat
+%I 5
+247 292
+256 224
+264 212
+278 206
+337 207
+5 BSpl
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 607 69.5001 ] concat
+%I
+[
+(TERMINATE_WAIT)
+] Text
+End
+
+Begin %I Elli
+%I b 65535
+3 0 0 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1.30721 -1.78915 0 1732.07 -545.278 ] concat
+%I
+517 623 61 20 Elli
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 621.5 85.0001 ] concat
+%I
+[
+(asynch_wait)
+] Text
+End
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ -0.878309 -0.478094 0.478094 -0.878309 716.966 456.44 ] concat
+%I 5
+235 289
+134 353
+165 305
+200 291
+220 279
+5 BSpl
+End
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ -0.132495 -0.991184 0.991184 -0.132495 655.328 370.985 ] concat
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 288.5 47 ] concat
+%I
+[
+(DIE)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 304.5 48.0002 ] concat
+%I
+[
+(unset_xfer)
+] Text
+End
+
+End %I eop
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.999975 0.00712614 -0.00712614 -0.999975 537.609 153.665 ] concat
+%I
+[
+(reaper)
+] Text
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -1 -0.00149275 0.00149275 -1 560.531 137.116 ] concat
+%I
+[
+(CHILD_EXIT)
+] Text
+End
+
+Begin %I BSpl
+%I b 65535
+3 1 0 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg Red
+1 0 0 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 824 -2.25002 ] concat
+%I 5
+129 416
+130 314
+129 301
+131 283
+131 245
+5 BSpl
+End
+
+Begin %I BSpl
+%I b 65535
+1 0 1 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 998 -157 ] concat
+%I 3
+261 591
+261 474
+266 415
+3 BSpl
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.999112 0.0421412 -0.0421412 0.999112 446.848 95.635 ] concat
+%I
+[
+(DO_WAIT)
+] Text
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1.27273 0 509.674 333 ] concat
+%I
+[
+(SEND_CORE)
+] Text
+End
+
+Begin %I Elli
+%I b 65535
+3 0 0 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 0.704132 -0.649744 0 836.449 -52.0695 ] concat
+%I
+606 482 82 43 Elli
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 528.5 344 ] concat
+%I
+[
+(send_core)
+] Text
+End
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 925 15 ] concat
+%I 4
+399 591
+412 569
+422 553
+459 515
+4 BSpl
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.539955 0.841694 -0.841694 0.539955 437.323 263.528 ] concat
+%I
+[
+(VACATE)
+] Text
+End
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+%I p
+0 SetP
+%I t
+[ 0 1 -1 0 861 -167 ] concat
+%I 5
+483 341
+458 355
+412 388
+385 411
+334 466
+5 BSpl
+End
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0.840571 -0.541701 0.219747 0.340986 4.36914 557.042 ] concat
+%I 5
+520 439
+517 490
+525 538
+528 493
+527 439
+5 BSpl
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.616523 0.787338 -0.787338 0.616523 521.075 439.472 ] concat
+%I
+[
+(susp_all)
+] Text
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.616523 0.787338 -0.787338 0.616523 512.073 449.061 ] concat
+%I
+[
+(SUSP)
+] Text
+End
+
+Begin %I BSpl
+%I b 65535
+3 0 1 [] 0 SetB
+%I cfg Red
+1 0 0 SetCFg
+%I cbg White
+1 1 1 SetCBg
+%I p
+0 SetP
+%I t
+[ 0 1 -1 0 851 -159 ] concat
+%I 5
+485 344
+462 355
+412 388
+385 411
+331 462
+5 BSpl
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 160 833.5 ] concat
+%I
+[
+(\(TERMINATE\))
+] Text
+End
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 0.902134 0.431455 -0.431455 0.902134 105.073 -134.213 ] concat
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 335.5 203.5 ] concat
+%I
+[
+(VACATE)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 349 206 ] concat
+%I
+[
+(req_vacate)
+] Text
+End
+
+End %I eop
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 0.993232 -0.116146 0.116146 0.993232 -25.6197 59.5867 ] concat
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.481919 0.876216 -0.876216 0.481919 487.261 257.565 ] concat
+%I
+[
+(DIE)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.503871 0.863779 -0.863779 0.503871 492.588 244.789 ] concat
+%I
+[
+(req_die)
+] Text
+End
+
+End %I eop
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.586968 0.809611 -0.809611 0.586968 442.528 255.384 ] concat
+%I
+[
+(req_vacate)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.99209 0.125535 -0.125535 -0.99209 319.084 890.457 ] concat
+%I
+[
+(req_vacate)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.99209 0.125535 -0.125535 -0.99209 320.584 835.957 ] concat
+%I
+[
+(req_die)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.318858 0.947804 -0.947804 0.318858 531.01 838.778 ] concat
+%I
+[
+(req_die)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.386816 0.922158 -0.922158 0.386816 589.271 825.275 ] concat
+%I
+[
+(req_vacate)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.291544 0.956558 -0.956558 -0.291544 97.7145 188.585 ] concat
+%I
+[
+(req_die)
+] Text
+End
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 1 0 0 1 22 -98 ] concat
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.159232 0.987241 -0.987241 -0.159232 170.42 281.593 ] concat
+%I
+[
+(FAILURE)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.152808 0.988256 -0.988256 -0.152808 182.374 280.033 ] concat
+%I
+[
+(req_vacate)
+] Text
+End
+
+End %I eop
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 0.0411953 -0.999151 0.999151 0.0411953 -15.8569 531.687 ] concat
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.183138 0.983087 -0.983087 -0.183138 180.17 172.6 ] concat
+%I
+[
+(FAILURE)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.152808 0.988256 -0.988256 -0.152808 191.374 173.033 ] concat
+%I
+[
+(dispose_one)
+] Text
+End
+
+End %I eop
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t
+[ 1 0 0 1 -26 125 ] concat
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1.27273 0 442.674 353 ] concat
+%I
+[
+(PROC_EXIT)
+] Text
+End
+
+Begin %I Elli
+%I b 65535
+1 0 0 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 0.704132 -0.649744 0 769.449 -32.0695 ] concat
+%I
+606 482 82 43 Elli
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0 1 -1 0 461.5 364 ] concat
+%I
+[
+(proc_exit)
+] Text
+End
+
+End %I eop
+
+Begin %I BSpl
+%I b 65535
+1 0 1 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 795.5 -42.5 ] concat
+%I 4
+523 344
+488 320
+469 305
+456 296
+4 BSpl
+End
+
+Begin %I BSpl
+%I b 65535
+1 0 1 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ -0.425797 0.904818 -0.904818 -0.425797 943.448 135.647 ] concat
+%I 4
+397 310
+400 343
+401 389
+418 478
+4 BSpl
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.569366 0.822084 -0.822084 -0.569366 499.588 426.214 ] concat
+%I
+[
+(HAS_CORE)
+] Text
+End
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t u
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.865983 -0.500075 0.500074 -0.865983 424.446 383.713 ] concat
+%I
+[
+(diispose_one)
+] Text
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.867418 -0.49758 0.49758 -0.867418 428.656 367.37 ] concat
+%I
+[
+(NO_CORE)
+] Text
+End
+
+End %I eop
+
+Begin %I BSpl
+%I b 65535
+1 0 1 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 795.5 -42.5 ] concat
+%I 4
+502 368
+440 379
+414 426
+406 452
+4 BSpl
+End
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t u
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.95367 -0.300855 0.300855 -0.95367 455.927 330.753 ] concat
+%I
+[
+(dispose_one)
+] Text
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.954532 -0.298109 0.298109 -0.954532 456.502 313.887 ] concat
+%I
+[
+(DEFAULT)
+] Text
+End
+
+End %I eop
+
+Begin %I BSpl
+%I b 65535
+1 0 1 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 0.5 -0.5 0 682 453.5 ] concat
+%I 4
+451 313
+446 430
+467 538
+506 617
+4 BSpl
+End
+
+Begin %I Pict
+%I b u
+%I cfg u
+%I cbg u
+%I f u
+%I p u
+%I t u
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.997077 0.0764185 -0.0764187 -0.997076 492.364 683.456 ] concat
+%I
+[
+(EXITED)
+] Text
+End
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.998024 0.062845 -0.0628458 -0.998024 507.913 695.036 ] concat
+%I
+[
+(dispose_one)
+] Text
+End
+
+End %I eop
+
+Begin %I Text
+%I cfg Red
+1 0 0 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ -0.981517 0.191374 -0.191374 -0.981517 491.608 726.236 ] concat
+%I
+[
+(update_cpu)
+] Text
+End
+
+Begin %I BSpl
+%I b 65535
+1 0 1 [] 0 SetB
+%I cfg Blue
+0 0 1 SetCFg
+%I cbg White
+1 1 1 SetCBg
+none SetP %I p n
+%I t
+[ 0 1 -1 0 745 -109 ] concat
+%I 4
+659 644
+608 544
+548 495
+525 464
+4 BSpl
+End
+
+Begin %I Text
+%I cfg Blue
+0 0 1 SetCFg
+%I f -adobe-helvetica-medium-r-normal--*-140-75-75-p-*-iso8859-1
+Helvetica 14 SetF
+%I t
+[ 0.759732 -0.650236 0.650236 0.759732 150.482 519.633 ] concat
+%I
+[
+(TRY_LATER)
+] Text
+End
+
+End %I eop
+
+showpage
+
+%%Trailer
+
+end

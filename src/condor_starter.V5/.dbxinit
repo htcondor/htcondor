@@ -1,0 +1,2 @@
+use
+use ../condor_util_lib ../condor_syscall_lib ../condor_ckpt ../condor_xdr_lib ../condor_c++_util
