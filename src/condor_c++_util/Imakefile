@@ -24,9 +24,9 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	classad_hashtable.o classad_log.o log_transaction.o log.o \
 	classad_collection.o usagemon.o print_wrapped_text.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
-	limit.o my_subsystem.o daemon_types.o killfamily.o access.o \
+	limit.o my_subsystem.o killfamily.o access.o \
 	strnewp.o memory_file.o my_username.o misc_utils.o file_transfer.o \
-	daemon.o uids.o metric_units.o condor_ver_info.o condor_cred_base.o \
+	uids.o metric_units.o condor_ver_info.o condor_cred_base.o \
         $(KERBEROS_OBJ)  condor_credential.o HashTable.o MyString.o \
 	which.o iso_dates.o java_config.o
 
@@ -50,17 +50,13 @@ c_plus_target(killfamily.t, killfamily.t.o, $(LIB))
 pure_c_plus_target(killfamily.t.pure, killfamily.t.o, $(LIB))
 purecov_c_plus_target(killfamily.t.pc, killfamily.t.o, $(LIB))
 
-c_plus_target(daemon.t, daemon.t.o, $(LIB))
-pure_c_plus_target(daemon.t.pure, daemon.t.o, $(LIB))
-purecov_c_plus_target(daemon.t.pc, daemon.t.o, $(LIB))
-
 c_plus_target(my_hostname.t, my_hostname.t.o, $(LIB))
 pure_c_plus_target(my_hostname.t.pure, my_hostname.t.o, $(LIB))
 purecov_c_plus_target(my_hostname.t.pc, my_hostname.t.o, $(LIB))
 
 html_target( documentation )
 
-all-tests: access.t killfamily.t daemon.t test_locks my_hostname.t
+all-tests: access.t killfamily.t test_locks my_hostname.t
 
 test: test.o user_log.o
 	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o test test.o user_log.o $(LIB)
