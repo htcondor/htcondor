@@ -68,8 +68,6 @@ sysapi_disk_space_raw(const char *filename)
    only C++.  -Derek 6/25/98 */
 extern char* param();
 
-#define LOTS_OF_FREE 50000
-
 static char	*Afs_Cache_Name;
 
 #define FS_PROGRAM "/usr/afsws/bin/fs"
@@ -180,7 +178,7 @@ const char *filename;
 	if(statfs(filename, &statfsbuf) < 0) {
 		dprintf(D_ALWAYS, "sysapi_disk_space_raw: statfs(%s,0x%x) failed\n",
 													filename, &statfsbuf );
-		return(LOTS_OF_FREE);
+		return(0);
 	}
 
 	fs = &statfsbuf.fd_req;
@@ -210,7 +208,7 @@ char *filename;
 
 	if( getmnt(&start, &mntdata, sizeof(mntdata), NOSTAT_ONE, filename) < 0) {
 		dprintf(D_ALWAYS, "sysapi_disk_space_raw(): getmnt failed");
-		return(LOTS_OF_FREE);
+		return(0);
 	}
 	
 	fs_req = &mntdata.fd_req;
@@ -268,7 +266,7 @@ const char *filename;
 		dprintf(D_ALWAYS, "sysapi_disk_space_raw: statfs(%s,0x%x) failed\n",
 													filename, &statfsbuf );
 		dprintf(D_ALWAYS, "errno = %d\n", errno );
-		return(LOTS_OF_FREE);
+		return(0);
 	}
 
 	/* Convert to kbyte blocks: available blks * blksize / 1k bytes. */
@@ -288,8 +286,7 @@ const char *filename;
 
 	free_kbytes = (double)statfsbuf.f_bavail * (double)kbytes_per_block; 
 	if(free_kbytes > INT_MAX) {
-		dprintf(D_ALWAYS, "Too much free disk space, return LOTS_OF_FREE\n");
-		return(LOTS_OF_FREE);
+		return(INT_MAX);
 	}
 
 	dprintf(D_FULLDEBUG, "number of kbytes available for (%s): %f\n", 
