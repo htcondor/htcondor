@@ -1819,6 +1819,25 @@ control state or activity transitions within the
   \Expr{START} expression.  This macro is defined in
   terms of seconds and defaults to 300 (5 minutes).
   
+\item[\Macro{MAX\_CLAIM\_ALIVES\_MISSED}]
+  \label{param:MaxClaimAlivesMissed} The schedd sends periodic updates
+  to each startd as a keep alive (see the description of
+  \Macro{ALIVE\_INTERVAL} on page~\pageref{param:AliveInterval}).  
+  If the startd does not receive any keep alive messages, it assumes
+  that something has gone wrong with the schedd and that the resource
+  is not being effectively used.
+  Once this happens, the startd considers the claim to have timed out,
+  it releases the claim, and starts advertising itself as available
+  for other jobs.
+  Because these keep alive messages are sent via UDP, they are
+  sometimes dropped by the network.
+  Therefore, the startd has some tolerance for missed keep alive
+  messages, so that in case a few keep alives are lost, the startd
+  will not immediately release the claim.
+  This setting controls how many keep alive messages can be missed
+  before the startd considers the claim no longer valid.
+  The default is 3.
+
 \item[\Macro{STARTD\_HAS\_BAD\_UTMP}] \label{param:StartdHasBadUtmp}
   When the startd is computing the idle time of all the
   users of the machine (both local and remote), it checks the
@@ -2288,14 +2307,18 @@ These macros control the \Condor{schedd}.
   Defined in terms of seconds and defaults to 2. 
   
 \item[\Macro{ALIVE\_INTERVAL}] \label{param:AliveInterval} This
-  macro determines how often the \Condor{schedd} should send a keep alive
-  message to any startd it has claimed.  When the schedd claims a
-  startd, it tells the startd how often it is going to send these
-  messages.  If the startd does not get one of these messages after 3
-  of these intervals has passed, the startd releases the claim, and
-  the schedd is no longer paying for the resource (in terms of
-  priority in the system).  The macro is defined in terms of seconds
-  and defaults to 300 (every 5 minutes).
+  macro determines how often the \Condor{schedd} should send a keep
+  alive message to any startd it has claimed.
+  When the schedd claims a startd, it tells the startd how often it is
+  going to send these messages.
+  If the startd does not recieve any of these keep alive messages
+  during a certain period of time (defined via
+  \Macro{MAX\_CLAIM\_ALIVES\_MISSED}, described on
+  page~\pageref{param:MaxClaimAlivesMissed})
+  the startd releases the claim, and the schedd is no longer pays for
+  the resource (in terms of user priority in the system).
+  The macro is defined in terms of seconds and defaults to 300 (every
+  5 minutes).
 
 \item[\Macro{SHADOW\_SIZE\_ESTIMATE}] \label{param:ShadowSizeEstimate}
   This macro sets the estimated virtual memory size of each
