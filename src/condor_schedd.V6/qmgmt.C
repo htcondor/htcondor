@@ -751,6 +751,7 @@ GetAttributeExpr(int cluster_id, int proc_id, const char *attr_name, char *val)
 		return -1;
 	}
 
+	val[0] = '\0';
 	tree->PrintToStr(val);
 
 	return 1;
