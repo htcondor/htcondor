@@ -310,6 +310,14 @@ UserProc::transfer_executable( char *src, int &error_code )
 int
 UserProc::linked_for_condor()
 {
+		// if env var _CONDOR_NOCHECK=1, then do not do this check.
+		// this allows expert users to submit shell scripts to the
+		// STANDARD universe.
+	char *tmp = env_obj.getenv("_CONDOR_NOCHECK");
+	if ( tmp && *tmp=='1' ) {
+			return TRUE;
+	}
+
 	if( magic_check(cur_ckpt) < 0 ) {
 		state = BAD_MAGIC;
 		dprintf( D_ALWAYS, "magic_check() failed\n" );
