@@ -1,6 +1,7 @@
 SRC_DIR = $(SRC_TREE)/condor_negotiator
 CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC -fno-implicit-templates -Wall
+LDFLAGS = SocketLib 
 
 CLASSAD_LIB = ../condor_classad/expr_lib.a
 ACCT_LIB    = ../condor_accountant.V6/libacct.a
@@ -10,8 +11,9 @@ OBJ = matchmaker.o main.o
 
 LIB = ../condor_daemon_core.V6/daemon_core.a $(ACCT_LIB) $(CLASSAD_LIB) \
 		../condor_c++_util/libapi.a ../condor_c++_util/cplus_lib.a \
-		../condor_util_lib/util_lib.a ../condor_io/libcondor.a SocketLib 
+		../condor_util_lib/util_lib.a ../condor_io/libcondor.a 
 LIBDIRS = ../condor_util_lib 
+
 
 all_target(condor_negotiator)
 tags_target($(SRC),$(LIBDIRS))
