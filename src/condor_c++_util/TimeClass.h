@@ -28,8 +28,6 @@
 #include <sys/time.h>
 #endif
 
-static char *_FileName_ = __FILE__;
-
 class Time {
 
 private:
@@ -58,7 +56,7 @@ public:
 #else
     struct timeval tp;
     if (gettimeofday(&tp,NULL)==-1) {
-      EXCEPT ("gettimeofday()");
+      tp.tv_sec=tp.tv_usec=0;
     }
     double d=((double)tp.tv_sec)+((double)tp.tv_usec)/1000000;
     return Time(d);
