@@ -923,12 +923,16 @@ checkpoint server host (see below).
 
 \begin{description}
   
-\item[\Macro{USE\_CKPT\_SERVER}] \label{param:UseCkptServer} A boolean
-  which determines if you want a given machine machine to use the
-  checkpoint server for your pool.  
-
 \item[\Macro{CKPT\_SERVER\_HOST}] \label{param:CkptServerHost} The
-  hostname of the checkpoint server for your pool.  
+  hostname of a checkpoint server.
+
+\item[\Macro{STARTER\_CHOOSES\_CKPT\_SERVER}]
+  \label{param:StarterChoosesCkptServer} If this parameter is true on
+  the submit machine, the checkpoint server specified by
+  \Macro{CKPT\_SERVER\_HOST} on the execute machine is used.  If it is
+  false or undefined on the submit machine, the checkpoint server
+  specified by \Macro{CKPT\_SERVER\_HOST} on the submit machine is
+  used.
   
 \item[\Macro{CKPT\_SERVER\_DIR}] \label{param:CkptServerDir} The
   checkpoint server needs this macro defined to the full path of the
@@ -936,6 +940,18 @@ checkpoint server host (see below).
   Depending on the size of your pool and the size of the jobs your
   users are submitting, this directory (and it's subdirectories) might
   need to store many megabytes of data.
+
+\item[\Macro{USE\_CKPT\_SERVER}] \label{param:UseCkptServer} A boolean
+  which determines if you want a given submit machine to use a
+  checkpoint server.
+
+\item[\Macro{MAX\_DISCARDED\_RUN\_TIME}]
+  \label{param:MaxDiscardedRunTime} If the shadow is unable to read a
+  checkpoint file from the checkpoint server, it keeps trying only if
+  the job has accumulated more than this many seconds of CPU usage.
+  Otherwise, the job is started from scratch.  Defaults to 3600 (1
+  hour). This setting is only used if \Macro{USE\_CKPT\_SERVER} is
+  True.
 
 \end{description}
 
@@ -1376,6 +1392,19 @@ These settings control the \Condor{schedd}.
   section~\ref{param:SubsysAddressFile} as
   \Macro{SUBSYS\_ADDRESS\_FILE} 
 
+\item[\Macro{FLOCK\_HOSTS}] \label{param:FlockHosts} This parameter
+  defines a list of central manager hostnames (not including the local
+  \Macro{CONDOR\_HOST} machine) for pools in which the schedd should
+  attempt to run jobs.  Hosts in the list should be in order of
+  preference.  The schedd will only send a request to a central
+  manager in the list if the local pool and pools earlier in the list
+  are not satisfying all the job requests.
+  \Macro{HOSTALLOW\_NEGOTIATOR\_SCHEDD} (see
+  section~\ref{param:HostAllow} must also be configured to allow
+  negotiators from all of the \Macro{FLOCK\_HOSTS} to contact the
+  schedd.  Similarly, the central managers of the remote pools must be
+  configured to listen to requests from this schedd.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1386,14 +1415,6 @@ These settings control the \Condor{schedd}.
 This setting effects the \Condor{shadow}
 
 \begin{description}
-
-\item[\Macro{MAX\_DISCARDED\_RUN\_TIME}]
-  \label{param:MaxDiscardedRunTime} If the shadow is unable to read a
-  checkpoint file from the checkpoint server, it keeps trying only if
-  the job has accumulated more than this many seconds of CPU usage.
-  Otherwise, the job is started from scratch.  Defaults to 3600 (1
-  hour). This setting is only used if \Macro{USE\_CKPT\_SERVER} is
-  True.
 
 \item[\Macro{SHADOW\_LOCK}] \label{param:ShadowLock} This entry
   specifies what lock file should be used for access to the
@@ -1659,14 +1680,42 @@ These settings control the \Condor{negotiator}.
   section~\ref{sec:user-priority-explained}
   on User Priorities for more details.  Defined in seconds, defaults
   to 86400 (1 day).
-  
-\item[\Expr{PREEMPTION\_HOLD}] \label{param:PreemptionHold} If the
-  \Expr{PREEMPTION\_HOLD} expression evaluates to true, the
-  \Condor{negotiator} won't preempt the job running on a given machine
-  even if a user with a higher priority has jobs they want to run.
-  This helps prevents thrashing.  The default is to wait 2 hours
-  before preempting any job.
 
+\item[\Expr{PREEMPTION\_REQUIREMENTS}]
+  \label{param:PreemptionRequirements} The negotiator will not preempt
+  a job running on a given machine unless the
+  \Expr{PREEMPTION\_REQUIREMENTS} expression evaluates to true.  This
+  expression defaults to true.
+
+\item[\Expr{PREEMPTION\_RANK}] \label{param:PreemptionRank} This
+  expression is used to rank machines which the job ranks the same.
+  For example, if the job has no preference, it is usually preferrable
+  to preempt a job with a small ImageSize instead of a job with a
+  large ImageSize.  The default is to rank all preemptible matches the
+  same.  However, the negotiator will always prefer to match the job
+  with an idle machine over a preemptible machine, if the job has no
+  preference between them.
+
+\item[\Expr{NEGOTIATOR\_TRAFFIC\_LIMIT}]
+  \label{param:NegotiatorTrafficLimit} This entry specifies the
+  maximum amount of network traffic (in KB) the negotiator may
+  initiate per \Expr{NEGOTIATOR\_TRAFFIC\_INTERVAL} for job placement
+  and preemption.  The negotiator uses the job ImageSize and
+  ExecutableSize parameters to track network usage.  The negotiator
+  will try to use bandwidth up to the limit, so if starting a large
+  ImageSize job would put the negotiator over the limit, it will try
+  to start a small ImageSize job in its place.  Thus, using traffic
+  limits penalizes large ImageSize jobs for the load they place on the
+  network.  This parameter defaults to 0, which disables network usage
+  management in the negotiator.
+
+\item[\Expr{NEGOTIATOR\_TRAFFIC\_INTERVAL}]
+  \label{param:NegotiatorTrafficInterval} This entry specifies the
+  interval (in seconds) to be used in maintaining the
+  \Expr{NEGOTIATOR\_TRAFFIC\_LIMIT}.  This parameter defaults to 0,
+  which disables network usage management in the negotiator.  It is
+  common to set this parameter equal to \Expr{NEGOTIATOR\_INTERVAL}.
+  
 \item[\Macro{NEGOTIATOR\_DEBUG}] \label{param:NegotiatorDebug} This setting
   (and other settings related to debug logging in the negotiator) is
   described above in section~\ref{param:SubsysDebug} as
