@@ -101,12 +101,46 @@ prio_rec	* PrioRec = &PrioRecArray[0];
 int			N_PrioRecs = 0;
 static int 	MAX_PRIO_REC=INITIAL_MAX_PRIO_REC ;	// INITIAL_MAX_* in prio_rec.h
 
+const char HeaderKey[] = "0.0";
 
 void
 InitJobQueue(const char *job_queue_name)
 {
 	assert(!JobQueue);
 	JobQueue = new ClassAdLog(job_queue_name);
+
+	/* We read/initialize the header ad in the job queue here.  Currently,
+	   this header ad just stores the next available cluster number. */
+	ClassAd *ad;
+	int 	cluster_num;
+	bool	CreatedAd = false;
+	char	cluster_str[40];
+	if (JobQueue->table.lookup(HashKey(HeaderKey), ad) != 0) {
+		// we failed to find header ad, so create one
+		LogNewClassAd *log = new LogNewClassAd(HeaderKey, JOB_ADTYPE,
+											   STARTD_ADTYPE);
+		JobQueue->AppendLog(log);
+		CreatedAd = true;
+	}
+
+	if (CreatedAd ||
+		ad->LookupInteger(ATTR_NEXT_CLUSTER_NUM, next_cluster_num) != 1) {
+		// cluster_num is not already set, so we set it here
+		next_cluster_num = 1;
+		JobQueue->table.startIterations();
+		while (JobQueue->table.iterate(ad) == 1) {
+			if (ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num) == 1) {
+				if (cluster_num >= next_cluster_num) {
+					next_cluster_num = cluster_num + 1;
+				}
+			}
+		}
+		sprintf(cluster_str, "%d", next_cluster_num);
+		LogSetAttribute *log = new LogSetAttribute(HeaderKey,
+												   ATTR_NEXT_CLUSTER_NUM,
+												   cluster_str);
+		JobQueue->AppendLog(log);
+	}
 }
 
 
@@ -354,26 +388,18 @@ InitializeConnection( char *owner, char *tmp_file )
 int
 NewCluster()
 {
-	ClassAd *ad;
-	int		cluster_num;
-
+	LogSetAttribute *log;
+	char cluster_str[40];
+	
 	if (CheckConnection() < 0) {
 		return -1;
 	}
 
-	if (next_cluster_num == -1) {
-		next_cluster_num = 1;
-		JobQueue->table.startIterations();
-		while (JobQueue->table.iterate(ad) == 1) {
-			ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num);
-			if (cluster_num >= next_cluster_num) {
-				next_cluster_num = cluster_num + 1;
-			}
-		}
-	}
-	
 	next_proc_num = 0;
 	active_cluster_num = next_cluster_num++;
+	sprintf(cluster_str, "%d", next_cluster_num);
+	log = new LogSetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, cluster_str);
+	JobQueue->AppendLog(log);
 	return active_cluster_num;
 }
 
@@ -444,11 +470,12 @@ int DestroyProc(int cluster_id, int proc_id)
 	bool lastjob = true;
 	JobQueue->table.startIterations();
 	while(JobQueue->table.iterate(ad) == 1 && lastjob) {
-		ad->LookupInteger(ATTR_CLUSTER_ID, c);
-		if (c == cluster_id) {
-			ad->LookupInteger(ATTR_PROC_ID, p);
-			if (p != proc_id) {
-				lastjob = false;
+		if (ad->LookupInteger(ATTR_CLUSTER_ID, c) == 1) {
+			if (c == cluster_id) {
+				ad->LookupInteger(ATTR_PROC_ID, p);
+				if (p != proc_id) {
+					lastjob = false;
+				}
 			}
 		}
 	}
@@ -479,23 +506,24 @@ int DestroyCluster(int cluster_id)
 
 	// Find all jobs in this cluster and remove them.
 	while(JobQueue->table.iterate(ad) == 1) {
-		ad->LookupInteger(ATTR_CLUSTER_ID, c);
-		if (c == cluster_id) {
-			ad->LookupInteger(ATTR_PROC_ID, proc_id);
+		if (ad->LookupInteger(ATTR_CLUSTER_ID, c) == 1) {
+			if (c == cluster_id) {
+				ad->LookupInteger(ATTR_PROC_ID, proc_id);
 
-			// Only the owner can delete a cluster
-			if (!OwnerCheck(ad, active_owner)) {
-				return -1;
+				// Only the owner can delete a cluster
+				if (!OwnerCheck(ad, active_owner)) {
+					return -1;
+				}
+				sprintf(key, "%d.%d", cluster_id, proc_id);
+				log = new LogDestroyClassAd(key);
+				JobQueue->AppendLog(log);
+
+				// notify schedd to abort job
+				// should probably wait until commit time to do this...
+				job_id.cluster = cluster_id;
+				job_id.proc = proc_id;
+				abort_job_myself( job_id );
 			}
-			sprintf(key, "%d.%d", cluster_id, proc_id);
-			log = new LogDestroyClassAd(key);
-			JobQueue->AppendLog(log);
-
-			// notify schedd to abort job
-			// should probably wait until commit time to do this...
-			job_id.cluster = cluster_id;
-			job_id.proc = proc_id;
-			abort_job_myself( job_id );
 		}
 	}
 
@@ -549,25 +577,27 @@ int DestroyClusterByConstraint(const char* constraint)
 	JobQueue->table.startIterations();
 
 	while(JobQueue->table.iterate(ad) == 1) {
-		if (OwnerCheck(ad, active_owner)) {
-			if (EvalBool(ad, constraint)) {
-				ad->LookupInteger(ATTR_CLUSTER_ID, job_id.cluster);
-				ad->LookupInteger(ATTR_PROC_ID, job_id.proc);
+		// check cluster first to avoid header ad
+		if (ad->LookupInteger(ATTR_CLUSTER_ID, job_id.cluster) == 1) {
+			if (OwnerCheck(ad, active_owner)) {
+				if (EvalBool(ad, constraint)) {
+					ad->LookupInteger(ATTR_PROC_ID, job_id.proc);
 
-				sprintf(key, "%d.%d", job_id.cluster, job_id.proc);
-				log = new LogDestroyClassAd(key);
-				JobQueue->AppendLog(log);
-				flag = 0;
+					sprintf(key, "%d.%d", job_id.cluster, job_id.proc);
+					log = new LogDestroyClassAd(key);
+					JobQueue->AppendLog(log);
+					flag = 0;
 
-				// notify schedd to abort job
-				// should probably wait until commit time to do this...
-				abort_job_myself( job_id );
+					// notify schedd to abort job
+					// should probably wait until commit time to do this...
+					abort_job_myself( job_id );
 
-				if (prev_cluster != job_id.cluster) {
-					ickpt_file_name =
-						gen_ckpt_name( Spool, job_id.cluster, ICKPT, 0 );
-					(void)unlink( ickpt_file_name );
-					prev_cluster = job_id.cluster;
+					if (prev_cluster != job_id.cluster) {
+						ickpt_file_name =
+							gen_ckpt_name( Spool, job_id.cluster, ICKPT, 0 );
+						(void)unlink( ickpt_file_name );
+						prev_cluster = job_id.cluster;
+					}
 				}
 			}
 		}
@@ -829,6 +859,7 @@ ClassAd *
 GetJobByConstraint(const char *constraint)
 {
 	ClassAd	*ad;
+	int cluster_num;	// check for cluster num to avoid header ad
 
 	if(CheckConnection() < 0) {
 		return NULL;
@@ -836,7 +867,8 @@ GetJobByConstraint(const char *constraint)
 
 	JobQueue->table.startIterations();
 	while(JobQueue->table.iterate(ad) == 1) {
-		if (EvalBool(ad, constraint)) {
+		if ((ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num) == 1) &&
+			EvalBool(ad, constraint)) {
 			return ad;
 		}
 	}
@@ -855,6 +887,7 @@ ClassAd *
 GetNextJobByConstraint(const char *constraint, int initScan)
 {
 	ClassAd	*ad;
+	int cluster_num;	// check for cluster num to avoid header ad
 
 	if(CheckConnection() < 0) {
 		return NULL;
@@ -865,7 +898,8 @@ GetNextJobByConstraint(const char *constraint, int initScan)
 	}
 
 	while(JobQueue->table.iterate(ad) == 1) {
-		if (!constraint || !constraint[0] || EvalBool(ad, constraint)) {
+		if ((ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num) == 1) &&
+			(!constraint || !constraint[0] || EvalBool(ad, constraint))) {
 			return ad;
 		}
 	}
@@ -884,6 +918,7 @@ int GetJobList(const char *constraint, ClassAdList &list)
 {
 	int			flag = 1;
 	ClassAd		*ad=NULL, *newad;
+	int			cluster_num;	// check for cluster num to avoid header ad
 
 	if(CheckConnection() < 0) {
 		return -1;
@@ -892,7 +927,8 @@ int GetJobList(const char *constraint, ClassAdList &list)
 	JobQueue->table.startIterations();
 
 	while(JobQueue->table.iterate(ad) == 1) {
-		if (!constraint || !constraint[0] || EvalBool(ad, constraint)) {
+		if ((ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num) == 1) &&
+			(!constraint || !constraint[0] || EvalBool(ad, constraint))) {
 			flag = 0;
 			newad = new ClassAd(*ad);	// insert copy so list doesn't
 			list.Insert(newad);			// destroy the original ad
@@ -1001,10 +1037,10 @@ int get_job_prio(ClassAd *job)
     owner = buf;
 	job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
 	job->LookupInteger(ATTR_PROC_ID, id.proc);
-    if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) < 0) {
+    if (job->LookupInteger(ATTR_CURRENT_HOSTS, cur_hosts) == 0) {
         cur_hosts = ((job_status == RUNNING) ? 1 : 0);
     }
-    if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) < 0) {
+    if (job->LookupInteger(ATTR_MAX_HOSTS, max_hosts) == 0) {
         max_hosts = ((job_status == IDLE || job_status == UNEXPANDED) ? 1 : 0);
     }
 
@@ -1016,38 +1052,15 @@ int get_job_prio(ClassAd *job)
         return cur_hosts;
     }
 
-#if 0
-    prio = upDown_GetUserPriority(owner,&status); /* UPDOWN */
-    if ( status  == Error )
-    {
-        dprintf(D_UPDOWN,"GetUserPriority returned error\n");
-        dprintf(D_UPDOWN,"ERROR : ERROR \n");
-        dprintf( D_ALWAYS,
-                "job_prio: Can't find user priority for %s, assuming 0\n",
-                owner );
-        prio = 0;
-    }
-
-    PrioRec[N_PrioRecs].prio     = prio;
-#endif
-
     PrioRec[N_PrioRecs].id       = id;
     PrioRec[N_PrioRecs].job_prio = job_prio;
     PrioRec[N_PrioRecs].status   = job_status;
     PrioRec[N_PrioRecs].qdate    = q_date;
 
-#if 0
-    if ( DebugFlags & D_UPDOWN )
-    {
-#endif
-		if ( PrioRec[N_PrioRecs].owner ) {
-			free( PrioRec[N_PrioRecs].owner );
-		}
-        PrioRec[N_PrioRecs].owner = strdup( owner );
-
-#if 0
-    }
-#endif
+	if ( PrioRec[N_PrioRecs].owner ) {
+		free( PrioRec[N_PrioRecs].owner );
+	}
+	PrioRec[N_PrioRecs].owner = strdup( owner );
 
 	dprintf(D_UPDOWN,"get_job_prio(): added PrioRec %d - id = %d.%d, owner = %s\n",N_PrioRecs,PrioRec[N_PrioRecs].id.cluster,PrioRec[N_PrioRecs].id.proc,PrioRec[N_PrioRecs].owner);
     N_PrioRecs += 1;
@@ -1078,17 +1091,6 @@ all_job_prio(int cluster, int proc)
     owner = own_buf;
     job_id.cluster = cluster;
     job_id.proc = proc;
-
-#if 0
-    prio = upDown_GetUserPriority(owner, &status);
-    if ( status == Error ) {
-        dprintf( D_ALWAYS,
-                "all_job_prio: Can't find user priority for %s, assuming 0\n",
-                owner );
-        prio = 0;
-    }
-    PrioRec[N_PrioRecs].prio = prio;
-#endif
 
     PrioRec[N_PrioRecs].id = job_id;
     PrioRec[N_PrioRecs].job_prio = job_prio;
@@ -1136,10 +1138,13 @@ WalkJobQueue(scan_func func)
 {
 	ClassAd *ad;
 	int rval = 0;
+	int cluster_num;	// check for cluster num to avoid header ad
 
 	ad = GetNextJob(1);
 	while (ad != NULL && rval >= 0) {
-		rval = func(ad);
+		if (ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num) == 1) {
+			rval = func(ad);
+		}
 		if (rval >= 0) {
 			FreeJobAd(ad);
 			ad = GetNextJob(0);
