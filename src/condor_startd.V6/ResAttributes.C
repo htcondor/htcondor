@@ -59,6 +59,8 @@ MachAttributes::MachAttributes()
 				 );
 		EXCEPT( "Can't compute physical memory." );
 	}
+
+	dprintf( D_FULLDEBUG, "Memory: Detected %d megs RAM\n", m_phys_mem );
 }
 
 
