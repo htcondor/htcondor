@@ -498,7 +498,21 @@ Daemon::getDaemonInfo( const char* subsys,
 		ClassAd*			scan;
 		ClassAdList			ads;
 
-		sprintf(buf, "%s == \"%s\"", ATTR_NAME, _name ); 
+		if( _type == DT_STARTD ) {
+				/*
+				  So long as an SMP startd has only 1 command socket
+				  per startd, we want to take advantage of that and
+				  query based on Machine, not Name.  This way, if
+				  people supply just the hostname of an SMP, we can
+				  still find the daemon.  For example, "condor_vacate
+				  host" will vacate all VMs on that host, but only if
+				  condor_vacate can find the address in the first
+				  place.  -Derek Wright 8/19/99 
+				*/
+			sprintf(buf, "%s == \"%s\"", ATTR_MACHINE, _full_hostname ); 
+		} else {
+			sprintf(buf, "%s == \"%s\"", ATTR_NAME, _name ); 
+		}
 		query.addConstraint(buf);
 		query.fetchAds(ads, _pool);
 		ads.Open();
