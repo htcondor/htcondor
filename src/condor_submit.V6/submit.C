@@ -2940,6 +2940,18 @@ SetGlobusParams()
 		InsertJobExpr (buff);
 	}
 
+	if (tmp = condor_param (ATTR_MYPROXY_REFRESH_THRESHOLD)) {
+		sprintf (buff, "%s = %s", ATTR_MYPROXY_REFRESH_THRESHOLD, tmp );
+		free( tmp );
+		InsertJobExpr ( buff );
+	}
+
+	if (tmp = condor_param (ATTR_MYPROXY_NEW_PROXY_LIFETIME)) { 
+		sprintf (buff, "%s = %s", ATTR_MYPROXY_NEW_PROXY_LIFETIME, tmp );
+		free( tmp );
+		InsertJobExpr ( buff );
+	}
+
 	// END MyProxy-related crap
 }
 

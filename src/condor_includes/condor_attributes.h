@@ -126,6 +126,8 @@ const char ATTR_MYPROXY_SERVER_DN		 [] = "MyProxyServerDN";
 const char ATTR_MYPROXY_HOST_NAME		 [] = "MyProxyHost";
 const char ATTR_MYPROXY_PASSWORD		 [] = "MyProxyPassword";
 const char ATTR_MYPROXY_CRED_NAME		 [] = "MyProxyCredentialName";
+const char ATTR_MYPROXY_REFRESH_THRESHOLD [] = "MyProxyRefreshThreshold";
+const char ATTR_MYPROXY_NEW_PROXY_LIFETIME [] = "MyProxyNewProxyLifetime";
 // END ckireyev myproxy
 const char ATTR_HAS_CHECKPOINTING        [] = "HasCheckpointing";
 const char ATTR_HAS_FILE_TRANSFER        [] = "HasFileTransfer";

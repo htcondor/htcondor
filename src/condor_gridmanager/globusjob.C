@@ -725,7 +725,24 @@ GlobusJob::GlobusJob( ClassAd *classad )
 				if (ad->LookupString (ATTR_MYPROXY_CRED_NAME, buff)) {
 					myProxyEntry->myproxy_credential_name=strdup(buff);
 				}
-			
+
+				if (ad->LookupInteger (ATTR_MYPROXY_REFRESH_THRESHOLD, myProxyEntry->refresh_threshold)) {
+					//myProxyEntry->refresh_threshold=atoi(buff);	// In minutes
+					dprintf (D_FULLDEBUG, "MyProxy Refresh Threshold %d\n",myProxyEntry->refresh_threshold);
+				} else {
+					myProxyEntry->refresh_threshold = 4*60;	// default 4 hrs
+					dprintf (D_FULLDEBUG, "MyProxy Refresh Threshold %d (default)\n",myProxyEntry->refresh_threshold);
+				}
+
+				if (ad->LookupInteger (ATTR_MYPROXY_NEW_PROXY_LIFETIME, myProxyEntry->new_proxy_lifetime)) {
+					//myProxyEntry->new_proxy_lifetime=atoi(buff); // In hours
+					dprintf (D_FULLDEBUG, "MyProxy New Proxy Lifetime %d\n",myProxyEntry->new_proxy_lifetime);
+				} else {
+					myProxyEntry->new_proxy_lifetime = 12; // default 12 hrs
+					dprintf (D_FULLDEBUG, "MyProxy New Proxy Lifetime %d (default)\n",myProxyEntry->new_proxy_lifetime);
+				}
+
+
 				dprintf (D_FULLDEBUG,
 						 "Adding new MyProxy entry for proxy %s : host=%s, cred name=%s\n",
 						 myProxy->proxy_filename,

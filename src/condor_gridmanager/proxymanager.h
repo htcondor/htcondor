@@ -36,6 +36,9 @@ struct MyProxyEntry {
 	//int myproxy_port;
 	char * myproxy_server_dn;
 	char * myproxy_credential_name;
+	
+	int refresh_threshold; // in minutes
+	int new_proxy_lifetime; // in hours
 
 	char * myproxy_password;
 
