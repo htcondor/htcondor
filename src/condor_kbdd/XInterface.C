@@ -31,8 +31,9 @@
 
 #include "XInterface.h"
 #include "condor_config.h"
+#include "condor_string.h"
 #include <paths.h>
-#include <utmp.h>
+#include <utmpx.h>
 #include <setjmp.h>
 
 extern int PollActivity();
@@ -72,11 +73,12 @@ CatchIOFalseAlarm(Display *display, XErrorEvent *err)
 
 // Get the next utmp entry and set our XAUTHORITY environment
 // variable to the .Xauthority file in the user's home directory.
+
 int
 XInterface::NextEntry()
 {
-	utmp *utmp_entry;
 	char *tmp;
+	static int slot = 0;
  
 	if(!_tried_root)
 	{
@@ -85,20 +87,17 @@ XInterface::NextEntry()
 	}
 	else if(!_tried_utmp)
 	{
-		do
-		{
-			utmp_entry = getutent();
-			if(!utmp_entry)
-			{
-				_tried_utmp = true;
-				dprintf(D_FULLDEBUG, "Tryed all utmp users, "
-					"now moving to XAUTHORITY_USERS param.\n");
-				return 0;  // Keep trying....
-			}
+		if ( slot > logged_on_users->getlast() ) {
+			_tried_utmp = true;
+			slot = 0;	// In case we don't actually connect to the X
+						// server and we're going to be back.
+			dprintf(D_FULLDEBUG, "Tryed all utmp users, "
+				"now moving to XAUTHORITY_USERS param.\n");
+			return 0;  // Keep trying....
 		} 
-		while(utmp_entry->ut_type != USER_PROCESS);
 
-		TryUser(utmp_entry->ut_user);
+		TryUser((*logged_on_users)[slot]);
+		slot++;
 	}
 	else  // Try the others
 	{
@@ -152,7 +151,8 @@ XInterface::XInterface(int id)
 {
 	char *tmp;
 	_daemon_core_timer = id;
-	
+	logged_on_users = 0;
+
 	// We may need access to other user's home directories, so we must run
 	// as root.
 	
@@ -191,10 +191,49 @@ XInterface::Connect()
 	int rtn;
 	Window root;
 	int s;
+	
+	struct utmpx utmp_entry;
+
+	if ( logged_on_users ) {
+		for (int foo =0; foo <= logged_on_users->getlast(); foo++) {
+			delete[] (*logged_on_users)[foo];
+		}
+		delete logged_on_users;
+	}
+
+	logged_on_users = new ExtArray< char * >;
+
+
+	dprintf(D_FULLDEBUG, "XInterface::Connect\n");
+	// fopen the Utmp.  If we fail, bail...
+	if ((utmp_fp=fopen(UtmpName,"r")) == NULL) {
+		if ((utmp_fp=fopen(AltUtmpName,"r")) == NULL) {                      
+			EXCEPT("fopen of \"%s\" (and \"%s\") failed!", UtmpName,
+				AltUtmpName);                        
+		}                             
+	}                                 
+ 
+	while(fread((char *)&utmp_entry, sizeof( struct utmpx ), 1, utmp_fp)) {
+		if (utmp_entry.ut_type == USER_PROCESS) {
+			bool _found_it = false;
+			for (int i=0; (i<=logged_on_users->getlast()) && (! _found_it); i++) {
+				if (!strcmp(utmp_entry.ut_user, (*logged_on_users)[i])) {
+					_found_it = true;
+				}
+			}
+			if (! _found_it) {
+				dprintf(D_FULLDEBUG, "User %s is logged in.\n",
+					utmp_entry.ut_user );
+				(*logged_on_users)[logged_on_users->getlast()+1] =
+					strnewp( utmp_entry.ut_user );
+			}
+		}
+	}
+
 
 	set_root_priv();
 
-	setutent(); // Reset utmp file to beginning.
+	//setutent(); // Reset utmp file to beginning.
 
 	_tried_root = false;
 	_tried_utmp = false;
@@ -205,6 +244,7 @@ XInterface::Connect()
 	while(!(_display = XOpenDisplay("localhost:0.0") ))
 	{
 		rtn = NextEntry();
+
 		if(rtn == -1)
 		{
 			dprintf(D_FULLDEBUG, "Exausted all possible attempts to "

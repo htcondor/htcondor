@@ -65,8 +65,22 @@ class XInterface
     int         _daemon_core_timer;
 
     StringList  *_xauth_users;
+
+	// The following are for getting rid of the obnoxious utmp stuff.
+	FILE * utmp_fp;
+	ExtArray<char *> *logged_on_users;
 };
 
+#if defined(OSF1)
+	static char *UtmpName = "/var/adm/utmpx";
+	static char *AltUtmpName = "/etc/utmpx";
+#elif defined(LINUX)
+	static char *UtmpName = "/var/run/utmpx";
+	static char *AltUtmpName = "/var/adm/utmpx";
+#else
+	static char *UtmpName = "/etc/utmpx";
+	static char *AltUtmpName = "/var/adm/utmpx";
+#endif
 
 #endif //__XINTERFACE_H__
 
