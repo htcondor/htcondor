@@ -33,6 +33,7 @@
 #include "sig_install.h"
 #include "string_list.h"
 #include "condor_string.h"   // for strnewp()
+#include "print_wrapped_text.h"
 
 // global variables
 AttrListPrintMask pm;
@@ -42,6 +43,7 @@ AdTypes		type 	= (AdTypes) -1;
 ppOption	ppStyle	= PP_NOTSET;
 int			wantOnlyTotals 	= 0;
 int			summarySize = -1;
+bool        expert = false;
 Mode		mode	= MODE_NOTSET;
 int			diagnose = 0;
 char*		direct = NULL;
@@ -243,8 +245,48 @@ main (int argc, char *argv[])
 	}
 
 	if ((q = query->fetchAds (result, addr)) != Q_OK) {
-		fprintf (stderr, "Error:  Could not fetch ads --- error %s\n", 
-					getStrQueryResult(q));
+		if (q == Q_COMMUNICATION_ERROR) {
+			char error_message[1000];
+			char *log_directory, *collector_host;
+
+			log_directory = param("LOG");
+			if (addr != NULL) {
+				collector_host = addr; 
+			} else {
+				collector_host = param("COLLECTOR_HOST");
+			}
+			sprintf(error_message, 
+					"Error: Couldn't contact the condor_collector on %s.",
+					collector_host ? collector_host : "your central manager");
+			print_wrapped_text(error_message, stderr);
+			if (!expert) {
+				fprintf(stderr, "\n");
+				print_wrapped_text("Extra Info: the condor_collector is a process "
+								   "that runs on the central manager of your Condor "
+								   "pool and collecting the status of all the machines "
+								   "and jobs in the Condor pool. "
+								   "The condor_collector might not be running, "
+								   "it might be refusing to communicate with you, "
+								   "there might be a network problem, or there may be "
+								   "some other problem. Check with your system "
+								   "administrator to fix this problem.", stderr);
+				fprintf(stderr, "\n");
+				sprintf(error_message, 
+						"If you are the system administrator, check that the "
+						"condor_collector is running on %s, check the HOSTALLOW "
+						"configuration in your condor_config, and check the "
+						"MasterLog and CollectorLog files in your log directory "
+						"for possible clues as to why the condor_collector "
+						"is not responding. Also see the Troubleshooting "
+						"section of the manual.", 
+						collector_host ? collector_host : "your central manager");
+				print_wrapped_text(error_message, stderr);
+			}
+		}
+		else {
+			fprintf (stderr, "Error:  Could not fetch ads --- %s\n", 
+					 getStrQueryResult(q));
+		}
 		exit (1);
 	}
 
@@ -303,6 +345,7 @@ usage ()
 		"\t-sort <attr>\t\tSort entries by named attribute\n"
 		"\t-total\t\t\tDisplay totals only\n"
 		"\t-verbose\t\tSame as -long\n" 
+		"\t-expert\t\tDisplay shorter error messages\n" 
 		"    and [custom-opts ...] are one or more of\n"
 		"\t-constraint <const>\tAdd constraint on classads\n"
 		"\t-format <fmt> <attr>\tRegister display format and attribute\n",
@@ -331,14 +374,30 @@ firstPass (int argc, char *argv[])
 			}
 			i++;
 			if( ! argv[i] ) {
-				fprintf( stderr, "%s: -pool requires another argument\n", 
+				fprintf( stderr, "%s: -pool requires a hostname as an argument.\n", 
 						 myName ); 
+				if (!expert) {
+					printf("\n");
+					print_wrapped_text("Extra Info: The hostname should be the central "
+									   "manager of the Condor pool you wish to work with.",
+									   stderr);
+					printf("\n");
+				}
 				fprintf( stderr, "Use \"%s -help\" for details\n", myName ); 
 				exit( 1 );
 			}
 			pool = get_full_hostname( (const char *)argv[i]);
 			if( !pool ) {
 				fprintf( stderr, "Error:  unknown host %s\n", argv[i] );
+				if (!expert) {
+					printf("\n");
+					print_wrapped_text("Extra Info: You specified a hostname for a pool "
+									   "(the -pool argument). That should be the Internet "
+									   "host name for the central manager of the pool, "
+									   "but it does not seem to "
+									   "be a valid hostname. (The DNS lookup failed.)",
+									   stderr);
+				}
 				exit( 1 );
 			} 
 		} else
@@ -454,6 +513,9 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i], "-total")) {
 			wantOnlyTotals = 1;
+		} else
+		if (matchPrefix(argv[i], "-expert")) {
+			expert = true;
 		} else
 		if (*argv[i] == '-') {
 			fprintf (stderr, "Error:  Unknown option %s\n", argv[i]);
