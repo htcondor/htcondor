@@ -331,6 +331,21 @@ int rename( const char *from, const char *to ) : pseudo {
 	    GET_PATH( uname );
 	    ALLOC_PATH( uname );
 	}
+	
+	int get_IOServerAddr( int *reqtype, const char *filename, char *host, int *port ) : pseudo {
+	    in xdr_int( reqtype );
+	    SEND_PATH( filename );
+	    in xdr_string( &host, MAX_STRING );
+	    in xdr_int( port );
+
+	    GET_PATH( host );
+	    out xdr_int( port );
+
+	    ALLOC_PATH( host );
+	    ALLOC_PATH( filename );
+	    alloc( port, INT_SIZE );
+	    alloc( reqtype, INT_SIZE );
+	}
 
 	int extern_name( const char *path, char *buf, int bufsize ) : pseudo {
 		SEND_PATH( path );
