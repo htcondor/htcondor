@@ -101,6 +101,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_gridmanager
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_wait
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -1147,6 +1150,21 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_io
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "condor_wait"=".\condor_wait.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name condor_util_lib
     End Project Dependency
 }}}
 
