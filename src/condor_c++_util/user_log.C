@@ -46,7 +46,7 @@ static const char SynchDelimiter[] = "...\n";
 static void switch_ids( uid_t new_euid, gid_t new_egid );
 static void display_ids();
 extern "C" char *find_env (const char *, const char *);
-static char *get_env_val (const char *);
+extern "C" char *get_env_val (const char *);
 
 UserLog::UserLog (const char *owner, const char *file, int c, int p, int s)
 {
@@ -101,7 +101,7 @@ find_env( const char * name, const char * env )
   avoid introducing NULL's into the original environment string,
   and a pointer into the static area is returned.
 */
-static char *
+char *
 get_env_val( const char *str )
 {
     const char  *src;
