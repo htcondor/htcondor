@@ -1307,13 +1307,13 @@ init_environment_info()
 		free(my_uid_domain);
 	}
 
+#if !defined(CONTRIB)
 	ckpt_server_host = param( "CKPT_SERVER_HOST" );
 	if( ckpt_server_host ) {
-		REMOTE_syscall( CONDOR_choose_ckpt_server, ckpt_server_host );
+		REMOTE_syscall( CONDOR_register_ckpt_server, ckpt_server_host );
 		free(ckpt_server_host);
 	}
 
-#if !defined(CONTRIB)
 	arch = param( "ARCH" );
 	if (arch) {
 		REMOTE_syscall( CONDOR_register_arch, arch );
