@@ -1737,8 +1737,9 @@ These settings control the \Condor{negotiator}.
 \item[\Expr{PREEMPTION\_REQUIREMENTS}]
   \label{param:PreemptionRequirements} The negotiator will not preempt
   a job running on a given machine unless the
-  \Expr{PREEMPTION\_REQUIREMENTS} expression evaluates to true.  This
-  expression defaults to (RemoteUserPrio $>$ SubmittorPrio).
+  \Expr{PREEMPTION\_REQUIREMENTS} expression evaluates to true and the
+  owner of the idle job has a better priority than the owner of the
+  running job.  This expression defaults to false.
 
 \item[\Expr{PREEMPTION\_RANK}] \label{param:PreemptionRank} This
   expression is used to rank machines which the job ranks the same.
