@@ -132,4 +132,9 @@ Now, the \Condor{master} correctly restarts itself in this case.
 2.8.  However, since \File{utmpx} support is enabled, you shouldn't
 need to do this normally.
 
+\item \Condor{kbdd} doesn't work properly under Compaq Tru64 5.1, and
+as a result, resources may not leave the ``Unclaimed'' state
+regardless of keyboard or pty activity.  Compaq Tru64 5.0a and earlier
+do work properly.
+
 \end{itemize}
