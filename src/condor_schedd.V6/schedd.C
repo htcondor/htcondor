@@ -6271,7 +6271,7 @@ Scheduler::Init()
 
 	tmp = param("PERIODIC_EXPR_INTERVAL");
 	if(!tmp) {
-		PeriodicExprInterval = 60;
+		PeriodicExprInterval = 300;
 	} else {
 		PeriodicExprInterval = atoi(tmp);
 	}
