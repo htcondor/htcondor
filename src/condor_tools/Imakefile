@@ -19,7 +19,7 @@ LIB= ../condor_c++_util/cplus_lib.a $(CLASSAD_LIB) ../condor_util_lib/util_lib.a
 LIBDIRS =../condor_util_lib ../condor_c++_util
 PROGRAMS =  \
 	condor_config_val condor_preen  \
-	condor_userprio condor_history condor 
+	condor_userprio condor_history condor test_calc
 
 all_target( $(PROGRAMS) )
 tags_target($(SRC),$(LIBDIRS))
@@ -34,6 +34,8 @@ release_target(condor_config_val,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 c_plus_target(condor_userprio,user_prio.o,$(LIB))
 release_target(condor_userprio,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
+c_plus_target(test_calc,test_calc.o,$(LIB))
+
 c_plus_target(condor,tool.o,$(LIB))
 copy_torelease_target(condor,sbin,condor,EXECUTABLE_MODE)
 link_torelease_target($(RELEASE_DIR)/sbin/condor,sbin,condor_on)
@@ -44,6 +46,7 @@ link_torelease_target($(RELEASE_DIR)/sbin/condor,sbin,condor_restart)
 link_torelease_target($(RELEASE_DIR)/sbin/condor,sbin,condor_reconfig)
 link_torelease_target($(RELEASE_DIR)/sbin/condor,sbin,condor_reconfig_schedd)
 link_torelease_target($(RELEASE_DIR)/sbin/condor,sbin,condor_reschedule)
+link_torelease_target($(RELEASE_DIR)/sbin/condor,sbin,condor_master_off)
 
 c_plus_target(condor_history,history.o,$(LIB))
 release_target(condor_history,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
@@ -58,4 +61,5 @@ stripped: condor
 		rm -f condor_restart; ln condor condor_restart; \
 		rm -f condor_reconfig; ln condor condor_reconfig; \
 		rm -f condor_reschedule; ln condor condor_reschedule; \
-		rm -f condor_reconfig_schedd; ln condor condor_reconfig_schedd
+		rm -f condor_reconfig_schedd; ln condor condor_reconfig_schedd; \
+		rm -f condor_master_off; ln condor condor_master_off
