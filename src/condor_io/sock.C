@@ -321,7 +321,7 @@ int Sock::do_connect(
 	}
 
 	time_t timeout_time = time(NULL) + CONNECT_TIMEOUT;
-	bool connect_failed;
+	bool connect_failed, failed_once = false;
 
 	do {
 		connect_failed = false;
@@ -333,14 +333,24 @@ int Sock::do_connect(
 
 #if defined(WIN32)
 		if (WSAGetLastError() != WSAEALREADY) {
-			dprintf( D_ALWAYS, "Can't connect to %s:%d, errno = %d\n",
-				host, port, WSAGetLastError() );
+			if (!failed_once) {
+				dprintf( D_ALWAYS, "Can't connect to %s:%d, errno = %d\n",
+						 host, port, WSAGetLastError() );
+				dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
+						 CONNECT_TIMEOUT );
+				failed_once = true;
+			}
 			connect_failed = true;
 		}
 #else
 		if (errno != EINPROGRESS) {
-			dprintf( D_ALWAYS, "Can't connect to %s:%d, errno = %d\n",
-				host, port, errno );
+			if (!failed_once) {
+				dprintf( D_ALWAYS, "Can't connect to %s:%d, errno = %d\n",
+						 host, port, errno );
+				dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
+						 CONNECT_TIMEOUT );
+				failed_once = true;
+			}
 			connect_failed = true;
 		}
 #endif
@@ -367,8 +377,13 @@ int Sock::do_connect(
 				}
 				break;
 			default:
-				dprintf( D_ALWAYS, "select returns %d, connect failed\n",
-					nfound );
+				if (!failed_once) {
+					dprintf( D_ALWAYS, "select returns %d, connect failed\n",
+							 nfound );
+					dprintf( D_ALWAYS, "Will keep trying for %d seconds...\n",
+							 CONNECT_TIMEOUT );
+					failed_once = true;
+				}
 				break;
 			}
 		}
