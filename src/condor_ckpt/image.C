@@ -325,7 +325,7 @@ SegMap::Contains( void *addr )
 }
 
 
-#if defined(PVM_CHECKPOINTING)
+#if defined(PVM_CHECKPOINTING) || 1
 extern "C" user_restore_pre(char *, int);
 extern "C" user_restore_post(char *, int);
 
@@ -342,7 +342,7 @@ Image::Restore()
 	int		save_fd = fd;
 	char	user_data[256];
 
-#if defined(PVM_CHECKPOINTING)
+#if defined(PVM_CHECKPOINTING) || 1
 	user_restore_pre(user_data, sizeof(user_data));
 #endif
 		// Overwrite our data segment with the one saved at checkpoint
@@ -354,7 +354,7 @@ Image::Restore()
 		// the only thing that has changed is the file descriptor.
 	fd = save_fd;
 
-#if defined(PVM_CHECKPOINTING)
+#if defined(PVM_CHECKPOINTING) || 1
 	memcpy(global_user_data, user_data, sizeof(user_data));
 #endif
 
@@ -415,7 +415,7 @@ RestoreStack()
 		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 	}
 
-#if defined(PVM_CHECKPOINTING)
+#if defined(PVM_CHECKPOINTING) || 1
 	user_restore_post(global_user_data, sizeof(global_user_data));
 #endif
 
@@ -466,7 +466,7 @@ Image::Write( const char *ckpt_file )
 		// Open the tmp file
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	tmp_name[0] = '\0';
-	if( (fd=open_url(tmp_name,O_WRONLY|O_TRUNC|O_CREAT,len)) < 0 ) {
+	if( (fd=open_url(ckpt_file,O_WRONLY|O_TRUNC|O_CREAT,len)) < 0 ) {
 		sprintf( tmp_name, "%s.tmp", ckpt_file );
 		dprintf( D_ALWAYS, "Tmp name is \"%s\"\n", tmp_name );
 		if ((fd = open_ckpt_file(tmp_name, O_WRONLY|O_TRUNC|O_CREAT,
@@ -492,12 +492,15 @@ Image::Write( const char *ckpt_file )
 	SetSyscalls( scm );
 
 		// We now know it's complete, so move it to the real ckpt file name
-	dprintf( D_ALWAYS, "About to rename \"%s\" to \"%s\"\n",tmp_name,ckpt_file);
-	if( rename(tmp_name,ckpt_file) < 0 ) {
-		perror( "rename" );
-		exit( 1 );
+	if (tmp_name[0] != '\0') {
+		dprintf(D_ALWAYS, "About to rename \"%s\" to \"%s\"\n",
+				tmp_name, ckpt_file);
+		if( rename(tmp_name,ckpt_file) < 0 ) {
+			perror( "rename" );
+			exit( 1 );
+		}
+		dprintf( D_ALWAYS, "Renamed OK\n" );
 	}
-	dprintf( D_ALWAYS, "Renamed OK\n" );
 
 		// Report
 	dprintf( D_ALWAYS, "USER PROC: CHECKPOINT IMAGE SENT OK\n" );
