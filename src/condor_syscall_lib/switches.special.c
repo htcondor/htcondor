@@ -28,6 +28,8 @@
   automatically go here...
 *******************************************************************/
 #include "condor_common.h"
+#include "syscall_sysdep.h"
+#include "syscall_64bit.h"
 
 #if defined(LINUX)
 int _xstat(int, const char *, struct stat *);
@@ -39,7 +41,7 @@ int _lxstat(int, const char *, struct stat *);
 #include "condor_syscall_mode.h"
 #include "file_table_interf.h"
 
-#if defined(HPUX9)
+#if defined(HPUX)
 #	ifdef _PROTOTYPES   /* to remove compilation errors unistd.h */
 #	undef _PROTOTYPES
 #	endif
@@ -141,7 +143,7 @@ store_working_directory()
 	char	tbuf[ _POSIX_PATH_MAX ];
 	char	*status;
 
-#if defined(HPUX9)
+#if defined(HPUX)
 	/* avoid infinite recursion in HPUX9, where getwd calls chdir, which
 	   calls store_working_directory, which calls getwd...  - Jim B. */
 	static int inside_call = 0;
@@ -163,7 +165,7 @@ store_working_directory()
 		/* Ok - everything worked */
 	Set_CWD( tbuf );
 
-#if defined(HPUX9)
+#if defined(HPUX)
 	inside_call = 0;
 #endif
 }
@@ -295,10 +297,10 @@ isatty( int filedes )
   We don't handle readv directly in remote system calls.  Instead we
   break the readv up into a series of individual reads.
 */
-#if defined(HPUX9) || defined(LINUX)
+#if defined(HPUX9) || defined(LINUX) 
 ssize_t
 readv( int fd, const struct iovec *iov, size_t iovcnt )
-#elif defined(IRIX62) || defined(OSF1) || defined(Solaris26)
+#elif defined(IRIX62) || defined(OSF1)|| defined(HPUX10) || defined(Solaris26)
 ssize_t
 readv( int fd, const struct iovec *iov, int iovcnt )
 #else
@@ -383,7 +385,7 @@ linux_fake_readv( int fd, const struct iovec *iov, int iovcnt )
 #if defined(HPUX9) || defined(LINUX) 
 ssize_t
 writev( int fd, const struct iovec *iov, size_t iovcnt )
-#elif defined(Solaris) || defined(IRIX62) || defined(OSF1)
+#elif defined(Solaris) || defined(IRIX62) || defined(OSF1) || defined(HPUX10)
 ssize_t
 writev( int fd, const struct iovec *iov, int iovcnt )
 #else
@@ -461,12 +463,12 @@ linux_fake_writev( int fd, const struct iovec *iov, int iovcnt )
 #endif
 
 
-#if defined(HPUX9)
+#if defined(HPUX)
 #	include <sys/mib.h>
 #	include <sys/ioctl.h>
 #endif
 
-#if defined(Solaris) || defined(LINUX) || defined(OSF1) || defined(IRIX53)
+#if defined(Solaris) || defined(LINUX) || defined(OSF1) || defined(IRIX53) || defined(HPUX10)
 /* int
 ioctl( int fd, int request, ...) */
 #else
@@ -637,7 +639,7 @@ __write(int fd, char *buf, int size)
 /* These are similar additions as above.  This problem cropped up for 
    FORTRAN programs on Solaris 2.4 and OSF1.  -Jim B. */
 
-#if !defined(HPUX9)
+#if !defined(HPUX)
 #if defined( SYS_write )
 _write( int fd, const void *buf, size_t len )
 {
@@ -671,10 +673,11 @@ __lseek( int fd, off_t offset, int whence )
 {
 	return lseek(fd,offset,whence);
 }
+
 #endif /* !defined(LINUX) */
 #endif /* defined(SYS_lseek) */
 
-#endif /* !defined(HPUX9) */
+#endif /* !defined(HPUX) */
 
 #if defined(SYS_prev_stat) && defined(LINUX)
 int _xstat(int version, const char *path, struct stat *buf)
@@ -986,3 +989,25 @@ kill( pid_t pid, int sig )
 	return rval;
 }
 
+
+#if SYNC_RETURNS_VOID
+void
+#else
+int
+#endif
+sync( void )
+{
+	int rval;
+	pid_t my_pid;	
+
+	/* Always want to do a local sync() */
+	SYSCALL( SYS_sync );
+
+	/* If we're in remote mode, also want to send a sync() to the shadow */
+	if( RemoteSysCalls() ) {
+		REMOTE_syscall( CONDOR_sync );
+	}
+#if ! SYNC_RETURNS_VOID
+	return 0;
+#endif
+}
