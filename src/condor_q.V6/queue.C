@@ -1614,9 +1614,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 
 	return_buff[0]='\0';
 
-		// FOR BACK COMPATIBILITY
-		// Add the 'TARGET' keyword to any external references
-	mad.ReplaceLeftAd( request->AddExplicitTargetRefs( ) );	// NAC
+	mad.ReplaceLeftAd( request );	// NAC
 
 	if( !request->EvaluateAttrString( ATTR_OWNER, owner, 128 ) ) {		// NAC
 		return "Nothing here.\n";										// NAC
@@ -1655,10 +1653,6 @@ doRunAnalysisToBuffer( ClassAd *request )
 
   	startdAds.Open();
 	while( offer = startdAds.Next( ) ) {
-
-			// FOR BACK COMPATIBILITY
-			// Add the 'TARGET' keyword to any external references
-		offer = offer->AddExplicitTargetRefs( );
 			// Add conditional operators to offer Rank expression if needed
 		ExprTree* rankExpr = offer->Lookup( ATTR_RANK );
 		ExprTree* newRankExpr = NULL;
@@ -1674,6 +1668,7 @@ doRunAnalysisToBuffer( ClassAd *request )
 		if( verbose ) sprintf( return_buff, "%-15.15s ", buffer );
 
 		// 1. Request satisfied? 
+		mad.RemoveRightAd( );		// NAC
 		mad.ReplaceRightAd( offer );// NAC
 
 		if( !mad.EvaluateAttr( "rightMatchesLeft", val ) ) {     	// NAC
@@ -1806,6 +1801,8 @@ doRunAnalysisToBuffer( ClassAd *request )
 			continue;
 		}
 	}
+	mad.RemoveLeftAd( );	// NAC
+	mad.RemoveRightAd( );	// NAC
 	startdAds.Close();
 
 	sprintf( return_buff,
