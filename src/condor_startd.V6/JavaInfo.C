@@ -143,7 +143,7 @@ void JavaInfo::query_create()
 	if(reaper_id==-1) {
 		reaper_id = daemonCore->Register_Reaper(
 			"JavaInfo::query_reaper",
-			(ReaperHandlercpp)&(JavaInfo::query_reaper),
+			(ReaperHandlercpp)&JavaInfo::query_reaper,
 			"JavaInfo::query_reaper",
 			this);
 
