@@ -57,6 +57,7 @@ int handleSquawk( char *line, char *addr );
 int doSquawkReconnect( char *addr );
 void squawkHelp( char *token );
 int  printAdToFile(ClassAd *ad, char* filename);
+int strncmp_auto(const char *s1, const char *s2);
 
 // Global variables
 int cmd = 0;
@@ -349,36 +350,39 @@ main( int argc, char *argv[] )
 		argv++; argc--;
 	}
 		// Figure out what kind of tool we are.
-	if( !strcmp( cmd_str, "_reconfig" ) ) {
+        // We use strncmp instead of strcmp because 
+        // we want to work on windows when invoked as 
+        // condor_reconfig.exe, not just condor_reconfig
+	if( !strncmp_auto( cmd_str, "_reconfig_schedd" ) ) {
+		fprintf( stderr, "WARNING: condor_reconfig_schedd is deprecated.\n" );
+		fprintf( stderr, "\t Use: \"condor_reconfig -schedd\" instead.\n" );
+		cmd = DC_RECONFIG;
+		dt = DT_SCHEDD;
+    } else if( !strncmp_auto( cmd_str, "_reconfig" ) ) {
 		cmd = DC_RECONFIG;
 		takes_subsys = 1;
-	} else if( !strcmp( cmd_str, "_restart" ) ) {
+	} else if( !strncmp_auto( cmd_str, "_restart" ) ) {
 		cmd = RESTART;
 		takes_subsys = 1;
-	} else if( !strcmp( cmd_str, "_off" ) ) {
+	} else if( !strncmp_auto( cmd_str, "_off" ) ) {
 		cmd = DAEMONS_OFF;
 		takes_subsys = 1;
-	} else if( !strcmp( cmd_str, "_on" ) ) {
+	} else if( !strncmp_auto( cmd_str, "_on" ) ) {
 		cmd = DAEMONS_ON;
 		takes_subsys = 1;
-	} else if( !strcmp( cmd_str, "_master_off" ) ) {
-		fprintf( stderr, "WARNING: condor_master_off is depricated.\n" );
+	} else if( !strncmp_auto( cmd_str, "_master_off" ) ) {
+		fprintf( stderr, "WARNING: condor_master_off is deprecated.\n" );
 		fprintf( stderr, "\t Use: \"condor_off -master\" instead.\n" );
 		cmd = DC_OFF_GRACEFUL;
 		dt = DT_MASTER;
 		takes_subsys = 0;
-	} else if( !strcmp( cmd_str, "_reschedule" ) ) {
+	} else if( !strncmp_auto( cmd_str, "_reschedule" ) ) {
 		cmd = RESCHEDULE;
-	} else if( !strcmp( cmd_str, "_reconfig_schedd" ) ) {
-		fprintf( stderr, "WARNING: condor_reconfig_schedd is depricated.\n" );
-		fprintf( stderr, "\t Use: \"condor_reconfig -schedd\" instead.\n" );
-		cmd = DC_RECONFIG;
-		dt = DT_SCHEDD;
-	} else if( !strcmp( cmd_str, "_vacate" ) ) {
+	} else if( !strncmp_auto( cmd_str, "_vacate" ) ) {
 		cmd = VACATE_CLAIM;
-	} else if( !strcmp( cmd_str, "_checkpoint" ) ) {
+	} else if( !strncmp_auto( cmd_str, "_checkpoint" ) ) {
 		cmd = PCKPT_JOB;
-	} else if ( !strcmp( cmd_str, "_squawk" ) ) {
+	} else if ( !strncmp_auto( cmd_str, "_squawk" ) ) {
 		cmd = SQUAWK;
 		takes_subsys = 1;
 	} else {
@@ -1527,7 +1531,10 @@ hashFunction( const MyString& key, int num_buckets )
 	return key.Hash() % num_buckets;
 }
 
-
+int strncmp_auto(const char *s1, const char *s2)
+{
+    return strncmp(s1, s2, strlen(s2));
+}
 
 extern "C" int SetSyscalls() {return 0;}
 
