@@ -5,7 +5,7 @@ include Makefile.config
 
 LD_FLAGS = $(EXTRA_LD_FLAGS) -L. -lclassad
 
-all:: libclassad.a test_classads tester cxi extra_tests test_xml sample
+all:: libclassad.a classad_functional_tester cxi extra_tests test_xml sample
 
 LIB_INSTALL = $(DESTDIR)/lib
 BIN_INSTALL = $(DESTDIR)/bin
@@ -41,14 +41,8 @@ test_instantiations.o:   test_instantiations.C
 cxi: cxi.o libclassad.a
 	$(CPlusPlus) -o cxi cxi.o $(LD_FLAGS)
 
-test_classads: test_classads.o libclassad.a test_instantiations.o
-	$(CPlusPlus) -o test_classads test_classads.o test_instantiations.o $(LD_FLAGS)
-
-test_classads.pure: test_classads.o libclassad.a
-	$(PURIFY) -o test_classads.pure test_classads.o $(LD_FLAGS)
-
-tester: tester.o libclassad.a test_instantiations.o
-	$(CPlusPlus) -o tester tester.o test_instantiations.o $(LD_FLAGS)
+classad_functional_tester: classad_functional_tester.o libclassad.a test_instantiations.o
+	$(CPlusPlus) -o classad_functional_tester classad_functional_tester.o test_instantiations.o $(LD_FLAGS)
 
 test_xml: test_xml.o libclassad.a
 	$(CPlusPlus) -o test_xml test_xml.o $(LD_FLAGS)
@@ -65,17 +59,16 @@ sample: sample.o libclassad.a
 shared: shared.C
 	$(CPlusPlus) -fPIC -shared -o libshared.so shared.C
 
-install:: libclassad.a test_classads
+install:: libclassad.a classad_functional_tester
 	mkdir -p $(LIB_INSTALL)
 	mkdir -p $(BIN_INSTALL)
 	mkdir -p $(INCLUDE_INSTALL)
 	cp libclassad.a  $(LIB_INSTALL)
-	cp test_classads $(BIN_INSTALL)
-	cp tester        $(BIN_INSTALL)
+	cp classad_functional_tester $(BIN_INSTALL)
 	cp $(HEADER_FILES) $(INCLUDE_INSTALL)
 
 clean: tidy
-	rm -f test_classads test_classads.pure test_xml cxi sample libclassad.a
+	rm -f classad_functional_tester test_xml cxi sample libclassad.a
 tidy:
 	rm -f *.o *~ *.bak
 

@@ -23,7 +23,7 @@
 
 #include "common.h"
 #include "classad.h"
-#include "tester.h"
+#include "classad_functional_tester.h"
 
 using namespace std;
 

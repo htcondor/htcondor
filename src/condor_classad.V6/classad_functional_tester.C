@@ -32,7 +32,7 @@
 #include <iostream>
 #include <ctype.h>
 #include <assert.h>
-#include "tester.h"
+#include "classad_functional_tester.h"
 
 using namespace std;
 #ifdef WANT_NAMESPACES
