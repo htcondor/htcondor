@@ -36,6 +36,8 @@
 #include "condor_network.h"
 #include "condor_string.h"
 #include "condor_ckpt_name.h"
+#include "environ.h"
+#include <time.h>
 #include "user_log.c++.h"
 #include "url_condor.h"
 #include "sched.h"
@@ -44,9 +46,13 @@
 #include "condor_adtypes.h"
 #include "condor_io.h"
 #include "condor_parser.h"
+#include "condor_scanner.h"
+#include "files.h"
+#if !defined(WIN32)
+#include <pwd.h>
+#include <sys/stat.h>
+#endif
 #include "my_hostname.h"
-// #include "util_lib_proto.h"
-
 #include "condor_qmgr.h"
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
@@ -106,6 +112,8 @@ char	*Universe		= "universe";
 char	*MachineCount	= "machine_count";
 char    *NotifyUser     = "notify_user";
 char    *UserLogFile    = "user_log";
+char	*CoreSize		= "coresize";
+char	*KillSig		= "kill_sig";
 #if defined(WIN32)
 char	*NullFile		= "NUL";
 #else
@@ -129,6 +137,9 @@ void 	SetRootDir();
 void 	SetRequirements();
 void 	SetPreferences();
 void 	SetIWD();
+void	SetUserLog();
+void	SetCoreSize();
+void	SetKillSig();
 void 	check_iwd( char *iwd );
 int 	read_condor_file( FILE *fp );
 char * 	condor_param( char *name );
@@ -149,6 +160,8 @@ void 	log_submit();
 void 	get_time_conv( int &hours, int &minutes );
 int     SaveClassAd (ClassAd &);
 void	InsertJobExpr (char *expr);
+
+extern char **environ;
 
 extern "C" {
 
@@ -173,6 +186,10 @@ main( int argc, char *argv[] )
 	init_params();
 
 	DebugFlags |= D_EXPR;
+
+#if !defined(WIN32)
+	install_sig_handler(SIGPIPE, SIG_IGN );
+#endif
 
 	for( ptr=argv+1; *ptr; ptr++ ) {
 		if( ptr[0][0] == '-' ) {
@@ -672,64 +689,58 @@ SetArguments()
 	InsertJobExpr (buffer);
 }
 
-#if defined(ALPHA)
-	char	*CoreSizeFmt = "CONDOR_CORESIZE=%ld";
-#else
-	char	*CoreSizeFmt = "CONDOR_CORESIZE=%d";
-#endif
-
-
 void
 SetEnvironment()
 {
 	char *env = condor_param(Environment);
-	char *shell_env;
-	char *envvalue;
-#if !defined(WIN32)
-	struct rlimit rl;
-#endif
-	char tmp[BUFSIZ];
+	Environ envobject;
+	char newenv[ATTRLIST_MAX_EXPRESSION];
+	char varname[MAXVARNAME];
+	int envlen;
+	bool first = true;
 
-	envvalue = "";
-	/* Defined in command file */
-	if( env != NULL ) 
-	{
-		envvalue = env;
-	}
-	/* Defined in shell environment variable */
-	else 
-	if( shell_env = getenv("CONDOR_CORESIZE") ) 
-	{
-		(void) sprintf( tmp, "CONDOR_CORESIZE=%s", shell_env );
-		env = strdup( tmp );
-		envvalue = env;
-	} 
-	/* Defined by shell variable */
-	else 
-	{
-#if defined(HPUX9) || defined(WIN32)		/* hp-ux doesn't support RLIMIT_CORE */
-		envvalue = "";
-#else
-		if ( getrlimit( RLIMIT_CORE, &rl ) == -1) {
-			EXCEPT("getrlimit failed");
-		}
+	sprintf(newenv, "%s = \"", ATTR_JOB_ENVIRONMENT);
 
-		/* RLIM_INFINITY is a magic cookie, don't try converting to kbytes */
-		if( rl.rlim_cur == RLIM_INFINITY) {
-			(void) sprintf( tmp, CoreSizeFmt, rl.rlim_cur );
-		} else {
-			(void) sprintf( tmp, CoreSizeFmt, rl.rlim_cur/1024 );
-		}
-		env = strdup( tmp );
 
-		check_path_length(env, Environment);
-
-		envvalue = env;
-#endif
+	if (env) {
+		strcat(newenv, env);
+		envobject.add_string(env);
+		first = false;
 	}
 
-	(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_ENVIRONMENT, envvalue);
-	InsertJobExpr (buffer);
+	// grab user's environment
+	envlen = strlen(newenv);
+	for (int i=0; environ[i] && envlen < ATTRLIST_MAX_EXPRESSION; i++) {
+
+		// ignore env settings that contain ';' to avoid syntax problems
+
+		if (strchr(environ[i], ';') == NULL) {
+			envlen += strlen(environ[i]);
+			if (envlen < ATTRLIST_MAX_EXPRESSION) {
+
+				// don't override submit file environment settings
+				// check if environment variable is set in submit file
+
+				int j;
+				for (j=0; env && environ[i][j] && environ[i][j] != '='; j++) {
+					varname[j] = environ[i][j];
+				}
+				varname[j] = '\0';
+				if (env == NULL || envobject.getenv(varname) == NULL) {
+					if (first) {
+						first = false;
+					} else {
+						strcat(newenv, ";");
+					}
+					strcat(newenv, environ[i]);
+				}
+
+			}
+		}
+	}
+	strcat(newenv, "\"");
+
+	InsertJobExpr (newenv);
 }
 
 void
@@ -873,6 +884,119 @@ check_iwd( char *iwd )
 	if( access(pathname, F_OK|X_OK) < 0 ) {
 		EXCEPT("No such directory: %s", pathname);
 	}
+}
+
+void
+SetUserLog()
+{
+	char *ulog = condor_param(UserLogFile);
+
+	if (ulog) {
+		if (whitespace(ulog)) {
+			EXCEPT("Only one %s can be specified.", UserLogFile);
+		}
+		check_path_length(ulog, UserLogFile);
+		(void) sprintf(buffer, "%s = \"%s\"", ATTR_ULOG_FILE, ulog);
+		InsertJobExpr(buffer);
+	}
+}
+
+#if defined(ALPHA)
+	char	*CoreSizeFmt = "CONDOR_CORESIZE=%ld";
+#else
+	char	*CoreSizeFmt = "CONDOR_CORESIZE=%d";
+#endif
+
+
+void
+SetCoreSize()
+{
+	char *size = condor_param(CoreSize);
+	long coresize;
+
+	if (size == NULL) {
+#if defined(HPUX9) || defined(WIN32) /* RLIMIT_CORE not supported */
+		size = "";
+#else
+		struct rlimit rl;
+		if ( getrlimit( RLIMIT_CORE, &rl ) == -1) {
+			EXCEPT("getrlimit failed");
+		}
+
+		/* RLIM_INFINITY is a magic cookie, don't try converting to kbytes */
+		if( rl.rlim_cur == RLIM_INFINITY) {
+			coresize = (long)rl.rlim_cur;
+		} else {
+			coresize = (long)rl.rlim_cur/1024;
+		}
+#endif
+	} else {
+		coresize = atoi(size);
+	}
+
+	(void)sprintf (buffer, "%s = %ld", ATTR_CORE_SIZE, coresize);
+	InsertJobExpr(buffer);
+}
+
+struct SigTable { int v; char *n; };
+
+static struct SigTable SigNameArray[] = {
+	{ SIGABRT, "SIGABRT" },
+	{ SIGALRM, "SIGALRM" },
+	{ SIGFPE, "SIGFPE" },
+	{ SIGHUP, "SIGHUP" },
+	{ SIGILL, "SIGILL" },
+	{ SIGINT, "SIGINT" },
+	{ SIGKILL, "SIGKILL" },
+	{ SIGPIPE, "SIGPIPE" },
+	{ SIGQUIT, "SIGQUIT" },
+	{ SIGSEGV, "SIGSEGV" },
+	{ SIGTERM, "SIGTERM" },
+	{ SIGUSR1, "SIGUSR1" },
+	{ SIGUSR2, "SIGUSR2" },
+	{ SIGCHLD, "SIGCHLD" },
+	{ SIGTSTP, "SIGTSTP" },
+	{ SIGTTIN, "SIGTTIN" },
+	{ SIGTTOU, "SIGTTOU" },
+	{ -1, 0 }
+};
+
+int
+sig_name_lookup(char sig[])
+{
+	for (int i = 0; SigNameArray[i].n != 0; i++) {
+		if (stricmp(SigNameArray[i].n, sig) == 0) {
+			return SigNameArray[i].v;
+		}
+	}
+	fprintf( stderr, "unknown signal %s\n", sig );
+	exit(1);
+}
+
+void
+SetKillSig()
+{
+	char *sig = condor_param(KillSig);
+	int signo;
+
+	if (sig) {
+		signo = atoi(sig);
+		if (signo == 0 && isalnum(sig[0])) {
+			signo = sig_name_lookup(sig);
+		}
+	} else {
+		switch(JobUniverse) {
+		case STANDARD:
+			signo = SIGTSTP;
+			break;
+		default:
+			signo = SIGTERM;
+			break;
+		}
+	}
+
+	(void) sprintf (buffer, "%s = %d", ATTR_KILL_SIG, signo);
+	InsertJobExpr(buffer);
 }
 
 int
@@ -1041,6 +1165,9 @@ queue()
 	SetEnvironment();
 	SetNotification();
 	SetNotifyUser();
+	SetUserLog();
+	SetCoreSize();
+	SetKillSig();
 	SetRequirements();
 	SetPreferences();
 	SetStdFile( 0 );
@@ -1318,12 +1445,9 @@ extern "C" {
 int SetSyscalls( int foo ) { return foo; }
 }
 
-#include "environ.h"
-
 void
 log_submit()
 {
-    Environ env;
     char    *simple_name;
     char    *path;
     char    tmp[ _POSIX_PATH_MAX ];
@@ -1331,13 +1455,10 @@ log_submit()
     UserLog usr_log;
     SubmitEvent jobSubmit;
 
-    // Get name of user log file (if any)
-	if (job.LookupString ("Env", tmp) == FALSE) 
+	
+	if ((simple_name=condor_param(UserLogFile)) == NULL)
 		return;
-    env.add_string( tmp );
-    if( (simple_name=env.getenv("LOG")) == NULL ) {
-        return;
-    }
+
 
     // Convert to a pathname using IWD if needed
     if( simple_name[0] == '/' ) {
@@ -1349,7 +1470,7 @@ log_submit()
 
         // Output the information
     strcpy (jobSubmit.submitHost, ThisHost);
-	job.LookupString ("Owner", owner);
+	job.LookupString (ATTR_OWNER, owner);
     usr_log.initialize ( owner, path, ClusterId, ProcId, 0 );
     if (!usr_log.writeEvent (&jobSubmit))
         fprintf (stderr, "Error logging submit event.\n");
