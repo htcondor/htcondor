@@ -7,7 +7,7 @@ BEGIN
     my $Dir = $0;
     if ( $Dir =~ /(.*)\/.*/ )
     {
-		push @INC, "$1";
+	push @INC, "$1";
     }
 }
 use HawkeyePublish;
@@ -19,15 +19,15 @@ my $OsInfo = ();
 my $OS;
 my @OsInfo = (
 	      { ostype => "IRIX.*", osrev => ".*",
-			cmd => "" },
+		cmd => "" },
 	      { ostype => "HP-UX", osrev => ".*",
-			cmd => "" },
+		cmd => "" },
 	      { ostype => "SunOS", osrev => "5",
-			cmd => "" },
+		cmd => "" },
 	      { ostype => "SunOS", osrev => "4",
-			cmd => "" },
+		cmd => "" },
 	      { ostype => "Linux", osrev => ".*",
-		  	cmd => "/bin/cat /proc/meminfo"}
+		cmd => "/bin/cat /proc/meminfo"}
 	  );
 my %mem_info = (
 		mem_total => "",
@@ -57,20 +57,20 @@ sub Init
     # Learn about our O/S
     foreach my $OsNum ( 0 .. $#OsInfo )
     {
-		my $OsType = $OsInfo[$OsNum]{ostype};
-		my $OsRev = $OsInfo[$OsNum]{osrev};
-		if (  ( $ENV{OS_TYPE} =~ /$OsType/ ) &&
-		      ( $ENV{OS_REV}  =~ /$OsRev/ )  )
-		{
-		    $OS = $OsInfo[$OsNum];
-		    last;
-		}
+	my $OsType = $OsInfo[$OsNum]{ostype};
+	my $OsRev = $OsInfo[$OsNum]{osrev};
+	if (  ( $ENV{OS_TYPE} =~ /$OsType/ ) &&
+	      ( $ENV{OS_REV}  =~ /$OsRev/ )  )
+	{
+	    $OS = $OsInfo[$OsNum];
+	    last;
+	}
     }
 
     # Did we find a match?
     if ( ! defined( $OS->{cmd} ) )
     {
-		die "O/S Not defined\n";
+	die "O/S Not defined\n";
     }
 }
 
@@ -86,42 +86,41 @@ sub RunIt
     # Read my config string
     my $ConfigString = HawkeyeLib::ReadConfig( "memory_used", "", "" );
 
+    my %mem_info = ();
+    my $mem_output = `$OS->{cmd}`;
 
-	my %mem_info = ();
-	my $mem_output = `$OS->{cmd}`;
-
-	if ($OS->{"ostype"} eq "Linux") {
-		if ($mem_output =~ m/^Mem: \s+
-							(\d+) \s+		# total
-							(\d+) \s+		# used
-							(\d+) \s+		# free
-							/mx){
-			$mem_info{mem_total} = $1;
-			$mem_info{mem_used} = $2;
-			$mem_info{mem_free} = $3;
-			$mem_info{perc_mem_used} = $2/$1;
-		}
-		else {
-			die "bad output from `$OS->{cmd}`\n";
-		}
-		if ($mem_output =~ m/^Swap: \s+
-							(\d+) \s+		# total
-							(\d+) \s+		# used
-							(\d+) \s+		# free
-							/mx){
-			$mem_info{swap_total} = $1;
-			$mem_info{swap_used} = $2;
-			$mem_info{swap_free} = $3;
-			$mem_info{perc_swap_used} = $2/$1;
-		}
-		else {
-			die "bad output from `$OS->{cmd}`\n";
-		}
-	} elsif ($OS->{"ostype"} eq "SunOS") {
-	} elsif ($OS->{"ostype"} eq "HP-UX") {
-	} elsif ($OS->{"ostype"} eq "IRIX.*") {
+    if ($OS->{"ostype"} eq "Linux") {
+	if ($mem_output =~ m/^Mem: \s+
+	    (\d+) \s+		# total
+	    (\d+) \s+		# used
+	    (\d+) \s+		# free
+	    /mx) {
+	    $mem_info{mem_total} = $1;
+	    $mem_info{mem_used} = $2;
+	    $mem_info{mem_free} = $3;
+	    $mem_info{perc_mem_used} = $2/$1;
+	} else {
+	    die "bad output from `$OS->{cmd}`\n";
 	}
-
+	if ($mem_output =~ m/^Swap: \s+
+	    (\d+) \s+		# total
+	    (\d+) \s+		# used
+	    (\d+) \s+		# free
+	    /mx) {
+	    $mem_info{swap_total} = $1;
+	    $mem_info{swap_used} = $2;
+	    $mem_info{swap_free} = $3;
+	    $mem_info{perc_swap_used} = $2/$1;
+	} else {
+	    die "bad output from `$OS->{cmd}`\n";
+	}
+    } elsif ($OS->{"ostype"} eq "SunOS") {
+	# Do nothing
+    } elsif ($OS->{"ostype"} eq "HP-UX") {
+	# Do nothing
+    } elsif ($OS->{"ostype"} eq "IRIX.*") {
+	# Do nothing
+    }
 
 
     ###
@@ -138,29 +137,27 @@ sub RunIt
     ### Store the fields used
     ###
     {
-		# Publish to Hawkeye
-		my $Key;
-		$Hawkeye->StoreIndex( $mem_info{perc_mem_used} );
-		foreach $Key ( keys %mem_info )
-		{
-		    # Pull out & clean up the value, and store it away
-		    my $Value = $mem_info{$Key};
-		    my $Name = $Key;
-		    if ( $Value =~ /^(\d+)\%$/ )
-		    {
-				$Value = $1;
-				$Name = "$Name (Percent)";
-				$Hawkeye->StoreNum( $Name, $Value );
-		    }
-		    elsif ( $Value =~ /^\d+$/ )
-		    {
-				$Hawkeye->StoreNum( $Name, $Value );
-		    }
-		    else
-		    {
-				$Hawkeye->Store( $Name, $Value );
-		    }
-		}
+	# Publish to Hawkeye
+	foreach my $Key ( keys %mem_info )
+	{
+	    # Pull out & clean up the value, and store it away
+	    my $Value = $mem_info{$Key};
+	    my $Name = $Key;
+	    if ( $Value =~ /^(\d+)\%$/ )
+	    {
+		$Value = $1;
+		$Name = "$Name (Percent)";
+		$Hawkeye->StoreNum( $Name, $Value );
+	    }
+	    elsif ( $Value =~ /^\d+$/ )
+	    {
+		$Hawkeye->StoreNum( $Name, $Value );
+	    }
+	    else
+	    {
+		$Hawkeye->Store( $Name, $Value );
+	    }
+	}
     }
 
     $Hawkeye->Publish( );
