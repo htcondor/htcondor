@@ -775,7 +775,7 @@ Scheduler::permission(char* id, char *user, char* server, PROC_ID* jobId)
 
             mrec->agentPid = pid;
 			FreeJobAd(jobAd);
-			delete JobAdCopy;	// THREAD SHARED MEMORY WARNING
+			delete jobAdCopy;	// THREAD SHARED MEMORY WARNING
 			return 1;
 	}
 #endif
