@@ -1,7 +1,11 @@
 SRC_DIR = $(SRC_TREE)/condor_c++_util
 
+#if IS_I386_LINUX
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fexternal-templates -DNEW_PROC
+TEMPLATE_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC
+#else
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC
-
+#endif
 CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
 
 #if IS_SPARC_SUNOS41
@@ -18,6 +22,9 @@ SYSPARAM=sysparam_aix
 #endif
 #if IS_HPPAR_HPUX9
 SYSPARAM = sysparam_hpux
+#endif
+#if IS_I386_LINUX
+SYSPARAM = sysparam_linux
 #endif
 
 
