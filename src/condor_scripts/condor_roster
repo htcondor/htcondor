@@ -30,7 +30,7 @@ my $MachineList = "condor_hostlist";
 my @Archs;		# Supported achitectures
 my @ClusterNodes;	# Dedicated cluster nodes
 my @IncludeHosts;	# Other hosts that we're allowwed to run on
-my @DownHosts;		# Machines with problems
+my %DownHosts;		# Machines with problems
 
 # Exclusion lists
 my @ExcludeUsers = ( "NEVER-MATCH-ME" );	# List of users to exclude
@@ -134,7 +134,7 @@ while ( <IN> )
     }
     elsif ( /Down\s+=\s+\"(.+?)\"/i )
     {
-	push( @DownHosts, $1 );
+	$DownHosts{$1} = $1;
     }
     elsif ( /PersonalCondor(Users|Hosts|Full)\s+=\s+\"(.+?)\"/i )
     {
@@ -239,10 +239,10 @@ foreach my $Host ( @IncludeHosts )
 
 # Remove the 'Down' hosts
 my $DownCount = 0;
-foreach my $Down ( @DownHosts )
+foreach my $Down ( keys %DownHosts )
 {
     $DownCount++;
-    delete( $Roster{$Down} );
+#    delete( $Roster{$Down} );
 }
 
 # Dump 'em
@@ -251,6 +251,7 @@ die "Can't write to roster file" if (! open ( OUT, ">$RosterFile" ) );
 my $NodeCount = 0;
 foreach my $Host ( sort keys %Roster )
 {
+    print OUT "- " if ( exists $DownHosts{$Host} );
     print OUT "$Host\n";
     $NodeCount++;
 }
