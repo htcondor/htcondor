@@ -1,9 +1,9 @@
 #define OperatingSystem	OSF1
 #define Architecture	ALPHA
 
-#define HAS_GLOBUS	NO
-#define HAS_GSI		NO
-#define HAS_OPENSSL	NO
+#define HAS_GLOBUS	YES
+#define HAS_GSI		YES
+#define HAS_OPENSSL	YES
 
 #define GLOBUS_FLAVOR gcc64dbg
 
@@ -73,6 +73,7 @@
 #define PVM_ARCH			ALPHA
 #define USE_GCC				YES
 #define HAS_STATIC			YES
+#define NEED_SNPRINTF		YES
 
 #define HAS_DYNAMIC_USER_JOBS	NO
 
