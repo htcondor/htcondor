@@ -81,11 +81,11 @@ public:
 	int DoDup2( int fd, int dupfd );
 	int DoSocket( int addr_family, int type, int protocol );
 	int DoAccept( int s, struct sockaddr *addr, int *addrlen );
-	int	Map( int user_fd );
+	int Map( int user_fd );
 	BOOL IsLocalAccess( int user_fd );
 	BOOL IsDup( int user_fd );
+	int find_avail( int start );
 private:
-	int		find_avail( int start );
 	void	fix_dups( int user_fd );
 	char	cwd[ _POSIX_PATH_MAX ];
 	File	*file;		// array allocated at run time
