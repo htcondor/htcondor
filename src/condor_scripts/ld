@@ -258,6 +258,18 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
                 ldargs=`echo $ldargs -lf2c`
               fi ;;
 
+
+     -lp2c )  if [ $lgcc = false ]; then
+				if [ $osfull = "SunOS5" ]; then
+                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lsocket -lnsl -lp2c`
+				else
+                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lp2c`
+				fi
+                lgcc=true 
+              else
+                ldargs=`echo $ldargs -lp2c`
+              fi ;;
+
 	 # Replace crt[01].o with condor_rt0
      $oscrt0 ) ldargs=`echo $ldargs $CONDOR_RT0` ;;
 
