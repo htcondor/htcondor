@@ -486,7 +486,7 @@ JobImageSizeEvent::
 int JobImageSizeEvent::
 writeEvent (FILE *file)
 {
-	if (fprintf (file, "Image size of job upated: %d\n", size) < 0)
+	if (fprintf (file, "Image size of job updated: %d\n", size) < 0)
 		return 0;
 
 	return 1;
