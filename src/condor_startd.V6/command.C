@@ -638,7 +638,6 @@ activate_claim( Resource* rip, Stream* stream )
 	int fd_1, fd_2;
 	struct sockaddr_in frm;
 	int len = sizeof frm;
-	char official_name[MAXHOSTLEN];
 	StartdRec stRec;
 	start_info_t ji;	/* XXXX */
 	int universe, job_cluster, job_proc, starter;
