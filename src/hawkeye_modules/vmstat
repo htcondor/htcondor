@@ -114,6 +114,8 @@ sub MainLoop( )
 	# If we're in run once mode, we're "all done"
 	if ( $Config{RunOnce} ) {
 	    $AllDone++;
+	} else {
+	    sleep( 5 );
 	}
     }
     while( ! $AllDone );

@@ -20,6 +20,15 @@ if ( $ModuleName =~ /\/([^\/]+)$/ )
 # sub DoConfig( );
 sub DoConfig( )
 {
+    # Prevent recursion
+    if ( exists $ENV{HAWKEYE_MODULE} )
+    {
+	print STDERR "$$: Child of Hawkeye module '$ENV{HAWKEYE_MODULE}'\n";
+	sleep( 5 );
+	die;
+    }
+    $ENV{HAWKEYE_MODULE} = "$0";
+
     $ModuleName = shift( @ARGV) if ( $#ARGV >= 0 );
     if ( $ModuleName =~ /^--ifversion/ )
     {

@@ -145,6 +145,8 @@ sub MainLoop( )
 	# If we're in run once mode, we're "all done"
 	if ( $Config{RunOnce} ) {
 	    $AllDone++;
+	} else {
+	    sleep( 5 );
 	}
     }
     while( ! $AllDone );
@@ -566,6 +568,11 @@ sub RunIt( $ )
 	}
 
 	# Ok, process the collected data now
+	if ( $Proc < 3 )
+	{
+	    print STDERR "No process lines found\n";
+	    next;
+	}
 	ProcessData( \%Processes );
 
 	# Timing logic
@@ -573,7 +580,7 @@ sub RunIt( $ )
 	my $TimeDiff = $CurTime - $LastTime;
 	my $MaxTime = $Config{TopPeriod} * 1.5;
 	if ( ( $LastTime > 0 ) && ( $TimeDiff < $Config{TopPeriod} ) ) {
-	    print STDERR "output looped in $TimeDiff seconds!\n";
+	    print STDERR "output looped in $TimeDiff seconds ($Proc lines)!\n";
 	    $Done++ if ( ++$FastCount > 1 );
 	} else {
 	    $FastCount-- if ( $FastCount > 0 );
