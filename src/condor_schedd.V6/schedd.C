@@ -139,7 +139,7 @@ match_rec::match_rec(char* i, char* p, PROC_ID* id, ClassAd *match,
 	origcluster = cluster = id->cluster;
 	proc = id->proc;
 	status = M_UNCLAIMED;
-	entered_current_status = time( 0 );
+	entered_current_status = (int)time(0);
 	shadowRec = NULL;
 	alive_countdown = 0;
 	num_exceptions = 0;
@@ -3403,7 +3403,7 @@ Scheduler::delete_shadow_rec(int pid)
 		if( rec->match ) {
 				// Be careful, since there might not be a match record
 				// for this shadow record anymore... 
-			rec->match->status = M_CLAIMED;
+			rec->match->setStatus( M_CLAIMED );
 		}
 		RemoveShadowRecFromMrec(rec);
 		shadowsByPid->remove(pid);
