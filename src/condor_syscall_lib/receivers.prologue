@@ -9,11 +9,12 @@
 #include "condor_xdr.h"
 #include "condor_sys.h"
 #include "condor_jobqueue.h"
-#include <assert.h>
+#include "condor_fix_assert.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "_condor_fix_resource.h"
 #include <sys/utsname.h>
+#include "condor_fdset.h"
 
 #if defined(ULTRIX42) || defined(ULTRIX43) || defined(OSF1)
 #	include <sys/param.h>
@@ -22,8 +23,12 @@
 #	include <sys/mount.h>
 #endif
 
-#if defined(OSF1)
+#if defined(OSF1) || defined(SUNOS41)
 #include <sys/poll.h>
+#endif
+
+#if defined(SUNOS41)
+#	include <sys/vfs.h>
 #endif
 
 #include "../condor_syscall_lib/syscall_param_sizes.h"
