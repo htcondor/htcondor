@@ -36,18 +36,22 @@
 static void (*SaveFunc)();
 static jmp_buf Env;
 
-const int	TmpStackSize = 4096;
-static char	TmpStack[ TmpStackSize ];
+// The stack is to be aligned on an 8-byte boundary on some
+// machines. This is required so that double's can be pushed
+// on the stack without any alignment problems.
+
+const int	TmpStackSize = sizeof(char)*4096/sizeof(double);
+static double	TmpStack[ TmpStackSize ];
 void
 ExecuteOnTmpStk( void (*func)() )
 {
-	jmp_buf	env;
+	sigjmp_buf	env;
 	SaveFunc = func;
 
 	if( SETJMP(env) == 0 ) {
 			// First time through - move SP
 		if( StackGrowsDown() ) {
-			JMP_BUF_SP(env) = (long)TmpStack + TmpStackSize;
+			JMP_BUF_SP(env) = (long)(TmpStack + TmpStackSize);
 		} else {
 			JMP_BUF_SP(env) = (long)TmpStack;
 		}
