@@ -1002,32 +1002,17 @@ abort_job_myself(PROC_ID job_id)
         return;
     }
 
+		// If we're here, the user either called condor_hold or
+		// condor_rm, so we should set ATTR_*_REASON appropriately. 
 	if( mode == REMOVED ) {
-			// If we're here, the user called condor_rm, so we should
-			// set ATTR_REMOVE_REASON (if it's not already)
-		if( GetAttributeStringNew(job_id.cluster, job_id.proc,
-								  ATTR_REMOVE_REASON, &tmp) < 0 ) {
-				// nothing there, set it ourselves
-			SetAttributeString( job_id.cluster, job_id.proc, 
-								ATTR_REMOVE_REASON, 
-								"Job removed by condor_rm" );
-		}
-			// GetAttributeStringNew() always allocates a string, even
-			// when it fails, so we want to free() the result in
-			// either case.
-		free( tmp );
+		SetAttributeString( job_id.cluster, job_id.proc, 
+							ATTR_REMOVE_REASON, 
+							"Job removed by condor_rm" );
 	}
 	if( mode == HELD ) {
-			// If we're here, the user called condor_hold, so we
-			// should set ATTR_HOLD_REASON (if it's not already)
-		if( GetAttributeStringNew(job_id.cluster, job_id.proc,
-								  ATTR_HOLD_REASON, &tmp) < 0 ) {
-				// nothing there, set it ourselves
-			SetAttributeString( job_id.cluster, job_id.proc, 
-								ATTR_HOLD_REASON, 
-								"Job held by condor_hold" );
-		}
-		free( tmp );
+		SetAttributeString( job_id.cluster, job_id.proc, 
+							ATTR_HOLD_REASON, 
+							"Job held by condor_hold" );
 	}
 
 	int job_universe = CONDOR_UNIVERSE_STANDARD;
