@@ -24,7 +24,7 @@
 #include "condor_classad.h"
 #include "list.h"
 #include "scheduler.h"
-
+#include "classadList.h"
 
 enum AllocStatus { A_NEW, A_RUNNING, A_DYING };
 
