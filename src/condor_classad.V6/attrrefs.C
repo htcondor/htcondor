@@ -1,5 +1,4 @@
 #include "condor_common.h"
-#include "caseSensitivity.h"
 #include "classad.h"
 
 static char *_FileName_ = __FILE__;
