@@ -782,7 +782,7 @@ doContactSchedd()
 
 		dprintf( D_FULLDEBUG, "querying for removed/held jobs\n" );
 
-		sprintf( expr_buf, "%s && %s == %d && (%s == %d || $s == %d)",
+		sprintf( expr_buf, "%s && %s == %d && (%s == %d || %s == %d)",
 				 owner_buf, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS,
 				 ATTR_JOB_STATUS, REMOVED, ATTR_JOB_STATUS, HELD );
 
