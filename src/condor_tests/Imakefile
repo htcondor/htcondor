@@ -51,7 +51,6 @@ BUILD($(CC),x_trapsig,c)
 
 /* Chirp */
 
-/* turn off until building/linking in NWO and workspace resolved */
 DESC(lib_chirpio_van,"Exercise the chirp I/O library using the C client library")
 BUILD_DEP_LIB($(CC),lib_chirpio,c,,../release_dir/lib/libchirp_client.a)
 DEPS(lib_chirpio_van,lib_chirpio.exe)
@@ -69,11 +68,9 @@ leave the 4th argument empty...
 BUILD_DEP_LIB($(CPlusPlus),x_read_joblog,C,,../release_dir/lib/libcondorapi.a -ldl)
 BUILD_DEP_LIB($(CPlusPlus),x_write_joblog,C,,../release_dir/lib/libcondorapi.a -ldl)
 
-/* turn off until building/linking in NWO and workspace resolved
 DESC(lib_userlog,"Exercise the userlog interface write and read all events");
 RUN(lib_userlog)
 TESTCLASS(lib_userlog,lib)
-*/
 
 /* Condor-C Tests */
 /*
@@ -237,9 +234,11 @@ RUN(job_core_compressfiles_std)
 TESTCLASS(job_core_compressfiles_std,core)
 #endif /* ! IS_CLIPPED */
 
+/* Test can hang now - offline for work 3/1/05
 DESC(job_core_streamerr_van,"Vanilla: test for streaming of error when both stream_error is true and false")
 RUN(job_core_streamerr_van)
 TESTCLASS(job_core_streamerr_van,core)
+*/
 
 DESC(job_core_copytospool_van,"Vanilla: test that spooled executable is same via md5 checksum of both files")
 RUN(job_core_copytospool_van)
