@@ -332,7 +332,9 @@ sub check_condor {
 	print "$host: $isUp";
 	if ( ${$nodes{$host}}[2] eq "given")
         {
-	    print " (reserved by ${$nodes{$host}}[1] at ";
+	    $reserver = ${$nodes{$host}}[1];
+            $reserver =~ s/\@.*$//;
+	    print " (reserved by $reserver at ";
 	    print "${$nodes{$host}}[0])";
 	}
         print"\n";
