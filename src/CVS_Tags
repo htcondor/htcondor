@@ -1,3 +1,19 @@
+11/14/03 V6_6_0
+   The official 6.6.0 release tag!  This is a re-tagging of
+   "BUILD-V6_6-branch-2003-11-13" and "BUILD-V6_6_0-2003-11-12" (both
+   of which might go away eventually).  This tag lives on the
+   V6_6-branch for the V6_6_ALL module, and on the trunk for the
+   entire externals tree.  In NMI land most of the binaries/tarballs
+   came from build ID 1715.  The test suite ran on most platforms via
+   build #1707 (equivalent source tag).  Solaris 9 and MacOSX had to
+   be tested by hand, and Alpha-DUX-40f had to be built and tested by
+   hand due to unexplainable errors building the globus external via
+   the nightly builds.  Hopefully IRIX will use this same tag
+   eventually, but right now, we don't have a functional build machine
+   to use.  Maybe NMI will be stable enough to do the full build by
+   6.6.1.  The version string for all platforms (except IRIX and maybe
+   windows) is: "$CondorVersion: 6.6.0 Nov 13 2003 $"
+
 11/10/03 HAWKEYE_V1_0_RC3
     Release Candidate 3 of Hawkeye 1.0.
 
