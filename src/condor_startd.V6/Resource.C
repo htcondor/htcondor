@@ -138,6 +138,14 @@ Resource::init_classad()
 
 		// Physical memory
 	phys_memory = calc_phys_memory();
+	if( phys_memory <= 0 ) {
+			// calc_phys_memory() failed to give us something useful,
+			// try paraming. 
+		if( (ptr = param("MEMORY")) != NULL ) {
+			phys_memory = atoi(ptr);
+			free(ptr);
+		}
+	}
 	if( phys_memory > 0 ) {
 		sprintf( tmp, "%s = %d", ATTR_MEMORY, phys_memory );
 		r_classad->Insert( tmp );
