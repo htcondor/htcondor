@@ -41,3 +41,4 @@
 #define JOB_NOT_CKPTED	7	/* The job was kicked off without a checkpoint	 */
 #define JOB_NOT_STARTED	8	/* Can't connect to startd or request refused	 */
 #define JOB_BAD_STATUS	9	/* Job status != RUNNING on startup				 */
+#define JOB_EXEC_FAILED 10  /* Exec failed for some reason other than ENOMEM */
