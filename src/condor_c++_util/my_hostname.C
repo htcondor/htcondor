@@ -28,11 +28,13 @@
 static char *_FileName_ = __FILE__;
 
 static struct hostent *host_ptr = NULL;
-static char hostname[MAXHOSTNAMELEN];
-static char full_hostname[MAXHOSTNAMELEN];
+static char* hostname = NULL;
+static char* full_hostname = NULL;
 static unsigned int ip_addr;
 static int hostnames_initialized = 0;
 static void init_hostnames();
+
+extern "C" {
 
 // Return our hostname in a static data buffer.
 char *
@@ -66,39 +68,93 @@ my_ip_addr()
 	return ip_addr;
 }
 
+} /* extern "C" */
+
+#if !defined(WIN32)
+#include <arpa/nameser.h>
+#include <resolv.h>
+#endif
 
 void
 init_hostnames()
 {
-	char* tmp;
+	char *tmp, hostbuf[MAXHOSTNAMELEN];
+	int i;
+
+	if( hostname ) {
+		free( hostname );
+	}
+	if( full_hostname ) {
+		free( full_hostname );
+		full_hostname = NULL;
+	}
 
 		// Get our local hostname, and strip off the domain if
 		// gethostname returns it.
-	if( gethostname(hostname, sizeof(hostname)) == 0 ) {
-		tmp = strchr( hostname, '.' );
-		if( tmp ) {
+	if( gethostname(hostbuf, sizeof(hostbuf)) == 0 ) {
+		if( (tmp = strchr(hostbuf, '.')) ) {
+				// There's a '.' in the hostname, assume we've got the
+				// full hostname here, save it, and trim the domain
+				// off and save that as the hostname.
+			full_hostname = strdup( hostbuf );
 			*tmp = '\0';
 		}
+		hostname = strdup( hostbuf );
 	} else {
 		EXCEPT( "gethostname failed, errno = %d", 
 #ifndef WIN32
-			errno );
+				errno );
 #else
-			WSAGetLastError() );
+		WSAGetLastError() );
 #endif
-	}
-
-		// Look up our official host information
-	if( (host_ptr = gethostbyname(hostname)) == NULL ) {
-		EXCEPT( "gethostbyname(%s) failed, errno = %d", hostname, errno );
-	}
-
-		// Grab our ip_addr and fully qualified hostname
-	memcpy( &ip_addr, host_ptr->h_addr, (size_t)host_ptr->h_length );
-	ip_addr = ntohl( ip_addr );
-
-	strcpy( full_hostname, host_ptr->h_name );
+    }
 	
+		// Look up our official host information
+	if( (host_ptr = gethostbyname(hostbuf)) == NULL ) {
+		EXCEPT( "gethostbyname(%s) failed, errno = %d", hostbuf, errno );
+	}
+
+		// Grab our ip_addr
+	memcpy( &ip_addr, host_ptr->h_addr, (size_t)host_ptr->h_length );
+    ip_addr = ntohl( ip_addr );
+
+	    // If we don't have our full_hostname yet, try to find it. 
+	if( ! full_hostname ) {
+			// See if it's correct in the hostent we've got.
+		if( (tmp = strchr(host_ptr->h_name, '.')) ) {
+				// There's a '.' in the "name", use that as full.
+			full_hostname = strdup( host_ptr->h_name );
+		}
+	}
+
+	if( ! full_hostname ) {
+			// We still haven't found it yet, try all the aliases
+			// until we find one with a '.'
+		for( i=0; host_ptr->h_aliases[i], !full_hostname; i++ ) {
+			if( (tmp = strchr(host_ptr->h_aliases[i], '.')) ) { 
+				full_hostname = strdup( host_ptr->h_aliases[i] );
+			}
+		}
+	}
+
+#if !defined( WIN32 ) /* I'm not sure how to do this on NT */
+	if( ! full_hostname ) {
+			// We still haven't found it yet, try to use the
+			// resolver.  *sigh*
+		res_init();
+		if( _res.defdname ) {
+				// We know our default domain name, append that.
+			strcat( hostbuf, "." );
+			strcat( hostbuf, _res.defdname );
+			full_hostname = strdup( hostbuf );
+		}
+	}
+#endif /* WIN32 */
+	if( ! full_hostname ) {
+			// Still can't find it, just give up.
+		full_hostname = strdup( hostname );
+	}
+
 	hostnames_initialized = TRUE;
 }
 
