@@ -48,18 +48,26 @@ class Attribute
 class ClassAd : public ExprTree
 {
   	public:
+		/**@name Constructors/Destructor */
+		//@{
 		/// Default constructor 
 		ClassAd ();
+
 		/** Instantiates ClassAd in a specified domain.  This feature is
 			experimental; use of domains is discouraged.
 		 	@param d The domain that the ClassAd belongs to.
 		*/
 		ClassAd (char *d);			// instantiate in domain
+
 		/** Copy constructor */
 		ClassAd (const ClassAd &);
+
 		/** Destructor */
 		~ClassAd ();
+		//@}
 
+		/**@name Inherited virtual methods */
+		//@{
 		// override methods
 		/** Sends the ClassAd object to a sink.
 			@param s The sink object.
@@ -69,20 +77,15 @@ class ClassAd : public ExprTree
 		*/
 		virtual bool ToSink( Sink &s );	
 
-		/** Update a class-ad with another ClassAd. The attributes from the 
-		 		specified ClassAd are inserted into this ClassAd, overwriting 
-				any existing attributes with the same name.
-			@param ad the class-ad that represents the update.
-			@return false if the ClassAd could not be successfully updated.
-		*/
-		void Update( const ClassAd& ad );	
-		bool Modify( ClassAd& ad );
+        /** Makes a deep copy of the expression tree
+           	@return A deep copy of the expression, or NULL on failure.
+         */
+		virtual ClassAd* Copy( );
+		//@}
 
-		// Accessors/modifiers
-		/** Clears the ClassAd of all attributes.
-		*/
-		void Clear( );
 
+		/**@name Insertion Methods */
+		//@{	
 		/** Inserts an attribute into the ClassAd.  The setParentScope() method
 				is invoked on the inserted expression.
 			@param attrName The name of the attribute.  This string is
@@ -92,8 +95,33 @@ class ClassAd : public ExprTree
 			@see ExprTree::setParentScope
 		*/
 		bool Insert( const char *attrName, ExprTree *expr );
+
+		/** Inserts an attribute into a nested classAd.  The scope expression is
+		 		evaluated to obtain a nested classad, and the attribute is 
+				inserted into this subclassad.  The setParentScope() method
+				is invoked on the inserted expression.
+			@param scopeExpr String representation of the scope expression.
+			@param attrName The name of the attribute.  This string is
+				duplicated internally.
+			@param expr The expression bound to the name.
+			@return true if the operation succeeded, false otherwise.
+			@see ExprTree::setParentScope
+		*/
 		bool DeepInsert( const char *scopeExpr, const char *attrName, 
 				ExprTree *expr );
+
+
+		/** Inserts an attribute into a nested classAd.  The scope expression is
+		 		evaluated to obtain a nested classad, and the attribute is 
+				inserted into this subclassad.  The setParentScope() method
+				is invoked on the inserted expression.
+			@param scopeExpr The scope expression.
+			@param attrName The name of the attribute.  This string is
+				duplicated internally.
+			@param expr The expression bound to the name.
+			@return true if the operation succeeded, false otherwise.
+			@see ExprTree::setParentScope
+		*/
 		bool DeepInsert( ExprTree *scopeExpr, const char *attrName, 
 				ExprTree *expr );
 
@@ -111,8 +139,40 @@ class ClassAd : public ExprTree
 			@see ExprTree::setParentScope
 		*/
 		bool Insert( const char *attrName, const char *buf, int len=-1 );
+
+		/** Inserts an attribute into a nested classad.  The scope expression is                evaluated to obtain a nested classad, and the attribute is 
+		        inserted into this subclassad.  The contents of the buffer buf
+				is parsed into an expression and then inserted into the nested
+				classad. The setParentScope() method is invoked on the 
+				inserted expression.
+			@param scopeExpr String representation of the scope expression.
+			@param attrName The name of the attribute.  This string is
+				duplicated internally.
+			@param buf The character representation of the expression.
+			@param len The length of the buffer.  If this paramter is not
+				supplied, the length is inferred from the string through
+				strlen().
+			@return true if the operation succeeded, false otherwise.
+			@see ExprTree::setParentScope
+		*/
 		bool DeepInsert( const char *scopeExpr, const char *attrName, 
 				const char *buf, int len=-1 );
+
+		/** Inserts an attribute into a nested classad.  The scope expression is                evaluated to obtain a nested classad, and the attribute is 
+		        inserted into this subclassad.  The contents of the buffer buf
+				is parsed into an expression and then inserted into the nested
+				classad. The setParentScope() method is invoked on the 
+				inserted expression.
+			@param scopeExpr The scope expression.
+			@param attrName The name of the attribute.  This string is
+				duplicated internally.
+			@param buf The character representation of the expression.
+			@param len The length of the buffer.  If this paramter is not
+				supplied, the length is inferred from the string through
+				strlen().
+			@return true if the operation succeeded, false otherwise.
+			@see ExprTree::setParentScope
+		*/
 		bool DeepInsert( ExprTree *scopeExpr, const char *attrName, 
 				const char *buf, int len=-1 );
 
@@ -127,8 +187,34 @@ class ClassAd : public ExprTree
 		*/
 		bool InsertAttr( const char *attrName,int value, 
 				NumberFactor f=NO_FACTOR );
+
+		/** Inserts an attribute into a nested classad.  The scope expression 
+		 		is evaluated to obtain a nested classad, and the attribute is
+		        inserted into this subclassad.  The integer value is
+				converted into a Literal expression, and then inserted into
+				the nested classad.
+			@param scopeExpr String representation of the scope expression.
+			@param attrName The name of the attribute.  This string is
+				duplicated internally.
+			@param value The integer value of the attribute.
+			@param f The multiplicative factor to be attached to value.
+			@see NumberFactor
+		*/
 		bool DeepInsertAttr( const char *scopeExpr, const char *attrName,
 				int value, NumberFactor f=NO_FACTOR );
+
+		/** Inserts an attribute into a nested classad.  The scope expression 
+		 		is evaluated to obtain a nested classad, and the attribute is
+		        inserted into this subclassad.  The integer value is
+				converted into a Literal expression, and then inserted into
+				the nested classad.
+			@param scopeExpr The scope expression.
+			@param attrName The name of the attribute.  This string is
+				duplicated internally.
+			@param value The integer value of the attribute.
+			@param f The multiplicative factor to be attached to value.
+			@see NumberFactor
+		*/
 		bool DeepInsertAttr( ExprTree *scopeExpr, const char *attrName,
 				int value, NumberFactor f=NO_FACTOR );
 
@@ -143,8 +229,35 @@ class ClassAd : public ExprTree
 		*/
 		bool InsertAttr( const char *attrName,double value, 
 				NumberFactor f=NO_FACTOR);
+		/** Inserts an attribute into a nested classad.  The scope expression
+		 		is evaluated to obtain a nested classad, and the insertion is
+				made in the nested classad.  The double value is
+				converted into a Literal expression to yield the expression to
+				be inserted.
+			@param scopeExpr String representation of the scope expression.
+			@param attrName The name of the attribute.  This string is
+				always duplicated internally.
+			@param value The string attribute
+			@param dup If dup is true, the value is duplicated internally.
+				Otherwise, the string is assumed to have been created with new[]
+				and the classad assumes responsibility for freeing the storage.
+		*/
 		bool DeepInsertAttr( const char *scopeExpr, const char *attrName,
 				double value, NumberFactor f=NO_FACTOR);
+
+		/** Inserts an attribute into a nested classad.  The scope expression
+		 		is evaluated to obtain a nested classad, and the insertion is
+				made in the nested classad.  The double value is
+				converted into a Literal expression to yield the expression to
+				be inserted.
+			@param scopeExpr String representation of the scope expression.
+			@param attrName The name of the attribute.  This string is
+				always duplicated internally.
+			@param value The string attribute
+			@param dup If dup is true, the value is duplicated internally.
+				Otherwise, the string is assumed to have been created with new[]
+				and the classad assumes responsibility for freeing the storage.
+		*/
 		bool DeepInsertAttr( ExprTree *scopeExpr, const char *attrName,
 				double value, NumberFactor f=NO_FACTOR);
 
@@ -156,8 +269,36 @@ class ClassAd : public ExprTree
 			@param value The boolean value of the attribute.
 		*/
 		bool InsertAttr( const char *attrName, bool value );
+
+		/** Inserts an attribute into a nested classad.  The scope expression
+		 		is evaluated to obtain a nested classad, and the insertion is
+				made in the nested classad.  The boolean value is
+				converted into a Literal expression to yield the expression to
+				be inserted.
+			@param scopeExpr String representation of the scope expression.
+			@param attrName The name of the attribute.  This string is
+				always duplicated internally.
+			@param value The string attribute
+			@param dup If dup is true, the value is duplicated internally.
+				Otherwise, the string is assumed to have been created with new[]
+				and the classad assumes responsibility for freeing the storage.
+		*/
 		bool DeepInsertAttr( const char *scopeExpr, const char *attrName, 
 				bool value );
+
+		/** Inserts an attribute into a nested classad.  The scope expression
+		 		is evaluated to obtain a nested classad, and the insertion is
+				made in the nested classad.  The boolean value is
+				converted into a Literal expression to yield the expression to
+				be inserted.
+			@param scopeExpr The scope expression.
+			@param attrName The name of the attribute.  This string is
+				always duplicated internally.
+			@param value The string attribute
+			@param dup If dup is true, the value is duplicated internally.
+				Otherwise, the string is assumed to have been created with new[]
+				and the classad assumes responsibility for freeing the storage.
+		*/
 		bool DeepInsertAttr( ExprTree *scopeExpr, const char *attrName, 
 				bool value );
 
@@ -173,11 +314,42 @@ class ClassAd : public ExprTree
 		*/
 		bool InsertAttr( const char *attrName, const char *value, 
 				bool dup=true );
+
+		/** Inserts an attribute into a nested classad.  The scope expression
+		 		is evaluated to obtain a nested classad, and the insertion is
+				made in the nested classad.  The string value is
+				converted into a Literal expression to yield the expression to
+				be inserted.
+			@param scopeExpr String representation of the scope expression.
+			@param attrName The name of the attribute.  This string is
+				always duplicated internally.
+			@param value The string attribute
+			@param dup If dup is true, the value is duplicated internally.
+				Otherwise, the string is assumed to have been created with new[]
+				and the classad assumes responsibility for freeing the storage.
+		*/
 		bool DeepInsertAttr( const char *scopeExpr, const char *attrName, 
 				const char *value, bool dup=true );
+
+		/** Inserts an attribute into a nested classad.  The scope expression
+		 		is evaluated to obtain a nested classad, and the insertion is
+				made in the nested classad.  The string value is
+				converted into a Literal expression to yield the expression to
+				be inserted.
+			@param scopeExpr The scope expression.
+			@param attrName The name of the attribute.  This string is
+				always duplicated internally.
+			@param value The string attribute
+			@param dup If dup is true, the value is duplicated internally.
+				Otherwise, the string is assumed to have been created with new[]
+				and the classad assumes responsibility for freeing the storage.
+		*/
 		bool DeepInsertAttr( ExprTree *scopeExpr, const char *attrName, 
 				const char *value, bool dup=true );
+		//@}
 
+		/**@name Lookup Methods */
+		//@{
 		/** Finds the expression bound to an attribute name.  The lookup only
 				involves this ClassAd; scoping information is ignored.
 			@param attrName The name of the attribute.  
@@ -198,6 +370,12 @@ class ClassAd : public ExprTree
 				otherwise.
 		*/
 		ExprTree *LookupInScope( const char *attrName, ClassAd *&ad );
+		//@}
+
+		/**@name Attribute Deletion Methods */
+		//@{
+		/** Clears the ClassAd of all attributes. */
+		void Clear( );
 
 		/** Deletes the named attribute from the ClassAd.  Only attributes from
 				the local ClassAd are considered; scoping information is 
@@ -207,7 +385,29 @@ class ClassAd : public ExprTree
 				successfully removed, false otherwise.
 		*/
 		bool Delete( const char *attrName );
+
+		/** Deletes the named attribute from a nested classAd.  The scope
+		 		expression is evaluated to obtain a nested classad, and the
+				attribute is then deleted from this ad.  Only attributes from
+				the local ClassAd are considered; scoping information is 
+				ignored.  The expression bound to the attribute is deleted.
+			@param scopeExpr String representation of the scope expression.
+			@param attrName The name of the attribute to be delete.
+			@return true if the attribute previously existed and was 
+				successfully removed, false otherwise.
+		*/
 		bool DeepDelete( const char *scopeExpr, const char *attrName );
+
+		/** Deletes the named attribute from a nested classAd.  The scope
+		 		expression is evaluated to obtain a nested classad, and the
+				attribute is then deleted from this ad.  Only attributes from
+				the local ClassAd are considered; scoping information is 
+				ignored.  The expression bound to the attribute is deleted.
+			@param scopeExpr The scope expression.
+			@param attrName The name of the attribute to be delete.
+			@return true if the attribute previously existed and was 
+				successfully removed, false otherwise.
+		*/
 		bool DeepDelete( ExprTree *scopeExpr, const char *attrName );
 	
 		/** Similar to Delete, but the expression is returned rather than 
@@ -215,12 +415,33 @@ class ClassAd : public ExprTree
 			@param attrName The name of the attribute to be extricated.
 			@return The expression tree of the named attribute, or NULL if
 				the attribute could not be found.
+			@see Delete
 		*/
 		ExprTree *Remove( const char* attrName );
-		ExprTree *DeepRemove( const char *scopeExpr, const char* attrName );
-		ExprTree *DeepRemove( ExprTree *scopeExpr, const char* attrName );
 
-		// evaluation methods
+		/** Similar to DeepDelete, but the expression is returned rather than 
+		  		deleted from the classad.
+			@param scopeExpr String representation of the scope expression
+			@param attrName The name of the attribute to be extricated.
+			@return The expression tree of the named attribute, or NULL if
+				the attribute could not be found.
+			@see Delete
+		*/
+		ExprTree *DeepRemove( const char *scopeExpr, const char* attrName );
+
+		/** Similar to DeepDelete, but the expression is returned rather than 
+		  		deleted from the classad.
+			@param scopeExpr The scope expression
+			@param attrName The name of the attribute to be extricated.
+			@return The expression tree of the named attribute, or NULL if
+				the attribute could not be found.
+			@see Delete
+		*/
+		ExprTree *DeepRemove( ExprTree *scopeExpr, const char* attrName );
+		//@}
+
+		/**@name Evaluation Methods */
+		//@{
 		/** Evaluates expression bound to an attribute.
 			@param attrName The name of the attribute in the ClassAd.
 			@param result The result of the evaluation.
@@ -315,8 +536,19 @@ class ClassAd : public ExprTree
 				otherwise.
 		*/
 		bool EvaluateAttrBool( const char* attrName, bool& boolValue );
+		//@}
 
-		// flattening method
+		/**@name Miscellaneous */
+		//@{
+		/** Update a class-ad with another ClassAd. The attributes from the 
+		 		specified ClassAd are inserted into this ClassAd, overwriting 
+				any existing attributes with the same name.
+			@param ad the class-ad that represents the update.
+			@return false if the ClassAd could not be successfully updated.
+		*/
+		void Update( const ClassAd& ad );	
+		bool Modify( ClassAd& ad );
+
 		/** Flattens the Classad.
 			@param expr The expression to be flattened.
 			@param val The value after flattening, if the expression was 
@@ -328,7 +560,6 @@ class ClassAd : public ExprTree
 		*/
 		bool Flatten( ExprTree* expr, Value& val, ExprTree *&fexpr );
 		
-		// factory methods to procure classads
 		/** Factory method to create a ClassAd.
 			@param s The source object.
 			@return The ClassAd if the parse was successful, and NULL otherwise.
@@ -344,10 +575,7 @@ class ClassAd : public ExprTree
 		*/
 		static ClassAd *AugmentFromSource( Source &s, ClassAd &c);
 
-        /** Makes a deep copy of the expression tree
-         *  @return A deep copy of the expression, or NULL on failure.
-         */
-		virtual ClassAd* Copy( );
+		//@}
 
   	private:
 		friend 	class AttributeReference;
