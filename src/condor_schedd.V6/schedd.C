@@ -3744,7 +3744,7 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 {
 #if !defined(WIN32)
 	int notification;
-	char owner[2048], buf[2048];
+	char owner[2048], subject[2048];
 	char cmd[_POSIX_PATH_MAX], args[_POSIX_ARG_MAX];
 
 	if (GetAttributeInt(srec->job_id.cluster, srec->job_id.proc,
@@ -3799,11 +3799,12 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 	}
 
 	// Send mail to user
-	sprintf(buf, "Condor Job %d.%d", srec->job_id.cluster, srec->job_id.proc);
+	sprintf(subject, "Condor Job %d.%d", srec->job_id.cluster, 
+		srec->job_id.proc);
 	dprintf( D_FULLDEBUG, "Unknown user notification selection\n");
-	dprintf( D_FULLDEBUG, "\tNotify user with subject: %s\n",buf);
+	dprintf( D_FULLDEBUG, "\tNotify user with subject: %s\n",subject);
 
-	FILE* mailer = email_open(buf, owner);
+	FILE* mailer = email_open(owner, subject);
 	if (mailer == NULL) {
 		EXCEPT("Could not open mail to user!");
 	}
@@ -3817,22 +3818,22 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 		EXCEPT("condor_open_mailto_url(%s, %d, 0)", owner, O_WRONLY, 0);
 	}
 
-//	sprintf(buf, "From: Condor\n");
-//	write(fd, buf, strlen(buf));
-//	sprintf(buf, "To: %s\n", owner);
-//	write(fd, buf, strlen(buf));
-	sprintf(buf, "Subject: Condor Job %d.%d\n\n", srec->job_id.cluster,
+//	sprintf(subject, "From: Condor\n");
+//	write(fd, subject, strlen(subject));
+//	sprintf(subject, "To: %s\n", owner);
+//	write(fd, subject, strlen(subject));
+	sprintf(subject, "Subject: Condor Job %d.%d\n\n", srec->job_id.cluster,
 			srec->job_id.proc);
-	write(fd, buf, strlen(buf));
-	sprintf(buf, "Your condor job\n\t");
-	write(fd, buf, strlen(buf));
+	write(fd, subject, strlen(subject));
+	sprintf(subject, "Your condor job\n\t");
+	write(fd, subject, strlen(subject));
 	write(fd, cmd, strlen(cmd));
 	write(fd, " ", 1);
 	write(fd, args, strlen(args));
 	write(fd, "\n", 1);
 	write(fd, msg, strlen(msg));
-	sprintf(buf, "%d.\n", status);
-	write(fd, buf, strlen(buf));
+	sprintf(subject, "%d.\n", status);
+	write(fd, subject, strlen(subject));
 	close(fd);
 */
 
