@@ -63,7 +63,6 @@ AuthSock::lookup_user( char *client_name ) {
 int 
 authsock_get(void *arg, void **bufp, size_t *sizep)
 {
-dprintf(D_ALWAYS, "entering authsock_get\n" );
 	/* globus code which calls this function expects 0/-1 return vals */
 
 	//authsock must "hold onto" GSS state, pass in struct with comms stuff
@@ -76,50 +75,19 @@ dprintf(D_ALWAYS, "entering authsock_get\n" );
 	//read size of data to read
 	stat = sock->code( *((int *)sizep) );
 
-/***************
-	//ensure that buffer has enuf space allocated to store "stat" bytes
-	if ( stat ) {
-dprintf(D_ALWAYS,"SIZE: %d\n", *((int *)sizep) );
-		if ( (*((int *)sizep)) > comms->size ) { //need more space in buffer
-			if ( *bufp = realloc( comms->buffer, *((int *)sizep) ) ) {
-				comms->size = *((int *)sizep);
-			}
-			else {
-				dprintf( D_ALWAYS, "authsock_get realloc failed-%s\n",
-						strerror( errno ) );
-			}
-		}
-
-		//fail if cannot malloc enough space
-		if ( !(*bufp) ) {
-			stat = FALSE;
-			dprintf( D_ALWAYS, "authsock_get memory allocation failure\n" );
-		}
-	} //end
-	else {
-		dprintf( D_ALWAYS, "cannot read %d bytes from socket\n", stat );
+	*bufp = malloc( *((int *)sizep) );
+	if ( !*bufp ) {
+		dprintf( D_ALWAYS, "malloc failure authsock_get\n" );
+		stat = FALSE;
 	}
-*******************/
-if ( !comms->buffer ) {
-	dprintf(D_ALWAYS,"BUFFER WAS NULL\n" );
-	comms->buffer = malloc( 2048 );
-}
-else
-	dprintf(D_ALWAYS,"BUFFER not null\n" );
-if ( comms->buffer ) {
-	dprintf(D_ALWAYS,"MALLOC success\n" );
-	*bufp = comms->buffer;
-}
-else
-	dprintf(D_ALWAYS,"MALLOC FAILURE!!!\n" );
 
 	//if successfully read size and malloced, read data
 	if ( stat )
 		sock->code_bytes( *bufp, *((int *)sizep) );
 
+	sock->end_of_message();
+
 	//check to ensure comms were successful
-//	if ( stat > 0 )
-stat = sock->end_of_message();
 	if ( !stat ) {
 		dprintf( D_ALWAYS, "authsock_get (read from socket) failure\n" );
 		return -1;
@@ -131,7 +99,6 @@ stat = sock->end_of_message();
 int 
 authsock_put(void *arg,  void *buf, size_t size)
 {
-dprintf(D_ALWAYS, "entering authsock_put\n" );
 	//param is just a AS*
 	AuthSock *sock = (AuthSock *) arg;
 	int stat;
@@ -150,9 +117,9 @@ dprintf(D_ALWAYS, "entering authsock_put\n" );
 		dprintf( D_ALWAYS, "failure sending size (%d) over sock\n", size );
 	}
 
+	sock->end_of_message();
+
 	//ensure data send was successful
-//	if ( stat > 0 )
-stat = sock->end_of_message();
 	if ( !stat ) {
 		dprintf( D_ALWAYS, "authsock_put (write to socket) failure\n" );
 		return -1;
@@ -166,7 +133,6 @@ AuthSock::authenticate_user()
 {
 	OM_uint32 major_status;
 	OM_uint32 minor_status;
-fprintf(stderr,"entered authenticate_user()\n" );
 
 	if ( credential_handle != GSS_C_NO_CREDENTIAL ) { // user already auth'd 
 		dprintf( D_FULLDEBUG, "user is authenticated\n" );
