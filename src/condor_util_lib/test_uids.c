@@ -35,13 +35,16 @@ main( int argc, char* argv[] )
 	uid_t euid;
 	gid_t rgid;
 	gid_t egid;
+	gid_t groups[NGROUPS_MAX];
 	pid_t pid;
 	FILE* fp;
+	int i, num_groups;
 
 	ruid = getuid();
 	euid = geteuid();
 	rgid = getgid();
 	egid = getegid();
+	num_groups = getgroups( NGROUPS_MAX, groups );
 
 	pid = getpid();
 
@@ -52,6 +55,11 @@ main( int argc, char* argv[] )
 	printf( "real gid: %d\n", (int)rgid );
 	printf( "effective uid: %d\n", (int)euid );
 	printf( "effective gid: %d\n", (int)egid );
+	printf( "groups: " );
+	for( i=0; i<num_groups; i++ ) {
+		printf( "%d ", (int)groups[i] );
+	}
+	printf( "\n" );
 
 	sprintf( filename, "/tmp/test-uids.%d", (int)pid );
 	printf( "trying to write info to %s\n", filename );
@@ -66,6 +74,11 @@ main( int argc, char* argv[] )
 	fprintf( fp, "real gid: %d\n", (int)rgid );
 	fprintf( fp, "effective uid: %d\n", (int)euid );
 	fprintf( fp, "effective gid: %d\n", (int)egid );
+	fprintf( fp, "groups: " );
+	for( i=0; i<num_groups; i++ ) {
+		fprintf( fp, "%d ", (int)groups[i] );
+	}
+	fprintf( fp, "\n" );
 
 	fclose( fp );
 	return 0;
