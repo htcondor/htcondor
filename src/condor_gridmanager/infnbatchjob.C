@@ -389,6 +389,10 @@ int INFNBatchJob::doEvaluateState()
 				gmState = GM_CANCEL;
 			} else if ( remoteState == COMPLETED ) {
 				gmState = GM_DONE_SAVE;
+			} else if ( remoteState == REMOVED ) {
+				errorString = "Job removed from batch queue manually";
+				SetRemoteJobId( NULL );
+				gmState = GM_HOLD;
 			} else if ( remoteProxyExpireTime < jobProxy->expiration_time ) {
 					gmState = GM_REFRESH_PROXY;
 			} else {
