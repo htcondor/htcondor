@@ -67,7 +67,12 @@ EXTRACT = FORK.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 EXTRACT = FORK.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o GETCWD.o \
 		  SYSCONF.o GETLOGIN.o GETRUSAGE.o
-#	elif IS_SUN4X_SOLARIS26
+#	elif IS_SUN4X_SOLARIS26 
+EXTRACT = FORK.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
+		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o \
+		  GETCWD.o GETRUSAGE.o \
+		  SYSCONF.o GETLOGIN.o LSEEK64.o
+#	elif IS_SUN4X_SOLARIS27
 EXTRACT = FORK.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o \
 		  GETCWD.o GETRUSAGE.o \
@@ -191,7 +196,7 @@ SYSCALL_LIB = libcondorsyscall.a
 #if DOES_REMOTE_SYSCALLS
 all_target($(SYSCALL_LIB) $(COMPRESS_LIB) receivers.o $(SIMPLE_OBJ) $(AIX_OBJ) syscall-list)
 #else 
-all_target($(SYSCALL_SUPPORT_OBJ) extern_path.o)
+all_target($(SYSCALL_SUPPORT_OBJ) extern_path.o file_stream.o)
 #endif
 
 stubs: switches.c senders.C receivers.C
@@ -248,7 +253,7 @@ uppercase_target($(SIMPLE_LIBC),__pipe.o,__PIPE.o,__pipe,__PIPE)
 uppercase_target($(SIMPLE_LIBC),getcwd.o,GETCWD.o,getcwd,GETCWD)
 uppercase_target($(SIMPLE_LIBC),getrusage.o,GETRUSAGE.o,getrusage,GETRUSAGE)
 
-#if IS_SOLARIS26
+#if IS_SOLARIS26 || IS_SOLARIS27
 uppercase_target($(SIMPLE_LIBC),lseek64.o,LSEEK64.o,lseek64,LSEEK64)
 #endif
 
@@ -351,6 +356,8 @@ STUB_GEN_PLATFORM = GlibCFlag
 STUB_GEN_PLATFORM = -DSolaris251
 #elif IS_SOLARIS26
 STUB_GEN_PLATFORM = -DSolaris26
+#elif IS_SOLARIS27
+STUB_GEN_PLATFORM = -DSolaris27
 #elif IS_HPUX10
 STUB_GEN_PLATFORM = -DHPUX10
 #elif IS_IRIX62
