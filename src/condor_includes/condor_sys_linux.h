@@ -67,6 +67,11 @@
 #include <sys/stat.h>
 #include <sys/vfs.h>
 
+/* This headerfile must be included before sys/wait.h because on glibc22
+	machines sys/wait.h brings in sys/resource.h and we need to modify
+	a few prototypes in sys/resource.h to be POSIX compliant.
+	-psilord 4/25/2001 */
+#include "condor_fix_sys_resource.h"
 #include <sys/wait.h>
 /* Some versions of Linux don't define WCOREFLG, but we need it */
 #if !defined( WCOREFLG )
@@ -96,7 +101,6 @@ int __writev(int, const struct iovec *, size_t);
 END_C_DECLS
 #endif /* GLIBC */
 
-#include "condor_fix_sys_resource.h"
 
 #if defined(LINUX) && defined(GLIBC21)
 #include <search.h>
