@@ -118,7 +118,7 @@ int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock);
       <LI><tt>char* mySubSystem = "SCHEDD";</tt>
     </UL>
 */
-extern "C" char *mySubSystem;
+extern char *mySubSystem;
 
 //-----------------------------------------------------------------------------
 /** This class badly needs documentation, doesn't it? 
@@ -135,6 +135,7 @@ class DaemonCore : public Service
   friend int dc_main( int argc, char** argv );
   friend unsigned pidWatcherThread(void*);
   friend BOOL CALLBACK DCFindWindow(HWND, LPARAM);
+  friend BOOL CALLBACK DCFindWinSta(LPTSTR, LPARAM);
 #else
   friend int main(int, char**);
 #endif
@@ -678,7 +679,7 @@ class DaemonCore : public Service
     // see if process was killed because it was hung
     int Was_Not_Responding(pid_t pid);
 
-	const char *GetExceptionString(int signal);
+	static const char *GetExceptionString(int signal);
     
   private:      
     int HandleSigCommand(int command, Stream* stream);
@@ -822,7 +823,6 @@ class DaemonCore : public Service
     PidHashTable* pidTable;
     pid_t mypid;
     pid_t ppid;
-    int Send_WM_CLOSE(pid_t pid);
 
 #ifdef WIN32
     // note: as of WinNT 4.0, MAXIMUM_WAIT_OBJECTS == 64
