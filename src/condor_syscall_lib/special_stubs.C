@@ -319,8 +319,6 @@ int
 _condor_itoa(int quantity, char *out, int base)
 {
 	int i;
-	char basemap[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a',
-						'b', 'c', 'd', 'e', 'f'};
 	unsigned int mask;
 	unsigned char byte, hi, lo;
 	unsigned int hexquant;
@@ -328,6 +326,28 @@ _condor_itoa(int quantity, char *out, int base)
 	int numchars;
 	char *p, *q;
 	int div, sum, mod, neg;
+
+	/* We initialzie the basemap[] array in this fasion to avoid the GNU
+	 * compiler from generating a call to memcpy() behind the scenes.
+	 * We cannot afford to have memcpy() or any other library function
+	 * invoked here since this function is called by debug statement deep
+	 * inside of our restart code. -Todd 12/99 */
+	basemap[0] = '0';
+	basemap[1] = '1';
+	basemap[2] = '2';
+	basemap[3] = '3';
+	basemap[4] = '4';
+	basemap[5] = '5';
+	basemap[6] = '6';
+	basemap[7] = '7';
+	basemap[8] = '8';
+	basemap[9] = '9';
+	basemap[10] = 'a';
+	basemap[11] = 'b';
+	basemap[12] = 'c';
+	basemap[13] = 'd';
+	basemap[14] = 'e';
+	basemap[15] = 'f';
 	
 	switch(base)
 	{
