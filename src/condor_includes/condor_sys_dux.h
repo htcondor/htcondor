@@ -142,6 +142,12 @@ int sigblock( int mask );
 int sigsetmask( int mask );
 END_C_DECLS
 
+/* Needed for MAXINT */
+#include <values.h>
+
+/* Needed for PIOCPSINFO */
+#include <sys/procfs.h>
+
 /****************************************
 ** Condor-specific system definitions
 ****************************************/
