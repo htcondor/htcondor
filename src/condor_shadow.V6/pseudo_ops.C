@@ -41,14 +41,18 @@
 #include "metric_units.h"
 #include "condor_file_info.h"
 #include "util_lib_proto.h"
+#include "condor_version.h"
+#include "condor_ver_info.h"
 
-extern "C"  void log_checkpoint (struct rusage *, struct rusage *);
-extern "C"  void log_image_size (int);
-
-extern "C" int access_via_afs (const char *);
-extern "C" int access_via_nfs (const char *);
-extern "C" int use_local_access (const char *);
-extern "C" int use_special_access (const char *);
+extern "C" {
+	void log_checkpoint (struct rusage *, struct rusage *);
+	void log_image_size (int);
+	int access_via_afs (const char *);
+	int access_via_nfs (const char *);
+	int use_local_access (const char *);
+	int use_special_access (const char *);
+	void HoldJob( const char* buf );
+}
 
 extern int JobStatus;
 extern int ImageSize;
@@ -1872,6 +1876,44 @@ pseudo_register_opsys(const char *opsys)
 {
 	if (Executing_OpSys) free(Executing_OpSys);
 	Executing_OpSys = strdup(opsys);
+	return 0;
+}
+
+int
+pseudo_register_syscall_version( const char *version )
+{
+	CondorVersionInfo versInfo;
+	if( versInfo.is_compatible(version) ) {
+		dprintf( D_FULLDEBUG, "User job is compatible with this shadow version\n" );
+		return 0;
+	} 
+		// Not compatible, we're screwed.
+	dprintf( D_ALWAYS, "ERROR: User job is NOT compatible with this shadow version\n" );
+	char buf[4096];
+	char line[256];
+
+	strcat( buf, "Since the time that you ran condor_compile to link your job with\n" );
+	strcat( buf, "the Condor libraries, your local Condor administrator has\n" );
+	strcat( buf, "installed a different version of the condor_shadow program.\n" );
+	strcat( buf, "The version of the Condor libraries you linked in with your job,\n" );
+	strcat( buf, version );
+	strcat( buf, "\nis not compatible with the currently installed condor_shadow,\n" );
+	strcat( buf, CondorVersion() );
+	strcat( buf, "\n\nYou must do one of the following:\n\n" );
+	sprintf( line, "1) Remove your job (\"condor_rm %d.%d\"), re-link it with a\n",
+			 Proc->id.cluster, Proc->id.proc );
+	strcat( buf, line );
+	strcat( buf, "compatible version of the Condor libraries (rerun " );
+	strcat( buf, "\"condor_compile\")\nand re-submit it (rerun \"condor_submit\").\n" );
+	strcat( buf, "\nor\n\n" );
+	strcat( buf, "2) Have your Condor administrator install a different version\n" );
+	strcat( buf, "of the condor_shadow program on your submit machine.\n" );
+	strcat( buf, "In this case, once the compatible shadow is in place, you\n" );
+	sprintf( line, "can release your job with \"condor_release %d.%d\".\n",
+			 Proc->id.cluster, Proc->id.proc );
+	strcat( buf, line );
+	
+	HoldJob( buf );  // This sends the email and exits with JOB_SHOULD_HOLD. 
 	return 0;
 }
 
