@@ -153,6 +153,20 @@ CondorQuery (AdTypes qType)
 		command = QUERY_COLLECTOR_ADS;
 		break;
 
+          case NEST_AD:
+                query.setNumStringCats (0);
+                query.setNumIntegerCats(0);
+                query.setNumFloatCats  (0);
+                command = QUERY_NEST_ADS;
+                break;
+
+          case ANY_AD:
+                query.setNumStringCats (0);
+                query.setNumIntegerCats(0);
+                query.setNumFloatCats  (0);
+                command = QUERY_ANY_ADS;
+                break;
+
 	  default:
 		command = -1;
 		queryType = (AdTypes) -1;
@@ -306,6 +320,14 @@ fetchAds (ClassAdList &adList, const char *poolName)
 
 	  case COLLECTOR_AD:
 		queryAd.SetTargetTypeName (COLLECTOR_ADTYPE);
+		break;
+
+	  case NEST_AD:
+		queryAd.SetTargetTypeName (NEST_ADTYPE);
+		break;
+
+	  case ANY_AD:
+		queryAd.SetTargetTypeName (ANY_ADTYPE);
 		break;
 
 	  default:
