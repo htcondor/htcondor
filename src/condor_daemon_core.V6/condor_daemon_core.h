@@ -224,19 +224,20 @@ class DaemonCore : public Service
     */
     int Cancel_Command (int command);
 
-    /** Not_Yet_Documented
-        @return Not_Yet_Documented
-    */
+    /** Gives the port of the DaemonCore
+		command socket of this process.
+        @return The port number, or -1 on error */
     int InfoCommandPort();
 
-    /** Returns the Sinful String <host:port> of this process
+    /** Returns the Sinful String <host:port> of the DaemonCore
+		command socket of this process
         as a default.  If given a pid, it returns the sinful
         string of that pid.
         @param pid The pid to ask about.  -1 (Default) means
                    the calling process
-        @return A pointer into a static buffer!  Ick! */
+        @return A pointer into a <b>static buffer</b>, or NULL on error */
     char* InfoCommandSinfulString (int pid = -1);
-    
+
     /** Not_Yet_Documented
         @param sig              Not_Yet_Documented
         @param sig_descrip      Not_Yet_Documented
