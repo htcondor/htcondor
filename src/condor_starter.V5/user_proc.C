@@ -1035,14 +1035,21 @@ open_std_file( int fd )
 	int	real_fd;
 	FILE	*debug;
 
+	/* First, try the new set of remote lookups */
+
 	success = REMOTE_syscall( CONDOR_get_std_file_info, fd, logical_name );
-	if(success<0) {
-		EXCEPT("Couldn't get standard file info");
+	if(success>=0) {
+		success = REMOTE_syscall( CONDOR_get_file_info_new, logical_name, physical_name );
 	}
 
-	success = REMOTE_syscall( CONDOR_get_file_info_new, logical_name, physical_name );
+	/* If either of those fail, fall back to the old way */
+
 	if(success<0) {
-		EXCEPT("Couldn't map standard file to physical name");
+		success = REMOTE_syscall( CONDOR_std_file_info, fd, logical_name, &real_fd );
+		if(success<0) {
+			EXCEPT("Couldn't get standard file info!");
+		}
+		sprintf(physical_name,"local:%s",logical_name);
 	}
 
 	if(fd==0) {
