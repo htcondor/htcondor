@@ -762,10 +762,11 @@ SetUniverse()
 		// clipped, that can't possibly work, so warn the user at
 		// submit time.  -Derek Wright 6/11/99
 	fprintf( stderr, 
-			 "\nERROR: You are trying to submit a \"standard\" job to Condor.\n"
-			 "This version of Condor only supports \"vanilla\" jobs, which\n"
-			 "perform no checkpointing or remote system calls.  See the\n"
-			 "Condor manual for details "
+			 "\n\nERROR: You are trying to submit a \"standard\" job to "
+			 "Condor.  This\nversion of Condor only supports \"vanilla\" "
+			 "or \"scheduler\" jobs, which\n"
+			 "perform no checkpointing or remote system calls.  "
+			 "See the Condor\nmanual for details "
 			 "(http://www.cs.wisc.edu/condor/manual).\n\n" );
 	DoCleanup();
 	exit( 1 );
