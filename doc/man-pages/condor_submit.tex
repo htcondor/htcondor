@@ -1006,6 +1006,10 @@ it will use the environment variable X509\_USER\_CERT.
 If that variable is not present,
 it will search in the default location.
 
+\Opt{x509userproxy} is only required when
+the \Opt{universe} is \Opt{grid},
+and \Opt{grid\_type} is one of \Opt{gt2}, \Opt{gt3}, or \Opt{nordugrid}.
+
 %%%%%%%%%%%%%%%%%%%
 %% globusscheduler
 %%%%%%%%%%%%%%%%%%%
@@ -1026,6 +1030,10 @@ GlobusScheduler = lego.bu.edu/jobmanager-lsf
 queue
 \end{verbatim}
 \end{description}
+
+\Opt{globusscheduler} is only required when
+the \Opt{universe} is \Opt{grid},
+and \Opt{grid\_type} is one of \Opt{gt2} or \Opt{gt3}.
 
 %%%%%%%%%%%%%%%%%%%
 %% globusrsl
@@ -1083,6 +1091,77 @@ the \Condor{gridmanager} will request that the \Condor{schedd}
 daemon renegotiate
 with the matchmaker (the \Condor{negotiator}).
 The result is this job will be matched again.
+
+%%%%%%%%%%%%%%%%%%%
+%% MyProxyHost
+%%%%%%%%%%%%%%%%%%%
+
+\item[MyProxyHost = $<$host$>$:$<$port$>$]
+\index{submit commands!MyProxyHost}
+The Internet address of the host that is the \Prog{MyProxy} server.
+The \Opt{host} may be specified by either a host name
+(as in \File{head.example.com}) or an IP address
+(of the form 123.456.7.8).
+The \Opt{port} number is an integer.
+
+%%%%%%%%%%%%%%%%%%%
+%% MyProxyServerDN
+%%%%%%%%%%%%%%%%%%%
+
+\item[MyProxyServerDN = $<$credential subject$>$]
+\index{submit commands!MyProxyServerDN}
+A string that specifies the expected Distinguished Name (credential subject,
+abbreviated DN)
+of the \Prog{MyProxy} server.
+It must be specified when the \Prog{MyProxy} server
+DN does not follow the
+conventional naming scheme of a host credential.
+This occurs, for
+example, when the  \Prog{MyProxy} server DN begins with a user credential.
+
+%%%%%%%%%%%%%%%%%%%
+%% MyProxyPassword
+%%%%%%%%%%%%%%%%%%%
+
+\item[MyProxyPassword = $<$password$>$]
+\index{submit commands!MyProxyPassword}
+The password needed to refresh a credential on the \Prog{MyProxy} server.
+This password is set when the user initially stores
+credentials on the server (using \Prog{myproxy-init}).
+As an alternative to using \Opt{MyProxyPassword} in the
+submit description file,
+the password may be specified as a command line argument to \Condor{submit}
+with the \Arg{-p} argument.
+
+%%%%%%%%%%%%%%%%%%%
+%% MyProxyCredentialName
+%%%%%%%%%%%%%%%%%%%
+
+\item[MyProxyCredentialName = $<$symbolic name$>$]
+\index{submit commands!MyProxyCredentialName}
+The symbolic name that identifies a credential to the \Prog{MyProxy} server.
+This symbolic name is set as the credential is
+initially stored on the server (using \Prog{myproxy-init}).
+
+%%%%%%%%%%%%%%%%%%%
+%% MyProxyRefreshThreshold
+%%%%%%%%%%%%%%%%%%%
+
+\item[MyProxyRefreshThreshold = $<$number-of-seconds$>$]
+\index{submit commands!MyProxyRefreshThreshold}
+The time (in seconds) before the expiration of a proxy 
+that the proxy should be refreshed.
+For example, if \Opt{MyProxyRefreshThreshold} is set to the
+value 600, the proxy will be refreshed 10 minutes before
+it expires.
+
+%%%%%%%%%%%%%%%%%%%
+%% MyProxyNewProxyLifetime
+%%%%%%%%%%%%%%%%%%%
+
+\item[MyProxyNewProxyLifetime = $<$number-of-minutes$>$]
+\index{submit commands!MyProxyNewProxyLifetime}
+The new lifetime (in minutes) of the proxy after it is refreshed.
 
 %%%%%%%%%%%%%%%%%%%
 %% leave_in_queue

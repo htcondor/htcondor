@@ -2037,10 +2037,10 @@ control state or activity transitions within the
   did not want to be matched with machines that were only really
   offering ``fractional CPUs''.
 
-\item[\Macro[COUNT\_HYPERTHREAD\_CPUS]] \label[param:CountHyperthreadCpus]
-  This macro controls how condor sees hyperthreaded
-  processors. When set to TRUE (the default) it includes virtual CPUs in
-  the default value of \MacroNI[NUM\_CPUS]. On dedicated cluster nodes, 
+\item[\Macro{COUNT\_HYPERTHREAD\_CPUS}] \label{param:CountHyperthreadCpus}
+  This macro controls how Condor sees hyperthreaded
+  processors. When set to TRUE (the default), it includes virtual CPUs in
+  the default value of \MacroNI{NUM\_CPUS}. On dedicated cluster nodes, 
   counting virtual CPUs can sometimes improve total throughput at the expense 
   of individual job speed. However, counting them on desktop workstations can
   interfere with interactive job performance.
@@ -2429,6 +2429,50 @@ not in the Owner state:
   Each sample requires 4 bytes of memory and approximately 10 bytes of
   disk space.
 
+\end{description}
+
+
+The following configuration variables support java universe jobs.
+
+\begin{description}
+\item[\Macro{JAVA}]
+\label{param:Java}
+  The full path to the Java interpreter (the Java Virtual Machine).
+
+\item[\Macro{JAVA\_MAXHEAP\_ARGUMENT}]
+\label{param:JavaMaxheapArgument}
+  An incomplete command line argument to the Java interpreter
+  (the Java Virtual Machine)
+  to specify the switch name for the Maxheap Argument.
+  Condor uses it to construct the maximum heap size
+  for the Java Virtual Machine. 
+  For example, the value for the Sun JVM is \Arg{-Xmx}.
+
+\item[\Macro{JAVA\_CLASSPATH\_ARGUMENT}]
+\label{param:JavaClasspathArgument}
+  The command line argument to the Java interpreter (the Java Virtual Machine)
+  that specifies the Java Classpath.
+  Classpath is a Java-specific term that denotes the list of
+  locations (\File{.jar} files and/or directories)
+  where the Java interpreter can
+  look for the Java class files that a Java program requires.
+
+\item[\Macro{JAVA\_CLASSPATH\_SEPARATOR}]
+\label{param:JavaClasspathSeparator}
+  The single character used to delimit constructed entries in the
+  Classpath for the given operating system and Java Virtual Machine.
+  If not defined, the operating system is queried for its default
+  Classpath separator.
+
+\item[\Macro{JAVA\_CLASSPATH\_DEFAULT}]
+\label{param:JavaClasspathDefault}
+  A list of path names to \File{.jar} files to be added to the Java Classpath 
+  by default.
+  The comma and/or space character delimits list entries.
+
+\item[\Macro{JAVA\_EXTRA\_ARGUMENTS}]
+\label{param:JavaExtraArguments}
+  A list of additional arguments to be passed to the Java executable.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -3512,6 +3556,15 @@ Defaults to 5 days (in seconds).
 \label{param:GT3GAHPLog} The complete path name to
 a file where the GT3 GAHP may write information to be used in debugging
 related to GT3 job submission.
+
+\item[\Macro{MYPROXY\_GET\_DELEGATION}]
+\label{param:MyProxyGetDelegation}  The full path name
+to the \Prog{myproxy-get-delegation} executable,
+installed as part of \Prog{MyProxy} software.
+Often, it is necessary to wrap the actual executable with a
+script that sets the environment,
+such as the \MacroNI{LD\_LIBRARY\_PATH} correctly.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -9,6 +9,82 @@ in the 6.6 series.
 The details of each version are described below.
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:New-6-6-6}Version 6.6.6}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item When the first start running, all Condor daemons will now try to
+  print to their log file the full path to the binary they are
+  executing. 
+  Unfortunately, we can only reliably get this information on Linux,
+  Solaris, MacOSX, and Windows platforms.
+  On other platforms, this information will only be printed to the log
+  file in certain cases that depend on how the daemon was invoked.
+  This new feature was added to aid in debugging problems where sites
+  were not running the version of the Condor daemons they thought they
+  were due to problems in custom-built startup scripts.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed an error in the \Condor{dagman} submit file parsing code:
+  if one job referred to a log file with a relative path, and another
+  job referred to the same log file with an absolute path, the log file
+  reading failed.  Note: things can still get goofed up by symbolic
+  links or paths with ".." in them.
+
+\item The kerberos map file now tolerates spaces on either side of the equals sign instead of generating a parse error.
+
+\item The -analyze option to \Condor{q} is only meaningful for certain
+  universes.  \Condor{q} now warns if the output might not be meaningful. 
+
+\item Java universe: when jar files are transferred to the execute
+  machine (with \Expr{should\_transfer\_files} or
+  \Expr{tranfer\_input\_files}) the \Condor{starter} will use the
+  local path (in the execute directory) for the jarfiles, instead of
+  the original path specified in the submit file.
+
+\item Fixed a minor bug where if the \Condor{schedd} crashed or was
+  killed at just the wrong moment while a job was being removed
+  because the \Attr{periodic\_remove} expression had evaluated to
+  TRUE, the job might have been successfully removed but the
+  \Attr{RemoveReason} attribute could have been lost.
+  Now, both actions are taken together atomically.
+  If a job is succesfully removed, it will always have a
+  \Attr{RemoveReason} attribute.
+
+\item The default setting for \Macro{POOL\_HISTORY\_DIR} is no
+  longer \Macro{SPOOL}.  Using the spool directory would result
+  in history files being obliterated by \Condor{preen}.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:New-6-6-5}Version 6.6.5}
@@ -34,8 +110,47 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a problem that sometimes caused DAGMan to segfault while
-      parsing DAGs (as far as we know, only very large DAGs).
+\item Fixed a bug introduced in Condor version 6.6.2 that could cause
+      \Condor{dagman} to segfault while parsing some DAG files, or
+      fail to recognize already-completed nodes in a rescue DAG.
+
+\item Fixed a bug in \Condor{dagman}, whereby it could fail to
+      automatically discover a Condor job's userlog file if the job's
+      submit file did not have whitespace surrounding the equal sign
+      on the log file line.
+
+\item Fixed a bug in \Condor{submit} that appears to only have
+  effected OSX machines.
+  Previously, submit files that only defined a single job and used
+  \verb@queue@ without any numerical modifiers would result in an
+  error like this: 
+\footnotesize
+\begin{verbatim}
+     ERROR: "test.sub" doesn't contain any "queue" commands -- no jobs queued
+\end{verbatim}
+\normalsize
+  Now, \Condor{submit} will properly process and submit the job from
+  job description files that contain a single \verb@queue@ statement
+  with no modifiers.
+
+\item Fixed a bug in the AIX \Condor{starter} that was causing the
+starter to sometimes kill itself when the job completed.  Because this
+happened before the \Condor{starter} reported the job completion back
+to the \Condor{shadow}, such a job would be restarted.
+
+\item Fixed a few memory and registry handle leaks in the \Condor{schedd}
+and \Condor{startd}. These leaks particularly affected Windows systems.
+
+\item On Windows, Condor was known to have trouble accessing config files
+with UNC paths (with appropriate permissions set). This has been fixed.
+
+\item On Windows, \Condor{store\_cred} would fail if the account did not
+have \verb@Log on Locally@ priviledges, even if the account was allowed
+to log in interactively. This has been fixed.
+
+\item Fixed a bug on Windows that would cause the \Condor{schedd} to
+crash if \Dflag{FULLDEBUG} was turned on, and the submitting user
+account did not have Administrator access rights.
 
 \end{itemize}
 
@@ -43,7 +158,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item \Condor{dagman} can fail to detect a job's progress if another
+      job in the DAG specifies the same underlying userlog file using
+      a different path or filename (e.g., log=foo and log=./foo) in
+      its submit file.
 
 \end{itemize}
 
@@ -65,6 +183,9 @@ The details of each version are described below.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a major bug in the Windows NT/2000 port that caused the
+  Condor daemons to crash when attempting to authenticate.
 
 \item Fixed the bug in Condor's file transfer mechanism for Mac OSX
   that was introduced in version 6.6.3.

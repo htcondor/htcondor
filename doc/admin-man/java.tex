@@ -26,7 +26,7 @@ is frequently found in \File{/usr/bin/java}.
 Condor's configuration includes the location of the installed
 JVM.
 Edit the configuration file.
-Modify the \Expr{JAVA} entry to point to the JVM binary,
+Modify the \Macro{JAVA} entry to point to the JVM binary,
 typically \File{/usr/bin/java}.
 Restart the \Condor{startd} daemon on that host.  For example,
 
@@ -50,10 +50,8 @@ After a suitable amount of time, if this command does not give any output,
 then the \Condor{starter}  is having difficulty executing the JVM.
 The exact cause of the problem depends on the details of the
 JVM, the local installation, and a variety of other factors.
-We cannot offer any specific advice on these matters, but
-we can provide an approach to solving the problem.
-
-% edited to here
+We can offer only limited advice on these matters,
+but here is an approach to solving the problem.
 
 To reproduce the test that the \Condor{starter} is attempting,
 try running the Java \Condor{starter} directly.  To find
@@ -71,8 +69,8 @@ perhaps something like this:
 \end{verbatim}
 
 Use this path to execute the \Condor{starter} directly
-with the \verb$-classad$ option.  This tells the starter
-to run its tests and display its properties:
+with the \Arg{-classad} argument.
+This tells the starter to run its tests and display its properties.
 
 \begin{verbatim}
 /usr/condor/sbin/condor_starter -classad
@@ -87,8 +85,8 @@ HasMPI = True
 CondorVersion = "$CondorVersion: 6.2$"
 \end{verbatim}
 
-If the Java configuration is correct, you should also
-see a short list of Java properties, such as:
+If the Java configuration is correct, there will also
+be a short list of Java properties, such as:
 
 \begin{verbatim}
 JavaVendor = "Sun Microsystems Inc."
@@ -100,4 +98,40 @@ HasJava = True
 If the Java installation is incorrect, then any error
 messages from the shell or Java will be printed
 on the error stream instead.
+
+One identified difficulty occurs when the machine has
+a large quantity of physical RAM, and this quantity
+exceeds the Java limitations.
+This is a known problem for the Sun JVM.
+Condor appends the maximum amount of system RAM
+to the Java Maxheap Argument,
+and sometimes this value is larger than the JVM allows.
+The end result is that Condor believes that the JVM on the machine
+is faulty,
+resulting in nothing showing up as a result of executing
+the command \ShortExpr{condor\_status -java}.
+
+The way to work around this particular problem is to modify
+the configuration file for those machines that may execute
+Java universe jobs.
+The \Macro{JAVA\_MAXHEAP\_ARGUMENT} macro is explicitly set
+to null in the configuration, to prevent Condor from appending
+the machine-specific, but too-big value.
+Then the Java Maxheap Argument is set (again, in the configuration)
+to the maximum value allowed for the JVM on that platform,
+using the \Macro{JAVA\_EXTRA\_ARGUMENTS} configuration variable.
+Note that the name of the switch that regulates the Java
+Maxheap Argument is different for different vendors' JVM.
+
+The following is an example of the configuration fix for the Sun JVM:
+
+\footnotesize
+\begin{verbatim}
+# First set JAVA_MAXHEAP_ARGUMENT to null, to disable the default of max RAM
+JAVA_MAXHEAP_ARGUMENT =
+# Now set the argument with the Sun-specific maximum allowable value
+JAVA_EXTRA_ARGUMENTS = -Xmx1906m
+\end{verbatim}
+\normalsize
+
 
