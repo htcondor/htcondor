@@ -331,18 +331,9 @@ sysapi_translate_opsys( char *sysname, char *release, char *version )
 		}
 	} 
 	else if ( !strncmp(sysname, "Darwin", 6) ) {
-		if( !strcmp( release, "7.4.0" ) ) {
-			sprintf( tmp, "OSX10_3" );
-		}
-		else if( !strcmp( release, "7.0.0" ) ) {
-			sprintf( tmp, "OSX10_3" );
-		}
-		else if( !strcmp( release, "6.8" ) ) {
-			sprintf( tmp, "OSX10_2" );
-		}
-		else {
-			sprintf( tmp, "OSX_UNK" );
-		}
+			//  there's no reason to differentiate across versions of
+			//  OSX, since jobs can freely run on any version, etc.
+		sprintf( tmp, "OSX");
 	}
 	else if ( !strncmp(sysname, "AIX", 3) ) {
 		if ( !strcmp(version, "5") ) {

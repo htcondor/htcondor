@@ -14,6 +14,19 @@ use DBI;
 use File::Copy;
 use Cwd;
 use Getopt::Long;
+use File::Basename;
+my $LIBDIR;
+BEGIN {
+    my $dir1 = dirname($0);
+    my $dir2 = dirname($dir1);
+    if( $dir1 eq $dir2 ) {
+	$LIBDIR = $dir2 . "/../lib";
+    } else {
+	$LIBDIR = $dir2 . "/lib";
+    }
+}
+use lib "$LIBDIR";
+use CondorGlue;
 
 use vars qw/ $opt_help $opt_nightly $opt_tag $opt_module $opt_notify/;
 
@@ -63,8 +76,8 @@ else {
 my $cwd = &getcwd();
 my $NIGHTLY_IDS_FILE = "$cwd/test_ids";
 
-mkdir($workspace) || die "Can't create workspace $workspace\n";
-chdir($workspace) || die "Can't change workspace $workspace\n";
+mkdir($workspace) || die "Can't create workspace $workspace: $!\n";
+chdir($workspace) || die "Can't chdir($workspace): $!\n";
 
 if ( defined($opt_tag) or defined($opt_module) ) {
     print "Sorry --tag and --module not supported yet.\n";
@@ -90,10 +103,9 @@ while ( my($id, $tag_module_string) = each(%ids) ) {
     $gid = &get_gid($id);
     my $cmdfile = &generate_cmdfile($id, $tag_module_string, @platforms);
     print "Submitting condor test suite run for build $id ($tag_module_string) ...\n";
-    run("/nmi/bin/nmi_submit $cmdfile", 0);
+    CondorGlue::run( "/nmi/bin/nmi_submit $cmdfile", 0 );
 } 
 chdir($cwd);
-#run("rm -rf $workspace", 0);
 
 exit 0;
 
@@ -108,22 +120,6 @@ sub generate_cmdfile() {
     my ($tag, $module) = split(/ /, $tag_module_string); 
     print "++tag is $tag\n";
     print "++module is $module\n";
- 
-    my $release = $tag;
-    $release =~ s/BUILD-//;
-    my $desc = $release;
-    $release =~ s/-branch-.*//;
-    $release =~ s/V//;
-    if( $release =~ /(\d+)(\D*)_(\d+)(\D*)_?(\d+)?(\D*)/ ) {
-        $versions[0] = $1;
-        $versions[1] = $3;
-	if( $5 ) {
-            $versions[2] = $5;
-        } else {
-            $versions[2] = "x";
-	}
-    }
-    my $vers_string = "$versions[0], $versions[1], $versions[2]";
 
     my $cmdfile = "condor_cmdfile-$tag";
     my $srcsfile = "condor_srcsfile-$tag";
@@ -131,40 +127,24 @@ sub generate_cmdfile() {
     my $runidfile = "input_build_runid.src";
 
     # generate the test glue file - may be symlinked eventually
-    open(GLUEFILE, ">$gluefile") || die "Can't open $gluefile for writing.";
-    print GLUEFILE "method = cvs\n";
-    print GLUEFILE "cvs_root = :ext:cndr-cvs\@chopin.cs.wisc.edu:/p/condor/repository/CONDOR_SRC\n";
-    print GLUEFILE "cvs_server = /afs/cs.wisc.edu/p/condor/public/bin/auth-cvs\n";
-    print GLUEFILE "cvs_rsh = /nmi/scripts/ssh_no_x11\n";
-    print GLUEFILE "cvs_tag = $tag\n"; 
-    print GLUEFILE "cvs_module = nmi_glue/test\n";
-    close GLUEFILE;
+    CondorGlue::makeFetchFile( $gluefile, $tag, "nmi_glue/test" );
+
+    # Generate the source code file
+    CondorGlue::makeFetchFile( $srcsfile, $tag, $module );
 
     # generate the runid input file
-    open(RUNIDFILE, ">$runidfile") || die "Can't open $runidfile for writing.";
+    open(RUNIDFILE, ">$runidfile") || 
+	die "Can't open $runidfile for writing: $!\n";
     print RUNIDFILE "method = nmi\n";
     print RUNIDFILE "input_runids = $id\n";
     print RUNIDFILE "untar_results = false\n";     
     close RUNIDFILE;
 
-    # Generate the source code file
-    open(SRCSFILE, ">$srcsfile") || die "Can't open $srcsfile for writing.";
-    print SRCSFILE "method = cvs\n";
-    print SRCSFILE "cvs_root = :ext:cndr-cvs\@chopin.cs.wisc.edu:/p/condor/repository/CONDOR_SRC\n";
-    print SRCSFILE "cvs_server = /afs/cs.wisc.edu/p/condor/public/bin/auth-cvs\n";
-    print SRCSFILE "cvs_rsh = /nmi/scripts/ssh_no_x11\n";
-    print SRCSFILE "cvs_tag = $tag\n";
-    print SRCSFILE "cvs_module = $module\n";
-    close SRCSFILE;
-
     # Generate the cmdfile
-    open(CMDFILE, ">$cmdfile") || die "Can't open $cmdfile for writing.";
-    print CMDFILE "description = $desc\n";
-    print CMDFILE "run_type = test\n";
-    print CMDFILE "project = condor\n";
-    print CMDFILE "project_release = $vers_string\n";
-    print CMDFILE "component = condor\n";
-    print CMDFILE "component_version = $vers_string\n";
+    open(CMDFILE, ">$cmdfile") || die "Can't open $cmdfile for writing: $!\n";
+    
+    CondorGlue::printIdentifiers( *CMDFILE, $tag );
+
     print CMDFILE "sources = $runidfile, $gluefile\n";
     print CMDFILE "pre_all = nmi_glue/test/pre_all\n";
     print CMDFILE "platform_pre = nmi_glue/test/platform_pre\n";
@@ -176,43 +156,39 @@ sub generate_cmdfile() {
     print CMDFILE "remote_pre = nmi_glue/test/remote_pre\n";
     print CMDFILE "remote_task = nmi_glue/test/remote_task\n";
     print CMDFILE "remote_post = nmi_glue/test/remote_post\n";
+
     print CMDFILE "platforms = ";
     foreach $platform (@platforms) { 
       print CMDFILE "$platform,";
     }
     print CMDFILE "\n";
 
-    # global prereqs
-    print CMDFILE "prereqs = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, coreutils-5.2.1, binutils-2.15\n";
-
-    # platform-specific prereqs
-    print CMDFILE "prereqs_sun4u_sol_5.9 = gcc-2.95.3\n";
-    print CMDFILE "prereqs_sun4u_sol_5.8 = gcc-2.95.3\n";
-    print CMDFILE "prereqs_ppc_aix_5.2 = vac-6, vacpp-6\n";
+    CondorGlue::printPrereqs( *CMDFILE );
 
     print CMDFILE "notify = $notify\n";
     print CMDFILE "priority = 1\n";
     close CMDFILE;
-
     return $cmdfile;
 }
+
 
 sub get_nightlyids() {
     print "Getting build ids and source to run against ...\n";
 
     my %ids;
 
-    open(IDS, "<", "$NIGHTLY_IDS_FILE") || die "Can't read nightly ids file $NIGHTLY_IDS_FILE\n";
+    open(IDS, "<", "$NIGHTLY_IDS_FILE") ||
+	die "Can't read nightly ids file $NIGHTLY_IDS_FILE: $!\n";
     while (<IDS>) {
         chomp($_);
         my @id = split /\s/, $_;
         $ids{$id[0]} = "$id[1]" . " " . "$id[2]"; 
     }
     # truncate file
-    #seek(IDS, 0, 0) || die "can't seek to $NIGHTLY_IDS_FILE\n"; 
-    #print IDS "" || die "can't print to $NIGHTLY_IDS_FILE\n";
-    #truncate(IDS, tell(IDS)) || die "can't truncate $NIGHTLY_IDS_FILE\n";  
-    close(IDS) || die "can't close $NIGHTLY_IDS_FILE\n";
+    #seek(IDS, 0, 0) || die "can't seek to $NIGHTLY_IDS_FILE: $!\n"; 
+    #print IDS "" || die "can't print to $NIGHTLY_IDS_FILE: $!\n";
+    #truncate(IDS, tell(IDS)) || die "can't truncate $NIGHTLY_IDS_FILE: $!\n";
+    close(IDS) || die "can't close $NIGHTLY_IDS_FILE: $!\n";
 
     return %ids;
 }
@@ -282,32 +258,3 @@ List of users to be notified about the results
 END_USAGE
 }
 
-sub run () {
-    my ($cmd, $fatal) = @_;
-    my $ret;
-    my $output = "";
-
-    # if not specified, the command is fatal
-    if (!defined($fatal) or ($fatal != 0 and $fatal != 1)) {
-        $fatal = 1;
-    }
-
-    print "\n";
-    print "#  $cmd\n";
-
-    # run the command
-    system("($cmd)  </dev/null 2>&1");
-    $ret = $? / 256;
-
-    # should we die here?
-    if ($fatal && $ret != 0) {
-        print "\n";
-        print "FAILED COMMAND: $cmd\n";
-        print "RETURN VALUE:  $ret\n";
-        print "\n";
-        exit(1);
-    }
-
-    # return the commands return value
-    return $ret;
-}

@@ -9,42 +9,45 @@
 # This should be run in the top-level src directory.
 #
 
+use Getopt::Long;
+
 # Autoflush the output
 $| = 1;
 
+use vars qw/ $opt_help $opt_sys $opt_version $opt_libc $opt_tarcmd $opt_cpcmd $opt_target/;
+
+GetOptions ( 'help'              => $opt_help,
+             'sys=s'             => $opt_sys,
+             'version=s'         => $opt_version,
+             'libc=s'            => $opt_libc,
+             'tarcmd=s'          => $opt_tarcmd,
+             'cpcmd=s'           => $opt_cpcmd,
+             'target=s'          => $opt_target);
+
 # Deal with any command-line args we are passed:
-while( $_ = shift( @ARGV ) ) {
-  SWITCH: {	
-    if( /-s.*/ ) {
-	$sys = shift(@ARGV);
-	last SWITCH;
-    }
-    if( /-v.*/ ) {
-	$versarg = shift(@ARGV);
-	last SWITCH;
-    }
-    if( /-l.*/ ) {
-	$libc = shift(@ARGV);
-	last SWITCH;
-    }
-    if( /-tarcmd.*/ ) {
-	$tar_cmd = shift(@ARGV);
-	last SWITCH;
-    }
-    if( /-cpcmd.*/ ) {
-	$cp_cmd = shift(@ARGV);
-	last SWITCH;
-    }
-    if( /-t.*/ ) {
-	# this is short for "-target".  if we get "-tarcmd", we'll
-	# already catch it above, so we can leave this test alone...
-        $target = shift(@ARGV);
-	if( ! -d $target ) {
-	    die "Target directory $target does not exist!\n";
-	}
-        last SWITCH;
-    }
-  }
+
+my ($sys, $versarg, $libc, $tar_cmd, $cp_cmd, $target);
+
+if (defined($opt_help)) {
+    print_usage(); exit 0;
+}
+if (defined($opt_sys)) {
+    $sys = $opt_sys;
+}
+if (defined($opt_version)) {
+    $versarg = $opt_version;
+}
+if (defined($opt_libc)) {
+    $libc = $opt_libc;
+}
+if (defined($opt_tarcmd)) {
+    $tar_cmd = $opt_tarcmd;
+}
+if (defined($opt_cpcmd)) {
+    $cp_cmd = $opt_cpcmd;
+}
+if (defined($opt_target)) {
+    $target = $opt_target;
 }
 
 # Now, grab the version of this release.
@@ -391,7 +394,7 @@ foreach $module ( @modules ) {
 }
 
 sub customize {
-    local( $source, $target, $module, $tarfile ) = @_;
+    my ( $source, $target, $module, $tarfile ) = @_;
     local( $description ) = $module_descriptions{$module};
 
     open( SRC, "<$source" ) || die "\nCan't open $source for reading.\n";
@@ -413,4 +416,23 @@ sub customize {
 }
     
 
+sub print_usage() {
 
+    print <<END_USAGE;
+--help
+This screen
+
+--sys=<System Name>
+
+--version=<Condor Version String>
+
+--libc=<libc name>
+
+--tarcmd=<tar command with args>
+
+--cpcmd=<cp command with args>
+
+--target=<target location>
+
+END_USAGE
+}

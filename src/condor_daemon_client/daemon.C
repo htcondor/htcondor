@@ -1002,9 +1002,13 @@ Daemon::getCmInfo( const char* subsys )
 	_subsys = strnewp( subsys );
 
 	if( _addr && is_valid_sinful(_addr) ) {
-		dprintf( D_HOSTNAME, "Already have address, no info to locate\n" );
-		_is_local = false;
-		return true;
+			// only consider addresses w/ a non-zero port "valid"...
+		_port = string_to_port( _addr );
+		if( _port > 0 ) {
+			dprintf( D_HOSTNAME, "Already have address, no info to locate\n" );
+			_is_local = false;
+			return true;
+		}
 	}
 
 		// For CM daemons, normally, we're going to be local (we're
@@ -1529,7 +1533,14 @@ Daemon::checkAddr( void )
 					  "port is still 0 after locate(), address invalid" );
 			return false;
 		}
+			// clear out some things that would confuse locate()
 		_tried_locate = false;
+		delete [] _addr;
+		_addr = NULL;
+		if( _is_local ) {
+			delete [] _name;
+			_name = NULL;
+		}
 		locate();
 		if( _port == 0 ) {
 			newError( CA_LOCATE_FAILED,

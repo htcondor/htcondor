@@ -297,22 +297,9 @@ elif test $os = "Darwin" ; then
   _cv_arch="PPC"
   _cv_op_sys="Darwin"
   _cv_opsys="DARWIN"
-  if test "$osrelease" = "6.8" ; then
-    _cv_opsys_vers="DARWIN_6"
-    _cv_sysname="ppc_macosx_6"
-  elif test "$osrelease" = "7.0.0" -o "$osrelease" = "7.4.0" ; then
-    # we are considering all darwin 7.x series to be a part of 10.3.x,
-    # and by observation, darwin 8.x to be 10.4.x <-- not implemented--yet.
-    # unless there is a reason to seperate specific revisions of Darwin,
-    # we'll collapse all of them together.
-    _cv_opsys_vers="DARWIN_7"
-    _cv_sysname="ppc_macosx_7"
-  else
-    _cv_opsys_vers="DARWIN_UNKNOWN"
-    AC_MSG_WARN([Unrecognised MacOSX/Darwin version])
-    AC_MSG_WARN([You may have trouble building and/or packaging Condor]) 
-  fi  
-
+  # we don't (yet) need to distinguish different osx/darwin versions
+  _cv_opsys_vers="OSX"
+  _cv_sysname="ppc_macosx"
 
 else
   AC_MSG_ERROR([Condor has not been ported to this platform])
