@@ -1144,14 +1144,22 @@ XCOMM End translation of func(CBUILD_DEP)
 #endif /* CBUILD_DEP */
 
 #ifndef DEP_SYMLINK
+#ifdef FLAGS_MACRO_NAME
 #define DEP_SYMLINK(name,file)		@@\
 XCOMM Begin translation of func(DEP_SYMLINK) @@\
-name:: file					@@\
-       @/bin/true				@@\
-all:: file					@@\
-file:					@@\
-	ln -s ../file .			@@\
+name:: file				@@\
+       @/bin/true			@@\
+all:: file				@@\
+file::					@@\
+	/bin/rm -f file 		@@\
+	ln -s ../file file		@@\
 XCOMM End translation of func(DEP_SYMLINK)
+#else /* ! defined(FLAGS_MACRO_NAME) */
+#define DEP_SYMLINK(name,file)		@@\
+XCOMM Begin translation of func(DEP_SYMLINK) @@\
+XCOMM NULL BODY				@@\
+XCOMM End translation of func(DEP_SYMLINK)
+#endif /* defined(FLAGS_MACRO_NAME) */
 #endif /* DEP_SYMLINK */
 
 #ifndef DEP_SYMLINK_EXT
