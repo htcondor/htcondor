@@ -47,7 +47,6 @@ void GlobusResource::Reconfig()
 
 	gahp.setTimeout( gahpCallTimeout );
 
-//	submitLimit = param_integer( "GRIDMANAGER_MAX_PENDING_SUBMITS", 5 );
 	submitLimit = -1;
 	param_value = param( "GRIDMANAGER_MAX_PENDING_SUBMITS_PER_RESOURCE" );
 	if ( param_value == NULL ) {
@@ -73,8 +72,6 @@ void GlobusResource::Reconfig()
 		submitLimit = DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE;
 	}
 
-//	jobLimit = param_integer("GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE",
-//							 100 );
 	jobLimit = -1;
 	param_value = param( "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE" );
 	if ( param_value != NULL ) {
