@@ -25,7 +25,9 @@
 extern "C" {
 #endif
 
+#ifndef WIN32
 void limit( int, rlim_t );
+#endif
 
 #if defined(__cplusplus)
 }
