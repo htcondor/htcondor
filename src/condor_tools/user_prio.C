@@ -148,6 +148,10 @@ main(int argc, char* argv[])
 
 	  // Get info on our negotiator
   Daemon negotiator( DT_NEGOTIATOR, NULL, pool );
+  if( ! negotiator.locate() ) {
+	  fprintf( stderr, "%s: %s\n", argv[0], negotiator.error() );
+	  exit(1);
+  }
 
   if (SetPrio) { // set priority
 
