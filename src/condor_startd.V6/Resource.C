@@ -1343,6 +1343,13 @@ Resource::publishVmAttrs( ClassAd* cap )
 
 
 void
+Resource::refreshVmAttrs( void )
+{
+	resmgr->publishVmAttrs( r_classad );
+}
+
+
+void
 Resource::compute( amask_t mask ) 
 {
 	if( IS_EVALUATED(mask) ) {
