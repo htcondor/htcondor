@@ -50,8 +50,11 @@
 extern "C" {
 #endif
 
-#if !defined(AIX32)
+#if !defined(AIX32) && !defined(HPUX9)
 int select (int , fd_set *, fd_set *, fd_set *, struct timeval *);
+#endif
+
+#if !defined(AIX32)
 #define NFDS(x) (x)
 #endif
 
