@@ -73,6 +73,11 @@ public:
  private:
 	bool is_initialized;
 	SafeSock* shadow_safesock;
+
+		// I can't be copied (yet)
+	DCShadow( const DCShadow& );
+	DCShadow& operator = ( const DCShadow& );
+
 };
 
 #endif /* _CONDOR_DC_SHADOW_H */

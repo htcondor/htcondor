@@ -76,6 +76,11 @@ public:
 
  private:
 	char* capability;
+
+		// I can't be copied (yet)
+	DCStartd( const DCStartd& );
+	DCStartd& operator = ( const DCStartd& );
+
 };
 
 #endif /* _CONDOR_DC_STARTD_H */

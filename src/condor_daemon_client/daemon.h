@@ -393,6 +393,13 @@ protected:
 	char* New_platform( char* );
 	char* New_addr( char* );
 	char* New_pool( char* );
+
+ private:
+
+		// I can't be copied (yet)
+	Daemon( const Daemon& );
+	Daemon& operator = ( const Daemon& );
+
 };
 
 #endif /* CONDOR_DAEMON_H */
