@@ -240,7 +240,7 @@ collect (int command, ClassAd *clientAd, sockaddr_in *from, int &insert)
 			retVal = 0;
 			break;
 		}
-		sprintf (hashString, "< %s , %s , %d >", hk.name, hk.ip_addr, hk.port);
+		sprintf (hashString, "< %s , %s >", hk.name, hk.ip_addr);
 		retVal=updateClassAd (StartdAds, "StartdAd  ", clientAd, hk, 
 							  hashString, insert);
 		break;
@@ -252,7 +252,7 @@ collect (int command, ClassAd *clientAd, sockaddr_in *from, int &insert)
 			retVal = 0;
 			break;
 		}
-		sprintf (hashString, "< %s , %s , %d >", hk.name, hk.ip_addr, hk.port);
+		sprintf (hashString, "< %s , %s >", hk.name, hk.ip_addr);
 		retVal=updateClassAd (ScheddAds, "ScheddAd  ", clientAd, hk,
 							  hashString, insert);
 		break;

@@ -14,9 +14,8 @@ class HashKey
 {
     public:
 
-    char name [64];
-    char ip_addr [64];
-    int  port;
+    char name    [64];
+    char ip_addr [16];
 
 	void   sprint (char *);
 	friend ostream& operator<< (ostream &out, const HashKey &); 

@@ -102,7 +102,7 @@ int  xdr_send_classad_as_mach_rec (XDR *, ClassAd *);
 
 void usage(char* name)
 {
-	dprintf( D_ALWAYS, "Usage: %s [-f] [-b] [-t] [-c config_file_name]\n", name );
+	dprintf(D_ALWAYS,"Usage: %s [-f] [-b] [-t] [-c config_file_name]\n",name );
 	exit( 1 );
 }
 
@@ -111,8 +111,8 @@ int main (int argc, char *argv[])
 {
 	fd_set readfds;
 	int    count, timerID;
-	char**	ptr;
-	char	config_file[MAXPATHLEN] = "";
+	char** ptr;
+	char   config_file[MAXPATHLEN] = "";
 	
 	if(argc > 5)
 	{
@@ -222,7 +222,7 @@ int main (int argc, char *argv[])
 			}
 			else
 			{
-				EXCEPT ("Bad return value from select(): %d\n", count);
+				EXCEPT ("Bad return value from select(): %d", count);
 			}
 		}
 
@@ -242,7 +242,7 @@ int main (int argc, char *argv[])
 
 	// we should never quit the above loop
 	EXCEPT ("Should never reach here");
-	return -1;
+	return 1;
 }
 
 void 
@@ -702,7 +702,7 @@ void
 sigpipe_handler ()
 {
     if (ClientSocket == -1)
-		EXCEPT ("Got SIGPIPE, but have no client socket\n");
+		EXCEPT ("Got SIGPIPE, but have no client socket");
 	
 	(void) close (ClientSocket);
     ClientSocket = -1;
