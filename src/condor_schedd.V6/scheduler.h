@@ -105,9 +105,7 @@ struct match_rec
 enum MrecStatus {
     M_ACTIVE,
     M_INACTIVE,
-    M_DELETED,
-	M_STARTD_CONTACT_LIMBO,  // after contacting startd; before recv'ing reply
-	M_DELETE_PENDING         // is set if we should delete, but in above state
+	M_STARTD_CONTACT_LIMBO  // after contacting startd; before recv'ing reply
 };
 
 // These are the args to contactStartd that get stored in the queue.
@@ -161,7 +159,6 @@ class Scheduler : public Service
     match_rec*      AddMrec(char*, char*, PROC_ID*, ClassAd*, char*, char*);
     int         	DelMrec(char*);
     int         	DelMrec(match_rec*);
-    int         	MarkDel(char*);
 	shadow_rec*		FindSrecByPid(int);
 	shadow_rec*		FindSrecByProcID(PROC_ID);
 	void			RemoveShadowRecFromMrec(shadow_rec*);

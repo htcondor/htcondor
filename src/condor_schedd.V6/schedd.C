@@ -1864,7 +1864,7 @@ Scheduler::contactStartd( char* capability, char *user,
 								 (SocketHandlercpp)&Scheduler::startdContactSockHandler,
 								 to_startd, this, ALLOW );
 
-	daemonCore->Register_DataPtr( mrec );
+	daemonCore->Register_DataPtr( strdup(capability) );
 
 	dprintf ( D_FULLDEBUG, "Registered startd contact socket.\n" );
 	dprintf ( D_FULLDEBUG, "Set data pointer to %x\n", mrec );
@@ -1900,28 +1900,27 @@ int Scheduler::startdContactSockHandler( Stream *sock )
 		// cancelled, we begin by decrementing the # of contacts.
 	numRegContacts--;
 
-	match_rec *mrec = (match_rec *) daemonCore->GetDataPtr();
+		// fetch the match record.  the daemon core DataPtr specifies the
+		// id of the match (which is really the startd capability).  use
+		// this id to pull out the actual mrec from our hashtable.
+	char *id = (char *) daemonCore->GetDataPtr();
+	match_rec *mrec = NULL;
+	HashKey key(id);
+	matches->lookup(key, mrec);
+	free(id);	// it was allocated with strdup() when Register_DataPtr was called
+
 
 	if ( !mrec ) {
-		dprintf ( D_ALWAYS, "deamonCore failed to get data pointer!\n" );
+		// The match record must have been deleted.  Nothing left to do, close
+		// up shop.
+		dprintf ( D_FULLDEBUG, "startdContactSockHandler(): mrec not found\n" );
 		checkContactQueue();
 		return FALSE;
 	}
 	
 	dprintf ( D_FULLDEBUG, "Got mrec data pointer %x\n", mrec );
 
-		/* If someone *tried* to delete mrec since the socket was 
-		   registered, they really only set the status to M_DELETE_PENDING.
-		   We check for this and delete as necessary */
-
-	if ( mrec->status == M_DELETE_PENDING ) {
-		dprintf( D_FULLDEBUG, "Found pending delete in mrec->status\n" );
-		mrec->status = M_DELETED; // to tell DelMrec to actually delete it
-		BAILOUT;
-	}
-	else {  // we assume things will work out.
-		mrec->status = M_ACTIVE;
-	}
+	mrec->status = M_ACTIVE; // we assume things will work out.
 
 	// Now, we set the timeout on the socket to 1 second.  Since we 
 	// were called by as a Register_Socket callback, this should not 
@@ -2077,10 +2076,6 @@ Scheduler::StartJobs()
 		if ( rec->status == M_STARTD_CONTACT_LIMBO ) {
 			dprintf ( D_FULLDEBUG, "match (%s) waiting for startd contact\n", 
 					  rec->id );
-			continue;
-		}
-		if ( rec->status == M_DELETE_PENDING ) {
-			dprintf ( D_FULLDEBUG, "match (%s) pending delete...\n", rec->id);
 			continue;
 		}
 		if ( rec->shadowRec ) {
@@ -4954,24 +4949,6 @@ Scheduler::DelMrec(match_rec* match)
 		return -1;
 	}
 	return DelMrec(match->id);
-}
-
-int
-Scheduler::MarkDel(char* id)
-{
-	match_rec *rec;
-
-	if(!id)
-	{
-		dprintf(D_ALWAYS, "Null parameter --- match not marked deleted\n");
-		return -1;
-	}
-	if (matches->lookup(HashKey(id), rec) == 0) {
-		dprintf(D_FULLDEBUG, "Match record (%s, %s, %d) marked deleted\n",
-				rec->id, rec->peer, rec->cluster);
-		rec->status = M_DELETED; 
-	}
-	return 0;
 }
 
 shadow_rec*
