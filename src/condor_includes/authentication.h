@@ -74,8 +74,6 @@ friend class ReliSock;
 	int isAuthenticated();
 	void unAuthenticate();
 
-	void canTryFilesystem();
-	void canTryGSS();
 	void setAuthType( authentication_state state );
 	int setOwner( char *owner );
 	char *getOwner();
@@ -85,7 +83,11 @@ friend class ReliSock;
 private:
 	Authentication() {}; //should never be called, make private to help that!
 	int handshake();
+#if defined(WIN32)
+	int authenticate_nt();
+#else
 	int authenticate_filesystem();
+#endif
 	int selectAuthenticationType( int clientCanUse );
 	int setupEnv( char *hostAddr );
 

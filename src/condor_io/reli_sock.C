@@ -886,6 +886,12 @@ ReliSock::setGenericAuthentication() {
 }
 
 void
+ReliSock::canTryNT()
+{
+   canUseFlags |= Authentication::CAUTH_NT;
+}
+
+void
 ReliSock::canTryFilesystem()
 {
    canUseFlags |= Authentication::CAUTH_FILESYSTEM;

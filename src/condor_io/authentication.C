@@ -41,6 +41,101 @@ gss_cred_id_t Authentication::credential_handle = GSS_C_NO_CREDENTIAL;
 #endif defined(GSS_AUTHENTICATION)
 
 
+#if defined(WIN32)
+int
+Authentication::authenticate_nt()
+{
+	if ( mySock->isClient() ) {
+		//client authentication
+	}
+	else {
+		//server authentication
+	}
+	//return 1 for success, 0 for failure. Server should send sucess/failure
+	//back to client so client can know what to return.
+}
+#endif
+
+int 
+Authentication::setupEnv( char *hostAddr )
+{
+	char tmpstring[1024];
+	char *CertDir;
+
+
+	//only for client because canTryGSS/canTryFilesystem, etc. for 
+	//server should be parsed in schedd from config file.
+
+	if ( mySock->isClient() ) {
+
+#if defined(WIN32)
+//TODD: put whatever code you want here, my suggestion is:
+//		mySock->canUseFlags |= CAUTH_NT;
+#else
+		mySock->canUseFlags |= CAUTH_FILESYSTEM;
+#endif
+
+	}
+
+	if ( !( CertDir = getenv( "X509_CERT_DIR" ) ) ) {
+		return 0;
+	}
+	struct stat statbuf;
+	int canTryGSS = 1;
+
+	if ( stat( CertDir, &statbuf ) ) {
+		canTryGSS = 0;
+	}
+	else if ( !( statbuf.st_mode & ( S_IFDIR | S_IREAD ) ) ) {
+		canTryGSS = 0;
+	}
+
+#if defined(GSS_AUTHENTICATION)
+	if ( !canTryGSS ) {
+		fprintf( stderr, "unable to read x509 directory %s\n", CertDir );
+		return( 0 );
+	}
+#endif
+
+	sockaddr_in sin;
+	char *hostname;
+
+	//client needs to know name of the schedd, I stashed hostAddr in 
+	//Authentication::connect(), which should only be called by clients
+	if ( mySock->isClient() ) {
+		if ( string_to_sin( hostAddr, &sin ) 
+				&& ( hostname = sin_to_hostname( &sin, NULL ) ) ) 
+		{
+			sprintf( tmpstring, "CONDOR_GATEKEEPER=/CN=schedd@%s", hostname );
+			putenv( strdup( tmpstring ) );
+		}
+		else {
+			free( CertDir );
+			return( 0 );
+		}
+	}
+	
+	sprintf( tmpstring, "X509_USER_CERT=%s/newcert.pem", CertDir );
+	putenv( strdup( tmpstring ) );
+
+	sprintf(tmpstring,"X509_USER_KEY=%s/private/newkey.pem",CertDir);
+	putenv( strdup( tmpstring ) );
+
+	sprintf(tmpstring,"SSLEAY_CONF=%s/condor_ssl.cnf",CertDir);
+	putenv( strdup( tmpstring ) );
+
+	//if they got this far, might as well let 'em try to use GSS
+	//only for client because canTryGSS/canTryFilesystem, for server
+	//should be parsed in schedd from config file.
+	if ( mySock->isClient() ) {
+		mySock->canUseFlags |= CAUTH_GSS;
+	}
+
+//	free( CertDir );
+	
+	return( 1 );
+}
+
 Authentication::Authentication( ReliSock *sock )
 {
 	//credential_handle is static and set at top of this file//
@@ -79,21 +174,29 @@ Authentication::authenticate( char *hostAddr )
 	 case CAUTH_GSS:
 		authenticate_self_gss();
 		if( authenticate_gss() ) {
-			sprintf( tmp, "%s = \"%s\"", USERAUTH_ADTYPE, "GSS" );
 			auth_status = CAUTH_GSS;
 		}
 		break;
 #endif
+
+#if defined(WIN32)
+	 case CAUTH_NT:
+		if ( authenticate_nt() ) {
+			auth_status = CAUTH_NT;
+		}
+		break;
+#else
 	 case CAUTH_FILESYSTEM:
 		if ( authenticate_filesystem() ) {
 
 			auth_status = CAUTH_FILESYSTEM;
 		}
 		break;
+#endif
+
 	 default:
 		dprintf(D_FULLDEBUG,"Authentication::authenticate-- bad handshake\n" );
 	}
-
 	//if none of the methods succeeded, we fall thru to default "none" from above
 
 	//TRUE means success, FALSE is failure (CAUTH_NONE)
@@ -182,6 +285,7 @@ Authentication::unAuthenticate()
 	setOwner( NULL );
 }
 
+#if !defined(WIN32)
 int
 Authentication::authenticate_filesystem()
 {
@@ -260,6 +364,7 @@ Authentication::authenticate_filesystem()
 	free( new_file );
 	return( retval == 0 );
 }
+#endif
 
 int
 Authentication::selectAuthenticationType( int clientCanUse ) 
@@ -268,99 +373,26 @@ Authentication::selectAuthenticationType( int clientCanUse )
 	dprintf( D_FULLDEBUG, "auth handshake: clientCanUse: %d\n", clientCanUse );
 	int retval = 0;
 
-	if ( clientCanUse & mySock->canUseFlags & CAUTH_FILESYSTEM ) {
-		retval = CAUTH_FILESYSTEM;
-	}
-	else if ( clientCanUse & mySock->canUseFlags & CAUTH_GSS ) {
+	if ( clientCanUse & mySock->canUseFlags & CAUTH_GSS ) {
 		retval = CAUTH_GSS;
+	}
+	else {
+#if defined(WIN32)
+		if ( clientCanUse & mySock->canUseFlags & CAUTH_NT ) {
+			retval = CAUTH_NT;
+		}
+#else
+		if ( clientCanUse & mySock->canUseFlags & CAUTH_FILESYSTEM ) {
+			retval = CAUTH_FILESYSTEM;
+		}
+#endif
 	}
 	dprintf(D_FULLDEBUG,"auth handshake: selected method: %d\n", retval );
 
 	return retval;
 }
 
-int 
-Authentication::setupEnv( char *hostAddr )
-{
-	char tmpstring[1024];
-	char *CertDir;
-
-
-	//only for client because canTryGSS/canTryFilesystem, etc. for 
-	//server should be parsed in schedd from config file.
-
-	if ( mySock->isClient() ) {
-
-#if defined(WIN32)
-//TODD: put whatever code you want here, my suggestion is:
-//		mySock->canUseFlags |= CAUTH_NT;
-#else
-		mySock->canUseFlags |= CAUTH_FILESYSTEM;
-#endif
-
-	}
-
-	if ( !( CertDir = getenv( "X509_CERT_DIR" ) ) ) {
-		return 0;
-	}
-	struct stat statbuf;
-	int canTryGSS = 1;
-
-	if ( stat( CertDir, &statbuf ) ) {
-		canTryGSS = 0;
-	}
-	else if ( !( statbuf.st_mode & ( S_IFDIR | S_IREAD ) ) ) {
-		canTryGSS = 0;
-	}
-
 #if defined(GSS_AUTHENTICATION)
-	if ( !canTryGSS ) {
-		fprintf( stderr, "unable to read x509 directory %s\n", CertDir );
-		return( 0 );
-	}
-#endif
-
-	sockaddr_in sin;
-	char *hostname;
-
-	//client needs to know name of the schedd, I stashed hostAddr in 
-	//Authentication::connect(), which should only be called by clients
-	if ( mySock->isClient() ) {
-		if ( string_to_sin( hostAddr, &sin ) 
-				&& ( hostname = sin_to_hostname( &sin, NULL ) ) ) 
-		{
-			sprintf( tmpstring, "CONDOR_GATEKEEPER=/CN=schedd@%s", hostname );
-			putenv( strdup( tmpstring ) );
-		}
-		else {
-			free( CertDir );
-			return( 0 );
-		}
-	}
-	
-	sprintf( tmpstring, "X509_USER_CERT=%s/newcert.pem", CertDir );
-	putenv( strdup( tmpstring ) );
-
-	sprintf(tmpstring,"X509_USER_KEY=%s/private/newkey.pem",CertDir);
-	putenv( strdup( tmpstring ) );
-
-	sprintf(tmpstring,"SSLEAY_CONF=%s/condor_ssl.cnf",CertDir);
-	putenv( strdup( tmpstring ) );
-
-	//if they got this far, might as well let 'em try to use GSS
-	//only for client because canTryGSS/canTryFilesystem, for server
-	//should be parsed in schedd from config file.
-	if ( mySock->isClient() ) {
-		mySock->canUseFlags |= CAUTH_GSS;
-	}
-
-//	free( CertDir );
-	
-	return( 1 );
-}
-
-#if defined(GSS_AUTHENTICATION)
-
 int 
 Authentication::lookup_user_gss( char *client_name ) 
 {

@@ -116,6 +116,7 @@ public:
 	void setGenericAuthentication();
 	void canTryGSS();
 	void canTryFilesystem();
+	void canTryNT();
 
 	int isClient() { return is_client; };
 
