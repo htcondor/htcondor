@@ -1668,9 +1668,11 @@ These macros control the \Condor{schedd}.
   are not satisfying all the job requests.
   \MacroUNI{HOSTALLOW\_NEGOTIATOR\_SCHEDD} (see
   section~\ref{param:HostAllow}) must also be configured to allow
-  negotiators from all of the \MacroU{FLOCK\_HOSTS} to contact the
-  schedd.  Similarly, the central managers of the remote pools must be
-  configured to listen to requests from this schedd.
+  negotiators from all of the \MacroU{FLOCK\_HOSTS} to contact the schedd.
+  Please make sure the \MacroUNI{CONDOR\_HOST} is first in the 
+  \MacroUNI{HOSTALLOW\_NEGOTIATOR\_SCHEDD} list.
+  Similarly, the central managers of the remote pools must be configured
+  to listen to requests from this schedd.
 
 \end{description}
 
