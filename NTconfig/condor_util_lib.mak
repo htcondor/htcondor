@@ -120,6 +120,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\chomp.obj" \
 	"$(INTDIR)\ckpt_name.obj" \
 	"$(INTDIR)\condor_common_c.obj" \
+	"$(INTDIR)\condor_snutils.obj" \
 	"$(INTDIR)\condor_universe.obj" \
 	"$(INTDIR)\cronos.obj" \
 	"$(INTDIR)\d_format_time.obj" \
@@ -144,8 +145,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\rotate_file.obj" \
 	"$(INTDIR)\setsyscalls.obj" \
 	"$(INTDIR)\signames.obj" \
-	"$(INTDIR)\strcmp_until.obj" \
-	"$(INTDIR)\condor_snutils.obj"
+	"$(INTDIR)\strcmp_until.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -246,6 +246,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\chomp.obj" \
 	"$(INTDIR)\ckpt_name.obj" \
 	"$(INTDIR)\condor_common_c.obj" \
+	"$(INTDIR)\condor_snutils.obj" \
 	"$(INTDIR)\condor_universe.obj" \
 	"$(INTDIR)\cronos.obj" \
 	"$(INTDIR)\d_format_time.obj" \
@@ -270,8 +271,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\rotate_file.obj" \
 	"$(INTDIR)\setsyscalls.obj" \
 	"$(INTDIR)\signames.obj" \
-	"$(INTDIR)\strcmp_until.obj" \
-	"$(INTDIR)\condor_snutils.obj"
+	"$(INTDIR)\strcmp_until.obj"
 
 "..\src\condor_util_lib\condor_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -279,31 +279,6 @@ LIB32_OBJS= \
 <<
 
 !ENDIF 
-
-.cpp{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.c{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
 
 
 !IF "$(NO_EXTERNAL_DEPS)" != "1"
@@ -596,7 +571,7 @@ SOURCE=..\src\h\syscall_numbers.tmpl
 
 !IF  "$(CFG)" == "condor_util_lib - Win32 Debug"
 
-InputDir=\home\tannenba\ws_v64-branch\src\h
+InputDir=..\src\h
 InputPath=..\src\h\syscall_numbers.tmpl
 
 "..\src\h\syscall_numbers.h" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"

@@ -882,7 +882,22 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_submit"=".\condor_submit.dsp" - Package Owner=<4>
+Project: "condor_store_cred"=.\condor_store_cred.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name condor_util_lib
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "condor_submit"=.\condor_submit.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
