@@ -15,7 +15,7 @@
 #define XExtLibPath DONT_KNOW
 #define DbmLibrary
 
-#define IS_ALHPA_OSF1			YES
+#define IS_ALPHA_OSF1			YES
 #define HAS_X					NO
 #define HAS_X_EXTENSIONS		NO
 #define HAS_NDBM				YES
@@ -24,9 +24,10 @@
 #define NEEDS_GROW_STACK		NO
 #define NEEDS_SPECIAL_SIGVEC	NO
 #define NEEDS_FAKE_GETMNT		NO
-#define HAS_VOID_SIGNAL_RETURN	NO
+#define HAS_VOID_SIGNAL_RETURN	YES
 #define HAS_AR_S_OPTION			YES
 #define HAS_RANLIB_TOUCH		YES
+#define HAS_CP_PRESERVE			YES
 #define NEEDS_SPECIAL_SETJMP	NO
 #define HAS_FORTRAN				NO
 #define HAS_FLOCK				YES
