@@ -1,0 +1,14 @@
+# Data file describing the UPTIME module
+ModuleFiles: uptime
+
+Description:
+Monitors the uptime and load averages of the system (based on the
+"uptime" program)
+
+Default: uptime
+options: 
+period: 5m
+prefix: uptime_
+
+# It's parameters
+# <NONE>

@@ -31,19 +31,25 @@ class GridUniverseLogic : public Service
 		GridUniverseLogic();
 		~GridUniverseLogic();
 
-		static void JobCountUpdate(const char* owner, const char* proxy,
-				int cluster, int proc,
-				int num_globus_jobs, int num_globus_unmanaged_jobs);
+		static void JobCountUpdate(const char* owner, const char* domain, 
+				const char* proxy, const char* proxy_path, int cluster, 
+				int proc, int num_globus_jobs, int num_globus_unmanaged_jobs);
 
-		static void JobRemoved(const char* owner, const char* proxy, 
-				int cluster, int proc);
+		static void JobRemoved(const char* owner, const char* domain,
+			   	const char* proxy, const char* proxy_path, int cluster, 
+				int proc);
 
-		static void JobAdded(const char* owner, const char* proxy,
-				int cluster, int proc);
+		static void JobAdded(const char* owner, const char* domain,
+			   	const char* proxy, const char* proxy_path, int cluster, 
+				int proc);
 
 		static void reconfig() { signal_all(SIGHUP); }
 		static void shutdown_graceful() { signal_all(SIGTERM); }
 		static void shutdown_fast() { signal_all(SIGQUIT); }
+
+		static bool want_scratch_dir();
+
+		static bool group_per_subject();
 
 	private:
 
@@ -55,6 +61,8 @@ class GridUniverseLogic : public Service
 			int pid;
 			int add_timer_id;
 			int remove_timer_id;
+			char owner[200];
+			char domain[200];
 			gman_node_t() : pid(0),add_timer_id(-1),remove_timer_id(-1) {};
 		};
 
@@ -64,11 +72,16 @@ class GridUniverseLogic : public Service
 		static int GManagerReaper(Service *,int pid, int exit_status);
 
 		static gman_node_t* StartOrFindGManager(const char* owner, 
-				const char* proxy, int cluster, int proc);
+				const char* domain, const char* proxy,  const char* proxy_path,
+				int cluster, int proc);
 
 		// SendAddSignal and SendRemoveSignal are DC Timer Event handlers
 		static int SendAddSignal(Service *);
 		static int SendRemoveSignal(Service *);
+
+		// given a pointer to a gman_node_t, return path to a scratch
+		// directory -- note: caller must call delete [] on returned pointer
+		static char *scratchFilePath(gman_node_t *);
 
 		typedef HashTable<MyString,gman_node_t *> GmanPidTable_t;
 		static GmanPidTable_t * gman_pid_table;

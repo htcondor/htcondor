@@ -27,18 +27,18 @@
 
 static const char root[] = "root";
 
-Condor_Auth_Base :: Condor_Auth_Base(ReliSock * sock, int mode)
-    : mode_          ( mode  ),
-      authenticated_ ( false ),
-      remoteUser_    ( NULL  ),
-      remoteDomain_  ( NULL  ),
-      remoteHost_    ( NULL  ),
-      localDomain_   ( NULL  ),
-      fqu_           ( NULL  ),
-      isDaemon_      ( false ),
-      mySock_        ( sock  )
+Condor_Auth_Base :: Condor_Auth_Base(ReliSock * sock, int mode) : 
+	mySock_        ( sock  ),
+	authenticated_ ( false ),
+	mode_          ( mode  ),
+	isDaemon_      ( false ),
+	remoteUser_    ( NULL  ),
+	remoteDomain_  ( NULL  ),
+	remoteHost_    ( NULL  ),
+	localDomain_   ( NULL  ),
+	fqu_           ( NULL  )
 {
-    if (mySock_->isClient()) {
+    //if (mySock_->isClient()) {
         
         //------------------------------------------
         // There are two possible cases:
@@ -61,7 +61,7 @@ Condor_Auth_Base :: Condor_Auth_Base(ReliSock * sock, int mode)
         if (get_my_uid() == 0) {
             isDaemon_ = true;
         }
-    }
+        //}
 
 		// this will *always* succeed
 	localDomain_ = param( "UID_DOMAIN" );

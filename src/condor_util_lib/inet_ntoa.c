@@ -1,3 +1,6 @@
+#include "condor_common.h"
+
+#if defined(IRIX)
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
@@ -6,7 +9,8 @@
 #define INET_ADDRSTRLEN 16 
 #endif
 
-/* inet_ntoa is broken in current version of gcc in IRIX for n32 ABI */
+/* inet_ntoa is broken in current version of gcc in IRIX for n32 ABI and
+	also in the current version of 64-bit gcc under HPUX11 */
 char *
 inet_ntoa( struct in_addr inaddr ) {
 	static char buffer[INET_ADDRSTRLEN];
@@ -14,3 +18,53 @@ inet_ntoa( struct in_addr inaddr ) {
 	return( inet_ntop( AF_INET, (void *) &inaddr, buffer, 
 			(size_t) INET_ADDRSTRLEN ) );
 }
+
+#elif defined(HPUX11)
+
+/* 64-bit gcc has a problem where it can't return by value a struct of a
+	certain size when linking against system libraries. This function, plus
+	one other which I think we don't use, have this problem. So, I've written
+	my own inet_ntoa implementation which should work for hpux11 on a parisc
+	architecture. Some endian issues might need to be fixed, however when
+	we go to ia64 hpux11 if the endianess is different */
+
+char *
+inet_ntoa( struct in_addr inaddr ) {
+	/* if in_addr is 4 bytes wide, then 3(the ascii space requirement for
+		0xff in base ten) * 4 = 12, plus each byte in the in_addr for each
+		period minus one for fence post, plus 1 for the NUL should equal
+		16. The max space requirement for "255.255.255.255\0" */
+	static char buffer[sizeof(struct in_addr) * 3 
+						+ (sizeof(struct in_addr)-1) + 1];
+
+	unsigned char tmp_buf[sizeof(struct in_addr)];
+	unsigned char tmp_buf2[1024];
+	int max_bytes = sizeof(struct in_addr);
+	int i;
+
+	/* clean the ascii buffer out */
+	memcpy(buffer, 0, 
+		sizeof(struct in_addr) * 3 + (sizeof(struct in_addr)-1) + 1);
+
+	/* XXX This assumes big endian */
+	for(i = 0; i < max_bytes; i++) {
+		tmp_buf[i] = ((unsigned char*)&inaddr)[i];
+	}
+	
+	/* perform the conversion */
+	for(i = 0; i < max_bytes; i++) {
+		sprintf(tmp_buf2, "%u", tmp_buf[i]);
+		strcat(buffer, tmp_buf2);
+		if (i != (max_bytes - 1)) {
+			strcat(buffer, ".");
+		}
+	}
+	return buffer;
+}
+
+
+#else
+#error Please supply an implementation of inet_ntoa() for this platform!
+#endif
+
+

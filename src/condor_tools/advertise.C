@@ -40,6 +40,7 @@ usage( char *cmd )
 	fprintf(stderr,"    -version          Display Condor version\n");
 	fprintf(stderr,"    -pool <hostname>  Use this central manager\n");
 	fprintf(stderr,"    -debug            Show extra debugging info\n");
+	fprintf(stderr,"    -tcp              Ship classad via TCP (default is UDP)\n");
 	fprintf(stderr,"\nExample: %s -debug UPDATE_STORAGE_AD adfile\n\n",cmd);
 }
 
@@ -55,6 +56,7 @@ int main( int argc, char *argv[] )
 	char *pool=0;
 	int command=-1;
 	int i;
+	bool use_tcp = false;
 
 	myDistro->Init( argc, argv );
 	config();
@@ -71,14 +73,18 @@ int main( int argc, char *argv[] )
 				exit(1);
 			}
 			pool = argv[i];
+		} else if(!strncmp(argv[i],"-tcp",strlen(argv[i]))) {
+			use_tcp = true;
 		} else if(!strcmp(argv[i],"-version")) {
 			version();
 			exit(0);
 		} else if(!strcmp(argv[i],"-debug")) {
-			set_debug_flags("D_FULLDEBUG");
+				// dprintf to console
+			Termlog = 1;
+			dprintf_config ("TOOL", 2 );
 		} else if(argv[i][0]!='-') {
 			if(command==-1) {
-				command = get_collector_command_num(argv[i]);
+				command = getCollectorCommandNum(argv[i]);
 				if(command==-1) {
 					fprintf(stderr,"Unknown command name %s\n\n",argv[i]);
 					usage(argv[0]);
@@ -107,7 +113,7 @@ int main( int argc, char *argv[] )
 	FILE *file;
 	ClassAd *ad;
 	Daemon *collector;
-	SafeSock *sock;
+	Sock *sock;
 	int eof,error,empty;
 
 	file = fopen(filename,"r");
@@ -127,11 +133,7 @@ int main( int argc, char *argv[] )
 		return 1;
 	}
 
-	if(pool) {
-		collector = new Daemon( DT_COLLECTOR, 0, pool );
-	} else {
-		collector = new Daemon( DT_COLLECTOR, 0, 0 );
-	}
+	collector = new Daemon( DT_COLLECTOR, pool, 0 );
 		
 	dprintf(D_FULLDEBUG,"locating collector...\n");
 
@@ -140,14 +142,26 @@ int main( int argc, char *argv[] )
 		exit(1);
 	}
 
-	dprintf(D_FULLDEBUG,"collector is %s <%s:%d>\n",collector->hostname(),collector->addr(),collector->port());
+	dprintf(D_FULLDEBUG,"collector is %s located at %s\n",
+						collector->hostname(),collector->addr());
 	
-	sock = collector->safeSock();
+	if ( use_tcp ) {
+		sock = collector->startCommand(command,Stream::reli_sock,20);
+	} else {
+		sock = collector->startCommand(command,Stream::safe_sock,20);
+	}
 
-	sock->encode();
-	sock->put( command );
-	ad->put( *sock );
-	sock->end_of_message();
+	int result = 0;
+	if ( sock ) {
+		result += ad->put( *sock );
+		result += sock->end_of_message();
+	}
+	if ( result != 2 ) {
+		fprintf(stderr,"failed to send classad to %s\n",collector->addr());
+		exit(1);
+	}
+
+	delete collector;
 
 	return 0;
 }

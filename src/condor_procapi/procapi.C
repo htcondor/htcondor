@@ -27,6 +27,7 @@
 
 HashTable <pid_t, procHashNode *> * ProcAPI::procHash = 
     new HashTable <pid_t, procHashNode *> ( PHBUCKETS, hashFunc );  
+
 #ifndef WIN32
 piPTR ProcAPI::procFamily	= NULL;
 piPTR ProcAPI::allProcInfos = NULL;
@@ -40,6 +41,7 @@ long unsigned ProcAPI::boottime_expiration = 0;
 #include "ntsysinfo.h"
 static CSysinfo ntSysInfo;	// for getting parent pid on NT
 PPERF_DATA_BLOCK ProcAPI::pDataBlock	= NULL;
+ExtArray<HANDLE> ProcAPI::familyHandles;
 struct Offset * ProcAPI::offsets		= NULL;
 #endif // WIN32
 
@@ -70,6 +72,8 @@ ProcAPI::~ProcAPI() {
         delete phn;
     
     delete procHash;
+
+	closeFamilyHandles();
     
 #ifdef WIN32
     if ( offsets )
@@ -93,7 +97,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	char path[64];
 	struct prpsinfo pri;
 	struct prstatus prs;
-#ifndef OSF1
+#ifndef DUX4
 	struct prusage pru;   // prusage doesn't exist in OSF/1
 #endif
 
@@ -118,6 +122,11 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 			pi->ppid    = pri.pr_ppid;
 			pi->age     = secsSinceEpoch() - pri.pr_start.tv_sec;
 			pi->creation_time = pri.pr_start.tv_sec;
+		
+			// get the owner of the file in /proc, which 
+			// should be the process owner uid.
+			pi->owner = getFileOwner(fd);			
+
 		} else {
 			dprintf( D_ALWAYS, 
 					 "ProcAPI: PIOCPSINFO Error occurred for pid %d\n",
@@ -131,8 +140,9 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 		long nowminf, nowmajf;
 
     // PIOCUSAGE is used for page fault info
-    // solaris 2.5.1 and Irix only - unsupported by osf/1
-#ifndef OSF1
+    // solaris 2.5.1 and Irix only - unsupported by osf/1 dux-4
+    // Now in DUX5, though...
+#ifndef DUX4
 		rval = ioctl( fd, PIOCUSAGE, &pru );
 		if( rval >= 0 ) {
 
@@ -229,8 +239,8 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 
 #endif /* defined(Solaris251) || defined(IRIX) || defined(OSF1) */
 
-// This is the version of getProcInfo for Solaris 2.6 and 2.7 and 2.8
-#if defined(Solaris26) || defined(Solaris27) || defined(Solaris28)
+// This is the version of getProcInfo for Solaris 2.6 and 2.7 and 2.8 and 2.9
+#if defined(Solaris26) || defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
 
 	char path[64];
 	int fd, rval = 0;
@@ -247,6 +257,8 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 			dprintf( D_ALWAYS, "ProcAPI: Problems reading %s.\n", path );
 			rval = -2;
 		}
+		// grab the process owner uid
+		pi->owner = getFileOwner(fd);
 		close( fd );
 	} else {
 		if( errno == ENOENT ) {
@@ -330,7 +342,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	set_priv( priv );
 	return 0;
 
-#endif /* Solaris26 || Solaris27 || Solaris28 */
+#endif /* Solaris26 || Solaris27 || Solaris28 || Solaris29 */
 
 // This is the Linux version of getProcInfo.  Everything is easier and
 // actually seems to work in Linux...nice, but annoyingly different.
@@ -347,6 +359,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	long i;
 	int rval = 0;
 	unsigned long u;
+	unsigned long proc_flags;
 	char c;
 	char s[256], junk[16];
 
@@ -368,13 +381,53 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 				"%ld %ld %ld %ld %lu",
 				&pi->pid, s, &c, &pi->ppid, 
 				&i, &i, &i, &i, 
-				&u, &nowminf, &u, &nowmajf, &u, 
+				&proc_flags, &nowminf, &u, &nowmajf, &u, 
 				&usert, &syst, &i, &i, &i, &i, 
 				&u, &u, &jiffie_start_time, &vsize, &rss, &u, &u, &u, 
 				&u, &u, &u, &i, &i, &i, &i, &u );
+			
+			// grab the process owner uid
+			pi->owner = getFileOwner(fileno(fp));
+			
 			fclose( fp );
-			// Perform sanity check on the data we just read, as
-			// sometimes Linux screws it up.  
+
+			//Next, zero out thread memory, because Linux (as of
+			//kernel 2.4) shows one process per thread, with the mem
+			//stats for each thread equal to the memory usage of the
+			//entire process.  This causes ImageSize to be far bigger
+			//than reality when there are many threads, so if the job
+			//gets evicted, it might never be able to match again.
+
+			//There is no perfect method for knowing if a given
+			//process entry is actually a thread.  One way is to
+			//compare the memory usage to the parent process, and if
+			//they are identical, it is probably a thread.  However,
+			//there is a small race condition if one of the entries is
+			//updated between reads; this could cause threads not to
+			//be weeded out every now and then, which can cause the
+			//ImageSize problem mentioned above.
+
+			//So instead, we use the PF_FORKNOEXEC (64) process flag.
+			//This is always turned on in threads, because they are
+			//produced by fork (actually clone), and they continue on
+			//from there in the same code, i.e.  there is no call to
+			//exec.  In some rare cases, a process that is not a
+			//thread will have this flag set, because it has not
+			//called exec, and it was created by a call to fork (or
+			//equivalently clone with options that cause memory not to
+			//be shared).  However, not only is this rare, it is not
+			//such a lie to zero out the memory usage, because Linux
+			//does copy-on-write handling of the memory.  In other
+			//words, memory is only duplicated when the forked process
+			//writes to it, so we are once again in danger of over-counting
+			//memory usage.  When in doubt, zero it out!
+
+			if (proc_flags & 64) { //PF_FORKNOEXEC
+				//zero out memory usage
+				vsize = 0;
+				rss = 0;
+			}
+
 			if ( pid == pi->pid ) {
 					// data looks ok.  set rval to success.
 					rval = 0;
@@ -542,6 +595,9 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	pi->pid		= buf.pst_pid;
 	pi->ppid	= buf.pst_ppid;
 
+	// get the process owner uid
+	pi->owner	= buf.pst_uid;
+
 		/* Now that darned sampling thing, so that page faults gets
 		   converted to page faults per second */
 
@@ -555,6 +611,71 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 
 #endif /* HPUX */
 
+#ifdef CONDOR_DARWIN
+
+
+	// First, let's get the BSD task info for this stucture. This
+	// will tell us things like the pid, ppid, etc. 
+
+	int mib[4];
+	struct kinfo_proc *kp, *kprocbuf;
+	size_t bufSize = 0;
+
+    mib[0] = CTL_KERN;
+    mib[1] = KERN_PROC;    
+    mib[2] = KERN_PROC_PID;
+    mib[3] = pid;
+
+    if (sysctl(mib, 4, NULL, &bufSize, NULL, 0) < 0) {
+        //perror("Failure calling sysctl");
+        return -1;
+    }
+
+    kprocbuf= kp = (struct kinfo_proc *)malloc(bufSize);
+
+    if (sysctl(mib, 4, kp, &bufSize, NULL, 0) < 0) {
+        //perror("Failure calling sysctl");
+        return -1;
+    }
+
+	// Now, for some things, we're going to have to go to Mach and ask
+	// it what it knows - for example, the image size and friends
+	task_port_t task;
+
+	if(task_for_pid(mach_task_self(), pid, &task) != KERN_SUCCESS) {
+		return -1;
+	}
+
+	task_basic_info_data_t 	ti;
+	unsigned int 		count;	
+	
+	count = TASK_BASIC_INFO_COUNT;	
+	if(task_info(task, TASK_BASIC_INFO, (task_info_t)&ti, 
+			&count)  != KERN_SUCCESS) {
+		return -1;
+	}
+	initpi(pi);
+	pi->imgsize = ti.virtual_size;
+	pi->rssize = ti.resident_size;
+	pi->user_time = ti.user_time.seconds;
+	pi->sys_time = ti.system_time.seconds;
+	pi->creation_time = kp->kp_proc.p_starttime.tv_sec;
+	pi->age = secsSinceEpoch() - pi->creation_time; 
+	pi->pid = pid;
+	pi->ppid = kp->kp_eproc.e_ppid;
+	pi->owner = kp->kp_eproc.e_pcred.p_ruid; 
+
+	long nowminf, nowmajf;
+	double ustime = pi->user_time + pi->sys_time;
+
+	nowminf = 0;
+	nowmajf = 0;
+	do_usage_sampling(pi, ustime, nowmajf, nowminf);
+
+	mach_port_deallocate(mach_task_self(), task);
+	free(kp);
+	return 0;
+#endif
 #ifdef WIN32
 /* Danger....WIN32 code follows....
    The getProcInfo call for WIN32 actually gets *all* the information
@@ -985,6 +1106,27 @@ ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	return 0;
 }
 #endif /* HPUX */
+
+#if ( defined(CONDOR_DARWIN)  )
+int
+ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
+	
+	int i, mib[2];
+	size_t oldlen;
+	
+	mib[0] = CTL_HW;
+	mib[1] = HW_PHYSMEM;
+
+	oldlen = sizeof(totalmem);	
+	i = sysctl(mib, 2, &totalmem, &oldlen, NULL, 0);
+	
+	mib[0] = CTL_HW;
+	mib[1] = HW_USERMEM;
+	oldlen = sizeof(availmem);	
+	i = sysctl(mib, 2, &availmem, &oldlen, NULL, 0);
+	return 0;
+}
+#endif /* Solaris */
 
 /* This version for windows is obviously broken. :-) */
 #ifdef WIN32
@@ -1495,6 +1637,7 @@ ProcAPI::initpi ( piPTR& pi ) {
 	pi->pid      = -1;
 	pi->ppid     = -1;
 	pi->next     = NULL;
+	pi->owner    = 0;
 }
 
 #ifndef WIN32  // Doesn't come close to working in WIN32...sigh.
@@ -1519,11 +1662,15 @@ ProcAPI::getAndRemNextPid () {
 	return tpid;
 }
 
-/* Wonderfully enough, this works for all OS's.  This function opens
+/* Wonderfully enough, this works for all OS'es except OS X and HPUX. 
+   OS X has it's own version, HP-UX never calls it.
+   This function opens
    up the /proc directory and reads the pids of all the processes in the
    system.  This information is put into a list of pids that is pointed
    to by pidList, a private data member of ProcAPI.  
  */
+
+#ifndef CONDOR_DARWIN
 int
 ProcAPI::buildPidList() {
 
@@ -1564,6 +1711,70 @@ ProcAPI::buildPidList() {
 		return -1;
 	}
 }
+#endif
+/* 
+   The darwin/OS X version of this code - it should work just fine on 
+   FreeBSD as well, but FreeBSD does have a /proc that it could look at
+ */
+
+#ifdef CONDOR_DARWIN
+int
+ProcAPI::buildPidList() {
+
+	pidlistPTR current;
+	pidlistPTR temp;
+	priv_state priv = set_root_priv();
+
+		// make a header node for the pidList:
+	deallocPidList();
+	pidList = new pidlist;
+
+	current = pidList;
+
+	int mib[4];
+	struct kinfo_proc *kp, *kprocbuf;
+	size_t origBufSize;
+	size_t bufSize = 0;
+	int nentries;
+
+	mib[0] = CTL_KERN;
+	mib[1] = KERN_PROC;
+	mib[2] = KERN_PROC_ALL;
+	mib[3] = 0;
+
+	if (sysctl(mib, 4, NULL, &bufSize, NULL, 0) < 0) {
+		 //perror("Failure calling sysctl");
+		return -1;
+	}	
+
+	kprocbuf= kp = (struct kinfo_proc *)malloc(bufSize);
+
+	origBufSize = bufSize;
+	if ( sysctl(mib, 4, kp, &bufSize, NULL, 0) < 0) {
+		free(kprocbuf);
+		return -1;
+	}
+
+	nentries = bufSize / sizeof(struct kinfo_proc);
+
+	for(int i = nentries; --i >=0; kp++) {
+		temp = new pidlist;
+		temp->pid = (pid_t) kp->kp_proc.p_pid;
+		temp->next = NULL;
+		current->next = temp;
+		current = temp;
+	}
+    
+	temp = pidList;
+	pidList = pidList->next;
+	delete temp;           // remove header node.
+
+	set_priv( priv );
+	free(kprocbuf);
+	return 0;
+}
+
+#endif
 
 /* Using the list of processes pointed to by pidList and returned by
    getAndRemNextPid(), a linked list of procInfo structures is
@@ -1818,10 +2029,28 @@ ProcAPI::printProcInfo( piPTR pi ) {
 	printf( "Times:  user, system, age: %ld %ld %ld\n", 
 			pi->user_time, pi->sys_time, pi->age );
 	printf( "percent cpu usage of this process: %5.2f\n", pi->cpuusage);
+	printf( "pid is %d, ppid is %d\n", pi->pid, pi->ppid);
 	printf( "\n" );
 }
 
 #ifndef WIN32
+
+uid_t 
+ProcAPI::getFileOwner(int fd) {
+	
+	struct stat si;
+
+	if ( fstat(fd, &si) != 0 ) {
+		dprintf(D_ALWAYS, 
+			"ProcAPI: fstat failed in /proc! (errno=%d)\n", errno);
+		return 0; 	// 0 is probably wrong, but this should never
+					// happen (unless things are really screwed)
+	}
+
+	return si.st_uid;
+}
+
+
  
 void
 ProcAPI::deallocPidList() {
@@ -2066,6 +2295,195 @@ DWORD ProcAPI::GetSystemPerfData ( LPTSTR pValue )
 }
 #endif // WIN32
 
+int
+ProcAPI::getPidFamilyByLogin( const char *searchLogin, pid_t *pidFamily )
+{
+#ifndef WIN32
+
+	// first, get the Login's uid, since that's what's stored in
+	// the ProcInfo structure.
+	ASSERT(pidFamily);
+	ASSERT(searchLogin);
+	struct passwd *pwd = getpwnam(searchLogin);
+	uid_t searchUid = pwd->pw_uid;
+
+	// now iterate through allProcInfos to find processes
+	// owned by the given uid
+	piPTR cur = allProcInfos;
+	int fam_index = 0;
+
+#ifndef HPUX        // everyone except HPUX needs a pidlist built.
+	buildPidList();
+#endif
+
+	buildProcInfoList();  // HPUX has its own version of this, too.
+
+	while ( cur != NULL ) {
+		if ( cur->owner == searchUid ) {
+			dprintf(D_PROCFAMILY,
+				  "ProcAPI: found pid %d owned by %s (uid=%d)\n",
+				  cur->pid, searchLogin, searchUid);
+			pidFamily[fam_index] = cur->pid;
+			fam_index++;
+		}
+		cur = cur->next;
+	}
+	pidFamily[fam_index] = (pid_t)0;
+	
+	return 0;
+#else
+	// Win32 version
+	ExtArray<pid_t> pids(256);
+	int num_pids;
+	int index_pidFamily = 0;
+	int index_familyHandles = 0;
+	BOOL ret;
+	HANDLE procToken;
+	HANDLE procHandle;
+	TOKEN_INFORMATION_CLASS tic;
+	VOID *tokenData;
+	DWORD sizeRqd;
+	CHAR str[80];
+	DWORD strSize;
+	CHAR str2[80];
+	DWORD str2Size;
+	SID_NAME_USE sidType;
+
+	closeFamilyHandles();
+
+	ASSERT(pidFamily);
+	ASSERT(searchLogin);
+
+	// get a list of all pids on the system
+	num_pids = ntSysInfo.GetPIDs(pids);
+
+	// loop through pids comparing process owner
+	for (int s=0; s<num_pids; s++) {
+
+		// find owner for pid pids[s]
+		
+	// again, this is assumed to be wrong, so I'm 
+	// nixing it for now.
+	// skip the daddy_pid, we already added it to our list
+//		  if ( pids[s] == daddy_pid ) {
+//			  continue;
+//		  }
+
+		  // get a handle for the process
+		  procHandle=OpenProcess(PROCESS_QUERY_INFORMATION,
+			FALSE, pids[s]);
+		  if (procHandle == NULL)
+		  {
+			  // Unable to open the process for query - try next pid
+			  continue;			
+		  }
+
+		  // get a handle for the access token used
+		  // by the process
+		  ret=OpenProcessToken(procHandle,
+			TOKEN_QUERY, &procToken);
+		  if (!ret)
+		  {
+			  // Unable to open the access token.
+			  CloseHandle(procHandle);
+			  continue;
+		  }
+
+		  // ----- Get user information -----
+
+		  // specify to return user info
+		  tic=TokenUser;
+
+		  // find out how much mem is needed
+		  ret=GetTokenInformation(procToken, tic, NULL, 0,
+			&sizeRqd);
+
+		  // allocate that memory
+		  tokenData=(TOKEN_USER *) GlobalAlloc(GPTR,
+			sizeRqd);
+		  if (tokenData == NULL)
+		  {
+			EXCEPT("Unable to allocate memory.");
+		  }
+
+		  // actually get the user info
+		  ret=GetTokenInformation(procToken, tic,
+			tokenData, sizeRqd, &sizeRqd);
+		  if (!ret)
+		  {
+			// Unable to get user info.
+			CloseHandle(procToken);
+			GlobalFree(tokenData);
+			CloseHandle(procHandle);
+			continue;
+		  }
+
+		  // specify size of string buffers
+		  strSize=str2Size=80;
+
+		  // convert user SID into a name and domain
+		  ret=LookupAccountSid(NULL,
+			((TOKEN_USER *)tokenData)->User.Sid,
+			str, &strSize, str2, &str2Size, &sidType);
+		  if (!ret)
+		  {
+		    // Unable to look up SID.
+			CloseHandle(procToken);
+			GlobalFree(tokenData);
+			CloseHandle(procHandle);
+			continue;
+		  }
+
+		  // release memory, handles
+		  GlobalFree(tokenData);
+		  CloseHandle(procToken);
+
+		  // user is now in variable str, domain in str2
+
+		  // see if it is the login prefix we are looking for
+		  if ( strincmp(searchLogin,str,strlen(searchLogin))==0 ) {
+			  // a match!  add to our list.   
+			  pidFamily[index_pidFamily++] = pids[s];
+			  // and add the procHandle to a list as well; we keep the
+			  // handle open so the pid is not reused by NT between now and
+			  // when the caller actually does something with this pid.
+			  familyHandles[index_familyHandles++] = procHandle;
+			  dprintf(D_PROCFAMILY,
+				  "getPidFamilyByLogin: found pid %d owned by %s\n",
+				  pids[s],str);
+		  } else {
+			  // not a match; close the handle to this process
+			  CloseHandle(procHandle);
+		  }
+
+	}	// end of for loop looping through all pids
+
+	// denote end of list with a zero entry
+	pidFamily[index_pidFamily] = 0;
+
+	if ( index_pidFamily > 0 ) {
+		// return success
+		return 0;
+	} else {
+		// return failure
+		return -1;
+	}
+#endif  // of WIN32
+}
+
+void
+ProcAPI::closeFamilyHandles()
+{
+	// This function is a no-op on Unix...
+#ifdef WIN32
+	int i;
+	for ( i=0; i < (familyHandles.getlast() + 1); i++ ) {
+		CloseHandle( familyHandles[i] );
+	}
+	familyHandles.truncate(-1);
+#endif // of Win32
+	return;
+}
 
 #ifdef WANT_STANDALONE_DEBUG
 void ProcAPI::runTests() {

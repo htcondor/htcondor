@@ -63,18 +63,21 @@
 #include "my_username.h"
 #ifdef WIN32
 #	include "ntsysinfo.h"		// for WinNT getppid
+#	include <locale.h>
 #endif
 #include "directory.h"			// for StatInfo
 //#include "condor_scanner.h"		// for MAXVARNAME, etc
 #include "condor_distribution.h"
 #include "condor_environ.h"
 #include "MyString.h"
+#include "HashTable.h"
+#include "extra_param_info.h"
 
 extern "C" {
 	
 // Function prototypes
 void real_config(char* host, int wantsQuiet);
-int Read_config(char*, BUCKET**, int, int);
+int Read_config(char*, BUCKET**, int, int, ExtraParamTable * = NULL);
 int SetSyscalls(int);
 char* find_global();
 char* find_global_root();
@@ -85,7 +88,7 @@ void check_domain_attributes();
 void init_config();
 void clear_config();
 void reinsert_specials(char*);
-void process_file(char*, char*, char*);
+void process_file(char*, char*, char*, int);
 void process_locals( char*, char*);
 static int  process_runtime_configs();
 void check_params();
@@ -98,10 +101,14 @@ extern char* mySubSystem;
 
 // Global variables
 BUCKET	*ConfigTab[TABLESIZE];
+static ExtraParamTable *extra_info = NULL;
 static char* tilde = NULL;
 extern DLL_IMPORT_MAGIC char **environ;
+static bool have_config_file = true;
 
-static char* _FileName_ = __FILE__;
+MyString global_config_file;
+MyString global_root_config_file;
+MyString local_config_files;
 
 // Function implementations
 
@@ -174,6 +181,9 @@ config_fill_ad( ClassAd* ad )
 void
 config( int wantsQuiet )
 {
+#ifdef WIN32
+	setlocale( LC_ALL, "English" );
+#endif
 	real_config( NULL, wantsQuiet );
 }
 
@@ -214,6 +224,8 @@ real_config(char* host, int wantsQuiet)
 		// Insert an entry for "tilde", (~condor)
 	if( tilde ) {
 		insert( "tilde", tilde, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("tilde");
+
 	} else {
 			// What about tilde if there's no ~condor? 
 	}
@@ -231,7 +243,14 @@ real_config(char* host, int wantsQuiet)
 	fill_attributes();
 
 		// Try to find the global config file
-	if( ! (config_file = find_global()) ) {
+
+	char* env = getenv( EnvGetName(ENV_CONFIG) );
+	if( env && stricmp(env, "ONLY_ENV") == MATCH ) {
+			// special case, no config file desired
+		have_config_file = false;
+	}
+
+	if( have_config_file && ! (config_file = find_global()) ) {
 		if( wantsQuiet ) {
 			fprintf( stderr, "%s error: can't find config file.\n",
 					 myDistro->GetCap() ); 
@@ -265,8 +284,11 @@ real_config(char* host, int wantsQuiet)
 	}
 
 		// Read in the global file
-	process_file( config_file, "global config file", NULL );
-	free( config_file );
+	if( have_config_file ) {
+		process_file( config_file, "global config file", NULL, true );
+		global_config_file = config_file;
+		free( config_file );
+	}
 
 		// Insert entries for "hostname" and "full_hostname".  We do
 		// this here b/c we need these macros defined so that we can
@@ -277,14 +299,18 @@ real_config(char* host, int wantsQuiet)
 		// -Derek Wright <wright@cs.wisc.edu> 5/11/98
 	if( host ) {
 		insert( "hostname", host, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("hostname");
 	} else {
 		insert( "hostname", my_hostname(), ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("hostname");
 	}
 	insert( "full_hostname", my_full_hostname(), ConfigTab, TABLESIZE );
+	extra_info->AddInternalParam("full_hostname");
 
 		// Also insert tilde since we don't want that over-written.
 	if( tilde ) {
 		insert( "tilde", tilde, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("tilde");
 	}
 
 		// Read in the LOCAL_CONFIG_FILE as a string list and process
@@ -333,11 +359,13 @@ real_config(char* host, int wantsQuiet)
 										+ strlen( posttext ) );
 			sprintf( tmp, "%s%s%s", pretext, varvalue, posttext );
 			insert( "START", tmp, ConfigTab, TABLESIZE );
+			extra_info->AddEnvironmentParam("START");
 			free( tmp );
 		}
 		// ignore "_CONDOR_" without any macro name attached
 		else if( macro_name[0] != '\0' ) {
 			insert( macro_name, varvalue, ConfigTab, TABLESIZE );
+			extra_info->AddEnvironmentParam(macro_name);
 		}
 
 		free( varname );
@@ -349,7 +377,8 @@ real_config(char* host, int wantsQuiet)
 
 		// Try to find and read the global root config file
 	if( (config_file = find_global_root()) ) {
-		process_file( config_file, "global root config file", host );
+		global_root_config_file = config_file;
+		process_file( config_file, "global root config file", host, true );
 
 			// Re-insert the special macros.  We don't want the user
 			// to override them, since it's not going to work.
@@ -368,7 +397,7 @@ real_config(char* host, int wantsQuiet)
 			// if we found runtime config files, we process the root
 			// config file again
 		if (config_file) {
-			process_file( config_file, "global root config file", host );
+			process_file( config_file, "global root config file", host, true );
 
 				// Re-insert the special macros.  We don't want the user
 				// to override them, since it's not going to work.
@@ -410,17 +439,19 @@ real_config(char* host, int wantsQuiet)
 
 
 void
-process_file( char* file, char* name, char* host )
+process_file( char* file, char* name, char* host, int required )
 {
 	int rval;
 	if( access( file, R_OK ) != 0 ) {
+		if( !required) { return; }
+
 		if( !host ) {
 			fprintf( stderr, "ERROR: Can't read %s %s\n", 
 					 name, file );
 			exit( 1 );
 		} 
 	} else {
-		rval = Read_config( file, ConfigTab, TABLESIZE, EXPAND_LAZY );
+		rval = Read_config( file, ConfigTab, TABLESIZE, EXPAND_LAZY, extra_info );
 		if( rval < 0 ) {
 			fprintf( stderr,
 					 "Configuration Error Line %d while reading %s %s\n",
@@ -438,6 +469,17 @@ process_locals( char* param_name, char* host )
 {
 	StringList locals;
 	char *file;
+	char *tmp;
+	int local_required;
+	
+	local_required = true;	
+    tmp = param( "REQUIRE_LOCAL_CONFIG_FILE" );
+    if( !tmp || tmp[0] == 'f' || tmp[0] == 'F' ) {
+        local_required = false;
+    } else {
+        local_required = true;
+    }
+    if( tmp ) free( tmp );
 
 	file = param( param_name );
 	if( file ) {
@@ -445,7 +487,11 @@ process_locals( char* param_name, char* host )
 		free( file );
 		locals.rewind();
 		while( (file = locals.next()) ) {
-			process_file( file, "config file", host );
+			process_file( file, "config file", host, local_required );
+			if (local_config_files.Length() > 0) {
+				local_config_files += " ";
+			}
+			local_config_files += file;
 		}
 	}
 }
@@ -479,7 +525,7 @@ get_tilde()
 char*
 find_global()
 {
-	char	file[256];
+	char	file[_POSIX_PATH_MAX];
 	sprintf( file, "%s_config", myDistro->Get() );
 	return find_file( EnvGetName( ENV_CONFIG), file );
 }
@@ -488,7 +534,7 @@ find_global()
 char*
 find_global_root()
 {
-	char	file[256];
+	char	file[_POSIX_PATH_MAX];
 	sprintf( file, "%s_config.root", myDistro->Get() );
 	return find_file( EnvGetName( ENV_CONFIG_ROOT ), file );
 }
@@ -651,21 +697,26 @@ fill_attributes()
 
 	if( (tmp = sysapi_condor_arch()) != NULL ) {
 		insert( "ARCH", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("ARCH");
 	}
 
 	if( (tmp = sysapi_uname_arch()) != NULL ) {
 		insert( "UNAME_ARCH", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("UNAME_ARCH");
 	}
 
 	if( (tmp = sysapi_opsys()) != NULL ) {
 		insert( "OPSYS", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("OPSYS");
 	}
 
 	if( (tmp = sysapi_uname_opsys()) != NULL ) {
 		insert( "UNAME_OPSYS", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("UNAME_OPSYS");
 	}
 
 	insert( "subsystem", mySubSystem, ConfigTab, TABLESIZE );
+	extra_info->AddInternalParam("subsystem");
 }
 
 
@@ -684,6 +735,7 @@ check_domain_attributes()
 	if( !filesys_domain ) {
 		filesys_domain = my_full_hostname();
 		insert( "FILESYSTEM_DOMAIN", filesys_domain, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("FILESYSTEM_DOMAIN");
 	} else {
 		free( filesys_domain );
 	}
@@ -692,6 +744,7 @@ check_domain_attributes()
 	if( !uid_domain ) {
 		uid_domain = my_full_hostname();
 		insert( "UID_DOMAIN", uid_domain, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("UID_DOMAIN");
 	} else {
 		free( uid_domain );
 	}
@@ -702,6 +755,8 @@ void
 init_config()
 {
 	memset( (char *)ConfigTab, 0, (TABLESIZE * sizeof(BUCKET*)) ); 
+	extra_info = new ExtraParamTable();
+	return;
 }
 
 
@@ -723,6 +778,14 @@ clear_config()
 		}
 		ConfigTab[i] = NULL;
 	}
+	if (extra_info != NULL) {
+		delete extra_info;
+		extra_info = new ExtraParamTable();
+	}
+	global_config_file       = "";
+	global_root_config_file  = "";
+	local_config_files         = "";
+	return;
 }
 
 
@@ -766,14 +829,61 @@ param_integer( const char *name, int default_value )
 	int fields;
 	char *string;
 
-	string = lookup_macro( name, ConfigTab, TABLESIZE );
-	if(!string) return default_value;
+	string = param( name );
+	if( ! string ) {
+		return default_value;
+	}
 
-	fields = sscanf(string,"%d",&result);
-	if(fields==1) return result;
+	fields = sscanf( string, "%d", &result );
+	free( string );
+	
+	if( fields==1 ) {
+		return result;
+	}
 
 	return default_value;
 }
+
+/*
+** Return the boolean value associated with the named paramter.
+** The parameter value is expected to be set to the string
+** "TRUE" or "FALSE" (no quotes, case insensitive).
+** If the value is not defined or not a valid, then
+** return the default_value argument.
+*/
+
+bool
+param_boolean( const char *name, const bool default_value )
+{
+	bool result;
+	char *string;
+
+	string = param( name );
+	if( ! string ) {
+		return default_value;
+	}
+
+	switch ( string[0] ) {
+		case 'T':
+		case 't':
+		case '1':
+			result = true;
+			break;
+		case 'F':
+		case 'f':
+		case '0':
+			result = false;
+			break;
+		default:
+			result = default_value;
+			break;
+	}
+
+	free( string );
+	
+	return result;
+}
+
 
 char *
 macro_expand( const char *str )
@@ -809,6 +919,22 @@ param_in_pattern( char *parameter, char *pattern )
 	return 0;
 }
 
+// Note that the line_number can be -1 if the filename isn't a real
+// filename, but something like <Internal> or <Environment>
+bool param_get_location(
+	const char *parameter,
+	MyString  &filename,
+	int       &line_number)
+{
+	bool found_it;
+
+	if (parameter != NULL && extra_info != NULL) {
+		found_it = extra_info->GetParam(parameter, filename, line_number);
+	} else {
+		found_it = false;
+	}
+	return found_it;
+}
 
 void
 reinsert_specials( char* host )
@@ -819,6 +945,7 @@ reinsert_specials( char* host )
 
 	if( tilde ) {
 		insert( "tilde", tilde, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("tilde");
 	}
 	if( host ) {
 		insert( "hostname", host, ConfigTab, TABLESIZE );
@@ -827,11 +954,18 @@ reinsert_specials( char* host )
 	}
 	insert( "full_hostname", my_full_hostname(), ConfigTab, TABLESIZE );
 	insert( "subsystem", mySubSystem, ConfigTab, TABLESIZE );
+	extra_info->AddInternalParam("hostname");
+	extra_info->AddInternalParam("full_hostname");
+	extra_info->AddInternalParam("subsystem");
 
-	// Insert login-name for our euid as "username"
+	// Insert login-name for our real uid as "username".  At the time
+	// we're reading in the config file, the priv state code is not
+	// initialized, so our euid will always be the same as our ruid.
 	char *myusernm = my_username();
 	insert( "username", myusernm, ConfigTab, TABLESIZE );
 	free(myusernm);
+	extra_info->AddInternalParam("username");
+
 
 	// Insert values for "pid" and "ppid".  Use static values since
 	// this is expensive to re-compute on Windows.
@@ -847,6 +981,7 @@ reinsert_specials( char* host )
 	}
 	sprintf(buf,"%u",reinsert_pid);
 	insert( "pid", buf, ConfigTab, TABLESIZE );
+	extra_info->AddInternalParam("pid");
 	if ( !reinsert_ppid ) {
 #ifdef WIN32
 		CSysinfo system_hackery;
@@ -858,11 +993,13 @@ reinsert_specials( char* host )
 	sprintf(buf,"%u",reinsert_ppid);
 	insert( "ppid", buf, ConfigTab, TABLESIZE );
 	insert( "ip_address", my_ip_string(), ConfigTab, TABLESIZE );
+	extra_info->AddInternalParam("ppid");
+	extra_info->AddInternalParam("ip_address");
 }
 
 
 void
-config_insert( char* attrName, char* attrValue )
+config_insert( const char* attrName, const char* attrValue )
 {
 	if( ! (attrName && attrValue) ) {
 		return;
@@ -936,10 +1073,24 @@ set_toplevel_runtime_config()
 		} else {
 			tmp = param("LOG");
 			if (!tmp) {
-				dprintf( D_ALWAYS, "%s error: neither %s nor LOG is "
+				if ( strcmp(mySubSystem,"SUBMIT")==0 || 
+					 strcmp(mySubSystem,"TOOL")==0 ||
+					 ! have_config_file )
+				{
+						// we are just a tool, not a daemon.
+						// or, we were explicitly told we don't have
+						// the usual config files.
+						// thus it is not imperative that we find what we
+						// were looking for...
+					toplevel_runtime_config[0] = '\0';
+					return;
+				} else {
+						// we are a daemon.  if we fail, we must exit.
+					dprintf( D_ALWAYS, "%s error: neither %s nor LOG is "
 						 "specified in the configuration file.\n",
 						 myDistro->GetCap(), filename_parameter );
-				exit( 1 );
+					exit( 1 );
+				}
 			}
 			sprintf(toplevel_runtime_config, "%s%c.config.%s", tmp,
 					DIR_DELIM_CHAR,	mySubSystem);
@@ -980,7 +1131,7 @@ set_persistent_config(char *admin, char *config)
 			free(config);
 			return -1;
 		}
-		if (write(fd, config, strlen(config)) != strlen(config)) {
+		if (write(fd, config, strlen(config)) != (ssize_t)strlen(config)) {
 			dprintf( D_ALWAYS, "write failed with errno %d in "
 					 "set_persistent_config\n", errno );
 			free(admin);
@@ -1035,7 +1186,7 @@ set_persistent_config(char *admin, char *config)
 		return -1;
 	}
 	const char param[] = "RUNTIME_CONFIG_ADMIN = ";
-	if (write(fd, param, strlen(param)) != strlen(param)) {
+	if (write(fd, param, strlen(param)) != (ssize_t)strlen(param)) {
 		dprintf( D_ALWAYS, "write failed with errno %d in "
 				 "set_persistent_config\n", errno );
 		free(admin);
@@ -1056,7 +1207,7 @@ set_persistent_config(char *admin, char *config)
 		} else {
 			first_time = false;
 		}
-		if (write(fd, tmp, strlen(tmp)) != strlen(tmp)) {
+		if (write(fd, tmp, strlen(tmp)) != (ssize_t)strlen(tmp)) {
 			dprintf( D_ALWAYS, "write failed with errno %d in "
 					 "set_persistent_config\n", errno );
 			free(admin);
@@ -1164,7 +1315,7 @@ process_runtime_configs()
 		processed = true;
 
 		rval = Read_config( toplevel_runtime_config, ConfigTab,
-							TABLESIZE, EXPAND_LAZY );
+							TABLESIZE, EXPAND_LAZY, extra_info );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d while reading "
 					 "top-level runtime config file: %s\n",
@@ -1184,7 +1335,7 @@ process_runtime_configs()
 		processed = true;
 		sprintf(filename, "%s.%s", toplevel_runtime_config, tmp);
 		rval = Read_config( filename, ConfigTab, TABLESIZE,
-							EXPAND_LAZY );
+							EXPAND_LAZY, extra_info );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d "
 					 "while reading runtime config file: %s\n",
@@ -1203,7 +1354,7 @@ process_runtime_configs()
 			exit(1);
 		}
 		if (write(fd, rArray[i].config, strlen(rArray[i].config))
-			!= strlen(rArray[i].config)) {
+			!= (ssize_t)strlen(rArray[i].config)) {
 			dprintf( D_ALWAYS, "write failed with errno %d in "
 					 "process_runtime_configs\n", errno );
 			exit(1);
@@ -1214,7 +1365,7 @@ process_runtime_configs()
 			exit(1);
 		}
 		rval = Read_config( filename, ConfigTab, TABLESIZE,
-							EXPAND_LAZY );
+							EXPAND_LAZY, extra_info );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d "
 					 "while reading %s, runtime config: %s\n",

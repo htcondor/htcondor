@@ -241,6 +241,9 @@ class BaseShadow : public Service
 		/// Called by EXCEPT handler to log to user log
 	static void BaseShadow::log_except(char *msg);
 
+	//set by pseudo_ulog() to suppress "Shadow exception!"
+	bool exception_already_logged;
+
 		/// Used by static and global functions to access shadow object
 	static BaseShadow* myshadow_ptr;
 
@@ -268,6 +271,9 @@ class BaseShadow : public Service
 			@return true on success, false on failure
 		*/
 	bool updateJobInQueue( update_t type );
+
+		/** Connect to the job queue and update one attribute */
+	bool updateJobAttr( const char *name, const char *expr );
 
 		/** Timer handler which just calls updateJobInQueue with the
 			right arguments so we do a periodic update.
@@ -333,6 +339,15 @@ class BaseShadow : public Service
 
 	virtual void emailTerminateEvent( int exitReason ) = 0;
 
+		// move output data from intermediate files to user-specified
+		// locations
+	void moveOutputFiles( void );
+
+		// since all the work is identical for the stdout and stderr
+		// files, i put all the code into its own method so it can be
+		// shared between the two...
+	void moveOutputFile( const char* in, const char* out, bool verbose );
+
 		/** Initialize our StringLists for attributes we want to keep
 			updated in the job queue itself
 		*/ 
@@ -388,6 +403,7 @@ class BaseShadow : public Service
 	int cluster;
 	int proc;
 	char owner[_POSIX_PATH_MAX];
+	char domain[_POSIX_PATH_MAX];
 	char iwd[_POSIX_PATH_MAX];
 	char *scheddAddr;
 	bool jobExitedGracefully;

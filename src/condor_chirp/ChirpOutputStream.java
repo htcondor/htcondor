@@ -1,3 +1,9 @@
+/*
+Chirp Java Client
+
+This public domain software is provided "as is".  See the Chirp License
+for details.
+*/
 
 package edu.wisc.cs.condor.chirp;
 

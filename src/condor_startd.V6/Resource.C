@@ -25,18 +25,18 @@
 #include "startd.h"
 #include "mds.h"
 
+
 Resource::Resource( CpuAttributes* cap, int rid )
 {
 	char tmp[256];
 	char* tmpName;
-	int size = (int)ceil(60.0 / (double)polling_interval);
 	r_classad = NULL;
 	r_state = new ResState( this );
-	r_starter = NULL;
-	r_cur = new Match( this );
+	r_cur = new Claim( this );
 	r_pre = NULL;
+	r_cod_mgr = new CODMgr( this );
 	r_reqexp = new Reqexp( this );
-	r_load_queue = new LoadQueue( size );
+	r_load_queue = new LoadQueue( 60 );
 
 	r_id = rid;
 	sprintf( tmp, "vm%d", rid );
@@ -57,10 +57,7 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	r_attr = cap;
 	r_attr->attach( this );
 
-	kill_tid = -1;
 	update_tid = -1;
-	r_is_deactivating = false;
-	update_sequence = 0;
 
 		// Set ckpt filename for avail stats here, since this object
 		// knows the resource id, and we need to use a different ckpt
@@ -78,10 +75,12 @@ Resource::Resource( CpuAttributes* cap, int rid )
 
 	r_cpu_busy = 0;
 	r_cpu_busy_start_time = 0;
-
-		// Initialize our procInfo structure so we don't use any
-		// values until we've actually computed them.
-	memset( (void*)&r_pinfo, 0, (size_t)sizeof(r_pinfo) );
+	r_last_compute_condor_load = resmgr->now();
+	r_suspended_for_cod = false;
+	r_hack_load_for_cod = false;
+	r_cod_load_hack_tid = -1;
+	r_pre_cod_total_load = 0.0;
+	r_pre_cod_condor_load = 0.0;
 
 	if( r_attr->type() ) {
 		dprintf( D_ALWAYS, "New machine resource of type %d allocated\n",  
@@ -94,8 +93,6 @@ Resource::Resource( CpuAttributes* cap, int rid )
 
 Resource::~Resource()
 {
-	this->cancel_kill_timer();
-
 	if ( update_tid != -1 ) {
 		if( daemonCore->Cancel_Timer(update_tid) < 0 ) {
 			::dprintf( D_ALWAYS, "failed to cancel update timer (%d): "
@@ -106,13 +103,11 @@ Resource::~Resource()
 
 	delete r_state;
 	delete r_classad;
-	if( r_starter ) {
-		delete r_starter;
-	}
 	delete r_cur;		
 	if( r_pre ) {
 		delete r_pre;		
 	}
+	delete r_cod_mgr;
 	delete r_reqexp;   
 	delete r_attr;		
 	delete r_load_queue;
@@ -134,9 +129,7 @@ Resource::release_claim( void )
 			// we're in any other state.  If there's no starter, this
 			// will just return without doing anything.  If there is a
 			// starter, it shouldn't be there.
-		if( r_starter ) {
-			return r_starter->kill( DC_SIGSOFTKILL );
-		}
+		return (int)r_cur->starterKillSoft();
 	}
 	return TRUE;
 }
@@ -156,7 +149,7 @@ Resource::kill_claim( void )
 		return change_state( owner_state );
 	default:
 			// In other states, try direct kill.  See above.
-		return hardkill_starter();
+		return (int)r_cur->starterKillHard();
 	}
 	return TRUE;
 }
@@ -188,10 +181,7 @@ Resource::periodic_checkpoint( void )
 		return FALSE;
 	}
 	dprintf( D_ALWAYS, "Performing a periodic checkpoint on %s.\n", r_name );
-	if( r_starter && r_starter->kill( DC_SIGPCKPT ) < 0 ) {
-		return FALSE;
-	}
-	r_cur->setlastpckpt((int)time(NULL));
+	r_cur->periodicCheckpoint();
 
 		// Now that we updated this time, be sure to insert those
 		// attributes into the classad right away so we don't keep
@@ -205,8 +195,8 @@ Resource::periodic_checkpoint( void )
 int
 Resource::request_new_proc( void )
 {
-	if( state() == claimed_state && r_starter) {
-		return r_starter->kill( SIGHUP );
+	if( state() == claimed_state && r_cur->isActive()) {
+		return (int)r_cur->starterKill( SIGHUP );
 	} else {
 		return FALSE;
 	}
@@ -218,18 +208,9 @@ Resource::deactivate_claim( void )
 {
 	dprintf(D_ALWAYS, "Called deactivate_claim()\n");
 	if( state() == claimed_state ) {
-		if( r_starter && r_starter->active() ) {
-				// Set a flag to avoid a potential race in our
-				// protocol.  
-			r_is_deactivating = true;
-				// Singal the starter.
-			return r_starter->kill( DC_SIGSOFTKILL );
-		} else {
-			return TRUE;
-		}
-	} else {
-		return FALSE;
-	}
+		return r_cur->deactivateClaim( true );
+	} 
+	return FALSE;
 }
 
 
@@ -238,83 +219,233 @@ Resource::deactivate_claim_forcibly( void )
 {
 	dprintf(D_ALWAYS, "Called deactivate_claim_forcibly()\n");
 	if( state() == claimed_state ) {
-		if( r_starter && r_starter->active() ) {
-				// Set a flag to avoid a potential race in our
-				// protocol.  
-			r_is_deactivating = true;
-				// Singal the starter.
-			return hardkill_starter();
-		} else {
-			return TRUE;
-		}
-	} else {
-		return FALSE;
+		return r_cur->deactivateClaim( false );
+	} 
+	return FALSE;
+}
+
+
+void
+Resource::removeClaim( Claim* c )
+{
+	if( c->isCOD() ) {
+		r_cod_mgr->removeClaim( c );
+		return;
 	}
+	if( c == r_pre ) {
+		delete r_pre;
+		r_pre = new Claim( this );
+		return;
+	}
+
+	if( c == r_cur ) {
+		delete r_cur;
+		r_cur = new Claim( this );
+		return;
+	}
+		// we should never get here, this would be a programmer's error:
+	EXCEPT( "Resource::removeClaim() called, but can't find the Claim!" );
 }
 
 
 int
-Resource::hardkill_starter( void )
+Resource::releaseAllClaims( void )
 {
-	if( ! r_starter || ! r_starter->active() ) {
-		return TRUE;
-	}
-	if( r_starter->kill( DC_SIGHARDKILL ) < 0 ) {
-		r_starter->killpg( SIGKILL );
-		return FALSE;
-	} else {
-		start_kill_timer();
-		return TRUE;
-	}
+	return shutdownAllClaims( true );
 }
 
 
 int
-Resource::sigkill_starter( void )
+Resource::killAllClaims( void )
 {
-		// Now that the timer has gone off, clear out the tid.
-	kill_tid = -1;
-	if( r_starter && r_starter->active() ) {
-			// Kill all of the starter's children.
-		r_starter->killkids( SIGKILL );
-			// Kill the starter's entire process group.
-		return r_starter->killpg( SIGKILL );
+	return shutdownAllClaims( false );
+}
+
+
+int
+Resource::shutdownAllClaims( bool graceful )
+{
+		// shutdown the COD claims
+	r_cod_mgr->shutdownAllClaims( graceful );
+
+	if( graceful ) {
+		release_claim();
+	} else {
+		kill_claim();
 	}
 	return TRUE;
 }
 
 
+// This one *only* looks at opportunistic claims
 bool
-Resource::in_use( void )
+Resource::hasOppClaim( void )
 {
 	State s = state();
-	if( s == owner_state || s == unclaimed_state ) {
-		return false;
+	if( s == claimed_state || s == preempting_state ) {
+		return true;
 	}
-	return true;
+	return false;
+}
+
+
+// This one checks if the Resource has *any* claims 
+bool
+Resource::hasAnyClaim( void )
+{
+	if( r_cod_mgr->hasClaims() ) {
+		return true;
+	}
+	return hasOppClaim();
 }
 
 
 void
-Resource::starter_exited( void )
+Resource::suspendForCOD( void )
 {
-	if( ! r_starter ) {
-		EXCEPT( "starter_exited() called with no starter!" );
+	bool did_update = false;
+	r_suspended_for_cod = true;
+	r_reqexp->unavail();
+
+	beginCODLoadHack();
+	
+	switch( r_cur->state() ) { 
+
+    case CLAIM_RUNNING:
+		dprintf( D_ALWAYS, "State change: Suspending because a COD "
+				 "job is now running\n" );
+		did_update = change_state( suspended_act );
+		break;
+
+    case CLAIM_VACATING:
+    case CLAIM_KILLING:
+		dprintf( D_ALWAYS, "A COD job is now running, opportunistic "
+				 "claim is already preempting\n" );
+		break;
+
+    case CLAIM_SUSPENDED:
+		dprintf( D_ALWAYS, "A COD job is now running, opportunistic "
+				 "claim is already suspended\n" );
+		break;
+
+    case CLAIM_IDLE:
+    case CLAIM_UNCLAIMED:
+		dprintf( D_ALWAYS, "A COD job is now running, opportunistic "
+				 "claim is unavailable\n" );
+		break;
+	}
+	if( ! did_update ) { 
+		update();
+	}
+}
+
+
+void
+Resource::resumeForCOD( void )
+{
+	if( ! r_suspended_for_cod ) {
+			// we've already been here, so we can return right away.
+			// This could be perfectly normal.  For example, if we
+			// suspend a COD job and then deactivate or release that
+			// COD claim, we'll get here twice.  We can just ignore
+			// the second one, since we'll have already done all the
+			// things we need to do when we first got here...
+		return;
 	}
 
-		// Now that the starter is gone, we can clear this flag.
-	r_is_deactivating = false;
+	bool did_update = false;
+	r_suspended_for_cod = false;
+	r_reqexp->restore();
 
-		// Let our starter object know it's starter has exited.
-	r_starter->exited();
+	startTimerToEndCODLoadHack();
 
-		// Now that this starter has exited, cancel the timer that
-		// would send it SIGKILL.
-	cancel_kill_timer();
+	switch( r_cur->state() ) { 
 
-		// now we can actually delete the starter object
-	delete( r_starter );
-	r_starter = NULL;
+    case CLAIM_RUNNING:
+		dprintf( D_ALWAYS, "ERROR: trying to resume opportunistic "
+				 "claim now that there's no COD job, but claim is "
+				 "already running!\n" );
+		break;
+
+    case CLAIM_VACATING:
+    case CLAIM_KILLING:
+			// do we even want to print this one?
+		dprintf( D_FULLDEBUG, "No running COD job, but opportunistic " 
+				 "claim is already preempting\n" );
+		break;
+
+    case CLAIM_SUSPENDED:
+		dprintf( D_ALWAYS, "State Change: No running COD job, "
+				 "resuming opportunistic claim\n" );
+		did_update = change_state( busy_act );
+		break;
+
+    case CLAIM_IDLE:
+    case CLAIM_UNCLAIMED:
+		dprintf( D_ALWAYS, "No running COD job, opportunistic "
+				 "claim is now available\n" );
+		break;
+	}
+	if( ! did_update ) { 
+		update();
+	}
+}
+
+
+void
+Resource::hackLoadForCOD( void )
+{
+	if( ! r_hack_load_for_cod ) { 
+		return;
+	}
+
+	char float_buf[64];
+
+	MyString load = ATTR_LOAD_AVG;
+	load += '=';
+	sprintf( float_buf, "%.2f", r_pre_cod_total_load );
+	load += float_buf;
+
+	MyString c_load = ATTR_CONDOR_LOAD_AVG;
+	c_load += '=';
+	sprintf( float_buf, "%.2f", r_pre_cod_condor_load );
+	c_load += float_buf;
+
+	if( DebugFlags & D_FULLDEBUG && DebugFlags & D_LOAD ) {
+		if( r_cod_mgr->isRunning() ) {
+			dprintf( D_LOAD, "COD job current running, using "
+					 "'%s', '%s' for internal policy evaluation\n",  
+					 load.Value(), c_load.Value() );
+		} else {
+			dprintf( D_LOAD, "COD job recently ran, using '%s', '%s' "
+					 "for internal policy evaluation\n", 
+					 load.Value(), c_load.Value() );
+		}
+	}
+	r_classad->Insert( load.Value() );
+	r_classad->Insert( c_load.Value() );
+
+	MyString line = ATTR_CPU_IS_BUSY;
+	line += "=False";
+	r_classad->Insert( line.Value() );
+
+	line = ATTR_CPU_BUSY_TIME;
+	line += "=0";
+	r_classad->Insert( line.Value() );
+}
+
+
+void
+Resource::starterExited( Claim* cur_claim )
+{
+	if( ! cur_claim ) {
+		EXCEPT( "Resource::starterExited() called with no Claim!" );
+	}
+
+	if( cur_claim->isCOD() ) {
+ 		r_cod_mgr->starterExited( cur_claim );
+		return;
+	}
 
 		// All of the potential paths from here result in a state
 		// change, and all of them are triggered by the starter
@@ -342,42 +473,70 @@ Resource::starter_exited( void )
 }
 
 
-int
-Resource::spawn_starter( start_info_t* info, time_t now )
+Claim*
+Resource::findClaimByPid( pid_t starter_pid )
 {
-	int rval;
-	if( ! r_starter ) {
-			// Big error!
-		dprintf( D_ALWAYS, "ERROR! Resource::spawn_starter() called "
-				 "w/o a Starter object! Returning failure\n" );
-		return 0;
+		// first, check our opportunistic claim (there's never a
+		// starter for r_pre, so we don't have to check that. 
+	if( r_cur && r_cur->starterPidMatches(starter_pid) ) {
+		return r_cur;
 	}
 
-	rval = r_starter->spawn( info, now );
-
-		// Fake ourselves out so we take another snapshot in 15
-		// seconds, once the starter has had a chance to spawn the
-		// user job and the job as (hopefully) done any initial
-		// forking it's going to do.  If we're planning to check more
-		// often that 15 seconds, anyway, don't bother with this.
-	if( pid_snapshot_interval > 15 ) {
-		r_starter->set_last_snapshot( (now + 15) -
-									  pid_snapshot_interval );
-	} 
-	return rval;
+		// if it's not there, see if our CODMgr has a Claim with this
+		// starter pid.  if it's not there, we'll get NULL back from
+		// the CODMgr, which is what we should return, anyway.
+	return r_cod_mgr->findClaimByPid( starter_pid );
 }
 
 
-void
-Resource::setStarter( Starter* s )
+Claim*
+Resource::findClaimById( const char* id )
 {
-	if( r_starter ) {
-		EXCEPT( "Resource::setStarter() called with existing starter!" );
+	Claim* claim = NULL;
+
+		// first, ask our CODMgr, since most likely, that's what we're
+		// looking for
+	claim = r_cod_mgr->findClaimById( id );
+	if( claim ) {
+		return claim;
 	}
-	r_starter = s;
-	if( s ) {
-		s->setResource( this );
+
+		// otherwise, try our opportunistic claims
+	if( r_cur && r_cur->cap()->matches(id) ) {
+		return r_cur;
 	}
+	if( r_pre && r_pre->cap()->matches(id) ) {
+		return r_pre;
+	}
+		// if we're still here, we couldn't find it anywhere
+	return NULL;
+}
+
+
+bool
+Resource::claimIsActive( void )
+{
+		// for now, just check r_cur.  once we've got multiple
+		// claims, we can walk through our list(s).
+	if( r_cur && r_cur->isActive() ) {
+		return true;
+	}
+	return false;
+}
+
+
+Claim*
+Resource::newCODClaim( void )
+{
+	Claim* claim;
+	claim = r_cod_mgr->addClaim();
+	if( ! claim ) {
+		dprintf( D_ALWAYS, "Failed to create new COD Claim!\n" );
+		return NULL;
+	}
+	dprintf( D_FULLDEBUG, "Created new COD Claim (%s)\n", claim->id() );
+	update();
+	return claim;
 }
 
 
@@ -385,9 +544,9 @@ Resource::setStarter( Starter* s )
    This function is called whenever we're in the preempting state
    without a starter.  This situation occurs b/c either the starter
    has finally exited after being told to go away, or we preempted a
-   match that wasn't active with a starter in the first place.  In any
+   claim that wasn't active with a starter in the first place.  In any
    event, leave_preempting_state is the one place that does what needs
-   to be done to all the current and preempting matches we've got, and
+   to be done to all the current and preempting claims we've got, and
    decides which state we should enter.
 */
 void
@@ -395,7 +554,7 @@ Resource::leave_preempting_state( void )
 {
 	int tmp;
 
-	r_cur->vacate();	// Send a vacate to the client of the match
+	r_cur->vacate();	// Send a vacate to the client of the claim
 	delete r_cur;		
 	r_cur = NULL;
 
@@ -433,7 +592,7 @@ Resource::leave_preempting_state( void )
 		// In english:  "If the machine is available and someone
 		// is waiting for it..." 
 	bool allow_it = false;
-	if( r_pre && r_pre->agentstream() ) {
+	if( r_pre && r_pre->requestStream() ) {
 		allow_it = true;
 		if( (r_classad->EvalBool("START", r_pre->ad(), tmp)) 
 			&& !tmp ) {
@@ -441,16 +600,16 @@ Resource::leave_preempting_state( void )
 				// machine busy.  We have a job ad, so local
 				// evaluation gotchas don't apply here.
 			dprintf( D_ALWAYS, 
-					 "State change: preempting match refused - START is false\n" );
+					 "State change: preempting claim refused - START is false\n" );
 			allow_it = false;
 		} else {
 			dprintf( D_ALWAYS, 
-					 "State change: preempting match exists - "
+					 "State change: preempting claim exists - "
 					 "START is true or undefined\n" );
 		}
 	} else {
 		dprintf( D_ALWAYS, 
-				 "State change: No preempting match, returning to owner\n" );
+				 "State change: No preempting claim, returning to owner\n" );
 	}
 
 	if( allow_it ) {
@@ -543,11 +702,6 @@ Resource::do_update( void )
 	this->publish( &public_ad, A_PUBLIC | A_ALL | A_EVALUATED );
 	this->publish( &private_ad, A_PRIVATE | A_ALL );
 
-	// NRL TODO: Put in seq # attribute
-	char	tmp [80];
-	sprintf( tmp, "%s=%u", ATTR_UPDATE_SEQUENCE_NUMBER, update_sequence++ );
-	public_ad.InsertOrUpdate( tmp );
-
 		// Send class ads to collector(s)
 	rval = resmgr->send_update( UPDATE_STARTD_AD, &public_ad,
 								&private_ad ); 
@@ -599,49 +753,12 @@ Resource::eval_and_update( void )
 
 
 int
-Resource::start_kill_timer( void )
-{
-	if( kill_tid >= 0 ) {
-			// Timer already started.
-		return TRUE;
-	}
-	kill_tid = 
-		daemonCore->Register_Timer( killing_timeout,
-						0, 
-						(TimerHandlercpp)&Resource::sigkill_starter,
-						"sigkill_starter", this );
-	if( kill_tid < 0 ) {
-		EXCEPT( "Can't register DaemonCore timer" );
-	}
-	return TRUE;
-}
-
-
-void
-Resource::cancel_kill_timer( void )
-{
-	int rval;
-	if( kill_tid != -1 ) {
-		rval = daemonCore->Cancel_Timer( kill_tid );
-		if( rval < 0 ) {
-			dprintf( D_ALWAYS, "Failed to cancel kill timer (%d): "
-					 "daemonCore error\n", kill_tid );
-		} else {
-			dprintf( D_FULLDEBUG, "Canceled claim timer (%d)\n",
-					 kill_tid );
-		}
-		kill_tid = -1;
-	}
-}
-
-
-int
 Resource::wants_vacate( void )
 {
 	int want_vacate = 0;
 	bool unknown = true;
 
-	if( ! r_starter || ! r_starter->active() ) {
+	if( ! claimIsActive() ) {
 			// There's no job here, so chances are good that some of
 			// the job attributes that WANT_VACATE might be defined in
 			// terms of won't exist.  So, instead of getting
@@ -946,19 +1063,23 @@ Resource::publish( ClassAd* cap, amask_t mask )
 	if( IS_PUBLIC(mask) && IS_UPDATE(mask) ) {
 			// If we're claimed or preempting, handle anything listed 
 			// in STARTD_JOB_EXPRS.
-			// Our current match object might be gone though, so make
+			// Our current claim object might be gone though, so make
 			// sure we have the object before we try to use it.
+			// Also, our current claim object might not have a
+			// ClassAd, so be careful about that, too. 
 		s = this->state();
 		if( s == claimed_state || s == preempting_state ) {
-			if( startd_job_exprs && r_cur ) {
+			if( startd_job_exprs && r_cur && r_cur->ad() ) {
 				startd_job_exprs->rewind();
 				while( (ptr = startd_job_exprs->next()) ) {
 					caInsert( cap, r_cur->ad(), ptr );
 				}
 			}
-				// update ImageSize attribute from procInfo
-			if (r_pinfo.imgsize) {
-				sprintf( line, "%s = %lu", ATTR_IMAGE_SIZE, r_pinfo.imgsize );
+				// update ImageSize attribute from procInfo (this is
+				// only for the opportunistic job, not COD)
+			if( r_cur && r_cur->isActive() ) {
+				unsigned long imgsize = r_cur->imageSize();
+				sprintf( line, "%s = %lu", ATTR_IMAGE_SIZE, imgsize );
 				cap->Insert( line );
 			}
 		}
@@ -1005,13 +1126,15 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		// Put in requirement expression info
 	r_reqexp->publish( cap, mask );
 
-		// Update info from the current Match object, if it exists.
+		// Update info from the current Claim object, if it exists.
 	if( r_cur ) {
 		r_cur->publish( cap, mask );
 	}
 
 		// Put in availability statistics
 	r_avail_stats.publish( cap, mask );
+
+	r_cod_mgr->publish( cap, mask );
 
 	// Publish the supplemental Class Ads
 	resmgr->adlist_publish( cap, mask );
@@ -1103,68 +1226,43 @@ Resource::dprintf( int flags, char* fmt, ... )
 float
 Resource::compute_condor_load( void )
 {
-	float avg;
-	float max;
-	float load;
+	float cpu_usage, avg, max, load;
 	int numcpus = resmgr->num_cpus();
-	int i;
 
-	if( r_starter && r_starter->active() ) { 
-		time_t now = time(NULL);
-		if( now - r_starter->last_snapshot() >= pid_snapshot_interval ) { 
-			r_starter->recompute_pidfamily( now );
-		}
-
-		if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
-			dprintf( D_FULLDEBUG, "Computing CondorLoad w/ pids: " );
-			for( i=0; i<r_starter->pidfamily_size(); i++ ) {
-				::dprintf( D_FULLDEBUG | D_NOHEADER, "%d ", (r_starter->pidfamily())[i] );	
-			}
-			::dprintf( D_FULLDEBUG | D_NOHEADER, "\n" );
-		}
-
-			// ProcAPI wants a non-const pointer reference, so we need
-			// a temporary.
-		procInfo *pinfoPTR = &r_pinfo;
-		if( (ProcAPI::getProcSetInfo( r_starter->pidfamily(), 
-									  r_starter->pidfamily_size(),  
-									  pinfoPTR) < -1) ) {
-				// If we failed, it might be b/c our pid family has
-				// stale info, so before we give up for real,
-				// recompute and try once more.
-			r_starter->recompute_pidfamily();
-
-			if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
-				dprintf( D_FULLDEBUG, "Failed once, now using pids: " );
-				for( i=0; i<r_starter->pidfamily_size(); i++ ) {
-					::dprintf( D_FULLDEBUG | D_NOHEADER, "%d ", 
-							   (r_starter->pidfamily())[i] );	
-				}
-				::dprintf( D_FULLDEBUG | D_NOHEADER, "\n" );
-			}
-
-			if( (ProcAPI::getProcSetInfo( r_starter->pidfamily(), 
-										  r_starter->pidfamily_size(),  
-										  pinfoPTR) < -1) ) {
-				EXCEPT( "Fatal error getting process info for the starter and decendents" ); 
-			}
-		}
-		if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
-			dprintf( D_FULLDEBUG, "Percent CPU usage for those pids is: %f\n", 
-					 r_pinfo.cpuusage );
-		}
-		r_load_queue->push( 1, r_pinfo.cpuusage );
-	} else {
-		r_load_queue->push( 1, 0.0 );
+	time_t now = resmgr->now();
+	int num_since_last = now - r_last_compute_condor_load;
+	if( num_since_last < 1 ) {
+		num_since_last = 1;
 	}
+	if( num_since_last > polling_interval ) {
+		num_since_last = polling_interval;
+	}
+
+		// we only consider the opportunistic Condor claim for
+		// CondorLoadAvg, not any of the COD claims...
+	if( r_cur && r_cur->isActive() ) {
+		cpu_usage = r_cur->percentCpuUsage();
+	} else {
+		cpu_usage = 0.0;
+	}
+
+	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
+		dprintf( D_FULLDEBUG, "LoadQueue: Adding %d entries of value %f\n", 
+				 num_since_last, cpu_usage );
+	}
+	r_load_queue->push( num_since_last, cpu_usage );
+
 	avg = (r_load_queue->avg() / numcpus);
 
 	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_LOAD) ) {
-		r_load_queue->display();
+		r_load_queue->display( this );
 		dprintf( D_FULLDEBUG, 
-				 "LoadQueue: Size: %d  Avg value: %f  Share of system load: %f\n", 
+				 "LoadQueue: Size: %d  Avg value: %.2f  "
+				 "Share of system load: %.2f\n", 
 				 r_load_queue->size(), r_load_queue->avg(), avg );
 	}
+
+	r_last_compute_condor_load = now;
 
 	max = MAX( numcpus, resmgr->m_attr->load() );
 	load = (avg * max) / 100;
@@ -1175,29 +1273,16 @@ Resource::compute_condor_load( void )
 
 
 void
-Resource::resize_load_queue( void )
-{
-	int size = (int)ceil(60.0 / (double)polling_interval);
-	dprintf( D_FULLDEBUG, "Resizing load queue.  Old: %d, New: %d\n",
-			 r_load_queue->size(), size );
-	float val = r_load_queue->avg();
-	delete r_load_queue;
-	r_load_queue = new LoadQueue( size );
-	r_load_queue->setval( val );
-}
-
-
-void
 Resource::compute_cpu_busy( void )
 {
 	int old_cpu_busy;
 	old_cpu_busy = r_cpu_busy;
 	r_cpu_busy = eval_cpu_busy();
-	
+
 	if( ! old_cpu_busy && r_cpu_busy ) {
 			// It's busy now and it wasn't before, so set the
 			// start time to now
-		r_cpu_busy_start_time = time( NULL );
+		r_cpu_busy_start_time = resmgr->now();
 	}
 	if( old_cpu_busy && ! r_cpu_busy ) {
 			// It was busy before, but isn't now, so clear the 
@@ -1231,7 +1316,7 @@ void
 Resource::log_ignore( int cmd, State s ) 
 {
 	dprintf( D_ALWAYS, "Got %s while in %s state, ignoring.\n", 
-			 command_to_string(cmd), state_to_string(s) );
+			 getCommandString(cmd), state_to_string(s) );
 }
 
 
@@ -1239,7 +1324,7 @@ void
 Resource::log_ignore( int cmd, State s, Activity a ) 
 {
 	dprintf( D_ALWAYS, "Got %s while in %s/%s state, ignoring.\n", 
-			 command_to_string(cmd), state_to_string(s),
+			 getCommandString(cmd), state_to_string(s),
 			 activity_to_string(a) );
 }
 
@@ -1248,7 +1333,7 @@ void
 Resource::log_shutdown_ignore( int cmd ) 
 {
 	dprintf( D_ALWAYS, "Got %s while shutting down, ignoring.\n", 
-			 command_to_string(cmd) );
+			 getCommandString(cmd) );
 }
 
 
@@ -1256,10 +1341,73 @@ void
 Resource::remove_pre( void )
 {
 	if( r_pre ) {
-		if( r_pre->agentstream() ) {
-			r_pre->refuse_agent();
+		if( r_pre->requestStream() ) {
+			r_pre->refuseClaimRequest();
 		}
 		delete r_pre;
 		r_pre = NULL;
 	}	
 }
+
+
+void
+Resource::beginCODLoadHack( void )
+{
+		// set our bool, so we use the pre-COD load for policy
+		// evaluations
+	r_hack_load_for_cod = true;
+	
+		// if we have a value for the pre-cod-load, we want to
+		// maintain it.  the only case where this would happen is if a
+		// COD job had finished in the last minute, we were still
+		// reporting the pre-cod-load, and a new cod job started up.
+		// if that happens, we don't want to use the current load,
+		// since that'll have some residual COD in it.  instead, we
+		// just want to use the load from *before* any COD happened.
+		// only if we've been free of COD for over a minute (and
+		// therefore, we're completely out of COD-load hack), do we
+		// want to record the real system load as the "pre-COD" load. 
+	if( ! r_pre_cod_total_load ) {
+		r_pre_cod_total_load = r_attr->total_load();
+		r_pre_cod_condor_load = r_attr->condor_load();
+	} else { 
+		ASSERT( r_cod_load_hack_tid != -1 );
+	}
+
+		// if we had a timer set to turn off this hack, cancel it,
+		// since we're back in hack mode...
+	if( r_cod_load_hack_tid != -1 ) {
+		if( daemonCore->Cancel_Timer(r_cod_load_hack_tid) < 0 ) {
+			::dprintf( D_ALWAYS, "failed to cancel COD Load timer (%d): "
+					   "daemonCore error\n", r_cod_load_hack_tid );
+		}
+		r_cod_load_hack_tid = -1;
+	}
+}
+
+
+void
+Resource::startTimerToEndCODLoadHack( void )
+{
+	ASSERT( r_cod_load_hack_tid == -1 );
+	r_cod_load_hack_tid = daemonCore->Register_Timer( 60, 0, 
+					(TimerHandlercpp)&Resource::endCODLoadHack,
+					"endCODLoadHack", this );
+	if( r_cod_load_hack_tid < 0 ) {
+		EXCEPT( "Can't register DaemonCore timer" );
+	}
+}
+
+
+void
+Resource::endCODLoadHack( void )
+{
+		// our timer went off, so we can clear our tid
+	r_cod_load_hack_tid = -1;
+
+		// now, reset all the COD-load hack state
+	r_hack_load_for_cod = false;
+	r_pre_cod_total_load = 0.0;
+	r_pre_cod_condor_load = 0.0;
+}
+

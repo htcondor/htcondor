@@ -82,7 +82,18 @@ char* calc_subnet_name( char* host );
 
 int is_ipaddr(const char *inbuf, struct in_addr *sin_addr);
 
+int is_valid_network( const char *network, struct in_addr *ip, struct in_addr *mask);
+
 int is_valid_sinful( const char *sinful );
+
+/* returns the port integer from a given address, or 0 if there is
+   none. */
+int getPortFromAddr( const char* addr );
+
+/* returns only the host information (not including '<', '>', ":2132",
+   etc) from a given address.  the string returned is a newly
+   allocated string which must be de-allocated with free(). */ 
+char* getHostFromAddr( const char* addr );
 
 /* Binds the given fd to any port on the correct local interface for
    this machine.   Returns 1 if successful, 0 on error. */

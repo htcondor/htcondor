@@ -44,9 +44,10 @@
 #include "condor_uid.h"
 #include "match_prefix.h"
 #include "string_list.h"
-#include "get_daemon_addr.h"
-#include "get_full_hostname.h"
+#include "condor_string.h"
+#include "get_daemon_name.h"
 #include "daemon.h"
+#include "dc_collector.h"
 #include "daemon_types.h"
 #include "internet.h"
 #include "condor_distribution.h"
@@ -114,20 +115,25 @@ usage()
 	fprintf( stderr, "   -negotiator\t\t(query the negotiator)\n" );
 	fprintf( stderr, "   -tilde\t\t(return the path to the Condor home directory)\n" );
 	fprintf( stderr, "   -owner\t\t(return the owner of the condor_config_val process)\n" );
+	fprintf( stderr, "   -verbose\t\t(print information about where variables are defined)\n" );
+	fprintf( stderr, "   -config\t\t(print the locations of found config files)\n" );
 	my_exit( 1 );
 }
 
 
-char* GetRemoteParam( char*, char*, char*, char* );
-void  SetRemoteParam( char*, char*, char*, char*, ModeType );
+char* GetRemoteParam( Daemon*, char* );
+void  SetRemoteParam( Daemon*, char*, ModeType );
+static void PrintConfigFiles(void);
 
 int
 main( int argc, char* argv[] )
 {
-	char	*value, *tmp, *foo, *host = NULL;
+	char	*value, *tmp, *host = NULL;
 	char	*addr = NULL, *name = NULL, *pool = NULL;
 	int		i;
 	bool	ask_a_daemon = false;
+	bool    verbose = false;
+	bool    print_config_files = false;
 	
 	PrintType pt = CONDOR_NONE;
 	ModeType mt = CONDOR_QUERY;
@@ -173,12 +179,7 @@ main( int argc, char* argv[] )
 		} else if( match_prefix( argv[i], "-pool" ) ) {
 			if( argv[i + 1] ) {
 				i++;
-				pool = get_full_hostname( (const char *) argv[i] );
-				if( ! pool ) {
-					fprintf( stderr, "%s: unknown host %s\n", MyName, 
-							 argv[i] );
-					my_exit( 1 );
-				}
+				pool = argv[i];
 			} else {
 				usage();
 			}
@@ -207,6 +208,10 @@ main( int argc, char* argv[] )
 			mt = CONDOR_RUNTIME_UNSET;
 		} else if( match_prefix( argv[i], "-mixedcase" ) ) {
 			mixedcase = true;
+		} else if( match_prefix( argv[i], "-config" ) ) {
+			print_config_files = true;
+		} else if( match_prefix( argv[i], "-verbose" ) ) {
+			verbose = true;
 		} else if( match_prefix( argv[i], "-" ) ) {
 			usage();
 		} else {
@@ -249,15 +254,33 @@ main( int argc, char* argv[] )
 		config_host( host );
 	} else {
 		config();
+		if (print_config_files) {
+			PrintConfigFiles();
+		}
 	}
 
-	if( name || pool || mt != CONDOR_QUERY || dt != DT_MASTER ) {
+	if( pool && ! name ) {
+		fprintf( stderr, "Error: you must specify -name with -pool\n" );
+		my_exit( 1 );
+	}
+
+	if( name || addr || mt != CONDOR_QUERY || dt != DT_MASTER ) {
 		ask_a_daemon = true;
 	}
 
+	Daemon* target = NULL;
 	if( ask_a_daemon ) {
-		addr = get_daemon_addr( dt, name, pool );
-		if( ! addr ) {
+		if( addr ) {
+			target = new Daemon( dt, addr, NULL );
+		} else {
+			DCCollector col( pool );
+			if( ! col.addr() ) {
+				fprintf( stderr, "%s: %s\n", MyName, col.error() );
+				my_exit( 1 );
+			}
+			target = new Daemon( dt, name, col.addr() );
+		}
+		if( ! target->locate() ) {
 			fprintf( stderr, "Can't find address for this %s\n", 
 					 daemonString(dt) );
 			fprintf( stderr, "Perhaps you need to query another pool.\n" );
@@ -267,17 +290,17 @@ main( int argc, char* argv[] )
 
 	params.rewind();
 
-	if( ! params.number() ) {
+	if( ! params.number() && !print_config_files ) {
 		usage();
 	}
 
 	while( (tmp = params.next()) ) {
 		if( mt == CONDOR_SET || mt == CONDOR_RUNTIME_SET ||
 			mt == CONDOR_UNSET || mt == CONDOR_RUNTIME_UNSET ) {
-			SetRemoteParam( name, addr, pool, tmp, mt );
+			SetRemoteParam( target, tmp, mt );
 		} else {
-			if( name || pool || addr ) {
-				value = GetRemoteParam( name, addr, pool, tmp );
+			if( target ) {
+				value = GetRemoteParam( target, tmp );
 			} else {
 				value = param( tmp );
 			}
@@ -285,8 +308,23 @@ main( int argc, char* argv[] )
 				fprintf(stderr, "Not defined: %s\n", tmp);
 				my_exit( 1 );
 			} else {
-				printf("%s\n", value);
+				if (verbose) {
+					printf("%s: %s\n", tmp, value);
+				} else {
+					printf("%s\n", value);
+				}
 				free( value );
+				if (verbose) {
+					MyString filename;
+					int      line_number;
+					param_get_location(tmp, filename, line_number);
+					if (line_number == -1) {
+						printf("  Defined in '%s'.\n\n", filename.GetCStr());
+					} else {
+						printf("  Defined in '%s', line %d.\n\n",
+							   filename.GetCStr(), line_number);
+					}
+				}
 			}
 		}
 	}
@@ -296,12 +334,21 @@ main( int argc, char* argv[] )
 
 
 char*
-GetRemoteParam( char* name, char* addr, char* pool, char* param_name ) 
+GetRemoteParam( Daemon* target, char* param_name ) 
 {
     ReliSock s;
 	s.timeout( 30 );
 	char	*val = NULL;
-	
+
+		// note: printing these things out in each dprintf() is
+		// stupid.  we should be using Daemon::idStr().  however,
+		// since this code didn't used to use a Daemon object at all,
+		// and since it's so hard for us to change the output of our
+		// tools for fear that someone's ASCII parser will break, i'm
+		// just cheating and being lazy here by replicating the old
+		// behavior...
+	char* addr = target->addr();
+	char* name = target->name();
 	if( !name ) {
 		name = "";
 	}
@@ -312,8 +359,7 @@ GetRemoteParam( char* name, char* addr, char* pool, char* param_name )
 		my_exit(1);
 	}
 
-	Daemon d(addr);
-	d.startCommand (CONFIG_VAL, &s, 30);
+	target->startCommand( CONFIG_VAL, &s, 30 );
 
 	s.encode();
 	if( !s.code(param_name) ) {
@@ -341,12 +387,24 @@ GetRemoteParam( char* name, char* addr, char* pool, char* param_name )
 
 
 void
-SetRemoteParam( char* name, char* addr, char* pool, char* param_value,
-				ModeType mt )
+SetRemoteParam( Daemon* target, char* param_value, ModeType mt )
 {
 	int cmd, rval;
 	ReliSock s;
 	bool set = false;
+
+		// note: printing these things out in each dprintf() is
+		// stupid.  we should be using Daemon::idStr().  however,
+		// since this code didn't used to use a Daemon object at all,
+		// and since it's so hard for us to change the output of our
+		// tools for fear that someone's ASCII parser will break, i'm
+		// just cheating and being lazy here by replicating the old
+		// behavior...
+	char* addr = target->addr();
+	char* name = target->name();
+	if( !name ) {
+		name = "";
+	}
 
 		// We need to know two things: what command to send, and (for
 		// error messages) if we're setting or unsetting.  Since our
@@ -367,10 +425,6 @@ SetRemoteParam( char* name, char* addr, char* pool, char* param_value,
 	default:
 		fprintf( stderr, "Unknown command type %d\n", (int)mt );
 		my_exit( 1 );
-	}
-
-	if( !name ) {
-		name = "";
 	}
 
 		// Now, process our strings for sanity.
@@ -421,7 +475,7 @@ SetRemoteParam( char* name, char* addr, char* pool, char* param_value,
 	}
 
 	if (!mixedcase) {
-		lower_case(param_name);		// make the config name case insensitive
+		strlwr(param_name);		// make the config name case insensitive
 	}
 
 		// We need a version with a newline at the end to make
@@ -436,8 +490,7 @@ SetRemoteParam( char* name, char* addr, char* pool, char* param_value,
 		my_exit(1);
 	}
 
-	Daemon d(addr);
-	d.startCommand (cmd, &s);
+	target->startCommand( cmd, &s );
 
 	s.encode();
 	if( !s.code(param_name) ) {
@@ -498,4 +551,48 @@ SetRemoteParam( char* name, char* addr, char* pool, char* param_value,
 
 	free( buf );
 	free( param_name );
+}
+
+static void PrintConfigFiles(void)
+{
+		// print descriptive lines to stderr and config file names to
+		// stdout, so that the output can be cleanly piped into
+		// something like xargs...
+
+	if (global_config_file.Length() > 0) {
+		fprintf( stderr, "Config file:\n" );
+		fflush( stderr );
+		fprintf( stdout, "\t%s\n", global_config_file.Value() );
+		fflush( stdout );
+	} else {
+		fprintf( stderr, "Can't find the config file.\n" );
+	}
+	if (global_root_config_file.Length() > 0) {
+		fprintf( stderr, "Root config file:\n" );
+		fflush( stderr );
+		fprintf( stdout, "\t%s\n", global_root_config_file.Value() );
+		fflush( stdout );
+	}
+	if (local_config_files.Length() > 0) {
+		StringList files;
+
+		files.initializeFromString(local_config_files.Value());
+		
+		if (files.number() < 2) {
+			fprintf( stderr, "Local config file:\n" );
+			fflush( stderr );
+			fprintf( stdout, "\t%s\n", local_config_files.Value() );
+			fflush( stdout );
+		} else {
+			fprintf( stderr, "Local config files:\n" );
+			fflush( stderr );
+			files.rewind();
+			char *file;
+			while ((file = files.next()) != NULL) {
+				fprintf( stdout, "\t%s\n", file );
+				fflush( stdout );
+			}
+		}
+	}
+	return;
 }

@@ -20,6 +20,7 @@
 
 print "\n";
 # Parse command-line args
+$dagman_path = "";
 $submit = 1;
 $force = 0;
 $max_jobs = 0;
@@ -57,6 +58,29 @@ while( $_ = shift ) {
 	}
 	last SWITCH;
     }
+	if ( /^-dagman.*/i) {
+		$dagman_path = shift;
+		if ( ! $dagman_path ) {
+			&usage();
+		}
+		last SWITCH;
+	}
+# -->DAP
+    if( /^-storklog.*/i ) {
+        $stork_log = shift;
+	if( ! $stork_log ) {
+	    &usage();
+        }
+        last SWITCH;
+    }						    
+    if( /^-storkserver.*/i ) {
+        $stork_server = shift;
+	if( ! $stork_server ) {
+	    &usage();
+        }
+        last SWITCH;
+    }				
+# <--DAP
     if( /^-maxj.*/i ) {
 	$max_jobs = shift;
 	if( ! $max_jobs ) {
@@ -133,14 +157,17 @@ if( ! $dagfile ) {
 }
 
 
-# See if there is an executable 'condor_dagman' anywhere in our path.
-foreach $dir ( split /:/, $ENV{PATH} )
-{
-    $cur_path = "$dir/condor_dagman";
-    if( -x $cur_path ) {
-        $dagman_path = $cur_path;
-        last;
-    }
+# See if there is an executable 'condor_dagman' anywhere in our path if it
+# has not been defined on the command line
+if ( $dagman_path eq "") {
+	foreach $dir ( split /:/, $ENV{PATH} )
+	{
+    	$cur_path = "$dir/condor_dagman";
+    	if( -x $cur_path ) {
+        	$dagman_path = $cur_path;
+        	last;
+    	}
+	}
 }
 -x $dagman_path || 
     die "Can't find the condor_dagman exectuable in your PATH, aborting.\n";
@@ -165,20 +192,28 @@ if( $job_log ) {
     print "Done.\n";
 }
 
-
 # Create the submit file used to submit DAGMan as a scheduler universe
 # job to Condor. 
 &write_submit_file();
 
 # Print closing remarks, and actually submit the DAG if that's wanted.
 print "-----------------------------------------------------------------------\n";
-print "File for submitting this DAG to Condor   : $sub_file\n";
-print "Log of DAGMan debugging messages         : $debug_log\n";
-print "Log of Condor library debug messages     : $lib_log\n";
-print "Log of the life of condor_dagman itself  : $sched_log\n";
+print "File for submitting this DAG to Condor           : $sub_file\n";
+print "Log of DAGMan debugging messages                 : $debug_log\n";
+print "Log of Condor library debug messages             : $lib_log\n";
+print "Log of the life of condor_dagman itself          : $sched_log\n";
 print "\n";
-print "Condor Log file for all jobs of this DAG : $job_log\n";
-
+if ( $job_log ){
+  print "Condor Log file for all Condor jobs of this DAG: $job_log\n";
+}
+# -->DAP
+if ( $stork_log ){
+  print "Stork Log file for all DaP jobs of this DAG      : $stork_log\n";
+}
+if ( $stork_server ){
+  print "Stork server to which DaP jobs will be submitted : $stork_server\n";
+}
+# <--DAP
 if( $submit ) {
     print `condor_submit $remote_schedd $sub_file`;
 } else {
@@ -197,6 +232,7 @@ sub usage {
     print "Usage: condor_submit_dag [options] filename\n";
     print "  where filename is the name of your DAG input file\n";
     print "  and where [options] is one or more of:\n";
+    print "    -dagman             (Full path to an alternate condor_dagman executable)\n";
     print "    -no_submit          (DAG is not submitted to Condor)\n";
     print "    -verbose            (Verbose error messages from condor_submit_dag)\n";
     print "    -force              (Overwrite files condor_submit_dag uses if they exist)\n";
@@ -205,7 +241,11 @@ sub usage {
     print "    -MaxPre number      (Maximum number of PRE scripts to run at once)\n";
     print "    -MaxPost number     (Maximum number of POST scripts to run at once)\n";
     print "    -NoPostFail         (Don't run POST scripts after failed jobs)\n";
-    print "    -log filename       (Specify the log file shared by all jobs in the DAG)\n";
+    print "    -log filename       (Specify the Condor log file shared by all Condor jobs in the DAG)\n";
+# -->DAP
+    print "    -storklog filename    (Specify the Stork log file shared by all DaP jobs in the DAG)\n";
+    print "    -storkserver hostname (Specify the hostname to submit DaP jobs)\n";
+# <--DAP
     print "    -notification value (Determines how much email you get from Condor)\n";
     print "    -debug number       (Determines how verbosely DAGMan logs its work)\n";
     print "         about the life of the condor_dagman job.  'value' must be\n";
@@ -215,7 +255,7 @@ sub usage {
 }
 
 sub parse_dag_file {
-    local( %cmd_files, %log_names, $log_name, $had_error, $did_one, $len );
+    local( %cmd_files, %log_names, $log_name, $had_error, $did_one );
     $had_error = 0;
     $did_one = 0;
     open( DAG, "<$dagfile" ) || die "Can't open $dagfile for reading: $!\n";
@@ -248,7 +288,7 @@ sub parse_dag_file {
 	    exit( 1 );
 	}
 	while( <FOO> ) {
-	    if( /^log\s*=\s*(.*)/i ) {
+	    if( /^\s*log\s*=\s*(.*)/i ) {
 		$log_names{$file} = $1;
 		if( ! $log_name ) { $log_name = $1; }
 	    }
@@ -256,33 +296,13 @@ sub parse_dag_file {
 	close FOO;
 	$did_one = 1;
     }
-    foreach $file (sort keys %log_names ) {
-	$len = length $file;
-	if( $log_names{$file} ne $log_name ) {
-	    print "ERROR: log file specified in $file is not \"$log_name\".\n";
-	    $had_error = 1;
-	}
-    }
-    if( $had_error ) {
-	print "\nAll jobs submitted in this DAG must share the same log file.  ";
-	print "Please look\nat all the submit files and make sure they each specify ";
-	print "the same filename\nin their \"log = filename\" settings.\n\n";
-	if( $verbose ) {
-	    print "The submit files your DAG file mentions and the log file each uses are:\n";
-	    foreach $file (sort keys %cmd_files ) {
-		printf( "   %-20s%s\n", $file, $log_names{$file} );
-	    }
-	} else {
-	    print "To see all the log files you mention in each submit file you use, ";
-	    print "run\ncondor_submit_dag again with the -verbose option.\n";
-	}
-	exit( 1 );
-    }
-    if( ! $did_one ) {
-	print "\nERROR: Your input file, \"$dagfile\" contains no jobs.\n",
-	"Please verify that this is really your DAG input file.\n";
-	exit( 1 );
-    }
+    # -->DAP
+    # if( ! $did_one ) {
+    # print "\nERROR: Your input file, \"$dagfile\" contains no jobs.\n",
+    # "Please verify that this is really your DAG input file.\n";
+    # exit( 1 );
+    # }
+    # <--DAP
     return $log_name;
 }
 
@@ -303,8 +323,19 @@ sub write_submit_file {
     print SUBMIT "log\t\t= $sched_log\n";
     print SUBMIT "remove_kill_sig\t= SIGUSR1\n";
     $args = "-f -l . -Debug $dagman_debug -Lockfile $dagfile.lock";
-    $args = $args . " -Condorlog $job_log -Dag $dagfile";
+    $args = $args . " -Dag $dagfile";
     $args = $args . " -Rescue $rescue_file";
+    # --> DAP
+    if( $job_log ){
+        $args = $args . " -Condorlog $job_log";
+    }
+    if( $stork_log ){
+        $args = $args . " -Storklog $stork_log";
+    }
+    if( $stork_server ){
+        $args = $args . " -Storkserver $stork_server";
+    }
+    # <-- DAP
     if( $max_jobs ) {
 	$args = $args . " -MaxJobs $max_jobs";
     }

@@ -24,6 +24,11 @@
 #include "condor_common.h"
 #include "killfamily.h"
 #include "../condor_procapi/procapi.h"
+#include "dynuser.h"
+
+#ifdef WIN32
+extern dynuser *myDynuser;
+#endif
 
 ProcFamily::ProcFamily( pid_t pid, priv_state priv, int test_only )
 {
@@ -39,10 +44,6 @@ ProcFamily::ProcFamily( pid_t pid, priv_state priv, int test_only )
 	searchLogin = NULL;
 
 #ifdef WIN32
-	// Always find the family via the Condor run login on NT, for now
-	//searchLogin = strdup("condor-run-dir");
-	searchLogin = strdup("condor-run-");
-
 	// On Win32, all ProcFamily activity needs to be done as LocalSystem
 	mypriv = PRIV_ROOT;
 #endif
@@ -60,13 +61,12 @@ ProcFamily::~ProcFamily()
 	if ( searchLogin ) {
 		free(searchLogin);
 	}
-	closeFamilyHandles();
 	dprintf( D_PROCFAMILY,
 			 "Deleted ProcFamily w/ pid %d as parent\n", daddy_pid ); 
 }
 
 void
-ProcFamily::setFamilyLogin( char *login )
+ProcFamily::setFamilyLogin( const char *login )
 {
 	if ( login ) {
 		if ( searchLogin ) 
@@ -201,170 +201,6 @@ ProcFamily::spree(int sig,KILLFAMILY_DIRECTION direction)
 	} while ( (*old_pids)[i].pid );
 }
 
-
-void
-ProcFamily::closeFamilyHandles()
-{
-	// This function is a no-op on Unix...
-
-#ifdef WIN32
-	int i;
-
-	for ( i=0; i < (familyHandles.getlast() + 1); i++ ) {
-		CloseHandle( familyHandles[i] );
-	}
-	familyHandles.truncate(-1);
-#endif // of Win32
-	
-	return;
-}
-
-
-int
-ProcFamily::getPidFamilyByLogin(pid_t *pidFamily)
-{
-#ifndef WIN32
-	// Not yet implemented on Unix.
-	EXCEPT("getPidFamilyByLogin not implemented");
-	return 0;
-#else
-	// Win32 version
-	ExtArray<pid_t> pids(256);
-	int num_pids;
-	int index_pidFamily = 0;
-	int index_familyHandles = 0;
-	BOOL ret;
-	HANDLE procToken;
-	HANDLE procHandle;
-	TOKEN_INFORMATION_CLASS tic;
-	VOID *tokenData;
-	DWORD sizeRqd;
-	CHAR str[80];
-	DWORD strSize;
-	CHAR str2[80];
-	DWORD str2Size;
-	SID_NAME_USE sidType;
-
-	closeFamilyHandles();
-
-	ASSERT(pidFamily);
-	ASSERT(searchLogin);
-
-	// add daddy_pid to the list of pids
-	pidFamily[index_pidFamily++] = daddy_pid;
-	
-	// get a list of all pids on the system
-	num_pids = sysinfo.GetPIDs(pids);
-
-	// loop through pids comparing process owner
-	for (int s=0; s<num_pids; s++) {
-
-		// find owner for pid pids[s]
-		
-		  // skip the daddy_pid, we already added it to our list
-		  if ( pids[s] == daddy_pid ) {
-			  continue;
-		  }
-
-		  // get a handle for the process
-		  procHandle=OpenProcess(PROCESS_QUERY_INFORMATION,
-			FALSE, pids[s]);
-		  if (procHandle == NULL)
-		  {
-			  // Unable to open the process for query - try next pid
-			  continue;			
-		  }
-
-		  // get a handle for the access token used
-		  // by the process
-		  ret=OpenProcessToken(procHandle,
-			TOKEN_QUERY, &procToken);
-		  if (!ret)
-		  {
-			  // Unable to open the access token.
-			  CloseHandle(procHandle);
-			  continue;
-		  }
-
-		  // ----- Get user information -----
-
-		  // specify to return user info
-		  tic=TokenUser;
-
-		  // find out how much mem is needed
-		  ret=GetTokenInformation(procToken, tic, NULL, 0,
-			&sizeRqd);
-
-		  // allocate that memory
-		  tokenData=(TOKEN_USER *) GlobalAlloc(GPTR,
-			sizeRqd);
-		  if (tokenData == NULL)
-		  {
-			EXCEPT("Unable to allocate memory.");
-		  }
-
-		  // actually get the user info
-		  ret=GetTokenInformation(procToken, tic,
-			tokenData, sizeRqd, &sizeRqd);
-		  if (!ret)
-		  {
-			// Unable to get user info.
-			CloseHandle(procToken);
-			GlobalFree(tokenData);
-			CloseHandle(procHandle);
-			continue;
-		  }
-
-		  // specify size of string buffers
-		  strSize=str2Size=80;
-
-		  // convert user SID into a name and domain
-		  ret=LookupAccountSid(NULL,
-			((TOKEN_USER *)tokenData)->User.Sid,
-			str, &strSize, str2, &str2Size, &sidType);
-		  if (!ret)
-		  {
-		    // Unable to look up SID.
-			CloseHandle(procToken);
-			GlobalFree(tokenData);
-			CloseHandle(procHandle);
-			continue;
-		  }
-
-		  // release memory, handles
-		  GlobalFree(tokenData);
-		  CloseHandle(procToken);
-
-		  // user is now in variable str, domain in str2
-
-		  // see if it is the login prefix we are looking for
-		  if ( strincmp(searchLogin,str,strlen(searchLogin))==0 ) {
-			  // a match!  add to our list.   
-			  pidFamily[index_pidFamily++] = pids[s];
-			  // and add the procHandle to a list as well; we keep the
-			  // handle open so the pid is not reused by NT between now and
-			  // when the caller actually does something with this pid.
-			  familyHandles[index_familyHandles++] = procHandle;
-			  dprintf(D_PROCFAMILY,
-				  "getPidFamilyByLogin: found pid %d owned by %s\n",
-				  pids[s],str);
-		  } else {
-			  // not a match; close the handle to this process
-			  CloseHandle(procHandle);
-		  }
-
-	}	// end of for loop looping through all pids
-
-	// denote end of list with a zero entry
-	pidFamily[index_pidFamily] = 0;
-
-	// return success
-	return 0;
-#endif  // of WIN32
-}
-
-
-
 void
 ProcFamily::takesnapshot()
 {
@@ -382,15 +218,23 @@ ProcFamily::takesnapshot()
 	new_pids = new ExtArray<a_pid>(10);
 	newpidindex = 0;
 
-	// On some systems, we can only see process we own, so set_priv
-	priv = set_priv(mypriv);
+	// On some systems, we can only see process we own, so we must be either
+	// the user or root. However, being the user in this function causes many,
+	// many priv state changes from user to root and back again since 
+	// getProcInfo changes to root(and back again) to look at the pid. This
+	// smashes the NIS master with too many calls and the load on it
+	// skyrockets so, we are root here. The real way to solve this problem is
+	// to cache the groups in the code so changes from/to the user uid don't
+	// talk to the NIS master. But that is for another day. -psilord 8/22/02
+	priv = set_root_priv();
 
 	// grab all pids in the family we can see now
 	if ( searchLogin ) {
-		ret_val = getPidFamilyByLogin(pidfamily);
+		ret_val = ProcAPI::getPidFamilyByLogin(searchLogin, pidfamily);
 	} else {
 		ret_val = ProcAPI::getPidFamily(daddy_pid,pidfamily);
 	}
+
 	if ( ret_val < 0 ) {
 		// daddy_pid must be gone!
 		dprintf( D_PROCFAMILY, 

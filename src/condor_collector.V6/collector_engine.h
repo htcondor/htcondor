@@ -27,12 +27,13 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 #include "condor_collector.h"
+#include "collector_stats.h"
 #include "hashkey.h"
 
 class CollectorEngine : public Service
 {
   public:
-	CollectorEngine();
+	CollectorEngine( CollectorStats *stats = NULL );
 	~CollectorEngine();
 
 	// maximum time a client can take to communicate with the collector
@@ -60,6 +61,9 @@ class CollectorEngine : public Service
 
 	// walk specified hash table with the given visit procedure
 	int walkHashTable (AdTypes, int (*)(ClassAd *));
+
+	// Publish stats into the collector's ClassAd
+	int publishStats( ClassAd *ad );
 
   private:
 	// the greater tables
@@ -93,8 +97,12 @@ class CollectorEngine : public Service
 	int  housekeeperTimerID;
 	void cleanHashTable (CollectorHashTable &, time_t,
 				bool (*) (HashKey &, ClassAd *,sockaddr_in *));
-	ClassAd* updateClassAd(CollectorHashTable&,char*,ClassAd*,HashKey&,
-	                       char*, int & );
+	ClassAd* updateClassAd(CollectorHashTable&,const char*, const char *,
+						   ClassAd*,HashKey&, const MyString &, int &, 
+						   const sockaddr_in * );
+
+	// Statistics
+	CollectorStats	*collectorStats;
 
   public:
 	// pointer values for representing master states

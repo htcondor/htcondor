@@ -1,0 +1,16 @@
+#! /usr/bin/env perl
+use strict;
+# use warnings;
+
+# Machine info list
+my $MachineInfo = "/home/condor/etc/machine_list";
+open( LIST, $MachineInfo ) || die "Can't read machine list '$MachineInfo'";
+while( <LIST> )
+{
+    s/^\s+//g;
+    s/\s*\#.*$//;
+    chomp;
+    next if ( $_ eq "" );
+    print "$_\n";
+}
+close( LIST );

@@ -1,6 +1,8 @@
 #ifndef CONDOR_SYSCALL_MACROS_H
 #define CONDOR_SYSCALL_MACROS_H
 
+#define ELLIPSIS	...
+
 #define REMAP_ZERO(oldfunc,newfunc,type_return) \
 type_return oldfunc(); \
 type_return newfunc() \
@@ -34,6 +36,19 @@ type_return oldfunc( type_1, type_2 ); \
 type_return newfunc( type_1 arg_1, type_2 arg_2 ) \
 { \
 return (type_return) oldfunc( arg_1, arg_2 ); \
+}
+
+#define REMAP_TWO_VARARGS(oldfunc,newfunc,type_return,type_1,type_2) \
+type_return newfunc( type_1 a1, ... )\
+{\
+	type_return rval;\
+	type_2 a2;\
+	va_list args;\
+	va_start(args,a1);\
+	a2 = va_arg(args,type_2);\
+	rval = oldfunc(a1,a2);\
+	va_end(args);\
+	return (type_return) rval;\
 }
 
 #define REMAP_THREE(oldfunc,newfunc,type_return,type_1,type_2,type_3) \

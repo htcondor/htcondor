@@ -121,7 +121,10 @@ stack_end_addr()
 #else
 	#if defined(Solaris27) || defined(Solaris28)
 		return 0xFFBF0000;
+	#elif defined(Solaris29)
+		return 0xFFC00000; /* XXX educated guess */
 	#else
+		/* Solaris 2.5.1, Solaris 2.6 */
 		return 0xF0000000;
 	#endif
 #endif

@@ -40,11 +40,13 @@
 #include "condor_ckpt_name.h"
 #include "scheduler.h"	// for shadow_rec definition
 #include "condor_email.h"
+#include "globus_utils.h"
 
 extern char *Spool;
 extern char *Name;
 extern char* JobHistoryFileName;
 extern Scheduler scheduler;
+extern bool	operator==( PROC_ID, PROC_ID );
 
 extern "C" {
 	int	prio_compar(prio_rec*, prio_rec*);
@@ -52,7 +54,7 @@ extern "C" {
 
 extern	int		Parse(const char*, ExprTree*&);
 extern  void    cleanup_ckpt_files(int, int, const char*);
-extern	bool	service_this_universe(int);
+extern	bool	service_this_universe(int, ClassAd *);
 static ReliSock *Q_SOCK = NULL;
 
 int		do_Q_request(ReliSock *);
@@ -62,10 +64,6 @@ void	FindPrioJob(PROC_ID &);
 int		Runnable(PROC_ID*);
 int		Runnable(ClassAd*);
 int		get_job_prio(ClassAd *ad);
-
-#if !defined(WIN32)
-uid_t	active_owner_uid = 0;
-#endif
 
 static OldClassAdCollection *JobQueue = 0;
 static int next_cluster_num = -1;
@@ -152,6 +150,24 @@ ClusterCleanup(int cluster_id)
 	// blow away the initial checkpoint file from the spool dir
 	char *ckpt_file_name = gen_ckpt_name( Spool, cluster_id, ICKPT, 0 );
 	(void)unlink( ckpt_file_name );
+}
+
+static 
+void
+RemoveMatchedAd(int cluster_id, int proc_id)
+{
+	if ( scheduler.resourcesByProcID ) {
+		ClassAd *ad_to_remove = NULL;
+		PROC_ID job_id;
+		job_id.cluster = cluster_id;
+		job_id.proc = proc_id;
+		scheduler.resourcesByProcID->lookup(job_id,ad_to_remove);
+		if ( ad_to_remove ) {
+			delete ad_to_remove;
+			scheduler.resourcesByProcID->remove(job_id);
+		}
+	}
+	return;
 }
 
 // Read out any parameters from the config file that we need and
@@ -334,7 +350,8 @@ InitJobQueue(const char *job_queue_name)
 				// Make sure ATTR_SCHEDULER is correct.
 				// XXX TODO: Need a better way than hard-coded
 				// universe check to decide if a job is "dedicated" 
-			if( universe == CONDOR_UNIVERSE_MPI ) {
+			if( universe == CONDOR_UNIVERSE_MPI ||
+				universe == CONDOR_UNIVERSE_PARALLEL ) {
 				if( !ad->LookupString(ATTR_SCHEDULER, attr_scheduler) ) { 
 					dprintf( D_FULLDEBUG, "Job %s has no %s attribute.  "
 							 "Inserting one now...\n", tmp,
@@ -508,10 +525,10 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 	}
 
 	// The super users are always allowed to do updates.  They are
-	// specified with the "SUPER_USERS" string list in the config
-	// file.  Defaults to root and condor.
+	// specified with the "QUEUE_SUPER_USERS" string list in the
+	// config file.  Defaults to root and condor.
 	if( isQueueSuperUser(test_owner) ) {
-		dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success), super_user\n" );
+		dprintf( D_FULLDEBUG, "OwnerCheck retval 1 (success), super_user\n" );
 		return 1;
 	}
 
@@ -520,19 +537,16 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 		// the UID we're running as.
 	uid_t 	my_uid = get_my_uid();
 	if( my_uid != 0 && my_uid != get_real_condor_uid() ) {
-		if( active_owner_uid == my_uid ) {
-			dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success), its me\n" );
+		if( strcmp(get_real_username(), test_owner) == MATCH ) {
+			dprintf(D_FULLDEBUG, "OwnerCheck success: owner (%s) matches "
+					"my username\n", test_owner );
 			return 1;
-		} 
-		else {
-
-#if !defined(WIN32)
+		} else {
 			errno = EACCES;
-#endif
-			dprintf( D_FULLDEBUG, "OwnerCheck: reject test_owner: %s non-super\n",
-					test_owner );
-			dprintf( D_FULLDEBUG,"OwnerCheck: my_uid: %d, active_owner_uid: %d\n",
-					my_uid,active_owner_uid );
+			dprintf( D_FULLDEBUG, "OwnerCheck: reject owner: %s non-super\n",
+					 test_owner );
+			dprintf( D_FULLDEBUG, "OwnerCheck: username: %s, test_owner: %s\n",
+					 get_real_username(), test_owner );
 			return 0;
 		}
 	}
@@ -577,9 +591,6 @@ setQSock( ReliSock* rsock )
 		return false;
 	}
 	Q_SOCK = rsock;
-	if( InitializeConnection(rsock->getOwner()) < 0 ) {
-		return false;
-	}
 	return true;
 }
 
@@ -588,10 +599,6 @@ void
 unsetQSock( void )
 {
 	Q_SOCK = NULL;
-	uninit_user_ids();
-#ifndef WIN32
-	active_owner_uid = 0;
-#endif
 }
 
 
@@ -613,9 +620,7 @@ handle_q(Service *, int, Stream *sock)
 	// from within the schedd itself.
 	Q_SOCK = (ReliSock *)sock;
 	//Q_SOCK->unAuthenticate();
-#ifndef WIN32
-	active_owner_uid = 0;
-#endif
+
 	active_cluster_num = -1;
 
 	do {
@@ -629,7 +634,6 @@ handle_q(Service *, int, Stream *sock)
 	// the QMGMT code the request originated internally, and it should
 	// be permitted (i.e. we only call OwnerCheck if Q_SOCK is not NULL).
 	//Q_SOCK->unAuthenticate();
-	uninit_user_ids();
 	// note: Q_SOCK is static...
 	Q_SOCK = NULL;
 
@@ -683,24 +687,16 @@ handle_q(Service *, int, Stream *sock)
 
 
 int
-InitializeConnection( const char *owner )
+InitializeConnection( const char *owner, const char *domain )
 {
-	
-	if ( owner ) {
-		dprintf(D_SECURITY,"in qmgmt InitializeConnection(owner=%s)\n",owner);
-		init_user_ids( owner );
-	}
-	else {
-		//this is a relic, but better than setting to NULL!
-		//    init_user_ids( "nobody" );
-		dprintf(D_SECURITY,"in qmgmt InitializeConnection(owner=NULL)\n");
-		return -1;
-	}
-
-#if !defined(WIN32)
-	active_owner_uid = get_user_uid();
-#endif /* !WIN32 */
-
+		/*
+		  This function used to call init_user_ids(), but we don't
+		  need that anymore.  perhaps the whole thing should go
+		  away...  however, when i tried that, i got all sorts of
+		  strange link errors b/c other parts of the qmgmt code (the
+		  sender stubs, etc) seem to depend on it.  i don't have time
+		  to do more a thorough purging of it.
+		*/
 	return 0;
 }
 
@@ -782,6 +778,27 @@ int DestroyProc(int cluster_id, int proc_id)
 		return -1;
 	}
 
+	// Take care of ATTR_COMPLETION_DATE
+	int job_status = -1;
+	ad->LookupInteger(ATTR_JOB_STATUS, job_status);	
+	if ( job_status == COMPLETED ) {
+			// if job completed, insert completion time if not already there
+		int completion_time = 0;
+		ad->LookupInteger(ATTR_COMPLETION_DATE,completion_time);
+		if ( !completion_time ) {
+			SetAttributeInt(cluster_id,proc_id,ATTR_COMPLETION_DATE,
+														(int)time(NULL));
+		}
+	}
+
+		// should we leave the job in the queue?
+	int leave_job_in_q = 0;
+	ad->EvalBool(ATTR_JOB_LEAVE_IN_QUEUE,NULL,leave_job_in_q);
+	if ( leave_job_in_q ) {
+		return 1;
+	}
+
+ 
 	// Remove checkpoint files
 	if ( !Q_SOCK ) {
 		//if socket is dead, have cleanup lookup ad owner
@@ -826,6 +843,9 @@ int DestroyProc(int cluster_id, int proc_id)
 		}
 	}
 
+		// remove any match (startd) ad stored w/ this job
+	RemoveMatchedAd(cluster_id,proc_id);
+
 	JobQueueDirty = true;
 
 	return 0;
@@ -855,12 +875,47 @@ int DestroyCluster(int cluster_id)
 					return -1;
 				}
 
+				// Take care of ATTR_COMPLETION_DATE
+				int job_status = -1;
+				ad->LookupInteger(ATTR_JOB_STATUS, job_status);	
+				if ( job_status == COMPLETED ) {
+						// if job completed, insert completion time if not already there
+					int completion_time = 0;
+					ad->LookupInteger(ATTR_COMPLETION_DATE,completion_time);
+					if ( !completion_time ) {
+						SetAttributeInt(cluster_id,proc_id,
+							ATTR_COMPLETION_DATE,(int)time(NULL));
+					}
+				}
+
+					// should we leave the job in the queue?
+				int leave_job_in_q = 0;
+				ad->EvalBool(ATTR_JOB_LEAVE_IN_QUEUE,NULL,leave_job_in_q);
+				if ( leave_job_in_q ) {
+						// leave it in the queue.... move on to the next one
+					continue;
+				}
+
 				// Apend to history file
                 AppendHistory(ad);
 
 //				log = new LogDestroyClassAd(key);
 //				JobQueue->AppendLog(log);
+
 				JobQueue->DestroyClassAd(key.value());
+					
+					// remove any match (startd) ad stored w/ this job
+				if ( scheduler.resourcesByProcID ) {
+					ClassAd *ad_to_remove = NULL;
+					PROC_ID job_id;
+					job_id.cluster = cluster_id;
+					job_id.proc = proc_id;
+					scheduler.resourcesByProcID->lookup(job_id,ad_to_remove);
+					if ( ad_to_remove ) {
+						delete ad_to_remove;
+						scheduler.resourcesByProcID->remove(job_id);
+					}
+				}
 		}
 
 	}
@@ -1016,6 +1071,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 //	LogSetAttribute	*log;
 	char			key[_POSIX_PATH_MAX];
 	ClassAd			*ad;
+	char			alternate_attrname_buf[_POSIX_PATH_MAX];
 
 	// Only an authenticated user or the schedd itself can set an attribute.
 	if ( Q_SOCK && !(Q_SOCK->isAuthenticated()) ) {
@@ -1041,24 +1097,29 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		
 	// check for security violations.
 	// first, make certain ATTR_OWNER can only be set to who they really are.
-	if (strcmp(attr_name, ATTR_OWNER) == 0) 
+	if (stricmp(attr_name, ATTR_OWNER) == 0) 
 	{
 		if ( !Q_SOCK ) {
 			EXCEPT( "Trying to setAttribute( ATTR_OWNER ) and Q_SOCK is NULL" );
 		}
 
-		char *test_owner = new char [strlen(Q_SOCK->getOwner() )+3];
-		sprintf(test_owner, "\"%s\"", Q_SOCK->getOwner() );
-		if (strcmp(attr_value, test_owner) != 0) {
+		sprintf(alternate_attrname_buf, "\"%s\"", Q_SOCK->getOwner() );
+		if (strcmp(attr_value, alternate_attrname_buf) != 0) {
+			if ( stricmp(attr_value,"UNDEFINED")==0 ) {
+					// If the user set the owner to be undefined, then
+					// just fill in the value of Owner with the owner name
+					// of the authenticated socket.
+				attr_value  = alternate_attrname_buf;
+			} else {
 #if !defined(WIN32)
-			errno = EACCES;
+				errno = EACCES;
 #endif
-			dprintf(D_ALWAYS, "SetAttribute security violation: setting owner to %s when active owner is %s\n",
-					attr_value, test_owner);
-			delete [] test_owner;
-			return -1;
+				dprintf(D_ALWAYS, "SetAttribute security violation: "
+					"setting owner to %s when active owner is %s\n",
+					attr_value, alternate_attrname_buf);
+				return -1;
+			}
 		}
-		delete [] test_owner;
 
 			// If we got this far, we're allowing the given value for
 			// ATTR_OWNER to be set.  However, now, we should try to
@@ -1084,7 +1145,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				 owner, scheduler.uidDomain() );  
 		SetAttribute( cluster_id, proc_id, ATTR_USER, user );
 	} 
-	else if (strcmp(attr_name, ATTR_CLUSTER_ID) == 0) {
+	else if (stricmp(attr_name, ATTR_CLUSTER_ID) == 0) {
 		if (atoi(attr_value) != cluster_id) {
 #if !defined(WIN32)
 			errno = EACCES;
@@ -1094,7 +1155,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			return -1;
 		}
 	} 
-	else if (strcmp(attr_name, ATTR_NICE_USER) == 0) {
+	else if (stricmp(attr_name, ATTR_NICE_USER) == 0) {
 			// Because we're setting a new value for nice user, we
 			// should create a new value for ATTR_USER while we're at
 			// it, since that might need to change now that
@@ -1121,7 +1182,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			SetAttribute( cluster_id, proc_id, ATTR_USER, user );
 		}
 	}
-	else if (strcmp(attr_name, ATTR_PROC_ID) == 0) {
+	else if (stricmp(attr_name, ATTR_PROC_ID) == 0) {
 		if (atoi(attr_value) != proc_id) {
 #if !defined(WIN32)
 			errno = EACCES;
@@ -1191,6 +1252,7 @@ CloseConnection()
 			}	
 		}	// end of loop thru clusters
 	}	// end of if a new cluster(s) submitted
+	old_cluster_num = next_cluster_num;
 					
 	return 0;
 }
@@ -1243,6 +1305,29 @@ GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 	return -1;
 }
 
+
+int
+GetAttributeBool(int cluster_id, int proc_id, const char *attr_name, int *val)
+{
+	ClassAd	*ad;
+	char	key[_POSIX_PATH_MAX];
+	char	*attr_val;
+
+	strcpy(key, IdToStr(cluster_id,proc_id) );
+
+	if( JobQueue->LookupInTransaction(key, attr_name, attr_val) ) {
+		sscanf(attr_val, "%d", val);
+		free( attr_val );
+		return 1;
+	}
+
+	if (!JobQueue->LookupClassAd(key, ad)) {
+		return -1;
+	}
+
+	if (ad->LookupBool(attr_name, *val) == 1) return 0;
+	return -1;
+}
 
 int
 GetAttributeString( int cluster_id, int proc_id, const char *attr_name, 
@@ -1398,12 +1483,11 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 		ClassAd *startd_ad;
 		ClassAd *expanded_ad;
 		int index;
-		const char *AttrsToExpand[] = { ATTR_JOB_CMD, ATTR_JOB_ARGUMENTS,
-			ATTR_JOB_ENVIRONMENT, NULL };	// ATTR_JOB_CMD must be first
 		char *left,*name,*right,*value,*tvalue;
 		ExprTree *tree = NULL;
 		string valueString;
 		ClassAdUnParser unp;
+		bool value_came_from_jobad;
 
 		// we must make a deep copy of the job ad; we do not
 		// want to expand the ad we have in memory.
@@ -1412,33 +1496,83 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 		job_id.cluster = cluster_id;
 		job_id.proc = proc_id;
 
-		if ((srec = scheduler.FindSrecByProcID(job_id)) == NULL) {
-			// pretty weird... no shadow, nothing we can do
-			return expanded_ad;
+		// find the startd ad.  this is done differently if the job
+		// is a globus universe jobs or not.
+		int	job_universe;
+		ad->LookupInteger(ATTR_JOB_UNIVERSE,job_universe);
+		if ( job_universe == CONDOR_UNIVERSE_GLOBUS ) {
+			// Globus job... find "startd ad" via our simple
+			// hash table.
+			startd_ad = NULL;
+			scheduler.resourcesByProcID->lookup(job_id,startd_ad);
+		} else {
+			// Not a Globus job... find startd ad via the shadow rec
+			if ((srec = scheduler.FindSrecByProcID(job_id)) == NULL) {
+				// pretty weird... no shadow, nothing we can do
+				return expanded_ad;
+			}
+			if ( srec->match == NULL ) {
+				// pretty weird... no match rec, nothing we can do
+				// could be a PVM job?
+				return expanded_ad;
+			}
+			startd_ad = srec->match->my_match_ad;
 		}
 
-		if ( srec->match == NULL ) {
-			// pretty weird... no match rec, nothing we can do
-			// could be a PVM job?
-			return expanded_ad;
+			// Make a stringlist of all attribute names in job ad.
+			// Note: ATTR_JOB_CMD must be first in AttrsToExpand...
+		StringList AttrsToExpand;
+		const char * curr_attr_to_expand;
+		AttrsToExpand.append(ATTR_JOB_CMD);
+		ad->ResetName();
+		const char *attr_name = ad->NextNameOriginal();
+		while ( attr_name ) {
+			if ( stricmp(attr_name,ATTR_JOB_CMD) ) { 
+				AttrsToExpand.append(attr_name);
+			}
+			attr_name = ad->NextNameOriginal();
 		}
 
-		startd_ad = srec->match->my_match_ad;
-
-		index = 0;
+		index = -1;	
+		AttrsToExpand.rewind();
 		bool no_startd_ad = false;
 		bool attribute_not_found = false;
-		while ( AttrsToExpand[index] && !no_startd_ad &&
-				!attribute_not_found ) 
+		while ( !no_startd_ad && !attribute_not_found ) 
 		{
+			index++;
+			curr_attr_to_expand = AttrsToExpand.next();
+
+			if ( curr_attr_to_expand == NULL ) {
+				// all done; no more attributes to try and expand
+				break;
+			}
+
 			if (attribute_value != NULL) {
 				free(attribute_value);
 				attribute_value = NULL;
 			}
-			// Note that this version of LookupString will
-			// allocate a new buffer, and we have to free() it 
-			// later. (Not delete[] it, unfortunately.)
-			ad->LookupString(AttrsToExpand[index],&attribute_value);
+
+			// Get the current value of the attribute.  We want
+			// to use PrintToNewStr() here because we want to work
+			// with anything (strings, ints, etc) and because want
+			// strings unparsed (for instance, quotation marks should
+			// be escaped with backslashes) so that we can re-insert
+			// them later into the expanded ClassAd.
+			// Note: deallocate attribute_value with free(), despite
+			// the mis-leading name PrintTo**NEW**Str.  
+			ExprTree *tree = ad->Lookup(curr_attr_to_expand);
+			if ( tree ) {
+				ExprTree *rhs = tree->RArg();
+				if ( rhs ) {
+					rhs->PrintToNewStr( &attribute_value );
+				}
+			}
+
+			if ( attribute_value == NULL ) {
+					// Did not find the attribute to expand in the job ad.
+					// Just move on to the next attribute...
+				continue;
+			}
 
 				// Some backwards compatibility: if the
 				// user just has $$opsys.$$arch in the
@@ -1462,11 +1596,11 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 					tvalue = strstr(attribute_value,"$$");	
 					ASSERT(tvalue);
 					strcpy(tvalue,"$$(OPSYS).$$(ARCH)");
-					bigbuf2 = (char *) malloc(strlen(AttrsToExpand[index])
+					bigbuf2 = (char *) malloc(strlen(curr_attr_to_expand)
 											  + 3 // for the equal and the quotes
 											  + strlen(attribute_value)
 											  + 1); // for the null terminator.
-					sprintf(bigbuf2,"%s=\"%s\"",AttrsToExpand[index],
+					sprintf(bigbuf2,"%s=\"%s\"",curr_attr_to_expand,
 						attribute_value);
 					ad->Insert(bigbuf2);
 					free(bigbuf2);
@@ -1476,7 +1610,7 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 			while( !no_startd_ad && !attribute_not_found &&
 					get_var(attribute_value,&left,&name,&right,NULL,true) )
 			{
-				if (!startd_ad) {
+				if (!startd_ad && job_universe != CONDOR_UNIVERSE_GLOBUS) {
 					no_startd_ad = true;
 					break;
 				}
@@ -1497,15 +1631,32 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 				// Look for the name in the ad.
 				// If it is not there, use the fallback.
 				// If no fallback value, then fail.
-
-//				value = startd_ad->sPrintExpr(NULL,0,name);
-				tree = startd_ad->Lookup( name );
-				if( tree ) {
-					unp.Unparse( valueString, tree );
-					strcpy( value, valueString.c_str( ) );
-				}
-				else {
-					value = NULL;
+				if ( startd_ad ) {
+						// We have a startd ad in memory, use it
+//					value = startd_ad->sPrintExpr(NULL,0,name);
+					tree = startd_ad->Lookup( name );
+					if( tree ) {
+						unp.Unparse( valueString, tree );
+						strcpy( value, valueString.c_str( ) );
+					} else {
+						value = NULL;
+					}
+					value_came_from_jobad = false;
+				} else {
+						// No startd ad -- use value from last match.
+						// Note: we will only do this for GLOBUS universe.
+					MyString expr;
+					expr = "MATCH_";
+					expr += name;
+//					value = ad->sPrintExpr(NULL,0,expr.Value());
+					tree = ad->Lookup( expr.Value() );
+					if( tree ) {
+						unp.Unparse( valueString, tree );
+						strcpy( value, valueString.c_str( ) );
+					} else {
+						value = NULL;
+					}
+					value_came_from_jobad = true;
 				}
 
 				if (!value) {
@@ -1521,14 +1672,42 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 					}
 				}
 
+
 				// we just want the attribute value, so strip
 				// out the "attrname=" prefix and any quotation marks 
 				// around string value.
 				tvalue = strchr(value,'=');
 				ASSERT(tvalue);	// we better find the "=" sign !
-				tvalue++;	// skip past "=" sign
+				// now skip past the "=" sign
+				tvalue++;
 				while ( *tvalue && isspace(*tvalue) ) {
 					tvalue++;
+				}
+				// insert the expression into the original job ad
+				// before we mess with it any further.  however, no need to
+				// re-insert it if we got the value from the job ad
+				// in the first place.
+				if ( !value_came_from_jobad ) {
+					MyString expr;
+					expr = "MATCH_";
+					expr += name;
+						// If we are GLOBUS universe, we must
+						// store the values from the startd ad
+						// persistantly to disk right now.  
+						// If any other universe, just updating
+						// our RAM image is fine since we will get
+						// a new match every time.
+					if ( job_universe == CONDOR_UNIVERSE_GLOBUS ) {
+						if ( SetAttribute(cluster_id,proc_id,expr.Value(),tvalue) < 0 )
+						{
+							EXCEPT("Failed to store %s into job ad %d.%d",
+								expr.Value(),cluster_id,proc_id);
+						}
+					} else {
+						expr += "=";
+						expr += tvalue;
+						ad->Insert(expr.Value());
+					}
 				}
 				// skip any quotation marks around strings
 				if (*tvalue == '"') {
@@ -1545,11 +1724,11 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 									      + 1);
 				sprintf(bigbuf2,"%s%s%s",left,tvalue,right);
 				free(attribute_value);
-				attribute_value = (char *) malloc(  strlen(AttrsToExpand[index])
+				attribute_value = (char *) malloc(  strlen(curr_attr_to_expand)
 												  + 3 // = and quotes
 												  + strlen(bigbuf2)
 												  + 1);
-				sprintf(attribute_value,"%s=\"%s\"",AttrsToExpand[index],
+				sprintf(attribute_value,"%s=%s",curr_attr_to_expand,
 					bigbuf2);
 				expanded_ad->Insert(attribute_value);
 				dprintf(D_FULLDEBUG,"$$ substitution: %s\n",attribute_value);
@@ -1558,11 +1737,19 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 			    attribute_value = bigbuf2;
 				bigbuf2 = NULL;
 			}
-			index++;
+		}
+
+		if ( startd_ad && job_universe == CONDOR_UNIVERSE_GLOBUS ) {
+				// Can remove our matched ad since we stored all the
+				// values we need from it into the job ad.
+			RemoveMatchedAd(cluster_id,proc_id);
 		}
 
 
 		if ( no_startd_ad || attribute_not_found ) {
+			MyString hold_reason;
+			hold_reason.sprintf("Cannot expand $$(%s).",name);
+
 			// no ClassAd in the match record; probably
 			// an older negotiator.  put the job on hold and send email.
 			dprintf( D_ALWAYS, 
@@ -1571,13 +1758,12 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 			// SetAttribute does security checks if Q_SOCK is not NULL.
 			// So, set Q_SOCK to be NULL before placing the job on hold
 			// so that SetAttribute knows this request is not coming from
-			// a client.  Then restork Q_SOCK back to the original value.
+			// a client.  Then restore Q_SOCK back to the original value.
 			ReliSock* saved_sock = Q_SOCK;
 			Q_SOCK = NULL;
-			SetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, HELD );
-			SetAttributeInt( cluster_id, proc_id,
-							 ATTR_ENTERED_CURRENT_STATUS, (int)time(0) ); 
+			holdJob(cluster_id, proc_id, hold_reason.Value());
 			Q_SOCK = saved_sock;
+
 			char buf[256];
 			sprintf(buf,"Your job (%d.%d) is on hold",cluster_id,proc_id);
 			FILE* email = email_user_open(ad,buf);
@@ -1585,7 +1771,7 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 				fprintf(email,"Condor failed to start your job %d.%d \n",
 					cluster_id,proc_id);
 				fprintf(email,"because job attribute %s contains $$(%s).\n",
-					AttrsToExpand[index-1],name);
+					curr_attr_to_expand,name);
 				fprintf(email,"\nAttribute $$(%s) cannot be expanded because",
 					name);
 				if ( attribute_not_found ) {
@@ -1728,6 +1914,8 @@ SendSpoolFile(char *filename)
 		return -1;
 	}
 
+	chmod(path,00755);
+
 	// Q_SOCK->eom();
 	dprintf(D_FULLDEBUG, "done with transfer, errno = %d\n", errno);
 	return 0;
@@ -1782,7 +1970,8 @@ int get_job_prio(ClassAd *job)
     // No longer judge whether or not a job can run by looking at its status.
     // Rather look at if it has all the hosts that it wanted.
     if (cur_hosts>=max_hosts || job_status==HELD || 
-		   !service_this_universe(universe)) 
+			job_status==REMOVED || job_status==COMPLETED ||
+			!service_this_universe(universe,job)) 
 	{
         return cur_hosts;
 	}
@@ -1804,10 +1993,22 @@ int get_job_prio(ClassAd *job)
 	job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
 	job->LookupInteger(ATTR_PROC_ID, id.proc);
 
+	
+    // No longer judge whether or not a job can run by looking at its status.
+    // Rather look at if it has all the hosts that it wanted.
+    if (cur_hosts>=max_hosts || job_status==HELD)
+        return cur_hosts;
+
     PrioRec[N_PrioRecs].id       = id;
     PrioRec[N_PrioRecs].job_prio = job_prio;
     PrioRec[N_PrioRecs].status   = job_status;
     PrioRec[N_PrioRecs].qdate    = q_date;
+	int auto_id = scheduler.autocluster.getAutoClusterid(job);
+	if ( auto_id == -1 ) {
+		PrioRec[N_PrioRecs].auto_cluster_id = id.cluster;
+	} else {
+		PrioRec[N_PrioRecs].auto_cluster_id = auto_id;
+	}
 
 	strcpy(PrioRec[N_PrioRecs].owner,owner);
 
@@ -1824,8 +2025,22 @@ extern void mark_job_stopped(PROC_ID* job_id);
 
 int mark_idle(ClassAd *job)
 {
-    int     status, cluster, proc, hosts;
+    int     status, cluster, proc, hosts, job_managed, universe;
 	PROC_ID	job_id;
+
+	if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) < 0) {
+		universe = CONDOR_UNIVERSE_STANDARD;
+	}
+	if ( universe == CONDOR_UNIVERSE_GLOBUS ) {
+		job_managed = 0;
+		job->LookupBool(ATTR_JOB_MANAGED, job_managed);
+		if ( job_managed ) {
+			// if a Globus Universe job is currently managed,
+			// don't touch a damn thing!!!  the gridmanager is
+			// in control.  stay out of its way!  -Todd 9/13/02
+			return 1;
+		}
+	}
 
 	job->LookupInteger(ATTR_CLUSTER_ID, cluster);
 	job->LookupInteger(ATTR_PROC_ID, proc);
@@ -1838,6 +2053,22 @@ int mark_idle(ClassAd *job)
 	if ( status == COMPLETED ) {
 		DestroyProc(cluster,proc);
 	} else if ( status == REMOVED ) {
+		// a globus job with a non-null contact string should be left alone
+		if ( universe == CONDOR_UNIVERSE_GLOBUS ) {
+			char contact_string[20];
+			strncpy(contact_string,NULL_JOB_CONTACT,sizeof(contact_string));
+			job->LookupString(ATTR_GLOBUS_CONTACT_STRING,contact_string,
+								sizeof(contact_string));
+			if ( strncmp(contact_string,NULL_JOB_CONTACT,
+							sizeof(contact_string)-1) )
+			{
+				// looks like the job's globus contact string is still valid,
+				// so there is still a job submitted remotely somewhere.
+				// don't touch this job -- leave it alone so the gridmanager
+				// completes the task of removing it from the remote site.
+				return 1;
+			}
+		}
 		dprintf( D_FULLDEBUG, "Job %d.%d was left marked as removed, "
 				 "cleaning up now\n", cluster, proc );
 		scheduler.WriteAbortToUserLog( job_id );
@@ -2068,6 +2299,12 @@ int Runnable(ClassAd *job)
 		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (REMOVED)\n");
 		return FALSE;
 	}
+	if (status == COMPLETED)
+	{
+		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (COMPLETED)\n");
+		return FALSE;
+	}
+
 
 	if ( job->LookupInteger(ATTR_JOB_UNIVERSE, universe) == 0 )
 	{
@@ -2075,7 +2312,7 @@ int Runnable(ClassAd *job)
 				ATTR_JOB_UNIVERSE);
 		return FALSE;
 	}
-	if( !service_this_universe(universe) )
+	if( !service_this_universe(universe,job) )
 	{
 		dprintf(D_FULLDEBUG | D_NOHEADER," not runnable (Universe=%s)\n",
 			CondorUniverseName(universe) );
@@ -2175,11 +2412,6 @@ static void AppendHistory(ClassAd* ad)
   if (!JobHistoryFileName) return;
   dprintf(D_FULLDEBUG, "Saving classad to history file\n");
 
-  // insert completion time
-  char tmp[512];
-  sprintf(tmp,"%s = %d",ATTR_COMPLETION_DATE,(int)time(NULL));
-  ad->InsertOrUpdate(tmp);
- 
   // save job ad to the log
   FILE* LogFile=fopen(JobHistoryFileName,"a");
   if ( !LogFile ) {

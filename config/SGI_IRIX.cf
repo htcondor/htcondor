@@ -58,6 +58,8 @@
 
 #define HAS_PVM				YES
 #define PVM_ARCH			SGI64
+#define HAS_DLOPEN			NO
+#define HAS_DAGMAN_HELPER   NO
 
 #define HAS_STATIC			NO
 
@@ -136,7 +138,6 @@
    actually care about.
 */
 #define LibC    	concat(LibPath,/libc.so.1)
-#define Crt0		concat(LibPath,/crt1.o)
 #define CrtN		concat(LibPath,/crtn.o)
 
 /* add certain flags which will only work with gnu gcc because
@@ -145,6 +146,6 @@ PlatformFlags is used by the vendor compiler in the test suite */
 
 #define PlatformFlags VersionPlatformFlags MipsFlags
 
-#define PlatformLdFlags -lelf
+#define PlatformLdFlags -lelf -lgen
 
 

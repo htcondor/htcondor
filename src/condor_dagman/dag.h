@@ -3,7 +3,7 @@
  *
  * See LICENSE.TXT for additional notices and disclaimers.
  *
- * Copyright (c)1990-2001 CONDOR Team, Computer Sciences Department, 
+ * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
@@ -32,12 +32,18 @@
 #include "condor_constants.h"      /* from condor_includes/ directory */
 #include "HashTable.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "read_multiple_logs.h"
 
 // for DAGMAN_RUN_POST_ON_FAILURE config setting
 extern bool run_post_on_failure;
 
 // for the Condor job id of the DAGMan job
 extern char* DAGManJobId;
+
+enum Log_source{
+  CONDORLOG,
+  DAPLOG
+};
 
 //------------------------------------------------------------------------
 /** A Dag instance stores information about a job dependency graph,
@@ -53,7 +59,8 @@ class Dag {
   public:
   
     /** Create a DAG
-        @param condorLog the condor log where job events are being written to
+		@param condorLogFiles the list of log files for all of the jobs
+		       in the DAG
         @param maxJobsSubmitted the maximum number of jobs to submit to Condor
                at one time
         @param maxPreScripts the maximum number of PRE scripts to spawn at
@@ -61,8 +68,10 @@ class Dag {
         @param maxPostScripts the maximum number of POST scripts to spawn at
 		       one time
     */
-    Dag( const char* condorLog, const int maxJobsSubmitted,
-		 const int maxPreScripts, const int maxPostScripts );
+
+    Dag( StringList &condorLogFiles, const int maxJobsSubmitted,
+		 const int maxPreScripts, const int maxPostScripts, 
+		 const char *dapLogName );
 
     ///
     ~Dag();
@@ -74,7 +83,7 @@ class Dag {
     bool Bootstrap (bool recovery);
 
     /// Add a job to the collection of jobs managed by this Dag.
-    inline bool Add (Job & job) { return _jobs.Append(job); }
+    bool Add( Job& job );
   
     /** Specify a dependency between two jobs. The child job will only
         run after the parent job has finished.
@@ -87,7 +96,11 @@ class Dag {
     /** Blocks until the Condor Log file grows.
         @return true: log file grew, false: timeout or shrinkage
     */
-    bool DetectLogGrowth();
+
+    
+    //    bool DetectLogGrowth();
+    bool DetectCondorLogGrowth();         //<--DAP 
+    bool DetectDaPLogGrowth();            //<--DAP
 
     /** Force the Dag to process all new events in the condor log file.
         This may cause the state of some jobs to change.
@@ -95,7 +108,9 @@ class Dag {
         @param recover Process Log in Recover Mode, from beginning to end
         @return true on success, false on failure
     */
-    bool ProcessLogEvents (bool recover = false);
+    //    bool ProcessLogEvents (bool recover = false);
+
+    bool ProcessLogEvents (int logsource, bool recovery = false); //<--DAP
 
     /** Get pointer to job with id jobID
         @param the handle of the job in the DAG
@@ -114,6 +129,12 @@ class Dag {
         @return address of Job object, or NULL if not found
     */
     Job * GetJob (const CondorID condorID) const;
+
+    /** Ask whether a node name exists in the DAG
+        @param nodeName the name of the node in the DAG
+        @return true if the node exists, false otherwise
+    */
+    bool NodeExists( const char *nodeName ) const;
 
     /// Print the list of jobs to stdout (for debugging).
     void PrintJobList() const;
@@ -172,11 +193,15 @@ class Dag {
     */
     void Rescue (const char * rescue_file, const char * datafile) const;
 
-	int PreScriptReaper( Job* job, int status );
-	int PostScriptReaper( Job* job, int status );
+	int PreScriptReaper( const char* nodeName, int status );
+	int PostScriptReaper( const char* nodeName, int status );
 
 	void PrintReadyQ( debug_level_t level ) const;
 
+	bool RemoveNode( const char *name, MyString &whynot );
+
+	bool RemoveDependency( Job *parent, Job *child );
+	bool RemoveDependency( Job *parent, Job *child, MyString &whynot );
 	
     /* Detects cycle within dag submitted by user
 	   @return true if there is cycle
@@ -184,9 +209,15 @@ class Dag {
 	bool isCycle ();
 
 	// max number of PRE & POST scripts to run at once (0 means no limit)
-    int _maxPreScripts;
-    int _maxPostScripts;
-	
+    const int _maxPreScripts;
+    const int _maxPostScripts;
+
+	void SetDotFileName(char *dot_file_name);
+	void SetDotIncludeFileName(char *include_file_name);
+	void SetDotFileUpdate(bool update_dot_file)       { _update_dot_file    = update_dot_file; }
+	void SetDotFileOverwrite(bool overwrite_dot_file) { _overwrite_dot_file = overwrite_dot_file; }
+	bool GetDotFileUpdate(void)                       { return _update_dot_file; }
+	void DumpDotFile(void);
 	
   protected:
 
@@ -225,16 +256,20 @@ class Dag {
 	void DFSVisit (Job * job);
 	
     // name of consolidated condor log
-    char        * _condorLogName;
+	StringList &_condorLogFiles;
 
     // Documentation on ReadUserLog is present in condor_c++_util
-    ReadUserLog   _condorLog;
+	ReadMultipleUserLogs _condorLog;
 
     //
     bool          _condorLogInitialized;
 
-    //  Last known size of condor log, used by DetectLogGrowth()
-    off_t         _condorLogSize;
+    //-->DAP
+    const char* _dapLogName;
+    ReadUserLog   _dapLog;
+    bool          _dapLogInitialized;
+    off_t         _dapLogSize;
+    //<--DAP
 
     /// List of Job objects
     List<Job>     _jobs;
@@ -251,7 +286,7 @@ class Dag {
     /*  Maximum number of jobs to submit at once.  Non-negative.  Zero means
         unlimited
     */
-    int _maxJobsSubmitted;
+    const int _maxJobsSubmitted;
 
 	// queue of jobs ready to be submitted to Condor
 	SimpleList<Job*>* _readyQ;
@@ -264,6 +299,20 @@ class Dag {
 	ScriptQ* _postScriptQ;
 	
 	int DFS_ORDER; 
+
+	// Information for producing dot files, which can be used to visualize
+	// DAG files. Dot is part of the graphviz package, which is available from
+	// http://www.research.att.com/sw/tools/graphviz/
+	char *_dot_file_name;
+	char *_dot_include_file_name;
+	bool  _update_dot_file;
+	bool  _overwrite_dot_file;
+	int   _dot_file_name_suffix;
+
+	void IncludeExtraDotCommands(FILE *dot_file);
+	void DumpDotFileNodes(FILE *temp_dot_file);
+	void DumpDotFileArcs(FILE *temp_dot_file);
+	void ChooseDotFileName(MyString &dot_file_name);
 };
 
 #endif /* #ifndef DAG_H */

@@ -24,7 +24,7 @@ CMNT OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE
 CMNT OR PERFORMANCE OF THIS SOFTWARE.
 CMNT
 
-
+#include <Compiler.select>
 #include <Platform.select>
 #include <Global.h>
 
@@ -54,3 +54,6 @@ CMNT instantiate.o: instantiate.C
 CMNT 	$(CPlusPlus) $(STD_C_FLAGS) -c instantiate.C
 
 ALWAYS:
+
+r: release
+

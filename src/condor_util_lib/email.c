@@ -258,6 +258,7 @@ email_open_implementation(char *Mailer, char *final_command)
 		const char *condor_name;
 		uid_t condor_uid;
 		gid_t condor_gid;
+		int i;
 
 		/* XXX This must be the FIRST thing in this block of code. For some
 			reason, at least on IRIX65, this forked process
@@ -296,6 +297,16 @@ email_open_implementation(char *Mailer, char *final_command)
 			EXCEPT("EMAIL PROCESS: Could not connect stdin to child!\n");
 		}
 
+		/* close all other unneeded file descriptors including stdout and
+			stderr, just leave the stdin open to this process. */
+		for(i = 0; i < sysconf(_SC_OPEN_MAX); i++)
+		{
+			if (i != pipefds[0] && i != STDIN_FILENO)
+			{
+				(void)close(i);
+			}
+		}
+
 		/* prop up the environment with goodies to get the Mailer to do the
 			right thing */
 		condor_name = get_condor_username();
@@ -312,6 +323,7 @@ email_open_implementation(char *Mailer, char *final_command)
 		sprintf(pe_user,"USER=%s", condor_name);
 		if( putenv(pe_user) != 0)
 		{
+			/* I hope this EXCEPT gets recorded somewhere */
 			EXCEPT("EMAIL PROCESS: Unable to insert USER=%s into "
 				" environment correctly: %s\n", pe_user, strerror(errno));
 		}

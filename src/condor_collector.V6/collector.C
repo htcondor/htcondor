@@ -1,3 +1,25 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
 #include "condor_classad.h"
 //#include "condor_parser.h"
@@ -10,6 +32,7 @@
 #include "fdprintf.h"
 #include "condor_io.h"
 #include "condor_attributes.h"
+#include "condor_parameters.h"
 #include "condor_email.h"
 #include "condor_classad_lookup.h"
 #include "condor_query.h"
@@ -25,6 +48,7 @@
 
 #include "condor_uid.h"
 #include "condor_adtypes.h"
+#include "condor_universe.h"
 #include "my_hostname.h"
 
 #include "collector.h"
@@ -35,10 +59,14 @@ extern char* mySubSystem;
 extern "C" char* CondorVersion( void );
 extern "C" char* CondorPlatform( void );
 
-CollectorEngine CollectorDaemon::collector;
+CollectorStats CollectorDaemon::collectorStats( false, 0, 0 );
+CollectorEngine CollectorDaemon::collector( &collectorStats );
 int CollectorDaemon::ClientTimeout;
 int CollectorDaemon::QueryTimeout;
 char* CollectorDaemon::CollectorName;
+Daemon* CollectorDaemon::View_Collector;
+Sock* CollectorDaemon::view_sock;
+SocketCache* CollectorDaemon::sock_cache;
 
 ClassAd* CollectorDaemon::__query__;
 Stream* CollectorDaemon::__sock__;
@@ -49,13 +77,18 @@ TrackTotals* CollectorDaemon::normalTotals;
 int CollectorDaemon::submittorRunningJobs;
 int CollectorDaemon::submittorIdleJobs;
 
+CollectorUniverseStats CollectorDaemon::ustatsAccum;
+CollectorUniverseStats CollectorDaemon::ustatsMonthly;
+
 int CollectorDaemon::machinesTotal;
 int CollectorDaemon::machinesUnclaimed;
 int CollectorDaemon::machinesClaimed;
 int CollectorDaemon::machinesOwner;
 
+ForkWork CollectorDaemon::forkQuery;
+
 ClassAd* CollectorDaemon::ad;
-SafeSock CollectorDaemon::updateSock;
+DCCollector* CollectorDaemon::updateCollector;
 int CollectorDaemon::UpdateTimerId;
 
 ClassAd *CollectorDaemon::query_any_result;
@@ -82,9 +115,12 @@ void CollectorDaemon::Init()
 	// read in various parameters from condor_config
 	CollectorName=NULL;
 	ad=NULL;
+	View_Collector=NULL;
+	view_sock=NULL;
 	UpdateTimerId=-1;
+	sock_cache = NULL;
+	updateCollector = NULL;
 	Config();
-
 
     // setup routine to report to condor developers
     // schedule reports to developers
@@ -115,6 +151,12 @@ void CollectorDaemon::Init()
 	daemonCore->Register_Command(QUERY_ANY_ADS,"QUERY_ANY_ADS",
 		(CommandHandler)receive_query,"receive_query",NULL,READ);
 	
+		// // // // // // // // // // // // // // // // // // // // //
+		// WARNING!!!! If you add other invalidate commands here, you
+		// also need to add them to the switch statement in the
+		// sockCacheHandler() method!!!
+		// // // // // // // // // // // // // // // // // // // // //
+
 	// install command handlers for invalidations
 	daemonCore->Register_Command(INVALIDATE_STARTD_ADS,"INVALIDATE_STARTD_ADS",
 		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,DAEMON);
@@ -138,6 +180,12 @@ void CollectorDaemon::Init()
 		"INVALIDATE_STORAGE_ADS", (CommandHandler)receive_invalidation,
 		"receive_invalidation",NULL,DAEMON);
 
+		// // // // // // // // // // // // // // // // // // // // //
+		// WARNING!!!! If you add other update commands here, you
+		// also need to add them to the switch statement in the
+		// sockCacheHandler() method!!!
+		// // // // // // // // // // // // // // // // // // // // //
+
 	// install command handlers for updates
 	daemonCore->Register_Command(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
@@ -157,7 +205,9 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 
 	// ClassAd evaluations use this function to resolve names
-//	ClassAdLookupRegister( process_global_query, this );
+	ClassAdLookupRegister( process_global_query, this );
+
+	forkQuery.Initialize( );
 }
 
 int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
@@ -237,8 +287,20 @@ int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
 		whichAds = (AdTypes) -1;
     }
 
-    if (whichAds != (AdTypes) -1)
-		process_query (whichAds, ad, sock);
+	// Process the query
+    if (whichAds != (AdTypes) -1) {
+		ForkStatus	status = forkQuery.NewJob( );
+		if ( FORK_FAILED == status || FORK_BUSY == status ) {
+			// Fork failed / busy
+			process_query (whichAds, ad, sock);
+		} else if ( FORK_CHILD == status ) {
+			// Fork ok, worker
+			process_query (whichAds, ad, sock);			
+			forkQuery.WorkerDone( );		// Never returns
+		} else {
+			// Fork ok, parent
+		}
+	}
 
     // all done; let daemon core will clean up connection
 	return TRUE;
@@ -256,7 +318,9 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 	sock->timeout(ClientTimeout);
     if( !ad.initFromStream(*sock) || !sock->eom() )
     {
-        dprintf(D_ALWAYS,"Failed to receive query on TCP: aborting\n");
+        dprintf( D_ALWAYS, 
+				 "Failed to receive invalidation on %s: aborting\n",
+				 sock->type() == Stream::reli_sock ? "TCP" : "UDP" );
         return FALSE;
     }
 
@@ -320,9 +384,21 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 	if (command == INVALIDATE_STARTD_ADS)
 		process_invalidation (STARTD_PVT_AD, ad, sock);
 
+	if(View_Collector && ((command == INVALIDATE_STARTD_ADS) || 
+		(command == INVALIDATE_SUBMITTOR_ADS)) ) {
+		send_classad_to_sock(command, View_Collector, &ad);
+	}	
+
+	if( sock_cache && sock->type() == Stream::reli_sock ) {
+			// if this is a TCP update and we've got a cache, stash
+			// this socket for future updates...
+		return stashSocket( sock );
+	}
+
     // all done; let daemon core will clean up connection
 	return TRUE;
 }
+
 
 int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 {
@@ -330,10 +406,13 @@ int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 	sockaddr_in *from;
 	ClassAd *ad;
 
-	
-	// TCP commands should not allow for classad updates.  In fact the collector
-	// will not collect on TCP to discourage use of TCP for classad updates.
-	if ( sock->type() == Stream::reli_sock ) {
+	/* assume the ad is malformed... other functions set this value */
+	insert = -3;
+
+  		// unless the collector has been configured to use a socket
+  		// cache for TCP updates, refuse any update commands that come
+  		// in via TCP... 
+	if( ! sock_cache && sock->type() == Stream::reli_sock ) {
 		// update via tcp; sorry buddy, use udp or you're outa here!
 		dprintf(D_ALWAYS,"Received UPDATE command via TCP; ignored\n");
 		// let daemon core clean up the socket
@@ -353,11 +432,129 @@ int CollectorDaemon::receive_update(Service *s, int command, Stream* sock)
 			dprintf (D_ALWAYS,"Got QUERY command (%d); not supported for UDP\n",
 						command);
 		}
+
+		if (insert == -3)
+		{
+			/* this happens when we get a classad for which a hash key could
+				not been made. This occurs when certain attributes are needed
+				for the particular catagory the ad is destined for, but they
+				are not present in the ad. */
+			dprintf (D_ALWAYS,
+				"Received malformed ad from command (%d). Ignoring.\n",
+				command);
+		}
+	}
+
+	if(View_Collector && ((command == UPDATE_STARTD_AD) || 
+			(command == UPDATE_SUBMITTOR_AD)) ) {
+		send_classad_to_sock(command, View_Collector, ad);
+	}	
+
+	if( sock_cache && sock->type() == Stream::reli_sock ) {
+			// if this is a TCP update and we've got a cache, stash
+			// this socket for future updates...
+		return stashSocket( sock );
 	}
 
 	// let daemon core clean up the socket
 	return TRUE;
 }
+
+
+int
+CollectorDaemon::stashSocket( Stream* sock )
+{
+		
+	ReliSock* rsock;
+	char* addr = sin_to_string( ((Sock*)sock)->endpoint() );
+	rsock = sock_cache->findReliSock( addr );
+	if( ! rsock ) {
+			// don't have it in the socket already, see if the cache
+			// is full.  if not, add this socket to the cache so we
+			// can reuse it for future updates.  if we're full, we're
+			// going to have to screw this connection and not cache
+			// it, to allow the cache to be useful for the other
+			// daemons.
+		if( sock_cache->isFull() ) {
+			dprintf( D_ALWAYS, "WARNING: socket cache (size: %d) "
+					 "is full - NOT caching TCP updates from %s\n", 
+					 sock_cache->size(), addr );
+			return TRUE;
+		} 
+		sock_cache->addReliSock( addr, (ReliSock*)sock );
+
+			// now that it's in our socket, we want to register this
+			// socket w/ DaemonCore so we wake up if there's more data
+			// to read...
+		daemonCore->Register_Socket( sock, "TCP Cached Socket", 
+									 (SocketHandler)sockCacheHandler,
+									 "sockCacheHandler", NULL, DAEMON );
+	}
+
+		// if we're here, it means the sock is in the cache (either
+		// because it was there already, or because we just added it).
+		// either, way, we don't want daemonCore to mess with the
+		// socket...
+	return KEEP_STREAM;
+}
+
+
+int
+CollectorDaemon::sockCacheHandler( Service*, Stream* sock )
+{
+	int cmd;
+	char* addr = sin_to_string( ((Sock*)sock)->endpoint() );
+	sock->decode();
+	dprintf( D_FULLDEBUG, "Activity on stashed TCP socket from %s\n", 
+			 addr ); 
+
+	if( ! sock->code(cmd) ) {
+			// can't read an int, the other side probably closed the
+			// socket, which is why select() woke up.
+		dprintf( D_FULLDEBUG,
+				 "Socket has been closed, removing from cache\n" );
+		daemonCore->Cancel_Socket( sock );
+		sock_cache->invalidateSock( addr );
+		return KEEP_STREAM;
+	}
+
+	switch( cmd ) {
+	case UPDATE_STARTD_AD:
+	case UPDATE_SCHEDD_AD:
+	case UPDATE_MASTER_AD:
+	case UPDATE_GATEWAY_AD:
+	case UPDATE_CKPT_SRVR_AD:
+	case UPDATE_SUBMITTOR_AD:
+	case UPDATE_COLLECTOR_AD:
+	case UPDATE_LICENSE_AD:
+	case UPDATE_STORAGE_AD:
+		return receive_update( NULL, cmd, sock );
+		break;
+
+	case INVALIDATE_STARTD_ADS:
+	case INVALIDATE_SCHEDD_ADS:
+	case INVALIDATE_MASTER_ADS:
+	case INVALIDATE_GATEWAY_ADS:
+	case INVALIDATE_CKPT_SRVR_ADS:
+	case INVALIDATE_SUBMITTOR_ADS:
+	case INVALIDATE_COLLECTOR_ADS:
+	case INVALIDATE_LICENSE_ADS:
+	case INVALIDATE_STORAGE_ADS:
+		return receive_invalidation( NULL, cmd, sock );
+		break;
+
+	default:
+		dprintf( D_ALWAYS,
+				 "ERROR: invalid command %d on stashed TCP socket\n", cmd );
+		daemonCore->Cancel_Socket( sock );
+		sock_cache->invalidateSock( addr );
+		return KEEP_STREAM;
+		break;
+    }
+	EXCEPT( "Should never reach here" );
+	return FALSE;
+}
+
 
 int CollectorDaemon::query_scanFunc (ClassAd *ad)
 {
@@ -552,6 +749,13 @@ int CollectorDaemon::reportMiniStartdScanFunc( ClassAd *ad )
             break;
     }
 
+	// Count the number of jobs in each universe
+	int		universe;
+	if ( ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) ) {
+		ustatsAccum.accumulate( universe );
+	}
+
+	// Done
     return 1;
 }
 
@@ -566,6 +770,8 @@ void CollectorDaemon::reportToDevelopers (void)
     machinesUnclaimed = 0;
     machinesClaimed = 0;
     machinesOwner = 0;
+	ustatsAccum.Reset( );
+
     if (!collector.walkHashTable (STARTD_AD, reportMiniStartdScanFunc)) {
             dprintf (D_ALWAYS, "Error counting machines in devel report \n");
     }
@@ -578,6 +784,9 @@ void CollectorDaemon::reportToDevelopers (void)
 		dprintf( D_ALWAYS, "Didn't send monthly report (failed totals)\n" );
 		return;
 	}
+
+	// Accumulate our monthly maxes
+	ustatsMonthly.setMax( ustatsAccum );
 
 	sprintf( buffer, "Collector (%s):  Monthly report", 
 			 my_full_hostname() );
@@ -606,6 +815,22 @@ void CollectorDaemon::reportToDevelopers (void)
 	}
 	fprintf( mailer , "%20s\t%20s\n" , ATTR_RUNNING_JOBS , ATTR_IDLE_JOBS );
 	fprintf( mailer , "%20d\t%20d\n" , submittorRunningJobs,submittorIdleJobs );
+
+	// If we've got any, find the maxes
+	if ( ustatsMonthly.getCount( ) ) {
+		fprintf( mailer , "\n%20s\t%20s\n" , "Universe", "Max Running Jobs" );
+		int		univ;
+		for( univ=0;  univ<CONDOR_UNIVERSE_MAX;  univ++) {
+			const char	*name = ustatsMonthly.getName( univ );
+			if ( name ) {
+				fprintf( mailer, "%20s\t%20d\n",
+						 name, ustatsMonthly.getValue(univ) );
+			}
+		}
+		fprintf( mailer, "%20s\t%20d\n",
+				 "All", ustatsMonthly.getCount( ) );
+	}
+	ustatsMonthly.Reset( );
 	
 	email_close( mailer );
 	return;
@@ -661,8 +886,6 @@ void CollectorDaemon::Config()
             UpdateTimerId = -1;
     }
 
-    updateSock.close();
-
     tmp = param ("CONDOR_DEVELOPERS_COLLECTOR");
     if (tmp == NULL) {
             tmp = strdup("condor.cs.wisc.edu");
@@ -679,11 +902,30 @@ void CollectorDaemon::Config()
             i = 900;                // default to 15 minutes
     }
     if ( tmp && i ) {
-        if ( updateSock.connect(tmp,COLLECTOR_PORT) == TRUE ) {
-                UpdateTimerId = daemonCore->Register_Timer(1,i,
-                        (TimerHandler)sendCollectorAd, "sendCollectorAd");
+		if( updateCollector ) {
+				// we should just delete it.  since we never use TCP
+				// for these updates, we don't really loose anything
+				// by destroying the object and recreating it...  
+			delete updateCollector;
+			updateCollector = NULL;
         }
-    }
+		updateCollector = new DCCollector( tmp, DCCollector::UDP );
+		if( UpdateTimerId < 0 ) {
+			UpdateTimerId = daemonCore->
+				Register_Timer( 1, i, (TimerHandler)sendCollectorAd,
+								"sendCollectorAd" );
+		}
+    } else {
+		if( updateCollector ) {
+			delete updateCollector;
+			updateCollector = NULL;
+		}
+		if( UpdateTimerId > 0 ) {
+			daemonCore->Cancel_Timer( UpdateTimerId );
+			UpdateTimerId = -1;
+		}
+	}
+
 	init_classad(i);
 
     if (tmp)
@@ -696,7 +938,95 @@ void CollectorDaemon::Config()
     collector.scheduleHousekeeper( ClassadLifetime );
     if (MasterCheckInterval>0) collector.scheduleDownMasterCheck( MasterCheckInterval );
 
-	return;
+    // if we're not the View Collector, let's set something up to forward
+    // all of our ads to the view collector.
+    if(View_Collector) {
+        delete View_Collector;
+    }
+
+    if(view_sock) {
+        delete view_sock;
+    }	
+
+    tmp = param("CONDOR_VIEW_HOST");
+    if(tmp) {
+       if(!same_host(my_full_hostname(), tmp) ) {
+           dprintf(D_ALWAYS, "Will forward ads on to View Server %s\n", tmp);
+           View_Collector = new DCCollector( tmp );
+       } 
+       free(tmp);
+       if(View_Collector) {
+           view_sock = View_Collector->safeSock(); 
+       }
+    }
+
+	tmp = param( "COLLECTOR_SOCKET_CACHE_SIZE" );
+	if( tmp ) {
+		int size = atoi( tmp );
+		if( size ) {
+			if( size < 0 || size > 64000 ) {
+					// the upper bound here is because a TCP port
+					// can't be any bigger than 64K (65536).  however,
+					// b/c of reserved ports and some other things, we
+					// leave it at 64000, just to be safe...
+				EXCEPT( "COLLECTOR_SOCKET_CACHE_SIZE must be between "
+						"0 and 64000 (you used: %s)", tmp );
+			}
+			if( sock_cache ) {
+				if( size > sock_cache->size() ) {
+					sock_cache->resize( size );
+				}
+			} else {
+				sock_cache = new SocketCache( size );
+			}
+		} 
+		free( tmp );
+	}
+	if( sock_cache ) {
+		dprintf( D_FULLDEBUG, 
+				 "Using a SocketCache for TCP updates (size: %d)\n",
+				 sock_cache->size() );
+	} else {
+		dprintf( D_FULLDEBUG, "No SocketCache, will refuse TCP updates\n" );
+	}		
+
+    tmp = param ("COLLECTOR_CLASS_HISTORY_SIZE");
+    if( tmp ) {
+		int	size = atoi( tmp );
+        collectorStats.setClassHistorySize( size );
+    } else {
+        collectorStats.setClassHistorySize( 0 );
+    }
+
+    tmp = param ("COLLECTOR_DAEMON_STATS");
+	if( tmp ) {
+		if( ( *tmp == 't' || *tmp == 'T' ) ) {
+			collectorStats.setDaemonStats( true );
+		} else {
+			collectorStats.setDaemonStats( false );
+		}
+		free( tmp );
+	} else {
+		collectorStats.setDaemonStats( false );
+	}
+
+    tmp = param ("COLLECTOR_DAEMON_HISTORY_SIZE");
+    if( tmp ) {
+		int	size = atoi( tmp );
+        collectorStats.setDaemonHistorySize( size );
+    } else {
+        collectorStats.setDaemonHistorySize( 0 );
+    }
+
+    tmp = param ("COLLECTOR_QUERY_WORKERS");
+    if( tmp ) {
+		int	num = atoi( tmp );
+        forkQuery.setMaxWorkers( num );
+    } else {
+        forkQuery.setMaxWorkers( 0 );
+    }
+
+    return;
 }
 
 void CollectorDaemon::Exit()
@@ -723,12 +1053,13 @@ int CollectorDaemon::sendCollectorAd()
     machinesUnclaimed = 0;
     machinesClaimed = 0;
     machinesOwner = 0;
+	ustatsAccum.Reset( );
     if (!collector.walkHashTable (STARTD_AD, reportMiniStartdScanFunc)) {
             dprintf (D_ALWAYS, "Error making collector ad (startd scan) \n");
     }
 
-    // If we don't have any machines, then bail out. You oftentimes see people
-    // run a collector on each macnine in their pool. Duh.
+    // If we don't have any machines, then bail out. You oftentimes
+    // see people run a collector on each macnine in their pool. Duh.
     if(machinesTotal == 0) {
 		return 1;
 	} 
@@ -747,26 +1078,23 @@ int CollectorDaemon::sendCollectorAd()
     sprintf(line,"%s = %d",ATTR_NUM_HOSTS_OWNER,machinesOwner);
     ad->Insert(line);
 
-    // send the ad
-    int             cmd = UPDATE_COLLECTOR_AD;
+	// Accumulate for the monthly
+	ustatsMonthly.setMax( ustatsAccum );
 
-    updateSock.encode();
-    if(!updateSock.code(cmd))
-    {
-            dprintf(D_ALWAYS, "Can't send UPDATE_MASTER_AD to the collector\n");
-            return 0;
-    }
-    if(!ad->put(updateSock))
-    {
-            dprintf(D_ALWAYS, "Can't send ClassAd to the collector\n");
-            return 0;
-    }
-    if(!updateSock.end_of_message())
-    {
-            dprintf(D_ALWAYS, "Can't send endofrecord to the collector\n");
-            return 0;
-    }
+	// If we've got any universe reports, find the maxes
+	ustatsAccum.publish( ATTR_CURRENT_JOBS_RUNNING, ad );
+	ustatsMonthly.publish( ATTR_MAX_JOBS_RUNNING, ad );
 
+	// Collector engine stats, too
+	collectorStats.publishGlobal( ad );
+
+    // Send the ad
+	if( ! updateCollector->sendUpdate(UPDATE_COLLECTOR_AD, ad) ) {
+		dprintf( D_ALWAYS, "Can't send UPDATE_COLLECTOR_AD to collector "
+				 "(%s): %s\n", updateCollector->fullHostname(),
+				 updateCollector->error() );
+		return 0;
+    }
     return 1;
 }
  
@@ -796,8 +1124,7 @@ void CollectorDaemon::init_classad(int interval)
     }
     ad->Insert(line);
 
-    sprintf(line, "%s = \"%s\"", ATTR_COLLECTOR_IP_ADDR,
-                    daemonCore->InfoCommandSinfulString() );
+    sprintf(line, "%s = \"%s\"", ATTR_COLLECTOR_IP_ADDR, global_dc_sinful() );
     ad->Insert(line);
 
     if ( interval > 0 ) {
@@ -806,7 +1133,159 @@ void CollectorDaemon::init_classad(int interval)
     }
 
     // In case COLLECTOR_EXPRS is set, fill in our ClassAd with those
-    // expressions. 
+    // expressions.
     config_fill_ad( ad );      
 }
 
+void 
+CollectorDaemon::send_classad_to_sock(int cmd, Daemon * d, ClassAd* theAd)
+{
+    // view_sock is static
+    if(!view_sock) {
+	dprintf(D_ALWAYS, "Trying to forward ad on, but no connection to View "
+		"Collector!\n");
+        return;
+    }
+    if(!theAd) {
+	dprintf(D_ALWAYS, "Trying to forward ad on, but ad is NULL!!!\n"); 
+        return;
+    }
+    if (! d->startCommand(cmd, view_sock)) {
+        dprintf( D_ALWAYS, "Can't send command %d to View Collector\n", cmd);
+        view_sock->end_of_message();
+        return;
+    }
+
+    if( theAd ) {
+        if( ! theAd->put( *view_sock ) ) {
+            dprintf( D_ALWAYS, "Can't forward classad to View Collector\n");
+            view_sock->end_of_message();
+            return;
+        }
+    }
+    if( ! view_sock->end_of_message() ) {
+        dprintf( D_ALWAYS, "Can't send end_of_message to View Collector\n");
+        return;
+    }
+    return;
+}
+
+//  Collector stats on universes
+CollectorUniverseStats::CollectorUniverseStats( void )
+{
+	Reset( );
+}
+
+//  Collector stats on universes
+CollectorUniverseStats::CollectorUniverseStats( CollectorUniverseStats &ref )
+{
+	int		univ;
+
+	for( univ=0;  univ<CONDOR_UNIVERSE_MAX;  univ++) {
+		perUniverse[univ] = ref.perUniverse[univ];
+	}
+	count = ref.count;
+}
+
+CollectorUniverseStats::~CollectorUniverseStats( void )
+{
+}
+
+void
+CollectorUniverseStats::Reset( void )
+{
+	int		univ;
+
+	for( univ=0;  univ<CONDOR_UNIVERSE_MAX;  univ++) {
+		perUniverse[univ] = 0;
+	}
+	count = 0;
+}
+
+void
+CollectorUniverseStats::accumulate(int univ )
+{
+	if (  ( univ >= 0 ) && ( univ < CONDOR_UNIVERSE_MAX ) ) {
+		perUniverse[univ]++;
+		count++;
+	}
+}
+
+int
+CollectorUniverseStats::getValue (int univ )
+{
+	if (  ( univ >= 0 ) && ( univ < CONDOR_UNIVERSE_MAX ) ) {
+		return perUniverse[univ];
+	} else {
+		return -1;
+	}
+}
+
+int
+CollectorUniverseStats::getCount ( void )
+{
+	return count;
+}
+
+int
+CollectorUniverseStats::setMax( CollectorUniverseStats &ref )
+{
+	int		univ;
+
+	for( univ=0;  univ<CONDOR_UNIVERSE_MAX;  univ++) {
+		if ( ref.perUniverse[univ] > perUniverse[univ] ) {
+			perUniverse[univ] = ref.perUniverse[univ];
+		}
+		if ( ref.count > count ) {
+			count = ref.count;
+		}
+	}
+	return 0;
+}
+
+const char *
+CollectorUniverseStats::getName( int univ )
+{
+	// Insert universe attributes
+	static const char	*names[] =
+	{
+		NULL,
+		"Standard",
+		NULL,
+		NULL,
+		"PVM",
+		"Vanilla",
+		"PVMD",
+		"Scheduler",
+		"MPI",
+		"Globus",
+		"Java",
+		"Parallel"
+	};
+
+	if (  ( univ >= 0 ) && ( univ < CONDOR_UNIVERSE_MAX ) ) {
+		return names[univ];
+	} else {
+		return NULL;
+	}
+}
+
+int
+CollectorUniverseStats::publish( const char *label, ClassAd *ad )
+{
+	int	univ;
+	char line[100];
+
+	// Loop through, publish all universes with a name
+	for( univ=0;  univ<CONDOR_UNIVERSE_MAX;  univ++) {
+		const char *name = getName( univ );
+		if ( name ) {
+			sprintf( line, "%s%s = %d", label, name, getValue( univ ) );
+			ad->Insert(line);
+		}
+	}
+	sprintf( line, "%s%s = %d", label, "All", count );
+	ad->Insert(line);
+
+	return 0;
+}

@@ -142,6 +142,26 @@ class StartdStateTotal : public ClassTotal
 };
 
 
+
+class StartdCODTotal : public ClassTotal
+{
+public:
+	StartdCODTotal();
+	virtual int update (ClassAd *);
+	virtual void displayHeader(FILE*);
+	virtual void displayInfo(FILE*,int);
+protected:
+	void updateTotals( ClassAd*, const char* );
+
+	int total;
+	int idle;
+	int running;
+	int suspended;
+	int vacating;
+	int killing;
+};
+
+
 // schedd totals
 class ScheddNormalTotal : public ClassTotal
 {
@@ -187,5 +207,10 @@ class CkptSrvrNormalTotal : public ClassTotal
 		int disk;
 };
 
+int getCODInt( ClassAd* ad, const char* id, const char* attr,
+			   int alt_val );  
+
+char* getCODStr( ClassAd* ad, const char* id, const char* attr,
+				 const char* alt );  
 
 #endif//__TOTALS_H__

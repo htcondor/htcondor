@@ -30,12 +30,14 @@ BEGIN_C_DECLS
 
 #if defined(__STDC__) || (__cplusplus)
 int mkargv ( int *argc, char *argv[], char *line );
-void lower_case ( char *str );
+char* strupr( char *str );
+char* strlwr( char *str );
 char * getline ( FILE *fp );
 char * ltrunc ( register char *str );
 #else
 int mkargv();
-void lower_case();
+char* strupr();
+char* strlwr();
 char * getline();
 char * ltrunc ();
 #endif

@@ -32,6 +32,7 @@
 #include "condor_state.h"
 #include "condor_attributes.h"
 #include "classad_log.h"
+#include "string_list.h"
 
 MyString Accountant::AcctRecord="Accountant.";
 MyString Accountant::CustomerRecord="Customer.";
@@ -76,6 +77,8 @@ Accountant::~Accountant()
 
 void Accountant::Initialize() 
 {
+  static bool first_time = true;
+
   // Default values
 
   char* tmp;
@@ -164,6 +167,61 @@ void Accountant::Initialize()
   LastUpdateTime=0;
   GetAttributeInt(AcctRecord,LastUpdateTimeAttr,LastUpdateTime);
 
+  // if at startup, do a sanity check to make certain number of resource
+  // records for a user and what the user record says jives
+  if ( first_time ) {
+	  HashKey HK;
+	  char key[_POSIX_PATH_MAX];
+	  ClassAd* ad;
+	  StringList users;
+	  char *next_user;
+	  MyString user;
+	  int resources_used, resources_used_really;
+	  int total_overestimated_resources = 0;
+	  int total_overestimated_users = 0;
+
+	  dprintf(D_ACCOUNTANT,"Sanity check on number of resources per user\n");
+
+		// first find all the users
+	  AcctLog->table.startIterations();
+	  while (AcctLog->table.iterate(HK,ad)) {
+		HK.sprint(key);
+		if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
+		users.append( &(key[CustomerRecord.Length()]) );
+	  }
+		// ok, now StringList users has all the users.  for each user,
+		// compare what the customer record claims for usage -vs- actual
+		// number of resources
+	  users.rewind();
+	  while( next_user=users.next() ) 
+	  {
+		  user = next_user;
+		  resources_used = GetResourcesUsed(user);
+		  ReportState(user,&resources_used_really);
+		  if ( resources_used == resources_used_really ) {
+			dprintf(D_ACCOUNTANT,"Customer %s using %d resources\n",next_user,
+				  resources_used);
+		  } else {
+			dprintf(D_ALWAYS,
+				"FIXING - Customer %s using %d resources, but only found %d\n",
+				next_user,resources_used,resources_used_really);
+			SetAttributeInt(CustomerRecord+user,ResourcesUsedAttr,resources_used_really);
+			if ( resources_used > resources_used_really ) {
+				total_overestimated_resources += 
+					( resources_used - resources_used_really );
+				total_overestimated_users++;
+			}
+		  }
+	  }
+	  if ( total_overestimated_users ) {
+		  dprintf( D_ALWAYS,
+			  "FIXING - Overestimated %d resources across %d users "
+			  "(from a total of %d users)\n",
+			  total_overestimated_resources,total_overestimated_users,
+			  users.number() );
+	  }
+  }
+
   // Update priorities
 
   UpdatePriorities();
@@ -232,8 +290,10 @@ void Accountant::ResetAllUsage()
   while (AcctLog->table.iterate(HK,ad)) {
     HK.sprint(key);
     if (strncmp(CustomerRecord.Value(),key,CustomerRecord.Length())) continue;
+	AcctLog->BeginTransaction();
     SetAttributeFloat(key,AccumulatedUsageAttr,0);
     SetAttributeInt(key,BeginUsageTimeAttr,T);
+	AcctLog->CommitTransaction();
   }
   return;
 }
@@ -245,8 +305,10 @@ void Accountant::ResetAllUsage()
 void Accountant::ResetAccumulatedUsage(const MyString& CustomerName) 
 {
   dprintf(D_ACCOUNTANT,"Accountant::ResetAccumulatedUsage - CustomerName=%s\n",CustomerName.Value());
+  AcctLog->BeginTransaction();
   SetAttributeFloat(CustomerRecord+CustomerName,AccumulatedUsageAttr,0);
   SetAttributeInt(CustomerRecord+CustomerName,BeginUsageTimeAttr,time(0));
+  AcctLog->CommitTransaction();
 }
 
 //------------------------------------------------------------------
@@ -295,23 +357,27 @@ void Accountant::AddMatch(const MyString& CustomerName, const MyString& Resource
     RemoveMatch(ResourceName,T);
   }
   
-  // Update customer's resource usage count
+
   int ResourcesUsed=0;
   GetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
-  ResourcesUsed++;
-  SetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
-
-  // add negative "uncharged" time if match starts after last update
   int UnchargedTime=0;
   GetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
+
+  AcctLog->BeginTransaction(); 
+  
+  // Update customer's resource usage count
+  ResourcesUsed++;
+  SetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
+  // add negative "uncharged" time if match starts after last update
   UnchargedTime-=T-LastUpdateTime;
   SetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
-  
   // Set reosurce's info: user, and start-time
   SetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,CustomerName);
   SetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,T);
 
-  dprintf(D_ACCOUNTANT,"(ACCOUNTANT) Adding match between customer %s and resource %s\n",CustomerName.Value(),ResourceName.Value());
+  AcctLog->CommitTransaction();
+
+  dprintf(D_ACCOUNTANT,"(ACCOUNTANT) Added match between customer %s and resource %s\n",CustomerName.Value(),ResourceName.Value());
 }
 
 //------------------------------------------------------------------
@@ -331,23 +397,28 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
   if (GetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,CustomerName)) {
     int StartTime=0;
     GetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,StartTime);
-    
-    // Update customer's resource usage count
     int ResourcesUsed=0;
     GetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
-    if (ResourcesUsed>0) ResourcesUsed--;
-    SetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
-
-    // update uncharged time
     int UnchargedTime=0;
     GetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
+
+	AcctLog->BeginTransaction();
+    // Update customer's resource usage count
+    if (ResourcesUsed>0) ResourcesUsed--;
+    SetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
+    // update uncharged time
     if (StartTime<LastUpdateTime) StartTime=LastUpdateTime;
     UnchargedTime+=T-StartTime;
     SetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
-  dprintf(D_ACCOUNTANT,"(ACCOUNTANT) Removing match between customer %s and resource %s\n",CustomerName.Value(),ResourceName.Value());
+	DeleteClassAd(ResourceRecord+ResourceName);
+	AcctLog->CommitTransaction();
+
+    dprintf(D_ACCOUNTANT,
+		"(ACCOUNTANT) Removed match between customer %s and resource %s\n",
+			CustomerName.Value(),ResourceName.Value());
+  } else {  
+      DeleteClassAd(ResourceRecord+ResourceName);
   }
-  
-  DeleteClassAd(ResourceRecord+ResourceName);
 }
 
 //------------------------------------------------------------------
@@ -439,16 +510,18 @@ void Accountant::UpdatePriorities()
     Priority=Priority*AgingFactor+RecentUsage*(1-AgingFactor);
     AccumulatedUsage+=ResourcesUsed*TimePassed+UnchargedTime;
 
+	AcctLog->BeginTransaction();
     SetAttributeFloat(key,PriorityAttr,Priority);
     SetAttributeFloat(key,AccumulatedUsageAttr,AccumulatedUsage);
     if (AccumulatedUsage>0 && BeginUsageTime==0) SetAttributeInt(key,BeginUsageTimeAttr,T);
     if (RecentUsage>0) SetAttributeInt(key,LastUsageTimeAttr,T);
     SetAttributeInt(key,UnchargedTimeAttr,0);
-
+    if (Priority<MinPriority && ResourcesUsed==0 && AccumulatedUsage==0) DeleteClassAd(key);
+	AcctLog->CommitTransaction();
+	
     dprintf(D_ACCOUNTANT,"CustomerName=%s , Old Priority=%5.3f , New Priority=%5.3f , ResourcesUsed=%d\n",key,OldPrio,Priority,ResourcesUsed);
     dprintf(D_ACCOUNTANT,"RecentUsage=%8.3f, UnchargedTime=%d, AccumulatedUsage=%5.3f, BeginUsageTime=%d\n",RecentUsage,UnchargedTime,AccumulatedUsage,BeginUsageTime);
 
-    if (Priority<MinPriority && ResourcesUsed==0 && AccumulatedUsage==0) DeleteClassAd(key);
   }
 
   // Check if the log needs to be truncated
@@ -528,7 +601,7 @@ void Accountant::CheckMatches(ClassAdList& ResourceList)
 // Report the list of Matches for a customer
 //------------------------------------------------------------------
 
-ClassAd* Accountant::ReportState(const MyString& CustomerName) {
+ClassAd* Accountant::ReportState(const MyString& CustomerName, int * NumResources) {
 
   dprintf(D_ACCOUNTANT,"Reporting State for customer %s\n",CustomerName.Value());
 
@@ -559,6 +632,10 @@ ClassAd* Accountant::ReportState(const MyString& CustomerName) {
     ad->Insert(tmp);
 
     ResourceNum++;
+  }
+
+  if ( NumResources ) {
+	  *NumResources = ResourceNum - 1;
   }
 
   return ad;
@@ -742,7 +819,8 @@ bool Accountant::DeleteClassAd(const MyString& Key)
 void Accountant::SetAttributeInt(const MyString& Key, const MyString& AttrName, int AttrValue)
 {
   ClassAd* ad;
-  if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) {
+  //if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) {
+  if (AcctLog->AdExistsInTableOrTransaction(Key.Value()) == false) {
     LogNewClassAd* log=new LogNewClassAd(Key.Value(),"*","*");
     AcctLog->AppendLog(log);
   }
@@ -759,7 +837,8 @@ void Accountant::SetAttributeInt(const MyString& Key, const MyString& AttrName, 
 void Accountant::SetAttributeFloat(const MyString& Key, const MyString& AttrName, float AttrValue)
 {
   ClassAd* ad;
-  if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) {
+  //if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) {
+  if (AcctLog->AdExistsInTableOrTransaction(Key.Value()) == false) {
     LogNewClassAd* log=new LogNewClassAd(Key.Value(),"*","*");
     AcctLog->AppendLog(log);
   }
@@ -777,7 +856,8 @@ void Accountant::SetAttributeFloat(const MyString& Key, const MyString& AttrName
 void Accountant::SetAttributeString(const MyString& Key, const MyString& AttrName, const MyString& AttrValue)
 {
   ClassAd* ad;
-  if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) {
+  //if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) {
+  if (AcctLog->AdExistsInTableOrTransaction(Key.Value()) == false) {
     LogNewClassAd* log=new LogNewClassAd(Key.Value(),"*","*");
     AcctLog->AppendLog(log);
   }

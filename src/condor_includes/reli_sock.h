@@ -28,6 +28,7 @@
 #include "sock.h"
 #include "condor_adtypes.h"
 #include "condor_io.h"
+#include "../condor_daemon_core.V6/condor_ipverify.h"
 
 /*
 **	R E L I A B L E    S O C K
@@ -147,9 +148,9 @@ public:
     ///
 	void setOwner( const char * );
     ///
-	int authenticate( int clientFlags = 0 );
+	int authenticate( const char* methods, CondorError* errstack );
     ///
-	int authenticate( KeyInfo *& key, int clientFlags = 0 );
+	int authenticate( KeyInfo *& key, const char* methods, CondorError* errstack );
     ///
     virtual const char * getFullyQualifiedUser() const;
     ///

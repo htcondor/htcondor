@@ -1,4 +1,19 @@
 
+-----------------------------------------------------------------------
+NOTE: Preparation of a public chirp release is currently done manually.
+It should be formalized in the makefile, both for making an independent
+release and for packaging chirp in Condor tools.
+
+To prepare an independent public release:
+
+Copy chirp_client.c and chirp_client.h into chirp/client/.
+Copy chirp_protocol.h into chirp/common/.
+Copy *.java into chirp/java/client/.
+Update chirp/doc/version.
+tar the chirp directory.
+Put the tar file in http://www.cs.wisc.edu/condor/chirp/.
+-----------------------------------------------------------------------
+
 This directory contains the definition of the Chirp I/O protocol
 and two examples of its use.
 

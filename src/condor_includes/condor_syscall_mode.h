@@ -23,9 +23,9 @@
 #ifndef _CONDOR_SYSCALLS_H
 #define _CONDOR_SYSCALLS_H
 
-#if defined( AIX32)
+#if defined( AIX )
 #	include "syscall.aix.h"
-#elif defined(Solaris)
+#elif defined(Solaris) || defined(CONDOR_DARWIN)
 #	include <sys/syscall.h>
 #elif defined(IRIX)
 #	undef SYSVoffset

@@ -29,6 +29,11 @@ BEGIN_C_DECLS
 
 #define NULL_JOB_CONTACT	"X"
 
+#define GRAM_V_UNKNOWN		0
+#define GRAM_V_1_0			1
+#define GRAM_V_1_5			2
+#define GRAM_V_1_6			3
+
 // Keep these in synch with the values defined in the Globus header files.
 #define GLOBUS_SUCCESS 0
 typedef void (* globus_gram_client_callback_func_t)(void * user_callback_arg,
@@ -170,9 +175,35 @@ typedef enum
     GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED = 131,
     GLOBUS_GRAM_PROTOCOL_ERROR_JOB_UNSUBMITTED = 132,
     GLOBUS_GRAM_PROTOCOL_ERROR_INVALID_COMMIT = 133,
-    GLOBUS_GRAM_PROTOCOL_ERROR_RSL_PROXY_TIMEOUT = 134,
-    GLOBUS_GRAM_PROTOCOL_ERROR_INVALID_PROXY_TIMEOUT = 135,
-    GLOBUS_GRAM_PROTOCOL_ERROR_LAST = 136
+	GLOBUS_GRAM_PROTOCOL_ERROR_RSL_SCHEDULER_SPECIFIC = 134,
+	GLOBUS_GRAM_PROTOCOL_ERROR_STAGE_IN_FAILED = 135,
+	GLOBUS_GRAM_PROTOCOL_ERROR_INVALID_SCRATCH = 136,
+	GLOBUS_GRAM_PROTOCOL_ERROR_RSL_CACHE = 137,
+	GLOBUS_GRAM_PROTOCOL_ERROR_INVALID_SUBMIT_ATTRIBUTE = 138,
+	GLOBUS_GRAM_PROTOCOL_ERROR_INVALID_STDIO_UPDATE_ATTRIBUTE = 139,
+	GLOBUS_GRAM_PROTOCOL_ERROR_INVALID_RESTART_ATTRIBUTE = 140,
+	GLOBUS_GRAM_PROTOCOL_ERROR_RSL_FILE_STAGE_IN = 141,
+	GLOBUS_GRAM_PROTOCOL_ERROR_RSL_FILE_STAGE_IN_SHARED = 142,
+	GLOBUS_GRAM_PROTOCOL_ERROR_RSL_FILE_STAGE_OUT = 143,
+	GLOBUS_GRAM_PROTOCOL_ERROR_RSL_GASS_CACHE = 144,
+	GLOBUS_GRAM_PROTOCOL_ERROR_RSL_FILE_CLEANUP = 145,
+	GLOBUS_GRAM_PROTOCOL_ERROR_RSL_SCRATCH = 146,
+	GLOBUS_GRAM_PROTOCOL_ERROR_INVALID_SCHEDULER_SPECIFIC = 147,
+	GLOBUS_GRAM_PROTOCOL_ERROR_UNDEFINED_ATTRIBUTE = 148,
+	GLOBUS_GRAM_PROTOCOL_ERROR_INVALID_CACHE = 149,
+	GLOBUS_GRAM_PROTOCOL_ERROR_INVALID_SAVE_STATE = 150,
+	GLOBUS_GRAM_PROTOCOL_ERROR_OPENING_VALIDATION_FILE = 151,
+	GLOBUS_GRAM_PROTOCOL_ERROR_READING_VALIDATION_FILE = 152,
+	GLOBUS_GRAM_PROTOCOL_ERROR_RSL_PROXY_TIMEOUT = 153,
+	GLOBUS_GRAM_PROTOCOL_ERROR_INVALID_PROXY_TIMEOUT = 154,
+	GLOBUS_GRAM_PROTOCOL_ERROR_STAGE_OUT_FAILED = 155,
+	GLOBUS_GRAM_PROTOCOL_ERROR_JOB_CONTACT_NOT_FOUND = 156,
+	GLOBUS_GRAM_PROTOCOL_ERROR_DELEGATION_FAILED = 157,
+	GLOBUS_GRAM_PROTOCOL_ERROR_LOCKING_STATE_LOCK_FILE = 158,
+	GLOBUS_GRAM_PROTOCOL_ERROR_INVALID_ATTR = 159,
+	GLOBUS_GRAM_PROTOCOL_ERROR_NULL_PARAMETER = 160,
+	GLOBUS_GRAM_PROTOCOL_ERROR_STILL_STREAMING = 161,
+	GLOBUS_GRAM_PROTOCOL_ERROR_LAST = 162
 } globus_gram_protocol_error_t;
 typedef enum
 {
@@ -182,6 +213,8 @@ typedef enum
     GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE = 8,
     GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED = 16,
     GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED = 32,
+	GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_IN = 64,
+	GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_OUT = 128,
     GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL = 0xFFFFF,
 	// This last state isn't a real GRAM job state. It's used
 	// by the gridmanager when a job's state is unknown
@@ -204,19 +237,31 @@ typedef enum
 
 char *GlobusJobStatusName( int status );
 
-int check_x509_proxy( char *proxy_file );
+char *get_x509_proxy_filename();
 
-int x509_proxy_seconds_until_expire( char *proxy_file );
+int check_x509_proxy( const char *proxy_file );
+
+time_t x509_proxy_expiration_time( const char *proxy_file );
+
+char* x509_proxy_subject_name( const char *proxy_file );
+
+int x509_proxy_seconds_until_expire( const char *proxy_file );
 
 const char* x509_error_string();
 
 int have_condor_g();
 
+void parse_resource_manager_string( const char *string, char **host,
+									char **port, char **service,
+									char **subject );
+
+/* Returns true (non-0) if path looks like an URL that Globus
+   (specifically, globus-url-copy) can handle */
+int is_globus_friendly_url(const char * path);
+
 #if 0
 int check_globus_rm_contacts( char* resource );
 #endif
-
-char *rsl_stringify( char *string );
 
 END_C_DECLS
 

@@ -28,9 +28,8 @@
 #include "condor_config.h"
 #include "condor_attributes.h"
 #include "my_hostname.h"
-#include "get_daemon_addr.h"
+#include "get_daemon_name.h"
 
-#include "sched.h"
 #include "exit.h"
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
@@ -51,6 +50,7 @@ extern "C"
 	int		ReadLog(char*);
 }
 extern	void	mark_jobs_idle();
+extern  int     clear_autocluster_id( ClassAd *job );
 
 
 // global variables to control the daemon's running and logging
@@ -103,6 +103,12 @@ main_init(int argc, char* argv[])
 	InitJobQueue(job_queue_name);
 	mark_jobs_idle();
 
+		// The below must happen _after_ InitJobQueue is called.
+	if ( scheduler.autocluster.config() ) {
+		// clear out auto cluster id attributes
+		WalkJobQueue( (int(*)(ClassAd *))clear_autocluster_id );
+	}
+
 		// Initialize the dedicated scheduler stuff
 	dedicated_scheduler.initialize();
 
@@ -144,6 +150,12 @@ main_shutdown_graceful()
 
 void
 main_pre_dc_init( int argc, char* argv[] )
+{
+}
+
+
+void
+main_pre_command_sock_init( )
 {
 }
 

@@ -1,18 +1,9 @@
-all_target(condor_install condor_init condor_compile ld)
+all_target(condor_install condor_init condor_compile ld condor_configure)
 
 CFLAGS = $(STD_C_FLAGS)
 
-/* Set up where I get the glibc libraries for packaging with the release */
-#if IS_GLIBC21
-GLIBC_DIR = /p/condor/workspaces/glibc/glibc-install/lib
-#elif IS_GLIBC22
-GLIBC_DIR = /p/condor/workspaces/glibc/glibc-install/lib-glibc2.2.2/lib
-#endif
-
-MANDIR = /p/condor/workspaces/man/v6.3
-
-
 release_copy_target(condor_install,$(RELEASE_DIR)/sbin,condor_install,EXECUTABLE_MODE)
+release_copy_target(condor_configure,$(RELEASE_DIR)/sbin,condor_configure,EXECUTABLE_MODE)
 release_copy_target(condor_init,$(RELEASE_DIR)/sbin,condor_init,EXECUTABLE_MODE)
 #if IS_CLIPPED
 release_copy_target(condor_compile.clipped,bin,condor_compile,EXECUTABLE_MODE)
@@ -23,11 +14,11 @@ release_link_target($(RELEASE_DIR)/lib/ld,lib,real-ld)
 #endif /* IS_CLIPPED */
 
 strip_copy_target(condor_install,$(STRIP_DIR)/sbin,condor_install,EXECUTABLE_MODE)
+strip_copy_target(condor_configure,$(STRIP_DIR)/sbin,condor_configure,EXECUTABLE_MODE)
 strip_copy_target(condor_init,$(STRIP_DIR)/sbin,condor_init,EXECUTABLE_MODE)
-strip_copy_target(condor_cleanckpts,$(STRIP_CONTRIB)/sbin,condor_cleanckpts,EXECUTABLE_MODE)
+strip_copy_target(condor_clean_checkpoints,$(STRIP_CONTRIB)/sbin,condor_clean_checkpoints,EXECUTABLE_MODE)
 #if IS_CLIPPED
-strip_copy_target(condor_compile.clipped,$(STRIP_DIR)/bin, \
-		condor_compile,EXECUTABLE_MODE)
+strip_copy_target(condor_compile.clipped,$(STRIP_DIR)/bin,condor_compile,EXECUTABLE_MODE)
 #else 
 strip_copy_target(condor_compile,$(STRIP_DIR)/bin,condor_compile,EXECUTABLE_MODE)
 strip_copy_target(ld,$(STRIP_DIR)/lib,ld,EXECUTABLE_MODE)
@@ -35,14 +26,13 @@ strip_link_target($(STRIP_DIR)/lib/ld,lib,real-ld)
 #endif /* IS_CLIPPED */
 
 static_copy_target(condor_install,$(STATIC_DIR)/sbin,condor_install,EXECUTABLE_MODE)
+static_copy_target(condor_configure,$(STATIC_DIR)/sbin,condor_configure,EXECUTABLE_MODE)
 static_copy_target(condor_init,$(STATIC_DIR)/sbin,condor_init,EXECUTABLE_MODE)
-static_copy_target(condor_cleanckpts,$(STATIC_CONTRIB)/sbin,condor_cleanckpts,EXECUTABLE_MODE)
+static_copy_target(condor_clean_checkpoints,$(STATIC_CONTRIB)/sbin,condor_clean_checkpoints,EXECUTABLE_MODE)
 #if IS_CLIPPED
-static_copy_target(condor_compile.clipped,$(STATIC_DIR)/bin, \
-		condor_compile,EXECUTABLE_MODE)
+static_copy_target(condor_compile.clipped,$(STATIC_DIR)/bin,condor_compile,EXECUTABLE_MODE)
 #else 
-static_copy_target(condor_compile,$(STATIC_DIR)/bin,condor_compile, \
-		EXECUTABLE_MODE)
+static_copy_target(condor_compile,$(STATIC_DIR)/bin,condor_compile,EXECUTABLE_MODE)
 static_copy_target(ld,$(STATIC_DIR)/lib,ld,EXECUTABLE_MODE)
 static_link_target($(STATIC_DIR)/lib/ld,lib,real-ld)
 #endif /* IS_CLIPPED */
@@ -58,7 +48,7 @@ all_symlink_target(ld,real-ld)
 	automatically get used before the real libc courtesy of -L on
 	the link line). This will be the case until we hit a set of
 	header files that can't be used with glibc 2.1.1. */
-#if IS_GLIBC21 || IS_GLIBC22
+#if IS_GLIBC21 || IS_GLIBC22 || IS_GLIBC23
 #if ! IS_CLIPPED
 release_copy_target($(GLIBC_DIR)/libc.a,$(RELEASE_DIR)/lib,libc.a,OBJECT_MODE)
 static_copy_target($(GLIBC_DIR)/libc.a,$(STATIC_DIR)/lib,libc.a,OBJECT_MODE)
@@ -125,6 +115,12 @@ all_symlink_target(/usr/lib/c++/ptcomp,ptcomp)
 all_symlink_target(/usr/lib/c++/ptlink,ptlink)
 #endif
 
+#if WANT_CONDOR_ANALYZE
+release_copy_target($(CONDOR_ANALZYE_DIR)/condor_analyze.release,$(RELEASE_DIR)/bin,condor_analyze,OBJECT_MODE)
+strip_copy_target($(CONDOR_ANALZYE_DIR)/condor_analyze.stripped,$(STRIP_DIR)/bin,condor_analyze,OBJECT_MODE)
+static_copy_target($(CONDOR_ANALZYE_DIR)/condor_analyze.static,$(STATIC_DIR)/bin,condor_analyze,OBJECT_MODE)
+#endif
+
 release_copy_target(Condor.pm,$(RELEASE_DIR)/lib,Condor.pm,OBJECT_MODE)
 strip_copy_target(Condor.pm,$(STRIP_DIR)/lib,Condor.pm,OBJECT_MODE)
 static_copy_target(Condor.pm,$(STATIC_DIR)/lib,Condor.pm,OBJECT_MODE)
@@ -133,6 +129,7 @@ release_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
 strip_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
 static_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
 
+#if WANT_MAN_PAGES
 release_copy_target($(MANDIR)/man1/condor_checkpoint.1,$(RELEASE_DIR)/man/man1,condor_checkpoint.1,OBJECT_MODE)
 static_copy_target($(MANDIR)/man1/condor_checkpoint.1,$(STATIC_DIR)/man/man1,condor_checkpoint.1,OBJECT_MODE)
 strip_copy_target($(MANDIR)/man1/condor_checkpoint.1,$(STRIP_DIR)/man/man1,condor_checkpoint.1,OBJECT_MODE)
@@ -248,6 +245,7 @@ strip_copy_target($(MANDIR)/man1/condor_userprio.1,$(STRIP_DIR)/man/man1,condor_
 release_copy_target($(MANDIR)/man1/condor_vacate.1,$(RELEASE_DIR)/man/man1,condor_vacate.1,OBJECT_MODE)
 static_copy_target($(MANDIR)/man1/condor_vacate.1,$(STATIC_DIR)/man/man1,condor_vacate.1,OBJECT_MODE)
 strip_copy_target($(MANDIR)/man1/condor_vacate.1,$(STRIP_DIR)/man/man1,condor_vacate.1,OBJECT_MODE)
+#endif
 
 clean::
 html:

@@ -66,7 +66,7 @@ public:
 
   void CheckMatches(ClassAdList& ResourceList);  // Remove matches that are not claimed
   ClassAd* ReportState();
-  ClassAd* ReportState(const MyString& CustomerName);
+  ClassAd* ReportState(const MyString& CustomerName, int * NumResources = NULL);
                                                 
   void DisplayLog();
   void DisplayMatches();

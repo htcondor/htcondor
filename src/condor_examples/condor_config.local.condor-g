@@ -38,7 +38,7 @@ GRIDMANAGER_LOG = $(LOG)/GridLogs/GridmanagerLog.$(USERNAME)
 ## The GridManager will shut things down 3 minutes before loosing Contact
 ## because of an expired proxy. 
 ## In seconds, and defaults to 3 minutes
-#GRDIMANAGER_MINIMUM_PROXY_TIME  = 180
+#GRIDMANAGER_MINIMUM_PROXY_TIME  = 180
 
 ## Condor requires that each submitted job be designated to run under a
 ## particular "universe". Condor-G is active when jobs are as marked as
@@ -69,3 +69,30 @@ CRED_MIN_TIME_LEFT		= 120
 
 GLIDEIN_SERVER_NAME = gridftp.cs.wisc.edu
 GLIDEIN_SERVER_DIR = /p/condor/public/binaries/glidein
+
+
+##---
+## New Condor-G Settings for Grid-Matchmaking
+##---
+
+# KEEP_OUTPUT_SANDBOX is an optional feature to tell Condor-G to not
+# remove the job spool when the job leaves the queue.  To use, just
+# set to TRUE.  Since you will be operating Condor-G in this manner,
+# you may want to put leave_in_queue = false in your job submit
+# description files, to tell Condor-G to simply remove the job from
+# the queue immediately when the job completes (since the output files
+# will stick around no matter what).
+#KEEP_OUTPUT_SANDBOX = False
+
+# This setting tells the negotiator to ignore user priorities.  This
+# avoids problems where jobs from different users won't run when using
+# condor_advertise instead of a full-blown startd (some of the user
+# priority system in Condor relies on information from the startd --
+# we will remove this reliance when we support the user priority
+# system for grid sites in the negotiator; for now, this setting will
+# just disable it).
+#NEGOTIATOR_IGNORE_USER_PRIORITIES = False
+
+#These are the directories used to locate classad plug-in functions
+#CLASSAD_SCRIPT_DIRECTORY =
+#CLASSAD_LIB_PATH =

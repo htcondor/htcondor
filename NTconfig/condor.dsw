@@ -86,6 +86,15 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_eventd
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_fetchlog
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_store_cred
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_advertise
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -129,6 +138,18 @@ Package=<4>
 
 ###############################################################################
 
+Project: "condor_birdwatcher"=".\condor_birdwatcher.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "condor_classad"=".\condor_classad.dsp" - Package Owner=<4>
 
 Package=<5>
@@ -147,7 +168,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "condor_classad_analysis"=".\condor_classad_analysis.dsp" - Package Owner=<4>
+Project: "condor_classad_test"=".\condor_classad_test.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -156,10 +177,19 @@ Package=<5>
 Package=<4>
 {{{
     Begin Project Dependency
+    Project_Dep_Name condor_classad
+    End Project Dependency
+    Begin Project Dependency
     Project_Dep_Name condor_cpp_util
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_util_lib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_io
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
     End Project Dependency
 }}}
 
@@ -304,6 +334,33 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_io
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "condor_fetchlog"=".\condor_fetchlog.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name condor_classad
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_cpp_util
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_io
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_util_lib
     End Project Dependency
 }}}
 
@@ -865,6 +922,33 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_util_lib
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "condor_store_cred"=".\condor_store_cred.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name condor_util_lib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_classad
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_cpp_util
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_io
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
     End Project Dependency
 }}}
 

@@ -84,6 +84,9 @@ ProcAd::dumpToAd( piPTR pi ) {
 
 	ClassAd *ad = new ClassAd;
 
+	ad->SetMyTypeName( "PROCESS_INFORMATION" );
+	ad->SetTargetTypeName( "ENQUIRING_MINDS_WANT_TO_KNOW" );
+
 	ad->InsertAttr( "THIS_PID", (int)pi->pid );
 	ad->InsertAttr( "PARENT_PID", (int)pi->ppid );
 	ad->InsertAttr( "IMAGE_SIZE", (int)pi->imgsize );

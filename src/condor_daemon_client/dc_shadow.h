@@ -29,6 +29,8 @@
 #include "condor_io.h"
 
 
+/** The subclass of the Daemon object for talking to a shadow
+*/
 class DCShadow : public Daemon {
 public:
 

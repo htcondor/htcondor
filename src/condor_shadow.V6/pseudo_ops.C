@@ -62,8 +62,10 @@ extern "C" {
 	int use_append( char *method, char *path );
 	void HoldJob( const char* buf );
 	void reaper();
-	#if defined(OSF1)
+	#if defined(DUX4)
 		int statfs(const char *, struct statfs*);
+	#elif defined(DUX5)
+		int _F64_statfs(char *, struct statfs*, ...);
 	#endif
 }
 
@@ -1392,7 +1394,9 @@ int
 create_tcp_port( u_short *port, int *fd )
 {
 	struct sockaddr_in	sin;
-	SOCKET_LENGTH_TYPE	addr_len = sizeof sin;
+	SOCKET_LENGTH_TYPE	addr_len;
+	
+	addr_len = sizeof(sin);
 
 		/* create a tcp socket */
 	if( (*fd=socket(AF_INET,SOCK_STREAM,0)) < 0 ) {
@@ -1806,7 +1810,13 @@ int pseudo_file_info( const char *logical_name, int *fd, char *physical_name )
 	result = pseudo_get_file_info( logical_name, url );
 	if(result<0) return result;
 
-	sscanf(url,"%[^:]:%s",method,physical_name);
+	/* glibc21 (and presumeably glibc20) have a problem where the range
+		specifier can't be 8bit. So, this only allows a 7bit clean filename. */
+	#if defined(LINUX) && (defined(GLIBC20) || defined(GLIBC21))
+	sscanf(url,"%[^:]:%[\x1-\x7F]",method,physical_name);
+	#else
+	sscanf(url,"%[^:]:%[\x1-\xFF]",method,physical_name);
+	#endif
 
 	if(!strcmp(method,"local")) {
 		result = IS_LOCAL;
@@ -2480,11 +2490,35 @@ pseudo_statfs( const char *path, struct statfs *buf )
 {
 #if defined(Solaris) || defined(IRIX)
 	return statfs( path, buf, 0, 0);
+#elif defined DUX5
+	return _F64_statfs( (char *) path, buf );
 #else
 	return statfs( path, buf );
 #endif
 }
 
+/*
+These three calls are used in the new starter/shadow
+by Chirp.  They certainly could be implemented in the old
+shadow, but we have no need for them just yet.
+*/
 
+int pseudo_get_job_attr( const char *name, char *expr )
+{
+	errno = ENOSYS;
+	return -1;
+}
+
+int pseudo_set_job_attr( const char *name, const char *expr )
+{
+	errno = ENOSYS;
+	return -1;
+}
+
+int pseudo_constrain( const char *expr )
+{
+	errno = ENOSYS;
+	return -1;
+}
 
 } /* extern "C" */

@@ -3,7 +3,7 @@
  *
  * See LICENSE.TXT for additional notices and disclaimers.
  *
- * Copyright (c)1990-2002 CONDOR Team, Computer Sciences Department, 
+ * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
@@ -26,9 +26,8 @@
 #include "condor_debug.h"
 #include "condor_network.h"
 #include "condor_io.h"
-#include "sched.h"
 #include "alloc.h"
-#include "get_daemon_addr.h"
+#include "get_daemon_name.h"
 #include "internet.h"
 #include "condor_attributes.h"
 #include "match_prefix.h"
@@ -38,7 +37,9 @@
 #include "string_list.h"
 #include "daemon.h"
 #include "dc_schedd.h"
+#include "dc_collector.h"
 #include "condor_distribution.h"
+#include "CondorError.h"
 
 
 char	*MyName;
@@ -46,6 +47,7 @@ int mode;
 bool All = false;
 bool had_error = false;
 bool old_messages = false;
+bool forceX = false;
 
 DCSchedd* schedd = NULL;
 
@@ -57,7 +59,7 @@ void procArg(const char*);
 void usage();
 void handleAll();
 void handleConstraints( void );
-ClassAd* doWorkByList( StringList* ids );
+ClassAd* doWorkByList( StringList* ids, CondorError * errstack );
 void printOldMessages( ClassAd* result_ad, StringList* ids );
 void printNewMessages( ClassAd* result_ad, StringList* ids );
 
@@ -72,13 +74,13 @@ usage()
 	char word[10];
 	switch( mode ) {
 	case IDLE:
-		sprintf( word, "Releases" );
+		sprintf( word, "Release" );
 		break;
 	case HELD:
-		sprintf( word, "Holds" );
+		sprintf( word, "Hold" );
 		break;
 	case REMOVED:
-		sprintf( word, "Removes" );
+		sprintf( word, "Remove" );
 		break;
 	default:
 		fprintf( stderr, "ERROR: Unknown mode: %d\n", mode );
@@ -89,15 +91,26 @@ usage()
 	fprintf( stderr, " where [options] is zero or more of:\n" );
 	fprintf( stderr, "  -help               Display this message and exit\n" );
 	fprintf( stderr, "  -version            Display version information and exit\n" );
+
+// i'm not sure we want -debug documented.  if we change our minds, we
+// should just uncomment the next line
+//	fprintf( stderr, "  -debug              Display debugging information while running\n" );
+
 	fprintf( stderr, "  -name schedd_name   Connect to the given schedd\n" );
 	fprintf( stderr, "  -pool hostname      Use the given central manager to find daemons\n" );
 	fprintf( stderr, "  -addr <ip:port>     Connect directly to the given \"sinful string\"\n" );
+	if( mode == REMOVED ) {
+		fprintf( stderr,
+				     "  -forcex             Force the immediate local removal of jobs in the X state\n"
+		         "                      (only affects jobs already being removed)\n" );
+	}
 	fprintf( stderr, " and where [constraints] is one or more of:\n" );
 	fprintf( stderr, "  cluster.proc        %s the given job\n", word );
 	fprintf( stderr, "  cluster             %s the given cluster of jobs\n", word );
 	fprintf( stderr, "  user                %s all jobs owned by user\n", word );
+	fprintf( stderr, "  -constraint expr    %s all jobs matching the boolean expression\n", word );
 	fprintf( stderr, "  -all                %s all jobs "
-			 "(Cannot be used with other constraints)\n", word );
+			 "(cannot be used with other constraints)\n", word );
 	exit( 1 );
 }
 
@@ -118,7 +131,7 @@ main( int argc, char *argv[] )
 	int					nArgs = 0;				// number of args 
 	int					i;
 	char*	cmd_str;
-	char* pool = NULL;
+	DCCollector* pool = NULL;
 	char* scheddName = NULL;
 	char* scheddAddr = NULL;
 
@@ -134,18 +147,37 @@ main( int argc, char *argv[] )
 	}
 
 	cmd_str = strchr( MyName, '_');
-	if (cmd_str && strcmp(cmd_str, "_hold") == MATCH) {
+
+	// we match modes based on characters after the '_'. This means
+	// 'condor_hold.exe' or 'condor_hold_wrapped' are all legal argv[0]'s
+	// for condor_hold.
+
+	if (cmd_str && strncmp( cmd_str, "_hold", strlen("_hold") ) == MATCH) { 
+
 		mode = HELD;
-	} else if( cmd_str && strcmp( cmd_str, "_release" ) == MATCH ) {
+
+	} else if ( cmd_str && 
+			strncmp( cmd_str, "_release", strlen("_release") ) == MATCH ) {
+
 		mode = IDLE;
-	} else {
+
+	} else if ( cmd_str && 
+			strncmp( cmd_str, "_rm", strlen("_rm") ) == MATCH ) {
+
 		mode = REMOVED;
+
+	} else {
+		// don't know what mode we're using, so bail.
+		fprintf( stderr, "Unrecognized command name, \"%s\"\n", MyName ); 
+		usage();
 	}
 
 	config();
 
 
 	if( argc < 2 ) {
+			// We got no indication of what to act on
+		fprintf( stderr, "You did not specify any jobs\n" ); 
 		usage();
 	}
 
@@ -206,6 +238,9 @@ main( int argc, char *argv[] )
 				}
 				All = true;
 				break;
+			case 'f':
+				forceX = true;
+				break;				
 			case 'n': 
 				// use the given name as the schedd name to connect to
 				argv++;
@@ -229,15 +264,22 @@ main( int argc, char *argv[] )
 					exit(1);
 				}				
 				if( pool ) {
-					free( pool );
+					delete pool;
 				}
-				pool = strdup( *argv );
+				pool = new DCCollector( *argv );
+				if( ! pool->addr() ) {
+					fprintf( stderr, "%s: %s\n", MyName, pool->error() );
+					exit(1);
+				}
 				break;
 			case 'v':
 				version();
 				break;
+			case 'h':
+				usage();
+				break;
 			default:
-					// This gets hit for "-h", too
+				fprintf( stderr, "Unrecognized option: %s\n", arg ); 
 				usage();
 				break;
 			}
@@ -253,7 +295,8 @@ main( int argc, char *argv[] )
 	}
 
 	if( ! (All || nArgs) ) {
-			// We got no indication of what to remove
+			// We got no indication of what to act on
+		fprintf( stderr, "You did not specify any jobs\n" ); 
 		usage();
 	}
 
@@ -271,7 +314,7 @@ main( int argc, char *argv[] )
 	if( ! scheddAddr ) {
 			// This will always do the right thing, even if either or
 			// both of scheddName or pool are NULL.
-		schedd = new DCSchedd( scheddName, pool );
+		schedd = new DCSchedd( scheddName, pool ? pool->addr() : NULL );
 	} else {
 		schedd = new DCSchedd( scheddAddr );
 	}
@@ -314,7 +357,11 @@ main( int argc, char *argv[] )
 		// Finally, do the actual work for all our args which weren't
 		// constraints...
 	if( job_ids ) {
-		ClassAd* result_ad = doWorkByList( job_ids );
+		CondorError errstack;
+		ClassAd* result_ad = doWorkByList( job_ids, &errstack );
+		if (had_error) {
+			fprintf (stderr, "%s", errstack.get_full_text());
+		}
 		if( old_messages ) {
 			printOldMessages( result_ad, job_ids );
 		} else {
@@ -323,6 +370,17 @@ main( int argc, char *argv[] )
 		}
 		delete( result_ad );
 	}
+
+		// If releasing jobs, and no errors happened, do a 
+		// reschedule command now.
+	if ( mode == IDLE && had_error == false ) {
+		Daemon  my_schedd(DT_SCHEDD, NULL, NULL);
+		CondorError errstack;
+		if (!my_schedd.sendCommand(RESCHEDULE, Stream::safe_sock, 0, &errstack)) {
+			fprintf( stderr, "%s", errstack.get_full_text() );
+		}
+	}
+
 	return had_error;
 }
 
@@ -333,19 +391,23 @@ main( int argc, char *argv[] )
 // advantage of all the slick info the schedd gives us back about this
 // request.  
 bool
-doWorkByConstraint( const char* constraint )
+doWorkByConstraint( const char* constraint, CondorError * errstack )
 {
 	ClassAd* ad;
 	bool rval = true;
 	switch( mode ) {
 	case IDLE:
-		ad = schedd->releaseJobs( constraint, "via condor_release" );
+		ad = schedd->releaseJobs( constraint, "via condor_release", errstack );
 		break;
 	case REMOVED:
-		ad = schedd->removeJobs( constraint, "via condor_rm" );
+		if( forceX ) {
+			ad = schedd->removeXJobs( constraint, "via condor_rm -forceX", errstack );
+		} else {
+			ad = schedd->removeJobs( constraint, "via condor_rm", errstack );
+		}
 		break;
 	case HELD:
-		ad = schedd->holdJobs( constraint, "via condor_hold" );
+		ad = schedd->holdJobs( constraint, "via condor_hold", errstack );
 		break;
 	}
 	if( ! ad ) {
@@ -363,18 +425,22 @@ doWorkByConstraint( const char* constraint )
 
 
 ClassAd*
-doWorkByList( StringList* ids )
+doWorkByList( StringList* ids, CondorError *errstack )
 {
 	ClassAd* rval;
 	switch( mode ) {
 	case IDLE:
-		rval = schedd->releaseJobs( ids, "via condor_release" );
+		rval = schedd->releaseJobs( ids, "via condor_release", errstack );
 		break;
 	case REMOVED:
-		rval = schedd->removeJobs( ids, "via condor_rm" );
+		if( forceX ) {
+			rval = schedd->removeXJobs( ids, "via condor_rm -forcex", errstack );
+		} else {
+			rval = schedd->removeJobs( ids, "via condor_rm", errstack );
+		}
 		break;
 	case HELD:
-		rval = schedd->holdJobs( ids, "via condor_hold" );
+		rval = schedd->holdJobs( ids, "via condor_hold", errstack );
 		break;
 	}
 	if( ! rval ) {
@@ -410,13 +476,18 @@ procArg(const char* arg)
 		if(*tmp == '\0')
 		// delete the cluster
 		{
+			CondorError errstack;
 			sprintf( constraint, "%s == %d", ATTR_CLUSTER_ID, c );
-			if( doWorkByConstraint(constraint) ) {
+			if( doWorkByConstraint(constraint, &errstack) ) {
 				fprintf( old_messages ? stderr : stdout, 
 						 "Cluster %d %s.\n", c,
-						 (mode==REMOVED)?"has been marked for removal":
+						 (mode == REMOVED && forceX == false) ?
+						 "has been marked for removal" :
+						 (mode == REMOVED && forceX == true) ?
+						 "has been removed locally (remote state unknown)" :
 						 (mode==HELD)?"held":"released" );
 			} else {
+				fprintf( stderr, "%s", errstack.get_full_text());
 				fprintf( stderr, 
 						 "Couldn't find/%s all jobs in cluster %d.\n",
 						 (mode==REMOVED)?"remove":(mode==HELD)?"hold":
@@ -449,12 +520,17 @@ procArg(const char* arg)
 	else if(isalpha(*arg))
 	// process by user name
 	{
+		CondorError errstack;
 		sprintf( constraint, "%s == \"%s\"", ATTR_OWNER, arg );
-		if( doWorkByConstraint(constraint) ) {
+		if( doWorkByConstraint(constraint, &errstack) ) {
 			fprintf( stdout, "User %s's job(s) %s.\n", arg,
-					 (mode==REMOVED)?"have been marked for removal":
+					 (mode == REMOVED && forceX == false) ?
+					 "have been marked for removal" :
+					 (mode == REMOVED && forceX == true) ?
+					 "have been removed locally (remote state unknown)" :
 					 (mode==HELD)?"held":"released" );
 		} else {
+			fprintf( stderr, "%s", errstack.get_full_text() );
 			fprintf( stderr, 
 					 "Couldn't find/%s all of user %s's job(s).\n",
 					 (mode==REMOVED)?"remove":(mode==HELD)?"hold":
@@ -489,11 +565,16 @@ handleAll()
 	char constraint[128];
 	sprintf( constraint, "%s >= 0", ATTR_CLUSTER_ID );
 
-	if( doWorkByConstraint(constraint) ) {
+	CondorError errstack;
+	if( doWorkByConstraint(constraint, &errstack) ) {
 		fprintf( stdout, "All jobs %s.\n",
-				 (mode==REMOVED)?"marked for removal":
+				 (mode == REMOVED && forceX == false) ?
+				 "marked for removal" :
+				 (mode == REMOVED && forceX == true) ?
+				 "removed locally (remote state unknown)" :
 				 (mode==HELD)?"held":"released" );
 	} else {
+		fprintf( stderr, "%s", errstack.get_full_text() );
 		fprintf( stderr, "Could not %s all jobs.\n",
 				 (mode==REMOVED)?"remove":
 				 (mode==HELD)?"hold":"release" );
@@ -510,11 +591,16 @@ handleConstraints( void )
 	}
 	const char* tmp = global_constraint.Value();
 
-	if( doWorkByConstraint(tmp) ) {
+	CondorError errstack;
+	if( doWorkByConstraint(tmp, &errstack) ) {
 		fprintf( stdout, "Jobs matching constraint %s %s\n", tmp,
-				 (mode==REMOVED)?"have been marked for removal":
+				 (mode == REMOVED && forceX == false) ?
+				 "have been marked for removal" :
+				 (mode == REMOVED && forceX == true) ?
+				 "have been removed locally (remote state unknown)" :
 				 (mode==HELD)?"held":"released" );
 	} else {
+		fprintf( stderr, "%s", errstack.get_full_text() );
 		fprintf( stderr, 
 				 "Couldn't find/%s all jobs matching constraint %s\n",
 				 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release",
@@ -539,7 +625,10 @@ printOldMessage( PROC_ID job_id, action_result_t result )
 	case AR_SUCCESS:
 		fprintf( stdout, "Job %d.%d %s.\n", 
 				 job_id.cluster, job_id.proc, 
-				 (mode==REMOVED)?"marked for removal":
+				 (mode == REMOVED && forceX == false) ?
+				 "marked for removal" :
+				 (mode == REMOVED && forceX == true) ?
+				 "removed locally (remote state unknown)" :
 				 (mode==HELD)?"held":"released" );
 		break;
 
@@ -570,7 +659,10 @@ printOldMessage( PROC_ID job_id, action_result_t result )
 			// the same job over and over again...
 		fprintf( stdout, "Job %d.%d %s.\n", 
 				 job_id.cluster, job_id.proc, 
-				 (mode==REMOVED)?"marked for removal":
+				 (mode == REMOVED && forceX == false) ?
+				 "marked for removal" :
+				 (mode == REMOVED && forceX == true) ?
+				 "removed locally (remote state unknown)" :
 				 (mode==HELD)?"held":"released" );
 		break;
 
@@ -624,3 +716,30 @@ printNewMessages( ClassAd* result_ad, StringList* ids )
 	}
 }
 
+/************************************
+	The following are dummy stubs for the DaemonCore class to allow
+	tools using DCSchedd to link.  DaemonCore is brought in
+	because of the FileTransfer object.
+	These stub functions will become obsoluete once we start linking
+	in the real DaemonCore library with the tools, -or- once
+	FileTransfer is broken down.
+*************************************/
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
+	DaemonCore* daemonCore = NULL;
+	int DaemonCore::Kill_Thread(int) { return 0; }
+//	char * DaemonCore::InfoCommandSinfulString(int) { return NULL; }
+	int DaemonCore::Register_Command(int,char*,CommandHandler,char*,Service*,
+		DCpermission,int) {return 0;}
+	int DaemonCore::Register_Reaper(char*,ReaperHandler,
+		char*,Service*) {return 0;}
+	int DaemonCore::Create_Thread(ThreadStartFunc,void*,Stream*,
+		int) {return 0;}
+	int DaemonCore::Suspend_Thread(int) {return 0;}
+	int DaemonCore::Continue_Thread(int) {return 0;}
+//	int DaemonCore::Register_Reaper(int,char*,ReaperHandler,ReaperHandlercpp,
+//		char*,Service*,int) {return 0;}
+//	int DaemonCore::Register_Reaper(char*,ReaperHandlercpp,
+//		char*,Service*) {return 0;}
+//	int DaemonCore::Register_Command(int,char*,CommandHandlercpp,char*,Service*,
+//		DCpermission,int) {return 0;}
+/**************************************/

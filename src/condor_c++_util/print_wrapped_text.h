@@ -20,12 +20,16 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+#ifndef __PRINT_WRAPPED_TEXT_H
+#define __PRINT_WRAPPED_TEXT_H
 
-
-/** Print some text, wrapping it properly on each line. This is
-    particularly useful when you don't know how long your text
-    will be in advance, like when you have a filename as part of 
-    your text. 
+/** Print a single paragraph of text, wrapping it properly on each
+    line. This is particularly useful when you don't know how long
+    your text will be in advance, like when you have a filename as
+    part of your text.  You should not use tabs or newlines embedded
+    in the string, as that will confuse this method.  Tabs at the
+    beginning and extra newlines at the end are fine, however.  You
+    get a single newline at the end of the paragraph automatically. 
 	@param text The text to print.
 	@param output Where to print the text to, like stdout
 	@param chars_per_line The maximum number of characters to print per line.
@@ -35,3 +39,5 @@ void print_wrapped_text(
     const char *text, 
 	FILE *output, 
 	int chars_per_line = 78);
+
+#endif

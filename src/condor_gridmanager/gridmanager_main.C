@@ -1,15 +1,39 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "basename.h"
 
-#include "sslutils.h"	// for proxy_get_filenames
+#include "globus_utils.h"
 
 #include "gridmanager.h"
 
 
 char *mySubSystem = "GRIDMANAGER";	// used by Daemon Core
+
+char *myUserName = NULL;
 
 // this appears at the bottom of this file
 extern "C" int display_dprintf_header(FILE *fp);
@@ -17,68 +41,11 @@ extern "C" int display_dprintf_header(FILE *fp);
 void
 usage( char *name )
 {
-	dprintf( D_ALWAYS, "Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>] -x <x509_user_proxy>]\n",
+	dprintf( D_ALWAYS, 
+		"Usage: %s [-f] [-b] [-t] [-p <port>] [-s <schedd addr>] [-o <owern@uid-domain>] [-x <x509_user_proxy>] [-C <job constraint>] [-S <scratch dir>]\n",
 		basename( name ) );
 	DC_Exit( 1 );
 }
-
-bool
-main_activate_globus()
-{
-	int err;
-	static int first_time = true;
-
-	// Find the location of our proxy file, if we don't already
-	// know (from the command line)
-	if (X509Proxy == NULL) {
-		proxy_get_filenames(NULL, 1, NULL, NULL, &X509Proxy, NULL, NULL);
-		if ( X509Proxy == NULL ) {
-			dprintf(D_ALWAYS,"Error finding X509 proxy filename. "
-					"Proxy file probably doesn't exist. Aborting.\n");
-			return false;
-		}
-	}
-
-	if(first_time) {
-		char buf[1024];
-		snprintf(buf,1024,"X509_USER_PROXY=%s",X509Proxy);
-		putenv(buf);
-		first_time = false;
-	}		
-
-	if ( GahpMain.Initialize( X509Proxy )  == false ) {
-		dprintf( D_ALWAYS, "Error initializing GAHP\n" );
-		return false;
-	}
-
-	GahpMain.setMode( GahpClient::blocking );
-
-	err = GahpMain.globus_gram_client_callback_allow( gramCallbackHandler,
-													  NULL,
-													  &gramCallbackContact );
-	if ( err != GLOBUS_SUCCESS ) {
-		dprintf( D_ALWAYS, "Error enabling GRAM callback, err=%d - %s\n", 
-			err, GahpMain.globus_gram_client_error_string(err) );
-		return false;
-	}
-
-	err = GahpMain.globus_gass_server_superez_init( &gassServerUrl, 0 );
-	if ( err != GLOBUS_SUCCESS ) {
-		dprintf( D_ALWAYS, "Error enabling GASS server, err=%d\n", err );
-		return false;
-	}
-	dprintf( D_FULLDEBUG, "GASS server URL: %s\n", gassServerUrl );
-
-	return true;
-}
-
-
-bool
-main_deactivate_globus()
-{
-	return true;
-}
-
 
 int
 main_init( int argc, char **argv )
@@ -94,11 +61,23 @@ main_init( int argc, char **argv )
 			usage( argv[0] );
 
 		switch( argv[i][1] ) {
+		case 'C':
+			if ( argc <= i + 1 )
+				usage( argv[0] );
+			ScheddJobConstraint = strdup( argv[i + 1] );
+			i++;
+			break;
 		case 's':
 			// don't check parent for schedd addr. use this one instead
 			if ( argc <= i + 1 )
 				usage( argv[0] );
 			ScheddAddr = strdup( argv[i + 1] );
+			i++;
+			break;
+		case 'S':
+			if ( argc <= i + 1 )
+				usage( argv[0] );
+			GridmanagerScratchDir = strdup( argv[i + 1] );
 			i++;
 			break;
 		case 'x':
@@ -107,6 +86,15 @@ main_init( int argc, char **argv )
 				usage( argv[0] );
 			X509Proxy = strdup( argv[i + 1] );
 			useDefaultProxy = false;
+			i++;
+			break;
+		case 'o':
+			// use a different owner name; this is useful if
+			// Condor-G is running as non-root, and yet
+			// different users are allowed to submit to the schedd.
+			if ( argc <= i + 1 )
+				usage( argv[0] );
+			myUserName = strdup( argv[i + 1] );
 			i++;
 			break;
 		default:
@@ -119,12 +107,6 @@ main_init( int argc, char **argv )
 
 	// Setup dprintf to display pid
 	DebugId = display_dprintf_header;
-
-	// Activate Globus libraries
-	if ( main_activate_globus() == false ) {
-		dprintf(D_ALWAYS,"Failed to activate Globus Libraries\n");
-		DC_Exit(1);
-	}
 
 	Init();
 	Register();
@@ -142,7 +124,6 @@ main_config( bool is_full )
 int
 main_shutdown_fast()
 {
-	main_deactivate_globus();
 	DC_Exit(0);
 	return TRUE;	// to satisfy c++
 }
@@ -150,13 +131,17 @@ main_shutdown_fast()
 int
 main_shutdown_graceful()
 {
-	main_deactivate_globus();
 	DC_Exit(0);
 	return TRUE;	// to satify c++
 }
 
 void
 main_pre_dc_init( int argc, char* argv[] )
+{
+}
+
+void
+main_pre_command_sock_init( )
 {
 }
 
@@ -172,7 +157,7 @@ display_dprintf_header(FILE *fp)
 		mypid = daemonCore->getpid();
 	}
 
-	fprintf( fp, "[%ld] ", mypid );
+	fprintf( fp, "[%ld] ", (long)mypid );
 
 	return TRUE;
 }

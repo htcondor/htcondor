@@ -24,6 +24,9 @@
 #define _CONDOR_USER_PROC_H
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "condor_distribution.h"
+#include "utc_time.h"
+#include "env.h"
 
 class ClassAd;
 
@@ -36,11 +39,10 @@ class UserProc : public Service
 {
 public:
 		/// Constructor
-	UserProc() : JobAd(NULL), JobPid(-1), Cluster(-1), Proc(-1),
-		exit_status(-1), requested_exit(false) {};
+	UserProc() : JobAd(NULL), name(NULL) { initialize(); }; 
 
 		/// Destructor
-	virtual ~UserProc() {};
+	virtual ~UserProc();
 
 		/** Pure virtual functions: */
 			//@{
@@ -61,18 +63,24 @@ public:
 	virtual int JobCleanup(int pid, int status) = 0;
 
 		/** Job exits.  Starter has decided it's done with everything
-			it needs to do, and we can now tell the shadow we've
-			exited so the job can leave the queue.
+			it needs to do, and we can now notify the job's controller
+			we've exited so it can do whatever it wants to.
 		    @return true on success, false on failure
-		*/ 
+		*/
 	virtual bool JobExit( void ) = 0;
 
 		/** Publish all attributes we care about for updating the
-			shadow into the given ClassAd.
+			job controller into the given ClassAd.
 			@param ad pointer to the classad to publish into
 			@return true if success, false if failure
 		*/
-	virtual bool PublishUpdateAd( ClassAd* ad ) = 0;
+	virtual bool PublishUpdateAd( ClassAd* ad );
+
+		/** Put all the environment variables we'd want for other
+			procs into the given Env object.
+			@param proc_env The environment to publish to
+		*/
+	virtual void PublishToEnv( Env* proc_env );
 
 		/** Suspend. */
 	virtual void Suspend() = 0;
@@ -108,12 +116,32 @@ public:
 	bool RequestedExit( void ) { return requested_exit; };
 
 protected:
+
+	void initialize( void );
+
 	ClassAd *JobAd;
 	int JobPid;
-	int Cluster;
-	int Proc;
 	int exit_status;
 	bool requested_exit;
+
+		/** This is the identifier for this UserProc.  It's used for
+			dprintf messages() and in some cases as a prefix for
+			ClassAd attribute names.  For regular job procs, it's left
+			as NULL, but for PRE/POST ScriptProc objects, it's got a
+			real value...
+		*/
+	char* name;
+
+	int soft_kill_sig;
+	int rm_kill_sig;
+
+	UtcTime job_start_time;
+	UtcTime job_exit_time;
+
+private:
+
+	void initKillSigs( void );
+
 };
 
 #endif /* _CONDOR_USER_PROC_H */

@@ -45,6 +45,7 @@ extern char		*_condor_DebugFlagNames[];
 extern int		_condor_dprintf_works;
 
 extern void		_condor_set_debug_flags( char *strflags );
+extern void		_condor_dprintf_saved_lines( void );
 
 FILE *open_debug_file( int debug_level, char flags[] );
 
@@ -177,5 +178,6 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 
 	first_time = 0;
 	_condor_dprintf_works = 1;
+	_condor_dprintf_saved_lines();
 }
 

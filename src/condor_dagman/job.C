@@ -3,7 +3,7 @@
  *
  * See LICENSE.TXT for additional notices and disclaimers.
  *
- * Copyright (c)1990-2001 CONDOR Team, Computer Sciences Department, 
+ * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
@@ -25,6 +25,7 @@
 #include "job.h"
 #include "condor_string.h"
 #include "condor_debug.h"
+#include "read_multiple_logs.h"
 
 //---------------------------------------------------------------------------
 JobID_t Job::_jobID_counter = 0;  // Initialize the static data memeber
@@ -37,6 +38,7 @@ const char *Job::queue_t_names[] = {
 };
 
 //---------------------------------------------------------------------------
+// NOTE: this must be kept in sync with the status_t enum
 const char * Job::status_t_names[] = {
     "STATUS_READY    ",
     "STATUS_PRERUN   ",
@@ -48,15 +50,21 @@ const char * Job::status_t_names[] = {
 
 //---------------------------------------------------------------------------
 Job::~Job() {
-    delete [] _cmdFile;
-    delete [] _jobName;
+	delete [] _cmdFile;
+	delete [] _jobName;
+	delete [] _logFile;
+	delete varNamesFromDag;
+	delete varValsFromDag;
 }
 
 //---------------------------------------------------------------------------
 Job::Job (const char *jobName, const char *cmdFile):
+	job_type (CONDOR_JOB),
     _scriptPre  (NULL),
     _scriptPost (NULL),
-    _Status     (STATUS_READY)
+    _Status     (STATUS_READY),
+	countedAsDone (false),
+	_waitingCount (0)
 {
 	ASSERT( jobName != NULL );
 	ASSERT( cmdFile != NULL );
@@ -71,6 +79,12 @@ Job::Job (const char *jobName, const char *cmdFile):
     retry_max = 0;
     retries = 0;
 	_visited = false;
+
+    MyString logFile = ReadMultipleUserLogs::loadLogFileNameFromSubFile(_cmdFile);
+    _logFile = strnewp (logFile.Value());
+
+	varNamesFromDag = new List<MyString>;
+	varValsFromDag = new List<MyString>;
 }
 
 //---------------------------------------------------------------------------
@@ -106,12 +120,28 @@ void Job::Dump () const {
 	if( retry_max > 0 ) {
 		dprintf( D_ALWAYS, "          Retry: %d\n", retry_max );
 	}
+	//-->DAP
 	if( _CondorID._cluster == -1 ) {
-		dprintf( D_ALWAYS, "  Condor Job ID: [not yet submitted]\n" );
-	} else {
-		dprintf( D_ALWAYS, "  Condor Job ID: (%d.%d.%d)\n", _CondorID._cluster,
-				 _CondorID._proc, _CondorID._subproc );
+	  if (job_type == CONDOR_JOB){
+	    dprintf( D_ALWAYS, "  Condor Job ID: [not yet submitted]\n" );
+	  }
+	  else if (job_type == DAP_JOB){
+	    dprintf( D_ALWAYS, "     DaP Job ID: [not yet submitted]\n" );
+	  }
 	}
+	else {
+	  if (job_type == CONDOR_JOB){
+	  dprintf( D_ALWAYS, "  Condor Job ID: (%d.%d.%d)\n", _CondorID._cluster,
+		   _CondorID._proc, _CondorID._subproc );
+	  }
+	  else if (job_type == DAP_JOB){
+	    dprintf( D_ALWAYS, "     DaP Job ID: (%d)\n", _CondorID._cluster);
+	  }
+	}
+	//<--DAP
+
+
+
   
     for (int i = 0 ; i < 3 ; i++) {
         dprintf( D_ALWAYS, "%15s: ", queue_t_names[i] );
@@ -137,4 +167,243 @@ void Job::Print (bool condorID) const {
 void job_print (Job * job, bool condorID) {
     if (job == NULL) dprintf( D_ALWAYS, "(UNKNOWN)");
     else job->Print(condorID);
+}
+
+const char*
+Job::GetPreScriptName() const
+{
+	if( !_scriptPre ) {
+		return NULL;
+	}
+	return _scriptPre->GetCmd();
+}
+
+const char*
+Job::GetPostScriptName() const
+{
+	if( !_scriptPost ) {
+		return NULL;
+	}
+	return _scriptPost->GetCmd();
+}
+
+bool
+Job::SanityCheck() const
+{
+	bool result = true;
+
+	if( _waitingCount < 0 ) {
+		dprintf( D_ALWAYS, "BADNESS 10000: _waitingCount = %d\n",
+				 _waitingCount );
+		result = false;
+	}
+
+	if( countedAsDone == true && _Status != STATUS_DONE ) {
+		dprintf( D_ALWAYS, "BADNESS 10000: countedAsDone == true but "
+				 "_Status != STATUS_DONE\n" );
+		result = false;
+	}
+
+		// TODO:
+		//
+		// - make sure # of parents whose state != done+success is
+		// equal to waitingCount
+		//
+		// - make sure no job appear twice in the DAG
+		// 
+		// - verify parent/child symmetry across entire DAG
+
+	return result;
+}
+
+Job::status_t
+Job::GetStatus() const
+{
+	return _Status;
+}
+
+bool
+Job::AddParent( Job* parent )
+{
+	ASSERT( parent != NULL );
+
+		// we don't currently allow a new parent to be added to a
+		// child that has already been started (unless the parent is
+		// already marked STATUS_DONE, e.g., when rebuilding from a
+		// rescue DAG) -- but this restriction might be lifted in the
+		// future once we figure out the right way for the DAG to
+		// respond...
+	if( _Status != STATUS_READY && parent->GetStatus() != STATUS_DONE ) {
+		debug_printf( DEBUG_QUIET, "ERROR: Job::AddParent(): can't add a new "
+					  "%s parent node (%s) to a %s child (%s)!\n",
+					  parent->GetStatusName(), parent->GetJobName(),
+					  this->GetStatusName(), this->GetJobName() );
+		return false;
+	}
+
+	if( !Add( Q_PARENTS, parent->GetJobID() ) ) {
+		return false;
+	}
+    if( !Add( Q_WAITING, parent->GetJobID() ) ) {
+		return false;
+	}
+	_waitingCount++;
+    return true;
+}
+
+bool
+Job::AddChild( Job* child )
+{
+    ASSERT( child  != NULL );
+    if( !Add( Q_CHILDREN, child->GetJobID() ) ) {
+		return false;
+	}
+	return true;
+}
+
+bool
+Job::TerminateSuccess()
+{
+	_Status = STATUS_DONE;
+	return true;
+} 
+
+bool
+Job::TerminateFailure()
+{
+	_Status = STATUS_ERROR;
+	return true;
+} 
+
+bool
+Job::Add( const queue_t queue, const JobID_t jobID )
+{
+	if( _queues[queue].IsMember( jobID ) ) {
+		dprintf( D_ALWAYS,
+				 "ERROR: can't add Job ID %d to DAG: already present!",
+				 jobID );
+		return false;
+	}
+	return _queues[queue].Append(jobID);
+}
+
+bool
+Job::AddPreScript( const char *cmd, MyString &whynot )
+{
+	return AddScript( false, cmd, whynot );
+}
+
+bool
+Job::AddPostScript( const char *cmd, MyString &whynot )
+{
+	return AddScript( true, cmd, whynot );
+}
+
+bool
+Job::AddScript( bool post, const char *cmd, MyString &whynot )
+{
+	if( !cmd || strcmp( cmd, "" ) == 0 ) {
+		whynot = "missing script name";
+		return false;
+	}
+	if( post ? _scriptPost : _scriptPre ) {
+		whynot.sprintf( "%s script already assigned (%s)",
+						post ? "POST" : "PRE", GetPreScriptName() );
+		return false;
+	}
+	Script* script = new Script( post, cmd, _jobName );
+	if( !script ) {
+		dprintf( D_ALWAYS, "ERROR: out of memory!\n" );
+			// we already know we're out of memory, so filling in
+			// whynot will likely fail, but give it a shot...
+		whynot = "out of memory!";
+		return false;
+	}
+	if( post ) {
+		_scriptPost = script;
+	}
+	else {
+		_scriptPre = script;
+	}
+	whynot = "n/a";
+	return true;
+}
+
+bool
+Job::IsActive() const
+{
+	if( _Status == STATUS_PRERUN ||
+		_Status == STATUS_SUBMITTED ||
+		_Status == STATUS_POSTRUN ) {
+		return true;
+	}
+	return false;
+}
+
+const char*
+Job::GetStatusName() const
+{
+	return status_t_names[_Status];
+}
+
+
+bool
+Job::HasChild( Job* child ) {
+	if( !child ) {
+		return false;
+	}
+	return _queues[Q_CHILDREN].IsMember( child->GetJobID() );
+}
+
+bool
+Job::HasParent( Job* parent ) {
+	if( !parent ) {
+		return false;
+	}
+	return _queues[Q_PARENTS].IsMember( parent->GetJobID() );
+}
+
+
+bool
+Job::RemoveChild( Job* child, MyString &whynot )
+{
+	if( !child ) {
+		whynot = "child == NULL";
+		return false;
+	}
+	return RemoveDependency( Q_CHILDREN, child->GetJobID(), whynot );
+}
+
+bool
+Job::RemoveParent( Job* parent, MyString &whynot )
+{
+	if( !parent ) {
+		whynot = "parent == NULL";
+		return false;
+	}
+	return RemoveDependency( Q_PARENTS, parent->GetJobID(), whynot );
+}
+
+bool
+Job::RemoveDependency( queue_t queue, JobID_t job )
+{
+	MyString whynot;
+	return RemoveDependency( queue, job, whynot );
+}
+
+bool
+Job::RemoveDependency( queue_t queue, JobID_t job, MyString &whynot )
+{
+	JobID_t candidate;
+    _queues[queue].Rewind();
+    while( _queues[queue].Next( candidate ) ) {
+        if( candidate == job ) {
+            _queues[queue].DeleteCurrent();
+			ASSERT( _queues[queue].IsMember( job ) == false );
+			whynot = "n/a";
+			return true;
+        }
+    }
+	whynot = "no such dependency";
+	return false;
 }

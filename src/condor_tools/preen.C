@@ -41,7 +41,6 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "my_hostname.h"
-#include "get_daemon_addr.h"
 #include "condor_state.h"
 #include "sig_install.h"
 #include "condor_email.h"
@@ -98,8 +97,6 @@ usage()
 int
 main( int argc, char *argv[] )
 {
-	char *str;
-
 #ifndef WIN32
 		// Ignore SIGPIPE so if we cannot connect to a daemon we do
 		// not blowup with a sig 13.
@@ -171,8 +168,7 @@ produce_output()
 {
 	char	*str;
 	FILE	*mailer;
-	char	cmd[ 1024 ];
-	char	*subject = "Junk Condor Files";
+	char	*subject = "condor_preen results";
 
 	if( MailFlag ) {
 		if( (mailer=email_open(PreenAdmin, subject)) == NULL ) {
@@ -185,21 +181,31 @@ produce_output()
 	if( MailFlag ) {
 		fprintf( mailer, "\n" );
 		fprintf( mailer,
-			"These files should be removed from <%s>:\n\n", my_hostname()
-		);
+			 "The condor_preen process has found the following\n"
+			 "stale condor files on <%s>:\n\n", my_hostname() );
 	}
 
-	for( BadFiles->rewind(); str = BadFiles->next(); ) {
-		fprintf( mailer, "%s\n", str );
+	for( BadFiles->rewind(); (str = BadFiles->next()); ) {
+		fprintf( mailer, "  %s\n", str );
 	}
 
 	if( MailFlag ) {
+		char *explanation = "\n\nWhat is condor_preen?\n\n"
+"The condor_preen tool examines the directories belonging to Condor, and\n"
+"removes extraneous files and directories which may be left over from Condor\n"
+"processes which terminated abnormally either due to internal errors or a\n"
+"system crash.  The directories checked are the LOG, EXECUTE, and SPOOL\n"
+"directories as defined in the Condor configuration files.  The condor_preen\n"
+"tool is intended to be run as user root (or user condor) periodically as a\n"
+"backup method to ensure reasonable file system cleanliness in the face of\n"
+"errors. This is done automatically by default by the condor_master daemon.\n"
+"It may also be explicitly invoked on an as needed basis.\n\n"
+"See the condor manual section on condor_preen for more details.\n";
+
+		fprintf( mailer, "%s\n", explanation );
 		email_close( mailer );
 	}
-
 }
-
-
 
 
 /*
@@ -227,7 +233,7 @@ check_spool_dir()
 	}
 
 		// Check each file in the directory
-	while( f = dir.Next() ) {
+	while( (f = dir.Next()) ) {
 			// see if it's on the list
 		if( well_known_list.contains(f) ) {
 			good_file( Spool, f );
@@ -295,7 +301,7 @@ grab_val( const char *str, const char *pattern )
 {
 	char	*ptr;
 
-	if( ptr = strstr(str,pattern) ) {
+	if( (ptr = strstr(str,pattern)) ) {
 		return atoi(ptr + strlen(pattern) );
 	}
 	return -1;
@@ -355,10 +361,6 @@ is_v3_ckpt( const char *name )
 		return proc_exists( cluster, proc );
 	}
 }
-
-static BOOLEAN	__exists;
-static int		__cluster;
-static int		__proc;
 
 /*
   Check to see whether a given cluster number exists in the job queue.
@@ -435,7 +437,7 @@ check_execute_dir()
 		return;
 	}
 
-	while( f = dir.Next() ) {
+	while( (f = dir.Next()) ) {
 		if( busy ) {
 			good_file( Execute, f );	// let anything go here
 		} else {
@@ -457,7 +459,7 @@ check_log_dir()
 
 	invalid.initializeFromString (InvalidLogFiles);
 
-	while( f = dir.Next() ) {
+	while( (f = dir.Next()) ) {
 		if( invalid.contains(f) ) {
 			bad_file( Log, f, dir );
 		} else {
@@ -556,20 +558,20 @@ bad_file( const char *dirpath, const char *name, Directory & dir )
 State
 get_machine_state()
 {
-	char* addr = get_startd_addr(0);
 	char* state_str = NULL;
 	State s;
 
-	if( !addr ) {
+	ReliSock* sock;
+	Daemon my_startd( DT_STARTD );
+	if( ! my_startd.locate() ) {
 		dprintf( D_ALWAYS, "Can't find local startd address.\n" );
 		return _error_state_;
 	}
-
-	ReliSock* sock;
-
-	Daemon my_startd (DT_STARTD, addr, NULL);
-	if (!(sock = (ReliSock*)my_startd.startCommand( GIVE_STATE, Stream::reli_sock, 0 ))) {
-		dprintf( D_ALWAYS, "Can't connect to startd at %s\n", addr );
+   
+	if( !(sock = (ReliSock*)
+		  my_startd.startCommand(GIVE_STATE, Stream::reli_sock, 0)) ) {
+		dprintf( D_ALWAYS, "Can't connect to startd at %s\n", 
+				 my_startd.addr() );
 		return _error_state_;
 	}
 

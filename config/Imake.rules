@@ -503,7 +503,7 @@ afs_##name##:: strip_##type##/##name			@@\
 							@@\
 strip_##type##/##name##: stripped			@@\
 	/bin/rm -f strip_##type##/##name		@@\
-	cd strip_##type##; tar -cvf name --owner=root --group=root files
+	cd strip_##type##; tar -cvf name --owner=root --group=0 files
 #endif /* strip_full_tarball */
 
 #ifndef static_full_tarball
@@ -516,7 +516,7 @@ afs_##name##:: static_##type##/##name			@@\
 							@@\
 static_##type##/##name##: static			@@\
 	/bin/rm -f static_##type##/##name		@@\
-	cd static_##type##; tar -cvf name --owner=root --group=root files
+	cd static_##type##; tar -cvf name --owner=root --group=0 files
 #else 
 #define static_full_tarball( name, files, type ) /* NULL MACRO */
 #endif /* HAS_STATIC */
@@ -569,13 +569,13 @@ static_dir/##name##: static					@@\
 
 #define	pure_c_plus_target( program, objlist, libs )	@@\
 ##program: objlist libs					@@\
-	purify -g++=yes PureCollector purecov -g++=yes PureCollector $(CC_LINK) $(NON_INST_C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)	@@\
+	purify -g++=yes -chain-length=50 PureCollector purecov -g++=yes PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)	@@\
 clean::							@@\
 	rm -f program objlist
 
 #define	purify_c_plus_target( program, objlist, libs )	@@\
 ##program: objlist libs					@@\
-	purify -g++=yes PureCollector $(CC_LINK) $(NON_INST_C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)	@@\
+	purify -g++=yes -chain-length=50 PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)	@@\
 clean::							@@\
 	rm -f program objlist
 

@@ -28,8 +28,9 @@
 #include "stdio.h"
 #include "math.h"
 
-int virt_memory_test(int test_blocksize, double perc_sd_variation_ok, 
-				double perc_failed_test_blocks_ok)
+int virt_memory_test(int	test_blocksize,
+					 double max_sd_varation_ratio, 
+					 double max_failed_test_ratio)
 {
 	int foo,  bar;
 	int	return_val = 0;
@@ -46,12 +47,12 @@ int virt_memory_test(int test_blocksize, double perc_sd_variation_ok,
 	dprintf(D_ALWAYS, "        I will test sysapi_swap_space (and sysapi_swap_space_raw) in "
 					"blocks of %d tests, and take the standard\n", test_blocksize);
 	dprintf(D_ALWAYS, "        deviation of those test blocks. If the standard deviation is "
-					"above %d%% of the average,\n", perc_sd_variation_ok);
+					"above %d%% of the average,\n", max_sd_varation_ratio);
 	dprintf(D_ALWAYS, "        the swap space reported are erratic and the test block is "
 					"considered a failure\n");
 	dprintf(D_ALWAYS, "        I will run %d test blocks, and if more than %d%% of those blocks "
 					"fail, this entire test fails.\n", test_blocksize, 
-					perc_failed_test_blocks_ok*100);
+					max_failed_test_ratio*100);
 
 	foo = sysapi_swap_space_raw();
 	dprintf(D_ALWAYS, "SysAPI: Initial sysapi_swap_space_raw -> %d\n", foo);
@@ -82,10 +83,10 @@ int virt_memory_test(int test_blocksize, double perc_sd_variation_ok,
 		/* Test if there were any unusually large jumps in the means of the testblocks */
 		num_tests++;
 		if (i > 0) {
-			if (perc_sd_variation_ok < fabs((raw_testblocks_mean[i]/raw_testblocks_mean[i-1])-1)) {
+			if (max_sd_varation_ratio < fabs((raw_testblocks_mean[i]/raw_testblocks_mean[i-1])-1)) {
 				dprintf(D_ALWAYS, "SysAPI: WARNING: Raw testblock %d's value was more than "
 								"%2.2f%% different from the previous testblock - something "
-								"changed dramatically.\n", i, perc_sd_variation_ok*100);
+								"changed dramatically.\n", i, max_sd_varation_ratio*100);
 				num_warnings++;
 			}
 		}
@@ -102,18 +103,18 @@ int virt_memory_test(int test_blocksize, double perc_sd_variation_ok,
 						i, (int)raw_testblocks_sd[i]);
 
 		num_tests++;
-		if (raw_testblocks_sd[i] > perc_sd_variation_ok*mean) {
+		if (raw_testblocks_sd[i] > max_sd_varation_ratio*mean) {
 			dprintf(D_ALWAYS, "SysAPI: WARNING: Raw testblock %d had a standard deviation of %d, "
 							"which is more than %2.2f%% of the mean.\n", i, 
-							(int)raw_testblocks_sd[i], perc_sd_variation_ok*100);
+							(int)raw_testblocks_sd[i], max_sd_varation_ratio*100);
 			num_warnings++;
 		}
 	}
 
-	if (((double)num_warnings/(double)num_tests) > perc_sd_variation_ok) {
+	if (((double)num_warnings/(double)num_tests) > max_sd_varation_ratio) {
 			dprintf(D_ALWAYS, "SysAPI: ERROR! Failing because %d of the raw testblocks failed, "
 							"which is more than %d (%2.2f%%).\n", num_warnings,
-							perc_sd_variation_ok*test_blocksize, perc_sd_variation_ok*100);
+							max_sd_varation_ratio*test_blocksize, max_sd_varation_ratio*100);
 			return_val = return_val | 1;
 	}
 	dprintf(D_ALWAYS, "\n\n");
@@ -148,10 +149,10 @@ int virt_memory_test(int test_blocksize, double perc_sd_variation_ok,
 		/* Test if there were any unusually large jumps in the means of the testblocks */
 		num_tests++;
 		if (i > 0) {
-			if (perc_sd_variation_ok < fabs((testblocks_mean[i]/testblocks_mean[i-1])-1)) {
+			if (max_sd_varation_ratio < fabs((testblocks_mean[i]/testblocks_mean[i-1])-1)) {
 				dprintf(D_ALWAYS, "SysAPI: WARNING: Cooked testblock %d's value was more than "
 								"%2.2f%% different from the previous testblock - something "
-								"changed dramatically.\n", i, perc_sd_variation_ok*100);
+								"changed dramatically.\n", i, max_sd_varation_ratio*100);
 				num_warnings++;
 			}
 		}
@@ -163,18 +164,18 @@ int virt_memory_test(int test_blocksize, double perc_sd_variation_ok,
 						i, (int)testblocks_sd[i]);
 
 		num_tests++;
-		if (testblocks_sd[i] > perc_sd_variation_ok*mean) {
+		if (testblocks_sd[i] > max_sd_varation_ratio*mean) {
 			dprintf(D_ALWAYS, "SysAPI: WARNING: Testblock %d had a standard deviation of %d KB, "
 							"which is more than %2.2f%% of the mean.\n", i, (int)testblocks_sd[i], 
-							perc_sd_variation_ok*100);
+							max_sd_varation_ratio*100);
 			num_warnings++;
 		}
 	}
 
-	if (((double)num_warnings/(double)num_tests) > perc_sd_variation_ok) {
+	if (((double)num_warnings/(double)num_tests) > max_sd_varation_ratio) {
 			dprintf(D_ALWAYS, "SysAPI: ERROR! Failing because %d of the cooked testblocks failed, "
 							"which is more than %d (%2.2f%%).\n", num_warnings, 
-							perc_sd_variation_ok*test_blocksize, perc_sd_variation_ok*100);
+							max_sd_varation_ratio*test_blocksize, max_sd_varation_ratio*100);
 			return_val = return_val | 1;
 	}
 	return return_val;

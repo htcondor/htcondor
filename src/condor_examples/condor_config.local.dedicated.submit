@@ -39,14 +39,3 @@
 ## configured to only run jobs, you should probably set this attribute
 ## to '0'
 #UNUSED_CLAIM_TIMEOUT = 600
-
-
-######################################################################
-######################################################################
-##  Settings you should probably leave alone:
-##  (unless you know what you're doing)
-######################################################################
-######################################################################
-
-## The path to the shadow binary that manages MPI jobs
-SHADOW_MPI		= $(SBIN)/condor_shadow.v63

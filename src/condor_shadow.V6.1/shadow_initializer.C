@@ -10,6 +10,8 @@
 #include "shadow.h"
 #include "mpishadow.h"
 
+#include "parallelshadow.h"
+
 ShadowInitializer::ShadowInitializer(int argc, char **argv) :
 	m_jobAd(NULL), m_argc(argc), m_argv(argv), m_accept_id(-1), m_acquire_id(-1)
 {
@@ -126,6 +128,9 @@ void ShadowInitializer::ShadowInitialize(void)
 	case CONDOR_UNIVERSE_MPI:
 		Shadow = new MPIShadow();
 		break;
+	case CONDOR_UNIVERSE_PARALLEL:
+		Shadow = new ParallelShadow();
+		break;
 	case CONDOR_UNIVERSE_PVM:
 			// some day we'll support this.  for now, fall through and
 			// print out an error message that might mean something to
@@ -138,9 +143,7 @@ void ShadowInitializer::ShadowInitialize(void)
 				 CondorUniverseName(universe) );
 		EXCEPT( "Universe not supported" );
 	}
-	
+
 	Shadow->init( m_jobAd, m_argv[1], m_argv[2], m_argv[3], m_argv[4], 
 				  m_argv[5] ); 
 }
-
-

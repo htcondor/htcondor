@@ -52,6 +52,8 @@ new ClassAds are deployed.
 
 int filename_remap_find( const char *input, const char *filename, char *output );
 
+void canonicalize_dir_delimiters( char *path );
+
 END_C_DECLS
 
 #endif

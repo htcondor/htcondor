@@ -127,6 +127,13 @@ EXTRACT = FORK.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  GETCWD.o GETRUSAGE.o \
 		  SYSCONF.o GETLOGIN.o LSEEK64.o GETMNTENT.o TSDALLOC.o \
 		  GETPAGESIZE.o
+#	elif IS_SUN4X_SOLARIS29
+EXTRACT = FORK.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
+		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o \
+		  GETCWD.o GETRUSAGE.o \
+		  SYSCONF.o GETLOGIN.o LSEEK64.o OPENDIR.o \
+		  GETPAGESIZE.o
+#	elif IS_IRIX
 #	elif IS_IRIX
 EXTRACT = /* don't extract anything */
 #	else
@@ -211,7 +218,12 @@ CKPT_OBJ = $(FILE_TABLE_OBJ) syscall_mode.o eprintf.o shared_utils.o condor_erro
 
 #if DOES_COMPRESS_CKPT
 #if IS_SUN4X_SOLARIS
+#if IS_SOLARIS29
+/* _rem.o, _div.o, umultiply.o were consolidated into hwmuldiv.o in sol 2.9 */
+COMPRESS_OBJ = malloc-condor.o zimage.o hwmuldiv.o
+#else
 COMPRESS_OBJ = malloc-condor.o zimage.o _rem.o _div.o umultiply.o
+#endif
 #else
 COMPRESS_OBJ = malloc-condor.o zimage.o
 #endif
@@ -243,7 +255,7 @@ IO_OBJ = stream.o sock.o safe_sock.o reli_sock.o buffers.o $(CONDOR_TYPE_OBJ) co
 
 OPENSSL_OBJ = md5_dgst.o md5_one.o rand_lib.o md_rand.o sha1dgst.o cryptlib.o \
 	buffer.o stack.o err.o lhash.o mem.o rand_win.o mem_dbg.o b_print.o \
-	bio_lib.o bss_file.o ex_data.o
+	bio_lib.o bss_file.o ex_data.o mem_clr.o
 
 #if defined(CONDOR_ENCRYPTION) || defined(CONDOR_MD)
 CONDOR_CRYPT_OBJ = CryptKey.o condor_crypt.o condor_md.o ../condor_util_lib/get_random_num.o \
@@ -265,7 +277,7 @@ SIMPLE_OBJ = condor_rt0.o extern_path.o xfer_file.o libcondorc++support.a
 SYSCALL_LIB = libcondorsyscall.a
 
 #if DOES_REMOTE_SYSCALLS
-all_target($(SYSCALL_LIB) $(COMPRESS_LIB) receivers.o $(SIMPLE_OBJ) $(AIX_OBJ) syscall-list libz.a )
+all_target($(SYSCALL_LIB) $(COMPRESS_LIB) receivers.o $(SIMPLE_OBJ) $(AIX_OBJ) syscall-list libz.a)
 #else 
 all_target($(SYSCALL_SUPPORT_OBJ) extern_path.o file_stream.o)
 #endif
@@ -371,7 +383,31 @@ TSDALLOC.o: ToUpper $(SIMPLE_LIBC)
 	./ToUpper tsdalloc.o tsdalloc2.o _free_tsdbuf _FREE_TSDBUF
 	./ToUpper tsdalloc2.o TSDALLOC.o _tsdbufalloc _TSDBUFALLOC
 	rm -f tsdalloc.o tsdalloc2.o
+
+#elif IS_SOLARIS29
+/* I'm sorry about this mess. GETCWD.o now calls something inside
+	of opendir.o which normally wouldn't be a problem... except for some
+	reason libc.so declares opendir.o functions as private, whereas libc.a
+	declares them as global. So This means we may not dynamically link with 
+	them from the extracted GETCWD. So, *sigh* I must extract and rename the 
+	local functions from opendir.o and fix up the sol 2.9 version of 
+	getcwd to reflect that I want to call my version of OPENDIR_STAT. 
+	-pete 11-04-2002 */
+GETCWD.o: ToUpper $(SIMPLE_LIBC)
+	ar x $(SIMPLE_LIBC) getcwd.o
+	./ToUpper getcwd.o getcwd2.o opendir_stat OPENDIR_STAT
+	./ToUpper getcwd2.o GETCWD.o getcwd GETCWD
+	rm -f getcwd.o getcwd2.o
+
+OPENDIR.o : ToUpper $(SIMPLE_LIBC)
+	ar x $(SIMPLE_LIBC) opendir.o
+	./ToUpper opendir.o opendir2.o _dirent_lock _DIRENT_LOCK
+	./ToUpper opendir2.o opendir3.o opendir OPENDIR
+	./ToUpper opendir3.o OPENDIR.o OPENDIR_stat OPENDIR_STAT
+	rm -f opendir.o opendir2.o opendir3.o 
+
 #else
+
 uppercase_target($(SIMPLE_LIBC),getcwd.o,GETCWD.o,getcwd,GETCWD)
 #endif
 
@@ -403,7 +439,7 @@ VFORK.o : ToUpper $(SIMPLE_LIBC)
 uppercase_target($(SIMPLE_LIBC),vfork.o,VFORK.o,fork,VFORK)
 #endif
 
-#if IS_SOLARIS26 || IS_SOLARIS27 || IS_SOLARIS28
+#if IS_SOLARIS26 || IS_SOLARIS27 || IS_SOLARIS28 || IS_SOLARIS29
 uppercase_target($(SIMPLE_LIBC),lseek64.o,LSEEK64.o,lseek64,LSEEK64)
 #endif
 
@@ -468,10 +504,11 @@ static_copy_target(condor_rt0.o,$(STATIC_DIR)/lib,condor_rt0.o,OBJECT_MODE)
 clean::
 	rm -f libcondorsyscall.a
 
-libcondorsyscall.a: libtmp.a ToUpper
 #   if (IS_X86_SOLARIS)
+libcondorsyscall.a: libtmp.a ToUpper
 	./ToUpper libtmp.a libcondorsyscall.a __cerror __CERROR
 #   else /* GLIBC Linux */
+libcondorsyscall.a: libtmp.a ToUpper
 	./ToUpper libtmp.a libcondorsyscall.a __syscall_error __SYSCALL_ERROR
 #   endif /* Solaris */
 #else /* Not GLIBC Linux or Intel Solaris */
@@ -485,9 +522,9 @@ static_library(libcondorsyscall.a,$(STATIC_DIR)/lib)
 #endif
 
 #if DOES_CHECKPOINTING || DOES_REMOTE_SYSCALLS
-release_library(libz.a, $(RELEASE_DIR)/lib)
-strip_library(libz.a, $(STRIP_DIR)/lib)
-static_library(libz.a, $(STATIC_DIR)/lib)
+release_library(libz.a,$(RELEASE_DIR)/lib)
+strip_library(libz.a,$(STRIP_DIR)/lib)
+static_library(libz.a,$(STATIC_DIR)/lib)
 #endif
 
 #if DOES_COMPRESS_CKPT
@@ -516,17 +553,23 @@ STUB_GEN_PLATFORM = -DSolaris26
 STUB_GEN_PLATFORM = -DSolaris27
 #elif IS_SOLARIS28
 STUB_GEN_PLATFORM = -DSolaris28
+#elif IS_SOLARIS29
+STUB_GEN_PLATFORM = -DSolaris29
 #elif IS_HPUX10
 STUB_GEN_PLATFORM = -DHPUX10
 #elif IS_IRIX62
 STUB_GEN_PLATFORM = -DIRIX62
 #elif IS_IRIX65
 STUB_GEN_PLATFORM = -DIRIX65
+#elif IS_DUX4
+STUB_GEN_PLATFORM = -DDUX4
+#elif IS_DUX5
+STUB_GEN_PLATFORM = -DDUX5
 #endif
 
 STUB_GEN_FLAGS = $(STUB_GEN_PLATFORM) $(DL_EXTRACT) -D$(OS) \
 	$(SAVE_SIGSTATE) $(FILE_TABLE) $(REMOTE_SYSCALLS) $(CLIP) \
-	$(HAS_64BIT_SYSCALLS) $(HAS_64BIT_STRUCTS) -Wall
+	$(HAS_64BIT_SYSCALLS) $(HAS_64BIT_STRUCTS)
 
 switches.C: syscall.tmpl switches.prologue stub_gen switches.epilogue
 	$(CPP) -DSWITCH $(STUB_GEN_FLAGS) -I../condor_includes syscall.tmpl | \
@@ -563,10 +606,10 @@ import(../condor_ckpt,condor_rt0.o)
 import(../condor_ckpt,$(CKPT_OBJ))
 import(../condor_ckpt,$(COMPRESS_OBJ))
 import(../h,syscall_numbers.c)
-import(../condor_util_lib, stub_gen)
-import(../condor_shadow.V6, pseudo_ops.h)
+import(../condor_util_lib,stub_gen)
+import(../condor_shadow.V6,pseudo_ops.h)
 import(../condor_ckpt,libcondorc++support.a)
-import( ZLibPath , libz.a )
+import(ZLibPath,libz.a)
 
 authentication.o: ../condor_io/authentication.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
@@ -616,5 +659,5 @@ remote_syscall.C switches.special.C syscall_connect.C xfer_file.c
 depend_source_target($(DEPEND_SRC))
 
 #if CONDOR_ENCRYPTION
-obj_extract( $(OPENSSL_MD_LIB), $(OPENSSL_OBJ) )
+obj_extract($(OPENSSL_MD_LIB),$(OPENSSL_OBJ))
 #endif

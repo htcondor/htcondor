@@ -31,6 +31,13 @@
 #include "vanilla_proc.h"
 #include "starter.h"
 #include "syscall_numbers.h"
+#include "dynuser.h"
+#include "condor_config.h"
+#include "domain_tools.h"
+
+#ifdef WIN32
+extern dynuser* myDynuser;
+#endif
 
 extern CStarter *Starter;
 
@@ -62,11 +69,11 @@ VanillaProc::StartJob()
 	// edit the ad so we start up a shell, pass the executable as
 	// an argument to the shell, if we are asked to run a .bat file.
 #ifdef WIN32
-	char argstmp[_POSIX_ARG_MAX];
+
 	char systemshell[_POSIX_PATH_MAX];
 	char tmp[_POSIX_PATH_MAX];
 
-	char* jobtmp = Starter->GetOrigJobName();
+	const char* jobtmp = Starter->jic->origJobName();
 	int joblen = strlen(jobtmp);
 	if ( joblen > 5 && 
 			( (stricmp(".bat",&(jobtmp[joblen-4])) == 0) || 
@@ -80,14 +87,40 @@ VanillaProc::StartJob()
 
 		// now change arguments to include name of program cmd.exe 
 		// should run
-		if (JobAd->LookupString(ATTR_JOB_ARGUMENTS,argstmp) != 1) {
-			argstmp[0] = '\0';
+
+		// this little piece of code preserves the backwhacking of quotes,
+		// so when it's re-inserted into the JobAd any original backwhacks are still there.
+		ExprTree  *tree;
+        char	  *job_args;
+		char      *argstmp;
+		int		  length;
+
+		job_args = argstmp = NULL;
+		
+		tree = JobAd->Lookup(ATTR_JOB_ARGUMENTS);
+		if ( tree != NULL && tree->RArg() != NULL ) {
+			tree->RArg()->PrintToNewStr(&argstmp);
+			job_args = argstmp+1;		// skip first quote
+			length = strlen(job_args);
+			job_args[length-1] = '\0';	// destroy last quote
+		} else {
+			job_args = (char*) malloc(1*sizeof(char));
+			job_args[0] = '\0';
 		}
+		
 		// also pass /Q and /C arguments to cmd.exe, to tell it we do not
 		// want an interactive shell -- just run the command and exit
 		sprintf ( tmp, "%s=\"/Q /C condor_exec.bat %s\"",
-				  ATTR_JOB_ARGUMENTS, argstmp );
+				  ATTR_JOB_ARGUMENTS, job_args );
 		JobAd->InsertOrUpdate(tmp);		
+
+		if ( argstmp != NULL ) {
+			// this is needed if we had to call PrintToNewStr() in classads
+			free(argstmp);
+		} else {
+			// otherwise we just need to free the byte we used to store the empty string
+			free(job_args);
+		}
 
 		// finally we must rename file condor_exec to condor_exec.bat
 		rename(CONDOR_EXEC,"condor_exec.bat");
@@ -106,14 +139,25 @@ VanillaProc::StartJob()
 		family = new ProcFamily(JobPid,PRIV_USER);
 		ASSERT(family);
 
-#ifdef WIN32
-		// we only support running jobs as user nobody for the first pass
-		char nobody_login[60];
-		//sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
-		sprintf(nobody_login,"condor-run-%d",daemonCore->getpid());
-		// set ProcFamily to find decendants via a common login name
-		family->setFamilyLogin(nobody_login);
-#endif
+		const char* run_jobs_as = NULL;
+		bool dedicated_account = false;
+
+		run_jobs_as = get_user_loginname();
+
+		// See if we want our family built by login if we're using
+		// specific run accounts. (default is no)
+		dedicated_account = param_boolean("EXECUTE_LOGIN_IS_DEDICATED", false);
+
+		// we support running the job as other users if the user
+		// is specifed in the config file, and the account's password
+		// is properly stored in our credential stash.
+
+		if (dedicated_account) {
+			// set ProcFamily to find decendants via a common login name
+			dprintf(D_FULLDEBUG, "Building procfamily by login \"%s\"\n",
+					run_jobs_as);
+			family->setFamilyLogin(run_jobs_as);
+		}
 
 		// take a snapshot of the family every 15 seconds
 		snapshot_tid = daemonCore->Register_Timer(2, 15, 
@@ -189,7 +233,7 @@ VanillaProc::Suspend()
 	}
 
 	// set our flag
-	job_suspended = TRUE;
+	is_suspended = true;
 }
 
 void
@@ -203,7 +247,7 @@ VanillaProc::Continue()
 	}
 
 	// set our flag
-	job_suspended = FALSE;
+	is_suspended = false;
 }
 
 bool

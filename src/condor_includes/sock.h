@@ -24,7 +24,9 @@
 #ifndef SOCK_H
 #define SOCK_H
 
+#include "condor_common.h"
 #include "stream.h"
+#include "CondorError.h"
 
 // retry failed connects for CONNECT_TIMEOUT seconds
 #define CONNECT_TIMEOUT 10
@@ -148,6 +150,8 @@ public:
 		 @return the actual/resulting size of the buffer in bytes
 	*/
 	int set_os_buffers(int desired_size, bool set_write_buf = false);
+
+	static int set_timeout_multiplier(int secs);
 	
 	inline int bind(char *s) { return bind(getportbyserv(s)); }
 	int close();
@@ -247,9 +251,9 @@ protected:
 	///
 	virtual bool is_hdr_encrypt();
     ///
-	virtual int authenticate(int clientFlags = 0);
+	virtual int authenticate(const char * auth_methods, CondorError* errstack);
     ///
-	virtual int authenticate(KeyInfo *&ki, int clientFlags = 0);
+	virtual int authenticate(KeyInfo *&ki, const char * auth_methods, CondorError* errstack);
     ///
 	virtual int isAuthenticated();
     ///
@@ -274,6 +278,8 @@ protected:
 	sock_state		_state;
 	int				_timeout;
 	struct sockaddr_in _who;	// endpoint of "connection"
+
+	static int timeout_multiplier;
 
 private:
 	int _condor_read(SOCKET fd, char *buf, int sz, int timeout);

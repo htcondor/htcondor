@@ -46,7 +46,6 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 #include "internet.h"
 #include "KeyCache.h"
 #include "condor_debug.h"
-#include "get_daemon_addr.h"
 #include "condor_uid.h"
 #include "my_hostname.h"
 #include "condor_commands.h"
@@ -60,7 +59,9 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 #include "condor_environ.h"
 #ifdef WIN32
 #include "exphnd.WIN32.h"
+#include "condor_fix_assert.h"
 typedef unsigned (__stdcall *CRT_THREAD_HANDLER) (void *);
+CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #endif
 
 #if 0
@@ -114,6 +115,8 @@ int ZZZ_always_increase() {
 	return ZZZZZ++;
 }
 
+extern int LockFd;
+
 extern void drop_addr_file( void );
 
 extern char* mySubSystem;	// the subsys ID, such as SCHEDD
@@ -143,6 +146,10 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	pidTable = new PidHashTable(PidSize, compute_pid_hash);
 	ppid = 0;
 #ifdef WIN32
+	// init the mutex
+	InitializeCriticalSection(&Big_fat_mutex);
+	EnterCriticalSection(&Big_fat_mutex);
+
 	mypid = ::GetCurrentProcessId();
 #else
 	mypid = ::getpid();
@@ -245,6 +252,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 
 	Default_Priv_State = PRIV_CONDOR;
 	
+	_cookie_len_old  = _cookie_len  = 0;
+	_cookie_data_old = _cookie_data = NULL;
 }
 
 // DaemonCore destructor. Delete the all the various handler tables, plus
@@ -344,6 +353,17 @@ DaemonCore::~DaemonCore()
 		delete( pipeTable );
 	}
 	t.CancelAllTimers();
+
+	if (_cookie_data) {
+		free(_cookie_data);
+	}
+	if (_cookie_data_old) {
+		free(_cookie_data_old);
+	}
+
+#ifdef WIN32
+	 DeleteCriticalSection(&Big_fat_mutex);
+#endif
 }
 
 void DaemonCore::Set_Default_Reaper( int reaper_id )
@@ -1423,8 +1443,8 @@ MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm) {
 	char tbuf[16];
 
 	for (i = 0; i < maxCommand; i++) {
-		if ((comTable[i].handler != NULL) || 
-						(comTable[i].handlercpp != NULL)) 
+		if ( ( (comTable[i].handler != NULL) || (comTable[i].handlercpp != NULL) ) &&
+			 ( comTable[i].perm == perm ) )
 		{
 
 			sprintf (tbuf, "%i", comTable[i].num);
@@ -1554,9 +1574,11 @@ DaemonCore::ReInit()
 	char buf[50];
 	static int tid = -1;
 
-	// Fetch the negotiator address for the Verify method to use
 #if 0
-	addr = get_negotiator_addr(NULL);	// get sinful string of negotiator
+	Daemon nego( DT_NEGOTIATOR );
+	// Fetch the negotiator address for the Verify method to use
+	if( nego.locate() ) {
+		addr = nego.addr();
 #else
 		// For now, we don't have the query code ported to new
 		// classads, so just don't worry about NEGOTIATOR commands.
@@ -1800,6 +1822,9 @@ void DaemonCore::Driver()
 		// Unblock all signals so that we can get them during the
 		// select.
 		sigprocmask( SIG_SETMASK, &emptyset, NULL );
+#else
+		//Win32 - grab coarse-grained mutex
+		LeaveCriticalSection(&Big_fat_mutex);
 #endif
 
 		errno = 0;
@@ -1829,6 +1854,7 @@ void DaemonCore::Driver()
 		}
 #else
 		// Windoze
+		EnterCriticalSection(&Big_fat_mutex);
 		if ( rv == SOCKET_ERROR ) {
 			EXCEPT("select, error # = %d",WSAGetLastError());
 		}
@@ -2217,8 +2243,8 @@ int DaemonCore::HandleReq(int socki)
 	user[0] = '\0';
     ClassAd *the_policy     = NULL;
     KeyInfo *the_key        = NULL;
-    char * the_sid = NULL;
-    string who;   // Remote user
+    string				the_sid;
+    string 				who;   // Remote user
 
 	insock = (*sockTable)[socki].iosock;
 
@@ -2235,6 +2261,8 @@ int DaemonCore::HandleReq(int socki)
 						"DaemonCore: HandleReq(): unrecognized Stream sock\n");
 			return FALSE;
 	}
+
+	CondorError errstack;
 
 	// set up a connection for a tcp socket	
 	if ( is_tcp ) {
@@ -2283,13 +2311,15 @@ int DaemonCore::HandleReq(int socki)
 			tmp = info_list.next();
 			if (tmp) {
 				sess_id = strdup(tmp);
-				dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet is MD5ed with key %s.\n", sess_id);
-
 				tmp = info_list.next();
 				if (tmp) {
 					return_address_ss = strdup(tmp);
-					dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet is from daemon %s.\n", return_address_ss);
+					dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet from %s uses MD5 session %s.\n",
+							return_address_ss, sess_id);
+				} else {
+					dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet uses MD5 session %s.\n", sess_id);
 				}
+
 			} else {
 				// protocol violation... StringList didn't give us anything!
 				// this is unlikely to work, but we may as well try... so, we
@@ -2305,22 +2335,9 @@ int DaemonCore::HandleReq(int socki)
 				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s NOT FOUND...\n", sess_id);
 				// no session... we outta here!
 
-
 				// but first, we should be nice and send a message back to
 				// the people who sent us the wrong session id.
-				SafeSock s;
-				if (s.connect(return_address_ss)) {
-					s.encode();
-					s.put(DC_INVALIDATE_KEY);
-					s.code(sess_id);
-					s.eom();
-					s.close();
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: sent DC_INVALIDATE %s to %s.\n",
-						sess_id, return_address_ss);
-				} else {
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't send DC_INVALIDATE %s to %s.\n",
-						sess_id, return_address_ss);
-				}
+				sec_man->send_invalidate_packet ( return_address_ss, sess_id );
 
 				if( return_address_ss ) {
 					free( return_address_ss );
@@ -2386,13 +2403,16 @@ int DaemonCore::HandleReq(int socki)
 			tmp = info_list.next();
 			if (tmp) {
 				sess_id = strdup(tmp);
-				dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet is encrypted with key %s.\n", sess_id);
 
 				tmp = info_list.next();
 				if (tmp) {
 					return_address_ss = strdup(tmp);
-					dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet is from daemon %s.\n", return_address_ss);
+					dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet from %s uses crypto session %s.\n",
+							return_address_ss, sess_id);
+				} else {
+					dprintf ( D_SECURITY, "DC_AUTHENTICATE: packet uses crypto session %s.\n", sess_id);
 				}
+
 			} else {
 				// protocol violation... StringList didn't give us anything!
 				// this is unlikely to work, but we may as well try... so, we
@@ -2410,21 +2430,14 @@ int DaemonCore::HandleReq(int socki)
 				// no session... we outta here!
 
 				// but first, see above behavior in MD5 code above.
+				sec_man->send_invalidate_packet( return_address_ss, sess_id );
 
-				SafeSock s;
-				if (s.connect(return_address_ss)) {
-					s.encode();
-					s.put(DC_INVALIDATE_KEY);
-					s.code(sess_id);
-					s.eom();
-					s.close();
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: sent DC_INVALIDATE %s to %s.\n",
-						sess_id, return_address_ss);
-				} else {
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't send DC_INVALIDATE %s to %s.\n",
-						sess_id, return_address_ss);
+				if( return_address_ss ) {
+					free( return_address_ss );
+					return_address_ss = NULL;
 				}
-
+				free( sess_id );
+				sess_id = NULL;
 				result = FALSE;
 				goto finalize;
 			}
@@ -2432,12 +2445,24 @@ int DaemonCore::HandleReq(int socki)
 			if (!session->key()) {
 				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
 				// uhm, there should be a key here!
+				if( return_address_ss ) {
+					free( return_address_ss );
+					return_address_ss = NULL;
+				}
+				free( sess_id );
+				sess_id = NULL;
 				result = FALSE;
 				goto finalize;
 			}
 
 			if (!stream->set_crypto_key(session->key())) {
 				dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing.\n");
+				if( return_address_ss ) {
+					free( return_address_ss );
+					return_address_ss = NULL;
+				}
+				free( sess_id );
+				sess_id = NULL;
 				result = FALSE;
 				goto finalize;
 			} else {
@@ -2561,358 +2586,390 @@ int DaemonCore::HandleReq(int socki)
 		}
 
 		bool new_session        = false;
+		bool using_cookie       = false;
+		bool valid_cookie		= false;
 
+		// check if we are using a cookie
+		string incoming_cookie;
+		if( auth_info.EvaluateAttrString(ATTR_SEC_COOKIE, incoming_cookie)) {
+			// compare it to the one we have internally
+
+			valid_cookie = cookie_is_valid((unsigned char*)incoming_cookie.data());
+
+			if ( valid_cookie ) {
+				// we have a match... trust this command.
+				using_cookie = true;
+			} else {
+				// bad cookie!!!
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: recieved invalid cookie!!!\n");
+				result = FALSE;
+				goto finalize;
+			}
+		}
 
 		// check if we are restarting a cached session
 		
-		if ( sec_man->sec_lookup_feat_act(auth_info, ATTR_SEC_USE_SESSION) == SecMan::SEC_FEAT_ACT_YES) {
+		if (!using_cookie) {
 
-			KeyCacheEntry *session = NULL;
+			if ( sec_man->sec_lookup_feat_act(auth_info, ATTR_SEC_USE_SESSION) == SecMan::SEC_FEAT_ACT_YES) {
 
-            string tmp_sid;
-			if( ! auth_info.EvaluateAttrString(ATTR_SEC_SID, tmp_sid)) {
-				dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
-						   "extract auth_info.%s!\n", ATTR_SEC_SID);
-				result = FALSE;	
-				goto finalize;
-			}
+				KeyCacheEntry *session = NULL;
 
-            the_sid = strdup(tmp_sid.data());
-
-			dprintf (D_SECURITY, "DC_AUTHENTICATE: looking up cached key id %s.\n", the_sid);
-
-
-			if (!sec_man->session_cache->lookup(the_sid, session)) {
-
-				// the key id they sent was not in our cache.  this is a
-				// problem.
-
-				dprintf (D_ALWAYS, "DC_AUTHENTICATE: attempt to open "
-						   "invalid session %s, failing.\n", the_sid);
-
-				// close the connection.
-				result = FALSE;
-				goto finalize;
-
-			} else {
-				// the session->id() and the_sid strings should be identical.
-
-				dprintf (D_SECURITY, "DC_AUTHENTICATE: resuming session id %s given to %s:\n",
-							session->id(), sin_to_string(session->addr()));
-			}
-
-			if (session->key()) {
-				// copy this to the HandleReq() scope
-				the_key = new KeyInfo(*session->key());
-			}
-
-			if (session->policy()) {
-				// copy this to the HandleReq() scope
-				the_policy = new ClassAd(*session->policy());
-				if (DebugFlags & D_FULLDEBUG) {
-					PrettyPrint pp;
-					string      buf;
-					pp.Unparse (buf, the_policy);
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: Cached Session:\n%s\n", buf.data());
+				if( ! auth_info.EvaluateAttrString(ATTR_SEC_SID, the_sid)) {
+					dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
+							   "extract auth_info.%s!\n", ATTR_SEC_SID);
+					result = FALSE;	
+					goto finalize;
 				}
-			}
 
-			// grab the user out of the policy.
-			if (the_policy) {
-				string the_user;
-				the_policy->EvaluateAttrString( ATTR_SEC_USER, the_user);
+				// lookup the suggested key
+				if (!sec_man->session_cache->lookup(the_sid.data(), session)) {
 
-				if (the_user.length() > 0) {
+					// the key id they sent was not in our cache.  this is a
+					// problem.
+
+					dprintf (D_ALWAYS, "DC_AUTHENTICATE: attempt to open "
+							   "invalid session %s, failing.\n", the_sid.data());
+
+					string return_addr = NULL;
+					if( auth_info.EvaluateAttrString(ATTR_SEC_SERVER_COMMAND_SOCK, return_addr)) {
+						sec_man->send_invalidate_packet( (char*)return_addr.data(), (char*)the_sid.data() );
+					}
+
+					// close the connection.
+					result = FALSE;
+					goto finalize;
+
+				} else {
+					// the session->id() and the_sid strings should be identical.
+
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: resuming session id %s given to %s:\n",
+								session->id(), sin_to_string(session->addr()));
+				}
+
+				if (session->key()) {
 					// copy this to the HandleReq() scope
-					strcpy (user, the_user.data());
+					the_key = new KeyInfo(*session->key());
 				}
-			}
-			new_session = false;
 
-		} else {
-				// they did not request a cached session.  see if they
-				// want to start one.  look at our security policy.
-			ClassAd our_policy;
-			if( ! sec_man->FillInSecurityPolicyAd( 
-				  PermString(comTable[cmd_index].perm), &our_policy) ) { 
-					// our policy is invalid even without the other
-					// side getting involved.
-				dprintf( D_ALWAYS, "DC_AUTHENTICATE: "
-						 "Our security policy is invalid!\n" );
-				result = FALSE;
-				goto finalize;
-			}
+				if (session->policy()) {
+					// copy this to the HandleReq() scope
+					the_policy = new ClassAd(*session->policy());
+					if (DebugFlags & D_FULLDEBUG) {
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: Cached Session:\n");
+						the_policy->dPrint (D_SECURITY);
+					}
+				}
 
-			if (DebugFlags & D_FULLDEBUG) {
-				PrettyPrint pp;
-				string      buf;
-				pp.Unparse (buf, &our_policy);
-				dprintf ( D_SECURITY, "DC_AUTHENTICATE: our_policy:\n%s\n", buf.data() );
-			}
-			
-			// reconcile.  if unable, close socket.
-			the_policy = sec_man->ReconcileSecurityPolicyAds( auth_info,
-															  our_policy ); 
+				// grab the user out of the policy.
+				if (the_policy) {
+					string the_user;
+					the_policy->EvaluateAttrString( ATTR_SEC_USER, the_user);
 
-			if (!the_policy) {
-				dprintf(D_ALWAYS, "DC_AUTHENTICATE: Unable to reconcile!\n");
-				result = FALSE;
-				goto finalize;
+					if (the_user != "") {
+						// copy this to the HandleReq() scope
+						strcpy (user, the_user.data());
+					}
+				}
+				new_session = false;
+
 			} else {
-				if (DebugFlags & D_FULLDEBUG) {
-					PrettyPrint pp;
-					string      buf;
-					pp.Unparse (buf, the_policy);
-					dprintf ( D_SECURITY, "DC_AUTHENTICATE: the_policy:\n%s\n", buf.data() );
+					// they did not request a cached session.  see if they
+					// want to start one.  look at our security policy.
+				ClassAd our_policy;
+				if( ! sec_man->FillInSecurityPolicyAd( 
+					  PermString(comTable[cmd_index].perm), &our_policy) ) { 
+						// our policy is invalid even without the other
+						// side getting involved.
+					dprintf( D_ALWAYS, "DC_AUTHENTICATE: "
+							 "Our security policy is invalid!\n" );
+					result = FALSE;
+					goto finalize;
 				}
-			}
 
-			// handy policy vars
-			SecMan::sec_feat_act will_enable_encryption = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_ENCRYPTION);
-			SecMan::sec_feat_act will_enable_integrity  = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_INTEGRITY);
+				if (DebugFlags & D_FULLDEBUG) {
+					dprintf ( D_SECURITY, "DC_AUTHENTICATE: our_policy:\n" );
+					our_policy.dPrint(D_SECURITY);
+				}
+				
+				// reconcile.  if unable, close socket.
+				the_policy = sec_man->ReconcileSecurityPolicyAds( auth_info,
+																  our_policy ); 
 
-			if (sec_man->sec_lookup_feat_act(auth_info, ATTR_SEC_NEW_SESSION) == SecMan::SEC_FEAT_ACT_YES) {
+				if (!the_policy) {
+					dprintf(D_ALWAYS, "DC_AUTHENTICATE: Unable to reconcile!\n");
+					result = FALSE;
+					goto finalize;
+				} else {
+					if (DebugFlags & D_FULLDEBUG) {
+						dprintf ( D_SECURITY, "DC_AUTHENTICATE: the_policy:\n" );
+						the_policy->dPrint(D_SECURITY);
+					}
+				}
 
-				// generate a new session
+				// handy policy vars
+				SecMan::sec_feat_act will_enable_encryption = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_ENCRYPTION);
+				SecMan::sec_feat_act will_enable_integrity  = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_INTEGRITY);
 
-				int    mypid = 0;
+				if (sec_man->sec_lookup_feat_act(auth_info, ATTR_SEC_NEW_SESSION) == SecMan::SEC_FEAT_ACT_YES) {
+
+					// generate a new session
+
+					int    mypid = 0;
 #ifdef WIN32
-				mypid = ::GetCurrentProcessId();
+					mypid = ::GetCurrentProcessId();
 #else
-				mypid = ::getpid();
+					mypid = ::getpid();
 #endif
 
-				// generate a unique ID.
-				sprintf( buf, "%s:%i:%i:%i", my_hostname(), mypid, 
-						 (int)time(0), ZZZ_always_increase() );
-				assert (the_sid == NULL);
-				the_sid = strdup(buf);
+					// generate a unique ID.
+					sprintf( buf, "%s:%i:%i:%i", my_hostname(), mypid, 
+							 (int)time(0), ZZZ_always_increase() );
+					assert (the_sid == "");
+					the_sid = buf;
 
-				if ((will_enable_encryption == SecMan::SEC_FEAT_ACT_YES) || (will_enable_integrity == SecMan::SEC_FEAT_ACT_YES)) {
+					if ((will_enable_encryption == SecMan::SEC_FEAT_ACT_YES) || (will_enable_integrity == SecMan::SEC_FEAT_ACT_YES)) {
 
-					string crypto_method;
-					if (!the_policy->EvaluateAttrString(ATTR_SEC_CRYPTO_METHODS, crypto_method)) {
-						dprintf ( D_ALWAYS, "DC_AUTHENTICATE: tried to enable encryption but we have none!\n" );
+						string crypto_method;
+						if (!the_policy->EvaluateAttrString(ATTR_SEC_CRYPTO_METHODS, crypto_method)) {
+							dprintf ( D_ALWAYS, "DC_AUTHENTICATE: tried to enable encryption but we have none!\n" );
+							result = FALSE;
+							goto finalize;
+						}
+
+						unsigned char* rkey = Condor_Crypt_Base::randomKey(24);
+						unsigned char  rbuf[24];
+						if (rkey) {
+							memcpy (rbuf, rkey, 24);
+							// this was malloced in randomKey
+							free (rkey);
+						} else {
+							memset (rbuf, 0, 24);
+							dprintf ( D_SECURITY, "DC_AUTHENTICATE: unable to generate key - no crypto available!\n");
+							result = FALSE;
+							goto finalize;
+						}
+
+						switch (toupper(crypto_method[0])) {
+							case 'B': // blowfish
+								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating BLOWFISH key for session %s...\n", the_sid.data());
+								the_key = new KeyInfo(rbuf, 24, CONDOR_BLOWFISH);
+								break;
+							case '3': // 3des
+							case 'T': // Tripledes
+								dprintf (D_SECURITY, "DC_AUTHENTICATE: generating 3DES key for session %s...\n", the_sid.data());
+								the_key = new KeyInfo(rbuf, 24, CONDOR_3DES);
+								break;
+							default:
+								dprintf ( D_SECURITY, "DC_AUTHENTICATE: this version doesn't support %s crypto.\n", crypto_method.data() );
+								break;
+						}
+
+						if (!the_key) {
+							result = FALSE;
+							goto finalize;
+						}
+
+#ifdef SECURITY_HACK_ENABLE
+						zz2printf (the_key);
+#endif
+					}
+
+					new_session = true;
+				}
+
+				// if they asked, tell them
+				if (is_tcp && (sec_man->sec_lookup_feat_act(auth_info, ATTR_SEC_ENACT) == SecMan::SEC_FEAT_ACT_NO)) {
+					if (DebugFlags & D_FULLDEBUG) {
+						dprintf (D_SECURITY, "SECMAN: Sending following response ClassAd:\n");
+						the_policy->dPrint( D_SECURITY );
+					}
+					sock->encode();
+					if (!the_policy->put(*sock) ||
+						!sock->eom()) {
+						dprintf (D_ALWAYS, "SECMAN: Error sending response classad!\n");
+						result = FALSE;
+						goto finalize;
+					}
+					sock->decode();
+				} else {
+					dprintf( D_SECURITY, "SECMAN: Enact was '%s', not sending response.\n",
+						SecMan::sec_feat_act_rev[sec_man->sec_lookup_feat_act(auth_info, ATTR_SEC_ENACT)] );
+				}
+
+			}
+
+			if (is_tcp) {
+
+				// do what we decided
+
+				// handy policy vars
+				SecMan::sec_feat_act will_authenticate      = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_AUTHENTICATION);
+				SecMan::sec_feat_act will_enable_encryption = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_ENCRYPTION);
+				SecMan::sec_feat_act will_enable_integrity  = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_INTEGRITY);
+
+
+
+				if (is_tcp && (will_authenticate == SecMan::SEC_FEAT_ACT_YES)) {
+
+					// we are going to authenticate.  this could one of two ways.
+					// the "real" way or the "quick" way which is by presenting a
+					// session ID.  the fact that the private key matches on both
+					// sides proves the authenticity.  if the key does not match,
+					// it will be detected as long as some crypto is used.
+
+
+					// we know the ..METHODS_LIST attribute exists since it was put
+					// in by us.  pre 6.5.0 protocol does not put it in.
+					string auth_methods;
+					the_policy->EvaluateAttrString(ATTR_SEC_AUTHENTICATION_METHODS_LIST, auth_methods);
+
+					if (auth_methods == "") {
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: no auth methods in response ad, failing!\n");
 						result = FALSE;
 						goto finalize;
 					}
 
-					unsigned char* rkey = Condor_Crypt_Base::randomKey(24);
-					unsigned char  rbuf[24];
-					if (rkey) {
-						memcpy (rbuf, rkey, 24);
-						// this was malloced in randomKey
-						free (rkey);
-					} else {
-						memset (rbuf, 0, 24);
-						dprintf ( D_SECURITY, "DC_AUTHENTICATE: unable to generate key - no crypto available!\n");
+					if (DebugFlags & D_FULLDEBUG) {
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticating RIGHT NOW.\n");
+					}
+
+					if (!sock->authenticate(the_key, auth_methods.data(), &errstack)) {
+						dprintf( D_ALWAYS, 
+								 "DC_AUTHENTICATE: authenticate failed\n" );
+						dprintf( D_ALWAYS, 
+								 "%s", errstack.get_full_text() );
 						result = FALSE;
 						goto finalize;
 					}
 
-					switch (toupper(crypto_method[0])) {
-						case 'B': // blowfish
-							dprintf (D_SECURITY, "DC_AUTHENTICATE: generating BLOWFISH key for session %s...\n", the_sid);
-							the_key = new KeyInfo(rbuf, 24, CONDOR_BLOWFISH);
-							break;
-						case '3': // 3des
-						case 'T': // Tripledes
-							dprintf (D_SECURITY, "DC_AUTHENTICATE: generating 3DES key for session %s...\n", the_sid);
-							the_key = new KeyInfo(rbuf, 24, CONDOR_3DES);
-							break;
-						default:
-							dprintf ( D_SECURITY, "DC_AUTHENTICATE: this version doesn't support %s crypto.\n", crypto_method.data() );
-							break;
+					// check to see if the auth IP is the same
+					// as the socket IP.  this cast is safe because
+					// we return above if sock is not a ReliSock.
+					if ( ((ReliSock*)sock)->authob ) {
+
+						// after authenticating, update the classad to reflect
+						// which method we actually used.
+						char* the_method = ((ReliSock*)sock)->authob->getMethodUsed();
+						the_policy->InsertAttr(ATTR_SEC_AUTHENTICATION_METHODS, the_method);
+
+						const char* sockip = sin_to_string(sock->endpoint());
+						const char* authip = ((ReliSock*)sock)->authob->getRemoteAddress() ;
+
+						result = !strncmp (sockip + 1, authip, strlen(authip) );
+
+						if (!result) {
+							dprintf (D_ALWAYS, "DC_AUTHENTICATE: sock ip -> %s\n", sockip);
+							dprintf (D_ALWAYS, "DC_AUTHENTICATE: auth ip -> %s\n", authip);
+							dprintf (D_ALWAYS, "DC_AUTHENTICATE: ERROR: IP not in agreement!!! BAILING!\n");
+
+							result = FALSE;
+							goto finalize;
+
+						} else {
+							dprintf (D_SECURITY, "DC_AUTHENTICATE: mutual authentication to %s complete.\n", authip);
+						}
 					}
+
+				} else {
+					if (DebugFlags & D_FULLDEBUG) {
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: not authenticating.\n");
+					}
+				}
+
+
+				if (will_enable_integrity == SecMan::SEC_FEAT_ACT_YES) {
 
 					if (!the_key) {
+						// uhm, there should be a key here!
 						result = FALSE;
 						goto finalize;
 					}
 
-#ifdef SECURITY_HACK_ENABLE
-					zz2printf (the_key);
-#endif
-				}
-
-				new_session = true;
-			}
-
-			// if they asked, tell them
-			if (is_tcp && (sec_man->sec_lookup_feat_act(auth_info, ATTR_SEC_ENACT) == SecMan::SEC_FEAT_ACT_NO)) {
-				if (DebugFlags & D_FULLDEBUG) {
-					PrettyPrint pp;
-					string      buf;
-					pp.Unparse (buf, the_policy);
-					dprintf (D_SECURITY, "SECMAN: Sending following response ClassAd:\n%s\n", buf.data());
-				}
-				sock->encode();
-
-				if( !putOldClassAd(sock, *the_policy) || !sock->eom() ) {
-					dprintf (D_ALWAYS, "SECMAN: Error sending response "
-							 "classad!\n");
-					result = FALSE;
-					goto finalize;
-				}
-
-				sock->decode();
-			} else {
-				dprintf( D_SECURITY, "SECMAN: Enact was '%s', not sending response.\n",
-					SecMan::sec_feat_act_rev[sec_man->sec_lookup_feat_act(auth_info, ATTR_SEC_ENACT)] );
-			}
-
-		}
-
-        if (is_tcp) {
-
-			// do what we decided
-
-			// handy policy vars
-			SecMan::sec_feat_act will_authenticate      = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_AUTHENTICATION);
-			SecMan::sec_feat_act will_enable_encryption = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_ENCRYPTION);
-			SecMan::sec_feat_act will_enable_integrity  = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_INTEGRITY);
-
-
-
-			if (is_tcp && (will_authenticate == SecMan::SEC_FEAT_ACT_YES)) {
-
-				// we are going to authenticate.  this could one of two ways.
-				// the "real" way or the "quick" way which is by presenting a
-				// session ID.  the fact that the private key matches on both
-				// sides proves the authenticity.  if the key does not match,
-				// it will be detected as long as some crypto is used.
-
-
-				string auth_method;
-				the_policy->EvaluateAttrString(ATTR_SEC_AUTHENTICATION_METHODS, auth_method);
-
-				if (DebugFlags & D_FULLDEBUG) {
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: authenticating RIGHT NOW.\n");
-				}
-				if (!sock->authenticate(the_key, sec_man->getAuthBitmask((char *)auth_method.data()))) {
-					dprintf (D_ALWAYS, "DC_AUTHENTICATE: authenticate failed\n");
-					result = FALSE;
-					goto finalize;
-				}
-
-				// check to see if the kerb IP is the same
-				// as the socket IP.  this cast is safe because
-				// we return above is sock is not a ReliSock.
-				if ( ((ReliSock*)sock)->authob ) {
-					const char* sockip = sin_to_string(sock->endpoint());
-					const char* kerbip = ((ReliSock*)sock)->authob->getRemoteAddress() ;
-
-					result = !strncmp (sockip + 1, kerbip, strlen(kerbip) );
-
-					if (!result) {
-						dprintf (D_ALWAYS, "DC_AUTHENTICATE: sock ip -> %s\n", sockip);
-						dprintf (D_ALWAYS, "DC_AUTHENTICATE: kerb ip -> %s\n", kerbip);
-						dprintf (D_ALWAYS, "DC_AUTHENTICATE: ERROR: IP not in agreement!!! BAILING!\n");
-
+					sock->decode();
+					if (!sock->set_MD_mode(MD_ALWAYS_ON, the_key)) {
+						dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on message authenticator, failing.\n");
 						result = FALSE;
 						goto finalize;
-
 					} else {
-						dprintf (D_SECURITY, "DC_AUTHENTICATE: mutual authentication to %s complete.\n", kerbip);
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: message authenticator enabled with key id %s.\n", the_sid.data());
+#ifdef SECURITY_HACK_ENABLE
+						zz2printf (the_key);
+#endif
 					}
 				}
 
-			} else {
-				if (DebugFlags & D_FULLDEBUG) {
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: not authenticating.\n");
-				}
-			}
 
+				if (will_enable_encryption == SecMan::SEC_FEAT_ACT_YES) {
 
-			if (will_enable_integrity == SecMan::SEC_FEAT_ACT_YES) {
+					if (!the_key) {
+						// uhm, there should be a key here!
+						result = FALSE;
+						goto finalize;
+					}
 
-				if (!the_key) {
-					// uhm, there should be a key here!
-					result = FALSE;
-					goto finalize;
-				}
-
-				sock->decode();
-				if (!sock->set_MD_mode(MD_ALWAYS_ON, the_key)) {
-					dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on message authenticator, failing.\n");
-					result = FALSE;
-					goto finalize;
-				} else {
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: message authenticator enabled with key id %s.\n", the_sid);
-#ifdef SECURITY_HACK_ENABLE
-					zz2printf (the_key);
-#endif
-				}
-			}
-
-
-			if (will_enable_encryption == SecMan::SEC_FEAT_ACT_YES) {
-
-				if (!the_key) {
-					// uhm, there should be a key here!
-					result = FALSE;
-					goto finalize;
+					sock->decode();
+					if (!sock->set_crypto_key(the_key) ) {
+						dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing.\n");
+						result = FALSE;
+						goto finalize;
+					} else {
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: encryption enabled for session %s\n", the_sid.data());
+					}
 				}
 
-				sock->decode();
-				if (!sock->set_crypto_key(the_key) ) {
-					dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to turn on encryption, failing.\n");
-					result = FALSE;
-					goto finalize;
-				} else {
-					dprintf (D_SECURITY, "DC_AUTHENTICATE: encryption enabled for session %s\n", the_sid);
+
+				if (new_session) {
+					// clear the buffer
+					sock->decode();
+					sock->eom();
+
+					// ready a classad to send
+					ClassAd pa_ad;
+
+					// session user
+					const char *fully_qualified_user = ((ReliSock*)sock)->getFullyQualifiedUser();
+					if ( fully_qualified_user ) {
+						pa_ad.InsertAttr(ATTR_SEC_USER, fully_qualified_user);
+					}
+
+					// session id
+					pa_ad.InsertAttr(ATTR_SEC_SID, the_sid.data());
+
+					// other commands this session is good for
+					pa_ad.InsertAttr(ATTR_SEC_VALID_COMMANDS, GetCommandsInAuthLevel(comTable[cmd_index].perm).Value());
+
+					// also put some attributes in the policy classad we are caching.
+					sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_SUBSYSTEM );
+					sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_USER );
+					sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_SID );
+					sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_VALID_COMMANDS );
+
+
+					sock->encode();
+					if (! pa_ad.put(*sock) ||
+						! sock->eom() ) {
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: unable to send session %s info!\n", the_sid.data());
+					} else {
+						if (DebugFlags & D_FULLDEBUG) {
+							dprintf (D_SECURITY, "DC_AUTHENTICATE: sent session %s info!\n", the_sid.data());
+						}
+					}
+
+					// extract the session duration
+					string dur;
+					the_policy->EvaluateAttrString(ATTR_SEC_SESSION_DURATION, dur);
+
+					int expiration_time = time(0) + atoi(dur.data());
+
+					// add the key to the cache
+					KeyCacheEntry tmp_key(the_sid.data(), sock->endpoint(), the_key, the_policy, expiration_time);
+					sec_man->session_cache->insert(tmp_key);
+					dprintf (D_SECURITY, "DC_AUTHENTICATE: added session id %s to cache for %s seconds!\n", the_sid.data(), dur.data());
 				}
-			}
-
-
-			if (new_session) {
-				// clear the buffer
-				sock->decode();
-				sock->eom();
-
-				// ready a classad to send
-				ClassAd pa_ad;
-
-				// session user
-				sprintf(buf, "%s", ((ReliSock*)sock)->getFullyQualifiedUser());
-				pa_ad.InsertAttr(ATTR_SEC_USER, buf);
-
-				// session id
-				sprintf (buf, "%s", the_sid);
-				pa_ad.InsertAttr(ATTR_SEC_SID, buf);
-
-				// other commands this session is good for
-				sprintf (buf, "%s", GetCommandsInAuthLevel(comTable[cmd_index].perm).Value());
-				pa_ad.InsertAttr(ATTR_SEC_VALID_COMMANDS, buf);
-
-				// also put these attributes in the policy classad we are caching.
-				sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_USER );
-				sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_SID );
-				sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_VALID_COMMANDS );
-
-
-				sock->encode();
-
-				putOldClassAd(sock, pa_ad);
-				sock->eom();
-
-				// extract the session duration
-				int expiration_time = 0;
-				the_policy->EvaluateAttrInt(ATTR_SEC_SESSION_DURATION,
-											expiration_time);
-				expiration_time += time(0);
-
-				// add the key to the cache
-				KeyCacheEntry tmp_key(the_sid, sock->endpoint(), the_key,
-									  the_policy, expiration_time);
-				sec_man->session_cache->insert(tmp_key);
-				dprintf (D_SECURITY, "DC_AUTHENTICATE: added session id %s to"
-						 " cache for %d seconds!\n", the_sid, expiration_time);
 			}
 		}
-
-
-
+		
 		if (real_cmd == DC_AUTHENTICATE) {
 			result = TRUE;
 			goto finalize;
@@ -2966,39 +3023,44 @@ int DaemonCore::HandleReq(int socki)
 
 			dprintf (D_SECURITY, "DaemonCore received UNAUTHENTICATED command %i.\n", req);
 
-			ClassAd our_policy;
-        	if( ! sec_man->FillInSecurityPolicyAd( PermString(comTable[index].perm), &our_policy) ) {
-				dprintf( D_ALWAYS, "DC_AUTHENTICATE: "
-						 "Our security policy is invalid!\n" );
-				result = FALSE;
-				goto finalize;
-			}
+			// if the command was registered as "ALLOW", then it doesn't matter what the
+			// security policy says, we just allow it.
+			if (comTable[index].perm != ALLOW) {
 
-			// well, they didn't authenticate, turn on encryption,
-			// or turn on integrity.  check to see if any of those
-			// were required.
+				ClassAd our_policy;
+				if( ! sec_man->FillInSecurityPolicyAd( PermString(comTable[index].perm), &our_policy) ) {
+					dprintf( D_ALWAYS, "DC_AUTHENTICATE: "
+							 "Our security policy is invalid!\n" );
+					result = FALSE;
+					goto finalize;
+				}
 
-			if (  (sec_man->sec_lookup_req(our_policy, ATTR_SEC_NEGOTIATION)
-				   == SecMan::SEC_REQ_REQUIRED)
-			   || (sec_man->sec_lookup_req(our_policy, ATTR_SEC_AUTHENTICATION)
-				   == SecMan::SEC_REQ_REQUIRED)
-			   || (sec_man->sec_lookup_req(our_policy, ATTR_SEC_ENCRYPTION)
-				   == SecMan::SEC_REQ_REQUIRED)
-			   || (sec_man->sec_lookup_req(our_policy, ATTR_SEC_INTEGRITY)
-				   == SecMan::SEC_REQ_REQUIRED) ) {
+				// well, they didn't authenticate, turn on encryption,
+				// or turn on integrity.  check to see if any of those
+				// were required.
 
-				// yep, they were.  deny.
+				if (  (sec_man->sec_lookup_req(our_policy, ATTR_SEC_NEGOTIATION)
+					   == SecMan::SEC_REQ_REQUIRED)
+				   || (sec_man->sec_lookup_req(our_policy, ATTR_SEC_AUTHENTICATION)
+					   == SecMan::SEC_REQ_REQUIRED)
+				   || (sec_man->sec_lookup_req(our_policy, ATTR_SEC_ENCRYPTION)
+					   == SecMan::SEC_REQ_REQUIRED)
+				   || (sec_man->sec_lookup_req(our_policy, ATTR_SEC_INTEGRITY)
+					   == SecMan::SEC_REQ_REQUIRED) ) {
 
-				dprintf(D_ALWAYS,
-					"DaemonCore: PERMISSION DENIED for %d via %s%s%s from host %s\n",
-					req,
-					(is_tcp) ? "TCP" : "UDP",
-					(user[0] != '\0') ? " from " : "",
-					(user[0] != '\0') ? user : "",
-					sin_to_string(((Sock*)stream)->endpoint()) );
+					// yep, they were.  deny.
 
-				result = FALSE;
-				goto finalize;
+					dprintf(D_ALWAYS,
+						"DaemonCore: PERMISSION DENIED for %d via %s%s%s from host %s\n",
+						req,
+						(is_tcp) ? "TCP" : "UDP",
+						(user[0] != '\0') ? " from " : "",
+						(user[0] != '\0') ? user : "",
+						sin_to_string(((Sock*)stream)->endpoint()) );
+
+					result = FALSE;
+					goto finalize;
+				}
 			}
 		}
 	}
@@ -3103,9 +3165,6 @@ finalize:
     }
     if (the_key) {
         delete the_key;
-    }
-    if (the_sid) {
-        free(the_sid);
     }
 	if ( result != KEEP_STREAM ) {
 		stream->encode();	// we wanna "flush" below in the encode direction 
@@ -3365,7 +3424,7 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 		destination = pidinfo->sinful_string;
 	}
 
-	Daemon d(destination);
+	Daemon d( DT_ANY, destination );
 	// now destination process is local, send via UDP; if remote, send via TCP
 	if ( is_local == TRUE ) {
 		sock = (Stream *)(d.startCommand(DC_RAISESIGNAL, Stream::safe_sock, 3));
@@ -4045,15 +4104,29 @@ DCFindWinSta(LPTSTR winsta_name, LPARAM p)
 {
 	BOOL ret_value;
 	priv_state priv;
+	BOOL check_winsta0;
+	char* use_visible;
+	check_winsta0 = FALSE;
 
 	// dprintf(D_FULLDEBUG,"Opening WinSta %s\n",winsta_name);
-
+	
 	if ( strcmp(winsta_name,"WinSta0") == 0 ) {
-		// skip the interactive Winsta to save time
-		dprintf(D_PROCFAMILY,"Skipping Winsta0\n");
-		return TRUE;
-	}
+		
+		// if we're running the job in the foreground, we had better 
+		// look in Winsta0!
+		use_visible = param("USE_VISIBLE_DESKTOP");
+		if (use_visible) { 
+			check_winsta0 = ( use_visible[0] == 'T' ) || (use_visible[0] == 't' );
+			free(use_visible);
+		}
 
+		if (! check_winsta0 ) {
+			// skip the interactive Winsta to save time
+			dprintf(D_PROCFAMILY,"Skipping Winsta0\n");
+			return TRUE;
+		}
+	}
+	
 	// must try to open winsta as the user
 	priv = set_user_priv();
 	HWINSTA hwinsta = OpenWindowStation(winsta_name, FALSE, MAXIMUM_ALLOWED);
@@ -4231,13 +4304,13 @@ int DaemonCore::SetEnv( char *env_var )
 
 
 int DaemonCore::Create_Process(
-			char		*name,
-			char		*args,
+			const char	*name,
+			const char	*args,
 			priv_state	priv,
 			int			reaper_id,
 			int			want_command_port,
-			char		*env,
-			char		*cwd,
+			const char	*env,
+			const char	*cwd,
 			int			new_process_group,
 			Stream		*sock_inherit_list[],
 			int			std[],
@@ -4249,23 +4322,45 @@ int DaemonCore::Create_Process(
 	char *ptmp;
 	int inheritSockFds[MAX_INHERIT_SOCKS];
 	int numInheritSockFds = 0;
-	int exec_results;
+
+	//saved errno (if any) to pass back to caller
+	//Currently, only stuff that would be of interest to the user
+	//is saved (so the error can be reported in the user-log).
+	int return_errno = 0;
+	pid_t newpid = FALSE; //return FALSE to caller, by default
+
+	// Name buffer to really use
+	const char	*namebuf = strdup( name );
+	if ( NULL == namebuf ) {
+		dprintf( D_ALWAYS, "strdup failed!\n" );
+		return FALSE;
+	}
 
 	char inheritbuf[_INHERITBUF_MAXSIZE];
 		// note that these are on the stack; they go away nicely
 		// upon return from this function.
 	ReliSock rsock;
 	SafeSock ssock;
+	PidEntry *pidtmp;
 
-	pid_t newpid;
 
-#ifdef WIN32  // sheesh, this shouldn't be necessary
+#ifdef WIN32  
+
+		// declare these variables early so MSVS doesn't complain
+
+		// about them being declared inside of the goto's below.
 	BOOL inherit_handles = FALSE;
+
+	char *newenv = NULL;
+
+	MyString strArgs;
+
+	bool bIs16Bit = FALSE;
 #else
 	int inherit_handles;
 #endif
 
-	dprintf(D_DAEMONCORE,"In DaemonCore::Create_Process(%s,...)\n",name);
+	dprintf(D_DAEMONCORE,"In DaemonCore::Create_Process(%s,...)\n",namebuf);
 
 	// First do whatever error checking we can that is not platform specific
 
@@ -4273,13 +4368,13 @@ int DaemonCore::Create_Process(
 	if ( (reaper_id < 1) || (reaper_id > maxReap) 
 		 || (reapTable[reaper_id - 1].num == 0) ) {
 		dprintf(D_ALWAYS,"Create_Process: invalid reaper_id\n");
-		return FALSE;
+		goto wrapup;
 	}
 
 	// check name validity
-	if ( !name ) {
+	if ( !namebuf ) {
 		dprintf(D_ALWAYS,"Create_Process: null name to exec\n");
-		return FALSE;
+		goto wrapup;
 	}
 
 	sprintf(inheritbuf,"%lu ",(unsigned long)mypid);
@@ -4301,7 +4396,7 @@ int DaemonCore::Create_Process(
                 numInheritSockFds++;
                     // make certain that this socket is inheritable
                 if ( !(tempSock->set_inheritable(TRUE)) ) {
-                    return FALSE;
+					goto wrapup;
                 }
             } 
             else {
@@ -4339,12 +4434,12 @@ int DaemonCore::Create_Process(
 			// choose any old port (dynamic port)
 			if (!BindAnyCommandPort(&rsock, &ssock)) {
 				// dprintf with error message already in BindAnyCommandPort
-				return FALSE;
+				goto wrapup;
 			}
 			if ( !rsock.listen() ) {
 				dprintf( D_ALWAYS, "Create_Process:Failed to post listen "
 						 "on command ReliSock\n");
-				return FALSE;
+				goto wrapup;
 			}
 		} else {
 			// use well-known port specified by command_port
@@ -4361,14 +4456,14 @@ int DaemonCore::Create_Process(
 									(char*)&on, sizeof(on))) )
 		    {
 				dprintf(D_ALWAYS,"ERROR: setsockopt() SO_REUSEADDR failed\n");
-				return FALSE;
+				goto wrapup;
 			}
 
 			if ( (!rsock.listen( want_command_port)) ||
 				 (!ssock.bind( want_command_port)) ) {
 				dprintf(D_ALWAYS,"Create_Process:Failed to post listen "
-						"on command socket(s)\n");
-				return FALSE;
+						"on command socket(s) (port %d)\n", want_command_port );
+				goto wrapup;
 			}
 		}
 
@@ -4377,7 +4472,7 @@ int DaemonCore::Create_Process(
 			 (!(ssock.set_inheritable(TRUE))) ) {
 			dprintf(D_ALWAYS,"Create_Process:Failed to set command "
 					"socks inheritable\n");
-			return FALSE;
+			goto wrapup;
 		}
 
 		// and now add these new command sockets to the inheritbuf
@@ -4403,7 +4498,7 @@ int DaemonCore::Create_Process(
 	PROCESS_INFORMATION piProcess;
 	// SECURITY_ATTRIBUTES sa;
 	// SECURITY_DESCRIPTOR sd;
-	char *newenv = NULL;
+	
 
 	// prepare a STARTUPINFO structure for the new process
 	ZeroMemory(&si,sizeof(si));
@@ -4464,7 +4559,7 @@ int DaemonCore::Create_Process(
 	if (InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION) == 0) {
 		dprintf(D_ALWAYS, "Create_Process: InitializeSecurityDescriptor "
 				"failed, errno = %d\n",GetLastError());
-		return FALSE;
+		goto wrapup;
 	}
 #endif
 
@@ -4475,7 +4570,12 @@ int DaemonCore::Create_Process(
 
     // Re-nice our child -- on WinNT, this means run it at IDLE process
 	// priority class.
-    if ( nice_inc > 0 && nice_inc < 20 ) {
+
+	// NOTE: Can't we have a more fine-grained approach than this?  I
+	// think there are other priority classes, and we should probably
+	// map them to ranges within the 0-20 Unix nice-values... --pfc
+
+    if ( nice_inc > 0 ) {
 		// or new_process_group with whatever we set above...
 		new_process_group |= IDLE_PRIORITY_CLASS;
 	}
@@ -4484,17 +4584,28 @@ int DaemonCore::Create_Process(
 	// Deal with environment.  If the user specified an environment, we 
 	// augment augment it with default system environment variables and 
 	// the CONDOR_INHERIT var.  If the user did not specify an e
-	if ( env ) {
+	if ( env || ( HAS_DCJOBOPT_NO_ENV_INHERIT(job_opt_mask) ) ) {
 		Env job_environ;
-		char envbuf[200];
+		char envbuf[_POSIX_PATH_MAX];
 		const char * default_vars[] = { "SystemDrive", "SystemRoot", 
 			"COMPUTERNAME", "NUMBER_OF_PROCESSORS", "OS", 
 			"PROCESSOR_ARCHITECTURE", "PROCESSOR_IDENTIFIER", 
 			"PROCESSOR_LEVEL", "PROCESSOR_REVISION", "PROGRAMFILES", "WINDIR",
 			"\0" };		// must end list with NULL string
 		
-			// first, add in env vars from user
-		job_environ.Merge(env);		
+			// add in what is likely the system default path.  we do this
+			// here, before merging the user env, because if the user 
+			// specifies a path in the job ad we want top use that instead.
+		envbuf[0]='\0';
+		GetEnvironmentVariable("PATH",envbuf,sizeof(envbuf));
+		if (envbuf[0]) {
+			job_environ.Put("PATH",envbuf);
+		}
+
+			// now add in env vars from user
+		if ( env ) {
+			job_environ.Merge(env);		
+		}
 
 			// next, add in default system env variables.  we do this after
 			// the user vars are in place, because we want the values for
@@ -4523,19 +4634,57 @@ int DaemonCore::Create_Process(
 		if( !SetEnv( EnvGetName( ENV_INHERIT ), inheritbuf) ) {
 			dprintf(D_ALWAYS, "Create_Process: Failed to set %s env.\n",
 					EnvGetName( ENV_INHERIT ) );
-			return FALSE;
+			goto wrapup;
 		}
 	
 	}	// end of dealing with the environment....
 
+	// Check if it's a 16-bit application
+	bIs16Bit = false;
+	LOADED_IMAGE loaded;
+	// NOTE (not in MSDN docs): Even when this function fails it still 
+	// may have "failed" with LastError = "operation completed successfully"
+	// and still filled in our structure.  It also might really have 
+	// failed.  So we init the part of the structure we care about and just 
+	// ignore the return value.  
+	loaded.fDOSImage = FALSE;
+	MapAndLoad((char *)namebuf, NULL, &loaded, FALSE, TRUE);
+	if (loaded.fDOSImage == TRUE)
+		bIs16Bit = true;
+	UnMapAndLoad(&loaded);
+	
+	// CreateProcess requires different params for 16-bit apps:
+	//		NULL for the app name
+	//		args begins with app name
+	strArgs = args;
+	if (bIs16Bit)
+	{
+		// surround the executable name with quotes or you'll have problems 
+		// when the execute directory contains spaces!
+		strArgs = "\"" + MyString(namebuf) + MyString("\" ");
+
+		// make sure we're only using backslashes
+		strArgs.replaceString("/", "\\", 0); 
+		
+		// args already should contain the executable name as the first param
+		// we have to strip it out but preserve any real args after it
+		MyString strOldArgs = args;
+		int iFindFirstSpace = strOldArgs.FindChar(' ');
+		if (iFindFirstSpace != -1)
+			strArgs += (args + iFindFirstSpace + 1);
+		
+		args = const_cast<char *>(strArgs.GetCStr());
+		dprintf(D_ALWAYS, "Create_Process: 16-bit job detected, args=%s\n", args);
+	}
+	
 	BOOL cp_result;
 	if ( priv != PRIV_USER_FINAL ) {
-		cp_result = ::CreateProcess(name,args,NULL,NULL,inherit_handles,
-			new_process_group,newenv,cwd,&si,&piProcess);
+		cp_result = ::CreateProcess(bIs16Bit ? NULL : namebuf,(char*)args,NULL,
+			NULL,inherit_handles, new_process_group,newenv,cwd,&si,&piProcess);
 	} else {
 		// here we want to create a process as user for PRIV_USER_FINAL
 
-			// Get the token for the user
+			// Get the token for	 the user
 		HANDLE user_token = priv_state_get_handle();
 		ASSERT(user_token);
 
@@ -4548,6 +4697,7 @@ int DaemonCore::Create_Process(
 			// then run the job on the visible desktop, otherwise create
 			// a new non-visible desktop for the job.
 		char *use_visible = param("USE_VISIBLE_DESKTOP");
+		
 		if (use_visible && (*use_visible=='T' || *use_visible=='t') ) {
 				// user wants visible desktop.
 				// place the user_token into the proper access control lists.
@@ -4571,9 +4721,20 @@ int DaemonCore::Create_Process(
 			// restricted to LOCALSYSTEM.  
 			//
 			// "Who's your Daddy ?!?!?!   JEFF B.!"
-		cp_result = ::CreateProcessAsUser(user_token,name,args,NULL,NULL,
-			inherit_handles,new_process_group | CREATE_NEW_CONSOLE, 
-			newenv,cwd,&si,&piProcess);
+		
+		// we set_user_priv() here because it really doesn't hurt, and more importantly, 
+		// if we're using an encrypted execute directory, SYSTEM can't read the user's
+		// executable, so the CreateProcessAsUser() call fails. We avoid this by 
+		// flipping into user priv mode first, then making the call, and all is well.
+
+		priv_state s = set_user_priv();
+
+		cp_result = ::CreateProcessAsUser(user_token,bIs16Bit ? NULL : namebuf,
+			(char *)args,NULL,NULL, inherit_handles,
+			new_process_group | CREATE_NEW_CONSOLE, newenv,cwd,&si,&piProcess);
+		
+		set_priv(s);
+
 	}
 
 	if ( !cp_result ) {
@@ -4582,7 +4743,7 @@ int DaemonCore::Create_Process(
 		if ( newenv ) {
 			delete [] newenv;
 		}
-		return FALSE;
+		goto wrapup;
 	}
 	if ( newenv ) {
 		delete [] newenv;
@@ -4603,6 +4764,7 @@ int DaemonCore::Create_Process(
 	}
 #else
 	// START A NEW PROCESS ON UNIX
+	int exec_results;
 
 		// We have to do some checks on the executable name and the
 		// cwd before we fork.  We want to do these in priv state
@@ -4619,28 +4781,29 @@ int DaemonCore::Create_Process(
 	}
 
 	// First, check to see that the specified executable exists.
-	if( access(name,F_OK | X_OK) < 0 ) {
-		dprintf(D_ALWAYS, 
-				"Create_Process: Specified executable %s cannot be found. "
-				"errno = %d (%s).\n",
-				name, errno, strerror(errno));	   
+	if( access(namebuf,F_OK | X_OK) < 0 ) {
+		return_errno = errno;
+		dprintf( D_ALWAYS, "Create_Process: "
+				 "Cannot access specified executable \"%s\": " 
+				 "errno = %d (%s)\n", namebuf, errno, strerror(errno) );
 		if ( priv != PRIV_UNKNOWN ) {
 			set_priv( current_priv );
 		}
-		return FALSE;
+		goto wrapup;
 	}
 
 	// Next, check to see that the cwd exists.
 	struct stat stat_struct;
 	if( cwd && (cwd[0] != '\0') ) {
 		if( stat(cwd, &stat_struct) == -1 ) {
-			dprintf(D_ALWAYS, 
-				"Create_Process: Specified cwd %s cannot be found.\n",
-				cwd);	   
+			return_errno = errno;
+			dprintf( D_ALWAYS, "Create_Process: "
+					 "Cannot access specified cwd \"%s\": "
+					 "errno = %d (%s)\n", cwd, errno, strerror(errno) ); 
 			if ( priv != PRIV_UNKNOWN ) {
 				set_priv( current_priv );
 			}	
-			return FALSE;
+			goto wrapup;
 		}
 	}
 
@@ -4664,12 +4827,19 @@ int DaemonCore::Create_Process(
 	if (pipe(errorpipe) < 0) {
 		dprintf(D_ALWAYS,"Create_Process: pipe() failed with errno %d (%s).\n",
 				errno, strerror(errno));
-		return FALSE;
+		goto wrapup;
 	}
 
 	newpid = fork();
 	if( newpid == 0 ) // Child Process
 	{
+			// make sure we're not going to try to share the lock file
+			// with our parent (if it's been defined).
+		if( LockFd >= 0 ) {
+			close( LockFd );
+			LockFd = -1;
+		}
+
 			// close the read end of our error pipe and set the
 			// close-on-exec flag on the write end
 		close(errorpipe[0]);
@@ -4693,8 +4863,8 @@ int DaemonCore::Create_Process(
 		if( (args == NULL) || (args[0] == 0) ) {
 			dprintf(D_DAEMONCORE, "Create_Process: Arg: NULL\n");
 			unix_args = new char*[2];
-			unix_args[0] = new char[strlen(name)+1];
-			strcpy ( unix_args[0], name );
+			unix_args[0] = new char[strlen(namebuf)+1];
+			strcpy ( unix_args[0], namebuf );
 			unix_args[1] = 0;
 		}
 		else {
@@ -4733,13 +4903,32 @@ int DaemonCore::Create_Process(
 					exit(errno);
 				}
 
-				char nametemp[_POSIX_PATH_MAX];
-				strcpy( nametemp, name );
-				strcpy( name, currwd );
-				strcat( name, "/" );
-				strcat( name, nametemp );
-				
-				dprintf ( D_DAEMONCORE, "Full path exec name: %s\n", name );
+				// Allocate a new buffer to store the modified name
+				const char	*origname = namebuf;
+				int			namelen = strlen( namebuf ) + strlen ( currwd ) + 2;
+
+				// Allocate the "final" buffer to use
+				char *nametmp = (char *) malloc( namelen );
+				if ( NULL == nametmp ) {
+					dprintf( D_ALWAYS, "malloc(%d) failed!\n", namelen );
+					free( (void *) origname );
+					return FALSE;
+				}
+
+				// Build the new (absolute) name in nametmp2
+				strcpy( nametmp, currwd );
+				strcat( nametmp, "/" );
+				strcat( nametmp, origname );
+
+				// Done with the original buffer
+				free( (void *) origname );
+
+				// Ok, we're done modifying the buffer, stuff it back 
+				// into our const char * namebuf
+				namebuf = (const char *) nametmp;
+
+				// Finally, log it
+				dprintf ( D_DAEMONCORE, "Full path exec name: %s\n", namebuf );
 			}
 			
 		}
@@ -4757,6 +4946,10 @@ int DaemonCore::Create_Process(
 							 errno );
 				}
 				close( std[0] );  // We don't need this in the child...
+			} else { 
+					// if we don't want to inherit it, we better close
+					// what's there
+				close( 0 );
 			}
 			if ( std[1] > -1 ) {
 				if ( ( dup2 ( std[1], 1 ) ) == -1 ) {
@@ -4764,6 +4957,8 @@ int DaemonCore::Create_Process(
 							 errno );
 				}
 				close( std[1] );  // We don't need this in the child...
+			} else { 
+				close( 1 );
 			}
 			if ( std[2] > -1 ) {
 				if ( ( dup2 ( std[2], 2 ) ) == -1 ) {
@@ -4771,45 +4966,57 @@ int DaemonCore::Create_Process(
 							 errno );
 				}
 				close( std[2] );  // We don't need this in the child...
+			} else { 
+				close( 2 );
 			}
-		}
-        else {
+		} else {
+			MyString msg = "Just closed standard file fd(s): ";
+
                 // if we don't want to re-map these, close 'em.
-			dprintf ( D_DAEMONCORE, "Just closed fd " );
+			    // However, make sure that its not in the inherit list first
+			int	num_closed = 0;
+			int	closed_fds[3];
             for ( int q=0 ; (q<openfds) && (q<3) ; q++ ) {
-                if ( close ( q ) != -1 ) {
-                    dprintf ( D_DAEMONCORE | D_NOHEADER, "%d ", q );
+				bool found = FALSE;
+				for ( int k=0 ; k < numInheritSockFds ; k++ ) {
+					if ( inheritSockFds[k] == q ) {
+						found = TRUE;
+						break;
+					}
+				}
+				// Now, if we didn't find it in the inherit list, close it
+                if ( ( ! found ) && ( close ( q ) != -1 ) ) {
+					closed_fds[num_closed++] = q;
+					msg += q;
+					msg += ' ';
                 }
             }
-			dprintf ( D_DAEMONCORE | D_NOHEADER, "\n" );
-        }
+			dprintf( D_DAEMONCORE, "%s\n", msg.Value() );
 
-        dprintf ( D_DAEMONCORE, "Printing fds to inherit: " );
-        for ( int a=0 ; a<numInheritSockFds ; a++ ) {
-            dprintf ( D_DAEMONCORE | D_NOHEADER, 
-					  "%d ", inheritSockFds[a] );
-        }
-        dprintf (  D_DAEMONCORE | D_NOHEADER, "\n" );
-
-			// Now we want to close all fds that aren't in sock_inherit_list
-		bool found;
-		dprintf ( D_DAEMONCORE, "Just closed fd " );
-		for ( int j=3 ; j < openfds ; j++ ) {
-			if ( j == errorpipe[1] ) continue; // don't close our errorpipe!
-			found = FALSE;
-			for ( int k=0 ; k < numInheritSockFds ; k++ ) {
-                if ( inheritSockFds[k] == j ) {
-					found = TRUE;
-					break;
+			// Re-open 'em to point at /dev/null as place holders
+			if ( num_closed ) {
+				int	fd_null = open( NULL_FILE, 0 );
+				if ( fd_null < 0 ) {
+					dprintf( D_ALWAYS, "Unable to open %s: %s\n", NULL_FILE,
+							 strerror(errno) );
+				} else {
+					int		i;
+					for ( i=0;  i<num_closed;  i++ ) {
+						if ( ( closed_fds[i] != fd_null ) &&
+							 ( dup2( fd_null, closed_fds[i] ) < 0 ) ) {
+							dprintf( D_ALWAYS,
+									 "Error dup2()ing %s -> %d: %s\n",
+									 NULL_FILE,
+									 closed_fds[i], strerror(errno) );
+						}
+					}
+					// Close the /dev/null descriptor _IF_ it's not stdin/out/err
+					if ( fd_null > 2 ) {
+						close( fd_null );
+					}
 				}
 			}
-			if ( !found ) {
-				if ( close( j ) != -1 ) {
-                    dprintf ( D_DAEMONCORE | D_NOHEADER, "%d ", j );
-                }
-            }
-		}
-		dprintf ( D_DAEMONCORE | D_NOHEADER, "\n" );
+        }
 
 			/* here we want to put all the unix_env stuff into the 
 			   environment.  We also want to drop CONDOR_INHERIT in.
@@ -4843,13 +5050,12 @@ int DaemonCore::Create_Process(
 		}
 
             /* Re-nice ourself */
-        if ( nice_inc > 0 && nice_inc < 20 ) {
-            dprintf ( D_FULLDEBUG, "calling nice(%d)\n", nice_inc );
+        if( nice_inc > 0 ) {
+			if( nice_inc > 19 ) {
+				nice_inc = 19;
+			}
+            dprintf ( D_DAEMONCORE, "calling nice(%d)\n", nice_inc );
             nice( nice_inc );
-        }
-        else if ( nice_inc >= 20 ) {
-            dprintf ( D_FULLDEBUG, "calling nice(19)\n" );
-            nice( 19 );
         }
 
 #if defined( Solaris ) && defined( sun4m )
@@ -4865,19 +5071,62 @@ int DaemonCore::Create_Process(
             SetEnv( "DISPLAY", display );
             free ( display );
             char purebuf[256]; 
-            sprintf ( purebuf, "-program-name=%s", name );
+            sprintf ( purebuf, "-program-name=%s", namebuf );
             SetEnv( "PUREOPTIONS", purebuf );
         }
 #endif
 
-		dprintf ( D_DAEMONCORE, "About to exec \"%s\"\n", name );
+		MyString msg = "Printing fds to inherit: ";
+        for ( int a=0 ; a<numInheritSockFds ; a++ ) {
+			msg += inheritSockFds[a];
+			msg += ' ';
+        }
+        dprintf( D_DAEMONCORE, "%s\n", msg.Value() );
+
+		dprintf ( D_DAEMONCORE, "About to exec \"%s\"\n", namebuf );
+
+			// !! !! !! !! !! !! !! !! !! !! !! !! 
+			// !! !! !! !! !! !! !! !! !! !! !! !! 
+			/* No dprintfs allowed after this! */
+			// !! !! !! !! !! !! !! !! !! !! !! !! 
+			// !! !! !! !! !! !! !! !! !! !! !! !! 
+
+
+			// Now we want to close all fds that aren't in the
+			// sock_inherit_list.  however, this can really screw up
+			// dprintf() because if we've still got a value in
+			// DebugLock and therefore in LockFd, once we close that
+			// fd, we're going to get a fatal error if we try to
+			// dprintf().  so, we cannot print anything to the logs
+			// once we start this process!!!
+
+			// once again, make sure that if the dprintf code opened a
+			// lock file and has an fd, that we close it before we
+			// exec() so we don't leak it.
+		if( LockFd >= 0 ) {
+			close( LockFd );
+			LockFd = -1;
+		}
+
+		bool found;
+		for ( int j=3 ; j < openfds ; j++ ) {
+			if ( j == errorpipe[1] ) continue; // don't close our errorpipe!
+			found = FALSE;
+			for ( int k=0 ; k < numInheritSockFds ; k++ ) {
+                if ( inheritSockFds[k] == j ) {
+					found = TRUE;
+					break;
+				}
+			}
+			if( !found ) {
+				close( j );
+            }
+		}
 
 			// now head into the proper priv state...
 		if ( priv != PRIV_UNKNOWN ) {
 			set_priv(priv);
 		}
-
-			/* No dprintfs allowed after this! */
 
 		if ( priv != PRIV_ROOT ) {
 				// Final check to make sure we're not root anymore.
@@ -4907,9 +5156,9 @@ int DaemonCore::Create_Process(
 	
 			// and ( finally ) exec:
 		if( HAS_DCJOBOPT_NO_ENV_INHERIT(job_opt_mask) ) {
-			exec_results =  execve(name, unix_args, unix_env); 
+			exec_results =  execve(namebuf, unix_args, unix_env); 
 		} else {
-			exec_results =  execv(name, unix_args);
+			exec_results =  execv(namebuf, unix_args);
 		}
 		if( exec_results == -1 )
 		{
@@ -4935,6 +5184,7 @@ int DaemonCore::Create_Process(
 			int child_status;
 			waitpid(newpid, &child_status, 0);
 			errno = child_errno;
+			return_errno = errno;
 			if( errno == ERRNO_EXEC_AS_ROOT ) {
 				dprintf( D_ALWAYS, "Create_Process: child failed because "
 						 "%s process was still root before exec()\n",
@@ -4945,7 +5195,8 @@ int DaemonCore::Create_Process(
 						 strerror(errno) );
 			}
 			close(errorpipe[0]);
-			return FALSE;
+			newpid = FALSE;
+			goto wrapup;
 		}
 		close(errorpipe[0]);
 		
@@ -4955,12 +5206,12 @@ int DaemonCore::Create_Process(
 		dprintf(D_ALWAYS, "Create Process: fork() failed: %s (%d)\n", 
 				strerror(errno), errno );
 		close(errorpipe[0]); close(errorpipe[1]);
-		return FALSE;
+		goto wrapup;
 	}
 #endif
 
 	// Now that we have a child, store the info in our pidTable
-	PidEntry *pidtmp = new PidEntry;
+	pidtmp = new PidEntry;
 	pidtmp->pid = newpid;
 	pidtmp->new_process_group = new_process_group;
 	if ( want_command_port != FALSE )
@@ -4981,7 +5232,10 @@ int DaemonCore::Create_Process(
 	pidtmp->pipeReady = 0;
 	pidtmp->deallocate = 0;
 #endif 
-	assert( pidTable->insert(newpid,pidtmp) == 0 );  
+	{
+	   int insert_result = pidTable->insert(newpid,pidtmp);  
+	   assert( insert_result == 0); 
+	}
 	dprintf(D_DAEMONCORE,
 		"Child Process: pid %lu at %s\n",newpid,pidtmp->sinful_string);
 #ifdef WIN32
@@ -4991,7 +5245,12 @@ int DaemonCore::Create_Process(
 	// Now that child exists, we (the parent) should close up our copy of
 	// the childs command listen cedar sockets.  Since these are on
 	// the stack (rsock and ssock), they will get closed when we return.
-	
+
+ wrapup:
+	// Free up the name buffer
+	free( (void *) namebuf );
+
+	errno = return_errno;
 	return newpid;	
 }
 
@@ -5116,7 +5375,8 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 #else
 	pidtmp->pid = tid;
 #endif 
-	assert( pidTable->insert(tid,pidtmp) == 0 );  
+	int insert_result = pidTable->insert(tid,pidtmp);
+	assert( insert_result == 0 );  
 #ifdef WIN32
 	WatchPid(pidtmp);		
 #endif
@@ -5205,13 +5465,24 @@ DaemonCore::Inherit( void )
 		pidtmp->hung_tid = -1;
 		pidtmp->was_not_responding = FALSE;
 #ifdef WIN32
+		pidtmp->deallocate = 0L;
+
+		// I don't see why we need STANDARD_RIGHTS_REQUIRED, so I'm dropping it
+		// for now since its screwing up DAGman. Ask Colin if you care.
+
 		pidtmp->hProcess = ::OpenProcess( SYNCHRONIZE | 
-						PROCESS_QUERY_INFORMATION | STANDARD_RIGHTS_REQUIRED , 
+//						PROCESS_QUERY_INFORMATION | STANDARD_RIGHTS_REQUIRED , 
+						PROCESS_QUERY_INFORMATION, 
 						FALSE, ppid );
+		if ( pidtmp->hProcess == NULL ) {
+			dprintf(D_ALWAYS, "OpenProcess() failed - Error %d\n", GetLastError());
+		}
 		assert(pidtmp->hProcess);
 		pidtmp->hThread = NULL;		// do not allow child to suspend parent
+		pidtmp->deallocate = 0L;
 #endif
-		assert( pidTable->insert(ppid,pidtmp) == 0 );
+		int insert_result = pidTable->insert(ppid,pidtmp);
+		assert( insert_result == 0 );
 #ifdef WIN32
 		WatchPid(pidtmp);
 #endif
@@ -5522,6 +5793,8 @@ pidWatcherThread( void* arg )
 	int last_pidentry_exited = MAXIMUM_WAIT_OBJECTS + 5;
 	unsigned int exited_pid;
 	
+	
+
 	entry = (DaemonCore::PidWatcherEntry *) arg;
 
 	for (;;) {
@@ -5558,7 +5831,7 @@ pidWatcherThread( void* arg )
 	hKids[numentries] = entry->event;
 	entry->nEntries = numentries;
 	::LeaveCriticalSection(&(entry->crit_section));
-
+	
 	// if there are no more entries to watch, we're done.
 	if ( numentries == 0 )
 		return TRUE;	// this return will kill this thread
@@ -5602,8 +5875,11 @@ pidWatcherThread( void* arg )
 			// Can no longer use localhost (127.0.0.1) here because we may
 			// only have our command socket bound to a specific address. -Todd
 			// sock.connect("127.0.0.1",daemonCore->InfoCommandPort());		
+			// Also - in the post v6.4.x world, SafeSock and startCommand
+			// are no longer thread safe, so we must grab our Big_fat lock.
+			::EnterCriticalSection(&Big_fat_mutex); // enter big fat mutex
 	        SafeSock sock;
-			Daemon d(daemonCore->InfoCommandSinfulString());
+			Daemon d( DT_ANY, daemonCore->InfoCommandSinfulString() );
 
 			bool notify_failed;
 			if ( exited_pid ) {
@@ -5618,6 +5894,7 @@ pidWatcherThread( void* arg )
 					!sock.connect(daemonCore->InfoCommandSinfulString()) ||
 					!d.sendCommand(DC_NOP, &sock, 1);
 			}
+			::LeaveCriticalSection(&Big_fat_mutex); // leave big fat mutex
 
             if ( notify_failed )
 			{
@@ -5640,6 +5917,8 @@ pidWatcherThread( void* arg )
 	}
 
 	}	// end of infinite for loop
+	
+	
 
 }
 
@@ -5809,6 +6088,8 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	// If process is NT and is remote, we are passed the exit status.
 	// If process is NT and is local, we need to fetch the exit status here.
 #ifdef WIN32
+	pidentry->deallocate = 0L; // init deallocate on WIN32
+
 	if ( pidentry->is_local ) {
 		DWORD winexit;
 	
@@ -5921,6 +6202,9 @@ const char* DaemonCore::GetExceptionString(int sig)
 	sprintf(exception_string,"exception %s",
 		ExceptionHandler::GetExceptionString(sig));
 #else
+	if ( sig > 64 ) {
+		sig = WTERMSIG(sig);
+	}
 	sprintf(exception_string,"signal %d",sig);
 #endif
 
@@ -5958,7 +6242,12 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 							(Eventcpp) &DaemonCore::HungChildTimeout,
 							"DaemonCore::HungChildTimeout", this);
 		ASSERT( pidentry->hung_tid != -1 );
-		Register_DataPtr( (void *)child_pid );
+
+		/* allocate a piece of memory here so 64bit architectures don't
+			complain about assigning a non-pointer to a pointer type */
+		pid_t *child_pid_ptr = new pid_t[1];
+		child_pid_ptr[0] = child_pid;
+		Register_DataPtr( child_pid_ptr );
 	}	
 
 	pidentry->was_not_responding = FALSE;
@@ -5973,9 +6262,14 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 int DaemonCore::HungChildTimeout()
 {
 	pid_t hung_child_pid;
+	pid_t *hung_child_pid_ptr;
 	PidEntry *pidentry;
 
-	hung_child_pid = (pid_t) GetDataPtr();
+	/* get the pid out of the allocated memory it was placed into */
+	hung_child_pid_ptr = (pid_t*)GetDataPtr();
+	hung_child_pid = hung_child_pid_ptr[0];
+	delete [] hung_child_pid_ptr;
+	hung_child_pid_ptr = NULL;
 
 	if ((pidTable->lookup(hung_child_pid, pidentry) < 0)) {
 		// we have no information on this pid, it must have exited
@@ -6041,20 +6335,31 @@ int DaemonCore::Was_Not_Responding(pid_t pid)
 int DaemonCore::SendAliveToParent()
 {
     SafeSock sock;
-	char *parent_sinful_string;
+	char parent_sinful_string[30];
+	char *tmp;
 
 	dprintf(D_FULLDEBUG,"DaemonCore: in SendAliveToParent()\n");
-	parent_sinful_string = InfoCommandSinfulString(ppid);	
-	if (!parent_sinful_string ) {
+
+	tmp = InfoCommandSinfulString(ppid);
+	if ( tmp ) {
+			// copy the result from InfoCommandSinfulString to the
+			// stack, because the pointer we got back is a static buffer
+		strcpy(parent_sinful_string,tmp);
+	} else {
+		dprintf(D_FULLDEBUG,"DaemonCore: No parent_sinful_string. SendAliveToParent() failed.\n");
+			// parent already gone?
 		return FALSE;
 	}
-
+	
+	dprintf(D_FULLDEBUG,"DaemonCore: attempting to connect to '%s'\n", parent_sinful_string);
 	if (!sock.connect(parent_sinful_string)) {
+		dprintf(D_FULLDEBUG,"DaemonCore: Could not connect to parent. SendAliveToParent() failed.\n");
 		return FALSE;
 	}
 
-	Daemon d(parent_sinful_string);
+	Daemon d( DT_ANY, parent_sinful_string );
 	if (!d.startCommand(DC_CHILDALIVE, &sock, 0)) {
+		dprintf(D_FULLDEBUG,"DaemonCore: startCommand() failed. SendAliveToParent() failed.\n");
 		return FALSE;
 	}
 	
@@ -6070,46 +6375,57 @@ int DaemonCore::SendAliveToParent()
 }
 	
 #ifndef WIN32
-char **DaemonCore::ParseEnvArgsString(char *incomming, bool env)
+char **DaemonCore::ParseEnvArgsString(const char *str, bool env)
 {
-	char seperator;
-	char **argv = 0;
-	char *temp = 0;
-	char *cur = 0;
-	int num_args = 0;
-	int i = 0;
-	int length = 0;
+	char separator1, separator2;
+	int maxlength;
+	char **argv, *arg;
+	int nargs=0;
 
 	if(env) {
-		seperator = ';';
+		separator1 = ';';
+		separator2 = ';';
 	} else {
-		seperator = ' ';
-	}
-	// Count the number of arguments
-	temp = incomming;
-	do {
-		num_args++;
-		temp++;
-	} while( ( temp = strchr(temp, seperator) ) != NULL);
-
-	argv = new char *[num_args + 1];
-
-	cur = incomming;
-	while( (temp = strchr(cur, seperator) ) )
-	{
-		length = temp - cur;
-		argv[i] = new char[length + 1]; 
-		strncpy(argv[i], cur, length);
-		argv[i][length] = 0;
-		cur = temp + 1;
-		i++;
+		separator1 = ' ';
+		separator2 = '\t';
 	}
 
-	argv[i] = new char[strlen(cur) + 1];
-	strcpy(argv[i], cur);
-	
-	argv[num_args] = 0;
+	/*
+	maxlength is the maximum number of args and the maximum
+	length of any one arg that could be found in this string.
+	A little waste is insignificant here.
+	*/
 
+	maxlength = strlen(str)+1;
+
+	argv = new char*[maxlength];
+
+	/* While there are characters left... */
+	while(*str) {
+		/* Skip over any sequence of whitespace */
+		while( *str == separator1 || *str == separator2 ) {
+			str++;
+		}
+
+		/* If we are not at the end... */
+		if(*str) {
+
+			/* Allocate a new string */
+			argv[nargs] = new char[maxlength];
+
+			/* Copy the arg into the new string */
+			arg = argv[nargs];
+			while( *str && *str != separator1 && *str != separator2 ) {
+				*arg++ = *str++;
+			}
+			*arg = 0;
+
+			/* Move on to the next argument */
+			nargs++;
+		}
+	}
+
+	argv[nargs] = 0;
 	return argv;
 }
 #endif
@@ -6119,7 +6435,15 @@ BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock)
 {
 	for(int i = 0; i < 1000; i++) {
 		if ( !rsock->bind() ) {
-			dprintf(D_ALWAYS, "Failed to bind to command ReliSock\n");
+			dprintf(D_ALWAYS, "Failed to bind to command ReliSock");
+
+#ifndef WIN32
+			dprintf(D_ALWAYS, "(Make sure your IP address is correct in /etc/hosts.)");
+#endif
+#ifdef WIN32
+			dprintf(D_ALWAYS, "(Your system network settings might be invalid.)");
+#endif
+
 			return FALSE;
 		}
 		// now open a SafeSock _on the same port_ choosen above
@@ -6443,4 +6767,76 @@ void DaemonCore :: invalidateSessionCache()
     if (sec_man) {
         sec_man->invalidateAllCache();
     }
+}
+
+
+bool DaemonCore :: set_cookie( int len, unsigned char* data ) {
+	if (_cookie_data) {
+		  // if we have a cookie already, keep it
+		  // around in case some packet that's already
+		  // queued uses it.
+		if ( _cookie_data_old ) {
+			free(_cookie_data_old);
+		}
+		_cookie_data_old = _cookie_data;
+		_cookie_len_old  = _cookie_len;
+
+		// now clear the current cookie data
+		_cookie_data = NULL;
+		_cookie_len  = 0;
+	}
+		
+	if (data) {
+		_cookie_data = (unsigned char*) malloc (len);
+		if (!_cookie_data) {
+			// out of mem
+			return false;
+		}
+		_cookie_len = len;
+		memcpy (_cookie_data, data, len);
+	}
+
+	return true;
+}
+
+bool DaemonCore :: get_cookie( int &len, unsigned char* &data ) {
+	if (data != NULL) {
+		return false;
+	}
+	data = (unsigned char*) malloc (_cookie_len);
+	if (!data) {
+		// out of mem
+		return false;
+	}
+
+	len = _cookie_len;
+	memcpy (data, _cookie_data, _cookie_len);
+
+	return true;
+}
+
+bool DaemonCore :: cookie_is_valid( unsigned char* data ) {
+
+	if ( data == NULL || _cookie_data == NULL ) {
+		return false;
+	}
+	
+	if ( strcmp((char*)_cookie_data, (char*)data) == 0 ) {
+		// we have a match... trust this command.
+		return true;
+	} else if ( _cookie_data_old != NULL ) {
+
+		// maybe this packet was queued before we 
+		// rotated the cookie. So check it with 
+		// the old cookie.
+
+		if ( strcmp((char*)_cookie_data_old, (char*)data) == 0 ) {
+			return true;
+		} else {
+
+			// failure. No match.
+			return false;
+		}
+	}
+	return false; // to make MSVC++ happy
 }

@@ -28,7 +28,7 @@
 #include "condor_attributes.h"
 #include "alloc.h"
 #include "my_hostname.h"
-#include "get_daemon_addr.h"
+#include "get_daemon_name.h"
 #include "sig_install.h"
 
 #include "condor_qmgr.h"
@@ -91,7 +91,7 @@ main( int argc, char *argv[] )
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
-	for( argv++; arg = *argv; argv++ ) {
+	for( argv++; (arg = *argv); argv++ ) {
 		if( (arg[0] == '-' || arg[0] == '+') && isdigit(arg[1]) ) {
 			PrioAdjustment = compute_adj(arg);
 			AdjustmentSet = TRUE;

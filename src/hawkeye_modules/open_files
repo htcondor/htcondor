@@ -1,0 +1,69 @@
+#! /usr/bin/perl -w
+use strict;
+
+my $netdev = "";
+
+# Update the module include path
+BEGIN
+{
+    my $Dir = $0;
+    if ( $Dir =~ /(.*)\/.*/ )
+    {
+	push @INC, "$1";
+    }
+}
+use HawkeyePublish;
+use HawkeyeLib;
+
+# My Hawkeye object
+my $Hawkeye;
+
+main();
+
+# Main
+sub main
+{
+    $| = 1;
+    Init();
+    RunIt();
+}
+
+# Initialize
+sub Init
+{
+    HawkeyeLib::DoConfig( );
+
+    $Hawkeye = HawkeyePublish->new;
+    $Hawkeye->Quiet( 1 );
+    $Hawkeye->AutoIndexSet( 1 );
+
+}
+
+# ***********************************************
+# Do the actual work
+sub RunIt
+{
+    my $Hash = HawkeyeHash->new( \$Hawkeye, "" );
+
+    ### Look up # of open file descriptors, etc
+    if ( $ENV{OSTYPE} =~ /linux/i )
+    {
+	my $ProcFile = "/proc/sys/fs/file-nr";
+	if ( ! open( PROC, $ProcFile ) )
+	{
+	    print STDERR "Can't open $ProcFile\n";
+	    exit 1;
+	}
+	while( <PROC> )
+	{
+	    my ( $NrFiles, $NrFreeFiles, $MaxFiles ) = split;
+	    $Hash->Add( "Limit", "n", $MaxFiles );
+	    $Hash->Add( "MaxUsed", "n", $NrFiles );
+	    $Hash->Add( "Available", "n",
+			$MaxFiles - ( $NrFiles - $NrFreeFiles ) );
+	}
+	$Hash->Store( );
+    }
+
+    $Hawkeye->Publish( );
+}

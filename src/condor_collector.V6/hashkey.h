@@ -37,19 +37,21 @@
 // this is the tuple that we will be hashing on
 class HashKey
 {
-    public:
+  public:
+    MyString name;
+    MyString ip_addr;
 
-    char name    [64];
-    char ip_addr [32];
-
-	void   sprint (char *);
+	void   sprint (MyString &);
 	friend ostream& operator<< (ostream &out, const HashKey &); 
     friend bool operator== (const HashKey &, const HashKey &);
+
 };
 
 // the hash functions
 int hashFunction (const HashKey &, int);
+#if 0
 int hashOnName   (const HashKey &, int);
+#endif
 
 // type for the hash tables ...
 typedef HashTable <HashKey, ClassAd *> CollectorHashTable;
@@ -63,9 +65,12 @@ bool makeCkptSrvrAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
 bool makeCollectorAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
 bool makeStorageAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
 
+class HashString : public MyString
+{
+  public:
+	HashString( void );
+	HashString( const HashKey & );
+	void Build( const HashKey & );
+};
+
 #endif /* __COLLHASH_H__ */
-
-
-
-
-

@@ -60,7 +60,7 @@ public:
 	
 	void	display();		// dprintf's the existing pid family
 
-	void	setFamilyLogin( char *login );
+	void	setFamilyLogin( const char *login );
 
 private:
 	enum KILLFAMILY_DIRECTION {
@@ -76,13 +76,6 @@ private:
 	pid_t daddy_pid;
 
 	priv_state mypriv;
-
-#ifdef WIN32
-	CSysinfo sysinfo;
-	ExtArray<HANDLE> familyHandles;
-#endif
-
-	void closeFamilyHandles();
 
 	class a_pid {
 		public:
@@ -116,7 +109,6 @@ private:
 
 	unsigned long max_image_size;
 
-	int getPidFamilyByLogin(pid_t *pidFamily);
 	char *searchLogin;
 };
 

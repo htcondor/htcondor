@@ -66,7 +66,7 @@ LIB_BASE =  ./libclassad.a ../condor_c++_util/cplus_lib.a \
 	../condor_util_lib/util_lib.a ../condor_sysapi/libsysapi.a 
 
 #if defined(CLASSAD_DEPRECATED)
-LIB = $(LIB_BASE) $(IO_LIB) $(SECURITY_LIB) $(CUTIL_LIB)
+LIB = $(LIB_BASE) $(IO_LIB) $(SECURITY_LIB) $(CPLUS_LIB) $(SECURITY_LIB) 
 #else
 LIB = $(LIB_BASE)
 #endif

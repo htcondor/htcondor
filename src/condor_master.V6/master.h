@@ -24,7 +24,7 @@
 #define _CONDOR_MASTER_H
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
-#include "daemon.h"
+#include "dc_collector.h"
 #include "killfamily.h"
 
 enum AllGoneT { MASTER_RESTART, MASTER_EXIT, MASTER_RESET };
@@ -81,6 +81,7 @@ private:
 	int		runs_on_this_host();
 	void	Recover();
 	void	DoStart();
+	void	DoConfig( bool init );
 
 	int		start_tid;
 	int		recover_tid;
@@ -113,7 +114,7 @@ class Daemons : public Service
 {
 public:
 	Daemons();
-	void	RegisterDaemon(daemon *);
+	void	RegisterDaemon(class daemon *);
 	void 	InitParams();
 	int		GetIndex(const char* process_name);
 
@@ -154,10 +155,10 @@ public:
 	void	Update( ClassAd* );
 	void	UpdateCollector();
 
-	daemon*	FindDaemon( daemon_t dt );
+	class daemon*	FindDaemon( daemon_t dt );
 
 private:
-	daemon **daemon_ptr;
+	class daemon **daemon_ptr;
 	int	no_daemons;
 	int daemon_list_size;
 	int check_new_exec_tid;

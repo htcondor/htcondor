@@ -1,0 +1,58 @@
+#! /usr/bin/perl -w
+use strict;
+
+# Update the module include path
+BEGIN
+{
+    my $Dir = $0;
+    if ( $Dir =~ /(.*)\/.*/ )
+    {
+	push @INC, "$1";
+    }
+}
+use HawkeyePublish;
+use HawkeyeLib;
+
+# Setup the hawkeye stuff
+my $Hawkeye;
+
+# Do it
+Init();
+RunIt();
+
+sub Init {
+    HawkeyeLib::DoConfig( );
+
+    $Hawkeye = HawkeyePublish->new;
+    $Hawkeye->Quiet( 1 );
+    $Hawkeye->AutoIndexSet( 1 );
+}
+
+sub RunIt {
+
+    ###
+    ### Get uptime output
+    ###
+
+    # Start things off
+    my $Hash = HawkeyeHash->new( \$Hawkeye, "" );
+
+    # Run it, parse it
+    my $Cmd = "/usr/bin/uptime";
+    $_ = `$Cmd`;
+    chomp;
+    if ( 0 == $? )
+    {
+	my %Uptime;
+	HawkeyeLib::ParseUptime( $_, \%Uptime );
+	foreach my $Attr ( keys %Uptime )
+	{
+	    my $Type = ( $Attr =~ /string/i ) ? "s" : "n";
+	    $Hash->Add( $Attr, $Type, $Uptime{$Attr} );
+	}
+    }
+
+    # Ok, summary is done...
+    $Hash->Store( );
+    $Hawkeye->Publish( );
+}

@@ -595,13 +595,11 @@ template <class ObjType>
 bool
 ListIterator<ObjType>::Next( ObjType& obj)
 {
-	if( cur ) {
-		if( ( cur = cur->next ) ) {
-			obj = *(cur->obj);
-			return true;
-		}
-	} 
-	return false;
+	ObjType* o = Next();
+	if(o == NULL)
+		return false;
+	obj = *o;
+	return true;
 }
 		
 template <class ObjType>
@@ -609,7 +607,7 @@ ObjType*
 ListIterator<ObjType>::Next( )
 {
 	if( cur ) {
-		if( ( cur = cur->next ) ) {
+		if((cur = cur->next) != NULL) {
 			return( cur->obj );
 		}
 	}

@@ -28,6 +28,27 @@
 #include "condor_io.h"
 #include "condor_debug.h"
 
+/*
+ * Returns true if the given error number indicates
+ * a temporary condition that may immediately be retried.
+ */
+
+static int errno_is_temporary( int e )
+{
+#ifdef WIN32
+	if( e==WSAEWOULDBLOCK ) {
+		return 1;
+	} else {
+		return 0;
+	}
+#else
+	if( e==EAGAIN || e==EWOULDBLOCK || e==EINTR ) {
+		return 1;
+	} else {
+		return 0;
+	}
+#endif
+}
 
 /* Generic read/write wrappers for condor.  These function emulate the 
  * read/write system calls under unix except that they are portable, use
@@ -100,14 +121,16 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout )
 			int the_error;
 #ifdef WIN32
 			the_error = WSAGetLastError();
-			if ( the_error == WSAEWOULDBLOCK ) {
-				dprintf( D_FULLDEBUG, "condor_read(): "
-						 "recv() returns WSAEWOULDBLOCK, try again\n" );
-				continue;
-			}
 #else
 			the_error = errno;
 #endif
+			if ( errno_is_temporary(the_error) ) {
+				dprintf( D_FULLDEBUG, "condor_read(): "
+				         "recv() returned temporary error %d,"
+					 "still trying\n", the_error );
+				continue;
+			}
+
 			dprintf( D_ALWAYS, "condor_read(): recv() returned %d, "
 					 "errno = %d, assuming failure.\n",
 					 nro, the_error );
@@ -153,6 +176,8 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout )
 	}
 
 	while( nw < sz ) {
+
+		needs_select = true;
 
 		if( timeout > 0 ) {
 			while( needs_select ) {
@@ -237,14 +262,16 @@ condor_write( SOCKET fd, char *buf, int sz, int timeout )
 			int the_error;
 #ifdef WIN32
 			the_error = WSAGetLastError();
-			if ( the_error == WSAEWOULDBLOCK ) {
-				dprintf( D_FULLDEBUG, "condor_write(): "
-						 "send() returns WSAEWOULDBLOCK, try again\n" );
-				continue;
-			}
 #else
 			the_error = errno;
 #endif
+			if ( errno_is_temporary(the_error) ) {
+				dprintf( D_FULLDEBUG, "condor_write(): "
+				         "send() returned temporary error %d,"
+					 "still trying\n", the_error );
+				continue;
+			}
+
 			dprintf( D_ALWAYS, "condor_write(): send() returned %d, "
 					 "timeout=%d, errno=%d.  Assuming failure.\n",
 					 nwo, timeout, the_error );

@@ -25,7 +25,7 @@
 #include "KeyCache.h"
 #include "CryptKey.h"
 
-KeyCacheEntry::KeyCacheEntry( char *id, struct sockaddr_in * addr, KeyInfo* key, ClassAd * policy, int expiration) {
+KeyCacheEntry::KeyCacheEntry( const char *id, struct sockaddr_in * addr, KeyInfo* key, ClassAd * policy, int expiration) {
 	if (id) {
 		_id = strdup(id);
 	} else {

@@ -12,9 +12,10 @@ TEST_OBJS = procapi_t.o procapi_getproc_t.o procapi_faminfo_t.o \
 
 library_target(libprocapi.a,$(OBJ))
 
-c_plus_target(condor_procapi, $(TEST_OBJS), $(LIB))
-pure_c_plus_target(condor_procapi.pure, $(TEST_OBJS), $(LIB))
+c_plus_target(condor_procapi,$(TEST_OBJS),$(LIB))
+pure_c_plus_target(condor_procapi.pure,$(TEST_OBJS),$(LIB))
 
+c_plus_target(testprocapi,testprocapi.o,$(LIB))
 html_target( procapi.h procinterface.h )
 
 release:: all

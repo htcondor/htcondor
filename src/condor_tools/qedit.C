@@ -27,7 +27,7 @@
 #include "condor_qmgr.h"
 #include "match_prefix.h"
 #include "sig_install.h"
-#include "get_daemon_addr.h"
+#include "get_daemon_name.h"
 #include "condor_attributes.h"
 #include "condor_distribution.h"
 

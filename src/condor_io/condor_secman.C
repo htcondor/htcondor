@@ -30,18 +30,18 @@
 #include "condor_string.h"
 #include "condor_attributes.h"
 #include "condor_adtypes.h"
-#include "get_daemon_addr.h"
-#include "get_full_hostname.h"
 #include "my_hostname.h"
 #include "internet.h"
 #include "HashTable.h"
 #include "KeyCache.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "../condor_daemon_core.V6/condor_ipverify.h"
 #include "condor_secman.h"
-//#include "classad_merge.h"
+#include "classad_merge.h"
+#include "daemon.h"
 
 extern char* mySubSystem;
-extern char* global_dc_sinful();
+extern bool global_dc_get_cookie(int &len, unsigned char* &data);
 
 ClassAdUnParser unp;
 
@@ -56,7 +56,7 @@ void zz1printf(KeyInfo *k) {
 			sprintf (&hexout[i*2], "%02x", *dataptr++);
 		}
 
-		dprintf (D_SECURITY, "KEYCACHE: [%i] %s\n", length, hexout);
+		dprintf (D_FULLDEBUG, "KEYCACHE: [%i] %s\n", length, hexout);
 	}
 }
 
@@ -117,6 +117,7 @@ SecMan::sec_lookup_feat_act( ClassAd &ad, const char* pname ) {
 	if ( ad.EvaluateAttrString(pname, name) ) {
         char buf[2];
         strncpy (buf, name.data(), 1);
+		buf[1] = 0;
 
 		return sec_alpha_to_sec_feat_act(buf);
 	}
@@ -195,6 +196,7 @@ SecMan::sec_lookup_req( ClassAd &ad, const char* pname ) {
 	if (ad.EvaluateAttrString(pname, res)) {
 		char buf[2];
 		strncpy (buf, res.data(), 1);
+		buf[1] = 0;
 
 		return sec_alpha_to_sec_req(buf);
 	}
@@ -235,7 +237,7 @@ SecMan::sec_param( char* pname, sec_req def) {
 		if (res == SEC_REQ_UNDEFINED || res == SEC_REQ_INVALID) {
 			if (DebugFlags & D_FULLDEBUG) {
 				dprintf (D_SECURITY,
-						"SECMAN: %s is invalid, using default: %s!\n",
+						"SECMAN: %s is invalid, using %s!\n",
 						pname, SecMan::sec_req_rev[def] );
 			}
 			return def;
@@ -244,10 +246,6 @@ SecMan::sec_param( char* pname, sec_req def) {
 		return res;
 	}
 
-	if (DebugFlags & D_FULLDEBUG) {
-		dprintf (D_SECURITY, "SECMAN: no %s defined, assuming %s\n",
-					pname, SecMan::sec_req_rev[def]);
-	}
 	return def;
 }
 
@@ -270,7 +268,7 @@ bool
 SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad, 
 								bool other_side_can_negotiate )
 {
-	char buf[256];
+	char buf[1024];
     Value v;
 
 	if( ! ad ) {
@@ -291,30 +289,21 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	sprintf (buf, "SEC_%s_AUTHENTICATION", auth_level);
 	sec_req sec_authentication = sec_param(buf);
 	if (sec_authentication == SEC_REQ_UNDEFINED) {
-		sec_authentication = sec_param("SEC_DEFAULT_AUTHENTICATION");
-		if (sec_authentication == SEC_REQ_UNDEFINED) {
-			sec_authentication = SEC_REQ_OPTIONAL;
-		}
+		sec_authentication = sec_param("SEC_DEFAULT_AUTHENTICATION", SEC_REQ_OPTIONAL);
 	}
 
 
 	sprintf (buf, "SEC_%s_ENCRYPTION", auth_level);
 	sec_req sec_encryption = sec_param(buf);
 	if (sec_encryption == SEC_REQ_UNDEFINED) {
-		sec_encryption = sec_param("SEC_DEFAULT_ENCRYPTION");
-		if (sec_encryption == SEC_REQ_UNDEFINED) {
-			sec_encryption = SEC_REQ_OPTIONAL;
-		}
+		sec_encryption = sec_param("SEC_DEFAULT_ENCRYPTION", SEC_REQ_OPTIONAL);
 	}
 
 
 	sprintf (buf, "SEC_%s_INTEGRITY", auth_level);
 	sec_req sec_integrity = sec_param(buf);
 	if (sec_integrity == SEC_REQ_UNDEFINED) {
-		sec_integrity = sec_param("SEC_DEFAULT_INTEGRITY");
-		if (sec_integrity == SEC_REQ_UNDEFINED) {
-			sec_integrity = SEC_REQ_OPTIONAL;
-		}
+		sec_integrity = sec_param("SEC_DEFAULT_INTEGRITY", SEC_REQ_OPTIONAL);
 	}
 
 
@@ -328,15 +317,12 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	//           negotiated and unnegotiated commands.
 	// NEVER- everything will be 6.2 style
 
-	// the default is OPTIONAL
+	// as of 6.5.0, the default is PREFERRED
 
 	sprintf (buf, "SEC_%s_NEGOTIATION", auth_level);
 	sec_req sec_negotiation = sec_param(buf);
 	if (sec_negotiation == SEC_REQ_UNDEFINED) {
-		sec_negotiation = sec_param("SEC_DEFAULT_NEGOTIATION");
-		if (sec_negotiation == SEC_REQ_UNDEFINED) {
-			sec_negotiation = SEC_REQ_OPTIONAL;
-		}
+		sec_negotiation = sec_param("SEC_DEFAULT_NEGOTIATION", SEC_REQ_PREFERRED);
 	}
 
 
@@ -368,44 +354,14 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 		return false;
 	}
 
-
 	// for those of you reading this code, a 'paramer'
 	// is a thing that param()s.
 	char *paramer;
 
 	// auth methods
-	sprintf(buf, "SEC_%s_AUTHENTICATION_METHODS", auth_level);
-	paramer = param(buf);
+	paramer = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", auth_level);
 	if (paramer == NULL) {
-		if (DebugFlags & D_FULLDEBUG) {
-			dprintf ( D_SECURITY, "SECMAN: param(\"%s\") == NULL\n", buf);
-		}
-		paramer = param("SEC_DEFAULT_AUTHENTICATION_METHODS");
-		if (paramer == NULL) {
-#if defined(WIN32)
-			// default windows method
-			paramer = strdup("NTSSPI");
-#else
-			// default unix method
-			paramer = strdup("FS");
-#endif
-			if( DebugFlags & D_FULLDEBUG ) {
-				dprintf( D_SECURITY, "SECMAN: "
-						 "param(\"SEC_DEFAULT_AUTHENTICATION_METHODS\") "
-						 "== NULL, using \"%s\"\n", paramer );
-			}
-		} else {
-			if( DebugFlags & D_FULLDEBUG ) {
-				dprintf( D_SECURITY, "SECMAN: "
-						 "param(\"SEC_DEFAULT_AUTHENTICATION_METHODS\") "
-						 "== %s\n", paramer );
-			}
-		}
-	} else {
-		if( DebugFlags & D_FULLDEBUG ) {
-			dprintf( D_SECURITY, "SECMAN: param(\"%s\") == %s\n", buf,
-					 paramer ); 
-		}
+		paramer = strdup(SecMan::getDefaultAuthenticationMethods().Value());
 	}
 
 	if (paramer) {
@@ -417,34 +373,30 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 		if (DebugFlags & D_FULLDEBUG ) {
 			dprintf ( D_SECURITY, "SECMAN: inserted '%s'\n", buf);
 		}
+	} else {
+		if( sec_authentication == SEC_REQ_REQUIRED ) {
+			dprintf( D_SECURITY, "SECMAN: no auth methods, "
+					 "but a feature was required! failing...\n" );
+			return false;
+		} else {
+			// disable auth, which disables crypto and integrity.
+			// if any of these were required, auth would be required
+			// too after calling ReconcileSecurityDependency.
+			dprintf( D_SECURITY, "SECMAN: no auth methods, "
+			 	"disabling authentication, crypto, and integrity.\n" );
+			sec_authentication = SEC_REQ_NEVER;
+			sec_encryption = SEC_REQ_NEVER;
+			sec_integrity = SEC_REQ_NEVER;
+		}
 	}
 
 
+
 	// crypto methods
-	sprintf(buf, "SEC_%s_CRYPTO_METHODS", auth_level);
-	paramer = param(buf);
-	if (paramer == NULL) {
-		if (DebugFlags & D_FULLDEBUG) {
-			dprintf ( D_SECURITY, "SECMAN: param(\"%s\") == NULL\n", buf);
-		}
-		paramer = param("SEC_DEFAULT_CRYPTO_METHODS");
-		if (paramer) {
-			if (DebugFlags & D_FULLDEBUG) {
-				dprintf( D_SECURITY, "SECMAN: "
-						 "param(\"SEC_DEFAULT_CRYPTO_METHODS\") == %s\n",
-						 paramer );
-			}
-		} else {
-			if (DebugFlags & D_FULLDEBUG) {
-				dprintf( D_SECURITY, "SECMAN: "
-						 "param(\"SEC_DEFAULT_CRYPTO_METHODS\") == NULL\n" );
-			}
-		}
-	} else {
-		if (DebugFlags & D_FULLDEBUG) {
-			dprintf( D_SECURITY, "SECMAN: param(\"%s\") == %s\n", buf,
-					 paramer );
-		}
+	paramer = SecMan::getSecSetting("SEC_%s_CRYPTO_METHODS", auth_level);
+	if (!paramer) {
+		paramer = strdup(SecMan::getDefaultCryptoMethods().Value());
+		dprintf ( D_SECURITY, "getDefCryptoMeth -> %s\n", paramer);
 	}
 
 	if (paramer) {
@@ -470,63 +422,35 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	}
 
 
-	// for now, we always want the top bracket of code.
-	if ( TRUE ||
-		 sec_is_negotiable(sec_authentication) || 
- 		 sec_is_negotiable(sec_encryption) || 
- 		 sec_is_negotiable(sec_integrity) ) {
+	sprintf( buf, "%s=\"%s\"", ATTR_SEC_NEGOTIATION,
+			 SecMan::sec_req_rev[sec_negotiation] );
+	ad->Insert(buf);
+	dprintf (D_SECURITY, "ad->Insert(%s)\n", buf);
 
-		sprintf (buf, "%s", SecMan::sec_req_rev[sec_negotiation]);
-        v.Clear();
-        v.SetStringValue(buf);
-		ad->InsertAttr(ATTR_SEC_NEGOTIATION, buf);
+	sprintf (buf, "%s", SecMan::sec_req_rev[sec_negotiation]);
+    v.Clear();
+    v.SetStringValue(buf);
+	ad->InsertAttr(ATTR_SEC_NEGOTIATION, buf);
 
-		sprintf (buf, "%s", SecMan::sec_req_rev[sec_authentication]);
-        v.Clear();
-        v.SetStringValue(buf);
-		ad->InsertAttr(ATTR_SEC_AUTHENTICATION, buf);
+	sprintf (buf, "%s", SecMan::sec_req_rev[sec_authentication]);
+    v.Clear();
+    v.SetStringValue(buf);
+	ad->InsertAttr(ATTR_SEC_AUTHENTICATION, buf);
 
-		sprintf (buf, "%s", SecMan::sec_req_rev[sec_encryption]);
-        v.Clear();
-        v.SetStringValue(buf);
-		ad->InsertAttr(ATTR_SEC_ENCRYPTION, buf);
+	sprintf (buf, "%s", SecMan::sec_req_rev[sec_encryption]);
+    v.Clear();
+    v.SetStringValue(buf);
+	ad->InsertAttr(ATTR_SEC_ENCRYPTION, buf);
 
-		sprintf (buf, "%s", SecMan::sec_req_rev[sec_integrity]);
-        v.Clear();
-        v.SetStringValue(buf);
-		ad->InsertAttr(ATTR_SEC_INTEGRITY, buf);	
+	sprintf (buf, "%s", SecMan::sec_req_rev[sec_integrity]);
+    v.Clear();
+    v.SetStringValue(buf);
+	ad->InsertAttr(ATTR_SEC_INTEGRITY, buf);	
 
-		sprintf (buf, "%s", "NO");
-		v.Clear();
-        v.SetStringValue(buf);
-		ad->InsertAttr(ATTR_SEC_ENACT, buf);	
-	} else {
-		sprintf (buf, "%s", SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_negotiation)]);
-        v.Clear();
-        v.SetStringValue(buf);
-		ad->InsertAttr(ATTR_SEC_NEGOTIATION, buf);	
-
-		sprintf (buf, "%s",SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_authentication)]);
-        v.Clear();
-        v.SetStringValue(buf);
-		ad->InsertAttr(ATTR_SEC_AUTHENTICATION, buf);	
-
-		sprintf (buf, "%s", SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_encryption)]);
-        v.Clear();
-        v.SetStringValue(buf);
-		ad->InsertAttr(ATTR_SEC_ENCRYPTION, buf);
-
-		sprintf (buf, "%s", SecMan::sec_feat_act_rev[sec_req_to_feat_act(sec_integrity)]);
-        v.Clear();
-        v.SetStringValue(buf);
-		ad->InsertAttr(ATTR_SEC_INTEGRITY, buf);
-		
-		sprintf (buf, "%s", "YES");
-        v.Clear();
-        v.SetStringValue(buf);
-		ad->InsertAttr(ATTR_SEC_ENACT, buf);
-	}
-
+	sprintf (buf, "%s", "NO");
+	v.Clear();
+    v.SetStringValue(buf);
+	ad->InsertAttr(ATTR_SEC_ENACT, buf);	
 
 	// subsystem
 	sprintf(buf, "%s", mySubSystem);
@@ -534,15 +458,10 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
     v.SetStringValue(buf);
 	ad->InsertAttr(ATTR_SEC_SUBSYSTEM, buf);
 
-
 	// key duration
 	// ZKM TODO HACK
 	// need to check kerb expiry.
-	sprintf(buf, "SEC_%s_SESSION_DURATION", auth_level);
-	paramer = param(buf);
-	if (!paramer) {
-		paramer = param("SEC_DEFAULT_SESSION_DURATION");
-	}
+	paramer = SecMan::getSecSetting("SEC_%s_SESSION_DURATION", auth_level);
 
 	int sessdur;
 	if (paramer) {
@@ -565,6 +484,26 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	return true;
 }
 
+char* 
+SecMan::getSecSetting( const char* fmt, const char* authorization_level ) {
+
+	// for those of you reading this code, a 'paramer'
+	// is a thing that param()s.
+	char *paramer = NULL;
+	char buf[1024];
+
+	if (authorization_level && authorization_level[0]) {
+		sprintf(buf, fmt, authorization_level);
+		paramer = param(buf);
+	}
+	if (!paramer) {
+		sprintf(buf, fmt, "DEFAULT");
+		paramer = param(buf);
+	}
+	// it is up to the caller to free the result (just like param)
+	return paramer;
+}
+
 
 bool
 SecMan::ReconcileSecurityDependency (sec_req &a, sec_req &b) {
@@ -581,54 +520,6 @@ SecMan::ReconcileSecurityDependency (sec_req &a, sec_req &b) {
 	}
 	return true;
 }
-
-/* defunct
-bool
-SecMan::ReconcileSecurityDependencyOld (sec_req &a, sec_req &b) {
-	sec_req tmp_base = a;
-	sec_req tmp_opt  = b;
-
-	if (tmp_opt == REQUIRED) {
-		if (tmp_base == NEVER) {
-			// invalid combo
-			return false;
-		}
-
-		// if the option is required and the
-		// base doesn't care, then the base
-		// is required too.
-		tmp_base = REQUIRED;
-	}
-
-	if (tmp_opt == PREFERRED) {
-		if (tmp_base == NEVER) {
-			// the option is preferred, but not
-			// possible since the base is never.
-			tmp_opt = NEVER;
-		} else if (tmp_base == OPTIONAL) {
-			// but if the base doesn't care, it
-			// too will prefer the option
-			tmp_base = PREFERRED;
-		}
-	}
-
-	if (tmp_opt == OPTIONAL) {
-		if (tmp_base == NEVER) {
-			// the option will not work,
-			// the base won't allow it.
-			tmp_opt = NEVER;
-		}
-		// base is already optional or higher (PREF, REQ)
-	}
-
-	// if (tmp_opt == NEVER) then nobody cares
-
-	// set the return params
-	a = tmp_base;
-	b = tmp_opt;
-	return true;
-}
-*/
 
 
 SecMan::sec_feat_act
@@ -742,7 +633,6 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 								ATTR_SEC_ENCRYPTION,
 								cli_ad, srv_ad );
 
-
 	integrity_action = ReconcileSecurityAttribute(
 								ATTR_SEC_INTEGRITY,
 								cli_ad, srv_ad );
@@ -760,7 +650,7 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 	// make a classad with the results
 	ClassAd * action_ad = new ClassAd();
 
-	char buf[128];
+	char buf[1024];
 
 	sprintf (buf, "%s", SecMan::sec_feat_act_rev[authentication_action]);
     v.Clear();
@@ -782,27 +672,33 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 	if (cli_ad.EvaluateAttrString( ATTR_SEC_AUTHENTICATION_METHODS, cli_methods) &&
 		srv_ad.EvaluateAttrString( ATTR_SEC_AUTHENTICATION_METHODS, srv_methods)) {
 
-		char* the_method = ReconcileMethodLists( (char *)cli_methods.data(), (char *)srv_methods.data() );
-		if (the_method) {
-			sprintf (buf, "%s", the_method);
+		// send the list for 6.5.0 and higher
+		MyString the_methods = ReconcileMethodLists( (char *)cli_methods.data(), (char *)srv_methods.data() );
+		sprintf (buf, "%s", the_methods.Value());
+		v.Clear();
+        v.SetStringValue(buf);
+        action_ad->InsertAttr(ATTR_SEC_AUTHENTICATION_METHODS_LIST, buf);
+
+		// send the single method for pre 6.5.0
+		StringList  tmpmethodlist( the_methods.Value() );
+		char* first;
+		tmpmethodlist.rewind();
+		first = tmpmethodlist.next();
+		if (first) {
 			v.Clear();
-            v.SetStringValue(buf);
-            action_ad->InsertAttr(ATTR_SEC_AUTHENTICATION_METHODS, buf);
-			free( the_method );
+        	v.SetStringValue(first);
+        	action_ad->InsertAttr(ATTR_SEC_AUTHENTICATION_METHODS_LIST, buf);
 		}
 	}
 
 	if (cli_ad.EvaluateAttrString( ATTR_SEC_CRYPTO_METHODS, cli_methods) &&
 		srv_ad.EvaluateAttrString( ATTR_SEC_CRYPTO_METHODS, srv_methods)) {
 
-		char *the_method = ReconcileMethodLists( (char*)cli_methods.data(), (char*)srv_methods.data() );
-		if (the_method) {
-			sprintf (buf, "%s", the_method);
-			v.Clear();
-            v.SetStringValue(buf);
-            action_ad->InsertAttr(ATTR_SEC_CRYPTO_METHODS, buf);
-			free( the_method );
-		}
+		MyString the_methods = ReconcileMethodLists( (char *)cli_methods.data(), (char *)srv_methods.data() );
+		sprintf (buf, "%s", the_methods.Value());
+		v.Clear();
+        v.SetStringValue(buf);
+        action_ad->InsertAttr(ATTR_SEC_CRYPTO_METHODS, buf);
 	}
 
 	// reconcile the session expiration.  it is the SHORTER of
@@ -832,24 +728,26 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 
 
 bool
-SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
+SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* errstack, int subCmd)
 {
     Value v;
 	// basic sanity check
 	if( ! sock ) {
 		dprintf ( D_ALWAYS, "startCommand() called with a NULL Sock*, failing." );
+		errstack->push( "SECMAN", SECMAN_ERR_INTERNAL, "Internal Error - "
+				"startCommand() called with a NULL socket");
 		return false;
 	} else {
-		dprintf ( D_SECURITY, "SECMAN: starting %i to %s on %s port %i.\n", cmd, sin_to_string(sock->endpoint()), (sock->type() == Stream::safe_sock) ? "UDP" : "TCP", sock->get_port());
+		dprintf ( D_SECURITY, "SECMAN: command %i to %s on %s port %i.\n", cmd, sin_to_string(sock->endpoint()), (sock->type() == Stream::safe_sock) ? "UDP" : "TCP", sock->get_port());
 	}
 
 
 	// get this value handy
 	bool is_tcp = (sock->type() == Stream::reli_sock);
-	
+
 
 	// need a temp buffer handy throughout.
-	char buf[256];
+	char buf[1024];
 
 	// this one is a temp for storing key ids
 	char keybuf[128];
@@ -909,6 +807,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 				// security policy was invalid.  bummer.
 			dprintf( D_ALWAYS, 
 					 "SECMAN: ERROR: The security policy is invalid.\n" );
+			errstack->push("SECMAN", SECMAN_ERR_INVALID_POLICY,
+				"Configuration Problem: The security policy is invalid.\n" );
 			return false;
 		}
 
@@ -938,8 +838,10 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 	// find out our negotiation policy.
 	sec_req negotiation = sec_lookup_req( auth_info, ATTR_SEC_NEGOTIATION );
 	if (negotiation == SEC_REQ_UNDEFINED) {
-		negotiation = SEC_REQ_OPTIONAL;
-		dprintf(D_SECURITY, "SECMAN: missing negotiation attribute, assuming OPTIONAL.\n");
+		// this code never executes, as a default was already stuck into the
+		// classad.
+		negotiation = SEC_REQ_PREFERRED;
+		dprintf(D_SECURITY, "SECMAN: missing negotiation attribute, assuming PREFERRED.\n");
 	}
 
 
@@ -960,9 +862,6 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 
 		// we must _NOT_ do an eom() here!  Ques?  See Todd or Zach 9/01
 
-		// TODO ZKM HACK
-		// make a note that this command was done old-style.  perhaps it is time
-		// to get some decent error propagation up in here...
 		return true;
 	}
 
@@ -995,7 +894,34 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 	// so, we send a DC_AUTHENTICATE via TCP.  this will get us authenticated
 	// and get us a key, which is what needs to happen.
 
-	if ((!have_session) && (!is_tcp)) {
+	// however, we cannot do this if the UDP message is addressed to
+	// our own daemoncore process, as we are NOT multithreaded and
+	// cannot hold a TCP conversation with ourself. so, in this case,
+	// we set a cookie in daemoncore and put the cookie in the classad
+	// as proof that the message came from ourself.
+
+	MyString destsinful = sin_to_string(sock->endpoint());
+	MyString oursinful = global_dc_sinful();
+	bool using_cookie = false;
+
+	if (destsinful == oursinful) {
+		// use a cookie.
+		int len = 0;
+		unsigned char* randomjunk = NULL;
+
+		global_dc_get_cookie (len, randomjunk);
+		
+		sprintf (buf, "%s=\"%s\"", ATTR_SEC_COOKIE, randomjunk);
+		free(randomjunk);
+		randomjunk = NULL;
+
+		auth_info.Insert(buf);
+		dprintf (D_SECURITY, "SECMAN: %s\n", buf);
+
+		using_cookie = true;
+
+	} else if ((!have_session) && (!is_tcp)) {
+		// can't use a cookie, so try to start a session.
 
 		if (DebugFlags & D_FULLDEBUG) {
 			dprintf ( D_SECURITY, "SECMAN: need to start a session via TCP\n");
@@ -1011,6 +937,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 		sprintf (buf, sin_to_string(sock->endpoint()));
 		if (!tcp_auth_sock.connect(buf)) {
 			dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", buf);
+			errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
+					"TCP connection to %s failed\n", buf);
 			return false;
 		}
 
@@ -1019,7 +947,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 		}
 		tcp_auth_sock.timeout(TCP_SOCK_TIMEOUT);
 
-		bool succ = startCommand ( DC_AUTHENTICATE, &tcp_auth_sock, true, cmd);
+		bool succ = startCommand ( DC_AUTHENTICATE, &tcp_auth_sock, can_negotiate, errstack, cmd);
 
 		if (DebugFlags & D_FULLDEBUG) {
 			dprintf ( D_SECURITY, "SECMAN: sending eom() and closing TCP sock.\n");
@@ -1031,6 +959,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 
 		if (!succ) {
 			dprintf ( D_SECURITY, "SECMAN: unable to start session via TCP, failing.\n");
+			errstack->push("SECMAN", SECMAN_ERR_NO_SESSION,
+					"Failed to start a session with TCP");
 			return false;
 		} else {
 			if (DebugFlags & D_FULLDEBUG) {
@@ -1078,7 +1008,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 			} else {
 				// there still is no session.
 				//
-				// this means when i sent them the NOP, session was started.
+				// this means when i sent them the NOP, no session was started.
 				// maybe it means their security policy doesn't negotiate.
 				// we'll send them this packet either way... if they don't like
 				// it, they won't listen.
@@ -1093,12 +1023,18 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 	}
 
 
+	// fill in return address, if we are a daemon
+	char* dcss = global_dc_sinful();
+	if (dcss) {
+		sprintf(buf, "%s=\"%s\"", ATTR_SEC_SERVER_COMMAND_SOCK, dcss);
+		auth_info.Insert(buf);
+	}
+
 	// fill in command
     v.Clear();  
     v.SetIntegerValue(cmd);
     auth_info.InsertAttr(ATTR_SEC_COMMAND, cmd);
 	dprintf(D_SECURITY, "SECMAN: inserted '%s = %d'\n", ATTR_SEC_COMMAND, cmd);
-
 
 	if (cmd == DC_AUTHENTICATE) {
 		// fill in sub-command
@@ -1121,112 +1057,122 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 	*/
 
 
-	bool retval = true;
+	if (!using_cookie && !is_tcp) {
 
-	if (!is_tcp) {
+		// udp works only with an already established session (gotten from a
+		// tcp connection).  if there's no session, there's no way to enable
+		// any features.  it could just be that this is a 6.2 daemon we are
+		// talking to.  in that case, send the command the old way, as long
+		// as that is permitted
 
-		// there has to be a session to do anything.
-		// in the future, if no authenticate or crypto is required, we 
-		// could just send a sessionless UDP message with the command.
+		dprintf ( D_SECURITY, "SECMAN: UDP, have_session == %i, can_neg == %i\n",
+				(have_session?1:0), (can_negotiate?1:0));
 
-		if (!have_session) {
-			dprintf ( D_SECURITY, "SECMAN: UDP has no session, failing!\n");
-			return false;
-		}
+		if (have_session) {
+			// UDP w/ session
+			if (DebugFlags & D_FULLDEBUG) {
+				dprintf ( D_SECURITY, "SECMAN: UDP has session %s.\n", enc_key->id());
+			}
 
-		// UDP
-		if (DebugFlags & D_FULLDEBUG) {
-			dprintf ( D_SECURITY, "SECMAN: UDP has session %s.\n", enc_key->id());
-		}
+			sec_feat_act will_authenticate = sec_lookup_feat_act( auth_info, ATTR_SEC_AUTHENTICATION );
+			sec_feat_act will_enable_enc   = sec_lookup_feat_act( auth_info, ATTR_SEC_ENCRYPTION );
+			sec_feat_act will_enable_mac   = sec_lookup_feat_act( auth_info, ATTR_SEC_INTEGRITY );
 
-		sec_feat_act will_authenticate = sec_lookup_feat_act( auth_info, ATTR_SEC_AUTHENTICATION );
-		sec_feat_act will_enable_enc   = sec_lookup_feat_act( auth_info, ATTR_SEC_ENCRYPTION );
-		sec_feat_act will_enable_mac   = sec_lookup_feat_act( auth_info, ATTR_SEC_INTEGRITY );
+			if (will_authenticate == SEC_FEAT_ACT_UNDEFINED || 
+				will_authenticate == SEC_FEAT_ACT_INVALID || 
+				will_enable_enc == SEC_FEAT_ACT_UNDEFINED || 
+				will_enable_enc == SEC_FEAT_ACT_INVALID || 
+				will_enable_mac == SEC_FEAT_ACT_UNDEFINED || 
+				will_enable_mac == SEC_FEAT_ACT_INVALID ) {
 
-		if (will_authenticate == SEC_FEAT_ACT_UNDEFINED || 
-			will_authenticate == SEC_FEAT_ACT_INVALID || 
-			will_enable_enc == SEC_FEAT_ACT_UNDEFINED || 
-			will_enable_enc == SEC_FEAT_ACT_INVALID || 
-			will_enable_mac == SEC_FEAT_ACT_UNDEFINED || 
-			will_enable_mac == SEC_FEAT_ACT_INVALID ) {
+				// suck.
 
-			// suck.
-
-			dprintf ( D_ALWAYS, "SECMAN: action attribute missing from classad\n");
-			return false;
-		}
-
-
-		KeyInfo* ki  = NULL;
-		if (enc_key->key()) {
-			ki  = new KeyInfo(*(enc_key->key()));
-		}
-		
-		if (will_enable_mac == SEC_FEAT_ACT_YES) {
-
-			if (!ki) {
-				dprintf ( D_ALWAYS, "SECMAN: enable_mac has no key to use, failing...\n");
+				dprintf ( D_ALWAYS, "SECMAN: action attribute missing from classad\n");
+				auth_info.dPrint( D_SECURITY );
+				errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
+						"Protocol Error: Action attribute missing");
 				return false;
 			}
 
-			if (DebugFlags & D_FULLDEBUG) {
-				dprintf (D_SECURITY, "SECMAN: about to enable message authenticator.\n");
+
+			KeyInfo* ki  = NULL;
+			if (enc_key->key()) {
+				ki  = new KeyInfo(*(enc_key->key()));
+			}
+			
+			if (will_enable_mac == SEC_FEAT_ACT_YES) {
+
+				if (!ki) {
+					dprintf ( D_ALWAYS, "SECMAN: enable_mac has no key to use, failing...\n");
+					errstack->push( "SECMAN", SECMAN_ERR_NO_KEY,
+							"Failed to establish a crypto key" );
+					return false;
+				}
+
+				if (DebugFlags & D_FULLDEBUG) {
+					dprintf (D_SECURITY, "SECMAN: about to enable message authenticator.\n");
 #ifdef SECURITY_HACK_ENABLE
-				zz1printf(ki);
+					zz1printf(ki);
 #endif
-			}
+				}
 
-			// prepare the buffer to pass in udp header
-			sprintf(buf, "%s", enc_key->id());
+				// prepare the buffer to pass in udp header
+				sprintf(buf, "%s", enc_key->id());
 
-			// stick our command socket sinful string in there
-			char* dcss = global_dc_sinful();
-			if (dcss) {
-				strcat (buf, ",");
-				strcat (buf, dcss);
-			}
+				// stick our command socket sinful string in there
+				char* dcss = global_dc_sinful();
+				if (dcss) {
+					strcat (buf, ",");
+					strcat (buf, dcss);
+				}
 
-			sock->encode();
-			sock->set_MD_mode(MD_ALWAYS_ON, ki, buf);
+				sock->encode();
+				sock->set_MD_mode(MD_ALWAYS_ON, ki, buf);
 
-			dprintf ( D_SECURITY, "SECMAN: successfully enabled message authenticator!\n");
-			retval = true;
-		} // if (will_enable_mac)
+				dprintf ( D_SECURITY, "SECMAN: successfully enabled message authenticator!\n");
+			} // if (will_enable_mac)
 
-		if (will_enable_enc == SEC_FEAT_ACT_YES) {
+			if (will_enable_enc == SEC_FEAT_ACT_YES) {
 
-			if (!ki) {
-				dprintf ( D_ALWAYS, "SECMAN: enable_enc no key to use, failing...\n");
-				return false;
-			}
+				if (!ki) {
+					dprintf ( D_ALWAYS, "SECMAN: enable_enc no key to use, failing...\n");
+					errstack->push( "SECMAN", SECMAN_ERR_NO_KEY,
+							"Failed to establish a crypto key" );
+					return false;
+				}
 
-			if (DebugFlags & D_FULLDEBUG) {
-				dprintf (D_SECURITY, "SECMAN: about to enable encryption.\n");
+				if (DebugFlags & D_FULLDEBUG) {
+					dprintf (D_SECURITY, "SECMAN: about to enable encryption.\n");
 #ifdef SECURITY_HACK_ENABLE
-				zz1printf(ki);
+					zz1printf(ki);
 #endif
+				}
+
+				// prepare the buffer to pass in udp header
+				sprintf(buf, "%s", enc_key->id());
+
+				// stick our command socket sinful string in there
+				char* dcss = global_dc_sinful();
+				if (dcss) {
+					strcat (buf, ",");
+					strcat (buf, dcss);
+				}
+
+
+				sock->encode();
+				sock->set_crypto_key(ki, buf);
+
+				dprintf ( D_SECURITY, "SECMAN: successfully enabled encryption!\n");
+			} // if (will_enable_enc)
+
+			if (ki) {
+				delete ki;
 			}
-
-			// prepare the buffer to pass in udp header
-			sprintf(buf, "%s", enc_key->id());
-
-			// stick our command socket sinful string in there
-			char* dcss = global_dc_sinful();
-			if (dcss) {
-				strcat (buf, ",");
-				strcat (buf, dcss);
-			}
-
-
+		} else {
+			// UDP the old way...  who knows if they get it, we'll just assume they do.
 			sock->encode();
-			sock->set_crypto_key(ki, buf);
-
-			dprintf ( D_SECURITY, "SECMAN: successfully enabled encryption!\n");
-			retval = true;
-		} // if (will_enable_enc)
-
-		if (ki) {
-			delete ki;
+			sock->code(cmd);
+			return true;
 		}
 	}
 
@@ -1239,6 +1185,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
     sock->encode();
 	if (! sock->code(authcmd)) {
 		dprintf ( D_ALWAYS, "SECMAN: failed to send DC_AUTHENTICATE\n");
+		errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
+						"Failed to send DC_AUTHENTICATE message" );
 		return false;
 	}
 
@@ -1253,7 +1201,9 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 
 	// send the classad
 	if( !putOldClassAd(sock, auth_info) ) {
-		dprintf(D_ALWAYS, "SECMAN: failed to send auth_info\n");
+		dprintf ( D_ALWAYS, "SECMAN: failed to send auth_info\n");
+		errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
+						"Failed to send auth_info" );
 		return false;
 	}
 
@@ -1261,6 +1211,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 
 		if (! sock->end_of_message()) {
 			dprintf ( D_ALWAYS, "SECMAN: failed to end classad message\n");
+			errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
+						"Failed to end classad message" );
 			return false;
 		}
 
@@ -1274,8 +1226,42 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 
 
 			if( !getOldClassAd(sock, auth_response) || !sock->eom() ) {
-				dprintf(D_ALWAYS, "SECMAN: server did not respond, failing\n");
-				return false;
+				// if we get here, it means the serve accepted our connection
+				// but dropped it after we sent the DC_AUTHENTICATE.  it probably
+				// doesn't understand that command, so let's attempt to send it
+				// the old way, IF negotiation wasn't REQUIRED.
+
+				// set this input/output parameter to reflect
+				can_negotiate = false;
+
+				if (negotiation == SEC_REQ_REQUIRED) {
+					dprintf ( D_ALWAYS, "SECMAN: no classad from server, failing\n");
+					errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
+						"Failed to end classad message" );
+					return false;
+				}
+
+				// we'll try to send it the old way.
+				dprintf (D_SECURITY, "SECMAN: negotiation failed.  trying the old way...\n");
+
+				// this is kind of ugly:  close and reconnect the socket.
+				// seems to work though! :)
+
+				char addrbuf[128];
+				sprintf (addrbuf, sin_to_string(sock->endpoint()));
+				sock->close();
+				//sleep( 1 );
+
+				if (!sock->connect(addrbuf)) {
+					dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", addrbuf);
+					errstack->pushf( "SECMAN", SECMAN_ERR_CONNECT_FAILED,
+						"TCP connection to %s failed\n", addrbuf);
+					return false;
+				}
+
+				sock->encode();
+				sock->code(cmd);
+				return true;
 			}
 
 			if (DebugFlags & D_FULLDEBUG) {
@@ -1287,6 +1273,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 
 			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_VERSION );
 			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_ENACT );
+			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_AUTHENTICATION_METHODS_LIST );
 			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_AUTHENTICATION_METHODS );
 			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_CRYPTO_METHODS );
 			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_AUTHENTICATION );
@@ -1320,6 +1307,9 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 			// missing some essential info.
 
 			dprintf ( D_SECURITY, "SECMAN: action attribute missing from classad, failing!\n");
+			auth_info.dPrint( D_SECURITY );
+			errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
+						"Protocol Error: Action attribute missing");
 			return false;
 		}
 
@@ -1340,18 +1330,36 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 			if (DebugFlags & D_FULLDEBUG) {
 				dprintf ( D_SECURITY, "SECMAN: authenticating RIGHT NOW.\n");
 			}
-			string auth_method;
-			if ( !auth_info.EvaluateAttrString(ATTR_SEC_AUTHENTICATION_METHODS,
-											  auth_method ) ||
-                 auth_method.length() <= 0 ) {
-				// there's no auth method.
-				dprintf ( D_ALWAYS, "SECMAN: no auth method!, failing.\n");
-				return false;
+
+			string auth_methods;
+			auth_info.EvaluateAttrString(ATTR_SEC_AUTHENTICATION_METHODS_LIST, auth_methods );
+			if (auth_methods != "") {
+				if (DebugFlags & D_FULLDEBUG) {
+					dprintf (D_SECURITY, "SECMAN: AuthMethodsList: %s\n", auth_methods.data());
+				}
+			} else {
+				// lookup the 6.4 attribute name
+				auth_info.EvaluateAttrString(ATTR_SEC_AUTHENTICATION_METHODS, auth_methods );
+   				if (DebugFlags & D_FULLDEBUG) {
+					dprintf (D_SECURITY, "SECMAN: AuthMethods: %s\n", auth_methods.data());
+				}
 			}
 
-			if (!sock->authenticate(ki, sec_char_to_auth_method((char*)auth_method.data()))) {
-				dprintf ( D_SECURITY, "SECMAN: authenticate failed!\n");
-				retval = false;
+			if ( auth_methods.length() <= 0 ) {
+				// there's no auth methods.
+				dprintf ( D_ALWAYS, "SECMAN: no auth method!, failing.\n");
+				errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
+						"Protocol Error: No auth methods");
+				return false;
+			} else {
+				dprintf ( D_SECURITY, "SECMAN: Auth methods: %s\n", auth_methods);
+			}
+
+			if (!sock->authenticate(ki, auth_methods.data(), errstack)) {
+				if(ki) {
+					delete ki;
+				}
+				return false;
 			}
 		} else {
 			// !new_session is equivilant to use_session in this client.
@@ -1370,6 +1378,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 
 			if (!ki) {
 				dprintf ( D_ALWAYS, "SECMAN: enable_mac has no key to use, failing...\n");
+				errstack->push ("SECMAN", SECMAN_ERR_NO_KEY,
+							"Failed to establish a crypto key" );
 				return false;
 			}
 
@@ -1384,13 +1394,14 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 			sock->set_MD_mode(MD_ALWAYS_ON, ki);
 
 			dprintf ( D_SECURITY, "SECMAN: successfully enabled message authenticator!\n");
-			retval = true;
 		} // if (will_enable_mac)
 
 		if (will_enable_enc == SEC_FEAT_ACT_YES) {
 
 			if (!ki) {
 				dprintf ( D_ALWAYS, "SECMAN: enable_enc no key to use, failing...\n");
+				errstack->push ("SECMAN", SECMAN_ERR_NO_KEY,
+							"Failed to establish a crypto key" );
 				return false;
 			}
 
@@ -1405,7 +1416,6 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 			sock->set_crypto_key(ki);
 
 			dprintf ( D_SECURITY, "SECMAN: successfully enabled encryption!\n");
-			retval = true;
 		} // if (will_enable_enc)
 
 		
@@ -1418,8 +1428,9 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 			sock->decode();
 
 			if( !getOldClassAd(sock, post_auth_info) || !sock->eom() ) {
-				dprintf (D_ALWAYS, "SECMAN: could not receive session info, "
-						 "failing!\n");
+				dprintf (D_ALWAYS, "SECMAN: could not receive session info, failing!\n");
+				errstack->push ("SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
+							"could not recieve post_auth_info" );
 				return false;
 			} else {
 				if (DebugFlags & D_FULLDEBUG) {
@@ -1446,14 +1457,20 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
             string sid;
 			if ( !auth_info.EvaluateAttrString(ATTR_SEC_SID, sid) ||
                  sid.length() <= 0 ) {
-				return FALSE;
+				dprintf (D_ALWAYS, "SECMAN: session id is NULL, failing\n");
+				errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
+						"Failed to lookup session id");
+				return false;
 			}
 
 			string cmd_list;
 			if ( !auth_info.EvaluateAttrString(ATTR_SEC_VALID_COMMANDS,
 											   cmd_list) ||
 				 cmd_list.length() <= 0 ) {
-				return FALSE;
+				dprintf (D_ALWAYS, "SECMAN: valid commands is NULL, failing\n");
+				errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
+						"Protocol Failure: Unable to lookup valid commands");
+				return false;
 			}
 
 			ASSERT (enc_key == NULL);
@@ -1484,7 +1501,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 			char *p;
 
 			coms.rewind();
-			while (p = coms.next() ) {
+			while ( (p = coms.next()) ) {
 				sprintf (keybuf, "{%s,<%s>}", sin_to_string(sock->endpoint()), p);
 
 				// NOTE: HashTable returns ZERO on SUCCESS!!!
@@ -1516,9 +1533,6 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 					}
 				}
 			}
-			
-			retval = true;
-
 		} // if (new_session)
 
 		// clean up
@@ -1528,19 +1542,11 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 
 	} // if (is_tcp)
 
-	if (retval) {
-		if (DebugFlags & D_FULLDEBUG) {
-			dprintf ( D_SECURITY, "SECMAN: setting sock->encode()\n");
-			dprintf ( D_SECURITY, "SECMAN: setting sock->allow_one_empty_message()\n");
-		}
-		sock->encode();
-		sock->allow_one_empty_message();
-		dprintf ( D_SECURITY, "SECMAN: startCommand succeeded.\n");
-	} else {
-		dprintf ( D_ALWAYS, "SECMAN: startCommand failed.\n");
-	}
+	sock->encode();
+	sock->allow_one_empty_message();
+	dprintf ( D_SECURITY, "SECMAN: startCommand succeeded.\n");
 
-	return retval;
+	return true;
 
 }
 
@@ -1630,9 +1636,8 @@ void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
 
 int
 SecMan::sec_char_to_auth_method( char* method ) {
-	if ( !stricmp( method, "GSS_AUTHENTICATION" ) ||
-		 !stricmp( method, "X509" ) ) {
-		return CAUTH_X509;
+	if (!stricmp( method, "GSI" )  ) {
+		return CAUTH_GSI;
 	} else if ( !stricmp( method, "NTSSPI" ) ) {
 		return CAUTH_NTSSPI;
 	} else if ( !stricmp( method, "FS" ) ) {
@@ -1651,16 +1656,9 @@ SecMan::sec_char_to_auth_method( char* method ) {
 
 
 int
-SecMan::getAuthBitmask ( char * methods ) {
+SecMan::getAuthBitmask ( const char * methods ) {
 
-	if (methods) {
-		if (DebugFlags & D_FULLDEBUG) {
-			dprintf ( D_SECURITY, "GETAUTHBITMASK: in getAuthBitmask('%s')\n", methods);
-		}
-	} else {
-		if (DebugFlags & D_FULLDEBUG) {
-			dprintf ( D_SECURITY, "GETAUTHBITMASK: getAuthBitmask( NULL ) called!\n");
-		}
+	if (!methods || !*methods) {
 		return 0;
 	}
 
@@ -1669,7 +1667,7 @@ SecMan::getAuthBitmask ( char * methods ) {
 	int retval = 0;
 
 	server.rewind();
-	while ( tmp = server.next() ) {
+	while ( (tmp = server.next()) ) {
 		retval |= sec_char_to_auth_method(tmp);
 	}
 
@@ -1678,29 +1676,43 @@ SecMan::getAuthBitmask ( char * methods ) {
 
 
 
-char*
+MyString
 SecMan::ReconcileMethodLists( char * cli_methods, char * srv_methods ) {
 
 	// algorithm:
-	// step through the server's types in order.  the first
-	// one the client supports will be the one.
+	// step through the server's methods in order.  if the method is
+	// present in the clients list, then append it to the results.
+	// the output will be a list of methods supported by both, in the
+	// order that the server prefers.
 
 	StringList server_methods( srv_methods );
 	StringList client_methods( cli_methods );
 	char *sm = NULL;
 	char *cm = NULL;
 
+	MyString results;
+	int match = 0;
+
+	// server methods, one at a time
 	server_methods.rewind();
-	while ( sm = server_methods.next() ) {
+	while ( (sm = server_methods.next()) ) {
 		client_methods.rewind();
-		while (cm = client_methods.next() ) {
-			if (stricmp(sm, cm) == 0) {
-				return strdup(cm);
+		while ( (cm = client_methods.next()) ) {
+			if (!stricmp(sm, cm)) {
+				// add a comma if it isn't the first match
+				if (match) {
+					results += ",";
+				} else {
+					match = 1;
+				}
+
+				// and of course, append the common method
+				results += cm;
 			}
 		}
 	}
 
-	return NULL;
+	return results;
 }
 
 
@@ -1792,7 +1804,7 @@ SecMan :: invalidateExpiredCache()
 
     list->rewind();
     char * p;
-    while (p = list->next()) {
+    while ( (p = list->next()) ) {
         invalidateKey(p);
     }
     delete list;
@@ -1835,3 +1847,73 @@ SecMan :: invalidateExpiredCache()
 
 			goto choose_action;
 */
+
+
+MyString SecMan::getDefaultAuthenticationMethods() {
+	MyString methods;
+#if defined(WIN32)
+	// default windows method
+	methods = "NTSSPI";
+#else
+	// default unix method
+	methods = "FS";
+#endif
+
+#if defined(KERBEROS_AUTHENTICATION) 
+	methods += ",KERBEROS";
+#endif
+
+#if defined(GSI_AUTHENTICATION)
+	methods += ",GSI";
+#endif
+
+	return methods;
+}
+
+
+
+MyString SecMan::getDefaultCryptoMethods() {
+
+	return ""
+
+/* 3DES */
+#ifdef CONDOR_3DES_ENCRYPTION
+#define ENCRYPTION_LIST_EXISTS
+		"3DES"
+#endif /* 3DES */
+
+/* BLOWFISH */
+#ifdef CONDOR_BLOWFISH_ENCRYPTION
+#ifdef ENCRYPTION_LIST_EXISTS
+		","
+#endif /* ENCRYPTION_LIST_EXISTS */
+		"BLOWFISH"
+#endif /* BLOWFISH */
+
+		;
+
+}
+
+void SecMan::send_invalidate_packet ( char* sinful, char* sessid ) {
+	if ( sinful ) {
+		SafeSock s;
+		if (s.connect(sinful)) {
+			s.encode();
+			s.put(DC_INVALIDATE_KEY);
+			s.code(sessid);
+			s.eom();
+			s.close();
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: sent DC_INVALIDATE %s to %s.\n",
+				sessid, sinful);
+		} else {
+			dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't send DC_INVALIDATE %s to %s.\n",
+				sessid, sinful);
+		}
+	} else {
+		dprintf (D_SECURITY, "DC_AUTHENTICATE: couldn't invalidate session %s... don't know who it is from!\n", sessid);
+	}
+}
+
+
+// testing commit, ignore
+

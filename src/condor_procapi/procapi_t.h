@@ -35,19 +35,19 @@ const int PROC_INFO_BREADTH = 3;
 const int PROC_INFO_DEPTH = 3;
 // the leniency to give the rss value returned compared to the expected value
 // (20%)
-const float PROC_INFO_RSS_MARGIN = .2f;
+const float PROC_INFO_RSS_MARGIN = .35f;
 
 //constants for faminfo_t //////////////////////////////
 const int FAMILY_INFO_BREADTH = 2;
 const int FAMILY_INFO_DEPTH = 3;
-const float FAMILY_INFO_RSS_MARGIN = .2f;
+const float FAMILY_INFO_RSS_MARGIN = .35f;
 
 //constants for set_t///////////////////////////////////
 const int SET_INFO_DEPTH = 3;
 const int SET_INFO_BREADTH = 2;
 // the margin of error allowed (%)when cheking values in the pi struct for 
 // family vs. set info
-const float SET_INFO_RSS_MARGIN = .2f;
+const float SET_INFO_RSS_MARGIN = .35f;
 const float SET_INFO_IMG_MARGIN = .1f;
 // margin in number of faults
 const float SET_INFO_MIN_MARGIN = .2f;

@@ -31,6 +31,10 @@ if ( defined $ARGV[0] ) {
     }
 }
 
+# grab current working directory for initial dir in system using automounter
+$pwd = `pwd`;
+chomp $pwd;
+
 # check arguments
 if (!defined($ARGV[0]) || $ARGV[0] eq "-h" || $ARGV[0] eq "-help") {
     print "usage: $0 \"shell-cmd\"\n";
@@ -40,6 +44,11 @@ if (!defined($ARGV[0]) || $ARGV[0] eq "-h" || $ARGV[0] eq "-help") {
     print "\tOpSys, and any additional requirements.\n";
     exit 1;
 }
+
+# set up environment for running something in the current directory in case
+# they want to run something in the current working directory and they
+# don't specify a "./" infront of it.
+$ENV{'PATH'} .= ":.";
 
 # setup cleanup subroutine and error handlers
 sub cleanfiles {
@@ -90,12 +99,15 @@ foreach $arg (@ARGV) {
 print CMD "\n";
 close(CMD) ||
     &abort("Failed to write temporary (CMD) file in current directory.\n");
+# fix the permissions to something nice.
+chmod 0700, ".condor_run.$$";
 
 # create a job description file to submit the shell script to Condor
 open(JDF, ">.condor_submit.$$") ||
     &abort("Can't create temporary (JDF) file in current directory.\n");
 print JDF "universe = $universe\n";
 print JDF "executable = .condor_run.$$\n";
+print JDF "initialdir = $pwd\n";
 print JDF "notification = NEVER\n";
 print JDF "log = .condor_log.$$\n";
 print JDF "output = .condor_out.$$\n";

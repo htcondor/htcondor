@@ -414,7 +414,13 @@ All of these calls manipulate the open file table.
 			int select (int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) : file_table;
 		#else
 			int poll( struct pollfd *fds, unsigned long nfds, int timeout ) : file_table;
-			int select (int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) : file_table;
+			int select (int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) : file_table
+			#if defined(LINUX)
+				/* Linux has a new system call we should use because SYS_select
+					is deprecated and returns EINVAL now */
+				, local_name(_newselect)
+			#endif
+			; /* closes the select() */
 		#endif
 	#endif
 
@@ -1201,6 +1207,29 @@ they should be built in the special "clipped" version.
 		out code( prefetch_size );
 		alloc( prefetch_size, INT_SIZE );
 	}
+
+	int get_job_attr( const char *attrname, char *expr ) : pseudo
+	{
+		in code(attrname);
+		alloc(attrname,ATTRLIST_MAX_EXPRESSION);
+		out code(expr);
+		alloc(expr,ATTRLIST_MAX_EXPRESSION);
+	}
+
+	int set_job_attr( const char *attrname, const char *expr ) : pseudo
+	{
+		in code(attrname);
+		alloc(attrname,ATTRLIST_MAX_EXPRESSION);
+		in code(expr);
+		alloc(expr,ATTRLIST_MAX_EXPRESSION);
+	}
+
+	int constrain( const char *expr ) : pseudo
+	{
+		in code(expr);
+		alloc(expr,ATTRLIST_MAX_EXPRESSION);
+	}
+
 	int get_iwd( char *path ) : pseudo {
 		GET_PATH( path );
 		ALLOC_PATH( path );
@@ -1511,7 +1540,9 @@ not_supported {
 		pid_t waitpid(pid_t pid, int *status, int options);
 	#endif
 
-	#if defined(Solaris28)
+	#if defined(Solaris29)
+		long ptrace( int req, pid_t process, long address, long data);
+	#elif defined(Solaris28)
 		long ptrace( int req, pid_t process, int address, int data);
 	#elif defined(Solaris27)
 		long ptrace( int req, long process, long address, long data);
@@ -1536,7 +1567,7 @@ not_supported {
 not_supported {
 	#if defined(LINUX)
 		int profil( char *buf, int buf_size, int offset, int scale );
-	#elif defined(Solaris27) || defined(Solaris28)
+	#elif defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
 		void profil( unsigned short *buf, unsigned int buf_size, unsigned long offset, unsigned int scale );
 	#elif defined(Solaris26) || defined(Solaris251)
 		void profil( unsigned short *buf, unsigned int buf_size, unsigned int offset, unsigned int scale );

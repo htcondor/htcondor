@@ -54,6 +54,7 @@ class CSysinfo
 	DWORD GetHandleCount (pid_t pid);
 	DWORD GetParentPID (pid_t pid);
 	void CloseThread (HANDLE hthread);
+	bool IsWin2korXP() { return IsWin2k; }
 #if 0
 	void Explore(DWORD pid);
 #endif
@@ -83,3 +84,4 @@ class CSysinfo
 };
 
 #endif
+

@@ -124,7 +124,7 @@ command_activate_claim( Service*, int cmd, Stream* stream )
 		return FALSE;
 	}
 
-	if( rip->is_deactivating() ) { 
+	if( rip->isDeactivating() ) { 
 			// We're in the middle of deactivating another claim, so
 			// tell the shadow to try again.  Any shadow before 6.1.9
 			// will just treat this like a "NOT_OK", which is what
@@ -388,7 +388,7 @@ command_give_request_ad( Service*, int, Stream* stream)
 {
 	int pid = -1;  // Starter sends it's pid so we know what
 				   // resource's request ad to send 
-	Resource*	rip;
+	Claim*		claim;
 	ClassAd*	cp;
 
 	if( ! stream->code(pid) ) {
@@ -403,8 +403,8 @@ command_give_request_ad( Service*, int, Stream* stream)
 		stream->end_of_message();
 		return FALSE;
 	}
-	rip = resmgr->get_by_pid( pid );
-	if( !rip ) {
+	claim = resmgr->getClaimByPid( pid );
+	if( !claim ) {
 		dprintf( D_ALWAYS, 
 				 "give_request_ad: Can't find starter with pid %d\n",
 				 pid ); 
@@ -412,17 +412,10 @@ command_give_request_ad( Service*, int, Stream* stream)
 		stream->end_of_message();
 		return FALSE;
 	}
-	if( !rip->r_cur ) {
-		rip->dprintf( D_ALWAYS, 
-					  "give_request_ad: resource doesn't have a current match.\n" );
-		stream->encode();
-		stream->end_of_message();
-		return FALSE;
-	}
-	cp = rip->r_cur->ad();
+	cp = claim->ad();
 	if( !cp ) {
-		rip->dprintf( D_ALWAYS, 
-					  "give_request_ad: current match has NULL classad.\n" );
+		claim->dprintf( D_ALWAYS, 
+						"give_request_ad: current claim has NULL classad.\n" );
 		stream->encode();
 		stream->end_of_message();
 		return FALSE;
@@ -494,7 +487,7 @@ delete req_classad;						\
 if (client_addr) free(client_addr);		\
 if( s == claimed_state ) {				\
 	delete rip->r_pre;					\
-	rip->r_pre = new Match( rip );		\
+	rip->r_pre = new Claim( rip );		\
 } else {								\
     if( s != owner_state ) {			\
         rip->dprintf( D_ALWAYS, "State change: claiming protocol failed\n" ); \
@@ -517,17 +510,17 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 	State s = rip->state();
 
 	if( !rip->r_cur ) {
-		EXCEPT( "request_claim: no current match object." );
+		EXCEPT( "request_claim: no current claim object." );
 	}
 
 		/* 
-		   Now that we've been contacted by the schedd agent, we can
+		   Now that we've been contacted by the schedd, we can
 		   cancel the match timer on either the current or the
-		   preempting match, depending on what state we're in.  We
+		   preempting claim, depending on what state we're in.  We
 		   want to do this right away so we don't abort this function
 		   for some reason and leave that timer in place, since we'll
 		   EXCEPT later on if it goes off and we're not in the matched
-		   state anymore (and it's the current match at that point).
+		   state anymore (and it's the current claim at that point).
 		   -Derek Wright 3/11/99 
 		*/
 	if( rip->state() == claimed_state ) {
@@ -538,7 +531,7 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 
 		// Get the classad of the request.
 	if( !req_classad->initFromStream(*stream) ) {
-		rip->dprintf( D_ALWAYS, "Can't receive classad from schedd-agent\n" );
+		rip->dprintf( D_ALWAYS, "Can't receive classad from schedd\n" );
 		ABORT;
 	}
 
@@ -570,7 +563,7 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 	}
 
 	if( !stream->end_of_message() ) {
-		rip->dprintf( D_ALWAYS, "Can't receive eom from schedd-agent\n" );
+		rip->dprintf( D_ALWAYS, "Can't receive eom from schedd\n" );
 		ABORT;
 	}
 
@@ -579,14 +572,14 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 		// we need change the timeout on the socket to the schedd to be
 		// very patient.  By default, daemon core put a timeout of ~20
 		// seconds on this socket.  This is not at all long enough.
-		// since we should only hold this match for match_timeout,
+		// since we should only hold this claim for match_timeout,
 		// set the timeout to be 10 seconds less than that. -Todd
 	if ( match_timeout > 10 ) {
 		stream->timeout( match_timeout - 10 );
 	}
 		
 	rip->dprintf( D_FULLDEBUG,
-				  "Received capability from schedd agent (%s)\n", cap );
+				  "Received capability from schedd (%s)\n", cap );
 
 		// Make sure we're willing to run this job at all.  Verify that 
 		// the machine and job meet each other's requirements.
@@ -634,33 +627,33 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 		// Now, make sure it's got a high enough rank to preempt us.
 	rank = compute_rank( mach_classad, req_classad );
 
-	rip->dprintf( D_FULLDEBUG, "Rank of this match is: %f\n", rank );
+	rip->dprintf( D_FULLDEBUG, "Rank of this claim is: %f\n", rank );
 
 	if( rip->state() == claimed_state ) {
 			// We're currently claimed.  We might want to preempt the
 			// current claim to make way for this new one...
 		if( !rip->r_pre ) {
 			rip->dprintf( D_ALWAYS, 
-			   "In CLAIMED state without preempting match object, aborting.\n" );
+			   "In CLAIMED state without preempting claim object, aborting.\n" );
 			refuse( stream );
 			ABORT;
 		}
 		if( rip->r_pre->cap()->matches(cap) ) {
 			rip->dprintf( D_ALWAYS, 
-						  "Preempting match has correct capability.\n" );
+						  "Preempting claim has correct capability.\n" );
 			
 				// Check rank, decided to preempt, if needed, do so.
 			if( rank < rip->r_cur->rank() ) {
 				rip->dprintf( D_ALWAYS, 
-				  "Preempting match doesn't have sufficient rank, refusing.\n" );
+				  "Preempting claim doesn't have sufficient rank, refusing.\n" );
 				cmd = NOT_OK;
 			} else {
 				rip->dprintf( D_ALWAYS, 
-				  "New match has sufficient rank, preempting current match.\n" );
+				  "New claim has sufficient rank, preempting current claim.\n" );
 
 					// We're going to preempt.  Save everything we
 					// need to know into r_pre.
-				rip->r_pre->setagentstream( stream );
+				rip->r_pre->setRequestStream( stream );
 				rip->r_pre->setad( req_classad );
 				rip->r_pre->setrank( rank );
 				rip->r_pre->setoldrank( rip->r_cur->rank() );
@@ -681,7 +674,7 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 			}					
 		} else {
 			rip->dprintf( D_ALWAYS,
-					 "Capability from schedd agent (%s) doesn't match (%s)\n",
+					 "Capability from schedd (%s) doesn't match (%s)\n",
 					 cap, rip->r_pre->capab() );
 			cmd = NOT_OK;
 		}
@@ -692,25 +685,25 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 			cmd = OK;
 		} else {
 			rip->dprintf( D_ALWAYS,
-					"Capability from schedd agent (%s) doesn't match (%s)\n",
+					"Capability from schedd (%s) doesn't match (%s)\n",
 					cap, rip->r_cur->capab() );
 			cmd = NOT_OK;
 		}		
 	}	
 
 	if( cmd == OK ) {
-			// We decided to accept the request, save the agent's
+			// We decided to accept the request, save the schedd's
 			// stream, the rank and the classad of this request.
-		rip->r_cur->setagentstream( stream );
+		rip->r_cur->setRequestStream( stream );
 		rip->r_cur->setad( req_classad );
 		rip->r_cur->setrank( rank );
 		rip->r_cur->setoldrank( oldrank );
 
-			// Call this other function to actually reply to the agent
-			// and perform the last half of the protocol.  We use the
-			// same function after the preemption has completed when
-			// the startd is finally ready to reply to the agent and
-			// finish the claiming process.
+			// Call this other function to actually reply to the
+			// schedd and perform the last half of the protocol.  We
+			// use the same function after the preemption has
+			// completed when the startd is finally ready to reply to
+			// the and finish the claiming process.
 		return accept_request_claim( rip );
 	} else {
 		refuse( stream );
@@ -724,7 +717,7 @@ if( client_addr )					\
     free( client_addr );			\
 stream->encode();					\
 stream->end_of_message();			\
-rip->r_cur->setagentstream( NULL );	\
+rip->r_cur->setRequestStream( NULL );	\
 rip->dprintf( D_ALWAYS, "State change: claiming protocol failed\n" ); \
 rip->change_state( owner_state );	\
 return KEEP_STREAM
@@ -737,20 +730,20 @@ accept_request_claim( Resource* rip )
 	char RemoteOwner[512];
 	RemoteOwner[0] = '\0';
 
-		// There should not be a pre match object now.
+		// There should not be a pre claim object now.
 	assert( rip->r_pre == NULL );
 
-	Stream* stream = rip->r_cur->agentstream();
+	Stream* stream = rip->r_cur->requestStream();
 	assert( stream );
 	Sock* sock = (Sock*)stream;
 
 	stream->encode();
 	if( !stream->put( OK ) ) {
-		rip->dprintf( D_ALWAYS, "Can't to send cmd to agent.\n" );
+		rip->dprintf( D_ALWAYS, "Can't to send cmd to schedd.\n" );
 		ABORT;
 	}
 	if( !stream->eom() ) {
-		rip->dprintf( D_ALWAYS, "Can't to send eom to agent.\n" );
+		rip->dprintf( D_ALWAYS, "Can't to send eom to schedd.\n" );
 		ABORT;
 	}
 
@@ -784,22 +777,23 @@ accept_request_claim( Resource* rip )
 
 		// Figure out the hostname of our client.
 	if( ! (tmp = sin_to_hostname(sock->endpoint(), NULL)) ) {
-		rip->dprintf( D_ALWAYS, "Can't find hostname of client machine\n");
-		ABORT;
-	} 
-	client_host = strdup( tmp );
-
-		// Try to make sure we've got a fully-qualified hostname.
-	full_client_host = get_full_hostname( (const char *) client_host );
-	if( ! full_client_host ) {
-		rip->dprintf( D_ALWAYS, "Error finding full hostname of %s\n", 
-				 client_host );
-		rip->r_cur->client()->sethost( client_host );
+		rip->dprintf( D_FULLDEBUG,
+					  "Can't find hostname of client machine\n" );
+		rip->r_cur->client()->sethost( sin_to_string(sock->endpoint()) );
 	} else {
-		rip->r_cur->client()->sethost( full_client_host );
-		delete [] full_client_host;
+		client_host = strdup( tmp );
+			// Try to make sure we've got a fully-qualified hostname.
+		full_client_host = get_full_hostname( (const char *) client_host );
+		if( ! full_client_host ) {
+			rip->dprintf( D_ALWAYS, "Error finding full hostname of %s\n", 
+						  client_host );
+			rip->r_cur->client()->sethost( client_host );
+		} else {
+			rip->r_cur->client()->sethost( full_client_host );
+			delete [] full_client_host;
+		}
+		free( client_host );
 	}
-	free( client_host );
 
 		// Get the owner of this claim out of the request classad.
 	if( (rip->r_cur->ad())->
@@ -820,8 +814,8 @@ accept_request_claim( Resource* rip )
 		rip->dprintf( D_ALWAYS, "Remote owner is NULL\n" );
 			// TODO: What else should we do here???
 	}		
-		// Since we're done talking to this schedd agent, delete the stream.
-	rip->r_cur->setagentstream( NULL );
+		// Since we're done talking to this schedd, delete the stream.
+	rip->r_cur->setRequestStream( NULL );
 
 	rip->dprintf( D_FAILURE|D_ALWAYS, "State change: claiming protocol successful\n" );
 	rip->change_state( claimed_state );
@@ -852,11 +846,9 @@ activate_claim( Resource* rip, Stream* stream )
 	struct sockaddr_in frm;
 	int len = sizeof frm;
 	StartdRec stRec;
-	start_info_t ji;	/* XXXX */
-	int universe, job_cluster, job_proc, starter;
+	int starter;
 	Sock* sock = (Sock*)stream;
 	char* shadow_addr = strdup( sin_to_string( sock->endpoint() ));
-	bool found_attr_user = false;	// did we find ATTR_USER in the ad?
 
 	if( rip->state() != claimed_state ) {
 		rip->dprintf( D_ALWAYS, "Not in claimed state, aborting.\n" );
@@ -936,23 +928,6 @@ activate_claim( Resource* rip, Stream* stream )
 		refuse( stream );
 	    ABORT;
 	}
-	
-		// Make sure the classad we got includes an ATTR_USER field,
-		// so we know who to charge for our services.  If it's not
-		// there, refuse to run the job.
-	char remote_user[256];
-	remote_user[0] = '\0';
-	if( req_classad->EvalString(ATTR_USER, rip->r_classad, 
-								remote_user) == 0 ) {
-		rip->dprintf( D_FULLDEBUG, "WARNING: %s not defined in request "
-					  "classad!  Using old value (%s)\n", ATTR_USER,
-					  rip->r_cur->client()->user() );
-	} else {
-		rip->dprintf( D_FULLDEBUG, 
-					  "Got RemoteUser (%s) from request classad\n",	
-					  remote_user );
-		found_attr_user = true;
-	}
 
 		// If we're here, we've decided to activate the claim.  Tell
 		// the shadow we're ok.
@@ -966,13 +941,16 @@ activate_claim( Resource* rip, Stream* stream )
 		ABORT;
 	}
 
+		// if we're daemonCore, hold onto the sock the shadow used for
+		// this command, and we'll use that for the shadow RSC sock.
+		// otherwise, if we're not windoze, setup our two ports, tell
+		// the shadow about them, and wait for it to connect.
+	Stream* shadow_sock = NULL;
 	if( tmp_starter->is_dc() ) {
-		ji.shadowCommandSock = stream;
+		shadow_sock = stream;
 	} 
 #ifndef WIN32
 	else {
-
-		ji.shadowCommandSock = NULL;
 
 			// Set up the two starter ports and send them to the shadow
 		stRec.version_num = VERSION_FOR_FLOCK;
@@ -1033,69 +1011,29 @@ activate_claim( Resource* rip, Stream* stream )
 				}
 			}
 		}
-		ji.ji_sock1 = fd_1;
-		ji.ji_sock2 = fd_2;
+		tmp_starter->setPorts( fd_1, fd_2 );
 	}
 #endif	// of ifdef WIN32
 
-
-
-
-
-
-
-	ji.ji_hname = rip->r_cur->client()->host();
-
-	int now = (int)time( NULL );
+	time_t now = time( NULL );
 
 		// now that we've gotten this far, we're really going to try
-		// to spawn the starter.  set it in our Resource object. 
-	rip->setStarter( tmp_starter );
+		// to spawn the starter.  set it in our Claim object. 
+	rip->r_cur->setStarter( tmp_starter );
+		// Grab the job ID, so we've got it...
+	rip->r_cur->saveJobInfo( req_classad );
 
 		// Actually spawn the starter
-	if( ! rip->spawn_starter(&ji, now) ) {
+	if( ! rip->r_cur->spawnStarter(now, shadow_sock) ) {
 			// Error spawning starter!
 		delete( tmp_starter );
-		rip->setStarter( NULL );
+		rip->r_cur->setStarter( NULL );
 		ABORT;
 	}
-		// Get a bunch of info out of the request ad that is now
-		// relevant, and store it in the machine ad and cur Match object
 
-	req_classad->EvalInteger( ATTR_CLUSTER_ID, req_classad, job_cluster );
-	req_classad->EvalInteger( ATTR_PROC_ID, req_classad, job_proc );
-
-	rip->dprintf( D_ALWAYS, "Remote job ID is %d.%d\n", job_cluster,
-				  job_proc );
-
-	if( req_classad->EvalInteger(ATTR_JOB_UNIVERSE,
-								 rip->r_classad, universe) == 0 ) {
-		universe = CONDOR_UNIVERSE_STANDARD;
-		rip->dprintf( D_ALWAYS,
-					  "Default universe (%d) since not in classad \n", 
-					  universe );
-	} else {
-		rip->dprintf( D_ALWAYS, "Got universe (%d) from request classad\n",
-					  universe );
-	}
-	if( universe == CONDOR_UNIVERSE_VANILLA ) {
-		rip->dprintf( D_ALWAYS, 
-					  "Startd using *_VANILLA control expressions.\n" );
-	} else {
-		rip->dprintf( D_ALWAYS, 
-					  "Startd using standard control expressions.\n" );
-	}
-
-	if( found_attr_user ) {
-		rip->r_cur->client()->setuser( remote_user );
-	}
-	rip->r_cur->setproc( job_proc );
-	rip->r_cur->setcluster( job_cluster );
-	rip->r_cur->setad( req_classad );
-	rip->r_cur->setuniverse(universe);
-
-	rip->r_cur->setjobstart(now);	
-	rip->r_cur->setlastpckpt(now);	
+		// Grab everything we need/want out of the request and store
+		// it in our current claim 
+	rip->r_cur->beginActivation( now );
 
 		// Finally, update all these things into the resource classad.
 	rip->r_cur->publish( rip->r_classad, A_PUBLIC );
@@ -1119,13 +1057,13 @@ match_info( Resource* rip, char* cap )
 	case claimed_state:
 		if( rip->r_cur->cap()->matches(cap) ) {
 				// The capability we got matches the one for the
-				// current match, and we're already claimed.  There's
+				// current claim, and we're already claimed.  There's
 				// nothing to do here.
 			rval = TRUE;
 		} else if( rip->r_pre && rip->r_pre->cap()->matches(cap) ) {
 				// The capability we got matches the preempting
 				// capability we've been advertising.  Advertise
-				// ourself as unavailable for future matches, update
+				// ourself as unavailable for future claims, update
 				// the CM, and set the timer for this match.
 			rip->r_reqexp->unavail();
 			rip->update();
@@ -1156,8 +1094,8 @@ match_info( Resource* rip, char* cap )
 			rval = TRUE;
 		} else {
 			rip->dprintf( D_ALWAYS, 
-					 "Capability from negotiator (%s) doesn't match.\n",  
-					 cap );			
+						  "Invalid capability from negotiator (%s)\n",  
+						  cap );			
 			rval = FALSE;
 		}
 		break;
@@ -1168,3 +1106,325 @@ match_info( Resource* rip, char* cap )
 	}
 	return rval;
 }
+
+
+int
+caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
+{
+	char* requirements_str = NULL;
+	Resource* rip;
+	Claim* claim;
+	MyString err_msg;
+	ExprTree *tree, *rhs;
+	ReliSock* rsock = (ReliSock*)s;
+	const char* owner = rsock->getOwner();
+
+	if( ! authorizedForCOD(owner) ) {
+		err_msg = "User '";
+		err_msg += owner;
+		err_msg += "' is not authorized for using COD at this machine"; 
+		return sendErrorReply( s, cmd_str, CA_NOT_AUTHORIZED,
+							   err_msg.Value() );
+	}
+	dprintf( D_COMMAND, 
+			 "Serving request for a new COD claim by user '%s'\n", 
+			 owner );
+
+		// Make sure the ad's got a requirements expression at all.
+	tree = req_ad->Lookup( ATTR_REQUIREMENTS );
+	if( ! tree ) {
+		dprintf( D_FULLDEBUG, 
+				 "Request did not contain %s, assuming TRUE\n",
+				 ATTR_REQUIREMENTS );
+		requirements_str = strdup( "TRUE" );
+		req_ad->Insert( "Requirements = TRUE" );
+	} else {
+		rhs = tree->RArg();
+		if( rhs ) {
+			rhs->PrintToNewStr( &requirements_str );
+		}
+	}
+
+		// Find the right resource for this claim
+	rip = resmgr->findRipForNewCOD( req_ad );
+
+	if( ! rip ) {
+		err_msg = "Can't find Resource matching ";
+		err_msg += ATTR_REQUIREMENTS;
+		err_msg += " (";
+		err_msg += requirements_str;
+		err_msg += ')';
+		free( requirements_str );
+		return sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.Value() );
+	}
+
+		// done with this now, so don't leak it
+	free( requirements_str );
+
+		// try to create the new claim
+	claim = rip->newCODClaim();
+	if( ! claim ) {
+		return sendErrorReply( s, cmd_str, CA_FAILURE, 
+							   "Can't create new COD claim" );
+	}
+
+		// Stash some info about who made this request in the Claim  
+	claim->client()->setuser( owner );
+	claim->client()->setowner(owner );
+	claim->client()->sethost( rsock->endpoint_ip_str() );
+
+		// now, we just fill in the reply ad appropriately.  publish
+		// a complete resource ad (like what we'd send to the
+		// collector), and include the ClaimID  
+	ClassAd reply;
+	rip->publish( &reply, A_PUBLIC | A_ALL | A_EVALUATED );
+
+	MyString line;
+	line = ATTR_CLAIM_ID;
+	line += " = \"";
+	line += claim->id();
+	line += '"';
+	reply.Insert( line.Value() );
+	
+	line = ATTR_RESULT;
+	line += " = \"";
+	line += getCAResultString( CA_SUCCESS );
+	line += '"';
+	reply.Insert( line.Value() );
+
+	int rval = sendCAReply( s, cmd_str, &reply );
+	if( ! rval ) {
+		dprintf( D_ALWAYS, 
+				 "Failed to reply to request, removing new claim\n" );
+		rip->r_cod_mgr->removeClaim( claim );
+			// removeClaim() deletes the object, so don't have a
+			// dangling pointer...
+		claim = NULL;
+	}
+	return rval;
+}
+
+
+int
+caRequestClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
+{
+	ClaimType claim_type;
+	char* ct_str = NULL;
+	MyString err_msg; 
+
+		// Now, depending on what kind of claim they're asking for, do
+		// the right thing
+	if( ! req_ad->LookupString(ATTR_CLAIM_TYPE, &ct_str) ) {
+		err_msg = "No ";
+		err_msg += ATTR_CLAIM_TYPE;
+		err_msg += " in ClassAd";
+		return sendErrorReply( s, cmd_str, CA_INVALID_REQUEST, 
+							   err_msg.Value() );
+	}
+	claim_type = getClaimTypeNum( ct_str );
+	free( ct_str ); 
+	switch( claim_type ) {
+	case CLAIM_COD:
+		return caRequestCODClaim( s, cmd_str, req_ad );
+		break;
+	case CLAIM_OPPORTUNISTIC:
+		err_msg = ATTR_CLAIM_TYPE;
+		err_msg += " (";
+		err_msg += getClaimTypeString( claim_type );
+		err_msg += ") not supported by this startd";
+		return sendErrorReply( s, cmd_str, CA_INVALID_REQUEST,
+							   err_msg.Value() );
+		break;
+	default:
+		err_msg = "Unrecognized ";
+		err_msg += ATTR_CLAIM_TYPE;
+		err_msg += " (";
+		err_msg += getClaimTypeString( claim_type );
+		err_msg += ") in request ClassAd";
+		return sendErrorReply( s, cmd_str, CA_INVALID_REQUEST,
+							   err_msg.Value() );
+		break;
+	}
+	return FALSE;
+}
+
+
+int
+command_classad_handler( Service*, int, Stream* s )
+{
+	int rval;
+	ClassAd ad;
+	ReliSock* rsock = (ReliSock*)s;
+
+        // make sure this connection is authenticated, and we know who
+        // the user is.  also, set a timeout, since we don't want to
+        // block long trying to read from our client.   
+    rsock->timeout( 10 );  
+    rsock->decode();
+    if( ! rsock->isAuthenticated() ) {
+		char* p = SecMan::getSecSetting( "SEC_%s_AUTHENTICATION_METHODS",
+										 "WRITE" );
+        MyString methods;
+        if( p ) {
+            methods = p;
+            free( p );
+        } else {
+            methods = SecMan::getDefaultAuthenticationMethods();
+        }
+		CondorError errstack;
+        if( ! rsock->authenticate(methods.Value(), &errstack) ) {
+                // we failed to authenticate, we should bail out now
+                // since we don't know what user is trying to perform
+                // this action.
+			sendErrorReply( s, "CA_CMD", CA_NOT_AUTHENTICATED,
+							"Server: client failed to authenticate" );
+			dprintf (D_ALWAYS, "STARTD: authenticate failed\n");
+			dprintf (D_ALWAYS, "%s", errstack.get_full_text());
+			return FALSE;
+        }
+    }
+	
+	if( ! ad.initFromStream(*s) ) { 
+		dprintf( D_ALWAYS, 
+				 "Failed to read ClassAd from network, aborting\n" ); 
+		return FALSE;
+	}
+	if( ! s->eom() ) { 
+		dprintf( D_ALWAYS, 
+				 "Error, more data on stream after ClassAd, aborting\n" ); 
+		return FALSE;
+	}
+
+	if( DebugFlags & D_FULLDEBUG && DebugFlags & D_COMMAND ) {
+		dprintf( D_COMMAND, "Command ClassAd:\n" );
+		ad.dPrint( D_COMMAND );
+		dprintf( D_COMMAND, "*** End of Command ClassAd***\n" );
+	}
+
+	char* cmd_str = NULL;
+	int cmd;
+	if( ! ad.LookupString(ATTR_COMMAND, &cmd_str) ) {
+		dprintf( D_ALWAYS, "Failed to read %s from ClassAd, aborting\n", 
+				 ATTR_COMMAND );
+		return FALSE;
+	}		
+	cmd = getCommandNum( cmd_str );
+	if( cmd < 0 ) {
+		unknownCmd( s, cmd_str );
+		free( cmd_str );
+		return FALSE;
+	}
+
+	if( cmd == CA_REQUEST_CLAIM ) { 
+			// this one's a special case, since we're creating a new
+			// claim... 
+		rval = caRequestClaim( s, cmd_str, &ad );
+		free( cmd_str );
+		return rval;
+	}
+
+		// for all the rest, we need to read the ClaimId out of the
+		// ad, find the right claim, and call the appropriate method
+		// on it.  
+
+	char* claim_id = NULL;
+	Claim* claim = NULL;
+
+	if( ! ad.LookupString(ATTR_CLAIM_ID, &claim_id) ) {
+		dprintf( D_ALWAYS, "Failed to read %s from ClassAd "
+				 "for cmd %s, aborting\n", ATTR_CLAIM_ID, cmd_str );
+		free( cmd_str );
+		return FALSE;
+	}
+	claim = resmgr->getClaimById( claim_id );
+	if( ! claim ) {
+		MyString err_msg = "ClaimID (";
+		err_msg += claim_id;
+		err_msg += ") not found";
+		sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.Value() );
+		free( claim_id );
+		free( cmd_str );
+		return FALSE;
+	}
+
+		// make sure the user attempting this action (whatever it
+		// might be) is the same as the owner of the claim
+	const char* owner = rsock->getOwner();
+	if( ! claim->ownerMatches(owner) ) {
+		MyString err_msg = "User '";
+		err_msg += owner;
+		err_msg += "' does not match the owner of this claim";
+		sendErrorReply( s, cmd_str, CA_NOT_AUTHORIZED, err_msg.Value() ); 
+		free( claim_id );
+		free( cmd_str );
+		return FALSE;
+	}
+	dprintf( D_COMMAND, "Serving request for %s by user '%s'\n", 
+			 cmd_str, owner );
+
+	char* tmp = NULL;
+	ad.LookupString( ATTR_OWNER, &tmp );
+	if( tmp ) {
+		if( strcmp(tmp, owner) ) {
+				// they're different!
+			MyString err_msg = ATTR_OWNER;
+			err_msg += " specified in ClassAd as '";
+			err_msg += tmp;
+			err_msg += "' yet request sent by user '";
+			err_msg += owner;
+			err_msg += "', possible security attack, request refused!";
+			sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.Value() );
+			free( claim_id );
+			free( cmd_str );
+			free( tmp );
+			return FALSE;
+		} 
+		free( tmp );
+	} else {
+			// ATTR_OWNER not defined, set it ourselves...
+		MyString line = ATTR_OWNER;
+		line += "=\"";
+		line += owner;
+		line += '"';
+		ad.Insert( line.Value() );
+	}
+ 
+
+		// now, find the CODMgr managing this Claim, and call the
+		// appropriate method for the given command
+	CODMgr* cod_mgr = claim->getCODMgr();
+	if( ! cod_mgr ) {
+		EXCEPT( "Resource does not have a CODMgr!" );
+	}
+
+	switch( cmd ) {
+	case CA_RELEASE_CLAIM:
+		rval = cod_mgr->release( s, &ad, claim );
+		break;
+	case CA_ACTIVATE_CLAIM:
+		rval = cod_mgr->activate( s, &ad, claim );
+		break;
+	case CA_DEACTIVATE_CLAIM:
+		rval = cod_mgr->deactivate( s, &ad, claim );
+		break;
+	case CA_SUSPEND_CLAIM:
+		rval = cod_mgr->suspend( s, &ad, claim );
+		break;
+	case CA_RESUME_CLAIM:
+		rval = cod_mgr->resume( s, &ad, claim );
+		break;
+	case CA_REQUEST_CLAIM:
+		EXCEPT( "Already handled CA_REQUEST_CLAIM, shouldn't be here\n" );
+		break;
+	default:
+		unknownCmd( s, cmd_str );
+		free( claim_id );
+		free( cmd_str );
+		return FALSE;
+	}
+	free( claim_id );
+	free( cmd_str );
+	return rval;
+}
+
+

@@ -30,9 +30,6 @@
 
 extern int	errno;
 
-void display_flock( struct flock *f );
-void display_cmd( int cmd );
-
 /*
 ** Compatibility routine for systems which utilize various forms of the
 ** fcntl() call for this purpose.  Note that semantics are a bit different
@@ -40,6 +37,12 @@ void display_cmd( int cmd );
 ** only be applied if the file is open for writing, and a read lock
 ** (shared lock) can only be applied if the file is open for reading.
 */
+
+/* Note, you may not call dprintf in here be because it will go into an 
+	infinite loop as it tries to flock() the file multiple times through each
+	dprintf invocation 
+*/
+
 int
 flock( int fd, int op )
 {
@@ -55,7 +58,7 @@ flock( int fd, int op )
 
 	f.l_start = 0;			/* flock only supports locking whole files */
 	f.l_len = 0;
-	f.l_whence = 0;
+	f.l_whence = SEEK_SET;
 	f.l_pid = 0;
 
 	if( op & LOCK_SH ) {			/* shared */
@@ -69,53 +72,10 @@ flock( int fd, int op )
 		return -1;
 	}
 
-	display_flock( &f );
-	display_cmd( cmd );
-
 	status =  fcntl( fd, cmd, &f );
-	/* dprintf( D_ALWAYS, "return value is %d\n", status ); */
 	return status;
 }
 
-#define CASE(vble,val) \
-	case val: \
-	/* dprintf( D_ALWAYS, "vble = val\n" ) */; \
-	break
-
-#define DEBUG(name,fmt) dprintf( D_ALWAYS, "name = fmt\n", name );
-void
-display_flock( struct flock	*f )
-{
-	switch( f->l_type ) {
-		CASE( l_type, F_RDLCK );
-		CASE( l_type, F_WRLCK );
-		CASE( l_type, F_UNLCK );
-		default:
-			dprintf( D_ALWAYS, "l_type is unknown (%d)\n", f->l_type );
-			break;
-	}
-
-	/*
-	DEBUG( f->l_whence, %d );
-	DEBUG( f->l_start, %d );
-	DEBUG( f->l_len, %d );
-	DEBUG( f->l_pid, %d );
-	*/
-}
 
 
-void
-display_cmd( int cmd )
-{
-	switch( cmd ) {
-		CASE( cmd, F_DUPFD );
-		CASE( cmd, F_GETFD );
-		CASE( cmd, F_SETFD );
-		CASE( cmd, F_GETLK );
-		CASE( cmd, F_SETLK );
-		CASE( cmd, F_SETLKW );
-		default:
-			dprintf( D_ALWAYS, "cmd = UNKNOWN (%d)\n" );
-			break;
-	}
-}
+

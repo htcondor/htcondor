@@ -1,0 +1,14 @@
+# Data file describing the memory module
+ModuleFiles: memory
+Version: 1.0-rc1
+
+Description:
+Monitors system memory usage
+
+Default: memory
+options:
+period: 1m
+prefix: ram_
+
+# It's parameters
+# none

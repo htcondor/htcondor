@@ -24,12 +24,16 @@ JavaProc::~JavaProc()
 int JavaProc::StartJob()
 {
 	char tmp[ATTRLIST_MAX_EXPRESSION];
-	char job_args[ATTRLIST_MAX_EXPRESSION];
-
+	
 	char java_cmd[_POSIX_PATH_MAX];
 	char java_args[_POSIX_ARG_MAX];
 	char jarfiles[ATTRLIST_MAX_EXPRESSION];
 	StringList *jarfiles_list=0;
+
+	ExprTree  *tree;
+	char	  *tmp_args;
+	char      *job_args;
+	int		  length;
 
 	if(JobAd->LookupString(ATTR_JAR_FILES,jarfiles)==1) {
 		jarfiles_list = new StringList(jarfiles);
@@ -47,13 +51,40 @@ int JavaProc::StartJob()
 	sprintf(startfile,"%s%cjvm.start",execute_dir,DIR_DELIM_CHAR);
 	sprintf(endfile,"%s%cjvm.end",execute_dir,DIR_DELIM_CHAR);
 
-	if( JobAd->LookupString( ATTR_JOB_ARGUMENTS, job_args ) != 1 ) {
+	// this new code pulls the value out of the classad with the
+	// quote backwhacks still in place, so when we InsertOrUpdate() we
+	// don't lose any of the backwhacks.  -stolley, 8/02
+
+	tree = JobAd->Lookup(ATTR_JOB_ARGUMENTS);
+	if ( tree == NULL ) {
 		dprintf(D_ALWAYS,"JavaProc: %s is not defined!\n",ATTR_JOB_ARGUMENTS);
 		return 0;
+	} else if ( tree->RArg() == NULL ) { 
+		// this shouldn't happen, but to be safe
+		dprintf(D_ALWAYS,"JavaProc: %s RArg is not defined!\n",ATTR_JOB_ARGUMENTS);
+		return 0;
 	}
+	tree->RArg()->PrintToNewStr(&tmp_args);
+	job_args = tmp_args+1; // skip first quote
+	length = strlen(job_args);
+	job_args[length-1] = '\0'; // destroy last quote
 
+	/*
+	We really need to be passing these arguments through an
+	argv-like interface to DaemonCore.  However, we don't have
+	one.  Currently, the Windows version interprets and removes
+	quotes in argument strings, but the UNIX version does not.
+	Thus, we need two different strings, depending on the platform.
+	Todd and Colin promise to fix this.  -thain
+	*/
+	
 	sprintf(tmp,
+#ifdef WIN32
+		"%s=\"%s -Dchirp.config=\\\"%s%cchirp.config\\\" CondorJavaWrapper \\\"%s\\\" \\\"%s\\\" %s\"",
+#else
 		"%s=\"%s -Dchirp.config=%s%cchirp.config CondorJavaWrapper %s %s %s\"",
+#endif
+
 		ATTR_JOB_ARGUMENTS,
 		java_args,
 		execute_dir,
@@ -63,6 +94,8 @@ int JavaProc::StartJob()
 		job_args);
 
 	JobAd->InsertOrUpdate(tmp);
+	
+	free(tmp_args);
 
 	dprintf(D_ALWAYS,"JavaProc: Cmd=%s\n",java_cmd);
 	dprintf(D_ALWAYS,"JavaProc: Args=%s\n",tmp);

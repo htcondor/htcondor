@@ -1,3 +1,20 @@
+- one-at-a-time node constraint feature for Ewa Deelman (miron has
+  thoughts on how this should be done more generally)
+
+- add check for situation where dagman thinks there should be jobs in
+  the queue but there are none... abort w/rescue file
+
+- Fix so that we don't pull the userlog filename from a submit file
+  until the job is actually submitted (so submit files can be created
+  late)
+
+- make sure we deal with jobs with 'initialdir=foo' and a
+non-abolute-pathed 'log=bar' in their submit files (since the log will
+end up in the initialdir)
+
+- ASSERT() calls should be removed in some places, and errors returned
+instead, so that higher levels can react and abort gracefully (e.g.,
+generate a rescue DAG, etc.)
 
 - maxjobs may be buggy (see litvin emails)
 
@@ -13,9 +30,13 @@
   - cycles
   - no jobs
 
-- recursive-DAG-aware tools (condor_submit DAG-hunting, etc.)
+- add an option to have DAGMan clean up all its temp/log files when
+  it's done, if it finished successfully
 
-? move lockfile handling to dagman_main & unlink only if normal exit
+- Add DAGManJobID to submti event so that two DAGMans with jobs
+  writing to the same log can keep each other straight
+
+? recursive-DAG-aware tools (condor_submit DAG-hunting, etc.)
 
 === bugs
 
@@ -23,9 +44,6 @@
   relationships, and with Maxjobs=1 set, DAGman is quitting after
   finding that a "leaf" node or job has failed, rather than trying to
   go as far as possible and run other jobs.
-
-x naming a job "executable" in the dag file hangs DAGMan? (per Jim
-  Amundson) [could never be reproduced -- prob his mistake...]
 
 === new features
 
@@ -54,11 +72,6 @@ x naming a job "executable" in the dag file hangs DAGMan? (per Jim
    level or leaf before moving to the next branch. Perhaps there could
    be a flag to toggle these two modes?
 
-x support throttling of PRE & POST scripts
-x get rid of GetSubmittedJob() code and replace with a waiting-job
-  list, etc.
-x get DAGMan job id and use in submit_submit() rather than "(-1.-1)"
-
 
 === Miron Ideas ===
 
@@ -67,5 +80,84 @@ x get DAGMan job id and use in submit_submit() rather than "(-1.-1)"
 
 - use liberal assert()s
 
+- interface dagman with a db [low priority]
+
 - talk w/Miron about adding a submit API to condor as part of my
   DAGMan work
+
+
+
+=== Tests to Write ===
+
+to test
+
+parsing:
+	- DAGs which define >1 PRE and POST scripts for a given node
+	- DAGs which define a PRE and POST script without a script name
+
+running:
+
+
+recovery:
+
+other:
+
+
+
+=== Dynamic Dag Support ===
+
+dynamic dag modification
+
+use daemoncoer socket to accept requests for modification
+dagman can modify the dag
+
+write a new temporary dag file
+make sure that it's consistent, etc
+get a commit command that swaps the new dag file for the old (while not processing new events)
+
+start with add/remove
+think about cases we can do safely, and those we reject (e.g., adding parents of already-submitted nodes)
+in the future, look at rejected cases
+in the future, add an undo
+
+recovery?
+
+race conditions
+
+confirmation of changes to requestor (2 phase commit?)
+
+what if we add a new parent to a node that hasn't completed?
+- either consider it done or re-run
+
+keep a clear audit trail
+- miron: think of the dag file as a db, keep meta info about the nodes
+- keep deleted nodes as comments, comment new nodes, etc.
+
+- dag files will need to become unique to dag instances (since they will change them)
+  - never have 2 dagmans using the same dag
+
+check for duplicate node names, etc (everything we do in parse.C)
+
+
+1/15/03:
+
+1) perform add/del/etc internally
+	- mark dynamic nodes with a bool (+maybe user+timestamp?)
+2) write record to DagLog file
+3) resume
+
+when producing rescue files, add comments above dynamic nodes (w/user+timestamp?)
+
+recovery from Rescue
+	- same as before!
+
+recovery from crash:
+	1) parse DAG [same]
+	2) apply DAGLog changes [new]
+	3) read userlog [same]
+
+- miron: when dagman starts running, it creates a shadow dag file
+  (initially a copy) with current dag info
+	- think carefully ~ recovery (e.g. crash before shadow file
+	  exists, etc.)
+

@@ -425,12 +425,9 @@ UserProc::execute()
 	int		user_syscall_fd;
 	const	int READ_END = 0;
 	const	int WRITE_END = 1;
-	const 	int USER_CMD_FD = 3;
 	int		pipe_fds[2];
 	FILE	*cmd_fp;
 	char	buf[128];
-	int		wait_for = TRUE;
-	int		fd;
 	ReliSock	*new_reli = NULL;
 
 	pipe_fds[0] = -1;
@@ -686,8 +683,6 @@ UserProc::delete_files()
 void
 UserProc::handle_termination( int exit_st )
 {
-	struct stat	buf;
-
 	exit_status = exit_st;
 	exit_status_valid = TRUE;
 	accumulate_cpu_time();
@@ -781,8 +776,6 @@ UserProc::handle_termination( int exit_st )
 void
 UserProc::send_sig( int sig )
 {
-    sigset_t    sigmask, oldmask;
-    int         i;
 	priv_state	priv;
  
 	if( !pid ) {
@@ -1044,7 +1037,6 @@ open_std_file( int fd )
 	int	flags;
 	int	success;
 	int	real_fd;
-	FILE	*debug;
 
 	/* First, try the new set of remote lookups */
 
@@ -1115,26 +1107,25 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 	gid( s.gid ),
 	v_pid( s.virt_pid ),
 	pid( 0 ),
+	job_class( s.job_class ),
+	state( NEW ),
+	user_time( 0 ),
+	sys_time( 0 ),
 	exit_status_valid( FALSE ),
 	exit_status( 0 ),
-	soft_kill_sig( s.soft_kill_sig ),
-	job_class( s.job_class ),
 	ckpt_wanted( s.ckpt_wanted ),
-	state( NEW ),
+	soft_kill_sig( s.soft_kill_sig ),
 	new_ckpt_created( FALSE ),
 	ckpt_transferred( FALSE ),
 	core_created( FALSE ),
 	core_transferred( FALSE ),
 	exit_requested( FALSE ),
 	image_size( -1 ),
-	user_time( 0 ),
-	sys_time( 0 ),
 	guaranteed_user_time( 0 ),
 	guaranteed_sys_time( 0 ),
 	pids_suspended( -1 )
 {
 	char	buf[ _POSIX_PATH_MAX ];
-	char	*value;
 	mode_t 	omask;
 
 	cmd = new char [ strlen(s.cmd) + 1 ];

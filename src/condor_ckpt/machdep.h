@@ -62,7 +62,9 @@
 
 	extern "C" int brk( void * );
 #	include <sys/types.h>
+# ifndef DUX5
 	extern "C" void *sbrk( int );
+# endif
 	typedef void (*SIG_HANDLER)( int );
 #	define SETJMP _setjmp
 #	define LONGJMP _longjmp

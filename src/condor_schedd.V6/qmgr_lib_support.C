@@ -32,11 +32,9 @@
 #include "daemon.h"
 #include "my_hostname.h"
 #include "my_username.h"
-#include "get_daemon_addr.h"
 
 int open_url(char *, int, int);
-extern "C" char* get_schedd_addr(const char*, const char*); 
-int	strcmp_until(const char *, const char *, const char);
+extern "C" int		strcmp_until(const char *, const char *, const char);
 
 ReliSock *qmgmt_sock = NULL;
 static Qmgr_connection connection;
@@ -55,47 +53,28 @@ strcmp_until( const char *s1, const char *s2, const char until ) {
 }
 
 Qmgr_connection *
-ConnectQ(char *qmgr_location, int timeout, bool read_only )
+ConnectQ(char *qmgr_location, int timeout, bool read_only, CondorError* errstack )
 {
-	int		rval, ok, is_local = FALSE;
-	char*	scheddAddr = get_schedd_addr(0);
-	char*	localScheddAddr = NULL;
-
-	if( scheddAddr ) {
-		localScheddAddr = strdup( scheddAddr );
-		scheddAddr = NULL;
-	} 
-
-		// get the address of the schedd to which we want a connection
-	if( !qmgr_location || !*qmgr_location ) {
-			/* No schedd identified --- use local schedd */
-		scheddAddr = localScheddAddr;
-		is_local = TRUE;
-	} else if(qmgr_location[0] != '<') {
-			/* Get schedd's IP address from collector */
-		scheddAddr = get_schedd_addr(qmgr_location);
-	} else {
-			/* We were passed the sinful string already */
-		scheddAddr = qmgr_location;
-	}
-
+	int		rval, ok;
+	char*	tmp;
 
 		// do we already have a connection active?
 	if( qmgmt_sock ) {
 			// yes; reject new connection (we can only handle one at a time)
-		if( localScheddAddr ) free( localScheddAddr );
 		return( NULL );
 	}
 
+	// set up the error handling so it will clean up automatically on
+	// return.  also allow them to specify their own stack.
+	CondorError  our_errstack;
+	CondorError* errstack_select = &our_errstack;
+	if (errstack) {
+		errstack_select = errstack;
+	}
+
     // no connection active as of now; create a new one
-	if(scheddAddr) {
-        Daemon d (scheddAddr);
-        qmgmt_sock = (ReliSock*) d.startCommand (QMGMT_CMD, Stream::reli_sock, timeout);
-        ok = (int)qmgmt_sock;
-        if( !ok ) {
-            dprintf(D_ALWAYS, "Can't connect to queue manager\n");
-        }
-	} else {
+	Daemon d( DT_SCHEDD, qmgr_location );
+	if( ! d.locate() ) {
 		ok = FALSE;
 		if( qmgr_location ) {
 			dprintf( D_ALWAYS, "Can't find address of queue manager %s\n", 
@@ -103,36 +82,34 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
 		} else {
 			dprintf( D_ALWAYS, "Can't find address of local queue manager\n" );
 		}
+	} else { 
+		qmgmt_sock = (ReliSock*) d.startCommand( QMGMT_CMD, 
+												 Stream::reli_sock,
+												 timeout,
+												 errstack_select);
+		ok = qmgmt_sock != NULL;
+		if( !ok && !errstack) {
+			dprintf(D_ALWAYS, "Can't connect to queue manager\n%s",
+					errstack_select->get_full_text() );
+		}
 	}
 
 	if( !ok ) {
-		if ( localScheddAddr ) free(localScheddAddr);
 		if( qmgmt_sock ) delete qmgmt_sock;
 		qmgmt_sock = NULL;
 		return 0;
 	}
 
-		/* Figure out if we're trying to connect to a remote queue, in
-		   which case we'll set our username to "nobody" */
-	if( localScheddAddr ) {
-		//mju replaced strcmp with new method that strcmp until char (:)
-		//so that we don't worry about the port number
-		if( ! is_local && ! strcmp_until(localScheddAddr, scheddAddr, ':' ) ) {
-			is_local = TRUE;
-		}
-		else {
-			dprintf(D_FULLDEBUG,"ConnectQ failed on check for localScheddAddr\n" );
-		}
-		free(localScheddAddr);
-	}
 
     // This could be a problem
 	char *username = my_username();
+	char *domain = my_domainname();
 
 	if ( !username ) {
 		dprintf(D_FULLDEBUG,"Failure getting my_username()\n", username );
 		delete qmgmt_sock;
 		qmgmt_sock = NULL;
+		if (domain) free(domain);
 		return( 0 );
 	}
 
@@ -154,8 +131,17 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
         if ( read_only ) {
             rval = InitializeReadOnlyConnection( username );
         } else {
-            rval = InitializeConnection( username );
+            rval = InitializeConnection( username, domain );
         }
+
+		if (username) {
+			free(username);
+			username = NULL;
+		}
+		if (domain) {
+			free(domain);
+			domain = NULL;
+		}
 
         if (rval < 0) {
             delete qmgmt_sock;
@@ -164,15 +150,29 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
         }
 
         if ( !read_only ) {
-            if (!qmgmt_sock->authenticate()) {
+			char * p = SecMan::getSecSetting ("SEC_%s_AUTHENTICATION_METHODS", "CLIENT");
+			MyString methods;
+			if (p) {
+				methods = p;
+				free(p);
+			} else {
+				methods = SecMan::getDefaultAuthenticationMethods();
+			}
+
+            if (!qmgmt_sock->authenticate(methods.Value(), errstack_select)) {
                 delete qmgmt_sock;
                 qmgmt_sock = NULL;
+				if (!errstack) {
+					dprintf (D_ALWAYS, "Authentication Error\n%s",
+							errstack_select->get_full_text());
+				}
                 return 0;
             }
         }
     }
 
-	free( username );
+	if (username) free(username);
+	if (domain) free(domain);
 
 	return &connection;
 }
@@ -180,12 +180,14 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
 
 // we can ignore the parameter because there is only one connection
 bool
-DisconnectQ(Qmgr_connection *)
+DisconnectQ(Qmgr_connection *,bool commit_transactions)
 {
-	int rval;
+	int rval = -1;
 
 	if( !qmgmt_sock ) return( false );
-	rval = CloseConnection();
+	if ( commit_transactions ) {
+		rval = CloseConnection();
+	}
 	delete qmgmt_sock;
 	qmgmt_sock = NULL;
 	return( rval >= 0 );

@@ -1,6 +1,6 @@
 %p 10000
 %n 1500
-%a 4500
+%a 5200
 %e 2500
 %o 5000
 %{
@@ -19,12 +19,14 @@ int grab(int type);
 void display_token( int type );
 void reset_yyline();
 
+
 %}
 
 %START C_Comment
 STR [A-Za-z_][A-Za-z0-9_]*
 WHITE [ \t\n]*
 STRUCT struct[ \t\n]+
+UNION union[ \t\n]+
 UNSIGNED unsigned[ \t\n]+
 %%
 "/*"				BEGIN C_Comment;
@@ -49,6 +51,7 @@ long{WHITE}int		return grab( TYPE_NAME );
 long{WHITE}long		return grab( TYPE_NAME );
 u_short				return grab( TYPE_NAME );
 ulong_t				return grab( TYPE_NAME );
+u_long				return grab( TYPE_NAME );
 size_t				return grab( TYPE_NAME );
 ssize_t				return grab( TYPE_NAME );
 off_t				return grab( TYPE_NAME );
@@ -106,6 +109,7 @@ STARTUP_INFO		return grab( TYPE_NAME );
 {STRUCT}dirent64	return grab( TYPE_NAME );
 {STRUCT}statfs64	return grab( TYPE_NAME );
 {STRUCT}pollfd		return grab (TYPE_NAME );
+{UNION}wait		return grab (TYPE_NAME );
 ClassAd			return grab( TYPE_NAME );
 "["{WHITE}"]"		return grab( ARRAY );
 map					return grab( MAP );
@@ -144,6 +148,7 @@ rdiscard			return grab( RDISCARD );
 "..."					return grab( ELLIPSIS );
 .					return grab( UNKNOWN );
 %%
+int
 yywrap()
 {
 	return feof(stdin);

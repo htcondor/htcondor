@@ -45,17 +45,39 @@ int
 sysapi_disk_space_raw(const char *filename)
 {
 	ULARGE_INTEGER FreeBytesAvailableToCaller, TotalNumberOfBytes, TotalNumberOfFreeBytes;
-
+	unsigned int t_hi, t_lo, temp;
+	const unsigned int lowest_ten_mask = 0x00000cff;
+	
+	t_hi = t_lo = temp = 0;
 	sysapi_internal_reconfig();
 
+	
 	if (GetDiskFreeSpaceEx(filename, &FreeBytesAvailableToCaller, &TotalNumberOfBytes, 
 		&TotalNumberOfFreeBytes) == 0) {
 		return -1;
 	} else {
-		if (FreeBytesAvailableToCaller.HighPart > 0) {
+		
+		// we have to shift everything down 10 bits since we report the number
+		// of kbytes free. There's a HighPart and a LowPart, so it gets a little ugly.
+
+		// first shift the low part (divide by 1024 to get it into kbytes)
+		t_lo = FreeBytesAvailableToCaller.LowPart;
+		t_lo = t_lo >> 10;
+		// now grab the lowest 10 bits in the high part
+		t_hi = FreeBytesAvailableToCaller.HighPart;
+		temp = lowest_ten_mask & t_hi;
+		// shift the high part 10 bits to get it into kbytes
+		t_hi = t_hi >> 10;
+		
+		// shift the lowest 10 bits from the high part up to the 
+		// highest 10 bits, and stick them into the low part
+		temp = temp << 22;
+		t_lo |= temp;
+
+		if (t_hi > 0) {
 			return INT_MAX;
 		} else {
-			return (int)(FreeBytesAvailableToCaller.LowPart/1024);
+			return (int)t_lo;
 		}
 	}
 }
@@ -68,7 +90,6 @@ sysapi_disk_space_raw(const char *filename)
    only C++.  -Derek 6/25/98 */
 extern char* param();
 
-static char	*Afs_Cache_Name;
 
 #define FS_PROGRAM "/usr/afsws/bin/fs"
 #define FS_COMMAND "getcacheparms"
@@ -99,7 +120,6 @@ reserve_for_afs_cache()
 	char	cmd[512];
 	int		cache_size, cache_in_use;
 	int		do_it;
-	char	*str;
 
 	/* See if we're configured to deal with an AFS cache */
 	do_it = _sysapi_reserve_afs_cache;
@@ -223,7 +243,7 @@ char *filename;
 }
 #endif /* VAX && ULTRIX */
 
-#if (defined(I386) && defined(DYNIX)) || defined(LINUX) || (defined(VAX) && defined(BSD43)) || (defined(MC68020) && defined(SUNOS41)) || (defined(IBM032) && defined(BSD43)) || (defined(MC68020) && defined(BSD43)) || (defined(SPARC) && defined(SUNOS41)) || (defined(R6000) && defined(AIX31)) || defined(AIX32) || defined(IRIX331) || (defined(SPARC) && defined(CMOS)) || defined(HPUX) || defined(OSF1) || defined(Solaris) || defined(IRIX53) || defined(IRIX65) || defined(IRIX62)
+#if (defined(I386) && defined(DYNIX)) || defined(LINUX) || (defined(VAX) && defined(BSD43)) || (defined(MC68020) && defined(SUNOS41)) || (defined(IBM032) && defined(BSD43)) || (defined(MC68020) && defined(BSD43)) || (defined(SPARC) && defined(SUNOS41)) || (defined(R6000) && defined(AIX31)) || defined(AIX32) || defined(IRIX331) || (defined(SPARC) && defined(CMOS)) || defined(HPUX) || defined(OSF1) || defined(Solaris) || defined(IRIX53) || defined(IRIX65) || defined(IRIX62) || defined(CONDOR_DARWIN)
 
 #include <limits.h>
 
@@ -277,11 +297,11 @@ const char *filename;
 		/* On Solaris, we need to use f_frsize, the "fundamental
 		   filesystem block size", not f_bsize, the "preferred file
 		   system block size".  3/25/98  Derek Wright */
-	kbytes_per_block = ( (unsigned long)statfsbuf.f_frsize / (float)1024 );
+	kbytes_per_block = ( (unsigned long)statfsbuf.f_frsize / 1024.0 );
 #elif defined(OSF1)
-	kbytes_per_block = ( (unsigned long)statfsbuf.f_fsize / (float)512 );
+	kbytes_per_block = ( (unsigned long)statfsbuf.f_fsize / 1024.0 );
 #else
-	kbytes_per_block = ( (unsigned long)statfsbuf.f_bsize / (float)1024 );
+	kbytes_per_block = ( (unsigned long)statfsbuf.f_bsize / 1024.0 );
 #endif
 
 	free_kbytes = (double)statfsbuf.f_bavail * (double)kbytes_per_block; 
@@ -289,8 +309,8 @@ const char *filename;
 		return(INT_MAX);
 	}
 
-	dprintf(D_FULLDEBUG, "number of kbytes available for (%s): %f\n", 
-			filename, free_kbytes);
+	dprintf( D_FULLDEBUG, "%.0f kbytes available for \"%s\"\n", 
+			 free_kbytes, filename );
 
 	return (int)free_kbytes;
 }

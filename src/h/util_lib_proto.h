@@ -44,7 +44,8 @@ void lower_case ( register char *str );
 int config_hash ( register char *string, register int size );
 char * getline ( FILE *fp );
 
-int rotate_file(const char *new_filename, const char *old_filename);
+int rotate_file(const char *old_filename, const char *new_filename);
+int copy_file(const char *old_filename, const char *new_filename);
 
 void schedule_event ( int month, int day, int hour, int minute, int second, void (*func)() );
 void event_mgr ( void );

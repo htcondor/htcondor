@@ -27,6 +27,7 @@
 #include "condor_config.h"
 #include "condor_string.h"
 #include "string_list.h"
+#include "CondorError.h"
 
 const char STR_CONDOR_KERBEROS_CACHE[]  = "CONDOR_KERBEROS_CACHE";
 const char STR_CONDOR_CACHE_SHARE[]     = "CONDOR_KERBEROS_SHARE_CACHE";
@@ -97,7 +98,7 @@ Condor_Auth_Kerberos :: ~Condor_Auth_Kerberos()
     }
 }
 
-int Condor_Auth_Kerberos :: authenticate(const char * remoteHost)
+int Condor_Auth_Kerberos :: authenticate(const char * remoteHost, CondorError* errstack)
 {
     //temporarily change timeout to 5 minutes so the user can type passwd
     //MUST do this even on server side, since client side might call
@@ -848,23 +849,28 @@ int Condor_Auth_Kerberos :: map_domain_name(const char * domain)
     if (RealmMap) {
         MyString from(domain), to;
         if (RealmMap->lookup(from, to) != -1) {
+			if (DebugFlags & D_FULLDEBUG) {
+				dprintf (D_SECURITY, "KERBEROS: mapping realm %s to domain %s.\n", 
+					from.Value(), to.Value());
+			}
             setRemoteDomain(to.Value());
             return TRUE;
-        }
+        } else {
+			// if the map exists, they must be listed.  and they're NOT!
+			return FALSE;
+		}
     }
 
-    // Maybe the domain is the same as our local domain?
-    localDomain = getLocalDomain();
-    if (localDomain && !strcmp(localDomain, domain)) {
-        // we are in the same domain, 
-        setRemoteDomain(localDomain);
-    }
-    else {
-        // No idea how to map the domain, exception!
-        dprintf(D_SECURITY, "Unable to map domain %s\n", domain);
-        rc = FALSE;
-    }
-    return rc;
+    // if there is no map, we just allow realm -> domain.
+	if (DebugFlags & D_FULLDEBUG) {
+		if (DebugFlags & D_FULLDEBUG) {
+			dprintf (D_SECURITY, "KERBEROS: mapping realm %s to domain %s.\n", 
+				domain, domain);
+            setRemoteDomain(domain);
+		}
+	}
+	return TRUE;
+
 }
 
 static int compute_string_hash(const MyString& str, int numBuckets)
@@ -882,42 +888,56 @@ int Condor_Auth_Kerberos :: init_realm_mapping()
 
     if (RealmMap) {
         delete RealmMap;
+		RealmMap = NULL;
     }
 
     if ( !(fd = fopen(  filename, "r" ) ) ) {
         dprintf( D_SECURITY, "unable to open map file %s, errno %d\n", 
                  filename, errno );
 		free(filename);
-        return FALSE;
-    }
+        RealmMap = NULL;
+		return FALSE;
+    } else {
     
-    while (buffer = getline(fd)) {
-        char * token;
-        token = strtok(buffer, "==");
-        if(token) {
-            from.append(token);
-        }
-        token = strtok(NULL, "==");
-        if(token) {
-            to.append(token);
-        }
-        lc++;
-    }
+    	while (buffer = getline(fd)) {
+        	char * token;
+        	token = strtok(buffer, "==");
+        	if(token) {
+				char *tmpf = strdup(token);
 
-    RealmMap = new Realm_Map_t(lc, compute_string_hash);
-	from.rewind();
-    to.rewind();
-    char *f, * t;
-	while ( (f = from.next()) ) {
-        t = to.next();
-        RealmMap->insert(MyString(f), MyString(t));
-        from.deleteCurrent();
-        to.deleteCurrent();
-    }
-    fclose(fd);
+				token = strtok(NULL, "==");
+				if(token) {
+					to.append(token);
+					from.append(tmpf);
+					lc++;
+				} else {
+					dprintf (D_ALWAYS, "KERBEROS: bad map (%s), no domain after '=': %s\n",
+						filename, buffer);
+				}
 
-	free(filename);
-    return TRUE;
+				free (tmpf);
+			} else {
+				dprintf (D_ALWAYS, "KERBEROS: bad map (%s), missing '=' separator: %s\n",
+					filename, buffer);
+			}
+		}
+
+		assert (RealmMap == NULL);
+		RealmMap = new Realm_Map_t(lc, compute_string_hash);
+		from.rewind();
+		to.rewind();
+		char *f, * t;
+		while ( (f = from.next()) ) {
+			t = to.next();
+			RealmMap->insert(MyString(f), MyString(t));
+			from.deleteCurrent();
+			to.deleteCurrent();
+		}
+		fclose(fd);
+
+		free(filename);
+		return TRUE;
+	}
 }
    
 int Condor_Auth_Kerberos :: send_request(krb5_data * request)

@@ -37,9 +37,6 @@ class Script {
     // Return value of the job run.  Only valid of POST script
     int  _retValJob;
 
-    // Has this script been logged?
-    bool   _logged;
-
 	// pid of running script, or 0 if not currently running
 	int _pid;
 
@@ -47,15 +44,17 @@ class Script {
 	bool _done;
 
 	int BackgroundRun( int reaperId );
+	inline const char* GetNodeName() { return _nodeName; }
 
-    inline char * GetCmd () const { return _cmd; }
-    Script( bool post, char* cmd, Job* job );
+    inline const char* GetCmd() const { return _cmd; }
+    Script( bool post, const char* cmd, const char* noeName );
     ~Script();
 
     char * _cmd;
-    Job  * _job;
 
   protected:
+		// name of DAG node with which this script is associated
+    const char* _nodeName;
 };
 
 #endif

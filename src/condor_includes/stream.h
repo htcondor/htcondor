@@ -43,20 +43,7 @@ const int MD_IS_ON         = 1;
 const int ENCRYPTION_IS_ON = 2;
 
 #include "proc.h"
-
-/* now include sched.h.  cleanup namespace if user has not
- * already included condor_mach_status.h, otherwise leave alone.
- * this silliness is needed because other parts of the code use
- * an enumerated type which has CHECKPOINTING and SUSPENDED defined,
- * and g++ apparently handles enums via #defines behind the scene. -Todd 7/97
- */
-#ifndef _MACH_STATUS
-#	include "sched.h"
-#	undef CHECKPOINTING
-#	undef SUSPENDED
-#else
-#	include "sched.h"
-#endif
+#include "condor_old_shadow_types.h"
 
 #include "startup.h"
 

@@ -238,6 +238,11 @@ _condor_vfprintf_va( int fd, char* fmt, va_list args )
 	}
 
 	/* return the number of bytes actually written */
+#ifdef CONDOR_DARWIN
+#ifndef SYS_write
+#define SYS_write 4
+#endif
+#endif
 	return SYSCALL(SYS_write, fd, out, c);
 }
 

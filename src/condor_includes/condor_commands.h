@@ -35,6 +35,7 @@
 **	Scheduler version number
 */
 #define SCHED_VERS			400
+#define CA_CMD_BASE			1000
 #define ALT_STARTER_BASE 	70
 
 /*
@@ -128,8 +129,30 @@
 #define VACATE_ALL_FAST		(SCHED_VERS+74)		// fast vacate for whole machine
 #define VACATE_CLAIM_FAST	(SCHED_VERS+75)  	// fast vacate for a given VM
 #define REJECTED_WITH_REASON (SCHED_VERS+76) // diagnostic version of REJECTED
-#define START_AGENT		(SCHED_VERS+77) // have the master start an agent
-#define ACT_ON_JOBS		(SCHED_VERS+78) // have the schedd act on some jobs (rm, hold, release)
+#define START_AGENT			(SCHED_VERS+77) // have the master start an agent
+#define ACT_ON_JOBS			(SCHED_VERS+78) // have the schedd act on some jobs (rm, hold, release)
+#define STORE_CRED			(SCHED_VERS+79)		// schedd, store a credential
+#define SPOOL_JOB_FILES		(SCHED_VERS+80)	// spool all job files via filetransfer object
+
+
+/*
+  The ClassAd-only protocol.  CA_CMD is the base command that's sent
+  on the wire that means "read a ClassAd off the wire, lookup
+  ATTR_COMMAND, do the right thing, and send the results back as a
+  ClassAd".  The rest of the commands listed here are possible values
+  for ATTR_COMMAND.
+*/
+
+#define CA_CMD                  (CA_CMD_BASE+0) 
+
+// generic claiming protocol that the startd uses for COD
+#define CA_REQUEST_CLAIM        (CA_CMD_BASE+1)
+#define CA_RELEASE_CLAIM        (CA_CMD_BASE+2)
+#define CA_ACTIVATE_CLAIM       (CA_CMD_BASE+3)
+#define CA_DEACTIVATE_CLAIM     (CA_CMD_BASE+4)
+#define CA_SUSPEND_CLAIM        (CA_CMD_BASE+5)
+#define CA_RESUME_CLAIM         (CA_CMD_BASE+6)
+
 
 /************
 *** Command ids used by the collector 
@@ -253,11 +276,11 @@ const int QUERY_ANY_ADS = 48;
 *** Commands used by the daemon core Shadow
 */
 #define DCSHADOW_BASE 71000
-#define SHADOW_UPDATEINFO	(DCSHADOW_BASE+0)
-#define TAKE_MATCH          (DCSHADOW_BASE+1)  // for MPI shadow
-#define MPI_START_COMRADE   (DCSHADOW_BASE+2)  // for MPI shadow
-#define GIVE_MATCHES 	    (DCSHADOW_BASE+3)  // for MPI shadow
-#define RECEIVE_JOBAD		(DCSHADOW_BASE+4)
+#define SHADOW_UPDATEINFO	   (DCSHADOW_BASE+0)
+#define TAKE_MATCH             (DCSHADOW_BASE+1)  // for MPI & parallel shadow
+#define MPI_START_COMRADE      (DCSHADOW_BASE+2)  // for MPI & parallel shadow
+#define GIVE_MATCHES 	       (DCSHADOW_BASE+3)  // for MPI & parallel shadow
+#define RECEIVE_JOBAD		   (DCSHADOW_BASE+4)
 
 
 /*

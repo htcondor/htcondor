@@ -124,10 +124,14 @@ void
 init_ipaddr( int config_done )
 {
 	char *network_interface, *tmp;
+	char *host;
 
     if( ! hostname ) {
 		init_hostnames();
 	}
+
+	dprintf( D_HOSTNAME, "Trying to initialize local IP address (%s)\n", 
+		 config_done ? "after reading config" : "config file not read" );
 
 	if( config_done ) {
 		if( (network_interface = param("NETWORK_INTERFACE")) ) {
@@ -138,6 +142,9 @@ init_ipaddr( int config_done )
 				has_sin_addr = true;
 				ip_addr = ntohl( sin_addr.s_addr );
 				ipaddr_initialized = TRUE;
+				dprintf( D_HOSTNAME, "Using NETWORK_INTERFACE (%s) from "
+						 "config file for local IP addr\n",
+						 network_interface );
 			} else {
 				dprintf( D_ALWAYS, 
 						 "init_ipaddr: Invalid network interface string: \"%s\"\n", 
@@ -145,20 +152,32 @@ init_ipaddr( int config_done )
 				dprintf( D_ALWAYS, "init_ipaddr: Using default interface.\n" );
 			} 
 			free( network_interface );
-		}
+		} else {
+			dprintf( D_HOSTNAME, "NETWORK_INTERFACE not in config file, "
+					 "using existing value\n" );
+		}			
 	}
 
 	if( ! ipaddr_initialized ) {
 		if( ! has_sin_addr ) {
+			dprintf( D_HOSTNAME, "Have not found an IP yet, calling "
+					 "gethostbyname()\n" );
 				// Get our official host info to initialize sin_addr
-			tmp = get_full_hostname( hostname, &sin_addr );
+			if( full_hostname ) {
+				host = full_hostname;
+			} else {
+				host = hostname;
+			}
+			tmp = get_full_hostname( host, &sin_addr );
 			if( ! tmp ) {
-				EXCEPT( "gethostbyname(%s) failed, errno = %d", hostname, errno );
+				EXCEPT( "gethostbyname(%s) failed, errno = %d", host, errno );
 			}
 			has_sin_addr = true;
 				// We don't need the full hostname, we've already got
 				// that... 
 			delete [] tmp;
+		} else {
+			dprintf( D_HOSTNAME, "Already found IP with gethostbyname()\n" );
 		}
 		ip_addr = ntohl( sin_addr.s_addr );
 		ipaddr_initialized = TRUE;
@@ -203,6 +222,9 @@ init_hostnames()
         full_hostname = NULL;
     }
 
+	dprintf( D_HOSTNAME, "Finding local host information, "
+			 "calling gethostname()\n" );
+
         // Get our local hostname, and strip off the domain if
         // gethostname returns it.
     if( gethostname(hostbuf, sizeof(hostbuf)) == 0 ) {
@@ -212,8 +234,13 @@ init_hostnames()
                     // the full hostname here, save it, and trim the
                     // domain off and save that as the hostname.
                 full_hostname = strdup( hostbuf );
+				dprintf( D_HOSTNAME, "gethostname() returned fully "
+						 "qualified name \"%s\"\n", hostbuf );
                 *tmp = '\0';
-            }
+            } else {
+				dprintf( D_HOSTNAME, "gethostname() returned a host "
+						 "with no domain \"%s\"\n", hostbuf );
+			}
             hostname = strdup( hostbuf );
         } else {
             EXCEPT( "gethostname succeeded, but hostbuf is empty" );

@@ -47,6 +47,12 @@ class ExceptionHandler {
       static void ImagehlpStackWalk( PCONTEXT pContext );
       static int __cdecl _tprintf(const TCHAR * format, ...);  
       static BOOL InitImagehlpFunctions( void );    
+
+	  // workaround for bug in older version of ms's dbghlp.dll 
+	  static BOOL InternalSymGetLineFromAddr(IN HANDLE hProcess, IN DWORD dwAddr, 
+									OUT PDWORD pdwDisplacement, 
+									OUT PIMAGEHLP_LINE  Line);
+
       // Variables used by the class
       static TCHAR m_szLogFileName[MAX_PATH];
       static LPTOP_LEVEL_EXCEPTION_FILTER m_previousFilter;
@@ -63,12 +69,17 @@ class ExceptionHandler {
       typedef DWORD (__stdcall *SYMGETMODULEBASEPROC)( HANDLE, DWORD );
       typedef BOOL (__stdcall *SYMGETSYMFROMADDRPROC)
                                     ( HANDLE, DWORD, PDWORD, PIMAGEHLP_SYMBOL );
+	  typedef BOOL (__stdcall *SYMGETLINEFROMADDRPROC) 
+		  (HANDLE, DWORD, PDWORD, PIMAGEHLP_LINE);
+
+
       static SYMINITIALIZEPROC _SymInitialize;
       static SYMCLEANUPPROC _SymCleanup;     
 	  static STACKWALKPROC _StackWalk;
       static SYMFUNCTIONTABLEACCESSPROC _SymFunctionTableAccess;
       static SYMGETMODULEBASEPROC _SymGetModuleBase;
       static SYMGETSYMFROMADDRPROC _SymGetSymFromAddr;      
+	  static SYMGETLINEFROMADDRPROC _SymGetLineFromAddr;
 };
 
 extern ExceptionHandler g_ExceptionHandler;  // global instance of class

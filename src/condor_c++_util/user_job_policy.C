@@ -40,7 +40,7 @@ ClassAd* user_job_policy(ClassAd *jad)
 {
 	ClassAd *result;
 	char buf[4096]; /* old classads needs to go away */
-	bool periodic_hold = 0, periodic_remove = 0;
+	bool periodic_hold = 0, periodic_remove = 0, periodic_release = 0;
 	bool on_exit_hold = 0, on_exit_remove = 0;
 	int cdate = 0;
 	int adkind;
@@ -83,11 +83,13 @@ ClassAd* user_job_policy(ClassAd *jad)
 			{
 				ExprTree *ph_expr = jad->Lookup(ATTR_PERIODIC_HOLD_CHECK);
 				ExprTree *pr_expr = jad->Lookup(ATTR_PERIODIC_REMOVE_CHECK);
+				ExprTree *pl_expr = jad->Lookup(ATTR_PERIODIC_RELEASE_CHECK);
 				ExprTree *oeh_expr = jad->Lookup(ATTR_ON_EXIT_HOLD_CHECK);
 				ExprTree *oer_expr = jad->Lookup(ATTR_ON_EXIT_REMOVE_CHECK);
 
 				EmitExpression(D_ALWAYS, ATTR_PERIODIC_HOLD_CHECK, ph_expr);
 				EmitExpression(D_ALWAYS, ATTR_PERIODIC_REMOVE_CHECK, pr_expr);
+				EmitExpression(D_ALWAYS, ATTR_PERIODIC_RELEASE_CHECK, pl_expr);
 				EmitExpression(D_ALWAYS, ATTR_ON_EXIT_HOLD_CHECK, oeh_expr);
 				EmitExpression(D_ALWAYS, ATTR_ON_EXIT_REMOVE_CHECK, oer_expr);
 			}
@@ -151,6 +153,24 @@ ClassAd* user_job_policy(ClassAd *jad)
 
                 sprintf(buf, "\"%s\"", ATTR_PERIODIC_REMOVE_CHECK);
 				result->InsertAttr( ATTR_USER_POLICY_FIRING_EXPR,buf );
+
+				return result;
+			}
+
+			/* Should I perform a periodic release? */
+			jad->EvaluateAttrBool( ATTR_PERIODIC_RELEASE_CHECK,
+								   periodic_release );
+			if (periodic_release == 1)
+			{
+				/* make a result classad explaining this and return it */
+
+				sprintf(buf, "%s = TRUE", ATTR_TAKE_ACTION);
+				result->Insert(buf);
+				sprintf(buf, "%s = %d", ATTR_USER_POLICY_ACTION, REMOVE_JOB);
+				result->Insert(buf);
+				sprintf(buf, "%s = \"%s\"", ATTR_USER_POLICY_FIRING_EXPR, 
+					ATTR_PERIODIC_RELEASE_CHECK);
+				result->Insert(buf);
 
 				return result;
 			}
@@ -255,11 +275,12 @@ int JadKind(ClassAd *suspect)
 		enabled. */
 	ExprTree *ph_expr = suspect->Lookup(ATTR_PERIODIC_HOLD_CHECK);
 	ExprTree *pr_expr = suspect->Lookup(ATTR_PERIODIC_REMOVE_CHECK);
+	ExprTree *pl_expr = suspect->Lookup(ATTR_PERIODIC_REMOVE_CHECK);
 	ExprTree *oeh_expr = suspect->Lookup(ATTR_ON_EXIT_HOLD_CHECK);
 	ExprTree *oer_expr = suspect->Lookup(ATTR_ON_EXIT_REMOVE_CHECK);
 
 	/* check to see if it is oldstyle */
-	if (ph_expr == NULL && pr_expr == NULL && oeh_expr == NULL && 
+	if (ph_expr == NULL && pr_expr == NULL && pl_expr == NULL && oeh_expr == NULL && 
 		oer_expr == NULL)
 	{
 		/* check to see if it has ATTR_COMPLETION_DATE, if so then it is
@@ -273,7 +294,7 @@ int JadKind(ClassAd *suspect)
 	}
 
 	/* check to see if it is a consistant user policy job ad. */
-	if (ph_expr == NULL || pr_expr == NULL || oeh_expr == NULL || 
+	if (ph_expr == NULL || pr_expr == NULL || pl_expr == NULL || oeh_expr == NULL || 
 		oer_expr == NULL)
 	{
 		return USER_ERROR_INCONSISTANT;
@@ -314,6 +335,7 @@ void UserPolicy::SetDefaults()
 
 	ExprTree *ph_expr = m_ad->Lookup(ATTR_PERIODIC_HOLD_CHECK);
 	ExprTree *pr_expr = m_ad->Lookup(ATTR_PERIODIC_REMOVE_CHECK);
+	ExprTree *pl_expr = m_ad->Lookup(ATTR_PERIODIC_RELEASE_CHECK);
 	ExprTree *oeh_expr = m_ad->Lookup(ATTR_ON_EXIT_HOLD_CHECK);
 	ExprTree *oer_expr = m_ad->Lookup(ATTR_ON_EXIT_REMOVE_CHECK);
 
@@ -325,6 +347,10 @@ void UserPolicy::SetDefaults()
 
 	if (pr_expr == NULL) {
 		m_ad->InsertAttr( ATTR_PERIODIC_REMOVE_CHECK, false );
+	}
+
+	if (pl_expr == NULL) {
+		m_ad->InsertAttr( ATTR_PERIODIC_RELEASE_CHECK, false );
 	}
 
 	if (oeh_expr == NULL) {
@@ -339,8 +365,9 @@ void UserPolicy::SetDefaults()
 int
 UserPolicy::AnalyzePolicy( int mode )
 {
-	bool periodic_hold, periodic_remove;
+	bool periodic_hold, periodic_remove, periodic_release;
 	bool on_exit_hold, on_exit_remove;
+	int state;
 
 	if (m_ad == NULL)
 	{
@@ -350,6 +377,10 @@ UserPolicy::AnalyzePolicy( int mode )
 	if (mode != PERIODIC_ONLY && mode != PERIODIC_THEN_EXIT)
 	{
 		EXCEPT("UserPolicy Error: Unknown mode in AnalyzePolicy()");
+	}
+
+	if( !m_ad->LookupInteger(ATTR_JOB_STATUS,state) ) {
+		return UNDEFINED_EVAL;
 	}
 
 		// Clear out our stateful variables
@@ -366,13 +397,28 @@ UserPolicy::AnalyzePolicy( int mode )
 	*/
 
 	/* should I perform a periodic hold? */
-	m_fire_expr = ATTR_PERIODIC_HOLD_CHECK;
-	if( ! m_ad->EvaluateAttrBool(ATTR_PERIODIC_HOLD_CHECK, periodic_hold) ) {
-		return UNDEFINED_EVAL;
+	if(state!=HELD) {
+		m_fire_expr = ATTR_PERIODIC_HOLD_CHECK;
+		if( ! m_ad->EvaluateAttrBool(ATTR_PERIODIC_HOLD_CHECK, periodic_hold) ) {
+			return UNDEFINED_EVAL;
+		}
+		if( periodic_hold ) {
+			m_fire_expr_val = 1;
+			return HOLD_IN_QUEUE;
+		}
 	}
-	if( periodic_hold ) {
-		m_fire_expr_val = 1;
-		return HOLD_IN_QUEUE;
+
+	/* Should I perform a periodic release? */
+	if(state==HELD) {
+		m_fire_expr = ATTR_PERIODIC_RELEASE_CHECK;
+		if( !m_ad->EvaluateAttrBool(ATTR_PERIODIC_RELEASE_CHECK,
+								   periodic_release) ) {
+			return UNDEFINED_EVAL;
+		}
+		if( periodic_release ) {
+			m_fire_expr_val = 1;
+			return RELEASE_FROM_HOLD;
+		}
 	}
 
 	/* Should I perform a periodic remove? */

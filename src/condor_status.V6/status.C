@@ -31,20 +31,21 @@
 //#include "classadList.h"	// NAC
 #include "status_types.h"
 #include "totals.h"
-#include "get_daemon_addr.h"
+#include "get_daemon_name.h"
 #include "daemon.h"
-#include "get_full_hostname.h"
+#include "dc_collector.h"
 #include "extArray.h"
 #include "sig_install.h"
 #include "string_list.h"
 #include "condor_string.h"   // for strnewp()
 #include "print_wrapped_text.h"
+#include "error_utils.h"
 #include "condor_distribution.h"
 
 // global variables
 ClassAdPrintMask pm;
 char		*DEFAULT= "<default>";
-char 		*pool 	= NULL;
+DCCollector* pool = NULL;
 AdTypes		type 	= (AdTypes) -1;
 ppOption	ppStyle	= PP_NOTSET;
 int			wantOnlyTotals 	= 0;
@@ -180,6 +181,13 @@ main (int argc, char *argv[])
 		query->addORConstraint (buffer);
 		break;
 
+	  case MODE_STARTD_COD:
+	    sprintf (buffer, "TARGET.%s > 0", ATTR_NUM_COD_CLAIMS );
+		if (diagnose) {
+			printf ("Adding constraint [%s]\n", buffer);
+		}
+		query->addORConstraint (buffer);
+		break;
 
 	  default:
 		break;
@@ -228,21 +236,22 @@ main (int argc, char *argv[])
 		exit (1);
 	}
 
-	char* addr = pool;
+	char* addr = pool ? pool->addr() : NULL;
 	if( direct ) {
 		Daemon *d = NULL;
 		switch( mode ) {
 		case MODE_MASTER_NORMAL:
-			d = new Daemon( DT_MASTER, direct, pool );
+			d = new Daemon( DT_MASTER, direct, addr );
 			break;
 		case MODE_STARTD_NORMAL:
 		case MODE_STARTD_AVAIL:
 		case MODE_STARTD_RUN:
-			d = new Daemon( DT_STARTD, direct, pool );
+		case MODE_STARTD_COD:
+			d = new Daemon( DT_STARTD, direct, addr );
 			break;
 		case MODE_SCHEDD_NORMAL: 
 		case MODE_SCHEDD_SUBMITTORS:
-			d = new Daemon( DT_SCHEDD, direct, pool );
+			d = new Daemon( DT_SCHEDD, direct, addr );
 			break;
 		case MODE_CKPT_SRVR_NORMAL:
 		case MODE_COLLECTOR_NORMAL:
@@ -268,43 +277,13 @@ main (int argc, char *argv[])
 		//debug NAC
 //	printf("addr = %s\n", addr);
 
-	if ((q = query->fetchAds (result, addr)) != Q_OK) {
+	CondorError errstack;
+	if ((q = query->fetchAds (result, addr, &errstack)) != Q_OK) {
 		if (q == Q_COMMUNICATION_ERROR) {
-			char error_message[1000];
-			char *log_directory, *collector_host;
-
-			log_directory = param("LOG");
-			if (addr != NULL) {
-				collector_host = addr; 
-			} else {
-				collector_host = param("COLLECTOR_HOST");
-			}
-			sprintf(error_message, 
-					"Error: Couldn't contact the condor_collector on %s.",
-					collector_host ? collector_host : "your central manager");
-			print_wrapped_text(error_message, stderr);
-			if (!expert) {
-				fprintf(stderr, "\n");
-				print_wrapped_text("Extra Info: the condor_collector is a process "
-								   "that runs on the central manager of your Condor "
-								   "pool and collects the status of all the machines "
-								   "and jobs in the Condor pool. "
-								   "The condor_collector might not be running, "
-								   "it might be refusing to communicate with you, "
-								   "there might be a network problem, or there may be "
-								   "some other problem. Check with your system "
-								   "administrator to fix this problem.", stderr);
-				fprintf(stderr, "\n");
-				sprintf(error_message, 
-						"If you are the system administrator, check that the "
-						"condor_collector is running on %s, check the HOSTALLOW "
-						"configuration in your condor_config, and check the "
-						"MasterLog and CollectorLog files in your log directory "
-						"for possible clues as to why the condor_collector "
-						"is not responding. Also see the Troubleshooting "
-						"section of the manual.", 
-						collector_host ? collector_host : "your central manager");
-				print_wrapped_text(error_message, stderr);
+			fprintf (stderr, "%s", errstack.get_full_text());
+				// if we're not an expert, we want verbose output
+			if (errstack.code(0) == CEDAR_ERR_CONNECT_FAILED) {
+				printNoCollectorContact( stderr, addr, !expert );
 			}
 		}
 		else {
@@ -350,6 +329,7 @@ usage ()
 		"\t-avail\t\t\tPrint information about available resources\n"
 		"\t-ckptsrvr\t\tDisplay checkpoint server attributes\n"
 		"\t-claimed\t\tPrint information about claimed resources\n"
+		"\t-cod\t\t\tDisplay Computing On Demand (COD) jobs\n"
 //		"\t-collector\t\tSame as -world\n"
 		"\t-debug\t\t\tDisplay debugging info to console\n"
 		"\t-direct <host>\t\tGet attributes directly from the given daemon\n"
@@ -361,7 +341,7 @@ usage ()
 		"\t-schedd\t\t\tDisplay attributes of schedds\n"
 		"\t-server\t\t\tDisplay important attributes of resources\n"
 		"\t-startd\t\t\tDisplay resource attributes\n"
-		"\t-storage\t\t\tDisplay network storage resources\n"
+		"\t-storage\t\tDisplay network storage resources\n"
 		"\t-any\t\t\tDisplay any resources\n"
 		"\t-state\t\t\tDisplay state of resources\n"
 		"\t-submitters\t\tDisplay information about request submitters\n"
@@ -396,7 +376,7 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i], "-pool")) {
 			if( pool ) {
-				free( pool );
+				delete pool;
 				had_pool_error = 1;
 			}
 			i++;
@@ -413,9 +393,9 @@ firstPass (int argc, char *argv[])
 				fprintf( stderr, "Use \"%s -help\" for details\n", myName ); 
 				exit( 1 );
 			}
-			pool = get_full_hostname( (const char *)argv[i]);
-			if( !pool ) {
-				fprintf( stderr, "Error:  unknown host %s\n", argv[i] );
+			pool = new DCCollector( argv[i] );
+			if( !pool->addr() ) {
+				fprintf( stderr, "Error: %s\n", pool->error() );
 				if (!expert) {
 					printf("\n");
 					print_wrapped_text("Extra Info: You specified a hostname for a pool "
@@ -482,6 +462,9 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i], "-run") || matchPrefix(argv[i], "-claimed")) {
 			setMode (MODE_STARTD_RUN, i, argv[i]);
+		} else
+		if( matchPrefix (argv[i], "-cod") ) {
+			setMode (MODE_STARTD_COD, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i], "-java") || matchPrefix(argv[i], "-java")) {
 			javaMode = true;
@@ -567,7 +550,7 @@ firstPass (int argc, char *argv[])
 	if( had_pool_error ) {
 		fprintf( stderr, 
 				 "Warning:  Multiple -pool arguments given, using \"%s\"\n",
-				 pool );
+				 pool->name() );
 	}
 	if( had_direct_error ) {
 		fprintf( stderr, 
@@ -629,6 +612,7 @@ secondPass (int argc, char *argv[])
 
 			switch (mode) {
 			  case MODE_STARTD_NORMAL:
+			  case MODE_STARTD_COD:
 			  case MODE_SCHEDD_NORMAL:
 			  case MODE_SCHEDD_SUBMITTORS:
 			  case MODE_MASTER_NORMAL:

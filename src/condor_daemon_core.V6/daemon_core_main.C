@@ -44,6 +44,7 @@
 
 // Externs to Globals
 extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc. 
+extern DLL_IMPORT_MAGIC char **environ;
 
 // External protos
 extern int main_init(int argc, char *argv[]);	// old main()
@@ -51,10 +52,11 @@ extern int main_config(bool is_full);
 extern int main_shutdown_fast();
 extern int main_shutdown_graceful();
 extern void main_pre_dc_init(int argc, char *argv[]);
+extern void main_pre_command_sock_init();
 
 // Internal protos
 void dc_reconfig( bool is_full );
-
+void dc_config_auth();       // Configuring GSI (and maybe other) authentication related stuff
 // Globals
 int		Foreground = 0;		// run in background by default
 char*	myName;				// set to argv[0]
@@ -63,6 +65,7 @@ static int is_master = 0;
 char*	logDir = NULL;
 char*	pidFile = NULL;
 char*	addrFile = NULL;
+static	char*	logAppend = NULL;
 #ifdef WIN32
 int line_where_service_stopped = 0;
 #endif
@@ -89,6 +92,38 @@ void
 check_session_cache()
 {
 	daemonCore->getSecMan()->invalidateExpiredCache();
+}
+
+bool global_dc_set_cookie(int len, unsigned char* data) {
+	if (daemonCore) {
+		return daemonCore->set_cookie(len, data);
+	} else {
+		return false;
+	}
+}
+
+bool global_dc_get_cookie(int &len, unsigned char* &data) {
+	if (daemonCore) {
+		return daemonCore->get_cookie(len, data);
+	} else {
+		return false;
+	}
+}
+
+void
+handle_cookie_refresh()
+{
+	unsigned char randomjunk[256];
+	char symbols[16] = { '0', '1', '2', '3', '4', '5', '6', '7',
+		'8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+	for (int i = 0; i < 128; i++) {
+		randomjunk[i] = symbols[rand() % 16];
+	}
+	
+	// good ol null terminator
+	randomjunk[127] = 0;
+
+	global_dc_set_cookie (128, randomjunk);	
 }
 
 char* global_dc_sinful() {
@@ -309,9 +344,9 @@ set_log_dir()
 
 
 void
-handle_log_append( char* logAppend )
+handle_log_append( char* append_str )
 {
-	if( ! logAppend ) {
+	if( ! append_str ) {
 		return;
 	}
 	char *tmp1, *tmp2;
@@ -320,12 +355,12 @@ handle_log_append( char* logAppend )
 	if( !(tmp1 = param(buf)) ) { 
 		EXCEPT( "%s not defined!", buf );
 	}
-	tmp2 = (char*)malloc( (strlen(tmp1) + strlen(logAppend) + 2)
+	tmp2 = (char*)malloc( (strlen(tmp1) + strlen(append_str) + 2)
 						  * sizeof(char) );
 	if( !tmp2 ) {	
 		EXCEPT( "Out of memory!" );
 	}
-	sprintf( tmp2, "%s.%s", tmp1, logAppend );
+	sprintf( tmp2, "%s.%s", tmp1, append_str );
 	config_insert( buf, tmp2 );
 	free( tmp1 );
 	free( tmp2 );
@@ -415,7 +450,10 @@ drop_core_in_log( void )
 			EXCEPT("cannot chdir to dir <%s>",ptmp);
 		}
 	} else {
-		EXCEPT("No LOG directory specified in config file(s)");
+		dprintf( D_FULLDEBUG, 
+				 "No LOG directory specified in config file(s), "
+				 "not calling chdir()\n" );
+		return;
 	}
 #ifdef WIN32
 	{
@@ -769,6 +807,12 @@ unix_sigusr1(int)
 	daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR1 );
 }
 
+void
+unix_sigusr2(int)
+{
+	daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR2 );
+}
+
 #endif /* ! WIN32 */
 
 
@@ -779,7 +823,14 @@ dc_reconfig( bool is_full )
 		// Actually re-read the files...  Added by Derek Wright on
 		// 12/8/97 (long after this function was first written... 
 		// nice goin', Todd).  *grin*
-	config();
+
+		/* purify flags this as a stack bounds array read violation when 
+			we're expecting to use the default argument. However, due to
+			_craziness_ in the header file that declares this function
+			as an extern "C" linkage with a default argument(WTF!?) while
+			being called in a C++ context, something goes wrong. So, we'll
+			just supply the errant argument. */
+	config(0);
 
 		// See if we're supposed to be allowing core files or not
 	check_core_files();
@@ -791,6 +842,10 @@ dc_reconfig( bool is_full )
 		// If we're supposed to be using our own log file, reset that here. 
 	if( logDir ) {
 		set_log_dir();
+	}
+
+	if( logAppend ) {
+		handle_log_append( logAppend );
 	}
 
 	// Reinitialize logging system; after all, LOG may have been changed.
@@ -825,6 +880,7 @@ dc_reconfig( bool is_full )
 			ptmp = NULL;
 			char segfault;	
 			segfault = *ptmp; // should blow up here
+			ptmp[0] = 'a';
 			
 			// should never make it to here!
 			EXCEPT("FAILED TO DROP CORE");	
@@ -834,6 +890,120 @@ dc_reconfig( bool is_full )
 	main_config( is_full );
 }
 
+// This function initialize GSI (maybe other) authentication related stuff
+void
+dc_config_auth()
+{
+#if !defined(SKIP_AUTHENTICATION) && defined(GSI_AUTHENTICATION)
+    int i;
+	char *x509_env = "X509_USER_PROXY=";
+
+    // First, if there is X509_USER_PROXY, we clear it.
+    for (i=0;environ[i] != NULL;i++) {
+         if (strncmp(environ[i], x509_env, strlen(x509_env) ) == 0) {
+             for (;environ[i] != NULL;i++) {
+                 environ[i] = environ[i+1];
+			}
+             break;
+         }
+    }
+
+    // Next, we param the configuration file for GSI related stuff and 
+    // set the corresponding environment variables for it
+
+    char *pbuf = 0;
+	char *proxy_buf = 0;
+	char *cert_buf = 0;
+	char *key_buf = 0;
+	char *trustedca_buf = 0;
+
+	char buffer[(_POSIX_PATH_MAX * 3)];
+	memset(buffer, 0, (_POSIX_PATH_MAX * 3));
+
+    
+    // Here's how it works. If you define any of 
+	// GSI_DAEMON_CERT, GSI_DAEMON_KEY, GSI_DAEMON_PROXY, or 
+	// GSI_DAEMON_TRUSTED_CA_DIR, those will get stuffed into the
+	// environment. 
+	//
+	// Everything else depends on GSI_DAEMON_DIRECTORY. If 
+	// GSI_DAEMON_DIRECTORY is not defined, then only settings that are
+	// defined above will be placed in the environment, so if you 
+	// want the cert and host in a non-standard location, but want to use 
+	// /etc/grid-security/certifcates as the trusted ca dir, only 
+	// define GSI_DAEMON_CERT and GSI_DAEMON_KEY, and not
+	// GSI_DAEMON_DIRECTORY and GSI_DAEMON_TRUSTED_CA_DIR
+	//
+	// If GSI_DAEMON_DIRECTORY is defined, condor builds a "reasonable" 
+	// default out of what's already been defined and what it can 
+	// construct from GSI_DAEMON_DIRECTORY  - ie  the trusted CA dir ends 
+	// up as in $(GSI_DAEMON_DIRECTORY)/certificates, and so on
+	// The proxy is not included in the "reasonable defaults" section
+
+	// First, let's get everything we might want
+    pbuf = param( STR_GSI_DAEMON_DIRECTORY );
+    proxy_buf = param( STR_GSI_DAEMON_PROXY );
+    cert_buf = param( STR_GSI_DAEMON_CERT );
+    key_buf = param( STR_GSI_DAEMON_KEY );
+    trustedca_buf = param( STR_GSI_DAEMON_TRUSTED_CA_DIR );
+
+
+    if (pbuf) {
+
+		if( !trustedca_buf) {
+       	 sprintf( buffer, "%s=%s%ccertificates", STR_GSI_CERT_DIR, pbuf, 
+					DIR_DELIM_CHAR);
+       	 putenv( strdup( buffer ) );
+		}
+
+		if( !cert_buf ) {
+        	sprintf( buffer, "%s=%s%chostcert.pem", STR_GSI_USER_CERT, pbuf, 
+						DIR_DELIM_CHAR);
+        	putenv( strdup ( buffer ) );
+		}
+	
+		if (!key_buf ) {
+        	sprintf(buffer,"%s=%s%chostkey.pem",STR_GSI_USER_KEY,pbuf, 
+					DIR_DELIM_CHAR);
+        	putenv( strdup ( buffer  ) );
+		}
+
+        free( pbuf );
+    }
+
+	if(proxy_buf) { 
+		sprintf( buffer, "%s=%s", STR_GSI_USER_PROXY, proxy_buf);
+		putenv (strdup( buffer ) );
+		free(proxy_buf);
+	}
+
+	if(cert_buf) { 
+		sprintf( buffer, "%s=%s", STR_GSI_USER_CERT, cert_buf);
+		putenv (strdup( buffer ) );
+		free(cert_buf);
+	}
+
+	if(key_buf) { 
+		sprintf( buffer, "%s=%s", STR_GSI_USER_KEY, key_buf);
+		putenv (strdup( buffer ) );
+		free(key_buf);
+	}
+
+	if(trustedca_buf) { 
+		sprintf( buffer, "%s=%s", STR_GSI_CERT_DIR, trustedca_buf);
+		putenv (strdup( buffer ) );
+		free(trustedca_buf);
+	}
+
+
+    pbuf = param( STR_GSI_MAPFILE );
+    if (pbuf) {
+        sprintf( buffer, "%s=%s", STR_GSI_MAPFILE, pbuf);
+        putenv( strdup (buffer) );
+        free(pbuf);
+    }
+#endif
+}
 
 int
 handle_dc_sighup( Service*, int )
@@ -913,7 +1083,6 @@ int main( int argc, char** argv )
 	char	*ptmp, *ptmp1;
 	int		i;
 	int		wantsKill = FALSE, wantsQuiet = FALSE;
-	char	*logAppend = NULL;
 	int runfor = 0; //allow cmd line option to exit after *runfor* minutes
 
 
@@ -943,16 +1112,9 @@ int main( int argc, char** argv )
 	install_sig_handler_with_mask(SIGTERM, &fullset, unix_sigterm);
 	install_sig_handler_with_mask(SIGCHLD, &fullset, unix_sigchld);
 	install_sig_handler_with_mask(SIGUSR1, &fullset, unix_sigusr1);
+	install_sig_handler_with_mask(SIGUSR2, &fullset, unix_sigusr2);
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif // of ifndef WIN32
-
-		// Figure out if we're the master or not.  The master is a
-		// special case daemon in many ways, so we want to just set a
-		// flag that we can check instead of doing this strcmp all the
-		// time.  -Derek Wright 1/13/98
-	if ( strcmp(mySubSystem,"MASTER") == 0 ) {
-		is_master = 1;
-	}
 
 	// set myName to be argv[0] with the path stripped off
 	myName = basename(argv[0]);
@@ -966,10 +1128,26 @@ int main( int argc, char** argv )
 		// messing with argv[]
 	main_pre_dc_init( argc, argv );
 
+		// Make sure this is set, since DaemonCore needs it for all
+		// sorts of things, and it's better to clearly EXCEPT here
+		// than to seg fault down the road...
+	if( ! mySubSystem ) {
+		EXCEPT( "Programmer error: mySubSystem is NULL!" );
+	}
+
+		// Figure out if we're the master or not.  The master is a
+		// special case daemon in many ways, so we want to just set a
+		// flag that we can check instead of doing this strcmp all the
+		// time.  -Derek Wright 1/13/98
+	if( strcmp(mySubSystem,"MASTER") == 0 ) {
+		is_master = 1;
+	}
+
 	// strip off any daemon-core specific command line arguments
 	// from the front of the command line.
 	i = 0;
 	bool done = false;
+
 	for(ptr = argv + 1; *ptr && (i < argc - 1); ptr++,i++) {
 		if(ptr[0][0] != '-') {
 			break;
@@ -1049,16 +1227,14 @@ int main( int argc, char** argv )
 			}
 			break;
 #endif
-		case 'l':		// specify Log directory
+		case 'l':		// specify Log directory 
 			ptr++;
 			if( ptr && *ptr ) {
 				logDir = *ptr;
 				dcargs += 2;
 			} else {
-				fprintf( stderr, 
-						 "DaemonCore: ERROR: -log needs another argument.\n" );
-				fprintf( stderr, 
-						 "   Please specify a directory to use for logging.\n" );
+				fprintf( stderr, "DaemonCore: ERROR: -log needs another "
+						 "argument\n" );
 				exit( 1 );
 			}				  
 			break;
@@ -1139,6 +1315,10 @@ int main( int argc, char** argv )
 		// call config so we can call param.  
 	config( wantsQuiet );
 
+    // call dc_config_GSI to set GSI related parameters so that all
+    // the daemons will know what to do.
+    dc_config_auth();
+
 		// See if we're supposed to be allowing core files or not
 	check_core_files();
 
@@ -1200,7 +1380,25 @@ int main( int argc, char** argv )
 		}
 		// and close stdin, out, err if we are the MASTER.  
 		if ( is_master ) {
-			close(0); close(1); close(2);
+			int	fd_null = open( NULL_FILE, 0 );
+			if ( fd_null < 0 ) {
+				fprintf( stderr, "Unable to open %s: %s\n", NULL_FILE, strerror(errno) );
+				dprintf( D_ALWAYS, "Unable to open %s: %s\n", NULL_FILE, strerror(errno) );
+			}
+			int	fd;
+			for( fd=0;  fd<=2;  fd++ ) {
+				close( fd );
+				if ( ( fd_null >= 0 ) && ( fd_null != fd ) &&
+					 ( dup2( fd_null, fd ) < 0 )  ) {
+					dprintf( D_ALWAYS, "Error dup2()ing %s -> %d: %s\n",
+							 NULL_FILE, fd, strerror(errno) );
+				}
+			}
+			// Close the /dev/null descriptor _IF_ it's not stdin/out/err
+			if ( fd_null > 2 ) {
+				close( fd );
+			}
+
 		}
 		// and detach from the controlling tty
 		detach();
@@ -1225,6 +1423,10 @@ int main( int argc, char** argv )
 
 		handle_dynamic_dirs();
 
+		if( logAppend ) {
+			handle_log_append( logAppend );
+		}
+		
 			// Actually set up logging.
 		dprintf_config(mySubSystem,2);
 	}
@@ -1253,6 +1455,26 @@ int main( int argc, char** argv )
 
 	dprintf(D_ALWAYS,"******************************************************\n");
 
+	if (global_config_file != "") {
+		dprintf(D_ALWAYS, "Using config file: %s\n", 
+				global_config_file.GetCStr());
+	} else {
+		const char* env_name = EnvGetName( ENV_CONFIG );
+		char* env = getenv( env_name );
+		if( env ) {
+			dprintf(D_ALWAYS, 
+					"%s is set to '%s', not reading a config file\n",
+					env_name, env );
+		}
+	}
+	if (global_root_config_file != "") {
+		dprintf(D_ALWAYS, "Using root config file: %s\n", 
+				global_root_config_file.GetCStr());
+	}
+	if (local_config_files != "") {
+		dprintf(D_ALWAYS, "Using local config files: %s\n", 
+				local_config_files.GetCStr());
+	}
 		// chdir() into our log directory so if we drop core, that's
 		// where it goes.  We also do some NT-specific stuff in here.
 	drop_core_in_log();
@@ -1284,6 +1506,8 @@ int main( int argc, char** argv )
 			EXCEPT("Failed to create async pipe");
 	}
 #endif
+
+	main_pre_command_sock_init();
 
 		// SETUP COMMAND SOCKET
 	daemonCore->InitCommandSocket( command_port );
@@ -1329,6 +1553,15 @@ int main( int argc, char** argv )
 
 	daemonCore->Register_Timer( 5 * 60, 0,
 				(TimerHandler)check_session_cache, "check_session_cache" );
+	
+
+	// set the timer for half the session duration, 
+	// since we retain the old cookie. Also make sure
+	// the value is atleast 1.
+	int cookie_refresh = (param_integer("SEC_DEFAULT_SESSION_DURATION", 3600)/2)+1;
+
+	daemonCore->Register_Timer( 0, cookie_refresh, 
+				(TimerHandler)handle_cookie_refresh, "handle_cookie_refresh");
 
 		// Install DaemonCore command handlers common to all daemons.
 	daemonCore->Register_Command( DC_RECONFIG, "DC_RECONFIG",
@@ -1376,7 +1609,7 @@ int main( int argc, char** argv )
 
 	daemonCore->Register_Command( DC_INVALIDATE_KEY, "DC_INVALIDATE_KEY",
 								  (CommandHandler)handle_invalidate_key,
-								  "handle_invalidate_key()", 0, WRITE );
+								  "handle_invalidate_key()", 0, ALLOW );
 
 	// Call daemonCore's ReInit(), which clears the cached DNS info.
 	// It also initializes some stuff, which is why we call it now. 
@@ -1458,7 +1691,11 @@ main( int argc, char** argv)
 			break;		// break out of for loop
 		}
 	}
-	if ( (Foreground != 1) && (strcmp(mySubSystem,"MASTER") == 0) ) {
+	if ( (Foreground != 1) && 
+			// the starter sets mySubSystem in main_pre_dc_init(), so 
+			// be careful when handling it this early in the game.
+			( mySubSystem != NULL && 
+			(strcmp(mySubSystem,"MASTER") == 0)) ) {
 		main_init(-1,NULL);	// passing the master main_init a -1 will register as an NT service
 		return 1;
 	} else {

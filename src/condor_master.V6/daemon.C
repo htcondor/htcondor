@@ -32,9 +32,11 @@
 #include "basename.h"
 #include "condor_email.h"
 #include "condor_environ.h"
-#include "string_list.h"
+#include "condor_parameters.h"
+#include "daemon_list.h"
 #include "sig_name.h"
 #include "env.h"
+
 
 // these are defined in master.C
 extern int		RestartsPerHour;
@@ -48,8 +50,8 @@ extern int		new_bin_delay;
 extern char*	FS_Preen;
 extern			ClassAd* ad;
 extern int		NT_ServiceFlag; // TRUE if running on NT as an NT Service
-extern Daemon*	Collector;
-extern StringList *secondary_collectors;
+extern DCCollector*	Collector;
+extern DaemonList* secondary_collectors;
 
 extern time_t	GetTimeStamp(char* file);
 extern int 	   	NewExecutable(char* file, time_t* tsp);
@@ -109,41 +111,15 @@ daemon::daemon(char *name, bool is_daemon_core)
 			daemon_name = NULL;
 		}
 	} 
-	
+
+	// Handle configuration
+	DoConfig( true );
+
+	// Default log file name...
 	sprintf(buf, "%s_LOG", name);
 	log_filename_in_config_file = strdup(buf);
-	sprintf(buf, "%s_FLAG", name);
-	flag_in_config_file = param(buf);
 
-	// get env settings from config file if present
-	sprintf(buf, "%s_ENVIRONMENT", name);
-	env = param(buf);
-	Env envStrParser;
-	// Note: If [name]_ENVIRONMENT is not specified, env will now be null.
-	// Env::Merge(null) will always return true, so the warning will not be
-	// printed in this case.
-	if( !envStrParser.Merge(env) ) {
-		// this is an invalid env string
-		dprintf(D_ALWAYS, "Warning! Configuration file variable `%s_ENVIRONME"
-				"NT' has invalid value `%s'; ignoring.\n", name, env);
-		env = NULL;
-	}
-
-	// Weiru
-	// In the case that we have several for example schedds running on the
-	// same machine, we specify SCHEDD__1, SCHEDD_2, ... in the config file.
-	// We want to be able to specify only one executable for them as well as
-	// different executables, or one flag for all of them as well as
-	// different flags for each. So we instead of specifying in config file
-	// SCHEDD__1 = /unsup/condor/bin/condor_schedd, SCHEDD__2 = /unsup/condor/
-	// bin/condor_schedd, ... we can simply say SCHEDD = /unsup/...
-	if(!flag_in_config_file && daemon_name)
-	{
-		*(daemon_name - 2) = '\0';
-		sprintf(buf, "%s_FLAG", name_in_config_file);
-		flag_in_config_file = param(buf);
-		*(daemon_name - 2) = '_';
-	} 
+	// Check the process name (is it me?)
 	process_name = NULL;
 	log_name = NULL;
 	if( strcmp(name, "MASTER") == MATCH ) {
@@ -176,7 +152,6 @@ daemon::daemon(char *name, bool is_daemon_core)
 	type = stringToDaemonType( name );
 	daemons.RegisterDaemon(this);
 }
-
 
 int
 daemon::runs_on_this_host()
@@ -335,6 +310,99 @@ daemon::DoStart()
 }
 
 
+// This function handles all of the configuration stuff; at startup and
+// at reconfig time.
+void
+daemon::DoConfig( bool init )
+{
+	char	*tmp;
+	char	buf[1000];
+
+	// Initialize some variables the first time through
+	if ( init ) {
+		flag_in_config_file = NULL;
+		env = NULL;
+	}
+
+	// Check for the _FLAG parameter
+	sprintf(buf, "%s_FLAG", name_in_config_file );
+	tmp = param(buf);
+
+	// Previously defind?
+	if ( NULL != flag_in_config_file ) {
+		// Has it changed?
+		if ( strcmp( flag_in_config_file, tmp ) ) {
+			free( flag_in_config_file );
+			flag_in_config_file = tmp;
+		} else if ( NULL != tmp ) {
+			// Unchanged, just free up tmp
+			free( tmp );
+		} else {
+			// Do nothing
+		}
+	} else {
+		// Not previously defined; just use tmp whatever it is
+		flag_in_config_file = tmp;
+	}
+
+	// get env settings from config file if present
+	sprintf(buf, "%s_ENVIRONMENT", name_in_config_file );
+	tmp = param( buf );
+	bool	envModified = false;
+
+	// Previously defind?
+	if ( NULL != env ) {
+		// Has it changed?
+		if ( strcmp( env, tmp ) ) {
+			free( env );
+			env = tmp;
+			envModified = true;
+		} else if ( NULL != tmp ) {
+			// Unchanged, just free up tmp
+			free( tmp );
+		} else {
+			// Do nothing
+		}
+	} else {
+		// Not previously defined; just use tmp whatever it is
+		env = tmp;
+		envModified = true;
+	}
+
+	// Check the new & improved ENV.
+	if ( ( envModified ) && ( NULL != env ) ) {
+		Env envStrParser;
+		// Note: If [name]_ENVIRONMENT is not specified, env will now be null.
+		// Env::Merge(null) will always return true, so the warning will not be
+		// printed in this case.
+		if( !envStrParser.Merge(env) ) {
+			// this is an invalid env string
+			dprintf(D_ALWAYS, "Warning! Configuration file variable "
+					"`%s_ENVIRONMENT' has invalid value `%s'; ignoring.\n",
+					name_in_config_file, env);
+			free( env );
+			env = NULL;
+		}
+	}
+
+
+	// Weiru
+	// In the case that we have several for example schedds running on the
+	// same machine, we specify SCHEDD__1, SCHEDD_2, ... in the config file.
+	// We want to be able to specify only one executable for them as well as
+	// different executables, or one flag for all of them as well as
+	// different flags for each. So we instead of specifying in config file
+	// SCHEDD__1 = /unsup/condor/bin/condor_schedd, SCHEDD__2 = /unsup/condor/
+	// bin/condor_schedd, ... we can simply say SCHEDD = /unsup/...
+	if( ( NULL == flag_in_config_file ) && ( NULL != daemon_name ) ) {
+		*(daemon_name - 2) = '\0';
+		sprintf(buf, "%s_FLAG", name_in_config_file);
+		flag_in_config_file = param(buf);
+		*(daemon_name - 2) = '_';
+	} 
+
+}
+
 int
 daemon::Start()
 {
@@ -365,12 +433,32 @@ daemon::Start()
 	}
 
 		// Collector needs to listen on a well known port, as does the
-		// Negotiator.
+		// Negotiator.  
+		// We didn't want them to use root for any reason, but b/c of
+		// evil in the security code where we're looking up host certs
+		// in the keytab file, we still need root afterall. :(
+	bool wants_condor_priv = false;
 	if ( strcmp(name_in_config_file,"COLLECTOR") == 0 ) {
-		command_port = COLLECTOR_PORT;
-	}
-	if ( strcmp(name_in_config_file,"NEGOTIATOR") == 0 ) {
-		command_port = NEGOTIATOR_PORT;
+			// If we're spawning a collector, we can get the right
+			// port by asking the global Collector object for it,
+			// since we've already instantiated that with the info for
+			// the local pool's collector.  This also saves the
+			// trouble of instantiating a new DCCollector object,
+			// which duplicates some effort and is less efficient. 
+		command_port = Collector->port();
+			// We can't do this b/c of needing to read host certs as root 
+			// wants_condor_priv = true;
+	} else if( stricmp(name_in_config_file,"CONDOR_VIEW") == 0 ||
+			   stricmp(name_in_config_file,"VIEW_SERVER") == 0 ) {
+		Daemon d( DT_VIEW_COLLECTOR );
+		command_port = d.port();
+			// We can't do this b/c of needing to read host certs as root 
+			// wants_condor_priv = true;
+	} else if( strcmp(name_in_config_file,"NEGOTIATOR") == 0 ) {
+		Daemon d( DT_NEGOTIATOR );
+		command_port = d.port();
+			// We can't do this b/c of needing to read host certs as root 
+			// wants_condor_priv = true;
 	}
 
 	priv_state priv_mode = PRIV_ROOT;
@@ -378,14 +466,39 @@ daemon::Start()
 	sprintf(buf,"%s_USERID",name_in_config_file);
 	char * username = param( buf );
 	if(username) {
-		int result = init_user_ids(username);
-		free(username);
+		// domain is set to NULL since we don't care about the domain
+		// unless we're on Windows, and on Windows the master
+		// always runs as SYSTEM (as a service). --stolley
+		int result = init_user_ids(username, NULL);
 		if(result) {
 			priv_mode = PRIV_USER_FINAL;
 		} else {
 			dprintf(D_ALWAYS,"couldn't switch to user %s!\n",username);
-			free(username);
 		}
+		free(username);
+	}
+	if( wants_condor_priv && priv_mode == PRIV_ROOT ) {
+
+#ifndef	WIN32
+
+			// we go this route on UNIX b/c it's safer, easier, and it
+			// automatically gets it right if CONDOR_IDS is defined.
+		uid_t cuid = get_condor_uid();
+		gid_t cgid = get_condor_gid();
+		int result = set_user_ids( cuid, cgid );
+		if( result ) { 
+			priv_mode = PRIV_USER_FINAL;
+		} else {
+			dprintf( D_ALWAYS, 
+					 "couldn't switch to \"condor\" user %d.%d!\n",
+					 cuid, cgid );
+		}
+
+#else /* WIN32 */
+
+			// don't know what to do here just yet...
+
+#endif /* WIN32 */
 	}
 
 	sprintf( buf, "%s_ARGS", name_in_config_file );
@@ -399,11 +512,20 @@ daemon::Start()
 			sprintf( buf, "%s -f -n %s", shortname, MasterName ); 
 		}
 	} else {
-		if( tmp ) { 
-			sprintf( buf, "%s -f %s", shortname, tmp );
-			free( tmp );
+		if( isDC ) {
+			if( tmp ) { 
+				sprintf( buf, "%s -f %s", shortname, tmp );
+				free( tmp );
+			} else {
+				sprintf( buf, "%s -f", shortname );
+			}
 		} else {
-			sprintf( buf, "%s -f", shortname );
+			if( tmp ) { 
+				sprintf( buf, "%s %s", shortname, tmp );
+				free( tmp );
+			} else {
+				sprintf( buf, "%s", shortname );
+			}
 		}
 	}
 
@@ -779,6 +901,7 @@ daemon::Reconfig()
 			// there's no need to reconfig it.
 		return;
 	}
+	DoConfig( false );
 	Kill( SIGHUP );
 }
 
@@ -839,12 +962,12 @@ Daemons::Daemons()
 
 
 void
-Daemons::RegisterDaemon(daemon *d)
+Daemons::RegisterDaemon(class daemon *d)
 {
 	int i;
 	if( !daemon_ptr ) {
 		daemon_list_size = 10;
-		daemon_ptr = (daemon **) malloc(daemon_list_size * sizeof(daemon *));
+		daemon_ptr = (class daemon **) malloc(daemon_list_size * sizeof(class daemon *));
 		for( i=0; i<daemon_list_size; i++ ) {
 			daemon_ptr[i] = NULL;
 		}
@@ -853,8 +976,8 @@ Daemons::RegisterDaemon(daemon *d)
 	if (no_daemons >= daemon_list_size) {
 		i = daemon_list_size;
 		daemon_list_size *= 2;
-		daemon_ptr = (daemon **) realloc(daemon_ptr, 
-										daemon_list_size * sizeof(daemon *));
+		daemon_ptr = (class daemon **) realloc(daemon_ptr, 
+										daemon_list_size * sizeof(class daemon *));
 		for( ; i<daemon_list_size; i++ ) {
 			daemon_ptr[i] = NULL;
 		}
@@ -1457,50 +1580,23 @@ Daemons::UpdateCollector()
 
 	Update(ad);
     
-    SafeSock sock;
-	sock.timeout(2);
-
-    // Port doesn't matter, since we've got the sinful string. 
-	if (!sock.connect(Collector->addr(), 0)) {
-		dprintf( error_debug, "Can't locate collector %s\n", 
-				 Collector->fullHostname() );
+	if( !Collector->sendUpdate(UPDATE_MASTER_AD, ad) ) {
+		dprintf( D_ALWAYS, 
+				 "Can't send UPDATE_MASTER_AD to collector %s: %s\n", 
+				 Collector->updateDestination(), Collector->error() );
 		return;
-	}
-
-    if (!Collector->startCommand(UPDATE_MASTER_AD, &sock)) {
-		dprintf( D_ALWAYS, "Can't send UPDATE_MASTER_AD to collector (%s)\n", 
-				 Collector->fullHostname() );
-		return;
-	}
-
-	sock.encode();
-
-	if(!ad->put(sock)) {
-		dprintf( D_ALWAYS, "Can't send ClassAd to the collector (%s)\n",
-				 Collector->fullHostname() );
-		return;
-	}
-
-	if(!sock.end_of_message()) {
-		dprintf( D_ALWAYS, "Can't send EOM to the collector (%s)\n",
-				 Collector->fullHostname() );
 	}
 
 	if (secondary_collectors) {
 		secondary_collectors->rewind();
-		char *collector;
-		while ((collector = secondary_collectors->next()) != NULL) {
-			SafeSock s;
-			s.timeout(2);
-			s.encode();
-            // COLLECTOR_PORT need to be added in there?  Bueller?
-			Daemon col(collector);
-			if (!s.connect(collector, COLLECTOR_PORT)     || 
-                !col.startCommand(UPDATE_MASTER_AD, &s)   ||
-                !ad->put(s) || !s.end_of_message()) {
-				dprintf( D_ALWAYS,
-						 "Failed to send update to secondary collector %s\n",
-						 collector);
+		Daemon* d;
+		DCCollector* col;
+		while( secondary_collectors->next(d) ) {
+			col = (DCCollector*)d;
+			if( ! col->sendUpdate(UPDATE_MASTER_AD, ad) ) {
+				dprintf( D_ALWAYS, "Can't send UPDATE_MASTER_AD to "
+						 "collector %s: %s\n", 
+						 col->updateDestination(), col->error() );
 			}
 		}
 	}
@@ -1512,7 +1608,7 @@ Daemons::UpdateCollector()
 }
 
 
-daemon*
+class daemon*
 Daemons::FindDaemon( daemon_t dt )
 {
 	for( int i=0; i < no_daemons; i++ ) {

@@ -25,7 +25,6 @@
 #include "condor_classad.h"
 #include "HashTable.h"
 #include "hashkey.h"
-#include "sched.h"
 #include "condor_attributes.h"
 
 #ifndef WIN32
@@ -35,20 +34,19 @@
 extern "C" char * sin_to_string(struct sockaddr_in *);
 
 template class HashTable<HashKey, ClassAd *>;
-extern void parseIpPort (char *, char *);
+extern void parseIpPort (const MyString &, MyString &);
 
-void HashKey::sprint (char *s)
+void HashKey::sprint (MyString &s)
 {
-	if (ip_addr[0])
-		sprintf (s, "< %s , %s >", name, ip_addr);
+	if (ip_addr.Length() )
+		s.sprintf( "< %s , %s >", name.GetCStr(), ip_addr.GetCStr() );
 	else
-		sprintf (s, "< %s >", name);
+		s.sprintf( "< %s >", name.GetCStr() );
 }
 
 bool operator== (const HashKey &lhs, const HashKey &rhs)
 {
-    return (strcmp (lhs.name, rhs.name) == 0    &&
-			strcmp (lhs.ip_addr, rhs.ip_addr) == 0);
+    return (  ( lhs.name == rhs.name ) && ( lhs.ip_addr == rhs.ip_addr ) );
 }
 
 ostream &operator<< (ostream &out, const HashKey &hk)
@@ -61,25 +59,13 @@ ostream &operator<< (ostream &out, const HashKey &hk)
 int hashFunction (const HashKey &key, int numBuckets)
 {
     unsigned int bkt = 0;
-    int i;
+	const char *p;
 
-    for (i = 0; key.name[i]   ; bkt += key.name[i++]);
-    for (i = 0; key.ip_addr[i]; bkt += key.ip_addr[i++]);
+    for (p = key.name.GetCStr(); p && *p; bkt += *p++);
+    for (p = key.ip_addr.GetCStr(); p && *p; bkt += *p++);
 
     bkt %= numBuckets;
-
     return bkt;
-}
-
-int hashOnName (const HashKey &key, int numBuckets)
-{
-	unsigned int bkt = 0;
-	int i;
-
-	for (i = 0; key.name [i]; bkt += key.name[i++]);
-	bkt %= numBuckets;
-
-	return bkt;
 }
 
 // functions to make the hashkeys ...
@@ -88,8 +74,8 @@ bool
 makeStartdAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
 	ExprTree *tree;
-	char buffer [30];
-	char buf2   [64];
+	MyString	buffer;
+	MyString	buf2;
 	int  inferred = 0;
 	ClassAdUnParser unp;
 	string buffString;
@@ -106,7 +92,7 @@ makeStartdAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	{
 		unp.Unparse( buffString, tree );
 //		strcpy (hk.name, ((String *)tree->RArg())->Value());
-		strcpy (hk.name, buffString.c_str( ) );
+		hk.name = buffString.c_str( );
 		buffString = "";
 	}
 	else
@@ -126,17 +112,17 @@ makeStartdAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	{
 		unp.Unparse( buffString, tree );
 //		strcpy (buffer, ((String *)tree->RArg())->Value());
-		strcpy (buffer, buffString.c_str( ) );
+		buffer = buffString.c_str( );
 		buffString = "";
 	}
 	else
 	{
 		dprintf (D_FULLDEBUG,"Warning: No STARTD_IP_ADDR; inferring address\n");
-		strcpy (buffer, sin_to_string (from));	
+		buffer = sin_to_string (from);	
 
-		sprintf (buf2, "%s = \"%s\"", ATTR_STARTD_IP_ADDR, buffer);
-		ad->Insert (buf2);
-		dprintf (D_FULLDEBUG, "(Inferred address: %s)\n", buf2);
+		buf2.sprintf( "%s = \"%s\"", ATTR_STARTD_IP_ADDR, buffer.GetCStr() );
+		ad->Insert( buf2.GetCStr() );
+		dprintf (D_FULLDEBUG, "(Inferred address: %s)\n", buf2.GetCStr() );
 		inferred = 1;
 	}
 
@@ -150,8 +136,8 @@ bool
 makeScheddAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
 	ExprTree *tree;
-	char buffer [30];
-	char buf2   [64];
+	MyString	buffer;
+	MyString	buf2;
 	int  inferred = 0;
 	ClassAdUnParser unp;
 	string buffString;
@@ -168,7 +154,7 @@ makeScheddAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	{
 		unp.Unparse( buffString, tree );
 //		strcpy (hk.name, ((String *)tree->RArg())->Value());
-		strcpy (hk.name, buffString.c_str( ) );
+		hk.name = buffString.c_str( );
 		buffString = "";
 	}
 	else
@@ -188,18 +174,18 @@ makeScheddAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	{
 		unp.Unparse( buffString, tree );
 //		strcpy (buffer, ((String *)tree->RArg())->Value());
-		strcpy (buffer, buffString.c_str( ) );
+		buffer = buffString.c_str( );
 		buffString = "";
 	}
 	else
 	{
 		dprintf(D_FULLDEBUG,"Warning: No SCHEDD_IP_ADDR; inferring address\n");
-		strcpy (buffer, sin_to_string (from));
+		buffer = sin_to_string (from);
 
         // since we have done the work ...
-        sprintf (buf2, "%s = \"%s\"", ATTR_SCHEDD_IP_ADDR, buffer);
-		ad->Insert (buf2);
-		dprintf (D_FULLDEBUG, "(Inferred address: %s)\n", buf2);
+        buf2.sprintf( "%s = \"%s\"", ATTR_SCHEDD_IP_ADDR, buffer.GetCStr() );
+		ad->Insert( buf2.GetCStr() );
+		dprintf (D_FULLDEBUG, "(Inferred address: %s)\n", buf2.GetCStr() );
 		inferred = 1;
 	}
 
@@ -213,8 +199,8 @@ bool
 makeLicenseAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
 	ExprTree *tree;
-	char buffer [30];
-	char buf2   [64];
+	MyString buffer;
+	MyString buf2;
 	int  inferred = 0;
 	ClassAdUnParser unp;
 	string buffString;
@@ -231,7 +217,7 @@ makeLicenseAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	{
 		unp.Unparse( buffString, tree );
 //		strcpy (hk.name, ((String *)tree->RArg())->Value());
-		strcpy (hk.name, buffString.c_str( ) );
+		hk.name = buffString.c_str( );
 		buffString = "";
 	}
 	else
@@ -246,20 +232,19 @@ makeLicenseAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	
 	if (tree)
 	{
-		unp.Unparse( buffString, tree );
 //		strcpy (buffer, ((String *)tree->RArg())->Value());
-		strcpy (buffer, buffString.c_str( ) );
+		buffer = buffString.c_str( );
 		buffString = "";
 	}
 	else
 	{
 		dprintf(D_FULLDEBUG,"Warning: No MY_ADDRESS; inferring address\n");
-		strcpy (buffer, sin_to_string (from));
+		buffer = sin_to_string (from);
 
         // since we have done the work ...
-        sprintf (buf2, "%s = \"%s\"", ATTR_MY_ADDRESS, buffer);
-		ad->Insert (buf2);
-		dprintf (D_FULLDEBUG, "(Inferred address: %s)\n", buf2);
+        buf2.sprintf( "%s = \"%s\"", ATTR_MY_ADDRESS, buffer.GetCStr() );
+		ad->Insert (buf2.GetCStr() );
+		dprintf (D_FULLDEBUG, "(Inferred address: %s)\n", buf2.GetCStr() );
 		inferred = 1;
 	}
 
@@ -288,7 +273,7 @@ makeMasterAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	{
 		unp.Unparse( buffString, tree );
 //		strcpy (hk.name, ((String *)tree->RArg())->Value ());
-		strcpy (hk.name, buffString.c_str( ) );
+		hk.name = buffString.c_str( );
 		buffString = "";
 	}
 	else
@@ -299,7 +284,7 @@ makeMasterAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	}
 
 	// ip_addr not necessary
-	hk.ip_addr [0] = '\0';
+	hk.ip_addr = "";
 
 	return true;
 }
@@ -308,13 +293,16 @@ makeMasterAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 bool
 makeCkptSrvrAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-	if (!ad->LookupString ("Machine", hk.name))
+	char	*name = NULL;
+	if (!ad->LookupString ("Machine", &name ))
 	{
 		dprintf (D_ALWAYS, "Error:  No 'Machine' attribute\n");
 		return false;
 	}
 
-	hk.ip_addr[0] = '\0';
+	hk.name = name;
+	free( name );
+	hk.ip_addr = "";
 
 	return true;
 }
@@ -322,13 +310,16 @@ makeCkptSrvrAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 bool
 makeCollectorAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-	if (!ad->LookupString ("Machine", hk.name))
+	char	*name = NULL;
+	if (!ad->LookupString ("Machine", &name ))
 	{
 		dprintf (D_ALWAYS, "Error:  No 'Machine' attribute\n");
 		return false;
 	}
 
-	hk.ip_addr[0] = '\0';
+	hk.name = name;
+	free( name );
+	hk.ip_addr = "";
 
 	return true;
 }
@@ -336,31 +327,52 @@ makeCollectorAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 bool
 makeStorageAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 {
-	if (!ad->LookupString ("Name", hk.name))
+	char	*name = NULL;
+	if (!ad->LookupString ("Name", &name ))
 	{
 		dprintf (D_ALWAYS, "Error:  No 'Name' attribute\n");
 		return false;
 	}
 
-	hk.ip_addr[0] = '\0';
+	hk.name = name;
+	free( name );
+	hk.ip_addr = "";
 
 	return true;
 }
 
 // utility function:  parse the string <aaa.bbb.ccc.ddd:pppp>
 void 
-parseIpPort (char *ip_port_pair, char *ip_addr)
+parseIpPort (const MyString &ip_port_pair, MyString &ip_addr)
 {
-	int i = 0;
-    while ( ip_port_pair[i+2] != ':')
+    const char *ip_port = ip_port_pair.GetCStr() + 1;
+	ip_addr = "";
+    while (*ip_port != ':')
     {
-        ip_addr[i] = ip_port_pair[i+2];
-        i++;
+		ip_addr += *ip_port;
+        ip_port++;
     }
-
-    ip_addr[i] = '\0';
 
 	// don't care about port number
 }
 
+// HashString
+HashString::HashString( void )
+{
+}
 
+HashString::HashString( const HashKey &hk )
+		: MyString( )
+{
+	Build( hk );
+}
+
+void
+HashString::Build( const HashKey &hk )
+{
+	if ( hk.ip_addr.Length() ) {
+		sprintf( "< %s , %s >", hk.name.GetCStr(), hk.ip_addr.GetCStr() );
+	} else {
+		sprintf( "< %s >", hk.name.GetCStr() );
+	}
+}

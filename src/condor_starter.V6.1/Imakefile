@@ -5,13 +5,13 @@ WRAPPER_CLASS = CondorJavaWrapper.class
 INFO_CLASS = CondorJavaInfo.class
 BENCHMARK_CLASS = scimark2lib.jar
 
-all_target($(NAME) $(RSH_NAME))
+all_target($(NAME) $(RSH_NAME) condor_gridshell)
 
 CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -Wall
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
-RSH_LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(CLASSAD_LIB)
+RSH_LIB = $(STD_LIBS) $(CLASSAD_LIB)
 
 #if IS_SGI_IRIX62
 OS = IRIX62
@@ -23,10 +23,13 @@ OS = OperatingSystem
 
 # this can (and will have to) be made better, but
 # it will suffice for now:
-OBJ = starter_v61_main.o starter.o NTsenders.o \
+OBJ = starter_v61_main.o starter.o NTsenders.o user_proc.o \
 	os_proc.o vanilla_proc.o mpi_master_proc.o mpi_comrade_proc.o \
+	parallel_master_proc.o parallel_comrade_proc.o script_proc.o \
 	starter_v61_instantiate.o io_proxy.o io_proxy_handler.o \
-	java_proc.o java_detect.o
+	java_proc.o java_detect.o local_user_log.o \
+	job_info_communicator.o jic_shadow.o jic_local.o \
+	jic_local_config.o jic_local_file.o
 
 RSH_OBJ = condor_rsh.o
 
@@ -54,3 +57,13 @@ release_copy_target($(BENCHMARK_CLASS),$(RELEASE_DIR)/lib,$(BENCHMARK_CLASS),EXE
 strip_copy_target($(BENCHMARK_CLASS),$(STRIP_DIR)/lib,$(BENCHMARK_CLASS),EXECUTABLE_MODE)
 static_copy_target($(BENCHMARK_CLASS),$(STATIC_DIR)/lib,$(BENCHMARK_CLASS),EXECUTABLE_MODE)
 
+clean::
+	rm -f condor_gridshell
+
+condor_gridshell: condor_starter
+	rm -f condor_gridshell
+	ln condor_starter condor_gridshell
+
+release_link_target($(RELEASE_DIR)/sbin/condor_starter,sbin,condor_gridshell)
+strip_link_target($(STRIP_DIR)/sbin/condor_starter,sbin,condor_gridshell)
+static_link_target($(STATIC_DIR)/sbin/condor_starter,sbin,condor_gridshell)

@@ -30,6 +30,8 @@
 #include "condor_config.h"       // for param()
 #include "condor_email.h"        // for (you guessed it) email stuff
 #include "condor_ver_info.h"
+#include "enum_utils.h"
+
 
 // these are declared static in baseshadow.h; allocate space here
 UserLog BaseShadow::uLog;
@@ -59,6 +61,7 @@ BaseShadow::BaseShadow() {
 	remove_job_queue_attrs = NULL;
 	requeue_job_queue_attrs = NULL;
 	terminate_job_queue_attrs = NULL;
+	exception_already_logged = false;
 }
 
 BaseShadow::~BaseShadow() {
@@ -87,6 +90,8 @@ void BaseShadow::baseInit( ClassAd *jobAd, char schedd_addr[],
 	if ( !jobAd->LookupString(ATTR_OWNER, owner)) {
 		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_OWNER);
 	}
+	// grab the NT domain if we've got it
+	jobAd->LookupString(ATTR_NT_DOMAIN, domain);
 	if ( !jobAd->LookupString(ATTR_JOB_IWD, iwd)) {
 		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_JOB_IWD);
 	}
@@ -136,7 +141,11 @@ void BaseShadow::baseInit( ClassAd *jobAd, char schedd_addr[],
 
 	// handle system calls with Owner's privilege
 // XXX this belong here?  We'll see...
-	init_user_ids(owner);
+	if ( !init_user_ids(owner, domain)) {
+		dprintf(D_ALWAYS, "init_user_ids() failed!\n");
+		// uids.C will EXCEPT when we set_user_priv() now
+		// so there's not much we can do at this point
+	}
 	set_user_priv();
 	daemonCore->Register_Priv_State( PRIV_USER );
 
@@ -463,6 +472,124 @@ BaseShadow::removeJob( const char* reason )
 	DC_Exit( JOB_SHOULD_REMOVE );
 }
 
+//Move output data from intermediate files to user-specified locations.
+//This happens in "transfer file" mode when the stdout or stderr
+//files specified by the user contain path information.
+void
+BaseShadow::moveOutputFiles( void )
+{
+    char* orig_output = NULL;
+    char* output = NULL;
+    char* orig_error = NULL;
+    char* error = NULL;
+    char* should_transfer_str = NULL;
+	ShouldTransferFiles_t should_transfer = STF_NO;
+	bool wants_verbose = true;
+
+		// if we're in transfer IF_NEEDED mode, we don't want verbose
+		// dprintfs from moveOutputFile(), since we expect it to fail
+		// if we didn't use file transfer in this run...
+	if( jobAd->LookupString(ATTR_SHOULD_TRANSFER_FILES, 
+							&should_transfer_str) ) { 
+		should_transfer = getShouldTransferFilesNum( should_transfer_str );
+		if( should_transfer == STF_IF_NEEDED ) {
+			wants_verbose = false;
+		}
+		free( should_transfer_str );
+	}
+
+    jobAd->LookupString( ATTR_JOB_OUTPUT, &output );
+    jobAd->LookupString( ATTR_JOB_ERROR, &error );
+    jobAd->LookupString( ATTR_JOB_OUTPUT_ORIG, &orig_output );
+    jobAd->LookupString( ATTR_JOB_ERROR_ORIG, &orig_error );
+
+    //First move stdout data.
+    if( orig_output && output ) {
+		moveOutputFile( output, orig_output, wants_verbose );
+	}
+
+    //Now move stderr data (unless it is the same file as stdout).
+    if( orig_error && error && strcmp(error,output) != 0 ) {
+		moveOutputFile( error, orig_error, wants_verbose );
+	}
+
+	if( output ) { 
+		free( output );
+	}
+	if( orig_output ) { 
+		free( orig_output );
+	}
+	if( error ) { 
+		free( error );
+	}
+	if( orig_error ) { 
+		free( orig_error );
+	}
+}
+
+
+void
+BaseShadow::moveOutputFile( const char* in, const char* out, bool verbose )
+{
+	int in_fd = -1, out_fd = -1;
+
+	in_fd = open(in,O_RDONLY);
+	if( in_fd == -1 ) {
+		if( verbose ) { 
+			dprintf( D_ALWAYS,
+					 "moveOutputFile: failed to read from '%s': %s\n",
+					 in, strerror(errno) );
+		}
+		return;
+	}
+
+	out_fd = open(out,O_WRONLY|O_CREAT|O_TRUNC);
+	if( out_fd == -1 ) {
+		if( verbose ) { 
+			dprintf( D_ALWAYS, "moveOutputFile: failed to write to "
+					 "'%s': %s\n", out, strerror(errno) );
+		}
+		close( in_fd );
+		return;
+	}
+	
+		// Copy the data, rather than just moving the files,
+		// because there are too many subtle problems with just
+		// doing rename().
+
+		// the rest of the errors in here mean we found the files and
+		// are trying to move the data but we still had a problem.  we
+		// want to see these messages even if we were called with
+		// verbose == false
+
+	char buf[100];
+	int n_in,n_out;
+	bool do_removal = true;
+	
+	while( (n_in = read(in_fd,buf,sizeof(buf))) > 0 ) {
+		n_out = write(out_fd,buf,n_in);
+		if( n_out != n_in ) {
+			dprintf( D_ALWAYS, "moveOutputFile: failed to write to "
+					 "'%s': %s\n", out, strerror(errno));
+			do_removal = false;
+		}
+	}
+
+	if( n_in == -1 ) {
+		dprintf( D_ALWAYS, "moveOutputFiles: failed to read '%s': "
+				 "%s\n", in, strerror(errno) );
+		do_removal = false;
+	}
+
+	close( in_fd );
+	close( out_fd );
+
+	if( do_removal && remove(in) == -1 ) {
+		dprintf( D_ALWAYS, "moveOutputFile: failed to remove '%s': "
+				 "%s\n", in, strerror(errno) );
+	}
+}
+
 
 void
 BaseShadow::terminateJob( void )
@@ -476,6 +603,9 @@ BaseShadow::terminateJob( void )
 
 	int reason;
 	reason = getExitReason();
+
+	//move intermediate stdout/stderr if necessary
+	moveOutputFiles();
 
 		// email the user
 	emailTerminateEvent( reason );
@@ -696,13 +826,20 @@ BaseShadow::shutDownEmail( int reason )
 void BaseShadow::initUserLog()
 {
 	char tmp[_POSIX_PATH_MAX], logfilename[_POSIX_PATH_MAX];
+	int  use_xml;
 	if (jobAd->LookupString(ATTR_ULOG_FILE, tmp) == 1) {
 		if ( tmp[0] == '/' || tmp[0]=='\\' || (tmp[1]==':' && tmp[2]=='\\') ) {
 			strcpy(logfilename, tmp);
 		} else {
 			sprintf(logfilename, "%s/%s", iwd, tmp);
 		}
-		uLog.initialize (owner, logfilename, cluster, proc, 0);
+		uLog.initialize (owner, domain, logfilename, cluster, proc, 0);
+		if (jobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml)
+			&& use_xml) {
+			uLog.setUseXML(true);
+		} else {
+			uLog.setUseXML(false);
+		}
 		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_ULOG_FILE, logfilename);
 	} else {
 		dprintf(D_FULLDEBUG, "no %s found\n", ATTR_ULOG_FILE);
@@ -888,26 +1025,54 @@ BaseShadow::log_except(char *msg)
 {
 	// log shadow exception event
 	ShadowExceptionEvent event;
+	bool exception_already_logged = false;
+
+	if(!msg) msg = "";
 	sprintf(event.message, msg);
 
-	
 	if ( BaseShadow::myshadow_ptr ) {
+		BaseShadow *shadow = BaseShadow::myshadow_ptr;
+
 		// we want to log the events from the perspective of the
 		// user job, so if the shadow *sent* the bytes, then that
 		// means the user job *received* the bytes
-		event.recvd_bytes = BaseShadow::myshadow_ptr->bytesSent();
-		event.sent_bytes = BaseShadow::myshadow_ptr->bytesReceived();
+		event.recvd_bytes = shadow->bytesSent();
+		event.sent_bytes = shadow->bytesReceived();
+		exception_already_logged = shadow->exception_already_logged;
 	} else {
 		event.recvd_bytes = 0.0;
 		event.sent_bytes = 0.0;
 	}
 
-	if (!uLog.writeEvent (&event))
+	if (!exception_already_logged && !uLog.writeEvent (&event))
 	{
 		::dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event\n");
 	}
 }
 
+bool
+BaseShadow::updateJobAttr( const char *name, const char *expr )
+{
+	bool result;
+
+	dprintf(D_FULLDEBUG,"updateJobAttr: %s = %s\n",name,expr);
+
+	if(ConnectQ(scheddAddr,SHADOW_QMGMT_TIMEOUT)) {
+		if(SetAttribute(cluster,proc,name,expr)<0) {
+			result = FALSE;
+		} else {
+			result = TRUE;
+		}
+		DisconnectQ(NULL);
+	} else {
+		result = FALSE;
+	}
+
+	if(result==FALSE) {
+		dprintf(D_ALWAYS,"updateJobAttr: couldn't update attribute\n");
+	}
+	return result;
+}
 
 bool
 BaseShadow::updateJobInQueue( update_t type )
@@ -1165,6 +1330,4 @@ display_dprintf_header(FILE *fp)
 
 	return TRUE;
 }
-
-
 

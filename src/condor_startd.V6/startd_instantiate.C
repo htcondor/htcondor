@@ -28,8 +28,10 @@
 class Resource;
 class CpuAttributes;
 class Starter;
+class Claim;
 
 template class ExtArray<bool>;
+template class SimpleList<Claim*>;
 template class SimpleList<Starter*>;
 template class SimpleList<Resource*>;
 template class SimpleList<CpuAttributes*>;

@@ -2,7 +2,7 @@
 use strict;
 
 # Things we know about
-my $Hawkeye = "hawkeye_dir";
+my $Hawkeye = "hawkeye_release";
 my $Release = "release_dir";
 my @BinDirs = ( "bin", "sbin" );
 my @KillList = (
@@ -33,6 +33,10 @@ my @KillList = (
 		"condor_schedd",
 		"condor_q",
 		"condor_qedit",
+		"condor_glidein",
+		"condor_gridmanager",
+		"condor_eventd",
+		"gahp_server",
 		"rsh",
 	       );
 
@@ -93,10 +97,9 @@ foreach my $Bin ( @BinDirs )
 	}
 	else
 	{
-	    my $LinkFile = "../../$CondFile";
-	    if ( ! symlink( $LinkFile, $HawkFile ) )
+	    if ( ! link( $CondFile, $HawkFile ) )
 	    {
-		print "ERROR\n";
+		print "ERROR: $!\n";
 		next;
 	    }
 	    print "Ok\n";

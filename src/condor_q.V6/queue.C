@@ -36,21 +36,21 @@
 #include "condor_attributes.h"
 #include "match_prefix.h"
 #include "my_hostname.h"
-#include "get_daemon_addr.h"
-#include "get_full_hostname.h"
+#include "get_daemon_name.h"
 #include "MyString.h"
 #include "extArray.h"
-#include "files.h"
 //#include "ad_printmask.h"
 #include "internet.h"
 #include "sig_install.h"
 #include "format_time.h"
 #include "daemon.h"
+#include "dc_collector.h"
 #include "my_hostname.h"
 #include "basename.h"
 #include "metric_units.h"
 #include "condor_classad_analysis.h"
 #include "globus_utils.h"
+#include "error_utils.h"
 #include "print_wrapped_text.h"
 #include "condor_distribution.h"
 
@@ -66,12 +66,11 @@ static 	void io_display (ClassAd *);
 static 	char * buffer_io_display (ClassAd *);
 static 	void displayJobShort (ClassAd *);
 static 	char * bufferJobShort (ClassAd *);
-static 	void shorten (char *, int);
 static	bool show_queue (char* scheddAddr, char* scheddName, char* scheddMachine);
 static	bool show_queue_buffered (char* scheddAddr, char* scheddName,
 								  char* scheddMachine);
 
-static 	int verbose = 0, summarize = 1, global = 0, show_io = 0, dag = 0;
+static 	int verbose = 0, summarize = 1, global = 0, show_io = 0, dag = 0, show_held = 0;
 static  int use_xml = 0;
 static  bool expert = false;
 static 	int malformed, unexpanded, running, idle, held;
@@ -94,8 +93,8 @@ static char* format_owner( char*, ClassAd* );
 class clusterProcString {
 public:
 	clusterProcString();
-	int parent_cluster;
-	int parent_proc;
+	int dagman_cluster_id;
+	int dagman_proc_id;
 	int cluster;
 	int proc;
 	char * string;
@@ -103,9 +102,9 @@ public:
 
 clusterProcString::
 clusterProcString() {
-	// these need to be initialized so that sorting works
-	parent_cluster = 0;
-	parent_proc = 0;
+	dagman_cluster_id = -1;
+	dagman_proc_id    = -1;
+	return;
 }
 
 static  ExtArray<clusterProcString *> *output_buffer;
@@ -120,7 +119,7 @@ static  char		*JOB_TIME = "RUN_TIME";
 static	bool		querySchedds 	= false;
 static	bool		querySubmittors = false;
 static	char		constraint[4096];
-static	char		*pool = NULL;
+static	DCCollector* pool = NULL; 
 static	char		scheddAddr[64];	// used by format_remote_host()
 //static	AttrListPrintMask 	mask;
 static	ClassAdPrintMask 	mask;
@@ -203,45 +202,48 @@ int main (int argc, char **argv)
 							scheddMachine ) );
 			}
 		} else {
-			int text_position = 0;
-			char error_message[1024];
-			print_wrapped_text("Error: Couldn't contact the local "
-							   "condor_schedd process.",
-							   stderr);
+			fprintf( stderr, "Error: %s\n", schedd.error() );
 			if (!expert) {
-				char *log_directory = NULL;
-				log_directory = param("LOG");
 				fprintf(stderr, "\n");
-				print_wrapped_text("Extra Info: the condor_schedd is the local process "
-								   "that runs "
-								   "on this machine and monitors your job "
-								   "submissions. Either it "
-								   "isn't running, or it is failing to "
-								   "communicate. Check with your system administrator "
-								   "to see why.", stderr);
-				fprintf(stderr, "\n");
-				sprintf(error_message, 
-						"If you are the system administrator, check the "
-						"MasterLog and SchedLog in %s "
-						"for possible clues as to why the condor_schedd "
-						"is misbehaving. Also see the Troubleshooting "
-						"section of the manual.", 
-						log_directory ? log_directory : "your Condor log directory");
-				print_wrapped_text(error_message, stderr);
-                if (log_directory) {
-                    free(log_directory);
-                }
+				print_wrapped_text("Extra Info: You probably saw this "
+								   "error because the condor_schedd is "
+								   "not running on the machine you are "
+								   "trying to query.  If the condor_schedd "
+								   "is not running, the Condor system "
+								   "will not be able to find an address "
+								   "and port to connect to and satisfy "
+								   "this request.  Please make sure "
+								   "the Condor daemons are running and "
+								   "try again.\n", stderr );
+				print_wrapped_text("Extra Info: "
+								   "If the condor_schedd is running on the "
+								   "machine you are trying to query and "
+								   "you still see the error, the most "
+								   "likely cause is that you have setup a " 
+								   "personal Condor, you have not "
+								   "defined SCHEDD_NAME in your "
+								   "condor_config file, and something "
+								   "is wrong with your "
+								   "SCHEDD_ADDRESS_FILE setting. "
+								   "You must define either or both of "
+								   "those settings in your config "
+								   "file, or you must use the -name "
+								   "option to condor_q. Please see "
+								   "the Condor manual for details on "
+								   "SCHEDD_NAME and "
+								   "SCHEDD_ADDRESS_FILE.",  stderr );
+				exit( 1 );
 			}
-			exit( 1 );
 		}
   	}
 
 	// if a global queue is required, query the schedds instead of submittors
 	if (global) {
 		querySchedds = true;
-		sprintf( constraint, "%s > 0 || %s > 0 || %s > 0 || %s > 0", 
+		sprintf( constraint, "%s > 0 || %s > 0 || %s > 0 || %s > 0 || %s > 0", 
 			ATTR_TOTAL_RUNNING_JOBS, ATTR_TOTAL_IDLE_JOBS,
-			ATTR_TOTAL_HELD_JOBS, ATTR_TOTAL_REMOVED_JOBS );
+			ATTR_TOTAL_HELD_JOBS, ATTR_TOTAL_REMOVED_JOBS,
+			ATTR_TOTAL_JOB_ADS );
 		result = scheddQuery.addANDConstraint( constraint );
 		if( result != Q_OK ) {
 			fprintf( stderr, "Error: Couldn't add constraint %s\n", constraint);
@@ -250,17 +252,31 @@ int main (int argc, char **argv)
 	}
 
 	// get the list of ads from the collector
-	if( pool ) {
-		result = querySchedds ? scheddQuery.fetchAds(scheddList, pool) : 
-			submittorQuery.fetchAds(scheddList, pool);
+	if( querySchedds ) { 
+		result = scheddQuery.fetchAds( scheddList, 
+									   pool ? pool->addr() : NULL );
 	} else {
-		result = querySchedds ? scheddQuery.fetchAds(scheddList) : 
-			submittorQuery.fetchAds(scheddList);
+		result = submittorQuery.fetchAds( scheddList,
+										  pool ? pool->addr() : NULL );
 	}
 
-	if (result != Q_OK) {
-		fprintf (stderr, "Error %d: %s\n", result, getStrQueryResult(result));
-		exit(1);
+	switch( result ) {
+	case Q_OK:
+		break;
+	case Q_COMMUNICATION_ERROR: 
+			// if we're not an expert, we want verbose output
+		printNoCollectorContact( stderr, pool ? pool->name() : NULL,
+								 !expert ); 
+		exit( 1 );
+	case Q_NO_COLLECTOR_HOST:
+		assert( pool );
+		fprintf( stderr, "Error: Can't contact condor_collector: "
+				 "invalid hostname: %s\n", pool->name() );
+		exit( 1 );
+	default:
+		fprintf( stderr, "Error fetching ads: %s\n", 
+				 getStrQueryResult(result) );
+		exit( 1 );
 	}
 	
 	// get queue from each ScheddIpAddr in ad
@@ -344,7 +360,7 @@ processCommandLineArguments (int argc, char *argv[])
 		else
 		if (match_prefix (arg, "pool")) {
 			if( pool ) {
-				delete [] pool;
+				delete pool;
 			}
             if( ++i >= argc ) {
 				fprintf( stderr,
@@ -357,9 +373,9 @@ processCommandLineArguments (int argc, char *argv[])
 				}
 				exit(1);
 			}
-			pool = get_full_hostname((const char *)argv[i]);
-			if( ! pool ) {
-				fprintf( stderr, "Error: Unknown host %s\n", argv[i] );
+			pool = new DCCollector( argv[i] );
+			if( ! pool->addr() ) {
+				fprintf( stderr, "Error: %s\n", pool->error() );
 				if (!expert) {
 					printf("\n");
 					print_wrapped_text("Extra Info: You specified a hostname for a pool "
@@ -432,12 +448,7 @@ processCommandLineArguments (int argc, char *argv[])
 			sprintf (constraint, "%s == \"%s\"", ATTR_NAME, daemonname);
 			delete [] daemonname;
 
-			result = scheddQuery.addORConstraint (constraint);
-			if (result != Q_OK) {
-				fprintf (stderr, "Argument %d (%s): Error %s\n", i, argv[i],
-							getStrQueryResult(result));
-				exit (1);
-			}
+			scheddQuery.addORConstraint (constraint);
 			i++;
 			querySchedds = true;
 		} 
@@ -484,12 +495,7 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 
 			// insert the constraints
-			result = submittorQuery.addORConstraint (constraint);
-			if (result != Q_OK) {
-				fprintf (stderr, "Argument %d (%s): Error %s\n", i, argv[i],
-							getStrQueryResult(result));
-				exit (1);
-			}
+			submittorQuery.addORConstraint (constraint);
 
 			{
 				char *ownerName = argv[i];
@@ -543,12 +549,7 @@ processCommandLineArguments (int argc, char *argv[])
 				exit(1);
 			}
 			sprintf(constraint, "%s == \"%s\"", ATTR_SCHEDD_IP_ADDR, argv[i+1]);
-			result = scheddQuery.addORConstraint(constraint);
-			if (result != Q_OK) {
-				fprintf (stderr, "Argument %d (%s): Error %s\n", i, argv[i],
-							getStrQueryResult(result));
-				exit (1);
-			}
+			scheddQuery.addORConstraint(constraint);
 			i++;
 			querySchedds = true;
 		} 
@@ -582,6 +583,11 @@ processCommandLineArguments (int argc, char *argv[])
 		if (match_prefix( arg, "run")) {
 			Q.add (CQ_STATUS, RUNNING);
 			run = true;
+		}
+		else
+		if (match_prefix( arg, "hold") || match_prefix( arg, "held")) {
+			Q.add (CQ_STATUS, HELD);		
+			show_held = true;
 		}
 		else
 		if (match_prefix( arg, "goodput")) {
@@ -762,6 +768,7 @@ bufferJobShort( ClassAd *ad ) {
 		sprintf (return_buff, " --- ???? --- \n");
 		return( return_buff );
 	}
+
 	if( utimeI == -1 ){
 		utime = (float)utimeD;
 	}
@@ -819,6 +826,8 @@ short_header (void)
 	} else if ( globus ) {
 		printf( "%-7s %-8s %-18s  %-18s\n", "STATUS",
 				"MANAGER", "HOST", "EXECUTABLE" );
+	} else if ( show_held ) {
+		printf( "%11s %-30s\n", "HELD_SINCE", "HOLD_REASON" );
 	} else if ( show_io ) {
 		printf( "%8s %8s %8s %10s %8s %8s\n",
 				"READ", "WRITE", "SEEK", "XPUT", "BUFSIZE", "BLKSIZE" );
@@ -1046,7 +1055,7 @@ format_globusHostAndJM( char  *globusResource, ClassAd *ad )
 	if ( globusResource != NULL ) {
 		// copy the hostname
 		p = strcspn( globusResource, ":/" );
-		if ( p > sizeof(host) )
+		if ( p > (int) sizeof(host) )
 			p = sizeof(host) - 1;
 		strncpy( host, globusResource, p );
 		host[p] = '\0';
@@ -1056,7 +1065,7 @@ format_globusHostAndJM( char  *globusResource, ClassAd *ad )
 
 			// copy the jobmanager name
 			p = strcspn( tmp, ":" );
-			if ( p > sizeof(jm) )
+			if ( p > (int) sizeof(jm) )
 				p = sizeof(jm) - 1;
 			strncpy( jm, tmp, p );
 			jm[p] = '\0';
@@ -1076,11 +1085,6 @@ format_q_date (int d, ClassAd *)
 	return format_date(d);
 }
 
-static void
-shorten (char *buff, int len)
-{
-	if ((unsigned int)strlen (buff) > (unsigned int)len) buff[len] = '\0';
-}
 		
 static void
 usage (char *myName)
@@ -1122,6 +1126,7 @@ usage (char *myName)
 		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
 		"\t\t-analyze\t\tPerform schedulability analysis on jobs\n"
 		"\t\t-run\t\t\tGet information about running jobs\n"
+		"\t\t-hold\t\t\tGet information about jobs placed on hold\n"
 		"\t\t-goodput\t\tDisplay job goodput statistics\n"	
 		"\t\t-cputime\t\tDisplay CPU_TIME instead of RUN_TIME\n"
 		"\t\t-currentrun\t\tDisplay times only for current run\n"
@@ -1148,13 +1153,14 @@ output_sorter( const void * va, const void * vb ) {
 	b = ( clusterProcString ** ) vb;
 
 	// when -dag is specified, we want to display DAG jobs under the
-	// DAGMan that started them, so we sort first by parent_cluster,
-	// which is zero for non-DAG jobs (and the DAGMan jobs themselves)
-
-	if ((*a)->parent_cluster < (*b)->parent_cluster ) { return -1; }
-	if ((*a)->parent_cluster > (*b)->parent_cluster ) { return  1; }
-	if ((*a)->parent_proc    < (*b)->parent_proc    ) { return -1; }
-	if ((*a)->parent_proc    > (*b)->parent_proc    ) { return  1; }
+	// DAGMan that started them, so we sort by the dagman job's
+	// cluster and proc id first. For jobs that aren't run by dagman,
+	// these have been set to the jobs cluster and proc id.
+	// --alain, 30-oct-2002
+	if ((*a)->dagman_cluster_id < (*b)->dagman_cluster_id) { return -1; }
+	if ((*a)->dagman_cluster_id > (*b)->dagman_cluster_id) { return 1; }
+	if ((*a)->dagman_proc_id < (*b)->dagman_proc_id) { return -1; }
+	if ((*a)->dagman_proc_id > (*b)->dagman_proc_id) { return 1; }
 
 	if ((*a)->cluster < (*b)->cluster ) { return -1; }
 	if ((*a)->cluster > (*b)->cluster ) { return  1; }
@@ -1231,29 +1237,34 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 			setup_mask = true;
 			usingPrintMask = true;
 		}
+	} else if ( show_held ) {
+		if (!setup_mask) {
+			mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
+			mask.registerFormat ("%-3d ", ATTR_PROC_ID);
+			mask.registerFormat ( (StringCustomFmt) format_owner,
+								  ATTR_OWNER, "[????????????] " );
+			mask.registerFormat(" ", "*bogus*", " ");  // force space
+			mask.registerFormat ( (IntCustomFmt) format_q_date,
+								  ATTR_ENTERED_CURRENT_STATUS, "[????????????]");
+			mask.registerFormat(" ", "*bogus*", " ");  // force space
+			mask.registerFormat( "%-43.43s\n", ATTR_HOLD_REASON );
+			setup_mask = true;
+			usingPrintMask = true;
+		}
 	} else if ( customFormat ) {
 		summarize = false;
 	}
 
 	// fetch queue from schedd and stash it in output_buffer.
+	CondorError errstack;
 	if( Q.fetchQueueFromHostAndProcess( scheddAddr,
-									 process_buffer_line ) != Q_OK ) {
-		printf ("\n-- Failed to fetch ads from: %s : %s\n", 
-									scheddAddr, scheddMachine);	
+									 process_buffer_line,
+									 &errstack) != Q_OK ) {
+		printf ("\n-- Failed to fetch ads from: %s : %s\n%s", 
+					scheddAddr, scheddMachine, errstack.get_full_text());	
 		delete output_buffer;
 
 		return false;
-	}
-
-	// before sorting, for non-DAGMan-spawned jobs (i.e., those whose
-	// parent_cluster is zero), set parent_cluster equal to cluster so
-	// that they sort properly against parent DAGMan jobs
-	for( int i = 0; i <= output_buffer->getlast(); i++ ) {
-		clusterProcString* cps = (*output_buffer)[i];
-		if( cps && cps->parent_cluster == 0 ) {
-			cps->parent_cluster = cps->cluster;
-			cps->parent_proc = cps->proc;
-		}
 	}
 
 	// If this is a global, don't print anything if this schedd is empty.
@@ -1322,6 +1333,40 @@ process_buffer_line( ClassAd *job )
 		case HELD:		 held++;	   break;
 	}
 
+	// If it's not a DAGMan job (and this includes the DAGMan process
+	// itself), then set the dagman_cluster_id equal to cluster so that
+	// it sorts properly against dagman jobs.
+	char *dagman_job_string = NULL;
+	if (!job->LookupString(ATTR_DAGMAN_JOB_ID, &dagman_job_string)) {
+		tempCPS->dagman_cluster_id = tempCPS->cluster;
+		tempCPS->dagman_proc_id    = tempCPS->proc;
+	} else {
+		// We've gotten a string, probably something like "201.0"
+		// we want to convert it to the numbers 201 and 0. To be safe, we
+		// use atoi on either side of the period. We could just use
+		// sscanf, but I want to know each fail case, so I can set them
+		// to reasonable values. 
+		char *loc_period = strchr(dagman_job_string, '.');
+		char *proc_string_start = NULL;
+		if (loc_period != NULL) {
+			*loc_period = 0;
+			proc_string_start = loc_period+1;
+		}
+		if (isdigit(*dagman_job_string)) {
+			tempCPS->dagman_cluster_id = atoi(dagman_job_string);
+		} else {
+			// It must not be a cluster id, because it's not a number.
+			tempCPS->dagman_cluster_id = tempCPS->cluster;
+		}
+
+		if (proc_string_start != NULL && isdigit(*proc_string_start)) {
+			tempCPS->dagman_proc_id = atoi(proc_string_start);
+		} else {
+			tempCPS->dagman_proc_id = 0;
+		}
+		free(dagman_job_string);
+	}
+
 	if( analyze ) {
   		tempCPS->string = strnewp( doRunAnalysisToBuffer( job ) );
 	} else if ( show_io ) {
@@ -1348,9 +1393,10 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 	static bool	setup_mask = false;
 
 		// fetch queue from schedd	
-	if( Q.fetchQueueFromHost(jobs, scheddAddr) != Q_OK ) {
-		printf ("\n-- Failed to fetch ads from: %s : %s\n", 
-									scheddAddr, scheddMachine);	
+	CondorError errstack;
+	if( Q.fetchQueueFromHost(jobs, scheddAddr, &errstack) != Q_OK ) {
+		printf ("\n-- Failed to fetch ads from: %s : %s\n%s", 
+					scheddAddr, scheddMachine, errstack.get_full_text());	
 		return false;
 	}
 
@@ -1412,6 +1458,23 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 									 format_globusHostAndJM,
 									 ATTR_GLOBUS_RESOURCE, "fork    [?????]" );
 				mask.registerFormat( "%-18.18s\n", ATTR_JOB_CMD );
+				setup_mask = true;
+				usingPrintMask = true;
+			}
+			mask.display( stdout, &jobs );
+		} else if ( show_held ) {
+			printf( " %-7s %-14s %11s %-30s\n", 
+				"ID", "OWNER", "HELD_SINCE", "HOLD_REASON" );
+			if (!setup_mask) {
+				mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
+				mask.registerFormat ("%-3d ", ATTR_PROC_ID);
+				mask.registerFormat ( (StringCustomFmt) format_owner,
+									  ATTR_OWNER, "[????????????] " );
+				mask.registerFormat(" ", "*bogus*", " ");  // force space
+				mask.registerFormat ( (IntCustomFmt) format_q_date,
+									  ATTR_ENTERED_CURRENT_STATUS, "[????????????]");
+				mask.registerFormat(" ", "*bogus*", " ");  // force space
+				mask.registerFormat( "%-43.43s\n", ATTR_HOLD_REASON );
 				setup_mask = true;
 				usingPrintMask = true;
 			}
@@ -1504,11 +1567,7 @@ setupAnalysis()
 	ClassAdParser	parser;	// NAC
 
 	// fetch startd ads
-	if( pool ) {
-		rval = query.fetchAds( startdAds , pool );
-	} else {
-		rval = query.fetchAds( startdAds );
-	}
+	rval = query.fetchAds( startdAds , pool ? pool->addr() : NULL );
 	if( rval != Q_OK ) {
 		fprintf( stderr , "Error:  Could not fetch startd ads\n" );
 		exit( 1 );
@@ -1570,7 +1629,7 @@ fetchSubmittorPrios()
 
 		// Minor hack, if we're talking to a remote pool, assume the
 		// negotiator is on the same host as the collector.
-	Daemon	negotiator( DT_NEGOTIATOR, pool, pool );
+	Daemon	negotiator( DT_NEGOTIATOR, pool ? pool->addr() : NULL, NULL );
 
 	// connect to negotiator
 	Sock* sock;

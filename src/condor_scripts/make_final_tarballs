@@ -66,17 +66,17 @@ require 5.002;
 ######################################################################
 
 # These are the modules you actually want to build.
-@modules = ( "condor", "smp_startd", "view_server", "ckpt_server", "pvm", "sdk","eventd", "dagman", "condor-g" );
-#@modules = ( "smp_startd", "view_server", "ckpt_server", "pvm", "sdk" );
-#@modules = ( "condor", "view_server", "ckpt_server", "pvm", "mpi" );
-#@modules = ( "view_server", "ckpt_server", "pvm" );
+@modules = ( "condor", "ckpt_server", "pvm", "sdk","eventd", "dagman", "condor-g" );
+#@modules = ( "smp_startd", "ckpt_server", "pvm", "sdk" );
+#@modules = ( "condor", "ckpt_server", "pvm", "mpi" );
+#@modules = ( "ckpt_server", "pvm" );
 #@modules = ( "condor" );
 
 # List any special files, other than README, DOC, INSTALL, and
 # LICENSE.TXT (which are included in all releases) that you want in
 # the skeleton for a given module.
 %skelfiles = (
-  "condor"   => [ "condor_install", "examples", ],
+  "condor"   => [ "condor_install", "condor_configure", "examples", ],
 );
 
 # If any of the files you specify aren't found in the $realskel
@@ -84,6 +84,7 @@ require 5.002;
 # be found here.
 %filesource = (
   "condor_install" => "condor_scripts/condor_install",
+  "condor_configure" => "condor_scripts/condor_configure",
 );	   
 
 # If the tar file for this module has a different name than
@@ -95,7 +96,6 @@ require 5.002;
 # English descriptions of the modules, used in the README, etc. 
 %module_descriptions = (
   "condor"        => "Main release",
-  "view_server"   => "CondorView server contrib module",
   "view_client"   => "CondorView client contrib module",
   "dagman"        => "DagMan contrib module",
   "pvm"           => "PVM contrib module",
@@ -125,6 +125,7 @@ $realskel="condor_release";
   "sun4x_56"      => "solaris26",
   "sun4x_57"      => "solaris27",
   "sun4x_58"      => "solaris28",
+  "sun4x_59"      => "solaris29",
   "sunx86_55"     => "solaris251",
   "sunx86_56"     => "solaris26",
   "sunx86_57"     => "solaris27",
@@ -133,6 +134,10 @@ $realskel="condor_release";
   "i386_linux3"   => "linux",
   "i386_rh62"     => "linux",
   "i386_rh71"     => "linux",
+  "i386_rh72"     => "linux",
+  "i386_rh80"     => "linux",
+  "i386_rh9"     => "linux",
+  "ia64_linux24"  => "linux",
   "alpha_linux3"  => "linux",
   "alpha_linux22" => "linux",
   "alpha_dux40"   => "dux40",
@@ -141,7 +146,9 @@ $realskel="condor_release";
   "sgi_63"        => "irix6",
   "sgi_64"        => "irix6",
   "sgi_65"        => "irix65",
-  "hp_ux102"      => "hpux10.20"
+  "ppc_macosx"    => "MacOSX",
+  "hp_ux102"      => "hpux10.20",
+  "hp_ux110"      => "hpux11.00"
 );
 
 %archname = (
@@ -149,6 +156,7 @@ $realskel="condor_release";
   "sun4x_56"      => "Sparc",
   "sun4x_57"      => "Sparc",
   "sun4x_58"      => "Sparc",
+  "sun4x_59"      => "Sparc",
   "sunx86_55"     => "x86",
   "sunx86_56"     => "x86",
   "sunx86_57"     => "x86",
@@ -156,16 +164,22 @@ $realskel="condor_release";
   "i386_linux22"  => "x86",
   "i386_rh62"     => "x86",
   "i386_rh71"     => "x86",
+  "i386_rh72"     => "x86",
+  "i386_rh80"     => "x86",
+  "i386_rh9"     => "x86",
   "i386_linux3"   => "x86",
+  "ia64_linux24"  => "ia64",
   "alpha_linux3"  => "Alpha",
-  "alpha_linux22"  => "Alpha",
+  "alpha_linux22" => "Alpha",
   "alpha_dux40"   => "Alpha",
   "alpha_dux40f"  => "Alpha",
   "sgi_62"        => "SGI",
   "sgi_63"        => "SGI",
   "sgi_64"        => "SGI",
   "sgi_65"        => "SGI",
-  "hp_ux102"      => "HPPAR"
+  "ppc_macosx"    => "PPC",
+  "hp_ux102"      => "HPPAR",
+  "hp_ux110"      => "HPPAR"
 );
 
 
@@ -176,6 +190,10 @@ $realskel="condor_release";
   "i386_rh61"   => "glibc21",
   "i386_rh62"   => "glibc21",
   "i386_rh71"   => "glibc22",
+  "i386_rh72"   => "glibc22",
+  "i386_rh80"   => "glibc22",
+  "i386_rh9"   => "glibc23",
+  "ia64_linux24" => "glibc22",
   "alpha_linux3"  => "glibc20",
   "alpha_linux22" => "glibc21"
 );
@@ -241,7 +259,8 @@ foreach $module ( @modules ) {
 		} else {
 	   	 $dest = $file;
 		}
-		if( $libc =~ /.*glibc22.*/ ) {	
+		# under linux, or hpux11(with fileutils), use the GNU fileutils flags
+		if( $libc =~ /.*glibc22.*/ || $opsys =~ /.*hp_ux110.*/) {	
 			`cp -rL $src $skel/$release/$dest`;
 		} else {
 			`cp -r $src $skel/$release/$dest`;
@@ -278,7 +297,7 @@ foreach $module ( @modules ) {
 	# Create full archive 
 	chdir( $skel ) || die "Can't chdir to $skel: $!\n";
 	print "Creating full archive: $release.tar\n";
-	print `tar -cvf $release.tar --owner=root --group=root $release`;
+	print `tar -cvf $release.tar --owner=root --group=0 $release`;
 	chdir( ".." ) || die "Can't chdir to ..: $!\n";
 
 	# Delete the release.tar we're now done with.

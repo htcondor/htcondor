@@ -31,7 +31,7 @@
 #ifndef _REQEXP_H
 #define _REQEXP_H
 
-enum reqexp_state { UNAVAIL, ORIG };
+enum reqexp_state { UNAVAIL_REQ, ORIG_REQ, COD_REQ };
 
 class Reqexp
 {

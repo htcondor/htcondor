@@ -1,6 +1,7 @@
 sbin/condor_schedd
 sbin/condor_gridmanager
 sbin/gahp_server
+sbin/grid_monitor.sh
 bin/condor_history
 bin/condor_hold
 bin/condor_q

@@ -4,6 +4,8 @@ BEGIN {
 	printf "************************************************************/\n"
 	printf "\n"
 	printf "\n"
+	printf "#include <stdio.h>\n"
+	printf "\n"
 	printf "typedef struct {\n"
 	printf "\tint	number;\n"
 	printf "\tchar *	name;\n"
@@ -12,7 +14,7 @@ BEGIN {
 	printf "SYSCALL_NAME SyscallNameTab[] = {\n"
 }
 /CONDOR_/ {
-	printf "\t%s, \"%s\",\n", $2, $1
+	printf "\t{%s, \"%s\"},\n", $2, $1
 }
 END {
 	printf "};\n\n"

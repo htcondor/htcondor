@@ -194,6 +194,9 @@ sysapi_translate_arch( char *machine, char *sysname )
 	else if( !strcmp(machine, "i386") ) { //LDAP entry
 		sprintf( tmp, "INTEL" );
 	} 
+	else if( !strcmp(machine, "ia64") ) {
+		sprintf( tmp, "IA64" );
+	}
 	else if( !strncmp( sysname, "IRIX", 4 ) ) {
 		sprintf( tmp, "SGI" );
 	} 
@@ -211,6 +214,9 @@ sysapi_translate_arch( char *machine, char *sysname )
 	} 
 	else if( !strcmp(machine, "sparc") ) { //LDAP entry
 		sprintf( tmp, "SUN4x" );
+	} 
+	else if( !strcmp(machine, "Power Macintosh") ) { //LDAP entry
+		sprintf( tmp, "PPC" );
 	} 
 	else {
 			// Unknown, just use what uname gave:
@@ -243,7 +249,13 @@ sysapi_translate_opsys( char *sysname, char *release )
 		|| !strcmp(sysname, "solaris" ) ) //LDAP entry
 	{
 		
-		if ( !strcmp(release, "2.8") //LDAP entry
+		if ( !strcmp(release, "2.9") //LDAP entry
+			|| !strcmp(release, "5.9")
+		)
+		{
+			sprintf( tmp, "SOLARIS29" );
+		} 
+		else if ( !strcmp(release, "2.8") //LDAP entry
 			|| !strcmp(release, "5.8")
 		)
 		{
@@ -282,6 +294,9 @@ sysapi_translate_opsys( char *sysname, char *release )
 		if( !strcmp(release, "B.10.20") ) {
 			sprintf( tmp, "HPUX10" );
 		} 
+		else if( !strcmp(release, "B.11.00") ) {
+			sprintf( tmp, "HPUX11" );
+		} 
 		else {
 			sprintf( tmp, "HPUX%s", release );
 		}
@@ -299,6 +314,14 @@ sysapi_translate_opsys( char *sysname, char *release )
 			sprintf( tmp, "IRIX%s", release );
 		}
 	} 
+	else if ( !strncmp(sysname, "Darwin", 6) ) {
+		if( !strcmp( release, "6.4" ) ) {
+			sprintf( tmp, "OSX10_2");
+		}
+		else {
+			sprintf( tmp, "OSX");
+		}
+	}
 	else {
 			// Unknown, just use what uname gave:
 		sprintf( tmp, "%s%s", sysname, release );
@@ -389,6 +412,8 @@ get_hpux_arch( struct utsname *buf )
 		if( !tmparch ) {
 			EXCEPT( "Out of memory!" );
 		}
+	} else {
+		tmparch = strdup("Unknown");
 	}
 	return tmparch;
 }

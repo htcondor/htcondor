@@ -84,7 +84,12 @@ ShadowUserPolicy::startTimer( void )
 void
 ShadowUserPolicy::checkAtExit( void )
 {
+	float old_run_time;
+	UpdateJobTime(&old_run_time);
+
 	int action = user_policy.AnalyzePolicy( PERIODIC_THEN_EXIT );
+
+	RestoreJobTime(old_run_time);
 
 		// All we have to do now is perform the appropriate action.
 		// Since this is all shared code w/ the periodic case, we just
@@ -97,7 +102,12 @@ ShadowUserPolicy::checkAtExit( void )
 void
 ShadowUserPolicy::checkPeriodic( void )
 {
+	float old_run_time;
+	UpdateJobTime(&old_run_time);
+
 	int action = user_policy.AnalyzePolicy( PERIODIC_ONLY );
+
+	RestoreJobTime(old_run_time);
 
 	if( action == STAYS_IN_QUEUE ) {
 			// at periodic evaluations, this is the normal case: the
@@ -111,6 +121,44 @@ ShadowUserPolicy::checkPeriodic( void )
 	doAction( action, true );
 }
 
+
+/*Before evaluating user policy expressions, temporarily update
+  any stale time values.  Currently, this is just RemoteWallClock.
+*/
+void
+ShadowUserPolicy::UpdateJobTime( float *old_run_time )
+{
+  float previous_run_time,total_run_time;
+  int shadow_bday;
+  time_t now = time(NULL);
+  char buf[100];
+
+  if(!job_ad) return;
+
+  job_ad->LookupInteger(ATTR_SHADOW_BIRTHDATE,shadow_bday);
+  job_ad->LookupFloat(ATTR_JOB_REMOTE_WALL_CLOCK,previous_run_time);
+
+  if(old_run_time) *old_run_time = previous_run_time;
+  total_run_time = previous_run_time;
+  if(shadow_bday) total_run_time += (now - shadow_bday);
+
+  sprintf(buf,"%s = %f",ATTR_JOB_REMOTE_WALL_CLOCK,total_run_time);
+  job_ad->InsertOrUpdate(buf);
+}
+
+/*After evaluating user policy expressions, this is
+  called to restore time values to their original state.
+*/
+void
+ShadowUserPolicy::RestoreJobTime( float old_run_time )
+{
+  char buf[100];
+
+  if(!job_ad) return;
+
+  sprintf(buf,"%s = %f",ATTR_JOB_REMOTE_WALL_CLOCK,old_run_time);
+  job_ad->InsertOrUpdate(buf);
+}
 
 void
 ShadowUserPolicy::doAction( int action, bool is_periodic ) 

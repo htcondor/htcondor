@@ -26,17 +26,9 @@
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "list.h"
-#include "os_proc.h"
 #include "user_proc.h"
-#include "io_proxy.h"
-#include "NTsenders.h"
-#include "condor_ver_info.h"
-#include "file_transfer.h"
-#include "condor_daemon_client.h"
+#include "job_info_communicator.h"
 
-extern ReliSock *syscall_sock;
-
-/* thse are the remote system calls that the starter uses */
 
 /** The starter class.  Basically, this class does some initialization
 	stuff and manages a set of UserProc instances, each of which 
@@ -52,18 +44,20 @@ public:
 		/// Destructor
 	virtual ~CStarter();
 
-		/** This is called at the end of main_init().  It calls Config(), 
-			registers a bunch of signals, registers a reaper, makes 
-			the starter's working dir and moves there, does a 
-			register_machine_info remote syscall, sets resource 
-			limits, then calls StartJob()
-		    @param peer The sumbitting machine (sinful string)
+		/** This is called at the end of main_init().  It calls
+			Config(), registers a bunch of signals, registers a
+			reaper, makes the starter's working dir and moves there,
+			sets resource limits, then calls StartJob()
 		*/
-	virtual bool Init(char peer[]);
+	virtual bool Init( JobInfoCommunicator* my_jic, 
+					   const char* orig_cwd, bool is_gridshell,
+					   int stdin_fd, int stdout_fd, int stderr_fd );
 
-		/** Params for "EXECUTE", "UID_DOMAIN", and "FILESYSTEM_DOMAIN".
+		/** Params for "EXECUTE" and other useful stuff 
 		 */
 	virtual void Config();
+
+	virtual int SpawnJob( void );
 
 		/** Walk through list of jobs, call ShutDownGraceful on each.
 			@return 1 if no jobs running, 0 otherwise 
@@ -75,10 +69,23 @@ public:
 		*/
 	virtual int ShutdownFast(int);
 
-		/** For now, make a VanillaProc class instance and call
-			StartJob on it.  Append it to the JobList.
+		/** Create the execute/dir_<pid> directory and chdir() into
+			it.  This can only be called once user_priv is initialized
+			by the JobInfoCommunicator.
 		*/
-	virtual bool StartJob();
+	virtual bool createTempExecuteDir( void );
+
+		/** Called by the JobInfoCommunicator whenever the job
+			execution environment is ready so we can actually spawn
+			the job.
+		*/
+	virtual int jobEnvironmentReady( void );
+
+		/** Does final cleanup once all the jobs (and post script, if
+			any) have completed.  This deals with everything on the
+			CleanedUpJobList, notifies the JIC, etc.
+		*/
+	virtual void allJobsDone( void );
 
 		/** Call Suspend() on all elements in JobList */
 	virtual int Suspend(int);
@@ -99,26 +106,47 @@ public:
 		/** Return the Working dir */
 	const char *GetWorkingDir() const { return WorkingDir; }
 
-		/** Return a pointer to the version object for the Shadow  */
-	CondorVersionInfo* GetShadowVersion() const { return ShadowVersion; }
-
-	DCShadow* shadow;
-
-	char* GetOrigJobName() { return &OrigJobName[0]; };
-
-		/** Check to see if we're configured to transfer files or not.
-			If so, see if transfer_output_files is set.  If so, append
-			the given filename to the list, so that we try to transfer
-			it back, too.  This is used when we find a core file to
-			make sure we always transfer it.
-			@param filename File to append to the transfer output list 
+		/** Publish all attributes we care about for our job
+			controller into the given ClassAd.  Walk through all our
+			UserProcs and have them publish.
+            @param ad pointer to the classad to publish into
+			@return true if we published any info, false if not.
 		*/
-	void addToTransferOutputFiles( const char* filename );
+	bool publishUpdateAd( ClassAd* ad );
 
-		/// Start a timer for the periodic update to the shadow
-	void startUpdateTimer( void );
+	bool publishPreScriptUpdateAd( ClassAd* ad );
+	bool publishPostScriptUpdateAd( ClassAd* ad );
 
-	bool wantsFileTransfer( void ) { return wants_file_transfer; };
+		/** Put all the environment variables we'd want a Proc to have
+			into the given Env object.  This will figure out what Proc
+			objects we've got and will call their respective
+			PublishToEnv() methods
+			@param proc_env The environment to publish to
+		*/
+	void PublishToEnv( Env* proc_env );
+	
+		/** Pointer to our JobInfoCommuniator object, which abstracts
+			away any details about our communications with whatever
+			entity is controlling our job.  This way, the starter can
+			easily run without talking to a shadow, by instantiating a
+			different kind of jic.  We want this public, since lots of
+			parts of the starter need to get to this thing, and it's
+			just easier this way. :)
+		*/
+	JobInfoCommunicator* jic;
+
+		/** Returns the VM number we're running on
+		*/
+	int getMyVMNumber( void );
+
+	bool isGridshell( void ) {return is_gridshell;};
+	const char* origCwd( void ) {return (const char*) orig_cwd;};
+	int starterStdinFd( void ) { return starter_stdin_fd; };
+	int starterStdoutFd( void ) { return starter_stdout_fd; };
+	int starterStderrFd( void ) { return starter_stderr_fd; };
+	void closeSavedStdin( void );
+	void closeSavedStdout( void );
+	void closeSavedStderr( void );
 
 protected:
 	List<UserProc> JobList;
@@ -126,117 +154,24 @@ protected:
 
 private:
 
-		// // // // // // // 
-		// Private Methods
-		// // // // // // // 
-
-		/** Send an update ClassAd to the shadow.  The "insure_update"
-			just means do we make sure the update gets there.  It has
-			nothing to do with the "insure" memory analysis tool.
-			@param insure_update Should we insure the update gets there?
-			@return true if success, false if failure
-		*/
-	bool UpdateShadow( bool insure_update = false );
-
-		/** Function to be called periodically to update the shadow.
-			We can't just register a timer to call UpdateShadow()
-			directly, since DaemonCore isn't passing any args to timer
-			handlers, and therefore, it doesn't know it's supposed to
-			honor the default argument we specified above.  So, we use
-			this seperate function to register for the periodic
-			updates, and this ensures that we use the UDP version of
-			UpdateShadow().  This returns an int just to keep
-			DaemonCore happy about the types.
-			@return TRUE on success, FALSE on failure
-		*/
-	int PeriodicShadowUpdate( void );
-
-		/** Publish all attributes we care about for updating the
-			shadow into the given ClassAd. 
-			@param ad pointer to the classad to publish into
-			@return true if success, false if failure
-		*/
-	bool PublishUpdateAd( ClassAd* ad );
-
-		/** Initialize the priv_state code with the appropriate user
-			for this job.  This function deals with all the logic for
-			checking UID_DOMAIN compatibility, SOFT_UID_DOMAIN
-			support, and so on.
-			@return true on success, false on failure
-		*/
-	bool InitUserPriv( void );
-
-		/** Initialize information about the Shadow from the job ad.
-			Grab the shadow's sinful string and store that in
-			ShadowAddr.  Also, try to initialize our ShadowVersion
-			object.  If there's no shadow version, we leave our
-			ShadowVersion NULL.  If we know the version, we
-			instantiate a CondorVersionInfo object so we can perform
-			checks on the version in the various places in the starter
-			where we need to know this for compatibility.
-		*/
-	void InitShadowInfo( void );
-
-		/** Compare our own UIDDomain vs. the submitting host.  We
-			check in the given job ClassAd for ATTR_UID_DOMAIN.
-			@return true if they match, false if not
-		*/
-	bool SameUidDomain( void );
-
-		/** Perform an RSC to the shadow to register some important
-			information about ourself that the shadow needs.  This
-			checks the version of the shadow and sends the appropriate
-			RSC to be backwards compatible, etc
-			@return true on success, false on failure
-		*/
-	bool RegisterStarterInfo( void );
-
-		/** Read all the relevent attributes out of the job ad and
-			decide if we need to transfer files.  If so, instantiate a
-			FileTransfer object, start the transfer, and return true.
-			If we don't have to transfer anything, return false.
-			@return true if transfer was begun, false if not
-		*/
-	bool BeginFileTransfer( void );
-
-		/// Callback for when the FileTransfer object is done
-    int TransferCompleted(FileTransfer *);
-
-
 		// // // // // // // //
 		// Private Data Members
 		// // // // // // // //
 
-		/** The version of the shadow if known; otherwise NULL */
-	CondorVersionInfo* ShadowVersion;
-
-	char *Execute;
-	char *UIDDomain;
-	char *FSDomain;
-	char WorkingDir[_POSIX_PATH_MAX]; // The iwd given to the job
-	char ExecuteDir[_POSIX_PATH_MAX]; // The scratch dir created for the job
-	int ShuttingDown;
-	IOProxy io_proxy;
-
-	ClassAd* jobAd;
 	int jobUniverse;
 
-	// the real job executable name (after ATTR_JOB_CMD
-	// is switched to condor_exec).
-	char OrigJobName[_POSIX_PATH_MAX];
+	char *Execute;
+	char WorkingDir[_POSIX_PATH_MAX]; // The iwd given to the job
+	char ExecuteDir[_POSIX_PATH_MAX]; // The scratch dir created for the job
+	char *orig_cwd;
+	bool is_gridshell;
+	int ShuttingDown;
+	int starter_stdin_fd;
+	int starter_stdout_fd;
+	int starter_stderr_fd;
 
-	FileTransfer *filetrans;
-
-	// if true, transfer files at vacate time (in addtion to job exit)
-	bool transfer_at_vacate;
-
-		/// if true, we were asked to shutdown
-	bool requested_exit;
-
-		/// timer id for periodically sending info on job to Shadow
-	int shadowupdate_tid;
-
-	bool wants_file_transfer;
+	UserProc* pre_script;
+	UserProc* post_script;
 };
 
 #endif

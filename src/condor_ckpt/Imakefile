@@ -65,7 +65,12 @@ EXTRACT = $(SIG_EXTRACT) $(PLATFORM_EXTRACT)
 
 #if DOES_COMPRESS_CKPT
 #if IS_SUN4X_SOLARIS
+#if IS_SOLARIS29
+/* _rem.o, _div.o, umultiply.o were consolidated into hwmuldiv.o in sol 2.9 */
+COMPRESS_OBJ = malloc-condor.o zimage.o hwmuldiv.o
+#else
 COMPRESS_OBJ = malloc-condor.o zimage.o _rem.o _div.o umultiply.o
+#endif
 #else
 COMPRESS_OBJ = malloc-condor.o zimage.o
 #endif
@@ -128,24 +133,20 @@ OBJ =	syscall_mode.o shared_utils.o
 
 #endif
 
+/* Figure out what should be in the libc++support library, if anything */
+#if DOES_CHECKPOINTING
 
-#   if IS_EGCS_BUILD
-/*#		if IS_GLIBC_LINUX && IS_GLIBC22
-		CPP_SUPPORT_EXTRACT_OBJ = _eh.o tinfo.o tinfo2.o \
-			  exception.o frame-dwarf2.o __dummy.o _pure.o 
-#		else
+#	if IS_C_COMP_KIND_EGCS || IS_C_COMP_MINOR_GCC_2_95 
 		CPP_SUPPORT_EXTRACT_OBJ = _eh.o tinfo.o tinfo2.o \
 			  exception.o frame.o __dummy.o _pure.o 
-#		endif
-*/
-/*        CPP_SUPPORT_OBJ = c_plus_alloc.o $(CPP_SUPPORT_EXTRACT_OBJ) */
-        CPP_SUPPORT_OBJ = c_plus_alloc.o
-
-#   else 
-        CPP_SUPPORT_OBJ = c_plus_alloc.o pure_virtual.o
-#   endif
-
-#if DOES_CHECKPOINTING
+#	elif IS_C_COMP_MINOR_GCC_2_96
+		CPP_SUPPORT_EXTRACT_OBJ = _eh.o tinfo.o tinfo2.o \
+			  exception.o frame-dwarf2.o __dummy.o _pure.o 
+#	else
+#		error Checkpoint library not compatible with compiler!
+#	endif
+	
+	CPP_SUPPORT_OBJ = c_plus_alloc.o $(CPP_SUPPORT_EXTRACT_OBJ)
 
     all_target(ToUpper libcondorc++support.a condor_rt0.o \
 	       $(OBJ) $(COMPRESS_LIB) $(RELEASE_OBJ) )
@@ -164,7 +165,6 @@ stripped:: all
 static:: all
 
 #endif
-
 
 #if IS_HPUX
 SIGNAL.o :  $(SIMPLE_LIBC)  ToUpper
@@ -241,9 +241,8 @@ uppercase_target($(SIMPLE_LIBC),sigsuspend.o,SIGSUSPEND.o,sigsuspend,SIGSUSPEND)
 uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
 #endif
 
-
-#if IS_EGCS_BUILD
-obj_extract($(EGCS_LIBC),$(CPP_SUPPORT_EXTRACT_OBJ))
+#if DOES_CHECKPOINTING
+obj_extract($(GCC_LIBC),$(CPP_SUPPORT_EXTRACT_OBJ))
 #endif
 
 #if IS_GLIBC_LINUX
@@ -287,12 +286,18 @@ malloc-condor.o : malloc-condor.c malloc.c
 zimage.o : image.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) $(COMPRESS_FLAGS) -o zimage.o -c image.C
 #if IS_SUN4X_SOLARIS
+#if IS_SOLARIS29
+/* hwmuldiv.o replaces _rem.o, _div.o, and umultiply.o in solaris 2.9 */
+hwmuldiv.o : $(SIMPLE_LIBC)
+	ar x $(SIMPLE_LIBC) hwmuldiv.o
+#else
 _rem.o : $(SIMPLE_LIBC)
 	ar x $(SIMPLE_LIBC) _rem.o
 _div.o : $(SIMPLE_LIBC)
 	ar x $(SIMPLE_LIBC) _div.o
 umultiply.o : $(SIMPLE_LIBC)
 	ar x $(SIMPLE_LIBC) umultiply.o
+#endif
 #endif
 $(COMPRESS_LIB): libcondorckpt.a $(COMPRESS_OBJ)
 	cp libcondorckpt.a $(COMPRESS_LIB)

@@ -28,6 +28,10 @@
 
 #define	SECURITY_WIN32 1
 #include "condor_auth.h"        // Condor_Auth_Base class is defined here
+
+/* no longer needed under the new SDK 
+#include "sspi.NT.h" */
+
 #include <sspi.h>
 
 class Condor_Auth_SSPI : public Condor_Auth_Base {
@@ -42,7 +46,7 @@ class Condor_Auth_SSPI : public Condor_Auth_Base {
     // Destructor
     //------------------------------------------
 
-    int authenticate(const char * remoteHost);
+    int authenticate(const char * remoteHost, CondorError* errstack);
     //------------------------------------------
     // PURPOSE: authenticate with the other side 
     // REQUIRE: hostAddr -- host to authenticate

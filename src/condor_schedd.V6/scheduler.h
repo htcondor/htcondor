@@ -32,11 +32,12 @@
 #ifndef _CONDOR_SCHED_H_
 #define _CONDOR_SCHED_H_
 
+#include "dc_collector.h"
 #include "daemon.h"
+#include "daemon_list.h"
 #include "condor_classad.h"
 #include "condor_io.h"
 #include "proc.h"
-#include "sched.h"
 #include "prio_rec.h"
 #include "HashTable.h"
 #include "string_list.h"
@@ -44,9 +45,9 @@
 #include "classad_hashtable.h"	// for HashKey class
 #include "Queue.h"
 #include "user_log.c++.h"
+#include "autocluster.h"
 #include "shadow_mgr.h"
 
-const 	int			MAX_NUM_OWNERS = 512;
 const 	int			MAX_REJECTED_CLUSTERS = 1024;
 const   int         STARTD_CONTACT_TIMEOUT = 45;
 const	int			NEGOTIATOR_CONTACT_TIMEOUT = 30;
@@ -69,6 +70,7 @@ struct shadow_rec
 
 struct OwnerData {
   char* Name;
+  char* Domain;
   char* X509;
   int JobsRunning;
   int JobsIdle;
@@ -83,6 +85,7 @@ struct OwnerData {
   JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=GlobusJobs=GlobusUnmanagedJobs=0; }
 };
 
+#define SIZE_OF_CAPABILITY_STRING 40 /* see also matchmater.C */
 class match_rec
 {
  public:
@@ -200,6 +203,7 @@ class Scheduler : public Service
 	int				negotiate(int, Stream *);
 	void			reschedule_negotiator(int, Stream *);
 	void			vacate_service(int, Stream *);
+	AutoCluster		autocluster;
 	void			sendReschedule( void );
 
 	// job managing
@@ -211,6 +215,10 @@ class Scheduler : public Service
 	friend  int		find_idle_sched_universe_jobs(ClassAd *);
 	void			display_shadow_recs();
 	int				actOnJobs(int, Stream *);
+	int				spoolJobFiles(int, Stream *);
+	static int		spoolJobFilesWorkerThread(void *, Stream*);
+	int				spoolJobFilesReaper(int,int);
+	void				PeriodicExprHandler( void );
 
 	// match managing
     match_rec*      AddMrec(char*, char*, PROC_ID*, ClassAd*, char*, char*);
@@ -281,16 +289,17 @@ class Scheduler : public Service
 	void addActiveShadows( int num ) { CurNumActiveShadows += num; };
 	
 	// info about our central manager
-	Daemon*			Collector;
+	DCCollector*	Collector;
 	Daemon*			Negotiator;
-
-	void			updateCentralMgr( int command, ClassAd* ca, 
-									  char* host, int port ); 
 
 		// object to manage our various shadows and their ClassAds
 	ShadowMgr shadow_mgr;
 
-  private:
+		// hashtable used to hold matching ClassAds for Globus Universe
+		// jobs which desire matchmaking.
+	HashTable <PROC_ID, ClassAd *> *resourcesByProcID;
+  
+private:
 	
 	// information about this scheduler
 	ClassAd*		ad;
@@ -304,7 +313,9 @@ class Scheduler : public Service
 	
 	// parameters controling the scheduling and starting shadow
 	int				SchedDInterval;
+	int				SchedDMinInterval;
 	int				QueueCleanInterval;
+	int				PeriodicExprInterval;
 	int				JobStartDelay;
 	int				MaxJobsRunning;
 	bool			NegotiateAllJobsInCluster;
@@ -318,6 +329,7 @@ class Scheduler : public Service
 	int				JobsIdle; 
 	int				JobsRunning;
 	int				JobsHeld;
+	int				JobsTotalAds;
 	int				JobsFlocked;
 	int				JobsRemoved;
 	int				SchedUniverseJobsIdle;
@@ -327,7 +339,7 @@ class Scheduler : public Service
 	//int				RejectedClusters[MAX_REJECTED_CLUSTERS];
 	ExtArray<int>   RejectedClusters;
 	int				N_RejectedClusters;
-    OwnerData			Owners[MAX_NUM_OWNERS];
+	ExtArray<OwnerData> Owners;
 	int				N_Owners;
 	time_t			LastTimeout;
 	int				ExitWhenDone;  // Flag set for graceful shutdown
@@ -347,7 +359,6 @@ class Scheduler : public Service
 	int				checkContactQueue_tid;	// DC Timer ID to check queue
 	
 	// useful names
-	char*			CondorViewHost;
 	char*			CondorAdministrator;
 	char*			Mail;
 	char*			filename;					// save UpDown object
@@ -371,7 +382,7 @@ class Scheduler : public Service
 	void			clean_shadow_recs();
 	void			preempt(int);
 	void			preempt_one_job();
-	void			refuse( Stream* s );
+	static void		refuse( Stream* s );
 	void			tryNextJob( void );
 	void	noShadowForJob( shadow_rec* srec, NoShadowFailure_t why );
 
@@ -403,10 +414,11 @@ class Scheduler : public Service
 	HashTable <HashKey, match_rec *> *matches;
 	HashTable <int, shadow_rec *> *shadowsByPid;
 	HashTable <PROC_ID, shadow_rec *> *shadowsByProcID;
+	HashTable <int, ExtArray<PROC_ID> *> *spoolJobFileWorkers;
 	int				numMatches;
 	int				numShadows;
 	List <PROC_ID>	*IdleSchedUniverseJobIDs;
-	StringList		*FlockCollectors, *FlockNegotiators, *FlockViewServers;
+	DaemonList		*FlockCollectors, *FlockNegotiators;
 	int				MaxFlockLevel;
 	int				FlockLevel;
     int         	alive_interval;  // how often to broadcast alive
@@ -432,9 +444,14 @@ extern bool sendAlive( match_rec* mrec );
 extern void fixReasonAttrs( PROC_ID job_id, int action );
 extern bool moveStrAttr( PROC_ID job_id, const char* old_attr,  
 						 const char* new_attr, bool verbose );
+extern bool abortJob( int cluster, int proc, const char *reason, bool use_transaction );
 extern bool holdJob( int cluster, int proc, const char* reason = NULL, 
 					 bool use_transaction = false, 
 					 bool notify_shadow = true,  
-					 bool email_user = false, bool email_admin = false );
-
+					 bool email_user = false, bool email_admin = false,
+					 bool system_hold = true);
+extern bool releaseJob( int cluster, int proc, const char* reason = NULL, 
+					 bool use_transaction = false, 
+					 bool email_user = false, bool email_admin = false,
+					 bool write_to_user_log = true);
 #endif /* _CONDOR_SCHED_H_ */

@@ -1,6 +1,9 @@
 #! /bin/sh
 
 #
+# chkconfig: 3 90 99
+# description: Condor batch system
+#
 # condor script for SysV-style init boot scripts.  
 #
 # Usually this would be installed as /etc/init.d/condor with soft

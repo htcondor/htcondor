@@ -132,16 +132,18 @@ display (ClassAd *ad)
 	Formatter *fmt;
 	char 	*attr, *alt;
 	ExprTree *tree;
-//	EvalResult result;
 	Value 	result;				// NAC
 	char * 	retval = new char[1024 * 8];
 	int		intValue;
 	float 	floatValue;
 	char  	stringValue[1024];
+	string	bool_str;
 
 	int 	tempInt;			// NAC
 	double 	tempReal;			// NAC
 	char 	tempString[1024];	// NAC
+    
+    ClassAdUnParser unparser;
 
 	formats.Rewind();
 	attributes.Rewind();
@@ -166,10 +168,8 @@ display (ClassAd *ad)
 				}
 
 				// print the result
-//				if (tree->EvalTree (ad, NULL, &result)){
 				if(ad->EvaluateAttr(attr, result))					// NAC
 				{
-//					switch (result.type)
 					switch (result.GetType())						// NAC
 					{
 //					case LX_STRING:
@@ -198,6 +198,34 @@ display (ClassAd *ad)
 						sprintf( stringValue, fmt->printfFmt, tempInt );	// NAC
 						strcat( retval, stringValue );				
 						break;
+
+                    case result.UNDEFINED_VALUE:
+                    case result.BOOLEAN_VALUE:
+
+							// if the classad lookup worked, but the
+							// evaluation gave us an undefined result,
+							// (or if it's a bool), we know the
+							// attribute is there.  so, instead of
+							// printing out the evaluated result, just
+							// print out the unevaluated expression.
+                        /*
+						rhs = tree->RArg();
+						if( rhs ) {
+							rhs->PrintToNewStr( &bool_str );
+							if( bool_str ) {
+								sprintf( stringValue, fmt->printfFmt,
+										 bool_str );
+								strcat( retval, stringValue );
+								free( bool_str );
+								break;
+							}
+						}
+                        */
+                        unparser.Unparse( bool_str, tree );
+                        sprintf( stringValue, fmt->printfFmt, bool_str.c_str() );
+                        strcat( retval, stringValue );
+                        break;
+                        
 
 					default:
 						strcat( retval, alt );

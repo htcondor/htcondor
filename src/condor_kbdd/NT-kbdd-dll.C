@@ -41,14 +41,17 @@ LPARAM lParam)
 
 HINSTANCE g_hinstDLL = NULL;
 
-extern "C"
+#if defined(__cplusplus)
+extern "C" {
+#endif //__cplusplus
+
+	
 int __declspec( dllexport) WINAPI KBInitialize(void)
 {
 	hHook=(HHOOK)SetWindowsHookEx(WH_KEYBOARD,(HOOKPROC)KBHook,g_hinstDLL,0);
 	return hHook ? 1 : 0;
 }
 
-extern "C" 
 int __declspec( dllexport) WINAPI KBShutdown(void)
 {
 	if ( UnhookWindowsHookEx(hHook) )
@@ -57,7 +60,6 @@ int __declspec( dllexport) WINAPI KBShutdown(void)
 		return 0;	// failure
 }
 
-extern "C" 
 int __declspec( dllexport)  WINAPI KBQuery(void)
 {
 	if ( InterlockedExchange(&KBkeyhitflag,0) )
@@ -65,6 +67,10 @@ int __declspec( dllexport)  WINAPI KBQuery(void)
 	else
 		return 0;	// no keys hit since asked last
 }
+
+#if defined(__cplusplus)
+} // extern "C"
+#endif //defined(__cplusplus)
 
 BOOL WINAPI DllMain(HANDLE hInstDLL, ULONG fdwReason, LPVOID lpReserved)
 {

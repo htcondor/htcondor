@@ -1,0 +1,100 @@
+#!/usr/bin/perl -w
+
+# make sure to check the sendmail binary a little below in the script.
+# make sure to set up the email address correctly
+# make sure the $days is correct.
+# Written by psilord 11/21/2000
+
+# This script will go through the checkpoint server directory available on 
+# the machine and REMOVE all checkpoints that have not been accessed in 
+# a configurable number of days. This file should be shoved into either
+# condor's(preferrably) crontab on a checkpoint server and set to run once
+# a day. It will only send mail when files are actually removed.
+
+# Start of script....
+
+$ENV{PATH} = $ENV{PATH} . ":/unsup/condor/bin";
+
+$days = "+70"; # ten weeks.
+$email = "condor-system\@cs.wisc.edu";
+$ckptdir = `condor_config_val CKPT_SERVER_DIR`;
+chomp $ckptdir;
+chdir $ckptdir or die "Could not chdir to $ckptdir: $!";
+
+# find the sendmail I need.
+if ( -f "/usr/lib/sendmail" )
+{
+	$mailprog = "/usr/lib/sendmail -bs";
+}
+elsif ( -f "/usr/sbin/sendmail" )
+{
+	$mailprog = "/usr/sbin/sendmail -bs";
+}
+die "Could not find a sendmail to use" if (!defined $mailprog);
+
+$hostname = `hostname`;
+chomp $hostname;
+$hostname =~ s/^([^.]+)(.*)/$1/; # just get the hostname, not the domain
+$user = "condor\@cs.wisc.edu";
+
+# This chicanery is because people create things that look suspiciously like
+# checkpoint files for debugging purposes in the ckpt dir. This is to ensure I
+# only blow away the actual checkpoint files.
+
+# grab the checkpoint directories
+@cdirs = grep m/\d+\.\d+\.\d+\.\d+/, `ls $ckptdir`;
+chomp @cdirs;
+
+# grab all the checkpoints out the the ip addresses
+foreach $cdir (@cdirs)
+{
+	push @ckpts, `find $cdir -name "cluster*.proc*.subproc*" -atime $days -type f -print`;
+}
+chomp @ckpts;
+
+# make them fully qualified pathnames
+map s/^(.*)/$ckptdir\/$1/, @ckpts;
+
+# Add up how much space I'll be removing...
+$space = 0;
+foreach $cfile (@ckpts)
+{
+	# 7 is size of file.
+	$space += (stat $cfile)[7];
+}
+$space = $space / 1024; # Kilobytes
+$space = $space / 1024; # Megabytes
+$space = int $space;
+
+# remove the files
+foreach $cfile (@ckpts)
+{
+	#print "$cfile\n";
+	unlink $cfile;
+}
+
+# send email about what files I removed
+open(EMAIL, "| $mailprog") or die "Failure to open email";
+print EMAIL "HELO $hostname.cs.wisc.edu\n";
+print EMAIL "MAIL FROM: $user\n";
+print EMAIL "RCPT TO: $email\n";
+print EMAIL "DATA\n";
+print EMAIL "Subject: Cleaned Checkpoints\n";
+print EMAIL "To: $email\n";
+print EMAIL "This is an automated mail from the checkpoint cleaning script.\n";
+print EMAIL "This script: $0\n";
+print EMAIL "may be found in root's crontab on $hostname(.cs.wisc.edu)\n\n";
+print EMAIL "Here are the checkpoints I removed that hadn't been accessed\n";
+print EMAIL "in $days days freeing up about $space Megs...\n\n";
+foreach $cfile (@ckpts)
+{
+	print EMAIL "$cfile\n";
+}
+print EMAIL "\nEnd of message.\n";
+print EMAIL ".\n";
+print EMAIL "QUIT\n";
+close EMAIL;
+
+exit 0;
+
+

@@ -25,6 +25,7 @@
 #include "condor_ipverify.h"
 #include "internet.h"
 #include "condor_config.h"
+#include "condor_perms.h"
 
 // Externs to Globals
 extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc. 
@@ -37,39 +38,13 @@ extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc.
   not neccessarily all of the permission levels DaemonCore itself
   cares about (for example, there's nothing in here for
   "IMMEDIATE_FAMILY").  They can *not* be used to convert DCpermission
-  enums into strings, you need to use PermString() for that.
+  enums into strings, you need to use PermString() (in the util lib) for
+  that.
 */
 const char* IpVerify::perm_names[] = {"READ","WRITE","DAEMON", "ADMINISTRATOR","OWNER","NEGOTIATOR","CONFIG",NULL};
 const int IpVerify::perm_ints[] = {READ,WRITE,DAEMON,ADMINISTRATOR,OWNER,NEGOTIATOR,CONFIG_PERM,-1};  // must end with -1
 const char TotallyWild[] = "*";
 
-const char*
-PermString( DCpermission perm )
-{
-	switch( perm ) {
-	case ALLOW:
-		return "ALLOW";
-	case READ:
-		return "READ";
-	case WRITE:
-		return "WRITE";
-    case DAEMON:
-        return "DAEMON";
-	case NEGOTIATOR:
-		return "NEGOTIATOR";
-	case IMMEDIATE_FAMILY:
-		return "IMMEDIATE_FAMILY";
-	case ADMINISTRATOR:
-		return "ADMINISTRATOR";
-	case OWNER:
-		return "OWNER";
-	case CONFIG_PERM:
-		return "CONFIG";
-	default:
-		return "Unknown";
-	}
-	return "Unknown";
-};
 
 // Hash function for Permission hash table
 static int
@@ -201,11 +176,10 @@ IpVerify::Init()
             pOldAllow = param(buf);
         }
 
-        // Treat a "*", "*/*", or "*@*/*for USERALLOW_XXX as if it's just
+        // Treat a "*", "*/*" for USERALLOW_XXX as if it's just
         // undefined. 
 		if( pNewAllow && (!strcmp(pNewAllow, "*") 
-                          || !strcmp(pNewAllow, "*/*") 
-                          || !strcmp(pNewAllow, "*@*/*")) ) {
+                          || !strcmp(pNewAllow, "*/*") ) ) {
 			free( pNewAllow );
 			pNewAllow = NULL;
 		}
@@ -265,6 +239,13 @@ IpVerify::Init()
                 pCopyDeny = NULL;
             }
         }
+
+		if (pAllow && (DebugFlags & D_FULLDEBUG)) {
+			dprintf ( D_SECURITY, "IPVERIFY: allow: %s\n", pAllow);
+		}
+		if (pDeny && (DebugFlags & D_FULLDEBUG)) {
+			dprintf ( D_SECURITY, "IPVERIFY: deny: %s\n", pDeny);
+		}
 
 		if ( !pAllow && !pDeny ) {
 			if (perm_ints[i] == CONFIG_PERM) { 	  // deny all CONFIG requests 
@@ -351,7 +332,7 @@ bool IpVerify :: has_user(UserPerm_t * perm, const char * user, int & mask, MySt
     int             found = -1;
     assert(perm);
 
-    if (user && (strcmp("*", user) != 0)) {
+    if (user && *user && (strcmp("*", user) != 0)) {
         userid = MyString(user);
         if ( (found = perm->lookup(userid, mask)) == -1 ) {
             // try *@..../...
@@ -359,11 +340,11 @@ bool IpVerify :: has_user(UserPerm_t * perm, const char * user, int & mask, MySt
             char buf[256];
             memset(buf, 0, 256);
             if ((tmp = strchr( user, '@')) == NULL) {
-                dprintf(D_SECURITY, "Malformed user name: %s\n", user);
+                dprintf(D_SECURITY, "IPVERIFY: Malformed user name: %s\n", user);
             }      
             else {
                 if (strlen(tmp) > 255) {
-                    dprintf(D_SECURITY, "User name is too long: %s\n", user);
+                    dprintf(D_SECURITY, "IPVERIFY: User name is too long (over 255): %s\n", user);
                 }  
                 else {
                     sprintf(buf, "*%s", tmp);
@@ -455,18 +436,34 @@ IpVerify::add_host_entry( const char* addr, int mask )
 	bool			result = true;	
     char  * host, * user;
 
-    split_entry(addr, &host, &user);
+	if (!addr || !*addr) {
+		// returning true means we dealt with it, and
+		// it will be deleted from parent list.  we aren't
+		// actually dealing with it, because we shouldn't
+		// be getting null here.
+		return true;
+	}
+
+	split_entry(addr, &host, &user);
+
+	// the host may be in netmask form:
+	// a.b.c.d/len or a.b.c.d/m.a.s.k
+	// is_ipaddr will still return false for those
 
     if( is_ipaddr(host,&sin_addr) == TRUE ) {
         // This address is an IP addr in numeric form.
         // Add it into the hash table.
         add_hash_entry(sin_addr, user, mask);
     } else {
-        // This address is a hostname.  If it has no wildcards, resolve to
-        // and IP address here, add it to our hashtable, and remove the entry
-        // (i.e. treat it just like an IP addr).  If it has wildcards, then
-        // leave it in this StringList.
-        if ( strchr(host,'*') ) {
+		// Could be a hostname or netmask.  a netmask will have a slash in it.
+		// otherwise, This address is a hostname.  If it has no wildcards,
+		// resolve to and IP address here, add it to our hashtable, and remove
+		// the entry (i.e. treat it just like an IP addr).  If it has
+		// wildcards or a slash, then leave it in this StringList.
+		if ( strchr(host,'/') ) {
+			// is a netmask (a form of wildcard really)
+			result = false;
+   		} else if ( strchr(host,'*') ) {
             // Contains wildcards, do nothing, and return false so
             // we leave the host in the string list
             result = false;
@@ -480,6 +477,11 @@ IpVerify::add_host_entry( const char* addr, int mask )
                                         user, mask );
 					}   
 				}
+				if (DebugFlags & D_FULLDEBUG) {
+					dprintf (D_SECURITY, "IPVERIFY: succesfully added %s\n", host);
+				}
+			} else {
+				dprintf (D_SECURITY, "IPVERIFY: unable to resolve %s\n", host);
 			}
 		}
 	}	
@@ -513,10 +515,13 @@ IpVerify::fill_table(PermTypeEntry * pentry, int mask, char * list, bool allow)
 	char *entry, * host, * user;
 	slist->rewind();
 	while ( (entry=slist->next()) ) {
-		if( add_host_entry(entry, mask) ) {
+		if (!*entry) {
+			// empty string?
+			slist->deleteCurrent();
+		} else if( add_host_entry(entry, mask) ) {
+			// it was dealt with, and should be removed
             slist->deleteCurrent();
-		}
-        else {
+		} else {
             split_entry(entry, &host, &user);
             MyString hostString(host);
             StringList * userList = 0;
@@ -550,29 +555,84 @@ IpVerify::fill_table(PermTypeEntry * pentry, int mask, char * list, bool allow)
 
 void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
 {
-    char * slash;
-    int totLen = strlen(perm_entry);
-    // Split it into two parts, user/hsot
-    slash = strchr(perm_entry, '/');
-    if (slash == NULL) {
-        // Assuming */host, e.g. */*.cs.wisc.edu
-        *user = (char *) malloc(2);
-        *host = (char *) malloc(totLen + 1);
-        memset(*user, 0, 2);
-        memset(*host, 0, totLen + 1);
-        (*user)[0] = '*';
-        strncpy(*host, perm_entry, totLen);
-    }
-    else {
-        int hlen = strlen(slash);
-        int ulen = totLen - hlen;
-        *user = (char *) malloc(ulen + 1);
-        *host = (char *) malloc(hlen);
-        memset(*user, 0, ulen + 1);
-        memset(*host, 0, hlen);
-        memcpy(*user, perm_entry, ulen);
-        memcpy(*host, slash+1, hlen - 1);
-    }
+    char * slash0;
+    char * slash1;
+    char * at;
+	char * colon;
+    char permbuf[512];
+
+	if (!perm_entry || !*perm_entry) {
+		EXCEPT("split_entry called with NULL or &NULL!");
+	}
+
+    // see if there is a user specified... here are the
+	// rules we use:
+	//
+	// if there are two slashes, the format is always
+	// user/net/mask
+	// 
+	// if there is one slash, it could be either
+	// net/mask  or  user/host  if it comes down to
+	// the ambiguous */x, it will be user=*/host=x
+	//
+	// if there are zero slashes it could be either
+	// user, host, or wildcard... look for an @ sign
+	// to see if it is a user
+
+	// make a local copy
+	strcpy (permbuf, perm_entry);
+
+    slash0 = strchr(permbuf, '/');
+	if (!slash0) {
+		at = strchr(permbuf, '@');
+		if (at) {
+			*user = strdup(permbuf);
+			*host = strdup("*");
+		} else {
+			*user = strdup("*");
+
+			// look for a colon
+			colon = strchr(permbuf, ':');
+			if (colon) {
+				// colon points into permbuf.  permbuf is a local
+				// copy of the data made above, so we can modify it.
+				// drop a null in place of the colon so everything
+				// from the colon and beyond is gone.
+				*colon = 0;
+			}
+
+			// now dup it
+			*host = strdup(permbuf);
+		}
+	} else {
+		// okay, there was one slash... look for another
+		slash1 = strchr(slash0 + 1, '/');
+		if (slash1) {
+			// form is user/net/mask
+			*slash0++ = 0;
+			*user = strdup(permbuf);
+			*host = strdup(slash0);
+		} else {
+			// could be either user/host or net/mask
+			// handle */x case now too
+			at = strchr(permbuf, '@');
+			if ((at && at < slash0) || permbuf[0] == '*') {
+				*slash0++ = 0;
+				*user = strdup(permbuf);
+				*host = strdup(slash0);
+			} else {
+				if (is_valid_network(permbuf, NULL, NULL)) {
+					*user = strdup("*");
+					*host = strdup(permbuf);
+				} else {
+					dprintf (D_SECURITY, "IPVERIFY: warning, strange entry %s\n", permbuf);
+					*slash0++ = 0;
+					*user = strdup(permbuf);
+					*host = strdup(slash0);
+				}
+			}
+		}
+	}
 }
 
 int
@@ -652,10 +712,48 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
 				}
 			}  // end of for
 
+			// used in next chunks
+            const char * hoststring = NULL;
+
+			// check for matching subnets in ip/mask style
+			char tmpbuf[16];
+			cur_byte = (unsigned char *) &(sin->sin_addr);
+			sprintf(tmpbuf, "%u.%u.%u.%u", cur_byte[0], cur_byte[1], cur_byte[2], cur_byte[3]);
+
+			StringList * userList;
+			if ( PermTypeArray[perm]->allow_hosts &&
+					(hoststring = PermTypeArray[perm]->allow_hosts->
+					string_withnetwork(tmpbuf))) {
+				// See if the user exist
+				if (PermTypeArray[perm]->allow_users->lookup(hoststring, userList) != -1) {
+					if (lookup_user(userList, who)) {
+						dprintf ( D_SECURITY, "IPVERIFY: matched with host %s and user %s\n",
+								hoststring, (who && *who) ? who : "*");
+						mask |= allow_mask(perm);
+					} else {
+						dprintf ( D_SECURITY, "IPVERIFY: matched with host %s, but not user %s!\n",
+								hoststring, (who && *who) ? who : "*");
+					}
+				} else {
+					dprintf( D_SECURITY, "IPVERIFY: ip not matched: %s\n", tmpbuf); }
+				}
+    
+			if ( PermTypeArray[perm]->deny_hosts &&
+				 (hoststring = PermTypeArray[perm]->deny_hosts->
+				  string_withnetwork(tmpbuf))) {
+				dprintf ( D_SECURITY, "IPVERIFY: matched with %s\n", hoststring);
+				if (PermTypeArray[perm]->deny_users->lookup(hoststring, userList) != -1) {
+					if (lookup_user(userList, who)) {  
+						dprintf ( D_ALWAYS, "IPVERIFY: denied user %s from %s\n", who, hoststring);
+						mask |= deny_mask(perm);
+					}
+				}
+			}
+
+
 			// now scan through hostname strings
 			thehost = sin_to_hostname(sin,&aliases);
 			i = 0;
-            const char * hoststring = NULL;
 			while ( thehost ) {
                 MyString     host(thehost);
                 StringList * userList;
@@ -663,6 +761,7 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin, const char *
                      (hoststring = PermTypeArray[perm]->allow_hosts->
                       string_anycase_withwildcard(thehost))) {
                     // See if the user exist
+					dprintf ( D_SECURITY, "IPVERIFY: matched with %s\n", hoststring);
                     if (PermTypeArray[perm]->allow_users->lookup(hoststring, userList) != -1) {
                         if (lookup_user(userList, who)) {
                             mask |= allow_mask(perm);
@@ -723,7 +822,7 @@ bool IpVerify :: lookup_user(StringList * list, const char * user)
 {
     bool found = false;
     if (user == NULL) {
-        if (list->contains("*") || list->contains("*@*")) {
+        if (list->contains("*")) {
             found = true;
         }
     }

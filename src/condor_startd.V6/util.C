@@ -65,14 +65,16 @@ cleanup_execute_dir(int pid)
 	dynuser nobody_login;
 
 	if( pid ) {
+		if ( nobody_login.reuse_accounts() == false ) {
 		// before removing subdir, remove any nobody-user account associtated
 		// with this starter pid.  this account might have been left around
 		// if the starter did not clean up completely.
 		//sprintf(buf,"condor-run-dir_%d",pid);
-		sprintf(buf,"condor-run-%d",pid);
-		if ( nobody_login.deleteuser(buf) ) {
-			dprintf(D_FULLDEBUG,"Removed account %s left by starter\n",buf);
-		}
+			sprintf(buf,"condor-run-%d",pid);
+			if ( nobody_login.deleteuser(buf) ) {
+				dprintf(D_FULLDEBUG,"Removed account %s left by starter\n",buf);
+			}
+		} 
 
 		// now remove the subdirectory.  NOTE: we only remove the 
 		// subdirectory _after_ removing the nobody account, because the
@@ -245,49 +247,6 @@ create_port( ReliSock* rsock )
 }
 
 
-char*
-command_to_string( int cmd )
-{
-	switch( cmd ) {
-	case CONTINUE_CLAIM:
-		return "continue_claim";
-	case SUSPEND_CLAIM:
-		return "suspend_claim";
-	case DEACTIVATE_CLAIM:
-		return "deactivate_claim";
-	case DEACTIVATE_CLAIM_FORCIBLY:
-		return "deactivate_claim_forcibly";
-	case MATCH_INFO:
-		return "match_info";
-	case ALIVE:
-		return "alive";
-	case REQUEST_CLAIM:
-		return "request_claim";
-	case RELEASE_CLAIM:
-		return "release_claim";
-	case ACTIVATE_CLAIM:
-		return "activate_claim";
-	case GIVE_STATE:
-		return "give_state";
-	case PCKPT_JOB:
-		return "pckpt_job";
-	case PCKPT_ALL_JOBS:
-		return "pckpt_all_jobs";
-	case VACATE_CLAIM:
-		return "vacate_claim";
-	case VACATE_CLAIM_FAST:
-		return "vacate_claim_fast";
-	case VACATE_ALL_CLAIMS:
-		return "vacate_all_claims";
-	case VACATE_ALL_FAST:
-		return "vacate_all_fast";
-	default:
-		return "unknown";
-	}
-	return "error";
-}
-
-
 bool
 reply( Stream* s, int cmd )
 {
@@ -358,8 +317,13 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose )
   there, if it should be a fatal error or not.  If the attribute is
   defined, we insert "attribute = value" into the given classad and
   return true.  If the attribute wasn't defined, we return false, and
-  if the is_fatal flag is set, we EXCEPT
+  if the is_fatal flag is set, we EXCEPT().  If we found the attribute
+  but failed to insert it into the ClassAd, there's a syntax error and
+  we should EXCEPT(), even if is_fatal is false.  If it's it's in the
+  config file, the admin is trying to use it, so if there's a syntax
+  error, we should let them know right away. 
   -Derek Wright <wright@cs.wisc.edu> 4/12/00
+  -Syntax error checking by Derek on 6/25/03
 */
 bool
 configInsert( ClassAd* ad, const char* attr, bool is_fatal )
@@ -397,50 +361,13 @@ configInsert( ClassAd* ad, const char* param_name,
 	}
 	sprintf( tmp, "%s = %s", attr, val );
 
-	ad->Insert( tmp );
+	if( ! ad->Insert(tmp) ) {
+		EXCEPT( "Syntax error in %s expression: '%s'", attr, val );
+	}
 
 	free( tmp );
 	free( val );
 	return true;
-}
-
-
-int
-send_classad_to_sock( int cmd, Daemon * d, ClassAd* pubCA, ClassAd*
-					  privCA )  
-{
-    Sock * sock = d->safeSock();
-    if (! d->startCommand(cmd, sock)) {
-		dprintf( D_ALWAYS, "Can't send command\n");
-		sock->end_of_message();
-		delete sock;
-		return FALSE;
-	}
-
-	if( pubCA ) {
-		if( ! pubCA->put( *sock ) ) {
-			dprintf( D_ALWAYS, "Can't send public classad\n");
-			sock->end_of_message();
-			delete sock;
-			return FALSE;
-		}
-	}
-	if( privCA ) {
-		if( ! privCA->put( *sock ) ) {
-			dprintf( D_ALWAYS, "Can't send private classad\n");
-			sock->end_of_message();
-			delete sock;
-			return FALSE;
-		}
-	}
-	if( ! sock->end_of_message() ) {
-		dprintf( D_ALWAYS, "Can't send end_of_message\n");
-		delete sock;
-		return FALSE;
-	}
-
-	delete sock;
-	return TRUE;
 }
 
 
@@ -477,3 +404,19 @@ stream_to_rip( Stream* stream )
 	free( cap );
 	return rip;
 }
+
+
+VacateType
+getVacateType( ClassAd* ad )
+{
+	VacateType vac_t;
+	char* vac_t_str = NULL;
+	if( ! ad->LookupString(ATTR_VACATE_TYPE, &vac_t_str) ) { 
+		return VACATE_GRACEFUL;
+	}
+	vac_t = getVacateTypeNum( vac_t_str );
+	free( vac_t_str );
+	return vac_t;
+}
+
+

@@ -38,8 +38,9 @@
 #include "condor_io.h"
 #include "exit.h"
 #include "string_list.h"
-#include "get_daemon_addr.h"
+#include "get_daemon_name.h"
 #include "daemon_types.h"
+#include "daemon_list.h"
 #include "strupr.h"
 
 #ifdef WIN32
@@ -60,7 +61,7 @@ extern "C"
 void	init_params();
 void	init_daemon_list();
 void	init_classad();
-void	get_lock(char * );
+void	lock_or_except(const char * );
 time_t 	GetTimeStamp(char* file);
 int 	NewExecutable(char* file, time_t* tsp);
 void	RestartMaster();
@@ -90,8 +91,8 @@ int		check_new_exec_interval;
 int		preen_interval;
 int		new_bin_delay;
 char	*MasterName = NULL;
-Daemon	*Collector = NULL;
-StringList *secondary_collectors = NULL;
+DCCollector	*Collector = NULL;
+DaemonList* secondary_collectors = NULL;
 
 int		ceiling = 3600;
 float	e_factor = 2.0;								// exponential factor
@@ -120,7 +121,8 @@ char	*default_daemon_list[] = {
 	0};
 
 char	default_dc_daemon_list[] =
-"MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD";
+"MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, "
+"VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE";
 
 // create an object of class daemons.
 class Daemons daemons;
@@ -275,12 +277,6 @@ main_init( int argc, char* argv[] )
 	}
 #endif
 
-	/* Make sure we are the only copy of condor_master running */
-#ifndef WIN32
-	char*	log_file = daemons.DaemonLog( daemonCore->getpid() );
-	get_lock( log_file);  
-#endif
-
 	if( StartDaemons ) {
 		daemons.StartAllDaemons();
 	}
@@ -419,7 +415,7 @@ int
 handle_subsys_command( int cmd, Stream* stream )
 {
 	char* subsys = NULL;
-	daemon* daemon;
+	class daemon* daemon;
 	daemon_t dt;
 
 	stream->decode();
@@ -514,7 +510,7 @@ init_params()
 	if( Collector ) {
 		delete( Collector );
 	}
-	Collector = new Daemon( DT_COLLECTOR );
+	Collector = new DCCollector;
 	
 	StartDaemons = TRUE;
 	tmp = param("START_DAEMONS");
@@ -665,12 +661,17 @@ init_params()
 
 	tmp = param( "SECONDARY_COLLECTOR_LIST" );
 	if( tmp ) {
-		if (secondary_collectors) delete secondary_collectors;
-		secondary_collectors = new StringList(tmp);
+		if( secondary_collectors ) {
+			delete secondary_collectors;
+		}
+		secondary_collectors = new DaemonList();
+		secondary_collectors->init( DT_COLLECTOR, tmp );
 		free(tmp);
 	} else {
-		if (secondary_collectors) delete secondary_collectors;
-		secondary_collectors = NULL;
+		if( secondary_collectors ) {
+			delete secondary_collectors;
+			secondary_collectors = NULL;
+		}
 	}
 }
 
@@ -679,7 +680,7 @@ void
 init_daemon_list()
 {
 	char	*daemon_name;
-	daemon	*new_daemon;
+	class daemon	*new_daemon;
 	StringList daemon_names, dc_daemon_names;
 
 	char* dc_daemon_list = param("DC_DAEMON_LIST");
@@ -701,15 +702,15 @@ init_daemon_list()
 		while( (daemon_name = daemon_names.next()) ) {
 			if(daemons.GetIndex(daemon_name) < 0) {
 				if( dc_daemon_names.contains(daemon_name) ) {
-					new_daemon = new daemon(daemon_name);
+					new_daemon = new class daemon(daemon_name);
 				} else {
-					new_daemon = new daemon(daemon_name, false);
+					new_daemon = new class daemon(daemon_name, false);
 				}
 			}
 		}
 	} else {
 		for(int i = 0; default_daemon_list[i]; i++) {
-			new_daemon = new daemon(default_daemon_list[i]);
+			new_daemon = new class daemon(default_daemon_list[i]);
 		}
 	}
 }
@@ -719,7 +720,7 @@ void
 check_daemon_list()
 {
 	char	*daemon_name;
-	daemon	*new_daemon;
+	class daemon	*new_daemon;
 	StringList daemon_names;
 	char* daemon_list = param("DAEMON_LIST");
 	if( !daemon_list ) {
@@ -738,7 +739,7 @@ check_daemon_list()
 	daemon_names.rewind();
 	while( (daemon_name = daemon_names.next()) ) {
 		if(daemons.GetIndex(daemon_name) < 0) {
-			new_daemon = new daemon(daemon_name);
+			new_daemon = new class daemon(daemon_name);
 		}
 	}
 }
@@ -784,13 +785,20 @@ init_classad()
 	config_fill_ad( ad ); 	
 }
 
+#ifndef WIN32
 FileLock *MasterLock;
+#endif
 
 void
-get_lock( char* file_name )
+lock_or_except( const char* file_name )
 {
-	if( (MasterLockFD=open(file_name,O_RDWR,0)) < 0 ) {
-		EXCEPT( "open(%s,0,0)", file_name );
+#ifndef WIN32	// S_IRUSR and S_IWUSR don't exist on WIN32, and 
+				// we don't need to worry about multiple masters anyway
+				// because it's a service.
+	MasterLockFD=_condor_open_lock_file(file_name,O_WRONLY|O_CREAT|O_APPEND,S_IRUSR|S_IWUSR);
+	if( MasterLockFD < 0 ) {
+		EXCEPT( "can't open(%s,O_WRONLY|O_CREAT|O_APPEND,S_IRUSR|S_IWUSR) - errno %i", 
+			file_name, errno );
 	}
 
 	// This must be a global so that it doesn't go out of scope
@@ -800,6 +808,7 @@ get_lock( char* file_name )
 	if( !MasterLock->obtain(WRITE_LOCK) ) {
 		EXCEPT( "Can't get lock on \"%s\"", file_name );
 	}
+#endif
 }
 
 
@@ -990,3 +999,46 @@ void
 main_pre_dc_init( int argc, char* argv[] )
 {
 }
+
+
+void
+main_pre_command_sock_init()
+{
+	/* Make sure we are the only copy of condor_master running */
+#ifndef WIN32
+	MyString lock_file;
+	char*  p;
+
+	// see if a file is given explicitly
+	p = param ("MASTER_INSTANCE_LOCK");
+	if (p) {
+		lock_file = p;
+		free (p);
+	} else {
+		// no filename given.  use $(LOCK)/InstanceLock.
+		p = param ("LOCK");
+		if (p) {
+			lock_file = p;
+			lock_file = lock_file + "/InstanceLock";
+			free (p);
+		} else {
+			// no LOCK dir?  strange.  fall back to the
+			// old behavior which is to lock the log file
+			// itself.
+			p = param("MASTER_LOG");
+			if (p) {
+				lock_file = p;
+				free (p);
+			} else {
+				// i give up.  have a hardcoded default and like it. :)
+				lock_file = "/tmp/InstanceLock";
+			}
+		}
+	}
+	dprintf (D_FULLDEBUG, "Attempting to lock %s.\n", lock_file.Value() );
+	lock_or_except( lock_file.Value() );
+	dprintf (D_FULLDEBUG, "Obtained lock on %s.\n", lock_file.Value() );
+#endif
+
+}
+

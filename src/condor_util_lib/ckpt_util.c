@@ -36,6 +36,7 @@
 #include "condor_network.h"
 #include "internet.h"
 #include "my_hostname.h"
+#include "condor_socket_types.h"
 
 
 #ifdef WANT_NETMAN
@@ -187,7 +188,7 @@ struct sockaddr_in *sin;
 int             listen_count;
 {
 	int             socket_fd;
-	int             len;
+	SOCKET_LENGTH_TYPE len;
 	
 	socket_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (socket_fd < 0) {

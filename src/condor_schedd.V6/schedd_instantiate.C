@@ -25,6 +25,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "scheduler.h"
 #include "proc.h"
+#include "MyString.h"
 #include "dedicated_scheduler.h"
 #include "grid_universe.h"
 #include "simplelist.h"
@@ -39,6 +40,8 @@ template class HashTable<HashKey, match_rec *>;
 template class HashBucket<HashKey,match_rec *>;
 template class HashTable<PROC_ID, shadow_rec *>;
 template class HashBucket<PROC_ID,shadow_rec *>;
+template class HashTable<PROC_ID, ClassAd *>;
+template class HashBucket<PROC_ID, ClassAd *>;
 template class Queue<shadow_rec*>;
 template class Queue<ContactStartdArgs*>;
 template class List<shadow_rec*>;
@@ -46,13 +49,17 @@ template class Item<shadow_rec*>;
 template class List<PROC_ID>;
 template class Item<PROC_ID>;
 template class ExtArray<int>;
+template class ExtArray<MyString*>;
+template class ExtArray<bool>;
 template class ExtArray<PROC_ID>;
+template class ExtArray<OwnerData>;
 template class SimpleList<Shadow*>;
+template class HashTable<int, ExtArray<PROC_ID> *>;
 
 // for condor-G
 template class HashTable<MyString,GridUniverseLogic::gman_node_t *>;
 
-// for MPI use:
+// for MPI (or parallel) use:
 template class ExtArray<match_rec*>;
 template class ExtArray<MRecArray*>;
 template class ExtArray<ClassAd*>;

@@ -36,23 +36,24 @@
 extern DLL_IMPORT_MAGIC char **environ;
 
 //-----------------------------------------------------------------------------
-Script::Script( bool post, char* cmd, Job* job ) :
+Script::Script( bool post, const char* cmd, const char* nodeName ) :
     _post         (post),
     _retValScript (-1),
     _retValJob    (-1),
-    _logged       (false),
 	_pid		  (0),
 	_done         (FALSE),
-    _job          (job)
+	_nodeName     (nodeName)
 {
 	ASSERT( cmd != NULL );
+	ASSERT( nodeName != NULL );
     _cmd = strnewp (cmd);
+    _nodeName = strnewp( nodeName );
 }
 
 //-----------------------------------------------------------------------------
 Script::~Script () {
     delete [] _cmd;
-    // Don't delete the _job pointer!
+	delete [] (char*) _nodeName;
 }
 
 //-----------------------------------------------------------------------------
@@ -62,12 +63,13 @@ Script::BackgroundRun( int reaperId )
 	// construct command line
     const char *delimiters = " \t";
     char * token;
-    string send;
+    MyString send;
     char * cmd = strnewp(_cmd);
     for (token = strtok (cmd,  delimiters) ; token != NULL ;
          token = strtok (NULL, delimiters)) {
-        if      (!strcasecmp(token, "$LOG"   )) send += _logged ? '1' : '0';
-        else if (!strcasecmp(token, "$JOB"   )) send += _job->GetJobName();
+		if( !strcasecmp( token, "$JOB" ) ) {
+			send += _nodeName;
+		}
         else if (!strcasecmp(token, "$RETURN")) send += _retValJob;
         else                                    send += token;
 
@@ -75,8 +77,8 @@ Script::BackgroundRun( int reaperId )
     }
 
 	char *env = environToString( (const char**)environ );
-	_pid = daemonCore->Create_Process( cmd, (char*) send.c_str(),
-									   PRIV_UNKNOWN, reaperId, TRUE,
+	_pid = daemonCore->Create_Process( cmd, (char*) send.Value(),
+									   PRIV_UNKNOWN, reaperId, FALSE,
 									   env, NULL, FALSE, NULL, NULL, 0 );
 	delete [] env;
     delete [] cmd;

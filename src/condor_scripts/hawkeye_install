@@ -3,117 +3,138 @@ use strict;
 $| = 1;
 
 # Prototypes
+sub Main( );
 sub PromptUser( $$ );
 sub CreateDir( $ );
 sub DoConfig( $$ );
 sub DoPrefs( $ );
+sub Lookup( $$ );
 
 # Check command line..
-my $Usage = "$0 [TargetDir]";
+my $Usage = "$0 [TargetDir [tarball]]";
 my $TargetDir = "/home/hawkeye";
 my $TarBall = "TARBALL";
 $TargetDir = shift( @ARGV ) if ( $#ARGV >= 0 );
 $TarBall = shift( @ARGV ) if ( $#ARGV >= 0 );
+my %Daemons;
 
-# Figure out where to install
-while ( 1 )
+$| = 1;
+Main( );
+
+# Main logic...
+sub Main( )
 {
-    $TargetDir = PromptUser( "Directory to install Hawkeye", $TargetDir );
-    last if ( -d $TargetDir );
-    print "$TargetDir does not exist.  Create it? ";
-    $_ = <>; chomp;
-    next if ( ! /^y/i );
-    next if CreateDir( $TargetDir );
-
-    # Wow.  All ok.  Done here
-    last;
-}
-
-# Ok.  We know where to install it now...
-
-# Extract the tarballs
-print "Extracting tarballs into '$TargetDir'...\n";
-system( "tar -C $TargetDir -xvf $TarBall" );
-system( "tar --gzip -C $TargetDir -xvf hcav.tgz" );
-
-# Create extra directories...
-die if CreateDir( "$TargetDir/etc" );
-die if CreateDir( "$TargetDir/spool" );
-die if CreateDir( "$TargetDir/execute" );
-die if CreateDir( "$TargetDir/log" );
-
-# Get the main Hawkeye host
-my $Collector = "";
-while ( $Collector eq "" )
-{
-    print "What host is your Hawkeye 'central manager' (FQDN)? ";
-    $_ = <>; chomp;
-    if ( ! ( $_ =~ /\w+\.\w+/ ) )
+    # Figure out where to install
+    while ( 1 )
     {
-	print STDERR "Illegal name (should be host.domain.top)\n";
-	next;
-    }
-    $Collector = $_;
-}
+	$TargetDir = PromptUser( "Directory to install Hawkeye", $TargetDir );
+	last if ( -d $TargetDir );
+	print "$TargetDir does not exist.  Create it? ";
+	$_ = <>; chomp;
+	next if ( ! /^y/i );
+	next if CreateDir( $TargetDir );
 
-# Are we the central manager?
-my $DaemonList = "MASTER, STARTD";
-while ( 1 )
-{
-    print "Is this host ($ENV{HOSTNAME}) the Hawkeye manager node (y/n)? ";
-    $_ = <>;
-    if ( ! /^[ny]/i )
-    {
-	print "  Please answer yes or no\n";
-    }
-    else
-    {
-	$DaemonList = "$DaemonList, COLLECTOR" if ( /^y/i );
+	# Wow.  All ok.  Done here
 	last;
     }
-}
 
-# Build up the new config...
-my $ConfigIn = "$TargetDir/hawkeye_config.example";
-my $ConfigOut = "$TargetDir/etc/hawkeye_config";
-DoConfig( $ConfigIn, $ConfigOut );
+    # Get the absolute path to it
+    $TargetDir = ( `cd $TargetDir; pwd` ); chomp $TargetDir;
+    die "$TargetDir is not a valid directory!" if ( ! -d $TargetDir );
 
-# Fix up the ClassAd viewer 'prefs'
-DoPrefs( "$TargetDir/condor/classadView/prefs" );
+    # Get my hostname..
+    print "\n";
+    my $MyHostname = `/bin/hostname`; chomp $MyHostname;
+    $MyHostname = Lookup( "this system", $MyHostname );
 
-# Various paths
-my $PathBin = "$TargetDir/bin";
-my $PathSbin = "$TargetDir/sbin";
+    # Ok.  We know where to install it now...
+    print "Using my hostname = '$MyHostname'\n";
 
-# Finally, create a simple script to run Hawkeye for the user
-{
-    my $Script = "$TargetDir/StartHawkeye";
-    if ( open( OUT, ">$Script" ) )
+    # Get the Central Manager host
+    print "\nEach Hawkeye pool needs ONE central manager.\n";
+    print "Is this host the central manager <n>? "; $_ = <>; chomp $_;
+    my $Collector = ( /^y/i ) ? $MyHostname : "";
+    $Daemons{Collector} = Lookup( "Central Manager", $Collector );
+
+    # Extract the tarballs
+    print "\n\nExtracting tarballs into '$TargetDir'...\n";
+    system( "tar -C $TargetDir -xvf $TarBall" );
+    system( "tar --gzip -C $TargetDir -xvf hcav.tgz" ) if ( -f "hcav.tgz" );
+    system( "cp README* $TargetDir" );
+
+    # Create extra directories...
+    die if CreateDir( "$TargetDir/etc" );
+    die if CreateDir( "$TargetDir/spool" );
+    die if CreateDir( "$TargetDir/execute" );
+    die if CreateDir( "$TargetDir/log" );
+
+    # Build the daemon list
+    $Daemons{List} = "MASTER, STARTD";
+    $Daemons{List} = "$Daemons{List}, COLLECTOR"
+	if ( $Daemons{Collector} eq $MyHostname );
+
+    # Build up the new config...
+    my $ConfigIn = "$TargetDir/install/hawkeye_config.example";
+    my $ConfigOut = "$TargetDir/etc/hawkeye_config";
+    DoConfig( $ConfigIn, $ConfigOut );
+
+    # Fix up the ClassAd viewer 'prefs'
+    my $Prefs = "$TargetDir/condor/classadView/prefs";
+    DoPrefs( $Prefs ) if ( -f $Prefs );
+
+    # Various paths
+    my $PathBin = "$TargetDir/bin";
+    my $PathSbin = "$TargetDir/sbin";
+
+    # Create a simple script to run Hawkeye for the user
     {
-	print OUT "#! /bin/bash\n";
-	print OUT "export HAWKEYE_CONFIG=$ConfigOut\n";
-	print OUT "export PATH=$PathBin:$PathSbin:\$PATH\n";
-	print OUT "$TargetDir/sbin/hawkeye_master\n";
-	close( OUT );
-	chmod( 0750, $Script);
+	my $Script = "$TargetDir/StartHawkeye";
+	print "Creating $Script to start Hawkeye\n";
+	if ( open( OUT, ">$Script" ) )
+	{
+	    print OUT "#! /bin/bash\n";
+	    print OUT "export HAWKEYE_CONFIG=$ConfigOut\n";
+	    print OUT "export PATH=$PathBin:$PathSbin:\$PATH\n";
+	    print OUT "$TargetDir/sbin/hawkeye_master\n";
+	    close( OUT );
+	    chmod( 0750, $Script);
+	}
+	print "A '$Script' script has been created for you\n";
     }
-    print "A '$Script' script has been created for you\n";
-}
 
-# Output to user
-print "\n";
-{
-    my $Tmp = $PathBin;
-    $Tmp =~ s/\//\\\//g;
-    print "You should add '$PathBin' to your PATH\n"
-	if ( ! ( $ENV{PATH} =~ /$Tmp/ ) );
-    $Tmp = $PathSbin;
-    $Tmp =~ s/\//\\\//g;
-    print "You should add '$PathSbin' to your PATH\n"
-	if ( ! ( $ENV{PATH} =~ /$Tmp/ ) );
-    print "You should set HAWKEYE_CONFIG=$ConfigOut\n"
-	if (  ( ! exists $ENV{HAWKEYE_CONFIG} ) ||
-	      ( $ENV{HAWKEYE_CONFIG} eq $ConfigOut )  );
+    # Create the "real" add module script
+    my $InstallModuleIn = "$TargetDir/install/hawkeye_install_module.example";
+    my $InstallModuleOut = "$TargetDir/sbin/hawkeye_install_module";
+    print "Creating module install script '$InstallModuleOut'\n";
+    if ( open( IN, $InstallModuleIn ) )
+    {
+	if ( open( OUT, ">$InstallModuleOut" ) )
+	{
+	    while( <IN> )
+	    {
+		chomp;
+		s/\"HAWKEYE_CONFIG_DIR\"/\"$TargetDir\"/;
+		print OUT "$_\n";
+	    }
+	    chmod( 0755, "$InstallModuleOut" );
+	}
+    }
+
+    # Output to user
+    print "\n";
+    {
+	my $Tmp = $PathBin;
+	$Tmp =~ s/\//\\\//g;
+	print "You should add '$PathBin' to your PATH\n"
+	    if ( ! ( $ENV{PATH} =~ /$Tmp/ ) );
+	$Tmp = $PathSbin;
+	$Tmp =~ s/\//\\\//g;
+	print "You should add '$PathSbin' to your PATH\n"
+	    if ( ! ( $ENV{PATH} =~ /$Tmp/ ) );
+	print "You should set HAWKEYE_CONFIG=$ConfigOut\n"
+	    if (  ( ! exists $ENV{HAWKEYE_CONFIG} ) ||
+		  ( $ENV{HAWKEYE_CONFIG} ne $ConfigOut )  );
+    }
 }
 
 
@@ -128,7 +149,7 @@ sub DoConfig( $$ )
     # Should we overwrite an existing config?
     if ( -f $ConfigOut )
     {
-	print "Overwrite $ConfigOut? ";
+	print "Overwrite $ConfigOut <n>? ";
 	$_ = <>;
 	if ( ! /^y/i )
 	{
@@ -156,23 +177,22 @@ sub DoConfig( $$ )
 	# Central manager
 	elsif ( /^HAWKEYE_HOST\s+=/ )
 	{
-	    print OUT "HAWKEYE_HOST = $Collector\n";
+	    print OUT "HAWKEYE_HOST = $Daemons{Collector}\n";
 	    next;
 	}
 
 	# Daemon list
 	elsif ( /^DAEMON_LIST\s+=/ )
 	{
-	    print OUT "DAEMON_LIST = $DaemonList\n";
+	    print OUT "DAEMON_LIST = $Daemons{List}\n";
 	    next;
 	}
 
 	# Actual cronjob list
-	elsif ( /^STARTD_CRONJOBS\s+=/ )
+	elsif ( /^HAWKEYE_JOBS\s+=/ )
 	{
 	    if ( $#Modules < 0 )
 	    {
-		print STDERR "Warning -- No modules defined!\n";
 		print OUT "$Line\n";
 	    }
 	    else
@@ -279,6 +299,76 @@ sub DoConfig( $$ )
 }
 
 # ###################################
+# Lookup a FQDN
+# ###################################
+sub Lookup( $$ )
+{
+    my $Title = shift;
+    my $Hostname = shift;
+
+    while( 1 )
+    {
+	my @FQDN = split( /\./, $Hostname );
+	if ( $#FQDN == 0 )
+	{
+	    # Run nslookup on it..
+	    my $Cmd = "nslookup $Hostname";
+	    my $FQDN = "";
+	    if ( open( NSLOOKUP, "$Cmd 2>&1 |" ) )
+	    {
+		while( <NSLOOKUP> )
+		{
+		    if ( /Name:\s*(\S+)/ )
+		    {
+			$FQDN = $1;
+		    }
+		}
+		close( NSLOOKUP );
+	    }
+
+	    # Did we find it?
+	    if ( $FQDN ne "" )
+	    {
+		print "$Title '$Hostname' resolves to '$FQDN'; is this correct <y>? ";
+		$_ = <>; chomp;
+		if ( /^n/i )
+		{
+		    $Hostname = "";
+		    next;
+		}
+		return $FQDN;
+	    }
+	    else
+	    {
+		print "Unable to resolve '$Hostname'\n";
+		print "Please enter FQDN of $Title: ";
+		$Hostname = <>; chomp $Hostname;
+	    }
+	}
+
+	# No hostname
+	elsif ( $#FQDN < 0 )
+	{
+	    print "Please enter the host name of $Title: ";
+	    $Hostname = <>; chomp $Hostname;
+	}
+	# FQDN looks valid
+	else
+	{
+	    print "I've resolve the FQDN of $Title to '$Hostname'; is this correct <y>? ";
+	    $_ = <>; chomp;
+	    if ( /^n/i )
+	    {
+		$Hostname = "";
+		next;
+	    }
+	    return $Hostname;
+	}
+    }
+} # Lookup()
+
+
+# ###################################
 # Customize the ClassAd viewer prefs
 # ###################################
 sub DoPrefs( $ )
@@ -291,11 +381,12 @@ sub DoPrefs( $ )
 	chomp;
 	if ( /(.*)\.collectorMachine\s+=/ )
 	{
-	    $_ = "$1.collectorMachine = $Collector";
+	    $_ = "$1.collectorMachine = $Daemons{Collector}";
 	}
 	push @Prefs, $_;
     }
     close( IN );
+
     open( OUT, ">$File" ) || die "Can't write to view prefs '$File'\n";
     foreach my $Pref ( @Prefs )
     {

@@ -56,6 +56,12 @@ static const int GAHPCLIENT_COMMAND_NOT_SUBMITTED = -102;
 ///
 static const int GAHPCLIENT_COMMAND_TIMED_OUT = -103;
 
+// Special values for what proxy to use with commands
+//   Use default proxy (not any cached proxy)
+static const int GAHPCLIENT_CACHE_DEFAULT_PROXY = -1;
+//   Use last proxy (use whatever proxy was used for the previous command)
+static const int GAHPCLIENT_CACHE_LAST_PROXY = -2;
+
 ///
 class GahpClient : public Service {
 	
@@ -73,6 +79,9 @@ class GahpClient : public Service {
 		//@}
 
 		///
+		bool Startup(const char * gahp_server_path = NULL);
+
+		///
 		bool Initialize(const char * proxy_path,
 						const char * gahp_server_path = NULL);
 
@@ -84,6 +93,12 @@ class GahpClient : public Service {
 
 		///
 		int getMaxPendingRequests() { return max_pending_requests; }
+
+		///
+		static bool getUsePrefix() { return use_prefix; }
+
+		/// Return -1 if gahp does not exist, else returns the gahp pid
+		static int getPid() { return m_gahp_pid; }
 
 		/** @name Mode methods.
 		 * Methods to set/get the mode.
@@ -184,6 +199,15 @@ class GahpClient : public Service {
 		static void poll_real_soon();
 		//@}
 					
+		bool cacheProxyFromFile( int id, const char *proxy_path );
+		bool uncacheProxy( int id );
+		bool useCachedProxy( int id, bool force = false );
+
+		void setNormalProxyCacheId( int id ) { normal_proxy_cache_id = id; }
+		int getNormalProxyCacheId() { return normal_proxy_cache_id; }
+
+		void setDelegProxyCacheId( int id ) { deleg_proxy_cache_id = id; }
+		int getDelegProxyCacheId() { return deleg_proxy_cache_id; }
 
 		//-----------------------------------------------------------
 		
@@ -206,7 +230,7 @@ class GahpClient : public Service {
 
 		///
 		int 
-		globus_gram_client_job_request(char * resource_manager_contact,
+		globus_gram_client_job_request(const char * resource_manager_contact,
 			const char * description,
 			const int job_state_mask,
 			const char * callback_contact,
@@ -214,25 +238,25 @@ class GahpClient : public Service {
 
 		///
 		int 
-		globus_gram_client_job_cancel(char * job_contact);
+		globus_gram_client_job_cancel(const char * job_contact);
 
 		///
 		int
-		globus_gram_client_job_status(char * job_contact,
+		globus_gram_client_job_status(const char * job_contact,
 			int * job_status,
 			int * failure_code);
 
 		///
 		int
-		globus_gram_client_job_signal(char * job_contact,
+		globus_gram_client_job_signal(const char * job_contact,
 			globus_gram_protocol_job_signal_t signal,
-			char * signal_arg,
+			const char * signal_arg,
 			int * job_status,
 			int * failure_code);
 
 		///
 		int
-		globus_gram_client_job_callback_register(char * job_contact,
+		globus_gram_client_job_callback_register(const char * job_contact,
 			const int job_state_mask,
 			const char * callback_contact,
 			int * job_status,
@@ -251,6 +275,10 @@ class GahpClient : public Service {
 		///
 		int
 		globus_gram_client_set_credentials(const char *proxy_path);
+
+		///
+		int
+		globus_gram_client_job_refresh_credentials(const char *job_contact);
 
 		///
 		int
@@ -277,7 +305,8 @@ class GahpClient : public Service {
 		int new_reqid();
 		void clear_pending();
 		bool is_pending(const char *command, const char *buf);
-		void now_pending(const char *command,const char *buf);
+		void now_pending(const char *command,const char *buf,
+						 int cache_id = GAHPCLIENT_CACHE_DEFAULT_PROXY);
 		Gahp_Args* get_pending_result(const char *,const char *);
 		bool check_pending_timeout(const char *,const char *);
 		int reset_user_timer(int tid);
@@ -289,6 +318,7 @@ class GahpClient : public Service {
 			const char *command=NULL);
 		bool command_commands();
 		bool command_async_mode_on();
+		bool command_response_prefix(const char *prefix);
 
 			// Private Data Members
 		static unsigned int m_reference_count;
@@ -304,6 +334,9 @@ class GahpClient : public Service {
 		static HashTable<int,GahpClient*> *requestTable;
 		static Queue<int> waitingToSubmit;
 		int user_timerid;
+		int normal_proxy_cache_id;
+		int deleg_proxy_cache_id;
+		int pending_cache_id;
 
 			// These data members all deal with the GAHP
 			// server.  Since there is only one instance of the GAHP
@@ -314,6 +347,7 @@ class GahpClient : public Service {
 		static int m_gahp_writefd;
 		static char m_gahp_version[150];
 		static StringList * m_commands_supported;
+		static bool use_prefix;
 		static void write_line(const char *command);
 		static void write_line(const char *command,int req,const char *args);
 		static void Reaper(Service*,int pid,int status);
@@ -326,6 +360,7 @@ class GahpClient : public Service {
 		static int m_callback_reqid;
 		static int max_pending_requests;
 		static int num_pending_requests;
+		static int current_cache_id;
 
 };	// end of class GahpClient
 

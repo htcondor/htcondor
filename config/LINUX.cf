@@ -21,34 +21,41 @@ statically linked to avoid problems */
 #   undef IS_GLIBC
 #   define IS_GLIBC		YES
 #   define IS_GLIBC_LINUX	YES
-#   define IS_EGCS_BUILD	YES
 
 /* Yes, we actually need to know the difference between glibc 2.0 and 2.1 */
 #if defined( IS_GLIBC20 )
 #   undef IS_GLIBC20
 #	define IS_GLIBC20	YES
 #   define GlibCFlag		-DGLIBC=GLIBC -DGLIBC20=GLIBC20
+#   define HAS_DAGMAN_HELPER NO
 #elif defined( IS_GLIBC21 )
 #	undef IS_GLIBC21
 #	define IS_GLIBC21	YES
 #   define GlibCFlag		-DGLIBC=GLIBC -DGLIBC21=GLIBC21
+#   define HAS_DAGMAN_HELPER NO
 #elif defined( IS_GLIBC22 )
 #	undef IS_GLIBC22
 #	define IS_GLIBC22	YES
 #   define GlibCFlag		-DGLIBC=GLIBC -DGLIBC22=GLIBC22
+#   define HAS_DAGMAN_HELPER YES
+#elif defined( IS_GLIBC23 )
+#	undef IS_GLIBC23
+#	define IS_GLIBC23	YES
+#   define GlibCFlag		-DGLIBC=GLIBC -DGLIBC23=GLIBC23
+#   define HAS_DAGMAN_HELPER YES
 #endif
 
 #else /* Non IS_GLIBC */
 #   define GlibCFlag
+#   define HAS_DAGMAN_HELPER NO
 #endif
 
 #define PlatformFlags		ArchOptimizeFlag GlibCFlag
 
-#define PlatformLdFlags		-lresolv 
+#define PlatformLdFlags		-lresolv -ldl
 
 #define SimpleLibC /usr/lib/libc.a
 #define LibC SimpleLibC
-#define Crt0 /usr/lib/crt1.o
 
 #define XLibPath /usr/X11R6/lib/libX11.a
 #define XExtLibPath /usr/X11R6/lib/libXext.a
@@ -100,7 +107,7 @@ statically linked to avoid problems */
 #define HAS_SETLINEBUF			YES
 #define MALLOC_DEBUG			NO
 #define HAS_STATIC			YES
-
+#define HAS_DLOPEN			YES
 
 #define StaticFlag	-static
 #define UnixName /vmlinuz		/* pathname of the system executable */

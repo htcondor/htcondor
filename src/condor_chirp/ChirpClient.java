@@ -1,3 +1,9 @@
+/*
+Chirp Java Client
+
+This public domain software is provided "as is".  See the Chirp License
+for details.
+*/
 
 package edu.wisc.cs.condor.chirp;
 
@@ -6,7 +12,7 @@ import java.net.*;
 
 /*
 XXX XXX XXX
-WARNING WARNING WARNING
+WARNING WARNING WARNING (Condor maintainers)
 If you change this file, then you must compile it
 and check the .jar file into CVS.  Why?  Because
 we can't manage a Java installation on all of our platforms,
@@ -81,7 +87,7 @@ public class ChirpClient {
 	*/
 
 	public void cookie( String c ) throws IOException {
-		simple_command("cookie "+c+"\n");	
+		simple_command("cookie "+ChirpWord(c)+"\n");	
 	}
 
 	/**
@@ -102,7 +108,7 @@ public class ChirpClient {
 	*/
 
 	public int open( String path, String flags, int mode ) throws IOException {
-		return simple_command("open "+path+" "+flags+" "+mode+"\n");
+		return simple_command("open "+ChirpWord(path)+" "+flags+" "+mode+"\n");
 	}
 
 	/**
@@ -208,7 +214,7 @@ public class ChirpClient {
 	*/
 
 	public void unlink( String name ) throws IOException {
-		simple_command("unlink "+name+"\n");
+		simple_command("unlink "+ChirpWord(name)+"\n");
 	}
 
 	/**	
@@ -219,7 +225,7 @@ public class ChirpClient {
 	*/
 
 	public void rename( String name, String newname ) throws IOException {
-		simple_command("rename "+name+" "+newname+"\n");
+		simple_command("rename "+ChirpWord(name)+" "+ChirpWord(newname)+"\n");
 	}
 
 
@@ -231,7 +237,7 @@ public class ChirpClient {
 	*/
 
 	public void mkdir( String name, int mode ) throws IOException {
-		simple_command("mkdir "+name+" "+mode+"\n");
+		simple_command("mkdir "+ChirpWord(name)+" "+mode+"\n");
 	}
 
 	/**	
@@ -252,7 +258,7 @@ public class ChirpClient {
 	*/
 
 	public void rmdir( String name ) throws IOException {
-		simple_command("rmdir "+name+"\n");
+		simple_command("rmdir "+ChirpWord(name)+"\n");
 	}
 
 	/**
@@ -264,6 +270,44 @@ public class ChirpClient {
 
 	public void fsync( int fd ) throws IOException {
 		simple_command("fsync "+fd+"\n");
+	}
+
+	public int version() throws IOException {
+		return simple_command("version\n");
+	}
+
+	public String lookup( String path ) throws IOException {
+		String url = null;
+		int response = simple_command("lookup "+ChirpWord(path)+"\n");
+		if(response>0) {
+			byte [] buffer = new byte[response];
+			int actual = fullRead(buffer,0,response);
+			if(actual!=response) throw new ChirpError("server disconnected");
+			url = new String(buffer,0,response,encoding);
+		}
+		returnOrThrow(response);
+		return url;
+	}
+
+	public void constrain( String expr ) throws IOException {
+		simple_command("constrain "+" "+ChirpWord(expr)+"\n");
+	}
+
+	public String get_job_attr( String name ) throws IOException {
+		String value = null;
+		int response = simple_command("get_job_attr "+ChirpWord(name)+"\n");
+		if(response>0) {
+			byte [] buffer = new byte[response];
+			int actual = fullRead(buffer,0,response);
+			if(actual!=response) throw new ChirpError("server disconnected");
+			value = new String(buffer,0,response,encoding);
+		}
+		returnOrThrow(response);
+		return value;
+	}
+
+	public void set_job_attr( String name, String expr ) throws IOException {
+		simple_command("set_job_attr "+ChirpWord(name)+" "+ChirpWord(expr)+"\n");	
 	}
 
 	private int simple_command( String cmd ) throws IOException {
@@ -278,6 +322,27 @@ public class ChirpClient {
 		}
 		return returnOrThrow(response);
 	}
+
+	public String ChirpWord( String cmd ) {
+		StringBuffer buf = new StringBuffer();
+
+		for(int i=0; i<cmd.length(); i++) {
+			char ch = cmd.charAt(i);
+			switch(ch) {
+			case '\\':
+			case ' ':
+			case '\n':
+			case '\t':
+			case '\r':
+				buf.append("\\");
+				//fall through
+			default:
+			    buf.append(ch);
+			}
+		}
+
+		return buf.toString();
+        }
 
 	private int returnOrThrow( int code ) throws IOException {
 		if(code>=0) {

@@ -31,6 +31,9 @@
 #include "ad_printmask.h"
 #include "Set.h"
 #include "condor_distribution.h"
+#include "file_transfer.h"
+#include "extra_param_info.h"
+#include "daemon.h"
 
 template class List<char>; 		template class Item<char>;
 template class List<int>; 		template class Item<int>;
@@ -53,6 +56,12 @@ template class HashBucket<MyString,int>;
 template class HashTable<MyString, MyString>;
 template class HashBucket<MyString, MyString>;
 template class HashTable<MyString, KeyCacheEntry*>;
+template class Queue<char *>;
+template class HashTable<int, FileTransfer *>;
+template class HashTable<MyString, FileTransfer *>;
+template class HashTable<MyString, ExtraParamInfo *>;
+template class SimpleList<Daemon*>;
 
 int 	CondorErrno;
 string	CondorErrMsg;
+

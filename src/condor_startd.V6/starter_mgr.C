@@ -255,7 +255,21 @@ StarterMgr::makeStarter( const char* path )
 	Starter* new_starter;
 	FILE* fp;
 	MyString cmd;
+
+#ifdef WIN32
+	/* if our path contains spaces, which it often does
+		(e.g. C:\Program Files\Condor\bin) we need to keep
+		windows happy by placing quotes around it. 
+		-stolley 7/2002 
+	*/
+	cmd += "\"";
 	cmd += path;
+	cmd += "\"";
+#else
+	cmd += path;
+#endif
+
+
 	cmd += " -classad";
 	char buf[1024];
 

@@ -31,6 +31,7 @@
 #include "condor_classad_lookup.h"
 #include "condor_query.h"
 #include "daemon.h"
+#include "dc_startd.h"
 #include "daemon_types.h"
 
 // the comparison function must be declared before the declaration of the
@@ -68,6 +69,8 @@ Matchmaker ()
 
 	negotiation_timerID = -1;
 	GotRescheduleCmd=false;
+	
+	stashedAds = new AdHash(1000, HashFunc);
 }
 
 
@@ -497,7 +500,7 @@ negotiationTime ()
 	addRemoteUserPrios( startdAds ); 
 
 	// ----- Sort the schedd list in decreasing priority order
-	dprintf( D_ALWAYS, "Phase 3:  Sorting schedd ads by priority ...\n" );
+	dprintf( D_ALWAYS, "Phase 3:  Sorting submitter ads by priority ...\n" );
 	scheddAds.Sort( (lessThanFunc)comparisonFunction, this );
 
 	int spin_pie=0;
@@ -558,7 +561,11 @@ negotiationTime ()
 			scheddPrio = accountant.GetPriority ( scheddName );
 			scheddUsage = accountant.GetResourcesUsed ( scheddName );
 			scheddShare = maxPrioValue/(scheddPrio*normalFactor);
-			scheddLimit  = (int) rint((scheddShare*numStartdAds)-scheddUsage);
+			if ( param_boolean("NEGOTIATOR_IGNORE_USER_PRIORITIES",false) ) {
+				scheddLimit = 500000;
+			} else {
+				scheddLimit  = (int) rint((scheddShare*numStartdAds)-scheddUsage);
+			}
 			if( scheddLimit < 0 ) {
 				scheddLimit = 0;
 			}
@@ -727,7 +734,10 @@ obtainAdsFromCollector (
 	CondorQuery publicQuery(ANY_AD);
 	CondorQuery privateQuery(STARTD_PVT_AD);
 	QueryResult result;
-	ClassAd *ad;
+	ClassAd *ad, *oldAd;
+	MapEntry *oldAdEntry;
+	int newSequence, oldSequence, reevaluate_ad;
+	char    remoteHost[MAXHOSTNAMELEN];
 
 	dprintf(D_ALWAYS, "  Getting all public ads ...\n");
 	result = publicQuery.fetchAds(allAds);
@@ -744,7 +754,60 @@ obtainAdsFromCollector (
 		// Insert each ad into the appropriate list.
 		// After we insert it into a list, do not delete the ad...
 
-		if( !strcmp(ad->GetMyTypeName(),STARTD_ADTYPE) ) {
+		// let's see if we've already got it - first lookup the sequence 
+		// number from the new ad, then let's look and see if we've already
+		// got something for this one.		
+		if(!strcmp(ad->GetMyTypeName(),STARTD_ADTYPE)) {
+
+			// first, let's make sure that will want to actually use this
+			// ad, and if we can use it (old startds had no seq. number)
+			reevaluate_ad = false; 
+			ad->LookupBool(ATTR_WANT_AD_REVAULATE, reevaluate_ad);
+			newSequence = -1;	
+			ad->LookupInteger(ATTR_UPDATE_SEQUENCE_NUMBER, newSequence);
+
+			if( reevaluate_ad && newSequence != -1 ) {
+				ad->LookupString(ATTR_NAME, remoteHost);
+				oldAd = NULL;
+				oldAdEntry = NULL;
+				MyString rhost(remoteHost);
+				stashedAds->lookup( rhost, oldAdEntry);
+				// if we find it...
+				oldSequence = -1;
+				if( oldAdEntry ) {
+					oldSequence = oldAdEntry->sequenceNum;
+				}
+				if(newSequence > oldSequence) {
+					if(oldSequence >= 0) {
+						delete(oldAdEntry->oldAd);
+						delete(oldAdEntry->remoteHost);
+						delete(oldAdEntry);
+						stashedAds->remove(rhost);
+					}
+					MapEntry *me = new MapEntry;
+					me->sequenceNum = newSequence;
+					me->remoteHost = strdup(remoteHost);
+					me->oldAd = new ClassAd(*ad); 
+					stashedAds->insert(rhost, me); 
+				} else {
+					/*
+					  We have a stashed copy of this ad, and it's the
+					  the same or a more recent sequence number, and we
+					  we don't want to use the one in allAds. However, 
+					  we need to make sure that the "stashed" ad gets into
+					  allAds for this negotiation cycle, but we don't want 
+					  to get stuck in a loop evaluating the, so we remove
+					  the sequence number before we put it into allAds - this
+					  way, when we encounter it a few iteration later we
+					  won't reconsider it
+					*/
+
+					allAds.Delete(ad);
+					ad = new ClassAd(*(oldAdEntry->oldAd));
+					ad->Delete(ATTR_UPDATE_SEQUENCE_NUMBER);
+					allAds.Insert(ad);
+				}
+			}
 			startdAds.Insert(ad);
 		} else if( !strcmp(ad->GetMyTypeName(),SUBMITTER_ADTYPE) ) {
 			scheddAds.Insert(ad);
@@ -762,7 +825,7 @@ obtainAdsFromCollector (
 	dprintf(D_ALWAYS, "Got ads: %d public and %d private\n",
 	        allAds.MyLength(),startdPvtAds.MyLength());
 
-	dprintf(D_ALWAYS, "Public ads include %d schedd, %d startd\n",
+	dprintf(D_ALWAYS, "Public ads include %d submitter, %d startd\n",
 		scheddAds.MyLength(), startdAds.MyLength() );
 
 	return true;
@@ -787,10 +850,41 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 	char		prioExpr[128], remoteUser[128];
 
 	// 0.  connect to the schedd --- ask the cache for a connection
-	if (!sockCache->getReliSock((Sock *&)sock, scheddAddr, NEGOTIATE, NegotiatorTimeout))
-	{
-		dprintf (D_ALWAYS, "    Failed to connect to %s\n", scheddAddr);
-		return MM_ERROR;
+	sock = sockCache->findReliSock( scheddAddr );
+	if( ! sock ) {
+		dprintf( D_FULLDEBUG, "Socket to %s not in cache, creating one\n", 
+				 scheddAddr );
+			// not in the cache already, create a new connection and
+			// add it to the cache.  We want to use a Daemon object to
+			// send the first command so we setup a security session. 
+		Daemon schedd( DT_SCHEDD, scheddAddr, 0 );
+		sock = schedd.reliSock( NegotiatorTimeout );
+		if( ! sock ) {
+			dprintf( D_ALWAYS, "    Failed to connect to %s\n", scheddAddr );
+			return MM_ERROR;
+		}
+		if( ! schedd.startCommand(NEGOTIATE, sock, NegotiatorTimeout) ) {
+			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE to %s\n",
+					 scheddAddr );
+			return MM_ERROR;
+		}
+			// finally, add it to the cache for later...
+		sockCache->addReliSock( scheddAddr, sock );
+	} else { 
+		dprintf( D_FULLDEBUG, "Socket to %s already in cache, reusing\n", 
+				 scheddAddr );
+			// this address is already in our socket cache.  since
+			// we've already got a TCP connection, we do *NOT* want to
+			// use a Daemon::startCommand() to create a new security
+			// session, we just want to encode the NEGOTIATE int on
+			// the socket...
+		sock->encode();
+		if( ! sock->put(NEGOTIATE) ) {
+			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE to %s\n",
+					 scheddAddr );
+			sockCache->invalidateSock( scheddAddr );
+			return MM_ERROR;
+		}
 	}
 
 	// 1.  send NEGOTIATE command, followed by the scheddName (user@uiddomain)
@@ -824,12 +918,12 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 				if ( display_overlimit ) {  // print message only once
 					display_overlimit = false;
 					dprintf (D_ALWAYS, 	
-						"    Over schedd resource limit (%d) ... "
+						"    Over submitter resource limit (%d) ... "
 					    "only consider startd ranks\n", scheddLimit);
 				}
 			} else {
 				dprintf (D_ALWAYS, 	
-				"    Reached schedd resource limit: %d ... stopping\n", i);
+				"    Reached submitter resource limit: %d ... stopping\n", i);
 				break;	// get out of the infinite for loop & stop negotiating
 			}
 		} else {
@@ -1006,7 +1100,13 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 
 		// 2g.  Delete ad from list so that it will not be considered again in 
 		//		this negotiation cycle
-		startdAds.Delete (offer);
+		int reevaluate_ad = false;
+		offer->LookupBool(ATTR_WANT_AD_REVAULATE, reevaluate_ad);
+		if( reevaluate_ad ) {
+			reeval(offer);
+		} else  {
+			startdAds.Delete (offer);
+		}	
 	}
 
 
@@ -1331,53 +1431,75 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	char *capability;
 	SafeSock startdSock;
 	bool send_failed;
+	int want_claiming = -1;
+
+	strcpy(startdAddr, "<0.0.0.0:0>");
+	strcpy(startdName,"unknown");
+	offer->LookupString (ATTR_NAME, startdName);
 
 	// these will succeed
 	request.LookupInteger (ATTR_CLUSTER_ID, cluster);
 	request.LookupInteger (ATTR_PROC_ID, proc);
 
+	// see if offer supports claiming or not
+	offer->LookupBool(ATTR_WANT_CLAIMING,want_claiming);
+	// if offer says nothing, see if request says something
+	if ( want_claiming == -1 ) {
+		request.LookupBool(ATTR_WANT_CLAIMING,want_claiming);
+	}
+
 	// these should too, but may not
 	if (!offer->LookupString (ATTR_STARTD_IP_ADDR, startdAddr)		||
 		!offer->LookupString (ATTR_NAME, startdName))
 	{
-		dprintf (D_ALWAYS, "      Could not lookup %s and %s\n", 
+		// fatal error if we need claiming
+		if ( want_claiming ) {
+			dprintf (D_ALWAYS, "      Could not lookup %s and %s\n", 
 					ATTR_NAME, ATTR_STARTD_IP_ADDR);
-		return MM_BAD_MATCH;
+			return MM_BAD_MATCH;
+		}
 	}
 
 	// find the startd's capability from the private ad
-	if (!(capability = getCapability (startdName, startdAddr, startdPvtAds)))
-	{
-		dprintf(D_ALWAYS,"      %s has no capability\n", startdName);
-		return MM_BAD_MATCH;
+	if ( want_claiming ) {
+		if (!(capability = getCapability (startdName, startdAddr, startdPvtAds)))
+		{
+			dprintf(D_ALWAYS,"      %s has no capability\n", startdName);
+			return MM_BAD_MATCH;
+		}
+	} else {
+		// Claiming is *not* desired
+		capability = "null";
 	}
 	
 	// ---- real matchmaking protocol begins ----
 	// 1.  contact the startd 
-	dprintf (D_FULLDEBUG, "      Connecting to startd %s at %s\n", 
-				startdName, startdAddr); 
+	if ( want_claiming ) {
+		dprintf (D_FULLDEBUG, "      Connecting to startd %s at %s\n", 
+					startdName, startdAddr); 
 
-    startdSock.timeout (NegotiatorTimeout);
-	if (!startdSock.connect (startdAddr, 0))
-	{
-		dprintf(D_ALWAYS,"      Could not connect to %s\n", startdAddr);
-		return MM_BAD_MATCH;
-	}
+		startdSock.timeout (NegotiatorTimeout);
+		if (!startdSock.connect (startdAddr, 0))
+		{
+			dprintf(D_ALWAYS,"      Could not connect to %s\n", startdAddr);
+			return MM_BAD_MATCH;
+		}
 
-	Daemon startd (startdAddr, 0);
-	startd.startCommand (MATCH_INFO, &startdSock);
+		DCStartd startd( startdAddr );
+		startd.startCommand (MATCH_INFO, &startdSock);
 
-	// 2.  pass the startd MATCH_INFO and capability string
-	dprintf (D_FULLDEBUG, "      Sending MATCH_INFO/capability\n" );
-	dprintf (D_FULLDEBUG, "      (Capability is \"%s\" )\n", capability);
-	startdSock.encode();
-	if ( !startdSock.put (capability) || !startdSock.end_of_message())
-	{
-		dprintf (D_ALWAYS,"      Could not send MATCH_INFO/capability to %s\n",
-					startdName );
-		dprintf (D_FULLDEBUG, "      (Capability is \"%s\")\n", capability );
-		return MM_BAD_MATCH;
-	}
+		// 2.  pass the startd MATCH_INFO and capability string
+		dprintf (D_FULLDEBUG, "      Sending MATCH_INFO/capability\n" );
+		dprintf (D_FULLDEBUG, "      (Capability is \"%s\" )\n", capability);
+		startdSock.encode();
+		if ( !startdSock.put (capability) || !startdSock.end_of_message())
+		{
+			dprintf (D_ALWAYS,"      Could not send MATCH_INFO/capability to %s\n",
+						startdName );
+			dprintf (D_FULLDEBUG, "      (Capability is \"%s\")\n", capability );
+			return MM_BAD_MATCH;
+		}
+	}	// end of if want_claiming
 
 	// 3.  send the match and capability to the schedd
 	sock->encode();
@@ -1526,3 +1648,30 @@ addRemoteUserPrios( ClassAdList &cal )
 	}
 	cal.Close();
 }
+
+void Matchmaker::
+reeval(ClassAd *ad) 
+{
+	int cur_matches;
+	MapEntry *oldAdEntry;
+	char    remoteHost[MAXHOSTNAMELEN];	
+	char    buffer[255];
+	
+	cur_matches = 0;
+	ad->EvalInteger("CurMatches", NULL, cur_matches);
+
+	ad->LookupString(ATTR_NAME, remoteHost);
+	MyString rhost(remoteHost);
+	stashedAds->lookup( rhost, oldAdEntry);
+		
+	cur_matches++;
+	snprintf(buffer, 255, "CurMatches = %d", cur_matches);
+	ad->InsertOrUpdate(buffer);
+	delete(oldAdEntry->oldAd);
+	oldAdEntry->oldAd = new ClassAd(*ad);
+}
+
+int Matchmaker::HashFunc(const MyString &Key, int TableSize) {
+	return Key.Hash() % TableSize;
+}
+

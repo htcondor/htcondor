@@ -123,6 +123,11 @@ GLIDEIN_SITES =
 DAEMON_LIST                     = MASTER, SCHEDD  
 #DAEMON_LIST                    = MASTER, SCHEDD, COLLECTOR, NEGOTIATOR
 
+## 
+## Enable GridMonitor
+##
+ENABLE_GRID_MONITOR = TRUE
+
 ##--------------------------------------------------------------------
 ##  Flocking: Submitting jobs to more than one pool
 ##--------------------------------------------------------------------
@@ -132,9 +137,6 @@ DAEMON_LIST                     = MASTER, SCHEDD
 ##  To let others flock to you, define FLOCK_FROM.
 ## 
 ##  To flock to others, define FLOCK_TO.
-## 
-##  (and if they are running a condor_view server, then you can also
-##  define FLOCK_VIEW_SERVERS).
 
 ##  FLOCK_FROM defines the machines where you would like to grant
 ##  people access to your pool via flocking. (i.e. you are granting
@@ -164,19 +166,6 @@ FLOCK_COLLECTOR_HOSTS = $(FLOCK_TO)
 #FLOCK_NEGOTIATOR_HOSTS = condor.cs.wisc.edu, condor-negotiator.friendly.domain
 #FLOCK_COLLECTOR_HOSTS =  condor.cs.wisc.edu, condor-collector.friendly.domain
 
-##  (optional) FLOCK_VIEW_SERVERS is used if you would like to report
-##  your usage in a remote pool to a remote condor-view server.  If so,
-##  FLOCK_VIEW_SERVERS should contain a list of hostnames where the
-##  condor-view server is running in the pools to which you want your
-##  jobs to flock.  The order of this list must correspond to the
-##  order of the FLOCK_COLLECTOR_HOSTS and FLOCK_NEGOTIATOR_HOSTS
-##  lists.  List items may be empty for pools which don't use a
-##  separate condor-view server.  FLOCK_VIEW_SERVER may be left
-##  undefined if no remote pools use separate condor-view servers.
-##  Note: It is required that the same hostname does not appear twice
-##  in the FLOCK_VIEW_SERVERS list and that the CONDOR_VIEW_HOST does
-##  not appear in the FLOCK_VIEW_SERVERS list.
-#FLOCK_VIEW_SERVERS = condor-view.cs.wisc.edu, condor-view.friendly.domain
 
 ##--------------------------------------------------------------------
 ##  Host/IP access levels
@@ -277,7 +266,7 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 ##  condor account, it's probably condor.  Otherwise, it's whatever
 ##  you've set in the CONDOR_IDS environment variable.  See the Admin
 ##  manual for details on this.
-LOCK		= $(LOCAL_DIR)/log
+LOCK		= $(LOG)
 
 ##  If you don't use a fully qualified name in your /etc/hosts file
 ##  (or NIS, etc.) for either your official hostname or as an alias,
@@ -427,8 +416,8 @@ SHADOW_LOCK = $(LOCK)/ShadowLock
 ##  In most cases, your condor_collector and condor_negotiator are
 ##  going to run on the same machine.  If for some reason, this isn't
 ##  the case, here's where you'd change it:
-NEGOTIATOR_HOST = $(CONDOR_HOST)
-COLLECTOR_HOST  = $(CONDOR_HOST)
+#NEGOTIATOR_HOST = $(CONDOR_HOST)
+#COLLECTOR_HOST  = $(CONDOR_HOST)
 
 ##  How long are you willing to let daemons try their graceful
 ##  shutdown methods before they do a hard shutdown? (30 minutes)
@@ -465,6 +454,8 @@ MASTER				= $(SBIN)/condor_master
 SCHEDD				= $(SBIN)/condor_schedd
 NEGOTIATOR			= $(SBIN)/condor_negotiator
 COLLECTOR			= $(SBIN)/condor_collector
+GRID_MONITOR			= $(SBIN)/grid_monitor.sh
+
 
 ##  When the master starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -655,7 +646,7 @@ QUEUE_SUPER_USERS	= root, condor
 ## The GridManager will shut things down 3 minutes before loosing Contact
 ## because of an expired proxy. 
 ## In seconds, and defaults to 3 minutes
-#GRDIMANAGER_MINIMUM_PROXY_TIME  = 180
+#GRIDMANAGER_MINIMUM_PROXY_TIME  = 180
 
 ##--------------------------------------------------------------------
 ##  condor_shadow.pvm

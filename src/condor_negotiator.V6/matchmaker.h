@@ -26,10 +26,17 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_accountant.h"
 #include "condor_io.h"
+#include "HashTable.h"
 
 #ifdef WANT_NETMAN
 #include "../condor_netman/netman.h"
 #endif
+
+typedef struct MapEntry {
+	char *remoteHost;
+	int sequenceNum;
+	ClassAd *oldAd;
+} MapEntry;
 
 class Matchmaker : public Service
 {
@@ -59,7 +66,10 @@ class Matchmaker : public Service
 		// timeout handler (for periodic negotiations)
 		int negotiationTime ();
 
+
 	private:
+
+
 		// auxillary functions
 		bool obtainAdsFromCollector (ClassAdList&, ClassAdList&, ClassAdList&, ClassAdList& );	
 		int  negotiate(char *, char *, double, double, int,
@@ -74,7 +84,8 @@ class Matchmaker : public Service
 										   double &, double &);
 		char *getCapability (char *, char *, ClassAdList &);
 		void addRemoteUserPrios( ClassAdList& );
-
+		void reeval( ClassAd *ad );
+		static int HashFunc(const MyString &Key, int TableSize);
 		friend int comparisonFunction (ClassAd *, ClassAd *,
 										void *);
 
@@ -85,6 +96,9 @@ class Matchmaker : public Service
 		ExprTree *PreemptionReq;	// only preempt if true
 		ExprTree *PreemptionRank; 	// rank preemption candidates
 
+		typedef HashTable<MyString, MapEntry*> AdHash;
+		AdHash *stashedAds;	
+		
 #ifdef WANT_NETMAN
 		// allocate network capacity
 		NetworkManager netman;
@@ -120,6 +134,7 @@ class Matchmaker : public Service
 		// MatchClassAd for matchmaking
 		MatchClassAd mad;
 };
+
 
 
 #endif//__MATCHMAKER_H__

@@ -63,8 +63,8 @@ public:
 		*/
 	virtual bool JobExit( void );
 
-		/** Publish all attributes we care about for updating the
-			shadow into the given ClassAd.  This function is just
+		/** Publish all attributes we care about for updating the job
+			controller into the given ClassAd.  This function is just
 			virtual, not pure virtual, since OsProc and any derived
 			classes should implement a version of this that publishes
 			any info contained in each class, and each derived version
@@ -91,8 +91,7 @@ public:
 
 protected:
 
-	// flag to TRUE is job suspended, else FALSE
-	int job_suspended;
+	bool is_suspended;
 	
 		/// Number of pids under this OsProc
 	int num_pids;
@@ -100,12 +99,6 @@ protected:
 	bool dumped_core;
 	char* job_iwd;
 
-	void initKillSigs( void );
-
-	int soft_kill_sig;
-	int rm_kill_sig;
 };
 
-// a little helper function that will move to the util lib later
-int nullFile(const char *filename);
 #endif

@@ -23,7 +23,6 @@
 #ifndef __COLLECTOR_H__
 #define __COLLECTOR_H__
 
-#include "sched.h"
 
 enum AdTypes
 {

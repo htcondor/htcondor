@@ -25,11 +25,15 @@
 #include "condor_debug.h"
 #include "condor_syscall_mode.h"
 #include "condor_uid.h"
+#include "condor_config.h"
 #include "condor_environ.h"
 #include "condor_distribution.h"
+#include "my_username.h"
+
 
 /* See condor_uid.h for description. */
 static char* CondorUserName = NULL;
+static const char* RealUserName = NULL;
 THREAD_LOCAL_STORAGE static priv_state CurrentPrivState = PRIV_UNKNOWN;
 static int SwitchIds = TRUE;
 
@@ -54,7 +58,6 @@ static struct {
 } priv_history[HISTORY_LENGTH];
 static int ph_head=0, ph_count=0;
 
-
 const char*
 priv_to_string( priv_state p )
 {
@@ -63,7 +66,6 @@ priv_to_string( priv_state p )
 	}
 	return "PRIV_INVALID";
 }
-
 
 void
 log_priv(priv_state prev, priv_state new_priv, char file[], int line)
@@ -111,6 +113,8 @@ get_priv()
 #if defined(WIN32)
 
 #include "dynuser.h"
+#include "lsa_mgr.h"
+#include "token_cache.h"
 
 // Lots of functions just stubs on Win NT for now....
 void init_condor_ids() {}
@@ -122,12 +126,28 @@ gid_t get_my_gid() { return 999999; }
 uid_t getuid() { return get_my_uid(); }
 
 // Static/Global objects
-static dynuser DynUser;		// object to create a dynamic nobody user
+extern dynuser *myDynuser; 	// the "system wide" dynuser object
+
 static HANDLE CurrUserHandle = NULL;
-static char *NobodyLoginName = NULL;
+static char *UserLoginName = NULL; // either a "nobody" account or the submitting user
+static char *UserDomainName = NULL; // user's domain
+
+static token_cache cached_tokens; // we cache tokens to save time
 
 void uninit_user_ids() 
 {
+	// just reset the "current" pointers.
+	// this doesn't affect the cache, but
+	// makes it behave as though there is 
+	// no user to set_user_priv() on.
+	if ( UserLoginName ) {
+	   	free(UserLoginName);
+	}
+	if ( UserDomainName ) {
+		free(UserDomainName);
+	}
+	UserLoginName = NULL;
+	UserDomainName= NULL;
 	CurrUserHandle = NULL;
 }
 
@@ -136,52 +156,154 @@ HANDLE priv_state_get_handle()
 	return CurrUserHandle;
 }
 
-void init_user_nobody_loginname(const char *login)
-{
-	if ( NobodyLoginName ) {
-		free(NobodyLoginName);
-	}
-
-	NobodyLoginName = strdup(login);
+const char *get_user_loginname() {
+    return UserLoginName;
 }
 
-const char *get_user_nobody_loginname()
-{
-    return NobodyLoginName;
+const char *get_user_domainname() {
+    return UserDomainName;
 }
 
 int
-init_user_ids(const char username[]) 
+init_user_ids(const char username[], const char domain[]) 
 {
+	int retval = 0;
+
+	if (!username || !domain) {
+		dprintf(D_ALWAYS, "WARNING: init_user_ids() called with"
+			   " NULL arguments!");
+	   	return 0;
+   	}
+
+	
+	// see if we already have a user handle for the requested user.
+	// if so, just return 1. 
+	// TODO: cache multiple user handles to save time.
+
+	dprintf(D_FULLDEBUG, "init_user_ids: want user '%s@%s', "
+			"current is '%s@%s'\n",
+		username, domain, UserLoginName, UserDomainName);
+	
+	if ( CurrUserHandle = cached_tokens.getToken(username, domain)) {
+		dprintf(D_FULLDEBUG, "init_user_ids: Already have handle for %s@%s,"
+			" so returning.\n", username, domain);
+		return 1;
+	} else {
+		char* myusr = my_username();
+		char* mydom = my_domainname();
+
+		// see if our calling thread matches the user and domain
+		// we want a token for. This happens if we're submit for example.
+		if ( strcmp( myusr, username ) == 0 &&
+			 stricmp( mydom, domain ) == 0 ) { // domain is case insensitive
+
+			dprintf(D_FULLDEBUG, "init_user_ids: Calling thread has token "
+					"we want, so returning.\n");
+			CurrUserHandle = my_usertoken();
+			if (! CurrUserHandle ) {
+				dprintf(D_FULLDEBUG, "init_user_ids: handle is null!\n");
+			}
+			// these are strdup'ed, so we can just stash their pointers
+			UserLoginName = myusr;
+			UserDomainName = mydom;
+
+			// don't forget to drop it in the cache too
+			cached_tokens.storeToken(UserLoginName, UserDomainName,
+				   		CurrUserHandle);
+			return 1;
+		}
+	}
+
 	if ( strcmp(username,"nobody") != 0 ) {
-		// we want something *other* than "nobody".
-		// here we call routines to deal with password server
-		// or as Jeff says: "insert hand waving here"  :^)
-		return FALSE;
+		// here we call routines to deal with passwords. Hopefully we're
+		// running as LocalSystem here, otherwise we can't get at the 
+		// password stash.
+		lsa_mgr lsaMan;
+		char pw[255];
+		char user[255];
+		char dom[255];
+		wchar_t w_fullname[255];
+		wchar_t *w_pw;
+
+		// these should probably be snprintfs
+		swprintf(w_fullname, L"%S@%S", username, domain);
+		sprintf(user, "%s", username);
+		sprintf(dom, "%s", domain);
+		
+		// make sure we're SYSTEM when we do this
+		w_pw = lsaMan.query(w_fullname);
+
+
+		if ( ! w_pw ) {
+			dprintf(D_ALWAYS, "ERROR: Could not locate credential for user "
+				"'%s@%s'\n", username, domain);
+			return 0;
+		} else {
+			sprintf(pw, "%S", w_pw);
+
+			// we don't need the wide char pw anymore, so clean it up
+			ZeroMemory(w_pw, wcslen(w_pw)*sizeof(wchar_t));
+			delete[](w_pw);
+
+			dprintf(D_FULLDEBUG, "Found credential for user '%s'\n", username);
+			retval = LogonUser(
+				user,						// user name
+				dom,						// domain or server - local for now
+				pw,							// password
+				LOGON32_LOGON_INTERACTIVE,	// type of logon operation. 
+											// LOGON_BATCH doesn't seem to work right here.
+				LOGON32_PROVIDER_DEFAULT,	// logon provider
+				&CurrUserHandle				// receive tokens handle
+			);
+
+			// clear pw from memory
+			ZeroMemory(pw, 255);
+
+			dprintf(D_FULLDEBUG, "LogonUser completed.\n");
+
+			UserLoginName = strdup(username);
+			UserDomainName = strdup(domain);
+
+			if ( !retval ) {
+				dprintf(D_ALWAYS, "init_user_ids: LogonUser failed with NT Status %ld\n", 
+					GetLastError());
+				return 0;
+			} else {
+				// stash the new token in our cache
+				cached_tokens.storeToken(UserLoginName, UserDomainName,
+					   	CurrUserHandle);
+				return 1;
+			}
+		}
+		
+	} else {
+		///
+		// Here's where we use a nobody account
+		//
+		
+		dprintf(D_FULLDEBUG, "Using dynamic user account.\n");
+
+		myDynuser->reset();
+		// at this point, we know we want a user nobody, so
+		// generate a dynamic user and stash the handle
+
+				
+		if ( !myDynuser->init_user() ) {
+			// Oh shit.  
+			EXCEPT("Failed to create a user nobody");
+		}
+	
+		UserLoginName = strdup( myDynuser->get_accountname() );
+		UserDomainName = strdup( "." );
+
+		// we created a new user, now just stash the token
+		CurrUserHandle = myDynuser->get_token();
+
+		// drop the handle in our cache too
+		cached_tokens.storeToken(UserLoginName, UserDomainName,
+			   		CurrUserHandle);
+		return 1;
 	}
-
-	// at this point, we know we want a user nobody, so
-	// generate a dynamic user and stash the handle
-
-	if ( DynUser.get_token() ) {
-		// we already have a user nobody handle created
-		// so just make it the CurrUserHandle
-		CurrUserHandle = DynUser.get_token();
-		return TRUE;
-	}
-
-	if ( !NobodyLoginName ) {
-		EXCEPT("NobodyLoginName not initialized");
-	}
-
-	if ( !DynUser.createuser(NobodyLoginName) ) {
-		// Oh shit.  
-		EXCEPT("Failed to create a user nobody");
-	}
-
-	// we created a new user, now just stash the token
-	CurrUserHandle = DynUser.get_token();
-	return TRUE;
 }
 
 priv_state
@@ -217,6 +339,7 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 			break;
 		case PRIV_USER:
 		case PRIV_USER_FINAL:
+			dprintf(D_FULLDEBUG, "TokenCache contents: \n%s", cached_tokens.cacheToString().Value());
 			if ( CurrUserHandle ) {
 				if ( PrevPrivState == PRIV_UNKNOWN ) {
 					// make certain we're back to 'condor' before impersonating
@@ -224,9 +347,9 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 				}
 				ImpersonateLoggedOnUser(CurrUserHandle);
 			} else {
-				// We do not have a CurrUserHandle.  So don't record ourselves
-				// as in a user priv state.... switch back to what we were.
-				CurrentPrivState = PrevPrivState;
+				// Tried to set_user_priv() but it failed, so bail out!
+
+				EXCEPT("set_user_priv() failed!");
 			}
 			break;
 		case PRIV_UNKNOWN:		/* silently ignore */
@@ -306,9 +429,29 @@ is_root( void )
 }
 
 
+const char*
+get_real_username( void )
+{
+	if( ! RealUserName ) {
+		RealUserName = strdup( "system" );
+	}
+	return RealUserName;
+}
+
 #else  // end of ifdef WIN32, now below starts Unix-specific code
 
 #include <grp.h>
+
+#if defined(HPUX11)
+/* XXX eh, this uid stuff needs to be cleaned up again... */
+#if defined(__cplusplus)
+extern "C" int seteuid(uid_t);
+extern "C" int setegid(gid_t);
+#else
+int seteuid(uid_t);
+int setegid(gid_t);
+#endif
+#endif
 
 #if defined(AIX31) || defined(AIX32)
 #include <sys/types.h>
@@ -352,8 +495,11 @@ static int set_user_egid();
 static int set_user_ruid();
 static int set_user_rgid();
 static int set_root_euid();
+
+#if 0 // these are not used, probably could be removed...
 static int set_condor_ruid();
 static int set_condor_rgid();
+#endif
 
 /* We don't use EXCEPT here because this file is used in
    condor_syscall_lib.a.  -Jim B. */
@@ -370,7 +516,11 @@ init_condor_ids()
 {
 	struct passwd *pwd;
 	int scm;
-	char *buf;
+	char* env_val = NULL;
+	char* config_val = NULL;
+	char* val = NULL;
+	uid_t envCondorUid = MAXINT;
+	gid_t envCondorGid = MAXINT;
 
         /*
         ** N.B. if we are using the yellow pages, system calls which are
@@ -391,45 +541,66 @@ init_condor_ids()
 		RealCondorUid = pwd->pw_uid;
 		RealCondorGid = pwd->pw_gid;
 	} else {
-		RealCondorUid = -1;
-		RealCondorGid = -1;
+		RealCondorUid = MAXINT;
+		RealCondorGid = MAXINT;
+	}
+
+	const char	*envName = EnvGetName( ENV_UG_IDS ); 
+	if( (env_val = getenv(envName)) ) {
+		val = env_val;
+	} else if( (config_val = param(envName)) ) {
+		val = config_val;
+	}
+	if( val ) {  
+		if( sscanf(val, "%d.%d", &envCondorUid, &envCondorGid) != 2 ) {
+			fprintf( stderr, "ERROR: badly formed value in %s ", envName );
+			fprintf( stderr, "%s variable (%s).\n",
+					 env_val ? "environment" : "config file", val );
+			fprintf( stderr, "Please set %s to ", envName );
+			fprintf( stderr, "the '.' seperated uid, gid pair that\n" );
+			fprintf( stderr, "should be used by %s.\n", myDistro->Get() );
+			exit(1);
+		}
+		pwd = getpwuid( envCondorUid );
+		if( pwd ) {
+			CondorUserName = strdup( pwd->pw_name );
+		} else {
+			fprintf( stderr, "ERROR: the uid specified in %s ", envName );
+			fprintf( stderr, "%s variable (%d)\n", 
+					 env_val ? "environment" : "config file", envCondorUid );
+			fprintf(stderr, "does not exist in your password information.\n" );
+			fprintf(stderr, "Please set %s to ", envName);
+			fprintf(stderr, "the '.' seperated uid, gid pair that\n");
+			fprintf(stderr, "should be used by %s.\n", myDistro->Get() );
+			exit(1);
+		}
+	}
+	if( config_val ) {
+		free( config_val );
+		config_val = NULL;
+		val = NULL;
 	}
 
 	/* If we're root, set the Condor Uid and Gid to the value
 	   specified in the "CONDOR_IDS" environment variable */
 	if( MyUid == ROOT ) {
 		const char	*envName = EnvGetName( ENV_UG_IDS ); 
-		if( (buf = getenv( envName )) ) {	
-			if( sscanf(buf, "%d.%d", &CondorUid, &CondorGid) != 2 ) {
-				fprintf(stderr, "ERROR: badly formed value in %s ", envName );
-				fprintf(stderr, "environment variable.\n");
-				fprintf(stderr, "Please set %s to ", envName);
-				fprintf(stderr, "the '.' seperated uid, gid pair that\n");
-				fprintf(stderr, "should be used by %s.\n", myDistro->Get() );
-				exit(1);
-			}
-			pwd = getpwuid( CondorUid );
-			if( pwd ) {
-				CondorUserName = strdup( pwd->pw_name );
-			} else {
-				fprintf( stderr, "ERROR: the uid specified in %s ", envName );
-				fprintf( stderr, "environment variable (%d)\n", CondorUid );
-				fprintf(stderr, "does not exist in your password information.\n" );
-				fprintf(stderr, "Please set %s to ", envName);
-				fprintf(stderr, "the '.' seperated uid, gid pair that\n");
-				fprintf(stderr, "should be used by %s.\n", myDistro->Get() );
-				exit(1);
-			}
+		if( envCondorUid != MAXINT ) {	
+			/* CONDOR_IDS are set, use what it said */
+				CondorUid = envCondorUid;
+				CondorGid = envCondorGid;
 		} else {
 			/* No CONDOR_IDS set, use condor.condor */
-			if( RealCondorUid > 0 ) {
+			if( RealCondorUid != MAXINT ) {
 				CondorUid = RealCondorUid;
 				CondorGid = RealCondorGid;
 				CondorUserName = strdup( myDistro->Get() );
 			} else {
-				fprintf(stderr,
-						"Can't find \"condor\" in the password file and\n"
-						"%s environment variable not set\n", envName); 
+				fprintf( stderr,
+						 "Can't find \"%s\" in the password file and "
+						 "%s not defined in %s_config or as an "
+						 "environment variable.\n", myDistro->Get(),
+						 myDistro->Get(), envName );
 				exit(1);
 			}
 		}
@@ -449,6 +620,16 @@ init_condor_ids()
 		} else {
 			/* Cannot find an entry in the passwd file for this uid */
 			CondorUserName = strdup("Unknown");
+		}
+
+		/* If CONDOR_IDS environment variable is set, and set to the same uid
+		   that we are running as, then behave as if the daemons are running
+		   as user "condor" -- i.e. allow any user to submit jobs to these daemons,
+		   not just the user running the daemons.
+		*/
+		if ( MyUid == envCondorUid ) {
+			RealCondorUid = MyUid;
+			RealCondorGid = MyGid;
 		}
 
 		/* no need to try to switch ids when running as non-root */
@@ -474,6 +655,13 @@ set_user_ids_implementation( uid_t uid, gid_t gid, const char *username,
 		dprintf( D_ALWAYS, "ERROR: Attempt to initialize user_priv " 
 				 "with root privileges rejected\n" );
 		return FALSE;
+	}
+		// So if we are not root, trying to use any user id is bogus
+		// since the OS will disallow it.  So if we are not running as
+		// root, may as well just set the user id to be the real id.
+	if ( get_my_uid() != ROOT ) {
+		uid = get_my_uid();
+		gid = get_my_gid();
 	}
 
 	if( UserIdsInited && UserUid != uid && !is_quiet ) {
@@ -533,10 +721,10 @@ init_nobody_ids( int is_quiet )
 		}
 		return FALSE;
 #endif
+	} else {
+		nobody_uid = pwd_entry->pw_uid;
+		nobody_gid = pwd_entry->pw_gid;
 	}
-
-	nobody_uid = pwd_entry->pw_uid;
-	nobody_gid = pwd_entry->pw_gid;
 
 #ifdef HPUX
 	// HPUX9 has a bug in that getpwnam("nobody") always returns
@@ -577,6 +765,14 @@ init_user_ids_implementation( const char username[], int is_quiet )
     struct passwd       *pwd;
 	int					scm;
 
+		// So if we are not root, trying to use any user id is bogus
+		// since the OS will disallow it.  So if we are not running as
+		// root, may as well just set the user id to be the real id.
+	if ( get_my_uid() != ROOT ) {
+		return set_user_ids_implementation( get_my_uid(), get_my_gid(),
+										NULL, is_quiet ); 
+	}
+
 	/*
 	** N.B. if we are using the yellow pages, system calls which are
 	** not supported by either remote system calls or file descriptor
@@ -594,6 +790,8 @@ init_user_ids_implementation( const char username[], int is_quiet )
 		if( ! is_quiet ) {
 			dprintf( D_ALWAYS, "%s not in passwd file\n", username );
 		}
+		(void)endpwent();
+		(void)SetSyscalls( scm );
 		return FALSE;
 	}
 	(void)endpwent();
@@ -604,7 +802,8 @@ init_user_ids_implementation( const char username[], int is_quiet )
 
 
 int
-init_user_ids( const char username[] ) {
+init_user_ids( const char username[], const char domain[] ) {
+	// we ignore the domain parameter on UNIX
 	return init_user_ids_implementation( username, 0 );
 }
 
@@ -896,6 +1095,7 @@ set_root_euid()
 }
 
 
+#if 0   // these functions not needed... probably could be removed completely
 int
 set_condor_ruid()
 {
@@ -916,7 +1116,7 @@ set_condor_rgid()
 
 	return SET_REAL_GID(CondorGid);
 }
-
+#endif
 
 int
 is_root( void ) 
@@ -924,4 +1124,28 @@ is_root( void )
 	return (! getuid() );
 }
 
+
+const char*
+get_real_username( void )
+{
+	if( ! RealUserName ) {
+		uid_t my_uid = getuid();
+		struct passwd *pwd;
+		pwd = getpwuid( my_uid );
+		if( pwd ) {
+			RealUserName = strdup( pwd->pw_name );
+		} else {
+			char buf[64];
+			sprintf( buf, "uid %d", (int)my_uid );
+			RealUserName = strdup( buf );
+		}
+	}
+	return RealUserName;
+}
+
+/* return the login of whomever you get when you call set_user_priv() */
+const char*
+get_user_loginname() {
+	return UserName;
+}
 #endif  /* #if defined(WIN32) */

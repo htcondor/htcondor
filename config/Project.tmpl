@@ -5,9 +5,6 @@
 
 LIBC = LibC
 SIMPLE_LIBC = SimpleLibC
-EGCS_LIBC = LIB_GCC
-
-CRT0 = Crt0
 
 TOP = Top
 TMP_DIR = TmpDir
@@ -61,6 +58,10 @@ SNPRINTF_FLAGS =
 #define PlatformGccFlags
 #endif
 
+#if !defined(PlatformGppFlags)
+#define PlatformGppFlags
+#endif
+
 #if !defined(PlatformLdFlags)
 #define PlatformLdFlags
 #endif
@@ -109,28 +110,28 @@ PLATFORM_LDFLAGS = PlatformLdFlags
 PURIFY_PLATFORM_LDFLAGS = PurifyPlatformLdFlags
 TEST_PLATFORM_LDFLAGS = TestPlatformLdFlags
 
-##########
-# Orbacus settings
-##########
+CMNT ##########
+CMNT Orbacus settings
+CMNT ##########
 #if !defined( PlatformOBLibs )
 #define PlatformOBLibs
 #endif
 
-# Libraries needed to link with OB
+CMNT Libraries needed to link with OB
 OB_LIBS = -lOB -lJTC -lpthread PlatformOBLibs
 
-# Where are all the OB files kept
+CMNT Where are all the OB files kept
 OB_ROOT = /unsup/OB
 
-# IDL is an Orbacus tool for creating source files from .idl files
+CMNT IDL is an Orbacus tool for creating source files from .idl files
 IDL = $(OB_ROOT)/bin/idl --c-suffix .C -I$(OB_ROOT)/include 
 
-# In general, we need to use a different version of g++ to build the
-# idl-generated source files (gcc 2.95) than we use to build the rest
-# of Condor (egcs 1.1.2)
+CMNT In general, we need to use a different version of g++ to build the
+CMNT idl-generated source files (gcc 2.95) than we use to build the rest
+CMNT of Condor (egcs 1.1.2)
 IDL_CC = /s/gcc-2.95.2/bin/g++
 
-# Particle Physics Data Grid CORBA IDL dir
+CMNT Particle Physics Data Grid CORBA IDL dir
 PPDG_IDL_DIR = /p/condor/workspaces/ppdg/ppdg_idl/idl
 
 /*
@@ -166,7 +167,7 @@ endif
 
 #if HAS_CP_PRESERVE			/* cp lib w/o changing modify time - don't ranlib */
 #	define COPY_LIBRARY(src,dst) cp -p src dst
-#	define RANLIB_TOUCH(lib)	/**/
+#	define RANLIB_TOUCH(lib)	/bin/true
 #else
 #	if HAS_RANLIB_TOUCH		/* cp lib changes modify time - ranlib -t */
 #		define COPY_LIBRARY(src,dst) cp src dst
@@ -211,7 +212,7 @@ OS_FLAG = OperatingSystem
 ARCH_FLAG = Architecture
 
 #if !defined( DebugFlag )
-#define DebugFlag -g
+#define DebugFlag -g -Wall
 #endif
 
 DEBUG_FLAG = DebugFlag
@@ -228,6 +229,10 @@ DEBUG_FLAG = DebugFlag
 #define PlatformFlags
 #endif
 
+#if !defined( CCompilerId )
+#define CCompilerId
+#endif
+
 #if !defined( VendorCTestFlags )
 #define VendorCTestFlags
 #endif
@@ -240,6 +245,15 @@ DEBUG_FLAG = DebugFlag
 #define VendorFTestFlags
 #endif
 
+
+#if WANT_CLASSAD_FUNCTIONS && HAS_DLOPEN
+    #define CLASSAD_FUNCTIONS YES
+#endif
+
+#if WANT_DAGMAN_HELPER && HAS_DAGMAN_HELPER
+    #define DAGMAN_HELPER YES
+#endif 
+
 #if WANT_CONDOR_G && HAS_GLOBUS
 
   #define NEEDS_GSI YES
@@ -250,30 +264,15 @@ DEBUG_FLAG = DebugFlag
  CONDOR_G_FLAGS =
 #endif /*HasGlobus && WantCondorG */
 
-GLOBUS_LIB = $(GlobusPath)/lib/libglobus_gass_server_ez_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_gass_transfer_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_duroc_control_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_duct_control_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_duroc_common_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_duct_common_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_rsl_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_gram_client_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_nexus_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_gram_protocol_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_dc_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_mp_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_io_$(GlobusFlavor).a \
-    $(GlobusPath)/lib/libglobus_common_$(GlobusFlavor).a
-
-/* X509 Authentication requires globus*/
-#if WANT_X509 && HAS_GSI
+/* GSI Authentication requires globus*/
+#if WANT_GSI && HAS_GSI
   #define NEEDS_GSI YES
-  X509_FLAGS = -DX509_AUTHENTICATION
-  X509_LIB =
+  GSI_AUTH_FLAGS = -DGSI_AUTHENTICATION
+  GSI_AUTH_LIB =
 #else
-  X509_FLAGS =
-  X509_LIB   = 
-#endif /* WANT_X509 && HAS_GSI */
+  GSI_AUTH_FLAGS =
+  GSI_AUTH_LIB   = 
+#endif /* WANT_GSI && HAS_GSI */
 
 /* Kerberos */
 #if HAS_KERBEROS && WANT_KERBEROS
@@ -323,12 +322,20 @@ GLOBUS_LIB = $(GlobusPath)/lib/libglobus_gass_server_ez_$(GlobusFlavor).a \
 #if NEEDS_GSI && HAS_GSI
   /* Make sure that USE_GLOBUS_OPENSSL is set */
   #define NEEDS_OPENSSL YES
-  GSI_FLAGS = -DCONDOR_GSI
+  GSI_FLAGS = -DCONDOR_GSI $(GSI_AUTH_FLAGS)
   GSI_LIB   = $(GlobusPath)/lib/libglobus_gss_assist_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_gsi_cert_utils_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_gsi_credential_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_gsi_proxy_core_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_proxy_ssl_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_gsi_callback_$(GlobusFlavor).a \
 	      $(GlobusPath)/lib/libglobus_gssapi_gsi_$(GlobusFlavor).a \
-	      $(GlobusPath)/lib/libglobus_ssl_utils_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libssl_$(GlobusFlavor).a \
+   	      $(GlobusPath)/lib/libglobus_gsi_sysconfig_$(GlobusFlavor).a \
 	      $(GlobusPath)/lib/libglobus_openssl_$(GlobusFlavor).a \
-	      $(GlobusPath)/lib/libglobus_common_$(GlobusFlavor).a
+	      $(GlobusPath)/lib/libglobus_openssl_error_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_oldgaa_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_common_$(GlobusFlavor).a 
 #else
   GSI_FLAGS =
   GSI_LIB   =
@@ -352,9 +359,9 @@ GLOBUS_LIB = $(GlobusPath)/lib/libglobus_gass_server_ez_$(GlobusFlavor).a \
 #endif
 
 /* Collect all the security-related variables into a single variable */
-SECURITY_FLAGS = $(X509_FLAGS) $(KERBEROS_FLAG) $(ENCRYPTION_FLAGS) \
+SECURITY_FLAGS = $(GSI_FLAGS) $(KERBEROS_FLAG) $(ENCRYPTION_FLAGS) \
 		 $(MD_FLAGS) $(GSI_FLAGS) $(OPENSSL_FLAGS)
-SECURITY_LIB   = $(X509_LIB) $(KERBEROS_LIB) $(ENCRYPTION_LIB) \
+SECURITY_LIB   = $(GSI_LIB) $(KERBEROS_LIB) $(ENCRYPTION_LIB) \
 		 $(MD_LIB) $(GSI_LIB) $(OPENSSL_LIB)
 
 #if WANT_NETMAN
@@ -383,7 +390,7 @@ make the SDK.
 
 /* CC_PIC_FLAG = -fPIC */
 
-STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) $(CC_PIC_FLAG) PlatformFlags PlatformGccFlags
+STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) $(CC_PIC_FLAG) PlatformFlags PlatformGccFlags CCompilerId
 STD_C_PLUS_FLAGS  = $(STD_C_FLAGS)
 INST_C_PLUS_FLAGS = $(C_PLUS_FLAGS)
 NON_INST_C_PLUS_FLAGS = -fno-implicit-templates $(C_PLUS_FLAGS)

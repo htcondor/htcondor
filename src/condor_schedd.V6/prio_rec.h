@@ -41,6 +41,7 @@ public:
     int         status;
     int         qdate;
     char        owner[100];                         /* valid only if D_UPDOWN */
+	int			auto_cluster_id;
 
 	prio_rec() { *owner='\0'; }
 };

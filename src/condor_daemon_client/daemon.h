@@ -29,8 +29,10 @@
 #include "condor_classad.h"
 #include "condor_collector.h"
 #include "condor_secman.h"
+#include "condor_network.h" // For the port numbers...
 #include "daemon_types.h"
 #include "KeyCache.h"
+#include "CondorError.h"
 
 
 /** 
@@ -92,14 +94,6 @@ public:
 		  @param pool The name of the pool, NULL if you want local */
 	Daemon( daemon_t type, const char* name = NULL, 
 				const char* pool = NULL );
-
-		/** Constructor.
-		  @param addr_string This can be a sinful string.  If not, it should be an
-		    IP address or hostname and the port parameter must be set as well.
-		  @param port        The port to connect to.  This parameter is ignored if
-		    the addr_string parameter is a sinful string (i.e. already has a port).
-		*/
-	Daemon( const char* addr_string, int port = 0 );
 
 		/// Destructor.
 	virtual ~Daemon();
@@ -240,7 +234,7 @@ public:
 		  @param sec Number of seconds for the timeout on connect().
 		  @return A new ReliSock object connected to the daemon.  
 		  */
-	ReliSock* reliSock( int sec = 0 );
+	ReliSock* reliSock( int sec = 0, CondorError* errstack = 0 );
 
 		/**	Create a new SafeSock object, connected to the daemon.
 		  Callers can optionally specify a timeout to use for the
@@ -249,7 +243,7 @@ public:
 		  @param sec Number of seconds for the timeout on connect().
 		  @return A new SafeSock object connected to the daemon.  
 		  */
-	SafeSock* safeSock( int sec = 0 );
+	SafeSock* safeSock( int sec = 0, CondorError* errstack = 0 );
 
 public:
 		/** Send the given command to the daemon.  The caller gives
@@ -265,7 +259,7 @@ public:
 		  */
 	bool sendCommand( int cmd, 
 					   Stream::stream_type st = Stream::reli_sock,
-					   int sec = 0 );
+					   int sec = 0, CondorError* errstack = NULL );
 	
 		/** Send the given command to the daemon.  The caller gives
 		  the command they want to send, a pointer to the Sock they
@@ -279,7 +273,7 @@ public:
 		  @param sec The timeout you want to use on your Sock.
 		  @return Success or failure.
 		  */
-	bool sendCommand( int cmd, Sock* sock, int sec = 0 );
+	bool sendCommand( int cmd, Sock* sock, int sec = 0, CondorError* errstack = NULL );
 
 		/** Start sending the given command to the daemon.  The caller
 		  gives the command they want to send, and the type of Sock
@@ -296,7 +290,7 @@ public:
 		  */
 	Sock* startCommand( int cmd, 
 				Stream::stream_type st = Stream::reli_sock,
-				int sec = 0 );
+				int sec = 0, CondorError* errstack = NULL );
 	
 		/** Start sending the given command to the daemon.  The caller
 		  gives the command they want to send, and a pointer to the
@@ -309,7 +303,8 @@ public:
 		  @return NULL on error, or the Sock object to use for the
 		  rest of the command on success.
 		*/
-	bool startCommand( int cmd, Sock* sock, int sec = 0 );
+	bool startCommand( int cmd, Sock* sock,
+			int sec = 0, CondorError* errstack = NULL );
 
 protected:
 	// Data members
@@ -323,10 +318,14 @@ protected:
 	char* _pool;
 	char* _error;
 	char* _id_str;
+	char* _subsys;
 	int _port;
 	daemon_t _type;
 	bool _is_local;
 	bool _tried_locate;
+	bool _tried_init_hostname;
+	bool _tried_init_version;
+	bool _is_configured; 
 	SecMan _sec_man;
 
 
@@ -359,16 +358,43 @@ protected:
 		  b/c if we can't find condor_view-specific entries, we fall
 		  back and try to just find the default collector.  
 		  @param subsys The subsystem string for this daemon
-		  @param port The fixed port for this daemon
 		  @return Whether or not we found the info we want
 		  */
-	bool getCmInfo( const char* subsys, int port );
+	bool getCmInfo( const char* subsys );
+
+		/** Helper to initialize the hostname if we don't have it
+			already, but we do have an IP address.  Usually, when we
+			locate(), we can get all the hostname info for free, but
+			if we're instantiated just with a sinful string, we don't
+			bother looking that IP up in the appropriate hostinfo
+			database unless we need it.
+		*/
+	bool initHostname( void );
+
+		/** Helper to initialize the hostname once we have the full
+			hostname.  This is shared in a few places, so it now lives
+			in a seperate method.
+		*/
+	bool initHostnameFromFull( void );
+
+		/** Helper to initialize the version and platform string if we
+			don't have it already.  Usually, when we locate(), we can
+			get all this info for free, either from the local address
+			file or the ClassAd we got back from querying a collector.
+			However, if we don't have it, we don't go out of our way
+			to find it (like calling ident on the binary) unless we
+			need it.
+		*/
+	bool initVersion( void );
+
+		/** Get the default port based on what type of Daemon we are */
+	int getDefaultPort( void );
 
 		/** Set a new value for the error string.  If the error string
 		  is already set, deallocate the existing string.  Then, make
 		  a copy of the given string and store that in _error.
 		  */
-	void newError( char* );
+	void newError( const char* );
 
 		/** Returns a string containing the local daemon's name.  If
 		  the <subsys>_NAME parameter is set in the config file, we
@@ -397,6 +423,51 @@ protected:
 	char* New_addr( char* );
 	char* New_pool( char* );
 
+		/**
+		   Set a string so we know what command we're inside for use
+		   in constructing error messages, and so we know the last
+		   command we tried to perform.
+		 */
+	void setCmdStr( const char* cmd );
+	char* _cmd_str;
+
+		/** 
+ 		   Helper method for the client-side of the ClassAd-only
+		   protocol.  This method will try to: locate our daemon,
+		   create a ReliSock, try to connect(), send the CA_CMD int,
+		   send a ClassAd and an EOM, read back a ClassAd and EOM,
+		   lookup the ATTR_RESULT in the reply, and if it's FALSE,
+		   lookup ATTR_ERROR_STRING.  This deals with everything for
+		   you, so all you have to do if you want to use this protocol
+		   is define a method that sets up up the right request ad and
+		   calls this.
+		   @param req Pointer to the request ad (you fill it in)
+		   @param reply Pointer to the reply ad (from the server)
+		   @param force_auth Should we force authentication for this cmd?
+		   @param timeout Network timeout to use (ignored if < 0 )
+		   @return false if there were any network errors, if
+		   ATTR_ERROR_STRING is defined, and/or if ATTR_RESULT is not
+		   CA_SUCCESS.  Otherwise, true.   
+		*/
+	bool sendCACmd( ClassAd* req, ClassAd* reply, bool force_auth,
+					int timeout = -1 );
+
+		/** 
+		   Helper method for commands to see if we've already got the
+		   right address for our daemon.  If not, we try to locate
+		   it.  
+		   @return true if we've got the address or found it, false 
+		   if we failed to locate it.
+		*/
+	bool checkAddr( void );
+
+		/**
+           Helper method for commands to see if we've already
+           authenticated this socket, and if not, to try to do so.
+		*/
+    bool forceAuthentication( ReliSock* rsock, CondorError* errstack );
+
+
  private:
 
 		// I can't be copied (yet)
@@ -404,5 +475,8 @@ protected:
 	Daemon& operator = ( const Daemon& );
 
 };
+
+// Prototype to get sinful string.
+char *global_dc_sinful( void );
 
 #endif /* CONDOR_DAEMON_H */

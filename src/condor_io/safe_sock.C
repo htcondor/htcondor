@@ -230,13 +230,12 @@ int SafeSock::connect(
 		string_to_sin(host, &_who);
 	}
 	/* try to get a decimal notation first 			*/
-	else if( (inaddr=inet_addr(host)) != (unsigned int)(-1) ) {
+	else if( (inaddr=inet_addr(host)) != (unsigned long)(-1L) ) {
 		memcpy((char *)&_who.sin_addr, &inaddr, sizeof(inaddr));
 	} else {
 		/* if dotted notation fails, try host database	*/
 		hostp = gethostbyname(host);
 		if( hostp == (struct hostent *)0 ) {
-			dprintf(D_NETWORK, "SafeSock::connect: no host entry\n");
 			return FALSE;
 		} else {
 			memcpy(&_who.sin_addr, hostp->h_addr, sizeof(hostp->h_addr));
@@ -462,7 +461,7 @@ int SafeSock::peek(char &c)
  */
 int SafeSock::handle_incoming_packet()
 {
-	SOCKET_LENGTH_TYPE fromlen = sizeof(struct sockaddr_in);
+	SOCKET_SENDRECV_LENGTH_TYPE fromlen = sizeof(struct sockaddr_in);
 	bool last;
 	int seqNo, length;
 	_condorMsgID mID;
@@ -478,6 +477,7 @@ int SafeSock::handle_incoming_packet()
 		dprintf(D_NETWORK, "recvfrom failed: errno = %d\n", errno);
 		return FALSE;
 	}
+
 	dprintf( D_NETWORK, "RECV %s ", sock_to_string(_sock) );
 	dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string(&_who) );
 	length = received;
@@ -643,7 +643,7 @@ char * SafeSock::serialize(char *buf)
 	// first, let our parent class restore its state
 	ptmp = Sock::serialize(buf);
 	ASSERT( ptmp );
-	sscanf(ptmp,"%d*",&_special_state);
+	sscanf(ptmp,"%d*",(int*)&_special_state);
     // skip through this
     ptmp = strchr(ptmp, '*');
     ptmp++;

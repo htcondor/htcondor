@@ -3,7 +3,7 @@
  *
  * See LICENSE.TXT for additional notices and disclaimers.
  *
- * Copyright (c)1990-2001 CONDOR Team, Computer Sciences Department, 
+ * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
@@ -27,6 +27,8 @@
 #include "condor_common.h"      /* for <stdio.h> */
 #include "condor_constants.h"   /* from condor_includes/ directory */
 #include "simplelist.h"         /* from condor_c++_util/ directory */
+#include "MyString.h"
+#include "list.h"
 
 //
 // Local DAGMan includes
@@ -65,6 +67,16 @@
 class Job {
   public:
   
+  //--> DAP
+  enum job_type_t{
+    CONDOR_JOB,
+    DAP_JOB
+  };
+  
+  job_type_t job_type;
+  
+  //<-- DAP
+  
     /** Enumeration for specifying which queue for Add() and Remove().
         If you change this enum, you *must* also update queue_t_names
     */
@@ -100,6 +112,7 @@ class Job {
   
     /** The Status of a Job
         If you update this enum, you *must* also update status_t_names
+		and the IsActive() method, etc.
     */
     enum status_t {
         /** Job is ready for submission */ STATUS_READY,
@@ -127,11 +140,17 @@ class Job {
     ///
     ~Job();
   
-    // returns _jobName
-	inline const char* GetJobName() { return _jobName; }
+	inline const char* GetJobName() const { return _jobName; }
+	inline const char* GetCmdFile() const { return _cmdFile; }
+	inline const JobID_t GetJobID() const { return _jobID; }
+	inline const int GetRetryMax() const { return retry_max; }
+	inline const int GetRetries() const { return retries; }
+	const char* GetPreScriptName() const;
+	const char* GetPostScriptName() const;
 
-    /** */ inline char *  GetCmdFile () const { return _cmdFile; }
-    /** */ inline JobID_t GetJobID   () const { return _jobID;   }
+	bool AddPreScript( const char *cmd, MyString &whynot );
+	bool AddPostScript( const char *cmd, MyString &whynot );
+	bool AddScript( bool post, const char *cmd, MyString &whynot );
 
     Script * _scriptPre;
     Script * _scriptPost;
@@ -147,9 +166,7 @@ class Job {
         @param queue The queue to add the job to
         @return true: success, false: failure (lack of memory)
     */
-    inline bool Add (const queue_t queue, const JobID_t jobID) {
-        return _queues[queue].Append(jobID);
-    }
+    bool Add( const queue_t queue, const JobID_t jobID );
 
     /** Returns true if this job is ready for submittion.
         @return true if job is submitable, false if not
@@ -173,6 +190,23 @@ class Job {
     inline bool IsEmpty (const queue_t queue) const {
         return _queues[queue].IsEmpty();
     }
+
+    /** Returns the node's current status
+        @return the node's current status
+    */
+	status_t GetStatus() const;
+    /** Returns the node's current status string
+        @return address of a string describing the node's current status
+    */
+	const char* GetStatusName() const;
+
+	bool HasChild( Job* child );
+	bool HasParent( Job* child );
+
+	bool RemoveChild( Job* child, MyString &whynot );
+	bool RemoveParent( Job* parent, MyString &whynot );
+	bool RemoveDependency( queue_t queue, JobID_t job );
+	bool RemoveDependency( queue_t queue, JobID_t job, MyString &whynot );
  
     /** Dump the contents of this Job to stdout for debugging purposes.
         @param level Only do the dump if the current debug level is >= level
@@ -184,6 +218,22 @@ class Job {
      */
     void Print (bool condorID = false) const;
   
+		// double-check internal data structures for consistency
+	bool SanityCheck() const;
+
+	bool AddParent( Job* parent );
+	bool AddChild( Job* child );
+
+		// should be called when the job terminates
+	bool TerminateSuccess();
+	bool TerminateFailure();
+
+    /** Returns true if the node's pre script, batch job, or post
+        script are currently submitted or running.
+        @return true: node is active, false: otherwise
+    */
+	bool IsActive() const;
+
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
 
@@ -195,13 +245,36 @@ class Job {
     // the return code of the job
     int retval;
 	
+	// somewhat kludgey, but this indicates to Dag::TerminateJob()
+	// whether Dag::_numJobsDone has been incremented for this node
+	// yet or not (since that method can now be called more than once
+	// for a given node); it should not be examined or changed
+	// unless/until node is STATUS_DONE
+	bool countedAsDone;
+
     //Node has been visited by DFS order
 	bool _visited; 
 	
 	//DFS ordering of the node
 	int _dfsOrder; 
-  private:
+
+	//The log file for this job -- needed because we're now allowing
+	//each job to have its own log file.
+	char *_logFile;
+
+	// DAG definition files can now pass named variables into job submit files.
+	// For lack of a pair<> class, I made two lists, and these lists work together
+	// closely. The order of their items defines the mapping between names
+	// and values of these named variables, i.e., for the first named variable, its
+	// name is the first item in varNamesFromDag, and its value is the first item
+	// in varValsFromDag.
+	List<MyString> *varNamesFromDag;
+	List<MyString> *varValsFromDag;
+
+private:
   
+	bool AddDependency( Job* parent, Job* child );
+
     // filename of condor submit file
     char * _cmdFile;
   
@@ -225,6 +298,10 @@ class Job {
         by one for every Job object that is constructed
     */
     static JobID_t _jobID_counter;
+
+		// the number of my parents that have yet to complete
+		// successfully
+	int _waitingCount;
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.

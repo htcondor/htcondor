@@ -36,6 +36,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
+#include "condor_string.h"
 #include "sysapi.h"
 #include "sysapi_externs.h"
 
@@ -93,6 +94,25 @@ sysapi_reconfig(void)
 			EXCEPT( "Out of memory in sysapi_reconfig()!" );
 		}
         _sysapi_console_devices->initializeFromString( tmp );
+
+	// if "/dev/" is prepended to any of the device names, strip it
+	// here, since later on we're expecting the bare device name
+	if( _sysapi_console_devices ) {
+ 	        char *devname = NULL;
+		const char* striptxt = "/dev/";
+		const int striplen = strlen( striptxt );
+		_sysapi_console_devices->rewind();
+		while( (devname = _sysapi_console_devices->next()) ) {
+		  if( strncmp( devname, striptxt, striplen ) == 0 &&
+		      strlen( devname ) > striplen ) {
+		    char *tmpname = strnewp( devname );
+		    _sysapi_console_devices->deleteCurrent();
+		    _sysapi_console_devices->insert( tmpname + striplen );
+		    delete[] tmpname;
+		  }
+		}
+	}
+
         free( tmp );
     }
 

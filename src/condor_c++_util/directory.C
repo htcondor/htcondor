@@ -27,6 +27,7 @@
 #include "condor_debug.h"
 #include "directory.h"
 #include "condor_string.h"
+#include "condor_config.h"
 
 // Set DEBUG_DIRECTORY_CLASS to 1 to not actually remove
 // files, but instead print out to the log file what would get
@@ -62,7 +63,7 @@ StatInfo::StatInfo( const char *path )
 			last = s;
         }
     }
-	if( last[1] ) {
+	if( last != NULL && last[1] ) {
 		filename = strnewp( &last[1] ); 
 		last[1] = '\0';
 	} else {
@@ -84,7 +85,7 @@ StatInfo::StatInfo( const char *dirpath, const char *filename )
 #ifdef WIN32
 StatInfo::StatInfo( const char* dirpath, const char* filename, 
 					time_t time_access, time_t time_create, 
-					time_t time_modify, unsigned long fsize, bool is_dir )
+					time_t time_modify, unsigned long fsize, bool is_dir, bool is_symlink )
 {
 	this->dirpath = strnewp( dirpath );
 	this->filename = strnewp( filename );
@@ -96,21 +97,16 @@ StatInfo::StatInfo( const char* dirpath, const char* filename,
 	create_time = time_create;
 	file_size = fsize;
 	isdirectory = is_dir;
+	issymlink = is_symlink;
 }
 #endif /* WIN32 */
 
 
 StatInfo::~StatInfo()
 {
-	if( filename ) {
-		delete [] filename;
-	}
-	if( dirpath ) {
-		delete [] dirpath;
-	}
-	if( fullpath ) {
-		delete [] fullpath;
-	}
+	delete [] filename;
+	delete [] dirpath;
+	delete [] fullpath;
 }
 
 void
@@ -123,6 +119,7 @@ StatInfo::do_stat( const char *path )
 	create_time = 0;
 	isdirectory = false;
 	isexecutable = false;
+	issymlink = false;
 
 	struct stat statbuf;	
 
@@ -148,6 +145,7 @@ StatInfo::do_stat( const char *path )
 		// On Unix, if any execute bit is set (user, group, other), we
 		// consider it to be executable.
 		isexecutable = ((statbuf.st_mode & (S_IXUSR|S_IXGRP|S_IXOTH)) != 0 );
+		issymlink = S_ISLNK(statbuf.st_mode);
 #else
 		isdirectory = ((_S_IFDIR & statbuf.st_mode) != 0);
 		isexecutable = ((_S_IEXEC & statbuf.st_mode) != 0);
@@ -299,7 +297,7 @@ Directory::GetDirectorySize()
 	Rewind();
 
 	while ( (thefile=Next()) ) {
-		if ( IsDirectory() ) {
+		if ( IsDirectory() && !IsSymlink() ) {
 			// recursively traverse down directory tree
 			Directory subdir( GetFullPath(), desired_priv_state );
 			dir_size += subdir.GetDirectorySize();
@@ -535,11 +533,12 @@ Directory::Next()
 	if ( result != -1 ) {
 		// findfirst/findnext succeeded
 		curr = new StatInfo( curr_dir, filedata.name, 
-							 filedata.time_access,
-							 filedata.time_create,
-							 filedata.time_write, 
-							 filedata.size,
-							 ((filedata.attrib & _A_SUBDIR) != 0) ); 
+		                     filedata.time_access,
+		                     filedata.time_create,
+		                     filedata.time_write, 
+		                     filedata.size,
+		                     ((filedata.attrib & _A_SUBDIR) != 0),
+		                     false); 
 	} else {
 		curr = NULL;
 	}
@@ -606,4 +605,58 @@ dircat( const char *dirpath, const char *filename )
 	return rval;
 }
 
+/*
+  Returns a path to subdirectory to use for temporary files.
+  The pointer returned must be de-allocated by the caller w/ free().
+*/
+char*
+temp_dir_path()
+{
+	char *prefix = param("TMP_DIR");
+	if  (!prefix) {
+		prefix = param("TEMP_DIR");
+	}
+	if (!prefix) {
+#ifndef WIN32
+		prefix = strdup("/tmp");
+#else
+			// try to get the temp dir, otherwise just use the root directory
+		prefix = getenv("TEMP");
+		if ( prefix ) {
+			prefix = strdup(prefix);
+		} else {
+			prefix = param("SPOOL");
+			if (!prefix) {
+				prefix = strdup("\\");
+			}
+		}
+#endif
+	}
+	return prefix;
+}
 
+/*
+  Atomically creates a unique file in the temporary directory 
+  (as returned by temp_dir_path())
+  Returns the name of the new file
+  The pointer returned must be de-allocated by the caller w/ free().
+*/
+
+char * 
+create_temp_file() {
+	char * temp_dir = temp_dir_path();
+	char * filename = (char*)(malloc (500));
+	//int pid = daemonCore->getPid();
+	int timestamp = (int)time(NULL);
+	int fd=-1;
+
+	do {
+		sprintf (filename, "%s/tmp.%d", temp_dir, timestamp);
+	} while ((fd=open (filename, O_EXCL | O_CREAT)) == -1);
+
+	close (fd);
+
+	free (temp_dir);
+
+	return filename;
+}

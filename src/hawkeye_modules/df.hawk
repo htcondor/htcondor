@@ -1,0 +1,15 @@
+# Data file describing the DF module
+ModuleFiles: df
+
+Description:
+Used to monitor free disk space (based on the "df" program)
+You should set the HAWKEYE_DF_FSLIST parameter by hand
+
+Default: df
+options: kill
+period: 30m
+prefix: disk_
+
+# It's parameters
+parameter: HAWKEYE_DF_FSLIST = /,/home,/var
+Comma-separated List of file systems (mount points) to monitor

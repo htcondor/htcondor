@@ -17,19 +17,19 @@
   sbin/condor_shadow.pvm sbin/condor_starter.pvm
 
 #define CondorGFiles sbin/condor_gridmanager sbin/gahp_server \
-    etc/examples/condor_config.local.condor-g
+    bin/condor_glidein 
+
+#define CondorGContribFiles etc/examples/condor_config.local.condor-g
  
 #define DAGManFiles bin/condor_dagman bin/condor_submit_dag \
   bin/condor_submit
 
-#define CkptServerFiles sbin/condor_ckpt_server sbin/condor_cleanckpts \
+#define CkptServerFiles sbin/condor_ckpt_server sbin/condor_clean_checkpoints \
   etc/examples/condor_config.local.ckpt.server
 
 #define EventdFiles sbin/condor_eventd etc/examples/condor_config.local.eventd
 
 #define SDKFiles src include lib/libcondorsdk.a
-
-#define ViewServerFiles sbin/condor_collector sbin/condor_stats
 
 #define ViewClientFiles sbin/condor_stats
 
@@ -56,7 +56,7 @@
 #endif
 
 #if WANT_CONDOR_G && HAS_GLOBUS
-#define GlobusProgs gridmanager
+#define GlobusProgs gridmanager globus
 #else
 #define GlobusProgs
 #endif
@@ -122,7 +122,7 @@ libs:: h h_all condor_includes makefiles Directories Libraries
 public:: strip.tar 
 
 strip.tar: stripped
-	cd strip_dir; rm -f release.tar; tar -cvf release.tar --owner=root --group=root --exclude sbin/condor_gridmanager --exclude sbin/gahp_server AllFiles
+	cd strip_dir; rm -f release.tar; tar -cvf release.tar --owner=root --group=0 AllFiles
 
 afs_release.tar:: afs_strip.tar
 
@@ -135,29 +135,27 @@ public:: static.tar
 afs_release.tar:: afs_static.tar
 
 static.tar: static
-	cd static_dir; rm -f release.tar; tar -cvf release.tar --owner=root --group=root --exclude sbin/condor_gridmanager --exclude sbin/gahp_server AllFiles
+	cd static_dir; rm -f release.tar; tar -cvf release.tar --owner=root --group=0 AllFiles
 
 afs_static.tar: static.tar
 	cp static_dir/release.tar $(PUBLIC_S_TARGET)
 
 #endif 
 
-release_tarball( submit.tar, SubmitOnlyFiles )
-release_tarball( link.tar, LinkOnlyFiles  )
-release_tarball( master.tar, MasterFiles )
-release_tarball( dagman.tar, DAGManFiles )
+release_tarball(submit.tar,SubmitOnlyFiles)
+release_tarball(link.tar,LinkOnlyFiles)
+release_tarball(master.tar,MasterFiles)
+release_tarball(dagman.tar,DAGManFiles)
 
-/* contrib_tarball( view_client.tar, ViewClientFiles ) */
-contrib_tarball( ckpt_server.tar, CkptServerFiles )
-contrib_tarball( eventd.tar, EventdFiles )
-/* contrib_tarball( sdk.tar, SDKFiles ) */
-
-both_tarball( view_server.tar, ViewServerFiles, ViewServerContribFiles )
+/* contrib_tarball(view_client.tar,ViewClientFiles) */
+contrib_tarball(ckpt_server.tar,CkptServerFiles)
+contrib_tarball(eventd.tar,EventdFiles)
+/* contrib_tarball(sdk.tar,SDKFiles) */
 
 #if WANT_PVM && HAS_PVM
 #define PvmTar pvm.tar
 #define AfsPvmTar afs_pvm.tar
-contrib_tarball( pvm.tar, PvmFiles )
+contrib_tarball(pvm.tar,PvmFiles)
 #else
 #define PvmTar 
 #define AfsPvmTar 
@@ -165,13 +163,13 @@ contrib_tarball( pvm.tar, PvmFiles )
 
 #if WANT_CONDOR_G && HAS_GLOBUS
 #define CondorGTar condor-g.tar
-contrib_tarball( condor-g.tar, CondorGFiles )
+both_tarball(condor-g.tar,CondorGFiles,CondorGContribFiles)
 #else
 #define CondorGTar 
 #endif /* Condor-G */
-all_tarballs: view_server.tar ckpt_server.tar eventd.tar PvmTar dagman.tar CondorGTar
+all_tarballs: ckpt_server.tar eventd.tar PvmTar dagman.tar CondorGTar
 
-afs_tarballs: afs_view_server.tar afs_release.tar \
+afs_tarballs: afs_release.tar \
 	afs_ckpt_server.tar AfsEventdTar AfsPvmTar
 
 public:: all_tarballs
@@ -279,6 +277,7 @@ object_target(prio)
 object_target(scripts)
 #if WANT_CONDOR_G && HAS_GLOBUS
     object_target(gridmanager)
+	object_target(globus)
 #endif
 object_target(starter.V6.1)
 object_target(shadow.V6.1)
@@ -294,9 +293,9 @@ object_dir_target(condor_sdk)
 
 single_target(condor_procapi,libprocapi.a)
 single_target(condor_sysapi,libsysapi.a)
-single_target(condor_schedd.V6, libqmgmt.a)
-single_target(condor_accountant.V6, libacct.a)
-single_target(condor_ckpt_server, ckpt_server_api.a)
+single_target(condor_schedd.V6,libqmgmt.a)
+single_target(condor_accountant.V6,libacct.a)
+single_target(condor_ckpt_server,ckpt_server_api.a)
 
 object_target(test_suite_C.V5)
 #if HAS_FORTRAN
@@ -338,15 +337,17 @@ reallyclean: really-clean
 htmldocs: html docs
 	cd html; ./build_doc++_index
 
-pure_target( condor_startd.V6, condor_startd.pure )
-pure_target( condor_schedd.V6, condor_schedd.pure )
-pure_target( condor_master.V6, condor_master.pure )
-pure_target( condor_shadow.V6, condor_shadow.std.pure )
-pure_target( condor_starter.V5, condor_starter.std.pure )
-pure_target( condor_shadow.V6.1, condor_shadow.pure )
-pure_target( condor_starter.V6.1, condor_starter.pure )
-pure_target( condor_collector.V6, condor_collector.pure )
-pure_target( condor_negotiator.V6, condor_negotiator.pure )
+pure_target(condor_startd.V6,condor_startd.pure)
+pure_target(condor_gridmanager,condor_gridmanager.pure)
+pure_target(condor_schedd.V6,condor_schedd.pure)
+pure_target(condor_master.V6,condor_master.pure)
+pure_target(condor_shadow.V6,condor_shadow.std.pure)
+pure_target(condor_starter.V5,condor_starter.std.pure)
+pure_target(condor_shadow.V6.1,condor_shadow.pure)
+pure_target(condor_starter.V6.1,condor_starter.pure)
+pure_target(condor_collector.V6,condor_collector.pure)
+pure_target(condor_negotiator.V6,condor_negotiator.pure)
+pure_target(condor_dagman,condor_dagman.pure)
 
 clean::
 	rm -rf $(PURE_DIR)

@@ -26,6 +26,7 @@
 #include "baseshadow.h"
 #include "shadow.h"
 #include "mpishadow.h"
+#include "parallelshadow.h"
 #include "exit.h"
 #include "condor_debug.h"
 #include "condor_version.h"
@@ -178,5 +179,11 @@ main_pre_dc_init( int argc, char* argv[] )
 		printClassAd();
 		exit(0);
 	}
+}
+
+
+void
+main_pre_command_sock_init( )
+{
 }
 

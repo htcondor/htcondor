@@ -4,27 +4,50 @@ use strict;
 # use warnings;
 
 # How to run the cluster tool...
-my $CondorClusterTool = "/unsup/condor/bin/condor_cluster_tool";
-my $CondorClusterToolArgs = "check";
-
-# Run the cluster tool...
-my $Cmd = "$CondorClusterTool $CondorClusterToolArgs";
-die "Can't run '$Cmd'" if ( ! open( IN, "$Cmd|" )  );
-while ( <IN> )
+print "Old:\n";
 {
-    chomp;
-    if ( /(.*): Condor is (\w+)/ )
+    my $Tool = "/unsup/condor/bin/condor_cluster_tool";
+    my $ToolArgs = "check";
+
+    # Run the cluster tool...
+    my $Cmd = "$Tool $ToolArgs";
+    die "Can't run '$Cmd'" if ( ! open( IN, "$Cmd|" )  );
+    while ( <IN> )
     {
-	my $Host = $1;
-	my $Status = $2;
-	if ( /reserved/ )
+	print;
+	chomp;
+	if ( /(.*): Condor is (\w+)/ )
 	{
-	    if ( $Status eq "on" )
+	    my $Host = $1;
+	    my $Status = $2;
+	    if ( ( $Status eq "off" ) || ( /reserved/ )  )
 	    {
-		# print STDERR "$Host: Reserved and on!\n";
+		print "$Host\n";
 	    }
-	    print "$Host\n";
 	}
     }
+    close( IN );
 }
-close( IN );
+
+print "New:\n";
+# How to run the NEW cluster tool...
+{
+    my $Tool = "/unsup/condor/bin/condor_new_cluster_tool";
+    my $ToolArgs = "check";
+
+    # Run the cluster tool...
+    my $Cmd = "$Tool $ToolArgs";
+    die "Can't run '$Cmd'" if ( ! open( IN, "$Cmd|" )  );
+    while ( <IN> )
+    {
+	print;
+	chomp;
+	if ( /(.*)\s+is\s+(\S+)/ )
+	{
+	    my $Host = $1;
+	    my $Status = $2;
+	    print "$Host\n" if ( $Status eq "reserved" );
+	}
+    }
+    close( IN );
+}

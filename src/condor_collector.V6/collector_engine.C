@@ -56,8 +56,7 @@ int 	engine_clientTimeoutHandler (Service *);
 int 	engine_housekeepingHandler  (Service *);
 char	*strStatus (ClassAd *);
 
-CollectorEngine::
-CollectorEngine () : 
+CollectorEngine::CollectorEngine (CollectorStats *stats ) : 
 	StartdAds     (GREATER_TABLE_SIZE, &hashFunction),
 	StartdPrivateAds(GREATER_TABLE_SIZE, &hashFunction),
 	ScheddAds     (GREATER_TABLE_SIZE, &hashFunction),
@@ -74,6 +73,8 @@ CollectorEngine () :
 	masterCheckInterval = 10800;
 	housekeeperTimerID = -1;
 	masterCheckTimerID = -1;
+
+	collectorStats = stats;
 }
 
 
@@ -295,24 +296,6 @@ walkHashTable (AdTypes adType, int (*scanFunction)(ClassAd *))
 	return 1;
 }
 
-/*
-static bool printAdToFile(ClassAd& ad, char* JobHistoryFileName) {
-  FILE* LogFile=fopen(JobHistoryFileName,"a");
-  if ( !LogFile ) {
-    dprintf(D_ALWAYS,"ERROR saving to history file; cannot open %s\n",JobHistoryFileName);
-    return false;
-  }
-  if (!ad.fPrint(LogFile)) {
-    dprintf(D_ALWAYS, "ERROR in Scheduler::LogMatchEnd - failed to write clas ad to log file %s\n",JobHistoryFileName);
-    fclose(LogFile);
-    return false;
-  }
-  fprintf(LogFile,"***\n");   // separator
-  fclose(LogFile);
-  return true;
-}
-*/
-
 ClassAd *CollectorEngine::
 collect (int command, Sock *sock, sockaddr_in *from, int &insert)
 {
@@ -353,11 +336,11 @@ collect (int command, Sock *sock, sockaddr_in *from, int &insert)
 ClassAd *CollectorEngine::
 collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 {
-	ClassAd	*retVal;
-	ClassAd	*pvtAd;
+	ClassAd		*retVal;
+	ClassAd		*pvtAd;
 	int		insPvt;
-	HashKey hk;
-	char    hashString [64];
+	HashKey		hk;
+	HashString	hashString;
 	
 	// mux on command
 	switch (command)
@@ -370,9 +353,9 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			break;
 		}
 		checkMasterStatus (clientAd);
-		sprintf (hashString, "< %s , %s >", hk.name, hk.ip_addr);
-		retVal=updateClassAd (StartdAds, "StartdAd     ", clientAd, hk, 
-							  hashString, insert);
+		hashString.Build( hk );
+		retVal=updateClassAd (StartdAds, "StartdAd     ", "Start",
+							  clientAd, hk, hashString, insert, from );
 
 		// if we want to store private ads
 		if (!sock)
@@ -395,8 +378,9 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			
 			// insert the private ad into its hashtable --- use the same
 			// hash key as the public ad
-			(void) updateClassAd (StartdPrivateAds, "StartdPvtAd  ", pvtAd,
-									hk, hashString, insPvt);
+			(void) updateClassAd (StartdPrivateAds, "StartdPvtAd  ",
+								  "StartdPvt", pvtAd, hk, hashString, insPvt,
+								  from );
 		}
 		break;
 
@@ -408,9 +392,9 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			break;
 		}
 		checkMasterStatus (clientAd);
-		sprintf (hashString, "< %s , %s >", hk.name, hk.ip_addr);
-		retVal=updateClassAd (ScheddAds, "ScheddAd     ", clientAd, hk,
-							  hashString, insert);
+		hashString.Build( hk );
+		retVal=updateClassAd (ScheddAds, "ScheddAd     ", "Schedd",
+							  clientAd, hk, hashString, insert, from );
 		break;
 
 	  case UPDATE_SUBMITTOR_AD:
@@ -423,9 +407,9 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		}
 		// since submittor ads always follow a schedd ad, and a master check is
 		// performed for schedd ads, we don't need a master check in here
-		sprintf (hashString, "< %s , %s >", hk.name, hk.ip_addr);
-		retVal=updateClassAd (SubmittorAds, "SubmittorAd  ", clientAd, hk,
-							  hashString, insert);
+		hashString.Build( hk );
+		retVal=updateClassAd (SubmittorAds, "SubmittorAd  ", "Submittor",
+							  clientAd, hk, hashString, insert, from );
 		break;
 
 	  case UPDATE_LICENSE_AD:
@@ -438,9 +422,9 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 		}
 		// since submittor ads always follow a schedd ad, and a master check is
 		// performed for schedd ads, we don't need a master check in here
-		sprintf (hashString, "< %s , %s >", hk.name, hk.ip_addr);
-		retVal=updateClassAd (LicenseAds, "LicenseAd  ", clientAd, hk,
-							  hashString, insert);
+		hashString.Build( hk );
+		retVal=updateClassAd (LicenseAds, "LicenseAd  ", "License",
+							  clientAd, hk, hashString, insert, from );
 		break;
 
 	  case UPDATE_MASTER_AD:
@@ -450,9 +434,9 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			retVal = 0;
 			break;
 		}
-		sprintf (hashString, "< %s >", hk.name);
-		retVal=updateClassAd (MasterAds, "MasterAd     ", clientAd, hk, 
-							  hashString, insert);
+		hashString.Build( hk );
+		retVal=updateClassAd (MasterAds, "MasterAd     ", "Master",
+							  clientAd, hk, hashString, insert, from );
 		break;
 
 	  case UPDATE_CKPT_SRVR_AD:
@@ -463,9 +447,9 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			break;
 		}
 		checkMasterStatus (clientAd);
-		sprintf (hashString, "< %s >", hk.name);
-		retVal=updateClassAd (CkptServerAds, "CkptSrvrAd   ", clientAd, hk, 
-							  hashString, insert);
+		hashString.Build( hk );
+		retVal=updateClassAd (CkptServerAds, "CkptSrvrAd   ", "CkptSrvr",
+							  clientAd, hk, hashString, insert, from );
 		break;
 
 	  case UPDATE_COLLECTOR_AD:
@@ -475,9 +459,9 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			retVal = 0;
 			break;
 		}
-		sprintf (hashString, "< %s >", hk.name);
-		retVal=updateClassAd (CollectorAds, "CollectorAd  ", clientAd, hk, 
-							  hashString, insert);
+		hashString.Build( hk );
+		retVal=updateClassAd (CollectorAds, "CollectorAd  ", "Collector",
+							  clientAd, hk, hashString, insert, from );
 		break;
 
 	  case UPDATE_STORAGE_AD:
@@ -487,9 +471,9 @@ collect (int command,ClassAd *clientAd,sockaddr_in *from,int &insert,Sock *sock)
 			retVal = 0;
 			break;
 		}
-		sprintf (hashString, "< %s >", hk.name);
-		retVal=updateClassAd (StorageAds, "StorageAd  ", clientAd, hk, 
-							  hashString, insert);
+		hashString.Build( hk );
+		retVal=updateClassAd (StorageAds, "StorageAd  ", "Storage",
+							  clientAd, hk, hashString, insert, from );
 		break;
 
 	  case QUERY_STARTD_ADS:
@@ -623,32 +607,39 @@ remove (AdTypes adType, HashKey &hk)
 				
 ClassAd * CollectorEngine::
 updateClassAd (CollectorHashTable &hashTable, 
-			   char *adType, 
+			   const char *adType,
+			   const char *label,
 			   ClassAd *ad, 
 			   HashKey &hk,
-			   char *hashString,
-			   int  &insert )
+			   const MyString &hashString,
+			   int  &insert,
+			   const sockaddr_in *from )
 {
-	ClassAd  *old_ad, *new_ad;
-	char     buf [40];
-	time_t   now;
+	ClassAd		*old_ad, *new_ad;
+	MyString	buf;
+	time_t		now;
 
 	(void) time (&now);
 	if (now == (time_t) -1)
 	{
 		EXCEPT ("Error reading system time!");
 	}	
-	sprintf (buf, "%s = %d", ATTR_LAST_HEARD_FROM, (int)now);
-	ad->Insert (buf);
+	buf.sprintf( "%s = %d", ATTR_LAST_HEARD_FROM, (int)now);
+	ad->Insert ( buf.GetCStr() );
 
 	// this time stamped ad is the new ad
 	new_ad = ad;
 
 	// check if it already exists in the hash table ...
-	if (hashTable.lookup (hk, old_ad) == -1)
+	if ( hashTable.lookup (hk, old_ad) == -1)
     {	 	
 		// no ... new ad
-		dprintf (D_ALWAYS, "%s: Inserting ** %s\n", adType, hashString);
+		dprintf (D_ALWAYS, "%s: Inserting ** \"%s\"\n", adType, hashString.GetCStr() );
+
+		// Update statistics
+		collectorStats->update( label, NULL, new_ad );
+
+		// Now, store it away
 		if (hashTable.insert (hk, new_ad) == -1)
 		{
 			EXCEPT ("Error inserting ad (out of memory)");
@@ -660,20 +651,27 @@ updateClassAd (CollectorHashTable &hashTable,
 	else
     {
 		// yes ... old ad must be updated
-		dprintf (D_FULLDEBUG, "%s: Updating ... %s\n", adType, hashString);
+		dprintf (D_FULLDEBUG, "%s: Updating ... \"%s\"\n", adType, hashString.GetCStr() );
 
 		// check if it has special status (master ads)
 		if (old_ad < CollectorEngine::THRESHOLD)
 		{
-			dprintf (D_ALWAYS, "** Master %s rejuvenated from %s\n", hashString,
-								strStatus(old_ad));
+			dprintf (D_ALWAYS, "** Master %s rejuvenated from %s\n",
+					 hashString.GetCStr(), strStatus(old_ad));
 			if (hashTable.remove (hk)==-1 || hashTable.insert (hk, new_ad)==-1)
 			{
 				EXCEPT ("Error updating ad (probably out of memory)");
 			}
+
+			// Update statistics
+			collectorStats->update( label, NULL, new_ad );
 		}
 		else
 		{
+			// Update statistics
+			collectorStats->update( label, old_ad, new_ad );
+
+			// Now, finally, store the new ClassAd
 //			old_ad->ExchangeExpressions (new_ad);
 			old_ad = ( ClassAd * )new_ad->Copy( );
 			delete new_ad;
@@ -682,7 +680,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		insert = 0;
 		return old_ad;
 	}
-}		
+}
 
 void CollectorEngine::
 checkMasterStatus (ClassAd *ad)
@@ -701,7 +699,7 @@ checkMasterStatus (ClassAd *ad)
 	if (MasterAds.lookup (hk, old) == -1)
 	{
 		// ad was not there ... enter status as RECENTLY_DOWN
-		dprintf(D_ALWAYS,"WARNING:  No master ad for < %s >\n",hk.name);
+		dprintf(D_ALWAYS,"WARNING:  No master ad for < %s >\n", hk.name.GetCStr() );
 		if (MasterAds.insert (hk, RECENTLY_DOWN) == -1)
 		{
 			EXCEPT ("Out of memory");
@@ -779,7 +777,7 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now,
 	int		 updateInterval;
 	HashKey  hk;
 	double   timeDiff;
-	char     hkString [128];
+	MyString	hkString;
 
 	hashTable.startIterations ();
 	while (hashTable.iterate (ad))
@@ -805,8 +803,8 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now,
 		{
 			// then remove it from the segregated table
 			(*makeKey) (hk, ad, NULL);
-			hk.sprint (hkString);
-			dprintf (D_ALWAYS,"\t\t**** Removing stale ad: %s\n", hkString);
+			hk.sprint( hkString );
+			dprintf (D_ALWAYS,"\t\t**** Removing stale ad: \"%s\"\n", hkString.GetCStr() );
 			if (hashTable.remove (hk) == -1)
 			{
 				dprintf (D_ALWAYS, "\t\tError while removing ad\n");
@@ -822,13 +820,26 @@ cleanHashTable (CollectorHashTable &hashTable, time_t now,
 int CollectorEngine::
 masterCheck ()
 {
-	ClassAd  *ad;
-	ClassAd	 *nextStatus;
-	HashKey  hk;
-	char     hkString [128];
-	char	 buffer [128];
-	FILE* 	 mailer = NULL;
-	int		 more;
+	ClassAd		*ad;
+	ClassAd		*nextStatus;
+	HashKey		hk;
+	MyString	hkString;
+	MyString	buffer;
+	FILE*		mailer = NULL;
+	int		more;
+
+	char *tmp = param("COLLECTOR_PERFORM_MASTERCHECK");
+	bool do_check = true;	// default should be to do the check
+	if ( tmp ) {
+		if ( tmp[0] == 'F' || tmp[0] == 'f' ) {
+			do_check = false;
+		}
+		free(tmp);
+	}
+	if ( do_check == false ) {
+		// User explicitly asked for no checking... all done.
+		return TRUE;
+	}
 
 	dprintf (D_ALWAYS, "MasterCheck:  Checking for down masters ...\n");
 
@@ -855,7 +866,7 @@ masterCheck ()
 
 		// if the master has been dead for a while and children are dead ...
 		if (ad == LONG_GONE) {
-			dprintf (D_ALWAYS,"\tMaster %s: purging dead entry\n", hkString);
+			dprintf (D_ALWAYS,"\tMaster %s: purging dead entry\n", hkString.GetCStr() );
 			if (MasterAds.remove (hk) == -1) 
 			{
 				dprintf (D_ALWAYS, "\tError while removing LONG_GONE ad\n");
@@ -867,23 +878,23 @@ masterCheck ()
 		// need to report for recently down masters (children still alive)
 		if (ad == RECENTLY_DOWN) {
 			if (mailer == NULL) {
-				sprintf( buffer, "Collector (%s): Dead condor_masters", 
-						 my_full_hostname() );
-				if ((mailer = email_admin_open(buffer)) == NULL) {
+				buffer.sprintf( "Collector (%s): Dead condor_masters", 
+								my_full_hostname() );
+				if ((mailer = email_admin_open(buffer.GetCStr())) == NULL) {
 					dprintf (D_ALWAYS, "Error sending email --- aborting\n");
 					return FALSE;
 				}
 				fprintf (mailer, "The following masters are dead, leaving"
 							" orphaned daemons\n\n");
 			}
-			fprintf (mailer, "\t\t%s\n", hkString);
-			dprintf (D_ALWAYS, "\tMaster %s: recently went down\n", hkString);
+			fprintf (mailer, "\t\t%s\n", hkString.GetCStr() );
+			dprintf (D_ALWAYS, "\tMaster %s: recently went down\n", hkString.GetCStr() );
 			nextStatus = DONE_REPORTING;
 		}	
 		else 
 		// the master is dead, but we've already sent mail about it
 		if (ad == DONE_REPORTING) {
-			dprintf(D_ALWAYS,"\tMaster %s: death already reported\n",hkString);
+			dprintf(D_ALWAYS,"\tMaster %s: death already reported\n",hkString.GetCStr() );
 			nextStatus = LONG_GONE;
 		}
 

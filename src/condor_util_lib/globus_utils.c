@@ -28,7 +28,10 @@
 #include "globus_utils.h"
 
 #if defined(CONDOR_GSI)
-#   include "sslutils.h"
+#     include "globus_gsi_credential.h"
+#     include "globus_gsi_system_config.h"
+#     include "globus_gsi_system_config_constants.h"
+#     include "gssapi.h"
 #endif
 
 #define DEFAULT_MIN_TIME_LEFT 8*60*60;
@@ -52,6 +55,10 @@ char *GlobusJobStatusName( int status )
 		return "SUSPENDED";
 	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED:
 		return "UNSUBMITTED";
+	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_IN:
+		return "STAGE_IN";
+	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_OUT:
+		return "STAGE_OUT";
 	case GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNKNOWN:
 		return "UNKNOWN";
 	default:
@@ -68,105 +75,334 @@ x509_error_string()
 	return _globus_error_message;
 }
 
-/* Return the number of seconds until the supplied proxy
- * file will expire.  
- * On error, return -1.    - Todd <tannenba@cs.wisc.edu>
+/* Activate the globus gsi modules for use by functions in this file.
+ * Returns zero if the modules were successfully activated. Returns -1 if
+ * something went wrong.
  */
+static
 int
-x509_proxy_seconds_until_expire( char *proxy_file )
+activate_globus_gsi()
+{
+#if !defined(CONDOR_GSI)
+	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
+	return -1;
+#else
+	static int globus_gsi_activated = 0;
+
+	if ( globus_gsi_activated != 0 ) {
+		return 0;
+	}
+
+/* This module is activated by GLOBUS_GSI_CREDENTIAL_MODULE
+	if ( globus_module_activate(GLOBUS_GSI_SYSCONFIG_MODULE) ) {
+		_globus_error_message = "couldn't activate globus gsi sysconfig module";
+		return -1;
+	}
+*/
+
+	if ( globus_module_activate(GLOBUS_GSI_CREDENTIAL_MODULE) ) {
+		_globus_error_message = "couldn't activate globus gsi credential module";
+		return -1;
+	}
+
+	if ( globus_module_activate(GLOBUS_GSI_GSSAPI_MODULE) ) {
+		_globus_error_message = "couldn't activate globus gsi gssapi module";
+		return -1;
+	}
+
+	globus_gsi_activated = 1;
+	return 0;
+#endif
+}
+
+/* Return the path to the X509 proxy file as determined by GSI/SSL.
+ * Returns NULL if the filename can't be determined. Otherwise, the
+ * string returned must be freed with free().
+ */
+char *
+get_x509_proxy_filename()
+{
+	char *proxy_file = NULL;
+#if defined(CONDOR_GSI)
+	globus_gsi_proxy_file_type_t     file_type    = GLOBUS_PROXY_FILE_INPUT;
+
+	if ( activate_globus_gsi() != 0 ) {
+		return NULL;
+	}
+
+	if ( GLOBUS_GSI_SYSCONFIG_GET_PROXY_FILENAME(&proxy_file, file_type) !=
+		 GLOBUS_SUCCESS ) {
+		_globus_error_message = "unable to locate proxy file";
+	}
+#endif
+	return proxy_file;
+}
+
+/* Return the subject name of a given proxy cert. 
+  On error, return NULL.
+  On success, return a pointer to a null-terminated string.
+  IT IS THE CALLER'S RESPONSBILITY TO DE-ALLOCATE THE STIRNG
+  WITH free().
+ */
+char *
+x509_proxy_subject_name( const char *proxy_file )
+{
+#if !defined(CONDOR_GSI)
+	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
+	return NULL;
+#else
+
+	globus_gsi_cred_handle_t         handle       = NULL;
+	globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
+	char *subject_name = NULL;
+	int must_free_proxy_file = FALSE;
+
+	if ( activate_globus_gsi() != 0 ) {
+		return NULL;
+	}
+
+	if (globus_gsi_cred_handle_attrs_init(&handle_attrs)) {
+		_globus_error_message = "problem during internal initialization1";
+		goto cleanup;
+	}
+
+	if (globus_gsi_cred_handle_init(&handle, handle_attrs)) {
+		_globus_error_message = "problem during internal initialization2";
+		goto cleanup;
+	}
+
+	/* Check for proxy file */
+	if (proxy_file == NULL) {
+		proxy_file = get_x509_proxy_filename();
+		if (proxy_file == NULL) {
+			goto cleanup;
+		}
+		must_free_proxy_file = TRUE;
+	}
+
+	// We should have a proxy file, now, try to read it
+	if (globus_gsi_cred_read_proxy(handle, proxy_file)) {
+		_globus_error_message = "unable to read proxy file";
+	   goto cleanup;
+	}
+
+	if (globus_gsi_cred_get_subject_name(handle, &subject_name)) {
+		_globus_error_message = "unable to extract subject name";
+		goto cleanup;
+	}
+
+ cleanup:
+	if (must_free_proxy_file) {
+		free(proxy_file);
+	}
+
+	if (handle_attrs) {
+		globus_gsi_cred_handle_attrs_destroy(handle_attrs);
+	}
+
+	if (handle) {
+		globus_gsi_cred_handle_destroy(handle);
+	}
+
+	return subject_name;
+
+#endif /* !defined(GSS_AUTHENTICATION) */
+}
+
+/* Return the time at which the proxy expires. On error, return -1.
+ */
+time_t
+x509_proxy_expiration_time( const char *proxy_file )
 {
 #if !defined(CONDOR_GSI)
 	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
 	return -1;
 #else
 
-	proxy_cred_desc *pcd = NULL;
-	time_t time_after;
-	time_t time_now;
-	time_t time_diff;
-	ASN1_UTCTIME *asn1_time = NULL;
-	struct stat stx;
-	int result;
+    globus_gsi_cred_handle_t         handle       = NULL;
+    globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
+	time_t expiration_time = -1;
+	time_t time_left;
 	int must_free_proxy_file = FALSE;
 
-	/* initialize SSLeay and the error strings */
-	ERR_load_prxyerr_strings(0);
-	SSLeay_add_ssl_algorithms();
-
-    pcd = proxy_cred_desc_new(); // Added. But not sure if it's correct. Hao
-
-	if (!pcd) {
-		_globus_error_message = "problem during internal initialization";
-		if ( must_free_proxy_file ) free(proxy_file);
+	if ( activate_globus_gsi() != 0 ) {
 		return -1;
 	}
 
-	/* Load proxy */
-	if (!proxy_file)  {
-		proxy_get_filenames(pcd, 1, NULL, NULL, &proxy_file, NULL, NULL);
+    if (globus_gsi_cred_handle_attrs_init(&handle_attrs)) {
+        _globus_error_message = "problem during internal initialization";
+        goto cleanup;
+    }
+
+    if (globus_gsi_cred_handle_init(&handle, handle_attrs)) {
+        _globus_error_message = "problem during internal initialization";
+        goto cleanup;
+    }
+
+    /* Check for proxy file */
+    if (proxy_file == NULL) {
+        proxy_file = get_x509_proxy_filename();
+        if (proxy_file == NULL) {
+            goto cleanup;
+        }
 		must_free_proxy_file = TRUE;
-	}
+    }
 
-	if (!proxy_file || (stat(proxy_file,&stx) != 0) ) {
-		_globus_error_message = "unable to find proxy file";
-		if ( must_free_proxy_file ) free(proxy_file);
+    // We should have a proxy file, now, try to read it
+    if (globus_gsi_cred_read_proxy(handle, proxy_file)) {
+       _globus_error_message = "unable to read proxy file";
+       goto cleanup;
+    }
+
+	if (globus_gsi_cred_get_lifetime(handle, &time_left)) {
+		_globus_error_message = "unable to extract expiration time";
+        goto cleanup;
+    }
+
+	expiration_time = time(NULL) + time_left;
+
+ cleanup:
+    if (must_free_proxy_file) {
+        free(proxy_file);
+    }
+
+    if (handle_attrs) {
+        globus_gsi_cred_handle_attrs_destroy(handle_attrs);
+    }
+
+    if (handle) {
+        globus_gsi_cred_handle_destroy(handle);
+    }
+
+	return expiration_time;
+
+#endif /* !defined(GSS_AUTHENTICATION) */
+}
+
+/* Return the number of seconds until the supplied proxy
+ * file will expire.  
+ * On error, return -1.    - Todd <tannenba@cs.wisc.edu>
+ */
+int
+x509_proxy_seconds_until_expire( const char *proxy_file )
+{
+#if !defined(CONDOR_GSI)
+	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
+	return -1;
+#else
+
+	time_t time_now;
+	time_t time_expire;
+	time_t time_diff;
+
+	time_now = time(NULL);
+	time_expire = x509_proxy_expiration_time( proxy_file );
+
+	if ( time_expire == -1 ) {
 		return -1;
 	}
 
-	if (proxy_load_user_cert(pcd, proxy_file, NULL, NULL)) {
-		_globus_error_message = "unable to load proxy";
-		if ( must_free_proxy_file ) free(proxy_file);
-		return -1;
-	}
-
-	if ((pcd->upkey = X509_get_pubkey(pcd->ucert)) == NULL) {
-		_globus_error_message = "unable to load public key from proxy";
-		if ( must_free_proxy_file ) free(proxy_file);
-		return -1;
-	}
-
-	/* validity: set time_diff to time to expiration (in seconds) */
-	asn1_time = ASN1_UTCTIME_new();
-	X509_gmtime_adj(asn1_time,0);
-	time_now = ASN1_UTCTIME_mktime(asn1_time);
-	time_after = ASN1_UTCTIME_mktime(X509_get_notAfter(pcd->ucert));
-	time_diff = time_after - time_now ;
-	ASN1_UTCTIME_free( asn1_time );
+	time_diff = time_expire - time_now;
 
 	if ( time_diff < 0 ) {
 		time_diff = 0;
 	}
 
-
-	result = (int) time_diff;
-
-	if ( must_free_proxy_file ) free(proxy_file);
-    
-    proxy_cred_desc_free(pcd);       // Added, not sure if it's correct. Hao
-
-	return result;
+	return (int)time_diff;
 
 #endif /* !defined(GSS_AUTHENTICATION) */
 }
 
+/* Attempt a gss_import_cred() to catch some certificate problems. This
+ * won't catch all problems (it doesn't verify the entire certificate
+ * chain), but it's a start. Returns 0 on success, and -1 on any errors.
+ */
 int
-check_x509_proxy( char *proxy_file )
+x509_proxy_try_import( const char *proxy_file )
+{
+#if !defined(CONDOR_GSI)
+
+	_globus_error_message = "This version of Condor doesn't support X509 credentials!";
+	return -1;
+
+#else
+	int rc;
+	int min_stat;
+	gss_buffer_desc import_buf;
+	gss_cred_id_t cred_handle;
+	static char buf_value[4096];
+	int must_free_proxy_file = FALSE;
+
+	if ( activate_globus_gsi() != 0 ) {
+		return -1;
+	}
+
+	/* Check for proxy file */
+	if (proxy_file == NULL) {
+		proxy_file = get_x509_proxy_filename();
+		if (proxy_file == NULL) {
+			goto cleanup;
+		}
+		must_free_proxy_file = TRUE;
+	}
+
+	snprintf( buf_value, sizeof(buf_value), "X509_USER_PROXY=%s", proxy_file);
+	import_buf.value = buf_value;
+	import_buf.length = strlen(buf_value) + 1;
+
+	rc = gss_import_cred( &min_stat, &cred_handle, GSS_C_NO_OID, 1,
+						  &import_buf, 0, NULL );
+
+	if ( rc != GSS_S_COMPLETE ) {
+		char *message;
+        globus_gss_assist_display_status_str(&message,
+											 "",
+											 rc,
+											 min_stat,
+											 0);
+		snprintf( buf_value, sizeof(buf_value), "%s", message );
+		free(message);
+//		snprintf( buf_value, sizeof(buf_value),
+//				  "Failed to import credential maj=%d min=%d", rc,
+//				  min_stat );
+		_globus_error_message = buf_value;
+		return -1;
+	}
+
+	gss_release_cred( &min_stat, &cred_handle );
+
+ cleanup:
+    if (must_free_proxy_file) {
+        free(proxy_file);
+    }
+
+	return 0;
+#endif /* !defined(CONDOR_GSI) */
+}
+
+int
+check_x509_proxy( const char *proxy_file )
 {
 #if !defined(CONDOR_GSI)
 
 	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
-	return 1;
+	return -1;
 
 #else
 	char *min_time_left_param = NULL;
 	int min_time_left;
 	int time_diff;
 
+	if ( x509_proxy_try_import( proxy_file ) != 0 ) {
+		/* Error! Don't set error message, it is already set */
+		return -1;
+	}
+
 	time_diff = x509_proxy_seconds_until_expire( proxy_file );
 
 	if ( time_diff < 0 ) {
 		/* Error! Don't set error message, it is already set */
-		return 1;
+		return -1;
 	}
 
 	/* check validity */
@@ -181,12 +417,12 @@ check_x509_proxy( char *proxy_file )
 
 	if ( time_diff == 0 ) {
 		_globus_error_message =	"proxy has expired";
-		return 1;
+		return -1;
 	}
 
 	if ( time_diff < min_time_left ) {
 		_globus_error_message =	"proxy lifetime too short";
-		return 1;
+		return -1;
 	}
 
 	return 0;
@@ -217,6 +453,95 @@ have_condor_g()
 #endif
 }
 
+void parse_resource_manager_string( const char *string, char **host,
+									char **port, char **service,
+									char **subject )
+{
+	char *p;
+	char *q;
+	int len = strlen( string );
+
+	char *my_host = (char *)calloc( len+1, sizeof(char) );
+	char *my_port = (char *)calloc( len+1, sizeof(char) );
+	char *my_service = (char *)calloc( len+1, sizeof(char) );
+	char *my_subject = (char *)calloc( len+1, sizeof(char) );
+
+	p = my_host;
+	q = my_host;
+
+	while ( *string != '\0' ) {
+		if ( *string == ':' ) {
+			if ( q == my_host ) {
+				p = my_port;
+				q = my_port;
+				string++;
+			} else if ( q == my_port || q == my_service ) {
+				p = my_subject;
+				q = my_subject;
+				string++;
+			} else {
+				*(p++) = *(string++);
+			}
+		} else if ( *string == '/' ) {
+			if ( q == my_host || q == my_port ) {
+				p = my_service;
+				q = my_service;
+				string++;
+			} else {
+				*(p++) = *(string++);
+			}
+		} else {
+			*(p++) = *(string++);
+		}
+	}
+
+	if ( host != NULL ) {
+		*host = my_host;
+	} else {
+		free( my_host );
+	}
+
+	if ( port != NULL ) {
+		*port = my_port;
+	} else {
+		free( my_port );
+	}
+
+	if ( service != NULL ) {
+		*service = my_service;
+	} else {
+		free( my_service );
+	}
+
+	if ( subject != NULL ) {
+		*subject = my_subject;
+	} else {
+		free( my_subject );
+	}
+}
+
+/* Returns true (non-0) if path looks like an URL that Globus
+   (specifically, globus-url-copy) can handle
+
+   Expected use: is the input/stdout file actually a Globus URL
+   that we can just hand off to Globus instead of a local file
+   that we need to rewrite as a Globus URL.
+
+   Probably doesn't make sense to use if universe != globus
+*/
+int
+is_globus_friendly_url(const char * path)
+{
+	if(path == 0)
+		return 0;
+	// Should this be more aggressive and allow anything with ://?
+	return 
+		strstr(path, "http://") == path ||
+		strstr(path, "https://") == path ||
+		strstr(path, "ftp://") == path ||
+		strstr(path, "gsiftp://") == path ||
+		0;
+}
 
 #if 0 /* We're not currently using these functions */
 
@@ -474,27 +799,3 @@ check_globus_rm_contacts(char* resource)
 
 #endif /* 0 */
 
-char *rsl_stringify( char *string )
-{
-	static char buffer[5000];
-
-	strcpy( buffer, "'" );
-	while ( strlen( string ) > 0 ) {
-		char *macro_start = strstr( string, "$(" );
-		char *macro_stop = macro_start == NULL ? NULL :
-			strstr( macro_start, ")" );
-		if ( macro_start && macro_stop ) {
-			strncat( buffer, string, macro_start - string );
-			strcat( buffer, "'#" );
-			strncat( buffer, macro_start, macro_stop - macro_start + 1 );
-			strcat( buffer, "#'" );
-			string = macro_stop + 1;
-		} else {
-			strcat( buffer, string );
-			string += strlen( string );
-		}
-	}
-	strcat( buffer, "'" );
-
-	return buffer;
-}

@@ -25,6 +25,7 @@
 #include "condor_auth_fs.h"
 #include "condor_string.h"
 #include "condor_environ.h"
+#include "CondorError.h"
 
 Condor_Auth_FS :: Condor_Auth_FS(ReliSock * sock, int remote)
     : Condor_Auth_Base    ( sock, CAUTH_FILESYSTEM ),
@@ -36,32 +37,16 @@ Condor_Auth_FS :: ~Condor_Auth_FS()
 {
 }
 
-int Condor_Auth_FS::authenticate(const char * remoteHost)
+int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
 {
     char *new_file = NULL;
     int fd = -1;
-    char *owner = NULL;
     int retval = -1;
 	int fail = -1 == 0;
     
     char * RendezvousDirectory = NULL;
 
     if ( mySock_->isClient() ) {
-        if ( remote_ ) {
-            //send over the directory
-            if ( mySock_->isClient() ) {
-                RendezvousDirectory = 
-					getenv( EnvGetName( ENV_RENDEZVOUS ) );
-            }
-            mySock_->encode();
-            if (!mySock_->code( RendezvousDirectory ) ||
-            	!mySock_->end_of_message())
-			{
-				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
-					__FUNCTION__, __LINE__);
-				return fail; 
-			}
-        }
         mySock_->decode();
         if (!mySock_->code( new_file )) { 
 			dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
@@ -109,28 +94,22 @@ int Condor_Auth_FS::authenticate(const char * remoteHost)
         	}
 			return fail; 
 		}
-        if ( new_file ) {
-            unlink( new_file ); /* XXX hope we aren't root */
-            free( new_file );
-        }
+		// leave new_file allocated until after dprintf below
     }
     else {  //server 
         setRemoteUser( NULL );
         
         if ( remote_ ) {
-	    //get RendezvousDirectory from client
-            mySock_->decode();
-            if (!mySock_->code( RendezvousDirectory ) ||
-            	!mySock_->end_of_message()) 
-			{ 
-				dprintf(D_SECURITY, "Protocol failure at %s, %d!\n",
-					__FUNCTION__, __LINE__);
-				return fail; 
+			char * rendezvous_dir = param("FS_REMOTE_DIR");
+			if (rendezvous_dir) {
+				new_file = tempnam(rendezvous_dir, "qmgr_");
+				free(rendezvous_dir);
+			} else {
+				// misconfiguration.  complain, and then use /tmp
+				dprintf (D_SECURITY, "AUTHENTICATE_FS: FS_REMOTE was used but no FS_REMOTE_DIR defined!\n");
+            	new_file = tempnam("/tmp", "qmgr_");
 			}
-            dprintf(D_FULLDEBUG,"RendezvousDirectory: %s\n", RendezvousDirectory );
-            new_file = tempnam( RendezvousDirectory, "qmgr_");
-            free(RendezvousDirectory);
-        }
+	    }
         else {
             new_file = tempnam("/tmp", "qmgr_");
         }
@@ -200,10 +179,20 @@ int Condor_Auth_FS::authenticate(const char * remoteHost)
 			free(new_file);
 			return fail;
 		}
-        free( new_file );
+		// leave new_file allocated until after dprintf below
     }
-    dprintf( D_FULLDEBUG, "authentcate_filesystem%s status: %d\n", 
-             remote_ ? "(REMOTE)" : "()", retval == 0 );
+
+   	dprintf( D_FULLDEBUG, "AUTHENTICATE_FS: used file %s, status: %d\n", 
+             (new_file ? new_file : "(null)"), (retval == 0) );
+
+	if ( new_file ) {
+   		// client responsible for deleting the file
+		if (mySock_->isClient()) {
+			unlink( new_file ); /* XXX hope we aren't root */
+		}
+		free( new_file );
+	}
+
     return( retval == 0 );
 }
 

@@ -68,6 +68,10 @@ int command_query_ads( Service*, int, Stream* );
 */
 int command_name_handler( Service*, int, Stream* );
 
+/*
+   Command handler for dealing w/ ClassAd-only protocol commands
+*/
+int command_classad_handler( Service*, int, Stream* );
 
 /*
   Since the protocol is complex and what we have to do so

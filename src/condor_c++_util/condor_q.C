@@ -28,6 +28,8 @@
 #include "condor_qmgr.h"
 #include "format_time.h"
 #include "condor_classad.h"
+#include "condor_config.h"
+#include "CondorError.h"
 
 // specify keyword lists; N.B.  The order should follow from the category
 // enumerations in the .h file
@@ -61,6 +63,7 @@ static const char *fltKeywords[] =
 CondorQ::
 CondorQ ()
 {
+	connect_timeout = 20; 
 	query.setNumIntegerCats (CQ_INT_THRESHOLD);
 	query.setNumStringCats (CQ_STR_THRESHOLD);
 	query.setNumFloatCats (CQ_FLT_THRESHOLD);
@@ -73,6 +76,14 @@ CondorQ ()
 CondorQ::
 ~CondorQ ()
 {
+}
+
+
+bool CondorQ::
+init()
+{
+	connect_timeout = param_integer( "Q_QUERY_TIMEOUT", connect_timeout );
+	return true;
 }
 
 
@@ -110,7 +121,7 @@ addAND (char *value)
 }
 
 int CondorQ::
-fetchQueue (ClassAdList &ca_list, ClassAd *ad)
+fetchQueue (ClassAdList &ca_list, ClassAd *ad, CondorError* errstack)
 {
 	Qmgr_connection *qmgr;
 	ClassAd 		filterAd;
@@ -128,11 +139,14 @@ fetchQueue (ClassAdList &ca_list, ClassAd *ad)
 	filterAd.InsertAttr( ATTR_TARGET_TYPE, (string)JOB_ADTYPE ); 	// NAC	
 
 	// connect to the Q manager
+	init();  // needed to get default connect_timeout
 	if (ad == 0)
 	{
 		// local case
-		if (!(qmgr = ConnectQ (0,20,true)))
+		if( !(qmgr = ConnectQ( 0, connect_timeout, true, errstack)) ) {
+			errstack->push("TEST", 0, "FOO");
 			return Q_SCHEDD_COMMUNICATION_ERROR;
+		}
 	}
 	else
 	{
@@ -141,7 +155,7 @@ fetchQueue (ClassAdList &ca_list, ClassAd *ad)
 		if ( !ad->EvaluateAttrString( ATTR_SCHEDD_IP_ADDR, scheddString, 32 ) ) {	// NAC
 			return Q_NO_SCHEDD_IP_ADDR;	
 		}
-		if (!(qmgr = ConnectQ (scheddString,20,true))) {
+		if( !(qmgr = ConnectQ( scheddString, connect_timeout, true, errstack)) ) {
 			return Q_SCHEDD_COMMUNICATION_ERROR;
 		}
 	}
@@ -154,7 +168,7 @@ fetchQueue (ClassAdList &ca_list, ClassAd *ad)
 }
 
 int CondorQ::
-fetchQueueFromHost (ClassAdList &ca_list, char *host)
+fetchQueueFromHost (ClassAdList &ca_list, char *host, CondorError* errstack)
 {
 	Qmgr_connection *qmgr;
 	ClassAd 		filterAd;
@@ -178,7 +192,8 @@ fetchQueueFromHost (ClassAdList &ca_list, char *host)
 	 that whenever one needs a periodic time value, 20 is always
 	 optimal.  :^).
 	*/
-	if (!(qmgr = ConnectQ (host,20,true))) {
+	init();  // needed to get default connect_timeout
+	if( !(qmgr = ConnectQ( host, connect_timeout, true, errstack)) ) {
 		return Q_SCHEDD_COMMUNICATION_ERROR;
 	}
 	// get the ads and filter them
@@ -189,7 +204,7 @@ fetchQueueFromHost (ClassAdList &ca_list, char *host)
 }
 
 int CondorQ::
-fetchQueueFromHostAndProcess ( char *host, process_function process_func )
+fetchQueueFromHostAndProcess ( char *host, process_function process_func, CondorError* errstack )
 {
 		// DEBUG NAC
 //	printf("entered fetchQueueFromHostAndProcess\n");	// NAC
@@ -215,8 +230,10 @@ fetchQueueFromHostAndProcess ( char *host, process_function process_func )
 	 that whenever one needs a periodic time value, 20 is always
 	 optimal.  :^).
 	*/
-	if (!(qmgr = ConnectQ (host,20,true)))
+	init();  // needed to get default connect_timeout
+	if( !(qmgr = ConnectQ( host, connect_timeout, true, errstack)) ) {
 		return Q_SCHEDD_COMMUNICATION_ERROR;
+	}
 
 	// get the ads and filter them
 	result = getFilterAndProcessAds (filterAd, process_func);

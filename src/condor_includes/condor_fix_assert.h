@@ -39,6 +39,7 @@ work:
 so, please.... don't use it... okay?
 
 */
+
 #ifndef __CONDOR_FIX_ASSERT_H
 #define __CONDOR_FIX_ASSERT_H
 
@@ -46,7 +47,9 @@ so, please.... don't use it... okay?
 
 #if defined(__GNUC__)
 #if __GNUC__ == 2
-#	define CONDOR_HAD_GNUC 2
+#	define CONDOR_HAD_GNUC_2
+#elif __GNUC__ == 3
+#	define CONDOR_HAD_GNUC_3
 #else
 #	error "Please fix the definition of CONDOR_HAD_GNUC."
 #endif
@@ -61,8 +64,10 @@ so, please.... don't use it... okay?
 #include "condor_debug.h"
 #endif	/* of else ifndef WIN32 */
 
-#if defined(CONDOR_HAD_GNUC)
-#	define __GNUC__ CONDOR_HAD_GNUC
+#if defined(CONDOR_HAD_GNUC_2)
+#	define __GNUC__ 2
+#elif defined(CONDOR_HAD_GNUC_3)
+#	define __GNUC__ 3
 #endif
 
 

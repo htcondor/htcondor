@@ -41,6 +41,7 @@
 #include "condor_common.h"
 #include "reli_sock.h"
 #include "condor_attributes.h"
+#include "condor_commands.h"
 #include "condor_classad.h"  // god only knows why I must include this!
 #include "condor_distribution.h"
 #include "condor_environ.h"
@@ -77,7 +78,7 @@ int main ( int argc, char *argv[] ) {
         strcat( buf, argv[i] );
     }
 
-	const char	*envName = EnvGetName( ENV_MPI_SHADOW_SINFUL );
+	const char	*envName = EnvGetName( ENV_PARALLEL_SHADOW_SINFUL );
     char *shadow = getenv( envName );
 
 #ifdef MAKE_DROPPINGS
@@ -89,7 +90,7 @@ int main ( int argc, char *argv[] ) {
 			fprintf ( fp, "args: %s\n", buf );
 		}
 		else {
-			fprintf ( fp, "No MPI_Shadow_Sinful!  Aborting!\n" );
+			fprintf ( fp, "No PARALLEL_SHADOW_SINFUL!  Aborting!\n" );
 			fclose( fp );
 			exit(30);
 		}

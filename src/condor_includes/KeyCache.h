@@ -35,7 +35,7 @@ class SecMan;
 class KeyCacheEntry {
  public:
     KeyCacheEntry(
-			char * id,
+			const char * id,
 			struct sockaddr_in * addr,
 			KeyInfo * key,
 			ClassAd * policy,

@@ -23,6 +23,7 @@
 #ifndef _LOAD_QUEUE_H
 #define _LOAD_QUEUE_H
 
+class Resource;
 
 class LoadQueue
 {
@@ -34,7 +35,7 @@ public:
 	float	avg();
 	int		size() { return q_size; };
 	void	setval( float val );
-	void	display();
+	void	display( Resource* rip );
 
 private:
 	int			head;	// Index of the next available slot.

@@ -29,7 +29,6 @@
 #include "condor_io.h"
 #include "condor_adtypes.h"
 #include "condor_debug.h"
-#include "get_daemon_addr.h"
 #include "internet.h"
 #include "daemon.h"
 
@@ -266,24 +265,16 @@ addORConstraint (const char *value)
 
 // fetch all ads from the collector that satisfy the constraints
 QueryResult CondorQuery::
-fetchAds (ClassAdList &adList, const char *poolName)
+fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 {
-	const char  *pool;
 	Sock*    sock; 
 	int			more;
 	QueryResult result;
 	ClassAd     queryAd, *ad;
 
-	if( is_valid_sinful((char *)poolName) ) {
-			// We already have a sinful string, use that.
-		pool = poolName;
-	} else {
-			// Assume we have a hostname, and try to find a collector
-			// with it. This will return the correct addr for the
-			// local pool's collector if poolName is NULL.
-		pool = get_collector_addr( poolName );
-	}
-	if( ! pool ) {
+	// contact collector
+	Daemon my_collector( DT_COLLECTOR, poolName, NULL );
+	if( !my_collector.locate() ) {
 			// We were passed a bogus poolName, abort gracefully
 		return Q_NO_COLLECTOR_HOST;
 	}
@@ -333,9 +324,15 @@ fetchAds (ClassAdList &adList, const char *poolName)
 		return Q_INVALID_QUERY;
 	}
 
+	if( DebugFlags & D_HOSTNAME ) {
+		dprintf( D_HOSTNAME, "Querying collector %s (%s) with classad:\n", 
+				 my_collector.addr(), my_collector.fullHostname() );
+		queryAd.dPrint( D_HOSTNAME );
+		dprintf( D_HOSTNAME, " --- End of Query ClassAd ---\n" );
+	}
+
 	// contact collector
-	Daemon my_collector(DT_COLLECTOR, pool, NULL);
-	sock = my_collector.startCommand(command, Stream::reli_sock, 0);
+	sock = my_collector.startCommand(command, Stream::reli_sock, 0, errstack);
 	if (!sock) {
         return Q_COMMUNICATION_ERROR;
     }
@@ -343,7 +340,6 @@ fetchAds (ClassAdList &adList, const char *poolName)
 	sock->encode();
 	if (!putOldClassAd((Stream *)sock, queryAd) ||		// NAC / ZKM
 		!sock->end_of_message()) {						// NAC / ZKM
-
 		delete sock;
 		return Q_COMMUNICATION_ERROR;
 	}

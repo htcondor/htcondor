@@ -32,9 +32,11 @@ public:
 	int Buffer( const char ** buf, int *nbytes );
 	int Buffer( char c );
 	int Flush( void );
-	virtual int Output( char *buf, int len ) = 0;
+	virtual int Output( const char *buf, int len ) = 0;
 
 private:
+	int DoOutput( bool force );
+
 	char	*buffer;			// Start of actual input buffer
 	char	*bufptr;			// Current buffer pointer
 	int		bufsize;			// Physical size of buffer

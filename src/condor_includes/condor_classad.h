@@ -26,6 +26,10 @@
 #include "../condor_classad.V6/common.h"
 #include "../condor_classad.V6/exprTree.h"
 #include "../condor_classad.V6/matchClassad.h"
+#include "../condor_classad.V6/sink.h"
+#include "../condor_classad.V6/source.h"
+#include "../condor_classad.V6/xmlSource.h"
+#include "../condor_classad.V6/xmlSink.h"
 
 #if defined( COLLECTIONS )
 #include "../condor_classad.V6/collectionServer.h"

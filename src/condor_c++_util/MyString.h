@@ -3,7 +3,7 @@
  *
  * See LICENSE.TXT for additional notices and disclaimers.
  *
- * Copyright (c)1990-2002 CONDOR Team, Computer Sciences Department, 
+ * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
@@ -21,7 +21,8 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include <string.h>
-#include <iostream.h>
+#include <iostream>
+#include <stdarg.h>
 #include "simplelist.h"
 
 #ifndef _MyString_H_
@@ -74,6 +75,9 @@ class MyString
 
 	/** Returns length of string */
 	int Length()          const { return Len;                }
+
+	/** Returns true if the string is empty, false otherwise */
+	const bool IsEmpty() const { return (Len == 0); }
 
 	/** Returns space reserved for string */
 	int Capacity()        const { return capacity;           }
@@ -148,6 +152,13 @@ class MyString
 		reasonably.  */
 	MyString& operator+=(const char ); 
 
+	/** Appends the string version of the given int */
+	MyString& operator+=(int i);
+
+	/** Appends the string version of the given double */
+	MyString& operator+=(double d);
+
+
 	/** Returns a new string that is S1 followed by S2 */
 	friend MyString operator+(const MyString &S1, const MyString &S2); 
 	//@}
@@ -181,13 +192,44 @@ class MyString
 	/** Returns the zero-based index of the first character of a
      *  substring, if it is contained within the MyString. Begins
      *  looking at iStartPost */
-	int find(const char *pszToFind, int iStartPos = 0);
+	int find(const char *pszToFind, int iStartPos = 0) const;
 
 	/** Replaces a substring with another substring. It's okay for the
      *  new string to be empty, so you end up deleting a substring. */
 	bool replaceString(const char *pszToReplace, 
 					   const char *pszReplaceWith, 
 					   int iStartFromPos=0);
+
+	/** Fills a MyString with what you would have gotten from sprintf.
+	 *  It's safe though, and it will accept whatever you print into it. 
+	 *  Assuming, of course, that you don't run out of memory. 
+	 *  The returns true if it succeeded, false otherwise.
+	 */
+	bool sprintf(const char *format, ...);
+
+	/** Fills a MyString with what you would have gotten from vsprintf.
+	 *  This is handy if you define your own printf-like functions.
+	 */
+
+	bool vsprintf(const char *format, va_list args);
+
+	/** Like sprintf, but this appends to existing data. */
+	bool sprintf_cat(const char *format, ...);
+
+	/** Like vsprintf, but this appends to existing data. */
+	bool vsprintf_cat(const char *format, va_list args);
+
+	void lower_case(void);
+	void upper_case(void);
+	void strlwr( void );
+	void strupr( void );
+
+	/** If the last character in the string is a newline, remove
+		it (by setting it to '\0' and decrementing Len).
+		@return True if we removed a newline, false if not
+	*/  
+	bool chomp( void );
+
 	//@}
 
 	// ----------------------------------------
@@ -238,12 +280,28 @@ class MyString
 	friend istream& operator>>(istream& is, MyString& S);
 	//@}
   
+	/** Safely read from the given file until we've hit a newline or
+		an EOF.  We use fgets() in a loop to make sure we've read data
+		until we find a newline.  If the buffer wasn't big enough and
+		there's more to read, we fgets() again and append the results
+		to ourselves.  If we hit EOF right away, we return false, and
+		the value of this MyString is unchanged.  If we read any data
+		at all, that's now the value of this MyString, and we return
+		true.  If we hit EOF before a newline, we still return true,
+		so don't assume a newline just because this returns true.
+		@param fp The file you want to read from
+		@returns True if we found data, false if we're at the EOF 
+	 */
+	bool readLine( FILE* fp );
+
 private:
 
-  char* Data;	
-  char dummy;
-  int Len;
-  int capacity;
+    void init();
+
+  char* Data;	// array containing the C string of this MyString's value
+  char dummy;	// used for '\0' char in operator[] (dangerous)
+  int Len;		// the length of the string
+  int capacity;	// capacity of the data array, not counting null terminator
   
 };
 

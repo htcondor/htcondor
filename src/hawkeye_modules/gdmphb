@@ -1,0 +1,10 @@
+#!/bin/sh
+echo -n "last_check = \""
+date | tr -d "\n"
+echo "\""
+
+echo -n "last_heartbeat_received = \""
+cat /tmp/last_hb_received
+echo "\""
+
+echo last_hearbbeat_received_worried = true

@@ -77,6 +77,7 @@ char	*Execute;				// Name of directory where user procs execute
 int		ExecTransferAttempts;	// How many attempts at getting the initial ckpt
 int		DoDelays;				// Insert artificial delays for testing
 char	*UidDomain=NULL;		// Machines we share UID space with
+bool	TrustUidDomain=false;	// Should we trust what the submit side claims?
 
 Alarm		MyAlarm;			// Don't block forever on user process exits
 char	*InitiatingHost;		// Machine where shadow is running
@@ -182,6 +183,8 @@ delay( int sec )
 #elif defined(ALPHA)
 	int		lim = 300000;
 #elif defined(HPPAR)
+	int		lim = 650000;
+#elif defined(CONDOR_DARWIN)
 	int		lim = 650000;
 #elif defined(LINUX)
 	int		lim = 300000;
@@ -369,6 +372,16 @@ init_params()
 	if( UidDomain[0] == '*' ) {
 		UidDomain[0] = '\0';
 	}
+
+	TrustUidDomain = false;
+	tmp = param( "TRUST_UID_DOMAIN" );
+	if( tmp ) {
+		if( tmp[0] == 't' || tmp[0] == 'T' ) { 
+			TrustUidDomain = true;
+		}			
+		free( tmp );
+	}
+
 
 	// We can configure how many times the starter wishes to attempt to
 	// pull over the initial checkpoint

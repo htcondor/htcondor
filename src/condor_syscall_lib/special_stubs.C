@@ -59,6 +59,17 @@ my_ip_addr()
 	return syscall_sock->get_ip_int();
 }
 
+/*
+	In the 6.3 series, REMOTE_syscall had been removed. Well, it turns out
+	that 6.4 was supposed to be backwards compatible with 6.2. :( This means
+	that some 6.2 starters are going to look for the symbol REMOTE_syscall in a
+	6.3+(including 6.4) standard universe executable in order to determine if
+	it had been linked with condor correctly. This function must do nothing
+	except exist for a while until we get rid of it for good and in a
+	non-backwards compatible way.
+*/
+void REMOTE_syscall(void) {} ;
+
 
 /*
   _condor_dprintf_va is the real meat of dprintf().  We have different
@@ -112,7 +123,6 @@ int get_port_range(int *low_port, int *high_port)
 		return FALSE;
     }
 	if ( (high = getenv("_condor_HIGHPORT")) == NULL ) {
-		free(low);
         dprintf(D_ALWAYS, "_condor_LOWPORT is defined but _condor_HIGHPORT undefined!\n");
 		return FALSE;
 	}
@@ -124,13 +134,9 @@ int get_port_range(int *low_port, int *high_port)
 		dprintf(D_ALWAYS, "get_port_range - invalid LOWPORT(%d) \
 		                   and/or HIGHPORT(%d)\n",
 		                   *low_port, *high_port);
-		free(low);
-		free(high);
 		return FALSE;
 	}
 
-	free(low);
-	free(high);
 	return TRUE;
 }
 

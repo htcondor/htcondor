@@ -45,6 +45,7 @@ getPPStyleStr ()
 		case PP_COLLECTOR_NORMAL:return"Normal (Collector)";
     	case PP_STARTD_SERVER:	return "Server";
     	case PP_STARTD_RUN:		return "Run";
+    	case PP_STARTD_COD:		return "COD";
 		case PP_STARTD_STATE:	return "State";
 		case PP_STORAGE_NORMAL:	return "Storage";
 		case PP_ANY_NORMAL:	return "Any";
@@ -178,6 +179,7 @@ getModeStr()
 		case MODE_STARTD_NORMAL:		return "Normal (Startd)";
 		case MODE_STARTD_AVAIL:			return "Available (Startd)";
 		case MODE_STARTD_RUN:			return "Run (Startd)";
+		case MODE_STARTD_COD:			return "COD (Startd)";
 		case MODE_SCHEDD_NORMAL:		return "Normal (Schedd)";
 		case MODE_SCHEDD_SUBMITTORS:	return "Submittors (Schedd)";
 		case MODE_MASTER_NORMAL:		return "Normal (Master)";
@@ -219,6 +221,11 @@ setMode (Mode mod, int i, char *argv)
           case MODE_STARTD_RUN:
             setType ("STARTD", i, argv);
             setPPstyle (PP_STARTD_RUN, i, argv);
+            break;
+
+          case MODE_STARTD_COD:
+            setType ("STARTD", i, argv);
+            setPPstyle (PP_STARTD_COD, i, argv);
             break;
 
 		  case MODE_SCHEDD_NORMAL:

@@ -1,6 +1,17 @@
+
 #include "stdafx.h"
 #include "smtp.h"
+#if _MSC_VER < 1300 // if we're not compiling with MSVS.NET
+// use the old iostream headers, which cause the old MFC libraries
+// to be used as well. MSVC6's new MFC libraries
+// that deal with io seem to be problematic.
 #include <iostream.h>
+#else 
+// on .NET we must use the new MFC io libraries and they seem to work ok.
+#include <iostream>
+using namespace std;
+#endif // we're not in .NET
+
 
 
 CString my_get_user() {

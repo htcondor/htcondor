@@ -74,22 +74,29 @@ public class CondorJavaWrapper {
 
 	public static void main(String[] args) {
 
+		PrintWriter out = null;
+
+		if (args.length < WRAPPER_ARGS) {
+			show_use();
+			System.exit(ERROR_EXIT_CODE);
+		}
+
 		String startFile = args[0];
 		String endFile = args[1];
 		String jobName = args[2];
-		PrintWriter out = null;
 
 		try {
-			if (args.length < WRAPPER_ARGS) {
-				show_use();
-				System.exit(ERROR_EXIT_CODE);
-			}
-
 			out = new PrintWriter( new FileOutputStream(startFile) );
+			out.println("started\n");
+			out.flush();
 			out.close();
-
 			out = new PrintWriter( new FileOutputStream(endFile) );
+		} catch( Exception e ) {
+			System.err.println("CondorJavaWrapper: "+e);
+			System.exit(1);
+		}
 
+		try {
 			String [] jobArgs = getExecutableArgs(args);
 			Class jobClass = Class.forName(jobName);
 			Class [] paramTypes = { jobArgs.getClass() };
@@ -105,6 +112,8 @@ public class CondorJavaWrapper {
 		}
 
 		dump_result("normal",null,out);
+		out.flush();
+		out.close();
 	}
 
 	private static void dump_result( String kind, Throwable reason, PrintWriter out ) {

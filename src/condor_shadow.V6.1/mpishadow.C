@@ -565,7 +565,7 @@ MPIShadow::spawnAllComrades( void )
 		modifyNodeAd( rr->getJobAd() );
 		spawnNode( rr );  // This increments nextResourceToStart 
     }
-	assert( nextResourceToStart == numNodes );
+	ASSERT( nextResourceToStart == numNodes );
 }
 
 

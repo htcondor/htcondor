@@ -38,4 +38,11 @@ int pseudo_get_user_info(ClassAd *&ad);
 int pseudo_job_exit(int status, int reason, ClassAd* ad);
 int pseudo_register_mpi_master_info( ClassAd* ad );
 int pseudo_begin_execution( void );
+int pseudo_get_file_info_new( const char *path, char *url );
+int pseudo_get_buffer_info( int *bytes_out, int *block_size_out, int *prefetch_bytes_out );
+int pseudo_ulog( ClassAd *ad );
+int pseudo_get_job_attr( const char *name, char *expr );
+int pseudo_set_job_attr( const char *name, const char *expr );
+int pseudo_constrain( const char *expr );
+
 #endif

@@ -25,71 +25,102 @@
 #include "startd_cronjob.h"
 #include "startd.h"
 
+// Interface version number
+#define	INTERFACE_VERSION	"1"
+
 // CronJob constructor
-StartdCronJob::StartdCronJob( const char *jobName ) :
-		CondorCronJob( jobName )
+StartdCronJob::
+StartdCronJob( const char *mgrName, const char *jobName ) :
+		CondorCronJob( mgrName, jobName )
 {
 	// Register it with the Resource Manager
 	resmgr->adlist_register( jobName );
+	OutputAd = NULL;
+	OutputAdCount = 0;
+
+	// Build my interface version environment (but, I need a 'name' to do it)
+	if ( mgrName && (*mgrName) ) {
+		char	*nameUc = strdup( mgrName );
+		char	*namePtr;
+		for( namePtr = nameUc; *namePtr; namePtr++ ) {
+			if ( islower ( *namePtr ) ) {
+				*namePtr = toupper( *namePtr );
+			}
+		}
+		EnvStr = nameUc;
+		EnvStr += "_INTERFACE_VERSION=" INTERFACE_VERSION;
+	}
 }
 
 // StartdCronJob destructor
-StartdCronJob::~StartdCronJob( )
+StartdCronJob::
+~StartdCronJob( )
 {
 	// Delete myself from the resource manager
 	resmgr->adlist_delete( GetName() );
+	if ( NULL != OutputAd ) {
+		delete( OutputAd );
+	}
 }
 
-// Process the job's output
+// StartdCronJob initializer
 int
-StartdCronJob::ProcessOutput( MyString *string )
+StartdCronJob::Initialize( )
 {
-	// Publish the results
-	const char		*cstring = string->Value( );
+	AddEnv( EnvStr.GetCStr() );
 
-	// Note: We allocate the ClassAd here, but we give it to the
-	// Resource Manager; the Resource manager stores the pointer away,
-	// and free's it up when it's no longer in use
-	ClassAd		*classAd = new ClassAd( );
+	// And, run the "main" Initialize function
+	return CondorCronJob::Initialize( );
+}
 
-	// Split up our string and parse it one chunk at a time...
-	StringList	*nvList = new StringList( cstring, "\n," );
-	nvList->rewind();
-	char	*nvpair;
-	int		ok = 0;
-	while (  ( nvpair = nvList->next() ) != NULL ) {
-		if ( ! classAd->Insert( nvpair ) ) {
-			dprintf( D_ALWAYS, "Can't insert '%s' into '%s' ClassAd\n",
-					 nvpair, GetName() );
-		} else {
-			ok++;
-		}
+// Process a line of input
+int
+StartdCronJob::
+ProcessOutput( const char *line )
+{
+	if ( NULL == OutputAd ) {
+		OutputAd = new ClassAd( );
 	}
 
-	// If we had at least one success, use this new ClassAd
-	if ( ok ) {
+	// NULL line means end of list
+	if ( NULL == line ) {
+		// Publish it
+		if ( OutputAdCount != 0 ) {
 
-		// Insert the 'LastUpdate' field
-		const char		*prefix = GetPrefix( );
-		if ( prefix ) {
-			MyString	Update( prefix );
-			Update += "LastUpdate = ";
-			char	tmpBuf [ 20 ];
-			sprintf( tmpBuf, "%ld", (long) time( NULL ) );
-			Update += tmpBuf;
-			const char	*UpdateStr = Update.Value( );
+			// Insert the 'LastUpdate' field
+			const char      *prefix = GetPrefix( );
+			if ( prefix ) {
+				MyString    Update( prefix );
+				Update += "LastUpdate = ";
+				char    tmpBuf [ 20 ];
+				sprintf( tmpBuf, "%ld", (long) time( NULL ) );
+				Update += tmpBuf;
+				const char  *UpdateStr = Update.Value( );
 
-			// Add it in
-			if ( ! classAd->Insert( UpdateStr ) ) {
-				dprintf( D_ALWAYS, "Can't insert '%s' into '%s' ClassAd\n",
-						 UpdateStr, GetName() );
+				// Add it in
+				if ( ! OutputAd->Insert( UpdateStr ) ) {
+					dprintf( D_ALWAYS, "Can't insert '%s' into '%s' ClassAd\n",
+							 UpdateStr, GetName() );
+					// TodoWrite( );
+				}
 			}
+
+			// Replace the old ClassAd now
+			resmgr->adlist_replace( GetName( ), OutputAd );
+
+			// I've handed it off; forget about it!
+			OutputAd = NULL;
+			OutputAdCount = 0;
 		}
-
-		// Replace the old ClassAd now
-		resmgr->adlist_replace( GetName( ), classAd );
+	} else {
+		// Process this line!
+		if ( ! OutputAd->Insert( line ) ) {
+			dprintf( D_ALWAYS, "Can't insert '%s' into '%s' ClassAd\n",
+					 line, GetName() );
+			// TodoWrite( );
+		} else {
+			OutputAdCount++;
+		}
 	}
-
-
-	return 0;
+	return OutputAdCount;
 }

@@ -39,6 +39,8 @@ static const char  LICENSE_ADTYPE	[] = "License";
 static const char  STORAGE_ADTYPE	[] = "Storage";
 static const char  ANY_ADTYPE		[] = "Any";
 static const char  SUBMITTER_ADTYPE	[] = "Submitter";
+static const char  COMMAND_ADTYPE	[] = "Command";
+static const char  REPLY_ADTYPE		[] = "Reply";
 
 #endif
 

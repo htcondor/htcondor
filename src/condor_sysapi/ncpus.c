@@ -37,6 +37,10 @@
 #include <sys/pstat.h>
 #endif
 
+#ifdef CONDOR_DARWIN
+#include <sys/sysctl.h>
+#endif
+
 int
 sysapi_ncpus_raw(void)
 {
@@ -79,7 +83,9 @@ sysapi_ncpus_raw(void)
 
 	FILE        *proc;
 	char 		buf[256];
+#if defined(ALPHA)
 	char		*tmp;
+#endif
 	int 		num_cpus = 0;
 
 	sysapi_internal_reconfig();
@@ -131,7 +137,7 @@ bogomips        : 299.01
 
 	// Count how many lines begin with the string "processor".
 	while( fgets( buf, 256, proc) ) {
-#if defined(I386)
+#if defined(I386) || defined(IA64)
 		if( !strincmp(buf, "processor", 9) ) {
 			num_cpus++;
 		}
@@ -158,8 +164,20 @@ bogomips        : 299.01
 	}
 	fclose( proc );
 	return num_cpus;
+#elif defined(AIX)
+	sysapi_internal_reconfig();
+	return sysconf(_SC_NPROCESSORS_ONLN);
+#elif defined(CONDOR_DARWIN)
+	sysapi_internal_reconfig();
+	int mib[2], maxproc;
+	size_t len;
+	mib[0] = CTL_HW;
+	mib[1] = HW_NCPU;
+	len = sizeof(maxproc);
+	sysctl(mib, 2, &maxproc, &len, NULL, 0);
+	return(maxproc);
 #else
-#error DO NOT KNOW HOW ON THIS PLATFORM
+#error DO NOT KNOW HOW TO COMPUTE NUMBER OF CPUS ON THIS PLATFORM!
 #endif
 }
 

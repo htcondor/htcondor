@@ -27,8 +27,8 @@
 ** Compatibility routine for systems which utilize setresgid() for
 ** this purpose.
 */
-setegid( egid )
-int		egid;
+#if !defined(CONDOR_DARWIN)
+int setegid( int egid )
 {
 #if defined(HPUX)
 	return setresgid( -1, egid, -1 );
@@ -36,3 +36,4 @@ int		egid;
 	return setregid( -1, egid, -1 );;
 #endif
 }
+#endif

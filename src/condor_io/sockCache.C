@@ -22,142 +22,129 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "sockCache.h"
-#include "daemon.h"
+#include "condor_io.h"
 
-SocketCache::
-SocketCache(int size)
+SocketCache::SocketCache( int size )
 {
 	cacheSize = size;
 	timeStamp = 0;
 	sockCache = new sockEntry[size];
-	if (!sockCache)
-	{
-		EXCEPT ("SocketCache:  Out of memory");
+	if( !sockCache ) {
+		EXCEPT( "SocketCache: Out of memory" );
 	}
-
-	for (int i = 0; i < size; i++)
-		sockCache[i].valid = false;
+	for( int i = 0; i < size; i++ ) {
+		initEntry( &(sockCache[i]) );
+	}
 }
 
 
-SocketCache::
-~SocketCache()
+SocketCache::~SocketCache()
 {
 	clearCache();
 	delete [] sockCache;
 }
 
 
-void SocketCache::
-clearCache()
+void
+SocketCache::resize( int size )
 {
-	for (int i = 0; i < cacheSize; i++) {
-		if (sockCache[i].valid) {
-			sockCache[i].sock->close();
-			delete sockCache[i].sock;
-			sockCache[i].valid = false;
-		}	
+	if( size == cacheSize ) {
+			// nothing to do!
+		return;
+	}
+	if( size < cacheSize ) {
+			// we don't gracefully support this yet.  if we really
+			// supported this in a SocketCache where each socket is
+			// registered with DaemonCore, we'd have to have a way to
+			// deal with canceling the sockets...
+		dprintf( D_ALWAYS, 
+				 "ERROR: Cannot shrink a SocketCache with resize()\n" );
+		return;
+	}
+	dprintf( D_FULLDEBUG, "Resizing SocketCache - old: %d new: %d\n",
+			 cacheSize, size ); 
+	sockEntry* new_cache = new sockEntry[size];
+	int i;
+	for( i=0; i<size; i++ ) {
+		if( i<cacheSize && sockCache[i].valid ) {
+			new_cache[i].valid = true;
+			new_cache[i].sock = sockCache[i].sock;
+			new_cache[i].timeStamp = sockCache[i].timeStamp;
+			strcpy( new_cache[i].addr, sockCache[i].addr );
+		} else {
+			initEntry( &(new_cache[i]) );
+		}
+	}
+	delete [] sockCache;
+	cacheSize = size;
+	sockCache = new_cache;
+}
+
+
+void
+SocketCache::clearCache()
+{
+	for( int i = 0; i < cacheSize; i++ ) {
+		invalidateEntry( i );
 	}
 }
 
 
-void SocketCache::
-invalidateSock (char *sock)
+void
+SocketCache::invalidateSock( const char* addr )
 {
-	for (int i = 0; i < cacheSize; i++)
-	{
-		if (sockCache[i].valid && strcmp(sock,sockCache[i].addr) == 0)
-		{
-			sockCache[i].sock->close();
-			delete sockCache[i].sock;
-			sockCache[i].valid = false;
+	for( int i = 0; i < cacheSize; i++ ) {
+		if( sockCache[i].valid && strcmp(addr,sockCache[i].addr) == 0 ) {
+			invalidateEntry(i);
 		}
 	}
 }
 
 
-bool SocketCache::
-getReliSock (Sock *&sock, char *addr, int cmd, int timeOut)
+ReliSock* 
+SocketCache::findReliSock( const char *addr )
 {
-	ReliSock	*rSock;
-	int			slot;
-    Daemon schedd (DT_SCHEDD, addr, 0);
-
-    for (int i = 0; i < cacheSize; i++)
-    {
-        if (sockCache[i].valid && strcmp(addr,sockCache[i].addr) == 0)
-		{
-			sock = sockCache[i].sock;
-			sock->timeout(timeOut);
-            if (!sock->put(cmd)) {
-                return false;
-            }
-			return true;
+    for( int i = 0; i < cacheSize; i++ ) {
+        if( sockCache[i].valid && strcmp(addr,sockCache[i].addr) == 0 ) {
+			return sockCache[i].sock;
 		}
 	}
+	return NULL;
+}
 
-	// increment timestamp
-	timeStamp++;
 
-    if ((rSock = (ReliSock*)(schedd.startCommand(cmd, Stream::reli_sock, timeOut))) ==0 ) {
-		return false;
-	}
-
-	slot = getCacheSlot();
-
+void
+SocketCache::addReliSock( const char* addr, ReliSock* rsock )
+{
+	int slot = getCacheSlot();
 	sockCache[slot].valid 		= true;
 	sockCache[slot].timeStamp 	= timeStamp;
-	sockCache[slot].sock 		= rSock;	
-	sockCache[slot].sockType	= Stream::reli_sock;
+	sockCache[slot].sock 		= rsock;	
 	strcpy(sockCache[slot].addr, addr);
+}
 
-	sock = rSock;
+
+bool
+SocketCache::isFull( void )
+{
+	for( int i = 0; i < cacheSize; i++ ) {
+		if( ! sockCache[i].valid ) {
+			return false;
+		}
+	}
 	return true;
 }
 
 
-bool SocketCache::
-getSafeSock (Sock *&sock, char *addr, int cmd, int timeOut)
+int
+SocketCache::size( void )
 {
-	SafeSock	*sSock;
-	int			slot;
-    Daemon schedd (DT_SCHEDD, addr, 0);
-
-    for (int i = 0; i < cacheSize; i++)
-    {
-        if (sockCache[i].valid && strcmp(addr,sockCache[i].addr) == 0)
-		{
-			sock = sockCache[i].sock;
-			sock->timeout(timeOut);
-            schedd.startCommand(cmd, sock, timeOut);
-			return true;
-		}
-	}
-
-	// increment timestamp
-	timeStamp++;
-
-    if ((sSock = (SafeSock*)(schedd.startCommand(cmd, Stream::safe_sock, timeOut))) ==0) {
-		return false;
-	}
-		
-	slot = getCacheSlot();
-
-	sockCache[slot].valid 		= true;
-	sockCache[slot].timeStamp 	= timeStamp;
-	sockCache[slot].sock 		= sSock;	
-	sockCache[slot].sockType	= Stream::safe_sock;
-	strcpy(sockCache[slot].addr, addr);
-
-	sock = sSock;
-	return true;
+	return cacheSize;
 }
 
 
-
-int SocketCache::
-getCacheSlot()
+int
+SocketCache::getCacheSlot()
 {
 	int time	= INT_MAX;
 	int	oldest  = -1;
@@ -185,8 +172,27 @@ getCacheSlot()
 	// evict the oldest
 	dprintf (D_FULLDEBUG, "SocketCache:  Evicting old connection to %s\n", 
 				sockCache[oldest].addr);
-	sockCache[oldest].sock->close();
-	delete sockCache[oldest].sock;
-
+	invalidateEntry( oldest );
 	return oldest;
+}
+
+
+void
+SocketCache::invalidateEntry( int i )
+{
+	if( sockCache[i].valid ) {
+		sockCache[i].sock->close();
+		delete sockCache[i].sock;
+	}
+	initEntry( &(sockCache[i]) );
+}
+
+
+void
+SocketCache::initEntry( sockEntry* entry )
+{
+	entry->valid = false;
+	entry->addr[0] = '\0';
+	entry->timeStamp = 0;
+	entry->sock = NULL;
 }

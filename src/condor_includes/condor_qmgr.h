@@ -23,7 +23,9 @@
 #if !defined(_LIBQMGR_H)
 #define _LIBQMGR_H
 
+#include "condor_common.h"
 #include "proc.h"
+#include "../condor_c++_util/CondorError.h"
 class ClassAd;
 
 
@@ -38,7 +40,7 @@ typedef int (*scan_func)(ClassAd *ad);
 extern "C" {
 #endif
 
-int InitializeConnection(const char * );
+int InitializeConnection(const char *, const char *);
 int InitializeReadOnlyConnection(const char * );
 
 /** Initiate connection to schedd job queue and begin transaction.
@@ -51,13 +53,16 @@ int InitializeReadOnlyConnection(const char * );
 	@return opaque Qmgr_connection structure
 */		 
 Qmgr_connection *ConnectQ(char *qmgr_location, int timeout=0, 
-				bool read_only=false );
-/** Commit all operations in the transaction and close the connection
-	to the schedd job queue.
+				bool read_only=false, CondorError* errstack=NULL );
+
+/** Close the connection to the schedd job queue, and optionally commit
+	the transaction.
 	@param qmgr pointer to Qmgr_connection object returned by ConnectQ
+	@param commit_transactions set to true to commit the transaction, 
+	and false to abort the transaction.
 	@return true if commit was successful; false if transaction was aborted
 */
-bool DisconnectQ(Qmgr_connection *qmgr);
+bool DisconnectQ(Qmgr_connection *qmgr, bool commit_transactions=true);
 
 /** Start a new job cluster.  This cluster becomes the
 	active cluster, and jobs may only be submitted to this cluster.
@@ -143,6 +148,10 @@ int GetAttributeFloat(int cluster, int proc, const char *attr, float *value);
 	@return -1 on failure; 0 on success
 */
 int GetAttributeInt(int cluster, int proc, const char *attr, int *value);
+/** Get value of attr for job with specified cluster and proc.
+	@return -1 on failure; 0 on success
+*/
+int GetAttributeBool(int cluster, int proc, const char *attr, int *value);
 /** Get value of attr for job with specified cluster and proc.
 	@return -1 on failure; 0 on success
 */

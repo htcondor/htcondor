@@ -6,6 +6,8 @@
 #include <aclapi.h>
 #include "ntsecapi.h"
 
+
+
 const int max_sid_length = 100;
 const int max_domain_length = 100;
 
@@ -14,17 +16,36 @@ const int max_domain_length = 100;
 #define STATUS_INVALID_PARAMETER    ((NTSTATUS)0xC000000DL) 
 #endif 
 
+#define ACCOUNT_PREFIX			"condor-run-"
+#define ACCOUNT_PREFIX_REUSE	"condor-reuse-"
+
+// get names of accounts and groups in a language-independent way
+char* getWellKnownName( DWORD subAuth1, DWORD subAuth2 = 0 );
+// these just call getWellKnownName()
+char* getSystemAccountName();
+char* getUserGroupName();
+
 class dynuser {
 public:
 	dynuser();
 	~dynuser();
 
-	bool createuser(char * username);
+	bool init_user();
 	bool deleteuser(char * username);
+	const char* get_accountname();
 
 	HANDLE get_token();
 
     bool cleanup_condor_users(char* user_prefix);
+
+	void reset(); // used to be private
+
+	const char* account_prefix() { 
+		if ( reuse_account ) { return ACCOUNT_PREFIX_REUSE; }
+		else { return ACCOUNT_PREFIX; }
+	};
+
+	bool reuse_accounts() { return reuse_account; }
 
 private:
 
@@ -40,23 +61,27 @@ private:
 
 	// End of SID stuff
 
-	void update_psid();
+	bool update_psid(); // returns true on successful
 
 	void createpass();
 	void createaccount();
+	void enable_account();
+	void disable_account();
 	void update_t();
 	
 	bool add_batch_privilege();
 	bool add_users_group();
 
     bool del_users_group();
-
+	bool logon_user();
+	
 #if 0
 	bool dump_groups();
 #endif
 
 	char	*accountname,	*password;			// ASCII versions
 	wchar_t	*accountname_t,	*password_t;		// Unicode versions
+	bool reuse_account;	// accounts are enabled/disabled instead of created/deleted when true
 
 	HANDLE logon_token;
 };

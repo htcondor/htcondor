@@ -22,7 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-
+#include "condor_parameters.h"
 /*
  * Main routine and function for the startd.
  */
@@ -31,6 +31,11 @@
 #include "startd_cronmgr.h"
 
 // Define global variables
+
+// windows-specific: notifier for the condor "birdwatcher" (system tray icon)
+#ifdef WIN32
+CondorSystrayNotifier systray_notifier;
+#endif
 
 // Resource manager
 ResMgr*	resmgr;			// Pointer to the resource manager object
@@ -44,11 +49,10 @@ char*	exec_path = NULL;
 
 // String Lists
 StringList *startd_job_exprs = NULL;
+static StringList *valid_cod_users = NULL; 
 
 // Hosts
-Daemon*	Collector = NULL;
-Daemon* View_Collector = NULL;
-char*	condor_view_host = NULL;
+DCCollector*	Collector = NULL;
 char*	accountant_host = NULL;
 
 // Others
@@ -85,9 +89,6 @@ int main_reaper = 0;
 // Cron stuff
 StartdCronMgr	*Cronmgr;
 
-// Define static variables
-static	int old_polling_interval;
-
 /*
  * Prototypes of static functions.
  */
@@ -101,7 +102,6 @@ int main_shutdown_fast();
 int main_shutdown_graceful();
 extern "C" int do_cleanup(int,int,char*);
 int reaper( Service*, int pid, int status);
-int	check_free();
 int	shutdown_reaper( Service*, int pid, int status ); 
 
 void
@@ -121,6 +121,9 @@ main_init( int, char* argv[] )
 	int		skip_benchmarks = FALSE;
 	char*	tmp = NULL;
 	char**	ptr; 
+
+	// Reset the cron manager to a known state
+	Cronmgr = NULL;
 
 		// Process command line args.
 	for(ptr = argv + 1; *ptr; ptr++) {
@@ -145,7 +148,7 @@ main_init( int, char* argv[] )
 		}
 	}
 
-		// Seed the random number generator for capability generation.
+	// Seed the random number generator for capability generation.
 	set_seed( 0 );
 
 		// Record the time we started up for use in determining
@@ -181,8 +184,6 @@ main_init( int, char* argv[] )
 		// Instantiate Resource objects in the ResMgr
 	resmgr->init_resources();
 
-	resmgr->init_socks();
-
 		// Compute all attributes
 	resmgr->compute( A_ALL );
 
@@ -201,7 +202,7 @@ main_init( int, char* argv[] )
 		free( tmp );
 	}
 
-	resmgr->walk( &(Resource::init_classad) );
+	resmgr->walk( &Resource::init_classad );
 
 	// Startup Cron
 	Cronmgr = new StartdCronMgr( );
@@ -209,8 +210,8 @@ main_init( int, char* argv[] )
 
 		// Now that we have our classads, we can compute things that
 		// need to be evaluated
-	resmgr->walk( &(Resource::compute), A_EVALUATED );
-	resmgr->walk( &(Resource::refresh_classad), A_PUBLIC | A_EVALUATED ); 
+	resmgr->walk( &Resource::compute, A_EVALUATED );
+	resmgr->walk( &Resource::refresh_classad, A_PUBLIC | A_EVALUATED ); 
 
 		// If we EXCEPT, don't leave any starters lying around.
 	_EXCEPT_Cleanup = do_cleanup;
@@ -308,6 +309,11 @@ main_init( int, char* argv[] )
 								  (CommandHandler)command_match_info,
 								  "command_match_info", 0, NEGOTIATOR );
 
+		// the ClassAd-only command
+	daemonCore->Register_Command( CA_CMD, "CA_CMD",
+								  (CommandHandler)command_classad_handler,
+								  "command_classad_handler", 0, WRITE );
+
 		//////////////////////////////////////////////////
 		// Reapers 
 		//////////////////////////////////////////////////
@@ -342,8 +348,6 @@ main_config( bool is_full )
 {
 	bool done_allocating;
 
-		// Stash old interval so we know if it's changed.
-	old_polling_interval = polling_interval;
 		// Reread config file for global settings.
 	init_params(0);
 		// Process any changes in the VM type specifications
@@ -361,13 +365,10 @@ finish_main_config( void )
 		// Recompute machine-wide attributes object.
 	resmgr->compute( A_ALL );
 		// Rebuild ads for each resource.  
-	resmgr->walk( &(Resource::init_classad) );  
+	resmgr->walk( &Resource::init_classad );  
 		// Reset various settings in the ResMgr.
-	resmgr->init_socks();
 	resmgr->reset_timers();
-	if( old_polling_interval != polling_interval ) {
-		resmgr->walk( &(Resource::resize_load_queue) );
-	}
+
 	dprintf( D_FULLDEBUG, "MainConfig finish\n" );
 	Cronmgr->Reconfig( );
 	resmgr->starter_mgr.init();
@@ -384,7 +385,7 @@ int
 init_params( int first_time)
 {
 	char *tmp;
-    Daemon *new_collector = NULL;
+    DCCollector* new_collector = NULL;
 
 	resmgr->init_config_classad();
 
@@ -409,7 +410,7 @@ init_params( int first_time)
 	if( Collector ) {
 			// See if we changed collectors.  If so, invalidate our
 			// ads at the old one, and start using the new info.
-		new_collector = new Daemon( DT_COLLECTOR );
+		new_collector = new DCCollector;
 		if( strcmp(new_collector->addr(), 
 				   Collector->addr()) != MATCH ) {
 				// The addresses are different, so we must really have
@@ -424,21 +425,8 @@ init_params( int first_time)
 	} else {
 			// No Collector yet, there's nothing to do except create a
 			// new object.
-		Collector = new Daemon( DT_COLLECTOR );
+		Collector = new DCCollector;
 	}
-
-
-	if( condor_view_host ) {
-		free( condor_view_host );
-	}
-	condor_view_host = param( "CONDOR_VIEW_HOST" );
-
-    if (View_Collector) {
-        delete View_Collector;
-    }
-    if (condor_view_host) {
-        View_Collector = new Daemon(condor_view_host, CONDOR_VIEW_PORT);
-    }
 
 	tmp = param( "POLLING_INTERVAL" );
 	if( tmp == NULL ) {
@@ -494,6 +482,9 @@ init_params( int first_time)
 		startd_job_exprs = new StringList();
 		startd_job_exprs->initializeFromString( tmp );
 		free( tmp );
+	} else {
+		startd_job_exprs = new StringList();
+		startd_job_exprs->initializeFromString( ATTR_JOB_UNIVERSE );
 	}
 
 	tmp = param( "VIRTUAL_MACHINES_CONNECTED_TO_CONSOLE" );
@@ -564,6 +555,17 @@ init_params( int first_time)
 		free( tmp );
 	}
 
+	if( valid_cod_users ) {
+		delete( valid_cod_users );
+		valid_cod_users = NULL;
+	}
+	tmp = param( "VALID_COD_USERS" );
+	if( tmp ) {
+		valid_cod_users = new StringList();
+		valid_cod_users->initializeFromString( tmp );
+		free( tmp );
+	}
+
 	return TRUE;
 }
 
@@ -571,6 +573,14 @@ init_params( int first_time)
 void
 startd_exit() 
 {
+	// Shut down the cron logic
+	if( Cronmgr ) {
+		dprintf( D_ALWAYS, "Deleting Cronmgr\n" );
+		Cronmgr->Shutdown( true );
+		delete Cronmgr;
+	}
+
+	// Cleanup the resource manager
 	if ( resmgr ) {
 		dprintf( D_FULLDEBUG, "About to send final update to the central manager\n" );	
 		resmgr->final_update();
@@ -580,6 +590,10 @@ startd_exit()
 		delete resmgr;
 		resmgr = NULL;
 	}
+
+#ifdef WIN32
+	systray_notifier.notifyCondorOff();
+#endif
 
 	dprintf( D_ALWAYS, "All resources are free, exiting.\n" );
 #ifdef WIN32
@@ -591,8 +605,15 @@ startd_exit()
 int
 main_shutdown_fast()
 {
+	dprintf( D_ALWAYS, "shutdown fast\n" );
+
+	// Shut down the cron logic
+	if( Cronmgr ) {
+		Cronmgr->Shutdown( true );
+	}
+
 		// If the machine is free, we can just exit right away.
-	check_free();
+	startd_check_free();
 
 		// Remember that we're in shutdown-mode so we will refuse
 		// various commands. 
@@ -603,11 +624,11 @@ main_shutdown_fast()
 								 "shutdown_reaper" );
 
 		// Quickly kill all the starters that are running
-	resmgr->walk( &(Resource::kill_claim) );
+	resmgr->walk( &Resource::killAllClaims );
 
 	daemonCore->Register_Timer( 0, 5, 
-								(TimerHandler)check_free,
-								 "check_free" );
+								(TimerHandler)startd_check_free,
+								 "startd_check_free" );
 	return TRUE;
 }
 
@@ -615,8 +636,15 @@ main_shutdown_fast()
 int
 main_shutdown_graceful()
 {
+	dprintf( D_ALWAYS, "shutdown graceful\n" );
+
+	// Shut down the cron logic
+	if( Cronmgr ) {
+		Cronmgr->Shutdown( false );
+	}
+
 		// If the machine is free, we can just exit right away.
-	check_free();
+	startd_check_free();
 
 		// Remember that we're in shutdown-mode so we will refuse
 		// various commands. 
@@ -627,11 +655,11 @@ main_shutdown_graceful()
 								 "shutdown_reaper" );
 
 		// Release all claims, active or not
-	resmgr->walk( &(Resource::release_claim) );
+	resmgr->walk( &Resource::releaseAllClaims );
 
 	daemonCore->Register_Timer( 0, 5, 
-								(TimerHandler)check_free,
-								 "check_free" );
+								(TimerHandler)startd_check_free,
+								 "startd_check_free" );
 	return TRUE;
 }
 
@@ -639,7 +667,7 @@ main_shutdown_graceful()
 int
 reaper(Service *, int pid, int status)
 {
-	Resource* rip;
+	Claim* foo;
 
 	if( WIFSIGNALED(status) ) {
 		dprintf(D_FAILURE|D_ALWAYS, "Starter pid %d died on signal %d (%s)\n",
@@ -648,9 +676,9 @@ reaper(Service *, int pid, int status)
 		dprintf(D_FAILURE|D_ALWAYS, "Starter pid %d exited with status %d\n",
 				pid, WEXITSTATUS(status));
 	}
-	rip = resmgr->get_by_pid(pid);
-	if( rip ) {
-		rip->starter_exited();
+	foo = resmgr->getClaimByPid(pid);
+	if( foo ) {
+		foo->starterExited();
 	}		
 	return TRUE;
 }
@@ -660,7 +688,7 @@ int
 shutdown_reaper(Service *, int pid, int status)
 {
 	reaper(NULL,pid,status);
-	check_free();
+	startd_check_free();
 	return TRUE;
 }
 
@@ -673,9 +701,9 @@ do_cleanup(int,int,char*)
 	if ( already_excepted == FALSE ) {
 		already_excepted = TRUE;
 			// If the machine is already free, we can exit right away.
-		check_free();		
+		startd_check_free();		
 			// Otherwise, quickly kill all the active starters.
-		resmgr->walk( &(Resource::kill_claim) );
+		resmgr->walk( &Resource::kill_claim );
 		dprintf( D_FAILURE|D_ALWAYS, "startd exiting because of fatal exception.\n" );
 	}
 
@@ -689,14 +717,17 @@ do_cleanup(int,int,char*)
 
 
 int
-check_free()
+startd_check_free()
 {	
+	if ( Cronmgr && ( ! Cronmgr->ShutdownOk() ) ) {
+		return FALSE;
+	}
 	if ( ! resmgr ) {
 		startd_exit();
 	}
-	if( ! resmgr->in_use() ) {
+	if( ! resmgr->hasAnyClaim() ) {
 		startd_exit();
-	} 
+	}
 	return TRUE;
 }
 
@@ -706,3 +737,18 @@ main_pre_dc_init( int argc, char* argv[] )
 {
 }
 
+
+void
+main_pre_command_sock_init( )
+{
+}
+
+
+bool
+authorizedForCOD( const char* owner )
+{
+	if( ! valid_cod_users ) {
+		return false;
+	}
+	return valid_cod_users->contains( owner );
+}

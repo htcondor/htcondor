@@ -255,6 +255,18 @@ sysapi_swap_space_raw()
 	}
 }
 
+#elif defined(CONDOR_DARWIN)
+#include <sys/sysctl.h>
+int
+sysapi_swap_space_raw() {
+        int mib[2], usermem;
+        size_t len;   
+        mib[0] = CTL_HW;     
+        mib[1] = HW_USERMEM;        
+        len = sizeof(usermem);   
+        sysctl(mib, 2, &usermem, &len, NULL, 0);   
+	return usermem / 1024;
+}
 #endif /* !defined(WIN32) */
 
 

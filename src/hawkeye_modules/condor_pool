@@ -1,0 +1,441 @@
+#! /usr/bin/perl -w
+use strict;
+
+# Update the module include path
+BEGIN
+{
+    my $Dir = $0;
+    if ( $Dir =~ /(.*)\/.*/ )
+    {
+	push @INC, "$1";
+    }
+}
+use HawkeyePublish;
+use HawkeyeLib;
+
+# Prototypes
+sub Init( );
+sub RunIt( );
+sub RunAbsent( );
+sub RunTotal( $$ );
+sub RunSubmit(  );
+
+
+# Setup the hawkeye stuff
+my $Hawkeye;
+my %Config = (
+	      Cluster => "",
+	      Reserved => "",
+	      DoAbsent => 1,
+	      DoSummary => 1,
+	      DoRun => 1,
+	      DoSubmit => 1,
+	      DoSubmitMunge => 0,
+	      DoCheckpoint => 1,
+	      DoSubmitDetails => 1,
+	      DoArchDetail => 1,
+	      PoolDescription => "",
+	     );
+my $Hash;
+
+# Do it
+Init();
+RunIt();
+
+sub Init()
+{
+    HawkeyeLib::DoConfig( );
+
+    $Hawkeye = HawkeyePublish->new;
+    $Hawkeye->Quiet( 1 );
+    $Hawkeye->AutoIndexSet( 0 );
+
+    # Read the config info..
+    my $Tmp;
+
+    $Config{PoolDescription} =
+	HawkeyeLib::ReadConfig( "_description", "" );
+
+    $Tmp = HawkeyeLib::ReadConfig( "_roster_dir", "" );
+    $ENV{CONDOR_ROSTER_DIR} = $Tmp if ( $Tmp ne "" );
+
+    $Tmp = HawkeyeLib::ReadConfig( "_pathadd", "" );
+    $ENV{PATH} = "$Tmp:$ENV{PATH}" if ( $Tmp ne "" );
+
+    $Tmp = HawkeyeLib::ReadConfig( "_cluster", "true" );
+    $Config{Cluster} = " -cluster -down-cluster" if ( $Tmp =~ /true/i );
+
+    $Tmp = HawkeyeLib::ReadConfig( "_reserved", "false" );
+    $Config{Reserved} = " -reserved" if ( $Tmp =~ /true/i );
+
+    $Tmp = HawkeyeLib::ReadConfig( "_absent", "true" );
+    $Config{DoAbsent} = ( $Tmp =~ /true/i ) ? 1 : 0;
+
+    $Tmp = HawkeyeLib::ReadConfig( "_summary", "true" );
+    $Config{DoSummary} = ( $Tmp =~ /true/i ) ? 1 : 0;
+
+    $Tmp = HawkeyeLib::ReadConfig( "_run", "true" );
+    $Config{DoRun} = ( $Tmp =~ /true/i ) ? 1 : 0;
+
+    $Tmp = HawkeyeLib::ReadConfig( "_submit", "true" );
+    $Config{DoSubmit} = ( $Tmp =~ /true/i ) ? 1 : 0;
+
+    $Tmp = HawkeyeLib::ReadConfig( "_submit_munge", "true" );
+    $Config{DoSubmitMunge} = ( $Tmp =~ /true/i ) ? 1 : 0;
+
+    $Tmp = HawkeyeLib::ReadConfig( "_submit_detail", "true" );
+    $Config{DoSubmitDetail} = ( $Tmp =~ /true/i ) ? 1 : 0;
+
+    $Tmp = HawkeyeLib::ReadConfig( "_arch_detail", "true" );
+    $Config{DoArchDetail} = ( $Tmp =~ /true/i ) ? 1 : 0;
+
+    $Tmp = HawkeyeLib::ReadConfig( "_ckpt", "true" );
+    $Config{DoCheckpoint} = ( $Tmp =~ /true/i ) ? 1 : 0;
+}
+
+# Do the real work here...
+sub RunIt()
+{
+    # Start things off
+    $Hash = HawkeyeHash->new( \$Hawkeye, "" );
+
+    # Description?
+    if ( $Config{PoolDescription} ne "" )
+    {
+	$Hash->Add( "Description", "s", $Config{PoolDescription} );
+	$Hawkeye->StoreIndex( "Description" );
+    }
+
+    RunAbsent() if ( $Config{DoAbsent} );
+    RunTotal( "", "Sum" ) if ( $Config{DoSummary} );
+    RunTotal( "-run", "Run" ) if ( $Config{DoRun} );
+    RunSubmit( ) if ( $Config{DoSubmit} );
+    RunCheckPoint( ) if ( $Config{DoCheckpoint} );
+
+    # Ok, summary is done...
+    $Hash->Store( );
+    $Hawkeye->Publish( );
+}
+
+# Do the real work here...
+sub RunAbsent()
+{
+
+    # Lists
+    my @ClusterAbsent;
+    my @ClusterDown;
+    my @ClusterKnownDown;
+    my @Absent;
+    my @NotDown;
+
+    # Now, run condor_status and gather some more info...
+    my $Cmd = "condor_absent -ping -pingok -script" .
+	$Config{Cluster} . $Config{Reserved};
+    print STDERR "Running '$Cmd'\n";
+    if ( ! open( ABSENT, "$Cmd|" ) )
+    {
+	print STDERR "Can't get absent info\n";
+	return;
+    }
+
+    # Parse the output...
+    while ( <ABSENT> )
+    {
+	chomp;
+
+	# Ignore empty/blank lines
+	next if ( $_ =~ /^\s*$/ );
+
+	# Summary info?
+	if ( /^\#\s+(.*)/ )
+	{
+	    # Roster count
+	    if ( $1 =~ /(\d+).*roster/ )
+	    {
+		$Hash->Add( "Count", "n", $1 );
+		$Hawkeye->StoreIndex( "Count" );
+	    }
+	    # Cluster summary
+	    elsif ( $1 =~ /Cluster:\s+(.*)/ )
+	    {
+		foreach my $Str ( split( /,/, $1 ) )
+		{
+		    $Str =~ s/^\s//g;
+		    my ( $Value, $Attr ) = split( /\s+/, $Str );
+		    my $AttrUc = uc( substr( $Attr, 0, 1 ) );
+		    substr( $Attr, 0, 1, $AttrUc );
+		    $Hash->Add( "Cluster_" . $Attr, "n", $Value );
+		    $Hawkeye->StoreIndex( "Cluster_" . $Attr );
+		}
+	    }
+	    # Absent summary
+	    elsif ( $1 =~ /(\d+).*absent/ )
+	    {
+		$Hash->Add( "Absent_count", "n", $1 );
+		$Hawkeye->StoreIndex( "Absent_Count" );
+	    }
+	}
+
+	# Absent cluster nodes
+	elsif ( /Cluster node absent: '(.*)'/ )
+	{
+	    push( @ClusterAbsent, $1 );
+	}
+
+	# Down cluster nodes
+	elsif ( /Cluster '(.*)' is down/ )
+	{
+	    push( @ClusterDown, $1 );
+	}
+	# New syntax
+	elsif ( /Cluster node down: '(.*)'/ )
+	{
+	    push( @ClusterDown, $1 );
+	}
+
+	# Cluster nodes "known" to be down
+	elsif ( /Cluster node known to be down: '(.*)'/ )
+	{
+	    push @ClusterKnownDown, $1;
+	}
+
+	# Cluster nodes "known" to be down
+	elsif ( /Host marked down, but ping ok: '(.*)'/ )
+	{
+	    push @NotDown, $1;
+	}
+
+	# Absent machines
+	elsif ( /^(\S+)$/ )
+	{
+	    push( @Absent, $_ );
+	}
+    }
+    close( ABSENT );
+
+    # Cluster Down list
+    $Hash->Add( "Cluster_AbsentList", "s",
+		join( " ", sort @ClusterAbsent ) );
+    $Hawkeye->StoreIndex( "Cluster_AbsentList" );
+
+    # Cluster Down list
+    $Hash->Add( "Cluster_DownList", "s",
+		join( " ", sort @ClusterDown ) );
+    $Hawkeye->StoreIndex( "Cluster_DownList" );
+
+    # Cluster Down list
+    $Hash->Add( "Cluster_KnownDownList", "s",
+		join( " ", sort @ClusterKnownDown ) );
+    $Hawkeye->StoreIndex( "Cluster_KnownDownList" );
+    $Hash->Add( "Cluster_KnownDownCount", "n", $#ClusterKnownDown + 1 );
+    $Hawkeye->StoreIndex( "Cluster_KnownDownCount" );
+
+    # Absent list
+    $Hash->Add( "Absent_List", "s",
+		join( " ", sort @Absent ) );
+    $Hawkeye->StoreIndex( "Absent_List" );
+
+    # Number of nodes listed as down, but ping ok
+    $Hash->Add( "Down_PingOkCount", "n", $#NotDown + 1 );
+    $Hawkeye->StoreIndex( "Down_PingOkCount" );
+    $Hash->Add( "Down_PingOkList", "s",
+		join( " ", sort @NotDown ) );
+    $Hawkeye->StoreIndex( "Down_PingOkList" );
+}
+
+
+# Run condor_status -total -run & parse it's output..
+sub RunTotal( $$ )
+{
+    my $Parms = shift;
+    my $Prefix = shift;
+
+    # Run it..
+    my $Cmd = "condor_status -total $Parms";
+    if ( ! open( TOTAL, "$Cmd|" ) )
+    {
+	print STDERR "Can't get total info\n";
+	return;
+    }
+
+    # Add it to the prefix list
+    $Hawkeye->StoreIndex( $Prefix );
+
+    # Add an _ to it..
+    $Prefix .= "_";
+
+    # "Global" info..
+    my @FieldNames;
+
+    # Parse the output...
+    my @ArchList;
+    while ( <TOTAL> )
+    {
+	chomp;
+	s/^\s+//g;
+	next if ( $_ eq "" );
+
+	# Header line?
+	if ( /Machines/ )
+	{
+	    @FieldNames = split( /\s+/, $_ );
+	}
+	elsif ( ! /omit/i )
+	{
+	    my ( $Arch, @Values ) = split;
+
+	    next if (  (! $Config{DoArchDetail}) && ( $Arch ne "Total" )  );
+	    push @ArchList, $Arch;
+	    foreach my $Field ( 0 .. $#Values )
+	    {
+		my $Attr = $Prefix . $Arch . "_" . $FieldNames[$Field];
+		$Hash->Add( $Attr, "n", $Values[$Field] );
+	    }
+	}
+    }
+    $Hash->Add( $Prefix . "ArchList", "s", join( " ", @ArchList ) )
+	if ( $#ArchList >= 0 );
+
+    # Done
+    close( TOTAL );
+}
+
+# Run condor_status -sub & parse it's output..
+sub RunSubmit(  )
+{
+    # Run it..
+    my @Fields =
+	(
+	 { Format => "%s", Type => "s", Name => "Name",		Munge => 1 },
+	 { Format => "%s", Type => "s", Name => "Machine",	Munge => 0 },
+	 { Format => "%d", Type => "n", Name => "RunningJobs",	Munge => 0 },
+	 { Format => "%d", Type => "n", Name => "IdleJobs",	Munge => 0 },
+	 { Format => "%d", Type => "n", Name => "HeldJobs",	Munge => 0 },
+	);
+
+    my $Cmd = "condor_status -submit";
+    foreach my $Field ( @Fields )
+    {
+	$Cmd = $Cmd .
+	    " -format \"" . $Field->{Format} . " \" " . $Field->{Name};
+    }
+    $Cmd = $Cmd . " -format \"\\n\" Name";
+    if ( ! open( SUB, "$Cmd|" ) )
+    {
+	print STDERR "Can't get submit info\n";
+	return;
+    }
+
+    # Parse the output...
+    my $SubmitNo = 0;
+    my %Totals;
+    while ( <SUB> )
+    {
+	chomp;
+	next if ( $_ eq "" );
+	$SubmitNo++;
+
+	# Split it up, crunch it out
+	my @Values = split;
+	warn "Wrong data size ($_) : " if ( $#Values != $#Fields );
+	for my $FieldNo ( 0 .. $#Fields )
+	{
+	    my $Name = $Fields[$FieldNo]->{Name};
+	    my $Attr = sprintf "Submit_%02d_%s", $SubmitNo, $Name;
+
+	    # Munge the email address to deter spambots
+	    if (  ( $Fields[$FieldNo]->{Munge} ) &&
+		  ( $Config{DoSubmitMunge} )  )
+	    {
+		$Values[$FieldNo] =~ s/@/ at /;
+	    }
+
+	    # Finally, publish it
+	    $Hash->Add( $Attr, $Fields[$FieldNo]->{Type}, $Values[$FieldNo] )
+		if ( $Config{DoSubmitDetail} );
+	    if ( $Fields[$FieldNo]->{Type} eq "n" )
+	    {
+		$Totals{$Name} = 0 if ( ! exists $Totals{$Name} );
+		$Totals{$Name} += $Values[$FieldNo];
+	    }
+	}
+    }
+    $Hash->Add( "Submit_Count", "n", $SubmitNo );
+    foreach my $Name ( keys %Totals )
+    {
+	$Hash->Add( "Submit_Total_$Name", "n", $Totals{$Name} );
+    }
+
+    # Done
+    close( SUB );
+}
+
+# Run condor_status -ckpt & parse it's output..
+sub RunCheckPoint(  )
+{
+    my $Cmd = "condor_status -ckpt";
+    if ( ! open( CKPT, "$Cmd|" ) )
+    {
+	print STDERR "Can't get checkpoint info\n";
+	return;
+    }
+
+    # Checkpoint server hash
+    my %Servers;
+
+    # Parse the output...
+    while ( <CKPT> )
+    {
+	s/^\s+//g;
+	chomp;
+	next if ( $_ eq "" );
+
+	# Split it up, crunch it out
+	my @Values = split;
+
+	# Total line
+	if ( $Values[0] eq "Total" )
+	{
+	    $Hash->Add( "Ckpt_Total_Servers", "n", $Values[1] );
+	    $Hash->Add( "Ckpt_Total_AvailDisk", "n", $Values[2] );
+	}
+	# Server line
+	elsif ( $Values[1] =~ /^\d+$/ )
+	{
+	    my $Fqdn = $Values[0];
+	    my $Name = $Fqdn;
+
+	    # Build the logical name, check for conflicts..
+	    $Name =~ s/^(\w+).*/$1/;
+	    $Name = $Fqdn if ( exists ( $Servers{$Name} ) );
+	    while ( exists ( $Servers{$Name} ) )
+	    {
+		$Name .= "_";
+	    }
+
+	    # Stuff it in the hash...
+	    $Servers{$Name}{FullName} = $Fqdn;
+	    $Servers{$Name}{AvailDisk} = $Values[1];
+	    $Servers{$Name}{Subnet} = $Values[2];
+	}
+    }
+
+    # Publish it all...
+    my %Types = ( FullName => "s", AvailDisk => "n", Subnet => "s", );
+    foreach my $Server ( keys %Servers )
+    {
+	foreach my $Field ( keys %{$Servers{$Server}} )
+	{
+	    my $Type = "s";
+	    $Type = $Types{$Field} if ( exists $Types{$Field} );
+	    $Hash->Add( "Ckpt_" . $Server . "_" . $Field, $Type,
+			$Servers{$Server}{$Field} );
+	}
+    }
+
+    # And, the server list
+    $Hash->Add( "Ckpt_Servers", "s", join( " ", keys %Servers  ) );
+
+    # Done
+    close( CKPT );
+}

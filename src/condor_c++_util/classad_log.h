@@ -72,6 +72,8 @@ public:
 	bool AbortTransaction();
 	void CommitTransaction();
 
+	bool AdExistsInTableOrTransaction(const char *key);
+
 	// returns 1 and sets val if corresponding SetAttribute found
 	// returns 0 if no SetAttribute found
 	// return -1 if DeleteAttribute or DestroyClassAd found

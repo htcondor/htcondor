@@ -27,5 +27,10 @@
 #define MY_USERNAME_H
 
 char *my_username( int uuid = 0 );
+char *my_domainname( void );
+
+#ifdef WIN32
+HANDLE my_usertoken(void);
+#endif
 
 #endif

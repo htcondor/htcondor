@@ -1,5 +1,5 @@
 
-Chirp Version 1
+Chirp Version 2
 
 INTRODUCTION
 
@@ -94,6 +94,14 @@ close  <decimal:fd>
 
 	Complete access to this file.
 
+constrain <string:expr>
+
+	Cause the scheduler to add this ClassAd expression to
+	the job's scheduling constraints.  However, take no
+	immediate scheduling action.  These constraints will
+	take effect at the next placement decision, should the
+	job fail or abort. 
+
 cookie <string:cookie>
 
 	Authenticate to the server with the given cookie string.
@@ -102,6 +110,11 @@ fsync  <decimal:fd>
 
 	Block until all uncommitted changes to this file descriptor
 	have been written to stable storage.
+
+get_job_attr <string:name>
+
+	Return the expression associated with this name in the
+	job's ClassAd in the queue.  Similar to a persistent "getenv".
 
 login  <string:name> <string:password>
 
@@ -118,6 +131,18 @@ lseek  <decimal:fd> <decimal:offset> <decimal:whence>
 
 	Returns the current seek position.
 
+lookup <string:name>
+
+	Perform a simple mapping on the given name.
+	If successful, the server returns the length of the
+	resulting name as an integer, followed by a string
+	of that length.  The resulting string is another name
+	describing where the resource name may be found.
+	The syntax and semantics of names both given and
+	received is implementation dependent.  A typical
+	use of lookup would be to map ordinary file names
+	into fully-qualified urls.
+		
 mkdir  <string:name> <decimal:mode>
 
 	Create a new directory by this name.
@@ -159,6 +184,11 @@ rename <string:oldpath> <string:newpath>
 rmdir  <string:name>
 
 	Delete a directory by this name.
+
+set_job_attr <string:name> <string:expr>
+
+	Set the expression associated with this name in the
+	job's ClassAd in the queue.  Similar to a persistent "setenv."
 
 unlink <string:path>
 

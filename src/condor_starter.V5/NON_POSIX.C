@@ -85,7 +85,7 @@ physical_file_size( char *name )
 	}
 
 
-#if defined(AIX32) || defined(ULTRIX42) || defined(ULTRIX43) || defined(SUNOS41)|| defined(OSF1) || defined(Solaris) || defined(IRIX)
+#if defined(AIX32) || defined(ULTRIX42) || defined(ULTRIX43) || defined(SUNOS41)|| defined(OSF1) || defined(Solaris) || defined(IRIX) || defined(CONDOR_DARWIN)
 
 	   /*  On these systems struct stat member st_blocks is
 	       defined, and appears to be in 512 byte blocks. */

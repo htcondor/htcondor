@@ -64,6 +64,11 @@ LOCAL_DIR		= $(TILDE)
 LOCAL_CONFIG_FILE	= $(LOCAL_DIR)/condor_config.local
 #LOCAL_CONFIG_FILE	= $(RELEASE_DIR)/etc/$(HOSTNAME).local
 
+## If the local config file is not present, is it an error?
+## WARNING: This is a potential security issue. 
+## If not specificed, te default is True
+#REQUIRE_LOCAL_CONFIG_FILE = TRUE
+
 ##--------------------------------------------------------------------
 ##  Mail parameters:
 ##--------------------------------------------------------------------
@@ -116,9 +121,6 @@ FILESYSTEM_DOMAIN	= your.domain
 ##  To let others flock to you, define FLOCK_FROM.
 ## 
 ##  To flock to others, define FLOCK_TO.
-## 
-##  (and if they are running a condor_view server, then you can also
-##  define FLOCK_VIEW_SERVERS).
 
 ##  FLOCK_FROM defines the machines where you would like to grant
 ##  people access to your pool via flocking. (i.e. you are granting
@@ -147,20 +149,6 @@ FLOCK_COLLECTOR_HOSTS = $(FLOCK_TO)
 ## machines is:
 #FLOCK_NEGOTIATOR_HOSTS = condor.cs.wisc.edu, condor-negotiator.friendly.domain
 #FLOCK_COLLECTOR_HOSTS =  condor.cs.wisc.edu, condor-collector.friendly.domain
-
-##  (optional) FLOCK_VIEW_SERVERS is used if you would like to report
-##  your usage in a remote pool to a remote condor-view server.  If so,
-##  FLOCK_VIEW_SERVERS should contain a list of hostnames where the
-##  condor-view server is running in the pools to which you want your
-##  jobs to flock.  The order of this list must correspond to the
-##  order of the FLOCK_COLLECTOR_HOSTS and FLOCK_NEGOTIATOR_HOSTS
-##  lists.  List items may be empty for pools which don't use a
-##  separate condor-view server.  FLOCK_VIEW_SERVER may be left
-##  undefined if no remote pools use separate condor-view servers.
-##  Note: It is required that the same hostname does not appear twice
-##  in the FLOCK_VIEW_SERVERS list and that the CONDOR_VIEW_HOST does
-##  not appear in the FLOCK_VIEW_SERVERS list.
-#FLOCK_VIEW_SERVERS = condor-view.cs.wisc.edu, condor-view.friendly.domain
 
 ##--------------------------------------------------------------------
 ##  Host/IP access levels
@@ -283,9 +271,6 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 ##  calls?
 #USE_NFS		= False
 
-##  Do your machines run AFS?
-#HAS_AFS		= False
-
 ##  Do you want to use AFS for file access instead of remote system
 ##  calls?
 #USE_AFS		= False
@@ -331,7 +316,7 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 ##  condor account, it's probably condor.  Otherwise, it's whatever
 ##  you've set in the CONDOR_IDS environment variable.  See the Admin
 ##  manual for details on this.
-LOCK		= $(LOCAL_DIR)/log
+LOCK		= $(LOG)
 
 ##  If you don't use a fully qualified name in your /etc/hosts file
 ##  (or NIS, etc.) for either your official hostname or as an alias,
@@ -362,6 +347,15 @@ LOCK		= $(LOCAL_DIR)/log
 ##  daemon) and change the following values to point to it, instead.
 GLIDEIN_SERVER_NAME = gridftp.cs.wisc.edu
 GLIDEIN_SERVER_DIR = /p/condor/public/binaries/glidein
+
+##  If your site needs to use UID_DOMAIN settings (defined above) that
+##  are not real Internet domains that match the hostnames, you can
+##  tell Condor to trust whatever UID_DOMAIN a submit machine gives to
+##  the execute machine and just make sure the two strings match.  The
+##  default for this setting is False, since it is more secure this
+##  way.
+#TRUST_UID_DOMAIN = False
+
 
 ##--------------------------------------------------------------------
 ##  Settings that control the daemon's debugging output:
@@ -628,6 +622,9 @@ EXECUTE		= $(LOCAL_DIR)/execute
 BIN		= $(RELEASE_DIR)/bin
 LIB		= $(RELEASE_DIR)/lib
 SBIN		= $(RELEASE_DIR)/sbin
+
+## If you leave HISTORY undefined (comment it out), no history file
+## will be created. 
 HISTORY		= $(SPOOL)/history
 
 ##  Log files
@@ -646,9 +643,13 @@ SHADOW_LOCK	= $(LOCK)/ShadowLock
 
 ##  In most cases, your condor_collector and condor_negotiator are 
 ##  going to run on the same machine.  If for some reason, this isn't 
-##  the case, here's where you'd change it:
-COLLECTOR_HOST	= $(CONDOR_HOST)
-NEGOTIATOR_HOST	= $(CONDOR_HOST)
+##  the case, here's where you'd change it. Also, you can change the
+##  port that the collector and negotiator run on. By default, the
+##  collector uses port 9618 and the negotiator uses port 9614, but
+##  you can set the port with a ":port", such as:
+##  COLLECTOR_HOST = $(CONDOR_HOST):1234
+COLLECTOR_HOST  = $(CONDOR_HOST)
+NEGOTIATOR_HOST = $(CONDOR_HOST)
 
 ##  How long are you willing to let daemons try their graceful
 ##  shutdown methods before they do a hard shutdown? (30 minutes)
@@ -682,6 +683,28 @@ RESERVED_DISK		= 5
 ##  user@UID_DOMAIN won't work.
 #EMAIL_DOMAIN = $(FULL_HOSTNAME)
 
+##  If your site needs to use TCP updates to the collector, instead of
+##  UDP, you can enable this feature.  HOWEVER, WE DO NOT RECOMMEND
+##  THIS FOR MOST SITES!  In general, the only sites that might want
+##  this feature are pools made up of machines connected via a
+##  wide-area network where UDP packets are frequently or always
+##  dropped.  If you enable this feature, you *MUST* turn on the
+##  COLLECTOR_SOCKET_CACHE_SIZE setting at your collector, and each
+##  entry in the socket cache uses another file descriptor.  If not
+##  defined, this feature is disabled by default.
+#UPDATE_COLLECTOR_WITH_TCP = True
+
+## HIGHPORT and LOWPORT let you set the range of ports that Condor
+## will use. This may be useful if you are behind a firewall. By
+## default, Condor uses port 9618 for the collector, 9614 for the
+## negotiator, and system-assigned (apparently random) ports for
+## everything else. HIGHPORT and LOWPORT only affect these
+## system-assigned ports, but will restrict them to the range you
+## specify here. If you want to change the well-known ports for the
+## collector or negotiator, see COLLECTOR_HOST or NEGOTIATOR_HOST.
+## Note that both LOWPORT and HIGHPORT must be at least 1024. 
+#HIGHPORT = 9700 
+#LOWPORT = 9600
 
 ######################################################################
 ##  Daemon-specific settings:
@@ -702,6 +725,9 @@ MASTER				= $(SBIN)/condor_master
 STARTD				= $(SBIN)/condor_startd
 SCHEDD				= $(SBIN)/condor_schedd
 KBDD				= $(SBIN)/condor_kbdd
+NEGOTIATOR			= $(SBIN)/condor_negotiator
+COLLECTOR			= $(SBIN)/condor_collector
+GRID_MONITOR			= $(SBIN)/grid_monitor.sh
 
 ##  When the master starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -850,6 +876,9 @@ RunBenchmarks : (LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
 ##  expressions.
 ##  Then, you'd set the STARTD_EXPRS setting to this:
 #STARTD_EXPRS = MY_CONSOLE_DEVICES, RunBenchmarks, UPDATE_INTERVAL
+
+COLLECTOR_HOST_STRING = "$(COLLECTOR_HOST)"
+STARTD_EXPRS = COLLECTOR_HOST_STRING
 
 ##  When the startd is claimed by a remote user, it can also advertise
 ##  arbitrary attributes from the ClassAd of the job its working on.
@@ -1053,6 +1082,11 @@ SHADOW_RENICE_INCREMENT	= 10
 ##  started.
 #NEGOTIATE_ALL_JOBS_IN_CLUSTER = False
 
+## This setting controls how often, in seconds, the schedd considers
+## periodic job actions given by the user in the submit file.
+## (Currently, these are periodic_hold, periodic_release, and periodic_remove.)
+PERIODIC_EXPR_INTERVAL = 60
+
 ######
 ## Queue management settings:
 ######
@@ -1243,4 +1277,70 @@ JAVA_BENCHMARK_TIME = 2
 ##  the options above, then give them here.
 
 JAVA_EXTRA_ARGUMENTS =
+
+##
+##--------------------------------------------------------------------
+##  Condor-G settings
+##--------------------------------------------------------------------
+##  Where is the GridManager binary installed?
+
+GRIDMANAGER			= $(SBIN)/condor_gridmanager
+GAHP				= $(SBIN)/gahp_server
+
+##--------------------------------------------------------------------
+##  Settings that control the daemon's debugging output:
+##--------------------------------------------------------------------
+##
+## Note that the Gridmanager runs as the User, not a Condor daemon, so 
+## all users must have write permssion to the directory that the 
+## Gridmanager will use for it's logfile. Our suggestion is to create a
+## directory called GridLogs in $(LOG) with UNIX permissions 1777 
+## (just like /tmp )
+##  Another option is to use /tmp as the location of the GridManager log.
+## 
+
+MAX_GRIDMANAGER_LOG	= 64000
+GRIDMANAGER_DEBUG	= D_COMMAND
+
+#GRIDMANAGER_LOG = $(LOG)/GridLogs/GridmanagerLog.$(USERNAME)
+GRIDMANAGER_LOG = /tmp/GridmanagerLog.$(USERNAME)
+
+##--------------------------------------------------------------------
+##  Various other settings that the Condor-G can use. 
+##--------------------------------------------------------------------
+
+## If we're talking to a Globus 2.0 resource, Condor-G will use the new
+## version of the GRAM protocol. The first option is how often to check the
+## proxy on the submit site of things. If the GridManager discovers a new
+## proxy, it will restart itself and use the new proxy for all future 
+## jobs launched. In seconds,  and defaults to 10 minutes
+#GRIDMANAGER_CHECKPROXY_INTERVAL = 600
+
+## The GridManager will shut things down 3 minutes before loosing Contact
+## because of an expired proxy. 
+## In seconds, and defaults to 3 minutes
+#GRDIMANAGER_MINIMUM_PROXY_TIME  = 180
+
+## Condor requires that each submitted job be designated to run under a
+## particular "universe". Condor-G is active when jobs are as marked as
+## "GLOBUS" universe jobs. The universe of a job is set in the submit file
+## with the 'universe = GLOBUS' line. 
+##
+## If no universe is specificed in the submit file, Condor must pick one
+## for the job to use. By default, it chooses the "standard" universe. 
+## The default can be overridden in the config file with the DEFAULT_UNIVERSE
+## setting, which is a string to insert into a job submit description if the
+## job does not try and define it's own universe
+##
+#DEFAULT_UNIVERSE = globus
+
+#
+# The Cred_min_time_left is the first-pass at making sure that Condor-G
+# does not submit your job without it having enough time left for the 
+# job to finish. For example, if you have a job that runs for 20 minutes, and
+# you might spend 40 minutes in the queue, it's a bad idea to submit with less
+# than an hour left before your proxy expires.
+# 2 hours seemed like a reasonable default.
+#
+CRED_MIN_TIME_LEFT		= 120 
 

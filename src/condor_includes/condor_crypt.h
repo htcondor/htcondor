@@ -24,6 +24,8 @@
 #ifndef CONDOR_CRYPTO
 #define CONDOR_CRYPTO
 
+#include "condor_common.h"
+
 #include "CryptKey.h"
 
 class Condor_Crypt_Base {

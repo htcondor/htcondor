@@ -33,6 +33,7 @@
 #include "condor_adtypes.h"
 #include "condor_version.h"
 #include "condor_attributes.h"
+#include "condor_commands.h"
 #include "condor_config.h"
 #include "my_hostname.h"
 #include "../condor_ckpt_server/server_interface.h"
@@ -48,10 +49,8 @@
 #include "syscall.aix.h"
 #endif
 
-#include "sched.h"
 #include "debug.h"
 #include "fileno.h"
-#include "files.h"
 #include "exit.h"
 
 #if defined(AIX32)
@@ -72,8 +71,8 @@ int	UsePipes;
 char* mySubSystem = "SHADOW";
 
 extern "C" {
-#if defined(LINUX) && defined(GLIBC22)
-	/* XXX fix declarations as well.  */
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11)
+	/* XXX These should really be selected in a better fashion */
 	void reaper(int);
 	void handle_sigusr1(int);
 	void handle_sigquit(int);
@@ -322,14 +321,19 @@ main(int argc, char *argv[] )
 
 	ShadowBDate = LastRestartTime = time(0);
 
-	/* Start up with condor.condor privileges. */
-	set_condor_priv();
-
 	_EXCEPT_Cleanup = ExceptCleanup;
 
 	MyPid = getpid();
 	
 	config();
+
+	/* Start up with condor.condor privileges. */
+	/*
+	  we need to do this AFTER we call config() so that if CONDOR_IDS
+	  is being defined in the config file, we'll get the right value
+	*/ 
+	set_condor_priv();
+
 	dprintf_config( mySubSystem, SHADOW_LOG );
 	DebugId = whoami;
 
@@ -419,18 +423,18 @@ main(int argc, char *argv[] )
 	use_afs = param( "USE_AFS" );
 	if( use_afs && (use_afs[0] == 'T' || use_afs[0] == 't') ) {
 		UseAFS = TRUE;
-        free( use_afs );
 	} else {
 		UseAFS = FALSE;
 	}
+    if (use_afs)    free( use_afs );
 
 	use_nfs = param( "USE_NFS" );
 	if( use_nfs && (use_nfs[0] == 'T' || use_nfs[0] == 't') ) {
 		UseNFS = TRUE;
-        free( use_nfs );
 	} else {
 		UseNFS = FALSE;
 	}
+    if (use_nfs)    free( use_nfs );
 
 	// if job specifies a checkpoint server host, this overrides
 	// the config file parameters
@@ -503,7 +507,6 @@ main(int argc, char *argv[] )
 	tmp = param( "PERIODIC_MEMORY_SYNC" );
 	if (tmp && (tmp[0] == 'T' || tmp[0] == 't')) {
 		PeriodicSync = TRUE;
-        free(tmp);
 	} else {
 		PeriodicSync = FALSE;
 	}
@@ -514,7 +517,6 @@ main(int argc, char *argv[] )
 	tmp = param( "COMPRESS_VACATE_CKPT" );
 	if (tmp && (tmp[0] == 'T' || tmp[0] == 't')) {
 		CompressVacateCkpt = TRUE;
-        free(tmp);
 	} else {
 		CompressVacateCkpt = FALSE;
 	}
@@ -607,7 +609,6 @@ main(int argc, char *argv[] )
 void
 HandleSyscalls()
 {
-	int				fake_arg;
 	register int	cnt;
 	fd_set 			readfds;
 	int 			nfds = -1;
@@ -616,7 +617,7 @@ HandleSyscalls()
 
 	nfds = (RSC_SOCK > CLIENT_LOG ) ? (RSC_SOCK + 1) : (CLIENT_LOG + 1);
 
-	init_user_ids(Proc->owner);
+	init_user_ids(Proc->owner, NULL);
 	set_user_priv();
 
 	dprintf(D_FULLDEBUG, "HandleSyscalls: about to chdir(%s)\n", Proc->iwd);
@@ -763,14 +764,6 @@ Wrapup( )
 {
 	struct rusage local_rusage;
 	char notification[ BUFSIZ ];
-	int pid;
-	int	cnt;
-	int	nfds;
-	FILE	*log_fp;
-	int		s;
-	char coredir[ MAXPATHLEN ];
-	int		coredir_len;
-	int		msg_type;
 
 	dprintf(D_FULLDEBUG, "Entering Wrapup()\n" );
 
@@ -982,8 +975,6 @@ update_job_rusage( struct rusage *localp, struct rusage *remotep )
 void
 update_job_status( struct rusage *localp, struct rusage *remotep )
 {
-	PROC	my_proc;
-	PROC	*proc = &my_proc;
 	int		status = -1;
 	float utime = 0.0;
 	float stime = 0.0;
@@ -1277,9 +1268,6 @@ ExceptCleanup(int, int, char *buf)
 int
 DoCleanup()
 {
-	int		status = -1;
-	int		fetch_rval;
-
 	dprintf( D_FULLDEBUG, "Shadow: Entered DoCleanup()\n" );
 
 	if( TmpCkptName[0] != '\0' ) {
@@ -1434,7 +1422,7 @@ open_named_pipe( const char *name, int mode, int target_fd )
 	}
 }
 
-#if defined(LINUX) && defined(GLIBC22)
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11)
 void
 reaper(int unused)
 #else
@@ -1495,7 +1483,7 @@ display_uids()
   the schedd already knows this job should be removed.
   Cleaned up, clarified and simplified on 5/12/00 by Derek Wright
 */
-#if defined(LINUX) && defined(GLIBC22)
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11)
 void
 handle_sigusr1( int unused )
 #else
@@ -1520,7 +1508,7 @@ handle_sigusr1( void )
   startd, to force the job to quickly vacate.
   Cleaned up, clarified and simplified on 5/12/00 by Derek Wright
 */
-#if defined(LINUX) && defined(GLIBC22)
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11)
 void
 handle_sigquit( int unused )
 #else
@@ -1554,12 +1542,15 @@ count_open_fds( const char *file, int line )
 
 void RemoveNewShadowDroppings(char *cluster, char *proc)
 {
-	char names[2][1024] = {0};
+	char names[2][1024];
 	int j;
 	char *ckpt_name;
 	char *myspool;
 	struct stat buf;
 	int clusternum, procnum;
+
+	memset(&names[0], 0, 1024);
+	memset(&names[1], 0, 1024);
 
 	/* XXX I'm sorry.
 		There are some incompatibilities between the new

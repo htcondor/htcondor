@@ -52,12 +52,33 @@ class FileTransfer {
 		a transfer key, then one is generated and this object is considered
 		to be a server.  If a transfer key exists in the ad, this object is
 		considered to be a client.
+		The FileTransfer Object will look up the following attributes
+		from the ClassAd passed in via parameter 1:
+				ATTR_CLUSTER_ID
+				ATTR_JOB_CMD
+				ATTR_JOB_ERROR
+				ATTR_JOB_INPUT
+				ATTR_JOB_IWD
+				ATTR_JOB_OUTPUT
+				ATTR_NT_DOMAIN
+				ATTR_OWNER
+				ATTR_PROC_ID
+				ATTR_TRANSFER_EXECUTABLE
+				ATTR_TRANSFER_INPUT_FILES
+				ATTR_TRANSFER_INTERMEDIATE_FILES
+				ATTR_TRANSFER_KEY
+				ATTR_TRANSFER_OUTPUT_FILES
+				ATTR_TRANSFER_SOCKET
 		@param check_file_perms If true, before reading or writing to any file,
 		a check is perfomed to see if the ATTR_OWNER attribute defined in the
 		ClassAd has the neccesary read/write permission.
 		@return 1 on success, 0 on failure */
 	int Init( ClassAd *Ad, bool check_file_perms = false, 
 			  priv_state priv = PRIV_UNKNOWN );
+
+	int SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server, 
+						 ReliSock *sock_to_use = NULL, 
+						 priv_state priv = PRIV_UNKNOWN);
 
 	/** @return 1 on success, 0 on failure */
 	int DownloadFiles(bool blocking=true);
@@ -107,6 +128,8 @@ class FileTransfer {
 
 	float TotalBytesReceived() { return bytesRcvd; };
 
+	void RemoveInputFiles(const char *sandbox_path = NULL);
+
 		/** Add the given filename to our list of output files to
 			transfer back.  If we're not managing a list of output
 			files, we return failure.  If we already have this file,
@@ -131,6 +154,7 @@ class FileTransfer {
 	int DoUpload(ReliSock *s);
 
 	void CommitFiles();
+	void ComputeFilesToSend();
 	float bytesSent, bytesRcvd;
 
   private:
@@ -142,6 +166,8 @@ class FileTransfer {
 	StringList* FilesToSend;
 	char* SpooledIntermediateFiles;
 	char* ExecFile;
+	char* UserLogFile;
+	char* X509UserProxy;
 	char* TransSock;
 	char* TransKey;
 	char* SpoolSpace;
@@ -167,6 +193,8 @@ class FileTransfer {
 	static int SequenceNum;
 	static int ReaperId;
 	bool did_init;
+	bool simple_init;
+	ReliSock *simple_sock;
 };
 
 #endif

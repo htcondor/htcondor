@@ -83,6 +83,8 @@
 #define HAS_INSQUE			YES
 
 #define HAS_PVM				YES
+#define HAS_DLOPEN			YES
+#define HAS_DAGMAN_HELPER   NO
 
 #define HAS_STATIC			NO
 
@@ -139,11 +141,5 @@
 
 #ifndef CrtLibPath
 #define CrtLibPath concat3(/opt/SUNWspro/,SC_VERS,/lib)
-#endif
-
-#if IS_EGCS_BUILD
-#  define Crt0 concat(EgcsPath,/crt1.o)
-#else 
-#  define Crt0 concat(CrtLibPath,/crt1.o)
 #endif
 

@@ -27,12 +27,18 @@
 #include "condor_config.h"
 #include "globus_utils.h"
 #include "grid_universe.h"
+#include "directory.h"
+#include "MyString.h"
+#include "condor_ver_info.h"
+#include "condor_attributes.h"
 
 // Initialize static data members
 const int GridUniverseLogic::job_added_delay = 3;
 const int GridUniverseLogic::job_removed_delay = 2;
 GridUniverseLogic::GmanPidTable_t * GridUniverseLogic::gman_pid_table = NULL;
 int GridUniverseLogic::rid = -1;
+static const char scratch_prefix[] = "condor_g_scratch.";
+static int make_tmp_dir = -1;  // -1 = unknown, 0 = no tmp dir, 1 = mkdir
 
 // globals
 GridUniverseLogic* _gridlogic = NULL;
@@ -90,12 +96,58 @@ GridUniverseLogic::~GridUniverseLogic()
 	return;
 }
 
+bool
+GridUniverseLogic::want_scratch_dir()
+{
+	return group_per_subject();
+}
 
+bool
+GridUniverseLogic::group_per_subject()
+{
+	char *gman_binary;
+
+	if ( make_tmp_dir == -1 ) {
+		gman_binary = param("GRIDMANAGER");
+		if (!gman_binary) {
+			return false;
+		}
+
+		// Now figure out if the gridmanager installed on this
+		// machine wants a tmp dir or not.  Do this by checking the version.
+		char ver[128];
+		ver[0] = '\0';
+		CondorVersionInfo::get_version_from_file(gman_binary,ver,sizeof(ver));
+		dprintf(D_FULLDEBUG,"Version of gridmanager is %s\n",ver);
+		CondorVersionInfo vi(ver);
+		// If gridmanager is ver 6.5.1 or newer, it wants a tmp dir.
+		if ( vi.built_since_version(6,5,1) ) {
+				// give it a tmp dir
+			make_tmp_dir = 1;
+		} else {
+				// old gridmanager --- no tmp dir
+			make_tmp_dir = 0;
+		}
+		free(gman_binary);
+	}
+
+	if ( make_tmp_dir == 1 ) {
+		return true;
+	}
+
+	if ( make_tmp_dir == 0 ) {
+		return false;
+	}
+
+	// if we made it here, make_tmp_dir is messed up
+	EXCEPT("group_per_subject() failed sanity check (%d)\n",make_tmp_dir);
+	return false;
+}
 
 void 
-GridUniverseLogic::JobCountUpdate(const char* owner, const char* proxy, 
-			int cluster, int proc, int num_globus_jobs,
-			int num_globus_unmanaged_jobs)
+GridUniverseLogic::JobCountUpdate(const char* owner, const char* domain,
+	   	const char* proxy, const char* proxy_path, int cluster, int proc, 
+		int num_globus_jobs, int num_globus_unmanaged_jobs)
 {
 	// Quick sanity checks - this should never be...
 	ASSERT( num_globus_jobs >= num_globus_unmanaged_jobs );
@@ -106,7 +158,7 @@ GridUniverseLogic::JobCountUpdate(const char* owner, const char* proxy,
 	// does not know they are in the queue. so tell it some jobs
 	// were added.
 	if ( num_globus_unmanaged_jobs > 0 ) {
-		JobAdded(owner, proxy, cluster, proc);
+		JobAdded(owner, domain, proxy, proxy_path, cluster, proc);
 		return;
 	}
 
@@ -114,7 +166,7 @@ GridUniverseLogic::JobCountUpdate(const char* owner, const char* proxy,
 	// are any globus jobs at all.  if there are, make certain that there
 	// is a grid manager watching over the jobs and start one if there isn't.
 	if ( num_globus_jobs > 0 ) {
-		StartOrFindGManager(owner, proxy, cluster, proc);
+		StartOrFindGManager(owner, domain, proxy, proxy_path, cluster, proc);
 		return;
 	}
 
@@ -124,12 +176,12 @@ GridUniverseLogic::JobCountUpdate(const char* owner, const char* proxy,
 
 
 void 
-GridUniverseLogic::JobAdded(const char* owner, const char* proxy,
-					int cluster, int proc)
+GridUniverseLogic::JobAdded(const char* owner, const char* domain,
+	   	const char* proxy, const char* proxy_path, int cluster, int proc)
 {
 	gman_node_t* node;
 
-	node = StartOrFindGManager(owner, proxy, cluster, proc);
+	node = StartOrFindGManager(owner, domain, proxy, proxy_path, cluster, proc);
 
 	if (!node) {
 		// if we cannot find nor start a gridmanager, there's
@@ -150,12 +202,12 @@ GridUniverseLogic::JobAdded(const char* owner, const char* proxy,
 }
 
 void 
-GridUniverseLogic::JobRemoved(const char* owner, const char* proxy,
-			int cluster, int proc)
+GridUniverseLogic::JobRemoved(const char* owner, const char* domain,
+	   	const char* proxy, const char* proxy_path,int cluster, int proc)
 {
 	gman_node_t* node;
 
-	node = StartOrFindGManager(owner, proxy, cluster, proc);
+	node = StartOrFindGManager(owner, domain, proxy, proxy_path, cluster, proc);
 
 	if (!node) {
 		// if we cannot find nor start a gridmanager, there's
@@ -231,6 +283,22 @@ GridUniverseLogic::signal_all(int sig)
 }
 
 
+// Note: caller must deallocate return value w/ delete []
+char *
+GridUniverseLogic::scratchFilePath(gman_node_t *gman_node)
+{
+	MyString filename;
+	filename.sprintf("%s%p.%d",scratch_prefix,
+					gman_node,daemonCore->getpid());
+	char *prefix = temp_dir_path();
+	ASSERT(prefix);
+		// note: dircat allocates with new char[]
+	char *finalpath = dircat(prefix,filename.Value());
+	free(prefix);
+	return finalpath;
+}
+
+
 int 
 GridUniverseLogic::GManagerReaper(Service *,int pid, int exit_status)
 {
@@ -274,6 +342,33 @@ GridUniverseLogic::GManagerReaper(Service *,int pid, int exit_status)
 	}
 	// Remove node from our hash table
 	gman_pid_table->remove(owner);
+	// Remove any scratch directory used by this gridmanager
+	if ( want_scratch_dir() ) {
+		char *scratchdir = scratchFilePath(gman_node);
+		ASSERT(scratchdir);
+		if ( IsDirectory(scratchdir) && 
+			init_user_ids(gman_node->owner, gman_node->domain) ) 
+		{
+			priv_state saved_priv = set_user_priv();
+				// Must put this in braces so the Directory object
+				// destructor is called, which will free the iterator
+				// handle.  If we didn't do this, the below rmdir 
+				// would fail.
+			{
+				Directory tmp( scratchdir );
+				tmp.Remove_Entire_Directory();
+			}
+			if ( rmdir(scratchdir) == 0 ) {
+				dprintf(D_FULLDEBUG,"Removed scratch dir %s\n",scratchdir);
+			} else {
+				dprintf(D_FULLDEBUG,"Failed to remove scratch dir %s\n",
+					scratchdir);
+			}
+			set_priv(saved_priv);
+			uninit_user_ids();
+		}
+		delete [] scratchdir;
+	}
 	// Reclaim memory from the node itself
 	delete gman_node;
 
@@ -310,8 +405,8 @@ GridUniverseLogic::lookupGmanByOwner(const char* owner, const char* proxy,
 }
 
 GridUniverseLogic::gman_node_t *
-GridUniverseLogic::StartOrFindGManager(const char* owner, const char* proxy,
-					int cluster, int proc)
+GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
+	   	const char* proxy, const char* proxy_path, int cluster, int proc)
 {
 	gman_node_t* gman_node;
 	int pid;
@@ -358,18 +453,123 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* proxy,
 	} else {
 		sprintf(gman_final_args,"condor_gridmanager -f");
 	}
-	if(proxy && proxy[0] != '\0') {
-		sprintf(proxy_buf, " -x %s", proxy);
-		// Really should be strncat...
-		strcat(gman_final_args, proxy_buf);
-	}
 	if (cluster) {
 		sprintf(proxy_buf, " -j %d.%d", cluster, proc);
 		strcat(gman_final_args, proxy_buf);
 	}
-	dprintf(D_FULLDEBUG,"Really Execing %s\n",gman_final_args);
+	if ( !group_per_subject() ) {
+		// old way -- pass a few more command line args
+		if(proxy && proxy != '\0') {
+			sprintf(proxy_buf, " -x %s", proxy);
+			// Really should be strncat...
+			strcat(gman_final_args, proxy_buf);
+		}
+		if ( owner ) {
+			MyString full_owner_name;
+			full_owner_name.sprintf(" -o %s",owner);
+			if ( domain ) {
+				full_owner_name += "@";
+				full_owner_name += domain;
+			}
+			strcat(gman_final_args,full_owner_name.Value());
+		}
+	} else {
+		// new way - pass a constraint
+		if ( !owner || !proxy ) {
+			dprintf(D_ALWAYS,"ERROR - missing owner or proxy fields\n");
+			return NULL;
+		}
+		MyString constraint;
+		MyString full_owner_name(owner);
+		const char *owner_or_user;
+		if ( domain && domain[0] ) {
+			owner_or_user = ATTR_USER;
+			full_owner_name += "@";
+			full_owner_name += domain;
+		} else {
+			owner_or_user = ATTR_OWNER;
+		}
+		constraint.sprintf(" -C (%s=?=\"%s\"&&%s=?=\"%s\")",
+			owner_or_user,full_owner_name.Value(),
+			ATTR_X509_USER_PROXY_SUBJECT,proxy);
+		strcat(gman_final_args,constraint.Value());
+	}
 
-	init_user_ids(owner);
+	if (!init_user_ids(owner, domain)) {
+		dprintf(D_ALWAYS,"ERROR - init_user_ids() failed in GRIDMANAGER\n");
+		return NULL;
+	}
+
+	static bool first_time_through = true;
+	if ( first_time_through ) {
+		// Note: Because first_time_through is static, this block runs only 
+		// once per schedd invocation.
+		first_time_through = false;
+
+		// Clean up any old / abandoned scratch dirs.
+		dprintf(D_FULLDEBUG,"Checking for old gridmanager scratch dirs\n");
+		char *prefix = temp_dir_path();
+		ASSERT(prefix);
+		Directory tmp( prefix, PRIV_USER );
+		const char *f;
+		char *dot;
+		int fname_pid;
+		int mypid = daemonCore->getpid();
+		int scratch_pre_len = strlen(scratch_prefix);
+		while ( (f=tmp.Next()) ) {
+				// skip regular files -- we only need to inspect subdirs
+			if ( !tmp.IsDirectory() ) {
+				continue;
+			}
+				// skip if it does not start with our prefix
+			if ( strncmp(scratch_prefix,f,scratch_pre_len) ) {
+				continue;
+			}
+				// skip if does not end w/ a pid
+			dot = strrchr(f,'.');
+			if ( !dot ) {
+				continue;
+			}
+				// skip if this pid is still alive and not ours
+			dot++;	// skip over period
+			fname_pid = atoi(dot);
+			if ( fname_pid != mypid && daemonCore->Is_Pid_Alive(fname_pid) ) {
+					continue;
+			}
+				// if we made it here, blow away this subdir
+			if ( tmp.Remove_Current_File() ) {
+				dprintf(D_ALWAYS,"Removed old scratch dir %s\n",
+				tmp.GetFullPath());
+			}
+		}	// end of while for cleanup of old scratch dirs
+		dprintf(D_FULLDEBUG,"Done checking for old scratch dirs\n");			
+	}	// end of once-per-schedd invocation block
+
+	// If gridmanager wants a tmp dir, create one and append proper
+	// command-line arguments to tell where it is.
+	if ( want_scratch_dir() ) {
+		bool failed = false;
+		gman_node = new gman_node_t;
+		char *finalpath = scratchFilePath(gman_node);
+		priv_state saved_priv = set_user_priv();
+		if ( (mkdir(finalpath,0700)) < 0 ) {
+			// mkdir failed.  
+			dprintf(D_ALWAYS,"ERROR - mkdir(%s,0700) failed in GRIDMANAGER\n",
+				finalpath);
+			failed = true;
+		}
+		set_priv(saved_priv);
+		strcat(gman_final_args," -S ");	// -S = "ScratchDir" argument
+		strcat(gman_final_args,finalpath);
+		delete [] finalpath;
+		if ( failed ) {
+			// we already did dprintf reason to the log...
+			if (gman_node) delete gman_node;
+			return NULL;
+		}
+	}
+
+	dprintf(D_FULLDEBUG,"Really Execing %s\n",gman_final_args);
 
 	pid = daemonCore->Create_Process( 
 		gman_binary,			// Program to exec
@@ -380,6 +580,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* proxy,
 
 	if ( pid <= 0 ) {
 		dprintf ( D_ALWAYS, "StartOrFindGManager: Create_Process problems!\n" );
+		if (gman_node) delete gman_node;
 		return NULL;
 	}
 
@@ -389,8 +590,18 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* proxy,
 			owner,pid);
 
 	// Make a new gman_node entry for our hashtable & insert it
-	gman_node = new gman_node_t;
+	if ( !gman_node ) {
+		gman_node = new gman_node_t;
+	}
 	gman_node->pid = pid;
+	gman_node->owner[0] = '\0';
+	gman_node->domain[0] = '\0';
+	if ( owner ) {
+		strcpy(gman_node->owner,owner);
+	}
+	if ( domain ) {
+		strcpy(gman_node->domain,domain);
+	}
 	MyString owner_key(owner);
 	if(proxy){
 		MyString proxy_key(proxy);

@@ -55,10 +55,27 @@ void preserve_log_file(int debug_level);
 void _condor_dprintf_exit( int error_code, const char* msg );
 void _condor_set_debug_flags( char *strflags );
 int _condor_mkargv( int* argc, char* argv[], char* line );
-
+static void _condor_save_dprintf_line( int flags, char* fmt, va_list args );
+void _condor_dprintf_saved_lines( void );
+struct saved_dprintf {
+	int level;
+	char* line;
+	struct saved_dprintf* next;
+};
+static struct saved_dprintf* saved_list = NULL;
+static struct saved_dprintf* saved_list_tail = NULL;
 
 extern	DLL_IMPORT_MAGIC int		errno;
 extern	int		DebugFlags;
+
+/*
+   This is a global flag that tells us if we've successfully ran
+   dprintf_config() or otherwise setup dprintf() to print where we
+   want it to go.  We use it here so that if we call dprintf() before
+   dprintf_config(), we save the messages into a special list and
+   dump them all out once dprintf is configured.
+*/
+extern int _condor_dprintf_works;
 
 
 FILE	*DebugFP = 0;
@@ -122,6 +139,18 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 		   If dprintf is broken and someone (like _EXCEPT_Cleanup)
 		   trys to dprintf, we just return to avoid infinite loops. */
 	if( DprintfBroken ) return;
+
+		/* 
+		   See if dprintf_config() has been called.  if not, save the
+		   message into a list so we can dump them out all at once
+		   when we've got a working log file.  we need to do this
+		   before we check the debug flags since they won't be
+		   initialized until we call dprintf_config().
+		*/
+	if( ! _condor_dprintf_works ) {
+		_condor_save_dprintf_line( flags, fmt, args );
+		return; 
+	} 
 
 		/* See if this is one of the messages we are logging */
 	if( !(flags&DebugFlags) ) {
@@ -246,13 +275,89 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 
 }
 
+int
+_condor_open_lock_file(const char *DebugLock,int flags, mode_t perm)
+{
+	int	retry = 0;
+	int save_errno = 0;
+	priv_state	priv;
+	char*		dirpath = NULL;
+	int lock_fd;
+
+	if( !DebugLock ) {
+		return -1;
+	}
+
+	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
+	lock_fd = open(DebugLock,flags,perm);
+	if( lock_fd < 0 ) {
+		save_errno = errno;
+		if( save_errno == ENOENT ) {
+				/* 
+				   No directory: Try to create the directory
+				   itself, first as condor, then as root.  If
+				   we created it as root, we need to try to
+				   chown() it to condor.
+				*/ 
+			dirpath = dirname( DebugLock );
+			errno = 0;
+			if( mkdir(dirpath, 0777) < 0 ) {
+				if( errno == EACCES ) {
+						/* Try as root */ 
+					_set_priv(PRIV_ROOT, __FILE__, __LINE__, 0);
+					if( mkdir(dirpath, 0777) < 0 ) {
+						/* We failed, we're screwed */
+						fprintf( stderr, "Can't create lock directory \"%s\", "
+								 "errno: %d (%s)\n", dirpath, errno, 
+								 strerror(errno) );
+					} else {
+						/* It worked as root, so chown() the
+						   new directory and set a flag so we
+						   retry the open(). */
+#ifndef WIN32
+						chown( dirpath, get_condor_uid(),
+							   get_condor_gid() );
+#endif
+						retry = 1;
+					}
+					_set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
+				} else {
+						/* Some other error than access, give up */ 
+					fprintf( stderr, "Can't create lock directory: \"%s\""
+							 "errno: %d (%s)\n", dirpath, errno, 
+							 strerror(errno) );							
+				}
+			} else {
+					/* We succeeded in creating the directory,
+					   try the open() again */
+				retry = 1;
+			}
+				/* At this point, we're done with this, so
+				   don't leak it. */
+			free( dirpath );
+		}
+		if( retry ) {
+			lock_fd = open(DebugLock,flags,perm);
+			if( lock_fd < 0 ) {
+				save_errno = errno;
+			}
+		}
+	}
+
+	_set_priv(priv, __FILE__, __LINE__, 0);
+
+	if( lock_fd < 0 ) {
+		errno = save_errno;
+	}
+	return lock_fd;
+}
 
 FILE *
 debug_lock(int debug_level)
 {
-	int			length, save_errno, retry = 0;
+	int			length = 0;
 	priv_state	priv;
-	char*		dirpath = NULL;
+	int save_errno;
 	char msg_buf[_POSIX_PATH_MAX];
 
 	if ( DebugFP == NULL ) {
@@ -264,60 +369,11 @@ debug_lock(int debug_level)
 		/* Acquire the lock */
 	if( DebugLock ) {
 		if( LockFd < 0 ) {
-			LockFd = open(DebugLock,O_CREAT|O_WRONLY,0660);
+			LockFd = _condor_open_lock_file(DebugLock,O_CREAT|O_WRONLY,0660);
 			if( LockFd < 0 ) {
 				save_errno = errno;
-				if( save_errno == ENOENT ) {
-						/* 
-						   No directory: Try to create the directory
-						   itself, first as condor, then as root.  If
-						   we created it as root, we need to try to
-						   chown() it to condor.
-						*/ 
-					dirpath = dirname( DebugLock );
-					errno = 0;
-					if( mkdir(dirpath, 0777) < 0 ) {
-						if( errno == EACCES ) {
-								/* Try as root */ 
-							_set_priv(PRIV_ROOT, __FILE__, __LINE__, 0);
-							if( mkdir(dirpath, 0777) < 0 ) {
-								/* We failed, we're screwed */
-								fprintf( stderr, "Can't create lock directory \"%s\", "
-										 "errno: %d (%s)\n", dirpath, errno, 
- 										 strerror(errno) );
-							} else {
-								/* It worked as root, so chown() the
-								   new directory and set a flag so we
-								   retry the open(). */
-#ifndef WIN32
-								chown( dirpath, get_condor_uid(),
-									   get_condor_gid() );
-#endif
-								retry = 1;
-							}
-							_set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
-						} else {
-								/* Some other error than access, give up */ 
-							fprintf( stderr, "Can't create lock directory: \"%s\""
-									 "errno: %d (%s)\n", dirpath, errno, 
-									 strerror(errno) );							
-						}
-					} else {
-							/* We succeeded in creating the directory,
-							   try the open() again */
-						retry = 1;
-					}
-						/* At this point, we're done with this, so
-						   don't leak it. */
-					free( dirpath );
-				}
-				if( retry ) {
-					LockFd = open(DebugLock,O_CREAT|O_WRONLY,0660);
-				}
-				if( LockFd < 0 ) {
-					sprintf( msg_buf, "Can't open \"%s\"\n", DebugLock );
-					_condor_dprintf_exit( save_errno, msg_buf );
-				}
+				sprintf( msg_buf, "Can't open \"%s\"\n", DebugLock );
+				_condor_dprintf_exit( save_errno, msg_buf );
 			}
 		}
 
@@ -738,4 +794,79 @@ int
 mkargv( int* argc, char* argv[], char* line )
 {
 	return( _condor_mkargv(argc, argv, line) );
+}
+
+
+static void
+_condor_save_dprintf_line( int flags, char* fmt, va_list args )
+{
+	char* buf;
+	struct saved_dprintf* new_node;
+	int len;
+
+		/* figure out how much space we need to store the string */
+	len = vprintf_length( fmt, args );
+	if( len <= 0 ) { 
+		return;
+	}
+		/* make a buffer to hold it and print it there */
+	buf = malloc( sizeof(char) * (len + 1) );
+	if( ! buf ) {
+		EXCEPT( "Out of memory!" );
+	}
+	vsnprintf( buf, len, fmt, args );
+
+		/* finally, make a new node in our list and save the line */
+	new_node = malloc( sizeof(struct saved_dprintf) );
+	if( saved_list == NULL ) {
+		saved_list = new_node;
+	} else {
+		saved_list_tail->next = new_node;
+	}
+	saved_list_tail = new_node;
+	new_node->next = NULL;
+	new_node->level = flags;
+	new_node->line = buf;
+}
+
+
+void
+_condor_dprintf_saved_lines( void )
+{
+	struct saved_dprintf* node;
+	struct saved_dprintf* next;
+
+	if( ! saved_list ) {
+		return;
+	}
+
+	node = saved_list;
+	while( node ) {
+			/* 
+			   print the line.  since we've already got the complete
+			   string, including all the original args, we won't have
+			   any optional args or a va_list.  we're just printing a
+			   string literal.  however, we want to do it with a %s so
+			   that the underlying vfprintf() code doesn't try to
+			   interpret any format strings that might still exist in
+			   the string literal, since that'd screw us up.  we
+			   definitely want to use the real dprintf() code so we
+			   get the locking, potentially different log files, all
+			   that stuff handled for us automatically.
+			*/
+		dprintf( node->level, "%s\n", node->line );
+
+			/* save the next node so we don't loose it */
+		next = node->next;
+
+			/* make sure we don't leak anything */
+		free( node->line );
+		free( node );
+
+		node = next;
+	}
+
+		/* now that we deallocated everything, clear out our pointer
+		   to the list so it's not dangling. */
+	saved_list = NULL;
 }

@@ -21,11 +21,12 @@
 #define HAS_GLOBUS			NO
 #define HAS_GSI				NO
 #define HAS_OPENSSL			NO
+#define HAS_DLOPEN			NO
+#define HAS_DAGMAN_HELPER   NO
 
 #define UnixName /stand/vmunix		/* pathname of the system executable */
 
 #define TypicalMemory 64
-#define IS_EGCS_BUILD			YES
 
 #define VendorCTestFlags -Aa -Ae
 #define VendorCPPTestFlags -Aa -ext

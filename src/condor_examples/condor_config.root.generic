@@ -76,7 +76,6 @@ ALTERNATE_STARTER_2	= $(SBIN)/condor_starter.v63
 SCHEDD			= $(SBIN)/condor_schedd
 SHADOW			= $(SBIN)/condor_shadow
 SHADOW_PVM		= $(SBIN)/condor_shadow.pvm
-SHADOW_GLOBUS		= $(SBIN)/condor_shadow.globus
 SHADOW_NT		= $(SBIN)/condor_shadow.v63
 SHADOW_MPI		= $(SBIN)/condor_shadow.v63
 

@@ -24,25 +24,22 @@
 #ifndef CONDOR_AUTHENTICATOR_GSS
 #define CONDOR_AUTHENTICATOR_GSS
 
-#if !defined(SKIP_AUTHENTICATION) && defined(X509_AUTHENTICATION)
+#if !defined(SKIP_AUTHENTICATION) && defined(GSI_AUTHENTICATION)
 
 #include "condor_auth.h"        // Condor_Auth_Base class is defined here
 #include "globus_gss_assist.h"
 
-const char STR_X509_USER_PROXY[]       = "X509_USER_PROXY";
-const char STR_X509_DIRECTORY[]        = "X509_DIRECTORY";
-const char STR_X509_CERT_DIR[]         = "X509_CERT_DIR";
-const char STR_X509_USER_CERT[]        = "X509_USER_CERT";
-const char STR_X509_USER_KEY[]         = "X509_USER_KEY";
-const char STR_SSLEAY_CONF[]           = "SSLEAY_CONF";
-
-class GSSComms {
-public:
-   ReliSock *sock;
-   void *buffer;
-   int size;
-};
-
+const char STR_GSI_DAEMON_DIRECTORY[] = "GSI_DAEMON_DIRECTORY";
+const char STR_GSI_DAEMON_PROXY[]     = "GSI_DAEMON_PROXY";
+const char STR_GSI_DAEMON_CERT[]      = "GSI_DAEMON_CERT";
+const char STR_GSI_DAEMON_KEY[]       = "GSI_DAEMON_KEY";
+const char STR_GSI_DAEMON_TRUSTED_CA_DIR[]       = "GSI_DAEMON_TRUSTED_CA_DIR";
+const char STR_GSI_USER_PROXY[]       = "X509_USER_PROXY";
+const char STR_GSI_CERT_DIR[]         = "X509_CERT_DIR";
+const char STR_GSI_USER_CERT[]        = "X509_USER_CERT";
+const char STR_GSI_USER_KEY[]         = "X509_USER_KEY";
+const char STR_SSLEAY_CONF[]          = "SSLEAY_CONF";
+const char STR_GSI_MAPFILE[]          = "GRIDMAP";
 
 class Condor_Auth_X509 : public Condor_Auth_Base {
  public:
@@ -56,7 +53,7 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
     // Destructor
     //------------------------------------------
 
-    int authenticate(const char * remoteHost);
+    int authenticate(const char * remoteHost, CondorError* errstack);
     //------------------------------------------
     // PURPOSE: authenticate with the other side 
     // REQUIRE: hostAddr -- host to authenticate
@@ -96,20 +93,25 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
     //------------------------------------------
  private:
 
-    int authenticate_self_gss();
+    int authenticate_self_gss(CondorError* errstack);
 
-    int authenticate_client_gss();
+    int authenticate_client_gss(CondorError* errstack);
 
-    int authenticate_server_gss();
+    int authenticate_server_gss(CondorError* errstack);
+
+    char * get_server_info();
 
     int nameGssToLocal( char * GssClient );
 
-    int get_user_x509name(char*,char*);
-    
+#ifdef WIN32
+	int ParseMapFile();
+	int condor_gss_assist_gridmap ( char * GssClient, char *& local_user );
+#endif
+
     /** Check whether the security context of the scoket is valid or not 
 	@return TRUE if valid FALSE if not */
     bool gss_is_valid();
-    
+
     /** A specialized function that is needed for secure personal
         condor. When schedd and the user are running under the
         same userid we would still want the authentication process
@@ -131,6 +133,10 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
     int                 token_status;
     //X509_Credential *   my_credential;
     OM_uint32	        ret_flags ;
+#ifdef WIN32
+    typedef HashTable<MyString, MyString> Grid_Map_t;
+    static Grid_Map_t * GridMap;
+#endif
 };
 
 #endif

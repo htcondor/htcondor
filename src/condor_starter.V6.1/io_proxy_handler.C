@@ -7,6 +7,8 @@
 
 #include <errno.h>
 
+static int sscanf_chirp( char const *input,char const *fmt,... );
+
 IOProxyHandler::IOProxyHandler()
 {
 	cookie = 0;
@@ -95,21 +97,124 @@ void IOProxyHandler::handle_cookie_request( ReliSock *r, char *line )
 	r->put_line_raw(line);
 }
 
+
+/*
+sscanf_chirp -- A simplified version of sscanf that handles escapes.
+
+Format tokens recognized:
+
+%d  --  decimal
+%s  --  word, possibly containing escaped characters
+%%  --  match %
+*/
+
+int
+sscanf_chirp( char const *input,char const *fmt,... )
+{
+  va_list args;
+  int args_parsed = 0;
+  va_start(args,fmt);
+
+  while(*input && *fmt) {
+    if(*fmt == '%') { //parse an argument
+      switch(*(++fmt)) {
+      case 'd': { //read a decimal
+	long d;
+	char *end;
+	fmt++;
+	d = strtol(input,&end,10);
+	if(end > input) {
+	  args_parsed++;
+	  *(va_arg(args,int *)) = d;
+	  input = end;
+	}
+	else goto parse_failed;
+	break;
+      }
+      case 's': { //read a word
+	//assume provided buffer is big enough
+	char *word = va_arg(args,char *);
+	fmt++;
+	while(*input && !isspace(*input)) {
+	  if(*input == '\\') {
+	    input++;
+	    if(!*input) break;
+	  }
+	  *(word++) = *(input++);
+	}
+	*word = '\0';
+	args_parsed++;
+	break;
+      }
+      case '%':
+	if(*input != *fmt) goto parse_failed;
+	input++;
+	fmt++;
+	break;
+      default: //unexpected fmt token!?
+	goto parse_failed;
+      }
+    } else if(isspace(*fmt)) { //match whitespace
+      while(isspace(*input)) input++;
+      while(isspace(*fmt)) fmt++;
+    } else { //normal character match
+      if(*input != *fmt) goto parse_failed;
+      input++;
+      fmt++;
+    }
+  }
+
+ parse_failed:
+  //like sscanf, we just return number of parsed args when something fails
+
+  va_end(args);
+  return args_parsed;
+}
+
 /*
 Handle an incoming line from the client.
-A valid cookie is assumedf to have been received, so decode and execute any request.
+A valid cookie is assumed to have been received, so decode and execute any request.
 */
 
 void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 {
+	char url[_POSIX_PATH_MAX];
 	char path[CHIRP_LINE_MAX];
 	char newpath[CHIRP_LINE_MAX];
 	char flags_string[CHIRP_LINE_MAX];
+	char name[CHIRP_LINE_MAX];
+	char expr[CHIRP_LINE_MAX];
 	int result, offset, whence, length, flags, mode, fd;
 
 	dprintf(D_SYSCALLS,"IOProxyHandler: request: %s\n",line);
 
-	if(sscanf(line,"open %s %s %d",path,flags_string,&mode)==3) {
+	if(sscanf_chirp(line,"open %s %s %d",path,flags_string,&mode)==3) {
+
+		/*
+		Open is a rather special case.
+		First, we attempt to look up the file name and
+		convert it into a physical url.  Then, we make
+		sure that we know how to open the url.
+		Finally, we actually open it.
+		*/
+
+		dprintf(D_SYSCALLS,"Getting mapping for file %s\n",path);
+
+		result = REMOTE_CONDOR_get_file_info_new(path,url);
+		if(result==0) {
+			dprintf(D_SYSCALLS,"Directed to use url %s\n",url);
+			if(!strncmp(url,"remote:",7)) {
+				strcpy(path,url+7);
+			} else if(!strncmp(url,"buffer:remote:",14)) {
+				strcpy(path,url+14);
+			} else {
+				EXCEPT("File %s maps to url %s, which I don't know how to open.\n",path,url);
+			}
+		} else {
+			EXCEPT("Unable to map file %s to a url: %s\n",path,strerror(errno));
+		}
+
+		dprintf(D_SYSCALLS,"Which simplifies to file %s\n",path);
 
 		flags = 0;
 
@@ -132,13 +237,13 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
-	} else if(sscanf(line,"close %d",&fd)==1) {
+	} else if(sscanf_chirp(line,"close %d",&fd)==1) {
 
 		result = REMOTE_CONDOR_close(fd);
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
-	} else if(sscanf(line,"lseek %d %d %d",&fd,&offset,&whence)) {
+	} else if(sscanf_chirp(line,"lseek %d %d %d",&fd,&offset,&whence)) {
 
 		int whence_valid = 1;
 
@@ -167,37 +272,74 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		sprintf(line,"%d",result);
 		r->put_line_raw(line);
 
-	} else if(sscanf(line,"unlink %s",path)==1) {
+	} else if(sscanf_chirp(line,"unlink %s",path)==1) {
 
 		result = REMOTE_CONDOR_unlink(path);
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
-	} else if(sscanf(line,"rename %s %s",path,newpath)==2) {
+	} else if(sscanf_chirp(line,"rename %s %s",path,newpath)==2) {
 
 		result = REMOTE_CONDOR_rename(path,newpath);
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
-	} else if(sscanf(line,"mkdir %s %d",path,&mode)==2) {
+	} else if(sscanf_chirp(line,"mkdir %s %d",path,&mode)==2) {
 
 		result = REMOTE_CONDOR_mkdir(path,mode);
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
-	} else if(sscanf(line,"rmdir %s",path)==1) {
+	} else if(sscanf_chirp(line,"rmdir %s",path)==1) {
 
 		result = REMOTE_CONDOR_rmdir(path);
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
-	} else if(sscanf(line,"fsync %d",&fd)==1) {
+	} else if(sscanf_chirp(line,"fsync %d",&fd)==1) {
 
 		result = REMOTE_CONDOR_fsync(fd);
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
-	} else if(sscanf(line,"read %d %d",&fd,&length)==2) {
+	} else if(sscanf_chirp(line,"lookup %s",path)==1) {
+
+		result = REMOTE_CONDOR_get_file_info_new(path,url);
+		if(result==0) {
+			dprintf(D_SYSCALLS,"Filename %s maps to url %s\n",path,url);
+			sprintf(line,"%d",strlen(url));
+			r->put_line_raw(line);
+			r->put_bytes_raw(url,strlen(url));
+		} else {
+			sprintf(line,"%d",convert(result,errno));
+			r->put_line_raw(line);
+		}
+
+	} else if(sscanf_chirp(line,"set_job_attr %s %s",name,expr)==2) {
+
+		result = REMOTE_CONDOR_set_job_attr(name,expr);
+		sprintf(line,"%d",convert(result,errno));
+		r->put_line_raw(line);
+
+	} else if(sscanf_chirp(line,"get_job_attr %s",name)==1) {
+
+		result = REMOTE_CONDOR_get_job_attr(name,expr);
+		if(result==0) {
+			sprintf(line,"%d",strlen(expr));
+			r->put_line_raw(line);
+			r->put_bytes_raw(expr,strlen(expr));
+		} else {
+			sprintf(line,"%d",convert(result,errno));
+			r->put_line_raw(line);
+		}	
+
+	} else if(sscanf_chirp(line,"constrain %s",expr)==1) {
+
+		result = REMOTE_CONDOR_constrain(expr);
+		sprintf(line,"%d",convert(result,errno));
+		r->put_line_raw(line);
+
+	} else if(sscanf_chirp(line,"read %d %d",&fd,&length)==2) {
 
 		char *buffer = (char*) malloc(length);
 		if(buffer) {
@@ -211,8 +353,8 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		} else {
 			sprintf(line,"%d",CHIRP_ERROR_NO_MEMORY);
 		}
-		
-	} else if(sscanf(line,"write %d %d",&fd,&length)==2) {
+	
+	} else if(sscanf_chirp(line,"write %d %d",&fd,&length)==2) {
 
 		char *buffer = (char*) malloc(length);
 		if(buffer) {
@@ -229,7 +371,11 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		}
 		r->put_line_raw(line);
 		
-	} else {
+	} else if(strncmp(line,"version",7)==0) {
+	    sprintf(line,"%d",CHIRP_VERSION);
+	    r->put_line_raw(line);
+	}
+	else {
 		sprintf(line,"%d",CHIRP_ERROR_INVALID_REQUEST);
 		r->put_line_raw(line);
 	}

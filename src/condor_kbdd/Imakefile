@@ -1,8 +1,8 @@
 NAME = condor_kbdd
 all_target($(NAME))
 
-CFLAGS = $(STD_C_FLAGS) -Wall 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -Wall
+CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS) 
 LDFLAGS = -lX11
 

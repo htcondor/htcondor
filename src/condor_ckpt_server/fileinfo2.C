@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "condor_debug.h"
 #include "fileinfo2.h"
 #include "network2.h"
 #include "gen_lib.h"
@@ -95,12 +96,8 @@ file_info_node* FileInformation::AddFileInfo(struct in_addr machine_IP,
   n = new file_info_node;
   if (n == NULL)
     {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: unable to allocate memory for the file information" 
-	   << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
+	  dprintf(D_ALWAYS, 
+			  "ERROR: unable to allocate memory for the file information\n");
       exit(DYNAMIC_ALLOCATION);
     }
   memcpy((char*) &n->data.machine_IP, &machine_IP, sizeof(struct in_addr));
@@ -144,7 +141,7 @@ void FileInformation::PrintFileInfo()
   const char ch2='-';
 
   file_info_node* p;
-  int             count=0;
+  u_lint             count=0;
 
   cout << setw(53) << "Submitting" << endl;
   cout << setw(15) << "File Name" << setw(37) << "Machine" << setw(19)
@@ -169,11 +166,8 @@ void FileInformation::PrintFileInfo()
   MakeLongLine(ch1, ch2);
   if (count != num_files)
     {
-      cerr << endl << "WARNING:" << endl;
-      cerr << "WARNING:" << endl;
-      cerr << "WARNING: incorrect count for the number of files" << endl;
-      cerr << "WARNING:" << endl;
-      cerr << "WARNING:" << endl;
+	  dprintf(D_ALWAYS, "WARNING incorrect count for the number of files "
+			  "(count = %d, num = %d)\n", count, num_files);
     }
 }
 
@@ -187,21 +181,25 @@ void FileInformation::PrintFileInfo()
 
 void FileInformation::TransferFileInfo(int socket_desc)
 {
-  int              max_buf;
+  u_lint           max_buf;
   file_state_info* buffer;
-  int              buf_count;
+  u_lint           buf_count;
   file_info_node*  ptr;
-  int              temp_len;
+  u_lint           temp_len;
 
-  if (num_files == 0)
+  if (num_files == 0) {
+	dprintf(D_ALWAYS, "ERROR: num_files is zero.\n");
     exit(CHILDTERM_NO_FILE_STATUS);
+  }
   max_buf = (DATA_BUFFER_SIZE/sizeof(file_state_info)) * 
                           sizeof(file_state_info);
   if (max_buf < num_files)
     max_buf = num_files;
   buffer = new file_state_info[max_buf];
-  if (buffer == NULL)
+  if (buffer == NULL) {
+	dprintf(D_ALWAYS, "ERROR: Couldn't allocate file_state_info.\n");
     exit(DYNAMIC_ALLOCATION);
+  }
   ptr = head;
   while (ptr != NULL)
     {
@@ -223,8 +221,10 @@ void FileInformation::TransferFileInfo(int socket_desc)
 	}
       temp_len = net_write(socket_desc, (char*) buffer, 
 			   sizeof(file_state_info) * buf_count);
-      if (temp_len != (sizeof(file_state_info) * buf_count))
-	exit(CHILDTERM_ERROR_ON_STATUS_WRITE);
+      if (temp_len != (sizeof(file_state_info) * buf_count)) {
+		  dprintf(D_ALWAYS, "ERROR: Write failed, line %d\n", __LINE__);
+		  exit(CHILDTERM_ERROR_ON_STATUS_WRITE);
+	  }
     }
   delete [] buffer;
 }
@@ -234,18 +234,14 @@ void FileInformation::WriteFileInfoToDisk()
 {
   ofstream        outfile(TEMP_FILE_INFO_FILENAME);
   file_info_node* fin_ptr;
-  int             count=0;
+  u_lint          count=0;
   char            pathname1[MAX_PATHNAME_LENGTH];
   char            pathname2[MAX_PATHNAME_LENGTH];
 
   if (outfile.fail())
     {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: unable to write in-memory data structure to file" 
-	   << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
+      dprintf(D_ALWAYS, 
+			  "ERROR: unable to write in-memory data structure to file\n");
       exit(CANNOT_WRITE_IMDS_FILE);
     }
   fin_ptr = head;
@@ -268,31 +264,18 @@ void FileInformation::WriteFileInfoToDisk()
   if (remove(pathname1) == -1)
     if (errno == EACCES)
       {
-        cerr << endl << "ERROR:" << endl;
-        cerr << "ERROR:" << endl;
-        cerr << "ERROR: cannot access IMDS file" << endl;
-        cerr << "ERROR:" << endl;
-        cerr << "ERROR:" << endl;
+		dprintf(D_ALWAYS, "ERROR: cannot access IMDS file\n");
         exit(CANNOT_DELETE_IMDS_FILE);
       }
   errno = 0;
   if (rename(pathname1, pathname2) != 0)
     {
-      cerr << endl << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR: unable to rename IMDS file" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "ERROR:" << endl;
-      cerr << "errno = " << errno << endl;
+      dprintf(D_ALWAYS, "ERROR: unable to rename IMDS file\n");
       exit(CANNOT_RENAME_IMDS_FILE);
     }
   if (count != num_files)
     {
-      cerr << endl << "WARNING:" << endl;
-      cerr << "WARNING:" << endl;
-      cerr << "WARNING: incorrect count for the number of files" << endl;
-      cerr << "WARNING:" << endl;
-      cerr << "WARNING:" << endl;
+      dprintf(D_ALWAYS, "WARNING: incorrect count for the number of files\n");
     }
 }
 

@@ -3,7 +3,7 @@
  *
  * See LICENSE.TXT for additional notices and disclaimers.
  *
- * Copyright (c)1990-2002 CONDOR Team, Computer Sciences Department, 
+ * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
@@ -23,6 +23,9 @@
 
 #include "condor_common.h"
 #include "MyString.h"
+#include "condor_snutils.h"
+#include "condor_string.h"
+#include "strupr.h"
 
 /*--------------------------------------------------------------------
  *
@@ -32,17 +35,17 @@
 
 MyString::MyString() 
 {
-    Data=NULL;
-    Len=0;
-    capacity = 0;
+	init();
     return;
 }
   
 MyString::MyString(int i) 
 {
-    char tmp[50];
-	sprintf(tmp,"%d",i);
+	const int bufLen = 50;
+    char tmp[bufLen];
+	::snprintf(tmp,bufLen,"%d",i);
     Len=strlen(tmp);
+	ASSERT(Len < bufLen);
     Data=new char[Len+1];
     capacity = Len;
     strcpy(Data,tmp);
@@ -51,18 +54,14 @@ MyString::MyString(int i)
 
 MyString::MyString(const char* S) 
 {
-    Data=NULL;
-    Len=0;
-	capacity = 0; 
+	init();
     *this=S;
 	return;
 };
 
 MyString::MyString(const MyString& S) 
 {
-    Data=NULL;
-	Len = 0;
-	capacity = 0;
+	init();
     *this=S;
 	return;
 }
@@ -72,6 +71,7 @@ MyString::~MyString()
     if (Data) {
 		delete[] Data;
 	}
+	init(); // for safety -- errors if you try to re-use this object
 	return;
 }
 
@@ -84,10 +84,15 @@ MyString::~MyString()
 char 
 MyString::operator[](int pos) const 
 {
-    if (pos >= Len) return '\0';
+    if (pos >= Len || pos < 0) return '\0';
     return Data[pos];
 }
 
+// Hmm -- this seems pretty dangerous.  What if the string is zero-length
+// and the caller changes the returned char& to something other than '\0'?
+// Or what if we return a character from the string and the caller changes
+// it to '\0'?  Either way, bad things will probably happen!
+// wenger 2003-04-28.
 char& 
 MyString::operator[](int pos) 
 {
@@ -121,14 +126,10 @@ operator=(const MyString& S)
     if (Data) {
 		delete[] Data;
 	}
-    Data=NULL;
-    Len=0;
-    if (S.Data) {
-		Len = S.Len;
-		Data = new char[Len+1];
-		strcpy(Data,S.Data);
-		capacity = Len;
-    }
+	Len = S.Len;
+	Data = new char[Len+1];
+	strcpy(Data,S.Data);
+	capacity = Len;
     return *this;
 }
 
@@ -164,6 +165,9 @@ MyString::operator=( const char *s )
 bool 
 MyString::reserve( const int sz ) 
 {
+	if (sz < 0) {
+		return false;
+	}
     char *buf = new char[ sz+1 ];
     if (!buf) {
 		return false;
@@ -172,7 +176,7 @@ MyString::reserve( const int sz )
     if (Data) {
       strncpy( buf, Data, sz); 
 	  // Make sure it's NULL terminated. strncpy won't make sure of it.
-	  buf[sz] = 0; 
+	  buf[sz] = '\0'; 
       delete [] Data;
     }
     Len = strlen( buf );
@@ -180,7 +184,7 @@ MyString::reserve( const int sz )
     Data = buf;
     return true;
 }
-    
+
 // I hope this doesn't seem strange. There are times when we do lots
 // of operations on a MyString. For example, in xml_classads.C, we
 // add characters one at a time to the string (see
@@ -196,7 +200,7 @@ MyString::reserve_at_least(const int sz)
 {
 	int twice_as_much;
 	bool success;
-	
+
 	twice_as_much = 2 * capacity;
 	if (twice_as_much > sz) {
 		success = reserve(twice_as_much);
@@ -218,7 +222,7 @@ MyString::reserve_at_least(const int sz)
 MyString& 
 MyString::operator+=(const MyString& S) 
 {
-    if( S.Len + Len > capacity ) {
+    if( S.Len + Len > capacity || !Data ) {
 		reserve_at_least( Len + S.Len );
     }
     //strcat( Data, S.Value() );
@@ -235,7 +239,7 @@ MyString::operator+=(const char *s)
 		return *this;
 	}
     int s_len = strlen( s );
-    if( s_len + Len > capacity ) {
+    if( s_len + Len > capacity || !Data ) {
 		reserve_at_least( Len + s_len );
     }
     //strcat( Data, s );
@@ -247,7 +251,7 @@ MyString::operator+=(const char *s)
 MyString& 
 MyString::operator+=(const char c) 
 {
-    if( Len + 1 > capacity ) {
+    if( Len + 1 > capacity || !Data ) {
        reserve_at_least( Len + 1 );
     }
 	Data[Len] = c;
@@ -263,6 +267,41 @@ MyString operator+(const MyString& S1, const MyString& S2)
     return S;
 }
 
+
+MyString& 
+MyString::operator+=( int i )
+{
+	const int bufLen = 64;
+	char tmp[bufLen];
+	::snprintf( tmp, bufLen, "%d", i );
+    int s_len = strlen( tmp );
+	ASSERT(s_len < bufLen);
+    if( s_len + Len > capacity ) {
+		reserve_at_least( Len + s_len );
+    }
+	strcpy( Data + Len, tmp );
+	Len += s_len;
+    return *this;
+}
+
+
+MyString& 
+MyString::operator+=( double d )
+{
+	const int bufLen = 128;
+	char tmp[bufLen];
+	::snprintf( tmp, bufLen, "%f", d );
+    int s_len = strlen( tmp );
+	ASSERT(s_len < bufLen);
+    if( s_len + Len > capacity ) {
+		reserve_at_least( Len + s_len );
+    }
+	strcpy( Data + Len, tmp);
+	Len += s_len;
+    return *this;
+}
+
+
 /*--------------------------------------------------------------------
  *
  * Miscellaneous Functions
@@ -273,8 +312,13 @@ MyString
 MyString::Substr(int pos1, int pos2) const 
 {
     MyString S;
-    if (pos2 > Len) {
-		pos2 = Len;
+
+	if (Len <= 0) {
+	    return S;
+	}
+
+    if (pos2 >= Len) {
+		pos2 = Len - 1;
 	}
     if (pos1 < 0) {
 		pos1=0;
@@ -327,7 +371,7 @@ MyString::EscapeChars(const MyString& Q, const char escape) const
 int 
 MyString::FindChar(int Char, int FirstPos) const 
 {
-    if (FirstPos >= Len || FirstPos < 0) {
+    if (!Data || FirstPos >= Len || FirstPos < 0) {
 		return -1;
 	}
     char* tmp = strchr(Data + FirstPos, Char);
@@ -350,9 +394,9 @@ MyString::Hash() const
  
 // returns the index of the first match, or -1 for no match found
 int 
-MyString::find(const char *pszToFind, int iStartPos) 
+MyString::find(const char *pszToFind, int iStartPos) const
 { 
-	if (!Data)
+	if (!Data || iStartPos >= Len || iStartPos < 0)
 		return -1;
 	const char *pszFound = strstr(Data + iStartPos, pszToFind);
 	if (!pszFound)
@@ -409,6 +453,116 @@ MyString::replaceString(
 	Len = iNewLen;
 	
 	return true;
+}
+
+bool
+MyString::vsprintf_cat(const char *format,va_list args) 
+{
+    if( !format || *format == '\0' ) {
+		return true;
+	}
+    int s_len = vprintf_length(format,args);
+    if( Len + s_len > capacity || !Data ) {
+		if(!reserve_at_least( Len + s_len )) return false;
+    }
+	::vsprintf(Data + Len, format, args);
+	Len += s_len;
+    return true;
+}
+
+bool 
+MyString::sprintf_cat(const char *format,...)
+{
+	bool    succeeded;
+	va_list args;
+
+	va_start(args, format);
+	succeeded = vsprintf_cat(format,args);
+	va_end(args);
+
+	return succeeded;
+}
+
+bool
+MyString::vsprintf(const char *format,va_list args)
+{
+	Len = 0;
+	if(Data) Data[0] = '\0';
+	return vsprintf_cat(format,args);
+}
+
+bool 
+MyString::sprintf(const char *format,...)
+{
+	bool    succeeded;
+	va_list args;
+
+	va_start(args, format);
+	succeeded = vsprintf(format,args);
+	va_end(args);
+
+	return succeeded;
+}
+
+
+void
+MyString::lower_case(void)
+{
+	::strlwr(Data);
+	return;
+}
+
+
+void
+MyString::strlwr(void)
+{
+	::strlwr(Data);
+	return;
+}
+
+
+void
+MyString::upper_case(void)
+{
+	::strupr(Data);
+	return;
+}
+
+
+void
+MyString::strupr(void)
+{
+	::strupr(Data);
+	return;
+}
+
+
+bool
+MyString::chomp( void )
+{
+	bool chomped = false;
+	if( Data[Len-1] == '\n' ) {
+		Data[Len-1] = '\0';
+		Len--;
+		chomped = true;
+	}
+#if defined(WIN32)
+	if( ( Len > 1 ) && ( Data[Len-2] == '\r' ) ) {
+		Data[Len-2] = '\0';
+		Len--;
+		chomped = true;
+	}
+#endif
+	return chomped;
+}
+
+
+void
+MyString::init()
+{
+    Data=NULL;
+    Len=0;
+    capacity = 0;
 }
 
 /*--------------------------------------------------------------------
@@ -507,8 +661,37 @@ istream& operator>>(istream& is, MyString& S)
     return is;
 }
 
+
+bool
+MyString::readLine( FILE* fp )
+{
+	char buf[1024];
+	bool first_time = true;
+
+	while( 1 ) {
+		if( ! fgets(buf, 1024, fp) ) {
+			if( first_time ) {
+				return false;
+			}
+			return true;
+		}
+		if( first_time ) {
+			*this = buf;
+			first_time = false;
+		} else {
+			*this += buf;
+		}
+		if( strrchr((const char *)buf,'\n') ) {
+				// we found a newline, return success
+			return true;
+		}
+	}
+}
+
+
 int MyStringHash( const MyString &str, int buckets )
 {
 	return str.Hash()%buckets;
 }
+
 

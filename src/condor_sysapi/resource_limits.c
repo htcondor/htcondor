@@ -26,10 +26,10 @@
 #include "condor_constants.h"
 #include "limit.h"
 
+#define SLOP 50
+
 
 #if defined( OSF1 ) || defined( LINUX )
-
-#define SLOP 50
 
 void
 sysapi_set_resource_limits()
@@ -99,6 +99,8 @@ sysapi_set_resource_limits()
 	Suns.
 */
 	limit( RLIMIT_CORE, RLIM_INFINITY );
+
+	dprintf( D_ALWAYS, "Done setting resource limits\n" );
 }
 
 #elif defined( HPUX ) 
@@ -107,14 +109,16 @@ void
 sysapi_set_resource_limits()
 {
 		/* These platforms do not support limit() */
+	dprintf( D_ALWAYS, "Setting resource limits not supported!\n" );
 }
 
-#elif defined( IRIX )  || defined( WIN32 )
+#elif defined( IRIX )  || defined( WIN32 ) || defined( AIX ) || defined( CONDOR_DARWIN )
 
 void
 sysapi_set_resource_limits()
 {
 		/* Not yet implemented on these platforms */
+	dprintf( D_ALWAYS, "Setting resource limits not implemented!\n" );
 }
 
 #else

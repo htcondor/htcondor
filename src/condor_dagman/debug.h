@@ -75,7 +75,7 @@ BEGIN_C_DECLS   /* from condor_header_features.h */
 */
 enum debug_level {
   /** NEVER output, except for usage info */ DEBUG_SILENT  = 0,
-  /** Very quiet, only servere errors */     DEBUG_QUIET   = 1,
+  /** Very quiet, only severe errors */     DEBUG_QUIET   = 1,
   /** Normal output, errors and warnings */  DEBUG_NORMAL  = 2,
   /** Errors, and all warnings */            DEBUG_VERBOSE = 3,
   /** Basic debug output */                  DEBUG_DEBUG_1 = 4,

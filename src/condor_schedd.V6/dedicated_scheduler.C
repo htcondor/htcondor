@@ -48,9 +48,9 @@
 #include "condor_string.h"
 #include "string_list.h"
 #include "condor_attributes.h"
-#include "get_full_hostname.h"
 #include "proc.h"
 #include "exit.h"
+#include "dc_startd.h"
 
 extern Scheduler scheduler;
 extern char* Name;
@@ -565,7 +565,7 @@ DedicatedScheduler::shutdown_graceful( void )
 
 
 /* 
-   The dedicated scheduler's negotate() method.  This is based heavily
+   The dedicated scheduler's negotiate() method.  This is based heavily
    on Scheduler::negotiate().  However, b/c we're not really
    negotiating for jobs, but for resource requests, and since a
    million other things are different, these have to be seperate
@@ -1197,7 +1197,7 @@ DedicatedScheduler::releaseClaim( match_rec* m_rec, bool use_tcp )
     ReliSock rsock;
 	SafeSock ssock;
 
-	Daemon d(m_rec->peer);
+	DCStartd d( m_rec->peer );
 
     if( use_tcp ) {
 		sock = &rsock;
@@ -1243,7 +1243,7 @@ DedicatedScheduler::deactivateClaim( match_rec* m_rec )
 		return false;
 	}
 
-	Daemon d(m_rec->peer);
+	DCStartd d( m_rec->peer );
 	d.startCommand(DEACTIVATE_CLAIM, &sock);
 
 	sock.encode();
@@ -2611,8 +2611,7 @@ DedicatedScheduler::publishRequestAd( void )
 
 		// Now, we can actually send this off to the CM:
 		// Port doesn't matter, since we've got the sinful string. 
-	scheduler.updateCentralMgr( UPDATE_SUBMITTOR_AD, &ad,
-								scheduler.Collector->addr(), 0 );  
+	scheduler.Collector->sendUpdate( UPDATE_SUBMITTOR_AD, &ad );
 }
 
 

@@ -5,12 +5,23 @@
 **
 **********/
 
-#if defined( IS_DUX4 )
+#if defined( IS_DUX4 ) || defined( IS_DUX5 )
 #	define PlatformIncludeFile <ALPHA_OSF1.cf>
-#	undef IS_DUX4
+#       if defined( IS_DUX4 )
+#               define OSVersionIncludeFile <ALPHA_OSF1_V4.cf>
+#               undef IS_DUX4
+#       elif defined( IS_DUX5 )
+#               define OSVersionIncludeFile <ALPHA_OSF1_V5.cf>
+#               undef IS_DUX5
+#       endif
 #endif
 
-#if defined( IS_SOLARIS251 ) || defined( IS_SOLARIS26 ) || defined( IS_SOLARIS27 ) || defined (IS_SOLARIS28 )
+#if defined( IS_BSD )
+#       define PlatformIncludeFile <BSD.cf>
+#       undef IS_BSD
+#endif
+
+#if defined( IS_SOLARIS251 ) || defined( IS_SOLARIS26 ) || defined( IS_SOLARIS27 ) || defined (IS_SOLARIS28 ) || defined( IS_SOLARIS29 )
 #	define PlatformIncludeFile <SOLARIS.cf>
 #	if defined( IS_SUN4X ) 
 #		define ArchIncludeFile <SOLARIS_SUN4X.cf>
@@ -34,12 +45,20 @@
 #elif defined( IS_SOLARIS28 )
 #	define OSVersionIncludeFile <SOLARIS28.cf>
 #	undef IS_SOLARIS28
+#elif defined( IS_SOLARIS29 )
+#	define OSVersionIncludeFile <SOLARIS29.cf>
+#	undef IS_SOLARIS29
 #endif
 
-#if defined( IS_HPUX10 )
+#if defined( IS_HPUX10 ) || defined( IS_HPUX11 )
 #	define PlatformIncludeFile <HPUX.cf>
-#	define OSVersionIncludeFile <HPUX10.cf>
-#	undef IS_HPUX10
+#	if defined( IS_HPUX10 )
+#		define OSVersionIncludeFile <HPUX10.cf>
+#		undef IS_HPUX10
+#	elif defined( IS_HPUX11 )
+#		define OSVersionIncludeFile <HPUX11.cf>
+#		undef IS_HPUX11
+#	endif
 #endif
 
 #if defined( IS_LINUX )
@@ -51,6 +70,9 @@
 #	elif defined( IS_ALPHA )
 #		define ArchIncludeFile <LINUX_ALPHA.cf>
 #		undef IS_ALPHA
+#   elif defined( IS_IA64 )
+#       define ArchIncludeFile <LINUX_IA64.cf>
+#       undef IS_IA64
 #	endif
 #endif
 
@@ -66,6 +88,23 @@
 #	undef IS_IRIX65
 #endif
 
+#if defined( IS_AIX )
+#	define PlatformIncludeFile <AIX.cf>
+#	if defined( IS_PPC )
+#		define ArchIncludeFile <AIX_PPC.cf>
+#		undef IS_PPC
+#	elif defined( IS_IA64 )
+#		define ArchIncludeFile <AIX_IA64.cf>
+#		undef IS_IA64
+#	endif
+#	undef IS_AIX
+#endif
+
+#if defined( IS_AIX5 )
+#	define OSVersionIncludeFile <AIX5.cf>
+#	undef IS_AIX5
+#endif 
+
 /***************************************************************************
 ** Undefine any symbols the compiler might have defined for us since
 ** they may trip us up later.
@@ -80,3 +119,4 @@
 #undef hpux
 #undef linux
 #undef mips
+#undef aix

@@ -84,6 +84,7 @@ static const int RPL_SOCK = 17;
 #if defined(WIN32)
 static const char env_delimiter = '|';
 static const char DIR_DELIM_CHAR = '\\';
+static const char DIR_DELIM_STRING[] = "\\";
 static const char PATH_DELIM_CHAR = ';';
 static const char NULL_FILE[] = "NUL";
 /* CONDOR_EXEC is name the used for the user's executable */
@@ -91,10 +92,15 @@ static const char CONDOR_EXEC[] = "condor_exec.exe";
 #else
 static const char env_delimiter = ';';
 static const char DIR_DELIM_CHAR = '/';
+static const char DIR_DELIM_STRING[] = "/";
 static const char PATH_DELIM_CHAR = ':';
 static const char NULL_FILE[] = "/dev/null";
 static const char CONDOR_EXEC[] = "condor_exec.exe";
 #endif
+
+/* condor_submit canonicalizes all NULLFILE's to the UNIX_NULL_FILE */
+static const char WINDOWS_NULL_FILE[] = "NUL";
+static const char UNIX_NULL_FILE[] = "/dev/null";
 
 /* This is the username of the NiceUser (i.e., dirt user) */
 static const char NiceUserName[] = "nice-user";

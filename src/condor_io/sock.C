@@ -36,6 +36,8 @@
 #define closesocket close
 #endif
 
+// initialize static data members
+int Sock::timeout_multiplier = 0;
 
 Sock::Sock() : Stream() {
 	_sock = INVALID_SOCKET;
@@ -758,7 +760,10 @@ bool Sock::test_connection()
 	struct sockaddr_in test_addr;
 	memset((char *) &test_addr, 0, sizeof(test_addr));
 	test_addr.sin_family = AF_INET;
-	SOCKET_LENGTH_TYPE nbytes = sizeof(test_addr);
+
+	SOCKET_LENGTH_TYPE nbytes;
+	
+	nbytes = sizeof(test_addr);
 	if (getpeername(_sock, (struct sockaddr *) &test_addr, &nbytes) < 0) {
 		sleep(1);	// try once more -- sometimes it fails the first time
 		if (getpeername(_sock, (struct sockaddr *) &test_addr, &nbytes) < 0) {
@@ -801,6 +806,14 @@ int Sock::close()
 #define ioctlsocket ioctl
 #endif
 
+int
+Sock::set_timeout_multiplier(int secs)
+{
+   int old_val = timeout_multiplier;
+   timeout_multiplier = secs;
+   return old_val;
+}
+
 /* NOTE: on timeout() we return the previous timeout value, or a -1 on an error.
  * Once more: we do _not_ return FALSE on Error like most other CEDAR functions;
  * we return a -1 !! 
@@ -808,8 +821,10 @@ int Sock::close()
 int Sock::timeout(int sec)
 {
 	int t = _timeout;
-	int on = 1;
-	int off = 0;
+
+	if (sec && (timeout_multiplier > 0)) {
+		sec *= timeout_multiplier;
+	}
 
 	_timeout = sec;
 
@@ -961,8 +976,9 @@ char * Sock::serializeCryptoInfo(char * buf)
         ptmp++;
     }
     else {
-        ptmp = strchr(ptmp, '*');
-        ptmp++;
+		ptmp = strchr(ptmp, '*');
+		ASSERT( ptmp );
+		ptmp++;
     }
 	return ptmp;
 }
@@ -1007,8 +1023,9 @@ char * Sock::serializeMdInfo(char * buf)
         ptmp++;
     }
     else {
-        ptmp = strchr(ptmp, '*');
-        ptmp++;
+		ptmp = strchr(ptmp, '*');
+		ASSERT( ptmp );
+		ptmp++;
     }
 	return ptmp;
 }
@@ -1030,13 +1047,13 @@ char * Sock::serialize() const
 char * Sock::serialize(char *buf)
 {
 	char *ptmp;
-	int i, len = 0;
+	int i;
 	SOCKET passed_sock;
 
 	ASSERT(buf);
 
 	// here we want to restore our state from the incoming buffer
-	sscanf(buf,"%u*%d*%d*",&passed_sock,&_state,&_timeout);
+	sscanf(buf,"%u*%d*%d*",&passed_sock,(int*)&_state,&_timeout);
 
 	// replace _sock with the one from the buffer _only_ if _sock
 	// is currently invalid.  if it is not invalid, it has already
@@ -1105,7 +1122,10 @@ int
 Sock::get_port()
 {
 	sockaddr_in	addr;
-	SOCKET_LENGTH_TYPE addr_len = sizeof(sockaddr_in);
+
+	SOCKET_LENGTH_TYPE addr_len;
+	
+	addr_len = sizeof(sockaddr_in);
 
 	if (getsockname(_sock, (sockaddr *)&addr, &addr_len) < 0) return -1;
 	return (int) ntohs(addr.sin_port);
@@ -1116,7 +1136,9 @@ unsigned int
 Sock::get_ip_int()
 {
 	sockaddr_in	addr;
-	SOCKET_LENGTH_TYPE addr_len = sizeof(sockaddr_in);
+	SOCKET_LENGTH_TYPE addr_len;
+
+	addr_len = sizeof(sockaddr_in);
 
 	if (getsockname(_sock, (sockaddr *)&addr, &addr_len) < 0) return 0;
 	return (unsigned int) ntohl(addr.sin_addr.s_addr);
@@ -1176,7 +1198,6 @@ So, we will throw all of our knives at once and ignore return values.
 static void make_fd_async( int fd )
 {
 	int bits;
-	int on=1;
 	int pid = getpid();
 
 	/* Make the owner of this fd be this process */
@@ -1202,14 +1223,20 @@ static void make_fd_async( int fd )
 	#endif
 
 	#if defined(FIOASYNC) && !defined(linux)
+		{
 		/* In some versions of linux, FIOASYNC results in
 		   _synchronous_ I/O.  Bug!  Fortunately, FASYNC
 		   is defined in these cases. */
-		ioctl( fd, FIOASYNC, &on );
-	#endif
+			int on = 1;
+			ioctl( fd, FIOASYNC, &on );
+		}
+    #endif
 
 	#if defined(FIOSSAIOSTAT)
-		ioctl( fd, FIOSSAIOSTAT, &on );
+		{
+			int on = 1; 
+			ioctl( fd, FIOSSAIOSTAT, &on );
+		}
 	#endif
 }
 
@@ -1314,16 +1341,20 @@ bool Sock :: is_hdr_encrypt(){
 	return FALSE;
 }
 
-int Sock :: authenticate(KeyInfo *&, int clientFlags)
+int Sock :: authenticate(KeyInfo *&, const char * methods, CondorError* errstack)
 {
 	return -1;
 }
 
-int Sock :: authenticate(int clientFlags)
+int Sock :: authenticate(const char * methods, CondorError* errstack)
 {
+	/*
+	errstack->push("AUTHENTICATE", AUTHENTICATE_ERR_NOT_BUILT,
+			"Failure: This version of condor was not compiled with authentication enabled");
+	*/
 	return -1;
 }
- 
+
 int Sock :: isAuthenticated()
 {
 	return -1;

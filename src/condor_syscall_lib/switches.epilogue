@@ -23,6 +23,10 @@
 #include "switches.remap-SOLARIS28.h"
 #endif
 
+#ifdef Solaris29
+#include "switches.remap-SOLARIS29.h"
+#endif
+
 #ifdef IRIX65
 #include "switches.remap-IRIX65.h"
 #else 
@@ -36,7 +40,11 @@
 #endif
 
 #ifdef OSF1
-#include "switches.remap-DUX4.h"
+# if defined DUX4
+#  include "switches.remap-DUX4.h"
+# elif defined DUX5
+#  include "switches.remap-DUX5.h"
+# endif
 #endif
 
 } // end of extern "C"

@@ -44,7 +44,7 @@
 #define D_ALWAYS 		(1<<0)
 #define D_SYSCALLS		(1<<1)
 #define D_CKPT			(1<<2)
-#define D_XDR			(1<<3)
+#define D_HOSTNAME		(1<<3)
 #define D_MALLOC		(1<<4)
 #define D_LOAD			(1<<5)
 #define D_EXPR			(1<<6)
@@ -85,6 +85,7 @@ extern int (*DebugId)(FILE *);		/* set header message */
 void dprintf ( int flags, char *fmt, ... );
 void dprintf_config( char *subsys, int logfd );
 void _condor_dprintf_va ( int flags, char* fmt, va_list args );
+int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
 void _EXCEPT_ ( char *fmt, ... );
 void Suicide();
 void set_debug_flags( char *strflags );
@@ -103,7 +104,7 @@ void _condor_fd_panic( int line, char *file );
 **	Important external variables in libc
 */
 extern DLL_IMPORT_MAGIC int		errno;
-#if !( defined(LINUX) && defined(GLIBC) )
+#if !( defined(LINUX) && defined(GLIBC) || defined(CONDOR_DARWIN) )
 extern DLL_IMPORT_MAGIC int		sys_nerr;
 extern DLL_IMPORT_MAGIC char		*sys_errlist[];
 #endif

@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "CondorError.h"
 
 #if !defined(SKIP_AUTHENTICATION) && defined(WIN32)
 
@@ -318,11 +319,16 @@ Condor_Auth_SSPI::sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx)
                  "sspi_server_auth(): Failed to impersonate (returns %d)!\n", rc );
     } else {
         char buf[256];
+		char *dom;
         DWORD bufsiz = sizeof buf;
         GetUserName( buf, &bufsiz );
         dprintf( D_FULLDEBUG,
                  "sspi_server_auth(): user name is: \"%s\"\n", buf );
         setRemoteUser(buf);
+		dom = my_domainname();
+        dprintf( D_FULLDEBUG, "sspi_server_auth(): domain name is: \"%s\"\n", 
+				 dom);
+		setRemoteDomain(dom);
         it_worked = TRUE;
         (pf->RevertSecurityContext)( &srvCtx );
     }
@@ -336,7 +342,7 @@ Condor_Auth_SSPI::sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx)
 }
 
 int
-Condor_Auth_SSPI::authenticate(const char * remoteHost)
+Condor_Auth_SSPI::authenticate(const char * remoteHost, CondorError* errstack)
 {
 	int ret_value;
 	CredHandle cred;

@@ -22,14 +22,79 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-#include "condor_uid.h"
+#include "condor_debug.h"
+#include "condor_config.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "dynuser.h"
-#include <windows.h>
 #include <lmaccess.h>
 #include <lmerr.h>
 #include <lmwksta.h>
 #include <lmapibuf.h>
 
+
+// language-independant way to get at the name of the Local System account
+// delete[] the result!
+//
+char* getSystemAccountName() {
+	return getWellKnownName(SECURITY_LOCAL_SYSTEM_RID);
+}
+
+// language-independant way to get at the BUILTIN\Users group name
+// delete[] the result!
+char* getUserGroupName() {
+	return getWellKnownName(SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_USERS);
+}
+
+// looks up well known SIDs and RIDs and returns the account name.
+// Seems like two sub-authorities should be enough for what we need.
+// delete[] the result!
+char* getWellKnownName( DWORD subAuth1, DWORD subAuth2 ) {
+	
+	PSID pSystemSID;
+	SID_IDENTIFIER_AUTHORITY auth = SECURITY_NT_AUTHORITY;
+	char* systemName;
+	char systemDomain[255];
+	DWORD name_size, domain_size;
+	SID_NAME_USE sidUse;
+	bool result;
+	
+	name_size = domain_size = 255;
+	
+	// Create a well-known SID for the Users Group.
+	
+	if(! AllocateAndInitializeSid( &auth, ((subAuth2) ? 2 : 1),
+		subAuth1,
+		subAuth2,
+		0,0, 0, 0, 0, 0,
+		&pSystemSID) ) {
+		printf( "AllocateAndInitializeSid Error %u\n", GetLastError() );
+		return NULL;
+	}
+	
+	
+	systemName = new char[name_size];
+	
+	// Now lookup whatever the account name is for this SID
+	
+	result = LookupAccountSid(
+		NULL,			// System name (or NULL for loca)
+		pSystemSID,		// ptr to SID to lookup
+		systemName,		// ptr to buffer that receives name
+		&name_size,			// size of buffer
+		systemDomain,	// ptr to domain buffer
+		&domain_size,			// size of domain buffer
+		&sidUse
+		);
+	FreeSid(pSystemSID);
+	
+	if ( ! result ) {
+		printf( "LookupAccountSid Error %u\n", GetLastError() );
+		delete[] systemName;
+		return NULL;
+	} else {
+		return systemName;
+	}
+}
 
 ////
 //
@@ -46,40 +111,165 @@ dynuser::dynuser() {
 	password = NULL;
 	accountname_t = NULL;
 	password_t = NULL;
+	reuse_account = true; // default is	don't delete accounts when done
+	
+ 	char *x = param("reuse_condor_run_account");
+ 	if ( x && ( x[0]=='F' || x[0]=='f' ) ) {
+ 		reuse_account = false;
+		free(x);
+		x = NULL;
+ 	}
 }
 
 ////
 //
-// createuser:  This creates a user, adds it to the "users" group and logs it in
-//
+// init_user: sets up an account to do our work, either by 
+//				logging on an existing condor account if 
+//				we have one, else create one.
 ////
 
-bool dynuser::createuser(char *username){ 
-	if (!accountname) 
-		accountname = new char[100];
-	if (!password)
-		password = new char[100];
+bool dynuser::init_user() { 
+
+	// if we don't have an accountname determined yet,
+	// lets get that straight. 
+ 	if ( !accountname ) {
+ 		accountname = new char[100];
+		
+
+ 		// How we initialize username: if we are the starter,
+		// we set it to be condor-reuse-vmX. However, if
+		// reuse_account = false we initialize it to be 
+		// condor-run-<pid>.
+
+		char *logappend = NULL;
+		char* tmp = NULL;
+		char vm_num[10];
+	 
+		if ( reuse_account ) {
+	
+			logappend = param("STARTER_LOG");
+			tmp = strrchr(logappend, '.');
+			
+			if ( tmp ) {
+				
+				// copy the vm # from the log filename
+	
+				strncpy(vm_num, tmp+1, 10);
+				vm_num[9] = '\0'; // make sure it's terminated
+
+			} else {
+	
+				// must not be an smp machine, so just use vm #1
+		 		
+				dprintf(D_FULLDEBUG, "Dynuser: Couldn't param VM# - using 1 by default\n");
+				sprintf(vm_num,"vm1");
+		 	}
+			int ret=snprintf(accountname, 100, 
+				ACCOUNT_PREFIX_REUSE "%s", vm_num);
+		 	if ( ret < 0 ) {
+		 		EXCEPT("account name to create too long");
+		 	}
+		} else { 
+			// don't reuse accounts, so just name the
+			// condor-run-<pid>
+
+			// we used to call DaemonCore for the PID, but
+			// this should accomplish the same thing and we
+			// don't have to link in DC to everything non-DC that uses
+			// Uids.C and Dynuser.C -stolley 7/2002
+			int current_pid = GetCurrentProcessId();
+			int ret=snprintf(accountname, 100, 
+				ACCOUNT_PREFIX "%d", current_pid);
+		 	if ( ret < 0 ) {
+		 		EXCEPT("account name to create too long");
+		 	}
+		}
+
+		if ( logappend ) { free(logappend); logappend = NULL; tmp = NULL; }
+		
+
+	} else if ( logon_token && accountname ) {
+			// account is already logged in, so just return
+		return true; 
+	} 
+
+	// ok we have an account name, but its not logged in,
+	// so lets take care of that.
+
+	// generate a random password
+	if (! password ) {
+ 		password = new char[100];
+	}
+	createpass();
+	
+	
+	// logon the user with our new password
+	return logon_user();
+}
+
+//
+// logon_user() - carries out what is necessary to
+//		log the current account in. If the user
+//		doesn't exist (existing_user = false) then
+//		the account is first created and then logged in.
+////
+bool dynuser::logon_user(){ 
 	if (!accountname_t)
 		accountname_t = new wchar_t[100];
 	if (!password_t)
 		password_t = new wchar_t[100];
-	this->createpass();
 
-	strcpy(accountname, username);  // This used to add condor-run- to the username, but
-									// now it doesn't.
+	this->update_t();	// copy accountname_t and password_t from ascii 
+						// versions accountname and password
 
-	this->update_t();				// Make the accountname_t and password_t accounts
-	this->createaccount();			// Create the account
-	this->update_psid();			// Updates our psid;
-//	this->dump_groups();			// This tests to make sure that we're reading groups correctly.
-	if (!this->add_users_group()) {	// Add this user to the users group
-		return false;
+
+	if (! this->update_psid() ) {	// returns false if user can't be found.
+								// Updates our psid if its successful. 
+
+		dprintf(D_FULLDEBUG, "update_psid() failed, so creating a new account\n");
+
+		// since update_psid failed, create the account we want
+		this->createaccount();		// Create the account
+		//	this->dump_groups();	// This tests to make sure that we're reading groups correctly.
+
+		if (! this->update_psid() ) { // now update sid 
+			dprintf(D_ALWAYS, "update_psid() failed after account creation!\n");
+			return false;
+		}
+
+		if (!this->add_users_group()) {	// Add this user to the users group
+			dprintf(D_ALWAYS, "dynuser::logon_user() - Failed to add account to users group!\n");
+		}
+
+		// Give this user the right to run as a batch job. 
+		if (!this->add_batch_privilege() ) {	
+			dprintf(D_ALWAYS, "dynuser::logon_user() - Failed to add batch privilege to account!\n");
+		}
+	} else {	// if update_psid is successful, set the password
+				//	on the account we're reusing
+
+
+		// first enable the account
+		dprintf(D_FULLDEBUG, "dynuser: Re-enabling account (%s)\n", accountname);
+		enable_account();
+
+		// set password on account to what we want it to be (shhh)
+		USER_INFO_1003 ui = {
+			password_t
+		};
+	
+		if ( NERR_Success !=  NetUserSetInfo( 
+			NULL, 			// servername
+			accountname_t, 	// username
+			1003, 			// level for setting password
+			(LPBYTE) &ui,	// buf containing info
+			NULL 			// # of offending parameter (ignored)
+			)) {
+		   	dprintf(D_ALWAYS, "Error setting password on account %s\n",
+			   	accountname );
+		}
+
 	}
-	if (!this->add_batch_privilege() ) {	// Give this user the right to run as a batch job. (SIDE EFFECT = sets the PSID)
-		return false;
-	}
-
-
 	// Log that user on and get a handle to the token.
 
 	if (!LogonUser(accountname,		// accountname
@@ -88,11 +278,21 @@ bool dynuser::createuser(char *username){
 		LOGON32_LOGON_BATCH,		// logon type
 		LOGON32_PROVIDER_DEFAULT,	// Logon provider
 		&logon_token)				// And the token to stuff it in.
-		) {
-		dprintf(D_ALWAYS,"LogonUser(%s, ... ) failed with status %d",
-			accountname,GetLastError());
-		
-		return false;
+		) 
+	{
+		// LogonUser failed; try again as an interactive login
+
+		if (!LogonUser(accountname,		// accountname
+			".",						// domain
+			password,					// password
+			LOGON32_LOGON_INTERACTIVE,	// logon type
+			LOGON32_PROVIDER_DEFAULT,	// Logon provider
+			&logon_token)				// And the token to stuff it in.
+			) {
+				dprintf(D_ALWAYS,"LogonUser(%s, ... ) failed with status %d",
+					accountname,GetLastError());
+				return false;
+		}		
 	}
 	
 	dprintf(D_FULLDEBUG,"dynuser::createuser(%s) successful\n",accountname);
@@ -101,48 +301,122 @@ bool dynuser::createuser(char *username){
 
 }
 
-
 ////
 //
-//  Destructor::  This deletes the user and logs it out.
+// reset() - clears/closes all current account information and
+//			handle pointers, etc.
 //
 ////
+void
+dynuser::reset() {
 
-dynuser::~dynuser() {
+	reuse_account = true;
 
-	if ( accountname_t ) {
-
-		bool success;
-		if ( accountname ) {
-			success = deleteuser(accountname);
-		} else {
-			// should never happen
-			success = false;
-		}
-
-		if (success) {
-			dprintf(D_FULLDEBUG,"dynuser: Removed user %s\n",accountname);
-		} else {
-			dprintf(D_ALWAYS,"dynuser: Removing user %s FAILED!\n",accountname);
-		}
+	if ( accountname ) {
+		delete [] accountname;
+		accountname = NULL;
 	}
-
-	if ( accountname )		delete [] accountname;
-	if ( accountname_t )	delete [] accountname_t;
-	if ( password )			delete [] password;
-	if ( password_t )		delete [] password_t;
-	
-	if ( logon_token )	{
+	if ( accountname_t ) {
+		delete [] accountname_t;
+		accountname_t = NULL;
+	}
+	if ( password ) {
+		delete [] password;
+		password = NULL;
+	}
+	if ( password_t ) {
+		delete [] password_t;
+		password_t = NULL;
+	}	
+	if ( logon_token ) {
 		CloseHandle ( logon_token );
 		logon_token = NULL;
 	}
 }
 
 
+////
+//
+//  Destructor::  This deletes the user (if desired) and logs it out.
+//
+////
+
+dynuser::~dynuser() {
+
+	if (!reuse_account) {
+	   	deleteuser(accountname);
+   	} else {
+		// just disable the account
+		
+		disable_account();
+	}
+
+	// free our memory and such
+	reset();
+}
+
+// unsets the 'DISABLED' flag on current account
+void dynuser::enable_account() {
+	
+	if (! accountname_t ) { return; }
+
+	USER_INFO_1008 ui = {
+		UF_PASSWD_CANT_CHANGE | UF_DONT_EXPIRE_PASSWD
+	};
+	
+	if ( NERR_Success !=  NetUserSetInfo( 
+		NULL, 			// servername
+		accountname_t, 	// username
+		1008, 			// level for setting password
+		(LPBYTE) &ui,	// buf containing info
+		NULL 			// # of offending parameter (ignored)
+		)) {
+	   	dprintf(D_ALWAYS, "Error enabling account %s\n",
+		   	accountname );
+	}
+}
+
+// sets the 'DISABLED' flag on the current account
+void dynuser::disable_account() {
+
+	NET_API_STATUS rval;
+
+	if (! accountname_t ) { return; }
+
+	USER_INFO_1008 ui = {
+		UF_ACCOUNTDISABLE | UF_PASSWD_CANT_CHANGE | UF_DONT_EXPIRE_PASSWD
+	};
+	
+	rval = NetUserSetInfo( 
+		NULL, 			// servername
+		accountname_t, 	// username
+		1008, 			// level for setting password
+		(LPBYTE) &ui,	// buf containing info
+		NULL 			// # of offending parameter (ignored)
+		);
+	if ( NERR_Success == rval ) {
+	   	return;
+	} else if ( ERROR_ACCESS_DENIED == rval ) {
+		dprintf(D_ALWAYS, "Error disabling account %s (ACCESS DENIED)\n",
+		   	accountname );
+	} else if ( ERROR_INVALID_PARAMETER ) {
+			dprintf(D_ALWAYS, "Error disabling account %s (INVALID PARAMETER)\n",
+		   	accountname );
+	} else if ( NERR_UserNotFound ) {
+			dprintf(D_ALWAYS, "Error disabling account %s (User Not Found)\n",
+		   	accountname );
+	} else {
+			dprintf(D_ALWAYS, "Error disabling account %s (Unknown error)\n",
+		   	accountname );
+	}
+}
+
+
 
 void dynuser::createpass() {
-	if ( !password ) abort();
 	
+	ASSERT( password != NULL );
+		
 	for ( int i = 0; i < 14; i++ ) {
 		char c = (char) ( rand() % 256 );
 
@@ -162,12 +436,12 @@ void dynuser::createpass() {
 void dynuser::update_t() {
 	if ( accountname && accountname_t ) {
 		if (!MultiByteToWideChar( 0, MB_ERR_INVALID_CHARS, accountname, -1, accountname_t, 100)) {
-			abort();
+			EXCEPT("Unexpected failure in dynuser:update_t\n");
 		}
 	}
 	if ( password && password_t ) {
 		if (!MultiByteToWideChar( 0, MB_ERR_INVALID_CHARS, password, -1, password_t, 100)) {
-			abort();
+			EXCEPT("Unexpected failure in dynuser:update_t\n");
 		}
 	}
 }
@@ -175,6 +449,14 @@ void dynuser::update_t() {
 
 HANDLE dynuser::get_token() {
 	return this->logon_token;
+}
+
+const char*
+dynuser::get_accountname() {
+	if (logon_token && accountname )
+		return accountname;
+	else
+		return NULL;
 }
 
 void InitString( UNICODE_STRING &us, wchar_t *psz ) {
@@ -204,21 +486,22 @@ bool dynuser::add_batch_privilege() {
 	LSA_HANDLE hPolicy = 0;
 	LSA_OBJECT_ATTRIBUTES oa;//	= { sizeof oa };
 	ZeroMemory(&oa, sizeof(oa));
-	if (LsaOpenPolicy(&machine,		// Computer Name (NULL == this machine?)
-		&oa,						// Object Attributes
-		POLICY_LOOKUP_NAMES | POLICY_CREATE_ACCOUNT,	// Type of access required
-		&hPolicy ) != STATUS_SUCCESS)					// Pointer to the policy handles
+	if (LsaOpenPolicy(&machine,	// Computer Name (NULL == this machine?)
+		&oa, 					// object attributes
+		POLICY_LOOKUP_NAMES | POLICY_CREATE_ACCOUNT, // Type of access required
+		&hPolicy ) != STATUS_SUCCESS)	// Pointer to the policy handles
 	{
 		dprintf(D_ALWAYS,"dynuser::add_batch_priv() LsaOpenPolicy failed\n");
-		retval = false;
 	}
 
 	UNICODE_STRING usPriv; InitString( usPriv, priv );
 
 	SetLastError(0);
 
-	if (retval && LsaAddAccountRights( hPolicy, psid, &usPriv, 1 ) != STATUS_SUCCESS) {
-		dprintf(D_ALWAYS,"dynuser::add_batch_priv() LsaAddAccountRights failed\n");
+	if (retval && LsaAddAccountRights( hPolicy, psid, &usPriv, 1 )
+	   	!= STATUS_SUCCESS) {
+		dprintf(D_ALWAYS,
+			"dynuser::add_batch_priv() LsaAddAccountRights failed\n");
 		retval = false;
 	}
 
@@ -241,8 +524,11 @@ void dynuser::createaccount() {
 							 L"" };										// script path
 	DWORD nParam = 0;
 
+	// this is a bad idea! We shouldn't be deleting accounts
+	// willy nilly like this?!	-stolley 6/2002
+	//
 	// Remove the account, if it exists...
-	NetUserDel(0,accountname_t);
+	//	NetUserDel(0,accountname_t);
 
 
 	NET_API_STATUS nerr = NetUserAdd (0,		// Machine
@@ -253,10 +539,12 @@ void dynuser::createaccount() {
 	if ( NERR_Success == nerr ) {
 		dprintf(D_FULLDEBUG, "Account %s created successfully\n",accountname);
 	} else if ( NERR_UserExists == nerr ) {
-		EXCEPT("createaccount: User %s already exists",accountname);
+		dprintf(D_ALWAYS, "Account %s already exists!\n",accountname);
+//		EXCEPT("createaccount: User %s already exists",accountname);
 	} else {
-		EXCEPT("Account %s creation failed! (err=%d)",accountname,nerr);
+		dprintf(D_ALWAYS, "Account %s creation failed! (err=%d)",accountname,nerr);
 	}
+
 }
 
 
@@ -269,12 +557,19 @@ void dynuser::createaccount() {
 bool dynuser::add_users_group() {
 	// Add this user to group "users"
 	LOCALGROUP_MEMBERS_INFO_0 lmi;
+	wchar_t UserGroupName[255];
+	char* tmp;
+
+	tmp = getUserGroupName();
+	swprintf(UserGroupName, L"%S", tmp);
+	delete[] tmp;
+	tmp = NULL;
 
 	lmi.lgrmi0_sid = this->psid;
 
 	NET_API_STATUS nerr = NetLocalGroupAddMembers(
 	  NULL,				// LPWSTR servername,      
-	  L"Users",			// LPWSTR LocalGroupName,  
+	  UserGroupName,			// LPWSTR LocalGroupName,  
 	  0,				// DWORD level,            
 	  (LPBYTE) &lmi,	// LPBYTE buf,             
 	  1				// DWORD membercount       
@@ -303,12 +598,19 @@ bool dynuser::add_users_group() {
 bool dynuser::del_users_group() {
 	// Add this user to group "users"
 	LOCALGROUP_MEMBERS_INFO_0 lmi;
+	wchar_t UserGroupName[255];
+	char* tmp;
+
+	tmp = getUserGroupName();
+	swprintf(UserGroupName, L"%S", tmp);
+	delete[] tmp;
+	tmp = NULL;
 
 	lmi.lgrmi0_sid = this->psid;
 
 	NET_API_STATUS nerr = NetLocalGroupDelMembers(
 	  NULL,				// LPWSTR servername,      
-	  L"Users",			// LPWSTR LocalGroupName,  
+	  UserGroupName,	// LPWSTR LocalGroupName,  
 	  0,				// DWORD level,            
 	  (LPBYTE) &lmi,	// LPBYTE buf,             
 	  1				// DWORD membercount       
@@ -362,7 +664,7 @@ bool dynuser::dump_groups() {
 }
 #endif 
 
-void dynuser::update_psid() {
+bool dynuser::update_psid() {
 	SID_NAME_USE snu;
 
 	sidBufferSize = max_sid_length;
@@ -374,8 +676,30 @@ void dynuser::update_psid() {
 		domainBuffer, &domainBufferSize,	// Domain
 		&snu ) )							// SID TYPE
 	{
-		dprintf(D_ALWAYS,"dynuser::update_psid() LookupAccountName(%s) failed!\n", accountname);
-		// EXCEPT("dynuser:Lookup Account Name %s failed!",accountname);
+		// not necessarily bad, since we could be using this method to
+		// check if a user exists, else we create it
+		dprintf(D_FULLDEBUG, "dynuser::update_psid() LookupAccountName(%s) failed!\n", accountname);
+		return FALSE;
+	} else {
+		
+		// Success! However, watchout because the sid we got may be on a 
+		// domain server somewhere (anywhere in the Windows 2000/XP forest
+		// as a matter of fact!) and for now, since we're still not running
+		// as the user, we want to make sure we've got an account on the
+		// Local machine. So we'll call GetComputerName() and make sure it
+		// matches the domainBuffer. -stolley, 9/2002
+
+		
+		char computerName[MAX_COMPUTERNAME_LENGTH+1];
+		unsigned long nameLength = MAX_COMPUTERNAME_LENGTH+1;
+		int success = GetComputerName( computerName, &nameLength );
+		
+		if (! success ) {
+			dprintf(D_ALWAYS, "dynuser::GetComputerName failed: (Err: %d)", GetLastError());
+			return FALSE;
+		}
+		
+		return ( 0 == stricmp(computerName, domainBuffer) );
 	}
 }
 
@@ -388,22 +712,15 @@ bool dynuser::deleteuser(char* username ) {
 		return false;
 	}
 
-	// Must be privledged user to go deleting accounts, buster!!!
-	priv_state old_priv = set_root_priv();
-
-	// Close any token we may have to the account we are about to delete
-	if ( accountname && strcmp(accountname,username)==0 ) {
-		if ( logon_token )	{
-			// logon token is a handle to the account we are about to kill,
-			// so we need to close it.  But first, check if the priv state
-			// code (in uids.C) has a copy of this handle.  If so, clear it
-			// out.
-			if ( logon_token == priv_state_get_handle() ) {
-				uninit_user_ids();
-			}
-			CloseHandle ( logon_token );
-			logon_token = NULL;
-		}
+	// as a sanity check, check the prefix of the username.  this
+	// check really shouldn't be here in terms of code structure, but
+	// Todd is paranoid about deleting some user's account.  -Todd T, 11/01
+	const char *prefix = ACCOUNT_PREFIX;
+	if ( strncmp(prefix,username,strlen(prefix)) != 0 ) {
+		dprintf(D_ALWAYS,
+			"Yikes! Asked to delete account %s - ig!\n",
+			username);
+		return false;  
 	}
 
 	// allocate working buffers if needed
@@ -419,9 +736,7 @@ bool dynuser::deleteuser(char* username ) {
 
 
 	// get machine name
-	// Todd <tannenba@cs.wisc.edu> - not needed; we'll just pass a NULL
-	// to LsaOpenPolicy to specify the local machine. - 1/02
-#if 0
+	
 	UNICODE_STRING machine;
 	{
 		PWKSTA_INFO_100 pwkiWorkstationInfo;
@@ -433,7 +748,6 @@ bool dynuser::deleteuser(char* username ) {
 		InitString( machine, 
 			(wchar_t *)pwkiWorkstationInfo->wki100_computername);
 	}
-#endif
 
 	// open a policy
 	LSA_HANDLE hPolicy = 0;
@@ -492,9 +806,6 @@ bool dynuser::deleteuser(char* username ) {
 	delete [] accountname_t;
 	accountname_t = NULL;
 	
-	// Set our priv state back how it used to be
-	set_priv(old_priv);
-
 	return retval;
 
 }
@@ -583,3 +894,4 @@ bool dynuser::cleanup_condor_users(char* user_prefix) {
 
 	return retval;
 }
+

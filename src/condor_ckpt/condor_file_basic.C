@@ -25,7 +25,14 @@ int CondorFileBasic::open(const char *url_in, int flags, int mode)
 	char path[_POSIX_PATH_MAX];
 
 	strcpy(url,url_in);
-	sscanf(url,"%[^:]:%s",junk,path);
+
+	/* linux glibc 2.1 and presumeably 2.0 had a bug where the range didn't
+		work with 8bit numbers */
+	#if defined(LINUX) && (defined(GLIBC20) || defined(GLIBC21))
+	sscanf(url,"%[^:]:%[\x1-\x7F]",junk,path);
+	#else
+	sscanf(url,"%[^:]:%[\x1-\xFF]",junk,path);
+	#endif
 
 	switch( flags & O_ACCMODE ) {
 		case O_RDONLY:

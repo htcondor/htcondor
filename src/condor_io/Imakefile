@@ -21,7 +21,7 @@ CONDOR_CRYPT_OBJ = $(CONDOR_DES_OBJ) $(CONDOR_BLOWFISH_OBJ)
 AUTH_KERB_OBJ = condor_auth_kerberos.o
 #endif
 
-#if WANT_X509 && HAS_GSI
+#if WANT_GSI && HAS_GSI
 AUTH_X509_OBJ = condor_auth_x509.o
 #endif
 
@@ -37,12 +37,12 @@ OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o sockCache.o \
 		condor_secman.o
 #		autoTest.o manTest.o
 
-library_target(libcedar.a, $(OBJ))
+library_target(libcedar.a,$(OBJ))
 
-c_plus_target(cedar.t, cedar.t.o, $(LIB))
+c_plus_target(cedar.t,cedar.t.o,$(LIB))
 pure_c_plus_target(cedar.t.pure,$(OBJ),$(LIB))
 purecov_c_plus_target(cedar.t.pc,$(OBJ),$(LIB))
-c_plus_target(buftest, buftest.o, $(LIB))
+c_plus_target(buftest,buftest.o,$(LIB))
 html_target( ../condor_includes/stream.h ../condor_includes/reli_sock.h ../condor_includes/safe_sock.h ../condor_includes/sock.h )
 
 release:: all
@@ -52,4 +52,7 @@ static:: all
 #  reli_sock_no_auth.o: reli_sock.C
 #  $(CPlusPlus) $(C_PLUS_FLAGS) -DNO_AUTHENTICATION \
 #  -c reli_sock.C -o reli_sock_no_auth.o
+
+#IMPORT_LINKS = ../../config/import_links
+#import(../condor_c++_util,MyString.o)
 

@@ -25,7 +25,6 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_debug.h"
 #include "condor_query.h"
-#include "get_daemon_addr.h"
 #include "condor_config.h"
 #include "daemon.h"
 
@@ -919,13 +918,13 @@ ScheduledShutdownEvent::UpdateSchedule()
 static const char ShutdownConfig[] =
 "EndDownTime = %d\n"
 "Shutdown = (CurrentTime < EndDownTime)\n"
-"START : ($(START)) && ($(Shutdown) == False)\n"
+"START = ($(START)) && ($(Shutdown) == False)\n"
 "STARTD_EXPRS = $(STARTD_EXPRS), EndDownTime\n";
 
 static const char StandardShutdownConfig[] =
 "EndDownTime = %d\n"
 "Shutdown = (CurrentTime < EndDownTime)\n"
-"START : ($(START)) && (($(Shutdown) == False) || (TARGET.JobUniverse != 1))\n"
+"START = ($(START)) && (($(Shutdown) == False) || (TARGET.JobUniverse != 1))\n"
 "STARTD_EXPRS = $(STARTD_EXPRS), EndDownTime\n";
 
 static const char ShutdownAdminId[] = "eventd_shutdown";

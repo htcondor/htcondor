@@ -38,15 +38,14 @@
 #include "condor_adtypes.h"
 #include "condor_attributes.h"
 #include "condor_email.h"
+#include "condor_commands.h"
 #include "../condor_ckpt_server/server_interface.h"
 
 #include "daemon.h"
 #include "stream.h"
 
-#include "sched.h"
 #include "debug.h"
 #include "fileno.h"
-#include "files.h"
 #include "exit.h"
 #include "shadow.h"
 #include "job_report.h"
@@ -427,7 +426,6 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 {
 	char buf[4096];
 	int status = *jobstatus;
-	struct stat st_buf;
 	char my_coredir[_POSIX_PATH_MAX];
 	dprintf(D_FULLDEBUG, "handle_termination() called.\n");
 
@@ -621,7 +619,7 @@ part_send_job(
 	      int &sd2,
 	      char **name)
 {
-  int cmd, sd, reply;
+  int reply;
   ReliSock *sock = NULL;
   StartdRec stRec;
   PORTS ports;

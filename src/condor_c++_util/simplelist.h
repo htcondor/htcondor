@@ -31,7 +31,7 @@
 #ifndef _SMPL_LIST_H_
 #define _SMPL_LIST_H_
 
-#include <iostream.h>
+#include <iostream>
 
 template <class ObjType> class SimpleListIterator;
 
@@ -49,10 +49,11 @@ class SimpleList
     inline ~SimpleList () { delete [] items; }
 
     // General
-    bool Append (ObjType);
+    bool Append (const ObjType &);
 	bool Insert (ObjType);
     inline bool IsEmpty() const { return (size == 0); }
 	inline int Number(void) { return size; }
+	inline int Length(void) { return Number(); }
 
     // Scans
     inline void    Rewind() { current = -1; }
@@ -60,7 +61,9 @@ class SimpleList
     bool    Next(ObjType &);
     inline bool    AtEnd() const { return (current >= size-1); }
     void    DeleteCurrent();
-	bool	ReplaceCurrent(ObjType &);
+	bool Delete(const ObjType &, bool delete_all = false);
+	bool	ReplaceCurrent(const ObjType &);
+	bool IsMember( const ObjType & ) const;
 
     // Debugging
     void Display (ostream & out) const;
@@ -92,7 +95,7 @@ SimpleList (const SimpleList<ObjType> & simlist):
 
 template <class ObjType>
 bool SimpleList<ObjType>::
-Append (ObjType item)
+Append (const ObjType &item)
 {
     if (size >= maximum_size)
 	{
@@ -161,7 +164,33 @@ DeleteCurrent ()
 
 template <class ObjType>
 bool SimpleList<ObjType>::
-ReplaceCurrent (ObjType &item)
+Delete (const ObjType &item, bool delete_all)
+{
+	bool found_it = false;
+
+	for ( int i = 0; i < size; i++ ) {
+		if ( items[i] == item ) {
+			found_it = true;
+			for ( int j = i; j < size - 1; j++ ) {
+				items[j] = items[j+1];
+			}
+			size--;
+			if ( current >= i ) {
+				current--;
+			}
+			if ( delete_all == false ) {
+				return true;
+			}
+			i--;
+		}
+	}
+
+	return found_it;
+}
+
+template <class ObjType>
+bool SimpleList<ObjType>::
+ReplaceCurrent (const ObjType &item)
 {
     if (items && current < size && current >= 0) {
 		items [current] = item;
@@ -212,6 +241,19 @@ resize (int newsize)
 		current = maximum_size;
 
 	return true;
+}
+
+template <class ObjType>
+bool SimpleList<ObjType>::
+IsMember( const ObjType& obj ) const
+{
+	int i;
+	for( i = 0; i < size; i++ ) {
+		if( items[i] == obj ) {
+			return true;
+		}
+	}
+	return false;
 }
 
 //--------------------------------------------------------------------------

@@ -28,7 +28,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 // Condor includes
-#include "daemon.h"
+#include "dc_collector.h"
 #include "condor_classad.h"
 #include "condor_adtypes.h"
 #include "condor_debug.h"
@@ -44,7 +44,10 @@
 #include "killfamily.h"
 #include "../condor_procapi/procapi.h"
 #include "misc_utils.h"
-#include "get_daemon_addr.h"
+#include "get_daemon_name.h"
+#include "enum_utils.h"
+#include "condor_version.h"
+#include "classad_command_util.h"
 
 
 #if !defined(WIN32)
@@ -53,6 +56,8 @@
 #else
 // Windoze specific stuff
 extern "C" int WINAPI KBShutdown(void);	/* in the Kbdd DLL */
+#include "CondorSystrayNotifier.h"//for the "birdwatcher" (system tray icon)
+extern CondorSystrayNotifier systray_notifier;
 #endif
 
 // Startd includes
@@ -60,7 +65,7 @@ class Resource;
 #include "LoadQueue.h"
 #include "ResAttributes.h"
 #include "AvailStats.h"
-#include "Match.h"
+#include "claim.h"
 #include "Starter.h"
 #include "Reqexp.h"
 #include "ResState.h"
@@ -69,6 +74,7 @@ class Resource;
 #include "command.h"
 #include "util.h"
 #include "starter_mgr.h"
+#include "cod_mgr.h"
 
 static const int MAX_STARTERS = 10;
 
@@ -76,6 +82,7 @@ static const int MAX_STARTERS = 10;
 
 // Define external functions
 extern int finish_main_config( void );
+extern bool authorizedForCOD( const char* owner );
 
 // Define external global variables
 
@@ -95,9 +102,7 @@ extern	StringList* console_devices;
 extern	StringList* startd_job_exprs;
 
 // Hosts
-extern	Daemon*	Collector;
-extern	Daemon*	View_Collector;
-extern	char*	condor_view_host;
+extern	DCCollector*	Collector;
 extern	char*	accountant_host;
 
 // Others
@@ -136,5 +141,8 @@ extern	int		pid_snapshot_interval;
 extern  int main_reaper;
 
 #endif /* _STARTD_NO_DECLARE_GLOBALS */
+
+// Check to see ifn we're all free
+int	startd_check_free();
 
 #endif /* _CONDOR_STARTD_H */

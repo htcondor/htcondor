@@ -26,4 +26,7 @@
 extern char* get_full_hostname( const char*, 
 								struct in_addr *sin_addrp = NULL );
 
+extern char* get_full_hostname_from_hostent( struct hostent* host_ptr,
+											 const char* host );
+
 #endif /* GET_FULL_HOSTNAME_H */

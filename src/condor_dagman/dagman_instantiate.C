@@ -25,8 +25,13 @@
 #include "dag.h"
 #include "job.h"
 #include "script.h"
+#include "MyString.h"
+
 template class List<Job>;
+template class List<MyString>;
 template class Item<Job>;
+template class Item<MyString>;
+template class ListIterator<MyString>;
 template class ListIterator<Job>;
 template class SimpleListIterator<JobID_t>;
 template class HashTable<int, Script*>;

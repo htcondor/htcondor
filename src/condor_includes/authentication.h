@@ -27,6 +27,8 @@
 #include "reli_sock.h"
 #include "condor_auth.h"
 #include "CryptKey.h"
+#include "../condor_daemon_core.V6/condor_ipverify.h"
+#include "CondorError.h"
 
 #define MAX_USERNAMELEN 128
 
@@ -46,26 +48,34 @@ class Authentication {
     
     ~Authentication();
     
-    int authenticate( char *hostAddr, int clientFlags = 0 );
+    int authenticate( char *hostAddr, const char* auth_methods, CondorError* errstack);
     //------------------------------------------
     // PURPOSE: authenticate with the other side 
-    // REQUIRE: hostAddr    -- host to authenticate
-    //          clientFlags -- what protocols
-    //                         does client support
+    // REQUIRE: hostAddr     -- host to authenticate
+	//          auth_methods -- protocols to use
     // RETURNS: -1 -- failure
     //------------------------------------------
 
-    int authenticate( char *hostAddr, KeyInfo *& key , int clientFlags = 0 );
+    int authenticate( char *hostAddr, KeyInfo *& key, const char* auth_methods, CondorError* errstack);
     //------------------------------------------
     // PURPOSE: To send the secret key over. this method
     //          is written to keep compatibility issues
     //          Later on, we can get rid of the first authenticate method
-    // REQUIRE: hostAddr  -- host address
-    //          key       -- the key to be sent over, see CryptKey.h
-    //          clientFlags -- protocols client supports
+    // REQUIRE: hostAddr     -- host address
+    //          key          -- the key to be sent over, see CryptKey.h
+    //          auth_methods -- protocols to use
     // RETURNS: -1 -- failure
     //------------------------------------------
     
+    char* getMethodUsed();
+    //------------------------------------------
+    // PURPOSE: Return the method of authentication
+    // REQUIRE: That authentication has already happened
+    // RETURNS: pointer to a string you should NOT free
+	//          which is the name of the method, or NULL
+	//          if not currently authenticated, see next.
+    //------------------------------------------
+
     int isAuthenticated();
     //------------------------------------------
     // PURPOSE: Return the state of the authentication
@@ -163,15 +173,13 @@ class Authentication {
 #if !defined(SKIP_AUTHENTICATION)
     Authentication() {}; //should never be called, make private to help that!
     
-    int handshake(int clientCanUse);
+    int handshake(MyString clientCanUse);
 
     int exchangeKey(KeyInfo *& key);
     
     void setAuthType( int state );
     
-    int selectAuthenticationType( int methods );
-    
-    int default_auth_methods();
+    int selectAuthenticationType( MyString my_methods, int remote_methods );
     
 #endif /* !SKIP_AUTHENTICATION */
     
@@ -182,8 +190,7 @@ class Authentication {
     ReliSock         *   mySock;
     transfer_mode        t_mode;
     int                  auth_status;
-    // int                  canUseFlags;
-    // char             *   serverShouldTry;
+    char*                method_used;
 };
 
 #endif /* AUTHENTICATION_H */

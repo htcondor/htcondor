@@ -1,4 +1,4 @@
-
+#include "condor_common.h"
 #include "filename_tools.h"
 
 void filename_url_parse( char *input, char *method, char *server, int *port, char *path )
@@ -158,7 +158,7 @@ int filename_split( const char *path, char *dir, char *file )
 {
 	char *last_slash;
 
-	last_slash = strrchr(path,'/');
+	last_slash = strrchr(path,DIR_DELIM_CHAR);
 	if(last_slash) {
 		strncpy(dir,path,(last_slash-path));
 		dir[(last_slash-path)] = 0;
@@ -172,3 +172,22 @@ int filename_split( const char *path, char *dir, char *file )
 	}
 }
 
+// changes all directory separators to match the DIR_DELIM_CHAR
+// makes changes in place
+void
+canonicalize_dir_delimiters( char *path ) {
+
+	int loc, len;
+	char *path_ptr;
+	
+	loc = 0;
+	path_ptr = path;
+	len = strlen(path);
+
+	while ( loc < len ) {
+		if ( path[loc] == '\\' || path[loc] == '/' ) {
+		   	path[loc] = DIR_DELIM_CHAR;
+		}
+		loc++;
+	}	
+}

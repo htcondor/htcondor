@@ -31,9 +31,6 @@ template class SimpleList<NamedClassAd*>;
 
 ResMgr::ResMgr()
 {
-	startTime = time( NULL );
-	coll_sock = NULL;
-	view_sock = NULL;
 	totals_classad = NULL;
 	config_classad = NULL;
 	up_tid = -1;
@@ -47,7 +44,7 @@ ResMgr::ResMgr()
 	type_nums = NULL;
 	new_type_nums = NULL;
 	is_shutting_down = false;
-	last_in_use = time(NULL);
+	cur_time = last_in_use = time( NULL );
 }
 
 
@@ -58,10 +55,6 @@ ResMgr::~ResMgr()
 	if( totals_classad ) delete totals_classad;
 	if( id_disp ) delete id_disp;
 	delete m_attr;
-	delete coll_sock;
-	if( view_sock ) {
-		delete view_sock;
-	}
 	if( resources ) {
 		for( i = 0; i < nresources; i++ ) {
 			delete resources[i];
@@ -712,25 +705,6 @@ ResMgr::compute_phys_mem( float share )
 
 
 void
-ResMgr::init_socks( void )
-{
-	if( coll_sock ) {
-		delete coll_sock;
-		coll_sock = NULL;
-	}
-	coll_sock = Collector->safeSock();
-
-	if( view_sock ) {
-		delete view_sock;
-		view_sock = NULL;
-	}
-    if (View_Collector) {
-        view_sock = View_Collector->safeSock();
-    }
-}
-
-
-void
 ResMgr::walk( int(*func)(Resource*) )
 {
 	if( ! resources ) {
@@ -882,7 +856,7 @@ ResMgr::adlist_replace( const char *name, ClassAd *newAd )
 	extra_ads.Rewind( );
 	while ( extra_ads.Next( cur ) ) {
 		if ( ! strcmp( cur->GetName( ), name ) ) {	
-			dprintf( D_FULLDEBUG, "Replacing ClassAd for '%s'\n", name );	
+			dprintf( D_FULLDEBUG, "Replacing ClassAd for '%s'\n", name );
 			cur->ReplaceAd( newAd );
 			return 0;
 		}
@@ -946,15 +920,16 @@ ResMgr::adlist_publish( ClassAd *resAd, amask_t mask )
 	return 0;
 }
 
+
 bool
-ResMgr::in_use( void )
+ResMgr::hasOppClaim( void )
 {
 	if( ! resources ) {
 		return false;
 	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
-		if( resources[i]->in_use() ) {
+		if( resources[i]->hasOppClaim() ) {
 			return true;
 		}
 	}
@@ -962,21 +937,94 @@ ResMgr::in_use( void )
 }
 
 
-Resource*
-ResMgr::get_by_pid( pid_t pid )
+bool
+ResMgr::hasAnyClaim( void )
 {
+	if( ! resources ) {
+		return false;
+	}
+	int i;
+	for( i = 0; i < nresources; i++ ) {
+		if( resources[i]->hasAnyClaim() ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+
+Claim*
+ResMgr::getClaimByPid( pid_t pid )
+{
+	Claim* foo = NULL;
 	if( ! resources ) {
 		return NULL;
 	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
-		if( resources[i]->r_starter &&
-			resources[i]->r_starter->pid() == pid ) {
+		if( (foo = resources[i]->findClaimByPid(pid)) ) {
+			return foo;
+		}
+	}
+	return NULL;
+}
+
+
+Claim*
+ResMgr::getClaimById( const char* id )
+{
+	Claim* foo = NULL;
+	if( ! resources ) {
+		return NULL;
+	}
+	int i;
+	for( i = 0; i < nresources; i++ ) {
+		if( (foo = resources[i]->findClaimById(id)) ) {
+			return foo;
+		}
+	}
+	return NULL;
+}
+
+
+Resource*
+ResMgr::findRipForNewCOD( ClassAd* ad )
+{
+	if( ! resources ) {
+		return NULL;
+	}
+	int requirements;
+	int i;
+
+		/*
+          We always ensure that the request's Requirements, if any,
+		  are met.  Other than that, we give out COD claims to
+		  Resources in the following order:  
+
+		  1) the Resource with the least # of existing COD claims (to
+  		     ensure round-robin across resources
+		  2) in case of a tie, the Resource in the best state (owner
+   		     or unclaimed, not claimed)
+		  3) in case of a tie, the Claimed resource with the lowest
+  		     value of machine Rank for its claim
+		*/
+
+		// sort resources based on the above order
+	resource_sort( newCODClaimCmp );
+
+		// find the first one that matches our requirements 
+	for( i = 0; i < nresources; i++ ) {
+		if( ad->EvalBool( ATTR_REQUIREMENTS, resources[i]->r_classad,
+						  requirements ) == 0 ) {
+			requirements = 0;
+		}
+		if( requirements ) { 
 			return resources[i];
 		}
 	}
 	return NULL;
 }
+
 
 
 Resource*
@@ -1068,7 +1116,7 @@ ResMgr::final_update( void )
 	if( ! resources ) {
 		return;
 	}
-	walk( &(Resource::final_update) );
+	walk( &Resource::final_update );
 }
 
 
@@ -1087,45 +1135,15 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad )
 {
 	int num = 0;
 
-	// Publish our "epoch" time
-	char	tmp [80];
-	sprintf( tmp, "%s=%ld", ATTR_DAEMON_START_TIME, (long) startTime );
-	public_ad->InsertOrUpdate( tmp );
-
-	if( coll_sock ) {
-		if( DebugFlags & D_FULLDEBUG ) {
-			dprintf( D_FULLDEBUG, 
-					 "Attempting to send update to collector <%s:%d>\n", 
-					 coll_sock->endpoint_ip_str(), coll_sock->endpoint_port() );
-			dprintf( D_FULLDEBUG, 
-					 "Collector Daemon Object: %s (%s)\n",
-					 Collector->addr(), Collector->fullHostname() );
-		}
-
-		if( send_classad_to_sock(cmd, Collector, public_ad, private_ad) ) {
+	if( Collector ) {
+		if( Collector->sendUpdate(cmd, public_ad, private_ad) ) {
 			num++;
 		} else {
 			dprintf( D_FAILURE|D_ALWAYS,
-					 "Error sending UDP update to the collector (%s)\n", 
-					 Collector->fullHostname() );
+					 "Error sending update to the collector %s: %s \n", 
+					 Collector->updateDestination(), Collector->error() );
 		}
 	}  
-
-		// If we have an alternate collector, send public CA there.
-	if( view_sock ) {
-		if( DebugFlags & D_FULLDEBUG ) {
-			dprintf( D_FULLDEBUG, 
-					 "Attempting to send update to view collector <%s:%d>\n", 
-					 view_sock->endpoint_ip_str(), view_sock->endpoint_port() );
-		}
-		if( send_classad_to_sock(cmd, View_Collector, public_ad, NULL) ) {
-			num++;
-		} else {
-			dprintf( D_ALWAYS, 
-					 "Error sending UDP update to the collector (%s)\n", 
-					 condor_view_host );
-		}
-	}
 
 		// Increment the resmgr's count of updates.
 	num_updates++;
@@ -1137,7 +1155,7 @@ void
 ResMgr::first_eval_and_update_all( void )
 {
 	num_updates = 0;
-	walk( &(Resource::eval_and_update) );
+	walk( &Resource::eval_and_update );
 	report_updates();
 	check_polling();
 	check_use();
@@ -1157,7 +1175,7 @@ ResMgr::eval_all( void )
 {
 	num_updates = 0;
 	compute( A_TIMEOUT );
-	walk( &(Resource::eval_state) );
+	walk( &Resource::eval_state );
 	report_updates();
 	check_polling();
 }
@@ -1169,16 +1187,11 @@ ResMgr::report_updates( void )
 	if( !num_updates ) {
 		return;
 	}
-	if( coll_sock ) {
+	if( Collector ) {
 		dprintf( D_FULLDEBUG,
 				 "Sent %d update(s) to the collector (%s)\n", 
 				 num_updates, Collector->fullHostname() );
 	}  
-	if( view_sock ) {
-		dprintf( D_FULLDEBUG, 
-				 "Sent %d update(s) to the condor_view host (%s)\n",
-				 num_updates, condor_view_host );
-	}
 }
 
 
@@ -1189,10 +1202,14 @@ ResMgr::compute( amask_t how_much )
 		return;
 	}
 
+		// Since lots of things want to know this, just get it from
+		// the kernel once and share the value...
+	cur_time = time( 0 ); 
+
 	m_attr->compute( (how_much & ~(A_SUMMED)) | A_SHARED );
-	walk( &(Resource::compute), (how_much & ~(A_SHARED)) );
+	walk( &Resource::compute, (how_much & ~(A_SHARED)) );
 	m_attr->compute( (how_much & ~(A_SHARED)) | A_SUMMED );
-	walk( &(Resource::compute), (how_much | A_SHARED) );
+	walk( &Resource::compute, (how_much | A_SHARED) );
 
 		// Sort the resources so when we're assigning owner load
 		// average and keyboard activity, we get to them in the
@@ -1207,19 +1224,19 @@ ResMgr::compute( amask_t how_much )
 		// refresh our internal classad with all the current values of
 		// everything so that when we evaluate our state or any other
 		// expressions, we've got accurate data to evaluate.
-	walk( &(Resource::refresh_classad), how_much );
+	walk( &Resource::refresh_classad, how_much );
 
 		// Now that we have an updated internal classad for each
 		// resource, we can "compute" anything where we need to 
 		// evaluate classad expressions to get the answer.
-	walk( &(Resource::compute), A_EVALUATED );
+	walk( &Resource::compute, A_EVALUATED );
 
 		// Next, we can publish any results from that to our internal
 		// classads to make sure those are still up-to-date
-	walk( &(Resource::refresh_classad), A_EVALUATED );
+	walk( &Resource::refresh_classad, A_EVALUATED );
 
 		// Now that we're done, we can display all the values.
-	walk( &(Resource::display), how_much );
+	walk( &Resource::display, how_much );
 }
 
 
@@ -1297,7 +1314,7 @@ ResMgr::assign_keyboard( void )
 		// First, initialize all CPUs to the max idle time we've got,
 		// which is some configurable amount of minutes longer than
 		// the time since we started up.
-	max = (time(0) - startd_startup) + disconnected_keyboard_boost;
+	max = (cur_time - startd_startup) + disconnected_keyboard_boost;
 	for( i = 0; i < nresources; i++ ) {
 		resources[i]->r_attr->set_console( max );
 		resources[i]->r_attr->set_keyboard( max );
@@ -1326,7 +1343,7 @@ ResMgr::check_polling( void )
 		return;
 	}
 
-	if( in_use() || m_attr->condor_load() > 0 ) {
+	if( hasOppClaim() || m_attr->condor_load() > 0 ) {
 		start_poll_timer();
 	} else {
 		cancel_poll_timer();
@@ -1485,9 +1502,8 @@ ResMgr::makeAdList( ClassAdList *list )
 		// collector normally does this, so if we're servicing a
 		// QUERY_STARTD_ADS commannd, we need to do this ourselves or
 		// some timing stuff won't work. 
-	int now = time(0);
 	char buf[1024];
-	sprintf( buf, "%s = %d", ATTR_LAST_HEARD_FROM, now );
+	sprintf( buf, "%s = %d", ATTR_LAST_HEARD_FROM, (int)cur_time );
 
 	for( i=0; i<nresources; i++ ) {
 		ad = new ClassAd;
@@ -1548,7 +1564,7 @@ void
 ResMgr::check_use( void ) 
 {
 	int now = time(NULL);
-	if( in_use() ) {
+	if( hasAnyClaim() ) {
 		last_in_use = now;
 	}
 	if( ! startd_noclaim_shutdown ) {
@@ -1631,6 +1647,65 @@ claimedRankCmp( const void* a, const void* b )
 }
 
 
+/*
+  Sort resource so their in the right order to give out a new COD
+  Claim.  We give out COD claims in the following order:  
+  1) the Resource with the least # of existing COD claims (to ensure
+     round-robin across resources
+  2) in case of a tie, the Resource in the best state (owner or
+     unclaimed, not claimed)
+  3) in case of a tie, the Claimed resource with the lowest value of
+     machine Rank for its claim
+*/
+int
+newCODClaimCmp( const void* a, const void* b )
+{
+	Resource *rip1, *rip2;
+	int val1, val2, diff;
+	int numCOD1, numCOD2;
+	float fval1, fval2;
+	State s;
+	rip1 = *((Resource**)a);
+	rip2 = *((Resource**)b);
+
+	numCOD1 = rip1->r_cod_mgr->numClaims();
+	numCOD2 = rip2->r_cod_mgr->numClaims();
+
+		// In the first case, sort based on # of COD claims
+	diff = numCOD1 - numCOD2;
+	if( diff ) {
+		return diff;
+	}
+
+		// If we're still here, we've got same # of COD claims, so
+		// sort based on State.  Since the state enum is already in
+		// the "right" order for this kind of sort, we don't need to
+		// do anything fancy, we just cast the state enum to an int
+		// and we're done.
+	s = rip1->state();
+	val1 = (int)s;
+	val2 = (int)rip2->state();
+	diff = val1 - val2;
+	if( diff ) {
+		return diff;
+	}
+
+		// We're still here, means we've got the same number of COD
+		// claims and the same state.  If that state is "Claimed" or
+		// "Preempting", we want to break ties w/ the Rank expression,
+		// else, don't worry about ties.
+	if( s == claimed_state || s == preempting_state ) {
+		fval1 = rip1->r_cur->rank();
+		fval2 = rip2->r_cur->rank();
+		diff = (int)(fval1 - fval2);
+		return diff;
+	} 
+	return 0;
+}
+
+
+
+
 
 
 IdDispenser::IdDispenser( int size, int seed ) :
@@ -1685,7 +1760,6 @@ NamedClassAd::~NamedClassAd( )
 void
 NamedClassAd::ReplaceAd( ClassAd *newAd )
 {
-	
 	if ( NULL != myClassAd ) {
 		delete myClassAd;
 		myClassAd = NULL;

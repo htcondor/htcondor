@@ -13,25 +13,33 @@
 GM_INIT
   <no contact string>
     gm_state = GM_CLEAR_REQUEST
+  want resubmit
+    gm_state = GM_CLEAN_JOBMANAGER
   other
     signal(invalid signal type)
-    if (QUERY_DENIAL or JOB_QUERY_DENIAL error)
+    if (UNKNOWN_SIGNAL_TYPE error)
+      set new jm
+      gm_state = GM_REGISTER
+    else if (JOB_CONTACT_NOT_FOUND error)
+      set new jm
+      gm_state = GM_RESTART
+    else if (QUERY_DENIAL or JOB_QUERY_DENIAL error)
       set old jm
       if (transfering stdout or stderr)
         gm_state = GM_CANCEL
       else
         gm_state = GM_REGISTER
-    else if (UNKNOWN_SIGNAL_TYPE error)
-      set new jm
-      gm_state = GM_REGISTER
-    if (CONNECTION_FAILED error)
+    else if (CONNECTION_FAILED error)
       gm_state = GM_RESTART
-    if (other error)
+    else (other error)
       gm_state = GM_STOP_AND_RESTART
 
 GM_REGISTER
   register callbacks()
-  if (other error)
+  if (JOB_QUERY_DENIAL error)
+    make GM_SUBMITTED start a probe immediately
+    gm_state = GM_SUBMITTED
+  else if (other error)
     gm_state = GM_STOP_AND_RESTART
   set globusState and errorCode
   update_schedd(globusState)
@@ -137,15 +145,21 @@ GM_STOP_AND_RESTART
 GM_RESTART
   <no contact>
     gm_state = GM_CLEAR_REQUEST
+  same error twice in a row
+    gm_state = GM_CLEAR_REQUEST
   other
     restart()
     if (USER_PROXY_EXPIRED)
       gm_state = GM_PROXY_EXPIRED
     if (JM_ALREADY_RUNNING error)
       gm_state = GM_INIT
+    if (UNDEFINED_EXE)
+      set old jm
+      gm_state = GM_CLEAR_REQUEST
+    if (WAITING_FOR_COMMIT)
+      gm_state = GM_RESTART_SAVE
     if (other error)
       gm_state = GM_CLEAR_REQUEST
-    gm_state = GM_RESTART_SAVE
 
 GM_RESTART_SAVE
   update_schedd(contact string)
@@ -190,6 +204,7 @@ GM_FAILED
       commit(end)
       if (other error)
         gm_state = GM_STOP_AND_RESTART
+      update_schedd(no contact)
     REMOVED
       gm_state = GM_DELETE
     other
@@ -199,11 +214,24 @@ GM_DELETE
   update_schedd(delete from schedd)
   kill_me()
 
+GM_CLEAN_JOBMANAGER
+  jm_cleanup()
+  if (success/JOB_CANCEL_FAILED)
+    gm_state = GM_CLEAR_REQUEST
+  else if (UNDEFINED_EXE)
+    gm_state = CLEAR_REQUEST
+  else if (NO_STATE_FILE)
+    gm_state = GM_CLEAR_REQUEST
+  else
+    gm_state = GM_CLEAR_REQUEST
+
 GM_CLEAR_REQUEST
-  // clear state of old submission, if any
-  globus_state = UNSUBMITTED
-  update_schedd(clear state of old submission, if any)
-  gm_state = GM_UNSUBMITTED
+  if want hold
+    gm_state = GM_HOLD
+  else
+    globus_state = UNSUBMITTED
+    update_schedd(clear state of old submission, if any)
+    gm_state = GM_UNSUBMITTED
 
 GM_HOLD
   condor_state = HELD
@@ -211,13 +239,10 @@ GM_HOLD
   kill_me()
 
 GM_PROXY_EXPIRED
-  HELD
-    kill_me()
-  other
-    if (proxy_expire_time < now + jm_min_proxy_time)
-      // do nothing
-    else
-      <no contact string>
-        gm_state = GM_UNSUBMITTED
-      other
-        gm_state = GM_RESTART
+  if (proxy_expire_time < now + jm_min_proxy_time)
+    // do nothing
+  else
+    <no contact string>
+      gm_state = GM_UNSUBMITTED
+    other
+      gm_state = GM_RESTART

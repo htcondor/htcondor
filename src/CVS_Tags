@@ -2,9 +2,472 @@
 	The state of the trunk before merging in the trunk-merge-V6_5-branch-1
 	as tagged at trunk-merge-V6_5-branch-1-merge-1.
 
+2/10/04 trunk-merge-V6_5-branch-1-merge-1
+   The state of the trunk-merge-V6_5-branch-1 before merging back to
+   the trunk.
+
+9/11/03 V6_7-branch
+   A new branch off the end of the V6_5-branch for the 6.7.x
+   development series.  Created from the V6_6-root tag.  Includes the
+   doc directory.
+
+9/11/03 V6_6-branch
+   A new branch off the end of the V6_5-branch for the 6.6.x stable
+   series.  Created from the V6_6-root tag.  Includes the doc
+   directory.
+
+9/11/03 V6_5_5
+   The 6.5.5 release tag.  It's also the end of the V6_5-branch, and
+   the same versions of files as the root of V6_6-branch and
+   V6_7-branch (although those will have their own tags, as well).  In
+   addition to everything in the V6_5_ALL module, V6_5_5 is also found
+   in the gahp directory (which lives next to src, config, and so on)
+   on the trunk.
+
+9/4/03 V6_5-dag-java-fix
+   The state of the V6_5-branch used for a pre-release 6.5.5 DAGMan
+   executable sent to Jens at Fermi (see condor-admin #7370).
+   "6.5.5 Sep  4 2003 PRE-RELEASE" is the version string.
+   This fixes a bug that caused DAGMan post scripts to be run with
+   the signal mask not fully open (resulting in java hanging when
+   run in a post script).
+
+8/25/03 V6_5-dag-crash-fix
+   The state of the V6_5-branch used for a pre-release 6.5.5 DAGMan
+   executable sent to Duncan and Scott at UW-Milwaukee (see condor-admin
+   #7292).  "6.5.5 Aug 25 2003 PRE-RELEASE" is the version string.
+   This fixes a bug in the logging of events to the *.dagman.out file
+   that may have caused DAGMan crashes Duncan and Scott have seen.
+
+8/12/03 V6_5-post-gridshell-vdt_1_1_10
+   The state of the V6_5-branch after merging in the
+   V6_5-gridshell3-branch as tagged at gridshell-vdt_1_1_10
+
+8/12/03 V6_5-pre-gridshell-vdt_1_1_10
+   The state of the V6_5-branch before merging in the
+   V6_5-gridshell3-branch as tagged at gridshell-vdt_1_1_10
+
+8/12/03 gridshell-vdt_1_1_10
+    The state of the V6_5-gridshell3-branch that was used to build the
+    gridshell-related binarines (condor_gridmanager and
+    condor_gridshell) that were used in the VDT 1.1.10 release.
+    (note: the V6_5-gridshell3-branch only exists for src and config)
+
+7/29/03 V6_5-gridshell3-post-V6_5-gridshell2-merge-1
+    The state of the V6_5-gridshell3-branch after it had the changes
+    from V6_5-gridshell2-branch (as tagged at V6_5-gridshell2-merge-1)
+    merged in.
+
+7/29/03 V6_5-gridshell3-branch
+   A new branch off of V6_5-branch for further GridShell work.
+   Depending on the state of the CVS repository and our plans for the
+   GridShell, when this is completed, it'll either get merged into the
+   V6_6-branch or the V6_7-branch.  Created from V6_5-gridshell3-root,
+   so it'll be easy to merge these changes into any other branch as
+   needed.  We needed a 3rd gridshell branch because of more bug fixes
+   to the starter on V6_5-branch for COD that we want in the
+   gridshell.  So, we made a new branch and will merge the changes
+   from V6_5-gridshell2-branch into here..  
+
+7/29/03 V6_5-gridshell2-merge-1
+    The state of the V6_5-gridshell2-branch when it was merged into
+    V6_5-gridshell3-branch and then abandoned.
+
+7/28/03 V6_5_4
+   The 6.5.4 release, which lives on the V6_5-branch. 
+
+7/22/03 V6_5-gridshell2-branch
+   A new branch off of V6_5-branch for adding support for the
+   GridShell.  depending on the state of the CVS repository and our
+   plans for the GridShell, when this is completed, it'll either get
+   merged into the V6_6-branch or the V6_7-branch.  Created from
+   V6_5-gridshell2-root, so it'll be easy to merge these changes into
+   any other branch as needed.  We needed a 2nd gridshell branch
+   because some changes were made to the starter on V6_5-branch for
+   COD that we need in the gridshell, and it was easier to just make a
+   new branch (since nothing had been checked into the old one).
+
+7/18/03 V6_5_4-COD-contrib-2
+    The state of the V6_5-branch used for a pre-release 6.5.4 COD
+    contrib module sent to Maarten at MIT (see [condor-admin #6613]).
+    "$CondorVersion: 6.5.4 Jul 18 2003 COD-PRE-RELEASE $" is the
+    version string I sent it with.  this fixes the minor bug in the
+    startd where it would EXCEPT() since we were clearing out the job
+    classad of all claims (not just COD claims) once the job exited. 
+
+7/15/03 V6_5-gridshell-branch
+   A new branch off of V6_5-branch for adding support for the
+   GridShell.  depending on the state of the CVS repository and our
+   plans for the GridShell, when this is completed, it'll either get
+   merged into the V6_6-branch or the V6_7-branch.  Created from
+   V6_5-gridshell-root, so it'll be easy to merge these changes into
+   any other branch as needed.
+
+7/10/03 V6_5-post-V6_5_3-branch-merge1
+	The state of the V6_5-branch after merging in the V6_5_3-branch
+
+7/10/03 V6_5-pre-V6_5_3-branch-merge1
+	The state of the V6_5-branch before merging in the V6_5_3-branch
+
+07/10/03 V6_5_3-branch-merge-1
+   The state of the V6_5_3-branch before mergeing into V6_5-branch
+
+07/09/03 V6_5_4-COD-contrib-1
+    The state of the V6_5-branch used for a pre-release 6.5.4 COD
+    contrib module sent to Maarten at MIT (see [condor-admin #6613]).
+    "$CondorVersion: 6.5.4 Jul 9 2003 COD-PRE-RELEASE $" is the
+    version string I sent it with.
+
+07/01/03 V6_5_3
+   The 6.5.3 release, which lives on the V6_5_3-branch
+
+06/24/03 V6_5_3-branch
+    The 6.5.3 release branch, which came from the V6_5-branch, and is
+    rooted at the spot tagged with "V6_5_3-root"
+
+06/17/03 V6_5-post-osx-checkin
+   The state of the V6_5-branch after checking in the Mac OS X port. 
+
+06/17/03 V6_5-pre-osx-checkin
+   The state of the V6_5-branch before checking in the Mac OS X port. This
+   port was done on the V6_5-branch, and not on its own branch. 
+
+05/23/03 V6_4-Tru64_51-1-branch-merge-1
+   The state of the V6_4-Tru64_51-1-branch before merging into v6.5.
+
+05/13/03 V6_5_2
+   The 6.5.2 release, which lives on the V6_5-branch.
+
+05/13/03 V6_5-post-merge-V6_5_0-merge-3
+   The state of the V6_5-branch just after merging in the V6_5_0-branch
+   as tagged at V6_5_0-merge-3.
+
+05/13/03 V6_5-pre-merge-V6_5_0-merge-3
+   The state of the V6_5-branch just before merging in the V6_5_0-branch
+   as tagged at V6_5_0-merge-3.  The last merge was done at V6_5_1.
+
+05/13/03 V6_5_0-merge-3
+   Merging into the V6_5-branch again.  The last one was done at V6_5_1.
+   V6_5_0-merge-2 was skipped.
+
+04/17/03 V6_5-gridmanager_reorg-branch
+    A new branch off of V6_5-branch for Jaime's overhaul of the gridmanager
+    to allow it to handle multiple job types (Globus, Oracle, NorduGrid, etc).
+
+04/11/03 HAWKEYE_V1_0_RC2
+    Release Candidate 2 of Hawkeye 1.0.
+
+04/10/03 V6_5_1_a
+   Very small packaging fixes to 6.5.1. They fix how we make our GPT
+   package--they are not changes to the Condor code.
+
+04/09/03 V6_5-post-merge-V6_5_1
+   The V6_5-branch just before merging in the changes from V6_5_0-branch
+   as tagged at V6_5_1 and since tagged at V6_5_0-merge-1.
+
+04/09/03 V6_5-pre-merge-V6_5_1
+   The V6_5-branch just before merging in the changes from V6_5_0-branch
+   as tagged at V6_5_1 and since tagged at V6_5_0-merge-1.
+
+04/08/03 V6_5_1
+   The 6.5.1 release, which lives on the V6_5_0-branch for everything
+   except the gahp, which lives on the trunk.
+
+04/01/03 v6_5_1_prerelease_for_edg_vdt_1_apr_2003
+   This tag is for the prerelease of Condor 6.5.1 that we gave
+   to EDG via VDT 1.1.8. 
+
+03/18/03 V6_5_0
+   The 6.5.0 release, which lives on the V6_5_0-branch
+
+03/13/03 V6_5_0-post_merge-V6_5_0-tcp_update-merge-1
+    The state of the V6_5_0 branch after merging in
+    V6_5_0-tcp_update-branch as tagged at V6_5_0-tcp_update-merge-1.
+    this enables condor to send TCP updates to the collector (which
+    now uses a SocketCache) if the right things are defined in the
+    config file.  flocking is not yet dealt with.  this was required
+    by D0 but might be generally useful to other sites.
+
+03/13/03 V6_5_0-pre_merge-V6_5_0-tcp_update-merge-1
+    The state of the V6_5_0 branch before merging in
+    V6_5_0-tcp_update-branch as tagged at V6_5_0-tcp_update-merge-1.  
+
+03/13/03 V6_5_0-tcp_update-merge-1
+    The state of the V6_5_0-tcp_update-branch when it was merged back
+    into V6_5_0-branch.
+
+03/07/05 V6_5_0-tcp_update-branch
+    A new branch off of V6_5_0-branch for developing the feature where
+    we can optionally send updates to the collector (or a tree of
+    collectors) via TCP.
+
+03/07/03 V6_5_0-post_merge-V6_4-merge-7
+    The state of the V6_5_0 branch after merging in V6_4-branch as
+    tagged at V6_4-merge-7. The last merge was at V6_4-merge-6
+
+03/07/03 V6_5_0-pre-merge-V6_4-merge-7
+    The state of the V6_5_0 branch before merging in V6_4-branch as
+    tagged at V6_4-merge-7. The last merge was at V6_4-merge-6
+
+03/07/03 V6_4-merge-7
+    the state of the V6_4-branch before merging into V6_5_0-branch
+    (again).  this includes a few minor but important bug fixes that
+    have gone into V6_4-branch that need to be present before we ship
+    6.5.0. 
+
+03/05/03 V6_5-post-V6_5-MB-V6_5-cod-merge-1-MB-m-1
+    the state of the V6_5-branch after merging in the COD merge
+    branch (V6_5-MB-V6_5-cod-merge-1-branch)
+
+03/05/03 V6_5-pre-V6_5-MB-V6_5-cod-merge-1-MB-m-1
+    the state of the V6_5-branch before merging in the COD merge
+    branch (V6_5-MB-V6_5-cod-merge-1-branch)
+
+03/05/03 V6_5-MB-V6_5-cod-merge-1-MB-m-1
+    the merge-from tag for the final merge of
+    V6_5-MB-V6_5-cod-merge-1-branch into the V6_5-branch.
+
+03/04/03 V6_5-MB-V6_5-cod-merge-1-post_merge
+    post_merge tag to demark the point after the basic CVS conflict
+    resolution was done, and when the more complicated code changes
+    where started to get this branch building and working again.
+
+03/04/03 V6_5-MB-V6_5-cod-merge-1-branch
+    the *right* name for the COD->V6_5 merge branch.  because of the
+    extensive changes required for COD and various things that were
+    changed on V6_5 (how CEDAR authenticate() works, and the starter
+    exception userlog event), i decided to use a merge-branch for this
+    merge so that we can track the changes i had to make to resolve
+    conflicts and get everything working after the merge.
+
+03/04/03 V6_5-merge-V6_5-cod-branch
+    a failed attempt at a merge-branch for merging COD into
+    V6_5-branch.  this is *NOT* the right naming scheme, so i'm
+    abandoning the branch (and no one else should use this convention
+    in the future).  unfortunately, i couldn't get CVS to just remove
+    this tag completely. :( 
+
+03/03/03 V6_5-cod-merge-1
+     The state of the COD branch when it was merged into V6_5 (via the 
+     "V6_5-MB-V6_5-cod-merge-1-branch" merge branch)
+
+02/24/03 HAWKEYE_V1_0_RC1
+    Release Candidate 1 of Hawkeye 1.0.
+
+02/07/03 V6_5-pre-merge-V6_5_0-merge-1
+    The state of the V6_5-branch before merging the V6_5_0 branch in for
+    the first time.
+
+02/07/03 V6_5_0-merge-1
+    The state of the V6_5_0-branch before merging back into V6_5-branch. It
+    has a few bug fixes, and some changes from V6_4 on it. This is the first
+    time V6_5_0 has ever been merged into V6_5
+
+02/07/03 V6_5_0-post-merge-V6_4-merge-6
+    The state of the V6_5_0 branch after merging in V6_4-branch as tagged 
+    at V6_4-merge-6. The last merge was at V6_4-merge-5
+
+02/07/03 V6_5_0-pre-merge-V6_4-merge-6
+    The state of the V6_5_0 branch before merging in V6_4-branch as tagged 
+    at V6_4-merge-6. The last merge was at V6_4-merge-5
+
+02/07/03 V6_4-merge-6
+    the state of the V6_4-branch before merging into V6_5_0-branch. 
+    this is slightly past the V6_4-merge-5 tag, with some doc changes 
+    and the new license.
+
+02/04/03 V6_5_0-branch
+    A stable branch for the V6.5.0 release. It's off the V6_5-branch.
+
+01/31/03 V6_5-post-merge-V6_4-merge-5
+	The state of the V6_5-branch after merging in the V6_4-branch as
+	tagged at V6_4-merge-5.
+
+01/31/03 V6_5-pre-merge-V6_4-merge-5
+	The state of the V6_5-branch after merging in the V6_4-branch as
+	tagged at V6_4-merge-5.
+
+01/31/03 V6_4-merge-5
+    the state of the V6_4-branch before merging into 6.5.  this is
+	slightly past the V6_4_7 tag.  the last merge was V6_4-merge-4.
+
+01/22/03 HAWKEYE_V0_1_9
+	The v0.1.9 release of Hawkeye.
+
+01/21/03 V6_5-post-merge-V6_4-merge-4
+	The state of the V6_5-branch after merging in the V6_4-branch as
+	tagged at V6_4-merge-4.
+
+01/21/03 V6_4-merge-4
+    the state of the V6_4-branch before merging into 6.5.  this is
+	slightly past the V6_4_6 tag.  the last merge was V6_4-merge-3.
+
+01/14/03 V6_4_6
+    The 6.4.6 release tag, which lives on the V6_4-branch
+
+01/10/03 V6_5-post-merge-V6_4-merge-3
+	The state of the V6_5-branch after merging in the V6_4-branch as
+	tagged at V6_4-merge-3.
+
+01/10/03 V6_5-pre-merge-V6_4-merge-3
+	The state of the V6_5-branch before merging in the V6_4-branch as
+	tagged at V6_4-merge-3.
+
+01/10/03 V6_4-merge-3
+	The state of the V6_4-branch before merging into 6.5.  This
+	may be equivalent to the V6_4_6 tag, but that's coming later,
+	and the merge has to happen now.  The last merge was
+	V6_4-merge-2.
+
+01/09/03 V6_5-post-merge-V6_5-edg-branch-1
+	The state of the V6_5-branch after merging in the V6_5-edg-branch
+	as tagged at V6_5-edg-branch-merge-1
+
+01/09/03 V6_5-pre-merge-V6_5-edg-branch-1
+	The state of the V6_5-branch before merging in the V6_5-edg-branch
+	as tagged at V6_5-edg-branch-merge-1
+
+01/09/03 V6_5-edg-branch-merge-1
+        The V6_5-edg-branch, before we merged it into the V6_5-branch as
+        tagged at V6_5-pre-merge-V6_5-edg-branch-1
+
+01/08/03 V6_4-Tru64_51-1-branch
+        This is a branch off V6_4-branch for the port to Tru64 v5.1
+
+12/19/02 V6_5-post-merge-V6_4-merge-2
+	The state of the V6_5-branch before merging in the V6_4-branch as
+	tagged at V6_4-merge-2.
+
+12/19/02 V6_5-pre-merge-V6_4-merge-2
+	Um, i forgot to actually create this tag before i committed the V6_4
+	to V6_5 merge.  Sorry, it doesn't exist.
+
+12/19/02 V6_4-merge-2
+	The state of the V6_4-branch before merging into 6.5. The last merge
+	was from V6_4-merge-1 into 6_5.
+
+12/19/02 V6_5-pre-merge-V6_3-dzero
+	The state of the V6_5-branch before merging in the
+	V6_3-dzero-branch.  The is the first and last merge from
+	the V6_3-dzero-branch, which is now abandoned.
+
+12/10/02 HAWKEYE_V0_1_8
+	The v0.1.8 release of Hawkeye.
+
+12/5/02 V6_4-merge-1
+	The state of the V6_4-branch before merging into 6.5. The last merge
+	was from 6_4_3 into 6_5.
+
+12/5/02 V6_5-pre-merge-V6_4-merge-1
+	The state of the V6_5-branch before merging the V6_4-branch as tagged 
+	at V6_4-merge-1, since V6_4_3 was merged into V6_5-branch.
+
+12/5/02 V6_5-post-merge-V6_4-merge-1
+	The state of the V6_5-branch after merging the V6_4-branch as tagged 
+	at V6_4-merge-1, since V6_4_3 was merged into V6_5-branch.
+
+10/30/02 V6_5-edg-branch
+	A new branch off of V6_5 for EDG code, specifically for Francesco
+	Giacomini's DAGMan callout to the EDG Resource Broker.
+
+10/22/02 V6_5-cod-branch
+	A new branch off of V6_5 for "cod", a.k.a. "computing on
+	demand".  This will mostly involve changes to the startd to
+	support multiple claims per resource, "checkpointing to swap",
+	and other features.  There might be other changes to other
+	parts of Condor to take advantage of it, too.
+
+10/17/02 V6_5-post-merge-V6_4_3
+	The V6_5 branch, after we merged in the V6_4-branch as tagged
+	at V6_4_3. 
+
+10/17/02 V6_5-pre-merge-V6_4_3
+	The V6_5 branch, before we merged in the V6_4-branch as tagged
+	at V6_4_3. 
+
+10/16/02 V6_4_3 
+	The 6.4.3 release tag, which lives on the V6_4-branch
+
+09/26/02 V6_4-branch-pre-V6_3-doc-merge-1
+	The V6_4-branch right before merging V6_3-branch (since V6_4_1 [which
+	is also on the V6_3-branch]) as tagged at V6_3-doc-merge-1
+
+09/26/02 V6_4-branch-post-V6_3-doc-merge-1
+	The V6_4-branch right after merging V6_3-branch (since V6_4_1 [which
+	is also on the V6_3-branch]) as tagged at V6_3-doc-merge-1
+
+09/26/02 V6_3-doc-merge-1
+	Some changes to the manual were accidentally checked into the
+	V6_3-branch after it was abandonded.  This is a tag on V6_3-branch,
+	only on doc/.
+
+08/19/02 V6_5-tdp-2-branch
+	 	Branch for all the "TDP" work, which stands for "Tool Daemon
+	 	Protocol".  This is the work to integrate Condor with
+	 	Paradyn, creating paused processes, etc.  Branched off of the
+	 	main V6_5-branch.  
+
+08/18/02 V6_4_2
+	The 6.4.2 release, which was only a relink of the Globus libraries to
+    fix OpenSSL security problems. It came from the 6_4-branch 
+
+08/02/02 V6_5-tdp-branch
+	 	Branch for all the "TDP" work, which stands for "Tool Daemon
+	 	Protocol".  This is the work to integrate Condor with
+	 	Paradyn, creating paused processes, etc.  Branched off of the
+	 	main V6_5-branch.  This branch contains all the changes made
+		on the (now abandoned) V6_3-tdp-branch.
+		NOW ABANDONED.  Use the V6_5-tdp-2-branch instead.
+
+7/25/02 V6_5_0-PRE-RELEASE-1
+	The first 6.5.0 release to run on our big pool. It lives on the
+	6_5-branch, and has support for the new parallel universe.
+
+07/19/02 V6_5-branch
+	The V6_5 development series branch.  For important,
+	low-hanging new features.  We should try to keep this branch
+	so it's always ready to be released within a week, if needed.
+	This development series should only last for a month of
+	development, and then be hardened for another stable release.
+	as soon as the trunk (new classads) porting is done in the
+	most basic level, and daemons with new classads can run jobs
+	and pass the test suite, we will freeze development in 6_5,
+	have a few people work to make it stable, and finally move all
+	development into new classads.  yee haw!
+
+07/19/02 V6_4-branch
+        The V6_4 *stable* series branch.  ONLY BUG FIXES to 6.4.1! 
+
+7/18/02 V6_4_1
+	The 6.4.1 release tag, which lives on the V6_3-branch. 
+
+07/18/02 trunk-pre-merge-t-m-V6_3-b-1-m-1
+	The state of the trunk before the intial merge of
+	trunk-merge-V6_3-branch-1 into it.
+
+07/18/02 trunk-post-merge-t-m-V6_3-b-1-m-1
+	The state of the trunk before the intial merge of
+	trunk-merge-V6_3-branch-1 into it.
+
+07/18/02 trunk-merge-V6_3-branch-1-merge-1
+	The state of trunk-merge-V6_3-branch-1 before merging back
+	to trunk.
+
+07/10/02 trunk-merge-V6_3-branch-1-post-merge-V6_3-merge-2
+	The state of trunk-merge-V6_3-branch-1 right after merging
+	in the V6_3-branch (since V6_3-merge-1) as tagged at V6_3-merge-2
+
+07/10/02 trunk-merge-V6_3-branch-1-pre-merge-V6_3-merge-2
+	The state of trunk-merge-V6_3-branch-1 right before merging
+	in the V6_3-branch (since V6_3-merge-1) as tagged at V6_3-merge-2
+
+07/10/02 V6_3-merge-2
+		The state of the V6_3-branch before being merged into
+		trunk-merge-V6_3-branch-1 again.
+
 6/19/02 V6_4_0
-	The 6.4.0 Release tag, which lives on the V6_3-bracnh. NMI-R1 and 6.4.0
-were both built from this tag, with identical flags
+	The 6.4.0 Release tag, which lives on the V6_3-bracnh. NMI-R1 and
+	6.4.0 were both built from this tag, with identical flags
 
 6/19/02 V6_2_3
 	The 6.2.3 Release tag, which lives on the V6_2-bracnh
@@ -27,10 +490,10 @@ were both built from this tag, with identical flags
 	private net stuff, too.
 
 5/15/02 V6_3-NMI-Condor-G-Beta1
-	The 6.3 branch that was released as the first NMI beta. It's a bit before
-	6.3.3, and is built with WANT_GLOBUS=TRUE and IS_CONDORG_RELEASE = Yes,
-	or whatever the settings are. The version string these carry are
-	6.3.2-NMI-Condor-G-Beta
+	The 6.3 branch that was released as the first NMI beta. It's a bit
+	before 6.3.3, and is built with WANT_GLOBUS=TRUE and
+	IS_CONDORG_RELEASE = Yes, or whatever the settings are. The version
+	string these carry are 6.3.2-NMI-Condor-G-Beta
 
 5/01/02 HAWKEYE_V0_1_2
 	The Hawkeye 0.1.2 release tag
@@ -80,10 +543,10 @@ were both built from this tag, with identical flags
 		CondorG-GT2
 
 03/19/02 V6_3_2-Condor-G-Globus113
-		The V6_3-branch, from the tag V6_3-pre-globus2_0-switch, which was
-		the state of the 6_3-branch right before the switchover to GT2.
-		The Condor-G release of this has a version string of 6.3.2
-		CondorG-113
+		The V6_3-branch, from the tag V6_3-pre-globus2_0-switch,
+		which was the state of the 6_3-branch right before the
+		switchover to GT2.  The Condor-G release of this has a
+		version string of 6.3.2 CondorG-113
 
 03/17/02 V6_3-CondorG-VDT-1_0
 		The V6_3-branch tagged for the 1.0 VDT Condor-G release. 
@@ -108,19 +571,19 @@ were both built from this tag, with identical flags
 		V6_3-branch right before V6_3-security-2-branch was merged in.
 
 03/06/02 V6_3-security-2-branch-merge-1
-		V6_3-security-2-branch tagged in case we merge from this branch again.
-		(unlikely, we plan to abandon)
+		V6_3-security-2-branch tagged in case we merge from this
+		branch again.  (unlikely, we plan to abandon)
 
 02/06/02 V6_3-tdp-branch
 	 	Branch for all the "TDP" work, which stands for "Tool Daemon
 	 	Protocol".  This is the work to integrate Condor with
 	 	Paradyn, creating paused processes, etc.  Branched off of the
-	 	main V6_3-branch.  
+	 	main V6_3-branch.  ABANDONED - use the V6_5-tdp-branch.
 
 02/07/02 V6_3-pre-globus2_0-switch
-		The V6_3-branch, right before we switched over to use Globus2.0.
-		There was one release of Condor (6.3.2 Condor-G-113) that was built
-		against this tag
+		The V6_3-branch, right before we switched over to use
+		Globus2.0.  There was one release of Condor (6.3.2
+		Condor-G-113) that was built against this tag
 
 01/15/02 V6_3-new-gridmanager-branch
 		Branch containing Jamie and Todd's rewrite of the 
@@ -152,9 +615,9 @@ were both built from this tag, with identical flags
 		V6_3-security-branch is abandoned.
 
 11/09/01 V6_3-security-branch
-		When the V6_3-security-branch was originally made, only files in
-		src/ were tagged. (See below 10/09/01).  This branches NTconfig,
-		config, and doc as well.
+		When the V6_3-security-branch was originally made, only
+		files in src/ were tagged. (See below 10/09/01).  This
+		branches NTconfig, config, and doc as well.
 
 11/8/01 V6_3-bandwidth-merge-1
         The end of the old bandwidth branch at the point where we

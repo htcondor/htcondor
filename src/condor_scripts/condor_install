@@ -39,7 +39,7 @@ $java_jvm_maxmem_arg="";
 print "\n" x 50, 
     "Welcome to condor_install.  You are going to need to answer a few\n",
     "questions about how you want Condor configured on this machine, what\n",
-    "pool(s) you want to join, and if this is machine is going to serve as\n",
+    "pool(s) you want to join, and if this machine is going to serve as\n",
     "the Central Manager for its own pool.  If you are unsure about how to\n",
     "answer any of the questions asked here, please consult the INSTALL\n",
     "file or the Installation chapter of the Condor Administrator's Manual.\n",
@@ -51,7 +51,7 @@ print "\n" x 50,
     "default, just press return.\n",
     "\n",
     "If you have problems installing or using Condor, please consult the\n",
-    "Condor Administrator's Manual, which is can be found on the World Wide\n",
+    "Condor Administrator's Manual, which can be found on the World Wide\n",
     "Web at: http://www.cs.wisc.edu/condor/manual/\n",
     "If you still have problems, send email to condor-admin\@cs.wisc.edu.\n\n",
     "Press enter to begin Condor installation\n";
@@ -1738,7 +1738,7 @@ sub prompt_java_jvm_path()
 	print "\nEnable Java Universe support? [yes] ";
 	chomp($_ = <STDIN>);
    	if( ! /(^[Yy].*)|^$/ ) {
-		print "Ok, Java Universe will be left unconfigured.\n";
+		print "OK, Java Universe will be left unconfigured.\n";
 		return "";
 	}
 
@@ -1767,8 +1767,12 @@ sub prompt_java_jvm_path()
 	# a fully qualified java executable path from them.
 
     while( 1 ) {
-		print "\nPlease enter the full path to the JVM:\n";
-		chomp($jvm = <STDIN>);    
+		print "\nPlease enter the full path to the JVM, or \"none\" to leave unconfigured:\n";
+		chomp($jvm = <STDIN>);
+		if ($jvm eq "none" || $jvm eq "\"none\"") {
+			print "OK, Java Universe will be left unconfigured.\n";
+			return "";
+		}
 		print "\nYou entered: $jvm\n";
 		if( $jvm =~ /^\//) {
 			if ( -f $jvm && -x $jvm) {

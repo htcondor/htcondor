@@ -88,31 +88,47 @@ while ( <IN> )
     elsif ( /ClusterNode\s+=\s+\"(.+?)\"/i )
     {
     }
+    elsif ( /NotSetup\s+=\s+\"(.+?)\"/i )
+    {
+    }
     elsif ( /Down\s+=\s+\"(.+?)\"(.*)/i )
     {
 	my $Host = $1;
 	my $Remain = $2;
-	my @Notes;
-	my $Date = "";
+
+	# Ok, let's look at the remainder of the line..
 	chomp $Remain;
 	$Remain =~ s/\#.*$//;
-	if ( $Remain =~ /,\s*(.*)/ )
+	$Remain =~ s/^\s+//;
+	my $NoteString = "";
+	my $Dump = 0;
+
+	# Otherwise, dump if it matches...
+	if ( $Remain =~ /(.+)[\s+,](.+)/ )
 	{
-	    ( $Date, @Notes ) = split (/[,\s]+/, $1 );
+	    my $Date = $1;
+	    my $Notes = $2;
+	    if ( $Notes =~ /$NotePattern/i )
+	    {
+		$Dump = 1;
+		$NoteString = "$Date $Notes";
+	    }
+	}
+	# If there is no matching note only dump if there is no pattern...
+	else
+	{
+	    $Dump = 1 if ( $NotePattern eq ".*" );
 	}
 
-	# Ok... Did the user specify a pattern?
-	foreach my $Note ( @Notes )
+	# Dump it
+	if ( $Dump )
 	{
-	    if ( $Note =~ /$NotePattern/ )
+	    printf "%-30s", $Host;
+	    if ( $Verbose )
 	    {
-		printf "%-30s", $Host;
-		if ( $Verbose )
-		{
-		    print join( " ", ( $Date, @Notes ) );
-		}
-		print "\n";
+		print "$NoteString";
 	    }
+	    print "\n";
 	}
     }
     elsif ( ! /^$/ )

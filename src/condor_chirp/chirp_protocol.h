@@ -1,8 +1,15 @@
+/*
+Chirp C Client
+
+This public domain software is provided "as is".  See the Chirp License
+for details.
+*/
 
 #ifndef CHIRP_PROTOCOL_H
 #define CHIRP_PROTOCOL_H
 
 #define CHIRP_LINE_MAX 1024
+#define CHIRP_VERSION 2
 
 #define CHIRP_ERROR_NOT_AUTHENTICATED -1
 #define CHIRP_ERROR_NOT_AUTHORIZED -2

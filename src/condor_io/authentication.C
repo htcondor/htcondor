@@ -33,6 +33,8 @@
 #include "condor_auth_kerberos.h"
 #include "condor_secman.h"
 #include "condor_environ.h"
+#include "../condor_daemon_core.V6/condor_ipverify.h"
+#include "CondorError.h"
 
 #if !defined(SKIP_AUTHENTICATION)
 #   include "condor_debug.h"
@@ -47,8 +49,9 @@ Authentication::Authentication( ReliSock *sock )
 #if !defined(SKIP_AUTHENTICATION)
 	mySock              = sock;
 	auth_status         = CAUTH_NONE;
+	method_used         = NULL;
 	t_mode              = NORMAL;
-        authenticator_      = NULL;
+	authenticator_      = NULL;
 #endif
 }
 
@@ -57,13 +60,18 @@ Authentication::~Authentication()
 #if !defined(SKIP_AUTHENTICATION)
 	mySock = NULL;
 
-        delete authenticator_;
+	delete authenticator_;
+
+	if (method_used) {
+		free (method_used);
+	}
+
 #endif
 }
 
-int Authentication::authenticate( char *hostAddr, KeyInfo *& key, int clientFlags)
+int Authentication::authenticate( char *hostAddr, KeyInfo *& key, const char* auth_methods, CondorError* errstack)
 {
-    int retval = authenticate(hostAddr, clientFlags);
+    int retval = authenticate(hostAddr, auth_methods, errstack);
     
 #if !defined(SKIP_AUTHENTICATION)
     if (retval) {        // will always try to exchange key!
@@ -77,111 +85,174 @@ int Authentication::authenticate( char *hostAddr, KeyInfo *& key, int clientFlag
     return retval;
 }
 
-int Authentication::authenticate( char *hostAddr, int auth_method )
+int Authentication::authenticate( char *hostAddr, const char* auth_methods,
+		CondorError* errstack)
 {
 #if defined(SKIP_AUTHENTICATION)
-    dprintf(D_ALWAYS, "Skipping....\n");
-  return 0;
+	dprintf(D_ALWAYS, "Skipping....\n");
+	/*
+	errstack->push ( "AUTHENTICATE", AUTHENTICATE_ERR_NOT_BUILT,
+			"this condor was built with SKIP_AUTHENTICATION");
+	*/
+	return 0;
 #else
-  Condor_Auth_Base * auth = NULL;
+Condor_Auth_Base * auth = NULL;
 
-  if (hostAddr) {
-	dprintf ( D_SECURITY, "AUTHENTICATE: in authenticate( char *addr == '%s', int method == %i)\n",
-		  hostAddr, auth_method);
-  } else {
-	dprintf ( D_SECURITY, "AUTHENTICATE: in authenticate( char *addr == NULL, int method == %i)\n",
-		  auth_method);
-  }
-  
-  int methods_to_try = 0;
+	if (DebugFlags & D_FULLDEBUG) {
+		if (hostAddr) {
+			dprintf ( D_SECURITY, "AUTHENTICATE: in authenticate( addr == '%s', "
+					"methods == '%s')\n", hostAddr, auth_methods);
+		} else {
+			dprintf ( D_SECURITY, "AUTHENTICATE: in authenticate( addr == NULL, "
+					"methods == '%s')\n", auth_methods);
+		}
+	}
 
-  if (auth_method) {
-	  methods_to_try = auth_method;
-  } else {
-	  methods_to_try = default_auth_methods();
-  }
+	MyString methods_to_try = auth_methods;
 
-  
-  auth_status = CAUTH_NONE;
-  
-  while (auth_status == CAUTH_NONE ) {
-    dprintf(D_SECURITY, "AUTHENTICATE: can still try these methods: %d\n", methods_to_try);
+	auth_status = CAUTH_NONE;
+	method_used = NULL;
+ 
+	while (auth_status == CAUTH_NONE ) {
+		if (DebugFlags & D_FULLDEBUG) {
+			dprintf(D_SECURITY, "AUTHENTICATE: can still try these methods: %s\n", methods_to_try.Value());
+		}
 
-    int firm = handshake(methods_to_try);
-    if ( firm < 0 ) {
-      dprintf(D_ALWAYS, "AUTHENTICATE: handshake failed!\n");
-      break;
-    }
+		int firm = handshake(methods_to_try);
 
+		if ( firm < 0 ) {
+			dprintf(D_ALWAYS, "AUTHENTICATE: handshake failed!\n");
+			errstack->push( "AUTHENTICATE", AUTHENTICATE_ERR_HANDSHAKE_FAILED, "Failure performing handshake" );
+			break;
+		}
 
-    dprintf(D_SECURITY, "AUTHENTICATE: will try to use %d\n", firm);
-
-    switch ( firm ) {
-#if defined(X509_AUTHENTICATION)
-    case CAUTH_X509:
-        auth = new Condor_Auth_X509(mySock);
-      break;
-#endif /* X509_AUTHENTICATION */
+		char* method_name = NULL;
+		switch ( firm ) {
+#if defined(GSI_AUTHENTICATION)
+			case CAUTH_GSI:
+				auth = new Condor_Auth_X509(mySock);
+				method_name = strdup("GSI");
+				break;
+#endif /* GSI_AUTHENTICATION */
 
 #if defined(KERBEROS_AUTHENTICATION) 
-    case CAUTH_KERBEROS:
-        auth = new Condor_Auth_Kerberos(mySock);
-      break;
+			case CAUTH_KERBEROS:
+				auth = new Condor_Auth_Kerberos(mySock);
+				method_name = strdup("KERBEROS");
+				break;
 #endif
-  
+ 
 #if defined(WIN32)
-    case CAUTH_NTSSPI:
-        auth = new Condor_Auth_SSPI(mySock);
-      break;
+			case CAUTH_NTSSPI:
+				auth = new Condor_Auth_SSPI(mySock);
+				method_name = strdup("NTSSPI");
+				break;
 #else
-    case CAUTH_FILESYSTEM:
-        auth = new Condor_Auth_FS(mySock);
-      break;
-    case CAUTH_FILESYSTEM_REMOTE:
-        auth = new Condor_Auth_FS(mySock, 1);
-      break;
+			case CAUTH_FILESYSTEM:
+				auth = new Condor_Auth_FS(mySock);
+				method_name = strdup("FS");
+				break;
+			case CAUTH_FILESYSTEM_REMOTE:
+				auth = new Condor_Auth_FS(mySock, 1);
+				method_name = strdup("FS_REMOTE");
+				break;
 #endif /* !defined(WIN32) */
-    case CAUTH_CLAIMTOBE:
-        auth = new Condor_Auth_Claim(mySock);
-      break;
-      
-    case CAUTH_ANONYMOUS:
-        auth = new Condor_Auth_Anonymous(mySock);
-      break;
-      
-    default:
-      dprintf(D_ALWAYS,"AUTHENTICATE: unsupported method: %i, failing.\n", firm);
-      return 0;
-    }
+			case CAUTH_CLAIMTOBE:
+				auth = new Condor_Auth_Claim(mySock);
+				method_name = strdup("CLAIMTOBE");
+				break;
+ 
+			case CAUTH_ANONYMOUS:
+				auth = new Condor_Auth_Anonymous(mySock);
+				method_name = strdup("ANONYMOUS");
+				break;
+ 
+			case CAUTH_NONE:
+				dprintf(D_ALWAYS,"AUTHENTICATE: no available authentication methods succeeded, "
+						"failing!\n");
+				errstack->push("AUTHENTICATE", AUTHENTICATE_ERR_OUT_OF_METHODS,
+						"Failed to authenticate with any method");
+				return 0;
 
-    //------------------------------------------
-    // Now authenticate
-    //------------------------------------------
-    if (!auth->authenticate(hostAddr) ) {
-        delete auth;
-		auth = NULL;
+			default:
+				dprintf(D_ALWAYS,"AUTHENTICATE: unsupported method: %i, failing.\n", firm);
+				errstack->pushf("AUTHENTICATE", AUTHENTICATE_ERR_OUT_OF_METHODS,
+						"Failure.  Unsupported method: %i", firm);
+				return 0;
+		}
 
-        //if authentication failed, try again after removing from client tries
-        if ( mySock->isClient() ) {
-            methods_to_try &= ~firm;
-        }
 
-      	dprintf(D_SECURITY,"AUTHENTICATE: method %i failed.\n", firm);
-		return 0;
-    }
-    else {
-        authenticator_ = auth;
-        auth_status = authenticator_->getMode();
-    }
-  }
+		if (DebugFlags & D_FULLDEBUG) {
+			dprintf(D_SECURITY, "AUTHENTICATE: will try to use %d (%s)\n", firm,
+					(method_name?method_name:"?!?") );
+		}
 
-  //if none of the methods succeeded, we fall thru to default "none" from above
-  int retval = ( auth_status != CAUTH_NONE );
-  dprintf(D_SECURITY, "Authentication::authenticate %s\n", 
-	  retval == 1 ? "Success" : "FAILURE" );
+		//------------------------------------------
+		// Now authenticate
+		//------------------------------------------
+		if (!auth->authenticate(hostAddr, errstack) ) {
+			delete auth;
+			auth = NULL;
 
-  mySock->allow_one_empty_message();
-  return ( retval );
+			errstack->pushf("AUTHENTICATE", AUTHENTICATE_ERR_METHOD_FAILED,
+					"Failed to authenticate using %s", method_name );
+
+			//if authentication failed, try again after removing from client tries
+			if ( mySock->isClient() ) {
+				// need to remove this item from the MyString!!  perhaps there is a
+				// better way to do this...  anyways, 'firm' is equal to the bit value
+				// of a particular method, so we'll just convert each item in the list
+				// and keep it if it's not that particular bit.
+				StringList meth_iter( methods_to_try.Value() );
+				meth_iter.rewind();
+				MyString new_list;
+				char *tmp = NULL;
+				while( (tmp = meth_iter.next()) ) {
+					int that_bit = SecMan::getAuthBitmask( tmp );
+
+					// keep if this isn't the failed method.
+					if (firm != that_bit) {
+						// and of course, keep the comma's correct.
+						if (new_list.Length() > 0) {
+							new_list += ",";
+						}
+						new_list += tmp;
+					}
+				}
+
+				// trust the copy constructor. :)
+				methods_to_try = new_list;
+			}
+
+			dprintf(D_SECURITY,"AUTHENTICATE: method %d (%s) failed.\n", firm,
+					(method_name?method_name:"?!?"));
+		} else {
+			// authentication succeeded.  store the object (we may call upon
+			// its wrapper functions) and set the auth_status of this sock to
+			// the bitmask method we used and the method_used to the string
+			// name.  (string name is obtained above because there is currently
+			// no bitmask -> string map)
+			authenticator_ = auth;
+			auth_status = authenticator_->getMode();
+			if (method_name) {
+				method_used = strdup(method_name);
+			} else {
+				method_used = NULL;
+			}
+		}
+		free (method_name);
+	}
+
+	//if none of the methods succeeded, we fall thru to default "none" from above
+	int retval = ( auth_status != CAUTH_NONE );
+	if (DebugFlags & D_FULLDEBUG) {
+		dprintf(D_SECURITY, "AUTHENTICATE: auth_status == %i (%s)\n", auth_status,
+				(method_used?method_used:"?!?") );
+	}
+	dprintf(D_SECURITY, "Authentication was a %s.\n", retval == 1 ? "Success" : "FAILURE" );
+
+	mySock->allow_one_empty_message();
+	return ( retval );
 #endif /* SKIP_AUTHENTICATION */
 }
 
@@ -200,12 +271,25 @@ void Authentication::unAuthenticate()
 {
 #if !defined(SKIP_AUTHENTICATION)
     auth_status = CAUTH_NONE;
-    delete authenticator_;
-    authenticator_ = 0;
+	if (authenticator_) {
+    	delete authenticator_;
+    	authenticator_ = 0;
+	}
+	if (method_used) {
+		free (method_used);
+		method_used = 0;
+	}
 #endif
 }
 
 
+char* Authentication::getMethodUsed() {
+#if !defined(SKIP_AUTHENTICATION)
+	return method_used;
+#else
+	return NULL;
+#endif
+}
 /*
 void Authentication::setAuthAny()
 {
@@ -495,56 +579,17 @@ int Authentication::exchangeKey(KeyInfo *& key)
     return retval;
 }
 
-int Authentication::default_auth_methods() {
-
-	// get the methods from config file
-	char * methods = param("SEC_DEFAULT_AUTHENTICATION_METHODS");
-
-	int bitmask = 0;
-	if (methods) {
-		// instantiating a SecMan isn't a big deal... all the
-		// data in it is static anyways.  i guess the functions
-		// really should be too.  oh well, deal with it.
-		SecMan s;
-
-		bitmask = s.getAuthBitmask(methods);
-		free( methods );
-	} else {
-
-		// clear the mask
-		bitmask = 0;
-
-		// these do _not_ go in the default
-		// bitmask |= (int) CAUTH_CLAIMTOBE;
-		// bitmask |= (int) CAUTH_ANONYMOUS;
-
-#if defined(WIN32)
-        bitmask |= (int) CAUTH_NTSSPI;
-#else
-        bitmask |= (int) CAUTH_FILESYSTEM;
-        
-        //RendezvousDirectory is for use by shared-filesystem filesys auth.
-        //if user specfied RENDEZVOUS_DIRECTORY, extract it
-        if ( getenv( EnvGetName( ENV_RENDEZVOUS ) )) {
-	    	bitmask |= (int) CAUTH_FILESYSTEM_REMOTE;
-        }
-#endif
-	}
-
-	return bitmask;
-}
-
 
 void Authentication::setAuthType( int state ) {
     auth_status = state;
 }
 
 
-int Authentication::handshake(int method_bitmask) {
+int Authentication::handshake(MyString my_methods) {
 
     int shouldUseMethod = 0;
     
-    dprintf ( D_SECURITY, "HANDSHAKE: in handshake(int methods == %i)\n", method_bitmask);
+    dprintf ( D_SECURITY, "HANDSHAKE: in handshake(my_methods = '%s')\n", my_methods.Value());
 
     if ( mySock->isClient() ) {
 
@@ -552,6 +597,7 @@ int Authentication::handshake(int method_bitmask) {
 
         dprintf (D_SECURITY, "HANDSHAKE: handshake() - i am the client\n");
         mySock->encode();
+		int method_bitmask = SecMan::getAuthBitmask(my_methods.Value());
         dprintf ( D_SECURITY, "HANDSHAKE: sending (methods == %i) to server\n", method_bitmask);
         if ( !mySock->code( method_bitmask ) || !mySock->end_of_message() ) {
             return -1;
@@ -575,10 +621,8 @@ int Authentication::handshake(int method_bitmask) {
         }
         dprintf ( D_SECURITY, "HANDSHAKE: client sent (methods == %i)\n", client_methods);
         
-		// take our supported method bitmasks and bitwise AND them together.  this yields
-		// the methods we have in common.  selectAuthenticationType then picks one from a
-		// hardcoded order
-        shouldUseMethod = selectAuthenticationType( method_bitmask & client_methods );
+        shouldUseMethod = selectAuthenticationType( my_methods, client_methods );
+
         dprintf ( D_SECURITY, "HANDSHAKE: i picked (method == %i)\n", shouldUseMethod);
         
         
@@ -595,42 +639,25 @@ int Authentication::handshake(int method_bitmask) {
 
 
 
-int Authentication::selectAuthenticationType( int methods ) {
+int Authentication::selectAuthenticationType( MyString method_order, int remote_methods ) {
 
-#if defined(X509_AUTHENTICATION)
-	if ( methods & CAUTH_X509 )  {
-		return CAUTH_X509;
-	}
-#endif
-	
-#if defined(WIN32)
-	if ( methods & CAUTH_NTSSPI ) {
-		return CAUTH_NTSSPI;
-	}
-#else
-	if ( methods & CAUTH_FILESYSTEM ) {
-		return CAUTH_FILESYSTEM;
-	}
-	if ( methods & CAUTH_FILESYSTEM_REMOTE ) {
-		return CAUTH_FILESYSTEM_REMOTE;
-	}
-#endif
-	
+	// the first one in the list that is also in the bitmask is the one
+	// that we pick.  so, iterate the list.
 
-#if defined(KERBEROS_AUTHENTICATION)
-	if ( methods & CAUTH_KERBEROS ) {
-		return CAUTH_KERBEROS;
-	}
-#endif
-	if ( methods & CAUTH_CLAIMTOBE ) {
-		return CAUTH_CLAIMTOBE;
+	StringList method_list( method_order.Value() );
+
+	char * tmp = NULL;
+	method_list.rewind();
+
+	while (	(tmp = method_list.next()) ) {
+		int that_bit = SecMan::getAuthBitmask( tmp );
+		if ( remote_methods & that_bit ) {
+			// we have a match.
+			return that_bit;
+		}
 	}
 
-	if ( methods & CAUTH_ANONYMOUS ) {
-		return CAUTH_ANONYMOUS;
-	}
-
-    return CAUTH_NONE;
+	return 0;
 }
 
 

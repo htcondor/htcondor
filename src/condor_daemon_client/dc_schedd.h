@@ -34,7 +34,8 @@ typedef enum {
 	JA_ERROR,
 	JA_HOLD_JOBS,
 	JA_RELEASE_JOBS,
-	JA_REMOVE_JOBS
+	JA_REMOVE_JOBS,
+	JA_REMOVE_X_JOBS
 } job_action_t; 
 
 
@@ -86,6 +87,7 @@ public:
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* holdJobs( const char* constraint, const char* reason,
+					   CondorError * errstack,
 					   action_result_type_t result_type = AR_TOTALS,
 					   bool notify_scheduler = true );
 
@@ -101,8 +103,27 @@ public:
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* removeJobs( const char* constraint, const char* reason,
+						 CondorError * errstack,
 						 action_result_type_t result_type = AR_TOTALS,
 						 bool notify_scheduler = true );
+
+		/** Force the local removal of jobs in the X state that match
+			the given constraint, regardless of whether they've been
+			successfully removed remotely.
+			Set ATTR_REMOVE_REASON to the given reason.
+			@param constraint What jobs to act on
+			@param reason Why the action is being done
+			@param result_type What kind of results you want
+			@param notify_scheduler Should the schedd notify the
+ 			controlling scheduler for this job?
+			@return ClassAd containing results of this action, or NULL
+			if we couldn't get any results.  The caller must delete
+			this ClassAd when they are done with the results.
+		*/
+	ClassAd* removeXJobs( const char* constraint, const char* reason,
+						  CondorError * errstack,
+						  action_result_type_t result_type = AR_TOTALS,
+						  bool notify_scheduler = true );
 
 		/** Release all jobs that match the given constraint.
 			Set ATTR_RELEASE_REASON to the given reason.
@@ -116,6 +137,7 @@ public:
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* releaseJobs( const char* constraint, const char* reason,
+						  CondorError * errstack,
 						  action_result_type_t result_type = AR_TOTALS,
 						  bool notify_scheduler = true );
 
@@ -132,6 +154,7 @@ public:
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* holdJobs( StringList* ids, const char* reason,
+					   CondorError * errstack,
 					   action_result_type_t result_type = AR_LONG,
 					   bool notify_scheduler = true );
 
@@ -149,8 +172,28 @@ public:
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* removeJobs( StringList* ids, const char* reason,
+						 CondorError * errstack,
 						 action_result_type_t result_type = AR_LONG,
 						 bool notify_scheduler = true );
+
+		/** Force the local removal of jobs in the X state specified
+			in the given StringList, regardless of whether they've
+			been successfully removed remotely.  The list should
+			contain a comma-seperated list of cluster.proc job ids.
+			Also, set ATTR_REMOVE_REASON to the given reason.
+			@param constraint What jobs to act on
+			@param reason Why the action is being done
+			@param result_type What kind of results you want
+			@param notify_scheduler Should the schedd notify the
+ 			controlling scheduler for this job?
+			@return ClassAd containing results of this action, or NULL
+			if we couldn't get any results.  The caller must delete
+			this ClassAd when they are done with the results.
+		*/
+	ClassAd* removeXJobs( StringList* ids, const char* reason,
+						  CondorError * errstack,
+						  action_result_type_t result_type = AR_LONG,
+						  bool notify_scheduler = true );
 
 		/** Release all jobs specified in the given StringList.  The
 			list should contain a comma-seperated list of cluster.proc
@@ -166,8 +209,17 @@ public:
 			this ClassAd when they are done with the results.
 		*/
 	ClassAd* releaseJobs( StringList* ids, const char* reason,
+						  CondorError * errstack,
 						  action_result_type_t result_type = AR_LONG,
 						  bool notify_scheduler = true );
+
+		/** Request the schedd to initiate a negoitation cycle.
+			The request is sent via a SafeSock (UDP datagram).
+			@return true on success, false on failure.
+		*/
+	bool reschedule();
+
+	bool spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError * errstack);
 
 private:
 		/** This method actually does all the brains for all versions
@@ -197,7 +249,7 @@ private:
 						const char* constraint, StringList* ids, 
 						const char* reason, const char* reason_attr,
 						action_result_type_t result_type,
-						bool notify_scheduler );
+						bool notify_scheduler, CondorError * errstack );
 
 		// I can't be copied (yet)
 	DCSchedd( const DCSchedd& );

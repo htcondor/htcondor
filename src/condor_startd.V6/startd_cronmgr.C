@@ -24,11 +24,21 @@
 #include "condor_common.h"
 #include "startd_cronmgr.h"
 #include "startd_cronjob.h"
+#include "condor_config.h"
+#include "startd.h"
 
 // Basic constructor
 StartdCronMgr::StartdCronMgr( void ) :
-		CondorCronMgr( "startd_" )
+		CondorCronMgr( "startd" )
 {
+	char *NewName = param( "STARTD_CRON_NAME" );
+	if ( NULL != NewName ) {
+		SetName( NewName, NewName );
+		free( NewName );
+	}
+
+	// Set my initial "shutdown" state
+	ShuttingDown = false;
 }
 
 // Basic destructor
@@ -37,11 +47,51 @@ StartdCronMgr::~StartdCronMgr( )
 	dprintf( D_FULLDEBUG, "StartdCronMgr: Bye\n" );
 }
 
+// Perform shutdown
+int
+StartdCronMgr::Shutdown( bool force )
+{
+	dprintf( D_FULLDEBUG, "StartdCronMgr: Shutting down\n" );
+	ShuttingDown = false;
+	return KillAll( force );
+}
+
+// Check shutdown
+bool
+StartdCronMgr::ShutdownOk( void )
+{
+	bool	idle = IsAllIdle( );
+
+	// dprintf( D_ALWAYS, "ShutdownOk: %s\n", idle ? "Idle" : "Busy" );
+	return idle;
+}
+
 // Create a new job
 CondorCronJob *
-StartdCronMgr::NewJob( const char *name )
+StartdCronMgr::NewJob( const char *jobname )
 {
-	dprintf( D_FULLDEBUG, "*** Creating a Startd job '%s'***\n", name );
-	StartdCronJob *job = new StartdCronJob( name );
+	dprintf( D_FULLDEBUG, "*** Creating a Startd job '%s'***\n", jobname );
+	StartdCronJob *job = new StartdCronJob( GetName(), jobname );
+
+	// Register our death handler...
+	CronEventHandler e;
+	e = (CronEventHandler) &StartdCronMgr::JobEvent;
+	job->SetEventHandler( e, this );
+
 	return (CondorCronJob *) job;
+}
+
+// Notified when a job dies
+void
+StartdCronMgr::JobEvent( CondorCronJob *Job, CondorCronEvent Event )
+{
+	(void) Job;
+
+	if ( CONDOR_CRON_JOB_DIED == Event ) {
+		if ( ShuttingDown ) {
+			if ( IsAllIdle( ) ) {
+				startd_check_free( );
+			}
+		}
+	}
 }

@@ -29,14 +29,17 @@
 #include "daemon.h"
 #include "condor_string.h"
 #include "condor_attributes.h"
+#include "condor_parameters.h"
 #include "condor_adtypes.h"
 #include "condor_query.h"
-#include "get_daemon_addr.h"
+#include "get_daemon_name.h"
 #include "get_full_hostname.h"
 #include "my_hostname.h"
 #include "internet.h"
 #include "HashTable.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+
+extern char *mySubSystem;
 
 
 void Daemon::common_init() {
@@ -44,7 +47,9 @@ void Daemon::common_init() {
 	_port = -1;
 	_is_local = false;
 	_tried_locate = false;
-
+	_tried_init_hostname = false;
+	_tried_init_version = false;
+	_is_configured = true;
 	_addr = NULL;
 	_name = NULL;
 	_pool = NULL;
@@ -52,56 +57,13 @@ void Daemon::common_init() {
 	_platform = NULL;
 	_error = NULL;
 	_id_str = NULL;
+	_subsys = NULL;
 	_hostname = NULL;
 	_full_hostname = NULL;
-}
-
-Daemon::Daemon( const char* addr_string, int port ) 
-{
-	common_init();
-	
-	// override the default initializion
-	_type = DT_ANY;
-	_tried_locate = true;
-
-	if( addr_string ) {
-		if ( is_valid_sinful(addr_string) ) {
-			_addr = strnewp( addr_string );
-			_port = string_to_port( addr_string );
-		} else if ( is_ipaddr(addr_string, NULL) ) {
-			// allocate the length of the IP addr plus
-			// 16 for the '<', ':', '>', and port.
-			_addr = new char[16 + strlen(addr_string)];
-			_port = port;
-			sprintf (_addr, "<%s:%d>", addr_string, port);
-		} else {
-			// well, if it isn't a sinful or an IP address,
-			// we'll treat it as a hostname.
-
-			struct in_addr sin_addr;
-
-			// resolv the hostname to an IP
-			char* tmp = get_full_hostname( addr_string, &sin_addr );
-			if( ! tmp ) {
-					// With a hostname, this is a fatal Daemon error.
-				char buf[128];
-				sprintf( buf, "unknown host %s", addr_string );
-				newError( buf );
-				_addr = NULL;
-				_port = -1;
-				return;
-			}
-			New_full_hostname( tmp );
-			// 32 bytes is more than enough for <234.678.012.456:890123456>
-			_addr = new char[32];
-			_port = port;
-			sprintf( _addr, "<%s:%d>", inet_ntoa(sin_addr), port );
-		}
-	} else {
-		_addr = NULL;
-		_port = -1;
-	}
-
+	_cmd_str = NULL;
+	char buf[200];
+	sprintf(buf,"%s_TIMEOUT_MULTIPLIER",mySubSystem);
+	Sock::set_timeout_multiplier( param_integer(buf,0) );
 }
 
 
@@ -123,22 +85,31 @@ Daemon::Daemon( daemon_t type, const char* name, const char* pool )
 			_name = strnewp( name );
 		}
 	} 
-
+	dprintf( D_HOSTNAME, "New Daemon obj (%s) name: \"%s\", pool: "
+			 "\"%s\", addr: \"%s\"\n", daemonString(_type), 
+			 _name ? _name : "NULL", _pool ? _pool : "NULL",
+			 _addr ? _addr : "NULL" );
 }
 
 
 Daemon::~Daemon() 
 {
+	if( DebugFlags & D_HOSTNAME ) {
+		dprintf( D_HOSTNAME, "Destroying Daemon object:\n" );
+		display( D_HOSTNAME );
+		dprintf( D_HOSTNAME, " --- End of Daemon object info ---\n" );
+	}
 	if( _name ) delete [] _name;
 	if( _pool ) delete [] _pool;
 	if( _addr ) delete [] _addr;
 	if( _error ) delete [] _error;
 	if( _id_str ) delete [] _id_str;
+	if( _subsys ) delete [] _subsys;
 	if( _hostname ) delete [] _hostname;
 	if( _full_hostname ) delete [] _full_hostname;
 	if( _version ) delete [] _version;
 	if( _platform ) { delete [] _platform; }
-
+	if( _cmd_str ) { delete [] _cmd_str; }
 }
 
 
@@ -159,8 +130,8 @@ Daemon::name( void )
 char*
 Daemon::hostname( void )
 {
-	if( ! _hostname ) {
-		locate();
+	if( ! _hostname && ! _tried_init_hostname ) {
+		initHostname();
 	}
 	return _hostname;
 }
@@ -169,8 +140,8 @@ Daemon::hostname( void )
 char*
 Daemon::version( void )
 {
-	if( ! _version ) {
-		locate();
+	if( ! _version && ! _tried_init_version ) {
+		initVersion();
 	}
 	return _version;
 }
@@ -179,8 +150,8 @@ Daemon::version( void )
 char*
 Daemon::platform( void )
 {
-	if( ! _platform ) {
-		locate();
+	if( ! _platform && ! _tried_init_version ) {
+		initVersion();
 	}
 	return _platform;
 }
@@ -189,8 +160,8 @@ Daemon::platform( void )
 char*
 Daemon::fullHostname( void )
 {
-	if( ! _full_hostname ) {
-		locate();
+	if( ! _full_hostname && ! _tried_init_hostname ) {
+		initHostname();
 	}
 	return _full_hostname;
 }
@@ -296,7 +267,7 @@ Daemon::display( FILE* fp )
 //////////////////////////////////////////////////////////////////////
 
 ReliSock*
-Daemon::reliSock( int sec )
+Daemon::reliSock( int sec, CondorError* errstack )
 {
 	if( ! _addr ) {
 		if( ! locate() ) {
@@ -311,6 +282,10 @@ Daemon::reliSock( int sec )
 	if( reli->connect(_addr, 0) ) {
 		return reli;
 	} else {
+		if (errstack) {
+			errstack->pushf("CEDAR", CEDAR_ERR_CONNECT_FAILED,
+				"Failed to connect to %s", _addr);
+		}
 		delete reli;
 		return NULL;
 	}
@@ -318,7 +293,7 @@ Daemon::reliSock( int sec )
 
 
 SafeSock*
-Daemon::safeSock( int sec )
+Daemon::safeSock( int sec, CondorError* errstack )
 {
 	if( ! _addr ) {
 		if( ! locate() ) {
@@ -333,6 +308,10 @@ Daemon::safeSock( int sec )
 	if( safe->connect(_addr, 0) ) {
 		return safe;
 	} else {
+		if (errstack) {
+			errstack->pushf("CEDAR", CEDAR_ERR_CONNECT_FAILED,
+				"Failed to connect to %s", _addr);
+		}
 		delete safe;
 		return NULL;
 	}
@@ -340,15 +319,15 @@ Daemon::safeSock( int sec )
 
 
 Sock*
-Daemon::startCommand( int cmd, Stream::stream_type st, int sec )
+Daemon::startCommand( int cmd, Stream::stream_type st, int sec, CondorError* errstack )
 {
 	Sock* sock;
 	switch( st ) {
 	case Stream::reli_sock:
-		sock = reliSock();
+		sock = reliSock(sec, errstack);
 		break;
 	case Stream::safe_sock:
-		sock = safeSock();
+		sock = safeSock(sec, errstack);
 		break;
 	default:
 		EXCEPT( "Unknown stream_type (%d) in Daemon::startCommand",
@@ -360,7 +339,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st, int sec )
 	}
 
 
-	if (startCommand ( cmd, sock, sec )) {
+	if (startCommand ( cmd, sock, sec, errstack )) {
 		return sock;
 	} else {
 		delete sock;
@@ -371,7 +350,7 @@ Daemon::startCommand( int cmd, Stream::stream_type st, int sec )
 
 
 bool
-Daemon::startCommand( int cmd, Sock* sock, int sec )
+Daemon::startCommand( int cmd, Sock* sock, int sec, CondorError *errstack )
 {
 
 	// basic sanity check
@@ -402,16 +381,35 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 		}
 	}
 
-	// handoff to the security manager
-	return _sec_man.startCommand(cmd, sock, other_side_can_negotiate);
+	// if they passed in NULL (the default for backwards compatibility),
+	// we'll collect the errors and dump them in the log if there's a
+	// failure.  to collect the errors, we need our own errstack
+	CondorError stack_errstack;
+
+	// new select which one we will use.  default to ours but pick
+	// the one passed in if it's not NULL.
+	CondorError *errstack_select = &stack_errstack;
+	if ( errstack ) {
+		errstack_select = errstack;
+	}
+
+	// call startCommand with the selected error stack
+	bool result = _sec_man.startCommand(cmd, sock, other_side_can_negotiate, errstack_select);
+
+	// dump the errors in the log if not being collected
+	if (!result && !errstack) {
+		dprintf( D_ALWAYS, "ERROR:\n%s", errstack_select->get_full_text());
+	}
+				
+	return result;
 
 }
 
 bool
-Daemon::sendCommand( int cmd, Sock* sock, int sec )
+Daemon::sendCommand( int cmd, Sock* sock, int sec, CondorError* errstack )
 {
 	
-	if( ! startCommand( cmd, sock, sec )) {
+	if( ! startCommand( cmd, sock, sec, errstack )) {
 		return false;
 	}
 	if( ! sock->eom() ) {
@@ -426,9 +424,9 @@ Daemon::sendCommand( int cmd, Sock* sock, int sec )
 
 
 bool
-Daemon::sendCommand( int cmd, Stream::stream_type st, int sec )
+Daemon::sendCommand( int cmd, Stream::stream_type st, int sec, CondorError* errstack )
 {
-	Sock* tmp = startCommand( cmd, st, sec );
+	Sock* tmp = startCommand( cmd, st, sec, errstack );
 	if( ! tmp ) {
 		return false;
 	}
@@ -445,6 +443,128 @@ Daemon::sendCommand( int cmd, Stream::stream_type st, int sec )
 }
 
 
+bool
+Daemon::sendCACmd( ClassAd* req, ClassAd* reply, bool force_auth,
+				   int timeout )
+{
+	if( !req ) {
+		newError( "sendCACmd() called with no request ClassAd" ); 
+		return false;
+	}
+	if( !reply ) {
+		newError( "sendCACmd() called with no reply ClassAd" );
+		return false;
+	}
+	if( !checkAddr() ) {
+			// this already deals w/ _error for us...
+		return false;
+	}
+	
+	req->SetMyTypeName( COMMAND_ADTYPE );
+	req->SetTargetTypeName( REPLY_ADTYPE );
+
+	ReliSock cmd_sock;
+
+	if( timeout >= 0 ) {
+		cmd_sock.timeout( timeout );
+	}
+
+	if( ! cmd_sock.connect(_addr) ) {
+		MyString err_msg = "Failed to connect to ";
+		err_msg += daemonString(_type);
+		err_msg += " ";
+		err_msg += _addr;
+		newError( err_msg.Value() );
+		return false;
+	}
+
+	CondorError errstack;
+	if( ! startCommand(CA_CMD, &cmd_sock, 20, &errstack) ) {
+		MyString err_msg = "Failed to send command (CA_CMD)";
+		err_msg += "\n";
+		err_msg += errstack.get_full_text();
+		newError( err_msg.Value() );
+		return false;
+	}
+	if( force_auth ) {
+		CondorError e;
+		if( ! forceAuthentication(&cmd_sock, &e) ) {
+			newError( e.get_full_text() );
+			return false;
+		}
+	}
+
+		// due to an EVIL bug in authenticate(), our timeout just got
+		// set to 20.  so, if we were given a timeout, we have to set
+		// it again... :(
+	if( timeout >= 0 ) {
+		cmd_sock.timeout( timeout );
+	}
+
+	if( ! req->put(cmd_sock) ) { 
+		newError( "Failed to send request ClassAd" );
+		return false;
+	}
+	if( ! cmd_sock.end_of_message() ) {
+		newError( "Failed to send end-of-message" );
+		return false;
+	}
+
+		// Now, try to get the reply
+	cmd_sock.decode();
+	if( ! reply->initFromStream(cmd_sock) ) {
+		newError( "Failed to read reply ClassAd" );
+		return false;
+	}
+	if( !cmd_sock.end_of_message() ) {
+		newError( "Failed to read end-of-message" );
+		return false;
+	}
+
+		// Finally, interpret the results
+	char* result_str = NULL;
+	if( ! reply->LookupString(ATTR_RESULT, &result_str) ) {
+		MyString err_msg = "Reply ClassAd does not have ";
+		err_msg += ATTR_RESULT;
+		err_msg += " attribute";
+		newError( err_msg.Value() );
+		return false;
+	}
+	CAResult result = getCAResultNum( result_str );
+	if( result == CA_SUCCESS ) { 
+			// we recognized it and it's good, just return.
+		free( result_str );
+		return true;		
+	}
+
+		// Either we don't recognize the result, or it's some known
+		// failure.  Either way, look for the error string if there is
+		// one, and set it. 
+	char* err = NULL;
+	if( ! reply->LookupString(ATTR_ERROR_STRING, &err) ) {
+		if( ! result ) {
+				// we didn't recognize the result, so don't assume
+				// it's a failure, just let the caller interpret the
+				// reply ClassAd if they know how...
+			free( result_str );
+			return true;
+		}
+			// otherwise, it's a known failure, but there's no error
+			// string to help us...
+		MyString err_msg = "Reply ClassAd returned '";
+		err_msg += result_str;
+		err_msg += "' but does not have the ";
+		err_msg += ATTR_ERROR_STRING;
+		err_msg += " attribute";
+		newError( err_msg.Value() );
+		free( result_str );
+		return false;
+	}
+	newError( err );
+	free( err );
+	free( result_str );
+	return false;
+}
 
 
 //////////////////////////////////////////////////////////////////////
@@ -454,7 +574,6 @@ Daemon::sendCommand( int cmd, Stream::stream_type st, int sec )
 bool
 Daemon::locate( void )
 {
-	char buf[256], *tmp;
 	bool rval;
 
 		// Make sure we only call locate() once.
@@ -492,19 +611,19 @@ Daemon::locate( void )
 		rval = getDaemonInfo( "MASTER", MASTER_AD );
 		break;
 	case DT_COLLECTOR:
-		rval = getCmInfo( "COLLECTOR", COLLECTOR_PORT );
+		rval = getCmInfo( "COLLECTOR" );
 		break;
 	case DT_NEGOTIATOR:
-		rval = getCmInfo( "NEGOTIATOR", NEGOTIATOR_PORT );
+		rval = getCmInfo( "NEGOTIATOR" );
 		break;
 	case DT_VIEW_COLLECTOR:
-		if( (rval = getCmInfo("CONDOR_VIEW", COLLECTOR_PORT)) ) {
+		if( (rval = getCmInfo("CONDOR_VIEW")) ) {
 				// If we found it, we're done.
 			break;
 		} 
 			// If there's nothing CONDOR_VIEW-specific, try just using
 			// "COLLECTOR".
-		rval = getCmInfo( "COLLECTOR", COLLECTOR_PORT ); 
+		rval = getCmInfo( "COLLECTOR" ); 
 		break;
 	default:
 		EXCEPT( "Unknown daemon type (%d) in Daemon::init", (int)_type );
@@ -517,16 +636,16 @@ Daemon::locate( void )
 
 		// Now, deal with everything that's common between both.
 
-		// get*Info() will usually fill in _full_hostname, but not
-		// _hostname.  In all cases, if we have _full_hostname we just
-		// want to trim off the domain the same way for _hostname. 
-	if( _full_hostname ) {
-		strcpy( buf, _full_hostname );
-		tmp = strchr( buf, '.' );
-		if( tmp ) {
-			*tmp = '\0';
-		}
-		New_hostname( strnewp(buf) );
+		// The helpers all try to set _full_hostname, but not
+		// _hostname.  If we've got the full host, we always want to
+		// trim off the domain for _hostname.
+	initHostnameFromFull();
+
+	if( _port < 0 && _addr ) {
+			// If we have the sinful string and no port, fill it in
+		_port = string_to_port( _addr );
+		dprintf( D_HOSTNAME, "Using port %d based on address \"%s\"\n",
+				 _port, _addr );
 	}
 
 		// Now that we're done with the get*Info() code, if we're a
@@ -546,73 +665,80 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
     int                 BUF_LEN = 512; // Change this if you also change buf
 	char				*addr_file, *tmp, *my_name;
 	FILE				*addr_fp;
-	struct				sockaddr_in sockaddr;
-	struct				hostent* hostp;
+
+	if( _subsys ) {
+		delete [] _subsys;
+	}
+	_subsys = strnewp( subsys );
+
+	if( _addr && is_valid_sinful(_addr) ) {
+		dprintf( D_HOSTNAME, "Already have address, no info to locate\n" );
+		_is_local = false;
+		return true;
+	}
+
+		// If we were not passed a name or an addr, check the
+		// config file for a subsystem_HOST, e.g. SCHEDD_HOST=XXXX
+	if( ! _name ) {
+		sprintf(buf,"%s_HOST",subsys);
+		char *specified_host = param(buf);
+		if ( specified_host ) {
+				// Found an entry.  Use this name.
+			_name = strnewp( specified_host );
+			dprintf( D_HOSTNAME, 
+					 "No name given, but %s defined to \"%s\"\n", buf,
+					 specified_host );
+			free(specified_host);
+		}
+	}
+
 
 		// Figure out if we want to find a local daemon or not, and
 		// fill in the various hostname fields.
 	if( _name ) {
 			// We were passed a name, so try to look it up in DNS to
 			// get the full hostname.
-		
-			// First, make sure we're only trying to resolve the
-			// hostname part of the name...
-		strncpy( tmpname, _name, 512 );
-		tmp = strchr( tmpname, '@' );
-		if( tmp ) {
-				// There's a '@'.
-			*tmp = '\0';
-				// Now, tmpname holds whatever was before the @ 
-			tmp++;
-			if( *tmp ) {
-					// There was something after the @, try to resolve it
-					// as a full hostname:
-				if( ! (New_full_hostname(get_full_hostname(tmp))) ) { 
-						// Given a hostname, this is a fatal error.
-					sprintf( buf, "unknown host %s", tmp );  
-					newError( buf );
-					return false;
-				} 
-			} else {
-					// There was nothing after the @, use localhost:
-				New_full_hostname( strnewp(my_full_hostname()) );
-			}
-			sprintf( buf, "%s@%s", tmpname, _full_hostname );
-			New_name( strnewp(buf) );
-		} else {
-				// There's no '@', just try to resolve the hostname.
-			if( (New_full_hostname(get_full_hostname(tmpname))) ) {
-				New_name( strnewp(_full_hostname) );
-			} else {
-					// Given a hostname, this is a fatal error.
-				sprintf( buf, "unknown host %s", tmpname );  
-				newError( buf );
-				return false;
-			}           
+
+		tmp = get_daemon_name( _name );
+		if( ! tmp ) {
+				// we failed to contruct the daemon name.  the only
+				// possible reason for this is being given faulty
+				// hostname.  This is a fatal error.
+			MyString err_msg = "unknown host ";
+			err_msg += get_host_part( _name );
+			newError( err_msg.Value() );
+			return false;
 		}
+			// if it worked, we've not got the proper values for the
+			// name (and the full hostname, since that's just the
+			// "host part" of the "name"...
+		New_name( tmp );
+		dprintf( D_HOSTNAME, "Using \"%s\" for name in Daemon object\n",
+				 tmp );
+			// now, grab the fullhost from the name we just made...
+		tmp = strnewp( get_host_part(_name) ); 
+		dprintf( D_HOSTNAME,
+				 "Using \"%s\" for full hostname in Daemon object\n", tmp );
+		New_full_hostname( tmp );
+
 			// Now that we got this far and have the correct name, see
 			// if that matches the name for the local daemon.  
 			// If we were given a pool, never assume we're local --
 			// always try to query that pool...
-		my_name = localName();
-		if( !_pool && !strcmp(_name, my_name) ) {
-			_is_local = true;
-		}
-		delete [] my_name;
-	} else if( _addr ) {
-			// We got no name, but we have an address.  Try to
-			// do an inverse lookup and fill in some hostname info
-			// from the IP address we already have.
-		string_to_sin( _addr, &sockaddr );
-		hostp = gethostbyaddr( (char*)&sockaddr.sin_addr, 
-							   sizeof(struct in_addr), AF_INET ); 
-		if( ! hostp ) {
-			New_full_hostname( NULL );
-
-			sprintf( buf, "cant find host info for %s", _addr );
-			newError( buf );
+		if( _pool ) {
+			dprintf( D_HOSTNAME, "Pool was specified, "
+					 "forcing collector query\n" );
 		} else {
-			New_full_hostname( strnewp(hostp->h_name) );
+			my_name = localName();
+			dprintf( D_HOSTNAME, "Local daemon name would be \"%s\"\n", 
+					 my_name );
+			if( !strcmp(_name, my_name) ) {
+				dprintf( D_HOSTNAME, "Name \"%s\" matches local name and "
+						 "no pool given, treating as a local daemon\n",
+						 _name );
+				_is_local = true;
+			}
+			delete [] my_name;
 		}
 	} else {
 			// We were passed neither a name nor an address, so use
@@ -620,6 +746,9 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 		_is_local = true;
 		New_name( localName() );
 		New_full_hostname( strnewp(my_full_hostname()) );
+		dprintf( D_HOSTNAME, "Neither name nor addr specified, using local "
+				 "values - name: \"%s\", full host: \"%s\"\n", 
+				 _name, _full_hostname );
 	}
 
 		// Now that we have the real, full names, actually find the
@@ -629,12 +758,16 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 		sprintf( buf, "%s_ADDRESS_FILE", subsys );
 		addr_file = param( buf );
 		if( addr_file ) {
+			dprintf( D_HOSTNAME, "Finding address for local daemon, "
+					 "%s is \"%s\"\n", buf, addr_file );
 			if( (addr_fp = fopen(addr_file, "r")) ) {
 					// Read out the sinful string.
 				fgets( buf, 100, addr_fp );
 					// chop off the newline
 				chomp( buf );
 				if( is_valid_sinful(buf) ) {
+					dprintf( D_HOSTNAME, "Found valid address \"%s\" in "
+							 "local address file\n", buf );
 					New_addr( strnewp(buf) );
 				}
 					// Let's see if this is new enough to also have a
@@ -643,34 +776,21 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 						// chop off the newline
 					chomp( buf );
 					New_version( strnewp(buf) );
+					dprintf( D_HOSTNAME, "Found version string \"%s\" in "
+							 "local address file\n", buf );
 					if( fgets(buf, 200, addr_fp) ) {
 							// chop off the newline
 						chomp( buf );
 						New_platform( strnewp(buf) );
+						dprintf( D_HOSTNAME, "Found platform string \"%s\" "
+								 "in local address file\n", buf );
 					}
 				}
 				fclose( addr_fp );
 			}
 			free( addr_file );
 		} 
-
-		if( ! _version ) { 
-				// If we didn't find the version string in the address
-				// file, try to ident the daemon's binary directly.
-			sprintf( buf, "%s", subsys );
-			char* exe_file = param( buf );
-			if( exe_file ) {
-				char ver[128];
-				CondorVersionInfo vi;
-				vi.get_version_from_file(exe_file, ver, 128);
-				New_version( strnewp(ver) );
-			}
-			free( exe_file );
-		}
-
-
 	}
-
 
 	if( ! _addr ) {
 			// If we still don't have it (or it wasn't local), query
@@ -695,7 +815,11 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 			sprintf(buf, "%s == \"%s\"", ATTR_NAME, _name ); 
 		}
 		query.addANDConstraint(buf);
-		query.fetchAds(ads, _pool);
+		CondorError errstack;
+		if (query.fetchAds(ads, _pool, &errstack) != Q_OK) {
+			newError( errstack.get_full_text() );
+			return false;
+		};
 		ads.Open();
 		scan = ads.Next();
 		if(!scan) {
@@ -718,6 +842,8 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 			return false;
 		}
 		New_addr( strnewp(buf) );
+		dprintf( D_HOSTNAME, "Found %s in ClassAd from collector, "
+				 "using address \"%s\"\n", tmpname, buf );
 
 		sprintf( tmpname, ATTR_VERSION );
 		if(scan->EvaluateAttrString( tmpname, buf, BUF_LEN ) == FALSE) {
@@ -729,6 +855,8 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 			return false;
 		}
 		New_version( strnewp(buf) );
+		dprintf( D_HOSTNAME, "Found %s in ClassAd from collector, "
+				 "using version \"%s\"\n", tmpname, buf );
 
 		sprintf( tmpname, ATTR_PLATFORM );
 		if(scan->EvaluateAttrString( tmpname, buf, BUF_LEN ) == FALSE) {
@@ -740,27 +868,36 @@ Daemon::getDaemonInfo( const char* subsys, AdTypes adtype )
 			return false;
 		}
 		New_platform( strnewp(buf) );
+		dprintf( D_HOSTNAME, "Found %s in ClassAd from collector, "
+				 "using platform \"%s\"\n", tmpname, buf );
 	}
 
 		// Now that we have the sinful string, fill in the port. 
 	_port = string_to_port( _addr );
+	dprintf( D_HOSTNAME, "Using port %d based on address \"%s\"\n",
+			 _port, _addr );
 	return true;
 }
 
 
 bool
-Daemon::getCmInfo( const char* subsys, int port )
+Daemon::getCmInfo( const char* subsys )
 {
 	char buf[128];
 	char* host = NULL;
-	char* local_host = NULL;
-	char* remote_host = NULL;
 	char* tmp;
 	struct in_addr sin_addr;
-	struct hostent* hostp;
 
-		// We know this without any work.
-	_port = port;
+	if( _subsys ) {
+		delete [] _subsys;
+	}
+	_subsys = strnewp( subsys );
+
+	if( _addr && is_valid_sinful(_addr) ) {
+		dprintf( D_HOSTNAME, "Already have address, no info to locate\n" );
+		_is_local = false;
+		return true;
+	}
 
 		// For CM daemons, normally, we're going to be local (we're
 		// just not sure which config parameter is going to find it
@@ -786,90 +923,266 @@ Daemon::getCmInfo( const char* subsys, int port )
 		// Figure out what name we're really going to use.
 	if( _name && *_name ) {
 			// If we were given a name, use that.
-		remote_host = strdup( _name );
-		host = remote_host;
+		host = strdup( _name );
 		_is_local = false;
 	}
 
-		// Try the config file for a subsys-specific IP addr 
-	sprintf( buf, "%s_IP_ADDR", subsys );
-	local_host = param( buf );
+	if( ! host ) {
+			// Try the config file for a subsys-specific IP addr 
+		sprintf( buf, "%s_IP_ADDR", subsys );
+		host = param( buf );
+		if( host ) {
+			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf, host );
+		}
+	}
 
-	if( ! local_host ) {
+	if( ! host ) {
 			// Try the config file for a subsys-specific hostname 
 		sprintf( buf, "%s_HOST", subsys );
-		local_host = param( buf );
+		host = param( buf );
+		if( host ) {
+			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf, 
+					 host ); 
+		}
 	}
 
-	if( ! local_host ) {
+	if( ! host ) {
 			// Try the generic CM_IP_ADDR setting (subsys-specific
 			// settings should take precedence over this). 
-		local_host = param( "CM_IP_ADDR" );
+		host = param( "CM_IP_ADDR" );
+		if( host ) {
+			dprintf( D_HOSTNAME, "%s is set to \"%s\"\n", buf, 
+					 host ); 
+		}
 	}
 
-	if( local_host && ! host ) {
-		host = local_host;
-	}
-	if( local_host && remote_host && !strcmp(local_host, remote_host) ) { 
-			// We've got the same thing, we're really local, even
-			// though we were given a "remote" host.
-		_is_local = true;
-		host = local_host;
-	}
 	if( ! host ) {
 		sprintf( buf, "%s address or hostname not specified in config file",
 				 subsys ); 
 		newError( buf );
-		if( local_host ) free( local_host );
-		if( remote_host ) free( remote_host );
+		_is_configured = false;
+		if( host ) free( host );
 		return false;
 	} 
 
+		// Now that we finally know what we're going to use, we should
+		// store that (as is) in _name, so that we can get to it later
+		// if we need it.
+	if( ! _name ) {
+		New_name( strnewp(host) );
+	}
+	dprintf( D_HOSTNAME, "Using name \"%s\" to find daemon\n", host ); 
+
+		// See if it's already got a port specified in it, or if we
+		// should use the default port for this kind of daemon.
+	_port = getPortFromAddr( host );
+	if( ! _port ) {
+		_port = getDefaultPort();
+		dprintf( D_HOSTNAME, "Port not specified, using default (%d)\n",
+				 _port ); 
+	} else {
+		dprintf( D_HOSTNAME, "Port %d specified in name\n", _port );
+	}
+
+		// Now that we've got the port, grab the hostname for the rest
+		// of the logic.  first, stash the copy of the hostname with
+		// our handy helper method, then free() the full version
+		// (which we've already got stashed in _name if we need it),
+		// and finally reset host to point to the host for the rest of
+		// this function.
+	tmp = getHostFromAddr( host );
+	free( host );
+	host = tmp;
+	tmp = NULL;
+
 	if( is_ipaddr(host, &sin_addr) ) {
 		sprintf( buf, "<%s:%d>", host, _port );
-		if( local_host ) free( local_host );
-		if( remote_host ) free( remote_host );
 		New_addr( strnewp(buf) );
-
-			// See if we can get the canonical name
-		hostp = gethostbyaddr( (char*)&sin_addr, 
-							   sizeof(struct in_addr), AF_INET ); 
-		if( ! hostp ) {
-			New_full_hostname( NULL );
-			sprintf( buf, "can't find host info for %s", _addr );
-			newError( buf );
-		} else {
-			New_full_hostname( strnewp(hostp->h_name) );
-		}
+		dprintf( D_HOSTNAME, "Host info \"%s\" is an IP address\n", host );
 	} else {
 			// We were given a hostname, not an address.
+		dprintf( D_HOSTNAME, "Host info \"%s\" is a hostname, "
+				 "finding IP address\n", host );
 		tmp = get_full_hostname( host, &sin_addr );
 		if( ! tmp ) {
 				// With a hostname, this is a fatal Daemon error.
 			sprintf( buf, "unknown host %s", host );
 			newError( buf );
-			if( local_host ) free( local_host );
-			if( remote_host ) free( remote_host );
+			free( host );
 			return false;
 		}
-		if( local_host ) free( local_host );
-		if( remote_host ) free( remote_host );
 		sprintf( buf, "<%s:%d>", inet_ntoa(sin_addr), _port );
+		dprintf( D_HOSTNAME, "Found IP address and port %s\n", buf );
 		New_addr( strnewp(buf) );
 		New_full_hostname( tmp );
 	}
 
-		// For CM daemons, we always want the name to be whatever the
-		// full_hostname is.
-	New_name( strnewp(_full_hostname) );
-
-		// If the pool was set, we want to use the full-hostname for
-		// that, too.
+		// If the pool was set, we want to use _name for that, too. 
 	if( _pool ) {
-		New_pool( strnewp(_full_hostname) );
+		New_pool( strnewp(_name) );
 	}
 
+	free( host );
 	return true;
+}
+
+
+
+bool
+Daemon::initHostname( void )
+{
+		// make sure we only try this once
+	if( _tried_init_hostname ) {
+		return true;
+	}
+	_tried_init_hostname = true;
+
+		// if we already have the info, we're done
+	if( _hostname && _full_hostname ) {
+		return true;
+	}
+
+		// if we haven't tried to locate yet, we should do that now,
+		// since that's usually the best way to get the hostnames, and
+		// we get everything else we need, while we're at it...
+	if( ! _tried_locate ) {
+		locate();
+	}
+
+	if( ! _addr ) {
+			// this is bad...
+		return false;
+	}
+
+			// We have no name, but we have an address.  Try to do an
+			// inverse lookup and fill in the hostname info from the
+			// IP address we already have.
+
+	dprintf( D_HOSTNAME, "Address \"%s\" specified but no name, "
+			 "looking up host info\n", _addr );
+
+	struct sockaddr_in sockaddr;
+	struct hostent* hostp;
+	string_to_sin( _addr, &sockaddr );
+	hostp = gethostbyaddr( (char*)&sockaddr.sin_addr, 
+						   sizeof(struct in_addr), AF_INET ); 
+	if( ! hostp ) {
+		New_hostname( NULL );
+		New_full_hostname( NULL );
+		dprintf( D_HOSTNAME, "gethostbyaddr() failed: %s (errno: %d)\n",
+				 strerror(errno), errno );
+		MyString err_msg = "can't find host info for ";
+		err_msg += _addr;
+		newError( err_msg.Value() );
+		return false;
+	}
+
+		// This will print all the D_HOSTNAME messages we need, and it
+		// returns a newly allocated string, so we won't need to
+		// strnewp() it again
+	char* tmp = get_full_hostname_from_hostent( hostp, NULL );
+	New_full_hostname( tmp );
+	initHostnameFromFull();
+	return true;
+}
+
+
+bool
+Daemon::initHostnameFromFull( void )
+{
+	char* copy;
+	char* tmp;
+
+		// many of the code paths that find the hostname info just
+		// fill in _full_hostname, but not _hostname.  In all cases,
+		// if we have _full_hostname we just want to trim off the
+		// domain the same way for _hostname.
+	if( _full_hostname ) {
+		copy = strnewp( _full_hostname );
+		tmp = strchr( copy, '.' );
+		if( tmp ) {
+			*tmp = '\0';
+		}
+		New_hostname( strnewp(copy) );
+		delete [] copy;
+		return true; 
+	}
+	return false;
+}
+
+
+bool
+Daemon::initVersion( void )
+{
+		// make sure we only try this once
+	if( _tried_init_version ) {
+		return true;
+	}
+	_tried_init_version = true;
+
+		// if we already have the info, we're done
+	if( _version && _platform ) {
+		return true;
+	}
+
+		// if we haven't done the full locate, we should do that now,
+		// since that's the most likely way to find the version and
+		// platform strings, and we get lots of other good info while
+		// we're at it...
+	if( ! _tried_locate ) {
+		locate();
+	}
+
+		// If we didn't find the version string via locate(), and
+		// we're a local daemon, try to ident the daemon's binary
+		// directly. 
+	if( ! _version && _is_local ) {
+		dprintf( D_HOSTNAME, "No version string in local address file, "
+				 "trying to find it in the daemon's binary\n" );
+		char* exe_file = param( _subsys );
+		if( exe_file ) {
+			char ver[128];
+			CondorVersionInfo vi;
+			vi.get_version_from_file(exe_file, ver, 128);
+			New_version( strnewp(ver) );
+			dprintf( D_HOSTNAME, "Found version string \"%s\" "
+					 "in local binary (%s)\n", ver, exe_file );
+			free( exe_file );
+			return true;
+		} else {
+			dprintf( D_HOSTNAME, "%s not defined in config file, "
+					 "can't locate daemon binary for version info\n", 
+					 _subsys );
+			return false;
+		}
+	}
+
+		// if we're not local, and locate() didn't find the version
+		// string, we're screwed.
+	dprintf( D_HOSTNAME, "Daemon isn't local and couldn't find "
+			 "version string with locate(), giving up\n" );
+	return false;
+}
+
+
+int
+Daemon::getDefaultPort( void )
+{
+	switch( _type ) {
+	case DT_COLLECTOR:
+		return COLLECTOR_PORT;
+		break;
+	case DT_NEGOTIATOR:
+		return NEGOTIATOR_PORT;
+		break;
+	case DT_VIEW_COLLECTOR:
+		return CONDOR_VIEW_PORT;
+		break;
+	default:
+		return 0;
+		break;
+	}
+	return 0;
 }
 
 
@@ -878,7 +1191,7 @@ Daemon::getCmInfo( const char* subsys, int port )
 //////////////////////////////////////////////////////////////////////
 
 void
-Daemon::newError( char* str )
+Daemon::newError( const char* str )
 {
 	if( _error ) {
 		delete [] _error;
@@ -975,4 +1288,56 @@ Daemon::New_pool( char* str )
 	} 
 	_pool = str;
 	return str;
+}
+
+
+bool
+Daemon::checkAddr( void )
+{
+	if( ! _addr ) {
+		locate();
+	}
+	if( ! _addr ) {
+			// _error will already be set appropriately
+		return false;
+	}
+	return true;
+}
+
+
+bool
+Daemon::forceAuthentication( ReliSock* rsock, CondorError* errstack )
+{
+	if( ! rsock ) {
+		return false;
+	}
+
+		// If we're already authenticated, return success...
+	if( rsock->isAuthenticated() ) {
+		return true;
+	}
+
+	char *p = SecMan::getSecSetting( "SEC_%s_AUTHENTICATION_METHODS",
+									 "CLIENT" ); 
+	MyString methods;
+	if( p ) {
+		methods = p;
+		free(p);
+	} else {
+		methods = SecMan::getDefaultAuthenticationMethods();
+	}
+	return rsock->authenticate( methods.Value(), errstack );
+}
+
+
+void
+Daemon::setCmdStr( const char* cmd )
+{
+	if( _cmd_str ) { 
+		delete [] _cmd_str;
+		_cmd_str = NULL;
+	}
+	if( cmd ) {
+		_cmd_str = strnewp( cmd );
+	}
 }

@@ -152,6 +152,7 @@ ClassAdLog::TruncLog()
 	char	tmp_log_filename[_POSIX_PATH_MAX];
 	int new_log_fd;
 
+	dprintf(D_FULLDEBUG,"About to truncate log %s\n",log_filename);
 	sprintf(tmp_log_filename, "%s.tmp", log_filename);
 	new_log_fd = open(tmp_log_filename, O_RDWR | O_CREAT, 0600);
 	if (new_log_fd < 0) {
@@ -198,7 +199,9 @@ ClassAdLog::AbortTransaction()
 void
 ClassAdLog::CommitTransaction()
 {
-	assert(active_transaction);
+	// Sometimes we do a CommitTransaction() when we don't know if there was
+	// an active transaction.  This is allowed.
+	if (!active_transaction) return;
 	if (!EmptyTransaction) {
 		LogEndTransaction *log = new LogEndTransaction;
 		active_transaction->AppendLog(log);
@@ -206,6 +209,53 @@ ClassAdLog::CommitTransaction()
 	}
 	delete active_transaction;
 	active_transaction = NULL;
+}
+
+bool
+ClassAdLog::AdExistsInTableOrTransaction(const char *key)
+{
+	bool adexists = false;
+
+		// first see if it exists in the "commited" hashtable
+	HashKey hkey(key);
+	ClassAd *ad = NULL;
+	table.lookup(hkey, ad);
+	if ( ad ) {
+		adexists = true;
+	}
+
+		// if there is no pending transaction, we're done
+	if (!active_transaction) {
+		return adexists;
+	}
+
+		// see what is going on in any current transaction
+	for (LogRecord *log = active_transaction->FirstEntry(); log; 
+		 log = active_transaction->NextEntry(log)) 
+	{
+		switch (log->get_op_type()) {
+		case CondorLogOp_NewClassAd: {
+			char *lkey = ((LogNewClassAd *)log)->get_key();
+			if (strcmp(lkey, key) == 0) {
+				adexists = true;
+			}
+			free(lkey);
+			break;
+		}
+		case CondorLogOp_DestroyClassAd: {
+			char *lkey = ((LogDestroyClassAd *)log)->get_key();
+			if (strcmp(lkey, key) == 0) {
+				adexists = false;
+			}
+			free(lkey);
+			break;
+		}
+		default:
+			break;
+		}
+	}
+
+	return adexists;
 }
 
 int
@@ -289,6 +339,7 @@ ClassAdLog::LogState(int fd)
 	char		key[_POSIX_PATH_MAX];
     string      my, target, attr_name, attr_val;
 	ClassAdUnParser unp;
+	void*		chain;
 
 	table.startIterations();
 	while(table.iterate(ad) == 1) {
@@ -302,6 +353,7 @@ ClassAdLog::LogState(int fd)
 			EXCEPT("write to %s failed, errno = %d", log_filename, errno);
 		}
 		delete log;
+//		chain = ad->unchain();
 //		ad->ResetName();
 //		attr_name = ad->NextName();
 //		while (attr_name) {
@@ -326,6 +378,8 @@ ClassAdLog::LogState(int fd)
 //				attr_name = ad->NextName();
 			}
 		}
+			// ok, now that we're done writing out this ad, restore the chain
+		//ad->RestoreChain(chain);
 	}
 	if (fsync(fd) < 0) {
 		EXCEPT("fsync of %s failed, errno = %d", log_filename, errno);

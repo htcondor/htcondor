@@ -6,6 +6,12 @@
 #include "condor_attributes.h"
 
 /*
+ * The user_job_policy() function is deprecated and NOT to be used for
+ * new code. Pete Keller said so. :-)
+ * Use the UserPolicy class, marked as the "NEW INTERFACE" below.
+ *      -- jfrey, Nov 14, 2002
+ */
+/*
 This is a plain english description of the technical details of the use
 of the user_job_policy() function.
 
@@ -91,7 +97,7 @@ extern const char ATTR_USER_ERROR_REASON[];
 
 /* NEW INTERFACE */
 
-enum { STAYS_IN_QUEUE = 0, REMOVE_FROM_QUEUE, HOLD_IN_QUEUE, UNDEFINED_EVAL };
+enum { STAYS_IN_QUEUE = 0, REMOVE_FROM_QUEUE, HOLD_IN_QUEUE, UNDEFINED_EVAL, RELEASE_FROM_HOLD };
 enum { PERIODIC_ONLY = 0, PERIODIC_THEN_EXIT };
 
 /* ok, here is the first set of expressions that should be available
@@ -99,6 +105,7 @@ enum { PERIODIC_ONLY = 0, PERIODIC_THEN_EXIT };
 
 	ATTR_PERIODIC_HOLD_CHECK
 	ATTR_PERIODIC_REMOVE_CHECK
+	ATTR_PERIODIC_RELEASE_CHECK
 	ATTR_ON_EXIT_HOLD_CHECK
 	ATTR_ON_EXIT_REMOVE_CHECK
 
@@ -169,7 +176,7 @@ class UserPolicy
 
 		/* mode is PERIODIC_ONLY or PERIODIC_THEN_EXIT */
 		/* returns STAYS_IN_QUEUE, REMOVE_FROM_QUEUE, HOLD_IN_QUEUE, 
-			UNDEFINED_EVAL */
+			UNDEFINED_EVAL, or RELEASE_FROM_HOLD */
 		int AnalyzePolicy(int mode);
 
 		/* This explains what expression caused the above action, if no 

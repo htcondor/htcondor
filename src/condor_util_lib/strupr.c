@@ -21,7 +21,23 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#include "condor_common.h"
+
+/*
+  NOTE: we do *NOT* want to include "condor_common.h" and all the
+  associated header files for this, since this file defines two very
+  simple functions and we want to be able to build it in a stand-alone
+  version of the UserLog parser for libcondorapi.a
+*/
+
+
+#ifndef _tolower
+#define _tolower(c) ((c) + 'a' - 'A')
+#endif
+
+#ifndef _toupper
+#define _toupper(c) ((c) + 'A' - 'a')
+#endif
+
 
 /*
 ** Convert a string, in place, to the uppercase version of it. 
@@ -32,7 +48,9 @@ strupr(char* src)
 	register char* tmp;
 	tmp = src;
 	while( tmp && *tmp ) {
-		*tmp = toupper( *tmp );
+        if( *tmp >= 'a' && *tmp <= 'z' ) {
+			*tmp = _toupper( *tmp );
+		}
 		tmp++;
 	}
 	return src;
@@ -48,7 +66,9 @@ strlwr(char* src)
 	register char* tmp;
 	tmp = src;
 	while( tmp && *tmp ) {
-		*tmp = tolower( *tmp );
+        if( *tmp >= 'A' && *tmp <= 'Z' ) {
+			*tmp = _tolower( *tmp );
+		}
 		tmp++;
 	}
 	return src;

@@ -37,25 +37,7 @@
 #include "HashTable.h"
 #include "string_list.h"
 #include "MyString.h"
-
-// IMPORTANT NOTE:  If you add a new enum value here, please add a new
-// case to PermString() in condor_ipverify.C.
-// Also, be sure to leave "LAST_PERM" last.  It's a place holder so 
-// we can iterate through all the permission levels, and know when to 
-// stop. 
-/// enum for Daemon Core socket/command/signal permissions
-enum DCpermission {
-  /** Open to everyone */                    ALLOW = 0,
-  /** Able to read data */                   READ = 1,
-  /** Able to modify data (submit jobs) */   WRITE = 2,
-  /** From the negotiator */                 NEGOTIATOR = 3,
-  /** Not yet implemented, do NOT use */     IMMEDIATE_FAMILY = 4,
-  /** Administrative cmds (on, off, etc) */  ADMINISTRATOR = 5,
-  /** The machine owner (vacate) */          OWNER = 6,
-  /** Changing config settings remotely */   CONFIG_PERM = 7,
-  /** Changing config settings remotely */   DAEMON = 8,
-  /** Place holder, must be last */          LAST_PERM
-};
+#include "condor_perms.h"
 
 /// Not_Yet_Ducumented
 static const int USERVERIFY_ALLOW = 0;

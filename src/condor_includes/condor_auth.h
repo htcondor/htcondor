@@ -37,7 +37,7 @@ const int CAUTH_CLAIMTOBE               = 2;
 const int CAUTH_FILESYSTEM              = 4;
 const int CAUTH_FILESYSTEM_REMOTE       = 8;
 const int CAUTH_NTSSPI                  = 16;
-const int CAUTH_X509                    = 32;
+const int CAUTH_GSI                     = 32;
 const int CAUTH_KERBEROS                = 64;
 const int CAUTH_ANONYMOUS               = 128;
 
@@ -69,7 +69,7 @@ class Condor_Auth_Base {
     // RETURNS: None
     //------------------------------------------
 
-    virtual int authenticate(const char * remoteHost) = 0;
+    virtual int authenticate(const char * remoteHost, CondorError* errstack) = 0;
     //------------------------------------------
     // PURPOSE: authenticate with the other side 
     // REQUIRE: 1. Remote host

@@ -23,8 +23,10 @@
 #ifndef __CONDOR_Q_H__
 #define __CONDOR_Q_H__
 
+#include "condor_common.h"
 #include "generic_query.h"
 #include "classadList.h" // NAC
+#include "CondorError.h"
 
 // This is for the getFilterAndProcess function
 typedef bool    (*process_function)(ClassAd *);
@@ -66,6 +68,9 @@ class CondorQ
 	// CondorQ (const CondorQ &);
 	~CondorQ ();
 
+	// initialize defaults, etc.
+	bool init();  
+
 	// add constraints
 	int add (CondorQIntCategories, int);
 	int add (CondorQStrCategories, char *);
@@ -76,13 +81,16 @@ class CondorQ
 	// fetch the job ads from the schedd corresponding to the given classad
 	// which pass the criterion specified by the constraints; default is
 	// from the local schedd
-	int fetchQueue (ClassAdList &, ClassAd * = 0);
-	int fetchQueueFromHost (ClassAdList &, char * = 0);
-	int fetchQueueFromHostAndProcess ( char *, process_function process_func);
+	int fetchQueue (ClassAdList &, ClassAd * = 0, CondorError* errstack = 0);
+	int fetchQueueFromHost (ClassAdList &, char * = 0, CondorError* errstack = 0);
+	int fetchQueueFromHostAndProcess ( char *, process_function process_func, CondorError* errstack = 0);
 
   private:
 	GenericQuery query;
 	
+	// default timeout when talking the schedd (via ConnectQ())
+	int connect_timeout;
+
 	// helper functions
 	int getAndFilterAds( ClassAd &, ClassAdList & );
 	int getFilterAndProcessAds( ClassAd &, process_function );

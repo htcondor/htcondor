@@ -230,9 +230,6 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 ##  calls?
 #USE_NFS		= False
 
-##  Do your machines run AFS?
-#HAS_AFS		= False
-
 ##  Do you want to use AFS for file access instead of remote system
 ##  calls?
 #USE_AFS		= False
@@ -253,7 +250,7 @@ HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
 ##  hawkeye account, it's probably hawkeye.  Otherwise, it's whatever
 ##  you've set in the HAWKEYE_IDS environment variable.  See the Admin
 ##  manual for details on this.
-LOCK		= $(LOCAL_DIR)/log
+LOCK		= $(LOG)
 
 ##  If you don't use a fully qualified name in your /etc/hosts file
 ##  (or NIS, etc.) for either your official hostname or as an alias,
@@ -282,11 +279,11 @@ LOCK		= $(LOCAL_DIR)/log
 MAX_COLLECTOR_LOG	= 64000
 COLLECTOR_DEBUG		= 
 
-MAX_STARTD_LOG		= 64000
+MAX_STARTD_LOG		= 640000
 STARTD_DEBUG		= D_COMMAND D_FULLDEBUG D_JOB D_DAEMONCORE
 STARTD_DEBUG		= D_COMMAND D_FULLDEBUG D_JOB
 
-MAX_STARTER_LOG		= 640000
+MAX_STARTER_LOG		= 64000
 STARTER_DEBUG		= D_NODATE
 
 MAX_MASTER_LOG		= 64000
@@ -547,6 +544,9 @@ RunBenchmarks = False
 ##  Then, you'd set the STARTD_EXPRS setting to this:
 #STARTD_EXPRS = MY_CONSOLE_DEVICES, RunBenchmarks, UPDATE_INTERVAL
 
+COLLECTOR_HOST_STRING = "$(COLLECTOR_HOST)" 
+STARTD_EXPRS = COLLECTOR_HOST_STRING 
+
 ##  When the startd is claimed by a remote user, it can also advertise
 ##  arbitrary attributes from the ClassAd of the job its working on.
 ##  Just list the attribute names you want advertised.  
@@ -582,60 +582,8 @@ NUM_CPUS = 1
 
 
 ##--------------------------------------------------------------------
-##  Hawkeye module parameters
-##
-##  Current modules (this section is parsed by the installer):
-##    MODULE df:df_:df:5m
-##+	Used to monitor free disk space (based on the "df" program)
-##+	You should set the Hawkeye_df parameter by hand
-##    MODULE memory_used:mem_:memory_used:5m
-##+	Monitors system memory usage
-##    MODULE network_errors:neterr_:network_errors:10m
-##+	Monitors the network status
-##    MODULE open_files:files_:open_files:10m
-##+	Monitors the number of open file descriptors
-##    MODULE top:top_:top:0:continuous
-##+	Monitors the top processes on the system, based on a number
-##+	of attributes (based on the "top" program)
-##+	You may want set the Hawkeye_top parameters by hand
-##    MODULE uptime:uptime_:uptime:5m
-##+	Monitors the uptime and load averages of the system
-##+	(based on the "uptime" program)
-##    MODULE w:w_:w:5m
-##+	Monitors the users, uptime, and load averages of the system
-##+	(based on the "w" program)
-##    MODULE who:who_:who:5m
-##+	Monitors uses logged on the system (based on the "who" program)
-##    MODULE gdmphb:gdmp_:gdmphb:20m
-##+	Monitors the status of GDMP for the US/CMS test bed
-##    MODULE vmstat:vmstat_:vmstat:0:continuous
-##+	Monitors the status of the Virtual Memory (VM) subsystem
-##    MODULE condor_node:Condor_:codor_node:5m
-##+	Monitors the status of an individual Condor pool node
-##
+##  Hawkeye module parameters:
 ##--------------------------------------------------------------------
 MODULES = $(HAWKEYE)/modules
-STARTD_CRONJOBS =
-
-## Define parameters for the TOP module
-## Valid fields are:
-##   pid user priority nice size rss share state lib cpu mem time command
-## HAWKEYE_TOP_SORT = field:num [field:num] ...
-##  Causes top to sort by 'field' and dump the top 'num' of that sort
-## HAWKEYE_TOP_FIELDS = field[,field]..
-##  List of fields to dump
-Hawkeye_top_time = 30
-Hawkeye_top_sort = :2 mem:2
-Hawkeye_top_fields = pid, user, nice, size, rss, state, cpu, mem, time, command
-Hawkeye_top_fields = pid, user, cpu, mem, time, command
-
-## Define parameters for the DF module
-## HAWKEYE_DF = mount,[mount]...
-##  List of mount points to monitor
-Hawkeye_df = /,/local,/usr,/tmp,/var
-
-## Define parameters for the UPTIME module
-##  None
-
-## Define parameters for the WHO module
-##  None
+STARTD_CRON_NAME = Hawkeye
+HAWKEYE_JOBS =

@@ -26,6 +26,7 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_fix_assert.h"
+#include "condor_secman.h"
 
 #include "../condor_syscall_lib/syscall_param_sizes.h"
 
@@ -62,17 +63,29 @@ do_Q_request(ReliSock *syscall_sock)
 	
 			// Authenticate socket, if not already done by daemonCore
 		if( !syscall_sock->isAuthenticated() ) {
-			dprintf(D_SECURITY,"Calling authenticate() in qmgmt_receivers\n");
-			if( ! syscall_sock->authenticate() ) {
+			char * p = SecMan::getSecSetting( "SEC_%s_AUTHENTICATION_METHODS", "WRITE" );
+			MyString methods;
+			if (p) {
+				methods = p;
+				free (p);
+			} else {
+				methods = SecMan::getDefaultAuthenticationMethods();
+			}
+			dprintf(D_SECURITY,"Calling authenticate(%s) in qmgmt_receivers\n", methods.Value());
+			CondorError errstack;
+			if( ! syscall_sock->authenticate(methods.Value(), &errstack) ) {
 					// Failed to authenticate
+				dprintf( D_ALWAYS, "SCHEDD: authentication failed\n");
+				dprintf( D_ALWAYS, "%s", errstack.get_full_text() );
 				authenticated = false;
 			}
 		}
 
 		if ( authenticated ) {
-			InitializeConnection( syscall_sock->getOwner() );			
+			InitializeConnection( syscall_sock->getOwner(), 
+					syscall_sock->getDomain() );			
 		} else {
-			InitializeConnection( NULL );			
+			InitializeConnection( NULL, NULL );			
 		}
 		return 0;
 	}
@@ -80,7 +93,7 @@ do_Q_request(ReliSock *syscall_sock)
 	case CONDOR_InitializeReadOnlyConnection:
 	{
 			// same as InitializeConnection but no authenticate()
-		InitializeConnection( NULL );			
+		InitializeConnection( NULL, NULL );			
 		return 0;
 	}
 
@@ -367,8 +380,13 @@ do_Q_request(ReliSock *syscall_sock)
 		errno = 0;
 		rval = GetAttributeInt( cluster_id, proc_id, attr_name, &value );
 		terrno = errno;
-		dprintf( D_SYSCALLS, "  value: %d\n", value );
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+		if (rval < 0) {
+			dprintf( D_SYSCALLS, "GetAttributeInt(%d, %d, %s) not found.\n",
+					cluster_id, proc_id, attr_name);
+		} else {
+			dprintf( D_SYSCALLS, "  value: %d\n", value );
+			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+		}
 
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );

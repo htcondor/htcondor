@@ -38,7 +38,7 @@ Reqexp::Reqexp( Resource* rip )
 	sprintf( tmp, "%s = %s", ATTR_REQUIREMENTS, "START" );
 	origreqexp = strdup( tmp );
 	origstart = NULL;
-	rstate = ORIG;
+	rstate = ORIG_REQ;
 }
 
 
@@ -71,9 +71,20 @@ Reqexp::~Reqexp()
 bool
 Reqexp::restore()
 {
-	if( rstate != ORIG ) {
-		rip->r_classad->InsertOrUpdate( origreqexp );
-		rstate = ORIG;
+	if( rip->isSuspendedForCOD() ) {
+		if( rstate != COD_REQ ) {
+			rstate = COD_REQ;
+			publish( rip->r_classad, A_PUBLIC );
+			return true;
+		} else {
+			return false;
+		}
+	} else {
+		rip->r_classad->Delete( ATTR_RUNNING_COD_JOB );
+	}
+	if( rstate != ORIG_REQ ) {
+		rstate = ORIG_REQ;
+		publish( rip->r_classad, A_PUBLIC );
 		return true;
 	}
 	return false;
@@ -83,10 +94,15 @@ Reqexp::restore()
 void
 Reqexp::unavail() 
 {
-	char tmp[100];
-	sprintf( tmp, "%s = False", ATTR_REQUIREMENTS );
-	rip->r_classad->InsertOrUpdate( tmp );
-	rstate = UNAVAIL;
+	if( rip->isSuspendedForCOD() ) {
+		if( rstate != COD_REQ ) {
+			rstate = COD_REQ;
+			publish( rip->r_classad, A_PUBLIC );
+		}
+		return;
+	}
+	rstate = UNAVAIL_REQ;
+	publish( rip->r_classad, A_PUBLIC );
 }
 
 
@@ -100,15 +116,21 @@ Reqexp::publish( ClassAd* ca, amask_t how_much )
 
 	char tmp[100];
 	switch( rstate ) {
-	case ORIG:
-		ca->InsertOrUpdate( origstart );
+	case ORIG_REQ:
+		ca->Insert( origstart );
 		sprintf( tmp, "%s", origreqexp );
 		break;
-	case UNAVAIL:
+	case UNAVAIL_REQ:
 		sprintf( tmp, "%s = False", ATTR_REQUIREMENTS );
 		break;
+	case COD_REQ:
+		sprintf( tmp, "%s = True", ATTR_RUNNING_COD_JOB );
+		ca->Insert( tmp );
+		sprintf( tmp, "%s = False && %s", ATTR_REQUIREMENTS,
+				 ATTR_RUNNING_COD_JOB );
+		break;
 	}
-	ca->InsertOrUpdate( tmp );
+	ca->Insert( tmp );
 }
 
 

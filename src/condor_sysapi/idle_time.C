@@ -27,6 +27,14 @@
 #include "sysapi.h"
 #include "sysapi_externs.h"
 
+#ifdef CONDOR_DARWIN
+#include <mach/mach.h>
+#include <IOKit/IOKitLib.h>
+#include <IOKit/hid/IOHIDLib.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <Carbon/Carbon.h>
+#endif
+
 /* define some static functions */
 #if defined(WIN32)
 static BOOL ThreadInteract(HDESK * hdesk, HWINSTA * hwinsta);
@@ -37,10 +45,13 @@ extern int WINAPI KBShutdown(void);
 extern int WINAPI KBQuery(void);
 #else /* Not defined WIN32 */
 #include "string_list.h"
+#ifndef CONDOR_DARWIN
 static time_t utmp_pty_idle_time( time_t now );
 static time_t all_pty_idle_time( time_t now );
 static time_t dev_idle_time( char *path, time_t now );
 static void calc_idle_time_cpp(time_t & m_idle, time_t & m_console_idle);
+#endif
+
 #endif
 
 /* the local function that does the main work */
@@ -50,6 +61,7 @@ static void calc_idle_time_cpp(time_t & m_idle, time_t & m_console_idle);
 
 // ThreadInteract allows the calling thread to access the visable,
 // interactive desktop in order to set a hook. 
+// Win32
 BOOL ThreadInteract(HDESK * hdesk_input, HWINSTA * hwinsta_input)   
 {      
 	HDESK   hdeskTest;
@@ -105,6 +117,7 @@ BOOL ThreadInteract(HDESK * hdesk_input, HWINSTA * hwinsta_input)
 }
 
 
+// Win32
 static DWORD WINAPI
 message_loop_thread(void *foo)
 {
@@ -151,6 +164,7 @@ message_loop_thread(void *foo)
 	return 0;
 }
 
+// Win32
 void
 calc_idle_time_cpp( time_t * user_idle, time_t * console_idle)
 {
@@ -187,7 +201,7 @@ calc_idle_time_cpp( time_t * user_idle, time_t * console_idle)
 			// no keypress detected, test if mouse moved
 			POINT current_pos;
 			if ( ! GetCursorPos(&current_pos) ) {
-				dprintf(D_ALWAYS,"GetCursorPos failed\n");
+				dprintf(D_ALWAYS,"GetCursorPos failed (err=%li)\n", GetLastError());
 			} else {
 				if ( (current_pos.x != previous_pos.x) || 
 					(current_pos.y != previous_pos.y) ) {
@@ -208,7 +222,7 @@ calc_idle_time_cpp( time_t * user_idle, time_t * console_idle)
 	return;
 }
 
-#else /* !defined(WIN32) */
+#elif !defined(CONDOR_DARWIN) /* !defined(WIN32) -- all UNIX platforms but OS X*/
 
 /* calc_idle_time fills in user_idle and console_idle with the number
  * of seconds since there has been activity detected on any tty or on
@@ -218,6 +232,7 @@ calc_idle_time_cpp( time_t * user_idle, time_t * console_idle)
  * on some platforms console_idle is always -1 because it cannot reliably
  * be determined.
  */
+// Unix
 void
 calc_idle_time_cpp( time_t & m_idle, time_t & m_console_idle )
 {
@@ -281,10 +296,19 @@ static char *AltUtmpName = "/etc/utmp";
 #elif defined(LINUX)
 static char *UtmpName = "/var/run/utmp";
 static char *AltUtmpName = "/var/adm/utmp";
-#elif defined(Solaris28)
+#elif defined(Solaris28) || defined(Solaris29)
 #include <utmpx.h>
 static char *UtmpName = "/etc/utmpx";
 static char *AltUtmpName = "/var/adm/utmpx";
+#undef UTMP_KIND
+#define UTMP_KIND utmpx
+#elif defined(HPUX11)
+/* actually, we use the xpg4.2 API to get the utmpx interface, not the 
+	files/method we normally would use. This prevents 32/64 bit
+	incompatibilities in the member fields of the utmpx structure.
+	- psilord 01/09/2002
+	*/
+#include <utmpx.h>
 #undef UTMP_KIND
 #define UTMP_KIND utmpx
 #else
@@ -292,14 +316,29 @@ static char *UtmpName = "/etc/utmp";
 static char *AltUtmpName = "/var/adm/utmp";
 #endif
 
+// Unix
 time_t
 utmp_pty_idle_time( time_t now )
 {
-	FILE *fp;
 	time_t tty_idle;
 	time_t answer = (time_t)INT_MAX;
 	static time_t saved_now;
 	static time_t saved_idle_answer = -1;
+
+#if !defined(HPUX11)
+
+	/* freading structures directly out of a file is a pretty bad idea
+		exemplified by the fact that the elements in the utmp
+		structure may change size based upon if you are
+		compiling in 32 bit or 64 bit mode, but the byte lengths
+		of the fields in the utmp file might not.  So, for
+		everyone, but HPUX11, we'll leave it the old fread way,
+		but on HPUX11, we'll use the xpg4.2 utmpx API to get
+		this information out of the utmpx file. Maybe we should
+		figure out the sactioned ways on each platform to do
+		this if one exists. -psilord 01/09/2002 */
+
+	FILE *fp;
 	struct UTMP_KIND utmp_info;
 
 	if ((fp=fopen(UtmpName,"r")) == NULL) {
@@ -309,7 +348,7 @@ utmp_pty_idle_time( time_t now )
 	}
 
 	while (fread((char *)&utmp_info, sizeof(struct UTMP_KIND), 1, fp)) {
-#if defined(AIX31) || defined(AIX32) || defined(IRIX331) || defined(IRIX53) || defined(LINUX) || defined(OSF1) || defined(IRIX62) || defined(IRIX65)
+#if defined(AIX31) || defined(AIX32) || defined(AIX5) || defined(IRIX331) || defined(IRIX53) || defined(LINUX) || defined(OSF1) || defined(IRIX62) || defined(IRIX65)
 		if (utmp_info.ut_type != USER_PROCESS)
 #else
 			if (utmp_info.ut_name[0] == '\0')
@@ -320,6 +359,24 @@ utmp_pty_idle_time( time_t now )
 		answer = MIN(tty_idle, answer);
 	}
 	fclose(fp);
+
+#else /* hpux 11 */
+
+	/* Here we use the xpg4.2 utmpx interface to process the utmpx entries
+		and figure out which ttys are assigned to user processes. */
+
+	struct UTMP_KIND *utmp_info;
+
+	while((utmp_info = getutxent()) != NULL)
+	{
+		if (utmp_info->ut_type != USER_PROCESS)
+			continue;
+
+		tty_idle = dev_idle_time(utmp_info->ut_line, now);
+		answer = MIN(tty_idle, answer);
+	}
+
+#endif
 
 	/* Here we check to see if we are about to return INT_MAX.  If so,
 	 * we recompute via the last pty access we knew about.  -Todd, 2/97 */
@@ -340,6 +397,7 @@ utmp_pty_idle_time( time_t now )
 
 #include "directory.h"
 
+// Unix
 time_t
 all_pty_idle_time( time_t now )
 {
@@ -428,14 +486,17 @@ all_pty_idle_time( time_t now )
 
 #ifdef LINUX
 #include <sys/sysmacros.h>  /* needed for major() below */
-#elif defined( OSF1 )
+#elif defined( OSF1 ) || defined(CONDOR_DARWIN)
 #include <sys/types.h>
 #elif defined( HPUX )
 #include <sys/sysmacros.h>
+#elif defined( AIX )
+#include <sys/types.h>
 #else
 #include <sys/mkdev.h>
 #endif
 
+// Unix
 time_t
 dev_idle_time( char *path, time_t now )
 {
@@ -492,7 +553,110 @@ dev_idle_time( char *path, time_t now )
 	return answer;
 }
 
-#endif /* defined(WIN32) */
+#else /* here's the OS X version of calc_idle_time */
+
+void calc_idle_time_cpp(time_t * user_idle, time_t * console_idle);
+static time_t extract_idle_time(CFMutableDictionaryRef  properties);
+
+/****************************************************************************
+ *
+ * Function: calc_idle_time_cpp
+ * Purpose:  This calculates the idle time on the Mac. It uses the HID 
+ *           (Human Interface Device) Manager, which happens to track
+ *           the system idle time. It doesn't distinguish user idle and 
+ *           console_idle, so they are set to be the same. If you investigate
+ *           the HID Manager deeply, you'll notice that it should be possible
+ *           to get the idle time of the keyboard and mouse separately. As of
+ *           April 2003, that doesn't work, because you can't use the HID 
+ *           Manager to query the keyboard.
+ ****************************************************************************/
+void
+calc_idle_time_cpp(time_t * user_idle, time_t * console_idle)
+{
+
+    mach_port_t             masterPort           = NULL;
+    io_iterator_t           hidObjectIterator    = NULL;
+    CFMutableDictionaryRef  hidMatchDictionary   = NULL;
+    io_object_t             hidDevice            = NULL;
+    
+    *user_idle = *console_idle = -1;
+    
+    if (IOMasterPort(bootstrap_port, &masterPort) != kIOReturnSuccess) {
+        dprintf(D_ALWAYS, "IDLE: Couldn't create a master I/O Kit port.\n");
+    } else {
+        hidMatchDictionary = IOServiceMatching("IOHIDSystem");
+        if (IOServiceGetMatchingServices(masterPort, hidMatchDictionary, &hidObjectIterator) != kIOReturnSuccess) {
+            dprintf(D_ALWAYS, "IDLE: Can't find IOHIDSystem\n");
+        } else if (hidObjectIterator == NULL) {
+            dprintf(D_ALWAYS, "IDLE Can't find IOHIDSystem\n");
+        } else {
+            // Note that IOServiceGetMatchingServices consumes a reference to the dictionary
+            // so we don't need to release it. We'll mark it as NULL, so we don't try to reuse it.
+            hidMatchDictionary = NULL;
+
+            hidDevice = IOIteratorNext(hidObjectIterator);
+                
+            CFMutableDictionaryRef  properties = 0;
+            if (   IORegistryEntryCreateCFProperties(hidDevice,
+                        &properties, kCFAllocatorDefault, kNilOptions) == KERN_SUCCESS
+                && properties != 0) {
+                
+                *user_idle = extract_idle_time(properties);
+                *console_idle = *user_idle;
+                CFRelease(properties);
+            }
+            IOObjectRelease(hidDevice);
+            IOObjectRelease(hidObjectIterator);    
+        }
+        if (masterPort) {
+            mach_port_deallocate(mach_task_self(), masterPort);
+        }
+    }
+    return;
+}
+
+/****************************************************************************
+ *
+ * Function: extract_idle_time
+ * Purpose:  The HID Manager reports the idle time in nanoseconds. I'm not
+ *           sure if it really tracks with that kind of percision. Anyway, 
+ *           we extract the idle time from the dictionary, and convert it 
+ *           into seconds. 
+ *
+ ****************************************************************************/
+static time_t 
+extract_idle_time(
+    CFMutableDictionaryRef  properties)
+{
+    time_t    idle_time = -1;
+    CFTypeRef object = CFDictionaryGetValue(properties, CFSTR(kIOHIDIdleTimeKey));
+    
+    if (!object) {
+	dprintf(D_ALWAYS, "IDLE: Failed to make CFTypeRef\n");
+    } else {
+	if (CFGetTypeID(object) != CFDataGetTypeID()) {
+            dprintf(D_ALWAYS, "IDLE: Idle time is not in expected format.\n");
+        } else {
+            Size num_bytes;
+            num_bytes = CFDataGetLength((CFDataRef) object);
+            if (num_bytes != 8) {
+                dprintf(D_ALWAYS, "IDLE: Idle time is not in expected format.\n");
+            } else {
+                UInt64  nanoseconds, billion, seconds_64, remainder;
+                UInt32  seconds;
+                CFDataGetBytes((CFDataRef) object, CFRangeMake(0, 8), 
+                                ((UInt8 *) &nanoseconds));
+                billion = U64SetU(1000000000);
+                seconds_64 = U64Divide(nanoseconds, billion, &remainder);
+                seconds = U32SetU(seconds_64);
+                idle_time = seconds;
+            }
+        }
+    }
+    return idle_time;
+}
+
+#endif  /* the end of the Mac OS X code, and the  */
 
 
 /* ok, the purpose of this code is to create an interface that is a C linkage
@@ -508,7 +672,7 @@ sysapi_idle_time_raw(time_t *m_idle, time_t *m_console_idle)
 
 	sysapi_internal_reconfig();
 
-#ifndef WIN32
+#if( !defined( WIN32 ) && !defined( CONDOR_DARWIN ) )
 	time_t m_i, m_c;
 
 	/* here calc_idle_time_cpp expects a reference, so let's give it one */

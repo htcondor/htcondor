@@ -20,11 +20,11 @@ extern "C" int arch_test(int trials);
  *    int trials - how many times to check sysapi_free_fs_blocks for consistency.
  *    int tolerance - how many KB discrepency to allow in consistency check
  *        without issuing a warning.
- *    double perc_warn_ok - what percentage of the test performed can issue
+ *    double warn_ok_ratio - what ratio (0=none,1=all) of the test performed can issue
  *        warnings without the test failing.
  */
 extern "C" int free_fs_blocks_test(int trials, double tolerance, double
-				perc_warn_ok);
+				warn_ok_ratio);
 
 /*
  * idle_time_test(int, int, double) tests sysapi_idle_time against
@@ -37,11 +37,11 @@ extern "C" int free_fs_blocks_test(int trials, double tolerance, double
  *    int tolerance - how many seconds discrepency to allow in consistency check
  *        without issuing a warning.
  *    int interval - how many seconds to wait before checking the idle_time again.
- *    double perc_warn_ok - what percentage of the test performed can issue
+ *    double warn_ok_ratio - what ratio of the test performed can issue
  *        warnings without the test failing.
  */
 extern "C" int idle_time_test(int trials, int interval, int tolerance, double
-				perc_warn_ok);
+				warn_ok_ratio);
 
 /*
  * load_avg_test(int, int, int, double) tests sysapi_load_avg against negative
@@ -53,11 +53,11 @@ extern "C" int idle_time_test(int trials, int interval, int tolerance, double
  *    int trials - how many times to check sysapi_load_avg for consistency.
  *    int interval - how many seconds to wait before checking the load again.
  *    int num_children - how many children to spawn per test.
- *    double perc_warn_ok - what percentage of the test performed can issue
+ *    double warn_ok_ratio - what ratio of the test performed can issue
  *        warnings without the test failing.
  */
 extern "C" int load_avg_test(int trials, int interval, int num_children, double
-				perc_warn_ok);
+				warn_ok_ratio);
 
 /*
  * phys_memory_test(int, int, double) tests sysapi_phys_mem against negative
@@ -67,11 +67,11 @@ extern "C" int load_avg_test(int trials, int interval, int num_children, double
  * fails.
  *    PARAMS:
  *    int trials - how many times to check sysapi_phy_mem for consistency.
- *    double perc_warn_ok - what percentage of the test performed can issue
+ *    double warn_ok_ratio - what ratio of the test performed can issue
  *        warnings without the test failing.
  *
  */
-extern "C" int phys_memory_test(int trials, double perc_warn_ok);
+extern "C" int phys_memory_test(int trials, double warn_ok_ratio);
 
 /*
  * ncpus_test(int, double) tests sysapi_ncpus against negative
@@ -81,11 +81,11 @@ extern "C" int phys_memory_test(int trials, double perc_warn_ok);
  * fails.
  *    PARAMS:
  *    int trials - how many times to check sysapi_ncpus for consistency.
- *    double perc_warn_ok - what percentage of the test performed can issue
+ *    double warn_ok_ratio - what ratio of the test performed can issue
  *        warnings without the test failing.
  *
  */
-extern "C" int ncpus_test(int trials, double perc_warn_ok);
+extern "C" int ncpus_test(int trials, double warn_ok_ratio);
 
 /*
  * These three tests all have the same structure: they perform n^2 function
@@ -96,16 +96,16 @@ extern "C" int ncpus_test(int trials, double perc_warn_ok);
  *    PARAMS:
  *    int    test_blocksize - the number of tests to run per testblock, and the
  *           number of testblocks to run. n^2 calls are made.
- *    double perc_sd_variation_ok - range: 0-1. Percentage of the mean. Used to test
+ *    double max_sd_variation_ratio - range: 0-1. Percentage of the mean. Used to test
  *           whether the standard deviation of a testblock is too high.
- *    double perc_failed_test_blocks_ok - range: 0-1. Percentage of test_blocksize.
+ *    double max_failed_test_ratio - range: 0-1. Percentage of test_blocksize.
  *           Used to determine whether the test as a whole fails.
  */
 extern "C" int virt_memory_test(int test_blocksize, double
-				perc_sd_variation_ok, double perc_failed_test_blocks_ok);
-extern "C" int mips_test(int test_blocksize, double perc_sd_variation_ok,
-				double perc_failed_test_blocks_ok);
-extern "C" int kflops_test(int test_blocksize, double perc_sd_variation_ok,
-				double perc_failed_test_blocks_ok);
+				max_sd_variation_ratio, double max_failed_test_ratio);
+extern "C" int mips_test(int test_blocksize, double max_sd_variation_ratio,
+				double max_failed_test_ratio);
+extern "C" int kflops_test(int test_blocksize, double max_sd_variation_ratio,
+				double max_failed_test_ratio);
 
 #endif

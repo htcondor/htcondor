@@ -22,8 +22,8 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_crypt_blowfish.h"
-#include <string.h>
-#include <malloc.h>
+//#include <string.h>
+//#include <malloc.h>
 
 Condor_Crypt_Blowfish :: Condor_Crypt_Blowfish(const KeyInfo& key)
 #if !defined(SKIP_AUTHENTICATION)

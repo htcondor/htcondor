@@ -26,6 +26,9 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_string.h"
+#include "string_list.h"
+#include "extra_param_info.h"
+#include "condor_random_num.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -61,7 +64,8 @@ condor_isalnum(int c)
 #define DOLLAR_ID "DOLLAR"
 
 int Read_config( char* config_file, BUCKET** table, 
-				 int table_size, int expand_flag )
+				 int table_size, int expand_flag,
+				 ExtraParamTable *extra_info)
 {
   	FILE			*conf_fp;
 	char			*name, *value, *rhs;
@@ -102,8 +106,17 @@ int Read_config( char* config_file, BUCKET** table,
 		}
 
 		if( !*ptr ) {
-			(void)fclose( conf_fp );
-			return( -1 );
+				// Here we have determined this line has no operator
+			if ( name && name[0] && name[0] == '[' ) {
+				// Treat a line w/o an operator that begins w/ a square bracket
+				// as a comment so a config file can look like
+				// a Win32 .ini file for MS Installer purposes.		
+				continue;
+			} else {
+				// No operator and no square bracket... bail.
+				(void)fclose( conf_fp );
+				return( -1 );
+			}
 		}
 
 		if( ISOP(*ptr) ) {
@@ -132,6 +145,7 @@ int Read_config( char* config_file, BUCKET** table,
 
 		rhs = ptr;
 		// rhs is now 'SunOS' in the above eg
+
 		
 		/* Expand references to other parameters */
 		name = expand_macro( name, table, table_size );
@@ -176,10 +190,13 @@ int Read_config( char* config_file, BUCKET** table,
 				  table.  Everything now behaves like macros used to
 				  Derek Wright <wright@cs.wisc.edu> 4/11/00
 				*/
-			lower_case( name );
+			strlwr( name );
 
 			/* Put the value in the Configuration Table */
 			insert( name, value, table, table_size );
+			if (extra_info != NULL) {
+				extra_info->AddFileParam(name, config_file, ConfigLineNo);
+			}
 		} else {
 			fprintf( stderr,
 				"Configuration Error File <%s>, Line %d: Syntax Error\n",
@@ -230,7 +247,7 @@ insert( const char *name, const char *value, BUCKET **table, int table_size )
 
 		/* Make sure not already in hash table */
 	strcpy( tmp_name, name );
-	lower_case( tmp_name );
+	strlwr( tmp_name );
 	loc = config_hash( tmp_name, table_size );
 	for( ptr=table[loc]; ptr; ptr=ptr->next ) {
 		if( strcmp(tmp_name,ptr->name) == 0 ) {
@@ -283,7 +300,7 @@ getline_implementation( FILE *fp, int requested_bufsize )
 		return NULL;
 	}
 
-	if ( buflen != requested_bufsize ) {
+	if ( buflen != (unsigned int)requested_bufsize ) {
 		if ( buf ) free(buf);
 		buf = (char *)malloc(requested_bufsize);
 		buflen = requested_bufsize;
@@ -354,31 +371,6 @@ getline_implementation( FILE *fp, int requested_bufsize )
 	}
 }
 
-#ifndef _tolower
-#define _tolower(c) ((c) + 'a' - 'A')
-#endif
-/*
-** Transform the given string into lower case in place.
-*/
-void
-lower_case( register char	*str )
-{
-#if defined(AIX32)
-#	define ANSI_STYLE 0
-#else
-#	define ANSI_STYLE 1
-#endif
-
-	for( ; *str; str++ ) {
-		if( *str >= 'A' && *str <= 'Z' )
-#if ANSI_STYLE
-			*str = _tolower( (int)(*str) );
-#else
-			*str |= 040;
-#endif
-	}
-}
-	
 /*
 ** Expand parameter references of the form "left$(middle)right".  This
 ** is deceptively simple, but does handle multiple and or nested references.
@@ -387,6 +379,7 @@ lower_case( register char	*str )
 ** only.
 ** Also expand references of the form "left$ENV(middle)right",
 ** replacing $ENV(middle) with getenv(middle).
+** Also expand references of the form "left$RANDOM_CHOICE(middle)right".
 */
 char *
 expand_macro( const char *value, BUCKET **table, int table_size, char *self )
@@ -399,11 +392,38 @@ expand_macro( const char *value, BUCKET **table, int table_size, char *self )
 	while( !all_done ) {		// loop until all done expanding
 		all_done = true;
 
-		if( !self && get_env(tmp, &left, &name, &right) ) {
+		if( !self && get_special_var("$ENV",true,tmp, &left, &name, &right) ) 
+		{
 			all_done = false;
 			tvalue = getenv(name);
 			if( tvalue == NULL ) {
 				EXCEPT("Can't find %s in environment!",name);
+			}
+
+			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
+											  strlen(right) + 1));
+			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
+			FREE( tmp );
+			tmp = rval;
+		}
+
+		if( !self && get_special_var("$RANDOM_CHOICE",false,tmp, &left, &name, 
+			&right) ) 
+		{
+			all_done = false;
+			StringList entries(name,",");
+			int num_entries = entries.number();
+			tvalue = NULL;
+			if ( num_entries > 0 ) {
+				int rand_entry = (get_random_int() % num_entries) + 1;
+				int i = 0;
+				entries.rewind();
+				while ( (i < rand_entry) && (tvalue=entries.next()) ) {
+					i++;
+				}
+			}
+			if( tvalue == NULL ) {
+				EXCEPT("$RANDOM_CHOICE() macro in config file empty!",name);
 			}
 
 			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
@@ -442,35 +462,41 @@ expand_macro( const char *value, BUCKET **table, int table_size, char *self )
 }
 
 /*
-** Same as get_var() below, but finds $ENV() references.
+** Same as get_var() below, but finds special references like $ENV().
 */
 int
-get_env( register char *value, register char **leftp, 
-		 register char **namep, register char **rightp )
+get_special_var( const char *prefix, bool only_id_chars, register char *value, 
+		register char **leftp, register char **namep, register char **rightp )
 {
 	char *left, *left_end, *name, *right;
 	char *tvalue;
+	int prefix_len;
 
+	if ( prefix == NULL ) {
+		return( 0 );
+	}
+
+	prefix_len = strlen(prefix);
 	tvalue = value;
 	left = value;
 
 	for(;;) {
 tryagain:
 		if (tvalue) {
-			value = (char *)strstr( (const char *)tvalue, "$ENV" );
+			value = (char *)strstr( (const char *)tvalue, prefix );
 		}
 		
 		if( value == NULL ) {
 			return( 0 );
 		}
 
-		value += 4;
+		value += prefix_len;
 		if( *value == '(' ) {
-			left_end = value - 4;
+			left_end = value - prefix_len;
 			name = ++value;
 			while( *value && *value != ')' ) {
 				char c = *value++;
-				if( !ISIDCHAR(c) ) {
+				if( !ISIDCHAR(c) && only_id_chars ) {
 					tvalue = name;
 					goto tryagain;
 				}
@@ -625,7 +651,7 @@ lookup_macro( const char *name, BUCKET **table, int table_size )
 	char			tmp_name[ 1024 ];
 
 	strcpy( tmp_name, name );
-	lower_case( tmp_name );
+	strlwr( tmp_name );
 	loc = config_hash( tmp_name, table_size );
 	for( ptr=table[loc]; ptr; ptr=ptr->next ) {
 		if( !strcmp(tmp_name,ptr->name) ) {

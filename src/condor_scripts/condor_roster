@@ -7,7 +7,7 @@ use strict;
 my $Debug = 0;
 
 # Dirs & files
-my $RosterDir = "/p/condor/home/admin";
+my $RosterDir = "/unsup/condor/etc";
 if ( defined( $ENV{CONDOR_ROSTER_DIR} ) )
 {
     $RosterDir = $ENV{CONDOR_ROSTER_DIR};
@@ -28,19 +28,15 @@ my $MachineList = "condor_hostlist";
 
 # Lists
 my @Archs;		# Supported achitectures
-my @ExcludeUsers;	# List of users to exclude
-my @ExcludeHosts;	# No condor on these hosts
-my @ExcludeSponsors;	# No condor for these sponsors
-my @ExcludeRooms;	# No condor in these rooms
 my @ClusterNodes;	# Dedicated cluster nodes
 my @IncludeHosts;	# Other hosts that we're allowwed to run on
-my @DownHosts;		# Machines with problems
+my %DownHosts;		# Machines with problems
 
-# Add a "never match" pattern to all of the exclude lists
-push @ExcludeUsers, "NEVER-MATCH-ME";
-push @ExcludeHosts, "NEVER-MATCH-ME";
-push @ExcludeSponsors, "NEVER-MATCH-ME";
-push @ExcludeRooms, "NEVER-MATCH-ME";
+# Exclusion lists
+my @ExcludeUsers = ( "NEVER-MATCH-ME" );	# List of users to exclude
+my @ExcludeHosts = ( "NEVER-MATCH-ME" );	# No condor on these hosts
+my @ExcludeSponsors = ( "NEVER-MATCH-ME" );	# No condor for these sponsors
+my @ExcludeRooms = ( "NEVER-MATCH-ME" );	# No condor in these rooms
 
 
 # ******************************************************
@@ -93,8 +89,8 @@ die "can't read '$RosterStateFile'" if (! open ( IN, $RosterStateFile ) );
 while ( <IN> )
 {
     chomp;
-    s/\#.*$//g;
-    next if ( $_ eq "" );
+    s/\s*\#.*$//g;
+    next if ( /^\s*$/ );
     if ( /arch\s+=\s+\"(.+)\"/i )
     {
 	my ($t) = $1;
@@ -125,6 +121,7 @@ while ( <IN> )
     }
     elsif ( /ExcludeHost\s+=\s+\"(.+?)\"/i )
     {
+	print "$.: No Host = '$1'\n" if ( $Debug );
 	push( @ExcludeHosts, $1 );
     }
     elsif ( /IncludeHost\s+=\s+\"(.+?)\"/i )
@@ -137,7 +134,15 @@ while ( <IN> )
     }
     elsif ( /Down\s+=\s+\"(.+?)\"/i )
     {
-	push( @DownHosts, $1 );
+	$DownHosts{$1} = $1;
+    }
+    elsif ( /NotSetup\s+=\s+\"(.+?)\"/i )
+    {
+	# Do nothing
+    }
+    elsif ( /PersonalCondor(Users|Hosts|Full)\s+=\s+\"(.+?)\"/i )
+    {
+	# Do nothing
     }
     elsif ( ! /^$/ )
     {
@@ -169,17 +174,18 @@ my $MachineCount = 0;	# Raw machine count
 my $HostCount = 0;	# Hosts added to the list count
 if ( $MachineList eq "" )
 {
-    die "Can't read stdin" if (! open ( MACHINES, "<\&STDIN" ) );
+    open ( MACHINES, "<\&STDIN" ) || die "Can't read stdin";
 }
 else
 {
-    die "Can't run '$MachineList'" if (! open ( MACHINES, "$MachineList|" ) );
+    open ( MACHINES, "$MachineList|" ) || die "Can't run '$MachineList'";
 }
 MACHINE:
 while ( <MACHINES> )
 {
     chomp;
     next if ( /^\#/ );
+    print "$_\n" if ( $Debug > 1 );
 
     # Parse the line
     $MachineCount++;
@@ -205,7 +211,7 @@ while ( <MACHINES> )
     next if ( $Sponsor =~ /$ExcludeSponsors/ );
     print "<S:$Sponsor> " if ( $Debug );
 
-    # No host?
+   # No host?
     $Host =~ s/\..*//;
     next if ( $Host =~ /$ExcludeHosts/ );
     print "<H:$Host> " if ( $Debug );
@@ -237,10 +243,10 @@ foreach my $Host ( @IncludeHosts )
 
 # Remove the 'Down' hosts
 my $DownCount = 0;
-foreach my $Down ( @DownHosts )
+foreach my $Down ( keys %DownHosts )
 {
     $DownCount++;
-    delete( $Roster{$Down} );
+#    delete( $Roster{$Down} );
 }
 
 # Dump 'em
@@ -249,6 +255,7 @@ die "Can't write to roster file" if (! open ( OUT, ">$RosterFile" ) );
 my $NodeCount = 0;
 foreach my $Host ( sort keys %Roster )
 {
+    print OUT "- " if ( exists $DownHosts{$Host} );
     print OUT "$Host\n";
     $NodeCount++;
 }

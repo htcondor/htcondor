@@ -27,6 +27,7 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "daemon.h"
+#include "dc_collector.h"
 #include "reli_sock.h"
 #include "command_strings.h"
 #include "condor_distribution.h"
@@ -117,7 +118,12 @@ int main( int argc, char *argv[] )
 	Daemon *daemon;
 	ReliSock *sock;
 
-	daemon = new Daemon( type, machine_name, pool );
+	DCCollector col( pool );
+	if( ! col.addr() ) {
+		fprintf( stderr, "Error: %s\n", col.error() );
+		exit(1);
+	}
+	daemon = new Daemon( type, machine_name, col.addr() );
 		
 	dprintf(D_FULLDEBUG,"Locating daemon process on %s...\n",machine_name);
 

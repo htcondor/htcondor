@@ -33,10 +33,10 @@
 #include "condor_version.h"
 #include "condor_io.h"
 #include "my_hostname.h"
-#include "get_daemon_addr.h"
+#include "get_daemon_name.h"
 #include "internet.h"
-#include "get_full_hostname.h"
 #include "daemon.h"
+#include "dc_collector.h"
 #include "daemon_types.h"
 #include "sig_install.h"
 #include "command_strings.h"
@@ -55,7 +55,7 @@ int  printAdToFile(ClassAd *ad, char* filename);
 // Global variables
 int cmd = 0;
 daemon_t dt = DT_NONE;
-char* pool = NULL;
+DCCollector* pool = NULL;
 bool fast = false;
 bool full = false;
 int all = 0;
@@ -288,7 +288,7 @@ int
 main( int argc, char *argv[] )
 {
 	char *daemonname, *MyName = argv[0];
-	char *cmd_str, **tmp, *foo;
+	char *cmd_str, **tmp;
 	int size, did_one = FALSE;
 
 #ifndef WIN32
@@ -384,9 +384,10 @@ main( int argc, char *argv[] )
 		case 'p':
 			tmp++;
 			if( tmp && *tmp ) {
-				if( (pool = get_full_hostname((const char *)(*tmp))) == NULL ) {
-					fprintf( stderr, "%s: unknown host %s\n", MyName, *tmp );
-					exit( 1 );	
+				pool = new DCCollector( *tmp );
+				if( ! pool->addr() ) {
+					fprintf( stderr, "%s: %s\n", MyName, pool->error() );
+					exit( 1 );
 				}
 			} else {
 				fprintf( stderr, "ERROR: -pool requires another argument\n" );
@@ -699,16 +700,14 @@ cmd = old_cmd
 void
 doCommand( char *name )
 {
-	char		*addr = NULL;
 	int 		sinful = 0, done = 0;
 	daemon_t 	old_dt = dt;
 	int			old_cmd = cmd;
 
-		// See if we were passed a sinful string, and if so, use it. 
+		// See if we were passed a sinful string
 	if( name && *name == '<' ) {
-		addr = name;
 		sinful = 1;
-		dt = DT_NONE;
+		dt = DT_ANY;
 	} 
 
 		// DAEMONS_OFF has some special cases to handle:
@@ -747,10 +746,8 @@ doCommand( char *name )
 	}
 
 
-	if( ! addr ) {
-		addr = get_daemon_addr( dt, name, pool );
-	}
-	if( ! addr ) {
+	Daemon d( dt, name, pool ? pool->addr() : NULL );
+	if( ! d.locate() ) {
 		namePrintf( stderr, name, "Can't find address for" );
 		fprintf( stderr, "Perhaps you need to query another pool.\n" ); 
 		RESTORE;
@@ -759,18 +756,17 @@ doCommand( char *name )
 
 		/* Squawking does its own connect... */
 	if ( cmd == SQUAWK ) {
-		doSquawk( addr );
+		doSquawk( d.addr() );
 		printf ( "Bye!\n" );
 		done = 1;
 		RESTORE;
 		return;
 	}
 
-		/* Connect to the daemon */
-	Daemon d(addr);
+
 	/* Connect to the daemon */
 	ReliSock sock;
-	if(!sock.connect(addr)) {
+	if( !sock.connect(d.addr()) ) {
 		namePrintf( stderr, name, "Can't connect to" );
 		RESTORE;
 		return;
@@ -784,7 +780,10 @@ doCommand( char *name )
 		// If no name is specified, or if name is a sinful string or
 		// hostname, we must send VACATE_ALL_CLAIMS.
 		if ( name && !sinful && strchr(name, '@') ) {
-			d.startCommand (cmd, &sock);
+			CondorError errstack;
+			if (!d.startCommand (cmd, &sock, 0, &errstack)) {
+				fprintf (stderr, "ERROR\n%s", errstack.get_full_text());
+			}
 			if( !sock.code(name) || !sock.eom() ) {
 				namePrintf( stderr, name, "Can't send %s command to", 
 							 cmdToStr(cmd) );
@@ -805,7 +804,10 @@ doCommand( char *name )
 		// If no name is specified, or if name is a sinful string or
 		// hostname, we must send PCKPT_ALL_JOBS.
 		if( name && !sinful && strchr(name, '@') ) {
-			d.startCommand (cmd, &sock, 0);
+			CondorError errstack;
+			if (!d.startCommand (cmd, &sock, 0, &errstack)) {
+				fprintf (stderr, "ERROR\n%s", errstack.get_full_text());
+			}
 			if( !sock.code(name) || !sock.eom() ) {
 				namePrintf( stderr, name, "Can't send %s command to", 
 							 cmdToStr(cmd) );
@@ -825,7 +827,10 @@ doCommand( char *name )
 				cmd = DAEMON_OFF_FAST;
 			}
 
-			d.startCommand( cmd, &sock, 0);
+			CondorError errstack;
+			if (!d.startCommand( cmd, &sock, 0, &errstack)) {
+				fprintf (stderr, "ERROR\n%s", errstack.get_full_text());
+			}
 			if( !sock.code(subsys) || !sock.eom() ) {
 				namePrintf( stderr, name, "Can't send %s command to", 
 							 cmdToStr(cmd) );
@@ -838,7 +843,10 @@ doCommand( char *name )
 		break;
 	case DAEMON_ON:
 		{
-			d.startCommand (cmd, &sock, 0);
+			CondorError errstack;
+			if (!d.startCommand (cmd, &sock, 0, &errstack)) {
+				fprintf (stderr, "ERROR\n%s", errstack.get_full_text());
+			}
 			if( !sock.code(subsys) || !sock.eom() ) {
 				namePrintf( stderr, name, "Can't send %s command to", 
 							 cmdToStr(cmd) );
@@ -872,7 +880,9 @@ doCommand( char *name )
 	}
 
 	if( !done ) {
-		if( !d.sendCommand(cmd, &sock) ) {
+		CondorError errstack;
+		if( !d.sendCommand(cmd, &sock, 0, &errstack) ) {
+			fprintf (stderr, "ERROR\n%s", errstack.get_full_text());
 			namePrintf( stderr, name, "Can't send %s command to", 
 						 cmdToStr(cmd) );
 			RESTORE;
@@ -931,7 +941,7 @@ namePrintf( FILE* stream, char* name, char* str, ... )
 	if( name ) {
 		if( *name == '<' ) {
 				// sinful string,
-			if( dt ) {
+			if( dt != DT_NONE && dt != DT_ANY ) {
 				fprintf( stream, " %s at %s\n", daemonString(dt), name );			
 			} else {
 				fprintf( stream, " daemon at %s\n", name );			
@@ -1006,8 +1016,11 @@ handleSquawk( char *line, char *addr ) {
 		return FALSE;
 		
 	case 'd': { /* dump state */
-		Daemon d(addr);
-        d.startCommand(DUMP_STATE, &sock, 0);
+		Daemon d( DT_ANY, addr );
+		CondorError errstack;
+        if (!d.startCommand(DUMP_STATE, &sock, 0, &errstack)) {
+			fprintf (stderr, "ERROR\n%s", errstack.get_full_text());
+		}
 
 		sock.decode();
 
@@ -1029,14 +1042,17 @@ handleSquawk( char *line, char *addr ) {
 			return TRUE;
 		}
 		
-		signal = get_command_num ( token );
+		signal = getCommandNum( token );
 		if ( signal == -1 ) {
 			printf ( "Signal %s not known.\n", token );
 			return TRUE;
 		}
 		
-		Daemon d(addr);
-		d.startCommand (DC_RAISESIGNAL, &sock, 0);
+		Daemon d( DT_ANY, addr );
+		CondorError errstack;
+		if (!d.startCommand (DC_RAISESIGNAL, &sock, 0, &errstack)) {
+			fprintf (stderr, "ERROR\n%s", errstack.get_full_text());
+		}
 
 		sock.encode();
 		sock.code( signal );
@@ -1051,16 +1067,19 @@ handleSquawk( char *line, char *addr ) {
 			return TRUE;
 		}
 		
-		command = get_command_num ( token );
+		command = getCommandNum( token );
 		if ( command == -1 ) {
 			printf ( "Command %s not known.\n", token );
 			return TRUE;
 		}
 
-		Daemon d(addr);
-		d.startCommand ( command, &sock, 0);
+		Daemon d( DT_ANY, addr );
+		CondorError errstack;
+		if (!d.startCommand ( command, &sock, 0, &errstack)) {
+			fprintf (stderr, "%s", errstack.get_full_text());
+		}
 		sock.encode();
-		while ( token = strtok( NULL, " " ) ) {
+		while( (token = strtok(NULL, " ")) ) {
 			if ( isdigit(token[0]) ) {
 				int dig = atoi( token );
 				if ( !sock.code( dig ) ) {
@@ -1131,12 +1150,12 @@ doSquawkReconnect( char *addr ) {
 		}
 		
 		if ( pool ) delete pool;
-		
-		if( (pool = get_full_hostname((const char *)(tmp))) == NULL ) {
-			fprintf( stderr, "Unknown host %s\n", tmp );
+		pool = new DCCollector( tmp );
+		if( ! pool->addr() ) {
+			fprintf( stderr, "%s\n", pool->error() );
 			return FALSE;
 		} else {
-			printf ( "Using pool %s.\n", tmp );
+			printf ( "Using pool %s.\n", pool->name() );
 		}
 	}
 	
@@ -1172,12 +1191,12 @@ doSquawkReconnect( char *addr ) {
 			dt = DT_MASTER;
 		}
 	}
-	char *tmp = get_daemon_addr( dt, hostname, pool );
-	if ( !tmp ) {
+	Daemon d( dt, hostname, pool ? pool->addr() : NULL );
+	if( ! d.locate() ) {
 		printf ( "Failed to contact daemon.\n" );
 		return FALSE;
 	}
-	strcpy ( addr, tmp );
+	strcpy ( addr, d.addr() );
 	delete [] hostname;
 	
 	return TRUE;	

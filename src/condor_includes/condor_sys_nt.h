@@ -39,8 +39,15 @@
 
 // #define NOGDI
 #define NOSOUND
+
+#define _WIN32_WINNT 0x0500 // ray's stupid kludge to get jobobject stuff to build
+
+// the ordering of the two following header files 
+// is important! Starting with the new SDK, we want 
+// winsock2.h not winsock.h, so we include it first. 
 #include <winsock2.h>
 #include <windows.h>
+
 
 #include <io.h>
 #include <fcntl.h>
@@ -72,6 +79,7 @@ typedef DWORD pid_t;
 #define strupr _strupr
 #define strlwr _strlwr
 #define snprintf _snprintf
+#define vsnprintf _vsnprintf
 #define chdir _chdir
 #define fsync _commit
 #define access _access
@@ -85,6 +93,7 @@ typedef DWORD pid_t;
 #define W_OK 2
 #define X_OK 4
 #define F_OK 0
+#define ssize_t SSIZE_T
 #define sleep(x) Sleep(x*1000)
 #define getpid _getpid
 #include <process.h>

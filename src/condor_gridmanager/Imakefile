@@ -5,7 +5,7 @@ CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(QMGMT_LIB)
 
-OBJ = gridmanager_main.o gridmanager.o globusjob.o globusresource.o gahp-client.o
+OBJ = gridmanager_main.o gridmanager.o globusjob.o globusresource.o proxymanager.o gahp-client.o
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 
@@ -19,9 +19,11 @@ release_copy_target($(GAHP_DIR)/gahp_server,$(RELEASE_DIR)/sbin,gahp_server,EXEC
 static_copy_target($(GAHP_DIR)/gahp_server,$(STATIC_DIR)/sbin,gahp_server,EXECUTABLE_MODE)
 strip_copy_target($(GAHP_DIR)/gahp_server,$(STRIP_DIR)/sbin,gahp_server,EXECUTABLE_MODE)
 
-strip_target($(NAME),$(STRIP_CONTRIB)/sbin,EXECUTABLE_MODE)
-static_target($(NAME),$(OBJ),$(LIB),$(STATIC_CONTRIB)/sbin)
-static_copy_target($(GAHP_DIR)/gahp_server,$(STATIC_CONTRIB)/sbin,gahp_server,EXECUTABLE_MODE)
-strip_copy_target($(GAHP_DIR)/gahp_server,$(STRIP_CONTRIB)/sbin,gahp_server,EXECUTABLE_MODE)
+release_copy_target(grid_monitor.sh,$(RELEASE_DIR)/sbin,grid_monitor.sh,EXECUTABLE_MODE)
+static_copy_target(grid_monitor.sh,$(STATIC_DIR)/sbin,grid_monitor.sh,EXECUTABLE_MODE)
+strip_copy_target(grid_monitor.sh,$(STRIP_DIR)/sbin,grid_monitor.sh,EXECUTABLE_MODE)
+
+$(GAHP_DIR)/gahp_server:
+	/bin/true
 
 html:

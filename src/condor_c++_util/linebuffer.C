@@ -53,8 +53,7 @@ Buffer( const char ** buf, int *nptr )
 	int			nbytes = *nptr;
 
 	// Loop through the whole input buffer
-	while( nbytes-- )
-	{
+	while( nbytes-- ) {
 		int status = Buffer( *bptr++ );
 		if ( status ) {
 			*buf = bptr;
@@ -71,21 +70,14 @@ int
 LineBuffer::
 Buffer( char c )
 {
-	*bufptr = c;
-	bufcount++;
-	if (  ( '\n' == c ) || ( '\0' == c ) || ( bufcount >= bufsize ) )
-	{
-		*bufptr = '\0';
-		int status = Output( buffer, bufcount );
-		bufptr = buffer;
-		bufcount = 0;
-		if ( status ) {
-			return status;
-		}
+	if (  ( '\n' == c ) || ( '\0' == c ) || ( bufcount >= bufsize ) ) {
+		return DoOutput( false );
 	} else {
+		*bufptr = c;
 		bufptr++;
+		bufcount++;
+		return 0;
 	}
-	return 0;
 }
 
 // Flush the input buffer
@@ -93,8 +85,16 @@ int
 LineBuffer::
 Flush( void )
 {
-	if ( bufcount )
-	{
+	return DoOutput( false );
+}
+
+// Send out data
+int
+LineBuffer::
+DoOutput( bool force ) {
+
+	// If there is data, or we're in force, just do it..
+	if ( ( bufcount ) || ( force )  ) {
 		*bufptr = '\0';
 		int status = Output( buffer, bufcount );
 		bufptr = buffer;
@@ -102,4 +102,5 @@ Flush( void )
 		return status;
 	}
 	return 0;
+
 }

@@ -1,29 +1,13 @@
 #define OperatingSystem	OSF1
 #define Architecture	ALPHA
 
-#define HAS_GLOBUS	YES
-#define HAS_GSI		YES
-#define HAS_OPENSSL	YES
-
 #define GLOBUS_FLAVOR gcc64dbg
-
-#define Platform	ALPHA-DUX4
-#define GccArch		alpha-dec-osf4.0
-
-#define PlatformFlags	-DDUX=DUX
-
-#define IS_ALPHA_OSF1	YES
-#define IS_DUX		YES
-#define IS_DUX4		YES
 
 #define PlatformLdFlags -lmld
 #define VendorFTestFlags -assume recursive 
 
-#define IS_EGCS_BUILD YES
-#define EgcsPath /s/egcs-1.1.2/alpha_dux40d/lib/gcc-lib/alpha-dec-osf4.0d/egcs-2.91.66
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC
-#define Crt0 /usr/lib/cmplrs/cc/crt0.o
 
 #define XLibPath /usr/lib/libX11.a /usr/lib/libdnet_stub.a
 #define XExtLibPath /usr/lib/libXext.a
@@ -73,7 +57,6 @@
 #define PVM_ARCH			ALPHA
 #define USE_GCC				YES
 #define HAS_STATIC			YES
-#define NEED_SNPRINTF		YES
 
 #define HAS_DYNAMIC_USER_JOBS	NO
 
@@ -92,3 +75,16 @@
 
 #define VendorCTestFlags -std
 
+
+/**************************************************************************
+** Include OS version and Arch-specific config files
+**************************************************************************/
+
+#ifdef ArchIncludeFile
+#include ArchIncludeFile
+
+#endif
+
+#ifdef OSVersionIncludeFile
+#include OSVersionIncludeFile
+#endif
