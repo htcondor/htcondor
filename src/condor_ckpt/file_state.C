@@ -801,7 +801,7 @@ OpenFileTable::Restore()
 			  f->real_fd = open( f->pathname, mode );
 			if( f->real_fd < 0 ) {
 			  dprintf(D_ALWAYS, "i=%d, filename=%s\n", i, f->pathname);
-			  dprintf(D_ALWAYS, "open: %s", strerror(errno) );
+			  dprintf(D_ALWAYS, "open: %s\n", strerror(errno) );
 			  Suicide();
 			}
 			
