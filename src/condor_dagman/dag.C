@@ -270,7 +270,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
 				  }
 
                   _numJobsSubmitted--;
-                  assert( _numJobsSubmitted >= 0 );
+                  ASSERT( _numJobsSubmitted >= 0 );
 
 				  if( job->retries++ < job->GetRetryMax() ) {
 					  RestartNode( job, recovery );
