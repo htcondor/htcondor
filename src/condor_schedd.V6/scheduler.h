@@ -288,7 +288,6 @@ class Scheduler : public Service
 	
 	// info about our central manager
 	DCCollector*	Collector;
-	DCCollector*	ViewCollector;
 	Daemon*			Negotiator;
 
 	void			updateCentralMgr( int command, ClassAd* ca, 
@@ -419,7 +418,7 @@ private:
 	int				numMatches;
 	int				numShadows;
 	List <PROC_ID>	*IdleSchedUniverseJobIDs;
-	StringList		*FlockCollectors, *FlockNegotiators, *FlockViewServers;
+	StringList		*FlockCollectors, *FlockNegotiators;
 	int				MaxFlockLevel;
 	int				FlockLevel;
     int         	alive_interval;  // how often to broadcast alive
