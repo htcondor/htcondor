@@ -126,6 +126,7 @@ friend class ListIterator<ObjType>;
 public:
 		// General
 	List();
+
 	virtual ~List();
 	bool	Append( ObjType & obj );
 	bool	Append( ObjType * obj );
@@ -162,6 +163,9 @@ public:
 #endif
 
 protected:
+	List(const List<ObjType> &toCopy); // disallow copy constructor 
+	List<ObjType> &operator=(const List<ObjType> &toCopy); // disallow assignment operator
+
 	void	RemoveItem( Item<ObjType> * );
 	Item<ObjType>	*dummy;
 	Item<ObjType>	*current;
@@ -243,6 +247,8 @@ Item<ObjType>::~Item()
   The empty list contains just a dummy element which has a null pointer
   to an object.
 */
+
+
 template <class ObjType>
 List<ObjType>::List()
 {
@@ -253,7 +259,6 @@ List<ObjType>::List()
 	// cout << "Constructed List" << endl;
 	num_elem = 0;
 }
-
 
 template <class ObjType>
 int
@@ -294,18 +299,7 @@ template <class ObjType>
 bool
 List<ObjType>::Append( ObjType & obj )
 {
-	Item<ObjType>	*item;
-
-	// cout << "Entering Append (reference)" << endl;
-	item = new Item<ObjType>( &obj );
-    if (item == NULL) return false;
-	dummy->prev->next = item;
-	item->prev = dummy->prev;
-	dummy->prev = item;
-	item->next = dummy;
-	current = item;
-	num_elem++;
-    return true;
+	return Append(&obj);
 }
 
 /*
@@ -335,13 +329,7 @@ template <class ObjType>
 void
 List<ObjType>::Insert( ObjType& obj )
 {
-	Item<ObjType>	*item;
-	item = new Item<ObjType>( &obj );
-	current->prev->next = item;
-	item->prev = current->prev;
-	current->prev = item;
-	item->next = current;
-	num_elem++;
+	Insert(&obj);
 }
 
 /* Insert an element before the current element */
@@ -693,6 +681,5 @@ ListIterator<ObjType>::IsAfterLast( ) const
 {
 	return( list && cur == NULL );
 }
-
 
 #endif /* LIST_H */
