@@ -1771,7 +1771,7 @@ void Scheduler::StartJobHandler() {
     }
 
 	pid = daemonCore->Create_Process(Shadow, args, PRIV_UNKNOWN, 1, 
-                                     TRUE, NULL, NULL, FALSE, NULL, NULL, 
+                                     sh_is_dc, NULL, NULL, FALSE, NULL, NULL, 
                                      niceness );
 
 	if (pid == FALSE) {
