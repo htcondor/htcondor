@@ -366,7 +366,7 @@ initialize (const char *filename)
 	if ((_fd = open (filename, O_RDONLY, 0)) == -1) return false;
 	if ((_fp = fdopen (_fd, "r")) == NULL) return false;
 
-    lock = new FileLock( _fd );
+    lock = new FileLock( _fd, _fp );
 	if( !lock ) {
 		return false;
 	}
@@ -385,7 +385,7 @@ readEvent (ULogEvent *& event)
 	// we obtain a write lock here not because we want to write
 	// anything, but because we want to ensure we don't read
 	// mid-way through someone else's write
-    lock->obtain( WRITE_LOCK );
+	lock->obtain( WRITE_LOCK );
 
 	// store file position so that if we are unable to read the event, we can
 	// rewind to this location
@@ -398,7 +398,8 @@ readEvent (ULogEvent *& event)
 	retval1 = fscanf (_fp, "%d", &eventnumber);
 
 	// so we don't dump core if the above fscanf failed
-	if (retval1 != 1) eventnumber = 1;
+	if (retval1 != 1) 
+		eventnumber = 1;
 
 	// allocate event object; check if allocated successfully
 	event = instantiateEvent ((ULogEventNumber) eventnumber);
@@ -418,7 +419,7 @@ readEvent (ULogEvent *& event)
 		// buggy getEvent() slurped up more than one event), then
 		// synchronize the log
 		sleep( 1 );
-		if( fseek( _fp, filepos, SEEK_SET) == -1 ) {
+		if( fseek( _fp, filepos, SEEK_SET)) {
 			dprintf( D_ALWAYS, "fseek() failed in %s:%d", __FILE__, __LINE__ );
 			return ULOG_UNK_ERROR;
 		}
@@ -505,4 +506,9 @@ synchronize ()
         }
     }
     return false;
+}
+
+void ReadUserLog::outputFilePos(const char *pszWhereAmI)
+{
+	dprintf(D_ALWAYS, "Filepos: %d, context: %s\n", ftell(_fp), pszWhereAmI);
 }
