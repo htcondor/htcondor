@@ -119,14 +119,33 @@ int main (int argc, char *argv[])
 
 	// If we dispose of the first "roy", the second one should still be there.
 	roy_ssstring.dispose();
+	//strings.disposeByIndex(roy_index);
 	test_string_in_space(&strings, "roy", __LINE__);
 	test_string_is_correct(&strings, roy_index, "roy", __LINE__);
 
 	// But if we dispose of the scond "roy", it should no longer be there.
 	// Note that getNumStrings() won't be correct though. That's not hard
 	// to fix in a simple way, but I didn't get around to it. 
-	roy_ssstring_2.dispose();
+	//roy_ssstring_2.dispose();
+	strings.disposeByIndex(roy_index);
 	test_string_not_in_space(&strings, "roy", __LINE__);
+
+	// Now we test that disposing of strings works okay. 
+	strings.getCanonical("a");
+	strings.getCanonical("b");
+	int c_index = strings.getCanonical("c");
+	strings.getCanonical("d");
+	strings.getCanonical("e");
+	int f_index = strings.getCanonical("f");
+
+	strings.disposeByIndex(c_index);
+	strings.disposeByIndex(f_index);
+	strings.getCanonical("g");
+	test_string_in_space(&strings, "g", __LINE__);
+	strings.getCanonical("h");
+	test_string_in_space(&strings, "g", __LINE__);
+	test_string_in_space(&strings, "h", __LINE__);
+	test_number_of_strings(&strings, 8, __LINE__);
 
 	// Print out a summary of what happened.
 	printf("\nResults: \n");
@@ -220,8 +239,9 @@ void test_string_is_correct(
 			   canonical_index, original, line_number);
  		number_of_tests_passed++;
 	} else {
-		printf("Failed: The string for %d is not \"%s\" in line number %d.\n",
-			   canonical_index, original, line_number);
+		printf("Failed: The string for %d is not \"%s\" but is %s"
+			   "in line number %d.\n",
+			   canonical_index, original, (*strings)[canonical_index], line_number);
  		number_of_tests_failed++;
 	}
 	return;
