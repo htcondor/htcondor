@@ -64,7 +64,7 @@
 	  but must still be supported by remote system calls for
 	  cross platform interoperability.
 
-  in code_bytes( buf, len );
+  in code_bytes_bool( buf, len );
 	  A statement like this appears with the prototype for the
 	  write() system call.  Note that the parameter "buf" is a
 	  pointer to void, and it is not immediately obvious whether
@@ -84,6 +84,11 @@
 	  receiver to the sender.  In cases where data needs to travel
 	  in both directions, both an "in" and an "out" statement would
 	  appear.
+
+	  NOTE: we need to use code_bytes_bool() here to get the
+	  assert-safe functionality we want: 0 on failure, 1 on
+	  success.  code_bytes() itself just returns the number of
+	  bytes read or written, and -1 on failure. 
 
 	map()
 
@@ -176,22 +181,22 @@
 #if defined( BufferCondorIO )
 	off_t lseek( map(int fd), off_t offset, int whence ); 
 	ssize_t read( map(int fd), void *buf, size_t len ) {
-		out code_bytes( &buf, &rval, len );
+		out code_bytes_bool( &buf, &rval, len );
 		alloc( buf, len );
 	}
 	
         ssize_t write( map(int fd), const void *buf, size_t len ) {
-		in code_bytes( &buf, &len, len );
+		in code_bytes_bool( &buf, &len, len );
 		alloc( buf, len );
 	}
 
 	int lseekread( map(int fd), off_t offset, int whence, void *buf, size_t len ) : pseudo {
-		out code_bytes( &buf, &rval, len );
+		out code_bytes_bool( &buf, &rval, len );
 		alloc( buf, len );
 	}
 
         int lseekwrite( map(int fd), off_t offset, int whence, const void *buf, size_t len ) : pseudo {
-		in code_bytes( &buf, &len, len );
+		in code_bytes_bool( &buf, &len, len );
 		alloc( buf, len );
         }
 #endif
@@ -218,7 +223,7 @@
 
 	int carmi_delhosts(int count, HostId* hosts, ResponseTag resp_tag) 
 		:pseudo {
-		in code_bytes( hosts, count*sizeof(HostId) );
+		in code_bytes_bool( hosts, count*sizeof(HostId) );
 		alloc( hosts, count*sizeof(HostId) );
 	}	
 
@@ -229,19 +234,19 @@
 
 	int carmi_delete_notify(int count, HostId *host_ids, 
                                 ResponseTag resp_tag): pseudo {
-		in code_bytes( host_ids, count*sizeof(HostId) );
+		in code_bytes_bool( host_ids, count*sizeof(HostId) );
 		alloc( host_ids, count*sizeof(HostId) );
 	}
 
 	int carmi_suspend_notify(int count, HostId *host_ids,
                                  ResponseTag resp_tag) : pseudo {
-		in code_bytes( host_ids, count*sizeof(HostId) );
+		in code_bytes_bool( host_ids, count*sizeof(HostId) );
 		alloc( host_ids, count*sizeof(HostId) );
 	}
 
 	int carmi_resume_notify(int count, HostId *host_ids,
 			ResponseTag resp_tag)  : pseudo{
-		in code_bytes( host_ids, count*sizeof(HostId) );
+		in code_bytes_bool( host_ids, count*sizeof(HostId) );
 		alloc( host_ids, count*sizeof(HostId) );
 	}
 
@@ -271,13 +276,13 @@
 	   int consistent_cnt, ProcessId *consistent_list, int flush_cnt, 
 	   ProcessId *flush_list, HostId id) : pseudo{
 
-		in code_bytes( ckpt_list, ckpt_cnt*sizeof(ProcessId) );
+		in code_bytes_bool( ckpt_list, ckpt_cnt*sizeof(ProcessId) );
 		alloc( ckpt_list, ckpt_cnt*sizeof(ProcessId) );
 
-		in code_bytes( consistent_list, consistent_cnt*sizeof(ProcessId) );
+		in code_bytes_bool( consistent_list, consistent_cnt*sizeof(ProcessId) );
 		alloc( consistent_list, consistent_cnt*sizeof(ProcessId) );
 
-		in code_bytes( flush_list, flush_cnt*sizeof(ProcessId) );
+		in code_bytes_bool( flush_list, flush_cnt*sizeof(ProcessId) );
 		alloc( flush_list, flush_cnt*sizeof(ProcessId) );
 
 	}
@@ -285,10 +290,10 @@
 	int carmi_restart(int restart_cnt, ProcessId *restart_list, 
 	  int consistent_cnt, ProcessId *consistent_list): pseudo {
 
-		in code_bytes( restart_list, restart_cnt*sizeof(ProcessId) );
+		in code_bytes_bool( restart_list, restart_cnt*sizeof(ProcessId) );
 		alloc( restart_list, restart_cnt*sizeof(ProcessId) );
 
-		in code_bytes( consistent_list, consistent_cnt*sizeof(ProcessId) );
+		in code_bytes_bool( consistent_list, consistent_cnt*sizeof(ProcessId) );
 		alloc( consistent_list, consistent_cnt*sizeof(ProcessId) );
 
 	}
@@ -296,7 +301,7 @@
 	int carmi_migrate(ProcessId target, HostId host, int
 	  consistent_cnt, ProcessId *consistent_list): pseudo {
 
-		in code_bytes( consistent_list, consistent_cnt*sizeof(ProcessId) );
+		in code_bytes_bool( consistent_list, consistent_cnt*sizeof(ProcessId) );
 		alloc( consistent_list, consistent_cnt*sizeof(ProcessId) );
 
 	}
@@ -339,12 +344,12 @@
 		*/
 #if !defined( BufferCondorIO )
 		ssize_t write( map(int fd), const void *buf, size_t len ) {
-			in code_bytes( buf, len );
+			in code_bytes_bool( buf, len );
 			alloc( buf, len );
 		}
 
 		ssize_t read( map(int fd), void *buf, size_t len ) {
-			out code_bytes( buf, rval );
+			out code_bytes_bool( buf, rval );
 			alloc( buf, len );
 		} 
 #endif
@@ -465,7 +470,7 @@ int rename( const char *from, const char *to ) : pseudo {
 	int extern_name( const char *path, char *buf, int bufsize ) : pseudo {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
-		out code_bytes( buf, bufsize );
+		out code_bytes_bool( buf, bufsize );
 		alloc( buf, bufsize );
 	}
 	int free_fs_blocks( const char *pathname ) : pseudo {
@@ -677,7 +682,7 @@ int rename( const char *from, const char *to ) : pseudo {
 	}
 #	if !defined(SUNOS41) && !defined(ULTRIX43)
 		int getfsstat( struct statfs buf[], long bufsize, int flags ) {
-			out code_bytes( buf, STATFS_ARRAY_SIZE );
+			out code_bytes_bool( buf, STATFS_ARRAY_SIZE );
 			alloc( buf, bufsize );
 		}
 #	endif
@@ -718,7 +723,7 @@ not_supported{
 #endif
 	SEND_PATH( path );
     ALLOC_PATH( path );
-    out code_bytes( buf, buf_size );
+    out code_bytes_bool( buf, buf_size );
     alloc( buf, buf_size );
     }
 
@@ -727,7 +732,7 @@ not_supported{
 	int getpagesize();
 
 	int getgroups( int gidsetsize, gid_t grouplist[] ) {
-		out code_bytes( grouplist, gidsetsize * GID_T_SIZE );
+		out code_bytes_bool( grouplist, gidsetsize * GID_T_SIZE );
 		alloc( grouplist, gidsetsize * GID_T_SIZE );
 	}
 #if	defined(HPUX9)
@@ -739,25 +744,25 @@ not_supported{
 #endif
 #	if defined(SUNOS41)
 		int getdents( map(int fd), char *buf, int nbytes ) {
-			out code_bytes( buf, nbytes );
+			out code_bytes_bool( buf, nbytes );
 			alloc( buf, nbytes );
 		}
 #	else
 		int getdirentries( map(int fd), char *buf, int nbytes, long *basep ) {
-			out code_bytes( buf, rval );
-			in code_bytes( basep, EIGHT );
-			out code_bytes( basep, EIGHT );
+			out code_bytes_bool( buf, rval );
+			in code_bytes_bool( basep, EIGHT );
+			out code_bytes_bool( basep, EIGHT );
 			alloc( buf, nbytes );
 			alloc( basep, LONG_SIZE );
 		}
 #	endif
 	int table( int id, int index, char *addr, int nel, unsigned int lel ) {
-		out code_bytes( addr, nel * lel );
+		out code_bytes_bool( addr, nel * lel );
 		alloc( addr, nel * lel );
 	}
 
 	int gethostname( char *address, int address_len ) {
-		out code_bytes( address, address_len );
+		out code_bytes_bool( address, address_len );
 		alloc( address, address_len );
 	}
 	int getdtablesize();
@@ -783,7 +788,7 @@ not_supported{
 #else
 	int gettimeofday( struct timeval *tp, void *tzp ) {
 		out code( tp );
-		out code_bytes( tzp, TIMEZONE_SIZE );
+		out code_bytes_bool( tzp, TIMEZONE_SIZE );
 #endif
 		alloc( tp, TIMEVAL_SIZE );
 		alloc( tzp, TIMEZONE_SIZE );
@@ -848,7 +853,7 @@ not_supported{
 	int utimes( const char *path, struct timeval times[] ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
-		in code_bytes( times, TIMEVAL_ARRAY_SIZE );
+		in code_bytes_bool( times, TIMEVAL_ARRAY_SIZE );
 		alloc( times, TIMEVAL_ARRAY_SIZE );
 	}
 #if defined(HPUX10)
@@ -924,12 +929,12 @@ not_supported{
 
 #	if !defined(AIX32)
 		int mvalid( char * addr, size_t len, int prot ) {
-			out code_bytes( addr, len );
+			out code_bytes_bool( addr, len );
 			alloc( addr, len );
 		}
 
 		int getaddressconf( struct addressconf *buf, size_t length ) {
-			out code_bytes( buf, length );
+			out code_bytes_bool( buf, length );
 			alloc( buf, length );
 		}
 		pid_t getpgid( pid_t pid );
@@ -1243,21 +1248,21 @@ not_supported {
 	int chacl( char *path, struct acl *list, int size ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
-		out code_bytes( list, size );
+		out code_bytes_bool( list, size );
 		alloc( list, size );
 	}
 	int fchacl( map(int fd), struct acl *list, int size ) {
-		out code_bytes( list, size );
+		out code_bytes_bool( list, size );
 		alloc( list, size );
 	}
 	int fstatacl( map(int fd), int cmd, struct acl *list, int size ) {
-		out code_bytes( list, size );
+		out code_bytes_bool( list, size );
 		alloc( list, size );
 	}
 	int statacl( char *path, int cmd, struct acl *list, int size ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
-		out code_bytes( list, size );
+		out code_bytes_bool( list, size );
 		alloc( list, size );
 	}
 	int chownx( char *path, int owner, int group, int ext ) {
@@ -1284,7 +1289,7 @@ not_supported {
 	int psdanger( int sig );
 	int ulimit( int cmd, int lim );
 	int usrinfo( int cmd, char *buf, int count ) {
-		in code_bytes( buf, count );
+		in code_bytes_bool( buf, count );
 		alloc( buf, count );
 	}
 

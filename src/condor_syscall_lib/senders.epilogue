@@ -51,7 +51,7 @@
 		for( bytes_to_go = file_size; bytes_to_go; bytes_to_go -= len ) {
 			len = bytes_to_go < sizeof(buf) ? bytes_to_go : sizeof(buf);
 			read_status = read( loc_fd, buf, len );
-			assert( syscall_sock->code_bytes(buf,len) );
+			assert( syscall_sock->code_bytes_bool(buf,len) );
 		}
 		(void)close( loc_fd );
 
@@ -140,7 +140,7 @@
 			/* Transfer the data */
 		for( bytes_to_go = file_size; bytes_to_go; bytes_to_go -= len ) {
 			len = bytes_to_go < sizeof(buf) ? bytes_to_go : sizeof(buf);
-			assert( syscall_sock->code_bytes(buf,len) );
+			assert( syscall_sock->code_bytes_bool(buf,len) );
 			write_status = write( loc_fd, buf, len );
 		}
 		close_status = close( loc_fd );
