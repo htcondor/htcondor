@@ -65,16 +65,17 @@ enum NodeKind
 /// The various kinds of values
 enum ValueType
 {
-	/** The error value */              ERROR_VALUE,
-	/** The undefined value */          UNDEFINED_VALUE,
-	/** A boolean value (false, true)*/ BOOLEAN_VALUE,
-	/** An integer value */             INTEGER_VALUE,
-	/** A real value */                 REAL_VALUE,
-	/** A relative time value */        RELATIVE_TIME_VALUE,
-	/** An absolute time value */       ABSOLUTE_TIME_VALUE,
-	/** A string value */               STRING_VALUE,
-	/** A classad value */              CLASSAD_VALUE,
-	/** An expression list value */     LIST_VALUE
+										NULL_VALUE			= 0,
+	/** The error value */              ERROR_VALUE			= 1<<0,
+	/** The undefined value */          UNDEFINED_VALUE		= 1<<1,
+	/** A boolean value (false, true)*/ BOOLEAN_VALUE		= 1<<2,
+	/** An integer value */             INTEGER_VALUE		= 1<<3,
+	/** A real value */                 REAL_VALUE			= 1<<4,
+	/** A relative time value */        RELATIVE_TIME_VALUE	= 1<<5,
+	/** An absolute time value */       ABSOLUTE_TIME_VALUE	= 1<<6,
+	/** A string value */               STRING_VALUE		= 1<<7,
+	/** A classad value */              CLASSAD_VALUE		= 1<<8,
+	/** An expression list value */     LIST_VALUE			= 1<<9
 };
 
 /// The multiplicative factors for a numeric literal.
@@ -291,6 +292,12 @@ struct CaseIgnLTStr {
 	}
 };
 
+struct CaseIgnEqStr {
+	bool operator( )( const string &s1, const string &s2 ) const {
+		return( strcasecmp( s1.c_str( ), s2.c_str( ) ) == 0 );
+	}
+};
+
 class ExprTree;
 struct ExprHash {
 	size_t operator()( const ExprTree *const &x ) const {
@@ -303,6 +310,16 @@ struct StringHash {
 		size_t h = 0;
 		for( int i = s.size(); i >= 0; i-- ) {
 			h = 5*h + s[i];
+		}
+		return( h );
+	}
+};
+
+struct StringCaseIgnHash {
+	size_t operator()( const string &s ) const {
+		size_t h = 0;
+		for( int i = s.size(); i >= 0; i-- ) {
+			h = 5*h + tolower(s[i]);
 		}
 		return( h );
 	}
