@@ -215,6 +215,7 @@ class Scheduler : public Service
 	void			StartJobHandler();
 	UserLog*		InitializeUserLog( PROC_ID job_id );
 	bool			WriteAbortToUserLog( PROC_ID job_id );
+	bool			WriteHoldToUserLog( PROC_ID job_id );
 	bool			WriteExecuteToUserLog( PROC_ID job_id, const char* sinful = NULL );
 	bool			WriteEvictToUserLog( PROC_ID job_id, bool checkpointed = false );
 	bool			WriteTerminateToUserLog( PROC_ID job_id, int status );

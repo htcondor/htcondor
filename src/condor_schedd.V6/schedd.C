@@ -1118,9 +1118,16 @@ abort_job_myself(PROC_ID job_id)
 		// We did not find a shadow for this job; just remove it.
 		if (mode == REMOVED) {
 			if (!scheduler.WriteAbortToUserLog(job_id)) {
-				dprintf(D_ALWAYS,"Failed to write abort to the user log\n");
+				dprintf( D_ALWAYS, 
+						 "Failed to write abort event to the user log\n" ); 
 			}
 			DestroyProc(job_id.cluster,job_id.proc);
+		}
+		if( mode == HELD ) {
+			if (!scheduler.WriteHoldToUserLog(job_id)) {
+				dprintf( D_ALWAYS, 
+						 "Failed to write hold event to the user log\n"); 
+			}
 		}
 	}
 }
@@ -1203,7 +1210,37 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 	}
 	return true;
 }
-		
+
+
+bool
+Scheduler::WriteHoldToUserLog( PROC_ID job_id )
+{
+	UserLog* ULog = this->InitializeUserLog( job_id );
+	if( ! ULog ) {
+			// User didn't want log
+		return true;
+	}
+	JobHeldEvent event;
+
+	char* reason = NULL;
+	if( GetAttributeStringNew(job_id.cluster, job_id.proc,
+							  ATTR_HOLD_REASON, &reason) >= 0 ) {
+		event.setReason( reason );
+	}
+		// GetAttributeStringNew always allocates memory, so we free
+		// regardless of the return value.
+	free( reason );
+
+	int status = ULog->writeEvent(&event);
+	delete ULog;
+
+	if (!status) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_HELD event\n" );
+		return false;
+	}
+	return true;
+}
+
 
 bool
 Scheduler::WriteExecuteToUserLog( PROC_ID job_id, const char* sinful )
@@ -3486,6 +3523,7 @@ void
 Scheduler::delete_shadow_rec(int pid)
 {
 	shadow_rec *rec;
+	int job_status = IDLE;
 
 	dprintf( D_FULLDEBUG, "Entered delete_shadow_rec( %d )\n", pid );
 
@@ -3497,6 +3535,9 @@ Scheduler::delete_shadow_rec(int pid)
 		int universe = CONDOR_UNIVERSE_STANDARD;
 		GetAttributeInt(rec->job_id.cluster, rec->job_id.proc,
 						ATTR_JOB_UNIVERSE, &universe);
+		GetAttributeInt(rec->job_id.cluster, rec->job_id.proc,
+						ATTR_JOB_STATUS, &job_status);
+
 		if (universe == CONDOR_UNIVERSE_PVM) {
 			ClassAd *ad;
 			ad = GetNextJob(1);
@@ -3531,6 +3572,12 @@ Scheduler::delete_shadow_rec(int pid)
 		if (rec->removed) {
 			if (!WriteAbortToUserLog(rec->job_id)) {
 				dprintf(D_ALWAYS,"Failed to write abort to the user log\n");
+			}
+		}
+		if( job_status == HELD ) {
+			if( !WriteHoldToUserLog(rec->job_id) ) {
+				dprintf( D_ALWAYS,
+						 "Failed to write hold event to the user log\n" );
 			}
 		}
 		check_zombie( pid, &(rec->job_id) );
