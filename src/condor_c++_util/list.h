@@ -1,6 +1,9 @@
 #if defined(LINUX)
 #pragma interface
 #endif
+
+#pragma interface
+
 /* 
 ** Copyright 1993 by Miron Livny, and Mike Litzkow
 ** 
