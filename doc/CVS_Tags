@@ -7,10 +7,48 @@
 ** of that here.  (New tags should be added at the top of the file,
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
+10/25/04 V6_7-pre-merge-V6_7_2-doc-merge-1
+    The state of the doc directory in V6_7-branch before merging
+    changes from the V6_7_2-branch as tagged V6_7_2-doc-merge-1.
 
-9/28/04 V6_7_2-branch
-    A release branch for the 6.7.2 manual.  Created from the
-    V6_7_2-root tag.  The V6_7_1-branch should now be abandoned.
+10/25/04 V6_7_2-doc-merge-1
+    The state of the doc directory in V6_7_2-branch before a 
+    first-time merge into the V6_7-branch. This brings changes
+    from the V6_6-branch (version 6.6.7 manual) into the
+    V6_7-branch.
+
+10/25/04 V6_7_2-post-merge-V6_6-doc-merge-10
+    The state of the doc directory in V6_7_2-branch after merging
+    changes from the V6_6-branch as tagged V6_6-doc-merge-10.
+
+10/25/04 V6_7_2-pre-merge-V6_6-doc-merge-10
+    The state of the doc directory in V6_7_2-branch before merging
+    changes from the V6_6-branch as tagged V6_6-doc-merge-10.
+
+10/25/04 V6_6-doc-merge-10
+    The state of the doc directory in V6_6-branch before a 
+    merge into the V6_7-branch.  This merge goes into the
+    V6_7_2-branch.
+
+10/22/04 V6_6-post-merge-V6_6_7-doc-merge-1
+    The state of the doc directory in V6_6-branch after merging
+    changes from the V6_6_7-branch as tagged V6_6_7-doc-merge-1.
+
+10/22/04 V6_6-pre-merge-V6_6_7-doc-merge-1
+    The state of the doc directory in V6_6-branch before merging
+    changes from the V6_6_7-branch as tagged V6_6_7-doc-merge-1.
+
+10/22/04 V6_6_7-doc-merge-1
+    The state of the doc directory in V6_6_7-branch before a 
+    first time merge into the V6_6-branch.
+
+10/13/04 V6_6_7-branch
+    A release branch for the 6.6.7 manual, created from the V6_6_7-root
+    tag. Any changes to the 6.6.7 manual should be done here, and the
+    V6_6-branch can be used for 6.6.8 and beyond.
+
+10/13/04 V6_6_7-root
+    The root from which the 6.6.7 release will be created.
 
 9/28/04 V6_7-post-merge-V6_7_1-doc-merge-1
     The state of the doc directory in V6_7-branch after merging
@@ -25,6 +63,10 @@
     first-time merge into the V6_7-branch. This brings changes
     from the V6_6-branch (version 6.6.7 manual) into the
     V6_7-branch.
+
+9/28/04 V6_7_2-branch
+    A release branch for the 6.7.2 manual.  Created from the
+    V6_7_2-root tag.  The V6_7_1-branch should now be abandoned.
 
 9/27/04 V6_7_1-post-merge-V6_6-doc-merge-9
     The state of the doc directory in V6_7_1-branch after merging
