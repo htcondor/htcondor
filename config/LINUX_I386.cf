@@ -10,6 +10,7 @@
 #if defined( IS_GLIBC )
 #   define Platform		I386_LINUX-G
 #   define PublicTargetName	i386_linux2-glibc
+#   define EgcsLibc /usr/local/lib/gcc-lib/i686-pc-linux-gnu/egcs-2.91.66/libgcc.a
 #else
 #   define Platform		I386_LINUX
 #endif
