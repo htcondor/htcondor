@@ -250,7 +250,17 @@ clean::
 uppercase_target($(SIMPLE_LIBC),truncate.o,TRUNCATE.o,truncate,TRUNCATE)
 #endif
 
-#if ! IS_DUX
+#if  IS_DUX
+/* do nothing */
+#elif IS_GLIBC_LINUX && IS_GLIBC20
+uppercase_target($(SIMPLE_LIBC),sigsuspend.o,SIGSUSPEND_TMP.o,sigsuspend,SIGSUSPEND)
+
+SIGSUSPEND.o: SIGSUSPEND_TMP.o ToUpper
+	./ToUpper SIGSUSPEND_TMP.o SIGSUSPEND.o __syscall_SIGSUSPEND __syscall_sigsuspend
+
+clean::
+	rm -f SIGSUSPEND_TMP.o
+#else
 uppercase_target($(SIMPLE_LIBC),sigsuspend.o,SIGSUSPEND.o,sigsuspend,SIGSUSPEND)
 #endif
 uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
