@@ -128,7 +128,7 @@ GENERIC_PROC GenProc;
 	V2_PROC	*Proc = (V2_PROC *)&GenProc;
 #endif
 
-extern "C"  void initializeUserLog(PROC *);
+extern "C"  void initializeUserLog();
 extern "C"  void log_termination(struct rusage *, struct rusage *);
 extern "C"  void log_execute(char *);
 extern "C"  void log_except();
@@ -233,6 +233,10 @@ main(int argc, char *argv[], char *envp[])
 	SyscallLabel = argv[0] + 7;
 #endif
 
+#if !defined(WIN32)
+	install_sig_handler(SIGPIPE, (SIG_HANDLER)SIG_IGN );
+#endif
+
 	if( argc > 1 ) {
 		if( strcmp("-t",argv[1]) == MATCH ) {
 			Termlog++;
@@ -312,7 +316,7 @@ main(int argc, char *argv[], char *envp[])
 #endif
 
 	// initialize the user log
-	initializeUserLog(Proc);
+	initializeUserLog();
 
 	// by this time, the job has been sent and accepted to run, so
 	// log a ULOG_EXECUTE event
