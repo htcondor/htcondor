@@ -2253,10 +2253,10 @@ check_requirements( char *orig )
 	int		has_opsys = FALSE;
 	int		has_arch = FALSE;
 	int		has_disk = FALSE;
-	int		has_virtmem = FALSE;
+	int		has_mem = FALSE;
 	int		has_fsdomain = FALSE;
 	int		has_ckpt_arch = FALSE;
-	char	*ptr;
+	char	*ptr, *tmp;
 	static char	answer[4096];
 
 	if( strlen(orig) ) {
@@ -2315,8 +2315,23 @@ check_requirements( char *orig )
 	}
  
 	for( ptr = answer; *ptr; ptr++ ) {
-		if( strincmp(ATTR_VIRTUAL_MEMORY,ptr,5) == MATCH ) {
-			has_virtmem = TRUE;
+		if( strincmp(ATTR_MEMORY,ptr,5) == MATCH ) {
+				// We found "Memory", but we need to make sure that's
+				// not part of "VirtualMemory"...
+			if( ptr == answer ) {
+					// We're at the beginning, must be Memory, since
+					// there's nothing before it.
+				has_mem = TRUE;
+				break;
+			}
+				// Otherwise, it's safe to go back one position:
+			tmp = ptr - 1;
+			if( *tmp == 'l' || *tmp == 'L' ) {
+					// Must be VirtualMemory, keep searching...
+				continue;
+			}
+				// If it wasn't an 'l', we must have found it...
+			has_mem = TRUE;
 			break;
 		}
 	}
@@ -2355,9 +2370,8 @@ check_requirements( char *orig )
 		(void)strcat( answer, " && (Disk >= DiskUsage)" );
 	}
 
-	if ( !has_virtmem ) {
-		(void)strcat( answer, " && ( (VirtualMemory + (Memory * 1024))" );
-		(void)strcat( answer, " >= ImageSize )" );
+	if ( !has_mem ) {
+		(void)strcat( answer, " && ( (Memory * 1024) >= ImageSize )" );
 	}
 
 	if ( JobUniverse == PVM ) {
