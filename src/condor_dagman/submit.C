@@ -1,13 +1,14 @@
 #include "submit.h"
 #include "util.h"
 #include "debug.h"
-#include "types.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>  /*   for sleep()  */
 
-static bool submit_try (const char * command) {
+static bool submit_try (const char *exe,
+                        const char * command,
+                        CondorID & condorID) {
   
   FILE * fp = popen(command, "r");
   if (fp == NULL) {
@@ -47,25 +48,22 @@ static bool submit_try (const char * command) {
       perror (command);
       return false;
     }
-    
-    debug_println (DEBUG_DEBUG_1, "%s exited with status %d", command, status);
   }
 
-  if (DEBUG_LEVEL(DEBUG_DEBUG_1)) {
-    CondorID_t condorID (0,0,0);
-    if (1 == sscanf(buffer, "1 job(s) submitted to cluster %d",
-                    & condorID._cluster)) {
-      printf ("%s assigned condorID ", command);
+  if (1 == sscanf(buffer, "1 job(s) submitted to cluster %d",
+                  & condorID._cluster)) {
+    if (DEBUG_LEVEL(DEBUG_DEBUG_2)) {
+      printf ("%s assigned condorID ", exe);
       condorID.Print();
       putchar('\n');
     }
   }
-
+  
   return true;
 }
 
 //-------------------------------------------------------------------------
-void submit_submit (const char * cmdFile) {
+void submit_submit (const char * cmdFile, CondorID & condorID) {
   // the '-p' parameter to condor_submit will now cause condor_submit
   // to pause ~4 seconds after a successfull submit.  this prevents
   // the race condition of condor_submit finishing before dagman
@@ -88,7 +86,7 @@ void submit_submit (const char * cmdFile) {
   const int tries = 6;
   
   for (int i = 1 ; i <= tries && !success ; i++) {
-    success = submit_try(command);
+    success = submit_try (exe, command, condorID);
     if (!success) {
       const int wait = 10;
       debug_println (DEBUG_NORMAL, "condor_submit try %d/%d failed, "

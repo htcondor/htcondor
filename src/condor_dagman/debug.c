@@ -50,7 +50,7 @@ void debug_error (int error, debug_level_t level, const char *fmt, ...) {
 }
 
 /*--------------------------------------------------------------------------*/
-void debug_perror (int error, debug_level_t level, char *s) {
+void debug_perror (int error, debug_level_t level, const char *s) {
   if (DEBUG_LEVEL(level)) {
     perror (s);
     exit(error);

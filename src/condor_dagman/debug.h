@@ -129,7 +129,7 @@ void debug_error   (int error, debug_level_t level, const char *fmt, ...);
     @param level This message is intended for output at debug 'level' or above
     @param s     String to pass to perror(), usually argv[0] or a filename
 */
-void debug_perror (int error, debug_level_t level, char *s);
+void debug_perror (int error, debug_level_t level, const char *s);
 
 ///
 #define debug_fflush() fflush(stdout)

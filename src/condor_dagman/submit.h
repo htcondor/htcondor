@@ -1,6 +1,8 @@
 #ifndef CONDOR_SUBMIT_H
 #define CONDOR_SUBMIT_H
 
+#include "types.h"
+
 /** Submits a job to condor using popen().  This is a very primitive method
     to submitting a job, and SHOULD be replacable by a Condor Submit API.
 
@@ -17,6 +19,6 @@
     @return true on success, false on failure
 */
 
-void submit_submit (const char * cmdFile);
+void submit_submit (const char * cmdFile, CondorID & condorID);
 
 #endif /* #ifndef CONDOR_SUBMIT_H */

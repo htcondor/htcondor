@@ -6,18 +6,15 @@ JobID_t Job::_jobID_counter = 0;  // Initialize the static data memeber
 //---------------------------------------------------------------------------
 const char *Job::queue_t_names[] = {
   "QUEUE_INCOMING",
-  "QUEUE_WAITING",
+  "QUEUE_WAITING ",
   "QUEUE_OUTGOING",
 };
 
 //---------------------------------------------------------------------------
 const char * Job::status_t_names[] = {
-  "STATUS_READY",
+  "STATUS_READY    ",
   "STATUS_SUBMITTED",
-  "STATUS_DONE",
-  "STATUS_NOT_READY",
-  "STATUS_RUNNING",
-  "STATUS_ERROR"
+  "STATUS_DONE     ",
 };
 
 //---------------------------------------------------------------------------
@@ -28,7 +25,7 @@ Job::~Job() {
 
 //---------------------------------------------------------------------------
 Job::Job (const char *jobName, const char *cmdFile):
-  _Status(STATUS_NOT_READY) {
+  _Status(STATUS_READY) {
 
   // JobID will be assigned when the Job class is linked to the Joblist
 
@@ -38,8 +35,7 @@ Job::Job (const char *jobName, const char *cmdFile):
   _cmdFile = new char[strlen(cmdFile)+1];
   strcpy(_cmdFile, cmdFile);
 
-  // initialize condor variables
-  _CondorID._cluster = _CondorID._proc = _CondorID._subproc = -1;
+  // _condorID struct initializes itself
 
   // jobID is a primary key (a database term).  All should be unique
   _jobID = _jobID_counter++;
@@ -87,3 +83,8 @@ void Job::Print (bool condorID) const {
   }
 }
 
+//---------------------------------------------------------------------------
+void job_print (Job * job, bool condorID = false) {
+  if (job == NULL) printf ("(UNKNOWN)");
+  else job->Print(condorID);
+}

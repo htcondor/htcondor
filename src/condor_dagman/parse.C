@@ -78,8 +78,6 @@ bool parse (char *filename, Dag *dag) {
       char *done = strtok(0, DELIMITERS);
       if (done != NULL && strcasecmp(done, "DONE") == 0) {
         job->_Status = Job::STATUS_DONE;
-      } else {
-        job->_Status = Job::STATUS_READY;
       }
 
       if (!dag->Add (*job)) {

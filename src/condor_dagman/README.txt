@@ -127,7 +127,7 @@ Recent Work
     necessary, rather than a SUBMIT queue.
   - Had some quality discussion with Rajesh and Todd about
     Dagman design, and planned features for version 1 and later version 2.
-    Conclusions were reached with Miron.  Here is the summary:
+    Conclusions were reached with Miron.
   - Cleaned up screen output for end users
   - Fixed memory leaks
   - Removed unused functions and variables

@@ -20,18 +20,16 @@ public:
   */
   enum queue_t { Q_INCOMING, Q_WAITING, Q_OUTGOING };
 
+  /// The string names for the queue_t enumeration
   static const char *queue_t_names[];
   
   /** The Status of a Job
       If you update this enum, you *must* also update status_t_names
    */
   enum status_t {
-    /** Job is ready */               STATUS_READY = 0,
+    /** Job is ready */               STATUS_READY,
     /** Job has been submitted */     STATUS_SUBMITTED,
     /** Job is done */                STATUS_DONE,
-    /** Job is not ready */           STATUS_NOT_READY,
-    /** Job is currently running */   STATUS_RUNNING,
-    /** Job had an error */           STATUS_ERROR
   };
 
   /// The string names for the status_t enumeration
@@ -93,8 +91,8 @@ public:
   /** Print the identification info for this Job.
    */
   void Print (bool condorID = false) const;
-
-  /** */ CondorID_t _CondorID;
+  
+  /** */ CondorID _CondorID;
   /** */ status_t _Status;
   
  private:
@@ -123,5 +121,8 @@ public:
   */
   static JobID_t _jobID_counter;
 };
+
+void job_print (Job * job, bool condorID = false);
+
 
 #endif /* ifndef JOB_H */

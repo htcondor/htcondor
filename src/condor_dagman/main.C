@@ -16,6 +16,15 @@ static void Usage() {
 }
 
 //---------------------------------------------------------------------------
+void touch (const char * filename) {
+    int fd = open(filename, O_RDWR | O_CREAT, 0600);
+    if (fd == -1) {
+        debug_perror (1, DEBUG_QUIET, filename);
+    }
+    close (fd);
+}
+
+//---------------------------------------------------------------------------
 int main(int argc, char **argv) {
 
   debug_progname = argv[0];
@@ -38,8 +47,6 @@ int main(int argc, char **argv) {
   // In this version, the DAG_LOG is not used
 
   char *datafile = NULL;
-  
-  Dag * dag = new Dag();
   
   if (argc < 2) Usage();  //  Make sure an input file was specified
   
@@ -75,23 +82,26 @@ int main(int argc, char **argv) {
     } else Usage();
   }
   
+  debug_println (DEBUG_VERBOSE,
+                 "This Dagman executable was compiled on %s at %s",
+                 __DATE__, __TIME__);
+
   if (datafile == NULL) {
     debug_println (DEBUG_SILENT, "No input file was specified");
     Usage();
   }
  
-  debug_println (DEBUG_VERBOSE,"Condor log will be written to %s", condorLogName);
+  debug_println (DEBUG_VERBOSE,"Condor log will be written to %s",
+                 condorLogName);
   debug_println (DEBUG_VERBOSE,"Dagman Lockfile will be written to %s",
                  lockFileName);
   debug_println (DEBUG_VERBOSE,"Input file is %s", datafile);
   
   //
-  // Initialize the DagMan object
+  // Create the DAG
   //
   
-  if (dag->Init(condorLogName, lockFileName) != OK) {
-    debug_error (1, DEBUG_QUIET, "ERROR in DagMan initialization!");
-  }
+  Dag * dag = new Dag (condorLogName, lockFileName);
   
   //
   // Parse the input file.  The parse() routine
@@ -107,15 +117,9 @@ int main(int argc, char **argv) {
 
   if (DEBUG_LEVEL(DEBUG_DEBUG_3)) dag->PrintJobList();
   
-  // check if any jobs have been pre-defined as being done
-  // if so, report this to the other nodes
-  dag->TerminateFinishedJobs();
-
-  debug_println (DEBUG_VERBOSE, "Number of Pre-completed Jobs: %d",
-                 dag->NumJobsDone());
-    
-  debug_println (DEBUG_NORMAL, "Starting DagMan ...");
-  
+  //------------------------------------------------------------------------
+  // Bootstrap and Recovery
+  //
   // If the Lockfile exists, this indicates a premature termination
   // of a previous run of Dagman. If condor log is also present,
   // we run in recovery mode
@@ -123,55 +127,63 @@ int main(int argc, char **argv) {
   // If the Daglog is not present, then we do not run in recovery
   // mode
   
-  if (access(lockFileName,  F_OK) == 0 &&
-      access(condorLogName, F_OK) == 0) {
-
-    debug_println (DEBUG_VERBOSE, "Lock file %s detected, "
-                   "running in RECOVER mode", lockFileName);
-    dag->Recover();
-
-  } else {                                      // NORMAL MODE
+  {
+    bool recovery = (access(lockFileName,  F_OK) == 0 &&
+                     access(condorLogName, F_OK) == 0);
     
-    // if there is an older version of the log files,
-    // we need to delete these.
-    
-    if ( access( condorLogName, F_OK) == 0 ) {
-      debug_println (DEBUG_VERBOSE, "Deleting older version of %s",
-                     condorLogName);
-      if (remove (condorLogName) == -1)
-        debug_perror (1, DEBUG_QUIET, condorLogName);
+    if (recovery) {
+      debug_println (DEBUG_VERBOSE, "Lock file %s detected, ", lockFileName);
+    } else {
+      
+      // if there is an older version of the log files,
+      // we need to delete these.
+      
+      if ( access( condorLogName, F_OK) == 0 ) {
+        debug_println (DEBUG_VERBOSE, "Deleting older version of %s",
+                       condorLogName);
+        if (remove (condorLogName) == -1)
+          debug_perror (1, DEBUG_QUIET, condorLogName);
+      }
+
+      touch (condorLogName);
+      touch (lockFileName);
     }
-    open(lockFileName, O_RDWR | O_CREAT, 0600);
+
+    debug_println (DEBUG_VERBOSE, "Bootstrapping...");
+    if (!dag->Bootstrap (recovery)) {
+      if (DEBUG_LEVEL(DEBUG_DEBUG_1)) dag->Print_TermQ();
+      debug_error (1, DEBUG_QUIET, "ERROR while bootstrapping");
+    }
   }
+
+  //------------------------------------------------------------------------
+  // Proceed with normal operation
+  //
+  // At this point, the DAG is bootstrapped.  All jobs premarked DONE
+  // are in a STATUS_DONE state, and all their children have been
+  // marked ready to submit.
+  //
+  // If recovery was needed, the log file has been completely read and
+  // we are ready to proceed with jobs yet unsubmitted.
+  //------------------------------------------------------------------------
 
   while (dag->NumJobsDone() < dag->NumJobs()) {
 
     debug_println (DEBUG_DEBUG_2, "%s: Jobs Done: %d/%d", __FUNCTION__,
                    dag->NumJobsDone(), dag->NumJobs());
 
-    if (DEBUG_LEVEL(DEBUG_DEBUG_3)) dag->PrintJobList();
+    if (DEBUG_LEVEL(DEBUG_DEBUG_4)) dag->PrintJobList();
 
-    int ran = dag->SubmitReadyJobs();
-    debug_println (DEBUG_DEBUG_2, "%s: Jobs Submitted: %d",
-                   __FUNCTION__, ran);
-    
-    //
     // Wait for new events to be written into the condor log
-    //
-    
-    // need to put a check here for the case
-    // where the condor log doesn't exist (i.e., no jobs submitted)
-    
     while (!dag->DetectLogGrowth());
     
-    if (dag->ProcessLogEvents() != OK) {
-      debug_error (1, DEBUG_QUIET, "ERROR processing condor log!");
+    if (dag->ProcessLogEvents() == false) {
+      if (DEBUG_LEVEL(DEBUG_DEBUG_1)) dag->Print_TermQ();
+      debug_error (1, DEBUG_QUIET, "ERROR while processing condor log!");
 	}
-
-    // Nothing to do if all jobs have finished
   }
   
   debug_println (DEBUG_NORMAL, "All jobs Completed!");
   delete dag;
-  return (0);
+  return 0;
 }
