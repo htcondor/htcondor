@@ -127,16 +127,18 @@ int SafeSock::end_of_message()
 {
 	int ret_val = FALSE;
 	int sent;
+        unsigned char * md = 0;
 
 	switch(_coding){
 		case stream_encode:
-            if (mdChecker_) {
-                    sent = _outMsg.sendMsg(_sock, (struct sockaddr *)&_who, _outMsgID, 
-                                           mdChecker_->computeMD());
-            }
-            else {
-                    sent = _outMsg.sendMsg(_sock, (struct sockaddr *)&_who, _outMsgID, 0);
-            }
+                    if (mdChecker_) {
+	    		md = mdChecker_->computeMD();
+		    }
+                    sent = _outMsg.sendMsg(_sock, (struct sockaddr *)&_who, 
+				           _outMsgID, md);
+		    if (md) {
+		    	free(md);
+		    }
                     _outMsgID.msgNo++; // It doesn't hurt to increment msgNO even if fails
                     resetCrypto();
 
