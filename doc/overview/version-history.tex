@@ -36,7 +36,7 @@ libc5, glibc20 and glibc21.
 This includes support for RedHat 6.x, Debian 2.x and other popular
 Linux distributions.
 Whereas the Linux machines had once been fragmented across libc5 and
-glibc, they have now been reunified.
+GNU libc, they have now been reunified.
 This means there is no longer any need for the ``LINUX-GLIBC'' OpSys
 setting in your pool: all machines will now show up as ``LINUX''.
 Part of this reunification process was the removal of dynamically
@@ -101,6 +101,13 @@ the old collector before it starts reporting to the new one.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a major bug dealing with the group access a Condor job is
+started with.
+Now, Condor jobs are started with all the groups the job's owner is
+in, not just their default group.
+This also fixes a security hole where user jobs could be started up in
+access groups they didn't belong to.
 
 \item Fixed a bug where there was a needless limitation on the number of open
 file descriptors a user job could have.
