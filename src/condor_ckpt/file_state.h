@@ -32,7 +32,7 @@ private:
 	Bit	readable : 1;		// File open for read or read/write
 	Bit	writeable : 1;		// File open for write or read/write
 	off_t	offset;			// File pointer position
-	FD		fd_num;			// File descriptor number
+	FD		real_fd;		// File descriptor number
 	FD		dup_of;			// File descriptor this is a dup of
 	char	*pathname;		// *FULL* pathname of the file
 };
