@@ -1549,7 +1549,7 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 	// sanity check on the pid.  we don't want to do something silly like
 	// kill pid -1 because the pid has not been initialized yet.
 	int signed_pid = (int) pid;
-	if ( signed_pid > -10 && signed_pid < 10 ) {
+	if ( signed_pid > -10 && signed_pid < 3 ) {
 		EXCEPT("Send_Signal: sent unsafe pid (%d)",signed_pid);
 	}
 
@@ -1756,30 +1756,10 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 	return TRUE;
 }
 
-int DaemonCore::Send_WM_CLOSE(pid_t pid)
-{
-	if ( pid == ppid )
-		return FALSE;		// cannot shut down our parent
-
-#ifdef WIN32
-	PidEntry *pidinfo;
-	if ( (pidTable->lookup(pid, pidinfo) < 0) || (pidinfo->hWnd == 0) ) {
-		dprintf(D_DAEMONCORE, "Send_WM_CLOSE: hWnd for pid %d unknown\n",pid);
-		return FALSE;
-	}
-	if (SendMessage(pidinfo->hWnd, WM_CLOSE, 0, 0) == 0) {
-		dprintf(D_DAEMONCORE, "Successfully sent WM_CLOSE to pid %d\n", pid);
-		return TRUE;
-	} 
-	dprintf(D_DAEMONCORE,"Failed to send WM_CLOSE to pid %d\n",pid);
-#endif
-	return FALSE;
-}
-
 int DaemonCore::Shutdown_Fast(pid_t pid)
 {
 
-	dprintf(D_DAEMONCORE,"called DaemonCore::Shutdown_Fast(%d)\n",
+	dprintf(D_PROCFAMILY,"called DaemonCore::Shutdown_Fast(%d)\n",
 		pid);
 
 	if ( pid == ppid )
@@ -1789,7 +1769,12 @@ int DaemonCore::Shutdown_Fast(pid_t pid)
 	// even on a shutdown_fast, first try to send a WM_CLOSE because
 	// when we call TerminateProcess, any DLL's do not get a chance to
 	// free allocated memory.
-	// Send_WM_CLOSE(pid);
+	if ( Shutdown_Graceful(pid) == TRUE ) {
+		// we successfully sent a WM_CLOSE.
+		// sleep a quarter of a second for the process to consume the WM_CLOSE
+		// before we call TerminateProcess below.
+		Sleep(250);
+	}
 	// now call TerminateProcess as a last resort
 	PidEntry *pidinfo;
 	HANDLE pidHandle; 	
@@ -1808,13 +1793,25 @@ int DaemonCore::Shutdown_Fast(pid_t pid)
 		// found this pid on our table
 		pidHandle = pidinfo->hProcess;
 	}
+
+	if( (DebugFlags & D_PROCFAMILY) && (DebugFlags & D_FULLDEBUG) ) {
+			char check_name[_POSIX_PATH_MAX];
+			CSysinfo sysinfo;
+			sysinfo.GetProcessName(pid,check_name);
+			dprintf(D_PROCFAMILY,
+				"Shutdown_Fast(%d):calling TerminateProcess handle=%x check_name='%s'\n",
+				pid,pidHandle,check_name);
+	}
+
 	if (TerminateProcess(pidHandle, 0)) {
-		dprintf(D_DAEMONCORE, "Successfully terminated pid %d\n", pid);
+		dprintf(D_PROCFAMILY, 
+			"Shutdown_Fast:Successfully terminated pid %d\n", pid);
 		ret_value = TRUE;
 	} else {
 		// TerminateProcess failed!!!??!
 		// should we try anything else here?
-		dprintf(D_ALWAYS,"Failed to TerminateProcess on pid %d\n",pid);
+		dprintf(D_PROCFAMILY,
+			"Shutdown_Fast: Failed to TerminateProcess on pid %d\n",pid);
 		ret_value = FALSE;
 	}
 	if ( must_free_handle ) {
@@ -1831,29 +1828,112 @@ int DaemonCore::Shutdown_Fast(pid_t pid)
 
 int DaemonCore::Shutdown_Graceful(pid_t pid)
 {
-	dprintf(D_DAEMONCORE,"called DaemonCore::Shutdown_Graceful(%d)\n",
+	dprintf(D_PROCFAMILY,"called DaemonCore::Shutdown_Graceful(%d)\n",
 		pid);
 
 	if ( pid == ppid )
 		return FALSE;		// cannot shut down our parent
 
 #if defined(WIN32)
+
+	// WINDOWS
+
 	PidEntry *pidinfo;
-	if ( (pidTable->lookup(pid, pidinfo) < 0) 
-		|| (pidinfo->new_process_group == 0) ) {
-		EXCEPT("Shutdown_Graceful: Pid %d is not a known process group id!",pid);
+	PidEntry tmp_pidentry;
+
+	if ( (pidTable->lookup(pid, pidinfo) < 0) ) {
+
+		// This pid was not created with DaemonCore Create_Process, and thus
+		// we do not have a PidEntry for it.  So we set pidinfo to point to a
+		// dummy PidEntry which has just enough info setup so we can send 
+		// a WM_CLOSE.
+		pidinfo = &tmp_pidentry;
+		pidinfo->pid = pid;
+		pidinfo->hWnd = NULL;
+		pidinfo->sinful_string[0] = '\0';
 	}
-	if ( !GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT,pid) ) {
-		dprintf(D_DAEMONCORE,"Shutdown_Graceful: send CTRL_BREAK failed\n");
-		return FALSE;
+
+	if ( pidinfo->sinful_string[0] != '\0' ) {
+		// pid is a DaemonCore Process; send it a DC_SIGTERM signal instead.
+		dprintf(D_PROCFAMILY,"Shutdown_Graceful: Sending pid %d DC_SIGTERM\n",pid);
+		return Send_Signal(pid,DC_SIGTERM);
+	}
+
+	// Find the Window Handle to this pid, if we don't already know it
+	if ( pidinfo->hWnd == NULL ) {
+
+		// First, save the currently winsta and desktop
+		HDESK hdesk;
+		HWINSTA hwinsta;
+		hwinsta = GetProcessWindowStation();
+		hdesk = GetThreadDesktop( GetCurrentThreadId() );
+
+		if ( hwinsta && hdesk ) {
+			// Enumerate all winsta's to find the one with the job
+			EnumWindowStations((WINSTAENUMPROC)DCFindWinSta, (LPARAM)pidinfo);
+
+			if ( pidinfo->hWnd == NULL ) {
+				// Did not find it.  This could happen because WinNT has a 
+				// stupid bug where a brand new winsta does not immediately
+				// show up when you enumerate all the winstas.  Sometimes
+				// it takes a few seconds.  So lets sleep a while and try again.
+				sleep(4);
+				EnumWindowStations((WINSTAENUMPROC)DCFindWinSta, (LPARAM)pidinfo);
+			}
+
+			// Set winsta and desktop back to the service desktop (or wherever)
+			SetProcessWindowStation(hwinsta);
+			SetThreadDesktop(hdesk);
+			// don't leak handles!
+			CloseDesktop(hdesk);
+			CloseWindowStation(hwinsta);
+		}	  
+	}
+
+	// Now, if we know the window handle, send it a WM_CLOSE message
+	if ( pidinfo->hWnd ) {
+		if ( pidinfo->hWnd == HWND_BROADCAST ) {
+			dprintf(D_PROCFAMILY,"PostMessage to HWND_BROADCAST!");
+			EXCEPT("About to send WM_CLOSE to HWND_BROADCAST!");
+		}
+		if( (DebugFlags & D_PROCFAMILY) && (DebugFlags & D_FULLDEBUG) ) {
+			// A whole bunch of sanity checks
+			pid_t check_pid = 0;
+			GetWindowThreadProcessId(pidinfo->hWnd, &check_pid);
+			char check_name[_POSIX_PATH_MAX];
+			CSysinfo sysinfo;
+			sysinfo.GetProcessName(check_pid,check_name);
+			dprintf(D_PROCFAMILY,
+				"Sending WM_CLOSE to pid %d: hWnd=%x check_pid=%d name='%s'\n",
+				pid,pidinfo->hWnd,check_pid,check_name);
+			if ( pid != check_pid ) {
+				EXCEPT("In ShutdownGraceful: failed sanity check");
+			}
+		}
+		if ( !PostMessage(pidinfo->hWnd,WM_CLOSE,0,0) ) {
+			dprintf(D_PROCFAMILY,"Shutdown_Graceful: PostMessage FAILED, err=%d\n",
+				GetLastError());
+			return FALSE;
+		} else {
+			// Success!!  We're done.
+			dprintf(D_PROCFAMILY,"Shutdown_Graceful: Success\n");
+			return TRUE;
+		}
 	} else {
-		return TRUE;
+		// despite our best efforts, we cannot find the hWnd for this pid.
+		dprintf(D_PROCFAMILY,"Shutdown_Graceful: Failed cuz no hWnd\n");
+		return FALSE;
 	}
+	
 #else
+
+	// UNIX 
+
 	priv_state priv = set_root_priv();
 	int status = kill(pid, SIGTERM);
 	set_priv(priv);
 	return (status >= 0);		// return 1 if kill succeeds, 0 otherwise
+
 #endif
 }
 
@@ -2300,6 +2380,91 @@ int DaemonCore::SetFDInheritFlag(int fh, int flag)
 	return TRUE;
 }
 
+// Callback function for EnumWindowStationProc call to find hWnd for a pid
+BOOL CALLBACK
+DCFindWinSta(LPTSTR winsta_name, LPARAM p)
+{
+	BOOL ret_value;
+	priv_state priv;
+
+	// dprintf(D_FULLDEBUG,"Opening WinSta %s\n",winsta_name);
+
+	if ( strcmp(winsta_name,"WinSta0") == 0 ) {
+		// skip the interactive Winsta to save time
+		dprintf(D_PROCFAMILY,"Skipping Winsta0\n");
+		return TRUE;
+	}
+
+	// must try to open winsta as the user
+	priv = set_user_priv();
+	HWINSTA hwinsta = OpenWindowStation(winsta_name, FALSE, MAXIMUM_ALLOWED);
+	set_priv(priv);
+
+	if ( hwinsta == NULL ) {
+		//dprintf(D_FULLDEBUG,"Error: Failed to open WinSta %s err=%d\n",
+		//	winsta_name,GetLastError());
+
+		// return TRUE so we continue to enumerate
+		return TRUE;
+	}
+
+	// Set the windowstation 
+	if (!SetProcessWindowStation(hwinsta)) {
+			// failed; so close the handle and return TRUE to continue
+			// the enumertion.
+		dprintf(D_PROCFAMILY,
+			"Error: Failed to SetProcessWindowStation to %s\n",winsta_name);
+		CloseWindowStation(hwinsta);
+		return TRUE;    
+	}
+
+	// must try to open desktop as the user
+	set_user_priv();
+	HDESK hdesk = OpenDesktop( "default", 0, FALSE, MAXIMUM_ALLOWED );
+	set_priv(priv);
+
+	if (hdesk == NULL) {
+			// failed; so close the handle and return TRUE to continue
+			// the enumertion.
+		dprintf(D_PROCFAMILY,"Error: Failed to open desktop on winsta %s\n",
+			winsta_name);
+		CloseWindowStation(hwinsta);
+		return TRUE;    
+	}
+
+	// Set the desktop to be "default"   
+	if (!SetThreadDesktop(hdesk)) {
+			// failed; so close the handle and return TRUE to continue
+			// the enumertion.
+		dprintf(D_PROCFAMILY,
+			"Error: Failed to SetThreadDesktop desktop on winsta %s\n",
+			winsta_name);
+		CloseDesktop(hdesk);
+		CloseWindowStation(hwinsta);
+		return TRUE;    
+	}
+
+	// Now check all the windows on this desktop for our user job
+	EnumWindows((WNDENUMPROC)DCFindWindow, p);
+
+	// See if we are done; if so, return FALSE so GDI will stop
+	// enumerating window stations.
+	DaemonCore::PidEntry *entry = (DaemonCore::PidEntry *)p;
+	if ( entry->hWnd ) {
+		// we're done!  we found the user job's window
+		dprintf(D_PROCFAMILY,"Found job pid %d on winsta %s\n",
+			entry->pid,winsta_name);
+		ret_value = FALSE;
+	} else {
+		ret_value = TRUE;
+	}
+
+	CloseDesktop(hdesk);
+	CloseWindowStation(hwinsta);
+
+	return ret_value;
+}
+
 // Callback function for EnumWindow call to find hWnd for a pid
 BOOL CALLBACK
 DCFindWindow(HWND hWnd, LPARAM p)
@@ -2309,6 +2474,17 @@ DCFindWindow(HWND hWnd, LPARAM p)
 	GetWindowThreadProcessId(hWnd, &pid);
 	if (pid == entry->pid) {
 		entry->hWnd = hWnd;
+
+		if( (DebugFlags & D_PROCFAMILY) && (DebugFlags & D_FULLDEBUG) ) {
+			char check_name[_POSIX_PATH_MAX];
+			CSysinfo sysinfo;
+			sysinfo.GetProcessName(pid,check_name);
+			dprintf(D_PROCFAMILY,
+				"DCFindWindow found pid %d: hWnd=%x name='%s'\n",
+				pid,hWnd,check_name);
+		}
+
+
 		return FALSE;
 	}
 	return TRUE;
@@ -3002,13 +3178,6 @@ int DaemonCore::Create_Process(
 	pidtmp->hThread = piProcess.hThread;
 	pidtmp->tid = piProcess.dwThreadId;
 	pidtmp->hWnd = 0;
-		// Note: below code to find hWnd is commented out since EnumWindows
-		// apparently does not see windows on the service desktop!  :^(. -Todd
-	/************* 
-	 * if ( want_command_port == FALSE ) {
-	 *	  EnumWindows((WNDENUMPROC)DCFindWindow, (LPARAM)pidtmp);
-	 * }
-	***********/
 #endif 
 	assert( pidTable->insert(newpid,pidtmp) == 0 );  
 	dprintf(D_DAEMONCORE,
@@ -3030,6 +3199,7 @@ struct thread_info {
 	ThreadStartFunc start_func;
 	void *arg;
 	Stream *sock;
+	priv_state priv;
 };
 
 unsigned
@@ -3037,6 +3207,7 @@ win32_thread_start_func(void *arg) {
 	dprintf(D_FULLDEBUG,"In win32_thread_start_func\n");
 	thread_info *tinfo = (thread_info *)arg;
 	int rval;
+	set_priv(tinfo->priv);	// start thread at same priv_state as parent
 	rval = tinfo->start_func(tinfo->arg, tinfo->sock);
 	if (tinfo->arg) free(tinfo->arg);
 	if (tinfo->sock) delete tinfo->sock;
@@ -3064,6 +3235,7 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 #ifdef WIN32
 	unsigned tid;
 	HANDLE hThread;
+	priv_state priv;
 	// need to copy the sock because our caller is going to delete/close it
 //	Stream *s = sock;
 // #if 0 
@@ -3085,6 +3257,13 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 	tinfo->start_func = start_func;
 	tinfo->arg = arg;
 	tinfo->sock = s;
+		// find out this threads priv state, so our new thread starts out
+		// at the same priv state.  on Unix this is not a worry, since
+		// priv_state on Unix is per process.  but on NT, it is per thread.
+	priv = set_condor_priv();
+	set_priv(priv);
+	tinfo->priv = priv;
+		// create the thread.
 	hThread = (HANDLE) _beginthreadex(NULL, 1024,
 				 (CRT_THREAD_HANDLER)win32_thread_start_func,
 				 (void *)tinfo, 0, &tid);
@@ -3578,13 +3757,15 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 		if ( pidentry->hProcess ) {
 			// a process exited
 			if ( !::GetExitCodeProcess(pidentry->hProcess,&winexit) ) {
-				dprintf(D_ALWAYS,"WARNING: Cannot get exit status for pid = %d\n",pid);
+				dprintf(D_ALWAYS,
+					"WARNING: Cannot get exit status for pid = %d\n",pid);
 				return FALSE;
 			}
 		} else {
 			// a thread created with DC Create_Thread exited
 			if ( !::GetExitCodeThread(pidentry->hThread,&winexit) ) {
-				dprintf(D_ALWAYS,"WARNING: Cannot get exit status for tid = %d\n",pid);
+				dprintf(D_ALWAYS,
+					"WARNING: Cannot get exit status for tid = %d\n",pid);
 				return FALSE;
 			}
 			whatexited = "tid";
