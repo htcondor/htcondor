@@ -1,10 +1,10 @@
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "basename.h"
 #include "dag.h"
 #include "log.h"
 #include "debug.h"
 #include "parse.h"
-#include <libgen.h>  /* for basename() */
 
 //---------------------------------------------------------------------------
 static char *_FileName_ = __FILE__;   // used by EXCEPT
