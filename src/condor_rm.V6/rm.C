@@ -37,6 +37,7 @@
 #include  "list.h"
 #include "sig_install.h"
 #include "condor_version.h"
+#include "daemon.h"
 
 #include "condor_qmgr.h"
 
@@ -47,7 +48,9 @@ char	*MyName;
 BOOLEAN	TroubleReported;
 BOOLEAN All = FALSE;
 int nToProcess = 0;
+int mode;
 List<PROC_ID> ToProcess;
+Daemon* schedd = NULL;
 
 	// Prototypes of local interest
 void handle_constraint(const char *);
@@ -56,9 +59,8 @@ void notify_schedd();
 void usage();
 void handle_all();
 
-char* DaemonName = NULL;
 
-int mode;
+
 
 void
 usage()
@@ -80,14 +82,16 @@ usage()
 		break;
 	}
 	fprintf( stderr, "Usage: %s [options] [constraints]\n", MyName );
-	fprintf( stderr, " where [options] is one of:\n" );
+	fprintf( stderr, " where [options] is zero or more of:\n" );
 	fprintf( stderr, "  -help               Display this message and exit\n" );
 	fprintf( stderr, "  -version            Display version information and exit\n" );
-	fprintf( stderr, "  -name <schedd_name> Connect to the given schedd\n" );
+	fprintf( stderr, "  -name schedd_name   Connect to the given schedd\n" );
+	fprintf( stderr, "  -pool hostname      Use the given central manager to find daemons\n" );
+	fprintf( stderr, "  -addr <ip:port>     Connect directly to the given \"sinful string\"\n" );
 	fprintf( stderr, " and where [constraints] is one or more of:\n" );
-	fprintf( stderr, "  <cluster.proc>      %s the given job\n", word );
-	fprintf( stderr, "  <cluster>           %s the given cluster of jobs\n", word );
-	fprintf( stderr, "  <user>              %s all jobs owned by <user>\n", word );
+	fprintf( stderr, "  cluster.proc        %s the given job\n", word );
+	fprintf( stderr, "  cluster             %s the given cluster of jobs\n", word );
+	fprintf( stderr, "  user                %s all jobs owned by user\n", word );
 	fprintf( stderr, "  -all                %s all jobs "
 			 "(Cannot be used with other constraints)\n", word );
 	exit( 1 );
@@ -111,6 +115,9 @@ main( int argc, char *argv[] )
 	int					i;
 	Qmgr_connection*	q;
 	char*	cmd_str;
+	char* pool = NULL;
+	char* scheddName = NULL;
+	char* scheddAddr = NULL;
 
 	MyName = strrchr( argv[0], DIR_DELIM_CHAR );
 	if( !MyName ) {
@@ -145,21 +152,60 @@ main( int argc, char *argv[] )
 			}
 			switch( arg[1] ) {
 			case 'a':
+				if( arg[2] && arg[2] == 'd' ) {
+					argv++;
+					if( ! *argv ) {
+						fprintf( stderr, 
+								 "%s: -addr requires another argument\n", 
+								 MyName);
+						exit(1);
+					}				
+					if( is_valid_sinful(*argv) ) {
+						scheddAddr = strdup(*argv);
+						if( ! scheddAddr ) {
+							fprintf( stderr, "Out of Memory!\n" );
+							exit(1);
+						}
+					} else {
+						fprintf( stderr, 
+								 "%s: \"%s\" is not a valid address\n",
+								 MyName, *argv );
+						fprintf( stderr, 
+								 "Should be of the form <ip.address.here:port>.\n" );
+						fprintf( stderr, 
+								 "For example: <123.456.789.123:6789>\n" );
+						exit( 1 );
+					}
+					break;
+				}
 				All = TRUE;
 				break;
 			case 'n': 
 				// use the given name as the schedd name to connect to
 				argv++;
 				if( ! *argv ) {
-					fprintf( stderr, "%s: -n requires another argument\n", 
+					fprintf( stderr, "%s: -name requires another argument\n", 
 							 MyName);
 					exit(1);
 				}				
-				if( !(DaemonName = get_daemon_name(*argv)) ) { 
+				if( !(scheddName = get_daemon_name(*argv)) ) { 
 					fprintf( stderr, "%s: unknown host %s\n", 
 							 MyName, get_host_part(*argv) );
 					exit(1);
 				}
+				break;
+			case 'p':
+				// use the given name as the central manager to query
+				argv++;
+				if( ! *argv ) {
+					fprintf( stderr, "%s: -pool requires another argument\n", 
+							 MyName);
+					exit(1);
+				}				
+				if( pool ) {
+					free( pool );
+				}
+				pool = strdup( *argv );
 				break;
 			case 'v':
 				version();
@@ -180,15 +226,29 @@ main( int argc, char *argv[] )
 		}
 	}
 
-		// Open job queue 
-	q = ConnectQ(DaemonName);
+	if( ! (All || nArgs) ) {
+			// We got no indication of what to remove
+		usage();
+	}
+
+		// We're done parsing args, now make sure we know how to
+		// contact the schedd. 
+	if( ! scheddAddr ) {
+			// This will always do the right thing, even if either or
+			// both of scheddName or pool are NULL.
+		schedd = new Daemon( DT_SCHEDD, scheddName, pool );
+	} else {
+		schedd = new Daemon( DT_SCHEDD, scheddAddr );
+	}
+	if( ! schedd->locate() ) {
+		fprintf( stderr, "%s: %s\n", MyName, schedd->error() ); 
+		exit( 1 );
+	}
+
+		// Open job queue
+	q = ConnectQ( schedd->addr() );
 	if( !q ) {
-		if( DaemonName ) {
-			fprintf( stderr, "Failed to connect to queue manager %s\n", 
-					 DaemonName );
-		} else {
-			fprintf( stderr, "Failed to connect to local queue manager\n" );
-		}
+		fprintf( stderr, "Failed to connect to %s\n", schedd->idStr() );
 		exit(1);
 	}
 
@@ -237,74 +297,52 @@ extern "C" int SetSyscalls( int foo ) { return foo; }
 void
 notify_schedd()
 {
-	ReliSock	*sock;
-	char		*scheddAddr;
+	ReliSock	sock;
 	int			cmd;
 	PROC_ID		*job_id;
 	int 		i;
 
-	if( (scheddAddr = get_schedd_addr(DaemonName)) == NULL ) {
-		if( *DaemonName ) {
-			fprintf( stderr, "Can't find schedd address of %s\n", DaemonName);
-		} else {
-			fprintf( stderr, "Can't find address of local schedd\n" );
-		}
-		exit(1);
-	}
-
 		/* Connect to the schedd */
-	sock = new ReliSock;
-	if(!sock->connect(scheddAddr)) {
+	if( !sock.connect(schedd->addr(), 0) ) {
 		if( !TroubleReported ) {
-			if( *DaemonName ) {
-				fprintf( stderr, "Error: Can't connect to schedd %s\n", 
-						 DaemonName );
-			} else {
-				fprintf( stderr, "Error: Can't connect to local schedd\n" );
-			}
+			fprintf( stderr, "%s: can't connect to %s\n", MyName, 
+					 schedd->idStr() );
 			TroubleReported = 1;
 		}
-		delete sock;
 		return;
 	}
 
-	sock->encode();
+	sock.encode();
 
 	cmd = KILL_FRGN_JOB;
-	if( !sock->code(cmd) ) {
+	if( !sock.code(cmd) ) {
 		fprintf( stderr,
 			"Warning: can't send KILL_JOB command to condor scheduler\n" );
-		delete sock;
 		return;
 	}
 
-	if( !sock->code(nToProcess) ) {
+	if( !sock.code(nToProcess) ) {
 		fprintf( stderr,
 			"Warning: can't send num jobs to process to schedd (%d)\n",
 			nToProcess );
-		delete sock;
 		return;
 	}
 
 	ToProcess.Rewind();
 	for (i=0;i<nToProcess;i++) {
 		job_id = ToProcess.Next();
-		if( !sock->code(*job_id) ) {
+		if( !sock.code(*job_id) ) {
 			fprintf( stderr,
 				"Error: can't send a proc_id to condor scheduler\n" );
-			delete sock;
 			return;
 		}
 	}
 
-	if( !sock->end_of_message() ) {
+	if( !sock.end_of_message() ) {
 		fprintf( stderr,
 			"Warning: can't send end of message to condor scheduler\n" );
-		delete sock;
 		return;
 	}
-
-	delete sock;
 }
 
 
