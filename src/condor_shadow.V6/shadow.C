@@ -282,6 +282,7 @@ main(int argc, char *argv[], char *envp[])
 		reserved_swap = 5 * 1024;			/* 5 megabytes */
 	} else {
 		reserved_swap = atoi( tmp ) * 1024;	/* Value specified in megabytes */
+		free( tmp );
 	}
 
 	free_swap = calc_virt_memory();
