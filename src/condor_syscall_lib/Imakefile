@@ -1,4 +1,7 @@
-#if !DOES_REMOTE_SYSCALLS
+#if DOES_REMOTE_SYSCALLS
+SEND_OBJ = send.o
+SETPRIORITY_OBJ = setpriority.o
+#else
 CLIP = -DCLIP
 #endif
 
@@ -52,7 +55,7 @@ HP_SPECIFIC_FILES = flock.o seteuid.o setegid.o
 HP_CKPT = get_reginfo.HPUX.o
 #endif
 
-STUBS = switches.o switches.special.o
+STUBS = switches.o switches.special.o $(SEND_OBJ) $(SETPRIORITY_OBJ)
 UTIL = \
 	remote_syscall.o \
 	syscall_connect.o \
