@@ -60,6 +60,7 @@ fhandle_t			return grab( TYPE_NAME );
 key_t				return grab( TYPE_NAME );
 fd_set				return grab( TYPE_NAME );
 PROC				return grab( TYPE_NAME );
+STARTUP_INFO		return grab( TYPE_NAME );
 {STRUCT}stat		return grab( TYPE_NAME );
 {STRUCT}statfs		return grab( TYPE_NAME );
 {STRUCT}rusage		return grab( TYPE_NAME );
