@@ -24,7 +24,7 @@
 #define __CONDOR_MASTER
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
-#include "daemon_types.h"
+#include "daemon.h"
 
 enum AllGoneT { MASTER_RESTART, MASTER_EXIT, MASTER_RESET };
 enum ReaperT { DEFAULT_R, ALL_R, NO_R };
