@@ -79,7 +79,7 @@ static int is_init_lock_initialized = 0;
     // #else  // no lib init lock
     #endif
 #endif
-static int is_init = 0;
+static int is_init = FALSE;
 
 /* ------------------- private helper routines ------------------- */
 int is_lib_init();
