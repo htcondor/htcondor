@@ -1,0 +1,144 @@
+#!/s/std/bin/perl
+
+# Perl script to turn Condor off or on on compute cluster nodes. 
+# Written 1/14/00 by Derek Wright <wright@cs.wisc.edu>
+#
+# This is a very simple, first pass to solve this problem.
+# Future work required: 
+#   knowing who reserved a node
+#   reservations into the future
+#   length of reservations
+#   automatic checking of stale/idle reservations
+#   ...
+#
+# Usage:
+# condor_cluster_tool off N
+#     turns off Condor on N nodes, and prints their hostnames to STDOUT  
+# condor_cluster_tool on [hosts]
+#     turns on Condor on the given hosts
+# condor_cluster_tool check [hosts]
+#     prints the status of Condor on the given hosts
+
+##################################################
+# Global variables
+##################################################
+$RELEASE_DIR = "/unsup/condor";
+$SBIN = "$RELEASE_DIR/sbin";
+$BIN = "$RELEASE_DIR/bin";
+$CONDOR_OFF = "$SBIN/condor_off -pool condor";
+$CONDOR_ON = "$SBIN/condor_on -pool condor";
+$CONDOR_STATUS = "$BIN/condor_status -pool condor";
+
+##################################################
+# The guts
+##################################################
+# $#ARGV is 1 less than the # of args...
+if( $#ARGV+1 < 2 ) {
+    usage();
+}
+$cmd = shift;
+@args = @ARGV;
+if( ($cmd =~ /on/) ) {
+    start( @args );
+} elsif( ($cmd =~ /of/) ) {
+    stop( @args );
+} elsif( ($cmd =~ /ch/) ) {
+    check( @args );
+} else {
+    usage();
+}
+exit(0);
+
+
+##################################################
+# Subroutines
+##################################################
+sub usage {
+    print STDERR "\nUsage:  $0 off N\n";
+    print STDERR "        $0 on [hosts]\n";
+    print STDERR "        $0 check [hosts]\n";
+    print STDERR "  off   Turn off Condor on N nodes, and print their ";
+    print STDERR "hostnames to STDOUT\n";
+    print STDERR "  on    Turn on Condor on the given hosts\n";
+    print STDERR "  check Print status of Condor on the given hosts\n";
+    print STDERR "Examples:\n";
+    print STDERR "  $0 off 4\n";
+    print STDERR "  $0 on c03 c05 c07 c09\n";
+    print STDERR "  $0 check c03 c04\n";
+    print STDERR "\n";
+    exit(1);
+}
+
+
+sub start {
+    my( @hosts ) = @_;
+    foreach $host ( @hosts ) {
+	open( CMD, "$CONDOR_ON $host |" );
+	while( <CMD> ) {
+	    print;
+	}
+	close CMD;
+    }
+}
+
+
+sub stop {
+    my( $num ) = @_;
+    my( @hosts );
+    if( ($num =~ /.*\D.*/) ) {
+	die "Error: $num is not a number, try again\n";
+    }
+    @hosts = find_avail( $num );
+    kill_condor( @hosts );
+}
+
+
+sub find_avail {
+    my( $num ) = @_;
+    my( $i, $host, @hosts );
+    # First, trivial pass: just give them the first N nodes
+    for( $i = 1; $i <= $num; $i++ ) {
+	if( $i < 10 ) {
+	    $host = "c0$i";
+	} else {
+	    $host = "c$i";
+	}
+	push @hosts, $host;
+    }
+    return @hosts;
+}
+
+
+sub kill_condor {
+    my( @hosts ) = @_;
+    foreach $host ( @hosts ) {
+	`$CONDOR_OFF $host`;
+	print $host . "\n";
+    }
+}
+
+
+sub check {
+    my( @hosts ) = @_;
+    foreach $host ( @hosts ) {
+	$status = check_host( $host );
+	print "$host: $status\n";
+    }
+}
+
+
+sub check_host {
+    my( $host ) = @_;
+    my( $status );
+    open( CMD, "$CONDOR_STATUS $host 2>&1 |" );
+    while( <CMD> ) {
+	if( /.*unknown host.*/ ) {
+	    $status = "Unknown host";
+	} elsif( /^$/ ) {
+	    $status = "Condor is down";
+	} else {
+	    $status = "Condor is up";
+	}
+    }
+    return $status
+}
