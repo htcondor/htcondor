@@ -905,7 +905,6 @@ SetRequirements()
 	tmp = check_requirements( JobRequirements );
 	(void) sprintf (buffer, "%s = %s", ATTR_REQUIREMENTS, tmp);
 	strcpy (JobRequirements, tmp);
-	fprintf(stderr, "%s\n", buffer);
 
 	InsertJobExpr (buffer);
 }
