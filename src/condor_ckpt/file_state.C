@@ -368,7 +368,7 @@ OpenFileTable::Save()
 			} else {
 				pos = syscall( SYS_lseek, f->real_fd, (off_t)0, SEEK_CUR);
 			}
-			if( pos < (off_t)0 && f->isPreOpened() && errno == ESPIPE ) {
+			if( pos < (off_t)0 && f->isPreOpened() ) {
 				pos = (off_t)0;		// probably it's a tty
 			}
 			if( pos < (off_t)0 ) {
