@@ -22,7 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
  
-
+#include "condor_common.h"
 
 #include <ctype.h>
 
