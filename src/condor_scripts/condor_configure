@@ -526,6 +526,14 @@ sub install {
     $local_config{FILESYSTEM_DOMAIN}="\$(FULL_HOSTNAME)";
     $local_config{LOCK}="/tmp/condor-lock.\$(HOSTNAME)".rand();
 
+    # if GT3 gahp is installed, fix a few wsdl files
+    my $gt3_install=$release_dir."/lib/gt3";
+    if ( -d $gt3_install ) {
+	
+	system ("cat $gt3_install/server-config.wsdd.in | sed -e \'s|\@GT3_INSTALL\@|$gt3_install|\' > $gt3_install/server-config.wsdd");
+	system ("cat $gt3_install/local-server-config.wsdd.in | sed -e \'s|\@GT3_INSTALL\@|$gt3_install|\' > $gt3_install/local-server-config.wsdd");
+    }
+
     # This is necessary so that if no collector host is specified, 
     # Condor doesn't start using "central-manager-hostname.your.domain"
     $global_config{CONDOR_HOST}="";
