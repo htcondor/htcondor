@@ -109,7 +109,8 @@ open_file_stream( const char *file, int flags, size_t *len )
 	}
 
 	if( MappingFileDescriptors() ) {
-		fd = MarkOpen( file, flags, fd, 0 );
+		EXCEPT("Opened a stream with mapping in effect!");
+//		fd = MarkOpen( file, flags, fd, 0 );
 	}
 
 	return fd;
