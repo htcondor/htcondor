@@ -73,7 +73,7 @@ bool dynuser::init_user() {
 		
 
  		// How we initialize username: if we are the starter,
-		// we set it to be condor-run-vmX. However, if
+		// we set it to be condor-reuse-vmX. However, if
 		// reuse_account = false we initialize it to be 
 		// condor-run-<pid>.
 
@@ -101,7 +101,7 @@ bool dynuser::init_user() {
 				sprintf(vm_num,"vm1");
 		 	}
 			int ret=snprintf(accountname, 100, 
-				"condor-reuse-%s", vm_num);
+				ACCOUNT_PREFIX_REUSE "%s", vm_num);
 		 	if ( ret < 0 ) {
 		 		EXCEPT("account name to create too long");
 		 	}
@@ -115,7 +115,7 @@ bool dynuser::init_user() {
 			// Uids.C and Dynuser.C -stolley 7/2002
 			int current_pid = GetCurrentProcessId();
 			int ret=snprintf(accountname, 100, 
-				"condor-run-%d", current_pid);
+				ACCOUNT_PREFIX "%d", current_pid);
 		 	if ( ret < 0 ) {
 		 		EXCEPT("account name to create too long");
 		 	}
@@ -619,7 +619,7 @@ bool dynuser::deleteuser(char* username ) {
 	// as a sanity check, check the prefix of the username.  this
 	// check really shouldn't be here in terms of code structure, but
 	// Todd is paranoid about deleting some user's account.  -Todd T, 11/01
-	const char *prefix = "condor-run-";
+	const char *prefix = ACCOUNT_PREFIX;
 	if ( strncmp(prefix,username,strlen(prefix)) != 0 ) {
 		dprintf(D_ALWAYS,
 			"Yikes! Asked to delete account %s - ig!\n",
