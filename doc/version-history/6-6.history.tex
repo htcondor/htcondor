@@ -12,7 +12,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The \Condor{dagman} debugging log now reports the total number
+      of ``Un-Ready'' Nodes (i.e. those waiting for unfinished
+      dependencies) in its periodic summaries.  In the past, the
+      omission of this state led to confusion because the total of all
+      reported job states didn't always match the total number of jobs
+      in the DAG.
 
 \end{itemize}
 
@@ -48,6 +53,11 @@ the continued lines.  This has been corrected.
 expression for a scheduler universe job evaluates to true.  Under
 these conditions, the schedd did not log the job terminiation to the
 job log.  Addtionally, the schedd would exit with an error status.
+
+\item Fixed a recently-introduced \Condor{dagman} bug where the number
+      of node retries (specified with the RETRY keyword) wasn't being
+      updated after some failures; instead, the node would be allowed
+      to retry indefinitely if it kept failing.
 
 \end{itemize}
 
