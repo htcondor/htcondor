@@ -234,6 +234,7 @@ class Scheduler : public Service
 	void			child_exit(int, int);
 	void			clean_shadow_recs();
 	void			preempt(int);
+	void			preempt_one_job();
 
 		/** We add a match record (AddMrec), then open a ReliSock to the
 			startd.  We push the capability and the jobAd, then register
