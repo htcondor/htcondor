@@ -18,12 +18,14 @@ Can have one of the following values:
 one of the following: 
 	\begin{description}
 	\item[\AdStr{INTEL}] : Intel x86 CPU (Pentium, Xeon, etc).
+	\item[\AdStr{IA64}] : Intel 64-bit CPU
 	\item[\AdStr{ALPHA}] : Digital Alpha CPU
 	\item[\AdStr{SGI}] : Silicon Graphics MIPS CPU
 	\item[\AdStr{SUN4u}] : Sun UltraSparc CPU
 	\item[\AdStr{SUN4x}] : A Sun Sparc CPU other than an UltraSparc, i.e.
 sun4m or sun4c CPU found in older Sparc workstations such as the Sparc~10, 
 Sparc~20, IPC, IPX, etc.
+	\item[\AdStr{PPC}] : Power Macintosh
 	\item[\AdStr{HPPA1}] :  Hewlett Packard PA-RISC 1.x CPU (i.e. PA-RISC    
                       7000 series CPU) based workstation
 	\item[\AdStr{HPPA2}] :  Hewlett Packard PA-RISC 2.x CPU (i.e. PA-RISC    
@@ -64,7 +66,7 @@ space reserved with the \Macro{RESERVED\_DISK} macro.
 \item[\AdAttr{EnteredCurrentActivity}] : Time at which the machine
 entered the current Activity (see \AdAttr{Activity} entry above).  On
 all platforms (including NT), this is measured in the number of
-seconds since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
+integer seconds since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 %
 \index{ClassAd machine attribute!FileSystemDomain}
 \item[\AdAttr{FileSystemDomain}] : A ``domain'' name configured by the
@@ -89,7 +91,8 @@ Linpack benchmark.
 \index{ClassAd machine attribute!LastHeardFrom}
 \item[\AdAttr{LastHeardFrom}] : Time when the Condor central manager last
 received a status update from this machine.  
-Expressed as seconds since the epoch (integer value).
+Expressed as 
+the number of integer seconds since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 Note: This attribute is only inserted by the central manager once it
 receives the ClassAd.
 It is not present in the \Condor{startd} copy of the ClassAd.
@@ -128,15 +131,21 @@ vulture.cs.wisc.edu.
 machine.  For Condor \VersionNotice\ typically one of the following:
 	\begin{description}
 	\item[\AdStr{HPUX10}] : for HPUX 10.20
+	\item[\AdStr{HPUX11}] : for HPUX B.11.00
 	\item[\AdStr{IRIX6}] : for IRIX 6.2, 6.3, or 6.4
 	\item[\AdStr{IRIX65}] : for IRIX 6.5
+	\item[\AdStr{IRIX62}] : for IRIX 6.2
 	\item[\AdStr{LINUX}] : for LINUX 2.0.x or LINUX 2.2.x kernel systems
 	\item[\AdStr{OSF1}] : for Digital Unix 4.x
-	\item[\AdStr{SOLARIS251}]
-	\item[\AdStr{SOLARIS26}]
-	\item[\AdStr{SOLARIS27}]
-	\item[\AdStr{SOLARIS28}]
+	\item[\AdStr{SOLARIS25}] : for Solaris 2.4 or 5.5
+	\item[\AdStr{SOLARIS251}] : for Solaris 2.5.1 or 5.5.1
+	\item[\AdStr{SOLARIS26}] : for Solaris 2.6 or 5.6
+	\item[\AdStr{SOLARIS27}] : for Solaris 2.7 or 5.7
+	\item[\AdStr{SOLARIS28}] : for Solaris 2.8 or 5.8
+	\item[\AdStr{SOLARIS29}] : for Solaris 2.9 or 5.9
 	\item[\AdStr{WINNT40}] : for Windows NT 4.0
+	\item[\AdStr{OSX}] : for Darwin
+	\item[\AdStr{OSX10\_2}] : for Darwin 6.4
 	\end{description}
 %
 \index{ClassAd machine attribute!Requirements}
@@ -242,8 +251,9 @@ attributes will be defined.
 on the submitting machine.
 
 \index{ClassAd machine attribute (when running)!JobStart}
-\item[\AdAttr{JobStart}] : The timestamp of when the job began
-executing. 
+\item[\AdAttr{JobStart}] : The timestamp in integer seconds of when the job began
+executing, since the Unix epoch (00:00:00 UTC, Jan 1, 1970).  For idle
+machines, the value is UNDEFINED.
 
 \index{ClassAd machine attribute (when running)!LastPeriodicCheckpoint}
 \item[\AdAttr{LastPeriodicCheckpoint}] : If the job has performed a
@@ -261,5 +271,5 @@ environment.
 \begin{description}
 \index{ClassAd attribute!CurrentTime}
 \item[\AdAttr{CurrentTime}] : Evaluates to the 
-the number of seconds since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
+the number of integer seconds since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 \end{description}

@@ -22,7 +22,7 @@ An input file defined prior to submission describes the DAG, and
 a Condor submit description file for each program in the DAG
 is used by Condor.
 
-Each node (program) in the DAG needs its own Condor submit description file.
+Each node (program) in the DAG specifies a Condor submit description file.
 As DAGMan submits jobs to Condor, it monitors the Condor log file(s) to 
 to enforce the ordering required for the DAG.
 
@@ -321,6 +321,10 @@ vanilla, or DAGMan.
 One limitation exists:
 each Condor submit description file must submit only one job.
 There may not be multiple \verb@queue@ commands, or DAGMan will fail.
+This requirement exists to enforce the requirements of a well-defined DAG.
+If each node of the DAG could cause the submission of multiple
+Condor jobs, then it would violate the definition of a DAG.
+
 DAGMan no longer requires that all jobs specify the same log file.
 However, if the DAG contains a very large number of jobs, each
 specifying its own log file, performance may suffer.  Therefore,
@@ -330,8 +334,22 @@ DAGMan enforces the dependencies within a DAG
 using the events recorded in the
 log file(s) produced by job submission to Condor.
 
-Here is an example Condor submit description file to go with the
-diamond-shaped DAG example.
+Here is a simple input file for a 
+modified version of diamond-shaped DAG example.
+
+\begin{verbatim}
+	# Filename: diamond.dag
+	#
+	Job  A  diamond_job.condor 
+	Job  B  diamond_job.condor 
+	Job  C  diamond_job.condor	
+	Job  D  diamond_job.condor
+	PARENT A CHILD B C
+	PARENT B C CHILD D
+\end{verbatim}
+
+A single Condor submit description file goes with all the nodes
+in this DAG:
 
 \index{DAGMan!example submit description file}
 \begin{verbatim}
@@ -361,7 +379,7 @@ submitted to Condor.
 For DAGs with many nodes, this is recommended
 to reduce or eliminate excessive numbers of e-mails.
 
-A separate example shows an intended use of a \Arg{Vars} entry
+A separate example shows an intended use of a \Arg{VARS} entry
 in the DAG.
 It can be used to dramatically reduce the number of submit description
 files needed for a DAG.
@@ -423,7 +441,7 @@ As such, it needs a submit description file.
 \Condor{submit\_dag} produces the needed file,
 naming it by appending the \Arg{DAGInputFileName} with
 \File{.condor.sub}.
-This submit description file may be editted if the DAG is
+This submit description file may be edited if the DAG is
 submitted with
 
 \begin{verbatim}
@@ -431,7 +449,7 @@ condor_submit_dag -no_submit diamond.dag
 \end{verbatim}
 causing \Condor{submit\_dag} to generate the submit description file,
 but not submit DAGMan to Condor.
-To submit the DAG, once the submit description file is editted,
+To submit the DAG, once the submit description file is edited,
 use
 
 \begin{verbatim}
@@ -481,7 +499,7 @@ If a problem is detected,
 \Condor{submit\_dag} prints out an error message and aborts.
 
 DAGMan normally generates a list of job log files to
-monitor by examing all of the job submission files.  If
+monitor by examining all of the job submission files.  If
 that will not work (some job submission files will be generated
 by \Arg{PRE} scripts, for example), you can specify a single
 common log file with the \Arg{-log} option.
@@ -556,6 +574,40 @@ of a node are completed,
 then the Rescue DAG file will also contain Retry entries.
 The number of retries will be set to the appropriate remaining
 number of retries. 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{DAGMan Configuration}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!configuration}
+
+\index{DAGMan!DAGMAN\_MAX\_SUBMITS\_PER\_INTERVAL}
+\Macro{DAGMAN\_MAX\_SUBMITS\_PER\_INTERVAL} is an integer that
+controls how many individual jobs \Condor{dagman} will submit in a row
+before servicing other requests (such as a \Condor{rm}).  It cannot be
+set to less than 1, or more than 1000; if undefined, it defaults to 5.
+
+\index{DAGMan!DAGMAN\_MAX\_SUBMIT\_ATTEMPTS}
+\Macro{DAGMAN\_MAX\_SUBMIT\_ATTEMPTS} is an integer that controls how
+many times in a row \Condor{dagman} will attempt to execute
+\Condor{submit} for a given job before giving up.  It cannot be
+set to less than 1, or more than 10; if left undefined, it defaults to
+6.
+
+\index{DAGMan!DAGMAN\_SUBMIT\_DELAY}
+\Macro{DAGMAN\_SUBMIT\_DELAY} is an integer that controls the number
+of seconds \Condor{dagman} will sleep before submitting consecutive
+jobs.  It can be increased to help reduce the load on the schedd.  It
+cannot be set to less than 0 or more than 60; if undefined, it
+defaults to 0.
+
+\index{DAGMan!DAGMAN\_STARTUP\_CYCLE\_DETECT}
+\Macro{DAGMAN\_STARTUP\_CYCLE\_DETECT} is a boolean that controls
+whether \Condor{dagman} checks for cycles in the DAG structure at
+startup, in addition to its runtime cycle detection.  The startup
+check can be expensive for large DAGs, so if undefined, it defaults to
+False.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Visualizing DAGs with \Prog{dot}}
@@ -643,4 +695,78 @@ progresses.
 
 If conflicting parameters are used in a DOT command, the last one
 listed is used.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:DAGsinDAGs}Advanced Usage: A DAG within a DAG}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!DAGs within DAGs}
+
+The organization and dependencies of the jobs within a DAG
+are the keys to its utility.
+There are cases when a DAG is easier to visualize and 
+construct hierarchically,
+as when a node within a DAG is also a DAG.
+Condor DAGMan handles this situation with grace.
+
+Since more than one DAG is being discussed, 
+terminology is introduced to clarify which DAG is which. 
+Reuse the example DAG as given in 
+Figure~\ref{fig:dagman-diamond}.
+Assume that node B of this diamond-shaped DAG
+will itself be a DAG.
+The DAG of node B is called the inner DAG,
+and the diamond-shaped DAG is called the outer DAG.
+
+To make DAGs within DAGs,
+the essential element is getting the name of the submit description
+file for the inner DAG correct within the outer DAG's input
+file.
+
+Work on the inner DAG first.
+The goal is to generate a Condor submit description file for this inner DAG.
+Here is a very simple DAG input file used as an example of the inner DAG.
+\begin{verbatim}
+	# Filename: inner.dag
+	#
+	Job  X  X.submit
+	Job  Y  Y.submit
+	Job  Z  Z.submit
+	PARENT X CHILD Y
+	PARENT Y CHILD Z
+\end{verbatim}
+
+Use \Condor{submit\_dag} to create a submit description file for this
+inner dag:
+\begin{verbatim}
+   condor_submit_dag -nosubmit inner.dag
+\end{verbatim}
+The resulting file will be named \File{inner.dag.condor.sub}.
+This file will be needed in the DAG input file of the outer DAG.
+The naming of the file is the name of the DAG input file
+(\File{inner.dag}) with the suffix \File{.condor.sub}.
+
+A simple example of a DAG input file for the outer DAG is
+\begin{verbatim}
+	# Filename: diamond.dag
+	#
+	Job  A  A.submit 
+	Job  B  inner.dag.condor.sub
+	Job  C  C.submit	
+	Job  D  D.submit
+	PARENT A CHILD B C
+	PARENT B C CHILD D
+\end{verbatim}
+
+The outer DAG is then submitted as before, with
+\begin{verbatim}
+   condor_submit_dag diamond.dag
+\end{verbatim}
+
+More than one level of nested DAGs is supported.
+
+One item to get right:
+to locate the log files used in ordering the DAG,
+DAGMan either needs a completely flat directory structure
+(\emph{all} files for outer and inner DAGS within the same directory)
+or
+it needs full pathnames to all log files.
 \index{DAGMan|)}

@@ -1080,7 +1080,7 @@ This setting is an example.
 SEC_DEFAULT_AUTHENTICATION = REQUIRED
 SEC_DEFAULT_AUTHENTICATION_METHODS = GSS_AUTHENTICATION 
 X509_DIRECTORY = /path/to/daemon/certificatedirectory
-CONDOR_GATEKEEPER = /C=US/O=Condor/O=University of Wisconsin
+GSI_DAEMON_NAME = /C=US/O=Condor/O=University of Wisconsin
 /OU=Computer Sciences Department/CN=condor@cs.wisc.edu
 \end{verbatim}
 
@@ -1109,12 +1109,12 @@ can point to
 local copies of the certificate stored
 in a local file system.
 
-The macro \MacroNI{CONDOR\_GATEKEEPER} configuration macro
+The macro \MacroNI{GSI\_DAEMON\_NAME} configuration macro
 provides daemons with a distinguished name to use for
 X.509 authentication.
 This name is specified with the following format
 \begin{verbatim}
-CONDOR_GATEKEEPER = /C=?/O=?/O=?/OU=?/CN=<daemon_name@domain>
+GSI_DAEMON_NAME = /C=?/O=?/O=?/OU=?/CN=<daemon_name@domain>
 \end{verbatim}
 A complete example that has the question marks filled in and the
 daemon's user name filled in is given in the 
@@ -1145,7 +1145,7 @@ Department/CN=Alice Smith" asmith
 
 Condor expects the map file to be in the location given by
 \begin{verbatim}
-$(X509_DIRECTORY)/certdir/index.txt
+$(X509_DIRECTORY)/grid-mapfile
 \end{verbatim}
 If the map file is not in this location, a symbolic link
 may be used to point to the actual map file.

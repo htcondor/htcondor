@@ -1,8 +1,17 @@
 \begin{ManPage}{\label{man-condor-store-cred}\Condor{store\_cred}}{1}
 {securely stash user's password - for Win32 only}
-\Synopsis \SynProg{\Condor{store\_cred}}
-\Optnm{add $|$ delete}
-%\oOpt{delete}
+\Synopsis
+\SynProg{\Condor{store\_cred}}
+\oOpt{-help}
+
+\SynProg{\Condor{store\_cred}}
+\Optnm{add} \oOptArg{-p}{password}
+
+\SynProg{\Condor{store\_cred}}
+\Optnm{delete}
+
+\SynProg{\Condor{store\_cred}}
+\Optnm{query}
 
 \index{Condor commands!condor\_store\_cred}
 \index{condor\_store\_cred command}
@@ -38,6 +47,10 @@ across system reboots.
 
 	\OptItem{\Opt{query}}{Report whether the current user's password 
 	is stored or not.}
+
+	\OptItem{\Opt{-help}}{Displays a brief summary of command options.}
+
+	\OptItem{\Opt{-p} password}{Stores given password rather than prompting.}
 
 \end{Options}
 

@@ -19,11 +19,15 @@
 \Condor{submit} is the program for submitting jobs for execution
 under Condor.
 \Condor{submit} requires a submit description file which contains commands
-to direct the queuing of jobs. One submit description file may contain
+to direct the queuing of jobs.
+One submit description file may contain
 specifications for the queuing of many Condor jobs at once.
-All jobs queued by a
-single invocation of \Condor{submit} must share the same executable, and
-are referred to as a job cluster. It is advantageous to submit
+A single invocation of \Condor{submit} may cause one or
+more clusters.
+A cluster is a set of jobs
+specified in the submit description file
+between \Opt{queue} commands for which the executable is not changed.
+It is advantageous to submit
 multiple jobs as a single cluster because:
 \begin{itemize}
 \item Only one copy of the checkpoint file is needed to 
@@ -32,6 +36,10 @@ represent all jobs in a cluster until they begin execution.
 job in a cluster than for Condor to start a new cluster.  This can make
 a big difference when submitting lots of short jobs.
 \end{itemize}
+
+Multiple clusters may be specified within a single
+submit description file.
+Each cluster must specify a single executable.
 
 Note that submission of jobs from a Windows machine requires
 a stashed password to allow Condor to impersonate the user submitting
@@ -155,7 +163,10 @@ Used to specify the current
 working directory for the Condor job. Should be a path to a preexisting
 directory. If not specified, \Condor{submit} will automatically insert
 the user's current working directory at the time \Condor{submit} was run
-as the value for \Opt{initialdir}. 
+as the value for \Opt{initialdir}.  If \Opt{initialdir} is specified,
+and is not an absolute path, the \Opt{initialdir} value will be appended
+to the current working directory, and that will become the working
+directory for the Condor job.
 
 %%%%%%%%%%%%%%%%%%%
 %% should_transfer_files
@@ -167,7 +178,7 @@ The \Opt{should\_transfer\_files} setting is used to define if Condor
 should transfer files to and from the remote machine where your job
 runs.
 The file transfer mechanism is used to run jobs which are not in the
-Standard Universe (and can therefore use remote system calls for file
+standard universe (and can therefore use remote system calls for file
 access) on machines which do not have a shared file system with the
 submit machine.
 \Opt{should\_transfer\_files} equal to \Arg{YES} will cause Condor to
@@ -186,7 +197,8 @@ For more information about this and other settings related to
 transferring files, see section~\ref{sec:file-transfer} on
 page~\pageref{sec:file-transfer}.
 
-
+Note that \Opt{should\_transfer\_files} is not supported
+for jobs submitted to the globus universe.
 %%%%%%%%%%%%%%%%%%%
 %% when_to_transfer_output
 %%%%%%%%%%%%%%%%%%%
@@ -723,7 +735,8 @@ the number of machines to be dedicated toward running the job.
 a core file, \Opt{coresize} specifies the maximum size in bytes of the
 core file which the user wishes to keep. If \Opt{coresize} is not
 specified in the command file, the system's user resource limit
-\mbox{``coredumpsize''} is used (except on HP-UX). 
+\mbox{``coredumpsize''} is used.
+This limit is not used in HP-UX and DUX operating systems. 
 
 %%%%%%%%%%%%%%%%%%%
 %% nice_user
@@ -1120,6 +1133,9 @@ and the name of the file is given
 by the \Opt{output} command.
 The default value is \Expr{True}.
 
+For transferring files other than \File{stdout},
+see \Opt{transfer\_output\_files}.
+
 %%%%%%%%%%%%%%%%%%%
 %% transfer_input
 %%%%%%%%%%%%%%%%%%%
@@ -1134,6 +1150,9 @@ If \Expr{False}, then the job's input is taken from a pre-staged
 file on the remote machine, and
 the name of the file is given by the \Opt{input} command.
 The default value is \Expr{True}.
+
+For transferring files other than \File{stdin},
+see \Opt{transfer\_input\_files}.
 
 %%%%%%%%%%%%%%%%%%%
 %% transfer_error
@@ -1227,17 +1246,21 @@ following \Arg{attribute} into the job ClasssAd with the given
 \item[queue \oOptnm{number-of-procs}] Places one or more
 \index{submit commands!queue}
 copies of the job into
-the Condor queue. If desired, new \Opt{input}, \Opt{output},
-\Opt{error}, \Opt{initialdir}, \Opt{arguments}, \Opt{nice\_user},
-\Opt{priority}, \Opt{kill\_sig}, \Opt{coresize}, or \Opt{image\_size}
-commands may be issued between \Opt{queue} commands. This is very handy
-when submitting multiple runs into one cluster with one submit description
-file;
-for example, by issuing an \Opt{initialdir} between each \Opt{queue}
-command, each run can work in its own subdirectory.
+the Condor queue. 
 The optional
 argument \Arg{number-of-procs} specifies how many times to submit the
 job to the queue, and it defaults to 1.
+If desired, any commands may be placed
+between subsequent \Opt{queue} commands, such as new \Opt{input},
+\Opt{output}, \Opt{error}, \Opt{initialdir}, \Opt{arguments}, or
+\Opt{executable} commands.
+This is handy when submitting multiple runs into one cluster with
+one submit description file.
+Multiple clusters may be specified within a single 
+submit description file by changing the executable between
+\Opt{queue} commands.
+Each time the \Opt{executable} command is issued (between \Opt{queue} commands),
+a new cluster is defined.
 
 %%%%%%%%%%%%%%%%%%%
 %% allow_startup_script

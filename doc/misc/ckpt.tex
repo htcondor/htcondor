@@ -87,8 +87,9 @@ control whether compression is used.
 The default is to not compress.
 
 By default, a checkpoint is written to a file on the local disk of the
-machine where the job was submitted.  A checkpoint server is available
-to serve as a repository for checkpoints.  (See
+machine where the job was submitted.  A Condor pool can also be
+configured with a checkpoint server or servers that
+serve as a repository for checkpoints.  (See
 section~\ref{sec:Ckpt-Server} on page~\pageref{sec:Ckpt-Server}.)
 When a host is configured to use a checkpoint server, jobs submitted
 on that machine write and read checkpoints to and from the server

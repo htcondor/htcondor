@@ -28,11 +28,11 @@ but the job will never run.
 The Condor NT executable for distribution is packaged in
 a single file such as:
 \begin{verbatim}
-  condor-6.1.8_preview-WINNT40-x86.exe
+  condor-6.6.0-winnt40-x86.exe
 \end{verbatim}
 
 \index{Windows NT!installation!initial file size}
-This file is approximately 5 Mbytes in size, and may be
+This file is approximately 20 Mbytes in size, and may be
 removed once Condor is fully installed.
 
 Before installing Condor, please consider joining the condor-world mailing
@@ -47,10 +47,11 @@ to \Email{majordomo@cs.wisc.edu} with the body:
 
 \begin{itemize}
 
-\item Condor NT requires Microsoft Windows NT 4.0 with Service Pack 3 or above.
-Service Pack 5 is recommended. \Note Condor NT has not yet been tested with Windows 2000.
+\item Condor NT requires Microsoft Windows NT 4.0 with Service Pack 3
+or above.  Service Pack 5 is recommended. \Note Condor NT has been fully
+tested with Windows 2000 and Windows XP.
 
-\item 30 megabytes of free disk space is recommended.  Significantly more 
+\item 50 megabytes of free disk space is recommended.  Significantly more 
 disk space could be desired to be able to run jobs with large data files.
 
 \item Condor NT will operate on either an NTFS or FAT filesystem.  However, for security purposes, NTFS is preferred.
@@ -111,7 +112,7 @@ on the other machines within the pool.
 \index{Windows NT!installation!required disk space}
 The Condor release directory takes up a fair amount of space.
 The size requirement for the release
-directory is approximately 20 Mbytes.
+directory is approximately 50 Mbytes.
 
 Condor itself, however, needs space to store all of your jobs, and their
 input files.  If you will be submitting large amounts of jobs,
@@ -135,7 +136,9 @@ Installation Procedure using the included Setup Program}
 Installation of Condor must be done by a user with administrator privileges.
 After installation, the Condor services will be run under the local system account.
 When Condor is running a user job, however, it will run that User job with normal user permissions.
-Condor will dynamically create an account, and then delete that account when the job is finished or is removed from the machine.
+Condor will dynamically enable a special account for running Condor
+jobs and disable the account when the job is finished or removed from
+the machine.
 
 Download Condor, and start the installation process by running the file (or by double clicking on the file).
 The Condor installation is completed by answering questions and choosing options within the following steps.
@@ -265,7 +268,15 @@ are available.
 %    things are and can't get access (without its "letter")
 
 
-\item[STEP 5: Where should Condor send e-mail if things go wrong?]
+\item[STEP 5: Where is the Java Virtual Machine?]
+	While not required, it is possible for Condor to run jobs in the
+	Java universe. In order for Condor to have support for java,
+	you must supply a path to \verb@java.exe@ on your system. The
+	installer will tell you if the path is invalid before proceeding
+	to the next step. To disable the Java universe, simply leave
+	this field blank.
+
+\item[STEP 6: Where should Condor send e-mail if things go wrong?]
 
      Various parts of Condor will send e-mail to a Condor administrator
      if something goes wrong and requires human attention.
@@ -273,7 +284,7 @@ are available.
      of this administrator.  Please pay close attention to this email
 	 since it will indicate problems in your Condor pool.
 
-\item[STEP 6: The domain.]
+\item[STEP 7: The domain.]
 
 % not really used right now.  "Things that suck about NT."
 % UNIX has 2 domains:  file system domain and user-ID domain
@@ -287,7 +298,7 @@ are available.
 	 page~\pageref{sec:UserPrio}) and to form a default email address for
 	 the user.
 
-\item[STEP 7: Access permissions.]
+\item[STEP 8: Access permissions.]
      This step is omitted for the installation of Personal Condor.
 
      Machines within the Condor pool will need
@@ -328,7 +339,7 @@ are available.
 	 section~\ref{sec:Host-Security}
 	 on page~\pageref{sec:Host-Security}.
 
-\item[STEP 8: Job Start Policy.]
+\item[STEP 9: Job Start Policy.]
      Condor will execute submitted jobs on machines based on
      a preference given at installation.
      Three options are given, and the first is most commonly used
@@ -359,9 +370,9 @@ are available.
 	jobs option.  For production mode, however, most people chose the
 	After 15 minutes of no console activity and low CPU activity.
 
-\item[STEP 9: Job Vacate Policy.]
+\item[STEP 10: Job Vacate Policy.]
      This step is omitted if Condor jobs are always run as
-     the option chosen in STEP 8.
+     the option chosen in STEP 9.
 
      If Condor is executing a job and the user returns,
 	 Condor will immediately suspend the job, and after five minutes
@@ -393,7 +404,7 @@ are available.
      Leaving a job in memory, however, has the benefit that accumulated
      run time is not lost for a partially completed job.
 
-\item[STEP 10: Review entered information.]
+\item[STEP 11: Review entered information.]
      Check that the entered information is correctly entered.
      You have the option to return to previous dialog boxes to fix entries.
 \end{description}
@@ -461,8 +472,7 @@ These files currently must reside on the local disk for a variety of reasons.
 Advanced Windows NT users might be able to put the files on remote resources.
 The main concern is twofold.  First, the files must be there when the service
 is started.  Second, the files must always be in the same spot (including
-drive letter), no matter who is logged into the machine.  Specifying a UNC
-path is not supported at this time.
+drive letter), no matter who is logged into the machine.  
 
 \end{description}
 

@@ -299,6 +299,8 @@ architecture/operating system combination.
 Condor binaries are available most major versions of UNIX, as well as
 Windows NT.  
 
+\index{clipped platform!definition of}
+\index{clipped platform!availibility}
 In the table, \Term{clipped} means that Condor does not support
 checkpointing or remote system calls on the given platform. 
 This means that \Term{standard} jobs are not supported, only
@@ -318,9 +320,9 @@ desire the Condor source code, please contact the Condor Team in order to discus
 \emph{Architecture} & \emph{Operating System} \\ \hline \hline
 Hewlett Packard PA-RISC (both PA7000 and PA8000 series) & HPUX 10.20 \\ \hline
 Sun SPARC Sun4m,Sun4c, Sun UltraSPARC & Solaris 2.6, 2.7, 8, 9 \\ \hline
-Silicon Graphics MIPS (R5000, R8000, R10000) & IRIX 6.5 \\ \hline
+Silicon Graphics MIPS (R5000, R8000, R10000) & IRIX 6.5 (clipped) \\ \hline
 Intel x86 & Red Hat Linux 7.1, 7.2, 7.3, 8.0 \\
- & Red Hat Linux 9 (clipped) \\ \hline
+ & Red Hat Linux 9 \\ \hline
  & Windows NT 4.0 Workstation and Server (clipped) \\ \hline
  & Windows 2000 Professional and Server, 2003 Server (clipped) \\ \hline
  & Windows XP Professional (clipped) \\ \hline
@@ -370,6 +372,12 @@ Red Hat Linux, versions 7.1, 7.2, and 7.3 on Intel x86 \\
 & pghpf, version 5.0 & Portland Group high performace Fortran compiler \\ 
 & pgcc, version 5.0 \\ 
 \hline
+Red Hat Linux, version 8 on x86 \\ 
+& gcc, g++, and g77 & version 3.2 \\ 
+& pgf77 and pgf90, version 5.0 & Portland Group compilers \\ 
+& pghpf, version 5.0 & Portland Group high performace Fortran compiler \\ 
+& pgcc, version 5.0 \\ 
+\hline
 HPUX 10.20 on HP PA-RISC (both PA7000 and PA8000)\\ 
 & gcc, g++, and g77; version egcs-1.1.2 & We plan to support newer versions of the GNU compiler collection in the near future.\\ 
 & cc, CC, aCC & cc and aCC cannot use C++ exceptions \\ 
@@ -383,7 +391,8 @@ IRIX 6.5 on Silicon Graphics MIPS (R5000, R8000, and R10000)\\
 Digitial Unix 4.0 on ALPHA \\ 
 & cc, CC, cxx, and c89 \\ 
 & KCC \\ 
-& gcc, g++, and g77;  version egcs-1.1.2 & We plan to support newer versions of the GNU compiler collection in the near future.\\ 
+% & gcc, g++, and g77;  version egcs-1.1.2 & We plan to support newer versions of the GNU compiler collection in the near future.\\ 
+& gcc, g++, and g77;  version 2.95.3 \\ 
 \hline
 \end{tabular}
 \caption{\label{supported-compile}Supported compilers under Condor \VersionNotice\ }

@@ -952,7 +952,7 @@ Similarly, all machines that share the same user information (in
 particular, the same UID, which is important for file systems like
 NFS) are considered part of the same UID domain.
 
-The default configuration for Condor is places each machine
+The default configuration for Condor places each machine
 in its own UID domain and file system domain, using the full hostname of the
 machine as the name of the domains.
 So, if a pool \emph{does} have access to a shared file system,
@@ -1171,6 +1171,18 @@ transfer mechanism is enabled by default with the following values:
   should_transfer_files = YES
   when_to_transfer_output = ON_EXIT
 \end{verbatim}
+
+\Note Prior to Condor version 6.5.2, different attributes were used to
+control when and if files should be transfered.
+Previously, a single attribute was used to control both things, and
+the \verb@IF_NEEDED@ value was not supported.
+This older attribute is still allowed in newer versions of Condor but
+it is now deprecated.
+The settings described above, \verb@when_to_transfer_output@ and
+\verb@should_transfer_files@, should be used instead.
+However, beware that these settings will not work with Condor versions
+older than 6.5.2. 
+
 
 %%%%%%%%%%%% 
 \subsubsection{Specifying What Files to Transfer}

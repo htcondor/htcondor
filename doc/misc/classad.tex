@@ -103,9 +103,9 @@ available in C.  The available operators and their relative precedence is shown
 in figure~\ref{ClassAd:operator-fig}.
 \begin{figure}[h]
 \begin{verbatim}
-  -                    (high precedence)
+  - (unary negation)   (high precedence)
   *   / 
-  +   -
+  +   - (addition, subtraction)
   <   <=   >=   >
   ==  !=  =?=  =!=
   &&
@@ -120,9 +120,9 @@ operators, which are discussed in Section~\ref{ClassAd:evaluation-meta}.
 
 \subsection{Evaluation Semantics}
 \label{ClassAd:evaluation}
-The ClassAd mechanism's primary purpose is for matching entities who supply
+The ClassAd mechanism's primary purpose is for matching entities that supply
 constraints on candidate matches.  The mechanism is therefore defined to
-carry out expression evaluations in the context of two ClassAds which are
+carry out expression evaluations in the context of two ClassAds that are
 testing each other for a potential match.  For example, the \Condor{negotiator}
 evaluates the \Attr{Requirements} expressions of machine and job ClassAds to
 test if they can be matched.  The semantics of evaluating such constraints
@@ -138,41 +138,42 @@ ClassAds, there is a potential for namespace ambiguities.  The following
 rules define the semantics of attribute references made by ad $A$ that is being 
 evaluated in a context with another ad $B$:
 \begin{enumerate}
-	\item If the reference is prefixed by a scope resolution prefix, 
-	\begin{itemize}
-		\item If the prefix is \texttt{MY.}, the attribute is looked up in 
-			ClassAd $A$.  If the named attribute does not exist in $A$, the
-			value of the reference is \texttt{UNDEFINED}.  Otherwise, the
-			value of the reference is the value of the expression bound to
-			the attribute name.
+    \item If the reference is prefixed by a scope resolution prefix, 
+    \begin{itemize}
+        \item If the prefix is \texttt{MY.}, the attribute is looked up in 
+        ClassAd $A$.  If the named attribute does not exist in $A$, the
+        value of the reference is \texttt{UNDEFINED}.  Otherwise, the
+        value of the reference is the value of the expression bound to
+        the attribute name.
 
-		\item Similarly, if the prefix is \texttt{TARGET.}, the attribute is 
-			looked up in ClassAd $B$.  If the named attribute does not exist in 
-			$B$, the value of the reference is \texttt{UNDEFINED}.  Otherwise, 
-			the value of the reference is the value of the expression bound to
-			the attribute name.
+        \item Similarly, if the prefix is \texttt{TARGET.}, the attribute is 
+        looked up in ClassAd $B$.  If the named attribute does not exist in 
+        $B$, the value of the reference is \texttt{UNDEFINED}.  Otherwise, 
+        the value of the reference is the value of the expression bound to
+        the attribute name.
 
-		\item Finally, if the prefix is \texttt{ENV.}, the attribute is
-			evaluated in the ``environment.''  Currently, the only attribute
-			of the environment is \Attr{CurrentTime}, which evaluates to the
-			integer value returned by the system call \texttt{time(2)}.
-	\end{itemize}
+    \end{itemize}
 
-	\item If the reference is not prefixed by a scope resolution prefix,
-	\begin{itemize}
-		\item If the attribute is defined in $A$, the value of the reference
-			is the value of the expression bound to the attribute name in $A$.
-		\item Otherwise, if the attribute is defined in $B$, the value of the
-			reference is the value of the expression bound to the attribute
-			name in $B$.
-		\item Otherwise, if the attribute is defined in the environment, the
-			value of the reference is the evaluated value in the environment.
-		\item Otherwise, the value of the reference is \texttt{UNDEFINED}.
-	\end{itemize}
+    \item If the reference is not prefixed by a scope resolution prefix,
+    \begin{itemize}
+        \item If the attribute is defined in $A$, the value of the reference
+        is the value of the expression bound to the attribute name in $A$.
+        \item Otherwise, if the attribute is defined in $B$, the value of the
+        reference is the value of the expression bound to the attribute
+        name in $B$.
+        \item Otherwise, if the attribute is defined in the ClassAd environment, the
+        value from the environment is returned.
+        This is a special environment, to be
+        distinguished from the Unix environment.
+        Currently, the only attribute
+        of the environment is \Attr{CurrentTime}, which evaluates to the
+        integer value returned by the system call \texttt{time(2)}.
+        \item Otherwise, the value of the reference is \texttt{UNDEFINED}.
+    \end{itemize}
 
-	\item Finally, if the reference refers to an expression that is itself in 
-	the process of being evaluated, there is a circular dependency in the 
-	evaluation.  The value of the reference is \texttt{ERROR}.
+    \item Finally, if the reference refers to an expression that is itself in 
+    the process of being evaluated, there is a circular dependency in the 
+    evaluation.  The value of the reference is \texttt{ERROR}.
 \end{enumerate}
 
 \subsubsection{Operators}
@@ -208,8 +209,8 @@ if either of their operands have these exceptional values.
 		\item Comparisons are carried out in the same type as both operands,
 		and type promotions from integers to reals are performed if one operand
 		is a real, and the other an integer.  Strings may not be converted to
-		any other type, so comparing a string and an integer results in 
-		\texttt{ERROR}.
+		any other type, so comparing a string and an integer or a
+		string and a real results in \texttt{ERROR}.
 
 		\item The operators \verb@==@, \verb@!=@, \verb@<=@, \verb@<@ and 
 		\verb@>=@ \verb@>@ are strict with respect to both \texttt{UNDEFINED} 
@@ -237,7 +238,9 @@ if either of their operands have these exceptional values.
 		\verb@UNDEFINED && FALSE@ evaluates to \texttt{FALSE}, but	
 		\verb@UNDEFINED || FALSE@ evaluates to \texttt{UNDEFINED}.
 
-		\item Any string operand is equivalent to an \texttt{ERROR} operand.
+		\item Any string operand is equivalent to an \texttt{ERROR} operand
+		for a logical operator.  In other words,
+		\verb@TRUE && "foobar"@ evaluates to \texttt{ERROR}.
 	\end{enumerate}
 \end{itemize}
 
@@ -248,7 +251,7 @@ Condor pool, but also other entities that exist in the pool such as
 checkpoint servers, submitters of jobs and master daemons.  Since arbitrary
 expressions may be supplied and evaluated over these ads, users have a uniform
 and powerful mechanism to specify constraints over these ads.  These constraints
-may take the form of \Attr{Requirements} expressions in resource and job ads,
+can take the form of \Attr{Requirements} expressions in resource and job ads,
 or queries over other ads.
 
 \subsubsection{Requirements and Ranks}

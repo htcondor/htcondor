@@ -64,12 +64,12 @@ you.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{How do I upgrade the Unix machines in my pool from 6.2.x to 6.4.x?}
+\subsection*{How do I upgrade the Unix machines in my pool from 6.4.x to 6.6.x?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{upgrade!version 6.2.x to version 6.4.x}
+\index{upgrade!version 6.4.x to version 6.6.x}
 
 This series of steps explains how to upgrade a pool of machines
-from running Condor version 6.2.x to version 6.4.x.
+from running Condor version 6.4.x to version 6.6.x.
 Read through the entire set of directions before following
 them.
 
@@ -96,11 +96,11 @@ using \Condor{hold}.
 Place all jobs into the hold state while replacing binaries.
 
 
-\item[Step 3:  Download Condor \VersionNotice]
+\item[Step 3:  Download Condor 6.6.x]
 To ensure that both new and current binaries are within
 the same volume,
 make a new directory within your current release
-directory where \VersionNotice 
+directory where 6.6.x 
 will go. 
 Unix commands will be of the form
 \begin{verbatim}
@@ -109,7 +109,7 @@ Unix commands will be of the form
   cd new
 \end{verbatim}
 
-Locate the correct \VersionNotice
+Locate the correct version of the Condor
 binary, and download into this \File{new} directory.
 
 Do \emph{not} install the downloaded version.
@@ -131,21 +131,53 @@ From this list of created directories,
 \File{lib} will be used to replace current directories.
 
 \item[Step 4:  Configuration files]
-The downloaded \VersionNotice
+The downloaded version 6.6.x
 configuration file will have extra, new suggestions
 for configuration macro settings,
 to go with new features in Condor.
 These extra configuration macros
-are not be required in order to run \VersionNotice.
+are not be required in order to run version Condor 6.6.x.
 
 Make a backup copy of the current configuration, to
 safeguard backing out of the upgrade, if something goes wrong.
 
 Work through the new
-\VersionNotice
 example configuration file to see if there
 is anything useful and merge with your site-specific (current)
 configuration file.
+
+Note that starting in Condor 6.6.x, security sessions are turned on by
+default. If you will be retaining some 6.4.x series Condor installations
+in your pool, you must turn security sessions off in your 6.6.x
+configuration files. This can be accomplished by setting
+
+\begin{verbatim}
+SEC_DEFAULT_NEGOTIATION = NEVER
+\end{verbatim}
+
+Also in 6.6.x, the definition of Hawkeye / Startd Cron jobs has
+changed. The old syntax allowed the following
+
+\begin{verbatim}
+HAWKEYE_JOBS =\
+	job1:job1_:/path/to/job1:1h \
+	job2:job2_:/path/to/job2:5m \
+	...
+\end{verbatim}
+
+This is no longer supported, and must be replaced with the following
+
+\begin{verbatim}
+HAWKEYE_JOBS = job1:job1_:/path/to/job1:1h
+HAWKEYE_JOBS = $(HAWKEYE_JOBS) job2:job2_:/path/to/job2:5m
+HAWKEYE_JOBS = $(HAWKEYE_JOBS) ...
+\end{verbatim}
+
+It should also be noted that in 6.6.x, the \Condor{collector} and
+\Condor{negotiator} can be set to run on non-standard ports. This will
+cause older (6.4.x and earlier) Condor installations in that pool to no
+longer function.
+
 
 \item[Step 5:  Replace release directories]
 For each of the directories that is to be replaced,
@@ -154,16 +186,16 @@ The Unix commands to do this will be of the form
 \begin{verbatim}
   cd <release-dir>
 
-  mv bin bin.v62
+  mv bin bin.v64
   mv new/bin bin
 
-  mv include include.v62
+  mv include include.v64
   mv new/include include
 
-  mv sbin sbin.v62
+  mv sbin sbin.v64
   mv new/sbin sbin
 
-  mv lib lib.v62
+  mv lib lib.v64
   mv new/lib lib
 \end{verbatim}
 
@@ -200,7 +232,7 @@ If these test jobs fail (possibly by leaving the queue before
 finishing), then the upgrade is unsuccessful.
 If unsuccessful, back out of the upgrade by
 replacing the new configuration file with the backup copy and
-moving the Version 6.2.x release directories back to their
+moving the Version 6.4.x release directories back to their
 previous location.
 Also send e-mail to \Email{condor-admin@cs.wisc.edu},
 explaining the situation and we'll help you work through it.
@@ -210,7 +242,7 @@ Release all jobs in the queue, but running \Condor{release}.
 
 \item[Step 9:  (Optional) Install manual pages]
 
-The \File{man} directory is new with Condor version 6.4.
+The \File{man} directory was new with Condor version 6.4.x.
 It contains manual pages.
 Note that installation of manual pages is optional;
 the chapter containing manual pages are in
@@ -1840,26 +1872,6 @@ subscribe condor-world
 \end{verbatim}
 
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{What is the process for upgrading from 6.0 to 6.2?}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{upgrading!6.0 to 6.2}
-
-The usual process for upgrading is to copy the original 6.0 binaries
-to $<$name$>$.old versions and then copy the 6.2 binaries over the 6.0
-binaries. The \Condor{master} will automatically (in about 5 minutes)
-notice that new binaries have been installed and exec them. Please be sure
-to upgrade the configuration files to match the 6.2 version and pay attention
-to copying over your site's specific policy to the new configuration file. Some
-macros and their meanings have changed and need to be addressed in the
-upgrade. You may find them in section~\ref{sec:V60-Policy-diffs} of the
-manual.
-
-One special note: You must relink your 6.0 standard universe jobs with
-the 6.2 supplied libraries. Backward compatibility to 6.0 from 6.2 had
-been intentionally broken because of an evolution of features that the
-standard universe now supports.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{My question isn't in the FAQ!}

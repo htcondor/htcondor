@@ -1,4 +1,4 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+g%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:History-6-6}Stable Release Series 6.6}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -8,17 +8,55 @@ All new features added or bugs fixed in the 6.5 series are available
 in the 6.6 series.
 The details of each version are described below.
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-6-1}Version 6.6.1}
+\subsection{\label{sec:New-6-6-2}Version 6.6.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
 
 \noindent New Features:
 
 \begin{itemize}
 
-\item Added full support (including standard universe jobs with
-  checkpointing and remote system calls) for Linux i386 RedHat 8.x
-  (using gcc/g++ version 3.2.x and glibc version 2.2.93). 
+\item The setting \Macro{GRIDMANAGER\_GLOBUS\_COMMIT\_TIMEOUT} allows
+   configuring the two phase commit timeout in Globus.  This maps to the
+   two\_phase setting in the Globus RSL.
+
+\item Added a new configuration variable,
+      \Macro{DAGMAN\_MAX\_SUBMIT\_ATTEMPTS}, that controls how many
+      times in a row \Condor{dagman} will attempt to execute
+      \Condor{submit} for a given job before giving up.  It cannot be
+      set to less than 1 attempt, or more than 10; if left undefined,
+      it defaults to 6.
+
+\item Added a new tool \Condor{updates\_stats} to dump out the update
+statistics information from ClassAds in a human readable format.
+Condor 6.6.1, by default, publishes ``update statistics'' into the
+ClassAds as published by the \Condor{collector}.  This program parses
+this ouput and displays it to the user in a readable format.
+
+\item Changed the default \Condor{dagman} behavior so that it doesn't
+      check for cycles at startup, only at runtime, since the former
+      could be expensive for large DAGs.  Added a boolean
+      \Attr{DAGMAN\_STARTUP\_CYCLE\_DETECT} config attribute to
+      re-enable cycle-detection at startup.
+
+\item \Condor{dagman} now offers a configuration variable,
+      \Macro{DAGMAN\_MAX\_SUBMITS\_PER\_INTERVAL}, which controls how
+      many individual jobs \Condor{dagman} will submit in a row before
+      servicing other requests (such as a \Condor{rm}).
+
+\item The grid\_monitor now automatically detects jobmanager scripts on the
+      remote gatekeeper.  Previously it was limited to supporting the condor,
+	  fork, lsf, pbs, and remote jobmanager scripts.
 
 \end{itemize}
 
@@ -26,18 +64,241 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Jobs that make use of Condor's file transfer mechanism were not
+automatically authorized to read/write input/output files when
+flocking to machines that did not happen to be in the
+\Macro{HOST\_ALLOW\_WRITE} list.  This bug has existed since 6.3.
+
+\item Eliminated a small chance that a grid\_monitor log file or state file
+    might be reused.  The unique identifying numbers are now unique across
+	the entire gridmanager, not each Globus resource.
+
+\item Eliminated a race condition which might cause the grid monitor to
+	erroneously decide that the status file was broken when in fact it
+	was being uploaded and was empty.
+
+\item Removed some settings from the default configuation files
+  shipped with Condor that are no longer used in the code.
+
+\item Fixed bugs in \Condor{dagman} parsing of submit files (to determine
+  node log files).  Previously, a submit file line begining with
+  "log" (e.g., "LogLock = True") would be interpreted as a log file
+  line.  Also, if "log" was defined twice in the submit file,
+  \Condor{dagman} would incorrectly use the first definition, rather than
+  the last.
+
+\item Re-added PVM support for IRIX 6.5.
+
+\item Fixed an indirect bug whereby \Condor{dagman} could fail with an
+assertion error if it encounters both a terminate and a abort event in
+the userlog for the same job; this can happen due to a bug in the
+\Condor{schedd}, which is not yet fixed.
+
+\item \Condor{dagman} now works right with nodes that have an initialdir
+  specified in the node submit file.  (Previously, specifiying
+  an initialdir only worked if the log file path was absolute.)
+
+\item \Condor{dagman} now responds more quickly to a request to be
+      removed from the queue (via \Condor{rm}), even if it is in the
+      midst of submitting jobs.  Previously, \Condor{dagman} would
+      finish submitting all ready jobs before responding to a removal
+      request, which could take a long time, and forced it to
+      immediately remove all the jobs it had just submitted
+      unnecessarily.
+
+\item Fixed keyboard idle reporting on Mac OS X. Previously, the code
+      would often return -1 on newer hardware. 
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item If a job terminates via SIGSEGV, the \Condor{schedd} logs both a
+      terminate event and an abort event to the userlog.
+
+\item Keyboard activity is not reported for pseudo-ttys on Mac OS X, only
+      the physically connected keyboard
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:New-6-6-1}Version 6.6.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item \Condor{analyze} is not included in the downloads of Version 6.6.1.
+  The existing binary from Version 6.6.0 is likely to work on all platforms
+  for which it was released.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Added full support (including standard universe jobs with
+  checkpointing and remote system calls) for Linux i386 RedHat 9
+  (using gcc/g++ version 3.2.2 and glibc version 2.3.2). 
+
+\item Added full support (including standard universe jobs with
+  checkpointing and remote system calls) for Linux i386 RedHat 8
+  (using gcc/g++ version 3.2 and glibc version 2.2.93). 
+
+\item The time it takes \Condor{dagman} to submit jobs has been
+      reduced slightly to improve up the startup time of large DAGs.
+
+\item In order to help reduce load on the \Condor{schedd} when
+      \Condor{dagman} is submitting jobs, there is a new config
+      variable, \Macro{DAGMAN\_SUBMIT\_DELAY}, to specify the number
+      of seconds \Condor{dagman} will sleep before submitting each
+      job.
+
+\item Enabled the ``update statistics'' in the \Condor{collector} by
+      default in both the executable and in the default configuration.
+
+\item Command-line arguments to \Condor{dagman} are now handled
+      case-insensitively.
+
+% commented out since i'm not sure we want to make a big deal of this
+% new config file knob. -derek 1/12/04
+% \item Added a new configuration macro
+%     \Macro{MAX\_CLAIM\_ALIVES\_MISSED}, described on
+%     page~\pageref{param:MaxClaimAlivesMissed}.
+%     This setting controls how many keep alive messages a startd is
+%     willing to miss before it releases the claim from a given schedd.
+
+\item Added support for Condor-G and strong authentication to Condor
+  for IRIX 6.5, but removed support for checkpointing and remote
+  system calls.
+  We plan to add support in Condor for IRIX's kernel-level
+  checkpointing in a future release.
+
+\item Added a \Opt{-p} option to \Condor{store\_cred} so that users
+can now specify the the password on the command line instead of getting
+prompted for it.
+
+\item The gahp\_server helper process for Condor-G includes patches from
+the LHC Computing Grid Project to increase data transfer performance of
+the Condor-G client. Previous versions of Condor-G could bog down in
+accepting new transfer requests, producing a variety of errors. 
+
+\item Added a new configuration setting,
+  \Macro{SUBMIT\_SEND\_RESCHEDULE} which controls whether or not
+  \Condor{submit} should automatically send a \Condor{reschedule}
+  command when it is done.
+  Previously, \Condor{submit} would always send this reschedule so
+  that the \Condor{schedd} knew to start trying to find matches for
+  the new jobs.
+  However, for submit machines that are managing a huge number of jobs
+  (thousands or tens of thousands), this step would hurt performance
+  in such a way that it became an obsticle to scalability.
+  In this case, an administrator can set
+  \MacroNI{SUBMIT\_SEND\_RESCHEDULE} to \verb@FALSE@, this extra
+  step is not performed, and the \Condor{schedd} will try to find
+  matches whenever the periodic timer in the \Condor{negotiator}
+  (\MacroNI{NEGOTIATOR\_INTERVAL}) goes off.
+
+\item Pool administrators can now specify the length of time before
+  the \Condor{starter} sends its initial update to the
+  \Condor{shadow} by defining
+  \Macro{STARTER\_INITIAL\_UPDATE\_INTERVAL}. 
+  The default is 8 seconds.
+  This setting would not normally need changing except to fine-tune a
+  heavily loaded system.
+
+\item Administrators can now specify the default session duration for
+  each Condor subsystem.
+  This allows for fine tuning the image size of running Condor daemons
+  if the memory footprint is a concern.
+  The default for tools is 1 minute, the default for \Condor{submit}
+  is one hour, and the default for daemons is 100 days.
+  This does not mean that tools cannot run more than one minute or
+  submit cannot run for more than an hour; it only affects memory
+  usage.
+
+\item Added new configuration setting
+  \Macro{GRID\_MONITOR\_HEARTBEAT\_TIMEOUT}.
+  If this many
+  seconds pass without hearing from the grid\_monitor, it is
+  assumed to be dead.  Defaults to 300 (5 minutes).  Increasing
+  this number will improve the ability of the grid\_monitor to
+  survive in the face of transient problems but will also
+  increase the time before Condor notices a problem.  Prior to
+  this change the gridmanager always waited 5 minutes, the user
+  could not change the setting.
+
+\item Added new configuration setting
+  \Macro{GRID\_MONITOR\_RETRY\_DURATION}.  
+  If something goes wrong
+  with the grid\_monitor at a particular site (like
+  \MacroNI{GRID\_MONITOR\_HEARTBEAT\_TIMEOUT} expiring), it will be retried
+  for this many seconds.  Defaults to 900 (15 minutes).  If we
+  can't successfully get it going again the grid monitor will be
+  disabled for that site until 60 minutes have passed.  Prior to
+  this change the condor\_gridmanger wait 60 minutes after any
+  failure.
+
+\end{itemize}
+
+
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed bugs related to network communication and timeouts that
+  impact scalability in Condor:
+  \begin{itemize}
+    \item Fixed a bug inside Condor's network communication layer that 
+      could result in Condor daemons blocking trying to read more data
+      after a socket had already been closed.
+    \item Fixed a \Condor{negotiator} bug that could, in certain rare
+      circumstances, cause a \Condor{schedd} to hang for five minutes
+      while trying to communicate with it.
+    \item Fixed a bug in which TCP connections would reauthenticate
+      needlessly when Condor's strong authentication was enabled.
+      This was not harmful but incurred a bit of overhead, especially
+      when using Kerberos authentication.
+  \end{itemize}
+
+\item Fixed bugs related to network security sessions which were
+  getting cleared out.
+  If the timing was unfortunate, this could cause some jobs to fail
+  immediately after completion.
+  So, Condor no longer clears out security sessions periodically (it
+  used to happen every 8 hours) nor does it do so when a daemon
+  receives a \Condor{reconfig} command.
+
 \item Fixed a bug in the standard universe where C++ code that threw an 
-exception would result in abortion of the executable instead of the delivery
-of the exception. 
-This bug affects Condor version 6.6.0 for Redhat 7.x.
+exception would result in abortion of the executable instead of the
+delivery of the exception. This bug affects Condor version 6.6.0 for
+Redhat 7.x.
+
+\item Fixed a \Condor{shadow} bug that could result in a fatal error
+  if the following 3 conditions were met: (1) the job enables Condor's
+  file transfer mechanism, (2) the job wants Condor to automatically
+  figure out what files to transfer back (the default), and (3) the
+  job does not specify a userlog.
 
 \item Fixed bug whereby \Condor{dagman}, if removed from the queue via
       \Condor{rm}, could fail to remove all of its submitted jobs if
       any of their submit events had not yet appeared in the userlog.
 
-\item Fixed the bug whereby \Condor{preen} could potentially remove
-  files related to a valid Computing on Demand (COD) claim on an
-  otherwise idle machine.
+\item Fixed a few bugs in \Condor{preen}:
+  \begin{itemize}
+  \item It will no longer potentially remove files related to a valid
+    Computing on Demand (COD) claim on an otherwise idle machine.
+  \item \Condor{preen} will no longer keep reporting that it had
+    successfully removed a directory which was in fact failing to be
+    removed.
+  \end{itemize}
 
 \item Fixed the faulty argument parsing in \Condor{rm},
   \Condor{release}, and \Condor{hold}.
@@ -50,8 +311,16 @@ This bug affects Condor version 6.6.0 for Redhat 7.x.
   longer get an error.
 
 \item Fixed a bug on Windows that would cause ``GetCursorPos() failed''
-to appear repeatedly in the StartLog. The startd now uses a different
-function to track mouse activity that does not have a tendancy to fail.
+  to appear repeatedly in the StartLog. The startd now uses a different
+  function to track mouse activity that does not have a tendency to fail.
+
+\item Fixed a bug on Windows that would prevent some \Condor{shadow}
+  daemons from obtaining a lock to their log file under heavy load, and
+  thus causing them to EXCEPT().
+
+\item Fixed a bug on Windows where file transfers would incorrectly fail
+because of bad permissions when using domain accounts with nested groups,
+or when UNC paths were used.
 
 \item Fixed the bug where the \Condor{starter} would fail to transfer
   back core files created by Vanilla, Java and MPI universe jobs.
@@ -64,13 +333,89 @@ function to track mouse activity that does not have a tendancy to fail.
   when jobs had large environments, it would fail. This has been
   corrected.
 
-\item The error message in the SchedLog that indicates that swap space
-  has been depleted has been rephrased so it appears to be
-  significant. 
+\item Fixed a rare bug affecting \Condor{dagman} when job-throttling
+      was enabled: if \Condor{dagman} was removed from the queue
+      together with some of its own jobs (e.g., via \verb@condor_rm -a@),
+      it would quickly submit new jobs to replace them before
+      recognizing that it needs to exit.  It now shuts down
+      immediately without submitting and then removing these
+      unnecessary jobs.
 
-\item Fixed a \Condor{negotiator} bug that could, in certain rare
-      circumstances, cause a \Condor{schedd} to hang for five minutes
-      while trying to communicate with it.
+\item Fixed a potential security problem that was introduced in Condor
+  version 6.5.5 when the \Macro{REQUIRE\_LOCAL\_CONFIG\_FILE}
+  configuration setting was added.
+  This setting used to default to FALSE if it was not defined in the
+  configuration files.
+  It now defaults to TRUE.
+  If administrators define local configuration files for the machines
+  in their pool, it should be a fatal error if those files don't exist
+  unless the administrators actively disable this check by defining 
+  \MacroNI{REQUIRE\_LOCAL\_CONFIG\_FILE} to be FALSE.
+
+\item Fixed a bug on Windows that would cause the \Condor{startd} to
+EXCEPT() if the \Condor{starter} exited and left orphaned processes to
+be cleaned up. This bug first appeared in 6.5.0.
+
+\item Fixed a bug on Windows that would cause graceful shutdowns on
+Windows (such as when \verb@condor_vacate@  is called) to fail to
+complete.
+
+\item The gahp\_server helper program, which provides Globus services
+to Condor-G, was always dynamically linked, even in statically-linked
+releases.
+The statically linked distributions of Condor now include a static
+gahp\_server.
+
+\item Fixed minor bug in parsing XML user log files that contain empty
+  strings. 
+
+\item Fixed the messages written to the Condor daemon log files in
+  various error conditions to be more informative and clear:
+  \begin{itemize}
+  \item The error message in the SchedLog that indicates that swap
+    space has been depleted has been rephrased so it appears to be
+    significant.
+  \item Certain serious error messages are now being written to the 
+    \Dflag{ALWAYS} debug level that used to only appear if other debug
+    levels were enabled.
+  \item Clarified log messages related to errors looking up user
+    information in the passwd database on UNIX and for creating
+    dynamic users on Windows.
+  \item Log messages related to keep-alives sent between the
+    \Condor{schedd} and \Condor{startd} (written to \Dflag{PROTOCOL})
+    now include the \Attr{ClaimId} on both sides, so that it is easier
+    to find potential problems and figure out which keep-alive
+    messages correspond to what resources.
+  \item Added more useful information to certain errors relating to 
+    security sessions and strong authentication.
+  \item Fixed the formatting of some messages to correctly include a
+    newline at the end of the message.
+  \end{itemize}
+
+\item Fixed a bug in the \Condor{configure} installation tool.
+  Previously, it would set \MacroNI{MAIL\_PATH}, which doesn't exist
+  in Condor and had no effect.
+  Now, \Condor{configure} correctly sets \Macro{MAIL}, instead.
+
+\item Fixed bug in userlog code in the CondorAPI library to prevent
+  segmentation faults.
+
+\item Clarified log messages for Condor-G's GridmanagerLog,
+  especially those relating to the grid monitor.
+
+\item Fixed potential race condition when using the grid monitor.  
+  Condor-G now identifies partial grid monitor status updates and 
+  waits for the update to complete.
+
+
+\item The grid\_monitor is slightly more robust in the face of
+  unexpected behavior by the Globus jobmanager.  This is only a
+  partial fix, for complete success you really need the Globus
+  patch at
+  \URL{http://bugzilla.globus.org/bugzilla/show\_bug.cgi?id=1425}
+
+\item Internal timeouts in the grid\_monitor have been increased,
+  increasing robustness during transient errors.
 
 \end{itemize}
 
@@ -79,9 +424,14 @@ function to track mouse activity that does not have a tendancy to fail.
 \begin{itemize}
 
 \item Submission of MPI jobs from a Unix machine to run on Windows
-machines (or vice versa) failes for machine\_count > 1.  This is
+machines (or vice versa) fails for machine\_count > 1.  This is
 not a new bug.  Cross-platform submission of MPI jobs between
 Unix and Windows has always had this problem.
+
+\item A multiple install of Condor's standard universe support libraries
+onto an NFS server for the purposes of having a heterogeneous mix of Linux
+distribution revisions all being able to utilize the same \Condor{compile}
+does not function correctly if Redhat 9 is one of the distributions.
 
 \end{itemize}
 

@@ -110,7 +110,7 @@ This expression describes the conditions that must be met for a
 machine to run a job. 
 This expression can reference attributes
 in the machine's ClassAd (such as \Attr{KeyboardIdle} and \Attr{LoadAvg})
-or attributes in a job ClassAd (such as
+and attributes in a job ClassAd (such as
 \Attr{Owner}, \Attr{Imagesize}, and \Attr{Cmd}, the name of the
 executable the job will run).
 The value of the \Expr{START} expression plays a crucial role in
@@ -263,7 +263,7 @@ prefers his jobs over those with the largest
 This \Expr{RANK} breaks if a job is submitted with an image
 size of more $10^{12}$ Kbytes.
 However, with that size, this \Expr{RANK} expression
-preferring that job would not be Condors
+preferring that job would not be Condor's
 only problem! 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1172,7 +1172,7 @@ to the existing configuration:
 \end{verbatim}
 Notice that there is nothing special in either the
 \Expr{CONTINUE} or \Expr{KILL} expressions.
-If Coltrane's jobs never suspend, they never look at \Expr{CONTINE}.  
+If Coltrane's jobs never suspend, they never look at \Expr{CONTINUE}.  
 Similarly, if they never preempt, they never look at \Expr{KILL}. 
 
 
@@ -1333,10 +1333,10 @@ In all other cases, the default policy described above will ignore
 keyboard activity.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{policy!dissabling preemption}
-\index{preemption!dissabling}
-\subsubsection{\label{sec:Dissabling Preemption}
-Dissabling Preemption}
+\index{policy!disabling preemption}
+\index{preemption!disabling}
+\subsubsection{\label{sec:Disabling Preemption}
+Disabling Preemption}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Preemption can result in jobs being killed by Condor.  When this

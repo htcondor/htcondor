@@ -1,10 +1,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:platform-windows}Microsoft Windows}
-\index{Platforms !Windows}
-\index{Windows NT !introduction|(}
+\index{platform-specific information!Windows}
+\index{Windows NT!introduction|(}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Welcome to Condor for Windows NT!  
 Windows NT is a strategic platform for Condor,
 and therefore we have been working toward a complete
 port to Windows NT.
@@ -37,7 +36,7 @@ important information and differences when using and administrating
 Condor on Windows NT.
 For information on installing Condor for Windows, see
 section~\ref{sec:Windows-Install}.
-\index{Windows NT !introduction|)}
+\index{Windows NT!introduction|)}
 
 
 \index{Windows NT!release notes|(}
@@ -54,18 +53,12 @@ However, the following items are not supported in this version:
 This is no transparent process checkpoint/migration, and there are no
 remote system calls.
 
-\item Accessing files via a network share (that is,
-files stored on a network volume managed by NT Server, Novell Netware, AFS)
-is not yet supported.
-All files required by the job must exist on a local disk on
-machine where the job was submitted.
-Condor NT transfers 
-needed files to/from the submit machine to the machine selected to
-execute the job(s) using the file transfer mechanisms.
+\item Accessing files via a network share that requires a kerberos ticket
+(such as AFS) is not yet supported.
 
-\item The ability to run the job with the same credentials as the submitting
-user is not yet supported.  Instead, Condor dynamically creates and runs the
-job in a special user account with minimal access rights.
+\item The ability to run the job with the same credentials as the
+submitting user is not yet supported.  Instead, Condor will use a set
+of accounts (one per VM) with minimal access rights to run the job.
 
 \end{itemize}
 
@@ -138,9 +131,9 @@ machine spawns a \Condor{starter} process.  The \Condor{starter} then
 creates:
 \begin{enumerate}
 
-\item a new temporary run account on the machine with a login name of
-``condor-run-dir\_XXX'', where XXX is the process ID of the
-\Condor{starter}.  This account is added to group Users and group Everyone.
+\item a run account on the machine with a login name of
+``condor-reuse-vmX'', where X is the Virtual Machine number of the
+\Condor{starter}.  This account is added to group Users.
 
 \item a new temporary working directory for the job on the execute machine.
 This directory is
@@ -258,15 +251,14 @@ Administrators have write access to
 %\File{C:\Bs WINNT},
 \verb@C:\WINNT@,
 then certainly no
-Condor job run on that machine would be able to write anything there.  The
-only files the job should be able to access on the execute machine are files
-accessible by group Everybody and files in the job's temporary working
-directory.
+Condor job run on that machine would be able to write anything there.
+The only files the job should be able to access on the execute machine
+are files accessible by the Users and Everyone groups, and files in the
+job's temporary working directory.
 
-On the submit machine, Condor permits the File Transfer mechanism to only
-read files which the submitting user has access to read, and only write
-files to which the submitting user has access to write.  For example, say
-only Administrators can write to 
+On the submit machine, Condor impersonates the submitting user, therefore
+the File Transfer mechanism has the same access rights as the submitting
+user.  For example, say only Administrators can write to
 %\File{C:\Bs WINNT}
 \verb@C:\WINNT@
 on the submit machine,

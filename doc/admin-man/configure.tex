@@ -482,13 +482,13 @@ system.
   Multiple Platforms on page~\pageref{sec:Multiple-Platforms}.
 
 \item[\Macro{REQUIRE\_LOCAL\_CONFIG\_FILE}] \label{param:RequireLocalConfigFile}
-  Beginning in Condor 6.5.5, it is permissiable for the files listed as the
+  Beginning in Condor 6.5.5, it is permissible for the files listed as the
   local config file to be missing. This is most useful for sites that have 
   large numbers of machines in the pool, and a local config file that uses
   the hostname builtin macro - instead of having an empty file for every host
   in the pool, some files can simply be omitted. The default setting is True,
   and Condor will exit with an error if the file listed as the local config 
-  file cannot be read, unless \MacroUNI{REQUIRE\_LOCAL\_CONFIG\_FILE} is set 
+  file cannot be read, unless \MacroNI{REQUIRE\_LOCAL\_CONFIG\_FILE} is set 
   to False 
 
 \item[\Macro{CONDOR\_IDS}] \label{param:CondorIds}
@@ -538,7 +538,7 @@ system.
   Condor will not start up more \Condor{shadow} processes if the
   amount of free swap space on your machine falls below this level.
   \Macro{RESERVED\_SWAP} is specified in megabytes.  The default value
-  of \Macro{RESERVED\_SWAP} is 5 magabytes.
+  of \Macro{RESERVED\_SWAP} is 5 megabytes.
 
 \item[\Macro{RESERVED\_DISK}] \label{param:ReservedDisk} Determines
   how much disk space you want to reserve for your own machine.  When
@@ -571,8 +571,6 @@ system.
   If no value for \Macro{LOCK} is provided, the value of \Macro{LOG}
   is used.
 
-% Default value check end here: NRL 11 Dec 2003
-
 
 \item[\Macro{HISTORY}] \label{param:History} Defines the
   location of the Condor history file, which stores information about
@@ -580,6 +578,15 @@ system.
   is used by both the \Condor{schedd} which appends the information
   and \Condor{history}, the user-level program used to view
   the history file.
+  This configuration macro is given the default value of
+  \File{\$(SPOOL)/history} in the default configuration.
+  If not defined,
+  no history file is kept.
+% PKK
+% Described in default config file: YES
+% Defined in the default config file: YES 
+% Default definition in config file: $(SPOOL)/history
+% Result if not defined or RHS is empty: no history file is kept.
 
 \item[\Macro{DEFAULT\_DOMAIN\_NAME}] \label{param:DefaultDomainName}
   If you do not use a fully qualified name in file \File{/etc/hosts}
@@ -598,12 +605,25 @@ system.
   reading the global configuration file, Condor figures out the right values
   for \MacroUNI{HOSTNAME} and \MacroUNI{FULL\_HOSTNAME} and inserts them
   into its configuration table.
+% PKK
+% Described in default config file: YES
+% Defined in the default config file: NO
+% Default definition in config file: bogus value
+% Result if not defined or RHS is empty: autodiscovered domain, if any, is used.
 
 \item[\Macro{NETWORK\_INTERFACE}] \label{param:NetworkInterface}
   For systems with multiple network interfaces, Condor chooses the
-  first one defined.  To choose a network interface other than the
+  first one defined.
+  If this configuration macro is not defined,
+  Condor binds to first interface found.
+  To choose a network interface other than the
   first one, this macro is defined by giving the IP address
   to use.
+% PKK
+% Described in default config file: NO
+% Defined in the default config file: NO
+% Default definition in config file: N/A
+% Result if not defined or RHS is empty: Condor binds to first interface found
 
 \item[\Macro{CM\_IP\_ADDR}] \label{param:CMIPAddr}
   If neither \MacroNI{COLLECTOR\_HOST} nor 
@@ -611,6 +631,11 @@ system.
   macro will be used to determine the IP address of the central
   manager (collector daemon).
   This macro is defined by an IP address.
+% PKK
+% Described in default config file: NO
+% Defined in the default config file: NO
+% Default definition in config file: N/A
+% Result if not defined or RHS is empty: Condor performs above algorithm
 
 \item[\Macro{HIGHPORT}] \label{param:HighPort}
   Specifies an upper limit of given port numbers for Condor to use,
@@ -620,6 +645,12 @@ system.
   system-assigned port numbers.
   For this macro to work, both \MacroNI{HIGHPORT} and
   \MacroNI{LOWPORT} (given below) must be defined.
+% PKK
+% Described in default config file: YES
+% Defined in the default config file: NO
+% Default definition in config file: bogus
+% Result if not defined or RHS is empty: Condor uses any ports available,
+% regardless of the LOWPORT setting
 
 \item[\Macro{LOWPORT}] \label{param:LowPort}
   Specifies a lower limit of given port numbers for Condor to use,
@@ -629,6 +660,12 @@ system.
   system-assigned port numbers.
   For this macro to work, both \MacroNI{HIGHPORT} (given above) and
   \MacroNI{LOWPORT} must be defined.
+% PKK
+% Described in default config file: YES
+% Defined in the default config file: NO
+% Default definition in config file: bogus
+% Result if not defined or RHS is empty: Condor uses any ports available,
+% regardless of the HIGHPORT setting
 
 \item[\Macro{EMAIL\_DOMAIN}] \label{param:EmailDomain}
   By default, if a user does not specify \AdAttr{notify\_user} in the
@@ -649,14 +686,26 @@ system.
   things are true: 1) \MacroNI{UID\_DOMAIN} is set to your domain, not
   \MacroUNI{FULL\_HOSTNAME}, and 2) email to user@UID\_DOMAIN will not 
   work. 
-
+% PKK
+% Described in default config file: YES
+% Defined in the default config file: NO
+% Default definition in config file: bogus
+% Result if not defined or RHS is empty: 
+%	Condor will try to use the notify_user attribute email in the job ad.
+%	If that is not present, then it will use the UID_DOMAIN embedded in
+%	the job ad.
+%	If that is not present, then it will use the UID_DOMAIN found in the
+%	config file.
+%	If that is not present, then I suspect there is a bug and the code will
+%	segfault!!! (This needs fixing...)
+ 
 \item[\Macro{CREATE\_CORE\_FILES}] \label{param:CreateCoreFiles}
   Defines whether or not Condor daemons are to
   create a core file if something really bad happens.  It is
   used to set
   the resource limit for the size of a core file.  If not defined,
   it leaves in place whatever limit was in effect
-  when you started the Condor daemons (normally the \Condor{master}).
+  when the Condor daemons (normally the \Condor{master}) were started.
   If this parameter is set and TRUE, the limit is increased to
   the maximum.  If it is set to FALSE, the limit is set at 0
   (which means that no core files are created).  Core files
@@ -666,34 +715,68 @@ system.
   limit before starting Condor. You set the parameter
   to whatever behavior you want Condor to enforce.  This parameter has
   no default value, and is commented out in the default configuration file. 
+% PKK
+% Described in default config file: YES
+% Defined in the default config file: NO
+% Default definition in config file: bogus
+% Result if not defined or RHS is empty: shell's default corelimit size applies
 
 \item[\Macro{Q\_QUERY\_TIMEOUT}] \label{param:QQueryTimeout}
   Defines the timeout (in seconds) that \Condor{q} uses when trying to
-  connect to the \Condor{schedd}.  Defaults to 20.
+  connect to the \Condor{schedd}.  Defaults to 20 seconds.
+% PKK
+% Described in default config file: NO
+% Defined in the default config file: NO
+% Default definition in config file: N/A
+% Result if not defined or RHS is empty: defaults to 20 seconds.
 
 \item[\Macro{UPDATE\_COLLECTOR\_WITH\_TCP}]
   \label{param:UpdateCollectorWithTcp}
   If your site needs to use TCP connections to send ClassAd updates to
-  your collector (which it almost certainly does NOT), you can enable
-  this feature by setting this to TRUE.
+  your collector (which it almost certainly does NOT), set to TRUE
+  to enable this feature.
   Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
   Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
-  for more details and a discussion of when you would need this
-  functionality. 
-  At this time, this setting only effects the main \Condor{collector}
-  for your site, not any sites that a \Condor{schedd} might flock to. 
-  If you enable this feature, you must also define
-  \Macro{COLLECTOR\_SOCKET\_CACHE\_SIZE}] at your central manager, so
+  for more details and a discussion of when this
+  functionality is needed. 
+  At this time, this setting only affects the main \Condor{collector}
+  for the site, not any sites that a \Condor{schedd} might flock to. 
+  If enabled, also define
+  \Macro{COLLECTOR\_SOCKET\_CACHE\_SIZE}] at the central manager, so
   that the collector will accept TCP connections for updates, and will
   keep them open for reuse.
   Defaults to FALSE.
+% PKK
+% Described in default config file: YES
+% Defined in the default config file: NO
+% Default definition in config file: bogus
+% Result if not defined or RHS is empty: disable the feature of TCP updates to
+% collectors
+% WARNING: The code also looks for UPDATE_COLLECTORS_WITH_TCP, which
+% means the SAME THING as UPDATE_COLLECTOR_WITH_TCP
+
+\item[\Macro{TCP\_UPDATE\_COLLECTORS}]
+  \label{param:TcpUpdateCollectors}
+  The list of collectors which will be updated with TCP instead of UDP.
+  Please read section~\ref{sec:tcp-collector-update} on ``Using TCP to
+  Send Collector Updates'' on page~\pageref{sec:tcp-collector-update}
+  for more details and a discussion of when a site needs this
+  functionality. 
+  If not defined, no collectors use TCP instead of UDP.
+% PKK
+% Described in default config file: NO
+% Defined in the default config file: NO
+% Default definition in config file: N/A
+% Result if not defined or RHS is empty: no collectors are updated with TCP
+% WARNING: Look in Version 6.5.2 version history for more information about
+% this particular entry.
 
 \item[\Macro{TRUST\_UID\_DOMAIN}]
   \label{param:TrustUidDomain}
-  As an added security precaution, when Condor is about to spawn a job
+  As an added security precaution when Condor is about to spawn a job,
   it ensures that the \MacroNI{UID\_DOMAIN} (defined above) of a given
   submit machine is a substring of that machine's fully-qualified
-  hostname.
+  host name.
   However, at some sites, there may be multiple UID spaces that do
   not clearly correspond to Internet domain names.
   In these cases, administrators may wish to use names to describe the
@@ -705,25 +788,41 @@ system.
   \MacroNI{UID\_DOMAIN} is presented by the submit machine when trying
   to spawn a job, instead of making sure the submit machine's hostname
   matches the \MacroNI{UID\_DOMAIN}.
-  The default is FALSE, since it is more secure to perform this test. 
+  When not defined, the default is FALSE,
+  since it is more secure to perform this test. 
+% PKK
+% Described in default config file: YES
+% Defined in the default config file: NO
+% Default definition in config file: bogus
+% Result if not defined or RHS is empty: this entry is considered False
 
 \item[\Macro{PASSWD\_CACHE\_REFRESH}]
   \label{param:PasswdCacheRefresh}
   Condor can cause NIS servers to become overwhelmed by queries for uid
   and group information in large pools. In order to avoid this problem,
-  Condor caches uid and group information internally. This setting allows
+  Condor caches UID and group information internally. This setting allows
   pool administrators to specify (in seconds) how long Condor should wait
   until refreshes a cache entry. The default is set to 300 seconds, or
   5 minutes. This means that if a pool administrator updates the user
-  or group database (e.g. /etc/passwd or /etc/group), it can take up
+  or group database (for example, \File{/etc/passwd} or \File{/etc/group}),
+  it can take up
   to 5 minutes before Condor will have the updated information. This
   caching feature can be disabled by setting the refresh interval to
   0. In addition, the cache can also be flushed explicitly by running
-  the ``\condor{reconfig} -full'' command. This setting has no effect
-  on Windows.
+  the command
+\begin{verbatim}
+     condor_reconfig -full
+\end{verbatim}
+  This configuration variable has no effect on Windows.
+% PKK
+% Described in default config file: NO
+% Defined in the default config file: NO
+% Default definition in config file: N/A
+% Result if not defined or RHS is empty: 300 seconds
 
 \end{description}
 
+% Default value check end here: PKK 8 Jan 2004
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Daemon-Logging-Config-File-Entries}
@@ -759,7 +858,7 @@ of the subsystem corresponding to the daemon.
   files are overwritten each time the log is saved, thus the maximum
   space devoted to logging for any one program will be twice the
   maximum length of its log file.  A value of 0 specifies that the
-  file may grow without bounds.  The default is 64 Kbytes.
+  file may grow without bounds.  The default is 1 Mbyte.
 
 \item[\Macro{TRUNC\_SUBSYS\_LOG\_ON\_OPEN}]
   \label{param:TruncSubsysLogOnOpen}  If this macro is defined and set
@@ -922,7 +1021,7 @@ The \Condor{startd} keeps track
 \item[\Dflag{PROCFAMILY}] \label{dflag:procfamily}
   \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_PROCFAMILY@\texttt{D\_PROCFAMILY}}
   Condor often times needs to manage an entire family of processes, i.e. a 
-  process and all descendents of that process.  This debug flag will 
+  process and all descendants of that process.  This debug flag will 
   turn on debugging output for the management of families of processes.
 
 \item[\Dflag{ACCOUNTANT}] \label{dflag:accountant}
@@ -930,6 +1029,11 @@ The \Condor{startd} keeps track
   When this flag is set,
   the \condor{negotiator} will output debug messages relating to the computation
   of user priorities (see section~\ref{sec:UserPrio}).
+
+\item[\Dflag{PROTOCOL}] \label{dflag:protocol}
+  \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_PROTOCOL@\texttt{D\_PROTOCOL}}
+  Enable debug messages relating to the protocol for Condor's matchmaking and
+  resource claiming framework.
 	
 \end{description}
 
@@ -1113,6 +1217,9 @@ These macros control how Condor interacts with various shared and
 network file systems.  If you are using AFS as your shared filesystem,
 be sure to read section~\ref{sec:Condor-AFS} on Using Condor with
 AFS.
+For information on submitting jobs under shared file systems,
+see
+section~\ref{sec:shared-fs}.
 \begin{description}
 
 \item[\Macro{UID\_DOMAIN}] \label{param:UidDomain}
@@ -1822,6 +1929,25 @@ control state or activity transitions within the
   \Expr{START} expression.  This macro is defined in
   terms of seconds and defaults to 300 (5 minutes).
   
+\item[\Macro{MAX\_CLAIM\_ALIVES\_MISSED}]
+  \label{param:MaxClaimAlivesMissed} The schedd sends periodic updates
+  to each startd as a keep alive (see the description of
+  \Macro{ALIVE\_INTERVAL} on page~\pageref{param:AliveInterval}).  
+  If the startd does not receive any keep alive messages, it assumes
+  that something has gone wrong with the schedd and that the resource
+  is not being effectively used.
+  Once this happens, the startd considers the claim to have timed out,
+  it releases the claim, and starts advertising itself as available
+  for other jobs.
+  Because these keep alive messages are sent via UDP, they are
+  sometimes dropped by the network.
+  Therefore, the startd has some tolerance for missed keep alive
+  messages, so that in case a few keep alives are lost, the startd
+  will not immediately release the claim.
+  This setting controls how many keep alive messages can be missed
+  before the startd considers the claim no longer valid.
+  The default is 6.
+
 \item[\Macro{STARTD\_HAS\_BAD\_UTMP}] \label{param:StartdHasBadUtmp}
   When the startd is computing the idle time of all the
   users of the machine (both local and remote), it checks the
@@ -2322,14 +2448,18 @@ These macros control the \Condor{schedd}.
   Defined in terms of seconds and defaults to 2. 
   
 \item[\Macro{ALIVE\_INTERVAL}] \label{param:AliveInterval} This
-  macro determines how often the \Condor{schedd} should send a keep alive
-  message to any startd it has claimed.  When the schedd claims a
-  startd, it tells the startd how often it is going to send these
-  messages.  If the startd does not get one of these messages after 3
-  of these intervals has passed, the startd releases the claim, and
-  the schedd is no longer paying for the resource (in terms of
-  priority in the system).  The macro is defined in terms of seconds
-  and defaults to 300 (every 5 minutes).
+  macro determines how often the \Condor{schedd} should send a keep
+  alive message to any startd it has claimed.
+  When the schedd claims a startd, it tells the startd how often it is
+  going to send these messages.
+  If the startd does not recieve any of these keep alive messages
+  during a certain period of time (defined via
+  \Macro{MAX\_CLAIM\_ALIVES\_MISSED}, described on
+  page~\pageref{param:MaxClaimAlivesMissed})
+  the startd releases the claim, and the schedd is no longer pays for
+  the resource (in terms of user priority in the system).
+  The macro is defined in terms of seconds and defaults to 300 (every
+  5 minutes).
 
 \item[\Macro{SHADOW\_SIZE\_ESTIMATE}] \label{param:ShadowSizeEstimate}
   This macro sets the estimated virtual memory size of each
@@ -2651,10 +2781,19 @@ These settings affect the \Condor{starter}.
   the command-line parameters to pass to the user job.
   This wrapper program must ultimately replace its image with the user job;
   in other words, it must \Term{exec()} the user job, not \Term{fork()} it.
-  For instance, if the wrapper program is a Bourne/C/Korn shell script, the
+  For instance, if the wrapper program is a C/Korn shell script, the
   last line of execution should be:
 \begin{verbatim}
         exec $*
+\end{verbatim}
+  This can potentially lose information about the arguments.
+  Any argument with embedded whitespace will be split into multiple
+  arguments.
+  For example the argument "argument one" will become the two arguments
+  "argument" and "one".
+  For Bourne shells, the following preserves the arguments:
+\begin{verbatim}
+           exec "$@"
 \end{verbatim}
 
 \item[\Macro{STARTER\_JOB\_ENVIRONMENT}] \label{param:StarterJobEnvironment}
@@ -2922,11 +3061,12 @@ These macros affect the \Condor{collector}.
 \item[\Macro{COLLECTOR\_DAEMON\_STATS}]
   \label{param:CollectorDaemonStats}
   This macro controls whether or not the Collector keeps update
-  statistics on incoming updates.  The default value is FALSE.  If
-  defined, the collector will insert several attributes into ClassAds
-  that it stores and sends.  ClassAds without the
+  statistics on incoming updates.  The default value is True.  If
+  this option is enabled, the collector will insert several attributes
+  into ClassAds that it stores and sends.  ClassAds without the
   ``UpdateSequenceNumber'' and ``DaemonStartTime'' attributes will not
-  be counted, and will not have attributes inserted.
+  be counted, and will not have attributes inserted (all modern Condor
+  daemons which publish ClassAds publish these attributes).
 
   The attributes inserted are ``UpdatesTotal'', ``UpdatesSequenced'',
   and ``UpdatesLost''.  ``UpdatesTotal'' is the total number of
@@ -2940,9 +3080,10 @@ These macros affect the \Condor{collector}.
 \item[\Macro{COLLECTOR\_DAEMON\_HISTORY\_SIZE}]
   \label{param:CollectorDaemonHistorySize} This macro controls the
   size of the published update history that the Collector inserts into
-  the ClassAds it stores and sends.  The default value is zero.  This
-  macro is ignored if \MacroU{COLLECTOR\_DAEMON\_STATS} is not
-  enabled.
+  the ClassAds it stores and sends.  The default value is 128, which
+  means that history is stored and published for the latest 128
+  updates.  This macro is ignored if \MacroU{COLLECTOR\_DAEMON\_STATS}
+  is not enabled.
 
   If this has a non-zero value, the Collector will insert
   ``UpdatesHistory'' into the ClassAd (similar to ``UpdatesTotal''
@@ -2958,7 +3099,10 @@ These macros affect the \Condor{collector}.
   the previous two not, the bitmap would be 0100, and the matching hex
   digit would be ``4''.  Note that the MSB can never be marked as lost
   because it's loss can only be detected by a non-lost update (a
-  ``gap'' is found in the sequence numbers).
+  ``gap'' is found in the sequence numbers).  Thus, UpdatesHistory =
+  "0x40" would be the history for the last 8 updates.  If the next
+  updates are all successful, the values published, after each update,
+  would be: 0x20, 0x10, 0x08, 0x04, 0x02, 0x01, 0x00.
 
 \item[\Macro{COLLECTOR\_CLASS\_HISTORY\_SIZE}]
   \label{param:CollectorClassHistorySize} This macro controls the
@@ -3258,6 +3402,10 @@ The default is 3.
 periodic syncs of streamed output to disk. The default is 5 minutes
 (300 seconds).
 
+\item[\Macro{GRIDMANAGER\_GLOBUS\_COMMIT\_TIMEOUT}]
+\label{param:GridmanagerGlobusCommitTimeout}  The duration, in seconds, of the
+two phase commit timeout to Globus.  This maps directly to the \texttt{two\_phase} setting in the Globus RSL.
+
 % configuration variable introduced into Condor due to Globus a GAHP
 % bug.  Users with Globus where this bug has been fixed should never
 % use nor even know about this configuration variable.
@@ -3317,6 +3465,21 @@ These macros affect the \Prog{grid\_monitor}.
   See section~\ref{sec:Condor-G-GridMonitor} on
   page~\pageref{sec:Condor-G-GridMonitor}
   for more information.
+
+\item[\Macro{GRID\_MONITOR\_HEARTBEAT\_TIMEOUT}] \label{param:GridMonitorHeartbeatTimeout}
+  If this many seconds pass without hearing from a \Prog{grid\_monitor}, it is
+  assumed to be dead.  Defaults to 300 (5 minutes).  Increasing this number
+  will improve the ability of the \Prog{grid\_monitor} to survive in the face of
+  transient problems but will also increase the time before Condor notices a
+  problem.
+
+\item[\Macro{GRID\_MONITOR\_RETRY\_DURATION}] \label{param:GridMonitorRetryDuration}
+  If something goes wrong with the \Prog{grid\_monitor} at a particular site
+  (like \MacroNI{GRID\_MONITOR\_HEARTBEAT\_TIMEOUT} expiring), Condor-G will
+  attempt to restart the \Prog{grid\_monitor} for this many seconds.  Defaults
+  to 900 (15 minutes).  If this duration passes without success the
+  \Prog{grid\_monitor} will be disabled for the site in question until 60
+  minutes have passed.
 
 \end{description}
 
