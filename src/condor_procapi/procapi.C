@@ -643,8 +643,8 @@ ProcAPI::do_usage_sampling( piPTR& pi, double ustime, long nowmajf, long nowminf
 			nowmajf = phn->oldmajf;
 		} else {
 			pi->cpuusage = ( ( ustime - phn->oldtime ) / timediff ) * 100;
-			pi->minfault = (long unsigned)((nowminf - phn->oldminf) / timediff);
-			pi->majfault = (long unsigned)((nowmajf - phn->oldmajf) / timediff);
+			pi->minfault = (long unsigned)((nowminf - phn->oldminf)/timediff);
+			pi->majfault = (long unsigned)((nowmajf - phn->oldmajf)/timediff);
 		}
 	} else {
 			// pid not in hash table; first time.  Use age of
@@ -698,10 +698,16 @@ ProcAPI::do_usage_sampling( piPTR& pi, double ustime, long nowmajf, long nowminf
 			dprintf ( D_ALWAYS, "pi->user_time      %ld\n", pi->user_time );
 			dprintf ( D_ALWAYS, "pi->sys_time       %ld\n", pi->sys_time );
 			dprintf ( D_ALWAYS, "pi->age            %ld\n", pi->age );
+            dprintf ( D_ALWAYS, "pi->creation_time  %ld\n", pi->creation_time);
+            dprintf ( D_ALWAYS, "pi->pid            %ld\n", pi->pid );
+            dprintf ( D_ALWAYS, "pi->ppid           %ld\n", pi->ppid );
+            dprintf ( D_ALWAYS, "getpid()           %ld\n", getpid() );
 			if ( phn ) {
 				dprintf ( D_ALWAYS, "old_phn->lasttime  %f\n", phn->lasttime );
 				dprintf ( D_ALWAYS, "old_phn->oldtime   %f\n", phn->oldtime );
 				dprintf ( D_ALWAYS, "old_phn->oldusage  %f\n", phn->oldusage );
+                dprintf ( D_ALWAYS, "old_phn->creation_time  %ld\n", 
+                          phn->creation_time );
 			}
 			assert(0);
 		}
