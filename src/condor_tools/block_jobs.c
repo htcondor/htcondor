@@ -34,8 +34,6 @@
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
-char	*MyName;
-
 void do_block_condor();
 void unblock_condor();
 
@@ -44,10 +42,7 @@ main( argc, argv )
 int argc;
 char *argv[];
 {
-	char	buf[512];
-
-	MyName = argv[0];
-	config( MyName, (CONTEXT *)0 );
+	config( 0 );
 	do_block_condor();
 	pause();
 }

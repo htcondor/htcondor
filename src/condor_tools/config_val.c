@@ -64,7 +64,7 @@ char	*argv[];
 		usage();
 	}
 
-	config( MyName, (CONTEXT *)0 );
+	config( 0 );
 	
 	while( *++argv ) {
 		if ( strcmp(*argv,"-value") == 0 ) {

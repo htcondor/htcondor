@@ -14,7 +14,7 @@ char	*argv[];
 	int		server_num;
 	int		do_remove = 0;
 
-	config( argv[0], 0);
+	config( 0 );
 
 	for (i = 1; i < argc; i++) {
 		if (argv[i][0] == '-') {

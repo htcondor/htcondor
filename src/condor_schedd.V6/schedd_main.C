@@ -94,12 +94,10 @@ extern "C"
 	void	dprintf_config(char*, int);
 	void	dprintf(int, char*...);
 	int		set_condor_euid();
-	void	config(char*, CONTEXT*);
 	char*	param(char*);
 	int		boolean(char*, char*);
 	int		SetSyscalls() {}
 	int		ReadLog(char*);
-	void	config_from_server(char*, char*, CONTEXT*); 
 }
 extern	void	mark_jobs_idle();
 
@@ -123,7 +121,7 @@ void	Init();
 
 void usage(char* name)
 {
-	dprintf( D_ALWAYS, "Usage: %s [-f] [-t] [-n schedd_name] [-c config_file_name]", name); 
+	dprintf( D_ALWAYS, "Usage: %s [-f] [-t] [-n schedd_name]", name); 
 	exit( 1 );
 }
 
@@ -132,7 +130,6 @@ main(int argc, char* argv[])
 	char**		ptr; 
 	char		job_queue_name[_POSIX_PATH_MAX];
 	struct		utsname	name;
-	char		config_file[MAXPATHLEN] = "";
  
 	myName = argv[0];
 	if(getuid() == 0)
@@ -168,16 +165,13 @@ main(int argc, char* argv[])
 			strcpy(Name, *(++ptr)); 
 			ScheddName++;
 			break;
-		  case 'c':
-			strcpy(config_file, *(++ptr));
-			break; 
 		  default:
 			usage(argv[0]);
 		}
 	}
 	
 	ClassAd *ScheddClassad = new ClassAd();
-	configAd(argv[0], ScheddClassad);
+	config( ScheddClassad );
 	
 	Init();
 

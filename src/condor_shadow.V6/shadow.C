@@ -123,8 +123,6 @@ extern "C" {
 	void send_quit( char *host );
 	void handle_termination( char *notification );
 	void get_local_rusage( struct rusage *bsd_rusage );
-	void config(char *, CONTEXT*);
-	int config_from_server(char *, char *, CONTEXT *);
 	int calc_virt_memory();
 	int close_kmem();
 	void NotifyUser( char *buf );
@@ -241,8 +239,6 @@ int HandleLog();
 
 int MainSymbolExists = 1;
 
-char	config_file[MAXPATHLEN] = "";
-
 usage()
 {
 	dprintf( D_ALWAYS, "Usage: shadow schedd_addr host capability cluster proc\n" );
@@ -311,12 +307,6 @@ main(int argc, char *argv[], char *envp[])
 			argv++;
 			argc--;
 		}
-		if(strcmp("-c", argv[1]) == MATCH)
-		{
-			strcpy(config_file, argv[2]);
-			argv = argv + 2;
-			argc = argc - 2;
-		} 
 	}
 
 
@@ -331,15 +321,7 @@ main(int argc, char *argv[], char *envp[])
 	_EXCEPT_Cleanup = DoCleanup;
 	MyPid = getpid();
 	
-	if(config_file[0] == '\0')
-	{
-		config( argv[0], (CONTEXT *)0 );
-	}
-	else
-	{
-		config_from_server( config_file, argv[0], (CONTEXT *)0 );
-	}
-
+	config( 0 );
 	dprintf_config( "SHADOW", SHADOW_LOG );
 	DebugId = whoami;
 

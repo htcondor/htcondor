@@ -1,7 +1,6 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
-
 #if !defined(__STDC__) && !defined(__cplusplus)
 #define const
 #endif
@@ -30,7 +29,7 @@ static const int	FALSE = 0;
 	these constants may have already been defined elsewhere, they are
 	conditional.
 */
-#ifndef TIME_CONSTANTS_DEFINED
+#if !defined(MINUTE) && !defined(TIME_CONSTANTS_DEFINED)
 static const int	MINUTE = 60;
 static const int	HOUR = 60 * 60;
 static const int	DAY = 24 * 60 * 60;

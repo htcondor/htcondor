@@ -94,7 +94,7 @@ main( int argc, char *argv[] )
 	ProcObj			*p;
 	int		dummy;
 
-	config( *argv, (CONTEXT *)0 );
+	config( 0 );
 	init_params();
 
 	for( MyName = *argv++; arg = *argv; argv++ ) {

@@ -66,7 +66,7 @@ int		argc;
 char	*argv[];
 {
 	MyName = argv[0];
-	config( MyName, (CONTEXT *)0 );
+	config( 0 );
 
 	if( argc > 2 ) {
 		usage( argv[0] );

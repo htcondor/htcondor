@@ -23,13 +23,10 @@
 ** 
 ** Author:  Mike Litzkow
 ** Modified by: Cai, Weiru
-**
-** 		The configuration is rather complicated now that we have config_server.
-**		We will first try to find a condor_config.master in condor directory.
-**		If failed, configure as usual. Otherwise, read condor_config.master
-**		and look for CONDOR_CONFIG_LOCATION to find out where the master placed
-**		the configuration file. If CONDOR_CONFIG_LOCATION is not configured,
-**		look in the default directory for the location of the config file.
+** Modified by: Derek Wright 7/14/97 to use config() instead of
+** 				the complicated configuration done in here.  If/when
+**				we have a working config_server, we can integrate it
+**				into config(), not all the individual daemons/tools.
 **
 */ 
 
@@ -119,7 +116,6 @@ char    *UserLogFile    = "user_log";
 
 extern int	Terse;
 extern int	DontDisplayTime;
-extern BUCKET	*ConfigTab[];
 
 void 	reschedule();
 void 	SetExecutable();
@@ -166,9 +162,8 @@ void _mkckpt( char *, char * );
 int SetSyscalls( int foo );
 int	get_machine_name(char*);
 int gethostname();
-int read_config(char*, char*, CONTEXT*, BUCKET**, int, int);
 char *get_schedd_addr(char *);
-void Config();
+
 }
 
 int
@@ -182,7 +177,7 @@ main( int argc, char *argv[] )
 	setbuf( stdout, NULL );
 
 	MyName = argv[0];
-	config( MyName, (CONTEXT *)0 );
+	config( 0 );
 	init_params();
 
 	DebugFlags |= D_EXPR;
@@ -211,9 +206,6 @@ main( int argc, char *argv[] )
 	job.SetMyTypeName (JOB_ADTYPE);
 	job.SetTargetTypeName (STARTD_ADTYPE);
 
-	/* Weiru */
-	Config(MyName);
-	
 	init_params();
 
 	DebugFlags |= D_EXPR;

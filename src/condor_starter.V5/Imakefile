@@ -56,7 +56,7 @@ OBJ = $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ)
 IO_LIB = ../condor_io/libcondor.a
 UTIL_LIB = ../condor_util_lib/util_lib.a
 CLASS_LIB = ../condor_c++_util/cplus_lib.a
-
+CLASSAD_LIB = ../condor_classad/expr_lib.a
 
 #if IS_V5 || IS_V6
 REMOTE_SYSCALL_LIB = \
@@ -66,10 +66,12 @@ REMOTE_SYSCALL_LIB = \
 	../condor_syscall_lib/remote_syscall.o \
 	../condor_syscall_lib/syscall_numbers.o \
 	../condor_syscall_lib/xfer_file.o \
+	$(CLASS_LIB) \
+	$(CLASSAD_LIB) \
 	$(UTIL_LIB) \
 	$(IO_LIB) \
-	$(CLASS_LIB) \
 	$(PVM_LIB)
+
 #else
 #if IS_R6000_AIX32 
 REMOTE_SYSCALL_LIB = ../condor_$(SYSCALL_LIB)/libremote.a $(PVM_LIB)
@@ -81,11 +83,11 @@ REMOTE_SYSCALL_LIB = ../condor_$(SYSCALL_LIB)/libremote.a $(UTIL_LIB) $(IO_LIB) 
 #if IS_MIPS_ULTRIX42
 LIB = $(REMOTE_SYSCALL_LIB) /usr/lib/libcP.a
 #elif (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS25) || (IS_SUN4M_SOLARIS251)
-LIB = $(REMOTE_SYSCALL_LIB) ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a ../condor_io/libcondor.a KernLib SocketLib RpcLib MldLib 
+LIB = $(REMOTE_SYSCALL_LIB) KernLib SocketLib RpcLib MldLib 
 #elif (IS_I386_LINUX)
-LIB = $(REMOTE_SYSCALL_LIB) ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a ../condor_io/libcondor.a KernLib  RpcLib MldLib /usr/lib/libbfd.a /usr/lib/libiberty.a
+LIB = $(REMOTE_SYSCALL_LIB) KernLib  RpcLib MldLib /usr/lib/libbfd.a /usr/lib/libiberty.a
 #else
-LIB = $(REMOTE_SYSCALL_LIB) ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a ../condor_io/libcondor.a KernLib  RpcLib MldLib 
+LIB = $(REMOTE_SYSCALL_LIB) KernLib  RpcLib MldLib 
 #endif
 
 LIBDIRS = ../condor_util_lib ../condor_io

@@ -43,8 +43,8 @@
 #include <sys/stat.h>
 #include "condor_debug.h"
 #include "condor_constants.h"
-#include "condor_config.h"
 #include "condor_mach_status.h"
+#include "condor_config.h"
 #include "condor_uid.h"
 #include "string_list.h"
 #include "directory.h"
@@ -115,7 +115,7 @@ main( int argc, char *argv[] )
 
 		// Initialize things
 	MyName = argv[0];
-	config( MyName, (CONTEXT *)0 );
+	config( 0 );
 	init_params();
 	BadFiles = new List<char>;
 

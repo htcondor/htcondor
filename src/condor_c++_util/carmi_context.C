@@ -41,7 +41,7 @@ CARMI_Context::CARMI_Context(const char *machine_name, int how, int timeout )
 		exit(1);
 	}
 
-	config( "", (CONTEXT *) 0);
+	config( 0 );
 
 	CollectorHost = param("COLLECTOR_HOST");
 	if (CollectorHost == 0) {

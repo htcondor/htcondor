@@ -60,7 +60,7 @@ c_plus_target(condor_jobqueue,jobQueueCheck.o,$(LIB))
 c_plus_target(condor_customize,custom.o custom_main.o,$(LIB))
 release_target(condor_customize,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
-program_target(config_val,config_val.o,$(LIB))
+c_plus_target(config_val,config_val.o,$(LIB))
 release_target(config_val,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
 c_plus_target(condor_reconfig_schedd,reconfig_schedd.o,$(LIB))
@@ -75,9 +75,9 @@ release_target(condor_vacate,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 c_plus_target(condor_checkpoint,checkpoint.o,$(LIB))
 release_target(condor_checkpoint,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
-program_target(watch_status,watch_status.o,$(LIB))
+c_plus_target(watch_status,watch_status.o,$(LIB))
 release_target(watch_status,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
-program_target(block_jobs,block_jobs.o,$(LIB))
+c_plus_target(block_jobs,block_jobs.o,$(LIB))
 
 program_target(condor_schedd_info,info.o,$(LIB))

@@ -84,7 +84,7 @@ void suspend_alarm();
 void resume_alarm();
 void init_shadow_connections();
 void init_logging();
-void read_config_files( char *my_name );
+void read_config_files( void );
 void move_to_execute_directory();
 void set_resource_limits();
 void close_unused_file_descriptors();

@@ -32,7 +32,6 @@ int main (int argc, char **argv)
 	char              constraint[1024];
 	char              *host = 0;
 	struct passwd*		pwd;
-	char*			    config_location;
 	char*				scheddAddr;
 	
 	for (i = 1; i < argc; i++)
@@ -82,29 +81,7 @@ int main (int argc, char **argv)
 		}
 	}
 	
-	/* Weiru */
-	if((pwd = getpwnam("condor")) == NULL)
-	{
-		printf( "condor not in passwd file" );
-		exit(1); 
-	}
-	if(read_config(pwd->pw_dir, MASTER_CONFIG, NULL, ConfigTab, TABLESIZE,
-				   EXPAND_LAZY) < 0)
-	{
-		config(argv[0], NULL);
-	}
-	else
-	{
-   		config_location = param("CONFIG_FILE_LOCATION");
-   		if(!config_location)
-   		{
-   			config_location = pwd->pw_dir;
-   		}
-		if(config_from_server(config_location, argv[0], NULL) < 0)
-	    {
-			config(argv[0], NULL);
-		}
-	}
+	config( 0 );
 
 	// find ip port of schedd from collector
 	if(!host)

@@ -201,7 +201,7 @@ initial_bookeeping( int argc, char *argv[] )
 
 	init_shadow_connections();
 
-	read_config_files( argv[0] );
+	read_config_files();
 	init_logging();
 
 		/* Now if we have an error, we can print a message */
@@ -417,9 +417,9 @@ init_logging()
   files.
 */
 void
-read_config_files( char *my_name )
+read_config_files( void )
 {
-	config( my_name, (CONTEXT *)0 );
+	config( 0 );
 
 		/* bring important parameters into global data items */
 	init_params();

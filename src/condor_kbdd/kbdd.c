@@ -102,7 +102,6 @@ int		argc;
 char	*argv[];
 {
 	char	**ptr;
-	char	config_file[MAXPATHLEN] = ""; 
 	int		error_handler(), io_error_handler();
 #ifdef X_EXTENSIONS
 	int		first_event, first_error;
@@ -124,16 +123,13 @@ char	*argv[];
 			case 't':
 				Termlog++;
 				break;
-			case 'c':
-				strcpy(config_file, *(++ptr));
-				break; 
 			default:
 				usage( argv[0] );
 		}
 	}
 
 	MyName = *argv;
-	config( MyName, 0 );
+	config( 0 );
 	init_params();
 
 	if( argc > 5 ) {

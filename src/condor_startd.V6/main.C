@@ -157,7 +157,7 @@ int main(int argc, char** argv)
 
 	/* conv all contexts to classAds - N Anand*/
 	template_ClassAd = new ClassAd();
-	configAd(MyName, template_ClassAd);
+	config( template_ClassAd );
 
 	// CHANGE -> N Anand
 	template_ClassAd->Insert(def_owner);
@@ -216,8 +216,7 @@ int main(int argc, char** argv)
 
 static int res_config_context(resource_info_t* rip)
 {
-  //CHANGE -> N Anand
-  configAd(MyName,rip->r_context);
+  config( rip->r_context );
 }
 
 static void usage(const char* s)

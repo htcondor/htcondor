@@ -56,7 +56,7 @@ int main( int argc, char *argv[] )
 {
 	char	hostname[512];
 
-	config( argv[0], (CONTEXT *)0 );
+	config( 0 );
 
 	if( argc < 2 ) {
 		gethostname( hostname, sizeof hostname );

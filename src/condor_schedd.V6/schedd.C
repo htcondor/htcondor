@@ -117,7 +117,6 @@ extern "C"
 	char*	param(char*);
 	void	block_signal(int);
 	void	unblock_signal(int);
-	void	config(char*, CONTEXT*);
 	void	handle_q(ReliSock*, struct sockaddr_in*);
 	void	fill_dgram_io_handle(DGRAM_IO_HANDLE*, char*, int, int);
 	int		udp_unconnect();
@@ -2071,7 +2070,7 @@ Scheduler::sighup_handler()
 {
     dprintf( D_ALWAYS, "Re-reading config file\n" );
 
-    configAd( myName, ad );
+	config( ad );
 
 	Init();
 	::Init();

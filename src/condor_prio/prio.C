@@ -117,7 +117,7 @@ main( int argc, char *argv[] )
 
 	MyName = argv[0];
 
-	config( MyName, (CONTEXT *)0 );
+	config( 0 );
 #if DBM_QUEUE
 	init_params();
 #endif

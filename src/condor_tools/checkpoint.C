@@ -59,7 +59,7 @@ main( int argc, char *argv[] )
 		usage( argv[0] );
 	}
 
-	config( argv[0], 0 ); /* ugh! */
+	config( 0 );
 
 	if ((startdAddr = get_startd_addr(argv[1])) == NULL)
 	{

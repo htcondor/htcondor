@@ -109,7 +109,6 @@ extern "C"
 {
 	void	dprintf(int, char*...);
 	int		set_condor_euid();
-	void	config(char*, CONTEXT*);
 	int		config_from_server(char*, char*, CONTEXT*);
 	void	_EXCEPT_(char*...);
 	int		udp_connect(char*, int);	
@@ -187,8 +186,8 @@ PRIO_REC	 	DummyPrioRec, *Endmarker = &DummyPrioRec;
 CondorQuery		queryObj(SCHEDD_AD);
 ClassAdList*	scheddAds;
 
+
 char*			MyName;
-char			config_file[MAXPATHLEN] = "";
 
 #if !defined(MAX)
 #	define MAX(a,b) ((a)>(b)?(a):(b))
@@ -200,7 +199,7 @@ char			config_file[MAXPATHLEN] = "";
 
 usage( char* name )
 {
-	dprintf( D_ALWAYS, "Usage: %s [-f] [-t] [-c config_file_name]\n", name );
+	dprintf( D_ALWAYS, "Usage: %s [-f] [-t]\n", name );
 	exit( 1 );
 }
 
@@ -211,6 +210,7 @@ main( int argc, char** argv )
 	char	**ptr;
 	fd_set	readfds;
 	struct timeval timer;
+	ClassAd	*NegotiatorAd;
 
 #ifdef NFSFIX
 	/* Must be condor to write to log files. */
@@ -231,25 +231,23 @@ main( int argc, char** argv )
 			case 't':
 				Termlog++;
 				break;
-			case 'c':
-				strcpy(config_file, *(++ptr));
-				break; 
 			default:
 				usage( argv[0] );
 		}
 	}
 
 	MyName = *argv;
+
+		// Evil hack: since the negotiator still uses contexts, we've
+		// got to configure with a classad, then convert it to a
+		// context.  -Derek Wright 7/14/97
+
 	NegotiatorContext = create_context();
-	if(config_file[0] == '\0')
-	{
-		config( argv[0], NegotiatorContext );
-	}
-	else
-	{
-		config_from_server( config_file, argv[0], NegotiatorContext );
-	}
-	
+	NegotiatorAd = new ClassAd;
+	config( NegotiatorAd );
+	NegotiatorAd->MakeContext( NegotiatorContext );
+	delete( NegotiatorAd );
+
 	init_params();
 	Terse = TRUE;
 	Silent = TRUE;

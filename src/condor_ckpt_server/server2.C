@@ -125,7 +125,7 @@ void Server::Init(int max_new_xfers,
     }
 #endif
 
-	config( "condor_ckpt_server", 0);
+	config( 0 );
 	dprintf_config( "CKPT_SERVER", 2 );
 
 	ckpt_server_dir = param( "CKPT_SERVER_DIR" );

@@ -117,7 +117,6 @@ int main (int argc, char *argv[])
 	fd_set readfds;
 	int    count, timerID;
 	char** ptr;
-	char   config_file[MAXPATHLEN] = "";
 	
 	if(argc > 5)
 	{
@@ -140,9 +139,6 @@ int main (int argc, char *argv[])
 		case 'b':
 			Foreground = 0;
 			break;
-		case 'c':
-			strcpy(config_file, *(++ptr));
-			break;
 		default:
 			usage(argv[0]);
 		}
@@ -150,14 +146,7 @@ int main (int argc, char *argv[])
 	
     // initialize
     MyName = *argv;
-	if(config_file[0] == '\0')
-	{
-		config (MyName, NULL);
-	}
-	else
-	{
-		config_from_server(config_file, MyName, NULL);
-	}
+	config( 0 );
 	
     initializeParams ();
     dprintf_config ("COLLECTOR", STDERR_FILENO);

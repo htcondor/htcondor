@@ -22,12 +22,26 @@
 ** OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE
 ** OR PERFORMANCE OF THIS SOFTWARE.
 ** 
-** Author:  Anand Narayanan
+** Origional author:  Anand Narayanan
+** 
+** Totally re-written and stream-lined on 7/10/97 by Derek Wright
 ** 
 */ 
 
-/*
-** This file implements configAd(), a classad version of config().
+/* 
+  This file implements config(), function all daemons should call to
+  configure themselves.  It takes just one argument: a pointer to the
+  ClassAd to fill up with the expressions in the config_file.
+  config() simply calls real_config() with the right parameters for
+  the default behavior.  real_config() is also called by
+  config_master(), which is used to configure the condor_master
+  process with different file names.  
+
+  In general, the config functions check an environment variable to
+  find the location of the global config files.  If that doesn't
+  exist, it looks in /etc/condor.  If the files aren't there, it try's
+  ~condor/.  If none of the above locations contain a config file, the
+  functions print error messages and exit
 */
 
 #include <stdio.h>
@@ -35,143 +49,192 @@
 #include <ctype.h>
 #include <pwd.h>
 #include <netdb.h>
-#include "trace.h"
-#include "files.h"
 #include "debug.h"
-#include "except.h"
 #include "clib.h"
 #include "condor_sys.h"
 #include "condor_config.h"
-#include "condor_classad.h"
+#include "util_lib_proto.h"
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-#ifndef LINT
-static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
-#endif LINT
-
-int SetSyscalls(int);
-
-extern BUCKET	*ConfigTab[];
-
-char	*expand_macro(), *lookup_macro(), *param();
-
+// Function prototypes
+void real_config(const char*, const char*, const char*, ClassAd*);
+int Read_config(char*, ClassAd*, BUCKET**, int, int);
 char *get_arch();
 char *get_op_sys();
+int SetSyscalls(int);
+#if defined(LINUX)
+    int gethostname(char*, unsigned int);
+#else
+    int gethostname(char*, int);
+#endif
 
+
+// External variables
+extern BUCKET	*ConfigTab[];
 extern int	ConfigLineNo;
 
-#if defined(__STDC__)
-void insert_context( char *name, char *value, CONTEXT *context );
-#else
-void insert_context();
-#endif
 
-#if !defined(USER_NAME)
-#	define USER_NAME "condor"
-#endif
+// Global variables
+BUCKET	*ConfigTab[TABLESIZE];
 
-/* conversion to ClassAd -- N Anand*/
-void configAd(char* a_out_name, ClassAd* classAd)
+
+// Function implementations
+void 
+config(ClassAd *classAd)
 {
-  struct passwd	*pw, *getpwnam();
-  char			*ptr;
-  char			*config_file, *tilde;
-  int				testing, rval;
-  char			hostname[1024];
-  int				scm;
-  char			*arch, *op_sys;
-  
-  /*
-   ** N.B. if we are using the yellow pages, system calls which are
-   ** not supported by either remote system calls or file descriptor
-   ** mapping will occur.  Thus we must be in LOCAL/UNRECORDED mode here.
-   */
-  scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
-  if( (pw=getpwnam(USER_NAME)) == NULL ) {
-	printf( "Can't find user \"%s\" in passwd file!\n", USER_NAME );
-	exit( 1 );
-  }
-  (void)endpwent();
-  (void)SetSyscalls( scm );
-  
-  // build a hash table with entries for "tilde" and
-  // "hostname". Note that "hostname" ends up as just the
-  // machine name w/o the . separators
-  tilde = strdup( pw->pw_dir );
-  insert( "tilde", tilde, ConfigTab, TABLESIZE );
-  free( tilde );
-  
-  if( gethostname(hostname,sizeof(hostname)) < 0 ) 
-  {
-	fprintf( stderr, "gethostname failed, errno = %d\n", errno );
-	exit( 1 );
-  }
-  
-  if( ptr=(char *)strchr((const char *)hostname,'.') )
-	*ptr = '\0';
-  insert( "hostname", hostname, ConfigTab, TABLESIZE );
+	real_config("CONDOR_CONFIG", "condor_config",
+				"condor_config.local", classAd);
+}
 
-  
-  /* Different cases for default configuration or server configuration */
-  /* weiru */
-  /* Test versions end in _t, prog name gets passed in */
-  for( ptr=a_out_name; *ptr; ptr++ );
-  if( strcmp("_t",ptr-2) == 0 ) 
-  {
-	testing = 1;
-  }
-  else 
-  {
-	testing = 0;
-  }
-  
-  // In h/files.h:
-  // #define CONFIG                          "condor_config"
-  // #define CONFIG_TEST                     "condor_config_t"
-  
-  config_file = (testing)?(CONFIG_TEST):(CONFIG);
+void
+config_master(ClassAd *classAd)
+{
+	real_config("CONDOR_CONFIG_MASTER", "condor_config.master", 
+				"condor_config.master.local", (ClassAd*)classAd);
+}
 
-  // read the configuration file and produce a classAd
-  // also build the hash table to store values
-  rval = Read_config( pw->pw_dir, config_file, classAd,
-		     ConfigTab, TABLESIZE, EXPAND_LAZY );
+void 
+real_config(const char *env_name, const char *file_name,
+			const char *local_name, ClassAd *classAd)
+{
+	struct passwd	*pw, *getpwnam();
+	char			*ptr;
+	int				rval, fd;
+	char			hostname[1024];
+	int				scm;
+	char			*arch, *op_sys;
+	char			*env, *config_file = NULL, *tilde = NULL;
   
-  if( rval < 0 ) 
-  {
-	fprintf( stderr,
-			"Configuration Error Line %d while processing config file %s/%s ",
-			ConfigLineNo, pw->pw_dir, config_file );
-	perror( "" );
-	exit( 1 );
-  }
-  
-  if( (config_file=param("LOCAL_CONFIG_FILE")) ) 
-  {
-	pw->pw_dir[0] = '\0';	/* Name specified in global config file */
-  } 
-  else 
-  {
-	if( testing ) 
-	{		
-	  // Default to: "~condor/condor_config_t.local" 
-	  config_file = strdup( LOCAL_CONFIG_TEST );
+		/*
+		  N.B. if we are using the yellow pages, system calls which are
+		  not supported by either remote system calls or file descriptor
+ 		  mapping will occur.  Thus we must be in LOCAL/UNRECORDED mode here.
+		*/
+	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
+
+	if( (pw=getpwnam( "condor" )) ) {
+		tilde = strdup( pw->pw_dir );
 	} 
-	else 
-	{
-	  // Default to: "~condor/condor_config.local" 
-	  config_file = strdup( LOCAL_CONFIG );
+
+		// Find location of condor_config file
+
+	if( (env = getenv( env_name )) ) {
+		config_file = strdup( env );
+		if( (fd = open( config_file, O_RDONLY)) < 0 ) {
+			fprintf( stderr, "File specified in %s environment ", env_name );
+			fprintf( stderr, "variable:\n\"%s\" does not exist.", config_file ); 
+			fprintf( stderr, "  Trying fall back options...\n" ); 
+			free( config_file );
+			config_file = NULL;
+		} else {
+			close( fd );
+		}
 	}
-  }
+	if( ! config_file ) {
+			// try /etc/condor/file_name
+		config_file = (char *)malloc( (strlen(file_name) + 14) * sizeof(char) ); 
+		config_file[0] = '\0';
+		strcat( config_file, "/etc/condor/" );
+		strcat( config_file, file_name );
+		if( (fd = open( config_file, O_RDONLY )) > 0 ) {
+			close( fd );
+		} else {
+			free( config_file );
+			config_file = NULL;
+		}
+	}
+	if( ! config_file && tilde ) {
+			// try ~condor/file_name
+		config_file = (char *)malloc( 
+						 (strlen(tilde) + strlen(file_name) + 2) * sizeof(char) ); 
+		config_file[0] = '\0';
+		strcat( config_file, tilde );
+		strcat( config_file, "/" );
+		strcat( config_file, file_name );
+		if( (fd = open( config_file, O_RDONLY)) < 0 ) {
+			free( config_file );
+			config_file = NULL;
+		} else {
+			close( fd );
+		}
+	}
+
+	if( ! config_file ) {
+		fprintf( stderr, "\nNeither the environment variable $s,\n", env_name );
+		fprintf( stderr, "/etc/condor/, nor ~condor/ contain a %s\n ", file_name );
+		fprintf( stderr, "Exiting.\n" );
+		exit( 1 );
+	}
+
+		// Build a hash table with entries for "tilde" and
+		// "hostname". Note that "hostname" ends up as just the
+		// machine name w/o the . separators
+
+	if( tilde ) {
+		insert( "tilde", tilde, ConfigTab, TABLESIZE );
+		free( tilde );
+		tilde = NULL;
+	} else {
+			// What about tilde if there's no ~condor? 
+	}
   
-  (void) Read_config( pw->pw_dir, config_file, classAd,
-					 ConfigTab, TABLESIZE, EXPAND_LAZY );
-  free( config_file );
+	if( gethostname(hostname,sizeof(hostname)) < 0 ) {
+		fprintf( stderr, "gethostname failed, errno = %d\n", errno );
+		exit( 1 );
+	}
+  
+	if( ptr=(char *)strchr((const char *)hostname,'.') )
+		*ptr = '\0';
+	insert( "hostname", hostname, ConfigTab, TABLESIZE );
 
-  // ToDo -> move this to read_config(..) -> NA
+		// Actually read in the file
 
+	rval = Read_config( config_file, classAd, ConfigTab, TABLESIZE,
+						EXPAND_LAZY );
+	if( rval < 0 ) {
+		fprintf( stderr,
+				 "Configuration Error Line %d while processing config file %s ",
+				 ConfigLineNo, config_file );
+		perror( "" );
+		exit( 1 );
+	}
+	free( config_file );
+	
+		// Try to find the local config file
+
+	config_file=param( "LOCAL_CONFIG_FILE" );
+	if( ! config_file && tilde ) {
+			// If there's no LOCAL_CONFIG_FILE in the global config
+			// file, try ~condor/local_name
+		config_file = (char *)malloc( 
+						 (strlen(tilde) + strlen(local_name) + 2) * sizeof(char) ); 
+		config_file[0] = '\0';
+		strcat( config_file, tilde );
+		strcat( config_file, "/" );
+		strcat( config_file, local_name );
+		if( (fd = open( config_file, O_RDONLY)) < 0 ) {
+			free( config_file );
+			config_file = NULL;
+		} else {
+			close( fd );
+		}
+	}
+
+	if( config_file) {
+		rval = Read_config( config_file, classAd, ConfigTab, TABLESIZE, EXPAND_LAZY ); 
+
+		if( rval < 0 ) {
+			fprintf( stderr,
+					 "Configuration Error Line %d while processing config file %s ",
+					 ConfigLineNo, config_file );
+			perror( "" );
+			exit( 1 );
+		}
+		free( config_file );
+	}
 
   /* If ARCH is not defined in config file, then try to get value
      using uname().  Note that the config file parameter overrides
@@ -179,32 +242,115 @@ void configAd(char* a_out_name, ClassAd* classAd)
   /* Jim's insertion into context changed to insertion into
      classAd -> N Anand */
   
-  if( (param("ARCH") == NULL) && ((arch = get_arch()) != NULL) ) 
-  {
-    insert( "ARCH", arch, ConfigTab, TABLESIZE );
-    if(classAd)
-    {
-      char line[80];
-      sprintf(line,"%s = %s","ARCH",arch);
-      classAd->Insert(line);
-    }
-  }
+	if( (param("ARCH") == NULL) && ((arch = get_arch()) != NULL) ) {
+		insert( "ARCH", arch, ConfigTab, TABLESIZE );
+		if(classAd)	{
+			char line[80];
+			sprintf(line,"%s = %s","ARCH",arch);
+			classAd->Insert(line);
+		}
+	}
 
-  /* If OPSYS is not defined in config file, then try to get value
-     using uname().  Note that the config file parameter overrides
-     the uname() value.  -Jim B. */
-  /* Jim's insertion into context changed to insertion into
-     classAd -> N Anand */
-  if( (param("OPSYS") == NULL) && ((op_sys = get_op_sys()) != NULL) ) 
-  {
-    insert( "OPSYS", op_sys, ConfigTab, TABLESIZE );
-    if(classAd)
-    {
-      char line[80];
-      sprintf(line,"%s = %s","OPSYS",op_sys);
-      classAd->Insert(line);
-    }
-  }
+		/* If OPSYS is not defined in config file, then try to get value
+		   using uname().  Note that the config file parameter overrides
+		   the uname() value.  -Jim B. */
+		/* Jim's insertion into context changed to insertion into
+		   classAd -> N Anand */
+	if( (param("OPSYS") == NULL) && ((op_sys = get_op_sys()) != NULL) ) {
+		insert( "OPSYS", op_sys, ConfigTab, TABLESIZE );
+		if(classAd) {
+			char line[80];
+			sprintf(line,"%s = %s","OPSYS",op_sys);
+			classAd->Insert(line);
+		}
+	}
+
+	(void)endpwent();
+	(void)SetSyscalls( scm );
+  
+}
+
+void
+init_config()
+{
+	 memset( (char *)ConfigTab, 0,sizeof(ConfigTab) ); 
+}
+
+/*
+** Return the value associated with the named parameter.  Return NULL
+** if the given parameter is not defined.
+*/
+char *
+param( char *name )
+{
+	char *val = lookup_macro( name, ConfigTab, TABLESIZE );
+
+	if( val == NULL ) {
+		return( NULL );
+	}
+	return( expand_macro(val, ConfigTab, TABLESIZE) );
+}
+
+char *
+macro_expand( char *str )
+{
+	return( expand_macro(str, ConfigTab, TABLESIZE) );
+}
+
+/*
+** Return non-zero iff the named configuration parameter contains the given
+** pattern.  
+*/
+boolean( char *parameter, char *pattern )
+{
+	char	*argv[512];
+	int		argc;
+	char	*tmp;
+
+		/* Look up the parameter and break its value into an argv */
+	/* tmp = strdup( param(parameter) ); */
+	tmp = param(parameter);
+	mkargv( &argc, argv, tmp );
+
+		/* Search for the given pattern */
+	for( argc--; argc >= 0; argc-- ) {
+		if( !strcmp(pattern,argv[argc]) ) {
+			FREE( tmp );
+			return 1;
+		}
+	}
+	FREE( tmp );
+	return 0;
+}
+
+/* uname() is POSIX, so this should work on all platforms.  -Jim */
+#include <sys/utsname.h>
+
+char *
+get_arch()
+{
+	static struct utsname buf;
+
+	if( uname(&buf) < 0 ) {
+		return NULL;
+	}
+
+	return buf.machine;
+}
+
+char *
+get_op_sys()
+{
+	static char	answer[1024];
+	struct utsname buf;
+
+	if( uname(&buf) < 0 ) {
+		return NULL;
+	}
+
+	strcpy( answer, buf.sysname );
+	strcat( answer, buf.release );
+	return answer;
 }
 
 #if defined(__cplusplus)

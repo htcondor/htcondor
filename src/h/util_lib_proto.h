@@ -6,7 +6,7 @@
  */
 
 #include "condor_types.h"
-#include "config.h"
+#include "condor_config.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -18,18 +18,11 @@ extern "C" {
 int blankline ( char *str );
 char * gen_ckpt_name ( char *directory, int cluster, int proc, int subproc );
 char * gen_exec_name ( int cluster, int proc, int subproc );
-void init_config ( void );
-void config ( char *a_out_name, CONTEXT *context );
-char * param ( char *name );
-char * macro_expand ( char *name );
-int boolean ( char *parameter, char *pattern );
+
 void lower_case ( register char *str );
 int hash ( register char *string, register int size );
-void insert ( char *name, char *value, BUCKET *table[], int table_size );
-int read_config ( char *tilde, char *config_name, CONTEXT *context, BUCKET *table[], int table_size, int expand_flag );
 char * getline ( FILE *fp );
-char * expand_macro ( char *value, BUCKET *table[], int table_size );
-char * lookup_macro ( char *name, BUCKET *table[], int table_size );
+
 void schedule_event ( int month, int day, int hour, int minute, int second, void (*func)() );
 void event_mgr ( void );
 void StartRecording ( void );
@@ -184,17 +177,12 @@ PROC *ConstructProc( int, PROC *);
 int blankline ();
 char * gen_ckpt_name ();
 char * gen_exec_name ();
-void init_config ();
-void config ();
-char * param ();
-int boolean ();
+
 void lower_case ();
 int hash ();
-void insert ();
-int read_config ();
 char * getline ();
-char * expand_macro ();
-char * lookup_macro ();
+
+
 void schedule_event ();
 void event_mgr ();
 void StartRecording ();

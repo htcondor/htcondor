@@ -185,7 +185,7 @@ main( int argc, char *argv[] )
 
 		// Initialize things
 	MyName = argv[0];
-	config( MyName, (CONTEXT *)0 );
+	config( 0 );
 	init_params();
 	BadFiles = new List<char>;
 

@@ -74,7 +74,7 @@ ELEM*     eval ( char *name, CONTEXT *cont1, CONTEXT *cont2 );
 void      display_context ( CONTEXT *context );
 int       xdr_status_line(XDR *xdrs, STATUS_LINE *line );
 XDR*      xdr_Init( int *sock, XDR *xdrs );
-void      config( char *a_out_name, CONTEXT *context );
+
 #if defined(OSF1) || defined(SUNOS41)
 void*     memset( void *,int, long unsigned int );  
 #else
@@ -304,7 +304,7 @@ main(int argc, char *argv[])
 	}                              
 
 
-	config( MyName, (CONTEXT *)0 );    
+	config( 0 );    
 	init_params();                 /* first record the time of this call. */
 	Terse = TRUE;
 	Silent = TRUE;
