@@ -16,13 +16,13 @@ int main_init (int, char *[])
 
 int main_shutdown_graceful()
 {
-	return 0;
+	exit(0);
 }
 
 
 int main_shutdown_fast()
 {
-	return 0;
+	exit(0);
 }
 
 
