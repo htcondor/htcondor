@@ -25,7 +25,6 @@
 #include "condor_classad.h"
 #include "condor_io.h"
 #include "condor_debug.h"
-#include "expr.h"
 #include "dgram_io_handle.h"
 #include "xferstat2.h"
 #include "xfer_summary.h"
@@ -33,8 +32,6 @@
 #include "condor_collector.h"
 #include "condor_attributes.h"
 #include "my_hostname.h"
-
-static char *_FileName_ = __FILE__;
 
 extern "C" {
 	char *calc_subnet_name();
