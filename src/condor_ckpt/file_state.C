@@ -888,10 +888,6 @@ storing the working directory text.  If this is a relative
 path, we just tack it on to the given path.  We have
 to be careful never to do a getcwd(), because this is not
 safe on auto-mounted NFS systems.
-
-When the shadow is available, use the success code from the
-shadow, but also attempt the local chdir in order to keep
-the execution site in the same directory... when it exists.
 */
 
 int CondorFileTable::chdir( const char *path )
@@ -900,7 +896,6 @@ int CondorFileTable::chdir( const char *path )
 
 	if( MyImage.GetMode() != STANDALONE ) {
 		result = REMOTE_syscall( CONDOR_chdir, path );
-		syscall( SYS_chdir, path );
 	} else {
 		result = syscall( SYS_chdir, path );
 	}
@@ -1284,7 +1279,7 @@ int CondorFileTable::is_fd_local( int fd )
 	return pointers[fd]->file->is_file_local();
 }
 
-int CondorFileTable::is_file_name_local( const char *incomplete_name )
+int CondorFileTable::is_file_name_local( const char *incomplete_name, char *local_name )
 {
 	char url[_POSIX_PATH_MAX];
 	char logical_name[_POSIX_PATH_MAX];
@@ -1305,7 +1300,8 @@ int CondorFileTable::is_file_name_local( const char *incomplete_name )
 	// Otherwise, resolve the url by normal methods.
 	lookup_url( logical_name, url );
 
-	// Finally, return true if the url begins with "local"
+	// Copy the local path name out
+	strcpy(local_name,strchr(url,':')+1);
 
 	if(!strncmp(url,"local:",6)) {
 		return 1;

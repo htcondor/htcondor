@@ -239,7 +239,7 @@ public:
 	int	is_fd_local( int fd );
 
 	/** Returns true if this file name should be accessed locally */
-	int	is_file_name_local( const char *name );
+	int	is_file_name_local( const char *name, char *local_name );
 	
 private:
 
