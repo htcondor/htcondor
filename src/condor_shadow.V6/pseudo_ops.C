@@ -1281,11 +1281,12 @@ pseudo_get_file_info( const char *logical_name, char *actual_url )
 	/* First check to see if the logical name matches a
 	   filename that is remapped by the job ad. */
 
-	JobAd->LookupString(ATTR_FILE_REMAPS,remap_list);
-        if(filename_remap_find(remap_list,(char*)logical_name,actual_url)) {
-		dprintf(D_SYSCALLS,"\tremapped to: %s\n",actual_url);
-		return 1;
-        }
+	if(JobAd->LookupString(ATTR_FILE_REMAPS,remap_list)) {
+		if(filename_remap_find(remap_list,(char*)logical_name,actual_url)) {
+			dprintf(D_SYSCALLS,"\tremapped to: %s\n",actual_url);
+			return 1;
+		}
+	}
 
 	dprintf( D_SYSCALLS, "\tnot remapped.\n");
 
