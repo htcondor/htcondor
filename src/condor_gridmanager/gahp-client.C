@@ -1961,8 +1961,7 @@ GahpServer::poll()
 	result = new Gahp_Args;
 	ASSERT(result);
 	read_argv(result);
-	if ( result->argv[0] == NULL || result->argv[0][0] != 'S' ||
-		 result->argv[1] == NULL ) {
+	if ( result->argc < 2 || result->argv[0][0] != 'S' ) {
 			// Badness !
 		dprintf(D_ALWAYS,"GAHP command 'RESULTS' failed\n");
 		return 0;
