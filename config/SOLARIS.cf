@@ -66,6 +66,7 @@
 #define NEEDS_64BIT_SYSCALLS		YES
 #define NEEDS_64BIT_STRUCTS		YES
 
+#define WANT_PVM			YES
 #define	PVM_ARCH			SUN4SOL2
 #define	HAS_PURIFY			YES
 
