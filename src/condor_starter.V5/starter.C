@@ -177,7 +177,6 @@ initial_bookeeping( int argc, char *argv[] )
 	(void) SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 
 	set_condor_priv();
-	(void)umask( 0 );
 
 	init_shadow_connections();
 
