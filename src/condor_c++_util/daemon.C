@@ -653,6 +653,9 @@ Daemon::locate( void )
 		// _is_local.  If possible, they will also set _full_hostname
 		// and _name. 
 	switch( _type ) {
+	case DT_CLUSTER:
+		rval = getDaemonInfo( "CLUSTER", CLUSTER_AD );
+		break;
 	case DT_SCHEDD:
 		rval = getDaemonInfo( "SCHEDD", SCHEDD_AD );
 		break;

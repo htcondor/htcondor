@@ -7,7 +7,7 @@
 
 enum daemon_t { DT_NONE, DT_ANY,  DT_MASTER, DT_SCHEDD, DT_STARTD,
 				  DT_COLLECTOR, DT_NEGOTIATOR, DT_KBDD, 
-				  DT_DAGMAN, DT_VIEW_COLLECTOR, _dt_threshold_ };
+				  DT_DAGMAN, DT_VIEW_COLLECTOR, DT_CLUSTER,  _dt_threshold_ };
 
 #ifdef __cplusplus
 extern "C" {
