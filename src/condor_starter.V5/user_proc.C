@@ -1164,6 +1164,19 @@ set_iwd()
 		exit( 4 );
 	}
 	if( chdir(iwd) < 0 ) {
+
+		int rval = -1;
+		for (int count = 0; count < 360 && rval == -1 &&
+				 (errno == ETIMEDOUT || errno == ENODEV); count++) {
+			dprintf(D_ALWAYS, "Connection timed out on chdir(%s), trying again"
+					" in 5 seconds\n", iwd);
+			sleep(5);
+			rval = chdir(iwd);
+		}
+		if (errno == ETIMEDOUT || errno == ENODEV) {
+			EXCEPT("Connection timed out for 30 minutes on chdir(%s)", iwd);
+		}
+			
 		sprintf( buf, "Can't open working directory \"%s\", errno = %d", iwd,
 			    errno );
 		REMOTE_syscall( CONDOR_perm_error, buf );
