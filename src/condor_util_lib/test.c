@@ -42,7 +42,7 @@ char	*argv[];
 	struct sigaction	act;
 	sigset_t	mask;
 
-	config( argv[0], 0 );
+	config();
 
 	act.sa_handler = reap;
 	sigemptyset( &act.sa_mask );
