@@ -1710,7 +1710,7 @@ MyString *GlobusJob::buildRestartRSL()
 MyString *GlobusJob::buildStdioUpdateRSL()
 {
 	int rc;
-	MyString *rsl;
+	MyString *rsl = new MyString;
 	MyString buff;
 	struct stat file_status;
 
