@@ -1,7 +1,5 @@
 #include "image.h"
 
-extern "C" void *sbrk( int );
-
 /*
   Return starting address of the data segment
 */

@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <string.h>
 #include "image.h"
 #include "stubs.h"
 
@@ -13,17 +14,6 @@
 #include <signal.h>
 #endif
 
-
-	// Somebody should get together on this...
-#if defined(ULTRIX42) || defined(SUNOS41)
-	extern "C" int brk( void * );
-#elif defined(ULTRIX43)
-	extern "C" char *brk( char * );
-#elif defined(HPUX9)
-	extern "C" int brk( const void * );
-#else
-#	error UNKNOWN PLATFORM
-#endif
 
 static Image MyImage;
 static jmp_buf Env;
@@ -97,7 +87,7 @@ Image::Image()
 	valid = FALSE;
 
 		// set up to catch SIGTSTP and do a checkpoint
-	action.sa_handler = Checkpoint;
+	action.sa_handler = (SIG_HANDLER)Checkpoint;
 	sigemptyset( &action.sa_mask );
 	action.sa_flags = 0;
 
@@ -433,9 +423,9 @@ ExecuteOnTmpStk( void (*func)() )
 	if( SETJMP(env) == 0 ) {
 			// First time through - move SP
 		if( StackGrowsDown() ) {
-			JMP_BUF_SP(env) = (int)TmpStack + TmpStackSize;
+			JMP_BUF_SP(env) = (long)TmpStack + TmpStackSize;
 		} else {
-			JMP_BUF_SP(env) = (int)TmpStack;
+			JMP_BUF_SP(env) = (long)TmpStack;
 		}
 		LONGJMP( env, 1 );
 	} else {

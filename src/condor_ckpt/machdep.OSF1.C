@@ -1,37 +1,69 @@
 #include "image.h"
-
-#if defined(NULL)
-#undef NULL			// sys/param defines this
-#endif
-#include <sys/param.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
 #include <sys/vmparam.h>
+
+extern "C" {
+#include <sys/addrconf.h>
+}
+
+static struct addressconf AddrTab[ AC_N_AREAS ];
+const int AddrTabSize = sizeof( AddrTab );
+
+void
+init_addr_tab()
+{
+	static BOOL initialized = FALSE;
+
+	if( initialized ) {
+		return;
+	}
+
+	if( getaddressconf(AddrTab,AddrTabSize) != AddrTabSize ) {
+		perror( "getaddressconf" );
+		exit( 1 );
+	}
+}
 
 /*
   Return starting address of the data segment
 */
-extern int __data_start;
-int
+long
 data_start_addr()
 {
-	return USRDATA;
+	init_addr_tab();
+	return (long)AddrTab[ AC_DATA ].ac_base;
 }
 
 /*
   Return ending address of the data segment
 */
-int
+long
 data_end_addr()
 {
-	return (int)sbrk(0);
+	return (long)sbrk( 0 );
 }
 
 /*
   Return TRUE if the stack grows toward lower addresses, and FALSE
   otherwise.
 */
-int StackGrowsDown()
+BOOL StackGrowsDown()
 {
-	return 1;
+	unsigned flag;
+
+	init_addr_tab();
+	flag = AddrTab[AC_STACK].ac_flags;
+	switch( flag ) {
+	  case AC_UPWARD:
+		return 0;
+	  case AC_DOWNWARD:
+		return 1;
+	  default:
+		fprintf( stderr, "Unexpected ac_flags for stack (0x%X)\n", flag );
+		exit( 1 );
+	}
 }
 
 /*
@@ -41,13 +73,13 @@ int StackGrowsDown()
 */
 int JmpBufSP_Index()
 {
-	return 32;
+	return 34;
 }
 
 /*
   Return starting address of stack segment.
 */
-int
+long
 stack_start_addr()
 {
 	jmp_buf env;
@@ -58,10 +90,10 @@ stack_start_addr()
 /*
   Return ending address of stack segment.
 */
-int
+long
 stack_end_addr()
 {
-	return USRSTACK;
+	return 0x120000000;
 }
 
 /*
@@ -71,5 +103,5 @@ stack_end_addr()
 void
 patch_registers( void *generic_ptr )
 {
-	// nothing needed
+	// Nothing needed
 }

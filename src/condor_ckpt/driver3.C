@@ -21,5 +21,5 @@ main( int argc, char *argv[] )
 		printf( "i = %d\n", i );
 		ckpt();
 	}
-	exit( 0 );
+	return 0;
 }

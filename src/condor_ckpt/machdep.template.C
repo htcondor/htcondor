@@ -3,7 +3,6 @@
 /*
   Return starting address of the data segment
 */
-extern int __data_start;
 int
 data_start_addr()
 {

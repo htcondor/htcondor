@@ -1,14 +1,20 @@
 #include <sys/types.h>
+#include "machdep.h"
 
 #define NAME_LEN 64
 typedef long RAW_ADDR;
 typedef int BOOL;
 
+#if defined(TRUE)
+#	undef TRUE
+#	undef FALSE
+#endif
+
 const BOOL	TRUE = 1;
 const BOOL	FALSE = 0;
 
 #if defined(SUNOS41) || defined(ULTRIX42) || defined(ULTRIX43)
-typedef int ssize_t; // should be included in <sys/types.h>, but SUN didn't
+typedef int ssize_t; // should be included in <sys/types.h>, but some don't
 #endif
 
 class Header {
@@ -72,7 +78,7 @@ protected:
 };
 void RestoreStack();
 
-extern "C" void Checkpoint();
+extern "C" void Checkpoint( int, int, void * );
 extern "C" {
 void ckpt();
 void restart();
@@ -93,13 +99,13 @@ extern "C" {
 	void LONGJMP( jmp_buf env, int retval );
 }
 
-int data_start_addr();
-int data_end_addr();
-int stack_start_addr();
-int stack_end_addr();
-int	StackGrowsDown();
+long data_start_addr();
+long data_end_addr();
+long stack_start_addr();
+long stack_end_addr();
+BOOL StackGrowsDown();
 int JmpBufSP_Index();
 void ExecuteOnTmpStk( void (*func)() );
 void patch_registers( void  *);
 
-#define JMP_BUF_SP(env) (((int *)(env))[JmpBufSP_Index()])
+#	define JMP_BUF_SP(env) (((long *)(env))[JmpBufSP_Index()])

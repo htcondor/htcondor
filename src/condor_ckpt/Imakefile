@@ -27,3 +27,6 @@ c_plus_target(test3,driver3.o $(PACKAGE),,no_release)
 c_plus_target(test4,driver4.o $(PACKAGE),,no_release)
 c_plus_target(display,display.o $(PACKAGE),,no_release)
 c_plus_target(gen_test,gen_test.o $(PACKAGE),,no_release)
+
+clean::
+	rm -f Ckpt.13.13 core
