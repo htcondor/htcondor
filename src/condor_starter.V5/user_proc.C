@@ -135,7 +135,6 @@ int UserProc::proc_index = 1;
 
 extern NameTable JobClasses;
 extern NameTable ProcStates;
-extern int Running_PVMD;
 
 int connect_to_port( int );
 
@@ -729,10 +728,6 @@ UserProc::handle_termination( int exit_st )
 			break;
 	}
 
-	if( get_class() == PVMD ) {
-		Running_PVMD = FALSE;
-	}
-
 }
 
 void
@@ -760,13 +755,21 @@ UserProc::send_sig( int sig )
 		// we block all of our async events, since killkids is relatively
 		// slow, does popen and runs /bin/ps, etc.  Thus it is not re-enterant.
 		// -Todd Tannenbaum, 5/9/95
-    	// sigemptyset( &sigmask );
-    	// for( i=0; EventSigs[i]; i++ ) {
-       // 		sigaddset( &sigmask, EventSigs[i] );
-    	// }
-    	// (void)sigprocmask( SIG_SETMASK, &sigmask, &oldmask );
-		killkids(pid,sig);
-    	// (void)sigprocmask( SIG_SETMASK, &oldmask, 0 );
+		switch (sig) {
+		case SIGTERM:
+		case SIGSTOP:
+		case SIGCONT:
+		case SIGKILL:
+			killkids(pid,sig);
+			break;
+		default:
+			if (kill(pid,SIGCONT) < 0) {
+				EXCEPT( "kill(%d,SIGCONT)", pid );
+			}
+			if (kill(pid,sig) < 0) {
+				EXCEPT( "kill(%d,%d)", pid, sig );
+			}
+		}
 	}
 
 	if( sig != SIGCONT ) {
@@ -799,119 +802,7 @@ UserProc::send_sig( int sig )
 				sig, pid);
 }
 
-void
-UserProc::commit_ckpt()
-{
-	// We'd like to just rename() the file, but if we don't do the unlink(),
-	// then on some platforms the "tmp_ckpt" file gets removed from the
-	// directory, but the disk space doesn't get freed.
 
-#if 0
-	(void)unlink( cur_ckpt );
-
-	if( rename(tmp_ckpt,cur_ckpt) < 0 ) {
-		EXCEPT( "rename" );
-	}
-
-#endif
-	state = RUNNABLE;
-}
-
-void
-UserProc::store_ckpt()
-{
-	char	tmp_name[ _POSIX_PATH_MAX ];
-	int		status;
-
-#if 0
-	if( new_ckpt_created ) {
-		sprintf( tmp_name, "%s.tmp", target_ckpt );
-		delay( 15 );
-		status = send_file( cur_ckpt, tmp_name, REGULAR_FILE_MODE );
-		if( status < 0 ) {
-			dprintf( D_ALWAYS, "File NOT xferred\n" );
-			dprintf( D_ALWAYS, "(Insufficient space on submitting machine?)\n");
-			dprintf( D_ALWAYS, "status = %d, errno = %d\n", status, errno );
-			(void)REMOTE_syscall(CONDOR_unlink,tmp_name);  // rm partial file
-			ckpt_transferred = FALSE;
-		} else {
-			if( REMOTE_syscall(CONDOR_rename,tmp_name,target_ckpt) < 0 ) {
-				EXCEPT("Remote rename \"%s\" to \"%s\"", tmp_name, target_ckpt);
-			}
-			commit_cpu_time();
-			ckpt_transferred = TRUE;
-		}
-	} else {
-		dprintf( D_ALWAYS, "Checkpoint file never updated - not sending\n" );
-		ckpt_transferred = FALSE;
-	}
-#endif
-}
-
-
-int
-UserProc::update_ckpt()
-{
-	int		size_estimate;
-	int		free_disk;
-	int		answer;
-	char	*old_brk, *new_brk;
-
-#if 0
-	free_disk = free_fs_blocks( "." );
-
-	if( !core_created ) {
-		dprintf( D_ALWAYS, "No core file - checkpoint *NOT* updated\n" );
-		image_size = free_disk;	// assume ran out of disk trying to creat core
-		return FALSE;
-	}
-
-	size_estimate = estimate_image_size();
-	dprintf( D_ALWAYS, "Estimating new ckpt needs %d kbytes\n", size_estimate );
-	dprintf( D_ALWAYS, "Found %d kbytes of free disk\n", free_disk );
-
-	if( free_disk > size_estimate ) {
-		delay( 5 );
-		dprintf( D_ALWAYS, "Updating checkpoint file...\n" );
-
-		old_brk = (char *)sbrk(0);
-		dprintf( D_ALWAYS, "before update break is 0x%x\n", old_brk );
-		_updateckpt( tmp_ckpt, cur_ckpt, core_name );
-		new_brk = (char *)sbrk(0);
-		dprintf( D_ALWAYS, "after update break is 0x%x\n", new_brk );
-		dprintf( D_ALWAYS,
-				"difference is %d megabytes\n",
-				(new_brk - old_brk) / (1024 * 1024)
-                );
-
-		image_size = physical_file_size( tmp_ckpt );  // Get real size
-		if( image_size < 0 ) {
-			answer = FALSE;
-			image_size = free_disk;	// Assume we ran out of disk space
-			dprintf( D_ALWAYS, "Checkpoint file *NOT* updated\n" );
-			dprintf( D_ALWAYS, "Probably ran out of disk\n" );
-		} else {
-			answer = TRUE;
-			new_ckpt_created = TRUE;
-			dprintf( D_ALWAYS, "Checkpoint file *IS* updated\n" );
-			dprintf( D_ALWAYS, "Actual ckpt file size %d kbytes\n", image_size);
-		}
-	} else {
-		answer = FALSE;
-		image_size = size_estimate;
-		dprintf( D_ALWAYS, "Checkpoint file *NOT* updated\n" );
-		dprintf( D_ALWAYS, "Estimated we would run out of disk\n" );
-	}
-
-	if( unlink(core_name) < 0 ) {
-		EXCEPT( "unlink(%s)", core_name );
-	}
-
-	return answer;
-#else
-	return FALSE;
-#endif
-}
 
 inline void
 display_bool( int debug_flags, char *name, int value )
@@ -1157,21 +1048,6 @@ int
 pre_open( int, int, int ) { return 0; }
 }
 
-#if 0
-void
-open_std_file( const char *name, int mode, int needed_fd )
-{
-	int		fd;
-
-	if( (fd = open(name,mode)) < 0 ) {
-		EXCEPT( "open(%s)", name );
-	}
-	if( fd != needed_fd ) {
-		dup2( fd, needed_fd );
-		close( fd );
-	}
-}
-#endif
 
 /*
   Open a standard file (0, 1, or 2), given its fd number.
@@ -1244,9 +1120,9 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 
 	env = new char [ strlen(s.env) + 1 ];
 	strcpy( env, s.env );
-#if 1
+
 	env_obj.add_string( env );  // set up environment as an object
-#endif
+
 
 		// Generate a directory where process can run and do its checkpointing
 	sprintf( buf, "dir_%d", proc_index++ );
