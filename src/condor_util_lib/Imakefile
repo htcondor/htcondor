@@ -13,7 +13,7 @@ VIRT_MEM_OBJ = virt_mem.Alpha.o
 #else
 CFLAGS = $(STD_C_FLAGS) $(RONALD) -DNEW_PROC
 VIRT_MEM_SRC = virt_mem.c
-VIRT_MEM_SRC = virt_mem.o
+VIRT_MEM_OBJ = virt_mem.o
 #endif
 
 #define MALLOC_DEBUG 1
