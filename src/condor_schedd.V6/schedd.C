@@ -41,6 +41,7 @@
 #include "get_daemon_addr.h"
 #include "renice_self.h"
 #include "user_log.c++.h"
+#include "access.h"
 
 #define DEFAULT_SHADOW_SIZE 125
 
@@ -2847,6 +2848,12 @@ Scheduler::Register()
 			(CommandHandlercpp)vacate_service, "vacate_service", this, WRITE);
     daemonCore->Register_Command(KILL_FRGN_JOB, "KILL_FRGN_JOB", 
 			(CommandHandlercpp)abort_job, "abort_job", this, WRITE);
+
+	// Command handler for testing file access.  I set this as WRITE as we
+	// don't want people snooping the permissions on our machine.
+	daemonCore->Register_Command(ATTEMPT_ACCESS, "ATTEMPT_ACCESS", 
+								 (CommandHandler)attempt_access_handler, 
+								 "attempt_access_handler", NULL, WRITE);
 
     // handler for queue management commands
     // Note: This could either be a READ or a WRITE command.  Too bad we have 
