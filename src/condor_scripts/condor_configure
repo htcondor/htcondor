@@ -275,10 +275,10 @@ e.g. mymachine.mydomain.com \n";
     }
 }
 
-
-    ###  Find condor's home directory, if it exists.
-    
-}
+#
+#    ###  Find condor's home directory, if it exists.
+#    
+#}
 
 sub parse_command_line() {
     if ($#ARGV == -1) {
