@@ -47,9 +47,66 @@ bool getOldClassAd( Sock& sock, ClassAd& ad )
 		}
 	}
 
+	// Get my type and target type
+	if (!sock.code(buffer) || !ad.Insert("MyType",buffer)) return false;
+	if (!sock.code(buffer) || !ad.Insert("TargetType",buffer)) return false;
+
 	return true;
 }
 
+bool putOldClassAd ( Sock& sock, ClassAd& ad )
+{
+	char* attr;
+	ExprTree* expr;
+
+	char buffer[10240];
+	char tmp[10240];
+	char* tmpPtr=tmp;
+
+	int numExprs=0;
+	ClassAdIterator itor(ad);
+	while (itor.NextAttribute(attr, expr)) {
+		if (strcmp(attr,"MyType")==0 || strcmp(attr,"TargetType")==0) continue;
+		numExprs++;
+	}
+	
+	sock.encode( );
+//printf("Sending: %d\n",numExprs);
+	if( !sock.code( numExprs ) ) {
+		return false;
+	}
+		
+	itor.ToBeforeFirst();
+	while (itor.NextAttribute(attr, expr)) {
+		if (strcmp(attr,"MyType")==0 || strcmp(attr,"TargetType")==0) continue;
+		memset(buffer,0,sizeof(buffer));
+		Sink s;
+		s.SetSink(buffer,sizeof(buffer));
+		expr->ToSink(s);
+		sprintf(tmp,"%s = %s",attr,buffer);
+//printf("Sending: %s\n",tmpPtr);
+		if (!sock.code(tmpPtr)) {
+			return false;
+		}
+	}
+
+	// Send the type
+	char* type=NULL;
+	if (!ad.EvaluateAttrString("MyType",type)) type="(unknown type)";
+//printf("Sending: %s\n",type);
+	if (!sock.code(type)) {
+		return false;
+	}
+
+	char* target_type=NULL;
+	if (!ad.EvaluateAttrString("TargetType",target_type)) target_type="(unknown type)";
+//printf("Sending: %s\n",target_type);
+	if (!sock.code(target_type)) {
+		return false;
+	}
+
+	return true;
+}
 
 void printClassAdExpr( ExprTree *tree )
 {
