@@ -28,11 +28,6 @@
 
 #include "condor_macros.h"
 
-#if defined(Solaris)
-#include <sys/fcntl.h>
-#include <sys/termios.h>
-#endif
-
 double	get_time();
 extern int	Syscalls;
 
