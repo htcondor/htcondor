@@ -138,5 +138,13 @@ SOURCE=..\src\condor_schedd.V6\schedd_main.C
 
 SOURCE=..\src\condor_schedd.V6\scheduler.h
 # End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_schedd.V6\shadow_mgr.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_schedd.V6\shadow_mgr.h
+# End Source File
 # End Target
 # End Project

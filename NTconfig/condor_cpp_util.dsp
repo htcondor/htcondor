@@ -131,6 +131,18 @@ SOURCE="..\src\condor_c++_util\classad_merge.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\classad_util.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\classad_util.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\condor_attributes.C"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\condor_common.C"
 
 !IF  "$(CFG)" == "condor_cpp_util - Win32 Debug"
@@ -169,6 +181,14 @@ SOURCE=..\src\condor_includes\condor_cronmgr.h
 # Begin Source File
 
 SOURCE=..\src\condor_daemon_client\condor_daemon_client.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_includes\condor_distribution.h
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\condor_environ.C"
 # End Source File
 # Begin Source File
 
@@ -285,6 +305,10 @@ SOURCE="..\src\condor_c++_util\directory.h"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\condor_c++_util\distribution.C"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_c++_util\dynuser.C"
 # End Source File
 # Begin Source File
@@ -354,6 +378,14 @@ SOURCE="..\src\condor_c++_util\get_daemon_addr.h"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\get_full_hostname.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\get_mysubsystem.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\get_mysubsystem.h"
 # End Source File
 # Begin Source File
 
@@ -495,6 +527,14 @@ SOURCE="..\src\condor_c++_util\Queue.h"
 # Begin Source File
 
 SOURCE="..\src\condor_c++_util\Set.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\sig_name.C"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\condor_c++_util\sig_name.h"
 # End Source File
 # Begin Source File
 
