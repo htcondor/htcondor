@@ -68,6 +68,7 @@ StateMachine::StateMachine(
 	for( i=0; i<n_states; i++ ) {
 		init_asynch_events( StateTab[i] );
 	}
+	no_print_tr = NULL;
 }
 
 /*
