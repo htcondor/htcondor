@@ -23,11 +23,35 @@
 #ifndef _ENV_H
 #define _ENV_H
 
+#include "HashTable.h"
+
+// ********* These are deprecated:
+
 // appends a new environment variable to env string
 bool AppendEnvVariable( char* env, char* name, char* value );
 bool AppendEnvVariableSafely( char** env, char* name, char* value );
 
 // converts unix environ array to a single semicolon-delimited string
 char* environToString( const char** unix_env );
+
+// ********* This is the new world order:
+
+class Env {
+ public:
+	Env();
+	~Env();
+
+	bool Merge( const char **stringArray ) const;
+	bool Merge( const char *delimitedString ) const;
+	bool Put( const char *nameValueExpr ) const;
+	bool Put( const char *var, const char *val ) const;
+	bool Put( const MyString, const MyString ) const;
+	char *getDelimitedString( const char delim = env_delimiter );
+	char *getNullDelimitedString();
+	char **getStringArray();
+
+ protected:
+	HashTable<MyString, MyString> *_envTable;
+};
 
 #endif	// _ENV_H
