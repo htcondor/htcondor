@@ -685,13 +685,13 @@ bad_file( char *dir, char *name )
 State
 get_machine_state()
 {
-	char* addr = get_startd_addr( my_hostname() );
+	char* addr = get_startd_addr( my_full_hostname() );
 	char* state_str;
 	State s;
 
 	if( !addr ) {
 		dprintf( D_ALWAYS, 
-				 "Can't find startd address for %s\n", my_hostname() );
+				 "Can't find startd address for %s\n", my_full_hostname() );
 		return _error_state_;
 	}
 
