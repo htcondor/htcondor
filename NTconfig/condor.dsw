@@ -29,6 +29,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_cpp_util
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_daemon_core
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -46,6 +49,18 @@ Package=<4>
 ###############################################################################
 
 Project: "condor_cpp_util"=.\condor_cpp_util.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "condor_daemon_core"=.\condor_daemon_core.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
