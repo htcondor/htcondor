@@ -9,6 +9,7 @@
 int GlobusResource::probeInterval = 300;	// default value
 int GlobusResource::probeDelay = 15;		// default value
 int GlobusResource::submitLimit = 5;		// default value
+int GlobusResource::gahpCallTimeout = 300;	// default value
 
 GlobusResource::GlobusResource( char *resource_name )
 {
@@ -20,6 +21,7 @@ GlobusResource::GlobusResource( char *resource_name )
 	lastPing = 0;
 	gahp.setNotificationTimerId( pingTimerId );
 	gahp.setMode( GahpClient::normal );
+	gahp.setTimeout( gahpCallTimeout );
 	resourceName = strdup( resource_name );
 }
 
@@ -150,7 +152,8 @@ int GlobusResource::DoPing()
 
 	lastPing = time(NULL);
 
-	if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ) {
+	if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
+		 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 		ping_failed = true;
 	}
 

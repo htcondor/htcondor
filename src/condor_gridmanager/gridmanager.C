@@ -328,6 +328,7 @@ Reconfig()
 		tmp_int = 5 * 60; // default interval is 5 minutes
 	}
 	GlobusJob::setGahpCallTimeout( tmp_int );
+	GlobusResource::setGahpCallTimeout( tmp_int );
 
 	checkProxy_interval = -1;
 	tmp = param("GRIDMANAGER_CHECKPROXY_INTERVAL");
