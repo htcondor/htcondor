@@ -246,7 +246,7 @@ char	*full_path(const char *name, bool use_iwd=true);
 void 	log_submit();
 void 	get_time_conv( int &hours, int &minutes );
 int	  SaveClassAd ();
-void	InsertJobExpr (char *expr, bool clustercheck = true);
+void	InsertJobExpr (const char *expr, bool clustercheck = true);
 void	check_umask();
 void setupAuthentication();
 void	SetPeriodicHoldCheck(void);
@@ -1698,76 +1698,72 @@ SetEnvironment()
 	char *allowscripts = condor_param( AllowStartupScript,
 									   "AllowStartupScript" );
 	Environ envobject;
-	char newenv[ATTRLIST_MAX_EXPRESSION];
+	MyString newenv;
 	char varname[MAXVARNAME];
 	int envlen;
 	bool first = true;
 
-
-	sprintf(newenv, "%s = \"", ATTR_JOB_ENVIRONMENT);
+	newenv += ATTR_JOB_ENVIRONMENT;
+	newenv += " = \"";
 
 	if (env) {
-		strcat(newenv, env);
+		newenv += env;
 		envobject.add_string(env);
 		first = false;
 	}
 
 	if (allowscripts && (*allowscripts=='T' || *allowscripts=='t') ) {
 		if ( !first ) {
-			strcat(newenv,env_delimiter_string);
+			newenv += env_delimiter_string;
 		}
-		strcat(newenv,"_CONDOR_NOCHECK=1");
+		newenv += "_CONDOR_NOCHECK=1";
 		first = false;
 		free(allowscripts);
 	}
 
 
-	envlen = strlen(newenv);
+	envlen = newenv.Length();
 
 	// grab user's environment if getenv == TRUE
 	if ( shouldgetenv && ( shouldgetenv[0] == 'T' || shouldgetenv[0] == 't' ) )
  	{
 
-		for (int i=0; environ[i] && envlen < ATTRLIST_MAX_EXPRESSION; i++) {
+		for (int i=0; environ[i]; i++) {
 
 			// ignore env settings that contain env_delimiter to avoid 
 			// syntax problems
 
 			if (strchr(environ[i], env_delimiter) == NULL) {
 				envlen += strlen(environ[i]);
-				if (envlen < ATTRLIST_MAX_EXPRESSION) {
-
-					// don't override submit file environment settings
-					// check if environment variable is set in submit file
-
-					int j;
-					for (j=0; env && environ[i][j] && environ[i][j] != '='; j++) {
-						varname[j] = environ[i][j];
+				// don't override submit file environment settings
+				// check if environment variable is set in submit file
+				int j;
+				for (j=0; env && environ[i][j] && environ[i][j] != '='; j++) {
+					varname[j] = environ[i][j];
+				}
+				varname[j] = '\0';
+				if (env == NULL || envobject.getenv(varname) == NULL) {
+					if (first) {
+						first = false;
+					} else {
+						newenv += env_delimiter_string;
 					}
-					varname[j] = '\0';
-					if (env == NULL || envobject.getenv(varname) == NULL) {
-						if (first) {
-							first = false;
-						} else {
-							strcat(newenv, env_delimiter_string);
-						}
-						strcat(newenv, environ[i]);
-					}
-
+					newenv += environ[i];
 				}
 			}
 		}
 	}
 
-	strcat(newenv, "\"");
+	newenv += "\"";
 
-	InsertJobExpr (newenv);
+	InsertJobExpr (newenv.GetCStr());
 	if( env ) {
 		free(env);
 	}
 	if( shouldgetenv ) {
 		free(shouldgetenv);
 	}
+	return;
 }
 
 #if !defined(WIN32)
@@ -3135,7 +3131,7 @@ int
 SaveClassAd ()
 {
 	ExprTree *tree = NULL, *lhs = NULL, *rhs = NULL;
-	char lhstr[128], rhstr[ATTRLIST_MAX_EXPRESSION];
+	char *lhstr, *rhstr;
 	int  retval = 0;
 	int myprocid = ProcId;
 
@@ -3150,16 +3146,18 @@ SaveClassAd ()
 
 	job->ResetExpr();
 	while( (tree = job->NextExpr()) ) {
-		lhstr[0] = '\0';
-		rhstr[0] = '\0';
-		if( (lhs = tree->LArg()) ) { lhs->PrintToStr (lhstr); }
-		if( (rhs = tree->RArg()) ) { rhs->PrintToStr (rhstr); }
-		if( !lhs || !rhs ) { retval = -1; }
+		lhstr = NULL;
+		rhstr = NULL;
+		if( (lhs = tree->LArg()) ) { lhs->PrintToNewStr (&lhstr); }
+		if( (rhs = tree->RArg()) ) { rhs->PrintToNewStr (&rhstr); }
+		if( !lhs || !rhs || !lhstr || !rhstr) { retval = -1; }
 		if( SetAttribute(ClusterId, myprocid, lhstr, rhstr) == -1 ) {
 			fprintf( stderr, "\nERROR: Failed to set %s=%s for job %d.%d\n", 
 					 lhstr, rhstr, ClusterId, ProcId );
 			retval = -1;
 		}
+		free(lhstr);
+		free(rhstr);
 	}
 
 	if ( ProcId == 0 ) {
@@ -3171,7 +3169,7 @@ SaveClassAd ()
 
 
 void 
-InsertJobExpr (char *expr, bool clustercheck)
+InsertJobExpr (const char *expr, bool clustercheck)
 {
 	ExprTree *tree = NULL, *lhs = NULL;
 	char      name[128];
