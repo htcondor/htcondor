@@ -647,7 +647,7 @@ sub RunIt( )
 	    }
 
 	    # Memory info
-	    elsif ( /^(Mem|Swap):(.+)/ )
+	    elsif ( /^(Mem|Swap|Memory):(.+)/ )
 	    {
 		my $MemSwap = $1;
 		my $Rest = $2;
