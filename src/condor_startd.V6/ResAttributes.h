@@ -25,8 +25,6 @@ public:
 
 	float 		load()			{return r_load;};
 	float		condor_load()	{return r_condor_load;};
-	int			mips()			{return r_mips;};
-	int			kflops()		{return r_kflops;};
 	int			idle() 			{return r_idle;};
 	int			console_idle()	{return r_console_idle;};
 	unsigned long	virtmem()	{return r_virtmem;};
