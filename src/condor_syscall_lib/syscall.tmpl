@@ -356,8 +356,19 @@ All of these calls manipulate the open file table.
 		offset_t llseek( int fd, offset_t offset, int whence )
 			: file_table_name(lseek), remote_name(lseek);
 	#elif defined(LINUX)
-		off64_t llseek( int fd, off64_t offset, int whence )
-			: file_table_name(lseek), remote_name(lseek), no_sys_chk, local_name(_llseek);
+		#if defined(GLIBC21)
+			off64_t llseek( int fd, off64_t offset, int whence )
+				: file_table_name(lseek), remote_name(lseek), no_sys_chk, 
+				local_name(_llseek);
+		#elif defined(GLIBC20)
+			unsigned long llseek( int fd, unsigned long offset, int whence )
+				: file_table_name(lseek), remote_name(lseek), no_sys_chk, 
+				local_name(_llseek);
+		#else
+			long long llseek( int fd, long long offset, int whence )
+				: file_table_name(lseek), remote_name(lseek), no_sys_chk, 
+				local_name(_llseek);
+		#endif
 	#endif
 
 	#if !defined(LINUX)		/* on Linux, lseek64 just goes to llseek */
