@@ -148,6 +148,54 @@ win32_getExecPath()
 #endif /* defined(WIN32) */
 
 
+#if defined( Darwin )
+
+/* We should include <mach-o/dyld.h> for this prototype, but
+   unfortunately, that header conflicts with our definitions of FALSE
+   and TRUE. :( So, we just prototype it directly here.  This is lame,
+   but it's easier than dealing with header file incompatibilities.
+   Also, this method only exists on OS X 10.2 and higher.  So, this
+   code will not work on older versions of OS X.
+   Derek Wright <wright@cs.wisc.edu> 2004-05-13
+*/
+extern int _NSGetExecutablePath( char *buf, size_t *bufsize );
+
+char*
+darwin_getExecPath()
+{
+	char buf[_POSIX_PATH_MAX];
+	char full_buf[_POSIX_PATH_MAX];
+	char* path = NULL;
+	size_t size = _POSIX_PATH_MAX;
+	int rval = 0;
+
+	memset( buf, '\0', _POSIX_PATH_MAX );
+	memset( full_buf, '\0', _POSIX_PATH_MAX );
+
+	rval = _NSGetExecutablePath( buf, &size );
+	if( rval < 0 ) {
+		dprintf( D_ALWAYS, 
+				 "getExecPath(): _NSGetExecutablePath() failed: "
+				 "%s (errno %d)\n", strerror(errno), errno );
+		return NULL;
+	}
+
+		/* 
+		  Convert to a canonicalized path, resolving '/./' and '/../'
+		*/
+	path = realpath( buf, full_buf );
+	if( path ) {
+		return strdup( path );
+	}
+
+	dprintf( D_ALWAYS,
+			 "getExecName(): realpath() returned failure on \"%s\": "
+			 "%s (errno %d)\n", full_buf, strerror(errno), errno );
+	return NULL;
+}
+#endif /* defined(Darwin) */
+
+
 /*
   Now, the public method that just invokes the right platform-specific
   helper (if there is one)
@@ -159,6 +207,8 @@ getExecPath( void )
 	return linux_getExecPath();
 #elif defined( Solaris )
 	return solaris_getExecPath();
+#elif defined( Darwin )
+	return darwin_getExecPath();
 #elif defined( WIN32 )
 	return win32_getExecPath();
 #else
