@@ -43,14 +43,25 @@ Condor's.  Read the Condor manual for general configuration
 information.  Note that there's no negotiator or schedd in Hawkeye.
 
 The bottom of the config file contains a section like:
-STARTD_CRONJOBS = \
-	df:df_:$(CRON)/df:5m:nokill		\
-	top:top_:$(CRON)/top:0:continuous	\
-	uptime:uptime_:$(CRON)/uptime:5m	\
-	who:who_:$(CRON)/who:5m
+MODULES = $(HAWKEYE)/modules
+STARTD_CRON_NAME = Hawkeye
+HAWKEYE_JOBS =
+HAWKEYE_JOBS = \
+	df:df_:$(MODULES)/df:5m:nokill		\
+	top:top_:$(MODULES)/top:0:continuous	\
+	uptime:uptime_:$(MODULES)/uptime:5m	\
+	who:who_:$(MODULES)/who:5m
 
-These define the collection modules.  In the above example 4 are
-defined (df, top, uptime, and who).  The general format is:
+MODULES defines the directory where the Hawkeye modules are located.
+
+STARTD_CRON_NAME defines the "name" by which the modules can be
+referenced.  This is named as it is because it is the "cron" subsytem
+of the "startd" daemon.  This setting is used to define the parameter
+which contains the "job list".  Because in the above example, we set
+STARTD_CRON_NAME = Hawkeye, we now list our jobs with HAWKEYE_JOBS.
+
+HAWKEYE_JOBS define the collection modules.  In the above example 4
+are defined (df, top, uptime, and who).  The general format is:
   module:prefix:path:period:options
 
 module - Defines the logical name of the module.  These must be
