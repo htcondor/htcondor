@@ -1044,24 +1044,16 @@ int GlobusJob::doEvaluateState()
 			}
 			if ( rc == GLOBUS_SUCCESS ||
 				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_CANCEL_FAILED ) {
-				rehashJobContact( this, jobContact, NULL );
-				free( jobContact );
-				jobContact = NULL;
+				 // All is good... deed is done.
 				gmState = GM_CLEAR_REQUEST;
 			} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_UNDEFINED_EXE ) {
 				// Jobmanager doesn't support cleanup attribute.
-				rehashJobContact( this, jobContact, NULL );
-				free( jobContact );
-				jobContact = NULL;
 				gmState = GM_CLEAR_REQUEST;
 			} else {
 				// unhandled error
 				LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
 				dprintf(D_ALWAYS,"    RSL='%s'\n", rsl);
 				globusError = rc;
-				rehashJobContact( this, jobContact, NULL );
-				free( jobContact );
-				jobContact = NULL;
 				gmState = GM_CLEAR_REQUEST;
 			}
 			break;
