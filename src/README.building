@@ -55,25 +55,10 @@ preprocessor imake will use compiles with the ANSI specification.
 Unfortunately, the preprocessor "cpp" included by many vendors does _not_
 conform to the ANSI specification.  Since compiling Condor needs gcc, the best
 way we've found to do this is simply to use gcc for preprocessing as well.
-Our shell script for doing this, which we call ansi_cpp is included below:
+Our tiny shell script for doing this, which we call ansi_cpp is included below:
 
-#!/bin/csh
-set platform = `uname -m`
-set os = `uname -s`
-
-if ( ${platform} == "i86pc" ) then
-	gcc -E $*
-else if ( ${platform} == "sun4m" ) then
-	gcc -E $*  
-else if ( ${platform} == "alpha" ) then
-	gcc -E $*
-else if ( ${os} == "HP-UX" ) then
-	gcc -E $*
-else
-	gcc -E $* -
-endif
-endif
-
+#!/bin/sh
+gcc -E $*
 
 In order to for imake to use this script for pre-processing, you must set
 an environment variable called IMAKECPP.  So, for example you might have a
