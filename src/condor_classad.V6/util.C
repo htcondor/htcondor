@@ -169,4 +169,18 @@ int isinf(double x) {
 }
 #endif
 
+#if defined (__SVR4) && defined (__sun)
+#include <ieeefp.h>
+int isinf(double x) 
+{ 
+    if (finite(x) || x != x) {
+        return 0;
+    } else if (x > 0) {
+        return 1;
+    } else {
+        return -1;
+    }
+} 
+#endif 
+
 END_NAMESPACE // classad

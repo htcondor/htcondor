@@ -50,6 +50,11 @@ void getLocalTime(time_t *now, struct tm *localtm);
 int isinf(double x);
 #endif
 
+#if defined (__SVR4) && defined (__sun)
+int isinf(double x);
+#endif 
+
+
 END_NAMESPACE // classad
 
 #endif//__UTILS_H__
