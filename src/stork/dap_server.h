@@ -11,6 +11,7 @@
 #include "sock.h"
 
 int initializations();
+int read_config_file();
 int call_main();
 void startup_check_for_requests_in_process();
 void regular_check_for_requests_in_process();
