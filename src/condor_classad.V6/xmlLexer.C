@@ -25,14 +25,8 @@
 
 BEGIN_NAMESPACE( classad )
 
-struct tag_mapping
-{
-	char             *tag_name;
-	XMLLexer::TagID  id;
-};
-
-#define NUMBER_OF_TAG_MAPPINGS (sizeof(tag_mappings)/sizeof(struct tag_mapping))
-struct tag_mapping tag_mappings[] = 
+// Note that these must be in the same order as the enum TagID
+struct xml_tag_mapping tag_mappings[] = 
 {
 	{"classads",        XMLLexer::tagID_ClassAds},
 	{"c",               XMLLexer::tagID_ClassAd},

@@ -24,182 +24,52 @@
 #include "exprTree.h"
 #include "xmlSink.h"
 #include "sink.h"
+#include "xmlLexer.h"
+
+static void add_tag(
+    string &buffer, 
+	XMLLexer::TagID  tag_id,
+	XMLLexer::TagType tag_type,
+	const char *attribute_name = NULL,
+	const char *attribute_value = NULL);
 
 BEGIN_NAMESPACE( classad )
 
 ClassAdXMLUnParser::
 ClassAdXMLUnParser()
 {
+	compact_spacing = true;
+	return;
 }
 
 
 ClassAdXMLUnParser::
 ~ClassAdXMLUnParser()
 {
+	return;
 }
 
 void ClassAdXMLUnParser::
-Unparse( string &buffer, Value &val )
+SetCompactSpacing(
+	bool use_compact_spacing)
 {
-	char	tempBuf[512];
-	switch( val.GetType( ) ) {
-		case Value::NULL_VALUE: 
-			buffer += "<null/>"; // I don't think this ever occurs. Am I correct? 
-			break;
-
-		case Value::STRING_VALUE: {
-			string	s;
-			val.IsStringValue( s );
-			buffer += "<string>";
-			for( string::const_iterator itr=s.begin( ); itr!=s.end( ); itr++ ) {
-				switch( *itr ) {
-				case '&':  buffer += "&amp;";  break;
-				case '<':  buffer += "&lt;";   break;
-				case '>':  buffer += "&gt;";   break;
-				case '"':  buffer += "&quot;"; break;
-				case '\'': buffer += "&apos;"; break;
-				default:
-					if( !isprint( *itr ) ) {
-						sprintf( tempBuf, "&#%d;", (int)*itr );
-						buffer += tempBuf;
-					} else {
-						buffer += *itr;
-					}
-				}
-			}
-			buffer += "</string>";
-			break;
-		}
-		case Value::INTEGER_VALUE: {
-			int	i;
-			val.IsIntegerValue( i );
-			sprintf( tempBuf, "%d", i );
-			buffer += "<number>";
-			buffer += tempBuf;
-			buffer += "</number>";
-			break;
-		}
-		case Value::REAL_VALUE: {
-			double	r;
-			val.IsRealValue( r );
-			sprintf( tempBuf, "%g", r );
-			buffer += "<number>";
-			buffer += tempBuf;
-			buffer += "</number>";
-			break;
-		}
-		case Value::BOOLEAN_VALUE: {
-			bool b;
-			val.IsBooleanValue( b );
-			if (b) {
-				buffer += "<bool value=\"true\"/>";
-			} else {
-				buffer += "<bool value=\"false\"/>";
-			}				
-			break;;
-		}
-		case Value::UNDEFINED_VALUE: {
-			buffer += "<undefined/>";
-			break;
-		}
-		case Value::ERROR_VALUE: {
-			buffer += "<error/>";
-			break;
-		}
-		case Value::ABSOLUTE_TIME_VALUE: {
-			struct  tm tms;
-			char    ascTimeBuf[32], timeZoneBuf[32];
-			extern  time_t timezone;
-			time_t	asecs;
-			val.IsAbsoluteTimeValue( asecs );
-
-				// format:  `Wed Nov 11 13:11:47 1998 (CST) -6:00`
-				// we use localtime()/asctime() instead of ctime() 
-				// because we need the timezone name from strftime() 
-				// which needs a 'normalized' struct tm.  localtime() 
-				// does this for us.
-
-				// get the asctime()-like segment; but remove \n
-			localtime_r( &asecs, &tms );
-			asctime_r( &tms, ascTimeBuf );
-			//asctime_r( &tms, ascTimeBuf, 31 );
-			ascTimeBuf[24] = '\0';
-			buffer += "<time>";
-			buffer += ascTimeBuf;
-
-				// get the timezone name
-			if( !strftime( timeZoneBuf, 31, "%Z", &tms ) ) {
-				buffer += "<error:strftime></time>";
-				return;
-			}
-			buffer += " (";
-			buffer += timeZoneBuf;
-			buffer += ") ";
-			
-			// output the offet (use the relative time format)
-			// wierd:  POSIX says regions west of GMT have positive
-			// offsets.We use negative offsets to not confuse users.
-			Value relTime;
-			string	relTimeBuf;
-			relTime.SetRelativeTimeValue( -timezone );
-			Unparse( relTimeBuf, relTime );
-			buffer += relTimeBuf.substr(1,relTimeBuf.size()-2) + "</time>";
-			break;
-		}
-		case Value::RELATIVE_TIME_VALUE: {
-			time_t	rsecs;
-			int		days, hrs, mins, secs;
-			val.IsRelativeTimeValue( rsecs );
-			buffer += "<time>";
-			if( rsecs < 0 ) {
-				buffer += "-";
-				rsecs = -rsecs;
-			}
-			days = rsecs;
-			hrs  = days % 86400;
-			mins = hrs  % 3600;
-			secs = mins % 60;
-			days = days / 86400;
-			hrs  = hrs  / 3600;
-			mins = mins / 60;
-
-			if( days ) {
-				sprintf( tempBuf, "%dd", days );
-				buffer += tempBuf;
-			}
-
-			sprintf( tempBuf, "%02d:%02d", hrs, mins );
-			buffer += tempBuf;
-			
-			if( secs ) {
-				sprintf( tempBuf, ":%02d", secs );
-				buffer += tempBuf;
-			}
-			buffer += "</time>";
-			break;
-		}
-		case Value::CLASSAD_VALUE: {
-			ClassAd *ad;
-			vector< pair<string,ExprTree*> > attrs;
-			val.IsClassAdValue( ad );
-			ad->GetComponents( attrs );
-			UnparseAux( buffer, attrs );
-			break;
-		}
-		case Value::LIST_VALUE: {
-			const ExprList *el;
-			vector<ExprTree*> exprs;
-			val.IsListValue( el );
-			el->GetComponents( exprs );
-			UnparseAux( buffer, exprs );
-			break;
-		}
-	}
+	compact_spacing = use_compact_spacing;
+	return;
 }
 
+void ClassAdXMLUnParser::Unparse(
+	string    &buffer, 
+	ExprTree  *expr)
+{
+	Unparse(buffer, expr, 0);
+	return;
+}
 
 void ClassAdXMLUnParser::
-Unparse( string &buffer, ExprTree *tree )
+Unparse(
+	string   &buffer, 
+	ExprTree *tree, 
+	int      indent)
 {
 	if( !tree ) {
 		buffer = "<error:null expr>";
@@ -210,31 +80,31 @@ Unparse( string &buffer, ExprTree *tree )
 		case ExprTree::LITERAL_NODE: {
 			Value				val;
 			Value::NumberFactor	factor;
-			((Literal*)tree)->GetComponents( val, factor );
-			Unparse( buffer, val );
+			((Literal*)tree)->GetComponents(val, factor);
+			Unparse(buffer, val, indent);
 			break;
 		}
 		case ExprTree::ATTRREF_NODE: 
 		case ExprTree::OP_NODE: 
 		case ExprTree::FN_CALL_NODE: {
 			ClassAdUnParser unparser;
-			buffer += "<expr>";
+			add_tag(buffer, XMLLexer::tagID_Expr, XMLLexer::tagType_Start);
 			unparser.Unparse(buffer, tree);
-			buffer += "</expr>";
+			add_tag(buffer, XMLLexer::tagID_Expr, XMLLexer::tagType_End);
 			break;
 		}
 			
 		case ExprTree::CLASSAD_NODE: {
 			vector< pair<string, ExprTree*> > attrs;
-			((ClassAd*)tree)->GetComponents( attrs );
-			UnparseAux( buffer, attrs );
+			((ClassAd*)tree)->GetComponents(attrs);
+			UnparseAux(buffer, attrs, indent);
 			break;
 		}
 		
 		case ExprTree::EXPR_LIST_NODE: {
 			vector<ExprTree*> exprs;
-			((ExprList*)tree)->GetComponents( exprs );
-			UnparseAux( buffer, exprs );
+			((ExprList*)tree)->GetComponents(exprs);
+			UnparseAux(buffer, exprs, indent);
 			break;
 		}
 		
@@ -249,33 +119,247 @@ Unparse( string &buffer, ExprTree *tree )
 }
 
 void ClassAdXMLUnParser::
-UnparseAux( string &buffer, vector< pair<string,ExprTree*> >& attrs )
+Unparse(
+	string &buffer, 
+	Value  &val, 
+	int    indent)
+{
+	char tempBuf[512];
+
+	switch( val.GetType( ) ) {
+		case Value::NULL_VALUE: 
+			// I don't think this ever occurs. Am I correct? 
+			//buffer += "<null/>"; 
+			break;
+
+		case Value::STRING_VALUE: {
+			string	               s;
+			string::const_iterator itr;
+			val.IsStringValue( s );
+			add_tag(buffer, XMLLexer::tagID_String, XMLLexer::tagType_Start);
+			for (itr = s.begin(); itr != s.end(); itr++ ) {
+				switch( *itr ) {
+				case '&':  buffer += "&amp;";  break;
+				case '<':  buffer += "&lt;";   break;
+				case '>':  buffer += "&gt;";   break;
+				//case '"':  buffer += "&quot;"; break;
+				//case '\'': buffer += "&apos;"; break;
+				default:
+					if(!isprint(*itr)) {
+						sprintf(tempBuf, "&#%d;", (int)*itr);
+						buffer += tempBuf;
+					} else {
+						buffer += *itr;
+					}
+				}
+			}
+			add_tag(buffer, XMLLexer::tagID_String, XMLLexer::tagType_End);
+			break;
+		}
+		case Value::INTEGER_VALUE: {
+			int	i;
+			val.IsIntegerValue(i);
+			sprintf(tempBuf, "%d", i);
+			add_tag(buffer, XMLLexer::tagID_Number, XMLLexer::tagType_Start);
+			buffer += tempBuf;
+			add_tag(buffer, XMLLexer::tagID_Number, XMLLexer::tagType_End);
+			break;
+		}
+		case Value::REAL_VALUE: {
+			double	r;
+			val.IsRealValue(r);
+			sprintf(tempBuf, "%g", r);
+			add_tag(buffer, XMLLexer::tagID_Number, XMLLexer::tagType_Start);
+			buffer += tempBuf;
+			add_tag(buffer, XMLLexer::tagID_Number, XMLLexer::tagType_End);
+			break;
+		}
+		case Value::BOOLEAN_VALUE: {
+			bool b;
+			val.IsBooleanValue( b );
+			if (b) {
+				add_tag(buffer, XMLLexer::tagID_Bool, 
+						XMLLexer::tagType_Empty, "v", "t");
+			} else {
+				add_tag(buffer, XMLLexer::tagID_Bool, 
+						XMLLexer::tagType_Empty, "v", "f");
+			}				
+			break;;
+		}
+		case Value::UNDEFINED_VALUE: {
+			add_tag(buffer, XMLLexer::tagID_Undefined, 
+					XMLLexer::tagType_Empty);
+			break;
+		}
+		case Value::ERROR_VALUE: {
+			add_tag(buffer, XMLLexer::tagID_Error,
+					XMLLexer::tagType_Empty);
+			break;
+		}
+		case Value::ABSOLUTE_TIME_VALUE: {
+			struct  tm tms;
+			char    ascTimeBuf[32], timeZoneBuf[32];
+			extern  time_t timezone;
+			time_t	asecs;
+			val.IsAbsoluteTimeValue( asecs );
+
+			// format:  `Wed Nov 11 13:11:47 1998 (CST) -6:00`
+			// we use localtime()/asctime() instead of ctime() 
+			// because we need the timezone name from strftime() 
+			// which needs a 'normalized' struct tm.  localtime() 
+			// does this for us.
+
+			// get the asctime()-like segment; but remove \n
+			localtime_r(&asecs, &tms);
+			asctime_r(&tms, ascTimeBuf);
+			//asctime_r( &tms, ascTimeBuf, 31 );
+			ascTimeBuf[24] = '\0';
+			add_tag(buffer, XMLLexer::tagID_Time, XMLLexer::tagType_Start);
+			buffer += ascTimeBuf;
+
+				// get the timezone name
+			if( !strftime(timeZoneBuf, 31, "%Z", &tms)) {
+				buffer += "<error:strftime></time>";
+				return;
+			}
+			buffer += " (";
+			buffer += timeZoneBuf;
+			buffer += ") ";
+			
+			// output the offet (use the relative time format)
+			// wierd:  POSIX says regions west of GMT have positive
+			// offsets.We use negative offsets to not confuse users.
+			Value relTime;
+			string	relTimeBuf;
+			relTime.SetRelativeTimeValue(-timezone);
+			Unparse(relTimeBuf, relTime, indent);
+			buffer += relTimeBuf.substr(1,relTimeBuf.size()-2);
+			add_tag(buffer, XMLLexer::tagID_Time, XMLLexer::tagType_End);
+			break;
+		}
+		case Value::RELATIVE_TIME_VALUE: {
+			time_t	rsecs;
+			int		days, hrs, mins, secs;
+			val.IsRelativeTimeValue( rsecs );
+			add_tag(buffer, XMLLexer::tagID_Time, XMLLexer::tagType_Start);
+			if( rsecs < 0 ) {
+				buffer += "-";
+				rsecs = -rsecs;
+			}
+			days = rsecs;
+			hrs  = days % 86400;
+			mins = hrs  % 3600;
+			secs = mins % 60;
+			days = days / 86400;
+			hrs  = hrs  / 3600;
+			mins = mins / 60;
+
+			if (days) {
+				sprintf( tempBuf, "%dd", days );
+				buffer += tempBuf;
+			}
+
+			sprintf(tempBuf, "%02d:%02d", hrs, mins);
+			buffer += tempBuf;
+			
+			if (secs) {
+				sprintf(tempBuf, ":%02d", secs);
+				buffer += tempBuf;
+			}
+			add_tag(buffer, XMLLexer::tagID_Time, XMLLexer::tagType_End);
+			break;
+		}
+		case Value::CLASSAD_VALUE: {
+			ClassAd *ad;
+			vector< pair<string,ExprTree*> > attrs;
+			val.IsClassAdValue(ad);
+			ad->GetComponents(attrs);
+			UnparseAux(buffer, attrs, indent);
+			break;
+		}
+		case Value::LIST_VALUE: {
+			const ExprList *el;
+			vector<ExprTree*> exprs;
+			val.IsListValue(el);
+			el->GetComponents(exprs);
+			UnparseAux(buffer, exprs, indent);
+			break;
+		}
+	}
+}
+
+void ClassAdXMLUnParser::
+UnparseAux(string                           &buffer, 
+		   vector< pair<string,ExprTree*> > &attrs, 
+		   int                              indent)
 {
 	vector< pair<string,ExprTree*> >::const_iterator itr;
 
-	buffer += "<classad>";
-	for( itr=attrs.begin( ); itr!=attrs.end( ); itr++ ) {
-		buffer += "<attribute name=\"";
-		buffer += itr->first;
-		buffer += "\">";
-		Unparse( buffer, itr->second );
-		buffer += "</attribute>";
+	add_tag(buffer, XMLLexer::tagID_ClassAd, XMLLexer::tagType_Start);
+	if (!compact_spacing) {
+		buffer += '\n';
 	}
-	buffer += "</classad>";
+	for (itr=attrs.begin(); itr!=attrs.end(); itr++) {
+		if (!compact_spacing) {
+			buffer.append(indent+4, ' ');
+		}
+		add_tag(buffer, XMLLexer::tagID_Attribute, XMLLexer::tagType_Start,
+				"n", itr->first.c_str());
+		Unparse(buffer, itr->second, indent+4);
+		add_tag(buffer, XMLLexer::tagID_Attribute, XMLLexer::tagType_End);
+		if (!compact_spacing) {
+			buffer += '\n';
+		}
+	}
+	if (!compact_spacing) {
+		buffer.append(indent, ' ');
+	}
+	add_tag(buffer, XMLLexer::tagID_ClassAd, XMLLexer::tagType_End);
+	if (!compact_spacing && indent == 0) {
+		buffer += '\n';
+	}
+	return;
 }
 
 
 void ClassAdXMLUnParser::
-UnparseAux( string &buffer, vector<ExprTree*>& exprs )
+UnparseAux(
+	string             &buffer, 
+	vector<ExprTree*>  &exprs, 
+	int                indent)
 {
 	vector<ExprTree*>::const_iterator	itr;
 
-	buffer += "<list>";
-	for( itr=exprs.begin( ); itr!=exprs.end( ); itr++ ) {
-		Unparse( buffer, *itr );
+	add_tag(buffer, XMLLexer::tagID_List, XMLLexer::tagType_Start);
+	for(itr = exprs.begin(); itr != exprs.end(); itr++) {
+		Unparse(buffer, *itr, indent);
 	}
-	buffer += "</list>";
+	add_tag(buffer, XMLLexer::tagID_List, XMLLexer::tagType_End);
 }
 
+static void add_tag(
+    string             &buffer, 
+	XMLLexer::TagID    tag_id,
+	XMLLexer::TagType  tag_type,
+	const char         *attribute_name,
+	const char         *attribute_value)
+{
+	buffer += '<';
+	if (tag_type == XMLLexer::tagType_End) {
+		buffer += '/';
+	}
+	buffer += tag_mappings[tag_id].tag_name;
+	if (attribute_name != NULL && attribute_value != NULL) {
+		buffer += ' ';
+		buffer += attribute_name;
+		buffer += "=\"";
+		buffer += attribute_value;
+		buffer +=  '\"';
+	}
+	if (tag_type == XMLLexer::tagType_Empty) {
+		buffer += '/';
+	}
+	buffer += '>';
+}
 
 END_NAMESPACE // classad

@@ -32,7 +32,7 @@ int main(int argc, char **argv)
                   "<a n=\"B\"><n> 3 </n></a>"
 		          "<a n=\"C\"><b v=\"t\"/></a>"
 		          "<a n=\"D\"><l><n>10</n><un/><er/><n>14</n></l></a>"
-		          "<a n=\"E\"><c><a n=\"AA\"><n>4</n></c></a>"
+		          "<a n=\"E\"><c><a n=\"AA\"><n>4</n><a n=\"BB\"><s>x</s></a></c></a>"
 		          "<a n=\"F\"><e>(x >= 10)</e></a>";
 
 	classad = parser.ParseClassAd(xml, offset);
@@ -43,4 +43,14 @@ int main(int argc, char **argv)
 	printer.Unparse(printed_classad, classad);
 	cout << printed_classad << endl;
 
+	printed_classad = "";
+	ClassAdXMLUnParser  unparser;
+	unparser.SetCompactSpacing(false);
+	unparser.Unparse(printed_classad, classad);
+	cout << printed_classad << endl;
+
+	classad = parser.ParseClassAd(printed_classad, offset);
+
+	printer.Unparse(printed_classad, classad);
+	cout << printed_classad << endl;
 }

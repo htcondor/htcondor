@@ -34,28 +34,38 @@ BEGIN_NAMESPACE( classad );
 /// The unparser object
 class ClassAdXMLUnParser
 {
-	public:
-		/// Constructor
-		ClassAdXMLUnParser( );
+ public:
+	/// Constructor
+	ClassAdXMLUnParser( );
 
-		/// Destructor
-		virtual ~ClassAdXMLUnParser( );
+	/// Destructor
+	virtual ~ClassAdXMLUnParser( );
 
-		/** Unparse a value 
-		 * 	@param buffer The string to unparse to
-		 * 	@param val The value to unparse
+	/** Set if compact spacing is desired or note */
+	void SetCompactSpacing(bool use_compact_spacing);
+
+	/** Unparse an expression 
+	 * 	@param buffer The string to unparse to
+	 * 	@param expr The expression to unparse
 		 */
-		void Unparse( string &buffer, Value &val );
+	void Unparse(string &buffer, ExprTree *expr);
 
-		/** Unparse an expression 
-		 * 	@param buffer The string to unparse to
-		 * 	@param expr The expression to unparse
-		 */
-		void Unparse( string &buffer, ExprTree *expr );
+ private:
+	/** Unparse a value 
+	 * 	@param buffer The string to unparse to
+	 * 	@param val The value to unparse
+	 */
+	void Unparse(string &buffer, ExprTree *expr, int indent);
 
-		virtual void UnparseAux( string &buffer, 
-					vector< pair< string, ExprTree*> >& attrlist );
-		virtual void UnparseAux( string &buffer, vector<ExprTree*>& );
+	void Unparse(string &buffer, Value &val, int indent);
+	virtual void UnparseAux(string &buffer, 
+							vector< pair< string, ExprTree*> >& attrlist,
+							int indent);
+	virtual void UnparseAux(string &buffer, vector<ExprTree*>&, 
+							int indent);
+
+	bool compact_spacing;
+
 };
 
 

@@ -105,6 +105,16 @@ class XMLLexer
 	bool GrabText(void);
 };
 
+struct xml_tag_mapping
+{
+	char             *tag_name;
+	XMLLexer::TagID  id;
+};
+
+#define NUMBER_OF_TAG_MAPPINGS (sizeof(tag_mappings)/sizeof(struct xml_tag_mapping))
+extern struct xml_tag_mapping tag_mappings[];
+
+
 END_NAMESPACE // classad
 
 #endif //__LEXER_H__
