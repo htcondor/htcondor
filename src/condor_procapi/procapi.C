@@ -342,7 +342,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	sprintf( path, "/proc/%d/stat", pid );
 
 	int number_of_attempts = 0;
-	while (number_of_attempts < 2) {
+	while (number_of_attempts < 5) {
 		number_of_attempts++;
 		if( (fp = fopen(path, "r")) != NULL ) {
 			fscanf( fp, "%d %s %c %d "
