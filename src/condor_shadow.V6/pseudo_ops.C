@@ -66,6 +66,7 @@ extern char ICkptName[];
 extern char RCkptName[];
 extern char *CkptServerHost;
 extern char *LastCkptServer;
+extern int  LastCkptTime;
 extern int MaxDiscardedRunTime;
 
 char	CurrentWorkingDir[ _POSIX_PATH_MAX ];
@@ -517,6 +518,7 @@ pseudo_rename(char *from, char *to)
 		}
 		if (LastCkptServer) free(LastCkptServer);
 		LastCkptServer = strdup(CkptServerHost);
+		LastCkptTime = time(0);
 		commit_rusage();
 	}
 
