@@ -27,6 +27,7 @@
 #include "status_types.h"
 #include "totals.h"
 #include "get_daemon_addr.h"
+#include "extArray.h"
 #include "sig_install.h"
 
 // global variables
@@ -43,7 +44,11 @@ CondorQuery *query;
 char		buffer[1024];
 ClassAdList result;
 char		*myName;
-ExprTree	*sortExpr = NULL;
+ExtArray<ExprTree*> sortLessThanExprs( 4 );
+ExtArray<ExprTree*> sortEqualExprs( 4 );
+
+// instantiate templates
+template class ExtArray<ExprTree*>;
 
 // function declarations
 void usage 		();
@@ -190,7 +195,7 @@ main (int argc, char *argv[])
 	}
 
 	// sort the ad 
-	if( sortExpr ) {
+	if( sortLessThanExprs.getlast() > -1 ) {
 		result.Sort((SortFunctionType) customLessThanFunc );
 	} else {
 		result.Sort ((SortFunctionType)lessThanFunc);
@@ -200,7 +205,14 @@ main (int argc, char *argv[])
 	prettyPrint (result, &totals);
 	
 	// be nice ...
-	delete query;
+	{
+		int last = sortLessThanExprs.getlast();
+		delete query;
+		for( int i = 0 ; i <= last ; i++ ) {
+			if( sortLessThanExprs[i] ) delete sortLessThanExprs[i];
+			if( sortEqualExprs[i] ) delete sortEqualExprs[i];
+		}
+	}
 
 	return 0;
 }
@@ -294,19 +306,21 @@ firstPass (int argc, char *argv[])
 			setMode (MODE_SCHEDD_NORMAL, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i], "-sort")) {
-			char	lessThanExpr[1024];
-			lessThanExpr[0] = '\0';
-			if( sortExpr != NULL ) {
-				sortExpr->PrintToStr( lessThanExpr );
-				fprintf( stderr, "Error:  Sort expression already set: %s\n", 
-						lessThanExpr );
+			char	exprString[1024];
+			ExprTree	*sortExpr;
+			exprString[0] = '\0';
+			sprintf( exprString, "MY.%s < TARGET.%s", argv[i+1], argv[i+1] );
+			if( Parse( exprString, sortExpr ) ) {
+				fprintf( stderr, "Error:  Parse error of: %s\n", exprString );
 				exit( 1 );
 			}
-			sprintf( lessThanExpr, "MY.%s < TARGET.%s", argv[i+1], argv[i+1] );
-			if( Parse( lessThanExpr, sortExpr ) ) {
-				fprintf( stderr, "Error:  Parse error of: %s\n", lessThanExpr );
+			sortLessThanExprs[sortLessThanExprs.getlast()+1] = sortExpr;
+			sprintf( exprString, "MY.%s == TARGET.%s", argv[i+1], argv[i+1] );
+			if( Parse( exprString, sortExpr ) ) {
+				fprintf( stderr, "Error:  Parse error of: %s\n", exprString );
 				exit( 1 );
 			}
+			sortEqualExprs[sortEqualExprs.getlast()+1] = sortExpr;
 			i++;
 		} else
 		if (matchPrefix (argv[i], "-submitters")) {
@@ -435,9 +449,23 @@ lessThanFunc(ClassAd *ad1, ClassAd *ad2, void *)
 int
 customLessThanFunc( ClassAd *ad1, ClassAd *ad2, void *)
 {
-	EvalResult result;
+	EvalResult 	result;
+	int			last = sortLessThanExprs.getlast();
 
-	return( sortExpr && 
-			sortExpr->EvalTree( ad1, ad2, &result ) &&
-			(result.type == LX_INTEGER && result.i ) );
+	for( int i = 0 ; i <= last ; i++ ) {
+		sortLessThanExprs[i]->EvalTree( ad1, ad2, &result );
+		if( result.type == LX_INTEGER ) {
+			if( result.i ) {
+				return 1;
+			} else {
+				sortEqualExprs[i]->EvalTree( ad1, ad2, &result );
+				if( result.type != LX_INTEGER || !result.i )
+					return 0;
+			}
+		} else {
+			return 0;
+		}
+	}
+
+	return 0;
 }
