@@ -25,10 +25,6 @@ library_target(ckpt_server_api.a,$(SERVER_API_OBJ))
 
 release:
 
-strip_copy_target(condor_ckpt_server,../strip_ckpt_server/sbin,condor_ckpt_server,EXECUTABLE_MODE)
-
-../strip_ckpt_server/INSTALL: INSTALL
-	/bin/cp -f INSTALL ../strip_ckpt_server
-stripped:: ../strip_ckpt_server/INSTALL
+strip_target(condor_ckpt_server,../strip_ckpt_server/sbin,EXECUTABLE_MODE)
 
 depend_target($(SRC))
