@@ -38,9 +38,8 @@ Condor_Auth_Claim :: ~Condor_Auth_Claim()
 
 int Condor_Auth_Claim :: authenticate(const char * remoteHost)
 {
-#ifdef WIN32
+
     const char * pszFunction = "Condor_Auth_Claim :: authenticate";
-#endif 
 
 	int retval = 0;
     char *tmpOwner = NULL;

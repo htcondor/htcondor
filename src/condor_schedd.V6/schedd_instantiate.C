@@ -50,6 +50,7 @@ template class ExtArray<int>;
 template class ExtArray<MyString*>;
 template class ExtArray<bool>;
 template class ExtArray<PROC_ID>;
+template class ExtArray<OwnerData>;
 template class SimpleList<Shadow*>;
 
 // for condor-G

@@ -168,7 +168,7 @@ display (AttrList *al)
 					{
 					case LX_STRING:
 						sprintf( stringValue, fmt->printfFmt,
-							collapse_escapes(result.s) );
+							result.s );
 						strcat( retval, stringValue );
 						break;
 

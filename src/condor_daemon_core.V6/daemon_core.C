@@ -5280,6 +5280,7 @@ DaemonCore::Inherit( void )
 		}
 		assert(pidtmp->hProcess);
 		pidtmp->hThread = NULL;		// do not allow child to suspend parent
+		pidtmp->deallocate = 0L;
 #endif
 		assert( pidTable->insert(ppid,pidtmp) == 0 );
 #ifdef WIN32
@@ -5887,7 +5888,8 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	// If process is NT and is remote, we are passed the exit status.
 	// If process is NT and is local, we need to fetch the exit status here.
 #ifdef WIN32
-	pidentry->deallocate = 0L;
+	pidentry->deallocate = 0L; // init deallocate on WIN32
+
 	if ( pidentry->is_local ) {
 		DWORD winexit;
 	
@@ -6037,7 +6039,12 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 							(Eventcpp) &DaemonCore::HungChildTimeout,
 							"DaemonCore::HungChildTimeout", this);
 		ASSERT( pidentry->hung_tid != -1 );
-		Register_DataPtr( (void *)child_pid );
+
+		/* allocate a piece of memory here so 64bit architectures don't
+			complain about assigning a non-pointer to a pointer type */
+		pid_t *child_pid_ptr = new pid_t[1];
+		child_pid_ptr[0] = child_pid;
+		Register_DataPtr( child_pid_ptr );
 	}	
 
 	pidentry->was_not_responding = FALSE;
@@ -6052,9 +6059,14 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 int DaemonCore::HungChildTimeout()
 {
 	pid_t hung_child_pid;
+	pid_t *hung_child_pid_ptr;
 	PidEntry *pidentry;
 
-	hung_child_pid = (pid_t) GetDataPtr();
+	/* get the pid out of the allocated memory it was placed into */
+	hung_child_pid_ptr = (pid_t*)GetDataPtr();
+	hung_child_pid = hung_child_pid_ptr[0];
+	delete [] hung_child_pid_ptr;
+	hung_child_pid_ptr = NULL;
 
 	if ((pidTable->lookup(hung_child_pid, pidentry) < 0)) {
 		// we have no information on this pid, it must have exited
@@ -6120,13 +6132,19 @@ int DaemonCore::Was_Not_Responding(pid_t pid)
 int DaemonCore::SendAliveToParent()
 {
     SafeSock sock;
-	char *parent_sinful_string;
+	char parent_sinful_string[30];
+	char *tmp;
 
 	dprintf(D_FULLDEBUG,"DaemonCore: in SendAliveToParent()\n");
-	parent_sinful_string = InfoCommandSinfulString(ppid);	
-	
-	if (!parent_sinful_string ) {
+
+	tmp = InfoCommandSinfulString(ppid);
+	if ( tmp ) {
+			// copy the result from InfoCommandSinfulString to the
+			// stack, because the pointer we got back is a static buffer
+		strcpy(parent_sinful_string,tmp);
+	} else {
 		dprintf(D_FULLDEBUG,"DaemonCore: No parent_sinful_string. SendAliveToParent() failed.\n");
+			// parent already gone?
 		return FALSE;
 	}
 	
@@ -6156,15 +6174,17 @@ int DaemonCore::SendAliveToParent()
 #ifndef WIN32
 char **DaemonCore::ParseEnvArgsString(char *str, bool env)
 {
-	char separator;
+	char separator1, separator2;
 	int maxlength;
 	char **argv, *arg;
 	int nargs=0;
 
 	if(env) {
-		separator = ';';
+		separator1 = ';';
+		separator2 = ';';
 	} else {
-		separator = ' ';
+		separator1 = ' ';
+		separator2 = '\t';
 	}
 
 	/*
@@ -6180,7 +6200,7 @@ char **DaemonCore::ParseEnvArgsString(char *str, bool env)
 	/* While there are characters left... */
 	while(*str) {
 		/* Skip over any sequence of whitespace */
-		while( *str == separator ) {
+		while( *str == separator1 || *str == separator2 ) {
 			str++;
 		}
 
@@ -6192,7 +6212,7 @@ char **DaemonCore::ParseEnvArgsString(char *str, bool env)
 
 			/* Copy the arg into the new string */
 			arg = argv[nargs];
-			while( *str && *str != separator ) {
+			while( *str && *str != separator1 && *str != separator2 ) {
 				*arg++ = *str++;
 			}
 			*arg = 0;

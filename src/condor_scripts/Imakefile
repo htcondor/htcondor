@@ -133,6 +133,7 @@ release_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
 strip_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
 static_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
 
+#ifdef WANT_MAN_PAGES
 release_copy_target($(MANDIR)/man1/condor_checkpoint.1,$(RELEASE_DIR)/man/man1,condor_checkpoint.1,OBJECT_MODE)
 static_copy_target($(MANDIR)/man1/condor_checkpoint.1,$(STATIC_DIR)/man/man1,condor_checkpoint.1,OBJECT_MODE)
 strip_copy_target($(MANDIR)/man1/condor_checkpoint.1,$(STRIP_DIR)/man/man1,condor_checkpoint.1,OBJECT_MODE)
@@ -248,6 +249,7 @@ strip_copy_target($(MANDIR)/man1/condor_userprio.1,$(STRIP_DIR)/man/man1,condor_
 release_copy_target($(MANDIR)/man1/condor_vacate.1,$(RELEASE_DIR)/man/man1,condor_vacate.1,OBJECT_MODE)
 static_copy_target($(MANDIR)/man1/condor_vacate.1,$(STATIC_DIR)/man/man1,condor_vacate.1,OBJECT_MODE)
 strip_copy_target($(MANDIR)/man1/condor_vacate.1,$(STRIP_DIR)/man/man1,condor_vacate.1,OBJECT_MODE)
+#endif
 
 clean::
 html:

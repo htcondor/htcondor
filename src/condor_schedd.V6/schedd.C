@@ -238,6 +238,7 @@ Scheduler::Scheduler()
 	shadowCommandrsock = NULL;
 	shadowCommandssock = NULL;
 	SchedDInterval = 0;
+	SchedDMinInterval = 0;
 	QueueCleanInterval = 0; JobStartDelay = 0;
 	MaxJobsRunning = 0;
 	NegotiateAllJobsInCluster = false;
@@ -371,6 +372,19 @@ Scheduler::~Scheduler()
 void
 Scheduler::timeout()
 {
+	static bool min_interval_timer_set = false;
+	static time_t next_timeout = 0;
+	time_t right_now;
+
+	right_now = time(NULL);
+	if ( right_now < next_timeout ) {
+		if (!min_interval_timer_set) {
+			daemonCore->Reset_Timer(timeoutid,next_timeout - right_now,1);
+			min_interval_timer_set = true;
+		}
+		return;
+	}
+
 	count_jobs();
 
 	clean_shadow_recs();	
@@ -390,6 +404,8 @@ Scheduler::timeout()
 
 	/* Reset our timer */
 	daemonCore->Reset_Timer(timeoutid,SchedDInterval);
+	min_interval_timer_set = false;
+	next_timeout = right_now + SchedDMinInterval;
 }
 
 /*
@@ -404,9 +420,8 @@ Scheduler::count_jobs()
 	char	tmp[512];
 
 	 // copy owner data to old-owners table
-	 OwnerData OldOwners[MAX_NUM_OWNERS];
-	 memcpy(OldOwners, Owners, N_Owners*sizeof(OwnerData));
-	 int Old_N_Owners=N_Owners;
+	ExtArray<OwnerData> OldOwners(Owners);
+	int Old_N_Owners=N_Owners;
 
 	N_Owners = 0;
 	JobsRunning = 0;
@@ -419,7 +434,7 @@ Scheduler::count_jobs()
 
 	// clear owner table contents
 	time_t current_time = time(0);
-	for ( i=0; i<MAX_NUM_OWNERS; i++) {
+	for ( i = 0; i < Owners.getlast(); i++) {
 		Owners[i].Name = NULL;
 		Owners[i].JobsRunning = 0;
 		Owners[i].JobsIdle = 0;
@@ -969,9 +984,6 @@ Scheduler::insert_owner(char* owner, char *x509proxy)
 		Owners[i].X509 = NULL;
 
 	N_Owners +=1;
-	if ( N_Owners == MAX_NUM_OWNERS ) {
-		EXCEPT( "Reached MAX_NUM_OWNERS" );
-	}
 	return i;
 }
 
@@ -4895,6 +4907,10 @@ Scheduler::child_exit(int pid, int status)
 								 (int)time(0) );
 				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
 								ATTR_JOB_EXIT_STATUS, WEXITSTATUS(status) );
+				SetAttribute(srec->job_id.cluster, srec->job_id.proc,
+							 ATTR_ON_EXIT_BY_SIGNAL, "FALSE");
+				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc,
+								ATTR_ON_EXIT_CODE, WEXITSTATUS(status) );
 				WriteTerminateToUserLog( jobId, status );
 			} else {
 				WriteEvictToUserLog( jobId );
@@ -4913,6 +4929,10 @@ Scheduler::child_exit(int pid, int status)
 				SetAttributeInt( srec->job_id.cluster, srec->job_id.proc, 
 								 ATTR_ENTERED_CURRENT_STATUS,
 								 (int)time(0) );
+				SetAttribute(srec->job_id.cluster, srec->job_id.proc,
+							 ATTR_ON_EXIT_BY_SIGNAL, "TRUE");
+				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc,
+								ATTR_ON_EXIT_SIGNAL, WTERMSIG(status) );
 				WriteTerminateToUserLog( jobId, status );
 			} else {
 				WriteEvictToUserLog( jobId );
@@ -5370,6 +5390,8 @@ Scheduler::Init()
 		  SchedDInterval = atoi( tmp );
 		  free( tmp );
 	 }
+
+	SchedDMinInterval = param_integer("SCHEDD_MIN_INTERVAL",5);
 
 	tmp = param( "QUEUE_CLEAN_INTERVAL" );
 	if( ! tmp ) {

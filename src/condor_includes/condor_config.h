@@ -41,6 +41,7 @@ typedef struct bucket {
 #define TABLESIZE 113
 
 #if defined(__cplusplus)
+	bool param_boolean( const char *name, const bool default_value );
 extern "C" {
 	void config( int wantsQuiet=0 );
 	void config_host( char* host=NULL );

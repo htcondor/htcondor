@@ -559,7 +559,7 @@ find_file(const char *env_name, const char *file_name)
 	if( ! config_file ) {
 		char *globus_location;      
 	
-		if( globus_location = getenv("GLOBUS_LOCATION") ) {
+		if( (globus_location = getenv("GLOBUS_LOCATION")) ) {
 	
 			config_file = (char *)malloc( ( strlen(globus_location) +
                                             strlen("/etc/") +   
@@ -768,6 +768,47 @@ param_integer( const char *name, int default_value )
 	return default_value;
 }
 
+/*
+** Return the boolean value associated with the named paramter.
+** The parameter value is expected to be set to the string
+** "TRUE" or "FALSE" (no quotes, case insensitive).
+** If the value is not defined or not a valid, then
+** return the default_value argument.
+*/
+
+bool
+param_boolean( const char *name, const bool default_value )
+{
+	bool result;
+	char *string;
+
+	string = param( name );
+	if( ! string ) {
+		return default_value;
+	}
+
+	switch ( string[0] ) {
+		case 'T':
+		case 't':
+		case '1':
+			result = true;
+			break;
+		case 'F':
+		case 'f':
+		case '0':
+			result = false;
+			break;
+		default:
+			result = default_value;
+			break;
+	}
+
+	free( string );
+	
+	return result;
+}
+
+
 char *
 macro_expand( const char *str )
 {
@@ -973,7 +1014,7 @@ set_persistent_config(char *admin, char *config)
 			free(config);
 			return -1;
 		}
-		if (write(fd, config, strlen(config)) != strlen(config)) {
+		if (write(fd, config, strlen(config)) != (ssize_t)strlen(config)) {
 			dprintf( D_ALWAYS, "write failed with errno %d in "
 					 "set_persistent_config\n", errno );
 			free(admin);
@@ -1028,7 +1069,7 @@ set_persistent_config(char *admin, char *config)
 		return -1;
 	}
 	const char param[] = "RUNTIME_CONFIG_ADMIN = ";
-	if (write(fd, param, strlen(param)) != strlen(param)) {
+	if (write(fd, param, strlen(param)) != (ssize_t)strlen(param)) {
 		dprintf( D_ALWAYS, "write failed with errno %d in "
 				 "set_persistent_config\n", errno );
 		free(admin);
@@ -1049,7 +1090,7 @@ set_persistent_config(char *admin, char *config)
 		} else {
 			first_time = false;
 		}
-		if (write(fd, tmp, strlen(tmp)) != strlen(tmp)) {
+		if (write(fd, tmp, strlen(tmp)) != (ssize_t)strlen(tmp)) {
 			dprintf( D_ALWAYS, "write failed with errno %d in "
 					 "set_persistent_config\n", errno );
 			free(admin);
@@ -1196,7 +1237,7 @@ process_runtime_configs()
 			exit(1);
 		}
 		if (write(fd, rArray[i].config, strlen(rArray[i].config))
-			!= strlen(rArray[i].config)) {
+			!= (ssize_t)strlen(rArray[i].config)) {
 			dprintf( D_ALWAYS, "write failed with errno %d in "
 					 "process_runtime_configs\n", errno );
 			exit(1);

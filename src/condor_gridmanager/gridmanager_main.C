@@ -5,6 +5,7 @@
 #include "basename.h"
 
 #include "sslutils.h"	// for proxy_get_filenames
+#include "globus_utils.h"
 
 #include "gridmanager.h"
 
@@ -39,12 +40,31 @@ main_activate_globus()
 		}
 	}
 
+	// Make certain there is at least 8 minutes left on the
+	// proxy before bothering to start up a GAHP server.  Why eight? Well,
+	// currently the jobmanager will exit when the proxy gets down to 5
+	// minutes....
+	int time_left = x509_proxy_seconds_until_expire(X509Proxy);
+	if ( time_left < (8 * 60) ) {
+		if ( time_left == -1 ) {
+			dprintf(D_ALWAYS,
+				"Error: unable to read proxy cert %s... aborting\n",
+				X509Proxy);
+		} else {
+			dprintf(D_ALWAYS,
+				"Proxy cert at %s has less than 8 minutes... aborting\n",
+				X509Proxy);
+		}
+		return false;
+	}
+
 	if(first_time) {
 		char buf[1024];
 		snprintf(buf,1024,"X509_USER_PROXY=%s",X509Proxy);
 		putenv(buf);
 		first_time = false;
 	}		
+
 
 	if ( GahpMain.Initialize( X509Proxy )  == false ) {
 		dprintf( D_ALWAYS, "Error initializing GAHP\n" );

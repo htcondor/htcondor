@@ -51,6 +51,9 @@
 #	elif defined( IS_ALPHA )
 #		define ArchIncludeFile <LINUX_ALPHA.cf>
 #		undef IS_ALPHA
+#   elif defined( IS_IA64 )
+#       define ArchIncludeFile <LINUX_IA64.cf>
+#       undef IS_IA64
 #	endif
 #endif
 

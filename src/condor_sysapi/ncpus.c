@@ -131,7 +131,7 @@ bogomips        : 299.01
 
 	// Count how many lines begin with the string "processor".
 	while( fgets( buf, 256, proc) ) {
-#if defined(I386)
+#if defined(I386) || defined(IA64)
 		if( !strincmp(buf, "processor", 9) ) {
 			num_cpus++;
 		}

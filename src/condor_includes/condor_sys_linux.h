@@ -96,10 +96,17 @@
 #undef writev
 #undef __writev
 BEGIN_C_DECLS
+#if !defined(IA64)
 int readv(int, const struct iovec *, size_t);
 int __readv(int, const struct iovec *, size_t);
 int writev(int, const struct iovec *, size_t);
 int __writev(int, const struct iovec *, size_t);
+#else
+ssize_t readv(int, const struct iovec *, size_t);
+ssize_t __readv(int, const struct iovec *, size_t);
+ssize_t writev(int, const struct iovec *, size_t);
+ssize_t __writev(int, const struct iovec *, size_t);
+#endif
 END_C_DECLS
 #endif /* GLIBC */
 
@@ -109,7 +116,11 @@ END_C_DECLS
 #endif
 
 /* swapon and swapoff prototypes */
+#if !defined(IA64)
+/* there is a bug in this header file for ia64 linux, figure out what I need
+	out of here and prototype it manually. */
 #include <linux/swap.h>
+#endif
 
 /* include stuff for malloc control */
 #include <malloc.h>

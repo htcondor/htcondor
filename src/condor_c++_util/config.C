@@ -283,7 +283,7 @@ getline_implementation( FILE *fp, int requested_bufsize )
 		return NULL;
 	}
 
-	if ( buflen != requested_bufsize ) {
+	if ( buflen != (unsigned int)requested_bufsize ) {
 		if ( buf ) free(buf);
 		buf = (char *)malloc(requested_bufsize);
 		buflen = requested_bufsize;

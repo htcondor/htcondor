@@ -87,8 +87,8 @@ static char* format_owner( char*, AttrList* );
 class clusterProcString {
 public:
 	clusterProcString();
-	int parent_cluster;
-	int parent_proc;
+	int dagman_cluster_id;
+	int dagman_proc_id;
 	int cluster;
 	int proc;
 	char * string;
@@ -96,9 +96,9 @@ public:
 
 clusterProcString::
 clusterProcString() {
-	// these need to be initialized so that sorting works
-	parent_cluster = 0;
-	parent_proc = 0;
+	dagman_cluster_id = -1;
+	dagman_proc_id    = -1;
+	return;
 }
 
 static  ExtArray<clusterProcString *> *output_buffer;
@@ -190,7 +190,6 @@ int main (int argc, char **argv)
 							scheddMachine ) );
 			}
 		} else {
-			int text_position = 0;
 			char error_message[1024];
 			print_wrapped_text("Error: Couldn't contact the local "
 							   "condor_schedd process.",
@@ -980,7 +979,7 @@ format_globusHostAndJM( char  *globusResource, AttrList *ad )
 	if ( globusResource != NULL ) {
 		// copy the hostname
 		p = strcspn( globusResource, ":/" );
-		if ( p > sizeof(host) )
+		if ( p > (int) sizeof(host) )
 			p = sizeof(host) - 1;
 		strncpy( host, globusResource, p );
 		host[p] = '\0';
@@ -990,7 +989,7 @@ format_globusHostAndJM( char  *globusResource, AttrList *ad )
 
 			// copy the jobmanager name
 			p = strcspn( tmp, ":" );
-			if ( p > sizeof(jm) )
+			if ( p > (int) sizeof(jm) )
 				p = sizeof(jm) - 1;
 			strncpy( jm, tmp, p );
 			jm[p] = '\0';
@@ -1049,13 +1048,14 @@ output_sorter( const void * va, const void * vb ) {
 	b = ( clusterProcString ** ) vb;
 
 	// when -dag is specified, we want to display DAG jobs under the
-	// DAGMan that started them, so we sort first by parent_cluster,
-	// which is zero for non-DAG jobs (and the DAGMan jobs themselves)
-
-	if ((*a)->parent_cluster < (*b)->parent_cluster ) { return -1; }
-	if ((*a)->parent_cluster > (*b)->parent_cluster ) { return  1; }
-	if ((*a)->parent_proc    < (*b)->parent_proc    ) { return -1; }
-	if ((*a)->parent_proc    > (*b)->parent_proc    ) { return  1; }
+	// DAGMan that started them, so we sort by the dagman job's
+	// cluster and proc id first. For jobs that aren't run by dagman,
+	// these have been set to the jobs cluster and proc id.
+	// --alain, 30-oct-2002
+	if ((*a)->dagman_cluster_id < (*b)->dagman_cluster_id) { return -1; }
+	if ((*a)->dagman_cluster_id > (*b)->dagman_cluster_id) { return 1; }
+	if ((*a)->dagman_proc_id < (*b)->dagman_proc_id) { return -1; }
+	if ((*a)->dagman_proc_id > (*b)->dagman_proc_id) { return 1; }
 
 	if ((*a)->cluster < (*b)->cluster ) { return -1; }
 	if ((*a)->cluster > (*b)->cluster ) { return  1; }
@@ -1160,17 +1160,6 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 		return false;
 	}
 
-	// before sorting, for non-DAGMan-spawned jobs (i.e., those whose
-	// parent_cluster is zero), set parent_cluster equal to cluster so
-	// that they sort properly against parent DAGMan jobs
-	for( int i = 0; i <= output_buffer->getlast(); i++ ) {
-		clusterProcString* cps = (*output_buffer)[i];
-		if( cps && cps->parent_cluster == 0 ) {
-			cps->parent_cluster = cps->cluster;
-			cps->parent_proc = cps->proc;
-		}
-	}
-
 	// If this is a global, don't print anything if this schedd is empty.
 	// If this is NOT global, print out the header and footer to show that we
 	//    did something.
@@ -1237,6 +1226,40 @@ process_buffer_line( ClassAd *job )
 		case IDLE:       idle++;       break;
 		case RUNNING:    running++;    break;
 		case HELD:		 held++;	   break;
+	}
+
+	// If it's not a DAGMan job (and this includes the DAGMan process
+	// itself), then set the dagman_cluster_id equal to cluster so that
+	// it sorts properly against dagman jobs.
+	char *dagman_job_string = NULL;
+	if (!job->LookupString(ATTR_DAGMAN_JOB_ID, &dagman_job_string)) {
+		tempCPS->dagman_cluster_id = tempCPS->cluster;
+		tempCPS->dagman_proc_id    = tempCPS->proc;
+	} else {
+		// We've gotten a string, probably something like "201.0"
+		// we want to convert it to the numbers 201 and 0. To be safe, we
+		// use atoi on either side of the period. We could just use
+		// sscanf, but I want to know each fail case, so I can set them
+		// to reasonable values. 
+		char *loc_period = strchr(dagman_job_string, '.');
+		char *proc_string_start = NULL;
+		if (loc_period != NULL) {
+			*loc_period = 0;
+			proc_string_start = loc_period+1;
+		}
+		if (isdigit(*dagman_job_string)) {
+			tempCPS->dagman_cluster_id = atoi(dagman_job_string);
+		} else {
+			// It must not be a cluster id, because it's not a number.
+			tempCPS->dagman_cluster_id = tempCPS->cluster;
+		}
+
+		if (proc_string_start != NULL && isdigit(*proc_string_start)) {
+			tempCPS->dagman_proc_id = atoi(proc_string_start);
+		} else {
+			tempCPS->dagman_proc_id = 0;
+		}
+		free(dagman_job_string);
 	}
 
 	if( analyze ) {

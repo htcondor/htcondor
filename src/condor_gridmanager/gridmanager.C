@@ -571,6 +571,9 @@ checkResources()
 	int num_resources = 0;
 	int num_down_resources = 0;
 	time_t most_recent_time = 0;
+	time_t least_recent_time = 0;
+	bool locked_up;
+	time_t downfor;
 
 	ResourcesByName.startIterations();
 	while ( ResourcesByName.iterate( next_resource ) != 0 ) {
@@ -582,6 +585,11 @@ checkResources()
 				continue;
 			}
 			most_recent_time = MAX(most_recent_time,downtime);
+			if ( least_recent_time == 0 ) {
+				least_recent_time = downtime;
+			} else {
+				least_recent_time = MIN(least_recent_time,downtime);
+			}
 			num_down_resources++;
 		}
 	}
@@ -589,15 +597,33 @@ checkResources()
 	dprintf(D_FULLDEBUG,"checkResources(): %d resources, %d are down\n",
 		num_resources, num_down_resources);
 
-	if ( num_resources > 0 && num_resources == num_down_resources ) {
-			// all resources are down!  see for how long...
+
+	locked_up = false;
+	if ( num_resources > 0 && num_down_resources > 0 ) {
+			// Decide if we want to take action if one resource is down,
+			// or only if all resources are down.
+		bool any_down = 
+			param_boolean("GRIDMANAGER_RESTART_ON_ANY_DOWN_RESOURCES",false);
+		if ( any_down ) {
+				// Consider the gahp wedged if one or more resources are down.
+				// We already know this to be true, so mark the flag..
+			locked_up = true;
+		} else {
+				// Consider the gahp wedged only if all resources are down
+			if ( num_resources == num_down_resources ) {
+				locked_up = true;
+			}
+		}
+	}
+
+	if ( locked_up ) {
+			// some resources are down!  see for how long...
 		time_t downfor = time(NULL) - most_recent_time;
-		int max_downtime = param_integer(
-							"GRIDMANAGER_MAX_TIME_DOWN_RESOURCES",
+		int max_downtime = param_integer("GRIDMANAGER_MAX_TIME_DOWN_RESOURCES",
 							15 * 60 );	// 15 minutes default
 		if ( downfor > max_downtime ) {
 			dprintf(D_ALWAYS,
-				"All resources down for more than %d secs -- killing GAHP\n",
+				"Resources down for more than %d secs -- killing GAHP\n",
 				max_downtime);
 			if ( GahpMain.getPid() > 0 ) {
 				daemonCore->Send_Signal(GahpMain.getPid(),SIGKILL);
@@ -605,7 +631,7 @@ checkResources()
 				dprintf(D_ALWAYS,"ERROR - no gahp found???\n");
 			}
 		} else {
-			dprintf(D_ALWAYS,"All resources down for %d seconds!\n",
+			dprintf(D_ALWAYS,"Resources down for %d seconds!\n",
 				downfor);
 		}
 	}

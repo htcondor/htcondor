@@ -116,10 +116,13 @@ class GlobusJob : public Service
 	ClassAd *ad;
 
 	int wantResubmit;
+	int doResubmit;
+	int numGlobusSubmits;
 
  protected:
 	bool callbackRegistered;
 	int connect_failure_counter;
+	bool AllowTransition( int new_state, int old_state );
 };
 
 #endif

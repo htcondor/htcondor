@@ -28,6 +28,16 @@ if [ -f /p/condor/workspaces/kerberos/lib/libkrb5.a ] ; then
 	fi
 
 	KerbFlags="$KerbPath $HasKerb $KerbK5"
+elif [ -f /usr/kerberos/lib/libkrb5.a ] ; then
+	KerbPath="-DKERBEROS_PATH=/usr/kerberos"
+	HasKerb="-DHAS_KERBEROS=YES"
+	if [ -f /usr/kerberos/lib/libk5crypto.a ] ; then
+		KerbK5="-DKERBEROS_K5=YES"
+	else
+		KerbK5="-DKERBEROS_K5=NO"
+	fi
+
+	KerbFlags="$KerbPath $HasKerb $KerbK5"
 fi
 
 # figure out where that annoying libgcc is... 
@@ -56,6 +66,8 @@ elif [ $os = "Linux" ]; then
 		ArchFlag="-DIS_I386"
 	elif [ $arch = "alpha" ] ; then
 		ArchFlag="-DIS_ALPHA"
+	elif [ $arch = "ia64" ] ; then
+		ArchFlag="-DIS_IA64"
 	fi
 
 elif [ $os = "SunOS" ]; then
@@ -82,6 +94,8 @@ elif [ $os = "IRIX" ] ; then
 		Opsys="-DIS_IRIX62"
 	fi
 fi
+
+echo imake -s Makefile $ArchFlag $Opsys $Other $Other2 $EgcsLib $KerbFlags -I../config -I../../config $*
 
 imake -s Makefile $ArchFlag $Opsys $Other $Other2 $EgcsLib $KerbFlags -I../config -I../../config $*
 

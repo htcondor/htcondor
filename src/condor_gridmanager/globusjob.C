@@ -232,7 +232,8 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 		}
 	}
 
-	wantResubmit = 0;
+	doResubmit = 0;		// set if gridmanager wants to resubmit job
+	wantResubmit = 0;	// set if user wants to resubmit job via RESUBMIT_CHECK
 	ad->EvalBool(ATTR_GLOBUS_RESUBMIT_CHECK,NULL,wantResubmit);
 
 	ad->ClearAllDirtyFlags();
@@ -349,17 +350,20 @@ int GlobusJob::doEvaluateState()
 			}
 			if ( jobContact == NULL ) {
 				gmState = GM_CLEAR_REQUEST;
-			} else if ( wantResubmit ) {
+			} else if ( wantResubmit || doResubmit ) {
 				gmState = GM_CLEAN_JOBMANAGER;
 			} else {
-				if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING ||
+				if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_IN ||
+					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING ||
 					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE ||
 					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED ||
+					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_OUT ||
 					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ) {
 					submitLogged = true;
 				}
 				if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_ACTIVE ||
 					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_SUSPENDED ||
+					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_OUT ||
 					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ) {
 					executeLogged = true;
 				}
@@ -815,6 +819,25 @@ int GlobusJob::doEvaluateState()
 					gmState = GM_PROXY_EXPIRED;
 					break;
 				}
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_NO_STATE_FILE &&
+					 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) 
+				{
+						// Here we tried to restart, but the jobmanager claimed
+						// there was no state file.  
+						// If we still think we are in UNSUBMITTED state, the
+						// odds are overwhelming that the jobmanager bailed
+						// out and deleted the state file before we sent 
+						// a commit signal.  So resubmit.
+						// HOWEVER ---- this is evil and wrong!!!  What
+						// should really happen is the Globus jobmanager
+						// should *not* delete the state file if it fails
+						// to receive the commit within 5 minutes.  
+						// Don't understand why?  
+						// Ask Todd T <tannenba@cs.wisc.edu>
+					gmState = GM_CLEAR_REQUEST;
+					doResubmit = 1;
+					break;
+				}
 				// TODO: What should be counted as a restart attempt and
 				// what shouldn't?
 				numRestartAttempts++;
@@ -1102,7 +1125,8 @@ int GlobusJob::doEvaluateState()
 			// expressed in the job ad.
 			if ( (jobContact != NULL || (globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED && globusStateErrorCode != GLOBUS_GRAM_PROTOCOL_ERROR_JOB_UNSUBMITTED)) 
 				     && condorState != REMOVED 
-					 && wantResubmit == 0 ) {
+					 && wantResubmit == 0 
+					 && doResubmit == 0 ) {
 				gmState = GM_HOLD;
 				break;
 			}
@@ -1111,6 +1135,12 @@ int GlobusJob::doEvaluateState()
 				dprintf(D_ALWAYS,
 					"(%d.%d) Resubmitting to Globus because %s==TRUE\n",
 						procID.cluster, procID.proc, ATTR_GLOBUS_RESUBMIT_CHECK );
+			}
+			if ( doResubmit ) {
+				doResubmit = 0;
+				dprintf(D_ALWAYS,
+					"(%d.%d) Resubmitting to Globus (last submit failed)\n",
+						procID.cluster, procID.proc );
 			}
 			schedd_actions = 0;
 			if ( globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) {
@@ -1334,21 +1364,36 @@ void GlobusJob::UpdateCondorState( int new_state )
 	}
 }
 
-void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
+bool GlobusJob::AllowTransition( int new_state, int old_state )
 {
-	bool allow_transition = true;
 
 	// Prevent non-transitions or transitions that go backwards in time.
 	// The jobmanager shouldn't do this, but notification of events may
 	// get re-ordered (callback and probe results arrive backwards).
-    if ( new_state == globusState ||
+    if ( new_state == old_state ||
 		 new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ||
-		 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ||
-		 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ||
+		 old_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ||
+		 old_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ||
+		 ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_IN &&
+		   old_state != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED) ||
 		 ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING &&
-		   globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ) ) {
-		allow_transition = false;
+		   old_state != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED &&
+		   old_state != GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_IN) ||
+		 ( old_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_OUT &&
+		   new_state != GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE &&
+		   new_state != GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) ) {
+		return false;
 	}
+
+	return true;
+}
+
+
+void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
+{
+	bool allow_transition;
+
+	allow_transition = AllowTransition( new_state, globusState );
 
 	if ( allow_transition ) {
 		// where to put logging of events: here or in EvaluateState?
@@ -1413,8 +1458,12 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 
 void GlobusJob::GramCallback( int new_state, int new_error_code )
 {
-	callbackGlobusState = new_state;
-	callbackGlobusStateErrorCode = new_error_code;
+	if ( callbackGlobusState == 0 || 
+		 AllowTransition(new_state,callbackGlobusState) ) 
+	{
+		callbackGlobusState = new_state;
+		callbackGlobusStateErrorCode = new_error_code;
+	}
 
 	SetEvaluateState();
 }

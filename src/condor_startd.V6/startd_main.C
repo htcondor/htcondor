@@ -204,7 +204,7 @@ main_init( int, char* argv[] )
 		free( tmp );
 	}
 
-	resmgr->walk( &(Resource::init_classad) );
+	resmgr->walk( &Resource::init_classad );
 
 	// Startup Cron
 	Cronmgr = new StartdCronMgr( );
@@ -212,8 +212,8 @@ main_init( int, char* argv[] )
 
 		// Now that we have our classads, we can compute things that
 		// need to be evaluated
-	resmgr->walk( &(Resource::compute), A_EVALUATED );
-	resmgr->walk( &(Resource::refresh_classad), A_PUBLIC | A_EVALUATED ); 
+	resmgr->walk( &Resource::compute, A_EVALUATED );
+	resmgr->walk( &Resource::refresh_classad, A_PUBLIC | A_EVALUATED ); 
 
 		// If we EXCEPT, don't leave any starters lying around.
 	_EXCEPT_Cleanup = do_cleanup;
@@ -364,12 +364,12 @@ finish_main_config( void )
 		// Recompute machine-wide attributes object.
 	resmgr->compute( A_ALL );
 		// Rebuild ads for each resource.  
-	resmgr->walk( &(Resource::init_classad) );  
+	resmgr->walk( &Resource::init_classad );  
 		// Reset various settings in the ResMgr.
 	resmgr->init_socks();
 	resmgr->reset_timers();
 	if( old_polling_interval != polling_interval ) {
-		resmgr->walk( &(Resource::resize_load_queue) );
+		resmgr->walk( &Resource::resize_load_queue );
 	}
 	dprintf( D_FULLDEBUG, "MainConfig finish\n" );
 	Cronmgr->Reconfig( );
@@ -621,7 +621,7 @@ main_shutdown_fast()
 								 "shutdown_reaper" );
 
 		// Quickly kill all the starters that are running
-	resmgr->walk( &(Resource::kill_claim) );
+	resmgr->walk( &Resource::kill_claim );
 
 	daemonCore->Register_Timer( 0, 5, 
 								(TimerHandler)check_free,
@@ -652,7 +652,7 @@ main_shutdown_graceful()
 								 "shutdown_reaper" );
 
 		// Release all claims, active or not
-	resmgr->walk( &(Resource::release_claim) );
+	resmgr->walk( &Resource::release_claim );
 
 	daemonCore->Register_Timer( 0, 5, 
 								(TimerHandler)check_free,
@@ -700,7 +700,7 @@ do_cleanup(int,int,char*)
 			// If the machine is already free, we can exit right away.
 		check_free();		
 			// Otherwise, quickly kill all the active starters.
-		resmgr->walk( &(Resource::kill_claim) );
+		resmgr->walk( &Resource::kill_claim );
 		dprintf( D_FAILURE|D_ALWAYS, "startd exiting because of fatal exception.\n" );
 	}
 
