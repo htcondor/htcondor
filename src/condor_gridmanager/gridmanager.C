@@ -229,7 +229,6 @@ rehashJobContact( GlobusJob *job, const char *old_contact,
 void
 Init()
 {
-	int rc;
 	pid_t schedd_pid;
 
 	// schedd address may be overridden by a commandline option
@@ -552,10 +551,6 @@ REMOVE_JOBS_signalHandler( int signal )
 int
 doContactSchedd()
 {
-	int rc;
-	int cluster_id;
-	int proc_id;
-	char buf[1024];
 	Qmgr_connection *schedd;
 	ScheddUpdateAction *curr_action;
 	GlobusJob *curr_job;
@@ -781,7 +776,6 @@ doContactSchedd()
 		while ( next_ad != NULL ) {
 			PROC_ID procID;
 			GlobusJob *old_job;
-			ClassAd *old_ad;
 
 			next_ad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 			next_ad->LookupInteger( ATTR_PROC_ID, procID.proc );
@@ -956,8 +950,6 @@ int
 orphanCallbackHandler()
 {
 	int rc;
-	int cluster_id;
-	int proc_id;
 	GlobusJob *this_job;
 	OrphanCallback_t *orphan;
 
@@ -998,8 +990,6 @@ gramCallbackHandler( void *user_arg, char *job_contact, int state,
 					 int errorcode )
 {
 	int rc;
-	int cluster_id;
-	int proc_id;
 	GlobusJob *this_job;
 
 	// Find the right job object
