@@ -37,9 +37,6 @@ class Script {
     // Return value of the job run.  Only valid of POST script
     int  _retValJob;
 
-    // Has this script been logged?
-    bool   _logged;
-
 	// pid of running script, or 0 if not currently running
 	int _pid;
 

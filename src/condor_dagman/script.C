@@ -40,7 +40,6 @@ Script::Script( bool post, const char* cmd, Job* job ) :
     _post         (post),
     _retValScript (-1),
     _retValJob    (-1),
-    _logged       (false),
 	_pid		  (0),
 	_done         (FALSE),
     _job          (job)
@@ -66,8 +65,9 @@ Script::BackgroundRun( int reaperId )
     char * cmd = strnewp(_cmd);
     for (token = strtok (cmd,  delimiters) ; token != NULL ;
          token = strtok (NULL, delimiters)) {
-        if      (!strcasecmp(token, "$LOG"   )) send += _logged ? '1' : '0';
-        else if (!strcasecmp(token, "$JOB"   )) send += _job->GetJobName();
+		if( !strcasecmp( token, "$JOB" ) ) {
+			send += _job->GetJobName();
+		}
         else if (!strcasecmp(token, "$RETURN")) send += _retValJob;
         else                                    send += token;
 
