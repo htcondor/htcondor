@@ -917,8 +917,7 @@ int DestroyProc(int cluster_id, int proc_id)
 			// our cleanup hook hasn't finished yet for this job.  so,
 			// we just want to add it to our queue of job ids to call
 			// the hook on and return immediately
-		scheduler.enqueueFinishedJob( cluster_id, proc_id,
-									  "DestroyProc() called" );
+		scheduler.enqueueFinishedJob( cluster_id, proc_id );
 		return 1;
 	}
 
