@@ -493,6 +493,10 @@ char * Sock::do_serialize(char *buf)
 	// here we want to restore our state from the incoming buffer
 	sscanf(buf,"%u*%d*%d",&_sock,&_state,&_timeout);
 
+	// call the timeout method to make certain socket state set via
+	// setsockopt() and/or ioctl() is restored.
+	timeout(_timeout);
+
 	// set our return value to a pointer beyond the 3 state values...
 	ptmp = buf;
 	for (i=0;i<3;i++) {
