@@ -248,8 +248,11 @@ RemoteResource::printExit( FILE *fp )
 	int got_exception = jobAd->LookupString(ATTR_EXCEPTION_NAME,ename);
 	char* reason_str = NULL;
 	jobAd->LookupString( ATTR_EXIT_REASON, &reason_str );
+	int had_core = FALSE;
+	jobAd->LookupBool( ATTR_JOB_CORE_DUMPED, had_core );
 
 	switch ( exit_reason ) {
+	case JOB_COREDUMPED:
 	case JOB_EXITED: {
 		if( exited_by_signal ) {
 			if( got_exception ) {
@@ -276,11 +279,13 @@ RemoteResource::printExit( FILE *fp )
 						 exit_value );
 			}
 		}
-
+		if( had_core ) {
+			fprintf( fp, "Core file is: %s\n", shadow->getCoreName() );
+		}
 		break;
 	}
 	case JOB_KILLED: {
-		fprintf ( fp, "was forceably removed with condor_rm.\n" );
+		fprintf ( fp, "was aborted by the user.\n" );
 		break;
 	}
 	case JOB_NOT_CKPTED: {
