@@ -61,12 +61,12 @@ MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 
         /* Register command to take pushed matches */
     daemonCore->Register_Command( TAKE_MATCH, "TAKE_MATCH", 
-         (CommandHandlercpp)MPIShadow::getResources, "getResurces", 
+         (CommandHandlercpp)&MPIShadow::getResources, "getResurces", 
          this, WRITE );
 
         /* Register Command for sneaky rsh: */
 	daemonCore->Register_Command( MPI_START_COMRADE, "MPI_START_COMRADE", 
-		 (CommandHandlercpp)MPIShadow::startComrade, "startComrade", 
+		 (CommandHandlercpp)&MPIShadow::startComrade, "startComrade", 
 		 this, WRITE );
 
         // make first remote resource the "master".  Put it first in list.
@@ -508,9 +508,11 @@ MPIShadow::shutDown( int exitReason, int exitStatus ) {
 		fprintf( mailer, " ------------------------    -----------\n" );
 
 		int allexitsone = TRUE;
+		int status;
 		for ( i=0 ; i<=ResourceList.getlast() ; i++ ) {
 			(ResourceList[i])->printExit( mailer );
-			if ( WEXITSTATUS((ResourceList[i])->getExitStatus()) != 1 ) {
+			status = (ResourceList[i])->getExitStatus();
+			if ( WEXITSTATUS(status) != 1 ) {
 				allexitsone = FALSE;
 			}
 		}
