@@ -301,7 +301,7 @@ sub RunSubmit(  )
 
 	# Split it up, crunch it out
 	my @Values = split;
-	warn "Wrong data size" if ( $#Values != $#Fields );
+	warn "Wrong data size ($_) : " if ( $#Values != $#Fields );
 	for my $FieldNo ( 0 .. $#Fields )
 	{
 	    my $Attr = sprintf "Submit_%02d_%s", 
