@@ -7,3 +7,4 @@ template class List<Job>;
 template class Item<Job>;
 template class ListIterator<Job>;
 template class SimpleListIterator<JobID_t>;
+template class HashTable<int,Job*>;

@@ -9,6 +9,7 @@
 
 #include "simplelist.h"     /* should be replaced by STL library */
 #include "condor_string.h"  /* for strnewp() */
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 //---------------------------------------------------------------------------
 void TQI::Print () const {
@@ -32,6 +33,15 @@ Dag::Dag(const char *condorLogName, const char *lockFileName,
 {
     _condorLogName = strnewp (condorLogName);
     _lockFileName  = strnewp (lockFileName);
+
+	// register reaper function for PRE script completion
+	preScriptReaperId =
+		daemonCore->Register_Reaper( "PRE Script Reaper",
+									 (ReaperHandlercpp)&Dag::PreScriptReaper,
+									 "Dag::PreScriptReaper", this );
+
+	// initialize hash table for mapping PRE/POST script pids to Job*
+	jobScriptPidTable = new HashTable<int,Job*>( 499, &hashFuncInt );
 }
 
 //-------------------------------------------------------------------------
@@ -39,18 +49,16 @@ Dag::~Dag() {
     unlink(_lockFileName);  // remove the file being used as semaphore
     delete [] _condorLogName;
     delete [] _lockFileName;
+	delete jobScriptPidTable;
+	// should we un-register reapers here?
 }
 
 //-------------------------------------------------------------------------
 bool Dag::Bootstrap (bool recovery) {
-    //--------------------------------------------------
-    // Add a virtual dependency for jobs that have no
-    // parent.  In other words, pretend that there is
-    // an invisible God job that has the orphan jobs
-    // as its children.  (Ignor the phyllisophical ramifications).
-    // The God job will be the value (Job *) NULL, which is
-    // fitting, since the existance of god is an unsolvable concept
-    //--------------------------------------------------
+    // Add a virtual dependency for jobs that have no parent.  In
+    // other words, pretend that there is an invisible "God" job that
+    // has the orphan jobs as its children.  The God job will have the
+    // value (Job *) NULL.
 
     assert (!_termQLock);
     _termQLock = true;
@@ -70,7 +78,7 @@ bool Dag::Bootstrap (bool recovery) {
     
     //--------------------------------------------------
     // Update dependencies for pre-terminated jobs
-    // (jobs marks DONE in the dag input file)
+    // (jobs marked DONE in the dag input file)
     //--------------------------------------------------
     Job * job;
     ListIterator<Job> iList (_jobs);
@@ -216,11 +224,7 @@ bool Dag::ProcessLogEvents (bool recovery) {
                           printf (" resulted in %s.\n"
                                   "This version of Dagman does not support "
                                   "job resubmition, so this DAG must be "
-                                  "aborted.\n"
-                                  "Version 2 of Dagman will support job UNDO "
-                                  "so that an erroneous job can be "
-                                  "resubmitted\n"
-                                  "while the dag is still running.\n",
+                                  "aborted.\n",
                                   ULogEventNumberNames[e->eventNumber]);
                       }
                       done   = true;
@@ -335,6 +339,15 @@ bool Dag::ProcessLogEvents (bool recovery) {
                     }
                     if (!recovery) {
                         debug_printf (DEBUG_VERBOSE, "\n");
+
+						// why do we submit more jobs here? i.e., why
+						// would having just seen a submit event
+						// prompt us to submit more jobs?  does only
+						// one job get submitted at a time elsewhere,
+						// making this part of an attempt at
+						// throttling job submission or something? i'm
+						// confused...  --pfc (2000-11-30)
+
                         if (SubmitReadyJobs() == false) {
                             done   = true;
                             result = false;
@@ -378,19 +391,37 @@ Job * Dag::GetJob (const CondorID condorID) const {
 bool Dag::Submit (Job * job) {
     assert (job != NULL);
 
+	// if a PRE script exists, spawn it, and set up a reaper to submit
+	// the job to Condor if/when the PRE script exits successfully
     if (job->_scriptPre != NULL) {
-        int ret = job->_scriptPre->Run();
-        if (ret != 0) {
-            if (DEBUG_LEVEL(DEBUG_QUIET)) {
-                printf ("PRE Script of Job ");
-                job->Print();
-                printf (" failed with status %d\n", ret);
-            }
-            job->_Status = Job::STATUS_ERROR;
-            _numJobsFailed++;
-            return true;
-        }
+		if( DEBUG_LEVEL( DEBUG_VERBOSE ) ) {
+			printf( "Running PRE Script of Job " );
+			job->Print();
+			printf( "\n" );
+		}
+		job->_Status = Job::STATUS_PRERUN;
+		_numJobsRunning++;
+		assert (_numJobsRunningMax >= 0 || _numJobsRunning <= _numJobsRunningMax);
+		int pid = job->_scriptPre->BackgroundRun( preScriptReaperId );
+		assert( pid > 0 );
+		job->_scriptPid = pid;
+		jobScriptPidTable->insert( pid, job );
+		return true;
     }
+	// no PRE script exists, so submit the job to condor right away
+	return SubmitCondor( job );
+}
+
+//-------------------------------------------------------------------------
+bool
+Dag::SubmitCondor( Job* job )
+{
+    assert( job != NULL );
+    assert( job->_Status == Job::STATUS_READY );
+
+	if( ! job->CanSubmit() ) {
+		return false;
+	}
 
     if (DEBUG_LEVEL(DEBUG_VERBOSE)) {
         printf ("Submitting JOB ");
@@ -400,13 +431,12 @@ bool Dag::Submit (Job * job) {
     CondorID condorID(0,0,0);
     if (!submit_submit (job->GetCmdFile(), condorID)) {
         job->_Status = Job::STATUS_ERROR;
+		_numJobsRunning--;
         _numJobsFailed++;
         return true;
     }
 
     job->_Status = Job::STATUS_SUBMITTED;
-    _numJobsRunning++;
-    assert (_numJobsRunningMax >= 0 || _numJobsRunning <= _numJobsRunningMax);
 
     if (DEBUG_LEVEL(DEBUG_VERBOSE)) {
         printf (", ");
@@ -415,6 +445,53 @@ bool Dag::Submit (Job * job) {
     }
 
     return true;
+}
+
+//---------------------------------------------------------------------------
+int
+Dag::PreScriptReaper( int pid, int status )
+{
+	Job* job;
+
+	// get the Job* that corresponds to this pid
+	jobScriptPidTable->lookup( pid, job );
+	jobScriptPidTable->remove( pid );
+
+	assert( job != NULL );
+	assert( job->_Status == Job::STATUS_PRERUN );
+
+	job->_scriptPid = 0;	// reset
+
+	if( WIFSIGNALED( status ) ) {
+		if( DEBUG_LEVEL(DEBUG_QUIET) ) {
+			printf( "PRE Script of Job " );
+			job->Print();
+			printf( " died on %s\n", daemonCore->GetExceptionString(status) );
+		}
+		job->_Status = Job::STATUS_ERROR;
+		_numJobsRunning--;
+		_numJobsFailed++;
+		return true;
+	}
+	else if ( WEXITSTATUS( status ) != 0 ) {
+		if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
+			printf( "PRE Script of Job " );
+			job->Print();
+			printf( " failed with return code %d\n", WEXITSTATUS(status) );
+		}
+		job->_Status = Job::STATUS_ERROR;
+		_numJobsRunning--;
+		_numJobsFailed++;
+		return true;
+	}
+
+	if( DEBUG_LEVEL(DEBUG_QUIET) ) {
+		printf( "PRE Script of Job " );
+		job->Print();
+		printf( " completed successfully\n" );
+	}
+	job->_Status = Job::STATUS_READY;
+	return SubmitCondor( job );
 }
 
 //---------------------------------------------------------------------------
@@ -451,36 +528,57 @@ void Dag::Print_TermQ () const {
 
 //---------------------------------------------------------------------------
 void Dag::RemoveRunningJobs () const {
-    char cmd     [ARG_MAX];
+    char rmCmd[ARG_MAX];
+	char killCmd[ARG_MAX];
 
-    unsigned int len  = 0;  // Number of character in cmd so far
-    unsigned int jobs = 0;  // Number of jobs appended to cmd so far
+    unsigned int rmCmdLen = 0;	  // number of chars in rmCmd so far
+    unsigned int rmNum = 0;		  // number of jobs appended to rmCmd so far
+    unsigned int killCmdLen = 0;  // number of chars in killCmd so far
+    unsigned int killNum = 0;     // number of jobs appended to killCmd so far
 
     ListIterator<Job> iList(_jobs);
     Job * job;
     while (iList.Next(job)) {
-
-        if (jobs == 0) {
-            len = 0;
-            len += sprintf (cmd, "condor_rm");
+        if( rmNum == 0 ) {
+            rmCmdLen = sprintf( rmCmd, "condor_rm" );
+        }
+        if( killNum == 0 ) {
+            killCmdLen = sprintf( killCmd, "kill -9" );
         }
 
+		// if the job has been submitted, condor_rm it
         if (job->_Status == Job::STATUS_SUBMITTED) {
             // Should be snprintf(), but doesn't exist on all platforms
-            len += sprintf (&cmd[len], " %d", job->_CondorID._cluster);
-            jobs++;
-        }
+            rmCmdLen += sprintf( &rmCmd[rmCmdLen], " %d",
+								 job->_CondorID._cluster );
+            rmNum++;
 
-        if (jobs > 0 && len >= ARG_MAX - 10) {
-            util_popen (cmd);
-            jobs = 0;
+			if( rmCmdLen >= (ARG_MAX - 20) ) {
+				util_popen( rmCmd );
+				rmNum = 0;
+			}
         }
-    }
+		// if job has its PRE script running, hard kill it
+        else if( job->_Status == Job::STATUS_PRERUN ) {
+			assert( job->_scriptPid != 0 );
+            killCmdLen += sprintf( &killCmd[killCmdLen], " %d",
+								   job->_scriptPid );
+            killNum++;
 
-    if (jobs > 0) {
-        util_popen (cmd);
-        jobs = 0;
+			if( killCmdLen >= (ARG_MAX - 20) ) {
+				util_popen( killCmd );
+				killNum = 0;
+			}
+        }
+	}
+
+    if( rmNum > 0) {
+        util_popen( rmCmd );
     }
+    if( killNum > 0) {
+        util_popen( killCmd );
+    }
+	return;
 }
 
 //-----------------------------------------------------------------------------
@@ -556,7 +654,7 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) const {
 
 
 //===========================================================================
-// Private Meathods
+// Private Methods
 //===========================================================================
 
 //-------------------------------------------------------------------------

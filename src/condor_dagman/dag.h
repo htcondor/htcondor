@@ -6,6 +6,8 @@
 #include "job.h"
 #include "user_log.c++.h"          /* from condor_c++_util/ directory */
 #include "condor_constants.h"      /* from condor_includes/ directory */
+#include "HashTable.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 // Termination Queue Item (TQI).
 class TQI {
@@ -31,8 +33,11 @@ class TQI {
     dependencies, submit jobs, control the locations of log files,
     query the state of a job, and process any new events that have
     appeared in the condor log file.
+
+	The Dag class must be derived from Service so that we can register
+	one of its methods as a reaper function for Create_Process()
 */
-class Dag {
+class Dag : public Service {
   public:
   
     /** Create a DAG
@@ -136,9 +141,9 @@ class Dag {
 
   protected:
 
-    /*  Submit job to Condor.  If job is not submittable (!job->CanSubmit())
-        then function will return false for failure
-        @return true on success, false on failure
+    /* Prepares to submit job by running its PRE Script if one exists,
+       otherwise calls SubmitCondor() directly
+	   @return true on success, false on failure
     */
     bool Submit (Job * job);
 
@@ -146,6 +151,12 @@ class Dag {
         @return true on success, false on failure
     */
     // bool Submit (JobID_t jobID);
+
+    /*  Submit job to Condor.  If job is not submittable (!job->CanSubmit())
+        then function will return false for failure
+        @return true on success, false on failure
+    */
+	bool SubmitCondor( Job* job );
 
     //  Update the state of a job to "Done", and run child jobs if possible.
     void TerminateJob (Job * job);
@@ -205,6 +216,13 @@ class Dag {
         unlimited
     */
     int _numJobsRunningMax;
+
+	int PreScriptReaper( int pid, int status );
+
+	int preScriptReaperId;
+
+	// hash table to map PRE/POST script pids to their Job*
+	HashTable<int, Job*> *jobScriptPidTable;
 };
 
 #endif /* #ifndef DAG_H */

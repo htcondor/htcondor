@@ -22,6 +22,8 @@ class Script {
     */
     int Run ();
 
+	int Script::BackgroundRun( int reaper_id );
+
     inline char * GetCmd () const { return _cmd; }
     Script (bool post, char *cmd, Job * job);
     ~Script();

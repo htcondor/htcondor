@@ -15,6 +15,7 @@ const char *Job::queue_t_names[] = {
 //---------------------------------------------------------------------------
 const char * Job::status_t_names[] = {
     "STATUS_READY    ",
+    "STATUS_PRERUN   ",
     "STATUS_SUBMITTED",
     "STATUS_DONE     ",
     "STATUS_ERROR    ",
@@ -30,7 +31,8 @@ Job::~Job() {
 Job::Job (const char *jobName, const char *cmdFile):
     _scriptPre  (NULL),
     _scriptPost (NULL),
-    _Status     (STATUS_READY)
+    _Status     (STATUS_READY),
+	_scriptPid	(0)
 {
 
     _jobName = strnewp (jobName);

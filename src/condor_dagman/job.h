@@ -20,19 +20,22 @@
      The outgoing queue is a list of child jobs that depend on this one.
      Once set, this queue never changes.<p>
 
-     From DAGMan's point of view, a job has four basic states in the Condor
-     system (refer to the Job::status_t enumeration).  It starts out as
-     READY, meaning that it has not yet been submitted.  The job's state
-     changes to SUBMITTED once in the Condor system.  Only one of the remaining
-     states is possible after that.  Either the job is DONE, if I completes
+     From DAGMan's point of view, a job has five basic states in the
+     Condor system (refer to the Job::status_t enumeration).  It
+     starts out as READY, meaning that it has not yet been submitted.
+     If the job has a PRE script defined it changes to PRERUN while
+     that script executes.  The job's state changes to SUBMITTED once
+     in the Condor system.  Only one of the remaining states is
+     possible after that.  Either the job is DONE, if I completes
      successfully, or is in the ERROR if it completes abnormally.<p>
 
-     The DAG class will control the job by modifying and viewing its three
-     queues.  Once the WAITING queue becomes empty, the job is submitted, and
-     its state goes from READY to SUBMITTED.  If the job completes
-     successfully, its state is changed to DONE, and the children (listed in
-     this jobs OUTGOING queue) are put on the DAG's ready list.
-*/
+     The DAG class will control the job by modifying and viewing its
+     three queues.  Once the WAITING queue becomes empty, the job
+     state either changes to PRERUN while the job's PRE script runs,
+     or the job is submitted and its state changes immediately to
+     SUBMITTED.  If the job completes successfully, its state is
+     changed to DONE, and the children (listed in this jobs OUTGOING
+     queue) are put on the DAG's ready list.  */
 class Job {
   public:
   
@@ -74,9 +77,10 @@ class Job {
     */
     enum status_t {
         /** Job is ready for submission */ STATUS_READY,
+        /** Job waiting for PRE script */  STATUS_PRERUN,
         /** Job has been submitted */      STATUS_SUBMITTED,
         /** Job is done */                 STATUS_DONE,
-        /** Job exited abnormally */       STATUS_ERROR
+        /** Job exited abnormally */       STATUS_ERROR,
     };
 
     /** The string names for the status_t enumeration.  Use this the same
@@ -150,6 +154,8 @@ class Job {
   
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
+
+    /** */ int _scriptPid;
   
   private:
   
