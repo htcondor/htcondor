@@ -28,8 +28,9 @@
 */ 
 
 /*********************************************************************
-* Send condor_vacate to startd's on non-instructional machines at the 
-* time of reboot of instructional machines.
+* This program takes as argument a machine name and just returns a record 
+* of all the machines that the schedd on that machine has scheduled its jobs 
+* to. The schedd has been modified to support this.
 *********************************************************************/
 
 #include <stdio.h>
