@@ -123,6 +123,11 @@ GLIDEIN_SITES =
 DAEMON_LIST                     = MASTER, SCHEDD  
 #DAEMON_LIST                    = MASTER, SCHEDD, COLLECTOR, NEGOTIATOR
 
+## 
+## Enable GridMonitor
+##
+ENABLE_GRID_MONITOR = TRUE
+
 ##--------------------------------------------------------------------
 ##  Flocking: Submitting jobs to more than one pool
 ##--------------------------------------------------------------------
@@ -449,6 +454,8 @@ MASTER				= $(SBIN)/condor_master
 SCHEDD				= $(SBIN)/condor_schedd
 NEGOTIATOR			= $(SBIN)/condor_negotiator
 COLLECTOR			= $(SBIN)/condor_collector
+GRID_MONITOR			= $(SBIN)/grid_monitor.sh
+
 
 ##  When the master starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -639,7 +646,7 @@ QUEUE_SUPER_USERS	= root, condor
 ## The GridManager will shut things down 3 minutes before loosing Contact
 ## because of an expired proxy. 
 ## In seconds, and defaults to 3 minutes
-#GRDIMANAGER_MINIMUM_PROXY_TIME  = 180
+#GRIDMANAGER_MINIMUM_PROXY_TIME  = 180
 
 ##--------------------------------------------------------------------
 ##  condor_shadow.pvm
