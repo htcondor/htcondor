@@ -253,11 +253,11 @@ const int QUERY_ANY_ADS = 48;
 *** Commands used by the daemon core Shadow
 */
 #define DCSHADOW_BASE 71000
-#define SHADOW_UPDATEINFO	(DCSHADOW_BASE+0)
-#define TAKE_MATCH          (DCSHADOW_BASE+1)  // for MPI shadow
-#define MPI_START_COMRADE   (DCSHADOW_BASE+2)  // for MPI shadow
-#define GIVE_MATCHES 	    (DCSHADOW_BASE+3)  // for MPI shadow
-#define RECEIVE_JOBAD		(DCSHADOW_BASE+4)
+#define SHADOW_UPDATEINFO	   (DCSHADOW_BASE+0)
+#define TAKE_MATCH             (DCSHADOW_BASE+1)  // for MPI & parallel shadow
+#define MPI_START_COMRADE      (DCSHADOW_BASE+2)  // for MPI & parallel shadow
+#define GIVE_MATCHES 	       (DCSHADOW_BASE+3)  // for MPI & parallel shadow
+#define RECEIVE_JOBAD		   (DCSHADOW_BASE+4)
 
 
 /*

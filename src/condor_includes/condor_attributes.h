@@ -197,6 +197,8 @@ const char ATTR_MIN_HOSTS				 [] = "MinHosts";
 const char ATTR_MIPS                     [] = "Mips";
 const char ATTR_MPI_IS_MASTER            [] = "MPIIsMaster";
 const char ATTR_MPI_MASTER_ADDR       	 [] = "MPIMasterAddr";
+const char ATTR_PARALLEL_IS_MASTER       [] = "ParallelIsMaster";   
+const char ATTR_PARALLEL_MASTER_ADDR   	 [] = "ParallelMasterAddr"; 
 const char ATTR_MY_TYPE					 [] = "MyType";
 const char ATTR_NAME                     [] = "Name";
 const char ATTR_NICE_USER			 	 [] = "NiceUser";
@@ -215,6 +217,8 @@ const char ATTR_NUM_USERS                [] = "NumUsers";
 const char ATTR_OPSYS                    [] = "OpSys";
 const char ATTR_ORIG_MAX_HOSTS			 [] = "OrigMaxHosts";
 const char ATTR_OWNER                    [] = "Owner"; 
+const char ATTR_PARALLEL_SCRIPT_SHADOW   [] = "ParallelScriptShadow";  
+const char ATTR_PARALLEL_SCRIPT_STARTER  [] = "ParallelScriptStarter"; 
 const char ATTR_PERIODIC_CHECKPOINT      [] = "PeriodicCheckpoint";
 #define ATTR_PLATFORM					AttrGetName( ATTRE_PLATFORM )
 const char ATTR_PREFERENCES				 [] = "Preferences";
