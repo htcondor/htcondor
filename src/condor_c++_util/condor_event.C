@@ -877,8 +877,11 @@ setReason( const char* reason_str )
 {
 	if( reason ) {
 		delete [] reason;
+		reason = NULL;
 	}
-	reason = strnewp( reason_str );
+	if( reason_str ) { 
+		reason = strnewp( reason_str );
+	}
 }
 
 
@@ -921,7 +924,7 @@ readEvent (FILE *file)
 		return 1;	// backwards compatibility
 	}
 	chomp( reason_buf );  // strip the newline, if it's there.
-	reason = strnewp(reason_buf);
+	reason = strnewp( reason_buf );
 	return 1;
 }
 
