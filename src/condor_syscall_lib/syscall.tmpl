@@ -563,14 +563,15 @@ version.
 
 
 	#if !defined(SWITCH) || !defined(STAT_NEEDS_SPECIAL_SWITCH)
-		int fstat( map(int fd), struct stat *buf ) :
+		int fstat( int fd, struct stat *buf ) :
 			#if defined(STAT_NEEDS_EXTRACT)
 				extract,
 			#endif
 			#if defined(IRIX)
 				no_sys_chk,
 			#endif
-				also_implements(fstat64)   /* for backwards compatibility */
+				also_implements(fstat64),   /* for backwards compatibility */
+				file_table
 		{
 			out code( buf );
 			alloc( buf, STAT_SIZE );
