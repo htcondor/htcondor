@@ -424,7 +424,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					if (ExecRecs.remove(key) < 0) {
 						if (debug_mode) {
 							fprintf(stderr, "internal error: hashtable remove "
-									"failed for ckpt event %s!\n", hash);
+									"failed for exec event %s!\n", hash);
 						}
 						delete event;
 						break;
