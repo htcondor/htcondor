@@ -46,33 +46,34 @@ sysapi_swap_space_raw()
 
 #elif defined(LINUX)
 
-/* On Linux, we just open /proc/meminfo and read the answer */
 int
 sysapi_swap_space_raw()
 {
-	FILE	*proc;
-	double	free_swap;
-	char	tmp_c[20];
-	int	tmp_i;
+	struct sysinfo si;
+	double free_swap;
 
 	sysapi_internal_reconfig();
-	proc = fopen("/proc/meminfo", "r");
-	if(!proc)	{
-		dprintf(D_ALWAYS,
-			"sysapi_swap_space_raw(): Could not open /proc/meminfo\n");
+
+	if (sysinfo(&si) == -1) {
+		dprintf(D_ALWAYS, 
+			"sysapi_swap_space_raw(): error: sysinfo(2) failed: %d(%s)",
+			errno, strerror(errno));
 		return -1;
 	}
-	
-	fscanf(proc, "%s %s %s %s %s %s", tmp_c, tmp_c, tmp_c, tmp_c, tmp_c, tmp_c);
-	fscanf(proc, "%s %d %d %d %d %d %d", tmp_c, &tmp_i, &tmp_i, &tmp_i, &tmp_i, &tmp_i, &tmp_i);
-	fscanf(proc, "%s %d %d %lf", tmp_c, &tmp_i, &tmp_i, &free_swap);
-	fclose(proc);
 
-	/* check for overflow of an int */
+	/* On Linux before 2.3.23, mem_unit was not present
+		and the pad region of space in this structure appears to
+		have been occupying was set to 0; units are bytes */
+	if (si.mem_unit == 0) {
+		si.mem_unit = 1;
+	}
 
+	/* in B */
+	free_swap = (double)si.freeswap * (double)si.mem_unit;
+	/* in KB */
 	free_swap /= 1024.0;
 
-	if (free_swap > INT_MAX)
+	if ((int)free_swap > INT_MAX)
 	{
 		return INT_MAX;
 	}
