@@ -290,7 +290,7 @@ void Accountant::LoadState()
   while(1) {
     MatchFile >> S >> CustomerName >> ResourceName >> T;
     if (MatchFile.eof()) break;
-    if (S=="A") AddMatch(CustomerName,ResourceName,T);
+    if (S==MyString("A")) AddMatch(CustomerName,ResourceName,T);
     else RemoveMatch(ResourceName);
   }
   MatchFile.close();
