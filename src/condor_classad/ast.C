@@ -288,73 +288,78 @@ int Variable::EvalTree(AttrList* classad, EvalResult* val)
 
 //------tw-----------------
 
-int Variable::EvalTree(AttrList* my_classad,AttrList* req_classad, EvalResult* val)
+int Variable::
+EvalTree(AttrList* my_classad,AttrList* req_classad, EvalResult* val)
 {
     ExprTree* tmp = NULL;
     
     if(!val || (!my_classad && !req_classad)) 
     {
-	return FALSE;
+		return FALSE;
     }
 
     char * myNamePrefix = "MY.";
     char * reqNamePrefix = "TARGET.";
 
     if (name == NULL)
-       {
+    {
         cout << "no name provided!!"<< endl;
         exit(1);                  
-       }
-    
-   if (strncmp(name, myNamePrefix, 3) == 0)
-      {
- 
-      // test char * name, if the first three letters are "MY." 
-      // do evaluation  in my_classad.
-      
-       char* realName = new char[strlen(name)-2];
-       strcpy(realName, name+3);
+    }
    
-       if(!(tmp = my_classad->Lookup(realName)))        //name should be without prefix "MY."
-	 {
-	    val->type = LX_UNDEFINED;
-	    delete []realName;
-	    return TRUE;
-	 }
-       delete []realName;
-       return tmp->EvalTree(my_classad, req_classad, val);
-       
-       }
+	// check for scope of the variable.  semantics state that if a variable's
+  	// scope is not defined, first look in the MY scope.  If the variable is
+	// not found in the MY scope, look in the TARGET scope.  If not found in
+	// both, return LX_UNDEFINED    --RR
+	char *realName = new char [strlen (name) + 1];
+	bool myScope, targetScope;
 
-    else if(strncmp(name, reqNamePrefix, 7) == 0)
-      {
-          
-	// test char * name, if the first four letters are "TARGET." 
-	// do evaluation  in req_classad.
+	if (strncmp(name, myNamePrefix, 3) == 0)
+	{
+		myScope = true;
+		targetScope = false;
+		strcpy (realName, name+3);
+	}
+	else
+	if (strncmp (name, reqNamePrefix, 7) == 0)
+	{	
+		targetScope = true;
+		myScope = false;
+		strcpy (realName, name+7);
+	}
+	else
+	{
+		// not prefixed by either MY or TARGET, must lookup both scopes
+		myScope = true;
+		targetScope = true;
+		strcpy (realName, name);
+	}
 
-	char* realName = new char[strlen(name)-6];
-	strcpy(realName, name+7);
-         
-	if(!(tmp = req_classad->Lookup(realName)))     //name should be without prefix "TARGET."
-	  {
-	    val->type = LX_UNDEFINED;
-	    delete []realName;
-	    return TRUE;
-	  }
-	delete []realName;
-	return tmp->EvalTree(my_classad, req_classad, val);
+   	if (myScope && my_classad)
+   	{
+		// lookup
+       	tmp = my_classad->Lookup(realName);
+	}
 
-      }
+	if (targetScope && req_classad && tmp == NULL)
+	{
+		// lookup
+		tmp = req_classad->Lookup(realName);
+	}
 
+	// done with realName
+	delete [] realName;
 
-    else
-      {
-	cerr << "Variable is not prefixed by either 'MY.' or 'TARGET.'"<< endl;
-	exit(1);              // for testing
-	return TRUE;          //for avoiding compiler warning
-      }
+	// if the tree was not found
+	if (tmp == NULL)
+	{
+	   	val->type = LX_UNDEFINED;
+	   	return TRUE;
+	}
 
-  }
+    return tmp->EvalTree(my_classad, req_classad, val);
+}
+
 
 //---------------------------
 
