@@ -448,8 +448,8 @@ main(int argc, char *argv[])
 
 	virtualMachineCounts = new HashTable <HashKey, int> (25, hashFunction); 
 	mySubSystem = "INTERACTIVE";
-	config();
 	myDistro = new Distribution( argc, argv );
+	config();
 
 	// parse command line args
 	for( ptr=argv+1,argc--; argc > 0; argc--,ptr++ ) {
