@@ -104,6 +104,22 @@ SOURCE=..\src\condor_gridmanager\baseresource.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\condor_gridmanager\condorjob.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\condorjob.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\condorresource.C
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\condor_gridmanager\condorresource.h
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\condor_gridmanager\gahp-client.C"
 # End Source File
 # Begin Source File

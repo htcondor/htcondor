@@ -53,6 +53,8 @@ CLEAN :
 !ENDIF 
 	-@erase "$(INTDIR)\basejob.obj"
 	-@erase "$(INTDIR)\baseresource.obj"
+	-@erase "$(INTDIR)\condorjob.obj"
+	-@erase "$(INTDIR)\condorresource.obj"
 	-@erase "$(INTDIR)\gahp-client.obj"
 	-@erase "$(INTDIR)\globusjob.obj"
 	-@erase "$(INTDIR)\globusresource.obj"
@@ -96,6 +98,8 @@ LINK32_OBJS= \
 	"$(INTDIR)\mirrorjob.obj" \
 	"$(INTDIR)\mirrorresource.obj" \
 	"$(INTDIR)\proxymanager.obj" \
+	"$(INTDIR)\condorjob.obj" \
+	"$(INTDIR)\condorresource.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_daemon_core.lib" \
@@ -135,6 +139,8 @@ CLEAN :
 !ENDIF 
 	-@erase "$(INTDIR)\basejob.obj"
 	-@erase "$(INTDIR)\baseresource.obj"
+	-@erase "$(INTDIR)\condorjob.obj"
+	-@erase "$(INTDIR)\condorresource.obj"
 	-@erase "$(INTDIR)\gahp-client.obj"
 	-@erase "$(INTDIR)\globusjob.obj"
 	-@erase "$(INTDIR)\globusresource.obj"
@@ -176,6 +182,8 @@ LINK32_OBJS= \
 	"$(INTDIR)\mirrorjob.obj" \
 	"$(INTDIR)\mirrorresource.obj" \
 	"$(INTDIR)\proxymanager.obj" \
+	"$(INTDIR)\condorjob.obj" \
+	"$(INTDIR)\condorresource.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_daemon_core.lib" \
@@ -451,6 +459,18 @@ SOURCE=..\src\condor_gridmanager\basejob.C
 SOURCE=..\src\condor_gridmanager\baseresource.C
 
 "$(INTDIR)\baseresource.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_gridmanager\condorjob.C
+
+"$(INTDIR)\condorjob.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_gridmanager\condorresource.C
+
+"$(INTDIR)\condorresource.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
