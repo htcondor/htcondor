@@ -40,6 +40,7 @@ usage( char *cmd )
 	fprintf(stderr,"    -version          Display Condor version\n");
 	fprintf(stderr,"    -pool <hostname>  Use this central manager\n");
 	fprintf(stderr,"    -debug            Show extra debugging info\n");
+	fprintf(stderr,"    -tcp              Ship classad via TCP (default is UDP)\n");
 	fprintf(stderr,"\nExample: %s -debug UPDATE_STORAGE_AD adfile\n\n",cmd);
 }
 
@@ -55,6 +56,7 @@ int main( int argc, char *argv[] )
 	char *pool=0;
 	int command=-1;
 	int i;
+	bool use_tcp = false;
 
 	myDistro->Init( argc, argv );
 	config();
@@ -71,6 +73,8 @@ int main( int argc, char *argv[] )
 				exit(1);
 			}
 			pool = argv[i];
+		} else if(!strncmp(argv[i],"-tcp",strlen(argv[i]))) {
+			use_tcp = true;
 		} else if(!strcmp(argv[i],"-version")) {
 			version();
 			exit(0);
@@ -107,7 +111,7 @@ int main( int argc, char *argv[] )
 	FILE *file;
 	ClassAd *ad;
 	Daemon *collector;
-	SafeSock *sock;
+	Sock *sock;
 	int eof,error,empty;
 
 	file = fopen(filename,"r");
@@ -142,12 +146,23 @@ int main( int argc, char *argv[] )
 
 	dprintf(D_FULLDEBUG,"collector is %s <%s:%d>\n",collector->hostname(),collector->addr(),collector->port());
 	
-	sock = collector->safeSock();
+	if ( use_tcp ) {
+		sock = collector->reliSock();
+	} else {
+		sock = collector->safeSock();
+	}
 
+	int result = 0;
 	sock->encode();
-	sock->put( command );
-	ad->put( *sock );
-	sock->end_of_message();
+	result += sock->put( command );
+	result += ad->put( *sock );
+	result += sock->end_of_message();
+	if ( result != 3 ) {
+		fprintf(stderr,"failed to send classad to %s\n",collector->addr());
+		exit(1);
+	}
+
+	delete collector;
 
 	return 0;
 }
