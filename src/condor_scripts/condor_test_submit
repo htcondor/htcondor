@@ -1,0 +1,11 @@
+#!/bin/sh
+
+PATH=../../condor_submit.V6:$PATH
+CONDOR_SUBMIT=condor_submit
+
+if [ -f requirements.txt ]; then
+    cat requirements.txt $1 | $CONDOR_SUBMIT
+else 
+    $CONDOR_SUBMIT $1
+fi
+

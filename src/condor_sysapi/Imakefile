@@ -1,0 +1,23 @@
+all_target(libsysapi.a condor_sysapi)
+
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+# use -O2 for the benchmark code, i.e clinpack & dhry*.c
+CFLAGS = $(STD_C_FLAGS) -O2
+LIB = $(STD_LIBS)
+
+OBJ = phys_mem.o free_fs_blocks.o ncpus.o clinpack.o dhry21a.o \
+      dhry21b.o timers_b.o idle_time.o reconfig.o last_x_event.o \
+      load_avg.o arch.o virt_mem.o resource_limits.o analyze_exec.o 
+
+# the test files for the sysapi tester
+TEST_OBJS = sysapi.t.o test.o arch_t.o free_fs_blocks_t.o idle_time_t.o \
+	load_avg_t.o phys_mem_t.o virt_mem_t.o ncpus_t.o dhry_t.o clinpack_t.o
+
+library_target(libsysapi.a,$(OBJ))
+
+c_plus_target(condor_sysapi,$(TEST_OBJS),$(LIB))
+
+html:
+release:: all
+stripped:: all
+static:: all

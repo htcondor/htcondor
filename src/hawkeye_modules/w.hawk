@@ -1,0 +1,16 @@
+# Data file describing the 'w' module
+ModuleFiles: w
+Version: 1.0-rc1
+
+Description:
+Monitors the users, uptime, and load averages of the system
+(based on the "w" program)
+
+
+Default: w
+options:
+period: 5m
+prefix: w_
+
+# It's parameters
+# none

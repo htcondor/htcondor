@@ -1,0 +1,262 @@
+#! /usr/bin/perl -w
+use strict;
+
+# Update the module include path
+BEGIN
+{
+    my $Dir = $0;
+    if ( $Dir =~ /(.*)\/.*/ )
+    {
+	push @INC, "$1";
+    }
+}
+use HawkeyePublish;
+use HawkeyeLib;
+
+# Setup the hawkeye stuff
+my $Hawkeye;
+
+# Setup
+my %Config = (
+	      MasterOwnerList => "",
+	      DaemonOwnerList => "",
+	      UserOwnerList => "",
+	     );
+
+# Do it
+Init();
+RunIt();
+
+# Init logic
+sub Init {
+    HawkeyeLib::DoConfig( );
+
+    $Hawkeye = HawkeyePublish->new;
+    $Hawkeye->Quiet( 1 );
+    $Hawkeye->AutoIndexSet( 1 );
+
+    my $Tmp;
+    $Tmp = HawkeyeLib::ReadConfig( "_master_owners", "" );
+    $Config{MasterOwnerList} = $Tmp if ( $Tmp ne "" );
+    $Tmp = HawkeyeLib::ReadConfig( "_daemon_owners", "" );
+    $Config{DaemonOwnerList} = $Tmp if ( $Tmp ne "" );
+    $Tmp = HawkeyeLib::ReadConfig( "_user_owners", "" );
+    $Config{UserOwnerList} = $Tmp if ( $Tmp ne "" );
+}
+
+
+# Do the real work here...
+sub RunIt {
+
+    # Data we'll gather...
+    my %CondorInfo = (
+		      "NumStarters"	=> 0,
+		      "NumStartds"	=> 0,
+		      "NumSchedds"	=> 0,
+		      "NumMasters"	=> 0,
+		      "NumExecs"	=> 0,
+		      "NumShadows"	=> 0,
+		      "NumRunaway"	=> 0,
+		      "Vms"		=> "",
+		      "RunawayPids"	=> [],
+		     );
+
+    # Table to translate "ps-command" regex to $CondorInfo key..
+    my $DefaultDaemonOwnerList = "condor,root";
+    my %CondorCmdTable =
+	(
+	 condor_starter	=> { Attr => "NumStarters",
+			     DaemonUser => 1,
+			     OwnerList => $DefaultDaemonOwnerList, },
+	 condor_startd	=> { Attr => "NumStartds",
+			     DaemonUser => 1,
+			     OwnerList => $DefaultDaemonOwnerList, },
+	 condor_master	=> { Attr => "NumMasters",
+			     DaemonUser => 1,
+			     OwnerList => $DefaultDaemonOwnerList, },
+	 condor_schedd	=> { Attr => "NumSchedds",
+			     DaemonUser => 1,
+			     OwnerList => $DefaultDaemonOwnerList, },
+	 condor_exec	=> { Attr => "NumExecs",
+			     DaemonUser => 0,
+			     OwnerList => "*", },
+	 condor_shadow	=> { Attr => "NumShadows",
+			     DaemonUser => 0,
+			     OwnerList => "*", },
+	);
+
+    # Set the "user list" for each command
+    foreach my $Cmd ( keys %CondorCmdTable )
+    {
+	if ( $CondorCmdTable{$Cmd}{DaemonUser} )
+	{
+	    $CondorCmdTable{$Cmd}{OwnerList} = $Config{DaemonOwnerList}
+		if ( $Config{DaemonOwnerList} ne "" );
+	}
+	else
+	{
+	    $CondorCmdTable{$Cmd}{OwnerList} = $Config{UserOwnerList}
+		if ( $Config{UserOwnerList} ne "" );
+	}
+    }
+    # Master has a special list that overrides the others..
+    $CondorCmdTable{condor_master}{OwnerList} = $Config{MasterOwnerList}
+	if ( $Config{MasterOwnerList} ne "" );
+
+    # Run a 'ps' and gather some info...
+    if ( open( PS, "/bin/ps -eo user,pid,ppid,comm,args|" ) )
+    {
+	while ( <PS> )
+	{
+	    chomp;
+	    my ( $User, $Pid, $Ppid, @CmdString ) = split;
+	    my $CmdString = join(" ", @CmdString);
+	    next if ( ! ( $CmdString =~ /condor/ ) );
+
+	    # Starter with PPID == 1
+	    if ( 1 == $Ppid )
+	    {
+		if ( ( $CmdString =~ /condor_starter/ ) ||
+		     ( $CmdString =~ /condor_exec/ ) )
+		{
+		    $CondorInfo{NumRunaway}++;
+		    push( @{$CondorInfo{RunawayPids}}, $Pid );
+		}
+	    }
+
+	    # Count the processes...
+	    foreach my $CmdPat ( keys %CondorCmdTable )
+	    {
+		if ( $CmdString =~ /$CmdPat/ )
+		{
+		    my $Attr = $CondorCmdTable{$CmdPat}->{Attr};
+		    my $OwnerList = $CondorCmdTable{$CmdPat}->{OwnerList};
+
+		    # Is it on the user match list?
+		    my $UserMatch = 0;
+		    $OwnerList = "*" if ( $OwnerList eq "" );
+		    foreach my $TmpUser ( split( /,/, $OwnerList ) )
+		    {
+			$UserMatch++ if (  ( $TmpUser eq "*" ) ||
+					   ( $TmpUser eq $User )  );
+		    }
+		    last if ( ! $UserMatch );
+
+		    # Update the count...
+		    if ( ! exists $CondorInfo{$Attr} )
+		    {
+			$CondorInfo{$Attr} = 1;
+		    }
+		    else
+		    {
+			$CondorInfo{$Attr}++;
+		    }
+		}
+	    }
+	}
+	close( PS );
+    }
+
+    # Now, run condor_status and gather some more info...
+    if ( $CondorInfo{NumStartds} )
+    {
+	my %Interesting =
+	    ( Name =>			{ Required => 1, },
+	      Arch =>			{ Required => 1, },
+	      OpSys =>			{ Required => 1, },
+	      State =>			{ Required => 1, },
+	      EnteredCurrentState =>	{ Required => 1, },
+	      Activity =>		{ Required => 1, },
+	      EnteredCurrentActivity =>	{ Required => 1, },
+	      LoadAvg =>		{ Required => 1, },
+	      Memory =>			{ Required => 1, },
+	      LastHeardFrom =>		{ Required => 1, },
+	      StarterAbilityList =>	{ Required => 0, },
+	    );
+	if ( open( CSTAT, "condor_status -l -direct $ENV{HOST} |" ) )
+	{
+	    my @Vms;
+	    my %AdInfo;
+	  READLINE:
+	    while ( <CSTAT> )
+	    {
+		chomp;
+
+		# Empty line between ads...
+		if ( ! /\S+/ )
+		{
+		    # Verify that we have all the interesting stuff
+		    next if ( scalar( keys( %AdInfo ) ) == 0 );
+		    foreach my $Key ( keys %Interesting )
+		    {
+			if (  ( $Interesting{$Key}{Required} ) &&
+					    ( ! exists $AdInfo{$Key} )  )
+			{
+			    print STDERR "Throwing out ad because '$Key' is missing\n";
+			    %AdInfo = ( );
+			    next READLINE;
+			}
+		    }
+
+		    # Ok, now pull  it apart..
+		    my $Vm = "";
+		    if ( $AdInfo{Name} =~ /(vm\d+)@(.*)/ )
+		    {
+			$Vm = $1;
+			push( @Vms, $Vm );
+		    }
+		    $CondorInfo{OpSys} = $AdInfo{OpSys};
+		    $CondorInfo{Arch} = $AdInfo{Arch};
+		    $CondorInfo{StarterAbilityList} = $AdInfo{StarterAbilityList}
+			if ( exists $AdInfo{StarterAbilityList} );
+		    $CondorInfo{"State$Vm"} = $AdInfo{State};
+		    $CondorInfo{"Activity$Vm"} = $AdInfo{Activity};
+		    $CondorInfo{"LoadAv$Vm"} = $AdInfo{LoadAvg};
+		    $CondorInfo{"Mem$Vm"} = $AdInfo{Memory};
+		    $CondorInfo{"ActivityTime$Vm"} =
+			( $AdInfo{LastHeardFrom} - $AdInfo{EnteredCurrentActivity} );
+		    %AdInfo = ( );
+		    next;
+		}
+
+		# Skip the 'uniteresting' lines
+		my ( $Attr, $Value ) = split( / = /, $_, 2 );
+		if ( $Value =~ /^\"(.*)\"$/ )
+		{
+		    $Value = $1;
+		}
+
+		# De we care about it??
+		next if ( ! exists $Interesting{$Attr} );
+		$AdInfo{$Attr} = $Value;
+	    }
+	    close( CSTAT );
+	    $CondorInfo{Vms} = join( " ", @Vms );
+	}
+	else
+	{
+	    print STDERR "Can't query startd\n";
+	}
+    }
+
+    # Publish 'em all
+    foreach my $Key ( keys %CondorInfo )
+    {
+	if ( ref( $CondorInfo{$Key} ) eq "ARRAY" )
+	{
+	    $Hawkeye->Store( $Key, join( ",", @{$CondorInfo{$Key}} ) );
+	}
+	elsif (  ( $CondorInfo{$Key} =~ /[a-zA-Z]/ ) ||
+		 ( $CondorInfo{$Key} eq "" )   )
+	{
+	    $Hawkeye->Store( $Key, $CondorInfo{$Key} );
+	}
+	else
+	{
+	    $Hawkeye->StoreNum( $Key, $CondorInfo{$Key} );
+	}
+    }
+
+    # Let 'er rip!
+    $Hawkeye->Publish( );
+}

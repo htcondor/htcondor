@@ -1,0 +1,8 @@
+open_files
+
+Reports the number of file handles the system has open (as reported
+by /proc/sys/fs/file-nr).
+
+INDEX = "Open_Files "
+open_files = <number of open files>
+

@@ -1,0 +1,13 @@
+###################################################
+# Submit file for Job B
+#
+# half.condor will read in a number from STDIN,
+# divide it by two, and print the result on STDOUT. 
+###################################################
+
+Universe   = standard
+Executable = half.condor
+input      = A.out
+output     = B.out
+log        = diamond.log
+Queue

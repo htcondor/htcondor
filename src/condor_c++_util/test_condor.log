@@ -1,0 +1,3213 @@
+000 (2758.000.000) 03/20 21:04:58 Job submitted from host: <128.105.175.133:1027>
+    DAG Node: A
+    foo dee doo: blah blah blah
+    foo dee doo: blah blah blah
+...
+001 (2758.000.000) 03/20 21:05:25 Job executing on host: <128.105.144.30:32794>
+    foo dee doo: blah blah blah
+    foo dee doo: blah blah blah
+...
+005 (2758.000.000) 03/20 21:05:32 Job terminated.
+	(1) Normal termination (return value 0)
+		Usr 0 00:00:06, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:06, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	552  -  Run Bytes Sent By Job
+	3739141  -  Run Bytes Received By Job
+	552  -  Total Bytes Sent By Job
+	3739141  -  Total Bytes Received By Job
+    foo dee doo: blah blah blah
+    foo dee doo: blah blah blah
+...
+000 (2759.000.000) 03/20 21:05:44 Job submitted from host: <128.105.175.133:1027>
+    DAG Node: C
+    foo dee doo: blah blah blah
+    foo dee doo: blah blah blah
+...
+001 (2759.000.000) 03/20 21:06:08 Job executing on host: <128.105.144.30:32794>
+    foo dee doo: blah blah blah
+    foo dee doo: blah blah blah
+...
+005 (2759.000.000) 03/20 21:06:15 Job terminated.
+	(1) Normal termination (return value 0)
+		Usr 0 00:00:06, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:06, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	552  -  Run Bytes Sent By Job
+	3739141  -  Run Bytes Received By Job
+	552  -  Total Bytes Sent By Job
+	3739141  -  Total Bytes Received By Job
+    foo dee doo: blah blah blah
+    foo dee doo: blah blah blah
+...
+001 (-01.-01.-01) 05/22 18:28:20 Job executing on host: 
+...
+004 (-01.-01.-01) 05/22 18:28:20 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+009 (-01.-01.-01) 05/22 18:28:20 Job was aborted by the user.
+...
+019 (-01.-01.-01) 05/22 18:28:20 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+008 (-01.-01.-01) 05/22 18:28:20 
+...
+010 (-01.-01.-01) 05/22 18:28:20 Job was suspended.
+	Number of processes actually suspended: 0
+...
+010 (-01.-01.-01) 05/22 18:28:20 Job was suspended.
+	Number of processes actually suspended: 0
+...
+009 (-01.-01.-01) 05/22 18:28:20 Job was aborted by the user.
+...
+015 (-01.-01.-01) 05/22 18:28:20 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+010 (-01.-01.-01) 05/22 18:28:20 Job was suspended.
+	Number of processes actually suspended: 0
+...
+002 (-01.-01.-01) 05/22 18:28:20 (-1) [Bad error number.]
+...
+019 (-01.-01.-01) 05/22 18:28:20 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+020 (-01.-01.-01) 05/22 18:28:20 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+004 (-01.-01.-01) 05/22 18:28:20 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+020 (-01.-01.-01) 05/22 18:28:20 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+007 (-01.-01.-01) 05/22 18:28:20 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+003 (-01.-01.-01) 05/22 18:28:20 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+015 (-01.-01.-01) 05/22 18:28:20 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+016 (-01.-01.-01) 05/22 18:28:20 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+016 (-01.-01.-01) 05/22 18:28:20 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+017 (-01.-01.-01) 05/22 18:28:20 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+014 (-01.-01.-01) 05/22 18:28:20 Node 0 executing on host: 
+...
+012 (-01.-01.-01) 05/22 18:28:20 Job was held.
+...
+009 (-01.-01.-01) 05/22 18:28:20 Job was aborted by the user.
+...
+002 (-01.-01.-01) 05/22 18:28:20 (-1) [Bad error number.]
+...
+005 (-01.-01.-01) 05/22 18:28:20 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+005 (-01.-01.-01) 05/22 18:28:20 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+013 (-01.-01.-01) 05/22 18:28:20 Job was released.
+...
+001 (-01.-01.-01) 05/22 18:28:20 Job executing on host: 
+...
+019 (-01.-01.-01) 05/22 18:28:20 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+005 (-01.-01.-01) 05/22 18:28:20 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+000 (-01.-01.-01) 05/22 18:28:20 Job submitted from host: 
+...
+003 (-01.-01.-01) 05/22 18:28:20 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+012 (-01.-01.-01) 05/22 18:28:20 Job was held.
+...
+017 (-01.-01.-01) 05/22 18:28:20 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+009 (-01.-01.-01) 05/22 18:28:20 Job was aborted by the user.
+...
+001 (-01.-01.-01) 05/22 18:28:20 Job executing on host: 
+...
+007 (-01.-01.-01) 05/22 18:28:21 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+016 (-01.-01.-01) 05/22 18:28:21 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+016 (-01.-01.-01) 05/22 18:28:21 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+015 (-01.-01.-01) 05/22 18:28:21 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+018 (-01.-01.-01) 05/22 18:28:21 Globus job submission failed!
+    Reason: UNKNOWN
+...
+012 (-01.-01.-01) 05/22 18:28:21 Job was held.
+...
+014 (-01.-01.-01) 05/22 18:28:21 Node 0 executing on host: 
+...
+020 (-01.-01.-01) 05/22 18:28:21 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+010 (-01.-01.-01) 05/22 18:28:21 Job was suspended.
+	Number of processes actually suspended: 0
+...
+020 (-01.-01.-01) 05/22 18:28:21 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+002 (-01.-01.-01) 05/22 18:28:21 (-1) [Bad error number.]
+...
+002 (-01.-01.-01) 05/22 18:28:21 (-1) [Bad error number.]
+...
+015 (-01.-01.-01) 05/22 18:28:21 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+017 (-01.-01.-01) 05/22 18:28:21 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+019 (-01.-01.-01) 05/22 18:28:21 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+007 (-01.-01.-01) 05/22 18:28:21 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+008 (-01.-01.-01) 05/22 18:28:21 
+...
+008 (-01.-01.-01) 05/22 18:28:21 
+...
+009 (-01.-01.-01) 05/22 18:28:21 Job was aborted by the user.
+...
+011 (-01.-01.-01) 05/22 18:28:21 Job was unsuspended.
+...
+011 (-01.-01.-01) 05/22 18:28:21 Job was unsuspended.
+...
+001 (-01.-01.-01) 05/22 18:28:21 Job executing on host: 
+...
+010 (-01.-01.-01) 05/22 18:28:21 Job was suspended.
+	Number of processes actually suspended: 0
+...
+009 (-01.-01.-01) 05/22 18:28:21 Job was aborted by the user.
+...
+006 (-01.-01.-01) 05/22 18:28:21 Image size of job updated: -1
+...
+011 (-01.-01.-01) 05/22 18:28:21 Job was unsuspended.
+...
+012 (-01.-01.-01) 05/22 18:28:21 Job was held.
+...
+017 (-01.-01.-01) 05/22 18:28:21 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+005 (-01.-01.-01) 05/22 18:28:21 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+019 (-01.-01.-01) 05/22 18:28:21 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+018 (-01.-01.-01) 05/22 18:28:21 Globus job submission failed!
+    Reason: UNKNOWN
+...
+010 (-01.-01.-01) 05/22 18:28:21 Job was suspended.
+	Number of processes actually suspended: 0
+...
+014 (-01.-01.-01) 05/22 18:28:21 Node 0 executing on host: 
+...
+012 (-01.-01.-01) 05/22 18:28:21 Job was held.
+...
+003 (-01.-01.-01) 05/22 18:28:21 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+009 (-01.-01.-01) 05/22 18:28:21 Job was aborted by the user.
+...
+003 (-01.-01.-01) 05/22 18:28:21 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+017 (-01.-01.-01) 05/22 18:28:21 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+009 (-01.-01.-01) 05/22 18:28:21 Job was aborted by the user.
+...
+011 (-01.-01.-01) 05/22 18:28:21 Job was unsuspended.
+...
+014 (-01.-01.-01) 05/22 18:28:21 Node 0 executing on host: 
+...
+009 (-01.-01.-01) 05/22 18:28:21 Job was aborted by the user.
+...
+014 (-01.-01.-01) 05/22 18:28:21 Node 0 executing on host: 
+...
+007 (-01.-01.-01) 05/22 18:28:21 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+003 (-01.-01.-01) 05/22 18:28:21 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+012 (-01.-01.-01) 05/22 18:28:21 Job was held.
+...
+014 (-01.-01.-01) 05/22 18:28:21 Node 0 executing on host: 
+...
+011 (-01.-01.-01) 05/22 18:28:21 Job was unsuspended.
+...
+018 (-01.-01.-01) 05/22 18:28:21 Globus job submission failed!
+    Reason: UNKNOWN
+...
+000 (-01.-01.-01) 05/22 18:28:21 Job submitted from host: 
+...
+002 (-01.-01.-01) 05/22 18:28:21 (-1) [Bad error number.]
+...
+008 (-01.-01.-01) 05/22 18:28:21 
+...
+001 (-01.-01.-01) 05/22 18:28:21 Job executing on host: 
+...
+012 (-01.-01.-01) 05/22 18:28:21 Job was held.
+...
+018 (-01.-01.-01) 05/22 18:28:21 Globus job submission failed!
+    Reason: UNKNOWN
+...
+005 (-01.-01.-01) 05/22 18:28:21 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+000 (-01.-01.-01) 05/22 18:28:21 Job submitted from host: 
+...
+007 (-01.-01.-01) 05/22 18:28:21 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+001 (-01.-01.-01) 05/22 18:28:21 Job executing on host: 
+...
+004 (-01.-01.-01) 05/22 18:28:21 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+006 (-01.-01.-01) 05/22 18:28:21 Image size of job updated: -1
+...
+018 (-01.-01.-01) 05/22 18:28:21 Globus job submission failed!
+    Reason: UNKNOWN
+...
+014 (-01.-01.-01) 05/22 18:28:21 Node 0 executing on host: 
+...
+018 (-01.-01.-01) 05/22 18:28:21 Globus job submission failed!
+    Reason: UNKNOWN
+...
+007 (-01.-01.-01) 05/22 18:28:21 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+017 (-01.-01.-01) 05/22 18:28:21 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+007 (-01.-01.-01) 05/22 18:28:21 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+008 (-01.-01.-01) 05/22 18:28:21 
+...
+012 (-01.-01.-01) 05/22 18:28:21 Job was held.
+...
+014 (-01.-01.-01) 05/22 18:28:21 Node 0 executing on host: 
+...
+020 (-01.-01.-01) 05/22 18:28:21 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+003 (-01.-01.-01) 05/22 18:28:21 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+000 (-01.-01.-01) 05/22 18:28:21 Job submitted from host: 
+...
+013 (-01.-01.-01) 05/22 18:28:21 Job was released.
+...
+008 (-01.-01.-01) 05/22 18:28:21 
+...
+004 (-01.-01.-01) 05/22 18:28:21 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+002 (-01.-01.-01) 05/22 18:28:21 (-1) [Bad error number.]
+...
+020 (-01.-01.-01) 05/22 18:28:21 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+013 (-01.-01.-01) 05/22 18:28:21 Job was released.
+...
+000 (-01.-01.-01) 05/22 18:28:21 Job submitted from host: 
+...
+020 (-01.-01.-01) 05/22 18:28:21 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+013 (-01.-01.-01) 05/22 18:28:21 Job was released.
+...
+008 (-01.-01.-01) 05/22 18:28:21 
+...
+019 (-01.-01.-01) 05/22 18:28:21 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+003 (-01.-01.-01) 05/22 18:28:21 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+003 (-01.-01.-01) 05/22 18:28:21 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+004 (-01.-01.-01) 05/22 18:28:21 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+003 (-01.-01.-01) 05/22 18:28:21 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+011 (-01.-01.-01) 05/22 18:28:21 Job was unsuspended.
+...
+003 (-01.-01.-01) 05/22 18:28:21 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+005 (-01.-01.-01) 05/22 18:28:21 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+015 (-01.-01.-01) 05/22 18:28:21 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+019 (-01.-01.-01) 05/22 18:28:21 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+018 (-01.-01.-01) 05/22 18:28:21 Globus job submission failed!
+    Reason: UNKNOWN
+...
+010 (-01.-01.-01) 05/22 18:28:21 Job was suspended.
+	Number of processes actually suspended: 0
+...
+005 (-01.-01.-01) 05/22 18:28:21 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+012 (-01.-01.-01) 05/22 18:28:21 Job was held.
+...
+015 (-01.-01.-01) 05/22 18:28:21 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+014 (-01.-01.-01) 05/22 18:28:21 Node 0 executing on host: 
+...
+001 (-01.-01.-01) 05/22 18:28:21 Job executing on host: 
+...
+008 (-01.-01.-01) 05/22 18:28:21 
+...
+011 (-01.-01.-01) 05/22 18:28:21 Job was unsuspended.
+...
+005 (-01.-01.-01) 05/22 18:28:21 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+007 (-01.-01.-01) 05/22 18:28:21 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+003 (-01.-01.-01) 05/22 18:28:21 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+011 (-01.-01.-01) 05/22 18:28:21 Job was unsuspended.
+...
+011 (-01.-01.-01) 05/22 18:28:21 Job was unsuspended.
+...
+003 (-01.-01.-01) 05/22 18:28:21 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+011 (-01.-01.-01) 05/22 18:28:21 Job was unsuspended.
+...
+003 (-01.-01.-01) 05/22 18:28:21 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+003 (-01.-01.-01) 05/22 18:28:21 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+010 (-01.-01.-01) 05/22 18:28:21 Job was suspended.
+	Number of processes actually suspended: 0
+...
+017 (-01.-01.-01) 05/22 18:28:21 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+010 (-01.-01.-01) 05/22 18:28:21 Job was suspended.
+	Number of processes actually suspended: 0
+...
+009 (-01.-01.-01) 05/22 18:28:21 Job was aborted by the user.
+...
+018 (-01.-01.-01) 05/22 18:28:21 Globus job submission failed!
+    Reason: UNKNOWN
+...
+011 (-01.-01.-01) 05/22 18:28:21 Job was unsuspended.
+...
+011 (-01.-01.-01) 05/22 18:28:21 Job was unsuspended.
+...
+019 (-01.-01.-01) 05/22 18:28:22 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+020 (-01.-01.-01) 05/22 18:28:22 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+012 (-01.-01.-01) 05/22 18:28:22 Job was held.
+...
+004 (-01.-01.-01) 05/22 18:28:22 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+014 (-01.-01.-01) 05/22 18:28:22 Node 0 executing on host: 
+...
+011 (-01.-01.-01) 05/22 18:28:22 Job was unsuspended.
+...
+001 (-01.-01.-01) 05/22 18:28:22 Job executing on host: 
+...
+002 (-01.-01.-01) 05/22 18:28:22 (-1) [Bad error number.]
+...
+014 (-01.-01.-01) 05/22 18:28:22 Node 0 executing on host: 
+...
+013 (-01.-01.-01) 05/22 18:28:22 Job was released.
+...
+017 (-01.-01.-01) 05/22 18:28:22 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+007 (-01.-01.-01) 05/22 18:28:22 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+013 (-01.-01.-01) 05/22 18:28:22 Job was released.
+...
+005 (-01.-01.-01) 05/22 18:28:22 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+016 (-01.-01.-01) 05/22 18:28:22 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+018 (-01.-01.-01) 05/22 18:28:22 Globus job submission failed!
+    Reason: UNKNOWN
+...
+010 (-01.-01.-01) 05/22 18:28:22 Job was suspended.
+	Number of processes actually suspended: 0
+...
+017 (-01.-01.-01) 05/22 18:28:22 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+008 (-01.-01.-01) 05/22 18:28:22 
+...
+000 (-01.-01.-01) 05/22 18:28:22 Job submitted from host: 
+...
+000 (-01.-01.-01) 05/22 18:28:22 Job submitted from host: 
+...
+017 (-01.-01.-01) 05/22 18:28:22 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+001 (-01.-01.-01) 05/22 18:28:22 Job executing on host: 
+...
+003 (-01.-01.-01) 05/22 18:28:22 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+007 (-01.-01.-01) 05/22 18:28:22 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+016 (-01.-01.-01) 05/22 18:28:22 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+011 (-01.-01.-01) 05/22 18:28:22 Job was unsuspended.
+...
+014 (-01.-01.-01) 05/22 18:28:22 Node 0 executing on host: 
+...
+013 (-01.-01.-01) 05/22 18:28:22 Job was released.
+...
+002 (-01.-01.-01) 05/22 18:28:22 (-1) [Bad error number.]
+...
+002 (-01.-01.-01) 05/22 18:28:22 (-1) [Bad error number.]
+...
+012 (-01.-01.-01) 05/22 18:28:22 Job was held.
+...
+001 (-01.-01.-01) 05/22 18:28:22 Job executing on host: 
+...
+014 (-01.-01.-01) 05/22 18:28:22 Node 0 executing on host: 
+...
+016 (-01.-01.-01) 05/22 18:28:22 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+014 (-01.-01.-01) 05/22 18:28:22 Node 0 executing on host: 
+...
+004 (-01.-01.-01) 05/22 18:28:22 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+015 (-01.-01.-01) 05/22 18:28:22 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+016 (-01.-01.-01) 05/22 18:28:22 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+017 (-01.-01.-01) 05/22 18:28:22 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+005 (-01.-01.-01) 05/22 18:28:23 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+012 (-01.-01.-01) 05/22 18:28:23 Job was held.
+...
+003 (-01.-01.-01) 05/22 18:28:23 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+018 (-01.-01.-01) 05/22 18:28:23 Globus job submission failed!
+    Reason: UNKNOWN
+...
+015 (-01.-01.-01) 05/22 18:28:23 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+020 (-01.-01.-01) 05/22 18:28:23 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+013 (-01.-01.-01) 05/22 18:28:23 Job was released.
+...
+004 (-01.-01.-01) 05/22 18:28:23 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+016 (-01.-01.-01) 05/22 18:28:23 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+020 (-01.-01.-01) 05/22 18:28:23 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+002 (-01.-01.-01) 05/22 18:28:23 (-1) [Bad error number.]
+...
+014 (-01.-01.-01) 05/22 18:28:23 Node 0 executing on host: 
+...
+016 (-01.-01.-01) 05/22 18:28:23 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+004 (-01.-01.-01) 05/22 18:28:23 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+016 (-01.-01.-01) 05/22 18:28:23 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+000 (-01.-01.-01) 05/22 18:28:23 Job submitted from host: 
+...
+018 (-01.-01.-01) 05/22 18:28:23 Globus job submission failed!
+    Reason: UNKNOWN
+...
+006 (-01.-01.-01) 05/22 18:28:23 Image size of job updated: -1
+...
+012 (-01.-01.-01) 05/22 18:28:23 Job was held.
+...
+011 (-01.-01.-01) 05/22 18:28:23 Job was unsuspended.
+...
+006 (-01.-01.-01) 05/22 18:28:23 Image size of job updated: -1
+...
+014 (-01.-01.-01) 05/22 18:28:23 Node 0 executing on host: 
+...
+000 (-01.-01.-01) 05/22 18:28:23 Job submitted from host: 
+...
+006 (-01.-01.-01) 05/22 18:28:23 Image size of job updated: -1
+...
+008 (-01.-01.-01) 05/22 18:28:23 
+...
+014 (-01.-01.-01) 05/22 18:28:23 Node 0 executing on host: 
+...
+020 (-01.-01.-01) 05/22 18:28:23 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+010 (-01.-01.-01) 05/22 18:28:23 Job was suspended.
+	Number of processes actually suspended: 0
+...
+008 (-01.-01.-01) 05/22 18:28:23 
+...
+013 (-01.-01.-01) 05/22 18:28:23 Job was released.
+...
+006 (-01.-01.-01) 05/22 18:28:23 Image size of job updated: -1
+...
+011 (-01.-01.-01) 05/22 18:28:23 Job was unsuspended.
+...
+002 (-01.-01.-01) 05/22 18:28:23 (-1) [Bad error number.]
+...
+008 (-01.-01.-01) 05/22 18:28:23 
+...
+007 (-01.-01.-01) 05/22 18:28:24 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+018 (-01.-01.-01) 05/22 18:28:24 Globus job submission failed!
+    Reason: UNKNOWN
+...
+005 (-01.-01.-01) 05/22 18:28:24 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+018 (-01.-01.-01) 05/22 18:28:24 Globus job submission failed!
+    Reason: UNKNOWN
+...
+020 (-01.-01.-01) 05/22 18:28:24 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+019 (-01.-01.-01) 05/22 18:28:24 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+015 (-01.-01.-01) 05/22 18:28:24 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+000 (-01.-01.-01) 05/22 18:28:24 Job submitted from host: 
+...
+013 (-01.-01.-01) 05/22 18:28:24 Job was released.
+...
+011 (-01.-01.-01) 05/22 18:28:24 Job was unsuspended.
+...
+002 (-01.-01.-01) 05/22 18:28:24 (-1) [Bad error number.]
+...
+008 (-01.-01.-01) 05/22 18:28:24 
+...
+009 (-01.-01.-01) 05/22 18:28:24 Job was aborted by the user.
+...
+020 (-01.-01.-01) 05/22 18:28:24 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+012 (-01.-01.-01) 05/22 18:28:24 Job was held.
+...
+001 (-01.-01.-01) 05/22 18:28:24 Job executing on host: 
+...
+008 (-01.-01.-01) 05/22 18:28:24 
+...
+019 (-01.-01.-01) 05/22 18:28:24 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+013 (-01.-01.-01) 05/22 18:28:24 Job was released.
+...
+008 (-01.-01.-01) 05/22 18:28:24 
+...
+004 (-01.-01.-01) 05/22 18:28:24 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+000 (-01.-01.-01) 05/22 18:28:24 Job submitted from host: 
+...
+001 (-01.-01.-01) 05/22 18:28:24 Job executing on host: 
+...
+001 (-01.-01.-01) 05/22 18:28:24 Job executing on host: 
+...
+009 (-01.-01.-01) 05/22 18:28:24 Job was aborted by the user.
+...
+007 (-01.-01.-01) 05/22 18:28:24 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+014 (-01.-01.-01) 05/22 18:28:24 Node 0 executing on host: 
+...
+015 (-01.-01.-01) 05/22 18:28:24 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+017 (-01.-01.-01) 05/22 18:28:24 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+016 (-01.-01.-01) 05/22 18:28:24 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+000 (-01.-01.-01) 05/22 18:28:24 Job submitted from host: 
+...
+003 (-01.-01.-01) 05/22 18:28:24 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+011 (-01.-01.-01) 05/22 18:28:24 Job was unsuspended.
+...
+005 (-01.-01.-01) 05/22 18:28:24 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+019 (-01.-01.-01) 05/22 18:28:24 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+009 (-01.-01.-01) 05/22 18:28:24 Job was aborted by the user.
+...
+002 (-01.-01.-01) 05/22 18:28:24 (-1) [Bad error number.]
+...
+014 (-01.-01.-01) 05/22 18:28:24 Node 0 executing on host: 
+...
+009 (-01.-01.-01) 05/22 18:28:24 Job was aborted by the user.
+...
+015 (-01.-01.-01) 05/22 18:28:24 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+002 (-01.-01.-01) 05/22 18:28:24 (-1) [Bad error number.]
+...
+009 (-01.-01.-01) 05/22 18:28:24 Job was aborted by the user.
+...
+000 (-01.-01.-01) 05/22 18:28:24 Job submitted from host: 
+...
+011 (-01.-01.-01) 05/22 18:28:24 Job was unsuspended.
+...
+008 (-01.-01.-01) 05/22 18:28:24 
+...
+012 (-01.-01.-01) 05/22 18:28:24 Job was held.
+...
+010 (-01.-01.-01) 05/22 18:28:24 Job was suspended.
+	Number of processes actually suspended: 0
+...
+017 (-01.-01.-01) 05/22 18:28:24 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+008 (-01.-01.-01) 05/22 18:28:24 
+...
+003 (-01.-01.-01) 05/22 18:28:24 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+002 (-01.-01.-01) 05/22 18:28:24 (-1) [Bad error number.]
+...
+012 (-01.-01.-01) 05/22 18:28:24 Job was held.
+...
+001 (-01.-01.-01) 05/22 18:28:24 Job executing on host: 
+...
+004 (-01.-01.-01) 05/22 18:28:24 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+011 (-01.-01.-01) 05/22 18:28:24 Job was unsuspended.
+...
+010 (-01.-01.-01) 05/22 18:28:24 Job was suspended.
+	Number of processes actually suspended: 0
+...
+009 (-01.-01.-01) 05/22 18:28:24 Job was aborted by the user.
+...
+004 (-01.-01.-01) 05/22 18:28:24 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+005 (-01.-01.-01) 05/22 18:28:24 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+005 (-01.-01.-01) 05/22 18:28:24 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+019 (-01.-01.-01) 05/22 18:28:24 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+003 (-01.-01.-01) 05/22 18:28:24 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+006 (-01.-01.-01) 05/22 18:28:24 Image size of job updated: -1
+...
+007 (-01.-01.-01) 05/22 18:28:24 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+009 (-01.-01.-01) 05/22 18:28:24 Job was aborted by the user.
+...
+005 (-01.-01.-01) 05/22 18:28:24 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+016 (-01.-01.-01) 05/22 18:28:24 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+011 (-01.-01.-01) 05/22 18:28:24 Job was unsuspended.
+...
+017 (-01.-01.-01) 05/22 18:28:24 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+002 (-01.-01.-01) 05/22 18:28:24 (-1) [Bad error number.]
+...
+003 (-01.-01.-01) 05/22 18:28:24 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+019 (-01.-01.-01) 05/22 18:28:24 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+011 (-01.-01.-01) 05/22 18:28:24 Job was unsuspended.
+...
+003 (-01.-01.-01) 05/22 18:28:24 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+009 (-01.-01.-01) 05/22 18:28:24 Job was aborted by the user.
+...
+018 (-01.-01.-01) 05/22 18:28:24 Globus job submission failed!
+    Reason: UNKNOWN
+...
+013 (-01.-01.-01) 05/22 18:28:24 Job was released.
+...
+018 (-01.-01.-01) 05/22 18:28:24 Globus job submission failed!
+    Reason: UNKNOWN
+...
+012 (-01.-01.-01) 05/22 18:28:24 Job was held.
+...
+001 (-01.-01.-01) 05/22 18:28:24 Job executing on host: 
+...
+000 (-01.-01.-01) 05/22 18:28:24 Job submitted from host: 
+...
+014 (-01.-01.-01) 05/22 18:28:24 Node 0 executing on host: 
+...
+011 (-01.-01.-01) 05/22 18:28:24 Job was unsuspended.
+...
+001 (-01.-01.-01) 05/22 18:28:24 Job executing on host: 
+...
+016 (-01.-01.-01) 05/22 18:28:24 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+000 (-01.-01.-01) 05/22 18:28:24 Job submitted from host: 
+...
+012 (-01.-01.-01) 05/22 18:28:24 Job was held.
+...
+005 (-01.-01.-01) 05/22 18:28:24 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+002 (-01.-01.-01) 05/22 18:28:24 (-1) [Bad error number.]
+...
+015 (-01.-01.-01) 05/22 18:28:24 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+008 (-01.-01.-01) 05/22 18:28:24 
+...
+000 (-01.-01.-01) 05/22 18:28:24 Job submitted from host: 
+...
+018 (-01.-01.-01) 05/22 18:28:24 Globus job submission failed!
+    Reason: UNKNOWN
+...
+013 (-01.-01.-01) 05/22 18:28:24 Job was released.
+...
+006 (-01.-01.-01) 05/22 18:28:24 Image size of job updated: -1
+...
+004 (-01.-01.-01) 05/22 18:28:24 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+016 (-01.-01.-01) 05/22 18:28:24 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+020 (-01.-01.-01) 05/22 18:28:24 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+013 (-01.-01.-01) 05/22 18:28:24 Job was released.
+...
+012 (-01.-01.-01) 05/22 18:28:25 Job was held.
+...
+002 (-01.-01.-01) 05/22 18:28:25 (-1) [Bad error number.]
+...
+016 (-01.-01.-01) 05/22 18:28:25 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+010 (-01.-01.-01) 05/22 18:28:25 Job was suspended.
+	Number of processes actually suspended: 0
+...
+011 (-01.-01.-01) 05/22 18:28:25 Job was unsuspended.
+...
+017 (-01.-01.-01) 05/22 18:28:25 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+017 (-01.-01.-01) 05/22 18:28:25 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+006 (-01.-01.-01) 05/22 18:28:25 Image size of job updated: -1
+...
+008 (-01.-01.-01) 05/22 18:28:25 
+...
+014 (-01.-01.-01) 05/22 18:28:25 Node 0 executing on host: 
+...
+018 (-01.-01.-01) 05/22 18:28:25 Globus job submission failed!
+    Reason: UNKNOWN
+...
+007 (-01.-01.-01) 05/22 18:28:25 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+012 (-01.-01.-01) 05/22 18:28:25 Job was held.
+...
+010 (-01.-01.-01) 05/22 18:28:25 Job was suspended.
+	Number of processes actually suspended: 0
+...
+016 (-01.-01.-01) 05/22 18:28:25 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+014 (-01.-01.-01) 05/22 18:28:25 Node 0 executing on host: 
+...
+005 (-01.-01.-01) 05/22 18:28:25 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+016 (-01.-01.-01) 05/22 18:28:25 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+003 (-01.-01.-01) 05/22 18:28:25 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+008 (-01.-01.-01) 05/22 18:28:25 
+...
+019 (-01.-01.-01) 05/22 18:28:25 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+018 (-01.-01.-01) 05/22 18:28:25 Globus job submission failed!
+    Reason: UNKNOWN
+...
+017 (-01.-01.-01) 05/22 18:28:25 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+017 (-01.-01.-01) 05/22 18:28:25 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+013 (-01.-01.-01) 05/22 18:28:25 Job was released.
+...
+009 (-01.-01.-01) 05/22 18:28:25 Job was aborted by the user.
+...
+002 (-01.-01.-01) 05/22 18:28:25 (-1) [Bad error number.]
+...
+016 (-01.-01.-01) 05/22 18:28:25 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+004 (-01.-01.-01) 05/22 18:28:25 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+002 (-01.-01.-01) 05/22 18:28:25 (-1) [Bad error number.]
+...
+008 (-01.-01.-01) 05/22 18:28:25 
+...
+014 (-01.-01.-01) 05/22 18:28:25 Node 0 executing on host: 
+...
+002 (-01.-01.-01) 05/22 18:28:25 (-1) [Bad error number.]
+...
+002 (-01.-01.-01) 05/22 18:28:25 (-1) [Bad error number.]
+...
+003 (-01.-01.-01) 05/22 18:28:25 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+011 (-01.-01.-01) 05/22 18:28:25 Job was unsuspended.
+...
+017 (-01.-01.-01) 05/22 18:28:25 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+018 (-01.-01.-01) 05/22 18:28:25 Globus job submission failed!
+    Reason: UNKNOWN
+...
+018 (-01.-01.-01) 05/22 18:28:25 Globus job submission failed!
+    Reason: UNKNOWN
+...
+004 (-01.-01.-01) 05/22 18:28:25 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+012 (-01.-01.-01) 05/22 18:28:25 Job was held.
+...
+013 (-01.-01.-01) 05/22 18:28:25 Job was released.
+...
+011 (-01.-01.-01) 05/22 18:28:25 Job was unsuspended.
+...
+001 (-01.-01.-01) 05/22 18:28:25 Job executing on host: 
+...
+002 (-01.-01.-01) 05/22 18:28:25 (-1) [Bad error number.]
+...
+005 (-01.-01.-01) 05/22 18:28:25 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+015 (-01.-01.-01) 05/22 18:28:25 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+008 (-01.-01.-01) 05/22 18:28:25 
+...
+000 (-01.-01.-01) 05/22 18:28:25 Job submitted from host: 
+...
+016 (-01.-01.-01) 05/22 18:28:25 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+016 (-01.-01.-01) 05/22 18:28:25 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+019 (-01.-01.-01) 05/22 18:28:25 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+011 (-01.-01.-01) 05/22 18:28:25 Job was unsuspended.
+...
+010 (-01.-01.-01) 05/22 18:28:25 Job was suspended.
+	Number of processes actually suspended: 0
+...
+016 (-01.-01.-01) 05/22 18:28:25 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+004 (-01.-01.-01) 05/22 18:28:25 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+017 (-01.-01.-01) 05/22 18:28:25 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+016 (-01.-01.-01) 05/22 18:28:25 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+020 (-01.-01.-01) 05/22 18:28:25 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+019 (-01.-01.-01) 05/22 18:28:25 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+016 (-01.-01.-01) 05/22 18:28:25 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+005 (-01.-01.-01) 05/22 18:28:25 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+012 (-01.-01.-01) 05/22 18:28:25 Job was held.
+...
+018 (-01.-01.-01) 05/22 18:28:25 Globus job submission failed!
+    Reason: UNKNOWN
+...
+007 (-01.-01.-01) 05/22 18:28:25 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+013 (-01.-01.-01) 05/22 18:28:25 Job was released.
+...
+007 (-01.-01.-01) 05/22 18:28:25 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+002 (-01.-01.-01) 05/22 18:28:25 (-1) [Bad error number.]
+...
+011 (-01.-01.-01) 05/22 18:28:25 Job was unsuspended.
+...
+004 (-01.-01.-01) 05/22 18:28:26 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+006 (-01.-01.-01) 05/22 18:28:26 Image size of job updated: -1
+...
+000 (-01.-01.-01) 05/22 18:28:26 Job submitted from host: 
+...
+015 (-01.-01.-01) 05/22 18:28:26 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+016 (-01.-01.-01) 05/22 18:28:26 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+001 (-01.-01.-01) 05/22 18:28:26 Job executing on host: 
+...
+018 (-01.-01.-01) 05/22 18:28:26 Globus job submission failed!
+    Reason: UNKNOWN
+...
+000 (-01.-01.-01) 05/22 18:28:26 Job submitted from host: 
+...
+015 (-01.-01.-01) 05/22 18:28:26 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+003 (-01.-01.-01) 05/22 18:28:26 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+000 (-01.-01.-01) 05/22 18:28:26 Job submitted from host: 
+...
+010 (-01.-01.-01) 05/22 18:28:26 Job was suspended.
+	Number of processes actually suspended: 0
+...
+017 (-01.-01.-01) 05/22 18:28:26 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+018 (-01.-01.-01) 05/22 18:28:26 Globus job submission failed!
+    Reason: UNKNOWN
+...
+001 (-01.-01.-01) 05/22 18:28:26 Job executing on host: 
+...
+007 (-01.-01.-01) 05/22 18:28:26 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+011 (-01.-01.-01) 05/22 18:28:26 Job was unsuspended.
+...
+003 (-01.-01.-01) 05/22 18:28:26 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+003 (-01.-01.-01) 05/22 18:28:26 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+004 (-01.-01.-01) 05/22 18:28:26 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+000 (-01.-01.-01) 05/22 18:28:26 Job submitted from host: 
+...
+002 (-01.-01.-01) 05/22 18:28:26 (-1) [Bad error number.]
+...
+000 (-01.-01.-01) 05/22 18:28:26 Job submitted from host: 
+...
+005 (-01.-01.-01) 05/22 18:28:26 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+012 (-01.-01.-01) 05/22 18:28:26 Job was held.
+...
+018 (-01.-01.-01) 05/22 18:28:26 Globus job submission failed!
+    Reason: UNKNOWN
+...
+011 (-01.-01.-01) 05/22 18:28:26 Job was unsuspended.
+...
+005 (-01.-01.-01) 05/22 18:28:26 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+004 (-01.-01.-01) 05/22 18:28:26 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+013 (-01.-01.-01) 05/22 18:28:26 Job was released.
+...
+016 (-01.-01.-01) 05/22 18:28:26 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+006 (-01.-01.-01) 05/22 18:28:26 Image size of job updated: -1
+...
+017 (-01.-01.-01) 05/22 18:28:26 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+014 (-01.-01.-01) 05/22 18:28:26 Node 0 executing on host: 
+...
+001 (-01.-01.-01) 05/22 18:28:26 Job executing on host: 
+...
+012 (-01.-01.-01) 05/22 18:28:26 Job was held.
+...
+015 (-01.-01.-01) 05/22 18:28:26 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+017 (-01.-01.-01) 05/22 18:28:26 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+010 (-01.-01.-01) 05/22 18:28:26 Job was suspended.
+	Number of processes actually suspended: 0
+...
+007 (-01.-01.-01) 05/22 18:28:26 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+020 (-01.-01.-01) 05/22 18:28:26 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+009 (-01.-01.-01) 05/22 18:28:26 Job was aborted by the user.
+...
+018 (-01.-01.-01) 05/22 18:28:26 Globus job submission failed!
+    Reason: UNKNOWN
+...
+016 (-01.-01.-01) 05/22 18:28:26 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+006 (-01.-01.-01) 05/22 18:28:26 Image size of job updated: -1
+...
+017 (-01.-01.-01) 05/22 18:28:26 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+000 (-01.-01.-01) 05/22 18:28:26 Job submitted from host: 
+...
+015 (-01.-01.-01) 05/22 18:28:26 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+020 (-01.-01.-01) 05/22 18:28:26 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+002 (-01.-01.-01) 05/22 18:28:26 (-1) [Bad error number.]
+...
+019 (-01.-01.-01) 05/22 18:28:26 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+020 (-01.-01.-01) 05/22 18:28:26 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+002 (-01.-01.-01) 05/22 18:28:26 (-1) [Bad error number.]
+...
+019 (-01.-01.-01) 05/22 18:28:26 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+002 (-01.-01.-01) 05/22 18:28:26 (-1) [Bad error number.]
+...
+014 (-01.-01.-01) 05/22 18:28:26 Node 0 executing on host: 
+...
+015 (-01.-01.-01) 05/22 18:28:26 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+013 (-01.-01.-01) 05/22 18:28:26 Job was released.
+...
+019 (-01.-01.-01) 05/22 18:28:26 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+017 (-01.-01.-01) 05/22 18:28:26 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+005 (-01.-01.-01) 05/22 18:28:26 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+012 (-01.-01.-01) 05/22 18:28:26 Job was held.
+...
+003 (-01.-01.-01) 05/22 18:28:26 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+002 (-01.-01.-01) 05/22 18:28:26 (-1) [Bad error number.]
+...
+005 (-01.-01.-01) 05/22 18:28:26 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+002 (-01.-01.-01) 05/22 18:28:26 (-1) [Bad error number.]
+...
+012 (-01.-01.-01) 05/22 18:28:26 Job was held.
+...
+019 (-01.-01.-01) 05/22 18:28:26 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+017 (-01.-01.-01) 05/22 18:28:26 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+002 (-01.-01.-01) 05/22 18:28:26 (-1) [Bad error number.]
+...
+005 (-01.-01.-01) 05/22 18:28:26 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+016 (-01.-01.-01) 05/22 18:28:26 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+011 (-01.-01.-01) 05/22 18:28:26 Job was unsuspended.
+...
+000 (-01.-01.-01) 05/22 18:28:26 Job submitted from host: 
+...
+009 (-01.-01.-01) 05/22 18:28:26 Job was aborted by the user.
+...
+015 (-01.-01.-01) 05/22 18:28:26 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+017 (-01.-01.-01) 05/22 18:28:26 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+010 (-01.-01.-01) 05/22 18:28:26 Job was suspended.
+	Number of processes actually suspended: 0
+...
+009 (-01.-01.-01) 05/22 18:28:26 Job was aborted by the user.
+...
+014 (-01.-01.-01) 05/22 18:28:26 Node 0 executing on host: 
+...
+010 (-01.-01.-01) 05/22 18:28:26 Job was suspended.
+	Number of processes actually suspended: 0
+...
+005 (-01.-01.-01) 05/22 18:28:26 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+013 (-01.-01.-01) 05/22 18:28:26 Job was released.
+...
+012 (-01.-01.-01) 05/22 18:28:27 Job was held.
+...
+004 (-01.-01.-01) 05/22 18:28:27 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+016 (-01.-01.-01) 05/22 18:28:27 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+005 (-01.-01.-01) 05/22 18:28:27 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+017 (-01.-01.-01) 05/22 18:28:27 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+006 (-01.-01.-01) 05/22 18:28:27 Image size of job updated: -1
+...
+002 (-01.-01.-01) 05/22 18:28:27 (-1) [Bad error number.]
+...
+013 (-01.-01.-01) 05/22 18:28:27 Job was released.
+...
+012 (-01.-01.-01) 05/22 18:28:27 Job was held.
+...
+014 (-01.-01.-01) 05/22 18:28:27 Node 0 executing on host: 
+...
+014 (-01.-01.-01) 05/22 18:28:27 Node 0 executing on host: 
+...
+012 (-01.-01.-01) 05/22 18:28:27 Job was held.
+...
+018 (-01.-01.-01) 05/22 18:28:27 Globus job submission failed!
+    Reason: UNKNOWN
+...
+016 (-01.-01.-01) 05/22 18:28:27 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+003 (-01.-01.-01) 05/22 18:28:27 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+014 (-01.-01.-01) 05/22 18:28:27 Node 0 executing on host: 
+...
+012 (-01.-01.-01) 05/22 18:28:27 Job was held.
+...
+003 (-01.-01.-01) 05/22 18:28:27 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+017 (-01.-01.-01) 05/22 18:28:27 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+005 (-01.-01.-01) 05/22 18:28:27 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+014 (-01.-01.-01) 05/22 18:28:27 Node 0 executing on host: 
+...
+018 (-01.-01.-01) 05/22 18:28:27 Globus job submission failed!
+    Reason: UNKNOWN
+...
+015 (-01.-01.-01) 05/22 18:28:27 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+006 (-01.-01.-01) 05/22 18:28:27 Image size of job updated: -1
+...
+012 (-01.-01.-01) 05/22 18:28:27 Job was held.
+...
+002 (-01.-01.-01) 05/22 18:28:27 (-1) [Bad error number.]
+...
+015 (-01.-01.-01) 05/22 18:28:27 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+006 (-01.-01.-01) 05/22 18:28:27 Image size of job updated: -1
+...
+012 (-01.-01.-01) 05/22 18:28:27 Job was held.
+...
+000 (-01.-01.-01) 05/22 18:28:27 Job submitted from host: 
+...
+017 (-01.-01.-01) 05/22 18:28:27 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+003 (-01.-01.-01) 05/22 18:28:27 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+002 (-01.-01.-01) 05/22 18:28:27 (-1) [Bad error number.]
+...
+012 (-01.-01.-01) 05/22 18:28:27 Job was held.
+...
+006 (-01.-01.-01) 05/22 18:28:27 Image size of job updated: -1
+...
+019 (-01.-01.-01) 05/22 18:28:27 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+019 (-01.-01.-01) 05/22 18:28:27 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+008 (-01.-01.-01) 05/22 18:28:27 
+...
+011 (-01.-01.-01) 05/22 18:28:27 Job was unsuspended.
+...
+008 (-01.-01.-01) 05/22 18:28:27 
+...
+000 (-01.-01.-01) 05/22 18:28:27 Job submitted from host: 
+...
+005 (-01.-01.-01) 05/22 18:28:27 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+020 (-01.-01.-01) 05/22 18:28:27 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+016 (-01.-01.-01) 05/22 18:28:27 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+019 (-01.-01.-01) 05/22 18:28:27 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+000 (-01.-01.-01) 05/22 18:28:27 Job submitted from host: 
+...
+009 (-01.-01.-01) 05/22 18:28:27 Job was aborted by the user.
+...
+009 (-01.-01.-01) 05/22 18:28:27 Job was aborted by the user.
+...
+004 (-01.-01.-01) 05/22 18:28:27 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+005 (-01.-01.-01) 05/22 18:28:27 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+012 (-01.-01.-01) 05/22 18:28:27 Job was held.
+...
+016 (-01.-01.-01) 05/22 18:28:27 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+000 (-01.-01.-01) 05/22 18:28:27 Job submitted from host: 
+...
+004 (-01.-01.-01) 05/22 18:28:27 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+002 (-01.-01.-01) 05/22 18:28:27 (-1) [Bad error number.]
+...
+013 (-01.-01.-01) 05/22 18:28:27 Job was released.
+...
+006 (-01.-01.-01) 05/22 18:28:27 Image size of job updated: -1
+...
+015 (-01.-01.-01) 05/22 18:28:27 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+017 (-01.-01.-01) 05/22 18:28:27 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+016 (-01.-01.-01) 05/22 18:28:27 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+013 (-01.-01.-01) 05/22 18:28:27 Job was released.
+...
+013 (-01.-01.-01) 05/22 18:28:27 Job was released.
+...
+017 (-01.-01.-01) 05/22 18:28:27 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+013 (-01.-01.-01) 05/22 18:28:27 Job was released.
+...
+003 (-01.-01.-01) 05/22 18:28:27 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+001 (-01.-01.-01) 05/22 18:28:27 Job executing on host: 
+...
+011 (-01.-01.-01) 05/22 18:28:27 Job was unsuspended.
+...
+020 (-01.-01.-01) 05/22 18:28:27 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+009 (-01.-01.-01) 05/22 18:28:27 Job was aborted by the user.
+...
+000 (-01.-01.-01) 05/22 18:28:27 Job submitted from host: 
+...
+005 (-01.-01.-01) 05/22 18:28:27 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+007 (-01.-01.-01) 05/22 18:28:27 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+003 (-01.-01.-01) 05/22 18:28:27 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+002 (-01.-01.-01) 05/22 18:28:27 (-1) [Bad error number.]
+...
+002 (-01.-01.-01) 05/22 18:28:27 (-1) [Bad error number.]
+...
+020 (-01.-01.-01) 05/22 18:28:27 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+002 (-01.-01.-01) 05/22 18:28:27 (-1) [Bad error number.]
+...
+009 (-01.-01.-01) 05/22 18:28:27 Job was aborted by the user.
+...
+006 (-01.-01.-01) 05/22 18:28:27 Image size of job updated: -1
+...
+004 (-01.-01.-01) 05/22 18:28:27 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+013 (-01.-01.-01) 05/22 18:28:27 Job was released.
+...
+019 (-01.-01.-01) 05/22 18:28:27 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+019 (-01.-01.-01) 05/22 18:28:27 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+013 (-01.-01.-01) 05/22 18:28:27 Job was released.
+...
+002 (-01.-01.-01) 05/22 18:28:27 (-1) [Bad error number.]
+...
+000 (-01.-01.-01) 05/22 18:28:27 Job submitted from host: 
+...
+003 (-01.-01.-01) 05/22 18:28:27 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+007 (-01.-01.-01) 05/22 18:28:27 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+013 (-01.-01.-01) 05/22 18:28:27 Job was released.
+...
+020 (-01.-01.-01) 05/22 18:28:27 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+000 (-01.-01.-01) 05/22 18:28:27 Job submitted from host: 
+...
+004 (-01.-01.-01) 05/22 18:28:27 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+011 (-01.-01.-01) 05/22 18:28:27 Job was unsuspended.
+...
+018 (-01.-01.-01) 05/22 18:28:27 Globus job submission failed!
+    Reason: UNKNOWN
+...
+017 (-01.-01.-01) 05/22 18:28:28 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+012 (-01.-01.-01) 05/22 18:28:28 Job was held.
+...
+019 (-01.-01.-01) 05/22 18:28:28 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+008 (-01.-01.-01) 05/22 18:28:28 
+...
+011 (-01.-01.-01) 05/22 18:28:28 Job was unsuspended.
+...
+005 (-01.-01.-01) 05/22 18:28:28 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+006 (-01.-01.-01) 05/22 18:29:01 Image size of job updated: -1
+...
+016 (-01.-01.-01) 05/22 18:29:01 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+013 (-01.-01.-01) 05/22 18:29:01 Job was released.
+...
+009 (-01.-01.-01) 05/22 18:29:01 Job was aborted by the user.
+...
+018 (-01.-01.-01) 05/22 18:29:01 Globus job submission failed!
+    Reason: UNKNOWN
+...
+013 (-01.-01.-01) 05/22 18:29:01 Job was released.
+...
+006 (-01.-01.-01) 05/22 18:29:01 Image size of job updated: -1
+...
+018 (-01.-01.-01) 05/22 18:29:01 Globus job submission failed!
+    Reason: UNKNOWN
+...
+000 (-01.-01.-01) 05/22 18:29:01 Job submitted from host: 
+...
+013 (-01.-01.-01) 05/22 18:29:01 Job was released.
+...
+002 (-01.-01.-01) 05/22 18:29:01 (-1) [Bad error number.]
+...
+013 (-01.-01.-01) 05/22 18:29:01 Job was released.
+...
+011 (-01.-01.-01) 05/22 18:29:01 Job was unsuspended.
+...
+000 (-01.-01.-01) 05/22 18:29:01 Job submitted from host: 
+...
+003 (-01.-01.-01) 05/22 18:29:01 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+011 (-01.-01.-01) 05/22 18:29:01 Job was unsuspended.
+...
+019 (-01.-01.-01) 05/22 18:29:01 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+007 (-01.-01.-01) 05/22 18:29:01 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+018 (-01.-01.-01) 05/22 18:29:01 Globus job submission failed!
+    Reason: UNKNOWN
+...
+009 (-01.-01.-01) 05/22 18:29:01 Job was aborted by the user.
+...
+004 (-01.-01.-01) 05/22 18:29:01 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+019 (-01.-01.-01) 05/22 18:29:01 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+013 (-01.-01.-01) 05/22 18:29:01 Job was released.
+...
+013 (-01.-01.-01) 05/22 18:29:01 Job was released.
+...
+014 (-01.-01.-01) 05/22 18:29:01 Node 0 executing on host: 
+...
+010 (-01.-01.-01) 05/22 18:29:01 Job was suspended.
+	Number of processes actually suspended: 0
+...
+004 (-01.-01.-01) 05/22 18:29:01 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+010 (-01.-01.-01) 05/22 18:29:01 Job was suspended.
+	Number of processes actually suspended: 0
+...
+016 (-01.-01.-01) 05/22 18:29:01 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+013 (-01.-01.-01) 05/22 18:29:01 Job was released.
+...
+015 (-01.-01.-01) 05/22 18:29:01 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+001 (-01.-01.-01) 05/22 18:29:01 Job executing on host: 
+...
+006 (-01.-01.-01) 05/22 18:29:01 Image size of job updated: -1
+...
+005 (-01.-01.-01) 05/22 18:29:01 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+008 (-01.-01.-01) 05/22 18:29:01 
+...
+001 (-01.-01.-01) 05/22 18:29:01 Job executing on host: 
+...
+017 (-01.-01.-01) 05/22 18:29:01 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+012 (-01.-01.-01) 05/22 18:29:01 Job was held.
+...
+020 (-01.-01.-01) 05/22 18:29:01 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+017 (-01.-01.-01) 05/22 18:29:01 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+004 (-01.-01.-01) 05/22 18:29:01 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+020 (-01.-01.-01) 05/22 18:29:01 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+007 (-01.-01.-01) 05/22 18:29:01 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+013 (-01.-01.-01) 05/22 18:29:01 Job was released.
+...
+018 (-01.-01.-01) 05/22 18:29:01 Globus job submission failed!
+    Reason: UNKNOWN
+...
+010 (-01.-01.-01) 05/22 18:29:01 Job was suspended.
+	Number of processes actually suspended: 0
+...
+002 (-01.-01.-01) 05/22 18:29:01 (-1) [Bad error number.]
+...
+014 (-01.-01.-01) 05/22 18:29:01 Node 0 executing on host: 
+...
+015 (-01.-01.-01) 05/22 18:29:01 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+020 (-01.-01.-01) 05/22 18:29:01 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+002 (-01.-01.-01) 05/22 18:29:01 (-1) [Bad error number.]
+...
+020 (-01.-01.-01) 05/22 18:29:01 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+016 (-01.-01.-01) 05/22 18:29:01 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+016 (-01.-01.-01) 05/22 18:29:01 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+010 (-01.-01.-01) 05/22 18:29:01 Job was suspended.
+	Number of processes actually suspended: 0
+...
+007 (-01.-01.-01) 05/22 18:29:01 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+003 (-01.-01.-01) 05/22 18:29:01 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+015 (-01.-01.-01) 05/22 18:29:01 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+017 (-01.-01.-01) 05/22 18:29:01 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+019 (-01.-01.-01) 05/22 18:29:01 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+005 (-01.-01.-01) 05/22 18:29:01 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+010 (-01.-01.-01) 05/22 18:29:01 Job was suspended.
+	Number of processes actually suspended: 0
+...
+018 (-01.-01.-01) 05/22 18:29:01 Globus job submission failed!
+    Reason: UNKNOWN
+...
+012 (-01.-01.-01) 05/22 18:29:01 Job was held.
+...
+015 (-01.-01.-01) 05/22 18:29:01 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+003 (-01.-01.-01) 05/22 18:29:01 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+013 (-01.-01.-01) 05/22 18:29:01 Job was released.
+...
+009 (-01.-01.-01) 05/22 18:29:01 Job was aborted by the user.
+...
+015 (-01.-01.-01) 05/22 18:29:01 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+010 (-01.-01.-01) 05/22 18:29:01 Job was suspended.
+	Number of processes actually suspended: 0
+...
+005 (-01.-01.-01) 05/22 18:29:01 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+018 (-01.-01.-01) 05/22 18:29:01 Globus job submission failed!
+    Reason: UNKNOWN
+...
+009 (-01.-01.-01) 05/22 18:29:01 Job was aborted by the user.
+...
+012 (-01.-01.-01) 05/22 18:29:01 Job was held.
+...
+008 (-01.-01.-01) 05/22 18:29:01 
+...
+004 (-01.-01.-01) 05/22 18:29:01 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+000 (-01.-01.-01) 05/22 18:29:01 Job submitted from host: 
+...
+010 (-01.-01.-01) 05/22 18:29:01 Job was suspended.
+	Number of processes actually suspended: 0
+...
+018 (-01.-01.-01) 05/22 18:29:01 Globus job submission failed!
+    Reason: UNKNOWN
+...
+015 (-01.-01.-01) 05/22 18:29:01 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+008 (-01.-01.-01) 05/22 18:29:01 
+...
+019 (-01.-01.-01) 05/22 18:29:01 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+014 (-01.-01.-01) 05/22 18:29:01 Node 0 executing on host: 
+...
+001 (-01.-01.-01) 05/22 18:29:01 Job executing on host: 
+...
+012 (-01.-01.-01) 05/22 18:29:01 Job was held.
+...
+002 (-01.-01.-01) 05/22 18:29:01 (-1) [Bad error number.]
+...
+009 (-01.-01.-01) 05/22 18:29:01 Job was aborted by the user.
+...
+015 (-01.-01.-01) 05/22 18:29:01 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+017 (-01.-01.-01) 05/22 18:29:01 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+003 (-01.-01.-01) 05/22 18:29:01 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+011 (-01.-01.-01) 05/22 18:29:01 Job was unsuspended.
+...
+020 (-01.-01.-01) 05/22 18:29:01 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+013 (-01.-01.-01) 05/22 18:29:01 Job was released.
+...
+006 (-01.-01.-01) 05/22 18:29:01 Image size of job updated: -1
+...
+011 (-01.-01.-01) 05/22 18:29:01 Job was unsuspended.
+...
+006 (-01.-01.-01) 05/22 18:29:01 Image size of job updated: -1
+...
+007 (-01.-01.-01) 05/22 18:29:01 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+004 (-01.-01.-01) 05/22 18:29:01 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+015 (-01.-01.-01) 05/22 18:29:01 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+020 (-01.-01.-01) 05/22 18:29:01 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+012 (-01.-01.-01) 05/22 18:29:01 Job was held.
+...
+019 (-01.-01.-01) 05/22 18:29:01 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+017 (-01.-01.-01) 05/22 18:29:01 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+001 (-01.-01.-01) 05/22 18:29:01 Job executing on host: 
+...
+008 (-01.-01.-01) 05/22 18:29:01 
+...
+005 (-01.-01.-01) 05/22 18:29:01 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+003 (-01.-01.-01) 05/22 18:29:01 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+008 (-01.-01.-01) 05/22 18:29:01 
+...
+013 (-01.-01.-01) 05/22 18:29:01 Job was released.
+...
+001 (-01.-01.-01) 05/22 18:29:01 Job executing on host: 
+...
+003 (-01.-01.-01) 05/22 18:29:01 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+000 (-01.-01.-01) 05/22 18:29:01 Job submitted from host: 
+...
+020 (-01.-01.-01) 05/22 18:29:01 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+015 (-01.-01.-01) 05/22 18:29:01 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+002 (-01.-01.-01) 05/22 18:29:01 (-1) [Bad error number.]
+...
+009 (-01.-01.-01) 05/22 18:29:01 Job was aborted by the user.
+...
+017 (-01.-01.-01) 05/22 18:29:01 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+011 (-01.-01.-01) 05/22 18:29:01 Job was unsuspended.
+...
+003 (-01.-01.-01) 05/22 18:29:01 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+011 (-01.-01.-01) 05/22 18:29:01 Job was unsuspended.
+...
+014 (-01.-01.-01) 05/22 18:29:01 Node 0 executing on host: 
+...
+012 (-01.-01.-01) 05/22 18:29:01 Job was held.
+...
+011 (-01.-01.-01) 05/22 18:29:01 Job was unsuspended.
+...
+005 (-01.-01.-01) 05/22 18:29:01 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+018 (-01.-01.-01) 05/22 18:29:02 Globus job submission failed!
+    Reason: UNKNOWN
+...
+020 (-01.-01.-01) 05/22 18:29:02 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+011 (-01.-01.-01) 05/22 18:29:02 Job was unsuspended.
+...
+002 (-01.-01.-01) 05/22 18:29:02 (-1) [Bad error number.]
+...
+001 (-01.-01.-01) 05/22 18:29:02 Job executing on host: 
+...
+003 (-01.-01.-01) 05/22 18:29:02 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+001 (-01.-01.-01) 05/22 18:29:02 Job executing on host: 
+...
+014 (-01.-01.-01) 05/22 18:29:02 Node 0 executing on host: 
+...
+001 (-01.-01.-01) 05/22 18:29:02 Job executing on host: 
+...
+017 (-01.-01.-01) 05/22 18:29:02 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+015 (-01.-01.-01) 05/22 18:29:02 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+010 (-01.-01.-01) 05/22 18:29:02 Job was suspended.
+	Number of processes actually suspended: 0
+...
+020 (-01.-01.-01) 05/22 18:29:02 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+018 (-01.-01.-01) 05/22 18:29:02 Globus job submission failed!
+    Reason: UNKNOWN
+...
+016 (-01.-01.-01) 05/22 18:29:02 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+012 (-01.-01.-01) 05/22 18:29:02 Job was held.
+...
+017 (-01.-01.-01) 05/22 18:29:02 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+017 (-01.-01.-01) 05/22 18:29:02 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+013 (-01.-01.-01) 05/22 18:29:02 Job was released.
+...
+014 (-01.-01.-01) 05/22 18:29:02 Node 0 executing on host: 
+...
+012 (-01.-01.-01) 05/22 18:29:02 Job was held.
+...
+015 (-01.-01.-01) 05/22 18:29:02 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+002 (-01.-01.-01) 05/22 18:29:02 (-1) [Bad error number.]
+...
+006 (-01.-01.-01) 05/22 18:29:02 Image size of job updated: -1
+...
+003 (-01.-01.-01) 05/22 18:29:02 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+003 (-01.-01.-01) 05/22 18:29:02 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+016 (-01.-01.-01) 05/22 18:29:02 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+015 (-01.-01.-01) 05/22 18:29:02 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+015 (-01.-01.-01) 05/22 18:29:02 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+004 (-01.-01.-01) 05/22 18:29:02 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+020 (-01.-01.-01) 05/22 18:29:02 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+010 (-01.-01.-01) 05/22 18:29:02 Job was suspended.
+	Number of processes actually suspended: 0
+...
+003 (-01.-01.-01) 05/22 18:29:02 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+008 (-01.-01.-01) 05/22 18:29:02 
+...
+012 (-01.-01.-01) 05/22 18:29:02 Job was held.
+...
+005 (-01.-01.-01) 05/22 18:29:02 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+012 (-01.-01.-01) 05/22 18:29:02 Job was held.
+...
+014 (-01.-01.-01) 05/22 18:29:02 Node 0 executing on host: 
+...
+019 (-01.-01.-01) 05/22 18:29:02 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+011 (-01.-01.-01) 05/22 18:29:02 Job was unsuspended.
+...
+010 (-01.-01.-01) 05/22 18:29:02 Job was suspended.
+	Number of processes actually suspended: 0
+...
+011 (-01.-01.-01) 05/22 18:29:02 Job was unsuspended.
+...
+019 (-01.-01.-01) 05/22 18:29:02 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+009 (-01.-01.-01) 05/22 18:29:02 Job was aborted by the user.
+...
+006 (-01.-01.-01) 05/22 18:29:02 Image size of job updated: -1
+...
+015 (-01.-01.-01) 05/22 18:29:02 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+019 (-01.-01.-01) 05/22 18:29:02 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+003 (-01.-01.-01) 05/22 18:29:02 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+011 (-01.-01.-01) 05/22 18:29:02 Job was unsuspended.
+...
+011 (-01.-01.-01) 05/22 18:29:02 Job was unsuspended.
+...
+015 (-01.-01.-01) 05/22 18:29:02 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+000 (-01.-01.-01) 05/22 18:29:02 Job submitted from host: 
+...
+003 (-01.-01.-01) 05/22 18:29:02 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+018 (-01.-01.-01) 05/22 18:29:02 Globus job submission failed!
+    Reason: UNKNOWN
+...
+005 (-01.-01.-01) 05/22 18:29:02 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+004 (-01.-01.-01) 05/22 18:29:02 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+019 (-01.-01.-01) 05/22 18:29:02 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+000 (-01.-01.-01) 05/22 18:29:02 Job submitted from host: 
+...
+020 (-01.-01.-01) 05/22 18:29:02 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+014 (-01.-01.-01) 05/22 18:29:02 Node 0 executing on host: 
+...
+004 (-01.-01.-01) 05/22 18:29:02 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+017 (-01.-01.-01) 05/22 18:29:02 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+003 (-01.-01.-01) 05/22 18:29:02 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+007 (-01.-01.-01) 05/22 18:29:02 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+003 (-01.-01.-01) 05/22 18:29:02 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+014 (-01.-01.-01) 05/22 18:29:02 Node 0 executing on host: 
+...
+010 (-01.-01.-01) 05/22 18:29:02 Job was suspended.
+	Number of processes actually suspended: 0
+...
+013 (-01.-01.-01) 05/22 18:29:02 Job was released.
+...
+005 (-01.-01.-01) 05/22 18:29:02 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+008 (-01.-01.-01) 05/22 18:29:02 
+...
+003 (-01.-01.-01) 05/22 18:29:02 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+015 (-01.-01.-01) 05/22 18:29:02 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+019 (-01.-01.-01) 05/22 18:29:02 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+002 (-01.-01.-01) 05/22 18:29:02 (-1) [Bad error number.]
+...
+001 (-01.-01.-01) 05/22 18:29:02 Job executing on host: 
+...
+003 (-01.-01.-01) 05/22 18:29:02 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+015 (-01.-01.-01) 05/22 18:29:02 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+020 (-01.-01.-01) 05/22 18:29:02 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+006 (-01.-01.-01) 05/22 18:29:02 Image size of job updated: -1
+...
+003 (-01.-01.-01) 05/22 18:29:02 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+009 (-01.-01.-01) 05/22 18:29:02 Job was aborted by the user.
+...
+019 (-01.-01.-01) 05/22 18:29:02 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+004 (-01.-01.-01) 05/22 18:29:02 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+012 (-01.-01.-01) 05/22 18:29:02 Job was held.
+...
+014 (-01.-01.-01) 05/22 18:29:02 Node 0 executing on host: 
+...
+009 (-01.-01.-01) 05/22 18:29:02 Job was aborted by the user.
+...
+017 (-01.-01.-01) 05/22 18:29:02 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+013 (-01.-01.-01) 05/22 18:29:02 Job was released.
+...
+007 (-01.-01.-01) 05/22 18:29:02 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+014 (-01.-01.-01) 05/22 18:29:02 Node 0 executing on host: 
+...
+006 (-01.-01.-01) 05/22 18:29:02 Image size of job updated: -1
+...
+009 (-01.-01.-01) 05/22 18:29:02 Job was aborted by the user.
+...
+008 (-01.-01.-01) 05/22 18:29:02 
+...
+007 (-01.-01.-01) 05/22 18:29:02 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+016 (-01.-01.-01) 05/22 18:29:02 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+011 (-01.-01.-01) 05/22 18:29:02 Job was unsuspended.
+...
+019 (-01.-01.-01) 05/22 18:29:02 Globus Resource Back Up
+    RM-Contact: UNKNOWN
+...
+006 (-01.-01.-01) 05/22 18:29:03 Image size of job updated: -1
+...
+003 (-01.-01.-01) 05/22 18:29:03 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+003 (-01.-01.-01) 05/22 18:29:03 Job was checkpointed.
+	Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+...
+012 (-01.-01.-01) 05/22 18:29:03 Job was held.
+...
+005 (-01.-01.-01) 05/22 18:29:03 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+018 (-01.-01.-01) 05/22 18:29:03 Globus job submission failed!
+    Reason: UNKNOWN
+...
+009 (-01.-01.-01) 05/22 18:29:03 Job was aborted by the user.
+...
+007 (-01.-01.-01) 05/22 18:29:03 Shadow exception!
+	
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+017 (-01.-01.-01) 05/22 18:29:03 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+012 (-01.-01.-01) 05/22 18:29:03 Job was held.
+...
+001 (-01.-01.-01) 05/22 18:29:03 Job executing on host: 
+...
+017 (-01.-01.-01) 05/22 18:29:03 Job submitted to Globus
+    RM-Contact: UNKNOWN
+    JM-Contact: UNKNOWN
+    Can-Restart-JM: 0
+...
+016 (-01.-01.-01) 05/22 18:29:03 POST Script terminated.
+	(0) Abnormal termination (signal -1)
+...
+004 (-01.-01.-01) 05/22 18:29:03 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+005 (-01.-01.-01) 05/22 18:29:03 Job terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+014 (-01.-01.-01) 05/22 18:29:03 Node 0 executing on host: 
+...
+006 (-01.-01.-01) 05/22 18:29:03 Image size of job updated: -1
+...
+015 (-01.-01.-01) 05/22 18:29:03 Node -1 terminated.
+	(0) Abnormal termination (signal -1)
+	(0) No core file
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Node
+	0  -  Run Bytes Received By Node
+	0  -  Total Bytes Sent By Node
+	0  -  Total Bytes Received By Node
+...
+008 (-01.-01.-01) 05/22 18:29:03 
+...
+013 (-01.-01.-01) 05/22 18:29:03 Job was released.
+...
+009 (-01.-01.-01) 05/22 18:29:03 Job was aborted by the user.
+...
+000 (-01.-01.-01) 05/22 18:29:03 Job submitted from host: 
+...
+018 (-01.-01.-01) 05/22 18:29:03 Globus job submission failed!
+    Reason: UNKNOWN
+...
+000 (-01.-01.-01) 05/22 18:29:03 Job submitted from host: 
+...
+004 (-01.-01.-01) 05/22 18:29:03 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+006 (-01.-01.-01) 05/22 18:29:03 Image size of job updated: -1
+...
+009 (-01.-01.-01) 05/22 18:29:03 Job was aborted by the user.
+...
+009 (-01.-01.-01) 05/22 18:29:03 Job was aborted by the user.
+...
+002 (-01.-01.-01) 05/22 18:29:03 (-1) [Bad error number.]
+...
+018 (-01.-01.-01) 05/22 18:29:03 Globus job submission failed!
+    Reason: UNKNOWN
+...
+008 (-01.-01.-01) 05/22 18:29:03 
+...
+006 (-01.-01.-01) 05/22 18:29:03 Image size of job updated: -1
+...
+020 (-01.-01.-01) 05/22 18:29:03 Detected Down Globus Resource
+    RM-Contact: UNKNOWN
+...
+011 (-01.-01.-01) 05/22 18:29:03 Job was unsuspended.
+...

@@ -1,0 +1,11 @@
+memory_used
+
+Reports memory usage, in bytes.
+
+INDEX = "Memory_Used "
+mem_total = <number of bytes of physical memory in the system> 
+mem_free = <number of free bytes of physical memory in the system>
+mem_used = <number of used bytes of physical memory in the system> 
+swap_total = <number of bytes of swap memory in the system> 
+swap_free = <number of free bytes of swap memory in the system> 
+swap_used = <number of used bytes of swap memory in the system>

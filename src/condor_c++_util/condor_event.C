@@ -1,0 +1,3224 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+#include "condor_common.h"
+#include <string.h>
+#include <errno.h>
+#include "condor_event.h"
+#include "user_log.c++.h"
+#include "condor_string.h"
+#include "condor_classad.h"
+#include "iso_dates.h"
+#include "condor_attributes.h"
+
+//--------------------------------------------------------
+#include "condor_debug.h"
+//--------------------------------------------------------
+
+
+#define ESCAPE { errorNumber=(errno==EAGAIN) ? ULOG_NO_EVENT : ULOG_UNK_ERROR;\
+					 return 0; }
+
+const char * ULogEventNumberNames[] = {
+	"ULOG_SUBMIT",					// Job submitted
+	"ULOG_EXECUTE",					// Job now running
+	"ULOG_EXECUTABLE_ERROR",		// Error in executable
+	"ULOG_CHECKPOINTED",			// Job was checkpointed
+	"ULOG_JOB_EVICTED",				// Job evicted from machine
+	"ULOG_JOB_TERMINATED",			// Job terminated
+	"ULOG_IMAGE_SIZE",				// Image size of job updated
+	"ULOG_SHADOW_EXCEPTION",		// Shadow threw an exception
+	"ULOG_GENERIC",
+	"ULOG_JOB_ABORTED",  			// Job aborted
+	"ULOG_JOB_SUSPENDED",			// Job was suspended
+	"ULOG_JOB_UNSUSPENDED",			// Job was unsuspended
+	"ULOG_JOB_HELD",  				// Job was held
+	"ULOG_JOB_RELEASED",  			// Job was released
+	"ULOG_NODE_EXECUTE",  			// MPI (or parallel) Node executing
+	"ULOG_NODE_TERMINATED",  		// MPI (or parallel) Node terminated
+	"ULOG_POST_SCRIPT_TERMINATED",	// POST script terminated
+	"ULOG_GLOBUS_SUBMIT",			// Job Submitted to Globus
+	"ULOG_GLOBUS_SUBMIT_FAILED",	// Globus Submit Failed 
+	"ULOG_GLOBUS_RESOURCE_UP",		// Globus Machine UP 
+	"ULOG_GLOBUS_RESOURCE_DOWN",	// Globus Machine Down
+	"ULOG_REMOTE_ERROR",            // Remote Error
+};
+
+const char * ULogEventOutcomeNames[] = {
+  "ULOG_OK       ",
+  "ULOG_NO_EVENT ",
+  "ULOG_RD_ERROR ",
+  "ULOG_UNK_ERROR"
+};
+
+
+ULogEvent *
+instantiateEvent (ClassAd *ad)
+{
+	ULogEvent *event;
+	int eventNumber;
+	if(!ad->LookupInteger("EventTypeNumber",eventNumber)) return NULL;
+
+	event = instantiateEvent((ULogEventNumber)eventNumber);
+	if(event) event->initFromClassAd(ad);
+	return event;
+}
+
+ULogEvent *
+instantiateEvent (ULogEventNumber event)
+{
+	switch (event)
+	{
+	  case ULOG_SUBMIT:
+		return new SubmitEvent;
+
+	  case ULOG_EXECUTE:
+		return new ExecuteEvent;
+
+	  case ULOG_EXECUTABLE_ERROR:
+		return new ExecutableErrorEvent;
+
+	  case ULOG_CHECKPOINTED:
+		return new CheckpointedEvent;
+
+	  case ULOG_JOB_EVICTED:
+		return new JobEvictedEvent;
+
+	  case ULOG_JOB_TERMINATED:
+		return new JobTerminatedEvent;
+
+	  case ULOG_IMAGE_SIZE:
+		return new JobImageSizeEvent;
+
+	  case ULOG_SHADOW_EXCEPTION:
+		return new ShadowExceptionEvent;
+
+	  case ULOG_GENERIC:
+		return new GenericEvent;
+
+	  case ULOG_JOB_ABORTED:
+		return new JobAbortedEvent;
+
+	  case ULOG_JOB_SUSPENDED:
+		return new JobSuspendedEvent;
+
+	  case ULOG_JOB_UNSUSPENDED:
+		return new JobUnsuspendedEvent;
+
+	  case ULOG_JOB_HELD:
+		return new JobHeldEvent;
+
+	  case ULOG_JOB_RELEASED:
+		return new JobReleasedEvent;
+
+	  case ULOG_NODE_EXECUTE:
+		return new NodeExecuteEvent;
+
+	  case ULOG_NODE_TERMINATED:
+		return new NodeTerminatedEvent;
+
+	  case ULOG_POST_SCRIPT_TERMINATED:
+		return new PostScriptTerminatedEvent;
+
+	  case ULOG_GLOBUS_SUBMIT:
+		return new GlobusSubmitEvent;
+
+	  case ULOG_GLOBUS_SUBMIT_FAILED:
+		return new GlobusSubmitFailedEvent;
+
+	  case ULOG_GLOBUS_RESOURCE_DOWN:
+		return new GlobusResourceDownEvent;
+
+	  case ULOG_GLOBUS_RESOURCE_UP:
+		return new GlobusResourceUpEvent;
+
+	case ULOG_REMOTE_ERROR:
+		return new RemoteErrorEvent;
+
+	  default:
+        EXCEPT( "Invalid ULogEventNumber" );
+
+	}
+
+    return 0;
+}
+
+
+ULogEvent::
+ULogEvent()
+{
+	struct tm *tm;
+	time_t     clock;
+
+	eventNumber = (ULogEventNumber) - 1;
+	cluster = proc = subproc = -1;
+
+	(void) time ((time_t *)&clock);
+	tm = localtime ((time_t *)&clock);
+	eventTime = *tm;
+}
+
+
+ULogEvent::
+~ULogEvent ()
+{
+}
+
+
+int ULogEvent::
+getEvent (FILE *file)
+{
+	if( !file ) {
+		dprintf( D_ALWAYS, "ERROR: file == NULL in ULogEvent::getEvent()\n" );
+		return 0;
+	}
+	return (readHeader (file) && readEvent (file));
+}
+
+
+int ULogEvent::
+putEvent (FILE *file)
+{
+	if( !file ) {
+		dprintf( D_ALWAYS, "ERROR: file == NULL in ULogEvent::putEvent()\n" );
+		return 0;
+	}
+	return (writeHeader (file) && writeEvent (file));
+}
+
+// This function reads in the header of an event from the UserLog and fills
+// the fields of the event object.  It does *not* read the event number.  The 
+// caller is supposed to read the event number, instantiate the appropriate 
+// event type using instantiateEvent(), and then call readEvent() of the 
+// returned event.
+int ULogEvent::
+readHeader (FILE *file)
+{
+	int retval;
+	
+	// read from file
+	retval = fscanf (file, " (%d.%d.%d) %d/%d %d:%d:%d ", 
+					 &cluster, &proc, &subproc,
+					 &(eventTime.tm_mon), &(eventTime.tm_mday), 
+					 &(eventTime.tm_hour), &(eventTime.tm_min), 
+					 &(eventTime.tm_sec));
+
+	// check if all fields were successfully read
+	if (retval != 8)
+	{
+		return 0;
+	}
+
+	// recall that tm_mon+1 was written to log; decrement to compensate
+	eventTime.tm_mon--;
+
+	return 1;
+}
+
+
+// Write the header for the event to the file
+int ULogEvent::
+writeHeader (FILE *file)
+{
+	int       retval;
+
+	// write header
+	retval = fprintf (file, "%03d (%03d.%03d.%03d) %02d/%02d %02d:%02d:%02d ",
+					  eventNumber, 
+					  cluster, proc, subproc,
+					  eventTime.tm_mon+1, eventTime.tm_mday, 
+					  eventTime.tm_hour, eventTime.tm_min, eventTime.tm_sec);
+
+	// check if all fields were sucessfully written
+	if (retval < 0) 
+	{
+		return 0;
+	}
+
+	return 1;
+}
+
+ClassAd* ULogEvent::
+toClassAd()
+{
+	ClassAd* myad = new ClassAd;
+
+	char buf0[128];
+
+	if( eventNumber >= 0 ) {
+		snprintf(buf0, 128, "EventTypeNumber = %d", eventNumber);
+		buf0[127] = 0;
+		if( !myad->Insert(buf0) ) return NULL;
+	}
+	
+	switch( (ULogEventNumber) eventNumber )
+	{
+	  case ULOG_SUBMIT:
+		myad->SetMyTypeName("SubmitEvent");
+		break;
+	  case ULOG_EXECUTE:
+		myad->SetMyTypeName("ExecuteEvent");
+		break;
+	  case ULOG_EXECUTABLE_ERROR:
+		myad->SetMyTypeName("ExecutableErrorEvent");
+		break;
+	  case ULOG_CHECKPOINTED:
+		myad->SetMyTypeName("CheckpointedEvent");
+		break;
+	  case ULOG_JOB_EVICTED:
+		myad->SetMyTypeName("JobEvictedEvent");
+		break;
+	  case ULOG_JOB_TERMINATED:
+		myad->SetMyTypeName("JobTerminatedEvent");
+		break;
+	  case ULOG_IMAGE_SIZE:
+		myad->SetMyTypeName("JobImageSizeEvent");
+		break;
+	  case ULOG_SHADOW_EXCEPTION:
+		myad->SetMyTypeName("ShadowExceptionEvent");
+		break;
+	  case ULOG_GENERIC:
+		myad->SetMyTypeName("GenericEvent");
+		break;
+	  case ULOG_JOB_ABORTED:
+		myad->SetMyTypeName("JobAbortedEvent");
+		break;
+	  case ULOG_JOB_SUSPENDED:
+		myad->SetMyTypeName("JobSuspendedEvent");
+		break;
+	  case ULOG_JOB_UNSUSPENDED:
+		myad->SetMyTypeName("JobUnsuspendedEvent");
+		break;
+	  case ULOG_JOB_HELD:
+		myad->SetMyTypeName("JobHeldEvent");
+		break;
+	  case ULOG_JOB_RELEASED:
+		myad->SetMyTypeName("JobReleaseEvent");
+		break;
+	  case ULOG_NODE_EXECUTE:
+		myad->SetMyTypeName("NodeExecuteEvent");
+		break;
+	  case ULOG_NODE_TERMINATED:
+		myad->SetMyTypeName("NodeTerminatedEvent");
+		break;
+	  case ULOG_POST_SCRIPT_TERMINATED:
+		myad->SetMyTypeName("PostScriptTerminatedEvent");
+		break;
+	  case ULOG_GLOBUS_SUBMIT:
+		myad->SetMyTypeName("GlobusSubmitEvent");
+		break;
+	  case ULOG_GLOBUS_SUBMIT_FAILED:
+		myad->SetMyTypeName("GlobusSubmitFailedEvent");
+		break;
+	  case ULOG_GLOBUS_RESOURCE_UP:
+		myad->SetMyTypeName("GlobusResourceUpEvent");
+		break;
+	  case ULOG_GLOBUS_RESOURCE_DOWN:
+		myad->SetMyTypeName("GlobusResourceDownEvent");
+		break;
+	case ULOG_REMOTE_ERROR:
+		myad->SetMyTypeName("RemoteErrorEvent");
+		break;
+	  default:
+		return NULL;
+	}
+
+	const struct tm tmdup = eventTime;
+	char* eventTimeStr = time_to_iso8601(tmdup, ISO8601_ExtendedFormat,
+										 ISO8601_DateAndTime, FALSE);
+	if( eventTimeStr ) {
+		MyString buf1;
+		buf1.sprintf("EventTime = \"%s\"", eventTimeStr);
+		free(eventTimeStr);
+		if( !myad->Insert(buf1.Value()) ) return NULL;
+	} else {
+		return NULL;
+	}
+
+	if( cluster >= 0 ) {
+		snprintf(buf0, 128, "Cluster = %d", cluster);
+		buf0[127] = 0;
+		if( !myad->Insert(buf0) ) return NULL;
+	}
+
+	if( proc >= 0 ) {
+		snprintf(buf0, 128, "Proc = %d", proc);
+		buf0[127] = 0;
+		if( !myad->Insert(buf0) ) return NULL;
+	}
+
+	if( subproc >= 0 ) {
+		snprintf(buf0, 128, "Subproc = %d", subproc);
+		buf0[127] = 0;
+		if( !myad->Insert(buf0) ) return NULL;
+	}
+	
+	return myad;
+}
+
+void ULogEvent::
+initFromClassAd(ClassAd* ad)
+{
+	if( !ad ) return;
+	int en;
+	if ( ad->LookupInteger("EventTypeNumber", en) ) {
+		eventNumber = (ULogEventNumber) en;
+	}
+	char* timestr = NULL;
+	if( ad->LookupString("EventTime", &timestr) ) {
+		bool f = FALSE;
+		iso8601_to_time(timestr, &eventTime, &f);
+		free(timestr);
+	}
+	ad->LookupInteger("Cluster", cluster);
+	ad->LookupInteger("Proc", proc);
+	ad->LookupInteger("Subproc", subproc);
+}
+
+// ----- the SubmitEvent class
+SubmitEvent::
+SubmitEvent()
+{	
+	submitHost [0] = '\0';
+	submitEventLogNotes = NULL;
+	submitEventUserNotes = NULL;
+	eventNumber = ULOG_SUBMIT;
+}
+
+SubmitEvent::
+~SubmitEvent()
+{
+    if( submitEventLogNotes ) {
+        delete[] submitEventLogNotes;
+    }
+    if( submitEventUserNotes ) {
+        delete[] submitEventUserNotes;
+    }
+}
+
+int SubmitEvent::
+writeEvent (FILE *file)
+{	
+	int retval = fprintf (file, "Job submitted from host: %s\n", submitHost);
+	if (retval < 0)
+	{
+		return 0;
+	}
+	if( submitEventLogNotes ) {
+		retval = fprintf( file, "    %.8191s\n", submitEventLogNotes );
+		if( retval < 0 ) {
+			return 0;
+		}
+	}
+	if( submitEventUserNotes ) {
+		retval = fprintf( file, "    %.8191s\n", submitEventUserNotes );
+		if( retval < 0 ) {
+			return 0;
+		}
+	}
+	return (1);
+}
+
+int SubmitEvent::
+readEvent (FILE *file)
+{
+	char s[8192];
+	s[0] = '\0';
+	delete[] submitEventLogNotes;
+	submitEventLogNotes = NULL;
+	if( fscanf( file, "Job submitted from host: %s\n", submitHost ) != 1 ) {
+		return 0;
+	}
+
+	// see if the next line contains an optional event notes string,
+	// and, if not, rewind, because that means we slurped in the next
+	// event delimiter looking for it...
+ 
+	fpos_t filep;
+	fgetpos( file, &filep );
+     
+	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
+		fsetpos( file, &filep );
+		return 1;
+	}
+ 
+	// remove trailing newline
+	s[ strlen( s ) - 1 ] = '\0';
+
+	submitEventLogNotes = strnewp( s );
+
+	// see if the next line contains an optional user event notes
+	// string, and, if not, rewind, because that means we slurped in
+	// the next event delimiter looking for it...
+ 
+	fgetpos( file, &filep );
+     
+	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
+		fsetpos( file, &filep );
+		return 1;
+	}
+ 
+	// remove trailing newline
+	s[ strlen( s ) - 1 ] = '\0';
+
+	submitEventUserNotes = strnewp( s );
+	return 1;
+}
+
+ClassAd* SubmitEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	char buf0[512];
+
+	if( submitHost && submitHost[0] ) {
+		snprintf(buf0, 512, "SubmitHost = \"%s\"", submitHost);
+		buf0[511] = 0;
+		if( !myad->Insert(buf0) ) return NULL;
+	}
+
+	if( submitEventLogNotes && submitEventLogNotes[0] ) {
+		MyString buf2;
+		buf2.sprintf("LogNotes = \"%s\"", submitEventLogNotes);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
+	}
+	if( submitEventUserNotes && submitEventUserNotes[0] ) {
+		MyString buf3;
+		buf3.sprintf("UserNotes = \"%s\"", submitEventUserNotes);
+		if( !myad->Insert(buf3.Value()) ) return NULL;
+	}
+
+	return myad;
+}
+
+void SubmitEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+	if( ad->LookupString("SubmitHost", submitHost, 128) ) {
+		submitHost[127] = 0;
+	}
+
+	// this fanagling is to ensure we don't malloc a pointer then delete it
+	char* mallocstr = NULL;
+	ad->LookupString("LogNotes", &mallocstr);
+	if( mallocstr ) {
+		submitEventLogNotes = new char[strlen(mallocstr) + 1];
+		strcpy(submitEventLogNotes, mallocstr);
+		free(mallocstr);
+		mallocstr = NULL;
+	}
+
+	// this fanagling is to ensure we don't malloc a pointer then delete it
+	ad->LookupString("UserNotes", &mallocstr);
+	if( mallocstr ) {
+		submitEventUserNotes = new char[strlen(mallocstr) + 1];
+		strcpy(submitEventUserNotes, mallocstr);
+		free(mallocstr);
+		mallocstr = NULL;
+	}
+}
+
+// ----- the GlobusSubmitEvent class
+GlobusSubmitEvent::
+GlobusSubmitEvent()
+{	
+	eventNumber = ULOG_GLOBUS_SUBMIT;
+	rmContact = NULL;
+	jmContact = NULL;
+	restartableJM = false;
+}
+
+GlobusSubmitEvent::
+~GlobusSubmitEvent()
+{
+	delete[] rmContact;
+	delete[] jmContact;
+}
+
+int GlobusSubmitEvent::
+writeEvent (FILE *file)
+{
+	const char * unknown = "UNKNOWN";
+	const char * rm = unknown;
+	const char * jm = unknown;
+
+	int retval = fprintf (file, "Job submitted to Globus\n");
+	if (retval < 0)
+	{
+		return 0;
+	}
+	
+	if ( rmContact ) rm = rmContact;
+	if ( jmContact ) jm = jmContact;
+
+	retval = fprintf( file, "    RM-Contact: %.8191s\n", rm );
+	if( retval < 0 ) {
+		return 0;
+	}
+
+	retval = fprintf( file, "    JM-Contact: %.8191s\n", jm );
+	if( retval < 0 ) {
+		return 0;
+	}
+
+	int newjm = 0;
+	if ( restartableJM ) { 
+		newjm = 1;
+	}
+	retval = fprintf( file, "    Can-Restart-JM: %d\n", newjm );
+	if( retval < 0 ) {
+		return 0;
+	}
+
+	return (1);
+}
+
+int GlobusSubmitEvent::
+readEvent (FILE *file)
+{
+	char s[8192];
+
+	delete[] rmContact;
+	delete[] jmContact;
+	rmContact = NULL;
+	jmContact = NULL;
+	int retval = fscanf (file, "Job submitted to Globus\n");
+    if (retval != 0)
+    {
+		return 0;
+    }
+	s[0] = '\0';
+	retval = fscanf( file, "    RM-Contact: %8191s\n", s );
+	if ( retval != 1 )
+	{
+		return 0;
+	}
+	rmContact = strnewp(s);
+	retval = fscanf( file, "    JM-Contact: %8191s\n", s );
+	if ( retval != 1 )
+	{
+		return 0;
+	}
+	jmContact = strnewp(s);
+	
+	int newjm = 0;
+	retval = fscanf( file, "    Can-Restart-JM: %d\n", &newjm );
+	if ( retval != 1 )
+	{
+		return 0;
+	}
+	if ( newjm ) {
+		restartableJM = true;
+	} else {
+		restartableJM = false;
+	}
+    
+	
+	return 1;
+}
+
+ClassAd* GlobusSubmitEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	char buf0[512];
+	
+	if( rmContact && rmContact[0] ) {
+		MyString buf2;
+		buf2.sprintf("RMContact = \"%s\"",rmContact);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
+	}
+	if( jmContact && jmContact[0] ) {
+		MyString buf3;
+		buf3.sprintf("JMContact = \"%s\"",jmContact);
+		if( !myad->Insert(buf3.Value()) ) return NULL;
+	}
+
+	snprintf(buf0, 512, "RestartableJM = %s", restartableJM ? "TRUE" : "FALSE");
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+
+	return myad;
+}
+
+void GlobusSubmitEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+	
+	// this fanagling is to ensure we don't malloc a pointer then delete it
+	char* mallocstr = NULL;
+	ad->LookupString("RMContact", &mallocstr);
+	if( mallocstr ) {
+		rmContact = new char[strlen(mallocstr) + 1];
+		strcpy(rmContact, mallocstr);
+		free(mallocstr);
+	}
+
+	// this fanagling is to ensure we don't malloc a pointer then delete it
+	mallocstr = NULL;
+	ad->LookupString("JMContact", &mallocstr);
+	if( mallocstr ) {
+		jmContact = new char[strlen(mallocstr) + 1];
+		strcpy(jmContact, mallocstr);
+		free(mallocstr);
+	}
+
+	int reallybool;
+	if( ad->LookupInteger("RestartableJM", reallybool) ) {
+		restartableJM = reallybool ? TRUE : FALSE;
+	}
+}
+
+// ----- the GlobusSubmitFailedEvent class
+GlobusSubmitFailedEvent::
+GlobusSubmitFailedEvent()
+{	
+	eventNumber = ULOG_GLOBUS_SUBMIT_FAILED;
+	reason = NULL;
+}
+
+GlobusSubmitFailedEvent::
+~GlobusSubmitFailedEvent()
+{
+	delete[] reason;
+}
+
+int GlobusSubmitFailedEvent::
+writeEvent (FILE *file)
+{
+	const char * unknown = "UNKNOWN";
+	const char * reasonString = unknown;
+
+	int retval = fprintf (file, "Globus job submission failed!\n");
+	if (retval < 0)
+	{
+		return 0;
+	}
+	
+	if ( reason ) reasonString = reason;
+
+	retval = fprintf( file, "    Reason: %.8191s\n", reasonString );
+	if( retval < 0 ) {
+		return 0;
+	}
+
+	return (1);
+}
+
+int GlobusSubmitFailedEvent::
+readEvent (FILE *file)
+{
+	char s[8192];
+
+	delete[] reason;
+	reason = NULL;
+	int retval = fscanf (file, "Globus job submission failed!\n");
+    if (retval != 0)
+    {
+		return 0;
+    }
+	s[0] = '\0';
+
+	fpos_t filep;
+	fgetpos( file, &filep );
+     
+	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
+		fsetpos( file, &filep );
+		return 1;
+	}
+ 
+	// remove trailing newline
+	s[ strlen( s ) - 1 ] = '\0';
+
+	// Copy after the "Reason: "
+	reason = strnewp( &s[8] );
+	return 1;
+}
+
+ClassAd* GlobusSubmitFailedEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	
+	if( reason && reason[0] ) {
+		MyString buf2;
+		buf2.sprintf("Reason = \"%s\"", reason);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
+	}
+
+	return myad;
+}
+
+void GlobusSubmitFailedEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	// this fanagling is to ensure we don't malloc a pointer then delete it
+	char* mallocstr = NULL;
+	ad->LookupString("Reason", &mallocstr);
+	if( mallocstr ) {
+		reason = new char[strlen(mallocstr) + 1];
+		strcpy(reason, mallocstr);
+		free(mallocstr);
+	}
+}
+
+// ----- the GlobusResourceUp class
+GlobusResourceUpEvent::
+GlobusResourceUpEvent()
+{	
+	eventNumber = ULOG_GLOBUS_RESOURCE_UP;
+	rmContact = NULL;
+}
+
+GlobusResourceUpEvent::
+~GlobusResourceUpEvent()
+{
+	delete[] rmContact;
+}
+
+int GlobusResourceUpEvent::
+writeEvent (FILE *file)
+{
+	const char * unknown = "UNKNOWN";
+	const char * rm = unknown;
+
+	int retval = fprintf (file, "Globus Resource Back Up\n");
+	if (retval < 0)
+	{
+		return 0;
+	}
+	
+	if ( rmContact ) rm = rmContact;
+
+	retval = fprintf( file, "    RM-Contact: %.8191s\n", rm );
+	if( retval < 0 ) {
+		return 0;
+	}
+
+	return (1);
+}
+
+int GlobusResourceUpEvent::
+readEvent (FILE *file)
+{
+	char s[8192];
+
+	delete[] rmContact;
+	rmContact = NULL;
+	int retval = fscanf (file, "Globus Resource Back Up\n");
+    if (retval != 0)
+    {
+		return 0;
+    }
+	s[0] = '\0';
+	retval = fscanf( file, "    RM-Contact: %8191s\n", s );
+	if ( retval != 1 )
+	{
+		return 0;
+	}
+	rmContact = strnewp(s);	
+	return 1;
+}
+
+ClassAd* GlobusResourceUpEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	
+	if( rmContact && rmContact[0] ) {
+		MyString buf2;
+		buf2.sprintf("RMContact = \"%s\"",rmContact);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
+	}
+
+	return myad;
+}
+
+void GlobusResourceUpEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	// this fanagling is to ensure we don't malloc a pointer then delete it
+	char* mallocstr = NULL;
+	ad->LookupString("RMContact", &mallocstr);
+	if( mallocstr ) {
+		rmContact = new char[strlen(mallocstr) + 1];
+		strcpy(rmContact, mallocstr);
+		free(mallocstr);
+	}
+}
+
+
+// ----- the GlobusResourceUp class
+GlobusResourceDownEvent::
+GlobusResourceDownEvent()
+{	
+	eventNumber = ULOG_GLOBUS_RESOURCE_DOWN;
+	rmContact = NULL;
+}
+
+GlobusResourceDownEvent::
+~GlobusResourceDownEvent()
+{
+	delete[] rmContact;
+}
+
+int GlobusResourceDownEvent::
+writeEvent (FILE *file)
+{
+	const char * unknown = "UNKNOWN";
+	const char * rm = unknown;
+
+	int retval = fprintf (file, "Detected Down Globus Resource\n");
+	if (retval < 0)
+	{
+		return 0;
+	}
+	
+	if ( rmContact ) rm = rmContact;
+
+	retval = fprintf( file, "    RM-Contact: %.8191s\n", rm );
+	if( retval < 0 ) {
+		return 0;
+	}
+
+	return (1);
+}
+
+int GlobusResourceDownEvent::
+readEvent (FILE *file)
+{
+	char s[8192];
+
+	delete[] rmContact;
+	rmContact = NULL;
+	int retval = fscanf (file, "Detected Down Globus Resource\n");
+    if (retval != 0)
+    {
+		return 0;
+    }
+	s[0] = '\0';
+	retval = fscanf( file, "    RM-Contact: %8191s\n", s );
+	if ( retval != 1 )
+	{
+		return 0;
+	}
+	rmContact = strnewp(s);	
+	return 1;
+}
+
+ClassAd* GlobusResourceDownEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	
+	if( rmContact && rmContact[0] ) {
+		MyString buf2;
+		buf2.sprintf("RMContact = \"%s\"",rmContact);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
+	}
+
+	return myad;
+}
+
+void GlobusResourceDownEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	// this fanagling is to ensure we don't malloc a pointer then delete it
+	char* mallocstr = NULL;
+	ad->LookupString("RMContact", &mallocstr);
+	if( mallocstr ) {
+		rmContact = new char[strlen(mallocstr) + 1];
+		strcpy(rmContact, mallocstr);
+		free(mallocstr);
+	}
+}
+
+
+// ----- the GenericEvent class
+GenericEvent::
+GenericEvent()
+{	
+	info[0] = '\0';
+	eventNumber = ULOG_GENERIC;
+}
+
+GenericEvent::
+~GenericEvent()
+{
+}
+
+int GenericEvent::
+writeEvent(FILE *file)
+{
+    int retval = fprintf(file, "%s\n", info);
+    if (retval < 0)
+    {
+	return 0;
+    }
+    
+    return 1;
+}
+
+int GenericEvent::
+readEvent(FILE *file)
+{
+    int retval = fscanf(file, "%[^\n]\n", info);
+    if (retval < 0)
+    {
+	return 0;
+    }
+    return 1;
+}
+	
+ClassAd* GenericEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	char buf0[512];
+
+	if( info && info[0] ) {
+		snprintf(buf0, 512, "Info = \"%s\"", info);
+		buf0[511] = 0;
+		if( !myad->Insert(buf0) ) return NULL;
+	}
+
+	return myad;
+}
+
+void GenericEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	if( ad->LookupString("Info", info, 128) ) {
+		info[127] = 0;
+	}
+}
+
+void GenericEvent::
+setInfoText(char const *str)
+{
+	strncpy(info,str,sizeof(info));
+	info[sizeof(info)] = '\0'; //ensure null-termination
+}
+
+// ----- the RemoteErrorEvent class
+RemoteErrorEvent::RemoteErrorEvent()
+{	
+	error_str = NULL;
+	execute_host[0] = daemon_name[0] = '\0';
+	eventNumber = ULOG_REMOTE_ERROR;
+	critical_error = true;
+}
+
+RemoteErrorEvent::~RemoteErrorEvent()
+{
+	delete error_str;
+}
+
+int
+RemoteErrorEvent::writeEvent(FILE *file)
+{
+	char const *error_type = "Error";
+
+	if(!critical_error) error_type = "Warning";
+
+    int retval = fprintf(
+	  file,
+	  "%s from %s on %s:\n",
+	  error_type,
+	  daemon_name,
+	  execute_host);
+
+    if (retval < 0)
+    {
+	return 0;
+    }
+
+	//output each line of error_str, indented by one tab
+	char const *line = error_str;
+	if(line)
+	while(*line) {
+		char *next_line = strchr(line,'\n');
+		if(next_line) *next_line = '\0';
+
+		retval = fprintf(file,"\t%s\n",line);
+		if(retval < 0) return 0;
+
+		if(!next_line) break;
+		*next_line = '\n';
+		line = next_line+1;
+	}
+
+    return 1;
+}
+
+int
+RemoteErrorEvent::readEvent(FILE *file)
+{
+	char line[8192];
+	char error_type[128];
+    int retval = fscanf(
+	  file,
+	  "%127s from %127s on %127s\n",
+	  error_type,
+	  daemon_name,
+	  execute_host);
+
+    if (retval < 0)
+    {
+	return 0;
+    }
+
+	error_type[sizeof(error_type)-1] = '\0';
+	daemon_name[sizeof(daemon_name)-1] = '\0';
+	execute_host[sizeof(execute_host)-1] = '\0';
+
+	if(!strcmp(error_type,"Error")) critical_error = true;
+	else if(!strcmp(error_type,"Warning")) critical_error = false;
+
+	//Now read one or more error_str lines from the body.
+	MyString lines;
+
+	while(!feof(file)) {
+		// see if the next line contains an optional event notes string,
+		// and, if not, rewind, because that means we slurped in the next
+		// event delimiter looking for it...
+
+		fpos_t filep;
+		fgetpos( file, &filep );
+     
+		if( !fgets(line, sizeof(line), file) || strcmp(line, "...\n") == 0 ) {
+			fsetpos( file, &filep );
+			break;
+		}
+
+		char *l = strchr(line,'\n');
+		if(l) *l = '\0';
+
+		l = line;
+		if(l[0] == '\t') l++;
+
+		if(lines.Length()) lines += "\n";
+		lines += l;
+	}
+
+	setErrorText(lines.GetCStr());
+    return 1;
+}
+
+ClassAd*
+RemoteErrorEvent::toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+
+	if(*daemon_name) {
+		myad->Assign("Daemon",daemon_name);
+	}
+	if(*execute_host) {
+		myad->Assign("ExecuteHost",execute_host);
+	}
+	if(error_str) {
+		myad->Assign("ErrorMsg",error_str);
+	}
+	if(!critical_error) { //default is true
+		myad->Assign("CriticalError",(int)critical_error);
+	}
+
+	return myad;
+}
+
+void
+RemoteErrorEvent::initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+	char buf[ATTRLIST_MAX_EXPRESSION];
+	int crit_err = 0;
+
+	if( !ad ) return;
+
+	if( ad->LookupString("Daemon", daemon_name, sizeof(daemon_name)) ) {
+		daemon_name[sizeof(daemon_name)-1] = '\0';
+	}
+	if( ad->LookupString("ExecuteHost", execute_host, sizeof(execute_host)) ) {
+		execute_host[sizeof(execute_host)-1] = '\0';
+	}
+	if( ad->LookupString("ErrorMsg", buf, sizeof(buf)) ) {
+		buf[sizeof(buf)-1] = '\0';
+		setErrorText(buf);
+	}
+	if( ad->LookupInteger("CriticalError",crit_err) ) {
+		critical_error = (crit_err != 0);
+	}
+}
+
+void
+RemoteErrorEvent::setCriticalError(bool f)
+{
+	critical_error = f;
+}
+
+void
+RemoteErrorEvent::setErrorText(char const *str)
+{
+	char *s = strnewp(str);
+	delete [] error_str;
+	error_str = s;
+}
+
+void
+RemoteErrorEvent::setDaemonName(char const *str)
+{
+	if(!str) str = "";
+	strncpy(daemon_name,str,sizeof(daemon_name));
+	daemon_name[sizeof(daemon_name)-1] = '\0';
+}
+
+void
+RemoteErrorEvent::setExecuteHost(char const *str)
+{
+	if(!str) str = "";
+	strncpy(execute_host,str,sizeof(execute_host));
+	execute_host[sizeof(execute_host)-1] = '\0';
+}
+
+// ----- the ExecuteEvent class
+ExecuteEvent::
+ExecuteEvent()
+{	
+	executeHost [0] = '\0';
+	eventNumber = ULOG_EXECUTE;
+}
+
+ExecuteEvent::
+~ExecuteEvent()
+{
+}
+
+
+int ExecuteEvent::
+writeEvent (FILE *file)
+{	
+	int retval = fprintf (file, "Job executing on host: %s\n", executeHost);
+	if (retval < 0)
+	{
+		return 0;
+	}
+	return 1;
+}
+
+int ExecuteEvent::
+readEvent (FILE *file)
+{
+	int retval  = fscanf (file, "Job executing on host: %s", executeHost);
+	if (retval != 1)
+	{
+		return 0;
+	}
+	return 1;
+}
+
+ClassAd* ExecuteEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	char buf0[512];
+
+	if( executeHost && executeHost[0] ) {
+		snprintf(buf0, 512, "ExecuteHost = \"%s\"", executeHost);
+		buf0[511] = 0;
+		if( !myad->Insert(buf0) ) return NULL;
+	}
+
+	return myad;
+}
+
+void ExecuteEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	if( !ad->LookupString("ExecuteHost", executeHost, 128) ) {
+		executeHost[127] = 0;
+	}
+}
+
+
+// ----- the ExecutableError class
+ExecutableErrorEvent::
+ExecutableErrorEvent()
+{
+	errType = (ExecErrorType) -1;
+	eventNumber = ULOG_EXECUTABLE_ERROR;
+}
+
+
+ExecutableErrorEvent::
+~ExecutableErrorEvent()
+{
+}
+
+int ExecutableErrorEvent::
+writeEvent (FILE *file)
+{
+	int retval;
+
+	switch (errType)
+	{
+	  case CONDOR_EVENT_NOT_EXECUTABLE:
+		retval = fprintf (file, "(%d) Job file not executable.\n", errType);
+		break;
+
+	  case CONDOR_EVENT_BAD_LINK:
+		retval=fprintf(file,"(%d) Job not properly linked for Condor.\n", errType);
+		break;
+
+	  default:
+		retval = fprintf (file, "(%d) [Bad error number.]\n", errType);
+	}
+	if (retval < 0) return 0;
+
+	return 1;
+}
+
+
+int ExecutableErrorEvent::
+readEvent (FILE *file)
+{
+	int  retval;
+	char buffer [128];
+
+	// get the error number
+	retval = fscanf (file, "(%d)", (int*)&errType);
+	if (retval != 1) 
+	{ 
+		return 0;
+	}
+
+	// skip over the rest of the line
+	if (fgets (buffer, 128, file) == 0)
+	{
+		return 0;
+	}
+
+	return 1;
+}
+
+ClassAd* ExecutableErrorEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	char buf0[512];
+	
+	if( errType >= 0 ) {
+		snprintf(buf0, 512, "ExecuteErrorType = %d", errType);
+		buf0[511] = 0;
+		if( !myad->Insert(buf0) ) return NULL;
+	}
+
+	return myad;
+}
+
+void ExecutableErrorEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	int reallyExecErrorType;
+	if( ad->LookupInteger("ExecuteErrorType", reallyExecErrorType) ) {
+		switch( reallyExecErrorType ) {
+		  case CONDOR_EVENT_NOT_EXECUTABLE:
+			errType = CONDOR_EVENT_NOT_EXECUTABLE;
+			break;
+		  case CONDOR_EVENT_BAD_LINK:
+			errType = CONDOR_EVENT_BAD_LINK;
+			break;
+		}
+	}
+}
+
+// ----- the CheckpointedEvent class
+CheckpointedEvent::
+CheckpointedEvent()
+{
+	(void)memset((void*)&run_local_rusage,0,(size_t) sizeof(run_local_rusage));
+	run_remote_rusage = run_local_rusage;
+
+	eventNumber = ULOG_CHECKPOINTED;
+}
+
+CheckpointedEvent::
+~CheckpointedEvent()
+{
+}
+
+int CheckpointedEvent::
+writeEvent (FILE *file)
+{
+	if (fprintf (file, "Job was checkpointed.\n") < 0  		||
+		(!writeRusage (file, run_remote_rusage)) 			||
+		(fprintf (file, "  -  Run Remote Usage\n\t") < 0) 	||
+		(!writeRusage (file, run_local_rusage)) 			||
+		(fprintf (file, "  -  Run Local Usage\n") < 0))
+		return 0;
+
+	return 1;
+}
+
+int CheckpointedEvent::
+readEvent (FILE *file)
+{
+	int retval = fscanf (file, "Job was checkpointed.");
+
+	char buffer[128];
+	if (retval == EOF ||
+		!readRusage(file,run_remote_rusage) || fgets (buffer,128,file) == 0  ||
+		!readRusage(file,run_local_rusage)  || fgets (buffer,128,file) == 0)
+		return 0;
+
+	return 1;
+}
+		
+ClassAd* CheckpointedEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	char buf0[512];
+
+	char* rs = rusageToStr(run_local_rusage);
+	snprintf(buf0, 512, "RunLocalUsage = \"%s\"", rs);
+	free(rs);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+	
+	rs = rusageToStr(run_remote_rusage);
+	snprintf(buf0, 512, "RunRemoteUsage = \"%s\"", rs);
+	free(rs);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+		
+	return myad;
+}
+
+void CheckpointedEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	char* usageStr = NULL;
+	if( ad->LookupString("RunLocalUsage", &usageStr) ) {
+		strToRusage(usageStr, run_local_rusage);
+		free(usageStr);
+	}
+	usageStr = NULL;
+	if( ad->LookupString("RunRemoteUsage", &usageStr) ) {
+		strToRusage(usageStr, run_remote_rusage);
+		free(usageStr);
+	}
+}
+
+// ----- the JobEvictedEvent class
+JobEvictedEvent::JobEvictedEvent()
+{
+	eventNumber = ULOG_JOB_EVICTED;
+	checkpointed = false;
+
+	(void)memset((void*)&run_local_rusage,0,(size_t) sizeof(run_local_rusage));
+	run_remote_rusage = run_local_rusage;
+
+	sent_bytes = recvd_bytes = 0.0;
+
+	terminate_and_requeued = false;
+	normal = false;
+	return_value = -1;
+	signal_number = -1;
+	reason = NULL;
+	core_file = NULL;
+}
+
+
+JobEvictedEvent::~JobEvictedEvent()
+{
+	delete[] reason;
+	delete[] core_file;
+}
+
+
+void
+JobEvictedEvent::setReason( const char* reason_str )
+{
+    delete[] reason; 
+    reason = NULL; 
+    if( reason_str ) { 
+        reason = strnewp( reason_str ); 
+        if( !reason ) { 
+            EXCEPT( "ERROR: out of memory!\n" ); 
+        } 
+    } 
+}
+
+
+const char* JobEvictedEvent::
+getReason( void ) const
+{
+	return reason;
+}
+
+
+void
+JobEvictedEvent::setCoreFile( const char* core_name )
+{
+	delete[] core_file;
+	core_file = NULL;
+	if( core_name ) {
+		core_file = strnewp( core_name );
+		if( !core_file ) {
+			EXCEPT( "ERROR: out of memory!\n" );  
+		}
+	}
+}
+
+
+const char*
+JobEvictedEvent::getCoreFile( void )
+{
+	return core_file;
+}
+
+
+int
+JobEvictedEvent::readEvent( FILE *file )
+{
+	int  ckpt;
+	char buffer [128];
+
+	if( (fscanf(file, "Job was evicted.") == EOF) ||
+		(fscanf(file, "\n\t(%d) ", &ckpt) != 1) )
+	{
+		return 0;
+	}
+	checkpointed = (bool) ckpt;
+	if( fgets(buffer, 128, file) == 0 ) {
+		return 0;
+	}
+
+		/* 
+		   since the old parsing code treated the integer we read as a
+		   bool (only to decide between checkpointed or not), we now
+		   have to parse the string we just read to figure out if this
+		   was a terminate_and_requeued eviction or not.
+		*/
+	if( ! strncmp(buffer, "Job terminated and was requeued", 31) ) {
+		terminate_and_requeued = true;
+	} else {
+		terminate_and_requeued = false;
+	}
+
+	if( !readRusage(file,run_remote_rusage) || !fgets(buffer,128,file) ||
+		!readRusage(file,run_local_rusage) || !fgets(buffer,128,file) )
+	{
+		return 0;
+	}
+
+	if( !fscanf(file, "\t%f  -  Run Bytes Sent By Job\n", &sent_bytes) ||
+		!fscanf(file, "\t%f  -  Run Bytes Received By Job\n",
+				&recvd_bytes) )
+	{
+		return 1;				// backwards compatibility
+	}
+
+	if( ! terminate_and_requeued ) {
+			// nothing more to read
+		return 1;
+	}
+
+		// now, parse the terminate and requeue specific stuff.
+
+	int  normal_term;
+	int  got_core;
+
+	if( fscanf(file, "\n\t(%d) ", &normal_term) != 1 ) {
+		return 0;
+	}
+	if( normal_term ) {
+		normal = true;
+		if( fscanf(file, "Normal termination (return value %d)\n",
+				   &return_value) !=1 ) {
+			return 0;
+		}
+	} else {
+		normal = false;
+		if( fscanf(file, "Abnormal termination (signal %d)",
+				   &signal_number) !=1 ) {
+			return 0;
+		}
+		if( fscanf(file, "\n\t(%d) ", &got_core) != 1 ) {
+			return 0;
+		}
+		if( got_core ) {
+			if( fscanf(file, "Corefile in: ") == EOF ) {
+				return 0;
+			}
+			if( !fgets(buffer, 128, file) ) {
+				return 0;
+			}
+			chomp( buffer );
+			setCoreFile( buffer );
+		} else {
+			if( !fgets(buffer, 128, file) ) {
+				return 0;
+			}
+		}
+	}
+		// finally, see if there's a reason.  this is optional.
+
+	// if we get a reason, fine. If we don't, we need to 
+	// rewind the file position.
+	fpos_t filep;
+	fgetpos( file, &filep );
+
+    char reason_buf[BUFSIZ];
+    if( !fgets( reason_buf, BUFSIZ, file ) ||
+		strcmp( reason_buf, "...\n" ) == 0 ) {
+
+		fsetpos( file, &filep );
+		return 1;  // not considered failure
+	}
+
+	chomp( reason_buf );
+		// This is strange, sometimes we get the \t from fgets(), and
+		// sometimes we don't.  Instead of trying to figure out why,
+		// we just check for it here and do the right thing...
+	if( reason_buf[0] == '\t' && reason_buf[1] ) {
+		setReason( &reason_buf[1] );
+	} else {
+		setReason( reason_buf );
+	}
+	return 1;
+}
+
+
+int
+JobEvictedEvent::writeEvent( FILE *file )
+{
+	int retval;
+
+	if( fprintf(file, "Job was evicted.\n\t") < 0 ) { 
+		return 0;
+	}
+
+	if( terminate_and_requeued ) { 
+		retval = fprintf( file, "(0) Job terminated and was requeued\n\t" );
+	} else if( checkpointed ) {
+		retval = fprintf( file, "(1) Job was checkpointed.\n\t" );
+	} else {
+		retval = fprintf( file, "(0) Job was not checkpointed.\n\t" );
+	}
+	if( retval < 0 ) {
+		return 0;
+	}
+
+	if( (!writeRusage (file, run_remote_rusage)) 			||
+		(fprintf (file, "  -  Run Remote Usage\n\t") < 0) 	||
+		(!writeRusage (file, run_local_rusage)) 			||
+		(fprintf (file, "  -  Run Local Usage\n") < 0) )
+    {
+		return 0;
+	}
+
+	if( fprintf(file, "\t%.0f  -  Run Bytes Sent By Job\n", 
+				sent_bytes) < 0 ) {
+		return 0;
+	}
+	if( fprintf(file, "\t%.0f  -  Run Bytes Received By Job\n", 
+				recvd_bytes) < 0 ) {
+		return 0;
+	}
+
+	if( ! terminate_and_requeued ) {
+			// nothing else to write
+		return 1;
+	}
+
+	if( normal ) {
+		if( fprintf(file, "\t(1) Normal termination (return value %d)\n", 
+					return_value) < 0 ) {
+			return 0;
+		}
+	} else {
+		if( fprintf(file, "\t(0) Abnormal termination (signal %d)\n",
+					signal_number) < 0 ) {
+			return 0;
+		}
+		if( core_file ) {
+			retval = fprintf( file, "\t(1) Corefile in: %s\n", core_file );
+		} else {
+			retval = fprintf( file, "\t(0) No core file\n" );
+		}
+		if( retval < 0 ) {
+			return 0;
+		}
+	}
+
+	if( reason ) {
+		if( fprintf(file, "\t%s\n", reason) < 0 ) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+ClassAd* JobEvictedEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	char buf0[512];
+	
+	snprintf(buf0, 512, "Checkpointed = %s", checkpointed ? "TRUE" : "FALSE");
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+
+	char* rs = rusageToStr(run_local_rusage);
+	snprintf(buf0, 512, "RunLocalUsage = \"%s\"", rs);
+	free(rs);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+	
+	rs = rusageToStr(run_remote_rusage);
+	snprintf(buf0, 512, "RunRemoteUsage = \"%s\"", rs);
+	free(rs);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+
+	snprintf(buf0, 512, "SentBytes = %f", sent_bytes);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+	snprintf(buf0, 512, "ReceivedBytes = %f", recvd_bytes);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+
+	snprintf(buf0, 512, "TerminatedAndRequeued = %s",
+			 terminate_and_requeued ? "TRUE" : "FALSE");
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+	snprintf(buf0, 512, "TerminatedNormally = %s", 
+			 normal ? "TRUE" : "FALSE");
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+
+	if( return_value >= 0 ) {
+		snprintf(buf0, 512, "ReturnValue = %d", return_value);
+		buf0[511] = 0;
+		if( !myad->Insert(buf0) ) return NULL;
+	}
+	if( signal_number >= 0 ) {
+		snprintf(buf0, 512, "TerminatedBySignal = %d", signal_number);
+		buf0[511] = 0;
+		if( !myad->Insert(buf0) ) return NULL;
+	}
+
+	if( reason ) {
+		MyString buf2;
+		buf2.sprintf("Reason = \"%s\"", reason);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
+	}
+	if( core_file ) {
+		MyString buf3;
+		buf3.sprintf("CoreFile = \"%s\"", core_file);
+		if( !myad->Insert(buf3.Value()) ) return NULL;
+	}
+	
+	return myad;
+}
+
+void JobEvictedEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	int reallybool;
+	if( ad->LookupInteger("Checkpointed", reallybool) ) {
+		checkpointed = reallybool ? TRUE : FALSE;
+	}
+
+	char* usageStr = NULL;
+	if( ad->LookupString("RunLocalUsage", &usageStr) ) {
+		strToRusage(usageStr, run_local_rusage);
+		free(usageStr);
+	}
+	usageStr = NULL;
+	if( ad->LookupString("RunRemoteUsage", &usageStr) ) {
+		strToRusage(usageStr, run_remote_rusage);
+		free(usageStr);
+	}
+	
+	ad->LookupFloat("SentBytes", sent_bytes);
+	ad->LookupFloat("ReceivedBytes", recvd_bytes);
+
+	if( ad->LookupInteger("TerminatedAndRequeued", reallybool) ) {
+		terminate_and_requeued = reallybool ? TRUE : FALSE;
+	}
+	if( ad->LookupInteger("TerminatedNormally", reallybool) ) {
+		normal = reallybool ? TRUE : FALSE;
+	}
+
+	ad->LookupInteger("ReturnValue", return_value);
+	ad->LookupInteger("TerminatedBySignal", signal_number);
+
+	char* multi = NULL;
+	ad->LookupString("Reason", &multi);
+	if( multi ) {
+		setReason(multi);
+		free(multi);
+		multi = NULL;
+	}
+	ad->LookupString("CoreFile", &multi);
+	if( multi ) {
+		setCoreFile(multi);
+		free(multi);
+		multi = NULL;
+	}
+}
+
+
+// ----- JobAbortedEvent class
+JobAbortedEvent::
+JobAbortedEvent ()
+{
+	eventNumber = ULOG_JOB_ABORTED;
+	reason = NULL;
+}
+
+JobAbortedEvent::
+~JobAbortedEvent()
+{
+	delete[] reason;
+}
+
+
+void JobAbortedEvent::
+setReason( const char* reason_str )
+{
+	delete[] reason;
+	reason = NULL;
+	if( reason_str ) {
+		reason = strnewp( reason_str );
+		if( !reason ) {
+			EXCEPT( "ERROR: out of memory!\n" );
+		}
+	}
+}
+
+
+const char* JobAbortedEvent::
+getReason( void ) const
+{
+	return reason;
+}
+
+
+int JobAbortedEvent::
+writeEvent (FILE *file)
+{
+	if( fprintf(file, "Job was aborted by the user.\n") < 0 ) {
+		return 0;
+	}
+	if( reason ) {
+		if( fprintf(file, "\t%s\n", reason) < 0 ) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+
+int JobAbortedEvent::
+readEvent (FILE *file)
+{
+	if( fscanf(file, "Job was aborted by the user.\n") == EOF ) {
+		return 0;
+	}
+	// try to read the reason, but if its not there,
+	// rewind so we don't slurp up the next event delimiter
+	fpos_t filep;
+	fgetpos( file, &filep );
+	char reason_buf[BUFSIZ];
+	if( !fgets( reason_buf, BUFSIZ, file ) ||
+		   	strcmp( reason_buf, "...\n" ) == 0 ) {
+		setReason( NULL );
+		fsetpos( file, &filep );
+		return 1;	// backwards compatibility
+	}
+ 
+	chomp( reason_buf );  // strip the newline, if it's there.
+		// This is strange, sometimes we get the \t from fgets(), and
+		// sometimes we don't.  Instead of trying to figure out why,
+		// we just check for it here and do the right thing...
+	if( reason_buf[0] == '\t' && reason_buf[1] ) {
+		setReason( &reason_buf[1] );
+	} else {
+		setReason( reason_buf );
+	}
+	return 1;
+}
+
+ClassAd* JobAbortedEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	
+	if( reason ) {
+		MyString buf2;
+		buf2.sprintf("Reason = \"%s\"", reason);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
+	}
+
+	return myad;
+}
+
+void JobAbortedEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	char* multi = NULL;
+	ad->LookupString("Reason", &multi);
+	if( multi ) {
+		setReason(multi);
+		free(multi);
+		multi = NULL;
+	}
+}
+
+// ----- TerminatedEvent baseclass
+TerminatedEvent::TerminatedEvent()
+{
+	core_file = NULL;
+	returnValue = signalNumber = -1;
+
+	(void)memset((void*)&run_local_rusage,0,(size_t)sizeof(run_local_rusage));
+	run_remote_rusage=total_local_rusage=total_remote_rusage=run_local_rusage;
+
+	sent_bytes = recvd_bytes = total_sent_bytes = total_recvd_bytes = 0.0;
+}
+
+TerminatedEvent::~TerminatedEvent()
+{
+	delete[] core_file;
+}
+
+
+void
+TerminatedEvent::setCoreFile( const char* core_name )
+{
+	delete[] core_file;
+	core_file = NULL;
+	if( core_name ) {
+		core_file = strnewp( core_name );
+		if( !core_file ) {
+            EXCEPT( "ERROR: out of memory!\n" );
+		}
+	}
+}
+
+
+const char*
+TerminatedEvent::getCoreFile( void )
+{
+	return core_file;
+}
+
+
+int
+TerminatedEvent::writeEvent( FILE *file, const char* header )
+{
+	int retval=0;
+
+	if( normal ) {
+		if( fprintf(file, "\t(1) Normal termination (return value %d)\n\t", 
+					returnValue) < 0 ) {
+			return 0;
+		}
+	} else {
+		if( fprintf(file, "\t(0) Abnormal termination (signal %d)\n",
+					signalNumber) < 0 ) {
+			return 0;
+		}
+		if( core_file ) {
+			retval = fprintf( file, "\t(1) Corefile in: %s\n\t",
+							  core_file );
+		} else {
+			retval = fprintf( file, "\t(0) No core file\n\t" );
+		}
+	}
+
+	if ((retval < 0)										||
+		(!writeRusage (file, run_remote_rusage))			||
+		(fprintf (file, "  -  Run Remote Usage\n\t") < 0) 	||
+		(!writeRusage (file, run_local_rusage)) 			||
+		(fprintf (file, "  -  Run Local Usage\n\t") < 0)   	||
+		(!writeRusage (file, total_remote_rusage))			||
+		(fprintf (file, "  -  Total Remote Usage\n\t") < 0)	||
+		(!writeRusage (file,  total_local_rusage))			||
+		(fprintf (file, "  -  Total Local Usage\n") < 0))
+		return 0;
+
+
+	if (fprintf(file, "\t%.0f  -  Run Bytes Sent By %s\n", 
+				sent_bytes, header) < 0 ||
+		fprintf(file, "\t%.0f  -  Run Bytes Received By %s\n",
+				recvd_bytes, header) < 0 ||
+		fprintf(file, "\t%.0f  -  Total Bytes Sent By %s\n",
+				total_sent_bytes, header) < 0 ||
+		fprintf(file, "\t%.0f  -  Total Bytes Received By %s\n",
+				total_recvd_bytes, header) < 0)
+		return 1;				// backwards compatibility
+
+	return 1;
+}
+
+
+int
+TerminatedEvent::readEvent( FILE *file, const char* header )
+{
+	char buffer[128];
+	int  normalTerm;
+	int  gotCore;
+	int  retval;
+
+	if( (retval = fscanf (file, "\n\t(%d) ", &normalTerm)) != 1 ) {
+		return 0;
+	}
+
+	if( normalTerm ) {
+		normal = true;
+		if(fscanf(file,"Normal termination (return value %d)",&returnValue)!=1)
+			return 0;
+	} else {
+		normal = false;
+		if((fscanf(file,"Abnormal termination (signal %d)",&signalNumber)!=1)||
+		   (fscanf(file,"\n\t(%d) ", &gotCore) != 1))
+			return 0;
+
+		if( gotCore ) {
+			if( fscanf(file, "Corefile in: ") == EOF ) {
+				return 0;
+			}
+			if( !fgets(buffer, 128, file) ) {
+				return 0;
+			}
+			chomp( buffer );
+			setCoreFile( buffer );
+		} else {
+			if (fgets (buffer, 128, file) == 0) 
+				return 0;
+		}
+	}
+
+		// read in rusage values
+	if (!readRusage(file,run_remote_rusage) || !fgets(buffer, 128, file) ||
+		!readRusage(file,run_local_rusage)   || !fgets(buffer, 128, file) ||
+		!readRusage(file,total_remote_rusage)|| !fgets(buffer, 128, file) ||
+		!readRusage(file,total_local_rusage) || !fgets(buffer, 128, file))
+		return 0;
+	
+		// THIS CODE IS TOTALLY BROKEN.  Please fix me.
+		// In particular: fscanf() when you don't convert anything to
+		// a local variable returns 0, but we think that's failure.
+	if( fscanf (file, "\t%f  -  Run Bytes Sent By ", &sent_bytes) == 0 ||
+		fscanf (file, header) == 0 ||
+		fscanf (file, "\n") == 0 ||
+		fscanf (file, "\t%f  -  Run Bytes Received By ",
+				&recvd_bytes) == 0 ||
+		fscanf (file, header) == 0 || 
+		fscanf (file, "\n") == 0 ||
+		fscanf (file, "\t%f  -  Total Bytes Sent By ",
+				&total_sent_bytes) == 0 ||
+		fscanf (file, header) == 0 ||
+		fscanf (file, "\n") == 0 ||
+		fscanf (file, "\t%f  -  Total Bytes Received By ",
+				&total_recvd_bytes) == 0 ||
+		fscanf (file, header) == 0 ||
+		fscanf (file, "\n") == 0 ) {
+		return 1;		// backwards compatibility
+	}
+	return 1;
+}
+
+
+// ----- JobTerminatedEvent class
+JobTerminatedEvent::JobTerminatedEvent() : TerminatedEvent()
+{
+	eventNumber = ULOG_JOB_TERMINATED;
+}
+
+
+JobTerminatedEvent::~JobTerminatedEvent()
+{
+}
+
+
+int
+JobTerminatedEvent::writeEvent (FILE *file)
+{
+	if( fprintf(file, "Job terminated.\n") < 0 ) {
+		return 0;
+	}
+	return TerminatedEvent::writeEvent( file, "Job" );
+}
+
+
+int
+JobTerminatedEvent::readEvent (FILE *file)
+{
+	if( fscanf(file, "Job terminated.") == EOF ) {
+		return 0;
+	}
+	return TerminatedEvent::readEvent( file, "Job" );
+}
+
+ClassAd* JobTerminatedEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	char buf0[512];
+	
+	snprintf(buf0, 512, "TerminatedNormally = %s", normal ? "TRUE" : "FALSE");
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+	if( returnValue >= 0 ) {
+		snprintf(buf0, 512, "ReturnValue = %d", returnValue);
+		buf0[511] = 0;
+		if( !myad->Insert(buf0) ) return NULL;
+	}
+	if( signalNumber >= 0 ) {
+		snprintf(buf0, 512, "TerminatedBySignal = %d", signalNumber);
+		buf0[511] = 0;
+		if( !myad->Insert(buf0) ) return NULL;
+	}
+
+	const char* core = getCoreFile();
+	if( core ) {
+		MyString buf3;
+		buf3.sprintf("CoreFile = \"%s\"", core);
+		if( !myad->Insert(buf3.Value()) ) return NULL;
+	}
+
+	char* rs = rusageToStr(run_local_rusage);
+	snprintf(buf0, 512, "RunLocalUsage = \"%s\"", rs);
+	free(rs);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+	rs = rusageToStr(run_remote_rusage);
+	snprintf(buf0, 512, "RunRemoteUsage = \"%s\"", rs);
+	free(rs);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+	rs = rusageToStr(total_local_rusage);
+	snprintf(buf0, 512, "TotalLocalUsage = \"%s\"", rs);
+	free(rs);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+	rs = rusageToStr(total_remote_rusage);
+	snprintf(buf0, 512, "TotalRemoteUsage = \"%s\"", rs);
+	free(rs);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+
+	snprintf(buf0, 512, "SentBytes = %f", sent_bytes);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+	snprintf(buf0, 512, "ReceivedBytes = %f", recvd_bytes);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+	snprintf(buf0, 512, "TotalSentBytes = %f", total_sent_bytes);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+	snprintf(buf0, 512, "TotalReceivedBytes = %f", total_recvd_bytes);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+
+	return myad;
+}
+
+void JobTerminatedEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	int reallybool;
+	if( ad->LookupInteger("TerminatedNormally", reallybool) ) {
+		normal = reallybool ? TRUE : FALSE;
+	}
+
+	ad->LookupInteger("ReturnValue", returnValue);
+	ad->LookupInteger("TerminatedBySignal", signalNumber);
+	
+	char* multi = NULL;
+	ad->LookupString("CoreFile", &multi);
+	if( multi ) {
+		setCoreFile(multi);
+		free(multi);
+		multi = NULL;
+	}
+
+	if( ad->LookupString("RunLocalUsage", &multi) ) {
+		strToRusage(multi, run_local_rusage);
+		free(multi);
+	}
+	if( ad->LookupString("RunRemoteUsage", &multi) ) {
+		strToRusage(multi, run_remote_rusage);
+		free(multi);
+	}
+	if( ad->LookupString("TotalLocalUsage", &multi) ) {
+		strToRusage(multi, total_local_rusage);
+		free(multi);
+	}
+	if( ad->LookupString("TotalRemoteUsage", &multi) ) {
+		strToRusage(multi, total_remote_rusage);
+		free(multi);
+	}
+
+	ad->LookupFloat("SentBytes", sent_bytes);
+	ad->LookupFloat("ReceivedBytes", recvd_bytes);
+	ad->LookupFloat("TotalSentBytes", total_sent_bytes);
+	ad->LookupFloat("TotalReceivedBytes", total_recvd_bytes);
+}
+
+JobImageSizeEvent::
+JobImageSizeEvent()
+{
+	eventNumber = ULOG_IMAGE_SIZE;
+	size = -1;
+}
+
+
+JobImageSizeEvent::
+~JobImageSizeEvent()
+{
+}
+
+
+int JobImageSizeEvent::
+writeEvent (FILE *file)
+{
+	if (fprintf (file, "Image size of job updated: %d\n", size) < 0)
+		return 0;
+
+	return 1;
+}
+
+
+int JobImageSizeEvent::
+readEvent (FILE *file)
+{
+	int retval;
+	if ((retval=fscanf(file,"Image size of job updated: %d", &size)) != 1)
+		return 0;
+
+	return 1;
+}
+
+ClassAd* JobImageSizeEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	char buf0[512];
+
+	if( size >= 0 ) {
+		snprintf(buf0, 512, "Size = %d", size);
+		buf0[511] = 0;
+		if( !myad->Insert(buf0) ) return NULL;
+	}
+
+	return myad;
+}
+
+void JobImageSizeEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	ad->LookupInteger("Size", size);
+}
+
+ShadowExceptionEvent::
+ShadowExceptionEvent ()
+{
+	eventNumber = ULOG_SHADOW_EXCEPTION;
+	message[0] = '\0';
+	sent_bytes = recvd_bytes = 0.0;
+}
+
+ShadowExceptionEvent::
+~ShadowExceptionEvent ()
+{
+}
+
+int ShadowExceptionEvent::
+readEvent (FILE *file)
+{
+	if (fscanf (file, "Shadow exception!\n\t") == EOF)
+		return 0;
+	if (fgets(message, BUFSIZ, file) == NULL) {
+		message[0] = '\0';
+		return 1;				// backwards compatibility
+	}
+
+	// remove '\n' from message
+	message[strlen(message)-1] = '\0';
+
+	if (fscanf (file, "\t%f  -  Run Bytes Sent By Job\n", &sent_bytes) == 0 ||
+		fscanf (file, "\t%f  -  Run Bytes Received By Job\n",
+				&recvd_bytes) == 0)
+		return 1;				// backwards compatibility
+
+	return 1;
+}
+
+int ShadowExceptionEvent::
+writeEvent (FILE *file)
+{
+	if (fprintf (file, "Shadow exception!\n\t") < 0)
+		return 0;
+	if (fprintf (file, "%s\n", message) < 0)
+		return 0;
+
+	if (fprintf (file, "\t%.0f  -  Run Bytes Sent By Job\n", sent_bytes) < 0 ||
+		fprintf (file, "\t%.0f  -  Run Bytes Received By Job\n",
+				 recvd_bytes) < 0)
+		return 1;				// backwards compatibility
+	
+	return 1;
+}
+
+ClassAd* ShadowExceptionEvent::
+toClassAd()
+{
+	bool     success = true;
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( myad ) {
+		char buf0[512];
+	
+		if( message ) {
+			MyString buf2;
+			buf2.sprintf("Message = \"%s\"", message);
+			if( !myad->Insert(buf2.Value())) {
+				success = false;
+			}
+		}
+
+		snprintf(buf0, 512, "SentBytes = %f", sent_bytes);
+		buf0[511] = 0;
+		if( !myad->Insert(buf0) ) {
+			success = false;
+		}
+		snprintf(buf0, 512, "ReceivedBytes = %f", recvd_bytes);
+		buf0[511] = 0;
+		if( !myad->Insert(buf0) ) {
+			success = false;
+		}
+	}
+	if (!success) {
+		delete myad;
+		myad = NULL;
+	}
+	return myad;
+}
+
+void ShadowExceptionEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+	
+	if( !ad ) return;
+
+	if( ad->LookupString("Message", message, BUFSIZ) ) {
+		message[BUFSIZ] = 0;
+	}
+	
+	ad->LookupFloat("SentBytes", sent_bytes);
+	ad->LookupFloat("ReceivedBytes", recvd_bytes);
+}
+
+JobSuspendedEvent::
+JobSuspendedEvent ()
+{
+	eventNumber = ULOG_JOB_SUSPENDED;
+}
+
+JobSuspendedEvent::
+~JobSuspendedEvent ()
+{
+}
+
+int JobSuspendedEvent::
+readEvent (FILE *file)
+{
+	if (fscanf (file, "Job was suspended.\n\t") == EOF)
+		return 0;
+	if (fscanf (file, "Number of processes actually suspended: %d\n",
+			&num_pids) == EOF)
+		return 1;				// backwards compatibility
+
+	return 1;
+}
+
+
+int JobSuspendedEvent::
+writeEvent (FILE *file)
+{
+	if (fprintf (file, "Job was suspended.\n\t") < 0)
+		return 0;
+	if (fprintf (file, "Number of processes actually suspended: %d\n", 
+			num_pids) < 0)
+		return 0;
+
+	return 1;
+}
+
+ClassAd* JobSuspendedEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	char buf0[512];
+	
+	snprintf(buf0, 512, "NumberOfPIDs = %d", num_pids);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+
+	return myad;
+}
+
+void JobSuspendedEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	ad->LookupInteger("NumberOfPIDs", num_pids);
+}
+
+JobUnsuspendedEvent::
+JobUnsuspendedEvent ()
+{
+	eventNumber = ULOG_JOB_UNSUSPENDED;
+}
+
+JobUnsuspendedEvent::
+~JobUnsuspendedEvent ()
+{
+}
+
+int JobUnsuspendedEvent::
+readEvent (FILE *file)
+{
+	if (fscanf (file, "Job was unsuspended.\n") == EOF)
+		return 0;
+
+	return 1;
+}
+
+int JobUnsuspendedEvent::
+writeEvent (FILE *file)
+{
+	if (fprintf (file, "Job was unsuspended.\n") < 0)
+		return 0;
+
+	return 1;
+}
+
+ClassAd* JobUnsuspendedEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	
+	return myad;
+}
+
+void JobUnsuspendedEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+}
+
+JobHeldEvent::JobHeldEvent ()
+{
+	eventNumber = ULOG_JOB_HELD;
+	reason = NULL;
+	code = 0;
+	subcode = 0;
+}
+
+
+JobHeldEvent::~JobHeldEvent ()
+{
+	delete[] reason;
+}
+
+
+void
+JobHeldEvent::setReason( const char* reason_str )
+{
+    delete[] reason; 
+    reason = NULL; 
+    if( reason_str ) { 
+        reason = strnewp( reason_str ); 
+        if( !reason ) { 
+            EXCEPT( "ERROR: out of memory!\n" ); 
+        } 
+    } 
+}
+
+void
+JobHeldEvent::setReasonCode(const int val)
+{
+	code = val;
+}
+
+void
+JobHeldEvent::setReasonSubCode(const int val)
+{
+	subcode = val;
+}
+
+
+const char* JobHeldEvent::
+getReason( void ) const
+{
+	return reason;
+}
+
+int JobHeldEvent::
+getReasonCode( void ) const
+{
+	return code;
+}
+
+int JobHeldEvent::
+getReasonSubCode( void ) const
+{
+	return subcode;
+}
+
+int
+JobHeldEvent::readEvent( FILE *file )
+{
+	if( fscanf(file, "Job was held.\n") == EOF ) { 
+		return 0;
+	}
+	// try to read the reason, but if its not there,
+	// rewind so we don't slurp up the next event delimiter
+	fpos_t filep;
+	fgetpos( file, &filep );
+	char reason_buf[BUFSIZ];
+	if( !fgets( reason_buf, BUFSIZ, file ) ||
+		   	strcmp( reason_buf, "...\n" ) == 0 ) {
+		setReason( NULL );
+		fsetpos( file, &filep );
+		return 1;	// backwards compatibility
+	}
+
+
+	chomp( reason_buf );  // strip the newline
+		// This is strange, sometimes we get the \t from fgets(), and
+		// sometimes we don't.  Instead of trying to figure out why,
+		// we just check for it here and do the right thing...
+	if( reason_buf[0] == '\t' && reason_buf[1] ) {
+		reason = strnewp( &reason_buf[1] );
+	} else {
+		reason = strnewp( reason_buf );
+	}
+
+	// read the code and subcodes, but if not there, rewind
+	// for backwards compatibility.
+	fgetpos( file, &filep );
+	int incode = 0;
+	int insubcode = 0;
+	int fsf_ret = fscanf(file, "\tCode %d Subcode %d\n", &incode,&insubcode);
+	if ( fsf_ret != 2 ) {
+		code = 0;
+		subcode = 0;
+		fsetpos( file, &filep );
+		return 1;	// backwards compatibility
+	}
+	code = incode;
+	subcode = insubcode;
+
+	return 1;
+}
+
+
+int
+JobHeldEvent::writeEvent( FILE *file )
+{
+	if( fprintf(file, "Job was held.\n") < 0 ) {
+		return 0;
+	}
+	if( reason ) {
+		if( fprintf(file, "\t%s\n", reason) < 0 ) {
+			return 0;
+		} 
+	} else {
+		if( fprintf(file, "\tReason unspecified\n") < 0 ) {
+			return 0;
+		}
+	}
+
+	// write the codes
+	if( fprintf(file, "\tCode %d Subcode %d\n", code,subcode) < 0 ) {
+		return 0;
+	}
+
+	return 1;
+}
+
+ClassAd* JobHeldEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	
+	const char* reason = getReason();
+	MyString buf2;
+	if ( reason ) {
+		buf2.sprintf("%s = \"%s\"", ATTR_HOLD_REASON,reason);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
+	}
+	buf2.sprintf("%s = %d",ATTR_HOLD_REASON_CODE,code);
+	if( !myad->Insert(buf2.Value()) ) return NULL;
+	buf2.sprintf("%s = %d",ATTR_HOLD_REASON_SUBCODE,code);
+	if( !myad->Insert(buf2.Value()) ) return NULL;
+
+	return myad;
+}
+
+void JobHeldEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	char* multi = NULL;
+	int incode = 0;
+	int insubcode = 0;
+	ad->LookupString(ATTR_HOLD_REASON, &multi);
+	if( multi ) {
+		setReason(multi);
+		free(multi);
+		multi = NULL;
+	}
+	ad->LookupInteger(ATTR_HOLD_REASON_CODE, incode);
+	setReasonCode(incode);
+	ad->LookupInteger(ATTR_HOLD_REASON_SUBCODE, insubcode);
+	setReasonSubCode(insubcode);
+}
+
+JobReleasedEvent::JobReleasedEvent()
+{
+	eventNumber = ULOG_JOB_RELEASED;
+	reason = NULL;
+}
+
+
+JobReleasedEvent::~JobReleasedEvent()
+{
+	delete[] reason;
+}
+
+
+void
+JobReleasedEvent::setReason( const char* reason_str )
+{
+    delete[] reason; 
+    reason = NULL; 
+    if( reason_str ) { 
+        reason = strnewp( reason_str ); 
+        if( !reason ) { 
+            EXCEPT( "ERROR: out of memory!\n" ); 
+        } 
+    } 
+}
+
+
+const char* JobReleasedEvent::
+getReason( void ) const
+{
+	return reason;
+}
+
+
+int
+JobReleasedEvent::readEvent( FILE *file )
+{
+	if( fscanf(file, "Job was released.\n") == EOF ) { 
+		return 0;
+	}
+	// try to read the reason, but if its not there,
+	// rewind so we don't slurp up the next event delimiter
+	fpos_t filep;
+	fgetpos( file, &filep );
+	char reason_buf[BUFSIZ];
+	if( !fgets( reason_buf, BUFSIZ, file ) ||
+		   	strcmp( reason_buf, "...\n" ) == 0 ) {
+		setReason( NULL );
+		fsetpos( file, &filep );
+		return 1;	// backwards compatibility
+	}
+
+	chomp( reason_buf );  // strip the newline
+		// This is strange, sometimes we get the \t from fgets(), and
+		// sometimes we don't.  Instead of trying to figure out why,
+		// we just check for it here and do the right thing...
+	if( reason_buf[0] == '\t' && reason_buf[1] ) {
+		reason = strnewp( &reason_buf[1] );
+	} else {
+		reason = strnewp( reason_buf );
+	}
+	return 1;
+}
+
+
+int
+JobReleasedEvent::writeEvent( FILE *file )
+{
+	if( fprintf(file, "Job was released.\n") < 0 ) {
+		return 0;
+	}
+	if( reason ) {
+		if( fprintf(file, "\t%s\n", reason) < 0 ) {
+			return 0;
+		} else {
+			return 1;
+		}
+	} 
+		// do we want to do anything else if there's no reason?
+		// should we fail?  EXCEPT()?  
+	return 1;
+}
+
+ClassAd* JobReleasedEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	
+	const char* reason = getReason();
+	if( reason ) {
+		MyString buf2;
+		buf2.sprintf("Reason = \"%s\"", reason);
+		if( !myad->Insert(buf2.Value()) ) return NULL;
+	}
+
+	return myad;
+}
+
+void JobReleasedEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	char* multi = NULL;
+	ad->LookupString("Reason", &multi);
+	if( multi ) {
+		setReason(multi);
+		free(multi);
+		multi = NULL;
+	}
+}
+
+static const int seconds = 1;
+static const int minutes = 60 * seconds;
+static const int hours = 60 * minutes;
+static const int days = 24 * hours;
+
+int ULogEvent::
+writeRusage (FILE *file, rusage &usage)
+{
+	int usr_secs = usage.ru_utime.tv_sec;
+	int sys_secs = usage.ru_stime.tv_sec;
+
+	int usr_days, usr_hours, usr_minutes;
+	int sys_days, sys_hours, sys_minutes;
+
+	usr_days = usr_secs/days;  			usr_secs %= days;
+	usr_hours = usr_secs/hours;			usr_secs %= hours;
+	usr_minutes = usr_secs/minutes;		usr_secs %= minutes;
+ 	
+	sys_days = sys_secs/days;  			sys_secs %= days;
+	sys_hours = sys_secs/hours;			sys_secs %= hours;
+	sys_minutes = sys_secs/minutes;		sys_secs %= minutes;
+ 	
+	int retval;
+	retval = fprintf (file, "\tUsr %d %02d:%02d:%02d, Sys %d %02d:%02d:%02d",
+					  usr_days, usr_hours, usr_minutes, usr_secs,
+					  sys_days, sys_hours, sys_minutes, sys_secs);
+
+	return (retval > 0);
+}
+
+
+int ULogEvent::
+readRusage (FILE *file, rusage &usage)
+{
+	int usr_secs, usr_minutes, usr_hours, usr_days;
+	int sys_secs, sys_minutes, sys_hours, sys_days;
+	int retval;
+
+	retval = fscanf (file, "\tUsr %d %d:%d:%d, Sys %d %d:%d:%d",
+					  &usr_days, &usr_hours, &usr_minutes, &usr_secs,
+					  &sys_days, &sys_hours, &sys_minutes, &sys_secs);
+
+	if (retval < 8)
+	{
+		return 0;
+	}
+
+	usage.ru_utime.tv_sec = usr_secs + usr_minutes*minutes + usr_hours*hours +
+		usr_days*days;
+
+	usage.ru_stime.tv_sec = sys_secs + sys_minutes*minutes + sys_hours*hours +
+		sys_days*days;
+
+	return (1);
+}
+
+char* ULogEvent::
+rusageToStr (rusage usage)
+{
+	char* result = (char*) malloc(128);
+
+	int usr_secs = usage.ru_utime.tv_sec;
+	int sys_secs = usage.ru_stime.tv_sec;
+
+	int usr_days, usr_hours, usr_minutes;
+	int sys_days, sys_hours, sys_minutes;
+
+	usr_days = usr_secs/days;  			usr_secs %= days;
+	usr_hours = usr_secs/hours;			usr_secs %= hours;
+	usr_minutes = usr_secs/minutes;		usr_secs %= minutes;
+ 	
+	sys_days = sys_secs/days;  			sys_secs %= days;
+	sys_hours = sys_secs/hours;			sys_secs %= hours;
+	sys_minutes = sys_secs/minutes;		sys_secs %= minutes;
+ 	
+	sprintf(result, "Usr %d %02d:%02d:%02d, Sys %d %02d:%02d:%02d",
+			usr_days, usr_hours, usr_minutes, usr_secs,
+			sys_days, sys_hours, sys_minutes, sys_secs);
+
+	return result;
+}
+
+int ULogEvent::
+strToRusage (char* rusageStr, rusage & usage)
+{
+	int usr_secs, usr_minutes, usr_hours, usr_days;
+	int sys_secs, sys_minutes, sys_hours, sys_days;
+	int retval;
+
+	retval = sscanf (rusageStr, "\tUsr %d %d:%d:%d, Sys %d %d:%d:%d",
+					 &usr_days, &usr_hours, &usr_minutes, &usr_secs,
+					 &sys_days, &sys_hours, &sys_minutes, &sys_secs);
+
+	if (retval < 8)
+	{
+		return 0;
+	}
+
+	usage.ru_utime.tv_sec = usr_secs + usr_minutes*minutes + usr_hours*hours +
+		usr_days*days;
+
+	usage.ru_stime.tv_sec = sys_secs + sys_minutes*minutes + sys_hours*hours +
+		sys_days*days;
+
+	return (1);
+}
+
+// ----- the NodeExecuteEvent class
+NodeExecuteEvent::NodeExecuteEvent()
+{	
+	executeHost [0] = '\0';
+	eventNumber = ULOG_NODE_EXECUTE;
+}
+
+
+NodeExecuteEvent::~NodeExecuteEvent()
+{
+}
+
+
+int
+NodeExecuteEvent::writeEvent (FILE *file)
+{	
+	return( fprintf(file, "Node %d executing on host: %s\n",
+					node, executeHost) >= 0 );
+}
+
+
+int
+NodeExecuteEvent::readEvent (FILE *file)
+{
+	return( fscanf(file, "Node %d executing on host: %s", 
+				   &node, executeHost) != EOF );
+}
+
+ClassAd* NodeExecuteEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	char buf0[512];
+	
+	snprintf(buf0, 512, "ExecuteHost = \"%s\"", executeHost);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+	snprintf(buf0, 512, "Node = %d", node);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+
+	return myad;
+}
+
+void NodeExecuteEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+
+	if( ad->LookupString("ExecuteHost", executeHost, 128) ) {
+		executeHost[127] = 0;
+	}
+
+	ad->LookupInteger("Node", node);
+}
+
+// ----- NodeTerminatedEvent class
+NodeTerminatedEvent::NodeTerminatedEvent() : TerminatedEvent()
+{
+	eventNumber = ULOG_NODE_TERMINATED;
+	node = -1;
+}
+
+
+NodeTerminatedEvent::
+~NodeTerminatedEvent()
+{
+}
+
+
+int
+NodeTerminatedEvent::writeEvent( FILE *file )
+{
+	if( fprintf(file, "Node %d terminated.\n", node) < 0 ) {
+		return 0;
+	}
+	return TerminatedEvent::writeEvent( file, "Node" );
+}
+
+
+int
+NodeTerminatedEvent::readEvent( FILE *file )
+{
+	if( fscanf(file, "Node %d terminated.", &node) == EOF ) {
+		return 0;
+	}
+	return TerminatedEvent::readEvent( file, "Node" );
+}
+
+ClassAd* NodeTerminatedEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	char buf0[512];
+	
+	snprintf(buf0, 512, "TerminatedNormally = %s", normal ? "TRUE" : "FALSE");
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+	snprintf(buf0, 512, "ReturnValue = %d", returnValue);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+	snprintf(buf0, 512, "TerminatedBySignal = %d", signalNumber);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+
+	const char* core = getCoreFile();
+	if( core ) {
+		MyString buf3;
+		buf3.sprintf("CoreFile = \"%s\"", core);
+		if( !myad->Insert(buf3.Value()) ) return NULL;
+	}
+
+	char* rs = rusageToStr(run_local_rusage);
+	snprintf(buf0, 512, "RunLocalUsage = \"%s\"", rs);
+	free(rs);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+	rs = rusageToStr(run_remote_rusage);
+	snprintf(buf0, 512, "RunRemoteUsage = \"%s\"", rs);
+	free(rs);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+	rs = rusageToStr(total_local_rusage);
+	snprintf(buf0, 512, "TotalLocalUsage = \"%s\"", rs);
+	free(rs);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+	rs = rusageToStr(total_remote_rusage);
+	snprintf(buf0, 512, "TotalRemoteUsage = \"%s\"", rs);
+	free(rs);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+
+	snprintf(buf0, 512, "SentBytes = %f", sent_bytes);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+	snprintf(buf0, 512, "ReceivedBytes = %f", recvd_bytes);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+	snprintf(buf0, 512, "TotalSentBytes = %f", total_sent_bytes);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+	snprintf(buf0, 512, "TotalReceivedBytes = %f", total_recvd_bytes);
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+
+	if( node >= 0 ) {
+		snprintf(buf0, 512, "Node = %d", node);
+		buf0[511] = 0;
+		if( !myad->Insert(buf0) ) return NULL;
+	}
+	
+	return myad;
+}
+
+void NodeTerminatedEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+	
+	if( !ad ) return;
+
+	int reallybool;
+	if( ad->LookupInteger("TerminatedNormally", reallybool) ) {
+		normal = reallybool ? TRUE : FALSE;
+	}
+
+	ad->LookupInteger("ReturnValue", returnValue);
+	ad->LookupInteger("TerminatedBySignal", signalNumber);
+	
+	char* multi = NULL;
+	ad->LookupString("CoreFile", &multi);
+	if( multi ) {
+		setCoreFile(multi);
+		free(multi);
+		multi = NULL;
+	}
+
+	if( ad->LookupString("RunLocalUsage", &multi) ) {
+		strToRusage(multi, run_local_rusage);
+		free(multi);
+	}
+	if( ad->LookupString("RunRemoteUsage", &multi) ) {
+		strToRusage(multi, run_remote_rusage);
+		free(multi);
+	}
+	if( ad->LookupString("TotalLocalUsage", &multi) ) {
+		strToRusage(multi, total_local_rusage);
+		free(multi);
+	}
+	if( ad->LookupString("TotalRemoteUsage", &multi) ) {
+		strToRusage(multi, total_remote_rusage);
+		free(multi);
+	}
+
+	ad->LookupFloat("SentBytes", sent_bytes);
+	ad->LookupFloat("ReceivedBytes", recvd_bytes);
+	ad->LookupFloat("TotalSentBytes", total_sent_bytes);
+	ad->LookupFloat("TotalReceivedBytes", total_recvd_bytes);
+
+	ad->LookupInteger("Node", node);
+}
+
+// ----- PostScriptTerminatedEvent class
+
+PostScriptTerminatedEvent::
+PostScriptTerminatedEvent()
+{
+	eventNumber = ULOG_POST_SCRIPT_TERMINATED;
+	normal = false;
+	returnValue = -1;
+	signalNumber = -1;
+}
+
+
+PostScriptTerminatedEvent::
+~PostScriptTerminatedEvent()
+{
+}
+
+
+int PostScriptTerminatedEvent::
+writeEvent( FILE* file )
+{
+    if( fprintf( file, "POST Script terminated.\n" ) < 0 ) {
+        return 0;
+    }
+
+    if( normal ) {
+        if( fprintf( file, "\t(1) Normal termination (return value %d)\n", 
+					 returnValue ) < 0 ) {
+            return 0;
+        }
+    } else {
+        if( fprintf( file, "\t(0) Abnormal termination (signal %d)\n",
+					 signalNumber ) < 0 ) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+
+int PostScriptTerminatedEvent::
+readEvent( FILE* file )
+{
+	int tmp;
+	if( fscanf( file, "POST Script terminated.\n\t(%d) ", &tmp ) != 1 ) {
+		return 0;
+	}
+	if( tmp == 1 ) {
+		normal = true;
+	} else {
+		normal = false;
+	}
+    if( normal ) {
+        if( fscanf( file, "Normal termination (return value %d)",
+					&returnValue ) != 1 ) {
+            return 0;
+		}
+    } else {
+        if( fscanf( file, "Abnormal termination (signal %d)",
+					&signalNumber ) != 1 ) {
+            return 0;
+		}
+    }
+    return 1;
+}
+
+ClassAd* PostScriptTerminatedEvent::
+toClassAd()
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+	char buf0[512];
+	
+	snprintf(buf0, 512, "TerminatedNormally = %s", normal ? "TRUE" : "FALSE");
+	buf0[511] = 0;
+	if( !myad->Insert(buf0) ) return NULL;
+	if( returnValue >= 0 ) {
+		snprintf(buf0, 512, "ReturnValue = %d", returnValue);
+		buf0[511] = 0;
+		if( !myad->Insert(buf0) ) return NULL;
+	}
+	if( signalNumber >= 0 ) {
+		snprintf(buf0, 512, "TerminatedBySignal = %d", signalNumber);
+		buf0[511] = 0;
+		if( !myad->Insert(buf0) ) return NULL;
+	}
+
+	return myad;
+}
+
+void PostScriptTerminatedEvent::
+initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+	
+	if( !ad ) return;
+
+	int reallybool;
+	if( ad->LookupInteger("TerminatedNormally", reallybool) ) {
+		normal = reallybool ? TRUE : FALSE;
+	}
+
+	ad->LookupInteger("ReturnValue", returnValue);
+	ad->LookupInteger("TerminatedBySignal", signalNumber);
+}
+
+

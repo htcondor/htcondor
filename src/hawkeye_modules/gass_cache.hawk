@@ -1,0 +1,23 @@
+# Data file describing the GASS Cache module
+ModuleFiles: gass_cache
+
+Description:
+Monitors the status of a Globus GASS cache You will need to set the
+GASS_CACHE_ parameters by hand In particular, the
+HAWKEYE_GASS_CACHE_DIRECTORY is most likely not valid for your system
+
+Default: gass_cache
+options: nokill
+period: 12h
+prefix: cache_
+
+# It's parameters
+parameter: HAWKEYE_GASS_CACHE_DIRECTORY = $(HOME)/.globus/.gass_cache
+Sets the "base" directory of the GASS cache to monitor
+example: HAWKEYE_GASS_CACHE_DIRECTORY = /some/dir/.globus/.gass_cache
+
+parameter: HAWKEYE_GASS_CACHE_MAXAGE = 2d
+Data files older than this are labeled as "old" (i.e. 12h, 2d)
+
+parameter: HAWKEYE_GASS_CACHE_MAXSIZE = 100m
+Data files larger than this are labeled as "big" (i.e. 200m, 1.5g)

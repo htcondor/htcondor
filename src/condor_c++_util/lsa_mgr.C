@@ -1,0 +1,578 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+#include "condor_common.h"
+
+#ifdef WIN32
+
+#include "lsa_mgr.h"
+
+//----------------------------------
+// class lsa_mgr
+// 
+// manages password storage on win32
+// You must be Local System in order
+// to run this code successfully.
+//----------------------------------
+
+
+//-----------------
+// public methods
+//-----------------
+
+lsa_mgr::lsa_mgr() {
+	Data_string = NULL;
+	DataBuffer = NULL;
+}
+
+lsa_mgr::~lsa_mgr() {
+	freeBuffers();
+}
+
+
+// careful with this one...it prints out everything in the clear
+// It's really just for debugging purposes
+void 
+lsa_mgr::printAllData() {
+	if ( loadDataFromRegistry() ) {
+
+		printf("%S\n", (this->Data_string) ? this->Data_string : L"Null");
+		freeBuffers(); // free buffers
+	} else {
+		printf("No data to print!\n");
+	}
+}
+
+// careful with this one too--it clears all passwords
+bool
+lsa_mgr::purgeAllData() {
+
+	LSA_HANDLE policyHandle;
+	LSA_UNICODE_STRING keyName;
+	NTSTATUS ntsResult;
+	LSA_OBJECT_ATTRIBUTES obj_attribs;
+
+	// Object attributes are reserved, so initialize to zeros
+	ZeroMemory(&obj_attribs, sizeof(obj_attribs));
+	
+	// first open a policy handle 
+	ntsResult = LsaOpenPolicy(
+			NULL, 							// machine name or NULL for local
+			&obj_attribs,					// object attributes (?)
+			POLICY_CREATE_SECRET,			// policy rights
+			&policyHandle					// policy handle ptr
+		);
+
+	if (ntsResult != ERROR_SUCCESS) {
+		wprintf(L"OpenPolicy returned %lu\n", LsaNtStatusToWinError(ntsResult));
+		return NULL;
+	}
+
+	// init keyname we want to erase
+	InitLsaString( &keyName, CONDOR_PASSWORD_KEYNAME );
+	
+	// now we can (finally) do the actual delete
+	ntsResult = LsaStorePrivateData(
+				policyHandle, 		/* LSA_HANDLE */
+				&keyName,			/* LSA_UNICODE_STRING registry key name */
+				NULL				/* Passing NULL to erase the key */
+		);
+	
+	// be tidy with the silly policy handles
+	LsaClose(policyHandle);
+
+	return (ntsResult == ERROR_SUCCESS);
+}
+
+// an attempt to add a Login that already exists will
+// result in a failure
+bool
+lsa_mgr::add( const LPWSTR Login, const LPWSTR Passwd ) {  
+
+	wchar_t* new_buffer = NULL; 
+	LSA_UNICODE_STRING lsa_new_data;
+	bool result = false;
+
+	// sanity checks for input strings
+	if ( !Login || 0 == wcslen(Login) ) {
+		printf("Must specify a Login!\n");
+		return false;
+	}else if ( !Passwd || 0 == wcslen(Passwd) ) {
+		printf("Must specify a Password!\n");
+		return false;
+	}
+
+	int new_buffer_len = 	wcslen(Login) + 1 + // Login delimiter
+							wcslen(Passwd) + 3;  // newline + null terminator
+
+	if ( loadDataFromRegistry() ) { // if there's already password information in the registry
+		if ( findInDataString(Login) ) { // check for a duplicate
+			
+			// if we find the login is already in the stash, nuke it
+			
+			freeBuffers();				// clean up buffers so we don't leak memory
+			remove(Login);				// nuke the login
+			loadDataFromRegistry();		// now reload the data
+		}
+
+
+		new_buffer_len += wcslen(this->Data_string);
+		new_buffer = new wchar_t[new_buffer_len];
+		wcscpy(new_buffer, this->Data_string);
+	} else {
+		new_buffer = new wchar_t[new_buffer_len];	
+		new_buffer[0] = CC_RECORD_DELIM; // init with empty record
+		new_buffer[1] = L'\0'; // 
+	}
+
+	wcscat(new_buffer, Login );
+	new_buffer[wcslen(new_buffer)+1] = L'\0';
+	new_buffer[wcslen(new_buffer)] = CC_DATA_DELIM;
+
+	wcscat(new_buffer, Passwd );
+	new_buffer[wcslen(new_buffer)+1] = L'\0';
+	new_buffer[wcslen(new_buffer)] = CC_RECORD_DELIM;
+
+	//first close up the data buffer if it's open already
+	freeBuffers();
+	
+	// prepare new data buffer
+	InitLsaString(&lsa_new_data, new_buffer);
+
+	result = storeDataToRegistry(&lsa_new_data);
+	
+	if (! result ) {
+		printf("lsa_mgr::storeDataToRegistry() failed!\n");
+	}
+
+	// clean up the new buffer after its stored
+	ZeroMemory(new_buffer, sizeof(WCHAR)*wcslen(new_buffer));
+	delete[] new_buffer;
+
+	return result;
+}
+
+bool
+lsa_mgr::remove( const LPWSTR Login ) {
+	
+	LSA_UNICODE_STRING newBuffer; // new data (with stuff removed) to store in registry
+	int remove_len; // size of record to remove from stash
+	wchar_t* newData; // string containing new data
+
+
+	if ( loadDataFromRegistry() ) {
+		
+		// first find out where the record is that we want to remove
+		wchar_t* result = findInDataString( Login );
+
+		if ( result ) {
+			// now if we found something, move past the first delimiter
+			result++; 
+			
+			// now calculate how much we have to skip over when we rewrite the data buffer to 
+			// the registry
+			remove_len = wcschr(result, CC_RECORD_DELIM) - (result); // how many chars to remove
+			remove_len++; // remove the extra newline too
+
+			// create a new buffer and copy everything we want to keep into it
+			newData = new wchar_t[(wcslen(Data_string) - remove_len) +1];
+			
+			// copy everything up to recrd
+			wcsncpy(newData, Data_string, (result - Data_string) ); 
+			newData[(result - Data_string)] = L'\0';
+
+			// now skip over the record we're removing
+			result += remove_len;
+			
+			// and copy what comes after it
+			wcscat(newData, result);
+
+			// finally, store it to the registry and clean up
+			InitLsaString( &newBuffer, newData );
+			storeDataToRegistry( &newBuffer );
+
+			delete[] newData;
+			freeBuffers();
+			return true;
+		}
+
+		freeBuffers();
+		return false;
+	} else {
+		return false; // no data in registry
+	}
+}
+
+bool
+lsa_mgr::isStored( const LPWSTR Login ) {
+	wchar_t* pw = NULL;
+
+	pw = query(Login);
+	if ( pw ) {
+		// we found something, but don't leak memory
+		delete[] pw;
+		return true;
+	} else {
+		return false;
+	}
+}
+
+LPWSTR
+lsa_mgr::query( const LPWSTR Login ) {
+	
+	wchar_t* pw;	// pointer to new buffer containing requested password
+	int pwlen;		// length of password
+
+	if ( loadDataFromRegistry() ) {
+	
+		int query_str_size = wcslen(Login) + 2; // delimiter+null
+
+		// locate login and peel off the password part
+		wchar_t* result = findInDataString( Login );
+		
+		if ( result ) {
+			result += query_str_size; // move ptr to password part
+			pwlen = wcschr(result+1, CC_RECORD_DELIM) - result;
+			pw = new wchar_t[pwlen+1];
+			wcsncpy(pw, result, pwlen);
+			pw[pwlen] = L'\0';  // make sure it's null terminated!
+			return pw;
+		} else { 
+			return NULL;
+		}
+	} else { return NULL; } // this happens if there's no data to retrieve from registry
+}
+
+// convert char to unicode. You must free what is returned!
+LPWSTR
+lsa_mgr::charToUnicode( char* str ) {
+	LPWSTR str_unicode = new wchar_t[strlen(str)+1];
+	MultiByteToWideChar(CP_ACP, 0, str, -1, str_unicode, strlen(str)+1);
+	return str_unicode;
+}
+
+//-----------------
+// private methods
+//-----------------
+
+bool 
+lsa_mgr::loadDataFromRegistry() {
+
+	LSA_HANDLE policyHandle;
+	LSA_UNICODE_STRING keyName;
+	NTSTATUS ntsResult;
+	LSA_OBJECT_ATTRIBUTES obj_attribs;
+
+	// Object attributes are reserved, so initialize to zeros
+	ZeroMemory(&obj_attribs, sizeof(obj_attribs));
+	
+	// first open a policy handle 
+	ntsResult = LsaOpenPolicy(
+			NULL, 							// machine name or NULL for local
+			&obj_attribs,					// object attributes (?)
+			POLICY_GET_PRIVATE_INFORMATION, // policy rights
+			&policyHandle					// policy handle ptr
+		);
+
+	if (ntsResult != ERROR_SUCCESS) {
+		wprintf(L"OpenPolicy returned %lu\n", LsaNtStatusToWinError(ntsResult));
+		return NULL;
+	}
+
+	// init keyname we want to grab
+	InitLsaString( &keyName, CONDOR_PASSWORD_KEYNAME );
+	
+	// now we can (finally) grab the private data
+	ntsResult = LsaRetrievePrivateData(
+				policyHandle, 		/* LSA_HANDLE */
+				&keyName,			/* LSA_UNICODE_STRING registry key name */
+				&DataBuffer 		/* LSA_UNICODE_STRING private data */
+		);
+
+	// be tidy with the silly policy handle 
+	LsaClose(policyHandle);
+
+	if (ntsResult == ERROR_SUCCESS) {
+		extractDataString();
+		return true;
+	} else {
+		return false;
+	}
+}
+
+bool 
+lsa_mgr::storeDataToRegistry( const PLSA_UNICODE_STRING lsaString ) {
+
+	LSA_HANDLE policyHandle;
+	LSA_UNICODE_STRING keyName;
+	NTSTATUS ntsResult;
+	LSA_OBJECT_ATTRIBUTES obj_attribs;
+
+	// Object attributes are reserved, so initialize to zeros
+	ZeroMemory(&obj_attribs, sizeof(obj_attribs));
+	
+	// first open a policy handle 
+	ntsResult = LsaOpenPolicy(
+			NULL, 							// machine name or NULL for local
+			&obj_attribs,					// object attributes (?)
+			POLICY_CREATE_SECRET,			// policy rights
+			&policyHandle					// policy handle ptr
+		);
+
+	if (ntsResult != ERROR_SUCCESS) {
+		wprintf(L"OpenPolicy returned %lu\n", LsaNtStatusToWinError(ntsResult));
+		return NULL;
+	}
+
+	// init keyname we want to grab
+	InitLsaString( &keyName, CONDOR_PASSWORD_KEYNAME );
+
+	printf("Attempting to store %d bytes to reg key...\n", lsaString->Length);
+	
+	// now we can (finally) grab the private data
+	ntsResult = LsaStorePrivateData(
+				policyHandle, 		/* LSA_HANDLE */
+				&keyName,			/* LSA_UNICODE_STRING registry key name */
+				lsaString	 		/* LSA_UNICODE_STRING private data */
+		);
+	
+	// be tidy with the silly policy handles
+	LsaClose(policyHandle);
+
+	return (ntsResult == ERROR_SUCCESS);
+}
+
+
+void
+lsa_mgr::InitLsaString( PLSA_UNICODE_STRING LsaString, const LPWSTR String ) {
+	DWORD StringLength;
+	if(String == NULL) {
+		LsaString->Buffer = NULL;
+		LsaString->Length = 0;
+		LsaString->MaximumLength = 0;
+		return;
+	}
+	//StringLength = lstrlenW(String);
+	StringLength = wcslen(String);
+	LsaString->Buffer = String;
+	LsaString->Length = (USHORT) StringLength * sizeof(WCHAR);
+	LsaString->MaximumLength = (USHORT) (StringLength + 1) * sizeof(WCHAR);
+}
+
+// the purpose of this method is to guarantee that the data buffer is null terminated
+void
+lsa_mgr::extractDataString() {
+	if ( this->DataBuffer ) { // no op if there's no data
+		int strlength = this->DataBuffer->Length/sizeof(WCHAR);
+		this->Data_string = new wchar_t[ strlength +1]; //length + null
+		wcsncpy( Data_string, DataBuffer->Buffer, strlength );
+		Data_string[strlength] = L'\0'; // make sure it's null terminated
+	} else {
+		printf("lsa_mgr::extractDataString() has been called with no data\n");
+	}
+}
+
+LPWSTR
+lsa_mgr::findInDataString( const LPWSTR Login, bool case_sensitive ) {
+	int look_for_size = wcslen(Login) + 3; // delimiter+delimiter+null
+	wchar_t* look_for = new wchar_t[look_for_size];
+	
+	// we're gonna look though the data string hoping to find this:
+	// \nDesired_Login\t
+	
+	look_for[0] = CC_RECORD_DELIM;
+	look_for[1] = L'\0';
+	
+	wcscat(look_for, Login );
+	look_for[wcslen(look_for)+1] = L'\0';
+	look_for[wcslen(look_for)] = CC_DATA_DELIM;
+		
+//	wprintf(L"Looking for '%s'\n", look_for);
+	wchar_t* result; 
+	if ( case_sensitive ) {
+		result = wcsstr(Data_string, look_for);
+	} else {
+		result = wcsstri(Data_string, look_for);
+	}
+	delete[] look_for;
+	return result;
+}
+
+// strstr that's case insensitive
+wchar_t* 
+lsa_mgr::wcsstri(wchar_t* haystack, wchar_t* needle) {
+	wchar_t* h_lwr = NULL; // lowercase versions of
+	wchar_t* n_lwr = NULL; // the above args
+	wchar_t* match = NULL;
+
+	if ( haystack && needle ) {
+		h_lwr = new wchar_t[wcslen(haystack)+1];
+		n_lwr = new wchar_t[wcslen(needle)+1];
+		
+		// make lowercase copies
+		wcscpy(h_lwr, haystack);
+		wcscpy(n_lwr, needle);
+		wcslwr(h_lwr);
+		wcslwr(n_lwr);
+
+		// do the strstr
+		match = wcsstr(h_lwr, n_lwr);
+		if ( match ) {
+			// set match to point to original haystack
+			// using offset
+			match = &haystack[match-h_lwr];
+		} else {
+			match = NULL;
+		}
+		
+		delete[] h_lwr;
+		delete[] n_lwr;
+	}
+
+	return match;
+}
+
+
+void 
+doAdd() {
+	char inBuf[1024];
+	wchar_t *Login=NULL, *Passw=NULL;
+	
+	lsa_mgr* foo = new lsa_mgr();
+	
+	printf("Enter Login: ");
+	gets(inBuf);
+	Login = foo->charToUnicode( inBuf );
+	
+	printf("Enter Password: ");
+	gets(inBuf);
+	Passw = foo->charToUnicode( inBuf );
+
+	foo->add( Login, Passw );
+
+	ZeroMemory(Passw, sizeof(WCHAR)*wcslen(Passw)+1);
+	delete[] Passw;
+	Passw = NULL;
+
+	ZeroMemory(Login, sizeof(WCHAR)*wcslen(Login)+1);
+	delete[] Login;
+	Login = NULL;
+
+	// cleanup 
+	delete foo;
+}
+
+void doRemove() {
+	char inBuf[1024];
+	wchar_t *Login=NULL;
+	
+	lsa_mgr* foo = new lsa_mgr();
+	
+	printf("Enter Login: ");
+	gets(inBuf);
+	Login = foo->charToUnicode( inBuf );
+	
+	foo->remove( Login );
+
+	// cleanup 
+	delete foo;
+
+	ZeroMemory(Login, sizeof(WCHAR)*wcslen(Login)+1);
+	delete[] Login;
+	Login = NULL;
+}
+
+void doQuery() {
+	char inBuf[1024];
+	wchar_t *Login=NULL, *Passw=NULL;
+	
+	lsa_mgr* foo = new lsa_mgr();
+	
+	printf("Enter Login: ");
+	gets(inBuf);
+	Login = foo->charToUnicode( inBuf );
+	
+	
+	Passw = foo->query( Login );
+
+	printf("Password is %S\n", Passw ? Passw : L"Not Found");
+
+	// cleanup 
+
+	if ( Passw ) {
+		ZeroMemory(Passw, sizeof(WCHAR)*wcslen(Passw));
+		delete[] Passw;
+		Passw = NULL;
+	}
+
+	ZeroMemory(Login, sizeof(WCHAR)*wcslen(Login)+1);
+	delete[] Login;
+	Login = NULL;
+		
+	delete foo;
+}
+
+void doPrintAll() {
+
+	lsa_mgr *foo = new lsa_mgr();
+	foo->printAllData();
+	delete foo;
+}
+
+void doClearAll() {
+	lsa_mgr *foo = new lsa_mgr();
+	foo->purgeAllData();
+	delete foo;
+}
+
+void printMenu() {
+
+	printf("\n\n1. %s\n2. %s\n3. %s\n4. %s\n5. %s\nExit\n\n> ", 
+			"Add new password",
+			"Remove a password",
+			"Query",
+			"Print all passwords",
+			"Clear all passwords" );
+}
+
+int interactive() {
+
+	char inBuf[256];
+
+	while (1) {
+		printMenu();
+		gets(inBuf);
+		switch( inBuf[0] ) {
+			case '1' : doAdd(); break;
+			case '2' : doRemove(); break;
+			case '3' : doQuery(); break;
+			case '4' : doPrintAll(); break;
+			case '5' : doClearAll(); break;
+			default: return 0; break;
+		}
+	}
+
+}
+
+#endif // WIN32
+

@@ -1,0 +1,97 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+#include "condor_common.h"
+#include "startd_cronmgr.h"
+#include "startd_cronjob.h"
+#include "condor_config.h"
+#include "startd.h"
+
+// Basic constructor
+StartdCronMgr::StartdCronMgr( void ) :
+		CondorCronMgr( "startd" )
+{
+	char *NewName = param( "STARTD_CRON_NAME" );
+	if ( NULL != NewName ) {
+		SetName( NewName, NewName );
+		free( NewName );
+	}
+
+	// Set my initial "shutdown" state
+	ShuttingDown = false;
+}
+
+// Basic destructor
+StartdCronMgr::~StartdCronMgr( )
+{
+	dprintf( D_FULLDEBUG, "StartdCronMgr: Bye\n" );
+}
+
+// Perform shutdown
+int
+StartdCronMgr::Shutdown( bool force )
+{
+	dprintf( D_FULLDEBUG, "StartdCronMgr: Shutting down\n" );
+	ShuttingDown = false;
+	return KillAll( force );
+}
+
+// Check shutdown
+bool
+StartdCronMgr::ShutdownOk( void )
+{
+	bool	idle = IsAllIdle( );
+
+	// dprintf( D_ALWAYS, "ShutdownOk: %s\n", idle ? "Idle" : "Busy" );
+	return idle;
+}
+
+// Create a new job
+CondorCronJob *
+StartdCronMgr::NewJob( const char *jobname )
+{
+	dprintf( D_FULLDEBUG, "*** Creating a Startd job '%s'***\n", jobname );
+	StartdCronJob *job = new StartdCronJob( GetName(), jobname );
+
+	// Register our death handler...
+	CronEventHandler e;
+	e = (CronEventHandler) &StartdCronMgr::JobEvent;
+	job->SetEventHandler( e, this );
+
+	return (CondorCronJob *) job;
+}
+
+// Notified when a job dies
+void
+StartdCronMgr::JobEvent( CondorCronJob *Job, CondorCronEvent Event )
+{
+	(void) Job;
+
+	if ( CONDOR_CRON_JOB_DIED == Event ) {
+		if ( ShuttingDown ) {
+			if ( IsAllIdle( ) ) {
+				startd_check_free( );
+			}
+		}
+	}
+}

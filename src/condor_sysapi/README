@@ -1,0 +1,117 @@
+So you are the poor fool that got this on their plate eh? :)
+
+REASON FOR EXISTENCE
+
+SysAPI is a library where people should put functions that somehow get
+values from the machine. Things like number of cpus, amount of physical
+memory, amount of swap space are squirreled away in here. The reason 
+SysAPI was created, was because it is sometimes very hard to port
+to another machine because a lot of the functions that needed porting
+were strewn across all of the program directories. This is an attempt
+to place the code that is system dependant, and gets info from the
+machine, into one spot. It also cleans up program directories because only
+the files that actually preform the task are there, and not utility 
+files. Less code to view in a directory, the faster you can understand it.
+
+Also, I wrote a lot of defensive programming concerning overflow bugs
+and what not. There are a lot of places where doubles are now used to
+calculate stuff, then the answer either gets typecasted to an int, or
+INT_MAX is returned.
+
+WEIRD THINGS
+
+The library is a completely C linkaged entity. This means that is you
+have c++ code in there, you must extern "C" the functions that will be
+seen by those linking against the library. This is to make it easier to
+use and link against. idle_time.C is a good(in the eye of the beholder)
+example of this practice.
+
+NAMING CONVENTION
+
+There are three types of externally linked against functions:
+a raw function
+a cooked function
+a utility function.
+
+A 'raw' function is a function that gets the true number from the machine.
+A 'cooked' function then takes the raw value and modifies it somehow according
+to specific parameters. It is not unusual for the cooked version of a 
+function to return the true raw value. This is called an identity mapping.
+There shall ALWAYS be a cooked and raw pair for functions that return things
+where a cooked and raw version make sense.
+A 'utility' function either changes state in the library some how, or returns
+a value or set of values that don't have a raw/cooked analogy.
+
+Example of cooked/raw pair:
+sysapi_ncpus_raw()	-> raw
+sysapi_ncpus()		-> cooked
+
+Example of a utility function:
+sysapi_condor_arch()
+
+Each one of the externally linked against functions  must begin with
+'sysapi_' and the raw functions must also end with '_raw'. True internal
+to the library functions may be named anything, but must be declared static
+in the file they are used. For functions where that can't be the case, then
+oh well. You can externally link against them(pollution of global function
+namespace). That isn't really fixable in C. There might be some linker mojo
+that could pull it off, but I doubt portably.
+
+NAMING GLOBAL VARIABLES STATIC TO THE LIBRARY
+
+These variables must begin with the lexical string _sysapi_. I'm sure there
+are some places where I didn't do this, but most of the code worked already
+when I put it in here, so why bust something that works. :) reconfig.C
+is a prime example of this naming convention.
+
+DO YOU USE param() IN YOUR FUNCTION?
+
+If so, then please make a variable in reconfig.C and store a cached
+value of that parameter in there. And add an extern of the variable to
+sysapi_extern.h) Use that cached value everywhere else. This is to help
+with speed improvements. A lot of these functions get called many times,
+and even a hash table gets slow. Be sure to add the initialization into
+sysapi_reconfig(), and place code into your function to understand when
+param() returns NULL.
+
+WHAT IS THE DEAL WITH sysapi.h AND sysapi_extern.h?
+
+sysapi.h is for people _using_ the library and should ONLY contain 
+function definitions. No structs or externs or anything unless you want 
+everybody to be able to use it for some purpose.
+
+sysapi_extern.h if for internal to the SysAPI library use. It contains
+private functions declarations and all the extern junk for global variables
+shared across the library modules.
+
+This was done so when someone who wants to use the library looks at sysapi.h,
+they see a clean interface to the library and not a bunch of crap.
+
+Also, comment the sysapi.h header file nicely.
+
+WHAT IS THE sysapi_reconfig() FUNCTION?
+
+When this is called by the program using the sysapi library, it will
+re-read the config files and re-param() the internally cached variables
+in the sysapi library. This is something that a daemon would call if it
+got a HUP.
+
+WHAT IS THE sysapi_internal_reconfig() FUNCTION?
+
+If the program linked with the sysapi lib has not loaded the configuration
+file yet, then this call(only used internally in the syscall lib) will
+load the config file and set the internal parameters needed from the
+config file when sysapi_* functions are called.  This call will work ONCE
+the first time it is used by any sysapi_*() call. Any other invocation
+after that results in a NOOP. It must be called first in all cooked, raw,
+and utility functions.
+
+PUT EACH FUNCTION INTO ONE FILE
+
+This means that all the versions of sysapi_ncpus() live in one file.
+Do not do the foo.HPUX.c, foo.WIN32.c, foo.LINUX.c stuff. It is annoying
+and makes the build system worse that it sould be. Also, make any
+and all helper functions static to the module if possible.
+
+
+

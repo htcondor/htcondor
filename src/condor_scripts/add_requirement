@@ -1,0 +1,40 @@
+#!/usr/bin/env perl
+
+# Configuration variables
+$file = "requirements.txt";
+
+# Check args
+$type = $ARGV[0];
+$name = $ARGV[1];
+$comp = $ARGV[2];
+$value = $ARGV[3];
+if( ! ($type && $name && $comp && $value) ) {
+    usage();
+}
+# Build the proper requirement clause
+if( $type eq "string" ) {
+    $req = "$name $comp \"$value\"";
+} elsif ( $type =~ /(int|float|bool)/ ) {
+    $req = "$name $comp $value";
+} else { 
+    fprintf STDERR "ERROR: The type \"$type\" is not recognized.\n", 
+    "You must use one of \"string\", \"bool\", \"int\", or \"float\"\n";
+    usage();
+}
+
+if( -f $file ) {
+    # Harder, have to append the new requirements...
+    # TODO
+    die "Error: $file already exists.  I don't know how to ", 
+    "deal with that.\n";
+} else {
+    # Easy, just create the new filel
+    open( OUT, ">$file" ) || die "Can't open $file: $!\n";
+    print OUT "Requirements\t= $req\n";
+    close OUT;
+}
+
+sub usage {
+    print STDERR "Usage: $0 [type] [name] [comparison] [value]\n";
+    exit(1);
+}

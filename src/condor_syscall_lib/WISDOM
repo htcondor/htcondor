@@ -1,0 +1,5 @@
+Callers sometimes rely on the fact that the structures they pass in to
+a system call won't be changed if the system call fails.  Our
+automatically generated "senders" do the right thing -- they don't
+modify any "out" parameters if the syscall failed.  Our special
+switches need to do the same.

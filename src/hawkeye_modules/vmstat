@@ -1,0 +1,246 @@
+#! /usr/bin/perl -w
+use strict;
+
+# Update the module include path
+BEGIN
+{
+    my $Dir = $0;
+    if ( $Dir =~ /(.*)\/.*/ )
+    {
+	push @INC, "$1";
+    }
+}
+use HawkeyePublish;
+use HawkeyeLib;
+
+# Prototypes
+sub MainLoop( );
+sub Init( );
+sub Configure( );
+sub RunIt( $ );
+
+
+# Setup the hawkeye stuff
+my $Hawkeye;
+
+# Setup
+my %Config =
+    (
+     Period	=> 30,
+     RunOnce	=> 0,
+     Debug	=> 0,
+    );
+
+# State logic
+my $Reconfig = 0;
+my $AllDone = 0;
+my $VmstatPid = -1;
+
+# Main logic
+$| = 1;
+
+# Initialize signal handlers
+$SIG{HUP} = sub {
+    print STDERR "Got HUP\n";
+    $Reconfig = 1;
+};
+$SIG{TERM} = sub {
+    if ( $VmstatPid > 0 ) {
+	print STDERR "Got SIGTERM; killing vmstat (PID = $VmstatPid)\n";
+	kill( "TERM", $VmstatPid ) || print STDERR "Can't kill $VmstatPid\n";
+    } else {
+	print STDERR "Got SIGTERM (no vmstat to kill)\n";
+    }
+    $AllDone++;
+};
+$SIG{INT} = sub {
+    if ( $VmstatPid > 0 ) {
+	print STDERR "Got SIGINT; killing vmstat (PID = $VmstatPid)\n";
+	kill( "INT", $VmstatPid ) || print STDERR "Can't kill $VmstatPid\n";
+    } else {
+	print STDERR "Got SIGINT (no vmstat to kill)\n";
+    }
+    $AllDone++;
+};
+$SIG{CHLD} = sub {
+    my $Pid = wait ();
+    if ( ( $Pid > 0 ) && ( $Pid == $VmstatPid ) ) {
+	print STDERR "\"vmstat\" process $Pid died\n";
+    }
+    $VmstatPid = -1;
+};
+
+# Initialize & Run
+Init( );
+MainLoop( );
+
+# Loop 'til we're done
+sub MainLoop( )
+{
+    my $LastTime = -1;
+    my $FastCount = 0;
+    my $LastSleepTime = 0;
+
+    # The loop
+    do
+    {
+
+	# Timing logic
+	my $CurTime = time();
+	my $TimeDiff = $CurTime - $LastTime - $LastSleepTime;
+	$LastSleepTime = 0;
+	if ( ( $LastTime > 0 ) && ( $TimeDiff < 10 ) ) {
+	    print STDERR "\"vmstat\" died after $TimeDiff seconds\n";
+	    if ( ++$FastCount > 1 ) {
+		my $SleepTime = $FastCount * 10;
+		print STDERR "Sleeping for $SleepTime seconds\n";
+		sleep( $SleepTime );
+		$LastSleepTime = $SleepTime;
+	    }
+	} else {
+	    $FastCount-- if ( $FastCount > 0 );
+	}
+	$LastTime = $CurTime;
+
+	# Check configuration
+	if ( $Reconfig ) {
+	    Configure( );
+	    $Reconfig = 0;
+	}
+
+	# Run the test
+	RunIt( $Config{RunOnce} );
+
+	# If we're in run once mode, we're "all done"
+	if ( $Config{RunOnce} ) {
+	    $AllDone++;
+	}
+    }
+    while( ! $AllDone );
+
+    exit 0;
+}
+
+# Initialization logic
+sub Init( )
+{
+    HawkeyeLib::DoConfig( );
+
+    # Parse command line args
+    foreach my $Arg ( @ARGV )
+    {
+	if ( $Arg =~ /^-1$/ ) {
+	    $Config{RunOnce} = 1;
+	} elsif ( $Arg =~ /^-c$/ ) {
+	    HawkeyeLib::HardConfig( "vmstat", "_period" );
+	}
+	elsif ( $Arg =~ /^-d$/ ) {
+	    $Config{Debug}++;
+	} else {
+	    print STDERR "Unknown argument '$Arg'\n";
+	}
+    }
+
+    # Setup the hawkeye stuff
+    $Hawkeye = HawkeyePublish->new;
+    $Hawkeye->Quiet( 1 );
+    $Hawkeye->AutoIndexSet( 1 );
+}
+
+sub Configure( )
+{
+    ### Valid fields are:
+    ###   pid, user, priority, nice, size, rss, share, status, lib,
+    ###    cpu,mem,time,command
+    ###
+    ### Examples
+    ###
+    ###  10:pid,command
+    ###  15:*
+
+    my $ConfigStringPeriod =
+	HawkeyeLib::ReadConfig( "_period", "30" );
+
+    # Check the config time string
+    if ( $ConfigStringPeriod =~ /(\d+)([sSmMhH]?)/ )
+    {
+	$Config{Period} = $1;
+	if ( ( $2 eq "s" ) || ( $2 eq "S" ) )
+	{
+	    # Do nothing
+	}
+	elsif ( ( $2 eq "m" ) || ( $2 eq "M" ) )
+	{
+	    $Config{Period} *= 60;
+	}
+	elsif ( ( $2 eq "h" ) || ( $2 eq "H" ) )
+	{
+	    $Config{Period} *= 3600;
+	}
+    }
+    else
+    {
+	print STDERR "Ignoring vmstat config time '$ConfigStringPeriod'\n";
+    }
+}
+
+
+# Gather info from vmstat, iostat, etc., & publish it...
+sub RunIt( $ )
+{
+    my $RunOnce = shift;
+    my @NameTable = (
+		     "NumProcsRun",
+		     "NumProcsUnint",
+		     "NumProcsSwapped",
+		     "VmUsedKb",
+		     "VmFreeKb",
+		     "VmBuffKb",
+		     "VmCacheKb",
+		     "SwapInKbSec",
+		     "SwapOutKbSec",
+		     "IoInBlkSec",
+		     "IoOutBlkSec",
+		     "SysIntruptsSec",
+		     "SysContextSec",
+		     "CpuUserPct",
+		     "CpuSysPct",
+		     "CpuIdlePct"
+		    );
+
+    # Start things off
+    my $Hash = HawkeyeHash->new( \$Hawkeye, "" );
+
+    # Run vmstat...
+    my $Cmd = "/usr/bin/vmstat $Config{Period}";
+    $VmstatPid = open ( VMSTAT, "$Cmd|" );
+    Carp::confess( "Can't run vmstat '$Cmd'" ) if ( ! $VmstatPid );
+    print STDERR "$Cmd => $VmstatPid\n";
+
+    # Read 'til the other end closes
+    while ( <VMSTAT> )
+    {
+	next if ( /[a-zA-Z]/ );
+	my @VmStat = split;
+	if ( $#VmStat != $#NameTable )
+	{
+	    die "Field mismatch: Expect $#NameTable, found $#VmStat";
+	}
+	foreach my $Offset ( 0 .. $#VmStat )
+	{
+	    $Hash->Add( $NameTable[$Offset], "n", $VmStat[$Offset] );
+	}
+
+	# Ok, summary is done...
+	$Hash->Store( );
+	$Hawkeye->Publish( );
+
+	last if ( $RunOnce );
+    }
+
+    # Done; close the FD
+    print STDERR "Killing vmstat (PID = $VmstatPid )\n";
+    kill( "TERM", $VmstatPid ) if ( $VmstatPid >= 0 );
+    close( VMSTAT );
+
+}

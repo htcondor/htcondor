@@ -1,0 +1,182 @@
+
+Chirp Version 1
+
+INTRODUCTION
+
+Chirp is a simple and lightweight remote I/O protocol.  See doc/Condor
+for information on a specific case where Chirp is being used.
+
+Each Chirp operation is a remote procedure call from a client to a server.
+A Chirp operation is initiated by a client, which sends a formatted request.
+The server acts upon the request and sends a response.  For example, in this
+interaction, a client creates a file for reading and writing, and the server
+responds with a file descriptor:
+
+client:  open /tmp/file rwct 511
+server:  5
+
+AUTHENTICATION
+
+It is assumed that Chirp is carried over a stream protocol such as TCP.
+The stream itself may uniquely identify the client to the server, in which
+case authentication is performed before Chirp comes into play.  For example,
+the server might identify the client based upon its IP address or credentials
+determined by SSL.
+
+If desired, client authentication may be done within the context of Chirp
+itself.  Two commands are available for authentication within the protocol,
+"cookie" and "login".  The exact syntax of these commands is given below.
+The "cookie" command is used to pass a magic string discovered by the client
+through a covert channel.  If the cookie present is what the server expects,
+then authentication succeeds.  The "login" command is a traditional cleartext
+username and password.
+
+Exactly what authentication the server requires is different in every setting.
+If the user fails to satisfy the server's authentication requirements, then
+the server is free to return NO_AUTHENTICATION in response to the
+authentication attempt or any other I/O request.
+
+SYNTAX
+
+A request consists of an LF-terminated line possibly followed by binary
+data. At a minimum, a Chirp server must accept requests of 1024
+characters. It may accept longer lines.  If a line exceeds a server's
+internal maximum, it must gracefully consume the excess characters and
+return a TOO_BIG error code, defined below. Certain requests are
+immediately followed by binary data.  The number of bytes is dependent on
+the semantics of the request, also described below.
+
+A request is parsed into words separated by any amount of white space
+consisting of spaces and tabs.  The first word of the request is called
+the "command" and the rest are called "arguments."
+
+Words fall into two categories: strings and decimals. A string is any
+sequence of non-white-space characters.  A string may include a
+white-space character if it is escaped by a backslash.  A single backslash
+may be represented by a double backslash.  A decimal is any sequence of
+the digits 0-9, optionally prefixed by a single + or -.
+
+At the protocol level, words ave no maximum size.  They may stretch on
+to fill any number of bytes.  Of course, each implementation has limits on
+concepts such a file name lengths and integer sizes.  If a receiver cannot 
+parse, store, or execute a word contained in a request, it must gracefully
+consume the excess characters and return a TOO_BIG error response, defined
+below.
+
+A response consists of an LF-terminated line, bearing an ASCII integer. If
+greater than or equal to zero, the response indicates the operation
+succeeded. If negative, the operation failed, and the exact value tells
+why:
+
+-1   NOT_AUTHENTICATED The client has not authenticated its identity.
+-2   NOT_AUTHORIZED    The client is not authorized to perform that action.
+-3   DOESNT_EXIST      There is no object by that name.
+-4   ALREADY_EXISTS    There is already an object by that name.
+-5   TOO_BIG           That request is too big to execute.
+-6   NO_SPACE          There is not enough space to store that.
+-7   NO_MEMORY         The server is out of memory.
+-8   INVALID_REQUEST   The form of the request is invalid.
+-9   TOO_MANY_OPEN     There are too many resources in use.
+-10  BUSY              That object is in use by someone else.
+-11  TRY_AGAIN         A temporary condition prevented the request.
+-12  UNKNOWN           An unknown error occurred.
+
+Negative values greater than -12 are reserved for future expansion.  The
+receipt of such a values should be interpreted in the same way as UNKNOWN.
+Error values between -1000 and -1999 inclusive are reserved for
+site-specific and experimental errors codes.
+
+COMMANDS
+
+Here are the available commands. Each argument to a command is specified
+with a type and a name.  The valid types are:
+
+close  <decimal:fd>
+
+	Complete access to this file.
+
+cookie <string:cookie>
+
+	Authenticate to the server with the given cookie string.
+
+fsync  <decimal:fd>
+
+	Block until all uncommitted changes to this file descriptor
+	have been written to stable storage.
+
+login  <string:name> <string:password>
+
+	Authenticate to the server with this name and password.
+
+lseek  <decimal:fd> <decimal:offset> <decimal:whence>
+
+	Move the current seek pointer of "fd" by "offset" bytes from the
+	base given by "whence." "whence" may be:
+
+		0 - from the beginning of the file
+		1 - from the current seek position
+		2 - from the end of the file.
+
+	Returns the current seek position.
+
+mkdir  <string:name> <decimal:mode>
+
+	Create a new directory by this name.
+	"mode" is interpreted in the same manner as a POSIX file mode.
+
+open   <string:name> <string:flags> <decimal:mode>
+
+	Open the file named "name."  "mode" is interpreted in the same
+	manner as a POSIX file mode.  Note that the mode is printed
+	in decimal representation, although the UNIX custom is to use
+	octal.  For example, the octal mode 0755, representing readable
+	and executable by everyone would be printed as 493. "flags" may
+	contain any of these characters which affect the nature of the
+	call:
+
+		r - open for reading
+		w - open for writing
+		a - force all writes to append
+		t - truncate before use
+		c - create if it doesn't exist
+		x - fail if 'c' is given and the file already exists
+
+	Returns an integer file descriptor which may be used with later
+	calls referring to open files.
+
+read   <decimal:fd> <decimal:length>
+
+	Read "length" bytes from the file descriptor "fd."  If successful,
+	the server may respond with any value between zero and "length."  
+	Immediately following the response will be binary data of exactly
+	as many bytes indicated in the response.  If zero, the end of the
+	file has been reached.  If any other value is given, no
+	assumptions about the file size may be made.
+
+rename <string:oldpath> <string:newpath>
+
+	Cause the file "oldpath" to be renamed to "newpath".
+
+rmdir  <string:name>
+
+	Delete a directory by this name.
+
+unlink <string:path>
+
+	Delete the file named "path".
+
+version
+
+	Return the protocol version number implemented by this server.
+	Clients may assume that higher protocol numbers are backwards-
+	compatible with lower protocol numbers.
+	
+write  <decimal:fd> <decimal:length>
+
+	Write "length" bytes to the file descriptor "fd."  This request
+	should be immediately followed by "length" binary bytes.  If
+	successful, may return any value between 0 and "length,"
+	indicating the number of bytes actually accepted for writing.  An
+	efficient server should avoid accepting fewer bytes than
+	requested, by the client must be prepared for this possibility.
+

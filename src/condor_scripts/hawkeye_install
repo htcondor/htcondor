@@ -1,0 +1,426 @@
+#! /usr/bin/perl -w
+use strict;
+$| = 1;
+
+# Prototypes
+sub Main( );
+sub PromptUser( $$ );
+sub CreateDir( $ );
+sub DoConfig( $$ );
+sub DoPrefs( $ );
+sub Lookup( $$ );
+
+# Check command line..
+my $Usage = "$0 [TargetDir [tarball]]";
+my $TargetDir = "/home/hawkeye";
+my $TarBall = "TARBALL";
+$TargetDir = shift( @ARGV ) if ( $#ARGV >= 0 );
+$TarBall = shift( @ARGV ) if ( $#ARGV >= 0 );
+my %Daemons;
+
+$| = 1;
+Main( );
+
+# Main logic...
+sub Main( )
+{
+    # Figure out where to install
+    while ( 1 )
+    {
+	$TargetDir = PromptUser( "Directory to install Hawkeye", $TargetDir );
+	last if ( -d $TargetDir );
+	print "$TargetDir does not exist.  Create it? ";
+	$_ = <>; chomp;
+	next if ( ! /^y/i );
+	next if CreateDir( $TargetDir );
+
+	# Wow.  All ok.  Done here
+	last;
+    }
+
+    # Get the absolute path to it
+    $TargetDir = ( `cd $TargetDir; pwd` ); chomp $TargetDir;
+    die "$TargetDir is not a valid directory!" if ( ! -d $TargetDir );
+
+    # Get my hostname..
+    print "\n";
+    my $MyHostname = `/bin/hostname`; chomp $MyHostname;
+    $MyHostname = Lookup( "this system", $MyHostname );
+
+    # Ok.  We know where to install it now...
+    print "Using my hostname = '$MyHostname'\n";
+
+    # Get the Central Manager host
+    print "\nEach Hawkeye pool needs ONE central manager.\n";
+    print "Is this host the central manager <n>? "; $_ = <>; chomp $_;
+    my $Collector = ( /^y/i ) ? $MyHostname : "";
+    $Daemons{Collector} = Lookup( "Central Manager", $Collector );
+
+    # Extract the tarballs
+    print "\n\nExtracting tarballs into '$TargetDir'...\n";
+    system( "tar -C $TargetDir -xvf $TarBall" );
+    system( "tar --gzip -C $TargetDir -xvf hcav.tgz" ) if ( -f "hcav.tgz" );
+    system( "cp README* $TargetDir" );
+
+    # Create extra directories...
+    die if CreateDir( "$TargetDir/etc" );
+    die if CreateDir( "$TargetDir/spool" );
+    die if CreateDir( "$TargetDir/execute" );
+    die if CreateDir( "$TargetDir/log" );
+
+    # Build the daemon list
+    $Daemons{List} = "MASTER, STARTD";
+    $Daemons{List} = "$Daemons{List}, COLLECTOR"
+	if ( $Daemons{Collector} eq $MyHostname );
+
+    # Build up the new config...
+    my $ConfigIn = "$TargetDir/install/hawkeye_config.example";
+    my $ConfigOut = "$TargetDir/etc/hawkeye_config";
+    DoConfig( $ConfigIn, $ConfigOut );
+
+    # Fix up the ClassAd viewer 'prefs'
+    my $Prefs = "$TargetDir/condor/classadView/prefs";
+    DoPrefs( $Prefs ) if ( -f $Prefs );
+
+    # Various paths
+    my $PathBin = "$TargetDir/bin";
+    my $PathSbin = "$TargetDir/sbin";
+
+    # Create a simple script to run Hawkeye for the user
+    {
+	my $Script = "$TargetDir/StartHawkeye";
+	print "Creating $Script to start Hawkeye\n";
+	if ( open( OUT, ">$Script" ) )
+	{
+	    print OUT "#! /bin/bash\n";
+	    print OUT "export HAWKEYE_CONFIG=$ConfigOut\n";
+	    print OUT "export PATH=$PathBin:$PathSbin:\$PATH\n";
+	    print OUT "$TargetDir/sbin/hawkeye_master\n";
+	    close( OUT );
+	    chmod( 0750, $Script);
+	}
+	print "A '$Script' script has been created for you\n";
+    }
+
+    # Create the "real" add module script
+    my $InstallModuleIn = "$TargetDir/install/hawkeye_install_module.example";
+    my $InstallModuleOut = "$TargetDir/sbin/hawkeye_install_module";
+    print "Creating module install script '$InstallModuleOut'\n";
+    if ( open( IN, $InstallModuleIn ) )
+    {
+	if ( open( OUT, ">$InstallModuleOut" ) )
+	{
+	    while( <IN> )
+	    {
+		chomp;
+		s/\"HAWKEYE_CONFIG_DIR\"/\"$TargetDir\"/;
+		print OUT "$_\n";
+	    }
+	    chmod( 0755, "$InstallModuleOut" );
+	}
+    }
+
+    # Output to user
+    print "\n";
+    {
+	my $Tmp = $PathBin;
+	$Tmp =~ s/\//\\\//g;
+	print "You should add '$PathBin' to your PATH\n"
+	    if ( ! ( $ENV{PATH} =~ /$Tmp/ ) );
+	$Tmp = $PathSbin;
+	$Tmp =~ s/\//\\\//g;
+	print "You should add '$PathSbin' to your PATH\n"
+	    if ( ! ( $ENV{PATH} =~ /$Tmp/ ) );
+	print "You should set HAWKEYE_CONFIG=$ConfigOut\n"
+	    if (  ( ! exists $ENV{HAWKEYE_CONFIG} ) ||
+		  ( $ENV{HAWKEYE_CONFIG} ne $ConfigOut )  );
+    }
+}
+
+
+# ###############################################
+# Build a custom config file for the user
+# ###############################################
+sub DoConfig( $$ )
+{
+    my $ConfigIn = shift;
+    my $ConfigOut = shift;
+
+    # Should we overwrite an existing config?
+    if ( -f $ConfigOut )
+    {
+	print "Overwrite $ConfigOut <n>? ";
+	$_ = <>;
+	if ( ! /^y/i )
+	{
+	    return;
+	}
+    }
+
+    # Open 'em both
+    open( IN, $ConfigIn ) || die "Can't open '$ConfigIn' for reading\n";
+    open( OUT, ">$ConfigOut" ) || die "Can't open '$ConfigOut' for writing\n";
+    my @Modules;
+  READ:
+    while ( <IN> )
+    {
+	chomp;
+	my $Line = $_;
+
+	# Hawkeye base dir
+	if ( /^HAWKEYE\s+=(.*) / )
+	{
+	    print OUT "HAWKEYE\t\t=$TargetDir\n";
+	    next;
+	}
+
+	# Central manager
+	elsif ( /^HAWKEYE_HOST\s+=/ )
+	{
+	    print OUT "HAWKEYE_HOST = $Daemons{Collector}\n";
+	    next;
+	}
+
+	# Daemon list
+	elsif ( /^DAEMON_LIST\s+=/ )
+	{
+	    print OUT "DAEMON_LIST = $Daemons{List}\n";
+	    next;
+	}
+
+	# Actual cronjob list
+	elsif ( /^HAWKEYE_JOBS\s+=/ )
+	{
+	    if ( $#Modules < 0 )
+	    {
+		print OUT "$Line\n";
+	    }
+	    else
+	    {
+		print OUT "$Line \\\n";
+	    }
+	    foreach my $i ( 0 .. $#Modules )
+	    {
+		my $Module = $Modules[$i];
+		my $ModName = $Module->{Name};
+		my $Prefix = $Module->{Prefix};
+		my $Path = $Module->{Path};
+		my $Period = $Module->{Period};
+		my $Opt = $Module->{Options};
+		my $Cont = ( $i == $#Modules ) ? "" : "\\";
+		print OUT
+		    "\t$ModName:$Prefix:$Path:$Period:$Opt $Cont\n";
+	    }
+	    next;
+	}
+
+	# Module definition
+	elsif ( /^\#.*MODULE\s+(\w+):(\w+):(\w+):(\w+)(.*)/ )
+	{
+	    print OUT "$Line\n";
+	    my $ModName = $1;
+	    my $ModPre = $2;
+	    my $ModPath = $3;
+	    my $ModTime = $4;
+	    my $ModOpt = ( defined( $5 )  ?  $5  :  "");
+	    my @ModDesc;
+	    while( <IN> )
+	    {
+		chomp;
+		$Line = $_;
+
+		# Read the module description line(s)
+		if ( /^[\#]+\+\s+(.*)/ )
+		{
+		    push @ModDesc, $1;
+		    print OUT "$Line\n";
+		    next;
+		}
+
+		# End this module def?
+		print "Module: '$ModName'\n";
+		foreach my $Desc ( @ModDesc )
+		{
+		    print "  $Desc\n";
+		}
+		while ( 1 )
+		{
+		    print "  Do you want to run $ModName (y/n)? ";
+		    $_ = <>;
+		    if ( /^n/i )
+		    {
+			$_ = $Line;
+			redo READ;
+		    }
+		    last if ( /^y/i );
+		    print "  Please answer yes or no\n";
+		}
+
+		# How often to run it?
+		if ( ! ( $ModOpt =~ /continuous/i ) )
+		{
+		    while( 1 )
+		    {
+			print "  At what period should this module run " .
+			    "(s/m/h modifiers ok) <$ModTime>? ";
+			$_ = <>; chomp;
+			last if ( $_ eq "" );
+			if ( /^(\d+[sSmMhH]?)$/)
+			{
+			    $ModTime = $1;
+			    last;
+			}
+			print "  '$_' is invalid.  Please enter a number ".
+			    "optionally followed by an s, an m, or a h\n";
+		    }
+		}
+		else
+		{
+		    print "   $ModName is runs in 'continuous' mode, ".
+			"so no period is defined here.\n";
+		}
+
+		# Define the module...
+		my $r = ();
+		$r->{Name} = $ModName;
+		$r->{Prefix} = $ModPre;
+		$r->{Path} = "$TargetDir/modules/$ModPath";
+		$r->{Period} = $ModTime;
+		$r->{Options} = $ModOpt;
+		push @Modules, $r;
+		$_ = $Line;
+		redo READ;
+	    }
+	}
+	print OUT "$Line\n";
+    }
+    close( IN );
+    close( OUT );
+}
+
+# ###################################
+# Lookup a FQDN
+# ###################################
+sub Lookup( $$ )
+{
+    my $Title = shift;
+    my $Hostname = shift;
+
+    while( 1 )
+    {
+	my @FQDN = split( /\./, $Hostname );
+	if ( $#FQDN == 0 )
+	{
+	    # Run nslookup on it..
+	    my $Cmd = "nslookup $Hostname";
+	    my $FQDN = "";
+	    if ( open( NSLOOKUP, "$Cmd 2>&1 |" ) )
+	    {
+		while( <NSLOOKUP> )
+		{
+		    if ( /Name:\s*(\S+)/ )
+		    {
+			$FQDN = $1;
+		    }
+		}
+		close( NSLOOKUP );
+	    }
+
+	    # Did we find it?
+	    if ( $FQDN ne "" )
+	    {
+		print "$Title '$Hostname' resolves to '$FQDN'; is this correct <y>? ";
+		$_ = <>; chomp;
+		if ( /^n/i )
+		{
+		    $Hostname = "";
+		    next;
+		}
+		return $FQDN;
+	    }
+	    else
+	    {
+		print "Unable to resolve '$Hostname'\n";
+		print "Please enter FQDN of $Title: ";
+		$Hostname = <>; chomp $Hostname;
+	    }
+	}
+
+	# No hostname
+	elsif ( $#FQDN < 0 )
+	{
+	    print "Please enter the host name of $Title: ";
+	    $Hostname = <>; chomp $Hostname;
+	}
+	# FQDN looks valid
+	else
+	{
+	    print "I've resolve the FQDN of $Title to '$Hostname'; is this correct <y>? ";
+	    $_ = <>; chomp;
+	    if ( /^n/i )
+	    {
+		$Hostname = "";
+		next;
+	    }
+	    return $Hostname;
+	}
+    }
+} # Lookup()
+
+
+# ###################################
+# Customize the ClassAd viewer prefs
+# ###################################
+sub DoPrefs( $ )
+{
+    my $File = shift;
+    my @Prefs;
+    open( IN, $File ) || die "Can't open view prefs '$File'\n";
+    while ( <IN> )
+    {
+	chomp;
+	if ( /(.*)\.collectorMachine\s+=/ )
+	{
+	    $_ = "$1.collectorMachine = $Daemons{Collector}";
+	}
+	push @Prefs, $_;
+    }
+    close( IN );
+
+    open( OUT, ">$File" ) || die "Can't write to view prefs '$File'\n";
+    foreach my $Pref ( @Prefs )
+    {
+	print OUT "$Pref\n";
+    }
+    close( OUT );
+}
+
+
+# ################################
+# Prompt the user & get a reply
+# ################################
+sub PromptUser( $$ )
+{
+    my $Prompt = shift;
+    my $Default = shift;
+    print "$Prompt <$Default> ";
+    my $Response = <>; chomp $Response;
+    $Response = $Default if ( $Response eq "" );
+    $Response = `echo $Response`; chomp $Response;
+    return $Response;
+}
+
+# ############################################################
+# Create a directory if it doesn't exist, check for errors
+# ############################################################
+sub CreateDir( $ )
+{
+    my $Dir = shift;
+    return 0 if ( -d $Dir );
+    if ( ! mkdir( $Dir, 0755 ) )
+    {
+	print STDERR "Can't create $Dir\n";
+	return 1;
+    }
+    return 0;
+}

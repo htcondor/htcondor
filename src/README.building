@@ -1,0 +1,89 @@
+
+This file is intended to describe the steps needed to build Condor version
+6.x from the source code tree.  The Condor build environment is very 
+large and full of specific features for the UW Condor Team.  This document
+will help with the very basics, i.e. just getting Condor to compile.
+
+
+Tools
+-----
+
+We build Condor using GNU gcc and g++ on all of our Unix platforms.  We are
+currently using version 2.95.2 of these compilers on many platforms.  On
+LINUX, such as RedHat Linux, we use the "default" compiler version found in
+/usr/bin/gcc|g++.  So on RedHat 7.2 for instance, we use gcc 2.96.  We
+cannot make any claims about the ability to compile Condor with any other
+compilers or other versions of gcc.  Note: the only exception to this is
+Irix 6.2; for Irix 6.2 we build with GNU gcc/g++ v2.7.2 in order to support
+O32 MIPS ABI.  Building Condor on Unix also uses the utilities awk, lex, and
+yacc, so they need to be available in order to perform a build.
+
+For building Condor on Windows NT/2K/XP, we use Microsoft Visual C++ v6.0 on a
+machine running Windows 2K with the latest service packs.  
+
+For the remainder of this README, follow the instructions before for either
+Unix or Win32.
+
+==================================
+BUILDING CONDOR ON UNIX
+==================================
+
+1) Make certain that a proper version of gcc and g++ is in your path.
+Also, tools like yacc, lex, and awk must be in your path.
+
+2) The source release of Condor should contain a config directory and a src
+directory.  It may be necessary to edit the files in the config directory to
+match your environment and specify compile options.  In particular, the
+site-specific config file named "site.def" is of interest.  In site.def,
+edit the value for the "Top" macro.  The path for the Top macro in site.def
+should specify the full pathname to the top-level directory where the Condor
+source files are unpacked, i.e. the directory which contains the "config"
+and "src" subdirectories.
+
+3) cd into the src directory
+
+4) Enter "./condor_imake"
+
+5) Now enter "make" to build all the modules, and/or "make release" to build
+all the modules, create a src/release_dir directory, and copy all the Condor
+release files into the release_dir.  The files in src/release_dir will be 
+statically linked w/ debug information.  You can enter "make public" to
+create additional subdirectories with stripped dynamic and statically linked
+binaries.
+
+==================================
+BUILDING CONDOR ON WIN32
+==================================
+
+1) Make certain that you have Microsoft Visual C++ 6.0 installed, and that
+you have the "bin" directory to Visual C++ in your path. For example, by
+default VC++ 6.0 will install into "C:\Program Files\Microsoft Visual
+Studio\VC98\bin".  Make certain this subdirectory is in your path. Also,
+make certain that both "cl.exe" and "rebase.exe" exist in this subdirectory.
+The rebase.exe tool is installed by the VC++ 6.0 installation program when
+you tell it to install the resource developer kit tools (which is installed
+by default, I think).
+
+
+3) Enter the following commands: 
+     cd NTconfig 
+     make.bat
+
+7) Now from a command prompt in the NTconfig directory, run: 
+     dorelease [path-to-final-release-subdirectory] 
+
+The dorelease script will copy the all the necessary executables and DLL
+files into the specified release subdirectory. It will then strip out the
+debugging information from all the executables (shrinking them to a fraction
+of their former size). It will leave the debug information for the Condor
+daemons inside of *.dbg files -- you can delete these if you do not desire
+to debug the resulting daemons. So for example if you do:
+
+     cd NTconfig
+     dorelease c:\condor\bin
+
+Then everything needed for Condor will end up in c:\condor\bin. 
+
+
+Questions relating to Condor can be sent to condor-admin@cs.wisc.edu.
+

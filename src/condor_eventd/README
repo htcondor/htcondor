@@ -1,0 +1,165 @@
+                      Event Daemon Specification
+
+PARAMETERS
+----------
+
+  EVENTD_LOG - log file
+  EVENTD_DEBUG - debug logging level; default is D_ALWAYS
+  EVENTD_INTERVAL - number of seconds between collector queries to
+    determine pool state; default is 15 minutes
+  EVENTD_MAX_PREPARATION - number of minutes before a scheduled event
+    when the eventd should start polling; if 0 (default), eventd
+    always polls 
+  EVENT_LIST - list of macro names which define events
+  EVENTD_SHUTDOWN_SLOW_START_INTERVAL - number of seconds between each
+    machine startup after a shutdown event; default is 0
+  EVENTD_SHUTDOWN_CLEANUP_INTERVAL - number of seconds between each
+    check for old shutdown configs in the pool; default is one hour
+  EVENTD_ROUTING_INFO - the path to the network routing table
+    configuration file the eventd should use to schedule network
+    bandwidth for shutdown events
+  EVENTD_CAPACITY_INFO - the path to the bandwidth limit configuration
+    file the eventd should use to schedule network bandwidth for
+    shutdown events
+
+For example:
+
+  EVENTD_LOG = $(LOG)/EventdLog
+  EVENTD_DEBUG = D_FULLDEBUG
+  EVENTD_INTERVAL = 900
+  EVENTD_ROUTING_INFO = $(ETC)/eventd.routes.dat
+  EVENTD_CAPACITY_INFO = $(ETC)/eventd.capinfo.dat
+  EVENT_LIST = TestEvent, TestEvent2
+  TestEvent = SHUTDOWN_RUNTIME MTWRFSU 2:00 1:00 TestEventConstraint
+  TestEvent2 = SHUTDOWN MTWRF 14:00 0:30 TestEventConstraint2
+  TestEventConstraint = (Arch == "INTEL")
+  TestEventConstraint2 = (True)
+  EVENTD_SHUTDOWN_SLOW_START_INTERVAL = 0
+
+In this example, the "TestEvent" is a SHUTDOWN_RUNTIME type event,
+which specifies that all machines whose startd ads match the
+constraint (Arch == "INTEL") should be shutdown for one hour starting
+at 2:00 every Wednesday.  "TestEvent2" is a SHUTDOWN type event, which
+specifies that all machines should be shutdown for 30 minutes starting
+at 14:00 every Friday.
+
+Additional event types may be defined later.
+
+
+ALGORITHM
+---------
+
+Every EVENTD_INTERVAL seconds, for each defined event, the event
+daemon computes an estimate of the time required to complete or
+prepare for the event.  If (time required < (event start time -
+EVENTD_INTERVAL - current time)), then the event daemon activates the
+event.
+
+
+SHUTDOWN EVENTS
+---------------
+
+Format: SHUTDOWN DAY TIME DURATION CONSTRAINT
+TIME and DURATION are specified in an hours:minutes format.
+
+DAY is a string of days, where M = Monday, T = Tuesday,
+W = Wednesday, R = Thursday, F = Friday, S = Saturday, and U = Sunday.
+
+Two options can be specified to change the default behavior of
+SHUTDOWN events.  If _RUNTIME is appended to the SHUTDOWN event
+specification, the startd shutdown configurations will not be
+persistent.  If a machine reboots or a startd is restarted, the startd
+will no longer be shutdown and may transition out of the owner state.
+This is useful for reboot events, where the startd should leave the
+shutdown state when the machine reboots.  If _STANDARD is appended to
+the SHUTDOWN event specification, the eventd will only consider
+standard universe jobs.  It will vacate only standard universe jobs
+and configure machines to run only non-standard universe jobs during
+the shutdown event.  This is also useful for reboot events, where
+there is no point vacating vanilla or pvm jobs before the machine is
+rebooted because they are unable to checkpoint.  Reboot events are
+usually listed as SHUTDOWN_RUNTIME_STANDARD.
+
+To determine the estimate of the time required to complete a SHUTDOWN
+event, the eventd schedules the vacate checkpoint transfers using the
+libnetman NetworkReservations object.
+
+When a SHUTDOWN event is activated, the eventd contacts all startds
+which match the given constraint and inserts the following into their
+configuration:
+
+  EndDownTime = 913066770 
+  Shutdown = (CurrentTime < EndDownTime)
+  START : ($(START)) && ($(Shutdown) == False)
+  STARTD_EXPRS = $(STARTD_EXPRS), EndDownTime
+
+EndDownTime is set to be (event start time + event duration +
+interval), where interval is incremented for each machine according to
+EVENTD_SHUTDOWN_SLOW_START_INTERVAL.  The protocol for changing
+configurations is documented in condor_daemon_core.V6/README.config.
+
+The eventd then sets a timer to start vacating the running jobs.
+Each time the timer goes off, the eventd:
+  - rebuilds its list of startds to be shutdown
+  - contacts any startds which it failed to contact previously and
+    modifies their configuration as above
+  - sends a VACATE_CLAIM to jobs that are scheduled to be shutdown at
+    this time
+  - re-sets the timer for the next scheduled shutdown time
+When the list is empty, the eventd checks periodically for new startds
+until the event period is over.
+
+The motivation for graceful shutdown events is to avoid a huge burst
+of checkpoints when many machines are shutdown, which often results in
+checkpoint failures.  The graceful shutdown processing described can
+make no guarantees, however.  The bandwidth may not be available to
+checkpoint according to the schedule, or new startds could enter the
+pool and start running jobs while the shutdown is occurring.  The
+eventd will notice the new startds at the next interval and add them
+to the shutdown schedule, but this may push the schedule past the
+deadline.  The event may be scheduled a little early to allow for some
+schedule slippage as needed.
+
+The eventd is stateless.  If it is restarted in the middle of a
+shutdown event, it will re-compute the time to complete the event,
+re-activate the event when it realizes that the deadline is
+approaching, configure those startds which don't yet have an
+EndDownTime set, and continue the shutdowns.  Note that the value of
+the slow start interval counter is lost (reset to zero) on restarts.
+
+The modified startd configuration is persistent, so if the startd
+restarts, it will remain in the shutdown state until EndDownTime
+arrives.  As mentioned above, if a startd starts up during a shutdown
+event, the eventd will notice it and place it in the shutdown state.
+
+While periodically computing the time estimate for SHUTDOWN events,
+the eventd cleans up any old SHUTDOWN configurations found (i.e., for
+which EndDownTime is less than CurrentTime).
+
+To undo an eventd shutdown, unset the "eventd_shutdown" configuration
+for each startd.  In csh, you can do this with:
+
+  foreach host (`condor_status -const 'EndDownTime =!= Undefined' -format "%s\n" Name`)
+  condor_config_val -name $host -startd -unset eventd_shutdown
+  condor_reconfig $host
+  end
+
+
+ISSUES
+------
+
+The eventd does not yet do anything to gracefully shutdown schedds.
+One possible solution is to gracefully shutdown schedds after we have
+configured all of the startds to be in Shutdown mode but before we
+send any VACATE_CLAIM commands.  The event daemon could compute the
+time needed to gracefully shutdown each schedd by querying startds
+with the appropriate RemoteUser value.  (This will not work if a user
+submits from more than one schedd, though.)  It would be nice to
+shutdown one job at a time.  This will be addressed further at a
+future date.
+
+Since time_t is used in all cases, timezones should not be an issue.
+The timezone in effect where the eventd is running determines the
+timing of events.  However, the eventd is only as precise as the
+synchronization of the clocks of the machines in the Condor pool.  No
+effort is made to correct for poorly synchronized clocks.

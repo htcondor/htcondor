@@ -1,0 +1,2 @@
+bin/condor_dagman
+bin/condor_submit_dag

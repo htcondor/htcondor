@@ -1,0 +1,20 @@
+# Data file describing the DOWNLIST module
+ModuleFiles: downlist
+
+Description:
+Downlist notes which machines have reported in to Hawkeye.  It
+compares this list to a list of machines which are expected and
+reports back to Hawkeye which machines are missing and which machines
+appeared unexpectedly.
+
+Default: down
+options:
+period: 10m
+prefix: down_
+
+# It's parameters
+parameter: HAWKEYE_DOWN_MACHINES
+Sets the list of machines that downlist will monitor
+
+parameter: HAWKEYE_DOWN_MACHINES_FILE
+Sets the file which contains the list of machines to monitor

@@ -1,0 +1,65 @@
+#! /usr/bin/perl -w
+use strict;
+
+# Update the module include path
+BEGIN
+{
+    my $Dir = $0;
+    if ( $Dir =~ /(.*)\/.*/ )
+    {
+	push @INC, "$1";
+    }
+}
+use HawkeyePublish;
+use HawkeyeLib;
+
+# Global Hawkeye data
+my $Hawkeye;
+
+Init();
+RunIt();
+
+sub Init {
+    HawkeyeLib::DoConfig( );
+
+    # Setup the hawkeye stuff
+    $Hawkeye = HawkeyePublish->new;
+    $Hawkeye->Quiet( 1 );
+    $Hawkeye->AutoIndexSet( 0 );
+}
+
+sub RunIt {
+
+    ###
+    ### Get uptime output for the top n processes
+    ###
+
+    my $Hash = HawkeyeHash->new( \$Hawkeye, "" );
+    my $Cmd = "/usr/bin/who";
+
+    # Run it, parse it
+    Carp::confess( "Can't run who '$Cmd'" ) if ( ! open ( WHO, "$Cmd|" ) );
+    my @UserList;
+    my $NumUsers = 0;
+    while( <WHO> )
+    {
+	my $Num = $.;
+	my $Num_ = $. . "_";
+	$NumUsers++;
+	chomp;
+	my ( $user, $tty, $month, $date, $time ) = split;
+	push( @UserList, $user );
+	$Hash->Add( $Num_ . "user", "s", $user );
+	$Hash->Add( $Num_ . "time", "s", "$month $date $time" );
+	$Hawkeye->StoreIndex( $Num );
+    }
+    close( WHO );
+    $Hash->Add( "LIST", "s", join( " ", @UserList ) );
+    $Hash->Add( "NUMBER", "n", $NumUsers );
+
+    # Ok, summary is done...
+    $Hash->Store( );
+
+    # Publish
+    $Hawkeye->Publish( );
+}

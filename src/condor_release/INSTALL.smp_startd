@@ -1,0 +1,286 @@
+Complete installation directions for Condor can be found in the Condor
+Manual.  The complete Condor Manual is available for download or
+online browsing at URL:
+   http://www.cs.wisc.edu/condor/manual
+
+We recommend that you go to the above URL and download the Condor
+Manual.  However, section 3.3.1 of the 6.0 manual, which provides
+installation directions for the SMP-Startd contrib module, is
+reproduced below in ASCII.
+
+After that, we include section 3.8, ``Managing your Condor Pool''
+which contains instructions that are referenced in the installation
+directions for the SMP-Startd module.
+
+     _________________________________________________________________
+
+3.3.1 Installing The SMP-Startd Contrib Module
+
+   Basically, the ``SMP-Startd Contrib module'' is just a selection of a
+   few files needed to run the 6.1 startd in your existing 6.0 pool. For
+   documentation on the new startd or the supporting files, see the
+   version 6.1 manual.
+   
+   See section 3.2 for complete details on how to install Condor. In
+   particular, you should read the first few sections that discuss
+   release directories, pool layout, and so on. 
+   
+   To install the SMP-startd from the separate contrib module, you
+   must first download the appropriate binary modules for each of your
+   platforms. Once you uncompress and untar the module, you will have
+   a directory with an smp_startd.tar file, a README, and so on. The
+   smp_startd.tar acts much like the release.tar file for a main
+   release. It contains all the binaries and supporting files you
+   would install in your release directory:
+
+        sbin/condor_startd
+        sbin/condor_starter
+        sbin/condor_preen
+        bin/condor_status
+        etc/examples/condor_config.local.smp
+
+   condor_preen and condor_status are both fully backwards compatible, so
+   you can use the new version for your entire pool without changing any
+   of your config files. They each have just been enhanced to handle the
+   SMP startd. See the version 6.1 man pages on each for details. The
+   condor_starter is also backwards compatible, so you probably want to
+   install it pool-wide, as well.
+   
+   The SMP startd is backwards compatible, only in the sense that it
+   still runs and works just fine on single-CPU machines. However, it
+   uses different policy expressions to control its policy, so in this
+   (more important) sense, it is not backwards compatible. For this
+   reason, you must have some separate config file settings in effect on
+   machines running the new version. Therefore, you must decide if you
+   want to convert all your machines to the new version, or only convert
+   your SMP machines. If you just convert the SMP machines, you can put
+   the new settings in the local config file for each SMP machine. If you
+   convert all your machines, you will want to put the new settings into
+   your global config file.
+   
+  Installing Pool-Wide
+  
+   Since you are installing new daemon binaries for all hosts in your
+   pool, it's generally a good idea to make sure no jobs are running and
+   all the Condor daemons are shut off before you begin. Please see
+   section 3.8 for details on how to do this.
+   
+   You may want to keep your old binaries around, just to be safe. Simply
+   move the existing condor_startd, condor_starter, condor_preen out of
+   the way (for example, to ``condor_startd.old'') in the sbin directory,
+   and move condor_status out of the way in bin.
+
+   You can simply untar the smp_startd.tar file into your release
+   directory, and it will install the new versions (and overwrite your
+   existing binaries if you haven't moved them out of the way). Once
+   the new binaries are in place, all you need to do is add the new
+   settings for the SMP startd to your global config file.
+   
+   Once the binaries and config settings are in place, you can restart
+   your pool, as described in section 3.8.1 ``Restarting Your Condor
+   Pool''. 
+   
+  Installing Only on SMP Machines
+  
+   If you only want to run the new startd on your SMP machines, you
+   should untar the smp_startd.tar file into some temporary
+   location. Copy the sbin/condor_startd file into
+   <release_dir>/sbin/condor_startd.smp. You can simply overwrite
+   <release_dir>/sbin/condor_preen and <release_dir>/bin/condor_status
+   with the new versions. In case you have any currently running
+   condor_starter processes, you should move the existing binary to
+   condor_starter.old with ``mv'' so that you don't get starters that
+   crash with SIGILL or SIGBUS. Once you have moved the existing
+   starter out of the way, you can install the new version from your
+   scratch directory.
+
+   Once you've got all the new binaries installed, all you need to do is
+   edit the local config file for each SMP host in your pool to add the
+   SMP-specific settings described below. In addition, you will need to
+   add the line:
+
+        STARTD = $(SBIN)/condor_startd.smp
+
+   to let the condor_master know you want the new version spawned on that
+   host.
+   
+   Once the binaries are all in place and all the configuration settings
+   are done, you can send a condor_reconfig command to your SMP hosts
+   (from any machine listed in the HOST_ALLOW_ADMINISTRATOR setting in
+   your config files), the condor_master should notice the new binaries
+   on the SMP machines, and spawn them.
+   
+  Notes on SMP Startd configuration
+  
+   All documentation for the new Startd can be found in the version 6.1
+   manual. In the etc/examples/condor_config.local.smp file, you will see
+   all the new config file settings you must define or change with the
+   new version. Mainly, these are the new policy expressions. Look in the
+   version 6.1 manual, in the ``Configuring The Startd Policy'' section
+   for complete details on how to configure the policy for the 6.1
+   startd. In particular, you probably want to read the section titled
+   ``Differences from the Version 6.0 Policy Settings'' to see how the
+   new policy expressions differ from previous versions. These changes
+   are not SMP-specific, they just make writing more complicated policies
+   much easier. Given the wide range of SMP machines, from dual CPU
+   desk-top workstations, up to giant, 128 node SMP super computers, more
+   flexibility in writing complicated policies is a big help.
+   
+   In addition to the new policy expressions, there are a few settings
+   that control how the SMP startd's view of the machine state effects
+   each of the virtual machines it is representing. See the section
+   ``Configuring The Startd for SMP Machines'' for full details on
+   configuring these other settings of the SMP startd.
+   
+   Finally, on SMP machines, you want condor_preen to only remove files
+   from the log directory, instead of having to list the files you want
+   to keep, since each condor_starter maintains its own log file, each
+   with a different name. To do this, you specify a INVALID_LOG_FILES
+   setting instead of a VALID_LOG_FILES setting. In both install cases,
+   since you are using the new condor_preen in your whole pool, you
+   should add the following to your global config file:
+
+        INVALID_LOG_FILES = core
+
+   since core files are the only unwanted things that might show up in
+   your log directory.
+
+     _________________________________________________________________
+   
+                         3.8 Managing your Condor Pool
+                                       
+   There are a number of administrative tools Condor provides to help you
+   manage your pool. The following sections describe various tasks you
+   might wish to perform on your pool and explains how to most
+   efficiently do them.
+   
+   All of the commands described in this section must be run from a
+   machine listed in the HOST_ALLOW_ADMINISTRATOR setting in your config
+   files, so that the IP/host-based security allows the administrator
+   commands to be serviced. See section 3.7 full details about
+   IP/host-based security in Condor. 
+   
+3.8.1 Shutting Down and Restarting your Condor Pool
+
+   There are a couple of situations where you might want to shutdown and
+   restart your entire Condor pool. In particular, when you want to
+   install new binaries, it is generally best to make sure no jobs are
+   running, shutdown Condor, and then install the new daemons.
+   
+  Shutting Down your Condor Pool
+  
+   The best way to shutdown your pool is to take advantage of the remote
+   administration capabilities of the condor_master. The first step is to
+   save the IP address and port of the condor_master daemon on all of
+   your machines to a file, so that even if you shutdown your
+   condor_collector, you can still send administrator commands to your
+   different machines. You do this with the following command:
+
+        % condor_status -master -format "%s\n" MasterIpAddr > addresses
+
+   The first step to shutting down your pool is to shutdown any currently
+   running jobs and give them a chance to checkpoint. Depending on the
+   size of your pool, your network infrastructure, and the image-size of
+   the standard jobs running in your pool, you may want to make this a
+   slow process, only vacating one host at a time. You can either
+   shutdown hosts that have jobs submitted (in which case all the jobs
+   from that host will try to checkpoint simultaneously), or you can
+   shutdown individual hosts that are running jobs. To shutdown a host,
+   simply send:
+
+        % condor_off hostname
+
+   where ``hostname'' is the name of the host you want to shutdown. This
+   will only work so long as your condor_collector is still running. Once
+   you have shutdown Condor on your central manager, you will have to
+   rely on the addresses file you just created.
+   
+   If all the running jobs are checkpointed and stopped, or if you're not
+   worried about the network load put in effect by shutting down
+   everything at once, it is safe to turn off all daemons on all machines
+   in your pool. You can do this with one command, so long as you run it
+   from a blessed administrator machine:
+
+        % condor_off `cat addresses`
+
+   where addresses is the file where you saved your master addresses.
+   condor_off will shutdown all the daemons, but leave the condor_master
+   running, so that you can send a condor_on in the future.
+   
+   Once all of the Condor daemons (except the condor_master) on each host
+   is turned off, you're done. You are now safe to install new binaries,
+   move your checkpoint server to another host, or any other task that
+   requires the pool to be shutdown to successfully complete.
+   
+   NOTE: If you are planning to install a new condor_master binary, be
+   sure to read the following section for special considerations with
+   this somewhat delicate task.
+   
+  Installing a New condor_master
+  
+   If you are going to be installing a new condor_master binary, there
+   are a few other steps you should take. If the condor_master restarts,
+   it will have a new port it is listening on, so your addresses file
+   will be stale information. Moreover, when the master restarts, it
+   doesn't know that you sent it a condor_off in its past life, and will
+   just start up all the daemons it's configured to spawn unless you
+   explicitly tell it otherwise.
+   
+   If you just want your pool to completely restart itself whenever the
+   master notices its new binary, neither of these issues are of any
+   concern and you can skip this (and the next) section. Just be sure
+   installing the new master binary is the last thing you install, and
+   once you put the new binary in place, the pool will restart itself
+   over the next 5 minutes (whenever all the masters notice the new
+   binary, which they each check for once every 5 minutes by default).
+   
+   However, if you want to have absolute control over when the rest of
+   the daemons restart, you must take a few steps.
+   
+   1.
+          Put the following setting in your global config file:
+
+        START_DAEMONS = False
+
+          This will make sure that when the master restarts itself
+          that it doesn't also start up the rest of its daemons.
+   2.
+          Install your new condor_master binary.
+   3.
+          Start up Condor on your central manager machine. You will have
+          to do this manually by logging into the machine and sending
+          commands locally. First, send a condor_restart to make sure
+          you've got the new master, then send a condor_on to start up
+          the other daemons (including, most importantly, the
+          condor_collector).
+   4.
+          Wait 5 minutes, such that all the masters have a chance to
+          notice the new binary, restart themselves, and send an update
+          with their new address. Make sure that:
+
+        % condor_status -master
+
+          lists all the machines in your pool.
+   5.
+          Remove the special setting from your global config file.
+   6.
+          Recreate your addresses file as described above:
+
+        % condor_status -master -format "%s\n" MasterIpAddr > addresses
+
+   Once the new master is in place, and you're ready to start up your
+   pool again, you can restart your whole pool by simply following the
+   steps in the next section.
+   
+  Restarting your Condor Pool
+  
+   Once you are done performing whatever tasks you need to perform and
+   you're ready to restart your pool, you simply have to send a condor_on
+   to all the condor_master daemons on each host. You can do this with
+   one command, so long as you run it from a blessed administrator
+   machine:
+
+        % condor_on `cat addresses`
+
+   That's it. All your daemons should now be restarted, and your pool
+   will be back on its way.

@@ -1,0 +1,217 @@
+#! /usr/bin/perl -w
+use strict;
+
+# Update the module include path
+BEGIN
+{
+    my $Dir = $0;
+    if ( $Dir =~ /(.*)\/.*/ )
+    {
+	push @INC, "$1";
+    }
+}
+use HawkeyePublish;
+use HawkeyeLib;
+
+# My Hawkeye object
+my $Hawkeye;
+my $OsInfo = ();
+my $OS;
+my @OsInfo = (
+	      { ostype => "IRIX.*", osrev => ".*",
+		df => "df",
+		fs => 0,
+		size => 2,
+		used => 3,
+		avail => 4,
+		pused => 5,
+		mnt => 6 },
+	      { ostype => "HP-UX", osrev => ".*",
+		df => "bdf",
+		fs => 0,
+		size => 1,
+		used => 2,
+		avail => 3,
+		pused => 4,
+		mnt => 5 },
+	      { ostype => "SunOS", osrev => "5",
+	        df => "df -k",
+		fs => 0,
+		size => 1,
+		used => 2,
+		avail => 3,
+		pused => 4,
+		mnt => 5 },
+	      { ostype => "SunOS", osrev => "4",
+		df => "df",
+		fs => 0,
+		size => 1,
+		used => 2,
+		avail => 3,
+		pused => 4,
+		mnt => 5 },
+	      { ostype => "Linux", osrev => ".*",
+		df => "df",
+		fs => 0,
+		size => 1,
+		used => 2,
+		avail => 3,
+		pused => 4,
+		mnt => 5 },
+	  );
+my %OsFields = ( fs => "fs",
+		 size => "size",
+		 used => "used",
+		 avail => "avail",
+		 pct_used => "pused",
+		 mnt => "mnt" );
+
+main();
+
+# Main
+sub main
+{
+    $| = 1;
+    Init();
+    RunIt();
+}
+
+# Initialize
+sub Init
+{
+    HawkeyeLib::DoConfig( );
+
+    $Hawkeye = HawkeyePublish->new;
+    $Hawkeye->Quiet( 1 );
+    $Hawkeye->AutoIndexSet( 0 );
+
+    # Learn about our O/S
+    foreach my $OsNum ( 0 .. $#OsInfo )
+    {
+	my $OsType = $OsInfo[$OsNum]{ostype};
+	my $OsRev = $OsInfo[$OsNum]{osrev};
+	if (  ( $ENV{OS_TYPE} =~ /$OsType/ ) &&
+	      ( $ENV{OS_REV}  =~ /$OsRev/ )  )
+	{
+	    $OS = $OsInfo[$OsNum];
+	    last;
+	}
+    }
+
+    # Did we find a match?
+    if ( ! defined( $OS->{df} ) )
+    {
+	die "O/S Not defined\n";
+    }
+}
+
+# ***********************************************
+# Do the actual work
+sub RunIt
+{
+
+    # Read the file system list (FSLIST)
+    my $FsList = HawkeyeLib::ReadConfig(  "_fslist", "" );
+    my @MountPoints = split( /,/, $FsList );
+
+
+    # Get the real mount points
+    my %RealMountPoints;
+    my $CheckMountPoints = 0;
+    if ( open ( MOUNT, "/bin/mount|" ) )
+    {
+	while ( <MOUNT> )
+	{
+	    chomp;
+	    my @Mount = split;
+	    if ( $Mount[1] ne "on" )
+	    {
+		print STDERR "df: I don't understand '$_'\n";
+		next;
+	    }
+	    $CheckMountPoints++;
+	    $RealMountPoints{$Mount[2]} = $Mount[0];
+	}
+	close( MOUNT );
+    }
+
+    my %DfOut;
+    my $MountPoint;
+    foreach $MountPoint (@MountPoints)
+    {
+	my $mount = $MountPoint;
+
+	# Verify it
+	if ( ! -d $mount )
+	{
+	    print STDERR "df: '$mount' is not a directory! (skipping)\n";
+	    next;
+	}
+	if (  ( $CheckMountPoints ) && ( ! exists $RealMountPoints{$mount} )  )
+	{
+	    print STDERR "df: '$mount' is not a mount point! (skipping)\n";
+	    next;
+	}
+
+	# Run df on it
+        chop( my $df_out = `$OS->{df} $mount | grep -v Filesystem` );
+
+	my @Tmp = split (/\s+/, $df_out);
+
+	# Store into the 'DfOut' hash
+	my $Key;
+	foreach $Key ( keys %OsFields )
+	{
+	    $DfOut{$mount}{$Key} = $Tmp[$OS->{$OsFields{$Key}}];
+	}
+    }
+
+    ###
+    ### Store the fields used
+    ###
+    {
+	my $Fields = "";
+	my $Key;
+	foreach $Key ( keys %OsFields )
+	{
+	    $Fields = $Fields . "$Key ";
+	}
+	$Hawkeye->Store( "FIELDS" , $Fields );
+    }
+
+    ###
+    ### Now, walk through the point point array
+    ###
+    foreach $MountPoint ( keys %DfOut )
+    {
+	my $PublishName = $MountPoint;
+	$PublishName = "root" if ( $PublishName eq "/" );
+
+        ###
+        ### Clean up the published name...
+        $PublishName =~ s/^\/$/root/;
+        $PublishName =~ s/^\///;
+        $PublishName =~ s/[\/\.]/_/g;
+
+	# Publish to Hawkeye
+	my $Key;
+	$Hawkeye->StoreIndex( $PublishName );
+	foreach $Key ( keys %OsFields )
+	{
+	    # Pull out & clean up the value, and store it away
+	    my $Value = $DfOut{$MountPoint}{$Key};
+	    my $Name = $PublishName . "_" . $Key;
+	    if ( $Value =~ /^(\d+)\%?$/ )
+	    {
+		$Value = $1;
+		$Hawkeye->StoreNum( $Name, $Value );
+	    }
+	    else
+	    {
+		$Hawkeye->Store( $Name, $Value );
+	    }
+	}
+    }
+
+    $Hawkeye->Publish( );
+}

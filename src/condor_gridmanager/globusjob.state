@@ -1,0 +1,248 @@
+// If a call returns pending or would_start_new_call status, break out
+// If a call returns a CONTACTING_JOB_MANAGER or CONNECTION_FAILED error,
+//    set jm_unreachable and break out, then call for a ping for the
+//    resource (don't set jm_unreachable or call for a ping if we already
+//    have the resource marked as down)
+// If jm_unreachable or resource_down is set, set no_new_call flag on
+//    globus function calls
+// A successful probe updates the globus_state and error code, and may
+//    force another state re-evaluation
+// Any change to globus_state or gm_state should force another state
+//    re-evaluation
+
+GM_INIT
+  <no contact string>
+    gm_state = GM_CLEAR_REQUEST
+  want resubmit
+    gm_state = GM_CLEAN_JOBMANAGER
+  other
+    signal(invalid signal type)
+    if (UNKNOWN_SIGNAL_TYPE error)
+      set new jm
+      gm_state = GM_REGISTER
+    else if (JOB_CONTACT_NOT_FOUND error)
+      set new jm
+      gm_state = GM_RESTART
+    else if (QUERY_DENIAL or JOB_QUERY_DENIAL error)
+      set old jm
+      if (transfering stdout or stderr)
+        gm_state = GM_CANCEL
+      else
+        gm_state = GM_REGISTER
+    else if (CONNECTION_FAILED error)
+      gm_state = GM_RESTART
+    else (other error)
+      gm_state = GM_STOP_AND_RESTART
+
+GM_REGISTER
+  register callbacks()
+  if (JOB_QUERY_DENIAL error)
+    make GM_SUBMITTED start a probe immediately
+    gm_state = GM_SUBMITTED
+  else if (other error)
+    gm_state = GM_STOP_AND_RESTART
+  set globusState and errorCode
+  update_schedd(globusState)
+  new jm
+    gm_state = GM_STDIO_UPDATE
+  old jm
+    gm_state = GM_SUBMITTED
+
+GM_STDIO_UPDATE
+  update stdio()
+  if (other error)
+    gm_state = GM_STOP_AND_RESTART
+  UNSUBMITTED
+    gm_state = GM_SUBMIT_COMMIT
+  other
+    gm_state = GM_SUBMITTED
+
+GM_UNSUBMITTED
+  REMOVED
+    gm_state = GM_DELETE
+  HELD
+    kill_me()
+  other
+    gm_state = GM_SUBMIT
+
+GM_SUBMIT
+  submit()
+  if (USER_PROXY_EXPIRED)
+    gm_state = GM_PROXY_EXPIRED
+  if (other error)
+    gm_state = GM_UNSUBMITTED
+  determine if jobmanager is new or old
+  gm_state = GM_SUBMIT_SAVE
+
+GM_SUBMIT_SAVE
+  REMOVED/HELD
+    gm_state = GM_CANCEL
+  other
+    update_schedd(contact string)
+    gm_state = GM_SUBMIT_COMMIT (GM_SUBMITTED for old jm)
+
+GM_SUBMIT_COMMIT
+  REMOVED/HELD
+    gm_state = GM_CANCEL
+  other
+    commit(request)
+    if (other error)
+      gm_state = GM_CANCEL
+    gm_state = GM_SUBMITTED
+
+GM_SUBMITTED
+  UNSUBMITTED/PENDING/ACTIVE/SUSPENDED
+    REMOVED || HELD
+      gm_state = GM_CANCEL
+    other
+      probe()
+      if (other error)
+        gm_state = GM_STOP_AND_RESTART
+  DONE
+    sync I/O to disk
+    old jm
+      gm_state = GM_DONE_SAVE
+    new jm
+      gm_state = GM_CHECK_OUTPUT
+  FAILED
+    gm_state = GM_FAILED
+
+GM_CHECK_OUTPUT
+  REMOVED || HELD
+    gm_state = GM_DONE_COMMIT
+  other
+    // should stop retrying if this fails for several cycles
+    check_output() // skip if nothing transferred back  
+    if (output complete)
+      gm_state = GM_DONE_SAVE
+    if (output incomplete)
+      gm_state = GM_STOP_AND_RESTART
+    if (other error)
+      gm_state = GM_STOP_AND_RESTART
+
+GM_DONE_SAVE
+  if (!HELD && !REMOVED)
+    update_schedd(condor_state = COMPLETED);
+  gm_state = GM_DONE_COMMIT
+
+GM_DONE_COMMIT
+  new jm
+    commit(end)
+    if (other error)
+      gm_state = GM_STOP_AND_RESTART
+  either
+    COMPLETED/REMOVED
+      gm_state = GM_DELETE
+    other
+      gm_state = GM_CLEAR_REQUEST
+
+GM_STOP_AND_RESTART
+  stop_jm()
+  if (other_error)
+    gm_state = GM_CANCEL
+  gm_state = GM_RESTART
+
+GM_RESTART
+  <no contact>
+    gm_state = GM_CLEAR_REQUEST
+  same error twice in a row
+    gm_state = GM_CLEAR_REQUEST
+  other
+    restart()
+    if (USER_PROXY_EXPIRED)
+      gm_state = GM_PROXY_EXPIRED
+    if (JM_ALREADY_RUNNING error)
+      gm_state = GM_INIT
+    if (UNDEFINED_EXE)
+      set old jm
+      gm_state = GM_CLEAR_REQUEST
+    if (WAITING_FOR_COMMIT)
+      gm_state = GM_RESTART_SAVE
+    if (other error)
+      gm_state = GM_CLEAR_REQUEST
+
+GM_RESTART_SAVE
+  update_schedd(contact string)
+  gm_state = GM_RESTART_COMMIT
+
+GM_RESTART_COMMIT
+  commit(request)
+  if (other error)
+    gm_state = GM_STOP_AND_RESTART
+  gm_state = GM_SUBMITTED
+
+GM_CANCEL
+  if (!DONE and !FAILED)
+    cancel()
+    if (other error)
+      gm_state = GM_CLEAR_REQUEST
+  if (callbackRegistered)
+    gm_state = GM_CANCEL_WAIT
+  else
+    REMOVED
+      gm_state = GM_DELETE
+    other
+      gm_state = GM_CLEAR_REQUEST
+
+GM_CANCEL_WAIT
+  UNSUBMITTED/PENDING/ACTIVE/SUSPENDED
+    probe
+    if (other error)
+      gm_state = GM_CLEAR_REQUEST
+  DONE
+    gm_state = GM_DONE_COMMIT
+  FAILED
+    gm_state = GM_FAILED
+
+GM_FAILED
+  USER_PROXY_EXPIRED
+    gm_state = GM_PROXY_EXPIRED
+  COMMIT_TIMED_OUT/TTL_EXPIRED/JM_STOPPED
+    gm_state = GM_RESTART
+  other
+    if (new jm)
+      commit(end)
+      if (other error)
+        gm_state = GM_STOP_AND_RESTART
+      update_schedd(no contact)
+    REMOVED
+      gm_state = GM_DELETE
+    other
+      gm_state = GM_CLEAR_REQUEST
+
+GM_DELETE
+  update_schedd(delete from schedd)
+  kill_me()
+
+GM_CLEAN_JOBMANAGER
+  jm_cleanup()
+  if (success/JOB_CANCEL_FAILED)
+    gm_state = GM_CLEAR_REQUEST
+  else if (UNDEFINED_EXE)
+    gm_state = CLEAR_REQUEST
+  else if (NO_STATE_FILE)
+    gm_state = GM_CLEAR_REQUEST
+  else
+    gm_state = GM_CLEAR_REQUEST
+
+GM_CLEAR_REQUEST
+  if want hold
+    gm_state = GM_HOLD
+  else
+    globus_state = UNSUBMITTED
+    update_schedd(clear state of old submission, if any)
+    gm_state = GM_UNSUBMITTED
+
+GM_HOLD
+  condor_state = HELD
+  update_schedd(put_on_hold)
+  kill_me()
+
+GM_PROXY_EXPIRED
+  if (proxy_expire_time < now + jm_min_proxy_time)
+    // do nothing
+  else
+    <no contact string>
+      gm_state = GM_UNSUBMITTED
+    other
+      gm_state = GM_RESTART

@@ -1,0 +1,13 @@
+###################################################
+# Submit file for Job A
+#
+# This will generate a random number and print 
+# the number to STDOUT, which we'll save in A.out
+###################################################
+
+Universe   = standard
+Executable = random.condor
+output     = A.out
+log        = diamond.log
+Queue
+

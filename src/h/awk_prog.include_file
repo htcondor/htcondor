@@ -1,0 +1,16 @@
+BEGIN {
+	printf "/************************************************************\n"
+	printf "This file is generated automatically by an awk script - DO NOT EDIT\n"
+	printf "************************************************************/\n"
+	printf "\n"
+}
+/CONDOR_/ {
+	if($2<low) low=$2;
+	if($2>high) high=$2;
+	printf "#define %s %s\n", $1, $2
+}
+END {
+	printf "\n#define CONDOR_SYSCALL_MIN %d\n",low;
+	printf "#define CONDOR_SYSCALL_MAX %d\n",high;
+}
+

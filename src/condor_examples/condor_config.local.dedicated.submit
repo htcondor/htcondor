@@ -1,0 +1,41 @@
+######################################################################
+##
+##  condor_config.local.dedicated.submit
+##
+##  This is the default local configuration file for the schedd you
+##  designate as your dedicated scheduler.  If you are going to have
+##  users submitting MPI jobs in your pool, you should configure a
+##  single schedd to act as the dedicated scheduler, and have all
+##  users submit from there.
+##
+##  PLEASE READ the discussion on "Configuring Condor for Dedicated
+##  Scheduling" in the "Setting up Condor for Special Environments"
+##  section of the Condor Manual for more details.
+##
+##  You should copy this file to the appropriate location and,
+##  optionally, customize it for your needs.  
+##
+##  Unless otherwise specified, settings that are commented out show
+##  the defaults that are used if you don't define a value.  Settings
+##  that are defined here MUST BE DEFINED since they have no default
+##  value.
+##
+######################################################################
+
+
+######################################################################
+######################################################################
+##  Settings you may want to customize: 
+##  (it is generally safe to leave these untouched) 
+######################################################################
+######################################################################
+
+## If the dedicated scheduler has resources claimed, but nothing to
+## use them for (no MPI jobs in the queue that could use them), how
+## long should it hold onto them before releasing them back to the
+## regular Condor pool?  Specified in seconds.  Default is 10 minutes.
+## If you define this to '0', the schedd will never release claims
+## (unless the schedd is shutdown).  If your dedicated resources are
+## configured to only run jobs, you should probably set this attribute
+## to '0'
+#UNUSED_CLAIM_TIMEOUT = 600

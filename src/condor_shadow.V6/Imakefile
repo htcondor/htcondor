@@ -1,0 +1,35 @@
+NAME = condor_shadow.std
+all_target($(NAME))
+
+CFLAGS = $(STD_C_FLAGS) -DSYSCALL_DEBUG
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DSYSCALL_DEBUG
+LIB = $(STD_LIBS)
+
+#if NEEDS_FAKE_GETMNT
+#define FAKE_GETMNT_OBJ getmnt.o
+#else
+#define FAKE_GETMNT_OBJ
+#endif
+
+RC_OBJ = extern_path.o FAKE_GETMNT_OBJ
+
+OBJ = $(RC_OBJ) ops.o pseudo_ops.o shadow.o shadow_common.o \
+	receivers.o log_events.o job_report.o
+
+c_plus_target($(NAME),$(OBJ),$(LIB))
+release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
+strip_target($(NAME),$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
+static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
+pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
+purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
+html:
+
+IMPORT_LINKS = ../../config/import_links
+import(../condor_syscall_lib,receivers.o)
+import(../condor_syscall_lib,extern_path.o)
+import(../condor_util_lib,getmnt.o)
+
+DEPEND_SRC = job_report.C log_events.C ops.C pseudo_ops.C shadow.C \
+shadow_common.C
+
+depend_source_target($(DEPEND_SRC))

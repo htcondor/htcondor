@@ -1,0 +1,147 @@
+      Condor External Data Representation (Cedar) Class Library
+			    Documentation
+
+1. Introduction
+
+The Cedar class library is used throughout Condor to provide a
+platform-independent interface to and implementation of socket
+services on versions of Unix and Windows NT.  Cedar handles integer
+byte-order and size incompatibilities between machines, as well as
+type differences across operating systems (for example, pid_t is
+unsigned on some systems but signed on others).
+
+2. C++ User Interface Overview
+
+Cedar is implemented in C++ as a hierarchy of classes defined in the
+condor_io directory of the Condor source tree.  Header files for these
+classes can be found in the condor_includes directory.  The class
+hierarchy is:
+
+                              Stream
+                                |
+                                |
+                               Sock
+                               / \
+                              /   \
+                       SafeSock   ReliSock
+
+The Stream class defines the connection-oriented, message-based
+communication interface of Cedar.  The communication stream is toggled
+between encode (send) mode and decode (receive) mode.  Depending on
+the mode, a call to a code() method either sends or receives data of a
+given type.  Since this interface is message-based, each communication
+must end with a call to end_of_message() before changing the stream's
+mode.  Since the code() method is used for both sending and receiving,
+senders and receivers should look similar.  It is imperative that the
+sender and receiver agree on the number and type of the data elements
+sent in a message.  The following is a prototypical Cedar code
+fragment:
+
+	/* Process A */			/* Process B */
+	int handshake(Stream *s) {	int handshake(Stream *s) {
+	    int data = 5, result;	    int data, result;
+	    char str[] = "myname";	    char *str = NULL;
+	    s->encode();		    s->decode();
+	    s->code(data);		    s->code(data);
+	    s->code(str);		    s->code(str);
+	    s->end_of_message();	    s->end_of_message();
+					    result = verify(data, str);
+					    free(str);
+	    s->decode();		    s->encode();
+	    s->code(result);		    s->code(result);
+	    s->end_of_message();	    s->end_of_message();
+	    return result;		    return result;
+	}				}
+
+Note that calls to end_of_message() in the sender and receiver must
+match.  When in encode mode, end_of_message() flushes the buffered
+data for the current message onto the network, returning failure when
+a network error occurs.  In decode mode, end_of_message() verifies
+that the receiver has reached the end of the message and if not,
+returns failure and flushes any remaining data in this message.  The
+code() and end_of_message() methods return 1 on success and 0 on
+failure.  Applications should check for these return values (unlike in
+the above code fragment), and handle errors appropriately.  Often,
+when a receiver encounters an error while reading a message, the
+receiver calls end_of_message() to discard the erroneous message and
+begins processing the next message.
+
+The Sock class defines an interface for connection establishment.
+This interface is implemented with TCP in the ReliSock class and with
+UDP in the SafeSock class.  The ReliSock class also includes listen()
+and accept() methods.  The following example shows ReliSock connection
+establishment in action:
+
+	/* Process A */			/* Process B */
+	ReliSock ls;
+	ls.listen(port);		ReliSock s;
+	ReliSock *s = ls.accept();	s.connect(hostname, port);
+	handshake(s);			handshake(&s);
+	delete s;
+
+The following example shows SafeSock connection establishment in
+action:
+
+	/* Process A */			/* Process B */
+	SafeSock s;			SafeSock s;
+	s.bind(port);			s.connect(hostname, port);
+	handshake(&s);			handshake(&s);
+
+The SafeSock object remembers the address of the sender of the last
+message received, so after receiving a message, the process can
+immediately encode a reply to the sender.  In other words, a two-way
+connection is established between the SafeSocks.  Unlike ReliSock,
+SafeSock does not guarantee reliable, in-order delivery of messages,
+and messages from different senders may be interleaved (on message
+boundaries) at the receiver.
+
+ReliSock and SafeSock are the only Cedar classes which should be
+instantiated; however, pointers to the Stream base class are often
+used at points in the application where it is not important if the
+underlying medium is TCP or UDP (for example, in a daemon which
+handles the same commands over both TCP and UDP).
+
+Further details of the Cedar C++ interface can be found in the header
+files for these classes.
+
+3. Network Interface
+
+Over TCP, a Cedar message may consist of multiple "packets".  All
+packets have a 5 byte header.  The first byte is 1 if this packet is
+the final packet in the message and 0 otherwise.  The remaining 4
+bytes contain a count of the number of data bytes in the message.
+There is no trailer.  The byte count is used to determine
+end-of-message.
+
+Over UDP, a Cedar message is sent as a single UDP packet.  There is no
+header or trailer.
+
+Cedar sends all integers in 8 byte network order.  Integers less than
+8 bytes in length are sign extended then converted to network order
+before being sent.  On receipt, Cedar tests for overflow: an error
+occurs when attempting to receive a negative value into an unsigned
+integer or when attempting to receive a value larger (or smaller) than
+the maximum (or minimum) values representable in the range of the
+variable.
+
+Cedar sends all floating point values as 8 byte network order integer
+mantissa followed by 8 byte network order integer exponent.  The
+standard C library functions frexp() and ldexp() are used to convert
+between float/double values and mantissa/exponent representation.
+
+All other data (char and opaque) is sent as is.
+
+4. Use in Condor
+
+Cedar communication in Condor is based on "commands".  To initiate a
+communication, a process sends a command to its peer.  Commands are
+messages which start with an integer (which identifies the command)
+followed by any other needed data as specified by the protocol for
+this command.  Condor daemons listen for incoming commands through the
+DaemonCore interface.  When a command arrives, DaemonCore reads the
+integer identifier and calls the registered handler for this command.
+This handler reads any remaining data in the message and continues the
+exchange by replying to the peer.
+
+Cedar is not ClassAd aware.  The ClassAd library provides its own
+methods for sending ClassAds through Cedar.

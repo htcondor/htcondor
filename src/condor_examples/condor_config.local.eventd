@@ -1,0 +1,88 @@
+######################################################################
+##
+##  condor_config.local.eventd
+##
+##  This is the default local configuration file for your event
+##  daemon.  You should copy this file to the appropriate
+##  location and customize it for your needs.  The file is divided
+##  into three main parts: settings you must customize, settings you
+##  may want to customize and settings you should probably leave alone
+##  (unless you know what you're doing).
+##
+######################################################################
+
+######################################################################
+######################################################################
+##  Settings you must customize:
+######################################################################
+######################################################################
+
+##  List of macro names which define events.
+##  For example:
+##
+##  EVENT_LIST	= TestEvent, TestEvent2
+##  TestEvent	= SHUTDOWN_RUNTIME MTWRFSU 2:00 1:00 TestEventConstraint
+##  TestEvent2	= SHUTDOWN MTWRF 14:00 0:30 TestEventConstraint2
+##  TestEventConstraint		= (Arch == "INTEL")
+##  TestEventConstraint2	= (True)
+##
+##  In this example, the "TestEvent" is a SHUTDOWN_RUNTIME type event,
+##  which specifies that all machines whose startd ads match the
+##  constraint (Arch == "INTEL") should be shutdown for one hour
+##  starting at 2:00 every Wednesday.  "TestEvent2" is a SHUTDOWN type
+##  event, which specifies that all machines should be shutdown for 30
+##  minutes starting at 14:00 every Friday.
+EVENT_LIST	=
+
+##  Where is the network routing table configuration file the eventd
+##  should use to schedule network bandwidth for shutdown events?
+##  See the eventd section in the manual for more details.
+EVENTD_ROUTING_INFO = $(ETC)/eventd.routes.dat
+
+##  Where is the bandwidth limit configuration file the eventd should
+##  use to schedule network bandwidth for shutdown events?
+##  See the eventd section in the manual for more details.
+EVENTD_CAPACITY_INFO = $(ETC)/eventd.capinfo.dat
+
+######################################################################
+######################################################################
+##  Settings you may want to customize: 
+##  (it is generally safe to leave these untouched) 
+######################################################################
+######################################################################
+
+##  What daemons do you want to run on this machine?
+##  We must add EVENTD to the DAEMON_LIST to run the condor_eventd on
+##  this machine.
+DAEMON_LIST	= $(DAEMON_LIST), EVENTD
+
+##  Where is the binary for the daemon?
+EVENTD		= $(SBIN)/condor_eventd
+
+##  The number of seconds between collector queries to determine pool
+##  state.  The default is 15 minutes (300 seconds).
+#EVENTD_INTERVAL	= 300
+
+##  The number of minutes before a scheduled event when the eventd
+##  should start periodically querying the collector.  If 0 (default),
+##  the eventd always polls.
+#EVENTD_MAX_PREPARATION	= 0
+
+##  The number of seconds between each machine startup after a
+##  shutdown event.  The default is 0.
+#EVENTD_SHUTDOWN_SLOW_START_INTERVAL = 0
+
+##  The number of seconds between each check for old shutdown configs
+##  in the pool.  The default is one hour (3600 seconds). 
+#EVENTD_SHUTDOWN_CLEANUP_INTERVAL = 3600
+
+######################################################################
+######################################################################
+##  Settings you should probably leave alone:
+##  (unless you know what you're doing)
+######################################################################
+######################################################################
+
+EVENTD_LOG	= $(LOG)/EventdLog
+MAX_EVENTD_LOG	= 640000
+EVENTD_DEBUG	= D_ALWAYS

@@ -1,0 +1,3 @@
+setup/globus/condor/post-condor_base
+setup/globus/condor/post-condor_base.pl
+setup/globus/condor/SXXcondor.in

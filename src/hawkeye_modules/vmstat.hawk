@@ -1,0 +1,15 @@
+# Data file describing the VMSTAT module
+ModuleFiles: vmstat
+
+Description:
+Monitors the status of the Virtual Memory (VM) subsystem You may
+want set the vmstat parameters by hand
+
+Default: vmstat
+options: continuous
+period: 1s
+prefix: vmstat_
+
+# It's parameters
+parameter: HAWKEYE_VMSTAT_PERIOD = 30s
+Sets the frequency with which vmstat collects data (i.e. 30s, 5m)

@@ -1,0 +1,21 @@
+NAME = condor_ckpt_server
+all_target($(NAME) ckpt_server_api.a)
+
+CFLAGS = $(STD_C_FLAGS)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+LIB = $(STD_LIBS) 
+
+OBJ = network2.o gen_lib.o fileinfo2.o fileindex2.o imds2.o xferstat2.o \
+	signal2.o alarm2.o server2.o xfer_summary.o replication.o
+
+SERVER_API_OBJ = network2.o server_interface.o
+
+library_target(ckpt_server_api.a,$(SERVER_API_OBJ))
+
+c_plus_target($(NAME),$(OBJ),$(LIB))
+pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
+release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
+strip_target($(NAME),$(STRIP_CONTRIB)/sbin,EXECUTABLE_MODE)
+static_target($(NAME),$(OBJ),$(LIB),$(STATIC_CONTRIB)/sbin)
+
+html:

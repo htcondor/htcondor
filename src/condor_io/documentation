@@ -1,0 +1,10 @@
+/** @name Condor CEDAR API
+    <hr>
+    Explain CEDAR here.
+*/
+//@{
+  //@Include: ../condor_includes/stream.h
+  //@Include: ../condor_includes/sock.h
+  //@Include: ../condor_includes/reli_sock.h
+  //@Include: ../condor_includes/safe_sock.h
+//@}

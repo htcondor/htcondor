@@ -1,0 +1,27 @@
+/** @name Condor Daemon Client API
+    <hr>
+    This API is used by Condor daemons and tools to communicate with
+    Condor daemons linked with the Condor Daemon Core library.  The
+    Daemon object is a generic interface that handles all sorts of
+    important, general tasks, like locating the given Daemon via
+    various methods, getting information about its version, dealing
+    with security sessions for communicating with it, etc.
+
+    The derived subclasses of Daemon, which are specific for what kind
+    of daemon you're talking to, implement further specialized
+    interfaces for invoking commands each daemon supports.  For
+    example, the DCCollector class has a method for sending a ClassAd
+    update to the collector (which handles a bunch of details that can
+    now be put in one place and hidden from the end user of this
+    interface, like should we use UDP or TCP to update, sequence
+    numbers to track lost updates, etc, tec).  
+*/
+
+//@{
+  //@Include: daemon.h
+  //@Include: dc_collector.h
+  //@Include: dc_schedd.h
+  //@Include: dc_startd.h
+  //@Include: dc_shadow.h
+  //@Include: daemon_list.h
+//@}

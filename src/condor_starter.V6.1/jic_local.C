@@ -1,0 +1,465 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-2002 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+#include "condor_common.h"
+#include "condor_debug.h"
+#include "condor_version.h"
+
+#include "starter.h"
+#include "jic_local.h"
+
+#include "my_hostname.h"
+#include "internet.h"
+#include "condor_string.h"  // for strnewp
+#include "condor_attributes.h"
+#include "directory.h"
+#include "nullfile.h"
+#include "basename.h"
+
+extern CStarter *Starter;
+
+
+JICLocal::JICLocal() : JobInfoCommunicator()
+{
+}
+
+
+JICLocal::~JICLocal()
+{
+}
+
+
+bool
+JICLocal::init( void ) 
+{ 
+	dprintf( D_ALWAYS, "Starter running a local job with no shadow\n" );
+
+	if( ! getLocalJobAd() ) {
+		dprintf( D_ALWAYS|D_FAILURE,
+				 "Failed to get local job ClassAd!\n" );
+		return false;
+	}
+
+		// now that we have the job ad, see if we should go into an
+		// infinite loop, waiting for someone to attach w/ the
+		// debugger.
+	checkForStarterDebugging();
+
+		// Grab all the interesting stuff out of the ClassAd we need
+		// to know about the job itself.
+	if( ! initJobInfo() ) { 
+		dprintf( D_ALWAYS|D_FAILURE,
+				 "Failed to initialize job info from ClassAd!\n" );
+		return false;
+	}
+
+		// for now, this is a no-op.  someday it might give this info
+		// to someone who really cares. :)
+	registerStarterInfo();
+
+		// Now that we have the job ad, figure out what the owner
+		// should be and initialize our priv_state code:
+	if( ! initUserPriv() ) {
+		dprintf( D_ALWAYS, "ERROR: Failed to determine what user "
+				 "to run this job as, aborting\n" );
+		return false;
+	}
+
+		// Now that we have the user_priv, we can make the temp
+		// execute dir
+	if( ! Starter->createTempExecuteDir() ) { 
+		return false;
+	}
+
+	initOutputAdFile();
+
+		// Now that the user priv is setup and the temp execute dir
+		// exists, we can initialize the LocalUserLog.  if the job
+		// defines StarterUserLog, we'll write the events.  if not,
+		// all attemps to log events will just be no-ops.
+	if( ! u_log->initFromJobAd(job_ad) ) {
+		return false;
+	}
+	return true;
+}
+
+
+void
+JICLocal::config( void ) 
+{ 
+		// nothing to look up just for JICLocal
+}
+
+
+void
+JICLocal::setupJobEnvironment( void )
+{ 
+		// nothing to do, tell the starter we're ready
+	Starter->jobEnvironmentReady();
+}
+
+
+
+float
+JICLocal::bytesSent( void )
+{
+		// no file transfer, always 0 for now. 
+	return 0.0;
+}
+
+
+float
+JICLocal::bytesReceived( void )
+{
+		// no file transfer, always 0 for now. 
+	return 0.0;
+}
+
+
+void
+JICLocal::allJobsSpawned( void )
+{
+		// at this point, we don't care that all the jobs have been
+		// spawned...
+}
+
+
+void
+JICLocal::Suspend( void )
+{
+		// We need the update ad for our job.  We'll use this for the
+		// LocalUserLog, and maybe someday other notification to the
+		// local user...
+	ClassAd update_ad;
+	publishUpdateAd( &update_ad );
+	
+		// See if the LocalUserLog wants it
+	u_log->logSuspend( &update_ad );
+}
+
+
+void
+JICLocal::Continue( void )
+{
+		// We need the update ad for our job.  We'll use this for the
+		// LocalUserLog, and maybe someday other notification to the
+		// local user...
+	ClassAd update_ad;
+	publishUpdateAd( &update_ad );
+
+		// See if the LocalUserLog wants it
+	u_log->logContinue( &update_ad );
+}
+
+
+void
+JICLocal::allJobsDone( void )
+{
+		// we don't care about anything at this stage.  we'll tell the
+		// user about the jobs exiting when we get the notifyJobExit()
+}
+
+
+void
+JICLocal::allJobsGone( void )
+{
+		// Since there's no shadow to tell us to go away, we have to
+		// exit ourselves.
+	dprintf( D_ALWAYS, "All jobs have exited... starter exiting\n" );
+	DC_Exit(0);
+}
+
+
+void
+JICLocal::notifyJobPreSpawn( void )
+{
+		// let the LocalUserLog know so it can log if necessary.  it
+		// doesn't use the ClassAd for this event at all, so it's not
+		// worth the trouble of creating one and publishing anything
+		// into it.
+	u_log->logExecute( NULL );
+}
+
+
+bool
+JICLocal::notifyJobExit( int exit_status, int reason, UserProc*
+						  user_proc )
+{
+	ClassAd ad;
+
+		// TODO: this is a hack.  we need a better way to get the
+		// pre/post info back to the right places...
+	Starter->publishPreScriptUpdateAd( &ad );
+	user_proc->PublishUpdateAd( &ad );
+	Starter->publishPostScriptUpdateAd( &ad );
+
+		// depending on the exit reason, we want a different event. 
+	u_log->logJobExit( &ad, reason );
+
+	writeOutputAdFile( &ad );
+
+	return true;
+}
+
+
+
+bool
+JICLocal::notifyStarterError( const char* err_msg, bool critical )
+{
+	u_log->logStarterError( err_msg, critical );
+	return true;
+}
+
+
+void
+JICLocal::addToOutputFiles( const char* filename )
+{
+		// there's no file transfer, so if something needs to get back
+		// to the user, it's already going to be in the job's iwd...
+}
+
+
+bool
+JICLocal::registerStarterInfo( void )
+{
+		// someday, we might want to give info about the Starter to
+		// someone who cares, for now, everything useful has already
+		// been dprintf'ed, so we're done.
+	return true;
+}
+
+
+bool
+JICLocal::initUserPriv( void )
+{
+	bool rval = false;
+
+#ifndef WIN32
+	// Unix
+
+		// Before we go through any trouble, see if we even need
+		// ATTR_OWNER to initialize user_priv.  If not, go ahead and
+		// initialize it as appropriate.  
+	if( initUserPrivNoOwner() ) {
+		return true;
+	}
+
+	char* owner = NULL;
+	if( job_ad->LookupString( ATTR_OWNER, &owner ) != 1 ) {
+		dprintf( D_ALWAYS, "ERROR: %s not found in JobAd.  Aborting.\n", 
+				 ATTR_OWNER );
+		return false;
+	}
+
+	if( ! init_user_ids_quiet(owner) ) { 
+		dprintf( D_ALWAYS, "ERROR: Uid for \"%s\" not found in "
+				 "passwd file for a local job\n", owner ); 
+	} else {  
+		rval = true;
+		dprintf( D_FULLDEBUG, "Initialized user_priv as \"%s\"\n", 
+				 owner );
+	}
+		// deallocate owner string so we don't leak memory.
+	free( owner );
+	if( rval ) {
+		user_priv_is_initialized = true;
+	}
+	return rval;
+
+#else
+		// Windoze
+	return initUserPrivWindows();
+
+#endif
+}
+
+
+bool
+JICLocal::initJobInfo( void ) 
+{
+	if( ! job_ad ) {
+		EXCEPT( "JICLocal::initJobInfo() called with NULL job ad!" );
+	}
+
+		// stash the executable name in orig_job_name
+	if( ! job_ad->LookupString(ATTR_JOB_CMD, &orig_job_name) ) {
+		dprintf( D_ALWAYS, "Error in JICLocal::initJobInfo(): "
+				 "Can't find %s in job ad\n", ATTR_JOB_CMD );
+		return false;
+	}
+
+	if( job_ad->LookupInteger(ATTR_JOB_UNIVERSE, job_universe) < 1 ) {
+		dprintf( D_ALWAYS, 
+				 "Job doesn't specify universe, assuming VANILLA\n" ); 
+		job_universe = CONDOR_UNIVERSE_VANILLA;
+	}
+		// also, make sure the universe we've got is valid, since in
+		// certain cases we may not check this until now, and we want
+		// to make sure we bail out if we can't support it.
+	if( ! checkUniverse(job_universe) ) {
+		return false;
+	}
+
+	if( Starter->isGridshell() ) { 
+		MyString iwd_str = ATTR_JOB_IWD;
+		iwd_str += "=\"";
+		iwd_str += Starter->origCwd();
+		iwd_str += '"';
+		job_ad->InsertOrUpdate( iwd_str.GetCStr() );
+	}
+	job_ad->LookupString( ATTR_JOB_IWD, &job_iwd );
+	if( ! job_iwd ) {
+		dprintf( D_ALWAYS, "Can't find job's IWD, aborting\n" );
+		return false;
+	}
+
+		// Figure out the cluster and proc 
+	initJobId();
+
+	if( ! fullpath(orig_job_name) ) {
+			// add the job's iwd to the job_cmd, so exec will work. 
+		dprintf( D_FULLDEBUG, "warning: %s not specified as full path, "
+				 "prepending job's IWD (%s)\n", ATTR_JOB_CMD, job_iwd );
+		MyString job_cmd;
+		job_cmd += ATTR_JOB_CMD;
+		job_cmd += "=\"";
+		job_cmd += job_iwd;
+		job_cmd += DIR_DELIM_CHAR;
+		job_cmd += orig_job_name;
+		job_cmd += '"';
+		job_ad->Insert( job_cmd.Value() );
+	}
+		
+		// now that we have the real iwd we'll be using, we can
+		// initialize the std files...
+	if( ! job_input_name ) {
+		job_input_name = getJobStdFile( ATTR_JOB_INPUT );
+	}
+	if( ! job_output_name ) {
+		job_output_name = getJobStdFile( ATTR_JOB_OUTPUT );
+	}
+	if( ! job_error_name ) {
+		job_error_name = getJobStdFile( ATTR_JOB_ERROR );
+	}
+	return true;
+}
+
+
+void
+JICLocal::initJobId( void ) 
+{
+	if( job_cluster < 0 ) {
+			// not on command-line, try classad
+		if( !job_ad->LookupInteger(ATTR_CLUSTER_ID, job_cluster) ) { 
+			dprintf( D_FULLDEBUG, "Job's cluster ID not specified "
+					 "in ClassAd or on command-line, using '1'\n" );
+			job_cluster = 1;
+		}
+	}
+	if( job_proc < 0 ) {
+			// not on command-line, try classad
+		if( !job_ad->LookupInteger(ATTR_PROC_ID, job_proc) ) { 
+			dprintf( D_FULLDEBUG, "Job's proc ID not specified "
+					 "in ClassAd or on command-line, using '0'\n" );
+			job_proc = 0;
+		}
+	}
+	if( job_subproc < 0 ) {
+			// not on command-line, try classad
+		if( !job_ad->LookupInteger(ATTR_NODE, job_subproc) ) { 
+			job_subproc = 0;
+		}
+	}
+}
+
+
+char* 
+JICLocal::getJobStdFile( const char* attr_name )
+{
+	char* tmp = NULL;
+	char filename[_POSIX_PATH_MAX];
+	filename[0] = '\0';
+
+		// the only magic here is to make sure we have full paths for
+		// these, by prepending the job's iwd if the filename doesn't
+		// start with a '/'
+	if( job_ad->LookupString(attr_name, &tmp) ) {
+		if ( !nullFile(tmp) ) {
+			if( ! fullpath(tmp) ) { 
+                sprintf( filename, "%s%c", job_iwd, DIR_DELIM_CHAR );
+            } else {
+                filename[0] = '\0';
+            }
+			strcat( filename, tmp );
+		}
+		free( tmp );
+	}
+	if( filename[0] ) { 
+		return strdup( filename );
+	}
+	return NULL;
+}
+
+
+bool
+JICLocal::publishUpdateAd( ClassAd* ad )
+{
+		// No info from JICLocal itself.  Just get our Starter object
+		// to publish about all the jobs.  This will walk through all
+		// the UserProcs and have those publish, as well.  It returns
+		// true if there was anything published, false if not.
+	return Starter->publishUpdateAd( ad );
+}
+
+
+bool
+JICLocal::checkUniverse( int univ ) 
+{
+	switch( univ ) {
+	case CONDOR_UNIVERSE_VANILLA:
+	case CONDOR_UNIVERSE_JAVA:
+			// for now, we don't support much. :)
+		return true;
+
+	case CONDOR_UNIVERSE_STANDARD:
+	case CONDOR_UNIVERSE_PVM:
+	case CONDOR_UNIVERSE_SCHEDULER:
+	case CONDOR_UNIVERSE_MPI:
+	case CONDOR_UNIVERSE_GLOBUS:
+	case CONDOR_UNIVERSE_PARALLEL:
+			// these are at least valid tries, but we don't work with
+			// any of them in stand-alone starter mode... yet.
+		dprintf( D_ALWAYS, "ERROR: %s %s (%d) not supported without the "
+				 "schedd and/or shadow, aborting\n", ATTR_JOB_UNIVERSE,
+				 CondorUniverseName(univ), univ );
+		return false;
+
+	default:
+			// downright unsupported universes
+		dprintf( D_ALWAYS, "ERROR: %s %s (%d) is not supported\n", 
+				 ATTR_JOB_UNIVERSE, CondorUniverseName(univ), univ );
+		return false;
+
+	}
+}
+

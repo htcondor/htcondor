@@ -1,0 +1,42 @@
+
+-----------------------------------------------------------------------
+NOTE: Preparation of a public chirp release is currently done manually.
+It should be formalized in the makefile, both for making an independent
+release and for packaging chirp in Condor tools.
+
+To prepare an independent public release:
+
+Copy chirp_client.c and chirp_client.h into chirp/client/.
+Copy chirp_protocol.h into chirp/common/.
+Copy *.java into chirp/java/client/.
+Update chirp/doc/version.
+tar the chirp directory.
+Put the tar file in http://www.cs.wisc.edu/condor/chirp/.
+-----------------------------------------------------------------------
+
+This directory contains the definition of the Chirp I/O protocol
+and two examples of its use.
+
+Chirp is a lightweight I/O protocol designed to bootstrap applications
+into a grid computing environment.  The protocol itself is defined
+in the file PROTOCOL.
+
+Two client libraries, one in Java and one in C, are contained in this
+directory.  These are intended to be taken by end users in source
+form and incorporated into their programs.  This code should remain
+simple and free of complications.  Please do not place
+any Condor-specific dependiences -- such as CEDAR or imake -- into
+this code, as it will make these libraries difficult or impossible
+to use by end users. If a Chirp implementation using the Condor
+libraries is needed, it would be best to make that a *third*
+implementation separate from the existing two.
+
+Chirp is currently used between the Condor starter and a user's
+job.  The job looks for a file named "chirp.config" in the execute
+directory which contains the address of the starter's socket and
+a cookie with which to authenticate.  It connects to that socket,
+presents the cookie, and then performs I/O using Chirp requests.
+The starter transforms these into remote I/O operations, using all
+of the goodness in CEDAR, and converts the responses back into
+Chirp.
+
