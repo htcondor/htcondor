@@ -35,6 +35,7 @@
 #include "image.h"
 #include "file_table_interf.h"
 #include "condor_debug.h"
+#include "condor_ckpt_mode.h"
 static char *_FileName_ = __FILE__;
 
 extern int _condor_in_file_stream;
@@ -60,7 +61,6 @@ extern "C" {
 	static struct z_stream *zstr = NULL;
 	unsigned char *zbuf = Z_NULL;
 	const int zbufsize = 64*1024;
-	int condor_compress_ckpt = 1; // compression off(0) or on(1)
 }
 #endif
 
@@ -91,6 +91,7 @@ static int SP_in_data_area();
 static void calc_stack_to_save();
 extern "C" void _install_signal_handler( int sig, SIG_HANDLER handler );
 extern "C" int open_ckpt_file( const char *name, int flags, size_t n_bytes );
+extern "C" int get_ckpt_mode( int sig );
 
 Image MyImage;
 static jmp_buf Env;
@@ -101,6 +102,8 @@ volatile int check_sig;		// the signal which activated the checkpoint; used
 							// checkpoint (USR2) or a check & vacate (TSTP).
 static size_t StackSaveSize;
 unsigned int _condor_numrestarts = 0;
+int condor_compress_ckpt = 1; // compression off(0) or on(1)
+int condor_slow_ckpt = 0;
 
 static int
 net_read(int fd, void *buf, int size)
@@ -184,6 +187,12 @@ void *condor_morecore(int incr)
 		*coreend += incr;
 		if (*coreend > *segend) {
 			int segincr = (((*coreend-*segend)/pagesize)+1)*pagesize;
+			if (*coreend+segincr-begin > ALT_HEAP_SIZE) {
+				dprintf(D_ALWAYS,
+						"fatal error: exceeded ALT_HEAP_SIZE of %d bytes!\n",
+						ALT_HEAP_SIZE);
+				Suicide();
+			}
 			if (condor_map_seg(*segend, segincr) != *segend) {
 				dprintf(D_ALWAYS, "failed to allocate contiguous segments in "
 						"condor_morecore!\n");
@@ -211,14 +220,21 @@ zfree(voidpf opaque, voidpf address)
 void
 Header::Init()
 {
-#if defined(COMPRESS_CKPT)
 	if (condor_compress_ckpt)
 		magic = COMPRESS_MAGIC;
 	else
-#endif
-	magic = MAGIC;
+		magic = MAGIC;
 	n_segs = 0;
 	alt_heap = 0;
+}
+
+void
+Header::ResetMagic()
+{
+	if (condor_compress_ckpt)
+		magic = COMPRESS_MAGIC;
+	else
+		magic = MAGIC;
 }
 
 void
@@ -236,6 +252,15 @@ SegMap::Init( const char *n, RAW_ADDR c, long l, int p )
 	core_loc = c;
 	len = l;
 	prot = p;
+}
+
+void
+SegMap::MSync()
+{
+	if (msync((char *)core_loc, len, MS_ASYNC) < 0) {
+		dprintf( D_ALWAYS, "msync(%x, %d) failed with errno = %d\n",
+				 core_loc, len, errno );
+	}
 }
 
 void
@@ -626,9 +651,22 @@ Image::Restore()
 #endif
 
 #if defined(COMPRESS_CKPT)
+	// If the checkpoint header contains an alt heap pointer, then we must
+	// create an alt heap, because the alt heap pointer is going to be
+	// restored, and it has to point to something.
+	if (head.AltHeap() > 0) {
+		condor_morecore(0);
+	}
 	if (head.Magic() == COMPRESS_MAGIC) {
+		if (head.AltHeap() == 0) {
+			dprintf( D_ALWAYS, "Checkpoint is compressed but no alt heap is "
+					 "specified!  Aborting restart.\n" );
+			fprintf( stderr, "CONDOR ERROR: Checkpoint header is malformed. "
+					 "Compression is specified without a corresponding alt "
+					 "heap.\n" );
+			exit( 1 );
+		}
 		dprintf( D_ALWAYS, "Reading compressed segments...\n" );
-		condor_morecore(0);			// initialize alt heap
 		zstr = (z_stream *) condor_malloc(sizeof(z_stream));
 		if (!zstr) {
 			dprintf( D_ALWAYS, "out of memory in condor_malloc!\n");
@@ -811,6 +849,14 @@ Image::Write()
 	}
 }
 
+void
+Image::MSync()
+{
+	for (int i=0; i < head.N_Segs(); i++) {
+		map[i].MSync();
+	}
+}
+
 
 /*
   Set up a stream to write our checkpoint information onto, then write
@@ -838,6 +884,31 @@ Image::Write( const char *ckpt_file )
 	if( ckpt_file == 0 ) {
 		ckpt_file = file_name;
 	}
+
+	if( MyImage.GetMode() == REMOTE ) {
+		// In remote mode we update the shadow on our image size
+		report_image_size( (MyImage.GetLen() + KILO - 1) / KILO );
+
+		// Get checkpoint parameters from the shadow
+		int mode = get_ckpt_mode(check_sig);
+		if (mode > 0) {
+			condor_compress_ckpt = (mode&CKPT_MODE_USE_COMPRESSION) ? 1 : 0;
+			condor_slow_ckpt = (mode&CKPT_MODE_SLOW) ? 1 : 0;
+			if (mode&CKPT_MODE_MSYNC) {
+				dprintf(D_ALWAYS,
+						"Performing an msync() on all dirty pages...\n");
+				MSync();
+			}
+			if (mode&CKPT_MODE_ABORT) {
+				dprintf(D_ALWAYS, "Checkpoint aborted by shadow request.\n");
+				return -1;
+			}
+		} else {
+			condor_compress_ckpt = condor_slow_ckpt = 0;
+		}
+		head.ResetMagic();			// set magic according to compression mode
+	}
+
 
 		// Generate tmp file name
 	dprintf( D_ALWAYS, "Checkpoint name is \"%s\"\n", ckpt_file );
@@ -897,11 +968,6 @@ Image::Write( const char *ckpt_file )
 		// Report
 	dprintf( D_ALWAYS, "USER PROC: CHECKPOINT IMAGE SENT OK\n" );
 
-		// In remote mode we update the shadow on our image size
-	if( MyImage.GetMode() == REMOTE ) {
-		report_image_size( (MyImage.GetLen() + KILO - 1) / KILO );
-	}
-
 	return 0;
 }
 
@@ -918,6 +984,12 @@ Image::Write( int fd )
 	int		nbytes;
 	int		ack;
 	int		status;
+
+#if defined(COMPRESS_CKPT)
+	if (condor_compress_ckpt) {
+		condor_morecore(0);			// initialize alt heap before we write head
+	}
+#endif
 
 		// Write out the header
 	if( (nbytes=write(fd,&head,sizeof(head))) < 0 ) {
@@ -937,7 +1009,6 @@ Image::Write( int fd )
 #if defined(COMPRESS_CKPT)
 	if (condor_compress_ckpt) {
 		dprintf( D_ALWAYS, "Writing compressed segments...\n" );
-		condor_morecore(0);			// initialize alt heap
 		zstr = (z_stream *) condor_malloc(sizeof(z_stream));
 		if (!zstr) {
 			dprintf( D_ALWAYS, "out of memory in condor_malloc!\n");
@@ -1196,7 +1267,6 @@ SegMap::Read( int fd, ssize_t pos )
 		saved_zstr->next_out = (unsigned char *)saved_core_loc;
 		saved_zstr->avail_out = saved_len;
 		while (saved_zstr->avail_out > 0) {
-			int stashed_avail_in = saved_zstr->avail_in;
 			// make at least 32 bytes available
 			if (saved_zstr->avail_in < 32) {
 				if (saved_zstr->avail_in > 0) {
@@ -1253,7 +1323,7 @@ SegMap::Write( int fd, ssize_t pos )
 	}
 #if defined(COMPRESS_CKPT)
 	if (condor_compress_ckpt) {
-		int bytes_to_go, rval;
+		int bytes_to_go, rval, old_avail_in;
 		unsigned char *ptr;
 
 		zstr->next_in = (unsigned char *)core_loc;
@@ -1261,6 +1331,7 @@ SegMap::Write( int fd, ssize_t pos )
 		while (zstr->avail_in > 0) {
 			zstr->next_out = zbuf;
 			zstr->avail_out = zbufsize;
+			old_avail_in = zstr->avail_in;
 			if (deflate(zstr, Z_PARTIAL_FLUSH) != Z_OK) {
 				dprintf( D_ALWAYS, "zlib (deflate): %s\n", zstr->msg );
 				Suicide();
@@ -1268,11 +1339,16 @@ SegMap::Write( int fd, ssize_t pos )
 			for (bytes_to_go = (zbufsize-zstr->avail_out), ptr = zbuf;
 				 bytes_to_go > 0;
 				 bytes_to_go -= rval, ptr += rval, zstr->avail_out += rval) {
+				// note: bytes_to_go <= 65536 (bufsize)
 				rval = write(fd,ptr,bytes_to_go);
 				if (rval < 0) {
 					dprintf(D_ALWAYS, "write failed with errno %d in "
 							"SegMap::Write\n", errno);
 					Suicide();
+				}
+				if (condor_slow_ckpt) {
+					// 256K per second
+					sleep(((old_avail_in-zstr->avail_in)/262144)+1);
 				}
 			}
 			if (zstr->avail_out != zbufsize) {
@@ -1289,13 +1365,20 @@ SegMap::Write( int fd, ssize_t pos )
 	int bytes_to_go = len, nbytes;
 	char *ptr = (char *)core_loc;
 	while (bytes_to_go) {
-		nbytes = write(fd,(void *)ptr,(size_t)bytes_to_go);
+		size_t write_size;
+		if (condor_slow_ckpt && bytes_to_go > 262144) {
+			write_size = 262144; // 256K
+		} else {
+			write_size = bytes_to_go;
+		}
+		nbytes = write(fd,(void *)ptr,write_size);
 		if ( nbytes < 0 ) {
 			dprintf( D_ALWAYS, "in SegMap::Write(): fd = %d, write_size=%d\n",
 					 fd, bytes_to_go );
 			dprintf( D_ALWAYS, "errno=%d, core_loc=%x\n", errno, ptr );
 			return -1;
 		}
+		if (condor_slow_ckpt) sleep(1);
 		bytes_to_go -= nbytes;
 		ptr += nbytes;
 	}
@@ -1358,6 +1441,35 @@ Checkpoint( int sig, int code, void *scp )
 		}
 #endif
 
+		/* now update shadow with CPU time info.  unfortunately, we need
+		 * to convert to struct rusage here in the user code, because
+		 * clock_tick is platform dependent and we don't want CPU times
+		 * messed up if the shadow is running on a different architecture */
+		/* We do this before we write the checkpoint now, so the shadow
+		 * can send usage info to the checkpoint server with the checkpoint.
+		 * The usage is committed with the checkpoint. -Jim B. */
+		struct tms posix_usage;
+		struct rusage bsd_usage;
+		long clock_tick;
+
+		p_scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+		memset(&bsd_usage,0,sizeof(struct rusage));
+		times( &posix_usage );
+#if defined(OSF1)
+		clock_tick = CLK_TCK;
+#else
+		clock_tick = sysconf( _SC_CLK_TCK );
+#endif
+		bsd_usage.ru_utime.tv_sec = posix_usage.tms_utime / clock_tick;
+		bsd_usage.ru_utime.tv_usec = posix_usage.tms_utime % clock_tick;
+		(bsd_usage.ru_utime.tv_usec) *= 1000000 / clock_tick;
+		bsd_usage.ru_stime.tv_sec = posix_usage.tms_stime / clock_tick;
+		bsd_usage.ru_stime.tv_usec = posix_usage.tms_stime % clock_tick;
+		(bsd_usage.ru_stime.tv_usec) *= 1000000 / clock_tick;
+		SetSyscalls( SYS_REMOTE | SYS_UNMAPPED );
+		(void)REMOTE_syscall( CONDOR_send_rusage, (void *) &bsd_usage );
+		SetSyscalls( p_scm );
+
 	} else {
 		scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	}
@@ -1396,9 +1508,6 @@ Checkpoint( int sig, int code, void *scp )
 			}
 			/* should never get here */
 		} else {
-			/* we have just checkpointed, but this is a periodic checkpoint.
-			 * so, update the shadow with accumulated CPU time info if we
-			 * are not standalone, and then continue running. -Todd Tannenbaum */
 			if ( MyImage.GetMode() == REMOTE ) {
 
 				// first, reset the fd to -1.  this is normally done in
@@ -1407,34 +1516,6 @@ Checkpoint( int sig, int code, void *scp )
 				// it here.
 				MyImage.SetFd( -1 );
 
-				if ( write_result == 0 ) {  /* only update if write was happy */
-				/* now update shadow with CPU time info.  unfortunately, we need
-				 * to convert to struct rusage here in the user code, because
-				 * clock_tick is platform dependent and we don't want CPU times
-				 * messed up if the shadow is running on a different architecture */
-				struct tms posix_usage;
-				struct rusage bsd_usage;
-				long clock_tick;
-
-				p_scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-				memset(&bsd_usage,0,sizeof(struct rusage));
-				times( &posix_usage );
-#if defined(OSF1)
-			    clock_tick = CLK_TCK;
-#else
-        		clock_tick = sysconf( _SC_CLK_TCK );
-#endif
-				bsd_usage.ru_utime.tv_sec = posix_usage.tms_utime / clock_tick;
-				bsd_usage.ru_utime.tv_usec = posix_usage.tms_utime % clock_tick;
-				(bsd_usage.ru_utime.tv_usec) *= 1000000 / clock_tick;
-				bsd_usage.ru_stime.tv_sec = posix_usage.tms_stime / clock_tick;
-				bsd_usage.ru_stime.tv_usec = posix_usage.tms_stime % clock_tick;
-				(bsd_usage.ru_stime.tv_usec) *= 1000000 / clock_tick;
-				SetSyscalls( SYS_REMOTE | SYS_UNMAPPED );
-				(void)REMOTE_syscall( CONDOR_send_rusage, (void *) &bsd_usage );
-				SetSyscalls( p_scm );
-				}  /* end of if write_result == 0 */
-				
 			}
 			do_full_restart = 0;
 			dprintf(D_ALWAYS, "Periodic Ckpt complete, doing a virtual restart...\n");
