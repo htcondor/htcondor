@@ -49,7 +49,7 @@
 #include "store_cred.h"
 #endif
 #include "my_hostname.h"
-#include "get_daemon_addr.h"
+#include "get_daemon_name.h"
 #include "condor_qmgr.h"
 #include "sig_install.h"
 #include "access.h"

@@ -33,7 +33,7 @@
 #include "condor_version.h"
 #include "condor_io.h"
 #include "my_hostname.h"
-#include "get_daemon_addr.h"   // only for daemon names
+#include "get_daemon_name.h"
 #include "internet.h"
 #include "daemon.h"
 #include "dc_collector.h"

@@ -41,7 +41,7 @@
 #include "environ.h"
 #include "condor_uid.h"
 #include "my_hostname.h"
-#include "get_daemon_addr.h"
+#include "get_daemon_name.h"
 #include "renice_self.h"
 #include "user_log.c++.h"
 #include "access.h"

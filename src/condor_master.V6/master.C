@@ -38,7 +38,7 @@
 #include "condor_io.h"
 #include "exit.h"
 #include "string_list.h"
-#include "get_daemon_addr.h"
+#include "get_daemon_name.h"
 #include "daemon_types.h"
 #include "daemon_list.h"
 #include "strupr.h"

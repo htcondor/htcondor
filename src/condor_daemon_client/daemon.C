@@ -32,7 +32,7 @@
 #include "condor_parameters.h"
 #include "condor_adtypes.h"
 #include "condor_query.h"
-#include "get_daemon_addr.h"
+#include "get_daemon_name.h"
 #include "get_full_hostname.h"
 #include "my_hostname.h"
 #include "internet.h"

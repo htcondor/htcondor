@@ -44,7 +44,7 @@
 #include "killfamily.h"
 #include "../condor_procapi/procapi.h"
 #include "misc_utils.h"
-#include "get_daemon_addr.h"
+#include "get_daemon_name.h"
 #include "enum_utils.h"
 #include "condor_version.h"
 #include "classad_command_util.h"

@@ -28,7 +28,7 @@
 #include "condor_attributes.h"
 #include "alloc.h"
 #include "my_hostname.h"
-#include "get_daemon_addr.h"
+#include "get_daemon_name.h"
 #include "sig_install.h"
 
 #include "condor_qmgr.h"

@@ -26,7 +26,7 @@
 #include "condor_api.h"
 #include "status_types.h"
 #include "totals.h"
-#include "get_daemon_addr.h"
+#include "get_daemon_name.h"
 #include "daemon.h"
 #include "dc_collector.h"
 #include "extArray.h"
