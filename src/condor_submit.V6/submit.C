@@ -1256,8 +1256,12 @@ SetNotifyUser()
 {
 	char *who = condor_param(NotifyUser);
 
-	if (who)
-	{
+	if( ! who ) {
+			// If "notify_user" isn't there, try "NotifyUser" 
+		who = condor_param( "NotifyUser" );
+	}
+
+	if (who) {
 		(void) sprintf (buffer, "%s = \"%s\"", ATTR_NOTIFY_USER, who);
 		InsertJobExpr (buffer);
 		free(who);
