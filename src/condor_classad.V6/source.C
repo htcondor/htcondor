@@ -814,7 +814,7 @@ parsePrimaryExpression(ExprTree *&tree)
 	ExprTree 			*treeL = NULL;
 	Lexer::TokenValue	tv;
 	Lexer::TokenType	tt;
-
+	
 	switch( ( tt = lexer.PeekToken(&tv) ) ) {
 		// identifiers
 		case Lexer::LEX_IDENTIFIER:
@@ -829,7 +829,15 @@ parsePrimaryExpression(ExprTree *&tree)
 					tree = NULL;
 					return false;
 				};
-				tree = FunctionCall::MakeFunctionCall( fnName, argList );
+				// special case function-calls (like ieee754), should
+				// be converted into a literal expression if the
+				// argument is a string literal
+				if (shouldEvaluateAtParseTime(fnName.c_str(), argList)){
+					tree = evaluateFunction(fnName, argList);
+				} else {
+					tree = FunctionCall::MakeFunctionCall(fnName, argList ); 
+				}
+
 			} else {
 				string	s;	
 				tv.GetStringValue( s );
@@ -963,7 +971,7 @@ parsePrimaryExpression(ExprTree *&tree)
 		case Lexer::LEX_ABSOLUTE_TIME_VALUE:
 			{
 				Value	val;
-				time_t	asecs;
+				abstime_t	asecs;
 
 				tv.GetAbsTimeValue( asecs );
 				lexer.ConsumeToken( );
@@ -1181,6 +1189,56 @@ parseExprList( ExprList *&list , bool full )
 	return true;
 }
 
+bool ClassAdParser::shouldEvaluateAtParseTime(
+	const string        &functionName,
+	vector<ExprTree*> 	&argList)
+{
+	bool should_eval;
+	const char *c_function_name;
+
+	should_eval = false;
+	c_function_name = functionName.c_str();
+	if (   strcasecmp(c_function_name, "ieee754")
+		|| strcasecmp(c_function_name, "absTime")
+		|| strcasecmp(c_function_name, "relTime")) {
+		if (argList.size() == 1 && argList[0]->GetKind() == ExprTree::LITERAL_NODE) {
+			should_eval = true;
+		}
+	}
+	return should_eval;
+}
+
+ExprTree *ClassAdParser::evaluateFunction(
+	const string        &functionName,
+	vector<ExprTree*> 	&argList)
+{
+	Value                val;
+	Value::NumberFactor  factor;
+	ExprTree             *tree;
+	const char           *c_function_name;
+
+	((Literal *)argList[0])->GetComponents(val, factor);
+	c_function_name = functionName.c_str();
+	tree = NULL;
+
+	string string_value;
+	if (val.IsStringValue(string_value)) {
+		if (strcasecmp(c_function_name, "ieee754") == 0) {
+			tree = Literal::MakeReal(string_value);
+		} else if (strcasecmp(c_function_name, "absTime") == 0) {
+			tree = Literal::MakeAbsTime(string_value);
+		} else if (strcasecmp(c_function_name, "relTime") == 0) {
+			tree = Literal::MakeRelTime(string_value);
+		} else {
+			tree = FunctionCall::MakeFunctionCall(functionName, argList ); 
+		}
+	}
+	else {
+		tree = FunctionCall::MakeFunctionCall(functionName, argList ); 
+	}
+	return tree;
+}
+
 std::istream & operator>>(std::istream &stream, ClassAd &ad)
 {
 	ClassAdParser parser;
@@ -1188,5 +1246,6 @@ std::istream & operator>>(std::istream &stream, ClassAd &ad)
 	parser.ParseClassAd(stream, ad);
 	return stream;
 }
+
 
 END_NAMESPACE // classad

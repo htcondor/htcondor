@@ -126,6 +126,12 @@ class ClassAdParser
 		bool parsePostfixExpression( ExprTree*& );
 		bool parsePrimaryExpression( ExprTree*& );
 		bool parseArgumentList( std::vector<ExprTree*>& );
+
+		bool shouldEvaluateAtParseTime(const string &functionName,
+									   vector<ExprTree*> &argList);
+		ExprTree *evaluateFunction(const string &functionName,
+								  vector<ExprTree*> &argList);
+
 };
 
 std::istream & operator>>(std::istream &stream, ClassAd &ad);
