@@ -643,24 +643,24 @@ bool
 OsProc::PublishUpdateAd( ClassAd* ad ) 
 {
 	dprintf( D_FULLDEBUG, "Inside OsProc::PublishUpdateAd()\n" );
-	char buf[128];
+	MyString buf;
 
 	if( exit_status >= 0 ) {
-		sprintf( buf, "%s=\"Exited\"", ATTR_JOB_STATE );
+		buf.sprintf( "%s=\"Exited\"", ATTR_JOB_STATE );
 	} else if( is_suspended ) {
-		sprintf( buf, "%s=\"Suspended\"", ATTR_JOB_STATE );
+		buf.sprintf( "%s=\"Suspended\"", ATTR_JOB_STATE );
 	} else {
-		sprintf( buf, "%s=\"Running\"", ATTR_JOB_STATE );
+		buf.sprintf( "%s=\"Running\"", ATTR_JOB_STATE );
 	}
-	ad->Insert( buf );
+	ad->Insert( buf.Value() );
 
-	sprintf( buf, "%s=%d", ATTR_NUM_PIDS, num_pids );
-	ad->Insert( buf );
+	buf.sprintf( "%s=%d", ATTR_NUM_PIDS, num_pids );
+	ad->Insert( buf.Value() );
 
 	if( exit_status >= 0 ) {
 		if( dumped_core ) {
-			sprintf( buf, "%s = True", ATTR_JOB_CORE_DUMPED );
-			ad->Insert( buf );
+			buf.sprintf( "%s = True", ATTR_JOB_CORE_DUMPED );
+			ad->Insert( buf.Value() );
 		} // should we put in ATTR_JOB_CORE_DUMPED = false if not?
 	}
 
