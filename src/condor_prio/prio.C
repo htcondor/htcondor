@@ -151,7 +151,7 @@ main( int argc, char *argv[] )
 	print_alloc_stats();
 #endif
 
-	exit( 0 );
+	return 0;
 }
 
 /*
