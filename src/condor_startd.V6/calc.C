@@ -390,7 +390,7 @@ calc_ncpus()
         else {
           return 0;
         }
-#elif defined(Solaris)
+#elif defined(Solaris) || defined(DUX)
 	return (int)sysconf(_SC_NPROCESSORS_ONLN);
 #elif defined(IRIX53)
 	return sysmp(MP_NPROCS);
@@ -452,7 +452,6 @@ bogomips        : 299.01
 	}
 	fclose( proc );
 	return num_cpus;
-
 #else sequent
 	return 1;
 #endif sequent
