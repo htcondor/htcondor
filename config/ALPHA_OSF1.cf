@@ -53,7 +53,7 @@
 #define HAS_GETWD				YES
 #define HAS_INSQUE				YES
 #define HAS_SETLINEBUF			YES
-#define HAS_PVM				NO
+#define HAS_PVM					YES
 
 #define CCompiler cc
 #define CPlusCompiler cxx
