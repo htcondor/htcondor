@@ -43,6 +43,7 @@ const char*
 get_host_part( const char* name )
 {
 	char* tmp;
+	if (name == NULL) return NULL;
 	tmp = strchr( name, '@' );
 	if( tmp ) {
 		return ++tmp;
