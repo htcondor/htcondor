@@ -51,6 +51,15 @@ If \Macro{NEGOTIATE\_ALL\_JOBS\_IN\_CLUSTER} is set to True, the
 \Condor{schedd} will now always try to schedule each individual job in
 a cluster.
 
+\item The \Condor{schedd} now automatically adds any machine it is
+matched with to its HOSTALLOW_WRITE list.
+This simplifies setting up a machine for flocking, since the
+submitting user doesn't have to know all the machines where the job
+might execute, they only have to know what central manager they wish
+to flock to.
+Submitting users must trust a central manager they report to, so this
+doesn't impact security in any way.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -86,11 +95,14 @@ disable output collection before calling pvm\_exit().
 when it logged the execute event to the user log produced situations
 where the shadow could log other events (like the shadow exception
 event) before the execute event was logged.
-Now, the shadow will always log an execute event before it logs any
-other events.
+Now, the \Condor{shadow} will always log an execute event before it
+logs any other events.
 The timing is still improved over 6.1.12 and older versions, with the
 execute event getting logged after the bulk of the job initialization
 has finished, right before the job will actually start executing.
+However, you will no longer see user logs that contain a ``shadow
+exception'' or ``job evicted'' message without a ``job executing''
+event, first.
 
 \end{itemize}
 
