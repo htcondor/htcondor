@@ -119,7 +119,7 @@ stack_end_addr()
 #if defined(X86)
 	return 0x8048000; /* -- for x86 */
 #else
-	#if defined(Solaris27)
+	#if defined(Solaris27) || defined(Solaris28)
 		return 0xFFBF0000;
 	#else
 		return 0xF0000000;
