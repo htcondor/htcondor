@@ -26,6 +26,9 @@
 ** given filename resides.
 */
 
+#include "sysapi.h"
+#include "sysapi_externs.h"
+
 /* static function declarations */
 #if !defined(WIN32)
 static int reserve_for_fs();
@@ -40,9 +43,12 @@ static int reserve_for_afs_cache();
 #include <limits.h>
 
 int
-sysapi_free_fs_blocks_raw(const char *filename)
+sysapi_diskspace_raw(const char *filename)
 {
 	ULARGE_INTEGER FreeBytesAvailableToCaller, TotalNumberOfBytes, TotalNumberOfFreeBytes;
+
+	sysapi_internal_reconfig();
+
 	if (GetDiskFreeSpaceEx(filename, &FreeBytesAvailableToCaller, &TotalNumberOfBytes, 
 		&TotalNumberOfFreeBytes) == 0) {
 		return -1;
@@ -91,21 +97,11 @@ reserve_for_afs_cache()
 	FILE	*fp;
 	char	cmd[512];
 	int		cache_size, cache_in_use;
-	static int	do_it = -1;
+	int		do_it;
 	char	*str;
 
-		/* See if we're configured to deal with an AFS cache */
-	if( do_it < 0 ) {
-		str = param( "RESERVE_AFS_CACHE" );
-		if( str && (*str == 'T' || *str == 't')) {
-			do_it = TRUE;
-		} else {
-			do_it = FALSE;
-		}
-		if( str ) {
-			free( str );
-		}
-	}
+	/* See if we're configured to deal with an AFS cache */
+	do_it = _sysapi_reserve_afs_cache;
 
 		/* If we're not configured to deal with AFS cache, just return 0 */
 	if( !do_it ) {
@@ -142,42 +138,43 @@ reserve_for_afs_cache()
 int
 reserve_for_fs()
 {
-	static int	answer = -1;
-	char	*str;
+	/* XXX make cleaner */
+	int	answer = -1;
 
 	if( answer < 0 ) {
 		dprintf( D_FULLDEBUG, "Looking up RESERVED_DISK parameter\n" );
-		str = param( "RESERVED_DISK" );
-		if( str ) {
-			answer = atoi( str ) * 1024;	/* Parameter is in meg */
-			free( str );
-		}
+
+		answer = _sysapi_reserve_disk;
 		if( answer < 0 ) {
 			answer = 0;
 		}
 	}
+
+	answer = _sysapi_reserve_disk;
 	dprintf( D_FULLDEBUG, "Reserving %d kbytes for file system\n", answer );
 	return answer;
 }
 
 
 #if defined(__STDC__)
-int sysapi_free_fs_blocks_raw( const char *filename);
+int sysapi_diskspace_raw( const char *filename);
 #else
-int sysapi_free_fs_blocks_raw();
+int sysapi_diskspace_raw();
 #endif
 
 #if defined(ULTRIX42) || defined(ULTRIX43)
 int
-sysapi_free_fs_blocks_raw(filename)
+sysapi_diskspace_raw(filename)
 const char *filename;
 {
 	struct fs_data statfsbuf;
 	struct fs_data_req *fs;
 	int free_kbytes;
 
+	sysapi_internal_reconfig();
+
 	if(statfs(filename, &statfsbuf) < 0) {
-		dprintf(D_ALWAYS, "free_fs_blocks: statfs(%s,0x%x) failed\n",
+		dprintf(D_ALWAYS, "sysapi_diskspace_raw: statfs(%s,0x%x) failed\n",
 													filename, &statfsbuf );
 		return(LOTS_OF_FREE);
 	}
@@ -197,7 +194,7 @@ const char *filename;
 #if defined(VAX) && defined(ULTRIX)
 /* statfs() did not work on our VAX_ULTRIX machine.  use getmnt() instead. */
 int
-sysapi_free_fs_blocks_raw(filename)
+sysapi_diskspace_raw(filename)
 char *filename;
 {
 	struct fs_data mntdata;
@@ -205,8 +202,10 @@ char *filename;
 	struct fs_data_req *fs_req;
 	int free_kbytes;
 
+	sysapi_internal_reconfig();
+
 	if( getmnt(&start, &mntdata, sizeof(mntdata), NOSTAT_ONE, filename) < 0) {
-		dprintf(D_ALWAYS, "free_fs_blocks(): getmnt failed");
+		dprintf(D_ALWAYS, "sysapi_diskspace_raw(): getmnt failed");
 		return(LOTS_OF_FREE);
 	}
 	
@@ -224,6 +223,8 @@ char *filename;
 
 #if (defined(I386) && defined(DYNIX)) || defined(LINUX) || (defined(VAX) && defined(BSD43)) || (defined(MC68020) && defined(SUNOS41)) || (defined(IBM032) && defined(BSD43)) || (defined(MC68020) && defined(BSD43)) || (defined(SPARC) && defined(SUNOS41)) || (defined(R6000) && defined(AIX31)) || defined(AIX32) || defined(IRIX331) || (defined(SPARC) && defined(CMOS)) || defined(HPUX) || defined(OSF1) || defined(Solaris) || defined(IRIX53)
 
+#include <limits.h>
+
 #if defined(AIX31) || defined(AIX32) || defined(IRIX53)
 #include <sys/statfs.h>
 #elif defined(Solaris)
@@ -238,7 +239,7 @@ char *filename;
 #endif
 
 int
-sysapi_free_fs_blocks_raw(filename)
+sysapi_diskspace_raw(filename)
 const char *filename;
 {
 #if defined(Solaris)
@@ -246,8 +247,10 @@ const char *filename;
 #else
 	struct statfs statfsbuf;
 #endif
-	unsigned long free_kbytes;
+	double free_kbytes;
 	float kbytes_per_block;
+
+	sysapi_internal_reconfig();
 
 #if defined(IRIX331) || defined(IRIX53)
 	if(statfs(filename, &statfsbuf, sizeof statfsbuf, 0) < 0) {
@@ -258,14 +261,15 @@ const char *filename;
 #else
 	if(statfs(filename, &statfsbuf) < 0) {
 #endif
-		dprintf(D_ALWAYS, "free_fs_blocks: statfs(%s,0x%x) failed\n",
+		dprintf(D_ALWAYS, "sysapi_diskspace_raw: statfs(%s,0x%x) failed\n",
 													filename, &statfsbuf );
 		dprintf(D_ALWAYS, "errno = %d\n", errno );
 		return(LOTS_OF_FREE);
 	}
 
 	/* Convert to kbyte blocks: available blks * blksize / 1k bytes. */
-	/* fix the overflow problem. weiru */
+	/* overflow problem fixed by using doubles to hold result - 
+		Keller 05/17/99 */
 
 #if defined(Solaris)
 		/* On Solaris, we need to use f_frsize, the "fundamental
@@ -276,16 +280,16 @@ const char *filename;
 	kbytes_per_block = ( (unsigned long)statfsbuf.f_bsize / (float)1024 );
 #endif
 
-	free_kbytes = (unsigned long)statfsbuf.f_bavail * kbytes_per_block; 
-	if(free_kbytes > 0x7fffffff) {
+	free_kbytes = (double)statfsbuf.f_bavail * (double)kbytes_per_block; 
+	if(free_kbytes > INT_MAX) {
 		dprintf(D_ALWAYS, "Too much free disk space, return LOTS_OF_FREE\n");
 		return(LOTS_OF_FREE);
 	}
 
 	dprintf(D_FULLDEBUG, "number of kbytes available for (%s): %d\n", 
-			filename, free_kbytes);
+			filename, (int)free_kbytes);
 
-	return(free_kbytes);
+	return (int)free_kbytes;
 }
 #endif /* I386 && DYNIX */
 
@@ -304,19 +308,21 @@ const char *filename;
   implementation would check whether the filesystem being asked about
   is the one containing the cache.  This is messy to do if the
   filesystem name we are given isn't a full pathname, e.g.
-  free_fs_blocks("."), which is why it isn't implemented here. -- mike
+  sysapi_diskspace("."), which is why it isn't implemented here. -- mike
 
-  This is the cooked version of the _raw function.
-  If how ever, you are on NT, this isn't a problem. -pete
 */
 int
-sysapi_free_fs_blocks(const char *filename)
+sysapi_diskspace(const char *filename)
 {
+
 #if defined(WIN32)
-	return sysapi_free_fs_bocks_raw(filename);
+	sysapi_internal_reconfig();
+	/* XXX fixme, this might not be right */
+	return sysapi_diskspace_raw(filename);
 #else
 	int		answer;
-	answer =  sysapi_free_fs_blocks_raw(filename)
+	sysapi_internal_reconfig();
+	answer =  sysapi_diskspace_raw(filename)
 			- reserve_for_afs_cache()
 			- reserve_for_fs();
 	return answer < 0 ? 0 : answer;
