@@ -21,6 +21,7 @@
 #define HAS_GLOBUS			NO
 #define HAS_GSI				NO
 #define HAS_OPENSSL			NO
+#define HAS_DLOPEN			NO
 
 #define UnixName /stand/vmunix		/* pathname of the system executable */
 

@@ -4,6 +4,7 @@
 #define HAS_GLOBUS	YES
 #define HAS_GSI		YES
 #define HAS_OPENSSL	YES
+#define HAS_DLOPEN  YES
 
 #define GLOBUS_FLAVOR gcc64dbg
 

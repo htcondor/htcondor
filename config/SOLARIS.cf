@@ -83,6 +83,7 @@
 #define HAS_INSQUE			YES
 
 #define HAS_PVM				YES
+#define HAS_DLOPEN			YES
 
 #define HAS_STATIC			NO
 

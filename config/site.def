@@ -46,6 +46,7 @@
 #define WANT_MD         YES
 #define WANT_3DES       YES
 #define WANT_BLOWFISH   YES
+#define WANT_CLASSAD_FUNCTIONS YES
 
 GAHP_DIR = /p/condor/workspaces/epaulson/gahp/bin
 
