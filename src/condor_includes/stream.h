@@ -179,11 +179,6 @@ public:
 	**	Methods
 	*/
 
-	//	error messages
-	//
-	inline int valid() const { return _error == stream_valid; }
-	inline int ok() const { return _error == stream_valid; }
-
 	//	coding type operations
 	//
 	inline stream_code representation() const { return _code; }
@@ -372,7 +367,6 @@ protected:
 	*/
 
 	enum stream_coding { stream_decode, stream_encode, stream_unknown };
-	enum stream_error { stream_valid, stream_invalid };
 
 
 	/*
@@ -382,7 +376,7 @@ protected:
 	//	constructor
 	//
 	Stream(stream_code c=external)
-		: _error(stream_valid), _code(c), _coding(stream_encode)
+		: _code(c), _coding(stream_encode)
 		{}
 
 
@@ -390,7 +384,6 @@ protected:
 	**	Data structures
 	*/
 
-	stream_error	_error;
 	stream_code		_code;
 	stream_coding	_coding;
 };
