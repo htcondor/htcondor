@@ -2660,6 +2660,8 @@ Scheduler::Init()
 
 #if defined( GSS_AUTHENTICATION )
 	//this section sets up three env vars needed by authentication code. //mju
+	if ( CondorCertDir ) 
+		free( CondorCertDir );
 	if( ! (CondorCertDir = param("CONDOR_CERT_DIR")) ) {
 		dprintf( D_ALWAYS, "no CONDOR_CERT_DIR, submits not authenticated\n");
 	}
@@ -2688,7 +2690,7 @@ Scheduler::Init()
          putenv( strdup( tmpstring ) );
       }
 
-		free( CondorCertDir );
+//		free( CondorCertDir );
 	}
 #endif
 
