@@ -71,7 +71,8 @@ public:
 		CAUTH_CLAIMTOBE=2,
 		CAUTH_FILESYSTEM=4, 
 		CAUTH_NTSSPI=8,
-		CAUTH_GSS=16
+		CAUTH_GSS=16,
+		CAUTH_FILESYSTEM_REMOTE=32
 		//, 32, 64, etc.
    };
 
@@ -99,7 +100,7 @@ private:
 	int sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx);
 	int authenticate_nt();
 #else
-	int authenticate_filesystem();
+	int authenticate_filesystem( int remote = 0 );
 #endif
 	int selectAuthenticationType( int clientCanUse );
 	void setupEnv( char *hostAddr );
@@ -129,6 +130,7 @@ private:
 	char *GSSClientname;
 	char *claimToBe;
 	int canUseFlags;
+	char *RendezvousDirectory;
 
 };
 
