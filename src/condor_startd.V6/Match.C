@@ -228,9 +228,19 @@ Match::cancel_match_timer()
 int
 Match::match_timed_out()
 {
-	Resource* rip = resmgr->get_by_any_cap( capab() );
+	char* cap = capab();
+	if( !cap ) {
+			// We're all confused.
+		dprintf( D_ALWAYS,
+				 "ERROR: Match timed out but there's no capability\n" );
+		return FALSE;
+	}
+		
+	Resource* rip = resmgr->get_by_any_cap( cap );
 	if( !rip ) {
-		EXCEPT( "Can't find resource of expired match." );
+		dprintf( D_ALWAYS,
+				 "ERROR: Can't find resource of expired match\n" );
+		return FALSE;
 	}
 
 	if( rip->r_cur->cap()->matches( capab() ) ) {
@@ -340,6 +350,17 @@ Match::setagentstream(Stream* stream)
 		delete( m_agentstream );
 	}
 	m_agentstream = stream;
+}
+
+
+char*
+Match::capab( void )
+{
+	if( m_cap ) {
+		return m_cap->capab();
+	} else {
+		return NULL;
+	}
 }
 
 

@@ -120,7 +120,7 @@ public:
 		// Functions that return data
 	float		rank()			{return m_rank;};
 	float		oldrank()		{return m_oldrank;};
-	char*		capab() 		{return m_cap->capab();};
+	char*		capab();
 	Client* 	client() 		{return m_client;};
 	Capability* cap()			{return m_cap;};
 	ClassAd*	ad() 			{return m_ad;};
