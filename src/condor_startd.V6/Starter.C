@@ -59,7 +59,7 @@ Starter::reallykill( int signo, int type )
 	struct stat st;
 	int 		ret = 0, sig = 0;
 	priv_state	priv;
-	char	signame[32];
+	char		signame[32];
 	signame[0]='\0';
 
 	if ( s_pid <= 0 ) {
@@ -119,10 +119,15 @@ Starter::reallykill( int signo, int type )
 		   If stat fails with ENOENT or ENOTDIR, we assume the server
 		     is alive, but the binary has been moved, so we do the 
 		     kill.  Similarly with EACCES.
-		   If stat fails with anything else, we ASSUME this is a soft
-  		     mounted NFS volume and the server is down.  So, we poll 
-		     every 15 seconds until the stat succeeds or fails with
-		     a known errno and dprintf to let the world know.
+		   If stat fails with "The file server is down" (ENOLINK), we
+		     poll every 15 seconds until the stat succeeds or fails
+			 with a known errno and dprintf to let the world know.
+		   On dux 4.0, we might also get ESTALE, which means the
+		     binary lives on a stale NFS mount.  If that's the case,
+			 we're screwed (and the startd is probably screwed, too,
+			 to EXCEPT to let the world know what went wrong.
+		   Any other errno we get back from stat is something we don't
+		     know how to handle, so we EXCEPT and print the errno.
 			 
 		   Added comments, polling, and check for known errnos
 		     -Derek Wright, 1/2/98
@@ -144,6 +149,15 @@ Starter::reallykill( int signo, int type )
 		case EACCES:
 			needs_stat = FALSE;
 			break;
+#if defined(OSF1)
+				// dux 4.0 doesn't have ENOLINK for stat().  It does
+				// have ESTALE, which means our binaries live on a
+				// stale NFS mount.  So, we can at least EXCEPT with a
+				// more specific error message.
+		case ESTALE:
+			EXCEPT( "Condor binaries are on a stale NFS mount.  Aborting." );
+			break;
+#else
 		case ENOLINK:
 			dprintf( D_ALWAYS, 
 					 "Can't stat binary (%s), file server probably down.\n",
@@ -155,6 +169,7 @@ Starter::reallykill( int signo, int type )
 			}
 			sleep(15);
 			break;
+#endif
 		default:
 			EXCEPT( "stat(%s) failed with unexpected errno (%d)", 
 					s_name, errno );
