@@ -65,7 +65,7 @@ class Condor_MD_MAC {
     // RETURNS: CheckSUM (MAC or MD) depends on how the object is initialized
     //------------------------------------------
     
-    void addMD(unsigned char * buffer, unsigned long length);
+    void addMD(const unsigned char * buffer, unsigned long length);
     //------------------------------------------
     // PURPOSE: If you want to compute the MAC/MD over
     //          multiple steps, use this method
