@@ -32,7 +32,6 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_io.h"
-#include "TimeClass.h"
 #include "MyString.h"
 
 //-----------------------------------------------------------------
@@ -312,15 +311,15 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
   ExprTree* exp;
   ad->ResetExpr();
   exp=ad->NextExpr();
-  Time T=((Integer*) exp->RArg())->Value();
-  printf("Last Priority Update: %s\n",T.Asc());
+  time_t T=((Integer*) exp->RArg())->Value();
+  printf("Last Priority Update: %s\n",format_date(T));
 
   char* Fmt1="%-30s %12.2f\n";
   char* Fmt2="%-30s %12s\n";
 
   if (DetailFlag) {
-    Fmt1="%-30s %12.2f %8.2f %12.2f %4d %12.2f %11s\n"; 
-    Fmt2="%-30s %12s %8s %12s %4s %12s %11s\n"; 
+    Fmt1="%-30s %14.2f %8.2f %12.2f %4d %12.2f %11s\n"; 
+    Fmt2="%-30s %14s %8s %12s %4s %12s %11s\n"; 
   }
 
   printf(Fmt2,"         ","Effective","  Real  ","  Priority  ","Res ","Accumulated","   Usage  ");
