@@ -52,11 +52,11 @@ struct LineRec {
 
 static int CalcTime(int,int,int);
 static void usage(char* name);
-static void ProcessInfo(AttrList* ad);
-static int CountElem(AttrList* ad);
-static void CollectInfo(int numElem, AttrList* ad, LineRec* LR);
-static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem);
-static void PrintResList(AttrList* ad);
+static void ProcessInfo(ClassAd* ad);
+static int CountElem(ClassAd* ad);
+static void CollectInfo(int numElem, ClassAd* ad, LineRec* LR);
+static void PrintInfo(ClassAd* ad, LineRec* LR, int NumElem);
+static void PrintResList(ClassAd* ad);
 
 //-----------------------------------------------------------------
 
@@ -294,8 +294,9 @@ main(int argc, char* argv[])
 
     // get reply
     sock->decode();
-    AttrList* ad=new AttrList();
-    if (!ad->initFromStream(*sock) ||
+    ClassAd* ad=new ClassAd();
+//    if (!ad->initFromStream(*sock) ||
+	if( !getOldClassAdNoTypes( sock, *ad ) ||
         !sock->end_of_message()) {
       fprintf( stderr, "failed to get classad from negotiator\n" );
       exit(1);
@@ -325,8 +326,9 @@ main(int argc, char* argv[])
 
     // get reply
     sock->decode();
-    AttrList* ad=new AttrList();
-    if (!ad->initFromStream(*sock) ||
+    ClassAd* ad=new ClassAd();
+//    if (!ad->initFromStream(*sock) ||
+	if( !getOldClassAdNoTypes( sock, *ad ) ||
         !sock->end_of_message()) {
       fprintf( stderr, "failed to get classad from negotiator\n" );
       exit(1);
@@ -345,7 +347,7 @@ main(int argc, char* argv[])
 
 //-----------------------------------------------------------------
 
-static void ProcessInfo(AttrList* ad)
+static void ProcessInfo(ClassAd* ad)
 {
   int NumElem=CountElem(ad);
   LineRec* LR=new LineRec[NumElem];
@@ -356,7 +358,7 @@ static void ProcessInfo(AttrList* ad)
 
 //-----------------------------------------------------------------
 
-static int CountElem(AttrList* ad)
+static int CountElem(ClassAd* ad)
 {
 	int numSubmittors;
 	if( ad->LookupInteger( "NumSubmittors", numSubmittors ) ) 
@@ -385,7 +387,7 @@ int CompPrio(const void * ina, const void * inb)
 
 //-----------------------------------------------------------------
 
-static void CollectInfo(int numElem, AttrList* ad, LineRec* LR)
+static void CollectInfo(int numElem, ClassAd* ad, LineRec* LR)
 {
   char  attrName[32], attrPrio[32], attrResUsed[32], attrFactor[32], attrBeginUsage[32], attrAccUsage[32];
   char  attrLastUsage[32];
@@ -435,13 +437,19 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR)
 
 //-----------------------------------------------------------------
 
-static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
+static void PrintInfo(ClassAd* ad, LineRec* LR, int NumElem)
 {
   char LastUsageStr[17];
   ExprTree* exp;
-  ad->ResetExpr();
-  exp=ad->NextExpr();
-  time_t T=((Integer*) exp->RArg())->Value();
+  Value val;
+  int intVal;
+//  ad->ResetExpr();
+//  exp=ad->NextExpr();
+//  time_t T=((Integer*) exp->RArg())->Value();
+  ClassAd::iterator adIter = ad->begin( );
+  ad->EvaluateExpr( adIter->second, val );
+  val.IsIntegerValue( intVal );
+  time_t T=intVal;
   printf("Last Priority Update: %s\n",format_date(T));
 
   LineRec Totals;
@@ -512,7 +520,7 @@ static void usage(char* name) {
 
 //-----------------------------------------------------------------
 
-static void PrintResList(AttrList* ad)
+static void PrintResList(ClassAd* ad)
 {
   // ad->fPrint(stdout);
 
