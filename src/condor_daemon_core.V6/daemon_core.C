@@ -1861,8 +1861,6 @@ int DaemonCore::HandleReq(int socki)
 
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: received DC_AUTHENTICATE from %s\n", sin_to_string(sock->endpoint()));
 
-
-		int saveres = result;
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: entry value of result == %i\n", result);
 
 		ClassAd auth_info;
@@ -2071,7 +2069,8 @@ int DaemonCore::HandleReq(int socki)
 #endif
 
 				// generate a unique ID.
-				sprintf (buf, "%s:%i:%i:%i", my_hostname(), mypid, time(0), ZZZ_always_increase());
+				sprintf( buf, "%s:%i:%i:%i", my_hostname(), mypid, 
+						 (int)time(0), ZZZ_always_increase() );
 				assert (the_sid == NULL);
 				the_sid = strdup(buf); // This is a memory leak. Fixed above by strdup the other the_sid as well Hao
 
