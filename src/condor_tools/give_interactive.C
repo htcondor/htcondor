@@ -1,0 +1,540 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+#include "condor_common.h"
+#include <math.h>
+#include <float.h>
+#include "condor_state.h"
+#include "condor_debug.h"
+#include "condor_config.h"
+#include "condor_attributes.h"
+#include "condor_api.h"
+#include "my_username.h"
+#include "condor_classad.h"
+#include "condor_adtypes.h"
+#include "condor_string.h"
+#include "condor_uid.h"
+#include "daemon.h"
+#include "extArray.h"
+#include "MyString.h"
+#include "basename.h"
+
+// Globals
+
+double priority = 0.00001;
+const char *pool = NULL;
+struct 	PrioEntry { MyString name; float prio; };
+static  ExtArray<PrioEntry> prioTable;
+#ifndef WIN32
+template class ExtArray<PrioEntry>;
+#endif
+ExprTree *rankCondStd;// no preemption or machine rank-preemption 
+							  // i.e., (Rank > CurrentRank)
+ExprTree *rankCondPrioPreempt;// prio preemption (Rank >= CurrentRank)
+ExprTree *PreemptionReq;	// only preempt if true
+ExprTree *PreemptionRank; 	// rank preemption candidates
+
+char *mySubSystem;
+
+bool
+obtainAdsFromCollector (ClassAdList &startdAds, const char *constraint)
+{
+	CondorQuery startdQuery(STARTD_AD);
+	QueryResult result;
+
+	// Use CondorQuery object to fetch ads of startds according 
+	// to the constraint.
+	if ( constraint ) {
+		if ( startdQuery.addANDConstraint(constraint) != Q_OK )
+			return false;		
+	} 
+
+	if ( pool ) 
+		result = startdQuery.fetchAds(startdAds,pool);
+	else
+		result = startdQuery.fetchAds(startdAds);
+
+	if (result != Q_OK) 
+		return false;
+
+	return true;
+}
+
+ClassAd *
+giveBestMachine(ClassAd &request,ClassAdList &startdAds,
+			double preemptPrio)
+{
+		// the order of values in this enumeration is important!
+		// it goes from least preffered to most preffered, i.e. we
+		// prefer a match with NO_PREEMPTION best.
+	enum PreemptState {PRIO_PREEMPTION,RANK_PREEMPTION,NO_PREEMPTION};
+		// to store values pertaining to a particular candidate offer
+	ClassAd 		*candidate;
+	double			candidateRankValue;
+	double			candidatePreemptRankValue;
+	PreemptState	candidatePreemptState;
+		// to store the best candidate so far
+	ClassAd 		*bestSoFar = NULL;	
+	double			bestRankValue = -(FLT_MAX);
+	double			bestPreemptRankValue = -(FLT_MAX);
+	PreemptState	bestPreemptState = (PreemptState)-1;
+	bool			newBestFound;
+		// to store results of evaluations
+	char			remoteUser[128];
+	EvalResult		result;
+	float			tmp;
+
+
+
+	// scan the offer ads
+	startdAds.Open ();
+	while ((candidate = startdAds.Next ())) {
+
+		// the candidate offer and request must match
+		if( !( *candidate == request ) ) {
+				// they don't match; continue
+			//printf("DEBUG: MATCH FAILED\n\nCANDIDATE:\n");
+			//candidate->fPrint(stdout);
+			//printf("\nDEBUG: REQUEST:\n");
+			//request.fPrint(stdout);
+			continue;
+		}
+
+		candidatePreemptState = NO_PREEMPTION;
+		// if there is a remote user, consider preemption ....
+		if (candidate->LookupString (ATTR_REMOTE_USER, remoteUser) ) {
+				// check if we are preempting for rank or priority
+			if( rankCondStd->EvalTree( candidate, &request, &result ) && 
+					result.type == LX_INTEGER && result.i == TRUE ) {
+					// offer strictly prefers this request to the one
+					// currently being serviced; preempt for rank
+				candidatePreemptState = RANK_PREEMPTION;
+			} else {
+					// RemoteUser on machine has *worse* priority than request
+					// so we can preempt this machine *but* we need to check
+					// on two things first
+				candidatePreemptState = PRIO_PREEMPTION;
+					// (1) we need to make sure that PreemptionReq's hold (i.e.,
+					// if the PreemptionReq expression isn't true, dont preempt)
+				if (PreemptionReq && 
+						!(PreemptionReq->EvalTree(candidate,&request,&result) &&
+						result.type == LX_INTEGER && result.i == TRUE) ) {
+					continue;
+				}
+					// (2) we need to make sure that the machine ranks the job
+					// at least as well as the one it is currently running 
+					// (i.e., rankCondPrioPreempt holds)
+				if(!(rankCondPrioPreempt->EvalTree(candidate,&request,&result)&&
+						result.type == LX_INTEGER && result.i == TRUE ) ) {
+						// machine doesn't like this job as much -- find another
+					continue;
+				}
+			} 
+		}
+
+
+		// calculate the request's rank of the offer
+		if(!request.EvalFloat(ATTR_RANK,candidate,tmp)) {
+			tmp = 0.0;
+		}
+		candidateRankValue = tmp;
+
+		// the quality of a match is determined by a lexicographic sort on
+		// the following values, but more is better for each component
+		//  1. job rank of offer 
+		//	2. preemption state (2=no preempt, 1=rank-preempt, 0=prio-preempt)
+		//  3. preemption rank (if preempting)
+		newBestFound = false;
+		candidatePreemptRankValue = -(FLT_MAX);
+		if( candidatePreemptState != NO_PREEMPTION ) {
+			// calculate the preemption rank
+			if( PreemptionRank &&
+			   		PreemptionRank->EvalTree(candidate,&request,&result) &&
+					result.type == LX_FLOAT) {
+				candidatePreemptRankValue = result.f;
+			} else if( PreemptionRank ) {
+				dprintf(D_ALWAYS, "Failed to evaluate PREEMPTION_RANK "
+					"expression to a float.\n");
+			}
+		}
+		if( ( candidateRankValue > bestRankValue ) || 	// first by job rank
+				( candidateRankValue==bestRankValue && 	// then by preempt state
+				candidatePreemptState > bestPreemptState ) ) {
+			newBestFound = true;
+		} else if( candidateRankValue==bestRankValue && // then by preempt rank
+				candidatePreemptState==bestPreemptState && 
+				bestPreemptState != NO_PREEMPTION ) {
+				// check if the preemption rank is better than the best
+			if( candidatePreemptRankValue > bestPreemptRankValue ) {
+				newBestFound = true;
+			}
+		} 
+
+		if( newBestFound ) {
+			bestSoFar = candidate;
+			bestRankValue = candidateRankValue;
+			bestPreemptState = candidatePreemptState;
+			bestPreemptRankValue = candidatePreemptRankValue;
+		}
+	}
+	startdAds.Close ();
+
+
+	// this is the best match
+	return bestSoFar;
+}
+
+void
+make_request_ad(ClassAd & requestAd, const char *rank)
+{
+	char buffer[2048];
+
+	requestAd.SetMyTypeName (JOB_ADTYPE);
+	requestAd.SetTargetTypeName (STARTD_ADTYPE);
+
+	mySubSystem = "SUBMIT";
+	config_fill_ad(&requestAd);
+	mySubSystem = "INTERACTIVE";
+	config_fill_ad(&requestAd);
+
+	(void) sprintf (buffer, "Interactive = TRUE");	
+	requestAd.Insert (buffer);
+
+	(void) sprintf( buffer , "%s = %f" , ATTR_SUBMITTOR_PRIO , priority );
+	requestAd.Insert (buffer);
+
+	// Always set Requirements to True - we can do this because we only
+	// fetch the startd ads which match the user's constraint in the first place.
+	(void)sprintf( buffer, "%s = TRUE", ATTR_REQUIREMENTS );
+	requestAd.Insert (buffer);
+
+	if( !rank ) {
+		(void)sprintf( buffer, "%s = 0", ATTR_RANK );
+		requestAd.Insert (buffer);
+	} else {
+		(void)sprintf( buffer, "%s = %s", ATTR_RANK, rank );
+		requestAd.Insert (buffer);
+	}
+
+	(void) sprintf (buffer, "%s = %d", ATTR_Q_DATE, (int)time ((time_t *) 0));	
+	requestAd.Insert (buffer);
+
+	(void) sprintf (buffer, "%s = 0", ATTR_COMPLETION_DATE);
+	requestAd.Insert (buffer);
+
+	char *owner = my_username();
+	if( !owner ) {
+		owner = "unknown";
+	}
+	(void) sprintf (buffer, "%s = \"%s\"", ATTR_OWNER, owner);
+	requestAd.Insert (buffer);
+
+#ifdef WIN32
+	// put the NT domain into the ad as well
+	char *ntdomain = strnewp(get_condor_username());
+	if (ntdomain) {
+		char *slash = strchr(ntdomain,'/');
+		if ( slash ) {
+			*slash = '\0';
+			if ( strlen(ntdomain) > 0 ) {
+				if ( strlen(ntdomain) > 80 ) {
+					fprintf(stderr,"NT DOMAIN OVERFLOW (%s)\n",ntdomain);
+					exit(1);
+				}
+				(void) sprintf (buffer, "%s = \"%s\"", ATTR_NT_DOMAIN, 
+										ntdomain);
+				requestAd.Insert (buffer);
+			}
+		}
+		delete [] ntdomain;
+	}
+#endif
+		
+	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_LOCAL_USER_CPU);
+	requestAd.Insert (buffer);
+
+	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_LOCAL_SYS_CPU);
+	requestAd.Insert (buffer);
+
+	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_REMOTE_USER_CPU);
+	requestAd.Insert (buffer);
+
+	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_REMOTE_SYS_CPU);
+	requestAd.Insert (buffer);
+
+	(void) sprintf (buffer, "%s = 0", ATTR_JOB_EXIT_STATUS);
+	requestAd.Insert (buffer);
+
+	(void) sprintf (buffer, "%s = 0", ATTR_NUM_CKPTS);
+	requestAd.Insert (buffer);
+
+	(void) sprintf (buffer, "%s = 0", ATTR_NUM_RESTARTS);
+	requestAd.Insert (buffer);
+
+	(void) sprintf (buffer, "%s = 0", ATTR_JOB_COMMITTED_TIME);
+	requestAd.Insert (buffer);
+
+	(void)sprintf (buffer, "%s = 0", ATTR_IMAGE_SIZE);
+	requestAd.Insert (buffer);
+
+	(void)sprintf (buffer, "%s = 0", ATTR_EXECUTABLE_SIZE);
+	requestAd.Insert (buffer);
+
+	(void)sprintf (buffer, "%s = 0", ATTR_DISK_USAGE);
+	requestAd.Insert (buffer);
+
+	// what else?
+
+	// perhaps a config_fill_ad with subsys interactive?
+}
+
+
+static void
+fetchSubmittorPrios()
+{
+	AttrList	al;
+	char  	attrName[32], attrPrio[32];
+  	char  	name[128];
+  	float 	priority;
+	int		i = 1;
+
+		// Minor hack, if we're talking to a remote pool, assume the
+		// negotiator is on the same host as the collector.
+	Daemon	negotiator( DT_NEGOTIATOR, pool, pool );
+
+	// connect to negotiator
+	ReliSock sock;
+	sock.connect( negotiator.addr(), 0 );
+
+	sock.encode();
+	if( !sock.put( GET_PRIORITY ) || !sock.end_of_message() ) {
+		fprintf( stderr, 
+				 "Error:  Could not get priorities from negotiator (%s)\n",
+				 negotiator.fullHostname() );
+		exit( 1 );
+	}
+
+	sock.decode();
+	if( !al.get(sock) || !sock.end_of_message() ) {
+		fprintf( stderr, 
+				 "Error:  Could not get priorities from negotiator (%s)\n",
+				 negotiator.fullHostname() );
+		exit( 1 );
+	}
+
+	i = 1;
+	while( i ) {
+    	sprintf( attrName , "Name%d", i );
+    	sprintf( attrPrio , "Priority%d", i );
+
+    	if( !al.LookupString( attrName, name ) || 
+			!al.LookupFloat( attrPrio, priority ) )
+            break;
+
+		prioTable[i-1].name = name;
+		prioTable[i-1].prio = priority;
+		// printf("DEBUG: Prio   %s %f\n",name,priority);
+		i++;
+	}
+
+	if( i == 1 ) {
+		printf( "Warning:  Found no submitters\n" );
+	}
+}
+
+static int
+findSubmittor( char *name ) 
+{
+	MyString 	sub(name);
+	int			last = prioTable.getlast();
+	int			i;
+	
+	for( i = 0 ; i <= last ; i++ ) {
+		if( prioTable[i].name == sub ) return i;
+	}
+
+	prioTable[i].name = sub;
+	prioTable[i].prio = 0.5;
+
+	return i;
+}
+
+void
+usage()
+{
+	//TODO
+	printf("Usage: .. TODO ..\n");
+	exit(1);
+}
+
+main(int argc, char *argv[])
+{
+	ClassAdList startdAds;
+	char	**ptr;
+	bool WantMachineNames = false;
+	int NumMachinesWanted = 1;
+	const char *constraint = NULL;
+	const char *rank = NULL;
+	ClassAd requestAd;
+	ClassAd *offer;
+	char *tmp;
+	int i;
+	char buffer[1024];
+
+	config( 0 );
+
+	// parse command line args
+	for( ptr=argv+1,argc--; argc > 0; argc--,ptr++ ) {
+		if( ptr[0][0] == '-' ) {
+			switch( ptr[0][1] ) {
+			case 'm':	// want real machines, not virtual machines
+				WantMachineNames = true;
+				break;
+			case 'n':	// want specific number of machines
+				if( !(--argc) || !(*(++ptr)) ) {
+					fprintf( stderr, "%s: -n requires another argument\n", 
+							 basename(argv[0]) );
+					exit(1);
+				}					
+				NumMachinesWanted = atoi(*ptr);
+				if ( NumMachinesWanted < 1 ) {
+					fprintf( stderr, "%s: -n requires another argument ", 
+							 "which is an integer greater than 0\n",
+							 basename(argv[0]) );
+					exit(1);
+				}
+				break;
+			case 'p':	// pool							
+				if( !(--argc) || !(*(++ptr)) ) {
+					fprintf( stderr, "%s: -p requires another argument\n", 
+							 basename(argv[0]) );
+					exit(1);
+				}
+				pool = *ptr;
+				break;
+			case 'c':	// constraint						
+				if( !(--argc) || !(*(++ptr)) ) {
+					fprintf( stderr, "%s: -c requires another argument\n", 
+							 basename(argv[0]) );
+					exit(1);
+				}
+				constraint = *ptr;
+				break;
+			case 'r':	// rank
+				if( !(--argc) || !(*(++ptr)) ) {
+					fprintf( stderr, "%s: -r requires another argument\n", 
+							 basename(argv[0]) );
+					exit(1);
+				}
+				rank = *ptr;
+				break;
+			default:
+				usage();
+			}		
+		}
+	}
+
+	// initialize some global expressions
+	sprintf (buffer, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
+	Parse (buffer, rankCondStd);
+	sprintf (buffer, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
+	Parse (buffer, rankCondPrioPreempt);
+
+	// get PreemptionReq expression from config file
+	PreemptionReq = NULL;
+	tmp = param("PREEMPTION_REQUIREMENTS");
+	if( tmp ) {
+		if( Parse(tmp, PreemptionReq) ) {
+			fprintf(stderr, 
+				"\nERROR: Failed to parse PREEMPTION_REQUIREMENTS.\n");
+			exit(1);
+		}
+	}
+
+	// get PreemptionRank expression from config file
+	PreemptionRank = NULL;
+	tmp = param("PREEMPTION_RANK");
+	if( tmp ) {
+		if( Parse(tmp, PreemptionRank) ) {
+			fprintf(stderr, 
+				"\nERROR: Failed to parse PREEMPTION_RANK.\n");
+			exit(1);
+		}
+	}
+
+	// make the request ad
+	make_request_ad(requestAd,rank);
+
+	// grab the startd ads from the collector
+	if ( !obtainAdsFromCollector(startdAds, constraint) ) {
+		fprintf(stderr,
+			"\nERROR:  failed to fetch startd ads ... aborting\n");
+		exit(1);
+	}
+
+	// fetch submittor prios
+	fetchSubmittorPrios();
+
+	// populate startd ads with remote user prios
+	ClassAd *ad;
+	char remoteUser[1024];
+	int index;
+	startdAds.Open();
+	while( ( ad = startdAds.Next() ) ) {
+		if( ad->LookupString( ATTR_REMOTE_USER , remoteUser ) ) {
+			if( ( index = findSubmittor( remoteUser ) ) != -1 ) {
+				sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , 
+							prioTable[index].prio );
+				ad->Insert( buffer );
+			}
+		}
+	}
+	startdAds.Close();
+	
+
+	// find best machines and display them
+	char	remoteHost[MAXHOSTNAMELEN];
+	for ( i = 0; i < NumMachinesWanted; i++ ) {
+		
+		offer = giveBestMachine(requestAd,startdAds,priority);
+		
+		// check if we found a machine
+		if (!offer) {
+			fprintf(stderr,
+				"\nERROR: %d machines not available\n",NumMachinesWanted);
+			exit(1);
+		}
+
+		// here we found a machine; spit out the name to stdout
+		remoteHost[0] = '\0';
+		offer->LookupString(ATTR_NAME, remoteHost);
+		if ( remoteHost[0] ) {
+			printf("%s\n", remoteHost);
+		}
+
+		// remote this startd ad from our list 
+		startdAds.Delete(offer);
+	}
+
+	return 0;
+}
+
