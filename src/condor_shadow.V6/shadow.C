@@ -127,7 +127,8 @@ extern "C" {
 	void HandleSyscalls();
 	void Wrapup();
 	void send_quit( char *host );
-	void handle_termination( char *notification );
+	void handle_termination( PROC *proc, char *notification,
+				union wait *jobstatus, char *coredir );
 	void get_local_rusage( struct rusage *bsd_rusage );
 	int calc_virt_memory();
 	int close_kmem();
@@ -139,6 +140,7 @@ extern "C" {
 	FILE	*fdopen();
 	int		whoami();
 	void update_job_status( struct rusage *localp, struct rusage *remotep );
+	int DoCleanup();
 #if defined(HPUX9)
 	pid_t waitpid(pid_t pid, int *statusp, int options);
 #else
@@ -147,6 +149,9 @@ extern "C" {
 }
 
 extern int getJobAd(int cluster_id, int proc_id, ClassAd *new_ad);
+extern int part_send_job( int test_starter, char *host, int &reason,
+			  char *capability, char *schedd, PROC *proc, int &sd1,
+	      		  int &sd2, char **name);
 
 int do_REMOTE_syscall();
 
@@ -154,6 +159,8 @@ int do_REMOTE_syscall();
 char *strcpy();
 #endif
 
+#include "user_log.c++.h"
+UserLog ULog;
 
 #define SMALL_STRING 128
 char My_AFS_Cell[ SMALL_STRING ];
@@ -207,7 +214,6 @@ struct rusage AccumRusage;
 int ChildPid;
 int ExitReason = JOB_EXITED;		/* Schedd counts on knowing exit reason */
 
-int DoCleanup();
 int ExceptCleanup();
 int Termlog;
 
@@ -418,9 +424,7 @@ main(int argc, char *argv[], char *envp[])
 	 * during before select(), which is where we spend most of our time. */
 	block_signal(SIGCHLD);
 	block_signal(SIGUSR1);      
-#if 0
-	count_open_fds( __FILE__, __LINE__ );
-#endif
+
 	HandleSyscalls();
 	Wrapup();
 
@@ -723,7 +727,7 @@ Wrapup( )
 	} else {
 		/* all event logging has been moved from handle_termination() to
 		   log_termination()	--RR */
-		handle_termination( notification );
+		handle_termination( Proc, notification, &JobStatus, NULL );
 	}
 
 	
@@ -765,83 +769,6 @@ Wrapup( )
 
 	if( notification[0] ) {
 		NotifyUser( notification, Proc, email_addr );
-	}
-}
-
-void
-handle_termination( char *notification )
-{
-	char	coredir[ 4096 ];
-	dprintf(D_FULLDEBUG, "handle_termination() called.\n");
-
-	switch( JobStatus.w_termsig ) {
-
-	 case 0: /* If core, bad executable -- otherwise a normal exit */
-		if( JobStatus.w_coredump && JobStatus.w_retcode == ENOEXEC ) {
-			(void)sprintf( notification, "is not executable." );
-			dprintf( D_ALWAYS, "Shadow: Job file not executable" );
-			ExitReason = JOB_EXCEPTION;
-		} else if( JobStatus.w_coredump && JobStatus.w_retcode == 0 ) {
-				(void)sprintf(notification,
-"was killed because it was not properly linked for execution \nwith Version 5 Condor.\n" );
-				MainSymbolExists = FALSE;
-				ExitReason = JOB_EXCEPTION;
-		} else {
-			(void)sprintf(notification, "exited with status %d.",
-					JobStatus.w_retcode );
-			dprintf(D_ALWAYS, "Shadow: Job exited normally with status %d\n",
-				JobStatus.w_retcode );
-			ExitReason = JOB_EXITED;
-		}
-
-		Proc->status = COMPLETED;
-		Proc->completion_date = time( (time_t *)0 );
-		break;
-
-	 case SIGKILL:	/* Kicked off without a checkpoint */
-		dprintf(D_ALWAYS, "Shadow: Job was kicked off without a checkpoint\n" );
-		DoCleanup();
-		ExitReason = JOB_NOT_CKPTED;
-		break;
-
-	 case SIGQUIT:	/* Kicked off, but with a checkpoint */
-		dprintf(D_ALWAYS, "Shadow: Job was checkpointed\n" );
-		if( strcmp(Proc->rootdir, "/") != 0 ) {
-			MvTmpCkpt();
-		}
-		Proc->status = IDLE;
-		ExitReason = JOB_CKPTED;
-		break;
-
-	 default:	/* Job exited abnormally */
-#if defined(Solaris)
-		getcwd(coredir,_POSIX_PATH_MAX);
-#else
-		getwd( coredir );
-#endif
-		if( JobStatus.w_coredump ) {
-			if( strcmp(Proc->rootdir, "/") == 0 ) {
-				(void)sprintf(notification,
-					"was killed by signal %d.\nCore file is %s/core.%d.%d.",
-					 JobStatus.w_termsig,
-						coredir, Proc->id.cluster, Proc->id.proc);
-			} else {
-				(void)sprintf(notification,
-					"was killed by signal %d.\nCore file is %s%s/core.%d.%d.",
-					 JobStatus.w_termsig,Proc->rootdir, coredir, 
-					 Proc->id.cluster, Proc->id.proc);
-			}
-			ExitReason = JOB_COREDUMPED;
-		} else {
-			(void)sprintf(notification,
-				"was killed by signal %d.", JobStatus.w_termsig);
-			ExitReason = JOB_KILLED;
-		}
-		dprintf(D_ALWAYS, "Shadow: %s\n", notification);
-
-		Proc->status = COMPLETED;
-		Proc->completion_date = time( (time_t *)0 );
-		break;
 	}
 }
 
@@ -945,12 +872,7 @@ send_job( PROC *proc, char *host, char *cap)
 send_job( V2_PROC *proc, char *host, char *cap)
 #endif
 {
-	int		cmd;
-	int		reply;
-	PORTS	ports;
-	int		sd;
-	ReliSock	*sock;
-	StartdRec   stRec;
+	int reason, retval, sd1, sd2;
 	char*	capability = strdup(cap);
 
 	dprintf( D_FULLDEBUG, "Shadow: Entering send_job()\n" );
@@ -958,110 +880,19 @@ send_job( V2_PROC *proc, char *host, char *cap)
 		/* Test starter 0 - Mike's combined pvm/vanilla starter. */
 		/* Test starter 1 - Jim's pvm starter */
 		/* Test starter 2 - Mike's V5 starter */
-#define TEST_STARTER 2
-#if defined(TEST_STARTER)
-	cmd = SCHED_VERS + ALT_STARTER_BASE + TEST_STARTER;
-	dprintf( D_ALWAYS, "Requesting Test Starter %d\n", TEST_STARTER );
-#else
-	cmd = START_FRGN_JOB;
-	dprintf( D_ALWAYS, "Requesting Standard Starter\n" );
-#endif 
-
-		/* Connect to the startd */
-	/* weiru */
-	/* for ip:port pair and capability */
-	if( (sd = do_connect(host, "condor_startd", START_PORT)) < 0 ) {
-		dprintf( D_ALWAYS, "Shadow: Can't connect to condor_startd on %s\n",
-						host);
+	retval = part_send_job(2, host, reason, capability, schedd, proc, sd1, sd2, NULL);
+	if (retval == -1) {
 		DoCleanup();
-		dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
-		exit( JOB_NOT_STARTED );
+                dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
+                exit( reason );
 	}
-
-	sock = new ReliSock();
-	sock->attach_to_file_desc(sd);
-	sock->encode();
-
-		/* Send the command */
-	if( !sock->code(cmd) ) {
-		EXCEPT( "sock->code(%d)", cmd );
-	}
-
-	/* send the capability */
-    dprintf(D_FULLDEBUG, "send capability %s\n", capability);
-    if(!sock->put(capability, SIZE_OF_CAPABILITY_STRING))
-    {
-        EXCEPT( "sock->put()" );
-    }
-    free(capability);
-
-		/* Send the job info */
-	ClassAd ad;
-	ConnectQ(schedd);
-	getJobAd( proc->id.cluster, proc->id.proc, &ad );
-	DisconnectQ(NULL);
-	if( !ad.put(*sock) ) {
-		EXCEPT( "failed to send job ad" );
-	}
-	if( !sock->end_of_message() ) {
-		EXCEPT( "end_of_message failed" );
-	}
-
-	sock->decode();
-	ASSERT( sock->code(reply) );
-	ASSERT( sock->eom() );
-
-	if( reply != OK ) {
-		dprintf( D_ALWAYS, "Shadow: Request to run a job was REFUSED\n" );
-		DoCleanup();
-		dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
-		exit( JOB_NOT_STARTED );
-	}
-	dprintf( D_ALWAYS, "Shadow: Request to run a job was ACCEPTED\n" );
-
-    /* start flock : dhruba */
-	sock->decode();
-	memset( &stRec, '\0', sizeof(stRec) );
-    ASSERT( sock->code(stRec));
-    ASSERT( sock->end_of_message() );
-    ports = stRec.ports;
-	if( stRec.ip_addr ) {
-		host = stRec.server_name;
-		dprintf(D_FULLDEBUG,
-			"host = %s inet_addr = 0x%x port1 = %d port2 = %d\n",
-			host, stRec.ip_addr,ports.port1, ports.port2
-		);
-	} else {
-		dprintf(D_FULLDEBUG,
-			"host = %s port1 = %d port2 = %d\n",
-			host, ports.port1, ports.port2
-		);
-	}
-		
-    if( ports.port1 == 0 ) {
-        dprintf( D_ALWAYS, "Shadow: Request to run a job on %s was REFUSED\n",
-host );
-        dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
-        exit( JOB_NOT_STARTED );
-    }
-    /* end  flock ; dhruba */
-
-	delete sock;
 
 #ifdef CARMI_OPS
 
-	if( (ProcList->rsc_sock = do_connect(host, (char *)0, (u_short)ports.port1)) < 0 ) {
-		EXCEPT( "connect to scheduler on \"%s\", port1 = %d",
-													host, ports.port1 );
-	}
-
+	ProcList->rsc_sock = sd1;
 	dprintf( D_ALWAYS, "Shadow: RSC_SOCK connected, fd = %d\n", ProcList->rsc_sock);
 
-	if( (ProcList->client_log = do_connect(host, (char *)0, (u_short)ports.port2)) < 0 ) {
-		EXCEPT( "connect to scheduler on \"%s\", port2 = %d",
-													host, ports.port2 );
-	}
-
+	ProcList->client_log = sd2;
 	dprintf( D_ALWAYS, "Shadow: CLIENT_LOG connected, fd = %d\n", ProcList->client_log );
 
 	ProcList->xdr_RSC1 = RSC_MyShadowInit( &(ProcList->rsc_sock), &(ProcList->client_log));
@@ -1069,25 +900,15 @@ host );
 
 #else
 
-	if( (sd = do_connect(host, (char *)0, (u_short)ports.port1)) < 0 ) {
-		EXCEPT( "connect to scheduler on \"%s\", port1 = %d",
-													host, ports.port1 );
-	}
-
-	if( sd != RSC_SOCK ) {
-		ASSERT(dup2(sd, RSC_SOCK) >= 0);
-		(void)close(sd);
+	if( sd1 != RSC_SOCK ) {
+		ASSERT(dup2(sd1, RSC_SOCK) >= 0);
+		(void)close(sd1);
 	}
 	dprintf( D_ALWAYS, "Shadow: RSC_SOCK connected, fd = %d\n", RSC_SOCK );
 
-	if( (sd = do_connect(host, (char *)0, (u_short)ports.port2)) < 0 ) {
-		EXCEPT( "connect to scheduler on \"%s\", port2 = %d",
-													host, ports.port2 );
-	}
-
-	if( sd != CLIENT_LOG ) {
-		ASSERT(dup2(sd, CLIENT_LOG) >= 0);
-		(void)close(sd);
+	if( sd2 != CLIENT_LOG ) {
+		ASSERT(dup2(sd2, CLIENT_LOG) >= 0);
+		(void)close(sd2);
 	}
 	dprintf( D_ALWAYS, "Shadow: CLIENT_LOG connected, fd = %d\n", CLIENT_LOG );
 

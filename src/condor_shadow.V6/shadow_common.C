@@ -119,7 +119,12 @@ extern "C" {
 	int whoami();
 	void MvTmpCkpt();
 	void get_local_rusage( struct rusage *bsd_rusage );
+	void handle_termination( PROC *proc, char *notification,
+				union wait *jobstatus, char *coredir );
 }
+
+extern int getJobAd(int cluster_id, int proc_id, ClassAd *new_ad);
+
 
 #if defined(NEW_PROC)
         extern PROC    *Proc;
@@ -128,6 +133,7 @@ extern "C" {
 #endif
 
 extern int ChildPid;
+extern int ExitReason;
 extern char    CkptName[];
 extern char    TmpCkptName[];
 extern int             MyPid;
@@ -462,4 +468,196 @@ get_local_rusage( struct rusage *bsd_rusage )
         dprintf( D_ALWAYS, "sys_time = %d ticks\n", sys );
         clock_t_to_timeval( user, &bsd_rusage->ru_utime );
         clock_t_to_timeval( sys, &bsd_rusage->ru_stime );
+}
+
+void
+handle_termination( PROC *proc, char *notification, union wait *jobstatus,
+			char *coredir )
+{
+	char my_coredir[4096];
+	dprintf(D_FULLDEBUG, "handle_termination() called.\n");
+
+	switch( jobstatus->w_termsig ) {
+
+	 case 0: /* If core, bad executable -- otherwise a normal exit */
+		if( jobstatus->w_coredump && jobstatus->w_retcode == ENOEXEC ) {
+			(void)sprintf( notification, "is not executable." );
+			dprintf( D_ALWAYS, "Shadow: Job file not executable" );
+			ExitReason = JOB_EXCEPTION;
+		} else if( jobstatus->w_coredump && jobstatus->w_retcode == 0 ) {
+				(void)sprintf(notification,
+"was killed because it was not properly linked for execution \nwith Version 6 Condor.\n" );
+				MainSymbolExists = FALSE;
+				ExitReason = JOB_EXCEPTION;
+		} else {
+			(void)sprintf(notification, "exited with status %d.",
+					jobstatus->w_retcode );
+			dprintf(D_ALWAYS, "Shadow: Job exited normally with status %d\n",
+				jobstatus->w_retcode );
+			ExitReason = JOB_EXITED;
+		}
+
+		proc->status = COMPLETED;
+		proc->completion_date = time( (time_t *)0 );
+		break;
+
+	 case SIGKILL:	/* Kicked off without a checkpoint */
+		dprintf(D_ALWAYS, "Shadow: Job was kicked off without a checkpoint\n" );
+		DoCleanup();
+		ExitReason = JOB_NOT_CKPTED;
+		break;
+
+	 case SIGQUIT:	/* Kicked off, but with a checkpoint */
+		dprintf(D_ALWAYS, "Shadow: Job was checkpointed\n" );
+		if( strcmp(proc->rootdir, "/") != 0 ) {
+			MvTmpCkpt();
+		}
+		proc->status = IDLE;
+		ExitReason = JOB_CKPTED;
+		break;
+
+	 default:	/* Job exited abnormally */
+		if (coredir == NULL) {
+			coredir = my_coredir;
+#if defined(Solaris)
+			getcwd(coredir,_POSIX_PATH_MAX);
+#else
+			getwd( coredir );
+#endif
+		}
+		if( jobstatus->w_coredump ) {
+			if( strcmp(proc->rootdir, "/") == 0 ) {
+				(void)sprintf(notification,
+					"was killed by signal %d.\nCore file is %s/core.%d.%d.",
+					 jobstatus->w_termsig,
+						coredir, proc->id.cluster, proc->id.proc);
+			} else {
+				(void)sprintf(notification,
+					"was killed by signal %d.\nCore file is %s%s/core.%d.%d.",
+					 jobstatus->w_termsig,proc->rootdir, coredir, 
+					 proc->id.cluster, proc->id.proc);
+			}
+			ExitReason = JOB_COREDUMPED;
+		} else {
+			(void)sprintf(notification,
+				"was killed by signal %d.", jobstatus->w_termsig);
+			ExitReason = JOB_KILLED;
+		}
+		dprintf(D_ALWAYS, "Shadow: %s\n", notification);
+
+		proc->status = COMPLETED;
+		proc->completion_date = time( (time_t *)0 );
+		break;
+	}
+}
+
+int
+part_send_job(
+	      int test_starter,
+	      char *host,
+	      int &reason,
+	      char *capability,
+	      char *schedd,
+	      PROC *proc,
+	      int &sd1,
+	      int &sd2,
+	      char **name)
+{
+  int cmd, sd, reply;
+  ReliSock *sock;
+  StartdRec stRec;
+  PORTS ports;
+  
+  if (test_starter) {
+    cmd = SCHED_VERS + ALT_STARTER_BASE + test_starter;
+    dprintf( D_ALWAYS, "Requesting Test Starter %d\n", test_starter );
+  } else {
+    cmd = START_FRGN_JOB;
+    dprintf( D_ALWAYS, "Requesting Standard Starter\n" );
+  }
+
+  /* Connect to the startd */
+  sd = do_connect_with_timeout(host, "condor_startd", START_PORT, 90);
+  if( sd < 0 ) {
+    reason = JOB_NOT_STARTED;
+    return -1;
+  }
+  
+  sock = new ReliSock();
+  sock->attach_to_file_desc(sd);
+  sock->encode();
+
+  /* Send the command */
+  if( !sock->code(cmd) ) {
+    EXCEPT( "sock->code(%d)", cmd );
+  }
+
+  /* send the capability */
+  dprintf(D_FULLDEBUG, "send capability %s\n", capability);
+  if(!sock->put(capability, SIZE_OF_CAPABILITY_STRING)){
+    EXCEPT( "sock->put()" );
+  }
+  free(capability);
+               
+  /* Send the job info */
+  ClassAd ad;
+  ConnectQ(schedd);
+  getJobAd( proc->id.cluster, proc->id.proc, &ad );
+  DisconnectQ(NULL);
+  if( !ad.put(*sock) ) {
+    EXCEPT( "failed to send job ad" );
+  }
+  if( !sock->end_of_message() ) {
+    EXCEPT( "end_of_message failed" );
+  }
+
+  sock->decode();
+  ASSERT( sock->code(reply) );
+  ASSERT( sock->eom() );
+
+  if( reply != OK ) {
+    dprintf( D_ALWAYS, "Shadow: Request to run a job was REFUSED\n");
+    reason = JOB_NOT_STARTED;
+    return -1;
+  }
+  dprintf( D_ALWAYS, "Shadow: Request to run a job was ACCEPTED\n" );
+
+  /* start flock : dhruba */
+  sock->decode();
+  memset( &stRec, '\0', sizeof(stRec) );
+  ASSERT( sock->code(stRec));
+  ASSERT( sock->end_of_message() );
+  ports = stRec.ports;
+  if( stRec.ip_addr ) {
+    host = stRec.server_name;
+    *name = strdup(stRec.server_name);
+    dprintf(D_FULLDEBUG,
+	    "host = %s inet_addr = 0x%x port1 = %d port2 = %d\n",
+	    host, stRec.ip_addr,ports.port1, ports.port2
+	    );
+  } else {
+    dprintf(D_FULLDEBUG,
+	    "host = %s port1 = %d port2 = %d\n",
+	    host, ports.port1, ports.port2
+	    );
+  }    
+	
+  if( ports.port1 == 0 ) {
+    dprintf( D_ALWAYS, "Shadow: Request to run a job on %s was REFUSED\n",
+	     host );
+    reason = JOB_NOT_STARTED;
+    return -1;
+  }
+  /* end  flock ; dhruba */
+
+  delete sock;
+  if( (sd1 = do_connect(host, (char *)0, (u_short)ports.port1)) < 0 ) {
+    EXCEPT( "connect to scheduler on \"%s\", port1 = %d", host, ports.port1 );
+  }
+  
+  if( (sd2 = do_connect(host, (char *)0, (u_short)ports.port2)) < 0 ) {
+    EXCEPT( "connect to scheduler on \"%s\", port2 = %d", host, ports.port2 );
+  }
+
+  return 0;
 }

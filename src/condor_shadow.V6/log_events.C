@@ -19,7 +19,7 @@
 #include "_condor_fix_resource.h"
 #include "condor_debug.h"
 
-UserLog		ULog;
+extern UserLog		ULog;
 
 extern "C" union wait JobStatus;
 extern "C" PROC  *Proc;
