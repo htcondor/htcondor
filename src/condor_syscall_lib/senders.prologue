@@ -26,53 +26,14 @@
 #include "condor_classad.h"
 #endif
 
+extern "C" sigset_t condor_block_signals();
+extern "C" void condor_restore_sigmask(sigset_t);
+
 static char *_FileName_ = __FILE__;
 
 int CurrentSysCall;
 
 extern ReliSock *syscall_sock;
-
-extern "C" {
-
-/* if you modify this, then make sure to modify it in local_startup.c too */
-sigset_t
-block_condor_signals()
-{
-	int sigscm;
-	sigset_t mask, omask;
-
-	/* Block signals requesting an exit or checkpoint for duration of
-	   system call. */
-	sigscm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-	sigemptyset( &mask );
-	sigaddset( &mask, SIGTSTP );
-	sigaddset( &mask, SIGUSR1 );
-	sigaddset( &mask, SIGUSR2 );
-	if( sigprocmask(SIG_BLOCK,&mask,&omask) < 0 ) {
-		dprintf(D_ALWAYS, "sigprocmask failed: %s\n", strerror(errno));
-		return omask;
-	}
-	SetSyscalls( sigscm );
-	return omask;
-}
-
-void restore_condor_sigmask(sigset_t omask)
-{
-	int sigscm;
-
-	sigscm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-	/* Restore previous signal mask - generally unblocks TSTP and USR1 */
-	if( sigprocmask(SIG_SETMASK,&omask,0) < 0 ) {
-		dprintf(D_ALWAYS, "sigprocmask failed: %s\n", strerror(errno));
-		return;
-	}
-	SetSyscalls( sigscm );
-}
-
-
-} // extern C
-
-
 
 int
 REMOTE_syscall( int syscall_num, ... )
@@ -90,8 +51,9 @@ REMOTE_syscall( int syscall_num, ... )
 	scm = SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 	va_start( ap, syscall_num );
 
-	/* defined in local_startup.c and remote_startup.c */
-	omask = block_condor_signals();
+	/* Every switch should already have blocked all signals, but we block
+	   them again here just to be safe. */
+	omask = condor_block_signals();
 	
 	switch( syscall_num ) {
 
