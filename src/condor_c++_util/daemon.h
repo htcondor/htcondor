@@ -79,13 +79,14 @@ public:
 		  name (a hostname, or Condor-name, such as
 		  "vm1@raven.cs.wisc.edu") of the particular daemon you care
 		  about.  If you pass in a NULL (the default) for the name, we
-		  assume you want the "local" daemon.  Finally, you can pass
-		  in the name of the pool you want to query.  If you pass in a
-		  NULL (the default), we assume you want the local pool.
+		  assume you want the "local" daemon.  Alternatively, you can
+		  pass in the "sinful string" of the daemon you care about.  
+		  Finally, you can pass in the name of the pool you want to
+		  query.  If you pass in a NULL (the default), we assume you
+		  want the local pool.
 		  @param type The type of the daemon, specified in a daemon_t
-		  @param name The name of the daemon, NULL if you want local
-		  @param pool The name of the pool, NULL if you want local
-		  */	
+		  @param name The name (or sinful string) of the daemon, NULL if you want local
+		  @param pool The name of the pool, NULL if you want local */
 	Daemon( daemon_t type, const char* name = NULL, 
 				const char* pool = NULL );
 
