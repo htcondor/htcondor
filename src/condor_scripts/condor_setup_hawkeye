@@ -1,13 +1,49 @@
 #! /usr/bin/env perl
+#***********************************************************************
+#
+# Copyright (C) 2004, Computer Sciences Department,
+# University of Wisconsin-Madison, WI, and Nick LeRoy,
+# and other members of the Condor Project
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License version
+# 2 as published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+# 02111-1307, USA.
+#
+# For contact information, please visit:
+#      http://www.cs.wisc.edu/condor
+#
+#**********************************************************************/
 use strict;
 use warnings;
+
+# Update the module include path
+BEGIN
+{
+	my $Dir = $0;
+	if ( $Dir =~ /(.*)\/.*/ )
+	{
+		push @INC, "$1";
+	}
+}
+use CondorConfig;
 $| = 1;
 
 # Prototypes
-sub Main( );
+sub main( );
 sub CommandLine( @ );
 sub FindConfigFile( );
-sub ReadConfigFile( );
+sub FindConfigToUpdate( );
+sub ReadConfigFiles( );
 sub InstallFiles( );
 sub ProcessConfigLine( $ );
 sub WriteConfig( );
@@ -15,6 +51,7 @@ sub Expand( $ );
 sub ExpandString( $ );
 sub Usage ( $ );
 sub Help ( );
+
 
 # ******************************************************
 # Command line options
@@ -37,8 +74,10 @@ my %Options =
 my %Config = (
 	      RootDir => "",
 	      SourceDir => ".",
-	      BaseConfigFile => "",
-	      ConfigFile => "",
+	      ConfigFile => {
+			     Base => "",
+			     Updated => "",
+			    },
 	      ModulesDir => "",
 	      UpdateConfig => 0,
 	      UseDefaults => 1,
@@ -54,47 +93,56 @@ my %InstallFiles = (
 		    "condor_install_module" => "SbinDir",
 		   );
 
-my %ConfigMacros;
-my %ConfigLines;	# Hash of arrays; 1 per file
-my @NewConfig;		# New configuration lines
-
-# "Main" Logic
-if ( ! exists $ENV{PWD} )
-{
-    $ENV{PWD} = `/bin/pwd`; chomp $ENV{PWD};
-}
 
 # Basic setups
 my $Program = "condor_setup_hawkeye";
 my $ConfigEnv = "CONDOR_CONFIG";
+my $ConfigMacros;
+my $ConfigFiles;
 
-# Process command line, etc..
-CommandLine( @ARGV );
-$#ARGV = -1;
-$| = 1;
+main( );
 
-# Find the release tarball
-if ( ! -f "$Config{SourceDir}/release.tar" )
+# Main
+sub main( )
 {
-    print STDERR "\nUnable to access 'release.tar' in $Config{SourceDir}\n";
-    print STDERR "You may need to specify --source=<dir>\n";
-    die "No release tarball found\n";
-}
+    # "Main" Logic
+    if ( ! exists $ENV{PWD} )
+    {
+	$ENV{PWD} = `/bin/pwd`; chomp $ENV{PWD};
+    }
 
-# Find the config file to use
-$ENV{$ConfigEnv} = $Config{BaseConfigFile} if ( ! exists $ENV{$ConfigEnv} );
-FindConfigFile( );
+    # Process command line, etc..
+    CommandLine( @ARGV );
+    $#ARGV = -1;
+    $| = 1;
 
-# Read the config file
-ReadConfigFile( );
+    # Find the release tarball
+    if ( ! -f "$Config{SourceDir}/release.tar" )
+    {
+	print STDERR "\nUnable to access 'release.tar' in $Config{SourceDir}\n";
+	print STDERR "You may need to specify --source=<dir>\n";
+	die "No release tarball found\n";
+    }
 
-# Copy in the perl modules
-InstallFiles( );
+    # Create the config macro & file handlers
+    $ConfigMacros = CondorConfigMacros->new( );
 
-# And, write the new config
-WriteConfig( );
+    # Construct the config file object
+    $ConfigFiles = CondorConfigFiles->new( $ConfigMacros );
 
-# end of "main"
+    # Find the config file to use
+    FindConfigFile( );
+
+    # Read the config file
+    ReadConfigFiles( );
+
+    # Copy in the perl modules
+    InstallFiles( );
+
+    # And, write the new config
+    WriteConfig( );
+
+} # end of "main"
 # ******************************************************
 
 # ******************************************************
@@ -118,13 +166,13 @@ sub CommandLine( @ )
 	    {
 		$File = $ENV{PWD} . "/$File";
 	    }
-	    $Config{BaseConfigFile} = $File;
+	    $Config{ConfigFile}{Base} = $File;
 	}
 
 	# Config file to update
 	elsif ( $Arg =~ /^--update=(.+)/ )
 	{
-	    $Config{ConfigFile} = $1;
+	    $Config{ConfigFile}{Updated} = $1;
 	    $Config{UpdateConfig} = 1;
 	}
 
@@ -176,32 +224,10 @@ sub CommandLine( @ )
 # ******************************************************
 sub FindConfigFile( )
 {
-
-    # Check the config env variable...
-    if ( ( $Config{BaseConfigFile} eq "" ) && ( exists $ENV{$ConfigEnv} ) )
-    {
-	if ( ! ( -f $ENV{$ConfigEnv} ) )
-	{
-	    warn "$ENV{$ConfigEnv} (from ENV) does not exist!";
-	}
-	$Config{BaseConfigFile} = $ENV{$ConfigEnv};
-    }
-
-    # Fallbacks...
-    my @FallbackConfigs = [ "/home/$Distribution", ];
-    my $RootEnv = uc $Distribution . "_ROOT_DIR";
-    unshift @FallbackConfigs, $ENV{$RootEnv}
-	if ( exists $ENV{$RootEnv} );
-    foreach my $TempConfig ( @FallbackConfigs )
-    {
-	if (  ( $Config{BaseConfigFile} eq "" ) && ( -f $TempConfig )  )
-	{
-	    $Config{BaseConfigFile} = $TempConfig;
-	}
-    }
-
+    my $Base = $ConfigFiles->FindConfig( $ConfigEnv,
+					 $Config{ConfigFile}{Base} );
     # Finally, let's go check the config
-    if ( $Config{BaseConfigFile} eq "" )
+    if ( $Base eq "" )
     {
 	print STDERR "No config found\n";
 	Usage( "" );
@@ -209,104 +235,45 @@ sub FindConfigFile( )
 	exit 1;
     }
 
+    return 1;
+
 } # FindConfigFile()
 # ******************************************************
 
 # ******************************************************
 # Read the config file
 # ******************************************************
-sub ReadConfigFile( )
+sub ReadConfigFiles( )
 {
-    my @ConfigFiles = ( { Raw => $Config{BaseConfigFile},
-			  File => $Config{BaseConfigFile}, } );
 
-    # Pre-define some things:
-    if ( ! exists $ENV{HOSTNAME} )
-    {
-	$ENV{HOSTNAME} = `/bin/hostname`;
-	chomp $ENV{HOSTNAME};
-    }
-    $ConfigMacros{FULL_HOSTNAME} = $ENV{HOSTNAME};
-    $ConfigMacros{HOSTNAME} = $ConfigMacros{FULL_HOSTNAME};
-    $ConfigMacros{HOSTNAME} =~ s/\..*$//;
-    $ConfigMacros{TILDE} = $ENV{HOME};
+    # Read them all in
+    $ConfigFiles->ReadAll( );
 
-    # Read all of the config files
-    foreach my $Conf ( @ConfigFiles )
-    {
-	my $Raw = $Conf->{Raw};
-	my $File = $Conf->{File};
-	open( CONFIG, $File ) || die "Can't read config @ $File";
-
-	print "Reading config file $Raw ...";
-	my $Line = "";
-	while( <CONFIG> )
-	{
-	    chomp;
-	    push( @{$ConfigLines{$File}}, $_ );
-	    s/^\s+//;
-	    s/\s+$//;
-
-	    # Comment? ( /\#/ )
-	    if ( /\#/ )
-	    {
-		ProcessConfigLine( $Line ) if ( $Line ne "" );
-		$Line = "";
-	    }
-
-	    # Continuation?
-	    elsif ( /(.*)\\$/ )
-	    {
-		$Line = ( $Line eq "" ) ? $1 : $Line . " " . $1;
-	    }
-
-	    # "Normal" line
-	    else
-	    {
-		$Line = ( $Line eq "" ) ? $_ : $Line . " " . $_;
-		ProcessConfigLine( $Line ) if ( $Line ne "" );
-		$Line = "";
-	    }
-	}
-	close( CONFIG );
-	print "Done\n";
-
-	# Evaluate the local configs
-	if ( ( $File eq $Config{BaseConfigFile} ) &&
-	     ( exists $ConfigMacros{LOCAL_CONFIG_FILE} )  )
-	{
-	    foreach my $Local ( split( /[\,\s]+/,
-				       $ConfigMacros{LOCAL_CONFIG_FILE} ) )
-	    {
-		my $r = ();
-		$r->{Raw} = $Local;
-		$r->{File} = ExpandString( $Local );
-		push( @ConfigFiles, $r );
-		$r = ();
-	    }
-	}
-    }
-    print "\n";
-
+    # Try to find the file that last definied the job list
+    FindConfigToUpdate( );
 
     # Add basic things to the config if they're not defined...
-    $Config{CronName} = Expand( "STARTD_CRON_NAME" );
-    if ( ! defined $Config{CronName} )
+    my $Tmp = $ConfigMacros->Expand( "STARTD_CRON_NAME" );
+    if ( $Tmp )
+    {
+	$Config{CronName} = $Tmp;
+    }
+    else
     {
 	$Config{CronName} =
 	    ( $Distribution eq "hawkeye" ) ? "Hawkeye" : "Cron";
-	push @NewConfig, "STARTD_CRON_NAME = $Config{CronName}";
-	$ConfigMacros{STARTD_CRON_NAME} = $Config{CronName};
+	$ConfigFiles->AddText( "STARTD_CRON_NAME = $Config{CronName}" );
+	$ConfigMacros->Set( "STARTD_CRON_NAME", $Config{CronName} );
     }
 
     # Figure out where the modules go
     {
-	my $Modules = $ConfigMacros{MODULES};
-	if ( ! defined $Modules )
+	my $Modules = $ConfigMacros->Get( "MODULES" );
+	if ( ! $Modules )
 	{
-	    my $Hawkeye = Expand( "HAWKEYE" );
-	    my $HawkeyeDir = Expand( "HAWKEYE_DIR" );
-	    my $ReleaseDir = Expand( "RELEASE_DIR" );
+	    my $Hawkeye = $ConfigMacros->Expand( "HAWKEYE" );
+	    my $HawkeyeDir = $ConfigMacros->Expand( "HAWKEYE_DIR" );
+	    my $ReleaseDir = $ConfigMacros->Expand( "RELEASE_DIR" );
 
 	    # 1. Look for direct config via cmd line
 	    if ( $Config{ModulesDir} ne "" )
@@ -341,7 +308,7 @@ sub ReadConfigFile( )
 	    my $Input = <>; chomp $Input;
 	    $Input = $Modules if ( $Input eq "" );
 
-	    $Expanded = ExpandString( $Input );
+	    $Expanded = $ConfigMacros->ExpandString( $Input );
 	    print "  $Input expands to '$Expanded': Is this correct [Y/n]? ";
 	    $_ = <>;
 	    if ( /^n/i )
@@ -365,145 +332,117 @@ sub ReadConfigFile( )
 	$Config{ModulesDir} = $Expanded;
 
 	# And, let's set the config
-	if ( ( !exists $ConfigMacros{MODULES} ) ||
-	     ( $ConfigMacros{MODULES} ne $Modules ) )
+	my $Tmp = $ConfigMacros->Get( "MODULES" );
+	if ( ( ! $Tmp ) || ( $Tmp ne $Modules ) )
 	{
 	    print "Defining MODULES\n";
-	    push @NewConfig, "MODULES = $Modules";
-	    $ConfigMacros{MODULES} = $Modules;
+	    $ConfigFiles->AddText( "MODULES = $Modules" );
+	    $ConfigMacros->Set( "MODULES", $Modules );
 	}
 
 	print "\n";
     }
 
     # Jobs defined?
-    my $CronJobsVar = uc( $ConfigMacros{STARTD_CRON_NAME} ) . "_JOBS";
-    my $Jobs = Expand( $CronJobsVar );
-    if ( ! defined $Jobs )
+    my $CronJobsVar = $Config{CronName} . "_JOBS";
+    my $Jobs = $ConfigMacros->Expand( $CronJobsVar );
+    if ( ! $Jobs )
     {
-	push @NewConfig, "$CronJobsVar = ";
-	$ConfigMacros{$CronJobsVar} = "";
-    }
-
-    # Try to find the file that last definied the job list
-    if ( $Config{ConfigFile} eq "" )
-    {
-	my $File = Expand( "INSTALL_MODULE_CONFIG_FILE" );
-	$Config{ConfigFile} = $File if ( defined $File );
+	$ConfigFiles->AddText( "$CronJobsVar = " );
+	$ConfigMacros->Set( $CronJobsVar, "" );
     }
 
     # Find the "sbin" & "bin" directories
-    my $Sbin = Expand( "SBIN" );
-    if ( ( !defined $Sbin ) || ( $Sbin eq "" ) )
+    my $Sbin = $ConfigMacros->Expand( "SBIN" );
+    if ( ( ! $Sbin ) || ( $Sbin eq "" ) )
     {
 	print STDERR "SBIN not defined in config.  Giving up.\n";
 	exit 1;
     }
     $Config{SbinDir} = $Sbin;
 
-    my $Bin = Expand( "BIN" );
-    if ( ( !defined $Bin ) || ( $Bin eq "" ) )
+    my $Bin = $ConfigMacros->Expand( "BIN" );
+    if ( ( ! $Bin ) || ( $Bin eq "" ) )
     {
 	print STDERR "BIN not defined in config.  Giving up.\n";
 	exit 1;
     }
     $Config{BinDir} = $Bin;
 
-    # Try to find the file that last definied the job list
-    FindConfigToUpdate( \@ConfigFiles );
 
-
-} # ReadConfigFile
+} # ReadConfigFiles
 #  ******************************************************
 
 # ******************************************************
-# Read the config file
+# Figure out which config file to update
 # ******************************************************
-sub FindConfigToUpdate( $ )
+sub FindConfigToUpdate( )
 {
-    my $ConfigFiles = shift;
 
-    # Local vars
-    my $UpdateConf = undef;
-    my $CronJobsVar = uc( $ConfigMacros{STARTD_CRON_NAME} ) . "_JOBS";
-
-    if ( !defined $UpdateConf )
+    # User specified?
+    if ( $Config{ConfigFile}{Updated} ne "" )
     {
-	foreach my $Conf ( reverse @{$ConfigFiles} )
-	{
-	    my @List = grep( /^\s*$CronJobsVar\s+=/,
-			     @{$ConfigLines{$Conf->{File}}} );
-	    if ( scalar @List )
-	    {
-		$UpdateConf = $Conf;
-		last;
-	    }
-	}
+	$ConfigFiles->SetUpdateFile( $Config{ConfigFile}{Updated} );
+	return 1;
+    }
+
+    # Raw file
+    my $Raw = undef;
+
+    # Is "INSTALL_MODULE_CONFIG_FILE" set?
+    if ( ! $Raw )
+    {
+	my $File = $ConfigMacros->Expand( "INSTALL_MODULE_CONFIG_FILE" );
+	$Raw = $File if ( ! $File );
     }
 
     # Try to find the file that last defined STARTD_CRON_NAME
-    if ( !defined $UpdateConf )
+    if ( ! $Raw )
     {
-	foreach my $Conf ( reverse @{$ConfigFiles} )
+	my @Match = $ConfigFiles->GrepText_l( "^\\s*STARTD_CRON_NAME\\s+=" );
+	if ( scalar @Match )
 	{
-	    my @List = grep( /^\s*START_CRON_NAME\s+=/,
-			     @{$ConfigLines{$Conf->{File}}} );
-	    if ( scalar @List )
-	    {
-		$UpdateConf = $Conf;
-		last;
-	    }
+	    $Raw = pop( @Match )->{File};
 	}
     }
 
     # If there's a local config that's named ".jobs" or similar, use it as
     # the config to modify
-    if ( !defined $UpdateConf )
+    if ( ! $Raw )
     {
-	foreach my $Conf ( @{$ConfigFiles} )
+	my @Match = $ConfigFiles->GrepNames( "(jobs|joblist|hawkeye)\$" );
+	if ( scalar @Match )
 	{
-	    if ( $Conf->{Raw} =~ /(jobs|joblist|hawkeye)$/ )
-	    {
-		$UpdateConf = $Conf;
-		last;
-	    }
+	    $Raw = shift( @Match );
 	}
     }
 
     # Finally, we'll grab a reasonable fallback
-    if ( !defined $UpdateConf )
+    if ( ! $Raw )
     {
-	$UpdateConf = ();
-	$UpdateConf->{Raw} = "\$(RELEASE_DIR)/condor_config.hawkeye";
-	$UpdateConf->{File} = ExpandString( "\$(RELEASE_DIR)/condor_config.hawkeye" );
+	$Raw = "\$(RELEASE_DIR)/condor_config.hawkeye";
     }
 
     # Confirm from user
     while( 1 )
     {
-	my $File = $UpdateConf->{File};
-	my $Raw = $UpdateConf->{Raw};
-	print "What directory would you like to store the module definitions in?\n";
+	my $File = $ConfigMacros->ExpandString( $Raw );
+	print "What config file would you like to store the module definitions in?\n";
 	print "  You may specify something like \$(RELEASE_DIR)/etc/config.jobs\n";
 	print "  Default = '$Raw'\n";
 	print "  Local config: ";
 	my $Input = <>; chomp $Input;
 	$Input = $Raw if ( $Input eq "" );
 
-	$File = ExpandString( $Input );
+	$File = $ConfigMacros->ExpandString( $Input );
 	print "$Input expands to '$File': Is this correct [Y/n]? ";
 	$_ = <>;
 	redo if ( /^n/i );
 
 	# Ok, let's run with it...
-	$Config{ConfigFile} = $File;
 	$Raw = $Input;
 
-	my $Found = 0;
-	foreach my $Conf ( @{$ConfigFiles} )
-	{
-	    $Found++ if ( $File eq $Conf->{File} );
-	}
+	my $Found = $ConfigFiles->FindName( $File );
 	if ( ! $Found )
 	{
 	    print "\n";
@@ -515,6 +454,9 @@ sub FindConfigToUpdate( $ )
 	}
 	last;
     }
+
+    # Store it
+    $ConfigFiles->SetUpdateFile( $Raw );
 
 } # FindConfigToUpdate( $ )
 # ******************************************************
@@ -588,54 +530,27 @@ HCV_1
 sub WriteConfig( )
 {
     # Any work to do?
-    if ( $#NewConfig < 0 )
+    my $Num = $ConfigFiles->NewTextLines( );
+    if ( $Num <= 0 )
     {
 	print "\nNo config updates required\n";
 	return 1;
     }
 
-    my $File = $Config{ConfigFile};
-    my $TmpFile = "$File.tmp.$$";
-    open( TMP, ">$TmpFile" ) || die "Can't create temp config '$TmpFile'";
-
-    my $EmacsLocal = 0;
-    foreach ( @{$ConfigLines{$File}} )
+    # Write the updates to the temp file
+    my ( $File, $TmpFile ) = $ConfigFiles->WriteUpdates( );
+    if ( ! $File or ! $TmpFile )
     {
-	if ( /\#\#\# Local Variables:/ )
-	{
-	    $EmacsLocal = 1;
-	    push( @NewConfig, "" );
-	    push( @NewConfig, $_ );
-	    next;
-	}
-	if ( $EmacsLocal )
-	{
-	    if ( /\#\#\#/ )
-	    {
-		push( @NewConfig, $_ );
-		$EmacsLocal = 0 if ( /End:/ );
-		next;
-	    }
-	    else
-	    {
-		$EmacsLocal = 0;
-	    }
-	}
-	print TMP "$_\n";
+	die "Error writing update";
     }
-    foreach ( @NewConfig )
-    {
-	print TMP "$_\n";
-    }
-    close( TMP );
 
     # Ask the user unless they explicietly asked us to overwrite it
     my $OverWrite = $Config{UpdateConfig};
     if ( ! $OverWrite )
     {
-	if ( -f $Config{ConfigFile} )
+	if ( -f $File )
 	{
-	    print "\nAbout to overwrite $Config{ConfigFile}; ok? ";
+	    print "\nAbout to overwrite $File; ok? ";
 	    $OverWrite = 1 if ( <> =~ /^y/ );
 	}
 	else
@@ -647,9 +562,11 @@ sub WriteConfig( )
     # OverWrite it?
     if ( $OverWrite )
     {
-	unlink( $Config{ConfigFile} );
-	rename( $TmpFile, $Config{ConfigFile} );
-	print "\n$Config{ConfigFile} updated\n";
+	my $Backup = "$File.bak";
+	unlink( $Backup );
+	rename( $File, $Backup );
+	rename( $TmpFile, $File );
+	print "\n$File updated\n";
     }
     else
     {
@@ -659,106 +576,6 @@ sub WriteConfig( )
     return 1;
 
 } # WriteConfig()
-# ******************************************************
-
-# ******************************************************
-# Process a line from a config file
-# ******************************************************
-sub ProcessConfigLine( $ )
-{
-    my $Line = shift;
-
-    $Line =~ s/^\s+//;
-    $Line =~ s/\s+$//;
-    return 0 if ( $Line eq "" ) ;
-
-    # MACRO = value
-    if ( $Line =~ /^(\S+)\s*=\s*(.+)/ )
-    {
-	my $Macro = uc( $1 );
-	my $Value = $2;
-
-	if ( exists $ConfigMacros{$Macro} )
-	{
-	    my $CurValue = $ConfigMacros{$Macro};
-	    $Value =~ s/\$\($Macro\)/$CurValue/g;
-	}
-	$ConfigMacros{$Macro} = $Value;
-    }
-    elsif ( $Line =~ /^(\S+)\s*=$/ )
-    {
-	my $Macro = uc( $1 );
-	$ConfigMacros{$Macro} = "";
-    }
-}
-
-
-# ******************************************************
-# Expand a macro from the config file
-# ******************************************************
-sub Expand( $ )
-{
-    my $Var = shift;
-
-    # One more check
-    return undef if ( ! exists ( $ConfigMacros{$Var} ) );
-
-    # Now, expand it out...
-    my $Value = $ConfigMacros{$Var};
-    while( $Value =~ /(.*)\$\((\w+)\)(.*)/ )
-    {
-	if ( $2 eq $Var )
-	{
-	    $Value = $1 . $3;
-	}
-	elsif ( exists ( $ConfigMacros{$2} ) )
-	{
-	    $Value = $1 . $ConfigMacros{$2} . $3;
-	    last if ( $2 eq $Var );
-	}
-	elsif ( exists ( $ENV{$2} ) )
-	{
-	    $Value = $1 . $ENV{$2} . $3;
-	    last if ( $2 eq $Var );
-	}
-	else
-	{
-	    print STDERR "Warning: Unable to expand $Value\n";
-	    last;
-	}
-    }
-    $Value;
-
-} # Expand()
-# ******************************************************
-
-# ******************************************************
-# Expand a string
-# ******************************************************
-sub ExpandString( $ )
-{
-    my $Value = shift;
-
-    # Now, expand it out...
-    while( $Value =~ /(.*)\$\((\w+)\)(.*)/ )
-    {
-	if ( exists ( $ConfigMacros{$2} ) )
-	{
-	    $Value = $1 . $ConfigMacros{$2} . $3;
-	}
-	elsif ( exists ( $ENV{$2} ) )
-	{
-	    $Value = $1 . $ENV{$2} . $3;
-	}
-	else
-	{
-	    print STDERR "Warning: Unable to expand $Value\n";
-	    last;
-	}
-    }
-    $Value;
-
-} # ExpandString()
 # ******************************************************
 
 # ******************************************************
