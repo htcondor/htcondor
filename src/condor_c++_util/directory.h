@@ -100,17 +100,23 @@ public:
 
 	/** Get the full path to the file.
 		@return A string containing the full path of this file.
+		Do not free or delete this pointer.
+		<b>Warning:</b> This pointer is meaningless when this StatInfo object is deleted.
 	*/
 	const char* FullPath() { return (const char*)fullpath; };
 
 	/** Get just the 'basename' for the file: its name without the
 	    directory path.
 		@return A string containing the 'basename' of this file.
+		Do not free or delete this pointer.
+		<b>Warning:</b> This pointer is meaningless when this StatInfo object is deleted.
 	*/
 	const char* BaseName() { return (const char*)filename; };
 
 	/** Get just the directory path for the file.
 		@return A string containing the directory path of this file.
+		Do not free or delete this pointer.
+		<b>Warning:</b> This pointer is meaningless when this StatInfo object is deleted.
 	*/
 	const char* DirPath() { return (const char*)dirpath; };
 
@@ -145,10 +151,12 @@ private:
 	char* dirpath;
 	char* filename;
 	char* fullpath;
-	int do_stat( const char *path );
+	void do_stat( const char *path );
 	char* make_dirpath( const char* dir );
 #ifndef WIN32
 	int unix_do_stat( const char *path, struct stat *buf );
+#else
+	int nt_do_stat( const char *path, struct stat *buf );
 #endif
 };
 
@@ -188,8 +196,9 @@ public:
 	/** Fetch information on the next file in the subdirectory and
 		make it the 'current' file.
 		@return The filename of the next file, or NULL if there are 
-		no more files.  Do not free or delete
-		this memory; the class handles all memory management. */
+		no more files.  Do not free or delete this memory; the class handles all memory management. 
+		<b>Warning:</b> This pointer is meaningless when the Directory object is deleted.
+	*/
 	const char* Next();
 
 	/** Restart the iteration.  After calling Rewind(), the next 
@@ -250,7 +259,7 @@ private:
 	bool do_remove( const char *path, bool is_curr );
 #ifdef WIN32
 	long dirp;
-	static struct _finddata_t filedata;
+	struct _finddata_t filedata;
 #else
 	DIR *dirp;
 #endif
