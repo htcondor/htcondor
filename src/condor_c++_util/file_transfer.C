@@ -589,6 +589,11 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 				continue;
 			if ( file_strcmp(f,"condor_exec.bat")==MATCH )
 				continue;
+
+			// for now, skip all subdirectory names until we add
+			// subdirectory support into FileTransfer.
+			if ( dir->IsDirectory() )
+				continue;
 							
 			// if this file is has been modified since last download,
 			// add it to the list of files to transfer.
