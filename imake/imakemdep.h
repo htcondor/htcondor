@@ -283,7 +283,8 @@ char *cpp_argv[ARGUMENTS] = {
 	"-D__i386__",
 # endif
 # ifdef __GNUC__
-	"-traditional",
+	/* traditional cpp does not allow token pasting! */
+	/* "-traditional", */
 # endif
 #endif
 #ifdef M4330
@@ -452,7 +453,8 @@ char *cpp_argv[ARGUMENTS] = {
 	"-D__i386__",
 # endif
 # ifdef __GNUC__
-	"-traditional",
+	/* traditional cpp does not allow token pasting! */
+	/* "-traditional", */
 # endif
 #endif
 #ifdef Oki
@@ -475,7 +477,8 @@ char *cpp_argv[ARGUMENTS] = {
 	"-DNCR",	/* NCR */
 #endif
 #ifdef linux
-        "-traditional",
+		/* traditional cpp does not allow token pasting! */
+		/* "-traditional", */
         "-Dlinux",
 #endif
 #ifdef __uxp__
