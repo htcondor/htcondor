@@ -226,7 +226,7 @@ class DaemonCore : public Service
 		int					maxSig;		// max number of signal handlers
 		int					nSig;		// number of signal handlers used
 		SignalEnt*			sigTable;		// signal table
-		int					sent_signal;	// TRUE if a signal handler sends a signal
+		volatile int		sent_signal;	// TRUE if a signal handler sends a signal
 
 		struct SockEnt
 		{
@@ -303,6 +303,13 @@ class DaemonCore : public Service
 		void				free_descrip(char *p) { if(p &&  p != EMPTY_DESCRIP) free(p); }
 	
 		fd_set				readfds; 
+
+		// m_timer is the timeout structure passed by the Driver()
+		// method to select().  it needs to be volatile so that we 
+		// can set the select timeout to zero in Send_Signal so that
+		// real posix/unix signal handlers that call Send_Signal do not
+		// have delivery of their daemon core signal delayed.  Whew....
+		volatile struct timeval		m_timer;	
 
 #ifdef WIN32
 		DWORD	dcmainThreadId;		// the thread id of the thread running the main daemon core

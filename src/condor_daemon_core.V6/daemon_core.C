@@ -832,8 +832,6 @@ void DaemonCore::Driver()
 	int			rv;					// return value from select
 	int			i;
 	int			tmpErrno;
-	struct timeval	timer;
-	struct timeval *ptimer;
 	int temp;
 	int result;
 #ifndef WIN32
@@ -884,12 +882,11 @@ void DaemonCore::Driver()
 		temp = t.Timeout();
 		if ( sent_signal == TRUE )
 			temp = 0;
-		timer.tv_sec = temp;
-		timer.tv_usec = 0;
+		m_timer.tv_usec = 0;
 		if ( temp < 0 )
-			ptimer = NULL;
+			m_timer.tv_sec = 1000000;	// no timers pending; sleep a long time...
 		else
-			ptimer = &timer;		// no timeout on the select() desired
+			m_timer.tv_sec = temp;	
 		
 
 		// Setup what socket descriptors to select on.  We recompute this
@@ -910,9 +907,9 @@ void DaemonCore::Driver()
 #endif
 
 #if defined(HPUX9)
-		rv = select(FD_SETSIZE, (int *) &readfds, NULL, NULL, ptimer);
+		rv = select(FD_SETSIZE, (int *) &readfds, NULL, NULL, (const struct timeval *)&m_timer);
 #else
-		rv = select(FD_SETSIZE, &readfds, NULL, NULL, ptimer);
+		rv = select(FD_SETSIZE, &readfds, NULL, NULL, (const struct timeval *)&m_timer);
 #endif
 		tmpErrno = errno;
 
@@ -1243,6 +1240,7 @@ int DaemonCore::Send_Signal(pid_t pid, int sig)
 			// no need to go via UDP/TCP, just call HandleSig directly.
 			HandleSig(_DC_RAISESIGNAL,sig);
 			sent_signal = TRUE;
+			m_timer.tv_sec = 0;		// set select() timeout to zero
 			return TRUE;
 		} else {
 			// send signal to same process, different thread.
