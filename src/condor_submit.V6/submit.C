@@ -170,6 +170,7 @@ void 	log_submit();
 void 	get_time_conv( int &hours, int &minutes );
 int     SaveClassAd (ClassAd &);
 void	InsertJobExpr (char *expr);
+void	check_umask();
 
 extern char **environ;
 
@@ -207,6 +208,12 @@ main( int argc, char *argv[] )
 	MyName = argv[0];
 	config( 0 );
 	init_params();
+
+		// If our effective and real gids are different (b/c the
+		// submit binary is setgid) set umask(002) so that stdout,
+		// stderr and the user log files are created writable by group
+		// condor. 
+	check_umask();
 
 	DebugFlags |= D_EXPR;
 
@@ -1777,3 +1784,16 @@ hashFunction (MyString &str, int numBuckets)
     return (hashVal % numBuckets);
 }
 
+
+// If our effective and real gids are different (b/c the submit binary
+// is setgid) set umask(002) so that stdout, stderr and the user log
+// files are created writable by group condor.  This way, people who
+// run Condor as condor can still have the right permissions on their
+// files for the default case of their job doesn't open its own files.
+void
+check_umask()
+{
+	if( getgid() != getegid() ) {
+		umask( 002 );
+	}
+}
