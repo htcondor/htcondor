@@ -30,11 +30,11 @@
 static char *_FileName_ = __FILE__;
 extern	char	*strerror();
 
-#if defined(HPUX9)
+#if defined(HPUX)
 extern void _sigreturn();
 #endif
 
-#if defined(HPUX9) 
+#if defined(HPUX)
 #define MASK_TYPE long
 #else
 #define MASK_TYPE int
@@ -96,19 +96,23 @@ condor_save_sigstates()
 	sigpending( &(signal_states.pending) );
 
 	if ( signal_states.nsigs == 0 ) {
+#if !SIGISMEMBER_IS_BROKEN
 		/* This code only runs once; here we figure out how many signals
 		 * this OS supports and verify our array (of size NUM_SIGS) is
 		 * big enough to store all the state. */
 		sigfillset(&mask);
 		sig = 1;
-		while ( sigismember(&mask,sig) != -1 ) sig++;
+		while ( sigismember(&mask,sig) > 0 ) sig++;
 		signal_states.nsigs = sig;
 		if ( sig > NUM_SIGS ) {
-			dprintf(D_ALWAYS,
-					"must recompile to support %d signals; current max=%d\n",
-					sig, NUM_SIGS);
+			dprintf( D_ALWAYS,
+					 "must recompile to support %d signals; current max=%d\n",
+					 sig, NUM_SIGS);
 			Suicide();
 		}
+#else 
+		signal_states.nsigs = NUM_SIGS;
+#endif
 	}
 
 	/* Save handler information for each signal */
@@ -139,7 +143,7 @@ condor_restore_sigstates()
 
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
 
-#if defined(HPUX9)
+#if defined(HPUX)
      /* Tell the kernel to fill in our process's "trampoline" return
 	  * code function with _sigreturn, so that signal handlers can
 	  * return properly.  HPUX normally does this in _start().  But
@@ -211,7 +215,7 @@ condor_restore_sigstates()
 
 
 #if defined (SYS_sigvec)
-#if defined(HPUX9)
+#if defined(HPUX)
 sigvector( sig, vec, ovec )
 #else
 sigvec( sig, vec, ovec )
@@ -224,7 +228,7 @@ struct sigvec *ovec;
 	struct	sigvec	nvec;
 
 	if( ! MappingFileDescriptors() ) {
-#if defined(HPUX9)
+#if defined(HPUX)
 			rval = syscall( SYS_sigvector, sig, vec, ovec );
 #elif defined(SUNOS41) || defined(ULTRIX43)
 			rval = SIGVEC( sig, vec, ovec );
@@ -257,7 +261,7 @@ struct sigvec *ovec;
 #endif
 			}
 
-#if defined(HPUX9)
+#if defined(HPUX)
 			rval = syscall( SYS_sigvector, sig, vec ? &nvec : vec, ovec );
 #elif defined(SUNOS41) || defined(ULTRIX43)
 			rval = SIGVEC( sig, vec ? &nvec : vec, ovec );
@@ -273,7 +277,7 @@ struct sigvec *ovec;
 #endif
 
 #if defined (SYS_sigvec)
-#if defined(HPUX9)
+#if defined(HPUX)
 _sigvector( int sig, const struct sigvec vec, struct sigvec ovec )
 {
 	sigvector( sig, vec, ovec );
