@@ -110,26 +110,10 @@ sub Init
 sub RunIt
 {
 
-    ###
-    ### Monitors availability of filesystem space
-    ###
+    # Read the file system list (FSLIST)
+    my $FsList = HawkeyeLib::ReadConfig(  "_fslist", "" );
+    my @MountPoints = split( /,/, $FsList );
 
-    # Read my config string
-    my $ConfigString = HawkeyeLib::ReadConfig(  "_fslist", "" );
-    my @MountPoints = split( /,/, $ConfigString );
-
-    ###
-    ### The format of @Config is
-    ###
-    ### <filesystem>,..
-    ###
-    ### Examples
-    ###  /,/usr,/usr/local
-    ###
-
-    ###
-    ### Get df output for each filesystem
-    ###
 
     # Get the real mount points
     my %RealMountPoints;
