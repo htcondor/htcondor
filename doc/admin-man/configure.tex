@@ -659,6 +659,12 @@ of the subsystem corresponding to the daemon.
 
 \end{description}
 
+\item[\Macro{ALL\_DEBUG}] \label{param:AllDebug} To make all subsystems
+  share a debug flag, simply set the parameter \Macro{ALL\_DEBUG}
+  instead of changing all of the individual parameters.  For example,
+  to turn on network debugging in all subsystems, set
+  \verb$ALL_DEBUG = D_NETWORK$.
+
 \end{description}
 
 Log files may optionally be specified per debug level as follows:
