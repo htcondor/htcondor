@@ -68,6 +68,7 @@ extern "C" {
 }
 
 extern int JobStatus;
+extern int MyPid;
 extern int ImageSize;
 extern struct rusage JobRusage;
 extern ReliSock *syscall_sock;
@@ -774,6 +775,8 @@ pseudo_get_file_stream(
 		if (CkptFile || ICkptFile) set_priv(priv);
 		return -1;
 	case 0:	/* the child */
+			// reset this so dprintf has the right pid in the header
+		MyPid = getpid();
 		data_sock = connect_file_stream( connect_sock );
 		if( data_sock < 0 ) {
 			exit( 1 );
@@ -962,6 +965,8 @@ pseudo_put_file_stream(
 		if (CkptFile || ICkptFile) set_priv(priv);	// restore user privileges
 		return -1;
 	  case 0:	/* the child */
+			// reset this so dprintf has the right pid in the header
+		MyPid = getpid();
 		data_sock = connect_file_stream( connect_sock );
 		if( data_sock < 0 ) {
 			exit( 1 );
