@@ -86,6 +86,9 @@ GlobusResource::GlobusResource( const char *resource_name )
 GlobusResource::~GlobusResource()
 {
 	daemonCore->Cancel_Timer( pingTimerId );
+	if ( gahp != NULL ) {
+		delete gahp;
+	}
 	if ( checkMonitorTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( checkMonitorTid );
 	}
