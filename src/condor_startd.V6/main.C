@@ -307,9 +307,7 @@ main_config()
 int
 init_params( int first_time)
 {
-	char *tmp, buf[1024];
-	int i;
-	struct hostent *hp;
+	char *tmp;
 
 	resmgr->init_config_classad();
 
@@ -322,6 +320,7 @@ init_params( int first_time)
 	}
 
 #if defined(WIN32)
+	int i;
 	// switch delimiter char in exec path on WIN32
 	for (i=0; exec_path[i]; i++) {
 		if (exec_path[i] == '/') {
