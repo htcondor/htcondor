@@ -47,8 +47,6 @@
 #include "basename.h"
 #include "metric_units.h"
 
-static char *_FileName_ = __FILE__;
-
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
 extern  void short_print_to_buffer(char*,int,int,const char*,int,int,int,int,
@@ -135,7 +133,8 @@ int main (int argc, char **argv)
 	bool		first = true;
 	char		scheddName[64];
 	char		scheddMachine[64];
-	
+	char		*tmp;
+
 	// load up configuration file
 	config();
 
@@ -156,8 +155,16 @@ int main (int argc, char **argv)
 		Daemon schedd( DT_SCHEDD, 0, 0 );
 		if ( schedd.locate() ) {
 			sprintf( scheddAddr, "%s", schedd.addr() );
-			sprintf( scheddName, "%s", schedd.name() );
-			sprintf( scheddMachine, "%s", schedd.fullHostname() );
+			if( (tmp = schedd.name()) ) {
+				sprintf( scheddName, "%s", tmp );
+			} else {
+				sprintf( scheddName, "Unknown" );
+			}
+			if( (tmp = schedd.fullHostname()) ) {
+				sprintf( scheddMachine, "%s", tmp );
+			} else {
+				sprintf( scheddMachine, "Unknown" );
+			}
 			//if ( verbose || run || show_io || goodput ) {
 			if ( verbose ) {
 				exit( !show_queue( scheddAddr, scheddName,
@@ -680,11 +687,18 @@ static char *
 format_remote_host (char *, AttrList *ad)
 {
 	static char result[MAXHOSTNAMELEN];
+	static char unknownHost [] = "[????????????????]";
+	char* tmp;
+
 	struct sockaddr_in sin;
 	if (ad->LookupString(ATTR_REMOTE_HOST, result) == 1) {
-		if (result[0] == '<' &&
-			string_to_sin(result, &sin) == 1) {
-			return sin_to_hostname(&sin, NULL);
+		if( is_valid_sinful(result) && 
+			(string_to_sin(result, &sin) == 1) ) {  
+			if( (tmp = sin_to_hostname(&sin, NULL)) ) {
+				strcpy( result, tmp );
+			} else {
+				return unknownHost;
+			}
 		}
 		return result;
 	} else {
@@ -692,7 +706,12 @@ format_remote_host (char *, AttrList *ad)
 		ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 		if (universe == SCHED_UNIVERSE &&
 			string_to_sin(scheddAddr, &sin) == 1) {
-			return sin_to_hostname(&sin, NULL);
+			if( (tmp = sin_to_hostname(&sin, NULL)) ) {
+				strcpy( result, tmp );
+				return result;
+			} else {
+				return unknownHost;
+			}
 		} else if (universe == PVM) {
 			int current_hosts;
 			if (ad->LookupInteger( ATTR_CURRENT_HOSTS, current_hosts ) == 1) {
@@ -705,8 +724,7 @@ format_remote_host (char *, AttrList *ad)
 			}
 		}
 	}
-		
-	return "[????????????????]";
+	return unknownHost;
 }
 
 static char *
@@ -1175,14 +1193,14 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 		} else if( show_io ) {
 			io_header();
 			jobs.Open();
-			while(job=jobs.Next()) {
+			while( (job=jobs.Next()) ) {
 				io_display( job );
 			}
 			jobs.Close();
 		} else {
 			short_header();
 			jobs.Open();
-			while( job = jobs.Next() ) {
+			while( (job=jobs.Next()) ) {
 				displayJobShort( job );
 			}
 			jobs.Close();
