@@ -27,7 +27,13 @@
 ** 
 */ 
 
+#if !defined(Solaris)
 #include <machine/param.h>
+#else
+#define NBPG 0x1000   /*couldnt get this val from header files. Rough
+				estimate from Suns header files - Raghu */
+#endif
+
 
 /*
 ** Compatibility routine for systems which don't have this call.
