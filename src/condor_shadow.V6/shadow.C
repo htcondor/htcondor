@@ -27,6 +27,8 @@
 ** 
 */ 
 
+#define INCLUDE_STATUS_NAME_ARRAY
+
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_io.h"
@@ -204,22 +206,6 @@ extern SpawnLIST* SpawnList;
 
 char*		schedd;
 
-volatile int needs_reaper;
-volatile int needs_condor_rm;
-
-void
-unix_sigchld() 
-{ 
-	needs_reaper = TRUE;
-}
-
-void
-unix_sigusr1()
-{
-	needs_condor_rm = TRUE;
-}
-
-
 /*ARGSUSED*/
 main(int argc, char *argv[], char *envp[])
 {
@@ -390,9 +376,14 @@ main(int argc, char *argv[], char *envp[])
 		MailerPgm = "/bin/mail";
 	}
 
-	install_sig_handler( SIGCHLD, unix_sigchld );
-	install_sig_handler( SIGUSR1, unix_sigusr1 ); /* sent by schedd when a */
-												/*job is removed */
+	// Install signal handlers such that all signals are blocked when inside
+	// the handler.
+	sigset_t fullset;
+	sigfillset(&fullset);
+	install_sig_handler_with_mask( SIGCHLD,&fullset, reaper );
+	install_sig_handler_with_mask( SIGTERM,&fullset, rm );
+	// SIGUSR1 is sent by the schedd when a job is removed with condor_rm
+	install_sig_handler_with_mask( SIGUSR1,&fullset, condor_rm );
 
 	/* Here we block the async signals.  We do this mainly because on HPUX,
 	 * XDR wigs out if it is interrupted by a signal.  We do it on all
@@ -400,9 +391,6 @@ main(int argc, char *argv[], char *envp[])
 	 * during before select(), which is where we spend most of our time. */
 	block_signal(SIGCHLD);
 	block_signal(SIGUSR1);      
-
-	needs_reaper = FALSE; 
-	needs_condor_rm = FALSE;
 
 	HandleSyscalls();
 
@@ -486,16 +474,6 @@ HandleSyscalls()
 			 (fd_set *) 0, &select_to);
 		block_signal(SIGCHLD);
 		block_signal(SIGUSR1);
-
-		if( needs_reaper ) {
-			needs_reaper = FALSE;
-			reaper();
-		}
-
-		if( needs_condor_rm ) {
-			needs_condor_rm = FALSE;
-			condor_rm();
-		}
 
 		if (cnt <= 0) /* means timer expiration or interrupt got */
 		  continue;
@@ -646,17 +624,6 @@ v			      ((tempproc->next != plist)&&(ProcList != plist));
 			EXCEPT("HandleSyscalls: select: errno=%d, rsc_sock=%d, client_log=%d",errno,RSC_SOCK,CLIENT_LOG);
 		}
 
-		if( needs_reaper ) {
-			needs_reaper = FALSE;
-			reaper();
-		}
-
-		if( needs_condor_rm ) {
-			needs_condor_rm = FALSE;
-			condor_rm();
-		}
-
-
 		if( FD_ISSET(CLIENT_LOG, &readfds) ) {
 			if( HandleLog() < 0 ) {
 				EXCEPT( "Peer went away" );
@@ -715,7 +682,6 @@ Wrapup( )
 	int		coredir_len;
 	int		msg_type;
 
-	install_sig_handler( SIGTERM, rm );
 	dprintf(D_FULLDEBUG, "Entering Wrapup()\n" );
 
 	notification[0] = '\0';
@@ -790,7 +756,7 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 	PROC	*proc = &my_proc;
 	static struct rusage tstartup_local, tstartup_remote;
 	static int tstartup_flag = 0;
-	int		status;
+	int		status = -1;
 	float utime = 0.0;
 	float stime = 0.0;
 
@@ -798,16 +764,8 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 	GetAttributeInt(Proc->id.cluster, Proc->id.proc, ATTR_JOB_STATUS, &status);
 
 	if( status == REMOVED ) {
-		dprintf( D_ALWAYS, "Job %d.%d has been removed by condor_rm\n",
-											proc->id.cluster, proc->id.proc );
-		if( CkptName[0] != '\0' ) {
-			dprintf(D_ALWAYS, "Shadow: unlinking Ckpt '%s'\n", CkptName);
-			(void) unlink_local_or_ckpt_server( CkptName );
-		}
-		if( TmpCkptName[0] != '\0' ) {
-			dprintf(D_ALWAYS, "Shadow: unlinking TmpCkpt '%s'\n", TmpCkptName);
-			(void) unlink_local_or_ckpt_server( TmpCkptName );
-		}
+		dprintf( D_ALWAYS, "update_job_status(): Job %d.%d has been removed by condor_rm\n",
+											Proc->id.cluster, Proc->id.proc );
 	} else {
 
 		dprintf(D_FULLDEBUG,"TIME DEBUG 1 USR remotep=%lu Proc=%lu utime=%f\n",remotep->ru_utime.tv_sec, Proc->remote_usage[0].ru_utime.tv_sec, utime);
@@ -858,13 +816,7 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 		dprintf(D_FULLDEBUG,"TIME DEBUG 3 USR remotep=%lu Proc=%lu utime=%f\n",remotep->ru_utime.tv_sec, Proc->remote_usage[0].ru_utime.tv_sec, utime);
 		dprintf(D_FULLDEBUG,"TIME DEBUG 4 SYS remotep=%lu Proc=%lu utime=%f\n",remotep->ru_stime.tv_sec, Proc->remote_usage[0].ru_stime.tv_sec, stime);
 
-		dprintf( D_ALWAYS, "Shadow: marked job status %d\n", Proc->status );
-
-		if( Proc->status == COMPLETED ) {
-			if( DestroyProc(Proc->id.cluster, Proc->id.proc) < 0 ) {
-				EXCEPT("DestroyProc(%d.%d)", Proc->id.cluster, Proc->id.proc );
-			}
-		}
+		dprintf( D_ALWAYS, "Shadow: marked job status %s\n", JobStatusNames[Proc->status] );
 	}
 
 	DisconnectQ(0);
@@ -1039,7 +991,7 @@ ExceptCleanup()
 int
 DoCleanup()
 {
-	int		status;
+	int		status = -1;
 	int		fetch_rval;
 
 	dprintf( D_FULLDEBUG, "Shadow: Entered DoCleanup()\n" );
@@ -1055,11 +1007,12 @@ DoCleanup()
 		fetch_rval = GetAttributeInt(Proc->id.cluster, Proc->id.proc, 
 									 ATTR_JOB_STATUS, &status);
 
-		if( fetch_rval < 0 || status == REMOVED ) {
-			dprintf(D_ALWAYS, "Job %d.%d has been removed by condor_rm\n",
+		if ( fetch_rval >= 0 && status == REMOVED ) {
+			dprintf(D_ALWAYS, "DoCleanup(): Job %d.%d has been removed by condor_rm\n",
 											Proc->id.cluster, Proc->id.proc );
-			dprintf(D_ALWAYS, "Shadow: unlinking Ckpt '%s'\n", CkptName);
-			(void) unlink_local_or_ckpt_server( CkptName );
+		}
+
+		if( fetch_rval < 0 || status == REMOVED ) {
 			DisconnectQ(0);
 			return 0;
 		}
@@ -1085,7 +1038,7 @@ DoCleanup()
 						ImageSize);
 
 		DisconnectQ(0);
-		dprintf( D_ALWAYS, "Shadow: marked job status %d\n", Proc->status );
+		dprintf( D_ALWAYS, "Shadow: marked job status %d\n", JobStatusNames[Proc->status] );
 	}
 
 	return 0;
@@ -1339,6 +1292,9 @@ void
 condor_rm()
 {
 	int retval;
+
+	dprintf(D_ALWAYS, "Shadow received rm command from Schedd \n");
+
 #ifdef CARMI_OPS
 	ProcLIST*       plist;
 
@@ -1353,7 +1309,6 @@ condor_rm()
 
 #endif
 
-	dprintf(D_ALWAYS, "Shadow received rm command from Schedd \n");
 	if (retval < 0) 
 		return;
 
