@@ -102,15 +102,9 @@ StatInfo::StatInfo( const char* dirpath, const char* filename,
 
 StatInfo::~StatInfo()
 {
-	if( filename ) {
-		delete [] filename;
-	}
-	if( dirpath ) {
-		delete [] dirpath;
-	}
-	if( fullpath ) {
-		delete [] fullpath;
-	}
+	delete [] filename;
+	delete [] dirpath;
+	delete [] fullpath;
 }
 
 void
