@@ -54,6 +54,7 @@
 #define DEBUG_SETTABLE_ATTR_LISTS 0
 
 static const int KEEP_STREAM = 100;
+static const int CLOSE_STREAM = 101;
 static const int MAX_SOCKS_INHERITED = 4;
 static char* EMPTY_DESCRIP = "<NULL>";
 
@@ -77,6 +78,12 @@ typedef int     (*SocketHandler)(Service*,Stream*);
 
 ///
 typedef int     (Service::*SocketHandlercpp)(Stream*);
+
+///
+typedef int     (*PipeHandler)(Service*,int);
+
+///
+typedef int     (Service::*PipeHandlercpp)(int);
 
 ///
 typedef int     (*ReaperHandler)(Service*,int pid,int exit_status);
@@ -155,7 +162,7 @@ class DaemonCore : public Service
 	 * of daemon_core_main.C.
 	 */
     DaemonCore (int PidSize = 0, int ComSize = 0, int SigSize = 0,
-                int SocSize = 0, int ReapSize = 0);
+                int SocSize = 0, int ReapSize = 0, int PipeSize = 0);
     ~DaemonCore();
     void Driver();
 
@@ -469,6 +476,61 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Lookup_Socket ( Stream * iosock );
+	//@}
+
+	/** @name Pipe events.
+	 */
+	//@{
+    /** Not_Yet_Documented
+        @param pipefd           Not_Yet_Documented
+        @param iosock_descrip   Not_Yet_Documented
+        @param handler          Not_Yet_Documented
+        @param handler_descrip  Not_Yet_Documented
+        @param s                Not_Yet_Documented
+        @param perm             Not_Yet_Documented
+        @return Not_Yet_Documented
+    */
+    int Register_Pipe (int		           pipefd,
+                         char *            iosock_descrip,
+                         PipeHandler       handler,
+                         char *            handler_descrip,
+                         Service *         s                = NULL,
+                         DCpermission      perm             = ALLOW);
+
+    /** Not_Yet_Documented
+        @param pipefd           Not_Yet_Documented
+        @param iosock_descrip   Not_Yet_Documented
+        @param handlercpp       Not_Yet_Documented
+        @param handler_descrip  Not_Yet_Documented
+        @param s                Not_Yet_Documented
+        @param perm             Not_Yet_Documented
+        @return Not_Yet_Documented
+    */
+    int Register_Pipe (int					  pipefd,
+                         char *               iosock_descrip,
+                         PipeHandlercpp       handlercpp,
+                         char *               handler_descrip,
+                         Service*             s,
+                         DCpermission         perm = ALLOW);
+
+
+    /** Not_Yet_Documented
+        @param pipefd           Not_Yet_Documented
+        @return Not_Yet_Documented
+    */
+    int Cancel_Pipe ( int pipefd );
+
+	/** Create an anonymous pipe.
+	*/
+	int Create_Pipe( int *pipefds, bool nonblocking_read = false, 
+		bool nonblocking_write = false, unsigned int psize = 0);
+
+	/** Close an anonymous pipe.  This function will also call 
+	 * Cancel_Pipe() on behalf of the caller if the pipefd had
+	 * been registed via Register_Pipe().
+	*/
+	int Close_Pipe(int piepfd);
+
 	//@}
 
 	/** @name Timer events.
@@ -825,6 +887,15 @@ class DaemonCore : public Service
                         DCpermission perm,
                         int is_cpp);
 
+    int Register_Pipe(int pipefd,
+                        char *pipefd_descrip,
+                        PipeHandler handler, 
+                        PipeHandlercpp handlercpp,
+                        char *handler_descrip,
+                        Service* s, 
+                        DCpermission perm,
+                        int is_cpp);
+
     int Register_Reaper(int rid,
                         char *reap_descip,
                         ReaperHandler handler, 
@@ -897,6 +968,27 @@ class DaemonCore : public Service
     ExtArray<SockEnt> *sockTable; // socket table; grows dynamically if needed
     int               initial_command_sock;  
 
+	struct PidEntry;  // forward reference
+    struct PipeEnt
+    {
+        int				pipefd;
+        PipeHandler	   handler;
+        PipeHandlercpp    handlercpp;
+        int             is_cpp;
+        DCpermission    perm;
+        Service*        service; 
+        char*           pipe_descrip;
+        char*           handler_descrip;
+        void*           data_ptr;
+		bool			call_handler;
+		PidEntry*		pentry;
+		bool			in_handler;
+    };
+    // void              DumpPipeTable(int, const char* = NULL);
+    int               maxPipe;  // number of pipe handlers to start with
+    int               nPipe;      // number of pipe handlers used
+    ExtArray<PipeEnt> *pipeTable; // pipe table; grows dynamically if needed
+
     struct ReapEnt
     {
         int             num;
@@ -923,6 +1015,10 @@ class DaemonCore : public Service
         HANDLE hThread;
         DWORD tid;
         HWND hWnd;
+		HANDLE hPipe;
+		LONG pipeReady;
+		LONG deallocate;
+		HANDLE watcherEvent;
 #endif
         char sinful_string[28];
         char parent_sinful_string[28];
