@@ -284,8 +284,7 @@ getrusage( int who, struct rusage *rusage )
   therefore provide a "quick and dirty" substitute here.  This may
   not always be correct, but it will get you by in most cases.
 */
-int
-isatty( int filedes )
+int _isatty( int filedes )
 {
 		/* Stdin, stdout, and stderr are redirected to normal
 		** files for all condor jobs.
@@ -303,6 +302,28 @@ isatty( int filedes )
 		default:
 			return FALSE;
 	}
+}
+
+int isatty( int fd )
+{
+	return _isatty(fd);
+}
+
+/* Same purpose as isatty, but asks if tape.  Present in Fortran library.
+   I don't know if this is the real function format, but it's a good guess. */
+
+int __istape( int fd )
+{
+        return 0;
+}
+
+/* Force the dummy functions to be loaded and linked.  Even if the user's code
+   does not make use of it, we want to override the C library version.  */
+
+void _condor_force_isatty( int fd )
+{
+        isatty(fd);
+        __istape(fd);
 }
 
 /*
