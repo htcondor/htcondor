@@ -124,11 +124,22 @@ private:
 	int			nresources;		// Size of the array
 	SafeSock*	coll_sock;
 	SafeSock*	view_sock;
+	int			currentVMType;		// Current virtual machine type
+		// we're parsing. 
 
 	int		num_updates;
 	int		up_tid;		// DaemonCore timer id for update timer
 	int		poll_tid;	// DaemonCore timer id for polling timer
 
+		// Builds a CpuAttributes object to represent the virtual
+		// machine described by the given config file string list.  
+	CpuAttributes*	build_vm( StringList* );	
+	    // Returns the percentage represented by the given fraction or
+		// percent string.
+	float			parse_value( char* );
+		// All the logic of computing an integer number of cpus out of
+		// a percentage share.   
+	int				compute_cpus( float share );
 };
 
 // Comparison functions for sorting resources:

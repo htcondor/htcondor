@@ -62,19 +62,258 @@ ResMgr::~ResMgr()
 void
 ResMgr::init_resources()
 {
-	int i;
 	CpuAttributes* cap;
-	float share;
+	int i, j, num, max, *nums;
+	float cpu, ram, swap, disk, share;
+	char* tmp;
+	char buf[64];
+	StringList** traits;
 
-	nresources = m_attr->num_cpus();
-	share = (float)1 / nresources;
-
-	resources = new Resource*[nresources];
-
-	for( i = 0; i < nresources; i++ ) {
-		cap = new CpuAttributes( m_attr, share, share, share );
-		resources[i] = new Resource( cap, i+1 );
+	if( (tmp = param("MAX_VIRTUAL_MACHINE_TYPES")) ) {
+		max = atoi( tmp );
+	} else {
+		max = 10;
 	}
+		// The reason these aren't on the stack is b/c of the variable
+		// nature of max. *sigh*  
+	nums = new int[max+1];
+	traits = new StringList*[max+1];
+
+		// So, first see if we're trying to advertise any virtual
+		// machines of specific types, and if so, grab the type info. 
+	for( i=0; i<=max; i++ ) {
+		traits[i] = NULL;
+		nums[i] = 0;
+		sprintf( buf, "NUM_VIRTUAL_MACHINES_TYPE_%d", i );
+		if( (tmp = param(buf)) ) {
+			nums[i] = atoi( tmp );
+			nresources += nums[i];
+			sprintf( buf, "VIRTUAL_MACHINE_TYPE_%d", i );
+			if( ! (tmp = param(buf)) ) {
+				EXCEPT( "NUM_VITUAL_MACHINES_TYPE_%d is %d, %s undefined.",	
+						i, nums[i], buf );
+			}
+			traits[i] = new StringList();
+			traits[i]->initializeFromString( tmp );
+		}
+	}
+
+	if( nresources ) {
+			// We found type-specific stuff mentioned, so use that. 
+		num=0;
+		resources = new Resource*[nresources];
+		for( i=0; i<=max; i++ ) {
+			if( nums[i] ) {
+				currentVMType = i;
+				for( j=0; j<nums[i]; j++ ) {
+					cap = build_vm( traits[i] );
+					resources[num] = new Resource( cap, num+1 );
+					num++;
+				}					
+			}
+		}
+	} else {
+			// We're evenly dividing things, so we only have to figure
+			// out how many nodes to advertise.
+		if( (tmp = param("NUM_VIRTUAL_MACHINES")) ) { 
+			nresources = atoi( tmp );
+		} else {
+			nresources = num_cpus();
+		}
+		max = MAX( nresources, num_cpus() );
+		if( nresources ) {
+			resources = new Resource*[nresources];
+			share = (float)1 / max;
+			for( i=0; i<nresources; i++ ) {
+				cap = new CpuAttributes( m_attr, 1, share, share, share );
+				resources[i] = new Resource( cap, i+1 );
+			}
+		} else {
+				// We're not supposed to advertise any VMs. 
+				// Anything special to do here?
+		}
+	}
+	
+		// Cleanup memory.
+	for( i=0; i<=max; i++ ) {
+		if( traits[i] ) {
+			delete traits[i];
+		}
+	}
+	delete [] traits;
+	delete [] nums;
+}
+
+
+CpuAttributes*
+ResMgr::build_vm( StringList* list )
+{
+	char *attr, *val, *tmp;
+	int cpus=0, num_ram=0, num;
+	float disk=0, swap=0, ram=0, share;
+
+		// For this parsing code, deal with the following example
+		// string list:
+		// "c=1, r=25%, d=1/4, s=25%"
+	list->rewind();
+	while( (attr = list->next()) ) {
+		if( ! (val = strchr(attr, '=')) ) {
+				// There's no = in this description, it must be one 
+				// percentage or fraction for all attributes.
+				// For example "1/4" or "25%".  So, we can just parse
+				// it as a percentage and use that for everything.
+			share = parse_value( attr );
+			if( share <= 0 ) {
+				dprintf( D_ALWAYS, "ERROR: Bad description of machine type %d: ",
+						 currentVMType );
+				dprintf( D_ALWAYS | D_NOHEADER,  "\"%s\" is invalid.\n", attr );
+				dprintf( D_ALWAYS | D_NOHEADER, 
+						 "\tYou must specify a percentage (like \"25%\"), " );
+				dprintf( D_ALWAYS | D_NOHEADER, "a fraction (like \"1/4\"),\n" );
+				dprintf( D_ALWAYS | D_NOHEADER, 
+						 "\tor list all attributes (like \"c=1, r=25%, s=25%, d=25%\").\n" );
+				dprintf( D_ALWAYS | D_NOHEADER, 
+						 "\tSee the manual for details.\n" );
+				exit( 4 );
+			}
+				// We want to be a little smart about CPUs, so put all
+				// the brains in a seperate function.
+			cpus = compute_cpus( share );
+			return new CpuAttributes( m_attr, cpus, share, share, share );
+		}
+			// If we're still here, this is part of a string that
+			// lists out seperate attributes and the share for each one.
+
+			// Get the value for this attribute.  It'll either be a
+			// percentage, or it'll be a distinct value (in which
+			// case, parse_value() will return negative.
+		if( ! val[1] ) {
+			dprintf( D_ALWAYS, 
+					 "Can't parse attribute \"%s\" in description of machine type %d\n",
+					 attr, currentVMType );
+			exit( 4 );
+		}
+		share = parse_value( &val[1] );
+
+			// Figure out what attribute we're dealing with.
+		switch( attr[0] ) {
+		case 'c':
+			cpus = compute_cpus( share );
+			break;
+		case 'r':
+		case 'm':
+			if( share > 0 ) {
+				ram = share;
+			} else {
+				num_ram = -(int)share;
+			}
+			break;
+		case 's':
+		case 'v':
+			if( share > 0 ) {
+				swap = share;
+			} else {
+				dprintf( D_ALWAYS,
+						 "You must specify a percent or fraction for swap in machine type %d\n", 
+						 currentVMType ); 
+				exit( 4 );
+			}
+			break;
+		case 'd':
+			if( share > 0 ) {
+				disk = share;
+			} else {
+				dprintf( D_ALWAYS, 
+						 "You must specify a percent or fraction for disk in machine type %d\n", 
+						currentVMType ); 
+				exit( 4 );
+			}
+			break;
+		default:
+			dprintf( D_ALWAYS, "Unknown attribute \"%s\" in machine type %d\n", 
+					 attr, currentVMType );
+			exit( 4 );
+			break;
+		}
+	}
+
+		// We're all done parsing the string.  Any attribute not
+		// listed defaults to an even share.
+	share = (float)1 / num_cpus();
+	if( ! cpus ) {
+		cpus = compute_cpus( share );
+	}
+	if( ! swap ) {
+		swap = share;
+	}
+	if( ! disk ) {
+		disk = share;
+	}
+	if( ! ram ) {
+		ram = share;
+	}
+
+		// Now create the object.  How exactly we do this depends on
+		// whether we got a percentage or value for ram.
+	if( num_ram ) {
+		return new CpuAttributes( m_attr, cpus, num_ram, swap, disk );
+	} else {
+		return new CpuAttributes( m_attr, cpus, ram, swap, disk );
+	}		
+}
+
+
+/* 
+   Parse a string in one of a few formats, and return a float that
+   represents the value.  Either it's a fraction, like "1/4", or it's
+   a percent, like "25%" (in both cases we'd return .25), or it's a
+   regular value, like "64", in which case, we return the negative
+   value, so that our caller knows it's a value, not a percentage. 
+*/
+float
+ResMgr::parse_value( char* foo )
+{
+	char* tmp;
+	if( (tmp = strchr(foo, '%')) ) {
+			// It's a percent
+		*tmp = '\0';
+		return (float)atoi(foo) / 100;
+	} else if( (tmp = strchr(foo, '/')) ) {
+			// It's a fraction
+		*tmp = '\0';
+		if( ! tmp[1] ) {
+			dprintf( D_ALWAYS, "Can't parse attribute \"%s\" in description of machine type %d\n",
+					 foo, currentVMType );
+			exit( 4 );
+		}
+		return (float)atoi(foo) / ((float)atoi(&tmp[1]));
+	} else {
+			// This must just be a value.  Return it as a negative
+			// float, so the caller knows it's not a percentage.
+		return -(float)atoi(foo);
+	}
+}
+ 
+ 
+/*
+  Generally speaking, we want to round down for fractional amounts of
+  a CPU.  However, we never want to advertise less than 1.  Plus, if
+  the share in question is negative, it means it's a real value, not a
+  percentage.
+*/
+int
+ResMgr::compute_cpus( float share )
+{
+	int cpus;
+	if( share > 0 ) {
+		cpus = (int)floor(share * num_cpus());
+	} else {
+		cpus = (int)floor(-share);
+	}
+	if( ! cpus ) {
+		cpus = 1;
+	}
+	return cpus;
 }
 
 
@@ -100,6 +339,9 @@ ResMgr::init_socks()
 void
 ResMgr::walk( int(*func)(Resource*) )
 {
+	if( ! resources ) {
+		return;
+	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
 		func(resources[i]);
@@ -110,6 +352,9 @@ ResMgr::walk( int(*func)(Resource*) )
 void
 ResMgr::walk( ResourceMember memberfunc )
 {
+	if( ! resources ) {
+		return;
+	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
 		(resources[i]->*(memberfunc))();
@@ -120,6 +365,9 @@ ResMgr::walk( ResourceMember memberfunc )
 void
 ResMgr::walk( VoidResourceMember memberfunc )
 {
+	if( ! resources ) {
+		return;
+	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
 		(resources[i]->*(memberfunc))();
@@ -130,6 +378,9 @@ ResMgr::walk( VoidResourceMember memberfunc )
 void
 ResMgr::walk( ResourceMaskMember memberfunc, amask_t mask ) 
 {
+	if( ! resources ) {
+		return;
+	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
 		(resources[i]->*(memberfunc))(mask);
@@ -140,6 +391,9 @@ ResMgr::walk( ResourceMaskMember memberfunc, amask_t mask )
 int
 ResMgr::sum( ResourceMember memberfunc )
 {
+	if( ! resources ) {
+		return 0;
+	}
 	int i, tot = 0;
 	for( i = 0; i < nresources; i++ ) {
 		tot += (resources[i]->*(memberfunc))();
@@ -151,6 +405,9 @@ ResMgr::sum( ResourceMember memberfunc )
 float
 ResMgr::sum( ResourceFloatMember memberfunc )
 {
+	if( ! resources ) {
+		return 0;
+	}
 	int i;
 	float tot = 0;
 	for( i = 0; i < nresources; i++ ) {
@@ -163,6 +420,9 @@ ResMgr::sum( ResourceFloatMember memberfunc )
 Resource*
 ResMgr::res_max( ResourceMember memberfunc, int* val )
 {
+	if( ! resources ) {
+		return NULL;
+	}
 	Resource* rip = NULL;
 	int i, tmp, max = INT_MIN;
 
@@ -183,6 +443,9 @@ ResMgr::res_max( ResourceMember memberfunc, int* val )
 void
 ResMgr::resource_sort( ComparisonFunc compar )
 {
+	if( ! resources ) {
+		return;
+	}
 	if( nresources > 1 ) {
 		qsort( resources, nresources, sizeof(Resource*), compar );
 	} 
@@ -192,6 +455,9 @@ ResMgr::resource_sort( ComparisonFunc compar )
 bool
 ResMgr::in_use( void )
 {
+	if( ! resources ) {
+		return false;
+	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
 		if( resources[i]->in_use() ) {
@@ -205,6 +471,9 @@ ResMgr::in_use( void )
 Resource*
 ResMgr::get_by_pid( int pid )
 {
+	if( ! resources ) {
+		return NULL;
+	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
 		if( resources[i]->r_starter->pid() == pid ) {
@@ -218,6 +487,9 @@ ResMgr::get_by_pid( int pid )
 Resource*
 ResMgr::get_by_cur_cap( char* cap )
 {
+	if( ! resources ) {
+		return NULL;
+	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
 		if( resources[i]->r_cur->cap()->matches(cap) ) {
@@ -231,6 +503,9 @@ ResMgr::get_by_cur_cap( char* cap )
 Resource*
 ResMgr::get_by_any_cap( char* cap )
 {
+	if( ! resources ) {
+		return NULL;
+	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
 		if( resources[i]->r_cur->cap()->matches(cap) ) {
@@ -248,6 +523,9 @@ ResMgr::get_by_any_cap( char* cap )
 Resource*
 ResMgr::get_by_name( char* name )
 {
+	if( ! resources ) {
+		return NULL;
+	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
 		if( !strcmp(resources[i]->r_name, name) ) {
@@ -263,6 +541,9 @@ ResMgr::get_by_name( char* name )
 State
 ResMgr::state()
 {
+	if( ! resources ) {
+		return owner_state;
+	}
 	State s;
 	int i, is_owner = 0;
 	for( i = 0; i < nresources; i++ ) {
@@ -290,6 +571,9 @@ ResMgr::state()
 void
 ResMgr::final_update()
 {
+	if( ! resources ) {
+		return;
+	}
 	walk( Resource::final_update );
 }
 
@@ -297,6 +581,9 @@ ResMgr::final_update()
 int
 ResMgr::force_benchmark()
 {
+	if( ! resources ) {
+		return 0;
+	}
 	return resources[0]->force_benchmark();
 }
 
@@ -387,6 +674,10 @@ ResMgr::report_updates()
 void
 ResMgr::compute( amask_t how_much )
 {
+	if( ! resources ) {
+		return;
+	}
+
 	m_attr->compute( (how_much & ~(A_SUMMED)) | A_SHARED );
 	walk( Resource::compute, (how_much & ~(A_SHARED)) );
 	m_attr->compute( (how_much & ~(A_SHARED)) | A_SUMMED );
@@ -409,6 +700,10 @@ ResMgr::compute( amask_t how_much )
 void
 ResMgr::assign_load()
 {
+	if( ! resources ) {
+		return;
+	}
+
 	int i;
 	Resource *rip, *next;
 	float total_owner_load = m_attr->load() - m_attr->condor_load();
@@ -449,6 +744,10 @@ ResMgr::assign_load()
 void
 ResMgr::assign_keyboard()
 {
+	if( ! resources ) {
+		return;
+	}
+
 	int i;
 	time_t console = m_attr->console_idle();
 	time_t keyboard = m_attr->keyboard_idle();
@@ -484,6 +783,10 @@ ResMgr::assign_keyboard()
 void
 ResMgr::check_polling()
 {
+	if( ! resources ) {
+		return;
+	}
+
 	if( in_use() || m_attr->condor_load() > 0 ) {
 		start_poll_timer();
 	} else {
