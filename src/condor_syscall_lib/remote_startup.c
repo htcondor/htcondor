@@ -209,14 +209,13 @@ static BOOLEAN condor_migrate_to( const char *host_addr, const char *port_num );
 static BOOLEAN condor_migrate_from( const char *fd_no );
 static BOOLEAN condor_exit( const char *status );
 static int open_tcp_stream( unsigned int ip_addr, unsigned short port );
-static int open_read_stream( const char *path );
-	   int open_write_stream( const char * ckpt_file, size_t n_bytes );
 void unblock_signals();
 void display_ip_addr( unsigned int addr );
 void open_std_file( int which );
 void set_iwd();
-
-extern int _Ckpt_Via_TCP_Stream;
+int open_file_stream( const char *local_path, int flags, size_t *len );
+int open_ckpt_file( const char *name, int flags, size_t n_bytes );
+void get_ckpt_name();
 
 int
 #if defined(HPUX9)
@@ -334,6 +333,7 @@ MAIN( int argc, char *argv[], char **envp )
 #endif
 
 	set_iwd();
+	get_ckpt_name();
 	open_std_file( 0 );
 	open_std_file( 1 );
 	open_std_file( 2 );
@@ -529,11 +529,16 @@ static BOOLEAN
 condor_restart()
 {
 	int		fd;
+	size_t	n_bytes;
 
 	dprintf( D_ALWAYS, "condor_restart:\n" );
 
-	fd = open_read_stream( "" );
+#if 0
+	fd = open_ckpt_file( "", O_RDONLY, n_bytes );
 	init_image_with_file_descriptor( fd );
+#else
+	get_ckpt_name();
+#endif
 	restart();
 
 		/* Can never get here - restart() jumps back into user code */
@@ -587,53 +592,6 @@ condor_exit( const char *status )
 	return TRUE;
 }
 
-/*
-  Open a TCP connection at the given hostname and port number.  This
-  will result in a file descriptor where we can read data (our checkpoint
-  information).
-*/
-int
-open_tcp_stream( unsigned int ip_addr, unsigned short port )
-{
-	struct sockaddr_in	sin;
-	int		fd;
-	int		status;
-	int		scm;
-
-	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-
-
-		/* generate a socket */
-	fd = socket( AF_INET, SOCK_STREAM, 0 );
-	assert( fd >= 0 );
-	dprintf( D_FULLDEBUG, "Generated a data socket - fd = %d\n", fd );
-		
-		/* set the address */
-	memset( &sin, '\0', sizeof sin );
-	memcpy( &sin.sin_addr, &ip_addr, sizeof(ip_addr) );
-	sin.sin_family = AF_INET;
-/*
-  This is incorrect!  Everything should be kept in network order so machines
-  of different architectures can communicate these numbers.  The correct
-  code is:
-
-	sin.sin_port = port;
-*/
-	sin.sin_port = htons( port );
-
-	dprintf( D_FULLDEBUG, "Internet address structure set up\n" );
-
-	status = connect( fd,( struct sockaddr *)&sin, sizeof(sin) );
-	if( status < 0 ) {
-		dprintf( D_ALWAYS, "connect() failed - errno = %d\n", errno );
-		exit( 1 );
-	}
-	dprintf( D_FULLDEBUG, "Connection completed - returning fd %d\n", fd );
-
-	SetSyscalls( scm );
-	return fd;
-}
-
 
 /*
   Open a stream for writing our checkpoint information.  Since we are in
@@ -641,162 +599,13 @@ open_tcp_stream( unsigned int ip_addr, unsigned short port )
   a "pseudo system call" to the shadow.
 */
 int
-open_write_stream( const char * ckpt_file, size_t n_bytes )
+open_ckpt_file( const char *name, int flags, size_t n_bytes )
 {
-	int				st;
-	unsigned int	ip_addr;
-	int				fd;
-	unsigned short	port;
 	char			file_name[ _POSIX_PATH_MAX ];
 	int				status;
 
-	dprintf( D_ALWAYS, "Entering open_write_stream()\n" );
-
-		/*
-		  We ignore the checkpoint file name we were given, and
-		  get it directly from the shadow.  This is to keep with
-		  our new policy of not having the starter know about such
-		  stuff. */
-	status = REMOTE_syscall( CONDOR_get_ckpt_name, file_name );
-	if( status < 0 ) {
-		EXCEPT( "Can't get checkpoint file name" );
-	}
-	dprintf( D_ALWAYS, "Checkpoint file name is \"%s\"\n", file_name );
-
-	if( (fd=try_via_afs(file_name,O_CREAT|O_WRONLY,0664)) >= 0 ) {
-		dprintf( D_ALWAYS, "Checkpoint AFS Connection Ready, fd = %d\n", fd );
-		_Ckpt_Via_TCP_Stream = FALSE;
-		return fd;
-	}
-
-		/*
-		Get the ip address and port number of a process to which we
-		can send the checkpoint data.
-		*/
-	st = REMOTE_syscall( CONDOR_put_file_stream, file_name, n_bytes, &ip_addr, &port );
-
-	display_ip_addr( ip_addr );
-	dprintf( D_FULLDEBUG, "Port = %d\n", port );
-
-		/* Connect to the specified party */
-	fd = open_tcp_stream( ip_addr, port );
-	_Ckpt_Via_TCP_Stream = TRUE;
-	dprintf( D_FULLDEBUG, "Checkpoint Data Connection Ready, fd = %d\n", fd );
-
-	return fd;
+	return open_file_stream( name, flags, &n_bytes );
 }
-
-static char	Hello[] = "Hello World\n";
-
-int
-try_via_afs( remote, mode, perm )
-char *remote;
-int mode;
-int perm;
-{
-	int		fd;
-	int		scm;
-	int		nbytes;
-	int		i;
-
-	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-
-	dprintf( D_ALWAYS, "Attempting to access \"%s\" via AFS\n",  remote );
-
-	if( strncmp("/afs",remote,4) != MATCH ) {
-		dprintf( D_ALWAYS, "Not an AFS file\n" );
-		SetSyscalls( scm );
-		return -1;
-	}
-
-	if( (fd = open(remote,mode,perm)) < 0 ) {
-		dprintf( D_ALWAYS, "\"%s\" is an AFS file, but open failed\n", remote );
-		SetSyscalls( scm );
-		return -1;
-	}
-
-	dprintf( D_ALWAYS, "Opened \"%s\" via AFS - fd = %d\n", remote, fd );
-
-
-#if 1
-			/* for debugging, we try writing to file right away */
-	if( mode & O_WRONLY ) {
-
-			/* write something to the file */
-		if( (nbytes=write(fd,Hello,strlen(Hello))) < 0 ) {
-			EXCEPT( "Can't write to AFS ckpt file\n" );
-		}
-		dprintf( D_ALWAYS, "Wrote %d bytes to AFS ckpt file\n", nbytes );
-		delay();
-
-			/* try closing - write() doesn't mean much without close in AFS */
-		if( close(fd) < 0 ) {
-			EXCEPT( "Can't close AFS ckpt file\n" );
-		}
-		dprintf( D_ALWAYS, "Closed AFS ckpt file OK\n" );
-		delay();
-
-			/* open it again so we can actually use it */
-		if( (fd = open(remote,mode,perm)) < 0 ) {
-			dprintf( D_ALWAYS, "\"%s\" is AFS file, but open failed\n", remote);
-			SetSyscalls( scm );
-			return -1;
-		}
-		dprintf( D_ALWAYS, "Re-Opened \"%s\" via AFS - fd = %d\n", remote, fd );
-	}
-
-#endif
-
-
-	SetSyscalls( scm );
-	return fd;
-}
-
-int
-open_read_stream( const char *path )
-{
-	int				st;
-	size_t			len;
-	unsigned short	port;
-	unsigned int	ip_addr;
-	int				fd;
-	char			file_name[ _POSIX_PATH_MAX ];
-	int				status;
-
-	dprintf( D_ALWAYS, "Entering open_read_stream()\n" );
-
-		/*
-		  We ignore the checkpoint file name we were given, and
-		  get it directly from the shadow.  This is to keep with
-		  our new policy of not having the starter know about such
-		  stuff. */
-	status = REMOTE_syscall( CONDOR_get_ckpt_name, file_name );
-	if( status < 0 ) {
-		EXCEPT( "Can't get checkpoint file name" );
-	}
-	dprintf( D_ALWAYS, "Checkpoint file name is \"%s\"\n", file_name );
-
-	if( (fd=try_via_afs(file_name,O_RDONLY,0)) >= 0 ) {
-		dprintf( D_ALWAYS, "Checkpoint AFS Connection Ready, fd = %d\n", fd );
-		return fd;
-	}
-
-		/*
-		Get the hostname and port number of a process which will
-		send us the checkpoint data.
-		*/
-	SetSyscalls( SYS_REMOTE | SYS_MAPPED );
-	st = REMOTE_syscall( CONDOR_get_file_stream, file_name, &len, &ip_addr, &port );
-	display_ip_addr( ip_addr );
-	dprintf( D_FULLDEBUG, "Port = %d\n", port );
-
-	SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-	fd = open_tcp_stream( ip_addr, port );
-	dprintf( D_FULLDEBUG, "Checkpoint Data Connection Ready, fd = %d\n", fd );
-
-	return fd;
-}
-
 
 void
 report_image_size( int kbytes )
@@ -935,6 +744,20 @@ set_iwd()
 		exit( 4 );
 	}
 	Set_CWD( iwd );
+}
+
+void
+get_ckpt_name()
+{
+	char	ckpt_name[ _POSIX_PATH_MAX ];
+	int		status;
+
+	status = REMOTE_syscall( CONDOR_get_ckpt_name, ckpt_name );
+	if( status < 0 ) {
+		EXCEPT( "Can't get checkpoint file name" );
+	}
+	dprintf( D_ALWAYS, "Checkpoint file name is \"%s\"\n", ckpt_name );
+	init_image_with_file_name( ckpt_name );
 }
 
 #if 0
