@@ -128,6 +128,7 @@ main( int argc, char* argv[] )
 	char	*addr = NULL, *name = NULL, *pool = NULL;
 	int		i;
 	bool	ask_a_daemon = false;
+	bool    verbose = false;
 	
 	PrintType pt = CONDOR_NONE;
 	ModeType mt = CONDOR_QUERY;
@@ -207,6 +208,8 @@ main( int argc, char* argv[] )
 			mt = CONDOR_RUNTIME_UNSET;
 		} else if( match_prefix( argv[i], "-mixedcase" ) ) {
 			mixedcase = true;
+		} else if( match_prefix( argv[i], "-verbose" ) ) {
+			verbose = true;
 		} else if( match_prefix( argv[i], "-" ) ) {
 			usage();
 		} else {
@@ -285,8 +288,23 @@ main( int argc, char* argv[] )
 				fprintf(stderr, "Not defined: %s\n", tmp);
 				my_exit( 1 );
 			} else {
-				printf("%s\n", value);
+				if (verbose) {
+					printf("%s: %s\n", tmp, value);
+				} else {
+					printf("%s\n", value);
+				}
 				free( value );
+				if (verbose) {
+					MyString filename;
+					int      line_number;
+					param_get_location(tmp, filename, line_number);
+					if (line_number == -1) {
+						printf("  Defined in '%s'.\n\n", filename.GetCStr());
+					} else {
+						printf("  Defined in '%s', line %d.\n\n",
+							   filename.GetCStr(), line_number);
+					}
+				}
 			}
 		}
 	}
