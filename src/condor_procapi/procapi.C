@@ -53,7 +53,7 @@ procHashNode::procHashNode()
 	majfaultrate = 0L;
 	minfaultrate = 0L;
 	creation_time = 0L;
-	bool garbage = false;
+	garbage = false;
 }
 
 ProcAPI::~ProcAPI() {
@@ -339,12 +339,14 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	char path[64];
 	FILE *fp;
 
-	long usert, syst, jiffie_start_time, start_time, now;
+	long usert, syst, jiffie_start_time, start_time;
+	unsigned long now;
 	unsigned long vsize, rss;
 	long nowminf, nowmajf;
 	
-	int i, rval = 0;
-	unsigned u;
+	long i;
+	int rval = 0;
+	unsigned long u;
 	char c;
 	char s[256], junk[16];
 
@@ -359,11 +361,11 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 		number_of_attempts++;
 		if( (fp = fopen(path, "r")) != NULL ) {
 			fscanf( fp, "%d %s %c %d "
-				"%d %d %d %d "
-				"%u %u %u %u %u "
-				"%ld %ld %ld %ld %d %d "
-				"%u %u %d %lu %lu %u %u %u %u %u %u "
-				"%d %d %d %d %u",
+				"%ld %ld %ld %ld "
+				"%lu %lu %lu %lu %lu "
+				"%ld %ld %ld %ld %ld %ld "
+				"%lu %lu %ld %lu %lu %lu %lu %lu %lu %lu %lu "
+				"%ld %ld %ld %ld %lu",
 				&pi->pid, s, &c, &pi->ppid, 
 				&i, &i, &i, &i, 
 				&u, &nowminf, &u, &nowmajf, &u, 
@@ -423,14 +425,14 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 		pagesize = getpagesize() / 1024;
 	}
 
-	pi->user_time   = usert   / 100;			// convert jiffies to sec.
-	pi->sys_time    = syst    / 100;
+	pi->user_time   = usert   / HZ;			// convert jiffies to sec.
+	pi->sys_time    = syst    / HZ;
 	pi->imgsize		= (vsize / 1024);			// bytes to k.
 	pi->rssize		= rss * pagesize;			// pages to k.
     
 		// we have start_time, which is the time after system boot
 		// that the process started...convert jiffies to seconds.
-	start_time = jiffie_start_time / 100;
+	start_time = jiffie_start_time / HZ;
   
 	now = secsSinceEpoch();
 
@@ -478,7 +480,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	 and make the page faults a rate...
   */
 
-	double ustime = (usert + syst) / 100.0;
+	double ustime = (usert + syst) / (double)HZ;
 
 	do_usage_sampling ( pi, ustime, nowmajf, nowminf );
 
@@ -711,7 +713,7 @@ ProcAPI::do_usage_sampling( piPTR& pi,
    want to use.  -MEY */
 
 	double timediff;
-	struct procHashNode * phn;
+	struct procHashNode * phn = NULL;
 
 #ifndef WIN32  /* In Unix, we get the time here. (Ugh) -MEY */
 	struct timeval thistime;
@@ -730,10 +732,11 @@ ProcAPI::do_usage_sampling( piPTR& pi,
 			// first delete anything still flagged as garbage
 		procHash->startIterations();
 		while ( procHash->iterate( garbage_pid, phn ) ) {
-			if ( phn->garbage ) {
+			if ( phn->garbage == true ) {
 				// it is still flagged as garbage; delete it
 				procHash->remove(garbage_pid);
 				delete phn;
+				phn = NULL;
 			} else {
 				// it is not still flagged as garbarge; so do 
 				// not delete it, but instead reset the garbage
@@ -751,13 +754,19 @@ ProcAPI::do_usage_sampling( piPTR& pi,
 		   last record of the new pid.  That is wrong.  So, we use
 		   each pid's creation time as a secondary identifier to make
 		   sure we've got the right one. Mike & Derek 3/24/99 */
+
+	phn = NULL;	// clear to NULL before attempting the lookup
+	if (procHash->lookup( pi->pid, phn ) == 0) {
+
 		/* Allow 2 seconds "slack" on creation time, like we do in
 		   ProcFamily, since (at least on Linux) the value can
 		   oscillate. Jim B. 11/29/00 */
-	phn = NULL;	// clear to NULL before attempting the lookup
-	if (procHash->lookup( pi->pid, phn ) == 0) {
+
 		long birth = phn->creation_time - pi->creation_time;
 		if (-2 > birth || birth > 2) {
+			/* must be a different process associated with this, remove it. */
+			procHash->remove(pi->pid);
+			delete phn;
 			phn = NULL;
 		}
 	}
