@@ -570,7 +570,7 @@ obtainAdsFromCollector (ClassAdList &startdAds,
 	// 1.  Fetch ads of startds that are CLAIMED or UNCLAIMED
 	dprintf (D_ALWAYS, "  Getting startd ads ...\n");
 	sprintf (buffer, "(TARGET.%s =!= FALSE)", ATTR_REQUIREMENTS);
-	if (((result = startdQuery.addConstraint(buffer))	!= Q_OK) ||
+	if (((result = startdQuery.addANDConstraint(buffer))	!= Q_OK) ||
 		((result = startdQuery.fetchAds(startdAds))		!= Q_OK))
 	{
 		dprintf (D_ALWAYS, 
@@ -582,7 +582,7 @@ obtainAdsFromCollector (ClassAdList &startdAds,
 	// 2.  Only obtain schedd ads that have idle jobs
 	dprintf (D_ALWAYS, "  Getting schedd ads ...\n");
 	sprintf (buffer, "%s > 0", ATTR_IDLE_JOBS);
-	if (((result = scheddQuery.addConstraint (buffer)) != Q_OK) ||
+	if (((result = scheddQuery.addANDConstraint (buffer)) != Q_OK) ||
 		((result = scheddQuery.fetchAds(scheddAds))    != Q_OK))
 	{
 		dprintf (D_ALWAYS, 
@@ -604,9 +604,9 @@ obtainAdsFromCollector (ClassAdList &startdAds,
 	// set the constraints on the various queries
 	// 4.  Fetch ads of startds that are CLAIMED
 	dprintf (D_ALWAYS, "  Getting startd ads ...\n");
-	sprintf (buffer, "(%s == \"%s\")", ATTR_STATE,state_to_string(claimed_state));
-	if (((result = ClaimedStartdQuery.addConstraint(buffer))	!= Q_OK) ||
-		((result = ClaimedStartdQuery.fetchAds(ClaimedStartdAds))		!= Q_OK))
+	sprintf (buffer,"(%s == \"%s\")",ATTR_STATE,state_to_string(claimed_state));
+	if (((result = ClaimedStartdQuery.addANDConstraint(buffer))	!= Q_OK) ||
+		((result = ClaimedStartdQuery.fetchAds(ClaimedStartdAds))!= Q_OK))
 	{
 		dprintf (D_ALWAYS, 
 			"Error %s:  failed to fetch startd ads ... aborting\n",
@@ -614,8 +614,9 @@ obtainAdsFromCollector (ClassAdList &startdAds,
 		return false;
 	}
 
-	dprintf (D_ALWAYS, "Got ads: %d startd ; %d schedd ; %d startd private ; %d claimed startd\n",
-		startdAds.MyLength(), scheddAds.MyLength(), startdPvtAds.MyLength(),ClaimedStartdAds.MyLength());
+	dprintf (D_ALWAYS, "Got ads: %d startd ; %d schedd ; %d startd private ; "
+		"%d claimed startd\n", startdAds.MyLength(), scheddAds.MyLength(), 
+		startdPvtAds.MyLength(),ClaimedStartdAds.MyLength());
 
 	return true;
 }
@@ -623,7 +624,7 @@ obtainAdsFromCollector (ClassAdList &startdAds,
 
 int Matchmaker::
 negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
-			ClassAdList &startdAds, ClassAdList &startdPvtAds, int send_ad_to_schedd)
+	ClassAdList &startdAds, ClassAdList &startdPvtAds, int send_ad_to_schedd)
 {
 	ReliSock	*sock;
 	int			i;
