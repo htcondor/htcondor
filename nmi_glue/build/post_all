@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: post_all,v 1.1.2.3 2004-06-29 05:10:40 wright Exp $
+# $Id: post_all,v 1.1.2.4 2004-06-29 21:56:06 wright Exp $
 # Submit-side NMI build system infrastructure to save results after
 # all the platform-specific jobs have completed
 ######################################################################
@@ -41,10 +41,20 @@ if( $? ) {
 }
 print "tar completed successfully\n";
 print "Removing files:\n";
+my $had_error = 0;
 foreach $file ("$vers_file", "$src_file") {
-    unlink( $file ) || die "Can't remove $file: $!\n";
-    print "  $file\n";
+    if( unlink($file) ) {
+        print "  $file\n";
+    } else {
+        warn "Can't remove $file: $!\n";
+        $had_error = 1;	
+    }
+}
+if( $had_error ) {
+    print "Error encountered, returning FAILURE\n";
+    exit 1;
 }
 
 print "All steps completed successfully\n";
 exit 0;
+
