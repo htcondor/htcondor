@@ -8,23 +8,29 @@ thain 1-Feb-1999
 
 Abstract:
 
-The syscall mode moves along two axes.
+The syscall mode moves along two axes:
 
-SYS_LOCAL/SYS_REMOTE describes whether non-filesystem calls are
-executed locally, or sent to the shadow.
+	* SYS_LOCAL/SYS_REMOTE describes whether non-filesystem calls are
+	  executed locally, or sent to the shadow.
+	* SYS_MAPPED/SYS_UNMAPPED describes whether filesystem calls are
+	  redirected through the virtual file table.
 
-SYS_MAPPED/SYS_UNMAPPED describes whether filesystem calls are redirected
-through the virtual file table.
-
-All four states are valid, and some have surprising side effects.
+All four combinations are valid, and some have surprising side effects.
+The existing Condor code does not use or implement these states consistently.
+Below, we propose an interpretation to use in the future.
 
 Background:
 
-In Condor, system calls related to the file system (open, close, read, write, etc.)
-pass through a virtual file table (vft).  The vft hides some things from
-the user.  For example, a particular fd which appears to be a file might be
-implemented in several different ways -- it could be open on the shadow, it
-could be opened locally, it could be stored on an I/O server, etc...
+In earlier versions of Condor, there were two ways to open a file -- 
+either on the local host, or via a remote system call.  However,
+the number of ways to access a file is expanding, and this is causing some
+confusion in the meaning of the system call flags.
+
+System calls related to the file system (open, close, read, write, etc.)
+will pass through a virtual file table (vft).  The vft hides a bunch of
+things from the user.  Primarily, it hides the access method -- for a given fd,
+you might be communicating with the shadow, or an ioserver, or any number
+of other entities.
 
 When SYS_MAPPED is in effect, the vft is consulted for all filesystem calls.
 For example, a SYS_MAPPED read() is routed through the vft.  The user-supplied
