@@ -12,7 +12,7 @@ The details of each version are described below.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-2-1}Version 6.2.2}
+\subsection{\label{sec:New-6-2-2}Version 6.2.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \noindent New Features:
 \begin{itemize}
@@ -27,10 +27,51 @@ should use for technical support.
 If your site has different addresses for these two things, you can now
 specify them properly.
 
+\item There is a new macro automatically defined by Condor for use in
+your config files: \Macro{IP\_ADDRESS}.
+If you refer to \MacroU{IP\_ADDRESS}, it will be replaced with the
+ASCII string version of the local host's IP address.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 \begin{itemize}
+
+\item Fixed a bug with the scheduler universe where if one or more of
+the stderr, stdout, or stdin files of a scheduler universe job couldn't
+be opened, the \Condor{schedd} would leak file descriptors.
+
+\item Fixed the default startd policy expressions that are shipped
+with Condor.
+When you upgrade Condor, if you keep your old \File{condor\_config}
+file and do not use the new one we ship with the Condor binaries, we
+highly recommend you open the \Release{etc/condor/config.generic}
+file and see what's changed.
+Carefully read part 3, see what's different from your existing policy
+expressions, and make the relevent changes to your own expressions.
+Here is a summary of the improvements made:
+\begin{itemize}
+  \item The policy expressions now use \Attr{CpuBusyTime} to avoid
+  problems with faulty values for \Attr{CondorLoadAvg}.
+  For certain kinds of jobs (mostly vanilla jobs), the old policy
+  could cause the jobs to cycle between the running and suspended
+  states.
+  \item The policy macros that refered to \Attr{JobUniverse} and
+  \Attr{ImageSize} now use ``TARGET.'' to ensure we're refering to the
+  right ClassAd to find those attributes.
+  Our old policy used to make important decisions based on the
+  universe and image size of the job it was planning to run, but
+  instead, it was using the values from the job that was currently
+  running.
+  \item Added verbose comments to explain the policy in English.
+\end{itemize}
+
+\item If \Condor{compile} can not find the \Condor{config\_val}
+program, \Condor{compile} can not work.
+In previous versions, \Condor{compile}  would try to perform the
+compilation and fail in an unclear way with cryptic error messages. 
+Now, \Condor{compile} detects this case, prints out a verbose error
+message, and exits.
 
 \item The \MacroNI{FILESYSTEM\_DOMAIN} and \MacroNI{UID\_DOMAIN} settings were
 not being automatically append to the requirements of a Vanilla-universe job,
@@ -92,6 +133,26 @@ file setting.
 Now, to see the periodic messages printing out the current load
 averages, you must include \Dflag{LOAD} in \Macro{STARTD\_DEBUG}, and
 to see the messages about idle time, you must include \Dflag{IDLE}.
+
+\item In most of the Condor tools (\Condor{on}, \Condor{off},
+\Condor{restart}, \Condor{vacate}, \Condor{checkpoint},
+\Condor{reconfig}, \Condor{reschedule}), if you used \Opt{-pool} to
+specify which pool to query to find specific daemons, but did not
+specify any daemons or machines, the tool would just act on the local
+host.
+Now, if you specify \Opt{-pool} and do not list any machines, these
+Condor tools will print an error message and exit.
+
+\item If you specified a file in the \Env{CONDOR\_CONFIG} environment
+variable, all Condor daemons and tools used to silently exit.
+Now, they print an error message about it and exit.
+Also, if there were any problems with the file you specified in 
+the \Env{CONDOR\_CONFIG} environment variable, Condor used to try
+other options, namely the ``condor'' user's home directory and
+\File{/etc/condor\_config}.
+Now, if you specify something in \Env{CONDOR\_CONFIG} and Condor
+cannot read it, Condor will print an error and exit, instead of
+searching the other locations.
 
 \end{itemize}
 

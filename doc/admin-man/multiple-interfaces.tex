@@ -71,10 +71,10 @@ On your central manager's global(to the cluster) config file: \\
 \Macro{CONDOR\_HOST} = \Bold{farm-server.farm.org}
 
 On your central manager's local configuration file: \\
-\Macro{NETWORK\_INTERFACE} = ip address of \Bold{farm-server.farm.org} \\
-\Macro{NEGOTIATOR} = \MacroU{SBIN}/condor\_negotiator \\
-\Macro{COLLECTOR} = \MacroU{SBIN}/condor\_collector \\
-\Macro{DAEMON\_LIST} = \Macro{MASTER}, \Macro{COLLECTOR}, \Macro{NEGOTIATOR}, \Macro{SCHEDD}, \Macro{STARTD}
+\MacroNI{NETWORK\_INTERFACE} = ip address of \Bold{farm-server.farm.org} \\
+\MacroNI{NEGOTIATOR} = \MacroUNI{SBIN}/condor\_negotiator \\
+\MacroNI{COLLECTOR} = \MacroUNI{SBIN}/condor\_collector \\
+\MacroNI{DAEMON\_LIST} = \MacroNI{MASTER}, \MacroNI{COLLECTOR}, \MacroNI{NEGOTIATOR}, \MacroNI{SCHEDD}, \MacroNI{STARTD}
 
 If your central manager and farm machines are all NT, then you only have
 vanilla universe and it will work now.  However, if you have this setup

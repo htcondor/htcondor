@@ -161,7 +161,7 @@ per machine basis.
 	\OptItem{\OptArg{-name}{name}}{Show only the job queue of the named schedd}
 	\OptItem{\Opt{-long}}{Display job ads in long format}
 	\OptItem{\OptArg{-format}{fmt attr}}{Display attribute \emph{attr} in
-		format \emph{fmt}}
+		format \emph{fmt}.  Attributes must be from the job ClassAd. }
 	\OptItem{\Opt{-cputime}} Instead of wall-clock allocation time (RUN\_TIME), 
 		display remote CPU time accumulated by the job to date in days,
 		hours, minutes, and seconds.  (If the job is currently running, time
@@ -194,6 +194,38 @@ is rapidly changing state) which cannot be accurately diagnosed.
 \Arg{-goodput}, \Arg{-cputime}, and \Arg{-io} are most useful for STANDARD
 universe jobs, since they rely on values computed when a job
 checkpoints.
+
+\Examples
+
+The \Opt{-format} option provides a way to specify both the job attributes
+and formatting of those attributes.
+The format specification is given as in \Prog{printf}.
+There must be only one conversion specification per \Opt{-format} option.
+As an example, to list only Jane Doe's jobs in the queue,
+choosing to print and format only the owner of the job,
+the command line arguments for the job, and the
+process ID of the job:
+\begin{verbatim}
+%condor_q -submitter jdoe -format "%s" Owner -format " %s " Args -format "ProcId = %d\n" ProcId
+jdoe 16386 2800 ProcId = 0
+jdoe 16386 3000 ProcId = 1
+jdoe 16386 3200 ProcId = 2
+jdoe 16386 3400 ProcId = 3
+jdoe 16386 3600 ProcId = 4
+jdoe 16386 4200 ProcId = 7
+\end{verbatim}
+
+If only the cluster and process ID of Jane Doe's job's are to
+be listed, the following example works well.
+\begin{verbatim}
+%condor_q -submitter jdoe -format "%d ." ClusterId -format " %d\n" ProcId
+27 . 0
+27 . 1
+27 . 2
+27 . 3
+27 . 4
+27 . 7
+\end{verbatim}
 
 \ExitStatus
 

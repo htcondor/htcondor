@@ -9,8 +9,13 @@
 
 %% How to locate the machines with which you want to mess.
 \newcommand{\ToolArgsLocate}{
-\oOptnm{-pool centralmanagerhostname}
-\oOptnm{-name hostname $|$ -addr "\SinfulAny" $|$ hostname ...}
+\oOptnm{-name hostname $|$ hostname $|$ -addr "\SinfulAny" $|$ "\SinfulAny" } \Opt{\Dots} \\
+}
+
+%% for checkpoint, off, on, reconfig, reschedule, restart and vacate
+\newcommand{\ToolWhere}{
+\Optnm{-pool centralmanagerhostname}\\
+\Optnm{-name hostname $|$ hostname $|$ -addr "\SinfulAny" $|$ "\SinfulAny" } \Optnm{\Dots} \\
 }
 
 %% Alternative to locate the machines with which you want to mess.
@@ -54,11 +59,12 @@
 \newcommand{\ToolArgsLocateDesc}{
 \OptItem{\OptArg{-pool}{centralmanagerhostname}}{Specify a pool by giving the
 	central manager's hostname}
-\OptItem{\OptArg{-name}{hostname}}{Send the command to a specified 
-	machine}
+\OptItem{\OptArg{-name}{hostname}}{Send the command to a machine identified by \Arg{hostname}}
+\OptItem{\Opt{hostname}}{Send the command to a machine identified by \Opt{hostname}}
 \OptItem{\OptArg{-addr}{"\SinfulAny"}}{Send the command
-	to a machine's master located at "\SinfulAny"}
-\OptItem{\Opt{hostname ...}}{A list of affected machines}
+	to a machine's master located at \Arg{"\SinfulAny"}}
+\OptItem{\Opt{"\SinfulAny"}}{Send the command
+	to a machine located at \Opt{"\SinfulAny"}}
 }
 
 
@@ -67,10 +73,9 @@
 \newcommand{\ToolLocateDesc}{
 \OptItem{\OptArg{-pool}{centralmanagerhostname}}{Specify a pool by giving the
 	central manager's hostname}
-\OptItem{\OptArg{-name}{hostname}}{Send the command to a specified 
-	machine}
+\OptItem{\OptArg{-name}{hostname}}{Send the command to a machine identified by \Opt{hostname}}
 \OptItem{\OptArg{-addr}{"\SinfulAny"}}{Send the command
-	to a machine's master located at "\SinfulAny"}
+	to a machine located at "\SinfulAny"}
 }
 
 %% Descriptions of Affected Daemons

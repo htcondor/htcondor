@@ -771,7 +771,13 @@ following \Arg{attribute} into the job ClasssAd with the given
 %% queue
 %%%%%%%%%%%%%%%%%%%
 
-\item[queue \Lbr number-of-procs \Rbr] Places one or more copies of the job into
+% these do not put the right bracket on the same line
+% \item[queue \Lbr number-of-procs \Rbr] Places one or more 
+% \item[queue $[$number-of-procs$]$] Places one or more 
+% this also doesn't work, but Karen doesn't know what else to try,
+% and it isn't worth the time.
+\item[queue \oOptnm{number-of-procs}] Places one or more
+copies of the job into
 the Condor queue. If desired, new \Opt{input}, \Opt{output},
 \Opt{error}, \Opt{initialdir}, \Opt{arguments}, \Opt{nice\_user},
 \Opt{priority}, \Opt{kill\_sig}, \Opt{coresize}, or \Opt{image\_size}
