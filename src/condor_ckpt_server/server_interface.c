@@ -176,11 +176,22 @@ int RequestStore(const char*     owner,
 		errno = 0;
 		bytes_read = read(server_sd, ((char*) &reply)+bytes_recvd, 
 						  sizeof(reply)-bytes_recvd);
-		assert(bytes_read >= 0);
-		if (bytes_read == 0)
-			assert(errno == EINTR);
-		else
+
+		/* assert(bytes_read >= 0); */
+		if ( !(bytes_read >= 0) ) {
+			close(server_sd);
+			return -1;
+		}
+			
+		if (bytes_read == 0) {
+			/* assert(errno == EINTR); */
+			if ( !(errno == EINTR) ) {
+				close(server_sd);
+				return -1;
+			}
+		} else {
 			bytes_recvd += bytes_read;
+		}
     }
 	close(server_sd);
 	server_IP->s_addr = reply.server_name.s_addr;
@@ -212,17 +223,30 @@ int RequestRestore(const char*     owner,
 	req.key = htonl(key);
 	strncpy(req.owner, owner, MAX_NAME_LENGTH);
 	StripPrefix(filename, req.filename);
-	assert(net_write(server_sd, (char*) &req, sizeof(req)) == sizeof(req));
+	/* assert(net_write(server_sd, (char*) &req, sizeof(req)) == sizeof(req)); */
+	if ( !(net_write(server_sd, (char*) &req, sizeof(req)) == sizeof(req)) ) {
+		close(server_sd);
+		return -1;
+	}
 	while (bytes_recvd != sizeof(reply))
     {
 		errno = 0;
 		bytes_read = read(server_sd, ((char*) &reply)+bytes_recvd, 
 						  sizeof(reply)-bytes_recvd);
-		assert(bytes_read >= 0);
-		if (bytes_read == 0)
-			assert(errno == EINTR);
-		else
+		/* assert(bytes_read >= 0); */
+		if ( !( bytes_read >= 0 ) ) {
+			close(server_sd);
+			return -1;
+		}
+		if (bytes_read == 0) {
+			/* assert(errno == EINTR); */
+			if ( !( errno == EINTR ) ) {
+				close(server_sd);
+				return -1;
+			}
+		} else {
 			bytes_recvd += bytes_read;
+		}
     }
 	close(server_sd);
 	server_IP->s_addr = reply.server_name.s_addr;
@@ -262,16 +286,29 @@ int RequestService(const char*     owner,
 		StripPrefix(filename, req.file_name);
 	if (new_filename != NULL)
 		StripPrefix(new_filename, req.new_file_name);
-	assert(net_write(server_sd, (char*) &req, sizeof(req)) == sizeof(req));
+	/* assert(net_write(server_sd, (char*) &req, sizeof(req)) == sizeof(req)); */
+	if ( !( net_write(server_sd, (char*) &req, sizeof(req)) == sizeof(req) )) {
+		close(server_sd);
+		return -1;
+	}
 	while (bytes_recvd != sizeof(reply)) {
 		errno = 0;
 		bytes_read = read(server_sd, ((char*) &reply)+bytes_recvd, 
 						  sizeof(reply)-bytes_recvd);
-		assert(bytes_read >= 0);
-		if (bytes_read == 0)
-			assert(errno == EINTR);
-		else
+		/* assert(bytes_read >= 0); */
+		if ( !( bytes_read >= 0 ) ) {
+			close(server_sd);
+			return -1;
+		}
+		if (bytes_read == 0) {
+			/* assert(errno == EINTR); */
+			if ( !( errno == EINTR ) ) {
+				close(server_sd);
+				return -1;
+			}
+		} else {
 			bytes_recvd += bytes_read;
+		}
     }
 	close(server_sd);
 	if (server_IP != NULL)
