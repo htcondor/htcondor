@@ -109,7 +109,6 @@ extern "C"
 	void	handle_q(Service *, int, Stream *sock);
 	int		udp_unconnect();
 	char*	sin_to_string(struct sockaddr_in*);
-	EXPR*	build_expr(const char*, ELEM*);
 	void	get_inet_address(struct in_addr*);
 	int		prio_compar(prio_rec*, prio_rec*);
 }
