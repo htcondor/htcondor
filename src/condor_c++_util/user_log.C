@@ -127,7 +127,7 @@ initialize( const char *file, int c, int p, int s )
 	if( fp ) {
 		if( fclose( fp ) != 0 ) {
 			dprintf( D_ALWAYS, "UserLog::initialize: "
-					 "fclose(\"%s\") failed - errno %d (%s)", path,
+					 "fclose(\"%s\") failed - errno %d (%s)\n", path,
 					 errno, strerror(errno) );
 		}
 		fp = NULL;
@@ -271,10 +271,18 @@ writeEvent (ULogEvent *event)
 		}
 	}
 
-	fflush(fp);
+	if ( fflush(fp) != 0 ) {
+		dprintf( D_ALWAYS, "fflush() failed in UserLog::writeEvent - "
+				"errno %d (%s)", errno, strerror(errno) );
+		// Note:  should we set success to false here?
+	}
 	// Now that we have flushed the stdio stream, sync to disk
 	// *before* we release our write lock!
-	fsync( fileno( fp ) );
+	if ( fsync( fileno( fp ) ) != 0 ) {
+		dprintf( D_ALWAYS, "fsync() failed in UserLog::writeEvent - "
+				"errno %d (%s)", errno, strerror(errno) );
+		// Note:  should we set success to false here?
+	}
 	lock->release ();
 	set_priv( priv );
 	return success;
