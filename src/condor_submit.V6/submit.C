@@ -101,7 +101,6 @@ int		DisableFileChecks = 0;
 int	  ClusterId = -1;
 int	  ProcId = -1;
 int	  JobUniverse;
-char	  *JobLanguage;
 int		Remote=0;
 int		ClusterCreated = FALSE;
 int		ActiveQueueConnection = FALSE;
@@ -151,7 +150,6 @@ char	*Preferences	= "preferences";
 char	*Rank				= "rank";
 char	*ImageSize		= "image_size";
 char	*Universe		= "universe";
-char	*Language		= "language";
 char	*MachineCount	= "machine_count";
 char	*NotifyUser		= "notify_user";
 char	*ExitRequirements = "exit_requirements";
@@ -191,8 +189,8 @@ char	*OnExitRemoveCheck = "on_exit_remove";
 
 char	*DAGNodeName = "dag_node_name";
 char	*DAGManJobId = "dagman_job_id";
-
 char	*LogNotes = "submit_event_notes";
+char	*JarFiles = "jar_files";
 
 #if !defined(WIN32)
 char	*KillSig			= "kill_sig";
@@ -257,6 +255,7 @@ void	SetExitRemoveCheck(void);
 void SetDAGNodeName();
 void SetDAGManJobId();
 void SetLogNotes();
+void	SetJarFiles();
 
 char *owner = NULL;
 
@@ -696,47 +695,33 @@ SetExecutable()
 	char	*macro_value = NULL;
 
 	ename = condor_param( Executable, ATTR_JOB_CMD );
-
 	if( ename == NULL ) {
 		fprintf( stderr, "No '%s' parameter was provided\n", Executable);
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
 
-	if( JobLanguage ) {
-
-		sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_EXECUTABLE );
-		InsertJobExpr(buffer);
-		transfer_it = false;
-
-		sprintf( buffer, "%s = \"$$(%sInterpreter)\"", ATTR_JOB_CMD,JobLanguage );
-		InsertJobExpr(buffer);
-
-	} else {
-
-		macro_value = condor_param( TransferExecutable ) ;
-		if ( macro_value ) {
-			if ( macro_value[0] == 'F' || macro_value[0] == 'f' ) {
-				sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_EXECUTABLE );
-				InsertJobExpr( buffer );
-				transfer_it = false;
-			}
-			free( macro_value );
+	macro_value = condor_param( TransferExecutable ) ;
+	if ( macro_value ) {
+		if ( macro_value[0] == 'F' || macro_value[0] == 'f' ) {
+			sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_EXECUTABLE );
+			InsertJobExpr( buffer );
+			transfer_it = false;
 		}
-
-		// If we're not transfering the executable, leave a relative pathname
-		// unresolved. This is mainly important for the Globus universe.
-		if ( transfer_it ) {
-			full_ename = full_path( ename, false );
-		} else {
-			full_ename = ename;
-		}
-
-		check_path_length(full_ename, Executable);
-
-		(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_CMD, full_ename);
-		InsertJobExpr (buffer);
+		free( macro_value );
 	}
+
+	// If we're not transfering the executable, leave a relative pathname
+	// unresolved. This is mainly important for the Globus universe.
+	if ( transfer_it ) {
+		full_ename = full_path( ename, false );
+	} else {
+		full_ename = ename;
+	}
+	check_path_length(full_ename, Executable);
+
+	(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_CMD, full_ename);
+	InsertJobExpr (buffer);
 
 		/* MPI REALLY doesn't like these! */
 	if ( JobUniverse != CONDOR_UNIVERSE_MPI && JobUniverse != CONDOR_UNIVERSE_PVM ) {
@@ -759,6 +744,7 @@ SetExecutable()
 	case CONDOR_UNIVERSE_SCHEDULER:
 	case CONDOR_UNIVERSE_MPI:  // for now
 	case CONDOR_UNIVERSE_GLOBUS:
+	case CONDOR_UNIVERSE_JAVA:
 		(void) sprintf (buffer, "%s = FALSE", ATTR_WANT_REMOTE_SYSCALLS);
 		InsertJobExpr (buffer);
 		(void) sprintf (buffer, "%s = FALSE", ATTR_WANT_CHECKPOINT);
@@ -884,6 +870,15 @@ SetUniverse()
 		return;
 	}
 
+	if( univ && stricmp(univ,"java") == MATCH ) {
+		JobUniverse = CONDOR_UNIVERSE_JAVA;
+		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_JAVA);
+		InsertJobExpr (buffer);
+		InsertJobExpr ("Checkpoint = 0");
+		free(univ);
+		return;
+	}
+
 	if (!univ) {
 		univ = strdup("standard");
 	}
@@ -913,24 +908,6 @@ SetUniverse()
 
 	return;
 }
-
-void
-SetLanguage()
-{
-	JobLanguage = condor_param(Language);
-
-	if( JobLanguage ) {
-		if( JobUniverse!=CONDOR_UNIVERSE_VANILLA ) {
-			fprintf(stderr,"You can only use language=%s with universe=vanilla.\n",JobLanguage);
-			DoCleanup(0,0,NULL);
-			exit(1);
-		} else {
-			(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_LANGUAGE, JobLanguage );
-			InsertJobExpr(buffer);
-		}			
-	}
-}
-
 
 void
 SetMachineCount()
@@ -1145,10 +1122,6 @@ SetTransferFiles()
 		input_file_list.initializeFromString( macro_value );
 	}
 
-	if( JobLanguage ) {
-		input_file_list.append( condor_param(Executable) );
-	}
-
 #if defined( WIN32 )
 	if( JobUniverse == CONDOR_UNIVERSE_MPI ) {
 			// On NT, if we're an MPI job, we need to find the
@@ -1257,6 +1230,64 @@ SetTransferFiles()
 	// Insert what we want for ATTR_TRANSFER_FILES
 	InsertJobExpr (buffer);
 
+	/*
+	In the Java universe, we want to automatically transfer the
+	"executable" (i.e. the entry class) and any requested .jar files.
+	However, the executable is put directly into TransferInputFiles
+	with TransferExecutable set to false, because the FileTransfer object
+	happy renames executables left and right, which we don't want.
+	*/
+
+	if( JobUniverse == CONDOR_UNIVERSE_JAVA ) {
+
+		char file_list[ATTRLIST_MAX_EXPRESSION];
+
+		if(job->LookupString(ATTR_TRANSFER_INPUT_FILES,file_list)!=1) {
+			file_list[0] = 0;
+		}
+
+		macro_value = condor_param(Executable);
+		if(macro_value) {
+			check_path_length(macro_value,TransferInputFiles);
+			check_open(macro_value,O_RDONLY);
+			TransferInputSize += calc_image_size(macro_value);
+			if(file_list[0]) {
+				strcat(file_list,",");
+				strcat(file_list,macro_value);
+			} else {
+				strcpy(file_list,macro_value);
+			}
+			free(macro_value);
+		}
+
+		macro_value = condor_param(JarFiles);
+		if(macro_value) {
+			StringList files(macro_value);
+			files.rewind();
+			while ( (tmp=files.next()) ) {
+				check_path_length(tmp,TransferInputFiles);
+				check_open(tmp, O_RDONLY);
+				TransferInputSize += calc_image_size(tmp);
+				if(file_list[0]) {
+					strcat(file_list,",");
+					strcat(file_list,tmp);
+				} else {
+					strcpy(file_list,tmp);
+				}
+			}
+			free(macro_value);
+		}
+
+		sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_INPUT_FILES,file_list);
+		InsertJobExpr(buffer);
+
+		sprintf(buffer,"%s = \"java\"",ATTR_JOB_CMD);
+		InsertJobExpr( buffer );
+
+		sprintf(buffer,"%s = FALSE",ATTR_TRANSFER_EXECUTABLE);
+		InsertJobExpr( buffer );
+	}
+
 	// if we did not set ATTR_TRANSFER_FILES to NEVER, 
 	// insert in input/output exprs
 	if ( !never_transfer ) {
@@ -1324,6 +1355,19 @@ SetLocalFiles()
 	value = condor_param( LocalFiles );
 	if(value) {
 		sprintf(buffer,"%s = \"%s\"",ATTR_LOCAL_FILES,value);
+		InsertJobExpr (buffer);
+	}
+}
+
+void
+SetJarFiles()
+{
+	char buffer[ATTRLIST_MAX_EXPRESSION];
+	char *value;
+
+	value = condor_param( JarFiles );
+	if(value) {
+		sprintf(buffer,"%s = \"%s\"",ATTR_JAR_FILES,value);
 		InsertJobExpr (buffer);
 	}
 }
@@ -2560,7 +2604,6 @@ queue(int num)
 		if (NewExecutable) {
 			NewExecutable = false;
 			SetUniverse();
-			SetLanguage();
 			SetExecutable();
 		}
 		SetMachineCount();
@@ -2643,6 +2686,7 @@ queue(int num)
 		SetGlobusParams();
 		SetDAGNodeName();
 		SetDAGManJobId();
+		SetJarFiles();
 
 		rval = SaveClassAd();
 
@@ -2807,11 +2851,12 @@ check_requirements( char *orig )
 		}
 	}
 
-	if ( JobLanguage ) {
-		if(answer[0]) (void)strcat( answer, " && " );
-		(void)strcat( answer, "(" );
-		(void)strcat( answer, JobLanguage );
-		(void)strcat( answer, "Interpreter!=\"\")" );
+	if( JobUniverse == CONDOR_UNIVERSE_JAVA ) {
+		if( answer[0] ) {
+			strcat( answer, " && (HasJava) ");
+		} else {
+			strcat( answer, "(HasJava) ");
+		}
 	} else {
 		if( !has_arch ) {
 			if( answer[0] ) {

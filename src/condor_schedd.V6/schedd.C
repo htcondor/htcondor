@@ -2678,6 +2678,17 @@ void Scheduler::StartJobHandler() {
 		}
 	}
 
+	ClassAd *jobAd = GetJobAd(job_id->cluster,job_id->proc,false);
+	if(!jobAd) {
+		dprintf(D_ALWAYS,"Couldn't find ClassAd for job %d.%d\n",
+		        job_id->cluster, job_id->proc);
+		return;
+	}
+
+	int universe;
+	if( jobAd->LookupInteger(ATTR_JOB_UNIVERSE,universe)!=1 ) {
+		universe = CONDOR_UNIVERSE_STANDARD;
+	}
 
 	//-------------------------------
 	// Actually fork the shadow
@@ -2714,6 +2725,12 @@ void Scheduler::StartJobHandler() {
 		if ( !Shadow ) {
 			EXCEPT("Parameter SHADOW_NT not defined!");
 		}
+	} else if( universe==CONDOR_UNIVERSE_JAVA ) {
+		Shadow = param("SHADOW_JAVA");
+		if(!Shadow) {
+			EXCEPT("Parameter SHADOW_JAVA is not defined!");
+		}
+		sh_is_dc = TRUE;
 	} else {
 		Shadow = param("SHADOW");
 		sh_is_dc = FALSE;

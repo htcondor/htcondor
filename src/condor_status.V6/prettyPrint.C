@@ -29,6 +29,7 @@
 extern ppOption				ppStyle;
 extern AttrListPrintMask 	pm;
 extern int					wantOnlyTotals;
+extern bool javaMode;
 
 extern char *format_time( int );
 
@@ -139,19 +140,31 @@ printStartdNormal (ClassAd *ad)
 	int    now;
 	int	   actvty;
 
+	char *opsys_attr, *arch_attr;
+	char *opsys_name, *arch_name;
+
+	if(javaMode) {
+		opsys_name = opsys_attr = (char*) ATTR_JAVA_VENDOR;
+		arch_name = "Ver";
+		arch_attr = (char*) ATTR_JAVA_VERSION;	
+	} else {
+		opsys_name = opsys_attr = (char*) ATTR_OPSYS;
+		arch_name = arch_attr = (char*) ATTR_ARCH;
+	}
+
 	if (ad)
 	{
 		// print header if necessary
 		if (first)
 		{
 			printf ("\n%-13.13s %-11.11s %-6.6s %-10.10s %-10.10s %-6.6s "
-					"%-4.4s  %s\n\n", 
-				ATTR_NAME, ATTR_OPSYS, ATTR_ARCH, ATTR_STATE, ATTR_ACTIVITY, 
-				ATTR_LOAD_AVG, "Mem", "ActvtyTime");
+						"%-4.4s  %s\n\n", 
+					ATTR_NAME, opsys_name, arch_name, ATTR_STATE, ATTR_ACTIVITY, 
+					ATTR_LOAD_AVG, "Mem", "ActvtyTime");
 		
 			pm.registerFormat("%-13.13s ", ATTR_NAME, "[???????????] ");
-			pm.registerFormat("%-11.11s " , ATTR_OPSYS, "[?????????] ");
-			pm.registerFormat("%-6.6s " , ATTR_ARCH, "[????] ");
+			pm.registerFormat("%-11.11s " , opsys_attr, "[?????????] ");
+			pm.registerFormat("%-6.6s " , arch_attr, "[????] ");
 			pm.registerFormat("%-10.10s ",  ATTR_STATE), "[????????] ";
 			pm.registerFormat("%-10.10s ",  ATTR_ACTIVITY, "[????????] ");
 			pm.registerFormat("%.3f  ",  ATTR_LOAD_AVG, "[???]  ");
@@ -255,18 +268,30 @@ printRun (ClassAd *ad)
 	static bool first = true;
 	static AttrListPrintMask pm; 
 
+	char *opsys_attr, *arch_attr;
+	char *opsys_name, *arch_name;
+
+	if(javaMode) {
+		opsys_name = opsys_attr = (char*) ATTR_JAVA_VENDOR;
+		arch_name = "Ver";
+		arch_attr = (char*) ATTR_JAVA_VERSION;	
+	} else {
+		opsys_name = opsys_attr = (char*) ATTR_OPSYS;
+		arch_name = arch_attr = (char*) ATTR_ARCH;
+	}
+
 	if (ad)
 	{
 		// print header if necessary
 		if (first)
 		{
 			printf ("\n%-13.13s %-11.11s %-6.6s %-6.6s %-20.20s %-15.15s\n\n",
-				ATTR_NAME, ATTR_OPSYS, ATTR_ARCH, ATTR_LOAD_AVG, 
+				ATTR_NAME, opsys_name, arch_name, ATTR_LOAD_AVG, 
 				ATTR_REMOTE_USER, ATTR_CLIENT_MACHINE);
 		
 			pm.registerFormat("%-13.13s ", ATTR_NAME, "[???????????] ");
-			pm.registerFormat("%-11.11s " , ATTR_OPSYS, "[?????????] ");
-			pm.registerFormat("%-6.6s " , ATTR_ARCH, "[????] ");
+			pm.registerFormat("%-11.11s " , opsys_attr, "[?????????] ");
+			pm.registerFormat("%-6.6s " , arch_attr, "[????] ");
 			pm.registerFormat("%-.3f  ",  ATTR_LOAD_AVG, "[???]  ");
 			pm.registerFormat("%-20.20s ", ATTR_REMOTE_USER, 
 													"[??????????????????] ");

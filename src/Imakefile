@@ -32,6 +32,10 @@
   TEST_SUITE_F = test_suite_F.V5
 #endif
 
+#if WANT_JAVA
+  TEST_SUITE_JAVA = test_suite_java
+#endif
+
 #if !(NEEDS_KBDD)
 #   define kbdd
 #endif
@@ -272,6 +276,9 @@ single_target(condor_ckpt_server, ckpt_server_api.a)
 object_target(test_suite_C.V5)
 #if HAS_FORTRAN
    object_target($(TEST_SUITE_F))
+#endif
+#if WANT_JAVA
+   object_target($(TEST_SUITE_JAVA))
 #endif
 
 h_all: h/Makefile h/syscall_numbers.h h/syscall_numbers.o

@@ -122,9 +122,12 @@ main_init(int argc, char *argv[])
 		universe = CONDOR_UNIVERSE_VANILLA;
 	}
 	
+	dprintf(D_ALWAYS,"Starting shadow for universe %s\n",CondorUniverseName(universe));
+
 	switch ( universe ) {
 	case CONDOR_UNIVERSE_VANILLA:
 	case CONDOR_UNIVERSE_STANDARD:
+	case CONDOR_UNIVERSE_JAVA:
 		Shadow = new UniShadow();
 		break;
 	case CONDOR_UNIVERSE_MPI:

@@ -702,6 +702,7 @@ PREEN_ARGS			= -m -r
 ##  Where are the various condor_starter binaries installed?
 STARTER			= $(SBIN)/condor_starter
 ALTERNATE_STARTER_1	= $(SBIN)/condor_starter.pvm
+ALTERNATE_STARTER_2	= $(SBIN)/condor_starter.v63
 
 ##  When the startd starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -925,6 +926,7 @@ SHADOW			= $(SBIN)/condor_shadow
 SHADOW_PVM		= $(SBIN)/condor_shadow.pvm
 SHADOW_GLOBUS		= $(SBIN)/condor_shadow.globus
 SHADOW_NT		= $(SBIN)/condor_shadow.v63
+SHADOW_JAVA             = $(SBIN)/condor_shadow.v63
 
 ##  When the schedd starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -1117,3 +1119,30 @@ VALID_SPOOL_FILES	= job_queue.log, job_queue.log.tmp, history, \
 ##  What files should condor_preen remove from the log directory?
 INVALID_LOG_FILES	= core
 
+##--------------------------------------------------------------------
+##  Java parameters:
+##--------------------------------------------------------------------
+##  If you would like this machine to be able to run Java jobs,
+##  then set JAVA to the path of your JVM binary.  If you are not
+##  interested in Java, there is no harm in leaving this entry
+##  empty or incorrect.
+
+JAVA = /usr/bin/java
+
+## JAVA_CLASSPATH_DEFAULT gives the default set of paths in which
+## Java classes are to be found.  Each path is separated by spaces.
+## If your JVM needs to be informed of additional directories, add
+## them here.  However, do not remove the existing entries, as Condor
+## needs them.
+
+JAVA_CLASSPATH_DEFAULT = $(RELEASE_DIR)/lib .
+
+##  JAVA_CLASSPATH_ARGUMENT describes the command-line parameter
+##  used to introduce a new classpath:
+
+JAVA_CLASSPATH_ARGUMENT = -classpath
+
+##  JAVA_CLASSPATH_SEPARATOR describes the character used to mark
+##  one path element from another:
+
+JAVA_CLASSPATH_SEPARATOR = :
