@@ -85,6 +85,9 @@ public:
 		/// Send a DC_SIGKILL
 	virtual bool ShutdownFast();
 
+		/// rename a core file created by this process
+	bool renameCoreFile( void );
+
 protected:
 
 	// flag to TRUE is job suspended, else FALSE
@@ -92,6 +95,9 @@ protected:
 	
 		/// Number of pids under this OsProc
 	int num_pids;
+
+	bool dumped_core;
+	char* job_iwd;
 };
 
 #endif
