@@ -129,18 +129,18 @@ struct tag_name
 #define NUMBER_OF_TAG_NAMES (sizeof(tag_names) / sizeof(struct tag_name))
 static struct tag_name tag_names[] = 
 {
-	{tag_ClassAds,  "cs", },
-	{tag_ClassAd,   "c",  },
-	{tag_Attribute, "a",  },
-	{tag_Number,    "n",  },
-	{tag_String,    "s",  },
-	{tag_Bool,      "b",  },
-	{tag_Undefined, "u",  },
-	{tag_Error,     "er", },
-	{tag_Time,      "t",  },
-	{tag_List,      "l",  },
-	{tag_Expr,      "e",  },
-	{tag_NoTag,     "",   }
+	{tag_ClassAds,  "classads", },
+	{tag_ClassAd,   "ca",  },
+	{tag_Attribute, "a",   },
+	{tag_Number,    "n",   },
+	{tag_String,    "s",   },
+	{tag_Bool,      "b",   },
+	{tag_Undefined, "un",  },
+	{tag_Error,     "er",  },
+	{tag_Time,      "t",   },
+	{tag_List,      "l",   },
+	{tag_Expr,      "e",   },
+	{tag_NoTag,     "",    }
 };
 
 static void debug_check(void);
@@ -717,9 +717,9 @@ ClassAdXMLUnparser::add_bool_start_tag(
 	buffer += tag_names[tag_Bool].name;
 	buffer += " v=\"";
 	if (bool_expr->Value()) {
-		buffer += "true";
+		buffer += "t";
 	} else {
-		buffer += "false";
+		buffer += "f";
 	}
 	buffer += "\"/>";
 	return;
