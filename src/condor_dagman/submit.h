@@ -26,14 +26,6 @@
 
 #include "types.h"
 
-// the character we should use to quote command-line arguments when
-// running shell commands
-#ifdef WIN32
-const char commandLineQuoteChar = '\"';
-#else
-const char commandLineQuoteChar = '\'';
-#endif
-
 /** Submits a job to condor using popen().  This is a very primitive method
     to submitting a job, and SHOULD be replacable by a Condor Submit API.
 

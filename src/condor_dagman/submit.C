@@ -147,7 +147,6 @@ do_submit( const Dagman &dm, const char *command, CondorID &condorID,
 	debug_printf(DEBUG_VERBOSE, "submitting: %s\n", command);
   
 	bool success = false;
-	const int tries = dm.max_submit_attempts;
 
 	success = submit_try( command, condorID, jobType );
 
@@ -169,7 +168,21 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	const char * exe = "condor_submit";
 	MyString prependLines;
 	MyString command;
-	char quote[2] = {commandLineQuoteChar, '\0'};
+
+		// argQuote: the characters we should use to quote
+		// command-line arguments when specifying shell commands
+
+		// innerQuote: the characters we should use to represent a
+		// double-quote character *within* a quoted command-line
+		// argument
+
+#ifdef WIN32
+	const char* argQuote = "\"";
+	const char* innerQuote = "\\\"";
+#else
+	const char* argQuote = "\'";
+	const char* innerQuote = "\"";
+#endif
 
 	// construct arguments to condor_submit to add attributes to the
 	// job classad which identify the job's node name in the DAG, the
@@ -185,18 +198,18 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	// one DAG complete before any jobs from another begin.
 
 	prependLines = prependLines +
-		" -a " + quote + "dag_node_name = " + DAGNodeName + quote +
-		" -a " + quote + "+DAGParentNodeNames = \"" + DAGParentNodeNames + "\"" + quote +
-		" -a " + quote + "+" + DAGManJobIdAttrName + " = " + dm.DAGManJobId._cluster + quote +
-		" -a " + quote + "submit_event_notes = DAG Node: " + DAGNodeName + quote;
+		" -a " + argQuote + "dag_node_name = " + DAGNodeName + argQuote +
+		" -a " + argQuote + "+DAGParentNodeNames = " + innerQuote + DAGParentNodeNames + innerQuote + argQuote +
+		" -a " + argQuote + "+" + DAGManJobIdAttrName + " = " + dm.DAGManJobId._cluster + argQuote +
+		" -a " + argQuote + "submit_event_notes = DAG Node: " + DAGNodeName + argQuote;
 
 	MyString anotherLine;
 	ListIterator<MyString> nameIter(*names);
 	ListIterator<MyString> valIter(*vals);
 	MyString name, val;
 	while(nameIter.Next(name) && valIter.Next(val)) {
-		anotherLine = MyString(" -a ") + quote +
-			name + " = " + val + quote;
+		anotherLine = MyString(" -a ") + argQuote +
+			name + " = " + val + argQuote;
 		prependLines += anotherLine;
 	}
 
