@@ -712,14 +712,6 @@ MPIShadow::spawnNode( MpiResource* rr )
     dprintf ( D_PROTOCOL, "Just requested resource for node %d\n",
 			  nextResourceToStart );
 
-	if ( nextResourceToStart == numNodes ) {
-			/* This is the last node we're starting...make an execute event. */
-		ExecuteEvent event;
-		strcpy( event.executeHost, "MPI_job" );
-		if ( !uLog.writeEvent( &event )) {
-			dprintf ( D_ALWAYS, "Unable to log EXECUTE event." );
-		}
-	}
 	nextResourceToStart++;
 }
 
@@ -887,6 +879,7 @@ MPIShadow::shutDownLogic( int& exitReason ) {
 				r->setExitReason( JOB_NOT_STARTED );
 				break;
 			}
+		    case RR_STARTUP:
 			case RR_EXECUTING: {
 				if ( !normal_exit ) {
 					r->killStarter();
@@ -922,8 +915,11 @@ MPIShadow::handleJobRemoval( int sig ) {
 
     dprintf ( D_FULLDEBUG, "In handleJobRemoval, sig %d\n", sig );
 
+	ResourceState s;
+
     for ( int i=0 ; i<=ResourceList.getlast() ; i++ ) {
-		if ( (ResourceList[i]->getResourceState() == RR_EXECUTING ) ) {
+		s = ResourceList[i]->getResourceState();
+		if( s == RR_EXECUTING || s == RR_STARTUP ) {
 			ResourceList[i]->setExitReason( JOB_KILLED );
 			ResourceList[i]->killStarter();
 		}
@@ -1171,4 +1167,27 @@ MPIShadow::exitCode( void )
 	return -1;
 }
 
+
+void
+MPIShadow::resourceBeganExecution( RemoteResource* rr )
+{
+	bool all_executing = true;
+
+	int i;
+	for( i=0; i<=ResourceList.getlast() && all_executing ; i++ ) {
+		if( ResourceList[i]->getResourceState() != RR_EXECUTING ) {
+			all_executing = false;
+		}
+	}
+
+	if( all_executing ) {
+			// All nodes in this computation are now running, so we 
+			// can finally log the execute event.
+		ExecuteEvent event;
+		strcpy( event.executeHost, "MPI_job" );
+		if ( !uLog.writeEvent( &event )) {
+			dprintf ( D_ALWAYS, "Unable to log EXECUTE event." );
+		}
+	}
+}
 
