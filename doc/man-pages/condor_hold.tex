@@ -39,4 +39,12 @@ For any given job, only the owner of the job or one of the queue super users
 \SeeAlso
 \Condor{release} (on page~\pageref{man-condor-release})
 
+\GenRem
+
+To put a PVM universe job on hold, you must put each ``process'' in
+the PVM job cluster on hold.  (In the PVM universe, each PVM job is
+assigned its own cluster number, and each machine class is assigned a
+``process'' number in the job's cluster.)  Putting a subset of the
+machine classes for a PVM job on hold is not supported.
+
 \end{ManPage}

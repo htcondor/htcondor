@@ -40,4 +40,12 @@ For any given job, only the owner of the job or one of the queue super users
 \SeeAlso
 \Condor{hold} (on page~\pageref{man-condor-hold})
 
+\GenRem
+
+When releasing a held PVM universe job, you must release the entire
+job cluster.  (In the PVM universe, each PVM job is assigned its own
+cluster number, and each machine class is assigned a ``process''
+number in the job's cluster.)  Releasing a subset of the machine
+classes for a PVM job is not supported.
+
 \end{ManPage}
