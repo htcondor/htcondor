@@ -30,7 +30,7 @@ machines in your pool to the same version.
 \begin{itemize}
 
 \item Added \Term{file\_remaps} as command in the job submit file given to
-standard universe jobs.
+STANDARD universe jobs.
 A Job can now specify that it would like to have files be remapped
 from one file to another.
 In addition you can specify that files should be read from the local machine
@@ -38,8 +38,12 @@ by specifing them.
 See the \Condor{submit} manual page on page~\pageref{man-condor-submit} for
 more details.
 
-\item Added \Term{buffer\_size} and \Term{buffer\_block\_size} so that standard
-jobs can specify that they wish to have I/O buffering turned on.
+\item Added \Term{buffer\_size} and \Term{buffer\_block\_size} so that STANDARD
+universe jobs can specify that they wish to have I/O buffering turned on.
+Without buffering, all I/O requests in the STANDARD universe are sent back
+over the network to be executed on the submit machine.  
+With buffering, read ahead, write behind, and seek batch buffering is
+performed to minimize network traffic and latency.
 By default, jobs do not specify buffering, however, for many situations buffering
 can drastically increase throughput.  See the \Condor{submit} manual page
 on page~\pageref{man-condor-submit} for more details.
@@ -96,7 +100,7 @@ This subdirectory includes an example DAGMan job, including a README
 
 \item Condor will now insert an environment variable, \Env{CONDOR\_VM}, into
 the environment of the user job.  
-This variable specifies which SMP ``virtual machine'' the was started on.
+This variable specifies which SMP ``virtual machine'' the job was started on.
 It will equal either vm1, vm2, vm3, \Dots , depending upon which virtual
 machine was matched.
 On a non-SMP machine, \Env{CONDOR\_VM} will always be set to vm1.
@@ -105,10 +109,23 @@ On a non-SMP machine, \Env{CONDOR\_VM} will always be set to vm1.
 Condor tries to simultaneously start a large number of jobs submitted from a
 single machine.
 
+\item Fixed bugs when Condor is told to gracefully shutdown; Condor no
+longer starts up new jobs when shutting down.  Also, the \Condor{schedd}
+progressively checkpoints running jobs during a graceful shutdown instead of
+trying to vacate all the job simultaneously.  The rate at which the shutdown
+occurs is controlled by the \Macro{JOB\_START\_DELAY} configuration
+parameter (see page~\pageref{param:JobStartDelay}).
+
 \item Fixed a bug which could cause the \Condor{master} process to exit if
 the Condor daemons have been hung for a while by the operating system (if,
 for instance, the LOG directory was placed on an NFS volume and the NFS
 server is down for an extended period).
+
+\item Previously, removing a large number of jobs with \Condor{rm} would
+result in the \Condor{schedd} being unresponsive for a period of time
+(perhaps leading to timeouts when running \Condor{q}).  The \Condor{schedd}
+has been improved to multitask the removal of jobs while servicing new
+requests.
 
 \item Added new configuration parameter \Macro{COLLECTOR\_SOCKET\_BUFSIZE}
 which controls the size of TCP/IP buffers used by the \Condor{collector}.
@@ -118,6 +135,12 @@ page~pageref{param:CollectorSocketBufsize}.
 \item Fixed a bug with the \Opt{-analyze} option to \Condor{q}: in some
 cases, the RANK expression would not be evaluated correctly.  This could
 cause the output from \Opt{-analyze} to be in error.
+
+\item When running on a multi-CPU (SMP) Hewlett-Packard machine, fixed bugs
+computing the system load average.
+
+\item Fixed bug in \Condor{q} which could cause the RUN\_TIME reported to
+be temporarily incorrect when jobs first start running. 
 
 \item The \Condor{startd} no longer rapidly sends multiple ClassAds one
 right after another to the Central Manager when its state/activity is in
