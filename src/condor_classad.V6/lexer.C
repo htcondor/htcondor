@@ -994,8 +994,8 @@ void Lexer::convert_escapes(string &text)
 			default:   
 				if (isodigit(text[source])) {
 					int  number;
-					// There are two allowed ways to have octal escape characters:
-					//  \[0..3]nn or \nn. We check for them in that order.
+					// There are three allowed ways to have octal escape characters:
+					//  \[0..3]nn or \nn or \n. We check for them in that order.
 					if (   source <= length - 3
 						&& text[source] >= '0' && text[source] <= '3'
 						&& isodigit(text[source+1])
@@ -1021,6 +1021,12 @@ void Lexer::convert_escapes(string &text)
 						sscanf(octal, "%o", &number);
 						new_char = number;
 						source += 1; // to account for the extra digit
+					} else if (source <= length - 1) {
+						char octal[2];
+						octal[0] = text[source];
+						octal[1] = 0;
+						sscanf(octal, "%o", &number);
+						new_char = number;
 					} else {
 						new_char = text[source];
 					}
