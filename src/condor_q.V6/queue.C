@@ -47,6 +47,7 @@
 #include "basename.h"
 #include "metric_units.h"
 #include "globus_utils.h"
+#include "print_wrapped_text.h"
 
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
@@ -66,6 +67,7 @@ static	bool show_queue_buffered (char* scheddAddr, char* scheddName,
 								  char* scheddMachine);
 
 static 	int verbose = 0, summarize = 1, global = 0, show_io = 0, dag = 0;
+static  bool expert = false;
 static 	int malformed, unexpanded, running, idle, held;
 
 static	CondorQ 	Q;
@@ -186,7 +188,32 @@ int main (int argc, char **argv)
 							scheddMachine ) );
 			}
 		} else {
-			fprintf( stderr, "Can't display queue of local schedd\n" );
+			int text_position = 0;
+			char error_message[1024];
+			print_wrapped_text("Error: Couldn't contact the local "
+							   "condor_schedd process.",
+							   stderr);
+			if (!expert) {
+				char *log_directory;
+				log_directory = param("LOG");
+				fprintf(stderr, "\n");
+				print_wrapped_text("Extra Info: the condor_schedd is the local process "
+								   "that runs "
+								   "on this machine and monitors your job "
+								   "submissions. Either it "
+								   "isn't running, or it is failing to "
+								   "communicate. Check with your system administrator "
+								   "to see why.", stderr);
+				fprintf(stderr, "\n");
+				sprintf(error_message, 
+						"If you are the system administrator, check the "
+						"MasterLog and SchedLog in %s "
+						"for possible clues as to why the condor_schedd "
+						"isn't misbehaving. Also see the Troubleshooting "
+						"section of the manual.", 
+						log_directory ? log_directory : "your Condor log directory");
+				print_wrapped_text(error_message, stderr);
+			}
 			exit( 1 );
 		}
 	}
@@ -296,14 +323,28 @@ processCommandLineArguments (int argc, char *argv[])
 				delete [] pool;
 			}
             if( ++i >= argc ) {
-				fprintf( stderr, 
-						 "Error: Argument -pool requires another parameter\n" );
+				fprintf( stderr,
+						 "Error: Argument -pool requires a hostname as an argument.\n" );
+				if (!expert) {
+					printf("\n");
+					print_wrapped_text("Extra Info: The hostname should be the central "
+									   "manager of the Condor pool you wish to work with.",
+									   stderr);
+				}
 				exit(1);
 			}
 			pool = get_full_hostname((const char *)argv[i]);
 			if( ! pool ) {
-				fprintf( stderr, "%s: unknown host %s\n", 
-						 argv[0], argv[i] );
+				fprintf( stderr, "Error: Unknown host %s\n", argv[i] );
+				if (!expert) {
+					printf("\n");
+					print_wrapped_text("Extra Info: You specified a hostname for a pool "
+									   "(the -pool argument). That should be the Internet "
+									   "host name for the central manager of the pool, "
+									   "but it does not seem to "
+									   "be a valid hostname. (The DNS lookup failed.)",
+									   stderr);
+				}
 				exit(1);
 			}
 		} 
@@ -311,7 +352,14 @@ processCommandLineArguments (int argc, char *argv[])
 		if (match_prefix (arg, "D")) {
 			if( ++i >= argc ) {
 				fprintf( stderr, 
-						 "Error: Argument -D requires another parameter\n" );
+						 "Error: Argument -D requires a list of flags as an argument.\n" );
+				if (!expert) {
+					printf("\n");
+					print_wrapped_text("Extra Info: You need to specify debug flags "
+									   "as a quoted string. Common flags are D_ALL, and "
+									   "D_ALWAYS.",
+									   stderr);
+				}
 				exit( 1 );
 			}
 			Termlog = 1;
@@ -323,19 +371,38 @@ processCommandLineArguments (int argc, char *argv[])
 			if (querySubmittors) {
 				// cannot query both schedd's and submittors
 				fprintf (stderr, "Cannot query both schedd's and submitters\n");
+				if (!expert) {
+					printf("\n");
+					print_wrapped_text("Extra Info: You cannot specify both -name and "
+									   "-submitter. -name implies you want to only query "
+									   "the local schedd, while -submitter implies you want "
+									   "to find everything in the entire pool for a given"
+									   "submitter.",
+									   stderr);
+				}
 				exit(1);
 			}
 
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
 				fprintf( stderr, 
-						 "Error: Argument -name requires another parameter\n" );
+						 "Error: Argument -name requires the name of a schedd as a parameter.\n" );
 				exit(1);
 			}
 
 			if( !(daemonname = get_daemon_name(argv[i+1])) ) {
-				fprintf( stderr, "%s: unknown host %s\n",
+				fprintf( stderr, "Error: unknown host %s\n",
 						 argv[0], get_host_part(argv[i+1]) );
+				if (!expert) {
+					printf("\n");
+					print_wrapped_text("Extra Info: The name given with the -name "
+									   "should be the name of a condor_schedd process. "
+									   "Normally it is either a hostname, or "
+									   "\"name@hostname\". "
+									   "In either case, the hostname should be the Internet "
+									   "host name, but it appears that it wasn't.",
+									   stderr);
+				}
 				exit(1);
 			}
 			sprintf (constraint, "%s == \"%s\"", ATTR_NAME, daemonname);
@@ -356,13 +423,22 @@ processCommandLineArguments (int argc, char *argv[])
 			if (querySchedds) {
 				// cannot query both schedd's and submittors
 				fprintf (stderr, "Cannot query both schedd's and submitters\n");
+				if (!expert) {
+					printf("\n");
+					print_wrapped_text("Extra Info: You cannot specify both -name and "
+									   "-submitter. -name implies you want to only query "
+									   "the local schedd, while -submitter implies you want "
+									   "to find everything in the entire pool for a given"
+									   "submitter.",
+									   stderr);
+				}
 				exit(1);
 			}
 			
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -submitter requires another "
-							"parameter\n");
+				fprintf( stderr, "Error: Argument -submitter requires the name of a "
+						 "user.\n");
 				exit(1);
 			}
 				
@@ -520,8 +596,12 @@ processCommandLineArguments (int argc, char *argv[])
 		else if( match_prefix( arg, "dag" ) ) {
 			dag = true;
 		}   
+		else if (match_prefix(arg, "expert")) {
+			expert = true;
+		}
 		else {
 			fprintf( stderr, "Error: unrecognized argument -%s\n", arg );
+			usage(argv[0]);
 			exit( 1 );
 		}
 	}
@@ -962,6 +1042,7 @@ usage (char *myName)
 		"\t\t-currentrun\t\tDisplay times only for current run\n"
 		"\t\t-io\t\t\tShow information regarding I/O\n"
 		"\t\t-dag\t\t\tSort DAG jobs under their DAGMan\n"
+		"\t\t-expert\t\t\tDisplay shorter error messages\n"
 		"\t\trestriction list\n"
 		"\twhere each restriction may be one of\n"
 		"\t\t<cluster>\t\tGet information about specific cluster\n"
