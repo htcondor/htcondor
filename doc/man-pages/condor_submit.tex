@@ -382,6 +382,8 @@ avoided by using both compress\_files and fetch\_files at the same time.  When
 this is done, a file is kept in the decompressed state at the execution
 machine, but is compressed for transfer to its original location.
 
+This option only applies to standard-universe jobs.
+
 %%%%%%%%%%%%%%%%%%%
 %% fetch_files
 %%%%%%%%%%%%%%%%%%%
@@ -393,6 +395,8 @@ Condor will automatically copy the whole file to the executing machine,
 where it can be accessed quickly.  When your job closes the file,
 it will be copied back to its original location.
 This list uses the same syntax as compress\_files, shown above.
+
+This option only applies to standard-universe jobs.
 
 %%%%%%%%%%%%%%%%%%%
 %% append_files
@@ -412,6 +416,8 @@ lifetime, such an output file might contain several copies of the results.
 This option should be only be used when you wish a certain file to be
 treated as a running log instead of a precise result.
 
+This option only applies to standard-universe jobs.
+
 %%%%%%%%%%%%%%%%%%%
 %% file_remaps
 %%%%%%%%%%%%%%%%%%%
@@ -425,6 +431,8 @@ describes the filename it should be replaced with.
 access specifier, \verb@local:@ or \verb@remote:@.  If left unspecified,
 the default access specifier is \verb@remote:@.  Multiple remaps can be 
 specified by separating each with a semicolon.
+
+This option only applies to standard-universe jobs.
 
 If you wish to remap file names that contain equals signs or semicolons,
 these special chracaters may be escaped with a backslash.
@@ -466,6 +474,8 @@ Condor keeps a buffer of recently-used data for each file a job accesses.
 This buffer is used both to cache commonly-used data and to consolidate small
 reads and writes into larger operations that get better throughput.
 The default settings should produce reasonable results for most programs.
+
+These options only apply to standard-universe jobs.
 
 If needed, you may set the buffer controls individually for each file using
 the buffer\_files option. For example, to set the buffer size to 1MB and
