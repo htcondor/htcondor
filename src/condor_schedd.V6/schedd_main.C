@@ -260,9 +260,7 @@ void Init()
     if( Log == NULL )  {
         EXCEPT( "No log directory specified in config file\n" );
     }
-	if( boolean("SCHEDD_DEBUG","Foreground") ) {
-		Foreground = 1;
-	}
+	Foreground += boolean("SCHEDD_DEBUG","Foreground");
 
 	Spool = param("SPOOL");
 	if(!Spool)
