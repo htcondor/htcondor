@@ -36,6 +36,7 @@
 struct StoreCredOptions {
 	int mode;
 	char pw[MAX_PASSWORD_LENGTH];
+	char username[MAX_PASSWORD_LENGTH];
 };
 
 char *MyName;
@@ -47,13 +48,9 @@ void badOption(const char* option);
 int main(int argc, char *argv[]) {
 	
 	char* pw = NULL;
-	char* my_name = my_username();		// we're only stashing the current user
-	char* my_domain = my_domainname();
 	char my_full_name[_POSIX_PATH_MAX];
 	struct StoreCredOptions options;
 
-	sprintf(my_full_name, "%s@%s", my_name, my_domain);
-	printf("Account: %s\n\n", my_full_name);
 
 	int result;
 	
@@ -64,6 +61,19 @@ int main(int argc, char *argv[]) {
 	config();
 
 	parseCommandLine(&options, argc, argv);
+
+	if ( strcmp(options.username, "") == 0 ) {
+		char* my_name = my_username();	
+		char* my_domain = my_domainname();
+
+		sprintf(my_full_name, "%s@%s", my_name, my_domain);
+		if ( my_name) { free(my_name); }
+		if ( my_domain) { free(my_domain); }
+		my_name = my_domain = NULL;
+	} else {
+		strcpy(my_full_name, options.username);
+	}
+	printf("Account: %s\n\n", my_full_name);
 
 	switch (options.mode) {
 		case ADD_MODE:
@@ -119,9 +129,6 @@ int main(int argc, char *argv[]) {
 	}
 
 
-	if ( my_name) { free(my_name); }
-	if ( my_domain) { free(my_domain); }
-	my_name = my_domain = NULL;
 	
 	return result;
 }
@@ -132,6 +139,7 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 	int i;
 	opts->mode = 0;
 	opts->pw[0] = '\0';
+	opts->username[0] = '\0';
 
 	for (i=1; i<argc; i++) {
 		switch(argv[i][0]) {
@@ -178,6 +186,25 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 						badOption(argv[i]);
 					}
 					break;
+				case 'u':
+					if (i+1 < argc) {
+						strncpy(opts->username, argv[i+1], MAX_PASSWORD_LENGTH);
+						i++;
+						char* at_ptr = strchr(opts->username, '@');
+						// '@' must be in the string, but not the beginning
+						// or end of the string.
+						if (at_ptr == NULL || 
+							at_ptr == opts->username ||
+						   	at_ptr == opts->username+strlen(opts->username)-1) {
+							fprintf(stderr, "ERROR: Username '%s' is not of "
+								   "the form account@domain\n", opts->username);
+							badOption(argv[i]);
+						}
+
+					} else {
+						badOption(argv[i]);
+					}
+					break;
 				case 'h':
 					usage();
 					
@@ -207,6 +234,7 @@ usage()
 	fprintf( stderr, "    delete            (Remove your credential from secure storage)\n" );
 	fprintf( stderr, "    query             (Check if your credential has been stored)\n" );
 	fprintf( stderr, "  and where [options] is one or more of:\n" );
+	fprintf( stderr, "    -u username       (use the specified username)\n" );
 	fprintf( stderr, "    -p password       (use the specified password rather than prompting)\n" );
 	fprintf( stderr, "    -h                (display this message)\n" );
 	fprintf( stderr, "\n" );
