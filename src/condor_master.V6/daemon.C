@@ -1871,7 +1871,8 @@ Daemons::UpdateCollector()
 	dprintf(D_FULLDEBUG, "enter Daemons::UpdateCollector\n");
 
 	Update(ad);
-    
+    daemonCore->monitor_data.ExportData(ad);
+
 	if (Collectors) {
 		Collectors->sendUpdates (UPDATE_MASTER_AD, ad);
 	}
