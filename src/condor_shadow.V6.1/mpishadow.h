@@ -196,8 +196,6 @@ class MPIShadow : public BaseShadow
 		/** Replace $(NODE) with the proper node number */
 	void replaceNode ( ClassAd *ad, int nodenum );
 	
-    int printAdToFile(ClassAd *ad, char *JobHistoryFileName);
-
 	int info_tid;	// DC id for our timer to get resource info 
 
 #if ! MPI_USES_RSH

@@ -986,27 +986,6 @@ MPIShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 	}	
 }
 
-/* handy for debugging... */
-int 
-MPIShadow::printAdToFile(ClassAd *ad, char* JobHistoryFileName) {
-
-    FILE* LogFile=fopen(JobHistoryFileName,"a");
-    if ( !LogFile ) {
-        dprintf(D_ALWAYS,"ERROR saving to history file; cannot open%s\n", 
-                JobHistoryFileName);
-        return false;
-    }
-    if (!ad->fPrint(LogFile)) {
-        dprintf(D_ALWAYS, "ERROR in Scheduler::LogMatchEnd - failed to "
-                "write classad to log file %s\n", JobHistoryFileName);
-        fclose(LogFile);
-        return false;
-    }
-    fprintf(LogFile,"***\n");   // separator
-    fclose(LogFile);
-    return true;
-}
-
 
 int
 MPIShadow::updateFromStarter(int command, Stream *s)
