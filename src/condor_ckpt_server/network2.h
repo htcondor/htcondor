@@ -109,7 +109,6 @@ extern "C" { int setsockopt(int, int, int, const void*, int); }
 extern "C" { char* GetIPName(struct in_addr machine_IP); }
 extern "C" { int I_bind(int socket_desc, 
 			 struct sockaddr_in* addr); }
-extern "C" { char* gethostaddr(void); }
 extern "C" { char* gethostnamebyaddr(struct in_addr* addr); }
 extern "C" { char* getserveraddr(void); }
 extern "C" { int I_socket(void); }
@@ -130,7 +129,6 @@ extern "C" { int net_write(int socket_desc,
 char* GetIPName(struct in_addr machine_IP); 
 int I_bind(int                 socket_desc, 
 	   struct sockaddr_in* addr);
-char* gethostaddr(void); 
 char* gethostnamebyaddr(struct in_addr* addr); 
 int I_socket(void);
 int I_listen(int socket_desc, 
