@@ -84,9 +84,11 @@ public:
 	void	dprintf( int, char*, ... );
 	void	dprintf_va( int, char*, va_list );
 
-		// Helper function to log that we're ignoring a command that
-		// came in while we were in an unexpected state. 
+		// Helper functions to log that we're ignoring a command that
+		// came in while we were in an unexpected state, or while
+		// we're shutting down.
 	void	log_ignore( int cmd, State s );
+	void	log_shutdown_ignore( int cmd );
 
 		// Called from the reaper to handle things for this rip
 	void	starter_exited( void );	

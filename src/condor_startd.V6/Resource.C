@@ -902,6 +902,13 @@ Resource::log_ignore( int cmd, State s )
 			 command_to_string(cmd), state_to_string(s) );
 }
 
+void
+Resource::log_shutdown_ignore( int cmd ) 
+{
+	dprintf( D_ALWAYS, "Got %s while shutting down, ignoring.\n", 
+			 command_to_string(cmd) );
+}
+
 
 void
 Resource::remove_pre( void )
