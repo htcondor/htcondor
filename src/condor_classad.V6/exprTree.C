@@ -45,30 +45,25 @@ ExprTree::
 bool ExprTree::
 Evaluate (EvalState &state, Value &val) const
 {
-	Value 	cv;
-	bool	rval;
+	Value 				cv;
+	bool				rval;
+	EvalCache::iterator	itr = state.cache.find( this );
 
-	if( state.cache.lookup( this, cv ) == 0 ) {
+	if( itr != state.cache.end( ) ) {
 		// found in cache; return cached value
-		val.CopyFrom( cv );
+		val.CopyFrom( itr->second );
 		return true;
 	} 
 
 	// not found in cache; insert a cache entry
 	cv.SetUndefinedValue( );
-	if( state.cache.insert( this, cv ) < 0 ) {
-		val.SetErrorValue( );
-		return false;
-	}
+	state.cache[ this ] = cv;
 
 	// evaluate the expression
 	rval = _Evaluate( state, val );
 
-	// remove old value and cache actual value 
-	if( state.cache.remove( this )<0 || state.cache.insert( this, val )<0 ) {
-		val.SetErrorValue( );
-		return false;
-	}
+	// replace undefined value with actual value 
+	state.cache[ this ] = val;
 
 	return( rval );
 }
@@ -76,34 +71,25 @@ Evaluate (EvalState &state, Value &val) const
 bool ExprTree::
 Evaluate( EvalState &state, Value &val, ExprTree *&sig ) const
 {
-	Value	cv;
-	bool	rval;
+	Value 				cv;
+	bool				rval;
+	EvalCache::iterator	itr = state.cache.find( this );
 
-	if( state.cache.lookup( this, cv ) == 0 ) {
+	if( itr != state.cache.end( ) ) {
 		// found in cache; return cached value
-		val.CopyFrom( cv );
+		val.CopyFrom( itr->second );
 		return true;
 	} 
 
 	// not found in cache; insert a cache entry
 	cv.SetUndefinedValue( );
-	if( state.cache.insert( this, cv ) < 0 ) {
-		val.SetErrorValue( );
-		CondorErrno = ERR_INTERNAL_CACHE_ERROR;
-		CondorErrMsg = "unable to insert internal cache entry";
-		return false;
-	}
+	state.cache[ this ] = cv;
 
 	// evaluate the expression
 	rval = _Evaluate( state, val, sig );
 
-	// cache the value
-	if( state.cache.remove( this )<0 || state.cache.insert( this, val )<0 ) {
-		CondorErrno = ERR_INTERNAL_CACHE_ERROR;
-		CondorErrMsg = "unable to cache expression value";
-		val.SetErrorValue( );
-		return false;
-	}
+	// replace undefined value with actual value 
+	state.cache[ this ] = val;
 
 	return( rval );
 }
@@ -150,34 +136,25 @@ Flatten( Value& val, ExprTree *&tree )
 bool ExprTree::
 Flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind* op) const
 {
-	Value	cv;
-	bool	rval;
+	Value				cv;
+	bool				rval;
+	EvalCache::iterator	itr = state.cache.find( this );
 
-	if( state.cache.lookup( this, cv ) == 0 ) {
+	if( itr != state.cache.end( ) ) {
 		// found in cache; return cached value
-		val.CopyFrom( cv );
+		val.CopyFrom( itr->second );
 		return true;
 	} 
 
 	// not found in cache; insert a cache entry
 	cv.SetUndefinedValue( );
-	if( state.cache.insert( this, cv ) < 0 ) {
-		val.SetErrorValue( );
-		CondorErrno = ERR_INTERNAL_CACHE_ERROR;
-		CondorErrMsg = "unable to insert internal cache entry";
-		return false;
-	}
+	state.cache[ this ] = cv;
 
 	// flatten the expression
 	rval = _Flatten( state, val, tree, op );
 
 	// cache the value
-	if( state.cache.remove( this )<0 || state.cache.insert( this, val )<0 ) {
-		CondorErrno = ERR_INTERNAL_CACHE_ERROR;
-		CondorErrMsg = "unable to cache expression value";
-		val.SetErrorValue( );
-		return false;
-	}
+	state.cache[ this ] = val;
 
 	return( rval );
 }
@@ -196,7 +173,7 @@ exprHash( const ExprTree* const& expr, int numBkts )
 
 
 EvalState::
-EvalState( ) : cache( 37, &exprHash )
+EvalState( )
 {
 	rootAd = NULL;
 	curAd  = NULL;
