@@ -121,10 +121,6 @@ Job * Dag::GetJob (const JobID_t jobID) const {
 
 //-------------------------------------------------------------------------
 bool Dag::DetectLogGrowth (int checkInterval) {
-    
-    debug_printf (DEBUG_DEBUG_4, "%s: checkInterval=%d -- ", __FUNCTION__,
-                  checkInterval);
-    
     if (!_condorLogInitialized) {
         _condorLog.initialize(_condorLogName);
         _condorLogInitialized = true;
@@ -133,7 +129,6 @@ bool Dag::DetectLogGrowth (int checkInterval) {
     int fd = _condorLog.getfd();
     assert (fd != 0);
     struct stat buf;
-    sleep (checkInterval);
     
     if (fstat (fd, & buf) == -1) debug_perror (2, DEBUG_QUIET, _condorLogName);
     
@@ -141,7 +136,8 @@ bool Dag::DetectLogGrowth (int checkInterval) {
     _condorLogSize = buf.st_size;
     
     bool growth = (buf.st_size > oldSize);
-    debug_printf (DEBUG_DEBUG_4, "%s\n", growth ? "GREW!" : "No growth");
+    debug_printf( DEBUG_DEBUG_4, "%s\n",
+				  growth ? "Log GREW!" : "No log growth..." );
     return growth;
 }
 
@@ -169,10 +165,6 @@ bool Dag::ProcessLogEvents (bool recovery) {
                       ULogEventOutcomeNames[outcome]);
         
         if (outcome != ULOG_UNK_ERROR) log_unk_count = 0;
-
-		debug_printf (DEBUG_VERBOSE,
-					  "\t_numJobsSubmitted = %d, _numJobsFailed = %d\n",
-					  _numJobsSubmitted, _numJobsFailed );
 
         switch (outcome) {
             
