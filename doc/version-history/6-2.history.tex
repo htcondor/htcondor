@@ -48,6 +48,13 @@ would not return zero filled memory.
 a non-zero exit status on failure, and only return 0 on success.
 Previously, they always returned status 0.
 
+\item If a user accidentally put \begin{verbatim}notify\_user =
+false\end{verbatim} in their submit file, Condor used to treat that
+as a valid entry.
+Now, \Condor{submit} prints out a warning in this case, telling the
+user that they probably want to use \begin{verbatim}notification =
+never\end{verbatim}, instead.
+
 \end{itemize}
 
 \noindent Known Bugs:
