@@ -9,6 +9,7 @@
 #define O_WRONLY _O_WRONLY
 #define O_RDWR _O_RDWR
 #define O_CREAT _O_CREAT
+#define O_APPEND _O_APPEND
 #include <sys/stat.h>
 #define stat _stat
 #define fstat _fstat
