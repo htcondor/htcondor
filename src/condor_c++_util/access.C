@@ -73,8 +73,8 @@ void attempt_access_handler(Service *, int i, Stream *s)
 	set_user_ids(uid, gid);
 	priv = set_user_priv();
 
-	dprintf(D_FULLDEBUG, "After switch uid: %d gid: %d.\n", geteuid(), 
-			getegid());
+	dprintf(D_FULLDEBUG, "After switch uid: %d gid: %d.\n", 
+		get_my_uid(), 	get_my_gid() );
 
 	// First check to make sure it exists.
 	access_result = access(filename, F_OK);
