@@ -265,6 +265,7 @@ public class ChirpClient {
 			case -1:
 				throw new IOException("couldn't authenticate");
 			case -2:
+				throw new IOException("permission denied");
 			case -3:
 				throw new FileNotFoundException();
 			case -4:
