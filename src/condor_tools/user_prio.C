@@ -166,7 +166,7 @@ main(int argc, char* argv[])
     float Priority=atof(argv[SetPrio+2]);
 
     // send request
-    ReliSock sock(NegotiatorHost.Value(), NEGOTIATOR_PORT);
+    ReliSock sock((char*) NegotiatorHost.Value(), NEGOTIATOR_PORT);
     sock.encode();
     if (!sock.put(SET_PRIORITY) ||
         !sock.put(argv[SetPrio+1]) ||
@@ -194,7 +194,7 @@ main(int argc, char* argv[])
     float Factor=atof(argv[SetFactor+2]);
 
     // send request
-    ReliSock sock(NegotiatorHost.Value(), NEGOTIATOR_PORT);
+    ReliSock sock((char*) NegotiatorHost.Value(), NEGOTIATOR_PORT);
     sock.encode();
     if (!sock.put(SET_PRIORITYFACTOR) ||
         !sock.put(argv[SetFactor+1]) ||
@@ -221,7 +221,7 @@ main(int argc, char* argv[])
 	}
 
     // send request
-    ReliSock sock(NegotiatorHost.Value(), NEGOTIATOR_PORT);
+    ReliSock sock((char*) NegotiatorHost.Value(), NEGOTIATOR_PORT);
     sock.encode();
     if (!sock.put(RESET_USAGE) ||
         !sock.put(argv[ResetUsage+1]) ||
@@ -237,7 +237,7 @@ main(int argc, char* argv[])
   else if (ResetAll) {
 
     // send request
-    ReliSock sock(NegotiatorHost.Value(), NEGOTIATOR_PORT);
+    ReliSock sock((char*) NegotiatorHost.Value(), NEGOTIATOR_PORT);
     sock.encode();
     if (!sock.put(RESET_ALL_USAGE) ||
         !sock.end_of_message()) {
@@ -262,7 +262,7 @@ main(int argc, char* argv[])
 	}
 
     // send request
-    ReliSock sock(NegotiatorHost.Value(), NEGOTIATOR_PORT);
+    ReliSock sock((char*) NegotiatorHost.Value(), NEGOTIATOR_PORT);
     sock.encode();
     if (!sock.put(GET_RESLIST) ||
         !sock.put(argv[GetResList+1]) ||
@@ -287,7 +287,7 @@ main(int argc, char* argv[])
   else {  // list priorities
 
     // send request
-    ReliSock sock(NegotiatorHost.Value(), NEGOTIATOR_PORT);
+    ReliSock sock((char*) NegotiatorHost.Value(), NEGOTIATOR_PORT);
     sock.encode();
     if (!sock.put(GET_PRIORITY) ||
         !sock.end_of_message()) {
