@@ -124,7 +124,10 @@ public:
 	bool	Append( ObjType * obj );
 
     /// Insert an element before the current element
-	void	Insert( ObjType & obj );
+	bool	Insert( ObjType & obj );
+	bool	Insert( ObjType * obj );
+	bool	InsertBefore( ListIterator<ObjType> &iter, ObjType &obj );
+	bool	InsertBefore( ListIterator<ObjType> &iter, ObjType *obj );
 	bool	IsEmpty() const;
 	int		Number() const;
 
@@ -167,6 +170,7 @@ private:
 
 template <class ObjType>
 class ListIterator {
+friend class List<ObjType>;
 public:
 	ListIterator( );
 	ListIterator( const List<ObjType>& );
@@ -278,18 +282,7 @@ template <class ObjType>
 bool
 List<ObjType>::Append( ObjType & obj )
 {
-	Item<ObjType>	*item;
-
-	// cout << "Entering Append (reference)" << endl;
-	item = new Item<ObjType>( &obj );
-    if (item == NULL) return false;
-	dummy->prev->next = item;
-	item->prev = dummy->prev;
-	dummy->prev = item;
-	item->next = dummy;
-	current = item;
-	num_elem++;
-    return true;
+	return( Append( &obj ) );
 }
 
 /*
@@ -316,16 +309,45 @@ List<ObjType>::Append( ObjType * obj )
 
 /* Insert an element before the current element */
 template <class ObjType>
-void
+bool
 List<ObjType>::Insert( ObjType& obj )
 {
+	return( Insert( &obj ) );
+}
+
+template <class ObjType>
+bool
+List<ObjType>::Insert( ObjType* obj )
+{
 	Item<ObjType>	*item;
-	item = new Item<ObjType>( &obj );
+	if( ( item = new Item<ObjType>( obj ) ) == NULL ) return false;
 	current->prev->next = item;
 	item->prev = current->prev;
 	current->prev = item;
 	item->next = current;
 	num_elem++;
+	return( true );
+}
+
+template <class ObjType>
+bool
+List<ObjType>::InsertBefore( ListIterator<ObjType> &iter, ObjType &obj )
+{
+	return( InsertBefore( iter, &obj ) );
+}
+
+template <class ObjType>
+bool
+List<ObjType>::InsertBefore( ListIterator<ObjType> &iter, ObjType *obj )
+{
+	Item<ObjType>	*item;
+	if( ( item = new Item<ObjType>( obj ) ) == NULL ) return false;
+	iter.cur->prev->next = item;
+	item->prev = iter.cur->prev;
+	iter.cur->prev = item;
+	item->next = iter.cur;
+	num_elem++;
+	return( true );
 }
 
 /*
@@ -517,18 +539,18 @@ template <class ObjType>
 void
 ListIterator<ObjType>::ToAfterLast( )
 {
-	cur = NULL;
+	if( list ) cur = list->dummy;
 }
 
 template <class ObjType>
 bool
 ListIterator<ObjType>::Next( ObjType& obj)
 {
-	if( cur ) {
-		if( ( cur = cur->next ) ) {
-			obj = *(cur->obj);
-			return true;
-		}
+	if( list && cur ) {
+		cur = cur->next;
+		if( cur == list->dummy ) return( false );
+		obj = *(cur->obj);
+		return true;
 	} 
 	return false;
 }
@@ -537,10 +559,10 @@ template <class ObjType>
 ObjType*
 ListIterator<ObjType>::Next( )
 {
-	if( cur ) {
-		if( ( cur = cur->next ) ) {
-			return( cur->obj );
-		}
+	if( list && cur ) {
+		cur = cur->next;
+		if( cur == list->dummy ) return( NULL );
+		return( cur->obj );
 	}
 	return NULL;
 }
@@ -571,11 +593,11 @@ template <class ObjType>
 bool
 ListIterator<ObjType>::Prev( ObjType& obj ) 
 {
-	if( cur && cur != list->dummy ) {
-		if( ( cur = cur->prev ) ) {
-			obj = *(cur->obj);
-			return true;
-		}
+	if( list && cur ) {
+		cur = cur->prev;
+		if( cur == list->dummy ) return false;
+		obj = *(cur->obj);
+		return true;
 	} 
 	return false;
 }
@@ -585,10 +607,10 @@ template <class ObjType>
 ObjType*
 ListIterator<ObjType>::Prev( )
 {
-	if( cur && cur != list->dummy ) {
-		if( ( cur = cur->prev ) ) {
-			return( cur->obj );
-		}
+	if( list && cur ) {
+		cur = cur->prev;
+		if( cur == list->dummy ) return NULL;
+		return( cur->obj );
 	}
 	return NULL;
 }
@@ -604,7 +626,7 @@ template <class ObjType>
 bool
 ListIterator<ObjType>::IsAfterLast( ) const
 {
-	return( list && cur == NULL );
+	return( list && list->dummy == cur );
 }
 
 
