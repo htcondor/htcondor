@@ -118,7 +118,7 @@ LONGJMP = _longjmp.AIX32.o
 
 #if DOES_CHECKPOINTING
 CKPT_OBJ =	file_state.o image.o tmp_stack.o machdep.$(OS).o \
-			syscall_mode.o $(LONGJMP) $(HP_CKPT) $(SIG_CKPT_OBJS)
+			syscall_mode.o condor_rt0.o $(LONGJMP) $(HP_CKPT) $(SIG_CKPT_OBJS)
 #else
 CKPT_OBJ = syscall_mode.o
 #endif
@@ -165,25 +165,6 @@ uppercase_target($(SIMPLE_LIBC),____sig.o,____SIG.o,___sig_restore,___SIG_RESTOR
 uppercase_target($(SIMPLE_LIBC),____sig.o,____SIG2.o,___masksig_restore,___MASKSIG_RESTORE)
 
 
-CMNT
-CMNT Create a replacement for crt0.o to be linked with condor programs.
-CMNT N.B. This is done differently than other objects in that we start out
-CMNT with a copy of crt0.o, and change the name of "main" to "MAIN".
-CMNT
-#if IS_HPPAR_HPUX9
-condor_rt0.o: Crt0 ToUpper
-	ToUpper Crt0 tmp1 _start _START 
-	ToUpper tmp1 tmp2 _data_START _data_start
-	ToUpper tmp2 condor_rt0.o _text_START _text_start
-	rm -f tmp1 tmp2
-clean::
-	rm -f condor_rt0.o
-#else
-condor_rt0.o: Crt0 ToUpper
-	ToUpper Crt0 condor_rt0.o main  MAIN
-clean::
-	rm -f condor_rt0.o
-#endif
 
 release_target( condor_rt0.o, $(RELEASE_DIR)/lib, OBJECT_MODE )
 
