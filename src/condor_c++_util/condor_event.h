@@ -246,6 +246,9 @@ class SubmitEvent : public ULogEvent
 
     /// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
     char submitHost[128];
+
+	// user-supplied text to include in the log event
+    char* submitEventLogNotes;
 };
 
 

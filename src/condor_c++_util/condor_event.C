@@ -26,6 +26,7 @@
 #include <errno.h>
 #include "condor_event.h"
 #include "user_log.c++.h"
+#include "condor_string.h"
 
 //--------------------------------------------------------
 #include "condor_debug.h"
@@ -211,12 +212,16 @@ SubmitEvent::
 SubmitEvent()
 {	
 	submitHost [0] = '\0';
+	submitEventLogNotes = NULL;
 	eventNumber = ULOG_SUBMIT;
 }
 
 SubmitEvent::
 ~SubmitEvent()
 {
+    if( submitEventLogNotes ) {
+        delete[] submitEventLogNotes;
+    }
 }
 
 int SubmitEvent::
@@ -227,18 +232,31 @@ writeEvent (FILE *file)
 	{
 		return 0;
 	}
-	
+	if( submitEventLogNotes ) {
+		retval = fprintf( file, "    %.8191s\n", submitEventLogNotes );
+		if( retval < 0 ) {
+			return 0;
+		}
+	}
 	return (1);
 }
 
 int SubmitEvent::
 readEvent (FILE *file)
 {
-    int retval  = fscanf (file, "Job submitted from host: %s", submitHost);
+	char s[8192];
+	if( submitEventLogNotes ) {
+		delete[] submitEventLogNotes;
+	}
+	int retval = fscanf( file, "Job submitted from host: %s\n", submitHost );
     if (retval != 1)
     {
 	return 0;
     }
+	if( ! fscanf( file, "    %8191[^\n]\n", s ) ) {
+		return 0;
+    }
+	submitEventLogNotes = strnewp( s );
     return 1;
 }
 
