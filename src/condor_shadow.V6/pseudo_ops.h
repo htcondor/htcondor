@@ -26,6 +26,10 @@
  
 BEGIN_C_DECLS
 
+int pseudo_register_arch( const char *arch );
+int pseudo_register_opsys( const char *opsys );
+int pseudo_choose_ckpt_server( const char *host );
+int pseudo_get_ckpt_mode( int sig );
 int pseudo_getppid();
 int pseudo_getpid();
 int pseudo_getlogin(char *loginbuf);
@@ -56,6 +60,7 @@ int pseudo_put_file_stream(
 int pseudo_startup_info_request( STARTUP_INFO *s );
 int pseudo_std_file_info( int which, char *name, int *pipe_fd );
 int pseudo_file_info( const char *name, int *pipe_fd, char *extern_path );
+int pseudo_get_buffer_info( int *blocks, int *block_size, int *prefetch_bytes );
 int pseudo_get_iwd( char *path );
 int pseudo_get_ckpt_name( char *path );
 int pseudo_get_a_out_name( char *path );

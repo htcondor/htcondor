@@ -37,6 +37,7 @@
 #include "condor_ckpt_mode.h"
 #include "../condor_ckpt_server/server_interface.h"
 #include "internet.h"
+#include "condor_config.h"
 
 #ifdef CARMI_OPS
 #include <ProcList.h>
@@ -1129,6 +1130,26 @@ pseudo_file_info( const char *name, int *pipe_fd, char *extern_path )
 	}
 
 	return answer;
+}
+
+int pseudo_get_buffer_info( int *blocks, int *block_size, int *prefetch_bytes )
+{
+	char *btext = param("BUFFER_BLOCK_COUNT");
+	char *bstext = param("BUFFER_BLOCK_SIZE");
+	char *ptext = param("BUFFER_PREFETCH_BYTES");
+
+	// If the param can't be found or contains funny data,
+	// then we return zeroes, which disables buffering
+	// or prefetching, as the case may be.
+
+	*blocks = atoi(btext);
+	*block_size = atoi(bstext);
+	*prefetch_bytes = atoi(ptext);
+
+	dprintf(D_SYSCALLS,"\tblocks=%d block_size=%d prefetch_bytes=%d\n",
+		*blocks, *block_size, *prefetch_bytes );
+
+	return 0;
 }
 
 /*
