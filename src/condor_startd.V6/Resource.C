@@ -699,8 +699,14 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 			// Since the Rank expression itself only lives in the
 			// config file and the r_classad (not any obejects), we
-			// have to insert it here from r_classad.
-		caInsert( cap, r_classad, ATTR_RANK );
+			// have to insert it here from r_classad.  If Rank is
+			// undefined in r_classad, we need to insert a default
+			// value, since we don't want to use the job ClassAd's
+			// Rank expression when we evaluate our Rank value.
+		if (!caInsert( cap, r_classad, ATTR_RANK )) {
+			sprintf( line, "%s = 0.0", ATTR_RANK );
+			cap->Insert( line );
+		}
 
 			// Include everything from STARTD_EXPRS.
 		config_fill_ad( cap );
