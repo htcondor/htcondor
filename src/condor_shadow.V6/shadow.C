@@ -130,6 +130,7 @@ int  LastCkptTime = -1;			// time when job last completed a ckpt
 int  NumCkpts = 0;				// count of completed checkpoints
 int  NumRestarts = 0;			// count of attempted checkpoint restarts
 int  CommittedTime = 0;			// run-time committed in checkpoints
+bool ManageBandwidth = false;	// notify negotiator about network usage?
 
 extern char *Executing_Arch, *Executing_OpSys;
 
@@ -149,10 +150,10 @@ extern "C"  void log_termination(struct rusage *, struct rusage *);
 extern "C"  void log_execute(char *);
 extern "C"  void log_except(char *);
 
-char	*Spool;
-char	*ExecutingHost;
-char	*GlobalCap;
-char	*MailerPgm;
+char	*Spool = NULL;
+char	*ExecutingHost = NULL;
+char	*GlobalCap = NULL;
+char	*MailerPgm = NULL;
 
 // count of network bytes send and received for this job so far
 extern float	TotalBytesSent, TotalBytesRecvd;
@@ -435,6 +436,18 @@ main(int argc, char *argv[], char *envp[])
 		free(tmp);
 	} else {
 		SlowCkptSpeed = 0;
+	}
+
+	tmp = param("MANAGE_BANDWIDTH");
+	if (!tmp) {
+		ManageBandwidth = false;
+	} else {
+		if (tmp[0] == 'T' || tmp[0] == 't') {
+			ManageBandwidth = true;
+		} else {
+			ManageBandwidth = false;
+		}
+		free(tmp);
 	}
 
 	MailerPgm = param( "MAIL" );

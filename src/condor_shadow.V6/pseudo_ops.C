@@ -37,6 +37,7 @@
 #include "internet.h"
 #include "condor_config.h"
 #include "filename_tools.h"
+#include "daemon.h"
 
 extern "C"  void log_checkpoint (struct rusage *, struct rusage *);
 extern "C"  void log_image_size (int);
@@ -60,6 +61,8 @@ extern int  LastCkptTime;
 extern int  NumCkpts;
 extern int  NumRestarts;
 extern int MaxDiscardedRunTime;
+extern bool ManageBandwidth;
+extern char *ExecutingHost;
 
 int		LastCkptSig = 0;
 
@@ -766,6 +769,10 @@ pseudo_put_file_stream(
 	if (!rval) {
 		/* Checkpoint server says ok */
 		BytesRecvd += len;
+		if (CkptFile && ManageBandwidth) {
+			// tell negotiator that the job is writing a checkpoint
+			RequestCkptBandwidth(*ip_addr);
+		}
 		return 0;
 	}
 
@@ -793,7 +800,11 @@ pseudo_put_file_stream(
 	create_tcp_port( port, &connect_sock );
 	dprintf( D_FULLDEBUG, "\tPort = %d\n", *port );
 	BytesRecvd += len;
-
+	if (CkptFile && ManageBandwidth) {
+		// tell negotiator that the job is writing a checkpoint
+		RequestCkptBandwidth(*ip_addr);
+	}
+	
 	switch( child_pid = fork() ) {
 	  case -1:	/* error */
 		dprintf( D_ALWAYS, "fork() failed, errno = %d\n", errno );
@@ -826,6 +837,56 @@ pseudo_put_file_stream(
 
 		/* Can never get here */
 	return -1;
+}
+
+void
+RequestCkptBandwidth(unsigned int ip_addr)
+{
+	ClassAd request;
+	char buf[100], source[100], owner[100], user[100], *str;
+	int executable_size = 0, nice_user = 0;
+
+	ip_addr = htonl(ip_addr);
+
+	if (LastCkptSig == SIGUSR2) {
+		sprintf(buf, "%s = \"PeriodicCheckpoint\"", ATTR_TRANSFER_TYPE);
+	} else {
+		sprintf(buf, "%s = \"VacateCheckpoint\"", ATTR_TRANSFER_TYPE);
+	}
+	request.Insert(buf);
+	JobAd->LookupInteger(ATTR_NICE_USER, nice_user);
+	JobAd->LookupString(ATTR_OWNER, owner);
+	sprintf(user, "%s%s@%s", (nice_user) ? "nice-user." : "", owner,
+			My_UID_Domain);
+	sprintf(buf, "%s = \"%s\"", ATTR_USER, user);
+	request.Insert(buf);
+	sprintf(buf, "%s = 1", ATTR_FORCE);
+	request.Insert(buf);
+	strcpy(source, ExecutingHost+1);
+	str = strchr(source, ':');
+	*str = '\0';
+	sprintf(buf, "%s = \"%s\"", ATTR_SOURCE, source);
+	request.Insert(buf);
+	sprintf(buf, "%s = \"%s\"", ATTR_REMOTE_HOST, ExecutingHost);
+	request.Insert(buf);
+	sprintf(buf, "%s = \"%s\"", ATTR_DESTINATION,
+			inet_ntoa(*(struct in_addr *)&ip_addr));
+	request.Insert(buf);
+	JobAd->LookupInteger(ATTR_EXECUTABLE_SIZE, executable_size);
+	sprintf(buf, "%s = %f", ATTR_REQUESTED_CAPACITY,
+			(float)(ImageSize-executable_size)*1024.0);
+	request.Insert(buf);
+	Daemon Negotiator(DT_NEGOTIATOR);
+	SafeSock sock;
+	sock.timeout(10);
+	if (!sock.connect(Negotiator.addr())) {
+		dprintf(D_ALWAYS, "Couldn't connect to negotiator!\n");
+		return;
+	}
+	sock.put(REQUEST_NETWORK);
+	sock.put(1);
+	request.put(sock);
+	sock.end_of_message();
 }
 
 /*
