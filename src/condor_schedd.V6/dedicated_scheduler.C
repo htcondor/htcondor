@@ -351,8 +351,6 @@ DedicatedScheduler::DedicatedScheduler()
 	resources = NULL;
 	resource_requests = NULL;
 	unclaimed_resources = NULL;
-	scheduling_interval = 0;
-	scheduling_tid = -1;
 	hdjt_tid = -1;
 
 		// TODO: Be smarter about the sizes of these tables
@@ -448,8 +446,8 @@ DedicatedScheduler::initialize( void )
 	sprintf( buf, "DedicatedScheduler@%s", Name );
 	ds_name = strnewp( buf );
 
-		// Call our reconfig() method, since that will register 
-		// the DaemonCore timer for us, if we need it at all.
+		// Call our reconfig() method, since any config file stuff we
+		// care about should be read at start-up, too.
 	this->reconfig();
 
 		// Next, fill in the dummy job ad we're going to send to 
@@ -498,27 +496,7 @@ DedicatedScheduler::initialize( void )
 int
 DedicatedScheduler::reconfig( void )
 {
-	char* tmp;
-	int old_int = scheduling_interval;
-
-	tmp = param( "DEDICATED_SCHEDULING_INTERVAL" );
-	if( ! tmp ) {
-		scheduling_interval = 300;
-	} else {
-		 scheduling_interval = atoi( tmp );
-		free( tmp );
-	}
-
-	if( old_int != scheduling_interval ) {
-		if( scheduling_tid != -1 ) {
-			daemonCore->Cancel_Timer( scheduling_tid );
-		}
-		scheduling_tid = daemonCore->
-			Register_Timer( scheduling_interval, scheduling_interval,
-							(Eventcpp)&DedicatedScheduler::handleDedicatedJobs,
-							"handleDedicatedJobs", this );
-	}
-
+		// Nothing to do for now!
 	return TRUE;
 }
 
@@ -1291,6 +1269,11 @@ DedicatedScheduler::reaper( int pid, int status )
 	shadow_rec*		srec;
 	int q_status;  // status of this job in the queue
 
+		// No matter what happens, now that a shadow has exited, we
+		// want to call handleDedicatedJobs() in a few seconds to see
+		// if we can do anything else useful at this point.
+	handleDedicatedJobTimer( 2 );
+
 	srec = scheduler.FindSrecByPid( pid );
 	if( !srec ) {
 			// Can't find the shadow record!  This is bad.
@@ -1576,6 +1559,19 @@ DedicatedScheduler::addDedicatedCluster( int cluster )
 	int next = idle_clusters->getlast() + 1;
 	(*idle_clusters)[next] = cluster;
 	dprintf( D_FULLDEBUG, "Found idle MPI cluster %d\n", cluster );
+}
+
+
+bool
+DedicatedScheduler::hasDedicatedClusters( void )
+{
+	if( ! idle_clusters ) {
+		return false;
+	}
+	if( idle_clusters->getlast() < 0 ) {
+		return false;
+	}
+	return true;
 }
 
 
