@@ -5029,6 +5029,7 @@ int DaemonCore::Create_Process(
 			int child_status;
 			waitpid(newpid, &child_status, 0);
 			errno = child_errno;
+			return_errno = errno;
 			if( errno == ERRNO_EXEC_AS_ROOT ) {
 				dprintf( D_ALWAYS, "Create_Process: child failed because "
 						 "%s process was still root before exec()\n",
