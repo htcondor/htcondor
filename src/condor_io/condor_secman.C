@@ -1564,7 +1564,7 @@ bool SecMan :: invalidateHost(const char * sin)
                 char * comp = sin_to_string(keyEntry->addr());
                 if (addr == MyString(comp)) {
                     remove_commands(keyEntry);
-                    session_cache->key_table->remove(id);
+					session_cache->remove(id.Value());
                 }
             }
         }
