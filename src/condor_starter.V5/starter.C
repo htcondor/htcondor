@@ -37,6 +37,7 @@
 #include "afs.h"
 #include "list.h"
 #include "user_proc.h"
+#include "sig_install.h"
 
 #if !defined(X86)
 typedef List<UserProc> listuserproc; 
