@@ -54,5 +54,9 @@ strip_link_target($(STRIP_DIR)/lib/ld,lib,old_ld)
 static_link_target($(STATIC_DIR)/lib/ld,lib,old_ld)
 #endif
 
+release_copy_target(Condor.pm,$(RELEASE_DIR)/lib,Condor.pm,OBJECT_MODE)
+strip_copy_target(Condor.pm,$(STRIP_DIR)/lib,Condor.pm,OBJECT_MODE)
+static_copy_target(Condor.pm,$(STATIC_DIR)/lib,Condor.pm,OBJECT_MODE)
+
 clean::
 html:
