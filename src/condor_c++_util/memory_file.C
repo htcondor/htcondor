@@ -51,7 +51,7 @@ int memory_file::compare( char *filename )
 	int fd = ::open(filename,O_RDONLY);
 	if( fd==-1 ) {
 		cerr << "Couldn't open " << filename << endl;
-		return 0;
+		return 100;
 	}
 
 	do {
@@ -116,8 +116,10 @@ Returns the number of bytes read, or an error.
 ssize_t memory_file::read( char *data, size_t length )
 {
 
-	if( (data==0) || (length<0) || (pointer<0) ) return EINVAL;
+	if( (data==0) || (length<0) || (pointer<0) ) return -1;
 	if( pointer>=filesize ) return 0;
+
+	if(length==0) return 0;
 
 	if((pointer+length)>filesize) length = filesize-pointer;
 	memcpy(data,&buffer[pointer],length);
@@ -133,7 +135,9 @@ Returns the number of bytes written, or an error.
 
 ssize_t memory_file::write( char *data, size_t length )
 {
-	if( (data==0) || (length<0) || (pointer<0) ) return EINVAL;
+	if( (data==0) || (length<0) || (pointer<0) ) return -1;
+
+	if(length==0) return 0;
 
 	ensure(pointer+length);
 
