@@ -24,8 +24,9 @@
 // File: Helper.cpp
 // Author: Francesco Giacomini, INFN <Francesco.Giacomini@cnaf.infn.it>
 
-// $Id: helper.C,v 1.1.4.1 2003-01-10 20:22:55 pfc Exp $
+// $Id: helper.C,v 1.1.4.2 2003-01-10 23:16:05 stolley Exp $
 
+#include "condor_common.h"
 #include "helper.h"
 #include <fstream>
 #include <sstream>

@@ -21,8 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#include "helper.h"
-
 //
 // Local DAGMan includes
 //
@@ -35,6 +33,7 @@
 #include "simplelist.h"
 #include "condor_string.h"  /* for strnewp() */
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "helper.h"
 
 //---------------------------------------------------------------------------
 Dag::Dag( const char* condorLogName, const int maxJobsSubmitted,
@@ -622,6 +621,7 @@ Dag::StartNode( Job *node )
 int
 Dag::SubmitReadyJobs()
 {
+	Helper helperObj;
 //	PrintReadyQ( DEBUG_DEBUG_4 );
 	// no jobs ready to submit
     if( _readyQ->IsEmpty() ) {
@@ -655,7 +655,7 @@ Dag::SubmitReadyJobs()
     if( helper ) {
       debug_printf( DEBUG_VERBOSE, "  passing original submit file (%s) "
 		    "to helper (%s)\n", cmd_file.Value(), helper );
-      cmd_file = Helper().resolve( cmd_file.Value() ).c_str();
+      cmd_file = helperObj.resolve( cmd_file.Value() ).c_str();
       if( cmd_file.Length() == 0 ) {
 	debug_printf( DEBUG_QUIET, "ERROR: helper (%s) "
 		      "failed for Job %s: submit aborted\n", helper,
