@@ -396,6 +396,7 @@ class BaseShadow : public Service
 
 		/// Attributes specific to certain kinds of updates
 	StringList* hold_job_queue_attrs;
+	StringList* evict_job_queue_attrs;
 	StringList* remove_job_queue_attrs;
 	StringList* requeue_job_queue_attrs;
 	StringList* terminate_job_queue_attrs;

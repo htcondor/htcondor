@@ -54,6 +54,7 @@ BaseShadow::BaseShadow() {
 	myshadow_ptr = this;
 	common_job_queue_attrs = NULL;
 	hold_job_queue_attrs = NULL;
+	evict_job_queue_attrs = NULL;
 	remove_job_queue_attrs = NULL;
 	requeue_job_queue_attrs = NULL;
 	terminate_job_queue_attrs = NULL;
@@ -66,6 +67,7 @@ BaseShadow::~BaseShadow() {
 	if (jobAd) FreeJobAd(jobAd);
 	if( common_job_queue_attrs ) { delete common_job_queue_attrs; }
 	if( hold_job_queue_attrs ) { delete hold_job_queue_attrs; }
+	if( evict_job_queue_attrs ) { delete evict_job_queue_attrs; }
 	if( remove_job_queue_attrs ) { delete remove_job_queue_attrs; }
 	if( requeue_job_queue_attrs ) { delete requeue_job_queue_attrs; }
 	if( terminate_job_queue_attrs ) { delete terminate_job_queue_attrs; }
@@ -201,6 +203,7 @@ void
 BaseShadow::initJobQueueAttrLists( void )
 {
 	if( hold_job_queue_attrs ) { delete hold_job_queue_attrs; }
+	if( evict_job_queue_attrs ) { delete evict_job_queue_attrs; }
 	if( requeue_job_queue_attrs ) { delete requeue_job_queue_attrs; }
 	if( remove_job_queue_attrs ) { delete remove_job_queue_attrs; }
 	if( terminate_job_queue_attrs ) { delete terminate_job_queue_attrs; }
@@ -217,6 +220,9 @@ BaseShadow::initJobQueueAttrLists( void )
 
 	hold_job_queue_attrs = new StringList();
 	hold_job_queue_attrs->insert( ATTR_HOLD_REASON );
+
+	evict_job_queue_attrs = new StringList();
+	evict_job_queue_attrs->insert( ATTR_LAST_VACATE_TIME );
 
 	remove_job_queue_attrs = new StringList();
 	remove_job_queue_attrs->insert( ATTR_REMOVE_REASON );
@@ -414,6 +420,11 @@ BaseShadow::evictJob( int reason )
 
 		// write stuff to user log:
 	logEvictEvent( reason );
+
+		// record the time we were vacated into the job ad 
+	char buf[64];
+	sprintf( buf, "%s = %d", ATTR_LAST_VACATE_TIME, (int)time(0) ); 
+	jobAd->Insert( buf );
 
 		// update the job ad in the queue with some important final
 		// attributes so we know what happened to the job when using
@@ -844,7 +855,7 @@ BaseShadow::updateJobInQueue( update_t type )
 		final_update = true;
 		break;
 	case U_EVICT:
-			// No special attributes needed...
+		job_queue_attrs = evict_job_queue_attrs;
 		break;
 	case U_PERIODIC:
 			// No special attributes needed...
