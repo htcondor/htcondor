@@ -432,8 +432,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 			// will get sent to our peer.
 			sprintf(buf,"\"%s\"",filelist.Value());
             v.SetStringValue(buf);
-            // Needs work Hao
-			//Ad->InsertOrUpdate( string(ATTR_TRANSFER_INTERMEDIATE_FILES), Literal::MakeLiteral(v));
+			Ad->Insert( ATTR_TRANSFER_INTERMEDIATE_FILES, Literal::MakeLiteral(v));
 			dprintf(D_FULLDEBUG,"%s\n",buf);
 		}
 	}
