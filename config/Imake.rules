@@ -485,7 +485,9 @@ clean::						@@\
 	mkdir dir_name							@@\
 	cd dir_name##; for file in `ls $(SRC_TREE)/##dir_name##`; \	@@\
 		do ln -s $(SRC_TREE)/##dir_name##/$$file .; done;	@@\
-	rm -f dir_name##/CVS
+	rm -f dir_name##/CVS						@@\
+really-clean::								@@\
+	rm -rf dir_name
 #endif /* object_dir_target */
 
 
