@@ -96,9 +96,11 @@ Reqexp::avail()
 }
 
 
-void
+// Returns TRUE if there's a state change.
+int
 Reqexp::pub()
 {
+	reqexp_state old_state = rstate;
 	switch( this->eval() ) {
 	case 0:							// requirements == false
 		this->unavail();
@@ -110,6 +112,7 @@ Reqexp::pub()
 		this->restore();			
 		break;
 	}
+	return( old_state != rstate );
 }
 
 

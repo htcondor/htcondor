@@ -43,8 +43,8 @@ public:
 	void	avail();		// Set requirements to True
 	int		eval();			// Evaluate the original requirements  
 							// (-1 = undef, 1 = true, 0 = false)
-	void	pub();			// Evaluates orig requirements and sets
-							// the classad appropriately
+	int		pub();			// Evaluates orig reqexp and sets classad
+							// appropriately, returns 1 if change.
 	reqexp_state   	update(ClassAd* ca);	// Insert the current reqexp into ca
 private:
 	ClassAd** 		cap;
