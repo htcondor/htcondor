@@ -64,9 +64,11 @@
 #if USE_GCC
 #	define CCompiler gcc
 #	define CPlusCompiler g++
+#	define Demangler c++filt
 #else
 #	define CCompiler cc
 #	define CPlusCompiler cxx
+#	define Demangler demangle
 #endif
 
 #define StaticFlag -static

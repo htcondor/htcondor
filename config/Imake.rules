@@ -128,8 +128,8 @@ clean:: 												@@\
 .C.o:
 	$(CPlusPlus) $(C_PLUS_FLAGS) -c $<
 
-#if IS_ALPHA_OSF1
-DEMANGLE = 2>&1 | demangle
+#if defined(Demangler)
+DEMANGLE = 2>&1 | Demangler
 #endif
 
 #if IS_V5
