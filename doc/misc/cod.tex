@@ -85,9 +85,7 @@ Overview of How COD Works}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Computing On Demand!Overview of how it works}
 
-%
-% TODO!
-% 
+\Todo
 
 % (Text from condor-week 2003 presentation)
 % When a high-priority COD job appears, the lower-priority batch job is
@@ -146,17 +144,181 @@ is running.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:cod-setup}
-Setting Up a Machine to Run a Given COD Application}
+Defining a COD Application}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Computing On Demand!Setting up machines}
 \index{Computing On Demand!Defining an application}
 
-%
-% TODO!
-% 
+To run an application under a COD resource, a user must define certain
+characteristics about the application.
+For example, they must specify what executable or script to use, what
+directory to run the application in, optionally define command-line
+arguments, files to use for standard input and output, etc.
 
-In addition to configuing a machine to authorize a given user to
-create and use COD claims, an administrator must configure
+COD users must specify a ClassAd that describes these characteristics
+of their application.  
+There are two ways for a user to define a COD application's ClassAd:
+
+\begin{enumerate}
+\item In the Condor configuration files of the COD resources
+\item When they use the \Condor{cod} command-line tool to launch the
+application itself
+\end{enumerate}
+
+These two methods for defining the ClassAd can be used together.
+For example, a user can define most attributes for a given application
+in the configuration file, and only provide a few dynamically defined
+attributes with the \Condor{cod} tool.
+(NOTE: detailed instructions on using the \Condor{cod} tool will be
+provided below in another section).
+
+Regardless of how the COD application's ClassAd is defined (locally in
+the Condor configuration files, remotely with the \Condor{cod} tool,
+or some combination of both) the application's executable and input
+data must be pre-installed on the COD resource.
+This is a current limitation of Condor's support for COD that will
+eventually go away.
+For now, there is no mechanism to transfer files automatically for a
+COD application, and all I/O must be performed locally or onto a
+network filesystem that is accessible via a given COD resource.
+
+The following three sections describe this process in more detail.
+The first lists all the attributes that can be used to define a COD
+application.
+The second describes how to define these attributes in the Condor
+configuration files.
+The third explains how to define them using the \Condor{cod} tool.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:cod-application-attributes}
+Attributes That Describe a COD Application}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%
+%% TODO! 
+%% Flesh out this list and provide useful explainations
+%% 
+
+\index{Computing On Demand!Defining Applications!Required attributes}
+
+The following list of attributes are required for a COD application:
+
+\begin{description}
+
+ \item[\Attr{Cmd}] (string, executable path)
+
+ \item[\Attr{Iwd}] (string, initial working directory)
+
+\end{description}
+
+\index{Computing On Demand!Defining Applications!Optional attributes}
+
+The following list of attributes are optional:
+
+\begin{description}
+
+ \item[\Attr{In}] (string, path to stdin)
+
+ \item[\Attr{Out}] (string, path to stdout)
+
+ \item[\Attr{Err}] (string, path to stderr)
+
+ \item[\Attr{Env}] (string, environment)
+
+ \item[\Attr{Args}] (string, arguments)
+
+ \item[\Attr{JobUniverse}] (integer, {5 = vanilla, 10 = java} are the
+ allowed values, vanilla is the default if not specified)
+
+ \item[\Attr{JarFiles}] (string, JAR files for java universe)
+
+ \item[\Attr{KillSig}] (int, signal to send for graceful shutdown,
+ SIGTERM by default)
+
+ \item[\Attr{StarterUserLog}] (string, path to UserLog written by
+ \Condor{starter}) 
+
+ \item[\Attr{StarterUserLogUseXML}] (bool, should UserLog use XML or
+ old Condor syntax)
+
+ \item[\Attr{ClusterId}] (int, job cluster id, can also specify to
+ \Condor{cod} with \Opt{-cluster})
+
+ \item[\Attr{ProcId}] (int, job process id, can also specify to
+ \Condor{cod} with \Opt{-proc})
+
+\end{description}
+
+\Note If any path attribute (Cmd, In, Out, Err, StarterUserLog) is not
+a full path name, Condor automatically prepends the value of Iwd.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:cod-config-attrs}
+Defining Attributes in the Condor Configuration Files}
+\index{Computing On Demand!Defining Applications!In Condor
+configuration files}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+To define COD attributes in the Condor configuration file for a given
+application, a user must select an arbitrary \Term{COD keyword} for
+the application.
+This case-insensitive keyword is used as a prefix for the various
+configuration file settings to define the application.
+When a user wishes to spawn a given application, they simply provide
+this keyword as an argument to the \Condor{cod} tool and the keyword
+is used at the remote COD resource to find attributes which define the
+application.
+
+Any of the ClassAd attributes described in the previous section can be
+specified in the configuration file with the keyword prefix and an
+underscore character (\verb@"_"@).
+
+For example, if the user's keyword for a given fractal generation
+application is ``FractGen'', the resulting entries in the Condor
+configuration file might look like this:
+
+\begin{verbatim}
+FractGen_Cmd = "/usr/local/bin/fractgen"
+FractGen_Iwd = "/tmp/cod-fractgen"
+FractGen_Out = "/tmp/cod-fractgen/output"
+FractGen_Err = "/tmp/cod-fractgen/error"
+FractGen_Args = "mandelbrot -0.65865,-0.56254 -0.45865,-0.71254"
+\end{verbatim}
+
+In this example, the ``fractgen'' binary might create other files.
+The \Attr{Out} and \Attr{Err} attributes specified in the
+configuration file are only for standard output and standard error
+redirection.
+
+When the user wanted to spawn an instance of this application, they
+would specify a \verb@-keyword FractGen@ command-line argument when
+they invoked \Condor{cod\_activate} (described below).
+
+\Note If a user is defining all attributes of their COD application in
+the Condor configuration files, and the \Condor{startd} on the COD
+resource they are using is running as root, the user must also define
+\Attr{Owner} to be the user that the COD application should run as.
+This attribute should be a string and should contain a valid username
+on the given COD resource.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:cod-command-line-attrs}
+Defining Attributes with the \Condor{cod} Tool} 
+\index{Computing On Demand!Defining Applications!With the \Condor{cod}
+tool}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\Todo
+
+\Note You should not define \Attr{Owner} in this case, since Condor
+will automatically insert the right value for you based on how you
+authenticate to the COD resource.  
+If you define something that does not match your authenticated
+identity, Condor will treat it as an error and fail to launch your
+application. 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -204,8 +366,7 @@ binary is used for a set of names, for example: \Condor{cod\_request},
 
 In addition, there is now a \Opt{-cod} option to \Condor{status}.
 
-Each command and its use is described in greater detail in the
-following sections.
+The following sections describe each command in greater detail.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:cod-claim-request}Request}
@@ -261,7 +422,7 @@ condor_cod_request -requirements 'VirtualMachineId==3'
 \end{verbatim}
 or
 \begin{verbatim}
-\verb@condor_cod_request -requirements 'State!="Claimed"'@  
+condor_cod_request -requirements 'State!="Claimed"'
 \end{verbatim}
 
 In general, you should be careful with shell quoting issues, so that
@@ -309,11 +470,15 @@ recognize any attempts to use the old claims.
 \index{Computing On Demand!Managing claims!Activate}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\Todo
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:cod-claim-suspend}Suspend}
 \index{Computing On Demand!Managing claims!Suspend}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\Todo
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -321,17 +486,24 @@ recognize any attempts to use the old claims.
 \index{Computing On Demand!Managing claims!Resume}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\Todo
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:cod-claim-deactivate}Deactivate}
 \index{Computing On Demand!Managing claims!Deactivate}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\Todo
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:cod-claim-release}Release}
 \index{Computing On Demand!Managing claims!Release}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\Todo
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -343,14 +515,14 @@ The \Opt{-cod} option to \Condor{status} can be used to view any COD
 claims in a given Condor pool.  
 
 \begin{verbatim}
-Name        ID    ClaimState  TimeInState  RemoteUser   JobId Keyword 
-astro.cs.wi COD1  Idle         0+00:00:04  wright                     
-chopin.cs.w COD1  Running      0+00:02:05  wright       3.0   fractgen
-chopin.cs.w COD2  Suspended    0+00:10:21  wright       4.0   fractgen
+Name        ID   ClaimState TimeInState RemoteUser JobId Keyword 
+astro.cs.wi COD1 Idle        0+00:00:04 wright                   
+chopin.cs.w COD1 Running     0+00:02:05 wright     3.0   fractgen
+chopin.cs.w COD2 Suspended   0+00:10:21 wright     4.0   fractgen
 
-                    Total  Idle  Running  Suspended  Vacating  Killing
-      INTEL/LINUX       3     1        1          1         0        0
-            Total       3     1        1          1         0        0
+               Total  Idle  Running  Suspended  Vacating  Killing
+ INTEL/LINUX       3     1        1          1         0        0
+       Total       3     1        1          1         0        0
 \end{verbatim}
 
 %
@@ -383,10 +555,6 @@ releases of Condor:
 
 \item Applications have to be pre-installed and pre-staged at a given
   machine. 
-
-\item Attributes of the job are static in the configuration file (for
-  example, you cannot specify different arguments for each instance of
-  the application when you activate them).
 
 \item There is no way to define limits for how long a given COD claim
   can be active, how often it is run, and so on.
