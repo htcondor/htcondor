@@ -27,6 +27,7 @@
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_classad.h"
+#include "shadow_user_policy.h"
 #include "user_log.c++.h"
 #include "exit.h"
 #include "../h/shadow.h"
@@ -47,7 +48,6 @@ enum update_t { U_PERIODIC, U_TERMINATE, U_HOLD, U_REMOVE, U_REQUEUE };
 	specific, make the change in that derived class. <p>
 
 	More to come...<p>
-
 
 	This class has some pure virtual functions, so it's an abstract
 	class.  You therefore can't instantiate it; you must instantiate
@@ -110,20 +110,46 @@ class BaseShadow : public Service
 	FILE* shutDownEmail( int reason );
 
 		/** Everyone should be able to shut down.<p>
-			This function is <b>pure virtual</b>.
 			@param reason The reason the job exited (JOB_BLAH_BLAH)
 		 */
-	virtual void shutDown( int reason ) = 0;
+	virtual void shutDown( int reason );
 
 		/** Put this job on hold, if requested, notify the user about
 			it, and exit with the appropriate status so that the
 			schedd actually puts the job on hold.<p>
-			This function is virtual, since different kinds of shadows
-			might want to implement their own version of this to clean
-			up in special ways before actually exiting.
+			This uses the virtual cleanUp() method to take care of any
+			universe-specific code before we exit.
 			@param reason String describing why the job is held
 		*/
-	virtual void holdJob( const char* reason );
+	void holdJob( const char* reason );
+
+		/** Remove the job from the queue, if requested, notify the
+			user about it, and exit with the appropriate status so
+			that the schedd actually removes the job.<p>
+			This uses the virtual cleanUp() method to take care of any
+			universe-specific code before we exit.
+			@param reason String describing why the job is removed
+		*/
+	void removeJob( const char* reason );
+
+		/** The job exited, but we want to put it back in the job
+			queue so it will run again.  If requested, notify the user about
+			it, and exit with the appropriate status so that the
+			schedd doesn't remove the job from the queue.<p>
+			This uses the virtual cleanUp() method to take care of any
+			universe-specific code before we exit.
+			@param reason String describing why the job is requeued
+		*/
+	void requeueJob( const char* reason );
+
+		/** The job exited, but we want to put it back in the job
+			queue so it will run again.  If requested, notify the user about
+			it, and exit with the appropriate status so that the
+			schedd doesn't remove the job from the queue.<p>
+			This uses the virtual cleanUp() method to take care of any
+			universe-specific code before we exit.
+		*/
+	void terminateJob( void );
 
 		/** The total number of bytes sent over the network on
 			behalf of this job.
@@ -145,17 +171,11 @@ class BaseShadow : public Service
 		*/
 	virtual float bytesReceived() { return 0.0; }
 
+	virtual int getExitReason( void ) = 0;
+
 		/** Initializes the user log.  'Nuff said. 
 		 */
 	void initUserLog();
-
-		/** Write out the proper things to the user log upon
-			a job's exit.  
-			@param exitReason The reason we exited
-			@param res The remote resource that exited.  Needed for 
-			             such things as amount of bytes transferred, etc.
-		*/
-	void endingUserLog( int exitReason );
 
 		/** Change to the 'Iwd' directory.  Send email if problem.
 			@return 0 on success, -1 on failure.
@@ -171,7 +191,7 @@ class BaseShadow : public Service
 			write an email message into.
 			@return A mail message file pointer.
 		*/
-	FILE* emailUser(char *subjectline);
+	FILE* emailUser( const char *subjectline );
 
 		/** This is used to tack on something (like "res #") 
 			after the header and before the text of a dprintf
@@ -229,6 +249,11 @@ class BaseShadow : public Service
 		*/
 	bool updateJobInQueue( update_t type );
 
+		/** Do whatever cleanup (like killing starter(s)) that's
+			required before the shadow can exit.
+		*/
+	virtual void cleanUp( void ) = 0;
+
 		/** Did this shadow's job exit by a signal or not?  This is
 			virtual since each kind of shadow will need to implement a
 			different method to decide this. */
@@ -249,6 +274,8 @@ class BaseShadow : public Service
 		// make UserLog static so it can be accessed by EXCEPTION handler
 	static UserLog uLog;
 
+	void evalPeriodicUserPolicy( void );
+
  protected:
 	
 		/** Note that this is the base, "unexpanded" ClassAd for the job.
@@ -256,6 +283,18 @@ class BaseShadow : public Service
 			remoteresource.  If we're an MPI job we expand it based on
 			something like $(NODE) into each remoteresource. */
 	ClassAd *jobAd;
+
+	ShadowUserPolicy shadow_user_policy;
+
+	void emailHoldEvent( const char* reason );
+
+	void emailRemoveEvent( const char* reason );
+
+	void logRequeueEvent( const char* reason );
+		// virtual void emailRequeueEvent( const char* reason );
+
+	void logTerminateEvent( int exitReason );
+	virtual void emailTerminateEvent( int exitReason ) = 0;
 
 		/** Initialize our StringLists for attributes we want to keep
 			updated in the job queue itself
@@ -270,6 +309,16 @@ class BaseShadow : public Service
 			not, exit with JOB_NO_MEM.
 		*/
 	void checkSwap( void );
+
+		/** Since the email for most of our events should be so
+			similar, we put the code in a shared method to avoid
+			duplication.
+			@param action String describing the action we're taking
+			@param reason The reason we're taking the action
+			@param subject The subject for the email
+		*/
+	void emailActionEvent( const char* action, const char* reason, 
+						   const char* subject );
 
 		/** Update a specific attribute from our job ad into the
 			queue.  This checks the type of the given ExprTree and

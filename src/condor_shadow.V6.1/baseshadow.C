@@ -126,11 +126,15 @@ void BaseShadow::baseInit( ClassAd *jobAd, char schedd_addr[],
 
 	dumpClassad( "BaseShadow::baseInit()", this->jobAd, D_JOB );
 
+		// initialize the UserPolicy object
+	shadow_user_policy.init( jobAd, this );
+
 		// finally, clear all the dirty bits on this jobAd, so we only
 		// update the queue with things that have changed after this
 		// point. 
 	jobAd->ClearAllDirtyFlags();
 }
+
 
 void BaseShadow::config()
 {
@@ -206,7 +210,8 @@ BaseShadow::initJobQueueAttrLists( void )
 	remove_job_queue_attrs = new StringList();
 	remove_job_queue_attrs->insert( ATTR_REMOVE_REASON );
 
-	requeue_job_queue_attrs = NULL;
+	requeue_job_queue_attrs = new StringList();
+	requeue_job_queue_attrs->insert( ATTR_REQUEUE_REASON );
 
 	terminate_job_queue_attrs = new StringList();
 	terminate_job_queue_attrs->insert( ATTR_EXIT_REASON );
@@ -247,52 +252,234 @@ int BaseShadow::cdToIwd() {
 
 
 void
+BaseShadow::shutDown( int reason ) 
+{
+		// exit now if there is no job ad
+	if ( !getJobAd() ) {
+		DC_Exit( reason );
+	}
+	
+		// if we are being called from the exception handler, return
+		// now to prevent infinite loop in case we call EXCEPT below.
+	if ( reason == JOB_EXCEPTION ) {
+		return;
+	}
+
+	if( reason == JOB_EXITED || reason == JOB_KILLED
+		|| reason == JOB_COREDUMPED ) {
+			// This will not return.  it'll take all desired actions
+			// and will eventually call DC_Exit()...
+		shadow_user_policy.checkAtExit();
+	}
+
+		// if we aren't trying to evaluate the user's policy, we just
+		// want to terminate this job.
+	terminateJob();
+}
+
+
+void
 BaseShadow::holdJob( const char* reason )
 {
+	dprintf( D_ALWAYS, "Job %d.%d going into Hold state: %s\n", 
+			 getCluster(), getProc(), reason );
+
 	if( ! jobAd ) {
 		dprintf( D_ALWAYS, "In HoldJob() w/ NULL JobAd!" );
-		dprintf( D_ALWAYS, "Job going into Hold state.\n");
 		DC_Exit( JOB_SHOULD_HOLD );
 	}
 
-	char subject[ 256];
-	sprintf( subject, "Condor Job %d.%d put on hold\n", 
-			 getCluster(), getProc() ); 
+		// cleanup this shadow (kill starters, etc)
+	cleanUp();
 
-	FILE* mailer = emailUser( subject );
-	if( mailer ) {
-			// Grab a few things out of the job ad we need.
-		char* job_name = NULL;
-        jobAd->LookupString( ATTR_JOB_CMD, &job_name );
-        char* args = NULL;
-        jobAd->LookupString( ATTR_JOB_ARGUMENTS, &args );
+		// Put the reason in our job ad.
+	int size = strlen( reason ) + strlen( ATTR_HOLD_REASON ) + 4;
+	char* buf = (char*)malloc( size * sizeof(char) );
+	if( ! buf ) {
+		EXCEPT( "Out of memory!" );
+	}
+	sprintf( buf, "%s=\"%s\"", ATTR_HOLD_REASON, reason );
+	jobAd->Insert( buf );
+	free( buf );
 
-		fprintf( mailer, "Your condor job " );
-			// Only print the args if we have both a name and
-			// args.  However, we need to be careful not to leak
-			// memory if there's no job_name.
-		if( job_name ) {
-			fprintf( mailer, "%s ", job_name );
-			if( args ) {
-				fprintf( mailer, "%s ", args );
-			}
-			free( job_name );
-		}
-		if( args ) {
-			free( args );
-		}
-		fprintf( mailer, "\nis being put on hold.\n\n" );
-		fprintf( mailer, "%s", reason );
-		email_close(mailer);
+		// try to send email (if the user wants it)
+	emailHoldEvent( reason );
+
+		// update the job queue for the attributes we care about
+	if( !updateJobInQueue(U_HOLD) ) {
+			// trouble!  TODO: should we do anything else?
+		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
 	}
 
-	dprintf( D_ALWAYS, "Job going into Hold state.\n");
+		// finally, exit and tell the schedd what to do
 	DC_Exit( JOB_SHOULD_HOLD );
 }
 
 
+void
+BaseShadow::removeJob( const char* reason )
+{
+	if( ! jobAd ) {
+		dprintf( D_ALWAYS, "In removeJob() w/ NULL JobAd!" );
+	}
+	dprintf( D_ALWAYS, "Job %d.%d is being removed: %s\n", 
+			 getCluster(), getProc(), reason );
+
+		// cleanup this shadow (kill starters, etc)
+	cleanUp();
+
+		// Put the reason in our job ad.
+	int size = strlen( reason ) + strlen( ATTR_REMOVE_REASON ) + 4;
+	char* buf = (char*)malloc( size * sizeof(char) );
+	if( ! buf ) {
+		EXCEPT( "Out of memory!" );
+	}
+	sprintf( buf, "%s=\"%s\"", ATTR_REMOVE_REASON, reason );
+	jobAd->Insert( buf );
+	free( buf );
+
+	emailRemoveEvent( reason );
+
+		// update the job ad in the queue with some important final
+		// attributes so we know what happened to the job when using
+		// condor_history...
+	if( !updateJobInQueue(U_REMOVE) ) {
+			// trouble!  TODO: should we do anything else?
+		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
+	}
+
+		// does not return.
+	DC_Exit( JOB_SHOULD_REMOVE );
+}
+
+
+void
+BaseShadow::terminateJob( void )
+{
+	if( ! jobAd ) {
+		dprintf( D_ALWAYS, "In terminateJob() w/ NULL JobAd!" );
+	}
+
+		// cleanup this shadow (kill starters, etc)
+	cleanUp();
+
+	int reason = getExitReason();
+
+		// email the user
+	emailTerminateEvent( reason );
+
+		// write stuff to user log:
+	logTerminateEvent( reason );
+
+		// update the job ad in the queue with some important final
+		// attributes so we know what happened to the job when using
+		// condor_history...
+	if( !updateJobInQueue(U_TERMINATE) ) {
+			// trouble!  TODO: should we do anything else?
+		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
+	}
+
+		// does not return.
+	DC_Exit( reason );
+}
+
+
+void
+BaseShadow::requeueJob( const char* reason )
+{
+	if( ! jobAd ) {
+		dprintf( D_ALWAYS, "In requeueJob() w/ NULL JobAd!" );
+	}
+	dprintf( D_ALWAYS, 
+			 "Job %d.%d is being put back in the job queue: %s\n", 
+			 getCluster(), getProc(), reason );
+
+		// cleanup this shadow (kill starters, etc)
+	cleanUp();
+
+		// Put the reason in our job ad.
+	int size = strlen( reason ) + strlen( ATTR_REQUEUE_REASON ) + 4;
+	char* buf = (char*)malloc( size * sizeof(char) );
+	if( ! buf ) {
+		EXCEPT( "Out of memory!" );
+	}
+	sprintf( buf, "%s=\"%s\"", ATTR_REQUEUE_REASON, reason );
+	jobAd->Insert( buf );
+	free( buf );
+
+		// write stuff to user log:
+	logRequeueEvent( reason );
+
+		// update the job ad in the queue with some important final
+		// attributes so we know what happened to the job when using
+		// condor_history...
+	if( !updateJobInQueue(U_REQUEUE) ) {
+			// trouble!  TODO: should we do anything else?
+		dprintf( D_ALWAYS, "Failed to update job queue!\n" );
+	}
+
+		// does not return.
+	DC_Exit( JOB_SHOULD_REQUEUE );
+}
+
+
+void
+BaseShadow::emailHoldEvent( const char* reason ) 
+{
+	char subject[256];
+	sprintf( subject, "Condor Job %d.%d put on hold\n", 
+			 getCluster(), getProc() ); 
+	emailActionEvent( "is being put on hold.", reason, subject );
+}
+
+
+void
+BaseShadow::emailRemoveEvent( const char* reason ) 
+{
+	char subject[256];
+	sprintf( subject, "Condor Job %d.%d removed\n", 
+			 getCluster(), getProc() ); 
+	emailActionEvent( "is being removed.", reason, subject );
+}
+
+
+void
+BaseShadow::emailActionEvent( const char* action, const char* reason,
+							  const char* subject )
+{
+	FILE* mailer = emailUser( subject );
+	if( ! mailer ) {
+			// nothing to do
+		return;
+	}
+		// Grab a few things out of the job ad we need.
+	char* job_name = NULL;
+	jobAd->LookupString( ATTR_JOB_CMD, &job_name );
+	char* args = NULL;
+	jobAd->LookupString( ATTR_JOB_ARGUMENTS, &args );
+	
+	fprintf( mailer, "Your condor job " );
+		// Only print the args if we have both a name and args.
+		// However, we need to be careful not to leak memory if
+		// there's no job_name.
+	if( job_name ) {
+		fprintf( mailer, "%s ", job_name );
+		if( args ) {
+			fprintf( mailer, "%s ", args );
+		}
+		free( job_name );
+	}
+	if( args ) {
+		free( args );
+	}
+	fprintf( mailer, "\n%s\n\n", action );
+	fprintf( mailer, "%s", reason );
+	email_close(mailer);
+}
+
+
 FILE*
-BaseShadow::emailUser( char *subjectline )
+BaseShadow::emailUser( const char *subjectline )
 {
 	dprintf(D_FULLDEBUG, "BaseShadow::emailUser() called.\n");
 	if( !jobAd ) {
@@ -302,7 +489,8 @@ BaseShadow::emailUser( char *subjectline )
 }
 
 
-FILE* BaseShadow::shutDownEmail( int reason ) 
+FILE*
+BaseShadow::shutDownEmail( int reason ) 
 {
 
 		// everything else we do only makes sense if there is a JobAd, 
@@ -371,8 +559,9 @@ void BaseShadow::initUserLog()
 	}
 }
 
+
 void
-BaseShadow::endingUserLog( int exitReason )
+BaseShadow::logTerminateEvent( int exitReason )
 {
 	struct rusage run_remote_rusage;
 	memset( &run_remote_rusage, 0, sizeof(struct rusage) );
@@ -380,19 +569,18 @@ BaseShadow::endingUserLog( int exitReason )
 	run_remote_rusage = getRUsage();
 
 	switch( exitReason ) {
-
-		case JOB_CKPTED:
-		case JOB_NOT_CKPTED:
+	case JOB_CKPTED:
+	case JOB_NOT_CKPTED:
 			// A vacate was performed on the resource, and the job
 			// was thrown off either with or without a checkpoint.
-			{
+		{
 			JobEvictedEvent event;
 			event.checkpointed = (exitReason == JOB_CKPTED);
 			
-			// TODO: fill in local rusage
-			// event.run_local_rusage = ???
+				// TODO: fill in local rusage
+				// event.run_local_rusage = ???
 			
-			// remote rusage
+				// remote rusage
 			event.run_remote_rusage = run_remote_rusage;
 			
 				// we want to log the events from the perspective of the
@@ -400,16 +588,16 @@ BaseShadow::endingUserLog( int exitReason )
 				// means the user job *received* the bytes
 			event.recvd_bytes = bytesSent();
 			event.sent_bytes = bytesReceived();
-
+			
 			if (!uLog.writeEvent (&event)) {
 				dprintf (D_ALWAYS, "Unable to log ULOG_JOB_EVICTED event\n");
 			}
-			}
-			break;
+		}
+		break;
 
-		case JOB_EXITED:	
+	case JOB_EXITED:	
 			// Job exited on its own, normally or abnormally
-			{
+		{
 			JobTerminatedEvent event;
 			if( exitedBySignal() ) {
 				event.normal = false;
@@ -419,10 +607,10 @@ BaseShadow::endingUserLog( int exitReason )
 				event.returnValue = exitCode();
 			}
 			
-			// TODO: fill in local/total rusage
-			// event.run_local_rusage = r;
+				// TODO: fill in local/total rusage
+				// event.run_local_rusage = r;
 			event.run_remote_rusage = run_remote_rusage;
-			// event.total_local_rusage = r;
+				// event.total_local_rusage = r;
 			event.total_remote_rusage = run_remote_rusage;
 
 			/* we want to log the events from the perspective 
@@ -431,18 +619,62 @@ BaseShadow::endingUserLog( int exitReason )
 			   the bytes */
 			event.recvd_bytes = bytesSent();
 			event.sent_bytes = bytesReceived();
-			// TODO: total sent and recvd
+				// TODO: total sent and recvd
 			event.total_recvd_bytes = bytesSent();
 			event.total_sent_bytes = bytesReceived();
 			
+				// TODO: deal w/ coredump and corefile name
+
 			if (!uLog.writeEvent (&event)) {
 				dprintf (D_ALWAYS,"Unable to log "
 						 "ULOG_JOB_TERMINATED event\n");
 			}
-			}
-			break;	
-
+		}
+		break;	
 	}	// end of switch
+}
+
+
+void
+BaseShadow::logRequeueEvent( const char* reason )
+{
+	struct rusage run_remote_rusage;
+	memset( &run_remote_rusage, 0, sizeof(struct rusage) );
+
+	run_remote_rusage = getRUsage();
+
+	JobEvictedEvent event;
+
+	event.terminate_and_requeued = true;
+
+	if( exitedBySignal() ) {
+		event.normal = false;
+		event.signal_number = exitSignal();
+		// TODO: deal w/ coredump and corefile name
+	} else {
+		event.normal = true;
+		event.return_value = exitCode();
+	}
+			
+	if( reason ) {
+		event.setReason( reason );
+	}
+
+		// TODO: fill in local rusage
+		// event.run_local_rusage = r;
+	event.run_remote_rusage = run_remote_rusage;
+
+		/* we want to log the events from the perspective 
+		   of the user job, so if the shadow *sent* the 
+		   bytes, then that means the user job *received* 
+		   the bytes */
+	event.recvd_bytes = bytesSent();
+	event.sent_bytes = bytesReceived();
+	
+	if (!uLog.writeEvent (&event)) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_EVICTED "
+				 "(and requeued) event\n" );
+	}
 }
 
 
@@ -601,6 +833,12 @@ BaseShadow::updateExprTree( ExprTree* tree )
 	return true;
 }
 
+
+void
+BaseShadow::evalPeriodicUserPolicy( void )
+{
+	shadow_user_policy.checkPeriodic();
+}
 
 void BaseShadow::dprintf_va( int flags, char* fmt, va_list args )
 {
