@@ -28,7 +28,6 @@ GetOptions (
     'notify'          => $opt_notify,
 );
 
-my $NIGHTLY_IDS_FILE = "test_ids";
 my $NMIDIR = "/nmi/run";
 
 #format of test_ids file
@@ -62,6 +61,8 @@ else {
 }
 
 my $cwd = &getcwd();
+my $NIGHTLY_IDS_FILE = "$cwd/test_ids";
+
 mkdir($workspace) || die "Can't create workspace $workspace\n";
 chdir($workspace) || die "Can't change workspace $workspace\n";
 
@@ -181,7 +182,7 @@ sub get_nightlyids() {
 
     my %ids;
 
-    open(IDS, "+< $NIGHTLY_IDS_FILE") || die "Can't read nightly ids file $NIGHTLY_IDS_FILE\n";
+    open(IDS, "<", "$NIGHTLY_IDS_FILE") || die "Can't read nightly ids file $NIGHTLY_IDS_FILE\n";
     while (<IDS>) {
         chomp($_);
         my @id = split /\s/, $_;
