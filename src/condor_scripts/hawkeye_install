@@ -188,6 +188,8 @@ sub DoConfig( $$ )
 		my $Period = $Module->{Period};
 		my $Opt = $Module->{Options};
 		my $Cont = ( $i == $#Modules ) ? "" : "\\";
+		print OUT
+		      "\t$Name: not supported by cvs2svn $Prefix:$Path:$Period:$Opt $Cont\n";
 	    }
 	    next;
 	}
