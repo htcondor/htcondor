@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# $Id: remote_task,v 1.1.2.2 2004-06-24 00:58:02 wright Exp $
+# $Id: remote_task,v 1.1.2.3 2004-06-24 19:52:43 wright Exp $
 
 # Condor implementation of NMI test infrastructure interface
 # Simple wrapper to source the environment file and spawn the
@@ -15,4 +15,4 @@ if [ ! -f $ENV_FILE ]; then
 fi
 . $ENV_FILE
 
-exec ./test_runtask.pl
+exec ./test_runtask.pl $*
