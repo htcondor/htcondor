@@ -53,10 +53,14 @@
 #include "debug.h"
 #include "clib.h"
 
-#if defined(HPUX9)
+#if defined(HPUX9) || defined(AIX32)
 #	include <signal.h>
+#endif
+
+#if defined(HPUX9)
 #	include "fake_flock.h"
 #endif
+
 
 FILE	*debug_lock();
 FILE	*fdopen();
