@@ -96,7 +96,7 @@ Authentication::Authentication( ReliSock *sock )
 	defaultCondor_ = NULL;
 	defaultStash_  = NULL;
 	keytabName_    = NULL;
-	ticket_        = NULL;
+	sessionKey_    = NULL;
 	server_        = NULL;
 #endif
 
@@ -151,8 +151,8 @@ Authentication::~Authentication()
 	    krb5_free_principal(krb_context_, krb_principal_);
 	  }
 
-	  if (ticket_) {
-	    krb5_free_ticket(krb_context_, ticket_);
+	  if (sessionKey_) {
+	    krb5_free_keyblock(krb_context_, sessionKey_);
           }
 
 	  if (server_) {
@@ -512,11 +512,11 @@ void Authentication :: initialize()
       // I am a daemon! This is a daemon-daemon authentication
       isDaemon_ = TRUE;
     
-      fprintf(stderr,"This is a daemon with Condor uid:%d; uid:%d\n",
-	      get_condor_uid(), get_my_uid());
+      //fprintf(stderr,"This is a daemon with Condor uid:%d; uid:%d\n",
+      //      get_condor_uid(), get_my_uid());
     }
     else {
-      fprintf(stderr, "This is a user: %s\n", username);
+      //fprintf(stderr, "This is a user: %s\n", username);
     }
   }
   
@@ -875,24 +875,25 @@ Authentication::setupEnv( char *hostAddr )
 #if defined(GSS_AUTHENTICATION)
 	
 	if (!mySock->isClient()){
-	  dprintf(D_ALWAYS, "Setup server\n");
-	  tryGss = 1;
 	  erase_env();
-	  
-	  pbuf = param( STR_X509_DIRECTORY );
-	  sprintf( buffer, "%s=%s/certdir", STR_X509_CERT_DIR, pbuf );
-	  putenv( strdup( buffer ) );
-	  
-	  sprintf( buffer, "%s=%s/usercert.pem", STR_X509_USER_CERT, pbuf );
-	  putenv( strdup ( buffer ) );
-	  
-	  sprintf(buffer,"%s=%s/private/userkey.pem",STR_X509_USER_KEY, pbuf );
-	  putenv( strdup ( buffer  ) );
-	  
-	  sprintf(buffer,"%s=%s/condor_ssl.cnf", STR_SSLEAY_CONF, pbuf );
-	  putenv( strdup ( buffer ) );
 
-	  free(pbuf);
+	  pbuf = param( STR_X509_DIRECTORY );
+	  if (pbuf) {
+	    sprintf( buffer, "%s=%s/certdir", STR_X509_CERT_DIR, pbuf);
+	    putenv( strdup( buffer ) );
+	    
+	    sprintf( buffer, "%s=%s/usercert.pem", STR_X509_USER_CERT, pbuf);
+	    putenv( strdup ( buffer ) );
+	    
+	    sprintf(buffer,"%s=%s/private/userkey.pem",STR_X509_USER_KEY,pbuf);
+	    putenv( strdup ( buffer  ) );
+	    
+	    sprintf(buffer,"%s=%s/condor_ssl.cnf", STR_SSLEAY_CONF, pbuf);
+	    putenv( strdup ( buffer ) );
+
+	    tryGss = 1;
+	    free(pbuf);
+	  }
   	}	
 	else{
 	  pbuf = getenv(STR_X509_DIRECTORY );
@@ -1402,9 +1403,8 @@ Authentication::authenticate_client_gss()
 
   priv_state priv;
 
-	fprintf(stderr, "GSS\n");
+  //fprintf(stderr, "GSS\n");
 	if ( !authenticate_self_gss() ) {
-	  fprintf(stderr, "failed to get client credential\n");
 	  dprintf( D_ALWAYS, 
 		   "failure authenticating client from auth_connection_client\n" );
 	  return FALSE;
@@ -1414,7 +1414,6 @@ Authentication::authenticate_client_gss()
 
 	if ( !gateKeeper ) {
 	  dprintf( D_ALWAYS, "env var CONDOR_GATEKEEPER not set\n" );
-	  fprintf(stderr, "failed to get gatekeeper\n");
 	  return FALSE;
 	}
 
@@ -1441,7 +1440,6 @@ Authentication::authenticate_client_gss()
 
 	if (major_status != GSS_S_COMPLETE)
 	{
-	  fprintf(stderr, "failed to talk\n");
 		print_log(major_status,minor_status,token_status,
 				"Authentication Failure on client side");
 		//free(gateKeeper);
@@ -1694,8 +1692,7 @@ void Authentication :: print_log(OM_uint32 major_status,
 		 minor_status,
 		 token_status);
 	if (buffer){
-	  //dprintf(D_ALWAYS,"%s\n",buffer);
-	  fprintf(stderr,"%s\n",buffer);
+	  dprintf(D_ALWAYS,"%s\n",buffer);
 	  free(buffer);
 	}
 }
@@ -1808,7 +1805,7 @@ int Authentication::authenticate_client_kerberos()
   //------------------------------------------
   // Set up the flags
   //------------------------------------------
-  flags = AP_OPTS_MUTUAL_REQUIRED;
+  flags = AP_OPTS_MUTUAL_REQUIRED | AP_OPTS_USE_SUBKEY;
   memset(&creds, 0, sizeof(creds));
 
   if (krb5_cc_resolve(krb_context_, ccname_, &ccdef)) {
@@ -1835,7 +1832,7 @@ int Authentication::authenticate_client_kerberos()
   // Load local addresses
   //------------------------------------------
   if (new_creds->addresses) {
-    fprintf(stderr, "addresses is already loaded\n");
+    //fprintf(stderr, "addresses is already loaded\n");
   }
   else {
     if (code = krb5_os_localaddr(krb_context_, &(new_creds->addresses))) {
@@ -1886,7 +1883,7 @@ int Authentication::authenticate_client_kerberos()
   switch (reply) 
     {
     case KERBEROS_DENY:
-      fprintf(stderr, "Authentication failed\n");
+      dprintf(D_ALWAYS, "Authentication failed\n");
       return FALSE;
       break; // unreachable
     case KERBEROS_FORWARD:
@@ -1898,11 +1895,11 @@ int Authentication::authenticate_client_kerberos()
       
       // This is an implict GRANT
       if (forward_tgt_creds(auth_context, new_creds, ccdef)) {
-	fprintf(stderr, "Unable to forward credentials\n");
+	dprintf(D_ALWAYS, "Unable to forward credentials\n");
 	return FALSE;  
       }
     default:
-      fprintf(stderr, "Successfully authenticated\n");
+      dprintf(D_ALWAYS, "Response is invalid\n");
       break;
     }
 
@@ -1911,9 +1908,16 @@ int Authentication::authenticate_client_kerberos()
   //------------------------------------------
   getRemoteHost(auth_context);
 
-  auth_status = CAUTH_KERBEROS;
-  
   rc = TRUE;
+
+  //------------------------------------------
+  // Store the session key for encryption
+  //------------------------------------------
+  if (code = krb5_copy_keyblock(krb_context_, 
+				&(new_creds->keyblock), 
+				&sessionKey_)) {
+    goto error;			  
+  }
 
   goto cleanup;
 
@@ -1956,6 +1960,7 @@ int Authentication::authenticate_server_kerberos()
   krb5_data         request, reply;
   priv_state        priv;
   int               time, message, rc = FALSE;
+  krb5_ticket *     ticket = NULL;
   //------------------------------------------
   // First, acquire credential
   //------------------------------------------
@@ -2003,7 +2008,7 @@ int Authentication::authenticate_server_kerberos()
 			 krb_principal_,
 			 NULL,
 			 &flags,
-			 &ticket_)) {
+			 &ticket)) {
     set_priv(priv);   // Reset
     goto error;
   }
@@ -2032,10 +2037,10 @@ int Authentication::authenticate_server_kerberos()
   //------------------------------------------
   // extract client addresses
   //------------------------------------------
-  if (ticket_->enc_part2->caddrs) {
+  if (ticket->enc_part2->caddrs) {
     struct in_addr in;
     memcpy(&(in.s_addr), 
-	   ticket_->enc_part2->caddrs[0]->contents, 
+	   ticket->enc_part2->caddrs[0]->contents, 
 	   sizeof(in_addr));
 
     setRemoteAddress(inet_ntoa(in));
@@ -2044,14 +2049,21 @@ int Authentication::authenticate_server_kerberos()
   }
 
   // First, map the name, this has to take place before receive_tgt_creds!
-  if (!map_kerberos_name(ticket_)) {
+  if (!map_kerberos_name(ticket)) {
     dprintf(D_ALWAYS, "Unable to map name ");
     goto cleanup;
   }
 
   // Next, see if we need client to forward the credential as well
-  if (receive_tgt_creds(auth_context, ticket_)) {
+  if (receive_tgt_creds(auth_context, ticket)) {
     goto cleanup;
+  }
+
+  // copy the session key
+  if (code = krb5_copy_keyblock(krb_context_, 
+				ticket->enc_part2->session, 
+				&sessionKey_)){
+    goto error;
   }
 
   //------------------------------------------
@@ -2080,6 +2092,10 @@ int Authentication::authenticate_server_kerberos()
   //------------------------------------------
   if (auth_context) {
     krb5_auth_con_free(krb_context_, auth_context);
+  }
+
+  if (ticket) {
+    krb5_free_ticket(krb_context_, ticket);
   }
 
   //------------------------------------------
@@ -2149,7 +2165,7 @@ int Authentication :: get_server_info(void)
   struct hostent * hp;
   krb5_error_code  code;
 
-  fprintf(stderr, "Getting server info\n");
+  dprintf(D_ALWAYS, "Getting server info\n");
   //------------------------------------------
   // Form the info for server
   //------------------------------------------
@@ -2159,7 +2175,7 @@ int Authentication :: get_server_info(void)
 		     mySock->endpoint()->sin_family);
 
   if (hp == NULL) {
-    fprintf(stderr, "Unable to resolve server host name");
+    dprintf(D_ALWAYS, "Unable to resolve server host name");
     goto error;
   }
 
@@ -2337,7 +2353,7 @@ int Authentication::client_acquire_credential()
   krb5_error_code code;
   krb5_ccache     ccache = (krb5_ccache) NULL;
 
-  fprintf(stderr, "Acquiring credential for user\n");
+  dprintf(D_ALWAYS, "Acquiring credential for user\n");
 
   //------------------------------------------
   // First, try the default credential cache
@@ -2345,7 +2361,7 @@ int Authentication::client_acquire_credential()
   ccname_ = strdup(krb5_cc_default_name(krb_context_));
 
   if (code = krb5_cc_resolve(krb_context_, ccname_, &ccache)) {
-    fprintf(stderr, "Kerberos: Could not find default cache.");
+    dprintf(D_ALWAYS, "Kerberos: Could not find default cache.");
     rc = FALSE;
     goto error;
   }
@@ -2354,17 +2370,17 @@ int Authentication::client_acquire_credential()
   // Get principal info
   //------------------------------------------
   if (code = krb5_cc_get_principal(krb_context_, ccache, &krb_principal_)) {
-    fprintf(stderr,"Kerberos : failure to get principal info");
+    dprintf(D_ALWAYS,"Kerberos : failure to get principal info");
     goto error;
   }
   
   krb5_cc_close(krb_context_, ccache);
-  fprintf(stderr, "Successfully located credential cache\n");
+  dprintf(D_ALWAYS, "Successfully located credential cache\n");
 
   return TRUE;
   
  error:
-  fprintf(stderr, "%s\n", error_message(code));
+  dprintf(D_ALWAYS, "%s\n", error_message(code));
   if (ccache) {  // maybe should destroy this
     krb5_cc_close(krb_context_, ccache);
   }
@@ -2399,7 +2415,7 @@ int Authentication::authenticate_kerberos()
 
     if (keytabName_) {
       if ((principal = param(STR_CONDOR_CLIENT_PRINCIPAL)) == NULL) {
-	fprintf(stderr, "Principal is not specified!\n");
+	dprintf(D_ALWAYS, "Principal is not specified!\n");
 	return 0;
       }
 
@@ -2577,7 +2593,7 @@ int Authentication :: forward_tgt_creds(krb5_auth_context auth_context,
 				ccache, 
 				KDC_OPT_FORWARDABLE,
 				&request)) {
-    fprintf(stderr, "Error getting forwarded creds\n");
+    dprintf(D_ALWAYS, "Error getting forwarded creds\n");
     goto error;
   }
 
@@ -2595,7 +2611,7 @@ int Authentication :: forward_tgt_creds(krb5_auth_context auth_context,
   goto cleanup;
 
  error:
-  fprintf(stderr, "%s\n", error_message(code));
+  dprintf(D_ALWAYS, "%s\n", error_message(code));
 
  cleanup:
 
@@ -2771,16 +2787,16 @@ int Authentication :: send_request(krb5_data * request)
   //------------------------------------------
   mySock->encode();
 
-  fprintf(stderr, "size of the message is %d:\n", request->length);
+  //fprintf(stderr, "size of the message is %d:\n", request->length);
 
   if (!mySock->code(request->length)) {
-    fprintf(stderr, "Faile to send request length\n");
+    dprintf(D_ALWAYS, "Faile to send request length\n");
     return reply;
   }
 
   if (!(mySock->put_bytes(request->data, request->length)) ||
       !(mySock->end_of_message())) {
-    fprintf(stderr, "Faile to send request data\n");
+    dprintf(D_ALWAYS, "Faile to send request data\n");
     return reply;
   }
 
@@ -2790,7 +2806,7 @@ int Authentication :: send_request(krb5_data * request)
   mySock->decode();
 
   if ((!mySock->code(reply)) || (!mySock->end_of_message())) {
-    fprintf(stderr, "Failed to receive response from server\n");
+    dprintf(D_ALWAYS, "Failed to receive response from server\n");
     return KERBEROS_DENY;
   }// Resturn buffer size
 
@@ -2822,7 +2838,7 @@ void Authentication :: getRemoteHost(krb5_auth_context auth)
     krb5_free_addresses(krb_context_, remoteAddr);
   }
 
-  fprintf(stderr, "Remote host is %s\n", remotehost_);
+  dprintf(D_ALWAYS, "Remote host is %s\n", remotehost_);
 }
 
 //----------------------------------------------------------------------
@@ -2830,9 +2846,7 @@ void Authentication :: getRemoteHost(krb5_auth_context auth)
 //----------------------------------------------------------------------
 bool Authentication :: kerberos_is_valid()
 {
-  bool valid = TRUE;
-
-  return valid;
+  return (auth_status == CAUTH_KERBEROS);
 }
 
 //----------------------------------------------------------------------
@@ -2844,19 +2858,20 @@ int Authentication :: kerberos_wrap(char*  input,
 				    int&   output_len)
 {
   krb5_error_code code;
-  krb5_data       in_data;
+  krb5_data       in_data, test;
   krb5_enc_data   out_data;
   krb5_pointer    ivec;
   int             index;
   
+  //fprintf(stderr, "Encrypting using Kerberos\n");
   // Make the input buffer
   in_data.length = input_len;
   in_data.data = (char *) malloc(input_len);
   memcpy(in_data.data, input, input_len);
-
+  
   if (code = krb5_encrypt_data(krb_context_, 
-			       ticket_->enc_part2->session, 
-			       ivec, 
+			       sessionKey_, 
+			       0, 
 			       &in_data, 
 			       &out_data)) {
     output_len = 0;
@@ -2867,7 +2882,7 @@ int Authentication :: kerberos_wrap(char*  input,
                sizeof(out_data.kvno)    + 
                sizeof(out_data.ciphertext.length) +
                out_data.ciphertext.length;
-             
+  
   output = (char *) malloc(output_len);
   index = 0;
   memcpy(output + index, &(out_data.enctype), sizeof(out_data.enctype));
@@ -2878,11 +2893,16 @@ int Authentication :: kerberos_wrap(char*  input,
   index += sizeof(out_data.ciphertext.length);
   memcpy(output + index, out_data.ciphertext.data, out_data.ciphertext.length);
 
-  fprintf(stderr, "Origional text: %s, encrypted text: %s\n", in_data, out_data);
-  return code;
+  //fprintf(stderr, "Origional text: %s, encrypted text: %24s\n", input, out_data.ciphertext.data);
+
+  if (in_data.data) {
+    free(in_data.data);
+  }
+
+  return TRUE;
  error:
   dprintf(D_ALWAYS, "%s\n", error_message(code));
-  return code;
+  return FALSE;
 }
 
 //----------------------------------------------------------------------
@@ -2896,7 +2916,6 @@ int Authentication :: kerberos_unwrap(char*  input,
   int code;
   krb5_data     out_data;
   krb5_enc_data enc_data;
-  krb5_pointer  ivec;
 
   int index = 0;
   memcpy(&(enc_data.enctype), input, sizeof(enc_data.enctype));
@@ -2905,20 +2924,36 @@ int Authentication :: kerberos_unwrap(char*  input,
   index += sizeof(enc_data.kvno);
   memcpy(&(enc_data.ciphertext.length), input + index, sizeof(enc_data.ciphertext.length));
   index += sizeof(enc_data.ciphertext.length);
-  memcpy(&(enc_data.ciphertext.data), input + index, enc_data.ciphertext.length);
 
-  code = krb5_decrypt_data(krb_context_, 
-			   ticket_->enc_part2->session,
-			   ivec, 
-			   &enc_data, 
-			   &out_data);
+  enc_data.ciphertext.data = (char *) malloc(enc_data.ciphertext.length);
+
+  memcpy(enc_data.ciphertext.data, input + index, enc_data.ciphertext.length);
+
+  //fprintf(stderr, "About to decrypt %s\n", enc_data.ciphertext.data);
+
+  if (code = krb5_decrypt_data(krb_context_, 
+			       sessionKey_,
+			       0, 
+			       &enc_data, 
+			       &out_data)) {
+    output_len = 0;
+    goto error;
+  }
+  //fprintf(stderr, "Decrypted\n");
 
   output_len = out_data.length;
   output = (char *) malloc(output_len);
   memcpy(output, out_data.data, output_len);
-  fprintf(stderr, "Encrypted text: %s, decrypted text: %s\n", input, output);
+  //fprintf(stderr, "Encrypted text: %s, decrypted text: %s\n", input, output);
 
-  return code;
+  if (enc_data.ciphertext.data) {
+    free(enc_data.ciphertext.data);
+  }
+
+  return TRUE;
+ error:
+  dprintf(D_ALWAYS, "%s\n", error_message(code));
+  return FALSE;
 }
 
 #endif defined(KERBEROS_AUTHENTICATION)
