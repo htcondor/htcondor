@@ -223,7 +223,7 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period)
 	// DumpTimerList(D_DAEMONCORE | D_FULLDEBUG);
 
 		// set flag letting Timeout() know we did a reset
-	did_reset = TRUE;
+	did_reset = -1;
 	return 0;
 }
 
@@ -353,7 +353,7 @@ TimerManager::Timeout()
 		daemonCore->curr_dataptr = &(timer_list->data_ptr);
 
 		// Initialize our flag so we know if ResetTimer was called.
-		did_reset = FALSE;
+		did_reset = current_id;
 
 		// Now we call the registered handler.  If we were told that the handler
 		// is a c++ method, we call the handler from the c++ object referenced 
@@ -370,7 +370,7 @@ TimerManager::Timeout()
 
 		/* Watch out for cancel_timer() called in the users handler with only 
 		 * one item in list which makes timer_list go to NULL */
-		if (timer_list != NULL  && did_reset == FALSE) {
+		if (timer_list != NULL  && did_reset == current_id) {
 			// here we remove the timer we just serviced, or renew it if it is 
 			// periodic.  note calls to CancelTimer are safe even if the user's
 			// handler called CancelTimer as well...
