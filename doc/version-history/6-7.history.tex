@@ -101,6 +101,38 @@ zero (silent), could cause it to to improperly recognize persistant
 
 \begin{itemize}
 
+\item Unfortunately, the default \Macro{OPSYS} value for the MacOSX
+  version of Condor was incorrectly changed in version 6.7.3.
+  Condor used to always report \verb@OSX@, but in version 6.7.3 it
+  will report either \verb@OSX10_2@, \verb@OSX10_3@, or
+  \verb@OSX_UNK@.
+  This is wrong, since Condor jobs submitted to any version of OSX
+  should be able to run on any other version of OSX, and the above
+  change needlessly partitions resources and complicates things for
+  end-users.
+  Therefore, anyone running version 6.7.3 on MacOSX is encouraged to
+  add the following line to their global \File{condor\_config} file:
+\begin{verbatim}
+OPSYS = OSX
+\end{verbatim}
+
+  If your pool is already running the new release, you can cause the
+  above change to take effect by running the following command on your
+  pool's central manager machine (or any machine listed in the
+  \MacroNI{HOSTALLOW\_ADMINISTRATOR} list) after you have changed the
+  \MacroNI{OPSYS} value in your configuration:
+\begin{verbatim}
+condor_reconfig -all
+\end{verbatim}
+
+  However, if you have already submitted jobs to your pool with the
+  old \MacroNI{OPSYS} value, the \Attr{Requirements} expression in
+  those jobs will still refer to the incorrect value.
+  In this case, you should either a) wait for the jobs to complete
+  before making the above change, b) remove the jobs and resubmit
+  them after you've made the change, or c) manually run \Condor{qedit}
+  on the jobs to change their \Attr{Requirements} expressions.
+
 \item When running in recovery mode on a DAG that has PRE scripts,
 \Condor{dagman} may attempt more than the specified number of retries
 of a node (counting retries attempted during the first run of the
