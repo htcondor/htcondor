@@ -138,7 +138,7 @@ void Init()
 	{
 		EXCEPT("No spool directory specified");
 	}
-	JobHistoryFileName=param("JOB_HISTORY_FILE");
+	JobHistoryFileName=param("HISTORY");
 }
 
 
