@@ -51,7 +51,7 @@ const char * Job::status_t_names[] = {
 //---------------------------------------------------------------------------
 Job::~Job() {
 	delete [] _cmdFile;
-	delete [] _jobName;
+	delete [] (char*)_jobName;
 	delete [] _logFile;
 	delete varNamesFromDag;
 	delete varValsFromDag;
