@@ -111,6 +111,7 @@ CLEAN :
 	-@erase "$(INTDIR)\print_wrapped_text.obj"
 	-@erase "$(INTDIR)\read_multiple_logs.obj"
 	-@erase "$(INTDIR)\sig_name.obj"
+	-@erase "$(INTDIR)\status_string.obj"
 	-@erase "$(INTDIR)\store_cred.obj"
 	-@erase "$(INTDIR)\string_list.obj"
 	-@erase "$(INTDIR)\stringSpace.obj"
@@ -223,7 +224,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\user_job_policy.obj" \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\utc_time.obj" \
-	"$(INTDIR)\which.obj"
+	"$(INTDIR)\which.obj" \
+	"$(INTDIR)\status_string.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -313,6 +315,7 @@ CLEAN :
 	-@erase "$(INTDIR)\print_wrapped_text.obj"
 	-@erase "$(INTDIR)\read_multiple_logs.obj"
 	-@erase "$(INTDIR)\sig_name.obj"
+	-@erase "$(INTDIR)\status_string.obj"
 	-@erase "$(INTDIR)\store_cred.obj"
 	-@erase "$(INTDIR)\string_list.obj"
 	-@erase "$(INTDIR)\stringSpace.obj"
@@ -424,7 +427,8 @@ LIB32_OBJS= \
 	"$(INTDIR)\user_job_policy.obj" \
 	"$(INTDIR)\user_log.obj" \
 	"$(INTDIR)\utc_time.obj" \
-	"$(INTDIR)\which.obj"
+	"$(INTDIR)\which.obj" \
+	"$(INTDIR)\status_string.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -957,6 +961,12 @@ SOURCE="..\src\condor_c++_util\read_multiple_logs.C"
 SOURCE="..\src\condor_c++_util\sig_name.C"
 
 "$(INTDIR)\sig_name.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE="..\src\condor_c++_util\status_string.C"
+
+"$(INTDIR)\status_string.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
