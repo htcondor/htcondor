@@ -515,6 +515,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 				// convert to nearest time stamp
 				uptime_boottime = (unsigned long)(now - uptime + 0.5);
 			}
+			fclose( fp );
 		}
 
 		// get stat_boottime
