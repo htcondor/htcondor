@@ -21,7 +21,9 @@
 static 	char *_FileName_ = __FILE__;         // Used by EXCEPT (see except.h)
 extern 	"C" int _EXCEPT_(char*, ...);
 extern	"C"	void dprintf(int, char* fmt, ...);
+#if defined(USE_XDR)
 extern  "C" int  xdr_mywrapstring (XDR *, char **);
+#endif
 extern  "C" int store_stmt (EXPR *, CONTEXT *);
 extern void evalFromEnvironment (const char *, EvalResult *);
 
@@ -1805,6 +1807,7 @@ int AttrList::get(Stream& s)
     return 1;
 }
 
+#if defined(USE_XDR)
 // xdr shipping code
 int AttrList::put(XDR *xdrs)
 {
@@ -1885,6 +1888,7 @@ int AttrList::get(XDR *xdrs)
 
 	return (!errorFlag);
 }
+#endif
 
 int AttrList::code(Stream& s)                                           
 {

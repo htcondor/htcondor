@@ -24,7 +24,9 @@ static Registration regi;                   // this is the registration for
                                             // procedure.
 static char *_FileName_ = __FILE__;         // Used by EXCEPT (see except.h)
 extern "C" int _EXCEPT_(char*, ...);
+#if defined(USE_XDR)
 extern "C" int xdr_mywrapstring (XDR *, char **);
+#endif
 
 // useful when debugging (std* are macros)
 FILE *__stdin__  = stdin;
@@ -696,6 +698,7 @@ int ClassAd::code(Stream& s)
         return get(s);
 }
 
+#if defined(USE_XDR)
 int ClassAd::put (XDR *xdrs)
 {
 	char*	tmp = NULL;
@@ -755,6 +758,7 @@ int ClassAd::get (XDR *xdrs)
 
 	return 1;
 }
+#endif
 
 void ClassAd::
 ExchangeExpressions (ClassAd *ad)
