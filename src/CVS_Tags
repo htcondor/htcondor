@@ -1,3 +1,11 @@
+03/13/03 V6_5_0-post_merge-V6_5_0-tcp_update-merge-1
+    The state of the V6_5_0 branch after merging in
+    V6_5_0-tcp_update-branch as tagged at V6_5_0-tcp_update-merge-1.
+    this enables condor to send TCP updates to the collector (which
+    now uses a SocketCache) if the right things are defined in the
+    config file.  flocking is not yet dealt with.  this was required
+    by D0 but might be generally useful to other sites.
+
 03/13/03 V6_5_0-pre_merge-V6_5_0-tcp_update-merge-1
     The state of the V6_5_0 branch before merging in
     V6_5_0-tcp_update-branch as tagged at V6_5_0-tcp_update-merge-1.  
