@@ -1287,7 +1287,7 @@ SetMyProxyPassword (int cluster_id, int proc_id, const char *pwd) {
 	}
 
 	// Create the file
-	int fd = open (filename, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR);
+	int fd = open (filename, O_CREAT | O_WRONLY, S_IREAD | S_IWRITE);
 	if (fd < 0) {
 		return -1;
 	}
