@@ -32,36 +32,35 @@ MpiResource::MpiResource( BaseShadow *shadow ) :
 }
 
 
-int
+bool
 MpiResource::activateClaim( int starterVersion )  {
 
 	char buf[256];
 	char* startd_addr;
 	sprintf( buf, "MpiResource::activateClaim(), node: %d", node_num );
 	dumpClassad( buf, jobAd, D_JOB );
-	int rval;
 
 	if( ! dc_startd ) {
 		dprintf( D_ALWAYS, 
 				 "activateClaim() called with no DCStartd object!\n" );
-		return NOT_OK;
+		return false;
 	}
 	if( ! (startd_addr = dc_startd->addr()) ) {
 		dprintf( D_ALWAYS, 
 				 "activateClaim() called with no startd contact info!\n" );
-		return NOT_OK;
+		return false;
 	}
 
-	rval = RemoteResource::activateClaim( starterVersion );
-	if( rval == OK ) {
+	if( RemoteResource::activateClaim(starterVersion) ) {
 		NodeExecuteEvent event;
         strcpy( event.executeHost, startd_addr );
 		event.node = node_num;
         if( writeULogEvent(&event) ) {
             dprintf( D_ALWAYS, "Unable to log NODE_EXECUTE event." );
         }
+		return true;
 	}
-	return rval;
+	return false;
 }
 
 

@@ -42,7 +42,7 @@ class MpiResource : public RemoteResource {
 
 		/** Call RemoteResource::activateClaim() and log a
 			NodeExecuteEvent */
-	virtual int activateClaim( int starterVersion = 2 );
+	virtual bool activateClaim( int starterVersion = 2 );
 
 		/** Special format... */
 	virtual void printExit( FILE *fp );

@@ -101,11 +101,9 @@ class RemoteResource : public Service {
 			full machine name and (hopefully) an OK are returned.
 			@param starterVersion The version number of the starter
                    wanted. The default is 2.
-			@return OK if claim is active, NOT_OK if claim was
-                    refused, CONDOR_TRY_AGAIN if we need to try again 
-			        later. 
+			@return true on success, false on failure
 		 */ 
-	virtual int activateClaim( int starterVersion = 2 );
+	virtual bool activateClaim( int starterVersion = 2 );
 
 		/** Here we tell the remote starter to kill itself in a gentle manner.
 			@return true on success, false if a problem occurred.

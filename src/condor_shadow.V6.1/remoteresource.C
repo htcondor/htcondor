@@ -85,60 +85,79 @@ RemoteResource::~RemoteResource()
 }
 
 
-int
+bool
 RemoteResource::activateClaim( int starterVersion )
 {
 	int reply;
-	
+	const int max_retries = 20;
+	const int retry_delay = 1;
+	int num_retries = 0;
+
 	if ( ! dc_startd ) {
 		shadow->dprintf( D_ALWAYS, "Shadow doesn't have startd contact "
 						 "information in RemoteResource::activateClaim()\n" ); 
 		setExitReason(JOB_SHADOW_USAGE);  // no better exit reason available
-		return NOT_OK;
+		return false;
 	}
 
 	if ( !jobAd ) {
 		shadow->dprintf( D_ALWAYS, "JobAd not defined in RemoteResource\n" );
 		setExitReason(JOB_SHADOW_USAGE);  // no better exit reason available
-		return NOT_OK;
+		return false;
 	}
 
-	reply = dc_startd->activateClaim( jobAd, starterVersion,
-									  &claim_sock );
-	switch( reply ) {
-	case OK:
-		shadow->dprintf( D_ALWAYS, "Request to run on %s was ACCEPTED.\n",
-						 dc_startd->addr() );
-			// Register the claim_sock for remote system calls.  It's
-			// a bit funky, but works.
-		daemonCore->Register_Socket( claim_sock, "RSC Socket", 
+		// we'll eventually return out of this loop...
+	while( 1 ) {
+		reply = dc_startd->activateClaim( jobAd, starterVersion,
+										  &claim_sock );
+		switch( reply ) {
+		case OK:
+			shadow->dprintf( D_ALWAYS, 
+							 "Request to run on %s was ACCEPTED\n",
+							 dc_startd->addr() );
+
+				// Register the claim_sock for remote system calls.
+				// It's a bit funky, but works.
+			daemonCore->Register_Socket( claim_sock, "RSC Socket", 
 				   (SocketHandlercpp)&RemoteResource::handleSysCalls, 
 				   "HandleSyscalls", this );
-		setResourceState( RR_EXECUTING );		
-		return OK;
-		break;
-	case CONDOR_TRY_AGAIN:
-		shadow->dprintf( D_ALWAYS, "Request to run on %s was DELAYED.\n",
-						 dc_startd->addr() );
-		return CONDOR_TRY_AGAIN;
-		break;
-	case NOT_OK:
-		shadow->dprintf( D_ALWAYS, "Request to run on %s was REFUSED.\n",
-						 dc_startd->addr() );
-		setExitReason( JOB_NOT_STARTED );
-		return NOT_OK;
-		break;
-	default:
-		shadow->dprintf( D_ALWAYS, "Got unknown reply(%d) from "
-						 "request to run on %s\n", reply,
-						 dc_startd->addr() );
-		setExitReason( JOB_NOT_STARTED );
-		return NOT_OK;
-		break;
+			setResourceState( RR_EXECUTING );		
+			return true;
+			break;
+		case CONDOR_TRY_AGAIN:
+			shadow->dprintf( D_ALWAYS, 
+							 "Request to run on %s was DELAYED\n",
+							 dc_startd->addr() ); 
+			num_retries++;
+			if( num_retries > max_retries ) {
+				dprintf( D_ALWAYS, "activateClaim(): Too many retries, "
+						 "giving up.\n" );
+				return false;
+			}			  
+			dprintf( D_FULLDEBUG, 
+					 "activateClaim(): will try again in %d seconds\n",
+					 retry_delay ); 
+			sleep( retry_delay );
+			break;
+		case NOT_OK:
+			shadow->dprintf( D_ALWAYS, 
+							 "Request to run on %s was REFUSED\n",
+							 dc_startd->addr() );
+			setExitReason( JOB_NOT_STARTED );
+			return false;
+			break;
+		default:
+			shadow->dprintf( D_ALWAYS, "Got unknown reply(%d) from "
+							 "request to run on %s\n", reply,
+							 dc_startd->addr() );
+			setExitReason( JOB_NOT_STARTED );
+			return false;
+			break;
+		}
 	}
 		// should never get here, but keep gcc happy and return
 		// something. 
-	return NOT_OK;
+	return false;
 }
 
 
