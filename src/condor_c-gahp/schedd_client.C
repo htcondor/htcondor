@@ -35,6 +35,7 @@
 #include "condor_xml_classads.h"
 #include "condor_new_classads.h"
 #include "setenv.h"
+#include "globus_utils.h"
 #include "FdBuffer.h"
 #include "io_loop.h"
 
@@ -1065,6 +1066,23 @@ handle_gahp_command(char ** argv, int argc) {
 			SetEnv( "X509_USER_PROXY", argv[1] );
 			UnsetEnv( "X509_USER_CERT" );
 			UnsetEnv( "X509_USER_KEY" );
+			char *subject = x509_proxy_identity_name( argv[1] );
+			char *daemon_subjects = param( "GSI_DAEMON_NAME" );
+			MyString buff;
+			if ( daemon_subjects ) {
+				buff.sprintf( "%s,%s", daemon_subjects, subject );
+			} else {
+				buff.sprintf( "%s", subject );
+			}
+			dprintf( D_ALWAYS, "Setting %s=%s\n", "_condor_GSI_DAEMON_NAME", buff.Value() );
+			SetEnv( "_condor_GSI_DAEMON_NAME", buff.Value() );
+			if ( subject ) {
+				free( subject );
+			}
+			if ( daemon_subjects ) {
+				free( daemon_subjects );
+			}
+			daemonCore->Send_Signal( daemonCore->getpid(), SIGHUP );
 			// TODO set any config values needed
 			// TODO trigger a reconfig
 			init_done = true;
