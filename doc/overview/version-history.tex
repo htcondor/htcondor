@@ -53,13 +53,26 @@ server is available.  It is usually more efficient to use a checkpoint
 server near the execution site instead of storing the checkpoint back
 to the submission machine, especially when flocking.
 
+\item All Condor tools that used to expect just a hostname or address 
+(\Condor{checkpoint}, \Condor{off}, \Condor{on}, \Condor{restart},
+\Condor{reconfig}, \Condor{reschedule}, \Condor{vacate}) to specify
+what machine to effect, can now take an optional \Opt{-name} or
+\Opt{-addr} in front of each target.
+This provides consistancy with other Condor tools that require the
+\Opt{-name} or \Opt{-addr} options.
+For all of the above mentioned tools, you can still just provide
+hostnames or addresses, the new flags are not required.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item None.
+\item Many of the Condor administration tools had a bug where they
+would perform a segmentation violation if you specified a \Opt{-pool} 
+option and did not specify a hostname.
+This case now results in an error message, instead.
 
 \end{itemize}
 
