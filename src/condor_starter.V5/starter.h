@@ -252,6 +252,9 @@ void update_cpu();			// Send updated CPU usage info to shadow
 #if defined(LINK_PVM)
 void pvm_reaper();			// Reap via PVM message
 #endif
+#if defined(OSF1)
+void make_runnable();		// Make ckpt'ed process runnable again
+#endif
 
 /*
   Name table for transition routines.  This allows the finite state
@@ -276,6 +279,9 @@ NAME_VALUE	TransFuncArray[] = {
 	{ (unsigned long)update_cpu,			"update_cpu"		},
 #if defined(LINK_PVM)
     { (unsigned long)pvm_reaper,			"pvm_reaper"		},
+#endif
+#if defined(OSF1)
+    { (unsigned long)make_runnable,			"make_runnable"		},
 #endif
 	{ -1,						""					}
 };
@@ -357,7 +363,11 @@ Transition TransTab[] = {
 { GET_EXEC,			VACATE,				TERMINATE,		req_vacate			},
 { GET_EXEC,			FAILURE,			SUPERVISE,		dispose_one			},
 { GET_EXEC,			SUCCESS,			SUPERVISE,		spawn_all			},
+#if defined(OSF1)
+{ GET_EXEC,			CKPT_and_VACATE,	TERMINATE,		req_vacate			},
+#else
 { GET_EXEC,			CKPT_and_VACATE,	UPDATE_ALL,		handle_vacate_req	},
+#endif
 
 { TERMINATE,		DO_WAIT,			TERMINATE_WAIT,	0					},
 { TERMINATE,		DONT_XFER,			SEND_STATUS_ALL,0					},
@@ -371,8 +381,12 @@ Transition TransTab[] = {
 { SUPERVISE,		VACATE,				TERMINATE,		req_vacate			},
 { SUPERVISE,		DIE,				TERMINATE,		req_die				},
 { SUPERVISE,		CHILD_EXIT,			PROC_EXIT,		reaper				},
+#if defined(OSF1)
+{ SUPERVISE,		CKPT_and_VACATE,	TERMINATE,		req_vacate			},
+#else
 { SUPERVISE,		CKPT_and_VACATE,	UPDATE_ALL,		handle_vacate_req	},
 { SUPERVISE,		ALARM,				UPDATE_ALL,		stop_all			},
+#endif
 { SUPERVISE,		GET_NEW_PROC,		GET_PROC,		susp_ckpt_timer		},
 { SUPERVISE,		SUSPEND,			0,				susp_all			},
 #if defined(LINK_PVM)
@@ -384,7 +398,11 @@ Transition TransTab[] = {
 
 { PROC_EXIT,		NO_CORE,			SUPERVISE,		dispose_one			},
 { PROC_EXIT,		SEND_CORE,			SEND_CORE,		0					},
+#if defined(OSF1)
+{ PROC_EXIT,		CKPT_EXIT,			SUPERVISE,		make_runnable		},
+#else
 { PROC_EXIT,		CKPT_EXIT,			UPDATE_ALL,		stop_all			},
+#endif
 { PROC_EXIT,		HAS_CORE,			SEND_CORE,		0					},
 
 { SEND_CORE,		VACATE,				TERMINATE,		req_vacate			},
