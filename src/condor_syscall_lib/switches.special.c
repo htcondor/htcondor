@@ -93,6 +93,7 @@ chdir( const char *path )
 	return rval;
 }
 
+#if defined(SYS_fchdir)
 int
 fchdir( int fd )
 {
@@ -122,6 +123,7 @@ fchdir( int fd )
 
 	return rval;
 }
+#endif
 
 /*
 Keep Condor's version of the CWD up to date
