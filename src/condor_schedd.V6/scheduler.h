@@ -61,7 +61,8 @@ struct shadow_rec
     int             conn_fd;
 	int				removed;
     char*           sinfulString;  // added for V6.1 Shadow by MEY
-};
+	bool			isZombie;	// added for Maui by stolley
+}; 
 
 struct OwnerData {
   char* Name;

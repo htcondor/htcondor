@@ -460,7 +460,7 @@ preserve_log_file(int debug_level)
 			/* now truncate the original by reopening _not_ with append */
 			DebugFP = open_debug_file(debug_level, "w");
 			if ( DebugFP ==  NULL ) {
-				still_in_old_file == TRUE;
+				still_in_old_file = TRUE;
 			}
 		}
 	}
@@ -618,6 +618,9 @@ open_debug_file(int debug_level, char flags[])
 void
 _condor_dprintf_exit()
 {
+
+	char* null_ptr = NULL;
+
 		/* First, set a flag so we know not to try to keep using
 		   dprintf during the rest of this */
 	DprintfBroken = 1;
@@ -633,7 +636,12 @@ _condor_dprintf_exit()
 
 		/* Actually exit now */
 	fflush (stderr);
-	exit(DPRINTF_ERROR);
+
+	/* instead of just exiting, we want to drop core and hopefully get a stack trace */
+
+	*null_ptr++; // BOOM
+
+	/* exit(DPRINTF_ERROR); */
 }
 
 
@@ -655,7 +663,7 @@ dprintf_init( int fd )
 		_condor_dprintf_exit();
 	}
 }
-#endif /* ! LOOSE32 */
+#endif /* ! LOSE32 */
 
 
 /*
