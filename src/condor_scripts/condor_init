@@ -5,15 +5,26 @@
 #  files and directories on a host to run Condor.  
 # 
 
-HOSTNAME=`hostname`
-CONFIG_VAL="condor_config_val -h $HOSTNAME"
-OWNER=`$CONFIG_VAL -owner 2> /dev/null`
+# Where can I find the condor_config_val binary?
+CONFIG_VAL_PATH="condor_config_val"
+
+# Create soft link, as needed, to find the global config file.
+
+# Be sure to get just the hostname without domain name.
+HOSTNAME=`hostname | sed "s/\..*//g"`
+
+# Find out who should own the Condor files.
+OWNER=`$CONFIG_VAL_PATH -owner 2> /dev/null`
 if [ ! -n "$OWNER" ]; then
-   echo "Error determining who should own the Condor-related directories."
-   echo "Either create a "condor" account, or set the CONDOR_IDS environment"
-   echo "variable to the valid uid.gid pair that should be used by Condor."
+   echo 'Error determining who should own the Condor-related directories.'
+   echo 'Either create a "condor" account, or set the CONDOR_IDS environment'
+   echo 'variable to the valid uid.gid pair that should be used by Condor.'
    exit 1
 fi
+
+# We need the -h option so we don't get an error if the local config
+# file doesn't exist.
+CONFIG_VAL="$CONFIG_VAL_PATH -h $HOSTNAME"
 
 CONDOR_LOCALDIR=`$CONFIG_VAL LOCAL_DIR 2> /dev/null`
 CONDOR_LOG=`$CONFIG_VAL LOG 2> /dev/null`
@@ -21,6 +32,8 @@ CONDOR_SPOOL=`$CONFIG_VAL SPOOL 2> /dev/null`
 CONDOR_EXECUTE=`$CONFIG_VAL EXECUTE 2> /dev/null`
 CONDOR_LOCALCFG=`$CONFIG_VAL LOCAL_CONFIG_FILE 2> /dev/null`
 CONDOR_LOCK=`$CONFIG_VAL LOCK 2> /dev/null`
+
+# Create a soft link to the global config file.  (Added by condor_install) 
 
 if [ -n "$CONDOR_LOCALDIR" ]; then
 	if [ ! -d $CONDOR_LOCALDIR ]; then
