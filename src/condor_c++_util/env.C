@@ -45,6 +45,31 @@ AppendEnvVariable( char* env, char* name, char* value )
     return true;
 }
 
+bool
+AppendEnvVariableSafely( char** env, char* name, char* value )
+{
+	char *new_env;
+
+    if( env == NULL || *env == NULL || name == NULL || value == NULL ) {
+        return false;
+    }
+
+	new_env = (char *) malloc(  strlen(*env)
+							  + strlen(name)
+							  + strlen(value)
+							  + 3); // for ; = \0
+
+    // append delimiter if this isn't the first variable in env
+    if( (*env)[0] != '\0' ) {
+		sprintf(new_env, "%s;%s=%s", *env, name, value);
+    } else {
+		sprintf(new_env, "%s=%s", name, value );
+	}
+	free(*env);
+	*env = new_env;
+    return true;
+}
+
 char*
 environToString( const char** unix_env ) {
 	// fixed size is bad here but consistent with existing code
