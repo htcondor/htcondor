@@ -266,9 +266,9 @@ the proper keystrokes needed for program input.
 Make certain the program will run correctly with the files.
 
 \item[The Condor Universe.]
-Condor has five
+Condor has four 
 runtime environments (called a \Term{universe}) from which to choose.
-Of the five, two are likely choices when learning
+Of the four, two are likely choices when learning
 to submit a job to Condor: the standard universe and the vanilla universe.
 The standard universe allows a job running under Condor to
 handle system calls by returning them to the machine where the
@@ -343,13 +343,13 @@ A \Term{universe} in Condor
 \index{universe}
 \index{Condor!universe}
 defines an execution environment. 
-Condor \VersionNotice\ supports five different
+Condor \VersionNotice\ supports four different
 universes for user jobs:
 \begin{itemize}
 	\item Standard
 	\item Vanilla
 	\item PVM
-	\item MPI
+%	\item MPI
 	\item Globus
 \end{itemize}
 
@@ -365,9 +365,9 @@ restrictions.
 \index{universe!PVM}
 The \Expr{PVM} universe is for programs written to the Parallel Virtual
 Machine interface.  See section~\ref{sec:PVM} for more about PVM and Condor.
-\index{universe!MPI}
-The \Expr{MPI} universe is for programs written to the MPICH interface.
-See section~\ref{sec:MPI} for more about MPI and Condor.
+%\index{universe!MPI}
+%The \Expr{MPI} universe is for programs written to the MPICH interface.
+%See section~\ref{sec:MPI} for more about MPI and Condor.
 \index{universe!Globus}
 The Globus universe allows users to submit Globus jobs through the
 Condor interface.  See \Url{http://www.globus.org} for more about Globus.
@@ -491,12 +491,12 @@ interface to be used within the opportunistic Condor environment.
 Please see section~\ref{sec:PVM} for more details.
 
 %%%%%%%%%%%%
-\subsubsection{MPI}
+%\subsubsection{MPI}
 %%%%%%%%%%%%
-\index{universe!MPI}
-The MPI universe allows programs written to the MPICH
-interface to be used within the opportunistic Condor environment.
-Please see section~\ref{sec:MPI} for more details.
+%\index{universe!MPI}
+%The MPI universe allows programs written to the MPICH
+%interface to be used within the opportunistic Condor environment.
+%Please see section~\ref{sec:MPI} for more details.
 
 %%%%%%%%%%%%
 \subsubsection{Globus Universe}
