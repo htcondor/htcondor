@@ -72,17 +72,17 @@ public:
 
 	void	report() {
 		if( RemoteSysCalls() ) {
-			REMOTE_syscall( CONDOR_report_file_info, "", logical_name, open_count, read_count, write_count, seek_count, read_bytes, write_bytes );
+			REMOTE_syscall( CONDOR_report_file_info_new, logical_name, open_count, read_count, write_count, seek_count, read_bytes, write_bytes );
 		}
 	}
 
 	char	logical_name[_POSIX_PATH_MAX];
 
-	int	open_count;
-	int	read_count, read_bytes;
-	int	write_count, write_bytes;
-	int	seek_count;
-	int	already_warned;
+	long long open_count;
+	long long read_count, read_bytes;
+	long long write_count, write_bytes;
+	long long seek_count;
+	int already_warned;
 
 	CondorFileInfo	*next;
 };
@@ -683,7 +683,10 @@ ssize_t CondorFileTable::write( int fd, const void *data, size_t nbyte )
 	check_safety(fp);
 
 	// If flush_mode is enabled, flush it to disk
-	if(flush_mode) f->fsync();
+	if(flush_mode) {
+		f->fsync();
+		fp->info->report();
+	}
 
 	// Return the number of bytes written
 	return actual;
