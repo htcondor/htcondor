@@ -47,7 +47,9 @@ Portability:
 #include "condor_jobqueue.h"
 #include "condor_syscall_mode.h"
 #include <sys/file.h>
+extern "C" {
 #include <a.out.h>
+}
 
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
@@ -59,12 +61,6 @@ typedef struct filehdr  FILE_HDR;
 typedef struct aouthdr  AOUT_HDR;
 #define FILE_HDR_SIZ    sizeof(FILE_HDR)
 #define AOUT_HDR_SIZ    sizeof(AOUT_HDR)
-
-#if !defined(__GNUC__)
-	extern "C" {
-		int nlist( char *FileName, struct nlist *N1);
-	}
-#endif
 
 int magic_check( char *a_out )
 {
