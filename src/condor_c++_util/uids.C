@@ -473,8 +473,11 @@ static int set_user_egid();
 static int set_user_ruid();
 static int set_user_rgid();
 static int set_root_euid();
+
+#if 0 // these are not used, probably could be removed...
 static int set_condor_ruid();
 static int set_condor_rgid();
+#endif
 
 /* We don't use EXCEPT here because this file is used in
    condor_syscall_lib.a.  -Jim B. */
@@ -492,6 +495,8 @@ init_condor_ids()
 	struct passwd *pwd;
 	int scm;
 	char *buf;
+	uid_t envCondorUid = MAXINT;
+	gid_t envCondorGid = MAXINT;
 
         /*
         ** N.B. if we are using the yellow pages, system calls which are
@@ -512,45 +517,53 @@ init_condor_ids()
 		RealCondorUid = pwd->pw_uid;
 		RealCondorGid = pwd->pw_gid;
 	} else {
-		RealCondorUid = (uid_t)-1;
-		RealCondorGid = (gid_t)-1;
+		RealCondorUid = MAXINT;
+		RealCondorGid = MAXINT;
+	}
+
+	const char	*envName = EnvGetName( ENV_UG_IDS ); 
+	if( (buf = getenv( envName )) ) {	
+		if( sscanf(buf, "%d.%d", &envCondorUid, &envCondorGid) != 2 ) {
+			fprintf(stderr, "ERROR: badly formed value in %s ", envName );
+			fprintf(stderr, "environment variable.\n");
+			fprintf(stderr, "Please set %s to ", envName);
+			fprintf(stderr, "the '.' seperated uid, gid pair that\n");
+			fprintf(stderr, "should be used by %s.\n", myDistro->Get() );
+			exit(1);
+		}
+		pwd = getpwuid( envCondorUid );
+		if( pwd ) {
+			CondorUserName = strdup( pwd->pw_name );
+		} else {
+			fprintf( stderr, "ERROR: the uid specified in %s ", envName );
+			fprintf( stderr, "environment variable (%d)\n", envCondorUid );
+			fprintf(stderr, "does not exist in your password information.\n" );
+			fprintf(stderr, "Please set %s to ", envName);
+			fprintf(stderr, "the '.' seperated uid, gid pair that\n");
+			fprintf(stderr, "should be used by %s.\n", myDistro->Get() );
+			exit(1);
+		}
 	}
 
 	/* If we're root, set the Condor Uid and Gid to the value
 	   specified in the "CONDOR_IDS" environment variable */
 	if( MyUid == ROOT ) {
 		const char	*envName = EnvGetName( ENV_UG_IDS ); 
-		if( (buf = getenv( envName )) ) {	
-			if( sscanf(buf, "%d.%d", &CondorUid, &CondorGid) != 2 ) {
-				fprintf(stderr, "ERROR: badly formed value in %s ", envName );
-				fprintf(stderr, "environment variable.\n");
-				fprintf(stderr, "Please set %s to ", envName);
-				fprintf(stderr, "the '.' seperated uid, gid pair that\n");
-				fprintf(stderr, "should be used by %s.\n", myDistro->Get() );
-				exit(1);
-			}
-			pwd = getpwuid( CondorUid );
-			if( pwd ) {
-				CondorUserName = strdup( pwd->pw_name );
-			} else {
-				fprintf( stderr, "ERROR: the uid specified in %s ", envName );
-				fprintf( stderr, "environment variable (%d)\n", CondorUid );
-				fprintf(stderr, "does not exist in your password information.\n" );
-				fprintf(stderr, "Please set %s to ", envName);
-				fprintf(stderr, "the '.' seperated uid, gid pair that\n");
-				fprintf(stderr, "should be used by %s.\n", myDistro->Get() );
-				exit(1);
-			}
+		if( envCondorUid != MAXINT ) {	
+			/* CONDOR_IDS are set, use what it said */
+				CondorUid = envCondorUid;
+				CondorGid = envCondorGid;
 		} else {
 			/* No CONDOR_IDS set, use condor.condor */
-			if( RealCondorUid > 0 ) {
+			if( RealCondorUid != MAXINT ) {
 				CondorUid = RealCondorUid;
 				CondorGid = RealCondorGid;
 				CondorUserName = strdup( myDistro->Get() );
 			} else {
 				fprintf(stderr,
-						"Can't find \"condor\" in the password file and\n"
-						"%s environment variable not set\n", envName); 
+						"Can't find \"%s\" in the password file and\n"
+						"%s environment variable not set.\n", 
+						myDistro->Get(), envName);
 				exit(1);
 			}
 		}
@@ -570,6 +583,16 @@ init_condor_ids()
 		} else {
 			/* Cannot find an entry in the passwd file for this uid */
 			CondorUserName = strdup("Unknown");
+		}
+
+		/* If CONDOR_IDS environment variable is set, and set to the same uid
+		   that we are running as, then behave as if the daemons are running
+		   as user "condor" -- i.e. allow any user to submit jobs to these daemons,
+		   not just the user running the daemons.
+		*/
+		if ( MyUid == envCondorUid ) {
+			RealCondorUid = MyUid;
+			RealCondorGid = MyGid;
 		}
 
 		/* no need to try to switch ids when running as non-root */
@@ -1018,6 +1041,7 @@ set_root_euid()
 }
 
 
+#if 0   // these functions not needed... probably could be removed completely
 int
 set_condor_ruid()
 {
@@ -1038,7 +1062,7 @@ set_condor_rgid()
 
 	return SET_REAL_GID(CondorGid);
 }
-
+#endif
 
 int
 is_root( void ) 
