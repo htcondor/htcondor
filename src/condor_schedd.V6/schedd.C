@@ -1213,7 +1213,7 @@ Scheduler::start_std(match_rec* mrec , PROC_ID* job_id)
 #endif NOTDEF
 
 	mark_job_running(job_id);
-	SetAttributeInt(job_id->cluster, job_id->proc, "CurrentHosts", 1);
+	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 1);
 	lim = getdtablesize();
 
 #ifdef CARMI_OPS
@@ -1638,7 +1638,7 @@ mark_job_stopped(PROC_ID* job_id)
 
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, &status);
 	had_orig = GetAttributeInt(job_id->cluster, job_id->proc, 
-							   "OrigMaxHosts", &orig_max);
+							   ATTR_ORIG_MAX_HOSTS, &orig_max);
 
 	if( status != RUNNING ) {
 		EXCEPT( "Trying to stop job %d.%d, but not marked RUNNING!",
