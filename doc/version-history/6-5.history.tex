@@ -72,6 +72,13 @@ specification of an alternate \Condor{dagman} executable.
 
 \item PVM: Fixed a few PVM deadlock scenarios during PVM startup.
 
+\item Fixed a bug which caused the ``KFlops'' published in the
+startd's ClassAd to have a large variance on fast CPUs.
+
+\item Fixed a bug which could cause inter-daemon communication
+problems.  A side effect of this fix, however, causes all daemons to
+use 3 more file descriptors.
+
 \end{itemize}
 
 \noindent Known Bugs:
