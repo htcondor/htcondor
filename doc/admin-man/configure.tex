@@ -1068,13 +1068,12 @@ section`\ref{sec:Configuring-Policy}.
   entry determines how often the startd should send a ClassAd update
   to the \Condor{collector}.  The startd also sends update on any
   state or activity change, or if the value of its START expression
-  changes.  See section~\ref{sec:States-and-Activites} on
-  ``\condor{startd} States and Activities'' and
-  section~\ref{sec:State-and-Activity-Transitions} on
-  ``\condor{startd} State and Activity Transitions'' for details on
-  states and activities, and the \Expr{START} expression respectively.
-  This entry is defined in terms of seconds and defaults to 300 (5
-  minutes).
+  changes.  See section~\ref{sec:States} on ``\condor{startd}
+  States'', section~\ref{sec:Activities} on ``\condor{startd}
+  Activities'', and section~\ref{sec:Start-Expr} on ``\condor{startd}
+  START expression'' for details on states, activities, and the
+  \Expr{START} expression respectively.  This entry is defined in
+  terms of seconds and defaults to 300 (5 minutes).
   
 \item[\Macro{STARTD\_HAS\_BAD\_UTMP}] \label{param:StartdHasBadUtmp}
   Normally, when the startd is computing the idle time of all the
@@ -1391,11 +1390,11 @@ These settings control the \Condor{collector}.
 \item[\Macro{CLASSAD\_LIFETIME}] \label{param:ClassadLifetime} This
   macro determines how long a ClassAd can remain in the collector
   before it is discarded as stale information.  The ClassAds sent to
-  the collector might also have an attribute that says how often to
-  expect updates.  If that attribute is present the collector will
-  either use it or the \Macro{CLASSAD\_LIFETIME}, whichever is
-  greater.  The macro is defined in terms of seconds, and defaults to
-  900 (15 minutes). 
+  the collector might also have an attribute that says how long the
+  lifetime should be for that specific ad.  If that attribute is
+  present the collector will either use it or the
+  \Macro{CLASSAD\_LIFETIME}, whichever is greater.  The macro is
+  defined in terms of seconds, and defaults to 900 (15 minutes).
   
 \item[\Macro{MASTER\_CHECK\_INTERVAL}]
   \label{param:MasterCheckInterval}  This setting defines often the
