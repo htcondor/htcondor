@@ -76,6 +76,16 @@ CondorQuery (AdTypes qType)
 		command = QUERY_STARTD_ADS;
 		break;
 
+	  case STARTD_PVT_AD:
+		query.setNumStringCats (STARTD_STRING_THRESHOLD);
+		query.setNumIntegerCats(STARTD_INT_THRESHOLD);
+		query.setNumFloatCats  (STARTD_FLOAT_THRESHOLD);
+		query.setIntegerKwList ((char **)StartdIntegerKeywords);
+		query.setStringKwList  ((char **)StartdStringKeywords);
+		query.setFloatKwList   ((char **)StartdFloatKeywords);
+		command = QUERY_STARTD_PVT_ADS;
+		break;
+
 	  case SCHEDD_AD:
 		query.setNumStringCats (SCHEDD_STRING_THRESHOLD);
 		query.setNumIntegerCats(SCHEDD_INT_THRESHOLD);
@@ -213,6 +223,7 @@ fetchAds (ClassAdList &adList, const char *poolName)
 	queryAd.SetMyTypeName (QUERY_ADTYPE);
 	switch (queryType) {
 	  case STARTD_AD:
+	  case STARTD_PVT_AD:
 		queryAd.SetTargetTypeName (STARTD_ADTYPE);
 		break;
 
@@ -239,7 +250,7 @@ fetchAds (ClassAdList &adList, const char *poolName)
 
 	// ship query
 	sock.encode();
-	if (!sock.code (command) || !queryAd.put (sock) || !sock.eom()) {
+	if (!sock.code (command) || !queryAd.put (sock) || !sock.end_of_message()) {
 		return Q_COMMUNICATION_ERROR;
 	}
 	
