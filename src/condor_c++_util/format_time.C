@@ -60,8 +60,8 @@ format_date_year( time_t date )
 	}
 
     tm = localtime( &date );
-    sprintf( buf, "%2d/%02d/%-2d %02d:%02d",
-        (tm->tm_mon)+1, tm->tm_mday, tm->tm_year, tm->tm_hour, tm->tm_min
+    sprintf( buf, "%2d/%02d/%-4d %02d:%02d",
+        (tm->tm_mon)+1, tm->tm_mday, (tm->tm_year + 1900), tm->tm_hour, tm->tm_min
     );
     return buf;
 }
