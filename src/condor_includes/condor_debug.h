@@ -35,8 +35,9 @@ static const int D_UPDOWN       = (1<<14);
 static const int D_AFS          = (1<<15);
 static const int D_PREEMPT		= (1<<16);
 static const int D_PROTOCOL		= (1<<17);
+static const int D_PRIV			= (1<<18);
 static const int D_MAXFLAGS		= 32;
-static const int D_ALL			= (~(1<<6));
+static const int D_ALL			= (~(1<<5));
 
 #if defined(__cplusplus)
 extern "C" {
