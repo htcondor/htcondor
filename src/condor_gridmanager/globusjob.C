@@ -88,6 +88,7 @@ char *GMStateNames[] = {
         func,error)
 
 int GlobusJob::probeInterval = 300;		// default value
+int GlobusJob::submitInterval = 300;	// default value
 
 GlobusJob::GlobusJob( GlobusJob& copy )
 {
@@ -130,6 +131,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	lastProbeTime = 0;
 	enteredCurrentGmState = time(NULL);
 	enteredCurrentGlobusState = time(NULL);
+	lastSubmitAttempt = 0;
 	numSubmitAttempts = 0;
 	// ad = NULL;
 	syncedOutputSize = 0;
@@ -217,6 +219,7 @@ int GlobusJob::doEvaluateState()
 	int old_globus_state;
 	bool reevaluate_state = true;
 	int schedd_actions = 0;
+	time_t now;	// make sure you set this before every use!!!
 
 	bool done;
 	int rc;
@@ -368,42 +371,51 @@ int GlobusJob::doEvaluateState()
 			break;
 		case GM_SUBMIT:
 			char *job_contact;
-			rc = gahp.globus_gram_client_job_request( 
+			now = time(NULL);
+			if ( now >= lastSubmitAttempt + submitInterval ) {
+				rc = gahp.globus_gram_client_job_request( 
 										myResource->ResourceName(), RSL,
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
 										gramCallbackContact, &job_contact );
-			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-				 rc == GAHPCLIENT_COMMAND_PENDING ) {
-				break;
-			}
-			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
-				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
-				connect_failure = true;
-				break;
-			}
-			numSubmitAttempts++;
-			if ( rc == GLOBUS_SUCCESS ) {
-				newJM = false;
-				callbackRegistered = true;
-				rehashJobContact( this, jobContact, job_contact );
-				jobContact = strdup( job_contact );
-				gahp.globus_gram_client_job_contact_free( job_contact );
-				gmState = GM_SUBMIT_SAVE;
-			} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
-				newJM = true;
-				callbackRegistered = true;
-				rehashJobContact( this, jobContact, job_contact );
-				jobContact = strdup( job_contact );
-				gahp.globus_gram_client_job_contact_free( job_contact );
-				gmState = GM_SUBMIT_SAVE;
-			} else {
-				// unhandled error
-				LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
-				dprintf(D_ALWAYS,"    RSL='%s'\n", RSL);
-				globusError = rc;
-				WriteGlobusSubmitFailedEventToUserLog( this );
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
+					break;
+				}
+				lastSubmitAttempt = time(NULL);
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
+					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
+					connect_failure = true;
+					break;
+				}
+				numSubmitAttempts++;
+				if ( rc == GLOBUS_SUCCESS ) {
+					newJM = false;
+					callbackRegistered = true;
+					rehashJobContact( this, jobContact, job_contact );
+					jobContact = strdup( job_contact );
+					gahp.globus_gram_client_job_contact_free( job_contact );
+					gmState = GM_SUBMIT_SAVE;
+				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
+					newJM = true;
+					callbackRegistered = true;
+					rehashJobContact( this, jobContact, job_contact );
+					jobContact = strdup( job_contact );
+					gahp.globus_gram_client_job_contact_free( job_contact );
+					gmState = GM_SUBMIT_SAVE;
+				} else {
+					// unhandled error
+					LOG_GLOBUS_ERROR( "globus_gram_client_job_request()", rc );
+					dprintf(D_ALWAYS,"    RSL='%s'\n", RSL);
+					globusError = rc;
+					WriteGlobusSubmitFailedEventToUserLog( this );
+					gmState = GM_UNSUBMITTED;
+					reevaluate_state = true;
+				}
+			} else if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_UNSUBMITTED;
-				reevaluate_state = true;
+			} else {
+				daemonCore->Reset_Timer( evaluateStateTid,
+								(lastSubmitAttempt + submitInterval) - now );
 			}
 			break;
 		case GM_SUBMIT_SAVE:
@@ -462,7 +474,7 @@ int GlobusJob::doEvaluateState()
 				if ( condorState == REMOVED || condorState == HELD ) {
 					gmState = GM_CANCEL;
 				} else {
-					time_t now = time(NULL);
+					now = time(NULL);
 					if ( lastProbeTime < enteredCurrentGmState ) {
 						lastProbeTime = enteredCurrentGmState;
 					}
@@ -718,7 +730,7 @@ int GlobusJob::doEvaluateState()
 			} else if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 				gmState = GM_FAILED;
 			} else {
-				time_t now = time(NULL);
+				now = time(NULL);
 				if ( lastProbeTime < enteredCurrentGmState ) {
 					lastProbeTime = enteredCurrentGmState;
 				}

@@ -34,9 +34,12 @@ class GlobusJob : public Service
 	int syncIO();
 
 	static int probeInterval;
+	static int submitInterval;
 
 	static void setProbeInterval( int new_interval )
 		{ probeInterval = new_interval; }
+	static void setSubmitInterval( int new_interval )
+		{ submitInterval = new_interval; }
 
 	// New variables
 	bool resourceDown;
@@ -53,6 +56,7 @@ class GlobusJob : public Service
 	time_t lastProbeTime;
 	time_t enteredCurrentGmState;
 	time_t enteredCurrentGlobusState;
+	time_t lastSubmitAttempt;
 	int numSubmitAttempts;
 	int syncedOutputSize;
 	int syncedErrorSize;
