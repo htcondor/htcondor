@@ -47,6 +47,7 @@ FunctionCall () : arguments( 4 )
 		functionTable.insert( "currenttime",	currentTime );
 		functionTable.insert( "timezoneoffset",	timeZoneOffset );
 		functionTable.insert( "daytime",		dayTime );
+		functionTable.insert( "makedate",		makeDate );
 		functionTable.insert( "makeabstime",	makeTime );
 		functionTable.insert( "makereltime",	makeTime );
 		functionTable.insert( "getyear",		getField );
@@ -577,6 +578,85 @@ dayTime (char *, ArgumentList &argList, EvalState &, Value &val)
 }
 
 bool FunctionCall::
+makeDate( char*, ArgumentList &argList, EvalState &state, Value &val )
+{
+	Value 	arg0, arg1, arg2;
+	int		dd, mm, yy, tmp;
+	time_t	clock;
+	struct	tm	tms;
+	char	buffer[64];
+	char	month[32];
+
+		// two or three arguments
+	if( argList.getlast( ) < 1 || argList.getLast( ) > 2 ) {
+		val.SetErrorValue( );
+		return( true );
+	}
+
+		// evaluate arguments
+	if( !argList[0]->Evaluate( state, arg0 ) || 
+		!argList[1]->Evaluate( state, arg1 ) ) {
+		val.SetErrorValue( );
+		return( false );
+	}
+
+		// get current time in tm struct
+	if( time( &clock ) == -1 ) {
+		val.SetErrorValue( );
+		return( false );
+	}
+	gmtime_r( &now, &tms );
+	
+		// evaluate optional third argument
+	if( argList.getLast( ) == 2 )
+		if( !argList[2]->Evaluate( state, arg2 ) ) {
+			val.SetErrorValue( );
+			return( false );
+		}
+	} else {
+			// use the current year
+		arg2.SetIntegerValue( tms.year );
+	}
+		
+		// check if any of the arguments are undefined
+	if( arg0.IsUndefinedValue( ) || arg1.IsUndefinedValue( ) || 
+		arg2.IsUndefinedValue( ) ) {
+		val.SetUndefinedValue( );
+		return( true );
+	}
+
+		// first and third arguments must be integers
+	if( !arg0.IsIntegerValue( dd ) || !arg2.IsIntegerValue( yy ) ) {
+		val.SetErrorValue( );
+		return( true );
+	}
+
+		// the second argument must be integer or string
+	if( arg1.IsIntegerValue( mm ) ) {
+		if( snprintf( buffer, 64, "%d %d %d", dd, mm, yy ) > 63 ||
+			strptime( buffer, "%d %m %Y", &tms ) == NULL ) {
+			val.SetErrorValue( );
+			return( true );
+		}
+	} else if( arg1.IsStringValue( month, 32, tmp ) ) {
+		if( snprintf( buffer, 64, "%d %s %d", dd, month, yy ) > 63 ||
+			strptime( buffer, "%d %b %Y", &tms ) == NULL ) {
+			val.SetErrorValue( );
+			return( true );
+		}
+	} else {
+		val.SetErrorValue( );
+		return( true );
+	}
+
+		// convert the struct tm->time_t->absolute time
+	clock = mktime( &tms );
+	val.SetAbsoluteTime( tms );
+	return( true );
+}
+
+
+bool FunctionCall::
 makeTime( char* name, ArgumentList &argList, EvalState &state, Value &val )
 {
 	Value 	arg;
@@ -590,6 +670,11 @@ makeTime( char* name, ArgumentList &argList, EvalState &state, Value &val )
 	if( !argList[0]->Evaluate( state, arg ) ) {
 		val.SetErrorValue( );
 		return false;	
+	}
+
+	if( arg.IsUndefinedValue( ) ) {
+		val.SetUndefinedValue( );
+		return( true );
 	}
 
 	if( !arg.IsNumber( i ) ) {
