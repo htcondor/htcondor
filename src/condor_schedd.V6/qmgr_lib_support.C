@@ -321,7 +321,7 @@ int
 GetProc(int cl, int pr, PROC *p)
 {
 	int disconn_when_done = 0;
-	char buf[1000];
+	char buf[ATTRLIST_MAX_EXPRESSION];
 	float	utime,stime;
 	char	*s;
 
