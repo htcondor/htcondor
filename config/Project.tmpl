@@ -23,6 +23,7 @@ DOC_TREE =			$(TOP)/doc
 INCLUDE_DIR =		../h
 NEW_INCLUDE_DIR =	../condor_includes
 C_PLUS_INCLUDE =	../condor_c++_util
+X11_INCLUDE =           /usr/X11R6/include	
 PS_DIR =			$(DOC_TREE)/POSTSCRIPT
 CAT_DIR = 			$(DOC_TREE)/CAT
 PLATFORM =			Platform
@@ -122,6 +123,11 @@ STD_C_PLUS_FLAGS = \
 	CFlags -I/usr/include -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX DbmFlag SigFlag CompatFlags -g
 STD_C_FLAGS = $(STD_C_PLUS_FLAGS)
 STATIC = -static
+#elif (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS)
+STD_C_PLUS_FLAGS =  \
+	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) -I$(X11_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX DbmFlag SigFlag CompatFlags -g -gstabs
+STD_C_FLAGS =  $(STD_C_PLUS_FLAGS)
+STATIC = StaticFlag
 #else
 STD_C_PLUS_FLAGS =  \
 	CFlags  -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG) -D$(OS_FLAG) -DNFSFIX DbmFlag SigFlag CompatFlags -g -gstabs
