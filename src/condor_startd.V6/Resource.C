@@ -27,6 +27,7 @@
 Resource::Resource( CpuAttributes* cap, int rid )
 {
 	char tmp[256];
+	char* tmpName;
 	int size = (int)ceil(60 / polling_interval);
 	r_classad = NULL;
 	r_state = new ResState( this );
@@ -40,11 +41,16 @@ Resource::Resource( CpuAttributes* cap, int rid )
 	sprintf( tmp, "vm%d", rid );
 	r_id_str = strdup( tmp );
 	
+	if( Name ) {
+		tmpName = Name;
+	} else {
+		tmpName = my_full_hostname();
+	}
 	if( resmgr->is_smp() ) {
-		sprintf( tmp, "%s@%s", r_id_str, my_full_hostname() );
+		sprintf( tmp, "%s@%s", r_id_str, tmpName );
 		r_name = strdup( tmp );
 	} else {
-		r_name = strdup( my_full_hostname() );
+		r_name = strdup( tmpName );
 	}
 
 	r_attr = cap;

@@ -43,6 +43,7 @@
 #include "killfamily.h"
 #include "../condor_procapi/procapi.h"
 #include "misc_utils.h"
+#include "get_daemon_addr.h"
 
 
 #if !defined(WIN32)
@@ -118,6 +119,8 @@ extern	int		disconnected_keyboard_boost;
 extern	int		startd_noclaim_shutdown;	
     // # of seconds we can go without being claimed before we "pull
     // the plug" and tell the master to shutdown.
+
+extern	char*	Name;			// The startd's name
 
 #endif /* _STARTD_NO_DECLARE_GLOBALS */
 

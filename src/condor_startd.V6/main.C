@@ -67,7 +67,7 @@ int		startd_noclaim_shutdown = 0;
     // # of seconds we can go without being claimed before we "pull
     // the plug" and tell the master to shutdown.
 
-
+char* Name = NULL;
 
 
 char*	mySubSystem = "STARTD";
@@ -119,6 +119,14 @@ main_init( int, char* argv[] )
 		case 's':
 			skip_benchmarks = TRUE;
 			break;
+		case 'n':
+			ptr++;
+			if( !(ptr && *ptr) ) {
+                EXCEPT( "-n requires another arugment" );
+            }
+            Name = build_valid_daemon_name( *ptr );
+            dprintf( D_ALWAYS, "Using name: %s\n", Name );
+            break;
 		default:
 			fprintf( stderr, "Error:  Unknown option %s\n", *ptr );
 			usage( argv[0] );
@@ -486,6 +494,17 @@ init_params( int first_time)
 		startd_noclaim_shutdown = atoi( tmp );
 		free( tmp );
 	} 
+
+	tmp = param( "STARTD_NAME" );
+	if( tmp ) {
+		if( Name ) {
+			delete [] Name;
+		}
+		Name = build_valid_daemon_name( tmp );
+		dprintf( D_FULLDEBUG, "Using %s for name\n", Name );
+		free( tmp );
+	}
+
 	return TRUE;
 }
 
