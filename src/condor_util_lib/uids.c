@@ -38,6 +38,8 @@ void set_user_ids(uid_t uid, gid_t gid) {}
 uid_t get_my_uid() { return 999999; }
 gid_t get_my_gid() { return 999999; }
 
+// Cover our getuid...
+uid_t getuid() { return get_my_uid(); }
 
 // This implementation of get_condor_username() for WinNT really 
 // returns the username of the current user.  Until we finish porting

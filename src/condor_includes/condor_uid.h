@@ -75,6 +75,7 @@ void set_user_ids(uid_t uid, gid_t gid);
 priv_state _set_priv(priv_state s, char file[], int line, int dologging);
 uid_t get_my_uid();
 gid_t get_my_gid();
+
 #if !defined(WIN32)
 uid_t get_condor_uid();
 gid_t get_condor_gid();
@@ -82,7 +83,10 @@ uid_t get_user_uid();
 gid_t get_user_gid();
 uid_t get_real_condor_uid();
 gid_t get_real_condor_gid();
+#else
+uid_t getuid(); /* getuid stub for WINNT */
 #endif
+
 char* get_condor_username();
 void display_priv_log();
 
