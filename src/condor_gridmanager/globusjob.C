@@ -2421,7 +2421,7 @@ MyString *GlobusJob::buildSubmitRSL()
 		*rsl += input_classad_filename;
 		*rsl += " -job-output-ad ";
 		*rsl += output_classad_filename;
-
+		*rsl += " -job-stdin - -job-stdout - -job-stderr -";
 	} else if ( ad->LookupString(ATTR_JOB_ARGUMENTS, &attr_value)
 				&& *attr_value ) {
 		*rsl += ")(arguments=";
@@ -2432,8 +2432,8 @@ MyString *GlobusJob::buildSubmitRSL()
 		attr_value = NULL;
 	}
 
-	if ( !useGridShell && ad->LookupString(ATTR_JOB_INPUT, &attr_value) 
-		 && *attr_value && strcmp(attr_value, NULL_FILE) ) {
+	if( ad->LookupString(ATTR_JOB_INPUT, &attr_value) && *attr_value &&
+		strcmp(attr_value, NULL_FILE) ) {
 		*rsl += ")(stdin=";
 		if ( !ad->LookupBool( ATTR_TRANSFER_INPUT, transfer ) || transfer ) {
 			buff = "$(GRIDMANAGER_GASS_URL)";
@@ -2451,60 +2451,42 @@ MyString *GlobusJob::buildSubmitRSL()
 		attr_value = NULL;
 	}
 
-	if( useGridShell ) {
-		streamOutput = false;
-		stageOutput = false;
-		if( localOutput ) {
-			free( localOutput );
-			localOutput = NULL;
-		}
+	if ( streamOutput ) {
+		*rsl += ")(stdout=";
+		buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localOutput );
+		*rsl += rsl_stringify( buff.Value() );
 	} else {
-		if ( streamOutput ) {
-			*rsl += ")(stdout=";
-			buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localOutput );
-			*rsl += rsl_stringify( buff.Value() );
+		if ( stageOutput ) {
+			*rsl += ")(stdout=$(GLOBUS_CACHED_STDOUT)";
 		} else {
-			if ( stageOutput ) {
-				*rsl += ")(stdout=$(GLOBUS_CACHED_STDOUT)";
-			} else {
-				if ( ad->LookupString(ATTR_JOB_OUTPUT, &attr_value) &&
-					 *attr_value && strcmp( attr_value, NULL_FILE ) ) {
-					*rsl += ")(stdout=";
-					*rsl += rsl_stringify( attr_value );
-				}
-				if ( attr_value != NULL ) {
-					free( attr_value );
-					attr_value = NULL;
-				}
+			if ( ad->LookupString(ATTR_JOB_OUTPUT, &attr_value) &&
+				 *attr_value && strcmp( attr_value, NULL_FILE ) ) {
+				*rsl += ")(stdout=";
+				*rsl += rsl_stringify( attr_value );
+			}
+			if ( attr_value != NULL ) {
+				free( attr_value );
+				attr_value = NULL;
 			}
 		}
 	}
 
-	if( useGridShell ) {
-		streamError = false;
-		stageError = false;
-		if( localError ) {
-			free( localError );
-			localError = NULL;
-		}
+	if ( streamError ) {
+		*rsl += ")(stderr=";
+		buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localError );
+		*rsl += rsl_stringify( buff.Value() );
 	} else {
-		if ( streamError ) {
-			*rsl += ")(stderr=";
-			buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localError );
-			*rsl += rsl_stringify( buff.Value() );
+		if ( stageError ) {
+			*rsl += ")(stderr=$(GLOBUS_CACHED_STDERR)";
 		} else {
-			if ( stageError ) {
-				*rsl += ")(stderr=$(GLOBUS_CACHED_STDERR)";
-			} else {
-				if ( ad->LookupString(ATTR_JOB_ERROR, &attr_value) &&
-					 *attr_value && strcmp( attr_value, NULL_FILE ) ) {
-					*rsl += ")(stderr=";
-					*rsl += rsl_stringify( attr_value );
-				}
-				if ( attr_value != NULL ) {
-					free( attr_value );
-					attr_value = NULL;
-				}
+			if ( ad->LookupString(ATTR_JOB_ERROR, &attr_value) &&
+				 *attr_value && strcmp( attr_value, NULL_FILE ) ) {
+				*rsl += ")(stderr=";
+				*rsl += rsl_stringify( attr_value );
+			}
+			if ( attr_value != NULL ) {
+				free( attr_value );
+				attr_value = NULL;
 			}
 		}
 	}
@@ -2530,13 +2512,6 @@ MyString *GlobusJob::buildSubmitRSL()
 			filelist.append(input_classad_filename.GetCStr());
 			if(transfer_executable) {
 				filelist.append(executable_path.GetCStr());
-			}
-			char* tmp = NULL;
-			ad->LookupString( ATTR_JOB_INPUT, &tmp );
-			if( tmp ) {
-				filelist.append( tmp );
-				free( tmp );
-				tmp = NULL;
 			}
 		}
 		if ( !filelist.isEmpty() ) {
@@ -2584,26 +2559,11 @@ MyString *GlobusJob::buildSubmitRSL()
 		if( useGridShell ) {
 				// If we're the grid shell, we want to append some
 				// files to  be transfered back: the final status
-				// ClassAd from the gridshell, plus the STDOUT and
-				// STDERR for the job itself (if defined).
+				// ClassAd from the gridshell
 
 			ASSERT( output_classad_filename.GetCStr() );
 			filelist.append( output_classad_filename.GetCStr() );
 			filelist.append( gridshell_log_filename.GetCStr() );
-
-			char* tmp = NULL;
-			ad->LookupString( ATTR_JOB_OUTPUT, &tmp );
-			if( tmp ) {
-				filelist.append( tmp );
-				free( tmp );
-				tmp = NULL;
-			}
-			ad->LookupString( ATTR_JOB_ERROR, &tmp );
-			if( tmp ) {
-				filelist.append( tmp );
-				free( tmp );
-				tmp = NULL;
-			}
 		}
 		if ( !filelist.isEmpty() || stageOutput || stageError ) {
 			char *filename;
