@@ -1213,8 +1213,9 @@ GridManager::updateSchedd()
 			if ( curr_job->newJM && curr_job->jobContact != NULL ) {
 				break;
 			}
-			if ( curr_event->event == JOB_UE_FAILED && curr_job->jmFailureCode ==
-				     GLOBUS_GRAM_CLIENT_ERROR_JOB_EXECUTION_FAILED ) {
+			if ( curr_event->event == JOB_UE_FAILED && 
+				 ( curr_job->jmFailureCode == GLOBUS_GRAM_CLIENT_ERROR_JOB_EXECUTION_FAILED ||
+				   curr_job->jmFailureCode == GLOBUS_GRAM_CLIENT_ERROR_INVALID_QUEUE ) ) {
 				// This error means the submission to the local scheduler
 				// failed. Treat it as a submission error.
 				curr_job->errorCode = curr_job->jmFailureCode;
