@@ -38,11 +38,13 @@
 #include "exit.h"
 #include "condor_uid.h"
 #include "condor_distribution.h"
+#include "nullfile.h"
 #ifdef WIN32
 #include "perm.h"
 #endif
 
 extern CStarter *Starter;
+
 
 /* OsProc class implementation */
 
@@ -672,34 +674,4 @@ OsProc::PublishUpdateAd( ClassAd* ad )
 		} // should we put in ATTR_JOB_CORE_DUMPED = false if not?
 	}
 	return true;
-}
-
-int 
-nullFile(const char *filename)
-{
-	// On WinNT, /dev/null is NUL
-	// on UNIX, /dev/null is /dev/null
-	
-	// a UNIX->NT submit will result in the NT starter seeing /dev/null, so it
-	// needs to recognize that /dev/null is the null file
-
-	// an NT->NT submit will result in the NT starter seeing NUL as the null 
-	// file
-
-	// a UNIX->UNIX submit ill result in the UNIX starter seeing /dev/null as
-	// the null file
-	
-	// NT->UNIX submits are not worried about - we don't think that anyone can
-	// do them, and to make it clean we'll fix submit to always use /dev/null,
-	// in the job ad, even on NT. 
-
-	#ifdef WIN32
-	if(_stricmp(filename, "NUL") == 0) {
-		return 1;
-	}
-	#endif
-	if(strcmp(filename, "/dev/null") == 0 ) {
-		return 1;
-	}
-	return 0;
 }

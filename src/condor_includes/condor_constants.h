@@ -96,6 +96,10 @@ static const char NULL_FILE[] = "/dev/null";
 static const char CONDOR_EXEC[] = "condor_exec.exe";
 #endif
 
+/* condor_submit canonicalizes all NULLFILE's to the UNIX_NULL_FILE */
+static const char WINDOWS_NULL_FILE[] = "NUL";
+static const char UNIX_NULL_FILE[] = "/dev/null";
+
 /* This is the username of the NiceUser (i.e., dirt user) */
 static const char NiceUserName[] = "nice-user";
 

@@ -1484,7 +1484,8 @@ SetStdFile( int which_file )
 	if( !macro_value || *macro_value == '\0') 
 	{
 		transfer_it = false;
-		macro_value = strdup(NULL_FILE);
+		// always canonicalize to the UNIX null file (i.e. /dev/null)
+		macro_value = strdup(UNIX_NULL_FILE);
 	}
 	
 	if( whitespace(macro_value) ) 
