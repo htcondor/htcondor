@@ -45,6 +45,8 @@ system.
 
 \item Added support for MPICH jobs on Windows NT and 2000.
 
+\item Added detection of Java during installation process.
+
 \item When you use \Condor{hold} and \Condor{release}, you now see an
 entry about the event in the UserLog file for the job.
 
@@ -114,11 +116,37 @@ would yield invalid email addresses.
 For more information, see section~\ref{Param:EmailDomain} on
 page~\pageref{Param:EmailDomain}.
 
+\item
+Added support for RedHat 7.2.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item
+Fixed a bug in Condor-PVM where it was possible that a machine would be 
+placed into the virtual machine, but then ignored by Condor for the purposes
+of scheduling tasks there.
+
+\item
+Under Solaris, the checkpointing libraries could segfault while determining
+the page size of the machine. 
+This has been fixed.
+
+\item
+In a heavily loaded submit machine, the \Condor{schedd} would time out
+authentication checks with its shadows. 
+This would cause the shadows to
+exit believing the \Condor{schedd} had died placing jobs into the idle
+state and the \Condor{schedd} to exhibit poor performance.
+This timeout problem has been corrected.
+
+\item
+Removed use of the bfd libary in the Condor Linux distribution. 
+This will make the dynamic versions of the Condor executables have a
+higher chance of being usable when RedHat upgrades.
 
 \item
 When you specify ``STARTD\_HAS\_BAD\_UTMP = True'' in the config files
@@ -166,9 +194,10 @@ by ignorant POST scripts which always succeed.
 \noindent Known Bugs:
 
 \begin{itemize}
+\item The HP-UX Vendor C++ CFront compiler does not work with \Condor{compile}
+if exception handling is enabled with +eh.
 
-\item None.
-
+\item The HP-UX Vendor aCC compiler does not work at all with Condor.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
