@@ -83,6 +83,15 @@ my_sin_addr()
 }
 
 
+char*
+my_ip_str()
+{
+	if( ! ipaddr_initialized ) {
+		init_ipaddr(0);
+	}
+	return inet_ntoa(sin_addr);
+}
+
 void
 init_full_hostname()
 {
