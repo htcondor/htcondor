@@ -34,7 +34,7 @@
 #elif !defined(IRIX)
 #	include <rpc/rpc.h>
 #	include <nfs/nfs.h>
-#if !defined(OSF1)
+#if !defined(OSF1) && !defined(Solaris)
 #	include <nfs/export.h>
 #endif
 #endif
