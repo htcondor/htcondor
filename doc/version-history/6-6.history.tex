@@ -92,6 +92,16 @@ with the message, "caInsert: Can't insert CpuBusy into target classad."
   sockets, even with \MacroNI{LOWPORT} and \MacroNI{HIGHPORT}
   defined. 
 
+\item Fixed a bug that caused \Condor{rm} \Opt{-forcex} to not remove
+  jobs that make use of \AdAttr{leave\_in\_queue}.
+  If invoked using a cluster id, username, or constraint expression,
+  \Condor{rm} would report success but the jobs would remain in the queue.
+  Now, the jobs will leave the queue.
+
+\item When a held job is released, job ad attributes HoldReasonCode and
+  HoldReasonSubCode are now properly moved to LastHoldReasonCode and
+  LastHoldReasonSubCode.
+
 \end{itemize}
 
 \noindent Known Bugs:
