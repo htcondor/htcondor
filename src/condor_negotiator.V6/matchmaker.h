@@ -52,6 +52,9 @@ class Matchmaker : public Service
 
 		// Cache of socket connections to schedds
 		SocketCache		sockCache;
+
+		// DaemonCore Timer ID for periodic negotiations
+		int negotiation_timerID;
 };
 
 
