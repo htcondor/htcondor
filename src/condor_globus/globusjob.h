@@ -6,7 +6,6 @@
 #include "condor_classad.h"
 #include "globus_utils.h"
 
-
 #define JM_COMMIT_TIMEOUT	60
 
 class GlobusJob
@@ -48,6 +47,7 @@ class GlobusJob
 					// and two-phase commit
 	bool restartingJM;
 	time_t restartWhen;
+	bool durocRequest;
 
  protected:
 	bool callbackRegistered;

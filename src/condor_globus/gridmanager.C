@@ -637,6 +637,11 @@ GridManager::CANCEL_JOB_signalHandler( int signal )
 
 				JobsToCommit.Delete( curr_job );
 				removeJobUpdateEvents( curr_job );
+
+				if ( curr_job->durocRequest ) {
+					curr_job->jobState = G_CANCELED;
+					addJobUpdateEvent( curr_job, JOB_UE_CANCELED );
+				}
 			}
 
 		}
@@ -1140,10 +1145,6 @@ GridManager::updateSchedd()
 						curr_job->procID.proc);
 
 			jobs_to_delete.Append( curr_job );
-			// Remove all knowledge we may have about this job
-//			JobsByProcID->remove( curr_job->procID );
-//			JobsToCancel.Delete( curr_job );
-//			delete curr_job;
 
 			handled = true;
 			break;
@@ -1202,7 +1203,7 @@ GridManager::updateSchedd()
 	while ( jobs_to_delete.Next( curr_job ) ) {
 
 		// For jobs we just removed from the schedd's queue, remove all
-		// knowledge of them and delete them. We do the after disconnecting
+		// knowledge of them and delete them. We do this after disconnecting
 		// from the schedd because some of the lists we need to search could
 		// be very long. Most of these lists shouldn't contain the job, but
 		// we're being safe.

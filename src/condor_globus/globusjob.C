@@ -29,13 +29,21 @@
 
 #include "globus_gram_client.h"
 #include "globus_gram_error.h"
+#include "globus_duroc_control.h"
 
 #include "gm_common.h"
 #include "globusjob.h"
 
+bool durocControlInited = false;
+globus_duroc_control_t durocControl;
 
 GlobusJob::GlobusJob( GlobusJob& copy )
 {
+	if ( !durocControlInited ) {
+		globus_duroc_control_init( &durocControl );
+		durocControlInited = true;
+	}
+
 	removedByUser = copy.removedByUser;
 	callbackRegistered = copy.callbackRegistered;
 	procID = copy.procID;
@@ -54,12 +62,19 @@ GlobusJob::GlobusJob( GlobusJob& copy )
 	newJM = copy.newJM;
 	restartingJM = copy.restartingJM;
 	restartWhen = copy.restartWhen;
+	durocRequest = copy.durocRequest;
 }
 
 GlobusJob::GlobusJob( ClassAd *classad )
 {
 	char buf[4096];
 	int job_status;
+	bool full_rsl_given = false;
+
+	if ( !durocControlInited ) {
+		globus_duroc_control_init( &durocControl );
+		durocControlInited = true;
+	}
 
 	removedByUser = false;
 	callbackRegistered = false;
@@ -80,12 +95,30 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	newJM = false;
 	restartingJM = false;
 	restartWhen = 0;
+	durocRequest = false;
 	// ad = NULL;
 
 	buf[0] = '\0';
-	classad->LookupString( ATTR_GLOBUS_CONTACT_STRING, buf );
-	if ( strcmp( buf, NULL_JOB_CONTACT ) != 0 ) {
-		jobContact = strdup( buf );
+	classad->LookupString( ATTR_GLOBUS_RSL, buf );
+	if ( buf[0] == '&' ) {
+		full_rsl_given = true;
+		RSL = strdup( buf );
+	} else if ( buf[0] == '+' ) {
+		full_rsl_given = true;
+		durocRequest = true;
+		RSL = strdup( buf );
+	}
+
+	// Currently, no contact string is saved on the schedd for duroc jobs
+	// since the contact string is meaningless outside of the process that
+	// initiates the job. Make sure we don't get one by accident, since we
+	// can't resume a duroc job.
+	if ( !durocRequest ) {
+		buf[0] = '\0';
+		classad->LookupString( ATTR_GLOBUS_CONTACT_STRING, buf );
+		if ( strcmp( buf, NULL_JOB_CONTACT ) != 0 ) {
+			jobContact = strdup( buf );
+		}
 	}
 
 	classad->LookupInteger( ATTR_GLOBUS_STATUS, jobState );
@@ -98,6 +131,8 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	classad->LookupString( ATTR_GLOBUS_RESOURCE, buf );
 	if ( buf[0] != '\0' ) {
 		rmContact = strdup( buf );
+	} else {
+		rmContact = strdup( "<unknown>" );
 	}
 
 	errorCode = GLOBUS_SUCCESS;
@@ -108,7 +143,9 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		userLogFile = strdup( buf );
 	}
 
-	RSL = buildRSL( classad );
+	if ( !full_rsl_given ) {
+		RSL = buildRSL( classad );
+	}
 }
 
 GlobusJob::~GlobusJob()
@@ -155,41 +192,88 @@ bool GlobusJob::start()
 				procID.cluster, procID.proc, localError, errno );
 	}
 
-    rc = globus_gram_client_job_request( rmContact, RSL,
-        GLOBUS_GRAM_CLIENT_JOB_STATE_ALL, gramCallbackContact,
-        &job_contact );
+	if ( durocRequest ) {
 
-    if ( rc == GLOBUS_SUCCESS ) {
-		newJM = false;
-		jobContact = strdup( job_contact );
-		globus_gram_client_job_contact_free( job_contact );
-		jobState = G_SUBMITTED;
+		int results_count;
+		int *results;
 
-		rehashJobContact( this, NULL, jobContact );
+		rc = globus_duroc_control_job_request( &durocControl, RSL, 0, NULL,
+											   &job_contact, &results_count,
+											   (volatile int **)&results );
 
-		stateChanged = true;
-		addJobUpdateEvent( this, JOB_UE_SUBMITTED );
+		if ( rc == GLOBUS_DUROC_SUCCESS ) {
 
-		callbackRegistered = true;
+			// Should we make sure all subjobs didn't fail?
 
-		return true;
-	} else if ( rc == GLOBUS_GRAM_CLIENT_ERROR_WAITING_FOR_COMMIT ) {
-		newJM = true;
-		jobContact = strdup( job_contact );
-		globus_gram_client_job_contact_free( job_contact );
-		jobState = G_UNSUBMITTED;
+			globus_free( results );
 
-		rehashJobContact( this, NULL, jobContact );
+			rc = globus_duroc_control_barrier_release( &durocControl,
+													   job_contact,
+													   GLOBUS_TRUE );
 
-		stateChanged = true;
-		addJobUpdateEvent( this, JOB_UE_SUBMITTED );
+			if ( rc != GLOBUS_DUROC_SUCCESS ) {
+				// Not sure if this should always be fatal
+				globus_duroc_control_job_cancel( &durocControl, job_contact );
+				errorCode = rc;
+				globus_free( job_contact );
+				return false;
+			}
 
-		callbackRegistered = true;
+			// do we need to update the schedd on anything?
 
-		return true;
+			jobContact = strdup( job_contact );
+			globus_free( job_contact );
+
+			jobState = G_ACTIVE;
+			stateChanged = true;
+			addJobUpdateEvent( this, JOB_UE_RUNNING );
+
+			return true;
+
+		} else {
+			errorCode = rc;
+			return false;
+		}
+
 	} else {
-		errorCode = rc;
-		return false;
+
+		rc = globus_gram_client_job_request( rmContact, RSL,
+					GLOBUS_GRAM_CLIENT_JOB_STATE_ALL, gramCallbackContact,
+					&job_contact );
+
+		if ( rc == GLOBUS_SUCCESS ) {
+			newJM = false;
+			jobContact = strdup( job_contact );
+			globus_gram_client_job_contact_free( job_contact );
+			jobState = G_SUBMITTED;
+
+			rehashJobContact( this, NULL, jobContact );
+
+			stateChanged = true;
+			addJobUpdateEvent( this, JOB_UE_SUBMITTED );
+
+			callbackRegistered = true;
+
+			return true;
+		} else if ( rc == GLOBUS_GRAM_CLIENT_ERROR_WAITING_FOR_COMMIT ) {
+			newJM = true;
+			jobContact = strdup( job_contact );
+			globus_gram_client_job_contact_free( job_contact );
+			jobState = G_UNSUBMITTED;
+
+			rehashJobContact( this, NULL, jobContact );
+
+			stateChanged = true;
+			addJobUpdateEvent( this, JOB_UE_SUBMITTED );
+
+			callbackRegistered = true;
+
+			return true;
+		} else {
+			errorCode = rc;
+			return false;
+		}
+
 	}
 }
 
@@ -270,6 +354,40 @@ bool GlobusJob::callback_register()
 	}
 
 	rehashJobContact( this, NULL, jobContact );
+
+	if ( rc == GLOBUS_SUCCESS && newJM ) {
+
+		char rsl[4096];
+		char buffer[1024];
+		struct stat file_status;
+
+		sprintf( rsl, "&(remote_io_url=%s)", gassServerUrl );
+
+		if ( localOutput ) {
+			rc = stat( localOutput, &file_status );
+			if ( rc < 0 ) {
+				file_status.st_size = 0;
+			}
+			sprintf( buffer, "(stdout=%s%s)(stdout_position=%d)",
+					 gassServerUrl, localOutput, file_status.st_size );
+			strcat( rsl, buffer );
+		}
+
+		if ( localError ) {
+			rc = stat( localError, &file_status );
+			if ( rc < 0 ) {
+				file_status.st_size = 0;
+			}
+			sprintf( buffer, "(stderr=%s%s)(stderr_position=%d)",
+					 gassServerUrl, localError, file_status.st_size );
+			strcat( rsl, buffer );
+		}
+
+		rc = globus_gram_client_job_signal( rmContact,
+							GLOBUS_GRAM_CLIENT_JOB_SIGNAL_STDIO_UPDATE,
+							rsl, &status, &failure_code );
+
+	}
 
     if ( rc == GLOBUS_SUCCESS ) {
 		callbackRegistered = true;
@@ -411,8 +529,14 @@ bool GlobusJob::cancel()
 {
 	int rc = GLOBUS_SUCCESS;
 
-	if ( jobContact != NULL ) {
-		rc = globus_gram_client_job_cancel( jobContact );
+	if ( durocRequest ) {
+		if ( jobContact != NULL ) {
+			rc = globus_duroc_control_job_cancel( &durocControl, jobContact );
+		}
+	} else {
+		if ( jobContact != NULL ) {
+			rc = globus_gram_client_job_cancel( jobContact );
+		}
 	}
 
 	if ( rc == GLOBUS_SUCCESS ) {
@@ -426,17 +550,67 @@ bool GlobusJob::cancel()
 
 bool GlobusJob::probe()
 {
-	int rc;
+	int rc = GLOBUS_SUCCESS;
 	int status;
 	int error;
 
-	rc = globus_gram_client_job_status( jobContact, &status, &error );
-
-	if ( rc == GLOBUS_SUCCESS ) {
+	if ( jobContact == NULL ) {
 		return true;
+	}
+
+	if ( durocRequest ) {
+		int subjob_count;
+		int *subjob_states;
+		char **subjob_labels;
+		bool all_done = true;
+
+		// Since we don't get callbacks on the status of DUROC jobs,
+		// we check the status here in the probe call.
+		rc = globus_duroc_control_subjob_states( &durocControl, jobContact,
+												 &subjob_count, &subjob_states,
+												 &subjob_labels );
+
+		if ( rc != GLOBUS_SUCCESS ) {
+			errorCode = rc;
+			return false;
+		}
+
+		for ( int i = 0; i < subjob_count; i++ ) {
+			if ( subjob_states[i] != GLOBUS_DUROC_SUBJOB_STATE_DONE &&
+				 subjob_states[i] != GLOBUS_DUROC_SUBJOB_STATE_FAILED ) {
+				all_done = false;
+			}
+			if ( subjob_labels[i] != NULL ) {
+				globus_free( subjob_labels[i] );
+			}
+		}
+
+		globus_free ( subjob_states );
+		globus_free ( subjob_labels );
+
+		if ( all_done ) {
+			// Is there any time we should consider the job failed instead
+			// of done?
+			jobState = G_DONE;
+			stateChanged = true;
+			addJobUpdateEvent( this, JOB_UE_DONE );
+
+			free( jobContact );
+			jobContact = NULL;
+		}
+
+		return true;
+
 	} else {
-		errorCode = error;
-		return false;
+
+		rc = globus_gram_client_job_status( jobContact, &status, &error );
+
+		if ( rc == GLOBUS_SUCCESS ) {
+			return true;
+		} else {
+			errorCode = error;
+			return false;
+		}
 	}
 }
 
@@ -447,6 +621,12 @@ bool GlobusJob::restart()
 	char rsl[4096];
 	char buffer[1024];
 	struct stat file_status;
+
+	if ( durocRequest ) {
+		dprintf( D_FULLDEBUG, "Attempted to restart a DUROC job (%d.%d)\n",
+				 procID.cluster, procID.proc );
+		return false;
+	}
 
 	sprintf( rsl, "&(restart=%s)(remote_io_url=%s)", jobContact,
 			 gassServerUrl );
@@ -502,7 +682,16 @@ bool GlobusJob::restart()
 
 const char *GlobusJob::errorString()
 {
-	return globus_gram_client_error_string( errorCode );
+	if ( durocRequest ) {
+		if ( globus_duroc_error_is_gram_client_error( errorCode ) ) {
+			return globus_gram_client_error_string(
+					globus_duroc_error_get_gram_client_error( errorCode ) );
+		} else {
+			return globus_duroc_error_string( errorCode );
+		}
+	} else {
+		return globus_gram_client_error_string( errorCode );
+	}
 }
 
 
