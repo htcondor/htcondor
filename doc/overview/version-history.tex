@@ -75,10 +75,10 @@ The \Condor{schedd} now sets the status correctly on multi-class PVM
 jobs and removes them from the job queue correctly on exit.
 \Condor{submit} no longer ignores the machine\_count command for PVM
 jobs.
-And, a problem which caused \func{pvm\_exit() to hang was diagnosed:
-PVM tasks which call \func{pvm\_catchout()} to catch the output of
+And, a problem which caused pvm\_exit() to hang was diagnosed:
+PVM tasks which call pvm\_catchout() to catch the output of
 child tasks should be sure to call it again with a NULL argument to
-disable output collection before calling \func{pvm\_exit()}.
+disable output collection before calling pvm\_exit().
 
 \item The change introduced in 6.1.13 to the \Condor{shadow} regarding
 when it logged the execute event to the user log produced situations
