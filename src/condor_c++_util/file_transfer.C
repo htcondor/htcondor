@@ -34,6 +34,7 @@
 #include "condor_config.h"
 #include "condor_ckpt_name.h"
 #include "util_lib_proto.h"
+#include "condor_uid.h"
 
 #define COMMIT_FILENAME ".ccommit.con"
 
@@ -286,13 +287,14 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 			SpoolSpace = strdup( gen_ckpt_name(Spool,Cluster,Proc,0) );
 			TmpSpoolSpace = (char*)malloc( strlen(SpoolSpace) + 10 );
 			sprintf(TmpSpoolSpace,"%s.tmp",SpoolSpace);
+			//priv_state priv = set_condor_priv();
 			if( (mkdir(SpoolSpace,0777) < 0) ) {
-				dprintf( D_ALWAYS, 
+				dprintf( D_FULLDEBUG, 
 						 "FileTransfer::Init(): mkdir(%s) failed, errno: %d\n",
 						 SpoolSpace, errno );
 			}
 			if( (mkdir(TmpSpoolSpace,0777) < 0) ) {
-				dprintf( D_ALWAYS, 
+				dprintf( D_FULLDEBUG, 
 						 "FileTransfer::Init(): mkdir(%s) failed, errno: %d\n",
 						 TmpSpoolSpace, errno );
 			}
@@ -302,6 +304,8 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 				// we can access an executable in the spool dir
 				ExecFile = strdup(source);
 			}
+			//set_priv(priv);
+
 		}
 		if ( !ExecFile ) {
 			// apparently the executable is not in the spool dir.
