@@ -39,6 +39,8 @@
 #include "HashTable.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
+extern char *mySubSystem;
+
 
 void Daemon::common_init() {
 	_type = DT_NONE;
@@ -59,6 +61,9 @@ void Daemon::common_init() {
 	_hostname = NULL;
 	_full_hostname = NULL;
 	_cmd_str = NULL;
+	char buf[200];
+	sprintf(buf,"%s_TIMEOUT_MULTIPLIER",mySubSystem);
+	Sock::set_timeout_multiplier( param_integer(buf,0) );
 }
 
 

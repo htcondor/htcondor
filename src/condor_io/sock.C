@@ -36,6 +36,8 @@
 #define closesocket close
 #endif
 
+// initialize static data members
+int Sock::timeout_multiplier = 0;
 
 Sock::Sock() : Stream() {
 	_sock = INVALID_SOCKET;
@@ -804,6 +806,14 @@ int Sock::close()
 #define ioctlsocket ioctl
 #endif
 
+int
+Sock::set_timeout_multiplier(int secs)
+{
+   int old_val = timeout_multiplier;
+   timeout_multiplier = secs;
+   return old_val;
+}
+
 /* NOTE: on timeout() we return the previous timeout value, or a -1 on an error.
  * Once more: we do _not_ return FALSE on Error like most other CEDAR functions;
  * we return a -1 !! 
@@ -811,6 +821,10 @@ int Sock::close()
 int Sock::timeout(int sec)
 {
 	int t = _timeout;
+
+	if (sec && (timeout_multiplier > 0)) {
+		sec *= timeout_multiplier;
+	}
 
 	_timeout = sec;
 

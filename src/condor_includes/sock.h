@@ -150,6 +150,8 @@ public:
 		 @return the actual/resulting size of the buffer in bytes
 	*/
 	int set_os_buffers(int desired_size, bool set_write_buf = false);
+
+	static int set_timeout_multiplier(int secs);
 	
 	inline int bind(char *s) { return bind(getportbyserv(s)); }
 	int close();
@@ -276,6 +278,8 @@ protected:
 	sock_state		_state;
 	int				_timeout;
 	struct sockaddr_in _who;	// endpoint of "connection"
+
+	static int timeout_multiplier;
 
 private:
 	int _condor_read(SOCKET fd, char *buf, int sz, int timeout);
