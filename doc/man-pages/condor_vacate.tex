@@ -1,10 +1,9 @@
 \begin{ManPage}{\label{man-condor-vacate}\Condor{vacate}}{1}
 {Vacate jobs that are running on the specified hosts}
 \Synopsis \SynProg{\Condor{vacate}}
-\oOpt{-help}
-\oOpt{-version}
-\oOpt{-fast}
-\oOpt{hostname ...}
+\ToolArgsBase
+\oOptnm{-graceful $|$ -fast}
+\ToolArgsLocate
 
 \index{Condor commands!condor\_vacate}
 \index{condor\_vacate command}
@@ -25,9 +24,10 @@ no Condor job running on that host, then \Condor{vacate} has no effect.
 automatically by Condor by following the policies stated in Condor's
 configuration files.   
 \begin{Options}
-    \OptItem{\Opt{-help}}{Display usage information}
-    \OptItem{\Opt{-version}}{Display version information}
+	\ToolArgsBaseDesc
+    \OptItem{\Opt{-graceful}}{Inform the job to checkpoint, then soft-kill it.}
     \OptItem{\Opt{-fast}}{Hard-kill jobs instead of checkpointing them}
+	\ToolArgsLocateDesc
 \end{Options}
 
 \end{ManPage}

@@ -5,6 +5,7 @@
 \oOpt{-v}
 \oOptArg{-n}{schedd\_name}
 \oOptArg{-r}{schedd\_name}
+\oOpt{-d}
 \Arg{submit-description file}
 
 \index{Condor commands!condor\_submit}
@@ -578,6 +579,8 @@ character are ignored by the submit-description file parser.
 	systems, the Condor administrator for you site must override the default 
 	AUTHENTICATION\_METHODS configuration setting to enable remote filesystem 
 	(FS\_REMOTE) authentication.}
+
+	\OptItem{\Opt{-d}}{Disable file permission checks.}
 
 \end{Options}
 

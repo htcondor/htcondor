@@ -1,9 +1,7 @@
 \begin{ManPage}{\label{man-condor-reconfig}\Condor{reconfig}}{1}
 {Reconfigure condor daemons}
 \Synopsis \SynProg{\Condor{reconfig}}
-\oOpt{-help}
-\oOpt{-version}
-\oOpt{hostname ...}
+\ToolArgs
 
 \index{Condor commands!condor\_reconfig}
 \index{condor\_reconfig command}
@@ -19,11 +17,8 @@ updated if the \Condor{restart} command is used.  In general,
 \Condor{reconfig} should be used when making changes to the configuration
 files, since it is faster and more efficient then restarting the daemons.
 
-
 \begin{Options}
-	\OptItem{\Opt{-help}}{Display usage information}
-	\OptItem{\Opt{-version}}{Display version information}
-	\OptItem{\Opt{hostname ...}}{Reconfigure condor on this list of machines}
+	\ToolArgsDesc
 \end{Options}
 
 \end{ManPage}
