@@ -4,7 +4,11 @@
 #endif
 #include "status_include.h"
 
-/*virtual ..dhaval 7/12 */ void SERVER_REC::print_rec( FILE *fp )
+#if defined(Solaris)
+/* virtual ..dhaval 7/12 */ void SERVER_REC::print_rec( FILE *fp )
+#else
+virtual void SERVER_REC::print_rec( FILE *fp )
+#endif
 {	
 	fprintf( fp, "%-14s", this->name );
 
