@@ -483,9 +483,6 @@ find_file(const char *env_name, const char *file_name)
 {
 
 	char	*config_file = NULL, *env;
-# if defined(CONDOR_G_RELEASE)
-	char	*home_dir;
-# endif
 	int		fd;
 
 		// If we were given an environment variable name, try that first. 
@@ -523,55 +520,7 @@ find_file(const char *env_name, const char *file_name)
 	}
 
 # ifdef UNIX
-	// Only look in /etc/condor and in ~condor on Unix.
-#  if defined(CONDOR_G_RELEASE)
-    // For Condor-G, first check in the default install path, which is the
-    // user's homedirectory/CondorG/etc/condor_config 
-	if( ! config_file ) {
-		char *globus_location;      
-	
-		if( globus_location = getenv("GLOBUS_LOCATION") ) {
-	
-			config_file = (char *)malloc( ( strlen(globus_location) +
-                                            strlen("/etc/") +   
-                                            strlen(file_name) + 3 ) 
-                                          * sizeof(char) );	
-			config_file[0] = '\0';
-			strcat(config_file, globus_location);
-			strcat(config_file, "/etc/");
-			strcat(config_file, file_name); 
-			if( (fd = open( config_file, O_RDONLY)) < 0 ) {
-				free( config_file );
-				config_file = NULL;
-			} else {
-				close( fd );
-			}
-		}
-	} 
-	// Check the old location in the user's home dir
-	if( ! config_file ) {
-		struct passwd *pwent;      
-		
-		if( pwent = getpwuid( getuid() ) ) {
-			home_dir = strdup( pwent->pw_dir );
-	
-			config_file = (char *) malloc(
-				(strlen(file_name) + strlen(home_dir) +
-				 strlen("CondorG/etc/") + 3 ) * sizeof(char));	
-			config_file[0] = '\0';
-			strcat(config_file, home_dir);
-			strcat(config_file, "/CondorG/etc/");
-			strcat(config_file, file_name); 
-			if( (fd = open( config_file, O_RDONLY)) < 0 ) {
-				free( config_file );
-				config_file = NULL;
-			} else {
-				close( fd );
-			}
-			free( home_dir);
-		}
-	}
-#  endif /* CONDOR_G_RELEASE */
+	// Only look in /etc/condor, ~condor, and $GLOBUS_LOCATION/etc on Unix.
 
 	if( ! config_file ) {
 		// try /etc/condor/file_name
@@ -602,6 +551,28 @@ find_file(const char *env_name, const char *file_name)
 			close( fd );
 		}
 	}
+    // For Condor-G, also check off of GLOBUS_LOCATION.
+	if( ! config_file ) {
+		char *globus_location;      
+	
+		if( globus_location = getenv("GLOBUS_LOCATION") ) {
+	
+			config_file = (char *)malloc( ( strlen(globus_location) +
+                                            strlen("/etc/") +   
+                                            strlen(file_name) + 3 ) 
+                                          * sizeof(char) );	
+			config_file[0] = '\0';
+			strcat(config_file, globus_location);
+			strcat(config_file, "/etc/");
+			strcat(config_file, file_name); 
+			if( (fd = open( config_file, O_RDONLY)) < 0 ) {
+				free( config_file );
+				config_file = NULL;
+			} else {
+				close( fd );
+			}
+		}
+	} 
 # elif defined WIN32	// ifdef UNIX
 	// Only look in the registry on WinNT.
 	HKEY	handle;
