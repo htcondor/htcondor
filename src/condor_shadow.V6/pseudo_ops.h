@@ -87,7 +87,6 @@ int PERM_ERR(...);
 int SYSCALL(...);
 
 int external_name( const char*, char*, int);
-int free_fs_blocks( const char* );
 void get_local_rusage( struct rusage *bsd_rusage );
 int tcp_accept_timeout( int, struct sockaddr*, int*, int );
 void display_startup_info( const STARTUP_INFO *, int );
