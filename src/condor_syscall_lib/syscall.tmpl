@@ -122,30 +122,7 @@
 	similar changes.
 */
 
-
-#if defined(LINUX)
-#   if defined(GLIBC) 
-#	define MMAP_T char*
-#	define GLIBC_CONST 
-#   else
-#	define MMAP_T void*
-#	define GLIBC_CONST const
-#   endif
-#endif
-
-#if defined(OSF1)
-#   define SYSCALL_PTR	void
-#   define INV_SYSCALL_PTR	char
-#   define NEED_CONST	const
-#else
-#   define SYSCALL_PTR	char
-#   define INV_SYSCALL_PTR	void
-#   if defined(Solaris26)
-#	define NEED_CONST	const
-#   else
-#	define NEED_CONST
-#   endif
-#endif
+#include "syscall_sysdep.h"
 
 #define SEND_PATH(name) in code(name)
 #define GET_PATH(name) out code(name)
@@ -368,11 +345,14 @@
 	off_t lseek( map(int fd), off_t offset, int whence );
 #endif
 
-#ifdef Solaris26 
+#if HAS_64BIT_SYSCALLS
+#if defined(Solaris26)
 	offset_t llseek( map(int fd), offset_t offset, int whence );
 	off64_t	lseek64( map(int fd), off64_t offset, int whence ) : extract, no_sys_chk;
-#endif 
-
+#else
+	off64_t	lseek64( map(int fd), off64_t offset, int whence );
+#endif /* Solaris 2.6 */
+#endif /* HAS_64BIT_SYSCALLS */
 
 	int access( const char *path, int access_mode ) {
 		SEND_PATH( path );
@@ -658,7 +638,7 @@ int rename( const char *from, const char *to ) : pseudo {
 			alloc( buf, STAT_SIZE );
 		}
 
-#if defined(Solaris26)
+#if HAS_64BIT_SYSCALLS
 		/* 64-bit versions of various syscalls.  
 		   Added on 6/24/98 by Derek Wright */ 
 
@@ -681,12 +661,14 @@ int rename( const char *from, const char *to ) : pseudo {
 			alloc( buf, STAT64_SIZE );
 	}
 
+#if !defined(HPUX)	/* There is no getdents64 on HPUX 10.20 */
 	int getdents64( map(int fd), char *buf, int nbytes ) {
 			out code_bytes_bool( buf, nbytes );
 			alloc( buf, nbytes );
 	}
+#endif /* HPUX */
 
-#endif /* Solaris26 */
+#endif /* HAS_64BIT_SYSCALLS */
 
 #if defined(LINUX)
 	int mknod( const char *path, mode_t mode, dev_t device ) {
@@ -700,7 +682,7 @@ int rename( const char *from, const char *to ) : pseudo {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
-#if !defined(Solaris) && !defined(LINUX) && !defined(IRIX62) 
+#if !defined(Solaris) && !defined(LINUX) && !defined(IRIX62) && !defined(HPUX)
 		int getfsstat( struct statfs buf[], long bufsize, int flags ) {
 			out code_bytes_bool( buf, STATFS_ARRAY_SIZE );
 			alloc( buf, bufsize );
@@ -732,6 +714,22 @@ not_supported{
 #endif /* defined(Solaris) */
 
 	int fsync( map(int fd) );
+
+#if !defined( SWITCH )
+    /*
+	We don't want a switch, since we want a special switch that
+	always does a sync() locally, and then conditionally sends a remote
+	sync() back to the shadow.  We want it pseudo on platforms where
+	sync() returns void, since that's the only way to get the shadow to
+	build since stubgen depends on returning an int.
+	-Derek Wright 7/17/98 
+    */
+#if SYNC_RETURNS_VOID
+	void sync() : pseudo;
+#else 
+	int sync();
+#endif
+#endif /* ! SWITCH */
 
 	int symlink( const char *path1, const char *path2 ) {
 		SEND_PATH( path1 );
@@ -775,7 +773,7 @@ not_supported{
 			alloc( basep, LONG_SIZE );
 		}
 #	endif
-#if !defined(Solaris) && !defined(LINUX) && !defined(IRIX62)
+#if !defined(Solaris) && !defined(LINUX) && !defined(IRIX62) && !defined(HPUX)
 	int table( int id, int index, char *addr, int nel, unsigned int lel ) {
 		out code_bytes_bool( addr, nel * lel );
 		alloc( addr, nel * lel );
@@ -806,6 +804,7 @@ not_supported{
 	int setpriority( int which, int who, int priority );
 #endif
 	int getpriority( int which, int who );
+
 #if defined(OSF1) || defined(LINUX)
 	int gettimeofday( struct timeval *tp, struct timezone *tzp ) {
 		out code( tp );
@@ -875,7 +874,7 @@ not_supported{
 #if defined(HPUX) || defined(LINUX) || defined(Solaris) || defined(IRIX)
 	int setrlimit( int resource, const  struct rlimit *rlp ) {
 #else
-	int setrlimit( int resource, /* const */ struct rlimit *rlp ) {
+	int setrlimit( int resource, struct rlimit *rlp ) {
 #endif
 		in code( rlp );
 		alloc( rlp, RLIMIT_SIZE );
@@ -885,7 +884,7 @@ not_supported{
 		alloc( rlp, RLIMIT_SIZE );
 	}
 
-#if defined(Solaris26)
+#if HAS_64BIT_SYSCALLS
 	int setrlimit64( int resource, const  struct rlimit64 *rlp ) {
 		in code( rlp );
 		alloc( rlp, RLIMIT64_SIZE );
@@ -896,7 +895,7 @@ not_supported{
 	}
 #endif
 
-#if defined(HPUX9)
+#if defined(HPUX)
 	int statfs( char *path, struct statfs *buf ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
@@ -948,15 +947,14 @@ not_supported{
 		*/
 	}
 
-
-#if !defined(Solaris) && !defined(LINUX) && !defined(IRIX62)
+#if defined(OSF1)
 		int getaddressconf( struct addressconf *buf, size_t length ) {
 			out code_bytes_bool( buf, length );
 			alloc( buf, length );
 		}
 #endif
 		pid_t getpgid( pid_t pid );
-#if defined(Solaris) || defined(LINUX) || defined(IRIX62)
+#if defined(Solaris) || defined(LINUX) || defined(IRIX62) || defined(HPUX)
 	not_supported { 
 		int mvalid( char * addr, size_t len, int prot ) {
 			out code_bytes_bool( addr, len );
@@ -1000,9 +998,9 @@ not_supported{
 #endif  /* of !defined(SAVE_SIGSTATE) */
 
 
-#if	defined(LINUX) || defined(Solaris251) || defined(HPUX9)
-	int setitimer( int which, const struct itimerval *value,
-			struct itimerval *oval );
+#if	defined(LINUX) || defined(Solaris251) || defined(HPUX)
+		int setitimer( int which, const struct itimerval *value,
+				struct itimerval *oval );
 #else
 	int setitimer( int which, struct itimerval *value, struct itimerval *oval );
 #endif
@@ -1040,7 +1038,7 @@ not_supported{
 	  -Derek Wright, 3/12/98 
 	*/
 not_supported {
-#	if defined(IRIX) || defined(OSF1)
+#	if defined(IRIX) || defined(OSF1) || defined(HPUX)
 	void * mmap( void * a, size_t l, int p, int f, map(int fd), off_t o ) : EXTRACT;
 	int mprotect( NEED_CONST void * addr, size_t len, int prot );
 	int madvise( INV_SYSCALL_PTR * addr, size_t len, int behav );
@@ -1056,10 +1054,10 @@ not_supported {
 	int msync( char * addr, size_t len, int flags );
 #	endif
 }
-#if defined( Solaris26 ) 
+#if HAS_64BIT_SYSCALLS
     not_supported {
 	caddr_t mmap64( caddr_t addr, size_t len, int prot, int flags,
-					int fildes, off64_t off) : extract;
+					int fildes, off64_t off);
 	}
 #endif
 
