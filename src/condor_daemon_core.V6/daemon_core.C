@@ -292,6 +292,7 @@ int DaemonCore::Register_Command(int command, char* command_descrip, CommandHand
 	comTable[i].is_cpp = is_cpp;
 	comTable[i].perm = perm;
 	comTable[i].service = s;
+	comTable[i].data_ptr = NULL;
 	free_descrip(comTable[i].command_descrip);
 	if ( command_descrip )
 		comTable[i].command_descrip = strdup(command_descrip);
@@ -534,6 +535,7 @@ int DaemonCore::Register_Socket(Stream *iosock, char* iosock_descrip, SocketHand
 	sockTable[i].is_cpp = is_cpp;
 	sockTable[i].perm = perm;
 	sockTable[i].service = s;
+	sockTable[i].data_ptr = NULL;
 	free_descrip(sockTable[i].iosock_descrip);
 	if ( iosock_descrip )
 		sockTable[i].iosock_descrip = strdup(iosock_descrip);
@@ -662,6 +664,7 @@ int DaemonCore::Register_Reaper(int rid, char* reap_descrip, ReaperHandler handl
 	reapTable[i].handlercpp = handlercpp;
 	reapTable[i].is_cpp = is_cpp;
 	reapTable[i].service = s;
+	reapTable[i].data_ptr = NULL;
 	free_descrip(reapTable[i].reap_descrip);
 	if ( reap_descrip )
 		reapTable[i].reap_descrip = strdup(reap_descrip);
