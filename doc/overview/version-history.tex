@@ -60,7 +60,7 @@ by default.
 
 \item Added extensive feedback on I/O performance in the user's email.
 
-\item Added -io option to \Condor{q} to show I/O statistics.
+\item Added \Opt{-io} option to \Condor{q} to show I/O statistics.
 
 \item Removed libckpt.a and libzckpt.a.  To build for standalone
 checkpointing, just do a regular \Condor{compile}.
@@ -103,20 +103,20 @@ Be sure to read section~\ref{sec:Configuring-SMP} on ``Configuring the
 Startd for SMP Machine'' on page~\pageref{sec:Configuring-SMP} for
 details about using these settings. 
 
+\item \Condor{rm}, \Condor{hold}, and \Condor{release} all support
+\Opt{-help} and \Opt{-version} options now.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item An extremely rare segmentation fault during checkpoint/restart has
-been fixed in IRIX 6.5.
-
 \item A signal race condition during restart of a Condor job has
 been fixed.
 
-\item In a Condor linked job, \Syscall{getdomainname} did not work. This
-has been fixed.
+\item In a Condor linked job, \Syscall{getdomainname} is now
+supported. 
 
 \item IRIX 6.5 can give negative time reports for how long a process has been
 running. We account for that now in our statistics about usage times.
