@@ -570,7 +570,7 @@ doContactSchedd()
 		}
 		if ( curr_action->actions & UA_LOG_EXECUTE_EVENT &&
 			 !curr_job->executeLogged ) {
-			WriteExecuteToUserLog( curr_job );
+			WriteExecuteEventToUserLog( curr_job );
 			curr_job->executeLogged = true;
 		}
 		if ( curr_action->actions & UA_LOG_SUBMIT_FAILED_EVENT &&
@@ -580,17 +580,17 @@ doContactSchedd()
 		}
 		if ( curr_action->actions & UA_LOG_TERMINATE_EVENT &&
 			 !curr_job->terminateLogged ) {
-			WriteTerminateToUserLog( curr_job );
+			WriteTerminateEventToUserLog( curr_job );
 			curr_job->terminateLogged = true;
 		}
 		if ( curr_action->actions & UA_LOG_ABORT_EVENT &&
 			 !curr_job->abortLogged ) {
-			WriteAbortToUserLog( curr_job );
+			WriteAbortEventToUserLog( curr_job );
 			curr_job->abortLogged = true;
 		}
 		if ( curr_action->actions & UA_LOG_EVICT_EVENT &&
 			 !curr_job->evictLogged ) {
-			WriteEvictToUserLog( curr_job );
+			WriteEvictEventToUserLog( curr_job );
 			curr_job->evictLogged = true;
 		}
 
@@ -969,7 +969,7 @@ InitializeUserLog( GlobusJob *job )
 }
 
 bool
-WriteExecuteToUserLog( GlobusJob *job )
+WriteExecuteEventToUserLog( GlobusJob *job )
 {
 	UserLog *ulog = InitializeUserLog( job );
 	if ( ulog == NULL ) {
@@ -1001,7 +1001,7 @@ WriteExecuteToUserLog( GlobusJob *job )
 }
 
 bool
-WriteAbortToUserLog( GlobusJob *job )
+WriteAbortEventToUserLog( GlobusJob *job )
 {
 	UserLog *ulog = InitializeUserLog( job );
 	if ( ulog == NULL ) {
@@ -1028,7 +1028,7 @@ WriteAbortToUserLog( GlobusJob *job )
 }
 
 bool
-WriteTerminateToUserLog( GlobusJob *job )
+WriteTerminateEventToUserLog( GlobusJob *job )
 {
 	UserLog *ulog = InitializeUserLog( job );
 	if ( ulog == NULL ) {
@@ -1074,7 +1074,7 @@ WriteTerminateToUserLog( GlobusJob *job )
 }
 
 bool
-WriteEvictToUserLog( GlobusJob *job )
+WriteEvictEventToUserLog( GlobusJob *job )
 {
 	UserLog *ulog = InitializeUserLog( job );
 	if ( ulog == NULL ) {

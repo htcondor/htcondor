@@ -56,10 +56,10 @@ void gramCallbackHandler( void *user_arg, char *job_contact, int state,
 						  int errorcode );
 
 UserLog *InitializeUserLog( GlobusJob * );
-bool WriteExecuteToUserLog( GlobusJob * );
-bool WriteAbortToUserLog( GlobusJob * );
-bool WriteTerminateToUserLog( GlobusJob * );
-bool WriteEvictToUserLog( GlobusJob * );
+bool WriteExecuteEventToUserLog( GlobusJob * );
+bool WriteAbortEventToUserLog( GlobusJob * );
+bool WriteTerminateEventToUserLog( GlobusJob * );
+bool WriteEvictEventToUserLog( GlobusJob * );
 bool WriteGlobusSubmitEventToUserLog( GlobusJob * );
 bool WriteGlobusSubmitFailedEventToUserLog( GlobusJob * );
 bool WriteGlobusResourceUpEventToUserLog( GlobusJob * );
