@@ -716,14 +716,14 @@ format_cpu_time (float utime, AttrList *ad)
 }
 
 static char *
-format_goodput (float wall_clock, AttrList *ad)
+format_goodput (int job_status, AttrList *ad)
 {
 	static char result[9];
-	int ckpt_time = 0, shadow_bday = 0, last_ckpt = 0, job_status = IDLE;
+	int ckpt_time = 0, shadow_bday = 0, last_ckpt = 0;
+	float wall_clock = 0.0;
 	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time );
 	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
 	ad->LookupInteger( ATTR_LAST_CKPT_TIME, last_ckpt );
-	ad->LookupInteger( ATTR_JOB_STATUS, job_status );
 	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock );
 	if (job_status == RUNNING && shadow_bday && last_ckpt > shadow_bday) {
 		wall_clock += last_ckpt - shadow_bday;
@@ -736,13 +736,20 @@ format_goodput (float wall_clock, AttrList *ad)
 }
 
 static char *
-format_mbps (float wall_clock, AttrList *ad)
+format_mbps (float bytes_sent, AttrList *ad)
 {
 	static char result[10];
-	float bytes_sent=0.0, bytes_recvd=0.0, total_mbits;
-	ad->LookupFloat(ATTR_BYTES_SENT, bytes_sent);
+	float wall_clock=0.0, bytes_recvd=0.0, total_mbits;
+	int shadow_bday = 0, last_ckpt = 0, job_status = IDLE;
+	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock );
+	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
+	ad->LookupInteger( ATTR_LAST_CKPT_TIME, last_ckpt );
+	ad->LookupInteger( ATTR_JOB_STATUS, job_status );
+	if (job_status == RUNNING && shadow_bday && last_ckpt > shadow_bday) {
+		wall_clock += last_ckpt - shadow_bday;
+	}
 	ad->LookupFloat(ATTR_BYTES_RECVD, bytes_recvd);
-	total_mbits = (bytes_sent+bytes_recvd)/(1024*1024*8); // bytes to mbits
+	total_mbits = (bytes_sent+bytes_recvd)*8/(1024*1024); // bytes to mbits
 	if (total_mbits <= 0) return " [????]";
 	sprintf(result, " %6.2f", total_mbits/wall_clock);
 	return result;
@@ -941,14 +948,14 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 				mask.registerFormat ( (StringCustomFmt) format_remote_host,
 									  ATTR_OWNER, "[????????????????]");
 			} else {			// goodput
-				mask.registerFormat ( (FloatCustomFmt) format_goodput,
-									  ATTR_JOB_REMOTE_WALL_CLOCK,
+				mask.registerFormat ( (IntCustomFmt) format_goodput,
+									  ATTR_JOB_STATUS,
 									  " [?????]");
 				mask.registerFormat ( (FloatCustomFmt) format_cpu_util,
 									  ATTR_JOB_REMOTE_USER_CPU,
 									  " [??????]");
 				mask.registerFormat ( (FloatCustomFmt) format_mbps,
-									  ATTR_JOB_REMOTE_WALL_CLOCK,
+									  ATTR_BYTES_SENT,
 									  " [????]");
 			}
 			mask.registerFormat("\n", "*bogus*", "\n");  // force newline
@@ -1149,14 +1156,14 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 					mask.registerFormat ( (StringCustomFmt) format_remote_host,
 										  ATTR_OWNER, "[????????????????]");
 				} else {			// goodput
-					mask.registerFormat ( (FloatCustomFmt) format_goodput,
-										  ATTR_JOB_REMOTE_WALL_CLOCK,
+					mask.registerFormat ( (IntCustomFmt) format_goodput,
+										  ATTR_JOB_STATUS,
 										  " [?????]");
 					mask.registerFormat ( (FloatCustomFmt) format_cpu_util,
 										  ATTR_JOB_REMOTE_USER_CPU,
 										  " [??????]");
 					mask.registerFormat ( (FloatCustomFmt) format_mbps,
-										  ATTR_JOB_REMOTE_WALL_CLOCK,
+										  ATTR_BYTES_SENT,
 										  " [????]");
 				}
 				mask.registerFormat("\n", "*bogus*", "\n");  // force newline
