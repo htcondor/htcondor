@@ -6,7 +6,6 @@ all_target( $(PROGRAMS) )
 
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)  
-LDFLAGS = RpcLib SocketLib
 LIB = $(STD_LIBS)
 
 c_plus_target(condor_preen,preen.o,$(LIB))

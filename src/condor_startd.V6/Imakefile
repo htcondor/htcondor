@@ -1,15 +1,9 @@
 NAME = condor_startd
 all_target( $(NAME) )
 
-#if IS_SGI_IRIX62
-#undef MldLib
-#define MldLib /usr/lib/libelf.a
-#endif 
-
 # Use "-O2" in CFLAGS for benchmark code, i.e. clinpack.c & dhry*.c
 CFLAGS = $(STD_C_FLAGS) -O2 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LDFLAGS = SocketLib RpcLib MldLib KernLib
 LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
 
 #if IS_ALPHA_OSF1
