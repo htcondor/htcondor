@@ -5,9 +5,10 @@
 #  This is condor_install.  It should be run to install and configure
 #  Condor on a given machine.  It can be run to customize a given
 #  release directory, to initialize Condor on the local host, or to
-#  initialize Condor for many hosts (if run on a file server).  Please
-#  read the INSTALL file or the Installation chapter of the Condor
-#  Administrator's Manual.
+#  initialize Condor for many hosts (if run on a file server).  
+#
+#  Please read the INSTALL file or the Installation chapter of the
+#  Condor Administrator's Manual.
 #
 #  Other than setting the proper path to perl above, you should not
 #  need to edit this script at all.
@@ -439,8 +440,8 @@ sub prompt_root_dir {
 
 
 sub prompt_central_manager {
-    local( $cm, $submit );
-    $submit = $_[0];
+    local( $submit ) = @_;
+    local( $cm );
     while(1) {
 	print "\nWhat is the full hostname of the central manager?\n";
 	if( $submit ) {
@@ -488,8 +489,8 @@ sub prompt_central_manager {
 
 
 sub prompt_pool_dir {
-    local( $pool, $pool_dir );
-    $pool = $_[0];
+    local( $pool ) = @_;
+    local( $pool_dir );
     while(1) {
 	$pool_dir = "$root_dir/$pool";
 	print "\nFor each pool you are going to join, Condor will need ",
@@ -520,9 +521,8 @@ sub prompt_pool_dir {
 
 
 sub prompt_global_config_file {
-    local( $config_file, $dir );
-    $dir = $_[0];
-
+    local( $dir ) = @_;
+    local( $config_file );
     while(1) {
 	print "\nWhere do you want to put Condor's configuration file ",
 	"for this pool?\n[$dir/etc/condor_config] ";
@@ -564,10 +564,10 @@ sub prompt_pool_user_name {
 }
 
 sub configure_pool {
-    local( $pool, $cm, $pool_dir, $local_dir_str, $config_file, $mach,
-       $local_config_str, $local_config_dir, $name, $lock, @args );
-    $pool = $_[0];
-
+    local( $pool ) = @_;
+    local( $cm, $pool_dir, $local_dir_str, $config_file, $mach,
+	  $local_config_str, $local_config_dir, $name, $lock, @args );
+    
     # Initialize the local_config_str so that if we don't set it,
     # we'll have a null string by default.
     $local_config_str = "";
@@ -830,7 +830,14 @@ sub get_default_mail_path {
       if(/^OSF1/)  { $mail_path="/usr/ucb/mailx";  last SWITCH; }
       $mail_path="/bin/mail";
   }   
-    return $mail_path
+    if( -x $mail_path ) { return $mail_path; }
+
+    foreach $mail_path ( "/bin/mailx", "/usr/sbin/mailx",
+		        "/usr/ucb/mailx", "/usr/bin/mail",
+		        "/usr/ucb/mail", "/bin/mail" ) {
+	if( -x $mail_path ) { return $mail_path; }
+    }
+    return "";
 }
 
 
@@ -913,8 +920,8 @@ sub install_release_dir {
 
 
 sub install_release_tar {
-    local( $rel_tar, $install_path, $dir );
-    $install_path = $_[0];
+    local( $install_path ) = @_;
+    local( $rel_tar, $dir );
     chop($dir = `pwd`);
     if( ! -f "release.tar" ) {
 	print "\nThere's no \"release.tar\" file in the current directory.\n",
@@ -962,8 +969,8 @@ sub find_release_dir {
 
 
 sub check_release_dir {
-    local( $dir, $tmp );
-    $dir = $_[0];
+    local( $dir ) = @_;
+    local( $tmp );
     -d $dir || return "";
     -d "$dir/lib" || return "";
     -d "$dir/bin" || return "";
@@ -1491,8 +1498,8 @@ sub find_lock_dir {
 
 
 sub configure_central_manager {
-    local( $local_config, $generic, $name );
-    $local_config = $_[0];
+    local( $local_config ) = @_;
+    local( $generic, $name );
     $generic = "$release_dir/etc/examples/condor_config.local.central.manager";
 
     if( ! $local_config ) {
@@ -1556,7 +1563,7 @@ n";
 
 
 sub customize_boot_script {
-    local( $use_script ) = $_[0];
+    local( $use_script ) = @_;
     if( $use_script ) {
 	$master = "$path/condor_master";
     } else {
