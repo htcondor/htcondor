@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: pre_all,v 1.1.2.3 2004-06-26 00:37:53 wright Exp $ 
+# $Id: pre_all,v 1.1.2.4 2004-06-26 03:34:53 wright Exp $ 
 # Submit-side NMI build system infrastructure to prepare sources for
 # the Condor build
 #
@@ -29,8 +29,7 @@ use Cwd;
 # autoflush our STDOUT
 $| = 1;
 
-my $BaseDir = getcwd();
-my $CommonDir = "$BaseDir/common";
+my $CommonDir = getcwd();
 my $SrcDir = "$CommonDir/src";
 my $DocDir = "$CommonDir/doc";
 my $ExtDir = "$CommonDir/externals";
