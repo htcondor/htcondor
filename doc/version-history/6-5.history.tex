@@ -13,6 +13,25 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added a new installation and configuration tool to Condor.
+  Instead of using the complicated \Condor{install} script to install
+  and configure Condor, users can now try the simplified
+  \Condor{configure} script.
+  The new method does not ask any interactive questions.
+  Instead, you set the few installation options you need to specify
+  for your site as command-line arguments.
+  For most sites, this method is much better than the question-driven
+  \Condor{install} script, and we recommend that new users of Condor
+  try \Condor{configure}.
+  All the options it supports are documented in the new
+  \Condor{configure} man page, section~\ref{man-condor-configure} on
+  page~\pageref{man-condor-configure}. 
+  However, since this is the first public release of the new script,
+  there may be some problems with how it works under certain
+  conditions, so we are still including \Condor{install} in the 6.5.3 
+  release if you run into problems with \Condor{configure} and would
+  prefer to use the old method. 
+
 \item Added the \Dflag{HOSTNAME} debugging level to print out verbose
   messages regarding how Condor resolves hostnames, domain names,
   IP addresses, and so on.
