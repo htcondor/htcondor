@@ -1344,10 +1344,12 @@ const char*
 priv_identifier( priv_state s )
 {
 	static char id[256];
+	int id_sz = 256;	// for use w/ snprintf()
+
 	switch( s ) {
 
 	case PRIV_UNKNOWN:
-		sprintf( id, "unknown user" );
+		snprintf( id, id_sz, "unknown user" );
 		break;
 
 	case PRIV_FILE_OWNER:
@@ -1359,8 +1361,8 @@ priv_identifier( priv_state s )
 		EXCEPT( "Programmer Error: priv_identifier() called for "
 				"PRIV_FILE_OWNER, on WIN32" );
 #else
-		sprintf( id, "file owner '%s' (%d.%d)",
-				 OwnerName ? OwnerName : "unknown", OwnerUid, OwnerGid );
+		snprintf( id, id_sz, "file owner '%s' (%d.%d)",
+				  OwnerName ? OwnerName : "unknown", OwnerUid, OwnerGid );
 #endif
 		break;
 
@@ -1372,26 +1374,26 @@ priv_identifier( priv_state s )
 					priv_to_string(s) );
 		}
 #ifdef WIN32
-		sprintf( id, "%s@%s", UserLoginName, UserDomainName );
+		snprintf( id, id_sz, "%s@%s", UserLoginName, UserDomainName );
 #else
-		sprintf( id, "User '%s' (%d.%d)", 
-				 UserName ? UserName : "unknown", UserUid, UserGid );
+		snprintf( id, id_sz, "User '%s' (%d.%d)", 
+				  UserName ? UserName : "unknown", UserUid, UserGid );
 #endif
 		break;
 
 #ifdef WIN32
 	case PRIV_ROOT:
 	case PRIV_CONDOR:
-		sprintf( id, "SuperUser (system)" );
+		snprintf( id, id_sz, "SuperUser (system)" );
 		break;
 #else /* UNIX */
 	case PRIV_ROOT:
-		sprintf( id, "SuperUser (root)" );
+		snprintf( id, id_sz, "SuperUser (root)" );
 		break;
 
 	case PRIV_CONDOR:
-		sprintf( id, "Condor daemon user '%s' (%d.%d)", CondorUserName, 
-				 CondorUid, CondorGid );
+		snprintf( id, id_sz, "Condor daemon user '%s' (%d.%d)", 
+				  CondorUserName, CondorUid, CondorGid );
 		break;
 #endif /* WIN32 vs. UNIX */
 
@@ -1400,6 +1402,7 @@ priv_identifier( priv_state s )
 				(int)s );
 
 	} /* end of switch */
+
 	return (const char*) id;
 }
 
