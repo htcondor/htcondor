@@ -30,15 +30,15 @@ class NameTable;
 class NameTableIterator;
 
 class NAME_VALUE {
-friend NameTable;
-friend NameTableIterator;
+friend class NameTable;
+friend class NameTableIterator;
 public:
 	long	value;
 	char	*name;
 };
 
 class NameTable {
-friend NameTableIterator;
+friend class NameTableIterator;
 public:
 	NameTable( NAME_VALUE tab[] );
 	char	*get_name( long value );

@@ -100,8 +100,8 @@ class AttrListRep: public AttrListAbstract
 
 		const AttrList* GetOrigAttrList() { return attrList; }
 
-		friend			AttrList;
-		friend			AttrListList;
+		friend	class		AttrList;
+		friend	class		AttrListList;
 
     private:
 
