@@ -1,0 +1,182 @@
+#! /usr/bin/env perl 
+use strict;
+use Config;
+
+# Update the module include path
+BEGIN
+{
+    my $Dir = $0;
+    if ( $Dir =~ /(.*)\/.*/ )
+    {
+	push @INC, "$1";
+    }
+}
+use HawkeyePublish;
+use HawkeyeLib;
+
+# Global Hawkeye data
+my $Hawkeye;
+
+my %uname_cmd = 
+(
+    "arch", "uname -m",
+    "os", "uname -s",
+    "os_ver", "uname -r",
+);
+
+my %short_os = 
+(
+    "SunOS", "sol",
+    "IRIX64", "irix",
+    "Darwin", "macosx",
+    "OSF1", "osf",
+    "AIX", "aix",
+    "HP-UX", "hpux",
+);
+
+my %short_arch = 
+(
+    "sun4u", "sun4u",
+    "powerpc", "ppc",
+    "i686", "x86",
+    "i386", "x86",
+    "x86", "x86",
+    "ia32", "ia32",
+    "ia64", "ia64",
+    "x86_64", "x86_64",
+);
+
+# Override the flags based on a system
+if ( ($Config{'archname'} =~ m!aix!) or
+     ($Config{'archname'} =~ m!aix!) or
+     ($Config{'archname'} =~ m!darwin!) ) {
+    $uname_cmd{"arch"} = "uname -p";
+}
+
+Init();
+RunIt();
+
+sub Init (){
+    HawkeyeLib::DoConfig( );
+
+    # Setup the hawkeye stuff
+    $Hawkeye = HawkeyePublish->new;
+    $Hawkeye->Quiet( 1 );
+    $Hawkeye->AutoIndexSet( 0 );
+}
+
+sub RunIt (){
+    my $Hash = HawkeyeHash->new( \$Hawkeye, "" );
+    my $arch = `$uname_cmd{"arch"}`;
+    my $os = `$uname_cmd{"os"}`;
+    my $os_version = `$uname_cmd{"os_ver"}`;
+
+    chomp($arch);
+    chomp($os);
+    chomp($os_version);
+
+    if ($Config{'archname'} =~ m!aix!) {
+        my $major = `uname -v`;
+        my $minor = `uname -r`;
+        chomp $major;
+        chomp $minor;
+        $os_version = "$major.$minor"
+    }
+
+    $Hash->Add( "arch", HawkeyePublish::TypeString, trim($arch) );
+    $Hash->Add( "os", HawkeyePublish::TypeString, trim($os) );
+    $Hash->Add( "os_version", HawkeyePublish::TypeString, trim($os_version) );
+
+
+    if ( lc($os) eq "linux") {
+        my %distro = &get_linux_distro();
+        $Hash->Add( "os_distro", HawkeyePublish::TypeString, "$distro{'long'} $distro{'version'}");
+    }
+
+    # Ok, summary is done...
+    $Hash->Store( );
+
+    # Publish
+    $Hawkeye->Publish( );
+}
+
+sub get_linux_distro () {
+    open(DISTRO, "/etc/issue") || die "Unable to open /etc/issue";
+    my %distro =
+    ( "long", "unknown",
+      "short", "unknown",
+      "version", "unknown",
+    );
+
+    while(<DISTRO>) {
+        next if /^(\s)*$/;      # skip blank lines
+        chomp;
+        my $line = $_;
+        my @distro_strs;
+
+        if($line =~ m!Red Hat!) {
+            @distro_strs = split(" ", $line);
+            if($line =~ m!Red Hat Enterprise Linux AS release!) {
+                $distro{"long"} = "$distro_strs[0]$distro_strs[1]$distro_strs[4]";
+                $distro{"version"} = "$distro_strs[6]";
+                $distro{"short"} = "rhas";
+            }
+            elsif($line =~ m!Red Hat Enterprise Linux ES release!) {
+                $distro{"long"} = "$distro_strs[0]$distro_strs[1]$distro_strs[4]";
+                $distro{"version"} = "$distro_strs[6]";
+                $distro{"short"} = "rhes";
+            }
+            elsif($line =~ m!Red Hat Enterprise Linux WS release!) {
+                $distro{"long"} = "$distro_strs[0]$distro_strs[1]$distro_strs[4]";
+                $distro{"version"} = "$distro_strs[6]";
+                $distro{"short"} = "rhws";
+            }
+            else {
+                $distro{"long"} = "$distro_strs[0]$distro_strs[1]";
+                $distro{"version"} = "$distro_strs[4]";
+                $distro{"short"} = "rh";
+            }
+        }
+        elsif($line =~ m!SuSE!) {
+            @distro_strs = split(" ", $line);
+            $distro{"long"} = "$distro_strs[3]";
+            $distro{"version"} = "$distro_strs[4]";
+
+            if($line =~ m!SuSE SLES!) {
+                $distro{"short"} = "sles";
+            }
+            else {
+                $distro{"short"} = "suse";
+            }
+        }
+        elsif($line =~ m!Fedora!) {
+            @distro_strs = split(" ", $line);
+            $distro{"long"} = "$distro_strs[0]$distro_strs[1]";
+            $distro{"version"} = " $distro_strs[3]";
+            $distro{"short"} = "fc";
+        }
+
+        return %distro;
+    }
+}
+
+sub trim () {
+    my @str = @_;
+    return &ltrim(&rtrim(@str));
+}
+
+sub rtrim () { 
+    my @str = @_;
+    for (@str) {
+        s/\s+$//;
+    }   
+    return @str == 1 ? $str[0] : @str;
+}
+    
+sub ltrim () {
+    my @str = @_;
+    for (@str) {
+        s/^\s+//;
+    }
+    return @str == 1 ? $str[0] : @str;
+}
