@@ -79,11 +79,11 @@ class ExprTree
         virtual void        Display();    // display the expression
 		virtual void        PrintToStr(char*) {} // print the expr to a string
 
-		virtual int         EvalTree(class AttrListList*, class EvalResult*) {}
-		virtual int         EvalTree(class AttrList*, EvalResult*) {}
+		virtual int         EvalTree(class AttrListList*, class EvalResult*);
+		virtual int         EvalTree(class AttrList*, EvalResult*);
 
 //-----------------tw 11/16/95 --------------
-		virtual int         EvalTree(AttrList*, AttrList*, EvalResult*) {}
+		virtual int         EvalTree(AttrList*, AttrList*, EvalResult*);
 //-------------------
 
 		virtual ExprTree*   MinTree(AttrListList*) { Copy(); return this; }
