@@ -29,7 +29,7 @@ SRC = state_machine_driver.C event_handler.C name_tab.C NON_POSIX.select.C \
 	classad_collection.C usagemon.C \
 	get_full_hostname.C format_time.C renice_self.C condor_version.C \
 	limit.C my_arch.C my_subsystem.C daemon_types.C killfamily.C strnewp.C \
-	access.C access.t.C
+	access.C access.t.C killfamily.t.C
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	alarm.o alloc.o \
@@ -43,13 +43,12 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	limit.o my_arch.o my_subsystem.o daemon_types.o killfamily.o access.o \
 	strnewp.o
 
-
 CEDAR_LIBS = ../condor_io/libcondor.a
 CLASS_AD_LIB = ../condor_classad/expr_lib.a
 DAEMON_CORE_LIB = ../condor_daemon_core.V6/daemon_core.a
+PROC_API_LIB = ../condor_procapi/libprocapi.a
 TEST_LIBS = cplus_lib.a $(CLASS_AD_LIB) ../condor_util_lib/util_lib.a \
-	$(CEDAR_LIBS) $(DAEMON_CORE_LIB) $(AUTH2_LIB)
-	
+	$(CEDAR_LIBS) $(DAEMON_CORE_LIB) $(AUTH2_LIB) $(PROC_API_LIB)
 
 #if !HAS_FLOCK
 FLOCK_OBJ = ../condor_util_lib/flock.o
@@ -68,7 +67,12 @@ libapi.tar: libapi.a
 c_plus_target(test_locks,test_locks.o,$(TEST_LIBS))
 
 c_plus_target(cat_url, cat_url.o, liburl.a SocketLib)
-c_plus_target(access.t, access.t.o, $(TEST_LIBS) $(LIB) SocketLib )
+c_plus_target(access.t, access.t.o, $(TEST_LIBS) SocketLib )
+c_plus_target(killfamily.t, killfamily.t.o, $(TEST_LIBS) )
+pure_c_plus_target(killfamily.t.pure, killfamily.t.o, $(TEST_LIBS) )
+purecov_c_plus_target(killfamily.t.pc, killfamily.t.o, $(TEST_LIBS) )
+
+all-tests: access.t killfamily.t test_locks 
 
 test: test.o user_log.o
 	$(CC) $(CFLAGS) -Wl,-u,_fpdata_size -o test test.o user_log.o $(TEST_LIBS)
