@@ -74,20 +74,18 @@ INET_NTOA_OBJ = inet_ntoa.o
 	condor_universe.o
 
 test.o: test.c
-	gcc $(CFLAGS) -c test.c
+	$(CC) $(CFLAGS) -c test.c
 
 test: test.o util_lib.a
-	gcc $(CFLAGS) -o test test.o util_lib.a
+	$(CC) $(CFLAGS) -o test test.o util_lib.a
 
 library_target(util_lib.a,ObjectFiles)
 
-c_plus_target(stub_gen,y.tab.o lex.yy.o, $(NULL))
-
 lex.yy.o: lex.yy.c
-	gcc $(CFLAGS) -c lex.yy.c
+	$(CC) $(CFLAGS) -c lex.yy.c
 
 stub_gen: y.tab.o lex.yy.o
-	gcc $(CFLAGS) -o stub_gen y.tab.o lex.yy.o $(ALL_LDFLAGS)
+	$(CC) $(CFLAGS) -o stub_gen y.tab.o lex.yy.o $(ALL_LDFLAGS)
 
 clean::
 	rm -f stub_gen y.tab.o lex.yy.o 
