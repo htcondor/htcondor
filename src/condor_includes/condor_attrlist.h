@@ -146,7 +146,7 @@ class AttrListList
     
         AttrListList();					// constructor
         AttrListList(AttrListList&);	// copy constructor
-        ~AttrListList();				// destructor
+        virtual ~AttrListList();		// destructor
 
         void 	  	Open();				// set pointer to the head of the queue
         void 	  	Close();			// set pointer to NULL

@@ -6,7 +6,6 @@
 //****************************************************************************//
 
 #include <std.h>
-#include <varargs.h>
 #include <string.h>
 #include "debug.h"    // required by dprintf
 #include "condor_exprtype.h"

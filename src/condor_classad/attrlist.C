@@ -534,8 +534,16 @@ char *Print_elem(ELEM *elem, char *str)
 		 break;
     case NAME  : sprintf(str, "%s", elem->val.string_val);
 		 break;
-    case STRING: sprintf(str, "\"%s\"", elem->val.string_val);
-		 break;
+    case STRING: 
+				 if(!elem->val.string_val)
+				 {
+					 sprintf(str, "(Null)");
+				 }
+				 else
+				 {
+					 sprintf(str, "\"%s\"", elem->val.string_val);
+				 } 
+				 break;
     case FLOAT : sprintf(str, "%f", elem->val.float_val);
 		 break;
     case INT   : sprintf(str, "%d", elem->val.integer_val);

@@ -11,16 +11,16 @@
 #ifndef _CLASSIFIEDJOBS_H
 #define _CLASSIFIEDJOBS_H
 
-#include "condor_astbase.h"
+#include "condor_classad.h"
 
 class Class
 {
     public:
 
-		Class(ExprTree*);
-		~Class() { delete definition; delete list; }
+		Class(class ExprTree*);
+		~Class();
 
-		const ExprTree*	Definition() { return definition; }
+		const ExprTree*	Definition();
 		int				ClassRequired(ExprTree*);
 
 		friend			class ClassList;

@@ -7,7 +7,6 @@
 //******************************************************************************
 
 #include <std.h>
-#include "proc_obj.h"
 #include "condor_classad.h"
 #include "condor_classifiedjobs.h"
 #include "condor_parser.h"
@@ -17,6 +16,17 @@ Class::Class(ExprTree* classDef)
     definition = classDef;
     list = NULL;
     next = NULL;
+}
+
+Class::~Class()
+{
+	delete definition;
+	delete list;
+}
+
+const ExprTree* Class::Definition()
+{
+	return definition;
 }
 
 int Class::ClassRequired(ExprTree* requirement)

@@ -14,7 +14,6 @@
 # include "condor_ast.h"
 # include "condor_registration.h"
 # include "condor_expressions.h"
-# include "proc_obj.h"
 # include "condor_attrlist.h"
 # include "condor_classad.h"
 # include "condor_parser.h"
@@ -76,7 +75,7 @@ ClassAd::ClassAd() : AttrList()
 	targetType = NULL;
 }
 
-ClassAd::ClassAd(ProcObj* procObj) : AttrList(procObj)
+ClassAd::ClassAd(class ProcObj* procObj) : AttrList(procObj)
 {
 	myType = NULL;
 	targetType = NULL;

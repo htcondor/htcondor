@@ -14,6 +14,7 @@
 #include "condor_expressions.h"
 #include "condor_exprtype.h"
 #include "condor_ast.h"
+#include "proc_obj.h"
 #include "condor_attrlist.h"
 
 //for the shipping functions -- added by Lei Cao
@@ -34,7 +35,7 @@ class ClassAd : public AttrList
     public :
 
 		ClassAd();								// No associated AttrList list
-		ClassAd(class ProcObj*);				// create from a proc object
+		ClassAd(ProcObj*);						// create from a proc object
 		ClassAd(const CONTEXT*);				// create from a CONTEXT
         ClassAd(FILE *, char *, int &);			// Constructor, read from file.
         ClassAd(char *, char);					// Constructor, from string.
@@ -68,6 +69,14 @@ class ClassAd : public AttrList
         AdType*		targetType;					// target type field.
 };
 
-typedef	AttrListList ClassAdList;
+class ClassAdList : public AttrListList
+{
+  public:
+	ClassAdList() : AttrListList() {}
+
+	ClassAd*	Next() { return (ClassAd*)AttrListList::Next(); }
+	void	Insert(ClassAd* ca) { AttrListList::Insert((AttrList*)ca); }
+	int		Delete(ClassAd* ca) { return AttrListList::Delete((AttrList*)ca); }
+};
 
 #endif
