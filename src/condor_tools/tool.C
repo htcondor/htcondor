@@ -123,6 +123,14 @@ usage( char *str )
 				 "causes the condor_startd to checkpoint any running jobs",
 				 "and make them vacate the machine." );
 		break;
+	case PCKPT_JOB:
+		fprintf( stderr, "  %s %s\n  %s%s\n  %s%s\n", str, 
+				 "causes the condor_startd to perform a periodic", 
+				 "checkpoint on running jobs on specific (possibly virtual) ",
+				 "machines.",
+				 "The jobs continue to run once ", 
+				 "they are done checkpointing." );
+		break;
 	case PCKPT_ALL_JOBS:
 		fprintf( stderr, "  %s %s\n  %s%s\n  %s\n", str, 
 				 "causes the condor_startd to perform a periodic", 
@@ -160,6 +168,8 @@ cmd_to_str( int c )
 		return "VACATE_CLAIM";
 	case VACATE_ALL_CLAIMS:
 		return "VACATE_ALL_CLAIMS";
+	case PCKPT_JOB:
+		return "PCKPT_JOB";
 	case PCKPT_ALL_JOBS:
 		return "PCKPT_ALL_JOBS";
 	case RESCHEDULE:
@@ -244,7 +254,7 @@ main( int argc, char *argv[] )
 		cmd = VACATE_CLAIM;
 		dt = DT_STARTD;
 	} else if( !strcmp( cmd_str, "_checkpoint" ) ) {
-		cmd = PCKPT_ALL_JOBS;
+		cmd = PCKPT_JOB;
 		dt = DT_STARTD;
 	} else {
 		fprintf( stderr, "Error: unknown command %s\n", MyName );
@@ -291,6 +301,9 @@ main( int argc, char *argv[] )
 				switch( cmd ) {
 				case VACATE_CLAIM:
 					cmd = VACATE_ALL_CLAIMS;
+					break;
+				case PCKPT_JOB:
+					cmd = PCKPT_ALL_JOBS;
 					break;
 				default:
 					fprintf( stderr, "ERROR: -all is not valid with %s\n",
@@ -383,6 +396,7 @@ do_command( char *name )
 	sock.encode();
 	switch(cmd) {
 	case VACATE_CLAIM:
+	case PCKPT_JOB:
 		if( name && *name != '<' && strchr(name, '@')) {
 			if( !sock.code(cmd) || !sock.code(name) || !sock.eom() ) {
 				fprintf( stderr, "Can't send %s %s command to %s\n", 
@@ -392,8 +406,15 @@ do_command( char *name )
 			break;
 		}
 		// if no name is specified, or if name is a sinful string, we
-		// must send VACATE_ALL_CLAIMS instead
-		cmd = VACATE_ALL_CLAIMS;
+		// must send VACATE_ALL_CLAIMS or PCKPT_ALL_JOBS instead
+		switch(cmd) {
+		case VACATE_CLAIM:
+			cmd = VACATE_ALL_CLAIMS;
+			break;
+		case PCKPT_JOB:
+			cmd = PCKPT_ALL_JOBS;
+			break;
+		}
 		// no break: we fall through to the default case
 	default:
 		if( !sock.code(cmd) || !sock.eom() ) {
