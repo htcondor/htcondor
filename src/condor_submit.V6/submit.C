@@ -812,17 +812,6 @@ SetExecutable()
 			exit( 1 );
 		}
 
-		// print a helpful, specific error if the specified job
-		// executable is not found, or can't be accessed
-		if( access( ename, R_OK ) == -1 ) {
-		  fprintf( stderr,
-			   "\nERROR: Cannot access the executable you "
-			   "specified (\"%s\"): %s\n",
-			   ename, strerror( errno ) );
-		  DoCleanup( 0, 0, NULL );
-		  exit( 1 );
-		}
-
 		if (SendSpoolFileBytes(full_path(ename,false)) < 0) {
 			fprintf( stderr,
 					 "\nERROR: failed to transfer executable file %s\n", 
@@ -857,6 +846,14 @@ SetUniverse()
 		}
 	}
 
+	if( univ && stricmp(univ,"scheduler") == MATCH ) {
+		JobUniverse = CONDOR_UNIVERSE_SCHEDULER;
+		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_SCHEDULER);
+		InsertJobExpr (buffer);
+		free(univ);
+		return;
+	};
+
 #if !defined(WIN32)
 	if( univ && stricmp(univ,"pvm") == MATCH ) 
 	{
@@ -884,13 +881,7 @@ SetUniverse()
 		return;
 	};
 
-	if( univ && stricmp(univ,"scheduler") == MATCH ) {
-		JobUniverse = CONDOR_UNIVERSE_SCHEDULER;
-		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_SCHEDULER);
-		InsertJobExpr (buffer);
-		free(univ);
-		return;
-	};
+
 
 	if( univ && stricmp(univ,"globus") == MATCH ) {
 		if ( have_condor_g() == 0 ) {
@@ -3295,7 +3286,7 @@ usage()
 			 "	-r schedd_name\tsubmit to the specified remote schedd\n" );
 	fprintf( stderr,
 			 "	-a line       \tadd line to submit file before processing\n"
-			 "                \t(overrides submit file; multiple -a arguments ok)\n" );
+			 "                \t(overrides submit file; multiple -a lines ok)\n" );
 	fprintf( stderr, "	-d\t\tdisable file permission checks\n\n" );
 	fprintf( stderr, "	If [cmdfile] is omitted, input is read from stdin\n" );
 	exit( 1 );
