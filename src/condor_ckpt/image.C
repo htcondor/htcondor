@@ -18,7 +18,10 @@ static char *_FileName_ = __FILE__;
 #include <signal.h>
 #endif
 
+const int KILO = 1024;
+
 extern "C" int open_write_stream( const char * ckpt_file, size_t n_bytes );
+extern "C" void report_image_size( int );
 
 #if defined(OSF1)
 extern "C" unsigned int htonl( unsigned int );
@@ -29,6 +32,7 @@ void terminate_with_sig( int sig );
 
 Image MyImage;
 static jmp_buf Env;
+static RAW_ADDR SavedStackLoc;
 
 
 void
@@ -146,7 +150,11 @@ Image::Save()
 	AddSegment( "DATA", data_start, data_end );
 
 		// Set up stack segment
-	stack_start = stack_start_addr();
+	if( SavedStackLoc ) {
+		stack_start = SavedStackLoc;
+	} else {
+		stack_start = stack_start_addr();
+	}
 	stack_end = stack_end_addr();
 	AddSegment( "STACK", stack_start, stack_end );
 
@@ -305,6 +313,7 @@ Image::Write()
 	return Write( file_name );
 }
 
+
 /*
   Set up a stream to write our checkpoint information onto, then write
   it.  Note: there are two versions of "open_write_stream", one in
@@ -349,6 +358,14 @@ Image::Write( const char *ckpt_file )
 
 	(void)close( fd );
 	SetSyscalls( scm );
+
+
+		// In remote mode we update the shadow on our image size
+	if( MyImage.GetMode() == REMOTE ) {
+		report_image_size( (MyImage.GetLen() + KILO - 1) / KILO );
+	}
+
+
 
 	return status;
 }
@@ -590,6 +607,16 @@ ckpt()
 }
 
 /*
+** Some FORTRAN compilers expect "_" after the symbol name.
+*/
+extern "C" {
+void
+ckpt_() {
+    ckpt();
+}
+}
+
+/*
   Arrange to terminate abnormally with the given signal.  Note: the
   expectation is that the signal is one whose default action terminates
   the process - could be with a core dump or not, depending on the sig.
@@ -626,4 +653,12 @@ terminate_with_sig( int sig )
 		// Should never get here
 	EXCEPT( "Should never get here" );
 
+}
+
+extern "C" {
+void
+_condor_save_stack_location()
+{
+	SavedStackLoc = stack_start_addr();
+}
 }
