@@ -166,7 +166,6 @@ va_dcl
 
 	scm = SetSyscalls( SYS_LOCAL | SYS_RECORDED );
 
-#if !defined(OSF1)
 		/* Block any signal handlers which might try to print something */
 	sigfillset( &mask );
 	sigdelset( &mask, SIGABRT );
@@ -177,7 +176,6 @@ va_dcl
 	sigdelset( &mask, SIGSEGV );
 	sigdelset( &mask, SIGTRAP );
 	sigprocmask( SIG_BLOCK, &mask, &omask );
-#endif
 
 		/* Open and lock the log file */
 	(void)debug_lock();
@@ -208,10 +206,8 @@ va_dcl
 		/* Close and unlock the log file */
 	debug_unlock();
 
-#if !defined(OSF1)
 		/* Let them signal handlers go!! */
 	(void) sigprocmask( SIG_SETMASK, &omask, 0 );
-#endif
 
 	(void) SetSyscalls( scm );
 
