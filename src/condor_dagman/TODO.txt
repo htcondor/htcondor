@@ -1,3 +1,6 @@
+- make sure we deal with jobs with 'initialdir=foo' and a
+non-abolute-pathed 'log=bar' in their submit files (since the log will
+end up in the initialdir)
 
 - ASSERT() calls should be removed in some places, and errors returned
 instead, so that higher levels can react and abort gracefully (e.g.,
