@@ -1129,25 +1129,47 @@ obtainAdsFromCollector (
 			// Next, let's transform the ad. The first thing we might
 			// do is replace the Requirements attribute with whatever
 			// we find in NegotiatorRequirements
-			ExprTree  *tree;
+			ExprTree  *negReqTree, *reqTree;
 			char *subReqs, *newReqs;
-			subReqs = NULL;
-			tree  = NULL;
+			subReqs = newReqs = NULL;
+			negReqTree = reqTree = NULL;
 			int length;
-			tree = ad->Lookup(ATTR_NEGOTIATOR_REQUIREMENTS);
-			if ( tree != NULL && tree->RArg() != NULL ) {
+			// TODO: Does this leak memory?
+			negReqTree = ad->Lookup(ATTR_NEGOTIATOR_REQUIREMENTS);
+			if ( negReqTree != NULL && negReqTree->RArg() != NULL ) {
 
-				// Get the requirements expression we're going to 
-				// subsititute in, and convert it to a string... 
-				// Sadly, this might be the best interface :(
-				tree->RArg()->PrintToNewStr(&subReqs); //Print allocs mem
-				length = strlen(subReqs) + strlen(ATTR_REQUIREMENTS);
+				// Save the old requirements expression
+				reqTree = ad->Lookup(ATTR_REQUIREMENTS);
+				if(reqTree != NULL && reqTree->RArg() != NULL) {
+				// Now, put the old requirements back into the ad
+				reqTree->RArg()->PrintToNewStr(&subReqs); //Print allocs mem
+				length = strlen(subReqs) + strlen(ATTR_REQUIREMENTS) + 7;
 				newReqs = (char *)malloc(length+16);
-				snprintf(newReqs, length+15, "%s = %s", ATTR_REQUIREMENTS, subReqs); 
+				snprintf(newReqs, length+15, "Saved%s = %s", 
+							ATTR_REQUIREMENTS, subReqs); 
 				ad->InsertOrUpdate(newReqs);
 				free(newReqs);
 				free(subReqs);
-			}
+				} else {
+					char *tmpstr;
+					reqTree->PrintToNewStr(&tmpstr);
+				}
+		
+				// Get the requirements expression we're going to 
+				// subsititute in, and convert it to a string... 
+				// Sadly, this might be the best interface :(
+				negReqTree->RArg()->PrintToNewStr(&subReqs); //Print allocs mem
+				length = strlen(subReqs) + strlen(ATTR_REQUIREMENTS);
+				newReqs = (char *)malloc(length+16);
+
+				snprintf(newReqs, length+15, "%s = %s", ATTR_REQUIREMENTS, 
+							subReqs); 
+				ad->InsertOrUpdate(newReqs);
+
+				free(newReqs);
+				free(subReqs);
+				
+				}
 
 			if( reevaluate_ad && newSequence != -1 ) {
 				oldAd = NULL;
@@ -1892,6 +1914,9 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	SafeSock startdSock;
 	bool send_failed;
 	int want_claiming = -1;
+	ExprTree *savedRequirements;
+	int length;
+	char *tmp;
 
 	strcpy(startdAddr, "<0.0.0.0:0>");
 	strcpy(startdName,"unknown");
@@ -1931,7 +1956,27 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		// Claiming is *not* desired
 		capability = "null";
 	}
-	
+
+	savedRequirements = NULL;
+	length = strlen("Saved") + strlen(ATTR_REQUIREMENTS) + 2;
+	tmp = (char *)malloc(length);
+	snprintf(tmp, length, "Saved%s", ATTR_REQUIREMENTS);
+	savedRequirements = offer->Lookup(tmp);
+	free(tmp);
+	if(savedRequirements != NULL && savedRequirements->RArg() != NULL) {
+		char *savedReqStr, *replacementReqStr;
+		int length;
+		savedReqStr = NULL;
+		savedRequirements->RArg()->PrintToNewStr(&savedReqStr);
+		length = strlen(savedReqStr) + strlen(ATTR_REQUIREMENTS);
+        replacementReqStr = (char *)malloc(length+16);
+        snprintf(replacementReqStr, length+15, "%s = %s", 
+							ATTR_REQUIREMENTS, savedReqStr); 
+        offer->InsertOrUpdate(replacementReqStr);
+		dprintf(D_ALWAYS, "Inserting %s into the ad\n", replacementReqStr);	
+		free(replacementReqStr);
+		free(savedReqStr);
+	}	
 	// ---- real matchmaking protocol begins ----
 	// 1.  contact the startd 
 	if ( want_claiming ) {
