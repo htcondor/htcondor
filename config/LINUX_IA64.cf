@@ -49,7 +49,7 @@
 #undef WANT_MAN_PAGES
 
 #undef GLOBUS_FLAVOR
-#define GLOBUS_FLAVOR gcc64
+#define GLOBUS_FLAVOR gcc64dbg
 
 /*#undef OpenSSLPath*/
 /*#undef GlobusPath*/
