@@ -13,6 +13,9 @@ daemon. Created off V6_7-credd-root. By ckireyev.
    firewalls, private nets, etc.  Created from V6_7-gcb-root.  Does
    *not* include doc.
 
+05/20/04 V6_7-Technion_ha-root & V6_7-Technion_ha-branch
+   The root & branch tags for Technion High Availability work.
+
 05/18/04 V6_7-post_merge-V6_6-merge-13
    The state of the V6_7-branch after merging in the V6_6-branch as
    tagged at V6_6-merge-13.
