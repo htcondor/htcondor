@@ -210,7 +210,6 @@ email_open_implementation(char *Mailer, char *final_command)
 	FILE *mailerstream;
 	pid_t pid;
 	int pipefds[2];
-	//char tempbuf[4096];
 
 	/* The gist of this code is to exec a mailer whose stdin is dup2'ed onto
 		the write end of a pipe. The parent gets the fdopen'ed read end
@@ -261,7 +260,6 @@ email_open_implementation(char *Mailer, char *final_command)
 		const char *condor_name;
 		uid_t condor_uid;
 		gid_t condor_gid;
-		char **envp = NULL;
 
 		/* XXX This must be the FIRST thing in this block of code. For some
 			reason, at least on IRIX65, this forked process
@@ -302,14 +300,25 @@ email_open_implementation(char *Mailer, char *final_command)
 		/* prop up the environment with goodies to get the Mailer to do the
 			right thing */
 		condor_name = get_condor_username();
+
+		/* Should be snprintf() but we don't have it for all platforms */
 		sprintf(pe_logname,"LOGNAME=%s", condor_name);
-		putenv(pe_logname);
+		if (putenv(pe_logname) != 0)
+		{
+			EXCEPT("EMAIL PROCESS: Unable to insert LOGNAME=%s into "
+				" environment correctly: %s\n", pe_logname, strerror(errno));
+		}
+
+		/* Should be snprintf() but we don't have it for all platforms */
 		sprintf(pe_user,"USER=%s", condor_name);
-		putenv(pe_user);
+		if( putenv(pe_user) != 0)
+		{
+			EXCEPT("EMAIL PROCESS: Unable to insert USER=%s into "
+				" environment correctly: %s\n", pe_user, strerror(errno));
+		}
 
 		/* invoke the mailer */
 		execl("/bin/sh", "sh", "-c", final_command, NULL);
-
 
 		/* I hope this EXCEPT gets recorded somewhere */
 		EXCEPT("EMAIL PROCESS: Could not exec mailer with %s with command %s because: %s.", 
