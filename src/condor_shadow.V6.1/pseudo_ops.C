@@ -84,4 +84,14 @@ pseudo_job_exit(int status, int reason, ClassAd* ad)
 }
 
 
-
+int
+pseudo_register_mpi_master_info(char *str) 
+{
+	if( ! Shadow->setMpiMasterInfo(str) ) {
+		dprintf( D_ALWAYS, 
+				 "ERROR: recieved pseudo_register_mpi_master_info for a "
+				 "non-MPI job!\n" );
+		return -1;
+	}
+	return 0;
+}
