@@ -6125,6 +6125,9 @@ const char* DaemonCore::GetExceptionString(int sig)
 	sprintf(exception_string,"exception %s",
 		ExceptionHandler::GetExceptionString(sig));
 #else
+	if ( sig > 64 ) {
+		sig = WTERMSIG(sig);
+	}
 	sprintf(exception_string,"signal %d",sig);
 #endif
 
