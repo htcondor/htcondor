@@ -1,3 +1,7 @@
+09/21/04 V6_6-merge-21
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  This merges includes: Windows XP SP2 fixes.
+
 09/16/04 V6_6-file_lock_test-branch
    A branch for testing changes to file locking in the user log code.
    NOT for release; if the changes work they'll probably make their
