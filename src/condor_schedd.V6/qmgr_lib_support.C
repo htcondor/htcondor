@@ -42,7 +42,7 @@ ReliSock *qmgmt_sock;
 static Qmgr_connection *connection = 0;
 
 Qmgr_connection *
-ConnectQ(char *qmgr_location )
+ConnectQ(char *qmgr_location, int timeout, bool read_only )
 {
 	int		rval, fd, cmd, ok, is_local = FALSE;
 	char	tmp_file[255];
@@ -59,11 +59,13 @@ ConnectQ(char *qmgr_location )
 
 	if (connection != 0) {
 		connection->count++;
+		if ( localScheddAddr ) free(localScheddAddr);
 		return connection;
 	}
 
 	connection = (Qmgr_connection *) malloc(sizeof(Qmgr_connection));
 	if (connection == 0) {
+		if ( localScheddAddr ) free(localScheddAddr);	
 		return 0;
 	}
 	connection->rendevous_file = 0;
@@ -83,6 +85,9 @@ ConnectQ(char *qmgr_location )
 		
 	if(scheddAddr) {
 		qmgmt_sock = new ReliSock();
+		if ( timeout > 0 ) {
+			qmgmt_sock->timeout(timeout);
+		}
 		ok = qmgmt_sock->connect(scheddAddr, QMGR_PORT);
 		if( !ok ) {
 			dprintf(D_ALWAYS, "Can't connect to queue manager\n");
@@ -99,7 +104,7 @@ ConnectQ(char *qmgr_location )
 
 	if( !ok ) {
 		free(connection);
-		free(localScheddAddr);
+		if ( localScheddAddr ) free(localScheddAddr);
 		return 0;
 	}
 
@@ -131,7 +136,11 @@ ConnectQ(char *qmgr_location )
 	cmd = QMGMT_CMD;
 	qmgmt_sock->code(cmd);
 	
-	rval = InitializeConnection( username );
+	if ( read_only ) {
+		rval = InitializeReadOnlyConnection( username );
+	} else {
+		rval = InitializeConnection( username );
+	}
 	free( username );
 
 	if (rval < 0) {
@@ -139,7 +148,9 @@ ConnectQ(char *qmgr_location )
 		return 0;
 	}
 
-	qmgmt_sock->authenticate();
+	if ( !read_only ) {
+		qmgmt_sock->authenticate();
+	}
 
 	connection->count = 1;
 	return connection;
@@ -188,69 +199,12 @@ int
 SendSpoolFileBytes(char *filename)
 {
 	qmgmt_sock->encode();
-	if (!qmgmt_sock->put_file(filename)) {		
+	if (qmgmt_sock->put_file(filename) < 0) {		
 		return -1;
 	}
 
 	return 0;
 
-#if 0
-	int fd, len = 0, cc, ack;
-	char buf[ 4096 ];
-	struct stat filesize;
-	
-#if defined(WIN32)
-	fd = open( filename, O_RDONLY | _O_BINARY | _O_SEQUENTIAL, 0 );
-#else
-	fd = open( filename, O_RDONLY, 0 );
-#endif
-	if( fd < 0 ) {
-		EXCEPT("open %s", filename);
-	}
-
-	if (fstat(fd, &filesize) < 0) {
-		EXCEPT("fstat of executable %s failed", filename);
-	}
-
-	qmgmt_sock->encode();
-	if ( !qmgmt_sock->code(filesize.st_size) ) {
-		EXCEPT("filesize write failed");
-	}
-
-	for(;;) {
-		cc = read(fd, buf, sizeof(buf));
-		if( cc < 0 ) {
-			EXCEPT("read %s: len = %d", filename, len);
-		}
-
-		if( qmgmt_sock->code_bytes(buf, cc) != cc ) {
-			fprintf(stderr,"Error writing initial executable into queue\nPerhaps no more space available in $(SPOOL)?\n");
-			EXCEPT("write %s: cc = %d, len = %d", filename, cc, len);
-		}
-
-		len += cc;
-
-		if( cc == 0 ) {
-			break;
-		}
-	}
-	qmgmt_sock->eom();
-
-	qmgmt_sock->decode();
-	if (!qmgmt_sock->code(ack)) {
-		EXCEPT("Failed to read ack from qmgmr!  Checkpoint store failed!");
-	}
-	qmgmt_sock->eom();
-
-	if (ack != len) {
-		EXCEPT("Failed to transfer %d bytes of checkpoint file (only %d)",
-			   len, ack);
-	}
-
-	(void)close( fd );
-
-	return 0;
-#endif
 }
 
 
@@ -273,7 +227,6 @@ WalkJobQueue(scan_func func)
 }
 
 
-#if !defined(WIN32)
 int
 rusage_to_float(struct rusage ru, float *utime, float *stime )
 {
@@ -298,10 +251,11 @@ float_to_rusage(float utime, float stime, struct rusage *ru)
 	return 0;
 }
 
-
+#if !defined(WIN32)
 int
 SaveProc(PROC *p)
 {
+#if 0	// we do not call SaveProc anywhere anymore
 	int disconn_when_done = 0;
 	char buf[1000];
 	int cl;
@@ -360,10 +314,10 @@ SaveProc(PROC *p)
 	if (disconn_when_done) {
 		DisconnectQ(connection);
 	}
+#endif	// of #if 0
+	
 	return 0;
 }
-
-
 
 
 int
