@@ -27,6 +27,7 @@
 #include "status_types.h"
 #include "totals.h"
 #include "get_daemon_addr.h"
+#include "get_full_hostname.h"
 #include "extArray.h"
 #include "sig_install.h"
 
@@ -271,7 +272,7 @@ firstPass (int argc, char *argv[])
 				free( pool );
 				had_pool_error = 1;
 			}
-			pool = get_daemon_name(argv[++i]);
+			pool = get_full_hostname(argv[++i]);
 			if( !pool ) {
 				fprintf( stderr, "Error:  unknown host %s\n", argv[i] );
 				exit( 1 );

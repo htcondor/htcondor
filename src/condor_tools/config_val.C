@@ -45,6 +45,7 @@
 #include "match_prefix.h"
 #include "string_list.h"
 #include "get_daemon_addr.h"
+#include "get_full_hostname.h"
 #include "daemon_types.h"
 
 char	*MyName;
@@ -166,10 +167,10 @@ main( int argc, char* argv[] )
 		} else if( match_prefix( argv[i], "-pool" ) ) {
 			if( argv[i + 1] ) {
 				i++;
-				pool = get_daemon_name( argv[i] );
+				pool = get_full_hostname( argv[i] );
 				if( ! pool ) {
 					fprintf( stderr, "%s: unknown host %s\n", MyName, 
-							 get_host_part(argv[i]) );
+							 argv[i] );
 					my_exit( 1 );
 				}
 			} else {

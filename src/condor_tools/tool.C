@@ -33,6 +33,7 @@
 #include "condor_io.h"
 #include "my_hostname.h"
 #include "get_daemon_addr.h"
+#include "get_full_hostname.h"
 #include "daemon_types.h"
 
 void doCommand( char *name );
@@ -320,9 +321,9 @@ main( int argc, char *argv[] )
 			case 'p':
 				tmp++;
 				if( tmp && *tmp ) {
-					if( (pool = get_daemon_name(*tmp)) == NULL ) {
-						fprintf( stderr, "%s: unknown host %s\n", MyName, 
-								 get_host_part(*tmp) );
+					if( (pool = get_full_hostname(*tmp)) == NULL ) {
+						fprintf( stderr, "%s: unknown host %s\n", 
+								 MyName, *tmp );
 						exit( 1 );	
 					}
 				} else {
