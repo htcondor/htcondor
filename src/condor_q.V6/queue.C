@@ -942,6 +942,7 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 
 		// initialize counters
 	unexpanded = idle = running = held = malformed = 0;
+	output_buffer_empty = true;
 
 	if ( run || goodput ) {
 		summarize = false;
@@ -1004,42 +1005,44 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 									 process_buffer_line ) != Q_OK ) {
 		printf ("\n-- Failed to fetch ads from: %s : %s\n", 
 									scheddAddr, scheddMachine);	
+		delete output_buffer;
+
 		return false;
-	}
-
-	the_output = &(*output_buffer)[0];
-	qsort(the_output, output_buffer->getlast()+1, sizeof(clusterProcString*),
-		output_sorter);
-
-	if (! customFormat ) {
-		if( querySchedds ) {
-			printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
-		} else {
-			printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
-					scheddAddr, scheddMachine);	
-		}
-		// Print the output header
-	
-		short_header();
 	}
 
 	// Print the jobs if we have any
 	if (!output_buffer_empty) {
+		the_output = &(*output_buffer)[0];
+		qsort(the_output, output_buffer->getlast()+1, sizeof(clusterProcString*),
+			output_sorter);
+
+		if (! customFormat ) {
+			if( querySchedds ) {
+				printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddr);
+			} else {
+				printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
+						scheddAddr, scheddMachine);	
+			}
+			// Print the output header
+		
+			short_header();
+		}
+
 		for (int i=0;i<=output_buffer->getlast(); i++) {
 			if ((*output_buffer)[i])
 				printf("%s",((*output_buffer)[i])->string);
 		}
-	}
 
-	// If we want to summarize, do that too.
-	if( summarize ) {
-		printf( "\n%d jobs; "
-				"%d idle, %d running, %d held",
-				unexpanded+idle+running+held+malformed,
-				idle,running,held);
-		if (unexpanded>0) printf( ", %d unexpanded",unexpanded);
-		if (malformed>0) printf( ", %d malformed",malformed);
-           printf("\n");
+		// If we want to summarize, do that too.
+		if( summarize ) {
+			printf( "\n%d jobs; "
+					"%d idle, %d running, %d held",
+					unexpanded+idle+running+held+malformed,
+					idle,running,held);
+			if (unexpanded>0) printf( ", %d unexpanded",unexpanded);
+			if (malformed>0) printf( ", %d malformed",malformed);
+           	printf("\n");
+		}
 	}
 
 	delete output_buffer;
@@ -1065,7 +1068,10 @@ process_buffer_line( ClassAd *job )
 	} else if ( show_io ) {
 		tempCPS->string = strnewp( buffer_io_display( job ) );
 	} else if ( usingPrintMask ) {
-		tempCPS->string = mask.display( job );
+		char * tempSTR = mask.display ( job );
+		// strnewp the mask.display return, since its an 8k string.
+		tempCPS->string = strnewp( tempSTR );
+		delete [] tempSTR;
 	} else {
 		tempCPS->string = strnewp( bufferJobShort( job ) );
 	}
