@@ -24,6 +24,35 @@ When you upgrade to a new development release, make certain you upgrade all
 machines in your pool to the same version.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:New-6-1-15}Version 6.1.15}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:New-6-1-14}Version 6.1.14}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -171,6 +200,13 @@ they are not tested or supported.
 job queue for running jobs, so if the schedd crashes, the counters
 will remain relatively up-to-date.  This is controlled by the
 \Macro{WALL\_CLOCK\_CKPT\_INTERVAL} parameter.
+
+\item The \Condor{shadow} now logs the ``job executing'' event in the
+user log after the binary has been successfully transfered, so that
+the events appear closer to the actual time the job starts running.
+This can create some somewhat unexpected log files.  
+If something goes wrong with the job's initialization, you might see
+an ``evicted'' event before you see an ``executing'' event.
 
 \end{itemize}
 
