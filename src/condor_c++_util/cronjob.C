@@ -317,7 +317,7 @@ SetKill( bool kill )
 // Set job characteristics
 int
 CondorCronJob::
-SetVar( char **var, const char *value, bool allowNull = false )
+SetVar( char **var, const char *value, bool allowNull )
 {
 	// If path is already set, and hasn't changed, do nothing!
 	if (  ( NULL != *var ) && ( NULL != value ) &&

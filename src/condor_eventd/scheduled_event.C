@@ -795,7 +795,7 @@ ScheduledShutdownEvent::UpdateSchedule()
 
 		if (NumSchedulingChanges == 0) {
 			SchedulingChanges =
-				new (ShutdownRecord *) [StartdList->MyLength()];
+				new ShutdownRecord* [StartdList->MyLength()];
 		}
 		SchedulingChanges[NumSchedulingChanges++] = rec;
 	}

@@ -74,9 +74,9 @@ Reconfig( void )
 char *
 CondorCronMgr::
 GetParam( const char *paramName, 
-		  const char *paramNameSep = NULL,
-		  const char *paramName2 = NULL,
-		  const char *paramName3 = NULL )
+		  const char *paramNameSep,
+		  const char *paramName2,
+		  const char *paramName3 )
 {
 	// Build the name of the parameter to read
 	int len = NameLen + strlen( paramName ) + 1;

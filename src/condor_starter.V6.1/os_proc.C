@@ -400,7 +400,7 @@ OsProc::JobExit( void )
 
 #ifdef WIN32		
 	job_exit_wants_ad = false;
-	CondorVersionInfo ver* = Starter->GetShadowVersion();
+	CondorVersionInfo * ver = Starter->GetShadowVersion();
 	if( ver && ver->built_since_version(6,3,0) ) {
 		job_exit_wants_ad = true;	// new shadow; send ad
 	}

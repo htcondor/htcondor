@@ -65,6 +65,7 @@ VanillaProc::StartJob()
 #ifdef WIN32
 	char argstmp[_POSIX_ARG_MAX];
 	char systemshell[_POSIX_PATH_MAX];
+	char tmp[_POSIX_PATH_MAX];
 
 	char* jobtmp = Starter->GetOrigJobName();
 	int joblen = strlen(jobtmp);

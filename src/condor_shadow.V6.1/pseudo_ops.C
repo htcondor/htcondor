@@ -152,11 +152,13 @@ pseudo_get_user_info(ClassAd *&ad)
 			// it in with the info we care about
 		user_ad = new ClassAd;
 
+#ifndef WIN32
 		sprintf( buf, "%s = %d", ATTR_UID, (int)get_user_uid() );
 		user_ad->Insert( buf );
 
 		sprintf( buf, "%s = %d", ATTR_GID, (int)get_user_gid() );
 		user_ad->Insert( buf );
+#endif
 
 	}
 

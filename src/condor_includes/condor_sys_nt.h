@@ -99,6 +99,7 @@ typedef DWORD pid_t;
 #include <stdio.h>
 #include <limits.h>
 #include <math.h>
+#include <float.h>   // for DBL_MAX and other constants
 #include <errno.h>
 #include "condor_file_lock.h"
 #include "condor_fix_assert.h"

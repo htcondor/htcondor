@@ -67,7 +67,7 @@ EventDaemon::Config()
 	free(tmp);
 
 	NumEvents = event_list.number();
-	EventList = new (ScheduledEvent *)[NumEvents];
+	EventList = new ScheduledEvent* [NumEvents];
 
 	event_list.rewind();
 	char *item;

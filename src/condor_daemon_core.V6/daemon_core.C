@@ -1595,7 +1595,8 @@ int DaemonCore::HandleReq(int socki)
 	int					result;
 	int					old_timeout;
     int                 perm         = USER_AUTH_FAILURE;
-    char                user[256] = {};
+    char                user[256];
+	user[0] = '\0';
     ClassAd *the_policy     = NULL;
     KeyInfo *the_key        = NULL;
     char    *the_sid        = NULL;
@@ -2390,7 +2391,7 @@ int DaemonCore::HandleReq(int socki)
 			result = 0;
 			dprintf( D_ALWAYS,
                      "DaemonCore: PERMISSION DENIED to %s from host %s for command %d (%s)\n",
-                     (user == 0)? "unknown user" : user, sin_to_string(((Sock*)stream)->endpoint()), req,
+                     (user[0] == '\0')? "unknown user" : user, sin_to_string(((Sock*)stream)->endpoint()), req,
                      comTable[index].command_descrip );
 			// if UDP, consume the rest of this message to try to stay "in-sync"
 			if ( !is_tcp)
@@ -2399,7 +2400,7 @@ int DaemonCore::HandleReq(int socki)
 		} else {
 			dprintf(comTable[index].dprintf_flag,
 					"DaemonCore: Command received via %s from %s from host %s\n",
-					(user == 0) ? "uknown user" : user, (is_tcp) ? "TCP" : "UDP",
+					(user[0] == '\0') ? "unknown user" : user, (is_tcp) ? "TCP" : "UDP",
 					sin_to_string(((Sock*)stream)->endpoint()) );
 			dprintf(comTable[index].dprintf_flag, 
                     "DaemonCore: received command %d (%s), calling handler (%s)\n",
@@ -2409,7 +2410,7 @@ int DaemonCore::HandleReq(int socki)
 
 	} else {
 		dprintf(D_ALWAYS, "DaemonCore: Command received via %s from %s from host %s\n",
-				(user == 0)? "unknown user" : user, (is_tcp) ? "TCP" : "UDP",
+				(user[0] == '\0')? "unknown user" : user, (is_tcp) ? "TCP" : "UDP",
 				sin_to_string(((Sock*)stream)->endpoint()) );
 		dprintf(D_ALWAYS,
 			"DaemonCore: received unregistered command request %d !\n",req);
@@ -4941,20 +4942,12 @@ pidWatcherThread( void* arg )
 			// sock.connect("127.0.0.1",daemonCore->InfoCommandPort());		
             SafeSock sock;
 			Daemon d(daemonCore->InfoCommandSinfulString());
-            if (!sock.connect(daemonCore->InfoCommandSinfulString())) {
-                dprintf(D_ALWAYS, "Unable to connect to remote host %s\n", 
-                        daemonCore->InfoCommandSinfulString());
-                return FALSE;
-            }
 
-			if (!d.startCommand(DC_PROCESSEXIT, &sock, 0)) {
-                dprintf(D_ALWAYS, "Unable to send DC_PROCESSEXIT command\n");
-                return FALSE;
-            }
-		
-			if ( !sock ||
+            if ( !sock.connect(daemonCore->InfoCommandSinfulString()) ||
+				 !d.startCommand(DC_PROCESSEXIT, &sock, 0) ||
 				 !sock.code(exited_pid) ||
-				 !sock.end_of_message() ) {
+				 !sock.end_of_message() )
+			{
 				// failed to get the notification off to the main thread.
 				// we'll log a message, wait a bit, and try again
 				dprintf(D_ALWAYS,
