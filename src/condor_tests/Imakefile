@@ -56,6 +56,7 @@ BUILD_DEP_LIB($(CC),lib_chirpio,c,,../release_dir/lib/libchirp_client.a)
 DEPS(lib_chirpio_van,lib_chirpio.exe)
 RUN(lib_chirpio_van)
 TESTCLASS(lib_chirpio_van,lib)
+TESTCLASS(lib_chirpio_van,quick)
 
 /* User log and log reader used by dagman tests */
 
@@ -73,6 +74,7 @@ RUN(lib_userlog)
 DEPS(lib_userlog,x_read_joblog.exe)
 DEPS(lib_userlog,x_write_joblog.exe)
 TESTCLASS(lib_userlog,lib)
+TESTCLASS(lib_userlog,quick)
 
 /* Condor-C Tests */
 /*
@@ -81,14 +83,17 @@ TESTCLASS(lib_userlog,lib)
 **DESC(job_condorc_ab_van,"Condor-C AB test")
 **RUN(job_condorc_ab_van)
 **TESTCLASS(job_condorc_ab_van,condorc)
+**TESTCLASS(job_condorc_ab_van,long)
 **
 **DESC(job_condorc_abc_van,"Condor-C ABC test")
 **RUN(job_condorc_abc_van)
 **TESTCLASS(job_condorc_abc_van,condorc)
+**TESTCLASS(job_condorc_abc_van,long)
 **
 **DESC(job_core_streamout,"Vanilla: test for streaming of output when both stream_output is true and false")
 **RUN(job_core_streamout_van)
 **TESTCLASS(job_core_streamout_van,core)
+**TESTCLASS(job_core_streamout_van,quick)
 **
 */
 
@@ -97,20 +102,24 @@ DESC(job_core_killsignal_sched,"Scheduler: Verify the specified input file is us
 RUN(job_core_killsignal_sched)
 DEPS(job_core_killsignal_sched,x_trapsig.exe)
 TESTCLASS(job_core_killsignal_sched,core)
+TESTCLASS(job_core_killsignal_sched,quick)
 
 DESC(job_core_holdkillsig_sched,"Scheduler: Verify ability to control signal for holds and kills")
 RUN(job_core_holdkillsig_sched)
 DEPS(job_core_holdkillsig_sched,x_trapsig.exe)
 TESTCLASS(job_core_holdkillsig_sched,core)
+TESTCLASS(job_core_holdkillsig_sched,quick)
 
 DESC(job_core_rmkillsig_sched,"Scheduler: Verify the  remove_kill_sig")
 RUN(job_core_rmkillsig_sched)
 DEPS(job_core_rmkillsig_sched,x_trapsig.exe)
 TESTCLASS(job_core_rmkillsig_sched,core)
+TESTCLASS(job_core_rmkillsig_sched,quick)
 
 DESC(job_core_macros-dollardollar_van,"Vanilla: Did dollar dollar macros work?")
 RUN(job_core_macros-dollardollar_van)
 TESTCLASS(job_core_macros-dollardollar_van,core)
+TESTCLASS(job_core_macros-dollardollar_van,quick)
 
 /*
 **
@@ -118,14 +127,17 @@ TESTCLASS(job_core_macros-dollardollar_van,core)
 **RUN(job_core_killsignal_van)
 **DEPS(job_core_killsignal_van,x_trapsig.exe)
 **TESTCLASS(job_core_killsignal_van,core)
+**TESTCLASS(job_core_killsignal_van,quick)
 **
 **DESC(job_core_corefiles_van,"Vanillla limit of core file size - FAILS!")
 **RUN(job_core_corefiles_van)
 **TESTCLASS(job_core_corefiles_van,core)
+**TESTCLASS(job_core_corefiles_van,quick)
 **
 **DESC(job_core_corefiles_sched,"Scheduler limit of core file size - FAILS!")
 **RUN(job_core_corefiles_sched)
 **TESTCLASS(job_core_corefiles_sched,core)
+**TESTCLASS(job_core_corefiles_sched,quick)
 **
 */
 
@@ -138,11 +150,13 @@ TESTCLASS(job_core_macros-dollardollar_van,core)
 **DESC(job_core_onexitrem_sched,"Scheduler: Verify true and false triggers of on_exit_remove")
 **RUN(job_core_onexitrem_sched)
 **TESTCLASS(job_core_onexitrem_sched,core)
+**TESTCLASS(job_core_onexitrem_sched,quick)
 **
 **
 **DESC(job_core_onexithold_sched,"Scheduler: Verify true and false triggers of on_exit_hold")
 **RUN(job_core_onexithold_sched)
 **TESTCLASS(job_core_onexithold_sched,core)
+**TESTCLASS(job_core_onexithold_sched,quick)
 **
 */
 
@@ -151,18 +165,22 @@ TESTCLASS(job_core_macros-dollardollar_van,core)
 DESC(job_filexfer_basic_van,"Vanilla: send a file and get it back")
 RUN(job_filexfer_basic_van)
 TESTCLASS(job_filexfer_basic_van,filexfer)
+TESTCLASS(job_filexfer_basic_van,quick)
 
 DESC(job_filexfer_minus1_van,"Vanilla: extra specified output file creates shadow exception to rerun to produce missing output")
 RUN(job_filexfer_minus1_van)
 TESTCLASS(job_filexfer_minus1_van,filexfer)
+TESTCLASS(job_filexfer_minus1_van,quick)
 
 DESC(job_filexfer_output-withvacate_van,"Vanilla: 3 files created before vacate - verify their return")
 RUN(job_filexfer_output-withvacate_van)
 TESTCLASS(job_filexfer_output-withvacate_van,filexfer)
+TESTCLASS(job_filexfer_output-withvacate_van,quick)
 
 DESC(job_filexfer_trans-nodflts_van,"Vanilla: all transfers explicitely off - complains...")
 RUN(job_filexfer_trans-nodflts_van)
 TESTCLASS(job_filexfer_trans-nodflts_van,filexfer)
+TESTCLASS(job_filexfer_trans-nodflts_van,quick)
 
 /* Tests which fail in groups but run singly reliably */
 
@@ -173,6 +191,7 @@ TESTCLASS(job_filexfer_trans-nodflts_van,filexfer)
 **DESC(job_core_matchlist_van,"Vanilla: test that match_list_length is storing and rotating matches")
 **RUN(job_core_matchlist_van)
 **TESTCLASS(job_core_matchlist_van,core)
+**TESTCLASS(job_core_matchlist_van,long)
 **
 **
 */
@@ -180,14 +199,17 @@ TESTCLASS(job_filexfer_trans-nodflts_van,filexfer)
 DESC(job_core_holdrelease_sched,"Scheduler: Test state changes from running to hold to release.")
 RUN(job_core_holdrelease_sched)
 TESTCLASS(job_core_holdrelease_sched,core)
+TESTCLASS(job_core_holdrelease_sched,quick)
 
 DESC(job_core_onexithold_van,"Vanilla: Verify true and false triggers of on_exit_hold")
 RUN(job_core_onexithold_van)
 TESTCLASS(job_core_onexithold_van,core)
+TESTCLASS(job_core_onexithold_van,quick)
 
 DESC(job_core_perhold_van,"Vanilla: verify true and false triggers for periodic hold")
 RUN(job_core_perhold_van)
 TESTCLASS(job_core_perhold_van,core)
+TESTCLASS(job_core_perhold_van,quick)
 
 
 /* runable core coverage tests */
@@ -195,10 +217,12 @@ TESTCLASS(job_core_perhold_van,core)
 DESC(job_core_args_van,"Vanilla: Did specify args from submit file reach the job?")
 RUN(job_core_args_van)
 TESTCLASS(job_core_args_van,core)
+TESTCLASS(job_core_args_van,quick)
 
 DESC(job_core_args_sched,"scheduler: Did specify args from submit file reach the job?")
 RUN(job_core_args_sched)
 TESTCLASS(job_core_args_sched,core)
+TESTCLASS(job_core_args_sched,quick)
 
 #if ! IS_CLIPPED
 CBUILD($(CC),job_core_compressfiles,c)
@@ -206,187 +230,232 @@ DESC(job_core_compressfiles_std,"Do we handle compressed files made by standard 
 DEPS(job_core_compressfiles_std,job_core_compressfiles.cndr.exe)
 RUN(job_core_compressfiles_std)
 TESTCLASS(job_core_compressfiles_std,core)
+TESTCLASS(job_core_compressfiles_std,quick)
 #endif /* ! IS_CLIPPED */
 
 /* Test can hang now - offline for work 3/1/05
 DESC(job_core_streamerr_van,"Vanilla: test for streaming of error when both stream_error is true and false")
 RUN(job_core_streamerr_van)
 TESTCLASS(job_core_streamerr_van,core)
+TESTCLASS(job_core_streamerr_van,quick)
 */
 
 DESC(job_core_copytospool_van,"Vanilla: test that spooled executable is same via md5 checksum of both files")
 RUN(job_core_copytospool_van)
 TESTCLASS(job_core_copytospool_van,core)
+TESTCLASS(job_core_copytospool_van,quick)
 
 DESC(job_core_getenv_van,"Vanilla: job which tests getenv both on and off")
 RUN(job_core_getenv_van)
 TESTCLASS(job_core_getenv_van,core)
+TESTCLASS(job_core_getenv_van,long)
 
 DESC(job_core_doublejeopardy_van,"Vanilla: make sure condor does not generate an abort AND the expected abnormal termination.")
 RUN(job_core_doublejeopardy_van)
 TESTCLASS(job_core_doublejeopardy_van,core)
+TESTCLASS(job_core_doublejeopardy_van,quick)
 
 DESC(job_core_doublejeopardy_sched,"Scheduler: make sure condor does not generate an abort AND the expected abnormal termination.")
 RUN(job_core_doublejeopardy_sched)
 TESTCLASS(job_core_doublejeopardy_sched,core)
+TESTCLASS(job_core_doublejeopardy_sched,quick)
 
 DESC(job_core_env_sched,"Scheduler: Does environment get to the job")
 RUN(job_core_env_sched)
 TESTCLASS(job_core_env_sched,core)
+TESTCLASS(job_core_env_sched,quick)
 
 DESC(job_core_env_van,"Vanilla: Does environment get to the job")
 RUN(job_core_env_van)
 TESTCLASS(job_core_env_van,core)
+TESTCLASS(job_core_env_van,quick)
 
 DESC(job_core_err_sched,"Scheduler: Does requested error file get used?")
 RUN(job_core_err_sched)
 TESTCLASS(job_core_err_sched,core)
+TESTCLASS(job_core_err_sched,quick)
 
 DESC(job_core_err_van,"Vanilla: Does requested error file get used?")
 RUN(job_core_err_van)
 TESTCLASS(job_core_err_van,core)
+TESTCLASS(job_core_err_van,quick)
 
 DESC(job_core_hold_sched,"Scheduler: job is told to begin on hold. So we test for that state when we get the submitted event")
 RUN(job_core_hold_sched)
 TESTCLASS(job_core_hold_sched,core)
+TESTCLASS(job_core_hold_sched,quick)
 
 DESC(job_core_hold_van,"Vanilla: job is told to begin on hold. So we test for that state when we get the submitted event")
 RUN(job_core_hold_van)
 TESTCLASS(job_core_hold_van,core)
+TESTCLASS(job_core_hold_van,quick)
 
 DESC(job_core_holdrelease_van,"Vanilla: Test state changes from running to hold to release.")
 RUN(job_core_holdrelease_van)
 TESTCLASS(job_core_holdrelease_van,core)
+TESTCLASS(job_core_holdrelease_van,quick)
 
 DESC(job_core_initialdir_sched,"Scheduler: We change the initialdir and assure log and stuff goes there")
 RUN(job_core_initialdir_sched)
 TESTCLASS(job_core_initialdir_sched,core)
+TESTCLASS(job_core_initialdir_sched,quick)
 
 DESC(job_core_initialdir_van,"Vanilla: We change the initialdir and assure log and stuff goes there")
 RUN(job_core_initialdir_van)
 TESTCLASS(job_core_initialdir_van,core)
+TESTCLASS(job_core_initialdir_van,quick)
 
 DESC(job_core_input_sched,"Scheduler: Verify the specified input file is used")
 RUN(job_core_input_sched)
 TESTCLASS(job_core_input_sched,core)
+TESTCLASS(job_core_input_sched,quick)
 
 DESC(job_core_input_van,"Vanilla: Verify the specified input file is used")
 RUN(job_core_input_van)
 TESTCLASS(job_core_input_van,core)
+TESTCLASS(job_core_input_van,quick)
 
 DESC(job_core_leaveinqueue_sched,"Scheduler: verify true and false classads do leave_in_queue right")
 RUN(job_core_leaveinqueue_sched)
 TESTCLASS(job_core_leaveinqueue_sched,core)
+TESTCLASS(job_core_leaveinqueue_sched,long)
 
 DESC(job_core_leaveinqueue_van,"Vanilla: verify true and false classads do leave_in_queue right")
 RUN(job_core_leaveinqueue_van)
 TESTCLASS(job_core_leaveinqueue_van,core)
+TESTCLASS(job_core_leaveinqueue_van,quick)
 
 DESC(job_core_macros_sched,"Scheduler: a number of macros get passed in as args") 
 RUN(job_core_macros_sched)
 TESTCLASS(job_core_macros_sched,core)
+TESTCLASS(job_core_macros_sched,quick)
 
 DESC(job_core_niceuser_van,"Vanilla: Ensure non nice_user job completes before nice_user job") 
 RUN(job_core_niceuser_van)
 TESTCLASS(job_core_niceuser_van,core)
+TESTCLASS(job_core_niceuser_van,quick)
 
 DESC(job_core_onexitrem_van,"Vanilla: Verify true and false triggers of on_exit_remove")
 RUN(job_core_onexitrem_van)
 TESTCLASS(job_core_onexitrem_van,core)
+TESTCLASS(job_core_onexitrem_van,quick)
 
 DESC(job_core_output_sched,"Scheduler: Verify trivially simple output from an input file")
 RUN(job_core_output_sched)
 TESTCLASS(job_core_output_sched,core)
+TESTCLASS(job_core_output_sched,quick)
 
 DESC(job_core_output_van,"Vanilla: Verify trivially simple output from an input file")
 RUN(job_core_output_van)
 TESTCLASS(job_core_output_van,core)
+TESTCLASS(job_core_output_van,quick)
 
 DESC(job_core_perhold_sched,"Scheduler: verify true and false triggers for periodic hold")
 RUN(job_core_perhold_sched)
 TESTCLASS(job_core_perhold_sched,core)
+TESTCLASS(job_core_perhold_sched,quick)
 
 DESC(job_core_perrelease_sched,"Scheduler: verify a policy of true/false for periodic release does the right thing")
 RUN(job_core_perrelease_sched)
 TESTCLASS(job_core_perrelease_sched,core)
+TESTCLASS(job_core_perrelease_sched,long)
 
 DESC(job_core_perrelease_van,"Vanilla: verify a policy of true/false for periodic release does the right thing")
 RUN(job_core_perrelease_van)
 TESTCLASS(job_core_perrelease_van,core)
+TESTCLASS(job_core_perrelease_van,long)
 
 DESC(job_core_perremove_van,"Vanilla: test true/false variations of periodic remove")
 RUN(job_core_perremove_van)
 TESTCLASS(job_core_perremove_van,core)
+TESTCLASS(job_core_perremove_van,quick)
 
 DESC(job_core_perremove_sched,"Scheduler: test true/false variations of periodic remove")
 RUN(job_core_perremove_sched)
 TESTCLASS(job_core_perremove_sched,core)
+TESTCLASS(job_core_perremove_sched,quick)
 
 DESC(job_core_plus_van,"Vanilla: Verify +entries go to job ad")
 RUN(job_core_plus_van)
 TESTCLASS(job_core_plus_van,core)
+TESTCLASS(job_core_plus_van,quick)
 
 DESC(job_core_plus_sched,"Scheduler: Verify +entries go to job ad")
 RUN(job_core_plus_sched)
 TESTCLASS(job_core_plus_sched,core)
+TESTCLASS(job_core_plus_sched,quick)
 
 DESC(job_core_priority_sched,"Scheduler: Verify respect for job priority")
 RUN(job_core_priority_sched)
 TESTCLASS(job_core_priority_sched,core)
+TESTCLASS(job_core_priority_sched,quick)
 
 DESC(job_core_priority_van,"Vanilla: Verify respect for job priority")
 RUN(job_core_priority_van)
 TESTCLASS(job_core_priority_van,core)
+TESTCLASS(job_core_priority_van,quick)
 
 DESC(job_core_queue_sched,"Scheduler: Verify the  queue command")
 RUN(job_core_queue_sched)
 TESTCLASS(job_core_queue_sched,core)
+TESTCLASS(job_core_queue_sched,quick)
 
 /* File Transfer Tests */
 
 DESC(job_filexfer_base-input1_van,"Vanilla: Tests input file does not make it with filetransfer off")
 RUN(job_filexfer_base-input1_van)
 TESTCLASS(job_filexfer_base-input1_van,filexfer)
+TESTCLASS(job_filexfer_base-input1_van,quick)
 
 DESC(job_filexfer_base-input4_van,"Vanilla: Verifies submit fails with input list and with filetransfer off")
 RUN(job_filexfer_base-input4_van)
 TESTCLASS(job_filexfer_base-input4_van,filexfer)
+TESTCLASS(job_filexfer_base-input4_van,quick)
 
 DESC(job_filexfer_base_van,"Vanilla: Is executable moved correctly to initialdir/sandbox?")
 RUN(job_filexfer_base_van)
 TESTCLASS(job_filexfer_base_van,filexfer)
+TESTCLASS(job_filexfer_base_van,quick)
 
 DESC(job_filexfer_input-onegone_van,"Vanilla: test for failure when specified input file is missing")
 RUN(job_filexfer_input-onegone_van)
 TESTCLASS(job_filexfer_input-onegone_van,filexfer)
+TESTCLASS(job_filexfer_input-onegone_van,quick)
 
 DESC(job_filexfer_limitback_van,"Vanilla: ask for exactly 2 files returned")
 RUN(job_filexfer_limitback_van)
 TESTCLASS(job_filexfer_limitback_van,filexfer)
+TESTCLASS(job_filexfer_limitback_van,quick)
 
 DESC(job_filexfer_trans-excut-true_van,"Vanilla: explicitely set transfer_executable... test complains")
 RUN(job_filexfer_trans-excut-true_van)
 TESTCLASS(job_filexfer_trans-excut-true_van,filexfer)
+TESTCLASS(job_filexfer_trans-excut-true_van,quick)
 
 DESC(job_filexfer_whento-base_van,"Vanilla: Inputless test of a job running with transfer files enabled.")
 RUN(job_filexfer_whento-base_van)
 TESTCLASS(job_filexfer_whento-base_van,filexfer)
+TESTCLASS(job_filexfer_whento-base_van,quick)
 
 DESC(job_filexfer_whento-simpleinput_van,"Vanilla: job runs with input file requested")
 RUN(job_filexfer_whento-simpleinput_van)
 TESTCLASS(job_filexfer_whento-simpleinput_van,filexfer)
+TESTCLASS(job_filexfer_whento-simpleinput_van,quick)
 
 DESC(job_filexfer_whento-withinput_van,"Vanilla: Multiple input files arrive ok")
 RUN(job_filexfer_whento-withinput_van)
 TESTCLASS(job_filexfer_whento-withinput_van,filexfer)
+TESTCLASS(job_filexfer_whento-withinput_van,quick)
 
 DESC(job_filexfer_output_van,"Vanilla: Are 6 output files returned")
 RUN(job_filexfer_output_van)
 TESTCLASS(job_filexfer_output_van,filexfer)
+TESTCLASS(job_filexfer_output_van,quick)
 
 DESC(job_filexfer_md5_van,"Vanilla: Can we move 200 megs and not impact md5 checksum?")
 RUN(job_filexfer_md5_van)
 TESTCLASS(job_filexfer_md5_van,filexfer)
+TESTCLASS(job_filexfer_md5_van,quick)
 
 /* Dagman Tests */
 
@@ -394,48 +463,58 @@ DESC(job_dagman_comlog,"Run a dag with multiple nodes sharing a common log")
 DEPS(job_dagman_comlog,x_read_joblog.exe)
 RUN(job_dagman_comlog)
 TESTCLASS(job_dagman_comlog,dagman)
+TESTCLASS(job_dagman_comlog,quick)
 
 DESC(job_dagman_fullremove,"Ensure a removed dag is completely removed")
 DEPS(job_dagman_fullremove,x_read_joblog.exe)
 RUN(job_dagman_fullremove)
 TESTCLASS(job_dagman_fullremove,dagman)
+TESTCLASS(job_dagman_fullremove,quick)
 
 DESC(job_dagman_basic,"Basic one node dag")
 RUN(job_dagman_basic)
 TESTCLASS(job_dagman_basic,dagman)
+TESTCLASS(job_dagman_basic,quick)
 
 DESC(job_dagman_maxpostscripts,"Check that throttling by post scripts works")
 RUN(job_dagman_maxpostscripts)
 TESTCLASS(job_dagman_maxpostscripts,dagman)
+TESTCLASS(job_dagman_maxpostscripts,quick)
 
 DESC(job_dagman_maxprescripts,"Check that throttling by pre scripts works")
 RUN(job_dagman_maxprescripts)
 TESTCLASS(job_dagman_maxprescripts,dagman)
+TESTCLASS(job_dagman_maxprescripts,quick)
 
 DESC(job_dagman_prepost,"Run a dag and verify each nodes pre and post scripts ran")
 RUN(job_dagman_prepost)
 TESTCLASS(job_dagman_prepost,dagman)
+TESTCLASS(job_dagman_prepost,quick)
 
 DESC(job_dagman_retry,"Make sure a retry dag runs correctly.")
 DEPS(job_dagman_retry,x_read_joblog.exe)
 RUN(job_dagman_retry)
 TESTCLASS(job_dagman_retry,dagman)
+TESTCLASS(job_dagman_retry,quick)
 
 DESC(job_dagman_throttle,"Test Dagman throttling ability")
 DEPS(job_dagman_throttle,x_read_joblog.exe)
 RUN(job_dagman_throttle)
 TESTCLASS(job_dagman_throttle,dagman)
+TESTCLASS(job_dagman_throttle,long)
 
 DESC(job_dagman_uncomlog,"Test Dagmans ability to have sepaarate job log files")
 DEPS(job_dagman_uncomlog,x_read_joblog.exe)
 RUN(job_dagman_uncomlog)
 TESTCLASS(job_dagman_uncomlog,dagman)
+TESTCLASS(job_dagman_uncomlog,quick)
 
 /* Valid starting v6_7 branch......
 DESC(job_dagman_unlessexit,"Test that the retries can be stopped with particular exit values from node.")
 DEPS(job_dagman_unlessexit,x_read_joblog.exe)
 RUN(job_dagman_unlessexit)
 TESTCLASS(job_dagman_unlessexit,dagman)
+TESTCLASS(job_dagman_unlessexit,quick)
 */
 
 /*
@@ -446,10 +525,12 @@ TESTCLASS(job_dagman_unlessexit,dagman)
 DESC(job_dagman_xmlcomlog,"Look at Dagmans ability to handle a common XML based log file")
 RUN(job_dagman_xmlcomlog)
 TESTCLASS(job_dagman_xmlcomlog,dagman)
+TESTCLASS(job_dagman_xmlcomlog,quick)
 
 DESC(job_dagman_xmluncomlog,"Look at Dagmans ability to handle uncommon XML based log files")
 RUN(job_dagman_xmluncomlog)
 TESTCLASS(job_dagman_xmluncomlog,dagman)
+TESTCLASS(job_dagman_xmluncomlog,quick)
 ******************************
 */
 
@@ -479,10 +560,12 @@ TESTCLASS(job_dagman_xmluncomlog,dagman)
 
 DESC(job_filexfer_sandbox-empty_van,"Are job sandboxes with bad permissions cleaned up?")
 RUN(job_filexfer_sandbox-empty_van)
+TESTCLASS(job_filexfer_sandbox-empty_van,framework)
 TESTCLASS(job_filexfer_sandbox-empty_van,quick)
 
 DESC(job_core_sh-loop_van,"Simple vanilla job that loops for N seconds")
 RUN(job_core_sh-loop_van)
+TESTCLASS(job_core_sh-loop_van,framework)
 TESTCLASS(job_core_sh-loop_van,quick)
 
 BUILD($(CC),job_core_bigenv,c)
@@ -490,12 +573,14 @@ DESC(job_core_bigenv_van,"Vanilla test for enormous environment")
 DEPS(job_core_bigenv_van,job_core_bigenv.exe)
 RUN(job_core_bigenv_van)
 TESTCLASS(job_core_bigenv_van,env)
+TESTCLASS(job_core_bigenv_van,framework)
 TESTCLASS(job_core_bigenv_van,quick)
 
 DESC(job_core_bigenv_sched,"Scheduler test for enormous environment")
 DEPS(job_core_bigenv_sched,job_core_bigenv.exe)
 RUN(job_core_bigenv_sched)
 TESTCLASS(job_core_bigenv_sched,env)
+TESTCLASS(job_core_bigenv_sched,quick)
 
 /* NOTE: we want this test in the top-level, even though we're linking
    it for standard universe, since we really don't care about
@@ -507,12 +592,14 @@ CBUILD($(CC),job_core_coredump,c)
 DESC(job_core_coredump_std,"Do we handle core files made by standard jobs?")
 DEPS(job_core_coredump_std,job_core_coredump.cndr.exe)
 RUN(job_core_coredump_std)
+TESTCLASS(job_core_coredump_std,framework)
 TESTCLASS(job_core_coredump_std,quick)
 #endif /* ! IS_CLIPPED */
 /* This test fails constantly and is off for now
 **DESC(job_core_coredump_van,"Do we handle core files made by vanilla jobs?")
 **DEPS(job_core_coredump_van,job_core_coredump.exe)
 **RUN(job_core_coredump_van)
+**TESTCLASS(job_core_coredump_van,framework)
 **TESTCLASS(job_core_coredump_van,quick)
 */
 

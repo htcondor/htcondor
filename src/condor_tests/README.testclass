@@ -30,6 +30,18 @@ the testnames that belong to the given classname.  Additionally, it
 generates a file called "list_testclass", which contains the names of
 all the valid test classes currently in use.
 
+We have decided to place all tests in one and only one of the classes
+quick and long. The initial factor being used to separate them is the length
+of time which the test takes to run on nmi-build18, a slow solaris 9
+system. The initial limit is 5 minutes. This means that running a test
+run of both list_quick and list_long will test each and every test
+exactly one time.
+
+The old list_quick which was used as a NWO framework test has been
+reclassified to a new testclass list_framework.
+
+All tests can additionally be placed in 0 or more of the other test classes.
+
 
 ----------------------------------------------------------------------
 DESCRIPTION OF CURRENTLY USED TEST CLASSES

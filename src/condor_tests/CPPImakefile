@@ -26,12 +26,14 @@ DESC(job_core-cpp_exception_std,"C++ exception handling")
 CBUILD($(CC),job_core-cpp_exception_std,C)
 DEP_SYMLINK_EXT(job_core-cpp_exception_std,cmd)
 RUN(job_core-cpp_exception_std)
+TESTCLASS(job_core-cpp_exception_std,framework)
 TESTCLASS(job_core-cpp_exception_std,quick)
 
 DESC(job_core-cpp_mem-alloc_std,"Memory allocation and constructors")
 CBUILD($(CC),job_core-cpp_mem-alloc_std,C)
 DEP_SYMLINK_EXT(job_core-cpp_mem-alloc_std,cmd)
 RUN(job_core-cpp_mem-alloc_std)
+TESTCLASS(job_core-cpp_mem-alloc_std,framework)
 TESTCLASS(job_core-cpp_mem-alloc_std,quick)
 
 
@@ -44,6 +46,7 @@ CBUILD($(CC),job_rsc_fstream_std,C)
 DEPS(job_rsc_fstream_std,x_data.in)
 DEP_SYMLINK_EXT(job_rsc_fstream_std,cmd)
 RUN(job_rsc_fstream_std)
+TESTCLASS(job_rsc_fstream_std,framework)
 TESTCLASS(job_rsc_fstream_std,quick)
 
 
@@ -55,19 +58,22 @@ DESC(job_ckpt_constructor_std,"Test C++ global and local constructors")
 CBUILD($(CC),job_ckpt_constructor_std,C)
 DEP_SYMLINK_EXT(job_ckpt_constructor_std,cmd)
 RUN(job_ckpt_constructor_std)
+TESTCLASS(job_ckpt_constructor_std,framework)
 TESTCLASS(job_ckpt_constructor_std,quick)
 
 DESC(job_ckpt_env_std,"Is the environment restored after ckpt?")
 CBUILD($(CC),job_ckpt_env_std,C)
 DEP_SYMLINK_EXT(job_ckpt_env_std,cmd)
 RUN(job_ckpt_env_std)
+TESTCLASS(job_ckpt_env_std,framework)
 TESTCLASS(job_ckpt_env_std,quick)
 
 DESC(job_ckpt_memory-file_std,"Does the memory_file class work across ckpts?")
 CBUILD($(CC),job_ckpt_memory-file_std,C)
 DEP_SYMLINK_EXT(job_ckpt_memory-file_std,cmd)
 RUN(job_ckpt_memory-file_std)
-TESTCLASS(job_ckpt_memory-file_std,quick)
+TESTCLASS(job_ckpt_memory-file_std,framework)
+TESTCLASS(job_ckpt_memory-file_std,long)
 
 
 /***********************************************************************

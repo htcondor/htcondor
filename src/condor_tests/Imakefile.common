@@ -23,6 +23,7 @@ all_lists:: list_all
 TESTCLASS_DECL(env)
 TESTCLASS_DECL(quick)
 TESTCLASS_DECL(critical)
+TESTCLASS_DECL(framework)
 TESTCLASS_DECL(long)
 TESTCLASS_DECL(filexfer)
 TESTCLASS_DECL(dagman)
