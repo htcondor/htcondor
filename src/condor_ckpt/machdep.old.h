@@ -1,6 +1,6 @@
 #include <setjmp.h>
 
-#if defined(ULTRIX42)
+#if defined(ULTRIX42) || defined(SUNOS41)
 extern "C" void *sbrk( int );
 extern "C" int brk( void * );
 #elif defined(ULTRIX43)
