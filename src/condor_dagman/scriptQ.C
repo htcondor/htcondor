@@ -89,7 +89,7 @@ ScriptQ::ScriptReaper( int pid, int status )
 	_numScriptsRunning--;
 
 	assert( pid == script->_pid );
-	script->_pid = 0;
+	script->_done = TRUE;
 
 	// call appropriate DAG reaper
 	if( ! script->_post ) {
