@@ -59,4 +59,10 @@ static const int RSC_SOCK = 17;
 static const int REQ_SOCK = 16;
 static const int RPL_SOCK = 17;
 
+#if defined(WIN32)
+static const char DIR_DELIM_CHAR = '\\';
+#else
+static const char DIR_DELIM_CHAR = '/';
+#endif
+
 #endif
