@@ -1,3 +1,9 @@
+03/17/05 V6_7_6-merge-1
+   The state of the V6_7_6-branch for a merge into V6_7-branch.  The
+   only real change is the version of the gt4-gahp we're using, and a
+   fix to the NMI glue to run all the tests every night.  Otherwise,
+   it's just a few last minute (mostly cosmetic) changes from 6.7.6.
+
 03/10/05 V6_7_6-branch
    A release branch for 6.7.6, created off V6_7-branch from the
    V6_7_6-root tag (after V6_6-merge-36). 
