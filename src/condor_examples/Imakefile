@@ -1,6 +1,4 @@
-FILES = README condor.generic condor_config.generic \
-	condor_config.local.central.manager condor_config.root.generic \
-	condor_config.submit.generic
+FILES = README condor.generic condor_config.local.central.manager
 
 all:
 
@@ -8,3 +6,4 @@ clean:
 
 release:
 	/bin/cp -f $(FILES) $(RELEASE_DIR)/etc/examples
+	perl ./customize
