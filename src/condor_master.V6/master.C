@@ -533,9 +533,9 @@ obituary( int pid, int status )
 
     mail_prog = param("MAIL");
     if (mail_prog) {
-        (void)sprintf( cmd, "%s %s -s \"%s\"", mail_prog,
-					   CondorAdministrator, 
-					   "CONDOR Problem" );
+        (void)sprintf( cmd, "%s -s \"%s\" %s", mail_prog,
+					   "CONDOR Problem",
+					   CondorAdministrator );
     } else {
         EXCEPT("\"MAIL\" not specified in the config file! ");
     }
