@@ -31,6 +31,7 @@
 #include "condor_classad_lookup.h"
 #include "condor_query.h"
 #include "daemon.h"
+#include "dc_startd.h"
 #include "daemon_types.h"
 
 // the comparison function must be declared before the declaration of the
@@ -1424,7 +1425,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 			return MM_BAD_MATCH;
 		}
 
-		Daemon startd (startdAddr, 0);
+		DCStartd startd( startdAddr );
 		startd.startCommand (MATCH_INFO, &startdSock);
 
 		// 2.  pass the startd MATCH_INFO and capability string

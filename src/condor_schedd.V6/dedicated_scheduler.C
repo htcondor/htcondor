@@ -51,6 +51,7 @@
 #include "get_full_hostname.h"
 #include "proc.h"
 #include "exit.h"
+#include "dc_startd.h"
 
 extern Scheduler scheduler;
 extern char* Name;
@@ -1197,7 +1198,7 @@ DedicatedScheduler::releaseClaim( match_rec* m_rec, bool use_tcp )
     ReliSock rsock;
 	SafeSock ssock;
 
-	Daemon d(m_rec->peer);
+	DCStartd d( m_rec->peer );
 
     if( use_tcp ) {
 		sock = &rsock;
@@ -1243,7 +1244,7 @@ DedicatedScheduler::deactivateClaim( match_rec* m_rec )
 		return false;
 	}
 
-	Daemon d(m_rec->peer);
+	DCStartd d( m_rec->peer );
 	d.startCommand(DEACTIVATE_CLAIM, &sock);
 
 	sock.encode();
