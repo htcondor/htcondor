@@ -45,9 +45,9 @@
 #endif
 
 #if WANT_PVM && HAS_PVM
-   #define PvmProgs starter.jim shadow.jim 
+#define PvmProgs starter.jim shadow.jim 
 #else
-   #define PvmProgs
+#define PvmProgs
 #endif
 
 #define Programs \
@@ -55,7 +55,7 @@
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts shadow.V6 startd.V6 starter.V5 submit.V6 status.V6 \
 		tools kbdd collector.V6 PvmProgs dagman userlog eventd \
-		shadow.V6.1 globus
+		globus
 
 #define Libraries \
 		util_lib c++_util procapi sysapi io classad daemon_core.V6 \
@@ -233,14 +233,13 @@ object_target(daemon_core.V6)
 #endif
 object_target(prio)
 object_target(scripts)
-
 object_target(globus)
-object_target(shadow.V6.1)
 
 object_dir_target(h)
 object_dir_target(condor_includes)
 object_dir_target(condor_release)
 object_dir_target(condor_starter.V6.1)
+object_dir_target(condor_shadow.V6.1)
 object_dir_target(html)
 object_dir_target(condor_bypass)
 
