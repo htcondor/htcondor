@@ -1062,6 +1062,7 @@ get_load_avg()
 	if (++load_counter != polls_per_update_load && !first)
 		return oldval;
 	first = 0;
+	load_counter = 0;
 	oldval = calc_load_avg();
 	dprintf(D_ALWAYS, "calc_load_avg -> %f\n", oldval);
 	return oldval;
