@@ -1,3 +1,4 @@
 #define COLLECTIONS
 /*#define EXPERIMENTAL*/
-#define DEPRECATED
+#define CLASSAD_DEPRECATED
+#define ALLOW_CHAINING
