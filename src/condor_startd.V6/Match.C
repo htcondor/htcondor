@@ -366,18 +366,3 @@ Capability::matches(char* capab)
 	return( strcmp(capab, c_capab) == 0 );
 }
 
-
-void
-Capability::setcapab(char* capab)
-{
-	if( c_capab ) {
-		free( c_capab );
-	}
-	if( capab ) {
-		c_capab = strdup( capab );
-	} else {
-		c_capab = NULL;
-	}
-}
-
-

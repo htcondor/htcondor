@@ -37,8 +37,6 @@ public:
 	char*	capab() {return c_capab;};
 	int		matches(char* capab);	// Return 1 if given capab matches
 									// current, 0 if not.
-		// Only needed for old protocol
-	void	setcapab(char* capab);
 private:
 	char*	c_capab;	// capability string
 };
