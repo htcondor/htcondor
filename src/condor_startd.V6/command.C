@@ -429,7 +429,6 @@ accept_request_claim( Resource* rip )
 {
 	int interval;
 	char* client_addr = NULL;
-	char tmp[128];
 	char RemoteUser[512];
 	RemoteUser[0] = '\0';
 	struct hostent *hp;
