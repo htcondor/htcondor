@@ -5,6 +5,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
+#include "condor_common.h"
+
 static const int DEFAULT_MAXCOMMANDS = 255;
 static const int DEFAULT_MAXSIGNALS = 99;
 static const int DEFAULT_MAXSOCKETS = 8;
@@ -13,40 +15,25 @@ static const int DEFAULT_PIDBUCKETS = 8;
 static const char* DEFAULT_INDENT = "DaemonCore--> ";
 
 
-#include "condor_common.h"
-
 #ifdef __GNUG__
 #pragma implementation "HashTable.h"
 #pragma implementation "list.h"
 #endif
 
-#ifndef WIN32
-#include <std.h>
-#if defined(Solaris251)
-#include <strings.h>
-#endif
-#include "_condor_fix_types.h"
-#include <sys/socket.h>
-#include "condor_fix_signal.h"
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#endif   /* ifndef WIN32 */
-
-#include "condor_debug.h"
 #include "condor_timer_manager.h"
 #include "condor_daemon_core.h"
 #include "condor_io.h"
 #include "internet.h"
+#include "condor_debug.h"
+static	char*  	_FileName_ = __FILE__;	// used by EXCEPT
 
 extern "C" 
 {
-	void			dprintf(int, char*...);
 	char*			sin_to_string(struct sockaddr_in*);
 	void			display_from(struct sockaddr_in*);
 }
 
-static	char*  	_FileName_ = __FILE__;	// used by EXCEPT
+
 
 TimerManager DaemonCore::t;
 

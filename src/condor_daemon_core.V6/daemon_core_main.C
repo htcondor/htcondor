@@ -1,23 +1,13 @@
 /* Copyright Condor Team, 1997 */
 
 #include "condor_common.h"
-static char *_FileName_ = __FILE__;  // used by EXCEPT 
-
-#ifndef WIN32
-#include <std.h>
-#if defined(Solaris251)
-#include <strings.h>
-#endif
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#endif   /* ifndef WIN32 */
+#include "condor_config.h"
 
 #include "condor_debug.h"
-#include "condor_config.h"
+static char *_FileName_ = __FILE__;  // used by EXCEPT 
+
 #define _NO_EXTERN_DAEMON_CORE 1	
 #include "condor_daemon_core.h"
-
 
 
 // Externs to Globals
