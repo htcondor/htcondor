@@ -1,86 +1,3 @@
-#if defined(LINUX)
-	case CONDOR_stat:
-	  {
-        char *path;
-        struct stat *buf;
-
-        CurrentSysCall = CONDOR_stat;
-
-        path = va_arg( ap, char *);
-        buf = va_arg( ap, struct stat *);
-
-        xdr_syscall->x_op = XDR_ENCODE;
-        assert(xdr_int(xdr_syscall,&CurrentSysCall) );
-        assert( xdr_string(xdr_syscall,&path, _POSIX_PATH_MAX) );
-        assert( xdrrec_endofrecord(xdr_syscall,TRUE) );
-
-        xdr_syscall->x_op = XDR_DECODE;
-        assert( xdrrec_skiprecord(xdr_syscall) );
-        assert( xdr_int(xdr_syscall,&rval) );
-        if( rval < 0 ) {
-            assert( xdr_int(xdr_syscall,&terrno) );
-            errno = terrno;
-            break;
-        }
-        assert( xdr_stat(xdr_syscall,buf) );
-        break;
-	  }
-
-	case CONDOR_fstat:
-	  {
-        int fd;
-        struct stat *buf;
-
-        CurrentSysCall = CONDOR_fstat;
-
-        fd = va_arg( ap, int );
-        buf = va_arg( ap, struct stat *);
-
-        xdr_syscall->x_op = XDR_ENCODE;
-        assert(xdr_int(xdr_syscall,&CurrentSysCall) );
-        assert( xdr_int(xdr_syscall,&fd) );
-        assert( xdrrec_endofrecord(xdr_syscall,TRUE) );
-
-        xdr_syscall->x_op = XDR_DECODE;
-        assert( xdrrec_skiprecord(xdr_syscall) );
-        assert( xdr_int(xdr_syscall,&rval) );
-        if( rval < 0 ) {
-            assert( xdr_int(xdr_syscall,&terrno) );
-            errno = terrno;
-            break;
-        }
-        assert( xdr_stat(xdr_syscall,buf) );
-        break;
-	  }
-
-	case CONDOR_lstat:
-	  {
-        char *path;
-        struct stat *buf;
-
-        CurrentSysCall = CONDOR_lstat;
-
-        path = va_arg( ap, char *);
-        buf = va_arg( ap, struct stat *);
-
-        xdr_syscall->x_op = XDR_ENCODE;
-        assert(xdr_int(xdr_syscall,&CurrentSysCall) );
-        assert( xdr_string(xdr_syscall,&path, _POSIX_PATH_MAX) );
-        assert( xdrrec_endofrecord(xdr_syscall,TRUE) );
-
-        xdr_syscall->x_op = XDR_DECODE;
-        assert( xdrrec_skiprecord(xdr_syscall) );
-        assert( xdr_int(xdr_syscall,&rval) );
-        if( rval < 0 ) {
-            assert( xdr_int(xdr_syscall,&terrno) );
-            errno = terrno;
-            break;
-        }
-        assert( xdr_stat(xdr_syscall,buf) );
-        break;
-	  }
-#endif
-
 	case CONDOR_send_file:
 	  {
 		char	*local;
@@ -88,7 +5,7 @@
 		MODE_T		mode;
 		int		loc_fd;
 		int		read_status = 0, write_status;
-		char	buf[ XDR_BLOCKSIZ ];
+		char	buf[ CONDOR_IO_BUF_SIZE ];
 		int		len;
 		int		bytes_to_go;
 		int		file_size;
@@ -106,52 +23,54 @@
 		}
 
 			/* Send over the file name, and mode */
-		xdr_syscall->x_op = XDR_ENCODE;
-		assert(xdr_int(xdr_syscall,&CurrentSysCall) );
-		assert( xdr_u_int(xdr_syscall,&mode) );
-		assert( xdr_string(xdr_syscall,&remote, _POSIX_PATH_MAX) );
-		assert( xdrrec_endofrecord(xdr_syscall,TRUE) );
+		syscall_sock->encode();
+		assert( syscall_sock->code(CurrentSysCall) );
+		assert( syscall_sock->code(mode) );
+		assert( syscall_sock->code(remote) );
+		assert( syscall_sock->end_of_message() );
 
 			/* Grab the result of the remote open */
-		xdr_syscall->x_op = XDR_DECODE;
-		assert( xdrrec_skiprecord(xdr_syscall) );
-		assert( xdr_int(xdr_syscall,&rval) );
+		syscall_sock->decode();
+		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( xdr_int(xdr_syscall,&terrno) );
+			assert( syscall_sock->code(terrno) );
+			assert( syscall_sock->end_of_message() );
 			errno = terrno;
 			rval = -1;
 			break;
 		}
+		assert( syscall_sock->end_of_message() );
 
 			/* Send file length */
 		file_size = lseek( loc_fd, 0, 2 );
 		lseek( loc_fd, 0, 0 );
-		xdr_syscall->x_op = XDR_ENCODE;
-		assert( xdr_int(xdr_syscall,&file_size) );
+		syscall_sock->encode();
+		assert( syscall_sock->code(file_size) );
 
 			/* Transfer the data */
 		for( bytes_to_go = file_size; bytes_to_go; bytes_to_go -= len ) {
 			len = bytes_to_go < sizeof(buf) ? bytes_to_go : sizeof(buf);
 			read_status = read( loc_fd, buf, len );
-			assert( xdr_opaque(xdr_syscall,buf,len) );
+			assert( syscall_sock->code_bytes(buf,len) );
 		}
 		(void)close( loc_fd );
 
 			/* As a check, re-send the length */
-		assert( xdr_int(xdr_syscall,&file_size) );
-		assert( xdrrec_endofrecord(xdr_syscall,TRUE) );
+		assert( syscall_sock->code(file_size) );
+		assert( syscall_sock->end_of_message() );
 
 
 			/* Get cumulative status from remote writes */
-		xdr_syscall->x_op = XDR_DECODE;
-		assert( xdrrec_skiprecord(xdr_syscall) );
-		assert( xdr_int(xdr_syscall,&write_status) );
+		syscall_sock->decode();
+		assert( syscall_sock->code(write_status) );
 		if( write_status < 0 ) {
-			assert( xdr_int(xdr_syscall,&terrno) );
+			assert( syscall_sock->code(terrno) );
+			assert( syscall_sock->end_of_message() );
 			errno = terrno;
 			rval = write_status;
 			break;
 		}
+		assert( syscall_sock->end_of_message() );
 
 			/* If we had a local error on the reads, we had to ignore
 			   it until now to avoid getting out of sync with the
@@ -176,7 +95,7 @@
 		int		mode;
 		int		loc_fd;
 		int		open_status, write_status = 0, read_status;
-		char	buf[ XDR_BLOCKSIZ ];
+		char	buf[ CONDOR_IO_BUF_SIZE ];
 		int		checksum;
 		int		len;
 		int		file_size;
@@ -199,29 +118,29 @@
 		}
 
 			/* Send over the file name */
-		xdr_syscall->x_op = XDR_ENCODE;
-		assert(xdr_int(xdr_syscall,&CurrentSysCall) );
-		assert( xdr_string(xdr_syscall,&remote, _POSIX_PATH_MAX) );
-		assert( xdrrec_endofrecord(xdr_syscall,TRUE) );
+		syscall_sock->encode();
+		assert( syscall_sock->code(CurrentSysCall) );
+		assert( syscall_sock->code(remote) );
+		assert( syscall_sock->end_of_message() );
 
 			/* Grab the result of the remote open */
-		xdr_syscall->x_op = XDR_DECODE;
-		assert( xdrrec_skiprecord(xdr_syscall) );
-		assert( xdr_int(xdr_syscall,&rval) );
+		syscall_sock->decode();
+		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( xdr_int(xdr_syscall,&terrno) );
+			assert( syscall_sock->code(terrno) );
+			assert( syscall_sock->end_of_message() );
 			errno = terrno;
 			rval = -1;
 			break;
 		}
 
 			/* Get the size of the file */
-		assert( xdr_int(xdr_syscall,&file_size) );
+		assert( syscall_sock->code(file_size) );
 
 			/* Transfer the data */
 		for( bytes_to_go = file_size; bytes_to_go; bytes_to_go -= len ) {
 			len = bytes_to_go < sizeof(buf) ? bytes_to_go : sizeof(buf);
-			assert(xdr_opaque(xdr_syscall,buf,len));
+			assert( syscall_sock->code_bytes(buf,len) );
 			write_status = write( loc_fd, buf, len );
 		}
 		close_status = close( loc_fd );
@@ -232,17 +151,19 @@
 		}
 
 			/* Should get file size again as a check */
-		assert( xdr_int(xdr_syscall,&checksum) );
+		assert( syscall_sock->code(checksum) );
 		assert( checksum == file_size );
 
 			/* Get status from remote reads */
-		assert( xdr_int(xdr_syscall,&read_status) );
+		assert( syscall_sock->code(read_status) );
 		if( read_status < 0 ) {
-			assert( xdr_int(xdr_syscall,&terrno) );
+			assert( syscall_sock->code(terrno) );
+			assert( syscall_sock->end_of_message() );
 			errno = terrno;
 			rval = -1;
 			break;
 		}
+		assert( syscall_sock->end_of_message() );
 
 			/* Wrapup */
 		if( write_status >= 0 && read_status >= 0 && close_status >= 0 ) {
