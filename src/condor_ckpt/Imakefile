@@ -10,8 +10,18 @@ CMNT
 
 CMNT PVM_CHECKPOINT = -DPVM_CHECKPOINTING
 
+#if DOES_SAVE_SIGSTATE
+SAVE_SIGSTATE = -DSAVE_SIGSTATE
+SAVE_SIGSTATE_OBJ = signals_support.o
+SAVE_SIGSTATE_SRC = signals_support.c
+#if IS_HPPAR_HPUX9
+EXTRACT = SIGNAL.o
+#elif
+/* Don't extract anything */
+#endif
+#endif  /* ======= of if DOES_SAVE_SIGSTATE ==========*/
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(STATIC) $(PVM_CHECKPOINT)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(SAVE_SIGSTATE) $(STATIC) $(PVM_CHECKPOINT)
 
 CFLAGS = $(STD_C_FLAGS)
 
@@ -43,12 +53,13 @@ UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o flock.o \
 UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o
 #endif
 
-SRC =	image.C machdep.$(OS).C file_state.C tmp_stack.C syscall_mode.c \
-		local_startup.c fake_remote_syscall.c
+SRC =	ToUpper.c image.C machdep.$(OS).C file_state.C tmp_stack.C syscall_mode.c \
+		local_startup.c fake_remote_syscall.c $(SAVE_SIGSTATE_SRC)
 
 #if DOES_CHECKPOINTING
 OBJ =	image.o machdep.$(OS).o file_state.o tmp_stack.o syscall_mode.o \
-		local_startup.o fake_remote_syscall.o $(ASSEMBLER_OBJ) $(UTIL_OBJ)
+		local_startup.o fake_remote_syscall.o $(SAVE_SIGSTATE_OBJ) $(EXTRACT) \
+		$(ASSEMBLER_OBJ) $(UTIL_OBJ)
 #else
 OBJ =	syscall_mode.o
 #endif
@@ -67,9 +78,24 @@ RELEASE_OBJ = $(LIB_DIR)/libckpt.a $(LIB_DIR)/c_plus_alloc.o
 release:: all
 #endif
 
+#if IS_HPPAR_HPUX9
+SIGNAL.o :  $(SIMPLE_LIBC)  ToUpper
+	ar x    $(SIMPLE_LIBC)      signal.o      ; mv  signal.o  $(TMP_DIR)
+	ToUpper $(TMP_DIR)/signal.o   SIGNAL.o   signal   SIGNAL
+	rm -f $(TMP_DIR)/signal.o
+	mv SIGNAL.o tmp1
+	ToUpper tmp1 SIGNAL.o _SIGNALvector _signalvector
+	rm -f tmp1
+#else
+uppercase_target($(SIMPLE_LIBC),signal.o,SIGNAL.o,signal,SIGNAL)
+#endif
+
 depend_target($(SRC) )
 
 program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ), )
+
+program_target(ToUpper,ToUpper.o,$(NULL))
+release_target(ToUpper,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
 
 IMPORT_LINKS = ../../config/import_links
