@@ -465,12 +465,26 @@ void dynuser::update_t() {
 		}
 	}
 	if ( password && password_t ) {
-		if (!MultiByteToWideChar( CP_ACP, MB_ERR_INVALID_CHARS, 
+		/* In some (Asian?) locales, MBTWC fails a lot. We're
+		 * trying to copy an ascii string to a Unicode string,
+		 * and in some languages, not all the characters that 
+		 * are printable in ascii have mappings to a Unicode 
+		 * equivalent. So we try about 1000 times, and then give
+		 * up. */
+		for (int i=0; i<1000; i++) {
+		   	if (MultiByteToWideChar( CP_ACP, MB_ERR_INVALID_CHARS, 
 					password, -1, password_t, 100)) {
-			dprintf(D_ALWAYS, "DynUser: MultiByteToWideChar() failed "
-					"error=%li\n", GetLastError());
-			EXCEPT("Unexpected failure in dynuser:update_t\n");
+				// success
+				return;
+			} else {
+				// didn't work; try a different password
+				createpass();
+			}
 		}
+
+		dprintf(D_ALWAYS, "DynUser: MultiByteToWideChar() failed "
+				"error=%li\n", GetLastError());
+		EXCEPT("Unexpected failure in dynuser:update_t\n");
 	}
 }
 
