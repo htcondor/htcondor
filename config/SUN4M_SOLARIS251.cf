@@ -4,7 +4,6 @@
 #define RpcLib /**/
 #define MldLib /**/
 #define KernLib /usr/lib/libelf.a /* weiru */
-#define KvmLib -lkvm
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC  
 #define SocketLib /lib/libsocket.a  /lib/libnsl.a  /lib/libdl.so /lib/libintl.a /* ..dhaval 6/28 */
