@@ -43,13 +43,14 @@
 ssize_t
 stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes )
 {
-	char		buf[4096];
+	char		buf[65536];		/* 64K */
 	ssize_t		bytes_written;
 	ssize_t		bytes_read;
 	ssize_t		bytes_moved = 0;
 	size_t		bytes_to_go = n_bytes;
 	size_t		read_size;
 	int			dont_know_file_size;
+	int			rval;
 
 	if (n_bytes == -1) {
 		dont_know_file_size = 1;
@@ -60,7 +61,11 @@ stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes )
 	for(;;) {
 
 			/* Read a block of the file */
-		read_size = sizeof(buf) < bytes_to_go ? sizeof(buf) : bytes_to_go;
+		if (dont_know_file_size || sizeof(buf) < bytes_to_go) {
+			read_size = sizeof(buf);
+		} else {
+			read_size = bytes_to_go;
+		}
 		bytes_read = read( src_fd, buf, read_size );
 		if( bytes_read <= 0 ) {
 			if (dont_know_file_size) {
@@ -71,14 +76,18 @@ stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes )
 		}
 
 			/* Send it */
-		bytes_written = write( dst_fd, buf, bytes_read );
-		if( bytes_written != bytes_read ) {
-			dprintf( D_ALWAYS, "stream_file_xfer: %d bytes written, "
-					 "%d bytes to go\n", bytes_moved, bytes_to_go );
-			dprintf( D_ALWAYS, "stream_file_xfer: write returns %d (errno=%d) " 
-					 "when attempting to write %d bytes\n", bytes_written,
-					 errno, bytes_read );
-			return -1;
+		for (bytes_written = 0;
+			 bytes_written < bytes_read;
+			 bytes_written += rval) {
+			rval = write( dst_fd, buf+bytes_written, bytes_read-bytes_written);
+			if( rval < 0 ) {
+				dprintf( D_ALWAYS, "stream_file_xfer: %d bytes written, "
+						 "%d bytes to go\n", bytes_moved, bytes_to_go );
+				dprintf( D_ALWAYS, "stream_file_xfer: write returns %d "
+						 "(errno=%d) when attempting to write %d bytes\n",
+						 rval, errno, bytes_read-bytes_written );
+				return -1;
+			}
 		}
 
 			/* Accumulate */
@@ -99,7 +108,7 @@ ssize_t
 multi_stream_file_xfer( int src_fd, int dst_fd_cnt, int *dst_fd_list,
 					   size_t n_bytes )
 {
-	char		buf[4096];
+	char		buf[65536];		/* 64K */
 	ssize_t		bytes_written;
 	ssize_t		bytes_read;
 	ssize_t		bytes_moved = 0;
@@ -117,7 +126,11 @@ multi_stream_file_xfer( int src_fd, int dst_fd_cnt, int *dst_fd_list,
 	for(;;) {
 
 			/* Read a block of the file */
-		read_size = sizeof(buf) < bytes_to_go ? sizeof(buf) : bytes_to_go;
+		if (dont_know_file_size || sizeof(buf) < bytes_to_go) {
+			read_size =  sizeof(buf);
+		} else {
+			read_size = bytes_to_go;
+		}
 		bytes_read = read( src_fd, buf, read_size );
 		if( bytes_read <= 0 ) {
 			if (dont_know_file_size) {
