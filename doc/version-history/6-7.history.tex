@@ -33,6 +33,9 @@ The details of each version are described below.
 \item Fixed the bugs in Condor's MPI support that were introduced in
   version 6.7.0.
   Condor now supports MPI jobs linked with MPICH 1.2.4 and older.
+  Improved Condor's log messages and email notifications when MPI jobs
+  run on multiple virtual machines (the messages now include the
+  appropriate ``vmX'' identifier, not just the hostname).
   Unfortuately, due to changes in MPICH between version 1.2.4 and
   1.2.5, Condor's MPI support is not compatible with MPICH 1.2.5.
   We will be addressing this problem in a future release.
