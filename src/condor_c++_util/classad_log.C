@@ -151,6 +151,11 @@ ClassAdLog::TruncLog()
 		return;
 	}
 	log_fd = open(log_filename, O_RDWR | O_APPEND, 0600);
+	if (log_fd < 0) {
+		dprintf(D_ALWAYS, "failed to open log in append mode: "
+			"open(%s) returns %d\n", log_filename, log_fd);
+		return;
+	}
 }
 
 void
