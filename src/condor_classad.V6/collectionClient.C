@@ -1,5 +1,6 @@
 #include "condor_common.h"
 #include "condor_io.h"
+#include "common.h"
 #include "collectionClient.h"
 #include "transaction.h"
 
