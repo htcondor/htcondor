@@ -246,13 +246,89 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 
 }
 
+int
+_condor_open_lock_file(const char *DebugLock,int flags, mode_t perm)
+{
+	int	retry = 0;
+	int save_errno = 0;
+	priv_state	priv;
+	char*		dirpath = NULL;
+	int lock_fd;
+
+	if( !DebugLock ) {
+		return -1;
+	}
+
+	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
+	lock_fd = open(DebugLock,flags,perm);
+	if( lock_fd < 0 ) {
+		save_errno = errno;
+		if( save_errno == ENOENT ) {
+				/* 
+				   No directory: Try to create the directory
+				   itself, first as condor, then as root.  If
+				   we created it as root, we need to try to
+				   chown() it to condor.
+				*/ 
+			dirpath = dirname( DebugLock );
+			errno = 0;
+			if( mkdir(dirpath, 0777) < 0 ) {
+				if( errno == EACCES ) {
+						/* Try as root */ 
+					_set_priv(PRIV_ROOT, __FILE__, __LINE__, 0);
+					if( mkdir(dirpath, 0777) < 0 ) {
+						/* We failed, we're screwed */
+						fprintf( stderr, "Can't create lock directory \"%s\", "
+								 "errno: %d (%s)\n", dirpath, errno, 
+								 strerror(errno) );
+					} else {
+						/* It worked as root, so chown() the
+						   new directory and set a flag so we
+						   retry the open(). */
+#ifndef WIN32
+						chown( dirpath, get_condor_uid(),
+							   get_condor_gid() );
+#endif
+						retry = 1;
+					}
+					_set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
+				} else {
+						/* Some other error than access, give up */ 
+					fprintf( stderr, "Can't create lock directory: \"%s\""
+							 "errno: %d (%s)\n", dirpath, errno, 
+							 strerror(errno) );							
+				}
+			} else {
+					/* We succeeded in creating the directory,
+					   try the open() again */
+				retry = 1;
+			}
+				/* At this point, we're done with this, so
+				   don't leak it. */
+			free( dirpath );
+		}
+		if( retry ) {
+			lock_fd = open(DebugLock,flags,perm);
+			if( lock_fd < 0 ) {
+				save_errno = errno;
+			}
+		}
+	}
+
+	_set_priv(priv, __FILE__, __LINE__, 0);
+
+	if( lock_fd < 0 ) {
+		errno = save_errno;
+	}
+	return lock_fd;
+}
 
 FILE *
 debug_lock(int debug_level)
 {
-	int			length, save_errno, retry = 0;
+	int			length = 0;
 	priv_state	priv;
-	char*		dirpath = NULL;
+	int save_errno;
 	char msg_buf[_POSIX_PATH_MAX];
 
 	if ( DebugFP == NULL ) {
@@ -264,60 +340,11 @@ debug_lock(int debug_level)
 		/* Acquire the lock */
 	if( DebugLock ) {
 		if( LockFd < 0 ) {
-			LockFd = open(DebugLock,O_CREAT|O_WRONLY,0660);
+			LockFd = _condor_open_lock_file(DebugLock,O_CREAT|O_WRONLY,0660);
 			if( LockFd < 0 ) {
 				save_errno = errno;
-				if( save_errno == ENOENT ) {
-						/* 
-						   No directory: Try to create the directory
-						   itself, first as condor, then as root.  If
-						   we created it as root, we need to try to
-						   chown() it to condor.
-						*/ 
-					dirpath = dirname( DebugLock );
-					errno = 0;
-					if( mkdir(dirpath, 0777) < 0 ) {
-						if( errno == EACCES ) {
-								/* Try as root */ 
-							_set_priv(PRIV_ROOT, __FILE__, __LINE__, 0);
-							if( mkdir(dirpath, 0777) < 0 ) {
-								/* We failed, we're screwed */
-								fprintf( stderr, "Can't create lock directory \"%s\", "
-										 "errno: %d (%s)\n", dirpath, errno, 
- 										 strerror(errno) );
-							} else {
-								/* It worked as root, so chown() the
-								   new directory and set a flag so we
-								   retry the open(). */
-#ifndef WIN32
-								chown( dirpath, get_condor_uid(),
-									   get_condor_gid() );
-#endif
-								retry = 1;
-							}
-							_set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
-						} else {
-								/* Some other error than access, give up */ 
-							fprintf( stderr, "Can't create lock directory: \"%s\""
-									 "errno: %d (%s)\n", dirpath, errno, 
-									 strerror(errno) );							
-						}
-					} else {
-							/* We succeeded in creating the directory,
-							   try the open() again */
-						retry = 1;
-					}
-						/* At this point, we're done with this, so
-						   don't leak it. */
-					free( dirpath );
-				}
-				if( retry ) {
-					LockFd = open(DebugLock,O_CREAT|O_WRONLY,0660);
-				}
-				if( LockFd < 0 ) {
-					sprintf( msg_buf, "Can't open \"%s\"\n", DebugLock );
-					_condor_dprintf_exit( save_errno, msg_buf );
-				}
+				sprintf( msg_buf, "Can't open \"%s\"\n", DebugLock );
+				_condor_dprintf_exit( save_errno, msg_buf );
 			}
 		}
 
