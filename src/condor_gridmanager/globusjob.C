@@ -1509,7 +1509,14 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 					connect_failure = true;
 					break;
 				}
-				if ( rc != GLOBUS_SUCCESS ) {
+				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_QUERY_DENIAL ) {
+						// The jobmanager is already in either FAILED or
+						// DONE state and ready to shut down. Go to
+						// GM_CANCEL_WAIT, where we'll deal with it
+						// appropriately.
+					gmState = GM_CANCEL_WAIT;
+					break;
+				} else if ( rc != GLOBUS_SUCCESS ) {
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_cancel()", rc );
 					globusError = rc;
