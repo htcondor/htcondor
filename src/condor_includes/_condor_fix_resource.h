@@ -25,7 +25,9 @@ extern "C" {
 	typedef int rlim_t;
 #endif
 
+#if !defined(WIN32)
 #include <sys/resource.h>
+#endif
 
 #if defined(ULTRIX43)
 #if defined(__STDC__) || defined(__cplusplus)
