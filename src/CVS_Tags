@@ -1,3 +1,17 @@
+03/28/02 V6_3-post-merge-V6_3-new-gridmanager-branch-merge-1
+		The V6_3-branch right after merging in the
+		V6_3-new-gridmanager-branch as tagged at 
+		V6_3-new-gridmanager-branch-merge-1
+
+03/28/02 V6_3-pre-merge-V6_3-new-gridmanager-branch-merge-1
+		The V6_3-branch right before merging in the
+		V6_3-new-gridmanager-branch as tagged at 
+		V6_3-new-gridmanager-branch-merge-1
+
+03/28/02 V6_3-new-gridmanager-branch-merge-1
+		V6_3-new-gridmanager-branch tagged in case we merge from this
+		branch again.  (unlikely, we plan to abandon)
+
 03/17/02 V6_3-CondorG-VDT-1_0
 		The V6_3-branch tagged for the 1.0 VDT Condor-G release. 
 		Built with WANT_GLOBUS=yes
