@@ -68,6 +68,7 @@ static	bool		querySchedds 	= false;
 static	bool		querySubmittors = false;
 static	char		constraint[4096];
 static	char		*pool = NULL;
+static	char		scheddAddr[64];	// used by format_remote_host()
 
 // for run failure analysis
 static  int			findSubmittor( char * );
@@ -94,7 +95,6 @@ int main (int argc, char **argv)
 {
 	ClassAd		*ad;
 	bool		first = true;
-	char		scheddAddr[64];
 	char		scheddName[64];
 	char		scheddMachine[64];
 	
@@ -473,8 +473,9 @@ format_remote_host (char *, AttrList *ad)
 	} else {
 		int universe = STANDARD;
 		ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
-		if (universe == SCHED_UNIVERSE) {
-			return my_full_hostname();
+		if (universe == SCHED_UNIVERSE &&
+			string_to_sin(scheddAddr, &sin) == 1) {
+			return sin_to_hostname(&sin, NULL);
 		} else if (universe == PVM) {
 			int current_hosts;
 			if (ad->LookupInteger( ATTR_CURRENT_HOSTS, current_hosts ) == 1) {
