@@ -110,7 +110,8 @@ V6_SRC		-a \
 			src/condor_tools \
 			src/condor_util_lib \
 			src/condor_dagman \
-			src/h
+			src/h \
+			src/html
 
 CONDOR_VIEW_SRC	-a \
 			src/condor_view_client \
