@@ -215,6 +215,13 @@ class Lexer
 		friend class FunctionCall;
 		friend class ClassAdXMLParser;
 
+        // The copy constructor and assignment operator are defined
+        // to be private so we don't have to write them, or worry about
+        // them being inappropriately used. The day we want them, we can 
+        // write them. 
+        Lexer(const Lexer &lexer)            { return;       }
+        Lexer &operator=(const Lexer &lexer) { return *this; }
+
 		// internal state of lexical analyzer
 		TokenType	tokenType;             		// the integer id of the token
 		LexerSource *lexSource;

@@ -66,6 +66,13 @@ public:
 	virtual bool AtEnd(void) const = 0;
 protected:
 	int _previous_character;
+private:
+    // The copy constructor and assignment operator are defined
+    // to be private so we don't have to write them, or worry about
+    // them being inappropriately used. The day we want them, we can 
+    // write them. 
+    LexerSource(const LexerSource &source)            { return;       }
+    LexerSource &operator=(const LexerSource &source) { return *this; }
 };
 
 // This source allows input from a traditional C FILE *
@@ -83,6 +90,8 @@ public:
 
 private:
 	FILE *_file;
+    FileLexerSource(const FileLexerSource &source)            { return;       }
+    FileLexerSource &operator=(const FileLexerSource &source) { return *this; }
 };
 
 // This source allows input from a C++ stream. Note that
@@ -101,6 +110,8 @@ public:
 
 private:
 	std::istream *_stream;
+    InputStreamLexerSource(const InputStreamLexerSource &source)            { return;       }
+    InputStreamLexerSource &operator=(const InputStreamLexerSource &source) { return *this; }
 };
 
 // This source allows input from a traditional C string.
@@ -119,6 +130,8 @@ public:
 private:
 	const char *_source_start;
 	const char *_current;
+    CharLexerSource(const CharLexerSource &source)            { return;       }
+    CharLexerSource &operator=(const CharLexerSource &source) { return *this; }
 };
 
 // This source allows input from a C++ string.
@@ -138,6 +151,8 @@ public:
 private:
 	const std::string *_string;
 	int           _offset;
+    StringLexerSource(const StringLexerSource &source)            { return;       }
+    StringLexerSource &operator=(const StringLexerSource &source) { return *this; }
 };
 
 #endif /* __LEXER_SOURCE_H__ */
