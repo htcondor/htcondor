@@ -10,18 +10,17 @@
 
 \Description 
 
-\Condor{master\_off} shuts down all of the condor daemons running on a given
-machine.  It does this cleanly without a loss of work done by any jobs
-currently running on this machine, or jobs that are running on other machines
-that have been submitted from this machine.  At the end of the shutdown
-process, unlike \Condor{off}, \Condor{master\_off} also shuts down the
-\Condor{master} daemon.  If you want to turn condor back on on this machine in
-the future, you will need to restart the \Condor{master}.
+\Condor{master\_off} no longer exists.
 
-\begin{Options}
-	\OptItem{\Opt{-help}}{Display usage information}	
-	\OptItem{\Opt{-version}}{Display version information}
-	\OptItem{\Opt{hostname ...}}{Turn shutdown condor on this list of machines}
-\end{Options}
+\GenRem
+\Condor{master\_off} no longer exists as a Condor command.
+Instead, use
+\begin{verbatim}
+        condor_off -master
+\end{verbatim}
+to accomplish this task.
+
+\SeeAlso
+See the \Condor{off} manual page.
 
 \end{ManPage}
