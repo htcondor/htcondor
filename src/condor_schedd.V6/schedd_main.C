@@ -37,6 +37,7 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT */
 #include "condor_config.h"
 #include "condor_attributes.h"
 #include "my_hostname.h"
+#include "get_daemon_addr.h"
 
 #include "sched.h"
 #include "clib.h"
