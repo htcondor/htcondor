@@ -31,6 +31,7 @@
 #include "condor_adtypes.h"
 #include "condor_debug.h"
 #include "get_daemon_addr.h"
+#include "internet.h"
 
 
 #define XDR_ASSERT(x) {if (!(x)) return Q_COMMUNICATION_ERROR;}

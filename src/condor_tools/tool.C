@@ -33,6 +33,7 @@
 #include "condor_io.h"
 #include "my_hostname.h"
 #include "get_daemon_addr.h"
+#include "internet.h"
 #include "get_full_hostname.h"
 #include "daemon_types.h"
 #include "sig_install.h"

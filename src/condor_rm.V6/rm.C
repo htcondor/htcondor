@@ -32,6 +32,7 @@
 #include "sched.h"
 #include "alloc.h"
 #include "get_daemon_addr.h"
+#include "internet.h"
 #include "condor_attributes.h"
 #include "match_prefix.h"
 #include  "list.h"

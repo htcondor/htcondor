@@ -47,6 +47,7 @@
 #include "get_daemon_addr.h"
 #include "get_full_hostname.h"
 #include "daemon_types.h"
+#include "internet.h"
 
 char	*MyName;
 char	*mySubSystem = NULL;
