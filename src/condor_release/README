@@ -1,22 +1,22 @@
 README for Condor version 6.0				3/5/98
 
-Please read the file DISCLAIMER before proceeding.  Installation and
+Please read the file LICENSE.TXT before proceeding.  Installation and
 use of Condor is acknowledgement that you have read and agree to the
-terms listed in the DISCLAIMER.
+terms listed in the LICENSE.TXT.
 
 This directory contains the following files:
 
-DISCLAIMER	- by installing Condor, you agree to the contents of
-                  the DISCLAIMER file
+LICENSE.TXT	- by installing Condor, you agree to the contents of
+                  the LICENSE.TXT file
 INSTALL		- instructions on how to install Condor on your machines
 README		- this file
 release.tar	- tar file of the release directory, which contains
 		  the Condor binaries and libraries -- please see
 		  INSTALL for details on using this file
+condor_install	- perl script that helps you install Condor
 doc		- directory containing Condor documentation
 examples	- directory containing C, Fortran and C++ example
 		  programs to run with Condor
-condor_install	- perl script that helps you install Condor
 
 
 A complete manual for Condor is available on the World Wide Web at
