@@ -1,8 +1,12 @@
 \begin{ManPage}{\Condor{config\_val}}{1}{Query a given condor configuration variable}
 \label{man-condor-config-val}
 \Synopsis \SynProg{\Condor{config\_val}}
-\oOptArg{-h}{hostname}
-\Arg{variable ...}
+\oOptArg{-name}{daemon\_name}
+\oOptArg{-pool}{hostname}
+\oOptArg{-address}{<ip:port>}
+\oOpt{-master \Bar -schedd \Bar -startd \Bar -collector \Bar -negotiator}
+\Arg{variable}
+\oOpt{variable \Dots}
 
 \Description
 
@@ -15,8 +19,13 @@ not defined.  By default, \Condor{config\_val} looks in the local
 machine's configuration files in order to evaluate the variables.
 
 \begin{Options}
-	\OptItem{\OptArg{-h}{hostname}}{ Report the values of
-	variables using the configuration for the specified host}
+	\OptItem{\OptArg{-name}{daemon\_name}}{ Query the specified
+	daemon for its configuration}
+	\OptItem{\OptArg{-pool}{hostname}}{ Use the given central
+	manager to find daemons}
+	\OptItem{\OptArg{-address}{<ip:port>}}{ connect to the given ip/port}
+	\OptItem{\Opt{-master \Bar -schedd \Bar -startd \Bar -collector \Bar -negotiator}}{The daemon to query (if not specified, master is default)}
+	\OptItem{\Opt{variable \Dots}}{The variables to query}
 \end{Options}
 
 \end{ManPage}
