@@ -85,6 +85,9 @@ private:
 	int	write_block( int position );
 	int	read_block( File *owner, int position, int order );
 
+	int	lseekwrite( File *owner, off_t offset, int whence, void *data, size_t length );
+	int	lseekread( File *owner, off_t offset, int whence, void *data, size_t length );
+
 	int		blocks;		// Number of blocks in this object
 	int		block_size;	// Size of a block, in bytes
 	char		*buffer;	// The buffer data

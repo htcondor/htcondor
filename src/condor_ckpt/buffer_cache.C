@@ -21,17 +21,12 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-// FIXME: Things labeled with FIXME were changed to graft the buffering
-// portion of the new-syscalls branch into the trunk.
-
 #include "condor_common.h"
 #include "buffer_cache.h"
 #include "condor_debug.h"
 #include "condor_macros.h"
 
-// FIXME
 #include "condor_syscall_mode.h"
-// FIXME
 #include "syscall_numbers.h"
 
 /*
@@ -85,7 +80,7 @@ BufferCache::BufferCache(int b, int bs)
 		return;
 	}
 
-	bzero(buffer,blocks*block_size);
+	memset(buffer,0,blocks*block_size);
 	for( int i=0; i<blocks; i++ ) info[i].owner = 0;
 
 	time = 0;
@@ -96,6 +91,39 @@ BufferCache::~BufferCache()
 	if(info) delete [] info;
 	if(buffer) delete [] buffer;
 }
+
+/* Do a seek and write on this file */
+
+int BufferCache::lseekwrite( File *owner, off_t offset, int whence, void *data, size_t length )
+{
+	int result;
+
+	if(owner->isRemoteAccess()) {
+		result = REMOTE_syscall( CONDOR_lseekwrite, owner->real_fd, offset, whence, data, length );
+	} else {
+		syscall( SYS_lseek, owner->real_fd, offset, whence );
+		result = syscall( SYS_write, owner->real_fd, data, length );
+	}
+
+	return result;
+}
+
+/* Do a seek and read on this file */
+
+int BufferCache::lseekread( File *owner, off_t offset, int whence, void *data, size_t length )
+{
+	int result;
+
+	if(owner->isRemoteAccess()) {
+		result = REMOTE_syscall( CONDOR_lseekread, owner->real_fd, offset, whence, data, length );
+	} else {
+		syscall( SYS_lseek, owner->real_fd, offset, whence );
+		result = syscall( SYS_read, owner->real_fd, data, length );
+	}
+
+	return result;
+}
+
 
 /*
 An incomplete or failed write can be a real problem -- it's too late
@@ -117,7 +145,6 @@ int BufferCache::write_block( int position )
 	// If this is the last block of the file,
 	// only write the necessary portion of the file
 
-	// FIXME int file_size = info[position].owner->get_size();
 	int file_size = info[position].owner->getSize();
 	
 	int last_block = file_size / block_size;
@@ -128,9 +155,8 @@ int BufferCache::write_block( int position )
 		fragment = block_size;
 	}
 
-	// FIXME result = info[position].owner->write(
-	result = REMOTE_syscall( CONDOR_lseekwrite,
-		info[position].owner->real_fd,
+	result = lseekwrite(
+		info[position].owner, 
 		info[position].order*block_size,
 		SEEK_SET,
 		&buffer[position*block_size],
@@ -138,7 +164,6 @@ int BufferCache::write_block( int position )
 
 	if(result!=fragment) {
 		_condor_file_warning("Unable to write buffered data to file %s! (%s).\n",			
-			// FIXME info[position].owner->get_name(),
 			info[position].owner->pathname,
 			strerror(errno));
 	}
@@ -159,8 +184,7 @@ int BufferCache::read_block( File *owner, int position, int order )
 
 	if( (position<0) || (position>=blocks) ) return -1;
 
-	// FIXME result = owner->read(order*block_size,&buffer[position*block_size],block_size);
-	result = REMOTE_syscall( CONDOR_lseekread, owner->real_fd, order*block_size, SEEK_SET, &buffer[position*block_size],block_size );
+	result = lseekread( owner, order*block_size, SEEK_SET, &buffer[position*block_size],block_size );
 
 	if(result<0) {
 		// Error, but buffer not changed
@@ -168,7 +192,7 @@ int BufferCache::read_block( File *owner, int position, int order )
 	}
 
 	// Clear the remaining part of the block left unread
-	bzero(&buffer[position*block_size+result],block_size-result);
+	memset(&buffer[position*block_size+result],0,block_size-result);
 
 	// Update the info block
 
@@ -280,8 +304,7 @@ ssize_t BufferCache::read( File *owner, off_t offset, char *data, ssize_t length
 	int order,position,chunksize;
 	int bytes_read=0;
 
-	// FIXME
-	if(!buffer) return REMOTE_syscall( CONDOR_lseekread, owner->real_fd, offset, SEEK_SET, data, length );
+	if(!buffer) return lseekread( owner, offset, SEEK_SET, data, length );
 
 	do {
 		// Decide what portion of the block to read
@@ -330,8 +353,7 @@ ssize_t BufferCache::write( File *owner, off_t offset, char *data, ssize_t lengt
 	int order,position,chunksize,readmode;
 	int bytes_written=0;
 
-	// FIXME
-	if(!buffer) return REMOTE_syscall( CONDOR_lseekwrite, owner->real_fd, SEEK_SET, offset, data, length );
+	if(!buffer) return lseekwrite( owner, SEEK_SET, offset, data, length );
 
 	do {
 		// Decide what portion of the block to write
@@ -351,7 +373,6 @@ ssize_t BufferCache::write( File *owner, off_t offset, char *data, ssize_t lengt
 		} else if( (chunksize==block_size) ) {
 			// Or, we are writing a whole block
 			position = make_room();
-		// FIXME } else if((offset_in_block==0)&&(offset>=owner->get_size())) {
 		} else if((offset_in_block==0)&&(offset>=owner->getSize())) {
 		
 			// Or, we are appending in a new block
@@ -370,8 +391,7 @@ ssize_t BufferCache::write( File *owner, off_t offset, char *data, ssize_t lengt
 			// buffer, excepting any partial last block.
 
 			chunksize = length - (length-chunksize)%block_size;
-			// FIXME owner->write(offset,data,chunksize);
-			REMOTE_syscall( CONDOR_lseekwrite, owner->real_fd, offset, SEEK_SET, data, chunksize );
+			lseekwrite( owner, offset, SEEK_SET, data, chunksize );
 			invalidate(owner,offset,chunksize);
 
 		} else {
@@ -391,7 +411,6 @@ ssize_t BufferCache::write( File *owner, off_t offset, char *data, ssize_t lengt
 		offset += chunksize;
 		bytes_written += chunksize;
 
-		// FIXME if( offset>owner->get_size() ) owner->set_size(offset);
 		if( offset>owner->getSize() ) owner->setSize(offset);
 
 	} while(length>0);
@@ -462,7 +481,11 @@ void BufferCache::flush( File *owner )
 	// a seek because seek pointer bufferring is not
 	// going to take place any longer...
 
-	REMOTE_syscall( CONDOR_lseek, owner->real_fd, owner->offset, SEEK_SET );
+	if( owner->isRemoteAccess() ) {
+		REMOTE_syscall( CONDOR_lseek, owner->real_fd, owner->offset, SEEK_SET );
+	} else {
+		syscall( SYS_lseek, owner->real_fd, owner->offset, SEEK_SET );
+	}
 }
 
 
