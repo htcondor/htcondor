@@ -72,6 +72,7 @@
 
 #define CCompiler /usr/psup/gcc-2.6.3/bin/gcc
 #define CPlusCompiler /usr/psup/gcc-2.6.3/bin/g++
+#define Demangler /usr/psup/gcc-2.6.3/bin/c++filt
 #define StaticFlag -static
 #define UnixName /hp-ux				/* pathname of the system executable */
 /* #define syscall_lib  */
