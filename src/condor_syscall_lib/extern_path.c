@@ -31,7 +31,13 @@
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/stat.h>
+#if defined(Solaris) 
+#include </usr/ucbinclude/sys/dir.h>
+#else
 #include <sys/dir.h>
+#endif
+
+#include <limits.h>
 #include "debug.h"
 #include "condor_getmnt.h"
 
@@ -45,10 +51,12 @@ static char	* compress( char *path );
 
 extern int		errno;
 
-char	*index();
-char	*getwd(), *malloc(), *strcat(), *strcpy();
-#if !defined(AIX32) && !defined(OSF1) &&!defined(HPUX9) && !defined(ULTRIX43) && !defined(LINUX)
-char	*sprintf();
+char	*strchr();
+char	*getcwd(), *malloc(), *strcat(), *strcpy();
+#if !defined(AIX32) && !defined(OSF1) &&!defined(HPUX9) && !defined(ULTRIX43) && !defined(LINUX) && !defined(Solaris)
+extern char *sprintf();
+#elif defined(Solaris)
+extern int	sprintf(); /* was char *sprintf() but change required for Solaris ..dhaval 7/12 */
 #endif
 
 static struct fs_data	FS_Buf[ NMOUNT ];
@@ -83,11 +91,11 @@ int		bufsize;
 	}
 
 	if( !name[0] ) {
-		(void)getwd(pathname);
+		(void)getcwd(pathname,_POSIX_PATH_MAX);
 	} else if( name[0] == '/' ) {
 		(void)strcpy( pathname, name );
 	} else {
-		(void)getwd(pathname);
+		(void)getcwd(pathname,_POSIX_PATH_MAX);
 		(void)strcat( pathname, "/" );
 		(void)strcat( pathname, name );
 	}
@@ -117,7 +125,7 @@ int		bufsize;
 				"external_name: fs->devname = \"%s\"\n", fs->devname
 			);
 			dprintf( D_NFS, "external_name: fs->path = \"%s\"\n", fs->path );
-			if( index(fs->devname,':') ) {	/* it's a mount point */
+			if( strchr(fs->devname,':') ) {	/* it's a mount point */
 				if( (mount_pt=xlate_link(fs->path)) == NULL ) {
 					return -1;
 				}

@@ -12,6 +12,11 @@
 #	define __STDC__
 #endif
 
+#if defined(Solaris)
+#include "../condor_includes/_condor_fix_types.h"
+#include </usr/ucbinclude/sys/rusage.h>
+#endif 
+
 #include "syscall_numbers.h"
 #include "condor_syscall_mode.h"
 #include "file_table_interf.h"

@@ -36,12 +36,17 @@
 #include "ckpt_file.h"
 #include "debug.h"
 
+#if defined(Solaris)
+#include <sys/fcntl.h>
+#include <sys/termios.h>
+#endif
+
 double	get_time();
 extern int	Syscalls;
 
 #define CHUNK_SIZE 4096
 
-#if defined(LINUX)
+#if defined(LINUX) || defined(Solaris)
 #define MIN(a,b)	((a)<(b)?(a):(b))
 #endif
 
@@ -188,12 +193,12 @@ find_physical_host( const char *path, int flags )
 {
 	static char answer[ MAXPATHLEN ];
 	char		dir[ MAXPATHLEN ];
-	char		*ptr, *index(), *rindex();
+	char		*ptr, *strchr(), *strrchr(); /* 9/25 ..dhaval */
 
 		/* Try to find the pathname as given */
 	/* if( extern_name(path,answer,sizeof(answer)) >= 0 ) { */
 	if( REMOTE_syscall(CONDOR_extern_name,path,answer,sizeof(answer)) >= 0 ) {
-		if( ptr=index(answer,':') ) {
+		if( ptr=strchr(answer,':') ) { /* dhaval 9/25 */
 			*ptr = '\0';
 		}
 		return answer;
@@ -205,7 +210,7 @@ find_physical_host( const char *path, int flags )
 
 		/* He's trying to creat the file, look for the parent directory */
 	strcpy( dir, path );
-    if( ptr=rindex(dir,'/') ) {
+    if( ptr=strrchr(dir,'/') ) { /* dhaval 9/25 */
 		if( ptr == dir ) {
 			strcpy( dir, "/" );
 		} else {
@@ -217,7 +222,7 @@ find_physical_host( const char *path, int flags )
 
 	/* if( extern_name(dir,answer,sizeof(answer)) >= 0 ) { */
 	if( REMOTE_syscall(CONDOR_extern_name,dir,answer,sizeof(answer)) >= 0 ) {
-		if( ptr=index(answer,':') ) {
+		if( ptr=strchr(answer,':') ) { /* dhaval 9/25 */
 			*ptr = '\0';
 		}
 		return answer;

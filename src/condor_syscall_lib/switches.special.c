@@ -32,6 +32,12 @@
 *******************************************************************/
 #define _POSIX_SOURCE
 
+#if defined(Solaris)
+#include "../condor_includes/_condor_fix_types.h"
+#include </usr/ucbinclude/sys/rusage.h>
+#endif 
+
+
 	/* Temporary - need to get real PSEUDO definitions brought in... */
 #define PSEUDO_getwd	1
 

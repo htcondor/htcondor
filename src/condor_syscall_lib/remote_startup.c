@@ -132,6 +132,9 @@
 
 
 #define _POSIX_SOURCE
+#if defined(Solaris)
+#include "_condor_fix_types.h"
+#endif
 
 #if defined(OSF1) && !defined(__GNUC__)
 #define __STDC__
@@ -648,6 +651,8 @@ unblock_signals()
 #	define LIM (260 * UNIT)
 #elif defined(LINUX)
 #	define LIM (200 * UNIT)
+#elif defined(Solaris)
+#	define LIM (260 * UNIT)
 #endif
 
 #if 1

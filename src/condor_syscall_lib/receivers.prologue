@@ -6,6 +6,10 @@
 	typedef struct  _quad { int val[2]; } quad;
 #endif
 
+#if defined(Solaris)
+#include "_condor_fix_types.h"
+#endif
+
 #if defined(HPUX9)
 #	define sync		__hide_sync
 #endif

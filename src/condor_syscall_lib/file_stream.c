@@ -28,6 +28,11 @@
 
 #define _POSIX_SOURCE
 
+#if defined(Solaris)
+#include "_condor_fix_types.h"
+#include </usr/ucbinclude/sys/rusage.h>
+#endif
+
 #if defined(OSF1) && !defined(__GNUC__)
 #define __STDC__
 #endif
