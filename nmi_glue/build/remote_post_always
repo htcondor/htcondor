@@ -1,9 +1,12 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post_always,v 1.1.2.1 2004-06-25 04:05:02 wright Exp $
+# $Id: remote_post_always,v 1.1.2.2 2004-06-25 05:15:51 wright Exp $
 # post script to cleanup after a Condor build, successful or not
 ######################################################################
+
+# autoflush our STDOUT
+$| = 1;
 
 
 ######################################################################

@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_pre,v 1.1.2.1 2004-06-25 04:05:03 wright Exp $
+# $Id: remote_pre,v 1.1.2.2 2004-06-25 05:15:51 wright Exp $
 # script to setup the Condor build
 ######################################################################
 
@@ -9,6 +9,8 @@ use Cwd;
 my $BaseDir = getcwd();
 my $SrcDir = "$BaseDir/src";
 
+# autoflush our STDOUT
+$| = 1;
 
 ######################################################################
 # run configure on the source tree
