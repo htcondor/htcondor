@@ -397,13 +397,14 @@ main(int argc, char *argv[], char *envp[])
 			UseCkptServer = FALSE;
 		}
 		if (use_ckpt_server) free(use_ckpt_server);
-		tmp = param( "STARTER_CHOOSES_CKPT_SERVER" );
-		if (tmp && (tmp[0] == 'T' || tmp[0] == 't')) {
-			StarterChoosesCkptServer = TRUE;
-		} else {
-			StarterChoosesCkptServer = FALSE;
+
+		StarterChoosesCkptServer = TRUE;
+		if( (tmp = param("STARTER_CHOOSES_CKPT_SERVER")) ) {
+			if( tmp[0] == 'F' || tmp[0] == 'f' ) {
+				StarterChoosesCkptServer = FALSE;
+			}
+			free(tmp);
 		}
-		if (tmp) free(tmp);
 	}
 
 	tmp = param( "MAX_DISCARDED_RUN_TIME" );
