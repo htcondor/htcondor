@@ -15,6 +15,10 @@ CondorFileBasic::CondorFileBasic( int mode )
 	syscall_mode = mode;
 }
 
+CondorFileBasic::~CondorFileBasic( )
+{
+}
+
 int CondorFileBasic::open(const char *url_in, int flags, int mode)
 {
 	char junk[_POSIX_PATH_MAX];

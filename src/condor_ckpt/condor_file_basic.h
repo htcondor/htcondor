@@ -14,6 +14,7 @@ CondorFileLocal and CondorFileRemote.
 class CondorFileBasic : public CondorFile {
 public:
 	CondorFileBasic( int mode );
+	virtual ~CondorFileBasic();
 
 	virtual int open( const char *url, int flags, int mode );
 	virtual int close();

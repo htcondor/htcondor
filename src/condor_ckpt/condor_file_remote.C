@@ -14,6 +14,10 @@ CondorFileRemote::CondorFileRemote()
 {
 }
 
+CondorFileRemote::~CondorFileRemote()
+{
+}
+
 /* A read results in a CONDOR_lseekread */
 
 int CondorFileRemote::read(int pos, char *data, int length) 

@@ -14,6 +14,11 @@ CondorFileLocal::CondorFileLocal()
 {
 }
 
+CondorFileLocal::~CondorFileLocal()
+{
+}
+
+
 /* Read requires a seek and a read.  This could be optimized to use pread on the platforms that support it. */
 
 int CondorFileLocal::read(int pos, char *data, int length) {
