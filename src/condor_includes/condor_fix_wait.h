@@ -40,7 +40,7 @@
 #       include <sys/wait.h>
 #elif defined(HPUX9)
 #       undef _POSIX_SOURCE
-#       define _BSD
+#		define _BSD
 #       include <sys/wait.h>
 #elif defined(LINUX)
 #       undef _POSIX_SOURCE
