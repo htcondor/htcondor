@@ -1599,6 +1599,7 @@ void GlobusJob::NotifyResourceDown()
 	resourceDown = true;
 	jmUnreachable = false;
 	// set downtime timestamp?
+	SetEvaluateState();
 }
 
 void GlobusJob::NotifyResourceUp()

@@ -165,6 +165,11 @@ if( $job_log ) {
     print "Done.\n";
 }
 
+if (!$job_log) {
+    print "\n";
+    print "ERROR: no log was specified in any submit files!\n";
+    exit (1);
+}
 
 # Create the submit file used to submit DAGMan as a scheduler universe
 # job to Condor. 

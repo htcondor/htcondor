@@ -84,7 +84,7 @@ StatInfo::StatInfo( const char *dirpath, const char *filename )
 #ifdef WIN32
 StatInfo::StatInfo( const char* dirpath, const char* filename, 
 					time_t time_access, time_t time_create, 
-					time_t time_modify, unsigned long fsize, bool is_dir )
+					time_t time_modify, unsigned long fsize, bool is_dir, bool is_symlink )
 {
 	this->dirpath = strnewp( dirpath );
 	this->filename = strnewp( filename );
@@ -96,6 +96,7 @@ StatInfo::StatInfo( const char* dirpath, const char* filename,
 	create_time = time_create;
 	file_size = fsize;
 	isdirectory = is_dir;
+	issymlink = is_symlink;
 }
 #endif /* WIN32 */
 
@@ -123,6 +124,7 @@ StatInfo::do_stat( const char *path )
 	create_time = 0;
 	isdirectory = false;
 	isexecutable = false;
+	issymlink = false;
 
 	struct stat statbuf;	
 
@@ -148,6 +150,7 @@ StatInfo::do_stat( const char *path )
 		// On Unix, if any execute bit is set (user, group, other), we
 		// consider it to be executable.
 		isexecutable = ((statbuf.st_mode & (S_IXUSR|S_IXGRP|S_IXOTH)) != 0 );
+		issymlink = S_ISLNK(statbuf.st_mode);
 #else
 		isdirectory = ((_S_IFDIR & statbuf.st_mode) != 0);
 		isexecutable = ((_S_IEXEC & statbuf.st_mode) != 0);
@@ -299,7 +302,7 @@ Directory::GetDirectorySize()
 	Rewind();
 
 	while ( (thefile=Next()) ) {
-		if ( IsDirectory() ) {
+		if ( IsDirectory() && !IsSymlink() ) {
 			// recursively traverse down directory tree
 			Directory subdir( GetFullPath(), desired_priv_state );
 			dir_size += subdir.GetDirectorySize();
@@ -535,11 +538,12 @@ Directory::Next()
 	if ( result != -1 ) {
 		// findfirst/findnext succeeded
 		curr = new StatInfo( curr_dir, filedata.name, 
-							 filedata.time_access,
-							 filedata.time_create,
-							 filedata.time_write, 
-							 filedata.size,
-							 ((filedata.attrib & _A_SUBDIR) != 0) ); 
+		                     filedata.time_access,
+		                     filedata.time_create,
+		                     filedata.time_write, 
+		                     filedata.size,
+		                     ((filedata.attrib & _A_SUBDIR) != 0),
+		                     false); 
 	} else {
 		curr = NULL;
 	}

@@ -706,13 +706,13 @@ class DaemonCore : public Service
         @return On success, returns the child pid.  On failure, returns FALSE.
     */
     int Create_Process (
-        char        *name,
-        char        *args,
+        const char  *name,
+        const char  *args,
         priv_state  priv                 = PRIV_UNKNOWN,
         int         reaper_id            = 1,
         int         want_commanand_port  = TRUE,
-        char        *env                 = NULL,
-        char        *cwd                 = NULL,
+        const char  *env                 = NULL,
+        const char  *cwd                 = NULL,
         int         new_process_group    = FALSE,
         Stream      *sock_inherit_list[] = NULL,
         int         std[]                = NULL,
@@ -1132,9 +1132,9 @@ class DaemonCore : public Service
     // end of thread local storage
         
 #ifdef WIN32
-    static char *ParseEnvArgsString(char *env, char *inheritbuf);
+    static char *ParseEnvArgsString(const char *env, char *inheritbuf);
 #else
-    static char **ParseEnvArgsString(char *env, bool env);
+    static char **ParseEnvArgsString(const char *env, bool env);
 #endif
 
 	priv_state Default_Priv_State;

@@ -9,7 +9,7 @@ Livny, Dept of Computer Sciences, 1210 W. Dayton St., Madison, WI
 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 
 This software referred to as the Condor (r) Version 6.x software
-("Software") may consists ofinclude voluntary contributions made to
+("Software") consists of voluntary contributions made to
 the Condor Project collaboration. For more information on the Condor
 Project, please see http://www.condorproject.org/.
 

@@ -75,7 +75,7 @@ public:
 	*/
 	StatInfo( const char* dirpath, const char* filename, time_t
 			  time_access,  time_t time_create, time_t time_modify,
-			  unsigned long fsize, bool is_dir );  
+			  unsigned long fsize, bool is_dir, bool is_symlink );  
 #endif
 
 	/// Destructor<p>
@@ -141,7 +141,8 @@ public:
 	unsigned long GetFileSize() { return file_size; }
 
 	/** Determine if the file is the name of a subdirectory,
-		or just a file.
+		or just a file.  This also returns true for symlinks
+		that point to directories.
 		@return true if the file is a subdirectory name, false if not
 	*/
 	bool IsDirectory() { return isdirectory; }
@@ -152,11 +153,17 @@ public:
 	*/
 	bool IsExecutable() { return isexecutable; }
 
+	/** Determinen if the file is a symbolic link
+		@return true if the file is a symbolic link, false if not
+	*/
+	bool IsSymlink() {return issymlink; }
+
 private:
 	si_error_t si_error;
 	int si_errno;
 	bool isdirectory;
 	bool isexecutable;
+	bool issymlink; //isdirectory may also be set if this points to a directory
 	time_t access_time;
 	time_t modify_time;
 	time_t create_time;
@@ -256,9 +263,15 @@ public:
 
 	/** Determine if the current file is the name of a subdirectory,
 		or just a file.  If there is no current file, return false.
+		(A Symbolic link that points to a directory will return true.)
 		@return true if current file is a subdirectory name, false if not
 	*/
 	bool IsDirectory() { return curr ? curr->IsDirectory() : false; };
+
+	/** Determine if the current file is a symbolic link.
+		@return true if current file is a symbolic link, false if not
+	*/
+	bool IsSymlink() {return curr ? curr->IsDirectory() : false; }
 
 	/** Remove the current file.  If the current file is a subdirectory,
 	    then the subdirectory (and all files beneath it) are removed.

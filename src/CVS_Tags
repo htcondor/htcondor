@@ -2,6 +2,12 @@
     The state of the V6_5_0 branch before merging in V6_4-branch as tagged 
     at V6_4-merge-7. The last merge was at V6_4-merge-6
 
+03/07/03 V6_4-merge-7
+    the state of the V6_4-branch before merging into V6_5_0-branch
+    (again).  this includes a few minor but important bug fixes that
+    have gone into V6_4-branch that need to be present before we ship
+    6.5.0. 
+
 02/07/03 V6_5_0-merge-1
     The state of the V6_5_0-branch before merging back into V6_5-branch. It
     has a few bug fixes, and some changes from V6_4 on it. This is the first
