@@ -38,6 +38,7 @@ void init_shadow_connections();
 void read_config_files();
 void init_logging();
 void usage( char *my_name );
+ReliSock* NewConnection( int id );
 
 extern "C" int exception_cleanup();
 
