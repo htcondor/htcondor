@@ -310,7 +310,32 @@ CStarter::createTempExecuteDir( void )
 	char* eed = param("ENCRYPT_EXECUTE_DIRECTORY");
 
 	if ( eed ) {
-		if ( eed[0] == 'T' || eed[0] == 't' ) {
+		// dynamically load our encryption functions to preserve 
+		// compatability with NT4 :(
+
+		typedef BOOL (WINAPI *FPEncryptionDisable)(LPCWSTR,BOOL);
+		typedef BOOL (WINAPI *FPEncryptFileA)(LPCSTR);
+		bool efs_support = true;
+
+		HINSTANCE advapi = LoadLibrary("ADVAPI32.dll");
+		if ( !advapi ) {
+			dprintf(D_FULLDEBUG, "Can't load advapi32.dll\n");
+			efs_support = false;
+		}
+		FPEncryptionDisable EncryptionDisable = (FPEncryptionDisable) 
+			GetProcAddress(advapi,"EncryptionDisable");
+		if ( !EncryptionDisable ) {
+			dprintf(D_FULLDEBUG, "cannot get address for EncryptionDisable()");
+			efs_support = false;
+		}
+		FPEncryptFileA EncryptFile = (FPEncryptFileA) 
+			GetProcAddress(advapi,"EncryptFileA");
+		if ( !EncryptFile ) {
+			dprintf(D_FULLDEBUG, "cannot get address for EncryptFile()");
+			efs_support = false;
+		}
+
+		if ( efs_support && (eed[0] == 'T' || eed[0] == 't')) {
 			wchar_t *WorkingDir_w = new wchar_t[strlen(WorkingDir)+1];
 			swprintf(WorkingDir_w, L"%S", WorkingDir);
 			EncryptionDisable(WorkingDir_w, FALSE);
