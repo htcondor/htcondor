@@ -27,6 +27,7 @@ BEGIN
     $num_active_jobs = 0;
     $saw_submit = 0;
     %submit_info;
+
 }
 
 sub Reset
@@ -119,16 +120,17 @@ sub runCommand
     $retval = system( $command_string );
 
     # did command die abormally?
-    if( ! WIFEXITED( $retval ) )
+	
+    if( ! safe_WIFEXITED( $retval ) )
     {
         print "error: $command died abnormally\n";
         return 0;
     }
 
     # did command exit w/an error?
-    if( WEXITSTATUS( $retval ) != 0 )
+    if( safe_WEXITSTATUS( $retval ) != 0 )
     {
-	$exitval = WEXITSTATUS( $retval );
+	$exitval = safe_WEXITSTATUS( $retval );
         print "error: $command failed (returned $exitval)\n";
         return 0;
     }
@@ -529,4 +531,34 @@ sub DebugOff
 
 sub timestamp {
     return scalar localtime();
+}
+
+sub safe_WIFEXITED {
+
+	my $status = shift;
+
+	# our sneaky way to detect if WIFEXITED macro is defined.
+	eval{ my $tmp = WIFEXITED(0); };
+	if ( $@ ) {
+		# no WIFEXITED, so AND the status with 127, which
+		# in theory should tell us if we died with a signal or not.
+		return !($status & 127);
+	} else {
+		return WIFEXITED($status);
+	}
+}
+
+sub safe_WEXITSTATUS {
+
+	my $status = shift;
+
+	# our sneaky way to detect if WEXITSTATUS macro is defined.
+	eval{ my $tmp = WEXITSTATUS(0); };
+	if ( $@ ) {
+		# no WEXITSTATUS, so just do what WEXITSTATUS normally
+		# does, which is shift 8 (divide by 256)
+		return $status >> 8;
+	} else {
+		return WEXITSTATUS($status);
+	}
 }
