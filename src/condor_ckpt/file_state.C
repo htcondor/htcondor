@@ -106,11 +106,16 @@ static void flush_and_disable_buffer()
 
 void OpenFileTable::init_buffer()
 {
-	int blocks, blocksize;
+	int blocks=0, blocksize=0;
 
 	if(buffer) return;
 
-	REMOTE_syscall(CONDOR_get_buffer_info,&blocks,&blocksize,&prefetch_size);
+	if(REMOTE_syscall(CONDOR_get_buffer_info,&blocks,&blocksize,&prefetch_size)<0) {
+		dprintf(D_ALWAYS,"get_buffer_info failed!");
+		buffer = 0;
+		return;
+	}
+
 	buffer = new BufferCache( blocks, blocksize );
 
 	dprintf(D_ALWAYS,"Buffer cache is %d blocks of %d bytes.\n",blocks,blocksize);
