@@ -1,7 +1,18 @@
 #ifndef FIX_TYPES_H
 #define FIX_TYPES_H
 
+	// OSF/1 has this as an "unsigned long", but this is incorrect.  It
+	// is used by lseek(), and must be able to hold negative values.
+#if defined(OSF1)
+#define off_t _hide_off_t
+#endif
+
 #include <sys/types.h>
+
+#if defined(OSF1)
+#undef off_t
+typedef long off_t;
+#endif
 
 /*
 The system include file defines this in terms of bzero(), but ANSI says
