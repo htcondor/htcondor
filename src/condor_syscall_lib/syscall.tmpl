@@ -803,26 +803,27 @@ int fstatfs( map(int fd), struct statfs *buf ) {
 	}
 #endif /* not CLIP */
 
-#if 0
-		/* Caused problems in local mode on Alpha - leave out for now */
 	/*
 	Things having to do with memory mapped files - we may support these
 	one day soon.
 	*/
 not_supported {
 #	if defined(IRIX53)
-	char * mmap( char * a, size_t l, int p, int f, map(int fd),
+	void * mmap( void * a, size_t l, int p, int f, map(int fd),
 														off_t o ) : dl_extract;
+	int munmap( void * addr, size_t len );
+	int mprotect( void * addr, size_t len, int prot );
+	int madvise( void * addr, size_t len, int behav );
+	int msync( void * addr, size_t len, int flags );
 #	else
 	char * mmap( char * a, size_t l, int p, int f, map(int fd),
 														off_t o ) : extract;
-#	endif
 	int munmap( char * addr, size_t len );
 	int mprotect( char * addr, size_t len, int prot );
 	int madvise( char * addr, size_t len, int behav );
 	int msync( char * addr, size_t len, int flags );
+#	endif
 }
-#endif
 
 #if !defined( CLIP )
 	/* Calls intended only for the super user or system managers */
