@@ -17,6 +17,9 @@ SAVE_SIGSTATE_SRC = signals_support.c
 #if IS_HPPAR_HPUX9
 EXTRACT = SIGNAL.o
 #endif
+#if IS_SPARC_SUNOS41
+EXTRACT = SIGNAL.o POSIX_SIG.o
+#endif
 #endif  /* ======= of if DOES_SAVE_SIGSTATE ==========*/
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(SAVE_SIGSTATE) $(STATIC) $(PVM_CHECKPOINT)
@@ -74,6 +77,15 @@ RELEASE_OBJ = $(LIB_DIR)/libckpt.a $(LIB_DIR)/c_plus_alloc.o
 #else
 	all_target(syscall_mode.o)
 release:: all
+#endif
+
+#if IS_SPARC_SUNOS41
+POSIX_SIG.o :  $(SIMPLE_LIBC)  ToUpper
+	ar x    $(SIMPLE_LIBC)      posix_sig.o      ; mv  posix_sig.o  $(TMP_DIR)
+	ToUpper $(TMP_DIR)/posix_sig.o   tmp1   sigaction   SIGACTION
+	ToUpper tmp1 tmp2  sigprocmask   SIGPROCMASK
+	ToUpper tmp2 POSIX_SIG.o  sigsuspend   SIGSUSPEND
+	rm -f $(TMP_DIR)/posix_sig.o tmp1 tmp2
 #endif
 
 #if IS_HPPAR_HPUX9
