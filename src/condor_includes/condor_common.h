@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include "condor_fix_unistd.h"
 #include "condor_fix_limits.h"
-#include <string.h>
+#include "condor_fix_string.h"
 #include <ctype.h>
 #include <fcntl.h>
 #include <errno.h>
