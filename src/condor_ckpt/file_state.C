@@ -1308,7 +1308,9 @@ lseek64( int fd, off64_t offset, int whence )
 #if defined(SYS_llseek)
 /*                rval = syscall( SYS_llseek, user_fd, offset, whence );*/
 				/* This SYS_lseek stuff is a temporary measure until I figure
-					out why I can't use the above line. -pete 11/19/99 */
+					out why I can't use the above line. It is sorta ok to leave
+					it like this, because if we ever seeked more than 2Gb 
+					on an fd, a lot of other stuff will break. -pete 11/19/99 */
                 rval = syscall( SYS_lseek, user_fd, (off_t)offset, whence );
 #else /* defined (SYS_lseek64) */
 				/* if you disassemble the lseek64 call under irix 6.5, you
