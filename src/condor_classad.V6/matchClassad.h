@@ -26,16 +26,50 @@
 
 #include "classad.h"
 
-/** Special case of a ClassAd which sets up the scope names ``self'' and 
-	``other'' for a bilateral matching.
+/** Special case of a ClassAd which sets up the scope names for bilateral 
+  	matching.  The top-level scope is defined as follows:
+	\begin{verbatim}
+    [
+       symmetricMatch   = leftMatchesRight && rightMatchesLeft;
+       leftMatchesRight = adcr.ad.requirements;
+       rightMatchesLeft = adcl.ad.requirements;
+       leftRankValue    = adcl.ad.rank;
+       rightRankValue   = adcr.ad.rank;
+       adcl             =
+           [
+               super    = other;
+               other    = .adcr.ad;
+               my       = ad;       // for condor backwards compatibility
+               target   = other;    // for condor backwards compatibility
+               ad       = 
+                  [
+                      // the ``left'' match candidate goes here
+                  ]
+    	   ];
+       adcl             =
+           [
+               super    = other;
+               other    = .adcl.ad;
+               my       = ad;       // for condor backwards compatibility
+               target   = other;    // for condor backwards compatibility
+               ad       = 
+                  [
+                      // the ``right'' match candidate goes here
+                  ]
+    	   ];
+    ]
+	\end{verbatim}
 */
 class MatchClassAd : public ClassAd
 {
 	public:
 		/// Default constructor
 		MatchClassAd();
-		/// Constructor which builds the CondorClassad given two ads
-		MatchClassAd( ClassAd*, ClassAd* );
+		/** Constructor which builds the CondorClassad given two ads
+		 	@param al The left candidate ad
+			@param ar The right candidate ad
+		*/
+		MatchClassAd( ClassAd* al, ClassAd* ar );
 		/// Default destructor
 		~MatchClassAd();
 
@@ -45,7 +79,7 @@ class MatchClassAd : public ClassAd
 			@param ar The ad to be placed in the right context.
 			@return A CondorClassad, or NULL if the operation failed.
 		*/
-		static MatchClassAd *MakeMatchClassAd( ClassAd*, ClassAd* );
+		static MatchClassAd *MakeMatchClassAd( ClassAd* al, ClassAd* ar );
 
 		/** Method to initialize a MatchClassad given two ClassAds.  The old
 		 	expressions in the classad are deleted.
@@ -79,9 +113,32 @@ class MatchClassAd : public ClassAd
 		*/
 		ClassAd *GetRightAd();
 
+		/** Gets the left context ad. ({\tt .adcl} in the above example)
+		 	@return The left context ad, or NULL if the MatchClassAd is not
+				valid
+		*/
 		ClassAd *GetLeftContext( );
+
+		/** Gets the right context ad. ({\tt .adcr} in the above example)
+		 	@return The left context ad, or NULL if the MatchClassAd is not
+				valid
+		*/
 		ClassAd *GetRightContext( );
+
+		/** Removes the left candidate from the match classad.  If the 
+		    candidate ``lives'' in another data structure, this method
+			should be called so that the match classad doesn't delete the
+			candidate.
+			@return The left candidate ad.
+		*/
 		ClassAd *RemoveLeftAd( );
+
+		/** Removes the right candidate from the match classad.  If the 
+		    candidate ``lives'' in another data structure, this method
+			should be called so that the match classad doesn't delete the
+			candidate.
+			@return The right candidate ad.
+		*/
 		ClassAd *RemoveRightAd( );
 
 	protected:
