@@ -1,162 +1,159 @@
-#ifndef CONDOR_QUERY_H
-#define CONDOR_QUERY_H
+#ifndef __CONDOR_QUERY_H__
+#define __CONDOR_QUERY_H__
 
-// this include file should probably be in condor_includes
 #include "condor_classad.h"
-#include "condor_parser.h"
 #include "list.h"
-#include "intlist.h"
+#include "simplelist.h"
+#include "condor_collector.h"
+#include "condor_attributes.h"
+
+// Please read the documentation for the API before you use it (RTFM :-)  --RR
+
+// the following arrays can be indexed by the enumerated constants to get
+// the required keyword eg ScheddIntegerKeywords[SCHEDD_IDLE_JOBS]=="IdleJobs"
+extern const char *ScheddStringKeywords [];
+extern const char *ScheddIntegerKeywords[];
+extern const char *ScheddFloatKeywords	[];
+extern const char *StartdStringKeywords	[];
+extern const char *StartdIntegerKeywords[];
+extern const char *StartdFloatKeywords	[];
 
 
-// job constraint categories which may be easily manipulated
-enum job_str_category
+enum ScheddStringCategory
 {
-    JOB_OWNER,
-    JOB_ARCH,
-    JOB_OPSYS,
-    JOB_COMMAND,
+	SCHEDD_NAME,
+	SCHEDD_JOB_OWNER,
 
-    JOB_STRING_THRESHOLD__,
+	SCHEDD_STRING_THRESHOLD
 };
 
-enum job_int_category
+enum ScheddIntCategory
 {
-    CLUSTER_ID,           // integer based values
-    PROCESS_ID,
-    JOB_PRIORITY,
-    JOB_STATUS,
+	SCHEDD_USERS,
+	SCHEDD_IDLE_JOBS,
+	SCHEDD_RUNNING_JOBS,
 
-    JOB_INTEGER_THRESHOLD__
+	SCHEDD_INT_THRESHOLD
 };
 
-enum job_cust_category
+enum ScheddFloatCategory
 {
-    JOB_CUSTOM,         // the custom category
+	SCHEDD_FLOAT_THRESHOLD
+};
 
-    JOB_CUSTOM_THRESHOLD__
+enum ScheddCustomCategory
+{
+	SCHEDD_CUSTOM,
+	
+	SCHEDD_CUSTOM_THRESHOLD
+};
+
+enum StartdStringCategory
+{
+	STARTD_NAME,
+	STARTD_MACHINE,
+	STARTD_ARCH,
+	STARTD_OPSYS,
+
+	STARTD_STRING_THRESHOLD
+};
+
+enum StartdIntCategory
+{
+	STARTD_MEMORY,
+	STARTD_DISK,
+
+	STARTD_INT_THRESHOLD
+};
+
+enum StartdFloatCategory
+{
+	STARTD_FLOAT_THRESHOLD
+};
+
+enum StartdCustomCategory
+{
+	STARTD_CUSTOM,
+
+	STARTD_CUSTOM_THRESHOLD
 };
 
 
-// machine constraint categories which may be easily manipulated
-enum machine_str_category 
+// users of the API must check the results of their calls, which will be one
+// of the following
+enum QueryResult
 {
-    HOST_NAME,
-    MACHINE_ARCH,
-    MACHINE_OPSYS,
-
-    MACHINE_STRING_THRESHOLD__
-};
-
-enum machine_int_category
-{
-    MACHINE_USERS,
-    MACHINE_RUNNING,
-    MACHINE_IDLE,
-    MACHINE_PRIO,
-  
-    MACHINE_INTEGER_THRESHOLD__
-};
-
-enum machine_cust_category
-{
-    MACHINE_CUSTOM,
-
-    MACHINE_CUSTOM_THRESHOLD__
+	Q_OK 					= 0,	// ok
+	Q_INVALID_CATEGORY    	= 1,	// category not supported by query type
+	Q_MEMORY_ERROR 			= 2,	// memory allocation error within API
+	Q_PARSE_ERROR		 	= 3,	// constraints could not be parsed
+	Q_COMMUNICATION_ERROR 	= 4,	// failed communication with collector
+	Q_INVALID_QUERY			= 5,	// query type not supported/implemented
+	Q_NO_COLLECTOR_HOST     = 6		// could not determine collector host
 };
 
 
-// error numbers
-enum query_result
+class CondorQuery
 {
-    OK = 0,
-    Q_MEMORY_ERROR,
-    Q_PARSE_MACH_REQS,
-    Q_PARSE_JOB_REQS,
-	Q_COMMUNICATION_ERROR
+  public:
+	// ctor/dtor
+	CondorQuery (AdTypes);
+	CondorQuery (const CondorQuery &);
+	~CondorQuery ();
+
+	// clear constraints
+	QueryResult clearStringConstraints  (const int);
+	QueryResult clearIntegerConstraints (const int);
+	QueryResult clearFloatConstraints   (const int);
+	void 		clearCustomConstraints  (void);
+
+	// add constraints
+	QueryResult addConstraint (const int, const char *); // string constraints
+	QueryResult addConstraint (const int, const int);	 // integer constraints
+	QueryResult addConstraint (const int, const float);	 // float constraints
+	QueryResult addConstraint (const char *);			 // custom constraints
+
+	// fetch from collector
+	QueryResult fetchAds (ClassAdList &, const char [] = "");
+
+	// filter list of ads; arg1 is 'in', arg2 is 'out'
+	QueryResult filterAds (ClassAdList &, ClassAdList &);
+
+	// overloaded operators
+	friend ostream &operator<< (ostream &, CondorQuery &); 	// display
+	CondorQuery    &operator=  (CondorQuery &);				// assignment
+
+  private:
+	int         stringThreshold;
+	int         integerThreshold;
+	int 		floatThreshold;
+	int         command;
+	AdTypes     queryType;
+
+	// bump up the constant if you have more than 32 categories
+	const int   MAX_NUM_CATEGORIES = 32;	
+	List<char>        stringConstraints  [MAX_NUM_CATEGORIES];
+	SimpleList<int>	  integerConstraints [MAX_NUM_CATEGORIES];
+	SimpleList<float> floatConstraints   [MAX_NUM_CATEGORIES];
+	List<char>        customConstraints;
+
+	QueryResult makeQueryAd (ClassAd &);
+	void        clearQueryObject     (void);
+	void        clearStringCategory  (List<char> &);
+	void        clearIntegerCategory (SimpleList<int> &);
+	void        clearFloatCategory   (SimpleList<float> &);
+	void 		copyQueryObject		 (CondorQuery &);
+	void		copyStringCategory   (List<char> &, List<char> &);
+	void		copyIntegerCategory  (SimpleList<int> &, SimpleList<int> &);
+	void 		copyFloatCategory    (SimpleList<float>&, SimpleList<float>&);
 };
-
-class Condor_query
-{
-    public:
-
-    // ctors and dtor
-    Condor_query ();
-    Condor_query (Condor_query &);
-    ~Condor_query ();
-
-    // clear job categories
-    void clear (const job_str_category);
-    void clear (const job_int_category);
-    void clear (const job_cust_category);
-
-    // clear machine categories
-    void clear (const machine_str_category);
-    void clear (const machine_int_category);
-    void clear (const machine_cust_category);
-
-    // add constraint to job category
-    void add (const job_str_category, const char *);
-    void add (const job_int_category, const int);
-    void add (const job_cust_category, const char *);
-
-    // add constraints to machine category
-    void add (const machine_str_category, const char *);
-    void add (const machine_int_category, const int);
-    void add (const machine_cust_category, const char *);
-
-    // get results of requests
-    // - argument 1 is 'out': the list of ads 
-    //    - machine type ads for condor_status
-    //    - job type ads for condor_queue
-    // - argument 2 is default 'in': machine on which the collector resides
-    int condor_status (ClassAdList &, const char pool_name [] = "");
-    int condor_queue  (ClassAdList &, const char pool_name [] = "");
-
-    // get job queues from given list of machine type class ads
-    // - argument 1 is 'in' : list of machine ads
-    // - argument 2 is 'out': list of job ads
-    int condor_queue  (ClassAdList &, ClassAdList &);
-
-    // filter functions --- use constraints to filter given class ad list
-    // - argument 1 is 'in' : given list of machine/job ads
-    // - argument 2 is 'out': filtered list of machine/job ads
-    int filter_machines (ClassAdList &, ClassAdList &);
-    int filter_jobs     (ClassAdList &, ClassAdList &);
-
-    // overloaded display
-    friend ostream & operator<< (ostream &, Condor_query &);
-
-    // overloaded assignment --- makes deep copies
-    Condor_query & operator= (Condor_query &);
-
-    // private:
-
-    // room to store info
-    List<char> job_string_constraints  [JOB_STRING_THRESHOLD__ ];
-    IntList    job_integer_constraints [JOB_INTEGER_THRESHOLD__];
-    List<char> job_custom_constraints;
-
-    List<char> machine_string_constraints  [MACHINE_STRING_THRESHOLD__ ];
-    IntList    machine_integer_constraints [MACHINE_INTEGER_THRESHOLD__];
-    List<char> machine_custom_constraints;
-
-    // private functions to obtain the query type classads
-    int make_job_query_ad (ClassAd &);
-    int make_machine_query_ad (ClassAd &);
-
-    // private functions to obtain the requirement expression from the 
-    // expressed constraints
-    char *get_machine_expr_string (void);
-    char *get_job_expr_string (void);
-
-    // generic clear functions
-    void clear_str_category(List<char> &);
-    void clear_int_category(IntList    &);
-
-    // generic copy functions
-    void copy_str_category(List<char> &, List<char> &);
-    void copy_int_category(IntList    &, IntList    &);
-};  
-
 
 #endif
+
+
+
+
+
+
+
+
