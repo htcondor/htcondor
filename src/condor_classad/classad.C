@@ -72,7 +72,7 @@ ClassAd::ClassAd() : AttrList()
 	myType = NULL;
 	targetType = NULL;
 	SetRankExpr ("Rank = 0");
-	SetRequirement ("Requirement = TRUE");
+	SetRequirements ("Requirements = TRUE");
 }
 
 ClassAd::ClassAd(class ProcObj* procObj) : AttrList(procObj)
@@ -80,16 +80,16 @@ ClassAd::ClassAd(class ProcObj* procObj) : AttrList(procObj)
 	myType = NULL;
 	targetType = NULL;
     SetRankExpr ("Rank = 0");
-	SetRequirement ("Requirement = TRUE");
+	SetRequirements ("Requirements = TRUE");
 }
 
 ClassAd::ClassAd(const CONTEXT* context) : AttrList((CONTEXT *) context)
 {
 	myType = NULL;
 	targetType = NULL;
-	if (!Lookup ("Requirement"))
+	if (!Lookup ("Requirements"))
 	{
-		SetRequirement ("Requirement = TRUE");
+		SetRequirements ("Requirements = TRUE");
 	}
 
 	if (!Lookup ("Rank"))
@@ -104,7 +104,7 @@ ClassAd::ClassAd(FILE* f, char* d, int& i) : AttrList(f, d, i)
     EvalResult *val;
 
     SetRankExpr ("Rank = 0");
-	SetRequirement ("Requirement = TRUE");
+	SetRequirements ("Requirements = TRUE");
 
 	val = new EvalResult;
     tree = Lookup("MyType");
@@ -160,7 +160,7 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
 	myType = NULL;
 	targetType = NULL;
     SetRankExpr ("Rank = 0");
-	SetRequirement ("Requirement = TRUE");
+	SetRequirements ("Requirements = TRUE");
     val = new EvalResult;
     if(val == NULL)
     {
@@ -378,7 +378,7 @@ int ClassAd::GetTargetTypeNumber()
 
 // Requirement expression management functions
 int ClassAd::
-SetRequirement (char *expr)
+SetRequirements (char *expr)
 {
 	ExprTree *tree;
 	int result = Parse (expr, tree);
@@ -387,12 +387,12 @@ SetRequirement (char *expr)
 		delete tree;
 		return -1;		
 	}
-	SetRequirement (tree);	
+	SetRequirements (tree);	
 	return 0;
 }
 
 void ClassAd::
-SetRequirement (ExprTree *tree)
+SetRequirements (ExprTree *tree)
 {
 	if (!AttrList::Insert (tree))
 	{
@@ -403,9 +403,9 @@ SetRequirement (ExprTree *tree)
 
 
 ExprTree *ClassAd::
-GetRequirement (void)
+GetRequirements (void)
 {
-	return Lookup (ATTR_REQUIREMENT);
+	return Lookup (ATTR_REQUIREMENTS);
 }
 
 //
@@ -485,7 +485,7 @@ int ClassAd::IsAMatch(ClassAd* temp)
         EXCEPT("Warning : you ran out of memory -- quitting !");
     }
 
-    Parse("MY.Requirement", tree);           // convention.
+    Parse("MY.Requirements", tree);           // convention.
 
     tree->EvalTree(this, temp, val);         // match in one direction.
     if(!val || val->type != LX_BOOL)
@@ -551,7 +551,7 @@ bool operator>= (ClassAd &lhs, ClassAd &rhs)
 		EXCEPT("Out of memory -- quitting");
 	}
 
-	Parse ("MY.Requirement", tree);
+	Parse ("MY.Requirements", tree);
 	tree -> EvalTree (&rhs, &lhs, val);
 	if (!val || val->type != LX_BOOL)
 	{
