@@ -29,6 +29,7 @@
 #include "condor_constants.h"
 #include "condor_jobqueue.h"
 #include "proto.h"
+#include "limit.h"   // for limit() (duh)
 
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
