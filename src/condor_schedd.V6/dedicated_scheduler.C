@@ -328,7 +328,7 @@ DedicatedScheduler::DedicatedScheduler()
 
 DedicatedScheduler::~DedicatedScheduler()
 {
-	if(	idle_clusters ) { delete idle_clusters; }
+	if(	idle_jobs ) { delete idle_jobs; }
 	if(	resources ) { delete resources; }
 	if(	avail_time_list ) { delete avail_time_list; }
 	if( ds_owner ) { delete [] ds_owner; }
