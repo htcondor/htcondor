@@ -445,4 +445,7 @@ protected:
 
 };
 
+// Prototype to get sinful string.
+char *mySinfulAddr( void );
+
 #endif /* CONDOR_DAEMON_H */

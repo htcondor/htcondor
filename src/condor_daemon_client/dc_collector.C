@@ -207,40 +207,44 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2 )
 	}
 
 	// Add start time & seq # to the ads before we publish 'em
-	char	tmp [80];
-	sprintf( tmp, "%s=%ld", ATTR_DAEMON_START_TIME, (long) startTime );
+	char	buf [80];
+	sprintf( buf, "%s=%ld", ATTR_DAEMON_START_TIME, (long) startTime );
 	if ( ad1 ) {
-		ad1->InsertOrUpdate( tmp );
+		ad1->InsertOrUpdate( buf );
 	}
 	if ( ad2 ) {
-		ad2->InsertOrUpdate( tmp );
+		ad2->InsertOrUpdate( buf );
 	}
 	if ( ad1 ) {
 		int	seq = adSeqMan.GetSequence( ad1 );
-		sprintf( tmp, "%s=%u", ATTR_UPDATE_SEQUENCE_NUMBER, seq );
-		ad1->InsertOrUpdate( tmp );
+		sprintf( buf, "%s=%u", ATTR_UPDATE_SEQUENCE_NUMBER, seq );
+		ad1->InsertOrUpdate( buf );
 	}
 	if ( ad2 ) {
 		int	seq = adSeqMan.GetSequence( ad2 );
-		sprintf( tmp, "%s=%u", ATTR_UPDATE_SEQUENCE_NUMBER, seq );
-		ad2->InsertOrUpdate( tmp );
+		sprintf( buf, "%s=%u", ATTR_UPDATE_SEQUENCE_NUMBER, seq );
+		ad2->InsertOrUpdate( buf );
 	}
 
 	// Insert "my address"
-	sprintf( tmp, "%s=\"%s\"", ATTR_MY_ADDRESS, daemonCore->InfoCommandSinfulString( ) );
-	char	*tmp2;
-	if ( ad1 ) {
-		if ( ad1->LookupString( ATTR_MY_ADDRESS, &tmp2 ) ) {
-			free( tmp2 );
-		} else {
-			ad1->InsertOrUpdate( tmp );
+	char	*tmp = mySinfulAddr( );
+	if ( tmp ) {
+		sprintf( buf, "%s=\"%s\"", ATTR_MY_ADDRESS, tmp );
+		// No need to free tmp -- it's static
+
+		if ( ad1 ) {
+			if ( ad1->LookupString( ATTR_MY_ADDRESS, &tmp ) ) {
+				free( tmp );	// tmp from LookupString does need to be freed
+			} else {
+				ad1->InsertOrUpdate( buf );
+			}
 		}
-	}
-	if ( ad2 ) {
-		if ( ad2->LookupString( ATTR_MY_ADDRESS, &tmp2 ) ) {
-			free( tmp2 );
-		} else {
-			ad2->InsertOrUpdate( tmp );
+		if ( ad2 ) {
+			if ( ad2->LookupString( ATTR_MY_ADDRESS, &tmp ) ) {
+				free( tmp );
+			} else {
+				ad2->InsertOrUpdate( buf );
+			}
 		}
 	}
 
