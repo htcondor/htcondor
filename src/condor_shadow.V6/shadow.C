@@ -949,6 +949,17 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 								   ATTR_CKPT_OPSYS, Executing_OpSys);
 			}
 		}
+		// if the job completed, we should include the run-time in
+		// committed time, since it contributed to the completion of
+		// the job
+		if (Proc->status == COMPLETED) {
+			int ckpt_time = 0;
+			GetAttributeInt(Proc->id.cluster, Proc->id.proc,
+							ATTR_JOB_COMMITTED_TIME, &ckpt_time);
+			ckpt_time += Proc->completion_date - LastRestartTime;
+			SetAttributeInt(Proc->id.cluster, Proc->id.proc,
+							ATTR_JOB_COMMITTED_TIME, ckpt_time);
+		}
 	}
 
 	DisconnectQ(0);
