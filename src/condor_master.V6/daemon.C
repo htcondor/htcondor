@@ -27,41 +27,13 @@
 ** 
 */ 
 
-#define _POSIX_SOURCE  // FIX
-
-#if defined(IRIX62)
-#include "condor_fdset.h"
-#endif
-
 #include "condor_common.h"
-
-#ifndef WIN32
-#if defined(Solaris251)
-#define __EXTENSIONS__
-#endif  // of defined(Solaris251)
-#include <pwd.h>
-#include <netdb.h>
-#include <sys/stat.h>
-#include <sys/file.h>
-#include "condor_fix_timeval.h"  // FIX
-#include <sys/resource.h>
-#endif // ifndef WIN32
-
-#include <math.h>
-
-#include "condor_constants.h"
 #include "condor_debug.h"
-#include "condor_expressions.h"
 #include "condor_config.h"
 #include "condor_uid.h"
 #include "master.h"
-#include "file_lock.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
-
-#if defined(HPUX9)
-#include "fake_flock.h"
-#define _BSD
-#endif
+#include <math.h>
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
@@ -91,10 +63,7 @@ int		hourly_housekeeping(void);
 
 extern "C"
 {
-#if	defined(SUNOS41) || defined(IRIX53)
-	extern	int vfork();
-#endif
-	extern	int		event_mgr();
+	int		event_mgr();
 }
 
 // to add a new process as a condor daemon, just add one line in 

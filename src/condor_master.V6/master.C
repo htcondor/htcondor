@@ -36,44 +36,19 @@
 #include "condor_common.h"
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
-#ifndef WIN32
-#include <std.h>
-#include <pwd.h>
-
-#if defined(Solaris)
-#define __EXTENSIONS__
-#endif
-#include <sys/time.h>
-#include <sys/stat.h>
-#include <sys/file.h>
-#include <sys/socket.h>
-#include <rpc/types.h>
-#endif	// of ifndef WIN32
-
 #include "condor_debug.h"
-#include "condor_expressions.h"
 #include "condor_config.h"
 #include "condor_uid.h"
 #include "my_hostname.h"
 #include "master.h"
-#include "file_lock.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_collector.h"
-#include "files.h"
 #include "cctp_msg.h"
 #include "condor_attributes.h"
 #include "condor_network.h"
 #include "condor_adtypes.h"
 // #include "dgram_io_handle.h"
 #include "condor_io.h"
-
-#if defined(HPUX9)
-#include "fake_flock.h"
-#endif
-
-#if defined(AIX32)
-#   define vfork fork
-#endif
 
 #ifndef WIN32
 void unix_sigusr1(int);
@@ -106,28 +81,9 @@ extern "C" char	*SigNames[];
 // prototypes of library functions
 extern "C"
 {
-
-#if defined(IRIX53)
-	int	vfork();
-		/* The following got clobbered when _POSIX_SOURCE was defined
-		   before stdio.h was included */
-	FILE *popen (const char *command, const char *type);
-	int pclose(FILE *stream);
-#endif
-
-#if defined(IRIX62)
-	int	killpg(long pgrp, int sig);
-#elif !defined(WIN32)
-	int	killpg(int pgrp, int sig);
-#endif  /* IRIX62 */
-
 	int 	detach();
-	int	param_in_pattern(char*, char*);
-
-
 	char*	get_arch();
 	char*	get_op_sys(); 
-//	void	fill_dgram_io_handle(DGRAM_IO_HANDLE*, char*, int, int); 
 	int	get_inet_address(struct in_addr*); 
 }
 
@@ -165,9 +121,6 @@ int		master_reaper(Service *, int, int);
 
 
 extern "C" int	DoCleanup();
-
-#define MINUTE	60
-#define HOUR	60 * MINUTE
 
 char	*MailerPgm;
 int		MasterLockFD;
