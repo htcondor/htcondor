@@ -50,6 +50,8 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 typedef unsigned (__stdcall *CRT_THREAD_HANDLER) (void *);
 #endif
 
+extern void drop_addr_file( void );
+
 extern char* mySubSystem;	// the subsys ID, such as SCHEDD
 
 TimerManager DaemonCore::t;
@@ -146,6 +148,9 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	async_sigs_unblocked = FALSE;
 #endif
 
+	dc_rsock = NULL;
+	dc_ssock = NULL;
+
 	inheritedSocks[0] = NULL;
 	inServiceCommandSocket_flag = FALSE;
 	
@@ -183,19 +188,31 @@ DaemonCore::~DaemonCore()
 
 	if (sockTable != NULL)
 	{
-		// There may be CEDAR objects stored in the table,
-		// but the only one we created is the 
-		// initial_commmand_sock, so that is the only one we
-		// should delete.  "He who creates should delete",
-		// otherwise the socket(s) may get deleted multiple times.
-		if ( (*sockTable)[initial_command_sock].iosock ) {
-			delete (*sockTable)[initial_command_sock].iosock;
-		}
+
+			// There may be CEDAR objects stored in the table, but we
+			// don't want to delete them here.  People who register
+			// sockets in our table have to be responsible for
+			// cleaning up after themselves.  "He who creates should
+			// delete", otherwise the socket(s) may get deleted
+			// multiple times.  The only things we created are the UDP
+			// and TCP command sockets, but we'll delete those down
+			// below, so we just need to delete the table entries
+			// themselves, not the CEDAR objects.  Origional wisdom by
+			// Todd, cleanup of DC command sockets by Derek on 2/26/01 
+
 		for (i=0;i<nSock;i++) {
 			free_descrip( (*sockTable)[i].iosock_descrip );
 			free_descrip( (*sockTable)[i].handler_descrip );		
 		}
 		delete sockTable;
+	}
+
+		// Since we created these, we need to clean them up.
+	if( dc_rsock ) {
+		delete dc_rsock;
+	}
+	if( dc_ssock ) {
+		delete dc_ssock;
 	}
 
 	if (reapTable != NULL)
@@ -3567,7 +3584,7 @@ DaemonCore::Kill_Thread(int tid)
 }
 
 void
-DaemonCore::Inherit( ReliSock* &rsock, SafeSock* &ssock ) 
+DaemonCore::Inherit( void ) 
 {
 	char inheritbuf[_INHERITBUF_MAXSIZE];
 	int numInheritedSocks = 0;
@@ -3640,22 +3657,22 @@ DaemonCore::Inherit( ReliSock* &rsock, SafeSock* &ssock )
 			switch ( *ptmp ) {
 				case '1' :
 					// inherit a relisock
-					rsock = new ReliSock();
+					dc_rsock = new ReliSock();
 					ptmp=strtok(NULL," ");
-					rsock->serialize(ptmp);
-					rsock->set_inheritable(FALSE);
+					dc_rsock->serialize(ptmp);
+					dc_rsock->set_inheritable(FALSE);
 					dprintf(D_DAEMONCORE,"Inherited a ReliSock\n");
 					// place into array...
-					inheritedSocks[numInheritedSocks++] = (Stream *)rsock;
+					inheritedSocks[numInheritedSocks++] = (Stream *)dc_rsock;
 					break;
 				case '2':
-					ssock = new SafeSock();
+					dc_ssock = new SafeSock();
 					ptmp=strtok(NULL," ");
-					ssock->serialize(ptmp);
-					ssock->set_inheritable(FALSE);
+					dc_ssock->serialize(ptmp);
+					dc_ssock->set_inheritable(FALSE);
 					dprintf(D_DAEMONCORE,"Inherited a SafeSock\n");
 					// place into array...
-					inheritedSocks[numInheritedSocks++] = (Stream *)ssock;
+					inheritedSocks[numInheritedSocks++] = (Stream *)dc_ssock;
 					break;
 				default:
 					EXCEPT("Daemoncore: Can only inherit SafeSock or ReliSocks");
@@ -3668,25 +3685,168 @@ DaemonCore::Inherit( ReliSock* &rsock, SafeSock* &ssock )
 		// inherit our "command" cedar socks.  they are sent
 		// relisock, then safesock, then a "0".
 		// we then register rsock and ssock as command sockets below...
-		rsock = NULL;
-		ssock = NULL;
+		dc_rsock = NULL;
+		dc_ssock = NULL;
 		ptmp=strtok(NULL," ");
 		if ( ptmp && (strcmp(ptmp,"0") != 0) ) {
 			dprintf(D_DAEMONCORE,"Inheriting Command Sockets\n");
-			rsock = new ReliSock();
-			((ReliSock *)rsock)->serialize(ptmp);
-			rsock->set_inheritable(FALSE);
+			dc_rsock = new ReliSock();
+			((ReliSock *)dc_rsock)->serialize(ptmp);
+			dc_rsock->set_inheritable(FALSE);
 		}
 		ptmp=strtok(NULL," ");
 		if ( ptmp && (strcmp(ptmp,"0") != 0) ) {
-			ssock = new SafeSock();
-			ssock->serialize(ptmp);
-			ssock->set_inheritable(FALSE);
+			dc_ssock = new SafeSock();
+			dc_ssock->serialize(ptmp);
+			dc_ssock->set_inheritable(FALSE);
 		}
 
 	}	// end of if we read out CONDOR_INHERIT ok
 
 }
+
+
+void
+DaemonCore::InitCommandPort( int command_port )
+{
+	if( command_port == 0 ) {
+			// No command port wanted, just bail.
+		dprintf( D_ALWAYS, "DaemonCore: No command port requested.\n" );
+		return;
+	}
+
+	dprintf( D_DAEMONCORE, "Setting up command socket\n" );
+
+		// we want a command port for this process, so create a tcp
+		// and a udp socket to listen on if we did not already inherit
+		// them above.
+		// If rsock/ssock are not NULL, it means we inherited them
+		// from our parent.
+
+	if( dc_rsock == NULL && dc_ssock == NULL ) {
+		dc_rsock = new ReliSock;
+		dc_ssock = new SafeSock;
+		if( !dc_rsock ) {
+			EXCEPT( "Unable to create command Relisock" );
+		}
+		if( !dc_ssock ) {
+			EXCEPT( "Unable to create command SafeSock" );
+		}
+		if( command_port == -1 ) {
+				// choose any old port (dynamic port)
+			if( !BindAnyCommandPort(dc_rsock, dc_ssock) ) {
+				EXCEPT("BindAnyCommandPort failed");
+			}
+			if( !dc_rsock->listen() ) {
+				EXCEPT( "Failed to post listen on command ReliSock" );
+			}
+		} else {
+				// use well-known port specified by command_port
+			int on = 1;
+	
+				// Set options on this socket, SO_REUSEADDR, so that
+				// if we are binding to a well known port, and we
+				// crash, we can be restarted and still bind ok back
+				// to this same port. -Todd T, 11/97
+
+			if( (!dc_rsock->setsockopt(SOL_SOCKET, SO_REUSEADDR,
+									   (char*)&on, sizeof(on))) ||
+				(!dc_ssock->setsockopt(SOL_SOCKET, SO_REUSEADDR,
+									   (char*)&on, sizeof(on))) ) {
+				EXCEPT( "setsockopt() SO_REUSEADDR failed\n" );
+			}
+				
+			if( (!dc_rsock->listen(command_port)) ||
+				(!dc_ssock->bind(command_port)) ) {
+				EXCEPT("Failed to bind to or post listen on command socket(s)");
+			}
+		}
+	}
+
+		// If we are the collector, increase the socket buffer size.  This
+		// helps minimize the number of updates (UDP packets) the collector
+		// drops on the floor.
+	if( strcmp(mySubSystem,"COLLECTOR") == 0 ) {
+		int desired_size;
+		char *tmp;
+
+		if( (tmp=param("COLLECTOR_SOCKET_BUFSIZE")) ) {
+			desired_size = atoi(tmp);
+			free(tmp);
+		} else {
+				// default to 1 meg of buffers.  Gulp!  
+			desired_size = 1024000;
+		}		
+			
+			// set the UDP (ssock) read size to be large, so we do not
+			// drop incoming updates.
+		int final_size = dc_ssock->set_os_buffers( desired_size );
+
+			// and also set the outgoing TCP write size to be large so the
+			// collector is not blocked on the network when answering queries
+		dc_rsock->set_os_buffers( desired_size, true );				
+
+		dprintf( D_FULLDEBUG,"Reset OS socket buffer size to %dk\n", 
+				 final_size / 1024 );
+	}
+
+#ifdef WANT_NETMAN
+		// The negotiator gets a lot of UDP messages from schedds,
+		// shadows, and checkpoint servers reporting network
+		// usage.  We increase our UDP read buffers here so we
+		// don't drop those messages.
+	if( strcmp(mySubSystem,"NEGOTIATOR") == 0 ) {
+		int desired_size;
+		char *tmp;
+
+		if( (tmp=param("NEGOTIATOR_SOCKET_BUFSIZE")) ) {
+			desired_size = atoi( tmp );
+			free( tmp );
+			
+				// set the UDP (ssock) read size to be large, so we do
+				// not drop incoming updates.
+			int final_size = dc_ssock->set_os_buffers( desired_size );
+
+			dprintf( D_FULLDEBUG,"Reset OS socket buffer size to %dk\n", 
+					 final_size / 1024 );
+		}		
+	}
+#endif
+
+		// now register these new command sockets.
+		// Note: In other parts of the code, we assume that the
+		// first command socket registered is TCP, so we must
+		// register the rsock socket first.
+	Register_Command_Socket( (Stream*)dc_rsock );
+	Register_Command_Socket( (Stream*)dc_ssock );
+
+	dprintf( D_ALWAYS,"DaemonCore: Command Socket at %s\n",
+			 InfoCommandSinfulString() );
+
+		// Now, drop this sinful string into a file, if
+		// mySubSystem_ADDRESS_FILE is defined.
+	drop_addr_file();
+
+		// now register any DaemonCore "default" handlers
+
+		// register the command handler to take care of signals
+	daemonCore->Register_Command( DC_RAISESIGNAL, "DC_RAISESIGNAL",
+				(CommandHandlercpp)&DaemonCore::HandleSigCommand,
+				"HandleSigCommand()", daemonCore, IMMEDIATE_FAMILY );
+
+		// this handler receives process exit info
+	daemonCore->Register_Command( DC_PROCESSEXIT,"DC_PROCESSEXIT",
+				(CommandHandlercpp)&DaemonCore::HandleProcessExitCommand,
+				"HandleProcessExitCommand()", daemonCore, IMMEDIATE_FAMILY );
+
+		// this handler receives keepalive pings from our children, so
+		// we can detect if any of our kids are hung.
+	daemonCore->Register_Command( DC_CHILDALIVE,"DC_CHILDALIVE",
+				(CommandHandlercpp)&DaemonCore::HandleChildAliveCommand,
+				"HandleChildAliveCommand", daemonCore, IMMEDIATE_FAMILY, 
+				D_FULLDEBUG );
+}
+
 
 #ifndef WIN32
 int
