@@ -1067,7 +1067,7 @@ ResMgr::final_update( void )
 	if( ! resources ) {
 		return;
 	}
-	walk( &(Resource::final_update) );
+	walk( &Resource::final_update );
 }
 
 
@@ -1136,7 +1136,7 @@ void
 ResMgr::first_eval_and_update_all( void )
 {
 	num_updates = 0;
-	walk( &(Resource::eval_and_update) );
+	walk( &Resource::eval_and_update );
 	report_updates();
 	check_polling();
 	check_use();
@@ -1156,7 +1156,7 @@ ResMgr::eval_all( void )
 {
 	num_updates = 0;
 	compute( A_TIMEOUT );
-	walk( &(Resource::eval_state) );
+	walk( &Resource::eval_state );
 	report_updates();
 	check_polling();
 }
@@ -1189,9 +1189,9 @@ ResMgr::compute( amask_t how_much )
 	}
 
 	m_attr->compute( (how_much & ~(A_SUMMED)) | A_SHARED );
-	walk( &(Resource::compute), (how_much & ~(A_SHARED)) );
+	walk( &Resource::compute, (how_much & ~(A_SHARED)) );
 	m_attr->compute( (how_much & ~(A_SHARED)) | A_SUMMED );
-	walk( &(Resource::compute), (how_much | A_SHARED) );
+	walk( &Resource::compute, (how_much | A_SHARED) );
 
 		// Sort the resources so when we're assigning owner load
 		// average and keyboard activity, we get to them in the
@@ -1206,19 +1206,19 @@ ResMgr::compute( amask_t how_much )
 		// refresh our internal classad with all the current values of
 		// everything so that when we evaluate our state or any other
 		// expressions, we've got accurate data to evaluate.
-	walk( &(Resource::refresh_classad), how_much );
+	walk( &Resource::refresh_classad, how_much );
 
 		// Now that we have an updated internal classad for each
 		// resource, we can "compute" anything where we need to 
 		// evaluate classad expressions to get the answer.
-	walk( &(Resource::compute), A_EVALUATED );
+	walk( &Resource::compute, A_EVALUATED );
 
 		// Next, we can publish any results from that to our internal
 		// classads to make sure those are still up-to-date
-	walk( &(Resource::refresh_classad), A_EVALUATED );
+	walk( &Resource::refresh_classad, A_EVALUATED );
 
 		// Now that we're done, we can display all the values.
-	walk( &(Resource::display), how_much );
+	walk( &Resource::display, how_much );
 }
 
 
