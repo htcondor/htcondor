@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: remote_post.pl,v 1.1.2.2 2004-06-25 06:10:01 wright Exp $
+# $Id: remote_post.pl,v 1.1.2.3 2004-06-29 01:21:38 wright Exp $
 # post script for Condor testsuite runs
 ######################################################################
 
@@ -81,6 +81,12 @@ if( ! -d "$BaseDir/results" ) {
     # If there's no results, and we can't even make the directory, we
     # might as well die, since there's nothing worth saving...
     mkdir( "$BaseDir/results" ) || die "Can't mkdir($BaseDir/results): $!\n";
+}
+
+system( "cp tasklist.nmi $BaseDir/results/" );
+if( $? ) {
+    print "Can't copy tasklist.nmi to $BaseDir/results\n";
+    $exit_status = 1;
 }
 
 
