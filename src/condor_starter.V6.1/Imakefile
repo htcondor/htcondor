@@ -11,7 +11,7 @@ LDFLAGS = KernLib RpcLib MldLib -lbfd -liberty
 LDFLAGS = KernLib SocketLib RpcLib MldLib 
 #endif
 
-LIB = $(STD_LIBS)
+LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
 #if IS_SGI_IRIX62
 OS = IRIX62
