@@ -40,22 +40,12 @@
 #undef va_start
 #undef va_end
 #include <varargs.h>
-#include <time.h>
-#if !defined(WIN32)
-#include <sys/file.h>
-#include <sys/param.h>
-#endif
 
 #include "condor_sys.h"
 #include "debug.h"
 #include "except.h"
 #include "clib.h"
 #include "condor_string.h"
-
-/* Solaris specific change ..dhaval 6/23 */
-#if defined(Solaris)
-#include <fcntl.h>
-#endif 
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
