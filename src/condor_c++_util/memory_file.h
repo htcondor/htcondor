@@ -28,24 +28,9 @@
 memory_file simulates a file stored in memory.
 The primary use of this class is to have a second implementation
 of read/write/seek, against which to test the real read/write/seek,
-
-I don't guarantee that this class returns exactly the same error
-values as POSIX requires.
-
-thain Thu Jan 28 14:19:48 CST 1999
 */
 
-#ifndef _POSIX_SOURCE
-#define _POSIX_SOURCE
-#endif
-
-#include <iostream.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <string.h>
-#include <strings.h>
-#include <stdlib.h>
-#include <errno.h>
+#include "condor_common.h"
 
 class memory_file {
 public:

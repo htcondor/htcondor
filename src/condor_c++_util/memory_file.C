@@ -185,7 +185,7 @@ int count_errors( char *b1, char *b2, int length, int offset )
 		if( b1[i]!=b2[i] ) {
 			if(!errors) cout << "FOUND ERROR:\npos\ta\tb\n";
 			errors++;
-			cout << (i+offset) << '\t' << (int)b1 << '\t' << (int)b2 << endl;
+			cout << (i+offset) << '\t' << (int)b1[i] << '\t' << (int)b2[i] << endl;
 			if( errors>50 ) {
 				cout << "Too many errors, stopping." << endl;
 				return 50;
