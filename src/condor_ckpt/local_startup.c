@@ -196,7 +196,7 @@ block_condor_signals()
 {
 	sigset_t mask, omask;
 
-	sigfullset(&mask);
+	sigfillset(&mask);
 	if( sigprocmask(SIG_BLOCK,&mask,&omask) < 0 ) {
 		EXCEPT( "sigprocmask" );
 	}
