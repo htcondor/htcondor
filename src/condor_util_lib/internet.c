@@ -30,10 +30,7 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "except.h"
-#include "proc.h"
 #include "internet.h"
-#include "expr.h"
 #include "my_hostname.h"
 
 
