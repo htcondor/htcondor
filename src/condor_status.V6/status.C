@@ -173,7 +173,7 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i], "-pool")) {
 			if (pool == NULL) {
-				pool = argv[i];
+				pool = argv[++i];
 			} else {
 				fprintf (stderr, "At most one -pool argument may be used\n");
 				exit (1);
