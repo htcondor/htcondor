@@ -98,7 +98,7 @@ class Variable : public VariableBase
   
   	Variable(char*name) : VariableBase(name) {}
     virtual void          PrintToStr(char*);
-	virtual Variable*     DeepCopy(void) const;
+	virtual ExprTree*     DeepCopy(void) const;
 
 	protected:
 
@@ -118,7 +118,7 @@ class Integer : public IntegerBase
 	virtual	int	    operator <=(ExprTree&);
  
     virtual void    PrintToStr(char*);
-	virtual Integer*  DeepCopy(void) const;
+	virtual ExprTree*  DeepCopy(void) const;
 
 	protected:
 
@@ -138,7 +138,7 @@ class Float: public FloatBase
 	virtual	int	    operator <(ExprTree&);
 	virtual	int	    operator <=(ExprTree&);
     virtual void    PrintToStr(char*);
-	virtual Float*  DeepCopy(void) const;
+	virtual ExprTree*  DeepCopy(void) const;
 
 	protected:
 
@@ -153,7 +153,7 @@ class String : public StringBase
 
   	String(char* s) : StringBase(s) {}
     virtual void        PrintToStr(char*);
-	virtual String*     DeepCopy(void) const;
+	virtual ExprTree*     DeepCopy(void) const;
 
 	protected:
 
@@ -168,7 +168,7 @@ class Boolean : public BooleanBase
 
   	Boolean(int b) : BooleanBase(b) {}
     virtual void        PrintToStr(char*);
-	virtual Boolean*    DeepCopy(void) const;
+	virtual ExprTree*   DeepCopy(void) const;
 
 	protected:
 
@@ -183,7 +183,7 @@ class Undefined : public UndefinedBase
 
 	Undefined() : UndefinedBase() {}
     virtual void        PrintToStr(char*);
-	virtual Undefined*  DeepCopy(void) const;
+	virtual ExprTree*   DeepCopy(void) const;
 
 	protected:
 
@@ -197,7 +197,7 @@ class Error : public ErrorBase
 
 	Error() : ErrorBase() {}
     virtual void        PrintToStr(char*);
-	virtual Error*      DeepCopy(void) const;
+	virtual ExprTree*   DeepCopy(void) const;
 
 	protected:
 
@@ -215,7 +215,7 @@ class AddOp: public AddOpBase
     public :
   	AddOp(ExprTree* l, ExprTree* r) : AddOpBase(l, r) {}
     virtual void        PrintToStr(char*);
-	virtual AddOp       *DeepCopy(void) const;
+	virtual ExprTree    *DeepCopy(void) const;
 };
 
 
@@ -224,7 +224,7 @@ class SubOp: public SubOpBase
     public :
   	SubOp(ExprTree* l, ExprTree* r) : SubOpBase(l, r) {}
     virtual void        PrintToStr(char*);
-	virtual SubOp       *DeepCopy(void) const;
+	virtual ExprTree    *DeepCopy(void) const;
 };
 
 
@@ -233,7 +233,7 @@ class MultOp: public MultOpBase
     public :
   	MultOp(ExprTree* l, ExprTree* r) : MultOpBase(l, r) {}
     virtual void        PrintToStr(char*);
-	virtual MultOp      *DeepCopy(void) const;
+	virtual ExprTree    *DeepCopy(void) const;
 };
 
 
@@ -242,7 +242,7 @@ class DivOp: public DivOpBase
     public :
   	DivOp(ExprTree* l, ExprTree* r) : DivOpBase(l, r) {}
     virtual void        PrintToStr(char*);
-	virtual DivOp       *DeepCopy(void) const;
+	virtual ExprTree    *DeepCopy(void) const;
 };
 
 
@@ -251,7 +251,7 @@ class MetaEqOp: public MetaEqOpBase
     public :
   	MetaEqOp(ExprTree* l, ExprTree* r) : MetaEqOpBase(l, r) {}
     virtual void        PrintToStr(char*);
-	virtual MetaEqOp    *DeepCopy(void) const;
+	virtual ExprTree    *DeepCopy(void) const;
 };
 
 
@@ -260,7 +260,7 @@ class MetaNeqOp: public MetaNeqOpBase
     public :
   	MetaNeqOp(ExprTree* l, ExprTree* r) : MetaNeqOpBase(l, r) {}
     virtual void        PrintToStr(char*);
-	virtual MetaNeqOp   *DeepCopy(void) const;
+	virtual ExprTree    *DeepCopy(void) const;
 };
 
 class EqOp: public EqOpBase
@@ -268,7 +268,7 @@ class EqOp: public EqOpBase
     public :
   	EqOp(ExprTree* l, ExprTree* r) : EqOpBase(l, r) {}
     virtual void        PrintToStr(char*);
-	virtual EqOp       *DeepCopy(void) const;
+	virtual ExprTree    *DeepCopy(void) const;
 };
 
 
@@ -277,7 +277,7 @@ class NeqOp: public NeqOpBase
     public :
   	NeqOp(ExprTree* l, ExprTree* r) : NeqOpBase(l, r) {}
     virtual void        PrintToStr(char*);
-	virtual NeqOp       *DeepCopy(void) const;
+	virtual ExprTree    *DeepCopy(void) const;
 };
 
 
@@ -286,7 +286,7 @@ class GtOp: public GtOpBase
     public :
   	GtOp(ExprTree* l, ExprTree* r) : GtOpBase(l, r) {}
     virtual void        PrintToStr(char*);
-	virtual GtOp       *DeepCopy(void) const;
+	virtual ExprTree    *DeepCopy(void) const;
 };
 
 
@@ -295,7 +295,7 @@ class GeOp: public GeOpBase
     public :
   	GeOp(ExprTree* l, ExprTree* r) : GeOpBase(l, r) {}
     virtual void        PrintToStr(char*);
-	virtual GeOp       *DeepCopy(void) const;
+	virtual ExprTree    *DeepCopy(void) const;
 };
 
 
@@ -304,7 +304,7 @@ class LtOp: public LtOpBase
     public :
   	LtOp(ExprTree* l, ExprTree* r) : LtOpBase(l, r) {}
     virtual void        PrintToStr(char*);
-	virtual LtOp       *DeepCopy(void) const;
+	virtual ExprTree    *DeepCopy(void) const;
 };
 
 
@@ -313,7 +313,7 @@ class LeOp: public LeOpBase
     public :
   	LeOp(ExprTree* l, ExprTree* r) : LeOpBase(l, r) {}
     virtual void        PrintToStr(char*);
-	virtual LeOp       *DeepCopy(void) const;
+	virtual ExprTree    *DeepCopy(void) const;
 };
 
 class AndOp: public AndOpBase
@@ -321,7 +321,7 @@ class AndOp: public AndOpBase
     public :
   	AndOp(ExprTree* l, ExprTree* r) : AndOpBase(l, r) {}
     virtual void        PrintToStr(char*);
-	virtual AndOp      *DeepCopy(void) const;
+	virtual ExprTree    *DeepCopy(void) const;
 };
 
 
@@ -330,7 +330,7 @@ class OrOp : public OrOpBase
     public :
   	OrOp(ExprTree* l, ExprTree* r) : OrOpBase(l, r) {}
     virtual void        PrintToStr(char*);
-	virtual OrOp        *DeepCopy(void) const;
+	virtual ExprTree    *DeepCopy(void) const;
 };
 
 class AssignOp: public AssignOpBase
@@ -338,7 +338,7 @@ class AssignOp: public AssignOpBase
     public :
   	AssignOp(ExprTree* l, ExprTree* r) : AssignOpBase(l, r) {}
     virtual void        PrintToStr(char*);
-	virtual AssignOp    *DeepCopy(void) const;
+	virtual ExprTree    *DeepCopy(void) const;
 	friend		    class AttrList;
 };
 
