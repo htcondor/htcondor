@@ -140,7 +140,6 @@ extern	char*		myName;
 extern	char*		Spool;
 extern	char*		CondorAdministrator;
 extern	Scheduler*	sched;
-extern	CONTEXT*	MachineContext;
 extern	char		Name[];
 extern	int			ScheddName;
 
@@ -259,11 +258,7 @@ Scheduler::count_jobs()
 	char	queue[MAXPATHLEN];
 	int		i;
 	int		prio_compar();
-/*
 	char	tmp[200];
-*/
-	ELEM	tmp;
-	ExprTree*	tree;
 
 	N_Owners = 0;
 	JobsRunning = 0;
@@ -286,32 +281,17 @@ Scheduler::count_jobs()
 		FREE( Owners[i] );
 	}
 
-    tmp.type = INT;
-    tmp.val.integer_val = JobsRunning;
-    store_stmt( build_expr(ATTR_RUNNING_JOBS,&tmp), MachineContext );
+	sprintf(tmp, "%s = %d", ATTR_RUNNING_JOBS, JobsRunning);
+	ad->InsertOrUpdate(tmp);
 
-    tmp.val.integer_val = JobsIdle;
-    store_stmt( build_expr(ATTR_IDLE_JOBS,&tmp), MachineContext );
+	sprintf(tmp, "%s = %d", ATTR_IDLE_JOBS, JobsIdle);
+	ad->InsertOrUpdate(tmp);
 
-    tmp.val.integer_val = N_Owners;
-    store_stmt( build_expr(ATTR_NUM_USERS,&tmp), MachineContext );
+	sprintf(tmp, "%s = %d", ATTR_NUM_USERS, N_Owners);
+	ad->InsertOrUpdate(tmp);
 
-    tmp.val.integer_val = MaxJobsRunning;
-    store_stmt( build_expr(ATTR_MAX_JOBS_RUNNING,&tmp), MachineContext );
-
-	/*
-	sprintf(tmp, "RunningJobs = %d", JobsRunning);
-	ad->Insert(tmp);
-
-	sprintf(tmp, "IdleJobs = %d", JobsIdle);
-	ad->Insert(tmp);
-
-	sprintf(tmp, "Users = %d", N_Owners);
-	ad->Insert(tmp);
-
-	sprintf(tmp, "MAX_JOBS_RUNNING = %d", MaxJobsRunning);
-	ad->Insert(tmp);
-	*/
+	sprintf(tmp, "%s = %d", ATTR_MAX_JOBS_RUNNING, MaxJobsRunning);
+	ad->InsertOrUpdate(tmp);
 }
 
 prio_comrpar(struct prio_rec* a, struct prio_rec* b )
@@ -413,16 +393,12 @@ void Scheduler::insert_owner(char* owner)
 void Scheduler::update_central_mgr()
 {
 	int			cmd = UPDATE_SCHEDD_AD;
-	ClassAd 	ad(MachineContext);
 	SafeSock	sock(CollectorHost, COLLECTOR_UDP_COMM_PORT);
 
-	ad.SetMyTypeName (SCHEDD_ADTYPE);
-	ad.SetTargetTypeName("");
-	
 	sock.attach_to_file_desc(UdpSock);
 	sock.encode();
 	sock.put(UPDATE_SCHEDD_AD);
-	ad.put(sock);
+	ad->put(sock);
 	sock.end_of_message();
 }
 
@@ -2156,15 +2132,9 @@ void Scheduler::sigint_handler()
 
 void Scheduler::sighup_handler()
 {
-	ClassAd*	ad;
-	CONTEXT*	MachineContext;
-
     dprintf( D_ALWAYS, "Re reading config file\n" );
 
-    MachineContext = create_context();
-    config( myName, MachineContext );
-	ad = new ClassAd(MachineContext);
-	SetClassAd(ad);
+    configAd( myName, ad );
 
 	Init();
 	::Init();
@@ -2542,7 +2512,6 @@ void Scheduler::SetSockName(int sock)
 	struct sockaddr_in		addr;
 	int						addrLen; 
 	char					tmpExpr[200];
-	ELEM					tmp;
 
 	memset((char*)&addr, 0, sizeof(addr));
 	errno = 0;
@@ -2568,13 +2537,8 @@ void Scheduler::SetSockName(int sock)
 	MySockName = strdup(sin_to_string(&addr));
 	dprintf(D_FULLDEBUG, "MySockName = %s\n", MySockName);
 	if (MySockName !=0){
-		sprintf(tmpExpr, "%s = %s", ATTR_SCHEDD_IP_ADDR, MySockName);
+		sprintf(tmpExpr, "%s = \"%s\"", ATTR_SCHEDD_IP_ADDR, MySockName);
 		ad->Insert(tmpExpr);
-		ELEM	tmp;
-
-		tmp.type = STRING;
-		tmp.val.string_val = MySockName;
-		store_stmt(build_expr(ATTR_SCHEDD_IP_ADDR, &tmp), MachineContext);
 	}
 	else
 	{

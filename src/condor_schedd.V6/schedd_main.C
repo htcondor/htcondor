@@ -81,6 +81,7 @@
 #include "condor_daemon_core.h"
 #include "condor_qmgr.h"
 #include "scheduler.h"
+#include "condor_adtypes.h"
 
 #if defined(BSD43) || defined(DYNIX)
 #	define WEXITSTATUS(x) ((x).w_retcode)
@@ -115,7 +116,6 @@ Scheduler	scheduler;
 DaemonCore	core(10, 10, 10);
 char*		myName;
 Scheduler*	sched = &scheduler;		// for non-member functions to access data
-CONTEXT*	MachineContext;
 char		Name[MAXHOSTNAMELEN];
 int			ScheddName = 0;
 
@@ -130,7 +130,6 @@ void usage(char* name)
 main(int argc, char* argv[])
 {
 	char**		ptr; 
-	ClassAd*	myAd; 
 	char		job_queue_name[_POSIX_PATH_MAX];
 	struct		utsname	name;
 	char		config_file[MAXPATHLEN] = "";
@@ -177,17 +176,9 @@ main(int argc, char* argv[])
 		}
 	}
 	
-	MachineContext = create_context();
-	if(config_file[0] == '\0')
-	{
-		config(argv[0], MachineContext);
-	}
-	else
-	{
-		config_from_server(config_file, argv[0], MachineContext);
-	}
+	ClassAd *ScheddClassad = new ClassAd();
+	configAd(argv[0], ScheddClassad);
 	
-	myAd = new ClassAd(MachineContext); 
 	Init();
 
 	// if a name if not specified, assume the name of the machine
@@ -197,25 +188,16 @@ main(int argc, char* argv[])
 		strcpy(Name, name.nodename);
 	}
 
+	ScheddClassad->SetMyTypeName(SCHEDD_ADTYPE);
+	ScheddClassad->SetTargetTypeName("");
+
 	// throw the name into the machine ad
 	{
 		char	expr[200];
 
-		sprintf(expr, "Name = %s", Name);
-		myAd->Insert(expr);
+		sprintf(expr, "Name = \"%s\"", Name);
+		ScheddClassad->Insert(expr);
 	}
-
-    {
-        EXPR *name_expr;
-        char NameExpr [MAXHOSTNAMELEN + 10];
-        sprintf (NameExpr, "Name = \"%s\"", Name);
-        name_expr = scan (NameExpr);
-        if (name_expr == NULL)
-        {
-                EXCEPT ("Could not scan expression: [%s]", NameExpr);
-        }
-        store_stmt (name_expr, MachineContext);
-    }
 
 	// This is so if we dump core it'll go in the log directory
 	if(chdir(Log) < 0)
@@ -243,7 +225,7 @@ main(int argc, char* argv[])
 
 	// initialize all the modules
 	scheduler.Init();
-	scheduler.SetClassAd(myAd);
+	scheduler.SetClassAd(ScheddClassad);
 	scheduler.Register(&core);
 	scheduler.SetSockName(core.OpenTcp(argv[0], scheduler.Port(),
 									   CONDOR_IO_SOCK));
