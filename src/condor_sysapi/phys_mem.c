@@ -21,13 +21,14 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#include "sysapi.h"
  
 #if defined(HPUX)
 
 #include <sys/pstat.h>
 
 int
-calc_phys_memory()
+sysapi_phys_memory_raw()
 {
 	struct pst_static s;
 	unsigned long pages, pagesz;
@@ -48,7 +49,7 @@ calc_phys_memory()
 #include <sys/sysmp.h>
 
 int
-calc_phys_memory()
+sysapi_phys_memory_raw()
 {
 	struct rminfo rmstruct;
 	unsigned long pages, pagesz;
@@ -77,14 +78,14 @@ calc_phys_memory()
 #include <unistd.h>
 
 int
-calc_phys_memory()
+sysapi_phys_memory_raw()
 {
-	unsigned long pages, pagesz, hack;
+	long pages, pagesz, hack;
 
 	pages = sysconf(_SC_PHYS_PAGES);
 	pagesz = (sysconf(_SC_PAGESIZE) >> 10);		// We want kbytes.
 
-	if (pages == -1 || pagesz <= 0 ) {
+	if (pages == -1 || pagesz == -1 ) {
 		return -1;
 	}
 
@@ -113,7 +114,8 @@ calc_phys_memory()
 #elif defined(LINUX)
 #include <stdio.h>
 
-int calc_phys_memory() 
+int 
+sysapi_phys_memory_raw() 
 {	
 
 	FILE	*proc;
@@ -151,7 +153,7 @@ int calc_phys_memory()
 #include "condor_common.h"
 
 int
-calc_phys_memory()
+sysapi_phys_memory_raw()
 {
 	MEMORYSTATUS status;
 	GlobalMemoryStatus(&status);
@@ -171,7 +173,7 @@ calc_phys_memory()
 #include <sys/table.h>
 
 int
-calc_phys_memory()
+sysapi_phys_memory_raw()
 {
 	struct tbl_pmemstats s;
 	if (table(TBL_PMEMSTATS,0,(void *)&s,1,sizeof(s)) < 0) {
@@ -182,10 +184,26 @@ calc_phys_memory()
 
 #else	/* Don't know how to do this on other than SunOS and HPUX yet */
 int
-calc_phys_memory()
+sysapi_phys_memory_raw()
 {
 	return -1;
 }
 #endif
+
+
+/* This is the cooked version of sysapi_phys_memory_raw(). Where as the raw
+	function gives you the raw number, this function can process the number
+	for you for some reason and return that instead.
+*/
+int
+sysapi_phys_memory()
+{
+	/* right now, it is an idenity mapping from the raw version */
+	sysapi_phys_memory_raw();
+}
+
+
+
+
 
 
