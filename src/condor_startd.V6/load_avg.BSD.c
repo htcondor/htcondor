@@ -31,6 +31,7 @@
 #include <nlist.h>
 #include <sys/types.h>
 #include <sys/file.h>
+#include "condor_uid.h"
 
 #ifdef MIPS
 #include <sys/fixpoint.h>
@@ -46,6 +47,7 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 static int	Kmem;
 static int	KernelLookupFailed = 0;
+static void get_k_vars();
 
 float lookup_load_avg();
 
@@ -69,6 +71,13 @@ float
 calc_load_avg()
 {
 	float val;
+	static int got_k_vars = 0;
+
+	// open /dev/kmem if haven't already done so
+	if ( !got_k_vars ) {
+		got_k_vars = 1;
+		get_k_vars();	// this will set KernelLookupFailed to 0 or 1
+	}
 	
 	if (!KernelLookupFailed)
 		val = lookup_load_avg();
@@ -81,6 +90,7 @@ calc_load_avg()
 /*
 * Find addresses of various kernel variables in /dev/kmem.
 */
+static void
 get_k_vars()
 {
 	priv_state priv;
