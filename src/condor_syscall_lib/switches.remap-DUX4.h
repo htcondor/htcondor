@@ -148,7 +148,7 @@ REMAP_ZERO( sync, __sync, void )
 REMAP_FIVE( table, __table, int , int , int , char *, int , unsigned int )
 REMAP_TWO( truncate, __truncate, int , const char *, off_t )
 REMAP_ONE( umask, __umask, unsigned int , unsigned int )
-REMAP_ONE( uname, __uname, int , struct utsname *)
+/*REMAP_ONE( uname, __uname, int , struct utsname *)*/
 REMAP_ONE( unlink, __unlink, int , const char *)
 REMAP_TWO( uswitch, __uswitch, int , int , int )
 REMAP_TWO( utimes, __utimes, int , const char *, struct timeval *)
