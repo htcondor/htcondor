@@ -226,7 +226,6 @@ char	*GlobusRematch = "globus_rematch";
 
 char	*LastMatchListLength = "match_list_length";
 
-char	*DAGNodeName = "dag_node_name";
 char	*DAGManJobId = "dagman_job_id";
 char	*LogNotesCommand = "submit_event_notes";
 char	*UserNotesCommand = "submit_event_user_notes";
@@ -310,7 +309,6 @@ void	SetExitRemoveCheck(void);
 void	SetNoopJob(void);
 void	SetNoopJobExitSignal(void);
 void	SetNoopJobExitCode(void);
-void SetDAGNodeName();
 void SetMatchListLen();
 void SetDAGManJobId();
 void SetLogNotes();
@@ -2592,17 +2590,6 @@ SetMatchListLen()
 }
 
 void
-SetDAGNodeName()
-{
-	char* name = condor_param( DAGNodeName, ATTR_DAG_NODE_NAME );
-	if( name ) {
-		(void) sprintf( buffer, "%s = \"%s\"", ATTR_DAG_NODE_NAME, name );
-		InsertJobExpr( buffer );
-		free( name );
-	}
-}
-
-void
 SetDAGManJobId()
 {
 	char* id = condor_param( DAGManJobId, ATTR_DAGMAN_JOB_ID );
@@ -3983,7 +3970,6 @@ queue(int num)
 		SetArguments();
 		SetGlobusParams();
 		SetMatchListLen();
-		SetDAGNodeName();
 		SetDAGManJobId();
 		SetJarFiles();
 		SetJavaVMArgs();
