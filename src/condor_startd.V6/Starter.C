@@ -494,16 +494,6 @@ Starter::spawn( start_info_t* info, time_t now )
 	} else {
 		s_birthdate = now;
 		s_procfam = new ProcFamily( s_pid, PRIV_ROOT );
-#if WIN32
-		// we only support running jobs as user nobody for the first pass
-		char nobody_login[100];
-
-		// just use the prefix (we don't know the nobody_login yet since we're in the startd)
-		strcpy(nobody_login, myDynuser->account_prefix());
-		
-		// set ProcFamily to find decendants via a common login name
-		s_procfam->setFamilyLogin(nobody_login);
-#endif
 		dprintf( D_PROCFAMILY, 
 				 "Created new ProcFamily w/ pid %d as the parent.\n", s_pid );
 		recompute_pidfamily( now );
