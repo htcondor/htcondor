@@ -7,7 +7,7 @@ PARAMETERS
   EVENTD_DEBUG - debug logging level; default is D_ALWAYS
   EVENTD_INTERVAL - number of seconds between collector queries to
     determine pool state; default is 15 minutes
-  EVENTD_MAX_PREPARATION - number of seconds before a scheduled event
+  EVENTD_MAX_PREPARATION - number of minutes before a scheduled event
     when the eventd should start polling; if 0 (default), eventd
     always polls 
   EVENT_LIST - list of macro names which define events

@@ -97,8 +97,9 @@ EventDaemon::Config()
 	if (tmp) {
 		MaxEventPreparation = atoi(tmp);
 		free(tmp);
-		dprintf(D_FULLDEBUG, "Max event preparation set to %d seconds.\n",
+		dprintf(D_FULLDEBUG, "Max event preparation set to %d minutes.\n",
 				MaxEventPreparation);
+		MaxEventPreparation *= 60; // convert to seconds
 	} else {
 		MaxEventPreparation = 0;
 	}
