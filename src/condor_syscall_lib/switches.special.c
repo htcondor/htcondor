@@ -155,6 +155,16 @@ store_working_directory()
 	char	tbuf[ _POSIX_PATH_MAX ];
 	char	*status;
 
+#if defined(HPUX9)
+	/* avoid infinite recursion in HPUX9, where getwd calls chdir, which
+	   calls store_working_directory, which calls getwd...  - Jim B. */
+	static int inside_call = 0;
+
+	if (inside_call)
+		return;
+	inside_call = 1;
+#endif
+
 		/* Get the information */
 #if defined(Solaris)
 	status = getcwd( tbuf, _POSIX_PATH_MAX);
@@ -170,6 +180,10 @@ store_working_directory()
 
 		/* Ok - everything worked */
 	Set_CWD( tbuf );
+
+#if defined(HPUX9)
+	inside_call = 0;
+#endif
 }
 
 /*
@@ -431,6 +445,11 @@ linux_fake_writev( int fd, const struct iovec *iov, int iovcnt )
 #	include <sys/mtio.h>
 #endif
 
+#if defined(HPUX9)
+#	include <sys/mib.h>
+#	include <sys/ioctl.h>
+#endif
+
 #if defined(Solaris)
 /* int
 ioctl( int fd, int request, ...) */
@@ -438,6 +457,39 @@ ioctl( int fd, int request, ...) */
 int
 ioctl( int fd, int request, caddr_t arg )
 {
+#if defined(HPUX9)
+	static int first_time = 1;
+	static int MaxOpenFiles;
+	static struct nmparms *parmset;
+	if (first_time) {
+		first_time = 0;
+		MaxOpenFiles = sysconf(_SC_OPEN_MAX);
+		parmset = (struct nmparms *)calloc(sizeof(struct nmparms),
+										   MaxOpenFiles);
+	}
+	if (request == 0x40206d02) {
+		struct nmparms *ptr = (struct nmparms *)arg;
+		dprintf( D_ALWAYS, "got NMIOSET request 0x%x on fd %d\n",
+				request, fd );
+		dprintf( D_ALWAYS, "objid = %d, buffer = 0x%x, len = 0x%x\n",
+				ptr->objid, ptr->buffer, ptr->len );
+		parmset[fd].objid = ptr->objid;
+		parmset[fd].buffer = ptr->buffer;
+		parmset[fd].len = ptr->len;
+		return 0;
+	}
+	else if (request == 0x80086d01) {
+		struct nmparms *ptr = (struct nmparms *)arg;
+		dprintf( D_ALWAYS, "got NMIOGET request 0x%x on fd %d\n",
+				request, fd);
+		ptr->objid = parmset[fd].objid;
+		ptr->buffer = parmset[fd].buffer;
+		ptr->len = parmset[fd].len;
+		dprintf( D_ALWAYS, "objid = %d, buffer = 0x%x, len = 0x%x\n",
+				ptr->objid, ptr->buffer, ptr->len );
+		return 0;
+	}		
+#endif
 	switch( request ) {
 #if defined(SUNOS41)
 	  case MTIOCGET:
