@@ -315,6 +315,13 @@ class Dag {
 	void DumpDotFile(void);
 
 	void CheckAllJobs(const Dagman &dm);
+
+		/** Returns a delimited string listing the node names of all
+			of the given node's parents.
+			@return delimited string of parent node names
+		*/
+	const MyString ParentListString( const Job *node, const char delim = ',' ) const;
+
 	
   protected:
 

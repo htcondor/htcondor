@@ -1123,9 +1123,10 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 
     if( job->JobType() == Job::TYPE_CONDOR ) {
 	  job->_submitTries++;
-      submit_success = condor_submit( dm, cmd_file.Value(), condorID,
-				      job->GetJobName(), job->varNamesFromDag,
-				      job->varValsFromDag );
+      submit_success =
+		  condor_submit( dm, cmd_file.Value(), condorID, job->GetJobName(),
+						 ParentListString( job ), job->varNamesFromDag,
+						 job->varValsFromDag );
     } else if( job->JobType() == Job::TYPE_STORK ) {
 	  job->_submitTries++;
       submit_success = dap_submit( dm, cmd_file.Value(), condorID,
@@ -1742,6 +1743,31 @@ Dag::CheckForDagAbort(Job *job, int exitVal, const char *type)
 		main_shutdown_rescue( exitVal );
 	}
 }
+
+
+const MyString
+Dag::ParentListString( const Job *node, const char delim ) const
+{
+	SimpleListIterator <JobID_t> parent_list;
+	JobID_t parentID;
+	Job* parent;
+	const char* parent_name = NULL;
+	MyString parents_str;
+
+	parent_list.Initialize( node->GetQueueRef( Job::Q_PARENTS ) );
+	parent_list.ToBeforeFirst();
+	while( parent_list.Next( parentID ) ) {
+		parent = GetJob( parentID );
+		parent_name = parent->GetJobName();
+		ASSERT( parent_name );
+		if( ! parents_str.IsEmpty() ) {
+			parents_str += delim;
+		}
+		parents_str += parent_name;
+	}
+	return parents_str;
+}
+
 
 //===========================================================================
 // Methods for Dot Files, both public and private
