@@ -54,9 +54,9 @@ fragment:
 	}				}
 
 Note that calls to end_of_message() in the sender and receiver must
-match.  When in decode mode, end_of_message() flushes the buffered
+match.  When in encode mode, end_of_message() flushes the buffered
 data for the current message onto the network, returning failure when
-a network error occurs.  In encode mode, end_of_message() verifies
+a network error occurs.  In decode mode, end_of_message() verifies
 that the receiver has reached the end of the message and if not,
 returns failure and flushes any remaining data in this message.  The
 code() and end_of_message() methods return 1 on success and 0 on
