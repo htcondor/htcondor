@@ -29,10 +29,11 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "basename.h"
 #include "condor_ckpt_name.h"
-
+#include "condor_holdcodes.h"
 #include "gridmanager.h"
 #include "globusjob.h"
 #include "condor_config.h"
+#include "condor_parameters.h"
 
 
 // GridManager job states
@@ -245,6 +246,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	// HACK!
 	retryStdioSize = true;
 	gahp_proxy_id_set = false;
+	communicationTimeoutTid = -1;
 
 	evaluateStateTid = daemonCore->Register_Timer( TIMER_NEVER,
 								(TimerHandlercpp)&GlobusJob::doEvaluateState,
@@ -256,6 +258,7 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 
 	ad = classad;
 
+	myProxy = NULL;
 	buff[0] = '\0';
 	ad->LookupString( ATTR_X509_USER_PROXY, buff );
 	if ( buff[0] != '\0' ) {
@@ -399,6 +402,10 @@ GlobusJob::~GlobusJob()
 	}
 	if (daemonCore) {
 		daemonCore->Cancel_Timer( evaluateStateTid );
+		if ( communicationTimeoutTid != -1 ) {
+			daemonCore->Cancel_Timer(communicationTimeoutTid);
+			communicationTimeoutTid = -1;
+		}
 	}
 	if ( ad ) {
 		delete ad;
@@ -472,20 +479,35 @@ int GlobusJob::doEvaluateState()
 			"(%d.%d) doEvaluateState called: gmState %s, globusState %d\n",
 			procID.cluster,procID.proc,GMStateNames[gmState],globusState);
 
-	if ( myProxy->gahp_proxy_id == -1 ) {
-		dprintf( D_ALWAYS, "(%d.%d) proxy not cached yet, waiting...\n",
-				 procID.cluster, procID.proc );
-		return TRUE;
-	} else if ( gahp_proxy_id_set == false ) {
-		gahp.setDelegProxyCacheId( myProxy->gahp_proxy_id );
-		gahp_proxy_id_set = true;
-	}
+	if ( !myProxy ) {
+		UpdateJobAdString( ATTR_HOLD_REASON,"Proxy file missing or corrupted" );
+		UpdateJobAdInt(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_CorruptedCredential);
+		UpdateJobAdInt(ATTR_HOLD_REASON_SUBCODE, 0);
+		gmState = GM_HOLD;
+	} else {
+		if ( myProxy->gahp_proxy_id == -1 ) {
+			dprintf( D_ALWAYS, "(%d.%d) proxy not cached yet, waiting...\n",
+					 procID.cluster, procID.proc );
+			return TRUE;
+		} else if ( gahp_proxy_id_set == false ) {
+			gahp.setDelegProxyCacheId( myProxy->gahp_proxy_id );
+			gahp_proxy_id_set = true;
+		}
 
-	if ( PROXY_NEAR_EXPIRED( myProxy ) && gmState != GM_PROXY_EXPIRED ) {
-		dprintf( D_ALWAYS, "(%d.%d) proxy is about to expire, changing state to GM_PROXY_EXPIRED\n",
-				 procID.cluster, procID.proc );
-		gmState = GM_PROXY_EXPIRED;
-	}
+			// For a job remove operation, we will try to use any proxy that is still
+			// valid.  For any other purpose, however, we require that the proxy
+			// at least has a minimum number of seconds left on it.
+			// This allows the user to perform a condor_rm on a job which has been put
+			// on hold when the proxy is about to expire (as long as they are quick
+			// about it!).  
+		if ( ((PROXY_NEAR_EXPIRED( myProxy ) && condorState != REMOVED) ||	// min # of seconds
+			  (PROXY_IS_EXPIRED( myProxy ) && condorState == REMOVED))		// any time at all
+			  && gmState != GM_PROXY_EXPIRED ) {
+			dprintf( D_ALWAYS, "(%d.%d) proxy is about to expire, changing state to GM_PROXY_EXPIRED\n",
+					 procID.cluster, procID.proc );
+			gmState = GM_PROXY_EXPIRED;
+		}
+	}	// of myProxy != NULL
 
 	if ( jmUnreachable || resourceDown ) {
 		gahp.setMode( GahpClient::results_only );
@@ -659,8 +681,10 @@ int GlobusJob::doEvaluateState()
 				break;
 			}
 			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
-				UpdateJobAdString( ATTR_HOLD_REASON,
-									"Attempts to submit failed" );
+				// Don't set HOLD_REASON here --- that way, the reason will get set
+				// to the globus error that caused the submission failure.
+				// UpdateJobAdString( ATTR_HOLD_REASON,"Attempts to submit failed" );
+
 				gmState = GM_HOLD;
 				break;
 			}
@@ -1499,7 +1523,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 			// TODO: Let our action here be dictated by the user preference
 			// expressed in the job ad.
 			if ( (jobContact != NULL || (globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED && globusStateErrorCode != GLOBUS_GRAM_PROTOCOL_ERROR_JOB_UNSUBMITTED)) 
-				     && condorState != REMOVED 
+				     // && condorState != REMOVED 
 					 && wantResubmit == 0 
 					 && doResubmit == 0 ) {
 				gmState = GM_HOLD;
@@ -1611,10 +1635,14 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 			// Set the hold reason as best we can
 			// TODO: set the hold reason in a more robust way.
 			char holdReason[1024];
+			int holdCode = 0;
+			int holdSubCode = 0;
 			holdReason[0] = '\0';
 			holdReason[sizeof(holdReason)-1] = '\0';
 			ad->LookupString( ATTR_HOLD_REASON, holdReason,
 							  sizeof(holdReason) - 1 );
+			ad->LookupInteger(ATTR_HOLD_REASON_CODE,holdCode);
+			ad->LookupInteger(ATTR_HOLD_REASON_SUBCODE,holdSubCode);
 			if ( holdReason[0] == '\0' && errorString != "" ) {
 				strncpy( holdReason, errorString.Value(),
 						 sizeof(holdReason) - 1 );
@@ -1623,16 +1651,22 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 				snprintf( holdReason, 1024, "Globus error %d: %s",
 						  globusStateErrorCode,
 						  gahp.globus_gram_client_error_string( globusStateErrorCode ) );
+				holdCode = CONDOR_HOLD_CODE_GlobusGramError;
+				holdSubCode = globusStateErrorCode;
 			}
 			if ( holdReason[0] == '\0' && globusError != 0 ) {
 				snprintf( holdReason, 1024, "Globus error %d: %s", globusError,
 						gahp.globus_gram_client_error_string( globusError ) );
+				holdCode = CONDOR_HOLD_CODE_GlobusGramError;
+				holdSubCode = globusError;
 			}
 			if ( holdReason[0] == '\0' ) {
 				strncpy( holdReason, "Unspecified gridmanager error",
 						 sizeof(holdReason) - 1 );
 			}
 			UpdateJobAdString( ATTR_HOLD_REASON, holdReason );
+			UpdateJobAdInt(ATTR_HOLD_REASON_CODE, holdCode);
+			UpdateJobAdInt(ATTR_HOLD_REASON_SUBCODE, holdSubCode);
 			addScheddUpdateAction( this, schedd_actions, GM_HOLD );
 			// This object will be deleted when the update occurs
 			} break;
@@ -1640,8 +1674,18 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 			// The proxy for this job is either expired or about to expire.
 			// If requested, put the job on hold. Otherwise, wait for the
 			// proxy to be refreshed, then resume handling the job.
+			bool hold_if_credential_expired = 
+				param_boolean(PARAM_HOLD_IF_CRED_EXPIRED,true);
+			if ( hold_if_credential_expired ) {
+					// set hold reason via Globus cred expired error code
+				globusStateErrorCode =
+					GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED;
+				gmState = GM_HOLD;
+				break;
+			}
 			now = time(NULL);
 			if ( myProxy->expiration_time > JM_MIN_PROXY_TIME + now ) {
+				// resume handling the job.
 				gmState = GM_INIT;
 			} else {
 				// Do nothing. Our proxy is about to expire.
@@ -1742,6 +1786,19 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 	return TRUE;
 }
 
+int GlobusJob::CommunicationTimeout()
+{
+	// This function is called by a daemonCore timer if the resource
+	// object has been waiting too long for a gatekeeper ping to 
+	// succeed.
+	// For now, put the job on hold.
+
+	globusStateErrorCode = GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED;
+	gmState = GM_HOLD;
+	communicationTimeoutTid = -1;
+	return TRUE;
+}
+
 void GlobusJob::NotifyResourceDown()
 {
 	resourceStateKnown = true;
@@ -1750,12 +1807,42 @@ void GlobusJob::NotifyResourceDown()
 	}
 	resourceDown = true;
 	jmUnreachable = false;
-	// set downtime timestamp?
 	SetEvaluateState();
+	// set a timeout timer, so we don't wait forever for this
+	// resource to reappear.
+	if ( communicationTimeoutTid != -1 ) {
+		// timer already set, our work is done
+		return;
+	}
+	int timeout = param_integer(PARAM_GLOBUS_GATEKEEPER_TIMEOUT,60*60*24*5);
+	int time_of_death = 0;
+	unsigned int now = time(NULL);
+	ad->LookupInteger( ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME, time_of_death );
+	if ( time_of_death ) {
+		timeout = timeout - (now - time_of_death);
+	}
+
+	if ( timeout > 0 ) {
+		communicationTimeoutTid = daemonCore->Register_Timer( timeout,
+							(TimerHandlercpp)&GlobusJob::CommunicationTimeout,
+							"CommunicationTimeout", (Service*) this );
+	} else {
+		// timeout must have occurred while the gridmanager was down
+		CommunicationTimeout();
+	}
+
+	if (!time_of_death) {
+		UpdateJobAdInt(ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME,now);
+		addScheddUpdateAction( this, UA_UPDATE_JOB_AD, 0 );
+	}
 }
 
 void GlobusJob::NotifyResourceUp()
 {
+	if ( communicationTimeoutTid != -1 ) {
+		daemonCore->Cancel_Timer(communicationTimeoutTid);
+		communicationTimeoutTid = -1;
+	}
 	resourceStateKnown = true;
 	if ( resourceDown == true ) {
 		WriteGlobusResourceUpEventToUserLog( ad );
@@ -1772,6 +1859,12 @@ void GlobusJob::NotifyResourceUp()
 	}
 	jmUnreachable = false;
 	SetEvaluateState();
+	int time_of_death = 0;
+	ad->LookupInteger( ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME, time_of_death );
+	if ( time_of_death ) {
+		UpdateJobAd(ATTR_GLOBUS_RESOURCE_UNAVAILABLE_TIME,"UNDEFINED");
+		addScheddUpdateAction( this, UA_UPDATE_JOB_AD, 0 );
+	}
 }
 
 // We're assuming that any updates that come through UpdateCondorState()
