@@ -26,6 +26,10 @@
 **
 */ 
 
+#ifdef __GNUG__
+#pragma implementation "list.h"
+#endif
+
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_network.h"
@@ -34,6 +38,10 @@
 #include "alloc.h"
 #include "my_hostname.h"
 #include "get_full_hostname.h"
+#include "condor_attributes.h"
+#include  "list.h"
+
+static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 extern "C" char *get_schedd_addr(const char *);
 
@@ -42,11 +50,12 @@ extern "C" char *get_schedd_addr(const char *);
 char	*MyName;
 BOOLEAN	TroubleReported;
 BOOLEAN All;
-static BOOLEAN Force = FALSE;
+int nToRemove = 0;
+List<PROC_ID> ToRemove;
 
 	// Prototypes of local interest
 void ProcArg(const char*);
-void notify_schedd( int cluster, int proc );
+void notify_schedd();
 void usage();
 
 char				hostname[512];
@@ -93,12 +102,6 @@ main( int argc, char *argv[] )
 			if( All ) {
 				usage();
 			}
-			if ( arg[0] == '-' && arg[1] == 'f' ) {
-				// "-f" is the undocumented "force" feature, which rips
-				// out the job from the queue without any checks except for
-				// permission.  -Todd 10/95
-				Force = TRUE;
-			} else 
 			if ( arg[0] == '-' && arg[1] == 'r' ) {
 				// use the given name as the host name to connect to
 				argv++;
@@ -115,7 +118,7 @@ main( int argc, char *argv[] )
 		}
 	}
 
-		/* Open job queue */
+	// Open job queue 
 	if (hostname[0] == '\0')
 	{
 		// hostname was not set at command line; obtain from system
@@ -126,11 +129,26 @@ main( int argc, char *argv[] )
 		fprintf( stderr, "Failed to connect to qmgr on host %s\n", hostname );
 		exit(1);
 	}
+
+	// Set status of requested jobs to REMOVED
 	for(i = 0; i < nArgs; i++)
 	{
 		ProcArg(args[i]);
 	}
+
+	// Close job queue
 	DisconnectQ(q);
+
+	// Now tell the schedd what we did.  We send the schedd the  KILL_FRGN_JOB
+	// command.  We pass the number of jobs to remove _unless_ one or more
+	// of the jobs are to be removed via cluster or via user name, in which
+	// case we say "-1" jobs to remove.  Telling the schedd there are "-1"
+	// jobs to remove forces the schedd to scan the queue looking for jobs
+	// which have a REMOVED status.  If all jobs to be removed are via
+	// a cluster.proc, we then send the schedd all the cluster.proc numbers
+	// to save the schedd from having to scan the entire queue.
+	if ( nToRemove != 0 )
+		notify_schedd();
 
 #if defined(ALLOC_DEBUG)
 	print_alloc_stats();
@@ -144,17 +162,16 @@ extern "C" int SetSyscalls( int foo ) { return foo; }
 
 
 void
-notify_schedd( int cluster, int proc )
+notify_schedd()
 {
 	ReliSock	*sock;
 	char		*scheddAddr;
 	int			cmd;
-	PROC_ID		job_id;
+	PROC_ID		*job_id;
+	int 		i;
 
-	job_id.cluster = cluster;
-	job_id.proc = proc;
-
-	if (hostname[0] == '\0') {
+	if (hostname[0] == '\0')
+	{
 		// if the hostname was not set at command line, obtain from system
 		strcpy( hostname, my_full_hostname() );
 	}
@@ -167,9 +184,9 @@ notify_schedd( int cluster, int proc )
 
 		/* Connect to the schedd */
 	sock = new ReliSock(scheddAddr, SCHED_PORT);
-	if(sock->get_file_desc() < 0) {
+	if(!sock->ok()) {
 		if( !TroubleReported ) {
-			fprintf( stderr, "Warning: can't connect to condor scheduler\n" );
+			fprintf( stderr, "Error: can't connect to Condor scheduler on %s !\n",hostname );
 			TroubleReported = 1;
 		}
 		delete sock;
@@ -186,11 +203,22 @@ notify_schedd( int cluster, int proc )
 		return;
 	}
 
-	if( !sock->code(job_id) ) {
+	if( !sock->code(nToRemove) ) {
 		fprintf( stderr,
-			"Warning: can't send proc_id to condor scheduler\n" );
+			"Warning: can't send num jobs to remove to schedd (%d)\n",nToRemove );
 		delete sock;
 		return;
+	}
+
+	ToRemove.Rewind();
+	for (i=0;i<nToRemove;i++) {
+		job_id = ToRemove.Next();
+		if( !sock->code(*job_id) ) {
+			dprintf( D_ALWAYS,
+				"Warning: can't send proc_id to condor scheduler\n" );
+			delete sock;
+			return;
+		}
 	}
 
 	if( !sock->end_of_message() ) {
@@ -209,6 +237,7 @@ void ProcArg(const char* arg)
 {
 	int		c, p;								// cluster/proc #
 	char*	tmp;
+	PROC_ID *id;
 
 	if(isdigit(*arg))
 	// delete by cluster/proc #
@@ -222,11 +251,16 @@ void ProcArg(const char* arg)
 		if(*tmp == '\0')
 		// delete the cluster
 		{
-			if(DestroyCluster(c) < 0)
+			char constraint[250];
+
+			sprintf(constraint, "%s == %d", ATTR_CLUSTER_ID, c);
+
+			if (SetAttributeIntByConstraint(constraint,ATTR_JOB_STATUS,REMOVED) < 0)
 			{
 				fprintf( stderr, "Couldn't find/delete cluster %d.\n", c);
 			} else {
-				fprintf( stderr, "Cluster %d removed.\n", c);
+				fprintf(stderr, "Cluster %d removed.\n", c);
+				nToRemove = -1;
 			}
 			return;
 		}
@@ -241,11 +275,18 @@ void ProcArg(const char* arg)
 			if(*tmp == '\0')
 			// delete a proc
 			{
-				if(DestroyProc(c, p) < 0)
+				if(SetAttributeInt(c, p, ATTR_JOB_STATUS, REMOVED ) < 0)
 				{
 					fprintf( stderr, "Couldn't find/delete job %d.%d.\n", c, p );
 				} else {
-					fprintf( stdout, "Job %d.%d removed.\n", c, p );
+					fprintf(stdout, "Job %d.%d removed.\n", c, p);
+					if ( nToRemove != -1 ) {
+						nToRemove++;
+						id = new PROC_ID;
+						id->proc = p;
+						id->cluster = c;
+						ToRemove.Append(id);
+					}
 				}
 				return;
 			}
@@ -260,11 +301,12 @@ void ProcArg(const char* arg)
 		char	constraint[1000];
 
 		sprintf(constraint, "Owner == \"%s\"", arg);
-		if(DestroyClusterByConstraint(constraint) < 0)
+		if(SetAttributeIntByConstraint(constraint,ATTR_JOB_STATUS,REMOVED) < 0)
 		{
 			fprintf( stderr, "Couldn't find/delete user %s's job(s).\n", arg );
 		} else {
-			fprintf( stdout, "User %s's job(s) removed.\n", arg );
+			fprintf(stdout, "User %s's job(s) removed.\n", arg);
+			nToRemove = -1;
 		}
 	}
 	else
