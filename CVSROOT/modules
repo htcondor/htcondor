@@ -323,6 +323,13 @@ V6_7_1_EXT	-a V6_7_COMMON_EXT \
 		   externals/bundles/globus/2.4.3.vdt.1.1.14 \
 		   externals/bundles/gt3gahp/2.0
 
+# The V6_7-soap-*-branch uses a new external...
+V6_7_SOAP_EXT	-a V6_7_COMMON_EXT \
+		   externals/bundles/gahp/1.0.12 \
+		   externals/bundles/globus/2.4.3 \
+		   externals/bundles/gsoap/2.6 \
+		   externals/bundles/gt3gahp/1.0
+
 # Externals needed for V6_7_2 (same as V6_7_1)
 V6_7_2_EXT	-a V6_7_1_EXT
 
@@ -389,6 +396,9 @@ V6_7_MIRROR_NT_CODE	-a NT_TOOLS NT_PROGRAMS V6_7_MIRROR_SRC
 V6_7_MIRROR_CODE	-a TOOLS NT_TOOLS NT_PROGRAMS V6_7_MIRROR_SRC
 V6_7_MIRROR_ALL		-a DOC V6_7_MIRROR_CODE
 V6_7_MIRROR_BUILD	-a V6_7_MIRROR_ALL V6_7_EXT
+
+# The V6_7-soap-*-branch uses a new external...
+V6_7_SOAP_BUILD		-a V6_7_ALL V6_7_SOAP_EXT
 
 # Point these to whatever version is living on the trunk.
 # For now, they're just called "TRUNK", since it's not obvious what
