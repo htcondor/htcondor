@@ -114,13 +114,7 @@ main( int argc, char *argv[] )
 void UpdateJobAd(int cluster, int proc)
 {
 	float usage = 0.0;
-	int status;
-	GetAttributeFloat(cluster, proc, ATTR_JOB_REMOTE_USER_CPU, &usage);
-	if (usage > 0) {
-		status = IDLE;
-	} else {
-		status = UNEXPANDED;
-	}
+	int status = IDLE;
 	if( (SetAttributeInt(cluster, proc, ATTR_JOB_STATUS, status) < 0) ) {
 		fprintf(stderr, "Couldn't set new job status for %d.%d.\n",
 				cluster, proc);
