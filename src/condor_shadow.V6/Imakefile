@@ -1,0 +1,45 @@
+SRC_DIR = $(SRC_TREE)/condor_tools
+CFLAGS = $(STD_C_FLAGS) -DNEW_PROC -DSYSCALL_DEBUG
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+LDFLAGS = $(LIBDBM)
+
+#if NEEDS_FAKE_GETMNT
+#define FAKE_GETMNT_SRC getmnt.c
+#define FAKE_GETMNT_OBJ getmnt.o
+#else
+#define FAKE_GETMNT_SRC
+#define FAKE_GETMNT_OBJ
+#endif
+
+RC_SRC = \
+	../condor_syscall_lib/extern_path.c \
+	FAKE_GETMNT_SRC 
+SRC =	$(RC_SRC) ops.c pseudo_ops.c perm_err.c shadow.c \
+		ulog.c ../condor_syscall_lib/receivers.c 
+
+RC_OBJ = extern_path.o FAKE_GETMNT_OBJ
+
+CKPT_SERV_LIB = ../condor_ckpt_server/ckpt_server_api.a
+QMGMT_LIB = ../condor_schedd.V6/libqmgmt.a
+
+OBJ = $(RC_OBJ) ops.o pseudo_ops.o perm_err.o shadow.o receivers.o ulog.o \
+	$(CKPT_SERV_OBJ)
+
+LIB =   $(CKPT_SERV_LIB) ../condor_util_lib/util_lib.a \
+		../condor_xdr_lib/xdr_lib.a \
+		$(QMGMT_LIB) \
+		../condor_c++_util/cplus_lib.a RpcLib KernLib SocketLib
+
+LIBDIRS = ../condor_util_lib ../condor_xdr_lib
+
+all_target(condor_shadow)
+tags_target($(SRC),$(LIBDIRS))
+depend_target($(SRC))
+
+program_target(condor_shadow,$(OBJ),$(LIB))
+release_target(condor_shadow,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+
+IMPORT_LINKS = ../../config/import_links
+import(../condor_syscall_lib,receivers.c)
+import(../condor_syscall_lib,extern_path.o)
+import(../condor_util_lib,getmnt.o)
