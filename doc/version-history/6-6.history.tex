@@ -127,6 +127,11 @@ The details of each version are described below.
 
   \item If a node submit file doesn't specify a log file, the warning
 	message now gets printed out in the the DAGMan log file.
+
+  \item Fixed a bug that caused \Condor{dagman} to fail if first node
+        submit file has continuation in log file line.
+
+
 \end{itemize}
 
 \item Bugs related to configuration
@@ -142,6 +147,7 @@ The details of each version are described below.
     longer \Macro{SPOOL}.
     Using the spool directory would result in history files being
     obliterated by \Condor{preen}.
+
 \end{itemize}
 
 \item Fixed a bug which could result in a daemon crashing while it was
@@ -175,6 +181,8 @@ The details of each version are described below.
   Now, both actions are taken together atomically.
   If a job is succesfully removed, it will always have a
   \Attr{RemoveReason} attribute.
+
+\item Fixed a memory leak in the \Condor{collector}.
 
 \end{itemize}
 
