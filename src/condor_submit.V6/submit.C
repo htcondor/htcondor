@@ -2406,19 +2406,35 @@ queue(int num)
 		}
 		SetMachineCount();
 		if ( JobUniverse == GLOBUS_UNIVERSE ) {
+			// Find the X509 user proxy
+			// First, grab the environment. Then param for it.
+			// This lets us override the environ with the submit file
+			// Globus will look at the first at the filename
+			// we pass in, then the X509_USER_PROXY environment variable,
+			// then in /tmp (or wherever the default secure tmpdir is
+
+			char *proxy_env_var = (char *)getenv( "X509_USER_PROXY" );
 			char *proxy_file = condor_param( X509UserProxy );
+
+			if(proxy_file == NULL) proxy_file = proxy_env_var;
+
 			char *rm_contact = condor_param( GlobusScheduler );
 			if ( check_x509_proxy(proxy_file) != 0 ) {
 				exit( 1 );
 			}
+			
 /*
 			if ( rm_contact && (check_globus_rm_contacts(rm_contact) != 0) ) {
 				fprintf( stderr, "\nERROR: Can't find scheduler in MDS\n" );
 				exit( 1 );
 			}
 */
-			if ( proxy_file )
+			if ( proxy_file ) {
+				(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY, 
+								proxy_file);
+				InsertJobExpr(buffer);	
 				free( proxy_file );
+			}
 			if ( rm_contact )
 				free( rm_contact );
 		}
