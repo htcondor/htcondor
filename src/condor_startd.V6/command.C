@@ -829,6 +829,7 @@ activate_claim( Resource* rip, Stream* stream )
 	int universe, job_cluster, job_proc, starter;
 	Sock* sock = (Sock*)stream;
 	char* shadow_addr = strdup( sin_to_string( sock->endpoint() ));
+	bool found_attr_user = false;	// did we find ATTR_USER in the ad?
 
 	if( rip->state() != claimed_state ) {
 		rip->dprintf( D_ALWAYS, "Not in claimed state, aborting.\n" );
@@ -922,14 +923,14 @@ activate_claim( Resource* rip, Stream* stream )
 	remote_user[0] = '\0';
 	if( req_classad->EvalString(ATTR_USER, rip->r_classad, 
 								remote_user) == 0 ) {
-		rip->dprintf( D_ALWAYS, "ERROR: %s not defined in request "
-					  "classad!  Refusing job\n", ATTR_USER );
-		REFUSE;
-		ABORT;
+		rip->dprintf( D_ALWAYS, "WARNING: %s not defined in request "
+					  "classad!  Using old value (%s)\n", ATTR_USER,
+					  rip->r_cur->client()->user() );
 	} else {
 		rip->dprintf( D_FULLDEBUG, 
 					  "Got RemoteUser (%s) from request classad\n",	
 					  remote_user );
+		found_attr_user = true;
 	}
 
 		// If we're here, we've decided to activate the claim.  Tell
@@ -1050,7 +1051,9 @@ activate_claim( Resource* rip, Stream* stream )
 					  "Startd using standard control expressions.\n" );
 	}
 
-	rip->r_cur->client()->setuser( remote_user );
+	if( found_attr_user ) {
+		rip->r_cur->client()->setuser( remote_user );
+	}
 	rip->r_cur->setproc( job_proc );
 	rip->r_cur->setcluster( job_cluster );
 	rip->r_cur->setad( req_classad );
