@@ -425,11 +425,15 @@ CondorCronJob::Reaper( int exitPid, int exitStatus )
 	}
 
 	// Process the output
+	int	status;
 	if ( string->Length() == 0 ) {
-		return 0;
+		status = 0;
 	} else {
-		return ProcessOutput( string );
+		status = ProcessOutput( string );
 	}
+
+	delete string;
+	return status;
 }
 
 // Publisher
@@ -559,6 +563,7 @@ CondorCronJob::StdoutHandler ( int pipe )
 		while ( stdOutBuf->Buffer( &bptr, &bytes ) > 0 ) {
 			MyString	*string = stdOutBuf->GetString( );
 			ProcessOutput( string );
+			delete string;
 		}
 	}
 
