@@ -13,9 +13,12 @@ REM dev studio as long as the extenals build ok.
 
 if not gsoap%ERRORLEVEL% == gsoap0 goto failure
 msdev /useenv condor.dsw 
+goto success
 
 :failure
 echo *** gsoap stub generator failed ***
 exit /b 1
+
+:success
 
 
