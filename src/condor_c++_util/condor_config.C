@@ -69,12 +69,14 @@
 #include "condor_scanner.h"		// for MAXVARNAME, etc
 #include "condor_distribution.h"
 #include "condor_environ.h"
+#include "HashTable.h"
+#include "extra_param_info.h"
 
 extern "C" {
 	
 // Function prototypes
 void real_config(char* host, int wantsQuiet);
-int Read_config(char*, BUCKET**, int, int);
+int Read_config(char*, BUCKET**, int, int, ExtraParamTable * = NULL);
 int SetSyscalls(int);
 char* find_global();
 char* find_global_root();
@@ -98,9 +100,13 @@ extern char* mySubSystem;
 
 // Global variables
 BUCKET	*ConfigTab[TABLESIZE];
+static ExtraParamTable *extra_info = NULL;
 static char* tilde = NULL;
 extern DLL_IMPORT_MAGIC char **environ;
 
+MyString global_config_file;
+MyString global_root_config_file;
+MyString local_config_files;
 
 // Function implementations
 
@@ -201,6 +207,8 @@ real_config(char* host, int wantsQuiet)
 		// Insert an entry for "tilde", (~condor)
 	if( tilde ) {
 		insert( "tilde", tilde, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("tilde");
+
 	} else {
 			// What about tilde if there's no ~condor? 
 	}
@@ -253,6 +261,8 @@ real_config(char* host, int wantsQuiet)
 
 		// Read in the global file
 	process_file( config_file, "global config file", NULL );
+	global_config_file = config_file;
+	
 	free( config_file );
 
 		// Insert entries for "hostname" and "full_hostname".  We do
@@ -264,14 +274,18 @@ real_config(char* host, int wantsQuiet)
 		// -Derek Wright <wright@cs.wisc.edu> 5/11/98
 	if( host ) {
 		insert( "hostname", host, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("hostname");
 	} else {
 		insert( "hostname", my_hostname(), ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("hostname");
 	}
 	insert( "full_hostname", my_full_hostname(), ConfigTab, TABLESIZE );
+	extra_info->AddInternalParam("full_hostname");
 
 		// Also insert tilde since we don't want that over-written.
 	if( tilde ) {
 		insert( "tilde", tilde, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("tilde");
 	}
 
 		// Read in the LOCAL_CONFIG_FILE as a string list and process
@@ -320,11 +334,13 @@ real_config(char* host, int wantsQuiet)
 										+ strlen( posttext ) );
 			sprintf( tmp, "%s%s%s", pretext, varvalue, posttext );
 			insert( "START", tmp, ConfigTab, TABLESIZE );
+			extra_info->AddEnvironmentParam("START");
 			free( tmp );
 		}
 		// ignore "_CONDOR_" without any macro name attached
 		else if( macro_name[0] != '\0' ) {
 			insert( macro_name, varvalue, ConfigTab, TABLESIZE );
+			extra_info->AddEnvironmentParam(macro_name);
 		}
 
 		free( varname );
@@ -336,6 +352,7 @@ real_config(char* host, int wantsQuiet)
 
 		// Try to find and read the global root config file
 	if( (config_file = find_global_root()) ) {
+		global_root_config_file = config_file;
 		process_file( config_file, "global root config file", host );
 
 			// Re-insert the special macros.  We don't want the user
@@ -407,7 +424,7 @@ process_file( char* file, char* name, char* host )
 			exit( 1 );
 		} 
 	} else {
-		rval = Read_config( file, ConfigTab, TABLESIZE, EXPAND_LAZY );
+		rval = Read_config( file, ConfigTab, TABLESIZE, EXPAND_LAZY, extra_info );
 		if( rval < 0 ) {
 			fprintf( stderr,
 					 "Configuration Error Line %d while reading %s %s\n",
@@ -433,6 +450,10 @@ process_locals( char* param_name, char* host )
 		locals.rewind();
 		while( (file = locals.next()) ) {
 			process_file( file, "config file", host );
+			if (local_config_files.Length() > 0) {
+				local_config_files += " ";
+			}
+			local_config_files += file;
 		}
 	}
 }
@@ -638,21 +659,26 @@ fill_attributes()
 
 	if( (tmp = sysapi_condor_arch()) != NULL ) {
 		insert( "ARCH", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("ARCH");
 	}
 
 	if( (tmp = sysapi_uname_arch()) != NULL ) {
 		insert( "UNAME_ARCH", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("UNAME_ARCH");
 	}
 
 	if( (tmp = sysapi_opsys()) != NULL ) {
 		insert( "OPSYS", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("OPSYS");
 	}
 
 	if( (tmp = sysapi_uname_opsys()) != NULL ) {
 		insert( "UNAME_OPSYS", tmp, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("UNAME_OPSYS");
 	}
 
 	insert( "subsystem", mySubSystem, ConfigTab, TABLESIZE );
+	extra_info->AddInternalParam("subsystem");
 }
 
 
@@ -671,6 +697,7 @@ check_domain_attributes()
 	if( !filesys_domain ) {
 		filesys_domain = my_full_hostname();
 		insert( "FILESYSTEM_DOMAIN", filesys_domain, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("FILESYSTEM_DOMAIN");
 	} else {
 		free( filesys_domain );
 	}
@@ -679,6 +706,7 @@ check_domain_attributes()
 	if( !uid_domain ) {
 		uid_domain = my_full_hostname();
 		insert( "UID_DOMAIN", uid_domain, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("UID_DOMAIN");
 	} else {
 		free( uid_domain );
 	}
@@ -689,6 +717,8 @@ void
 init_config()
 {
 	memset( (char *)ConfigTab, 0, (TABLESIZE * sizeof(BUCKET*)) ); 
+	extra_info = new ExtraParamTable();
+	return;
 }
 
 
@@ -710,6 +740,14 @@ clear_config()
 		}
 		ConfigTab[i] = NULL;
 	}
+	if (extra_info != NULL) {
+		delete extra_info;
+		extra_info = new ExtraParamTable();
+	}
+	global_config_file       = "";
+	global_root_config_file  = "";
+	local_config_files         = "";
+	return;
 }
 
 
@@ -844,6 +882,21 @@ param_in_pattern( char *parameter, char *pattern )
 }
 
 
+bool param_get_location(
+	const char *parameter,
+	MyString  &filename,
+	int       &line_number)
+{
+	bool found_it;
+
+	if (parameter != NULL && extra_info != NULL) {
+		found_it = extra_info->GetParam(parameter, filename, line_number);
+	} else {
+		found_it = false;
+	}
+	return found_it;
+}
+
 void
 reinsert_specials( char* host )
 {
@@ -853,6 +906,7 @@ reinsert_specials( char* host )
 
 	if( tilde ) {
 		insert( "tilde", tilde, ConfigTab, TABLESIZE );
+		extra_info->AddInternalParam("tilde");
 	}
 	if( host ) {
 		insert( "hostname", host, ConfigTab, TABLESIZE );
@@ -861,11 +915,16 @@ reinsert_specials( char* host )
 	}
 	insert( "full_hostname", my_full_hostname(), ConfigTab, TABLESIZE );
 	insert( "subsystem", mySubSystem, ConfigTab, TABLESIZE );
+	extra_info->AddInternalParam("hostname");
+	extra_info->AddInternalParam("full_hostname");
+	extra_info->AddInternalParam("subsystem");
 
 	// Insert login-name for our euid as "username"
 	char *myusernm = my_username();
 	insert( "username", myusernm, ConfigTab, TABLESIZE );
 	free(myusernm);
+	extra_info->AddInternalParam("username");
+
 
 	// Insert values for "pid" and "ppid".  Use static values since
 	// this is expensive to re-compute on Windows.
@@ -881,6 +940,7 @@ reinsert_specials( char* host )
 	}
 	sprintf(buf,"%u",reinsert_pid);
 	insert( "pid", buf, ConfigTab, TABLESIZE );
+	extra_info->AddInternalParam("pid");
 	if ( !reinsert_ppid ) {
 #ifdef WIN32
 		CSysinfo system_hackery;
@@ -892,6 +952,8 @@ reinsert_specials( char* host )
 	sprintf(buf,"%u",reinsert_ppid);
 	insert( "ppid", buf, ConfigTab, TABLESIZE );
 	insert( "ip_address", my_ip_string(), ConfigTab, TABLESIZE );
+	extra_info->AddInternalParam("ppid");
+	extra_info->AddInternalParam("ip_address");
 }
 
 
@@ -1209,7 +1271,7 @@ process_runtime_configs()
 		processed = true;
 
 		rval = Read_config( toplevel_runtime_config, ConfigTab,
-							TABLESIZE, EXPAND_LAZY );
+							TABLESIZE, EXPAND_LAZY, extra_info );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d while reading "
 					 "top-level runtime config file: %s\n",
@@ -1229,7 +1291,7 @@ process_runtime_configs()
 		processed = true;
 		sprintf(filename, "%s.%s", toplevel_runtime_config, tmp);
 		rval = Read_config( filename, ConfigTab, TABLESIZE,
-							EXPAND_LAZY );
+							EXPAND_LAZY, extra_info );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d "
 					 "while reading runtime config file: %s\n",
@@ -1259,7 +1321,7 @@ process_runtime_configs()
 			exit(1);
 		}
 		rval = Read_config( filename, ConfigTab, TABLESIZE,
-							EXPAND_LAZY );
+							EXPAND_LAZY, extra_info );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d "
 					 "while reading %s, runtime config: %s\n",

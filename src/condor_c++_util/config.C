@@ -26,6 +26,7 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_string.h"
+#include "extra_param_info.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -61,7 +62,8 @@ condor_isalnum(int c)
 #define DOLLAR_ID "DOLLAR"
 
 int Read_config( char* config_file, BUCKET** table, 
-				 int table_size, int expand_flag )
+				 int table_size, int expand_flag,
+				 ExtraParamTable *extra_info)
 {
   	FILE	*conf_fp;
 	char	*name, *value, *rhs;
@@ -180,6 +182,9 @@ int Read_config( char* config_file, BUCKET** table,
 
 			/* Put the value in the Configuration Table */
 			insert( name, value, table, table_size );
+			if (extra_info != NULL) {
+				extra_info->AddFileParam(name, config_file, ConfigLineNo);
+			}
 		} else {
 			fprintf( stderr,
 				"Configuration Error File <%s>, Line %d: Syntax Error\n",
