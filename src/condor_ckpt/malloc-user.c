@@ -39,4 +39,14 @@ management of dynamically-linked executables.
 
 #define HAVE_MMAP 0
 
+/*
+On Digital UNIX, the C startup code calls this function to
+initialize the mutexes in the malloc code.  With our new
+malloc, there is nothing to initialize, so provide a dummy.
+*/
+
+#ifdef OSF1
+void __malloc_locks_reinit() {}
+#endif
+
 #include "malloc.c"
