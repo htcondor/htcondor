@@ -36,6 +36,19 @@
 #include <mswsock.h>    // For TransmitFile()
 #endif
 
+
+static double inline
+s_pow (double base, unsigned exp)
+{
+	double result = 1.0;
+
+	for (int i=0; i < exp; i++) {
+		result *= base;
+	}
+	return result;
+}
+
+
 /**************************************************************/
 
 /* 
@@ -1229,7 +1242,7 @@ int ReliSock::setLimit(const int sec, const int bytes, const float percent)
 {
     // check parameters
     if(sec <= 0 ||
-       bytes <= CONDOR_IO_BUF_SIZE * pow(9.0/5.0, BND_CTL_LEVELS-1) ||
+       bytes <= CONDOR_IO_BUF_SIZE * s_pow(9.0/5.0, BND_CTL_LEVELS-1) ||
        percent <= 0.0 || percent > 1.0)
     {
         dprintf(D_NETWORK, "ReliSock::setLimit - Bad Parameter\n");
@@ -1482,7 +1495,7 @@ void ReliSock::calculateAllowance()
     _allowance = _l[BND_CTL_LEVELS - 1];
     index = _curIdx;
     for(int i=0; i<BND_CTL_LEVELS-1; i++) {
-        for(int j=0; j<(int)pow(2,i); j++) {
+        for(int j=0; j<(int)s_pow(2,i); j++) {
             sent += _s[index];
             if(--index < 0) index = BND_CTL_WINS - 1;
         }
