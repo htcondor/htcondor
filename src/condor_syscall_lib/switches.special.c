@@ -924,3 +924,45 @@ getlogin()
 		return NULL;  
 }
 
+
+#if defined( LINUX  )
+
+/* 
+   Linux's mmap can be passed a special flag, MAP_ANONYMOUS, which
+   means that you don't want to use a file, in which case, mmap
+   behaves a lot like malloc().  So, we need to check for that flag
+   here, and if it's set, don't do anything with the fd we were passed
+   and always do the mmap locally.  The C library uses mmap with
+   MAP_ANONYMOUS to allocate I/O buffers.  -Derek Wright 3/12/98 
+*/
+#include <sys/mman.h>		/* for MAP_ANONYMOUS */
+void*
+mmap( void* a, size_t l, int p, int f, int fd, off_t o )
+{
+	int		rval;
+	int		user_fd;
+	int		use_local_access = FALSE;
+
+	if( f & MAP_ANONYMOUS ) {
+			/* If the MAP_ANONYMOUS flag is set, ignore the fd we were
+			   passed and do the mmap locally */
+		use_local_access = TRUE;
+	} else {
+		if( (user_fd=MapFd(fd)) < 0 ) {
+			return (void *)-1;
+		}
+		if( LocalAccess(fd) ) {
+			use_local_access = TRUE;
+		}
+	}
+	if( use_local_access || LocalSysCalls() ) {
+		rval = MMAP( a, l, p, f, user_fd, o );
+	} else {
+		rval = REMOTE_syscall( CONDOR_mmap, a, l, p, f, user_fd, o );
+	}
+	
+	return (void *)rval;
+}
+
+#endif /* defined( LINUX ) */
+
