@@ -451,18 +451,25 @@ class ProcAPI {
   long unsigned boottime;  // this is used only in linux.  It represents the 
                            // number of seconds after the epoch that the
                            // machine was booted.  Used in age calculation
-#endif 
+#endif // LINUX
 
-  // The following are for the test programs.
-  // how many children to you want to create?  5 is a good number for me.
-  const int NUMKIDS = 5;
-
-  // when each child is created, it allocates some memory.  The first child
-  // allocates "MEMFACTOR" Megs.  The second allocates MEMFACTOR * 2 Megs.
-  // etc, etc.  Be careful of thrashing...unless that's what you want.
-  const int MEMFACTOR = 3;
-#endif // ndef WIN32
+#endif // not defined WIN32
 
 }; 
 
-#endif
+
+#ifdef WANT_STANDALONE_DEBUG
+// The following are for the test programs.
+
+// how many children to you want to create?  5 is a good number for me.
+const int NUMKIDS = 5;
+
+// when each child is created, it allocates some memory.  The first
+// child allocates "MEMFACTOR" Megs.  The second allocates MEMFACTOR *
+// 2 Megs.  etc, etc.  Be careful of thrashing...unless that's what
+// you want.
+const int MEMFACTOR = 3;
+
+#endif // WANT_STANDALONE_DEBUG
+
+#endif // PROCAPI_H
