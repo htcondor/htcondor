@@ -1,3 +1,14 @@
+9/25/03 V6_6-externals-branch
+   A new branch off the V6_6-branch for checking in the solution to
+   the "list of shame": the new "externals" directory and related
+   changes to our Imake system.  This will be a short-lived branch.
+   Once everything is working on all our platforms, this branch will
+   be merged back into V6_6-branch and abandoned.  The only reason it
+   exists is so that the V6_6-branch isn't broken while we work out
+   the kinks with the new externals system.  Created from the
+   V6_6-externals-root tag.  Does *not* include doc (since there's no
+   user visible changes to document).
+
 9/11/03 V6_7-branch
    A new branch off the end of the V6_5-branch for the 6.7.x
    development series.  Created from the V6_6-root tag.  Includes the
