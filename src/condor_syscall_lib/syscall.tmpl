@@ -404,9 +404,9 @@ All of these calls manipulate the open file table.
 		: file_table_name(lseek), remote_name(lseek)
 		#if defined(IRIX)
 			/* all seek calls under IRIX call lseek, disassemble it and see. */
-			,local_name(lseek)
+			, local_name(lseek)
 		#elif defined(Solaris)
-			,local_name(llseek)
+			, local_name(llseek)
 		#endif
 		;
 	#endif
