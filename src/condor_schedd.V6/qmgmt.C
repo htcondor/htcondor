@@ -1528,7 +1528,7 @@ static void AppendHistory(ClassAd* ad)
     return;
   }
   
-  fprintf(LogFile,"***");   // separator
+  fprintf(LogFile,"***\n");   // separator
   fclose(LogFile);
   return;
 }
