@@ -39,6 +39,7 @@ This file can be processed with several purposes in mind.
 #include "condor_debug.h"
 #include "../condor_ckpt/signals_control.h"
 #include "../condor_ckpt/file_state.h"
+#include "gtodc.h"
 
 #if defined(DL_EXTRACT)
 #   include <dlfcn.h>   /* for dlopen and dlsym */
@@ -1647,6 +1648,93 @@ getrusage( int who, struct rusage *rusage )
 		return -1;
 	}
 }
+
+/* Programs which call gettimeofday() in tight loops trying to calculate
+	timing statistics will really slow down as each gettimeofday()
+	goes across the network to the shadow. So, we're going to
+	implement a cache where the first time gettimeofday() is called
+	it will contact the shadow, but afterwards it'll use a cache. The
+	execution machine time is gotten and the difference from the last
+	execution machine time is added the the submission machine time.
+	This should fix time skew since _instances_ in time are relative
+	to the submission machine, but the passing of time is relative
+	to the execution machine.
+
+	We have to be careful to reinitialize the cache after we resume
+	from a checkpoint to keep eveything as correct as possible. This
+	reinitalization happens elsewhere.
+*/
+
+#undef gettimeofday
+#if defined( SYS_gettimeofday )
+#if defined(LINUX)
+extern "C" int REMOTE_CONDOR_gettimeofday(struct timeval *, struct timesoze *);
+int gettimeofday (struct timeval *tp, struct timezone *tzp)
+#else
+extern "C" int REMOTE_CONDOR_gettimeofday(struct timeval *, void *);
+int gettimeofday (struct timeval *tp, void *tzp)
+#endif
+{
+	GTOD_Cache *gtodc = NULL;
+	struct timeval exe_machine_now;
+	struct timeval sub_machine_now;
+
+	int rval, do_local=0;
+	errno = 0;
+
+	sigset_t condor_omask = _condor_signals_disable();
+
+	if( LocalSysCalls() || do_local ) {
+
+		rval = syscall( SYS_gettimeofday, tp , tzp );
+
+	} else {
+
+		/* initialize the in memory cache, if needed */
+		if (_condor_gtodc_is_initialized(_condor_global_gtodc) == FALSE) {
+
+			/* get "now" from the submit machine */
+			rval = -1;
+			rval = REMOTE_CONDOR_gettimeofday( &sub_machine_now, tzp );
+			if (rval != 0) {
+				goto finished;
+			}
+
+			/* get "now" from the execute machine */
+			rval = syscall( SYS_gettimeofday, &exe_machine_now, tzp );
+			if (rval != 0) {
+				goto finished;
+			}
+			
+			_condor_gtodc_set_now(_condor_global_gtodc, &exe_machine_now, 
+							&sub_machine_now);
+
+			_condor_gtodc_set_initialized(_condor_global_gtodc, TRUE);
+
+		}
+
+		/* get "now" on the local machine, the differential of this and
+			when I initially filled the cache will be added to the 
+			submit machine's original "now" and returned to the user. */
+		rval = syscall( SYS_gettimeofday, &exe_machine_now, tzp );
+		if (rval != 0) {
+			goto finished;
+		}
+
+		/* determine how much time has passed since the last gettimeofday()
+			call has happened (in terms of the submit machine), but without 
+			going to the submit machine. */
+		_condor_gtodc_synchronize(_condor_global_gtodc, tp, &exe_machine_now);
+
+	}
+
+	finished:
+	_condor_signals_enable( condor_omask );
+
+	return rval;
+}
+#endif
+
 
 /*
   This routine which is normally provided in the C library determines
