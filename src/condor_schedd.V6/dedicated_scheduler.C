@@ -2512,10 +2512,6 @@ DedicatedScheduler::publishRequestAd( void )
 }
 
 
-/*
-  TODO: do something smarter w/ requirements than arch, opsys and
-  memory? 
-*/
 void
 DedicatedScheduler::generateRequest( ClassAd* machine_ad )
 {
