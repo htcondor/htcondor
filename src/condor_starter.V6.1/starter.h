@@ -105,6 +105,9 @@ public:
 		/** Return the version string of the Shadow */
 	const char *GetShadowVersion() const { return ShadowVersion; }
 
+		/** Compare our own UIDDomain vs. the submitting host */
+	bool SameUidDomain( void );
+
 protected:
 	List<UserProc> JobList;
 
