@@ -2437,7 +2437,7 @@ prio_compar(prio_rec* a, prio_rec* b)
         return (-1);
 
 
-    /* finally, check for job submit times */
+    /* check for job submit times */
     if( a->qdate < b->qdate ) {
         return -1;
     }
@@ -2445,9 +2445,18 @@ prio_compar(prio_rec* a, prio_rec* b)
         return 1;
     }
 
+	/* finally, go in order of the proc id 
+	 * we already are likely in "cluster" order because of the qdate comparison 
+	 * above, but all procs in a cluster have the same qdate, thus the
+	 * comparison on proc id here. 
+	 */
+	if ( a->id.proc < b->id.proc )
+		return -1;
+	if ( a->id.proc > b->id.proc )
+		return 1;
 
-    /* give up!!! */
-    return 0;
+	/* give up! very unlikely we'd ever get here */
+	return 0;
 }
 } // end of extern
 
