@@ -10,7 +10,8 @@
 #endif
 
 #if defined(OSF1)
-/* We need to temporarily define _OSF_SOURCE so that type quad gets defined */
+/* We need to temporarily define _OSF_SOURCE so that type quad, and
+   u_int and friends get defined */
 #define _OSF_SOURCE
 #endif
 
@@ -66,7 +67,7 @@ Various non-POSIX conforming files which depend on sys/types.h will
 need these extra definitions...
 */
 
-#if defined(HPUX9) || defined(LINUX) || defined(Solaris) || defined(IRIX53) || defined(SUNOS41)
+#if defined(HPUX9) || defined(LINUX) || defined(Solaris) || defined(IRIX53) || defined(SUNOS41) || defined(OSF1)
 #	define HAS_U_TYPES
 #endif
 
@@ -77,7 +78,7 @@ need these extra definitions...
 	typedef unsigned long   u_long;
 #endif
 
-#if defined(AIX32) || defined(OSF1)
+#if defined(AIX32)
 typedef unsigned short ushort;
 #endif
 
