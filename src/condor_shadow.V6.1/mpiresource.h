@@ -40,10 +40,6 @@ class MpiResource : public RemoteResource {
 		/// Destructor
 	~MpiResource() {};
 
-		/** Call RemoteResource::activateClaim() and log a
-			NodeExecuteEvent */
-	virtual bool activateClaim( int starterVersion = 2 );
-
 		/** Special format... */
 	virtual void printExit( FILE *fp );
 
@@ -59,6 +55,11 @@ class MpiResource : public RemoteResource {
 			initialize the UserLog with our node number.  
 		*/
 	virtual bool writeULogEvent( ULogEvent* event );
+
+		/** Our job on the remote resource started to execute, so we
+			want to log a NodeExecuteEvent.
+		*/
+	virtual void beginExecution( void );
 
  private:
 
