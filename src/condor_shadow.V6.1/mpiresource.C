@@ -28,7 +28,6 @@
 MpiResource::MpiResource( BaseShadow *shadow ) :
 	RemoteResource( shadow ) 
 {
-	state = PRE;
 	node_num = -1;
 }
 
@@ -37,72 +36,35 @@ MpiResource::MpiResource( BaseShadow *shadow,
 						  const char *capability ) :
 	RemoteResource( shadow, executingHost, capability ) 
 {
-	state = PRE;
 	node_num = -1;
 }
 
 
-int 
+bool
 MpiResource::requestIt( int starterVersion )  {
 
 	char buf[256];
-	sprintf( buf, "%s, node: %d", "MpiResource::requestIt()", node_num );
+	sprintf( buf, "MpiResource::requestIt(), node: %d", node_num );
 	dumpClassad( buf, jobAd, D_JOB );
+	bool rval;
 
-	int r = RemoteResource::requestIt( starterVersion );
-	if ( r == 0 ) { // success
-		setResourceState( EXECUTING );
+	if( (rval=RemoteResource::requestIt(starterVersion)) ) {
 		NodeExecuteEvent event;
         strcpy( event.executeHost, executingHost );
 		event.node = node_num;
-		shadow->uLog.initialize( shadow->getCluster(),
-								 shadow->getProc(), node_num );
-        if ( !shadow->uLog.writeEvent( &event )) {
+        if( writeULogEvent(&event) ) {
             dprintf ( D_ALWAYS, "Unable to log NODE_EXECUTE event." );
         }
-		shadow->uLog.initialize( shadow->getCluster(),
-								 shadow->getProc(), 0 );
 	}
-	return r;
+	return rval;
 }
 
-int
-MpiResource::killStarter() {
-	int r = RemoteResource::killStarter();
-	if ( r == 0 ) {
-		setResourceState( PENDING_DEATH );
-	}
-	return r;
-}
-
-void
-MpiResource::dprintfSelf( int debugLevel) {
-	RemoteResource::dprintfSelf( debugLevel );
-	shadow->dprintf ( debugLevel, "\tstate:         %s\n", 
-					  Resource_State_String[state] );
-}
 
 void 
 MpiResource::printExit( FILE *fp ) {
 
 	fprintf ( fp, "%25s    ", machineName ? machineName : "Unknown machine" );
 	RemoteResource::printExit( fp );
-}
-
-void 
-MpiResource::setResourceState( Resource_State s ) {
-	shadow->dprintf ( D_FULLDEBUG,"Resource %s changing state from %s to %s\n",
-					  machineName ? machineName : "???", 
-					  Resource_State_String[state], 
-					  Resource_State_String[s] );
-	state = s;
-}
-
-void 
-MpiResource::setExitStatus( int status ) {
-		/* If you're setting the exit status, you must be done! */
-	RemoteResource::setExitStatus( status );
-	setResourceState( FINISHED );
 }
 
 
@@ -143,16 +105,10 @@ MpiResource::resourceExit( int exit_reason, int exit_status )
 				// TODO: total sent and recvd
 			event.total_recvd_bytes = bytesSent();
 			event.total_sent_bytes = bytesReceived();
-			
-			shadow->uLog.initialize( shadow->getCluster(),
-									 shadow->getProc(), node_num );
-			if( !shadow->uLog.writeEvent(&event) ) {
+			if( !writeULogEvent(&event) ) {
 				dprintf( D_ALWAYS,"Unable to log "
 						 "ULOG_NODE_TERMINATED event\n" );
 			}
-			shadow->uLog.initialize( shadow->getCluster(),
-									 shadow->getProc(), 0 );
-
 		}
 		break;	
 	case JOB_CKPTED:
@@ -164,4 +120,17 @@ MpiResource::resourceExit( int exit_reason, int exit_status )
 				 "MpiResource::resourceExit()\n", exit_reason );  
 	}	
 
+}
+
+
+bool
+MpiResource::writeULogEvent( ULogEvent* event )
+{
+	bool rval;
+	shadow->uLog.initialize( shadow->getCluster(), 
+							 shadow->getProc(), node_num );
+	rval = RemoteResource::writeULogEvent( event );
+	shadow->uLog.initialize( shadow->getCluster(), 
+							 shadow->getProc(), 0 ); 
+	return rval;
 }
