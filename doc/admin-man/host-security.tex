@@ -91,8 +91,8 @@ Condor can be registered with:
    \textbf{IMPORTANT:} This is host-wide access we're talking about.
    So, if you grant \DCPerm{ADMINISTRATOR} access to a given machine,
    \textbf{ANY USER} on that machine now has \DCPerm{ADMINISTRATOR}
-   rights.  Therefore, you should grant \DCPerm{ADMINISTRATOR} access
-   carefully.
+   rights (including users who can run Condor jobs on that machine).
+   Therefore, you should grant \DCPerm{ADMINISTRATOR} access carefully.
 
 \item[\DCPerm{OWNER}] \label{dcperm:owner} This level of access is
    required for commands that the owner of a machine (any local user)
@@ -108,6 +108,15 @@ Condor can be registered with:
    level are the ones that tell the \Condor{schedd} to begin
    negotiating and that tell an available \Condor{startd} that it has
    been matched to a \Condor{schedd} with jobs to run.
+
+\item[\DCPerm{CONFIG}] \label{dcperm:config} This access level is
+   required to modify a daemon's configuration using
+   \Condor{config\_val}.  Hosts with this level of access will be able
+   to change any configuration parameters, except those specified in
+   the \File{condor\_config.root} configuration file.  Therefore, this
+   level of host-wide access should only be granted with extreme
+   caution.  By default, \DCPerm{CONFIG} access is denied from all
+   hosts.
 
 \end{description}
 

@@ -24,6 +24,251 @@ When you upgrade to a new development release, make certain you upgrade all
 machines in your pool to the same version.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:New-6-1-16}Version 6.1.16}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Condor now supports multiple pvmds per user on a machine.  Users
+can now submit more than one PVM job at a time, PVM tasks can now run
+on the submission machine, and multiple PVM tasks can run on SMP
+machines.  \Condor{submit} no longer inserts default job requirements
+to restrict PVM jobs to one pvmd per user on a machine.  This new
+functionality requires the \Condor{pvmd} included in this (and future)
+Condor releases.  If you set ``PVM\_OLD\_PVMD = True'' in the Condor
+configuration file, \Condor{submit} will insert the default PVM job
+requirements as it did in previous releases.  You must set this if you
+don't upgrade your \Condor{pvmd} binary or if your jobs flock with pools
+that user an older \Condor{pvmd}.
+
+\item The NT release of Condor no longer contains debugging
+information.
+This drastically reduces the size of the binaries you must install.  
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item The configuration files shipped with version 6.1.15 contained a
+number of errors relating to host-based security, the configuration of
+the central manager, and a few other things.
+These errors have all been corrected.
+
+\item Fixed a memory management bug in the \Condor{schedd} that could
+cause it to crash under certain circumstances when machines were taken
+away from the schedd's control.
+
+\item Fixed a potential memory leak in a library used by the
+\Condor{startd} and \Condor{master} that could leak memory while
+Condor jobs were executing.
+
+\item Fixed a bug in the NT version of Condor that would result in
+faulty reporting of the load average.
+
+\item The \Condor{shadow.pvm} should now correctly return core files
+when a task or \Condor{pvmd} crashes.
+
+\item This release fixes a memory error introduced in version
+6.1.15 that could crash the \Condor{shadow.pvm}.
+
+\item Some \Condor{pvmd} binaries in previous releases included
+debugging code we added that could cause the \Condor{pvmd} to crash.
+This release includes new \Condor{pvmd} binaries for all platforms
+with the problematic debugging code removed.
+
+\item Fixed a bug in the \Opt{-unset} options to \Condor{config\_val}
+that was introduced in version 6.1.15.
+Both \Opt{-unset} and \Opt{-runset} work correctly, now.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:New-6-1-15}Version 6.1.15}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item In the job submit description file passed to \Condor{submit}, 
+a new style of macro (with two dollar-signs) can reference attributes
+from the machine ClassAd.  This new style macro can be used in the
+job's \MacroNI{Executable}, \MacroNI{Arguments}, or \MacroNI{Environment}
+settings in the submit description file.  For example, if you have both
+Linux and Solaris machines in your pool, the following submit description
+file will run either foo.INTEL.LINUX or foo.SUN4u.SOLARIS27 as appropiate,
+and will pass in the amount of memory available on that machine on the
+command line:
+\begin{verbatim}
+	executable = foo.$$(Arch).$$(Opsys)
+	arguments = $$(Memory)
+	queue
+\end{verbatim}
+
+\item The \DCPerm{CONFIG} security access level now controls the
+modification of daemon configurations using \Condor{config\_val}.  For
+more information about security access levels, see
+section~\ref{sec:Security-Access-Levels} on
+page~\pageref{sec:Security-Access-Levels}.
+
+\item The \Macro{DC\_DAEMON\_LIST} macro now indicates to the
+\Condor{master} which processes in the \Macro{DAEMON\_LIST} use
+Condor's DaemonCore inter-process communication mechanisms.  This
+allows the \Condor{master} to monitor both processes developed with or
+without the Condor DaemonCore library.
+
+\item The new \Macro{NEGOTIATE\_ALL\_JOBS\_IN\_CLUSTER} macro can be
+use to configure the \Condor{schedd} to not assume (for efficiency)
+that if one job in a cluster can't be scheduled, then no other jobs in
+the cluster can be scheduled.
+If \Macro{NEGOTIATE\_ALL\_JOBS\_IN\_CLUSTER} is set to True, the
+\Condor{schedd} will now always try to schedule each individual job in
+a cluster.
+
+\item The \Condor{schedd} now automatically adds any machine it is
+matched with to its HOSTALLOW\_WRITE list.
+This simplifies setting up a machine for flocking, since the
+submitting user doesn't have to know all the machines where the job
+might execute, they only have to know what central manager they wish
+to flock to.
+Submitting users must trust a central manager they report to, so this
+doesn't impact security in any way.
+
+\item Some static limits relating to the number of jobs which can be 
+simultaneously started by the \Condor{schedd} has been removed.
+
+\item The default Condor config file(s) which are installed by
+the installation program have been re-organized for greater 
+clarity and simplicity.  
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item In the STANDARD Universe, jobs submitted to Condor could segfault
+if they opened multiple files with the same name.  Usually this bug
+was exposed when users would submit jobs without specifying a file
+for either stdout or stderr; in this case, both would default to 
+\File{/dev/null}, and this could trigger the problem.
+
+\item The Linux 2.2.14 kernel, which is used by default with RedHat 6.2,
+has a serious bug can cause the machine to lock up when 
+the same socket is used for repeated connection attempts.   Thus, 
+previous versions of Condor could cause the 2.2.14 kernel to hang
+(lots of other applications could do this as well).  The Condor Team
+recommends that you upgrade your kernel to 2.2.16 or later.  However,
+in v6.1.15 of Condor, a patch was added to the Condor networking
+layer so that Condor would not trigger this Linux kernel bug.
+
+\item If no email address was specified when the job was submitted
+with \Condor{submit}, completion email was being sent to 
+user@submit-machine-hostname.  This is not the correct behavior.  Now 
+email goes by default to user@uid-domain, where uid-domain is
+defined by the \MacroNI{UID\_DOMAIN} setting in the config file.
+
+\item The \Condor{master} can now correctly shutdown and restart the
+\Condor{checkpoint\_server}.
+
+\item Email sent when a SCHEDULER Universe job compeltes now has the
+correct From: header.
+
+\item In the STANDARD universe, jobs which call sigsuspend() will 
+now receive the correct return value.
+
+\item Abnormal error conditions, such as the hard disk on the submit
+machine filling up, are much less likely to result in a job disappearing
+from the queue.
+
+\item The \Condor{checkpoint\_server} now correctly reconfigures when
+a \Condor{reconfig} command is received by the \Condor{master}.
+
+\item Fixed a bug with how the \Condor{schedd} associates jobs with
+machines (claimed resources) which would, under certain circumstances,
+cause some jobs to remain idle until other jobs in the queue complete
+or are preempted.
+
+\item A number of PVM universe bugs are fixed in this release.
+Bugs in how the \Condor{shadow.pvm} exited, which caused jobs to hang
+at exit or to run multiple times, have been fixed.
+The \Condor{shadow.pvm} no longer exits if there is a problem starting
+up PVM on one remote host.
+The \Condor{starter.pvm} now ignores the periodic checkpoint command
+from the startd.  Previously, it would vacate the job when it received
+the periodic checkpoint command.
+A number of bugs with how the \Condor{starter.pvm} handled
+asynchronous events, which caused it to take a long time to clean up
+an exited PVM task, have been fixed.
+The \Condor{schedd} now sets the status correctly on multi-class PVM
+jobs and removes them from the job queue correctly on exit.
+\Condor{submit} no longer ignores the machine\_count command for PVM
+jobs.
+And, a problem which caused pvm\_exit() to hang was diagnosed:
+PVM tasks which call pvm\_catchout() to catch the output of
+child tasks should be sure to call it again with a NULL argument to
+disable output collection before calling pvm\_exit().
+
+\item The change introduced in 6.1.13 to the \Condor{shadow} regarding
+when it logged the execute event to the user log produced situations
+where the shadow could log other events (like the shadow exception
+event) before the execute event was logged.
+Now, the \Condor{shadow} will always log an execute event before it
+logs any other events.
+The timing is still improved over 6.1.12 and older versions, with the
+execute event getting logged after the bulk of the job initialization
+has finished, right before the job will actually start executing.
+However, you will no longer see user logs that contain a ``shadow
+exception'' or ``job evicted'' message without a ``job executing''
+event, first.
+
+\item \Syscall{stat} and varient calls now go through the file table to
+get the correct logical size and access times of buffered files.
+Before, \Syscall{stat} used to return zero size on a buffered file that had
+not yet been synced to disk.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item On IRIX 6.2, C++ programs compiled with GNU C++ (g++) 2.7.2 and
+linked with the Condor libraries (using \Condor{compile}) will not
+execute the constructors for any global objects.
+There is a work-around for this bug, so if this is a problem for you,
+please send email to \Email{condor-admin@cs.wisc.edu}.
+
+\item In HP-UX 10.20, \Condor{compile} will not work correctly with HP's
+C++ compiler. 
+The jobs might link, but they will produce incorrect output, or die with
+a signal such as SIGSEGV during restart after a checkpoint/vacate cycle.
+However, the GNU C/C++ and the HP C compilers work just fine.
+
+\item The \Syscall{getrusage} call does not work always as expected in
+STANDARD Universe jobs.  
+If your program uses \Syscall{getrusage}, it 
+could decrease incorrectly by a second
+across a checkpoint and restart.  In addition, the time it takes
+Condor to restart from a checkpoint is included in the usage times
+reported by \Syscall{getrusage}, and it probably should not be.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:New-6-1-14}Version 6.1.14}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -172,6 +417,13 @@ job queue for running jobs, so if the schedd crashes, the counters
 will remain relatively up-to-date.  This is controlled by the
 \Macro{WALL\_CLOCK\_CKPT\_INTERVAL} parameter.
 
+\item The \Condor{shadow} now logs the ``job executing'' event in the
+user log after the binary has been successfully transfered, so that
+the events appear closer to the actual time the job starts running.
+This can create some somewhat unexpected log files.  
+If something goes wrong with the job's initialization, you might see
+an ``evicted'' event before you see an ``executing'' event.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -263,7 +515,7 @@ file attribute \Macro{PERIODIC\_CHECKPOINT} evaluates to True,
 Condor performs a periodic checkpoint of the running job.  This
 bug has been fixed in v6.1.14.  \Note there is a work-around to permit
 periodic checkpoints to occur in v6.1.13: include the attribute name
-``PERIODIC\_CHECPOINT'' (note the spelling mistake) to the attributes 
+``PERIODIC\_CHECKPOINT'' to the attributes 
 listed in the \Macro{STARTD\_EXPRS} entry in the config file.
 
 \item The \Syscall{getrusage} call does not work properly inside

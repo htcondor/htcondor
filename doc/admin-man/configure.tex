@@ -1044,6 +1044,14 @@ These macros control the \Condor{master}.
   special daemon that we can acquire this information on those
   platforms. 
 
+\item[\Macro{DC\_DAEMON\_LIST}] \label{param:DCDaemonList} This macro
+  lists the daemons in \Macro{DAEMON\_LIST} which use the Condor
+  DaemonCore library.  The \Condor{master} must differentiate between
+  daemons that use DaemonCore and those that don't so it uses the
+  appropriate inter-process communication mechanisms.  This list
+  currently includes all Condor daemons except the checkpoint server
+  by default.
+
 \item[\Macro{SUBSYS}] \label{param:SUBSYS} Once you have defined which
   subsystems you want the \Condor{master} to start, you must provide
   it with the full path to each of these binaries.  For example:
@@ -1663,6 +1671,23 @@ These macros control the \Condor{schedd}.
   \MacroU{FLOCK\_VIEW\_SERVERS} list and that the
   \MacroU{CONDOR\_VIEW\_HOST} does not appear in the
   \MacroU{FLOCK\_VIEW\_SERVERS} list.
+
+\item[\Macro{NEGOTIATE\_ALL\_JOBS\_IN\_CLUSTER}]
+  \label{param:NegotiateAllJobsInCluster}
+  If this macro is set to False (the default), when the schedd fails
+  to start an idle job, it will not try to start any other
+  idle jobs in the same cluster during that negotiation cycle.  This
+  makes negotiation much more efficient for large job clusters.
+  However, in some cases other jobs in the cluster can be started even
+  though an earlier job can't.  For example, the jobs' requirements
+  may differ, because of different disk space, memory, or
+  operating system requirements.  Or, machines may be willing to run
+  only some jobs in the cluster, because their requirements reference
+  the jobs' virtual memory size or other attribute.  Setting this
+  macro to True will force the schedd to try to start all idle jobs in
+  each negotiation cycle.  This will make negotiation cycles last
+  longer, but it will ensure that all jobs that can be started will be
+  started.
 
 \end{description}
 

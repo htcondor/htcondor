@@ -51,7 +51,10 @@ variables for a specific daemon on a given machine.  Each daemon
 remembers settings made by \Condor{config\_val}.  The configuration
 file is not modified by this command.  Persistent settings remain when
 the daemon is restarted.  Runtime settings are lost when the daemon is
-restarted.  
+restarted.  Modifying a hosts configuration with \Condor{config\_val}
+requires the \DCPerm{CONFIG} access level, which is disabled on all
+hosts by default.  See section~\ref{sec:Security-Access-Levels} on
+page~\pageref{sec:Security-Access-Levels} for more details.
 
 \Note The changes will not take effect until you perform a
 \Condor{reconfig}.
