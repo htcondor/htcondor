@@ -34,11 +34,13 @@
 
 #include "condor_common.h"
 #include "condor_query.h"
-#include "get_full_hostname.h"
+#include "my_hostname.h"
 
 extern "C"
 {
-char* get_daemon_addr(const char* name, AdTypes adtype, const char* attribute)
+char* get_daemon_addr( const char* constraint_attr, 
+					   const char* name,
+					   AdTypes adtype, const char* attribute )
 {
 	CondorQuery			query(adtype);
 	ClassAd*			scan;
@@ -46,14 +48,14 @@ char* get_daemon_addr(const char* name, AdTypes adtype, const char* attribute)
 	char				constraint[500];
 	ClassAdList			ads;
 	char*				fullname;
-
-		// Make sure we've got a fully qualified name.
-	fullname = get_full_hostname( name );
-	if( !fullname ) {
-		return NULL;
-	}
 	
-	sprintf(constraint, "%s == \"%s\"", ATTR_NAME, fullname); 
+	if( name ) {
+		fullname = (char*)name;
+	} else {
+		fullname = my_full_hostname();
+	}
+
+	sprintf(constraint, "%s == \"%s\"", constraint_attr, fullname ); 
 	query.addConstraint(constraint);
 	query.fetchAds(ads);
 	ads.Open();
@@ -72,14 +74,14 @@ char* get_daemon_addr(const char* name, AdTypes adtype, const char* attribute)
 }
 char* get_schedd_addr(const char* name)
 {
-	return get_daemon_addr(name, SCHEDD_AD, ATTR_SCHEDD_IP_ADDR);
+	return get_daemon_addr(ATTR_NAME, name, SCHEDD_AD, ATTR_SCHEDD_IP_ADDR);
 } 
 char* get_startd_addr(const char* name)
 {
-	return get_daemon_addr(name, STARTD_AD, ATTR_STARTD_IP_ADDR);
+	return get_daemon_addr(ATTR_MACHINE, name, STARTD_AD, ATTR_STARTD_IP_ADDR);
 } 
 char* get_master_addr(const char* name)
 {
-	return get_daemon_addr(name, MASTER_AD, ATTR_MASTER_IP_ADDR);
+	return get_daemon_addr(ATTR_MACHINE, name, MASTER_AD, ATTR_MASTER_IP_ADDR);
 } 
 }
