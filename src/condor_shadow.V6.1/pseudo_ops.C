@@ -67,6 +67,20 @@ pseudo_get_job_info(ClassAd *&ad)
 	the_ad->Insert(shadow_ver);
 	free(shadow_ver);
 
+		// Also, try to include our value for UidDomain, so that the
+		// starter can properly compare them...
+	char* uid_domain = param( "UID_DOMAIN" );
+	if( uid_domain ) {
+		size = 10 + strlen(uid_domain) + strlen(ATTR_UID_DOMAIN);
+		char* uid_domain_expr = (char*) malloc( size );
+		ASSERT(uid_domain_expr);
+		sprintf( uid_domain_expr, "%s=\"%s\"", ATTR_UID_DOMAIN,
+				 uid_domain );
+		the_ad->Insert( uid_domain_expr );
+		free( uid_domain_expr );
+		free( uid_domain );
+	}
+
 	ad = the_ad;
 	return 0;
 }
