@@ -41,7 +41,6 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "my_hostname.h"
-#include "get_daemon_addr.h"
 #include "condor_state.h"
 #include "sig_install.h"
 #include "condor_email.h"
@@ -559,20 +558,20 @@ bad_file( const char *dirpath, const char *name, Directory & dir )
 State
 get_machine_state()
 {
-	char* addr = get_startd_addr(0);
 	char* state_str = NULL;
 	State s;
 
-	if( !addr ) {
+	ReliSock* sock;
+	Daemon my_startd( DT_STARTD );
+	if( ! my_startd.locate() ) {
 		dprintf( D_ALWAYS, "Can't find local startd address.\n" );
 		return _error_state_;
 	}
-
-	ReliSock* sock;
-
-	Daemon my_startd (DT_STARTD, addr, NULL);
-	if (!(sock = (ReliSock*)my_startd.startCommand( GIVE_STATE, Stream::reli_sock, 0 ))) {
-		dprintf( D_ALWAYS, "Can't connect to startd at %s\n", addr );
+   
+	if( !(sock = (ReliSock*)
+		  my_startd.startCommand(GIVE_STATE, Stream::reli_sock, 0)) ) {
+		dprintf( D_ALWAYS, "Can't connect to startd at %s\n", 
+				 my_startd.addr() );
 		return _error_state_;
 	}
 
