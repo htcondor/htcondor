@@ -379,7 +379,7 @@ negotiationTime ()
 	ClassAdList startdAds;			// 1. get from collector
 	ClassAdList startdPvtAds;		// 2. get from collector
 	ClassAdList scheddAds;			// 3. get from collector
-	ClassAdList ClaimedStartdAds;           // 4. get from collector
+	ClassAdList ClaimedStartdAds;   // 4. get from collector
 
 	ClassAd		*schedd;
 	char		scheddName[80];
@@ -394,6 +394,27 @@ negotiationTime ()
 	int			scheddUsage;
 	int			MaxscheddLimit;
 	int			hit_schedd_prio_limit;
+	int 		send_ad_to_schedd;	
+	static time_t completedLastCycleTime = 0;
+
+	// Check if we just finished a cycle less than 20 seconds ago.
+	// If we did, reset our timer so at least 20 seconds will elapse
+	// between cycles.  We do this to help ensure all the startds have
+	// had time to update the collector after the last negotiation cycle
+	// (otherwise, we might match the same resource twice).  Note: we must
+	// do this check _before_ we reset GotRescheduledCmd to false to prevent
+	// postponing a new cycle indefinitely.
+	unsigned int elapsed = time(NULL) - completedLastCycleTime;
+	if ( elapsed < 20 ) {
+		daemonCore->Reset_Timer(negotiation_timerID,
+							20 - elapsed,
+							NegotiatorInterval);
+		dprintf(D_FULLDEBUG,
+			"New cycle requested but just finished one -- delaying %s secs\n",
+			20 - elapsed);
+		return FALSE;
+	}
+
 
 	dprintf( D_ALWAYS, "---------- Started Negotiation Cycle ----------\n" );
 
@@ -443,6 +464,10 @@ negotiationTime ()
 				return FALSE;
 			}	
 			dprintf(D_ALWAYS,"  Negotiating with %s at %s\n",scheddName,scheddAddr);
+
+			// should we send the startd ad to this schedd?
+			send_ad_to_schedd = FALSE;
+			schedd->LookupBool( ATTR_WANT_RESOURCE_AD, send_ad_to_schedd);
 	
 			// calculate the percentage of machines that this schedd can use
 			scheddPrio = accountant.GetPriority ( scheddName );
@@ -464,7 +489,7 @@ negotiationTime ()
 				result = MM_RESUME;
 			} else {
 				result = negotiate( scheddName, scheddAddr, scheddPrio, scheddLimit, 
-							startdAds, startdPvtAds);
+							startdAds, startdPvtAds, send_ad_to_schedd);
 			}
 
 			switch (result)
@@ -492,6 +517,8 @@ negotiationTime ()
 
 	// ----- Done with the negotiation cycle
 	dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
+
+	completedLastCycleTime = time(NULL);
 
 	return TRUE;
 }
@@ -596,7 +623,7 @@ obtainAdsFromCollector (ClassAdList &startdAds,
 
 int Matchmaker::
 negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
-			ClassAdList &startdAds, ClassAdList &startdPvtAds)
+			ClassAdList &startdAds, ClassAdList &startdPvtAds, int send_ad_to_schedd)
 {
 	ReliSock	*sock;
 	int			i;
@@ -633,6 +660,9 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 		// Service any interactive commands on our command socket.
 		// This keeps condor_userprio hanging to a minimum when
 		// we are involved in a lot of schedd negotiating.
+		// It also performs the important function of draining out
+		// any reschedule requests queued up on our command socket, so
+		// we do not negotiate over & over unnecesarily.
 		daemonCore->ServiceCommandSocket();
 
 		// 2a.  ask for job information
@@ -742,9 +772,11 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 
 			// Make sure this offer won't put us over our network bandwidth
 			// limit.
-			if (!request.LookupInteger (ATTR_EXECUTABLE_SIZE,
-										placement_bw)) {
-				placement_bw = 0;
+			if (!request.LookupInteger (ATTR_DISK_USAGE,placement_bw)) {
+				if (!request.LookupInteger (ATTR_EXECUTABLE_SIZE,
+											placement_bw)) {
+					placement_bw = 0;
+				}
 			}
 			if (!request.LookupInteger (ATTR_JOB_UNIVERSE, job_universe)) {
 				job_universe = STANDARD; // err on the safe side
@@ -804,7 +836,7 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 
 			// 2e(ii).  perform the matchmaking protocol
 			result = matchmakingProtocol (request, offer, startdPvtAds, sock, 
-					scheddName);
+					scheddName, send_ad_to_schedd);
 
 			// 2e(iii). if the matchmaking protocol failed, do not consider the
 			//			startd again for this negotiation cycle.
@@ -978,13 +1010,15 @@ matchmakingAlgorithm(char *, ClassAd &request,ClassAdList &startdAds,
 
 int Matchmaker::
 matchmakingProtocol (ClassAd &request, ClassAd *offer, 
-						ClassAdList &startdPvtAds, Sock *sock, char* scheddName)
+						ClassAdList &startdPvtAds, Sock *sock, char* scheddName,
+						int send_ad_to_schedd)
 {
 	int  cluster, proc;
 	char startdAddr[32];
 	char startdName[64];
 	char *capability;
 	ReliSock startdSock;
+	bool send_failed;
 
 	// these will succeed
 	request.LookupInteger (ATTR_CLUSTER_ID, cluster);
@@ -1032,11 +1066,28 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	}
 
 	// 3.  send the match and capability to the schedd
-	dprintf(D_FULLDEBUG,"      Sending PERMISSION with capability to schedd\n");
 	sock->encode();
-	if (!sock->put(PERMISSION) 	|| 
-		!sock->put(capability)	||
-		!sock->end_of_message())
+	send_failed = false;	
+
+	if ( send_ad_to_schedd ) 
+	{
+		dprintf(D_FULLDEBUG,
+			"      Sending PERMISSION, capability, startdAd to schedd\n");
+		if (!sock->put(PERMISSION_AND_AD) 	|| 
+			!sock->put(capability)	||
+			!offer->put(*sock)		||	// send startd ad to schedd
+			!sock->end_of_message())
+				send_failed = true;
+	} else {
+		dprintf(D_FULLDEBUG,
+			"      Sending PERMISSION with capability to schedd\n");
+		if (!sock->put(PERMISSION) 	|| 
+			!sock->put(capability)	||
+			!sock->end_of_message())
+				send_failed = true;
+	}
+
+	if ( send_failed )
 	{
 		dprintf (D_ALWAYS, "      Could not send PERMISSION\n" );
 		dprintf( D_FULLDEBUG, "      (Capability is \"%s\")\n", capability);
