@@ -244,6 +244,13 @@ class Job {
     // the return code of the job
     int retval;
 	
+	// somewhat kludgey, but this indicates to Dag::TerminateJob()
+	// whether Dag::_numJobsDone has been incremented for this node
+	// yet or not (since that method can now be called more than once
+	// for a given node); it should not be examined or changed
+	// unless/until node is STATUS_DONE
+	bool countedAsDone;
+
     //Node has been visited by DFS order
 	bool _visited; 
 	

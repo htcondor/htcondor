@@ -58,6 +58,7 @@ Job::Job (const char *jobName, const char *cmdFile):
     _scriptPre  (NULL),
     _scriptPost (NULL),
     _Status     (STATUS_READY),
+	countedAsDone (false),
 	_waitingCount (0)
 {
 	ASSERT( jobName != NULL );
@@ -183,6 +184,12 @@ Job::SanityCheck() const
 	if( _waitingCount < 0 ) {
 		dprintf( D_ALWAYS, "BADNESS 10000: _waitingCount = %d\n",
 				 _waitingCount );
+		result = false;
+	}
+
+	if( countedAsDone == true && _Status != STATUS_DONE ) {
+		dprintf( D_ALWAYS, "BADNESS 10000: countedAsDone == true but "
+				 "_Status != STATUS_DONE\n" );
 		result = false;
 	}
 
