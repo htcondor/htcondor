@@ -204,6 +204,10 @@ main( int argc, char *argv[] )
 	
 	MyName = argv[0];
 
+	// set up types of the ad
+	job.SetMyTypeName ("Job");
+	job.SetTargetTypeName ("Machine");
+
 	/* Weiru */
 	Config(MyName);
 	
@@ -858,10 +862,14 @@ read_condor_file( FILE *fp )
 {
 	char	*name, *value;
 	char	*ptr;
+	int		force = 0;
 
 	LineNo = 0;
+	
 
 	for(;;) {
+		force = 0;
+
 		name = getline(fp);
 		if( name == NULL ) {
 			break;
@@ -871,6 +879,17 @@ read_condor_file( FILE *fp )
 		if( *name == '#' || blankline(name) )
 			continue;
 		
+		/* check if the user wants to force a parameter into/outof the job ad */
+		if (*name == '+') {
+			force = 1;
+			name++;
+		} else
+		if (*name == '-') {
+			name++;
+			job.Delete (name);
+			continue;
+		}
+
 		if( stricmp(name, "queue") == 0 ) {
 			queue();
 			continue;
@@ -927,9 +946,16 @@ read_condor_file( FILE *fp )
 			return( -1 );
 		}
 
+		/* if the user wanted to force the parameter into the classad, do it */
+		if (force == 1) {
+			char	buffer[2048];
+			sprintf (buffer, "%s = %s", name, value);
+			ASSERT (job.InsertOrUpdate (buffer));
+		} 
+
 		lower_case( name );
 
-			/* Put the value in the Configuration Table */
+		/* Put the value in the Configuration Table */
 		insert( name, value, ProcVars, PROCVARSIZE );
 
 		free( name );
@@ -1015,7 +1041,7 @@ queue()
 	
 	if( !Quiet ) 
 	{
-		fprintf(stdout, "Proc %d.%d:\n", ClusterId, ProcId);
+		fprintf(stdout, "\n** Proc %d.%d:\n", ClusterId, ProcId);
 		job.fPrint (stdout);
 	}
 
