@@ -229,8 +229,8 @@ CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o
 
 IO_OBJ = stream.o sock.o safe_sock.o buffers.o $(CONDOR_TYPE_OBJ) condor_rw.o reli_sock.o SafeMsg.o ../condor_util_lib/get_random_num.o 
 
-SPECIAL_IO_OBJ = authentication.o
-SPECIAL_IO_SRC = authentication.C
+SPECIAL_IO_OBJ = authentication.o condor_crypt_3des.o condor_crypt_blowfish.o CryptKey.o condor_crypt.o
+SPECIAL_IO_SRC = authentication.C condor_crypt_3des.C condor_crypt_blowfish.C CryptKey.C condor_crypt.C
 
 SPECIAL_OBJ = special_stubs.o
 
@@ -545,8 +545,24 @@ import(../condor_ckpt,libcondorc++support.a)
 import( ZLibPath , libz.a )
 
 authentication.o: authentication.C
-	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
+	$(CPlusPlus) $(C_PLUS_FLAGS) -I$(OpenSSLIncludePath) -I../condor_io \
 		-DSKIP_AUTHENTICATION -c authentication.C
+
+condor_crypt_3des.o: condor_crypt_3des.C
+	$(CPlusPlus) $(C_PLUS_FLAGS) -I$(OpenSSLIncludePath) -I../condor_io \
+		-DSKIP_AUTHENTICATION -c condor_crypt_3des.C
+
+condor_crypt_blowfish.o: condor_crypt_blowfish.C
+	$(CPlusPlus) $(C_PLUS_FLAGS) -I$(OpenSSLIncludePath) -I../condor_io \
+		-DSKIP_AUTHENTICATION -c condor_crypt_blowfish.C
+
+CryptKey.o: CryptKey.C
+	$(CPlusPlus) $(C_PLUS_FLAGS) -I$(OpenSSLIncludePath) -I../condor_io \
+		-DSKIP_AUTHENTICATION -c CryptKey.C
+
+condor_crypt.o: condor_crypt.C
+	$(CPlusPlus) $(C_PLUS_FLAGS) -I$(OpenSSLIncludePath) -I../condor_io \
+		-DSKIP_AUTHENTICATION -c condor_crypt.C
 
 #if DOES_COMPRESS_CKPT
 $(COMPRESS_LIB) : $(SYSCALL_LIB) $(COMPRESS_OBJ)
