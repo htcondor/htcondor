@@ -1447,7 +1447,7 @@ pseudo_get_a_out_name( char *path )
 
 	if ( JobAd ) {
 			JobAd->LookupString(ATTR_JOB_CMD,exec_name);
-			if ( (tptr=substr(exec_name,"$$")) == MATCH ) {
+			if ( (tptr=substr(exec_name,"$$")) ) {
 				JobAd->LookupString(ATTR_JOB_CMDEXT,final);
 				if ( final[0] ) {
 					strcpy(tptr,final);
