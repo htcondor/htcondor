@@ -149,9 +149,6 @@ e		*/
 			@param scopeExpr String representation of the scope expression.
 			@param attrName The name of the attribute.
 			@param value The string attribute
-			@param dup If dup is true, the value is duplicated internally.
-				Otherwise, the string is assumed to have been created with new[]
-				and the classad assumes responsibility for freeing the storage.
 		*/
 		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName,
 				double value, Value::NumberFactor f=Value::NO_FACTOR);
@@ -173,9 +170,6 @@ e		*/
 			@param attrName The name of the attribute.  This string is
 				always duplicated internally.
 			@param value The string attribute
-			@param dup If dup is true, the value is duplicated internally.
-				Otherwise, the string is assumed to have been created with new[]
-				and the classad assumes responsibility for freeing the storage.
 		*/
 		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName, 
 				bool value );
