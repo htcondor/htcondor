@@ -66,7 +66,7 @@ ref.html:
 	latex ref.tex
 	latex ref.tex
 	latex ref.tex
-	latex2html -split 4 -link 2 -show_section_numbers ref.tex
+	latex2html -address condor-team@cs.wisc.edu -split 4 -link 2 -show_section_numbers ref.tex
 	rm -f ref.dvi
 	mv ref ref.new
 	mv -f ref.new  /p/condor/public/html/manual
