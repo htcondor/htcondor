@@ -81,7 +81,6 @@ typedef DWORD pid_t;
 #include <windows.h>
 #include <winperf.h>
 #include <tchar.h>
-#include <largeint.h>
 
 #define INITIAL_SIZE    40960L    // init. size for getting pDataBlock
 #define EXTEND_SIZE	     4096L    // incremental addition to pDataBlock

@@ -1,6 +1,9 @@
 #include "stdafx.h"
 #include "smtp.h"
-#include <iostream.h>
+#include <iostream>
+
+using namespace std;
+
 
 
 CString my_get_user() {
