@@ -60,7 +60,6 @@ unblock_signal( int sig)
     if ( sigprocmask(SIG_SETMASK,&set, 0)  == -1 ) {
         EXCEPT("Error in setting procmask, errno = %d\n", errno);
     }
-    dprintf(D_FULLDEBUG, "Unblocked signal %d\n", sig);
 }	
 
 void
@@ -74,5 +73,4 @@ block_signal( int sig)
     if ( sigprocmask(SIG_SETMASK,&set, 0)  == -1 ) {
         EXCEPT("block_signal:Error in setting procmask, errno = %d\n", errno);
     }
-    dprintf(D_FULLDEBUG, "Blocked signal %d\n", sig);
 }	
