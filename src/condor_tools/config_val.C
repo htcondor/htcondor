@@ -50,7 +50,7 @@
 char	*MyName;
 char	*mySubSystem = NULL;
 StringList params;
-daemonType dt = DT_MASTER;
+daemon_t dt = DT_MASTER;
 
 // The pure-tools (PureCoverage, Purify, etc) spit out a bunch of
 // stuff to stderr, which is where we normally put our error
@@ -225,7 +225,7 @@ main( int argc, char* argv[] )
 		addr = get_daemon_addr( dt, name, pool );
 		if( ! addr ) {
 			fprintf( stderr, "Can't find address for %s %s\n", 
-					 daemon_string(dt), name );
+					 daemonString(dt), name );
 			fprintf( stderr, "Perhaps you need to query another pool.\n" );
 			my_exit( 1 );
 		}
@@ -293,7 +293,7 @@ GetRemoteParam( char* name, char* addr, char* pool, char* param_name )
 
 	if( ! s.connect( addr, 0 ) ) {
 		fprintf( stderr, "Can't connect to %s on %s %s\n", 
-				 daemon_string(dt), name, addr );
+				 daemonString(dt), name, addr );
 		my_exit(1);
 	}
 
@@ -314,7 +314,7 @@ GetRemoteParam( char* name, char* addr, char* pool, char* param_name )
 	s.decode();
 	if( !s.code(val) ) {
 		fprintf( stderr, "Can't receive reply from %s on %s %s\n",
-				 daemon_string(dt), name, addr );
+				 daemonString(dt), name, addr );
 		return NULL;
 	}
 	if( !s.end_of_message() ) {
@@ -354,7 +354,7 @@ SetRemoteParam( char* name, char* addr, char* pool, char* param_name,
 
 	if( ! s.connect( addr, 0 ) ) {
 		fprintf( stderr, "Can't connect to %s on %s %s\n", 
-				 daemon_string(dt), name, addr );
+				 daemonString(dt), name, addr );
 		my_exit(1);
 	}
 
@@ -391,7 +391,7 @@ SetRemoteParam( char* name, char* addr, char* pool, char* param_name,
 	s.decode();
 	if( !s.code(rval) ) {
 		fprintf( stderr, "Can't receive reply from %s on %s %s\n",
-				 daemon_string(dt), name, addr );
+				 daemonString(dt), name, addr );
 		if (buf) free(buf);
 		my_exit(1);
 	}
@@ -405,23 +405,23 @@ SetRemoteParam( char* name, char* addr, char* pool, char* param_name,
 		if (buf) {
 			fprintf( stderr, "Attempt to set configuration \"%s\" on %s %s "
 					 "%s failed.\n",
-					 buf, daemon_string(dt), name, addr );
+					 buf, daemonString(dt), name, addr );
 			free(buf);
 		} else {
 			fprintf( stderr, "Attempt to unset configuration \"%s\" on %s %s "
 					 "%s failed.\n",
-					 param_name, daemon_string(dt), name, addr );
+					 param_name, daemonString(dt), name, addr );
 		}
 		my_exit(1);
 	}
 	if (buf) {
 		fprintf( stderr, "Successfully set configuration \"%s\" on %s %s "
 				 "%s.\n",
-				 buf, daemon_string(dt), name, addr );
+				 buf, daemonString(dt), name, addr );
 		free(buf);
 	} else {
 		fprintf( stderr, "Successfully unset configuration \"%s\" on %s %s "
 				 "%s.\n",
-				 param_name, daemon_string(dt), name, addr );
+				 param_name, daemonString(dt), name, addr );
 	}
 }

@@ -29,7 +29,7 @@
 extern "C" {
 #endif
 
-extern char* get_daemon_addr( daemonType dt = DT_MASTER, 
+extern char* get_daemon_addr( daemon_t dt = DT_MASTER, 
 							  const char* name = NULL, const char* pool = NULL);
 extern char* get_schedd_addr(const char* name = NULL, const char* pool = NULL);
 extern char* get_startd_addr(const char* name = NULL, const char* pool = NULL);

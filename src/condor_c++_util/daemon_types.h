@@ -1,7 +1,7 @@
 #ifndef _CONDOR_DAEMON_TYPES_H
 #define _CONDOR_DAEMON_TYPES_H
 
-enum daemonType { DT_NONE, DT_MASTER, DT_SCHEDD, DT_STARTD,
+enum daemon_t { DT_NONE, DT_MASTER, DT_SCHEDD, DT_STARTD,
 				  DT_COLLECTOR, DT_NEGOTIATOR, DT_KBDD, 
 				  DT_DAGMAN, _dt_threshold_ };
 
@@ -9,8 +9,8 @@ enum daemonType { DT_NONE, DT_MASTER, DT_SCHEDD, DT_STARTD,
 extern "C" {
 #endif
 
-const char* daemon_string( daemonType dt );
-daemonType string_to_daemon_type( char* name );
+const char* daemonString( daemon_t dt );
+daemon_t stringToDaemonType( char* name );
 
 #ifdef __cplusplus
 }

@@ -24,7 +24,7 @@
 #include "condor_common.h"
 #include "daemon_types.h"
 
-static const char* daemonNames[] = {
+static const char* daemon_names[] = {
 	"none",
 	"master",
 	"schedd",
@@ -38,22 +38,22 @@ static const char* daemonNames[] = {
 extern "C" {
 
 const char*
-daemon_string( daemonType dt )
+daemonString( daemon_t dt )
 {	
 	if( dt < _dt_threshold_ ) {
-		return daemonNames[dt];
+		return daemon_names[dt];
 	} else {
 		return "Unknown";
 	}
 }
 
-daemonType
-string_to_daemon_type( char* name )
+daemon_t
+stringToDaemonType( char* name )
 {
 	int i;
 	for( i=0; i<_dt_threshold_; i++ ) {
-		if( !stricmp(daemonNames[i], name) ) {
-			return (daemonType)i;
+		if( !stricmp(daemon_names[i], name) ) {
+			return (daemon_t)i;
 		}
 	}
 	return DT_NONE;

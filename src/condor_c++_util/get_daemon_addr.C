@@ -290,7 +290,7 @@ get_collector_addr(const char* name)
 
 
 char*
-get_daemon_addr( daemonType dt, const char* name, const char* pool )
+get_daemon_addr( daemon_t dt, const char* name, const char* pool )
 {
 	switch( dt ) {
 	case DT_MASTER:
