@@ -1481,13 +1481,13 @@ check_requirements( char *orig )
 				break;
 			}
 		}
-/*
+
 		if ( !has_fsdomain ) {
 			(void)strcat( answer, " && (FilesystemDomain == \"" );
 			(void)strcat( answer, My_fs_domain );
 			(void)strcat( answer, "\")" );
 		} 
-*/
+
 	}
 
 	if ( JobUniverse == STANDARD ) {
