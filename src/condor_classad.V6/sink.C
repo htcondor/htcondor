@@ -439,6 +439,9 @@ UnparseAux( string &buffer, vector< pair<string,ExprTree*> >& attrs )
 	if( !oldClassAd ) {	// NAC
 		buffer += " ]";
 	}					// NAC
+	else {				// NAC
+		buffer += "\n";	// NAC
+	}					// NAC
 }
 
 
