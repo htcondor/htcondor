@@ -231,9 +231,7 @@ int Sock::bind(
 	)
 {
 	sockaddr_in		sin;
-	int					on = 0;
-	struct linger		linger = {0, 0}; 
-
+	
 	if (!valid()) return FALSE;
 
 		/* if stream not assigned to a sock, do it now	*/
@@ -258,22 +256,23 @@ int Sock::bind(
 
 	_state = sock_bound;
 
-	// Set options on this socket, SO_REUSEADDR and SO_LINGER, so that
-	// if we are binding to a well known port, and we crash, we can be
-	// restarted and still bind ok back to this same port. -Todd T, 11/97
-	if( (!setsockopt(SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on))) ||
-		((type() == Stream::reli_sock) &&	// SO_LINGER only defined on TCP
-		(!setsockopt(SOL_SOCKET, SO_LINGER, (char*)&linger, sizeof(linger)))) ) {
-		dprintf(D_ALWAYS,"ERROR: setsockopt() SO_REUSEADDR, SO_LINGER failed\n");
-		return FALSE;
+	// Make certain SO_LINGER is Off.  This will result in the default
+	// of closesocket returning immediately and the system attempts to 
+	// send any unsent data.
+	if ( type() == Stream::reli_sock ) {
+		struct linger linger = {0,0};
+		setsockopt(SOL_SOCKET, SO_LINGER, (char*)&linger, sizeof(linger));
 	}
-	
+
 	return TRUE;
 }
 
 
 int Sock::setsockopt(SOCKET level, int optname, const char* optval, int optlen)
 {
+	/* if stream not assigned to a sock, do it now	*/
+	if (_state == sock_virgin) assign();
+
 	if(::setsockopt(_sock, level, optname, optval, optlen) < 0)
 	{
 		return FALSE;
