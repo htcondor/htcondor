@@ -779,7 +779,21 @@ sub ReadJobs( )
 	    if ( ( $StateFile =~ /^$Owner\./ ) ||
 		 ( ( $Owner eq "" ) && ( !($StateFile =~ /^job\./ )) )  )
 	    {
+		# If -state-file-dir specified in the config,
+		# Do nothing
+	    }
+	    else
+	    {
+		# Otherwise, set the env var.
 		$ENV{GLOBUS_SPOOL_DIR} = $StateFileDir;
+	    }
+
+	    # Debugging output..
+	    if ( $Config{Debug} > 4 )
+	    {
+		my $GSD = $ENV{GLOBUS_SPOOL_DIR};
+		$GSD = "<undefined>" if ( ! defined $GSD );
+		print "GLOBUS_SPOOL_DIR = '$GSD'\n";
 	    }
 
 	    # Create a job description and job manager
