@@ -47,7 +47,6 @@ extern "C" {
 #include "condor_sys.h"
 #include "image.h"
 #include "file_table_interf.h"
-#include "url_condor.h"
 #include "condor_debug.h"
 static char *_FileName_ = __FILE__;
 
