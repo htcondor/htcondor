@@ -960,11 +960,12 @@ activate_claim( Resource* rip, Stream* stream )
 		ABORT;
 	}
 
-#ifndef WIN32
-
 	if( tmp_starter->is_dc() ) {
 		ji.shadowCommandSock = stream;
-	} else {
+	} 
+#ifndef WIN32
+	else {
+
 		ji.shadowCommandSock = NULL;
 
 			// Set up the two starter ports and send them to the shadow
@@ -1029,8 +1030,13 @@ activate_claim( Resource* rip, Stream* stream )
 		ji.ji_sock1 = fd_1;
 		ji.ji_sock2 = fd_2;
 	}
+#endif	// of ifdef WIN32
 
-#endif	// of ifndef WIN32
+
+
+
+
+
 
 	ji.ji_hname = rip->r_cur->client()->host();
 
@@ -1047,7 +1053,6 @@ activate_claim( Resource* rip, Stream* stream )
 		rip->setStarter( NULL );
 		ABORT;
 	}
-
 		// Get a bunch of info out of the request ad that is now
 		// relevant, and store it in the machine ad and cur Match object
 
