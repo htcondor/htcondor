@@ -888,6 +888,8 @@ int CondorFileTable::chdir( const char *path )
 		strcat( working_dir, "/" );
 		strcat( working_dir, path );
 	}
+
+	return result;
 }
 
 /*
