@@ -39,6 +39,7 @@
 #include "condor_parser.h"
 #include "condor_scanner.h"
 #include "condor_distribution.h"
+#include "condor_ver_info.h"
 #if !defined(WIN32)
 #include <pwd.h>
 #include <sys/stat.h>
@@ -2398,10 +2399,11 @@ SetLeaveInQueue()
 				   for up to 10 days, so user can grab the output.
 				 */
 			sprintf( buffer, 
-				"%s = %s == %d && (%s =?= UNDEFINED || ((CurrentTime - %s) < %d))",
+				"%s = %s == %d && (%s =?= UNDEFINED || %s == 0 || ((CurrentTime - %s) < %d))",
 				ATTR_JOB_LEAVE_IN_QUEUE,
 				ATTR_JOB_STATUS,
 				COMPLETED,
+				ATTR_COMPLETION_DATE,
 				ATTR_COMPLETION_DATE,
 				ATTR_COMPLETION_DATE,
 				60 * 60 * 24 * 10 
@@ -3882,13 +3884,30 @@ queue(int num)
 				free( proxy_file );
 			} else {
 #ifndef WIN32
+					// Versions of Condor prior to 6.7.3 set a different
+					// value for X509UserProxySubject. Specifically, the
+					// proxy's subject is used rather than the identity
+					// (the subject this is a proxy for), and spaces are
+					// converted to underscores. The elimination of spaces
+					// is important, as the proxy subject gets passed on
+					// the command line to the gridmanager in these older
+					// versions and daemon core's CreateProcess() can't
+					// handle spaces in command line arguments. So if
+					// we're talking to an older schedd, use the old format.
+				CondorVersionInfo vi( MySchedd->version() );
+
 				if ( check_x509_proxy(proxy_file) != 0 ) {
 					fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
 					exit( 1 );
 				}
 
 				/* Insert the proxy subject name into the ad */
-				char *proxy_subject = x509_proxy_identity_name(proxy_file);
+				char *proxy_subject;
+				if ( !vi.built_since_version(6,7,3) ) {
+					proxy_subject = x509_proxy_subject_name(proxy_file);
+				} else {
+					proxy_subject = x509_proxy_identity_name(proxy_file);
+				}
 				if ( !proxy_subject ) {
 					fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
 					exit( 1 );
@@ -3899,14 +3918,14 @@ queue(int num)
 				* daemoncore handles command-line args w/ an argv array, spaces
 				* will cause trouble.  
 				*/
-	/*
-				char *space_tmp;
-				do {
-					if ( (space_tmp = strchr(proxy_subject,' ')) ) {
-						*space_tmp = '_';
-					}
-				} while (space_tmp);
-	*/
+				if ( !vi.built_since_version(6,7,3) ) {
+					char *space_tmp;
+					do {
+						if ( (space_tmp = strchr(proxy_subject,' ')) ) {
+							*space_tmp = '_';
+						}
+					} while (space_tmp);
+				}
 				(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
 							proxy_subject);
 				InsertJobExpr(buffer);	
