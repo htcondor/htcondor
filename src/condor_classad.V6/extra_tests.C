@@ -23,6 +23,7 @@
 // This is a program that does a bunch of testing that is easier to do
 // without user input, like in test_classads.
 
+#define ALLOW_CHAINING
 #include "classad_distribution.h"
 #include "lexerSource.h"
 #include <fstream.h>
@@ -37,11 +38,18 @@ using namespace classad;
 // Note that we are careful to leave no space between the first and 
 // second ClassAd. This is to test that we put back a character correctly
 // after parsing.
-string classads_text = 
+string parsing_text = 
 "[ A = 1; B = \"blue\"; C = true; ]"
 "[ AA = 14; BB = \"bonnet\"; CC = false; ]";
 
+string chaining_root_text  = "[  A = 1;   B = \"blue\";    C = true;  ]";
+string chaining_child_text = "[ AA = 14;  B = \"bonnet\"; CC = false; ]";
+
+string dirty_classad_text = "[ A = 1; ]";
+
 int main(int argc, char **argv);
+static void test_parsing(void);
+static void test_parsing_helper(ClassAd *classad_a, ClassAd *classad_b);
 static void read_from_string(ClassAd **classad_a, ClassAd **classad_b);
 static void read_from_string_alt(ClassAd **classad_a, ClassAd **classad_b);
 static void read_from_char(ClassAd **classad_a, ClassAd **classad_b);
@@ -57,6 +65,9 @@ static void check_parse(ClassAd *classad_a, ClassAd *classad_b,
 static void check_classad_a(ClassAd *classad);
 static void check_classad_b(ClassAd *classad);
 
+static void test_chaining(void);
+static void test_dirty(void);
+
 /*********************************************************************
  *
  * Function: main
@@ -66,61 +77,56 @@ static void check_classad_b(ClassAd *classad);
 int 
 main(int argc, char **argv)
 {
+	test_parsing();
+	test_chaining();
+	test_dirty();
+	return 0;
+}
+
+static void test_parsing(void)
+{
 	ClassAd       *classad_a, *classad_b;
 
 	read_from_string(&classad_a, &classad_b);
-	check_classad_a(classad_a);
-	check_classad_b(classad_b);
-	delete classad_a;
-	delete classad_b;
+	test_parsing_helper(classad_a, classad_b);
 
 	read_from_string_alt(&classad_a, &classad_b);
-	check_classad_a(classad_a);
-	check_classad_b(classad_b);
-	delete classad_a;
-	delete classad_b;
+	test_parsing_helper(classad_a, classad_b);
 
 	read_from_char(&classad_a, &classad_b);
-	check_classad_a(classad_a);
-	check_classad_b(classad_b);
-	delete classad_a;
-	delete classad_b;
+	test_parsing_helper(classad_a, classad_b);
 
 	read_from_char_alt(&classad_a, &classad_b);
-	check_classad_a(classad_a);
-	check_classad_b(classad_b);
-	delete classad_a;
-	delete classad_b;
+	test_parsing_helper(classad_a, classad_b);
 
 	make_file();
 
 	read_from_file(&classad_a, &classad_b);
-	check_classad_a(classad_a);
-	check_classad_b(classad_b);
-	delete classad_a;
-	delete classad_b;
+	test_parsing_helper(classad_a, classad_b);
 
 	read_from_file_alt(&classad_a, &classad_b);
-	check_classad_a(classad_a);
-	check_classad_b(classad_b);
-	delete classad_a;
-	delete classad_b;
+	test_parsing_helper(classad_a, classad_b);
 
 	read_from_stream(&classad_a, &classad_b);
-	check_classad_a(classad_a);
-	check_classad_b(classad_b);
-	delete classad_a;
-	delete classad_b;
+	test_parsing_helper(classad_a, classad_b);
 
 	read_from_stream_alt(&classad_a, &classad_b);
-	check_classad_a(classad_a);
-	check_classad_b(classad_b);
-	delete classad_a;
-	delete classad_b;
+	test_parsing_helper(classad_a, classad_b);
 
 	remove_file();
 
-	return 0;
+	return;
+}
+
+static void test_parsing_helper(
+	ClassAd *classad_a,
+	ClassAd *classad_b)
+{
+	check_classad_a(classad_a);
+	check_classad_b(classad_b);
+	delete classad_a;
+	delete classad_b;
+	return;
 }
 
 static void read_from_string(ClassAd **classad_a, ClassAd **classad_b)
@@ -132,9 +138,9 @@ static void read_from_string(ClassAd **classad_a, ClassAd **classad_b)
 	cout << "Reading from C++ string.\n";
 
 	offset = 0;
-	*classad_a = parser.ParseClassAd(classads_text, &offset);
-	*classad_b = parser.ParseClassAd(classads_text, &offset);
-	classad_c = parser.ParseClassAd(classads_text, &offset);
+	*classad_a = parser.ParseClassAd(parsing_text, &offset);
+	*classad_b = parser.ParseClassAd(parsing_text, &offset);
+	classad_c = parser.ParseClassAd(parsing_text, &offset);
 
 	check_parse(*classad_a, *classad_b, classad_c);
 
@@ -153,9 +159,9 @@ static void read_from_string_alt(ClassAd **classad_a, ClassAd **classad_b)
 	*classad_a = new ClassAd;
 	*classad_b = new ClassAd;
 	classad_c  = new ClassAd;
-	parser.ParseClassAd(classads_text, **classad_a, &offset);
-	parser.ParseClassAd(classads_text, **classad_b, &offset);
-	if (!parser.ParseClassAd(classads_text, *classad_c, &offset)) {
+	parser.ParseClassAd(parsing_text, **classad_a, &offset);
+	parser.ParseClassAd(parsing_text, **classad_b, &offset);
+	if (!parser.ParseClassAd(parsing_text, *classad_c, &offset)) {
 		delete classad_c;
 		classad_c = NULL;
 	}
@@ -168,7 +174,7 @@ static void read_from_char(ClassAd **classad_a, ClassAd **classad_b)
 {
 	ClassAdParser parser;
 	ClassAd *classad_c;
-	const char *text = classads_text.c_str();
+	const char *text = parsing_text.c_str();
 	int offset;
 
 	cout << "Reading from C string.\n";
@@ -186,7 +192,7 @@ static void read_from_char_alt(ClassAd **classad_a, ClassAd **classad_b)
 {
 	ClassAdParser parser;
 	ClassAd *classad_c;
-	const char *text = classads_text.c_str();
+	const char *text = parsing_text.c_str();
 	int offset;
 
 	cout << "Reading from C string (alt parse).\n";
@@ -212,7 +218,7 @@ static void make_file(void)
 
 	remove_file();
 	file = fopen("tmp.classads.tmp", "w");
-	fprintf(file, "%s", classads_text.c_str());
+	fprintf(file, "%s", parsing_text.c_str());
 	fclose(file);
 
 	return;
@@ -397,3 +403,143 @@ static void check_classad_b(ClassAd *classad)
 	return;
 }
 
+static void test_chaining(void)
+{
+	ClassAd *root, *child;
+	ClassAdParser  parser;
+
+	root = parser.ParseClassAd(chaining_root_text);
+	child = parser.ParseClassAd(chaining_child_text);
+
+	if (root == NULL) {
+		cout << "Failed: Couldn't parse chaining root.\n";
+		exit(1);
+	} else if (child == NULL) {
+		cout << "Failed: Couldn't parser chaining child.\n";
+		exit(1);
+	}
+	
+	cout << "\nTesting chaining...\n";
+	child->ChainToAd(root);
+
+	// Make sure we can look up in child.
+	int aa;
+	if (!child->EvaluateAttrInt("AA", aa) || aa != 14) {
+		cout << "  Couldn't retrieve AA from chained child.\n";
+	} else {
+		cout << "  Can look up AA.\n";
+	}
+
+	// Make sure we can look up in parent:
+	int a;
+	if (!child->EvaluateAttrInt("A", a) || a != 1) {
+		cout << "  Couldn't retrieve A from chained parent.\n";
+	} else {
+		cout << "  Can look up A from chained parent.\n";
+	} 
+
+	// When we look up B, it should come from child, not parent, 
+	// because it is duplicated.
+	string b;
+	if (!child->EvaluateAttrString("B", b) || b != "bonnet") {
+		cout << "  Failed to look up B from chained child.\n";
+	} else {
+		cout << "  Can look up B from child.\n";
+	}
+
+	// Let's delete BB and look it up again. It should come back
+	// as undefined.
+	Value lookup_value;
+	string bb;
+	child->Delete("BB");
+	if (child->EvaluateAttrString("BB", bb)) {
+		cout << "  Failed: BB still has string value?\n";
+	} else {
+		cout << "  BB is now undefined.\n";
+	}
+
+	// Let's delete B and look it up again. It should come back
+	// as undefined.
+	child->Delete("B");
+	if (child->EvaluateAttrString("B", b)) {
+		cout << "  Failed: B still has string value?\n";
+	} else {
+		cout << "  B is now undefined.\n";
+	}
+	cout << *child << endl;
+
+	child->Unchain();
+
+	return;
+}
+
+static void test_dirty(void)
+{
+	ClassAd        *classad;
+	ClassAdParser  parser;
+
+	classad = parser.ParseClassAd(dirty_classad_text);
+
+	cout << "Testing dirty attributes...\n";
+
+	if (classad->IsAttributeDirty("A")) {
+		cout << "  Failed: A is dirty just after construction.\n";
+	} else {
+		cout << "  OK: A is clean.\n";
+	}
+
+	classad->InsertAttr("B", true);
+	if (classad->IsAttributeDirty("A")) {
+		cout << "  Failed: A is dirty after inserting B.\n";
+	} else {
+		cout << "  OK: A is still clean.\n";
+	}
+	
+	if (!classad->IsAttributeDirty("B")) {
+		cout << "  Failed: B is not dirty.\n";
+	} else {
+		cout << "  OK: B is dirty.\n";
+	}
+
+	ClassAd::dirtyIterator  it = classad->dirtyBegin();
+	
+	if (it == classad->dirtyEnd()) {
+		cout << "  Failed: Dirty iterator gives us nothing.\n";
+	} else {
+		if ((*it) != "B") {
+			cout << "  Failed: Dirty iterator is not pointing at B.\n";
+		} else {
+			cout << "  OK: Dirty iterator starts out okay.\n";
+
+			it++;
+			if (it != classad->dirtyEnd()) {
+				cout << "  Failed: Dirty iterator it not at end.\n";
+			} else {
+				cout << "  OK: Dirty iterator ends okay.\n";
+			}
+		}
+	}
+
+	classad->ClearAllDirtyFlags();
+	if (classad->IsAttributeDirty("B")) {
+		cout << "  Failed: B is dirty after clearing flags.\n";
+	} else {
+		cout << "  OK: B is clean.\n";
+	}
+
+	classad->MarkAttributeDirty("A");
+	if (!classad->IsAttributeDirty("A")) {
+		cout << "  Failed: A is not dirty.\n";
+	} else {
+		cout << "  OK: A is dirty.\n";
+	}
+
+	classad->MarkAttributeClean("A");
+	if (classad->IsAttributeDirty("A")) {
+		cout << "  Failed: A is dirty after cleaning it.\n";
+	} else {
+		cout << "  OK: A is clean.\n";
+	}
+
+	return;
+}
