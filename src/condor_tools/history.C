@@ -31,7 +31,7 @@
 
 //------------------------------------------------------------------------
 
-static void displayJobShort(AttrList* ad);
+static void displayJobShort(ClassAd* ad);
 static void short_header(void);
 static void short_print(int,int,const char*,int,int,int,int,int,int,const char *);
 static void short_header (void);
@@ -39,8 +39,7 @@ static void shorten (char *, int);
 static char* format_date( time_t date );
 static char* format_time( int tot_secs );
 static char encode_status( int status );
-static bool EvalBool(AttrList *ad, ExprTree *tree);
-
+static bool EvalBool(ClassAd *ad, ExprTree *tree);
 
 //------------------------------------------------------------------------
 
@@ -116,18 +115,19 @@ if (constraint) puts(constraint);
   // printf("HistroyFile=%s\nLongFormat=%d\n",JobHistoryFileName,LongFormat);
   // if (constraint) printf("constraint=%s\n",constraint);
 
-  if( constraint && Parse( constraint, constraintExpr ) ) {
-     fprintf( stderr, "Error:  could not parse constraint %s\n", constraint );
+  ClassAdParser parser;	// NAC
+  if( constraint && parser.ParseExpression( constraint, constraintExpr )){//NAC
+	  fprintf( stderr, "Error:  could not parse constraint %s\n", constraint );
      exit( 1 );
   }
 
   int EndFlag=0;
   int ErrorFlag=0;
   int EmptyFlag=0;
-  AttrList *ad=0;
+  ClassAd *ad=0;
   if (!LongFormat) short_header();
   while(!EndFlag) {
-    if( !( ad=new AttrList(LogFile,"***", EndFlag, ErrorFlag, EmptyFlag) ) ){
+    if( !( ad=new ClassAd(LogFile,"***", EndFlag, ErrorFlag, EmptyFlag) ) ){
       fprintf( stderr, "Error:  Out of memory\n" );
       exit( 1 );
     } 
@@ -159,7 +159,7 @@ if (constraint) puts(constraint);
 //------------------------------------------------------------------------
 
 static void
-displayJobShort(AttrList* ad)
+displayJobShort(ClassAd* ad)
 {
         int cluster, proc, date, status, prio, image_size, CompDate;
         float utime;
@@ -336,22 +336,17 @@ encode_status( int status )
 
 //------------------------------------------------------------------------
 
-static bool EvalBool(AttrList* ad, ExprTree *tree)
+static bool EvalBool(ClassAd* ad, ExprTree *tree)	// NAC
 {
-	EvalResult result;
-
-    // Evaluate constraint with ad in the target scope so that constraints
-    // have the same semantics as the collector queries.  --RR
-    if (!tree->EvalTree(NULL, ad, &result)) {
-        // dprintf(D_ALWAYS, "can't evaluate constraint: %s\n", constraint);
-        delete tree;
-        return false;
-    }
-    
-    if (result.type == LX_INTEGER) {
-        return (bool)result.i;
-    }
-
-    return false;
+	Value result;
+	bool boolValue;
+	if( !ad->EvaluateExpr( tree, result ) ) {
+		delete tree;
+		return false;
+	}
+	if( result.IsBooleanValue( boolValue ) ) {
+		return boolValue;
+	}
+	
+	return false;
 }
-
