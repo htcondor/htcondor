@@ -46,23 +46,36 @@ public:
 
 	bool getLocalJobAd( void );
 
-private:
+protected:
 
-		// Private helper methods
+		/** Protected version of the constructor.  This can't be used
+			by the outside world, but it can be used by our derived
+			classes.  JICLocalStdin can work in conjunction with a
+			keyword, but it's not required, so we don't want to
+			EXCEPT() if it's not there.  Other than run-time type
+			checking, there's no way for the public constructor to
+			know if it should EXCEPT or not, so this seems like the
+			safest, most portable way to get what we want.
+		*/
+	JICLocalConfig( int cluster, int proc, int subproc );
 
-	bool getConfigString( ClassAd* ad, const char* key, bool warn,
-						  const char* attr, const char* alt_name );
-	bool getConfigInt( ClassAd* ad, const char* key, bool warn,
-					   const char* attr, const char* alt_name );
-	bool getConfigBool( ClassAd* ad, const char* key, bool warn,
-						const char* attr, const char* alt_name );
-	bool getConfigAttr( ClassAd* ad, const char* key, bool warn,
-						bool is_string, const char* attr,
-						const char* alt_name );
+		/** Get the job's universe from the config file.  We can't
+			just use the regular getInt() method, since the user could
+			have defined either the int or the string version of the
+			universe.  We want this to be virtual since JICLocalStdin
+			needs a different version (which checks in the existing
+			ClassAd before trying the config file).
+		*/
+	virtual bool getUniverse( void );
 
-	bool getUniverse( ClassAd* ad );
+		// Protected helper methods
+	bool getString( bool warn, const char* attr, const char* alt_name );
+	bool getBool( bool warn, const char* attr, const char* alt_name );
+	bool getInt( bool warn, const char* attr, const char* alt_name );
+	bool getAttr( bool warn, bool is_string, const char* attr,
+				  const char* alt_name );
 
-		// Private data
+		// Protected data
 	char* key;
 };
 

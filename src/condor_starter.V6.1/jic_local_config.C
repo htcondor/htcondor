@@ -41,7 +41,22 @@ JICLocalConfig::JICLocalConfig( const char* keyword, int cluster,
 	job_cluster = cluster;
 	job_proc = proc;
 	job_subproc = subproc;
+	job_ad = new ClassAd();
 }
+
+
+JICLocalConfig::JICLocalConfig( int cluster, int proc, int subproc ) 
+	: JICLocal()
+{
+		// this is the protected version that doesn't care if there's
+		// no key...  
+	key = NULL;
+	job_cluster = cluster;
+	job_proc = proc;
+	job_subproc = subproc;
+	job_ad = new ClassAd();
+}
+
 
 
 JICLocalConfig::~JICLocalConfig()
@@ -49,52 +64,57 @@ JICLocalConfig::~JICLocalConfig()
 	if( key ) {
 		free( key );
 	}
+	if( job_ad ) {
+		delete job_ad;
+	}  
 }
 
 
 bool
 JICLocalConfig::getLocalJobAd( void )
 { 
+	if( ! key ) {
+		dprintf( D_ALWAYS, "ERROR: Cannot get job ClassAd from config file "
+				 "without a keyword, aborting\n" );
+		return false;
+	}
+
 	dprintf( D_ALWAYS, "Getting job ClassAd from config file "
 			 "with keyword: \"%s\"\n", key );
 
-	job_ad = new ClassAd();
-
 		// first, things we absolutely need
-	if( !getUniverse(job_ad) ) { 
+	if( ! getUniverse() ) { 
 		return false;
 	}
-	if( !getConfigString(job_ad, key, 1, ATTR_JOB_CMD, "executable")) {
+	if( ! getString( 1, ATTR_JOB_CMD, "executable") ) {
 		return false;
 	}
-	if( !getConfigString(job_ad, key, 1, ATTR_JOB_IWD, "initialdir")) {
+	if( ! getString( 1, ATTR_JOB_IWD, "initialdir") ) {
 		return false;
 	}
 
 		// ATTR_OWNER only matters if we're running as root, and we'll
 		// catch it later if we need it and it's not defined.  so,
 		// just treat it as optional at this point.
-	getConfigString( job_ad, key, 0, ATTR_OWNER, NULL );
+	getString( 0, ATTR_OWNER, NULL );
 
 		// now, optional things
-	getConfigString( job_ad, key, 0, ATTR_JOB_INPUT, "input" );
-	getConfigString( job_ad, key, 0, ATTR_JOB_OUTPUT, "output" );
-	getConfigString( job_ad, key, 0, ATTR_JOB_ERROR, "error" );
-	getConfigString( job_ad, key, 0, ATTR_JOB_ARGUMENTS, "arguments" );
-	getConfigString( job_ad, key, 0, ATTR_JOB_ENVIRONMENT, "environment" );
-	getConfigString( job_ad, key, 0, ATTR_JAR_FILES, "jar_files" );
-	getConfigInt( job_ad, key, 0, ATTR_KILL_SIG, "kill_sig" );
-	getConfigBool( job_ad, key, 0, ATTR_STARTER_WAIT_FOR_DEBUG, 
-				   "starter_wait_for_debug" );
-	getConfigString( job_ad, key, 0, ATTR_STARTER_ULOG_FILE, "log" );
-	getConfigBool( job_ad, key, 0, ATTR_STARTER_ULOG_USE_XML, 
-				   "log_use_xml" );
+	getString( 0, ATTR_JOB_INPUT, "input" );
+	getString( 0, ATTR_JOB_OUTPUT, "output" );
+	getString( 0, ATTR_JOB_ERROR, "error" );
+	getString( 0, ATTR_JOB_ARGUMENTS, "arguments" );
+	getString( 0, ATTR_JOB_ENVIRONMENT, "environment" );
+	getString( 0, ATTR_JAR_FILES, "jar_files" );
+	getInt( 0, ATTR_KILL_SIG, "kill_sig" );
+	getBool( 0, ATTR_STARTER_WAIT_FOR_DEBUG, "starter_wait_for_debug" );
+	getString( 0, ATTR_STARTER_ULOG_FILE, "log" );
+	getBool( 0, ATTR_STARTER_ULOG_USE_XML, "log_use_xml" );
 
 		// only check for cluster and proc in the config file if we
 		// didn't get them on the command-line
 	MyString line;
 	if( job_cluster < 0 ) { 
-		getConfigInt( job_ad, key, 0, ATTR_CLUSTER_ID, "cluster" );
+		getInt( 0, ATTR_CLUSTER_ID, "cluster" );
 	} else {
 		line = ATTR_CLUSTER_ID;
 		line += '=';
@@ -102,7 +122,7 @@ JICLocalConfig::getLocalJobAd( void )
 		job_ad->Insert( line.Value() );
 	}
 	if( job_proc < 0 ) {
-		getConfigInt( job_ad, key, 1, ATTR_PROC_ID, "proc" );
+		getInt( 1, ATTR_PROC_ID, "proc" );
 	} else {
 		line = ATTR_PROC_ID;
 		line += '=';
@@ -114,41 +134,43 @@ JICLocalConfig::getLocalJobAd( void )
 
 
 bool
-JICLocalConfig::getConfigString( ClassAd* ad, const char* key, 
-								 bool warn, const char* attr,
-								 const char* alt_name )
+JICLocalConfig::getString( bool warn, const char* attr, 
+						   const char* alt_name )
 {
-	return getConfigAttr( ad, key, warn, true, attr, alt_name );
+	return getAttr( warn, true, attr, alt_name );
 }
 
 
 bool
-JICLocalConfig::getConfigInt( ClassAd* ad, const char* key, 
-							  bool warn, const char* attr,
-							  const char* alt_name )
+JICLocalConfig::getBool( bool warn, const char* attr,
+						 const char* alt_name )
 {
-	return getConfigAttr( ad, key, warn, false, attr, alt_name );
+	return getAttr( warn, false, attr, alt_name );
 }
 
 
 bool
-JICLocalConfig::getConfigBool( ClassAd* ad, const char* key, 
-							   bool warn, const char* attr,
-							   const char* alt_name )
+JICLocalConfig::getInt( bool warn, const char* attr,
+						const char* alt_name )
 {
-	return getConfigAttr( ad, key, warn, false, attr, alt_name );
+	return getAttr( warn, false, attr, alt_name );
 }
 
 
 bool
-JICLocalConfig::getConfigAttr( ClassAd* ad, const char* key, bool warn, 
-							   bool is_string, const char* attr, 
-							   const char* alt_name )
+JICLocalConfig::getAttr( bool warn, bool is_string, const char* attr, 
+						 const char* alt_name )
 {
 	char* tmp;
 	char param_name[256];
 	MyString expr;
 	bool needs_quotes = false;
+
+	if( job_ad->Lookup(attr) ) {
+			// we've already got this attribute in our ClassAd, we're
+			// done.  
+		return true;
+	}
 
 	sprintf( param_name, "%s_%s", key, attr );
 	tmp = param( param_name );
@@ -179,7 +201,7 @@ JICLocalConfig::getConfigAttr( ClassAd* ad, const char* key, bool warn,
 	}
 	free( tmp );
 
-	if( ad->Insert(expr.Value()) ) {
+	if( job_ad->Insert(expr.Value()) ) {
 		return true;
 	}
 	dprintf( D_ALWAYS, "ERROR: Failed to insert into job ad: %s\n",
@@ -189,12 +211,12 @@ JICLocalConfig::getConfigAttr( ClassAd* ad, const char* key, bool warn,
 
 
 bool
-JICLocalConfig::getUniverse( ClassAd* ad ) 
+JICLocalConfig::getUniverse( void ) 
 {
 	char* tmp;
 	char param_name[256];
 	int univ = 0;
-
+ 
 		// first try the ClassAd attr name:
 	sprintf( param_name, "%s_%s", key, ATTR_JOB_UNIVERSE );
 	tmp = param( param_name );
@@ -233,30 +255,8 @@ JICLocalConfig::getUniverse( ClassAd* ad )
 	free( tmp );
 	tmp = NULL;
 
-		// now that we know what they wanted, see if we'll support it
-	switch( univ ) {
-	case CONDOR_UNIVERSE_VANILLA:
-	case CONDOR_UNIVERSE_JAVA:
-			// for now, we don't support much. :)
-		break;
-	case CONDOR_UNIVERSE_STANDARD:
-	case CONDOR_UNIVERSE_PVM:
-	case CONDOR_UNIVERSE_SCHEDULER:
-	case CONDOR_UNIVERSE_MPI:
-	case CONDOR_UNIVERSE_GLOBUS:
-	case CONDOR_UNIVERSE_PARALLEL:
-			// these are at least valid tries, but we don't work with
-			// any of them in stand-alone starter mode... yet.
-		dprintf( D_ALWAYS, "ERROR: %s %s (%d) not supported without the "
-				 "schedd and/or shadow, aborting\n", param_name,
-				 CondorUniverseName(univ), univ );
+	if( ! checkUniverse(univ) ) {
 		return false;
-	default:
-			// downright unsupported universes
-		dprintf( D_ALWAYS, "ERROR: %s %s (%d) is not supported\n", 
-				 param_name, CondorUniverseName(univ), univ );
-		return false;
-
 	}
 
 		// MyString likes to append strings, so print out the string
@@ -271,12 +271,13 @@ JICLocalConfig::getUniverse( ClassAd* ad )
 	expr += " = ";
 	expr += univ_str;
 
-	if( ad->Insert(expr.Value()) ) {
+	if( job_ad->Insert(expr.Value()) ) {
 		return true;
 	}
 	dprintf( D_ALWAYS, "ERROR: Failed to insert into job ad: %s\n",
 			 expr.Value() );
 	return false;
 }
+
 
 
