@@ -182,6 +182,7 @@ DEBUG_FLAG = DebugFlag
 #define VendorFTestFlags
 #endif
 
+#undef GSS_AUTHENTICATION
 #if !defined( GSS_AUTHENTICATION )
 
 #  define GssAuthentication
@@ -214,6 +215,7 @@ VENDOR_C_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 
 STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) PlatformFlags PlatformGccFlags
 STD_C_PLUS_FLAGS = $(STD_C_FLAGS) -fno-implicit-templates
+INST_C_PLUS_FLAGS = $(STD_C_FLAGS)
 
 TESTSUITE_FLAGS_GCC =  $(STD_C_FLAGS)
 TESTSUITE_FLAGS_GPP = $(STD_C_PLUS_FLAGS)
