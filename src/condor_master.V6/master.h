@@ -51,6 +51,9 @@ public:
 	time_t	startTime;		// Time this daemon was started
 	bool	isDC;
 
+	char*   env;			// Environment of daemon, e.g.,
+							// "FOO=bar;CONDOR_CONFIG=/some/path/config"
+							// null if there is none
 
 #if 0
 	char*	port;				 	// for config server
