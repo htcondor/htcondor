@@ -1359,9 +1359,37 @@ SetNotification()
 void
 SetNotifyUser()
 {
+	bool needs_warning = false;
+	static bool did_warning = false;
+
 	char *who = condor_param( NotifyUser, ATTR_NOTIFY_USER );
 
 	if (who) {
+		if( ! did_warning ) {
+			if( !stricmp(who, "false") ) {
+				needs_warning = true;
+			}
+			if( !stricmp(who, "never") ) {
+				needs_warning = true;
+			}
+		}
+		if( needs_warning && ! did_warning ) {
+			char* tmp = param( "UID_DOMAIN" );
+			if( ! tmp ) {
+				tmp = strdup( my_full_hostname() );
+			}
+			fprintf( stderr, "\nWARNING: You used \"%s = %s\" in your "
+					 "submit file.\n", NotifyUser, who );
+			fprintf( stderr, "This means notification email will go to "
+					 "user \"%s@%s\".\n", who, tmp );
+			free( tmp );
+			fprintf( stderr, "This is probably not what you expect!\n"
+					 "If you do not want notification email, put "
+					 "\"notification = never\"\n"
+					 "into your submit file, instead.\n" );
+
+			did_warning = true;
+		}
 		(void) sprintf (buffer, "%s = \"%s\"", ATTR_NOTIFY_USER, who);
 		InsertJobExpr (buffer);
 		free(who);
