@@ -1,18 +1,15 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_userlog.mak
 
 "..\src\condor_c++_util\dc_stub.C" : \
-	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	
 
 ..\src\condor_userlog\userlog.C : \
-	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\format_time.h"\
@@ -22,9 +19,8 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_distribution.h"\
-	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\internet.h"\
 	

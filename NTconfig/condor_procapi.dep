@@ -1,23 +1,20 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_procapi.mak
 
 ..\src\condor_procapi\procapi.C : \
-	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\ntsysinfo.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_procapi\procapi.h"\
-	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	
 
 ..\src\condor_procapi\procinterface.C : \
-	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -34,7 +31,6 @@
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
-	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_uid.h"\
@@ -43,7 +39,7 @@
 	"..\src\condor_includes\stream.h"\
 	"..\src\condor_procapi\procapi.h"\
 	"..\src\condor_procapi\procinterface.h"\
-	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\proc.h"\
 	"..\src\h\sched.h"\

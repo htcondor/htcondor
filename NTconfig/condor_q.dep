@@ -1,18 +1,15 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_q.mak
 
 "..\src\condor_c++_util\dc_stub.C" : \
-	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
-	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	
 
 ..\src\condor_q.V6\queue.C : \
-	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\ad_printmask.h"\
 	"..\src\condor_c++_util\condor_q.h"\
 	"..\src\condor_c++_util\condor_query.h"\
@@ -20,7 +17,6 @@
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\format_time.h"\
 	"..\src\condor_c++_util\generic_query.h"\
-	"..\src\condor_c++_util\get_daemon_addr.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\metric_units.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -53,7 +49,6 @@
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_distribution.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
-	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_getmnt.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_io.h"\
@@ -74,8 +69,8 @@
 	"..\src\condor_includes\sock.h"\
 	"..\src\condor_includes\sockCache.h"\
 	"..\src\condor_includes\stream.h"\
-	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\condor_types.h"\
+	"..\src\h\fake_flock.h"\
 	"..\src\h\file_lock.h"\
 	"..\src\h\globus_utils.h"\
 	"..\src\h\internet.h"\
