@@ -48,13 +48,14 @@
 #include <errno.h>
 #include <sys/file.h>
 #include <sys/param.h>
-
+#include <sys/stat.h>
 
 #include "condor_sys.h"
 #include "debug.h"
 #include "clib.h"
+#include "except.h"
 
-#if defined(HPUX9) || defined(AIX32) || defined(LINUX)
+#if defined(HPUX9) || defined(AIX32) || defined(LINUX) || defined (OSF1)
 #	include <signal.h>
 #endif
 
@@ -88,6 +89,8 @@ int		(*DebugId)();
 
 int		LockFd = -1;
 int		_Condor_SwitchUids;
+
+static char _FileName_[] = __FILE__;
 
 char *DebugFlagNames[] = {
 	"D_ALWAYS", "D_TERMLOG", "D_SYSCALLS", "D_CKPT", "D_XDR", "D_MALLOC", 
@@ -312,13 +315,33 @@ preserve_log_file()
 	fprintf( DebugFP, "Saving log file to \"%s\"\n", old );
 	(void)fflush( DebugFP );
 
+	/*
+	** for some still unknown reason, newer versions of OSF/1 (Digital Unix)
+    ** sometimes do not rotate the log correctly using 'rename'.  Changing
+	** this to a unlink/link/unlink sequence seems to work.  May as well do
+	** it for all platforms as there is no need for atomicity.  --RR
+    */
 
-	if( rename(DebugFile,old) < 0 ) {
-		fprintf( DebugFP, "Can't link %s to %s\n", DebugFile, old );
-		perror( "rename" );
-		exit( errno );
-	}
 	fclose( DebugFP );
+	unlink (old);
+
+	if (link (DebugFile, old) < 0)
+		exit (__LINE__);
+
+	if (unlink (DebugFile) < 0)
+		exit (__LINE__);
+
+	/* double check the result of the rename */
+	{
+		struct stat buf;
+		if (stat (DebugFile, &buf) >= 0)
+		{
+			/* Debug file exists! */
+			fprintf (DebugFP, "Double check on rename failed!\n");
+			fprintf (DebugFP, "%s still exists\n", DebugFile);
+			exit (__LINE__);
+		}
+	}
 
 	fd = open_debug_file( O_CREAT | O_WRONLY );
 
@@ -334,7 +357,9 @@ preserve_log_file()
 #	endif
 #else
 	DebugFP = fdopen( fd, "a" );
+	if (DebugFP == NULL) exit (__LINE__);
 #endif
+	fprintf (DebugFP, "Now in new log file %s\n", DebugFile);
 }
 
 /*
