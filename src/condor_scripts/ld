@@ -47,6 +47,14 @@ PATH=/bin:/usr/bin:$PATH
 # On linux and SunOS5, they are simply in a directory other than /bin.
 CONDOR_FULLINSTALL=false
 
+# touch the activity file if it is available to us in our environment. It is
+# the root invocation(in the process tree) condor_compile's responsibility to 
+# check for and clean this file up under normal and signalling circumstances
+if [ "X$CONDOR_LD_IN_USE_FILE" != "X" ]; then
+	touch $CONDOR_LD_IN_USE_FILE
+	chmod 600 $CONDOR_LD_IN_USE_FILE
+fi
+
 # Call uname to get the OS. IRIX sometimes reports as IRIX64, strip it.
 os=`uname -s | sed 's/IRIX.*/IRIX/'`
 osver=`uname -r`
