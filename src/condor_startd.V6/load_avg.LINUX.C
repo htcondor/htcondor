@@ -32,24 +32,16 @@
 
 static char *_FileName_ = __FILE__;
 
-
 extern "C" {
 	float calc_load_avg();
 	void get_k_vars();
 }
 
-
-
-
 float
 calc_load_avg()
 {
 	Linux	param;			//System parameters
-	float	load_avg;
-	int	size = sizeof(float);
-
-	load_avg = param.get_load_avg();
-	return load_avg;
+	return param.get_load_avg();
 }
 
 void

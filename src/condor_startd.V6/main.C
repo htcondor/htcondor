@@ -53,7 +53,7 @@ int	handle_dc_sigchld( Service*, int );
 int	shutdown_sigchld( Service*, int ); 
 
 int
-main_init( int argc, char* argv[] )
+main_init( int, char* [] )
 {
 		// Seed the random number generator for capability generation.
 	set_seed( 0 );
@@ -159,7 +159,7 @@ main_config()
 int
 init_params( int first_time)
 {
-	char *tmp, *pval, buf[1024];
+	char *tmp, buf[1024];
 	int i;
 	struct hostent *hp;
 

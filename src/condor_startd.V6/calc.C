@@ -47,11 +47,11 @@ calc_idle_time( int & user_idle, int & console_idle )
 {
 	int tty_idle;
 	int now;
-	struct utmp utmp;
-	ELEM temp;
-#if defined(HPUX9) || defined(LINUX)	/*Linux uses /dev/mouse	*/
-	int i;
+#if defined(HPUX9) || defined(LINUX)
 	char devname[MAXPATHLEN];
+#endif
+#if defined(HPUX9)
+	int i;
 #endif
 
 	console_idle = -1;  // initialize
@@ -97,7 +97,7 @@ calc_idle_time( int & user_idle, int & console_idle )
 /*
  * Linux usally has a /dev/mouse linked to ttySx or psaux, etc.  Use it!
  *
- * stat() will follow the link to the apropriate ttySx
+ * stat() will follow the link to the apropriate device
  */
 #if defined(LINUX)
 	sprintf(devname, "mouse");

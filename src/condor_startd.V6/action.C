@@ -59,8 +59,6 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 	ClassAd *requestAd = new ClassAd;
 	ClassAd templateCA;
 	int cmd;
-	int interval = 0;
-	char* client_addr = NULL;
 	float rank = -1;
 	float oldrank = -1;
 	State s = rip->state();
@@ -297,12 +295,11 @@ activate_claim( Resource* rip, Stream* stream )
 	ClassAd	*req_classad = NULL, *mach_classad = rip->r_classad;
 
 	char tmp[80];
-	PORTS ports;
 	int sock_1, sock_2;
 	int fd_1, fd_2;
 	struct sockaddr_in frm;
 	int len = sizeof frm;
-	char official_name[MAXHOSTLEN], *ptr = official_name;
+	char official_name[MAXHOSTLEN];
 	StartdRec stRec;
 	start_info_t ji;	/* XXXX */
 	char JobId[80];
@@ -591,7 +588,11 @@ vacate_claim( Resource* rip )
 		} else {
 			return rip->change_state( idle_act );
 		}
+	default:
+		EXCEPT( "Unknown state (%d) in vacate_claim",
+				(int)rip->state() );
 	}
+	return FALSE;
 }
 
 
@@ -617,7 +618,11 @@ kill_claim( Resource* rip )
 		} else {
 			return rip->change_state( idle_act );
 		}
+	default:
+		EXCEPT( "Unknown state (%d) in kill_claim",
+				(int)rip->state() );
 	}
+	return FALSE;
 }
 
 int
@@ -655,7 +660,7 @@ continue_claim( Resource* rip )
 int
 match_info( Resource* rip, char* cap )
 {
-	int rval;
+	int rval = FALSE;
 	dprintf(D_ALWAYS, "match_info called\n");
 
 	if( rip->state() == claimed_state ) {
@@ -705,7 +710,7 @@ match_info( Resource* rip, char* cap )
 
 
 int
-match_timed_out( Service* s )
+match_timed_out( Service* )
 {
 	Match* match = (Match*) daemonCore->GetDataPtr();
 	Resource* rip = resmgr->get_by_any_cap( match->capab() );
@@ -735,8 +740,8 @@ match_timed_out( Service* s )
 	return TRUE;
 }
 
-
-claim_timed_out( Service* s )
+int
+claim_timed_out( Service* )
 {
 	Match* match = (Match*) daemonCore->GetDataPtr();
 	Resource* rip = resmgr->get_by_cur_cap( match->capab() );
@@ -751,6 +756,8 @@ claim_timed_out( Service* s )
 
 		// Release the claim.
 	release_claim( rip );
+
+	return TRUE;
 }
 
 
@@ -786,5 +793,6 @@ request_new_proc( Resource* rip )
 			return TRUE;
 		}
 	}
+	return FALSE;
 }	
 

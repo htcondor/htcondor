@@ -243,12 +243,12 @@ create_port(int* sock)
 {
 	struct sockaddr_in sin;
 	int len = sizeof sin;
-	char address[100];
 
 	memset((char *)&sin,0,sizeof sin);
 	sin.sin_family = AF_INET;
 	
 #if 0
+	char address[100];
 	if( IP ) {
 		sprintf(address, "<%s:%d>", IP, 0);
 		string_to_sin(address, &sin);
@@ -283,6 +283,7 @@ config_classad( Resource* rip )
 {
 	config( rip->r_classad );
 	rip->init_classad();
+	return TRUE;
 }
 
 
@@ -325,4 +326,5 @@ command_to_string( int cmd )
 	default:
 		return "unknown";
 	}
+	return "error";
 }

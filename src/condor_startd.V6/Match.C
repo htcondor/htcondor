@@ -313,9 +313,8 @@ char*
 new_capability_string()
 {
 	char cap[256];
-	cap[0] = '\0';
 	char tmp[128];
-	sprintf( tmp, "%d\0", get_random_int() );
+	sprintf( tmp, "%d", get_random_int() );
 	strcpy( cap, daemonCore->InfoCommandSinfulString() );
 	strcat( cap, "#" );
 	strcat( cap, tmp );
