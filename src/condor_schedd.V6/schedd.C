@@ -2249,7 +2249,7 @@ Scheduler::Init()
 	if( ad ) delete ad;
 	ad = new ClassAd();
 
-	config( ad, mySubSystem );
+	config_fill_ad( ad, mySubSystem );
 
 	ad->SetMyTypeName(SCHEDD_ADTYPE);
 	ad->SetTargetTypeName("");
