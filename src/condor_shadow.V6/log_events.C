@@ -31,7 +31,6 @@
 
 #include "user_log.c++.h"
 #include "proc.h"
-#include "_condor_fix_resource.h"
 #include "condor_debug.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
