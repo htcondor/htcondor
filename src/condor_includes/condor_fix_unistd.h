@@ -7,8 +7,9 @@
 /*
   For some reason the g++ include files on Ultrix 4.3 fail to provide
   these prototypes, even though the Ultrix 4.2 versions did...
+  Once again, OSF1 also chokes, unless _AES_SOURCE(?) is defined JCP
 */
-#if defined(ULTRIX43)
+#if defined(ULTRIX43) || defined(OSF1)
 
 #if defined(__cplusplus)
 extern "C" {
