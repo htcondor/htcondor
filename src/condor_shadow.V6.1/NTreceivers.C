@@ -368,6 +368,58 @@ do_REMOTE_syscall()
 		return 0;
 	}
 
+	case CONDOR_mkdir:
+	  {
+		char *  path;
+		int terrno;
+		int mode;
+
+		path = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
+		memset( path, 0, (unsigned)_POSIX_PATH_MAX );
+		assert( syscall_sock->code(path) );
+		assert( syscall_sock->code(mode) );
+		assert( syscall_sock->end_of_message() );;
+
+		errno = 0;
+		rval = mkdir(path,mode);
+		terrno = errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		free( (char *)path );
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+	}
+
+	case CONDOR_rmdir:
+	  {
+		char *  path;
+		int terrno;
+
+		path = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
+		memset( path, 0, (unsigned)_POSIX_PATH_MAX );
+		assert( syscall_sock->code(path) );
+		assert( syscall_sock->end_of_message() );;
+
+		errno = 0;
+		rval = rmdir( path);
+		terrno = errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		free( (char *)path );
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+	}
+
 	default:
 	{
 		EXCEPT( "unknown syscall %d received\n", condor_sysnum );

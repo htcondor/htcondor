@@ -182,6 +182,18 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
+	} else if(sscanf(line,"mkdir %s %d",path,&mode)==2) {
+
+		result = REMOTE_CONDOR_mkdir(path,mode);
+		sprintf(line,"%d",convert(result,errno));
+		r->put_line_raw(line);
+
+	} else if(sscanf(line,"rmdir %s",path)==1) {
+
+		result = REMOTE_CONDOR_rmdir(path);
+		sprintf(line,"%d",convert(result,errno));
+		r->put_line_raw(line);
+
 	} else if(sscanf(line,"read %d %d",&fd,&length)==2) {
 
 		char *buffer = (char*) malloc(length);

@@ -369,4 +369,55 @@ REMOTE_CONDOR_register_mpi_master_info( char* str )
 	return rval;
 }
 
+int
+REMOTE_CONDOR_mkdir( char *  path, int mode )
+{
+        int     rval;
+        int     terrno;
+
+        CurrentSysCall = CONDOR_mkdir;
+
+        syscall_sock->encode();
+        assert( syscall_sock->code(CurrentSysCall) );
+        assert( syscall_sock->code(path) );
+        assert( syscall_sock->code(mode) );
+        assert( syscall_sock->end_of_message() );
+
+        syscall_sock->decode();
+        assert( syscall_sock->code(rval) );
+        if( rval < 0 ) {
+                assert( syscall_sock->code(terrno) );
+                assert( syscall_sock->end_of_message() );
+                errno = terrno;
+                return rval;
+        }
+        assert( syscall_sock->end_of_message() );
+        return rval;
+}
+
+int
+REMOTE_CONDOR_rmdir( char *  path )
+{
+        int     rval;
+        int     terrno;
+
+        CurrentSysCall = CONDOR_rmdir;
+
+        syscall_sock->encode();
+        assert( syscall_sock->code(CurrentSysCall) );
+        assert( syscall_sock->code(path) );
+        assert( syscall_sock->end_of_message() );
+
+        syscall_sock->decode();
+        assert( syscall_sock->code(rval) );
+        if( rval < 0 ) {
+                assert( syscall_sock->code(terrno) );
+                assert( syscall_sock->end_of_message() );
+                errno = terrno;
+                return rval;
+        }
+        assert( syscall_sock->end_of_message() );
+        return rval;
+}
+
 } // extern "C"

@@ -113,6 +113,11 @@ lseek  <decimal:fd> <decimal:offset> <decimal:whence>
 
 	Returns the current seek position.
 
+mkdir  <string:name> <decimal:mode>
+
+	Create a new directory by this name.
+	"mode" is interpreted in the same manner as a POSIX file mode.
+
 open   <string:name> <string:flags> <decimal:mode>
 
 	Open the file named "name."  "mode" is interpreted in the same
@@ -145,6 +150,10 @@ read   <decimal:fd> <decimal:length>
 rename <string:oldpath> <string:newpath>
 
 	Cause the file "oldpath" to be renamed to "newpath".
+
+rmdir  <string:name>
+
+	Delete a directory by this name.
 
 unlink <string:path>
 

@@ -71,17 +71,7 @@ public class ChirpClient {
 	*/
 
 	public void cookie( String c ) throws IOException {
-		int response;
-		try {
-			String line ="cookie "+c+"\n";	
-			byte [] bytes = line.getBytes(encoding);
-			output.write(bytes,0,bytes.length);
-			output.flush();
-			response = getResponse();
-		} catch( IOException e ) {
-			throw new ChirpError(e);
-		}
-		returnOrThrow(response);
+		simple_command("cookie "+c+"\n");	
 	}
 
 	/**
@@ -102,17 +92,7 @@ public class ChirpClient {
 	*/
 
 	public int open( String path, String flags, int mode ) throws IOException {
-		int response;
-		try {
-			String line ="open "+path+" "+flags+" "+mode+"\n";
-			byte [] bytes = line.getBytes(encoding);
-			output.write(bytes,0,bytes.length);
-			output.flush();
-			response = getResponse();
-		} catch( IOException e ) {
-			throw new ChirpError(e);
-		}
-		return returnOrThrow(response);
+		return simple_command("open "+path+" "+flags+" "+mode+"\n");
 	}
 
 	/**
@@ -122,17 +102,7 @@ public class ChirpClient {
 	*/
 
 	public void close( int fd ) throws IOException {
-		int response;
-		try {
-			String line = "close "+fd+"\n";
-			byte [] bytes = line.getBytes(encoding);
-			output.write(bytes,0,bytes.length);
-			output.flush();
-			response = getResponse();
-		} catch( IOException e ) {
-			throw new ChirpError(e);
-		}
-		returnOrThrow(response);
+		simple_command("close "+fd+"\n");
 	}
 
 	/**
@@ -210,17 +180,7 @@ public class ChirpClient {
 	*/
 
 	public int lseek( int fd, int offset, int whence ) throws IOException {
-		int response;
-		try {	
-			String line ="seek "+fd+" "+offset+" "+whence+"\n";
-			byte [] bytes = line.getBytes(encoding);
-			output.write(bytes,0,bytes.length);
-			output.flush();
-			response = getResponse();
-		} catch( IOException e ) {
-			throw new ChirpError(e);
-		}
-		return returnOrThrow(response);
+		return simple_command("seek "+fd+" "+offset+" "+whence+"\n");
 	}
 
 	/**	
@@ -230,17 +190,7 @@ public class ChirpClient {
 	*/
 
 	public void unlink( String name ) throws IOException {
-		int response;
-		try {
-			String line ="unlink "+name+"\n";
-			byte [] bytes = line.getBytes(encoding);
-			output.write(bytes,0,bytes.length);
-			output.flush();
-			response = getResponse();
-		} catch( IOException e ) {
-			throw new ChirpError(e);
-		}
-		returnOrThrow(response);
+		simple_command("unlink "+name+"\n");
 	}
 
 	/**	
@@ -251,17 +201,40 @@ public class ChirpClient {
 	*/
 
 	public void rename( String name, String newname ) throws IOException {
+		simple_command("rename "+name+" "+newname+"\n");
+	}
+
+	/**	
+	Create a directory.
+	@param name The directory name.
+	@throws IOException
+	*/
+
+	public void mkdir( String name, int mode ) throws IOException {
+		simple_command("mkdir "+name+" "+mode+"\n");
+	}
+
+	/**	
+	Delete a directory.
+	@param name The directory name.
+	@throws IOException
+	*/
+
+	public void rmdir( String name ) throws IOException {
+		simple_command("rmdir "+name+"\n");
+	}
+
+	private int simple_command( String cmd ) throws IOException {
 		int response;
 		try {
-			String line ="rename "+name+" "+newname+"\n";
-			byte [] bytes = line.getBytes(encoding);
+			byte [] bytes = cmd.getBytes(encoding);
 			output.write(bytes,0,bytes.length);
 			output.flush();
 			response = getResponse();
 		} catch( IOException e ) {
 			throw new ChirpError(e);
 		}
-		returnOrThrow(response);
+		return returnOrThrow(response);
 	}
 
 	private int returnOrThrow( int code ) throws IOException {

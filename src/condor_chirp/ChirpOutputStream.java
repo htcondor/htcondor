@@ -19,33 +19,64 @@ public class ChirpOutputStream extends java.io.OutputStream {
 	private String path;
 	private int fd;
 
+	private void init( String host, int port, String p, boolean append ) throws IOException {
+		if(host!=null) {
+			client = new ChirpClient(host,port);
+		} else {
+			client = new ChirpClient();
+		}
+		path = p;
+		if(append) {
+			fd = client.open(path,"wa",0777);
+		} else {
+			fd = client.open(path,"wtc",0777);
+		}
+	}
+
 	/**
 	Create a new output stream attached to the named file.
 	Use the Chirp server implicitly defined by the environment.
-	@param The file name.
+	@param p The file name.
 	@throws IOException
 	*/
 
 	public ChirpOutputStream( String p ) throws IOException {
-		client = new ChirpClient();
-		path = p;
-		fd = client.open(path,"wtc",0777);
+		init(null,0,p,false);
+	}
+
+
+	/**
+	Create a new output stream attached to the named file.
+	Use the Chirp server implicitly defined by the environment.
+	@param p The file name.
+	@param append
+		<ul>
+		<li> If true - Open file for appending, fail if it does not exist.
+		<li> If false - Create and truncate file for writing.
+		</ul>
+	@throws IOException
+	*/
+
+	public ChirpOutputStream( String p, boolean append ) throws IOException {
+		init(null,0,p,append);
 	}
 
 	/**
 	Create a new output stream attached to the named file.
 	Use the named Chirp server host and port.
-	Condor users should use the single-argument constructor instead.
 	@param host The server name.
 	@param port The server port number.
 	@param p The file name.
+	@param append
+		<ul>
+		<li> If true - Open file for appending, fail if it does not exist.
+		<li> If false - Create and truncate file for writing.
+		</ul>
 	@throws IOException
 	*/
 
-	public ChirpOutputStream( String host, int port, String p ) throws IOException {
-		client = new ChirpClient(host,port);
-		path = p;
-		fd = client.open(path,"wtc",0777);
+	public ChirpOutputStream( String host, int port, String p, boolean append ) throws IOException {
+		init(host,port,p,false);
 	}
 
 	/**
