@@ -71,7 +71,7 @@
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts shadow.V6 startd.V6 starter.V5 submit.V6 status.V6 \
 		tools kbdd collector.V6 PvmProgs dagman userlog eventd \
-		GlobusProgs starter.V6.1 shadow.V6.1
+		GlobusProgs starter.V6.1 shadow.V6.1 dcskel
 
 #define Libraries \
 		util_lib c++_util procapi sysapi io classad daemon_core.V6 \
@@ -258,6 +258,7 @@ object_target(scripts)
 #endif
 object_target(starter.V6.1)
 object_target(shadow.V6.1)
+object_target(dcskel)
 
 object_dir_target(h)
 object_dir_target(condor_includes)
