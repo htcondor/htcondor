@@ -34,12 +34,21 @@
 #include "condor_debug.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
+#include "condor_io.h"
 
 extern UserLog		ULog;
 
 extern int JobStatus;
 extern "C" PROC  *Proc;
 extern ClassAd *JobAd;
+
+extern ReliSock *syscall_sock;
+
+// count of network bytes send and received for this job so far
+float	TotalBytesSent = 0.0, TotalBytesRecvd = 0.0;
+
+// count of network bytes send and received outside of CEDAR RSC socket
+float	BytesSent = 0.0, BytesRecvd = 0.0;
 
 extern "C" void 
 initializeUserLog ()
@@ -98,6 +107,13 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 			event.total_remote_rusage = Proc->remote_usage[0];
 			event.run_local_rusage = *localr;
 			event.run_remote_rusage = *remoter;
+			// we want to log the events from the perspective of the
+			// user job, so if the shadow *sent* the bytes, then that
+			// means the user job *received* the bytes
+			event.recvd_bytes = syscall_sock->get_bytes_sent() + BytesSent;
+			event.sent_bytes = syscall_sock->get_bytes_recvd() + BytesRecvd;
+			event.total_recvd_bytes = TotalBytesSent;
+			event.total_sent_bytes = TotalBytesRecvd;
 			if (!ULog.writeEvent (&event))
 			{
 				dprintf (D_ALWAYS,"Unable to log ULOG_JOB_TERMINATED event\n");
@@ -113,6 +129,11 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 			event.checkpointed = false;
 			event.run_local_rusage = *localr;
 			event.run_remote_rusage = *remoter;
+			// we want to log the events from the perspective of the
+			// user job, so if the shadow *sent* the bytes, then that
+			// means the user job *received* the bytes
+			event.recvd_bytes = syscall_sock->get_bytes_sent() + BytesSent;
+			event.sent_bytes = syscall_sock->get_bytes_recvd() + BytesRecvd;
 			if (!ULog.writeEvent (&event))
 			{
 				dprintf (D_ALWAYS, "Unable to log ULOG_JOB_EVICTED event\n");
@@ -128,6 +149,11 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 			event.checkpointed = true;
 			event.run_local_rusage = *localr;
 			event.run_remote_rusage = *remoter;
+			// we want to log the events from the perspective of the
+			// user job, so if the shadow *sent* the bytes, then that
+			// means the user job *received* the bytes
+			event.recvd_bytes = syscall_sock->get_bytes_sent() + BytesSent;
+			event.sent_bytes = syscall_sock->get_bytes_recvd() + BytesRecvd;
 			if (!ULog.writeEvent (&event))
 			{
 				dprintf (D_ALWAYS, "Unable to log ULOG_JOB_EVICTED event\n");
@@ -172,6 +198,11 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 			event.run_remote_rusage = *remoter;
 			event.total_local_rusage = Proc->local_usage;
 			event.total_remote_rusage = Proc->remote_usage[0];
+			// we want to log the events from the perspective of the
+			// user job, so if the shadow *sent* the bytes, then that
+			// means the user job *received* the bytes
+			event.recvd_bytes = syscall_sock->get_bytes_sent() + BytesSent;
+			event.sent_bytes = syscall_sock->get_bytes_recvd() + BytesRecvd;
 			if (!ULog.writeEvent (&event))
 			{
 				dprintf (D_ALWAYS,"Unable to log ULOG_JOB_TERMINATED event\n");
@@ -225,6 +256,11 @@ log_except (char *msg)
 	// log shadow exception event
 	ShadowExceptionEvent event;
 	sprintf(event.message, msg);
+	// we want to log the events from the perspective of the
+	// user job, so if the shadow *sent* the bytes, then that
+	// means the user job *received* the bytes
+	event.recvd_bytes = syscall_sock->get_bytes_sent() + BytesSent;
+	event.sent_bytes = syscall_sock->get_bytes_recvd() + BytesRecvd;
 	if (!ULog.writeEvent (&event))
 	{
 		dprintf (D_ALWAYS, "Unable to log ULOG_SHADOW_EXCEPTION event\n");
