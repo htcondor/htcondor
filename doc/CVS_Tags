@@ -7,6 +7,9 @@
 ** of that here.  (New tags should be added at the top of the file,
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
+05/25/04 V6_7-credd-branch
+   A new branch off V6_7-branch for working on the new Condor credential
+daemon. Created off V6_7-credd-root. By ckireyev.
 
 5/20/04 V6_7-post-merge-V6_7_0-doc-merge-1
     The state of the doc directory in V6_7-branch after merging
