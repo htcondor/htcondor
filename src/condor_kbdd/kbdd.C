@@ -33,7 +33,6 @@ int
 update_startd()
 {
     char *my_name;
-    char *my_addr;    
     //SafeSock *ssock;
     my_name = my_hostname();
 
@@ -50,6 +49,7 @@ update_startd()
     //ssock->snd_int(X_EVENT_NOTIFICATION, TRUE);
     
     //delete ssock;
+	return 0;
 }
 
 int 
