@@ -202,8 +202,11 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 					RevertToSelf();
 				}
 				ImpersonateLoggedOnUser(CurrUserHandle);
+			} else {
+				// We do not have a CurrUserHandle.  So don't record ourselves
+				// as in a user priv state.... switch back to what we were.
+				CurrentPrivState = PrevPrivState;
 			}
-
 			break;
 		case PRIV_UNKNOWN:		/* silently ignore */
 			break;
