@@ -40,7 +40,6 @@
 #include <netdb.h>
 #include <ctype.h>
 #include <string.h>
-#include <strings.h>  
 #include <time.h>
 
 
