@@ -942,6 +942,9 @@ usage( char *str )
 	case CA_ACTIVATE_CLAIM:
 		fprintf( stderr, "   -keyword string\tUse the keyword to "
 				 "find the job in the config file\n" );
+		fprintf( stderr, "   -jobad filename\tUse the ClassAd in filename "
+				 "to define the job\n" );
+		fprintf( stderr, "\t\t\t(if filename is \"-\", read from STDIN)\n" );
 		fprintf( stderr, "   -cluster N\t\tStart the job with the "
 				 "given cluster ID\n" );
 		fprintf( stderr, "   -proc N\t\tStart the job with the "
