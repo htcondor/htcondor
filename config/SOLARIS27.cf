@@ -1,31 +1,5 @@
 /* Things that are specific to Solaris 2.7 */
 
-#define		IS_SOLARIS27		YES
-
-#define NEEDS_64BIT_SYSCALLS    YES
-#define NEEDS_64BIT_STRUCTS YES
-
-#define WANT_PVM YES
-
-#define HAS_GLOBUS			YES
-#define HAS_GSI				YES
-#define HAS_OPENSSL			YES
-
-#if IS_X86
-#define		IS_X86_SOLARIS27	YES
-#define		Platform		INTEL-SOLARIS27
-SYSNAME = sunx86_57
-#endif
-
-#if IS_SUN4X
-#define		IS_SUN4X_SOLARIS27	YES
-#define		Platform		SUN4X-SOLARIS27
-SYSNAME = sun4x_57
-#endif
-
-#define IS_CLIPPED NO
+#define WANT_PVM	YES
 
 #define PlatformFlags	-DSolaris27=Solaris27
-
-#define PlatformLdFlags -ldl -lkstat -lelf -lsocket -lnsl -lm -lc -lresolv \
-$(GCC_STATIC_LIBS)

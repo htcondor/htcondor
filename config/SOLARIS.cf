@@ -1,17 +1,14 @@
 /**************************************************************************
 ** These are all the definitions that are shared between all versions of 
-** Solaris, including Sparc vs. X86, and 2.5.1 vs 2.6, etc.
+** Solaris
 **
-** At the end of this file, we include the arch/version-specific
+** At the end of this file, we include the version-specific
 ** config files as needed.   
 **************************************************************************/
 
 /**************************************************************************
 ** Shared Solaris Settings
 **************************************************************************/
-
-#define OperatingSystem		Solaris
-#define IS_SOLARIS		YES
 
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC  
@@ -32,6 +29,10 @@
 #define DOES_SAVE_SIGSTATE	YES
 
 #define	HAS_DYNAMIC_USER_JOBS	YES
+
+#define HAS_GLOBUS 			YES
+#define HAS_GSI				YES
+#define HAS_OPENSSL			YES
 
 #define HAS_NDBM			YES
 #define HAS_FSTATFS			YES
@@ -66,8 +67,14 @@
 #define HAS_INSQUE			YES
 #define HAS_DLOPEN			YES
 #define HAS_DAGMAN_HELPER   NO
+#define NEEDS_64BIT_SYSCALLS		YES
+#define NEEDS_64BIT_STRUCTS		YES
 
 #define HAS_STATIC			NO
+
+#define	PVM_ARCH			SUN4SOL2
+#define	HAS_PURIFY			YES
+
 
 /*
     In the test suite, we only need to make sure we've got the network 
@@ -84,21 +91,19 @@
 */ 
 #define PurifyPlatformLdFlags -ldl -lkstat -lelf -lnsl -lsocket -lresolv
 
+#define PlatformLdFlags -ldl -lkstat -lelf -lsocket -lresolv -lnsl -lm -lc \
+$(GCC_STATIC_LIBS)
 
 /**************************************************************************
-** Include OS version and Arch-specific config files
+** Include OS version-specific config files
 **************************************************************************/
-
-#ifdef ArchIncludeFile
-#include ArchIncludeFile
-
-#endif
 
 #ifdef OSVersionIncludeFile
 #include OSVersionIncludeFile
 #endif
 
+
 /**************************************************************************
-** Shared things we only can do after we get the version/arch specific 
+** Shared things we only can do after we get the version specific
 ** settings defined. 
 **************************************************************************/

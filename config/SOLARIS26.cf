@@ -1,29 +1,5 @@
 /* Things that are specific to Solaris 2.6 */
 
-#define NEEDS_64BIT_SYSCALLS    YES
-#define NEEDS_64BIT_STRUCTS YES
-
 #define WANT_PVM	YES
 
-#define HAS_GLOBUS			YES
-#define HAS_GSI				YES
-#define HAS_OPENSSL			YES
-
-#define		IS_SOLARIS26		YES
-
-#if IS_X86
-#define		IS_X86_SOLARIS26	YES
-#define		Platform		INTEL-SOLARIS26
-SYSNAME = sunx86_56
-#endif
-
-#if IS_SUN4X
-#define		IS_SUN4X_SOLARIS26	YES
-#define		Platform		SUN4X-SOLARIS26
-SYSNAME = sun4x_56
-#endif
-
 #define PlatformFlags	-DSolaris26=Solaris26
-
-#define PlatformLdFlags -ldl -lkstat -lelf -lsocket -lnsl -lm -lc -lresolv \
-$(GCC_STATIC_LIBS)

@@ -1,29 +1,5 @@
 /* Things that are specific to Solaris 2.8 */
 
-#define		IS_SOLARIS28		YES
-
-#define NEEDS_64BIT_SYSCALLS    YES
-#define NEEDS_64BIT_STRUCTS YES
 #define WANT_PVM	YES
 
-#if IS_X86
-#define		IS_X86_SOLARIS28	YES
-#define		Platform		INTEL-SOLARIS28
-SYSNAME = sunx86_58
-#endif
-
-#if IS_SUN4X
-#define		IS_SUN4X_SOLARIS28	YES
-#define		Platform		SUN4X-SOLARIS28
-SYSNAME = sun4x_58
-#define HAS_GLOBUS 			YES
-#define HAS_GSI				YES
-#define HAS_OPENSSL			YES
-#endif
-
-#define IS_CLIPPED NO
-
 #define PlatformFlags	-DSolaris28=Solaris28
-
-#define PlatformLdFlags -ldl -lkstat -lelf -lsocket -lresolv -lnsl -lm -lc \
-$(GCC_STATIC_LIBS)
