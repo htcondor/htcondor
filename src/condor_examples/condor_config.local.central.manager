@@ -124,6 +124,12 @@ NEGOTIATOR    = $(SBIN)/condor_negotiator
 ##  cache, TCP updates will be refused by the collector.
 #COLLECTOR_SOCKET_CACHE_SIZE = 300
 
+# Turn on some history
+COLLECTOR_CLASS_HISTORY_SIZE	= 1024
+COLLECTOR_DAEMON_STATS		= True
+COLLECTOR_DAEMON_HISTORY_SIZE	= 128
+
+
 ##--------------------------------------------------------------------
 ##  condor_negotiator
 ##--------------------------------------------------------------------
