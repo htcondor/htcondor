@@ -112,6 +112,7 @@ class GlobusJob : public Service
  protected:
 	bool callbackRegistered;
 	int connect_failure_counter;
+	bool AllowTransition( int new_state, int old_state );
 	//Classad *ad;
 };
 

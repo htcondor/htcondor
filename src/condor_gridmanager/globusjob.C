@@ -1283,24 +1283,33 @@ void GlobusJob::UpdateCondorState( int new_state )
 	SetEvaluateState();
 }
 
-void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
+bool GlobusJob::AllowTransition( int new_state, int old_state )
 {
-	bool allow_transition = true;
 
 	// Prevent non-transitions or transitions that go backwards in time.
 	// The jobmanager shouldn't do this, but notification of events may
 	// get re-ordered (callback and probe results arrive backwards).
-    if ( new_state == globusState ||
+    if ( new_state == old_state ||
 		 new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED ||
-		 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ||
-		 globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ||
+		 old_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ||
+		 old_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ||
 		 ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_IN &&
-		   globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED) ||
+		   old_state != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED) ||
 		 ( new_state == GLOBUS_GRAM_PROTOCOL_JOB_STATE_PENDING &&
-		   globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED &&
-		   globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_IN) ) {
-		allow_transition = false;
+		   old_state != GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED &&
+		   old_state != GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_IN) ) {
+		return false;
 	}
+
+	return true;
+}
+
+
+void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
+{
+	bool allow_transition;
+
+	allow_transition = AllowTransition( new_state, globusState );
 
 	if ( allow_transition ) {
 		// where to put logging of events: here or in EvaluateState?
@@ -1356,8 +1365,12 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 
 void GlobusJob::GramCallback( int new_state, int new_error_code )
 {
-	callbackGlobusState = new_state;
-	callbackGlobusStateErrorCode = new_error_code;
+	if ( callbackGlobusState == 0 || 
+		 AllowTransition(new_state,callbackGlobusState) ) 
+	{
+		callbackGlobusState = new_state;
+		callbackGlobusStateErrorCode = new_error_code;
+	}
 
 	SetEvaluateState();
 }
