@@ -482,7 +482,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		MyString constraint;
 		MyString full_owner_name(owner);
 		const char *owner_or_user;
-		if ( domain ) {
+		if ( domain && domain[0] ) {
 			owner_or_user = ATTR_USER;
 			full_owner_name += "@";
 			full_owner_name += domain;
