@@ -111,6 +111,7 @@ class Job {
   
     /** The Status of a Job
         If you update this enum, you *must* also update status_t_names
+		and the IsActive() method, etc.
     */
     enum status_t {
         /** Job is ready for submission */ STATUS_READY,
@@ -189,8 +190,14 @@ class Job {
         return _queues[queue].IsEmpty();
     }
 
-		// returns the node's current status
+    /** Returns the node's current status
+        @return the node's current status
+    */
 	status_t GetStatus() const;
+    /** Returns the node's current status string
+        @return address of a string describing the node's current status
+    */
+	const char* GetStatusName() const;
  
     /** Dump the contents of this Job to stdout for debugging purposes.
         @param level Only do the dump if the current debug level is >= level
@@ -211,6 +218,12 @@ class Job {
 		// should be called when the job terminates
 	bool TerminateSuccess();
 	bool TerminateFailure();
+
+    /** Returns true if the node's pre script, batch job, or post
+        script are currently submitted or running.
+        @return true: node is active, false: otherwise
+    */
+	bool IsActive() const;
 
     /** */ CondorID _CondorID;
     /** */ status_t _Status;

@@ -37,6 +37,7 @@ const char *Job::queue_t_names[] = {
 };
 
 //---------------------------------------------------------------------------
+// NOTE: this must be kept in sync with the status_t enum
 const char * Job::status_t_names[] = {
     "STATUS_READY    ",
     "STATUS_PRERUN   ",
@@ -300,4 +301,21 @@ Job::AddScript( bool post, const char *cmd, MyString &whynot )
 	}
 	whynot = "n/a";
 	return true;
+}
+
+bool
+Job::IsActive() const
+{
+	if( _Status == STATUS_PRERUN ||
+		_Status == STATUS_SUBMITTED ||
+		_Status == STATUS_POSTRUN ) {
+		return true;
+	}
+	return false;
+}
+
+const char*
+Job::GetStatusName() const
+{
+	return status_t_names[_Status];
 }
