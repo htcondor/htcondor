@@ -327,7 +327,7 @@ OpenFileTable::DoClose( int fd )
 				"Leaving DoClose(): Tried to close already closed fd = %d\n",
 				fd);
 		}
-		else if (file[fd].isShadowSock)
+		else if (file[fd].isShadowSock())
 		{
 			dprintf(D_FULLDEBUG, 
 				"Leaving DoClose(): Tried to close shadow socket fd = %d\n",
