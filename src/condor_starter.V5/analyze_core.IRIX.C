@@ -62,16 +62,39 @@ core_is_valid( char *name )
 	file_size = lseek( fd, (off_t)0, SEEK_END );
 	close( fd );
 
-	if( header.c_magic != CORE_MAGIC ) {
+#if !defined(CORE_MAGIC) && !defined(CORE_MAGIC64) && !defined(CORE_MAGICN32)
+#error "I don't know what a core file looks like!"
+#endif
+
+#if defined(CORE_MAGIC)
+	if (header.c_magic == CORE_MAGIC)
+	{
 		dprintf( D_ALWAYS,
-			"Core file - bad magic number (0x%x)\n", header.c_magic
-		);
-		return FALSE;
+			"Core file - magic number OK\n");
+		return TRUE;
 	}
+#endif
+#if defined(CORE_MAGIC64)
+	if (header.c_magic == CORE_MAGIC64)
+	{
+		dprintf( D_ALWAYS,
+			"Core file - magic number OK 64-bit\n");
+		return TRUE;
+	}
+#endif
+
+#if defined(CORE_MAGICN32)
+	if (header.c_magic == CORE_MAGICN32)
+	{
+		dprintf( D_ALWAYS,
+			"Core file - magic number OK n32-bit\n");
+		return TRUE;
+	}
+#endif
 
 	dprintf( D_ALWAYS,
-		"Core file - magic number OK\n"
+		"Core file - bad magic number (0x%x)\n", header.c_magic
 	);
 
-	return TRUE;
+	return FALSE;
 }
