@@ -61,6 +61,8 @@ extern PROC *Proc;
 extern char CkptName[];
 extern char ICkptName[];
 extern char RCkptName[];
+extern char *CkptServerHost;
+extern char *LastCkptServer;
 extern int MaxDiscardedRunTime;
 
 char	CurrentWorkingDir[ _POSIX_PATH_MAX ];
@@ -79,6 +81,7 @@ void update_job_status( struct rusage *localp, struct rusage *remotep );
 static char Executing_AFS_Cell[ MAX_STRING ];
 static char Executing_Filesystem_Domain[ MAX_STRING ];
 static char Executing_UID_Domain[ MAX_STRING ];
+char *Executing_Arch=NULL, *Executing_OpSys=NULL;
 
 extern char My_AFS_Cell[];
 extern char My_Filesystem_Domain[];
@@ -86,6 +89,7 @@ extern char My_UID_Domain[];
 extern int	UseAFS;
 extern int  UseNFS;
 extern int  UseCkptServer;
+extern int  StarterChoosesCkptServer;
 extern char *Spool;
 extern ClassAd *JobAd;
 
@@ -459,28 +463,60 @@ pseudo_rename(char *from, char *to)
 	priv_state	priv;
 	mode_t	omask;
 
-	if (CkptFile) {
-		priv = set_condor_priv();
-		omask = umask( 022 );
-	}
+	if (!CkptFile || !UseCkptServer) {
 
-	rval = rename(from, to);
+		if (CkptFile) {
+			priv = set_condor_priv();
+			omask = umask( 022 );
+		}
 
-	if (CkptFile) {
-		(void)umask( omask );
-		set_priv(priv);
-	}
+		rval = rename(from, to);
 
-	if (rval == 0 || rval == -1 && errno != ENOENT) {
-		return rval;
+		if (CkptFile) {
+			(void)umask( omask );
+			set_priv(priv);
+		}
+
+		if (rval == 0 || rval == -1 && errno != ENOENT) {
+			return rval;
+		}
+
 	}
 	
 	if (CkptFile) {
 		if (RenameRemoteFile(p->owner, from, to) < 0)
 			return -1;
+		// if we just wrote a checkpoint to a new checkpoint server,
+		// we should remove the checkpoint we left on the previous server.
+		if (LastCkptServer &&
+			same_host(LastCkptServer, CkptServerHost) == FALSE) {
+			SetCkptServerHost(LastCkptServer);
+			RemoveRemoteFile(p->owner, to);
+			SetCkptServerHost(CkptServerHost);
+		}
+		if (LastCkptServer) free(LastCkptServer);
+		LastCkptServer = strdup(CkptServerHost);
 	}
 
 	return 0;
+}
+
+void
+set_last_ckpt_server()
+{
+	if (!LastCkptServer) {
+		LastCkptServer = (char *)malloc(_POSIX_PATH_MAX);
+		if (JobAd->LookupString(ATTR_LAST_CKPT_SERVER,
+								LastCkptServer) == 0) {
+			free(LastCkptServer);
+			LastCkptServer = NULL;
+		}
+		if (LastCkptServer) {
+			SetCkptServerHost(LastCkptServer);
+		} else {
+			SetCkptServerHost(CkptServerHost);
+		}
+	}
 }
 
 
@@ -517,6 +553,7 @@ pseudo_get_file_stream(
 	*len = 0;
 		/* open the file */
 	if (CkptFile && UseCkptServer) {
+		set_last_ckpt_server();
 		retry_wait = 5;
 		do {
 			rval = RequestRestore(p->owner,file,len,
@@ -669,6 +706,7 @@ pseudo_put_file_stream(
 
 		/* open the file */
 	if (CkptFile && UseCkptServer) {
+		SetCkptServerHost(CkptServerHost);
 		do {
 			rval = RequestStore(p->owner, file, len,
 								(struct in_addr*)ip_addr, port);
@@ -1271,6 +1309,7 @@ has_ckpt_file()
 		p->remote_usage[0].ru_stime.tv_sec;
 	priv = set_condor_priv();
 	do {
+		set_last_ckpt_server();
 		rval = FileExists(RCkptName, p->owner);
 		if (rval == -1 && UseCkptServer && accum_usage > MaxDiscardedRunTime) {
 			dprintf(D_ALWAYS, "failed to contact ckpt server, trying again"
@@ -1504,6 +1543,36 @@ int
 pseudo_sync()
 {
     sync();
+	return 0;
+}
+
+/*
+   Specify checkpoint server host.
+*/
+int
+pseudo_choose_ckpt_server(const char *host)
+{
+	if (StarterChoosesCkptServer) {
+		if (CkptServerHost) free(CkptServerHost);
+		CkptServerHost = strdup(host);
+	}
+
+	return 0;
+}
+
+int
+pseudo_register_arch(const char *arch)
+{
+	if (Executing_Arch) free(Executing_Arch);
+	Executing_Arch = strdup(arch);
+	return 0;
+}
+
+int
+pseudo_register_opsys(const char *opsys)
+{
+	if (Executing_OpSys) free(Executing_OpSys);
+	Executing_OpSys = strdup(opsys);
 	return 0;
 }
 
