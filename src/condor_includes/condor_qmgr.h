@@ -55,6 +55,7 @@ Qmgr_connection *ConnectQ(char *qmgr_location);
 void DisconnectQ(Qmgr_connection *);
 void WalkJobQueue(scan_func);
 
+void InitQmgmt();
 void InitJobQueue(const char *job_queue_name);
 void CleanJobQueue();
 
