@@ -733,7 +733,6 @@ Image::Write( int fd )
 		if( (nbytes=map[i].Write(fd,pos)) < 0 ) {
 			dprintf( D_ALWAYS, "Write() of segment %d failed\n", i );
 			dprintf( D_ALWAYS, "errno = %d, nbytes = %d\n", errno, nbytes );
-			abort();
 			return -1;
 		}
 		pos += nbytes;
