@@ -32,8 +32,10 @@
 #include "condor_syscall_mode.h"
 #include "syscall_numbers.h"
 #include "exit.h"
+#include "condor_uid.h"
+#include "perm.h"
 
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)    */
+extern CStarter *Starter;
 
 /* OsProc class implementation */
 
@@ -73,7 +75,21 @@ OsProc::StartJob()
 	}
 
 #ifndef WIN32
+	// Unix
 	init_user_ids( owner );
+#else
+	// Win32
+
+	// we only support running jobs as user nobody for the first pass
+	char nobody_login[60];
+	sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
+	init_user_nobody_loginname(nobody_login);
+	init_user_ids("nobody");
+	{
+		perm dirperm;
+		dirperm.init(nobody_login);
+		dirperm.set_acls(Starter->GetWorkingDir());
+	}
 #endif
 
 	if (JobAd->LookupInteger(ATTR_CLUSTER_ID, Cluster) != 1) {
