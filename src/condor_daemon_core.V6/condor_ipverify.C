@@ -170,6 +170,13 @@ IpVerify::Init()
 			sprintf(buf,"HOSTALLOW_%s",perm_names[i]);
 			pAllow = param(buf);
 		}
+
+			// Treat a "*" for HOSTALLOW_XXX as if it's just
+			// undefined. 
+		if( pAllow && !strcmp(pAllow, "*") ) {
+			free( pAllow );
+			pAllow = NULL;
+		}
 	
 		sprintf(buf,"HOSTDENY_%s_%s",perm_names[i],mySubSystem);
 		if ( (pDeny = param(buf)) == NULL ) {
