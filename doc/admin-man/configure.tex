@@ -3156,7 +3156,9 @@ takes precedence over use of a certificate and key.
 \item[\Macro{SEC\_DEFAULT\_SESSION\_DURATION}]
 \label{param:SessionDuration} The amount of time in seconds before
 a communication session expires.
-Defaults to 3600 seconds (1 hour).
+%Defaults to 3600 seconds (1 hour).
+Defaults to 8640000 seconds (100 days) to avoid a bug in session
+renegotiation for Condor Version 6.6.0.
 A session is a record of necessary information to do communication
 between a client and daemon, and is protected by a shared secret key.
 The session expires to reduce the window of opportunity where
