@@ -58,7 +58,11 @@ extern void _sigreturn();
 
 void display_sigstate( int line, const char * file );
 
+#if defined(LINUX)
+typedef int				SS_TYPE;
+#else
 typedef struct sigstack SS_TYPE;
+#endif
 
 struct signal_states_struct {
 	int nsigs;		/* the number of signals supported on this platform +1 */
@@ -113,7 +117,9 @@ condor_save_sigstates()
 	}
 
 	/* Save pointer to signal stack (not POSIX, but widely supported) */	
+#if !defined(LINUX)
 	sigstack( (struct sigstack *) 0, &(signal_states.sig_stack) ); 
+#endif
 
     (void) SetSyscalls( scm );
 }
@@ -171,7 +177,9 @@ condor_restore_sigstates()
 	sigprocmask(SIG_SETMASK,&(signal_states.user_mask),NULL);
 
 	/* Restore signal stack pointer */
+#if !defined(LINUX)
 	sigstack( &(signal_states.sig_stack), (struct sigstack *) 0 );  
+#endif
 
 	/* Restore pending signals, again ignoring special Condor sigs */
 	mypid = getpid();
@@ -230,8 +238,13 @@ struct sigvec *ovec;
 			if (vec) {
 				bcopy( (char *) vec, (char *) &nvec, sizeof nvec );
 				/* while in the handler, block checkpointing */
+#if defined(LINUX)
+				nvec.sv_mask |= __sigmask( SIGTSTP );
+				nvec.sv_mask |= __sigmask( SIGUSR1 );
+#else
 				nvec.sv_mask |= sigmask( SIGTSTP );
 				nvec.sv_mask |= sigmask( SIGUSR1 );
+#endif
 			}
 
 #if defined(HPUX9)
@@ -276,8 +289,13 @@ MASK_TYPE mask;
 		condor_sig_mask = ~0;
 	} else {
 		/* mask out the special Condor signals */
+#if defined(LINUX)
+		condor_sig_mask = ~(__sigmask( SIGUSR1 ) |
+			 __sigmask( SIGTSTP ) | __sigmask(SIGCONT));
+#else
 		condor_sig_mask = ~(sigmask( SIGUSR1 ) |
 			 sigmask( SIGTSTP ) | sigmask(SIGCONT));
+#endif
 		mask &= condor_sig_mask;
 	}
 	rval =  syscall( SYS_sigblock, mask ) & condor_sig_mask;
@@ -295,8 +313,13 @@ MASK_TYPE mask;
 
 	if ( MappingFileDescriptors() ) {
 		/* mask out the special Condor signals */
+#if defined(LINUX)
+		condor_sig_mask = ~(__sigmask( SIGUSR1 ) |
+			 __sigmask( SIGTSTP ) | __sigmask(SIGCONT));
+#else
 		condor_sig_mask = ~(sigmask( SIGUSR1 ) |
 			 sigmask( SIGTSTP ) | sigmask(SIGCONT));
+#endif
 		mask &= condor_sig_mask;
 	}
 	rval =  syscall( SYS_sigpause, mask );
@@ -316,8 +339,13 @@ MASK_TYPE mask;
 		condor_sig_mask = ~0;
 	} else {
 		/* mask out the special Condor signals */
+#if defined(LINUX)
+		condor_sig_mask = ~(__sigmask( SIGUSR1 ) |
+			 __sigmask( SIGTSTP ) | __sigmask(SIGCONT));
+#else
 		condor_sig_mask = ~(sigmask( SIGUSR1 ) |
 			 sigmask( SIGTSTP ) | sigmask(SIGCONT));
+#endif
 		mask &= condor_sig_mask;
 	}
 	rval =  syscall( SYS_sigsetmask, mask ) & condor_sig_mask;
@@ -326,8 +354,13 @@ MASK_TYPE mask;
 #endif
 
 #if defined(SYS_sigaction)
+#if defined(LINUX)
+int
+sigaction( int sig, struct sigaction *act, struct sigaction *oact )
+#else
 int
 sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
+#endif
 {
 	struct sigaction tmp, *my_act = &tmp;
 
@@ -361,8 +394,11 @@ sigaction( int sig, const struct sigaction *act, struct sigaction *oact )
 
 
 #if defined(SYS_sigprocmask)
-int
+#if defined(LINUX)
+sigprocmask( int how, sigset_t *set, sigset_t *oset)
+#else
 sigprocmask( int how, const sigset_t *set, sigset_t *oset)
+#endif
 {
 	sigset_t tmp, *my_set;
 
@@ -391,7 +427,7 @@ sigprocmask( int how, const sigset_t *set, sigset_t *oset)
 #if defined (SYS_sigsuspend)
 int
 sigsuspend(set)
-#if defined(SUNOS41)
+#if defined(SUNOS41) || defined(LINUX)
 sigset_t *set;
 #else
 const sigset_t *set;
