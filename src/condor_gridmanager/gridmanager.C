@@ -543,9 +543,9 @@ doContactSchedd()
 	bool add_remove_jobs_complete = false;
 	bool commit_transaction = true;
 	bool fake_job_in_queue = false;
+	int failure_line_num = 0;
 
 	dprintf(D_FULLDEBUG,"in doContactSchedd()\n");
-//bool foo=false;while(!foo)sleep(1);
 
 	contactScheddTid = TIMER_UNSET;
 
@@ -619,7 +619,7 @@ doContactSchedd()
 							  ATTR_JOB_STATUS, &job_status_schedd );
 		if ( rc < 0 ) {
 			if ( errno == ETIMEDOUT ) {
-dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+				failure_line_num = __LINE__;
 				commit_transaction = false;
 				goto contact_schedd_disconnect;
 			} else {
@@ -648,7 +648,7 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 				curr_job->UpdateJobAdString( ATTR_LAST_RELEASE_REASON,
 											 reason );
 			} else if ( errno == ETIMEDOUT ) {
-dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+				failure_line_num = __LINE__;
 				commit_transaction = false;
 				goto contact_schedd_disconnect;
 			}
@@ -663,7 +663,7 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 							   curr_job->procID.proc, ATTR_NUM_SYSTEM_HOLDS,
 							   &sys_holds);
 			if ( rc < 0 && fake_job_in_queue == false ) {
-dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+				failure_line_num = __LINE__;
 				commit_transaction = false;
 				goto contact_schedd_disconnect;
 			}
@@ -713,7 +713,7 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 			if ( fake_job_in_queue == true ) {
 				accum_time = 0.0;
 			} else if ( rc < 0 ) {
-dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+				failure_line_num = __LINE__;
 				commit_transaction = false;
 				goto contact_schedd_disconnect;
 			}
@@ -730,7 +730,8 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 			curr_job->UpdateJobAdBool( ATTR_JOB_MANAGED, 0 );
 		}
 
-dprintf(D_FULLDEBUG,"Updating classad values for %d.%d:\n",curr_job->procID.cluster, curr_job->procID.proc);
+		dprintf( D_FULLDEBUG, "Updating classad values for %d.%d:\n",
+				 curr_job->procID.cluster, curr_job->procID.proc );
 		char attr_name[1024];
 		char attr_value[1024];
 		ExprTree *expr;
@@ -741,13 +742,13 @@ dprintf(D_FULLDEBUG,"Updating classad values for %d.%d:\n",curr_job->procID.clus
 			expr->LArg()->PrintToStr(attr_name);
 			expr->RArg()->PrintToStr(attr_value);
 
-dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
+			dprintf( D_FULLDEBUG, "   %s = %s\n", attr_name, attr_value );
 			rc = SetAttribute( curr_job->procID.cluster,
 							   curr_job->procID.proc,
 							   attr_name,
 							   attr_value);
 			if ( rc < 0 && fake_job_in_queue == false ) {
-dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+				failure_line_num = __LINE__;
 				commit_transaction = false;
 				goto contact_schedd_disconnect;
 			}
@@ -756,7 +757,7 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 	}
 
 	if ( CloseConnection() < 0 ) {
-dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+		failure_line_num = __LINE__;
 		commit_transaction = false;
 		goto contact_schedd_disconnect;
 	}
@@ -768,22 +769,24 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 	while ( pendingScheddUpdates.iterate( curr_action ) != 0 ) {
 
 		if ( curr_action->actions & UA_DELETE_FROM_SCHEDD ) {
-dprintf(D_FULLDEBUG,"Deleting job %d.%d from schedd\n",curr_action->job->procID.cluster, curr_action->job->procID.proc);
+			dprintf( D_FULLDEBUG, "Deleting job %d.%d from schedd\n",
+					 curr_action->job->procID.cluster,
+					 curr_action->job->procID.proc);
 			BeginTransaction();
 			if ( errno == ETIMEDOUT ) {
-dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+				failure_line_num = __LINE__;
 				commit_transaction = false;
 				goto contact_schedd_disconnect;
 			}
 			rc = DestroyProc(curr_action->job->procID.cluster,
 							 curr_action->job->procID.proc);
 			if ( rc < 0 && fake_job_in_queue == false ) {
-dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+				failure_line_num = __LINE__;
 				commit_transaction = false;
 				goto contact_schedd_disconnect;
 			}
 			if ( CloseConnection() < 0 ) {
-dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+				failure_line_num = __LINE__;
 				commit_transaction = false;
 				goto contact_schedd_disconnect;
 			}
@@ -798,7 +801,7 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 	errno = 0;
 	BeginTransaction();
 	if ( errno == ETIMEDOUT ) {
-dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+		failure_line_num = __LINE__;
 		commit_transaction = false;
 		goto contact_schedd_disconnect;
 	}
@@ -873,7 +876,7 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 					next_ad = NULL;
 					next_ad = GetJobAd(procID.cluster,procID.proc);
 					if ( next_ad == NULL && errno == ETIMEDOUT ) {
-dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+						failure_line_num = __LINE__;
 						commit_transaction = false;
 						goto contact_schedd_disconnect;
 					}
@@ -896,8 +899,8 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 										  ATTR_JOB_STATUS,
 										  HELD );
 					if ( rc < 0 ) {
-dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 						delete next_ad;
+						failure_line_num = __LINE__;
 						commit_transaction = false;
 						goto contact_schedd_disconnect;
 					}
@@ -908,8 +911,8 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 												 reason );
 						free( reason );
 						if ( rc < 0 ) {
-dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 							delete next_ad;
+							failure_line_num = __LINE__;
 							commit_transaction = false;
 							goto contact_schedd_disconnect;
 						}
@@ -917,8 +920,8 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 					rc = SetAttribute( procID.cluster, procID.proc,
 									   ATTR_RELEASE_REASON, "UNDEFINED" );
 					if ( rc < 0 ) {
-dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 						delete next_ad;
+						failure_line_num = __LINE__;
 						commit_transaction = false;
 						goto contact_schedd_disconnect;
 					}
@@ -927,8 +930,8 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 											 ATTR_HOLD_REASON,
 											 hold_reason );
 					if ( rc < 0 ) {
-dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 						delete next_ad;
+						failure_line_num = __LINE__;
 						commit_transaction = false;
  						goto contact_schedd_disconnect;
 					}
@@ -973,7 +976,7 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 										   ATTR_JOB_MANAGED,
 										   "TRUE" );
 						if ( rc < 0 ) {
-dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+							failure_line_num = __LINE__;
 							commit_transaction = false;
 							goto contact_schedd_disconnect;
 						}
@@ -991,7 +994,7 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 			next_ad = GetNextJobByConstraint( expr_buf, 0 );
 		}	// end of while next_ad
 		if ( errno == ETIMEDOUT ) {
-dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+			failure_line_num = __LINE__;
 			commit_transaction = false;
 			goto contact_schedd_disconnect;
 		}
@@ -1043,8 +1046,8 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 						next_job->UpdateJobAdString( ATTR_REMOVE_REASON,
 													 remove_reason );
 					} else if ( rc < 0 && errno == ETIMEDOUT ) {
-dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 						delete next_ad;
+						failure_line_num = __LINE__;
 						commit_transaction = false;
 						goto contact_schedd_disconnect;
 					}
@@ -1066,8 +1069,8 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 						next_job->UpdateJobAdString( ATTR_HOLD_REASON,
 													 hold_reason );
 					} else if ( rc < 0 && errno == ETIMEDOUT ) {
-dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 						delete next_ad;
+						failure_line_num = __LINE__;
 						commit_transaction = false;
 						goto contact_schedd_disconnect;
 					}
@@ -1094,8 +1097,8 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 				WriteAbortEventToUserLog( next_ad );
 				rc = DestroyProc( procID.cluster, procID.proc );
 				if ( rc < 0 ) {
-dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 					delete next_ad;
+					failure_line_num = __LINE__;
 					commit_transaction = false;
 					goto contact_schedd_disconnect;
 				}
@@ -1112,8 +1115,8 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 			next_ad = GetNextJobByConstraint( expr_buf, 0 );
 		}
 		if ( errno == ETIMEDOUT ) {
-dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 			commit_transaction = false;
+			failure_line_num = __LINE__;
 			goto contact_schedd_disconnect;
 		}
 
@@ -1122,7 +1125,7 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 	/////////////////////////////////////////////////////
 
 	if ( CloseConnection() < 0 ) {
-dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
+		failure_line_num = __LINE__;
 		commit_transaction = false;
 		goto contact_schedd_disconnect;
 	}
@@ -1133,7 +1136,7 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 	DisconnectQ( schedd, commit_transaction );
 
 	if ( schedd_updates_complete == false ) {
-		dprintf( D_ALWAYS, "Schedd connection error during updates! Will retry\n" );
+		dprintf( D_ALWAYS, "Schedd connection error during updates at line %d! Will retry\n", failure_line_num );
 		lastContactSchedd = time(NULL);
 		RequestContactSchedd();
 		return TRUE;
@@ -1206,7 +1209,7 @@ dprintf(D_ALWAYS,"***schedd failure at %d!\n",__LINE__);
 	lastContactSchedd = time(NULL);
 
 	if ( add_remove_jobs_complete == false ) {
-		dprintf( D_ALWAYS, "Schedd connection error! Will retry\n" );
+		dprintf( D_ALWAYS, "Schedd connection error at line %d! Will retry\n", failure_line_num );
 		RequestContactSchedd();
 	}
 
