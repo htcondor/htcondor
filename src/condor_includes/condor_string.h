@@ -12,6 +12,7 @@ int mkargv ( int *argc, char *argv[], char *line );
 void lower_case ( char *str );
 int blankline ( const char *str );
 char * getline ( FILE *fp );
+char * ltrunc ( register char *str );
 #else
 int stricmp();
 int strincmp();
@@ -19,6 +20,7 @@ int mkargv();
 void lower_case();
 int blankline();
 char * getline();
+char * ltrunc ();
 #endif
 
 #if defined(__cplusplus)
