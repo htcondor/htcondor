@@ -1557,17 +1557,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 		if( !scheduler.WriteAbortToUserLog(job_id) ) {
 			dprintf( D_ALWAYS,"Failed to write abort event to the user log\n" );
 		}
-			/*
-			  we used to call DestroyProc() right here, but we no
-			  longer want to do that.  we'll have just called
-			  SetAttribute() on ATTR_JOB_STATUS to put it into a
-			  "finished" job state (REMOVED), and therefore, we've got
-			  to wait for our jobIsFinished() thread to run and
-			  complete before we can call DestroyProc().  so, we'll
-			  just allow that code to work its magic, and once the
-			  jobIsFinished() thread completes, it'll call
-			  DestroyProc() for us.  -- derek 2005-03-28
-			*/
+		DestroyProc( job_id.cluster, job_id.proc );
 	}
 	if( mode == HELD ) {
 		if( log_hold && !scheduler.WriteHoldToUserLog(job_id) ) {
@@ -7937,17 +7927,7 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 		handle_mirror_job_notification(
 					GetJobAd(job_id->cluster,job_id->proc),
 					status, *job_id);
-			/*
-			  we used to call DestroyProc() right here, but we no
-			  longer want to do that.  we'll have just called
-			  SetAttribute() on ATTR_JOB_STATUS to put it into one of
-			  these two "finished" job states, and therefore, we've
-			  got to wait for our jobIsFinished() thread to run and
-			  complete before we can call DestroyProc().  so, we'll
-			  just allow that code to work its magic, and once the
-			  jobIsFinished() thread completes, it'll call
-			  DestroyProc() for us.  -- derek 2005-03-24
-			*/
+		DestroyProc( job_id->cluster, job_id->proc );
 		break;
 	default:
 		break;
