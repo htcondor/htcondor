@@ -88,6 +88,10 @@ See the \Condor{config\_val} man page on
 page~\pageref{man:condor-config-val} for details on
 \Condor{config\_val}.  
 
+\item If the directory you specified for LOCK (which holds lock files
+used by Condor) doesn't exist, Condor will now try to create that
+directory for you instead of giving up right away.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
