@@ -1,0 +1,258 @@
+#!/usr/bin/perl
+
+use File::Copy;
+use Cwd;
+#use NmiTools;
+#use Config;
+#use NmiConfig;
+
+# Location to dump our stripped binaries for building the installer package
+$CONDOR_INSTALLSHIELD_LOCATION = "C:\\My Installations\\Condor-generic";
+
+# should we create NMI bundles for this build?
+$create_NMI_bundles = "false";
+
+# get the architecture stuff loaded
+#$fig = NmiConfig->new();
+#$fig->init();
+
+# HomeDir is /home/condor/execute/dir_xxxx/
+# MakeDir is /home/condor/execute/dir_xxxx/src/
+
+my $HomeDir = $ENV{HOME} = getcwd();
+# Perl Win32 sucks: getcwd() returns something like
+# C:/condor/execute/... , which sucks, so we have to 
+# fix it. 
+$HomeDir =~ s/\//\\/g;
+
+# Yes, these are hardcoded paths. The thing is, unless someone's gone
+# really far out of their way to make things wierd, these paths should
+# work with any sane Visual Studio / Platform Core SDK installation.
+$ENV{OS}   = 'Windows_NT';
+$ENV{WINDIR} = 'C:\WINDOWS';
+
+$ENV{PATH} = 'C:\cygwin\bin;C:\Perl\bin;' .
+		'C:\Program Files\Microsoft Platform SDK for Windows XP SP2;'.
+		'C:\Program Files\Microsoft Visual Studio\VC98\bin;' .
+		$ENV{SystemRoot}.'\system32';
+
+$ENV{TMP} = 'C:\temp';
+$ENV{TEMP} = 'C:\temp';
+$ENV{USERPROFILE} = 'C:\temp';
+
+#$ENV{INCLUDE} = 'C:\Program Files\Microsoft SDK\include;'.
+#		'C:\Program Files\Microsoft Visual Studio\VC98\ATL\Include;'.
+#		'C:\Program Files\Microsoft Visual Studio\VC98\Include;'.
+#		'C:\Program Files\Microsoft Visual Studio\VC98\MFC\Include';
+
+#$ENV{LIB}     = 'C:\Program Files\Microsoft SDK\lib;'.
+#		'C:\Program Files\Microsoft Visual Studio\VC98\lib;'.
+#		'C:\Program Files\Microsoft Visual Studio\VC98\MFC\lib';
+
+print "archname is 'Win32'\n";
+
+print "HOME is $ENV{HOME}\n";
+print "PATH is $ENV{PATH}\n";
+
+# Wierd Hack #1:
+# This line is important! make.bat (actually setenv.bat from the Platform
+# SDK) gets pissed if we don't call cmd first. I don't know why, but it
+# works, so don't be messin'!
+print "Windows Version is " . `cmd /c Ver`;
+
+
+open(CONDORVERSION, "CONDOR-VERSION");
+my $condorversion = <CONDORVERSION>;
+chomp($condorversion);
+
+# at this point I should have a good place to build against
+chdir("$HomeDir");
+$buildstat = &verbose_system("tar --no-same-permissions --no-same-owner -xzvf condor-$condorversion.tar.gz");
+
+
+my $MakeDir = "$HomeDir\\condor-$condorversion\\NTConfig";
+
+# Wierd Hack #2: tar doesn't set permissions on Windows in a sane way. So, 
+# in order for the startd to be able to clean up the execute directory
+# scratch space, we have to run through and open up the ACLs on each file
+# for NT AUTHORITY\SYSTEM.
+$buildstat = &verbose_system("echo y|cacls *.* /c /t /e /g SYSTEM:F");
+chdir("$MakeDir");
+
+# $buildstat = &verbose_system("./configure 2>&1");
+#$buildstat = &verbose_system("unix2dos *.mak *.ds?");
+#print "unix2dos returned a code of $buildstat\n";
+
+create_make_wrapper($MakeDir);
+
+$buildstat = &verbose_system("cmd.exe /c make_wrapper.bat make.bat");
+print "Make.bat returned a code of $buildstat\n";
+
+# strip binaries
+mkdir("$HomeDir\\public");
+mkdir("$HomeDir\\public\\v$condorversion");
+$makecleanstat = &verbose_system("cmd.exe /c dorelease $HomeDir\\public\\v$condorversion > NUL");
+
+chdir("$MakeDir");
+
+$makecleanstat = &verbose_system("rm -rf ..\\Release > NUL");
+print "MAKE CLEAN returned a code of $makecleanstat\n";
+chdir("$HomeDir");
+
+&verbose_system("tar zcf condor_sandbox.tar.gz condor$condorversion/src condor$condorversion/NTConfig condor$condorversion/config condor$condorversion/externals");
+
+# copy $HomeDir\\v6.6.x to C:\My Installations\Condor-generic\release-dir
+&verbose_system("copy $HomeDir\\public\\v$condorversion\\*.* " .
+		"\"$CONDOR_INSTALLSHIELD_LOCATION\\release-dir\"");
+
+# run the installshield builder
+&verbose_system("\"C:\\Program Files\\InstallShield\\InstallShield 5.5 Professional Edition\\Program\\isbuild\" -s -mWeb -p" .
+	 "\"$CONDOR_INSTALLSHIELD_LOCATION\"");
+
+# run package for the web (pfw)
+&verbose_system('"C:\Program Files\InstallShield\PackageForTheWeb 4\pftwwiz" ' .
+	"\"$CONDOR_INSTALLSHIELD_LOCATION\\Condor-generic.pfw\" -a -s");
+
+# finally, copy the installer file to cwd and include it in the tarball.
+
+&verbose_system("copy \"$CONDOR_INSTALLSHIELD_LOCATION\\condor-installer.exe\" public\\condor-$condorversion-winnt50-x86.exe");
+
+#&verbose_system("tar zcf condor_results.tar.gz public");
+&verbose_system("tar zcf results.tar.gz public");
+
+#if ($create_NMI_bundles =~ "true")
+#{
+#    NMI_packaging($HomeDir, $MakeDir);
+#}
+
+exit($buildstat);
+
+
+sub verbose_system {
+
+  my @args = @_;
+  my $rc = 0xffff & system @args;
+
+  printf "system(%s) returned %#04x: ", @args, $rc;
+
+  if ($rc == 0) {
+   print "ran with normal exit\n";
+   return $rc;
+  }
+  elsif ($rc == 0xff00) {
+   print "command failed: $!\n";
+   return $rc;
+  }
+  elsif (($rc & 0xff) == 0) {
+   $rc >>= 8;
+   print "ran with non-zero exit status $rc\n";
+   return $rc;
+  }
+  else {
+   print "ran with ";
+   if ($rc &   0x80) {
+       $rc &= ~0x80;
+       print "coredump from ";
+   return $rc;
+   }
+   print "signal $rc\n"
+  }
+}
+
+
+sub NMI_packaging
+{
+   my ($HomeDir, $MakeDir) = @_;
+
+   chdir("$HomeDir");
+   NmiTools::run("pwd");
+   NmiTools::run("ls -la");
+   NmiTools::run("ls -la ..");
+   NmiTools::run("ls -la $MakeDir");
+
+#  Install gpt
+chdir("$HomeDir");
+NmiTools::install_gpt();
+
+#  Install Globus
+chdir("$HomeDir");
+NmiTools::run("tar -xzf bldbundle_*.tar.gz");
+chdir($fig->bundleloc());
+NmiTools::run("gpt-install globus-`cat ../VERSION`-*-bin.tar.gz");
+NmiTools::run("gpt-postinstall");
+
+
+   NmiTools::run("mkdir -p condor-0.3/prebuilt");
+   chdir("condor-0.3/prebuilt") or die "Could not chdir to prebuilt";
+
+   #exit(0);
+   # we have to do the release first, as condor-g overwrites files
+   #NmiTools::run("tar xf ../../condor-g/" . $fig->bundleloc() .
+   #              "/condor-6.6.0/release.tar");
+   #NmiTools::run("tar xf ../../condor-g/" . $fig->bundleloc() .
+   #              "/condor-g-6.6.0/condor-g.tar");
+
+   chdir("$MakeDir/release_dir");
+   NmiTools::run("tar cvfz release.tar *");
+   NmiTools::run("gzip release.tar");
+   NmiTools::run("mv release.tar.gz $HomeDir/condor-6.6.0.tar.gz");
+
+   chdir("$HomeDir");
+
+   # make sure gpt understands that this is a src pkg
+   NmiTools::run("touch condor-0.3/prebuilt/INSTALL");
+
+   # metadata
+   NmiTools::run("cp nmi_build/components/condor/condor-0.4/pkg_data_src.gpt condor-0.3/");
+   NmiTools::run("cp nmi_build/components/condor/condor-0.4/filelist condor-0.3/");
+
+   NmiTools::run("mkdir -p condor_setup-0.4");
+   NmiTools::run("cp nmi_build/components/condor/condor_setup-0.4/pkg_data_src.gpt condor_setup-0.4/");
+   NmiTools::run("cp nmi_build/components/condor/condor_setup-0.4/filelist condor_setup-0.4/");
+   NmiTools::run("cp nmi_build/components/condor/condor_setup-0.4/SXXcondor.in condor_setup-0.4/");
+   NmiTools::run("cp nmi_build/components/condor/condor_setup-0.4/setup-condor condor_setup-0.4/");
+   NmiTools::run("cp nmi_build/components/condor/condor_setup-0.4/setup-condor.pl condor_setup-0.4/");
+
+
+   # create the package
+   NmiTools::run("tar czf condor-0.3.tar.gz condor-0.3");
+   NmiTools::run("tar czf  condor_setup-0.4.tar.gz condor_setup-0.4");
+   # build it
+   NmiTools::run("gpt-build -verbose condor-0.3.tar.gz");
+   NmiTools::run("gpt-build -verbose condor_setup-0.4.tar.gz");
+   
+   NmiTools::run("gpt-pkg -all -pkgdir=\${GLOBUS_LOCATION}/binaries");
+   
+   NmiTools::run("gpt-bundle " .
+                 " -bn=condor -bl=`cat VERSION` " .
+                 " -bindir=\${GLOBUS_LOCATION}/binaries " .
+                 " condor condor_setup");
+   
+
+   # Create the sandbox tar file
+   chdir("$HomeDir");
+   NmiTools::run("tar -czf condor_sandbox.tar.gz R4globus");
+
+
+   # Tar up the results
+   chdir("$HomeDir");
+   NmiTools::run("tar -czf condor_results.tar.gz condor*-bin.tar.gz");
+
+
+   # Clean up
+   chdir("$HomeDir");
+   NmiTools::run("rm -rf R4* BUILD");
+}
+
+sub create_make_wrapper {
+
+	my $makedir = shift;
+
+	open(MAKEWRAP, ">$makedir\\make_wrapper.bat")||
+				die("could not open make wrapper $!\n");
+
+	print MAKEWRAP "call %*\r\n";
+	print MAKEWRAP "exit %ERRORLEVEL%\r\n";
+
+	close(MAKEWRAP);
+}
