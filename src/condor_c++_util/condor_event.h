@@ -422,7 +422,7 @@ class JobAbortedEvent : public ULogEvent
 
 //----------------------------------------------------------------------------
 /** Framework for an Evicted Event object.
-    Below is an example Evicted Log entry for Condor v6.<p>
+    Below is an example Evicted Log entry for Condor v6<p>
 
 <PRE>
 004 (5164.000.000) 10/20 17:08:13 Job was evicted.
@@ -432,7 +432,44 @@ class JobAbortedEvent : public ULogEvent
 ...
 </PRE>
 
+<p> However, the evict event might also look like this:
+
+<PRE>
+004 (3236.000.000) 03/28 19:28:07 Job was evicted.
+    (0) Job terminated and was requeued
+        Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+        Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+    29  -  Run Bytes Sent By Job
+    144  -  Run Bytes Received By Job
+    (0) Abnormal termination (signal 9)
+    (1) Corefile in: /some/interesting/path/core.3236.0
+    The OnExitRemove expression 'ExitBySignal == False' evaluated to False
+...
+</PRE>
+
+<p>or like this:
+
+<PRE>
+004 (3236.000.000) 03/28 19:28:07 Job was evicted.
+    (0) Job terminated and was requeued
+        Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+        Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+    29  -  Run Bytes Sent By Job
+    144  -  Run Bytes Received By Job
+    (1) Normal termination (return value 3)
+    The OnExitRemove expression 'ExitCode == 0' evaluated to False
+...
+</PRE>
+
+
+
+<p> In this case, the event shows that the job terminated but was
+requeued due to the user-specified policy expressions.  The old
+parsing code will just see this as an eviction w/o checkpoint.
+However, the new code will correctly parse the other useful info out
+of it.  
 */
+
 class JobEvictedEvent : public ULogEvent
 {
   public:
@@ -461,8 +498,32 @@ class JobEvictedEvent : public ULogEvent
 
 	/// bytes sent by the job over network for the run
 	float sent_bytes;
+
 	/// bytes received by the job over the network for the run
 	float recvd_bytes;
+
+    /// Did it terminate and get requeued?
+    bool    terminate_and_requeued;
+
+	/// Did it terminate normally? (only valid for requeue eviction) 
+    bool    normal;
+
+    /// return value (valid only on normal exit)
+    int     return_value;
+
+    /// The signal that terminated it (valid only on abnormal exit)
+    int     signal_number;
+
+	const char* getReason();
+	void setReason( const char* );
+
+	const char* getCoreFile();
+	void setCoreFile( const char* );
+
+ private:
+	char* reason;
+	char* core_file;
+
 };
 
 

@@ -780,8 +780,7 @@ readEvent (FILE *file)
 }
 		
 // ----- the JobEvictedEvent class
-JobEvictedEvent::
-JobEvictedEvent ()
+JobEvictedEvent::JobEvictedEvent()
 {
 	eventNumber = ULOG_JOB_EVICTED;
 	checkpointed = false;
@@ -790,67 +789,236 @@ JobEvictedEvent ()
 	run_remote_rusage = run_local_rusage;
 
 	sent_bytes = recvd_bytes = 0.0;
+
+	terminate_and_requeued = false;
+	normal = false;
+	return_value = -1;
+	signal_number = -1;
+	reason = NULL;
+	core_file = NULL;
 }
 
-JobEvictedEvent::
-~JobEvictedEvent ()
+
+JobEvictedEvent::~JobEvictedEvent()
 {
+	if( reason ) {
+		delete [] reason;
+	}
+	if( core_file ) {
+		delete [] core_file;
+		core_file = NULL;
+	}
 }
 
-int JobEvictedEvent::
-readEvent (FILE *file)
+
+void
+JobEvictedEvent::setReason( const char* reason_str )
 {
-	int  retval1, retval2;
+	if( reason ) {
+		delete [] reason;
+		reason = NULL;
+	}
+	if( reason_str ) {
+		reason = strnewp( reason_str );
+	}
+}
+
+
+const char*
+JobEvictedEvent::getReason( void )
+{
+	return reason;
+}
+
+
+void
+JobEvictedEvent::setCoreFile( const char* core_name )
+{
+	if( core_file ) {
+		delete [] core_file;
+		core_file = NULL;
+	}
+	if( core_name ) {
+		core_file = strnewp( core_name );
+	}
+}
+
+
+const char*
+JobEvictedEvent::getCoreFile( void )
+{
+	return core_file;
+}
+
+
+int
+JobEvictedEvent::readEvent( FILE *file )
+{
 	int  ckpt;
 	char buffer [128];
 
-	if (((retval1 = fscanf (file, "Job was evicted.")) == EOF)  ||
-		((retval2 = fscanf (file, "\n\t(%d) ", &ckpt)) != 1))
+	if( (fscanf(file, "Job was evicted.") == EOF) ||
+		(fscanf(file, "\n\t(%d) ", &ckpt) != 1) )
+	{
 		return 0;
+	}
 	checkpointed = (bool) ckpt;
-	if (fgets (buffer, 128, file) == 0) return 0;
-	
-
-	if (!readRusage(file,run_remote_rusage) || fgets (buffer,128,file) == 0  ||
-		!readRusage(file,run_local_rusage)  || fgets (buffer,128,file) == 0)
+	if( fgets(buffer, 128, file) == 0 ) {
 		return 0;
+	}
 
+		/* 
+		   since the old parsing code treated the integer we read as a
+		   bool (only to decide between checkpointed or not), we now
+		   have to parse the string we just read to figure out if this
+		   was a terminate_and_requeued eviction or not.
+		*/
+	if( ! strncmp(buffer, "Job terminated and was requeued", 31) ) {
+		terminate_and_requeued = true;
+	} else {
+		terminate_and_requeued = false;
+	}
 
-	if (fscanf (file, "\t%f  -  Run Bytes Sent By Job\n", &sent_bytes) == 0 ||
-		fscanf (file, "\t%f  -  Run Bytes Received By Job\n",
-				&recvd_bytes) == 0)
+	if( !readRusage(file,run_remote_rusage) || !fgets(buffer,128,file) ||
+		!readRusage(file,run_local_rusage) || !fgets(buffer,128,file) )
+	{
+		return 0;
+	}
+
+	if( !fscanf(file, "\t%f  -  Run Bytes Sent By Job\n", &sent_bytes) ||
+		!fscanf(file, "\t%f  -  Run Bytes Received By Job\n",
+				&recvd_bytes) )
+	{
 		return 1;				// backwards compatibility
+	}
 
+	if( ! terminate_and_requeued ) {
+			// nothing more to read
+		return 1;
+	}
+
+		// now, parse the terminate and requeue specific stuff.
+
+	int  normal_term;
+	int  got_core;
+
+	if( fscanf(file, "\n\t(%d) ", &normal_term) != 1 ) {
+		return 0;
+	}
+	if( normal_term ) {
+		normal = true;
+		if( fscanf(file, "Normal termination (return value %d)\n",
+				   &return_value) !=1 ) {
+			return 0;
+		}
+	} else {
+		normal = false;
+		if( fscanf(file, "Abnormal termination (signal %d)",
+				   &signal_number) !=1 ) {
+			return 0;
+		}
+		if( fscanf(file, "\n\t(%d) ", &got_core) != 1 ) {
+			return 0;
+		}
+		if( got_core ) {
+			if( fscanf(file, "Corefile in: ") == EOF ) {
+				return 0;
+			}
+			if( !fgets(buffer, 128, file) ) {
+				return 0;
+			}
+			chomp( buffer );
+			setCoreFile( buffer );
+		} else {
+			if( !fgets(buffer, 128, file) ) {
+				return 0;
+			}
+		}
+	}
+		// finally, see if there's a reason.  this is optional.
+	if( !fgets(buffer, 128, file) ) {
+		return 1;  // not considered failure
+	}
+	chomp( buffer );
+		// This is strange, sometimes we get the \t from fgets(), and
+		// sometimes we don't.  Instead of trying to figure out why,
+		// we just check for it here and do the right thing...
+	if( buffer[0] == '\t' && buffer[1] ) {
+		setReason( &buffer[1] );
+	} else {
+		setReason( buffer );
+	}
 	return 1;
 }
 
-int JobEvictedEvent::
-writeEvent (FILE *file)
+
+int
+JobEvictedEvent::writeEvent( FILE *file )
 {
 	int retval;
 
-	if (fprintf (file, "Job was evicted.\n\t(%d) ", (int) checkpointed) < 0)
+	if( fprintf(file, "Job was evicted.\n\t") < 0 ) { 
 		return 0;
+	}
 
-	if (checkpointed)
-		retval = fprintf (file, "Job was checkpointed.\n\t");
-	else
-		retval = fprintf (file, "Job was not checkpointed.\n\t");
+	if( terminate_and_requeued ) { 
+		retval = fprintf( file, "(0) Job terminated and was requeued\n\t" );
+	} else if( checkpointed ) {
+		retval = fprintf( file, "(1) Job was checkpointed\n\t" );
+	} else {
+		retval = fprintf( file, "(0) Job was not checkpointed\n\t" );
+	}
+	if( retval < 0 ) {
+		return 0;
+	}
 
-
-	if ((retval < 0)										||
-		(!writeRusage (file, run_remote_rusage)) 			||
+	if( (!writeRusage (file, run_remote_rusage)) 			||
 		(fprintf (file, "  -  Run Remote Usage\n\t") < 0) 	||
 		(!writeRusage (file, run_local_rusage)) 			||
-		(fprintf (file, "  -  Run Local Usage\n") < 0))
+		(fprintf (file, "  -  Run Local Usage\n") < 0) )
+    {
 		return 0;
+	}
 
+	if( fprintf(file, "\t%.0f  -  Run Bytes Sent By Job\n", 
+				sent_bytes) < 0 ) {
+		return 0;
+	}
+	if( fprintf(file, "\t%.0f  -  Run Bytes Received By Job\n", 
+				recvd_bytes) < 0 ) {
+		return 0;
+	}
 
-	if (fprintf (file, "\t%.0f  -  Run Bytes Sent By Job\n", sent_bytes) < 0 ||
-		fprintf (file, "\t%.0f  -  Run Bytes Received By Job\n",
-				 recvd_bytes) < 0)
-		return 1;				// backwards compatibility
-	
+	if( ! terminate_and_requeued ) {
+			// nothing else to write
+		return 1;
+	}
+
+	if( normal ) {
+		if( fprintf(file, "\t(1) Normal termination (return value %d)\n", 
+					return_value) < 0 ) {
+			return 0;
+		}
+	} else {
+		if( fprintf(file, "\t(0) Abnormal termination (signal %d)\n",
+					signal_number) < 0 ) {
+			return 0;
+		}
+		if( core_file ) {
+			retval = fprintf( file, "\t(1) Corefile in: %s\n", core_file );
+		} else {
+			retval = fprintf( file, "\t(0) No core file\n" );
+		}
+		if( retval < 0 ) {
+			return 0;
+		}
+	}
+
+	if( reason ) {
+		if( fprintf(file, "\t%s\n", reason) < 0 ) {
+			return 0;
+		}
+	}
 	return 1;
 }
 
