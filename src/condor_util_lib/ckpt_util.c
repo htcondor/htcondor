@@ -33,8 +33,10 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include <sys/socket.h>
-#include <netinet/in.h>
+#include "condor_network.h"
+#include "internet.h"
+#include "my_hostname.h"
+
 
 #ifdef WANT_NETMAN
 /* Perform a callback during file stream transfers so we can manage
