@@ -8,6 +8,8 @@
 **
 ***********************************************************/
 
+#include "syscall_sysdep.h"
+
 #if defined(OSF1) && !defined(__GNUC__)
 #	define __STDC__
 #endif
@@ -22,9 +24,6 @@
 #define profil __hide_profil
 #define mount __hide_mount
 #define __EXTENSIONS__
-#if defined(Solaris26)
-#	define _LARGEFILE64_SOURCE
-#endif /* Solaris 2.6 */
 #include <sys/types.h>
 #endif /* Solaris */
 
@@ -32,18 +31,20 @@
 #include "syscall_macros.h"
 #include "condor_syscall_mode.h"
 #include "file_table_interf.h"
-#include <stdio.h>
 
-#include <sys/types.h>
-
-#if defined(HPUX9)
+#if defined(HPUX)
+#	define _XPG4_EXTENDED
 #	define mknod	__hide_mknod
 #	define select	__hide_select
-#	define fchmod	__hide_fchmod
 #	define setitimer __hide_setitimer
 #	define settimeofday __hide_settimeofday
 #	define profil	__hide_profil
 #endif
+
+#include <stdio.h>
+#include <sys/types.h>
+
+#include "syscall_64bit.h"
 
 #if defined(LINUX) && !defined(GLIBC)
 #define fstat __hide_fstat 
@@ -55,15 +56,13 @@
 
 #include "condor_fix_sys_time.h"
 
-#if defined(HPUX9)
+#if defined(HPUX) 
 #	undef mknod
 #	undef select
-#	undef fchmod
 #	undef setitimer
 #	undef settimeofday
 #	undef profil
 	int select();
-	int fchmod( int fd, unsigned int mode );
 	int setitimer( int which, const struct itimerval *,struct itimerval * );	
 	int	settimeofday( struct timeval *tp, struct timezone *tzp );
 	void profil( short *buf, unsigned int size, unsigned int ,unsigned int  );
@@ -76,6 +75,13 @@
 #if defined(IRIX)
 struct statfs;
 struct exportfsdata;
+#endif
+
+#if defined(HPUX)
+struct exportfsdata;
+struct msqid_ds;
+struct sembuf;
+struct shmid_ds;
 #endif
 
 #if defined(Solaris)
@@ -96,11 +102,12 @@ struct stat;
 
 #include "condor_fix_sys_resource.h"
 
-#include "condor_mmap.h"
-
-#if defined(HPUX9)
+#if defined(HPUX)
 #undef _PROTOTYPES
 #endif
+
+#include "condor_mmap.h"
+
 
 #if defined(IRIX)
 #	define sendmsg __hide_sendmsg
@@ -158,7 +165,12 @@ struct stat;
 #	undef _uname
 #endif
 
-#if defined(HPUX9)
+#if defined(IRIX)
+#	undef kill
+	int kill( pid_t pid, int sig );
+#endif
+
+#if defined(HPUX)
 #	undef _PROTOTYPES
 #	include <signal.h>
 #	define async_daemon	__hide_async_daemon
@@ -213,7 +225,7 @@ struct module;
 	int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
 #endif
 
-#if defined(HPUX9)
+#if defined(HPUX) 
 #   define mknod  	__hide_mknod
 #	define readlink	__hide_readlink
 #	define setpgrp  __hide_setpgrp
@@ -236,7 +248,7 @@ struct module;
 #	undef mount
 #endif
 
-#if defined(HPUX9)
+#if defined(HPUX)
 #   undef mknod
 #	undef readlink
 #	undef setpgrp
@@ -266,10 +278,8 @@ struct module;
 #endif
 
 
-#if defined(HPUX9)
+#if defined(HPUX) 
 #	undef _PROTOTYPES
-#endif
-#if defined(SUNOS41) || defined(HPUX9)
 #	include <sys/vfs.h>		 /* for struct statfs */
 #endif
 
