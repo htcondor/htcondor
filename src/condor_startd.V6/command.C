@@ -960,13 +960,9 @@ activate_claim( Resource* rip, Stream* stream )
 		ABORT;
 	}
 
-		// now that we've gotten this far, we're really going to try
-		// to spawn the starter.  set it in our Resource object. 
-	rip->setStarter( tmp_starter );
-
 #ifndef WIN32
 
-	if( rip->r_starter->is_dc() ) {
+	if( tmp_starter->is_dc() ) {
 		ji.shadowCommandSock = stream;
 	} else {
 		ji.shadowCommandSock = NULL;
@@ -1040,9 +1036,15 @@ activate_claim( Resource* rip, Stream* stream )
 
 	int now = (int)time( NULL );
 
+		// now that we've gotten this far, we're really going to try
+		// to spawn the starter.  set it in our Resource object. 
+	rip->setStarter( tmp_starter );
+
 		// Actually spawn the starter
 	if( ! rip->spawn_starter(&ji, now) ) {
 			// Error spawning starter!
+		delete( tmp_starter );
+		rip->setStarter( NULL );
 		ABORT;
 	}
 
