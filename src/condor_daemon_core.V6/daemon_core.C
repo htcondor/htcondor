@@ -33,7 +33,7 @@ static const int DEFAULT_MAXCOMMANDS = 255;
 static const int DEFAULT_MAXSIGNALS = 99;
 static const int DEFAULT_MAXSOCKETS = 8;
 static const int DEFAULT_MAXREAPS = 8;
-static const int DEFAULT_PIDBUCKETS = 8;
+static const int DEFAULT_PIDBUCKETS = 11;
 static const char* DEFAULT_INDENT = "DaemonCore--> ";
 
 

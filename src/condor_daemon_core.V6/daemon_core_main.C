@@ -1026,7 +1026,7 @@ int main( int argc, char** argv )
 		// pid.  Have lots of pid table hash buckets if we're the
 		// SCHEDD, since the SCHEDD could have lots of children... 
 	if ( strcmp(mySubSystem,"SCHEDD") == 0 ) {
-		daemonCore = new DaemonCore(500);
+		daemonCore = new DaemonCore(503);
 	} else {
 		daemonCore = new DaemonCore();
 	}
