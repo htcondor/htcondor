@@ -202,6 +202,16 @@ int main_init (int argc, char ** const argv) {
 		// process any config vars
 	G.Config();
 
+#ifdef WIN32
+	// on Windows, we'll EXCEPT() if we attempt to set_user_priv()
+	// and we're not running as SYSTEM (aka root). So, if we're 
+	// not SYSTEM, disable switching to prevent this.
+
+	if ( is_root() == 0 ) {
+		_condor_disable_uid_switching();
+	}
+#endif
+
 	// The DCpermission (last parm) should probably be PARENT, if it existed
     daemonCore->Register_Signal( SIGUSR1, "SIGUSR1",
                                  (SignalHandler) main_shutdown_remove,
