@@ -48,9 +48,9 @@
 #include "condor_string.h"
 #include "condor_ckpt_name.h"
 #include "url_condor.h"
-#include "proc_obj.h"
 #include "sched.h"
 #include "condor_classad.h"
+#include "condor_io.h"
 #include "condor_parser.h"
 #include "files.h"
 #include <pwd.h>
@@ -299,27 +299,26 @@ main( int argc, char *argv[] )
 void
 reschedule()
 {
-	int			sock = -1;
 	int			cmd;
-	XDR			xdr, *xdrs = NULL;
-	char			*scheddAddr;
+	char		*scheddAddr;
 
 	if ((scheddAddr = get_schedd_addr(ThisHost)) == NULL)
 	{
 		EXCEPT("Can't find schedd address on %s\n", ThisHost);
 	}
 
-		/* Connect to the schedd */
-	if ((sock = do_connect(scheddAddr, "condor_schedd", SCHED_PORT)) < 0) {
-		dprintf(D_ALWAYS, "Can't connect to condor_schedd on %s\n", ThisHost);
-		return;
+	/* Connect to the schedd */
+	ReliSock sock(scheddAddr, SCHED_PORT);
+	if(sock.get_file_desc() < 0) {
+		EXCEPT( "Can't connect to condor scheduler (%s)\n",
+				scheddAddr );
 	}
-	xdrs = xdr_Init( &sock, &xdr );
-	xdrs->x_op = XDR_ENCODE;
 
+	sock.encode();
 	cmd = RESCHEDULE;
-	ASSERT( xdr_int(xdrs, &cmd) );
-	ASSERT( xdrrec_endofrecord(xdrs,TRUE) );
+	if( !sock.code(cmd) || !sock.eom() ) {
+		EXCEPT( "Can't send RESCHEDULE command to condor scheduler\n" );
+	}
 }
 
 
@@ -695,7 +694,7 @@ SetEnvironment()
 	if( shell_env = getenv("CONDOR_CORESIZE") ) 
 	{
 		(void) sprintf( tmp, "CONDOR_CORESIZE=%s", shell_env );
-		env = string_copy( tmp );
+		env = strdup( tmp );
 		envvalue = env;
 	} 
 	/* Defined by shell variable */
@@ -714,7 +713,7 @@ SetEnvironment()
 		} else {
 			(void) sprintf( tmp, CoreSizeFmt, rl.rlim_cur/1024 );
 		}
-		env = string_copy( tmp );
+		env = strdup( tmp );
 
 		check_path_length(env, Environment);
 
@@ -997,7 +996,7 @@ condor_param( char *name )
 void
 set_condor_param( char *name, char *value )
 {
-	char *tval = string_copy( value );
+	char *tval = strdup( value );
 
 	insert( name, tval, ProcVars, PROCVARSIZE );
 }
@@ -1208,7 +1207,7 @@ get_owner()
 	if( (pwd=getpwuid(getuid())) == NULL ) {
 		EXCEPT( "Can't get passwd entry for uid %d\n", getuid() );
 	}
-	return string_copy(pwd->pw_name);
+	return strdup(pwd->pw_name);
 }
 
 void
@@ -1233,7 +1232,7 @@ init_params()
 
 	Flavor = param( "FLAVOR" );
 	if( Flavor == NULL ) {
-		Flavor = string_copy("none");
+		Flavor = strdup("none");
 	}
 
 	My_fs_domain = param( "FILESYSTEM_DOMAIN" );
