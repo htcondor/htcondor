@@ -561,6 +561,12 @@ obituary( int pid, int status )
     if ( strcmp( daemons.SymbolicName(pid), "KBDD") == 0 )
         return;
 
+	// just return if process was killed with signal 9.  this
+	// means the admin did it, and thus no need to send email informing
+	// the admin about something they did...
+	if ( (WIFSIGNALED(status)) && ( (WTERMSIG(status)) == 9 ) )
+		return;
+
     name = daemons.DaemonName( pid );
     log = daemons.DaemonLog( pid );
 
