@@ -34,9 +34,12 @@
 **  debug levels and dprintf options (i.e., D_NOHEADER).  The debug
 **  level flags use the lower order bits while the option flag(s)
 **  use the higher order bit(s).  Note that D_MAXFLAGS is 32 so we
-**  can store the debug level as a integer bitmask.
+**  can store the debug level as a integer bitmask.  When adding a
+**  debug flag, be sure to update D_NUMLEVELS.  Since we start
+**  counting levels at 0, D_NUMLEVELS should be one greater than the
+**  highest level.
 */
-#define D_NUMLEVELS		23
+#define D_NUMLEVELS		25
 #define D_MAXFLAGS 		32
 #define D_ALWAYS 		(1<<0)
 #define D_SYSCALLS		(1<<1)
@@ -62,6 +65,7 @@
 #define D_NETWORK		(1<<21)
 #define D_KEYBOARD		(1<<22)
 #define D_PROCFAMILY	(1<<23)
+#define D_IDLE			(1<<24)
 #define D_FDS           (1<<(D_MAXFLAGS-3))
 #define D_SECONDS		(1<<(D_MAXFLAGS-2))
 #define D_NOHEADER		(1<<(D_MAXFLAGS-1))
@@ -83,6 +87,7 @@ void _condor_dprintf_va ( int flags, char* fmt, va_list args );
 void _EXCEPT_ ( char *fmt, ... );
 void Suicide();
 void dprintf_config( char* subsys, int logfd );
+void set_debug_flags( char *strflags );
 #else
 void config ();
 char * param ();
