@@ -55,9 +55,10 @@
 #include "condor_fix_unistd.h"
 #include <stdarg.h>		/* Include this before stdio.h so GNU's va_list is defined */
 #include "condor_fix_stdio.h"
+#include "condor_fix_signal.h" /* before param.h since on IRIX, param includes signal.h */
+#include <sys/param.h>  /* before fdset since on glibc, this defines NBBY w/o check */
 #include "condor_fdset.h"
 #include "condor_fix_string.h"
-#include "condor_fix_signal.h"
 #include "condor_fix_sys_ioctl.h"
 #include "condor_fix_sys_stat.h"
 #include "condor_fix_sys_wait.h"
@@ -67,8 +68,8 @@
 #include "condor_fix_netdb.h"
 #include <sys/utsname.h>		
 #include "condor_fix_limits.h"
+#include "condor_fix_sys_resource.h"
 #include <stdlib.h>
-#include <sys/resource.h>
 #include <ctype.h>
 #include <fcntl.h>	
 #include <errno.h>
@@ -78,9 +79,9 @@
 #include <sys/times.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <sys/param.h>
 #include <values.h>
 #include <math.h>
+#include <sys/file.h>
 
 #endif /* System specific stuff */
 
@@ -99,6 +100,7 @@
 
 #include <iostream.h>
 #include <iomanip.h>
+#include <fstream.h>
 
 #endif /* __cplusplus */
 
