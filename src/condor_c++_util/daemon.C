@@ -361,9 +361,8 @@ Daemon::startCommand( int cmd, Sock* sock, int sec )
 		dprintf(D_SECURITY, "STARTCOMMAND: talking to a %s daemon.\n", _version);
 
 		CondorVersionInfo vi(_version);
-		int cmpres = vi.compare_versions("$CondorVersion: 6.3.1 Jul 17 2001 $");
-
-		if (cmpres < 0) {
+		
+		if ( !vi.built_since_version(6,3,1) ) {
 			_auth_cap_known = true;
 			_is_auth_cap = false;
 			dprintf (D_SECURITY, "STARTCOMMAND: disabling auth "
