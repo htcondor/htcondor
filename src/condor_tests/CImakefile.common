@@ -50,9 +50,11 @@ CBUILD($(CC),job_ckpt_integers_std,c)
 RUN(job_ckpt_integers_std)
 TESTCLASS(job_ckpt_integers_std,quick)
 
+#if DOES_SAVE_SIGSTATE
 DESC(job_ckpt_signals_std,"ckpt/restore signal state")
 CBUILD($(CC),job_ckpt_signals_std,c)
 RUN(job_ckpt_signals_std)
+#endif /* DOES_SAVE_SIGSTATE */
 
 DESC(job_ckpt_getrusage-loop_std,"Does getrusage() work across ckpts?")
 CBUILD_DEP($(CC),job_ckpt_getrusage-loop_std,c,x_waste_second.o)
