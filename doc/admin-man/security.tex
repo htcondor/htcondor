@@ -637,8 +637,10 @@ The values will be
     CLAIMTOBE
     ANONYMOUS
     NTSSPI
+    GSI
 \end{verbatim}
-%   GSI
+%   FS_REMOTE
+%   PASSWORD
 
 As an example, the macro
 % \begin{verbatim}
@@ -897,160 +899,164 @@ of several supported methods.
 The details of Condor's requirements for using various methods
 of authentication are given below.
 
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% \subsubsection{\label{sec:X509-Authentication}X.509 Authentication}
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% The Globus GSI (Grid Security Infrastructure) protocol provides
-% an avenue for Condor to do
-% PKI-based authentication using X.509 certificates.
-% 
-% Several steps are required to enable this authentication.
-% \begin{description}
-% \item[X.509 Certificates]
-% 
-% PKI-based authentication between Condor daemons
-% requires
-% a valid X.509 certificate from a trusted
-% CA (Certification Authority).
-% The certificate may be a single host certificate,
-% and all Condor daemons on the same machine may share the same certificate.
-% The directory where the certificate resides, along with
-% other related files such as one containing the private key,
-% are utilized by Condor when doing authentication. 
-% 
-% Condor locates the daemon's certificate through the use of
-% a configuration macro.
-% Note that the certificate can be shared by all Condor daemons
-% running on a machine.
-% The certificate can also be copied to other machines,
-% where local copies are necessary.
-% The certificates must be protected by access rights to
-% files, since the password file is not encrypted.
-% 
-% Condor users (those who submit jobs) can also use
-% the X.509-based authentication.
-% These users must also
-% have valid X.509 certificates signed by a trusted CA.
-% For use when submitting jobs,
-% the certificate is used to generate a proxy:
-% a combination of certificate and password that is valid only
-% for a specific (and usually short) time period.
-% A proxy is used so that the user does  
-% not need to be present (to give a password) when a job is executed.
-% 
-% \item[Condor Configuration]
-        % 
-% To use X.509 certificates for authentication, the Condor configuration file
-% must have the following configuration macros set.
-% This setting is an example.
-% 
-% \begin{verbatim}
-% SEC_DEFAULT_AUTHENTICATION = REQUIRED
-% SEC_DEFAULT_AUTHENTICATION_METHODS = GSS_AUTHENTICATION 
-% X509_DIRECTORY = /path/to/daemon/certificatedirectory
-% CONDOR_GATEKEEPER = /C=US/O=Condor/O=University of Wisconsin
-% /OU=Computer Sciences Department/CN=condor@cs.wisc.edu
-% \end{verbatim}
-% 
-% The
-% \MacroNI{SEC\_DEFAULT\_AUTHENTICATION} macro specifies that
-% authentication is required for all communications.
-% This single macro covers all communications, but could be
-% replaced with a set of macros that require authentication for
-% only specific communications.
-% See section~\ref{sec:Security-Authentication} for details on the
-% more specific configuration variables used for authentication.
+Where no authentication methods are specified in the configuration,
+the default is for Condor to use file system authentication,
+Kerberos authentication, or GSI authentication.
 
-% The \MacroNI{GSS\_AUTHENTICATION} method specifies the use of
-% the X.509 protocol. 
-% If this is the only method listed, then X.509 will be the only
-% protocol used.
-% If other methods are acceptable, then placing this method
-% first within the list will cause Condor to give preference to
-% this method over others.
-% 
-% The macro \MacroNI{X509\_DIRECTORY} must be specified,
-% so that Condor knows where to look for the daemon's certificate.
-% This path may be a directory or a shared file system such as AFS. 
-% Alternatively, this path name
-% can point to 
-% local copies of the certificate stored
-% in a local file system.
-% 
-% The macro \MacroNI{CONDOR\_GATEKEEPER} configuration macro
-% provides daemons with a distinguished name to use for
-% X.509 authentication.
-% This name is specified with the following format
-% \begin{verbatim}
-% CONDOR_GATEKEEPER = /C=?/O=?/O=?/OU=?/CN=<daemon_name@domain>
-% \end{verbatim}
-% A complete example that has the question marks filled in and the
-% daemon's user name filled in is given in the 
-% example above.
-% 
-% Condor will also need a way to map an X.509 distinguished
-% name to a Condor user id.
-% This is done in an administrator-maintained file called an X.509 map file,
-% mapping from X509 Distinguished Name (DN) to Condor user id.
-% It is similar to a Globus Gridmap file.
-% Entries (lines) in the file each contain two items.
-% The first item in an entry is the distinguished name
-% given in an X.509 certificate.
-% The second item is the Condor user id, given as a
-% fully qualified name.
-% Note that the two items in an entry are separated by tab character(s),
-% not spaces.
-% An example of two entries in an X.509 map file:
-% 
-% \begin{verbatim}
-% V	020406001927Z		01	unknown	/C=US/O=Condor/O=University
-% of Wisconsin/ OU=Computer Sciences Department/CN=condor@cs.wisc.edu
-% condor@cs.wisc.edu
-% V	020406002049Z		02	unknown	/C=US/O=Condor/O=University
-% of Wisconsin/OU=Computer Sciences Department/CN=jsmith@cs.wisc.edu
-% jsmith@cs.wisc.edu
-% \end{verbatim}
-% 
-% Condor expects the map file to be in the location given by
-% \begin{verbatim}
-% $(X509_DIRECTORY)/certdir/index.txt
-% \end{verbatim}
-% If the map file is not in this location, a symbolic link
-% may be used to point to the actual map file.
-% 
-% \item[User environment]
-% 
-% The Condor user (one who submits jobs) must create a proxy
-% prior to authentication.
-% The user creates a proxy using the program
-% \Prog{grid-proxy-init}.
-% This program needs to know 
-% the location of the user's certificate directory.
-% This is done by setting an environment variable, called
-% \Env{X509\_CERT\_DIR}.
-% For example, if the X509 directory is \File{/test/myX509},
-% then \Env{X509\_CERT\_DIR} should be set to \File{/test/myX509/certdir}.
-% 
-% After running \Prog{grid-proxy-init},
-% an environment variable called
-% \Env{X509\_USER\_PROXY} may be set to give
-% the location where the proxy is stored.
-% By default,
-% \Prog{grid-proxy-init} will place the proxy in the \File{/tmp}
-% directory with
-% the file name being determined by the format:
-% \begin{verbatim}
-% /tmp/x509_uXXXX
-% \end{verbatim}
-% The specific file name is given by substituting the \verb@XXXX@
-% characters with the UID of the user.
-% The
-% \Env{X509\_USER\_PROXY} environment variable is optional,
-% since Condor looks in the default location if the environment
-% variable is not set.
-% 
-% 
-% \end{description}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:GSI-Authentication}GSI Authentication}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The Globus GSI (Grid Security Infrastructure) protocol provides
+an avenue for Condor to do
+PKI-based authentication using X.509 certificates.
+
+Several steps are required to enable this authentication.
+\begin{description}
+\item[X.509 Certificates]
+
+PKI-based authentication between Condor daemons
+requires
+a valid X.509 certificate from a trusted
+CA (Certification Authority).
+The certificate may be a single host certificate,
+and all Condor daemons on the same machine may share the same certificate.
+The directory where the certificate resides, along with
+other related files such as one containing the private key,
+are utilized by Condor when doing authentication. 
+
+Condor locates the daemon's certificate through the use of
+a configuration macro.
+Note that the certificate can be shared by all Condor daemons
+running on a machine.
+The certificate can also be copied to other machines,
+where local copies are necessary.
+The certificates must be protected by access rights to
+files, since the password file is not encrypted.
+
+Condor users (those who submit jobs) can also use
+the X.509-based authentication.
+These users must also
+have valid X.509 certificates signed by a trusted CA.
+For use when submitting jobs,
+the certificate is used to generate a proxy:
+a combination of certificate and password that is valid only
+for a specific (and usually short) time period.
+A proxy is used so that the user does  
+not need to be present (to give a password) when a job is executed.
+
+\item[Condor Configuration]
+
+To use X.509 certificates for authentication, the Condor configuration file
+must have the following configuration macros set.
+This setting is an example.
+
+\begin{verbatim}
+SEC_DEFAULT_AUTHENTICATION = REQUIRED
+SEC_DEFAULT_AUTHENTICATION_METHODS = GSS_AUTHENTICATION 
+X509_DIRECTORY = /path/to/daemon/certificatedirectory
+CONDOR_GATEKEEPER = /C=US/O=Condor/O=University of Wisconsin
+/OU=Computer Sciences Department/CN=condor@cs.wisc.edu
+\end{verbatim}
+
+The
+\MacroNI{SEC\_DEFAULT\_AUTHENTICATION} macro specifies that
+authentication is required for all communications.
+This single macro covers all communications, but could be
+replaced with a set of macros that require authentication for
+only specific communications.
+See section~\ref{sec:Security-Authentication} for details on the
+more specific configuration variables used for authentication.
+
+The \MacroNI{GSS\_AUTHENTICATION} method specifies the use of
+the X.509 protocol. 
+If this is the only method listed, then X.509 will be the only
+protocol used.
+If other methods are acceptable, then placing this method
+first within the list will cause Condor to give preference to
+this method over others.
+
+The macro \MacroNI{X509\_DIRECTORY} must be specified,
+so that Condor knows where to look for the daemon's certificate.
+This path may be a directory or a shared file system such as AFS. 
+Alternatively, this path name
+can point to 
+local copies of the certificate stored
+in a local file system.
+
+The macro \MacroNI{CONDOR\_GATEKEEPER} configuration macro
+provides daemons with a distinguished name to use for
+X.509 authentication.
+This name is specified with the following format
+\begin{verbatim}
+CONDOR_GATEKEEPER = /C=?/O=?/O=?/OU=?/CN=<daemon_name@domain>
+\end{verbatim}
+A complete example that has the question marks filled in and the
+daemon's user name filled in is given in the 
+example above.
+
+Condor will also need a way to map an X.509 distinguished
+name to a Condor user id.
+This is done in an administrator-maintained file called an X.509 map file,
+mapping from X509 Distinguished Name (DN) to Condor user id.
+It is similar to a Globus Gridmap file.
+Entries (lines) in the file each contain two items.
+The first item in an entry is the distinguished name
+given in an X.509 certificate.
+The second item is the Condor user id, given as a
+fully qualified name.
+Note that the two items in an entry are separated by tab character(s),
+not spaces.
+An example of two entries in an X.509 map file:
+
+\begin{verbatim}
+V	020406001927Z		01	unknown	/C=US/O=Condor/O=University
+of Wisconsin/ OU=Computer Sciences Department/CN=condor@cs.wisc.edu
+condor@cs.wisc.edu
+V	020406002049Z		02	unknown	/C=US/O=Condor/O=University
+of Wisconsin/OU=Computer Sciences Department/CN=jsmith@cs.wisc.edu
+jsmith@cs.wisc.edu
+\end{verbatim}
+
+Condor expects the map file to be in the location given by
+\begin{verbatim}
+$(X509_DIRECTORY)/certdir/index.txt
+\end{verbatim}
+If the map file is not in this location, a symbolic link
+may be used to point to the actual map file.
+
+\item[User environment]
+
+The Condor user (one who submits jobs) must create a proxy
+prior to authentication.
+The user creates a proxy using the program
+\Prog{grid-proxy-init}.
+This program needs to know 
+the location of the user's certificate directory.
+This is done by setting an environment variable, called
+\Env{X509\_CERT\_DIR}.
+For example, if the X509 directory is \File{/test/myX509},
+then \Env{X509\_CERT\_DIR} should be set to \File{/test/myX509/certdir}.
+
+After running \Prog{grid-proxy-init},
+an environment variable called
+\Env{X509\_USER\_PROXY} may be set to give
+the location where the proxy is stored.
+By default,
+\Prog{grid-proxy-init} will place the proxy in the \File{/tmp}
+directory with
+the file name being determined by the format:
+\begin{verbatim}
+/tmp/x509_uXXXX
+\end{verbatim}
+The specific file name is given by substituting the \verb@XXXX@
+characters with the UID of the user.
+The
+\Env{X509\_USER\_PROXY} environment variable is optional,
+since Condor looks in the default location if the environment
+variable is not set.
+
+
+\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Kerberos-Authentication}Kerberos Authentication}
@@ -1059,7 +1065,7 @@ of authentication are given below.
 If Kerberos is used for authentication, then 
 the configuration variable
 \Macro{KERBEROS\_MAP\_FILE}
-must be used to define a path to an administrator-maintained file that
+is used to define a path to an administrator-maintained file that
 contains Kerberos domain (called a realm) to Condor UID domain mapping.
 The configuration syntax is
 \begin{verbatim}
@@ -1070,13 +1076,18 @@ Lines within the map file have the syntax
 \begin{verbatim}
    KERB.REALM = UID.domain.name
 \end{verbatim}
-%If no map file is specified, then Condor assumes that the
-%Kerberos realm is the same as the Condor UID domain.
+
 Here are two lines from a map file to use as an example:
 \begin{verbatim}
    CS.WISC.EDU   = cs.wisc.edu
    ENGR.WISC.EDU = ee.wisc.edu
 \end{verbatim}
+
+If a \MacroNI{KERBEROS\_MAP\_FILE}
+configuration variable is defined and set,
+then all permitted realms must be explicitly mapped.
+If no map file is specified, then Condor assumes that the
+Kerberos realm is the same as the Condor UID domain.
 
 The configuration variable
 \Macro{CONDOR\_SERVER\_PRINCIPAL}
@@ -1089,7 +1100,7 @@ may be assigned.
 
 Condor takes the specified (or default) principal and appends
 a slash character, the host name, an '@' (at sign character),
-and the kerberos realm.
+and the Kerberos realm.
 As an example, the configuration
 \begin{verbatim}
 CONDOR_SERVER_PRINCIPAL=condor-daemon
@@ -1099,6 +1110,18 @@ results in Condor's use of
 condor-daemon/the.host.name@YOUR.KERB.REALM
 \end{verbatim}
 as the server principal.
+
+Here is
+an example of configuration settings that use Kerberos for
+authentication and require authentication of all communications
+of the write or administrator access level.
+\begin{verbatim}
+SEC_WRITE_AUTHENTICATION = REQUIRED
+SEC_WRITE_AUTHENTICATION_METHODS = KERBEROS
+SEC_ADMINISTRATOR_AUTHENTICATION = REQUIRED
+SEC_ADMINISTRATOR_AUTHENTICATION_METHODS = KERBEROS
+\end{verbatim}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:FS-Authentication}File System Authentication}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1112,12 +1135,37 @@ The daemon then checks the ownership of the file.
 The file's ownership verifies the identity of the client.
 In this way, the file system becomes the trusted authority.
 
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \subsubsection{\label{sec:FSR-Authentication}File System Remote Authentication}
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \index{authentication!using a remote file system}
+% \Todo
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \subsubsection{\label{sec:Passwd-Authentication}Password Authentication}
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \index{authentication!using a password}
+% Authentication can be done interactively.
+% This method of authentication can only be used for verifying the
+% identity of a client.
+% It requires a command line ?,
+% and the client is prompted for a password.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:NTSSPI-Authentication}Windows Authentication}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{authentication!Windows}
-This is authentication done among Windows machines using
+This authentication is done only among Windows machines using
 a proprietary method.
+The Windows security interface SSPI is used to enforce NTLM
+(NT LAN Manager).
+The authentication is based on challenge and response, using the user's
+password as a key.
+This is similar to Kerberos.
+The main difference 
+is that Kerberos provides an access token that typically grants
+access to an entire network, whereas NTLM authentication only 
+verifies an identity to one machine at a time.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:CLAIM-Authentication}Claim To Be Authentication}
@@ -1235,7 +1283,18 @@ is described using the following format:
 The information to the left of the slash character describes
 a user within a domain.
 The information to the right of the slash character describes
-a machine from which the user would be issuing a command. 
+one or more machines from which the user would be issuing a command. 
+This host name may take the form of either a fully qualified host name
+of the form
+\begin{verbatim}
+bird.cs.wisc.edu
+\end{verbatim}
+or an IP address
+of the form
+\begin{verbatim}
+128.105.128.0
+\end{verbatim}
+
 An example is
 \begin{verbatim}
 zmiller@cs.wisc.edu/bird.cs.wisc.edu
@@ -1244,6 +1303,9 @@ zmiller@cs.wisc.edu/bird.cs.wisc.edu
 Within the format, wildcard characters (the asterisk, *) are allowed.
 The use of wildcards is limited to one wildcard on either side
 of the slash character.
+A wildcard character used in the host name is further limited
+to come at the beginning of a fully qualified host name
+or at the end of an IP address.
 For example,
 \begin{verbatim}
 *@cs.wisc.edu/bird.cs.wisc.edu
@@ -1251,19 +1313,66 @@ For example,
 refers to any user that comes from \verb@cs.wisc.edu@,
 where the command is originating from the machine
 \verb@bird.cs.wisc.edu@.
-Another example,
+Another valid example,
 \begin{verbatim}
 zmiller@cs.wisc.edu/*.cs.wisc.edu
 \end{verbatim}
 refers to commands coming from any machine within the 
 \verb@cs.wisc.edu@ domain, and issued by \verb@zmiller@.
-A third example,
+A third valid example,
 \begin{verbatim}
 *@cs.wisc.edu/*
 \end{verbatim}
 refers to commands coming from any user within the 
 \verb@cs.wisc.edu@ domain
 where the command is issued from any machine.
+A fourth valid example,
+\begin{verbatim}
+*@cs.wisc.edu/128.105.*
+\end{verbatim}
+refers to commands coming from any user within the 
+\verb@cs.wisc.edu@ domain
+where the command is issued from machines within the network that match
+the first two octets of the IP address.
+
+If the set of machines is specified by an IP address,
+then further specification using a net mask
+identifies a physical set (subnet) of machines.
+This physical set of machines is specified using the form
+\begin{verbatim}
+network/netmask
+\end{verbatim}
+The \verb@network@ is an IP address.
+The net mask takes one of two forms.
+It may be a decimal number which refers to the number of leading
+bits of the IP address that are used in describing a subnet.
+Or, the net mask may take the form of
+\begin{verbatim}
+a.b.c.d
+\end{verbatim}
+where \verb@a@,
+\verb@b@,
+\verb@c@, and
+\verb@d@
+are decimal numbers that each specify an 8-bit mask.
+An example net mask is
+\begin{verbatim}
+128.255.0.4
+\end{verbatim}
+which specifies the bit mask
+\begin{verbatim}
+10000000.11111111.00000000.00000100
+\end{verbatim}
+
+A single complete example of a configuration variable that uses
+a net mask is
+\begin{verbatim}
+ALLOW_WRITE = joesmith@cs.wisc.edu/128.105.128.0/17
+\end{verbatim}
+User \verb@joesmith@ within the
+\verb@cs.wisc.edu@ domain is given write authorization
+when originating from machines that match their leftmost
+17 bits of the IP address.
 
 This flexible set of configuration macros could used to define
 conflicting authorization.
