@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:EventD}
-Condor Event Daemon}
+Installing the Condor Event Daemon}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{daemon!eventd}
@@ -17,14 +17,12 @@ activates the event.
 
 Currently, this daemon supports \Macro{SHUTDOWN} events, which place machines
 in the owner state during scheduled times.
-The eventd causes machines to vacate jobs one at a time
+The eventd causes machines to vacate jobs in an orderly fashion
 in anticipation of \Macro{SHUTDOWN} events.
 Scheduling this improves performance, because the machines
 do not all attempt to checkpoint their jobs at the same time.
-To determine the estimate of the time required to complete a \Macro{SHUTDOWN}
-event, the \Attr{ImageSize} values for all running standard universe jobs are
-totalled and then divided by the maximum bandwidth specified for this
-event.
+Instead, the eventd schedules checkpoint transfers according to
+bandwidth limits defined in its configuration files.
 
 When a \Macro{SHUTDOWN} event is activated, the eventd contacts all startd
 daemons
@@ -35,13 +33,14 @@ the startd on any machine not running a job will immediately transition to
 the owner state.
 Any machine currently running a job will continue to run the
 job, but will not start any new job.
-The eventd then sends a vacate command to the each startd
+The eventd then sends a vacate command to each startd
 that is currently running a job.
 Once the job is vacated, the startd transitions to the
-owner state.
+owner state and remains in this state for the duration of the
+\Macro{SHUTDOWN} event.
 
-\Condor{eventd} must run on a machine with administrator
-access to your pool.
+The \Condor{eventd} must run on a machine with \Macro{STARTD}
+\Macro{ADMINISTRATOR} and \Macro{CONFIG} access to your pool.
 See section~\ref{sec:Host-Security} on
 page~\pageref{sec:Host-Security} for full details about IP/host-based
 security in Condor.
@@ -50,12 +49,6 @@ security in Condor.
 \subsubsection{\label{sec:EventD-Installation}
 Installing the Event Daemon} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\Condor{eventd} requires version 6.1.3 or later of
-\Condor{startd}.
-So, you should first install either the latest version of the SMP
-\Condor{startd} contrib module or the latest release of Condor version
-6.1.
 
 First, download the \Condor{eventd} contrib module.
 Uncompress and untar the file, to have a directory that
@@ -84,10 +77,9 @@ To define events, first set the \Macro{EVENT\_LIST} macro.
 This macro contains a list of macro names which define the individual
 events.
 The definition of individual events depends on the type of the event.
-Currently, there is only one event type: \Macro{SHUTDOWN}.
 The format for \Macro{SHUTDOWN} events is
 \begin{verbatim}
-	SHUTDOWN DAY TIME DURATION BANDWIDTH CONSTRAINT RANK
+	SHUTDOWN DAY TIME DURATION CONSTRAINT
 \end{verbatim}
 \verb@TIME@ and \verb@DURATION@ are specified in an hours:minutes
 format.  \verb@DAY@ is a string of days, where \verb@M@ = Monday,
@@ -97,28 +89,53 @@ example, \verb@MTWRFSU@ would specify that the event occurs daily,
 \verb@MTWRF@ would specify that the event occurs only on weekdays, and
 \verb@SU@ would specificy that the event occurs only on weekends.
 
+Two options can be specified to change the default behavior of
+\Macro{SHUTDOWN} events.
+If \Macro{\_RUNTIME} is appended to the \Macro{SHUTDOWN} event
+specification, the startd shutdown configurations will not be
+persistent.  If a machine reboots or a startd is restarted, the startd
+will no longer be ``shutdown'' and may transition out of the owner state.
+This is useful for reboot events, where the startd should leave the
+shutdown state when the machine reboots.
+If \Macro{\_STANDARD} is appended to the \Macro{SHUTDOWN} event
+specification, the eventd will only consider standard universe jobs.
+It will vacate only standard universe jobs and configure machines to
+run only non-standard universe jobs during the shutdown event.
+This is also useful for reboot events, where there is no point
+vacating vanilla or pvm jobs before the machine is rebooted because
+they are unable to checkpoint.
+Reboot events are usually listed as \Macro{SHUTDOWN\_RUNTIME\_STANDARD}.
+
 The following is an example event daemon configuration:
 \index{event daemon!example configuration}
 \begin{verbatim}
 EVENT_LIST	= TestEvent, TestEvent2
-TestEvent	= SHUTDOWN W 16:00 1:00 2.5 TestEventConstraint TestEventRank
-TestEvent2	= SHUTDOWN F 14:00 0:30 6.0 TestEventConstraint2 TestEventRank
+TestEvent	= SHUTDOWN_RUNTIME MTWRFSU 2:00 1:00 TestEventConstraint
+TestEvent2	= SHUTDOWN MTWRF 14:00 0:30 TestEventConstraint2
 TestEventConstraint		= (Arch == "INTEL")
-TestEventConstraint2		= (True)
-TestEventRank			= (0 - ImageSize)
+TestEventConstraint2	= (True)
 \end{verbatim}
 
-In this example, the \verb@TestEvent@ is a \Macro{SHUTDOWN} type event, which
+In this example, the \verb@TestEvent@ is a \Macro{SHUTDOWN\_RUNTIME}
+type event, which
 specifies that all machines whose startd ads match the constraint
-\verb@Arch == "INTEL"@ should be shutdown for one hour starting at
-16:00 every Wednesday, and no more than 2.5 Mbytes/s of bandwidth
-should be used to vacate jobs in anticipation of the shutdown
-event.  According to the \verb@TestEventRank@, jobs will be vacated in
-reverse order of their \Attr{ImageSize} (larger jobs first, smaller jobs
-last).  \verb@TestEvent2@ is a \Macro{SHUTDOWN} type event, which specifies
+\verb@Arch == "INTEL"@ should be shutdown for one hour (or until the
+startd restarts) starting at 2:00 every Wednesday.
+\verb@TestEvent2@ is a \Macro{SHUTDOWN} type event, which specifies
 that all machines should be shutdown for 30 minutes starting at
-14:00 every Friday, and no more than 6.0 Mbytes/s of bandwidth should
-be used to vacate jobs in anticipation of the shutdown event.
+14:00 every Friday.
+
+The bandwidth limits used in the eventd's schedule are specified in
+the file indicated by the \Macro{EVENTD\_CAPACITY\_INFO} parameter, and
+any network routing information required to implement those limits is
+specified in the file indicated by the \Macro{EVENTD\_ROUTING\_INFO}
+parameter.
+The \Macro{EVENTD\_CAPACITY\_INFO} file has the same
+format as the \Macro{NETWORK\_CAPACITY\_INFO} file, described in
+section~\ref{sec:Bandwidth-Alloc-Capinfo}.
+The \Macro{EVENTD\_ROUTING\_INFO} file has the same
+format as the \Macro{NETWORK\_ROUTING\_INFO} file, described in
+section~\ref{sec:Bandwidth-Alloc-Routes}.
 
 Note that the \Macro{DAEMON\_LIST} macro (described in
 section~\ref{sec:Master-Config-File-Entries}) is defined in the
