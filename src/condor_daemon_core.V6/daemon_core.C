@@ -62,6 +62,7 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 #ifdef WIN32
 #include "exphnd.WIN32.h"
 typedef unsigned (__stdcall *CRT_THREAD_HANDLER) (void *);
+CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #endif
 
 #if 0
@@ -144,6 +145,10 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	pidTable = new PidHashTable(PidSize, compute_pid_hash);
 	ppid = 0;
 #ifdef WIN32
+	// init the mutex
+	InitializeCriticalSection(&Big_fat_mutex);
+	EnterCriticalSection(&Big_fat_mutex);
+
 	mypid = ::GetCurrentProcessId();
 #else
 	mypid = ::getpid();
@@ -345,6 +350,10 @@ DaemonCore::~DaemonCore()
 		delete( pipeTable );
 	}
 	t.CancelAllTimers();
+
+#ifdef WIN32
+	 DeleteCriticalSection(&Big_fat_mutex);
+#endif
 }
 
 void DaemonCore::Set_Default_Reaper( int reaper_id )
@@ -1795,6 +1804,9 @@ void DaemonCore::Driver()
 		// Unblock all signals so that we can get them during the
 		// select.
 		sigprocmask( SIG_SETMASK, &emptyset, NULL );
+#else
+		//Win32 - grab coarse-grained mutex
+		LeaveCriticalSection(&Big_fat_mutex);
 #endif
 
 		errno = 0;
@@ -1824,6 +1836,7 @@ void DaemonCore::Driver()
 		}
 #else
 		// Windoze
+		EnterCriticalSection(&Big_fat_mutex);
 		if ( rv == SOCKET_ERROR ) {
 			EXCEPT("select, error # = %d",WSAGetLastError());
 		}
@@ -5556,6 +5569,8 @@ pidWatcherThread( void* arg )
 	int last_pidentry_exited = MAXIMUM_WAIT_OBJECTS + 5;
 	unsigned int exited_pid;
 	
+	
+
 	entry = (DaemonCore::PidWatcherEntry *) arg;
 
 	for (;;) {
@@ -5592,7 +5607,7 @@ pidWatcherThread( void* arg )
 	hKids[numentries] = entry->event;
 	entry->nEntries = numentries;
 	::LeaveCriticalSection(&(entry->crit_section));
-
+	
 	// if there are no more entries to watch, we're done.
 	if ( numentries == 0 )
 		return TRUE;	// this return will kill this thread
@@ -5636,6 +5651,9 @@ pidWatcherThread( void* arg )
 			// Can no longer use localhost (127.0.0.1) here because we may
 			// only have our command socket bound to a specific address. -Todd
 			// sock.connect("127.0.0.1",daemonCore->InfoCommandPort());		
+			// Also - in the post v6.4.x world, SafeSock and startCommand
+			// are no longer thread safe, so we must grab our Big_fat lock.
+			::EnterCriticalSection(&Big_fat_mutex); // enter big fat mutex
 	        SafeSock sock;
 			Daemon d(daemonCore->InfoCommandSinfulString());
 
@@ -5652,6 +5670,7 @@ pidWatcherThread( void* arg )
 					!sock.connect(daemonCore->InfoCommandSinfulString()) ||
 					!d.sendCommand(DC_NOP, &sock, 1);
 			}
+			::LeaveCriticalSection(&Big_fat_mutex); // leave big fat mutex
 
             if ( notify_failed )
 			{
@@ -5674,6 +5693,8 @@ pidWatcherThread( void* arg )
 	}
 
 	}	// end of infinite for loop
+	
+	
 
 }
 
