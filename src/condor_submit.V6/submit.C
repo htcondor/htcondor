@@ -46,7 +46,7 @@
 #include <sys/stat.h>
 #include <time.h>
 
-#include "../condor_schedd/condor_qmgr.h"
+#include "condor_qmgr.h"
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
@@ -195,20 +195,10 @@ main( int argc, char *argv[] )
 		EXCEPT( "fopen(%s,\"r\")", argv[1] );
 	}
 
-#if DBM_QUEUE
-		/* Open job queue and initialize a new cluster */
-	(void)sprintf( queue_name, "%s/job_queue", Spool );
-	if( (Q=OpenJobQueue(queue_name,O_RDWR | O_CREAT,0664)) == NULL ) {
-		EXCEPT( "OpenJobQueue(%s)", queue_name );
-	}
-	LockJobQueue( Q, WRITER );
-
-#else
 	if (ConnectQ(NULL) == 0) {
 		fprintf(stderr, "Failed to connect to qmgr\n");
 		exit(1);
 	}
-#endif
 	Proc.q_date = (int)time( (time_t *)0 );
 	Proc.completion_date = 0;
 	Proc.version_num = PROC_VERSION;
@@ -229,10 +219,6 @@ main( int argc, char *argv[] )
 		EXCEPT( "CONDOR description file error" );
 	}
 
-#if 0
-	CloseJobQueue( Q );
-	Q = (DBM *)0;
-#endif
 	DisconnectQ(0);
 
 	if( Proc.id.proc == 0 ) {
