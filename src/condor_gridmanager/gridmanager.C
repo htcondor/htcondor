@@ -861,8 +861,8 @@ dprintf(D_FULLDEBUG,"   %s = %s\n",attr_name,attr_value);
 						 "Don't know about removed job %d.%d. "
 						 "Deleting it immediately\n", procID.cluster,
 						 procID.proc );
-				// TODO: log abort event here. This will be easy once
-				// start keeping job classads in the gridmanager.
+				// Log the removal of the job from the queue
+				WriteAbortEventToUserLog( next_ad );
 				DestroyProc( procID.cluster, procID.proc );
 
 			} else {
