@@ -50,6 +50,28 @@ struct Translation VacateTypeTranslation[] = {
 };
 
 
+// duplicates are allowed in the table.  however, the first entry we
+// find in the table that matches what we're looking for is used.
+struct Translation ShouldTransferFilesTranslation[] = {
+	{ "YES", STF_YES },
+	{ "TRUE", STF_YES },
+	{ "ALWAYS", STF_YES },
+	{ "NO", STF_NO },
+	{ "FALSE", STF_NO },
+	{ "NEVER", STF_NO },
+	{ "IF_NEEDED", STF_IF_NEEDED },
+	{ "AUTO", STF_IF_NEEDED },
+	{ "NULL", 0 }
+};
+
+
+struct Translation FileTransferOutputTranslation[] = {
+	{ "ALWAYS", FTO_ALWAYS },
+	{ "ON_EXIT", FTO_ON_EXIT },
+	{ "ONEXIT", FTO_ON_EXIT },
+	{ "NULL", 0 }
+};
+
 
 const char*
 getClaimTypeString( ClaimType type )
@@ -90,5 +112,35 @@ VacateType
 getVacateTypeNum( const char* str )
 {
 	return (VacateType)getNumFromName( str, VacateTypeTranslation );
+}
+
+
+const char*
+getShouldTransferFilesString( ShouldTransferFiles_t type )
+{
+	return getNameFromNum( (int)type, ShouldTransferFilesTranslation );
+}
+
+
+ShouldTransferFiles_t
+getShouldTransferFilesNum( const char* str )
+{
+	return (ShouldTransferFiles_t)
+		getNumFromName( str, ShouldTransferFilesTranslation ); 
+}
+
+
+const char*
+getFileTransferOutputString( FileTransferOutput_t type )
+{
+	return getNameFromNum( (int)type, FileTransferOutputTranslation );
+}
+
+
+FileTransferOutput_t
+getFileTransferOutputNum( const char* str )
+{
+	return (FileTransferOutput_t)
+		getNumFromName( str, FileTransferOutputTranslation ); 
 }
 

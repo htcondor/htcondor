@@ -62,4 +62,22 @@ const char* getVacateTypeString( VacateType type );
 VacateType  getVacateTypeNum( const char* string );
 
 
+typedef enum { 
+	STF_NO = 1,
+	STF_YES,
+	STF_IF_NEEDED
+} ShouldTransferFiles_t;
+
+const char* getShouldTransferFilesString( ShouldTransferFiles_t type );
+ShouldTransferFiles_t getShouldTransferFilesNum( const char* string );
+
+
+typedef enum { 
+	FTO_ON_EXIT = 1,
+	FTO_ALWAYS,
+} FileTransferOutput_t;
+
+const char* getFileTransferOutputString( FileTransferOutput_t type );
+FileTransferOutput_t getFileTransferOutputNum( const char* string );
+
 #endif /* _CONDOR_ENUM_UTILS_H */
