@@ -53,6 +53,12 @@ The details of each version are described below.
    so the admin can configure the default environment inherited by
    user jobs.
 
+\item Added a new ``High Availability'' service to the \Condor{master}.
+   You can now specify a daemon which can have ``fail over'' capabilities
+   (i.e. the master on another machine can start a matching daemon if the
+   first one fails).  Currently, this is only available over a shared
+   file system (i.e. NFS), and has only been tested for the \Condor{schedd}.
+
 \end{itemize}
 
 
