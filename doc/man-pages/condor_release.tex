@@ -1,9 +1,14 @@
 \begin{ManPage}{\label{man-condor-release}\Condor{release}}{1}
-{release held jobs in the condor queue}
+{release held jobs in the Condor queue}
 \Synopsis \SynProg{\Condor{release}}
-\ToolArgs
-\oArg{cluster $|$ cluster.process $|$ user $|$ -all}
-\oOpt{-constraint \emph{constraint}}
+\ToolArgsBase 
+\ToolLocate
+\ToolJobs
+
+\SynProg{\Condor{release}}
+\ToolArgsBase 
+\ToolLocate
+\ToolAll
 
 \index{Condor commands!condor\_release}
 \index{condor\_release command}
@@ -21,13 +26,12 @@ For any given job, only the owner of the job or one of the queue super users
 (defined by the \MacroNI{QUEUE\_SUPER\_USERS} macro) can release the job.
 
 \begin{Options}
-	\ToolArgsDesc
+	\ToolArgsBaseDesc
+	\ToolLocateDesc
 	\OptItem{\Arg{cluster}}{Release all jobs in the specified cluster}
 	\OptItem{\Arg{cluster.process}}{Release the specific job in the cluster}
 	\OptItem{\Arg{user}}{Release jobs belonging to specified user}
-    \OptItem{\Opt{-all}}{Release all the jobs in the queue}
-	\OptItem{\Arg{-constraint \emph{constraint}}}{Release 
-		jobs matching specified constraint}
+        \OptItem{\Arg{-all}}{Release all the jobs in the queue}
 \end{Options}
 
 \SeeAlso

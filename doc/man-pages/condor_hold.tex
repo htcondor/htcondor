@@ -1,8 +1,14 @@
 \begin{ManPage}{\label{man-condor-hold}\Condor{hold}}{1}
-{put jobs in the queue in hold state}
+{put jobs in the queue into the hold state}
 \Synopsis \SynProg{\Condor{hold}}
-\ToolArgs
-\oOpt{job identifiers}
+\ToolArgsBase
+\ToolLocate 
+\ToolJobs
+
+\SynProg{\Condor{hold}}
+\ToolArgsBase
+\ToolLocate 
+\ToolAll
 
 \index{Condor commands!condor\_hold}
 \index{condor\_hold command}
@@ -20,17 +26,15 @@ For any given job, only the owner of the job or one of the queue super users
 
 \begin{Options}
 
-	\ToolArgsDesc
+	\ToolArgsBaseDesc
+	\ToolLocateDesc
+        \OptItem{\Arg{cluster}}{Hold all jobs in the specified cluster}
+        \OptItem{\Arg{cluster.process}}{Hold the specific job in the cluster}
+        \OptItem{\Arg{user}}{Hold jobs belonging to specified user}
+        \OptItem{\Arg{-all}}{Hold all the jobs in the queue}
+        \OptItem{\Arg{-constraint constraint}}{Hold
+        jobs matching specified constraint}
 
-	\OptItem{\Arg{cluster}}{(Job identifier.) Hold all jobs in the specified 
-		cluster}
-	\OptItem{\Arg{cluster.process}}{(Job identifier.) Hold the specific job 
-		in the cluster}
-	\OptItem{\Arg{name}}{(Job identifier.) Hold jobs belonging to specified 
-		user}
-    \OptItem{\Opt{-a}}{(Job identifier.) Hold all the jobs in the queue}
-	\OptItem{\Opt{-constraint \emph{constraint}}}{(Job identifier.) Hold 
-		jobs matching specified constraint}
 \end{Options}
 
 \SeeAlso
