@@ -10,17 +10,20 @@ static char * cookie_create( int length );
 
 IOProxy::IOProxy()
 {
-	server = new ReliSock;
+	server = NULL;
 	cookie = 0;
+	socket_registered = false;
 }
 
 IOProxy::~IOProxy()
 {
-	if( daemonCore ) {
+	if ( daemonCore && socket_registered && server ) {
 		daemonCore->Cancel_Socket(server);
 	}
-	server->close();
-	delete server;
+	if ( server ) {
+		server->close();
+		delete server;
+	}
 	if(cookie) free(cookie);
 }
 
@@ -72,7 +75,12 @@ Returns true on success, false otherwise.
 bool IOProxy::init( const char *config_file )
 {
 	FILE *file=0;
-	int success;
+
+	server = new ReliSock;
+	if ( !server ) {
+		dprintf(D_ALWAYS,"IOProxy: couldn't create socket\n");
+		return false;
+	}
 
 	if(!server->bind()) {
 		dprintf(D_ALWAYS,"IOProxy: couldn't bind: %s\n",strerror(errno));
@@ -99,7 +107,10 @@ bool IOProxy::init( const char *config_file )
 	fprintf(file,"%s %d %s\n",my_ip_string(),server->get_port(),cookie);
 	fclose(file);
 
-	daemonCore->Register_Socket( server, "IOProxy listen socket", (SocketHandlercpp) &IOProxy::connect_callback, "IOProxy connect callback", this );
+	daemonCore->Register_Socket( server, "IOProxy listen socket", 
+		(SocketHandlercpp) &IOProxy::connect_callback, 
+		"IOProxy connect callback", this );
+	socket_registered = true;
 	return true;
 
 	failure:
