@@ -44,7 +44,7 @@
 #define D_ALWAYS 		(1<<0)
 #define D_SYSCALLS		(1<<1)
 #define D_CKPT			(1<<2)
-#define D_XDR			(1<<3)
+#define D_HOSTNAME		(1<<3)
 #define D_MALLOC		(1<<4)
 #define D_LOAD			(1<<5)
 #define D_EXPR			(1<<6)
