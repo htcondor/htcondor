@@ -1,11 +1,7 @@
 SRC_DIR = $(SRC_TREE)/condor_dagman
 
-CONDOR_INCS = -I$(SRC_TREE)/h -I$(SRC_TREE)/condor_includes \
-		-I$(SRC_TREE)/condor_c++_util 
-
-CFLAGS = $(STD_C_FLAGS) 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -gstabs -Wall -pedantic \
-$(INCS) $(DEFINES) -g
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -Wall
+CFLAGS = $(STD_C_FLAGS) -Wall
 
 SRC = main.C submit.C dag.C job.C util.C parse.C debug.c types.C
 OBJ = main.o submit.o dag.o job.o util.o parse.o debug.o types.o
