@@ -185,6 +185,15 @@ public:
     if (!tmp) return -1;
     return tmp-Data;
   }
+
+  int Hash() const {
+	  int i;
+	  unsigned int result = 0;
+	  for(i=0;i<Len;i++) {
+		  result += i*Data[i];
+	  }
+	  return result;
+  }	  
  
   friend ostream& operator<<(ostream& os, const MyString& S) {
     if (S.Data) os << S.Data;
