@@ -291,6 +291,13 @@ struct CaseIgnLTStr {
 	}
 };
 
+class ExprTree;
+struct ExprHash {
+	size_t operator()( const ExprTree *const &x ) const {
+		return( (size_t)x );
+	}
+};
+
 struct StringHash {
 	size_t operator()( const string &s ) const {
 		size_t h = 0;
