@@ -657,7 +657,22 @@ int Float::CalcPrintToStr(void)
 
 int String::CalcPrintToStr(void)
 {
-	return strlen(value) + 2; // the +2 is for the quote marks around the string
+	int   length;
+	char  *p;
+	length = 0;
+	
+	// Unfortunately, we have to walk the string to find the length.
+	// This is because it contain quote marks
+	for (p = value; *p != 0; p++) {
+		if (*p == '"') {
+			length += 2;
+		} else {
+			length++;
+		}
+	}
+	// Then we have to add 2, for the opening and closing quote marks.
+	return length + 2;
+	//return strlen(value) + 2; // the +2 is for the quote marks around the string
 }
 
 int Boolean::CalcPrintToStr(void)
