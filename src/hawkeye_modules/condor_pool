@@ -61,7 +61,7 @@ sub Init()
     $ENV{PATH} = "$Tmp:$ENV{PATH}" if ( $Tmp ne "" );
 
     $Tmp = HawkeyeLib::ReadConfig( "_cluster", "true" );
-    $Config{Cluster} = " -cluster" if ( $Tmp =~ /true/i );
+    $Config{Cluster} = " -cluster -down-cluster" if ( $Tmp =~ /true/i );
 
     $Tmp = HawkeyeLib::ReadConfig( "_reserved", "true" );
     $Config{Reserved} = " -reserved" if ( $Tmp =~ /true/i );
@@ -90,7 +90,7 @@ sub Init()
 	# Cluster on/off
 	if ( $Arg =~ /-(no)?cluster/ )
 	{
-	    $Config{Cluster} = defined($1) ? "" : " -cluster";
+	    $Config{Cluster} = defined($1) ? "" : " -cluster -down-cluster";
 	}
 	# Reserved on/off
 	elsif ( $Arg =~ /-(no)?reserved/ )
@@ -178,11 +178,14 @@ sub RunAbsent()
 {
 
     # Lists
+    my @ClusterAbsent;
     my @ClusterDown;
+    my @ClusterKnownDown;
     my @Absent;
 
     # Now, run condor_status and gather some more info...
-    my $Cmd = "condor_absent -ping" . $Config{Cluster} . $Config{Reserved};
+    my $Cmd = "condor_absent -ping -script" . $Config{Cluster} . $Config{Reserved};
+    print STDERR "Running '$Cmd'\n";
     if ( ! open( ABSENT, "$Cmd|" ) )
     {
 	print STDERR "Can't get absent info\n";
@@ -193,6 +196,9 @@ sub RunAbsent()
     while ( <ABSENT> )
     {
 	chomp;
+
+	# Ignore empty/blank lines
+	next if ( $_ =~ /^\s*$/ );
 
 	# Summary info?
 	if ( /^\#\s+(.*)/ )
@@ -224,10 +230,27 @@ sub RunAbsent()
 	    }
 	}
 
+	# Absent cluster nodes
+	elsif ( /Cluster node absent: '(.*)'/ )
+	{
+	    push( @ClusterAbsent, $1 );
+	}
+
 	# Down cluster nodes
 	elsif ( /Cluster '(.*)' is down/ )
 	{
 	    push( @ClusterDown, $1 );
+	}
+	# New syntax
+	elsif ( /Cluster node down: '(.*)'/ )
+	{
+	    push( @ClusterDown, $1 );
+	}
+
+	# Cluster nodes "known" to be down
+	elsif ( /Cluster node known to be down: '(.*)'/ )
+	{
+	    push @ClusterKnownDown, $1;
 	}
 
 	# Absent machines
@@ -239,8 +262,19 @@ sub RunAbsent()
     close( ABSENT );
 
     # Cluster Down list
+    $Hash->Add( "Cluster_AbsentList", "s", join( " ", @ClusterAbsent ) );
+    $Hawkeye->StoreIndex( "Cluster_AbsentList" );
+
+    # Cluster Down list
     $Hash->Add( "Cluster_DownList", "s", join( " ", @ClusterDown ) );
     $Hawkeye->StoreIndex( "Cluster_DownList" );
+
+    # Cluster Down list
+    $Hash->Add( "Cluster_KnownDownList", "s",
+		join( " ", @ClusterKnownDown ) );
+    $Hawkeye->StoreIndex( "Cluster_KnownDownList" );
+    $Hash->Add( "Cluster_KnownDownCount", "n", $#ClusterKnownDown + 1 );
+    $Hawkeye->StoreIndex( "Cluster_KnownDownCount" );
 
     # Absent list
     $Hash->Add( "Absent_List", "s", join( " ", @Absent ) );
