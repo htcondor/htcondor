@@ -1585,7 +1585,7 @@ int
 Stream::get( char	*&s)
 {
 	char	c;
-	char 	*tmp_ptr = 0;
+	void 	*tmp_ptr = 0;
         int     len;
 
         if (tmp_ptr) {
@@ -1606,13 +1606,13 @@ Stream::get( char	*&s)
                         }
                         else{
                             /* tmp_ptr = s; */
-                            if (get_ptr((void *) tmp_ptr, '\0') <= 0) return FALSE;
+                            if (get_ptr(tmp_ptr, '\0') <= 0) return FALSE;
                             if (s) {
-                                strcpy(s, tmp_ptr);
+                                strcpy(s, (char *)tmp_ptr);
                                 //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
                             }
                             else {
-                                s = strdup(tmp_ptr);
+                                s = strdup((char *)tmp_ptr);
                                 //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
                             }
                         }
@@ -1623,21 +1623,21 @@ Stream::get( char	*&s)
                             return FALSE;
                         }
                         
-                        tmp_ptr = (char *) malloc(len);
-                        if (get_bytes(tmp_ptr, len) != len) {
+                        tmp_ptr = malloc(len);
+                        if (get_bytes((char *) tmp_ptr, len) != len) {
                             return FALSE;
                         }
                         
-                        if (*tmp_ptr == '\255') {
+                        if (*((char *)tmp_ptr) == '\255') {
                             if (s) s[0] = '\0';
                         }
                         else {
                             if (s) {
-                                strcpy(s, tmp_ptr);
+                                strcpy(s, (char *)tmp_ptr);
                                 //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
                             }
                             else {
-                                s = strdup(tmp_ptr);
+                                s = strdup((char *)tmp_ptr);
                                 //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
                             }
                         }
@@ -1661,7 +1661,7 @@ int
 Stream::get( char	*&s, int		&l)
 {
 	char	c;
-	char	*tmp_ptr = 0;
+	void	*tmp_ptr = 0;
         int     len;
 
 	switch(_code){
@@ -1676,12 +1676,12 @@ Stream::get( char	*&s, int		&l)
 			}
 			else{
 				/* tmp_ptr = s; */
-                            if ((l = get_ptr((void*)tmp_ptr, '\0')) <= 0) return FALSE;
+                            if ((l = get_ptr(tmp_ptr, '\0')) <= 0) return FALSE;
                             if (s) {
-                                strcpy(s, tmp_ptr);
+                                strcpy(s, (char *)tmp_ptr);
                                 //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
                             } else {
-                                s = tmp_ptr;
+                                s = (char *)tmp_ptr;
                                 //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
                             }
 			}
@@ -1692,12 +1692,12 @@ Stream::get( char	*&s, int		&l)
                             return FALSE;
                         }
                         
-                        tmp_ptr = (char *) malloc(len);
-                        if (get_bytes(tmp_ptr, len) != len) {
+                        tmp_ptr = malloc(len);
+                        if (get_bytes((char *)tmp_ptr, len) != len) {
                             return FALSE;
                         }
                         
-                        if (*tmp_ptr == '\255') {
+                        if (*((char*)tmp_ptr) == '\255') {
                             if (s) s[0] = '\0';
                         }
                         else {
