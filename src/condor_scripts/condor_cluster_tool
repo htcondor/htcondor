@@ -5,6 +5,8 @@
 # 14-Jan-2000 Derek Wright <wright@cs.wisc.edu>
 # 21-Jan-2000 Peter Couvares <pfc@cs.wisc.edu> many fixes/improvements
 # 25-Feb-2000 Peter Couvares <pfc@cs.wisc.edu> added logging
+# 15-Mar-2000 Derek Wright <wright@cs.wisc.edu> fixing bugs reported
+#                                               by wylie@cs
 #
 # This is a very simple, first pass to solve this problem.
 # Future work required:
@@ -40,7 +42,7 @@ use FileHandle;
 
          $SBIN = "$RELEASE_DIR/sbin";
           $BIN = "$RELEASE_DIR/bin";
-   $CONDOR_OFF = "$SBIN/condor_off -pool $CONDOR_CM";
+   $CONDOR_OFF = "$SBIN/condor_off -pool $CONDOR_CM -fast";
     $CONDOR_ON = "$SBIN/condor_on -pool $CONDOR_CM";
 $CONDOR_STATUS = "$BIN/condor_status -pool $CONDOR_CM";
 
@@ -53,16 +55,15 @@ if( $#ARGV < 0 ) {
     exit 1;
 }
 
-# determine username & timestamp and then open logfile
+# determine username and then open logfile
 $user = scalar getpwuid( $UID );
-$datetime = scalar localtime();
 open( LOG, ">>$LOGFILE" ) || warn "$0: error opening $LOGFILE: $!\n";
 
 # make sure partial logging occurs even if user kills us mid-way
 LOG->autoflush();
 
 # log command-line args
-print LOG "$datetime $user";
+print LOG timestamp() . " $user";
 foreach $arg ( @ARGV ) {
     print LOG " $arg";
 }
@@ -153,7 +154,7 @@ sub start_condor
 		$host = "c$host";
 	    }
 	}
-	print LOG "$datetime $user    (returned $host)\n";
+	print LOG timestamp() . " $user    (returned $host)\n";
 	system( "$CONDOR_ON $host" );
     }
 }
@@ -184,7 +185,7 @@ sub stop_condor {
 	    sleep 1;
 	}
 	print $host, "\n";
-	print LOG "$datetime $user    (given $host)\n";
+	print LOG timestamp() . " $user    (given $host)\n";
     }
 }
 
@@ -275,4 +276,9 @@ sub check_host {
 	}
     }
     return $status
+}
+
+
+sub timestamp {
+    return scalar localtime();
 }
