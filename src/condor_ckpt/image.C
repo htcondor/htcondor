@@ -520,6 +520,7 @@ Image::Save()
 	dprintf(D_CKPT, "About to ask the OS for segments...\n");
 	numsegs = num_segments();
 	dprintf(D_CKPT, "I should have %d segments...\n", numsegs);
+/*	display_prmap();*/
 
 #if !defined(IRIX) && !defined(Solaris)
 
