@@ -90,7 +90,49 @@ calc_phys_memory()
  
  	return(physmem);
 }
-#else	/* Don't know how to do this on other than SunOS yet */
+#elif defined HPUX9  /* Todd figured how to do it on hp's and i added it in here --sami */
+
+#include <stdio.h>
+#include <nlist.h>
+#include <sys/types.h>
+#include <sys/file.h>
+
+struct nlist memnl[] = {
+	{ "physmem" },
+        { NULL }
+};
+calc_phys_memory()
+{
+  int kmem;
+  int maxmem, physmem;
+
+
+  /*
+   *   Lookup addresses of variables.
+  */
+  if ((nlist("/hp-ux",memnl) <0) || (memnl[0].n_type ==0)) return(-1); 
+
+  /*
+   *   Open kernel memory and read variables.
+  */
+  if ((kmem=open("/dev/kmem",0)) <0) return (-1);
+  
+  if (-1==lseek(kmem,(long) memnl[0].n_value,0)) return (-1);
+
+  if (read(kmem,(char *) &physmem, sizeof(int)) <0) return (-1);
+  
+  close(kmem);
+
+  /*
+   *  convert to megabytes
+  */
+
+  physmem/=256; /* *4 /1024 */
+
+  return(physmem);
+}
+
+#else	/* Don't know how to do this on other than SunOS and HPUX yet */
 int
 calc_phys_memory()
 {
