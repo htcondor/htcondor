@@ -75,6 +75,10 @@
 #define USE_FLOCK 1
 #endif
 
+#if defined( LINUX)
+#define USE_FLOCK 1
+#endif
+
 #if !defined(USE_FLOCK)
 ERROR: DONT KNOW WHETHER TO USE FLOCK or FCNTL
 #endif
