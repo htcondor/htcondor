@@ -367,11 +367,17 @@ IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin )
 			i = 0;
 			while ( thehost ) {
 				if ( PermTypeArray[perm]->allow_hosts &&
-					 PermTypeArray[perm]->allow_hosts->contains_withwildcard(thehost) == TRUE )
+					 PermTypeArray[perm]->allow_hosts->
+							contains_anycase_withwildcard(thehost) == TRUE )
+				{
 					mask |= allow_mask(perm);
+				}
 				if ( PermTypeArray[perm]->deny_hosts &&
-					 PermTypeArray[perm]->deny_hosts->contains_withwildcard(thehost) == TRUE )
+					 PermTypeArray[perm]->deny_hosts->
+							contains_anycase_withwildcard(thehost) == TRUE )
+				{
 					mask |= deny_mask(perm);
+				}
 
 				// check all aliases for this IP as well
 				thehost = aliases[i++];
