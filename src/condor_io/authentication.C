@@ -385,7 +385,6 @@ Authentication::authenticate_filesystem()
 		if ( new_file ) {
 			fd = open(new_file, O_RDONLY | O_CREAT | O_TRUNC, 0666);
 			::close(fd);
-			free( new_file );
 		}
 		mySock->end_of_message();
 		mySock->encode();
@@ -396,6 +395,11 @@ Authentication::authenticate_filesystem()
 		mySock->code( rval );
 		mySock->end_of_message();
 //		dprintf(D_FULLDEBUG,"server determined owner is \"%s\"\n", owner );
+
+		if( new_file ) {
+			free( new_file );
+			unlink( new_file );
+		}
 		return( rval == 0 );
 	}
 
@@ -438,7 +442,6 @@ Authentication::authenticate_filesystem()
 				free( tmpOwner );
 			}
 		}
-		unlink( new_file );
 	} else {
 		retval = -1;
 		dprintf( D_ALWAYS, "invalid state in authenticate_filesystem\n" );
