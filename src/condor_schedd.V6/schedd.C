@@ -781,7 +781,7 @@ Scheduler::count_jobs()
 		for (i=0; i < N_Owners; i++) {
 			if ( Owners[i].GlobusJobs > 0 ) {
 				GridUniverseLogic::JobCountUpdate(Owners[i].Name, 
-						Owners[i].Domain,Owners[i].X509, 0, 0, 
+						Owners[i].Domain,Owners[i].X509, NULL, 0, 0, 
 						Owners[i].GlobusJobs,Owners[i].GlobusUnmanagedJobs);
 			}
 		}
@@ -919,10 +919,21 @@ count( ClassAd *job )
 		universe = CONDOR_UNIVERSE_STANDARD;
 	}
 
-	if(job->LookupString(ATTR_X509_USER_PROXY, buf, _POSIX_PATH_MAX ) == 0) {
-		x509userproxy = NULL;
+	x509userproxy = NULL;
+	if ( GridUniverseLogic::group_per_subject() ) {
+		job->LookupString(ATTR_X509_USER_PROXY_SUBJECT, &x509userproxy);
+		if ( !x509userproxy ) {
+			int cluster = 0;
+			int proc = 0;
+			job->LookupInteger(ATTR_CLUSTER_ID, cluster);
+			job->LookupInteger(ATTR_PROC_ID, proc);
+			dprintf(D_ALWAYS, 
+				"ERROR %d.%d has no %s attribute.  Ignoring. "
+				"Update you condor_submit!\n",
+				cluster, proc, ATTR_X509_USER_PROXY_SUBJECT);
+		}
 	} else {
-		x509userproxy = strdup(buf);
+		job->LookupString(ATTR_X509_USER_PROXY, &x509userproxy);
 	}
 
 	// calculate owner for per submittor information.
@@ -1013,7 +1024,7 @@ count( ClassAd *job )
 			int proc = 0;
 			job->LookupInteger(ATTR_CLUSTER_ID, cluster);
 			job->LookupInteger(ATTR_PROC_ID, proc);
-			GridUniverseLogic::JobCountUpdate(owner,domain,x509userproxy,
+			GridUniverseLogic::JobCountUpdate(owner,domain,x509userproxy,NULL,
 				cluster, proc, needs_management, job_managed ? 0 : 1);
 		}
 			// If we do not need to do matchmaking on this job (i.e.
@@ -1202,11 +1213,15 @@ abort_job_myself( PROC_ID job_id, bool log_hold, bool notify )
 			proxy[0] = '\0';
 			job_ad->LookupString(ATTR_OWNER,owner);
 			job_ad->LookupString(ATTR_NT_DOMAIN,domain);
-			job_ad->LookupString(ATTR_X509_USER_PROXY,proxy);
-			if ( gridman_per_job ) {
-				GridUniverseLogic::JobRemoved(owner, domain ,proxy,job_id.cluster,job_id.proc);
+			if ( GridUniverseLogic::group_per_subject() ) {
+				job_ad->LookupString(ATTR_X509_USER_PROXY_SUBJECT,proxy);
 			} else {
-				GridUniverseLogic::JobRemoved(owner, domain, proxy,0,0);
+				job_ad->LookupString(ATTR_X509_USER_PROXY,proxy);
+			}
+			if ( gridman_per_job ) {
+				GridUniverseLogic::JobRemoved(owner,domain,proxy,NULL,job_id.cluster,job_id.proc);
+			} else {
+				GridUniverseLogic::JobRemoved(owner,domain,proxy,NULL,0,0);
 			}
 			return;
 		}
@@ -1679,7 +1694,6 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 
 
 	dprintf(D_FULLDEBUG,"JobFilesReaper tid=%d status=%d\n",tid,exit_status);
-
 
 		// find the list of jobs which we just finished receiving the files
 	spoolJobFileWorkers->lookup(tid,jobs);
