@@ -12,7 +12,7 @@ The details of each version are described below.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:New-6-2-1}Version 6.2.2}
+\subsection{\label{sec:New-6-2-2}Version 6.2.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \noindent New Features:
 \begin{itemize}
@@ -33,13 +33,27 @@ specify them properly.
 \begin{itemize}
 
 \item Fixed the default startd policy expressions that are shipped
-with Condor in a few ways:
+with Condor.
+When you upgrade Condor, if you keep your old \File{condor\_config}
+file and do not use the new one we ship with the Condor binaries, we
+highly recommend you open the \Release{etc/condor\config.generic}
+file and see what's changed.
+Carefully read part 3, see what's different from your existing policy
+expressions, and make the relevent changes to your own expressions.
+Here is a summary of the improvements made:
 \begin{itemize}
   \item The policy expressions now use \Attr{CpuBusyTime} to avoid
   problems with faulty values for \Attr{CondorLoadAvg}.
+  For certain kinds of jobs (mostly vanilla jobs), the old policy
+  could cause the jobs to cycle between the running and suspended
+  states.
   \item The policy macros that refered to \Attr{JobUniverse} and
   \Attr{ImageSize} now use ``TARGET.'' to ensure we're refering to the
   right ClassAd to find those attributes.
+  Our old policy used to make important decisions based on the
+  universe and image size of the job it was planning to run, but
+  instead, it was using the values from the job that was currently
+  running.
   \item Added verbose comments to explain the policy in English.
 \end{itemize}
 
