@@ -27,31 +27,7 @@
 #include "condor_common.h"
 #include "remoteresource.h"
 
-/** Here are some basic states that an mpi resource can be in. */ 
-enum Resource_State {
-		/// Before the job begins execution
-	PRE, 
-		/// While it's running (after requestIt() succeeds...)
-	EXECUTING,
-		/** We've told the job to go away, but haven't received 
-			confirmation that it's really dead.  This state is 
-		    skipped if the job exits on its own. */
-	PENDING_DEATH,
-		/// After it has stopped (for whatever reason...)
-	FINISHED 
-};
-
-static char *Resource_State_String [] = {
-	"PRE", 
-	"EXECUTING", 
-	"PENDING_DEATH", 
-	"FINISHED"
-};
-
-/** Here we have a remote resource that is specific to an MPI job.
-	The differences are in the way it prints itself out, and it 
-	also has the notion of special "states" that it can be in, that
-	aren't needed in a normal job. */
+/** Here we have a remote resource that is specific to an MPI job. */
 
 class MpiResource : public RemoteResource {
 
@@ -69,40 +45,31 @@ class MpiResource : public RemoteResource {
 		/// Destructor
 	~MpiResource() {};
 
-		/** Call RemoteResource::requestIt(), set state to EXECUTING
-		   if it succeeds */
-	virtual int requestIt( int starterVersion = 2 );
-
-		/** Call RemoteResource::killStarter, set state to PENDING_DEATH */
-	virtual int killStarter();
-
-		/** Overridden so you can set the state to FINISHED */
-	virtual void setExitStatus( int status );
-
-		/** Add state... */
-	virtual void dprintfSelf( int debugLevel);
+		/** Call RemoteResource::requestIt() and log a
+			NodeExecuteEvent */
+	virtual bool requestIt( int starterVersion = 2 );
 
 		/** Special format... */
 	virtual void printExit( FILE *fp );
 
-	/** Return the state that this resource is in. */
-	Resource_State getResourceState() { return state; };
-
-		/** Change this resource's state */
-	void setResourceState( Resource_State s );
-
 	int node( void ) { return node_num; };
 	void setNode( int node ) { node_num = node; };
 
+		/** Call RemoteResource::resourceExit() and log a
+			NodeTerminatedEvent to the UserLog
+		*/
 	void resourceExit( int exit_reason, int exit_status );
+
+		/** Before we log anything to the UserLog, we want to
+			initialize the UserLog with our node number.  
+		*/
+	virtual bool writeULogEvent( ULogEvent* event );
 
  private:
 
 		// Making these private PREVENTS copying.
 	MpiResource( const MpiResource& );
 	MpiResource& operator = ( const MpiResource& );
-
-	Resource_State state;
 
 	int node_num;
 };
