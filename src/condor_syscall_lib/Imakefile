@@ -160,7 +160,7 @@ SIMPLE_OBJ = $(LIB_DIR)/condor_rt0.o extern_path.o xfer_file.o
 SYSCALL_LIB = $(LIB_DIR)/condor_syscall_lib.a
 
 #if DOES_REMOTE_SYSCALLS
-all_target($(SYSCALL_LIB) receivers.C $(SIMPLE_OBJ) $(AIX_OBJ))
+all_target($(SYSCALL_LIB) receivers.C $(SIMPLE_OBJ) $(AIX_OBJ) syscall-list)
 #else 
 all_target($(SYSCALL_SUPPORT_OBJ))
 #endif
@@ -238,19 +238,19 @@ CPP = PreProcessCmd
 
 
 #if IS_I386_LINUX
-switches.c: syscall.tmpl switches.prologue stub_gen switches.linux.h
+switches.c: syscall.tmpl switches.prologue stub_gen switches.linux.h switches.epilogue
 	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) syscall.tmpl | \
-	stub_gen -mode switches  -p switches.prologue \
+	stub_gen -mode switches  -p switches.prologue -e switches.epilogue \
 	> switches.c
 #elif IS_SUN4M_SOLARIS251 || IS_X86_SOLARIS25
-switches.c: syscall.tmpl switches.prologue stub_gen
+switches.c: syscall.tmpl switches.prologue stub_gen switches.epilogue
 	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) -DSolaris251 \
-	syscall.tmpl | stub_gen -mode switches  -p switches.prologue \
+	syscall.tmpl | stub_gen -mode switches  -p switches.prologue -e switches.epilogue \
 	> switches.c
 #else
-switches.c: syscall.tmpl switches.prologue stub_gen
+switches.c: syscall.tmpl switches.prologue stub_gen switches.epilogue
 	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) syscall.tmpl | \
-	stub_gen -mode switches  -p switches.prologue \
+	stub_gen -mode switches  -p switches.prologue -e switches.epilogue \
 	> switches.c
 #endif
 
@@ -272,6 +272,11 @@ receivers.C: syscall.tmpl stub_gen receivers.prologue receivers.epilogue
 	stub_gen -mode receivers -p receivers.prologue -e receivers.epilogue \
 	> receivers.C
 
+syscall-list: syscall.tmpl stub_gen 
+	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) syscall.tmpl | \
+	stub_gen -mode listcalls > syscall-list
+clean::
+	rm -f syscall-list
 
 
 #if IS_R6000_AIX32
