@@ -97,11 +97,11 @@ class FstatMsg_t
 
 
 
+extern "C" {
+
 int ioserver_open(const char *path, int oflag, mode_t mode);
 
 int ioserver_close(int filedes);
-
-extern "C" {
 
 off_t ioserver_lseek(int filedes, off_t offset, int whence);
 
