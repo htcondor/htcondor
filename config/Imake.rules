@@ -306,7 +306,20 @@ clean::																@@\
 /*
 ** Generate a platform specific version of a shell script file using imake.
 */
-#ifndef script_target
+#if IS_ALPHA_OSF1
+#define script_target(targ,dir,dest)										@@\
+##targ: targ##.generic														@@\
+	imake -I../../config -T Scripts.template -s targ##.tmp -f targ##.generic@@\
+	awk -f awk.prog targ##.tmp > targ										@@\
+	rm -f targ##.tmp														@@\
+clean:: 																	@@\
+	rm -f targ 																@@\
+release::																	@@\
+	/bin/rm -f $(RELEASE_DIR)/##dir##/##targ								@@\
+	/bin/rm -f $(RELEASE_DIR)/##dir##/##dest								@@\
+	cp targ $(RELEASE_DIR)/##dir##/##dest									@@\
+	chmod u+x $(RELEASE_DIR)/##dir##/##dest
+#else
 #define script_target(targ,dest)											@@\
 ##targ: targ##.generic														@@\
 	imake -I../../config -T Scripts.template -s targ##.tmp -f targ##.generic@@\
@@ -324,7 +337,19 @@ release::																	@@\
 /*
 ** Generate a platform specific version of a text file file using imake.
 */
-#ifndef text_target
+#if IS_ALPHA_OSF1
+#define text_target(targ,dir,dest)											@@\
+##targ: targ##.generic														@@\
+	imake -I../../config -T Scripts.template -s targ##.tmp -f targ##.generic@@\
+	awk -f awk.prog targ##.tmp > targ										@@\
+	rm -f targ##.tmp														@@\
+clean:: 																	@@\
+	rm -f targ 																@@\
+release::																	@@\
+	/bin/rm -f $(RELEASE_DIR)/##dir##/##targ								@@\
+	/bin/rm -f $(RELEASE_DIR)/##dir##/##dest								@@\
+	cp targ $(RELEASE_DIR)/##dir##/##dest
+#else
 #define text_target(targ,dest)												@@\
 ##targ: targ##.generic														@@\
 	imake -I../../config -T Scripts.template -s targ##.tmp -f targ##.generic@@\
