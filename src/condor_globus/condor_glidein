@@ -140,8 +140,11 @@ sub do_submit() {
 	$GLOBUSENV =~ s/\$/\$(DOLLAR)/g;
 
 		##generate condor_submit description file
-#	open( SUBMIT, ">sub3" );
-	open( SUBMIT, "|$submit" );
+	if ( $gen_submit ) {
+		open( SUBMIT, ">submit.glidein" );
+	} else {
+		open( SUBMIT, "|$submit" );
+	}
 	print SUBMIT <<"EOF";
 Universe = Globus
 
@@ -160,7 +163,11 @@ Queue
 
 EOF
 	close( SUBMIT );
-	return ($?);
+	if ( $gen_submit ) {
+		return 0;
+	} else {
+		return ($?);
+	}
 }
 
 
@@ -280,7 +287,8 @@ print STDERR "	Valid options:\n"
 . "   -anybody                Allow any user to run jobs on your glideins\n"
 . "   -admin <email address>  Who to email with problems [default=<you>]\n"
 . "   -genconfig              Generate condor_config.glidein\n"
-. "   -useconfig              Use the specifed config file\n"
+. "   -useconfig <file>       Use the specifed config file\n"
+. "   -gensubmit              Generate submit.glidein\n"
 . "   -help                   Print this usage, see documentation for info\n";
 }
 
@@ -315,6 +323,7 @@ sub parse_command_line() {
 		"admin=s" => \$CONDOR_ADMIN,
 		"genconfig" => \$gen_config,
 		"useconfig=s" => \$use_config,
+		"gensubmit" => \$gen_submit,
 		"help" => \$help );
 	if ( !$RESULT ) {
 		usage();
@@ -428,14 +437,14 @@ sub gen_main_config() {
 
 	STARTD_DEBUG = D_COMMAND
 
-	SUSPEND : False
-	CONTINUE : True
-	PREEMPT : False
-	WANT_VACATE : False
-	WANT_SUSPEND : True
-	SUSPEND_VANILLA : False
-	WANT_SUSPEND_VANILLA : True
-	KILL : False
+	SUSPEND = False
+	CONTINUE = True
+	PREEMPT = False
+	WANT_VACATE = False
+	WANT_SUSPEND = True
+	SUSPEND_VANILLA = False
+	WANT_SUSPEND_VANILLA = True
+	KILL = False
 	UPDATE_INTERVAL = 20
 	IS_GLIDEIN = True
 	STARTD_EXPRS = IS_GLIDEIN, START, DaemonStopTime
@@ -561,6 +570,9 @@ sub do_remote_setup() {
 
 	$remotedir = "/tmp";
 
+	# Why are we changing directories at all???
+	chomp($oldcwd = `pwd`);
+
 	if ( $use_config ne "" ) {
 		`cp $use_config $remotedir/$config`;
 		chdir $remotedir;
@@ -629,6 +641,8 @@ EOF
 
 	unlink( "$remotedir/$config" );
 	unlink( $REM_SETUP );
+
+	chdir $oldcwd;
 
 	if ( $err ) {
 		return( "running setup script on remote machine" );
