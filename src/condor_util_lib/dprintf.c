@@ -169,7 +169,7 @@ va_dcl
 	sigdelset( &mask, SIGQUIT );
 	sigdelset( &mask, SIGSEGV );
 	sigdelset( &mask, SIGTRAP );
-	sigprocmask( SIG_SETMASK, &mask, &omask );
+	sigprocmask( SIG_BLOCK, &mask, &omask );
 #endif
 
 		/* Open and lock the log file */
