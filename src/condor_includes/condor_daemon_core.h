@@ -21,6 +21,7 @@
 #include <rpc/types.h>
 #include <rpc/xdr.h>
 #include "condor_io.h"
+#include "condor_fdset.h"
 #if defined(Solaris)
 #undef __EXTENSIONS__
 #endif
