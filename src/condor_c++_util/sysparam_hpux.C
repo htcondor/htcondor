@@ -36,7 +36,6 @@
 
 #include "condor_debug.h"
 #include "condor_sysparam.h"
-#include "_condor_fix_resource.h"
 
 // C definitions
 static char *_FileName_ = __FILE__;
