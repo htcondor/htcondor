@@ -2292,13 +2292,6 @@ MyString *GlobusJob::buildSubmitRSL()
 	rsl->sprintf( "&(rsl_substitution=(GRIDMANAGER_GASS_URL %s))",
 				  gassServerUrl );
 
-	//This is the ugly hack to determine if the jobmanager is pre-gram 1.6.
-	//This attribute will cause an error in older jobmanagers. It will be
-	//over-ridden by the real executable attribute in later jobmanagers.
-	if ( jmVersion == GRAM_V_UNKNOWN || jmVersion >= GRAM_V_1_6 ) {
-		*rsl += "(executable=$(GLOBUS_CACHED_STDOUT))";
-	}
-
 	//We're assuming all job classads have a command attribute
 	//First look for executable in the spool area.
 	MyString executable_path;
