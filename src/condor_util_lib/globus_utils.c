@@ -215,6 +215,7 @@ x509_proxy_expiration_time( const char *proxy_file )
     globus_gsi_cred_handle_t         handle       = NULL;
     globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
 	time_t expiration_time = -1;
+	time_t time_left;
 	int must_free_proxy_file = FALSE;
 
 	if ( activate_globus_gsi() != 0 ) {
@@ -222,12 +223,12 @@ x509_proxy_expiration_time( const char *proxy_file )
 	}
 
     if (globus_gsi_cred_handle_attrs_init(&handle_attrs)) {
-        _globus_error_message = "problem during internal initializationA";
+        _globus_error_message = "problem during internal initialization";
         goto cleanup;
     }
 
     if (globus_gsi_cred_handle_init(&handle, handle_attrs)) {
-        _globus_error_message = "problem during internal initializationB";
+        _globus_error_message = "problem during internal initialization";
         goto cleanup;
     }
 
@@ -246,10 +247,12 @@ x509_proxy_expiration_time( const char *proxy_file )
        goto cleanup;
     }
 
-	if (globus_gsi_cred_get_goodtill(handle, &expiration_time)) {
+	if (globus_gsi_cred_get_lifetime(handle, &time_left)) {
 		_globus_error_message = "unable to extract expiration time";
         goto cleanup;
     }
+
+	expiration_time = time(NULL) + time_left;
 
  cleanup:
     if (must_free_proxy_file) {
