@@ -68,11 +68,23 @@ AdType::~AdType()
 //
 // ClassAd constructors
 //
-ClassAd::ClassAd() : AttrList();
+ClassAd::ClassAd() : AttrList()
+{
+	myType = NULL;
+	targetType = NULL;
+}
 
-ClassAd::ClassAd(ProcObj* procObj) : AttrList(procObj);
+ClassAd::ClassAd(ProcObj* procObj) : AttrList(procObj)
+{
+	myType = NULL;
+	targetType = NULL;
+}
 
-ClassAd::ClassAd(CONTEXT* context) : AttrList(context);
+ClassAd::ClassAd(CONTEXT* context) : AttrList(context)
+{
+	myType = NULL;
+	targetType = NULL;
+}
 
 ClassAd::ClassAd(FILE* f, char* d, int& i) : AttrList(f, d, i)
 {
@@ -122,11 +134,6 @@ ClassAd::ClassAd(FILE* f, char* d, int& i) : AttrList(f, d, i)
 		}
     }
     delete tree;
-
-    if(buffer)
-    {
-        delete []buffer;
-    }
 
     if(val)
     {
@@ -191,11 +198,6 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
     }
     delete tree;
 
-    if(buffer)
-    {
-        delete []buffer;
-    }
-
     if(val)
     {
         delete val;
@@ -204,7 +206,7 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
     Delete("TargetType");
 }
 
-ClassAd::ClassAd(const ClassAd& old) : AttrList(old)
+ClassAd::ClassAd(const ClassAd& old) : AttrList((AttrList&) old)
 {
 	myType = NULL;
 	targetType = NULL;
@@ -223,12 +225,24 @@ ClassAd::ClassAd(const ClassAd& old) : AttrList(old)
 		{
 			EXCEPT("Warning : you ran out of meomory");
 		}
+	}
 }
 
 ClassAd::~ClassAd()
 {
-	AttrList::~AttrList();
+    AttrListElem* tmp;
+
+    for(tmp = exprList; tmp; tmp = exprList)
+    {
+        exprList = exprList->next;
+        delete tmp;
+    }
+    if(associatedList)
+    {
+		associatedList->associatedAttrLists->Delete(this);
+    }
 	if(myType)
+
     {
         delete myType;
     }

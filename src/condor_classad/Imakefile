@@ -38,7 +38,7 @@ SRC = ast.C astbase.C buildtable.C parser.C scanner.C registration.C \
 	  attrlist.C classad.C classifiedjobs.C
 
 OBJ = ast.o astbase.o buildtable.o parser.o scanner.o registration.o \
-	  attrlist.o classifiedjobs.o
+	  attrlist.o classad.o classifiedjobs.o
 
 #if IS_R6000_AIX32
 TEST_LIBS = ../condor_util_lib/util_lib.a cplus_lib.a /usr/lib/libbsd.a
