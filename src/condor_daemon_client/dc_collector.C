@@ -125,8 +125,8 @@ DCCollector::reconfig( void )
 		if( tmp ) {
 			tcp_collectors.initializeFromString( tmp );
 			free( tmp );
- 			if( _full_hostname && 
-				tcp_collectors.contains_anycase_withwildcard(_full_hostname) )
+ 			if( _name && 
+				tcp_collectors.contains_anycase_withwildcard(_name) )
 			{	
 				use_tcp = true;
 				break;
