@@ -4423,7 +4423,8 @@ Scheduler::Init()
 
 	if( CondorAdministrator ) free( CondorAdministrator );
 	if( ! (CondorAdministrator = param("CONDOR_ADMIN")) ) {
-		EXCEPT( "CONDOR_ADMIN not specified in config file" );
+		dprintf(D_FULLDEBUG, 
+			"WARNING: CONDOR_ADMIN not specified in config file" );
 	}
 
 	if( Mail ) free( Mail );
