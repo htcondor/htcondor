@@ -27,14 +27,9 @@
 
 #include "condor_io.h"
 
-#if defined(LINUX)
-typedef long	rlim_t;
-#endif
+#include "limit.h"
 
 extern "C" {
-#if 0
-#include "util_lib_proto.h"
-#endif
 	int SetSyscalls( int );
 	void InitStaticFile( int, int );
 	void set_debug_flags( char * );
@@ -99,7 +94,6 @@ int verify_ckpt_file();
 char *get_user_env_param( char * );
 void initial_bookeeping( int argc, char *argv[] );
 void wait_for_debugger( int do_wait );
-void limit( int resource, rlim_t new_limit );
 void send_ckpt_file();
 void send_core_file();
 void update_cpu_usage();

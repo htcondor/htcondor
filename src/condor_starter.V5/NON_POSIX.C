@@ -21,9 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
-
 /*
 Portability
 	The code in this file is not POSIX.1 conforming, and is
@@ -32,18 +29,12 @@ Portability
 	modification.
 */
 	
-
-
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_jobqueue.h"
 #include "condor_sys.h"
 #include "startup.h"
 #include "user_proc.h"
-
-extern "C" {
-	int SetSyscalls( int );
-}
 
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
@@ -61,33 +52,12 @@ define different sets of limits which may be set.  Here we define a
 routine for setting an individual limit.  Code in platform specific
 files will call this routine to set up limits as appropriate for that
 platform.
+
+Note: the "limit" function that is used to set an individual limit has
+been moved to the c++ util lib since it is needed by daemonCore.
+-Derek Wright <wright@cs.wisc.edu> 5/19/98
 */
-void limit( int resource, rlim_t new_limit )
-{
-	int		scm;
-	struct	rlimit lim;
 
-	scm = SetSyscalls( SYS_LOCAL | SYS_RECORDED );
-
-
-		/* Find out current limits */
-	if( getrlimit(resource,&lim) < 0 ) {
-		EXCEPT( "getrlimit(%d,0x%x)", resource, &lim );
-	}
-
-		/* Don't try to exceed the max */
-	if( new_limit > lim.rlim_max ) {
-		new_limit = lim.rlim_max;
-	}
-
-		/* Set the new limit */
-	lim.rlim_cur = new_limit;
-	if( setrlimit(resource,&lim) < 0 ) {
-		EXCEPT( "setrlimit(%d,0x%x), errno: %d", resource, &lim, errno );
-	}
-
-	(void)SetSyscalls( scm );
-}
 
 /*
 ** Return physical file size in 1024 byte units.  This is the number of
