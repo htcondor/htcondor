@@ -29,7 +29,8 @@
 #include "condor_cronmgr.h"
 #include "condor_cron.h"
 
-#define READBUF_SIZE	128
+// Size of the buffer for reading from the child process
+#define READBUF_SIZE	1024
 
 // Cron's Line StdOut Buffer constructor
 CronJobOut::
