@@ -60,6 +60,13 @@ instead of requiring \DCPerm{ADMINISTRATOR} access.
 
 \begin{itemize}
 
+\item
+When you specify ``STARTD\_HAS\_BAD\_UTMP = True'' in the config files
+on a linux machine with a 2.4+ kernel, the \Condor{startd} would report
+an error stating some of the tty entries in /dev. This would result
+in incorrect tty activity sampling causing jobs to not be migrated or
+incorrectly started on a resource. This has now been corrected.
+
 \item 
 When you specify ``GenEnv = True'' in a \Condor{submit} file,
 your environment is no longer restricted to 10KB.
