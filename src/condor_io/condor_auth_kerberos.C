@@ -159,15 +159,18 @@ int Condor_Auth_Kerberos :: authenticate(const char * remoteHost)
         
         mySock_->encode();
         dprintf(D_ALWAYS, "status is %d\n", status);
+	int message;
         if (status) {
             // We are ready to go
-            mySock_->code(KERBEROS_PROCEED);
+	    message = KERBEROS_PROCEED;
+            mySock_->code(message);
             mySock_->end_of_message();
             status = authenticate_client_kerberos();
         }
         else {
             // abort!
-            mySock_->code(KERBEROS_ABORT);
+	    message = KERBEROS_ABORT;
+            mySock_->code(message);
             mySock_->end_of_message();
         }
     }
@@ -208,7 +211,6 @@ int Condor_Auth_Kerberos :: wrap(const char*  input,
     krb5_pointer    ivec;
     int             index;
   
-    //fprintf(stderr, "Encrypting using Kerberos\n");
     // Make the input buffer
     in_data.length = input_len;
     in_data.data = (char *) malloc(input_len);
@@ -993,8 +995,6 @@ int Condor_Auth_Kerberos :: send_request(krb5_data * request)
     // Send the AP_REQ object
     //------------------------------------------
     mySock_->encode();
-    
-    //fprintf(stderr, "size of the message is %d:\n", request->length);
     
     if (!mySock_->code(message) || !mySock_->code(request->length)) {
         dprintf(D_ALWAYS, "Faile to send request length\n");
