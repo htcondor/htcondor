@@ -990,10 +990,12 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 bool
 RemoteResource::recordSuspendEvent( ClassAd* update_ad )
 {
+	char *rt = NULL;
 	bool rval = true;
 		// First, grab the number of pids that were suspended out of
 		// the update ad.
 	int num_pids;
+
 	if( ! update_ad->LookupInteger(ATTR_NUM_PIDS, num_pids) ) {
 		dprintf( D_FULLDEBUG, "update ad from starter does not define %s\n",
 				 ATTR_NUM_PIDS );  
@@ -1025,6 +1027,17 @@ RemoteResource::recordSuspendEvent( ClassAd* update_ad )
 		// Log stuff so we can check our sanity
 	printSuspendStats( D_FULLDEBUG );
 
+	/* If we have been asked to record the state of these suspend/resume
+		events in realtime, then update the schedd right now */
+	rt = param( "REAL_TIME_JOB_SUSPEND_UPDATES" );
+	if( rt != NULL ) {
+		if (strcasecmp(rt, "true") == MATCH) {
+			shadow->updateJobInQueue(U_PERIODIC);
+		}
+		free(rt);
+		rt = NULL;
+	}
+	
 	return rval;
 }
 
@@ -1032,6 +1045,7 @@ RemoteResource::recordSuspendEvent( ClassAd* update_ad )
 bool
 RemoteResource::recordResumeEvent( ClassAd* update_ad )
 {
+	char *rt = NULL;
 	bool rval = true;
 
 		// First, log this to the UserLog
@@ -1064,6 +1078,17 @@ RemoteResource::recordResumeEvent( ClassAd* update_ad )
 
 		// Log stuff so we can check our sanity
 	printSuspendStats( D_FULLDEBUG );
+
+	/* If we have been asked to record the state of these suspend/resume
+		events in realtime, then update the schedd right now */
+	rt = param( "REAL_TIME_JOB_SUSPEND_UPDATES" );
+	if( rt != NULL ) {
+		if (strcasecmp(rt, "true") == MATCH) {
+			shadow->updateJobInQueue(U_PERIODIC);
+		}
+		free(rt);
+		rt = NULL;
+	}
 
 	return rval;
 }
