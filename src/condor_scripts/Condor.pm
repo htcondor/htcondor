@@ -327,7 +327,7 @@ sub Monitor
 	    }
 	    # terminated w/error
 	    elsif( $line =~ 
-		   /^\s+\(1\) Normal termination \(return value \((\d+)\)/ )
+		   /^\s+\(1\) Normal termination \(return value (\d+)\)/ )
 	    {
 		$info{'retval'} = $1;
 		# execute callback if one is registered
