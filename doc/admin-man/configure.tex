@@ -1805,6 +1805,13 @@ will not want to change them for any reason.
   \Condor{master}'s \File{InstanceLock}.
   If \File{\$(LOCK)} is undefined, then the master log itself is locked.
 
+\item[\Macro{ADD\_WINDOWS\_FIREWALL\_EXCEPTION}]
+  \label{param:AddWindowsFirewallException} If set to false, the
+  \Condor{master} will not automatically add Condor to the Windows
+  Firewall list of trusted applications. Such trusted applications can
+  accept incoming connections without interference from the firewall. This
+  only affects machines running Windows XP SP2 or higher. The default
+  is True.
 
 \end{description}
 
