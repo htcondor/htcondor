@@ -325,6 +325,7 @@ const char ATTR_EXCEPTION_TYPE           [] = "ExceptionType";
 const char ATTR_EXIT_REASON              [] = "ExitReason";
 const char ATTR_FETCH_FILES			 [] = "FetchFiles";
 const char ATTR_FLOCKED_JOBS			 [] = "FlockedJobs";
+const char ATTR_GID						 [] = "Gid";
 const char ATTR_GLOBUS_CONTACT_STRING  [] = "GlobusContactString";
 const char ATTR_GLOBUS_RESOURCE			 [] = "GlobusResource";
 const char ATTR_GLOBUS_RSL				 [] = "GlobusRSL";
