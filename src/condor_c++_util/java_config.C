@@ -2,6 +2,7 @@
 #include "condor_common.h"
 #include "string_list.h"
 #include "condor_config.h"
+#include "../condor_sysapi/sysapi.h"
 
 /*
 Extract the java configuration from the local config files.
@@ -20,10 +21,19 @@ int java_config( char *cmd, char *args, StringList *extra_classpath )
 	strcpy(cmd,tmp);
 	free(tmp);
 
+	tmp = param("JAVA_MAXHEAP_ARGUMENT");
+	if(tmp) {
+		sprintf(args,"%s%dm ",tmp,sysapi_phys_memory());
+		free(tmp);
+	} else {
+		args[0] = 0;
+	}
+	
 	tmp = param("JAVA_CLASSPATH_ARGUMENT");
 	if(!tmp) tmp = strdup("-classpath");
 	if(!tmp) return 0;
-	strcpy(args,tmp);
+	strcat(args," ");
+	strcat(args,tmp);
 	strcat(args," ");
 	free(tmp);
 
@@ -59,6 +69,13 @@ int java_config( char *cmd, char *args, StringList *extra_classpath )
 			strncat(args,&separator,1);
 			strcat(args,tmp);
 		}
+	}
+
+	tmp = param("JAVA_EXTRA_ARGUMENTS");
+	if(tmp) {
+		strcat(args," ");
+		strcat(args,tmp);
+		free(tmp);
 	}
 
 	return 1;
