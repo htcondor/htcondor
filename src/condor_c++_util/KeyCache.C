@@ -176,24 +176,29 @@ void KeyCache::copy_storage(const KeyCache &copy) {
 }
 
 
-void KeyCache::delete_storage() {
-	if (key_table) {
-		// Delete all entries from the hash, and the table itself
-		//KeyCacheEntry* key_entry;
-		//key_table->startIterations();
-		//while (key_table->iterate(key_entry)) {
-		//	if ( key_entry ) {
-		//		dprintf ( D_SECURITY, "KEYCACHEENTRY: deleted: %x\n", key_entry );
-		//		delete key_entry;
-		//	}
-		//}
-
-        key_table->clear();
-		dprintf ( D_SECURITY, "KEYCACHE: deleted: %x\n", key_table );
+void KeyCache::delete_storage()
+{
+	if( key_table ) {
+			// Delete all entries from the hash, and the table itself
+		KeyCacheEntry* key_entry;
+		key_table->startIterations();
+		while( key_table->iterate(key_entry) ) {
+			if( key_entry ) {
+				if( DebugFlags & D_FULLDEBUG ) {
+					dprintf( D_SECURITY, "KEYCACHEENTRY: deleted: %x\n", 
+							 key_entry );
+					delete key_entry;
+				}
+			}
+			if( DebugFlags & D_FULLDEBUG ) {
+				dprintf( D_SECURITY, "KEYCACHE: deleted: %x\n", key_table );
+			}
+		}
 		delete key_table;
 		key_table = NULL;
 	}
 }
+
 
 bool KeyCache::insert(KeyCacheEntry &e) {
 
