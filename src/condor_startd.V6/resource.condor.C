@@ -42,8 +42,8 @@ extern "C" int event_killjob(resource_id_t rid, job_id_t jid, task_id_t tid);
 extern "C" int calc_virt_memory();
 extern "C" float calc_load_avg();
 
-char *kbd_dev;
-char *mouse_dev;
+char *kbd_dev=NULL;
+char *mouse_dev=NULL;
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
