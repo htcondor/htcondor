@@ -172,3 +172,32 @@ int		process;
 
 	switch( condor_sysnum ) {
 #endif
+
+#if defined( IRIX53 )
+	case CONDOR_fstat:
+	  {
+		int fd;
+		struct stat *buf;
+		int terrno;
+
+		assert( xdr_int(xdr_syscall,&fd) );
+		buf = (struct stat *)malloc( (unsigned)STAT_SIZE );
+
+		errno = 0;
+		rval = fstat( fd, buf );
+		terrno = errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		xdr_syscall->x_op = XDR_ENCODE;
+		assert( xdr_int(xdr_syscall,&rval) );
+		if( rval < 0 ) {
+			assert( xdr_int(xdr_syscall,&terrno) );
+		}
+		if( rval >= 0 ) {
+			assert( xdr_stat(xdr_syscall,buf) );
+		}
+		free( (char *)buf );
+		assert( xdrrec_endofrecord(xdr_syscall,TRUE) );;
+		return 0;
+	}
+#endif
