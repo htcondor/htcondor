@@ -288,7 +288,7 @@ char *
 GridUniverseLogic::scratchFilePath(gman_node_t *gman_node)
 {
 	MyString filename;
-	filename.sprintf("%s.%p.%d",scratch_prefix,
+	filename.sprintf("%s%p.%d",scratch_prefix,
 					gman_node,daemonCore->getpid());
 	char *prefix = temp_dir_path();
 	ASSERT(prefix);
@@ -457,10 +457,10 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		sprintf(proxy_buf, " -j %d.%d", cluster, proc);
 		strcat(gman_final_args, proxy_buf);
 	}
-	if ( group_per_subject() ) {
+	if ( !group_per_subject() ) {
 		// old way -- pass a few more command line args
-		if(proxy_path && proxy_path[0] != '\0') {
-			sprintf(proxy_buf, " -x %s", proxy_path);
+		if(proxy && proxy != '\0') {
+			sprintf(proxy_buf, " -x %s", proxy);
 			// Really should be strncat...
 			strcat(gman_final_args, proxy_buf);
 		}
@@ -489,7 +489,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		} else {
 			owner_or_user = ATTR_OWNER;
 		}
-		constraint.sprintf(" -C (%s=\"%s\"&&%s=\"%s\")",
+		constraint.sprintf(" -C (%s=?=\"%s\"&&%s=?=\"%s\")",
 			owner_or_user,full_owner_name.Value(),
 			ATTR_X509_USER_PROXY_SUBJECT,proxy);
 		strcat(gman_final_args,constraint.Value());
@@ -538,7 +538,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 			}
 				// if we made it here, blow away this subdir
 			if ( tmp.Remove_Current_File() ) {
-				dprintf(D_ALWAYS,"Removed old scratch dir %s",
+				dprintf(D_ALWAYS,"Removed old scratch dir %s\n",
 				tmp.GetFullPath());
 			}
 		}	// end of while for cleanup of old scratch dirs
@@ -549,6 +549,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 	// command-line arguments to tell where it is.
 	if ( want_scratch_dir() ) {
 		bool failed = false;
+		gman_node = new gman_node_t;
 		char *finalpath = scratchFilePath(gman_node);
 		priv_state saved_priv = set_user_priv();
 		if ( (mkdir(finalpath,0700)) < 0 ) {
@@ -563,6 +564,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		delete [] finalpath;
 		if ( failed ) {
 			// we already did dprintf reason to the log...
+			if (gman_node) delete gman_node;
 			return NULL;
 		}
 	}
@@ -578,6 +580,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 
 	if ( pid <= 0 ) {
 		dprintf ( D_ALWAYS, "StartOrFindGManager: Create_Process problems!\n" );
+		if (gman_node) delete gman_node;
 		return NULL;
 	}
 
@@ -587,7 +590,9 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 			owner,pid);
 
 	// Make a new gman_node entry for our hashtable & insert it
-	gman_node = new gman_node_t;
+	if ( !gman_node ) {
+		gman_node = new gman_node_t;
+	}
 	gman_node->pid = pid;
 	gman_node->owner[0] = '\0';
 	gman_node->domain[0] = '\0';
