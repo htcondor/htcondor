@@ -102,12 +102,12 @@ ScriptQ::ScriptReaper( int pid, int status )
 
 	// get the Job* that corresponds to this pid
 	_scriptPidTable->lookup( pid, script );
-	assert( script != NULL );
+	ASSERT( script != NULL );
 
 	_scriptPidTable->remove( pid );
 	_numScriptsRunning--;
 
-	assert( pid == script->_pid );
+	ASSERT( pid == script->_pid );
 	script->_done = TRUE;
 
 	// call appropriate DAG reaper
@@ -121,7 +121,7 @@ ScriptQ::ScriptReaper( int pid, int status )
 	script = NULL;
 	if( !_waitingQueue->IsEmpty() ) {
 		_waitingQueue->dequeue( script );
-		assert( script != NULL );
+		ASSERT( script != NULL );
 		Run( script );
 	}
 

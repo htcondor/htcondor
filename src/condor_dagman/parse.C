@@ -54,7 +54,7 @@ bool isKeyWord (char *token) {
 //-----------------------------------------------------------------------------
 bool parse (char *filename, Dag *dag) {
 
-    assert (dag != NULL);
+    ASSERT( dag != NULL );
   
     FILE *fp = fopen(filename, "r");
     if (fp == NULL) {

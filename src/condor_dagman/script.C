@@ -45,7 +45,7 @@ Script::Script( bool post, char* cmd, Job* job ) :
 	_done         (FALSE),
     _job          (job)
 {
-	assert( cmd != NULL );
+	ASSERT( cmd != NULL );
     _cmd = strnewp (cmd);
 }
 

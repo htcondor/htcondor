@@ -58,8 +58,8 @@ Job::Job (const char *jobName, const char *cmdFile):
     _scriptPost (NULL),
     _Status     (STATUS_READY)
 {
-	assert( jobName != NULL );
-	assert( cmdFile != NULL );
+	ASSERT( jobName != NULL );
+	ASSERT( cmdFile != NULL );
     _jobName = strnewp (jobName);
     _cmdFile = strnewp (cmdFile);
 
