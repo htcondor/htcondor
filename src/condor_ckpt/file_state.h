@@ -30,143 +30,127 @@
 #include <string.h>
 #include <sys/types.h>
 
-const int MAXBUF = 131072;
-const int PREFETCH = 2048;
+#include "file_types.h"
+#include "buffer_cache.h"
 
-typedef unsigned int	Bit;
-typedef int				BOOL;
-typedef int				FD;
+class FilePointer;
 
-struct BufElem {
+/**
+This class multiplexes number of UNIX file system calls.
+The fd's used to index this table are "virtual file descriptors",
+and could refer to real fds, remote fds, ioservers, sockets,
+or who knows what.
+<p>
+It only makes sense to use this table when MappingFileDescriptors()
+is in effect.  If it is not, just perform syscalls remotely or
+locally, as the SyscallMode indicates.
+<p>
+This class does several things:
+<dir> 
+	<li> checks validity of vfds  
+	<li> multiplexes vfds to file types
+	<li> buffers seek pointers   
+	<li> talks to the buffer cache
+	<li> oversees checkpoint and restore
+</dir>
 
-  friend class File;
-  friend class OpenFileTable;
-
- public:
-
- private:
-
-  int offset;
-  int len;
-  char *buf;
-  BufElem *next;
-
-};
-
-class OpenFileTable;
-
-class File {
-friend class OpenFileTable;
-public:
-	void	Init();
-	void	Display();
-        void    setOffset(off_t temp)   { offset = temp; }
-        void    setSize(off_t temp)     { size = temp; }
-        off_t   getOffset()             { return offset; }
-        off_t   getSize()               { return size; }
-	BOOL	isOpen()		{ return open; }
-	BOOL	isDup()			{ return duplicate; }
-	BOOL	isPreOpened()		{ return pre_opened; }
-	BOOL	isRemoteAccess()	{ return remote_access; }
-	BOOL	isIOServerAccess()	{ return ioserver_access; }
-	BOOL	isShadowSock()		{ return shadow_sock; }
-	BOOL	isReadable()		{ return readable; }
-	BOOL	isWriteable()		{ return writeable; }
-private:
-	Bit	open : 1;		// file is open
-	Bit	duplicate : 1;		// file is dup of another fd
-	Bit	pre_opened : 1;		// file was pre_opened (stdin, stdout, stderr)
-	Bit	remote_access : 1;	// access via remote sys calls (via the shadow)
-	Bit	ioserver_access : 1;	// access via IO server
-	Bit	shadow_sock : 1;	// TCP connection to the shadow
-	Bit	readable : 1;		// File open for read or read/write
-	Bit	writeable : 1;		// File open for write or read/write
-	off_t   size;                   // File size
-	off_t	offset;			// File pointer position
-	char	*ioservername;		// The hostname of the IO server
-	int	ioserverport;		// The port for contacting IO server
-	int	ioserversocket;		// The socket descriptor for contacting
-					// the IO server
-	int	flags;			// The flags when the file was opened
-					// This was not needed initially but
-					// with the addition of IO server files
-					// may be reopened.
-	mode_t	mode;			// Mode when file was opened.
-	FD		real_fd;	// File descriptor number
-	FD		dup_of;		// File descriptor this is a dup of
-	char	*pathname;		// *FULL* pathname of the file
-	BufElem *firstBuf;              // first buffer element.
-};
+This class does _not_:
+<dir>
+	<li> Decide whether mapping is in effect.
+	     The system call stubs do that.
+	<li> Implement read, write, seek, etc. for _any_ file.
+	     Subclasses of File do that (file_types.C)
+	<li> Implement buffering.
+	     A BufferCache does that (buffer_cache.C)
+	<li> Perform operations on names (i.e. stat()).
+	     To operate on a name, open() it, and
+	     then perform the fd equivalent of that op.
+	     (i.e. fstat())  
+</dir>
+*/
 
 class OpenFileTable {
 public:
-	void Init();
-	void Display();
-	void Save();
-	void Restore();
-	int PreOpen( int fd, BOOL readable, BOOL writeable, BOOL shadow_connection);
-#if 0
-	int DoOpen( const char *path, int flags, int mode, int fd, int is_remote );
-#else
-	int DoOpen( const char *path, int flags, int fd, int is_remote, int status = -1);
-#endif
-	off_t DoLseek(int fd, off_t offset, int whence);
-	int DoClose( int fd );
-	int DoDup( int fd );
-	int DoDup2( int fd, int dupfd );
-	int DoSocket( int addr_family, int type, int protocol );
-	int DoAccept( int s, struct sockaddr *addr, int *addrlen );
-	int	Map( int user_fd );
 
-	// Methods for setting various parameters needed to contact 
-	// another IO server if necessary.
+	/** Prepare the table for use */
+	void	init();
 
-	int setServerName( int fd, char *name );
-	int setServerPort( int fd, int port );
-	int setSockFd( int fd, int sockfd );
-	int setRemoteFd( int fd, int realfd );
-	int setOffset( int fd, int off );
-	int setFileName( int fd, char *name );
-	int setFlag( int fd, int flag );
-	int setMode( int fd, mode_t modes );
+	/** Write out any buffered data */
+	void	flush();
 
-	char	*getServerName( int fd );
-	int	getServerPort( int fd );
-	int	getSockFd( int fd );
-	int	getRemoteFd( int fd );
-	int	getOffset( int fd );
-	char	*getFileName( int fd ) ;
-	int	getFlag( int fd );
-	mode_t	getMode( int fd );
-	BOOL IsLocalAccess( int user_fd );
-	BOOL isIOServerAccess( int fd );
-	BOOL IsDup( int user_fd );
-	void SetOffset(int i, off_t temp)  { file[i].setOffset(temp); }
-	void SetSize(int i, off_t temp)    { file[i].setSize(temp); }
-	off_t GetOffset(int i)             { return file[i].getOffset(); }
-	off_t GetSize(int i)               { return file[i].getSize(); }
-	void IncreBufCount( int i )        { bufCount += i; }
-	BOOL IsReadable(int i)             { return file[i].isReadable(); }
-	BOOL IsWriteable(int i)            { return file[i].isWriteable(); }
-	ssize_t InsertR( int, void *, int, int, int, BufElem *, BufElem * );
-	ssize_t InsertW( int, const void *, int, int, BufElem *, BufElem * );
-	ssize_t OverlapR1( int, void *, int, int, int, BufElem *, BufElem * );
-	ssize_t OverlapR2( int, void *, int, int, int, BufElem *, BufElem * );
-	ssize_t OverlapW1( int, const void *, int, int, BufElem *, BufElem * );
-	ssize_t OverlapW2( int, const void *, int, int, BufElem *, BufElem * );
-	ssize_t PreFetch( int, void *, size_t );
-	ssize_t Buffer( int, const void *, size_t );
-	void FlushBuf();
-	void DisplayBuf();
-	int find_avail( int start );
+	/** Display debug info */
+	void	dump();
+
+	/** Configure and use the buffer */
+	void	init_buffer();
+
+	/** Turn off buffering */
+	void	disable_buffer();
+
+	/** Map a virtual fd to the same real fd.  This is generally only
+	used by the startup code to bootstrap a usable stdin/stdout until
+	things get rolling. */
+
+	int	pre_open( int fd, int readable, int writable, int is_remote );
+
+	/** Standard UNIX operations: open, close, read, etc...
+	These should all perform as their UNIX counterparts. */
+
+	int	open( const char *path, int flags, int mode );
+	int	close( int fd );
+
+	ssize_t	read( int fd, void *data, size_t length );
+	ssize_t	write( int fd, const void *data, size_t length );
+	off_t	lseek( int fd, off_t offset, int whence );
+
+	int	dup( int old );
+	int	dup2( int old, int nfd );
+
+	/** Like dup2, but use any free fd >= search. */
+	int	search_dup2( int old, int search );
+
+	int	fchdir( int fd );
+	int	fstat( int fd, struct stat *buf );
+	int	fcntl( int fd, int cmd, int arg );
+	int	ioctl( int fd, int cmd, int arg );
+	int	flock( int fd, int op );
+	int	fstatfs( int fsync, struct statfs * buf );
+	int	fchown( int fd, uid_t owner, gid_t group );
+	int	fchmod( int fd, mode_t mode );
+	int	ftruncate( int fd, size_t length );
+	int	fsync( int fd );
+
+	/* Flush buffers and save everything I know, as a precaution. */
+	void	checkpoint();
+
+	/* Same as checkpoint, but close everything in preparation for exit */
+	void	suspend();
+
+	/* A checkpoint has resumed, so open everything up again. */
+	void	resume();
+
+	/* Support the MapFd and LocalAccess interfaces for now */
+	int	map_fd_hack( int fd );
+	int	local_access_hack( int fd );
+
 private:
-	int     bufCount;       // running count of the used buffer. 
-	void	fix_dups( int user_fd );
-	char	cwd[ _POSIX_PATH_MAX ];
-	File	*file;		// array allocated at run time
+
+	int	find_name(const char *path);
+	int	find_empty();
+
+	FilePointer	**pointers;
+	int		length;
+	BufferCache	*buffer;
+	char		working_dir[_POSIX_PATH_MAX];
+	int		prefetch_size;
 };
 
-char *string_copy( const char *);
+/** This is a pointer to the single global instance of the file
+table.  The only user of this pointer should be the system call
+switches, who need to send some syscalls to the open file table.
+*/
+
+extern OpenFileTable *FileTab;
 
 #endif
 
