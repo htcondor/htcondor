@@ -27,12 +27,11 @@
 */ 
 
 #define _POSIX_SOURCE
-#include <stdio.h>
-#include <unistd.h>
-#include <ctype.h>
-#include <fcntl.h>
-#include "types.h"
-#include "util_lib_proto.h"
+
+#include "condor_common.h"
+#include "condor_constants.h"
+#include "condor_debug.h"
+#include "condor_config.h"
 #include "proc_obj.h"
 #include "filter.h"
 #include "alloc.h"
@@ -55,7 +54,6 @@ char	*InvokingUserName;	// user name of person ivoking this program
 
 const int MIN_PRIO = -20;
 const int MAX_PRIO = 20;
-const int MATCH = 0;
 
 	// Prototypes of local interest only
 void usage();
