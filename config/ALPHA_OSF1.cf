@@ -21,6 +21,7 @@
 #define DOES_CHECKPOINTING		YES
 #define DOES_REMOTE_SYSCALLS	YES
 #define DOES_SAVE_SIGSTATE		YES
+#define DO_BENCHMARKING                       YES
 
 #define HAS_X					YES
 #define HAS_X_EXTENSIONS		NO
@@ -62,9 +63,9 @@
 
 #define USE_GCC					YES
 #if USE_GCC
-#	define CCompiler gcc
-#	define CPlusCompiler g++
-#	define Demangler c++filt
+#	define CCompiler /usr/psup/gcc-2.6.3/bin/gcc 
+#	define CPlusCompiler /usr/psup/gcc-2.6.3/bin/g++
+#	define Demangler /usr/psup/gcc-2.6.3/bin/c++filt
 #else
 #	define CCompiler cc
 #	define CPlusCompiler cxx
