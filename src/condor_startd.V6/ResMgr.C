@@ -94,7 +94,7 @@ ResMgr::init_config_classad( void )
 		// Now, bring in things that we might need
 	configInsert( config_classad, "PERIODIC_CHECKPOINT", false );
 	configInsert( config_classad, "RunBenchmarks", false );
-	configInsert( config_classad, "Rank", false );
+	configInsert( config_classad, ATTR_RANK, false );
 	configInsert( config_classad, "SUSPEND_VANILLA", false );
 	configInsert( config_classad, "CONTINUE_VANILLA", false );
 	configInsert( config_classad, "PREEMPT_VANILLA", false );
@@ -112,6 +112,22 @@ ResMgr::init_config_classad( void )
 		sprintf( tmp, "%s = (START =?= False)", ATTR_IS_OWNER );
 		config_classad->Insert( tmp );
 		free( tmp );
+	}
+		// Next, try the CpuBusy expression.  If it's not there, try
+		// what's defined in cpu_busy (for backwards compatibility).  
+		// If that's not there, give them a default of "False",
+		// instead of leaving it undefined.
+	if( ! configInsert(config_classad, ATTR_CPU_BUSY, false) ) {
+		if( ! configInsert(config_classad, "cpu_busy", ATTR_CPU_BUSY,
+						   false) ) { 
+			char* tmp = (char*) malloc( strlen(ATTR_CPU_BUSY) + 9 ); 
+			if( ! tmp ) {
+				EXCEPT( "Out of memory!" );
+			}
+			sprintf( tmp, "%s = False", ATTR_CPU_BUSY );
+			config_classad->Insert( tmp );
+			free( tmp );
+		}
 	}
 
 		// Now, bring in anything the user has said to include
@@ -1079,7 +1095,22 @@ ResMgr::compute( amask_t how_much )
 	assign_load();
 	assign_keyboard();
 
-		// Now that we're done assigning, display all values 
+		// Now that everything has actually been computed, we can
+		// refresh our internal classad with all the current values of
+		// everything so that when we evaluate our state or any other
+		// expressions, we've got accurate data to evaluate.
+	walk( &(Resource::refresh_classad), how_much );
+
+		// Now that we have an updated internal classad for each
+		// resource, we can "compute" anything where we need to 
+		// evaluate classad expressions to get the answer.
+	walk( &(Resource::compute), A_EVALUATED );
+
+		// Next, we can publish any results from that to our internal
+		// classads to make sure those are still up-to-date
+	walk( &(Resource::refresh_classad), A_EVALUATED );
+
+		// Now that we're done, we can display all the values.
 	walk( &(Resource::display), how_much );
 }
 
@@ -1330,6 +1361,9 @@ ResMgr::makeAdList( ClassAdList *list )
 	ClassAd* ad;
 	int i;
 
+		// Make sure everything is current
+	compute( A_TIMEOUT | A_UPDATE );
+
 		// We want to insert ATTR_LAST_HEARD_FROM into each ad.  The
 		// collector normally does this, so if we're servicing a
 		// QUERY_STARTD_ADS commannd, we need to do this ourselves or
@@ -1340,7 +1374,7 @@ ResMgr::makeAdList( ClassAdList *list )
 
 	for( i=0; i<nresources; i++ ) {
 		ad = new ClassAd;
-		resources[i]->publish( ad, A_PUBLIC | A_ALL );
+		resources[i]->publish( ad, A_PUBLIC | A_ALL | A_EVALUATED ); 
 		ad->Insert( buf );
 		list->Insert( ad );
 	}
