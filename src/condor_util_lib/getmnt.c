@@ -49,6 +49,7 @@ char			*strdup(), *malloc();
 #include <sys/mount.h>
 
 
+int
 getmnt( start, buf, bufsize, mode, path )
 int				*start;
 struct fs_data	buf[];
@@ -60,7 +61,6 @@ char			*path;
 	struct stat	st_buf;
 	int		n_entries;
 	int		i;
-	dev_t	dev;
 
 	if( (n_entries=getmntinfo(&data,MNT_NOWAIT)) < 0 ) {
 		perror( "getmntinfo" );

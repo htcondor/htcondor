@@ -25,7 +25,6 @@
 #include "condor_classad.h"
 #include "condor_io.h"
 #include "condor_debug.h"
-#include "dgram_io_handle.h"
 #include "xferstat2.h"
 #include "xfer_summary.h"
 #include "condor_network.h"

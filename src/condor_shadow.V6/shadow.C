@@ -49,7 +49,7 @@
 #include "syscall.aix.h"
 #endif
 
-#include "debug.h"
+#include "condor_debug.h"
 #include "fileno.h"
 #include "exit.h"
 #include "shadow.h"

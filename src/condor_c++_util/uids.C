@@ -529,7 +529,7 @@ int setegid(gid_t);
 #define GET_REAL_GID() getgid()
 #endif
 
-#include "debug.h"
+#include "condor_debug.h"
 #include "passwd_cache.h"
 
 

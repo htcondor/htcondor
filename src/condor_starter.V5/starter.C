@@ -34,7 +34,6 @@
 
 #include "starter.h"
 #include "fileno.h"
-#include "ckpt_file.h"
 #include "startup.h"
 #include "alarm.h"
 #include "list.h"

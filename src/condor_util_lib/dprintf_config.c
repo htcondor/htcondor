@@ -29,8 +29,7 @@
 ************************************************************************/
 
 #include "condor_common.h"
-#include "debug.h"
-#include "except.h"
+#include "condor_debug.h"
 #include "condor_string.h"
 
 

@@ -33,6 +33,7 @@
 #include "HashTable.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "read_multiple_logs.h"
+#include "check_events.h"
 
 // for DAGMAN_RUN_POST_ON_FAILURE config setting
 extern bool run_post_on_failure;
@@ -227,6 +228,7 @@ class Dag {
 	void SetDotFileOverwrite(bool overwrite_dot_file) { _overwrite_dot_file = overwrite_dot_file; }
 	bool GetDotFileUpdate(void)                       { return _update_dot_file; }
 	void DumpDotFile(void);
+	void CheckAllJobs(void);
 	
   protected:
 
@@ -317,6 +319,8 @@ class Dag {
 	void DumpDotFileNodes(FILE *temp_dot_file);
 	void DumpDotFileArcs(FILE *temp_dot_file);
 	void ChooseDotFileName(MyString &dot_file_name);
+
+	CheckEvents	_ce;
 };
 
 #endif /* #ifndef DAG_H */

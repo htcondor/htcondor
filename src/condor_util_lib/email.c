@@ -23,7 +23,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "debug.h"
+#include "condor_debug.h"
 #include "condor_uid.h"
 #include "condor_email.h"
 #include "my_hostname.h"

@@ -44,7 +44,7 @@
 #include "daemon.h"
 #include "stream.h"
 
-#include "debug.h"
+#include "condor_debug.h"
 #include "fileno.h"
 #include "exit.h"
 #include "shadow.h"

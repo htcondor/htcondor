@@ -84,7 +84,7 @@ sysapi_disk_space_raw(const char *filename)
 
 #else
 
-#include "debug.h"
+#include "condor_debug.h"
 
 /* Can't include condor_config.h since it depends on classads which is
    only C++.  -Derek 6/25/98 */

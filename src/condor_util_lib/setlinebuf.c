@@ -28,6 +28,7 @@
 /*
 ** Compatibility routine for HP-UX which has setvbuf() instead of setlinebuf().
 */
+int
 setlinebuf( fp )
 FILE	*fp;
 {

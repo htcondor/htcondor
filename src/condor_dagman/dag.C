@@ -98,7 +98,7 @@ Dag::~Dag() {
     // delete all jobs in _jobs
     Job *job = NULL;
     _jobs.Rewind();
-    while( job = _jobs.Next() ) {
+    while( (job = _jobs.Next()) ) {
       ASSERT( job != NULL );
       delete job;
       _jobs.DeleteCurrent();
@@ -286,7 +286,7 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
   }
 
  
- bool done = false;  // Keep scaning until ULOG_NO_EVENT
+ bool done = false;  // Keep scanning until ULOG_NO_EVENT
  bool result = true;
  static int log_unk_count = 0;
  static int ulog_rd_error_count = 0;
@@ -365,6 +365,11 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 				// submit events are printed specially below, since we
 				// want to match them with their DAG nodes first...
 
+				// This variable is used to turn off the new event checking
+				// code for duplicate terminate/abort events.  DAGMan
+				// tolerates them, but the CheckEvents class does not.
+			bool	checkThisEvent = true;
+
             switch(e->eventNumber) {
 
               case ULOG_EXECUTABLE_ERROR:
@@ -383,6 +388,7 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 									"WARNING: Job %s already marked %s; "
 									"ignoring job aborted event...\n",
 									job->GetJobName(), job->GetStatusName() );
+					  checkThisEvent = false;
 					  break;
 				  }
 
@@ -680,6 +686,17 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 			case ULOG_EXECUTE:
 			default:
                 break;
+			}
+
+			if ( dagman.doEventChecks && checkThisEvent ) {
+				MyString	eventError;
+				if ( !_ce.CheckAnEvent(e, eventError) ) {
+    				debug_printf( DEBUG_VERBOSE, "%s\n",
+							eventError.Value() );
+					result = false;
+				} else {
+    				debug_printf( DEBUG_DEBUG_1, "Event okay\n");
+				}
 			}
         }
 		if( e != NULL ) {
@@ -1474,6 +1491,29 @@ Dag::DumpDotFile(void)
 		}
 	}
 	return;
+}
+
+//-------------------------------------------------------------------------
+// 
+// Function: CheckAllJobs
+// Purpose:  Called after the DAG has finished to check for any
+//           inconsistency in the job events we've gotten.
+// Scope:    Public
+//
+//-------------------------------------------------------------------------
+void
+Dag::CheckAllJobs()
+{
+	if ( dagman.doEventChecks ) {
+		MyString	jobError;
+		if ( !_ce.CheckAllJobs(jobError) ) {
+			debug_printf( DEBUG_VERBOSE, "Error checking job events: %s\n",
+					jobError.Value() );
+			ASSERT( false );
+		} else {
+			debug_printf( DEBUG_DEBUG_1, "All job events okay\n");
+		}
+	}
 }
 
 //-------------------------------------------------------------------------

@@ -22,7 +22,7 @@
   ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-#include "debug.h"
+#include "condor_debug.h"
 #include "condor_getmnt.h"
 
 static void init( void );

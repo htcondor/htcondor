@@ -487,26 +487,56 @@ ReliSock::get_file( filesize_t *size, int fd, bool flush_buffers )
 		return -1;
 	}
 
+
 	// Log what's going on
 	dprintf(D_FULLDEBUG,
 			"get_file: Receiving " FILESIZE_T_FORMAT " bytes\n", filesize );
 
-	// Now, read it all in & save it
-	const filesize_t	FILESIZE_ALL = ( (filesize_t) -1 );
-	while ( ( filesize == FILESIZE_ALL ) || ( total < filesize ) ) {
+		/*
+		  the code used to check for filesize == -1 here, but that's
+		  totally wrong.  we're storing the size as an unsigned int,
+		  so we can't check it against a negative value.  furthermore,
+		  ReliSock::put_file() never puts a -1 on the wire for the
+		  size.  that's legacy code from the pseudo_put_file_stream()
+		  RSC in the syscall library.  this code isn't like that.
+		*/
 
-		int		iosize = (int) MIN( (filesize_t) sizeof(buf),
+	// Now, read it all in & save it
+	while( total < filesize ) {
+		int	iosize = (int) MIN( (filesize_t) sizeof(buf),
 									filesize - total );
-		int		nbytes = get_bytes_nobuffer( buf, iosize, 0 );
+		int	nbytes = get_bytes_nobuffer( buf, iosize, 0 );
 		if ( nbytes <= 0 ) {
 			break;
 		}
 
-		int		written = ::write(fd, buf, nbytes );
-		if ( written < nbytes ) {
-			dprintf(D_ALWAYS, "failed to write %d bytes in ReliSock::get_file "
-					"(only wrote %d, errno=%d)\n", nbytes, written, errno);
-			return -1;
+		int rval;
+		int written;
+		for( written=0; written<nbytes; ) {
+			rval = ::write( fd, &buf[written], (nbytes-written) );
+			if( rval < 0 ) {
+				dprintf( D_ALWAYS,
+						 "ReliSock::get_file: write() returned %d: %s "
+						 "(errno=%d)\n", rval, strerror(errno), errno );
+				return -1;
+			} else if( rval == 0 ) {
+					/*
+					  write() shouldn't really return 0 at all.
+					  apparently it can do so if we asked it to write
+					  0 bytes (which we're not going to do) or if the
+					  file is closed (which we're also not going to
+					  do).  so, for now, if we see it, we want to just
+					  break out of this loop.  in the future, we might
+					  do more fancy stuff to handle this case, but
+					  we're probably never going to see this anyway.
+					*/
+				dprintf( D_ALWAYS, "ReliSock::get_file: write() returned 0: "
+						 "wrote %d out of %d bytes (errno=%d %s)\n",
+						 written, nbytes, errno, strerror(errno) );
+				break;
+			} else {
+				written += rval;
+			}
 		}
 		total += written;
 	}
@@ -526,9 +556,10 @@ ReliSock::get_file( filesize_t *size, int fd, bool flush_buffers )
 	dprintf(D_FULLDEBUG,
 			"get_file: wrote " FILESIZE_T_FORMAT " bytes to file\n", total );
 
-	if ( ( total < filesize ) && ( filesize != FILESIZE_ALL ) ) {
-		dprintf(D_ALWAYS,"get_file(): ERROR: received %d bytes, expected %d!\n",
-			total, filesize);
+	if ( total < filesize ) {
+		dprintf( D_ALWAYS,
+				 "get_file(): ERROR: received %d bytes, expected %d!\n",
+				 total, filesize);
 		return -1;
 	}
 
@@ -641,15 +672,18 @@ ReliSock::put_file( filesize_t *size, int fd )
 		while (total < filesize &&
 			   (nrd = ::read(fd, buf, sizeof(buf))) > 0) {
 			if ((nbytes = put_bytes_nobuffer(buf, nrd, 0)) < nrd) {
-				dprintf(D_ALWAYS, "ReliSock: put_file: failed to put %d bytes "
-						"(only wrote %d)\n", nrd, nbytes);
+					// put_bytes_nobuffer() does the appropriate
+					// looping for us already, the only way this could
+					// return less than we asked for is if it returned
+					// -1 on failure.
+				ASSERT( nbytes == -1 );
+				dprintf( D_ALWAYS, "ReliSock::put_file: failed to put %d "
+						 "bytes (put_bytes_nobuffer() returned %d)\n",
+						 nrd, nbytes );
 				return -1;
 			}
 			total += nbytes;
 		}
-		dprintf(D_FULLDEBUG,
-				"ReliSock: put_file: done with transfer (errno = %d)\n", errno);
-
 	
 	} // end of if filesize > 0
 

@@ -76,22 +76,8 @@ public:
 		 */
     static MyString loadLogFileNameFromSubFile(const MyString &strSubFilename);
 
-private:
-	void cleanup();
-
-	struct LogFileEntry
-	{
-		bool		isInitialized;
-		bool		isValid;
-		bool		haveReadEvent;
-		MyString	strFilename;
-		ReadUserLog	readUserLog;
-		ULogEvent *	pLastLogEvent;
-		off_t		logSize;
-	};
-
-	int				iLogFileCount;
-	LogFileEntry *	pLogFileEntries;
+protected:
+	friend class CheckEvents;
 
 	class JobID 
 	{
@@ -117,6 +103,23 @@ private:
 	};
 
 	static int hashFuncJobID(const JobID &key, int numBuckets);
+
+private:
+	void cleanup();
+
+	struct LogFileEntry
+	{
+		bool		isInitialized;
+		bool		isValid;
+		bool		haveReadEvent;
+		MyString	strFilename;
+		ReadUserLog	readUserLog;
+		ULogEvent *	pLastLogEvent;
+		off_t		logSize;
+	};
+
+	int				iLogFileCount;
+	LogFileEntry *	pLogFileEntries;
 
 	HashTable<JobID, LogFileEntry *>	logHash;
 

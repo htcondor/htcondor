@@ -595,7 +595,10 @@ ReadMultipleUserLogs::DuplicateLogExists(ULogEvent *event, LogFileEntry *log)
 	} else {
 			// First event for this job ID.  Insert the given log into
 			// the hash table.
-		logHash.insert(id, log);
+		if ( logHash.insert(id, log) != 0 ) {
+			dprintf(D_FULLDEBUG,
+					"Hash table insert error");
+		}
 		result = false;
 	}
 

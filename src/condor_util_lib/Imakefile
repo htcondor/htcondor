@@ -48,7 +48,7 @@ INET_NTOA_OBJ = inet_ntoa.o
 	ltrunc.o mkargv.o proc.o signames.o \
 	stricmp.o \
 	get_port_range.o \
-	ctrace.o detach.o update_rusage.o cronos.o \
+	detach.o update_rusage.o cronos.o \
 	$(FLOCK_OBJ) \
 	email.o email_file.o \
 	$(GETDTABLESIZE_OBJ) $(MALLOC_OBJ)\

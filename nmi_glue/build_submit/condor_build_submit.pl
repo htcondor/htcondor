@@ -17,6 +17,9 @@ use Getopt::Long;
 
 use vars qw/ $opt_help $opt_nightly $opt_tag $opt_module $opt_notify/;
 
+$ENV{PATH} = "/nmi/bin:/usr/local/condor/bin:/usr/local/condor/sbin:"
+    . $ENV{PATH};
+
 GetOptions (
     'help'            => $opt_help,
     'nightly'         => $opt_nightly,
