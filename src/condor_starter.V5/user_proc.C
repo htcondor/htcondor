@@ -337,15 +337,15 @@ UserProc::linked_for_condor()
 			return TRUE;
 	}
 
-	if( magic_check(cur_ckpt) < 0 ) {
+	if( sysapi_magic_check(cur_ckpt) < 0 ) {
 		state = BAD_MAGIC;
-		dprintf( D_FAILURE|D_ALWAYS, "magic_check() failed\n" );
+		dprintf( D_FAILURE|D_ALWAYS, "sysapi_magic_check() failed\n" );
 		return FALSE;
 	}
 
 	// Don't look for symbol "MAIN" in vanilla jobs or PVM processes
 	if( job_class != CONDOR_UNIVERSE_PVM && job_class !=  CONDOR_UNIVERSE_VANILLA ) {	
-		if( symbol_main_check(cur_ckpt) < 0 ) {
+		if( sysapi_symbol_main_check(cur_ckpt) < 0 ) {
 			state = BAD_LINK;
 			dprintf( D_ALWAYS, "symbol_main_check() failed\n" );
 			return FALSE;
@@ -884,36 +884,6 @@ display_bool( int debug_flags, char *name, int value )
 	dprintf( debug_flags, "%s = %s\n", name, value ? "TRUE" : "FALSE" );
 }
 
-
-/*
-Look at the core file the previous checkpoint and try to guess how big
-a new checkpoint file would be created from them.  Return the answer in
-1024 byte units.
-*/
-#define SLOP 50
-int
-UserProc::estimate_image_size()
-{
-	int		answer;
-	int		text_blocks;
-	int		hdr_blocks;
-	int		core_blocks;
-
-	core_blocks = physical_file_size( core_name );
-	text_blocks = calc_text_blocks( cur_ckpt );
-	hdr_blocks = calc_hdr_blocks();
-
-	answer = hdr_blocks + text_blocks + core_blocks + SLOP;
-
-	dprintf( D_FULLDEBUG, "text: %d blocks\n", text_blocks );
-	dprintf( D_FULLDEBUG, "core: %d blocks\n", core_blocks );
-	dprintf( D_FULLDEBUG, "a.out hdr: %d blocks\n", hdr_blocks );
-	dprintf( D_FULLDEBUG, "SLOP: %d blocks\n", SLOP );
-	dprintf( D_FULLDEBUG, "Calculated image size: %dK\n", answer );
-
-	return answer;
-
-}
 
 void
 UserProc::store_core()
