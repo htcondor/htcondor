@@ -585,7 +585,13 @@ abort_job_myself(PROC_ID job_id)
 			   "Found record for scheduler universe job %d.%d\n",
 			   job_id.cluster, job_id.proc);
 #if !defined(WIN32)	/* NEED TO PORT TO WIN32 */
+		  dprintf(D_FULLDEBUG,"Sending SIGKILL to scheduler universe job pid=%d\n",srec->pid);
+		  char owner[_POSIX_PATH_MAX];
+		  GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
+    	  init_user_ids(owner);
+		  priv_state priv = set_user_priv();
 		  kill( srec->pid, SIGKILL );
+		  set_priv(priv);
 #endif
 	     }
 	     srec->removed = TRUE;
@@ -626,7 +632,7 @@ bool Scheduler::WriteAbortToUserLog(PROC_ID job_id)
 	priv_state priv = set_user_priv();
 
     UserLog* ULog=new UserLog();
-	ULog->openLog(logfilename, job_id.cluster, job_id.proc, 0);
+	ULog->initialize(logfilename, job_id.cluster, job_id.proc, 0);
 
 	JobAbortedEvent event;
 	int status=ULog->writeEvent(&event);
@@ -1276,7 +1282,8 @@ find_idle_sched_universe_jobs( ClassAd *job )
 	}
 
 	if (max_hosts > cur_hosts) {
-		scheduler.IdleSchedUniverseJobIDs->Append(id);
+		dprintf(D_FULLDEBUG,"Found idle scheduler universe job %d.%d\n",id.cluster,id.proc);
+		scheduler.start_sched_universe_job(&id);
 	}
 
 	return 0;
@@ -1366,16 +1373,7 @@ Scheduler::StartJobs()
 void
 Scheduler::StartSchedUniverseJobs()
 {
-	PROC_ID id;
-
-	IdleSchedUniverseJobIDs = new List <PROC_ID>;
 	WalkJobQueue( (int(*)(ClassAd *))find_idle_sched_universe_jobs );
-	IdleSchedUniverseJobIDs->Rewind();
-	while (IdleSchedUniverseJobIDs->Next(id)) {
-		start_sched_universe_job(&id);
-	}
-	delete IdleSchedUniverseJobIDs;
-	IdleSchedUniverseJobIDs = NULL;
 }
 
 shadow_rec*
@@ -2322,7 +2320,7 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 // Check scheduler universe
 static int IsSchedulerUniverse(shadow_rec* srec)
 {
-	dprintf(D_FULLDEBUG,"Scheduler::Reaper - checking job universe\n");
+	dprintf(D_FULLDEBUG,"Scheduler::IsSchedulerUniverse - checking job universe\n");
 	if (srec==NULL || srec->match!=NULL) return FALSE;
 	int universe=STANDARD;
 	GetAttributeInt(srec->job_id.cluster, srec->job_id.proc, ATTR_JOB_UNIVERSE,&universe);
@@ -2381,8 +2379,7 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
                 DelMrec(mrec);
             }
 		} else if (IsSchedulerUniverse(srec)) {
-				// Shadow record without a capability... must be a
-				// scheduler universe process.
+			// scheduler universe process
 			if(WIFEXITED(status)) {
 				dprintf(D_FULLDEBUG,
 						"scheduler universe job (%d.%d) pid %d "
@@ -2401,15 +2398,17 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
 						   WTERMSIG(status), REMOVED);
 				SetAttributeInt(srec->job_id.cluster, srec->job_id.proc, ATTR_JOB_STATUS, REMOVED);
 			}
+/*
 			if( DestroyProc(srec->job_id.cluster, srec->job_id.proc) ) {
 				dprintf(D_ALWAYS, "DestroyProc(%d.%d) failed -- "
 						"presumably job was already removed\n",
 						srec->job_id.cluster,
 						srec->job_id.proc);
 			}
+*/
 			delete_shadow_rec( pid );
 		} else if (srec) {
-				// Shadow record with capability... must be a real shadow.
+			// A real shadow
 			if( WIFEXITED(status) ) {
                 dprintf( D_FULLDEBUG, "Shadow pid %d exited with status %d\n",
                                                 pid, WEXITSTATUS(status) );
