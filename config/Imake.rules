@@ -46,7 +46,7 @@ object_dir_target(condor_##obj_name)
 ** List everything which should be built in this object tree.
 */
 #define all_target(targetlist)				@@\
-all: targetlist
+all:: targetlist
 
 /*
 ** Just build a given thing from a given directory.
@@ -332,6 +332,35 @@ $(STATIC_DIR)/##dir##/##dest##: 			@@\
 	/bin/rm -f $(STATIC_DIR)/##dir##/##dest		@@\
 	ln -s src $(STATIC_DIR)/##dir##/##dest
 #endif /* static_symlink_target */
+
+
+/***********************************************************************
+** Misc link-related targets
+**
+** These rules are used for creating hard and soft links for various
+** make targets.
+**
+***********************************************************************/
+
+
+/*
+** The all* targets make the links when you do a "make all".  They
+** only take two args, a src and a dest, since they assume you want
+** the links in the current directory.
+*/
+#ifndef all_link_target
+#define all_link_target( src, dest )		@@\
+all::						@@\
+	/bin/rm -f dest				@@\
+	ln src dest
+#endif /* all_link_target */
+
+#ifndef all_symlink_target
+#define all_symlink_target( src, dest )		@@\
+all::						@@\
+	/bin/rm -f dest				@@\
+	ln -s src dest
+#endif /* all_symlink_target */
 
 
 /***********************************************************************
