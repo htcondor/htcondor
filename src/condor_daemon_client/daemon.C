@@ -81,7 +81,8 @@ Daemon::Daemon( const char* addr_string, int port )
 			struct in_addr sin_addr;
 
 			// resolv the hostname to an IP
-			if( ! get_full_hostname( addr_string, &sin_addr ) ) {
+			char* tmp = get_full_hostname( addr_string, &sin_addr );
+			if( ! tmp ) {
 					// With a hostname, this is a fatal Daemon error.
 				char buf[128];
 				sprintf( buf, "unknown host %s", addr_string );
@@ -90,13 +91,12 @@ Daemon::Daemon( const char* addr_string, int port )
 				_port = -1;
 				return;
 			}
-
+			New_full_hostname( tmp );
 			// 32 bytes is more than enough for <234.678.012.456:890123456>
 			_addr = new char[32];
 			_port = port;
 			sprintf( _addr, "<%s:%d>", inet_ntoa(sin_addr), port );
 		}
-
 	} else {
 		_addr = NULL;
 		_port = -1;
