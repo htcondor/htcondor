@@ -57,9 +57,6 @@ public:
 	~UserLog();
 
 	// to initialize if not initialized bt ctor
-#if defined(NEW_PROC)
-	void initialize(PROC *);
-#endif
 	void initialize(const char *, const char *, int, int, int);
 
 	// use this function to access log (see condor_event.h)   --RR

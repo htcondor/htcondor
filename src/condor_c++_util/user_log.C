@@ -46,30 +46,6 @@ UserLog::UserLog (const char *owner, const char *file, int c, int p, int s)
 	initialize (owner, file, c, p, s);
 }
 
-#if defined(NEW_PROC)
-void UserLog::
-initialize (PROC *p)
-{
-	char buf [_POSIX_PATH_MAX];
-	char *path = buf;
-	char *log_name;
-
-	log_name = find_env( "LOG", p->env );
-
-    if( !log_name ) {
-        return;
-    }
-
-    if( log_name[0] == '/' ) {
-        path = log_name;
-    } else {
-        sprintf( path, "%s/%s", p->iwd, log_name );
-    }
-
-	initialize (p->owner, path, p->id.cluster, p->id.proc, 0);
-}
-#endif
-
 /* --- The following two functions are taken from the shadow's ulog.c --- */
 /*
   Find the value of an environment value, given the condor style envrionment
