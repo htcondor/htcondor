@@ -32,6 +32,8 @@
 #include <ctype.h>
 #include <varargs.h>
 #include <sys/types.h>
+#include <time.h>
+#include <values.h>
 #include "except.h"
 #include "debug.h"
 #include "expr.h"
@@ -323,6 +325,12 @@ ELEM	*elem;
 		return elem;
 	}
 
+	if( *In == '%' ) {
+		elem->type = MOD;
+		In++;
+		return elem;
+	}
+
 	if( *In == '<' ) {
 		In++;
 		if( *In && *In == '=' ) {
@@ -547,6 +555,7 @@ ELEM	*elem;
 		case MINUS:
 		case MUL:
 		case DIV:
+		case MOD:
 		case GETS:
 		case LPAREN:
 		case ENDMARKER:
@@ -629,6 +638,9 @@ FILE	*log_fp;
 		case DIV:
 			(void)fputc( '/', log_fp );
 			break;
+		case MOD:
+			(void)fputc( '%', log_fp );
+			break;
 		case GETS:
 			(void)fputc( '=', log_fp );
 			break;
@@ -686,6 +698,7 @@ struct prio {
 	PLUS,	6,	6,
 	MINUS,	6,	6,
 	DIV,	7,	7,
+	MOD,	7,	7,
 	MUL,	7,	7,
 	NOT,	8,	8,
 	LPAREN,	0,	9,
@@ -745,12 +758,60 @@ CONTEXT	*cont2;
 	ELEM	*elem, *tmp, *result;
 	int		i;
 	EXPR	*expr;
+	time_t	timer;
+	struct tm *the_time;
 
 		/* Built in function */
 	if( strcmp("CurrentTime",name) == MATCH ) {
 		result = create_elem();
 		result->type = INT;
 		result->i_val = time( (time_t *)0 );
+		return result;
+	}
+
+	if( strcmp("Clock_Day",name) == MATCH ) {
+		result = create_elem();
+		result->type = INT;
+		time( &timer );
+		the_time = localtime( &timer );
+		result->i_val = the_time->tm_wday;
+		return result;
+	}
+
+	if( strcmp("Clock_Min",name) == MATCH ) {
+		result = create_elem();
+		result->type = INT;
+		time( &timer );
+		the_time = localtime( &timer );
+		result->i_val = (the_time->tm_hour * 60) + the_time->tm_min;
+		return result;
+	}
+
+	if( strcmp("Random_Int",name) == MATCH ) {
+		result = create_elem();
+		result->type = INT;
+		/* use random() instead of rand() when possible */
+#if defined(OSF1) || defined(Solaris) || defined(SUNOS)
+		srandom(time(NULL));
+		result->i_val = random();
+#else
+		srand(time(NULL));
+		result->i_val = rand();
+#endif
+		return result;
+	}
+
+	if( strcmp("Random_Float",name) == MATCH ) {
+		result = create_elem();
+		result->type = FLOAT;
+		/* use random() instead of rand() when possible */
+#if defined(OSF1) || defined(Solaris) || defined(SUNOS)
+		srandom(time(NULL));
+		result->f_val = random()/((float) MAXINT);
+#else
+		srand(time(NULL));
+		result->f_val = rand()/((float) RAND_MAX);
+#endif
 		return result;
 	}
 
@@ -807,6 +868,7 @@ CONTEXT	*cont2;
 			case MINUS:
 			case MUL:
 			case DIV:
+			case MOD:
 				do_op( elem, operand_stack );
 				free_elem( elem );
 				break;
@@ -855,6 +917,7 @@ STACK	*stack;
 			case MINUS:
 			case MUL:
 			case DIV:
+			case MOD:
 				do_arithmetic_op( elem->type, stack );
 				break;
 			default:
@@ -1175,6 +1238,9 @@ int		v2;
 		case DIV:
 			answer->i_val = v1 / v2;
 			break;
+		case MOD:
+			answer->i_val = v1 % v2;
+			break;
 		case MUL:
 			answer->i_val = v1 * v2;
 			break;
@@ -1231,6 +1297,7 @@ struct {
 	MINUS,		"MINUS",
 	MUL,		"MUL",
 	DIV,		"DIV",
+	MOD,		"MOD",
 	GETS,		"GETS",
 	LPAREN,		"LPAREN",
 	RPAREN,		"RPAREN",
