@@ -1036,13 +1036,21 @@ void
 file_stream_progress_report(int bytes_moved)
 {
 	if (!file_stream_info.active) {
-		dprintf(D_ALWAYS, "Warning: file_stream_progress_report() called with "
-				"no active file_stream_transfer.\n");
+		static bool warned_already = false;
+		if (!warned_already) {
+			dprintf(D_ALWAYS, "Warning: file_stream_progress_report() called "
+					"with no active file_stream_transfer.\n");
+		}
+		warned_already = true;
 		return;
 	}
 	if (file_stream_info.remote) {
-		dprintf(D_ALWAYS, "Warning: file_stream_progress_report() called with "
-				"active REMOTE file_stream_transfer.\n");
+		static bool warned_already = false;
+		if (!warned_already) {
+			dprintf(D_ALWAYS, "Warning: file_stream_progress_report() called "
+					"with active REMOTE file_stream_transfer.\n");
+		}
+		warned_already = true;
 		return;
 	}
 	file_stream_info.bytes_so_far = bytes_moved;

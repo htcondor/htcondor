@@ -44,6 +44,9 @@ int		shadow_tid;
 
 extern void do_unlink( const char * );
 
+/* these are the remote system calls used in this file */
+extern "C" int REMOTE_CONDOR_pvm_info(char *response, int mytid);
+extern "C" int REMOTE_CONDOR_pvm_task_info(int v_pid, int pvm_tid);
 
 void PVMdProc::execute()
 {
@@ -154,7 +157,7 @@ void PVMdProc::execute()
 	set_root_euid();
 	seteuid( old_uid );
 	dprintf( D_ALWAYS, "Starter tid = t%x\n", mytid );
-	(void)REMOTE_syscall( CONDOR_pvm_info, tmp, mytid );
+	(void)REMOTE_CONDOR_pvm_info( tmp, mytid );
 	delete [] tmp;
 	state = EXECUTING;
 	dprintf( D_ALWAYS, "Shadow tid = t%x\n", shadow_tid);
@@ -269,7 +272,7 @@ void PVMUserProc::execute()
 	pvm_upkint( &pvm_tid, 1, 1);
 	dprintf( D_ALWAYS, "New Tid = 0x%x\n", pvm_tid );
 
-	REMOTE_syscall( CONDOR_pvm_task_info, v_pid, pvm_tid );
+	REMOTE_CONDOR_pvm_task_info( v_pid, pvm_tid );
 	delete [] tmp;
 
 }

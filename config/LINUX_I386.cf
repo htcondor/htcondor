@@ -32,4 +32,7 @@
 #endif
 
 /*#define IS_CLIPPED YES*/
+
 #define HAS_GLOBUS	YES
+/* XXX temporary redhat 7.1-ism */
+/*#define HAS_GLOBUS	NO*/

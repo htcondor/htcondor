@@ -2,7 +2,12 @@ all_target(condor_install condor_init condor_compile ld)
 
 CFLAGS = $(STD_C_FLAGS)
 
+/* Set up where I get the glibc libraries for packaging with the release */
+#if IS_GLIBC21
 GLIBC_DIR = /p/condor/workspaces/glibc/glibc-install/lib
+#elif IS_GLIBC22
+GLIBC_DIR = /p/condor/workspaces/glibc/glibc-install/lib-glibc2.2.2/lib
+#endif
 
 release_copy_target(condor_install,$(RELEASE_DIR)/sbin,condor_install,EXECUTABLE_MODE)
 release_copy_target(condor_init,$(RELEASE_DIR)/sbin,condor_init,EXECUTABLE_MODE)
@@ -50,7 +55,7 @@ all_symlink_target(ld,real-ld)
 	automatically get used before the real libc courtesy of -L on
 	the link line). This will be the case until we hit a set of
 	header files that can't be used with glibc 2.1.1. */
-#if IS_GLIBC21
+#if IS_GLIBC21 || IS_GLIBC22
 #if ! IS_CLIPPED
 release_copy_target($(GLIBC_DIR)/libc.a,$(RELEASE_DIR)/lib,libc.a,OBJECT_MODE)
 static_copy_target($(GLIBC_DIR)/libc.a,$(STATIC_DIR)/lib,libc.a,OBJECT_MODE)

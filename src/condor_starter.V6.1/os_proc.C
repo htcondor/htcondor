@@ -265,7 +265,7 @@ OsProc::JobExit(int pid, int status)
 		ClassAd ad;
 		PublishUpdateAd( &ad );
 
-		if( REMOTE_syscall(CONDOR_job_exit, status, reason, &ad) < 0 ) {   
+		if( REMOTE_CONDOR_job_exit(status, reason, &ad) < 0 ) {   
 			dprintf( D_ALWAYS, 
 					 "Failed to send job exit status to Shadow.\n" );
 		}

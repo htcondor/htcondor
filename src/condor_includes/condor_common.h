@@ -46,8 +46,8 @@
 #endif
 #endif
 
+#include "cedar_enums.h"
 #include "../condor_sysapi/sysapi.h"
-
 
 /**********************************************************************
 ** C++ specific stuff 

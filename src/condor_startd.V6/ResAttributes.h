@@ -193,5 +193,5 @@ private:
 
 void deal_with_benchmarks( Resource* );
 
-#endif _RES_ATTRIBUTES_H
+#endif /* _RES_ATTRIBUTES_H */
 

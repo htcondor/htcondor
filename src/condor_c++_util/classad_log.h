@@ -89,7 +89,7 @@ private:
 class LogNewClassAd : public LogRecord {
 public:
 	LogNewClassAd(const char *key, const char *mytype, const char *targettype);
-	~LogNewClassAd();
+	virtual ~LogNewClassAd();
 	int Play(void *data_structure);
 	char *get_key() { return strdup(key); }
 	char *get_mytype() { return strdup(mytype); }
@@ -108,7 +108,7 @@ private:
 class LogDestroyClassAd : public LogRecord {
 public:
 	LogDestroyClassAd(const char *key);
-	~LogDestroyClassAd();
+	virtual ~LogDestroyClassAd();
 	int Play(void *data_structure);
 	char *get_key() { return strdup(key); }
 
@@ -123,7 +123,7 @@ private:
 class LogSetAttribute : public LogRecord {
 public:
 	LogSetAttribute(const char *key, const char *name, const char *value);
-	~LogSetAttribute();
+	virtual ~LogSetAttribute();
 	int Play(void *data_structure);
 	char *get_key() { return strdup(key); }
 	char *get_name() { return strdup(name); }
@@ -141,7 +141,7 @@ private:
 class LogDeleteAttribute : public LogRecord {
 public:
 	LogDeleteAttribute(const char *key, const char *name);
-	~LogDeleteAttribute();
+	virtual ~LogDeleteAttribute();
 	int Play(void *data_structure);
 	char *get_key() { return strdup(key); }
 	char *get_name() { return strdup(name); }
@@ -157,6 +157,7 @@ private:
 class LogBeginTransaction : public LogRecord {
 public:
 	LogBeginTransaction() { op_type = CondorLogOp_BeginTransaction; }
+	virtual ~LogBeginTransaction(){};
 private:
 	virtual int WriteBody(int fd) { return 0; }
 	virtual int ReadBody(int fd);
@@ -165,6 +166,7 @@ private:
 class LogEndTransaction : public LogRecord {
 public:
 	LogEndTransaction() { op_type = CondorLogOp_EndTransaction; }
+	virtual ~LogEndTransaction(){};
 private:
 	virtual int WriteBody(int fd) { return 0; }
 	virtual int ReadBody(int fd);

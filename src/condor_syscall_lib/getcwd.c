@@ -14,6 +14,9 @@ char* getwd( char* );
 char* _getwd( char* );
 char* __getwd( char* );
 
+/* remote system call externs */
+extern int REMOTE_CONDOR_getwd(char *path_name);
+
 
 /* Definitions of the getwd() and getcwd() that the user job will
    probably call */
@@ -24,7 +27,7 @@ getwd( char *path )
 	if( LocalSysCalls() ) {
 		return GETCWD( path, _POSIX_PATH_MAX );
 	} else {
-		REMOTE_syscall( CONDOR_getwd, path );
+		REMOTE_CONDOR_getwd( path );
 		return path;
 	}
 }
@@ -44,7 +47,7 @@ getcwd( char *path, size_t size )
 			return NULL;
 		}
 		tmpbuf[0] = '\0';
-		REMOTE_syscall( CONDOR_getwd, tmpbuf );
+		REMOTE_CONDOR_getwd( tmpbuf );
 		if ( tmpbuf[0] == '\0' ) {
 			// our remote syscall failed somehow
 			return NULL;

@@ -82,6 +82,7 @@ _updateckpt( char *a, char *b, char *c )
 }
 #endif
 
+
 extern sigset_t	ChildSigMask;
 extern NameTable SigNames;
 extern char *ThisHost;
@@ -89,6 +90,18 @@ extern char *InitiatingHost;
 extern ReliSock	*SyscallStream;	// stream to shadow for remote system calls
 extern int EventSigs[];
 int UserProc::proc_index = 1;
+
+/* These are the remote system calls we use in this file */
+extern "C" int REMOTE_CONDOR_get_a_out_name(char *path);
+extern "C" int REMOTE_CONDOR_getwd(char *path_name);
+extern "C" int REMOTE_CONDOR_free_fs_blocks(char *pathname);
+extern "C" int REMOTE_CONDOR_get_std_file_info(int fd, char *logical_name);
+extern "C" int REMOTE_CONDOR_get_file_info_new(char *logical_name,
+	char *actual_url);
+extern "C" int REMOTE_CONDOR_std_file_info(int fd, char *logical_name,
+	int *pipe_fd);
+extern "C" int REMOTE_CONDOR_report_error(char *msg);
+extern "C" int REMOTE_CONDOR_get_iwd(char *path);
 
 #ifndef MATCH
 #define MATCH 0	// for strcmp
@@ -193,7 +206,7 @@ UserProc::expand_exec_name( int &on_this_host )
 	char	a_out[ _POSIX_PATH_MAX ];
 	int		status;
 
-	status = REMOTE_syscall( CONDOR_get_a_out_name, a_out );
+	status = REMOTE_CONDOR_get_a_out_name( a_out );
 	if( status < 0 ) {
 		EXCEPT( "Can't get name of a.out file" );
 	}
@@ -928,13 +941,15 @@ UserProc::store_core()
 		}
 	}
 
-	if( REMOTE_syscall(CONDOR_getwd,virtual_working_dir) < 0 ) {
-		EXCEPT( "REMOTE_syscall(CONDOR_getwd)" );
+	if( REMOTE_CONDOR_getwd(virtual_working_dir) < 0 ) {
+		EXCEPT( "REMOTE_CONDOR_getwd(virtual_working_dir = %s)",
+			(virtual_working_dir != NULL)?virtual_working_dir:"(null)");
 	}
 
-	free_disk = REMOTE_syscall( CONDOR_free_fs_blocks, virtual_working_dir);
+	free_disk = REMOTE_CONDOR_free_fs_blocks( virtual_working_dir);
 	if( free_disk < 0 ) {
-		EXCEPT( "REMOTE_syscall(CONDOR_free_fs_blocks)" );
+		EXCEPT( "REMOTE_CONDOR_free_fs_blocks(virtual_working_dir = %s)",
+			(virtual_working_dir != NULL)?virtual_working_dir:"(null)");
 	}
 
 	dprintf( D_ALWAYS, "Core file size is %d kbytes\n", core_size );
@@ -1066,15 +1081,15 @@ open_std_file( int fd )
 
 	/* First, try the new set of remote lookups */
 
-	success = REMOTE_syscall( CONDOR_get_std_file_info, fd, logical_name );
+	success = REMOTE_CONDOR_get_std_file_info( fd, logical_name );
 	if(success>=0) {
-		success = REMOTE_syscall( CONDOR_get_file_info_new, logical_name, physical_name );
+		success = REMOTE_CONDOR_get_file_info_new(logical_name, physical_name);
 	}
 
 	/* If either of those fail, fall back to the old way */
 
 	if(success<0) {
-		success = REMOTE_syscall( CONDOR_std_file_info, fd, logical_name, &real_fd );
+		success = REMOTE_CONDOR_std_file_info( fd, logical_name, &real_fd );
 		if(success<0) {
 			EXCEPT("Couldn't get standard file info!");
 		}
@@ -1117,7 +1132,7 @@ open_std_file( int fd )
 	if(real_fd<0) {
 		sprintf(buf,"Can't open \"%s\": %s", file_name,strerror(errno));
 		dprintf(D_ALWAYS,buf);
-		REMOTE_syscall(CONDOR_report_error, buf);
+		REMOTE_CONDOR_report_error(buf);
 		exit( 4 );
 	} else {
 		if( real_fd != fd ) {
@@ -1233,13 +1248,11 @@ set_iwd()
 	char	iwd[ _POSIX_PATH_MAX ];
 	char	buf[ _POSIX_PATH_MAX + 50 ];
 
-	if( REMOTE_syscall(CONDOR_get_iwd,iwd) < 0 ) {
-		REMOTE_syscall(
-			CONDOR_report_error,
-			"Can't determine initial working directory"
-		);
+	if( REMOTE_CONDOR_get_iwd(iwd) < 0 ) {
+		REMOTE_CONDOR_report_error("Can't determine initial working directory");
 		exit( 4 );
 	}
+
 	if( chdir(iwd) < 0 ) {
 
 		int rval = -1;
@@ -1256,7 +1269,7 @@ set_iwd()
 			
 		sprintf( buf, "Can't open working directory \"%s\": %s", iwd,
 			    strerror(errno) );
-		REMOTE_syscall( CONDOR_report_error, buf );
+		REMOTE_CONDOR_report_error( buf );
 		exit( 4 );
 	}
 }

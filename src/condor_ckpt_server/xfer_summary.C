@@ -34,7 +34,7 @@
 #include "my_hostname.h"
 
 extern "C" {
-	char *calc_subnet_name();
+	char* calc_subnet_name(char*);
 	char* getwd( char* );
 }
 

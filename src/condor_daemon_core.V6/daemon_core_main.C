@@ -855,7 +855,8 @@ handle_dc_sighup( Service*, int )
 		 (*ptmp=='T' || *ptmp=='t') ) {
 			// on purpose, derefernce a null pointer.
 			ptmp = NULL;
-			char crap = *ptmp;		// should blow up here
+			char segfault;	
+			segfault = *ptmp; // should blow up here
 			
 			// should never make it to here!
 			EXCEPT("FAILED TO DROP CORE");	

@@ -173,5 +173,5 @@ private:
 };
 
 
-#endif _MATCH_H
+#endif /* _MATCH_H */
 

@@ -32,23 +32,5 @@ int CurrentSysCall;
 
 extern ReliSock *syscall_sock;
 
-int
-REMOTE_syscall( int syscall_num, ... )
-{
-	int		scm;
-	int		terrno;
-	int		rval;
-	sigset_t	mask, omask;
-	va_list ap;
-#if defined(USE_STUB_CLUMPS) || defined(IRIX)
-	int keep_going = 0;
-#endif
-
-	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-
-	va_start( ap, syscall_num );
-
-	omask = _condor_signals_disable();
-	
-	switch( syscall_num ) {
-
+/* Ahhh, like drinking beer by the pool side. */
+extern "C" {

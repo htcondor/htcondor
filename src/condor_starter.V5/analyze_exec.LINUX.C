@@ -30,7 +30,8 @@ Purpose:
 	with the Condor remote execution library.  Any executable format
 	supported by the BFD library will be detected.  For now, the
 	accepted formats are a.out and ELF.  We also look for a well known 
-	symbol from the Condor library (REMOTE_syscall) to ensure proper linking.
+	symbol from the Condor library (_linked_with_condor_message) to ensure 
+	proper linking.
 
 Portability:
 	This code depends upon executable formats for LINUX 2.0.x systems, 
@@ -84,7 +85,7 @@ int magic_check( char *executable )
 
 /*
   - Check to see that the checkpoint file is linked with the Condor
-  - library by looking for the symbol "REMOTE_syscall".
+  - library by looking for the symbol "_linked_with_condor_message".
 */
 int symbol_main_check( char *executable )
 {
@@ -128,10 +129,11 @@ int symbol_main_check( char *executable )
 				return -1;
 			}
 
-			// Search for the REMOTE_syscall sym
+			// Search for the _linked_with_condor_message sym
 			for(i=0;i<number_of_symbols;i++) {
-				if(strcmp(bfd_asymbol_name(symbol_table[i]), "REMOTE_syscall")==0) {
-        			dprintf( D_ALWAYS, "Symbol REMOTE_syscall check - OK\n" );
+				if(strcmp(bfd_asymbol_name(symbol_table[i]), "_linked_with_condor_message")==0) {
+        			dprintf( D_ALWAYS, 	
+						"Symbol _linked_with_condor_message check - OK\n" );
 					bfd_close(bfdp);
 					free(symbol_table);
 					return 0;

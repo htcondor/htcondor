@@ -153,7 +153,7 @@ int symbol_main_check( char *name )
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 #define NEW_SYSCALLS
 #if defined(NEW_SYSCALLS)
-	target = "REMOTE_syscall";
+	target = "_linked_with_condor_message";
 #else
 	target = "MAIN";
 #endif

@@ -65,6 +65,14 @@ Stream :: Stream(stream_code c) :
 {
 }
 
+int
+Stream::code( void *&)
+{
+	/* This is a noop just to make stub generation happy. All of the functions
+		that wish to use this overload we don't support or ignore. -psilord */
+	return TRUE;
+}
+
 Stream :: ~Stream()
 {
     delete crypto_;

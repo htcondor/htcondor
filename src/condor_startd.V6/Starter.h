@@ -78,4 +78,4 @@ private:
 	time_t	s_last_snapshot;
 };
 
-#endif _CONDOR_STARTD_STARTER_H
+#endif /* _CONDOR_STARTD_STARTER_H */

@@ -56,7 +56,6 @@ int GetSyscallMode();
 BOOL LocalSysCalls();
 BOOL RemoteSysCalls();
 BOOL MappingFileDescriptors();
-int REMOTE_syscall( int syscall_num, ... );
 
 #if defined(OSF1) || defined(HPUX) || defined(SUNOS41) || defined (Solaris)
 	int syscall( int, ... );

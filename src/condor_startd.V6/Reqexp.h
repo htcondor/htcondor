@@ -53,4 +53,4 @@ private:
 	reqexp_state	rstate;
 };
 
-#endif _REQEXP_H
+#endif /* _REQEXP_H */

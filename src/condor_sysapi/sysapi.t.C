@@ -28,10 +28,10 @@
 #include "sysapi_externs.h"
 
 int
-main()
+main(int argc, char** argv)
 {
 	set_debug_flags("D_ALWAYS");
 	config();
-	sysapi_test_dump_all();
+	sysapi_test_dump_all(argc, argv);
 	return 0;
 }

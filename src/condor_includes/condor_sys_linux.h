@@ -109,6 +109,9 @@ END_C_DECLS
 /* swapon and swapoff prototypes */
 #include <linux/swap.h>
 
+/* include stuff for malloc control */
+#include <malloc.h>
+
 /****************************************
 ** Condor-specific system definitions
 ***************************************/
@@ -116,7 +119,12 @@ END_C_DECLS
 #define HAS_U_TYPES	1
 #define SIGSET_CONST	/* nothing */
 
+#if defined(GLIBC22)
+	#define SYNC_RETURNS_VOID 1
+#endif
+
 /* typedef long long off64_t; */
+
 typedef void* MMAP_T;
 
 #endif /* CONDOR_SYS_LINUX_H */

@@ -183,9 +183,28 @@ void get_ckpt_name();
 extern volatile int InRestart;
 void _condor_setup_dprintf();
 
+/* These are the various remote system calls we need to worry about */
+extern int REMOTE_CONDOR_register_syscall_version(char *version);
+extern int REMOTE_CONDOR_chdir(const char *path);
+extern int REMOTE_CONDOR_image_size(int kbytes);
+extern int REMOTE_CONDOR_get_ckpt_mode(enum condor_signal_t sig);
+extern int REMOTE_CONDOR_get_ckpt_speed(void);
+extern int REMOTE_CONDOR_get_std_file_info(int fd, char *logical_name);
+extern int REMOTE_CONDOR_get_iwd(char *path);
+extern int REMOTE_CONDOR_get_ckpt_name(char *path);
+
 extern int _condor_dprintf_works;
 extern int	_condor_DebugFD;
 static int do_remote_syscalls = 1;
+
+/* This is what we use to determine if an executable has been linked with
+	Condor. Do not rename this function because things like analyze_exec 
+	look for it. */
+void _linked_with_condor_message(void)
+{
+	dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorPlatform() );
+	dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorVersion() );
+}
 
 int
 #if defined(HPUX)
@@ -402,10 +421,9 @@ MAIN( int argc, char *argv[], char **envp )
 
 		_condor_file_table_init();
 
-		dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorPlatform() );
-		dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorVersion() );
+		_linked_with_condor_message();
 			// Also, register the version with the shadow
-		REMOTE_syscall( CONDOR_register_syscall_version, CondorVersion() );
+		REMOTE_CONDOR_register_syscall_version( CondorVersion() );
 
 		SetSyscalls( SYS_REMOTE | SYS_MAPPED );
 
@@ -427,8 +445,7 @@ MAIN( int argc, char *argv[], char **envp )
 
 		_condor_prestart( SYS_LOCAL );
 
-		dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorVersion() );
-		dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorPlatform() );
+		_linked_with_condor_message();
 
 		init_image_with_file_name( ckpt_file );
 
@@ -567,7 +584,7 @@ condor_iwd( const char *path )
 	dprintf( D_ALWAYS, "condor_iwd: path = \"%s\"\n", path );
 	delay();
 #endif
-	REMOTE_syscall( CONDOR_chdir, path );
+	REMOTE_CONDOR_chdir( path );
 	return TRUE;
 }
 
@@ -678,7 +695,7 @@ report_image_size( int kbytes )
 	if( !do_remote_syscalls ) {
 		return;
 	} else {
-		REMOTE_syscall( CONDOR_image_size, kbytes );
+		REMOTE_CONDOR_image_size( kbytes );
 	}
 }
 
@@ -697,7 +714,7 @@ get_ckpt_mode( int sig )
 	if( !do_remote_syscalls ) {
 		return 0;
 	} else {
-		return REMOTE_syscall( CONDOR_get_ckpt_mode, sig );
+		return REMOTE_CONDOR_get_ckpt_mode( sig );
 	}
 }
 
@@ -711,7 +728,7 @@ get_ckpt_speed()
 	if( !do_remote_syscalls ) {
 		return 0;
 	} else {
-		return REMOTE_syscall( CONDOR_get_ckpt_speed );
+		return REMOTE_CONDOR_get_ckpt_speed( );
 	}
 }
 
@@ -790,7 +807,7 @@ open_std_file( int fd )
 	int	new_fd;
 	int	flags;
 
-	result = REMOTE_syscall(CONDOR_get_std_file_info,fd,logical_name);
+	result = REMOTE_CONDOR_get_std_file_info(fd,logical_name);
 	if(result==0) {
 		close(fd);
 		if(fd==0) {
@@ -817,7 +834,7 @@ _condor_set_iwd()
 	char	buf[ _POSIX_PATH_MAX + 50 ];
 	int	scm;
 
-	if( REMOTE_syscall(CONDOR_get_iwd,iwd) < 0 ) {
+	if( REMOTE_CONDOR_get_iwd(iwd) < 0 ) {
 		_condor_error_fatal( "Can't determine initial working directory" );
 	}
 	scm = SetSyscalls( SYS_REMOTE|SYS_MAPPED );
@@ -833,7 +850,7 @@ get_ckpt_name()
 	char	ckpt_name[ _POSIX_PATH_MAX ];
 	int		status;
 
-	status = REMOTE_syscall( CONDOR_get_ckpt_name, ckpt_name );
+	status = REMOTE_CONDOR_get_ckpt_name( ckpt_name );
 	if( status < 0 ) {
 		_condor_error_fatal("Can't get checkpoint file name!\n");
 	}

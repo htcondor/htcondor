@@ -70,4 +70,4 @@ private:
 	MyString		ckpt_filename, tmp_ckpt_filename;
 };
 
-#endif _AVAIL_STATS_H
+#endif /* _AVAIL_STATS_H */

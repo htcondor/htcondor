@@ -296,7 +296,7 @@ All of these calls manipulate the open file table.
 	      at least 32 bit offsets work now. :) 
 	      Derek Wright <wright@cs.wisc.edu> 2/4/00
 	   */
-		#if defined(GLIBC21)
+		#if defined(GLIBC21) || defined(GLIBC22)
 			off64_t llseek( int fd, off64_t offset, int whence )
 				: file_table_name(lseek), remote_name(lseek), no_sys_chk, 
 				local_name(lseek);
@@ -389,9 +389,12 @@ All of these calls manipulate the open file table.
 	poll and switch are supported in a limited way for local files
 	and sockets, so we need the switch to trap them, but
 	no sender or receiver.
+	
+	Addendum, we actually need a sender so the shadow could support it in 
+	the future. -psilord 5/23/2001
 	*/
 
-	#if defined(SWITCH)
+	#if defined(SWITCH) || defined(SENDER)
 		#if defined(OSF1) || defined(HPUX10)
 			int poll( struct pollfd *fds, nfds_t nfds, int timeout ) : file_table;
 			int select (int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) : file_table;
@@ -405,10 +408,16 @@ All of these calls manipulate the open file table.
 	socket is supported in general, but is a special
 	switch on Solaris.
 	*/
-	#if !defined(Solaris) || !defined(SWITCH)
+	#if defined(Solaris)
+		#if !defined(SWITCH)
+		int socket( int domain, int type, int protocol )
+			: file_table, no_sys_chk, INDIRECT;
+		#endif
+	#else
 		int socket( int domain, int type, int protocol )
 			: file_table, INDIRECT;
 	#endif
+
 
 #endif /* FILE_TABLE and not CLIP */
 
@@ -426,7 +435,7 @@ version.
 	Most of the switches are special.
 	*/
 
-	#if defined(LINUX) && (defined(GLIBC20)||defined(GLIBC21))
+	#if defined(LINUX) && (defined(GLIBC20)||defined(GLIBC21)||defined(GLIBC22))
 		#define STAT_NEEDS_SPECIAL_SWITCH
 	#elif defined(LINUX)
 		#define STAT_NEEDS_EXTRACT
@@ -846,14 +855,15 @@ either file names or file descriptors.
 		}
 	#endif
 
+
+#endif /* REMOTE_SYSCALLS and not CLIP */
+
 	#if !defined(SWITCH)
 		char * getwd( char *path_name ) : pseudo {
 			GET_PATH( path_name );
 			ALLOC_PATH( path_name );
 		}
 	#endif
-
-#endif /* REMOTE_SYSCALLS and not CLIP */
 
 /*
 These are general-purpose system calls.
@@ -1447,7 +1457,7 @@ not_supported {
 		pid_t fork1();
 	#endif
 
-	#if defined(LINUX) && ! defined(GLIBC21)
+	#if defined(LINUX) && ! (defined(GLIBC21) || defined(GLIBC22))
 	pid_t vfork() : EXTRACT;
 	#else
 	pid_t vfork();

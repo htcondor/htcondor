@@ -162,4 +162,4 @@ private:
 	time_t	r_cpu_busy_start_time;
 };
 
-#endif _STARTD_RESOURCE_H
+#endif /* _STARTD_RESOURCE_H */

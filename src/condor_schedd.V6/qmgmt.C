@@ -660,7 +660,7 @@ InitializeConnection( const char *owner )
 
 #if !defined(WIN32)
 	active_owner_uid = get_user_uid();
-#endif !WIN32
+#endif /* !WIN32 */
 
 	return 0;
 }

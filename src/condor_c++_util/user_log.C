@@ -313,7 +313,7 @@ InitUserLog( const char *own, const char *file, int c, int p, int s )
 extern "C" void
 CloseUserLog( LP *lp )
 {
-	delete lp;
+	delete (UserLog*)lp;
 }
 
 extern "C" void

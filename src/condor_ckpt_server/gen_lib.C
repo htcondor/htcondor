@@ -91,6 +91,9 @@ void PrintTime(ofstream& outfile)
 
 
 extern "C" {
+/* XXX This should prolly be documented for why it is here.... */
 int
-SetSyscalls() {}
+SetSyscalls() { return -1; }
 }
+
+

@@ -32,7 +32,9 @@ osver=`uname -r`
 
 LINUX_LIB="NOT_SO_LINUX"
 if [ $os = "Linux" ]; then
-        if [ -f /lib/libc-2.1* ]; then
+        if [ -f /lib/libc-2.2* ]; then
+                LINUX_LIB="glibc22"
+        elif [ -f /lib/libc-2.1* ]; then
                 LINUX_LIB="glibc21"
         elif [ -f /lib/libc-2.0* ]; then
                 LINUX_LIB="glibc20"
@@ -249,7 +251,7 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
               else
 				if [ $os = "OSF1" ]; then				
 					ldargs=`echo $ldargs -lm -lc`
-				elif [ $LINUX_LIB = "glibc21" ]; then
+				elif [ $LINUX_LIB = "glibc21" -o $LINUX_LIB = "glibc22" ]; then
 
 					ldargs=`echo $ldargs -L$CONDOR_LIBDIR -lc -lnss_files -lnss_dns -lresolv -lc`
 				else

@@ -102,7 +102,6 @@ void init_environment_info();
 void determine_user_ids( uid_t &requested_uid, gid_t &requested_gid );
 StateMachine	*condor_starter_ptr;
 
-
 /*
   Main routine for condor_starter.  DEBUGGING can be turned on if we
   need to attach a debugger at run time.  Everything is driven by the
@@ -572,7 +571,7 @@ send_final_status( UserProc *proc )
 #if 0
 	image_size = proc->get_image_size();
 	if ( image_size > 0 ) {
-		(void)REMOTE_syscall( CONDOR_image_size, image_size );
+		(void)REMOTE_CONDOR_image_size( image_size );
 	}
 #endif
 
@@ -581,10 +580,11 @@ send_final_status( UserProc *proc )
 	if( proc->get_class() == PVM ) {
 		rusage = proc->accumulated_rusage();	// All resource usage
 		id = proc->get_id();
-		(void)REMOTE_syscall( CONDOR_subproc_status, id, status, rusage);
+		(void)REMOTE_CONDOR_subproc_status( (int)id, (int*)status, 
+			(struct rusage*)rusage);
 	} else {
 		rusage = proc->guaranteed_rusage();		// Only usage guaranteed by ckpt
-		(void)REMOTE_syscall( CONDOR_reallyexit, status, rusage);
+		(void)REMOTE_CONDOR_reallyexit( (int*)status, (struct rusage*)rusage);
 	}
 
 	dprintf( D_FULLDEBUG,
@@ -1019,7 +1019,7 @@ update_cpu()
 	proc = UProcList.Current();
 
 	rusage = proc->accumulated_rusage();
-	(void)REMOTE_syscall( CONDOR_send_rusage, rusage );
+	(void)REMOTE_CONDOR_send_rusage( rusage );
 #endif
 	return(0);
 }
@@ -1048,7 +1048,7 @@ get_job_info()
 	dprintf( D_ALWAYS, "Entering get_job_info()\n" );
 
 	memset( &s, 0, sizeof(s) );
-	REMOTE_syscall( CONDOR_startup_info_request, &s );
+	REMOTE_CONDOR_startup_info_request( &s );
 	display_startup_info( &s, D_ALWAYS );
 
 	determine_user_ids( s.uid, s.gid );
@@ -1210,32 +1210,32 @@ init_environment_info()
 
 	my_fs_domain = param( "FILESYSTEM_DOMAIN" );
 	if( my_fs_domain ) {
-		REMOTE_syscall( CONDOR_register_fs_domain, my_fs_domain );
+		REMOTE_CONDOR_register_fs_domain( my_fs_domain );
 		free(my_fs_domain);
 	}
 
 	my_uid_domain = param( "UID_DOMAIN" );
 	if( my_uid_domain ) {
-		REMOTE_syscall( CONDOR_register_uid_domain, my_uid_domain );
+		REMOTE_CONDOR_register_uid_domain( my_uid_domain );
 		free(my_uid_domain);
 	}
 
 #if !defined(CONTRIB)
 	ckpt_server_host = param( "CKPT_SERVER_HOST" );
 	if( ckpt_server_host ) {
-		REMOTE_syscall( CONDOR_register_ckpt_server, ckpt_server_host );
+		REMOTE_CONDOR_register_ckpt_server( ckpt_server_host );
 		free(ckpt_server_host);
 	}
 
 	arch = param( "ARCH" );
 	if (arch) {
-		REMOTE_syscall( CONDOR_register_arch, arch );
+		REMOTE_CONDOR_register_arch( arch );
 		free(arch);
 	}
 
 	opsys = param( "OPSYS" );
 	if (opsys) {
-		REMOTE_syscall( CONDOR_register_opsys, opsys);
+		REMOTE_CONDOR_register_opsys( opsys );
 		free(opsys);
 	}
 #endif

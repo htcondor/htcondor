@@ -145,4 +145,4 @@ private:
 //    AttrList       attrList;             // attribute list requested
 };
 
-#endif CCTP_MSG_H_
+#endif /* CCTP_MSG_H_ */

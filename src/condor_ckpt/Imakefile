@@ -128,9 +128,13 @@ OBJ =	syscall_mode.o shared_utils.o
 
 
 #   if IS_EGCS_BUILD
-
+#		if IS_GLIBC_LINUX && IS_GLIBC22
+		CPP_SUPPORT_EXTRACT_OBJ = _eh.o tinfo.o tinfo2.o \
+			  exception.o frame-dwarf2.o __dummy.o _pure.o 
+#		else
 		CPP_SUPPORT_EXTRACT_OBJ = _eh.o tinfo.o tinfo2.o \
 			  exception.o frame.o __dummy.o _pure.o 
+#		endif
 
         CPP_SUPPORT_OBJ = c_plus_alloc.o $(CPP_SUPPORT_EXTRACT_OBJ)
 
@@ -320,7 +324,7 @@ condor_rt0.o: Crt0 ToUpper
 	./ToUpper Crt0 condor_rt0.o main  MAIN
 clean::
 	rm -f condor_rt0.o
-#elif IS_GLIBC_LINUX && IS_GLIBC21
+#elif IS_GLIBC_LINUX && (IS_GLIBC21 || IS_GLIBC22)
 condor_rt0.o: Crt0 ToUpper
 	./ToUpper Crt0 tmp1 main  MAIN
 	./ToUpper tmp1 condor_rt0.o __libc_start_MAIN __libc_start_main

@@ -66,9 +66,18 @@ int	UsePipes;
 char* mySubSystem = "SHADOW";
 
 extern "C" {
+#if defined(LINUX) && defined(GLIBC22)
+	/* XXX fix declarations as well.  */
+	void reaper(int);
+	void handle_sigusr1(int);
+	void handle_sigquit(int);
+#else
 	void reaper();
 	void handle_sigusr1();
 	void handle_sigquit();
+#endif
+
+
 	void unblock_signal(int sig);
 	void block_signal(int sig);
 	void display_errors( FILE *fp );
@@ -80,8 +89,8 @@ extern "C" {
 				int *jobstatus, char *coredir );
 	void get_local_rusage( struct rusage *bsd_rusage );
 	void NotifyUser( char *buf, PROC *proc );
-	FILE	*fdopen();
-	int		whoami();
+	FILE	*fdopen(int, const char *);
+	int		whoami(FILE*);
 	void update_job_status( struct rusage *localp, struct rusage *remotep );
 	void update_job_rusage( struct rusage *localp, struct rusage *remotep );
 	int DoCleanup();
@@ -193,7 +202,7 @@ int		HadErr = 0;
 
 #ifdef NOTDEF
 int		InitialJobStatus = -1;
-#endif NOTDEF
+#endif /* NOTDEF */
 
 int JobStatus;
 struct rusage JobRusage;
@@ -333,7 +342,7 @@ main(int argc, char *argv[], char *envp[])
 	while( x ) {
 
 	}
-#endif WAIT_FOR_DEBUGGER
+#endif /* WAIT_FOR_DEBUGGER */
 
 	if( strcmp("-pipe",argv[1]) == 0 ) {
 		capability = argv[2];
@@ -1310,8 +1319,13 @@ open_named_pipe( const char *name, int mode, int target_fd )
 	}
 }
 
+#if defined(LINUX) && defined(GLIBC22)
+void
+reaper(int unused)
+#else
 void
 reaper()
+#endif
 {
 	pid_t		pid;
 	int			status;
@@ -1366,8 +1380,13 @@ display_uids()
   the schedd already knows this job should be removed.
   Cleaned up, clarified and simplified on 5/12/00 by Derek Wright
 */
+#if defined(LINUX) && defined(GLIBC22)
+void
+handle_sigusr1( int unused )
+#else
 void
 handle_sigusr1( void )
+#endif
 {
 	dprintf( D_ALWAYS, 
 			 "Shadow received SIGUSR1 (rm command from schedd)\n" );
@@ -1385,8 +1404,13 @@ handle_sigusr1( void )
   startd, to force the job to quickly vacate.
   Cleaned up, clarified and simplified on 5/12/00 by Derek Wright
 */
+#if defined(LINUX) && defined(GLIBC22)
+void
+handle_sigquit( int unused )
+#else
 void
 handle_sigquit( void )
+#endif
 {
 	dprintf( D_ALWAYS, "Shadow recieved SIGQUIT (fast shutdown)\n" ); 
 	send_quit( ExecutingHost, GlobalCap );

@@ -43,6 +43,7 @@ enum CollectionType { ExplicitCollection_e, ConstraintCollection_e, PartitionPar
 class BaseCollection {
 
 public:
+	virtual ~BaseCollection(){};
 
   BaseCollection(const MyString& rank) {
     Rank=rank;
@@ -66,6 +67,7 @@ public:
 class ExplicitCollection : public BaseCollection {
 
 public:
+	virtual ~ExplicitCollection(){};
 
   ExplicitCollection(const MyString& rank, bool fullFlag) 
   : BaseCollection(rank) {
@@ -87,6 +89,7 @@ public:
 class ConstraintCollection : public BaseCollection {
 
 public:
+	virtual ~ConstraintCollection(){};
 
   ConstraintCollection(const MyString& rank, const MyString& constraint)
   : BaseCollection(rank) {
@@ -126,6 +129,7 @@ class PartitionParent : public BaseCollection {
 
 public:
 
+	virtual ~PartitionParent(){};
   PartitionParent(const MyString& rank, StringSet& attributes)
   : BaseCollection(rank) {
     Attributes=attributes;
@@ -146,6 +150,7 @@ public:
 class PartitionChild : public BaseCollection {
 
 public:
+	virtual ~PartitionChild(){};
 
   PartitionChild(const MyString& rank, StringSet& values)
   : BaseCollection(rank) {

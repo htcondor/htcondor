@@ -111,6 +111,9 @@ unsigned int _condor_numrestarts = 0;
 int condor_compress_ckpt = 1; // compression off(0) or on(1)
 int condor_slow_ckpt = 0;
 
+/* these are the remote system calls we use in this file */
+extern "C" int REMOTE_CONDOR_send_rusage(struct rusage *use_p);
+
 // set mySubSystem for Condor components which expect it
 char *mySubSystem = "JOB";
 
@@ -1572,7 +1575,7 @@ Checkpoint( int sig, int code, void *scp )
 		bsd_usage.ru_stime.tv_usec = posix_usage.tms_stime % clock_tick;
 		(bsd_usage.ru_stime.tv_usec) *= 1000000 / clock_tick;
 		SetSyscalls( SYS_REMOTE | SYS_UNMAPPED );
-		(void)REMOTE_syscall( CONDOR_send_rusage, (void *) &bsd_usage );
+		(void)REMOTE_CONDOR_send_rusage( &bsd_usage );
 		SetSyscalls( p_scm );
 
 	} else {

@@ -31,6 +31,10 @@
 double	get_time();
 extern int	Syscalls;
 
+/* remote systems calls we use in this file */
+extern int REMOTE_CONDOR_extern_name(char *path, char *buf, int bufsize);
+extern int REMOTE_CONDOR_getwd(char *path_name);
+
 #define CHUNK_SIZE 4096
 
 
@@ -194,7 +198,7 @@ find_physical_host( const char *path, int flags )
 
 		/* Try to find the pathname as given */
 	/* if( extern_name(path,answer,sizeof(answer)) >= 0 ) { */
-	if( REMOTE_syscall(CONDOR_extern_name,path,answer,sizeof(answer)) >= 0 ) {
+	if( REMOTE_CONDOR_extern_name(path,answer,sizeof(answer)) >= 0 ) {
 		if( ptr=strchr(answer,':') ) { /* dhaval 9/25 */
 			*ptr = '\0';
 		}
@@ -214,11 +218,11 @@ find_physical_host( const char *path, int flags )
 			*ptr = '\0';
 		}
 	} else {
-		REMOTE_syscall( CONDOR_getwd, dir );
+		REMOTE_CONDOR_getwd( dir );
 	}
 
 	/* if( extern_name(dir,answer,sizeof(answer)) >= 0 ) { */
-	if( REMOTE_syscall(CONDOR_extern_name,dir,answer,sizeof(answer)) >= 0 ) {
+	if( REMOTE_CONDOR_extern_name(dir,answer,sizeof(answer)) >= 0 ) {
 		if( ptr=strchr(answer,':') ) { /* dhaval 9/25 */
 			*ptr = '\0';
 		}

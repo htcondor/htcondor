@@ -47,6 +47,16 @@
 #include <stdarg.h>
 #include <sys/errno.h>
 
+/* These are the remote system calls we use in this file */
+extern "C" int REMOTE_CONDOR_report_file_info_new(char *name, 
+	long long open_count, long long read_count, long long write_count,
+	long long seek_count, long long read_bytes, long long write_bytes);
+extern "C" int REMOTE_CONDOR_get_file_info_new(char *logical_name,
+	char *actual_url);
+extern "C" int REMOTE_CONDOR_get_buffer_info(int *bytes, int *block_size, 
+	int *prefetch_size);
+extern "C" int REMOTE_CONDOR_chdir(const char *path);
+
 CondorFileTable *FileTab=0;
 
 /**
@@ -71,7 +81,8 @@ public:
 
 	void	report() {
 		if( RemoteSysCalls() ) {
-			REMOTE_syscall( CONDOR_report_file_info_new, info_name, open_count, read_count, write_count, seek_count, read_bytes, write_bytes );
+			REMOTE_CONDOR_report_file_info_new( info_name, open_count, 
+				read_count, write_count, seek_count, read_bytes, write_bytes );
 		}
 	}
 
@@ -367,14 +378,15 @@ void CondorFileTable::lookup_url( char *logical_name, char *url )
 	if( LocalSysCalls() ) {
 		sprintf(url,"local:%s",logical_name);
 	} else {
-		int result = REMOTE_syscall( CONDOR_get_file_info_new, logical_name, url );
+		int result = REMOTE_CONDOR_get_file_info_new( logical_name, url );
 		if( result<0 ) {
 			sprintf(url,"buffer:remote:%s",logical_name);
 		}
 
 		if(!got_buffer_info) {
 			int temp;
-			REMOTE_syscall( CONDOR_get_buffer_info, &buffer_size, &buffer_block_size, &temp );
+			REMOTE_CONDOR_get_buffer_info( &buffer_size, &buffer_block_size, 
+				&temp );
 			got_buffer_info = 1;
 		}
 	}
@@ -947,7 +959,7 @@ int CondorFileTable::chdir( const char *path )
 	int result;
 
 	if( MyImage.GetMode() != STANDALONE ) {
-		result = REMOTE_syscall( CONDOR_chdir, path );
+		result = REMOTE_CONDOR_chdir( path );
 	} else {
 		result = syscall( SYS_chdir, path );
 	}
@@ -1238,7 +1250,8 @@ void CondorFileTable::checkpoint()
 	dump();
 
 	if( MyImage.GetMode() != STANDALONE ) {
-		REMOTE_syscall( CONDOR_get_buffer_info, &buffer_size, &buffer_block_size, &temp );
+		REMOTE_CONDOR_get_buffer_info( &buffer_size, &buffer_block_size, 
+			&temp );
 	}
 	dprintf(D_ALWAYS,"working dir = %s\n",working_dir);
 
@@ -1273,8 +1286,9 @@ void CondorFileTable::resume()
 	dprintf(D_ALWAYS,"working dir = %s\n",working_dir);
 
 	if(MyImage.GetMode()!=STANDALONE) {
-		REMOTE_syscall( CONDOR_get_buffer_info, &buffer_size, &buffer_block_size, &temp );
-		result = REMOTE_syscall(CONDOR_chdir,working_dir);
+		REMOTE_CONDOR_get_buffer_info( &buffer_size, &buffer_block_size, 
+			&temp );
+		result = REMOTE_CONDOR_chdir(working_dir);
 	} else {
 		result = ::chdir( working_dir );
 	}

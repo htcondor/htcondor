@@ -57,12 +57,13 @@ OS = OperatingSystem
 CFLAGS = $(STD_C_FLAGS) $(DL_EXTRACT) $(FILE_TABLE) $(REMOTE_SYSCALLS)
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(STUB_CLUMPS_FLAG) $(DL_EXTRACT) \
-	$(FILE_TABLE) $(REMOTE_SYSCALLS) $(SAVE_SIGSTATE) -I../condor_ckpt
+	$(FILE_TABLE) $(REMOTE_SYSCALLS) $(SAVE_SIGSTATE) -I../condor_ckpt \
+	-fno-exceptions
 
 #if DOES_CHECKPOINTING  /* ========= DOES CHECKPOINTING ============ */
 
 #if IS_LINUX
-#if IS_GLIBC21
+#if IS_GLIBC21 || IS_GLIBC22
 FORK_OBJ = FORK.o
 #elif IS_GLIBC20
 FORK_OBJ = FORK.o VFORK.o
@@ -360,7 +361,11 @@ __FORK.o : ToUpper $(SIMPLE_LIBC)
 	./ToUpper __FORK_TMP.o __FORK.o fork FORK
 	rm -f __fork.o __FORK_TMP.o
 #else
-uppercase_target($(SIMPLE_LIBC),__fork.o,__FORK.o,__fork,__FORK)
+#	if IS_LINUX && IS_GLIBC22
+		/* do nothing. there is no __fork object in glibc 22 */
+#	else
+		uppercase_target($(SIMPLE_LIBC),__fork.o,__FORK.o,__fork,__FORK)
+#	endif
 #endif
 
 #if IS_LINUX && IS_GLIBC20

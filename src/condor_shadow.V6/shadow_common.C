@@ -61,7 +61,7 @@ extern "C" {
 	void HoldJob( const char* buf );
 	char *d_format_time( double dsecs );
 	int unlink_local_or_ckpt_server( char *file );
-	int whoami();
+	int whoami( FILE *fp );
 	void get_local_rusage( struct rusage *bsd_rusage );
 	void handle_termination( PROC *proc, char *notification,
 				int *jobstatus, char *coredir );

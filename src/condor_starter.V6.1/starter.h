@@ -31,6 +31,12 @@
 
 void set_resource_limits();
 extern ReliSock *syscall_sock;
+extern "C" int REMOTE_CONDOR_register_machine_info(char *uiddomain, 
+	char *fsdomain, char *address, char *fullHostname, int key);
+extern "C" int REMOTE_CONDOR_get_job_info(ClassAd *ad);
+extern "C" int REMOTE_CONDOR_job_exit(int status, int reason, ClassAd *ad);
+
+/* thse are the remote system calls that the starter uses */
 
 /** The starter class.  Basically, this class does some initialization
 	stuff and manages a set of UserProc instances, each of which 

@@ -63,7 +63,7 @@ bool makeCkptSrvrAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
 bool makeCollectorAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
 bool makeStorageAdHashKey (HashKey &, ClassAd *, sockaddr_in *);
 
-#endif __COLLHASH_H__
+#endif /* __COLLHASH_H__ */
 
 
 

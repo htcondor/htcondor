@@ -89,7 +89,7 @@ CStarter::Init(char peer[])
 
 	// init environment info
 	char *mfhn = strnewp ( my_full_hostname() );
-	REMOTE_syscall(CONDOR_register_machine_info, UIDDomain, FSDomain,
+	REMOTE_CONDOR_register_machine_info(UIDDomain, FSDomain,
 				   daemonCore->InfoCommandSinfulString(), 
 				   mfhn, Key);
 	delete [] mfhn;
@@ -182,7 +182,7 @@ CStarter::StartJob()
 
     ClassAd *jobAd = new ClassAd;
 
-	if (REMOTE_syscall(CONDOR_get_job_info, jobAd) < 0) {
+	if (REMOTE_CONDOR_get_job_info(jobAd) < 0) {
 		dprintf(D_ALWAYS, 
 				"Failed to get job info from Shadow.  Aborting StartJob.\n");
 		return;

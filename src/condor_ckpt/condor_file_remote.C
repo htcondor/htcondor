@@ -7,6 +7,14 @@
 #include "syscall_numbers.h"
 #include "image.h"
 
+/* Here are the remote system calls we use in this file */
+extern "C" int REMOTE_CONDOR_lseekread(int fd, off_t offset, int whence, 
+	void *buf, size_t len);
+extern "C" int REMOTE_CONDOR_lseekwrite(int fd, off_t offset, int whence, 
+	void *buf, size_t len);
+extern "C" int REMOTE_CONDOR_ftruncate(int fd, off_t length);
+
+
 /* A CondorFileRemote is a CondorFileBasic that does syscalls in remote and unmapped mode. */
 
 CondorFileRemote::CondorFileRemote()
@@ -22,7 +30,7 @@ CondorFileRemote::~CondorFileRemote()
 
 int CondorFileRemote::read(int pos, char *data, int length) 
 {
-       	return REMOTE_syscall( CONDOR_lseekread, fd, pos, SEEK_SET, data, length );
+	return REMOTE_CONDOR_lseekread( fd, pos, SEEK_SET, data, length );
 }
 
 /* A write results in a CONDOR_lseekwrite */
@@ -30,7 +38,7 @@ int CondorFileRemote::read(int pos, char *data, int length)
 int CondorFileRemote::write(int pos, char *data, int length)
 {
 	int result;
-	result = REMOTE_syscall( CONDOR_lseekwrite, fd, pos, SEEK_SET, data, length );
+	result = REMOTE_CONDOR_lseekwrite( fd, pos, SEEK_SET, data, length );
 
 	if(result>0) {
 		if((pos+result)>get_size()) {
@@ -96,7 +104,7 @@ in an infinite loop.
 int CondorFileRemote::ftruncate( size_t s )
 {
 	size = s;
-	return REMOTE_syscall( CONDOR_ftruncate, fd, s );
+	return REMOTE_CONDOR_ftruncate( fd, s );
 }
 
 /* This file cannot be accessed locally */
