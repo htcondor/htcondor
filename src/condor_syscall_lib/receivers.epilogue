@@ -21,6 +21,7 @@
 }	/* End of switch on system call number */
 }	/* End of do_REMOTE_syscall() procedure */
 
+int
 CONDOR_NotSupported( int condor_sysnum,  ... )
 {
 	job_report_store_error( "%s - system call not supported by Condor",
@@ -30,6 +31,7 @@ CONDOR_NotSupported( int condor_sysnum,  ... )
 	return -1;
 }
 
+int
 CONDOR_Ignored( int condor_sysnum,  ... )
 {
 	dprintf(
