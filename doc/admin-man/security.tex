@@ -287,7 +287,7 @@ They are enabled by site administrators through the use of
 configuration macros.
 This section describes the authentication, encryption,
 integrity assurance, as well as authorization configuration
-macros used by Condor.
+macros provided by Condor.
 
 Authentication provides an assurance of the identity of one of the
 communicating parties.
@@ -306,7 +306,7 @@ use no authentication, encryption, or integrity checks,
 nor are authorization checks provided.
 This allows newer versions of Condor with
 security features to work or interact
-with previous versions that had no security.
+with previous versions without security support.
 An administrator must modify the configuration settings to
 enable the security features.
 
@@ -326,11 +326,10 @@ This can be considered a negotiation between the client and
 the daemon.
 The daemon replies to the client with 
 a set of reconciled policies that controls the communication,
-including decisions on
-authentication, encryption,
+including authentication, encryption,
 and integrity algorithms.
 
-If communications require authentication, then the
+If the daemon determines that authentication is required, then the
 client must follow the chosen authentication protocol.
 After the required authentication, the client can send its
 request to the daemon. 
@@ -339,15 +338,16 @@ request,
 and it checks the configuration settings to determine if the client 
 has the required access level.
 If the client has the required access level,
-permission is granted, and the request is filled. 
+permission is granted, and the request is serviced. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Security-access-levels} Access Level Descriptions}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{security!access levels}
 Authorization is granted based on specified access levels.
-An access level is granted for users by configuration settings.
-The following describe the various access levels.
+Access levels are granted for users by configuration settings.
+The following describes the various access levels provided
+by Condor.
 
 \begin{description}
 
@@ -432,8 +432,8 @@ The configuration macro names follow a pattern.
 Each of the names starts with the string
 \MacroNI{SEC\_}.
 This string is followed by a string that describes an
-authorization or access level.
-The authorization levels are
+access level.
+The levels are
 \begin{verbatim}
     DEFAULT
     READ
@@ -454,7 +454,7 @@ The \MacroNI{CLIENT} is used to define the client's requirements
 and preferences in a secure communication.
 
 Still within the name of a configuration macro,
-the authorization level is followed by another underscore
+the access level is followed by another underscore
 character and then a string describing the communication type.
 The communication types are
 \begin{verbatim}
@@ -628,6 +628,8 @@ The methods are
 given as a comma-separated list of acceptable values.
 These variables list the authentication methods that are available
 to be used.
+The ordering of the list gives preference;
+the first item in the list indicates the highest preference.
 The values will be 
 \begin{verbatim}
     KERBEROS
@@ -638,8 +640,15 @@ The values will be
     NTSSPI
 \end{verbatim}
 
+As an example, the macro
+\begin{verbatim}
+SEC_DEFAULT_AUTHENTICATION_METHODS = KERBEROS, GSS_AUTHENTICATION
+\end{verbatim}
+indicates that either Kerberos or X.509 authentication may be used,
+but Kerberos is preferred over X.509.
+
 If Kerberos is used for authentication, then 
-the configuration variable
+the optional configuration variable
 \Macro{KERBEROS\_MAP\_FILE}
 may be used to define a path to an administrator-maintained file that
 contains Kerberos domain (called a realm) to Condor UID domain mapping.
@@ -771,6 +780,8 @@ The methods are
 given as a comma-separated list of acceptable values.
 These variables list the encryption methods that are available
 to be used.
+The ordering of the list gives preference;
+the first item in the list indicates the highest preference.
 Possible values are
 \begin{verbatim}
     3DES
@@ -858,9 +869,9 @@ which methods are acceptable.
 A configuration file is provided when Condor is installed.
 No security features are enabled within the configuration as
 distributed.
-Included in the configuration file is an example setting
-that enables security.
-Here is an example of the daemon-side portion of the configuration file.
+Included as comments within the configuration file is an example 
+suggesting settings that enable security features.
+Here is that example of the daemon-side portion.
 
 % from Zach
 \begin{verbatim}
@@ -878,13 +889,188 @@ KERBEROS_MAP_FILE = /path/to/etc/condor.kmap
 This set of configuration macros forces all security features
 to be used at all times.
 All communication is authenticated (using Kerberos),
-and all communication is both encrypted and has its
+and all communication is both encrypted
+(using triple DES)
+and has its
 integrity checked to make sure that messages
-are not modified or corrupted (using triple DES).
+are not modified or corrupted.
 
-Note that this configuration requires that all Condor daemons be
+Note that this example configuration requires that all Condor daemons be
 version 6.3.3 or later, since previous versions will not have
 the ability to do secure communication.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Authentication}Authentication}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{authentication|(}
+\index{security!authentication}
+Authentication provides an assurance of an identity.
+Condor supports authenticated communications by using any one
+of several supported methods.
+The details of Condor's requirements for using X.509 authentication
+and Kerberos authentication are given below.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:X509-Authentication}X.509 Authentication}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The Globus GSI (Grid Security Infrastructure) protocol provides
+an avenue for Condor to do
+PKI-based authentication using X.509 certificates.
+
+Several steps are required to enable this authentication.
+\begin{description}
+\item[X.509 Certificates]
+
+PKI-based authentication between Condor daemons
+requires
+a valid X.509 certificate from a trusted
+CA (Certification Authority).
+The certificate may be a single host certificate,
+and all Condor daemons on the same machine may share the same certificate.
+The directory where the certificate resides, along with
+other related files such as one containing the private key,
+are utilized by Condor when doing authentication. 
+
+Condor locates the daemon's certificate through the use of
+a configuration macro.
+Note that the certificate can be shared by all Condor daemons
+running on a machine.
+The certificate can also be copied to other machines,
+where local copies are necessary.
+The certificates must be protected by access rights to
+files, since the password file is not encrypted.
+
+Condor users (those who submit jobs) can also use
+the X.509-based authentication.
+These users must also
+have valid X.509 certificates signed by a trusted CA.
+For use when submitting jobs,
+the certificate is used to generate a proxy:
+a combination of certificate and password that is valid only
+for a specific (and usually short) time period.
+A proxy is used so that the user does  
+not need to be present (to give a password) when a job is executed.
+
+\item[Condor Configuration]
+        
+To use X.509 certificates for authentication, the Condor configuration file
+must have the following configuration macros set.
+This setting is an example.
+
+\begin{verbatim}
+SEC_DEFAULT_AUTHENTICATION = REQUIRED
+SEC_DEFAULT_AUTHENTICATION_METHODS = GSS_AUTHENTICATION 
+X509_DIRECTORY = /path/to/daemon/certificatedirectory
+CONDOR_GATEKEEPER = /C=US/O=Condor/O=University of Wisconsin
+/OU=Computer Sciences Department/CN=condor@cs.wisc.edu
+\end{verbatim}
+
+The
+\MacroNI{SEC\_DEFAULT\_AUTHENTICATION} macro specifies that
+authentication is required for all communications.
+This single macro covers all communications, but could be
+replaced with a set of macros that require authentication for
+only specific communications.
+See section~\ref{sec:Security-Authentication} for details on the
+more specific configuration variables used for authentication.
+
+The \MacroNI{GSS\_AUTHENTICATION} method specifies the use of
+the X.509 protocol. 
+If this is the only method listed, then X.509 will be the only
+protocol used.
+If other methods are acceptable, then placing this method
+first within the list will cause Condor to give preference to
+this method over others.
+
+The macro \MacroNI{X509\_DIRECTORY} must be specified,
+so that Condor knows where to look for the daemon's certificate.
+This path may be a directory or a shared file system such as AFS. 
+Alternatively, this path name
+can point to 
+local copies of the certificate stored
+in a local file system.
+
+The macro \MacroNI{CONDOR\_GATEKEEPER} configuration macro
+provides daemons with a distinguished name to use for
+X.509 authentication.
+This name is specified with the following format
+\begin{verbatim}
+CONDOR_GATEKEEPER = /C=?/O=?/O=?/OU=?/CN=<daemon_name@domain>
+\end{verbatim}
+A complete example that has the question marks filled in and the
+daemon's user name filled in is given in the 
+example above.
+
+Condor will also need a way to map an X.509 distinguished
+name to a Condor user id.
+This is done in an administrator-maintained file called an X.509 map file,
+mapping from X509 Distinguished Name (DN) to Condor user id.
+It is similar to a Globus Gridmap file.
+Entries (lines) in the file each contain two items.
+The first item in an entry is the distinguished name
+given in an X.509 certificate.
+The second item is the Condor user id, given as a
+fully qualified name.
+Note that the two items in an entry are separated by tab character(s),
+not spaces.
+An example of two entries in an X.509 map file:
+
+\begin{verbatim}
+V	020406001927Z		01	unknown	/C=US/O=Condor/O=University
+of Wisconsin/ OU=Computer Sciences Department/CN=condor@cs.wisc.edu
+condor@cs.wisc.edu
+V	020406002049Z		02	unknown	/C=US/O=Condor/O=University
+of Wisconsin/OU=Computer Sciences Department/CN=jsmith@cs.wisc.edu
+jsmith@cs.wisc.edu
+\end{verbatim}
+
+Condor expects the map file to be in the location given by
+\begin{verbatim}
+$(X509_DIRECTORY)/certdir/index.txt
+\end{verbatim}
+If the map file is not in this location, a symbolic link
+may be used to point to the actual map file.
+
+\item[User environment]
+
+The Condor user (one who submits jobs) must create a proxy
+prior to authentication.
+The user creates a proxy using the program
+\Prog{grid-proxy-init}.
+This program needs to know 
+the location of the user's certificate directory.
+This is done by setting an environment variable, called
+\Env{X509\_CERT\_DIR}.
+For example, if the X509 directory is \File{/test/myX509},
+then \Env{X509\_CERT\_DIR} should be set to \File{/test/myX509/certdir}.
+
+After running \Prog{grid-proxy-init},
+an environment variable called
+\Env{X509\_USER\_PROXY} may be set to give
+the location where the proxy is stored.
+By default,
+\Prog{grid-proxy-init} will place the proxy in the \File{/tmp}
+directory with
+the file name being determined by the format:
+\begin{verbatim}
+/tmp/x509_uXXXX
+\end{verbatim}
+The specific file name is given by substituting the \verb@XXXX@
+characters with the UID of the user.
+The
+\Env{X509\_USER\_PROXY} environment variable is optional,
+since Condor looks in the default location if the environment
+variable is not set.
+
+
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Kerberos-Authentication}Kerberos Authentication}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\Todo
+
+\index{authentication|)}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Security-Authorization} Authorization}
@@ -1021,7 +1207,7 @@ configuration macros.
 \begin{description}
 \item{1. }\MacroNI{DENY\_*} macros take precedence over \Macro{ALLOW\_* macros}
 where there is a conflict.
-This implies that if a specific user is both denied and given authorization,
+This implies that if a specific user is both denied and granted authorization,
 the conflict is resolved by denying access.
 \item{2. }If macros are omitted, the default behavior is to grant
 authorization for every user.
@@ -1630,25 +1816,5 @@ example to make sense.
 \end{itemize}
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:Authentication}Authentication}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\Todo
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:X509-Authentication}X.509 Authentication}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\Todo
-% the X509 map file
-% Note that at the end of each line is the mapped to userid (eg. condor@cs.wisc.edu)
-
-%V	020406001927Z		01	unknown	/C=US/O=Condor/O=University of Wisconsin/OU=Computer Sciences Department/CN=condor@cs.wisc.edu	condor@cs.wisc.edu
-%V	020406002049Z		02	unknown	/C=US/O=Condor/O=University of Wisconsin/OU=Computer Sciences Department/CN=hbwang@cs.wisc.edu	hbwang@cs.wisc.edu
-%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:X509-Authentication}Kerberos Authentication}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\Todo
 
 \index{security! in Condor|)}
