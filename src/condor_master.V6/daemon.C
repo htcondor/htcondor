@@ -407,7 +407,7 @@ int daemon::Restart()
 		newExec = FALSE; 
 		return StartDaemon();
 	}
-	n = (int)ceil(pow(e_factor, restarts));
+	n = 9 + (int)ceil(pow(e_factor, restarts));
 	if(n > ceiling)
 	{
 		n = ceiling;
