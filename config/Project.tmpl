@@ -55,6 +55,7 @@ SYSCALL_LIB = syscall_lib
 #endif
 LIBDBM = DbmLibrary
 
+
 #if HAS_VOID_SIGNAL_RETURN
 #define SigFlag -DVOID_SIGNAL_RETURN
 #else
@@ -87,16 +88,15 @@ LIBDBM = DbmLibrary
 #endif
 #endif
 
-
 #if HAS_CP_PRESERVE			/* cp lib w/o changing modify time - don't ranlib */
-#define COPY_LIBRARY(src,dst) cp -p src dst
-#define RANLIB_TOUCH(lib)	/**/
+#	define COPY_LIBRARY(src,dst) cp -p src dst
+#	define RANLIB_TOUCH(lib)	/**/
 #elif HAS_RANLIB_TOUCH		/* cp lib changes modify time - ranlib -t */
-#define COPY_LIBRARY(src,dst) cp src dst
-#define RANLIB_TOUCH(libname) ranlib -t libname
+#	define COPY_LIBRARY(src,dst) cp src dst
+#	define RANLIB_TOUCH(libname) ranlib -t libname
 #else						/* dumb cp and ranlib - do it the hard way */
-#define COPY_LIBRARY(src,dst) cp src dst
-#define RANLIB_TOUCH(libname) ranlib libname
+#	define COPY_LIBRARY(src,dst) cp src dst
+#	define RANLIB_TOUCH(libname) ranlib libname
 #endif
 
 #ifdef XIncludeFlag
