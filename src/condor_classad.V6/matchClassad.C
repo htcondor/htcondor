@@ -89,7 +89,7 @@ InitMatchClassAd( ClassAd *adl, ClassAd *adr )
 
 		// the left context
 	if( !( lCtx = parser.ParseClassAd( 
-			"[other=.adcr.ad;my=ad;target=other;super=other;ad=[]]" ) ) ) {
+			"[other=.adcr.ad;my=ad;target=other;ad=[]]" ) ) ) {
 		Clear( );
 		lCtx = NULL;
 		rCtx = NULL;
@@ -105,7 +105,7 @@ InitMatchClassAd( ClassAd *adl, ClassAd *adr )
 
 		// the right context
 	if( !( rCtx = parser.ParseClassAd( 
-			"[other=.adcl.ad;my=ad;target=other;super=other;ad=[]]" ) ) ) {
+			"[other=.adcl.ad;my=ad;target=other;ad=[]]" ) ) ) {
 		delete lCtx;
 		lCtx = rCtx = NULL;
 		return( false );
