@@ -85,6 +85,25 @@ is also a legal set of macro definitions and the resulting value of
 is not legal, and will result in the Condor daemons and tools exiting
 when they try to parse their config files.
 
+A macro may be incrementally defined by invoking the macro in its
+definition.  For example,
+\begin{verbatim}
+	A = xxx
+	B = $(A)
+	A = $(A)yyy
+	A = $(A)zzz
+\end{verbatim}
+is a legal set of macro definitions, and the resulting value of ``A''
+is ``xxxyyyzzz''.  Note that in the second line of the above example,
+``A'' is bound to the previous value of ``A'' and not ``\MacroU(A)''.
+Thus, invokations of a macro in its own definition are immediately
+expanded.  However, in all other cases, macros are not expanded until
+all lines of the config file(s) have been processed.  So, in the above
+example, the value of ``B'' is ``xxxyyyzzz'', not ``xxx''.
+
+\Note Macros should not be incrementally defined in the
+\Macro{LOCAL\_ROOT\_CONFIG\_FILE} for security reasons.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Config-File-Expressions}
 Config File Expressions}
