@@ -236,6 +236,14 @@ public:
   */
   bool IterateAllClassAds(ClassAd*& Ad) { return (table.iterate(Ad)==1); }
 
+  /** Get the next class-ad in the repository and its key.
+      @param Ad A pointer to next the class-ad (output parameter).
+	  @param KeyBuf A pointer to a buffer which will receive the key (output param).
+      @return true on success, false otherwise.
+  */
+  bool IterateAllClassAds(ClassAd*& Ad, HashKey& KeyBuf) 
+		{ return (table.iterate(KeyBuf,Ad)==1); }
+
   //@}
   //------------------------------------------------------------------------
   /**@name Misc methods
