@@ -137,7 +137,7 @@ Match::start_claim_timer()
 
 	m_claim_tid =
 		daemonCore->Register_Timer( (3 * m_aliveint), 0,
-									(TimerHandler)claim_timed_out,
+									(TimerHandler) ::claim_timed_out,
 									"claim_timed_out" );
 	if( m_claim_tid == -1 ) {
 		EXCEPT( "Couldn't register timer (out of memory)." );
