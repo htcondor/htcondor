@@ -5682,7 +5682,7 @@ DaemonCore::InitSettableAttrsList( const char* subsys, int i )
 		param_name = "SETTABLE_ATTRS_";
 	}
 	param_name += PermString((DCpermission)i);
-	tmp = param( param_name.GetCStr() );
+	tmp = param( param_name.Value() );
 	if( tmp ) {
 		SettableAttrsLists[i] = new StringList;
 		(SettableAttrsLists[i])->initializeFromString( tmp );

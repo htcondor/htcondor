@@ -766,7 +766,7 @@ IpVerify::AddAllowHost( const char* host, DCpermission perm )
 		// If we're still here, it wasn't in our table, so we want to
 		// add it to the real verify hash table, and if that works,
 		// add it to both our table (so we remember it on reconfig).
-	if( add_host_entry(addr.GetCStr(), new_mask) ) {
+	if( add_host_entry(addr.Value(), new_mask) ) {
 		dprintf( D_DAEMONCORE, "Adding new hostallow (%s) entry for \"%s\"\n",  
 				 PermString(perm), host );
 		AllowHostsTable->insert( addr, new_mask );
