@@ -26,6 +26,10 @@
 #include "scheduler.h"
 #include "proc.h"
 
+#include "Set.h"
+#include "MyString.h"
+#include "classad_collection_types.h"
+
 template class HashTable<int, int>;
 template class HashBucket<int,int>;
 template class HashTable<int, shadow_rec *>;
@@ -37,6 +41,15 @@ template class HashBucket<PROC_ID,shadow_rec *>;
 template class Queue<shadow_rec*>;
 template class List<PROC_ID>;
 template class Item<PROC_ID>;
+
+template class HashTable<int, BaseCollection*>;
+template class HashBucket<int, BaseCollection*>;
+template class Set<MyString>;
+template class SetElem<MyString>;
+template class Set<int>;
+template class SetElem<int>;
+template class Set<RankedClassAd>;
+template class SetElem<RankedClassAd>;
 
 bool operator==(const PROC_ID a, const PROC_ID b)
 {

@@ -43,8 +43,7 @@ static char *_FileName_ = __FILE__;	 /* Used by EXCEPT (see condor_debug.h) */
 #include "condor_qmgr.h"
 #include "log_transaction.h"
 #include "log.h"
-#include "classad_log.h"
-#include "condor_qmgr.h"
+#include "classad_collection.h"
 #include "condor_updown.h"
 #include "prio_rec.h"
 #include "condor_attributes.h"
@@ -85,7 +84,7 @@ uid_t	active_owner_uid = 0;
 char	*active_owner = 0;
 char	*rendevous_file = 0;
 
-static ClassAdLog *JobQueue = 0;
+static ClassAdCollection *JobQueue = 0;
 static int next_cluster_num = -1;
 static int next_proc_num = 0;
 static int active_cluster_num = -1;	// client is restricted to only insert jobs to the active cluster
@@ -177,7 +176,7 @@ void
 InitJobQueue(const char *job_queue_name)
 {
 	assert(!JobQueue);
-	JobQueue = new ClassAdLog(job_queue_name);
+	JobQueue = new ClassAdCollection(job_queue_name);
 	ClusterSizeHashTable = new ClusterSizeHashTable_t(37,compute_clustersize_hash);
 
 	/* We read/initialize the header ad in the job queue here.  Currently,
@@ -188,11 +187,12 @@ InitJobQueue(const char *job_queue_name)
 	int 	*numOfProcs = NULL;	
 	bool	CreatedAd = false;
 	char	cluster_str[40];
-	if (JobQueue->table.lookup(HashKey(HeaderKey), ad) != 0) {
+	if (!JobQueue->LookupClassAd(HeaderKey, ad)) {
 		// we failed to find header ad, so create one
-		LogNewClassAd *log = new LogNewClassAd(HeaderKey, JOB_ADTYPE,
-											   STARTD_ADTYPE);
-		JobQueue->AppendLog(log);
+//		LogNewClassAd *log = new LogNewClassAd(HeaderKey, JOB_ADTYPE,
+//											   STARTD_ADTYPE);
+//		JobQueue->AppendLog(log);
+		JobQueue->NewClassAd(HeaderKey, JOB_ADTYPE, STARTD_ADTYPE);
 		CreatedAd = true;
 	}
 
@@ -204,8 +204,8 @@ InitJobQueue(const char *job_queue_name)
 	}
 
 	next_cluster_num = 1;
-	JobQueue->table.startIterations();
-	while (JobQueue->table.iterate(ad) == 1) {
+	JobQueue->StartIterateAllClassAds();
+	while (JobQueue->IterateAllClassAds(ad)) {
 		if (ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num) == 1) {
 			if (cluster_num >= next_cluster_num) {
 				next_cluster_num = cluster_num + 1;
@@ -222,10 +222,11 @@ InitJobQueue(const char *job_queue_name)
 
 	if ( stored_cluster_num == 0 ) {
 		sprintf(cluster_str, "%d", next_cluster_num);
-		LogSetAttribute *log = new LogSetAttribute(HeaderKey,
-												   ATTR_NEXT_CLUSTER_NUM,
-												   cluster_str);
-		JobQueue->AppendLog(log);
+//		LogSetAttribute *log = new LogSetAttribute(HeaderKey,
+//												   ATTR_NEXT_CLUSTER_NUM,
+//												   cluster_str);
+//		JobQueue->AppendLog(log);
+		JobQueue->SetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, cluster_str);
 	} else {
 		if ( next_cluster_num > stored_cluster_num ) {
 			// Oh no!  Somehow the header ad in the queue says to reuse cluster nums!
@@ -541,8 +542,9 @@ NewCluster()
 	next_proc_num = 0;
 	active_cluster_num = next_cluster_num++;
 	sprintf(cluster_str, "%d", next_cluster_num);
-	log = new LogSetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, cluster_str);
-	JobQueue->AppendLog(log);
+//	log = new LogSetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, cluster_str);
+//	JobQueue->AppendLog(log);
+	JobQueue->SetAttribute(HeaderKey, ATTR_NEXT_CLUSTER_NUM, cluster_str);
 	return active_cluster_num;
 }
 
@@ -571,8 +573,9 @@ NewProc(int cluster_id)
 	}
 	proc_id = next_proc_num++;
 	sprintf(key, "%d.%d", cluster_id, proc_id);
-	log = new LogNewClassAd(key, JOB_ADTYPE, STARTD_ADTYPE);
-	JobQueue->AppendLog(log);
+//	log = new LogNewClassAd(key, JOB_ADTYPE, STARTD_ADTYPE);
+//	JobQueue->AppendLog(log);
+	JobQueue->NewClassAd(key, JOB_ADTYPE, STARTD_ADTYPE);
 
 	if ( ClusterSizeHashTable->lookup(cluster_id,numOfProcs) == -1 ) {
 		// First proc we've seen in this cluster; set size to 1
@@ -600,7 +603,7 @@ int DestroyProc(int cluster_id, int proc_id)
 		return -1;
 	}
 	sprintf(key, "%d.%d", cluster_id, proc_id);
-	if (JobQueue->table.lookup(HashKey(key), ad) != 0) {
+	if (!JobQueue->LookupClassAd(key, ad)) {
 		return -1;
 	}
 
@@ -615,8 +618,9 @@ int DestroyProc(int cluster_id, int proc_id)
     // Append to history file
     AppendHistory(ad);
 
-	log = new LogDestroyClassAd(key);
-	JobQueue->AppendLog(log);
+//	log = new LogDestroyClassAd(key);
+//	JobQueue->AppendLog(log);
+	JobQueue->DestroyClassAd(key);
 
 	if ( ClusterSizeHashTable->lookup(cluster_id,numOfProcs) != -1 ) {
 		// We've seen this cluster_num go by before; increment proc count
@@ -652,10 +656,10 @@ int DestroyCluster(int cluster_id)
 		return -1;
 	}
 
-	JobQueue->table.startIterations();
+	JobQueue->StartIterateAllClassAds();
 
 	// Find all jobs in this cluster and remove them.
-	while(JobQueue->table.iterate(ad) == 1) {
+	while(JobQueue->IterateAllClassAds(ad)) {
 		if (ad->LookupInteger(ATTR_CLUSTER_ID, c) == 1) {
 			if (c == cluster_id) {
 				ad->LookupInteger(ATTR_PROC_ID, proc_id);
@@ -669,8 +673,9 @@ int DestroyCluster(int cluster_id)
                 AppendHistory(ad);
 
 				sprintf(key, "%d.%d", cluster_id, proc_id);
-				log = new LogDestroyClassAd(key);
-				JobQueue->AppendLog(log);
+//				log = new LogDestroyClassAd(key);
+//				JobQueue->AppendLog(log);
+				JobQueue->DestroyClassAd(key);
 			}
 		}
 	}
@@ -726,9 +731,9 @@ int DestroyClusterByConstraint(const char* constraint)
 		return -1;
 	}
 
-	JobQueue->table.startIterations();
+	JobQueue->StartIterateAllClassAds();
 
-	while(JobQueue->table.iterate(ad) == 1) {
+	while(JobQueue->IterateAllClassAds(ad)) {
 		// check cluster first to avoid header ad
 		if (ad->LookupInteger(ATTR_CLUSTER_ID, job_id.cluster) == 1) {
 			if (OwnerCheck(ad, active_owner)) {
@@ -739,8 +744,9 @@ int DestroyClusterByConstraint(const char* constraint)
     	            AppendHistory(ad);
 
 					sprintf(key, "%d.%d", job_id.cluster, job_id.proc);
-					log = new LogDestroyClassAd(key);
-					JobQueue->AppendLog(log);
+//					log = new LogDestroyClassAd(key);
+//					JobQueue->AppendLog(log);
+					JobQueue->DestroyClassAd(key);
 					flag = 0;
 
 					if (prev_cluster != job_id.cluster) {
@@ -773,8 +779,8 @@ SetAttributeByConstraint(const char *constraint, const char *attr_name, char *at
 		return -1;
 	}
 
-	JobQueue->table.startIterations();
-	while(JobQueue->table.iterate(ad) == 1) {
+	JobQueue->StartIterateAllClassAds();
+	while(JobQueue->IterateAllClassAds(ad)) {
 		// check for CLUSTER_ID to avoid queue header ad
 		if ((ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num) == 1) &&
 			(ad->LookupInteger(ATTR_PROC_ID, proc_num) == 1) &&
@@ -809,7 +815,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_valu
 	}
 
 	sprintf(key, "%d.%d", cluster_id, proc_id);
-	if (JobQueue->table.lookup(HashKey(key), ad) == 0) {
+	if (JobQueue->LookupClassAd(key, ad)) {
 		if (!OwnerCheck(ad, active_owner)) {
 			dprintf(D_ALWAYS, "OwnerCheck(%s) failed in SetAttribute for job %d.%d\n",
 					active_owner, cluster_id, proc_id);
@@ -858,8 +864,9 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name, char *attr_valu
 		}
 	}
 
-	log = new LogSetAttribute(key, attr_name, attr_value);
-	JobQueue->AppendLog(log);
+//	log = new LogSetAttribute(key, attr_name, attr_value);
+//	JobQueue->AppendLog(log);
+	JobQueue->SetAttribute(key, attr_name, attr_value);
 
 	JobQueueDirty = true;
 
@@ -897,7 +904,7 @@ GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, float *val
 		return -1;
 	}
 
-	if (JobQueue->table.lookup(HashKey(key), ad) != 0) {
+	if (!JobQueue->LookupClassAd(key, ad)) {
 		return -1;
 	}
 
@@ -927,7 +934,7 @@ GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 		return -1;
 	}
 
-	if (JobQueue->table.lookup(HashKey(key), ad) != 0) {
+	if (!JobQueue->LookupClassAd(key, ad)) {
 		return -1;
 	}
 
@@ -957,7 +964,7 @@ GetAttributeString(int cluster_id, int proc_id, const char *attr_name, char *val
 		return -1;
 	}
 
-	if (JobQueue->table.lookup(HashKey(key), ad) != 0) {
+	if (!JobQueue->LookupClassAd(key, ad)) {
 		return -1;
 	}
 
@@ -988,7 +995,7 @@ GetAttributeExpr(int cluster_id, int proc_id, const char *attr_name, char *val)
 		return -1;
 	}
 
-	if (JobQueue->table.lookup(HashKey(key), ad) != 0) {
+	if (!JobQueue->LookupClassAd(key, ad)) {
 		return -1;
 	}
 
@@ -1014,7 +1021,7 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 
 	sprintf(key, "%d.%d", cluster_id, proc_id);
 
-	if (JobQueue->table.lookup(HashKey(key), ad) != 0) {
+	if (!JobQueue->LookupClassAd(key, ad)) {
 		if (JobQueue->LookupInTransaction(key, attr_name, attr_val) != 1) {
 			return -1;
 		}
@@ -1024,8 +1031,9 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 		return -1;
 	}
 
-	log = new LogDeleteAttribute(key, attr_name);
-	JobQueue->AppendLog(log);
+//	log = new LogDeleteAttribute(key, attr_name);
+//	JobQueue->AppendLog(log);
+	JobQueue->DeleteAttribute(key, attr_name);
 
 	JobQueueDirty = true;
 
@@ -1040,7 +1048,7 @@ GetJobAd(int cluster_id, int proc_id)
 	ClassAd	*ad;
 
 	sprintf(key, "%d.%d", cluster_id, proc_id);
-	if (JobQueue->table.lookup(HashKey(key), ad) == 0)
+	if (JobQueue->LookupClassAd(key, ad))
 		return ad;
 	else
 		return NULL;
@@ -1057,8 +1065,8 @@ GetJobByConstraint(const char *constraint)
 		return NULL;
 	}
 
-	JobQueue->table.startIterations();
-	while(JobQueue->table.iterate(ad) == 1) {
+	JobQueue->StartIterateAllClassAds();
+	while(JobQueue->IterateAllClassAds(ad)) {
 		if ((ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num) == 1) &&
 			EvalBool(ad, constraint)) {
 			return ad;
@@ -1086,10 +1094,10 @@ GetNextJobByConstraint(const char *constraint, int initScan)
 	}
 
 	if (initScan) {
-		JobQueue->table.startIterations();
+		JobQueue->StartIterateAllClassAds();
 	}
 
-	while(JobQueue->table.iterate(ad) == 1) {
+	while(JobQueue->IterateAllClassAds(ad)) {
 		if ((ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num) == 1) &&
 			(!constraint || !constraint[0] || EvalBool(ad, constraint))) {
 			return ad;
@@ -1116,9 +1124,9 @@ int GetJobList(const char *constraint, ClassAdList &list)
 		return -1;
 	}
 
-	JobQueue->table.startIterations();
+	JobQueue->StartIterateAllClassAds();
 
-	while(JobQueue->table.iterate(ad) == 1) {
+	while(JobQueue->IterateAllClassAds(ad)) {
 		if ((ad->LookupInteger(ATTR_CLUSTER_ID, cluster_num) == 1) &&
 			(!constraint || !constraint[0] || EvalBool(ad, constraint))) {
 			flag = 0;
@@ -1201,8 +1209,8 @@ PrintQ()
 	ClassAd		*ad=NULL;
 
 	dprintf(D_ALWAYS, "*******Job Queue*********\n");
-	JobQueue->table.startIterations();
-	while(JobQueue->table.iterate(ad) == 1) {
+	JobQueue->StartIterateAllClassAds();
+	while(JobQueue->IterateAllClassAds(ad)) {
 		ad->fPrint(stdout);
 	}
 	dprintf(D_ALWAYS, "****End of Queue*********\n");
