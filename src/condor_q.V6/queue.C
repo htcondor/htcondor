@@ -25,7 +25,7 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-//#include "condor_accountant.h"
+#include "condor_accountant.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_api.h"
@@ -75,8 +75,6 @@ static 	int verbose = 0, summarize = 1, global = 0, show_io = 0, dag = 0;
 static  int use_xml = 0;
 static  bool expert = false;
 static 	int malformed, unexpanded, running, idle, held;
-
-static const float PriorityDelta = 0.5;  // NAC - from condor_accountant.h
 
 static	CondorQ 	Q;
 static	QueryResult result;
@@ -743,12 +741,14 @@ bufferJobShort( ClassAd *ad ) {
 	int cluster, proc, date, status, prio, image_size;
 	float utime;
 	double utimeD;
+	int utimeI = -1;
 	char owner[64], cmd[ATTRLIST_MAX_EXPRESSION], args[ATTRLIST_MAX_EXPRESSION];
 	char buffer[ATTRLIST_MAX_EXPRESSION];
 	if (!ad->EvaluateAttrInt( ATTR_CLUSTER_ID,  cluster )			||	// NAC
 		!ad->EvaluateAttrInt( ATTR_PROC_ID,  proc )					||	// NAC
 		!ad->EvaluateAttrInt( ATTR_Q_DATE,  date )					||	// NAC
-		!ad->EvaluateAttrReal( ATTR_JOB_REMOTE_USER_CPU,  utimeD )	||	// NAC
+		( !ad->EvaluateAttrReal( ATTR_JOB_REMOTE_USER_CPU,  utimeD)  &&
+		  !ad->EvaluateAttrInt( ATTR_JOB_REMOTE_USER_CPU,  utimeI)) ||	// NAC
 		!ad->EvaluateAttrInt( ATTR_JOB_STATUS,  status )			||	// NAC
 		!ad->EvaluateAttrInt( ATTR_JOB_PRIO,  prio )				||	// NAC
 		!ad->EvaluateAttrInt( ATTR_IMAGE_SIZE,  image_size )		||	// NAC
@@ -758,7 +758,12 @@ bufferJobShort( ClassAd *ad ) {
 		sprintf (return_buff, " --- ???? --- \n");
 		return( return_buff );
 	}
-	utime = (float)utimeD;
+	if( utimeI == -1 ){
+		utime = (float)utimeD;
+	}
+	else {
+		utime = (float)utimeI;
+	}
 
 	int niceUser;
     if( ad->EvaluateAttrInt( ATTR_NICE_USER, niceUser ) && niceUser ) {	// NAC
