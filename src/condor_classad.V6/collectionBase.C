@@ -31,24 +31,26 @@ using namespace std;
 
 BEGIN_NAMESPACE( classad )
 
+#include <assert.h>
+
 ClassAdCollection::
 ClassAdCollection( ) : viewTree( NULL )
 {
-  Setup(false);
+	Setup(false);
 }
 
 ClassAdCollection::
 ClassAdCollection(bool CacheOn) : viewTree( NULL ) 
 {
-  Setup(CacheOn);
-  return;
+	Setup(CacheOn);
+	return;
 }
 void ClassAdCollection::
 Setup(bool CacheOn)
 {
-        Cache = CacheOn;
-        test_checkpoint=0;
-		// create "root" view
+	Cache = CacheOn;
+	test_checkpoint=0;
+	// create "root" view
 	viewTree.SetViewName( "root" );
 	RegisterView( "root", &viewTree );
 	log_fp = NULL;
@@ -1070,26 +1072,24 @@ UpdateClassAd( const string &key, ClassAd *updAd )
 		ClassAdTable::iterator	itr = classadTable.find( key );
 		ClassAd					*ad;
 		if ( Cache==true){
-		  if (itr==classadTable.end()){
-		    tag ptr;
-		    if (ClassAdStorage.FindInFile( key,ptr )){
-		      if (!SwitchInClassAd(key)){
-			CondorErrMsg = "can not switch in classad";
-			return( false );
-		      }
-		    }else{
-		      CondorErrno = ERR_NO_SUCH_CLASSAD;
-		      CondorErrMsg = "no classad " + key + " to update";
-		      return( false );
-		    };
-		  }			
-		  itr = classadTable.find( key );
-		}else{
-		  if( itr == classadTable.end( ) ) {
+			if (itr==classadTable.end()) {
+				tag ptr;
+				if (ClassAdStorage.FindInFile( key,ptr )) {
+					if (!SwitchInClassAd(key)) {
+						CondorErrMsg = "can not switch in classad";
+						return( false );
+					}
+				} else {
+					CondorErrno = ERR_NO_SUCH_CLASSAD;
+					CondorErrMsg = "no classad " + key + " to update";
+					return( false );
+				};
+			}			
+			itr = classadTable.find( key );
+		} else if( itr == classadTable.end( ) ) {
 		    CondorErrno = ERR_NO_SUCH_CLASSAD;
 		    CondorErrMsg = "no classad " + key + " to update";
 		    return( false );
-		  }
 		}
 
 		ad = itr->second.ad;
@@ -1140,32 +1140,27 @@ ModifyClassAd( const string &key, ClassAd *modAd )
 		ClassAdTable::iterator	itr = classadTable.find( key );
 		ClassAd					*ad;
 		if ( Cache==true){
- 		  if (itr==classadTable.end()){
-	 	    tag ptr;
-		    if (ClassAdStorage.FindInFile( key,ptr )){
-		      
-		      if (!SwitchInClassAd(key)){
-			CondorErrMsg = "can not switch in classad";
-			return( false );
-		      }
-		      
-		    }else{
-		      CondorErrno = ERR_NO_SUCH_CLASSAD;
-		      CondorErrMsg = "no classad " + key + " to update";
-		      delete modAd;
-		      return( false );
-		    };
-		    itr = classadTable.find( key );		  
-		  }else{
-		    if( itr == classadTable.end( ) ) {
-		    CondorErrno = ERR_NO_SUCH_CLASSAD;
-		    CondorErrMsg = "classad " + key + " doesn't exist to modify";
-		    delete modAd;
-		    return( false );
-		    }
+ 		  if (itr == classadTable.end()){
+			  tag ptr;
+			  if (ClassAdStorage.FindInFile( key,ptr )){
+				  if (!SwitchInClassAd(key)){
+					  CondorErrMsg = "can not switch in classad";
+					  return( false );
+				  }
+			  } else {
+				  CondorErrno = ERR_NO_SUCH_CLASSAD;
+				  CondorErrMsg = "no classad " + key + " to update";
+				  delete modAd;
+				  return( false );
+			  }
+			  itr = classadTable.find( key );		  
 		  }
+		} else if ( itr == classadTable.end( ) ) {
+				CondorErrno = ERR_NO_SUCH_CLASSAD;
+				CondorErrMsg = "classad " + key + " doesn't exist to modify";
+				delete modAd;
+				return( false );
 		}
-		
 		ad = itr->second.ad;
 		viewTree.ClassAdPreModify( this, ad );
 		ad->Modify( *modAd );
