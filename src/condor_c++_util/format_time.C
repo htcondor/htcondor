@@ -20,9 +20,14 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+#ifdef WIN32
+#include "condor_common.h"
+#else
 #include <stdio.h>
 #include <time.h>
 #include "types.h"
+#endif
 
 /*
   Format a date expressed in "UNIX time" into "month/day hour:minute".
