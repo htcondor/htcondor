@@ -1029,7 +1029,11 @@ FileTransfer::DoUpload(ReliSock *s)
 #endif
 
 		if ( ((bytes = s->put_file(fullname)) < 0) ) {
-			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
+			/* if we fail to transfer a file, EXCEPT so the other side can */
+			/* try again. SC2000 hackery. _WARNING_ - I think Keller changed */
+			/* all of this. -epaulson 11/22/2000 */
+			EXCEPT("DoUpload: Failed to send file %s, exiting at %d\n",
+				fullname,__LINE__);
 			return -1;
 		}
 
