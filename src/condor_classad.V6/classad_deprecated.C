@@ -203,6 +203,7 @@ EvalString( const char *name, class ClassAd *target, char *value )
 {
 	ExprTree *tree;
 	Value val;
+	ClassAd *env;
 	string strVal;
 
 	tree = Lookup( name );
@@ -220,7 +221,15 @@ EvalString( const char *name, class ClassAd *target, char *value )
 		}
 	}
 
-	if( target->EvaluateExpr( tree, val ) && val.IsStringValue( strVal ) ) {
+	if( target ) {
+		env = target;
+	}
+	else {
+		env = this;
+	}
+
+	if( env->EvaluateExpr( tree, val ) && 
+		val.IsStringValue( strVal ) ) {
 		strcpy( value, strVal.c_str( ) );
 		return 1;
 	}
@@ -232,6 +241,7 @@ int ClassAd::
 EvalInteger (const char *name, class ClassAd *target, int &value) {
 	ExprTree *tree;
 	Value val;
+	ClassAd *env;
 
 	tree = Lookup( name );
 	if( !tree ) {
@@ -247,7 +257,15 @@ EvalInteger (const char *name, class ClassAd *target, int &value) {
 		}
 	}
 
-	if( target->EvaluateExpr( tree, val ) && val.IsIntegerValue( value ) ) {
+	if( target ) {
+		env = target;
+	}
+	else {
+		env = this;
+	}
+
+	if( env->EvaluateExpr( tree, val ) && 
+		val.IsIntegerValue( value ) ) {
 		return 1;
 	}
 
@@ -259,6 +277,7 @@ EvalFloat (const char *name, class ClassAd *target, float &value)
 {
 	ExprTree *tree;
 	Value val;
+	ClassAd *env;
 	double doubleVal;
 	int intVal;
 
@@ -281,7 +300,14 @@ EvalFloat (const char *name, class ClassAd *target, float &value)
 		}
 	}
 
-	if( target->EvaluateExpr( tree, val ) ) {
+	if( target ) {
+		env = target;
+	}
+	else {
+		env = this;
+	}
+
+	if( env->EvaluateExpr( tree, val ) ) {
 		if( val.IsRealValue( doubleVal ) ) {
 			value = ( float )doubleVal;
 			return 1;
@@ -300,6 +326,7 @@ EvalBool  (const char *name, class ClassAd *target, int &value)
 {
 	ExprTree *tree;
 	Value val;
+	ClassAd *env;
 	double doubleVal;
 	int intVal;
 	bool boolVal;
@@ -323,7 +350,14 @@ EvalBool  (const char *name, class ClassAd *target, int &value)
 		}
 	}
 
-	if( target->EvaluateExpr( tree, val ) ) {
+	if( target ) {
+		env = target;
+	}
+	else {
+		env = this;
+	}
+
+	if( env->EvaluateExpr( tree, val ) ) {
 		if( val.IsBooleanValue( boolVal ) ) {
 			value = boolVal ? 1 : 0;
 			return 1;
