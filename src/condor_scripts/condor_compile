@@ -6,7 +6,6 @@
 
 # --------------------------------------------------
 
-
 # Here are the default paths/directories to use.
 # These defaults can be overidden with command-line args.
 # Customize these if desired.  The defaults provided should be
@@ -296,9 +295,66 @@ fi
 # option(s) allows us to use $CONDOR_LIBDIR/ld instead
 # of the default path for ld.
 
+
 case $os in 
 
-	IRIX | OSF1 )
+	IRIX )
+		# IRIX has some special cases with the compiler taking different
+		# flags depending what version yout have, this tries to sort that out
+
+		if [ $myname = "cc" ]; then
+			VCCRET=`cc -tul 2>&1 | head -1 | grep 'WARNING'`
+			if [ "X$VCCRET" = "X" ]; then
+				exec $ARGS -tul -h$CONDOR_LD_DIR -B
+			else
+				exec $ARGS -Y l,$CONDOR_LD_DIR -B dynamic
+			fi
+		fi
+
+		if [ $myname = "CC" ]; then
+			VCPPRET=`CC -tul 2>&1 | head -1 | grep 'WARNING'`
+			if [ "X$VCPPRET" = "X" ]; then
+				exec $ARGS -tul -h$CONDOR_LD_DIR -B
+			else
+				exec $ARGS -Y l,$CONDOR_LD_DIR -B dynamic
+			fi
+		fi
+
+		if [ $myname = "c89" ]; then
+			VC89RET=`c89 -tul 2>&1 | head -1 | grep 'WARNING'`
+			if [ "X$VC89RET" = "X" ]; then
+				exec $ARGS -tul -h$CONDOR_LD_DIR -B
+			else
+				exec $ARGS -Y l,$CONDOR_LD_DIR -B dynamic
+			fi
+		fi
+
+		if [ $myname = "f77" ]; then
+			VF77RET=`f77 -tul 2>&1 | head -1 | grep 'WARNING'`
+			if [ "X$VF77RET" = "X" ]; then
+				exec $ARGS -tul -h$CONDOR_LD_DIR -B
+			else
+				exec $ARGS -Y l,$CONDOR_LD_DIR -B dynamic
+			fi
+		fi 
+	
+		if [ $myname = "f90" ]; then	
+			VF90RET=`f90 -tul 2>&1 | head -1 | grep 'WARNING'`
+			if [ "X$VF90RET" = "X" ]; then
+				exec $ARGS -tul -h$CONDOR_LD_DIR -B
+			else
+				exec $ARGS -Y l,$CONDOR_LD_DIR -B dynamic
+			fi
+		fi 
+
+		if [ $myname = "KCC" ]; then	
+			exec $ARGS --backend -tul --backend \
+			-h$CONDOR_LD_DIR --backend -B
+		fi 
+
+		;;
+
+	OSF1 )
 		if [ $myname = "cc" ]; then
 			exec $ARGS -tul -h$CONDOR_LD_DIR -B
 		fi
@@ -315,11 +371,11 @@ case $os in
 			exec $ARGS -tul -h$CONDOR_LD_DIR -B
 		fi 
 	
-		if [ $myname = "f90" -a $os = "OSF1" ]; then	
+		if [ $myname = "f90" ]; then	
 			exec $ARGS -tul -h$CONDOR_LD_DIR -B
 		fi 
 
-		if [ $myname = "KCC" -a $os = "OSF1" ]; then	
+		if [ $myname = "KCC" ]; then	
 			exec $ARGS --backend -tul --backend \
 			-h$CONDOR_LD_DIR --backend -B
 		fi 
