@@ -34,7 +34,7 @@
 extern "C" char * sin_to_string(struct sockaddr_in *);
 
 template class HashTable<HashKey, ClassAd *>;
-extern void parseIpPort (const MyString &, MyString &);
+int parseIpPort (const MyString &, MyString &);
 
 void HashKey::sprint (MyString &s)
 {
@@ -68,6 +68,46 @@ int hashFunction (const HashKey &key, int numBuckets)
     return bkt;
 }
 
+int getIpAddr( ClassAd *ad,
+			   const char * attrname,
+			   const char *attrold,
+			   sockaddr_in *from,
+			   MyString &ip )
+{
+	ExprTree	*tree;
+	MyString	buf2;
+
+	// Reset IP string
+	ip = "";
+
+	// get the IP and port of the startd 
+	tree = ad->Lookup ( attrname );
+	
+	// if not there, try to lookup the old style "STARTD_IP_ADDR" string
+	if ( ! tree && attrold) {
+		tree = ad->Lookup ( attrold );
+	}
+
+	// Extract the string from it...
+	if (tree)
+	{
+		ip = ((String *)tree->RArg())->Value();
+	}
+
+	// If no valid string, do our own thing..
+	if ( ip.Length() == 0 )
+	{
+		ip = sin_to_string( from );
+
+		buf2.sprintf( "%s = \"%s\"", attrname, ip.GetCStr() );
+		ad->Insert( buf2.GetCStr() );
+		dprintf (D_ALWAYS , "WARNING: No %s; inferring address %s\n",
+				 attrname, buf2.GetCStr() );
+	}
+
+	return 0;
+}
+
 // functions to make the hashkeys ...
 // make hashkeys from the obtained ad
 bool
@@ -76,7 +116,6 @@ makeStartdAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	ExprTree	*tree;
 	MyString	buffer;
 	MyString	buf2;
-	int		inferred = 0;
 
 	// get the name of the startd
 	if (!(tree = ad->Lookup ("Name")))
@@ -96,29 +135,11 @@ makeStartdAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 		dprintf (D_ALWAYS, "Error: Neither 'Name' nor 'Machine' specified\n");
 		return false;
 	}
-	
-	// get the IP and port of the startd 
-	tree = ad->Lookup (ATTR_STARTD_IP_ADDR);
-	
-	// if not there, try to lookup the old style "STARTD_IP_ADDR" string
-	if (!tree) tree = ad->Lookup ("STARTD_IP_ADDR");
 
-	if (tree)
-	{
-		buffer = ((String *)tree->RArg())->Value();
+	getIpAddr( ad, ATTR_STARTD_IP_ADDR, "STARTD_IP_ADDR", from, buffer );
+	if ( parseIpPort (buffer, hk.ip_addr) < 0 ) {
+		return false;
 	}
-	else
-	{
-		dprintf (D_FULLDEBUG,"Warning: No STARTD_IP_ADDR; inferring address\n");
-		buffer = sin_to_string (from);	
-
-		buf2.sprintf( "%s = \"%s\"", ATTR_STARTD_IP_ADDR, buffer.GetCStr() );
-		ad->Insert( buf2.GetCStr() );
-		dprintf (D_FULLDEBUG, "(Inferred address: %s)\n", buf2.GetCStr() );
-		inferred = 1;
-	}
-
-	parseIpPort (buffer, hk.ip_addr);
 
 	return true;
 }
@@ -130,7 +151,6 @@ makeScheddAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	ExprTree	*tree;
 	MyString	buffer;
 	MyString	buf2;
-	int		inferred = 0;
 
 	// get the name of the startd
 	if (!(tree = ad->Lookup ("Name")))
@@ -150,30 +170,12 @@ makeScheddAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 		// neither Name nor Machine specified
 		return false;
 	}
-	
-	// get the IP and port of the startd 
-	tree = ad->Lookup (ATTR_SCHEDD_IP_ADDR);
-	
-	if (!tree)
-		tree = ad->Lookup ("SCHEDD_IP_ADDR");
 
-	if (tree)
-	{
-		buffer = ((String *)tree->RArg())->Value();
+	// get the IP and port of the schedd 
+	getIpAddr( ad, ATTR_SCHEDD_IP_ADDR, "SCHEDD_IP_ADDR", from, buffer );
+	if ( parseIpPort (buffer, hk.ip_addr) < 0 ) {
+		return false;
 	}
-	else
-	{
-		dprintf(D_FULLDEBUG,"Warning: No SCHEDD_IP_ADDR; inferring address\n");
-		buffer = sin_to_string (from);
-
-        // since we have done the work ...
-        buf2.sprintf( "%s = \"%s\"", ATTR_SCHEDD_IP_ADDR, buffer.GetCStr() );
-		ad->Insert( buf2.GetCStr() );
-		dprintf (D_FULLDEBUG, "(Inferred address: %s)\n", buf2.GetCStr() );
-		inferred = 1;
-	}
-
-	parseIpPort (buffer, hk.ip_addr);
 
 	return true;
 }
@@ -185,7 +187,6 @@ makeLicenseAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	ExprTree *tree;
 	MyString buffer;
 	MyString buf2;
-	int  inferred = 0;
 
 	// get the name of the startd
 	if (!(tree = ad->Lookup ("Name")))
@@ -207,25 +208,10 @@ makeLicenseAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	}
 	
 	// get the IP and port of the startd 
-	tree = ad->Lookup (ATTR_MY_ADDRESS);
-	
-	if (tree)
-	{
-		buffer = ((String *)tree->RArg())->Value();
+	getIpAddr( ad, ATTR_MY_ADDRESS, NULL, from, buffer );
+	if ( parseIpPort (buffer, hk.ip_addr) < 0 ) {
+		return false;
 	}
-	else
-	{
-		dprintf(D_FULLDEBUG,"Warning: No MY_ADDRESS; inferring address\n");
-		buffer = sin_to_string (from);
-
-        // since we have done the work ...
-        buf2.sprintf( "%s = \"%s\"", ATTR_MY_ADDRESS, buffer.GetCStr() );
-		ad->Insert (buf2.GetCStr() );
-		dprintf (D_FULLDEBUG, "(Inferred address: %s)\n", buf2.GetCStr() );
-		inferred = 1;
-	}
-
-	parseIpPort (buffer, hk.ip_addr);
 
 	return true;
 }
@@ -313,19 +299,26 @@ makeStorageAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	return true;
 }
 
-// utility function:  parse the string <aaa.bbb.ccc.ddd:pppp>
-void 
+// utility function:  parse the string "<aaa.bbb.ccc.ddd:pppp>"
+//  Extracts the ip address portion ("aaa.bbb.ccc.ddd")
+int 
 parseIpPort (const MyString &ip_port_pair, MyString &ip_addr)
 {
-    const char *ip_port = ip_port_pair.GetCStr() + 1;
 	ip_addr = "";
-    while (*ip_port != ':')
+
+    const char *ip_port = ip_port_pair.GetCStr();
+    if ( ! ip_port ) {
+        return -1;
+    }
+	ip_port++;			// Skip the leading "<"
+    while ( *ip_port && *ip_port != ':')
     {
 		ip_addr += *ip_port;
         ip_port++;
     }
 
 	// don't care about port number
+	return 0;
 }
 
 // HashString
