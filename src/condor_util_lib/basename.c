@@ -32,13 +32,13 @@
 
 /* A basname() function that is happy on both Unix and NT */
 char *
-basename(char *path)
+basename(const char *path)
 {
-	char *s;
-	for (s = path; path && *path != '\0'; path++) {
-		if (*path == '\\' || *path == '/') {
-			s = path+1;
+	char *s, *name;
+	for (s = (char*)path; s && *s != '\0'; s++) {
+		if (*s == '\\' || *s == '/') {
+			name = s+1;
 		}
 	}
-	return s;
+	return name;
 }
