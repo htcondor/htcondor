@@ -38,6 +38,18 @@ if ( $gen_config || $gen_glidein_startup ) {
     exit( 0 );
 }
 
+if ( $#ARGV == -1 ) {
+    if ( ($run_here && $setup_here) ||
+	 ($run_here && $runonly) ||
+	 ($setup_here && $setuponly)) {
+	@CONTACTS = (`hostname`)
+    }
+    else {
+	print STDERR "No target resource specified.  Use -help for usage information.\n";
+	exit( -1 );
+    }
+}
+
 foreach $CONTACT ( @CONTACTS ) {
 	if ( host_info() ) {
 		next;
@@ -55,11 +67,6 @@ foreach $CONTACT ( @CONTACTS ) {
 			exit( 3 );
 		}
 	}
-}
-
-if ( $#ARGV == -1 ) {
-    print STDERR "No target resource specified.  Use -help for usage information.\n";
-    exit( -1 );
 }
 
 exit( 0 );
@@ -165,6 +172,38 @@ sub do_submit() {
 	$arguments = "-dyn -f";
 	if ( $master_run_time ) {
 		$arguments .= " -r $master_run_time";
+	}
+
+	if ( $run_here ) {
+	    my $glidein_run_sh = "glidein_run.sh$suffix";
+	    my $commands = "#!/bin/sh\n";
+	    my $shenv = $GLOBUSENV;
+	    my $sh_archdir = $archdir;
+
+	    #convert env references to sh syntax
+	    $shenv =~ s/\$\(HOME\)/\${HOME}/g;
+	    $sh_archdir =~ s/\$\(HOME\)/\${HOME}/g;
+
+	    for my $env_setting (split(/;/,$shenv)) {
+		my $var, $val;
+		($var, $val) = split(/=/,$env_setting,2);
+		$commands .= "$var=\"$val\"\n";
+		$commands .= "export $var\n";
+	    }
+	    $commands .= "\nexec $sh_archdir/$startup_name $arguments\n";
+	    if ( $gen_submit ) {
+		print "Saving glidein submit file: $glidein_run_sh\n";
+		open( SUBMIT, ">$glidein_run_sh" );
+		print SUBMIT $commands;
+		close( SUBMIT );
+		chmod 0755, $glidein_run_sh;
+	    } else {
+		print "Running Glidein...\n";
+		if( system($commands) != 0 ) {
+		    return ("glidein failed to run.");
+		}
+	    }
+	    return;
 	}
 
 		##Escape '$' in submit file entries
@@ -295,6 +334,18 @@ sub gather_info() {
 		return( "$NAME: $HOME not in your ENV" );
 	}
 
+	if( $config_gsi ) {
+	    if( $install_gsi_trusted_ca_dir eq "" ) {
+		return( "ERROR: GSI setup requires -install_gsi_trusted_ca_dir to be specified.\nExample: -install_gsi_trusted_ca_dir /etc/grid-security/certificates" );
+	    }
+	    if( $install_gsi_gridmap eq "" ) {
+		return( "ERROR: GSI setup requires -install_gsi_gridmap to be specified.\nThis should be a grid-mapfile containing entries for authorized users." );
+	    }
+	    if( $gsi_daemon_name eq "" ) {
+		return( "ERROR: GSI setup requires -gsi_daemon_name to be specified.  This should be set to your grid certificate name." );
+	    }
+	}
+
 	return( 0 );
 }
 
@@ -316,6 +367,7 @@ print STDERR "	Valid options:\n"
 . "   -forcesetup             During setup, force copying of files\n"
 . "   -setup_jobmanager <X>   Jobmanager to use for setup.\n"
 . "   -setup_here             Run setup procedure directly, rather than remotely.\n"
+. "   -run_here               Run glidein directly, rather than remotely.\n"
 . "   -arch <architecture>    Condor architecture to install on remote fesource.\n"
 . "   -queue <queue>          Queue to use on Globus scheduler\n"
 . "   -project <project>      Project to use on Globus resource\n"
@@ -335,6 +387,9 @@ print STDERR "	Valid options:\n"
 . "   -gensubmit              Generate submit files; do not submit\n"
 . "   -suffix X               Suffix to append to submit file names.\n"
 . "   -edg                    Use EDG MDS schema to query GRIS\n"
+. "   -install_gsi_trusted_ca_dir <path>   Copy trusted CA certs.\n"
+. "   -install_gsi_gridmap <file>          Copy grid-mapfile.\n"
+. "   -gsi_daemon_name <cert name>         Your grid certificate name.\n"
 . "   -help                   Print this usage, see documentation for info\n";
 }
 
@@ -377,14 +432,25 @@ sub parse_command_line() {
 		"gensubmit" => \$gen_submit,
 		"edg" => \$edg_mds_schema,
 		"setup_here" => \$setup_here,
+		"run_here" => \$run_here,
 		"setup_jobmanager=s" => \$setup_jobmanager,
 		"setup_queue=s" => \$setup_queue,
 		"arch=s" => \$setup_arch,
 		"suffix=s" => \$suffix,
+		"install_gsi_trusted_ca_dir=s" => \$install_gsi_trusted_ca_dir,
+		"install_gsi_gridmap=s" => \$install_gsi_gridmap,
+		"gsi_daemon_name=s" => \$gsi_daemon_name,
 		"help" => \$help );
 	if ( !$RESULT ) {
 		usage();
 		exit( 1 );
+	}
+
+	$config_gsi = 0;
+	if( $install_gsi_trusted_ca_dir ne ""
+	    || $install_gsi_gridmap ne ""
+	    || $gsi_daemon_name ne "" ) {
+	    $config_gsi = 1;
 	}
 
 	if ( $suffix ne "" && !($suffix =~ /\..*/) ) {
@@ -468,6 +534,11 @@ if [ "\$_condor_LOCAL_DIR" = "." ]; then
   export _condor_LOCAL_DIR=\$(pwd)
 fi
 
+#If we have an X509 user proxy, use it as the Condor daemon proxy.
+if [ "\$_condor_GSI_DAEMON_PROXY" = "" ] && [ -a "\$X509_USER_PROXY" ]; then
+  export _condor_GSI_DAEMON_PROXY="\$X509_USER_PROXY"
+fi
+
 exec \${_condor_SBIN}/condor_master "\$@"
 EOF
 	close GLIDEIN_STARTUP
@@ -484,50 +555,60 @@ sub gen_main_config {
 
 	print CONDOR_CONFIG <<"EOF";
 
-	LOG = \$(LOCAL_DIR)/log
-	EXECUTE = \$(LOCAL_DIR)/execute
-	HOSTALLOW_ADMINISTRATOR = \$(HOSTNAME), \$(GLIDEIN_HOST)
+LOG = \$(LOCAL_DIR)/log
+EXECUTE = \$(LOCAL_DIR)/execute
+HOSTALLOW_ADMINISTRATOR = \$(HOSTNAME), \$(GLIDEIN_HOST)
 
-	MAIL = /bin/mail
-	DAEMON_LIST = MASTER, STARTD
-	MASTER_ADDRESS_FILE = \$(LOG)/.master_address
-	MASTER = \$(SBIN)/condor_master
-	MASTER_LOG = \$(LOG)/MasterLog
-	STARTD = \$(SBIN)/condor_startd
-	STARTER = \$(SBIN)/condor_starter
+MAIL = /bin/mail
+DAEMON_LIST = MASTER, STARTD
+MASTER_ADDRESS_FILE = \$(LOG)/.master_address
+MASTER = \$(SBIN)/condor_master
+MASTER_LOG = \$(LOG)/MasterLog
+STARTD = \$(SBIN)/condor_startd
+STARTER = \$(SBIN)/condor_starter
 
-	STARTER_PVM = \$(SBIN)/condor_starter.pvm
-	STARTER_STD = \$(SBIN)/condor_starter.std
-	STARTER_LIST = STARTER, STARTER_STD, STARTER_PVM
+STARTER_PVM = \$(SBIN)/condor_starter.pvm
+STARTER_STD = \$(SBIN)/condor_starter.std
+STARTER_LIST = STARTER, STARTER_STD, STARTER_PVM
 
-	ALTERNATE_STARTER_1 = \$(SBIN)/condor_starter.pvm
-	PVMD = \$(SBIN)/condor_pvmd
+ALTERNATE_STARTER_1 = \$(SBIN)/condor_starter.pvm
+PVMD = \$(SBIN)/condor_pvmd
 
-	USE_NFS = False
-	USE_CKPT_SERVER = False
-	NEGOTIATOR_HOST	= $NEGOTIATOR_HOST
-	COLLECTOR_HOST = $COLLECTOR_HOST
+USE_NFS = False
+USE_CKPT_SERVER = False
+NEGOTIATOR_HOST	= $NEGOTIATOR_HOST
+COLLECTOR_HOST = $COLLECTOR_HOST
 
-	LOCK = \$(LOG)
-	STARTD_LOG = \$(LOG)/StartdLog
-	STARTER_LOG = \$(LOG)/StarterLog
+LOCK = \$(LOG)
+STARTD_LOG = \$(LOG)/StartdLog
+STARTER_LOG = \$(LOG)/StarterLog
 
-	STARTD_DEBUG = D_COMMAND
+STARTD_DEBUG = D_COMMAND
 
-	SUSPEND = False
-	CONTINUE = True
-	PREEMPT = False
-	WANT_VACATE = False
-	WANT_SUSPEND = True
-	SUSPEND_VANILLA = False
-	WANT_SUSPEND_VANILLA = True
-	KILL = False
-	UPDATE_INTERVAL = 20
-	IS_GLIDEIN = True
-	STARTD_EXPRS = IS_GLIDEIN, START, DaemonStopTime
+SUSPEND = False
+CONTINUE = True
+PREEMPT = False
+WANT_VACATE = False
+WANT_SUSPEND = True
+SUSPEND_VANILLA = False
+WANT_SUSPEND_VANILLA = True
+KILL = False
+UPDATE_INTERVAL = 20
+IS_GLIDEIN = True
+STARTD_EXPRS = IS_GLIDEIN, START, DaemonStopTime
 
-	PREEN_INTERVAL = 0
+PREEN_INTERVAL = 0
 EOF
+	if( $config_gsi ) {
+	    print CONDOR_CONFIG <<"EOF";
+SEC_DEFAULT_AUTHENTICATION = REQUIRED
+SEC_DEFAULT_AUTHENTICATION_METHODS = GSI
+GSI_DAEMON_DIRECTORY = \$(SBIN)/../grid-security
+GRIDMAP = \$(GSI_DAEMON_DIRECTORY)/grid-mapfile
+GSI_DAEMON_NAME = $gsi_daemon_name
+EOF
+	}
+
 	close CONDOR_CONFIG
 	    or die "Error writing to $filename: $!";
 }
@@ -842,6 +923,10 @@ sub do_remote_setup() {
 
 	my $glidein_condor_config_text;
 	my $glidein_startup_text;
+	my $glidein_gridmap_text = "";
+	my $glidein_trusted_ca_text = "";
+	my $have_gridmap = 0;
+	my $have_trusted_ca = 0;
 
 	open( CONFIG_FILE, "<$glidein_condor_config")
 	    or return ("reading $glidein_condor_config: $!");
@@ -859,6 +944,35 @@ sub do_remote_setup() {
 		unlink( $glidein_startup );
 	}
 
+	if ( $install_gsi_gridmap ne "" ) {
+	    $have_gridmap = 1;
+	    open( GRIDMAP_FILE, "<$install_gsi_gridmap")
+		or return ("reading $install_gsi_gridmap: $!");
+	    $glidein_gridmap_text = join("",readline(GRIDMAP_FILE));
+	    close(GRIDMAP_FILE);
+	}
+	if ( $install_gsi_trusted_ca_dir ne "" ) {
+	    $have_trusted_ca = 1;
+	    if ( ! -d $install_gsi_trusted_ca_dir ) {
+		return "no such directory $install_gsi_trusted_ca_dir";
+	    }
+	    chomp($cwd = `pwd`);
+	    $glidein_trusted_ca_tar = $cwd . "/glidein_trusted_ca.tar$suffix";
+	    $command = "if ! cd $install_gsi_trusted_ca_dir; then exit 1; fi\n";
+	    $command .= "if ! tar cf $glidein_trusted_ca_tar *; then exit 1; fi\n";
+	    $command .= "if ! mimencode $glidein_trusted_ca_tar > $glidein_trusted_ca_tar.base64; then exit 1; fi\n";
+	    $command .= "rm $glidein_trusted_ca_tar\n";
+	    if(system($command) != 0) {
+		return "building trusted ca tar file";
+	    }
+
+	    open( TRUSTED_CA_FILE, "<$glidein_trusted_ca_tar.base64")
+		or return ("reading $glidein_trusted_ca_tar.base64: $!");
+	    $glidein_trusted_ca_text = join("",readline(TRUSTED_CA_FILE));
+	    close(TRUSTED_CA_FILE);
+	    unlink( "$glidein_trusted_ca_tar.base64" );
+	}
+
 	#For maximum portability and to avoid extra problems that may
 	#result from file transfers, the condor_config and startup
 	#files are inserted into the remote setup script.
@@ -866,6 +980,8 @@ sub do_remote_setup() {
 	#Escape $ characters.
 	$glidein_condor_config_text =~ s/\$/\\\$/g;
 	$glidein_startup_text =~ s/\$/\\\$/g;
+	$glidein_gridmap_text =~ s/\$/\\\$/g;
+	$glidein_trusted_ca_text =~ s/\$/\\\$/g;
 
 	my $glidein_remote_setup = "glidein_remote_setup$suffix";
 	open( REM_SETUP, ">$glidein_remote_setup" );
@@ -880,6 +996,8 @@ sub do_remote_setup() {
 
 	CONFIG=\$BASEDIR/$config_name
 	STARTUP=\$ARCHDIR/$startup_name
+	GRIDMAP=\$BASEDIR/grid-security/grid-mapfile
+	TRUSTED_CA=\$BASEDIR/grid-security/certificates
 
 	if [ "$GLOBUS_SH_TAR" = "" ]; then
 		#We must not have gotten executed via globus-sh-exec.
@@ -904,7 +1022,7 @@ sub do_remote_setup() {
 		fi
 	done
 
-	if [ \$FORCE -ne 0 -o ! -f \$CONFIG ]; then
+	if [ \$FORCE -ne 0 -o ! -a \$CONFIG ]; then
 		#Write config file
 		echo "Installing \$CONFIG.";
 		cat > \$CONFIG.\$\$ <<END_CONFIG
@@ -926,6 +1044,37 @@ END_STARTUP
 	else
 		echo "Already installed: \$STARTUP.";
 	fi
+
+	if [ "$have_gridmap" = "0" ]; then
+		#User did not supply grid-mapfile.
+		echo > /dev/null  #nop
+	elif [ \$FORCE -ne 0 -o ! -a \$GRIDMAP ]; then
+		#Write grid-mapfile
+		echo "Installing \$GRIDMAP.";
+		mkdir -p `dirname \$GRIDMAP`
+		cat > \$GRIDMAP.\$\$ <<END_CONFIG
+$glidein_gridmap_text
+END_CONFIG
+		mv -f \$GRIDMAP.\$\$ \$GRIDMAP;
+	else
+		echo "Already installed: \$CONFIG.";
+	fi
+
+	if [ "$have_trusted_ca" = "0" ]; then
+		#User did not supply trusted ca directory.
+		echo > /dev/null  #nop
+	elif [ \$FORCE -ne 0 -o ! -d \$TRUSTED_CA ]; then
+		#Write trusted ca files
+		echo "Installing \$TRUSTED_CA.";
+		mkdir -p \$TRUSTED_CA
+		mimencode -u > \$TRUSTED_CA.\$\$.tar <<END_CONFIG
+$glidein_trusted_ca_text
+END_CONFIG
+		tar -x -C \$TRUSTED_CA -f \$TRUSTED_CA.\$\$.tar
+	else
+		echo "Already installed: \$TRUSTED_CA.";
+	fi
+
 
 	cd \$ARCHDIR
 	GETFILES=0
