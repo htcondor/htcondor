@@ -99,6 +99,11 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
 
     int nameGssToLocal( char * GssClient );
 
+#ifdef WIN32
+	int ParseMapFile();
+	int condor_gss_assist_gridmap ( char * GssClient, char *& local_user );
+#endif
+
     /** Check whether the security context of the scoket is valid or not 
 	@return TRUE if valid FALSE if not */
     bool gss_is_valid();
@@ -124,6 +129,10 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
     int                 token_status;
     //X509_Credential *   my_credential;
     OM_uint32	        ret_flags ;
+#ifdef WIN32
+    typedef HashTable<MyString, MyString> Grid_Map_t;
+    static Grid_Map_t * GridMap;
+#endif
 };
 
 #endif

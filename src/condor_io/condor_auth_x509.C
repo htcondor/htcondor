@@ -23,13 +23,20 @@
 
 #if !defined(SKIP_AUTHENTICATION) && defined(GSI_AUTHENTICATION)
 
+#include "condor_common.h"
 #include "condor_auth_x509.h"
 #include "environ.h"
 #include "condor_config.h"
+#include "condor_string.h"
 
 extern DLL_IMPORT_MAGIC char **environ;
 const char STR_DAEMON_NAME_FORMAT[]="$$(FULL_HOST_NAME)";
 StringList * getDaemonList(ReliSock * sock);
+
+
+#ifdef WIN32
+HashTable<MyString, MyString> * Condor_Auth_X509::GridMap = 0;
+#endif
 
 //----------------------------------------------------------------------
 // Implementation
@@ -42,6 +49,9 @@ Condor_Auth_X509 :: Condor_Auth_X509(ReliSock * sock)
       token_status     (0),
       ret_flags        (0)
 {
+#ifdef WIN32
+	ParseMapFile();
+#endif
 }
 
 Condor_Auth_X509 ::  ~Condor_Auth_X509()
@@ -269,37 +279,185 @@ void  Condor_Auth_X509 :: erase_env()
    return;
  }
 
+/* these next two functions are the implementation of a globus function that
+   does not exist on the windows side.
+   
+   the return value and method of returning the dup'ed string are the same way
+   globus behaves.
+ 
+   if globus includes this function in a future version of GSI, delete
+   these functions and use theirs.
+*/
+#ifdef WIN32
+int Condor_Auth_X509::ParseMapFile() {
+	FILE *fd;
+	char * buffer;
+	char * filename = param( STR_GSI_MAPFILE );
+
+	if (!filename) {
+		dprintf( D_ALWAYS, "GSI: GRIDMAP not set in condor_config, failing!\n");
+		return FALSE;
+	}
+
+	if ( !(fd = fopen(  filename, "r" ) ) ) {
+		dprintf( D_ALWAYS, "GSI: unable to open map file %s, errno %d\n", 
+			filename, errno );
+		free(filename);
+		return FALSE;
+	} else {
+
+		dprintf (D_SECURITY, "GSI: parsing mapfile: %s\n", filename);
+    
+		if (GridMap) {
+			delete GridMap;
+			GridMap = NULL;
+		}
+
+		assert (GridMap == NULL);
+		GridMap = new Grid_Map_t(293, MyStringHash);
+
+		// parse the file
+		while (buffer = getline(fd)) {
+
+			// one_line will be a copy.  user_name will point to the username
+			// within.  subject_name will point to the null-truncated subject
+			// name within.  one_line should be free()ed.
+			char *user_name = NULL;
+			char *subject_name = NULL;
+			char *one_line = (char*)malloc(1 + strlen(buffer));
+
+			if (!one_line) {
+				EXCEPT("out of mem.");
+			}
+			strcpy (one_line, buffer);
+
+			// subject name is in quotes
+			char *tmp;
+			tmp = index(one_line, '"');
+			if (tmp) {
+				subject_name = tmp + 1;
+
+				tmp = index(subject_name, '"');
+				if (tmp) {
+					// truncate the subject name
+					*tmp = 0;
+
+					// now, let's find the username
+					tmp++;
+					while (*tmp && (*tmp == ' ' || *tmp == '\t')) {
+						tmp++;
+					}
+					if (*tmp) {
+						// we found something.  the rest of the line
+						// becomes username.
+						user_name = tmp;
+					} else {
+						dprintf ( D_ALWAYS, "GSI: bad map (%s), no username: %s\n", filename, buffer);
+					}
+
+				} else {
+					dprintf ( D_ALWAYS, "GSI: bad map (%s), missing quote after subject name: %s\n", filename, buffer);
+				}
+			} else {
+				dprintf ( D_ALWAYS, "GSI: bad map (%s), need quotes around subject name: %s\n", filename, buffer);
+			}
+
+
+			// user_name is set only if we parsed the whole line
+			if (user_name) {
+				GridMap->insert( subject_name, user_name );
+				dprintf ( D_SECURITY, "GSI: mapped %s to %s.\n",
+						subject_name, user_name );
+			}
+
+			free (one_line);
+		}
+
+		fclose(fd);
+
+		free(filename);
+		return TRUE;
+	}
+}
+
+/*
+   this function must return the same values as globus!!!!
+
+   also, it must allocate memory the same:  create a new string and
+   write address into '*to'.
+ 
+*/
+int Condor_Auth_X509::condor_gss_assist_gridmap(char * from, char ** to) {
+
+	if (GridMap == 0) {
+		ParseMapFile();
+	}
+
+	if (GridMap) {
+		MyString f(from), t;
+		if (GridMap->lookup(f, t) != -1) {
+			if (DebugFlags & D_FULLDEBUG) {
+				dprintf (D_SECURITY, "GSI: subject %s is mapped to user %s.\n", 
+					f.Value(), t.Value());
+			}
+
+			*to = strdup(t.Value());
+			return GSS_S_COMPLETE;
+		} else {
+			// if the map exists, they must be listed.  and they're NOT!
+			return !GSS_S_COMPLETE;
+		}
+	}
+
+	return !GSS_S_COMPLETE;
+}
+#endif
+
 int Condor_Auth_X509::nameGssToLocal(char * GSSClientname) 
 {
-    //this might need to change with SSLK5 stuff
-    //just extract username from /CN=<username>@<domain,etc>
-    OM_uint32 major_status;
-    char *local;
+	//this might need to change with SSLK5 stuff
+	//just extract username from /CN=<username>@<domain,etc>
+	OM_uint32 major_status;
+	char *tmp_user = NULL;
+	char local_user[256];
 
-    if ( (major_status = globus_gss_assist_gridmap(GSSClientname, &local)) 
-         != GSS_S_COMPLETE) {
-        dprintf(D_SECURITY, "Unable to map GSI user name %s to local id.\n", GSSClientname);
-        return 0;
-    }
+// windows gsi does not currently include this function.  we use it on
+// unix, but implement our own on windows for now.
+#ifdef WIN32
+	major_status = condor_gss_assist_gridmap(GSSClientname, &tmp_user);
+#else
+	major_status = globus_gss_assist_gridmap(GSSClientname, &tmp_user);
+#endif
 
-    // we found a map, let's check it now
-    // split it into user@domain
-    char * tmp = strchr(local, '@');
-    if (tmp == NULL) {
-        dprintf(D_SECURITY, "GSI certificate map is invalid. Expect user@domain. Instead, the user id is %s\n", local);
-        return 0;
-    }
+	if (tmp_user) {
+		strcpy( local_user, tmp_user );
+		free(tmp_user);
+		tmp_user = NULL;
+	}
+
+	if ( major_status != GSS_S_COMPLETE) {
+		dprintf(D_SECURITY, "Unable to map GSI user name %s to local id.\n", GSSClientname);
+		return 0;
+	}
+
+	// we found a map, let's check it now
+	// split it into user@domain
+	char * tmp = strchr(local_user, '@');
+	if (tmp == NULL) {
+		dprintf(D_SECURITY, "GSI: bad map. Username '%s' should be in the form "
+			"user@domain. ", local_user);
+		return 0;
+	}
     
-    int len  = strlen(local);
-    int len2 = len - strlen(tmp);
-    char * user = (char *) malloc(len2 + 1);
-    memset(user, 0, len2 + 1);
-    strncpy(user, local, len2);
-    setRemoteUser  (user);
-    setRemoteDomain(tmp+1);
-    free(user);
-    free(local);
-    return 1;
+	int len  = strlen(local_user);
+	int len2 = len - strlen(tmp);
+	char * user = (char *) malloc(len2 + 1);
+	memset(user, 0, len2 + 1);
+	strncpy(user, local_user, len2);
+	setRemoteUser  (user);
+	setRemoteDomain(tmp+1);
+	free(user);
+	return 1;
 }
 
 //cannot make this an AuthSock method, since gss_assist method expects

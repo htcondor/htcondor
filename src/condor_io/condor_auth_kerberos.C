@@ -902,14 +902,24 @@ int Condor_Auth_Kerberos :: init_realm_mapping()
         	char * token;
         	token = strtok(buffer, "==");
         	if(token) {
-            	from.append(token);
-        	}
-        	token = strtok(NULL, "==");
-        	if(token) {
-            	to.append(token);
-        	}
-        	lc++;
-    	}
+				char *tmpf = strdup(token);
+
+				token = strtok(NULL, "==");
+				if(token) {
+					to.append(token);
+					from.append(tmpf);
+					lc++;
+				} else {
+					dprintf (D_ALWAYS, "KERBEROS: bad map (%s), no domain after '=': %s\n",
+						filename, buffer);
+				}
+
+				free (tmpf);
+			} else {
+				dprintf (D_ALWAYS, "KERBEROS: bad map (%s), missing '=' separator: %s\n",
+					filename, buffer);
+			}
+		}
 
 		assert (RealmMap == NULL);
 		RealmMap = new Realm_Map_t(lc, compute_string_hash);
