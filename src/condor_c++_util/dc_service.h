@@ -120,6 +120,8 @@ protected:
 */ 
 typedef int (*ServiceDataHandler)(ServiceData*);
 
+typedef int (*ServiceDataCompare)(ServiceData*, ServiceData*);
+
 typedef int (Service::*ServiceDataHandlercpp)(ServiceData*);
 
 
