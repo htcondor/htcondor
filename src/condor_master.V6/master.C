@@ -827,7 +827,7 @@ run_preen(Service*)
 	child_pid = daemonCore->Create_Process(
 					FS_Preen,		// program to exec
 					FS_Preen,			// args
-					PRIV_CONDOR,	// privledge level
+					PRIV_ROOT,	// privledge level
 					1,				// which reaper ID to use; use default reaper
 					FALSE );		// we do _not_ want this process to have a command port; PREEN is not a daemon core process
 	dprintf( D_ALWAYS, "Preen pid is %d\n", child_pid );
