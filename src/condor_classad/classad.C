@@ -226,6 +226,12 @@ ClassAd::ClassAd(char* s, char d) : AttrList(s, d)
 		}
     }
 	delete tree;
+	// I just added the next two lines: we were leaking memory 
+	// because EvalResult may contain a string result that isn't
+	// properly deleted if we don't call the destructor. Therefore,
+	// I delete and recreate the EvalResult. --alain 23-Sep-2001
+	delete val;
+	val = new EvalResult;
 
 	// Make a parse tree that contains the variable TargetType
     Parse("TargetType", tree);
