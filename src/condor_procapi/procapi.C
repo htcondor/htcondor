@@ -491,8 +491,8 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	rval = pstat_getproc( &buf, sizeof(buf), 0, pid );
 
 	if ( rval < 0 ) {
-		dprintf( D_ALWAYS, "ProcAPI: Error in pstat_getproc(%d)\n",
-				 pid );
+		dprintf( D_ALWAYS, "ProcAPI: Error in pstat_getproc(%d): errno=%d\n",
+				 pid, errno );
 		delete pi; 
 		pi = NULL;
 		set_priv( priv );
