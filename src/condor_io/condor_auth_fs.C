@@ -179,6 +179,7 @@ int Condor_Auth_FS::authenticate(const char * remoteHost)
                     char *tmpOwner = my_username( stat_buf.st_uid );
                     setRemoteUser( tmpOwner );
                     free( tmpOwner );
+                    setRemoteDomain( getLocalDomain());
                 }
             }
         } 
