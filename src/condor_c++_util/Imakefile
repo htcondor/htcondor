@@ -1,4 +1,4 @@
-all_target(cplus_lib.a liburl.a libcondorapi.a)
+all_target(cplus_lib.a liburl.a libcondorapi.a test_libcondorapi)
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(OPENSSL_FLAGS)
 CFLAGS = $(STD_C_FLAGS) $(OPENSSL_FLAGS)
@@ -73,6 +73,7 @@ CONLIBAPI_OBJ = \
 	my_distribution.o \
 	$(CLASSAD_OBJ) \
 	$(DH_OBJ) \
+	lower_case.o \
 	c++_util_instantiate.o \
 	libcondorapi_stubs.o
 
@@ -100,7 +101,8 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	KeyCache.o dc_stub.o which.o iso_dates.o java_config.o \
 	RegExer.o my_distribution.o error_utils.o $(DH_OBJ) \
 	translation_utils.o command_strings.o enum_utils.o \
-	condor_parameters.o extra_param_info.o classad_command_util.o
+	condor_parameters.o extra_param_info.o classad_command_util.o \
+	lower_case.o
 
 library_target( cplus_lib.a,$(OBJ))
 library_target( liburl.a,$(URL_OBJ))
@@ -113,6 +115,7 @@ c_plus_target(test_user_job_policy,test_user_job_policy.o,$(LIB))
 c_plus_target(test_classad_support,test_classad_support.o,$(LIB))
 c_plus_target(test_classad_merge,test_classad_merge.o,$(LIB))
 c_plus_target(test_mystring,test_mystring.o,$(LIB))
+c_plus_target(test_libcondorapi,test_libcondorapi.o,libcondorapi.a)
 
 c_plus_target(cat_url,cat_url.o,liburl.a)
 c_plus_target(access.t,access.t.o,$(LIB))
