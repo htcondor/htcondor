@@ -22,14 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
  
-
-#define _POSIX_SORUCE
 #include "condor_common.h"
-#include "condor_fix_socket.h"
-#include <netinet/in.h>
-extern "C" {
-#include <netdb.h>
-}
 #include "url_condor.h"
 #include "condor_debug.h"
 

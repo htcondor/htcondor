@@ -20,18 +20,9 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#define _POSIX_SOURCE
-#include <iostream.h>
-#include <stdio.h>
 
-#if 0
-#include "types.h"
-#include "file_lock.h"
-#else
 #include "condor_common.h"
-#include "condor_constants.h"
 #include "file_lock.h"
-#endif
 
 int open_file( const char *name );
 

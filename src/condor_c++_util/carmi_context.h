@@ -20,8 +20,6 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#include <netinet/in.h>
-#include "condor_types.h"
 #include "manager.h"
 
 enum {                  // how to get the information

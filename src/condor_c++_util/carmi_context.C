@@ -20,12 +20,6 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#define _POSIX_SOURCE
-
-/* Solaris specific change ..dhaval 6/27 */
-#if defined(Solaris)
-#include "_condor_fix_types.h"
-#endif
 
 #include "condor_common.h"
 #include "condor_fix_string.h"
@@ -35,10 +29,6 @@
 #include "condor_network.h"		/* For COLLECTOR_PORT */
 #include "condor_debug.h"
 #include "sched.h"
-
-#if defined(IRIX53)
-#	include <time.h>
-#endif
 
 #undef ASSERT
 #define ASSERT(x) x
