@@ -21,6 +21,7 @@ sub TypeAuto   { 1 }
 sub TypeString { 2 }
 sub TypeNumber { 3 }
 sub TypeBool   { 4 }
+sub TypePercent { 5 }
 
 # Perform initializations..
 sub _initialize {
@@ -66,6 +67,11 @@ sub StoreValue {
 	if ( ( $Value =~ /^\d+$/ ) || ( $Value =~ /^\d*\.\d+$/ ) )
 	{
 	    $Type = HawkeyePublish::TypeNumber;
+	}
+	elsif ( ( $Value =~ /^\d+%$/ ) || ( $Value =~ /^\d*\.\d+%$/ ) )
+	{
+	    $Value *= 0.01;
+	    $Type = HawkeyePublish::TypePercent;
 	}
 	elsif ( $Value =~ /(^true$)|(^false$)/i )
 	{
@@ -133,6 +139,18 @@ sub StoreBool {
     my $Value = shift;
 
     $self->StoreValue( $Var, $Value, HawkeyePublish::TypeBool );
+}
+
+# Publish a boolean boolean value
+sub StorePercent {
+    my $self = shift;
+
+    # Check that we're passed the correct # of args...
+    Carp::confess( "Store: wrong args" ) if ( $#_ != 1 );
+    my $Var = shift;
+    my $Value = shift;
+
+    $self->StoreValue( $Var, $Value, HawkeyePublish::TypePercent );
 }
 
 # Turn on/off auto indexing
@@ -208,6 +226,11 @@ sub Publish {
 	{
 	    $Value = $Rec->{Value} * 1.0;
 	    print "$Attr = $Value\n";
+	}
+	elsif ( $Rec->{Type} == HawkeyePublish::TypePercent )
+	{
+	    $Value = $Rec->{Value} * 100.0;
+	    print "$Attr = \"$Value%\"\n";
 	}
 	else
 	{
