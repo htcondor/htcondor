@@ -2,12 +2,11 @@ Condor-G NMI Release April 2002
 
 Installation
 ------------
-This distribution is packaged using the Grid Packaging Tools [Technology?]
+This distribution is packaged using the Grid Packaging Technology
 (GPT). To install it, you must first install the GPT. You can obtain GPT
-1.0 from the following locations:
+2.0 from the following locations:
 
-http://www-unix.globus.org/ftppub/gt2/2.0/gpt/gpt-1.0.tar.gz
-ftp://ftp.globus.org/pub/gt2/2.0/gpt/gpt-1.0.tar.gz
+ftp://ftp.nsf-middleware.org/pub/tools/src/gpt-2.0.tar.gz
 
 GPT Requirements:
 
@@ -42,7 +41,7 @@ Installing GPT:
 This step is required for both binary and source bundles. Untar the
 distribution and enter the following commands.
 
-    % cd gpt-1.0
+    % cd gpt-2.0
     % ./build_gpt
 
 Note: If your perl 5.005 executable is not named "perl" or is not in your
@@ -61,8 +60,8 @@ GPT_LOCATION) environment variable is set, you can install the Condor-G
 Basic bundle. The following commands assume you're installing the linux
 version. Change names as appropriate for other platforms.
 
-    % $GPT_LOCATION/sbin/globus-install \
-        condorg_basic_bundle-linux-i686.tar.gz
+    % $GPT_LOCATION/sbin/gpt-install \  
+        Condor-G_linux_bundle.tar.gz
 
 Note: Remember to replace GPT_LOCATION with GLOBUS_LOCATION if you did not
 create a separate packaging directory.
@@ -104,4 +103,95 @@ Overview
 
 Examples
 --------
-[Demonstrate running a job.]
+
+A job is submitted for execution to Condor using the condor_submit command.
+condor_submit takes as an argument the name of a file called a submit
+description file. The following sample submit description file will run a job
+on the Origin2000 at NCSA.
+
+    executable = test-progam
+    globusscheduler = modi4.ncsa.uiuc.edu/jobmanager
+    universe = globus
+    output = test.out
+    log = test.log
+    queue
+
+The executable for this example is transferred from the local machine to the
+remote machine. By default, Condor-G transfers the executable. Note that this
+executable must be compiled for the correct platform.
+
+The universe is set to globus. A "universe" tells Condor-G how to start and run 
+the job. By setting it to globus, Condor-G will use the Globus Toolkit(tm)
+to run your job.
+ 
+The globusscheduler tells Condor-G which Globus resource it should use to
+run your job. In the example above, it will use the default jobmanager on
+the Origin2000 at NCSA.
+
+No input file is specified for the job. Condor transfers the standard output
+produced from the remote machine to the local machine, and puts it into 
+the file test.out  after the job completes.  The log file is maintained on 
+the local machine. Condor-G will write periodic updates about the progress of 
+your job into this file.
+
+To submit this job to Condor-G for execution on the remote machine, use
+
+    % condor_submit test.submit
+
+Where test.submit is the name of the submit description file. Example output
+from condor_q for this submission looks like:
+
+
+    % condor_q
+
+-- Submitter: wireless48.cs.wisc.edu : <128.105.48.148:33012> : wireless48.cs.wi
+ ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD               
+   7.0   epaulson        3/26 14:08   0+00:00:00 I  0   0.0  test
+
+1 jobs; 1 idle, 0 running, 0 held
+
+
+After a short time, Globus accepts the job. Again running condor_q will now
+result in
+
+
+    % condor_q
+
+-- Submitter: wireless48.cs.wisc.edu : <128.105.48.148:33012> : wireless48.cs.wi
+ ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD
+   7.0   epaulson        3/26 14:08   0+00:00:00 R  0   0.0  test
+
+1 jobs; 0 idle, 1 running, 0 held
+
+
+Then, very shortly after that, the queue will be empty again:
+
+
+    % condor_q
+
+-- Submitter: wireless48.cs.wisc.edu : <128.105.48.148:33012> : wireless48.cs.wi
+ ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD
+
+0 jobs; 0 idle, 0 running, 0 held
+
+
+A second example of a submit description file runs the Unix ls program on a
+different Globus resource.
+
+    executable = /bin/ls
+    Transfer_Executable = false
+    globusscheduler = vulture.cs.wisc.edu/jobmanager
+    universe = globus
+    output = ls-test.out
+    log = ls-test.log
+    queue
+
+In this example, the executable (the binary) is pre-staged. The executable is
+on the remote machine, and it is not to be transferred before execution. The
+command
+
+    Transfer_Executable = FALSE
+
+within the submit description file identifies the executable as being
+pre-staged. In this case, the executable command gives the pathname to the
+executable on the remote machine.
