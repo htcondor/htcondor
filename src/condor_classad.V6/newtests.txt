@@ -173,7 +173,7 @@ same splitTime($t).day, 2
 same splitTime($t).hours, 3
 same splitTime($t).minutes, 4
 same splitTime($t).seconds, 5
-same splitTime($t).offset, -360
+same splitTime($t).offset, -21600
 
 eval t = relTime("1d2h3m4.5s")
 eval tt = splitTime($t)

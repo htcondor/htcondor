@@ -2267,7 +2267,7 @@ absTimeToClassAd(const abstime_t &asecs, ClassAd * &splitClassAd)
     splitClassAd->InsertAttr("Minutes", tms.tm_min);
     splitClassAd->InsertAttr("Seconds", tms.tm_sec);
     // Note that we convert the timezone from seconds to minutes.
-    splitClassAd->InsertAttr("Offset",(int) (asecs.offset / 60));
+    splitClassAd->InsertAttr("Offset", asecs.offset);
     
     return;
 }
