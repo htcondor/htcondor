@@ -43,6 +43,11 @@ char * ltrunc ();
 
 END_C_DECLS
 
+#ifdef __cplusplus
+/* like strdup() but uses new[] */
+char *strnewp( const char * );
+#endif
+
 #include "basename.h"
 
 #endif /* _STRING */
