@@ -34,9 +34,9 @@
 BEGIN_NAMESPACE( classad )
 
 typedef std::set<std::string, CaseIgnLTStr> References;
+typedef std::map<const ClassAd*, References> PortReferences;
 
 #if defined( EXPERIMENTAL )
-	typedef std::map<const ClassAd*, References> PortReferences;
 #include "rectangle.h"
 #endif
 
@@ -481,8 +481,8 @@ e		*/
 		
 		bool GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames );
 
-#if defined( EXPERIMENTAL )
 		bool GetExternalReferences(const ExprTree *tree, PortReferences &refs);
+#if defined( EXPERIMENTAL )
 		bool AddRectangle( const ExprTree *tree, Rectangles &r, 
 					const std::string &allowed, const References &imported );
 #endif
@@ -571,9 +571,9 @@ e		*/
 		bool _GetExternalReferences( const ExprTree *, ClassAd *, 
 					EvalState &, References&, bool fullNames );
 
-#if defined( EXPERIMENTAL )
 		bool _GetExternalReferences( const ExprTree *, ClassAd *, 
 					EvalState &, PortReferences& );
+#if defined( EXPERIMENTAL )
 		bool _MakeRectangles(const ExprTree*,const std::string&,Rectangles&, bool);
 		bool _CheckRef( ExprTree *, const std::string & );
 #endif

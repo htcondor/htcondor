@@ -1036,8 +1036,6 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
     }
 }
 
-#if defined( EXPERIMENTAL )
-
 bool ClassAd::
 GetExternalReferences( const ExprTree *tree, PortReferences &refs )
 {
@@ -1185,6 +1183,8 @@ _GetExternalReferences( const ExprTree *expr, ClassAd *ad,
             return false;
     }
 }
+
+#if defined( EXPERIMENTAL )
 
 bool ClassAd::
 AddRectangle( const ExprTree* tree, Rectangles &r, const string &allowed,
