@@ -640,9 +640,16 @@ init_classad(int interval)
 	ad->SetMyTypeName(COLLECTOR_ADTYPE);
 	ad->SetTargetTypeName("");
 
-	char line[100];
+	char line[100], *tmp;
 	sprintf(line, "%s = \"%s\"", ATTR_MACHINE, my_full_hostname() );
 	ad->Insert(line);
+
+	tmp = param( "CONDOR_ADMIN" );
+	if( tmp ) {
+		sprintf(line, "%s = \"%s\"", ATTR_CONDOR_ADMIN, tmp );
+		ad->Insert(line);
+		free( tmp );
+	}
 
 	if( CollectorName ) {
 		sprintf(line, "%s = \"%s\"", ATTR_NAME, CollectorName );
