@@ -4437,13 +4437,22 @@ void exit(int status)
 		_exit(status);
 	}
 
+	char* my_argv[2];
+	char* my_env[1];
+	my_argv[1] = NULL;
+	my_env[0] = NULL; 
+
 		// First try to just use /bin/true or /bin/false.
 	if ( status == 0 ) {
-		execve("/bin/true",NULL,NULL);
-		execve("/usr/bin/true",NULL,NULL);
+		my_argv[0] = "/bin/true";
+		execve("/bin/true",my_argv,my_env);
+		my_argv[0] = "/usr/bin/true";
+		execve("/usr/bin/true",my_argv,my_env);
 	} else {
-		execve("/bin/false",NULL,NULL);
-		execve("/usr/bin/false",NULL,NULL);
+		my_argv[0] = "/bin/false";
+		execve("/bin/false",my_argv,my_env);
+		my_argv[0] = "/usr/bin/false";
+		execve("/usr/bin/false",my_argv,my_env);
 	}
 
 		// If we made it here, we cannot use /bin/[true|false].
