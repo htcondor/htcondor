@@ -39,9 +39,11 @@ editinfo	-i mkmodules CVSROOT editinfo
 # Add other modules here...
 code	-a Distfile GENERIC Imakefile config src
 doc		-a config doc
+CKPT_CODE	-a src/condor_ckpt
 AIX_CODE	-a Distfile GENERIC config \
 			src/Imakefile \
 			src/condor_c++_util \
+			src/condor_ckpt \
 			src/condor_collector \
 			src/condor_globalq \
 			src/condor_includes \
@@ -71,6 +73,7 @@ AIX_CODE	-a Distfile GENERIC config \
 ULTRIX_CODE	-a Distfile GENERIC config \
 			src/Imakefile \
 			src/condor_c++_util \
+			src/condor_ckpt \
 			src/condor_collector \
 			src/condor_globalq \
 			src/condor_includes \
@@ -101,6 +104,7 @@ OSF1_CODE &ULTRIX_CODE
 SUNOS_CODE	-a Distfile GENERIC config \
 			src/Imakefile \
 			src/condor_c++_util \
+			src/condor_ckpt \
 			src/condor_collector \
 			src/condor_globalq \
 			src/condor_includes \
