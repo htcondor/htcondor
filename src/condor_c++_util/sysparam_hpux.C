@@ -228,8 +228,12 @@ Aix:: Aix() {}
 int  Aix::readSysParam(const SysParamName, char*& buffer, int& size, SysType& type){}
 void Aix::disSysParam(const SysParamName sys, const char* buffer, const int size, const SysType type){}
 
-
 Ultrix:: Ultrix() {}
 int  Ultrix::readSysParam(const SysParamName, char*& buffer, int& size, SysType& type){}
 void Ultrix::disSysParam(const SysParamName sys, const char* buffer, const int size, const SysType type){}
+
+Linux:: Linux() {}
+int  Linux::readSysParam(const SysParamName, char*& buffer, int& size, SysType& type){}
+void Linux::disSysParam(const SysParamName sys, const char* buffer, const int size, const SysType type){}
+
 
