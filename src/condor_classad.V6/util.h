@@ -59,7 +59,6 @@ void relTimeToString(double rtime, std::string &buffer);
 
 int classad_isinf(double x);
 int classad_isnan(double x);
-bool classad_isneg(double x);
 
 END_NAMESPACE // classad
 
