@@ -33,8 +33,7 @@ calc_phys_memory()
   struct pst_static s;
   
   if (pstat_getstatic(&s, sizeof(s), (size_t)1, 0) != -1) {
-    pagesize = s.page_size / 1024;
-    return s.physical_memory * pagesize;
+    return( (s.physical_memory * s.page_size) >> 20 );
   }
   else {
     return -1;
