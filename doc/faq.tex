@@ -121,14 +121,17 @@ This will create the directories
       etc
       include
       sbin
+      libexec
       lib
       man
 \end{verbatim}
 From this list of created directories, 
 \File{bin},
 \File{include},
-\File{sbin}, and
-\File{lib} will be used to replace current directories.
+\File{sbin}, 
+\File{libexec}, and
+\File{lib} will be used to replace current directories. Note that
+older versions of Condor do not have a libexec directory.
 
 \item[Step 4:  Configuration files]
 The downloaded version 6.6.x

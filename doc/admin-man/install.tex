@@ -409,9 +409,9 @@ macro can be a list of files or a single file.
 \item[Release Directory]
 
 Every binary distribution contains a \File{release.tar} file that contains
-four subdirectories: \File{bin}, \File{etc}, \File{lib} and \File{sbin}.
-Wherever you
-choose to install these 4 directories we call the release directory
+five subdirectories: \File{bin}, \File{etc}, \File{lib}, \File{sbin},
+and \File{libexec}. Wherever you
+choose to install these five directories we call the release directory
 (specified by the \Macro{RELEASE\_DIR} macro in the configuration file).
 Each
 release directory contains platform-dependent binaries and libraries,
@@ -438,6 +438,12 @@ located on a shared file system, if possible.
      agents, or programs that only the Condor administrator would need
      to run.  Therefore, add these programs only
      to the \Env{PATH} of the Condor administrator.
+
+     \item Private Condor Binaries:
+
+     All of the files in the \File{libexec} directory are Condor
+     programs that should never be run by hand, but are only used
+     internally by Condor. 
 
      \item \File{lib} Directory:
 
@@ -643,9 +649,9 @@ what each step is for, and suggests how to answer the questions
      answer no to the first question, and move on.
 
 \item[STEP 3: Install the Condor release directory] 
-     The release directory contains four subdirectories: 
+     The release directory contains five subdirectories: 
      \File{bin}, \File{etc},
-     \File{lib} and \File{sbin}.  
+     \File{lib}, \File{libexec} and \File{sbin}.  
      \File{bin} contains user-level executable programs.
      \File{etc} is the recommended location for your Condor configuration
      files, and
@@ -654,7 +660,8 @@ what each step is for, and suggests how to answer the questions
      and other default files used for installing Condor.  \File{lib} contains
      libraries to link Condor user programs and scripts used by the
      Condor system.  \File{sbin} contains all administrative executable
-     programs and the Condor daemons.  
+     programs and the Condor daemons.  \File{libexec} contains
+     programs that only Condor needs to execute.
 
      If you have multiple machines with a shared file system that will
      be running Condor, put the release directory on that
