@@ -58,8 +58,8 @@ Match::Match( Resource* rip )
 	m_client = new Client;
 	m_cap = new Capability;
 	m_ad = NULL;
-	m_rank = -1;
-	m_oldrank = -1;
+	m_rank = 0;
+	m_oldrank = 0;
 	m_universe = -1;
 	m_agentstream = NULL;
 	m_match_tid = -1;
