@@ -776,8 +776,20 @@ BaseShadow::updateJobInQueue( update_t type )
 	ExprTree* tree = NULL;
 	bool is_connected = false;
 	bool had_error = false;
+	bool final_update = false;
+	static bool checked_for_history = false;
+	static bool has_history = false;
 	char* name;
 	
+	if( ! checked_for_history ) {
+		char* history = param( "HISTORY" );
+		if( history ) {
+			has_history = true;
+			free( history );
+		}
+		checked_for_history = true;
+	}
+
 	StringList* job_queue_attrs = NULL;
 	switch( type ) {
 	case U_HOLD:
@@ -785,12 +797,14 @@ BaseShadow::updateJobInQueue( update_t type )
 		break;
 	case U_REMOVE:
 		job_queue_attrs = remove_job_queue_attrs;
+		final_update = true;
 		break;
 	case U_REQUEUE:
 		job_queue_attrs = requeue_job_queue_attrs;
 		break;
 	case U_TERMINATE:
 		job_queue_attrs = terminate_job_queue_attrs;
+		final_update = true;
 		break;
 	case U_ABORT:
 			// No special attributes needed...
@@ -800,6 +814,16 @@ BaseShadow::updateJobInQueue( update_t type )
 		break;
 	default:
 		EXCEPT( "BaseShadow::updateJobInQueue: Unknown update type (%d)!" );
+	}
+
+	if( final_update && ! has_history ) {
+			// there's no history file on this machine, and this job
+			// is about to leave the queue.  there's no reason to send
+			// this stuff to the schedd, since it's all about to be
+			// flushed, anyway.
+		dprintf( D_FULLDEBUG, "BaseShadow::updateJobInQueue: job leaving "
+				 "queue and schedd has no history file, aborting update\n" );
+		return true;
 	}
 
 	jobAd->ResetExpr();
