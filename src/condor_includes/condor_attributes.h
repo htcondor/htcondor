@@ -113,6 +113,7 @@ const char ATTR_HAS_FILE_TRANSFER        [] = "HasFileTransfer";
 const char ATTR_HAS_IO_PROXY             [] = "HasIOProxy";
 const char ATTR_HAS_JAVA                 [] = "HasJava";
 const char ATTR_HAS_MPI                  [] = "HasMPI";
+const char ATTR_HAS_OLD_VANILLA          [] = "HasOldVanilla";
 const char ATTR_HAS_PVM                  [] = "HasPVM";
 const char ATTR_HAS_REMOTE_SYSCALLS      [] = "HasRemoteSyscalls";
 const char ATTR_HELD_JOBS				 [] = "HeldJobs";
