@@ -25,6 +25,7 @@
 #include "debug.h"
 #include "condor_email.h"
 #include "basename.h"
+#include "condor_config.h"
 
 /* MAX_LINES is the max number of lines we can tail */
 #define MAX_LINES 1024 
