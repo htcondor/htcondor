@@ -485,9 +485,17 @@ ReliSock::get_file( int fd, bool flush_buffers )
 		return -1;
 	}
 
-	while( (filesize == -1 || total < (int)filesize) &&
-			(nbytes = 
-			 get_bytes_nobuffer(buf,MIN(sizeof(buf),filesize-total),0)) > 0 ) 
+		/*
+		  the code used to check for filesize == -1 here, but that's
+		  totally wrong.  we're storing the size as an unsigned int,
+		  so we can't check it against a negative value.  furthermore,
+		  ReliSock::put_file() never puts a -1 on the wire for the
+		  size.  that's legacy code from the pseudo_put_file_stream()
+		  RSC in the syscall library.  this code isn't like that.
+		*/
+	while( (total < filesize) &&
+		   (nbytes = 
+			get_bytes_nobuffer(buf,MIN(sizeof(buf),filesize-total),0)) > 0 ) 
 	{
 		int rval;
 		for( written=0; written<nbytes; ) {
@@ -533,9 +541,10 @@ ReliSock::get_file( int fd, bool flush_buffers )
 	
 	dprintf(D_FULLDEBUG, "wrote %d bytes\n",total);
 
-	if ( total < (int)filesize && filesize != -1 ) {
-		dprintf(D_ALWAYS,"get_file(): ERROR: received %d bytes, expected %d!\n",
-			total, filesize);
+	if ( total < filesize ) {
+		dprintf( D_ALWAYS,
+				 "get_file(): ERROR: received %d bytes, expected %d!\n",
+				 total, filesize );
 		return -1;
 	}
 
