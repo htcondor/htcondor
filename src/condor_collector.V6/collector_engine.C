@@ -675,7 +675,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		else
 		{
 //			old_ad->ExchangeExpressions (new_ad);
-			old_ad = new_ad->Copy( );
+			old_ad = ( ClassAd * )new_ad->Copy( );
 			delete new_ad;
 		}
 
