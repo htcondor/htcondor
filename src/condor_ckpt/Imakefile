@@ -4,7 +4,7 @@ CMNT compiled.  This will require that the PVM library be linked into
 CMNT the application.
 CMNT
 
-CMNT PVM_CHECKPOINT = -DPVM_CHECKPOINTING
+PVM_CHECKPOINT = -DPVM_CHECKPOINTING
 
 #if DOES_SAVE_SIGSTATE
 SAVE_SIGSTATE = -DSAVE_SIGSTATE
