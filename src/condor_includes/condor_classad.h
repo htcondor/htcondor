@@ -76,9 +76,11 @@ class ClassAd : public AttrList
         int get(Stream& s);
         int code(Stream& s);
 
+#if defined(USE_XDR)
 		// xdr shipping
 		int put (XDR *);
 		int get (XDR *);
+#endif
 
 		// misc
 		ClassAd*	FindNext();

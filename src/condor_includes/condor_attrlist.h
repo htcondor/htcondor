@@ -15,8 +15,10 @@
 #include "condor_astbase.h"
 
 //for the shipping functions
+#if defined(USE_XDR)
 #include <rpc/types.h>
 #include <rpc/xdr.h>
+#endif
 #include "stream.h"
 
 #define		ATTRLIST_MAX_EXPRESSION		1024
@@ -148,8 +150,10 @@ class AttrList : public AttrListAbstract
         int put(Stream& s);
         int get(Stream& s);
         int code(Stream& s);
+#if defined(USE_XDR)
 		int put (XDR *);
 		int get (XDR *);
+#endif
 
 		friend	class	AttrListRep;			// access "next" 
 		friend	class	AttrListList;			// access "UpdateAgg()"
