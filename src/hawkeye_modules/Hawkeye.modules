@@ -4,7 +4,7 @@ prefix: Hawkeye_modules_
 
 target: all
 version: 1.0.rc4
-os: Any-Unix
+os: Unix-Any
 +condor_jobhist
 +condor_node
 +condor_pool
@@ -23,82 +23,82 @@ os: Any-Unix
 +who
 
 target: condor_jobhist
-os: Any-Unix
+os: Unix-Any
 version: 1.0.rc1
 +condor_jobhist
 
 target: condor_node
-os: Any-Unix
+os: Unix-Any
 version: 1.0.rc2
 +condor_node
 
 target: condor_pool
-os: Any-Unix
+os: Unix-Any
 version: 1.0.rc3
 +condor_pool
 
 target: downlist
-os: Any-Unix
+os: Unix-Any
 version: 1.0.rc1
 +downlist
 
 target: df
-os: Any-Unix
+os: Unix-Any
 version: 1.0.rc2
 +df
 
 target: gass_cache
-os: Any-Unix
+os: Unix-Any
 version: 1.0.rc1
 +gass_cache
 
 target: gdmphb
-os: Any-Unix
+os: Unix-Any
 version: 1.0.rc1
 +gdmphb
 
 target: grid_probe
-os: Any-Unix
+os: Unix-Any
 version: 1.0.rc1
 +grid_probe
 
 target: memory
-os: Any-Unix
+os: Unix-Any
 version: 1.0.rc1
 +memory
 
 target: network_stats
-os: Any-Unix
+os: Unix-Any
 version: 1.0.rc1
 +network_stats
 
 target: open_files
-os: Any-Unix
+os: Unix-Any
 version: 1.0.rc1
 +open_files
 
 target: top
-os: Any-Unix
+os: Unix-Any
 version: 1.0.rc2
 +top
 
 target: uptime
-os: Any-Unix
+os: Unix-Any
 version: 1.0.rc1
 +uptime
 
 target: vmstat
-os: Any-Unix
+os: Unix-Any
 version: 1.0.rc1
 +vmstat
 
 target: w
-os: Any-Unix
+os: Unix-Any
 version: 1.0.rc1
 +w
 
 target: who
-os: Any-Unix
+os: Unix-Any
 version: 1.0.rc1
 +who
 
