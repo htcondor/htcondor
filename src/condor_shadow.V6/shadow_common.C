@@ -250,8 +250,6 @@ NotifyUser( char *buf, PROC *proc )
 	}
 
 	email_close(mailer);
-
-        (void)pclose( mailer );
 }
 
 int 
