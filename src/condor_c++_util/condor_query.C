@@ -335,7 +335,7 @@ fetchAds (ClassAdList &adList, const char *poolName)
 	}
 
 	// contact collector
-	Daemon my_collector(DT_COLLECTOR, NULL, NULL);
+	Daemon my_collector(DT_COLLECTOR, NULL, pool);
 	if (!(sock = my_collector.startCommand(command, Stream::reli_sock, 0)) ||
 	    !queryAd.put (*sock) || !sock->end_of_message()) {
 
