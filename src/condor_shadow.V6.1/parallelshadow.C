@@ -435,7 +435,7 @@ ParallelShadow::postScript(int pid, int exit_status)
 	char obitfile[_POSIX_PATH_MAX];
 	snprintf(obitfile, _POSIX_PATH_MAX, "%s/scriptobit.%d",
 			 getIwd(), pid);
-	if( scriptobit = fopen(obitfile, "r") ) {
+	if( (scriptobit = fopen(obitfile, "r")) ) {
 		char scripterr[256];
 		fgets(scripterr, 256, scriptobit);
 		fclose(scriptobit);
