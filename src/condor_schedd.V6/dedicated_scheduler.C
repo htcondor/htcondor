@@ -2659,6 +2659,26 @@ DedicatedScheduler::clearUnclaimedResources( void )
 }
 
 
+bool
+DedicatedScheduler::setScheduler( ClassAd* job_ad )
+{
+	int cluster;
+	int proc;
+
+	if( ! job_ad->LookupInteger(ATTR_CLUSTER_ID, cluster) ) {
+		return false;
+	}
+	if( ! job_ad->LookupInteger(ATTR_PROC_ID, proc) ) {
+		return false;
+	}
+	if( SetAttributeString(cluster, proc, ATTR_SCHEDULER,
+						   ds_name) < 0 ) {
+		return false;
+	}
+	return true;
+}
+
+
 //////////////////////////////////////////////////////////////
 //  Utility functions
 //////////////////////////////////////////////////////////////
@@ -2780,26 +2800,7 @@ findAvailTime( match_rec* mrec )
 }
 
 
-// Comparison function for sorting job ads by QDate
-int
-jobSortByDate( const void *ptr1, const void* ptr2 )
-{
-	ClassAd *ad1 = (ClassAd*)ptr1;
-	ClassAd *ad2 = (ClassAd*)ptr2;
-
-	int qdate1, qdate2;
-
-	if( !ad1->LookupInteger (ATTR_Q_DATE, qdate1) ||
-        !ad2->LookupInteger (ATTR_Q_DATE, qdate2) )
-	{
-        return -1;
-    }
-
-	return (qdate1 < qdate2);
-}
-
-
-// Comparison function for sorting job ads by QDate
+// Comparison function for sorting jobs (given cluster id) by QDate 
 int
 clusterSortByDate( const void *ptr1, const void* ptr2 )
 {
@@ -2838,20 +2839,6 @@ displayRequest( ClassAd* ad, char* str, int debug_level )
 }
 
 
-char*
-getCapability( ClassAd* resource )
-{
-	char cap_buf[256];
-	cap_buf[0] = '\0';
-
-	if( ! resource->LookupString(ATTR_CAPABILITY, cap_buf) ) {
-			// No capability in ad...
-		return NULL;
-	}
-	return( strdup(cap_buf) );
-}
-
-
 void
 deallocMatchRec( match_rec* mrec )
 {
@@ -2866,24 +2853,4 @@ deallocMatchRec( match_rec* mrec )
 	mrec->num_exceptions = 0;
 		// Status is no longer active, but we're still claimed
 	mrec->status = M_CLAIMED;
-}
-
-
-bool
-DedicatedScheduler::setScheduler( ClassAd* job_ad )
-{
-	int cluster;
-	int proc;
-
-	if( ! job_ad->LookupInteger(ATTR_CLUSTER_ID, cluster) ) {
-		return false;
-	}
-	if( ! job_ad->LookupInteger(ATTR_PROC_ID, proc) ) {
-		return false;
-	}
-	if( SetAttributeString(cluster, proc, ATTR_SCHEDULER,
-						   ds_name) < 0 ) {
-		return false;
-	}
-	return true;
 }
