@@ -25,8 +25,10 @@
 #include "condor_debug.h"
 #include "condor_syscall_mode.h"
 #include "condor_uid.h"
+#include "condor_config.h"
 #include "condor_environ.h"
 #include "condor_distribution.h"
+
 
 /* See condor_uid.h for description. */
 static char* CondorUserName = NULL;
@@ -63,7 +65,6 @@ priv_to_string( priv_state p )
 	}
 	return "PRIV_INVALID";
 }
-
 
 void
 log_priv(priv_state prev, priv_state new_priv, char file[], int line)
@@ -136,52 +137,59 @@ HANDLE priv_state_get_handle()
 	return CurrUserHandle;
 }
 
-void init_user_nobody_loginname(const char *login)
+#if 0
+void init_user_nobody_loginname()
 {
-	if ( NobodyLoginName ) {
-		free(NobodyLoginName);
-	}
-
-	NobodyLoginName = strdup(login);
+	//DynUser.init_user();
+    NobodyLoginName = (char*) DynUser.get_accountname();
 }
+#endif
 
 const char *get_user_nobody_loginname()
 {
     return NobodyLoginName;
 }
 
-int
+void
 init_user_ids(const char username[]) 
 {
+	dprintf(D_ALWAYS,
+		"entering init_user_ids()...watch out.\n");
+	
+	if (!username) { return; }
+
+	
+	// see if we already have a user handle for the requested user.
+	// if so, just make it the CurrUserHandle and we're done.
+	const char *cur_acct = DynUser.get_accountname();
+	if ( cur_acct && strcmp(cur_acct,username) == 0 ) {
+		CurrUserHandle = DynUser.get_token();
+		return;
+	}
+
+	DynUser.reset();
+
 	if ( strcmp(username,"nobody") != 0 ) {
-		// we want something *other* than "nobody".
 		// here we call routines to deal with password server
 		// or as Jeff says: "insert hand waving here"  :^)
-		return FALSE;
+		return;
 	}
 
 	// at this point, we know we want a user nobody, so
 	// generate a dynamic user and stash the handle
 
-	if ( DynUser.get_token() ) {
-		// we already have a user nobody handle created
-		// so just make it the CurrUserHandle
-		CurrUserHandle = DynUser.get_token();
-		return TRUE;
-	}
-
-	if ( !NobodyLoginName ) {
-		EXCEPT("NobodyLoginName not initialized");
-	}
-
-	if ( !DynUser.createuser(NobodyLoginName) ) {
+	// initialize NobodyLoginName unless it has been explicitly
+	// set already...
+		
+	if ( !DynUser.init_user() ) {
 		// Oh shit.  
 		EXCEPT("Failed to create a user nobody");
 	}
+	
+	NobodyLoginName = (char*) DynUser.get_accountname();
 
 	// we created a new user, now just stash the token
 	CurrUserHandle = DynUser.get_token();
-	return TRUE;
 }
 
 priv_state
