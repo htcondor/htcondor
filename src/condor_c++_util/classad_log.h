@@ -23,6 +23,7 @@
    internally by ClassAdLog to delimit transactions in the on-disk log.
 */
 
+#include "condor_classad.h"
 #include "log.h"
 #include "classad_hashtable.h"
 #include "log_transaction.h"
@@ -33,6 +34,8 @@
 #define CondorLogOp_DeleteAttribute		104
 #define CondorLogOp_BeginTransaction	105
 #define CondorLogOp_EndTransaction		106
+
+typedef HashTable <HashKey, ClassAd *> ClassAdHashTable;
 
 class ClassAdLog {
 public:
