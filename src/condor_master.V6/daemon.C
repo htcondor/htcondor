@@ -1580,27 +1580,12 @@ Daemons::UpdateCollector()
 
 	Update(ad);
     
-	if( Collector->port() == 0 ) {
-			// if the master still thinks the port is 0, try
-			// destroying the collector object again and re-creating
-			// it, since the collector might have started up by now
-			// and written out an address file...
-		delete Collector;
-		Collector = new DCCollector;
+	if( !Collector->sendUpdate(UPDATE_MASTER_AD, ad) ) {
+		dprintf( D_ALWAYS, 
+				 "Can't send UPDATE_MASTER_AD to collector %s: %s\n", 
+				 Collector->updateDestination(), Collector->error() );
+		return;
 	}
-
-	if( Collector->port() ) { 
-		if( !Collector->sendUpdate(UPDATE_MASTER_AD, ad) ) {
-			dprintf( D_ALWAYS, 
-					 "Can't send UPDATE_MASTER_AD to collector %s: %s\n", 
-					 Collector->updateDestination(), Collector->error() );
-			return;
-		}
-	} else {
-		dprintf( D_ALWAYS, "Collector port is still 0, can't send "
-				 "UPDATE_MASTER_AD to collector %s\n", 
-				 Collector->updateDestination() );
-	}		
 
 	if (secondary_collectors) {
 		secondary_collectors->rewind();
