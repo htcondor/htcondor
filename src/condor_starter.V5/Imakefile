@@ -16,10 +16,6 @@ CFLAGS = $(STD_C_FLAGS) $(CKPT_FLAG) -DNEW_PROC
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CKPT_FLAG) -DNEW_PROC $(PVM_INCLUDE)\
 	$(PVM_FLAG) -fexternal-templates
 
-#if IS_ALPHA_OSF1
-LDFLAGS = -lmld
-#endif
-
 /*
   The OS dependent files are the same for Ultrix 4.2 and Ultrix 4.3, so
   we set up to use the 4.2 code on 4.3 systems rather than create
