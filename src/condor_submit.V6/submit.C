@@ -2232,13 +2232,6 @@ SetPriority()
 	if( prio != NULL ) 
 	{
 		prioval = atoi (prio);
-		if( prioval < -20 || prioval > 20 ) 
-		{
-			fprintf( stderr, "\nERROR: Priority must be in the range "
-					 "-20 thru 20 (%d)\n", prioval );
-			DoCleanup(0,0,NULL);
-			exit( 1 );
-		}
 		free(prio);
 	}
 	(void) sprintf (buffer, "%s = %d", ATTR_JOB_PRIO, prioval);
