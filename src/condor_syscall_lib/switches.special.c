@@ -54,17 +54,10 @@ int _lxstat(int, const char *, struct stat *);
 
 #if defined(IRIX53)
 #   include <dlfcn.h>   /* for dlopen and dlsym */
-#   include <sys/mman.h>    /* for mmap */
 #endif
 
 static int fake_readv( int fd, const struct iovec *iov, int iovcnt );
 static int fake_writev( int fd, const struct iovec *iov, int iovcnt );
-
-#if 0
-static int linux_fake_readv( int fd, const struct iovec *iov, int iovcnt );
-static int linux_fake_writev( int fd, const struct iovec *iov, int iovcnt );
-#endif
-
 char	*getwd( char * );
 void    *malloc();     
 
@@ -924,13 +917,6 @@ getlogin()
 
 
 #if defined( LINUX  )
-
-#if defined(GLIBC) 
-#	define MMAP_T char*
-#else
-#	define MMAP_T void*
-#endif
-
 /* 
    Linux's mmap can be passed a special flag, MAP_ANONYMOUS, which
    means that you don't want to use a file, in which case, mmap
@@ -943,11 +929,12 @@ getlogin()
    which is really a char*
 
 */
-#include <sys/mman.h>		/* for MAP_ANONYMOUS */
+
+#include "condor_mmap.h"
 MMAP_T
 mmap( MMAP_T a, size_t l, int p, int f, int fd, off_t o )
 {
-	int		rval;
+	MMAP_T	rval;
 	int		user_fd;
 	int		use_local_access = FALSE;
 
@@ -957,7 +944,7 @@ mmap( MMAP_T a, size_t l, int p, int f, int fd, off_t o )
 		use_local_access = TRUE;
 	} else {
 		if( (user_fd=MapFd(fd)) < 0 ) {
-			return (MMAP_T)-1;
+			return MAP_FAILED;
 		}
 		if( LocalAccess(fd) ) {
 			use_local_access = TRUE;
@@ -966,11 +953,11 @@ mmap( MMAP_T a, size_t l, int p, int f, int fd, off_t o )
 	if( use_local_access || LocalSysCalls() ) {
 		rval = MMAP( a, l, p, f, user_fd, o );
 	} else {
-		rval = REMOTE_syscall( CONDOR_mmap, a, l, p, f, user_fd, o );
+		rval = (MMAP_T)REMOTE_syscall( CONDOR_mmap, a, l, p, f, user_fd, o );
 	}
 	
-	return (MMAP_T)rval;
+	return rval;
 }
-#undef MMAP_T
 #endif /* defined( LINUX ) */
+
 
