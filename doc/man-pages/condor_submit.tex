@@ -549,7 +549,7 @@ Two pre-defined macros are supplied by the description file parser. The
 intended to aid in the specification of input/output files, arguments,
 etc., for clusters with lots of jobs, and/or could be used to supply a
 Condor process with its own cluster and process numbers on the command
-line. 
+line.  The \MacroU{Process} macro should not be used for PVM jobs.
 
 \item[Comments] Blank lines and lines beginning with a '\#' (pound-sign)
 character are ignored by the submit-description file parser. 
