@@ -166,6 +166,7 @@ class FunctionCall : public ExprTree
 	static bool makeDate(const char*,const ArgumentList&,EvalState&,Value&);
 	// time management (selectors)
 	static bool getField(const char*,const ArgumentList&,EvalState&,Value&);
+	static bool splitTime(const char*,const ArgumentList&,EvalState&,Value&);
 	// time management (conversions)
 	static bool inTimeUnits(const char*,const ArgumentList&,EvalState&,
 							Value&);

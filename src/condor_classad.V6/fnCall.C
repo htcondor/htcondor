@@ -100,10 +100,11 @@ FunctionCall( )
 		functionTable["gethours"	] =	(void*)getField;
 		functionTable["getminutes"	] =	(void*)getField;
 		functionTable["getseconds"	] =	(void*)getField;
-	      	functionTable["indays"		] =	(void*)inTimeUnits;
-		functionTable["inhours"		] =	(void*)inTimeUnits;
-		functionTable["inminutes"	] =	(void*)inTimeUnits;
-		functionTable["inseconds"	] =	(void*)inTimeUnits;
+        functionTable["splittime"   ] = (void*)splitTime;
+        //functionTable["indays"		] =	(void*)inTimeUnits;
+		//functionTable["inhours"		] =	(void*)inTimeUnits;
+		//functionTable["inminutes"	] =	(void*)inTimeUnits;
+		//functionTable["inseconds"	] =	(void*)inTimeUnits;
 		
 			// string manipulation
 		functionTable["strcat"		] =	(void*)strCat;
@@ -1287,7 +1288,7 @@ getField(const char* name, const ArgumentList &argList, EvalState &state,
 	}
 
 	if( arg.IsAbsoluteTimeValue( asecs ) ) {
-	 	clock = asecs.secs + asecs.offset + timezone_offset();
+	 	clock = asecs.secs;
 		getLocalTime( &clock, &tms );
 		if( strcasecmp( name, "getyear" ) == 0 ) {
 			 // tm_year is years since 1900 --- make it y2k compliant :-)
@@ -1346,6 +1347,87 @@ getField(const char* name, const ArgumentList &argList, EvalState &state,
 	return( true );
 }
 
+bool FunctionCall::
+splitTime(const char* name, const ArgumentList &argList, EvalState &state, 
+	Value &val )
+{
+	Value 	arg;
+	abstime_t asecs;
+	time_t rsecs;
+	time_t	clock;
+	struct  tm tms;
+    ClassAd *split;
+
+	if( argList.size( ) != 1 ) {
+		val.SetErrorValue( );
+		return( true );
+	}
+
+	if( !argList[0]->Evaluate( state, arg ) ) {
+		val.SetErrorValue( );
+		return false;	
+	}
+
+	if( arg.IsAbsoluteTimeValue( asecs ) ) {
+        split = new ClassAd;
+
+	 	clock = asecs.secs;
+		getGMTime( &clock, &tms );
+
+        split->InsertAttr("seconds", tms.tm_sec);
+        split->InsertAttr("minutes", tms.tm_min);
+        split->InsertAttr("hours", tms.tm_hour);
+        split->InsertAttr("day", tms.tm_mday);
+        split->InsertAttr("month", tms.tm_mon + 1);
+        split->InsertAttr("year", tms.tm_year + 1900);
+        // Note that we convert the timezone from seconds to minutes.
+        split->InsertAttr("offset",(int) (asecs.offset / 60));
+
+        val.SetClassAdValue(split);
+		return true;
+	} else if( arg.IsRelativeTimeValue( rsecs ) ) {
+        int		days, hrs, mins, secs;
+        bool    is_negative;
+        
+        if( rsecs < 0 ) {
+            rsecs = -rsecs;
+            is_negative = true;
+        } else {
+            is_negative = false;
+        }
+        days = rsecs;
+        hrs  = days % 86400;
+        mins = hrs  % 3600;
+        secs = mins % 60;
+        days = days / 86400;
+        hrs  = hrs  / 3600;
+        mins = mins / 60;
+        
+        if (is_negative) {
+            if (days > 0) {
+                days = -days;
+            } else if (hrs > 0) {
+                hrs = -hrs;
+            } else if (mins > 0) {
+                mins = -mins;
+            } else {
+                secs = -secs;
+            }
+        }
+        
+        split = new ClassAd;
+        split->InsertAttr("days", days);
+        split->InsertAttr("hours", hrs);
+        split->InsertAttr("minutes", mins);
+        split->InsertAttr("seconds", secs);
+        
+        val.SetClassAdValue(split);
+        return true; 
+    } else {
+        val.SetErrorValue( );
+        return( true );
+    }
+}
 
 bool FunctionCall::
 inTimeUnits(const char*name,const ArgumentList &argList,EvalState &state, 
@@ -1686,7 +1768,7 @@ convInt( const char*, const ArgumentList &argList, EvalState &state,
 
 		case Value::ABSOLUTE_TIME_VALUE:
 			arg.IsAbsoluteTimeValue(atvalue );
-			result.SetIntegerValue( (int)atvalue.secs );
+			result.SetIntegerValue((int)atvalue.secs);
 			return( true );
 
 		case Value::RELATIVE_TIME_VALUE:
