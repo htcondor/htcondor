@@ -134,7 +134,7 @@ class IntegerBase : public ExprTree
 		virtual int	    operator <=(ExprTree&);
 
 		virtual void	Display();
-		int		    	Value() { return value; }
+		int		    	Value();
 
     protected :
 
@@ -154,7 +154,7 @@ class FloatBase : public ExprTree
 	virtual int	    operator <=(ExprTree&);
 	
 	virtual void        Display();
-	float		    Value() { return value; }
+	float		    Value();
 
     protected :
 
@@ -170,7 +170,7 @@ class StringBase : public ExprTree
 		virtual int	    operator ==(ExprTree&);
 
 		virtual void	Display();
-		char*	const	Value() { return value; }
+		char*	const	Value();
 
 		friend	class	ExprTree;
 
