@@ -24,7 +24,6 @@
 #include "condor_common.h"
 #include "condor_syscall_mode.h"
 #include "condor_uid.h"
-#include "condor_string.h"
 
 /* See condor_uid.h for description. */
 static char* CondorUserName = NULL;
@@ -57,10 +56,10 @@ HANDLE priv_state_get_handle()
 void init_user_nobody_loginname(const char *login)
 {
 	if ( NobodyLoginName ) {
-		delete [] NobodyLoginName;
+		free(NobodyLoginName);
 	}
 
-	NobodyLoginName = strnewp(login);
+	NobodyLoginName = strdup(login);
 }
 
 void init_user_ids(const char username[]) 
