@@ -49,6 +49,9 @@ class GridManager : public Service
 	bool WriteTerminateToUserLog( GlobusJob * );
 	bool WriteEvictToUserLog( GlobusJob * );
 	bool WriteGlobusSubmitEventToUserLog( GlobusJob * );
+	bool WriteGlobusSubmitFailedEventToUserLog( GlobusJob * );
+	bool WriteGlobusResourceUpEventToUserLog( GlobusJob * );
+	bool WriteGlobusResourceDownEventToUserLog( GlobusJob * );
 
 
 	// This is public because it needs to be accessible from main_init()
@@ -89,6 +92,8 @@ class GridManager : public Service
 
 	void cancelAllPendingEvents(GlobusJob *);
 	bool stopJM(GlobusJob *);
+	void RecordRebirth(char *rmContact);
+	void RecordDeath(char *rmContact, char *second);
 
 };
 

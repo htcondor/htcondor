@@ -573,6 +573,7 @@ GridManager::SUBMIT_JOB_signalHandler( int signal )
 				"Resource %s is dead, delaying submit of job %d.%d\n",
 				new_job->rmContact,new_job->procID.cluster,
 				new_job->procID.proc);
+		WriteGlobusResourceDownEventToUserLog( new_job );
 		WaitingToSubmit.Append( new_job );
 
 	} else {
@@ -593,7 +594,8 @@ GridManager::SUBMIT_JOB_signalHandler( int signal )
 					dprintf( D_ALWAYS,
 							 "Resource %s unreachable. Marking as dead\n",
 							 new_job->rmContact );
-					DeadMachines->insert( HashKey(new_job->rmContact), (char*)NULL );
+					//DeadMachines->insert( HashKey(new_job->rmContact), (char*)NULL );
+					RecordDeath( new_job->rmContact, (char*)NULL );
 					WaitingToSubmit.Append( new_job );
 
 				} else {
@@ -607,6 +609,7 @@ GridManager::SUBMIT_JOB_signalHandler( int signal )
 								new_job->procID.cluster,new_job->procID.proc,
 								new_job->RSL);
 					}
+					WriteGlobusSubmitFailedEventToUserLog( new_job );
 					// TODO : we just failed to submit a job; handle it better.
 				}
 			}
@@ -638,8 +641,9 @@ GridManager::SUBMIT_JOB_signalHandler( int signal )
 							dprintf( D_ALWAYS,
 								 "Resource %s unreachable. Marking as dead\n",
 									 new_job->rmContact );
-							DeadMachines->insert( HashKey(new_job->rmContact),
-												  (char*)NULL );
+							RecordDeath( new_job->rmContact, (char*)NULL );
+							//DeadMachines->insert( HashKey(new_job->rmContact),
+							//					  (char*)NULL );
 							WaitingToSubmit.Append( new_job );
 
 						} else {
@@ -810,8 +814,9 @@ GridManager::CANCEL_JOB_signalHandler( int signal )
 						dprintf( D_ALWAYS,
 								 "Resource %s unreachable. Marking as dead\n",
 								 curr_job->rmContact );
-						DeadMachines->insert( HashKey(curr_job->rmContact),
-											  (char*)NULL );
+						RecordDeath( curr_job->rmContact, (char*)NULL );
+						//DeadMachines->insert( HashKey(curr_job->rmContact),
+						//					  (char*)NULL );
 						WaitingToCancel.Append( curr_job );
 
 					} else {
@@ -935,8 +940,9 @@ GridManager::COMMIT_JOB_signalHandler( int signal )
 					dprintf( D_ALWAYS,
 							 "Resource %s unreachable. Marking as dead\n",
 							 curr_job->rmContact );
-					DeadMachines->insert( HashKey(curr_job->rmContact),
-										  (char*)NULL );
+					RecordDeath( curr_job->rmContact, (char*)NULL );
+					//	DeadMachines->insert( HashKey(curr_job->rmContact),
+					//				  (char*)NULL );
 					WaitingToCommit.Append( curr_job );
 
 				} else {
@@ -1095,8 +1101,9 @@ GridManager::RESTART_JM_signalHandler( int signal = 0 )
 				dprintf( D_ALWAYS,
 						 "Resource %s unreachable. Marking as dead\n",
 						 curr_job->rmContact );
-				DeadMachines->insert( HashKey(curr_job->rmContact),
-									  (char*)NULL );
+				RecordDeath( curr_job->rmContact, (char*)NULL );
+				//DeadMachines->insert( HashKey(curr_job->rmContact),
+				//					  (char*)NULL );
 				WaitingToRestart.Append( curr_job );
 
 			} else {
@@ -1541,7 +1548,10 @@ GridManager::jobProbe()
 				"Ping succeeded for resource %s. Removing from dead list\n",
 					 next_contact );
 
-			DeadMachines->remove( HashKey(next_contact) );
+			// Bring this machine back from the dead, and note that in all the
+			// jobs running there.
+
+			RecordRebirth(next_contact); 
 
 			if ( !WaitingToSubmit.IsEmpty() ) {
 				WaitingToSubmit.Rewind();
@@ -1657,7 +1667,8 @@ GridManager::jobProbe()
 					dprintf( D_ALWAYS,
 							 "Resource %s unreachable. Marking as dead\n",
 							 next_job->rmContact );
-					DeadMachines->insert( HashKey(next_job->rmContact), (char*)NULL );
+					RecordDeath( next_job->rmContact, (char*)NULL );
+					//DeadMachines->insert( HashKey(next_job->rmContact), (char*)NULL );
 				}
 
 			}
@@ -1723,6 +1734,35 @@ GridManager::gramCallbackHandler( void *user_arg, char *job_contact,
 	this_job->callback( state, errorcode );
 
 	dprintf(D_FULLDEBUG,"gramCallbackHandler() returning\n");
+}
+
+void
+GridManager::RecordDeath( char *contact, char *second) {
+	GlobusJob *tmp;
+
+	DeadMachines->insert( HashKey(contact), second );
+
+	JobsByProcID->startIterations();
+	while( JobsByProcID->iterate( tmp ) ) {
+		if ( strcmp(tmp->rmContact, contact ) == 0 ) {
+			WriteGlobusResourceDownEventToUserLog( tmp );
+		}
+	}
+}
+
+void
+GridManager::RecordRebirth(char *contact) {
+	GlobusJob *tmp;
+
+	DeadMachines->remove( HashKey(contact) );
+
+	JobsByProcID->startIterations();
+	while( JobsByProcID->iterate( tmp ) ) {
+		if ( strcmp(tmp->rmContact, contact ) == 0 ) {
+			WriteGlobusResourceUpEventToUserLog( tmp );
+		}
+	}
+
 }
 
 // Initialize a UserLog object for a given job and return a pointer to
@@ -1905,6 +1945,92 @@ GridManager::WriteGlobusSubmitEventToUserLog( GlobusJob *job )
 
 	if (!rc) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_GLOBUS_SUBMIT event\n" );
+		return false;
+	}
+
+	return true;
+}
+
+bool
+GridManager::WriteGlobusSubmitFailedEventToUserLog( GlobusJob *job )
+{
+	const char *unknown = "UNKNOWN";
+
+	UserLog *ulog = InitializeUserLog( job );
+	if ( ulog == NULL ) {
+		// User doesn't want a log
+		return true;
+	}
+
+	dprintf( D_FULLDEBUG, 
+		"Writing submit-failed record to user logfile=%s job=%d.%d owner=%s\n",
+			 job->userLogFile, job->procID.cluster, job->procID.proc, Owner );
+
+	GlobusSubmitFailedEvent event;
+	
+	event.reason =  strnewp(job->errorString());
+
+	int rc = ulog->writeEvent(&event);
+	delete ulog;
+
+	if (!rc) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_GLOBUS_SUBMIT_FAILED event\n" );
+		return false;
+	}
+
+	return true;
+}
+
+bool
+GridManager::WriteGlobusResourceUpEventToUserLog( GlobusJob *job )
+{
+	UserLog *ulog = InitializeUserLog( job );
+	if ( ulog == NULL ) {
+		// User doesn't want a log
+		return true;
+	}
+
+	dprintf( D_FULLDEBUG, 
+		"Writing globus up record to user logfile=%s job=%d.%d owner=%s\n",
+			 job->userLogFile, job->procID.cluster, job->procID.proc, Owner );
+
+	GlobusResourceUpEvent event;
+
+	event.rmContact =  strnewp(job->rmContact);
+
+	int rc = ulog->writeEvent(&event);
+	delete ulog;
+
+	if (!rc) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_GLOBUS_RESOURCE_UP event\n" );
+		return false;
+	}
+
+	return true;
+}
+
+bool
+GridManager::WriteGlobusResourceDownEventToUserLog( GlobusJob *job )
+{
+	UserLog *ulog = InitializeUserLog( job );
+	if ( ulog == NULL ) {
+		// User doesn't want a log
+		return true;
+	}
+
+	dprintf( D_FULLDEBUG, 
+		"Writing globus down record to user logfile=%s job=%d.%d owner=%s\n",
+			 job->userLogFile, job->procID.cluster, job->procID.proc, Owner );
+
+	GlobusResourceDownEvent event;
+
+	event.rmContact =  strnewp(job->rmContact);
+
+	int rc = ulog->writeEvent(&event);
+	delete ulog;
+
+	if (!rc) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_GLOBUS_RESOURCE_DOWN event\n" );
 		return false;
 	}
 
