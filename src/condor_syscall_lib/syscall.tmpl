@@ -1412,7 +1412,9 @@ not_supported {
 		pid_t waitpid(pid_t pid, int *status, int options);
 	#endif
 
-	#if defined(Solaris)
+	#if defined(Solaris27)
+	        long ptrace( int req, long process, long address, long data);
+	#elif defined(Solaris)
 		int ptrace( int req, long process, int address, int data);
 	#elif defined (IRIX)
 		int ptrace( int req, pid_t process, int address, int data);
