@@ -17,4 +17,5 @@ all_symlink_target(../x_waste_second.h,x_waste_second.h)
 all_symlink_target(../x_compute_bogokips.c,x_compute_bogokips.c)
 
 all_copy_target(../x_hello.in,x_hello.in)
+all_copy_target(../x_data.in,x_data.in)
 
