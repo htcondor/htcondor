@@ -83,10 +83,9 @@ long	delete_queue(QUEUE* );
 int		empty_queue(QUEUE* );
 void	get_lock(char * );
 time_t 	GetTimeStamp(char* file);
-int 	NewExecutable(char* file, time_t tsp);
+int 	NewExecutable(char* file, time_t* tsp);
 void	RestartMaster();
 int		run_preen(Service*);
-void	update_collector();
 void	usage(const char* );
 int		main_shutdown_graceful();
 int		main_shutdown_fast();
@@ -738,7 +737,7 @@ main_config()
 		// Re-register our timers, since their intervals might have
 		// changed.
 	daemons.StartTimers();
-	update_collector();
+	daemons.UpdateCollector();
 	return TRUE;
 }
 
@@ -823,22 +822,24 @@ GetTimeStamp(char* file)
 }
 
 int
-NewExecutable(char* file, time_t tsp)
+NewExecutable(char* file, time_t *tsp)
 {
-	time_t cts = GetTimeStamp(file);
-	dprintf(D_FULLDEBUG, "Time stamp of running %s is %d\n",
-			file, (int)tsp);
-	dprintf(D_FULLDEBUG, "GetTime stamp returned %d\n",(int)cts);
+	time_t cts = *tsp;
+	*tsp = GetTimeStamp(file);
+	dprintf(D_FULLDEBUG, "Time stamp of running %s is %ld\n",
+			file, cts);
+	dprintf(D_FULLDEBUG, "GetTimeStamp returned %ld\n",tsp);
 
-	if( cts == (time_t) -1 ) {
+	if( *tsp == (time_t) -1 ) {
 		/*
 		 **	We could have been in the process of installing a new
 		 **	version, and that's why the 'stat' failed.  Catch it
 		 **  next time around.
 		 */
+		*tsp = cts;
 		return( FALSE );
 	}
-	return( cts != tsp );
+	return( cts != *tsp );
 }
 
 char	*Shell = "/bin/sh";
@@ -893,33 +894,6 @@ RestartMaster()
 	daemons.RestartMaster();
 }
 
-
-void
-update_collector()
-{
-	int		cmd = UPDATE_MASTER_AD;
-	SafeSock sock(CollectorHost, COLLECTOR_PORT, 2);
-
-	dprintf(D_FULLDEBUG, "enter report_to_collector\n");
-
-	sock.encode();
-	if(!sock.code(cmd))
-	{
-		dprintf(D_ALWAYS, "Can't send UPDATE_MASTER_AD to the collector\n");
-		return;
-	}
-	if(!ad->put(sock))
-	{
-		dprintf(D_ALWAYS, "Can't send ClassAd to the collector\n");
-		return;
-	}
-	if(!sock.end_of_message())
-	{
-		dprintf(D_ALWAYS, "Can't send endofrecord to the collector\n");
-	}
-
-	dprintf(D_FULLDEBUG, "exit report_to_collector\n");
-}
 
 #if 0
 void StartConfigServer()
