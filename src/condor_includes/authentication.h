@@ -419,7 +419,7 @@ private:
 	char *             ccname_;           // FILE:/krbcc_name
 	char *             defaultCondor_;    // Default condor 
 	char *             defaultStash_;     // Default stash location
-	krb5_ticket   *    ticket_;           // keep the ticket or the session
+	krb5_keyblock *    sessionKey_;       // Session key
 	char *             keytabName_;       // keytab to use
 	//  key?
 #endif
