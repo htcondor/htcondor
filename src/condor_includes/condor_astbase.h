@@ -79,7 +79,7 @@
 
 #include "condor_exprtype.h"
 
-#define USE_STRING_SPACE_IN_CLASSADS
+#undef USE_STRING_SPACE_IN_CLASSADS
 
 class AttrList;
 class EvalResult;
