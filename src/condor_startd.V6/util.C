@@ -85,42 +85,11 @@ compute_rank( ClassAd* mach_classad, ClassAd* req_classad )
 
 
 int
-create_port(int* sock)
+create_port( ReliSock* rsock )
 {
-	struct sockaddr_in sin;
-	int len = sizeof sin;
-
-	memset((char *)&sin,0,sizeof sin);
-	sin.sin_family = AF_INET;
-	
-#if 0
-	char address[100];
-	if( IP ) {
-		sprintf(address, "<%s:%d>", IP, 0);
-		string_to_sin(address, &sin);
-	} else {
-	}
-#endif 0
-		
-	sin.sin_port = 0;
-
-	if( (*sock=socket(AF_INET,SOCK_STREAM,0)) < 0 ) {
-		EXCEPT( "socket" );
-	}
-
-	if( bind(*sock,(struct sockaddr *)&sin, sizeof sin) < 0 ) {
-		EXCEPT( "bind" );
-	}
-
-	if( listen(*sock,1) < 0 ) {
-		EXCEPT( "listen" );
-	}
-
-	if( getsockname(*sock,(struct sockaddr *)&sin, &len) < 0 ) {
-		EXCEPT("getsockname");
-	}
-
-	return (int)ntohs((u_short)sin.sin_port);
+	rsock->bind();
+	rsock->listen();
+	return rsock->get_file_desc();
 }
 
 
