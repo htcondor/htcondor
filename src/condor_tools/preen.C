@@ -35,6 +35,7 @@
 
 
 #define _POSIX_SOURCE
+#if 0
 #include <stdio.h>
 #include <unistd.h>
 #include <ctype.h>
@@ -50,6 +51,18 @@
 #include <sys/stat.h>
 #include <time.h>
 #include "alloc.h"
+#else
+#include <sys/stat.h>
+#include "condor_common.h"
+#include "condor_debug.h"
+#include "condor_constants.h"
+#include "condor_config.h"
+#include "condor_jobqueue.h"
+#include "condor_mach_status.h"
+#include "proc_obj.h"
+#include "directory.h"
+#include "alloc.h"
+#endif
 
 char *my_hostname();
 
@@ -215,7 +228,7 @@ main( int argc, char *argv[] )
 	print_alloc_stats( "End of main" );
 #endif
 
-	exit( 0 );
+	return 0;
 }
 
 /*

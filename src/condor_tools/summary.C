@@ -33,17 +33,17 @@
 ****************************************************************/
 
 #define _POSIX_SOURCE
-#include <stdio.h>
-#include <unistd.h>
-#include <ctype.h>
-#include <fcntl.h>
-#include "types.h"
-#include "util_lib_proto.h"
+
+#include "condor_common.h"
+#include "condor_debug.h"
+#include "condor_constants.h"
+#include "condor_config.h"
+#include "condor_jobqueue.h"
 #include "proc_obj.h"
-#include "filter.h"
 #include "alloc.h"
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
+extern "C" char * format_time ( float fp_secs );
 
 class UserRec {
 public:
