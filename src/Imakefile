@@ -351,12 +351,14 @@ pure_target( condor_negotiator.V6, condor_negotiator.pure )
 clean::
 	rm -rf $(PURE_DIR)
 
-condor_analyze_external: public/analyze libs
+condor_analyze_external: ../public/analyze libs
 	cd condor_q.V6; make analyze-external
 
-public/analyze: 
-	mkdir public
-	mkdir public/analyze
+../public/analyze: ../public
+	mkdir ../public/analyze
+
+../public:
+	mkdir ../public
 
 today:
 	/bin/rm -f condor_c++_util/condor_version.o
