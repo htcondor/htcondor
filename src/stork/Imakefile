@@ -310,12 +310,8 @@ DAP_RELEASE_NEST_OBJ = dap_release_nest.o $(DAP_CLASSAD_OBJ)
 #endif
 
 #ifdef STORK_SRB
-#	ifdef WANT_SRB
 	/* Need SRB, which depends upon Globus */
 	ext_target(EXT_SRB_VERSION,$(EXT_TRIGGER)/$(EXT_GLOBUS_VERSION))
-#	else
-#		error SRB not available on this platform
-#	endif
 #endif
 
 c_plus_target(DaP.transfer.dcache_srm,$(DAP_TRANSFER_DCACHE_SRM_OBJ),$(LIB))
