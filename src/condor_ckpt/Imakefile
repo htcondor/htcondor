@@ -67,11 +67,13 @@ ASSEMBLER_OBJ = SYSCALL.MIPS.IRIX62.o MMAP.MIPS.IRIX62.o
 	gas -o $*.o $*.s
 #endif
 
+CPP_UTIL_OBJ = condor_version.o
+
 #if DOES_CHECKPOINTING
 OBJ =	image.o machdep.$(OS).o file_state.o tmp_stack.o syscall_mode.o \
 	local_startup.o fake_remote_syscall.o fake_hooks.o \
 	$(SAVE_SIGSTATE_OBJ) fake_util_lib.o eprintf.o $(EXTRACT) \
-	$(ASSEMBLER_OBJ)
+	$(ASSEMBLER_OBJ) $(CPP_UTIL_OBJ)
 #else
 OBJ =	syscall_mode.o
 #endif
@@ -260,8 +262,10 @@ clean::
 	rm -f condor_rt0.o
 #endif
 
-
 clean::
 	rm -f c_plus_alloc.o syscall_mode.o
 
 html:
+
+IMPORT_LINKS = ../../config/import_links
+import(../condor_c++_util,$(CPP_UTIL_OBJ))
