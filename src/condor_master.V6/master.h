@@ -24,6 +24,7 @@
 #define _CONDOR_MASTER_H
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "../condor_daemon_core.V6/condor_lock.h"
 #include "dc_collector.h"
 #include "killfamily.h"
 
@@ -34,7 +35,7 @@ enum StopStateT { GRACEFUL, FAST, KILL, NONE };
 class daemon : public Service
 {
 public:
-	daemon(char *name, bool is_daemon_core = true);
+	daemon(char *name, bool is_daemon_core = true, bool is_ha = false );
 	daemon_t type;
 	char*	name_in_config_file;
 	char*	daemon_name; 
@@ -62,6 +63,7 @@ public:
 
 	int		NextStart();
 	int		Start();
+	int		RealStart();
 	int		Restart();
 	void	Stop();
 	void	StopFast();
@@ -82,6 +84,9 @@ private:
 	void	Recover();
 	void	DoStart();
 	void	DoConfig( bool init );
+	int		SetupHighAvailability( void );
+	int		HaLockAcquired( LockEventSrc src );
+	int		HaLockLost( LockEventSrc src );
 
 	int		start_tid;
 	int		recover_tid;
@@ -96,6 +101,9 @@ private:
 
 	ProcFamily*	procfam;
 	int		procfam_tid;
+
+	CondorLock	*ha_lock;
+	bool	is_ha;
 };
 
 

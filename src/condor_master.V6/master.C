@@ -690,6 +690,27 @@ init_daemon_list()
 		dc_daemon_names.initializeFromString(default_dc_daemon_list);
 	}
 
+	char* ha_list = param("MASTER_HA_LIST");
+	if( ha_list ) {
+			// Make MASTER_HA_LIST case insensitive by always converting
+			// what we get to uppercase.
+		StringList	ha_names;
+		ha_list = strupr( ha_list );
+		ha_names.initializeFromString(ha_list);
+		free( ha_list );
+
+		ha_names.rewind();
+		while( (daemon_name = ha_names.next()) ) {
+			if(daemons.GetIndex(daemon_name) < 0) {
+				if( dc_daemon_names.contains(daemon_name) ) {
+					new_daemon = new class daemon(daemon_name, true, true );
+				} else {
+					new_daemon = new class daemon(daemon_name, false, true );
+				}
+			}
+		}
+	}
+
 	char* daemon_list = param("DAEMON_LIST");
 	if( daemon_list ) {
 			// Make DAEMON_LIST case insensitive by always converting

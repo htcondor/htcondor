@@ -89,7 +89,7 @@ extern char*		MasterName;
 ///////////////////////////////////////////////////////////////////////////
 // daemon Class
 ///////////////////////////////////////////////////////////////////////////
-daemon::daemon(char *name, bool is_daemon_core)
+daemon::daemon(char *name, bool is_daemon_core, bool is_ha )
 {
 	char	buf[1000];
 
@@ -111,6 +111,10 @@ daemon::daemon(char *name, bool is_daemon_core)
 			daemon_name = NULL;
 		}
 	} 
+
+	// Store our HA state
+	this->ha_lock = NULL;
+	this->is_ha = is_ha;
 
 	// Handle configuration
 	DoConfig( true );
@@ -345,6 +349,13 @@ daemon::DoConfig( bool init )
 		flag_in_config_file = tmp;
 	}
 
+	// High Availability?
+	if ( is_ha ) {
+		if ( SetupHighAvailability( ) < 0 ) {
+			// What should we do here????
+		}
+	}
+
 	// get env settings from config file if present
 	sprintf(buf, "%s_ENVIRONMENT", name_in_config_file );
 	tmp = param( buf );
@@ -406,14 +417,45 @@ daemon::DoConfig( bool init )
 int
 daemon::Start()
 {
-	char	*shortname, *tmp;
-	char	buf[512];
-	int 	command_port = isDC ? TRUE : FALSE;
-
 	if( start_tid != -1 ) {
 		daemonCore->Cancel_Timer( start_tid );
 		start_tid = -1;
 	}
+	if( on_hold ) {
+		return FALSE;
+	}
+	if( pid ) {
+			// Already running
+		return TRUE;
+	}
+
+		// If this is an HA service, we need to lock it first.
+	if ( is_ha && ha_lock ) {
+		int lockstat = ha_lock->AcquireLock( true );
+		if ( lockstat < 0 ) {
+			dprintf(D_ALWAYS, "%s: HA lock error\n", name_in_config_file );
+		} else if ( lockstat > 0 ) {
+			dprintf(D_FULLDEBUG, "%s: HA lock busy\n", name_in_config_file );
+		}
+
+			// Here, we have the lock // The LockAcquired callback
+			// will have already fired up the daemon for us.
+		return 0;
+	}
+
+	// Now, go start the process
+	return RealStart( );
+}
+
+// The real start logic; this is called by the LockAcquired callback when
+// we've acquired the lock
+int daemon::RealStart( )
+{
+	char	*shortname, *tmp;
+	int 	command_port = isDC ? TRUE : FALSE;
+	char	buf[512];
+
+	// Copy a couple of checks from Start
 	if( on_hold ) {
 		return FALSE;
 	}
@@ -710,6 +752,11 @@ daemon::Exited( int status )
 	}
 	dprintf( D_FAILURE|D_ALWAYS, "%s%s\n", buf1, buf2 );
 
+		// For HA, release the lock
+	if ( is_ha && ha_lock ) {
+		ha_lock->ReleaseLock( );
+	}
+
 		// For good measure, try to clean up any dead/hung children of
 		// the daemon that just died by sending SIGKILL to it's
 		// entire process family.
@@ -939,6 +986,114 @@ daemon::DeleteProcFam( void )
 		delete procfam;
 		procfam = NULL;
 	}
+}
+
+
+int
+daemon::SetupHighAvailability( void )
+{
+	char		*tmp;
+	char		*url;
+	MyString	name;
+
+	// Get the URL
+	name.sprintf("HA_%s_LOCK_URL" );
+	tmp = param( name.Value() );
+	if ( ! tmp ) {
+		tmp = param( "HA_LOCK_URL" );
+	}
+	if ( ! tmp ) {
+		dprintf(D_ALWAYS, "Warning: %s listed in HA, "
+				"but no HA lock URL provided!!\n",
+				name_in_config_file );
+		return -1;
+	}
+	url = tmp;
+
+	// Get the length of the lock
+	time_t		lock_hold_time = 60 * 60;	// One hour
+	name.sprintf( "HA_%s_LOCK_HOLD_TIME" );
+	tmp = param( name.Value( ) );
+	if ( ! tmp ) {
+		tmp = param( "HA_LOC_HOLD_TIME" );
+	}
+	if ( tmp ) {
+		if ( !isdigit( tmp[0] ) ) {
+			dprintf(D_ALWAYS,
+					"HA time '%s' is not a number; using default %d\n",
+					tmp, lock_hold_time );
+		} else {
+			lock_hold_time = (time_t) atol( tmp );
+		}
+		free( tmp );
+	}
+
+	// Get the lock poll time
+	time_t		poll_period = 5 * 60;		// Five minutes
+	name.sprintf( "HA_%s_POLL_PERIOD" );
+	tmp = param( name.Value() );
+	if ( ! tmp ) {
+		tmp = param( "HA_POLL_PERIOD" );
+	}
+	if ( tmp ) {
+		if ( !isdigit( tmp[0] ) ) {
+			dprintf(D_ALWAYS,
+					"HA time '%s' is not a number; using default %d\n",
+					tmp, poll_period );
+		} else {
+			poll_period = (time_t) atol( tmp );
+		}
+		free( tmp );
+	}
+
+	// Now, create the lock object
+	ha_lock = new CondorLock( url,
+							  name_in_config_file,
+							  this,
+							  (LockEvent) &daemon::HaLockAcquired,
+							  (LockEvent) &daemon::HaLockLost,
+							  poll_period,
+							  lock_hold_time,
+							  true );
+	free( url );
+	if ( ! ha_lock ) {
+		dprintf( D_ALWAYS, "HA Lock creation failed for URL '%s' / '%s'\n",
+				 url, name_in_config_file );
+		return -1;
+	}
+
+	return 0;
+}
+
+
+int
+daemon::HaLockAcquired( LockEventSrc src )
+{
+	dprintf( D_FULLDEBUG, "%s: Got HA lock (%s); starting\n",
+			 name_in_config_file, ha_lock->EventSrcString(src) );
+
+		// Start the deamon in either case
+	return RealStart( );
+}
+
+
+int
+daemon::HaLockLost( LockEventSrc src )
+{
+	dprintf( D_FULLDEBUG, "%s: Lost HA lock (%s); stoping\n",
+			 name_in_config_file, ha_lock->EventSrcString(src) );
+	if ( LOCK_SRC_APP == src ) {
+			// We released the lock from the ReleaseLock() call; we already
+			// know about it.  Do nothing.
+		return 0;
+	}
+
+		// Poll detected that we've lost the lock; pull the plug NOW!!
+	dprintf( D_ALWAYS,
+			 "%s: HA poll detected broken lock: emergency stop!!\n",
+			 name_in_config_file );
+	StopFast( );
+	return 0;
 }
 
 
