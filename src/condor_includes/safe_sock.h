@@ -66,12 +66,13 @@ public:
 	// Safe socket services
 	//
 
-	SafeSock() : Sock() {}		/* virgin safe_sock		*/
+	SafeSock();					/* virgin safe_sock		*/
 	SafeSock(int);				/* bind on port			*/
 	SafeSock(char *);			/* bind on serv 		*/
 	SafeSock(char *, int, int timeout_val=0);		/* connect to host/port	*/
 	SafeSock(char *, char *, int timeout_val=0);	/* connect to host/serv	*/
 	~SafeSock();
+	void init();				/* shared initialization method */
 
 	int get_port();
 	struct sockaddr_in *endpoint();
@@ -105,7 +106,7 @@ protected:
 	**	Types
 	*/
 
-	enum safesock_state { safesock_listen };
+	enum safesock_state { safesock_none, safesock_listen };
 
 	/*
 	**	Methods
