@@ -100,6 +100,9 @@ purge ()
 		}
 		strTable[i].adoptMode = SS_INVALID;
 	}
+
+	// clean up the hash table
+	stringSpace.clear();
 }
 
 
