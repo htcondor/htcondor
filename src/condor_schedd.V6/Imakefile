@@ -16,8 +16,8 @@ CLASS_AD_LIB = ../condor_classad/expr_lib.a
 DAEMON_CORE_LIB = ../condor_daemon_core.V6/daemon_core.a
 CKPT_SERVER_LIB = ../condor_ckpt_server/ckpt_server_api.a
 
-QMGMT_SRC = qmgmt.C qmgmt_receivers.C 
-QMGMT_OBJ = qmgmt.o qmgmt_receivers.o 
+QMGMT_SRC = qmgmt.C qmgmt_receivers.C qmgmt_common.C
+QMGMT_OBJ = qmgmt.o qmgmt_receivers.o qmgmt_common.o
 
 HISTORY_SRC = get_history.57.c
 SRC = stub.C schedd.C schedd_main.C $(QMGMT_SRC) stub.57.C event.c $(HISTORY_SRC) schedd.c
@@ -32,7 +32,7 @@ QMGR_LIB = $(LIB)
 QMGR_SRC = qmgr.C $(QMGMT_SRC)
 QMGR_OBJ = qmgr.o $(QMGMT_OBJ)
 
-QMGMT_LIB_OBJ = qmgmt_send_stubs.o qmgr_lib_support.o
+QMGMT_LIB_OBJ = qmgmt_send_stubs.o qmgr_lib_support.o qmgmt_common.o
 
 all_target(condor_schedd libqmgmt.a)
 tags_target($(SRC),$(LIBDIRS))
