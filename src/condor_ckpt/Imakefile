@@ -21,6 +21,8 @@ EXTRACT = SIGVEC.o _SIGVEC.o
 EXTRACT = SIGACTION.o SIGPROCMASK.o _SIGPROCMSK.o SIGSUSPEND.o
 #elif IS_MIPS_ULTRIX43
 EXTRACT = SIGVEC.o SIGACTION.o SIGPROCMASK.o SIGSUSPEND.o SIGNAL.o
+#elif (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS)
+EXTRACT = MMAP.o SYSCALL.o SIGACTION.o _SIGACTION.o
 #endif
 
 #endif  /* ======= of if DOES_SAVE_SIGSTATE ==========*/
@@ -54,7 +56,7 @@ UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o flock.o
 UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o flock.o \
 		   seteuid.o setegid.o getwd.o
 #else
-UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o
+UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o flock.o
 #endif
 
 URL_OBJ = url_condor.o include_urls.o cbstp_url.o file_url.o http_url.o \
@@ -105,6 +107,11 @@ uppercase_target($(SIMPLE_LIBC),_sigvec.o,_SIGVEC.o,_sigvec,_SIGVEC)
 #if !IS_ALPHA_OSF1
 uppercase_target($(SIMPLE_LIBC),sigaction.o,SIGACTION.o,sigaction,SIGACTION)
 #endif
+#if (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS)
+uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
+uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
+uppercase_target($(SIMPLE_LIBC),_sigaction.o,_SIGACTION.o,sigaction,SIGACTION)
+#endif
 uppercase_target($(SIMPLE_LIBC),sigprocmask.o,SIGPROCMASK.o,sigprocmask,SIGPROCMASK)
 uppercase_target($(SIMPLE_LIBC),_sigprocmsk.o,_SIGPROCMSK.o,_sigprocmask,_SIGPROCMASK)
 
@@ -126,7 +133,11 @@ uppercase_target($(SIMPLE_LIBC),sigsuspend.o,SIGSUSPEND.o,sigsuspend,SIGSUSPEND)
 
 depend_target($(SRC) )
 
+#if (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS)
+program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) dprintf.o flock.o MMAP.o SYSCALL.o, )
+#else
 program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ), )
+#endif
 
 program_target(ToUpper,ToUpper.o,$(NULL))
 release_target(ToUpper,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
@@ -144,6 +155,24 @@ condor_rt0.o: Crt0 ToUpper
 	rm -f tmp1 tmp2
 clean::
 	rm -f condor_rt0.o
+#elif (IS_SUN4M_SOLARIS)
+#undef sparc
+#undef sun
+condor_rt0.o: /s/gcc-2.6.3/sun4m_54/lib/gcc-lib/sparc-sun-solaris2.4/2.6.3/crt1.o ToUpper
+	ToUpper /s/gcc-2.6.3/sun4m_54/lib/gcc-lib/sparc-sun-solaris2.4/2.6.3/crt1.o condor_rt0.o main  MAIN
+clean::
+	rm -f condor_rt0.o
+#define sparc
+#define sun
+#elif  (IS_X86_SOLARIS)
+#undef i386
+#undef sun
+condor_rt0.o: /s/gcc-2.6.3/sunx86_54/lib/gcc-lib/i386-sun-solaris2.4/2.6.3/crt1.o ToUpper
+	ToUpper /s/gcc-2.6.3/sunx86_54/lib/gcc-lib/i386-sun-solaris2.4/2.6.3/crt1.o condor_rt0.o main  MAIN
+clean::
+	rm -f condor_rt0.o
+#define i386
+#define sun
 #else
 condor_rt0.o: Crt0 ToUpper
 	ToUpper Crt0 condor_rt0.o main  MAIN
