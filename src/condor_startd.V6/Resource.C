@@ -370,7 +370,7 @@ Resource::update()
 		// Send class ads to collector
 	if( (rval1 = 
 		 send_classad_to_sock( coll_sock, &public_ad, &private_ad )) ) {
-		dprintf( D_ALWAYS, "Sent update to the collector (%s)\n", 
+		dprintf( D_FULLDEBUG, "Sent update to the collector (%s)\n", 
 				 collector_host );
 	}  
 
