@@ -72,11 +72,16 @@ unsigned char * Condor_Crypt_Base :: randomKey(int length)
     unsigned char * key = (unsigned char *)(malloc(length));
 	static bool already_seeded = false;
 
+	memset(key, 0, length);
+
 #if defined(CONDOR_ENCRYPTION)
     char * file = 0;
-    int size = 4096;
+    int size = 128;
     if( ! already_seeded ) {
         unsigned char * buf = (unsigned char *) malloc(size);
+		for (int i = 0; i < size; i++) {
+			buf[i] = get_random_int() & 0xFF;
+		}
 
         RAND_seed(buf, size);
         free(buf);
