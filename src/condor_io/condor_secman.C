@@ -38,7 +38,7 @@
 #include "KeyCache.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_secman.h"
-#include "classad_merge.h"
+//#include "classad_merge.h"
 
 extern char* mySubSystem;
 extern char* global_dc_sinful();
@@ -1071,7 +1071,9 @@ SecMan::startCommand( int cmd, Sock* sock, bool can_negotiate, int subCmd)
 					dprintf ( D_SECURITY, "SECMAN: SEC_UDP obtained key id %s!\n", enc_key->id());
 				}
 				auth_info.Clear();
-				MergeClassAds( &auth_info, enc_key->policy(), true );
+//				MergeClassAds( &auth_info, enc_key->policy(), true );
+				auth_info.Update(*(enc_key->policy()));
+
 			} else {
 				// there still is no session.
 				//
