@@ -363,6 +363,9 @@ init_job_ad()
 	}
 #endif
 		
+	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_REMOTE_WALL_CLOCK);
+	InsertJobExpr (buffer);
+
 	(void) sprintf (buffer, "%s = 0.0", ATTR_JOB_LOCAL_USER_CPU);
 	InsertJobExpr (buffer);
 
@@ -509,7 +512,14 @@ main( int argc, char *argv[] )
 			cmd_file = *ptr;
 		}
 	}
-	
+
+	char *dis_check = param("SUBMIT_SKIP_FILECHECKS");
+	if ( dis_check ) {
+		if (dis_check[0]=='T' || dis_check[0]=='t') {
+			DisableFileChecks = 1;
+		}
+		free(dis_check);
+	}
 
 	if( !(ScheddAddr = get_schedd_addr(ScheddName)) ) {
 		if( ScheddName ) {
@@ -627,7 +637,7 @@ reschedule()
 {
 	Daemon  my_schedd(DT_SCHEDD, NULL, NULL);
 
- 	if ( ! my_schedd.sendCommand(RESCHEDULE, Stream::reli_sock, 0) ) {
+ 	if ( ! my_schedd.sendCommand(RESCHEDULE, Stream::safe_sock, 0) ) {
 		fprintf(stderr, "Can't send RESCHEDULE command to condor scheduler\n" );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
@@ -758,7 +768,11 @@ SetExecutable()
 	if( copySpool == NULL)
 	{
 		copySpool = (char *)malloc(16);
-		strcpy(copySpool, "TRUE");
+		if ( JobUniverse == CONDOR_UNIVERSE_GLOBUS ) {
+			strcpy(copySpool, "FALSE");
+		} else {
+			strcpy(copySpool, "TRUE");
+		}
 	}
 
 	// generate initial checkpoint file
