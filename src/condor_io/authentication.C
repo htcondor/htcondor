@@ -1,0 +1,694 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+ 
+
+
+
+#define _POSIX_SOURCE
+
+#include "condor_common.h"
+#include "authentication.h"
+#include "condor_debug.h"
+#include "internet.h"
+#include "condor_string.h"
+#include "condor_uid.h"
+#include "my_username.h"
+
+
+#if defined(GSS_AUTHENTICATION)
+gss_cred_id_t Authentication::credential_handle = GSS_C_NO_CREDENTIAL;
+#endif defined(GSS_AUTHENTICATION)
+
+
+Authentication::Authentication( ReliSock *sock )
+{
+	//credential_handle is static and set at top of this file//
+	mySock = sock;
+	//start off with socket authenticated, so that queue mgmt stuff works.
+	//this is insecure, but won't work without rewriting queue stuff.
+	auth_status = CAUTH_ANY;
+	claimToBe = NULL;
+	ownerUid = -1;
+	GSSClientname = NULL;
+	authComms.buffer = NULL;
+	authComms.size = 0;
+}
+
+Authentication::~Authentication()
+{
+	mySock = NULL;
+}
+
+int 
+Authentication::isAuthenticated() 
+{ 
+	return( auth_status != CAUTH_NONE );
+};
+
+int
+Authentication::authenticate( char *hostAddr )
+{
+	setupEnv( mySock->hostAddr );
+
+	int firm = handshake();
+	dprintf(D_FULLDEBUG,"authenticate, handshake returned: %d\n", firm );
+
+	switch ( firm ) {
+#if defined(GSS_AUTHENTICATION)
+	 case CAUTH_GSS:
+		authenticate_self_gss();
+		if( authenticate_gss() ) {
+			sprintf( tmp, "%s = \"%s\"", USERAUTH_ADTYPE, "GSS" );
+			auth_status = CAUTH_GSS;
+		}
+		break;
+#endif
+	 case CAUTH_FILESYSTEM:
+		if ( authenticate_filesystem() ) {
+
+			auth_status = CAUTH_FILESYSTEM;
+		}
+		break;
+	 default:
+		dprintf(D_FULLDEBUG,"Authentication::authenticate-- bad handshake\n" );
+	}
+
+	//if none of the methods succeeded, we fall thru to default "none" from above
+
+	//TRUE means success, FALSE is failure (CAUTH_NONE)
+	int retval = ( auth_status != CAUTH_NONE );
+	dprintf(D_FULLDEBUG, "Authentication::auth returning %d (TRUE on success)\n",
+			retval );
+	return ( retval );
+}
+
+void 
+Authentication::setAuthType( authentication_state state ) {
+	auth_status = state;
+}
+
+int
+Authentication::setOwner( char *owner ) {
+	if ( !this ) {
+		return 0;
+	}
+	if ( claimToBe ) {
+		delete [] claimToBe;
+		claimToBe = NULL;
+	}
+	if ( owner ) {
+		claimToBe = strnewp( owner );
+	}
+	return 1;
+}
+
+char *
+Authentication::getOwner() {
+	if ( claimToBe ) {
+		return( strnewp( claimToBe ) );
+	}
+	return( NULL );
+}
+
+int
+Authentication::setOwnerUid( int uid ) {
+	if ( !this ) {
+		return 0;
+	}
+	ownerUid = uid;
+	return( 1 );
+}
+
+int
+Authentication::getOwnerUid() {
+	return( ownerUid );
+}
+
+int
+Authentication::handshake()
+{
+	int shouldUseMethod = 0;
+
+	int clientCanUse = 0;
+
+	switch( mySock->isClient() ) {
+	 case 1:
+		mySock->encode();
+		mySock->code( mySock->canUseFlags );
+		mySock->end_of_message();
+		mySock->decode();
+		mySock->code( shouldUseMethod );
+		mySock->end_of_message();
+		break;
+	 default: //otherwise, server
+		mySock->decode();
+		mySock->code( clientCanUse );
+		mySock->end_of_message();
+		shouldUseMethod = selectAuthenticationType( clientCanUse );
+		mySock->encode();
+		mySock->code( shouldUseMethod );
+		mySock->end_of_message();
+		break;
+	}
+	return( shouldUseMethod );
+}
+
+
+void
+Authentication::unAuthenticate()
+{
+	auth_status = CAUTH_NONE;
+	setOwner( NULL );
+}
+
+int
+Authentication::authenticate_filesystem()
+{
+	char *new_file = NULL;
+	int fd = -1;
+	char *owner = NULL;
+
+	if ( mySock->isClient() ) {
+		mySock->decode();
+		mySock->code( new_file );
+		if ( new_file ) {
+			fd = open(new_file, O_RDONLY | O_CREAT | O_TRUNC, 0666);
+			::close(fd);
+			free( new_file );
+		}
+		mySock->end_of_message();
+		mySock->encode();
+		mySock->code( fd );
+		mySock->end_of_message();
+		int rval = -1;
+		mySock->decode();
+		mySock->code( rval );
+		mySock->end_of_message();
+//		dprintf(D_FULLDEBUG,"server determined owner is \"%s\"\n", owner );
+		return( rval == 0 );
+	}
+
+	//else SERVER 
+
+	setOwner( NULL );
+
+	//create temp file name and send it over
+	new_file = tempnam("/tmp", "qmgr_");
+	// man page says string returned by tempnam has been malloc()'d
+	mySock->encode();
+	mySock->code( new_file );
+	mySock->end_of_message();
+	mySock->decode();
+	mySock->code( fd );
+	mySock->end_of_message();
+	mySock->encode();
+
+	int retval = 0;
+	if ( fd > -1 ) {
+		//check file to ensure that claimant is owner
+		struct stat stat_buf;
+
+		if ( lstat( new_file, &stat_buf ) < 0 ) {
+			retval = -1;  
+		}
+		else {
+			// Authentication should fail if a) owner match fails, or b) the
+			// file is either a hard or soft link (no links allowed because they
+			// could spoof the owner match).  -Todd 3/98
+			if ( 
+				(stat_buf.st_nlink > 1) ||	 // check for hard link
+				(S_ISLNK(stat_buf.st_mode)) ) 
+			{
+				retval = -1;
+			}
+			else {
+				//need to lookup username from file and do setOwner()
+				setOwner( (char *) my_username( stat_buf.st_uid ) );
+			}
+		}
+		unlink( new_file );
+
+		init_user_ids( getOwner() );
+	}
+	else {
+		retval = -1;
+		dprintf( D_ALWAYS, "invalid state in authenticate_filesystem\n" );
+	}
+	mySock->code( retval );
+	mySock->end_of_message();
+	free( new_file );
+	return( retval == 0 );
+}
+
+int
+Authentication::selectAuthenticationType( int clientCanUse ) 
+{
+//this should be changed to somehow go in the order as specified in config file
+	dprintf( D_FULLDEBUG, "auth handshake: clientCanUse: %d\n", clientCanUse );
+	int retval = 0;
+
+	if ( clientCanUse & mySock->canUseFlags & CAUTH_FILESYSTEM ) {
+		retval = CAUTH_FILESYSTEM;
+	}
+	else if ( clientCanUse & mySock->canUseFlags & CAUTH_GSS ) {
+		retval = CAUTH_GSS;
+	}
+	dprintf(D_FULLDEBUG,"auth handshake: selected method: %d\n", retval );
+
+	return retval;
+}
+
+int 
+Authentication::setupEnv( char *hostAddr )
+{
+	char tmpstring[1024];
+	char *CertDir;
+
+
+	//only for client because canTryGSS/canTryFilesystem, etc. for 
+	//server should be parsed in schedd from config file.
+
+	if ( mySock->isClient() ) {
+
+#if defined(WIN32)
+//TODD: put whatever code you want here, my suggestion is:
+//		mySock->canUseFlags |= CAUTH_NT;
+#else
+		mySock->canUseFlags |= CAUTH_FILESYSTEM;
+#endif
+
+	}
+
+	if ( !( CertDir = getenv( "X509_CERT_DIR" ) ) ) {
+		return 0;
+	}
+	struct stat statbuf;
+	int canTryGSS = 1;
+
+	if ( stat( CertDir, &statbuf ) ) {
+		canTryGSS = 0;
+	}
+	else if ( !( statbuf.st_mode & ( S_IFDIR | S_IREAD ) ) ) {
+		canTryGSS = 0;
+	}
+
+#if defined(GSS_AUTHENTICATION)
+	if ( !canTryGSS ) {
+		fprintf( stderr, "unable to read x509 directory %s\n", CertDir );
+		return( 0 );
+	}
+#endif
+
+	sockaddr_in sin;
+	char *hostname;
+
+	//client needs to know name of the schedd, I stashed hostAddr in 
+	//Authentication::connect(), which should only be called by clients
+	if ( mySock->isClient() ) {
+		if ( string_to_sin( hostAddr, &sin ) 
+				&& ( hostname = sin_to_hostname( &sin, NULL ) ) ) 
+		{
+			sprintf( tmpstring, "CONDOR_GATEKEEPER=/CN=schedd@%s", hostname );
+			putenv( strdup( tmpstring ) );
+		}
+		else {
+			free( CertDir );
+			return( 0 );
+		}
+	}
+	
+	sprintf( tmpstring, "X509_USER_CERT=%s/newcert.pem", CertDir );
+	putenv( strdup( tmpstring ) );
+
+	sprintf(tmpstring,"X509_USER_KEY=%s/private/newkey.pem",CertDir);
+	putenv( strdup( tmpstring ) );
+
+	sprintf(tmpstring,"SSLEAY_CONF=%s/condor_ssl.cnf",CertDir);
+	putenv( strdup( tmpstring ) );
+
+	//if they got this far, might as well let 'em try to use GSS
+	//only for client because canTryGSS/canTryFilesystem, for server
+	//should be parsed in schedd from config file.
+	if ( mySock->isClient() ) {
+		mySock->canUseFlags |= CAUTH_GSS;
+	}
+
+//	free( CertDir );
+	
+	return( 1 );
+}
+
+#if defined(GSS_AUTHENTICATION)
+
+int 
+Authentication::lookup_user_gss( char *client_name ) 
+{
+	char filename[MAXPATHLEN];
+
+	sprintf( filename, "%.*s/index.txt", MAXPATHLEN-11, 
+			getenv( "X509_CERT_DIR" ) );
+
+	FILE *index;
+	if ( !(index = fopen(  filename, "r" ) ) ) {
+		dprintf( D_ALWAYS, "unable to open index file %s, errno %d\n", 
+				filename, errno );
+		return -1;
+	}
+
+	//find entry
+	int found = 0;
+	char line[81];
+	while ( !found && fgets( line, 80, index ) ) {
+		//Valid user entries have 'V' as first byte in their cert db entry
+		if ( line[0] == 'V' &&  strstr( line, client_name ) ) {
+			found = 1;
+		}
+	}
+	fclose( index );
+	if ( !found ) {
+		dprintf( D_ALWAYS, "unable to find V entry for %s in %s\n", 
+				filename, client_name );
+		return( -1 );
+	}
+
+	return 0;
+}
+
+//cannot make this an AuthSock method, since gss_assist method expects
+//three parms, methods have hidden "this" parm first. Couldn't figure out
+//a way around this, so made AuthSock have a member of type AuthComms
+//to pass in to this method to manage buffer space.  //mju
+int 
+authsock_get(void *arg, void **bufp, size_t *sizep)
+{
+	/* globus code which calls this function expects 0/-1 return vals */
+
+	//authsock must "hold onto" GSS state, pass in struct with comms stuff
+	GSSComms *comms = (GSSComms *) arg;
+	ReliSock *sock = comms->sock;
+	size_t stat;
+
+	sock->decode();
+
+	//read size of data to read
+	stat = sock->code( *((int *)sizep) );
+
+	*bufp = malloc( *((int *)sizep) );
+	if ( !*bufp ) {
+		dprintf( D_ALWAYS, "malloc failure authsock_get\n" );
+		stat = FALSE;
+	}
+
+	//if successfully read size and malloced, read data
+	if ( stat )
+		sock->code_bytes( *bufp, *((int *)sizep) );
+
+	sock->end_of_message();
+
+	//check to ensure comms were successful
+	if ( !stat ) {
+		dprintf( D_ALWAYS, "authsock_get (read from socket) failure\n" );
+		return -1;
+	}
+	return 0;
+}
+
+int 
+authsock_put(void *arg,  void *buf, size_t size)
+{
+	//param is just a AS*
+	ReliSock *sock = (ReliSock *) arg;
+	int stat;
+
+	sock->encode();
+
+	//send size of data to send
+	stat = sock->code( (int &)size );
+	//if successful, send the data
+	if ( stat ) {
+		if ( !(stat = sock->code_bytes( buf, ((int) size )) ) ) {
+			dprintf( D_ALWAYS, "failure sending data (%d bytes) over sock\n",size);
+		}
+	}
+	else {
+		dprintf( D_ALWAYS, "failure sending size (%d) over sock\n", size );
+	}
+
+	sock->end_of_message();
+
+	//ensure data send was successful
+	if ( !stat ) {
+		dprintf( D_ALWAYS, "authsock_put (write to socket) failure\n" );
+		return -1;
+	}
+	return 0;
+}
+
+int 
+Authentication::authenticate_self_gss()
+{
+	OM_uint32 major_status;
+	OM_uint32 minor_status;
+
+	if ( credential_handle != GSS_C_NO_CREDENTIAL ) { // user already auth'd 
+		dprintf( D_FULLDEBUG, "This process has a valid certificate & key\n" );
+		return TRUE;
+	}
+
+	// ensure all env vars are in place, acquire cred will fail otherwise 
+	if ( !( getenv( "X509_USER_CERT" ) && getenv( "X509_USER_KEY" ) 
+			&& getenv( "X509_CERT_DIR" ) ) ) 
+	{
+		//don't log error, since this can be called before env vars are set!
+		dprintf(D_FULLDEBUG,"X509 env vars not set yet (might not be error)\n");
+		return FALSE;
+	}
+
+	//use gss-assist to verify user (not connection)
+	//this method will prompt for password if private key is encrypted!
+	int time = mySock->timeout(60 * 5);  //allow user 5 min to type passwd
+
+	major_status = globus_gss_assist_acquire_cred(&minor_status,
+		GSS_C_BOTH, &credential_handle);
+
+	mySock->timeout(time); //put it back to what it was before
+
+	if (major_status != GSS_S_COMPLETE)
+	{
+		dprintf( D_ALWAYS, "gss-api failure initializing user credentials, "
+				"stats: 0x%x\n", major_status );
+		credential_handle = GSS_C_NO_CREDENTIAL; 
+		return FALSE;
+	}
+
+	dprintf( D_FULLDEBUG, "This process has a valid certificate & key\n" );
+	return TRUE;
+}
+
+int 
+Authentication::authenticate_client_gss()
+{
+	OM_uint32						  major_status = 0;
+	OM_uint32						  minor_status = 0;
+	int								  token_status = 0;
+	OM_uint32						  ret_flags = 0;
+	gss_ctx_id_t					  context_handle = GSS_C_NO_CONTEXT;
+
+	if ( !authenticate_self_gss() ) {
+		dprintf( D_ALWAYS, 
+			"failure authenticating client from auth_connection_client\n" );
+		return FALSE;
+	}
+	 
+	char *gateKeeper = getenv( "CONDOR_GATEKEEPER" );
+
+	if ( !gateKeeper ) {
+		dprintf( D_ALWAYS, "env var CONDOR_GATEKEEPER not set" );
+		return FALSE;
+	}
+
+	authComms.sock = mySock;
+	authComms.buffer = NULL;
+	authComms.size = 0;
+
+	major_status = globus_gss_assist_init_sec_context(&minor_status,
+		  credential_handle, &context_handle,
+		  gateKeeper,
+		  GSS_C_DELEG_FLAG|GSS_C_MUTUAL_FLAG,
+		  &ret_flags, &token_status,
+		  authsock_get, (void *) &authComms,
+		  authsock_put, (void *) this 
+	);
+
+	if (major_status != GSS_S_COMPLETE)
+	{
+		dprintf( D_ALWAYS, "failed auth connection client, gss status: 0x%x\n",
+								major_status );
+		delete gateKeeper;
+		gateKeeper = NULL;
+		return FALSE;
+	}
+
+	/* 
+	 * once connection is Authenticated, don't need sec_context any more
+	 * ???might need sec_context for PROXIES???
+	 */
+	gss_delete_sec_context( &minor_status, &context_handle, GSS_C_NO_BUFFER );
+
+	auth_status = CAUTH_GSS;
+
+	dprintf(D_FULLDEBUG,"valid GSS connection established to %s\n", gateKeeper);
+//	delete gateKeeper;
+//	gateKeeper = NULL;
+	return TRUE;
+}
+
+//made major mods: took out authsock param and made everything [implied] this//
+int 
+Authentication::authenticate_server_gss()
+{
+	int rc;
+	OM_uint32 major_status = 0;
+	OM_uint32 minor_status = 0;
+	int		 token_status = 0;
+	OM_uint32 ret_flags = 0;
+	gss_ctx_id_t context_handle = GSS_C_NO_CONTEXT;
+
+	if ( !authenticate_self_gss() ) {
+		dprintf( D_ALWAYS, 
+			"failure authenticating self in auth_connection_server\n" );
+		return FALSE;
+	}
+//	if ( GSSClientname ) {
+//		free( GSSClientname );
+//		GSSClientname = NULL;
+//	}
+	 
+	authComms.sock = mySock;
+	authComms.buffer = NULL;
+	authComms.size = 0;
+
+	major_status = globus_gss_assist_accept_sec_context(&minor_status,
+				 &context_handle, credential_handle,
+				 &GSSClientname,
+				 &ret_flags, NULL, /* don't need user_to_user */
+				 &token_status,
+				 authsock_get, (void *) &authComms,
+				 authsock_put, (void *) this
+	);
+
+
+	if ( (major_status != GSS_S_COMPLETE) ||
+			( lookup_user_gss( GSSClientname ) < 0 ) ) 
+	{
+		if (major_status != GSS_S_COMPLETE) {
+			dprintf(D_ALWAYS, "server: GSS failure authenticating %s 0x%x\n",
+					"client, status: ", major_status );
+		}
+		else {
+			dprintf( D_ALWAYS, "server: user lookup failure.\n" );
+		}
+		return FALSE;
+	}
+
+	/* 
+	 * once connection is Authenticated, don't need sec_context any more
+	 * ???might need sec_context for PROXIES???
+	 */
+	gss_delete_sec_context( &minor_status, &context_handle, GSS_C_NO_BUFFER );
+
+	if ( !nameGssToLocal() ) {
+		return( FALSE );
+	}
+
+	auth_status = CAUTH_GSS;
+
+	dprintf(D_FULLDEBUG,"valid GSS connection established to %s\n", 
+			GSSClientname);
+	return TRUE;
+}
+
+int
+Authentication::nameGssToLocal() {
+	//this might need to change with SSLK5 stuff
+
+	//just extract username from /CN=<username>@<domain,etc>
+	if ( !GSSClientname ) {
+		return 0;
+	}
+
+	char *tmp;
+	tmp = strchr( GSSClientname, '=' );
+	char tmp2[512];
+
+	if ( tmp ) {
+		tmp++;
+		sprintf( tmp2, "%*.*s", strcspn( tmp, "@" ),
+				strcspn( tmp, "@" ), tmp );
+		setOwner( tmp2 );
+	}
+	else {
+		setOwner( GSSClientname );
+	}
+	return 1;
+}
+
+int
+Authentication::authenticate_gss() 
+{
+	int status = 1;
+
+	//don't just return TRUE if isAuthenticated() == TRUE, since 
+	//we should BALANCE calls of Authenticate() on client/server side
+	//just like end_of_message() calls must balance!
+
+	if ( !authenticate_self_gss() ) {
+		dprintf( D_ALWAYS, "authenticate: user creds not established\n" );
+		status = 0;
+	}
+
+	if ( status ) {
+		//temporarily change timeout to 5 minutes so the user can type passwd
+		//MUST do this even on server side, since client side might call
+		//authenticate_self_gss() while server is waiting on authenticate!!
+		int time = mySock->timeout(60 * 5); 
+
+		switch ( mySock->isClient() ) {
+			case 1: 
+				dprintf(D_FULLDEBUG,"about to authenticate server from client\n" );
+				status = authenticate_client_gss();
+				break;
+			default: 
+				dprintf(D_FULLDEBUG,"about to authenticate client from server\n" );
+				status = authenticate_server_gss();
+init_user_ids( getOwner() );
+				break;
+		}
+		mySock->timeout(time); //put it back to what it was before
+	}
+
+	return( status );
+}
+
+#endif defined(GSS_AUTHENTICATION)
