@@ -24,15 +24,21 @@
 #ifndef __CLASSAD_H__
 #define __CLASSAD_H__
 
+#include <set>
 #include <map>
 #include <vector>
 #include "exprTree.h"
-#include "sink.h"
-#include "source.h"
+
 
 BEGIN_NAMESPACE( classad )
 
-typedef map<string, ExprTree*, CaseIgnLTStr> AttrList;
+#if defined( EXPERIMENTAL )
+	typedef set<string, CaseIgnLTStr> References;
+#include "rectangle.h"
+#endif
+
+
+typedef hash_map<string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr> AttrList;
 
 /// An internal node of an expression which represents a ClassAd. 
 class ClassAd : public ExprTree
@@ -386,6 +392,10 @@ class ClassAd : public ExprTree
 		*/
 		bool Flatten( ExprTree* expr, Value& val, ExprTree *&fexpr ) const;
 		
+#if defined( EXPERIMENTAL )
+		bool GetExternalReferences( const ExprTree *tree, References &refs );
+		bool AddRectangle( int &rkey, Rectangles &r, const References &refs );
+#endif
 		//@}
 
   	private:
@@ -393,6 +403,12 @@ class ClassAd : public ExprTree
 		friend 	class ExprTree;
 		friend 	class EvalState;
 		friend 	class ClassAdIterator;
+
+#if defined( EXPERIMENTAL )
+		bool _GetExternalReferences( const ExprTree *, ClassAd *, 
+					EvalState &, References& );
+		bool _MakeRectangle( int&, const ExprTree*, Rectangles&, bool );
+#endif
 
 		ClassAd *_GetDeepScope( const string& ) const;
 		ClassAd *_GetDeepScope( ExprTree * ) const;
@@ -402,7 +418,7 @@ class ClassAd : public ExprTree
 		virtual bool _Evaluate( EvalState&, Value&, ExprTree*& ) const;
 		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* ) const;
 	
-		int LookupInScope( const string&, const ExprTree*&, EvalState& ) const;
+		int LookupInScope( const string&, ExprTree*&, EvalState& ) const;
 		AttrList	attrList;
 };
 	
