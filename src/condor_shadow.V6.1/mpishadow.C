@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 
 #include "condor_common.h"
@@ -31,6 +31,7 @@
 #include "list.h"                // List class
 #include "internet.h"            // sinful->hostname stuff
 #include "daemon.h"
+#include "env.h"
 
 
 MPIShadow::MPIShadow() {
@@ -64,18 +65,17 @@ MPIShadow::~MPIShadow() {
 }
 
 void 
-MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[], 
-                 char capability[], char cluster[], char proc[])
+MPIShadow::init( ClassAd* job_ad, const char* schedd_addr )
 {
 
 	char buf[256];
 
-    if ( !jobAd ) {
-        EXCEPT( "No jobAd defined!" );
+    if( ! job_ad ) {
+        EXCEPT( "No job_ad defined!" );
     }
 
         // BaseShadow::baseInit - basic init stuff...
-    baseInit( jobAd, schedd_addr, cluster, proc );
+    baseInit( job_ad, schedd_addr );
 
 		// Register command which gets updates from the starter
 		// on the job's image size, cpu usage, etc.  Each kind of
@@ -104,10 +104,7 @@ MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 
         // make first remote resource the "master".  Put it first in list.
     MpiResource *rr = new MpiResource( this );
-	rr->setStartdInfo( host, capability );
-		// for now, set this to the sinful string.  when the starter
-		// spawns, it'll do an RSC to register a real hostname...
-	rr->setMachineName( host );
+
     ClassAd *temp = new ClassAd( *(getJobAd() ) );
 
     sprintf( buf, "%s = %s", ATTR_MPI_IS_MASTER, "TRUE" );
@@ -122,6 +119,8 @@ MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 	temp->InsertOrUpdate( buf );
     rr->setJobAd( temp );
 
+	rr->setStartdInfo( temp );
+
     ResourceList[ResourceList.getlast()+1] = rr;
 
 		// now, we want to re-initialize the shadow_user_policy object
@@ -130,10 +129,40 @@ MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 		// exit status, info about the run, etc, etc.
 	shadow_user_policy.init( temp, this );
 
+}
+
+
+void
+MPIShadow::reconnect( void )
+{
+	EXCEPT( "reconnect is not supported for MPI universe!" );
+}
+
+
+bool 
+MPIShadow::supportsReconnect( void )
+{
+	return false;
+}
+
+
+void
+MPIShadow::spawn( void )
+{
+		/*
+		  This is lame.  We should really do a better job of dealing
+		  with the multiple ClassAds for MPI universe via the classad
+		  file mechanism (pipe to STDIN, usually), instead of this
+		  whole mess, and spawn() should really just call
+		  "startMaster()".  however, in the race to get disconnected
+		  operation working for vanilla, we cut a few corners and
+		  leave this as it is.  whenever we're seriously looking at
+		  MPI support again, we should fix this, too.
+		*/
 		/*
 		  Finally, register a timer to call getResources(), which
 		  sends a command to the schedd to get all the job classads,
-		  startd sinful strings, and capabilities for all the matches
+		  startd sinful strings, and ClaimIds for all the matches
 		  for our computation.  
 		  In the future this will just be a backup way to get the
 		  info, since the schedd will start to push all this info to
@@ -156,7 +185,7 @@ MPIShadow::getResources( void )
     dprintf ( D_FULLDEBUG, "Getting machines from schedd now...\n" );
 
     char *host = NULL;
-    char *capability = NULL;
+    char *claim_id = NULL;
     MpiResource *rr;
 	int cluster;
 	char buf[128];
@@ -170,10 +199,10 @@ MPIShadow::getResources( void )
 
 	cluster = getCluster();
     rr = ResourceList[0];
-	rr->getCapability( capability );
+	rr->getClaimId( claim_id );
 
 		// First, contact the schedd and send the command, the
-		// cluster, and the capability
+		// cluster, and the ClaimId
 	Daemon my_schedd (DT_SCHEDD, NULL, NULL);
 
 	if(!(sock = (ReliSock*)my_schedd.startCommand(GIVE_MATCHES))) {
@@ -184,14 +213,14 @@ MPIShadow::getResources( void )
 	if( ! sock->code(cluster) ) {
 		EXCEPT( "Can't send cluster (%d) to schedd\n", cluster );
 	}
-	if( ! sock->code(capability) ) {
-		EXCEPT( "Can't send capability to schedd\n" );
+	if( ! sock->code(claim_id) ) {
+		EXCEPT( "Can't send ClaimId to schedd\n" );
 	}
 
 		// Now that we sent this, free the memory that was allocated
-		// with getCapability() above
-	delete [] capability;
-	capability = NULL;
+		// with getClaimId() above
+	delete [] claim_id;
+	claim_id = NULL;
 
 	if( ! sock->end_of_message() ) {
 		EXCEPT( "Can't send EOM to schedd\n" );
@@ -221,10 +250,10 @@ MPIShadow::getResources( void )
 
         for ( int j=0 ; j<numInProc ; j++ ) {
             if ( !sock->code( host ) ||
-                 !sock->code( capability ) ) {
+                 !sock->code( claim_id ) ) {
                 EXCEPT( "Problem getting resource %d, %d", i, j );
             }
-            dprintf ( D_FULLDEBUG, "Got host: %s   cap: %s\n",host,capability);
+            dprintf( D_FULLDEBUG, "Got host: %s id: %s\n", host, claim_id );
             
             if ( i==0 && j==0 ) {
 					/* 
@@ -237,14 +266,14 @@ MPIShadow::getResources( void )
                        have it!  We ignore it here.... */
 
                 free( host );
-                free( capability );
+                free( claim_id );
                 host = NULL;
-                capability = NULL;
+                claim_id = NULL;
                 continue;
             }
 
             rr = new MpiResource( this );
-            rr->setStartdInfo( host, capability );
+            rr->setStartdInfo( host, claim_id );
  				// for now, set this to the sinful string.  when the
  				// starter spawns, it'll do an RSC to register a real
 				// hostname... 
@@ -265,9 +294,9 @@ MPIShadow::getResources( void )
 
                 /* free stuff so next code() works correctly */
             free( host );
-            free( capability );
+            free( claim_id );
             host = NULL;
-            capability = NULL;
+            claim_id = NULL;
 
         } // end of for loop for this proc
         
@@ -591,48 +620,22 @@ MPIShadow::modifyNodeAd( ClassAd* ad )
 		  MPICH_EXTRA env var.
 		*/
 
-	bool had_env = false;
-	char buf[1024];
-
-		// Initialize env_delimiter string... note that const char
-		// env_delimiter is defined in condor_constants.h
-	char env_delim_str[3];
-    sprintf(env_delim_str,"%c",env_delimiter);
-
-		// Eventually, we're going to need to insert this as a ClassAd
-		// attribute, so we might as well initialize it with
-		// 'ATTR_JOB_ENVIRONMENT = "'...
-	sprintf( buf, "%s = \"", ATTR_JOB_ENVIRONMENT );
-	MyString env( buf );
-
-		// Now, grab the existing environment.  Do so without static
-		// buffers so we can handle really huge environments
-		// correctly.  
+	Env env;
 	char* env_str = NULL;
 	if( ad->LookupString(ATTR_JOB_ENVIRONMENT, &env_str) ) {
 		if( env_str && env_str[0] ) {
-				// There's something there!
-			had_env = true;
-			env += env_str;
+			env.Merge(env_str);
 		}
 		free( env_str );
-	}
-
-	if( had_env ) {
-			// If there's already an environment, we've got to use the
-			// delimiter before we add our first variable.  If there's
-			// no environment, we should just insert our first
-			// variable without a delimiter.  Either way, all the rest
-			// of the variables should use the delimiter...
-		env += env_delim_str;
 	}
 
 		// Now, add all the MPICH-specific variables.
 
 		// NPROC is easy, since numNodes already holds the total
 		// number of nodes we're going to spawn
-	sprintf( buf, "MPICH_NPROC=%d", numNodes );
-	env += buf;
+	char numNodesString[127];
+	sprintf(numNodesString,"%d",numNodes);
+	env.Put("MPICH_NPROC",numNodesString);
 
 		// We need the delimiter for all the rest of them... 
 
@@ -640,27 +643,22 @@ MPIShadow::modifyNodeAd( ClassAd* ad )
 		// mpich_jobid, since we want that to be constant across all
 		// nodes we spawn, and we can just compute it once when we
 		// start up and reuse it.
-	env += env_delim_str;
-	sprintf( buf, "MPICH_JOBID=%s", mpich_jobid );
-	env += buf;
+	env.Put("MPICH_JOBID",mpich_jobid);
 
 		// Conveniently, nextResourceToStart always holds the right
 		// value for IPROC, since that's what we use to keep track of
 		// what node we're spawning...
-	env += env_delim_str;
-	sprintf( buf, "MPICH_IPROC=%d", nextResourceToStart );
-	env += buf;
+	char nextResourceToStartStr[127];
+	sprintf(nextResourceToStartStr,"%d",nextResourceToStart);
+	env.Put("MPICH_IPROC",nextResourceToStartStr);
 
 		// Now, if we're a comrade (rank > 0), we also need to add
 		// MPICH_ROOT, which is what we got from our pseudo syscall. 
 	if( nextResourceToStart > 0 ) {
-		env += env_delim_str;
-		sprintf( buf, "MPICH_ROOT=%s", master_addr );
-		env += buf;
+		env.Put("MPICH_ROOT",master_addr);
 	} else {
 			// For the root node, we need to set MPICH_ROOT just to
 			// the hostname of the resource where it's executing
-		env += env_delim_str;
 		char* sinful = NULL;
 		ResourceList[0]->getStartdAddress( sinful );
 			// Now, we've got a sinful string, so, parse out the ip
@@ -676,19 +674,16 @@ MPIShadow::modifyNodeAd( ClassAd* ad )
 			delete [] sinful;
 			shutDown( JOB_NOT_STARTED );
 		}
-		sprintf( buf, "MPICH_ROOT=%s", &sinful[1] );
-		env += buf;
+		env.Put("MPICH_ROOT",&sinful[1]);
 		delete [] sinful;
 	}
 
-		// Now that we're done appending stuff, we've got to terminate
-		// the string for the ClassAd attribute we're constructing.
-	sprintf( buf, "\"" );
-	env += buf;
-
-		// Now, the env MyString contains the modified environment
+		// Now, the env contains the modified environment
 		// attribute, so we just need to re-insert that into our ad. 
-	if( ad->Insert(env.Value()) ) {
+	env_str = env.getDelimitedString();
+	int ret = ad->Assign(ATTR_JOB_ENVIRONMENT,env_str);
+	delete[] env_str;
+	if(ret) {
 		return true;
 	} 
 	return false;
@@ -910,6 +905,7 @@ int
 MPIShadow::handleJobRemoval( int sig ) {
 
     dprintf ( D_FULLDEBUG, "In handleJobRemoval, sig %d\n", sig );
+	remove_requested = true;
 
 	ResourceState s;
 
@@ -1203,3 +1199,30 @@ MPIShadow::resourceBeganExecution( RemoteResource* rr )
 	}
 }
 
+
+void
+MPIShadow::resourceReconnected( RemoteResource* rr )
+{
+	EXCEPT( "impossible: MPIShadow doesn't support reconnect" );
+}
+
+
+void
+MPIShadow::logDisconnectedEvent( const char* reason )
+{
+	EXCEPT( "impossible: MPIShadow doesn't support reconnect" );
+}
+
+
+void
+MPIShadow::logReconnectedEvent( void )
+{
+	EXCEPT( "impossible: MPIShadow doesn't support reconnect" );
+}
+
+
+void
+MPIShadow::logReconnectFailedEvent( const char* reason )
+{
+	EXCEPT( "impossible: MPIShadow doesn't support reconnect" );
+}

@@ -23,42 +23,61 @@ while( $_ = shift( @ARGV ) ) {
 	$versarg = shift(@ARGV);
 	last SWITCH;
     }
-    if( /-t.*/ ) {
-        $target = shift(@ARGV);
-        last SWITCH;
-    }
     if( /-l.*/ ) {
 	$libc = shift(@ARGV);
 	last SWITCH;
+    }
+    if( /-tarcmd.*/ ) {
+	$tar_cmd = shift(@ARGV);
+	last SWITCH;
+    }
+    if( /-cpcmd.*/ ) {
+	$cp_cmd = shift(@ARGV);
+	last SWITCH;
+    }
+    if( /-t.*/ ) {
+	# this is short for "-target".  if we get "-tarcmd", we'll
+	# already catch it above, so we can leave this test alone...
+        $target = shift(@ARGV);
+	if( ! -d $target ) {
+	    die "Target directory $target does not exist!\n";
+	}
+        last SWITCH;
     }
   }
 }
 
 # Now, grab the version of this release.
 if( $versarg ) {
-    $_ = $versarg;
+    $vers_string = $versarg;
 } else {
-    # If we weren't told on the command line, try to run ident
-    # directly on the condor_master binary.
+    # If we weren't told on the command line, use the condor_master
+    # binary with -version to find the version string.
     if( -f "strip_dir/sbin/condor_master" ) {
-        $_=`strip_dir/sbin/condor_master -version`;
+        $vers_string=`strip_dir/sbin/condor_master -version`;
     } elsif ( -f "static_dir/sbin/condor_master" ) {
-        $_=`static_dir/sbin/condor_master -version`;
+        $vers_string=`./static_dir/sbin/condor_master -version`;
     } else {
-	die "ERROR: can't find a condor_master, and no -v specified";
+	die "ERROR: can't find a condor_version, and no -v specified";
+    }
+    if( ! $vers_string ) {
+	die "ERROR: Can't find version string, and no -v specified";
     }
 }
-/.*\$CondorVersion: (\d*)\.(\d*)\.(\d*).*/;
-$majorv = $1;
-$minorv = $2;
-$releasev = $3;
+
+$vers_string =~ /(.*\$CondorVersion: )?(\d+)\.(\d+)\.(\d+).*/;
+$majorv = $2;
+$minorv = $3;
+$releasev = $4;
 $version = "$majorv.$minorv.$releasev";
 
-# Things you should probably leave alone:
-BEGIN {
-    unshift(@INC, "/p/condor/home/perl");
+if( $version =~ /(\d+)\.(\d+)\.(\d+)/ ) {
+    print "Making final tarballs for Condor Version $version\n";
+} else {
+    die "ERROR: Can't parse the version string!";
 }
 
+# Things you should probably leave alone:
 require 5.002;
 
 ######################################################################
@@ -66,7 +85,7 @@ require 5.002;
 ######################################################################
 
 # These are the modules you actually want to build.
-@modules = ( "condor", "ckpt_server", "pvm", "sdk","eventd", "dagman", "condor-g" );
+@modules = ( "condor", "ckpt_server", "pvm", "sdk","eventd", "dagman" );
 #@modules = ( "smp_startd", "ckpt_server", "pvm", "sdk" );
 #@modules = ( "condor", "ckpt_server", "pvm", "mpi" );
 #@modules = ( "ckpt_server", "pvm" );
@@ -101,7 +120,6 @@ require 5.002;
   "pvm"           => "PVM contrib module",
   "ckpt_server"   => "Checkpoint Server contrib module",
   "mpi"           => "MPI contrib module",
-  "condor-g"      => "Condor-G technology",
   "sdk"           => "software developer's kit",
   "eventd"        => "Condor Eventd contrib module"
 );	   
@@ -121,81 +139,58 @@ $realskel="condor_release";
 
 # Convert from AFS @sys names to our names for the tarballs.
 %opsysname = (
-  "sun4x_55"      => "solaris251",
   "sun4x_56"      => "solaris26",
   "sun4x_57"      => "solaris27",
   "sun4x_58"      => "solaris28",
   "sun4x_59"      => "solaris29",
-  "sunx86_55"     => "solaris251",
-  "sunx86_56"     => "solaris26",
-  "sunx86_57"     => "solaris27",
-  "i386_linux2"   => "linux",
-  "i386_linux22"  => "linux",
-  "i386_linux3"   => "linux",
-  "i386_rh62"     => "linux",
-  "i386_rh71"     => "linux",
   "i386_rh72"     => "linux",
   "i386_rh80"     => "linux",
-  "i386_rh9"     => "linux",
-  "ia64_linux24"  => "linux",
-  "alpha_linux3"  => "linux",
-  "alpha_linux22" => "linux",
+  "i386_rh9"      => "linux",
+  "ia64_rh72"     => "linux",
+  "ia64_sles81"   => "linux",
+  "alpha_rh72"    => "linux",
   "alpha_dux40"   => "dux40",
-  "alpha_dux40f"  => "dux40",
-  "sgi_62"        => "irix6",
-  "sgi_63"        => "irix6",
-  "sgi_64"        => "irix6",
+  "alpha_dux51"   => "dux51",
   "sgi_65"        => "irix65",
   "ppc_macosx"    => "MacOSX",
   "hp_ux102"      => "hpux10.20",
-  "hp_ux110"      => "hpux11.00"
+  "hp_ux110"      => "hpux11.00",
+  "ppc_aix51"	  => "aix5.1",
+  "ppc_aix52"	  => "aix5.2"
 );
 
 %archname = (
-  "sun4x_55"      => "Sparc",
   "sun4x_56"      => "Sparc",
   "sun4x_57"      => "Sparc",
   "sun4x_58"      => "Sparc",
   "sun4x_59"      => "Sparc",
-  "sunx86_55"     => "x86",
-  "sunx86_56"     => "x86",
-  "sunx86_57"     => "x86",
-  "i386_linux2"   => "x86",
-  "i386_linux22"  => "x86",
-  "i386_rh62"     => "x86",
-  "i386_rh71"     => "x86",
   "i386_rh72"     => "x86",
   "i386_rh80"     => "x86",
-  "i386_rh9"     => "x86",
-  "i386_linux3"   => "x86",
-  "ia64_linux24"  => "ia64",
-  "alpha_linux3"  => "Alpha",
-  "alpha_linux22" => "Alpha",
+  "i386_rh9"      => "x86",
+  "ia64_rh72"     => "ia64",
+  "ia64_sles81"   => "ia64",
+  "alpha_rh72"    => "Alpha",
   "alpha_dux40"   => "Alpha",
-  "alpha_dux40f"  => "Alpha",
-  "sgi_62"        => "SGI",
-  "sgi_63"        => "SGI",
-  "sgi_64"        => "SGI",
+  "alpha_dux51"   => "Alpha",
   "sgi_65"        => "SGI",
   "ppc_macosx"    => "PPC",
   "hp_ux102"      => "HPPAR",
-  "hp_ux110"      => "HPPAR"
+  "hp_ux110"      => "HPPAR",
+  "ppc_aix51"	  => "aix",
+  "ppc_aix52"	  => "aix"
 );
 
 
+# NOTE: any two entries in here with the same arch *MUST* have
+# seperate values, or else we get identically named files and that's
+# no good at all!
 %libcname = (
-  "i386_linux2"   => "libc5",
-  "i386_linux22"  => "glibc21",
-  "i386_linux3"   => "glibc20",
-  "i386_rh61"   => "glibc21",
-  "i386_rh62"   => "glibc21",
-  "i386_rh71"   => "glibc22",
   "i386_rh72"   => "glibc22",
-  "i386_rh80"   => "glibc22",
-  "i386_rh9"   => "glibc23",
-  "ia64_linux24" => "glibc22",
-  "alpha_linux3"  => "glibc20",
-  "alpha_linux22" => "glibc21"
+  "i386_rh80"   => "redhat80",
+  "i386_rh9"    => "glibc23",
+  "ia64_rh72"   => "glibc22",
+  "ia64_sles81" => "sles81",
+  "alpha_rh72"  => "glibc22",
 );
 
 
@@ -219,8 +214,26 @@ $arch = $archname{$sys};
 $opsys = $opsysname{$sys};
 $libc = $libcname{$sys};
 
+if( ! $tar_cmd ) {
+    $tar_cmd = "tar --owner=root --group=root";
+}
+if( ! $cp_cmd ) {
+  # the condor build system always tells us the right thing, so
+  # hopefully we never hit this code.  however, if we need a default,
+  # it really depends on if we're using GNU cp or not.  on linux, we
+  # can safely use the GNU flags, and on the others, we'll just have
+  # to live without and hope for the best.  luckily, the configure
+  # script figures it out for us and tells us, so it's not really an
+  # issue inside here anymore...
+  if( $opsys =~ /.*linux.*/ ) {
+    $cp_cmd = "cp -rL";
+  } else {  
+    $cp_cmd = "cp -r";
+  }
+}
+
 `rm -rf $skel`;
-mkdir( "$skel", 0777 );
+mkdir( "$skel", 0777 ) || die "Can't mkdir($skel): $!\n";
 
 ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime;
 $mon++;
@@ -237,15 +250,22 @@ foreach $module ( @modules ) {
 
     # Setup skeleton directory
     print "Setting up skeleton directory for \"$module\"... ";
-    mkdir( "$skel/$release", 0777 );
+    mkdir( "$skel/$release", 0777 ) || 
+	die "Can't mkdir($skel/$release): $!\n";
 
     # You always want the same version of LICENSE.TXT in everything. 
-    `cp -f $realskel/LICENSE.TXT $skel/$release`;
+    $out = `cp -f $realskel/LICENSE.TXT $skel/$release`;
+    if( ($? >> 8) != 0 ) {
+	die "Can't cp $realskel/LICENSE.TXT: $out";
+    }
 
     # Now, you always want a README, DOC, and INSTALL
-	foreach $file ( "README", "INSTALL", "DOC" ) {
-	    `cp -f $realskel/$file $skel/$release/`;
-    } 
+    foreach $file ( "README", "INSTALL", "DOC" ) {
+	$out = `cp -f $realskel/$file $skel/$release/`;
+	if( ($? >> 8) != 0 ) {
+	    die "Can't cp $realskel/$file: $out";
+	}
+    }
 
     # Now, handle any special case files for a given module
     foreach $file ( @{$skelfiles{$module}} ) {
@@ -259,12 +279,10 @@ foreach $module ( @modules ) {
 		} else {
 	   	 $dest = $file;
 		}
-		# under linux, or hpux11(with fileutils), use the GNU fileutils flags
-		if( $libc =~ /.*glibc22.*/ || $opsys =~ /.*hp_ux110.*/) {	
-			`cp -rL $src $skel/$release/$dest`;
-		} else {
-			`cp -r $src $skel/$release/$dest`;
-		}	
+		$out = `$cp_cmd $src $skel/$release/$dest`;
+		if( ($? >> 8) != 0 ) {
+		    die "Can't $cp_cmd $src: $out";
+		}
     }
     `rm -rf $skel/$release/CVS`;
     `rm -rf $skel/$release/*/CVS`;
@@ -292,19 +310,29 @@ foreach $module ( @modules ) {
 	}
 
 	# Copy the tarfile with the right permissions into the skeleton. 
-	`cp $releaselocation{$linktype}/$tarfile $skel/$release/$tarfile`;
+	$out = `cp $releaselocation{$linktype}/$tarfile $skel/$release/$tarfile`;
+	if( ($? >> 8) != 0 ) {
+	    die "Can't cp $releaselocation{$linktype}/$tarfile: $out";
+	}
 
 	# Create full archive 
 	chdir( $skel ) || die "Can't chdir to $skel: $!\n";
 	print "Creating full archive: $release.tar\n";
-	print `tar -cvf $release.tar --owner=root --group=0 $release`;
+	print `$tar_cmd -cvf $release.tar $release`;
+	if( ($? >> 8) != 0 ) {
+	    die "Can't tar $release.tar $release\n";
+	}
+
 	chdir( ".." ) || die "Can't chdir to ..: $!\n";
 
 	# Delete the release.tar we're now done with.
 	unlink( "$skel/$release/$tarfile" );
 
 	# Fix ownerships in the full archive.
-	`cp $skel/$release.tar $skel/$release-$platform.tar`;
+	$out = `cp $skel/$release.tar $skel/$release-$platform.tar`;
+	if( ($? >> 8) != 0 ) {
+	    die "Can't cp $skel/$release.tar $skel/$release-$platform.tar: $out";
+	}
 
 	# Delete the tar file we're now done with.
 	unlink( "$skel/$release.tar" );
@@ -315,6 +343,9 @@ foreach $module ( @modules ) {
 	} else {
 	    $targetdir = "$target/contrib";
 	}
+	if( ! -d $targetdir ) {
+	    mkdir( $targetdir, 0777 ) || die "Can't mkdir $targetdir: $!\n";
+	}
 	$targetfile = "$targetdir/$release-$platform.tar";
 
 	# Make sure there's nothing in the way where we want to put it.
@@ -323,15 +354,27 @@ foreach $module ( @modules ) {
 	# Compress as appropriate, and move to the final location.
 	if( $platform =~ /.*linux.*/ ) {
 	    print "gzipping $skel/$release-$platform.tar\n";
-	    system( "gzip $skel/$release-$platform.tar" );
+	    $out = `gzip $skel/$release-$platform.tar`;
+	    if( ($? >> 8) != 0 ) {
+		die "Can't gzip $skel/$release-$platform.tar: $out";
+	    }
 	    print "Moving $release-$platform.tar.gz into $targetdir ... ";
-	    `mv $skel/$release-$platform.tar.gz $targetdir`;
+	    $out = `mv $skel/$release-$platform.tar.gz $targetdir`;
+	    if( ($? >> 8) != 0 ) {
+		die "Can't mv $skel/$release-$platform.tar.gz $targetdir: $out";
+	    }
 	    print "done.\n";
 	} else {
 	    print "compressing $skel/$release-$platform.tar\n";
-	    system( "compress $skel/$release-$platform.tar" );
+	    $out = `compress $skel/$release-$platform.tar`;
+	    if( ($? >> 8) != 0 ) {
+		die "Can't compress $skel/$release-$platform.tar: $out";
+	    }
 	    print "Moving $release-$platform.tar.Z into $targetdir ... ";
-	    `mv $skel/$release-$platform.tar.Z $targetdir`;
+	    $out = `mv $skel/$release-$platform.tar.Z $targetdir`;
+	    if( ($? >> 8) != 0 ) {
+		die "Can't mv $skel/$release-$platform.tar.Z $targetdir: $out";
+	    }
 	    print "done.\n";
 	}
     }

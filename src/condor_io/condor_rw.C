@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #define _POSIX_SOURCE
 
@@ -118,6 +118,22 @@ condor_read( SOCKET fd, char *buf, int sz, int timeout )
 
 		nro = recv(fd, &buf[nr], sz - nr, 0);
 		if( nro <= 0 ) {
+
+				// If timeout > 0, and we made it here, then
+				// we know we were woken by select().  Now, if
+				// select() wakes up on a read fd, and then recv() 
+				// subsequently returns 0, that means that the
+				// socket has been closed by our peer.
+				// If timeout == 0, then recv() should have 
+				// blocked until 1 or more bytes arrived.
+				// Thus no matter what, if nro==0, then the
+				// socket must be closed.
+			if ( nro == 0 ) {
+				dprintf( D_FULLDEBUG, "condor_read(): "
+						 "Socket closed when trying to read buffer\n" );
+				return -1;
+			}
+
 			int the_error;
 #ifdef WIN32
 			the_error = WSAGetLastError();

@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_debug.h"
@@ -289,7 +289,7 @@ init_user_ids(const char username[], const char domain[])
 
 				
 		if ( !myDynuser->init_user() ) {
-			// Oh shit.  
+			// This is indicative of a serious problem.
 			EXCEPT("Failed to create a user nobody");
 		}
 	
@@ -438,6 +438,11 @@ get_real_username( void )
 	return RealUserName;
 }
 
+void
+clear_passwd_cache() {
+	// no-op on Windows
+}
+
 #else  // end of ifdef WIN32, now below starts Unix-specific code
 
 #include <grp.h>
@@ -470,6 +475,7 @@ int setegid(gid_t);
 #endif
 
 #include "debug.h"
+#include "passwd_cache.h"
 
 
 #ifndef FALSE
@@ -487,6 +493,7 @@ static gid_t CondorGid, UserGid, MyGid, RealCondorGid;
 static int CondorIdsInited = FALSE;
 static int UserIdsInited = FALSE;
 static char* UserName = NULL;
+static passwd_cache pcache;
 
 static int set_condor_euid();
 static int set_condor_egid();
@@ -512,10 +519,15 @@ _condor_disable_uid_switching()
 }
 
 void
+clear_passwd_cache() {
+	pcache.reset();
+}
+
+void
 init_condor_ids()
 {
-	struct passwd *pwd;
 	int scm;
+	bool result;
 	char* env_val = NULL;
 	char* config_val = NULL;
 	char* val = NULL;
@@ -536,14 +548,12 @@ init_condor_ids()
 		free( CondorUserName );
 	}
 
-	pwd=getpwnam( myDistro->Get() );
-	if( pwd ) {
-		RealCondorUid = pwd->pw_uid;
-		RealCondorGid = pwd->pw_gid;
-	} else {
-		RealCondorUid = MAXINT;
-		RealCondorGid = MAXINT;
-	}
+		/* if either of the following get_user_*() functions fail,
+		 * the default is MAXINT */
+	RealCondorUid = MAXINT;
+	RealCondorGid = MAXINT;
+	pcache.get_user_uid( myDistro->Get(), RealCondorUid );
+	pcache.get_user_gid( myDistro->Get(), RealCondorGid );
 
 	const char	*envName = EnvGetName( ENV_UG_IDS ); 
 	if( (env_val = getenv(envName)) ) {
@@ -561,10 +571,12 @@ init_condor_ids()
 			fprintf( stderr, "should be used by %s.\n", myDistro->Get() );
 			exit(1);
 		}
-		pwd = getpwuid( envCondorUid );
-		if( pwd ) {
-			CondorUserName = strdup( pwd->pw_name );
-		} else {
+		result = pcache.get_user_name( envCondorUid, CondorUserName );
+
+		if( ! result ) {
+
+				/* failure to get username */
+
 			fprintf( stderr, "ERROR: the uid specified in %s ", envName );
 			fprintf( stderr, "%s variable (%d)\n", 
 					 env_val ? "environment" : "config file", envCondorUid );
@@ -614,10 +626,8 @@ init_condor_ids()
 		/* Non-root.  Set the CondorUid/Gid to our current uid/gid */
 		CondorUid = MyUid;
 		CondorGid = MyGid;
-		pwd = getpwuid( CondorUid );
-		if( pwd ) {
-			CondorUserName = strdup( pwd->pw_name );
-		} else {
+		result = pcache.get_user_name( CondorUid, CondorUserName );
+		if( !result ) {
 			/* Cannot find an entry in the passwd file for this uid */
 			CondorUserName = strdup("Unknown");
 		}
@@ -676,21 +686,17 @@ set_user_ids_implementation( uid_t uid, gid_t gid, const char *username,
 	// find the user login name for this uid.  note we should not
 	// EXCEPT or log an error if we do not find it; it is OK for the
 	// user not to be in the passwd file for a so-called SOFT_UID_DOMAIN.
-	if ( !username ) {
-		struct passwd *	pwd = getpwuid( UserUid );
-		if( pwd ) {
-			username = pwd->pw_name;
-		}
-	}
-
-		// Finally, save the username so we can call initgroups later.
 	if( UserName ) {
 		free( UserName );
 	}
-	if( username ) {
-		UserName = strdup( username );
+
+	if ( !username ) {
+
+		if ( !pcache.get_user_name( UserUid, UserName ) ) {
+			UserName = NULL;
+		}
 	} else {
-		UserName = NULL;
+		UserName = strdup( username );
 	}
 	return TRUE;
 }
@@ -704,11 +710,29 @@ set_user_ids_implementation( uid_t uid, gid_t gid, const char *username,
 int
 init_nobody_ids( int is_quiet )
 {
-    struct passwd *pwd_entry = NULL;
-	int nobody_uid = -1;
-	int nobody_gid = -1;
+	bool result;
 
-	if( (pwd_entry = getpwnam("nobody")) == NULL ) {
+	/* WARNING: We're initializing the nobody uid/gid's to 0!
+	   That's a big no-no, so make sure that if we somehow don't
+	   manage to find a valid nobody uid/gid, that we immediately
+	   return FALSE and fail out. 
+
+	   Unfortunately, there is no value you can set a uid_t/gid_t
+	   to that indicates an uninitialized or invalid value. In the
+	   case of this function however, we know that no matter what,
+	   the nobody user should NEVER be 0, so it serves well for
+	   this purpose.
+	 */
+
+	uid_t nobody_uid = 0;
+	gid_t nobody_gid = 0;
+
+	result = ( 	pcache.get_user_uid("nobody", nobody_uid) &&
+	   			pcache.get_user_gid("nobody", nobody_gid) );
+
+	if (! result ) {
+
+
 #ifdef HPUX
 		// the HPUX9 release does not have a default entry for nobody,
 		// so we'll help condor admins out a bit here...
@@ -721,10 +745,7 @@ init_nobody_ids( int is_quiet )
 		}
 		return FALSE;
 #endif
-	} else {
-		nobody_uid = pwd_entry->pw_uid;
-		nobody_gid = pwd_entry->pw_gid;
-	}
+	} 
 
 #ifdef HPUX
 	// HPUX9 has a bug in that getpwnam("nobody") always returns
@@ -732,10 +753,10 @@ init_nobody_ids( int is_quiet )
 	// on top of that, legal UID/GIDs must be -1<x<60000, so unless we
 	// patch here, we will generate an EXCEPT later when we try a
 	// setgid().  -Todd Tannenbaum, 3/95
-	if( (nobody_uid > 59999) || (nobody_uid < 0) ) {
+	if( (nobody_uid > 59999) || (nobody_uid <= 0) ) {
 		nobody_uid = 59999;
 	}
-	if( (nobody_gid > 59999) || (nobody_gid < 0) ) {
+	if( (nobody_gid > 59999) || (nobody_gid <= 0) ) {
 		nobody_gid = 59999;
 	}
 #endif
@@ -743,13 +764,22 @@ init_nobody_ids( int is_quiet )
 #ifdef IRIX
 		// Same weirdness on IRIX.  60001 is the default uid for
 		// nobody, lets hope that works.
-	if( (nobody_uid >= UID_MAX ) || (nobody_uid < 0) ) {
+	if( (nobody_uid >= UID_MAX ) || (nobody_uid <= 0) ) {
 		nobody_uid = 60001;
 	}
-	if( (nobody_gid >= UID_MAX) || (nobody_gid < 0) ) {
+	if( (nobody_gid >= UID_MAX) || (nobody_gid <= 0) ) {
 		nobody_gid = 60001;
 	}
 #endif
+
+	/* WARNING: At the top of this function, we initialized 
+	   nobody_uid and nobody_gid to 0, so if for some terrible 
+	   reason we haven't set them to a valid nobody uid/gid
+	   by this point, we need to fail immediately. */
+
+	if ( nobody_uid == 0 || nobody_gid == 0 ) {
+		return FALSE;
+	}
 
 		// Now we know what the uid/gid for nobody should *really* be,
 		// so we can actually initialize this as the "user" priv.
@@ -762,8 +792,9 @@ init_nobody_ids( int is_quiet )
 int
 init_user_ids_implementation( const char username[], int is_quiet )
 {
-    struct passwd       *pwd;
 	int					scm;
+	uid_t 				usr_uid;
+	gid_t				usr_gid;
 
 		// So if we are not root, trying to use any user id is bogus
 		// since the OS will disallow it.  So if we are not running as
@@ -786,7 +817,8 @@ init_user_ids_implementation( const char username[], int is_quiet )
 		return init_nobody_ids( is_quiet );
 	}
 
-	if( (pwd=getpwnam(username)) == NULL ) {
+	if( !pcache.get_user_uid(username, usr_uid) ||
+	 	!pcache.get_user_gid(username, usr_gid) ) {
 		if( ! is_quiet ) {
 			dprintf( D_ALWAYS, "%s not in passwd file\n", username );
 		}
@@ -796,8 +828,7 @@ init_user_ids_implementation( const char username[], int is_quiet )
 	}
 	(void)endpwent();
 	(void)SetSyscalls( scm );
-	return set_user_ids_implementation( pwd->pw_uid, pwd->pw_gid,
-										username, is_quiet ); 
+	return set_user_ids_implementation( usr_uid, usr_gid, username, is_quiet ); 
 }
 
 
@@ -1032,18 +1063,20 @@ set_user_egid()
 		return -1;
 	}
 	
-		// Now, call initgroups with the right username so the user
-		// can access files belonging to any group (s)he is a member
-		// of.  If we did not call initgroups here, the user could
-		// only access files belonging to his/her default group, and
-		// might be left with access to the groups that root belongs
-		// to, which is a serious security problem.
+		// Now, call our caching version of initgroups with the 
+		// right username so the user can access files belonging
+		// to any group (s)he is a member of.  If we did not call
+		// initgroups here, the user could only access files
+		// belonging to his/her default group, and might be left
+		// with access to the groups that root belongs to, which 
+		// is a serious security problem.
+		
 	if( UserName ) {
 		errno = 0;
-		if( (initgroups(UserName, UserGid) < 0) ) {
+		if(!pcache.init_groups(UserName) ) {
 			dprintf( D_ALWAYS, 
 					 "set_user_egid - ERROR: initgroups(%s, %d) failed, "
-					 "errno: %d\n", UserName, UserGid, errno );
+					 "errno: %s\n", UserName, UserGid, strerror(errno) );
 		}			
 	}
 	return SET_EFFECTIVE_GID(UserGid);
@@ -1070,15 +1103,17 @@ set_user_rgid()
 		return -1;
 	}
 
-		// Now, call initgroups with the right username so the user
-		// can access files belonging to any group (s)he is a member
-		// of.  If we did not call initgroups here, the user could
-		// only access files belonging to his/her default group, and
-		// might be left with access to the groups that root belongs
-		// to, which is a serious security problem.
+		// Now, call our caching version of initgroups with the 
+		// right username so the user can access files belonging
+		// to any group (s)he is a member of.  If we did not call
+		// initgroups here, the user could only access files
+		// belonging to his/her default group, and might be left
+		// with access to the groups that root belongs to, which 
+		// is a serious security problem.
+		
 	if( UserName ) {
 		errno = 0;
-		if( (initgroups(UserName, UserGid) < 0) ) {
+		if( !pcache.init_groups(UserName) ) {
 			dprintf( D_ALWAYS, 
 					 "set_user_rgid - ERROR: initgroups(%s, %d) failed, "
 					 "errno: %d\n", UserName, UserGid, errno );
@@ -1130,11 +1165,7 @@ get_real_username( void )
 {
 	if( ! RealUserName ) {
 		uid_t my_uid = getuid();
-		struct passwd *pwd;
-		pwd = getpwuid( my_uid );
-		if( pwd ) {
-			RealUserName = strdup( pwd->pw_name );
-		} else {
+		if ( !pcache.get_user_name( my_uid, (char*)RealUserName ) ) {
 			char buf[64];
 			sprintf( buf, "uid %d", (int)my_uid );
 			RealUserName = strdup( buf );

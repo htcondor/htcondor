@@ -111,13 +111,13 @@ sub RunJobHistory(  )
 
     # Array of interesting stuff...
     my %Interesting =
-	( ExitStatus => "n",
-	  NumRestarts => "n",
-	  JobStatus => "n",
-	  Owner => "s",
-	  JobUniverse => "",
-	  ClusterId => "",
-	  ProcId => "",
+	( ExitStatus => HawkeyePublish::TypeNumber,
+	  NumRestarts => HawkeyePublish::TypeNumber,
+	  JobStatus => HawkeyePublish::TypeNumber,
+	  Owner => HawkeyePublish::TypeString,
+	  JobUniverse => HawkeyePublish::TypeNumber,
+	  ClusterId => HawkeyePublish::TypeNumber,
+	  ProcId => HawkeyePublish::TypeNumber,
 	);
 
     # Job information..
@@ -194,7 +194,7 @@ sub RunJobHistory(  )
     foreach my $Status ( 0 .. $#JobStatusMap )
     {
 	$Hash->Add( "JobStatus_" . $JobStatusMap[$Status]{String},
-		    "n",
+		    HawkeyePublish::TypeNumber,
 		    $JobStatusMap[$Status]{Count} );
     }
 
@@ -202,7 +202,7 @@ sub RunJobHistory(  )
     foreach my $Universe ( 0 .. $#JobUniverseMap )
     {
 	$Hash->Add( "JobUniverse_" . $JobUniverseMap[$Universe]{String},
-		    "n",
+		    HawkeyePublish::TypeNumber,
 		    $JobUniverseMap[$Universe]{Count} );
     }
 

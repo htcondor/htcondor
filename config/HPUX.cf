@@ -1,19 +1,7 @@
-#define OperatingSystem		HPUX
-#define Architecture		HPPAR
-
-#define IS_HPUX			YES
-#define IS_HPPAR		YES
-#define IS_HPPAR_HPUX		YES
-
 #define PlatformLdFlags /**/
 
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC
-
-#define XLibPath /**/
-#define XExtLibPath /**/
-
-#define BSDLibrary /usr/lib/libBSD.a
 
 #define IS_V5				YES
 
@@ -39,7 +27,6 @@
 #define HAS_RANLIB_TOUCH		YES
 #define HAS_CP_PRESERVE			YES
 #define NEEDS_SPECIAL_SETJMP		NO
-#define HAS_FORTRAN			YES
 #define HAS_FLOCK			NO
 #define HAS_GETDTABLESIZE		NO
 #define HAS__UTSSYS			YES
@@ -49,22 +36,6 @@
 #define HAS_SETEGID			NO
 #define HAS_SETEUID			NO
 #define DO_BENCHMARKING			YES
-#define HAS_PVM				YES
-#define PVM_ARCH			HPPA
-#define HAS_STATIC			YES
-
-
-#define StaticFlag -static
-#define PsAllFlag /bin/ps -e		/* "Ps" flag when you want everything */
-#define PsAwkProg '{ print $1 }'	/* Pick out pid from "ps" output */
-
-#ifndef Ctags
-#define Ctags ctags -t
-#endif Ctags
-
-#ifndef MkDepend
-#define MkDepend ../../GENERIC/mdepend.sh
-#endif MkDepend
 
 #define ShadowSizeEstimate 200
 

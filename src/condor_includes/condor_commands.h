@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 
 #ifndef _CONDOR_COMMANDS_H
@@ -35,7 +35,9 @@
 **	Scheduler version number
 */
 #define SCHED_VERS			400
-#define CA_CMD_BASE			1000
+#define CA_AUTH_CMD_BASE	1000
+// beware, QMGMT_CMD is 1111, so we don't want to use 1100...
+#define CA_CMD_BASE			1200
 #define ALT_STARTER_BASE 	70
 
 /*
@@ -133,7 +135,8 @@
 #define ACT_ON_JOBS			(SCHED_VERS+78) // have the schedd act on some jobs (rm, hold, release)
 #define STORE_CRED			(SCHED_VERS+79)		// schedd, store a credential
 #define SPOOL_JOB_FILES		(SCHED_VERS+80)	// spool all job files via filetransfer object
-
+#define GET_MYPROXY_PASSWORD (SCHED_VERS+81) // gmanager->schedd: Give me MyProxy password
+#define DELETE_USER			(SCHED_VERS+82)		// negotiator  (actually, accountant)
 
 /*
   The ClassAd-only protocol.  CA_CMD is the base command that's sent
@@ -141,18 +144,26 @@
   ATTR_COMMAND, do the right thing, and send the results back as a
   ClassAd".  The rest of the commands listed here are possible values
   for ATTR_COMMAND.
+  CA_AUTH_CMD forces authentication if that's needed, while CA_CMD
+  just uses whatever authentication methods are configured.
 */
 
-#define CA_CMD                  (CA_CMD_BASE+0) 
+#define CA_AUTH_CMD                  (CA_AUTH_CMD_BASE+0) 
 
 // generic claiming protocol that the startd uses for COD
-#define CA_REQUEST_CLAIM        (CA_CMD_BASE+1)
-#define CA_RELEASE_CLAIM        (CA_CMD_BASE+2)
-#define CA_ACTIVATE_CLAIM       (CA_CMD_BASE+3)
-#define CA_DEACTIVATE_CLAIM     (CA_CMD_BASE+4)
-#define CA_SUSPEND_CLAIM        (CA_CMD_BASE+5)
-#define CA_RESUME_CLAIM         (CA_CMD_BASE+6)
+#define CA_REQUEST_CLAIM        (CA_AUTH_CMD_BASE+1)
+#define CA_RELEASE_CLAIM        (CA_AUTH_CMD_BASE+2)
+#define CA_ACTIVATE_CLAIM       (CA_AUTH_CMD_BASE+3)
+#define CA_DEACTIVATE_CLAIM     (CA_AUTH_CMD_BASE+4)
+#define CA_SUSPEND_CLAIM        (CA_AUTH_CMD_BASE+5)
+#define CA_RESUME_CLAIM         (CA_AUTH_CMD_BASE+6)
+// other commands that use the ClassAd-only protocol 
+// CA_LOCATE_STARTER used to be (CA_AUTH_CMD_BASE+7), but no more 
+// CA_RECONNECT_JOB used to be  (CA_AUTH_CMD_BASE+8), but no more 
 
+#define CA_CMD                  (CA_CMD_BASE+0) 
+#define CA_LOCATE_STARTER       (CA_CMD_BASE+1)
+#define CA_RECONNECT_JOB        (CA_CMD_BASE+2)
 
 /************
 *** Command ids used by the collector 
@@ -317,6 +328,7 @@ const int QUERY_ANY_ADS = 48;
 
 /* Other replies */
 #define CONDOR_TRY_AGAIN	2
+#define CONDOR_ERROR	3
 
 
 #endif  /* of ifndef _CONDOR_COMMANDS_H */

@@ -25,12 +25,15 @@ NULL=
 NULL=nul
 !ENDIF 
 
+CPP=cl.exe
+RSC=rc.exe
+
 !IF  "$(CFG)" == "condor_cpp_util - Win32 Debug"
 
-OUTDIR=..\Debug
-INTDIR=..\Debug
+OUTDIR=.\..\Debug
+INTDIR=.\..\Debug
 # Begin Custom Macros
-OutDir=..\Debug
+OutDir=.\..\Debug
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -69,6 +72,7 @@ CLEAN :
 	-@erase "$(INTDIR)\dc_schedd.obj"
 	-@erase "$(INTDIR)\dc_shadow.obj"
 	-@erase "$(INTDIR)\dc_startd.obj"
+	-@erase "$(INTDIR)\dc_starter.obj"
 	-@erase "$(INTDIR)\directory.obj"
 	-@erase "$(INTDIR)\distribution.obj"
 	-@erase "$(INTDIR)\domain_tools.obj"
@@ -129,40 +133,7 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP=cl.exe
 CPP_PROJ=/nologo /MTd /W3 /Gm /Gi /GX /ZI /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /D "WIN32" /D "_DEBUG" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
-
-.c{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.c{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_cpp_util.bsc" 
 BSC32_SBRS= \
@@ -191,6 +162,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_state.obj" \
 	"$(INTDIR)\condor_ver_info.obj" \
 	"$(INTDIR)\condor_version.obj" \
+	"$(INTDIR)\CondorError.obj" \
 	"$(INTDIR)\config.obj" \
 	"$(INTDIR)\cron.obj" \
 	"$(INTDIR)\cronjob.obj" \
@@ -251,9 +223,9 @@ LIB32_OBJS= \
 	"$(INTDIR)\usagemon.obj" \
 	"$(INTDIR)\user_job_policy.obj" \
 	"$(INTDIR)\user_log.obj" \
+	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\CondorError.obj" \
-	"$(INTDIR)\utc_time.obj"
+	"$(INTDIR)\dc_starter.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -262,10 +234,10 @@ LIB32_OBJS= \
 
 !ELSEIF  "$(CFG)" == "condor_cpp_util - Win32 Release"
 
-OUTDIR=..\Release
-INTDIR=..\Release
+OUTDIR=.\..\Release
+INTDIR=.\..\Release
 # Begin Custom Macros
-OutDir=..\Release
+OutDir=.\..\Release
 # End Custom Macros
 
 ALL : "$(OUTDIR)\condor_cpp_util.lib"
@@ -304,6 +276,7 @@ CLEAN :
 	-@erase "$(INTDIR)\dc_schedd.obj"
 	-@erase "$(INTDIR)\dc_shadow.obj"
 	-@erase "$(INTDIR)\dc_startd.obj"
+	-@erase "$(INTDIR)\dc_starter.obj"
 	-@erase "$(INTDIR)\directory.obj"
 	-@erase "$(INTDIR)\distribution.obj"
 	-@erase "$(INTDIR)\domain_tools.obj"
@@ -363,40 +336,7 @@ CLEAN :
 "$(OUTDIR)" :
     if not exist "$(OUTDIR)/$(NULL)" mkdir "$(OUTDIR)"
 
-CPP=cl.exe
 CPP_PROJ=/nologo /MT /W3 /GX /Z7 /O1 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /I "..\src\condor_daemon_client" /I "..\src\condor_daemon_core.V6" /D "WIN32" /D "NDEBUG" /Fp"$(INTDIR)\condor_common.pch" /Yu"condor_common.h" /Fo"$(INTDIR)\\" /Fd"$(INTDIR)\\" /FD /TP /c 
-
-.c{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.obj::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.c{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cpp{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-.cxx{$(INTDIR)}.sbr::
-   $(CPP) @<<
-   $(CPP_PROJ) $< 
-<<
-
-RSC=rc.exe
 BSC32=bscmake.exe
 BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_cpp_util.bsc" 
 BSC32_SBRS= \
@@ -425,6 +365,7 @@ LIB32_OBJS= \
 	"$(INTDIR)\condor_state.obj" \
 	"$(INTDIR)\condor_ver_info.obj" \
 	"$(INTDIR)\condor_version.obj" \
+	"$(INTDIR)\CondorError.obj" \
 	"$(INTDIR)\config.obj" \
 	"$(INTDIR)\cron.obj" \
 	"$(INTDIR)\cronjob.obj" \
@@ -485,9 +426,9 @@ LIB32_OBJS= \
 	"$(INTDIR)\usagemon.obj" \
 	"$(INTDIR)\user_job_policy.obj" \
 	"$(INTDIR)\user_log.obj" \
+	"$(INTDIR)\utc_time.obj" \
 	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\CondorError.obj" \
-	"$(INTDIR)\utc_time.obj"
+	"$(INTDIR)\dc_starter.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -495,6 +436,36 @@ LIB32_OBJS= \
 <<
 
 !ENDIF 
+
+.c{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.obj::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.c{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cpp{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
+
+.cxx{$(INTDIR)}.sbr::
+   $(CPP) @<<
+   $(CPP_PROJ) $< 
+<<
 
 
 !IF "$(NO_EXTERNAL_DEPS)" != "1"
@@ -738,6 +709,12 @@ SOURCE=..\src\condor_daemon_client\dc_shadow.C
 SOURCE=..\src\condor_daemon_client\dc_startd.C
 
 "$(INTDIR)\dc_startd.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_daemon_client\dc_starter.C
+
+"$(INTDIR)\dc_starter.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

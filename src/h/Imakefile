@@ -3,7 +3,7 @@ awk_target( syscall_numbers.h, syscall_numbers.tmpl, awk_prog.include_file )
 awk_target( syscall_numbers.c, syscall_numbers.tmpl, awk_prog.name_table )
 
 syscall_numbers.o: syscall_numbers.c syscall_numbers.h
-	gcc $(STD_C_FLAGS) -c syscall_numbers.c -o syscall_numbers.o
+	gcc $(STD_C_FLAGS) -c syscall_numbers.c 
 
 html:
 

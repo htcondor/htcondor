@@ -367,29 +367,29 @@ GLIDEIN_SERVER_DIR = /p/condor/public/binaries/glidein
 
 ALL_DEBUG               =
 
-MAX_COLLECTOR_LOG	= 64000
+MAX_COLLECTOR_LOG	= 1000000
 COLLECTOR_DEBUG		=
 
-MAX_KBDD_LOG		= 64000
+MAX_KBDD_LOG		= 1000000
 KBDD_DEBUG		=
 
-MAX_NEGOTIATOR_LOG	= 64000
+MAX_NEGOTIATOR_LOG	= 1000000
 NEGOTIATOR_DEBUG	= D_MATCH
-MAX_NEGOTIATOR_MATCH_LOG = 64000
+MAX_NEGOTIATOR_MATCH_LOG = 1000000
 
-MAX_SCHEDD_LOG		= 64000
+MAX_SCHEDD_LOG		= 1000000
 SCHEDD_DEBUG		= D_COMMAND
 
-MAX_SHADOW_LOG		= 64000
+MAX_SHADOW_LOG		= 1000000
 SHADOW_DEBUG		=
 
-MAX_STARTD_LOG		= 64000
+MAX_STARTD_LOG		= 1000000
 STARTD_DEBUG		= D_COMMAND
 
-MAX_STARTER_LOG		= 64000
+MAX_STARTER_LOG		= 1000000
 STARTER_DEBUG		= D_NODATE
 
-MAX_MASTER_LOG		= 64000
+MAX_MASTER_LOG		= 1000000
 MASTER_DEBUG		= D_COMMAND
 ##  When the master starts up, should it truncate it's log file?
 #TRUNC_MASTER_LOG_ON_OPEN        = False
@@ -488,6 +488,8 @@ KILL			= $(UWCS_KILL)
 PERIODIC_CHECKPOINT	= $(UWCS_PERIODIC_CHECKPOINT)
 PREEMPTION_REQUIREMENTS	= $(UWCS_PREEMPTION_REQUIREMENTS)
 PREEMPTION_RANK		= $(UWCS_PREEMPTION_RANK)
+NEGOTIATOR_PRE_JOB_RANK = $(UWCS_NEGOTIATOR_PRE_JOB_RANK)
+NEGOTIATOR_POST_JOB_RANK = $(UWCS_NEGOTIATOR_POST_JOB_RANK)
 
 #####################################################################
 ## This is the UWisc - CS Department Configuration.
@@ -558,21 +560,46 @@ UWCS_PERIODIC_CHECKPOINT	= $(LastCkpt) > (3 * $(HOUR))
 #			    ($(LastCkpt) > (6 * $(HOUR))) ) || \ 
 #			  ( $(LastCkpt) > (12 * $(HOUR)) )
 
+##  The rank expressions used by the negotiator are configured below.
+##  This is the order in which ranks are applied by the negotiator:
+##    1. NEGOTIATOR_PRE_JOB_RANK
+##    2. rank in job ClassAd
+##    3. NEGOTIATOR_POST_JOB_RANK
+##    4. cause of preemption (0=user priority,1=startd rank,2=no preemption)
+##    5. PREEMPTION_RANK
+
+##  The NEGOTIATOR_PRE_JOB_RANK expression overrides all other ranks
+##  that are used to pick a match from the set of possibilities.
+##  The following expression matches jobs to unclaimed resources
+##  whenever possible, regardless of the job-supplied rank.
+UWCS_NEGOTIATOR_PRE_JOB_RANK = RemoteOwner =?= UNDEFINED
+
+##  The NEGOTIATOR_POST_JOB_RANK expression chooses between
+##  resources that are equally preferred by the job.
+##  The following example expression steers jobs toward
+##  faster machines and tends to fill a cluster of multi-processors
+##  breadth-first instead of depth-first.  In this example,
+##  the expression is chosen to have no effect when preemption
+##  would take place, allowing control to pass on to
+##  PREEMPTION_RANK.
+#UWCS_NEGOTIATOR_POST_JOB_RANK = \
+# (RemoteOwner =?= UNDEFINED) * (KFlops - VirtualMachineID)
+
 ##  The negotiator will not preempt a job running on a given machine
 ##  unless the PREEMPTION_REQUIREMENTS expression evaluates to true
 ##  and the owner of the idle job has a better priority than the owner
 ##  of the running job.  This expression defaults to true.
 UWCS_PREEMPTION_REQUIREMENTS = $(StateTimer) > (1 * $(HOUR)) && RemoteUserPrio > SubmittorPrio * 1.2
 
-##  The PREEMPTION_RANK expression is used to rank machines which the 
-##  job ranks the same.  For example, if the job has no preference, it
-##  is usually preferable to preempt a job with a small ImageSize
-##  instead of a job with a large ImageSize.  The default is to rank
-##  all preemptable matches the same.  However, the negotiator will  
-##  always prefer to match the job with an idle machine over a      
-##  preemptable machine, if the job has no preference between them. 
+##  The PREEMPTION_RANK expression is used in a case where preemption
+##  is the only option and all other negotiation ranks are equal.  For
+##  example, if the job has no preference, it is usually preferable to
+##  preempt a job with a small ImageSize instead of a job with a large
+##  ImageSize.  The default is to rank all preemptable matches the
+##  same.  However, the negotiator will always prefer to match the job
+##  with an idle machine over a preemptable machine, if all other
+##  negotiation ranks are equal.
 UWCS_PREEMPTION_RANK = (RemoteUserPrio * 1000000) - TARGET.ImageSize
-
 
 #####################################################################
 ##  This is a Configuration that will cause your Condor jobs to
@@ -1100,10 +1127,6 @@ PERIODIC_EXPR_INTERVAL = 60
 ##  default.  Set to 0 to disable.)
 #WALL_CLOCK_CKPT_INTERVAL = 3600
 
-##  Do you want to allow remote machines to be able to submit jobs to
-##  this queue as user "nobody"?
-#ALLOW_REMOTE_SUBMIT	= False
-
 ##  What users do you want to grant super user access to this job
 ##  queue?  (These users will be able to remove other user's jobs). 
 ##  By default, this only includes root.
@@ -1299,7 +1322,7 @@ GAHP				= $(SBIN)/gahp_server
 ##  Another option is to use /tmp as the location of the GridManager log.
 ## 
 
-MAX_GRIDMANAGER_LOG	= 64000
+MAX_GRIDMANAGER_LOG	= 1000000
 GRIDMANAGER_DEBUG	= D_COMMAND
 
 #GRIDMANAGER_LOG = $(LOG)/GridLogs/GridmanagerLog.$(USERNAME)
@@ -1344,3 +1367,13 @@ GRIDMANAGER_LOG = /tmp/GridmanagerLog.$(USERNAME)
 #
 CRED_MIN_TIME_LEFT		= 120 
 
+##
+## The location of the wrapper for invoking
+## GT3 GAHP server
+##
+GT3_GAHP = $(SBIN)/gt3_gahp
+
+##
+## The location of GT3 files. This should normally be lib/gt3
+##
+GT3_LOCATION = $(LIB)/gt3

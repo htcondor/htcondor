@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_debug.h"
@@ -245,40 +245,57 @@ REMOTE_CONDOR_job_exit(int status, int reason, ClassAd *ad)
 {
 	condor_errno_t		terrno;
 	int		rval=-1;
-	int result = 0;
 	
 	dprintf ( D_SYSCALLS, "Doing CONDOR_job_exit\n" );
 
 	CurrentSysCall = CONDOR_job_exit;
 
-	syscall_sock->encode();
-	result = syscall_sock->code(CurrentSysCall);
-	ASSERT( result );
-	result = syscall_sock->code(status);
-	ASSERT( result );
-	result = syscall_sock->code(reason);
-	ASSERT( result );
-	if ( ad ) {
-		result = ad->put(*syscall_sock);
-		ASSERT( result );
-	}
-	result = syscall_sock->end_of_message();
-	ASSERT( result );
+		/*
+		  This RSC is a special-case.  if there are any network
+		  failures at all, instead of blowing an ASSERT(), we want to
+		  just return an error code.  The shadow never returns failure
+		  for this pseudo call, so if the starter sees -1 from this,
+		  it knows there was a network error.  in this case, it sets a
+		  timer to wait for the DisconnectedRunTimeout to expire,
+		  hoping to get a request for a reconnect.
+		*/
 
+	syscall_sock->encode();
+	if( ! syscall_sock->code(CurrentSysCall) ) {
+		return -1;
+	}
+	if( ! syscall_sock->code(status) ) {
+		return -1;
+	}
+	if( ! syscall_sock->code(reason) ) {
+		return -1;
+	}
+	if ( ad ) {
+		if( ! ad->put(*syscall_sock) ) {
+			return -1;
+		}
+	}
+	if( ! syscall_sock->end_of_message() ) {
+		return -1;
+	}
 	syscall_sock->decode();
-	result = syscall_sock->code(rval);
-	ASSERT( result );
+	if( ! syscall_sock->code(rval) ) {
+		return -1;
+	}
 	if( rval < 0 ) {
-		result = syscall_sock->code(terrno);
-		ASSERT( result );
-		result = syscall_sock->end_of_message();
-		ASSERT( result );
+		if( ! syscall_sock->code(terrno) ) {
+			return -1;
+		}
+		if( ! syscall_sock->end_of_message() ) {
+			return -1;
+		}
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 		return rval;
 	}
-	result = syscall_sock->end_of_message();
-	ASSERT( result );
+	if( ! syscall_sock->end_of_message() ) {
+		return -1;
+	}
 	return rval;
 }
 

@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #define _POSIX_SOURCE
 #include "condor_common.h"
 #include "condor_io.h"
@@ -27,6 +27,7 @@
 #include "condor_debug.h"
 #include "condor_fix_assert.h"
 #include "condor_secman.h"
+#include "condor_attributes.h"
 
 #include "../condor_syscall_lib/syscall_param_sizes.h"
 
@@ -75,8 +76,8 @@ do_Q_request(ReliSock *syscall_sock)
 			CondorError errstack;
 			if( ! syscall_sock->authenticate(methods.Value(), &errstack) ) {
 					// Failed to authenticate
-				dprintf( D_ALWAYS, "SCHEDD: authentication failed\n");
-				dprintf( D_ALWAYS, "%s", errstack.get_full_text() );
+				dprintf( D_ALWAYS, "SCHEDD: authentication failed: %s\n", 
+						 errstack.getFullText() );
 				authenticated = false;
 			}
 		}
@@ -236,10 +237,18 @@ do_Q_request(ReliSock *syscall_sock)
 		assert( syscall_sock->code(attr_name) );
 		assert( syscall_sock->end_of_message() );;
 
-		errno = 0;
-		rval = SetAttributeByConstraint( constraint, attr_name, attr_value );
-		terrno = errno;
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+		if (strcmp (attr_name, ATTR_MYPROXY_PASSWORD) == 0) {
+			errno = 0;
+			dprintf( D_SYSCALLS, "SetAttributeByConstraint (MyProxyPassword) not supported...\n");
+			rval = 0;
+			terrno = errno;
+		} else {
+
+			errno = 0;
+			rval = SetAttributeByConstraint( constraint, attr_name, attr_value );
+			terrno = errno;
+			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+		}
 
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
@@ -271,10 +280,24 @@ do_Q_request(ReliSock *syscall_sock)
 		if (attr_value) dprintf(D_SYSCALLS,"\tattr_value = %s\n",attr_value);
 		assert( syscall_sock->end_of_message() );;
 
-		errno = 0;
-		rval = SetAttribute( cluster_id, proc_id, attr_name, attr_value );
-		terrno = errno;
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+		// ckireyev:
+		// We do NOT want to include MyProxy password in the ClassAd (since it's a secret)
+		// I'm not sure if this is the best place to do this, but....
+		if (strcmp (attr_name, ATTR_MYPROXY_PASSWORD) == 0) {
+			errno = 0;
+			dprintf( D_SYSCALLS, "Got MyProxyPassword, stashing...\n");
+			rval = SetMyProxyPassword (cluster_id, proc_id, attr_value);
+			terrno = errno;
+			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+			
+		}
+		else {
+			errno = 0;
+
+			rval = SetAttribute( cluster_id, proc_id, attr_name, attr_value );
+			terrno = errno;
+			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+		}
 
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
@@ -307,6 +330,31 @@ do_Q_request(ReliSock *syscall_sock)
 		assert( syscall_sock->end_of_message() );;
 		return 0;
 	}
+
+	case CONDOR_AbortTransaction:
+	{
+		int terrno;
+
+		assert( syscall_sock->end_of_message() );;
+
+		errno = 0;
+		rval = 0;	// AbortTransaction returns void (sigh), so always success
+
+		AbortTransaction( );
+		terrno = errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+	}
+
 
 	case CONDOR_CloseConnection:
 	  {
@@ -606,7 +654,13 @@ do_Q_request(ReliSock *syscall_sock)
 
 		assert( syscall_sock->code(initScan) );
 		dprintf( D_SYSCALLS, "	initScan = %d\n", initScan );
-		assert( syscall_sock->code(constraint) );
+		if ( !(syscall_sock->code(constraint)) ) {
+			if (constraint != NULL) {
+				free(constraint);
+				constraint = NULL;
+			}
+			return -1;
+		}
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;

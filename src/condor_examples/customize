@@ -40,6 +40,12 @@ sub get_platform_defaults {
 	  $console_devs="mouse, console";
 	  last SWITCH;
       }
+      if(/^Darwin/) { 
+	  $mail_path="/usr/bin/mail";
+	  $ps_path="/bin/ps auwx";
+	  $console_devs="";
+	  last SWITCH;
+      }
       if(/^SunOS/) {
 	  $mail_path="/usr/ucb/mail";
 	  $ps_path="/usr/ucb/ps auwx";

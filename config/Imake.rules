@@ -82,51 +82,122 @@ clean::							@@\
 /*
 ** Build a C program from .o files and libraries.
 */
+#if NEEDS_PRELINKER
+
+/* under AIX, we need a special prelink phase which links the GNU CC generated
+	.o files with GNU ld, but then uses the vendor linker the compiler should
+	have been installed to use to link the prelinked object and the system
+	libraries. */
 #ifndef program_target
 #define	program_target( program, objlist, libs )		@@\
-program: objlist libs						@@\
+program: objlist						@@\
+	$(PRELINK_C) $(PRELINK_C_FLAGS) -o __prelink__.o objlist libs @@\
+	$(C_LINK) $(CFLAGS) -o program __prelink__.o $(ALL_LDFLAGS)	@@\
+	rm -f __prelink__.o @@\
+clean::								@@\
+	rm -f program objlist
+#endif /* program_target */
+
+#else
+
+/* everyone else gets a normal link rule */
+#ifndef program_target
+#define	program_target( program, objlist, libs )		@@\
+program: objlist						@@\
 	$(C_LINK) $(CFLAGS) -o program objlist libs $(ALL_LDFLAGS)	@@\
 clean::								@@\
-	rm -f program 
-#endif  /* program_target */
+	rm -f program objlist
+#endif /* program_target */
+
+#endif
 
 /*
 ** Build a C program from .o files and libraries supplying the compile time
-** and link time flags. For building utilitoes with special flags.
+** and link time flags. For building utilites with special flags.
 */
+#if NEEDS_PRELINKER
+
 #ifndef program_target_complex
 #define	program_target_complex( program, objlist, comflags, linkflags, libs )		@@\
-program: objlist libs						@@\
+program: objlist						@@\
+	$(PRELINK_C) $(PRELINK_C_FLAGS) comflags -o __prelink__.o \
+		objlist libs @@\
+	$(C_LINK) comflags -o program __prelink__.o linkflags	@@\
+	rm -f __prelink__.o @@\
+clean::								@@\
+	rm -f program objlist
+#endif  /* program_target_complex */
+
+#else
+
+#ifndef program_target_complex
+#define	program_target_complex( program, objlist, comflags, linkflags, libs )		@@\
+program: objlist						@@\
 	$(C_LINK) comflags -o program objlist libs linkflags	@@\
 clean::								@@\
 	rm -f program objlist
-#endif  program_target_complex
+#endif  /* program_target_complex */
+
+#endif
 
 
 /*
 ** Build a C++ program from .o files and libraries.
 */
+#if NEEDS_PRELINKER
+
 #ifndef c_plus_target
 #define	c_plus_target( program, objlist, libs )			@@\
-program: objlist libs						@@\
-	$(CC_LINK) $(NON_INST_C_PLUS_FLAGS) -o program objlist libs \
+program: objlist						@@\
+	$(PRELINK_CPP) $(PRELINK_CPP_FLAGS) -o __prelink__.o objlist libs @@\
+	$(CC_LINK) $(C_PLUS_FLAGS) -o program __prelink__.o \
+		$(ALL_LDFLAGS) $(DEMANGLE)			@@\
+	rm -f __prelink__.o @@\
+clean::								@@\
+	rm -f program objlist
+#endif  /* c_plus_target */
+
+#else
+
+#ifndef c_plus_target
+#define	c_plus_target( program, objlist, libs )			@@\
+program: objlist						@@\
+	$(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs \
 		$(ALL_LDFLAGS) $(DEMANGLE)			@@\
 clean::								@@\
 	rm -f program objlist
 #endif  /* c_plus_target */
 
+#endif
+
 /*
 ** Build a C++ program from .o files and libraries supplying the compile and
 ** link flags. For building utility programs with special flags.
 */
+#if NEEDS_PRELINKER
+
 #ifndef c_plus_target_complex
 #define	c_plus_target_complex( program, objlist, comflags, linkflags, libs )	@@\
-program: objlist libs						@@\
-	$(CC_LINK) comflags -o program objlist libs \
-		linkflags $(DEMANGLE)			@@\
+program: objlist						@@\
+	$(PRELINK_CPP) $(PRELINK_CPP_FLAGS) comflags -o __prelink__.o \
+		objlist libs @@\
+	$(CC_LINK) comflags -o program __prelink__.o linkflags $(DEMANGLE)	@@\
+	rm -f __prelink__.o @@\
 clean::								@@\
 	rm -f program objlist
-#endif  c_plus_target_complex
+#endif  /* c_plus_target_complex */
+
+#else
+
+#ifndef c_plus_target_complex
+#define	c_plus_target_complex( program, objlist, comflags, linkflags, libs )	@@\
+program: objlist						@@\
+	$(CC_LINK) comflags -o program objlist libs linkflags $(DEMANGLE)	@@\
+clean::								@@\
+	rm -f program objlist
+#endif  /* c_plus_target_complex */
+
+#endif
 
 /*
 ** Build a template instantiation object
@@ -177,21 +248,12 @@ clean::                                               @@\
 ** Copy the given file to the specified directory, with the given mode.
 */
 #ifndef release_target
-#if RELEASE_IS_STATIC
-#define release_target( file, dir, mode )		@@\
-$(RELEASE_DIR)/##dir##/##file: file##.static		@@\
-	/bin/rm -f $(RELEASE_DIR)/##dir##/##file	@@\
-	cp file##.static $(RELEASE_DIR)/##dir##/##file	@@\
-	chmod mode $(RELEASE_DIR)/##dir##/##file	@@\
-release:: $(RELEASE_DIR)/##dir##/##file
-#else /* ! RELEASE_IS_STATIC */
 #define release_target( file, dir, mode )		@@\
 $(RELEASE_DIR)/##dir##/##file: file			@@\
 	/bin/rm -f $(RELEASE_DIR)/##dir##/##file	@@\
 	cp file $(RELEASE_DIR)/##dir			@@\
 	chmod mode $(RELEASE_DIR)/##dir##/##file	@@\
 release:: $(RELEASE_DIR)/##dir##/##file
-#endif   /* ! RELEASE_IS_STATIC */
 #endif /* release_target */
 
 /*
@@ -203,7 +265,7 @@ $(RELEASE_DIR)/##dir##/##lib: lib					@@\
 	COPY_LIBRARY( lib, $(RELEASE_DIR)/##dir##/##lib )		@@\
 	RANLIB_TOUCH( $(RELEASE_DIR)/##dir##/##lib )			@@\
 release:: $(RELEASE_DIR)/##dir##/##lib
-#endif  release_library
+#endif  /* release_library */
 
 
 /*
@@ -258,6 +320,20 @@ $(RELEASE_DIR)/##dir##/##dest##: src			@@\
 #endif /* release_copy_target */
 
 
+
+/*
+** Target is released by recursive copying
+*/
+#ifndef release_recursive_copy_target
+#define release_recursive_copy_target( src, dest )	@@\
+release:: $(RELEASE_DIR)/##dest	       			@@\
+							@@\
+$(RELEASE_DIR)/##dest##: src				@@\
+	/bin/rm -rf $(RELEASE_DIR)/##dest		@@\
+	$(CP_CMD) src $(RELEASE_DIR)/##dest
+#endif /* release_recursive_copy_target */
+
+
 /***********************************************************************
 ** strip targets
 **
@@ -279,7 +355,7 @@ $(STRIP_DIR)/##dir##/##file##: file			@@\
 	$(STRIP) $(STRIP_DIR)/##dir##/##file		@@\
 	chmod mode $(STRIP_DIR)/##dir##/##file		@@\
 stripped:: $(STRIP_DIR)/##dir##/##file
-#endif  strip_target
+#endif  /* strip_target */
 
 
 /*
@@ -292,7 +368,7 @@ $(STRIP_DIR)/##dir##/##lib: lib				@@\
 	RANLIB_TOUCH( $(STRIP_DIR)/##dir##/##lib )	@@\
 	chmod OBJECT_MODE $(STRIP_DIR)/##dir##/##lib	@@\
 stripped:: $(STRIP_DIR)/##dir##/##lib
-#endif  strip_library
+#endif  /* strip_library */
 
 
 /* 
@@ -306,6 +382,19 @@ $(STRIP_DIR)/##dir##/##file: src			@@\
 	chmod mode $(STRIP_DIR)/##dir##/##file		@@\
 stripped:: $(STRIP_DIR)/##dir##/##file
 #endif /* strip_copy_target */
+
+
+/*
+** Stripped target is released by recursive copying
+*/
+#ifndef strip_recursive_copy_target
+#define strip_recursive_copy_target( src, dest )	@@\
+stripped:: $(STRIP_DIR)/##dest	     			@@\
+							@@\
+$(STRIP_DIR)/##dest##: src				@@\
+	/bin/rm -rf $(STRIP_DIR)/##dest			@@\
+	$(CP_CMD) src $(STRIP_DIR)/##dest
+#endif /* strip_recursive_copy_target */
 
 
 /*
@@ -350,6 +439,8 @@ $(STRIP_DIR)/##dir##/##dest##: 			@@\
 ** Target to build a statically linked, stripped binary, placed in the
 ** specified directory.
 */
+#if NEEDS_PRELINKER 
+
 #ifndef	static_target
 #define	static_target( program, objlist, libs, dir )		@@\
 dir##/##program: program##.static				@@\
@@ -357,12 +448,32 @@ dir##/##program: program##.static				@@\
 	cp program##.static dir##/##program			@@\
 	chmod EXECUTABLE_MODE dir##/##program			@@\
 	$(STRIP) dir##/##program				@@\
-program##.static: objlist libs					@@\
-	$(CC_LINK) $(STATIC)  $(NON_INST_C_PLUS_FLAGS) -o program##.static objlist libs $(ALL_LDFLAGS) $(DEMANGLE) @@\
+program##.static: objlist					@@\
+	$(PRELINK_CPP) $(PRELINK_CPP_FLAGS) -o __prelink__.o objlist libs @@\
+	$(CC_LINK) $(STATIC)  $(C_PLUS_FLAGS) -o program##.static __prelink__.o $(ALL_LDFLAGS) $(DEMANGLE) @@\
+	rm -f __prelink__.o @@\
 clean:: 							@@\
 	rm -f program##.static objlist				@@\
 static:: dir##/##program
 #endif  /* static_target */
+
+#else
+
+#ifndef	static_target
+#define	static_target( program, objlist, libs, dir )		@@\
+dir##/##program: program##.static				@@\
+	/bin/rm -f dir##/##program				@@\
+	cp program##.static dir##/##program			@@\
+	chmod EXECUTABLE_MODE dir##/##program			@@\
+	$(STRIP) dir##/##program				@@\
+program##.static: objlist					@@\
+	$(CC_LINK) $(STATIC)  $(C_PLUS_FLAGS) -o program##.static objlist libs $(ALL_LDFLAGS) $(DEMANGLE) @@\
+clean:: 							@@\
+	rm -f program##.static objlist				@@\
+static:: dir##/##program
+#endif  /* static_target */
+
+#endif
 
 
 /*
@@ -375,7 +486,7 @@ $(STATIC_DIR)/##dir##/##lib: lib			@@\
 	RANLIB_TOUCH( $(STATIC_DIR)/##dir##/##lib )	@@\
 	chmod OBJECT_MODE $(STATIC_DIR)/##dir##/##lib	@@\
 static:: $(STATIC_DIR)/##dir##/##lib
-#endif  static_library
+#endif  /* static_library */
 
 
 /* 
@@ -388,7 +499,20 @@ $(STATIC_DIR)/##dir##/##file: src			@@\
 	cp src $(STATIC_DIR)/##dir##/##file		@@\
 	chmod mode $(STATIC_DIR)/##dir##/##file		@@\
 static:: $(STATIC_DIR)/##dir##/##file
-#endif static_copy_target
+#endif /* static_copy_target */
+
+
+/*
+** Static target is released by recursive copying
+*/
+#ifndef static_recursive_copy_target
+#define static_recursive_copy_target( src, dest )	@@\
+static:: $(STATIC_DIR)/##dest	      			@@\
+							@@\
+$(STATIC_DIR)/##dest##: src				@@\
+	/bin/rm -rf $(STATIC_DIR)/##dest		@@\
+	$(CP_CMD) src $(STATIC_DIR)/##dest
+#endif /* static_recursive_copy_target */
 
 
 /*
@@ -498,12 +622,9 @@ clean::						@@\
 #define strip_full_tarball( name, files, type )		@@\
 ##name##:: strip_##type##/##name			@@\
 							@@\
-afs_##name##:: strip_##type##/##name			@@\
-	cp strip_##type##/##name $(PUBLIC_D_TARGET)	@@\
-							@@\
 strip_##type##/##name##: stripped			@@\
 	/bin/rm -f strip_##type##/##name		@@\
-	cd strip_##type##; tar -cvf name --owner=root --group=0 files
+	cd strip_##type##; $(TAR_CMD) -cvf name files
 #endif /* strip_full_tarball */
 
 #ifndef static_full_tarball
@@ -511,12 +632,9 @@ strip_##type##/##name##: stripped			@@\
 #define static_full_tarball( name, files, type )	@@\
 ##name##:: static_##type##/##name			@@\
 							@@\
-afs_##name##:: static_##type##/##name			@@\
-	cp static_##type##/##name $(PUBLIC_S_TARGET)	@@\
-							@@\
 static_##type##/##name##: static			@@\
 	/bin/rm -f static_##type##/##name		@@\
-	cd static_##type##; tar -cvf name --owner=root --group=0 files
+	cd static_##type##; $(TAR_CMD) -cvf name files
 #else 
 #define static_full_tarball( name, files, type ) /* NULL MACRO */
 #endif /* HAS_STATIC */
@@ -533,11 +651,8 @@ static_##type##/##name##: static			@@\
 #define strip_both_tarball( name, files, contribfiles )		@@\
 ##name##:: strip_dir/##name					@@\
 								@@\
-afs_##name##:: strip_dir/##name					@@\
-	cp strip_dir/##name $(PUBLIC_D_TARGET)			@@\
-								@@\
 strip_dir/##name##: stripped					@@\
-	perl condor_scripts/make_both_tarball strip##, name##, files##, contribfiles
+	perl condor_scripts/make_both_tarball -cmd "$(TAR_CMD)" strip##, name##, files##, contribfiles
 #endif /* strip_both_tarball */
 
 #ifndef static_both_tarball
@@ -545,11 +660,8 @@ strip_dir/##name##: stripped					@@\
 #define static_both_tarball( name, files, contribfiles )	@@\
 ##name##:: static_dir/##name					@@\
 								@@\
-afs_##name##:: static_dir/##name				@@\
-	cp static_dir/##name $(PUBLIC_S_TARGET)			@@\
-								@@\
 static_dir/##name##: static					@@\
-	perl condor_scripts/make_both_tarball static##, name##, files##, contribfiles
+	perl condor_scripts/make_both_tarball -cmd "$(TAR_CMD)" static##, name##, files##, contribfiles
 #else 
 #define static_both_tarball( name, files, contribfiles ) /* NULL MACRO */
 #endif /* HAS_STATIC */
@@ -563,32 +675,30 @@ static_dir/##name##: static					@@\
 ** for either purify, purecoverage, or both.
 ***********************************************************************/
 
-#if IS_SUN4X
-
-#define PureCollector concat3(-collector=,CrtLibPath,/ld)
+#if HAS_PURIFY
 
 #define	pure_c_plus_target( program, objlist, libs )	@@\
-##program: objlist libs					@@\
-	purify -g++=yes -chain-length=50 PureCollector purecov -g++=yes PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)	@@\
+##program: objlist					@@\
+	purify -g++=yes -chain-length=50 -cache-dir=$(PURE_CACHE_DIR) purecov -g++=yes $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)	@@\
 clean::							@@\
 	rm -f program objlist
 
 #define	purify_c_plus_target( program, objlist, libs )	@@\
-##program: objlist libs					@@\
+##program: objlist					@@\
 	purify -g++=yes -chain-length=50 PureCollector $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)	@@\
 clean::							@@\
 	rm -f program objlist
 
 #define	purecov_c_plus_target( program, objlist, libs )	@@\
-##program: objlist libs					@@\
-	purecov -g++=yes PureCollector $(CC_LINK) $(NON_INST_C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)						@@\
+##program: objlist					@@\
+	purecov -g++=yes -cache-dir=$(PURE_CACHE_DIR) $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)	@@\
 clean:: 						@@\
 	rm -f program objlist
 
 
 #define	quantify_c_plus_target( program, objlist, libs )	@@\
-##program: objlist libs						@@\
-	quantify -g++=yes PureCollector $(CC_LINK) $(NON_INST_C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)	                                 @@\
+##program: objlist						@@\
+	quantify -g++=yes -cache-dir=$(PURE_CACHE_DIR) $(CC_LINK) $(C_PLUS_FLAGS) -o program objlist libs $(PURIFY_LDFLAGS)     @@\
 clean::		 						@@\
 	rm -f program objlist
 
@@ -608,7 +718,7 @@ pure:: $(PURE_DIR)/##program
 #define	purecov_c_plus_target( program, objlist, libs )	/* NULL MACRO */
 #define	quantify_c_plus_target( program, objlist, libs ) /* NULL MACRO */
 
-#endif	/* IS_SUN4M_SOLARIS251 */
+#endif	/* HAS_PURIFY */
 
 
 /***********************************************************************
@@ -631,6 +741,9 @@ VLINK( compiler, vanillatarg, obj );
 /*
 ** Link a program for running remotely
 */
+#if IS_CLIPPED
+#define RLINK( compiler, remotetarg, obj )	/* */
+#else
 #define RLINK( compiler, remotetarg, obj )	@@\
 remotetarg: obj					@@\
 	$(CONDOR_COMPILE) $(CONDOR_COMPILE_FLAGS) compiler -o remotetarg obj $(TEST_LDFLAGS) @@\
@@ -638,6 +751,7 @@ remotetarg: obj					@@\
 clean::						@@\
 	rm -f remotetarg obj			@@\
 all:: remotetarg
+#endif
 
 
 /*
@@ -732,6 +846,12 @@ BUILD_FILES( name, ext )			@@\
 RLINK( cmplr, name##.remote, name##.o )		@@\
 VLINK( cmplr, name##.vanilla, name##.o )
 
+#define BUILD_EXTRA( cmplr, name, ext, obj)	@@\
+BUILD_FILES( name, ext )			@@\
+RLINK( cmplr, name##.remote, obj name##.o)	@@\
+VLINK( cmplr, name##.vanilla, obj name##.o)
+
+
 #define BUILD_SPECIFIC_VANILLA(compiler, progname, objfiles, cmdfile, runfile, ext) @@\
 BUILD_FILES_SPECIFIC(progname, cmdfile, runfile, ext) @@\
 VLINK(compiler, progname##.vanilla, objfiles)
@@ -795,7 +915,7 @@ html: files							@@\
 ** the comment in src/condor_c++_util/condor_version.C for more
 ** details.  -Derek Wright <wright@cs.wisc.edu> 1/25/00
 */ 
-#define x_dollar_paren(a) $( ## a ## )
+#define x_dollar_paren(a) $(##a##)
 #define dollar_paren(a) x_dollar_paren(a)
 
 
@@ -855,7 +975,7 @@ clean::						@@\
 #define simple_dir_target(dirname)			@@\
 ##dirname##:						@@\
 	mkdir dirname
-#endif  simple_dir_target
+#endif  /* simple_dir_target */
 
 
 /*
@@ -863,12 +983,21 @@ clean::						@@\
 ** source directory.  Making it appear as though all the source
 ** files are in the directory where we want to build the objects
 ** will simplify the Makefiles.
+** The really-clean rule is for blowing away a whole build workspace
+** and starting over from scratch.  However, since that's totally
+** overkill and dangerous for a source workspace, if we see a "CVS"
+** directory, we print a message and exit.  Notice that we use "@if"
+** to tell make to pass this directly to the shell.  That way, it
+** doesn't echo this test for every directory, but instead just prints
+** the error and bails out if it finds the directory.
 */
+
 #ifndef object_dir_target
 #define object_dir_target(dir_name)					@@\
 ##dir_name##:								@@\
 	perl $(SRC_TREE)/condor_scripts/make_dir_tree dir_name $(SRC_TREE) @@\
 really-clean::								@@\
+	@if [ -d CVS ]; then echo "You definitely do NOT want to do this in your source repository." ; echo "Try doing it in a build directory, instead."; exit 1; fi @@\
 	rm -rf dir_name
 #endif /* object_dir_target */
 
@@ -885,7 +1014,7 @@ platform.init: platform ALWAYS				@@\
 	cd platform ; make directories; make depend	@@\
 platform: 						@@\
 	mkdir platform
-#endif  platform_target
+#endif  /* platform_target */
 
 /*
 ** Check to make sure we are running on the correct kind of machine
@@ -898,7 +1027,7 @@ CheckPlatformType:					@@\
 	cc $(CFLAGS) -o CheckPlatformType ../GENERIC/CheckPlatformType.c	@@\
 	./CheckPlatformType				@@\
 	rm -f CheckPlatformType
-#endif  check_platform_target
+#endif  /* check_platform_target */
 
 
 /*
@@ -946,21 +1075,47 @@ depend:	ALWAYS				               @@\
 	$(CPlusPlus) $(CFLAGS) -MM $(DEPEND_C_SRC) > dependencies
 #endif
 
-/* The old definition of depend
-depend: ALWAYS						@@\
-	$(MKDEPEND) $(CFLAGS) src_list
-*/
 
 /*
-** Build a tags file for a source directory.
+** Build rule for copying man pages into the right place
 */
-#ifndef tags_target
-#define tags_target( c_files, libdirs )			@@\
-tags: ALWAYS						@@\
-	condor_ctags c_files -l libdirs			@@\
-clean::							@@\
-	rm -f tags
-#endif 
+#ifndef man_target
+#if HAS_STATIC
+#define man_target(name)					@@\
+man_full_target(name,strip)					@@\
+man_full_target(name,static)					@@\
+man_full_target(name,release)
+#else /* HAS_STATIC */
+#define man_target(name)					@@\
+man_full_target(name,strip)					@@\
+man_full_target(name,release)
+#endif /* HAS_STATIC */
+#endif /* ifndef man_target */
+
+#ifndef man_full_target
+#define man_full_target(name,type)				@@\
+manpages:: type##_dir/man/man1/##name				@@\
+type##_dir/man/man1/##name: $(EXT_TRIGGER)/man-current		@@\
+	/bin/rm -f type##_dir/man/man1/##name			@@\
+	cp $(MAN_DIR)/man1/##name type##_dir/man/man1/##name	@@\
+	chmod 0644 type##_dir/man/man1/##name
+#endif
+
+/*
+** Externals build rule
+*/
+
+#ifndef ext_target
+#define ext_target(package_id,ext_dep)				@@\
+ext_nodep_target(package_id,ext_dep)				@@\
+externals:: $(EXT_TRIGGER)/$(##package_id##)
+#endif
+
+#ifndef ext_nodep_target
+#define ext_nodep_target(package_id,ext_dep)			@@\
+$(EXT_TRIGGER)/$(##package_id##): ext_dep			@@\
+	$(EXT_ROOT)/build_external --extern_dir=$(EXT_ROOT) --package_name=$(##package_id##) --extern_config=$(EXT_CONFIG_SH)
+#endif
 
 
 /*

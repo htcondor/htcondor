@@ -1,7 +1,15 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_negotiator.mak
 
 ..\src\condor_negotiator.V6\main.C : \
+	"..\..\program files\microsoft sdk\include\basetsd.h"\
+	"..\..\program files\microsoft sdk\include\guiddef.h"\
+	"..\..\program files\microsoft sdk\include\propidl.h"\
+	"..\..\program files\microsoft sdk\include\reason.h"\
+	"..\..\program files\microsoft sdk\include\stralign.h"\
+	"..\..\program files\microsoft sdk\include\tvout.h"\
+	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\command_strings.h"\
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -26,6 +34,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
@@ -35,11 +44,10 @@
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -54,12 +62,20 @@
 	
 
 ..\src\condor_negotiator.V6\matchmaker.C : \
+	"..\..\program files\microsoft sdk\include\basetsd.h"\
+	"..\..\program files\microsoft sdk\include\guiddef.h"\
+	"..\..\program files\microsoft sdk\include\propidl.h"\
+	"..\..\program files\microsoft sdk\include\reason.h"\
+	"..\..\program files\microsoft sdk\include\stralign.h"\
+	"..\..\program files\microsoft sdk\include\tvout.h"\
+	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\ad_printmask.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_api.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\condor_q.h"\
 	"..\src\condor_c++_util\condor_query.h"\
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\enum_utils.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\generic_query.h"\
@@ -95,6 +111,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
@@ -106,11 +123,10 @@
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
 	"..\src\condor_includes\condor_state.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\

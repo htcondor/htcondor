@@ -1,0 +1,68 @@
+EXT_ROOT = @ext_root@
+EXT_TRIGGER = $(EXT_ROOT)/triggers
+EXT_INSTALL = $(EXT_ROOT)/install
+EXT_CONFIG_SH = @_cv_ext_config_sh@
+
+
+EXT_KERBEROS_VERSION = @ext_kerberos_version@
+EXT_GLOBUS_VERSION = @ext_globus_version@
+EXT_GPT_VERSION = @ext_gpt_version@
+EXT_GAHP_VERSION = @ext_gahp_version@
+EXT_ZLIB_VERSION = @ext_zlib_version@
+EXT_PVM_VERSION = @ext_pvm_version@
+EXT_MAN_VERSION = man-current
+EXT_GT3GAHP_VERSION = @ext_gt3gahp_version@
+
+#define WANT_EXT_GLIBC @want_ext_glibc@
+#if WANT_EXT_GLIBC
+EXT_GLIBC_VERSION = @ext_glibc_version@
+GLIBC_DIR = $(EXT_INSTALL)/$(EXT_GLIBC_VERSION)/lib
+#endif
+
+MAN_DIR = $(EXT_INSTALL)/$(EXT_MAN_VERSION)/man
+
+OPENSSL_DIR = $(EXT_INSTALL)/$(EXT_GLOBUS_VERSION)
+GLOBUS_DIR = $(EXT_INSTALL)/$(EXT_GLOBUS_VERSION)
+GAHP_DIR = $(EXT_INSTALL)/$(EXT_GAHP_VERSION)/bin
+
+
+#if WANT_NEST
+NEST_DIR = /p/condor/workspaces/nest
+NEST_LIB = $(NEST_DIR)/lib
+NEST_INC = $(NEST_DIR)/include
+#endif /* WANT_NEST */
+
+
+KERBEROS_DIR = $(EXT_INSTALL)/$(EXT_KERBEROS_VERSION)
+#if WANT_KERBEROS
+KERBEROS_INC = $(KERBEROS_DIR)/include
+/* so long as we're building it ourselves, we know it's krb5, so we
+   probably don't need to keep this variable around.  however, for
+   now, just turn it on in all cases. */ 
+#ifndef KERBEROS_K5
+#define KERBEROS_K5 YES
+#endif
+#if KERBEROS_K5
+KERBEROS_LIB = $(KERBEROS_DIR)/lib/libkrb5.a \
+   $(KERBEROS_DIR)/lib/libk5crypto.a \
+   $(KERBEROS_DIR)/lib/libcom_err.a
+#else
+KERBEROS_LIB = $(KERBEROS_DIR)/lib/libkrb5.a \
+   $(KERBEROS_DIR)/lib/libcrypto.a \
+   $(KERBEROS_DIR)/lib/libcom_err.a
+#endif /* KERBEROS_K5 */
+
+#else /* WANT_KERBEROS */
+KERBEROS_LIB = 
+KERBEROS_INC = 
+#endif
+
+
+ZLIB_DIR = $(EXT_INSTALL)/$(EXT_ZLIB_VERSION)
+ZLIB_LIB = $(ZLIB_DIR)/lib
+ZLIB_INC = $(ZLIB_DIR)/include
+
+
+PVM_DIR = $(EXT_INSTALL)/$(EXT_PVM_VERSION)
+
+GT3GAHP_DIR = $(EXT_INSTALL)/$(EXT_GT3GAHP_VERSION)

@@ -116,14 +116,18 @@ sub GatherMeminfo( $$ )
 	    my @Values = split( /\s+/, $1 );
 	    for my $Num ( 0 .. $#Values )
 	    {
-		$Hash->Add( "mem_$Fields[$Num]", "n", $Values[$Num] );
+		$Hash->Add( "mem_$Fields[$Num]",
+			    HawkeyePublish::TypeNumber,
+			    $Values[$Num] );
 	    }
 	    if ( ( exists $Offsets{total} ) && ( exists $Offsets{used} ) )
 	    {
 		my $Percent = ( 100 *
 				$Values[ $Offsets{used} ] /
 				$Values[ $Offsets{total} ] );
-		$Hash->Add( "mem_used_pct", "n", sprintf( "%.2f", $Percent) );
+		$Hash->Add( "mem_used_pct",
+			    HawkeyePublish::TypeNumber,
+			    sprintf( "%.2f", $Percent) );
 	    }
 	}
 	# Swap line
@@ -132,20 +136,24 @@ sub GatherMeminfo( $$ )
 	    my @Values = split( /\s+/, $1 );
 	    for my $Num ( 0 .. $#Values )
 	    {
-		$Hash->Add( "swap_$Fields[$Num]", "n", $Values[$Num] );
+		$Hash->Add( "swap_$Fields[$Num]",
+			    HawkeyePublish::TypeNumber,
+			    $Values[$Num] );
 	    }
 	    if ( ( exists $Offsets{total} ) && ( exists $Offsets{used} ) )
 	    {
 		my $Percent = ( 100 *
 				$Values[ $Offsets{used} ] /
 				$Values[ $Offsets{total} ] );
-		$Hash->Add( "swap_used_pct", "n", sprintf( "%.2f", $Percent) );
+		$Hash->Add( "swap_used_pct",
+			    HawkeyePublish::TypeNumber,
+			    sprintf( "%.2f", $Percent) );
 	    }
 	}
 	# Other lines
 	elsif ( /(\S+):\s+(\d+) kB/)
 	{
-	    $Hash->Add( $1, "n", $2 * 1024 );
+	    $Hash->Add( $1, HawkeyePublish::TypeNumber, $2 * 1024 );
 	}
     }
 
@@ -185,14 +193,18 @@ sub GatherFree( $$ )
 	    my @Values = split( /\s+/, $1 );
 	    for my $Num ( 0 .. $#Values )
 	    {
-		$Hash->Add( "mem_$Fields[$Num]", "n", $Values[$Num] );
+		$Hash->Add( "mem_$Fields[$Num]",
+			    HawkeyePublish::TypeNumber,
+			    $Values[$Num] );
 	    }
 	    if ( ( exists $Offsets{total} ) && ( exists $Offsets{used} ) )
 	    {
 		my $Percent = ( 100 *
 				$Values[ $Offsets{used} ] /
 				$Values[ $Offsets{total} ] );
-		$Hash->Add( "mem_used_pct", "n", sprintf( "%.2f", $Percent) );
+		$Hash->Add( "mem_used_pct",
+			    HawkeyePublish::TypeNumber,
+			    sprintf( "%.2f", $Percent) );
 	    }
 	}
 	# Buffers/cache line
@@ -202,7 +214,7 @@ sub GatherFree( $$ )
 	    for my $Num ( 1 .. $#Values )
 	    {
 		$Hash->Add( "buffers_cache_$Fields[$Num]",
-			    "n", $Values[$Num] );
+			    HawkeyePublish::TypeNumber, $Values[$Num] );
 	    }
 	}
 	# Swap line
@@ -211,14 +223,18 @@ sub GatherFree( $$ )
 	    my @Values = split( /\s+/, $1 );
 	    for my $Num ( 0 .. $#Values )
 	    {
-		$Hash->Add( "swap_$Fields[$Num]", "n", $Values[$Num] );
+		$Hash->Add( "swap_$Fields[$Num]",
+			    HawkeyePublish::TypeNumber,
+			    $Values[$Num] );
 	    }
 	    if ( ( exists $Offsets{total} ) && ( exists $Offsets{used} ) )
 	    {
 		my $Percent = ( 100 *
 				$Values[ $Offsets{used} ] /
 				$Values[ $Offsets{total} ] );
-		$Hash->Add( "swap_used_pct", "n", sprintf( "%.2f", $Percent) );
+		$Hash->Add( "swap_used_pct",
+			    HawkeyePublish::TypeNumber,
+			    sprintf( "%.2f", $Percent) );
 	    }
 	}
     }
@@ -276,7 +292,7 @@ sub GatherSolaris( $$ )
 		    }
 		    my $Label = $3;
 		    $Label =~ s/\s+/_/g;
-		    $Hash->Add( "swap_" . $Label, "n", $Value );
+		    $Hash->Add( "swap_" . $Label, HawkeyePublish::TypeNumber, $Value );
 		    $SwapOk = 1;
 		}
 		else

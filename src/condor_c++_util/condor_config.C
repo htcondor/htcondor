@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 /* 
 
@@ -474,12 +474,12 @@ process_locals( char* param_name, char* host )
 	
 	local_required = true;	
     tmp = param( "REQUIRE_LOCAL_CONFIG_FILE" );
-    if( !tmp || tmp[0] == 'f' || tmp[0] == 'F' ) {
-        local_required = false;
-    } else {
-        local_required = true;
+    if( tmp ) {
+		if( tmp[0] == 'f' || tmp[0] == 'F' ) {
+			local_required = false;
+		}
+		free( tmp );
     }
-    if( tmp ) free( tmp );
 
 	file = param( param_name );
 	if( file ) {
@@ -819,29 +819,45 @@ param( const char *name )
 /*
 ** Return the integer value associated with the named paramter.
 ** If the value is not defined or not a valid integer, then
-** return the default_value argument.
+** return the default_value argument.  The min_value and max_value
+** arguments are optional and default to MININT and MAXINT.
 */
 
 int
-param_integer( const char *name, int default_value )
+param_integer( const char *name, int default_value,
+			   int min_value, int max_value )
 {
 	int result;
 	int fields;
 	char *string;
 
+	ASSERT( name );
 	string = param( name );
 	if( ! string ) {
+		dprintf( D_FULLDEBUG, "%s is undefined, using default value of %d\n",
+				 name, default_value );
 		return default_value;
 	}
 
 	fields = sscanf( string, "%d", &result );
-	free( string );
-	
-	if( fields==1 ) {
-		return result;
-	}
 
-	return default_value;
+	if( fields != 1 ) {
+		dprintf( D_FULLDEBUG, "WARNING: %s not an integer (\"%s\"), using "
+				 "default value of %d\n", name, string, default_value );
+		result = default_value;
+	}
+	else if( result < min_value ) {
+		dprintf( D_FULLDEBUG, "WARNING: %s too low (%d), using minimum "
+				 "value of %d\n", name, result, min_value );
+		result = min_value;
+	}
+	else if( result > max_value ) {
+		dprintf( D_FULLDEBUG, "WARNING: %s too high (%d), using maximum "
+				 "value of %d\n", name, result, max_value );
+		result = max_value;
+	}
+	free( string );
+	return result;
 }
 
 /*
@@ -858,8 +874,11 @@ param_boolean( const char *name, const bool default_value )
 	bool result;
 	char *string;
 
+	ASSERT( name );
 	string = param( name );
 	if( ! string ) {
+		dprintf( D_FULLDEBUG, "%s is undefined, using default value of %s\n",
+				 name, default_value ? "True" : "False" );
 		return default_value;
 	}
 
@@ -875,6 +894,9 @@ param_boolean( const char *name, const bool default_value )
 			result = false;
 			break;
 		default:
+		    dprintf( D_FULLDEBUG, "WARNING: %s not a boolean (\"%s\"), using "
+					 "default value of %s\n", name, string,
+					 default_value ? "True" : "False" );
 			result = default_value;
 			break;
 	}
@@ -891,6 +913,21 @@ macro_expand( const char *str )
 	return( expand_macro(str, ConfigTab, TABLESIZE) );
 }
 
+/*
+** Same as param_boolean but for C -- returns 0 or 1
+** The parameter value is expected to be set to the string
+** "TRUE" or "FALSE" (no quotes, case insensitive).
+** If the value is not defined or not a valid, then
+** return the default_value argument.
+*/
+int
+param_boolean_int( const char *name, int default_value )
+{
+    bool default_bool;
+
+    default_bool = default_value == 0 ? false : true;
+    return param_boolean(name, default_bool) ? 1 : 0;
+}
 
 /*
 ** Return non-zero iff the named configuration parameter contains the given
@@ -969,7 +1006,7 @@ reinsert_specials( char* host )
 
 	// Insert values for "pid" and "ppid".  Use static values since
 	// this is expensive to re-compute on Windows.
-	// Note: we have to resort to ifdef WIN32 crap even though 
+	// Note: we have to resort to ifdef WIN32 junk even though 
 	// DaemonCore can nicely give us this information.  We do this
 	// because the config code is used by the tools as well as daemons.
 	if (!reinsert_pid) {

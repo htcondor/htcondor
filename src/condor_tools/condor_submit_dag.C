@@ -1,8 +1,31 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
 #include "MyString.h"
 #include "which.h"
 #include "string_list.h"
 #include "condor_distribution.h"
+#include "env.h"
 
 struct SubmitDagOptions
 {
@@ -276,8 +299,15 @@ void writeSubmitFile(const MyString &strDagmanPath, const SubmitDagOptions &opts
     }
 
     fprintf(pSubFile, "arguments\t= %s\n", strArgs.Value());
-    fprintf(pSubFile, "environment\t= _CONDOR_DAGMAN_LOG=%s"
-		"%c_CONDOR_MAX_DAGMAN_LOG=0\n", opts.strDebugLog.Value(), env_delimiter);
+
+	Env env;
+	env.Put("_CONDOR_DAGMAN_LOG",opts.strDebugLog.Value());
+	env.Put("_CONDOR_MAX_DAGMAN_LOG=0");
+
+	char *env_str = env.getDelimitedString();
+    fprintf(pSubFile, "environment\t=%s\n",env_str);
+	delete[] env_str;
+
     if(opts.strNotification != "") 
 	{	
 		fprintf(pSubFile, "notification\t= %s\n", opts.strNotification.Value());
@@ -310,7 +340,7 @@ void getJobLogFilenameFromSubmitFiles(SubmitDagOptions &opts)
 		// this internal loop is for '/' line continuation
 		while (strLine[strLine.Length()-1] == '\\')
 		{
-			strLine[strLine.Length()-1] = 0;
+			strLine.setChar(strLine.Length()-1, 0);
 			psLine = listLines.next();
 			if (psLine)
 				strLine += psLine;

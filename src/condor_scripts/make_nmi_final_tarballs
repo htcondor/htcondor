@@ -56,10 +56,6 @@ $version = "$majorv.$minorv.$releasev";
 
 print "Extracted $version from Condor**************************************************************\n";
 # Things you should probably leave alone:
-BEGIN {
-    unshift(@INC, "/p/condor/home/perl");
-}
-
 require 5.002;
 
 ######################################################################

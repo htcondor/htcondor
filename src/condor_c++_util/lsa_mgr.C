@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 
@@ -313,7 +313,59 @@ lsa_mgr::loadDataFromRegistry() {
 	LsaClose(policyHandle);
 
 	if (ntsResult == ERROR_SUCCESS) {
+		
+		// decrypt our data so we can read it, but be careful...
+		// we may not have to decrypt it if users have stored 
+		// the passwords with a pre 6.6.3 version of Condor,
+		// (but next time we store it, it'll be encrypted)
+		
+		DATA_BLOB DataIn, DataOut;
+		LPWSTR pDescrOut =  NULL;
+
+		DataOut.pbData = NULL;
+		DataIn.pbData = (BYTE*)DataBuffer->Buffer;
+		DataIn.cbData = DataBuffer->Length;
+
+		if (!CryptUnprotectData(
+			&DataIn,
+			&pDescrOut,			// Description string
+			NULL,				// Optional Entropy,
+			NULL,				// Reserved
+			NULL,				// optional promptstruct
+			CRYPTPROTECT_UI_FORBIDDEN, // No GUI prompt!
+			&DataOut)){
+			
+			DWORD err = GetLastError();
+
+			if ( err == ERROR_PASSWORD_RESTRICTION ) {
+
+				// this means the password wasn't encypted 
+				// when we got it, so do nothing, and pass
+				// the data on to extractDataString() 
+				// untouched.
+
+			} else {
+
+				// this means decryption failed for some
+				// other reason, so return failure.
+				return false;
+			}
+			
+		} else {
+			DataBuffer->Buffer = (USHORT*) DataOut.pbData;
+			DataBuffer->Length = DataOut.cbData;
+		}
+		
 		extractDataString();
+
+		if ( DataOut.pbData != NULL ) {
+			LocalFree(DataOut.pbData);
+		}
+
+		if ( pDescrOut != NULL ) {
+			LocalFree(pDescrOut);
+		}
+
 		return true;
 	} else {
 		return false;
@@ -340,14 +392,40 @@ lsa_mgr::storeDataToRegistry( const PLSA_UNICODE_STRING lsaString ) {
 		);
 
 	if (ntsResult != ERROR_SUCCESS) {
-		wprintf(L"OpenPolicy returned %lu\n", LsaNtStatusToWinError(ntsResult));
+		dprintf(D_ALWAYS, "OpenPolicy returned %lu\n", 
+			LsaNtStatusToWinError(ntsResult));
 		return NULL;
 	}
 
 	// init keyname we want to grab
 	InitLsaString( &keyName, CONDOR_PASSWORD_KEYNAME );
 
-	printf("Attempting to store %d bytes to reg key...\n", lsaString->Length);
+	// Encrypt data before storing it
+	DATA_BLOB DataIn, DataOut;
+
+	DataOut.pbData = NULL;
+	DataIn.pbData = (BYTE*) lsaString->Buffer;
+	DataIn.cbData = lsaString->Length;
+
+	if(!CryptProtectData(
+        &DataIn,
+        L"Condor",			// A description sting. 
+        NULL,				// Optional entropy not used
+        NULL,				// Reserved
+        NULL,				// a promptstruct
+        CRYPTPROTECT_UI_FORBIDDEN,
+        &DataOut)){
+    
+		// The function failed. Report the error.   
+		dprintf(D_ALWAYS, "Encryption error! errorcode=%lu \n",
+			GetLastError());
+    }
+
+	lsaString->Buffer = (USHORT*)DataOut.pbData;
+	lsaString->Length = DataOut.cbData;
+
+	dprintf(D_FULLDEBUG, "Attempting to store %d bytes to reg key...\n",
+		 lsaString->Length);
 	
 	// now we can (finally) grab the private data
 	ntsResult = LsaStorePrivateData(
@@ -358,6 +436,11 @@ lsa_mgr::storeDataToRegistry( const PLSA_UNICODE_STRING lsaString ) {
 	
 	// be tidy with the silly policy handles
 	LsaClose(policyHandle);
+
+	// clean up our encrypted data
+	if ( DataOut.pbData != NULL ) {
+		LocalFree(DataOut.pbData);
+	}
 
 	return (ntsResult == ERROR_SUCCESS);
 }
@@ -388,7 +471,8 @@ lsa_mgr::extractDataString() {
 		wcsncpy( Data_string, DataBuffer->Buffer, strlength );
 		Data_string[strlength] = L'\0'; // make sure it's null terminated
 	} else {
-		printf("lsa_mgr::extractDataString() has been called with no data\n");
+		dprintf(D_ALWAYS, "lsa_mgr::extractDataString() has been "
+			"called with no data\n");
 	}
 }
 

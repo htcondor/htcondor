@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_classad.h"
@@ -50,12 +50,14 @@ static void usage( char *cmd )
 	fprintf(stderr,"    -help             Display options\n");
 	fprintf(stderr,"    -version          Display Condor version\n");
 	fprintf(stderr,"    -debug            Show extra debugging info\n");
+	fprintf(stderr,"    -num <number>     Wait for this many jobs to end\n");
+	fprintf(stderr,"                       (default is all jobs)\n");
 	fprintf(stderr,"    -wait <seconds>   Wait no more than this time\n");
 	fprintf(stderr,"                       (default is unlimited)\n\n");
 
 	fprintf(stderr,"This command watches a log file, and indicates when\n");
 	fprintf(stderr,"a specific job (or all jobs mentioned in the log)\n");
-	fprintf(stderr,"have completed or aborted.  It returns success iff\n");
+	fprintf(stderr,"have completed or aborted.  It returns success if\n");
 	fprintf(stderr,"all such jobs have completed or aborted, and returns\n");
 	fprintf(stderr,"failure otherwise.\n\n");
 
@@ -64,6 +66,7 @@ static void usage( char *cmd )
 	fprintf(stderr,"    %s logfile 35\n",cmd);
 	fprintf(stderr,"    %s logfile 1406.35\n",cmd);
 	fprintf(stderr,"    %s -wait 60 logfile 13.25.3\n",cmd);
+	fprintf(stderr,"    %s -num 2 logfile\n",cmd);
 }
 
 static void version()
@@ -85,6 +88,7 @@ int main( int argc, char *argv[] )
 	char *log_file_name = 0;
 	char *job_name = 0;
 	time_t waittime=0, stoptime=0;
+	int minjobs = 0;
 
 	myDistro->Init( argc, argv );
 	config();
@@ -108,6 +112,20 @@ int main( int argc, char *argv[] )
 			waittime = atoi(argv[i]);
 			stoptime = time(0) + waittime;
 			dprintf(D_FULLDEBUG,"Will wait until %s\n",ctime(&stoptime));
+		} else if( !strcmp( argv[i], "-num" ) ) {
+			i++;
+			if( i >= argc ) {
+				fprintf( stderr, "-num requires an argument\n" );
+				usage( argv[0] );
+				EXIT_FAILURE;
+			}
+			minjobs = atoi( argv[i] );
+			if( minjobs < 1 ) {
+				fprintf( stderr, "-num must be greater than zero\n" );
+				usage( argv[0] );
+				EXIT_FAILURE;
+			}
+			dprintf( D_FULLDEBUG, "Will wait until %d jobs end\n", minjobs );
 		} else if(argv[i][0]!='-') {
 			if(!log_file_name) {
 				log_file_name = argv[i];
@@ -179,12 +197,18 @@ int main( int argc, char *argv[] )
 					}
 				}
 				delete event;
+				if( minjobs && (completed + aborted >= minjobs ) ) {
+					printf( "Specifed number of jobs (%d) done.\n", minjobs );
+					EXIT_SUCCESS;
+				}
 			} else {
 				dprintf(D_FULLDEBUG,"%d submitted %d completed %d aborted %d remaining\n",submitted,completed,aborted,submitted-completed-aborted);
 				if(table.getNumElements()==0) {
 					if(submitted>0) {
-						printf("All jobs done.\n");
-						EXIT_SUCCESS;
+						if( !minjobs ) {
+							printf("All jobs done.\n");
+							EXIT_SUCCESS;
+						}
 					} else {
 						if(cluster==ANY_NUMBER) {
 							fprintf(stderr,"This log does not mention any jobs!\n");

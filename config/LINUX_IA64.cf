@@ -1,41 +1,6 @@
 /* Things specific to IA64_LINUX machines (all versions) */
 
-#define Architecture		IA64
-#define IS_IA64			YES
-#define IS_IA64_LINUX		YES
-
-/* Under SuSE linux, this must be yacc, but under Redhat linux, it must be
-	byacc */
-#undef YACC
-#define  YACC yacc
-
-/* XXX This is bad, bad, bad, bad, bad, bad, bad, bad, BAD! */
-#define	ArchOptimizeFlag -Wno-deprecated
-
-#if defined( IS_GLIBC22 )
-#   define Platform		IA64-LINUX-GLIBC22
-#   define PublicTargetName	ia64_linux2-glibc22
-#   define LIB_NAME		glibc22
-#elif defined( IS_GLIBC21 )
-#   define Platform		IA64-LINUX-GLIBC21
-#   define PublicTargetName	ia64_linux2-glibc21
-#   define LIB_NAME		glibc21
-#elif defined( IS_GLIBC20 )
-#   define Platform		IA64-LINUX-GLIBC20
-#   define PublicTargetName	ia64_linux2-glibc20
-#   define LIB_NAME		glibc20
-#else
-#   define Platform		IA64-LINUX-LIBC5
-#   define PublicTargetName	ia64_linux2-libc5
-#   define LIB_NAME		libc5
-#endif
-
-#if defined( IS_GLIBC )
-	/* this is a bit wonky here, but otherwise the ia64 
-		becomes a ' 1 ' on glib machines with egcs. I don't think ia64
-		is used for anything important, so away it goes. */
-#	undef ia64
-#endif
+#define	ArchOptimizeFlag
 
 #define IS_CLIPPED YES
 
@@ -43,23 +8,6 @@
 #define HAS_GSI		YES
 #define HAS_OPENSSL 	YES
 
-#undef  HAS_PVM
-#define HAS_PVM NO
-
-#undef WANT_MAN_PAGES
-
-#undef GLOBUS_FLAVOR
-#define GLOBUS_FLAVOR gcc64dbg
-
-/*#undef OpenSSLPath*/
-/*#undef GlobusPath*/
-/*#undef GAHP_DIR*/
-
-/*OpenSSLPath = /usr/uwglobus*/
-/*GlobusPath  = /usr/uwglobus*/
-/*GAHP_DIR    = /p/condor/workspaces/epaulson/gahp/bin*/
-/*GAHP_DIR    = /home/psilord/v64/v64-dirty/src/gahp*/
-/*GAHP_DIR    = /usr/local/ia64-condor-build-support*/
-
+#define WANT_PVM	NO
 
 

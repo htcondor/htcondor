@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "startd.h"
@@ -58,7 +58,6 @@ void
 cleanup_execute_dir(int pid)
 {
 	char buf[2048];
-	char pathbuf[2048];
 
 #if defined(WIN32)
 
@@ -97,6 +96,7 @@ cleanup_execute_dir(int pid)
 
 #else /* UNIX */
 
+	char pathbuf[2048];
 	struct stat st;
 	priv_state priv;
 
@@ -275,13 +275,17 @@ refuse( Stream* s )
 
 
 bool
-caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose )
+caInsert( ClassAd* target, ClassAd* source, const char* attr,
+		  const char* prefix )
 {
-	char buf[4096];
-	buf[0] = '\0';
+    char  buf[4096];
+	char* str = NULL;
+	const char* good_str = NULL; 
+	string modified_str;
 	ExprTree* tree;
 	ClassAdUnParser unp;
 	string bufString;
+
 	if( !attr ) {
 		EXCEPT( "caInsert called with NULL attribute" );
 	}
@@ -291,22 +295,25 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose )
 
 	tree = source->Lookup( attr );
 	if( !tree ) {
-		if( verbose ) {
-			dprintf( D_ALWAYS, 
-					 "caInsert: Can't find %s in source classad.\n", 
-					 attr );
-		}
 		return false;
 	}
-//	tree->PrintToStr( buf );
+
+ //	tree->PrintToNewStr( &str );
 	unp.Unparse( bufString, tree );
-	sprintf( buf, "%s=%s", attr, bufString.c_str( ) );
 	
+	if( prefix ) {
+        sprintf(buf, "%s=%s%s", attr, prefix, bufString);
+	} else {
+        sprintf(buf, "%s=%s", attr, bufString);
+	}
+
 	if( ! target->Insert( buf ) ) {
 		dprintf( D_ALWAYS, "caInsert: Can't insert %s into target classad.\n",
 				 attr );
+		free( str );
 		return false;
 	}		
+	free( str );
 	return true;
 }
 
@@ -372,36 +379,35 @@ configInsert( ClassAd* ad, const char* param_name,
 
 
 /* 
-   This function reads of a capability string and an eom from the
-   given stream.  It looks up that capability in the resmgr to find
+   This function reads of a ClaimId string and an eom from the
+   given stream.  It looks up that ClaimId in the resmgr to find
    the corresponding Resource*.  If such a Resource is found, we
    return the pointer to it, otherwise, we return NULL.  */
 Resource*
 stream_to_rip( Stream* stream )
 {
-	char* cap = NULL;
+	char* id = NULL;
 	Resource* rip;
 
 	stream->decode();
-	if( ! stream->code(cap) ) {
-		dprintf( D_ALWAYS, "Can't read capability\n" );
-		free( cap );
+	if( ! stream->code(id) ) {
+		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
+		free( id );
 		return NULL;
 	}
 	if( ! stream->end_of_message() ) {
 		dprintf( D_ALWAYS, "Can't read end_of_message\n" );
-		free( cap );
+		free( id );
 		return NULL;
 	}
-	rip = resmgr->get_by_cur_cap( cap );
+	rip = resmgr->get_by_cur_id( id );
 	if( !rip ) {
 		dprintf( D_ALWAYS, 
-				 "Error: can't find resource with capability (%s)\n",
-				 cap );
-		free( cap );
+				 "Error: can't find resource with ClaimId (%s)\n", id );
+		free( id );
 		return NULL;
 	}
-	free( cap );
+	free( id );
 	return rip;
 }
 

@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 // //////////////////////////////////////////////////////////////////////////
 //
 // This file contains the definition for class DaemonCore. This is the
@@ -96,16 +96,11 @@ typedef int     (Service::*ReaperHandlercpp)(int pid,int exit_status);
 typedef int		(*ThreadStartFunc)(void *,Stream*);
 //@}
 
-// other macros and protos needed on WIN32 for exit status
-#ifdef WIN32
-#define WEXITSTATUS(stat) ((int)(stat))
-#define WTERMSIG(stat) ((int)(stat))
-#define WIFSTOPPED(stat) ((int)(0))
-///
-int WIFEXITED(DWORD stat);
-///
-int WIFSIGNALED(DWORD stat);
-#endif  // of ifdef WIN32
+typedef enum { 
+	HANDLE_READ=1,
+	HANDLE_WRITE,
+	HANDLE_READ_WRITE
+} HandlerType;
 
 // some constants for HandleSig().
 #define _DC_RAISESIGNAL 1
@@ -150,6 +145,7 @@ class DaemonCore : public Service
 #ifdef WIN32
   friend int dc_main( int argc, char** argv );
   friend unsigned pidWatcherThread(void*);
+  friend DWORD WINAPI FindWinstaThread( LPVOID lpParam );
   friend BOOL CALLBACK DCFindWindow(HWND, LPARAM);
   friend BOOL CALLBACK DCFindWinSta(LPTSTR, LPARAM);
 #else
@@ -501,6 +497,7 @@ class DaemonCore : public Service
                          PipeHandler       handler,
                          char *            handler_descrip,
                          Service *         s                = NULL,
+                         HandlerType       handler_type     = HANDLE_READ,    
                          DCpermission      perm             = ALLOW);
 
     /** Not_Yet_Documented
@@ -517,6 +514,7 @@ class DaemonCore : public Service
                          PipeHandlercpp       handlercpp,
                          char *               handler_descrip,
                          Service*             s,
+                         HandlerType          handler_type = HANDLE_READ,    
                          DCpermission         perm = ALLOW);
 
 
@@ -797,7 +795,9 @@ class DaemonCore : public Service
 			   is called in the parent, giving the return value as
 			   the thread exit status.
 			   The function must take a single argument of type
-			   (void *) and return an int.
+			   (void *) and return an int.  The value of the return int
+			   should ONLY be a 0 or a 1.... the thread reaper can only
+			   distinguish between 0 and non-zero.
 			@param arg The (void *) argument to be passed to the thread.
 			   If not NULL, this must point to a buffer malloc()'ed by
 			   the caller.  DaemonCore will free() this memory when
@@ -810,7 +810,14 @@ class DaemonCore : public Service
 			   the copy given to the thread when the thread exits; the
 			   caller (parent) is responsible for eventually closing
 			   the copy kept with the caller.  
-			@param reaper_id The reaper number to use.  Default = 1.
+			@param reaper_id The reaper number to use.  Default = 1.  
+			   IMPORTANT: the exit_status passed to the reaper will
+			   be a 0 if the start_func returned with 0, and the reaper
+			   exit_status will be non-zero if the start_func returns with
+			   a 1.  Example: start_func returns 1, the reaper exit_status
+			   could be set to 1, or 128, or -1, or 255.... or anything 
+			   except 0.  Example: start_func returns 0, the reaper exit_status
+			   will be 0, and only 0.
 			@return The tid of the newly created thread.
 		*/
 	int Create_Thread(
@@ -829,6 +836,13 @@ class DaemonCore : public Service
 	///
 	int Kill_Thread(int tid);
 	//@}
+
+	/** Public method to allow things that fork() themselves without
+		using Create_Thread() to set the magic DC variable so that our
+		version of exit() uses exec() instead of exit() and we don't
+		call destructors when the child exits.
+	*/
+	void Forked_Child_Wants_Exit_By_Exec( bool exit_by_exec );
 
     Stream **GetInheritedSocks() { return (Stream **)inheritedSocks; }
 
@@ -918,7 +932,8 @@ class DaemonCore : public Service
                         PipeHandlercpp handlercpp,
                         char *handler_descrip,
                         Service* s, 
-                        DCpermission perm,
+					    HandlerType handler_type, 
+					    DCpermission perm,
                         int is_cpp);
 
     int Register_Reaper(int rid,
@@ -1007,6 +1022,7 @@ class DaemonCore : public Service
         void*           data_ptr;
 		bool			call_handler;
 		PidEntry*		pentry;
+		HandlerType		handler_type;
 		bool			in_handler;
     };
     // void              DumpPipeTable(int, const char* = NULL);
@@ -1139,10 +1155,8 @@ class DaemonCore : public Service
     int inServiceCommandSocket_flag;
     // end of thread local storage
         
-#ifdef WIN32
-    static char *ParseEnvArgsString(const char *env, char *inheritbuf);
-#else
-    static char **ParseEnvArgsString(const char *env, bool env);
+#ifndef WIN32
+    static char **ParseArgsString(const char *env);
 #endif
 
 	priv_state Default_Priv_State;

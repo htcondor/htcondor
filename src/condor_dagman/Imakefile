@@ -1,5 +1,5 @@
 NAME = condor_dagman
-all_target($(NAME) t_helper)
+all_target($(NAME) t_helper condor_submit_dag)
 
 #if defined(DAGMAN_HELPER)
 HELPER_FLAGS = -DBUILD_HELPER
@@ -10,22 +10,24 @@ C_PLUS_FLAGS = -I. $(STD_C_PLUS_FLAGS) \
 	-I../condor_includes -I- -Wall $(HELPER_FLAGS)
 CFLAGS = $(STD_C_FLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
+TOOL_LIB = $(STD_LIBS)
 
 OBJ = dagman_main.o submit.o dag.o job.o util.o parse.o debug.o types.o \
 	script.o scriptQ.o helper.o dagman_instantiate.o dagman_commands.o
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
-release_target($(NAME),$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
-strip_target($(NAME),$(STRIP_DIR)/bin,EXECUTABLE_MODE)
+release_target($(NAME),bin,EXECUTABLE_MODE)
+strip_target($(NAME),bin,EXECUTABLE_MODE)
 static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/bin)
 purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 
-html_target( documentation )
+c_plus_target(condor_submit_dag,condor_submit_dag.o,$(TOOL_LIB))
+release_target(condor_submit_dag,bin,EXECUTABLE_MODE)
+strip_target(condor_submit_dag,bin,EXECUTABLE_MODE)
+static_target(condor_submit_dag,condor_submit_dag.o,$(TOOL_LIB),$(STATIC_DIR)/bin)
 
-release_copy_target(condor_submit_dag,$(RELEASE_DIR)/bin,condor_submit_dag,EXECUTABLE_MODE)
-strip_copy_target(condor_submit_dag,$(STRIP_DIR)/bin,condor_submit_dag,EXECUTABLE_MODE)
-static_copy_target(condor_submit_dag,$(STATIC_DIR)/bin,condor_submit_dag,EXECUTABLE_MODE)
+html_target( documentation )
 
 #if defined(DAGMAN_HELPER)
 c_plus_target(t_helper,t_helper.o helper.o,$(LIB))

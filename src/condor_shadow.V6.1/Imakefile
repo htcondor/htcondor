@@ -8,17 +8,15 @@ LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(QMGMT_LIB)
 
 OBJ = shadow_v61_main.o baseshadow.o shadow.o mpishadow.o \
 	remoteresource.o mpiresource.o pseudo_ops.o NTreceivers.o \
-	shadow_v61_instantiate.o shadow_initializer.o \
-	shadow_user_policy.o parallelshadow.o parallelresource.o
+	shadow_v61_instantiate.o shadow_user_policy.o
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
-release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
-strip_target($(NAME),$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
+release_target($(NAME),sbin,EXECUTABLE_MODE)
+strip_target($(NAME),sbin,EXECUTABLE_MODE)
 static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
 pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
-html_target( baseshadow.h shadow.h mpishadow.h remoteresource.h \
-	parallelshadow.h parallelresource.h)
+html_target( baseshadow.h shadow.h mpishadow.h remoteresource.h )
 
 #if 0
 IMPORT_LINKS = ../../config/import_links

@@ -1,41 +1,30 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #ifndef _ENV_H
 #define _ENV_H
 
 #include "HashTable.h"
 #include "MyString.h"
-
-// ********* These are deprecated:
-
-// appends a new environment variable to env string
-bool AppendEnvVariable( char* env, char* name, char* value );
-bool AppendEnvVariableSafely( char** env, char* name, char* value );
-
-// converts unix environ array to a single semicolon-delimited string
-char* environToString( const char** unix_env );
-
-// ********* This is the new world order:
 
 class Env {
  public:
@@ -47,12 +36,26 @@ class Env {
 	bool Put( const char *nameValueExpr );
 	bool Put( const char *var, const char *val );
 	bool Put( const MyString &, const MyString & );
-	char *getDelimitedString( const char delim = env_delimiter );
+	char *getDelimitedString(char delim='\0');
+	char *getDelimitedStringForOpSys(char const *opsys);
 	char *getNullDelimitedString();
 	char **getStringArray();
+	bool getenv(MyString const &var,MyString &val) const;
+	bool IsSafeEnvValue(char const *str) const;
+
+	void GenerateParseMessages(bool flag=true);
+	void ClearParseMessages();
+	char const *GetParseMessages();
 
  protected:
 	HashTable<MyString, MyString> *_envTable;
+	bool generate_parse_messages;
+	MyString parse_messages;
+
+	bool ReadFromDelimitedString( char const *&input, char *output );
+	bool ReadFromDelimitedString_OldSyntax( char const *&input, char *output );
+	void WriteToDelimitedString(char const *input,MyString &output);
+	void AddParseMessage(char const *msg);
 };
 
 #endif	// _ENV_H

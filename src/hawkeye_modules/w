@@ -48,8 +48,9 @@ sub RunIt {
     HawkeyeLib::ParseUptime( $_, \%Uptime );
     foreach my $Attr ( keys %Uptime )
     {
-	my $Type = ( $Attr =~ /string/i ) ? "s" : "n";
-	$Hash->Add( "Uptime" . $Attr, $Type, $Uptime{$Attr} );
+	$Hash->Add( "Uptime" . $Attr,
+		    HawkeyePublish::TypeAuto,
+		    $Uptime{$Attr} );
     }
 
     # Read & parse the header line
@@ -79,7 +80,7 @@ sub RunIt {
 	    }
 	    $Prev = $Field;
 	}
-	$Hash->Add( "FIELDS", "s", join( " ", @Fields ) );
+	$Hash->Add( "FIELDS", HawkeyePublish::TypeString, join( " ", @Fields ) );
     }
 
     # Read the data lines
@@ -121,7 +122,9 @@ sub RunIt {
 			$End = $Offset;
 			my $Len = $End - $Start + 1;
 			my $Str = substr( $_, $Start, $Len );
-			$Hash->Add( $Num_ . $Field, "s", $Str );
+			$Hash->Add( $Num_ . $Field,
+				    HawkeyePublish::TypeString,
+				    $Str );
 			last;
 		    }
 		}

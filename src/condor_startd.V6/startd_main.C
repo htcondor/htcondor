@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_parameters.h"
@@ -49,6 +49,7 @@ char*	exec_path = NULL;
 
 // String Lists
 StringList *startd_job_exprs = NULL;
+StringList *startd_vm_exprs = NULL;
 static StringList *valid_cod_users = NULL; 
 
 // Hosts
@@ -61,6 +62,8 @@ int		match_timeout;		// How long you're willing to be
 int		killing_timeout;	// How long you're willing to be in
 							// preempting/killing before you drop the
 							// hammer on the starter
+int		max_claim_alives_missed;  // how many keepalives can we miss
+								  // until we timeout the claim
 time_t	startd_startup;		// Time when the startd started up
 
 int		console_vms = 0;	// # of nodes in an SMP that care about
@@ -148,9 +151,6 @@ main_init( int, char* argv[] )
 		}
 	}
 
-	// Seed the random number generator for capability generation.
-	set_seed( 0 );
-
 		// Record the time we started up for use in determining
 		// keyboard idle time on SMP machines, etc.
 	startd_startup = time( 0 );
@@ -206,12 +206,16 @@ main_init( int, char* argv[] )
 
 	// Startup Cron
 	Cronmgr = new StartdCronMgr( );
-	Cronmgr->Reconfig( );
+	Cronmgr->Initialize( );
 
 		// Now that we have our classads, we can compute things that
 		// need to be evaluated
 	resmgr->walk( &Resource::compute, A_EVALUATED );
 	resmgr->walk( &Resource::refresh_classad, A_PUBLIC | A_EVALUATED ); 
+
+		// Now that everything is computed and published, we can
+		// finally put in the attrs shared across the different VMs
+	resmgr->walk( &Resource::refresh_classad, A_PUBLIC | A_SHARED_VM ); 
 
 		// If we EXCEPT, don't leave any starters lying around.
 	_EXCEPT_Cleanup = do_cleanup;
@@ -222,8 +226,8 @@ main_init( int, char* argv[] )
 		// Commands
 		//////////////////////////////////////////////////
 
-		// These commands all read the capability off the wire, find
-		// the resource with that capability, and call appropriate
+		// These commands all read the ClaimId off the wire, find
+		// the resource with that ClaimId, and call appropriate
 		// action on that resource.  Plus, all of these commands only
 		// make sense when we're in the claimed state.  So, we can
 		// handle them all with a common handler.  For all of them,
@@ -310,6 +314,9 @@ main_init( int, char* argv[] )
 								  "command_match_info", 0, NEGOTIATOR );
 
 		// the ClassAd-only command
+	daemonCore->Register_Command( CA_AUTH_CMD, "CA_AUTH_CMD",
+								  (CommandHandler)command_classad_handler,
+								  "command_classad_handler", 0, WRITE );
 	daemonCore->Register_Command( CA_CMD, "CA_CMD",
 								  (CommandHandler)command_classad_handler,
 								  "command_classad_handler", 0, WRITE );
@@ -370,7 +377,7 @@ finish_main_config( void )
 	resmgr->reset_timers();
 
 	dprintf( D_FULLDEBUG, "MainConfig finish\n" );
-	Cronmgr->Reconfig( );
+	Cronmgr->Reconfig(  );
 	resmgr->starter_mgr.init();
 
 		// Re-evaluate and update the CM for each resource (again, we
@@ -471,6 +478,14 @@ init_params( int first_time)
 		free( tmp );
 	}
 
+	tmp = param( "MAX_CLAIM_ALIVES_MISSED" );
+	if( !tmp ) {
+		max_claim_alives_missed = 6;
+	} else {
+		max_claim_alives_missed = atoi( tmp );
+		free( tmp );
+	}
+
 	sysapi_reconfig();
 
 	if( startd_job_exprs ) {
@@ -485,6 +500,17 @@ init_params( int first_time)
 	} else {
 		startd_job_exprs = new StringList();
 		startd_job_exprs->initializeFromString( ATTR_JOB_UNIVERSE );
+	}
+
+	if( startd_vm_exprs ) {
+		delete( startd_vm_exprs );
+		startd_vm_exprs = NULL;
+	}
+	tmp = param( "STARTD_VM_EXPRS" );
+	if( tmp ) {
+		startd_vm_exprs = new StringList();
+		startd_vm_exprs->initializeFromString( tmp );
+		free( tmp );
 	}
 
 	tmp = param( "VIRTUAL_MACHINES_CONNECTED_TO_CONSOLE" );

@@ -24,9 +24,9 @@ CMNT OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE
 CMNT OR PERFORMANCE OF THIS SOFTWARE.
 CMNT
 
-#include <Compiler.select>
-#include <Platform.select>
 #include <Global.h>
+#include <configure.cf>
+#include <Platform.select>
 
 #define BeforeVendorCF
 #include <site.def>
@@ -42,16 +42,10 @@ CMNT
 #include <site.def>
 #undef AfterVendorCF
 
+#include <externals.cf>
 #include <Project.tmpl>
 #include <Imake.rules>
 #include INCLUDE_IMAKEFILE
-
-clean::
-	rm -f *.o core
-
-CMNT Do instantiations with template_inst( src, obj ) imake rule
-CMNT instantiate.o: instantiate.C
-CMNT 	$(CPlusPlus) $(STD_C_FLAGS) -c instantiate.C
 
 ALWAYS:
 

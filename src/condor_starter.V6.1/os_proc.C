@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_classad.h"
@@ -37,6 +37,7 @@
 #include "sig_name.h"
 #include "exit.h"
 #include "condor_uid.h"
+#include "stream_handler.h"
 #ifdef WIN32
 #include "perm.h"
 #endif
@@ -53,16 +54,12 @@ OsProc::OsProc( ClassAd* ad )
 	is_suspended = false;
 	num_pids = 0;
 	dumped_core = false;
-	job_iwd = NULL;
 	UserProc::initialize();
 }
 
 
 OsProc::~OsProc()
 {
-	if( job_iwd ) {
-		free( job_iwd );
-	}
 }
 
 
@@ -186,12 +183,25 @@ OsProc::StartJob()
 		// Environment 
 		// // // // // // 
 
-	char* env_str = NULL;
-	JobAd->LookupString( ATTR_JOB_ENVIRONMENT, &env_str );
-
 		// Now, instantiate an Env object so we can manipulate the
 		// environment as needed.
 	Env job_env;
+	char* env_str = NULL;
+
+	env_str = param( "STARTER_JOB_ENVIRONMENT" );
+	if(env_str) {
+		if( ! job_env.Merge(env_str) ) {
+			dprintf( D_ALWAYS, "Aborting OSProc::StartJob: "
+					           "Invalid value for STARTER_JOB_ENVIRONMENT: "
+				               "%s\n",env_str);
+			return 0;
+		}
+		free(env_str);
+		env_str = NULL;
+	}
+
+	JobAd->LookupString( ATTR_JOB_ENVIRONMENT, &env_str );
+
 	if( env_str ) { 
 		if( ! job_env.Merge(env_str) ) {
 			dprintf( D_ALWAYS, "Invalid %s found in JobAd.  "
@@ -238,6 +248,13 @@ OsProc::StartJob()
 			starter_stdin = true;
 			dprintf( D_ALWAYS, "Input file: using STDIN of %s\n",
 					 mySubSystem );
+		} else if(Starter->jic->streamInput()) {
+			StreamHandler *handler = new StreamHandler;
+			if(!handler->Init(filename,"stdin",false)) {
+				Starter->jic->notifyStarterError("unable to establish standard input stream\n",true);
+			}
+			fds[0] = handler->GetJobPipe();
+			dprintf( D_ALWAYS, "Input file: streaming from remote file %s\n",filename);
 		} else {
 			if( (fds[0]=open(filename, O_RDONLY)) < 0 ) {
 				failed_stdin = 1;
@@ -274,6 +291,13 @@ OsProc::StartJob()
 			starter_stdout = true;
 			dprintf( D_ALWAYS, "Output file: using STDOUT of %s\n",
 					 mySubSystem );
+		} else if(Starter->jic->streamOutput()) {
+			StreamHandler *handler = new StreamHandler;
+			if(!handler->Init(filename,"stdout",true)) {
+				Starter->jic->notifyStarterError("unable to establish standard output stream\n",true);
+			}
+			fds[1] = handler->GetJobPipe();
+			dprintf( D_ALWAYS, "Output file: streaming to remote file %s\n",filename);
 		} else {
 			if( (fds[1]=open(filename,O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 )
 			{
@@ -317,6 +341,13 @@ OsProc::StartJob()
 			starter_stderr = true;
 			dprintf( D_ALWAYS, "Error file: using STDERR of %s\n",
 					 mySubSystem );
+		} else if(Starter->jic->streamError()) {
+			StreamHandler *handler = new StreamHandler;
+			if(!handler->Init(filename,"stderr",true)) {
+				Starter->jic->notifyStarterError("unable to establish standard error stream\n",true);
+			}
+			fds[2] = handler->GetJobPipe();
+			dprintf( D_ALWAYS, "Error file: streaming to remote file %s\n",filename);
 		} else {
 			if( (fds[2]=open(filename,O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0 )
 			{
@@ -564,6 +595,7 @@ OsProc::renameCoreFile( void )
 	int t_errno = 0;
 
 	priv_state old_priv;
+	const char* job_iwd = Starter->jic->jobIWD();
 
 	char buf[64];
 	sprintf( buf, "core.%d.%d", Starter->jic->jobCluster(), 

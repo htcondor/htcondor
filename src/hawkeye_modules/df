@@ -18,53 +18,90 @@ my $Hawkeye;
 my $OsInfo = ();
 my $OS;
 my @OsInfo = (
+	      # Any version of IRIX
 	      { ostype => "IRIX.*", osrev => ".*",
-		df => "df",
-		fs => 0,
-		size => 2,
-		used => 3,
-		avail => 4,
-		pused => 5,
-		mnt => 6 },
+		df =>
+		{ command => "df",
+		  fs => 0,
+		  size => 2,
+		  used => 3,
+		  avail => 4,
+		  pused => 5,
+		  mnt => 6 },
+		mount =>
+		{ command => "/sbin/mount",
+		  mountpoint => 0,
+		  fs => 2, },
+	      },
+	      # Any version of HP-UX
 	      { ostype => "HP-UX", osrev => ".*",
-		df => "bdf",
-		fs => 0,
-		size => 1,
-		used => 2,
-		avail => 3,
-		pused => 4,
-		mnt => 5 },
+		df =>
+		{ command => "bdf",
+		  fs => 0,
+		  size => 1,
+		  used => 2,
+		  avail => 3,
+		  pused => 4,
+		  mnt => 5 },
+		mount =>
+		{ command => "/sbin/mount",
+		  mountpoint => 0,
+		  fs => 2, },
+	      },
+	      # Solaris
 	      { ostype => "SunOS", osrev => "5",
-	        df => "df -k",
-		fs => 0,
-		size => 1,
-		used => 2,
-		avail => 3,
-		pused => 4,
-		mnt => 5 },
+	        df =>
+		{ command => "df -k",
+		  fs => 0,
+		  size => 1,
+		  used => 2,
+		  avail => 3,
+		  pused => 4,
+		  mnt => 5 },
+		mount =>
+		{ command => "/sbin/mount",
+		  mountpoint => 0,
+		  fs => 2, },
+	      },
+	      # SunOS 4.x
 	      { ostype => "SunOS", osrev => "4",
-		df => "df",
-		fs => 0,
-		size => 1,
-		used => 2,
-		avail => 3,
-		pused => 4,
-		mnt => 5 },
+		df =>
+		{ command => "df",
+		  fs => 0,
+		  size => 1,
+		  used => 2,
+		  avail => 3,
+		  pused => 4,
+		  mnt => 5 },
+		mount =>
+		{ command => "/sbin/mount",
+		  mountpoint => 0,
+		  fs => 2, },
+	      },
+	      # Any Linux
 	      { ostype => "Linux", osrev => ".*",
-		df => "df",
-		fs => 0,
-		size => 1,
-		used => 2,
-		avail => 3,
-		pused => 4,
-		mnt => 5 },
+		df =>
+		{ command => "df",
+		  fs => 0,
+		  size => 1,
+		  used => 2,
+		  avail => 3,
+		  pused => 4,
+		  mnt => 5 },
+		mount =>
+		{ command => "/bin/mount",
+		  mountpoint => 2,
+		  fs => 0, },
+	      }
 	  );
-my %OsFields = ( fs => "fs",
-		 size => "size",
-		 used => "used",
-		 avail => "avail",
-		 pct_used => "pused",
-		 mnt => "mnt" );
+my %DfFields = (
+		fs => "fs",
+		size => "size",
+		used => "used",
+		avail => "avail",
+		pct_used => "pused",
+		mnt => "mnt"
+	       );
 
 main();
 
@@ -86,20 +123,10 @@ sub Init
     $Hawkeye->AutoIndexSet( 0 );
 
     # Learn about our O/S
-    foreach my $OsNum ( 0 .. $#OsInfo )
-    {
-	my $OsType = $OsInfo[$OsNum]{ostype};
-	my $OsRev = $OsInfo[$OsNum]{osrev};
-	if (  ( $ENV{OS_TYPE} =~ /$OsType/ ) &&
-	      ( $ENV{OS_REV}  =~ /$OsRev/ )  )
-	{
-	    $OS = $OsInfo[$OsNum];
-	    last;
-	}
-    }
+    $OS = HawkeyeLib::DetectOs( \@OsInfo );
 
     # Did we find a match?
-    if ( ! defined( $OS->{df} ) )
+    if ( ! $OS )
     {
 	die "O/S Not defined\n";
     }
@@ -118,7 +145,8 @@ sub RunIt
     # Get the real mount points
     my %RealMountPoints;
     my $CheckMountPoints = 0;
-    if ( open ( MOUNT, "/bin/mount|" ) )
+    my $OsMount = $OS->{mount};
+    if ( open ( MOUNT, $OsMount->{command}."|" ) )
     {
 	while ( <MOUNT> )
 	{
@@ -130,7 +158,9 @@ sub RunIt
 		next;
 	    }
 	    $CheckMountPoints++;
-	    $RealMountPoints{$Mount[2]} = $Mount[0];
+	    my $Fs = $Mount[$OsMount->{fs}];
+	    my $MPoint = $Mount[$OsMount->{mountpoint}];
+	    $RealMountPoints{$MPoint} = $Fs;
 	}
 	close( MOUNT );
     }
@@ -154,41 +184,31 @@ sub RunIt
 	}
 
 	# Run df on it
-        chop( my $df_out = `$OS->{df} $mount | grep -v Filesystem` );
+	my $Cmd = $OS->{df}{command} . " $mount | grep -v Filesystem";
+        chop( my $df_out = `$Cmd` );
 
 	my @Tmp = split (/\s+/, $df_out);
 
 	# Store into the 'DfOut' hash
 	my $Key;
-	foreach $Key ( keys %OsFields )
+	foreach $Key ( keys %DfFields )
 	{
-	    $DfOut{$mount}{$Key} = $Tmp[$OS->{$OsFields{$Key}}];
+	    $DfOut{$mount}{$Key} = $Tmp[$OS->{df}{$DfFields{$Key}}];
 	}
     }
 
-    ###
-    ### Store the fields used
-    ###
-    {
-	my $Fields = "";
-	my $Key;
-	foreach $Key ( keys %OsFields )
-	{
-	    $Fields = $Fields . "$Key ";
-	}
-	$Hawkeye->Store( "FIELDS" , $Fields );
-    }
+    # Store the fields used
+    $Hawkeye->StoreValue( "FIELDS" ,
+			  join( " ", keys %DfFields ),
+			  HawkeyePublish::TypeString );
 
-    ###
-    ### Now, walk through the point point array
-    ###
+    # Now, walk through the point point array
     foreach $MountPoint ( keys %DfOut )
     {
 	my $PublishName = $MountPoint;
 	$PublishName = "root" if ( $PublishName eq "/" );
 
-        ###
-        ### Clean up the published name...
+        # Clean up the published name...
         $PublishName =~ s/^\/$/root/;
         $PublishName =~ s/^\///;
         $PublishName =~ s/[\/\.]/_/g;
@@ -196,7 +216,7 @@ sub RunIt
 	# Publish to Hawkeye
 	my $Key;
 	$Hawkeye->StoreIndex( $PublishName );
-	foreach $Key ( keys %OsFields )
+	foreach $Key ( keys %DfFields )
 	{
 	    # Pull out & clean up the value, and store it away
 	    my $Value = $DfOut{$MountPoint}{$Key};
@@ -204,11 +224,15 @@ sub RunIt
 	    if ( $Value =~ /^(\d+)\%?$/ )
 	    {
 		$Value = $1;
-		$Hawkeye->StoreNum( $Name, $Value );
+		$Hawkeye->StoreValue( $Name,
+				      $Value,
+				      HawkeyePublish::TypeNumber );
 	    }
 	    else
 	    {
-		$Hawkeye->Store( $Name, $Value );
+		$Hawkeye->StoreValue( $Name,
+				      $Value,
+				      HawkeyePublish::TypeAuto );
 	    }
 	}
     }

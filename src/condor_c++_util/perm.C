@@ -1,30 +1,31 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "perm.h"
 #include "domain_tools.h"
 #include "Lm.h"
+#include "dynuser.h"
 
 //
 // get_permissions:  1 = yes, 0 = no, -1 = unknown/error
@@ -164,7 +165,9 @@ int perm::get_permissions( const char *file_name, ACCESS_MASK &AccessRights ) {
 				return -1;
 			}
 
-			dprintf(D_FULLDEBUG, "Calling Perm::userInAce() for %s\\%s\n", (Account_name) ? Account_name : "NULL", (Domain_name) ? Domain_name : "NULL" );
+			dprintf(D_FULLDEBUG, "Calling Perm::userInAce() for %s\\%s\n",
+				   (Domain_name) ? Domain_name : "NULL",
+				   (Account_name) ? Account_name : "NULL" );
 			result = userInAce ( current_ace, Account_name, Domain_name );		
 			
 			if (result == 1) {
@@ -301,7 +304,7 @@ int perm::userInGlobalGroup( const char *account, const char *domain, const char
 		);
 	
 	if (status == NERR_DCNotFound ) {
-		dprintf(D_ALWAYS, "perm::NetGetDCName() failed: DCNotFound (domain looked up: %s)", group_domain);
+		dprintf(D_ALWAYS, "perm::NetGetDCName() failed: DCNotFound (domain looked up: %s)\n", group_domain);
 		NetApiBufferFree( BufPtr );
 		return -1;
 	} else if ( status == ERROR_INVALID_NAME ) {
@@ -384,6 +387,7 @@ int perm::userInAce ( const LPVOID cur_ace, const char *account, const char *dom
 	unsigned long name_buffer_size = 0;
 	unsigned long domain_name_size = 0;
 	SID_NAME_USE peSid;
+	int result;
 
 	LPVOID ace_sid = &((ACCESS_ALLOWED_ACE*) cur_ace)->SidStart;
 	
@@ -425,10 +429,7 @@ int perm::userInAce ( const LPVOID cur_ace, const char *account, const char *dom
 
 	if ( peSid == SidTypeUser ) 
 	{
-		int result = domainAndNameMatch( account, trustee_name, domain, trustee_domain );
-		if (trustee_name) { delete[] trustee_name; trustee_name = NULL; }
-		if (trustee_domain) { delete[] trustee_domain; trustee_domain = NULL; }
-		return result;
+		result = domainAndNameMatch( account, trustee_name, domain, trustee_domain );
 	} 
 	else if ( ( peSid == SidTypeGroup ) ||
 		( peSid == SidTypeAlias ) ||
@@ -438,43 +439,43 @@ int perm::userInAce ( const LPVOID cur_ace, const char *account, const char *dom
 		
 		char computerName[MAX_COMPUTERNAME_LENGTH+1];
 		unsigned long nameLength = MAX_COMPUTERNAME_LENGTH+1;
+		char* builtin = getBuiltinDomainName();
+		char* nt_authority = getNTAuthorityDomainName();
+
 		
 		int success = GetComputerName( computerName, &nameLength );
 		
 		if (! success ) {
+			// this should never happen
 			dprintf(D_ALWAYS, "perm::GetComputerName failed: (Err: %d)", GetLastError());
-//			delete[] trustee_str;
-			return -1;
-		}
-		
-		if ( strcmp( trustee_name, "Everyone" ) == 0 ) // if file is in group Everyone, we're done.
-		{
-			return 1;
-		} else if ( 
-			(trustee_domain == NULL) || 
+			result = -1; // failure
+		} else if ( strcmp( trustee_name, "Everyone" ) == 0 ) { 
+			// if file is in group Everyone, we're done.
+			result = 1; 
+		} else if ((trustee_domain == NULL) || 
 			( strcmp( trustee_domain, "" ) == 0 ) ||
-			( strcmp(trustee_domain, "BUILTIN") == 0 ) ||
-			( strcmp(trustee_domain, "NT AUTHORITY") == 0 ) ||
+			( strcmp(trustee_domain, builtin) == 0 ) ||
+			( strcmp(trustee_domain, nt_authority) == 0 ) ||
 			( strcmp(trustee_domain, computerName ) == 0 ) ) {
 			
-			int result = userInLocalGroup( account, domain, trustee_name );			
-			if (trustee_name) { delete[] trustee_name; trustee_name = NULL; }
-			if (trustee_domain) { delete[] trustee_domain; trustee_domain = NULL; }
-			return result;
-
-		}
-		else { // if group is global
-			int result = userInGlobalGroup( account, domain, trustee_name, trustee_domain );
-			if (trustee_name) { delete[] trustee_name; trustee_name = NULL; }
-			if (trustee_domain) { delete[] trustee_domain; trustee_domain = NULL; }
-			return result;
-		}
+			result = userInLocalGroup( account, domain, trustee_name );			
 		
+		} else { // if group is global
+			result = userInGlobalGroup( account, domain, trustee_name, trustee_domain );
+		}
+
+		delete[] builtin;
+		delete[] nt_authority;
 	} // is group
 	else {
 		// If it's not a user and not a group, I don't know what it is, so return error
-		return -1;
+		result = -1;
 	}	
+
+	if (trustee_name) { delete[] trustee_name; trustee_name = NULL; }
+	if (trustee_domain) { delete[] trustee_domain; trustee_domain = NULL; }
+
+	return result;
 } 
 
 perm::perm() {
@@ -504,13 +505,17 @@ perm::~perm() {
 bool perm::init( const char *accountname, char *domain ) 
 {
 	SID_NAME_USE snu;
+	char qualified_account[1024];
 	
 	if ( psid && must_freesid ) FreeSid(psid);
 	must_freesid = false;
 	
 	psid = (PSID) &sidBuffer;
 
-	dprintf(D_FULLDEBUG,"perm::init() starting up for account (%s) domain (%s)\n", accountname, ( domain ? domain : "NULL"));
+	dprintf(D_FULLDEBUG,"perm::init() starting up for account (%s) "
+			"domain (%s)\n", accountname, ( domain ? domain : "NULL"));
+
+	// copy class-wide variables for account and domain
 	
 	Account_name = new char[ strlen(accountname) +1 ];
 	strcpy( Account_name, accountname );
@@ -519,12 +524,26 @@ bool perm::init( const char *accountname, char *domain )
 	{
 		Domain_name = new char[ strlen(domain) +1 ];
 		strcpy( Domain_name, domain );
-	} else {
-		Domain_name = NULL;
-	}
 	
-	if ( !LookupAccountName( domain,		// Domain
-		accountname,						// Account name
+		// now concatenate our domain and account name for LookupAccountName()
+		// so that we have domain\username
+		if ( 0 > snprintf(qualified_account, 1023, "%s\\%s",
+			   	domain, accountname) ) {
+		
+			dprintf(D_ALWAYS, "Perm object: domain\\account (%s\\%s) "
+				"string too long!\n", domain, accountname );
+			return false;
+		}
+
+	} else {
+
+		// no domain specified, so just copy the accountname.
+		Domain_name = NULL;
+		strncpy(qualified_account, accountname, 1023);
+	}
+
+	if ( !LookupAccountName( NULL,			// System
+		qualified_account,					// Account name
 		psid, &sidBufferSize,				// Sid
 		domainBuffer, &domainBufferSize,	// Domain
 		&snu ) )							// SID TYPE
@@ -674,7 +693,7 @@ int perm::set_acls( const char *filename )
 	ACCESS_ALLOWED_ACE *pace,*pace2;
 	
 	// If this is not on an NTFS volume, we're done.  In fact, we'll
-	// likely crash if we try all the below ACL crap on a volume which
+	// likely crash if we try all the below ACL junk on a volume which
 	// does not support ACLs. Dooo!
 	if ( !volume_has_acls(filename) ) 
 	{

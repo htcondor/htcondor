@@ -41,6 +41,22 @@
 ##  Pool is: "UW-Madison CS" (you don't need to put in the " marks).
 #COLLECTOR_NAME		= Short Description of your pool
 
+##  By default, every pool sends periodic updates to a central
+##  condor_collector at UW-Madison with basic information about the
+##  status of your pool.  This includes only the number of total
+##  machines, the number of jobs submitted, the number of machines
+##  running jobs, the hostname of your central manager, and the
+##  "COLLECTOR_NAME" specified above.  These updates help us see how
+##  Condor is being used around the world.  By default, they will be
+##  sent to condor.cs.wisc.edu.  If you don't want these updates sent
+##  from your pool, uncomment the following entry:
+#CONDOR_DEVELOPERS_COLLECTOR = NONE
+
+##  Additional reporting (like that described above) can be sent via
+##  email.  By default, it is sent to "condor-admin@cs.wisc.edu".  If
+##  you wish to disable this reporting, uncomment this entry.
+#CONDOR_DEVELOPERS = NONE
+
 ##  What daemons do you want to run on your central manager?  
 ##  NOTE: For it to be the central manager, you need the NEGOTIATOR
 ##  and COLLECTOR to run.  It's optional whether or not you want to
@@ -81,20 +97,6 @@ NEGOTIATOR    = $(SBIN)/condor_negotiator
 ##  Network timeout when talking to anyone doing a query:
 #QUERY_TIMEOUT		= 60
 
-##  Email address of the condor-developers at UW-Madison.  
-#CONDOR_DEVELOPERS	= condor-admin@cs.wisc.edu
-
-##  By default, every pool sends periodic updates to a central
-##  condor_collector at UW-Madison with basic information about the
-##  status of your pool.  This includes only the number of total
-##  machines, the number of jobs submitted, the number of machines
-##  running jobs, the hostname of your central manager, and the
-##  "COLLECTOR_NAME" specified above.  These updates help us see
-##  how Condor is being used around the world.  By default, they will
-##  be sent to condor.cs.wisc.edu.  If you don't want these updates to
-##  be sent from your pool, uncomment the following line.
-#CONDOR_DEVELOPERS_COLLECTOR = NONE
-
 ##  Enable history logging in the collector
 #KEEP_POOL_HISTORY = False
 
@@ -121,6 +123,44 @@ NEGOTIATOR    = $(SBIN)/condor_negotiator
 ##  allocates for a single process.  If you do not enable a socket
 ##  cache, TCP updates will be refused by the collector.
 #COLLECTOR_SOCKET_CACHE_SIZE = 300
+
+## Turn on update statistics in the collector.  These fields cause the
+## collector to gather and publish some statistics about lost UDP
+## updates.  All updates that are sent to the collector will be
+## stamped with a sequence number that the collector can use to detect
+## that previous updates have been missed.  Setting
+## "COLLECTOR_DAEMON_STATS = True" enables the collector to publish
+## UpdatesTotal, UpdatesSquenced and UpdatesLost fields into each ClassAd
+## that it receives and sends out.  To turn these off, set this value
+## to False.
+#COLLECTOR_DAEMON_STATS		= True
+
+## This is related to COLLECTOR_DAEMON_STATS.  If
+## COLLECTOR_DAEMON_HISTORY_SIZE is non-zero, the collector will also
+## publish an UpdatesHistory into each ClassAd the it receives and sends
+## out.  The collector will keep track, for each of the past
+## COLLECTOR_DAEMON_HISTORY_SIZE updates, whether that update was lost
+## or not.  UpdatesHistory is a hex string which represents this history.
+## The hex string is long enough to accomodate the specified number of
+## updates, and is initally filled with zeros.  For each update, a logical
+## "one" bit represents a lost update, and a zero is a successful update.
+## The most significant bit represents the most recent update, with the
+## value shifted right with each new update.  Thus, UpdatesHistory = "0x40"
+## would be the history for the last 8 updates, with the second most recent
+## update marked as lost, and all others successful.  If the next updates
+## are all successful, the values published, after each update, would be:
+## 0x20, 0x10, 0x08, 0x04, 0x02, 0x01, 0x00.  Setting
+## COLLECTOR_DAEMON_HISTORY_SIZE = 0 will disable this feature.
+#COLLECTOR_DAEMON_HISTORY_SIZE	= 128
+
+## COLLECTOR_CLASS_HISTORY_SIZE turns on "per daemon" stats that can
+## be queried with "condor_status -collector -l".  This enables the
+## collector to publish overall history about all updates of a given
+## "class" (i.e.  "Start" would represent the history of all of the most
+## recent Machine ads).  Setting COLLECTOR_CLASS_HISTORY_SIZE = 0 will
+## disable this feature.
+#COLLECTOR_CLASS_HISTORY_SIZE	= 1024
+
 
 ##--------------------------------------------------------------------
 ##  condor_negotiator

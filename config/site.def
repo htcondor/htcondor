@@ -1,13 +1,5 @@
 #ifdef BeforeVendorCF
 
-/* BEGIN Things passed in from condor_imake */
-GCC_LIBC = LIB_GCC
-#define Crt0 CRT_BEGIN
-/* END Things passed in from condor_imake */
-
-#define HasGcc		YES
-#define HasGPlusPlus	YES
-
 #define CCompiler	gcc
 #define CPlusCompiler	g++
 #define PreProcessCmd	CCompiler -E -x c-header
@@ -18,27 +10,10 @@ GCC_LIBC = LIB_GCC
 
 #define DocCompiler     /unsup/doc++-3.4.8/bin/doc++
 
-#define MkDepend ../../GENERIC/mdepend.sh
-
-#define X11LibPath /s/X11R6-2/lib
-#define X11Include /s/X11R6-2/include
-
-#define ZLibPath /p/condor/workspaces/glibc/zlib/lib
-#define ZIncludePath /p/condor/workspaces/glibc/zlib/include
-
-/* To build on ring.cs.wisc.edu, Solaris 2.9(this should go away!) */
-/*#define ZLibPath /usr/local/lib*/
-/*#define ZIncludePath /usr/local/include*/
-
-/* Uncomment this line to enable the NeST I/O module */
-/* #define ENABLE_NEST */
-#define NestLibPath /p/condor/workspaces/nest/lib
-#define NestIncludePath /p/condor/workspaces/nest/include
 
 /* Put all of your #defines up here do you can turn them off/redefine
 	them selectively for an architecture if you desire. */
 #define WANT_MAN_PAGES	YES
-#define WANT_CONDOR_ANALZYE YES
 #define IS_V6			YES
 #define USE_QMGMT		YES
 #define HAS_NEW_FORTRAN YES
@@ -46,7 +21,7 @@ GCC_LIBC = LIB_GCC
 #define WANT_JAVA       YES
 #define WANT_PVM		YES
 #define WANT_CONDOR_G	YES
-#define WANT_NETMAN		YES
+#define WANT_NETMAN	NO
 #define WANT_GSI		YES
 #define WANT_X509       YES
 #define WANT_KERBEROS   YES
@@ -55,13 +30,13 @@ GCC_LIBC = LIB_GCC
 #define WANT_BLOWFISH   YES
 #define WANT_CLASSAD_FUNCTIONS YES
 #define WANT_DAGMAN_HELPER     YES
-
-GAHP_DIR = /p/condor/workspaces/epaulson/gahp.V65/bin
+#define WANT_NEST	NO		/* the NeST I/O module */
+#define WANT_ORACLE_UNIVERSE   NO
+#define WANT_NORDUGRID_UNIVERSE	NO
+#define WANT_DRMAA		YES
 
 #define USE_GLOBUS_OPENSSL YES
-OpenSSLPath        = /unsup/globus-2.2.4
-GlobusPath = /unsup/globus-2.2.4
-
+#define NEEDS_PRELINKER	NO
 #endif  /* BeforeVendorCF */
 
 #ifdef AfterVendorCF
@@ -69,24 +44,9 @@ GlobusPath = /unsup/globus-2.2.4
 /* Top should be the root of the source directory you want to use if
 you want our top-level Makefile to build the directory tree with all
 the soft links.  The links will point back to Top/src/... */
-#define Top /p/condor/workspaces/zmiller/merge/arena/
+#define Top /p/condor/workspaces/roy/trunk-merge/arena
 
 #define TmpDir	/tmp
-
-/*
- * GccVersion should be the only one that needs to be changed from time to time
- */
-#define GccVersion pgcc-2.91.57
-
-#if defined( GccPath )
-#undef GccPath
-#endif
-#define GccPath /s/egcs-1.1
-
-#if defined( CrtLibPath )
-#undef CrtLibPath
-#endif
-#define CrtLibPath concat5(GccPath,/lib/gcc-lib/,GccArch,/,GccVersion)
 
 #if MALLOC_DEBUG
 #define CFlags -DMALLOC_DEBUG
@@ -95,40 +55,5 @@ the soft links.  The links will point back to Top/src/... */
 #endif
 
 #define CondorAdministrator	condor-admin
-#define YpLib
-
-/*------------------------------------------
- * Condor Credential API related
- *------------------------------------------*/
-#if WANT_KERBEROS && HAS_KERBEROS
-KERBEROS_DIR = 			KERBEROS_PATH
-KERBEROS_INCLUDE =		$(KERBEROS_DIR)/include
-#if KERBEROS_K5
-KERBEROS_LIB =			$(KERBEROS_DIR)/lib/libkrb5.a        \
-                		$(KERBEROS_DIR)/lib/libk5crypto.a    \
-				$(KERBEROS_DIR)/lib/libcom_err.a
-#else
-KERBEROS_LIB =			$(KERBEROS_DIR)/lib/libkrb5.a        \
-				$(KERBEROS_DIR)/lib/libcrypto.a      \
-				$(KERBEROS_DIR)/lib/libcom_err.a
-#endif
-
-#else /* WANT_KERBEROS && HAS_KERBEROS */
-KERBEROS_LIB =
-KERBEROS_INCLUDE = 
-#endif
-
-/* Set up where I get the glibc libraries for packaging with the release */
-#if IS_GLIBC21
-GLIBC_DIR = /p/condor/workspaces/glibc/glibc-install/lib
-#elif IS_GLIBC22
-GLIBC_DIR = /p/condor/workspaces/glibc/glibc-install/lib-glibc2.2.2/lib
-#elif IS_GLIBC23
-GLIBC_DIR = /p/condor/workspaces/glibc/glibc-install/lib-glibc2.3.2/lib
-#endif
-
-MANDIR = /p/condor/workspaces/man/v6.5
-PVM_DIR = /afs/cs.wisc.edu/p/condor/workspaces/pvm/pvm3.4.2
-CONDOR_ANALYZE_DIR = /afs/cs.wisc.edu/p/condor/workspaces/epaulson/condor_analyze_dir/bin
 
 #endif  /* AfterVendorCF */

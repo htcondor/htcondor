@@ -10,55 +10,54 @@
 ** Shared Linux Settings
 **************************************************************************/
 
-#define OperatingSystem		LINUX
-#define IS_LINUX		YES
-
-/* We want the binaries we release to the CS pool for Linux to be
-statically linked to avoid problems */
-#define RELEASE_IS_STATIC	YES
+#define HAS_DAGMAN_HELPER YES
 
 #if defined( IS_GLIBC )
-#   undef IS_GLIBC
-#   define IS_GLIBC		YES
-#   define IS_GLIBC_LINUX	YES
-
-/* Yes, we actually need to know the difference between glibc 2.0 and 2.1 */
-#if defined( IS_GLIBC20 )
-#   undef IS_GLIBC20
-#	define IS_GLIBC20	YES
-#   define GlibCFlag		-DGLIBC=GLIBC -DGLIBC20=GLIBC20
-#   define HAS_DAGMAN_HELPER NO
-#elif defined( IS_GLIBC21 )
-#	undef IS_GLIBC21
-#	define IS_GLIBC21	YES
-#   define GlibCFlag		-DGLIBC=GLIBC -DGLIBC21=GLIBC21
-#   define HAS_DAGMAN_HELPER NO
-#elif defined( IS_GLIBC22 )
-#	undef IS_GLIBC22
-#	define IS_GLIBC22	YES
-#   define GlibCFlag		-DGLIBC=GLIBC -DGLIBC22=GLIBC22
-#   define HAS_DAGMAN_HELPER YES
-#elif defined( IS_GLIBC23 )
-#	undef IS_GLIBC23
-#	define IS_GLIBC23	YES
-#   define GlibCFlag		-DGLIBC=GLIBC -DGLIBC23=GLIBC23
-#   define HAS_DAGMAN_HELPER YES
-#endif
-
+#  if defined( IS_GLIBC22 )
+#    define GlibCFlag		-DGLIBC=GLIBC -DGLIBC22=GLIBC22
+#  elif defined( IS_GLIBC23 )
+#    define GlibCFlag		-DGLIBC=GLIBC -DGLIBC23=GLIBC23
+#  endif
 #else /* Non IS_GLIBC */
-#   define GlibCFlag
-#   define HAS_DAGMAN_HELPER NO
+#  define GlibCFlag
+#  define HAS_DAGMAN_HELPER NO
 #endif
 
 #define PlatformFlags		ArchOptimizeFlag GlibCFlag
 
 #define PlatformLdFlags		-lresolv -ldl
 
+#if IS_CLIPPED
+/* This is sort of odd, since we never use this defined when in clipped mode,
+	but just in case, we'll give it a reasonable value */
 #define SimpleLibC /usr/lib/libc.a
-#define LibC SimpleLibC
+#else
+	/* It used to be the case, before this checkin, that we would
+		extract needed .o files from /usr/lib/libc.a and the link
+		them against the glibc that we manually create which has
+		nss statically linked in. However, on redhat 9, the rpm
+		build of the static nss glibc differed from the system
+		glibc in that they seemingly had different feature sets.
+		The system glibc had run time signals, the hand built
+		one did not, and no deciphering of the build arguments
+		could determine what the incantation was to make the
+		feature sets be identical.  Since variables came and
+		went in certain .o files based upon this real time signal
+		stuff, the extracted system .o could be using an undefined
+		variable that the hand built glibc now never defines. Or
+		vice versa.  This would cause .o files to be brought in
+		multiple times from either libc as the two versions of
+		the .o file fought over who defined what and where.
 
-#define XLibPath /usr/X11R6/lib/libX11.a
-#define XExtLibPath /usr/X11R6/lib/libXext.a
+		A long time ago, we wondered if the extracting libc should
+		be the same libc that we link a standard universe
+		job against. The answer as of this checkin is now
+		"yes". --psilord 12/09/03 */
+
+#define SimpleLibC $(GLIBC_DIR)/libc.a
+#endif
+
+#define LibC SimpleLibC
 
 #define IS_V5				YES
 #define DOES_CHECKPOINTING		YES
@@ -81,7 +80,6 @@ statically linked to avoid problems */
 /*?????*/
 #define HAS_CP_PRESERVE			NO
 #define NEEDS_SPECIAL_SETJMP		NO
-#define HAS_FORTRAN			YES
 #ifndef FORTRAN_HAS_RECURSION
 #  define FORTRAN_HAS_RECURSION		NO
 #endif
@@ -102,27 +100,10 @@ statically linked to avoid problems */
 #define HAS_SETEUID			YES
 #define HAS_GETWD			YES
 #define HAS_INSQUE			YES
-#define HAS_PVM				YES
-#define PVM_ARCH			LINUX
 #define HAS_SETLINEBUF			YES
 #define MALLOC_DEBUG			NO
-#define HAS_STATIC			YES
 #define HAS_DLOPEN			YES
-
-#define StaticFlag	-static
-#define UnixName /vmlinuz		/* pathname of the system executable */
-#define PsAllFlag ps -ax		/* "Ps" flag when you want everything */
-#define PsAwkProg '{ print $1 }'	/* Pick out pid from "ps" output */
-
-#ifndef Ctags
-#define Ctags ctags -t
-#endif Ctags
-
-#ifndef MkDepend
-#define MkDepend Tilde/CONDOR.new/GENERIC/mdepend.sh
-#endif MkDepend
-
-#define YACC byacc
+#define HAS_RPM				YES
 
 
 /**************************************************************************

@@ -55,12 +55,9 @@ CLEAN :
 	-@erase "$(INTDIR)\mpiresource.obj"
 	-@erase "$(INTDIR)\mpishadow.obj"
 	-@erase "$(INTDIR)\NTreceivers.obj"
-	-@erase "$(INTDIR)\parallelresource.obj"
-	-@erase "$(INTDIR)\parallelshadow.obj"
 	-@erase "$(INTDIR)\pseudo_ops.obj"
 	-@erase "$(INTDIR)\remoteresource.obj"
 	-@erase "$(INTDIR)\shadow.obj"
-	-@erase "$(INTDIR)\shadow_initializer.obj"
 	-@erase "$(INTDIR)\shadow_user_policy.obj"
 	-@erase "$(INTDIR)\shadow_v61_main.obj"
 	-@erase "$(INTDIR)\vc60.idb"
@@ -78,18 +75,15 @@ BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_shadow.bsc"
 BSC32_SBRS= \
 	
 LINK32=link.exe
-LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib pdh.lib ws2_32.lib mswsock.lib netapi32.lib ../Debug/condor_common.obj ..\Debug\condor_common_c.obj imagehlp.lib /nologo /subsystem:console /incremental:yes /pdb:"$(OUTDIR)\condor_shadow.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_shadow.exe" /pdbtype:sept 
+LINK32_FLAGS=../Debug/condor_common.obj ..\Debug\condor_common_c.obj kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib pdh.lib ws2_32.lib mswsock.lib netapi32.lib imagehlp.lib Crypt32.lib /nologo /subsystem:console /incremental:yes /pdb:"$(OUTDIR)\condor_shadow.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_shadow.exe" /pdbtype:sept 
 LINK32_OBJS= \
 	"$(INTDIR)\baseshadow.obj" \
 	"$(INTDIR)\mpiresource.obj" \
 	"$(INTDIR)\mpishadow.obj" \
 	"$(INTDIR)\NTreceivers.obj" \
-	"$(INTDIR)\parallelresource.obj" \
-	"$(INTDIR)\parallelshadow.obj" \
 	"$(INTDIR)\pseudo_ops.obj" \
 	"$(INTDIR)\remoteresource.obj" \
 	"$(INTDIR)\shadow.obj" \
-	"$(INTDIR)\shadow_initializer.obj" \
 	"$(INTDIR)\shadow_user_policy.obj" \
 	"$(INTDIR)\shadow_v61_main.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
@@ -132,12 +126,9 @@ CLEAN :
 	-@erase "$(INTDIR)\mpiresource.obj"
 	-@erase "$(INTDIR)\mpishadow.obj"
 	-@erase "$(INTDIR)\NTreceivers.obj"
-	-@erase "$(INTDIR)\parallelresource.obj"
-	-@erase "$(INTDIR)\parallelshadow.obj"
 	-@erase "$(INTDIR)\pseudo_ops.obj"
 	-@erase "$(INTDIR)\remoteresource.obj"
 	-@erase "$(INTDIR)\shadow.obj"
-	-@erase "$(INTDIR)\shadow_initializer.obj"
 	-@erase "$(INTDIR)\shadow_user_policy.obj"
 	-@erase "$(INTDIR)\shadow_v61_main.obj"
 	-@erase "$(INTDIR)\vc60.idb"
@@ -153,18 +144,15 @@ BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_shadow.bsc"
 BSC32_SBRS= \
 	
 LINK32=link.exe
-LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib pdh.lib ws2_32.lib mswsock.lib netapi32.lib ../Release/condor_common.obj ../Release/condor_common_c.obj imagehlp.lib /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_shadow.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_shadow.exe" 
+LINK32_FLAGS=../Release/condor_common.obj ../Release/condor_common_c.obj kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib pdh.lib ws2_32.lib mswsock.lib netapi32.lib imagehlp.lib Crypt32.lib /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_shadow.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_shadow.exe" 
 LINK32_OBJS= \
 	"$(INTDIR)\baseshadow.obj" \
 	"$(INTDIR)\mpiresource.obj" \
 	"$(INTDIR)\mpishadow.obj" \
 	"$(INTDIR)\NTreceivers.obj" \
-	"$(INTDIR)\parallelresource.obj" \
-	"$(INTDIR)\parallelshadow.obj" \
 	"$(INTDIR)\pseudo_ops.obj" \
 	"$(INTDIR)\remoteresource.obj" \
 	"$(INTDIR)\shadow.obj" \
-	"$(INTDIR)\shadow_initializer.obj" \
 	"$(INTDIR)\shadow_user_policy.obj" \
 	"$(INTDIR)\shadow_v61_main.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
@@ -228,24 +216,24 @@ LINK32_OBJS= \
 
 "condor_classad - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_classad.mak" CFG="condor_classad - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_classad.mak CFG="condor_classad - Win32 Debug" 
    cd "."
 
 "condor_classad - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_classad.mak" CFG="condor_classad - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_classad.mak CFG="condor_classad - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_shadow - Win32 Release"
 
 "condor_classad - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_classad.mak" CFG="condor_classad - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_classad.mak CFG="condor_classad - Win32 Release" 
    cd "."
 
 "condor_classad - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_classad.mak" CFG="condor_classad - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_classad.mak CFG="condor_classad - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
@@ -254,24 +242,24 @@ LINK32_OBJS= \
 
 "condor_cpp_util - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_cpp_util.mak" CFG="condor_cpp_util - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Debug" 
    cd "."
 
 "condor_cpp_util - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_cpp_util.mak" CFG="condor_cpp_util - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_shadow - Win32 Release"
 
 "condor_cpp_util - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_cpp_util.mak" CFG="condor_cpp_util - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Release" 
    cd "."
 
 "condor_cpp_util - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_cpp_util.mak" CFG="condor_cpp_util - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
@@ -280,24 +268,24 @@ LINK32_OBJS= \
 
 "condor_daemon_core - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_daemon_core.mak" CFG="condor_daemon_core - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_daemon_core.mak CFG="condor_daemon_core - Win32 Debug" 
    cd "."
 
 "condor_daemon_core - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_daemon_core.mak" CFG="condor_daemon_core - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_daemon_core.mak CFG="condor_daemon_core - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_shadow - Win32 Release"
 
 "condor_daemon_core - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_daemon_core.mak" CFG="condor_daemon_core - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_daemon_core.mak CFG="condor_daemon_core - Win32 Release" 
    cd "."
 
 "condor_daemon_core - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_daemon_core.mak" CFG="condor_daemon_core - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_daemon_core.mak CFG="condor_daemon_core - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
@@ -306,24 +294,24 @@ LINK32_OBJS= \
 
 "condor_io - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_io.mak" CFG="condor_io - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_io.mak CFG="condor_io - Win32 Debug" 
    cd "."
 
 "condor_io - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_io.mak" CFG="condor_io - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_io.mak CFG="condor_io - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_shadow - Win32 Release"
 
 "condor_io - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_io.mak" CFG="condor_io - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_io.mak CFG="condor_io - Win32 Release" 
    cd "."
 
 "condor_io - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_io.mak" CFG="condor_io - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_io.mak CFG="condor_io - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
@@ -332,24 +320,24 @@ LINK32_OBJS= \
 
 "condor_util_lib - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_util_lib.mak" CFG="condor_util_lib - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Debug" 
    cd "."
 
 "condor_util_lib - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_util_lib.mak" CFG="condor_util_lib - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_shadow - Win32 Release"
 
 "condor_util_lib - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_util_lib.mak" CFG="condor_util_lib - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Release" 
    cd "."
 
 "condor_util_lib - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_util_lib.mak" CFG="condor_util_lib - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
@@ -358,24 +346,24 @@ LINK32_OBJS= \
 
 "condor_qmgmt - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_qmgmt.mak" CFG="condor_qmgmt - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_qmgmt.mak CFG="condor_qmgmt - Win32 Debug" 
    cd "."
 
 "condor_qmgmt - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_qmgmt.mak" CFG="condor_qmgmt - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_qmgmt.mak CFG="condor_qmgmt - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_shadow - Win32 Release"
 
 "condor_qmgmt - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_qmgmt.mak" CFG="condor_qmgmt - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_qmgmt.mak CFG="condor_qmgmt - Win32 Release" 
    cd "."
 
 "condor_qmgmt - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_qmgmt.mak" CFG="condor_qmgmt - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_qmgmt.mak CFG="condor_qmgmt - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
@@ -384,24 +372,24 @@ LINK32_OBJS= \
 
 "condor_sysapi - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_sysapi.mak" CFG="condor_sysapi - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_sysapi.mak CFG="condor_sysapi - Win32 Debug" 
    cd "."
 
 "condor_sysapi - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_sysapi.mak" CFG="condor_sysapi - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_sysapi.mak CFG="condor_sysapi - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_shadow - Win32 Release"
 
 "condor_sysapi - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_sysapi.mak" CFG="condor_sysapi - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_sysapi.mak CFG="condor_sysapi - Win32 Release" 
    cd "."
 
 "condor_sysapi - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_sysapi.mak" CFG="condor_sysapi - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_sysapi.mak CFG="condor_sysapi - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
@@ -430,18 +418,6 @@ SOURCE=..\src\condor_shadow.V6.1\NTreceivers.C
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 
-SOURCE=..\src\condor_shadow.V6.1\parallelresource.C
-
-"$(INTDIR)\parallelresource.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-SOURCE=..\src\condor_shadow.V6.1\parallelshadow.C
-
-"$(INTDIR)\parallelshadow.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
 SOURCE=..\src\condor_shadow.V6.1\pseudo_ops.C
 
 "$(INTDIR)\pseudo_ops.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
@@ -457,12 +433,6 @@ SOURCE=..\src\condor_shadow.V6.1\remoteresource.C
 SOURCE=..\src\condor_shadow.V6.1\shadow.C
 
 "$(INTDIR)\shadow.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
-	$(CPP) $(CPP_PROJ) $(SOURCE)
-
-
-SOURCE=..\src\condor_shadow.V6.1\shadow_initializer.C
-
-"$(INTDIR)\shadow_initializer.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

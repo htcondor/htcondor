@@ -49,13 +49,17 @@ sub RunIt {
 	chomp;
 	my ( $user, $tty, $month, $date, $time ) = split;
 	push( @UserList, $user );
-	$Hash->Add( $Num_ . "user", "s", $user );
-	$Hash->Add( $Num_ . "time", "s", "$month $date $time" );
+	$Hash->Add( $Num_ . "user",
+		    HawkeyePublish::TypeString,
+		    $user );
+	$Hash->Add( $Num_ . "time",
+		    HawkeyePublish::TypeString,
+		    "$month $date $time" );
 	$Hawkeye->StoreIndex( $Num );
     }
     close( WHO );
-    $Hash->Add( "LIST", "s", join( " ", @UserList ) );
-    $Hash->Add( "NUMBER", "n", $NumUsers );
+    $Hash->Add( "List", HawkeyePublish::TypeString, join( " ", @UserList ) );
+    $Hash->Add( "Count", HawkeyePublish::TypeNumber, $NumUsers );
 
     # Ok, summary is done...
     $Hash->Store( );

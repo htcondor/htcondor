@@ -1,10 +1,246 @@
+5/21/04 trunk-pre-merge-t-m-V6_7-b-1-m-1
+   The state of the trunk before merging in the trunk-merge-V6_7-branch-1
+   as tagged at trunk-merge-V6_7-b-1-m-1.
+
 5/20/04 stork-gsi-support-branch
    A branch created off the trunk for adding GSI/MyPorxy suppport to  Stork
 
-4/12/04 trunk-merge-V6_7-branch-1
+5/12/04 V6_7-merge-1
+  The state of the V6_7 branch before merging to the trunk.
+  It will be merged to trunk-merge-V6_7-branch-1.
+
+5/12/04 trunk-merge-V6_7-branch-1
    A branch created off the trunk for the purpose of merging V6_7
    branch to the trunk.  We will merge from the V6_6_ROOT tag to 
    V6_7-merge-1.
+
+05/11/04 V6_7-unicore-2-branch
+   A new branch off of V6_7-branch created from the V6_7-unicore-2-root
+   tag. This is the 2nd generation of the V6_7-unicore-branch. The
+   V6_7-branch has new syntax for specifying grid universe job subtypes
+   and parsing to/from new classad native format that we now want on the
+   unicore branch.
+
+05/11/04 V6_7-condorc-2-branch
+   A new branch off of V6_7-branch created from the V6_7-condorc-2-root
+   tag. This is the 2nd generation of the V6_7-condorc2-branch. The
+   V6_7-branch has new syntax for specifying grid universe job subtypes
+   and parsing to/from new classad native format that we now want on the
+   condorc branch.
+
+04/29/04 V6_7-soap-2-branch
+   A new branch off of V6_7-branch created from the V6_7-soap-2-root
+   tag.  This is the 2nd generation of the V6_7-soap-branch.  The
+   V6_7-branch now has LoS support and a number of other improvements
+   since the V6_7-soap-root tag.
+
+04/28/04 V6_7_0
+  The 6.7.0 release, which lives on the V6_7-branch
+
+04/23/04 V6_7-post_merge-V6_6-merge-10
+   The state of the V6_7-branch after merging in the V6_6-branch as
+   tagged at V6_6-merge-10.
+
+04/23/04 V6_7-pre_merge-V6_6-merge-10
+   The state of the V6_7-branch before merging in the V6_6-branch as
+   tagged at V6_6-merge-10.
+
+04/23/04 V6_6-merge-10
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  More build system fixes for AIX 5.1 compatibility,
+   the highly elusive windoze bug, etc.
+
+04/21/04 V6_7-post_merge-V6_6-merge-9
+   The state of the V6_7-branch after merging in the V6_6-branch as
+   tagged at V6_6-merge-9.
+
+04/21/04 V6_7-pre_merge-V6_6-merge-9
+   The state of the V6_7-branch before merging in the V6_6-branch as
+   tagged at V6_6-merge-9.
+
+04/21/04 V6_6-merge-9
+   The state of the V6_6-branch for another merge into V6_7-branch.
+   This gets some last minute bug fixes and build system changes into
+   the V6_7-branch in time for 6.7.0.
+
+04/15/04 V6_7_0_WIN32
+   The state of the V6_7-branch for the 6.7.0 release on windoze.  we
+   couldn't use the same tag as for the unix build, since the build
+   was busted on windoze but worked on everything else and we didn't
+   want to delay the release by another day.
+
+04/15/04 V6_7-post_merge-V6_6_4_OSX
+   The state of the V6_7-branch after merging in the V6_6-branch as
+   tagged at V6_6_4_OSX
+
+04/15/04 V6_7-pre_merge-V6_6_4_OSX
+   The state of the V6_7-branch before merging in the V6_6-branch as
+   tagged at V6_6_4_OSX
+
+04/15/04 V6_6_4_OSX
+   The is the 6.6.4 release tag for the OSX 6.6.4 build.  This fixes
+   the bug in file transfer.  6.6.3 users only have to upgrade their
+   starter, but new downloaders might as well just get the latest
+   version in the first place, instead of having to patch.
+
+04/13/04 V6_7-post_merge-V6_6-merge-8
+   The state of the V6_7-branch after merging in the V6_6-branch as
+   tagged at V6_6-merge-8.
+
+04/13/04 V6_7-pre_merge-V6_6-merge-8
+   The state of the V6_7-branch before merging in the V6_6-branch as
+   tagged at V6_6-merge-8.
+
+04/13/04 HAWKEYE_V1_0_RC5
+    Release Candidate 5 of Hawkeye 1.0.
+
+04/13/04 V6_6-merge-8
+   The state of the V6_6-branch for another merge into V6_7-branch,
+   which is basically V6_6_4.
+
+04/12/04 V6_6_4
+   The is the 6.6.4 release tag. 
+
+04/06/04 V6_7-post_merge-V6_6-merge-7
+   The state of the V6_7-branch after merging in the V6_6-branch as
+   tagged at V6_6-merge-7.
+
+04/06/04 V6_7-pre_merge-V6_6-merge-7
+   The state of the V6_7-branch before merging in the V6_6-branch as
+   tagged at V6_6-merge-7.
+
+04/06/04 V6_6-merge-7
+   The state of the V6_6-branch for another merge into V6_7-branch.
+   This is basically from the V6_6_3 release, but there have been a
+   few minor changes since then and it's easier to just use another
+   merge tag instead of going out of our way to avoid these diffs.
+
+04/02/04 V6_6_3
+   This is the 6.6.3 release tag.  This is a retag of
+   BUILD-V6_6-branch-2004-3-29 which is build 32 in NMI land.
+
+03/26/04 HAWKEYE_V1_0_RC4
+    Release Candidate 4 of Hawkeye 1.0.
+
+03/18/04 V6_6_2
+   This is the 6.6.2 release tag.  This is a retag of
+   BUILD-V6_6-branch-2004-3-12 which is build 3061 in NMI land.
+
+03/15/04 V6_7-post_merge-V6_6-merge-6
+   The state of the V6_7-branch after merging in the V6_6-branch as
+   tagged at V6_6-merge-6.
+
+03/15/04 V6_7-pre_merge-V6_6-merge-6
+   The state of the V6_7-branch before merging in the V6_6-branch as
+   tagged at V6_6-merge-6.
+
+03/15/04 V6_6-merge-6
+   The state of the V6_6-branch for another merge into V6_7-branch.
+   This is basically from the V6_6_2 release.  It includes some bug
+   fixes and of particular interest, the AIX port. 
+
+03/12/04 V6_7-tdp_2-branch
+   A new branch off of V6_7-branch created from the V6_7-tdp_2-root
+   tag.  This is the 2nd generation of the V6_7-tdp-branch.  The
+   V6_7-branch now has rh9 support and a number of other improvements
+   since the V6_7-tdp-root tag, which is why we need a new branch.
+
+03/10/04 V6_7-condorc-branch
+   A new branch off of V6_7-branch created from the V6_7-condorc-root
+   tag. This will hold work to implement Condor-C.
+
+03/09/04 V6_6-post-aix-checkin
+	This is the state of the V6_6-branch after the checkin of the 
+	clipped AIX port.
+
+03/09/04 V6_6-pre-aix-checkin
+	This is the state of the V6_6-branch before the checkin of the 
+	clipped AIX port.
+
+03/02/04 V6_7-post_merge-V6_7-mirror-2-merge-2
+   The state of the V6_7-branch after merging in the V6_7-mirror-2-branch
+   as tagged at V6_7-mirror-2-merge-2 
+
+03/02/04 V6_7-pre_merge-V6_7-mirror-2-merge-2
+   The state of the V6_7-branch before merging in the V6_7-mirror-2-branch
+   as tagged at V6_7-mirror-2-merge-2 
+
+03/02/04 V6_7-mirror-2-merge-2
+   The state of the V6_7-mirror-2-branch before another merge into the
+   V6_7-branch 
+
+03/02/04 V6_7-mirror-2-CORE_snapshot2
+   The state of the V6_7-mirror-2-branch for another snapshot release
+   given to CORE.  Mostly, this includes bug fixes to hawkeye
+   features.  The version string in this release looks like this:
+   $CondorVersion: 6.7.0 Mar 1 2004 MIRROR-2-BRANCH CORE_snapshot2 $
+
+02/19/04 V6_7-post_merge-V6_7-mirror-2-merge-1
+   The state of the V6_7-branch after merging in the V6_7-mirror-2-branch
+   as tagged at V6_7-mirror-2-merge-1
+
+02/19/04 V6_7-pre_merge-V6_7-mirror-2-merge-1
+   The state of the V6_7-branch before merging in the V6_7-mirror-2-branch
+   as tagged at V6_7-mirror-2-merge-1 
+
+02/19/04 V6_7-mirror-2-merge-1
+   The state of the V6_7-mirror-2-branch before merging into the 
+   V6_7-branch
+
+02/19/04 V6_7-post_merge-V6_6-infn-merge-1
+   The state of the V6_7-branch after merging in the V6_6-infn-branch
+   as tagged at V6_6-infn-merge-1.
+
+02/19/04 V6_7-pre_merge-V6_6-infn-merge-1
+   The state of the V6_7-branch before merging in the V6_6-infn-branch
+   as tagged at V6_6-infn-merge-1.
+
+02/19/04 V6_6-infn-merge-1
+   The state of the V6_6-infn-branch when merged into V6_7-branch
+
+02/19/04 V6_7-post_merge-V6_6-merge-5
+   The state of the V6_7-branch after merging in the V6_6-branch as
+   tagged at V6_6-merge-5.
+
+02/19/04 V6_7-pre_merge-V6_6-merge-5
+   The state of the V6_7-branch before merging in the V6_6-branch as
+   tagged at V6_6-merge-5.
+
+02/19/04 V6_6-merge-5
+   The state of the V6_6-branch for another merge into V6_7-branch.
+   This is from after the V6_6_1 release, and it also includes a few
+   pre-6.6.2 changes, fixes, build system improvements, etc.
+
+02/16/04 V6_6-cdf-branch
+   A new branch off of V6_6-branch created from the V6_6-cdf-root tag.
+   This will hold various changed made for CDF, some of which are new
+   features.
+
+02/13/04 V6_6_2-pre-bbs-snapshot2
+   The state of the V6_6-infn-branch that was given to INFN as a 6.6.2
+   pre-release snapshot.  The version string for this release was:
+   $CondorVersion: 6.6.2 Feb 13 2004 BBS-PRE-RELEASE Snapshot-2 $
+   This tag lives on the V6_6-infn-branch of the V6_6_ALL module and
+   on the trunk of the V6_6_1_EXT module of externals.
+
+02/12/04 V6_6-infn-branch
+   A new branch off of V6_6-branch (post V6_6_1) that will be used for
+   various startd enhancements for the Bolonga Batch System (BBS) at
+   INFN.  These changes will be merged back into the V6_7-branch, not
+   V6_6 (since they are totally new features), but they're being given
+   to INFN from code as close to the stable 6.6.1 release as possible.
+   This branch was created from the V6_6-infn-root tag.
+
+02/11/04 V6_6_1
+   The official 6.6.1 release tag!  This is a re-tagging of
+   "BUILD-V6_6-branch-2004-2-5" with a few minor modifications for
+   IRIX.  The tag lives on the V6_6-branch for the V6_6_ALL module,
+   and on the trunk for the V6_6_1_EXT module of the externals tree.
+   In NMI land most of the binaries/tarballs came from build ID 2732.
+   The test suite ran on most platforms as is reported on that build
+   ID.  IRIX was built manually due to various evil things.  
+   The version string for all platforms (except IRIX and maybe 
+   windows) is: "$CondorVersion: 6.6.1 Feb 5 2003 $"
 
 2/10/04 trunk-post-merge-t-m-V6_5-b-1-m-1
 	The state of the trunk after merging in the trunk-merge-V6_5-branch-1
@@ -17,6 +253,294 @@
 2/10/04 trunk-merge-V6_5-branch-1-merge-1
    The state of the trunk-merge-V6_5-branch-1 before merging back to
    the trunk.
+
+02/02/04 V6_7-mirror-2-CORE_snapshot1
+   The state of the V6_7-mirror-2-branch for the first snapshot
+   release given to CORE for the schedd-failover features.  The
+   version string in this release looks like this:
+   $CondorVersion: 6.7.0 Feb  2 2004 MIRROR-2-BRANCH PRE-RELEASE $
+
+02/01/04 V6_7-mirror-2-post_merge-V6_7-mirror-merge-1
+   The state of the V6_7-mirror-2-branch after merging in the
+   V6_7-mirror-branch as tagged at V6_7-mirror-merge-1.  The
+   V6_7-mirror-branch is now abandonded.
+
+02/01/04 V6_7-mirror-2-pre_merge-V6_7-mirror-merge-1
+   The state of the V6_7-mirror-2-branch before merging in the
+   V6_7-mirror-branch as tagged at V6_7-mirror-merge-1.
+
+02/01/04 V6_7-mirror-2-branch
+   A new branch off of V6_7-branch for the final product we're sending
+   to CORE.  It will contain all of the HighAvailability locking stuff
+   along with the Condor-C-style schedding mirroring, so that CORE can
+   decide which solution they want to use.  The V6_7-mirror-branch
+   will be merged directly into this one and then abandoned.  Created
+   from the V6_7-mirror-2-root tag.
+
+02/01/04 V6_7-mirror-merge-1
+   The state of the V6_7-mirror-branch when it was merged into the 
+   V6_7-mirror-2-branch.  The V6_7-mirror-branch is now abandoned.
+
+02/01/04 V6_7-post_merge-V6_6-merge-4
+   The state of the V6_7-branch after merging in the V6_6-branch as
+   tagged at V6_6-merge-4.
+
+02/01/04 V6_7-pre_merge-V6_6-merge-4
+   The state of the V6_7-branch before merging in the V6_6-branch as
+   tagged at V6_6-merge-4.
+
+02/01/04 V6_6-merge-4
+   The state of the V6_6-branch for another merge into V6_7-branch.
+   Some final 6.6.1 bug fixes and other things we need before we make
+   the V6_7-mirror-2-branch to send to CORE.
+
+01/26/04 V6_7-dagman-branch
+   A new branch off of V6_7-branch for improvements to dagman.  the
+   improvements are to make dagman speedier, especially on startup
+   when there are many thousand nodes in the dag.  Created from the
+   V6_7-dagman-root tag.
+
+01/21/04 V6_7-mirror-post_merge-V6_7-core-2-merge-1
+   The state of the V6_7-mirror-branch after merging in the
+   V6_7-core-2-branch as tagged at V6_7-core-2-merge-1.
+
+01/21/04 V6_7-mirror-pre_merge-V6_7-core-2-merge-1
+   The state of the V6_7-mirror-branch before merging in the
+   V6_7-core-2-branch as tagged at V6_7-core-2-merge-1.
+
+01/21/4 V6_7-mirror-branch
+   A new branch off of V6_7-branch for adding the job mirroring stuff
+   for CORE.  This is the gridmanager/Condor-C method of doing it.
+   Since it's so complicated it's now living in its own branch.
+   Created from the V6_7-mirror-root tag.
+
+01/21/04 V6_7-core-2-merge-1
+   The state of the V6_7-core-2-branch when it was merged into the
+   V6_7-mirror-branch.  The V6_7-core-2-branch is now abandoned.
+
+01/16/04 V6_7-core-2-branch
+   A new branch off of V6_7-branch for adding the 2nd round of custom
+   features for CORE.  These include:
+   - schedd replication/fail-over
+   - condor_vacate_job <job.id>
+   Created from the V6_7-core-2-root tag.  We will merge this branch 
+   back into V6_7-branch once we're done and sure it's stable. 
+
+01/16/04 V6_7-post_merge-V6_6-merge-3
+   The state of the V6_7-branch after merging in the V6_6-branch as
+   tagged at V6_6-merge-3.
+
+01/16/04 V6_7-pre_merge-V6_6-merge-3
+   The state of the V6_7-branch before merging in the V6_6-branch as
+   tagged at V6_6-merge-3.
+
+01/16/04 V6_6-merge-3
+   The state of the V6_6-branch for another merge into V6_7-branch.
+   This gets some important build system changes and various 6.6.1 bug
+   fixes discovered via the CDF work that we want in the V6_7-branch
+   before we make V6_7-core-2-branch
+
+01/14/04 V6_6-post_merge-V6_6-full_redhat9_port-merge-1
+	This is state of the V6_6-branch AFTER I had merged in the
+	V6_6-full_redhat9_port-branch into V6_6-branch as tagged at
+	V6_6-full_redhat9_port-merge-1
+
+01/14/04 V6_6-pre_merge-V6_6-full_redhat9_port-merge-1
+	This is the premerge tag on the V6_6-branch which is BEFORE I checked
+	in the merge arena of V6_6-full_redhat9_port-branch into V6_6-branch 
+	workspace.
+
+01/14/04 V6_6-full_redhat9_port-merge-1
+	The state of the V6_6-full_redhat9_port-branch just before it 
+	is merged into the V6_6-branch.
+
+01/14/04 V6_7-post_merge-V6_7-core-merge-1
+   The state of the V6_7-branch after merging in the V6_7-core-branch
+   as tagged at V6_7-core-merge-1.
+
+01/14/04 V6_7-pre_merge-V6_7-core-merge-1
+   The state of the V6_7-branch before merging in the V6_7-core-branch
+   as tagged at V6_7-core-merge-1.
+
+01/14/04 V6_7-core-merge-1
+   The state of the V6_7-core-branch that was merged back into the
+   V6_7-branch.  The V6_7-core-branch will be abandoned after this
+   merge in favor of the V6_7-core-2-branch.
+	 
+01/09/04 V6_7-classad_history-branch
+   A new branch off of V6_7-branch for Nandita's work to save and
+   query historical classad information, particularly startd ads.
+   Created from the V6_7-classad_history-root tag.  
+
+12/23/03 V6_6-full_redhat9_port-branch 
+   A new branch off the end of the V6_6-branch for the redhat 9 full port.
+   Created from the V6_6-full_redhat9_port-root tag.  Includes the
+   doc directory.
+
+12/23/03 V6_6-full_redhat9_port-root
+    The state of the V6_6-branch on 12/23/03. This is the root tag
+    for the V6_6-full_redhat9_port-branch tag and subsequent branch.
+
+12/22/03 V6_7_0-core_snapshot_0
+   The state of the V6_7-core-branch that was given to CORE as
+   snapshot 0 (it's was a 6.7.0 pre-release).
+
+12/10/03 V6_7-unicore-branch
+   A new branch off of V6_7-branch for adding support for Unicore jobs
+   to Condor-G.
+   Created from the V6_7-unicore-root tag. We will merge this branch
+   back into V6_7-branch once we're done and sure it's stable.
+
+12/08/03 V6_7-core-branch
+   A new branch off of V6_7-branch for adding some custom features for
+   CORE.  These include:
+   - disconnected shadow/starter (and schedd/startd) operation, so
+     that vanilla jobs can continue to make progress even if the
+     submit machine crashes, reboots, etc.
+   - group-based accounting in the schedd + negotiator
+   Created from the V6_7-core-root tag.  We will merge this branch
+   back into V6_7-branch once we're done and sure it's stable. 
+
+12/08/03 V6_7-post_merge-V6_6-merge-2
+   The state of the V6_7-branch after merging in the V6_6-branch as
+   tagged at V6_6-merge-2.
+
+12/08/03 V6_7-pre_merge-V6_6-merge-2
+   The state of the V6_7-branch before merging in the V6_6-branch as
+   tagged at V6_6-merge-2.
+
+12/08/03 V6_6-merge-2
+   The state of the V6_6-branch for another merge into V6_7-branch.
+   Just want to get all of the bug fixes and other minor changes since
+   the last merge into V6_7-branch before we start making lots of
+   other branches off of that (core, unicore, stork, stale-classads,
+   etc).  
+
+12/08/03 V6_7-post-V6_7-MB-V6_5-gridmanager_reorg-merge-1-MB-m-1
+   The state of the V6_7-branch after merging the
+   V6_7-MB-V6_5-gridmanager_reorg-merge-1-branch as tagged at
+   V6_7-MB-V6_5-gridmanager_reorg-merge-1-MB-m-1.
+
+12/08/03 V6_7-pre-V6_7-MB-V6_5-gridmanager_reorg-merge-1-MB-m-1
+   The state of the V6_7-branch before merging the
+   V6_7-MB-V6_5-gridmanager_reorg-merge-1-branch as tagged at
+   V6_7-MB-V6_5-gridmanager_reorg-merge-1-MB-m-1.
+
+12/08/03 V6_7-MB-V6_5-gridmanager_reorg-merge-1-MB-m-1
+   The state of the V6_7-MB-V6_5-gridmanager_reorg-merge-1-branch when
+   first (and last) merged into V6_7-branch.
+
+12/04/03 V6_5-gridmanager_reorg-merge-1
+   The state of the V6_5-gridmanager_reorg-branch when it was merged
+   into V6_7-MB-V6_5-gridmanager_reorg-merge-1-branch (and thence
+   into V6_7-branch).
+
+12/4/03 V6_7-MB-V6_5-gridmanager_reorg-merge-1-branch
+   Merge branch for the V6_5-gridmanager_reorg -> V6_7 merge. An
+   appropriate root tag was also added.
+
+12/2/03 V6_7-post_merge-V6_6-merge-1
+   The state of the V6_7-branch after merging in the V6_6-branch as
+   tagged at V6_6-merge-1.
+
+12/2/03 V6_7-pre_merge-V6_6-merge-1
+   The state of the V6_7-branch before merging in the V6_6-branch as
+   tagged at V6_6-merge-1.
+
+12/02/03 V6_6-merge-1
+   The state of the V6_6-branch when first merged into V6_7-branch.
+   This is after V6_6_0, but before V6_6_1.  This is the first merge
+   from V6_6-branch -> V6_7-branch.  it includes the entire autoconf +
+   externals build system, the rh8 full port, an updated copyright
+   notice, and all the bug fixes for V6_6_0 (and some that will show
+   up for V6_6_1). 
+
+11/27/03 V6_6-branch-post-redhat80-fullport-checkin
+	This is the state of the V6_6-branch just after I checked in the full
+	port for the redhat 8.0 revision of Linux.
+
+11/27/03 V6_6-branch-pre-redhat80-fullport-checkin
+	This is the state of the V6_6-branch just before I checked in the full
+	port for the redhat 8.0 revision of Linux.
+
+11/14/03 V6_6_0
+   The official 6.6.0 release tag!  This is a re-tagging of
+   "BUILD-V6_6-branch-2003-11-13" and "BUILD-V6_6_0-2003-11-12" (both
+   of which might go away eventually).  This tag lives on the
+   V6_6-branch for the V6_6_ALL module, and on the trunk for the
+   entire externals tree.  In NMI land most of the binaries/tarballs
+   came from build ID 1715.  The test suite ran on most platforms via
+   build #1707 (equivalent source tag).  Solaris 9 and MacOSX had to
+   be tested by hand, and Alpha-DUX-40f had to be built and tested by
+   hand due to unexplainable errors building the globus external via
+   the nightly builds.  Hopefully IRIX will use this same tag
+   eventually, but right now, we don't have a functional build machine
+   to use.  Maybe NMI will be stable enough to do the full build by
+   6.6.1.  The version string for all platforms (except IRIX and maybe
+   windows) is: "$CondorVersion: 6.6.0 Nov 13 2003 $"
+   NOTE: this is also the last tag of the source that includes all the
+   build system wisdom regarding X86 Solaris, Solaris 2.5.1, IRIX 6.2,
+   and pre-glibc versions of Linux (everything before rh7.2, in fact).
+   I modified all the build system files to purge these platforms
+   since we're no longer supporting them, and they were causing
+   needless complication in various ways.  This change also
+   corresponds with moving platform detection from condor_imake into
+   the configure script under the new build system.  Finally, i purged
+   a bunch of really old code from condor_ckpt and condor_syscall_lib,
+   such as: AIX3.2, ULTRIX, SUNOS, HPUX9, and IRIX53.
+
+11/10/03 HAWKEYE_V1_0_RC3
+    Release Candidate 3 of Hawkeye 1.0.
+
+11/04/03 V6_6_0-analyze
+   The 6.6.0 version of condor_analyze, which lives on the trunk.  The
+   condor_analyze we include in 6.6.0 is really a version of condor_q
+   from the trunk with new classads.  it was built manually on linux
+   (i386_rh72), and will be included in the 6.6.0 tarballs for that
+   platform by the build system.  The condor_analyze binaries included
+   in 6.6.0 have this version string: 
+   "$CondorVersion: 6.6.0 Nov  5 2003 CONDOR_ANALYZE-BETA $"
+
+10/22/03 V6_6-post_merge_V6_6-externals-merge-1
+   The state of the V6_6-branch after merging the
+   V6_6-externals-branch as tagged at V6_6-externals-merge-1.
+   The V6_6-externals-branch is now abandonded.
+
+10/22/03 V6_6-externals-merge-1
+   The state of the V6_6-externals-branch when it was merged back into
+   V6_6-branch.  We'll abandon the V6_6-externals-branch after this
+   merge, and move all development on the new system onto the
+   V6_6-branch for the 6.6.x stable series.
+
+10/22/03 V6_6-pre_merge_V6_6-externals-merge-1
+   The state of the V6_6-branch before merging the
+   V6_6-externals-branch as tagged at V6_6-externals-merge-1.
+
+10/03/03 V6_7-soap-branch
+   A new branch off V6_7-branch to hold our initial effort
+   at incorporating SOAP interfaces into the Condor daemons.
+   Primary goal of producing snapshots for our SciDac collaborators
+   at LBNL to produce a demo using our soap work at SuperComputing.
+   Created from the V6_7-soap-root tag.  We will merge this branch
+   back into V6_7-branch once it stabilizes more... ideally after
+   V6_7-branch has the List of Shame work (so we can add gSOAP as
+   an external), but before we go back to the trunk.
+
+9/25/03 V6_6-externals-branch
+   A new branch off the V6_6-branch for checking in the solution to
+   the "list of shame": the new "externals" directory and related
+   changes to our Imake system.  This will be a short-lived branch.
+   Once everything is working on all our platforms, this branch will
+   be merged back into V6_6-branch and abandoned.  The only reason it
+   exists is so that the V6_6-branch isn't broken while we work out
+   the kinks with the new externals system.  Created from the
+   V6_6-externals-root tag.  Does *not* include doc (since there's no
+   user visible changes to document).
+
+9/12/03 V6_7-tdp-branch
+   A new branch off V6_7-branch for continued work on the TDP (Tool
+   Daemon Protocol).  Created from the V6_7-tdp-root tag.  We will
+   attempt to merge the older V6_5-tdp-2-branch into this.
 
 9/11/03 V6_7-branch
    A new branch off the end of the V6_5-branch for the 6.7.x

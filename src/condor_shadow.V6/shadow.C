@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #define INCLUDE_STATUS_NAME_ARRAY
 
@@ -52,16 +52,9 @@
 #include "debug.h"
 #include "fileno.h"
 #include "exit.h"
-
-#if defined(AIX32)
-#	include <sys/id.h>
-#   include <sys/wait.h>
-#   include <sys/m_wait.h>
-#	include "condor_fdset.h"
-#endif
-
 #include "shadow.h"
 
+/* XXX This should not be here */
 #if !defined( WCOREDUMP )
 #define  WCOREDUMP(stat)      ((stat)&WCOREFLG)
 #endif
@@ -71,15 +64,17 @@ int	UsePipes;
 char* mySubSystem = "SHADOW";
 
 extern "C" {
-#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11)
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11) || defined(AIX)
 	/* XXX These should really be selected in a better fashion */
 	void reaper(int);
 	void handle_sigusr1(int);
 	void handle_sigquit(int);
+	void handle_sigterm(int);
 #else
 	void reaper();
 	void handle_sigusr1();
 	void handle_sigquit();
+	void handle_sigterm();
 #endif
 
 
@@ -90,6 +85,7 @@ extern "C" {
 	void HandleSyscalls();
 	void Wrapup();
 	void send_quit( char *host, char *capability );
+	void send_vacate( char *host, char *capability );
 	void handle_termination( PROC *proc, char *notification,
 				int *jobstatus, char *coredir );
 	void get_local_rusage( struct rusage *bsd_rusage );
@@ -260,6 +256,7 @@ printClassAd( void )
 	printf( "%s = True\n", ATTR_HAS_REMOTE_SYSCALLS );
 	printf( "%s = True\n", ATTR_HAS_CHECKPOINTING );
 	printf( "%s = True\n", ATTR_HAS_OLD_VANILLA );
+	printf( "%s = True\n", ATTR_HAS_JOB_AD_FROM_FILE );
 	printf( "%s = \"%s\"\n", ATTR_VERSION, CondorVersion() );
 }
 
@@ -282,33 +279,12 @@ main(int argc, char *argv[] )
 		exit( 0 );
 	}
 
-	/* on OSF/1 as installed currently on our machines, attempts to read from
-	   the FILE * returned by popen() fail if the underlying file descriptor
-	   is 1.  This is ugly, but we have 4K fd's so we won't miss these few */
-
-#if !defined(OSF1) && !defined(Solaris)
-	close( 0 );
-	close( 1 );
-	close( 2 );
-#endif
-
 #if defined(SYSCALL_DEBUG)
 	SyscallLabel = argv[0] + 7;
 #endif
 
 #if !defined(WIN32)
 	install_sig_handler(SIGPIPE, (SIG_HANDLER)SIG_IGN );
-	
-		/*
-		  We should always ignore SIGTERM.  If the machine is shutting
-		  down, the SIGTERM should be sent to the schedd, which in
-		  turn will gracefully shutdown the shadows in an orderly,
-		  throttled progression.  If the schedd isn't around to do
-		  that, we've got much bigger problems, and should be getting
-		  sent the SIGQUIT for a fast shutdown soon enough.  
-		  -Derek Wright <wright@cs.wisc.edu> 5/12/00
-		*/
-	install_sig_handler(SIGTERM, (SIG_HANDLER)SIG_IGN );
 #endif
 
 	if( argc > 1 ) {
@@ -565,6 +541,9 @@ main(int argc, char *argv[] )
 
 		// SIGQUIT is sent for a fast shutdow.
 	install_sig_handler_with_mask( SIGQUIT, &fullset, handle_sigquit );
+
+		// SIGTERM is sent for a graceful shutdow.
+	install_sig_handler_with_mask( SIGTERM, &fullset, handle_sigterm );
 
 
 	/* Here we block the async signals.  We do this mainly because on HPUX,
@@ -1348,6 +1327,24 @@ send_quit( char *host, char *capability )
 }
 
 
+/*
+  Connect to the startd on the remote host and gracefully vacate our
+  claim. 
+*/
+void
+send_vacate( char *host, char *capability )
+{
+	if( send_cmd_to_startd( host, capability, DEACTIVATE_CLAIM ) < 0 ) {
+		dprintf( D_ALWAYS, "Shadow: Can't connect to condor_startd on %s\n",
+				 host );
+		DoCleanup();
+		dprintf( D_ALWAYS, "********** Shadow Parent Exiting(%d) **********\n",
+				 JOB_NOT_STARTED );
+		exit( JOB_NOT_STARTED );
+	}
+}
+
+
 void
 regular_setup( char *host, char *cluster, char *proc, char *capability )
 {
@@ -1422,7 +1419,7 @@ open_named_pipe( const char *name, int mode, int target_fd )
 	}
 }
 
-#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11)
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11) || defined(AIX)
 void
 reaper(int unused)
 #else
@@ -1483,7 +1480,7 @@ display_uids()
   the schedd already knows this job should be removed.
   Cleaned up, clarified and simplified on 5/12/00 by Derek Wright
 */
-#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11)
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11) || defined(AIX)
 void
 handle_sigusr1( int unused )
 #else
@@ -1508,7 +1505,7 @@ handle_sigusr1( void )
   startd, to force the job to quickly vacate.
   Cleaned up, clarified and simplified on 5/12/00 by Derek Wright
 */
-#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11)
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11) || defined(AIX)
 void
 handle_sigquit( int unused )
 #else
@@ -1519,6 +1516,25 @@ handle_sigquit( void )
 	dprintf( D_ALWAYS, "Shadow recieved SIGQUIT (fast shutdown)\n" ); 
 	check_static_policy = 0;
 	send_quit( ExecutingHost, GlobalCap );
+}
+
+
+/*
+
+  If we get a SIGTERM (from the schedd, a shutdown, etc), we want to
+  try to do a graceful shutdown and allow our job to checkpoint. 
+*/
+#if (defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))) || defined(HPUX11)
+void
+handle_sigterm( int unused )
+#else
+void
+handle_sigterm( void )
+#endif
+{
+	dprintf( D_ALWAYS, "Shadow recieved SIGTERM (graceful shutdown)\n" ); 
+	check_static_policy = 0;
+	send_vacate( ExecutingHost, GlobalCap );
 }
 
 

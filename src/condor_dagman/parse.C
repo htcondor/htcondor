@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-2001 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
- ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 
@@ -29,13 +29,14 @@
 #include "debug.h"
 #include "list.h"
 #include "util_lib_proto.h"
+#include "dagman_commands.h"
 
 static const char   COMMENT    = '#';
 static const char * DELIMITERS = " \t";
 static const int    MAX_LENGTH = 255;
 
-static bool parse_job(Dag *dag, char *filename, int lineNumber);
-static bool parse_dap(Dag *dag, char *filename, int lineNumber); //<-- DAP
+static bool parse_node( Job::job_type_t nodeType, char* nodeTypeKeyword,
+						Dag* dag, char* dagFile, int lineNum );
 
 static bool parse_script(char *endline, Dag *dag, char *filename, int lineNumber);
 static bool parse_parent(Dag *dag, char *filename, int lineNumber);
@@ -43,12 +44,12 @@ static bool parse_retry(Dag *dag, char *filename, int lineNumber);
 static bool parse_dot(Dag *dag, char *filename, int lineNumber);
 static bool parse_vars(Dag *dag, char *filename, int lineNumber);
 
-//-----------------------------------------------------------------------------
+
 void exampleSyntax (const char * example) {
     debug_printf( DEBUG_QUIET, "Example syntax is: %s\n", example);
 }
 
-//-----------------------------------------------------------------------------
+
 bool
 isKeyWord( const char *token )
 {
@@ -113,14 +114,16 @@ bool parse (char *filename, Dag *dag) {
 		// Example Syntax is:  JOB j1 j1.condor [DONE]
 		//
 		if(strcasecmp(token, "JOB") == 0) {
-			parsed_line_successfully = parse_job(dag, filename, lineNumber);
+			parsed_line_successfully = parse_node( Job::TYPE_CONDOR, token,
+												   dag, filename, lineNumber );
 		}
 
 		// Handle a DaP spec
 		// Example Syntax is:  DAP j1 j1.dapsubmit [DONE]
 		//
 		else if (strcasecmp(token, "DAP") == 0) {
-			parsed_line_successfully = parse_dap(dag, filename, lineNumber);
+			parsed_line_successfully = parse_node( Job::TYPE_STORK, token,
+												   dag, filename, lineNumber );
 		}
 
 		// Handle a SCRIPT spec
@@ -172,155 +175,51 @@ bool parse (char *filename, Dag *dag) {
 	return true;
 }
 
-//-----------------------------------------------------------------------------
-//
-// Function: parse_job
-// Purpose:  parse a line of the format "JOB job-name submit-file [DONE]"
-//
-//-----------------------------------------------------------------------------
+
 static bool 
-parse_job(
-	Dag  *dag, 
-	char *filename, 
-	int  lineNumber)
+parse_node( Job::job_type_t nodeType, char* nodeTypeKeyword, Dag* dag,
+			char* dagFile, int lineNum )
 {
+	MyString example;
+	MyString whynot;
+	bool done = false;
 
-	const char * example = "JOB j1 j1.condor";
+	MyString expectedSyntax;
+	expectedSyntax.sprintf( "Expected syntax: %s nodename submitfile [DONE]",
+							nodeTypeKeyword );
 
-	char *jobName = strtok(NULL, DELIMITERS);
-	if (jobName == NULL) {
-		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): Missing job name\n", 
-					  filename, lineNumber );
-		exampleSyntax (example);
-		return false;
-	}
-	
-	// The JobName cannot be a keyword
-	//
-	if (isKeyWord(jobName)) {
-		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): JobName cannot be a keyword\n",
-					  filename, lineNumber );
-		exampleSyntax (example);
-		return false;
-	}
-	
-	// The JobName cannot be an existing JobName
-	if( dag->NodeExists( jobName ) ) {
-		debug_printf( DEBUG_QUIET,
-			"ERROR: invalid DAG (%s:%d): node name \"%s\" "
-			"already used\n", filename, lineNumber, jobName );
-		return false;
-	}
+		// NOTE: fear not -- any missing tokens resulting in NULL
+		// strings will be error-handled correctly by AddNode()
 
-	// Next token is the condor command file
-	//
-	char *cmd = strtok(NULL, DELIMITERS);
-	if (cmd == NULL) {
-		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): Missing condor cmd file\n",
-					  filename, lineNumber );
-		exampleSyntax (example);
+		// first token is the node name
+	char *nodeName = strtok( NULL, DELIMITERS );
+		// next token is the submit file name
+	char *submitFile = strtok( NULL, DELIMITERS );
+		// last (optional) token is DONE marker
+	char *doneKey = strtok( 0, DELIMITERS );
+		// anything else is garbage
+	char *garbage = strtok( 0, DELIMITERS );
+	if( doneKey ) {
+		if( strcasecmp( doneKey, "DONE" ) != 0 ) {
+			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
+						  "parameter \"%s\"\n", dagFile, lineNum, doneKey );
+			debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+			return false;
+		}
+		done = true;
+	}
+	if( garbage ) {
+			debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): invalid "
+						  "parameter \"%s\"\n", dagFile, lineNum, garbage );
+			debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
+			return false;
+	}
+	if( !AddNode( nodeType, nodeName, submitFile, NULL, NULL, done, whynot ) )
+	{
+		debug_printf( DEBUG_QUIET, "ERROR: %s (line %d): %s\n",
+					  dagFile, lineNum, whynot.Value() );
+		debug_printf( DEBUG_QUIET, "%s\n", expectedSyntax.Value() );
 		return false;
-	}
-	
-	Job * job = new Job (jobName, cmd);
-	if (job == NULL) debug_error( 1, DEBUG_QUIET, "Out of Memory\n");
-	
-    	job->job_type = Job::CONDOR_JOB; //--> DAP
-	
-	// Check if the user has pre-definied a Job as being done
-	//
-	char *done = strtok(0, DELIMITERS);
-	if (done != NULL && strcasecmp(done, "DONE") == 0) {
-		job->_Status = Job::STATUS_DONE;
-	}
-	
-	if (!dag->Add (*job)) {
-		debug_printf( DEBUG_QUIET, "ERROR adding Job %s to DAG\n",
-					  job->GetJobName() );
-		return false;
-	} else {
-		debug_printf( DEBUG_DEBUG_3, "Added Job %s\n",
-					  job->GetJobName() );
-	}
-	return true;
-}
-
-//-----------------------------------------------------------------------------
-//
-// Function: parse_dap
-// Purpose:  parse a line of the format "DAP job-name submit-file [DONE]"
-//
-//-----------------------------------------------------------------------------
-static bool 
-parse_dap(
-	Dag  *dag, 
-	char *filename, 
-	int  lineNumber)
-{
-
-	const char * example = "DAP j1 j1.dapsubmit";
-
-	char *jobName = strtok(NULL, DELIMITERS);
-	if (jobName == NULL) {
-		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): Missing job name\n", 
-					  filename, lineNumber );
-		exampleSyntax (example);
-		return false;
-	}
-	
-	// The JobName cannot be a keyword
-	//
-	if (isKeyWord(jobName)) {
-		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): JobName cannot be a keyword\n",
-					  filename, lineNumber );
-		exampleSyntax (example);
-		return false;
-	}
-	
-	// The JobName cannot be an existing JobName
-	if( dag->NodeExists( jobName ) ) {
-		debug_printf( DEBUG_QUIET,
-			"ERROR: invalid DAG (%s:%d): node name \"%s\" "
-			"already used\n", filename, lineNumber, jobName );
-		return false;
-	}
-
-	// Next token is the condor command file
-	//
-	char *cmd = strtok(NULL, DELIMITERS);
-	if (cmd == NULL) {
-		debug_printf( DEBUG_QUIET, 
-					  "%s (line %d): Missing condor cmd file\n",
-					  filename, lineNumber );
-		exampleSyntax (example);
-		return false;
-	}
-	
-	Job * job = new Job (jobName, cmd);
-	if (job == NULL) debug_error( 1, DEBUG_QUIET, "Out of Memory\n");
-	
-    	job->job_type = Job::DAP_JOB;  //--> DAP
-	
-
-	// Check if the user has pre-definied a Job as being done
-	//
-	char *done = strtok(0, DELIMITERS);
-	if (done != NULL && strcasecmp(done, "DONE") == 0) {
-		job->_Status = Job::STATUS_DONE;
-	}
-	
-	if (!dag->Add (*job)) {
-		debug_printf( DEBUG_QUIET, "ERROR adding Job %s to DAG\n",
-					  job->GetJobName() );
-		return false;
-	} else {
-	  debug_printf( DEBUG_DEBUG_3, "Added Job %s\n",
-	  			  job->GetJobName() );
 	}
 	return true;
 }

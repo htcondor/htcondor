@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #ifndef BASESHADOW_H
 #define BASESHADOW_H
@@ -30,6 +30,7 @@
 #include "shadow_user_policy.h"
 #include "user_log.c++.h"
 #include "exit.h"
+#include "internet.h"
 #include "../h/shadow.h"
 
 /* Forward declaration to prevent loops... */
@@ -78,25 +79,51 @@ class BaseShadow : public Service
 			It does the following:
 			<ul>
 			 <li>Puts the args into class data members
-			 <li>Stores the classAd, checks its info.
+			 <li>Stores the classAd, checks its info, and pulls
+			     everything we care about out of the ad and into class
+			     data members.
 			 <li>calls config()
 			 <li>calls initUserLog()
 			 <li>registers handleJobRemoval on SIGUSR1
 			</ul>
 			It should be called right after the constructor.
-			@param jobAd The Ad for this job.
+			@param job_ad The ClassAd for this job.
 			@param schedd_addr The sinful string of the schedd
-			@param cluster This job's cluster number
-			@param proc This job's proc number
 		*/
-	void baseInit( ClassAd *jobAd, char schedd_addr[], 
-					   char cluster[], char proc[]);
+	void baseInit( ClassAd *job_ad, const char* schedd_addr );
 
 		/** Everyone must make an init with a bunch of parameters.<p>
 			This function is <b>pure virtual</b>.
 		 */
-	virtual void init( ClassAd *jobAd, char schedd_addr[], char host[], 
-			   char capability[], char cluster[], char proc[] ) = 0;
+	virtual void init( ClassAd* job_ad, const char* schedd_addr ) = 0;
+
+		/** Shadow should spawn a new starter for this job.
+			This function is <b>pure virtual</b>.
+		 */
+	virtual void spawn( void ) = 0;
+
+		/** Shadow should attempt to reconnect to a disconnected
+			starter that might still be running for this job.  
+			This function is <b>pure virtual</b>.
+		 */
+	virtual void reconnect( void ) = 0;
+
+		/** Does the shadow support reconnect for this job? 
+		 */
+	virtual bool supportsReconnect( void ) = 0;
+
+		/** Given our config parameters, figure out how long we should
+			delay until our next attempt to reconnect.
+		*/
+	int nextReconnectDelay( int attempts );
+
+		/**	Called by any part of the shadow that finally decides the
+			reconnect has completely failed, we should give up, try
+			one last time to release the claim, write a UserLog event
+			about it, and exit with a special status. 
+			@param reason Why we gave up (for UserLog, dprintf, etc)
+		*/
+	void reconnectFailed( const char* reason ); 
 
 		/** Here, we param for lots of stuff in the config file.  Things
 			param'ed for are: SPOOL, FILESYSTEM_DOMAIN, UID_DOMAIN, 
@@ -229,6 +256,8 @@ class BaseShadow : public Service
 	int getCluster() { return cluster; }
 		/// Returns this job's proc number
 	int getProc() { return proc; }
+		/// Returns this job's GlobalJobId string
+	const char* getGlobalJobId() { return gjid; }
 		/// Returns the spool
 	char *getSpool() { return spool; }
 		/// Returns the schedd address
@@ -311,10 +340,16 @@ class BaseShadow : public Service
 
 	virtual void resourceBeganExecution( RemoteResource* rr ) = 0;
 
+	virtual void resourceReconnected( RemoteResource* rr ) = 0;
+
 		/** Start a timer to do periodic updates of the job queue for
 			this job.
 		*/
 	void startQueueUpdateTimer( void );
+
+	void publishShadowAttrs( ClassAd* ad );
+
+	virtual void logDisconnectedEvent( const char* reason ) = 0;
 
  protected:
 	
@@ -323,6 +358,9 @@ class BaseShadow : public Service
 			remoteresource.  If we're an MPI job we expand it based on
 			something like $(NODE) into each remoteresource. */
 	ClassAd *jobAd;
+
+		/// Are we trying to remove this job (condor_rm)?
+	bool remove_requested;
 
 	ShadowUserPolicy shadow_user_policy;
 
@@ -336,6 +374,10 @@ class BaseShadow : public Service
 	void logTerminateEvent( int exitReason );
 
 	void logEvictEvent( int exitReason );
+
+	virtual void logReconnectedEvent( void ) = 0;
+
+	virtual void logReconnectFailedEvent( const char* reason ) = 0;
 
 	virtual void emailTerminateEvent( int exitReason ) = 0;
 
@@ -398,10 +440,13 @@ class BaseShadow : public Service
 	bool useAFS;
 	bool useNFS;
 	bool useCkptServer;
+	int reconnect_ceiling;
+	double reconnect_e_factor;
 
 	// job parameters
 	int cluster;
 	int proc;
+	char* gjid;
 	char owner[_POSIX_PATH_MAX];
 	char domain[_POSIX_PATH_MAX];
 	char iwd[_POSIX_PATH_MAX];

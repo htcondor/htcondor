@@ -12,12 +12,20 @@ FIX_BROKEN_GCC =
 #endif
 #endif
 
+#if HAS_PURIFY
+PURIFY_FLAG = -DHAS_PURIFY
+#else
+PURIFY_FLAG =
+#endif
+
 CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(FIX_BROKEN_GCC)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(FIX_BROKEN_GCC) $(PURIFY_FLAG)
 LIB = $(STD_LIBS)
 
 OBJ = timer_manager.o daemon_core.o daemon_core_main.o \
-  daemon_core_instantiate.o condor_ipverify.o condor_perms.o
+  daemon_core_instantiate.o condor_ipverify.o condor_perms.o \
+  condor_lock_base.o condor_lock_implementation.o condor_lock_file.o \
+  condor_lock.o
 
 library_target(daemon_core.a,$(OBJ))
 c_plus_target(testit,test_daemon_core.o daemon_core.a,$(LIB))

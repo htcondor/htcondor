@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_classad.h"
@@ -87,7 +87,8 @@ int main( int argc, char *argv[] )
 			version();
 			exit(0);
 		} else if(!strcmp(argv[i],"-debug")) {
-			set_debug_flags("D_FULLDEBUG");
+            Termlog = 1;
+            dprintf_config ("TOOL", 2);
 		} else if(argv[i][0]=='-') {
 			type = stringToDaemonType(&argv[i][1]);
 			if(type==DT_NONE) {
@@ -134,15 +135,13 @@ int main( int argc, char *argv[] )
 
 	dprintf(D_FULLDEBUG,"Daemon %s is %s\n",daemon->hostname(),daemon->addr());
 	
-	sock = daemon->reliSock();
+	sock = (ReliSock*)daemon->startCommand( DC_FETCH_LOG, Sock::reli_sock);
 
 	if(!sock) {
 		fprintf(stderr,"couldn't connect to daemon %s at %s\n",daemon->hostname(),daemon->addr());
 		return 1;
 	}
 
-	sock->encode();
-	sock->put( DC_FETCH_LOG );
 	sock->put( DC_FETCH_LOG_TYPE_PLAIN );
 	sock->put( log_name );
 	sock->end_of_message();
@@ -150,6 +149,7 @@ int main( int argc, char *argv[] )
 	int result = -1;
 	int exitcode = 1;
 	char *reason=0;
+	filesize_t filesize;
 
 	sock->decode();
 	sock->code(result);
@@ -159,7 +159,7 @@ int main( int argc, char *argv[] )
 			reason = "permission denied";
 			break;
 		case DC_FETCH_LOG_RESULT_SUCCESS:
-			result = sock->get_file(1,0);
+			result = sock->get_file(&filesize,1,0);
 			if(result>=0) {
 				exitcode = 0;
 			} else {

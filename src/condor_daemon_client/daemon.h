@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department,
- *University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.
- *No use of the CONDOR Software Program Source Code is authorized
- *without the express consent of the CONDOR Team.  For more
- *information contact: CONDOR Team, Attention: Professor Miron Livny,
- *7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685,
- *(608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #ifndef CONDOR_DAEMON_H
 #define CONDOR_DAEMON_H
@@ -33,6 +33,7 @@
 #include "daemon_types.h"
 #include "KeyCache.h"
 #include "CondorError.h"
+#include "command_strings.h"
 
 
 /** 
@@ -95,6 +96,13 @@ public:
 	Daemon( daemon_t type, const char* name = NULL, 
 				const char* pool = NULL );
 
+		/** Another version of the constructor that takes a ClassAd
+			and gets all the info out of that instead of having to
+			query a collector to locate it.  You can also optionally
+			pass in the name of the collector you got it from.
+		*/
+	Daemon( ClassAd* ad, daemon_t type, const char* pool );
+
 		/// Destructor.
 	virtual ~Daemon();
 
@@ -115,6 +123,14 @@ public:
 		  string desribing it.  Returns NULL if there's no error.
 		  */
 	char* error( void )	{ return _error; }
+
+ 		/** Return the result code of the previous action.  If there's
+			a problem and the error() string above is set, this result
+			code will specify the type of error encountered.  The
+			CAResult enum and some helper functions to convert it
+			to/from strings are in condor_c++_util/command_string.[Ch]
+		*/
+	CAResult errorCode( void ) { return _error_code; }
 
 		// //////////////////////////////////////////////////////////
 		/// Methods for getting information about the daemon.
@@ -317,6 +333,7 @@ protected:
 	char* _platform;
 	char* _pool;
 	char* _error;
+	CAResult _error_code;
 	char* _id_str;
 	char* _subsys;
 	int _port;
@@ -394,7 +411,7 @@ protected:
 		  is already set, deallocate the existing string.  Then, make
 		  a copy of the given string and store that in _error.
 		  */
-	void newError( const char* );
+	void newError( CAResult, const char* );
 
 		/** Returns a string containing the local daemon's name.  If
 		  the <subsys>_NAME parameter is set in the config file, we
@@ -434,13 +451,13 @@ protected:
 		/** 
  		   Helper method for the client-side of the ClassAd-only
 		   protocol.  This method will try to: locate our daemon,
-		   create a ReliSock, try to connect(), send the CA_CMD int,
-		   send a ClassAd and an EOM, read back a ClassAd and EOM,
-		   lookup the ATTR_RESULT in the reply, and if it's FALSE,
-		   lookup ATTR_ERROR_STRING.  This deals with everything for
-		   you, so all you have to do if you want to use this protocol
-		   is define a method that sets up up the right request ad and
-		   calls this.
+		   connect(), send the CA_CMD int (or CA_AUTH_CMD is
+		   force_auth is true), send a ClassAd and an EOM,  
+		   read back a ClassAd and EOM, lookup the ATTR_RESULT in the
+		   reply, and if it's FALSE, lookup ATTR_ERROR_STRING.  This
+		   deals with everything for you, so all you have to do if you
+		   want to use this protocol is define a method that sets up
+		   up the right request ad and calls this.
 		   @param req Pointer to the request ad (you fill it in)
 		   @param reply Pointer to the reply ad (from the server)
 		   @param force_auth Should we force authentication for this cmd?
@@ -451,6 +468,15 @@ protected:
 		*/
 	bool sendCACmd( ClassAd* req, ClassAd* reply, bool force_auth,
 					int timeout = -1 );
+
+		/** Same as above, except the socket for the command is passed
+			in as an argument.  This way, you can keep the ReliSock
+			object around and the connection open once the command is
+			over, in case you need that.  Otherwise, you should just
+			call the above version.
+		*/
+	bool sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* sock,
+					bool force_auth, int timeout = -1 );
 
 		/** 
 		   Helper method for commands to see if we've already got the

@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "starter_common.h"
@@ -56,6 +56,14 @@ const mode_t LOCAL_DIR_MODE =
 	S_IRGRP | S_IWGRP | S_IXGRP |		// rwx for group
 	S_IROTH | S_IWOTH | S_IXOTH;		// rwx for other
 
+/* Do I know the actual name of the core file yet, or not? On some machines
+it is 'core', and on others (namely redhat 9) it is 'core.<pid>'. I'm going
+to check for both forms. */
+enum 
+{
+	CORE_NAME_UNKNOWN,
+	CORE_NAME_KNOWN,
+};
 
 #include "user_proc.h"
 
@@ -119,7 +127,9 @@ UserProc::~UserProc()
 	delete [] env;
 	delete [] local_dir;
 	delete [] cur_ckpt;
-	delete [] core_name;
+	if ( core_name ) {
+		delete [] core_name;
+	}
 	if ( family ) {
 		delete family;
 	}
@@ -137,7 +147,8 @@ UserProc::display()
 
 	dprintf( D_ALWAYS, "  local_dir = %s\n", local_dir );
 	dprintf( D_ALWAYS, "  cur_ckpt = %s\n", cur_ckpt );
-	dprintf( D_ALWAYS, "  core_name = %s\n", core_name );
+	dprintf( D_ALWAYS, "  core_name = %s\n", 
+		core_name==NULL?"(either 'core' or 'core.<pid>')":core_name);
 
 	dprintf( D_ALWAYS, "  uid = %d, gid = %d\n", uid, gid );
 
@@ -669,7 +680,10 @@ void
 UserProc::delete_files()
 {
 	do_unlink( cur_ckpt );
-	do_unlink( core_name );
+
+	if (core_name != NULL) {
+		do_unlink( core_name );
+	}
 
 	if( rmdir(local_dir) < 0 ) {
 		dprintf( D_ALWAYS,
@@ -683,6 +697,14 @@ UserProc::delete_files()
 void
 UserProc::handle_termination( int exit_st )
 {
+	/* XXX I wonder what the kernel does if a core file is created such that 
+		the entire path up to the core file is path max, and when you add the
+		pid, it overshoots the path max... */
+	char corebuf[_POSIX_PATH_MAX]; 
+	struct stat sbuf;
+	int core_name_type = CORE_NAME_UNKNOWN;
+	pid_t user_job_pid;
+
 	exit_status = exit_st;
 	exit_status_valid = TRUE;
 	accumulate_cpu_time();
@@ -736,6 +758,7 @@ UserProc::handle_termination( int exit_st )
 		}
 			
 	}
+	user_job_pid = pid;
 	pid = 0;
 
 	// the parent process exited; make certain kids are all gone as well
@@ -754,15 +777,60 @@ UserProc::handle_termination( int exit_st )
 
         case ABNORMAL_EXIT:
 			priv = set_root_priv();	// need to be root to access core file
-		    if( core_is_valid(core_name) ) {
-				dprintf( D_FAILURE|D_ALWAYS, "A core file was created\n" );
-				core_created = TRUE;
+
+			/* figure out the name of the core file, it could be either
+				"core.pid" which we will try first, or "core". We'll take
+				the first one we find, and ignore the other one. */
+
+			/* the default */
+			core_name_type = CORE_NAME_UNKNOWN;
+
+			/* try the 'core.pid' form first */
+			sprintf(corebuf, "%s/core.%lu", local_dir, 
+				(unsigned long)user_job_pid);
+			if (stat(corebuf, &sbuf) >= 0) {
+				core_name_type = CORE_NAME_KNOWN;
 			} else {
-				dprintf( D_FULLDEBUG, "No core file was created\n" );
-				core_created = FALSE;
-				(void)unlink( core_name );	// remove any incomplete core
+				/* now try the normal 'core' form */
+				sprintf(corebuf, "%s/core", local_dir);
+				if (stat(corebuf, &sbuf) >= 0) {
+					core_name_type = CORE_NAME_KNOWN;
+				}
 			}
+
+			/* If I know a core file name, then set up its retrival */
+			core_created = FALSE; // assume false if unknown
+			if (core_name_type == CORE_NAME_KNOWN) {
+
+				/* AFAICT, This is where core_name should be set up,
+					if it had already been setup somehow, then that is a logic
+					error and I'd need to find out why/where */
+				if (core_name != NULL) {
+					EXCEPT( "core_name should have been NULL!\n" );
+				}
+
+				/* this gets deleted when this objects destructs */
+				core_name = new char [ strlen(corebuf) + 1 ];
+				strcpy( core_name, corebuf );
+
+				/* core_is_valid checks to make sure it isn't a symlink and
+					returns false if it is */
+		    	if( core_is_valid(core_name) == TRUE) {
+					dprintf( D_FAILURE|D_ALWAYS, 
+						"A core file was created: %s\n", core_name );
+					core_created = TRUE;
+				} else {
+					dprintf( D_FULLDEBUG, "No core file was created\n" );
+					core_created = FALSE;
+					if (core_name != NULL) {
+						// remove any incomplete core, or possible symlink
+						(void)unlink( core_name );	
+					}
+				}
+			}
+
 			set_priv(priv);
+
 			break;
 
 		default:
@@ -889,6 +957,10 @@ UserProc::store_core()
 		return;
 	}
 
+	if ( core_name == NULL ) {
+		EXCEPT( "UserProc::store_core() asked to store unnamed core file that we knew existed!" );
+	}
+
 	priv = set_root_priv();
 	core_size = physical_file_size( core_name );
 	set_priv(priv);
@@ -919,9 +991,8 @@ UserProc::store_core()
 	if( free_disk > core_size ) {
 		sprintf( new_name, "%s/core.%d.%d", virtual_working_dir, cluster, proc);
 		dprintf( D_ALWAYS, "Transferring core file to \"%s\"\n", new_name );
-		delay( 15 );
 		priv = set_root_priv();
-		send_file( core_name, new_name, REGULAR_FILE_MODE );
+		send_a_file( core_name, new_name, REGULAR_FILE_MODE );
 		set_priv(priv);
 		core_transferred = TRUE;
 	} else {
@@ -1103,6 +1174,7 @@ open_std_file( int fd )
 UserProc::UserProc( STARTUP_INFO &s ) :
 	cluster( s.cluster ),
 	proc( s.proc ),
+	core_name( NULL ),
 	uid( s.uid ),
 	gid( s.gid ),
 	v_pid( s.virt_pid ),
@@ -1184,10 +1256,6 @@ UserProc::UserProc( STARTUP_INFO &s ) :
 	sprintf( buf, "%s/condor_exec.%d.%d", local_dir, cluster, proc );
 	cur_ckpt = new char [ strlen(buf) + 1 ];
 	strcpy( cur_ckpt, buf );
-
-	sprintf( buf, "%s/core", local_dir );
-	core_name = new char [ strlen(buf) + 1 ];
-	strcpy( core_name, buf );
 
 		// Find out if user wants checkpointing
 #if defined(NO_CKPT)

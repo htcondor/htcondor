@@ -1,8 +1,6 @@
 /* AIX 5 Specific stuff */
 
-#define Platform			PPC-AIX5
-#define GccArch				powerpc-ibm-aix5.1.0.0
-#define PlatformFlags		-DAIX5=AIX5 -Wno-deprecated
+#define PlatformFlags		-DAIX5=AIX5
 
 /* XXX This stuff is borkened */
 #define HAS_ADJTIME			YES
@@ -15,34 +13,30 @@
 #define HAS_GETWD			YES
 #define HAS_INSQUE			YES
 
+#define NEED_SNPRINTF	YES
+
 #define HAS_DYNAMIC_USER_JOBS	NO
 
-#define WANT_MAN_PAGES  NO
-
-#define HAS_GLOBUS			NO
-#define HAS_GSI				NO
-#define HAS_OPENSSL			NO
+#define HAS_GLOBUS			YES
+#define HAS_GSI				YES
+#define HAS_OPENSSL			YES
 #define HAS_DLOPEN			NO
-#define HAS_DAGMAN_HELPER   NO
-#define WANT_PVM        NO
+#define HAS_DAGMAN_HELPER   YES
+#undef WANT_PVM
+#define WANT_PVM        YES
 
-#define WANT_JAVA       NO
-#define WANT_CONDOR_G   NO
-#define WANT_NETMAN     NO
-#define WANT_X509       NO
+#undef WANT_JAVA
+#define WANT_JAVA       YES
+#undef WANT_KERBEROS
 #define WANT_KERBEROS   NO
-#define WANT_MD         NO
-#define WANT_3DES       NO
-#define WANT_BLOWFISH   NO
 
-#define WANT_CLASSAD_FUNCTIONS YES
+#undef WANT_CLASSAD_FUNCTIONS
+#define WANT_CLASSAD_FUNCTIONS NO
 
+#undef WANT_DAGMAN_HELPER
 #define WANT_DAGMAN_HELPER     YES
 
 #define IS_CLIPPED	YES
-
-#define UnixName /unix		/* pathname of the system executable */
-
 
 #define VendorCTestFlags 
 #define VendorCPPTestFlags 

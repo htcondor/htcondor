@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
  
 
@@ -39,10 +39,23 @@ extern "C" char *get_env_val (const char *);
 
 UserLog::UserLog (const char *owner, const char *domain, const char *file,
 				  int c, int p, int s, bool xml)
+    :  in_block(FALSE), path(0), fp(0), lock(NULL)
 {
 	UserLog();
 	use_xml = xml;
 	initialize (owner, domain, file, c, p, s);
+}
+
+/* This constructor is just like the constructor above, except
+ * that it doesn't take a domain, and it passes NULL for the domain.
+ * It's a convenience function, requested by our friends in LCG. */
+UserLog::UserLog (const char *owner, const char *file,
+				  int c, int p, int s, bool xml)
+    :  in_block(FALSE), path(0), fp(0), lock(NULL)
+{
+	UserLog();
+	use_xml = xml;
+	initialize (owner, NULL, file, c, p, s);
 }
 
 /* --- The following two functions are taken from the shadow's ulog.c --- */
@@ -697,7 +710,7 @@ readEventOld(ULogEvent *& event)
 	if (!retval1 || !retval2)
 	{	
 		// we could end up here if file locking did not work for
-		// whatever reason (crappy NFS bugs, whatever).  so here
+		// whatever reason (usual NFS bugs, whatever).  so here
 		// try to wait a second until the current partially-written
 		// event has benn completely written.  the algorithm is
 		// wait a second, rewind to our initial position (in case a
@@ -705,8 +718,8 @@ readEventOld(ULogEvent *& event)
 		// again try to synchronize the log
 		// 
 		// NOTE: this code is important, so don't remove or "fix"
-		// it unless you *really* know what you're doing and test
-		// the crap out of it...
+		// it unless you *really* know what you're doing and test it
+		// extermely well
 		if( !is_locked ) {
 			lock->release();
 		}

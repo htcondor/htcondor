@@ -1,4 +1,25 @@
-/* condor legal shit */
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "command_strings.h"
@@ -70,6 +91,7 @@ struct Translation DCTranslation[] = {
 	{ "MASTER_OFF", MASTER_OFF },
 	{ "CONFIG_VAL", CONFIG_VAL },
 	{ "RESET_USAGE", RESET_USAGE },
+	{ "DELETE_USER", DELETE_USER },
 	{ "SET_PRIORITYFACTOR", SET_PRIORITYFACTOR },
 	{ "RESET_ALL_USAGE", RESET_ALL_USAGE },
 	{ "DAEMONS_OFF_FAST", DAEMONS_OFF_FAST },
@@ -90,6 +112,7 @@ struct Translation DCTranslation[] = {
 	{ "REJECTED_WITH_REASON", REJECTED_WITH_REASON },
 	{ "START_AGENT", START_AGENT },
 	{ "ACT_ON_JOBS", ACT_ON_JOBS },
+	{ "CA_AUTH_CMD", CA_AUTH_CMD },
 	{ "CA_CMD", CA_CMD },
 	{ "CA_REQUEST_CLAIM", CA_REQUEST_CLAIM },
 	{ "CA_RELEASE_CLAIM", CA_RELEASE_CLAIM },
@@ -97,6 +120,8 @@ struct Translation DCTranslation[] = {
 	{ "CA_DEACTIVATE_CLAIM", CA_DEACTIVATE_CLAIM },
 	{ "CA_SUSPEND_CLAIM", CA_SUSPEND_CLAIM },
 	{ "CA_RESUME_CLAIM", CA_RESUME_CLAIM },
+	{ "CA_LOCATE_STARTER", CA_LOCATE_STARTER },
+	{ "CA_RECONNECT_JOB", CA_RECONNECT_JOB },
 	{ "DC_SIGSUSPEND", DC_SIGSUSPEND },
 	{ "DC_SIGCONTINUE", DC_SIGCONTINUE },
 	{ "DC_SIGSOFTKILL", DC_SIGSOFTKILL },
@@ -174,6 +199,10 @@ struct Translation CAResultTranslation[] = {
 	{ "NotAuthorized", CA_NOT_AUTHORIZED },
 	{ "InvalidRequest", CA_INVALID_REQUEST },
 	{ "InvalidState", CA_INVALID_STATE },
+	{ "InvalidReply", CA_INVALID_REPLY },
+	{ "LocateFailed", CA_LOCATE_FAILED },
+	{ "ConnectFailed", CA_CONNECT_FAILED },
+	{ "CommunicationError", CA_COMMUNICATION_ERROR },
 	{ NULL, 0 }
 };
 

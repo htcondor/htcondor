@@ -17,6 +17,12 @@ sub new {
     return $self;
 }
 
+sub TypeAuto   { 1 }
+sub TypeString { 2 }
+sub TypeNumber { 3 }
+sub TypeBool   { 4 }
+sub TypePercent { 5 }
+
 # Perform initializations..
 sub _initialize {
     my $self = shift;
@@ -42,6 +48,51 @@ sub Quiet {
 }
 
 # Publish a value
+sub StoreValue {
+    my $self = shift;
+
+    # Check that we're passed the correct # of args...
+    Carp::confess( "Store: wrong args" ) if ( $#_ != 2 );
+    my $Var = shift;
+    my $Value = shift;
+    my $Type = shift;
+    $self->AttrCheck( "Store: Attribute", \$Var );
+
+    my $Attr = $Var;
+    $self->StoreIndex( $Var ) if ( $self->{AutoIndex} );
+
+    # Auto; let's guess
+    if ( $Type == HawkeyePublish::TypeAuto )
+    {
+	if ( ( $Value =~ /^\d+$/ ) || ( $Value =~ /^\d*\.\d+$/ ) )
+	{
+	    $Type = HawkeyePublish::TypeNumber;
+	}
+	elsif ( ( $Value =~ /^(\d+)\%$/ ) || ( $Value =~ /^(\d*\.\d+)\%$/ ) )
+	{
+	    $Value = $1 * 0.01;
+	    $Type = HawkeyePublish::TypePercent;
+	}
+	elsif ( $Value =~ /(^true$)|(^false$)/i )
+	{
+	    $Type = HawkeyePublish::TypeBool;
+	}
+	else
+	{
+	    $Type = HawkeyePublish::TypeString;
+	}
+    }
+
+    # Store 'em off
+    my $Rec = ();
+    $Rec->{Type} = $Type;
+    $Rec->{Value} = $Value;
+    $self->{Publish}{$Attr} = $Rec;
+}
+
+# These are depricated methods for storing.  Use StoreValue() instead.
+
+# Publish a string value
 sub Store {
     my $self = shift;
 
@@ -51,17 +102,22 @@ sub Store {
     my $Value = shift;
     $self->AttrCheck( "Store: Attribute", \$Var );
 
-    my $Attr = $Var;
-    $self->StoreIndex( $Var ) if ( $self->{AutoIndex} );
-
-    # Store 'em off
-    my $Rec = ();
-    $Rec->{IsNum} = 0;
-    $Rec->{Value} = $Value;
-    $self->{Publish}{$Attr} = $Rec;
+    $self->StoreValue( $Var, $Value, HawkeyePublish::TypeString );
 }
 
-# Publish a value
+# Publish a string value
+sub StoreString {
+    my $self = shift;
+
+    # Check that we're passed the correct # of args...
+    Carp::confess( "Store: wrong args" ) if ( $#_ != 1 );
+    my $Var = shift;
+    my $Value = shift;
+
+    $self->StoreValue( $Var, $Value, HawkeyePublish::TypeString );
+}
+
+# Publish a numeric value
 sub StoreNum {
     my $self = shift;
 
@@ -69,16 +125,32 @@ sub StoreNum {
     Carp::confess( "Store: wrong args" ) if ( $#_ != 1 );
     my $Var = shift;
     my $Value = shift;
-    $self->AttrCheck( "Store: Attribute", \$Var );
 
-    my $Attr = $Var;
-    $self->StoreIndex( $Var ) if ( $self->{AutoIndex} );
+    $self->StoreValue( $Var, $Value, HawkeyePublish::TypeNumber );
+}
 
-    # Store 'em off
-    my $Rec = ();
-    $Rec->{IsNum} = 1;
-    $Rec->{Value} = $Value;
-    $self->{Publish}{$Attr} = $Rec;
+# Publish a boolean boolean value
+sub StoreBool {
+    my $self = shift;
+
+    # Check that we're passed the correct # of args...
+    Carp::confess( "Store: wrong args" ) if ( $#_ != 1 );
+    my $Var = shift;
+    my $Value = shift;
+
+    $self->StoreValue( $Var, $Value, HawkeyePublish::TypeBool );
+}
+
+# Publish a boolean boolean value
+sub StorePercent {
+    my $self = shift;
+
+    # Check that we're passed the correct # of args...
+    Carp::confess( "Store: wrong args" ) if ( $#_ != 1 );
+    my $Var = shift;
+    my $Value = shift;
+
+    $self->StoreValue( $Var, $Value, HawkeyePublish::TypePercent );
 }
 
 # Turn on/off auto indexing
@@ -140,15 +212,29 @@ sub Publish {
 	my $Value;
 
 	# Publish it
-	if ( ! $Rec->{IsNum} )
+	if ( $Rec->{Type} == HawkeyePublish::TypeString )
 	{
 	    $Value = $Rec->{Value};
 	    print "$Attr = \"$Value\"\n";
 	}
-	else
+	elsif ( $Rec->{Type} == HawkeyePublish::TypeBool )
+	{
+	    $Value = $Rec->{Value};
+	    print "$Attr = $Value\n";
+	}
+	elsif ( $Rec->{Type} == HawkeyePublish::TypeNumber )
 	{
 	    $Value = $Rec->{Value} * 1.0;
 	    print "$Attr = $Value\n";
+	}
+	elsif ( $Rec->{Type} == HawkeyePublish::TypePercent )
+	{
+	    $Value = $Rec->{Value} * 100.0;
+	    print "$Attr = \"$Value%\"\n";
+	}
+	else
+	{
+	    print STDERR "Unknown type " . $Rec->{Type} . " of " . $Rec->{Attr} . "\n";
 	}
     }
     print "--\n";

@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 /*
 System call stubs which cannot be built automatically by the stub
@@ -73,7 +73,6 @@ int __xstat(int, const char *, struct stat *);
 int __fxstat(int, int, struct stat *);
 int __lxstat(int, const char *, struct stat *);
 
-#if defined(GLIBC21) || defined(IRIX) || defined(GLIBC22)
 int _condor_xstat64(int version, const char *path, struct stat64 *buf);
 int _condor_lxstat64(int version, const char *path, struct stat64 *buf);
 int _condor_fxstat64(int versino, int fd, struct stat64 *buf);
@@ -84,7 +83,6 @@ int _lxstat64(int, const char *, struct stat64 *);
 int __xstat64(int, const char *, struct stat64 *);
 int __fxstat64(int, int, struct stat64 *);
 int __lxstat64(int, const char *, struct stat64 *);
-#endif
 
 #endif /* LINUX or IRIX */
 
@@ -343,7 +341,7 @@ what each of these parameters do, and I am throwing them to the wind.
 Whee!
 */
 
-#if defined(Solaris) && !defined(Solaris251)
+#if defined(Solaris)
 
 extern "C" int REMOTE_CONDOR_socket( int, int, int);
 int so_socket( int a, int b, int c, int d, int e )
@@ -393,7 +391,7 @@ on that fd.  A door is something like a named pipe.  So, we must
 trap door_info and cause it to return "that is not a door", and all is well.
 */
 
-#if defined(Solaris251) || defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
+#if defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
 
 int door_info( int fd, void *info )
 {
@@ -777,7 +775,7 @@ int __lxstat(int version, const char *path, struct stat *buf)
 	return _condor_lxstat( version, path, buf );
 }
 
-#if defined(GLIBC21) || defined(GLIBC22)
+#if defined(GLIBC22) || defined(GLIBC23)
 int _xstat64(int version, const char *path, struct stat64 *buf)
 {
 	return _condor_xstat64( version, path, buf );
@@ -807,7 +805,7 @@ int __lxstat64(int version, const char *path, struct stat64 *buf)
 {
 	return _condor_lxstat64( version, path, buf );
 }
-#endif /* GLIBC21 */
+#endif /* GLIBC22 || GLIBC23 */
 
 /*
    _condor_k_stat_convert() takes in a version, and two pointers, one
@@ -861,10 +859,13 @@ _condor_k_stat_convert( int version, const struct kernel_stat *source,
 			*/
 		target->__pad1 = 0;
 		target->__pad2 = 0;
+		#if !defined(GLIBC23)
 		target->__unused1 = 0;
 		target->__unused2 = 0;
 		target->__unused3 = 0;
+		#endif
 		#if defined (GLIBC21)
+			/* is someone *SURE* we don't need this in glibc22, as well? */
 		target->__unused4 = 0;
 		target->__unused5 = 0;
 		#endif
@@ -891,7 +892,7 @@ _condor_k_stat_convert( int version, const struct kernel_stat *source,
 	}
 }
 
-#if defined(GLIBC21) || defined(IRIX) || defined(GLIBC22)
+#if defined(IRIX) || defined(GLIBC22) || defined(GLIBC23)
 void 
 _condor_k_stat_convert64( int version, const struct kernel_stat *source, 
 						struct stat64 *target )
@@ -928,10 +929,14 @@ _condor_k_stat_convert64( int version, const struct kernel_stat *source,
 			*/
 		target->__pad1 = 0;
 		target->__pad2 = 0;
+		#if !defined(GLIBC23)
+		/* glibc23 uses these fields */
 		target->__unused1 = 0;
 		target->__unused2 = 0;
 		target->__unused3 = 0;
+		#endif
 		#if defined(GLIBC21)
+			/* is someone *SURE* we don't need this in glibc22, as well? */
 		target->__unused4 = 0;
 		target->__unused5 = 0;
 		#endif
@@ -1005,9 +1010,11 @@ _condor_s_stat_convert( int version, const struct stat *source,
 			*/
 		target->__pad1 = 0;
 		target->__pad2 = 0;
+		#if !defined(GLIBC23)
 		target->__unused1 = 0;
 		target->__unused2 = 0;
 		target->__unused3 = 0;
+		#endif
 		target->__unused4 = 0;
 		target->__unused5 = 0;
 		break;
@@ -1019,8 +1026,8 @@ _condor_s_stat_convert( int version, const struct stat *source,
 			*/
 		break;
 	case _STAT64_VER:
-		/* XXX do nothing right now*/
-		/* This crap don't work... */
+		/* XXX do nothing right now */
+		/* This stuff unfortunately doesn't work... */
 		dprintf(D_FULLDEBUG, "_condor_s_stat_convert() did as instructed\n");
 		break;
 #endif
@@ -1031,7 +1038,7 @@ _condor_s_stat_convert( int version, const struct stat *source,
 	}
 }
 
-#if defined(GLIBC21) || defined(GLIBC22)
+#if defined(GLIBC22) || defined(GLIBC23)
 void 
 _condor_s_stat_convert64( int version, const struct stat *source, 
 						struct stat64 *target )
@@ -1068,10 +1075,14 @@ _condor_s_stat_convert64( int version, const struct stat *source,
 			*/
 		target->__pad1 = 0;
 		target->__pad2 = 0;
+		#if !defined(GLIBC23)
+		/* glibc23 uses these fields */
 		target->__unused1 = 0;
 		target->__unused2 = 0;
 		target->__unused3 = 0;
+		#endif
 		#if defined(GLIBC21)
+			/* is someone *SURE* we don't need this in glibc22, as well? */
 		target->__unused4 = 0;
 		target->__unused5 = 0;
 		#endif
@@ -1140,7 +1151,7 @@ int _condor_xstat(int version, const char *path, struct stat *buf)
 	return rval;
 }
 
-#if defined(GLIBC21) || defined(GLIBC22)
+#if defined(GLIBC22) || defined(GLIBC23)
 extern "C" int REMOTE_CONDOR_stat( const char *, struct stat * );
 int _condor_xstat64(int version, const char *path, struct stat64 *buf)
 {
@@ -1213,13 +1224,12 @@ _condor_fxstat(int version, int fd, struct stat *buf)
 	return rval;
 }
 
-#if defined(GLIBC21) || defined(GLIBC22)
+#if defined(GLIBC22) || defined(GLIBC23)
 extern "C" int REMOTE_CONDOR_fstat( int, struct stat * );
 int
 _condor_fxstat64(int version, int fd, struct stat64 *buf)
 {
 	int rval;
-	int use_local_access = FALSE;
 	struct kernel_stat kbuf;
 	struct stat sbuf;
 
@@ -1287,7 +1297,7 @@ int _condor_lxstat(int version, const char *path, struct stat *buf)
 	return rval;
 }
 
-#if defined(GLIBC21) || defined(GLIBC22)
+#if defined(GLIBC22) || defined(GLIBC23)
 extern "C" int REMOTE_CONDOR_lstat( const char *, struct stat *);
 int _condor_lxstat64(int version, const char *path, struct stat64 *buf)
 {
@@ -1400,7 +1410,6 @@ extern "C" int REMOTE_CONDOR_fstat( int, struct stat * );
 int _fxstat(const int ver, int fd, struct stat *buf)
 {
 	int	rval;
-	int use_local_access = FALSE;
 
 	sigset_t omask = _condor_signals_disable();
 
@@ -1480,9 +1489,9 @@ of whatever magic is implemented there.  Notice that this works for
 both remote and local system calls.
 */
 
-#if defined(HPUX9) || defined(LINUX) 
+#if defined(LINUX) 
 ssize_t readv( int fd, const struct iovec *iov, size_t iovcnt )
-#elif defined(IRIX) || defined(OSF1)|| defined(HPUX10) || defined(Solaris26) || defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
+#elif defined(IRIX) || defined(OSF1)|| defined(HPUX10) || defined(Solaris)
 ssize_t readv( int fd, const struct iovec *iov, int iovcnt )
 #else
 int readv( int fd, struct iovec *iov, int iovcnt )
@@ -1508,7 +1517,7 @@ of whatever magic is implemented there.  Notice that this works for
 both remote and local system calls.
 */
 
-#if defined(HPUX9) || defined(LINUX) 
+#if defined(LINUX) 
 ssize_t writev( int fd, const struct iovec *iov, size_t iovcnt )
 #elif defined(Solaris) || defined(IRIX) || defined(OSF1) || defined(HPUX10)
 ssize_t writev( int fd, const struct iovec *iov, int iovcnt )
@@ -1730,12 +1739,11 @@ getlogin()
 {
 	int rval;
 	static char *loginbuf = NULL;
-	char *loc_rval;
 
 	if( LocalSysCalls() ) {
 #if defined( SYS_getlogin )
-		loc_rval = (char *) syscall( SYS_getlogin );
-		return loc_rval;
+		char* rval_str = (char *) syscall( SYS_getlogin );
+		return rval_str;
 #elif defined( DL_EXTRACT ) 
 		{
         void *handle;
@@ -1762,10 +1770,11 @@ getlogin()
 		rval = REMOTE_CONDOR_getlogin( loginbuf );
 	}
 
-	if ( rval >= 0 )
+	if( rval >= 0 ) {
 		return loginbuf;
-	else
-		return NULL;  
+	} else {
+		return NULL;
+	}
 }
 
 /* Special kill that allows us to send signals to ourself, but not any
@@ -1805,9 +1814,6 @@ int
 #endif
 sync( void )
 {
-	int rval;
-	pid_t my_pid;	
-
 	/* Always flush buffered data from the file table */
 	_condor_file_table_init();
 	FileTab->flush();

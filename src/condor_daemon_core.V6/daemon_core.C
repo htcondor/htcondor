@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 // //////////////////////////////////////////////////////////////////////
 //
 // Implementation of DaemonCore.
@@ -57,6 +57,7 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 #include "condor_secman.h"
 #include "condor_distribution.h"
 #include "condor_environ.h"
+#include "condor_version.h"
 #ifdef WIN32
 #include "exphnd.WIN32.h"
 #include "condor_fix_assert.h"
@@ -114,6 +115,8 @@ static unsigned int ZZZZZ = 0;
 int ZZZ_always_increase() {
 	return ZZZZZ++;
 }
+
+static int _condor_exit_with_exec = 0;
 
 extern int LockFd;
 
@@ -429,19 +432,19 @@ int	DaemonCore::Register_Socket(Stream* iosock, char* iosock_descrip,
 
 int	DaemonCore::Register_Pipe(int pipefd, char* pipefd_descrip, 
 				PipeHandler handler, char* handler_descrip, 
-				Service* s, DCpermission perm) 
+				Service* s, HandlerType handler_type, DCpermission perm) 
 {
 	return( Register_Pipe(pipefd, pipefd_descrip, handler, 
 							(PipeHandlercpp)NULL, handler_descrip, s, 
-							perm, FALSE) );
+							handler_type, perm, FALSE) );
 }
 
 int	DaemonCore::Register_Pipe(int pipefd, char* piepfd_descrip, 
 				PipeHandlercpp handlercpp, char* handler_descrip, 
-				Service* s, DCpermission perm) 
+				Service* s, HandlerType handler_type, DCpermission perm) 
 {
 	return( Register_Pipe(pipefd, piepfd_descrip, NULL, handlercpp, 
-							handler_descrip, s, perm, TRUE) ); 
+							handler_descrip, s, handler_type, perm, TRUE) ); 
 }
 
 int	DaemonCore::Register_Reaper(char* reap_descrip, ReaperHandler handler, 
@@ -519,7 +522,7 @@ int DaemonCore::Register_Command(int command, char* command_descrip,
     int     i;		// hash value
     int     j;		// for linear probing
     
-    if( handler == NULL && handlercpp == NULL ) {
+    if( handler == 0 && handlercpp == 0 ) {
 		dprintf(D_DAEMONCORE, "Can't register NULL command handler\n");
 		return -1;
     }
@@ -537,7 +540,7 @@ int DaemonCore::Register_Command(int command, char* command_descrip,
     }
 
 	// See if our hash landed on an empty bucket...
-    if ( (comTable[i].handler != NULL) || (comTable[i].handlercpp != NULL) ) {
+    if ( (comTable[i].handler) || (comTable[i].handlercpp) ) {
 		// occupied
         if(comTable[i].num == command) {
 			// by the same signal
@@ -546,8 +549,7 @@ int DaemonCore::Register_Command(int command, char* command_descrip,
 		// by some other signal, so scan thru the entries to
 		// find the first empty one
         for(j = (i + 1) % maxCommand; j != i; j = (j + 1) % maxCommand) {
-            if ((comTable[j].handler == NULL) && 
-							(comTable[j].handlercpp == NULL))
+            if( (comTable[j].handler == 0) && (comTable[j].handlercpp == 0) )
             {
 				i = j;
 				break;
@@ -652,7 +654,7 @@ int DaemonCore::Register_Signal(int sig, char* sig_descrip,
     int     j;		// for linear probing
     
     
-    if( handler == NULL && handlercpp == NULL) {
+    if( handler == 0 && handlercpp == 0 ) {
 		dprintf(D_DAEMONCORE, "Can't register NULL signal handler\n");
 		return -1;
     }
@@ -688,7 +690,7 @@ int DaemonCore::Register_Signal(int sig, char* sig_descrip,
 	// See if our hash landed on an empty bucket...  We identify an empty 
 	// bucket by checking of there is a handler (or a c++ handler) defined; 
 	// if there is no handler, then it is an empty entry.
-    if ( (sigTable[i].handler != NULL) || (sigTable[i].handlercpp != NULL) ) {
+    if( sigTable[i].handler || sigTable[i].handlercpp ) {
 		// occupied...
         if(sigTable[i].num == sig) {
 			// by the same signal
@@ -697,8 +699,7 @@ int DaemonCore::Register_Signal(int sig, char* sig_descrip,
 		// by some other signal, so scan thru the entries to
 		// find the first empty one
         for(j = (i + 1) % maxSig; j != i; j = (j + 1) % maxSig) {
-            if ((sigTable[j].handler == NULL) && 
-							(sigTable[j].handlercpp == NULL))
+            if( (sigTable[j].handler == 0) && (sigTable[j].handlercpp == 0) )
             {
 				i = j;
 				break;
@@ -883,7 +884,7 @@ int DaemonCore::Register_Socket(Stream *iosock, char* iosock_descrip,
 
 	// If this is the first command sock, set initial_command_sock
 	// NOTE: When we remove sockets, the intial_command_sock can change!
-	if ( initial_command_sock == -1 && handler == NULL && handlercpp == NULL )
+	if ( initial_command_sock == -1 && handler == 0 && handlercpp == 0 )
 		initial_command_sock = i;
 
 	// Update curr_regdataptr for SetDataPtr()
@@ -1001,7 +1002,8 @@ int DaemonCore::Cancel_Socket( Stream* insock)
 
 int DaemonCore::Register_Pipe(int pipefd, char* pipefd_descrip, 
 				PipeHandler handler, PipeHandlercpp handlercpp, 
-				char *handler_descrip, Service* s, DCpermission perm, 
+				char *handler_descrip, Service* s, 
+				HandlerType handler_type, DCpermission perm, 
 				int is_cpp)
 {
     int     i;	
@@ -1069,6 +1071,7 @@ int DaemonCore::Register_Pipe(int pipefd, char* pipefd_descrip,
 	(*pipeTable)[i].in_handler = false;
 	(*pipeTable)[i].pipefd = pipefd;
 	(*pipeTable)[i].handler = handler;
+	(*pipeTable)[i].handler_type = handler_type;
 	(*pipeTable)[i].handlercpp = handlercpp;
 	(*pipeTable)[i].is_cpp = is_cpp;
 	(*pipeTable)[i].perm = perm;
@@ -1420,8 +1423,7 @@ void DaemonCore::DumpCommandTable(int flag, const char* indent)
 	dprintf(flag, "%sCommands Registered\n", indent);
 	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~~\n", indent);
 	for (i = 0; i < maxCommand; i++) {
-		if ((comTable[i].handler != NULL) || 
-						(comTable[i].handlercpp != NULL)) 
+		if( comTable[i].handler || comTable[i].handlercpp ) 
 		{
 			descrip1 = "NULL";
 			descrip2 = descrip1;
@@ -1443,8 +1445,8 @@ MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm) {
 	char tbuf[16];
 
 	for (i = 0; i < maxCommand; i++) {
-		if ( ( (comTable[i].handler != NULL) || (comTable[i].handlercpp != NULL) ) &&
-			 ( comTable[i].perm == perm ) )
+		if( (comTable[i].handler || comTable[i].handlercpp) &&
+			(comTable[i].perm == perm) )
 		{
 
 			sprintf (tbuf, "%i", comTable[i].num);
@@ -1479,8 +1481,7 @@ void DaemonCore::DumpReapTable(int flag, const char* indent)
 	dprintf(flag, "%sReapers Registered\n", indent);
 	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~~\n", indent);
 	for (i = 0; i < maxReap; i++) {
-		if ((reapTable[i].handler != NULL) || 
-						(reapTable[i].handlercpp != NULL)) {
+		if( reapTable[i].handler || reapTable[i].handlercpp ) {
 			descrip1 = "NULL";
 			descrip2 = descrip1;
 			if ( reapTable[i].reap_descrip )
@@ -1514,9 +1515,7 @@ void DaemonCore::DumpSigTable(int flag, const char* indent)
 	dprintf(flag, "%sSignals Registered\n", indent);
 	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~\n", indent);
 	for (i = 0; i < maxSig; i++) {
-		if ( (sigTable[i].handler != NULL) || 
-						(sigTable[i].handlercpp != NULL) ) 
-		{
+		if( sigTable[i].handler || sigTable[i].handlercpp ) { 
 			descrip1 = "NULL";
 			descrip2 = descrip1;
 			if ( sigTable[i].sig_descrip )
@@ -1595,9 +1594,6 @@ DaemonCore::ReInit()
 
 		// Reset our IpVerify object
 	ipverify.Init();
-
-		// Reset our SecMan object (clears the cached info)
-    invalidateSessionCache();
 
 		// Handle our timer.  If this is the first time, we need to
 		// register it.  Otherwise, we just reset its value to go off
@@ -1803,8 +1799,18 @@ void DaemonCore::Driver()
 		// select on.
 		for (i = 0; i < nPipe; i++) {
 			if ( (*pipeTable)[i].pipefd ) {	// if a valid entry....
-				// Add the pipe fd to our read fd set
-				FD_SET( (*pipeTable)[i].pipefd,&readfds);
+				switch( (*pipeTable)[i].handler_type ) {
+				case HANDLE_READ:
+					FD_SET( (*pipeTable)[i].pipefd,&readfds);
+					break;
+				case HANDLE_WRITE:
+					FD_SET( (*pipeTable)[i].pipefd,&writefds);
+					break;
+				case HANDLE_READ_WRITE:
+					FD_SET( (*pipeTable)[i].pipefd,&readfds);
+					FD_SET( (*pipeTable)[i].pipefd,&writefds);
+					break;
+				}
 			}
         }
 
@@ -1908,7 +1914,11 @@ void DaemonCore::Driver()
 					}
 #else
 					// For Unix, check if select set the bit
-					if (FD_ISSET((*pipeTable)[i].pipefd, &readfds)) 
+					if( FD_ISSET((*pipeTable)[i].pipefd, &readfds) ) 
+					{
+						(*pipeTable)[i].call_handler = true;
+					}
+					if (FD_ISSET((*pipeTable)[i].pipefd, &writefds)) 
 					{
 						(*pipeTable)[i].call_handler = true;
 					}
@@ -2332,7 +2342,7 @@ int DaemonCore::HandleReq(int socki)
 			bool found_sess = sec_man->session_cache->lookup(sess_id, session);
 
 			if (!found_sess) {
-				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s NOT FOUND...\n", sess_id);
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s NOT FOUND...\n", sess_id);
 				// no session... we outta here!
 
 				// but first, we should be nice and send a message back to
@@ -2350,7 +2360,7 @@ int DaemonCore::HandleReq(int socki)
 			}
 
 			if (!session->key()) {
-				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
 				// uhm, there should be a key here!
 				if( return_address_ss ) {
 					free( return_address_ss );
@@ -2426,7 +2436,7 @@ int DaemonCore::HandleReq(int socki)
 			bool found_sess = sec_man->session_cache->lookup(sess_id, session);
 
 			if (!found_sess) {
-				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s NOT FOUND...\n", sess_id);
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s NOT FOUND...\n", sess_id);
 				// no session... we outta here!
 
 				// but first, see above behavior in MD5 code above.
@@ -2443,7 +2453,7 @@ int DaemonCore::HandleReq(int socki)
 			}
 
 			if (!session->key()) {
-				dprintf ( D_SECURITY, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
+				dprintf ( D_ALWAYS, "DC_AUTHENTICATE: session %s is missing the key!\n", sess_id);
 				// uhm, there should be a key here!
 				if( return_address_ss ) {
 					free( return_address_ss );
@@ -2707,6 +2717,10 @@ int DaemonCore::HandleReq(int socki)
 					}
 				}
 
+				// add our version to the policy to be sent over
+				sprintf (buf, "%s=\"%s\"", ATTR_SEC_REMOTE_VERSION, CondorVersion());
+				the_policy->InsertOrUpdate(buf);
+				
 				// handy policy vars
 				SecMan::sec_feat_act will_enable_encryption = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_ENCRYPTION);
 				SecMan::sec_feat_act will_enable_integrity  = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_INTEGRITY);
@@ -2809,6 +2823,38 @@ int DaemonCore::HandleReq(int socki)
 				SecMan::sec_feat_act will_enable_integrity  = sec_man->sec_lookup_feat_act(*the_policy, ATTR_SEC_INTEGRITY);
 
 
+				// protocol fix:
+				//
+				// up to and including 6.6.0, will_authenticate would be set to
+				// true if we are resuming a session that was authenticated.
+				// this is not necessary.
+				//
+				// so, as of 6.6.1, if we are resuming a session (as determined
+				// by the expression (!new_session), AND the other side is
+				// 6.6.1 or higher, we will force will_authenticate to
+				// SEC_FEAT_ACT_NO.
+
+				if ((will_authenticate == SecMan::SEC_FEAT_ACT_YES)) {
+					if ((!new_session)) {
+						char * remote_version = NULL;
+						the_policy->LookupString(ATTR_SEC_REMOTE_VERSION, &remote_version);
+						if(remote_version) {
+							// this attribute was added in 6.6.1.  it's mere
+							// presence means that the remote side is 6.6.1 or
+							// higher, so no need to instantiate a CondorVersionInfo.
+							dprintf( D_SECURITY, "SECMAN: other side is %s, NOT reauthenticating.\n", remote_version );
+							will_authenticate = SecMan::SEC_FEAT_ACT_NO;
+
+							free (remote_version);
+						} else {
+							dprintf( D_SECURITY, "SECMAN: other side is pre 6.6.1, reauthenticating.\n" );
+						}
+					} else {
+						dprintf( D_SECURITY, "SECMAN: new session, doing initial authentication.\n" );
+					}
+				}
+
+
 
 				if (is_tcp && (will_authenticate == SecMan::SEC_FEAT_ACT_YES)) {
 
@@ -2836,9 +2882,8 @@ int DaemonCore::HandleReq(int socki)
 
 					if (!sock->authenticate(the_key, auth_methods.data(), &errstack)) {
 						dprintf( D_ALWAYS, 
-								 "DC_AUTHENTICATE: authenticate failed\n" );
-						dprintf( D_ALWAYS, 
-								 "%s", errstack.get_full_text() );
+								 "DC_AUTHENTICATE: authenticate failed: %s\n",
+								 errstack.getFullText() );
 						result = FALSE;
 						goto finalize;
 					}
@@ -2941,10 +2986,17 @@ int DaemonCore::HandleReq(int socki)
 
 					// also put some attributes in the policy classad we are caching.
 					sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_SUBSYSTEM );
+					// it matters if the version is empty, so we must explicitly delete it
+					the_policy->Delete( ATTR_SEC_REMOTE_VERSION );
+					sec_man->sec_copy_attribute( *the_policy, auth_info, ATTR_SEC_REMOTE_VERSION );
 					sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_USER );
 					sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_SID );
 					sec_man->sec_copy_attribute( *the_policy, pa_ad, ATTR_SEC_VALID_COMMANDS );
 
+					if (DebugFlags & D_FULLDEBUG) {
+						dprintf (D_SECURITY, "DC_AUTHENTICATE: sending session ad:\n");
+						pa_ad.dPrint( D_SECURITY );
+					}
 
 					sock->encode();
 					if (! pa_ad.put(*sock) ||
@@ -2966,6 +3018,9 @@ int DaemonCore::HandleReq(int socki)
 					KeyCacheEntry tmp_key(the_sid.data(), sock->endpoint(), the_key, the_policy, expiration_time);
 					sec_man->session_cache->insert(tmp_key);
 					dprintf (D_SECURITY, "DC_AUTHENTICATE: added session id %s to cache for %s seconds!\n", the_sid.data(), dur.data());
+					if (DebugFlags & D_FULLDEBUG) {
+						the_policy->dPrint(D_SECURITY);
+					}
 				}
 			}
 		}
@@ -3576,7 +3631,14 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 
 		if ( hwinsta && hdesk ) {
 			// Enumerate all winsta's to find the one with the job
-			EnumWindowStations((WINSTAENUMPROC)DCFindWinSta, (LPARAM)pidinfo);
+			// We kick this off in a separate thread, and block until
+			// it returns.
+
+			HANDLE threadHandle;
+			DWORD threadID;
+			threadHandle = CreateThread(NULL, 0, FindWinstaThread, 
+									pidinfo, 0, &threadID);
+			WaitForSingleObject(threadHandle, INFINITE);
 
 			if ( pidinfo->hWnd == NULL ) {
 				// Did not find it.  This could happen because WinNT has a 
@@ -3584,8 +3646,9 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 				// show up when you enumerate all the winstas.  Sometimes
 				// it takes a few seconds.  So lets sleep a while and try again.
 				sleep(4);
-				EnumWindowStations((WINSTAENUMPROC)DCFindWinSta, 
-								(LPARAM)pidinfo);
+				threadHandle = CreateThread(NULL, 0, FindWinstaThread, 
+									pidinfo, 0, &threadID);
+				WaitForSingleObject(threadHandle, INFINITE);
 			}
 
 			// Set winsta and desktop back to the service desktop (or wherever)
@@ -3951,7 +4014,7 @@ int DaemonCore::Continue_Process(pid_t pid)
 			}
 			// Note: SuspendThread returns 0 if thread was previously active
 			if ( ::SuspendThread(hThreads[j]) == 0 ) {
-				// Oh shit! This process was already active.  Resume all
+				// This process was already active.  Resume all
 				// the threads we have suspended and return.
 				dprintf(D_DAEMONCORE,
 						"Continue_Process: pid %d has active thread\n",pid);
@@ -4098,6 +4161,17 @@ int DaemonCore::SetFDInheritFlag(int fh, int flag)
 	return TRUE;
 }
 
+// This is the thread function we use to call EnumWindowStations(). We
+// found  that calling EnumWindowStations() from the main thread would 
+// later cause SetThreadDesktop() to fail, due to existing Windows or
+// hooks on the "current" desktop that were owned by the main thread.  
+// By kicking it off in its own thread, we ensure that this doesn't happen.
+DWORD WINAPI
+FindWinstaThread( LPVOID pidinfo ) {
+
+	return EnumWindowStations((WINSTAENUMPROC)DCFindWinSta, (LPARAM)pidinfo);
+}
+
 // Callback function for EnumWindowStationProc call to find hWnd for a pid
 BOOL CALLBACK
 DCFindWinSta(LPTSTR winsta_name, LPARAM p)
@@ -4127,10 +4201,9 @@ DCFindWinSta(LPTSTR winsta_name, LPARAM p)
 		}
 	}
 	
-	// must try to open winsta as the user
-	priv = set_user_priv();
+	// we used to set_user_priv() here, but we found that its not 
+	// needed, and worse still, would cause the startd to EXCEPT().
 	HWINSTA hwinsta = OpenWindowStation(winsta_name, FALSE, MAXIMUM_ALLOWED);
-	set_priv(priv);
 
 	if ( hwinsta == NULL ) {
 		//dprintf(D_FULLDEBUG,"Error: Failed to open WinSta %s err=%d\n",
@@ -4150,10 +4223,9 @@ DCFindWinSta(LPTSTR winsta_name, LPARAM p)
 		return TRUE;    
 	}
 
-	// must try to open desktop as the user
-	set_user_priv();
+	// We used to set_user_priv() here, but we found it wasn't needed.
+	// Worse still, it would cause the startd to EXCEPT(). 
 	HDESK hdesk = OpenDesktop( "default", 0, FALSE, MAXIMUM_ALLOWED );
-	set_priv(priv);
 
 	if (hdesk == NULL) {
 			// failed; so close the handle and return TRUE to continue
@@ -4301,6 +4373,86 @@ int DaemonCore::SetEnv( char *env_var )
 	return TRUE;
 #endif
 }
+
+
+void
+DaemonCore::Forked_Child_Wants_Exit_By_Exec( bool exit_by_exec )
+{
+	if( exit_by_exec ) {
+		_condor_exit_with_exec = 1;
+	}
+}
+
+
+#if !defined(WIN32) && !defined(DUX)
+	/* On Unix, we define our own exit() call.  The reason is messy: 
+	 * Basically, daemonCore Create_Thread call fork() on Unix.  
+	 * When the forked child calls exit, however, all the class 
+	 * destructors are called.  However, the code was never written in 
+	 * a way that expects the daemons to be forked.  For instance, some
+	 * global constructor in the schedd tells the gridmanager to shutdown...
+	 * certainly we do not want this happening in our forked child!  Also,
+	 * we've seen problems were the forked child gets stuck in libc realloc
+	 * on Linux trying to free up space in the gsi libraries after being 
+	 * called by some global destructor.  So.... for now, if we are
+	 * forked via Create_Thread, we have our child exit _without_ calling
+	 * any c++ destructors.  How do we accomplish that magic feat?  By
+	 * exiting via a call to exec()!  So here it is... we overload exit()
+	 * inside of daemonCore -- we do it this way so we catch all calls to
+	 * exit, including ones buried in dprintf etc.  Note we dont want to
+	 * do this via a macro setting, because some .C files that call exit
+	 * do not include condor_daemon_core.h, and we don't want to put it
+	 * into condor_common.h (because we only want to overload exit for
+	 * daemonCore daemons).  So doing it this way works for all cases.
+	 */
+extern "C" {
+void exit(int status)
+{
+
+		// turns out that _exit() does *not* always flush STDOUT and
+		// STDERR, that it's "implementation dependent".  so, to
+		// ensure that daemoncore things that are writing to stdout
+		// and exiting (like "condor_master -version" or
+		// "condor_shadow -classad") will in fact produce output, we
+		// need to call fflush() ourselves right here.
+		// Derek Wright <wright@cs.wisc.edu> 2004-03-28
+	fflush( stdout );
+	fflush( stderr );
+
+	if ( _condor_exit_with_exec == 0 ) {
+		_exit(status);
+	}
+
+	char* my_argv[2];
+	char* my_env[1];
+	my_argv[1] = NULL;
+	my_env[0] = NULL; 
+
+		// First try to just use /bin/true or /bin/false.
+	if ( status == 0 ) {
+		my_argv[0] = "/bin/true";
+		execve("/bin/true",my_argv,my_env);
+		my_argv[0] = "/usr/bin/true";
+		execve("/usr/bin/true",my_argv,my_env);
+	} else {
+		my_argv[0] = "/bin/false";
+		execve("/bin/false",my_argv,my_env);
+		my_argv[0] = "/usr/bin/false";
+		execve("/usr/bin/false",my_argv,my_env);
+	}
+
+		// If we made it here, we cannot use /bin/[true|false].
+		// So we need to use the condor_exit_code utility, if
+		// it exists.
+		// TODO
+
+		// If we made it here, we are out of options.  So we will
+		// just call _exit(), and hope for the best.
+	_condor_exit_with_exec = 0;  
+	_exit(status ? 1 : 0);
+}
+}
+#endif
 
 
 int DaemonCore::Create_Process(
@@ -4602,6 +4754,14 @@ int DaemonCore::Create_Process(
 			job_environ.Put("PATH",envbuf);
 		}
 
+		// do the same for what likely is the system default TEMP
+		// directory.
+		envbuf[0]='\0';
+		GetEnvironmentVariable("TEMP",envbuf,sizeof(envbuf));
+		if (envbuf[0]) {
+			job_environ.Put("TEMP",envbuf);
+		}
+
 			// now add in env vars from user
 		if ( env ) {
 			job_environ.Merge(env);		
@@ -4856,8 +5016,10 @@ int DaemonCore::Create_Process(
 			unix_env[0] = 0;
 		}
 		else {
+			Env envobject;
 			dprintf(D_DAEMONCORE, "Create_Process: Env: %s\n", env);
-			unix_env = ParseEnvArgsString(env, true);
+			envobject.Merge(env);
+			unix_env = envobject.getStringArray();
 		}
 		
 		if( (args == NULL) || (args[0] == 0) ) {
@@ -4869,7 +5031,7 @@ int DaemonCore::Create_Process(
 		}
 		else {
 			dprintf(D_DAEMONCORE, "Create_Process: Arg: %s\n", args);
-			unix_args = ParseEnvArgsString(args, false);
+			unix_args = ParseArgsString(args);
 		}
 
 		//create a new process group if we are supposed to
@@ -5058,7 +5220,7 @@ int DaemonCore::Create_Process(
             nice( nice_inc );
         }
 
-#if defined( Solaris ) && defined( sun4m )
+#if defined( HAS_PURIFY )
 			/* The following will allow purify to pop up windows 
 			   for all daemons created with Create_Process().  The
 			   -program-name is so purify can find the executable.
@@ -5335,6 +5497,7 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 	int tid;
 	tid = fork();
 	if (tid == 0) {				// new thread (i.e., child process)
+		_condor_exit_with_exec = 1;
 		exit(start_func(arg, sock));
 	} else if (tid < 0) {
 		dprintf(D_ALWAYS, "Create_Thread: fork() failed: %s (%d)\n",
@@ -5987,46 +6150,8 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 	return TRUE;
 }
 
-#define EXCEPTION( x ) case EXCEPTION_##x: return 0;
-int 
-WIFEXITED(DWORD stat) 
-{
-	switch (stat) {
-		EXCEPTION( ACCESS_VIOLATION )
-        EXCEPTION( DATATYPE_MISALIGNMENT )        
-		EXCEPTION( BREAKPOINT )
-        EXCEPTION( SINGLE_STEP )        
-		EXCEPTION( ARRAY_BOUNDS_EXCEEDED )
-        EXCEPTION( FLT_DENORMAL_OPERAND )        
-		EXCEPTION( FLT_DIVIDE_BY_ZERO )
-        EXCEPTION( FLT_INEXACT_RESULT )
-        EXCEPTION( FLT_INVALID_OPERATION )        
-		EXCEPTION( FLT_OVERFLOW )
-        EXCEPTION( FLT_STACK_CHECK )        
-		EXCEPTION( FLT_UNDERFLOW )
-        EXCEPTION( INT_DIVIDE_BY_ZERO )        
-		EXCEPTION( INT_OVERFLOW )
-        EXCEPTION( PRIV_INSTRUCTION )        
-		EXCEPTION( IN_PAGE_ERROR )
-        EXCEPTION( ILLEGAL_INSTRUCTION )
-        EXCEPTION( NONCONTINUABLE_EXCEPTION )        
-		EXCEPTION( STACK_OVERFLOW )
-        EXCEPTION( INVALID_DISPOSITION )        
-		EXCEPTION( GUARD_PAGE )
-        EXCEPTION( INVALID_HANDLE )
-	}
-	return 1;
-}
-
-int 
-WIFSIGNALED(DWORD stat) 
-{
-	if ( WIFEXITED(stat) )
-		return 0;
-	else
-		return 1;
-}
 #endif  // of WIN32
+
 
 int DaemonCore::HandleProcessExitCommand(int command, Stream* stream)
 {
@@ -6127,8 +6252,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 		i = pidentry->reaper_id - 1;
 
 		// Invoke the reaper handler if there is one registered
-		if ( (i >= 0) && ((reapTable[i].handler != NULL) || 
-			 (reapTable[i].handlercpp != NULL)) ) {
+		if( (i >= 0) && (reapTable[i].handler || reapTable[i].handlercpp) ) {
 			// Set curr_dataptr for Get/SetDataPtr()
 			curr_dataptr = &(reapTable[i].data_ptr);
 
@@ -6245,6 +6369,8 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 
 		/* allocate a piece of memory here so 64bit architectures don't
 			complain about assigning a non-pointer to a pointer type */
+		/* XXX this memory is leaked if the timer is canceled before it fires.
+			*/
 		pid_t *child_pid_ptr = new pid_t[1];
 		child_pid_ptr[0] = child_pid;
 		Register_DataPtr( child_pid_ptr );
@@ -6375,20 +6501,15 @@ int DaemonCore::SendAliveToParent()
 }
 	
 #ifndef WIN32
-char **DaemonCore::ParseEnvArgsString(const char *str, bool env)
+char **DaemonCore::ParseArgsString(const char *str)
 {
 	char separator1, separator2;
 	int maxlength;
 	char **argv, *arg;
 	int nargs=0;
 
-	if(env) {
-		separator1 = ';';
-		separator2 = ';';
-	} else {
-		separator1 = ' ';
-		separator2 = '\t';
-	}
+	separator1 = ' ';
+	separator2 = '\t';
 
 	/*
 	maxlength is the maximum number of args and the maximum
@@ -6764,6 +6885,9 @@ void DaemonCore :: clearSession(pid_t pid)
 
 void DaemonCore :: invalidateSessionCache()
 {
+	/* for now, never invalidate the session cache */
+	return;
+
     if (sec_man) {
         sec_man->invalidateAllCache();
     }

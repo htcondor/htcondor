@@ -3,7 +3,10 @@ use strict;
 
 # Version info, dirs, etc
 my $HawkeyeVersion = "";
-my $Temp = "../tmp-$$";
+my $HawkeyeCpu = "";
+my $HawkeyeOs = "";
+my $HawkeyeLib = "";
+my $TempNum = $$;
 my $HawkeyeRelease = "hawkeye_release";
 my @BinDirs = ( "bin", "sbin" );
 my $Modules = "hawkeye_modules";
@@ -12,14 +15,14 @@ my $Install = "install";
 my $Examples = "condor_examples";
 my $CondorRel = "condor_release";
 my $Scripts = "condor_scripts";
-my $ClassAdViewer = "/p/condor/workspaces/shared/wenger/dist/";
+#my $ClassAdViewer = "/p/condor/workspaces/shared/wenger/dist/";
 my $ReleaseDir = "../Hawkeye-Release";
-my $TarBallPat = "Hawkeye-%s.tar";
-my $RelTarBallPat = "Hawkeye-%s.tar.gz";
+my $TestMode = 0;
 
 # Script version, etc
-my $Version = "0.2";
-my $Usage = "$0 version";
+my $Version = "0.3";
+my $Usage = "$0 [-t|-T] version os cpu lib\n".
+  "Example: $0 1.2.3 linux x86 glibc23-dynamic\n";
 
 # Env variable overrides the dirctory from the file...
 if ( exists $ENV{HAWKEYE_RELEASE_DIR} )
@@ -28,26 +31,44 @@ if ( exists $ENV{HAWKEYE_RELEASE_DIR} )
 }
 
 # Prototypes
-sub CopyAll( $$$ );
+sub CopyAll( $$$$ );
 
 # Process command line..
+my @RelOpts;
 foreach my $Arg ( @ARGV )
 {
     # Option (no options supported for now)
     if ( $Arg =~ /^-/ )
     {
-	die "$Usage";
+      SWITCH:
+	{
+	    $Arg =~ /^-t$/ && do { $TestMode = 1; last SWITCH; };
+	    $Arg =~ /^-T$/ && do { $TestMode = 2; last SWITCH; };
+	    $Arg =~ /^-n=(\d+)$/ && do { $TempNum = $1; last SWITCH; };
+	    print STDERR "$Usage"; exit 1;
+	}
     }
-
-    # Grab the version
-    $HawkeyeVersion = $Arg;
+    else
+    {
+	push @RelOpts, $Arg;
+    }
 }
+
+# Temp directory to use
+my $Temp = "../tmp-$TempNum";
+
+# Pull the info from the commandline
+ if ( $#RelOpts != 3 )
+{
+    print STDERR "$Usage"; exit 1;
+}
+$HawkeyeVersion = shift( @RelOpts );
+$HawkeyeOs = shift( @RelOpts );
+$HawkeyeCpu = shift( @RelOpts );
+$HawkeyeLib = shift( @RelOpts );
 
 # Make stdout unbufferred...
 $| = 1;
-
-# Version specified?
-die "$Usage" if ( $HawkeyeVersion eq "" );
 
 # Temp better not exist!
 die "$Temp exists" if ( -d $Temp );
@@ -70,16 +91,23 @@ print "\n == Filling temp release directory ==\n\n";
 # Start populating it..
 foreach my $Bin ( @BinDirs )
 {
-    CopyAll( "$HawkeyeRelease/$Bin", "$Temp/$Bin", "*" );
+    CopyAll( "$HawkeyeRelease/$Bin", "$Temp/$Bin", "*", undef );
 }
 
 # Copy the modules
-CopyAll( $Modules, "$Temp/$ModulesTarget", "test" );
-CopyAll( $Modules, "$Temp/$ModulesTarget", "*pm" );
+CopyAll( $Modules, "$Temp/$ModulesTarget", "test", undef );
+CopyAll( $Modules, "$Temp/$ModulesTarget", "*pm", undef );
+
+# Copy the installation tools & rename them
+my @Scripts;
+CopyAll( $Scripts, "$Temp/sbin", "hawkeye_install_*", \@Scripts );
+foreach my $File ( @Scripts )
+{
+    rename( "$Temp/sbin/$File", "$Temp/sbin/$File.pl" );
+}
 
 # Copy the module installer, configs, etc.
-CopyAll( $Scripts, "$Temp/$Install", "hawkeye_install_*" );
-CopyAll( $Examples, "$Temp/$Install", "*hawkeye*" );
+CopyAll( $Examples, "$Temp/$Install", "*hawkeye*", undef );
 
 # Rename 'em to .example'
 foreach my $File ( split ( /\s+/, `echo $Temp/$Install/*` ) )
@@ -90,52 +118,61 @@ foreach my $File ( split ( /\s+/, `echo $Temp/$Install/*` ) )
     }
 }
 
+# Test Mode
+do { print "\n-- TestMode -> $Temp; done --\n"; exit; } if ( $TestMode == 1 );
+
 # Create the release directory
 mkdir( $ReleaseDir, 0755 ) if ( ! -d $ReleaseDir );
 
+# Directory to create the final tarball in...
+my $AssembleDir = $Temp . "/" . "hawkeye-" . $HawkeyeVersion;
+
 # Finally, make the damn tarball
-my $BinTarBall;
+my $BinTarBall = "release.tar";
 {
-    my $TarBall = sprintf( $TarBallPat, $HawkeyeVersion );
-    my $TarBallPath = "$ReleaseDir/$TarBall";
+    my $TarBallPath = "$ReleaseDir/$BinTarBall";
     print "\nCreating tarball '$TarBallPath'...  ";
-    system( "gtar -C $Temp -cf $TarBallPath ." );
+    system( "tar -C $Temp -cf $TarBallPath ." );
     print "Done\n";
     system( "ls -l $TarBallPath" );
 
     # Blow away tmp, and move the newly created tarball there
     system( "rm -r $Temp" );
-    die "Can't create $Temp" if ( ! mkdir( "$Temp", 0755 ) );
-    system( "mv $TarBallPath $Temp" );
-    $BinTarBall = $TarBall;
+    mkdir( "$Temp", 0755 ) || die "Can't create $Temp";
+    mkdir( "$AssembleDir", 0755 ) || die "Can't create $AssembleDir";
+    system( "mv $TarBallPath $AssembleDir" );
 }
+
+# Assemble the final tarball pieces
 
 # Copy in the last minute pieces..
-CopyAll( $CondorRel, $Temp, "*hawkeye*" );
-CopyAll( $ClassAdViewer, $Temp, "h*tgz*" );
+CopyAll( $CondorRel, $AssembleDir, "*hawkeye*", undef );
+#CopyAll( $ClassAdViewer, $AssembleDir, "h*tgz*", undef );
 
-# Copy the install script, but clean it up along the way...
+# Create the install script
 {
-    my $InstallIn = "$Scripts/hawkeye_install";
-    my $InstallOut = "$Temp/hawkeye_install";
-    open( IN, $InstallIn ) || die "Can't read '$InstallIn'\n";
-    open( OUT, ">$InstallOut" ) || die "Can't write to '$InstallOut'\n";
-    while( <IN> )
-    {
-	s/TARBALL/$BinTarBall/;
-	print OUT;
-    }
-    close( IN );
-    close( OUT );
-    chmod( 0755, $InstallOut );
+
+    # Copy the installation script
+    system( "cp $Scripts/hawkeye_install $AssembleDir/hawkeye_install.pl" );
+    my $Install = "$AssembleDir/hawkeye_install";
+    open( OUT, ">$Install" ) || die "Can't write to '$Install'\n";
+    print OUT "#! /bin/sh\n";
+    print OUT "\$0.pl \"$BinTarBall\" \$*\n";
+    close OUT;
+    chmod( 0755, $Install );
 }
+
+# Test Mode
+do { print "\n-- TestMode -> $Temp; done --\n"; exit; } if ( $TestMode == 2 );
 
 # Now, make the release tarball...
 {
-    my $TarBall = sprintf( $RelTarBallPat, $HawkeyeVersion );
+    my $TarBall = sprintf( "Hawkeye-%s-%s-%s-%s.tar.gz",
+			   $HawkeyeVersion, $HawkeyeOs,
+			   $HawkeyeCpu, $HawkeyeLib );
     my $TarBallPath = "$ReleaseDir/$TarBall";
     print "\nCreating release tarball '$TarBallPath'...  ";
-    system( "gtar --gzip -C $Temp -cf $TarBallPath ." );
+    system( "tar --gzip -C $Temp -cf $TarBallPath ." );
     print "Done\n";
     system( "ls -l $TarBallPath" );
     system( "tar --gzip -tvf $TarBallPath" );
@@ -147,9 +184,9 @@ system( "rm -r $Temp" );
 exit 0;
 
 # Stupid subroutine to copy files
-sub CopyAll( $$$ )
+sub CopyAll( $$$$ )
 {
-    my ( $SrcDir, $DestDir, $FilePat ) = @_;
+    my ( $SrcDir, $DestDir, $FilePat, $List ) = @_;
     print "Copy/Link '$FilePat' from '$SrcDir' to '$DestDir':\n";
     if ( ! -d $DestDir )
     {
@@ -160,6 +197,7 @@ sub CopyAll( $$$ )
     {
 	next if ( ! -f "$SrcDir/$File" );
 	print "   $SrcDir/$File -> $DestDir:  ";
+	push( @{$List}, $File ) if ( defined $List );
 
 	if ( ( -l $SrcDir ) || ( -l "$SrcDir/$File" ) )
 	{

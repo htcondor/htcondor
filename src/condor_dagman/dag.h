@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
- ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #ifndef DAG_H
 #define DAG_H
@@ -36,6 +36,9 @@
 
 // for DAGMAN_RUN_POST_ON_FAILURE config setting
 extern bool run_post_on_failure;
+
+// the name of the attr we insert in job ads, recording DAGMan's job id
+extern const char* DAGManJobIdAttrName;
 
 // for the Condor job id of the DAGMan job
 extern char* DAGManJobId;
@@ -177,6 +180,12 @@ class Dag {
 
 	inline bool Done() const { return NumJobsDone() == NumJobs(); }
 
+		/** Submit all ready jobs, provided they are not waiting on a
+			parent job or being throttled.
+			@return number of jobs successfully submitted
+		*/
+    int SubmitReadyJobs();
+  
     /** Remove all jobs (using condor_rm) that are currently running.
         All jobs currently marked Job::STATUS_SUBMITTED will be fed
         as arguments to condor_rm via popen.  This function is called
@@ -242,11 +251,6 @@ class Dag {
     */
     Job * GetSubmittedJob (bool recovery);
 
-    /*  Submit all ready jobs, provided they are not waiting on a parent job.
-        @return number of jobs successfully submitted
-    */
-    int SubmitReadyJobs();
-  
 	void PrintEvent( debug_level_t level, const char* eventName, Job* job,
 					 CondorID condorID );
 

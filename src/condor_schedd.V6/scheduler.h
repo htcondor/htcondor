@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 // //////////////////////////////////////////////////////////////////////
 //
 // condor_sched.h
@@ -47,6 +47,7 @@
 #include "user_log.c++.h"
 #include "autocluster.h"
 #include "shadow_mgr.h"
+#include "enum_utils.h"
 
 const 	int			MAX_REJECTED_CLUSTERS = 1024;
 const   int         STARTD_CONTACT_TIMEOUT = 45;
@@ -64,8 +65,8 @@ struct shadow_rec
     int             preempted;
     int             conn_fd;
 	int				removed;
-    char*           sinfulString;  // added for V6.1 Shadow by MEY
 	bool			isZombie;	// added for Maui by stolley
+	bool			is_reconnect;
 }; 
 
 struct OwnerData {
@@ -81,18 +82,17 @@ struct OwnerData {
   int GlobusJobs;
   int GlobusUnmanagedJobs;
   time_t NegotiationTimestamp;
-  OwnerData() { Name=NULL;
+  OwnerData() { Name=NULL; Domain=NULL; X509=NULL;
   JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=GlobusJobs=GlobusUnmanagedJobs=0; }
 };
 
-#define SIZE_OF_CAPABILITY_STRING 40 /* see also matchmater.C */
 class match_rec
 {
  public:
     match_rec(char*, char*, PROC_ID*, ClassAd*, char*, char* pool);
 	~match_rec();
-    char    		id[SIZE_OF_CAPABILITY_STRING];
-    char    		peer[50];
+    char*    		id;
+    char*   		peer;
 	
 		// cluster of the job we used to obtain the match
 	int				origcluster; 
@@ -134,6 +134,7 @@ typedef enum {
 	NO_SHADOW_WIN32,
 	NO_SHADOW_DC_VANILLA,
 	NO_SHADOW_OLD_VANILLA,
+	NO_SHADOW_RECONNECT,
 } NoShadowFailure_t;
 
 
@@ -141,13 +142,13 @@ typedef enum {
 class ContactStartdArgs
 {
 public:
-	ContactStartdArgs( char* the_capab, char* the_owner, char*
+	ContactStartdArgs( char* the_claim_id, char* the_owner, char*
 					   the_sinful, PROC_ID the_id, ClassAd* match,
 					   char* the_pool, bool is_dedicated );
 	~ContactStartdArgs();
 
 	char*		sinful( void )		{ return csa_sinful; };
-	char*		capability( void )	{ return csa_capability; };
+	char*		claimId( void )		{ return csa_claim_id; };
 	char*		owner( void )		{ return csa_owner; };
 	char*		pool( void )		{ return csa_pool; };
 	ClassAd*	matchAd( void )		{ return csa_match_ad; };
@@ -156,7 +157,7 @@ public:
 	int			proc( void )		{ return csa_id.proc; };
 
 private:
-	char *csa_capability;
+	char *csa_claim_id;
 	char *csa_owner;
 	char *csa_sinful;
 	PROC_ID csa_id;
@@ -170,7 +171,7 @@ private:
 // a pointer to this state so we can restore it after a non-blocking connect.
 struct contactStartdState {
     match_rec* mrec;
-    char* capability;
+    char* claim_id;
     char* server;
     ClassAd *jobAd;
 };
@@ -231,6 +232,7 @@ class Scheduler : public Service
 	void			StartJobs();
 	void			StartSchedUniverseJobs();
 	void			sendAlives();
+	void			RecomputeAliveInterval(int cluster, int proc);
 	void			StartJobHandler();
 	UserLog*		InitializeUserLog( PROC_ID job_id );
 	bool			WriteAbortToUserLog( PROC_ID job_id );
@@ -268,6 +270,13 @@ class Scheduler : public Service
 			@return FALSE on denial/problems, TRUE on success
 		*/
 	int             startdContactSockHandler( Stream *sock );
+
+		/** Used to enqueue another disconnected job that we need to
+			spawn a shadow to attempt to reconnect to.
+		*/
+	bool			enqueueReconnectJob( PROC_ID job );
+	void			checkReconnectQueue( void );
+	void			makeReconnectRecords( PROC_ID* job, ClassAd* match_ad );
 
 		// Useful public info
 	char*			shadowSockSinful( void ) { return MyShadowSockName; };
@@ -357,7 +366,13 @@ private:
 	Queue<ContactStartdArgs*> startdContactQueue;
 	int             MAX_STARTD_CONTACTS;
 	int				checkContactQueue_tid;	// DC Timer ID to check queue
-	
+
+		// If we we need to reconnect to disconnected starters, we
+		// stash the proc IDs in here while we read through the job
+		// queue.  Then, we can spawn all the shadows after the fact. 
+	SimpleList<PROC_ID> jobsToReconnect;
+	int				checkReconnectQueue_tid;
+
 	// useful names
 	char*			CondorAdministrator;
 	char*			Mail;
@@ -388,7 +403,7 @@ private:
 
 
 		/** We add a match record (AddMrec), then open a ReliSock to the
-			startd.  We push the capability and the jobAd, then register
+			startd.  We push the ClaimId and the jobAd, then register
 			the Socket with startdContactSockHandler and put the new mrec
 			into the daemonCore data pointer.  
 			@param args An object that holds all the info we care about 
@@ -417,11 +432,14 @@ private:
 	HashTable <int, ExtArray<PROC_ID> *> *spoolJobFileWorkers;
 	int				numMatches;
 	int				numShadows;
-	List <PROC_ID>	*IdleSchedUniverseJobIDs;
 	DaemonList		*FlockCollectors, *FlockNegotiators;
 	int				MaxFlockLevel;
 	int				FlockLevel;
     int         	alive_interval;  // how often to broadcast alive
+		// leaseAliveInterval is the minimum interval we need to send
+		// keepalives based upon ATTR_JOB_LEASE_DURATION...
+	int				leaseAliveInterval;  
+	int				aliveid;	// timer id for sending keepalives to startd
 	int				MaxExceptions;	 // Max shadow excep. before we relinquish
 	bool			ManageBandwidth;
 
@@ -441,10 +459,10 @@ private:
 extern void set_job_status(int cluster, int proc, int status);
 extern bool claimStartd( match_rec* mrec, ClassAd* job_ad, bool is_dedicated );
 extern bool sendAlive( match_rec* mrec );
-extern void fixReasonAttrs( PROC_ID job_id, int action );
+extern void fixReasonAttrs( PROC_ID job_id, JobAction action );
 extern bool moveStrAttr( PROC_ID job_id, const char* old_attr,  
 						 const char* new_attr, bool verbose );
-extern bool abortJob( int cluster, int proc, const char *reason, bool use_transaction );
+extern bool abortJob( ClassAd *jobad, int cluster, int proc, const char *reason, bool use_transaction );
 extern bool holdJob( int cluster, int proc, const char* reason = NULL, 
 					 bool use_transaction = false, 
 					 bool notify_shadow = true,  

@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
- ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "MyString.h"
@@ -41,6 +41,7 @@ MyString::MyString()
   
 MyString::MyString(int i) 
 {
+	init();
 	const int bufLen = 50;
     char tmp[bufLen];
 	::snprintf(tmp,bufLen,"%d",i);
@@ -71,6 +72,7 @@ MyString::~MyString()
     if (Data) {
 		delete[] Data;
 	}
+	delete [] tokenBuf;
 	init(); // for safety -- errors if you try to re-use this object
 	return;
 }
@@ -88,19 +90,27 @@ MyString::operator[](int pos) const
     return Data[pos];
 }
 
-// Hmm -- this seems pretty dangerous.  What if the string is zero-length
-// and the caller changes the returned char& to something other than '\0'?
-// Or what if we return a character from the string and the caller changes
-// it to '\0'?  Either way, bad things will probably happen!
-// wenger 2003-04-28.
-char& 
-MyString::operator[](int pos) 
+const char&
+MyString::operator[](int pos)
 {
 	if (pos >= Len || pos < 0) {
 		dummy = '\0';
 		return dummy;
 	}	
 	return Data[pos];
+}
+
+void
+MyString::setChar(int pos, char value)
+{
+	if ( pos >= 0 && pos < Len ) {
+		Data[pos] = value;
+		if ( value == '\0' ) {
+			Len = pos;
+		}
+	} else {
+		// No op.
+	}
 }
 
 /*--------------------------------------------------------------------
@@ -563,6 +573,8 @@ MyString::init()
     Data=NULL;
     Len=0;
     capacity = 0;
+	tokenBuf = NULL;
+	nextToken = NULL;
 }
 
 /*--------------------------------------------------------------------
@@ -663,7 +675,7 @@ istream& operator>>(istream& is, MyString& S)
 
 
 bool
-MyString::readLine( FILE* fp )
+MyString::readLine( FILE* fp, bool append )
 {
 	char buf[1024];
 	bool first_time = true;
@@ -675,7 +687,7 @@ MyString::readLine( FILE* fp )
 			}
 			return true;
 		}
-		if( first_time ) {
+		if( first_time && !append) {
 			*this = buf;
 			first_time = false;
 		} else {
@@ -688,6 +700,58 @@ MyString::readLine( FILE* fp )
 	}
 }
 
+/*--------------------------------------------------------------------
+ *
+ * Tokenize
+ *
+ *--------------------------------------------------------------------*/
+
+void
+MyString::Tokenize()
+{
+	delete [] tokenBuf;
+	tokenBuf = new char[strlen(Value()) + 1];
+	strcpy(tokenBuf, Value());
+	if ( strlen(tokenBuf) > 0 ) {
+		nextToken = tokenBuf;
+	} else {
+		nextToken = NULL;
+	}
+}
+
+const char *
+MyString::GetNextToken(const char *delim, bool skipBlankTokens)
+{
+	const char *result = nextToken;
+
+	if ( !delim || strlen(delim) == 0 ) result = NULL;
+
+	if ( result != NULL ) {
+		while ( *nextToken != '\0' && index(delim, *nextToken) == NULL ) {
+			nextToken++;
+		}
+
+		if ( *nextToken != '\0' ) {
+			*nextToken = '\0';
+			nextToken++;
+		} else {
+			nextToken = NULL;
+		}
+	}
+
+	if ( skipBlankTokens && result && strlen(result) == 0 ) {
+		result = GetNextToken(delim, skipBlankTokens);
+	}
+
+	return result;
+}
+
+
+/*--------------------------------------------------------------------
+ *
+ * Private
+ *
+ *--------------------------------------------------------------------*/
 
 int MyStringHash( const MyString &str, int buckets )
 {

@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-2002 CONDOR Team, Computer Sciences Department,
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.
- * No use of the CONDOR Software Program Source Code is authorized
- * without the express consent of the CONDOR Team.  For more
- * information contact: CONDOR Team, Attention: Professor Miron Livny,
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685,
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #ifndef _CONDOR_DC_SCHEDD_H
 #define _CONDOR_DC_SCHEDD_H
@@ -27,16 +27,7 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_io.h"
-
-
-// ATTR_JOB_ACTION should be one of these
-typedef enum {
-	JA_ERROR,
-	JA_HOLD_JOBS,
-	JA_RELEASE_JOBS,
-	JA_REMOVE_JOBS,
-	JA_REMOVE_X_JOBS
-} job_action_t; 
+#include "enum_utils.h"
 
 
 typedef enum {
@@ -213,6 +204,40 @@ public:
 						  action_result_type_t result_type = AR_LONG,
 						  bool notify_scheduler = true );
 
+
+		/** Vacate all jobs specified in the given StringList.  The list
+			should contain a comma-seperated list of cluster.proc job
+			ids.
+			@param ids What jobs to act on
+			@param vacate_type Graceful or fast vacate?
+			@param result_type What kind of results you want
+			@param notify_scheduler Should the schedd notify the
+ 			controlling scheduler for this job?
+			@return ClassAd containing results of this action, or NULL
+			if we couldn't get any results.  The caller must delete
+			this ClassAd when they are done with the results.
+		*/
+	ClassAd* vacateJobs( StringList* ids, VacateType vacate_type,
+						 CondorError * errstack,
+						 action_result_type_t result_type = AR_LONG,
+						 bool notify_scheduler = true );
+
+		/** Vacate all jobs that match the given constraint.
+			@param constraint What jobs to act on
+			@param vacate_type Graceful or fast vacate?
+			@param result_type What kind of results you want
+			@param notify_scheduler Should the schedd notify the
+ 			controlling scheduler for this job?
+			@return ClassAd containing results of this action, or NULL
+			if we couldn't get any results.  The caller must delete
+			this ClassAd when they are done with the results.
+		*/
+	ClassAd* vacateJobs( const char* constraint, VacateType vacate_type,
+						 CondorError * errstack,
+						 action_result_type_t result_type = AR_TOTALS,
+						 bool notify_scheduler = true );
+
+
 		/** Request the schedd to initiate a negoitation cycle.
 			The request is sent via a SafeSock (UDP datagram).
 			@return true on success, false on failure.
@@ -245,7 +270,7 @@ private:
 			if we couldn't get any results.  The caller must delete
 			this ClassAd when they are done with the results.
 		*/
-	ClassAd* actOnJobs( job_action_t action, const char* action_str, 
+	ClassAd* actOnJobs( JobAction action, const char* action_str, 
 						const char* constraint, StringList* ids, 
 						const char* reason, const char* reason_attr,
 						action_result_type_t result_type,
@@ -323,7 +348,7 @@ public:
 
 private:
 
-	job_action_t action;
+	JobAction action;
 	action_result_type_t result_type;
 
 	ClassAd* result_ad;

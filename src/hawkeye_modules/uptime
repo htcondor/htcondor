@@ -47,8 +47,7 @@ sub RunIt {
 	HawkeyeLib::ParseUptime( $_, \%Uptime );
 	foreach my $Attr ( keys %Uptime )
 	{
-	    my $Type = ( $Attr =~ /string/i ) ? "s" : "n";
-	    $Hash->Add( $Attr, $Type, $Uptime{$Attr} );
+	    $Hash->Add( $Attr, HawkeyePublish::TypeAuto, $Uptime{$Attr} );
 	}
     }
 

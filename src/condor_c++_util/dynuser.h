@@ -1,10 +1,32 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #ifndef __dynuser_H
 #define __dynuser_H
 
 #ifdef WIN32
 
 #include <aclapi.h>
-#include "ntsecapi.h"
+#include <ntsecapi.h>
 
 
 
@@ -20,10 +42,12 @@ const int max_domain_length = 100;
 #define ACCOUNT_PREFIX_REUSE	"condor-reuse-"
 
 // get names of accounts and groups in a language-independent way
-char* getWellKnownName( DWORD subAuth1, DWORD subAuth2 = 0 );
+char* getWellKnownName( DWORD subAuth1, DWORD subAuth2 = 0, bool domainname=false );
 // these just call getWellKnownName()
 char* getSystemAccountName();
 char* getUserGroupName();
+char* getBuiltinDomainName();
+char* getNTAuthorityDomainName();
 
 class dynuser {
 public:

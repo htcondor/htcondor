@@ -1,42 +1,42 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 /*  
 	This file defines the following classes:
 
-	Claim, Capability, and Client
+	Claim, ClaimId, and Client
 
 	A Claim object contains all of the information a startd needs
-    about a given claim, such as the capability, the client of this
-    claim, etc.  The capability in the claim is just a pointer to a
-    Capability object.  The client is also just a pointer to a Client
+    about a given claim, such as the ClaimId, the client of this
+    claim, etc.  The ClaimId in the Claim is just a pointer to a
+    ClaimId object.  The client is also just a pointer to a Client
     object.  The startd maintains two Claim objects in the "rip", the
     per-resource information structure.  One for the current claim,
     and one for the possibly preempting claim that is pending.
  
-	A Capability object contains the capability string, and some
+	A ClaimId object contains the ClaimId string, and some
 	functions to manipulate and compare against this string.  The
-	constructor generates a new capability with the following form:
-	<ip:port>#random_integer
+	constructor generates a new ClaimId with the following form:
+	<ip:port>#startd-birthdate#sequence-number
 
 	A Client object contains all the info about a given client of a
 	startd.  In particular, the client name (a.k.a. "user"), the
@@ -58,20 +58,19 @@
 class CODMgr;
 
 
-class Capability
+class ClaimId
 {
 public:
-	Capability( bool is_cod = false );
-	~Capability();
+	ClaimId( bool is_cod = false );
+	~ClaimId();
 
 	char*	id() {return c_id;};
-	char*	capab() {return c_id;};
 	char*	codId() {return c_cod_id;};
-	bool	matches( const char* capab );
+	bool	matches( const char* id );
 
 private:
-	char*	c_id;	// capability string
-	char*	c_cod_id;
+    char*   c_id;       // ClaimId string
+    char*   c_cod_id;   // COD Id for this Claim (NULL if not COD)
 };
 
 
@@ -84,20 +83,23 @@ public:
 	char*	name()	{return c_user;};	// For compatibility only
 	char*	user()	{return c_user;};
 	char*	owner()	{return c_owner;};
+	char*	accountingGroup() {return c_acctgrp;};
 	char*	host()	{return c_host;};
 	char*	addr() 	{return c_addr;};
 
 	void	setuser(const char* user);
 	void	setowner(const char* owner);
+	void	setAccountingGroup(const char* grp);
 	void	setaddr(const char* addr);
 	void	sethost(const char* host);
 
 		// send a message to the client and accountant that the claim
 		// is a being vacated
-	void	vacate(char* cap);
+	void	vacate( char* claim_id );
 private:
 	char	*c_owner;	// name of the owner
 	char	*c_user;	// name of the user
+	char	*c_acctgrp; // name of the accounting group, if any
 	char	*c_host;	// hostname of the clientmachine
 	char	*c_addr;	// <ip:port> of the client
 };
@@ -115,6 +117,7 @@ public:
 
 	void publish( ClassAd*, amask_t );
 	void publishCOD( ClassAd* );
+	void publishStateTimes( ClassAd* );
 
 	void dprintf( int, char* ... );
 
@@ -143,21 +146,20 @@ public:
 	void start_match_timer();
 	void cancel_match_timer();
 	int  match_timed_out();		// We were matched, but not claimed in time
-	void start_claim_timer();
-	void cancel_claim_timer();
-	int  claim_timed_out(); 	// We were claimed, but didn't get a
+	void startLeaseTimer();
+	void cancelLeaseTimer();
+	int  leaseExpired();		// We were claimed, but didn't get a
 								// keep alive in time from the schedd
 
 		// Functions that return data
 	float		rank()			{return c_rank;};
 	float		oldrank()		{return c_oldrank;};
 	bool		isCOD()			{return c_is_cod;};
-	char*		id();
-	char*		capab();
-	char*		codId()			{return c_cap->codId();};
+	char*		codId()			{return c_id->codId();};
+    char*       id();
+    bool        idMatches( const char* id );
 	Client* 	client() 		{return c_client;};
 	Resource* 	rip()			{return c_rip;};
-	Capability* cap()			{return c_cap;};
 	ClassAd*	ad() 			{return c_ad;};
 	int			universe()		{return c_universe;};
 	int			cluster()		{return c_cluster;};
@@ -178,7 +180,7 @@ public:
 	void setoldrank(float rank) {c_oldrank=rank;};
 	void setad(ClassAd *ad);		// Set our ad to the given pointer
 	void setRequestStream(Stream* stream);	
-	void setaliveint(int alive)		{c_aliveint=alive;};
+	void setaliveint(int alive);
 
 		// starter-related functions
 	int	 spawnStarter( time_t, Stream* = NULL );
@@ -197,10 +199,12 @@ public:
 	bool starterKillHard( void );
 	char* makeCODStarterArgs( void );
 	bool verifyCODAttrs( ClassAd* req );
+	bool publishStarterAd( ClassAd* ad );
 
 	bool periodicCheckpoint( void );
 
 	bool ownerMatches( const char* owner );
+	bool globalJobIdMatches( const char* id );
 
 		/**
 		   Remove this claim
@@ -225,7 +229,7 @@ public:
 private:
 	Resource	*c_rip;
 	Client 		*c_client;
-	Capability 	*c_cap;
+	ClaimId 	*c_id;
 	ClassAd*	c_ad;
 	Starter*	c_starter;
 	float		c_rank;
@@ -233,9 +237,14 @@ private:
 	int			c_universe;
 	int			c_proc;
 	int			c_cluster;
+	char*		c_global_job_id;
 	int			c_job_start;
 	int			c_last_pckpt;
 	time_t		c_entered_state;
+	time_t		c_job_total_run_time;
+	time_t		c_job_total_suspend_time;
+	time_t		c_claim_total_run_time;
+	time_t		c_claim_total_suspend_time;
 	Stream*		c_request_stream; // cedar sock that a remote request
                                   // is waiting for a response on
 
@@ -243,12 +252,15 @@ private:
 								// match.  If we're matched but not
 								// claimed within 5 minutes, throw out
 								// the match.
-	int			c_claim_tid;	// DeamonCore timer id for this
-								// claim.  If we don't get a keep
-								// alive in 3 alive intervals, the
-								// schedd has died and we need to
-								// release the claim.
+
+		/*  DeamonCore timer id for this claim/job lease.  If we don't
+			get a keepalive before the job lease expires, schedd has
+			died and we need to release the claim.
+		*/
+	int			c_lease_tid;	
+	int			c_lease_duration; // Duration of our claim/job lease
 	int			c_aliveint;		// Alive interval for this claim
+
 	bool		c_is_cod;       // are we a COD claim or not?
 	char*		c_cod_keyword;	// COD keyword for this claim, if any
 	int			c_has_job_ad;	// Do we have a job ad for the COD claim?

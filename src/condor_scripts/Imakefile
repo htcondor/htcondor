@@ -2,9 +2,10 @@ all_target(condor_install condor_init condor_compile ld condor_configure)
 
 CFLAGS = $(STD_C_FLAGS)
 
-release_copy_target(condor_install,$(RELEASE_DIR)/sbin,condor_install,EXECUTABLE_MODE)
-release_copy_target(condor_configure,$(RELEASE_DIR)/sbin,condor_configure,EXECUTABLE_MODE)
-release_copy_target(condor_init,$(RELEASE_DIR)/sbin,condor_init,EXECUTABLE_MODE)
+release_copy_target(condor_install,sbin,condor_install,EXECUTABLE_MODE)
+release_copy_target(condor_configure,sbin,condor_configure,EXECUTABLE_MODE)
+release_copy_target(condor_init,sbin,condor_init,EXECUTABLE_MODE)
+release_copy_target(condor_updates_stats,sbin,condor_updates_stats,EXECUTABLE_MODE)
 #if IS_CLIPPED
 release_copy_target(condor_compile.clipped,bin,condor_compile,EXECUTABLE_MODE)
 #else 
@@ -13,27 +14,27 @@ release_copy_target(ld,lib,ld,EXECUTABLE_MODE)
 release_link_target($(RELEASE_DIR)/lib/ld,lib,real-ld)
 #endif /* IS_CLIPPED */
 
-strip_copy_target(condor_install,$(STRIP_DIR)/sbin,condor_install,EXECUTABLE_MODE)
-strip_copy_target(condor_configure,$(STRIP_DIR)/sbin,condor_configure,EXECUTABLE_MODE)
-strip_copy_target(condor_init,$(STRIP_DIR)/sbin,condor_init,EXECUTABLE_MODE)
+strip_copy_target(condor_install,sbin,condor_install,EXECUTABLE_MODE)
+strip_copy_target(condor_configure,sbin,condor_configure,EXECUTABLE_MODE)
+strip_copy_target(condor_init,sbin,condor_init,EXECUTABLE_MODE)
 strip_copy_target(condor_clean_checkpoints,$(STRIP_CONTRIB)/sbin,condor_clean_checkpoints,EXECUTABLE_MODE)
 #if IS_CLIPPED
-strip_copy_target(condor_compile.clipped,$(STRIP_DIR)/bin,condor_compile,EXECUTABLE_MODE)
+strip_copy_target(condor_compile.clipped,bin,condor_compile,EXECUTABLE_MODE)
 #else 
-strip_copy_target(condor_compile,$(STRIP_DIR)/bin,condor_compile,EXECUTABLE_MODE)
-strip_copy_target(ld,$(STRIP_DIR)/lib,ld,EXECUTABLE_MODE)
+strip_copy_target(condor_compile,bin,condor_compile,EXECUTABLE_MODE)
+strip_copy_target(ld,lib,ld,EXECUTABLE_MODE)
 strip_link_target($(STRIP_DIR)/lib/ld,lib,real-ld)
 #endif /* IS_CLIPPED */
 
-static_copy_target(condor_install,$(STATIC_DIR)/sbin,condor_install,EXECUTABLE_MODE)
-static_copy_target(condor_configure,$(STATIC_DIR)/sbin,condor_configure,EXECUTABLE_MODE)
-static_copy_target(condor_init,$(STATIC_DIR)/sbin,condor_init,EXECUTABLE_MODE)
+static_copy_target(condor_install,sbin,condor_install,EXECUTABLE_MODE)
+static_copy_target(condor_configure,sbin,condor_configure,EXECUTABLE_MODE)
+static_copy_target(condor_init,sbin,condor_init,EXECUTABLE_MODE)
 static_copy_target(condor_clean_checkpoints,$(STATIC_CONTRIB)/sbin,condor_clean_checkpoints,EXECUTABLE_MODE)
 #if IS_CLIPPED
-static_copy_target(condor_compile.clipped,$(STATIC_DIR)/bin,condor_compile,EXECUTABLE_MODE)
+static_copy_target(condor_compile.clipped,bin,condor_compile,EXECUTABLE_MODE)
 #else 
-static_copy_target(condor_compile,$(STATIC_DIR)/bin,condor_compile,EXECUTABLE_MODE)
-static_copy_target(ld,$(STATIC_DIR)/lib,ld,EXECUTABLE_MODE)
+static_copy_target(condor_compile,bin,condor_compile,EXECUTABLE_MODE)
+static_copy_target(ld,lib,ld,EXECUTABLE_MODE)
 static_link_target($(STATIC_DIR)/lib/ld,lib,real-ld)
 #endif /* IS_CLIPPED */
 
@@ -41,42 +42,12 @@ static_link_target($(STATIC_DIR)/lib/ld,lib,real-ld)
 all_symlink_target(ld,real-ld)
 #endif /* ! IS_CLIPPED */
 
-/* WARNING. Ok, here's the deal on why this is here: glibc 2.1.3 added/renamed
-	some libc calls that broke how we trap stuff. So in order to
-	not have a release tar ball for EACH redhat release, be just
-	ship glibc 2.1.1 with it in the condor/lib directory(it will
-	automatically get used before the real libc courtesy of -L on
-	the link line). This will be the case until we hit a set of
-	header files that can't be used with glibc 2.1.1. */
-#if IS_GLIBC21 || IS_GLIBC22 || IS_GLIBC23
-#if ! IS_CLIPPED
-release_copy_target($(GLIBC_DIR)/libc.a,$(RELEASE_DIR)/lib,libc.a,OBJECT_MODE)
-static_copy_target($(GLIBC_DIR)/libc.a,$(STATIC_DIR)/lib,libc.a,OBJECT_MODE)
-strip_copy_target($(GLIBC_DIR)/libc.a,$(STRIP_DIR)/lib,libc.a,OBJECT_MODE)
-
-release_copy_target($(GLIBC_DIR)/libnss_files.a,$(RELEASE_DIR)/lib,libnss_files.a,OBJECT_MODE)
-static_copy_target($(GLIBC_DIR)/libnss_files.a,$(STATIC_DIR)/lib,libnss_files.a,OBJECT_MODE)
-strip_copy_target($(GLIBC_DIR)/libnss_files.a,$(STRIP_DIR)/lib,libnss_files.a,OBJECT_MODE)
-
-release_copy_target($(GLIBC_DIR)/libnss_dns.a,$(RELEASE_DIR)/lib,libnss_dns.a,OBJECT_MODE)
-static_copy_target($(GLIBC_DIR)/libnss_dns.a,$(STATIC_DIR)/lib,libnss_dns.a,OBJECT_MODE)
-strip_copy_target($(GLIBC_DIR)/libnss_dns.a,$(STRIP_DIR)/lib,libnss_dns.a,OBJECT_MODE)
-
-release_copy_target($(GLIBC_DIR)/libresolv.a,$(RELEASE_DIR)/lib,libresolv.a,OBJECT_MODE)
-static_copy_target($(GLIBC_DIR)/libresolv.a,$(STATIC_DIR)/lib,libresolv.a,OBJECT_MODE)
-strip_copy_target($(GLIBC_DIR)/libresolv.a,$(STRIP_DIR)/lib,libresolv.a,OBJECT_MODE)
-
-release_plain_symlink_target($(RELEASE_DIR)/lib/libresolv.a,libresolv.a)
-release_plain_symlink_target($(RELEASE_DIR)/lib/libc.a,libc.a)
-release_plain_symlink_target($(RELEASE_DIR)/lib/libnss_files.a,libnss_files.a)
-release_plain_symlink_target($(RELEASE_DIR)/lib/libnss_dns.a,libnss_dns.a)
-#endif
-#endif
-
 #if IS_IRIX
+#if ! IS_CLIPPED
 release_link_target($(RELEASE_DIR)/lib/ld,lib,uld)
 release_link_target($(RELEASE_DIR)/lib/ld,lib,old_ld)
 release_link_target($(RELEASE_DIR)/lib/ld,lib,ld32)
+#endif /* ! IS_CLIPPED */
 release_symlink_target(/usr/lib/c++/c++filt,lib,c++filt)
 release_symlink_target(/usr/lib/c++/c++patch,lib,c++patch)
 release_symlink_target(/usr/lib/c++/cfront,lib,cfront)
@@ -84,9 +55,11 @@ release_symlink_target(/usr/lib/c++/markc++,lib,markc++)
 release_symlink_target(/usr/lib/c++/ptcomp,lib,ptcomp)
 release_symlink_target(/usr/lib/c++/ptlink,lib,ptlink)
 
+#if ! IS_CLIPPED
 strip_link_target($(STRIP_DIR)/lib/ld,lib,uld)
 strip_link_target($(STRIP_DIR)/lib/ld,lib,old_ld)
 strip_link_target($(STRIP_DIR)/lib/ld,lib,ld32)
+#endif /* ! IS_CLIPPED */
 strip_symlink_target(/usr/lib/c++/c++filt,lib,c++filt)
 strip_symlink_target(/usr/lib/c++/c++patch,lib,c++patch)
 strip_symlink_target(/usr/lib/c++/cfront,lib,cfront)
@@ -94,9 +67,11 @@ strip_symlink_target(/usr/lib/c++/markc++,lib,markc++)
 strip_symlink_target(/usr/lib/c++/ptcomp,lib,ptcomp)
 strip_symlink_target(/usr/lib/c++/ptlink,lib,ptlink)
 
+#if ! IS_CLIPPED
 static_link_target($(STATIC_DIR)/lib/ld,lib,uld)
 static_link_target($(STATIC_DIR)/lib/ld,lib,old_ld)
 static_link_target($(STATIC_DIR)/lib/ld,lib,ld32)
+#endif /* ! IS_CLIPPED */
 static_symlink_target(/usr/lib/c++/c++filt,lib,c++filt)
 static_symlink_target(/usr/lib/c++/c++patch,lib,c++patch)
 static_symlink_target(/usr/lib/c++/cfront,lib,cfront)
@@ -104,9 +79,11 @@ static_symlink_target(/usr/lib/c++/markc++,lib,markc++)
 static_symlink_target(/usr/lib/c++/ptcomp,lib,ptcomp)
 static_symlink_target(/usr/lib/c++/ptlink,lib,ptlink)
 
+#if ! IS_CLIPPED
 all_symlink_target(ld,uld)
 all_symlink_target(ld,old_ld)
 all_symlink_target(ld,ld32)
+#endif /* ! IS_CLIPPED */
 all_symlink_target(/usr/lib/c++/c++filt,c++filt)
 all_symlink_target(/usr/lib/c++/c++patch,c++patch)
 all_symlink_target(/usr/lib/c++/cfront,cfront)
@@ -115,137 +92,13 @@ all_symlink_target(/usr/lib/c++/ptcomp,ptcomp)
 all_symlink_target(/usr/lib/c++/ptlink,ptlink)
 #endif
 
-#if WANT_CONDOR_ANALYZE
-release_copy_target($(CONDOR_ANALZYE_DIR)/condor_analyze.release,$(RELEASE_DIR)/bin,condor_analyze,OBJECT_MODE)
-strip_copy_target($(CONDOR_ANALZYE_DIR)/condor_analyze.stripped,$(STRIP_DIR)/bin,condor_analyze,OBJECT_MODE)
-static_copy_target($(CONDOR_ANALZYE_DIR)/condor_analyze.static,$(STATIC_DIR)/bin,condor_analyze,OBJECT_MODE)
-#endif
-
-release_copy_target(Condor.pm,$(RELEASE_DIR)/lib,Condor.pm,OBJECT_MODE)
-strip_copy_target(Condor.pm,$(STRIP_DIR)/lib,Condor.pm,OBJECT_MODE)
-static_copy_target(Condor.pm,$(STATIC_DIR)/lib,Condor.pm,OBJECT_MODE)
+release_copy_target(Condor.pm,lib,Condor.pm,OBJECT_MODE)
+strip_copy_target(Condor.pm,lib,Condor.pm,OBJECT_MODE)
+static_copy_target(Condor.pm,lib,Condor.pm,OBJECT_MODE)
 
 release_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
 strip_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
 static_copy_target(condor_run,bin,condor_run,EXECUTABLE_MODE)
-
-#if WANT_MAN_PAGES
-release_copy_target($(MANDIR)/man1/condor_checkpoint.1,$(RELEASE_DIR)/man/man1,condor_checkpoint.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_checkpoint.1,$(STATIC_DIR)/man/man1,condor_checkpoint.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_checkpoint.1,$(STRIP_DIR)/man/man1,condor_checkpoint.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_compile.1,$(RELEASE_DIR)/man/man1,condor_compile.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_compile.1,$(STATIC_DIR)/man/man1,condor_compile.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_compile.1,$(STRIP_DIR)/man/man1,condor_compile.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_config_val.1,$(RELEASE_DIR)/man/man1,condor_config_val.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_config_val.1,$(STATIC_DIR)/man/man1,condor_config_val.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_config_val.1,$(STRIP_DIR)/man/man1,condor_config_val.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_findhost.1,$(RELEASE_DIR)/man/man1,condor_findhost.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_findhost.1,$(STATIC_DIR)/man/man1,condor_findhost.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_findhost.1,$(STRIP_DIR)/man/man1,condor_findhost.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_glidein.1,$(RELEASE_DIR)/man/man1,condor_glidein.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_glidein.1,$(STATIC_DIR)/man/man1,condor_glidein.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_glidein.1,$(STRIP_DIR)/man/man1,condor_glidein.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_history.1,$(RELEASE_DIR)/man/man1,condor_history.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_history.1,$(STATIC_DIR)/man/man1,condor_history.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_history.1,$(STRIP_DIR)/man/man1,condor_history.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_hold.1,$(RELEASE_DIR)/man/man1,condor_hold.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_hold.1,$(STATIC_DIR)/man/man1,condor_hold.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_hold.1,$(STRIP_DIR)/man/man1,condor_hold.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_master.1,$(RELEASE_DIR)/man/man1,condor_master.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_master.1,$(STATIC_DIR)/man/man1,condor_master.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_master.1,$(STRIP_DIR)/man/man1,condor_master.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_master_off.1,$(RELEASE_DIR)/man/man1,condor_master_off.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_master_off.1,$(STATIC_DIR)/man/man1,condor_master_off.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_master_off.1,$(STRIP_DIR)/man/man1,condor_master_off.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_off.1,$(RELEASE_DIR)/man/man1,condor_off.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_off.1,$(STATIC_DIR)/man/man1,condor_off.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_off.1,$(STRIP_DIR)/man/man1,condor_off.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_on.1,$(RELEASE_DIR)/man/man1,condor_on.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_on.1,$(STATIC_DIR)/man/man1,condor_on.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_on.1,$(STRIP_DIR)/man/man1,condor_on.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_preen.1,$(RELEASE_DIR)/man/man1,condor_preen.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_preen.1,$(STATIC_DIR)/man/man1,condor_preen.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_preen.1,$(STRIP_DIR)/man/man1,condor_preen.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_prio.1,$(RELEASE_DIR)/man/man1,condor_prio.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_prio.1,$(STATIC_DIR)/man/man1,condor_prio.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_prio.1,$(STRIP_DIR)/man/man1,condor_prio.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_q.1,$(RELEASE_DIR)/man/man1,condor_q.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_q.1,$(STATIC_DIR)/man/man1,condor_q.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_q.1,$(STRIP_DIR)/man/man1,condor_q.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_qedit.1,$(RELEASE_DIR)/man/man1,condor_qedit.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_qedit.1,$(STATIC_DIR)/man/man1,condor_qedit.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_qedit.1,$(STRIP_DIR)/man/man1,condor_qedit.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_reconfig.1,$(RELEASE_DIR)/man/man1,condor_reconfig.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_reconfig.1,$(STATIC_DIR)/man/man1,condor_reconfig.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_reconfig.1,$(STRIP_DIR)/man/man1,condor_reconfig.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_reconfig_schedd.1,$(RELEASE_DIR)/man/man1,condor_reconfig_schedd.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_reconfig_schedd.1,$(STATIC_DIR)/man/man1,condor_reconfig_schedd.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_reconfig_schedd.1,$(STRIP_DIR)/man/man1,condor_reconfig_schedd.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_release.1,$(RELEASE_DIR)/man/man1,condor_release.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_release.1,$(STATIC_DIR)/man/man1,condor_release.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_release.1,$(STRIP_DIR)/man/man1,condor_release.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_reschedule.1,$(RELEASE_DIR)/man/man1,condor_reschedule.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_reschedule.1,$(STATIC_DIR)/man/man1,condor_reschedule.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_reschedule.1,$(STRIP_DIR)/man/man1,condor_reschedule.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_restart.1,$(RELEASE_DIR)/man/man1,condor_restart.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_restart.1,$(STATIC_DIR)/man/man1,condor_restart.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_restart.1,$(STRIP_DIR)/man/man1,condor_restart.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_rm.1,$(RELEASE_DIR)/man/man1,condor_rm.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_rm.1,$(STATIC_DIR)/man/man1,condor_rm.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_rm.1,$(STRIP_DIR)/man/man1,condor_rm.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_run.1,$(RELEASE_DIR)/man/man1,condor_run.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_run.1,$(STATIC_DIR)/man/man1,condor_run.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_run.1,$(STRIP_DIR)/man/man1,condor_run.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_stats.1,$(RELEASE_DIR)/man/man1,condor_stats.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_stats.1,$(STATIC_DIR)/man/man1,condor_stats.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_stats.1,$(STRIP_DIR)/man/man1,condor_stats.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_status.1,$(RELEASE_DIR)/man/man1,condor_status.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_status.1,$(STATIC_DIR)/man/man1,condor_status.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_status.1,$(STRIP_DIR)/man/man1,condor_status.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_submit.1,$(RELEASE_DIR)/man/man1,condor_submit.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_submit.1,$(STATIC_DIR)/man/man1,condor_submit.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_submit.1,$(STRIP_DIR)/man/man1,condor_submit.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_submit_dag.1,$(RELEASE_DIR)/man/man1,condor_submit_dag.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_submit_dag.1,$(STATIC_DIR)/man/man1,condor_submit_dag.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_submit_dag.1,$(STRIP_DIR)/man/man1,condor_submit_dag.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_userlog.1,$(RELEASE_DIR)/man/man1,condor_userlog.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_userlog.1,$(STATIC_DIR)/man/man1,condor_userlog.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_userlog.1,$(STRIP_DIR)/man/man1,condor_userlog.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_userprio.1,$(RELEASE_DIR)/man/man1,condor_userprio.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_userprio.1,$(STATIC_DIR)/man/man1,condor_userprio.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_userprio.1,$(STRIP_DIR)/man/man1,condor_userprio.1,OBJECT_MODE)
-
-release_copy_target($(MANDIR)/man1/condor_vacate.1,$(RELEASE_DIR)/man/man1,condor_vacate.1,OBJECT_MODE)
-static_copy_target($(MANDIR)/man1/condor_vacate.1,$(STATIC_DIR)/man/man1,condor_vacate.1,OBJECT_MODE)
-strip_copy_target($(MANDIR)/man1/condor_vacate.1,$(STRIP_DIR)/man/man1,condor_vacate.1,OBJECT_MODE)
-#endif
 
 clean::
 html:

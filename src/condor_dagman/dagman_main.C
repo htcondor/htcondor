@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
- ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_config.h"
@@ -39,13 +39,16 @@ void ExitSuccess();
 //---------------------------------------------------------------------------
 char* mySubSystem = "DAGMAN";         // used by Daemon Core
 
+// the name of the attr we insert in job ads, recording DAGMan's job id
+const char* DAGManJobIdAttrName = "DAGManJobID";
+
 bool run_post_on_failure = TRUE;
 
 char* lockFileName = NULL;
 char* DAGManJobId;
 char* DAP_SERVER = "skywalker.cs.wisc.edu";
 
-Global G;
+Dagman dagman;
 
 //---------------------------------------------------------------------------
 static void Usage() {
@@ -79,13 +82,50 @@ void touch (const char * filename) {
 
 //---------------------------------------------------------------------------
 
+
+Dagman::Dagman() :
+	dag (NULL),
+	maxJobs (0),
+	maxPreScripts (0),
+	maxPostScripts (0),
+	rescue_file (NULL),
+	paused (false),
+	submit_delay (0),
+	max_submit_attempts (0),
+	datafile (NULL)
+{
+}
+
+
+Dagman::~Dagman()
+{
+	delete dag;
+}
+
+
+bool
+Dagman::Config()
+{
+	dagman.submit_delay = param_integer( "DAGMAN_SUBMIT_DELAY", 0, 0, 60 );
+	dagman.max_submit_attempts =
+		param_integer( "DAGMAN_MAX_SUBMIT_ATTEMPTS", 6, 1, 10 );
+	dagman.startup_cycle_detect =
+		param_boolean( "DAGMAN_STARTUP_CYCLE_DETECT", false );
+	dagman.max_submits_per_interval =
+		param_integer( "DAGMAN_MAX_SUBMITS_PER_INTERVAL", 5, 1, 1000 );
+	return true;
+}
+
+
+// NOTE: this is only called on reconfig, not at startup
 int
 main_config( bool is_full )
 {
-		// nothing to read in from the config files here...
+	dagman.Config();
 	return 0;
 }
 
+// this is called by DC when the schedd is shutdown fast
 int
 main_shutdown_fast()
 {
@@ -93,36 +133,46 @@ main_shutdown_fast()
     return FALSE;
 }
 
+// this can be called by other functions, or by DC when the schedd is
+// shutdown gracefully
 int main_shutdown_graceful() {
-	debug_printf( DEBUG_QUIET, "Aborting DAG...\n" );
-	if( G.dag ) {
-		debug_printf( DEBUG_NORMAL, "Writing Rescue DAG to %s...\n",
-					  G.rescue_file );
-		G.dag->Rescue( G.rescue_file, G.datafile );
-			// we write the rescue DAG *before* removing jobs because
-			// otherwise if we crashed, failed, or were killed while
-			// removing them, we would leave the DAG in an
-			// unrecoverable state...
-		if( G.dag->NumJobsSubmitted() > 0 ) {
-			debug_printf( DEBUG_NORMAL, "Removing running jobs...\n" );
-			G.dag->RemoveRunningJobs();
-		}
-	}
-	unlink( lockFileName ); 
-    G.CleanUp();
+    dagman.CleanUp();
 	DC_Exit( 1 );
     return FALSE;
 }
 
+int main_shutdown_rescue() {
+	debug_printf( DEBUG_QUIET, "Aborting DAG...\n" );
+	if( dagman.dag ) {
+		debug_printf( DEBUG_NORMAL, "Writing Rescue DAG to %s...\n",
+					  dagman.rescue_file );
+		dagman.dag->Rescue( dagman.rescue_file, dagman.datafile );
+			// we write the rescue DAG *before* removing jobs because
+			// otherwise if we crashed, failed, or were killed while
+			// removing them, we would leave the DAG in an
+			// unrecoverable state...
+		if( dagman.dag->NumJobsSubmitted() > 0 ) {
+			debug_printf( DEBUG_NORMAL, "Removing submitted jobs...\n" );
+			dagman.dag->RemoveRunningJobs();
+		}
+	}
+	unlink( lockFileName ); 
+	main_shutdown_graceful();
+	return false;
+}
+
+// this gets called by DC when DAGMan receives a SIGUSR1 -- which,
+// assuming the DAGMan submit file was properly written, is the signal
+// the schedd will send if the DAGMan job is removed from the queue
 int main_shutdown_remove(Service *, int) {
     debug_printf( DEBUG_NORMAL, "Received SIGUSR1\n" );
-	main_shutdown_graceful();
+	main_shutdown_rescue();
 	return false;
 }
 
 void ExitSuccess() {
 	unlink( lockFileName ); 
-    G.CleanUp();
+    dagman.CleanUp();
 	DC_Exit( 0 );
 }
 
@@ -132,7 +182,7 @@ void print_status();
 
 /****** FOR TESTING *******
 int main_testing_stub( Service *, int ) {
-	if( G.paused ) {
+	if( dagman.paused ) {
 		ResumeDag();
 	}
 	else {
@@ -149,8 +199,11 @@ int main_init (int argc, char ** const argv) {
 
 		// flag used if DAGMan is invoked with -WaitForDebug so we
 		// wait for a developer to attach with a debugger...
-	int wait_for_debug = 0;
-		
+	volatile int wait_for_debug = 0;
+
+		// process any config vars
+	dagman.Config();
+
 	// The DCpermission (last parm) should probably be PARENT, if it existed
     daemonCore->Register_Signal( SIGUSR1, "SIGUSR1",
                                  (SignalHandler) main_shutdown_remove,
@@ -186,14 +239,14 @@ int main_init (int argc, char ** const argv) {
     // Process command-line arguments
     //
     for (i = 1; i < argc; i++) {
-        if (!strcmp("-Debug", argv[i])) {
+        if( !strcasecmp( "-Debug", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT, "No debug level specified\n" );
                 Usage();
             }
             debug_level = (debug_level_t) atoi (argv[i]);
-        } else if (!strcmp("-Condorlog", argv[i])) {
+        } else if( !strcasecmp( "-Condorlog", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT, "No condor log specified" );
@@ -201,14 +254,14 @@ int main_init (int argc, char ** const argv) {
            }
             condorLogName = argv[i];
 	//-->DAP
-	} else if (!strcmp("-Storklog", argv[i])) {
+		} else if( !strcasecmp( "-Storklog", argv[i] ) ) {
             i++;
             if (argc <= i) {
                 debug_printf( DEBUG_SILENT, "No stork log specified" );
                 Usage();
            }
             dapLogName = argv[i];        
-	} else if (!strcmp("-Storkserver", argv[i])) {
+		} else if( !strcasecmp( "-Storkserver", argv[i] ) ) {
 	    i++;
 	    if (argc <= i) {
 	        debug_printf( DEBUG_SILENT, "No stork server specified" );
@@ -216,60 +269,60 @@ int main_init (int argc, char ** const argv) {
 	  }
 	    DAP_SERVER = argv[i];   
 	//<--DAP
-        } else if (!strcmp("-Lockfile", argv[i])) {
+        } else if( !strcasecmp( "-Lockfile", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT, "No DagMan lockfile specified\n" );
                 Usage();
             }
             lockFileName = argv[i];
-        } else if (!strcmp("-Help", argv[i])) {
+        } else if( !strcasecmp( "-Help", argv[i] ) ) {
             Usage();
-        } else if (!strcmp("-Dag", argv[i])) {
+        } else if (!strcasecmp( "-Dag", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT, "No DAG specified\n" );
                 Usage();
             }
-            G.datafile = argv[i];
-        } else if (!strcmp("-Rescue", argv[i])) {
+            dagman.datafile = argv[i];
+        } else if( !strcasecmp( "-Rescue", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT, "No Rescue DAG specified\n" );
                 Usage();
             }
-            G.rescue_file = argv[i];
-        } else if (!strcmp("-MaxJobs", argv[i])) {
+            dagman.rescue_file = argv[i];
+        } else if( !strcasecmp( "-MaxJobs", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT,
 							  "Integer missing after -MaxJobs\n" );
                 Usage();
             }
-            G.maxJobs = atoi (argv[i]);
-        } else if( !strcmp( "-MaxScripts", argv[i] ) ) {
+            dagman.maxJobs = atoi( argv[i] );
+        } else if( !strcasecmp( "-MaxScripts", argv[i] ) ) {
 			debug_printf( DEBUG_SILENT, "-MaxScripts has been replaced with "
 						   "-MaxPre and -MaxPost arguments\n" );
 			Usage();
-        } else if( !strcmp( "-MaxPre", argv[i] ) ) {
+        } else if( !strcasecmp( "-MaxPre", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT,
 							  "Integer missing after -MaxPre\n" );
                 Usage();
             }
-            G.maxPreScripts = atoi( argv[i] );
-        } else if( !strcmp( "-MaxPost", argv[i] ) ) {
+            dagman.maxPreScripts = atoi( argv[i] );
+        } else if( !strcasecmp( "-MaxPost", argv[i] ) ) {
             i++;
             if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
                 debug_printf( DEBUG_SILENT,
 							  "Integer missing after -MaxPost\n" );
                 Usage();
             }
-            G.maxPostScripts = atoi( argv[i] );
-        } else if( !strcmp( "-NoPostFail", argv[i] ) ) {
+            dagman.maxPostScripts = atoi( argv[i] );
+        } else if( !strcasecmp( "-NoPostFail", argv[i] ) ) {
 			run_post_on_failure = FALSE;
-        } else if( !strcmp( "-WaitForDebug", argv[i] ) ) {
+        } else if( !strcasecmp( "-WaitForDebug", argv[i] ) ) {
 			wait_for_debug = 1;
         } else Usage();
     }
@@ -278,7 +331,7 @@ int main_init (int argc, char ** const argv) {
     // Check the arguments
     //
 
-    if (G.datafile == NULL) {
+    if( dagman.datafile == NULL ) {
         debug_printf( DEBUG_SILENT, "No DAG file was specified\n" );
         Usage();
     }
@@ -291,29 +344,30 @@ int main_init (int argc, char ** const argv) {
         debug_printf( DEBUG_SILENT, "No DAG lock file was specified\n" );
         Usage();
     }
-    if (G.maxJobs < 0) {
+    if( dagman.maxJobs < 0 ) {
         debug_printf( DEBUG_SILENT, "-MaxJobs must be non-negative\n");
         Usage();
     }
-    if( G.maxPreScripts < 0 ) {
+    if( dagman.maxPreScripts < 0 ) {
         debug_printf( DEBUG_SILENT, "-MaxPre must be non-negative\n" );
         Usage();
     }
-    if( G.maxPostScripts < 0 ) {
+    if( dagman.maxPostScripts < 0 ) {
         debug_printf( DEBUG_SILENT, "-MaxPost must be non-negative\n" );
         Usage();
     }
     debug_printf( DEBUG_VERBOSE, "DAG Lockfile will be written to %s\n",
                    lockFileName);
-    debug_printf( DEBUG_VERBOSE, "DAG Input file is %s\n", G.datafile);
+    debug_printf( DEBUG_VERBOSE, "DAG Input file is %s\n",
+				  dagman.datafile );
 
-	if( G.rescue_file == NULL ) {
-		MyString s = G.datafile;
+	if( dagman.rescue_file == NULL ) {
+		MyString s = dagman.datafile;
 		s += ".rescue";
-		G.rescue_file = strnewp( s.Value() );
+		dagman.rescue_file = strnewp( s.Value() );
 	}
 	debug_printf( DEBUG_VERBOSE, "Rescue DAG will be written to %s\n",
-				  G.rescue_file);
+				  dagman.rescue_file );
 
 		// if requested, wait for someone to attach with a debugger...
 	while( wait_for_debug );
@@ -341,29 +395,30 @@ int main_init (int argc, char ** const argv) {
 		// if that doesn't work, use the value from the command-line
 		// argument.
     
-	MyString dagFileName(G.datafile);
+	MyString dagFileName( dagman.datafile );
 	MyString jobKeyword("job");
 	MyString msg = ReadMultipleUserLogs::getJobLogsFromSubmitFiles(
-				dagFileName, jobKeyword, G.condorLogFiles);
+				dagFileName, jobKeyword, dagman.condorLogFiles );
 
 		// The "&& !dapLogName" check below is kind of a kludgey fix to allow
 		// DaP jobs that have no "regular" Condor jobs to run.  Kent Wenger
 		// (wenger@cs.wisc.edu) 2003-09-05.
-	if( (msg != "" || G.condorLogFiles.number() == 0) && !dapLogName ) {
+	if( (msg != "" || dagman.condorLogFiles.number() == 0)
+        && !dapLogName ) {
 
-		G.condorLogFiles.rewind();
-		while( G.condorLogFiles.next() ) {
-		    G.condorLogFiles.deleteCurrent();
+		dagman.condorLogFiles.rewind();
+		while( dagman.condorLogFiles.next() ) {
+		    dagman.condorLogFiles.deleteCurrent();
 		}
 
-		G.condorLogFiles.append(condorLogName);
+		dagman.condorLogFiles.append( condorLogName );
 	 }
 
 
-	if( G.condorLogFiles.number() > 0 ) {
-		G.condorLogFiles.rewind();
+	if( dagman.condorLogFiles.number() > 0 ) {
+		dagman.condorLogFiles.rewind();
 		debug_printf( DEBUG_VERBOSE, "Condor log will be written to %s, etc.\n",
-					  G.condorLogFiles.next() );
+					  dagman.condorLogFiles.next() );
 	}
 
 	if( dapLogName ) {
@@ -371,10 +426,11 @@ int main_init (int argc, char ** const argv) {
 					  dapLogName );
 	}
 
-    G.dag = new Dag( G.condorLogFiles, G.maxJobs, G.maxPreScripts,
-		     G.maxPostScripts, dapLogName); //<-- DaP
+    dagman.dag = new Dag( dagman.condorLogFiles, dagman.maxJobs,
+						  dagman.maxPreScripts, dagman.maxPostScripts,
+						  dapLogName ); //<-- DaP
 
-    if( G.dag == NULL ) {
+    if( dagman.dag == NULL ) {
         EXCEPT( "ERROR: out of memory!\n");
     }
     
@@ -382,21 +438,22 @@ int main_init (int argc, char ** const argv) {
     // Parse the input file.  The parse() routine
     // takes care of adding jobs and dependencies to the DagMan
     //
-    debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", G.datafile);
-    if (!parse (G.datafile, G.dag)) {
-        debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n", G.datafile);
+    debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", dagman.datafile );
+    if( !parse( dagman.datafile, dagman.dag ) ) {
+        debug_error( 1, DEBUG_QUIET, "Failed to parse %s\n",
+					 dagman.datafile );
     }
 
 #ifndef NOT_DETECT_CYCLE
-	if (G.dag->isCycle())
+	if( dagman.startup_cycle_detect && dagman.dag->isCycle() )
 	{
 		debug_error (1, DEBUG_QUIET, "ERROR: a cycle exists in the dag, plese check input\n");
 	}
 #endif
     debug_printf( DEBUG_VERBOSE, "Dag contains %d total jobs\n",
-                   G.dag->NumJobs());
+				  dagman.dag->NumJobs() );
 
-	G.dag->DumpDotFile();
+	dagman.dag->DumpDotFile();
 
     //------------------------------------------------------------------------
     // Bootstrap and Recovery
@@ -443,7 +500,7 @@ int main_init (int argc, char ** const argv) {
 			debug_printf( DEBUG_VERBOSE,
 						  "Deleting any older versions of log files...\n" );
       
-            ReadMultipleUserLogs::DeleteLogs(G.condorLogFiles);
+            ReadMultipleUserLogs::DeleteLogs( dagman.condorLogFiles );
 
 	    if ( access( dapLogName, F_OK) == 0 ) {
 	      debug_printf( DEBUG_VERBOSE, "Deleting older version of %s\n",
@@ -459,8 +516,8 @@ int main_init (int argc, char ** const argv) {
         }
 
         debug_printf( DEBUG_VERBOSE, "Bootstrapping...\n");
-        if (!G.dag->Bootstrap (recovery)) {
-            G.dag->PrintReadyQ( DEBUG_DEBUG_1 );
+        if( !dagman.dag->Bootstrap( recovery ) ) {
+            dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
             debug_error( 1, DEBUG_QUIET, "ERROR while bootstrapping\n");
         }
     }
@@ -482,17 +539,28 @@ int main_init (int argc, char ** const argv) {
 
 void
 print_status() {
-	debug_printf( DEBUG_VERBOSE, "%d/%d done, %d failed, %d submitted, "
-				  "%d ready, %d pre, %d post\n", G.dag->NumJobsDone(),
-				  G.dag->NumJobs(), G.dag->NumJobsFailed(),
-				  G.dag->NumJobsSubmitted(), G.dag->NumJobsReady(),
-				  G.dag->NumPreScriptsRunning(),
-				  G.dag->NumPostScriptsRunning() );
+	int total = dagman.dag->NumJobs();
+	int done = dagman.dag->NumJobsDone();
+	int pre = dagman.dag->NumPreScriptsRunning();
+	int submitted = dagman.dag->NumJobsSubmitted();
+	int post = dagman.dag->NumPostScriptsRunning();
+	int ready =  dagman.dag->NumJobsReady();
+	int failed = dagman.dag->NumJobsFailed();
+	int unready = total - (done + pre + submitted + post + ready + failed );
+
+	debug_printf( DEBUG_VERBOSE, "Of %d nodes total:\n", total );
+
+	debug_printf( DEBUG_VERBOSE, " Done     Pre   Queued    Post   Ready   Un-Ready   Failed\n" );
+
+	debug_printf( DEBUG_VERBOSE, "  ===     ===      ===     ===     ===        ===      ===\n" );
+
+	debug_printf( DEBUG_VERBOSE, "%5d   %5d    %5d   %5d   %5d      %5d    %5d\n",
+				  done, pre, submitted, post, ready, unready, failed );
 }
 
 void condor_event_timer () {
 
-	ASSERT( G.dag != NULL );
+	ASSERT( dagman.dag != NULL );
 
     //------------------------------------------------------------------------
     // Proceed with normal operation
@@ -505,8 +573,8 @@ void condor_event_timer () {
     // we are ready to proceed with jobs yet unsubmitted.
     //------------------------------------------------------------------------
 
-	if( G.paused == true ) {
-		debug_printf( DEBUG_VERBOSE, "(DAGMan paused)\n" );
+	if( dagman.paused == true ) {
+		debug_printf( DEBUG_DEBUG_1, "(DAGMan paused)\n" );
 		return;
 	}
 
@@ -517,43 +585,51 @@ void condor_event_timer () {
     static int prevJobsReady = 0;
     static int prevScriptsRunning = 0;
 
+	int justSubmitted;
+	justSubmitted = dagman.dag->SubmitReadyJobs();
+	if( justSubmitted ) {
+		debug_printf( DEBUG_VERBOSE, "Just submitted %d job%s this cycle...\n",
+					  justSubmitted, justSubmitted == 1 ? "" : "s" );
+	}
+
     // If the log has grown
-    if (G.dag->DetectCondorLogGrowth()) {              //-->DAP
-      if (G.dag->ProcessLogEvents(CONDORLOG) == false) { //-->DAP
-			G.dag->PrintReadyQ( DEBUG_DEBUG_1 );
-			main_shutdown_graceful();
+    if( dagman.dag->DetectCondorLogGrowth() ) {
+		if( dagman.dag->ProcessLogEvents( CONDORLOG ) == false ) {
+			dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
+			main_shutdown_rescue();
 			return;
         }
     }
   
     // print status if anything's changed (or we're in a high debug level)
-    if( prevJobsDone != G.dag->NumJobsDone()
-        || prevJobs != G.dag->NumJobs()
-        || prevJobsFailed != G.dag->NumJobsFailed()
-        || prevJobsSubmitted != G.dag->NumJobsSubmitted()
-        || prevJobsReady != G.dag->NumJobsReady()
-        || prevScriptsRunning != G.dag->NumScriptsRunning()
+    if( prevJobsDone != dagman.dag->NumJobsDone()
+        || prevJobs != dagman.dag->NumJobs()
+        || prevJobsFailed != dagman.dag->NumJobsFailed()
+        || prevJobsSubmitted != dagman.dag->NumJobsSubmitted()
+        || prevJobsReady != dagman.dag->NumJobsReady()
+        || prevScriptsRunning != dagman.dag->NumScriptsRunning()
 		|| DEBUG_LEVEL( DEBUG_DEBUG_4 ) ) {
 		print_status();
-        prevJobsDone = G.dag->NumJobsDone();
-        prevJobs = G.dag->NumJobs();
-        prevJobsFailed = G.dag->NumJobsFailed();
-        prevJobsSubmitted = G.dag->NumJobsSubmitted();
-        prevJobsReady = G.dag->NumJobsReady();
-        prevScriptsRunning = G.dag->NumScriptsRunning();
+        prevJobsDone = dagman.dag->NumJobsDone();
+        prevJobs = dagman.dag->NumJobs();
+        prevJobsFailed = dagman.dag->NumJobsFailed();
+        prevJobsSubmitted = dagman.dag->NumJobsSubmitted();
+        prevJobsReady = dagman.dag->NumJobsReady();
+        prevScriptsRunning = dagman.dag->NumScriptsRunning();
 		
-		if (G.dag->GetDotFileUpdate()) {
-			G.dag->DumpDotFile();
+		if( dagman.dag->GetDotFileUpdate() ) {
+			dagman.dag->DumpDotFile();
 		}
 	}
 
-    ASSERT( G.dag->NumJobsDone() + G.dag->NumJobsFailed() <= G.dag->NumJobs() );
+    ASSERT( dagman.dag->NumJobsDone() + dagman.dag->NumJobsFailed()
+			<= dagman.dag->NumJobs() );
 
     //
     // If DAG is complete, hurray, and exit.
     //
-    if( G.dag->Done() ) {
-        ASSERT( G.dag->NumJobsSubmitted() == 0 );
+    if( dagman.dag->Done() ) {
+        ASSERT( dagman.dag->NumJobsSubmitted() == 0 );
         debug_printf( DEBUG_NORMAL, "All jobs Completed!\n" );
 		ExitSuccess();
 		return;
@@ -565,13 +641,14 @@ void condor_event_timer () {
     // dag is not complete, then at least one job failed, or a cycle
     // exists.
     // 
-    if( G.dag->NumJobsSubmitted() == 0 &&
-		G.dag->NumScriptsRunning() == 0 ) {
-		if( G.dag->NumJobsFailed() > 0 ) {
+    if( dagman.dag->NumJobsSubmitted() == 0 &&
+		dagman.dag->NumJobsReady() == 0 &&
+		dagman.dag->NumScriptsRunning() == 0 ) {
+		if( dagman.dag->NumJobsFailed() > 0 ) {
 			if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
 				debug_printf( DEBUG_QUIET,
 							  "ERROR: the following job(s) failed:\n" );
-				G.dag->PrintJobList( Job::STATUS_ERROR );
+				dagman.dag->PrintJobList( Job::STATUS_ERROR );
 			}
 		}
 		else {
@@ -579,7 +656,7 @@ void condor_event_timer () {
 			debug_printf( DEBUG_QUIET, "ERROR: a cycle exists in the DAG\n" );
 		}
 
-		main_shutdown_graceful();
+		main_shutdown_rescue();
 		return;
     }
 }
@@ -606,39 +683,39 @@ void dap_event_timer () {
     static int prevScriptsRunning = 0;
 
     // If the log has grown
-    if (G.dag->DetectDaPLogGrowth()) {
-
-      if (G.dag->ProcessLogEvents(DAPLOG) == false) {
-			G.dag->PrintReadyQ( DEBUG_DEBUG_1 );
-			main_shutdown_graceful();
+    if( dagman.dag->DetectDaPLogGrowth() ) {
+		if( dagman.dag->ProcessLogEvents( DAPLOG ) == false ) {
+			dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
+			main_shutdown_rescue();
 			return;
         }
     }
   
     // print status if anything's changed (or we're in a high debug level)
-    if( prevJobsDone != G.dag->NumJobsDone()
-        || prevJobs != G.dag->NumJobs()
-        || prevJobsFailed != G.dag->NumJobsFailed()
-        || prevJobsSubmitted != G.dag->NumJobsSubmitted()
-        || prevJobsReady != G.dag->NumJobsReady()
-        || prevScriptsRunning != G.dag->NumScriptsRunning()
+    if( prevJobsDone != dagman.dag->NumJobsDone()
+        || prevJobs != dagman.dag->NumJobs()
+        || prevJobsFailed != dagman.dag->NumJobsFailed()
+        || prevJobsSubmitted != dagman.dag->NumJobsSubmitted()
+        || prevJobsReady != dagman.dag->NumJobsReady()
+        || prevScriptsRunning != dagman.dag->NumScriptsRunning()
 		|| DEBUG_LEVEL( DEBUG_DEBUG_4 ) ) {
 		print_status();
-        prevJobsDone = G.dag->NumJobsDone();
-        prevJobs = G.dag->NumJobs();
-        prevJobsFailed = G.dag->NumJobsFailed();
-        prevJobsSubmitted = G.dag->NumJobsSubmitted();
-        prevJobsReady = G.dag->NumJobsReady();
-        prevScriptsRunning = G.dag->NumScriptsRunning();
+        prevJobsDone = dagman.dag->NumJobsDone();
+        prevJobs = dagman.dag->NumJobs();
+        prevJobsFailed = dagman.dag->NumJobsFailed();
+        prevJobsSubmitted = dagman.dag->NumJobsSubmitted();
+        prevJobsReady = dagman.dag->NumJobsReady();
+        prevScriptsRunning = dagman.dag->NumScriptsRunning();
 	}
 
-    ASSERT( G.dag->NumJobsDone() + G.dag->NumJobsFailed() <= G.dag->NumJobs() );
+    ASSERT( dagman.dag->NumJobsDone() + dagman.dag->NumJobsFailed()
+			<= dagman.dag->NumJobs() );
 
     //
     // If DAG is complete, hurray, and exit.
     //
-    if( G.dag->Done() ) {
-        ASSERT( G.dag->NumJobsSubmitted() == 0 );
+    if( dagman.dag->Done() ) {
+        ASSERT( dagman.dag->NumJobsSubmitted() == 0 );
         debug_printf( DEBUG_NORMAL, "All jobs Completed!\n" );
 		ExitSuccess();
 		return;
@@ -650,13 +727,14 @@ void dap_event_timer () {
     // dag is not complete, then at least one job failed, or a cycle
     // exists.
     // 
-    if( G.dag->NumJobsSubmitted() == 0 &&
-		G.dag->NumScriptsRunning() == 0 ) {
-		if( G.dag->NumJobsFailed() > 0 ) {
+    if( dagman.dag->NumJobsSubmitted() == 0 &&
+		dagman.dag->NumJobsReady() == 0 &&
+		dagman.dag->NumScriptsRunning() == 0 ) {
+		if( dagman.dag->NumJobsFailed() > 0 ) {
 			if( DEBUG_LEVEL( DEBUG_QUIET ) ) {
 				debug_printf( DEBUG_QUIET,
 							  "ERROR: the following job(s) failed:\n" );
-				G.dag->PrintJobList( Job::STATUS_ERROR );
+				dagman.dag->PrintJobList( Job::STATUS_ERROR );
 			}
 		}
 		else {
@@ -664,7 +742,7 @@ void dap_event_timer () {
 			debug_printf( DEBUG_QUIET, "ERROR: a cycle exists in the DAG\n" );
 		}
 
-		main_shutdown_graceful();
+		main_shutdown_rescue();
 		return;
     }
 }

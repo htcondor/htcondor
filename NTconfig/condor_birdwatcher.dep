@@ -2,7 +2,8 @@
 
 ..\src\condor_birdwatcher\birdwatcher.cpp : \
 	"..\src\condor_birdwatcher\birdwatcher.h"\
-	"..\src\condor_birdwatcher\condorsystraycommon.h"\
+	"..\src\condor_birdwatcher\CondorSystrayCommon.h"\
+	"..\src\condor_birdwatcher\StdAfx.h"\
 	"..\src\condor_birdwatcher\SystrayManager.h"\
 	"..\src\condor_birdwatcher\WindowsMessageReceiver.h"\
 	
@@ -21,21 +22,21 @@
 ..\src\condor_birdwatcher\birdWatcherDlg.cpp : \
 	"..\src\condor_birdwatcher\birdwatcher.h"\
 	"..\src\condor_birdwatcher\birdWatcherDlg.h"\
-	"..\src\condor_birdwatcher\condorsystraycommon.h"\
+	"..\src\condor_birdwatcher\CondorSystrayCommon.h"\
+	"..\src\condor_birdwatcher\StdAfx.h"\
 	"..\src\condor_birdwatcher\SystrayManager.h"\
 	"..\src\condor_birdwatcher\SystrayMinimize.h"\
 	"..\src\condor_birdwatcher\WindowsMessageReceiver.h"\
 	
 
 ..\src\condor_birdwatcher\StdAfx.cpp : \
-	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_birdwatcher\StdAfx.h"\
 	
 
 ..\src\condor_birdwatcher\SystrayManager.cpp : \
 	"..\src\condor_birdwatcher\birdwatcher.h"\
 	"..\src\condor_birdwatcher\birdWatcherDlg.h"\
-	"..\src\condor_birdwatcher\condorsystraycommon.h"\
+	"..\src\condor_birdwatcher\CondorSystrayCommon.h"\
 	"..\src\condor_birdwatcher\SystrayManager.h"\
 	"..\src\condor_birdwatcher\SystrayMinimize.h"\
 	"..\src\condor_birdwatcher\WindowsMessageReceiver.h"\

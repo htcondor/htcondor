@@ -293,23 +293,23 @@ LOCK		= $(LOG)
 ##  Settings that control the daemon's debugging output:
 ##--------------------------------------------------------------------
 
-MAX_SCHEDD_LOG		= 64000
+MAX_SCHEDD_LOG		= 1000000
 SCHEDD_DEBUG		= D_COMMAND
 
-MAX_GRIDMANAGER_LOG	= 64000
+MAX_GRIDMANAGER_LOG	= 1000000
 GRIDMANAGER_DEBUG	= D_COMMAND
 
-MAX_MASTER_LOG		= 64000
+MAX_MASTER_LOG		= 1000000
 MASTER_DEBUG		= D_COMMAND
 
-MAX_COLLECTOR_LOG       = 64000
+MAX_COLLECTOR_LOG       = 1000000
 COLLECTOR_DEBUG         = D_COMMAND
 
-MAX_NEGOTIATOR_LOG      = 64000
+MAX_NEGOTIATOR_LOG      = 1000000
 NEGOTIATOR_DEBUG        = D_MATCH
-MAX_NEGOTIATOR_MATCH_LOG = 64000
+MAX_NEGOTIATOR_MATCH_LOG = 1000000
  
-MAX_SHADOW_LOG          = 64000
+MAX_SHADOW_LOG          = 1000000
 SHADOW_DEBUG            =
 
 
@@ -596,10 +596,6 @@ SHADOW_RENICE_INCREMENT	= 10
 ##  schedd crashes?  (Specified in seconds, once per hour is the
 ##  default.  Set to 0 to disable.)
 #WALL_CLOCK_CKPT_INTERVAL = 3600
-
-##  Do you want to allow remote machines to be able to submit jobs to
-##  this queue as user "nobody"?
-#ALLOW_REMOTE_SUBMIT	= False
 
 ##  What users do you want to grant super user access to this job
 ##  queue?  (These users will be able to remove other user's jobs). 

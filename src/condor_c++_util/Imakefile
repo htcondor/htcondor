@@ -1,8 +1,8 @@
 all_target(cplus_lib.a liburl.a libcondorapi.a)
 
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(OPENSSL_FLAGS)
-CFLAGS = $(STD_C_FLAGS) $(OPENSSL_FLAGS)
-LIB = $(STD_LIBS) $(OPENSSL_LIB)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+CFLAGS = $(STD_C_FLAGS)
+LIB = $(STD_LIBS)
 
 #if !HAS_FLOCK
 FLOCK_OBJ = ../condor_util_lib/flock.o
@@ -17,6 +17,20 @@ API_OBJ = generic_query.o condor_query.o condor_q.o ad_printmask.o \
 
 #if HAS_OPENSSL
 DH_OBJ = condor_dh.o
+#endif
+
+/* Machines that do not have the seteuid call need this particular object file
+	to allow proper linkage in libcondorapi.a */
+#if !HAS_SETEUID
+SETEUID_OBJ = ../condor_util_lib/seteuid.o
+#else
+SETEUID_OBJ = 
+#endif
+
+#if !HAS_SETEGID
+SETEGID_OBJ = ../condor_util_lib/setegid.o
+#else
+SETEGID_OBJ = 
 #endif
 
 /* Bring in the old classad library because the user log parsing code
@@ -81,6 +95,7 @@ CONLIBAPI_OBJ = \
 	strnewp.o \
 	condor_environ.o \
 	../condor_util_lib/setsyscalls.o \
+	passwd_cache.o \
 	uids.o \
 	../condor_util_lib/chomp.o \
 	get_mysubsystem.o \
@@ -93,10 +108,12 @@ CONLIBAPI_OBJ = \
 	../condor_util_lib/condor_snutils.o \
 	stringSpace.o \
 	MyString.o \
-	libcondorapi_stubs.o
+	libcondorapi_stubs.o \
+	$(SETEUID_OBJ) \
+	$(SETEGID_OBJ)
 
 DAEMON_CLIENT_OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o \
-	dc_schedd.o dc_collector.o daemon_list.o
+	dc_schedd.o dc_collector.o dc_starter.o daemon_list.o
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	alarm.o user_job_policy.o classad_support.o \
@@ -113,7 +130,7 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
 	limit.o my_subsystem.o killfamily.o access.o get_mysubsystem.o \
 	strnewp.o memory_file.o my_username.o misc_utils.o file_transfer.o \
-	uids.o metric_units.o condor_ver_info.o condor_cred_base.o \
+	uids.o passwd_cache.o metric_units.o condor_ver_info.o condor_cred_base.o \
 	condor_md.o condor_credential.o \
 	HashTable.o MyString.o \
 	KeyCache.o dc_stub.o which.o iso_dates.o java_config.o \
@@ -170,9 +187,9 @@ IMPORT_LINKS = ../../config/import_links
 import(../condor_util_lib,mkargv.o)
 import(../condor_daemon_client,$(DAEMON_CLIENT_OBJ))
 
-release_library(libcondorapi.a,$(RELEASE_DIR)/lib)
-strip_library(libcondorapi.a,$(STRIP_DIR)/lib)
-static_library(libcondorapi.a,$(STATIC_DIR)/lib)
+release_library(libcondorapi.a,lib)
+strip_library(libcondorapi.a,lib)
+static_library(libcondorapi.a,lib)
 
 release_copy_target(user_log.README,include,user_log.README,TEXT_MODE)
 strip_copy_target(user_log.README,include,user_log.README,TEXT_MODE)

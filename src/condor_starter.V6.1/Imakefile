@@ -25,37 +25,37 @@ OS = OperatingSystem
 # it will suffice for now:
 OBJ = starter_v61_main.o starter.o NTsenders.o user_proc.o \
 	os_proc.o vanilla_proc.o mpi_master_proc.o mpi_comrade_proc.o \
-	parallel_master_proc.o parallel_comrade_proc.o script_proc.o \
+	script_proc.o \
 	starter_v61_instantiate.o io_proxy.o io_proxy_handler.o \
 	java_proc.o java_detect.o local_user_log.o \
 	job_info_communicator.o jic_shadow.o jic_local.o \
-	jic_local_config.o jic_local_file.o
+	jic_local_config.o jic_local_file.o stream_handler.o
 
 RSH_OBJ = condor_rsh.o
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 c_plus_target($(RSH_NAME),$(RSH_OBJ),$(RSH_LIB))
-release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
-release_target($(RSH_NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
-strip_target($(NAME),$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
-strip_target($(RSH_NAME),$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
+release_target($(NAME),sbin,EXECUTABLE_MODE)
+release_target($(RSH_NAME),sbin,EXECUTABLE_MODE)
+strip_target($(NAME),sbin,EXECUTABLE_MODE)
+strip_target($(RSH_NAME),sbin,EXECUTABLE_MODE)
 static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
 static_target($(RSH_NAME),$(RSH_OBJ),$(RSH_LIB),$(STATIC_DIR)/sbin)
 pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 html_target( starter.h user_proc.h os_proc.h vanilla_proc.h )
 
-release_copy_target($(WRAPPER_CLASS),$(RELEASE_DIR)/lib,$(WRAPPER_CLASS),EXECUTABLE_MODE)
-strip_copy_target($(WRAPPER_CLASS),$(STRIP_DIR)/lib,$(WRAPPER_CLASS),EXECUTABLE_MODE)
-static_copy_target($(WRAPPER_CLASS),$(STATIC_DIR)/lib,$(WRAPPER_CLASS),EXECUTABLE_MODE)
+release_copy_target($(WRAPPER_CLASS),lib,$(WRAPPER_CLASS),EXECUTABLE_MODE)
+strip_copy_target($(WRAPPER_CLASS),lib,$(WRAPPER_CLASS),EXECUTABLE_MODE)
+static_copy_target($(WRAPPER_CLASS),lib,$(WRAPPER_CLASS),EXECUTABLE_MODE)
 
-release_copy_target($(INFO_CLASS),$(RELEASE_DIR)/lib,$(INFO_CLASS),EXECUTABLE_MODE)
-strip_copy_target($(INFO_CLASS),$(STRIP_DIR)/lib,$(INFO_CLASS),EXECUTABLE_MODE)
-static_copy_target($(INFO_CLASS),$(STATIC_DIR)/lib,$(INFO_CLASS),EXECUTABLE_MODE)
+release_copy_target($(INFO_CLASS),lib,$(INFO_CLASS),EXECUTABLE_MODE)
+strip_copy_target($(INFO_CLASS),lib,$(INFO_CLASS),EXECUTABLE_MODE)
+static_copy_target($(INFO_CLASS),lib,$(INFO_CLASS),EXECUTABLE_MODE)
 
-release_copy_target($(BENCHMARK_CLASS),$(RELEASE_DIR)/lib,$(BENCHMARK_CLASS),EXECUTABLE_MODE)
-strip_copy_target($(BENCHMARK_CLASS),$(STRIP_DIR)/lib,$(BENCHMARK_CLASS),EXECUTABLE_MODE)
-static_copy_target($(BENCHMARK_CLASS),$(STATIC_DIR)/lib,$(BENCHMARK_CLASS),EXECUTABLE_MODE)
+release_copy_target($(BENCHMARK_CLASS),lib,$(BENCHMARK_CLASS),EXECUTABLE_MODE)
+strip_copy_target($(BENCHMARK_CLASS),lib,$(BENCHMARK_CLASS),EXECUTABLE_MODE)
+static_copy_target($(BENCHMARK_CLASS),lib,$(BENCHMARK_CLASS),EXECUTABLE_MODE)
 
 clean::
 	rm -f condor_gridshell

@@ -1,10 +1,6 @@
 /* HPUX 11 Specific stuff */
 
-#define IS_HPUX11			YES
-#define IS_HPPAR_HPUX11			YES
-#define Platform			HPPA-HPUX11
-#define GccArch				hppa64-hp-hpux11.00
-#define PlatformFlags		-DHPUX11=HPUX11 -Wno-deprecated -L/usr/lib/pa20_64
+#define PlatformFlags		-DHPUX11=HPUX11 -L/usr/lib/pa20_64
 /* -lxnet is to allow use of the XOpen/Unix98 functions with a 64bit compiler */
 #define PlatformLdFlags		-lxnet
 
@@ -27,27 +23,15 @@
 /* inet_nota() with gcc is broken under 64-bit compilation mode, so use ours */
 #define HAS_INET_NTOA		NO
 
-/* Grrr.... libxnet.so (the XOpen interface) does NOT have a .a equivalent */
-#define HAS_STATIC	NO
-
 #define HAS_DYNAMIC_USER_JOBS	NO
 
 #define HAS_GLOBUS			NO
 #define HAS_GSI				NO
 #define HAS_OPENSSL			NO
 
-#define UnixName /stand/vmunix		/* pathname of the system executable */
+#define WANT_PVM			NO
 
-#define TypicalMemory 64
-
-#undef IS_CLIPPED
 #define IS_CLIPPED YES
-
-#undef HAS_PVM
-#define HAS_PVM NO
-
-#undef WANT_MAN_PAGES
-#define WANT_MAN_PAGES		NO
 
 #define VendorCTestFlags -Aa -Ae
 #define VendorCPPTestFlags -Aa -ext

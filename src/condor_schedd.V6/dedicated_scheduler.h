@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_classad.h"
 #include "list.h"
@@ -41,12 +41,12 @@ class AllocationNode {
 
 		// Methods
 	void addResource( ClassAd* r, int proc );
-	void setCapability( const char* new_capab );
+	void setClaimId( const char* new_claim_id );
 	void display( void );
 
 		// Data
 	int status;
-	char* capability;	// The capability for the first match in the cluster 
+	char* claim_id;	// The ClaimId for the first match in the cluster 
 	int cluster;		// cluster id of the job(s) for this allocation
 	int num_procs;			// How many procs are in the cluster
 	ExtArray< ClassAd* >* jobs;		// Both arrays are indexed by proc
@@ -153,7 +153,7 @@ class DedicatedScheduler : public Service {
 
 		// These are public, since the Scheduler class needs to call
 		// them from vacate_service and possibly other places, too.
-	bool DelMrec( char* cap );
+	bool DelMrec( char* id );
 	bool DelMrec( match_rec* rec );
 
 		/** Remove the given shadow record from any match records that
@@ -316,12 +316,12 @@ class DedicatedScheduler : public Service {
 		// hashed on resource name, each claim we have
 	HashTable <HashKey, match_rec*>* all_matches;
 
-		// hashed on capability, each claim we have.  only store
+		// hashed on ClaimId, each claim we have.  only store
 		// pointers in here into the real match records we store in
 		// all_matches.  This is needed for some functions that only
-		// know the capability (like DelMrec(), since vacate_service()
-		// is only given a capability to identify the lost claim).
-	HashTable <HashKey, match_rec*>* all_matches_by_cap;
+		// know the ClaimId (like DelMrec(), since vacate_service()
+		// is only given a ClaimId to identify the lost claim).
+	HashTable <HashKey, match_rec*>* all_matches_by_id;
 
 		// Queue for resource requests we need to negotiate for. 
 	Queue<ClassAd*>* resource_requests;

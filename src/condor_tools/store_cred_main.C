@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 
@@ -33,18 +33,24 @@
 #include "basename.h"
 #include "dynuser.h"
 
+struct StoreCredOptions {
+	int mode;
+	char pw[MAX_PASSWORD_LENGTH];
+	char username[MAX_PASSWORD_LENGTH];
+};
+
 char *MyName;
 void usage(void);
+void parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]);
+void badOption(const char* option);
+
 
 int main(int argc, char *argv[]) {
 	
 	char* pw = NULL;
-	char* my_name = my_username();		// we're only stashing the current user
-	char* my_domain = my_domainname();
 	char my_full_name[_POSIX_PATH_MAX];
+	struct StoreCredOptions options;
 
-	sprintf(my_full_name, "%s@%s", my_name, my_domain);
-	printf("Account: %s\n\n", my_full_name);
 
 	int result;
 	
@@ -54,17 +60,32 @@ int main(int argc, char *argv[]) {
 	myDistro->Init( argc, argv );
 	config();
 
-	if ( (argc < 2) ||
-		( (stricmp(argv[1], CONFIG_CREDENTIAL ) != 0) &&				
-		(stricmp(argv[1], ADD_CREDENTIAL) != 0) && 
-		(stricmp(argv[1], QUERY_CREDENTIAL) != 0) && 
-		(stricmp(argv[1], DELETE_CREDENTIAL) != 0)) ) {
-		usage();
+	parseCommandLine(&options, argc, argv);
+
+	if ( strcmp(options.username, "") == 0 ) {
+		char* my_name = my_username();	
+		char* my_domain = my_domainname();
+
+		sprintf(my_full_name, "%s@%s", my_name, my_domain);
+		if ( my_name) { free(my_name); }
+		if ( my_domain) { free(my_domain); }
+		my_name = my_domain = NULL;
 	} else {
-		switch(argv[1][0]) {
-		case 'a':
-		case 'A':	// Add
-			pw = get_password();
+		strcpy(my_full_name, options.username);
+	}
+	printf("Account: %s\n\n", my_full_name);
+
+	switch (options.mode) {
+		case ADD_MODE:
+			if ( strcmp(options.pw, "") == 0 ) {
+				// get password from the user.
+				pw = get_password();
+			} else { 
+				// got the passwd from the command line.
+				pw = new char[MAX_PASSWORD_LENGTH];
+				strncpy(pw, options.pw, MAX_PASSWORD_LENGTH);
+				ZeroMemory(options.pw, MAX_PASSWORD_LENGTH);
+			}
 			if ( pw ) {
 				result = addCredential( my_full_name, pw );			
 				ZeroMemory(pw, MAX_PASSWORD_LENGTH);
@@ -81,8 +102,7 @@ int main(int argc, char *argv[]) {
 				fprintf(stderr, "\nAborted.\n");
 			}
 			break;
-		case 'd':	
-		case 'D':	// Delete
+		case DELETE_MODE:
 			result = deleteCredential(my_full_name);
 			if ( result == SUCCESS ) {
 				fprintf(stdout, "Delete Successful.\n");
@@ -90,8 +110,7 @@ int main(int argc, char *argv[]) {
 				fprintf(stdout, "Delete failed.\n");
 			}
 			break;
-		case 'q':	
-		case 'Q':	// tell me if I have anything stored
+		case QUERY_MODE:
 			result = queryCredential(my_full_name);
 			if ( result == SUCCESS ) {
 				fprintf(stdout, "Your credential is stored.\n");
@@ -99,31 +118,127 @@ int main(int argc, char *argv[]) {
 				fprintf(stdout, "No credential is stored.\n");
 			}
 			break;
-#if 1
-			// I only want to build this when I'm debugging
-		case 'c':	
-		case 'C':	// Config
+		case CONFIG_MODE:
 			return interactive();
 			break;
-#endif
-		default:
-			fprintf(stderr, "Unknown option.\n");
+		case 0:
 			usage();
 			break;
-		}
+
+	
 	}
 
-	if ( my_name) { free(my_name); }
-	if ( my_domain) { free(my_domain); }
-	my_name = my_domain = NULL;
+
 	
 	return result;
 }
 
 void
+parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
+
+	int i;
+	opts->mode = 0;
+	opts->pw[0] = '\0';
+	opts->username[0] = '\0';
+
+	for (i=1; i<argc; i++) {
+		switch(argv[i][0]) {
+		case 'a':
+		case 'A':	// Add
+			if (stricmp(argv[i], ADD_CREDENTIAL) == 0) {
+				opts->mode = ADD_MODE;
+			} else {
+				badOption(argv[i]);
+			}	
+			break;
+		case 'd':	
+		case 'D':	// Delete
+			if (stricmp(argv[i], DELETE_CREDENTIAL) == 0) {
+				opts->mode = DELETE_MODE;
+			} else {
+				badOption(argv[i]);
+			}	
+			break;
+		case 'q':	
+		case 'Q':	// tell me if I have anything stored
+			if (stricmp(argv[i], QUERY_CREDENTIAL) == 0) {
+				opts->mode = QUERY_MODE;
+			} else {
+				badOption(argv[i]);
+			}	
+			break;
+		case 'c':	
+		case 'C':	// Config
+			if (stricmp(argv[i], CONFIG_CREDENTIAL) == 0) {
+				opts->mode = CONFIG_MODE;
+			} else {
+				badOption(argv[i]);
+			}	
+			break;
+		case '-':
+			// various switches
+			switch (argv[i][1]) {
+				case 'p':
+					if (i+1 < argc) {
+						strncpy(opts->pw, argv[i+1], MAX_PASSWORD_LENGTH);
+						i++;
+					} else {
+						badOption(argv[i]);
+					}
+					break;
+				case 'u':
+					if (i+1 < argc) {
+						strncpy(opts->username, argv[i+1], MAX_PASSWORD_LENGTH);
+						i++;
+						char* at_ptr = strchr(opts->username, '@');
+						// '@' must be in the string, but not the beginning
+						// or end of the string.
+						if (at_ptr == NULL || 
+							at_ptr == opts->username ||
+						   	at_ptr == opts->username+strlen(opts->username)-1) {
+							fprintf(stderr, "ERROR: Username '%s' is not of "
+								   "the form account@domain\n", opts->username);
+							badOption(argv[i]);
+						}
+
+					} else {
+						badOption(argv[i]);
+					}
+					break;
+				case 'h':
+					usage();
+					
+					break;
+			}
+			break;
+			// fail through
+		default:
+			badOption(argv[i]);
+			break;
+		}
+	}
+}
+
+void
+badOption(const char* option) {
+	fprintf(stderr, "Unrecognized option - '%s'\n\n", option);
+	usage();
+}
+
+void
 usage()
 {
-	fprintf( stderr, "Usage: %s [ add | delete | query ] \n", MyName );
+	fprintf( stderr, "Usage: %s [options] action\n", MyName );
+	fprintf( stderr, "  where action is one of:\n" );
+	fprintf( stderr, "    add               (Add your credential to secure storage)\n" );
+	fprintf( stderr, "    delete            (Remove your credential from secure storage)\n" );
+	fprintf( stderr, "    query             (Check if your credential has been stored)\n" );
+	fprintf( stderr, "  and where [options] is one or more of:\n" );
+	fprintf( stderr, "    -u username       (use the specified username)\n" );
+	fprintf( stderr, "    -p password       (use the specified password rather than prompting)\n" );
+	fprintf( stderr, "    -h                (display this message)\n" );
+	fprintf( stderr, "\n" );
+
 	exit( 1 );
 };
 

@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
  
 
@@ -98,6 +98,8 @@ static	int DprintfBroken = 0;
 static	int DebugUnlockBroken = 0;
 #ifdef WIN32
 static CRITICAL_SECTION	*_condor_dprintf_critsec = NULL;
+extern int lock_file(int fd, LOCK_TYPE type, int do_block);
+extern int vprintf_length(const char *format, va_list args);
 #endif
 
 extern char *_condor_DebugFlagNames[];
@@ -485,7 +487,9 @@ preserve_log_file(int debug_level)
 	int			still_in_old_file = FALSE;
 	int			failed_to_rotate = FALSE;
 	int			save_errno;
+#ifndef WIN32
 	struct stat buf;
+#endif
 	char msg_buf[_POSIX_PATH_MAX];
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
@@ -508,7 +512,7 @@ preserve_log_file(int debug_level)
 		Sleep(500);
 		unlink(old);
 		if ( rename(DebugFile[debug_level],old) < 0) {
-			/* Crap.  Some bonehead must be keeping one of the files
+			/* Feh.  Some bonehead must be keeping one of the files
 			 * open for an extended period.  Win32 will not permit an
 			 * open file to be unlinked or renamed.  So, here we copy
 			 * the file over (instead of renaming it) and then truncate

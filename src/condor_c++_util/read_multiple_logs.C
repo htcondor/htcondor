@@ -1,29 +1,30 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "read_multiple_logs.h"
+#include "condor_string.h" // for strnewp()
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -287,13 +288,28 @@ ReadMultipleUserLogs::readFileToString(const MyString &strFilename)
 {
 	FILE *pFile = fopen(strFilename.Value(), "r");
 	if (!pFile) {
+		dprintf( D_ALWAYS, "ReadMultipleUserLogs::readFileToString: "
+				"fopen(%s) failed with errno %d (%s)\n", strFilename.Value(),
+				errno, strerror(errno) );
 		return "";
 	}
 
-	fseek(pFile, 0, SEEK_END);
+	if ( fseek(pFile, 0, SEEK_END) != 0 ) {
+		dprintf( D_ALWAYS, "ReadMultipleUserLogs::readFileToString: "
+				"fseek(%s) failed with errno %d (%s)\n", strFilename.Value(),
+				errno, strerror(errno) );
+		return "";
+	}
 	int iLength = ftell(pFile);
+	if ( iLength == -1 ) {
+		dprintf( D_ALWAYS, "ReadMultipleUserLogs::readFileToString: "
+				"ftell(%s) failed with errno %d (%s)\n", strFilename.Value(),
+				errno, strerror(errno) );
+		fclose(pFile);
+		return "";
+	}
 	MyString strToReturn;
-	strToReturn.reserve_at_least(iLength+1);
+	strToReturn.reserve_at_least(iLength);
 
 	fseek(pFile, 0, SEEK_SET);
 	char *psBuf = new char[iLength+1];
@@ -314,36 +330,48 @@ ReadMultipleUserLogs::loadLogFileNameFromSubFile(const MyString &strSubFilename)
 {
 	MyString strSubFile = readFileToString(strSubFilename);
 	
-	// Note: StringList constructor removes leading whitespace from lines.
-	StringList listLines( strSubFile.Value(), "\r\n");
+		// Split the node submit file string into lines.
+		// Note: StringList constructor removes leading whitespace from lines.
+	StringList physicalLines( strSubFile.Value(), "\r\n");
+	physicalLines.rewind();
 
-	listLines.rewind();
-	const char *psLine;
-	MyString strPreviousLogFilename;
-	while( (psLine = listLines.next()) ) {
-		MyString strLine = psLine;
-		if (!stricmp(strLine.Substr(0, 2).Value(), "log")) {
-			int iEqPos = strLine.FindChar('=',0);
-			if (iEqPos == -1) {
-				return "";
-			}
+		// Combine lines with continuation characters.
+	StringList	logicalLines;
+	MyString	combineResult = CombineLines(physicalLines, '\\', logicalLines);
+	if ( combineResult != "" ) {
+		return combineResult;
+	}
+	logicalLines.rewind();
 
-			iEqPos++;
-			while (iEqPos < strLine.Length() && (strLine[iEqPos] == ' ' ||
-					strLine[iEqPos] == '\t')) {
-				iEqPos++;
-			}
+	MyString	logFileName("");
+	MyString	initialDir("");
 
-			if (iEqPos >= strLine.Length()) {
-				return "";
-			}
+		// Now look through the submit file logical lines to find the
+		// log file and initial directory (if specified) and combine
+		// them into a path to the log file that's either absolute or
+		// relative to the DAG submit directory.
+	const char *logicalLine;
+	while( (logicalLine = logicalLines.next()) != NULL ) {
+		MyString	submitLine(logicalLine);
+		MyString	tmpLogName = getParamFromSubmitLine(submitLine, "log");
+		if ( tmpLogName != "" ) {
+			logFileName = tmpLogName;
+		}
 
-			MyString strToReturn = strLine.Substr(iEqPos, strLine.Length());
-
-			return strToReturn;
+		MyString	tmpInitialDir = getParamFromSubmitLine(submitLine,
+				"initialdir");
+		if ( tmpInitialDir != "" ) {
+			initialDir = tmpInitialDir;
 		}
 	}
-	return "";
+
+		// Prepend initialdir to log file name if log file name is not
+		// an absolute path.
+	if ( initialDir != "" && logFileName[0] != '/' ) {
+		logFileName = initialDir + "/" + logFileName;
+	}
+
+	return logFileName;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -357,64 +385,128 @@ ReadMultipleUserLogs::getJobLogsFromSubmitFiles(const MyString &strDagFileName,
 		return "Unable to read DAG file";
 	}
 
-	StringList listLines( strDagFileContents.Value(), "\r\n");
-	listLines.rewind();
-	const char *psLine;
-	while( (psLine = listLines.next()) ) {
-		MyString strLine = psLine;
-		
-		// this internal loop is for '\' line continuation
-		while (strLine[strLine.Length()-1] == '\\') {
-			strLine[strLine.Length()-1] = 0;
-			psLine = listLines.next();
-			if (psLine) {
-				strLine += psLine;
-			}
-		}
+		// Split the DAG submit file string into lines.
+		// Note: StringList constructor removes leading whitespace from lines.
+	StringList physicalLines(strDagFileContents.Value(), "\r\n");
+	physicalLines.rewind();
 
-		if (strLine.Length() <= 3) {
-			continue;
-		}
+		// Combine lines with continuation characters.
+	StringList	logicalLines;
+	MyString	combineResult = CombineLines(physicalLines, '\\', logicalLines);
+	if ( combineResult != "" ) {
+		return combineResult;
+	}
+	logicalLines.rewind();
 
-		MyString strFirstThree = strLine.Substr(0, 2);
-		if (!stricmp(strFirstThree.Value(), jobKeyword.Value())) {
+	const char *	logicalLine;
+	while ( (logicalLine = logicalLines.next()) ) {
 
-                // Format of a job line should be:
-				// JOB <name> <script> [DONE]
-			StringList tokens (strLine.Value(), " \t");
+		if ( logicalLine && strcmp(logicalLine, "") ) {
+
+				// Note: StringList constructor removes leading
+				// whitespace from lines.
+			StringList	tokens(logicalLine, " \t");
 			tokens.rewind();
-			tokens.next(); // Skip JOB
-			tokens.next(); // Skip <name>
-			const char *submitFile = tokens.next();
-			if( !submitFile ) {
-			    return "Improperly-formatted DAG file";
-			}
-			MyString strSubFile(submitFile);
 
+			if ( !stricmp(tokens.next(), jobKeyword.Value()) ) {
 
-			// get the log= value from the sub file
-
-			MyString strLogFilename = loadLogFileNameFromSubFile(strSubFile);
-
-			if (strLogFilename == "") {
-				return "No 'log =' found in submit file " + strSubFile;
-			}
-			
-			listLogFilenames.rewind();
-			char *psLogFilename;
-			bool bAlreadyInList = false;
-			while ( (psLogFilename = listLogFilenames.next()) ) {
-				if (psLogFilename == strLogFilename) {
-					bAlreadyInList = true;
+					// Get the node submit file name.
+				tokens.next(); // Skip <name>
+				const char *submitFile = tokens.next();
+				if( !submitFile ) {
+			    	return "Improperly-formatted DAG file: submit file "
+							"missing from job line";
 				}
-			}
+				MyString strSubFile(submitFile);
 
-			if (!bAlreadyInList) {
-				// Note: append copies the string here.
-				listLogFilenames.append(strLogFilename.Value());
+					// get the log = value from the sub file
+				MyString strLogFilename = loadLogFileNameFromSubFile(strSubFile);
+				if (strLogFilename == "") {
+					return "No 'log =' value found in submit file " +
+							strSubFile;
+				}
+			
+					// Add the log file we just found to the log file list
+					// (if it's not already in the list -- we don't want
+					// duplicates).
+				listLogFilenames.rewind();
+				char *psLogFilename;
+				bool bAlreadyInList = false;
+				while ( (psLogFilename = listLogFilenames.next()) ) {
+					if (psLogFilename == strLogFilename) {
+						bAlreadyInList = true;
+					}
+				}
+
+				if (!bAlreadyInList) {
+						// Note: append copies the string here.
+					listLogFilenames.append(strLogFilename.Value());
+				}
 			}
 		}
 	}	
 
 	return "";
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+MyString
+ReadMultipleUserLogs::getParamFromSubmitLine(MyString &submitLine,
+		const char *paramName)
+{
+	MyString	paramValue("");
+
+	const char *DELIM = " \t";
+
+	submitLine.Tokenize();
+	const char *	token = submitLine.GetNextToken(DELIM, true);
+	if ( token && !strcasecmp(token, paramName) ) {
+		token = submitLine.GetNextToken(DELIM, true);
+		if ( token && !strcasecmp(token, "=") ) {
+			token = submitLine.GetNextToken(DELIM, true);
+			if ( token ) {
+				paramValue = token;
+			}
+		}
+	}
+
+	return paramValue;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+MyString
+ReadMultipleUserLogs::CombineLines(StringList &listIn, char continuation,
+		StringList &listOut)
+{
+	listIn.rewind();
+
+		// Physical line is one line in the file.
+	const char	*physicalLine;
+	while ( (physicalLine = listIn.next()) != NULL ) {
+
+			// Logical line is physical lines combined as needed by
+			// continuation characters (backslash).
+		MyString	logicalLine(physicalLine);
+
+		while ( logicalLine[logicalLine.Length()-1] == continuation ) {
+
+				// Remove the continuation character.
+			logicalLine.setChar(logicalLine.Length()-1, '\0');
+
+				// Append the next physical line.
+			physicalLine = listIn.next();
+			if ( physicalLine ) {
+				logicalLine += physicalLine;
+			} else {
+				return "Improper DAG file: continuation character "
+						"with no trailing line!";
+			}
+		}
+
+		listOut.append(logicalLine.Value());
+	}
+
+	return ""; // blank means okay
 }

@@ -1,27 +1,60 @@
 NAME=condor_gridmanager
-all_target($(NAME))
+GT3GAHP_WRAPPER_NAME = gt3_gahp
+all_target($(NAME) grid_monitor.sh $(GT3GAHP_WRAPPER_NAME))
+
+#if WANT_ORACLE_UNIVERSE
+ORACLE_JOB_FLAGS = -DORACLE_UNIVERSE -I/p/condor/workspaces/jfrey/oracle/OraHome1/rdbms/demo -I/p/condor/workspaces/jfrey/oracle/OraHome1/rdbms/public
+ORACLE_JOB_OBJ = oraclejob.o oracleresource.o
+ORACLE_JOB_LIB = /p/condor/workspaces/jfrey/oracle/OraHome1/lib/libclient9.a /p/condor/workspaces/jfrey/oracle/OraHome1/lib/libclntst9.a -lpthread
+#endif
+
+#if WANT_NORDUGRID_UNIVERSE
+NORDUGRID_JOB_FLAGS = -DNORDUGRID_UNIVERSE -I/p/condor/workspaces/jfrey/ftp_lite/include
+NORDUGRID_JOB_OBJ = nordugridjob.o nordugridresource.o
+NORDUGRID_JOB_LIB = /p/condor/workspaces/jfrey/ftp_lite/lib/libftp_lite.a
+#endif
 
 CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LIB = $(DAEMONCORE_LIB) $(STD_LIBS) $(QMGMT_LIB)
+C_PLUS_FLAGS = $(ORACLE_JOB_FLAGS) $(NORDUGRID_JOB_FLAGS) $(STD_C_PLUS_FLAGS)
+LIB = $(ORACLE_JOB_LIB) $(NORDUGRID_JOB_LIB) $(DAEMONCORE_LIB) $(STD_LIBS)
+# Do we want QMGMT_LIBS here?
+#LIB = $(ORACLE_JOB_LIB) $(NORDUGRID_JOB_LIB) $(DAEMONCORE_LIB) $(STD_LIBS) $(QMGMT_LIBS)
 
-OBJ = gridmanager_main.o gridmanager.o globusjob.o globusresource.o proxymanager.o gahp-client.o
+OBJ = gridmanager_main.o gridmanager.o globusjob.o globusresource.o gt3job.o gt3resource.o mirrorjob.o mirrorresource.o proxymanager.o gahp-client.o $(ORACLE_JOB_OBJ) $(NORDUGRID_JOB_OBJ) basejob.o baseresource.o
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 
-release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
-strip_target($(NAME),$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
+release_target($(NAME),sbin,EXECUTABLE_MODE)
+strip_target($(NAME),sbin,EXECUTABLE_MODE)
 static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
 purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 
-release_copy_target($(GAHP_DIR)/gahp_server,$(RELEASE_DIR)/sbin,gahp_server,EXECUTABLE_MODE)
-static_copy_target($(GAHP_DIR)/gahp_server,$(STATIC_DIR)/sbin,gahp_server,EXECUTABLE_MODE)
-strip_copy_target($(GAHP_DIR)/gahp_server,$(STRIP_DIR)/sbin,gahp_server,EXECUTABLE_MODE)
+GT3GAHP_WRAPPER_OBJ = gt3_gahp_wrapper.o
 
-release_copy_target(grid_monitor.sh,$(RELEASE_DIR)/sbin,grid_monitor.sh,EXECUTABLE_MODE)
-static_copy_target(grid_monitor.sh,$(STATIC_DIR)/sbin,grid_monitor.sh,EXECUTABLE_MODE)
-strip_copy_target(grid_monitor.sh,$(STRIP_DIR)/sbin,grid_monitor.sh,EXECUTABLE_MODE)
+c_plus_target($(GT3GAHP_WRAPPER_NAME),$(GT3GAHP_WRAPPER_OBJ),$(STD_LIBS))
+release_target($(GT3GAHP_WRAPPER_NAME),sbin,EXECUTABLE_MODE)
+strip_target($(GT3GAHP_WRAPPER_NAME),sbin,EXECUTABLE_MODE)
+static_target($(GT3GAHP_WRAPPER_NAME),$(GT3GAHP_WRAPPER_OBJ),$(STD_LIBS),$(STATIC_DIR)/sbin)
+purecov_c_plus_target($(GT3GAHP_WRAPPER_NAME).pc,$(GT3GAHP_WRAPPER_OBJ),$(STD_LIBS))
+pure_c_plus_target($(GT3GAHP_WRAPPER_NAME).pure,$(GT3GAHP_WRAPPER_OBJ),$(STD_LIBS))
+
+
+release_copy_target($(GAHP_DIR)/gahp_server.dynamic,sbin,gahp_server,EXECUTABLE_MODE)
+static_copy_target($(GAHP_DIR)/gahp_server.static,sbin,gahp_server,EXECUTABLE_MODE)
+strip_copy_target($(GAHP_DIR)/gahp_server.dynamic,sbin,gahp_server,EXECUTABLE_MODE)
+
+release_copy_target(grid_monitor.sh,sbin,grid_monitor.sh,EXECUTABLE_MODE)
+static_copy_target(grid_monitor.sh,sbin,grid_monitor.sh,EXECUTABLE_MODE)
+strip_copy_target(grid_monitor.sh,sbin,grid_monitor.sh,EXECUTABLE_MODE)
+
+grid_monitor.sh: grid_monitor_wrapper grid_manager_monitor_agent
+	cat grid_monitor_wrapper grid_manager_monitor_agent > grid_monitor.sh
+	chmod 755 grid_monitor.sh
+
+release_recursive_copy_target($(GT3GAHP_DIR)/gt3,lib/gt3)
+static_recursive_copy_target($(GT3GAHP_DIR)/gt3,lib/gt3)
+strip_recursive_copy_target($(GT3GAHP_DIR)/gt3,lib/gt3)
 
 $(GAHP_DIR)/gahp_server:
 	/bin/true

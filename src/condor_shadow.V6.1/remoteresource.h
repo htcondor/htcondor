@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #ifndef REMOTERESOURCE_H
 #define REMOTERESOURCE_H
@@ -50,6 +50,8 @@ typedef enum {
 	RR_SUSPENDED,
 		/// Starter exists, but the job is not executing yet 
 	RR_STARTUP,
+		/// Trying to reconnect to the starter
+	RR_RECONNECT,
 		/// The threshold must be last!
 	_RR_STATE_THRESHOLD
 } ResourceState;
@@ -98,7 +100,7 @@ class RemoteResource : public Service {
 	virtual ~RemoteResource();
 
 		/** This function connects to the executing host and does
-			an ACTIVATE_CLAIM command on it.  The capability, starternum
+			an ACTIVATE_CLAIM command on it.  The ClaimId, starternum
 			and Job ClassAd are pushed, and the executing host's 
 			full machine name and (hopefully) an OK are returned.
 			@param starterVersion The version number of the starter
@@ -160,12 +162,12 @@ class RemoteResource : public Service {
        */ 
    void getStartdAddress( char *& sinful );
 
-		/** Return the capability string of the remote startd.
-			@param cap Will contain the capability string.  If NULL,
-			this will be a string allocated with new().  If cap
+		/** Return the ClaimId string of the remote startd.
+			@param id Will contain the ClaimId string.  If NULL,
+			this will be a string allocated with new().  If id
 			already exists, we assume it's a buffer and print into it.
        */
-   void getCapability( char *& cap );
+   void getClaimId( char *& id );
 
 		/** Return the arch string of the starter.
 			@param arch Will contain the starter's arch string.
@@ -182,38 +184,42 @@ class RemoteResource : public Service {
 		*/ 
 	ReliSock* getClaimSock();
 
+		/** Called when our syscall socket got closed.  So, cancel the
+			daemoncore socket handler, delete the object, and set our
+			pointer to NULL.
+		*/
+	void closeClaimSock( void );
+
 		/** Return the reason this host exited.
 			@return The exit reason for this host.
 		*/ 
 	int  getExitReason();
 
-		/** Set the sinful string and capability for the startd
-			associated with this remote resource.
-			@param sinful The sinful string for the startd
-			@param capability The capability string for the startd
-		*/
-	void setStartdInfo( const char *sinful, const char* capability );
+		/** Return a pointer to our DCStartd object, so callers can
+			access information in there directly, without having to
+			add other methods in here...
+		*/ 
+	DCStartd* getDCStartd() { return dc_startd; };
 
-		/** Set the address (sinful string).
-			@param The starter's sinful string 
+		/** Set the info about the startd associated with this
+			remote resource via attributes in the given ClassAd
 		*/
-	void setStarterAddress( const char *starterAddr );
-	
-		/** Set the Starter's Arch
-			@param arch The starter's arch string 
+	void setStartdInfo( ClassAd* ad );
+
+		/** Set the sinful string and ClaimId for the startd
+			associated with this remote resource.
+			This method is deprecated, use the version that takes a
+			ClassAd if possible.
+			@param sinful The sinful string for the startd
+			@param claim_id The ClaimId string for the startd
 		*/
-	void setStarterArch( const char *arch );
-	
-		/** Set the Starter's Opsys
-			@param arch The starter's opsys string 
+	void setStartdInfo( const char *sinful, const char* claim_id );
+
+		/** Set all the info about the starter we can find in the
+			given ClassAd. 
 		*/
-	void setStarterOpsys( const char *opsys );
-	
-		/** Set the Starter's version string
-			@param version The starter's version string
-		*/
-	void setStarterVersion( const char *version );
-	
+	void setStarterInfo( ClassAd* ad );
+
 		/** Set the reason this host exited.  
 			@param reason Why did it exit?  Film at 11.
 		*/
@@ -227,17 +233,29 @@ class RemoteResource : public Service {
 		/** Get this resource's jobAd */
 	ClassAd* getJobAd() { return this->jobAd; };
 
-		/** Set the machine name for this host.
+		/** Set the address (sinful string).
+			@param The starter's sinful string 
+		*/
+	void setStarterAddress( const char *starterAddr );
+
+		/**
+		   CRUFT the next 3 methods for setting info are only used if
+		   we're talking to a really old version of the starter.
+		   someday they should all be ripped out in favor of using
+		   setStarterInfo(), declared above...
+		*/
+
+		/** Set the machine name for this host.  CRUFT
 			@param machineName The machine name of this host.
 		*/
 	void setMachineName( const char *machineName );
 
-		/** Set the filesystem domain for this host.
+		/** Set the filesystem domain for this host.  CRUFT
 			@param filesystemDomain The filesystem domain of this host.
 		*/
 	void setFilesystemDomain( const char *filesystemDomain );
 
-		/** Set the uid domain for this host.
+		/** Set the uid domain for this host.  CRUFT
 			@param uidDomain The uid domain of this host.
 		*/
 	void setUidDomain( const char *uidDomain );
@@ -304,6 +322,16 @@ class RemoteResource : public Service {
 		*/
 	virtual void beginExecution( void );
 
+	virtual void reconnect( void );
+
+	virtual bool supportsReconnect( void );
+
+		/** This is actually a DaemonCore timer handler.  It has to be
+			public so DaemonCore can use it, but it's not meant to be 
+			called by other parts of the shadow.
+		*/
+	virtual void attemptReconnect( void );
+
  protected:
 
 		/** The jobAd for this resource.  Why is this here and not
@@ -326,6 +354,11 @@ class RemoteResource : public Service {
 	int exit_value;
 	bool exited_by_signal;
 
+		/// Updates both the last_contact data member and the job ad
+	void hadContact( void );
+	time_t last_job_lease_renewal;
+	bool supports_reconnect;
+
 		/// This is the timeout period to hear from a startd.  (90 seconds).
 	static const int SHADOW_SOCK_TIMEOUT;
 
@@ -343,11 +376,25 @@ class RemoteResource : public Service {
 
 	DCStartd* dc_startd;
 
+		/** Initialize all the info about the startd associated with
+			this remote resource, instantiate the DCStartd object, 
+			grant ACLs for the execute host, etc.  This is called by
+			setStartdInfo() to do the real work.
+		*/
+	void initStartdInfo( const char *name, const char* pool,
+						 const char *addr, const char* claim_id );
+
 	ResourceState state;
 
 	bool began_execution;
 
 private:
+
+		/// Private helper methods for trying to reconnect
+	bool locateReconnectStarter( void );
+	void requestReconnect( void );
+	int reconnect_attempts;
+	int next_reconnect_tid;
 
 		/** For debugging, print out the values of various statistics
 			related to our bookkeeping of suspend/resume activity for

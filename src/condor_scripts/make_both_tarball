@@ -17,6 +17,12 @@
 # Written on 1/8/99 by Derek Wright <wright@cs.wisc.edu>
 
 # Process args
+$opt = shift;
+if( $opt =~ /-cmd/ ) {
+    $tar_cmd = shift;
+} else {
+    die "You must specify the tar command to use for root-owned files with '-cmd'\n";
+}
 $type = shift;
 $type =~ s/,//;
 $name = shift;
@@ -57,7 +63,7 @@ foreach $file ( @contribfiles ) {
 
 # Actually make the tarball
 chdir( "$dir" );
-`tar -cvf $name --owner=root --group=0 $files $contribfiles`;
+`$tar_cmd -cvf $name $files $contribfiles`;
 chdir( ".." );
 
 # Do the cleanup

@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 
 #include "condor_common.h"
@@ -29,6 +29,7 @@
 #include "condor_attributes.h"   // for ATTR_ ClassAd stuff
 #include "condor_config.h"       // for param()
 #include "condor_email.h"        // for (you guessed it) email stuff
+#include "condor_version.h"
 #include "condor_ver_info.h"
 #include "enum_utils.h"
 
@@ -47,7 +48,9 @@ BaseShadow::BaseShadow() {
 	ckptServerHost = NULL;
 	useAFS = useNFS = useCkptServer = false;
 	jobAd = NULL;
+	remove_requested = false;
 	cluster = proc = -1;
+	gjid = NULL;
 	q_update_tid = -1;
 	owner[0] = '\0';
 	iwd[0] = '\0';
@@ -69,6 +72,8 @@ BaseShadow::~BaseShadow() {
 	if (fsDomain) free(fsDomain);
 	if (ckptServerHost) free(ckptServerHost);
 	if (jobAd) FreeJobAd(jobAd);
+	if (gjid) free(gjid); 
+	if (scheddAddr) free(scheddAddr);
 	if( common_job_queue_attrs ) { delete common_job_queue_attrs; }
 	if( hold_job_queue_attrs ) { delete hold_job_queue_attrs; }
 	if( evict_job_queue_attrs ) { delete evict_job_queue_attrs; }
@@ -77,19 +82,36 @@ BaseShadow::~BaseShadow() {
 	if( terminate_job_queue_attrs ) { delete terminate_job_queue_attrs; }
 }
 
-void BaseShadow::baseInit( ClassAd *jobAd, char schedd_addr[], 
-				  char cluster[], char proc[])
+void
+BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr )
 {
-	if (schedd_addr[0] != '<') {
-		EXCEPT("Schedd_Addr not specified with sinful string.");
+	if( ! job_ad ) {
+		EXCEPT("baseInit() called with NULL job_ad!");
 	}
-	scheddAddr = schedd_addr;
-	this->cluster = atoi(cluster);
-	this->proc = atoi(proc);
+	jobAd = job_ad;
+
+	if( ! is_valid_sinful(schedd_addr) ) {
+		EXCEPT("schedd_addr not specified with valid address");
+	}
+	scheddAddr = strdup( schedd_addr );
 
 	if ( !jobAd->LookupString(ATTR_OWNER, owner)) {
 		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_OWNER);
 	}
+
+	if( !jobAd->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
+		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_CLUSTER_ID);
+	}
+
+	if( !jobAd->LookupInteger(ATTR_PROC_ID, proc)) {
+		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_PROC_ID);
+	}
+
+		// Grab the GlobalJobId if we've got it.
+	if( ! jobAd->LookupString(ATTR_GLOBAL_JOB_ID, &gjid) ) {
+		gjid = NULL;
+	}
+
 	// grab the NT domain if we've got it
 	jobAd->LookupString(ATTR_NT_DOMAIN, domain);
 	if ( !jobAd->LookupString(ATTR_JOB_IWD, iwd)) {
@@ -104,25 +126,24 @@ void BaseShadow::baseInit( ClassAd *jobAd, char schedd_addr[],
 	}
 
 		// construct the core file name we'd get if we had one.
-	int size = strlen(iwd) + strlen(cluster) + strlen(proc) + 11;
-	core_file_name = (char*)malloc( size * sizeof(char) );
-	if( ! core_file_name ) {
-		EXCEPT( "Out of memory!" );
-	}
-	sprintf( core_file_name, "%s%ccore.%s.%s", iwd, DIR_DELIM_CHAR,
-			 cluster, proc );
+	MyString tmp_name = iwd;
+	tmp_name += DIR_DELIM_CHAR;
+	tmp_name += "core.";
+	tmp_name += cluster;
+	tmp_name += '.';
+	tmp_name += proc;
+	core_file_name = strdup( tmp_name.Value() );
 
         // put the shadow's sinful string into the jobAd.  Helpful for
         // the mpi shadow, at least...and a good idea in general.
-	char buf[256];
-    sprintf ( buf, "%s = \"%s\"", ATTR_MY_ADDRESS,
-              daemonCore->InfoCommandSinfulString() );
-    if ( !jobAd->Insert( buf )) {
+	MyString tmp_addr = ATTR_MY_ADDRESS;
+	tmp_addr += "=\"";
+	tmp_addr += daemonCore->InfoCommandSinfulString();
+	tmp_addr += '"';
+    if ( !jobAd->Insert( tmp_addr.Value() )) {
         EXCEPT( "Failed to insert %s!", ATTR_MY_ADDRESS );
     }
 
-	this->jobAd = jobAd;
-	
 	DebugId = display_dprintf_header;
 	
 	config();
@@ -187,7 +208,7 @@ BaseShadow::checkFileTransferCruft()
 	int universe; 
 	char* version = NULL;
 	bool is_old = false;
-	if( jobAd->LookupInteger(ATTR_JOB_UNIVERSE, universe) < 0 ) {
+	if( ! jobAd->LookupInteger(ATTR_JOB_UNIVERSE, universe) ) {
 		universe = CONDOR_UNIVERSE_VANILLA;
 	}
 	if( universe != CONDOR_UNIVERSE_VANILLA ) {
@@ -295,6 +316,26 @@ void BaseShadow::config()
 		useCkptServer = false;
 	}
 	if (tmp) free(tmp);
+
+	reconnect_ceiling = 0;
+	tmp = param( "RECONNECT_BACKOFF_CEILING" );
+	if( tmp ) {
+		reconnect_ceiling = atoi( tmp );
+		free( tmp );
+	} 
+	if( !reconnect_ceiling ) {
+		reconnect_ceiling = 300;
+	}
+
+	reconnect_e_factor = 0;
+	tmp = param( "RECONNECT_BACKOFF_FACTOR" );
+    if( tmp ) {
+        reconnect_e_factor = atof( tmp );
+		free( tmp );
+    } 
+	if( !reconnect_e_factor ) {
+    	reconnect_e_factor = 2.0;
+    }
 }
 
 
@@ -318,6 +359,7 @@ BaseShadow::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_LAST_SUSPENSION_TIME );
 	common_job_queue_attrs->insert( ATTR_BYTES_SENT );
 	common_job_queue_attrs->insert( ATTR_BYTES_RECVD );
+	common_job_queue_attrs->insert( ATTR_LAST_JOB_LEASE_RENEWAL );
 
 	hold_job_queue_attrs = new StringList();
 	hold_job_queue_attrs->insert( ATTR_HOLD_REASON );
@@ -395,6 +437,35 @@ BaseShadow::shutDown( int reason )
 		// if we aren't trying to evaluate the user's policy, we just
 		// want to evict this job.
 	evictJob( reason );
+}
+
+
+int
+BaseShadow::nextReconnectDelay( int attempts )
+{
+	if( ! attempts ) {
+			// first time, do it right away
+		return 0;
+	}
+	int n = (int)ceil(pow(reconnect_e_factor, (attempts+2)));
+	if( n > reconnect_ceiling || n < 0 ) {
+		n = reconnect_ceiling;
+	}
+	return n;
+}
+
+
+void
+BaseShadow::reconnectFailed( const char* reason )
+{
+		// try one last time to release the claim, write a UserLog event
+		// about it, and exit with a special status. 
+	dprintf( D_ALWAYS, "Reconnect FAILED: %s\n", reason );
+	
+	logReconnectFailedEvent( reason );
+
+		// does not return
+	DC_Exit( JOB_SHOULD_REQUEUE );
 }
 
 
@@ -856,7 +927,7 @@ BaseShadow::logTerminateEvent( int exitReason )
 		break;
 	default:
 		dprintf( D_ALWAYS, 
-				 "logTerminateEvent with unknown reason (%d), aborting",
+				 "logTerminateEvent with unknown reason (%d), aborting\n",
 				 exitReason ); 
 		return;
 	}
@@ -918,7 +989,7 @@ BaseShadow::logEvictEvent( int exitReason )
 		break;
 	default:
 		dprintf( D_ALWAYS, 
-				 "logEvictEvent with unknown reason (%d), aborting",
+				 "logEvictEvent with unknown reason (%d), aborting\n",
 				 exitReason ); 
 		return;
 	}
@@ -1280,6 +1351,34 @@ BaseShadow::startQueueUpdateTimer( void )
     if( q_update_tid < 0 ) {
         EXCEPT( "Can't register DC timer!" );
     }
+}
+
+
+void
+BaseShadow::publishShadowAttrs( ClassAd* ad )
+{
+	MyString tmp;
+	tmp = ATTR_SHADOW_IP_ADDR;
+	tmp += "=\"";
+	tmp += daemonCore->InfoCommandSinfulString();
+    tmp += '"';
+	ad->Insert( tmp.Value() );
+
+	tmp = ATTR_SHADOW_VERSION;
+	tmp += "=\"";
+	tmp += CondorVersion();
+    tmp += '"';
+	ad->Insert( tmp.Value() );
+
+	char* my_uid_domain = param( "UID_DOMAIN" );
+	if( my_uid_domain ) {
+		tmp = ATTR_UID_DOMAIN;
+		tmp += "=\"";
+		tmp += my_uid_domain;
+		tmp += '"';
+		ad->Insert( tmp.Value() );
+		free( my_uid_domain );
+	}
 }
 
 

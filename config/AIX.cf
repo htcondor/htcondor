@@ -1,13 +1,16 @@
-#define OperatingSystem		AIX
-#define Architecture		PPC
 
-#define PlatformLdFlags /**/
+/* AIX need to use a GNU ld prelinker before it can link the executable with
+	the vendor linker */
+#undef NEEDS_PRELINKER
+#define NEEDS_PRELINKER	NO
 
-#define SimpleLibC /lib/libc.a
-#define LibC SimpleLibC
+PRELINK_C = /usr/local/bin/ld.gnu
+PRELINK_C_FLAGS = -Ur -u main
+PRELINK_CPP = /usr/local/bin/ld.gnu
+PRELINK_CPP_FLAGS = -Ur -u main
 
-#define XLibPath /**/
-#define XExtLibPath /**/
+/* specifically ask for the C++ libraries to be statically linked */
+#define PlatformLdFlags -Wl,-berok -Wl,-bstatic -lstdc++ -Wl,-bdynamic -lcfg -lodm -lcrypt -lc -static-libgcc
 
 #define IS_V5				YES
 
@@ -15,8 +18,8 @@
 
 #define NEEDS_KBDD			NO
 
-#define DOES_CHECKPOINTING		YES
-#define DOES_REMOTE_SYSCALLS		YES
+#define DOES_CHECKPOINTING		NO
+#define DOES_REMOTE_SYSCALLS	NO
 #define DOES_SAVE_SIGSTATE		YES
 
 #define NEEDS_64BIT_SYSCALLS	NO
@@ -34,7 +37,6 @@
 #define HAS_RANLIB_TOUCH		YES
 #define HAS_CP_PRESERVE			YES
 #define NEEDS_SPECIAL_SETJMP		NO
-#define HAS_FORTRAN			YES
 #define HAS_FLOCK			NO
 #define HAS_GETDTABLESIZE		NO
 #define HAS__UTSSYS			YES
@@ -42,24 +44,13 @@
 #define HAS_UTIME			YES
 #define HAS_VHANGUP			NO
 #define HAS_SETEGID			NO
-#define HAS_SETEUID			NO
+#define HAS_SETEUID			YES
 #define DO_BENCHMARKING			YES
-#define HAS_PVM				YES
-#define PVM_ARCH			HPPA
-#define HAS_STATIC			YES
+#define HAS_PVM				NO
+#define PVM_ARCH			RS6K
 
-
-#define StaticFlag -static
-#define PsAllFlag /bin/ps -e		/* "Ps" flag when you want everything */
-#define PsAwkProg '{ print $1 }'	/* Pick out pid from "ps" output */
-
-#ifndef Ctags
-#define Ctags ctags -t
-#endif Ctags
-
-#ifndef MkDepend
-#define MkDepend ../../GENERIC/mdepend.sh
-#endif MkDepend
+#undef WANT_DRMAA
+#define WANT_DRMAA	NO
 
 #define ShadowSizeEstimate 200
 

@@ -2,22 +2,16 @@ NAME = condor_startd
 
 all_target( $(NAME) )
 
+
 CFLAGS = $(STD_C_FLAGS)
+
+#if IS_DARWIN
+LDFLAGS = -framework IOKit -framework Carbon
+#endif
+
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LIB= $(DAEMONCORE_LIB) $(STD_LIBS)
-
-#if IS_ALPHA_OSF1
-#	define LOAD_AVG_OBJ load_avg.OSF1.o
-#elif IS_LINUX
-#	define LOAD_AVG_OBJ load_avg.LINUX.o
-#elif IS_SOLARIS
-#       define LOAD_AVG_OBJ load_avg.Solaris.o load_avg.uptime.o
-#elif IS_SGI_IRIX
-#       define LOAD_AVG_OBJ load_avg.IRIX.o load_avg.uptime.o
-#elif IS_HPUX
-#	define LOAD_AVG_OBJ load_avg.HPUX.o
-#endif
 
 OBJ = LoadQueue.o claim.o Reqexp.o ResAttributes.o ResMgr.o ResState.o \
 	Resource.o Starter.o command.o startd_main.o util.o \
@@ -27,8 +21,8 @@ OBJ = LoadQueue.o claim.o Reqexp.o ResAttributes.o ResMgr.o ResState.o \
 template_inst( startd_instantiate.C, startd_instantiate.o )
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
-release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
-strip_target($(NAME),$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
+release_target($(NAME),sbin,EXECUTABLE_MODE)
+strip_target($(NAME),sbin,EXECUTABLE_MODE)
 static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
 pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))

@@ -4,7 +4,7 @@ ModuleFiles: condor_node
 Description:
 Monitors the status of an individual Condor pool node You probably
 need set the condor_node parameters by hand In particular, the
-HAWKEYE_CONDOR_ENV will most likely need to be set
+ENV will most likely need to be set
 
 Default: condor
 options: kill
@@ -12,8 +12,25 @@ period: 1h
 prefix: condor_
 
 # It's parameters
-parameter: CONDOR = /home/condor
+Parameter: CONDOR = /home/condor
 Specify the home of Condor on the system
 
-parameter: HAWKEYE_CONDOR_ENV = PATH=/bin:/sbin:/usr/bin:$(HAWKEYE)/bin:$(CONDOR)/bin:$(CONDOR)/scripts:CONDOR_CONFIG=$(CONDOR)/etc/condor_config
+Parameter: ENV = PATH=/bin:/sbin:/usr/bin:$(HAWKEYE)/bin:$(CONDOR)/bin:$(CONDOR)/scripts:CONDOR_CONFIG=$(CONDOR)/etc/condor_config
 Sets the PATH & CONDOR_CONFIG used by the condor 
+
+Parameter: DAEMON_OWNERS
+Specifies a comma separated list of process owners (from 'ps') that
+condor_node will count as being in the pool.  This is to allow
+condor_node to ignore personal condors when looking for anonalies.
+Defaults to "condor,root".
+Example: DAEMON_OWNERS = mycondoruser,root
+
+Parameter: MASTER_OWNERS
+Like DAEMON_OWNERS, but specifically for the master.  Defaults to
+"condor,root", or DAEMON_OWNERS.
+Example: MASTER_OWNERS = mycondoruser,root
+
+Parameter: USER_OWNERS
+Similar to DAEMON_OWNERS, but specifies the valid owners of the user
+jobs that Condor is executing.
+Example: DAEMON_OWNERS = user1,user2,user3

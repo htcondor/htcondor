@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_debug.h"
@@ -255,7 +255,7 @@ sysapi_swap_space_raw()
 	}
 }
 
-#elif defined(CONDOR_DARWIN)
+#elif defined(Darwin)
 #include <sys/sysctl.h>
 int
 sysapi_swap_space_raw() {
@@ -267,6 +267,108 @@ sysapi_swap_space_raw() {
         sysctl(mib, 2, &usermem, &len, NULL, 0);   
 	return usermem / 1024;
 }
+
+#elif defined(AIX)
+
+int
+sysapi_swap_space_raw() {
+    struct pginfo p;
+    int ret;
+
+    CLASS_SYMBOL cuat;
+    struct CuAt paging_ent;
+    struct CuAt *pret = NULL;
+    unsigned long free_swap_space = 0;
+	char buf[1024];
+	char *path = NULL;
+
+    if (odm_initialize() < 0)
+    {
+		/* This is quite terrible if it happens */
+        dprintf(D_ALWAYS, 
+			"sysapi_swap_space_raw(): Could not initialize the ODM database: "
+			"%d\n", odmerrno);
+		return -1;
+    }
+
+	/* remember to free this memory just before I leave this function */
+    path = odm_set_path("/etc/objrepos");
+	if (path == (char*)-1) /* eewww */
+	{
+        dprintf(D_ALWAYS, "sysapi_swap_space_raw(): Could not set class path! "
+			"%d\n", odmerrno);
+		return -1;
+	}
+
+	/* open up a predefined class symbol found in libcfg.a */
+    cuat = odm_open_class(CuAt_CLASS);
+    if (cuat == NULL)
+    {
+        dprintf(D_ALWAYS, "sysapi_swap_space_raw(): Could not open CuAt! %d\n",
+			odmerrno);
+    	if (odm_terminate() < 0)
+    	{
+        	dprintf(D_ALWAYS, "Could not terminate using the ODM database: "
+				"%d\n", odmerrno);
+			free(path);
+			return -1;
+    	}
+		free(path);
+		return -1;
+    }
+
+    /* odm_get_list() is scary cause I can't tell if it is going to actually
+        remove the entries from the ODM when it returns them to me or not.
+        So I'm traversing the list in the safe way that I know how */
+
+    /* get me the objects that are paging devices */
+    pret = odm_get_obj(cuat, "value='paging'", &paging_ent, ODM_FIRST);
+    while(pret != NULL)
+    {
+		memset(buf, 0, 1024);
+		snprintf(buf, 1024, "%s/%s", "/dev", paging_ent.name);
+
+		ret = swapqry(buf, &p);
+        if (ret == -1)
+        {
+			/* XXX when non root, some swap partitions cannot be inspected,
+				so skip them. */
+        	pret = odm_get_obj(cuat, NULL, &paging_ent, ODM_NEXT);
+			continue;
+        }
+
+        free_swap_space += p.free;
+
+        pret = odm_get_obj(cuat, NULL, &paging_ent, ODM_NEXT);
+    }
+
+    if (odm_close_class(cuat) < 0)
+    {
+        dprintf(D_ALWAYS, "Could not close CuAt in the ODM database: %d\n",
+			odmerrno);
+		free(path);
+		return -1;
+    }
+
+    if (odm_terminate() < 0)
+    {
+        dprintf(D_ALWAYS, "Could not terminate using the ODM database: %d\n",
+			odmerrno);
+		free(path);
+		return -1;
+    }
+
+	free(path);
+
+	/* the free_swap_space unit is in PAGESIZE blocks */
+	/* so convert it into bytes, and then convert it into KB units */
+    return (free_swap_space * PAGESIZE) / 1024;
+}
+
+#else
+
+#error "Please define: sysapi_swap_space_raw()"
+
 #endif /* !defined(WIN32) */
 
 

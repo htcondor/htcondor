@@ -1,38 +1,3 @@
 /* Things that are specific to Solaris 2.8 */
 
-#define		IS_SOLARIS28		YES
-
-#define NEEDS_64BIT_SYSCALLS    YES
-#define NEEDS_64BIT_STRUCTS YES
-#define HAS_PVM	YES
-
-#if IS_X86
-#define		IS_X86_SOLARIS28	YES
-#define		GccArch			i386-pc-solaris2.8
-#define		Platform		INTEL-SOLARIS28
-#endif
-
-#if IS_SUN4X
-#define		IS_SUN4X_SOLARIS28	YES
-#define		Platform		SUN4X-SOLARIS28
-#define		GccArch			sparc-sun-solaris2.8
-#define HAS_GLOBUS 			YES
-#define HAS_GSI				YES
-#define HAS_OPENSSL			YES
-#endif
-
-#ifndef SC_VERS
-#define SC_VERS SC5.0
-#endif
-
-#define IS_CLIPPED NO
-
 #define PlatformFlags	-DSolaris28=Solaris28
-
-#define PlatformLdFlags -ldl -lkstat -lelf -lsocket -lresolv -lnsl -lm -lc \
-  -Xlinker -B -Xlinker static -lstdc++ -lgcc 
-
-#define Strip /s/binutils-2.9.1/bin/strip
-
-
-

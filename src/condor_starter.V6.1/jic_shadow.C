@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-2002 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_debug.h"
@@ -35,6 +35,9 @@
 #include "basename.h"
 #include "condor_string.h"  // for strnewp
 #include "condor_attributes.h"
+#include "condor_commands.h"
+#include "command_strings.h"
+#include "classad_command_util.h"
 #include "directory.h"
 #include "nullfile.h"
 
@@ -60,6 +63,7 @@ JICShadow::JICShadow( char* shadow_sinful ) : JobInfoCommunicator()
 
 	transfer_at_vacate = false;
 	wants_file_transfer = false;
+	job_cleanup_disconnected = false;
 
 		// now we need to try to inherit the syscall sock from the startd
 	Stream **socks = daemonCore->GetInheritedSocks();
@@ -132,10 +136,9 @@ JICShadow::init( void )
 	ASSERT( shadow );
 
 		// Now, initalize our version information about the shadow
-	initShadowInfo();
+		// with whatever attributes we can find in the job ad.
+	initShadowInfo( job_ad );
 
-	dprintf( D_ALWAYS, "Starter communicating with condor_shadow %s\n",
-			 shadow->addr() );
 	dprintf( D_ALWAYS, "Submitting machine is \"%s\"\n", shadow->name());
 
 		// Now that we know what version of the shadow we're talking
@@ -226,6 +229,29 @@ JICShadow::setupJobEnvironment( void )
 	transferCompleted( NULL );
 }
 
+bool
+JICShadow::streamInput()
+{
+	bool result=false;
+	job_ad->LookupBool(ATTR_STREAM_INPUT,result);
+	return result;
+}
+
+bool
+JICShadow::streamOutput()
+{
+	bool result=false;
+	job_ad->LookupBool(ATTR_STREAM_OUTPUT,result);
+	return result;
+}
+
+bool
+JICShadow::streamError()
+{
+	bool result=false;
+	job_ad->LookupBool(ATTR_STREAM_ERROR,result);
+	return result;
+}
 
 float
 JICShadow::bytesSent( void )
@@ -310,7 +336,7 @@ JICShadow::Continue( void )
 }
 
 
-void
+bool
 JICShadow::allJobsDone( void )
 {
 		// now that all the jobs are gone, we can stop our periodic
@@ -333,10 +359,16 @@ JICShadow::allJobsDone( void )
 		priv_state saved_priv = set_user_priv();
 
 			// this will block
-		ASSERT( filetrans->UploadFiles(true, final_transfer) );	
-
+		bool rval = filetrans->UploadFiles( true, final_transfer );
 		set_priv(saved_priv);
+
+		if( ! rval ) {
+				// failed to transfer, the shadow is probably gone.
+			job_cleanup_disconnected = true;
+			return false;
+		}
 	}
+	return true;
 }
 
 
@@ -349,6 +381,133 @@ JICShadow::gotShutdownFast( void )
 
 		// let our parent class do the right thing, too.
 	JobInfoCommunicator::gotShutdownFast();
+}
+
+
+int
+JICShadow::reconnect( ReliSock* s, ClassAd* ad )
+{
+		// first, make sure the entity requesting this is authorized.
+		/*
+		  TODO!!  UGH, since the results of getFullyQualifiedUser()
+		  are not serialized properly when we inherit the relisock, we
+		  have no way to figure out the original entity that
+		  authenticated to the startd to spawn this job.  :( We really
+		  should call getFullyQualifiedUser() on the socket we
+		  inherit, stash that in a variable, and compare that against
+		  the result on this socket right here.
+
+		  But, we can't do that. :( So, instead, we call getOwner()
+		  and compare that to whatever ATTR_OWNER is in our job ad
+		  (the original ad, not whatever they're requesting now).
+
+		  WORSE YET, even if it did work, there's no user credential
+		  management when you use strong authentication, so this
+		  socket would be authenticated with the shadow's system
+		  credentials, not the user.  So, *NONE* of this will work,
+		  anyway.  
+
+		  We could try to introduce some kind of real shared
+		  secret/capability to make this more secure, but that's going
+		  to have to wait for time to make some bigger changes.
+		*/
+#if 0
+	const char* new_owner = s->getOwner();
+	char* my_owner = NULL; 
+	if( ! job_ad->LookupString(ATTR_OWNER, &my_owner) ) {
+		EXCEPT( "impossible: ATTR_OWNER must be in job ad by now" );
+	}
+
+	if( strcmp(new_owner, my_owner) ) {
+		MyString err_msg = "User '";
+		err_msg += new_owner;
+		err_msg += "' does not match the owner of this job";
+		sendErrorReply( s, getCommandString(CA_RECONNECT_JOB), 
+						CA_NOT_AUTHORIZED, err_msg.Value() ); 
+		dprintf( D_COMMAND, "Denied request for %s by invalid user '%s'\n", 
+				 getCommandString(CA_RECONNECT_JOB), new_owner );
+		return FALSE;
+	}
+#endif
+
+	ClassAd reply;
+	publishStarterInfo( &reply );
+
+	MyString line;
+	line = ATTR_RESULT;
+	line += "=\"";
+	line += getCAResultString( CA_SUCCESS );
+	line += '"';
+	reply.Insert( line.Value() );
+
+	if( ! sendCAReply(s, getCommandString(CA_RECONNECT_JOB), &reply) ) {
+		dprintf( D_ALWAYS, "Failed to reply to request\n" );
+		return FALSE;
+	}
+
+		// If we managed to send the reply, finally commit to the
+		// switch.  Destroy all the info we're storing about the
+		// previous shadow and switch over to the new info.
+
+		// Destroy our old DCShadow object and make a new one with the
+		// current info.
+	dprintf( D_ALWAYS, "Accepted request to reconnect from <%s:%d>\n",
+			 syscall_sock->endpoint_ip_str(), 
+			 syscall_sock->endpoint_port() );
+	dprintf( D_ALWAYS, "Ignoring old shadow %s\n", shadow->addr() );
+	delete shadow;
+	shadow = new DCShadow;
+	initShadowInfo( ad );	// this dprintf's D_ALWAYS for us
+	free( shadow_addr );
+	shadow_addr = strdup( shadow->addr() );
+
+		// tell our FileTransfer object to point to the new 
+		// shadow using the transsock and key in the ad from the
+		// reconnect request
+	if ( filetrans ) {
+		char *value1 = NULL;
+		char *value2 = NULL;
+		ad->LookupString(ATTR_TRANSFER_KEY,&value1);
+		ad->LookupString(ATTR_TRANSFER_SOCKET,&value2);
+		bool result = filetrans->changeServer(value1,value2);
+		if ( value1 && value2 && result ) {
+			dprintf(D_FULLDEBUG,
+				"Switching to new filetrans server, "
+				"sock=%s key=%s\n",value2,value1);
+		} else {
+			dprintf(D_ALWAYS,
+				"ERROR Failed to switch to new filetrans server, "
+				"sock=%s key=%s\n", value2 ? value2 : "(null)",
+				value1 ? value1 : "(null)");
+		}
+		if ( value1 ) free(value1);
+		if ( value2 ) free(value2);
+	}
+
+		// switch over to the new syscall_sock
+	dprintf( D_FULLDEBUG, "Closing old syscall sock <%s:%d>\n",
+			 syscall_sock->endpoint_ip_str(), 
+			 syscall_sock->endpoint_port() );
+	delete syscall_sock;
+	syscall_sock = s;
+	syscall_sock->timeout(300);
+	dprintf( D_FULLDEBUG, "Using new syscall sock <%s:%d>\n",
+			 syscall_sock->endpoint_ip_str(), 
+			 syscall_sock->endpoint_port() );
+
+	if( job_cleanup_disconnected ) {
+			/*
+			  if we were trying to cleanup our job and we noticed we
+			  were disconnected from the shadow, this flag will be
+			  set.  in this case, want to call out to the Starter
+			  object to tell it to try to clean up the job again.
+			*/
+		Starter->allJobsDone();
+	}
+
+		// Now that we're holding onto the ReliSock, we can't let
+		// DaemonCore close it on us!
+	return KEEP_STREAM;
 }
 
 
@@ -370,6 +529,7 @@ bool
 JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 						  user_proc )
 {
+	static bool wrote_local_log_event = false;
 	bool job_exit_wants_ad = true;
 
 		// protocol changed w/ v6.3.0 so the Update Ad is sent
@@ -391,8 +551,11 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 #ifdef WIN32		
 	job_exit_wants_ad = false;
 
+
 	if( shadow_version && shadow_version->built_since_version(6,3,0) ) {
+
 		job_exit_wants_ad = true;	// new shadow; send ad
+
 	}
 #endif		
 
@@ -404,7 +567,14 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 	user_proc->PublishUpdateAd( &ad );
 
 		// depending on the exit reason, we want a different event. 
-	u_log->logJobExit( &ad, reason );
+		// however, don't write multiple events if we've already been
+		// here, which might happen if we were disconnected when we
+		// first tried and we're trying again...
+	if( ! wrote_local_log_event ) {
+		if( u_log->logJobExit(&ad, reason) ) {
+			wrote_local_log_event = true;
+		}
+	}
 
 	if ( job_exit_wants_ad ) {
 		ad_to_send = &ad;
@@ -415,8 +585,8 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 	}
 			
 	if( REMOTE_CONDOR_job_exit(exit_status, reason, ad_to_send) < 0 ) {    
-		dprintf( D_ALWAYS, 
-				 "Failed to send job exit status to Shadow.\n" );
+		dprintf( D_ALWAYS, "Failed to send job exit status to shadow\n" );
+		job_cleanup_disconnected = true;
 		return false;
 	}
 	return true;
@@ -453,72 +623,9 @@ JICShadow::registerStarterInfo( void )
 		// CONDOR_register_starter_info, which just sends a ClassAd
 		// with all the relevent info.
 	if( shadow_version && shadow_version->built_since_version(6,3,3) ) {
-		ClassAd* starter_info = new ClassAd;
-		char *tmp = NULL;
-		char* tmp_val = NULL;
-		int size;
-
-		size = strlen(uid_domain) + strlen(ATTR_UID_DOMAIN) + 5;
-		tmp = (char*) malloc( size * sizeof(char) );
-		sprintf( tmp, "%s=\"%s\"", ATTR_UID_DOMAIN, uid_domain );
-		starter_info->Insert( tmp );
-		free( tmp );
-
-		size = strlen(fs_domain) + strlen(ATTR_FILE_SYSTEM_DOMAIN) + 5;
-		tmp = (char*) malloc( size * sizeof(char) );
-		sprintf( tmp, "%s=\"%s\"", ATTR_FILE_SYSTEM_DOMAIN, fs_domain ); 
-		starter_info->Insert( tmp );
-		free( tmp );
-
-		tmp_val = my_full_hostname();
-		size = strlen(tmp_val) + strlen(ATTR_MACHINE) + 5;
-		tmp = (char*) malloc( size * sizeof(char) );
-		sprintf( tmp, "%s=\"%s\"", ATTR_MACHINE, tmp_val );
-		starter_info->Insert( tmp );
-		free( tmp );
-
-		tmp_val = daemonCore->InfoCommandSinfulString();
- 		size = strlen(tmp_val) + strlen(ATTR_STARTER_IP_ADDR) + 5;
-		tmp = (char*) malloc( size * sizeof(char) );
-		sprintf( tmp, "%s=\"%s\"", ATTR_STARTER_IP_ADDR, tmp_val );
-		starter_info->Insert( tmp );
-		free( tmp );
-
-		tmp_val = CondorVersion();
- 		size = strlen(tmp_val) + strlen(ATTR_VERSION) + 5;
-		tmp = (char*) malloc( size * sizeof(char) );
-		sprintf( tmp, "%s=\"%s\"", ATTR_VERSION, tmp_val );
-		starter_info->Insert( tmp );
-		free( tmp );
-
-		tmp_val = param( "ARCH" );
-		size = strlen(tmp_val) + strlen(ATTR_ARCH) + 5;
-		tmp = (char*) malloc( size * sizeof(char) );
-		sprintf( tmp, "%s=\"%s\"", ATTR_ARCH, tmp_val );
-		starter_info->Insert( tmp );
-		free( tmp );
-		free( tmp_val );
-
-		tmp_val = param( "OPSYS" );
-		size = strlen(tmp_val) + strlen(ATTR_OPSYS) + 5;
-		tmp = (char*) malloc( size * sizeof(char) );
-		sprintf( tmp, "%s=\"%s\"", ATTR_OPSYS, tmp_val );
-		starter_info->Insert( tmp );
-		free( tmp );
-		free( tmp_val );
-
-		tmp_val = param( "CKPT_SERVER_HOST" );
-		if( tmp_val ) {
-			size = strlen(tmp_val) + strlen(ATTR_CKPT_SERVER) + 5; 
-			tmp = (char*) malloc( size * sizeof(char) );
-			sprintf( tmp, "%s=\"%s\"", ATTR_CKPT_SERVER, tmp_val ); 
-			starter_info->Insert( tmp );
-			free( tmp );
-			free( tmp_val );
-		}
-
-		rval = REMOTE_CONDOR_register_starter_info( starter_info );
-		delete( starter_info );
+		ClassAd starter_info;
+		publishStarterInfo( &starter_info );
+		rval = REMOTE_CONDOR_register_starter_info( &starter_info );
 
 	} else {
 			// We've got to use the old method.
@@ -532,6 +639,80 @@ JICShadow::registerStarterInfo( void )
 		return false;
 	}
 	return true;
+}
+
+
+void
+JICShadow::publishStarterInfo( ClassAd* ad )
+{
+	char *tmp = NULL;
+	char* tmp_val = NULL;
+	int size;
+
+	size = strlen(uid_domain) + strlen(ATTR_UID_DOMAIN) + 5;
+	tmp = (char*) malloc( size * sizeof(char) );
+	sprintf( tmp, "%s=\"%s\"", ATTR_UID_DOMAIN, uid_domain );
+	ad->Insert( tmp );
+	free( tmp );
+
+	size = strlen(fs_domain) + strlen(ATTR_FILE_SYSTEM_DOMAIN) + 5;
+	tmp = (char*) malloc( size * sizeof(char) );
+	sprintf( tmp, "%s=\"%s\"", ATTR_FILE_SYSTEM_DOMAIN, fs_domain ); 
+	ad->Insert( tmp );
+	free( tmp );
+
+	tmp_val = my_full_hostname();
+	size = strlen(tmp_val) + strlen(ATTR_MACHINE) + 5;
+	tmp = (char*) malloc( size * sizeof(char) );
+	sprintf( tmp, "%s=\"%s\"", ATTR_MACHINE, tmp_val );
+	ad->Insert( tmp );
+	free( tmp );
+
+	tmp_val = daemonCore->InfoCommandSinfulString();
+	size = strlen(tmp_val) + strlen(ATTR_STARTER_IP_ADDR) + 5;
+	tmp = (char*) malloc( size * sizeof(char) );
+	sprintf( tmp, "%s=\"%s\"", ATTR_STARTER_IP_ADDR, tmp_val );
+	ad->Insert( tmp );
+	free( tmp );
+
+	tmp_val = CondorVersion();
+	size = strlen(tmp_val) + strlen(ATTR_VERSION) + 5;
+	tmp = (char*) malloc( size * sizeof(char) );
+	sprintf( tmp, "%s=\"%s\"", ATTR_VERSION, tmp_val );
+	ad->Insert( tmp );
+	free( tmp );
+
+	tmp_val = param( "ARCH" );
+	size = strlen(tmp_val) + strlen(ATTR_ARCH) + 5;
+	tmp = (char*) malloc( size * sizeof(char) );
+	sprintf( tmp, "%s=\"%s\"", ATTR_ARCH, tmp_val );
+	ad->Insert( tmp );
+	free( tmp );
+	free( tmp_val );
+
+	tmp_val = param( "OPSYS" );
+	size = strlen(tmp_val) + strlen(ATTR_OPSYS) + 5;
+	tmp = (char*) malloc( size * sizeof(char) );
+	sprintf( tmp, "%s=\"%s\"", ATTR_OPSYS, tmp_val );
+	ad->Insert( tmp );
+	free( tmp );
+	free( tmp_val );
+
+	tmp_val = param( "CKPT_SERVER_HOST" );
+	if( tmp_val ) {
+		size = strlen(tmp_val) + strlen(ATTR_CKPT_SERVER) + 5; 
+		tmp = (char*) malloc( size * sizeof(char) );
+		sprintf( tmp, "%s=\"%s\"", ATTR_CKPT_SERVER, tmp_val ); 
+		ad->Insert( tmp );
+		free( tmp );
+		free( tmp_val );
+	}
+
+	size = strlen(ATTR_HAS_RECONNECT) + 6;
+	tmp = (char*) malloc( size * sizeof(char) );
+	sprintf( tmp, "%s=TRUE", ATTR_HAS_RECONNECT );
+	ad->Insert( tmp );
+	free( tmp );
 }
 
 
@@ -944,6 +1125,12 @@ JICShadow::getJobStdFile( const char* attr_name, const char* alt_name )
 	char filename[_POSIX_PATH_MAX];
 	filename[0] = '\0';
 
+	if(streamStdFile(attr_name)) {
+		if(!tmp && alt_name) job_ad->LookupString(alt_name,&tmp);
+		if(!tmp && attr_name) job_ad->LookupString(attr_name,&tmp);
+		return tmp;
+	}
+
 	if( ! wants_file_transfer && alt_name ) {
 		job_ad->LookupString( alt_name, &tmp );
 	}
@@ -1105,23 +1292,10 @@ JICShadow::startUpdateTimer( void )
 		return;
 	}
 
-	char* tmp = param( "STARTER_UPDATE_INTERVAL" );
-	int update_interval = 0;
-		// years of careful study show: 20 minutes... :)
-	int def_update_interval = (20*60);
-	int initial_interval = 8;
-	if( tmp ) {
-		update_interval = atoi( tmp );
-		if( ! update_interval ) {
-			dprintf( D_ALWAYS, "Invalid STARTER_UPDATE_INTERVAL: "
-					 "\"%s\", using default value (%d) instead\n",
-					 tmp, def_update_interval );
-		}
-		free( tmp );
-	}
-	if( ! update_interval ) {
-		update_interval = def_update_interval;
-	}
+	// default interval is 20 minutes, with 8 seconds as the initial value.
+	int update_interval = param_integer( "STARTER_UPDATE_INTERVAL", (20*60) );
+	int initial_interval = param_integer( "STARTER_INITIAL_UPDATE_INTERVAL", 8 );
+
 	if( update_interval < initial_interval ) {
 		initial_interval = update_interval;
 	}
@@ -1260,16 +1434,16 @@ JICShadow::getJobAdFromShadow( void )
 
 
 void
-JICShadow::initShadowInfo( void )
+JICShadow::initShadowInfo( ClassAd* ad )
 {
-	ASSERT( job_ad );
 	ASSERT( shadow );
-
-	if( ! shadow->initFromClassAd(job_ad) ) { 
+	if( ! shadow->initFromClassAd(ad) ) { 
 		dprintf( D_ALWAYS, 
-				 "Failed to initialize shadow info from job ClassAd!\n" );
+				 "Failed to initialize shadow info from ClassAd!\n" );
 		return;
 	}
+	dprintf( D_ALWAYS, "Communicating with shadow %s\n",
+			 shadow->addr() );
 
 	if( shadow_version ) {
 		delete shadow_version;
@@ -1277,10 +1451,10 @@ JICShadow::initShadowInfo( void )
 	}
 	char* tmp = shadow->version();
 	if( tmp ) {
-		dprintf( D_FULLDEBUG, "Version of Shadow is %s\n", tmp );
+		dprintf( D_FULLDEBUG, "Shadow version: %s\n", tmp );
 		shadow_version = new CondorVersionInfo( tmp, "SHADOW" );
 	} else {
-		dprintf( D_FULLDEBUG, "Version of Shadow unknown (pre v6.3.3)\n" ); 
+		dprintf( D_FULLDEBUG, "Shadow version: unknown (pre v6.3.3)\n" ); 
 	}
 }
 

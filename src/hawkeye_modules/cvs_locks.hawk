@@ -1,0 +1,17 @@
+# Data file describing the cvs_locks module
+ModuleFiles: cvs_locks
+
+Description:
+Used to monitor CVS locks
+
+Default: cvs
+options: kill
+period: 30m
+prefix: cvslocks_
+
+# It's parameters
+parameter: REPOSITORIES
+Flags: required
+Example: REPOSITORIES = Name:/dir/to/repository
+Comma-separated List of repositories to monitor.
+Each repository has the format Name:/path/to/repository

@@ -1,6 +1,7 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_io.mak
 
 ..\src\condor_io\authentication.C : \
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -30,6 +31,7 @@
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_environ.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
@@ -39,11 +41,10 @@
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -58,6 +59,7 @@
 	
 
 ..\src\condor_io\buffers.C : \
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -70,6 +72,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_io.h"\
@@ -77,7 +80,6 @@
 	"..\src\condor_includes\condor_old_shadow_types.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\reli_sock.h"\
@@ -94,6 +96,7 @@
 	
 
 ..\src\condor_io\condor_auth.C : \
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -117,6 +120,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_getmnt.h"\
@@ -128,7 +132,6 @@
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -148,6 +151,7 @@
 	
 
 ..\src\condor_io\condor_auth_anonymous.C : \
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_c++_util\my_username.h"\
@@ -164,6 +168,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_io.h"\
@@ -171,7 +176,6 @@
 	"..\src\condor_includes\condor_old_shadow_types.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -189,6 +193,7 @@
 	
 
 ..\src\condor_io\condor_auth_claim.C : \
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_c++_util\my_username.h"\
@@ -204,6 +209,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_io.h"\
@@ -211,7 +217,6 @@
 	"..\src\condor_includes\condor_old_shadow_types.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -229,6 +234,7 @@
 	
 
 ..\src\condor_io\condor_auth_sspi.C : \
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_c++_util\my_username.h"\
@@ -244,6 +250,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_io.h"\
@@ -251,7 +258,6 @@
 	"..\src\condor_includes\condor_old_shadow_types.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -277,13 +283,13 @@
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_md.h"\
 	"..\src\condor_includes\condor_random_num.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\file_lock.h"\
 	
 
 ..\src\condor_io\condor_rw.C : \
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -296,6 +302,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_io.h"\
@@ -303,7 +310,6 @@
 	"..\src\condor_includes\condor_old_shadow_types.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\reli_sock.h"\
@@ -322,6 +328,8 @@
 	"..\src\condor_c++_util\classad_merge.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_ver_info.h"\
+	"..\src\condor_c++_util\condor_version.h"\
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -355,6 +363,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_getmnt.h"\
@@ -368,11 +377,10 @@
 	"..\src\condor_includes\condor_secman.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -394,7 +402,6 @@
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\file_lock.h"\
@@ -406,7 +413,6 @@
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\file_lock.h"\
 	
@@ -417,12 +423,12 @@
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\file_lock.h"\
 	
 
 ..\src\condor_io\reli_sock.C : \
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_c++_util\my_username.h"\
@@ -438,6 +444,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_io.h"\
@@ -446,7 +453,6 @@
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_socket_types.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -465,6 +471,7 @@
 	
 
 ..\src\condor_io\safe_sock.C : \
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -486,6 +493,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_getmnt.h"\
@@ -498,7 +506,6 @@
 	"..\src\condor_includes\condor_socket_types.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\reli_sock.h"\
@@ -517,6 +524,7 @@
 	
 
 ..\src\condor_io\SafeMsg.C : \
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -529,6 +537,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_io.h"\
@@ -536,7 +545,6 @@
 	"..\src\condor_includes\condor_old_shadow_types.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\reli_sock.h"\
@@ -553,6 +561,7 @@
 	
 
 ..\src\condor_io\sock.C : \
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_c++_util\my_username.h"\
@@ -568,6 +577,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_io.h"\
@@ -577,7 +587,6 @@
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_socket_types.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
@@ -596,6 +605,7 @@
 	
 
 ..\src\condor_io\sockCache.C : \
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -608,6 +618,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_io.h"\
@@ -615,7 +626,6 @@
 	"..\src\condor_includes\condor_old_shadow_types.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\reli_sock.h"\
@@ -631,6 +641,7 @@
 	
 
 ..\src\condor_io\stream.C : \
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -643,6 +654,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
 	"..\src\condor_includes\condor_io.h"\
@@ -650,7 +662,6 @@
 	"..\src\condor_includes\condor_old_shadow_types.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\reli_sock.h"\

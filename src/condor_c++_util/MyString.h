@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
- ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include <string.h>
 #include <iostream>
 #include <stdarg.h>
@@ -96,7 +96,11 @@ class MyString
 
 	/** Returns a single character from the string. Returns 0
 	 *  if out of bounds. */
-	char& operator[](int pos);
+	const char& operator[](int pos);
+
+	/** Sets the character at the given position to the given value,
+	 *  if the position is within the string. */
+	void setChar(int pos, char value);
 
 	//@}
 
@@ -292,16 +296,40 @@ class MyString
 		@param fp The file you want to read from
 		@returns True if we found data, false if we're at the EOF 
 	 */
-	bool readLine( FILE* fp );
+	bool readLine( FILE* fp, bool append = false);
+
+	// ----------------------------------------
+	//           Tokenize (safe replacement for strtok())
+	// ----------------------------------------
+	/**@name Tokenize */
+	//@{ 
+
+	/** Initialize the tokenizing of this string.  */
+	void Tokenize();
+
+	/** Get the next token, with tokens separated by the characters
+	    in delim.  Note that the value of delim may change from call to
+		call.
+		WARNING: changing the value of this object between a call to
+		Tokenize() and a call to GetNextToken() will result in an error
+		(incorrect value from GetNextToken()).
+	    */
+	const char *GetNextToken(const char *delim, bool skipBlankTokens);
+	//@}
 
 private:
 
     void init();
 
   char* Data;	// array containing the C string of this MyString's value
-  char dummy;	// used for '\0' char in operator[] (dangerous)
+  char dummy;	// used for '\0' char in operator[] when the index
+  				// is past the end of the string (effectively it's
+				// a const, but compiler doesn't like that)
   int Len;		// the length of the string
   int capacity;	// capacity of the data array, not counting null terminator
+
+  char *tokenBuf;
+  char *nextToken;
   
 };
 

@@ -1,0 +1,445 @@
+#! /usr/bin/env perl
+
+# Sends results from the grid_manager_monitor_agent back to a
+# globus-url-copy friendly URL whenever those results are updated.
+# If necessary, starts the grid_manager_monitor_agent (packaged here as
+# the __DATA__ segment).
+#
+# Expected user is the Condor-G grid-manager which will start this to
+# monitor the status of jobs on a Globus gatekeeper.
+
+
+$^W = 1; # same as -w, but -w doesn't work quite run under /usr/bin/env hack
+use strict;
+
+use POSIX ":sys_wait_h";
+use Fcntl;
+
+$| = 1;
+
+# How old can the status file get before we don't want to use it any more.
+# In seconds.
+# --max-status-age=SECONDS
+my $MAX_STATUS_FILE_AGE = 60*3;
+
+# Time is seconds between when an agent is started and we expect
+# results.  If the results don't show up, we assume something went wrong
+# and send off another agent
+#
+# (Note: we don't kill the agent even if it exceeds the time, it may yet
+# get back to us.  The newly started agent should detect the existing
+# agent and silently bail out.)
+my $MAX_AGENT_START_BEFORE_OUTPUT = 60*6;
+
+# What do we call the agent?  Used in user messages.
+my $GRID_AGENT_NAME = 'grid_manager_monitor_agent';
+
+# Location to send the file to.  You probably do NOT want to
+# specify a default here, since it should be set on the command line.
+# --dest-url=STRING
+my $DST_URL = undef;
+
+# Maximum time this program should exist before terminating.
+# In seconds
+# --max-lifespan=SECONDS
+my $MAX_LIFE = 60 * 60;
+
+# How long are we allowed to wait between keepalives?
+# seconds
+# --min-update-interval=SECONDS
+my $MIN_TIME_BETWEEN_UPDATES = 60;
+
+# Don't try restarting without seeing any results more than
+# this many times.  If undef, is unused.
+my $MAX_SEQUENTIAL_GRID_AGENT_STARTS = undef;
+
+# Set to 1 to use Greenwich Mean Time
+# --use-gmt
+my $USE_GMT = 0;
+
+# Used to determine timeouts for globus-url-copy transfers
+my $MIN_BYTES_PER_SECOND = 250;
+
+# Minimum time in seconds to let globus-url-copy run for.
+my $MIN_TIMEOUT = 60;
+
+# Arguments to pass to the grid agent when spawned.
+my(@GRID_AGENT_ARGS) = (
+	'--delete-self',
+);
+
+
+# Error codes:
+	# Max lifetime exceeded.
+my $ERROR_MAX_LIFETIME = 0;
+	# GLOBUS_LOCATION not configured
+my $ERROR_NO_GLOBUS_LOCATION = 1;
+	# Problem with status file.
+my $ERROR_BAD_STATUS_FILE = 2;
+	# Never got results from grid_manager_monitor_agent
+my $ERROR_NO_RESULTS = 3;
+	# Got unexpected or ill-specified command line argument
+my $ERROR_BAD_CMD_LINE_ARG = 4;
+	# Tried and failed to start the grid_manager_monitor_agent
+my $ERROR_NO_START_AGENT = 5;
+	# Attempt to send file back using globus-url-copy failed.
+my $ERROR_GUC_FAILED = 6;
+	# the grid_manager_monitor_agent exited with a 0 code.
+#my $ERROR_AGENT_EXITED_OK = 7; # no longer used.
+	# the grid_manager_monitor_agent exited with a non-zero code.
+my $ERROR_AGENT_EXITED_BAD = 8;
+
+
+
+# Holds copy of the agent in case we need to install and start it.
+my $AGENT_SOURCE;
+{
+	local $/ = undef;
+	$AGENT_SOURCE = <DATA>;
+}
+
+# Alway start an agent at the beginning.
+my $force_agent_start = 1;
+
+# Hold PID of last started agent.
+my $last_started_agent_pid = 0;
+
+
+sub REAPER {
+	my $child;
+
+	# Normally we'd test for -1, but 0 can mean "processes running".
+	# waitpid returns:
+	#  -1 = No process exitted
+	#  0  = Processes running (some systems, including Linux)
+	#  >0 = Pid that exitted.
+	if (($child = waitpid(-1, WNOHANG)) <= 0) {
+		# system() call.  We get the signal, but not the wait.
+
+		# Probably no necessary, but just in case we're on a crusty SysV
+		# box, reset the signal handler.
+		$SIG{'CHLD'} = \&REAPER;
+		return;
+	}
+	my $result = $?;
+	my $return = $result / 256;
+
+	if($child != $last_started_agent_pid) {
+		report_info("Unknown child process pid $child exited with"
+			."$return result ($result).");
+		$SIG{'CHLD'} = \&REAPER;
+		return;
+	}
+
+	my $AGENT_RESULT_TIMEOUT = 0;
+	my $AGENT_RESULT_ALREADY_RUNNING = 1;
+	if($return == $AGENT_RESULT_TIMEOUT) {
+		# The agent ran out of time.  Restart it.
+		$force_agent_start = 1;
+		report_info("$GRID_AGENT_NAME timed out.  Restarting");
+		$SIG{'CHLD'} = \&REAPER;
+		return;
+	}
+	if($return == $AGENT_RESULT_ALREADY_RUNNING) {
+		# That's good, silently continue.
+		report_info("$GRID_AGENT_NAME already running.");
+		$SIG{'CHLD'} = \&REAPER;
+		return;
+	}
+	fatal_error( $ERROR_AGENT_EXITED_BAD,
+		"$GRID_AGENT_NAME (pid $child) exited with a $return result ($result).");
+}
+
+$SIG{'CHLD'} = \&REAPER;
+
+my(@argv) = @ARGV;
+while(@argv) {
+	my $arg = shift @argv;
+	if      ($arg =~ /^--max-lifespan=(\d+)$/) {
+		$MAX_LIFE = $1;
+	} elsif ($arg =~ /^--dest-url=(\S+)$/) {
+		$DST_URL = $1;
+	} elsif ($arg =~ /^--min-update-interval=(\d+)$/) {
+		$MIN_TIME_BETWEEN_UPDATES = $1;
+	} elsif ($arg =~ /^--max-status-age=(\d+)$/) {
+		$MAX_STATUS_FILE_AGE = $1;
+	} elsif ($arg =~ /^--use-gmt$/) {
+		$USE_GMT = 1;
+	} else {
+		fatal_error($ERROR_BAD_CMD_LINE_ARG,
+			"Unknown or malformed argument '$arg'");
+	}
+}
+
+if(not defined $DST_URL) {
+	fatal_error($ERROR_BAD_CMD_LINE_ARG, "You MUST specify --dest-url");
+}
+
+my $OLD_AGE = time() + $MAX_LIFE;
+if($MAX_LIFE == 0) {
+	# 2003-03-20 + 10 years.
+	$OLD_AGE = 1048207714 + 60*60*24*265*10;
+}
+
+if(not exists $ENV{GLOBUS_LOCATION}) {
+	fatal_error($ERROR_NO_GLOBUS_LOCATION, "GLOBUS_LOCATION not available.  Unable to locate status file.");
+}
+
+my $username = (getpwuid($>))[0];
+
+my $STATUS_FILE = "$ENV{GLOBUS_LOCATION}/tmp/${GRID_AGENT_NAME}_log.$>";
+
+# Have encountered situations where LD_LIBRARY_PATH isn't set.
+# This shouldn't happen, but it's been seen.
+print "$ENV{LD_LIBRARY_PATH}\n";
+{
+	my $gl = $ENV{GLOBUS_LOCATION};
+	if(exists $ENV{'LD_LIBRARY_PATH'} 
+		and defined $ENV{'LD_LIBRARY_PATH'}
+		and length $ENV{'LD_LIBRARY_PATH'}) {
+		$ENV{'LD_LIBRARY_PATH'} .= ':';
+	} else {
+		$ENV{'LD_LIBRARY_PATH'} = '';
+	}
+	$ENV{'LD_LIBRARY_PATH'} .= "$ENV{GLOBUS_LOCATION}/lib";
+}
+
+my($last_grid_file_timestamp) = 0;
+
+
+my $next_update_time = 0;
+while(1)
+{
+	report_ok(); # used as keepalive
+
+	if(time() > $OLD_AGE) {
+		fatal_error($ERROR_MAX_LIFETIME,
+			"Maximum lifetime ($MAX_LIFE seconds) exceeded.");
+	}
+
+	$next_update_time = time() + $MIN_TIME_BETWEEN_UPDATES;
+
+	if(not -e $STATUS_FILE) {
+		start_agent($last_grid_file_timestamp, "$STATUS_FILE missing");
+		next; # skip to next try, see if file exists.
+	}
+
+	my($file_uid, $this_grid_file_timestamp) = (stat($STATUS_FILE))[4,9];
+
+	if( $file_uid != $> ) {
+		fatal_error($ERROR_BAD_STATUS_FILE,
+			"$> ($username) doesn't own $STATUS_FILE");
+	}
+
+	my $now = time();
+	my $old_age = $this_grid_file_timestamp + $MAX_STATUS_FILE_AGE;
+	if( $last_grid_file_timestamp == $this_grid_file_timestamp and
+		$old_age < $now ) {
+		start_agent($last_grid_file_timestamp,
+			"$STATUS_FILE looks old ($this_grid_file_timestamp more "
+			."than $MAX_STATUS_FILE_AGE second older than $now)");
+		next;
+	}
+
+	if($force_agent_start) {
+		start_agent($last_grid_file_timestamp, "Forced agent start");
+	}
+
+
+	if($last_grid_file_timestamp == $this_grid_file_timestamp) {
+		# unchanged
+		next;
+	}
+
+	$last_grid_file_timestamp = $this_grid_file_timestamp;
+
+	# The file is fresh enough to use.
+	send_file($STATUS_FILE, $DST_URL);
+
+} continue {
+	my $sleep_length = $next_update_time - time();
+	sleep $sleep_length if $sleep_length > 0;
+}
+
+################################################################################
+sub timeout_system {
+	my($timeout, @args) = @_;
+
+	my $result = -2;
+	eval {
+		# NB: \n required, otherwise filename/lineno is added
+		local $SIG{ALRM} = sub { die "TIMEOUT_SYSTEM_alarm\n" };
+		alarm $timeout;
+		$result = system(@args);
+		alarm 0;
+	};
+	if ($@) {
+		die unless $@ eq "TIMEOUT_SYSTEM_alarm\n";
+	}
+	return $result;
+}
+
+################################################################################
+# The loop in question is loops on the timeout.
+sub looping_timeout_system {
+	my($loops, $timeout, @args) = @_;
+	while($loops) {
+		my $ret = timeout_system($timeout, @args);
+		if($ret != -2) { return $ret; }
+		$loops--;
+	}
+	return -2;
+}
+
+################################################################################
+sub send_file {
+	my($src_file, $dst_url) = @_;
+	my $src_url = "file://$src_file";
+	my $max_timeouts = 2;
+	my $size = -s $src_file;
+	my $timeout = $size / $MIN_BYTES_PER_SECOND;
+	if($timeout < $MIN_TIMEOUT) { $timeout = $MIN_TIMEOUT; }
+	my $ret = looping_timeout_system($max_timeouts, $timeout,
+		"$ENV{GLOBUS_LOCATION}/bin/globus-url-copy", $src_url, $dst_url);
+	if($ret == -1) {
+		fatal_error($ERROR_GUC_FAILED,
+			"Failed to execute globus-url-copy $src_url $dst_url "
+			."because of $!");
+	}
+	if($ret == -2) {
+		fatal_error($ERROR_GUC_FAILED,
+			"Timed out attempting globus-url-copy $src_url $dst_url ");
+	}
+	if($ret != 0) {
+		my $real_ret = $ret / 256;
+		fatal_error($ERROR_GUC_FAILED,
+			"globus-url-copy $src_url $dst_url failed for unknown reason. "
+			."wait status is $ret, return value might be $real_ret");
+	}
+}
+
+
+################################################################################
+BEGIN {
+
+	# Local static variables for sub start_agent
+my $last_grid_agent_start = 0;
+my $num_sequential_grid_agent_starts = 0;
+
+sub start_agent {
+	my $last_grid_file_timestamp = shift;
+	report_info(@_) if @_;
+	report_info("Starting $GRID_AGENT_NAME");
+
+	$force_agent_start = 0;
+
+	# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+	# It's possible that we just started the agent, we just
+	# haven't seen any results.  Throttle start up rate.
+	my $next_allowed_restart =
+		$MAX_AGENT_START_BEFORE_OUTPUT + $last_grid_agent_start;
+	if( $last_grid_agent_start > 0 and $next_allowed_restart > time())
+	{
+		my $delta = time() - $last_grid_agent_start;
+		my $next = timestamp($next_allowed_restart);
+		report_info("Skipping restart.  $GRID_AGENT_NAME last started $delta seconds ago.  Will not restart until $next.");
+		return;
+	}
+
+	# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+	# Make sure we're not just looping, trying and failing to start
+	# the grid agent over and over.
+	if($last_grid_file_timestamp < $last_grid_agent_start) {
+		# We never got results from last start;
+		$num_sequential_grid_agent_starts++
+	} else {
+		$num_sequential_grid_agent_starts = 1;
+	}
+	if( defined $MAX_SEQUENTIAL_GRID_AGENT_STARTS and
+		$num_sequential_grid_agent_starts > $MAX_SEQUENTIAL_GRID_AGENT_STARTS ) {
+		fatal_error($ERROR_NO_RESULTS,
+			"Started $GRID_AGENT_NAME $num_sequential_grid_agent_starts "
+			."times, but never saw output.");
+	}
+
+	# . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+	# Dump grid agent into a file to run.
+	$last_grid_agent_start = time();
+
+	my $MAX_TMP_TRIES = 1000;
+	local *FH;
+	my $counter = 0;
+	my $filename;
+	my $username = (getpwuid($>))[0];
+	do {
+		$filename = "/tmp/$GRID_AGENT_NAME.$username.$$.$MAX_TMP_TRIES";
+		$MAX_TMP_TRIES--;
+	} until ( sysopen(FH, $filename, O_RDWR|O_CREAT|O_EXCL, 0744) or
+		($MAX_TMP_TRIES < 1) );
+
+	if($MAX_TMP_TRIES < 1) {
+		fatal_error($ERROR_NO_START_AGENT,
+			"Unable to create temporary file for $GRID_AGENT_NAME");
+	}
+
+	print FH $AGENT_SOURCE;
+	close FH;
+	chmod 0755, $filename
+		or fatal_error($ERROR_NO_START_AGENT,
+			"Unable to set permissions on temporary file for "
+			."$GRID_AGENT_NAME ($filename)");
+
+	my $fork_result = fork();
+	if(not defined $fork_result) {
+		fatal_error($ERROR_NO_START_AGENT,
+			"Unable to fork to start $GRID_AGENT_NAME");
+	}
+
+	if($fork_result == 0) { # child
+		exec $filename, @GRID_AGENT_ARGS, "--maxtime=${MAX_LIFE}s";
+		fatal_error($ERROR_NO_START_AGENT, "Failed to exec $filename");
+		#TODO: My parent will muddle on, perhaps kill it?
+	} else { # parent
+		report_info("Started $GRID_AGENT_NAME as $filename, pid $fork_result");
+		$last_started_agent_pid = $fork_result;
+	}
+}
+
+}
+
+################################################################################
+sub fatal_error {
+	my($num) = shift;
+	print timestamp()." ERROR: $num: @_\n";
+	exit $num;
+}
+
+################################################################################
+sub report_ok {
+	print timestamp()." OK: @_\n";
+}
+
+################################################################################
+sub report_info {
+	print timestamp()." INFO: @_\n";
+}
+
+################################################################################
+sub timestamp {
+	my $time = time();
+	$time = shift if @_;
+	my($sec,$min,$hour,$mday,$mon,$year,$wday,$yday);
+	if($USE_GMT) {
+		($sec,$min,$hour,$mday,$mon,$year,$wday,$yday) = gmtime($time);
+	} else {
+		($sec,$min,$hour,$mday,$mon,$year,$wday,$yday) = localtime($time);
+	}
+	$year += 1900;
+	$mon += 1;
+	return sprintf "%04d-%02d-%02d %02d:%02d:%02d",
+		$year, $mon, $mday, $hour, $min, $sec;
+}
+
+################################################################################
+# The actual grid_manager_monitor_agent should follow the __DATA__
+__DATA__

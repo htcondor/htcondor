@@ -114,6 +114,8 @@ sub MainLoop( )
 	# If we're in run once mode, we're "all done"
 	if ( $Config{RunOnce} ) {
 	    $AllDone++;
+	} else {
+	    sleep( 5 );
 	}
     }
     while( ! $AllDone );
@@ -189,30 +191,15 @@ sub Configure( )
 sub RunIt( $ )
 {
     my $RunOnce = shift;
-    my @NameTable = (
-		     "NumProcsRun",
-		     "NumProcsUnint",
-		     "NumProcsSwapped",
-		     "VmUsedKb",
-		     "VmFreeKb",
-		     "VmBuffKb",
-		     "VmCacheKb",
-		     "SwapInKbSec",
-		     "SwapOutKbSec",
-		     "IoInBlkSec",
-		     "IoOutBlkSec",
-		     "SysIntruptsSec",
-		     "SysContextSec",
-		     "CpuUserPct",
-		     "CpuSysPct",
-		     "CpuIdlePct"
-		    );
+
+    my $Os = GetNameTable( );
+    my $Table = $Os->{Table};
 
     # Start things off
     my $Hash = HawkeyeHash->new( \$Hawkeye, "" );
 
     # Run vmstat...
-    my $Cmd = "/usr/bin/vmstat $Config{Period}";
+    my $Cmd = $Os->{Command} . " $Config{Period}";
     $VmstatPid = open ( VMSTAT, "$Cmd|" );
     Carp::confess( "Can't run vmstat '$Cmd'" ) if ( ! $VmstatPid );
     print STDERR "$Cmd => $VmstatPid\n";
@@ -222,13 +209,16 @@ sub RunIt( $ )
     {
 	next if ( /[a-zA-Z]/ );
 	my @VmStat = split;
-	if ( $#VmStat != $#NameTable )
+	if ( $#VmStat != $#{$Table} )
 	{
-	    die "Field mismatch: Expect $#NameTable, found $#VmStat";
+	    die "Field mismatch: Expect $#{$Table}, found $#VmStat";
 	}
 	foreach my $Offset ( 0 .. $#VmStat )
 	{
-	    $Hash->Add( $NameTable[$Offset], "n", $VmStat[$Offset] );
+	    next if ( @{$Table}[$Offset] =~ /^\*/ );
+	    $Hash->Add( @{$Table}[$Offset],
+			HawkeyePublish::TypeNumber,
+			$VmStat[$Offset] );
 	}
 
 	# Ok, summary is done...
@@ -242,5 +232,70 @@ sub RunIt( $ )
     print STDERR "Killing vmstat (PID = $VmstatPid )\n";
     kill( "TERM", $VmstatPid ) if ( $VmstatPid >= 0 );
     close( VMSTAT );
+}
 
+# Get the O/S info
+sub GetNameTable( )
+{
+    # Table of O/S's we know
+    my @OsTable = (
+		   # Any version of Linux
+		   { ostype => "Linux",
+		     osrev => ".*",
+		     Command => "/usr/bin/vmstat",
+		     Table => [
+			       "NumProcsRun",
+			       "NumProcsUnint",
+			       "NumProcsSwapped",
+			       "VmUsedKb",
+			       "VmFreeKb",
+			       "VmBuffKb",
+			       "VmCacheKb",
+			       "SwapInKbSec",
+			       "SwapOutKbSec",
+			       "IoInBlkSec",
+			       "IoOutBlkSec",
+			       "SysIntruptsSec",
+			       "SysContextSec",
+			       "CpuUserPct",
+			       "CpuSysPct",
+			       "CpuIdlePct" ],
+		   },
+
+		   # Solaris
+		   { ostype => "SunOS",
+		     osrev => "5",
+		     Command => "/usr/ucb/vmstat",
+		     Table => [
+			       "NumProcsRun",
+			       "NumProcsUnint",
+			       "NumProcsSwapped",
+			       "MemSwapAvailKb",
+			       "MemFreeListKb",
+			       "PageInReclaims",
+			       "PageMinorFaults",
+			       "PageInKb",
+			       "PageOutKb",
+			       "PageFreedKb",
+			       "PageShortfallKb",
+			       "PageScanned",
+			       "*Disk",
+			       "*Disk",
+			       "*Disk",
+			       "*Disk",
+			       "FaultsIn",
+			       "SysCalls",
+			       "ContextSwitches",
+			       "CpuUserTime",
+			       "CpuSystemTime",
+			       "CpuIdleTIme",
+			      ],
+		   },
+
+		  );
+
+    # Detect what O/S we're running
+    my $Os = HawkeyeLib::DetectOs( \@OsTable );
+
+    return $Os;
 }

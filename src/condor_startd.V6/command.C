@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "startd.h"
@@ -85,25 +85,24 @@ command_handler( Service*, int cmd, Stream* stream )
 int
 command_activate_claim( Service*, int cmd, Stream* stream )
 {
-	char* cap = NULL;
+	char* id = NULL;
 	Resource* rip;
 
-	if( ! stream->code(cap) ) {
-		dprintf( D_ALWAYS, "Can't read capability\n" );
-		free( cap );
+	if( ! stream->code(id) ) {
+		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
+		free( id );
 		return FALSE;
 	}
-	rip = resmgr->get_by_cur_cap( cap );
+	rip = resmgr->get_by_cur_id( id );
 	if( !rip ) {
 		dprintf( D_ALWAYS, 
-				 "Error: can't find resource with capability (%s)\n",
-				 cap );
-		free( cap );
+				 "Error: can't find resource with ClaimId (%s)\n", id );
+		free( id );
 		stream->end_of_message();
 		reply( stream, NOT_OK );
 		return FALSE;
 	}
-	free( cap );
+	free( id );
 
 	if ( resmgr->isShuttingDown() ) {
 		rip->log_shutdown_ignore( cmd );
@@ -229,32 +228,31 @@ command_give_totals_classad( Service*, int, Stream* stream )
 int
 command_request_claim( Service*, int cmd, Stream* stream ) 
 {
-	char* cap = NULL;
+	char* id = NULL;
 	Resource* rip;
 	int rval;
 
-	if( ! stream->code(cap) ) {
-		dprintf( D_ALWAYS, "Can't read capability\n" );
-		if( cap ) { 
-			free( cap );
+	if( ! stream->code(id) ) {
+		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
+		if( id ) { 
+			free( id );
 		}
 		refuse( stream );
 		return FALSE;
 	}
 
-	rip = resmgr->get_by_any_cap( cap );
+	rip = resmgr->get_by_any_id( id );
 	if( !rip ) {
 		dprintf( D_ALWAYS, 
-				 "Error: can't find resource with capability (%s)\n",
-				 cap );
-		free( cap );
+				 "Error: can't find resource with ClaimId (%s)\n", id );
+		free( id );
 		refuse( stream );
 		return FALSE;
 	}
 
 	if( resmgr->isShuttingDown() ) {
 		rip->log_shutdown_ignore( cmd );
-		free( cap );
+		free( id );
 		refuse( stream );
 		return FALSE;
 	}
@@ -265,9 +263,9 @@ command_request_claim( Service*, int cmd, Stream* stream )
 		refuse( stream );
 		rval = FALSE;
 	} else {
-		rval = request_claim( rip, cap, stream );
+		rval = request_claim( rip, id, stream );
 	}
-	free( cap );
+	free( id );
 	return rval;
 }
 
@@ -343,29 +341,28 @@ command_name_handler( Service*, int cmd, Stream* stream )
 int
 command_match_info( Service*, int cmd, Stream* stream ) 
 {
-	char* cap = NULL;
+	char* id = NULL;
 	Resource* rip;
 	int rval;
 
-	if( ! stream->code(cap) ) {
-		dprintf( D_ALWAYS, "Can't read capability\n" );
-		free( cap );
+	if( ! stream->code(id) ) {
+		dprintf( D_ALWAYS, "Can't read ClaimId\n" );
+		free( id );
 		return FALSE;
 	}
 
-		// Find Resource object for this capability
-	rip = resmgr->get_by_any_cap( cap );
+		// Find Resource object for this ClaimId
+	rip = resmgr->get_by_any_id( id );
 	if( !rip ) {
 		dprintf( D_ALWAYS, 
-				 "Error: can't find resource with capability (%s)\n",
-				 cap );
-		free( cap );
+				 "Error: can't find resource with ClaimId (%s)\n", id );
+		free( id );
 		return FALSE;
 	}
 
 	if( resmgr->isShuttingDown() ) {
 		rip->log_shutdown_ignore( cmd );
-		free( cap );
+		free( id );
 		return FALSE;
 	}
 
@@ -376,9 +373,9 @@ command_match_info( Service*, int cmd, Stream* stream )
 		rip->log_ignore( MATCH_INFO, s );
 		rval = FALSE;
 	} else {
-		rval = match_info( rip, cap );
+		rval = match_info( rip, id );
 	}
-	free( cap );
+	free( id );
 	return rval;
 }
 
@@ -497,7 +494,7 @@ if( s == claimed_state ) {				\
 return FALSE
 
 int
-request_claim( Resource* rip, char* cap, Stream* stream )
+request_claim( Resource* rip, char* id, Stream* stream )
 {
 		// Formerly known as "reqservice"
 
@@ -579,7 +576,7 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 	}
 		
 	rip->dprintf( D_FULLDEBUG,
-				  "Received capability from schedd (%s)\n", cap );
+				  "Received ClaimId from schedd (%s)\n", id );
 
 		// Make sure we're willing to run this job at all.  Verify that 
 		// the machine and job meet each other's requirements.
@@ -638,9 +635,9 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 			refuse( stream );
 			ABORT;
 		}
-		if( rip->r_pre->cap()->matches(cap) ) {
+		if( rip->r_pre->idMatches(id) ) {
 			rip->dprintf( D_ALWAYS, 
-						  "Preempting claim has correct capability.\n" );
+						  "Preempting claim has correct ClaimId.\n" );
 			
 				// Check rank, decided to preempt, if needed, do so.
 			if( rank < rip->r_cur->rank() ) {
@@ -674,19 +671,19 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 			}					
 		} else {
 			rip->dprintf( D_ALWAYS,
-					 "Capability from schedd (%s) doesn't match (%s)\n",
-					 cap, rip->r_pre->capab() );
+					 "ClaimId from schedd (%s) doesn't match (%s)\n",
+					 id, rip->r_pre->id() );
 			cmd = NOT_OK;
 		}
 	} else {
 			// We're not claimed
-		if( rip->r_cur->cap()->matches(cap) ) {
+		if( rip->r_cur->idMatches(id) ) {
 			rip->dprintf( D_ALWAYS, "Request accepted.\n" );
 			cmd = OK;
 		} else {
 			rip->dprintf( D_ALWAYS,
-					"Capability from schedd (%s) doesn't match (%s)\n",
-					cap, rip->r_cur->capab() );
+					"ClaimId from schedd (%s) doesn't match (%s)\n",
+					id, rip->r_cur->id() );
 			cmd = NOT_OK;
 		}		
 	}	
@@ -814,6 +811,15 @@ accept_request_claim( Resource* rip )
 		rip->dprintf( D_ALWAYS, "Remote owner is NULL\n" );
 			// TODO: What else should we do here???
 	}		
+		// Also look for ATTR_ACCOUNTING_GROUP and stash that
+	char* acct_grp = NULL;
+	rip->r_cur->ad()->LookupString( ATTR_ACCOUNTING_GROUP, &acct_grp );
+	if( acct_grp ) {
+		rip->r_cur->client()->setAccountingGroup( acct_grp );
+		free( acct_grp );
+		acct_grp = NULL;
+	}
+
 		// Since we're done talking to this schedd, delete the stream.
 	rip->r_cur->setRequestStream( NULL );
 
@@ -839,13 +845,14 @@ activate_claim( Resource* rip, Stream* stream )
 		// Formerly known as "startjob"
 	int mach_requirements = 1;
 	ClassAd	*req_classad = NULL, *mach_classad = rip->r_classad;
-
-	int sock_1, sock_2;
 	ReliSock rsock_1, rsock_2;
+#ifndef WIN32
+	int sock_1, sock_2;
 	int fd_1, fd_2;
 	struct sockaddr_in frm;
-	int len = sizeof frm;
+	int len = sizeof frm;	
 	StartdRec stRec;
+#endif
 	int starter;
 	Sock* sock = (Sock*)stream;
 	char* shadow_addr = strdup( sin_to_string( sock->endpoint() ));
@@ -1048,21 +1055,21 @@ activate_claim( Resource* rip, Stream* stream )
 #undef ABORT
 
 int
-match_info( Resource* rip, char* cap )
+match_info( Resource* rip, char* id )
 {
 	int rval = FALSE;
 	rip->dprintf(D_ALWAYS, "match_info called\n");
 
 	switch( rip->state() ) {
 	case claimed_state:
-		if( rip->r_cur->cap()->matches(cap) ) {
-				// The capability we got matches the one for the
+		if( rip->r_cur->idMatches(id) ) {
+				// The ClaimId we got matches the one for the
 				// current claim, and we're already claimed.  There's
 				// nothing to do here.
 			rval = TRUE;
-		} else if( rip->r_pre && rip->r_pre->cap()->matches(cap) ) {
-				// The capability we got matches the preempting
-				// capability we've been advertising.  Advertise
+		} else if( rip->r_pre && rip->r_pre->idMatches(id) ) {
+				// The ClaimId we got matches the preempting
+				// ClaimId we've been advertising.  Advertise
 				// ourself as unavailable for future claims, update
 				// the CM, and set the timer for this match.
 			rip->r_reqexp->unavail();
@@ -1070,17 +1077,16 @@ match_info( Resource* rip, char* cap )
 			rip->r_pre->start_match_timer();
 			rval = TRUE;
 		} else {
-				// The capability doesn't match any of our
-				// capabilities.  
+				// The ClaimId doesn't match any of our ClaimIds.
 				// Should never get here, since we found the rip by
-				// some cap in the first place.
+				// some id in the first place.
 			EXCEPT( "Should never get here" );
 		}
 		break;
 	case unclaimed_state:
 	case owner_state:
-		if( rip->r_cur->cap()->matches(cap) ) {
-			rip->dprintf( D_ALWAYS, "Received match %s\n", cap );
+		if( rip->r_cur->idMatches(id) ) {
+			rip->dprintf( D_ALWAYS, "Received match %s\n", id );
 
 				// Start a timer to prevent staying in matched state
 				// too long. 
@@ -1094,8 +1100,7 @@ match_info( Resource* rip, char* cap )
 			rval = TRUE;
 		} else {
 			rip->dprintf( D_ALWAYS, 
-						  "Invalid capability from negotiator (%s)\n",  
-						  cap );			
+						  "Invalid ClaimId from negotiator (%s)\n", id );
 			rval = FALSE;
 		}
 		break;
@@ -1179,7 +1184,7 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 		// a complete resource ad (like what we'd send to the
 		// collector), and include the ClaimID  
 	ClassAd reply;
-	rip->publish( &reply, A_PUBLIC | A_ALL | A_EVALUATED );
+	rip->publish( &reply, A_ALL_PUB );
 
 	MyString line;
 	line = ATTR_CLAIM_ID;
@@ -1252,82 +1257,108 @@ caRequestClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 
 
 int
-command_classad_handler( Service*, int, Stream* s )
+caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
+{
+	char* global_job_id = NULL;
+	Claim* claim = NULL;
+
+	if( ! req_ad->LookupString(ATTR_GLOBAL_JOB_ID, &global_job_id) ) {
+		dprintf( D_ALWAYS, "Failed to read %s from ClassAd "
+				 "for cmd %s, aborting\n", ATTR_GLOBAL_JOB_ID, cmd_str );
+		MyString err_msg = ATTR_GLOBAL_JOB_ID;
+		err_msg += " not found in request ad";
+		sendErrorReply( s, cmd_str, CA_INVALID_REQUEST, err_msg.Value() );
+		return FALSE;
+	}
+	claim = resmgr->getClaimByGlobalJobId( global_job_id );
+	if( ! claim ) {
+		MyString err_msg = ATTR_GLOBAL_JOB_ID;
+		err_msg += " (";
+		err_msg += global_job_id;
+		err_msg += ") not found";
+		sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.Value() );
+		free( global_job_id );
+		return FALSE;
+	}
+	ClassAd reply;
+	if( ! claim->publishStarterAd(&reply) ) {
+		MyString err_msg = "No starter found for ";
+		err_msg += ATTR_GLOBAL_JOB_ID;
+		err_msg += " (";
+		err_msg += global_job_id;
+		err_msg += ")";
+		sendErrorReply( s, cmd_str, CA_FAILURE, err_msg.Value() );
+		free( global_job_id );
+		return FALSE;
+	}
+
+		// if we're still here, everything worked, so we can reply
+		// with success...
+	MyString line;
+	line = ATTR_RESULT;
+	line += " = \"";
+	line += getCAResultString( CA_SUCCESS );
+	line += '"';
+	reply.Insert( line.Value() );
+
+	int rval = sendCAReply( s, cmd_str, &reply );
+	if( ! rval ) {
+		dprintf( D_ALWAYS, "Failed to reply to request\n" );
+	}
+	free( global_job_id );
+	return rval;
+}
+
+
+int
+command_classad_handler( Service*, int dc_cmd, Stream* s )
 {
 	int rval;
 	ClassAd ad;
 	ReliSock* rsock = (ReliSock*)s;
-
-        // make sure this connection is authenticated, and we know who
-        // the user is.  also, set a timeout, since we don't want to
-        // block long trying to read from our client.   
-    rsock->timeout( 10 );  
-    rsock->decode();
-    if( ! rsock->isAuthenticated() ) {
-		char* p = SecMan::getSecSetting( "SEC_%s_AUTHENTICATION_METHODS",
-										 "WRITE" );
-        MyString methods;
-        if( p ) {
-            methods = p;
-            free( p );
-        } else {
-            methods = SecMan::getDefaultAuthenticationMethods();
-        }
-		CondorError errstack;
-        if( ! rsock->authenticate(methods.Value(), &errstack) ) {
-                // we failed to authenticate, we should bail out now
-                // since we don't know what user is trying to perform
-                // this action.
-			sendErrorReply( s, "CA_CMD", CA_NOT_AUTHENTICATED,
-							"Server: client failed to authenticate" );
-			dprintf (D_ALWAYS, "STARTD: authenticate failed\n");
-			dprintf (D_ALWAYS, "%s", errstack.get_full_text());
-			return FALSE;
-        }
-    }
-	
-	if( ! ad.initFromStream(*s) ) { 
-		dprintf( D_ALWAYS, 
-				 "Failed to read ClassAd from network, aborting\n" ); 
-		return FALSE;
-	}
-	if( ! s->eom() ) { 
-		dprintf( D_ALWAYS, 
-				 "Error, more data on stream after ClassAd, aborting\n" ); 
-		return FALSE;
-	}
-
-	if( DebugFlags & D_FULLDEBUG && DebugFlags & D_COMMAND ) {
-		dprintf( D_COMMAND, "Command ClassAd:\n" );
-		ad.dPrint( D_COMMAND );
-		dprintf( D_COMMAND, "*** End of Command ClassAd***\n" );
-	}
-
+	int cmd = 0;
 	char* cmd_str = NULL;
-	int cmd;
+
+
+	if( dc_cmd == CA_AUTH_CMD ) {
+		cmd = getCmdFromReliSock( rsock, &ad, true );
+	} else {
+		cmd = getCmdFromReliSock( rsock, &ad, false );
+	}
+		// since we really care about the command string for a lot of
+		// things, let's just grab it out of the classad once right
+		// here.
 	if( ! ad.LookupString(ATTR_COMMAND, &cmd_str) ) {
-		dprintf( D_ALWAYS, "Failed to read %s from ClassAd, aborting\n", 
-				 ATTR_COMMAND );
-		return FALSE;
-	}		
-	cmd = getCommandNum( cmd_str );
-	if( cmd < 0 ) {
-		unknownCmd( s, cmd_str );
-		free( cmd_str );
-		return FALSE;
+		cmd_str = strdup( "UNKNOWN" );
 	}
 
-	if( cmd == CA_REQUEST_CLAIM ) { 
+	switch( cmd ) {
+	case CA_LOCATE_STARTER:
+			// special case, since it's not really about claims at
+			// all, but instead are worrying about trying to find a
+			// starter given a global job id.  this is used for
+			// shadow/starter reconnect mode, so the shadow can find
+			// the right ip/port to reconnect to (since it already has
+			// our address in the job classad).
+		rval = caLocateStarter( s, cmd_str, &ad );
+		free( cmd_str );
+		return rval;
+		break;
+
+	case CA_REQUEST_CLAIM:
 			// this one's a special case, since we're creating a new
 			// claim... 
 		rval = caRequestClaim( s, cmd_str, &ad );
 		free( cmd_str );
 		return rval;
-	}
+		break;
 
-		// for all the rest, we need to read the ClaimId out of the
-		// ad, find the right claim, and call the appropriate method
-		// on it.  
+	default:
+			// for all the rest, we need to read the ClaimId out of
+			// the ad, find the right claim, and call the appropriate
+			// method on it.  nothing more to do here...
+		break;
+	}
 
 	char* claim_id = NULL;
 	Claim* claim = NULL;

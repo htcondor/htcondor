@@ -276,17 +276,17 @@ LOCK		= $(LOG)
 ##--------------------------------------------------------------------
 ##  Settings that control the daemon's debugging output:
 ##--------------------------------------------------------------------
-MAX_COLLECTOR_LOG	= 64000
+MAX_COLLECTOR_LOG	= 1000000
 COLLECTOR_DEBUG		= 
 
-MAX_STARTD_LOG		= 640000
+MAX_STARTD_LOG		= 1000000
 STARTD_DEBUG		= D_COMMAND D_FULLDEBUG D_JOB D_DAEMONCORE
 STARTD_DEBUG		= D_COMMAND D_FULLDEBUG D_JOB
 
-MAX_STARTER_LOG		= 64000
+MAX_STARTER_LOG		= 1000000
 STARTER_DEBUG		= D_NODATE
 
-MAX_MASTER_LOG		= 64000
+MAX_MASTER_LOG		= 1000000
 MASTER_DEBUG		= 
 ##  When the master starts up, should it truncate it's log file?
 #TRUNC_MASTER_LOG_ON_OPEN        = False

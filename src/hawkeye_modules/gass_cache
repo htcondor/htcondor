@@ -51,9 +51,19 @@ sub Init()
 
     # Get the GASS cache base directory..
     $Directories{Base} = HawkeyeLib::ReadConfig( "_directory", "" );
+    if ( $Directories{Base} eq "" && -d $ENV{HOME} . "/.globus/.gass_cache" )
+    {
+	$Directories{Base} = $ENV{HOME} . "/.globus/.gass_cache";
+    }
 
     # Is this a valid Gass Cache?
-    if (  ( $Directories{Base} eq "" ) || ( ! -d $Directories{Base} )  )
+    if ( $Directories{Base} eq "" )
+    {
+	print STDERR "No cache directory specified & ".
+	    "\$HOME/.globus/.gass_cache doesn't exit\n";
+	exit 1;
+    }
+    elsif ( ! -d $Directories{Base} )
     {
 	print STDERR "Cache directory '$Directories{Base}' is invalid\n";
 	exit 1;
@@ -104,6 +114,20 @@ my %TagInodes;
 my %UrlInodes;
 my %AllInodes;
 
+sub WarnExit( $ )
+{
+    my $Cmd = shift;
+
+    if ( $! == 0 )
+    {
+	warn "$Cmd: Exit status $?";
+    }
+    else
+    {
+	warn "$Cmd: Error closing pipe: $!";
+    }
+}
+
 # Do the real work here...
 sub RunIt()
 {
@@ -124,7 +148,7 @@ sub RunIt()
     CheckSize( );
 
     # Add the cache directory...
-    $Hash->Add( "Directory", "s", $Directories{Base} );
+    $Hash->Add( "Directory", HawkeyePublish::TypeString, $Directories{Base} );
 
     # Ok, summary is done...
     $Hash->Store( );
@@ -220,8 +244,7 @@ sub ScanFiles( )
 	    }
 	}
     }
-    close( FIND ) or
-	warn $! ? "Error closing $Cmd pipe: $!" : "Exit status $? from $Cmd";
+    close( FIND ) or WarnExit( $Cmd );
 }
 
 # Find orphaned files here...
@@ -243,9 +266,9 @@ sub CheckOrphans()
     }
 
     # Report it all..
-    $Hash->Add( "GlobalOrphanCount", "n", $Count );
-    $Hash->Add( "GlobalOrphanBytes", "n", $TotalBytes );
-    $Hash->Add( "GlobalOrphanBlocks", "n", $TotalBlocks );
+    $Hash->Add( "GlobalOrphanCount", HawkeyePublish::TypeNumber, $Count );
+    $Hash->Add( "GlobalOrphanBytes", HawkeyePublish::TypeNumber, $TotalBytes );
+    $Hash->Add( "GlobalOrphanBlocks", HawkeyePublish::TypeNumber, $TotalBlocks );
 }
 
 
@@ -275,22 +298,22 @@ sub CacheUsage( )
     my $EmptyDirs = scalar @EmptyDirs;
 
     # Report it all..
-    $Hash->Add( "GlobalDataCount", "n", $Count );
-    $Hash->Add( "GlobalDataBytes", "n", $TotalBytes );
-    $Hash->Add( "GlobalDataBlocks", "n", $TotalBlocks );
-    $Hash->Add( "TotalInodes", "n", $TotalInodes );
-    $Hash->Add( "EmptyDirs", "n", $EmptyDirs );
+    $Hash->Add( "GlobalDataCount", HawkeyePublish::TypeNumber, $Count );
+    $Hash->Add( "GlobalDataBytes", HawkeyePublish::TypeNumber, $TotalBytes );
+    $Hash->Add( "GlobalDataBlocks", HawkeyePublish::TypeNumber, $TotalBlocks );
+    $Hash->Add( "TotalInodes", HawkeyePublish::TypeNumber, $TotalInodes );
+    $Hash->Add( "EmptyDirs", HawkeyePublish::TypeNumber, $EmptyDirs );
 
     my $MeanBytes = 0;
     $MeanBytes = sprintf "%.1f", ( $TotalBytes / $Count ) if ( $Count );
-    $Hash->Add( "GlobalDataBytesMean", "n", $MeanBytes );
-    $Hash->Add( "GlobalDataBytesMax", "n", $MaxBytes );
+    $Hash->Add( "GlobalDataBytesMean", HawkeyePublish::TypeNumber, $MeanBytes );
+    $Hash->Add( "GlobalDataBytesMax", HawkeyePublish::TypeNumber, $MaxBytes );
 
     # Tag & URL counts
     my $TagCount = keys %TagInodes;
     my $UrlCount = keys %UrlInodes;
-    $Hash->Add( "TagCount", "n", $TagCount );
-    $Hash->Add( "UrlCount", "n", $UrlCount );
+    $Hash->Add( "TagCount", HawkeyePublish::TypeNumber, $TagCount );
+    $Hash->Add( "UrlCount", HawkeyePublish::TypeNumber, $UrlCount );
 
     # Run 'du'...
     my $Cmd = "du -s global local";
@@ -308,15 +331,14 @@ sub CacheUsage( )
 	    $Du{$2} = $1;
 	}
     }
-    close( DU ) or
-	warn $! ? "Error closing $Cmd pipe: $!" : "Exit status $? from $Cmd";
+    close( DU ) or WarnExit( $Cmd );
     my $TotalDu = 0;
     foreach my $Dir ( keys %Du )
     {
-	$Hash->Add( "Du_" . $Dir, "n", $Du{$Dir} );
+	$Hash->Add( "Du_" . $Dir, HawkeyePublish::TypeNumber, $Du{$Dir} );
 	$TotalDu += $Du{$Dir};
     }
-    $Hash->Add( "Du", "n", $TotalDu );
+    $Hash->Add( "Du", HawkeyePublish::TypeNumber, $TotalDu );
 
     # DF
     $Cmd = "df -P .";
@@ -332,16 +354,15 @@ sub CacheUsage( )
 	{
 	    my ( $Dev, $Blocks, $Used, $Avail, $UsePct, $Mount ) = split;
 	    $UsePct =~ s/(\d+)\%/$1/;
-	    $Hash->Add( "Disk_FileSystem", "s", $Dev );
-	    $Hash->Add( "Disk_1k_Blocks", "n", $Blocks );
-	    $Hash->Add( "Disk_Used", "n", $Used );
-	    $Hash->Add( "Disk_Avail", "n", $Avail );
-	    $Hash->Add( "Disk_UsePct", "n", $UsePct );
-	    $Hash->Add( "Disk_MountPt", "s", $Mount );
+	    $Hash->Add( "Disk_FileSystem", HawkeyePublish::TypeString, $Dev );
+	    $Hash->Add( "Disk_1k_Blocks", HawkeyePublish::TypeNumber, $Blocks );
+	    $Hash->Add( "Disk_Used", HawkeyePublish::TypeNumber, $Used );
+	    $Hash->Add( "Disk_Avail", HawkeyePublish::TypeNumber, $Avail );
+	    $Hash->Add( "Disk_UsePct", HawkeyePublish::TypeNumber, $UsePct );
+	    $Hash->Add( "Disk_MountPt", HawkeyePublish::TypeString, $Mount );
 	}
     }
-    close( DF ) or
-	warn $! ? "Error closing $Cmd pipe: $!" : "Exit status $? from $Cmd";
+    close( DF ) or WarnExit( $Cmd );
 }
 
 # Check file ages
@@ -386,26 +407,26 @@ sub CheckAge(  )
 
     my $OldPct = 100.0 * $OldCount / $Count;
 
-    $Hash->Add( "OldCount", "n", $OldCount );
-    $Hash->Add( "OldOrphanCount", "n", $OldOrphanCount );
+    $Hash->Add( "OldCount", HawkeyePublish::TypeNumber, $OldCount );
+    $Hash->Add( "OldOrphanCount", HawkeyePublish::TypeNumber, $OldOrphanCount );
     $OldCount = 1 if ( 0 == $OldCount );
 
     # Store the results...
-    $Hash->Add( "GlobalMeanAge", "n",
+    $Hash->Add( "GlobalMeanAge", HawkeyePublish::TypeNumber,
 		sprintf "%.1f", sprintf("%.1f", $TotalAge / $Count) );
-    $Hash->Add( "OldMeanAge", "n",
+    $Hash->Add( "OldMeanAge", HawkeyePublish::TypeNumber,
 		sprintf "%.1f", sprintf("%1.f", $OldTotalAge / $OldCount) );
-    $Hash->Add( "OldTotalBytes", "n", $OldTotalBytes );
-    $Hash->Add( "OldMeanBytes", "n",
+    $Hash->Add( "OldTotalBytes", HawkeyePublish::TypeNumber, $OldTotalBytes );
+    $Hash->Add( "OldMeanBytes", HawkeyePublish::TypeNumber,
 		sprintf "%.1f", sprintf("%1.f", $OldTotalBytes / $OldCount) );
-    $Hash->Add( "OldTotalBlocks", "n", $OldTotalBlocks );
-    $Hash->Add( "OldMeanBlocks", "n",
+    $Hash->Add( "OldTotalBlocks", HawkeyePublish::TypeNumber, $OldTotalBlocks );
+    $Hash->Add( "OldMeanBlocks", HawkeyePublish::TypeNumber,
 		sprintf "%.1f", sprintf("%1.f", $OldTotalBlocks / $OldCount) );
-    $Hash->Add( "OldPct", "n",
+    $Hash->Add( "OldPct", HawkeyePublish::TypeNumber,
 		sprintf( "%.1f", $OldPct) );
 
     # And, the old age threshold that we used...
-    $Hash->Add( "OldThreshold", "n", $Config{MaxAge} );
+    $Hash->Add( "OldThreshold", HawkeyePublish::TypeNumber, $Config{MaxAge} );
 }
 
 # Check file sizes
@@ -436,22 +457,22 @@ sub CheckSize(  )
 
     my $BigPct = 100.0 * $BigCount / $Count;
 
-    $Hash->Add( "BigCount", "n", $BigCount );
+    $Hash->Add( "BigCount", HawkeyePublish::TypeNumber, $BigCount );
     $BigCount = 1 if ( 0 == $BigCount );
 
     # Store the results...
-    $Hash->Add( "BigTotalBytes", "n",
+    $Hash->Add( "BigTotalBytes", HawkeyePublish::TypeNumber,
 		$BigTotalBytes );
-    $Hash->Add( "BigMeanBytes", "n",
+    $Hash->Add( "BigMeanBytes", HawkeyePublish::TypeNumber,
 		sprintf "%.1f", sprintf("%.1f", $BigTotalBytes / $BigCount) );
-    $Hash->Add( "BigTotalBlocks", "n",
+    $Hash->Add( "BigTotalBlocks", HawkeyePublish::TypeNumber,
 		$BigTotalBlocks );
-    $Hash->Add( "BigMeanBlocks", "n",
+    $Hash->Add( "BigMeanBlocks", HawkeyePublish::TypeNumber,
 		sprintf "%.1f", sprintf("%.1f", $BigTotalBlocks / $BigCount) );
-    $Hash->Add( "BigPct", "n",
+    $Hash->Add( "BigPct", HawkeyePublish::TypeNumber,
 		sprintf "%.1f", $BigPct );
 
     # And, the old age threshold that we used...
-    $Hash->Add( "BigThreshold", "n", $Config{MaxSize} );
+    $Hash->Add( "BigThreshold", HawkeyePublish::TypeNumber, $Config{MaxSize} );
 
 }

@@ -1,8 +1,8 @@
 /**************************************************************************
 ** These are all the definitions that are shared between all versions of 
-** Solaris, including Sparc vs. X86, and 2.5.1 vs 2.6, etc.
+** Solaris
 **
-** At the end of this file, we include the arch/version-specific
+** At the end of this file, we include the version-specific
 ** config files as needed.   
 **************************************************************************/
 
@@ -10,31 +10,8 @@
 ** Shared Solaris Settings
 **************************************************************************/
 
-#define OperatingSystem		Solaris
-#define IS_SOLARIS		YES
-
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC  
-
-#ifndef X11LibPath
-#define X11LibPath /opt/openwin/lib
-#endif
-
-#ifndef XLibPath
-#define XLibPath concat(-L,X11LibPath) -lX11 concat(-R,X11LibPath)
-#endif
-
-#ifndef XExtLibPath
-#define XExtLibPath concat(-L,X11LibPath) -lXext concat(-R,X11LibPath)
-#endif
-
-#ifndef YpLib
-#define YpLib
-#endif
-
-#ifndef StaticFlag
-#define StaticFlag -static
-#endif
 
 #define IS_V5				YES
 
@@ -49,6 +26,10 @@
 
 #define	HAS_DYNAMIC_USER_JOBS	YES
 
+#define HAS_GLOBUS 			YES
+#define HAS_GSI				YES
+#define HAS_OPENSSL			YES
+
 #define HAS_NDBM			YES
 #define HAS_FSTATFS			YES
 #define NEEDS_XDR_FLOAT			NO
@@ -60,7 +41,6 @@
 #define HAS_RANLIB_TOUCH		YES
 #define HAS_CP_PRESERVE			YES
 #define NEEDS_SPECIAL_SETJMP		NO
-#define HAS_FORTRAN			YES
 #ifndef FORTRAN_HAS_RECURSION
 #define FORTRAN_HAS_RECURSION YES
 #endif
@@ -81,24 +61,15 @@
 #define HAS_SETEUID			YES
 #define HAS_GETWD			YES
 #define HAS_INSQUE			YES
-
-#define HAS_PVM				YES
 #define HAS_DLOPEN			YES
 #define HAS_DAGMAN_HELPER   NO
+#define NEEDS_64BIT_SYSCALLS		YES
+#define NEEDS_64BIT_STRUCTS		YES
 
-#define HAS_STATIC			NO
+#define WANT_PVM			YES
+#define	PVM_ARCH			SUN4SOL2
+#define	HAS_PURIFY			YES
 
-#define UnixName /vmunix		/* pathname of the system executable */
-#define PsAllFlag ps -ax		/* "Ps" flag when you want everything */
-#define PsAwkProg '{ print $1 }'	/* Pick out pid from "ps" output */
-
-#ifndef Ctags
-#define Ctags ctags -t
-#endif Ctags
-
-#ifndef MkDepend
-#define MkDepend ../../GENERIC/mdepend.sh /* Ask Jim */
-#endif MkDepend
 
 /*
     In the test suite, we only need to make sure we've got the network 
@@ -108,38 +79,26 @@
 #define TestPlatformLdFlags -lnsl -lsocket -lresolv
 
 /*
-    When we're linking for purify, we don't want all the static crap,
+    When we're linking for purify, we don't want all the static junk,
     either, but we need more libs than just the test suite.  So, we 
     define this here to specify the flags we want to give to the
     linker when we're building the Condor Daemons under purify.
 */ 
 #define PurifyPlatformLdFlags -ldl -lkstat -lelf -lnsl -lsocket -lresolv
 
-/*
-    platform-specific libraries for linking w/Orbacus
-*/
-#define PlatformOBLibs -lsocket -lposix4
-
+#define PlatformLdFlags -ldl -lkstat -lelf -lsocket -lresolv -lnsl -lm -lc \
+$(GCC_STATIC_LIBS)
 
 /**************************************************************************
-** Include OS version and Arch-specific config files
+** Include OS version-specific config files
 **************************************************************************/
-
-#ifdef ArchIncludeFile
-#include ArchIncludeFile
-
-#endif
 
 #ifdef OSVersionIncludeFile
 #include OSVersionIncludeFile
 #endif
 
+
 /**************************************************************************
-** Shared things we only can do after we get the version/arch specific 
+** Shared things we only can do after we get the version specific
 ** settings defined. 
 **************************************************************************/
-
-#ifndef CrtLibPath
-#define CrtLibPath concat3(/opt/SUNWspro/,SC_VERS,/lib)
-#endif
-

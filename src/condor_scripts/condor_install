@@ -25,9 +25,15 @@ umask 0022;
 @bin_names=( "q", "rm", "submit", "status", "prio", "userprio", 
 		"compile", "history", "config_val", "findhost", "release",
          "run", "userlog", "version" );
-@full_lib_names=( "ld", "libcondorc++support.a", "condor_rt0.o",
-		  "libcondorsyscall.a" );
+@full_lib_names=( "ld", "condor_rt0.o", "libcondorsyscall.a" );
 @sbin_master_names=( "master", "preen" );
+
+# The first array of files in here are for gcc2 releases, and the second set is
+# for gcc3 releases. condor_install checks the first one, and if it is there
+# makes sure the second one doesn't exist, and vice versa.
+@compiler_lib_names=( ["libcondorc++support.a"], ["libcomp_libgcc.a", 
+		"libcomp_libgcc_eh.a", "libcomp_libstdc++.a"] );
+
 $needs_lock=0;
 $fs_domain="";
 $uid_domain="";
@@ -802,6 +808,7 @@ sub get_default_mail_path {
     local( $mail_path );
     chop($_ = `uname`);
   SWITCH: {
+      if(/^AIX/) { $mail_path="/usr/bin/mail";   last SWITCH; }
       if(/^Linux/) { $mail_path="/usr/bin/mail";   last SWITCH; }
       if(/^SunOS/) { $mail_path="/usr/ucb/mail";   last SWITCH; }
       if(/^HP-UX/) { $mail_path="/bin/mailx";      last SWITCH; }
@@ -980,14 +987,42 @@ sub check_release_dir {
 	}
     }
     close( FOO );
-    if( $is_clipped ) {
-        @lib_names=();
-    } else {
-	@lib_names = @full_lib_names;
+
+	# if I'm not clipped, then make sure the compiler/condor libraries 
+	# needed for standard universe exist
+    if( ! $is_clipped ) {
+
+		# check to make sure the condor syscall libraries and friends are
+		# available;
+    	foreach $tmp( @full_lib_names ) {
+			-f "$dir/lib/$tmp" || return "";
+    	}
+		
+		# now make sure that the compiler support libraries exist.
+		@gcc2_libs = @{$compiler_lib_names[0]};
+		@gcc3_libs = @{$compiler_lib_names[1]};
+
+		# check to see if the gcc2 libs are available
+		$present = 1;
+    	foreach $tmp( @gcc2_libs ) {
+			-f "$dir/lib/$tmp" || ($present = 0);
+    	}
+
+		# if they are available, then make sure the gcc3 libs aren't
+		if ($present == 1) {
+    		foreach $tmp( @gcc3_libs ) {
+				!(-f "$dir/lib/$tmp") || return "";
+    		}
+		}
+		else # if they aren't present, then make sure the gcc3 libs are
+		{
+    		foreach $tmp( @gcc3_libs ) {
+				-f "$dir/lib/$tmp" || return "";
+    		}
+		}
     }
-    foreach $tmp( @lib_names ) {
-	-f "$dir/lib/$tmp" || return "";
-    }
+
+
     return $dir;
 }
 

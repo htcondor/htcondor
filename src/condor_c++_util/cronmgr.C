@@ -1,29 +1,29 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#include "condor_common.h"
 #include <limits.h>
 #include <string.h>
-#include "condor_common.h"
 #include "condor_debug.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_config.h"
@@ -65,7 +65,11 @@ private:
 // Job list parser constructor
 JobListParser::JobListParser( const char *s )
 {
-	jobListString = strdup( s );
+	if( s ) {
+		jobListString = strdup( s );
+	} else { 
+		jobListString = NULL;
+	}
 	nextJobStart = jobListString;
 	curJobPointer = NULL;
 
@@ -137,7 +141,6 @@ bool JobListParser::nextJob( void )
 			skipJob( );
 			continue;
 		}
-		dprintf( D_ALWAYS, "prefix = '%s'\n", prefix );
 
 		// Path: must exist, non-zero length
 		path = nextField( );
@@ -292,8 +295,23 @@ CondorCronMgr::~CondorCronMgr( )
 	// Kill all running jobs
 	Cron.DeleteAll( );
 
+	// Free up name, etc. buffers
+	if ( NULL != Name ) {
+		free( (char *) Name );
+	}
+	if ( NULL != ParamBase ) {
+		free( (void *) ParamBase );
+	}
+
 	// Log our death
 	dprintf( D_FULLDEBUG, "CronMgr: bye\n" );
+}
+
+// Handle initialization
+int
+CondorCronMgr::Initialize( void )
+{
+	return DoConfig( true );
 }
 
 // Set new name..
@@ -367,7 +385,7 @@ CondorCronMgr::KillAll( bool force)
 	// Log our death
 	dprintf( D_FULLDEBUG, "CronMgr: Killing all jobs\n" );
 
-	// Reconfigure all running jobs
+	// Kill all running jobs
 	return Cron.KillAll( force );
 }
 
@@ -385,19 +403,27 @@ CondorCronMgr::IsAllIdle( void )
 int
 CondorCronMgr::Reconfig( void )
 {
+	return DoConfig( false );
+}
+
+// Handle configuration
+int
+CondorCronMgr::DoConfig( bool initial )
+{
 	char *paramBuf = GetParam( "JOBS" );
 
 	// Find our environment variable, if it exits..
-	if( paramBuf == NULL ) {
-		dprintf( D_JOB, "CronMgr: No job list\n" );
-		return 0;
-	} else {
-		ParseJobList( paramBuf );
+	dprintf( D_FULLDEBUG, "CronMgr: Doing config (%s)\n",
+			 initial ? "initial" : "reconfig" );
+	ParseJobList( paramBuf );
+	if( paramBuf ) {
 		free( paramBuf );
 	}
 
 	// Reconfigure all running jobs
-	Cron.Reconfig( );
+	if ( ! initial ) {
+		Cron.Reconfig( );
+	}
 
 	// Done
 	return 0;
@@ -514,6 +540,7 @@ CondorCronMgr::ParseJobList( const char *jobString )
 
 		// Parse any remaining options
 		bool	killMode = false;
+		bool	reconfig = false;
 		while ( 1 ) {
 			// Extract an option
 			const char *option = parser.getOption( );
@@ -530,10 +557,23 @@ CondorCronMgr::ParseJobList( const char *jobString )
 				dprintf( D_FULLDEBUG, "CronMgr: '%s': NoKill option ok\n",
 						 jobName );
 				killMode = false;
+			} else if ( !strcasecmp( option, "reconfig" ) ) {
+				dprintf( D_FULLDEBUG, "CronMgr: '%s': Reconfig option ok\n",
+						 jobName );
+				reconfig = true;
+			} else if ( !strcasecmp( option, "noreconfig" ) ) {
+				dprintf( D_FULLDEBUG, "CronMgr: '%s': NoReconfig option ok\n",
+						 jobName );
+				reconfig = false;
+			} else if ( !strcasecmp( option, "WaitForExit" ) ) {
+				dprintf( D_FULLDEBUG, "CronMgr: '%s': WaitForExit option ok\n",
+						 jobName );
+				jobMode = CRON_WAIT_FOR_EXIT;
 			} else if ( !strcasecmp( option, "continuous" ) ) {
 				dprintf( D_FULLDEBUG, "CronMgr: '%s': Continuous option ok\n",
 						 jobName );
-				jobMode = CRON_CONTINUOUS;
+				jobMode = CRON_WAIT_FOR_EXIT;
+				reconfig = true;
 			} else {
 				dprintf( D_ALWAYS, "CronMgr: Job '%s':"
 						 " Ignoring unknown option '%s'\n",
@@ -542,23 +582,23 @@ CondorCronMgr::ParseJobList( const char *jobString )
 		}
 
 		// we change period == 0 to period == 1 for continuous
+		// (now called WaitForExit)
 		// jobs, so Hawkeye doesn't busy-loop if the job fails to
 		// execute for some reason; we mark it as an error for
 		// other job modes, since it's an invalid period...
 		if( jobPeriod == 0 ) {
-		  if ( jobMode == CRON_CONTINUOUS ) {
-		    jobPeriod = 1;
-		    dprintf( D_ALWAYS, 
-			     "CronMgr: WARNING: Job '%s' period = 0, but this "
-			     "can cause busy-loops; resetting to 1.\n",
-			     jobName );
-		  }
-		  else {
-		    dprintf( D_ALWAYS,
-			     "CronMgr: ERROR: Job '%s' not continuous, but "
-			     "period = 0; ignoring Job.\n", jobName );
-		    continue; 
-		  }
+			if ( jobMode == CRON_WAIT_FOR_EXIT ) {
+				jobPeriod = 1;
+				dprintf( D_ALWAYS, 
+						 "CronMgr: WARNING: Job '%s' period = 0, but this "
+						 "can cause busy-loops; resetting to 1.\n",
+						 jobName );
+			} else {
+				dprintf( D_ALWAYS,
+						 "CronMgr: ERROR: Job '%s' not 'WaitForExit', but "
+						 "period = 0; ignoring Job.\n", jobName );
+				continue; 
+			}
 		}
 
 		// Create the job & add it to the list (if it's new)
@@ -580,6 +620,7 @@ CondorCronMgr::ParseJobList( const char *jobString )
 
 		// Set the "Kill" mode
 		job->SetKill( killMode );
+		job->SetReconfig( reconfig );
 
 		// Are there arguments for it?
 		// Force the first arg to be the "Job Name"..

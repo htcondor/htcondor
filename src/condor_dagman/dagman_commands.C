@@ -1,3 +1,25 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 // dagman_commands.C
 
 #include "condor_common.h"
@@ -7,8 +29,9 @@
 #include "dagman_commands.h"
 
 bool
-PauseDag() {
-	if( G.paused == true ) {
+PauseDag()
+{
+	if( dagman.paused == true ) {
 			// maybe this should be a warning rather than an error,
 			// but it probably indicates that the caller doesn't know
 			// what the h*** is going on, so I'd rather catch it here
@@ -17,13 +40,14 @@ PauseDag() {
 		return false;
 	}
 	debug_printf( DEBUG_NORMAL, "DAGMan event-processing paused...\n" );
-	G.paused = true;
+	dagman.paused = true;
 	return true;
 }
 
 bool
-ResumeDag() {
-	if( G.paused != true ) {
+ResumeDag()
+{
+	if( dagman.paused != true ) {
 		debug_printf( DEBUG_NORMAL, "ERROR: ResumeDag() called on an "
 					  "un-paused DAG\n" );
 		return false;
@@ -34,24 +58,25 @@ ResumeDag() {
 		// degree, the dag modification routines) to make sure they
 		// get everything right...
 	debug_printf( DEBUG_NORMAL, "DAGMan event-processing resuming...\n" );
-	G.paused = false;
+	dagman.paused = false;
 	return true;
 }
 
 bool
-AddNode( const char *name, const char* cmd, const char *precmd,
-		 const char *postcmd, MyString &failReason )
+AddNode( Job::job_type_t type, const char *name, const char* cmd,
+		 const char *precmd, const char *postcmd, bool done,
+		 MyString &failReason )
 {
 	MyString why;
 	if( !IsValidNodeName( name, why ) ) {
-		failReason = "invalid node name: " + why;
+		failReason = why;
 		return false;
 	}
-	if( !cmd ) {
-		failReason = "missing cmd (NULL)";
+	if( !IsValidSubmitFileName( cmd, why ) ) {
+		failReason = why;
 		return false;
 	}
-	Job* node = new Job( name, cmd );
+	Job* node = new Job( type, name, cmd );
 	if( !node ) {
 		dprintf( D_ALWAYS, "ERROR: out of memory!\n" );
 			// we already know we're out of memory, so filling in
@@ -73,6 +98,15 @@ AddNode( const char *name, const char* cmd, const char *precmd,
 			return false;
 		}
 	}
+	if( done ) {
+		node->SetStatus( Job::STATUS_DONE );
+	}
+	ASSERT( dagman.dag != NULL );
+	if( !dagman.dag->Add( *node ) ) {
+		failReason = "unknown failure adding node to DAG";
+		delete node;
+		return false;
+	}
 	failReason = "n/a";
 	return true;
 }
@@ -81,20 +115,34 @@ bool
 IsValidNodeName( const char *name, MyString &whynot )
 {
 	if( name == NULL ) {
-		whynot = "name == NULL";
+		whynot = "missing node name";
 		return false;
 	}
-	if( strcmp( name, "" ) == 0 ) {
-		whynot = "name is empty";
+	if( strlen( name ) == 0 ) {
+		whynot = "empty node name (name == \"\")";
 		return false;
 	}
 	if( isKeyWord( name ) ) {
-		whynot.sprintf( "'%s' is a DAGMan keyword", name );
+		whynot.sprintf( "invalid node name: '%s' is a DAGMan keyword", name );
 		return false;
 	}
-	ASSERT( G.dag != NULL );
-	if( G.dag->NodeExists( name ) ) {
-		whynot.sprintf( "node '%s' already exists in DAG", name );
+	ASSERT( dagman.dag != NULL );
+	if( dagman.dag->NodeExists( name ) ) {
+		whynot.sprintf( "node name '%s' already exists in DAG", name );
+		return false;
+	}
+	return true;
+}
+
+bool
+IsValidSubmitFileName( const char *name, MyString &whynot )
+{
+	if( name == NULL ) {
+		whynot = "missing submit file name";
+		return false;
+	}
+	if( strlen( name ) == 0 ) {
+		whynot = "empty submit file name (name == \"\")";
 		return false;
 	}
 	return true;

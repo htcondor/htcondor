@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 
@@ -146,7 +146,7 @@ GridUniverseLogic::group_per_subject()
 
 void 
 GridUniverseLogic::JobCountUpdate(const char* owner, const char* domain,
-	   	const char* proxy, const char* proxy_path, int cluster, int proc, 
+	   	const char* proxy, const char* attr_name, int cluster, int proc, 
 		int num_globus_jobs, int num_globus_unmanaged_jobs)
 {
 	// Quick sanity checks - this should never be...
@@ -158,7 +158,7 @@ GridUniverseLogic::JobCountUpdate(const char* owner, const char* domain,
 	// does not know they are in the queue. so tell it some jobs
 	// were added.
 	if ( num_globus_unmanaged_jobs > 0 ) {
-		JobAdded(owner, domain, proxy, proxy_path, cluster, proc);
+		JobAdded(owner, domain, proxy, attr_name, cluster, proc);
 		return;
 	}
 
@@ -166,7 +166,7 @@ GridUniverseLogic::JobCountUpdate(const char* owner, const char* domain,
 	// are any globus jobs at all.  if there are, make certain that there
 	// is a grid manager watching over the jobs and start one if there isn't.
 	if ( num_globus_jobs > 0 ) {
-		StartOrFindGManager(owner, domain, proxy, proxy_path, cluster, proc);
+		StartOrFindGManager(owner, domain, proxy, attr_name, cluster, proc);
 		return;
 	}
 
@@ -177,11 +177,11 @@ GridUniverseLogic::JobCountUpdate(const char* owner, const char* domain,
 
 void 
 GridUniverseLogic::JobAdded(const char* owner, const char* domain,
-	   	const char* proxy, const char* proxy_path, int cluster, int proc)
+	   	const char* proxy, const char* attr_name, int cluster, int proc)
 {
 	gman_node_t* node;
 
-	node = StartOrFindGManager(owner, domain, proxy, proxy_path, cluster, proc);
+	node = StartOrFindGManager(owner, domain, proxy, attr_name, cluster, proc);
 
 	if (!node) {
 		// if we cannot find nor start a gridmanager, there's
@@ -203,11 +203,11 @@ GridUniverseLogic::JobAdded(const char* owner, const char* domain,
 
 void 
 GridUniverseLogic::JobRemoved(const char* owner, const char* domain,
-	   	const char* proxy, const char* proxy_path,int cluster, int proc)
+	   	const char* proxy, const char* attr_name,int cluster, int proc)
 {
 	gman_node_t* node;
 
-	node = StartOrFindGManager(owner, domain, proxy, proxy_path, cluster, proc);
+	node = StartOrFindGManager(owner, domain, proxy, attr_name, cluster, proc);
 
 	if (!node) {
 		// if we cannot find nor start a gridmanager, there's
@@ -406,7 +406,7 @@ GridUniverseLogic::lookupGmanByOwner(const char* owner, const char* proxy,
 
 GridUniverseLogic::gman_node_t *
 GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
-	   	const char* proxy, const char* proxy_path, int cluster, int proc)
+	   	const char* proxy, const char* attr_name, int cluster, int proc)
 {
 	gman_node_t* gman_node;
 	int pid;
@@ -489,9 +489,17 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		} else {
 			owner_or_user = ATTR_OWNER;
 		}
-		constraint.sprintf(" -C (%s=?=\"%s\"&&%s=?=\"%s\")",
-			owner_or_user,full_owner_name.Value(),
-			ATTR_X509_USER_PROXY_SUBJECT,proxy);
+		if ( !attr_name  ) {
+			attr_name = ATTR_X509_USER_PROXY_SUBJECT;
+			constraint.sprintf(" -C (%s=?=\"%s\"&&%s=?=\"%s\"&&%s==%d)",
+				owner_or_user,full_owner_name.Value(),
+				attr_name,proxy,
+				ATTR_JOB_UNIVERSE,CONDOR_UNIVERSE_GLOBUS);
+		} else {
+			constraint.sprintf(" -C (%s=?=\"%s\"&&%s=?=\"%s\")",
+				owner_or_user,full_owner_name.Value(),
+				attr_name,proxy);
+		}
 		strcat(gman_final_args,constraint.Value());
 	}
 
@@ -542,7 +550,14 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 				tmp.GetFullPath());
 			}
 		}	// end of while for cleanup of old scratch dirs
+
 		dprintf(D_FULLDEBUG,"Done checking for old scratch dirs\n");			
+
+		if (prefix != NULL) {
+			free(prefix);
+			prefix = NULL;
+		}
+
 	}	// end of once-per-schedd invocation block
 
 	// If gridmanager wants a tmp dir, create one and append proper
@@ -577,6 +592,8 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		PRIV_USER_FINAL,		// Run as the Owner
 		rid						// Reaper ID
 		);
+
+	free(gman_binary);
 
 	if ( pid <= 0 ) {
 		dprintf ( D_ALWAYS, "StartOrFindGManager: Create_Process problems!\n" );

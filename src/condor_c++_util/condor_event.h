@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #ifndef __CONDOR_EVENT_H__
 #define __CONDOR_EVENT_H__
 
@@ -83,6 +83,9 @@ enum ULogEventNumber {
 	/** Globus Resource Up        */  ULOG_GLOBUS_RESOURCE_UP 		= 19,
 	/** Globus Resource Down      */  ULOG_GLOBUS_RESOURCE_DOWN 	= 20,
 	/** Remote Error              */  ULOG_REMOTE_ERROR             = 21,
+	/** RSC socket lost           */  ULOG_JOB_DISCONNECTED         = 22,
+	/** RSC socket re-established */  ULOG_JOB_RECONNECTED          = 23,
+	/** RSC reconnect failure     */  ULOG_JOB_RECONNECT_FAILED     = 24,
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
@@ -1361,6 +1364,126 @@ class NodeExecuteEvent : public ULogEvent
 		/// Node identifier
 	int node;
 };
+
+
+//----------------------------------------------------------------------------
+/** JobConnectionEvent object.
+	This subclass of ULogEvent is a base class used for the various
+	userlog events related to the connection between the submit and
+	execute hosts being lost (and potentially re-established).
+	This is an abstract base class, you can't instantiate one of
+	these.  Instead, you must instantiate one of its children:
+	JobDisconnectedEvent, JobReconnectedEvent, or
+	JobReconnectFailedEvent. 
+*/
+
+class JobDisconnectedEvent : public ULogEvent
+{
+public:
+	JobDisconnectedEvent();
+	~JobDisconnectedEvent();
+
+	virtual int readEvent( FILE * );
+
+	virtual int writeEvent( FILE * );
+
+	virtual ClassAd* toClassAd( void );
+
+	virtual void initFromClassAd( ClassAd* ad );
+
+		/// stores a copy of the string in our "startd_addr" member
+	void setStartdAddr( char const *startd );
+	const char* getStartdAddr() const {return startd_addr;}
+
+		/// stores a copy of the string in our "startd_name" member
+	void setStartdName( char const *name );
+	const char* getStartdName() const {return startd_name;}
+
+		/// stores a copy of the string in our "reason" member
+	void setDisconnectReason( const char* );
+		/// @return pointer to our copy of the reason, or NULL if not set
+	const char* getDisconnectReason() const {return disconnect_reason;};
+
+		/// stores a copy of the string in our "reason" member
+	void setNoReconnectReason( const char* );
+		/// @return pointer to our copy of the reason, or NULL if not set
+	const char* getNoReconnectReason() const {return no_reconnect_reason;};
+
+		/** This flag defaults to true, and is set to false if a
+			NoReconnectReason is specified for the event */
+	bool canReconnect( void ) {return can_reconnect; };
+
+private:
+	char *startd_addr;
+	char *startd_name;
+	char *disconnect_reason;
+	char *no_reconnect_reason;
+	bool can_reconnect;
+};
+
+
+class JobReconnectedEvent : public ULogEvent
+{
+public:
+	JobReconnectedEvent();
+	~JobReconnectedEvent();
+
+	virtual int readEvent( FILE * );
+
+	virtual int writeEvent( FILE * );
+
+	virtual ClassAd* toClassAd( void );
+
+	virtual void initFromClassAd( ClassAd* ad );
+
+		/// stores a copy of the string in our "startd_addr" member
+	void setStartdAddr( char const *startd );
+	const char* getStartdAddr() const {return startd_addr;}
+
+		/// stores a copy of the string in our "startd_name" member
+	void setStartdName( char const *name );
+	const char* getStartdName() const {return startd_name;}
+
+		/// stores a copy of the string in our "starter_addr" member
+	void setStarterAddr( char const *starter );
+	const char* getStarterAddr() const {return startd_addr;}
+
+private:
+	char *startd_addr;
+	char *startd_name;
+	char *starter_addr;
+};
+
+
+class JobReconnectFailedEvent : public ULogEvent
+{
+public:
+	JobReconnectFailedEvent();
+	~JobReconnectFailedEvent();
+
+	virtual int readEvent( FILE * );
+
+	virtual int writeEvent( FILE * );
+
+	virtual ClassAd* toClassAd( void );
+
+	virtual void initFromClassAd( ClassAd* ad );
+
+		/// stores a copy of the string in our "reason" member
+	void setReason( const char* );
+		/// @return pointer to our copy of the reason, or NULL if not set
+	const char* getReason() const {return reason;};
+
+		/// stores a copy of the string in our "startd_name" member
+	void setStartdName( char const *name );
+	const char* getStartdName() const {return startd_name;}
+
+private:
+	char *startd_name;
+	char *reason;
+};
+
+
 
 #endif // __CONDOR_EVENT_H__
 

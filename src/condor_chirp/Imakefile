@@ -1,12 +1,26 @@
-
 NAME=Chirp.jar
+LIBNAME = libchirp_client.a
+LIBOBJ = chirp_client.o
 
-all::
+all:: $(LIBNAME)
 
 clean::
 
-release_copy_target($(NAME),$(RELEASE_DIR)/lib,$(NAME),EXECUTABLE_MODE)
-strip_copy_target($(NAME),$(RELEASE_DIR)/lib,$(NAME),EXECUTABLE_MODE)
-static_copy_target($(NAME),$(RELEASE_DIR)/lib,$(NAME),EXECUTABLE_MODE)
+release_copy_target($(NAME),lib,$(NAME),EXECUTABLE_MODE)
+strip_copy_target($(NAME),lib,$(NAME),EXECUTABLE_MODE)
+static_copy_target($(NAME),lib,$(NAME),EXECUTABLE_MODE)
+
+release_copy_target(chirp_client.c,src/chirp,chirp_client.c,TEXT_MODE)
+strip_copy_target(chirp_client.c,src/chirp,chirp_client.c,TEXT_MODE)
+static_copy_target(chirp_client.c,src/chirp,chirp_client.c,TEXT_MODE)
+
+release_copy_target(chirp_client.h,src/chirp,chirp_client.h,TEXT_MODE)
+strip_copy_target(chirp_client.h,src/chirp,chirp_client.h,TEXT_MODE)
+static_copy_target(chirp_client.h,src/chirp,chirp_client.h,TEXT_MODE)
+
+library_target($(LIBNAME),$(LIBOBJ))
+release_library($(LIBNAME),lib)
+strip_library($(LIBNAME),lib)
+static_library($(LIBNAME),lib)
 
 html_target( ChirpClient.java ChirpInputStream.java ChirpOutputStream.java )

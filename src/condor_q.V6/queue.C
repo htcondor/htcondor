@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-2001 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #define EXPERIMENTAL
 
@@ -1129,7 +1129,8 @@ usage (char *myName)
 		"\t\t-help\t\t\tThis screen\n"
 		"\t\t-name <name>\t\tName of schedd\n"
 		"\t\t-pool <host>\t\tUse host as the central manager to query\n"
-		"\t\t-long\t\t\tVerbose output\n"
+		"\t\t-long\t\t\tVerbose output (entire classads)\n"
+		"\t\t-xml\t\t\tDisplay entire classads, but in XML\n"
 		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
 		"\t\t-analyze\t\tPerform schedulability analysis on jobs\n"
 		"\t\t-run\t\t\tGet information about running jobs\n"
@@ -1267,8 +1268,8 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 	if( Q.fetchQueueFromHostAndProcess( scheddAddr,
 									 process_buffer_line,
 									 &errstack) != Q_OK ) {
-		printf ("\n-- Failed to fetch ads from: %s : %s\n%s", 
-					scheddAddr, scheddMachine, errstack.get_full_text());	
+		printf( "\n-- Failed to fetch ads from: %s : %s\n%s\n",
+				scheddAddr, scheddMachine, errstack.getFullText(true) );
 		delete output_buffer;
 
 		return false;
@@ -1402,8 +1403,8 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 		// fetch queue from schedd	
 	CondorError errstack;
 	if( Q.fetchQueueFromHost(jobs, scheddAddr, &errstack) != Q_OK ) {
-		printf ("\n-- Failed to fetch ads from: %s : %s\n%s", 
-					scheddAddr, scheddMachine, errstack.get_full_text());	
+		printf( "\n-- Failed to fetch ads from: %s : %s\n%s\n",
+				scheddAddr, scheddMachine, errstack.getFullText(true) );
 		return false;
 	}
 

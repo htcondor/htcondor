@@ -7,39 +7,38 @@ CKPT_FLAG = -DNO_CKPT
 CFLAGS = $(STD_C_FLAGS) $(CKPT_FLAG) 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CKPT_FLAG) -fno-implicit-templates
 
-REMOTE_SYSCALL_LIB = \
+IMPORT_LINKS = ../../config/import_links
+import(../condor_syscall_lib,file_stream.o)
+
+REMOTE_SYSCALL_OBJ = \
 	../condor_ckpt/signals_control.o \
-	../condor_syscall_lib/senders.o \
-	../condor_syscall_lib/syscall_mode.o \
-	../condor_syscall_lib/syscall_connect.o \
+	../condor_ckpt/syscall_mode.o \
 	../condor_syscall_lib/remote_syscall.o \
+	../condor_syscall_lib/senders.o \
+	../condor_syscall_lib/syscall_connect.o \
 	../condor_syscall_lib/syscall_numbers.o \
 	../condor_syscall_lib/xfer_file.o
-LIB = $(REMOTE_SYSCALL_LIB) $(STD_LIBS)
+
+LIB = $(STD_LIBS)
 
 OS = OperatingSystem
 
 CLASS_LIB_OBJ = alarm.o
 
 PORTABLE_OBJ = $(CLASS_LIB_OBJ) signals.o \
-	user_proc.o tables.o starter_common.o \
-	../condor_syscall_lib/file_stream.o 
+	user_proc.o tables.o starter_common.o file_stream.o 
 
-NON_PORTABLE_OBJ = NON_POSIX.o analyze_core.$(OS).o
+NON_PORTABLE_OBJ = NON_POSIX.o analyze_core.o
 
-OBJ = starter.o $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ)
-
-TOY_OBJ = state_machine_driver.o signals.o name_tab.o starter.toy.o \
-	alarm.o
+OBJ = starter.o $(PORTABLE_OBJ) $(NON_PORTABLE_OBJ) $(REMOTE_SYSCALL_OBJ)
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
-release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
-strip_target($(NAME),$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
+release_target($(NAME),sbin,EXECUTABLE_MODE)
+strip_target($(NAME),sbin,EXECUTABLE_MODE)
 static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
 pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 
-c_plus_target(toy,$(TOY_OBJ),$(LIB))
 html:
 
 starter_state_diagram.dot: $(NAME)

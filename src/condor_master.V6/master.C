@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_debug.h"
@@ -397,9 +397,10 @@ handle_agent_fetch_log (ReliSock* stream) {
 	dprintf( D_ALWAYS, "INFO: daemon_paramname: %s\n", daemon_paramname );
 
 	if( (daemon_filename = param(daemon_paramname)) ) {
+		filesize_t	size;
 		dprintf( D_ALWAYS, "INFO: daemon_filename: %s\n", daemon_filename );
 		stream->encode();
-		res = (stream->put_file(daemon_filename) < 0);
+		res = (stream->put_file(&size, daemon_filename) < 0);
 		free (daemon_filename);
 	} else {
 		dprintf( D_ALWAYS, "ERROR: fetch_log can't param for log name\n" );
@@ -688,6 +689,27 @@ init_daemon_list()
 		dc_daemon_names.initializeFromString(dc_daemon_list);
 	} else {
 		dc_daemon_names.initializeFromString(default_dc_daemon_list);
+	}
+
+	char* ha_list = param("MASTER_HA_LIST");
+	if( ha_list ) {
+			// Make MASTER_HA_LIST case insensitive by always converting
+			// what we get to uppercase.
+		StringList	ha_names;
+		ha_list = strupr( ha_list );
+		ha_names.initializeFromString(ha_list);
+		free( ha_list );
+
+		ha_names.rewind();
+		while( (daemon_name = ha_names.next()) ) {
+			if(daemons.GetIndex(daemon_name) < 0) {
+				if( dc_daemon_names.contains(daemon_name) ) {
+					new_daemon = new class daemon(daemon_name, true, true );
+				} else {
+					new_daemon = new class daemon(daemon_name, false, true );
+				}
+			}
+		}
 	}
 
 	char* daemon_list = param("DAEMON_LIST");

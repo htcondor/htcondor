@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_string.h"
@@ -39,18 +39,27 @@ DCStartd::DCStartd( const char* name, const char* pool )
 }
 
 
+DCStartd::DCStartd( const char* name, const char* pool, const char* addr,
+					const char* id )
+	: Daemon( DT_STARTD, name, pool )
+{
+	if( addr ) {
+		New_addr( strnewp(addr) );
+	}
+		// claim_id isn't initialized by Daemon's constructor, so we
+		// have to treat it slightly differently 
+	claim_id = NULL;
+	if( id ) {
+		claim_id = strnewp( id );
+	}
+}
+
+
 DCStartd::~DCStartd( void )
 {
 	if( claim_id ) {
 		delete [] claim_id;
 	}
-}
-
-
-bool
-DCStartd::setCapability( const char* cap_str ) 
-{
-	return setClaimId( cap_str );
 }
 
 
@@ -87,8 +96,11 @@ DCStartd::deactivateClaim( bool graceful )
 	ReliSock reli_sock;
 	reli_sock.timeout(20);   // years of research... :)
 	if( ! reli_sock.connect(_addr) ) {
-		dprintf( D_ALWAYS, "DCStartd::deactivateClaim: "
-				 "Failed to connect to startd (%s)\n", _addr );
+		MyString err = "DCStartd::deactivateClaim: ";
+		err += "Failed to connect to startd (";
+		err += _addr;
+		err += ')';
+		newError( CA_CONNECT_FAILED, err.Value() );
 		return false;
 	}
 	int cmd;
@@ -99,21 +111,28 @@ DCStartd::deactivateClaim( bool graceful )
 	}
 	result = startCommand( cmd, (Sock*)&reli_sock ); 
 	if( ! result ) {
-		dprintf( D_ALWAYS, "DCStartd::deactivateClaim: "
-				 "Failed to send command (%s) to the startd\n", 
-				 graceful ? "DEACTIVATE_CLAIM" :
-				 "DEACTIVATE_CLAIM_FORCIBLY" );
+		MyString err = "DCStartd::deactivateClaim: ";
+		err += "Failed to send command ";
+		if( graceful ) {
+			err += "DEACTIVATE_CLAIM";
+		} else {
+			err += "DEACTIVATE_CLAIM_FORCIBLY";
+		}
+		err += " to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
 		return false;
 	}
-		// Now, send the claim_id
+		// Now, send the ClaimId
 	if( ! reli_sock.code(claim_id) ) {
-		dprintf( D_ALWAYS, "DCStartd::deactivateClaim: "
-				 "Failed to send claim_id to the startd\n" );
+		MyString err = "DCStartd::deactivateClaim: ";
+		err += "Failed to send ClaimId to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
 		return false;
 	}
 	if( ! reli_sock.eom() ) {
-		dprintf( D_ALWAYS, "DCStartd::deactivateClaim: "
-				 "Failed to send EOM to the startd\n" );
+		MyString err = "DCStartd::deactivateClaim: ";
+		err += "Failed to send EOM to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
 		return false;
 	}
 		// we're done
@@ -141,53 +160,63 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 	}
 
 	if( ! claim_id ) {
-		dprintf( D_ALWAYS, "DCStartd::activateClaim "
-				 "called with NULL claim_id, failing\n" );
-		return NOT_OK;
+		MyString err = "DCStartd::activateClaim: ";
+		err += "called with NULL claim_id, failing";
+		newError( CA_INVALID_REQUEST, err.Value() );
+		return CONDOR_ERROR;
 	}
 
 	Sock* tmp;
 	tmp = startCommand( ACTIVATE_CLAIM, Stream::reli_sock, 20 ); 
 	if( ! tmp ) {
-		dprintf( D_ALWAYS, "DCStartd::activateClaim: "
-				 "Failed to send command (%s) to the startd\n", 
-				 "ACTIVATE_CLAIM" );
-		return NOT_OK;
+		MyString err = "DCStartd::activateClaim: ";
+		err += "Failed to send command ";
+		err += "ACTIVATE_CLAIM";
+		err += " to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
+		delete tmp;
+		return CONDOR_ERROR;
 	}
 	if( ! tmp->code(claim_id) ) {
-		dprintf( D_ALWAYS, "DCStartd::activateClaim: "
-				 "Failed to send claim_id to the startd\n" );
+		MyString err = "DCStartd::activateClaim: ";
+		err += "Failed to send ClaimId to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
 		delete tmp;
-		return NOT_OK;
+		return CONDOR_ERROR;
 	}
 	if( ! tmp->code(starter_version) ) {
-		dprintf( D_ALWAYS, "DCStartd::activateClaim: "
-				 "Failed to send starter_version to the startd\n" );
+		MyString err = "DCStartd::activateClaim: ";
+		err += "Failed to send starter_version to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
 		delete tmp;
-		return NOT_OK;
+		return CONDOR_ERROR;
 	}
 
 	if( ! job_ad->put(*tmp) ) {
-		dprintf( D_ALWAYS, "DCStartd::activateClaim: "
-				 "Failed to send job_ad to the startd\n" );
+		MyString err = "DCStartd::activateClaim: ";
+		err += "Failed to send job ClassAd to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
 		delete tmp;
-		return NOT_OK;
+		return CONDOR_ERROR;
 	}
 
 	if( ! tmp->end_of_message() ) {
-		dprintf( D_ALWAYS, "DCStartd::activateClaim: "
-				 "Failed to send EOM to the startd\n" );
+		MyString err = "DCStartd::activateClaim: ";
+		err += "Failed to send EOM to the startd";
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
 		delete tmp;
-		return NOT_OK;
+		return CONDOR_ERROR;
 	}
 
 		// Now, try to get the reply
 	tmp->decode();
 	if( !tmp->code(reply) || !tmp->end_of_message()) {
-		dprintf( D_ALWAYS, "DCStartd::activateClaim: "
-				 "failed to receive reply from %s\n", _addr );
+		MyString err = "DCStartd::activateClaim: ";
+		err += "Failed to receive reply from ";
+		err += _addr;
+		newError( CA_COMMUNICATION_ERROR, err.Value() );
 		delete tmp;
-		return NOT_OK;
+		return CONDOR_ERROR;
 	}
 
 	dprintf( D_FULLDEBUG, "DCStartd::activateClaim: "
@@ -219,7 +248,7 @@ DCStartd::requestClaim( ClaimType type, const ClassAd* req_ad,
 		err_msg = "Invalid ClaimType (";
 		err_msg += (int)type;
 		err_msg += ')';
-		newError( err_msg.Value() );
+		newError( CA_INVALID_REQUEST, err_msg.Value() );
 		return false;
 	}
 
@@ -384,6 +413,32 @@ DCStartd::releaseClaim( VacateType type, ClassAd* reply,
 
 
 bool
+DCStartd::locateStarter( const char* global_job_id, ClassAd* reply,
+						 int timeout )
+{
+	setCmdStr( "locateStarter" );
+
+	ClassAd req;
+	MyString line;
+
+		// Add our own attributes to the request ad we're sending
+	line = ATTR_COMMAND;
+	line += "=\"";
+	line += getCommandString( CA_LOCATE_STARTER );
+	line += '"';
+	req.Insert( line.Value() );
+
+	line = ATTR_GLOBAL_JOB_ID;
+	line += "=\"";
+	line += global_job_id;
+	line += '"';
+	req.Insert( line.Value() );
+
+	return sendCACmd( &req, reply, false, timeout );
+}
+
+
+bool
 DCStartd::checkClaimId( void )
 {
 	if( claim_id ) {
@@ -395,7 +450,7 @@ DCStartd::checkClaimId( void )
 		err_msg += ": ";
 	}
 	err_msg += "called with no ClaimId";
-	newError( err_msg.Value() );
+	newError( CA_INVALID_REQUEST, err_msg.Value() );
 	return false;
 }
 
@@ -412,7 +467,7 @@ DCStartd::checkVacateType( VacateType t )
 		err_msg = "Invalid VacateType (";
 		err_msg += (int)t;
 		err_msg += ')';
-		newError( err_msg.Value() );
+		newError( CA_INVALID_REQUEST, err_msg.Value() );
 		return false;
 	}
 	return true;

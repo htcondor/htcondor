@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 /* 
     This file defines the ResAttributes class which stores various
 	attributes about a given resource such as load average, available
@@ -43,12 +43,21 @@ const amask_t A_UPDATE	= 16;
 const amask_t A_SHARED	= 32;
 const amask_t A_SUMMED	= 64;
 const amask_t A_EVALUATED = 128; 
+const amask_t A_SHARED_VM = 256;
 /*
   NOTE: We don't want A_EVALUATED in A_ALL, since it's a special bit
   that only applies to the Resource class, and it shouldn't be set
   unless we explicity ask for it.
+  Same thing for A_SHARED_VM...
 */
-const amask_t A_ALL		= (A_UPDATE | A_TIMEOUT | A_STATIC | A_SHARED | A_SUMMED );
+const amask_t A_ALL	= (A_UPDATE | A_TIMEOUT | A_STATIC | A_SHARED | A_SUMMED);
+/*
+  HOWEVER: We do want to include A_EVALUATED and A_SHARED_VM in a
+  single bitmask since there are multiple places in the startd where
+  we really want *everything*, and it's lame to have to keep changing
+  all those call sites whenever we add another special-case bit.
+*/
+const amask_t A_ALL_PUB	= (A_PUBLIC | A_ALL | A_EVALUATED | A_SHARED_VM);
 
 #define IS_PUBLIC(mask)		((mask) & A_PUBLIC)
 #define IS_PRIVATE(mask)	((mask) & A_PRIVATE)
@@ -58,6 +67,7 @@ const amask_t A_ALL		= (A_UPDATE | A_TIMEOUT | A_STATIC | A_SHARED | A_SUMMED );
 #define IS_SHARED(mask)		((mask) & A_SHARED)
 #define IS_SUMMED(mask)		((mask) & A_SUMMED)
 #define IS_EVALUATED(mask)	((mask) & A_EVALUATED)
+#define IS_SHARED_VM(mask)	((mask) & A_SHARED_VM)
 #define IS_ALL(mask)		((mask) & A_ALL)
 
 

@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_config.h"
@@ -27,7 +27,7 @@
 #include "sysapi.h"
 #include "sysapi_externs.h"
 
-#ifdef CONDOR_DARWIN
+#ifdef Darwin
 #include <mach/mach.h>
 #include <IOKit/IOKitLib.h>
 #include <IOKit/hid/IOHIDLib.h>
@@ -45,14 +45,22 @@ extern int WINAPI KBShutdown(void);
 extern int WINAPI KBQuery(void);
 #else /* Not defined WIN32 */
 #include "string_list.h"
-#ifndef CONDOR_DARWIN
+#ifndef Darwin
 static time_t utmp_pty_idle_time( time_t now );
 static time_t all_pty_idle_time( time_t now );
 static time_t dev_idle_time( char *path, time_t now );
 static void calc_idle_time_cpp(time_t & m_idle, time_t & m_console_idle);
 #endif
 
+/* we must now use the kstat interface to get this information under later
+	releases of Solaris */
+#if defined(Solaris28) || defined(Solaris29)
+static time_t solaris_kbd_idle(void);
+static time_t solaris_mouse_idle(void);
 #endif
+
+#endif
+
 
 /* the local function that does the main work */
 
@@ -199,14 +207,18 @@ calc_idle_time_cpp( time_t * user_idle, time_t * console_idle)
 			_sysapi_last_x_event = now;
 		} else {
 			// no keypress detected, test if mouse moved
-			POINT current_pos;
-			if ( ! GetCursorPos(&current_pos) ) {
-				dprintf(D_ALWAYS,"GetCursorPos failed (err=%li)\n", GetLastError());
+			CURSORINFO cursor_inf;
+			cursor_inf.cbSize = sizeof(CURSORINFO);
+			if ( ! GetCursorInfo(&cursor_inf) ) {
+				dprintf(D_ALWAYS,"GetCursorInfo() failed (err=%li)\n",
+					   	GetLastError());
 			} else {
-				if ( (current_pos.x != previous_pos.x) || 
-					(current_pos.y != previous_pos.y) ) {
-					// the mouse has moved!
-					previous_pos = current_pos;	// stash new position
+				if ( (cursor_inf.ptScreenPos.x != previous_pos.x) || 
+					(cursor_inf.ptScreenPos.y != previous_pos.y) ) {
+						// the mouse has moved!
+						// stash new position
+					previous_pos.x = cursor_inf.ptScreenPos.x; 
+					previous_pos.y = cursor_inf.ptScreenPos.y; 
 					_sysapi_last_x_event = now;
 				}
 			}
@@ -222,7 +234,7 @@ calc_idle_time_cpp( time_t * user_idle, time_t * console_idle)
 	return;
 }
 
-#elif !defined(CONDOR_DARWIN) /* !defined(WIN32) -- all UNIX platforms but OS X*/
+#elif !defined(Darwin) /* !defined(WIN32) -- all UNIX platforms but OS X*/
 
 /* calc_idle_time fills in user_idle and console_idle with the number
  * of seconds since there has been activity detected on any tty or on
@@ -348,7 +360,7 @@ utmp_pty_idle_time( time_t now )
 	}
 
 	while (fread((char *)&utmp_info, sizeof(struct UTMP_KIND), 1, fp)) {
-#if defined(AIX31) || defined(AIX32) || defined(AIX5) || defined(IRIX331) || defined(IRIX53) || defined(LINUX) || defined(OSF1) || defined(IRIX62) || defined(IRIX65)
+#if defined(AIX) || defined(LINUX) || defined(OSF1) || defined(IRIX65)
 		if (utmp_info.ut_type != USER_PROCESS)
 #else
 			if (utmp_info.ut_name[0] == '\0')
@@ -459,11 +471,11 @@ all_pty_idle_time( time_t now )
 		entries come and go depending upon the number of users actually logged
 		in.  If we keep the Directory object static, then we will never know or
 		incorrectly check ttys that might or might not exist. 
-		Hopefully the performance might not be that bad under linux because
+		Hopefully the performance might not be that bad under linux since
 		this stuff is created each and every time this function is called.
 		psilord 1/4/2002
 	*/
-#if defined(LINUX) && defined(GLIBC22)
+#if defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))
 	if (dev != NULL)
 	{
 		delete dev;
@@ -486,7 +498,7 @@ all_pty_idle_time( time_t now )
 
 #ifdef LINUX
 #include <sys/sysmacros.h>  /* needed for major() below */
-#elif defined( OSF1 ) || defined(CONDOR_DARWIN)
+#elif defined( OSF1 ) || defined(Darwin)
 #include <sys/types.h>
 #elif defined( HPUX )
 #include <sys/sysmacros.h>
@@ -502,16 +514,20 @@ dev_idle_time( char *path, time_t now )
 {
 	struct stat	buf;
 	time_t answer;
+	#if defined(Solaris28) || defined(Solaris29)
+	time_t kstat_answer;
+	#endif
 	static char pathname[100] = "/dev/";
 	static int null_major_device = -1;
 
 	if ( !path || path[0]=='\0' ||
 		 strncmp(path,"unix:",5) == 0 ) {
 		// we don't have a valid path, or it is
-		// a bullshit path setup by the X server
+		// a nonuseful/fake path setup by the X server
 		return now;
 	}
 
+	strcpy( &pathname[5], path );
 	if ( null_major_device == -1 ) {
 		// get the major device number of /dev/null so
 		// we can ignore any device that shares that
@@ -531,10 +547,12 @@ dev_idle_time( char *path, time_t now )
 		}
 	}
 	
-	strcpy( &pathname[5], path );
+	/* ok, just check the device idle time for normal devices using stat() */
 	if (stat(pathname,&buf) < 0) {
-		dprintf( D_FULLDEBUG, "Error on stat(%s,0x%x), errno = %d(%s)\n",
-				 pathname, &buf, errno, strerror(errno) );
+		if( errno != ENOENT ) {
+			dprintf( D_FULLDEBUG, "Error on stat(%s,0x%x), errno = %d(%s)\n",
+					 pathname, &buf, errno, strerror(errno) );
+		}
 		buf.st_atime = 0;
 	}
 	if ( null_major_device > -1 && null_major_device == major(buf.st_rdev) ) {
@@ -545,6 +563,36 @@ dev_idle_time( char *path, time_t now )
 	if( buf.st_atime > now ) {
 		answer = 0;
 	}
+
+	/* under solaris2[89], we'll catch when someone asks about specifically
+		about a console or mouse device, and specially figure
+		them out since we cannot stat() them anymore under
+		solaris 8 update 6+ or solaris 9. stat() will return 0
+		for the access time no matter what. */
+
+	#if defined(Solaris28) || defined(Solaris29)
+	
+		/* if I happen not to be dealing with a console device, we better 
+			choose what the stat() answer would have been, so initialize this
+			to zero for force it when the MAX macro gets used */
+		kstat_answer = 0;
+
+		if (strstr(path, "kbd") != NULL)
+		{
+			kstat_answer = solaris_kbd_idle();
+		}
+
+		if (strstr(path, "mouse") != NULL || strstr(path, "consms") != NULL)
+		{
+			kstat_answer = solaris_mouse_idle();
+		}
+	
+	/* ok, now we'll grab the higher of the two answers. zero for the busted
+		stat() or the real value for the kstat(). If they are both zero,
+		then, well, someone is using it */
+	answer = MAX(answer, kstat_answer);
+
+	#endif
 
 	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_IDLE) ) {
         dprintf( D_IDLE, "%s: %d secs\n", pathname, (int)answer );
@@ -629,34 +677,270 @@ extract_idle_time(
     CFMutableDictionaryRef  properties)
 {
     time_t    idle_time = -1;
+	UInt64  nanoseconds, billion, seconds_64, remainder;
+	UInt32  seconds;
     CFTypeRef object = CFDictionaryGetValue(properties, CFSTR(kIOHIDIdleTimeKey));
-    
+	CFRetain(object);
+ 
     if (!object) {
 	dprintf(D_ALWAYS, "IDLE: Failed to make CFTypeRef\n");
     } else {
-	if (CFGetTypeID(object) != CFDataGetTypeID()) {
-            dprintf(D_ALWAYS, "IDLE: Idle time is not in expected format.\n");
-        } else {
+		CFTypeID object_type = CFGetTypeID(object);
+		if (object_type == CFNumberGetTypeID()) {
+			CFNumberGetValue((CFNumberRef)object, kCFNumberSInt64Type,
+							&nanoseconds);
+        } else if (object_type == CFDataGetTypeID()) {
             Size num_bytes;
             num_bytes = CFDataGetLength((CFDataRef) object);
             if (num_bytes != 8) {
-                dprintf(D_ALWAYS, "IDLE: Idle time is not in expected format.\n");
+                dprintf(D_ALWAYS, "IDLE: Idle time is not 8 bytes.\n");
+				CFRelease(object);
+				return idle_time;
             } else {
-                UInt64  nanoseconds, billion, seconds_64, remainder;
-                UInt32  seconds;
-                CFDataGetBytes((CFDataRef) object, CFRangeMake(0, 8), 
-                                ((UInt8 *) &nanoseconds));
-                billion = U64SetU(1000000000);
-                seconds_64 = U64Divide(nanoseconds, billion, &remainder);
-                seconds = U32SetU(seconds_64);
-                idle_time = seconds;
-            }
-        }
+				CFDataGetBytes((CFDataRef) object, CFRangeMake(0, 8), 
+				((UInt8 *) &nanoseconds));
+			}
+        } else {
+            dprintf(D_ALWAYS, "IDLE: Idle time didnt match CFDataGetTypeID.\n");
+			CFRelease(object);
+			return idle_time;
+		}	
+		billion = U64SetU(1000000000);
+		seconds_64 = U64Divide(nanoseconds, billion, &remainder);
+		seconds = U32SetU(seconds_64);
+		idle_time = seconds;
     }
+	// CFRelease seems to be hip with taking a null object. This seems
+	// strange to me, but hey, at least I thought about it
+	CFRelease(object);
     return idle_time;
 }
 
 #endif  /* the end of the Mac OS X code, and the  */
+
+/* under solaris 8 with update 6 and later, and solaris 9, use the kstat 
+	interface to determine the console and mouse idle times. stat() on the
+	actual kbd or mouse device no longer returns(by design according to 
+	solaris) the access time. These are localized functions static to this
+	object file. */
+#if defined(Solaris28) || defined(Solaris29)
+static time_t solaris_kbd_idle(void)
+{
+	kstat_ctl_t     *kc = NULL;  /* libkstat cookie */ 
+	kstat_t         *kbd_ksp = NULL; 
+	void *p = NULL;
+	time_t answer;
+
+	/* open the kstat device */
+	if ((kc = kstat_open()) == NULL) {
+
+		dprintf(D_FULLDEBUG, 
+			"solaris_kbd_idle(): Can't open /dev/kstat: %d(%s)\n",
+			errno, strerror(errno));
+
+		dprintf(D_FULLDEBUG, "solaris_kbd_idle(): assuming zero idle time!\n");
+
+		return (time_t)0;
+	}
+
+	/* find the keyboard device */
+	kbd_ksp = kstat_lookup(kc, "conskbd", 0, "activity");
+	if (kbd_ksp == NULL) {
+		
+		if (errno == ENOMEM)
+		{
+			/* NOTE: This is an educated guess for what a Solaris machine which 
+				doesn't support the lookup I'm asking gives back as an errno
+				here. Since this is a possibility on solaris 8 machines
+				BEFORE Update 6, I have to notice it, and then silently
+				ignore it, because the stat() that was done previously on the
+				device will have worked as expected. I suppose it might
+				be possible to have this error happen on a machine where
+				this code should have worked, in which case sorry.
+				*/
+			if (kstat_close(kc) != 0)
+			{
+				/* XXX I hope there isn't a resource leak if this ever 
+					happens */
+				dprintf(D_FULLDEBUG, 
+					"solaris_kbd_idle(): Can't close /dev/kstat: %d(%s)\n",
+					errno, strerror(errno));
+			}
+
+			return (time_t)0;
+		}
+
+		dprintf(D_FULLDEBUG, 
+			"solaris_kbd_idle(): Keyboard init failed: %d(%s)\n",
+			errno, strerror(errno));
+
+		dprintf(D_FULLDEBUG, "solaris_kbd_idle(): assuming zero idle time!\n");
+
+		if (kstat_close(kc) != 0)
+		{
+			/* XXX I hope there isn't a resource leak if this ever happens */
+	
+			dprintf(D_FULLDEBUG, 
+				"solaris_kbd_idle(): Can't close /dev/kstat: %d(%s)\n",
+				errno, strerror(errno));
+		}
+
+		return (time_t)0;
+	}
+
+	/* get the idle time from the keyboard device */
+	if (kstat_read(kc, kbd_ksp, NULL) == -1 ||
+		(p = kstat_data_lookup(kbd_ksp, "idle_sec")) == NULL)
+	{
+		dprintf(D_FULLDEBUG, 
+			"solaris_kbd_idle(): Can't get idle time from /dev/kstat: %d(%s)\n",
+			errno, strerror(errno));
+
+		if (kstat_close(kc) != 0)
+		{
+			/* XXX I hope there isn't a resource leak if this ever happens */
+	
+			dprintf(D_FULLDEBUG, 
+				"solaris_kbd_idle(): Can't close /dev/kstat: %d(%s)\n",
+				errno, strerror(errno));
+		}
+
+		return (time_t)0;
+	}
+
+	/* ok sanity check it, and look at the value BEFORE I do a kstat_close */
+	answer = ((kstat_named_t *)p)->value.l;
+	if (answer < (time_t)0)
+	{
+		dprintf(D_FULLDEBUG,
+			"solaris_kbd_idle(): WARNING! Fixing a negative idle time!\n");
+			
+		answer = 0;
+	}
+
+	/* close kstat */
+	if (kstat_close(kc) != 0)
+	{
+		/* XXX I hope there isn't a resource leak if this ever happens */
+
+		dprintf(D_FULLDEBUG, 
+			"solaris_kbd_idle(): Can't close /dev/kstat: %d(%s)\n",
+			errno, strerror(errno));
+	}
+	
+	return answer;
+}
+
+static time_t solaris_mouse_idle(void)
+{
+	kstat_ctl_t     *kc = NULL;  /* libkstat cookie */ 
+	kstat_t         *ms_ksp = NULL; 
+	time_t answer;
+	void *p = NULL;
+
+	/* open kstat */
+	if ((kc = kstat_open()) == NULL) {
+
+		dprintf(D_ALWAYS, 
+			"solaris_mouse_idle(): Can't open /dev/kstat: %d(%s)\n",
+			errno, strerror(errno));
+
+		dprintf(D_FULLDEBUG, 
+			"solaris_mouse_idle(): assuming zero idle time!\n");
+
+		return (time_t)0;
+	}
+
+	/* find the mouse device */
+	ms_ksp = kstat_lookup(kc, "consms", 0, "activity");
+	if (ms_ksp == NULL) {
+
+		if (errno == ENOMEM)
+		{
+			/* NOTE: This is an educated guess for what a Solaris machine which 
+				doesn't support the lookup I'm asking gives back as an errno
+				here. Since this is a possibility on solaris 8 machines
+				BEFORE Update 6, I have to notice it, and then silently
+				ignore it, because the stat() that was done previously on the
+				device will have worked as expected. I suppose it might
+				be possible to have this error happen on a machine where
+				this code should have worked, in which case sorry.
+				*/
+			if (kstat_close(kc) != 0)
+			{
+				/* XXX I hope there isn't a resource leak if this ever 
+					happens */
+				dprintf(D_FULLDEBUG, 
+					"solaris_mouse_idle(): Can't close /dev/kstat: %d(%s)\n",
+					errno, strerror(errno));
+			}
+
+			return (time_t)0;
+		}
+
+		dprintf(D_FULLDEBUG, 
+			"solaris_mouse_idle(): Mouse init failed: %d(%s)\n",
+			errno, strerror(errno));
+
+		dprintf(D_FULLDEBUG, 
+			"solaris_mouse_idle(): assuming zero idle time!\n");
+
+		if (kstat_close(kc) != 0)
+		{
+			/* XXX I hope there isn't a resource leak if this ever happens */
+
+			dprintf(D_FULLDEBUG,
+				"solaris_mouse_idle(): Can't close /dev/kstat: %d(%s)\n",
+				errno, strerror(errno));
+		}
+
+		return (time_t)0;
+	}
+
+	/* get the idle time from the mouse device */
+	if (kstat_read(kc, ms_ksp, NULL) == -1 ||
+		(p = kstat_data_lookup(ms_ksp, "idle_sec")) == NULL)
+	{
+		dprintf(D_FULLDEBUG,
+			"solaris_mouse_idle(): Can't get idle time from /dev/kstat: "
+				"%d(%s)\n", errno, strerror(errno));
+
+		if (kstat_close(kc) != 0)
+		{
+			/* XXX I hope there isn't a resource leak if this ever happens */
+
+			dprintf(D_FULLDEBUG, 
+				"solaris_mouse_idle(): Can't close /dev/kstat: %d(%s)\n",
+				errno, strerror(errno));
+		}
+
+		return (time_t)0;
+	}
+
+	/* ok, sanity check the result */
+	answer = ((kstat_named_t *)p)->value.l;
+	if (answer < (time_t)0)
+	{
+		dprintf(D_FULLDEBUG,
+			"solaris_mouse_idle(): WARNING! Fixing a negative idle time!\n");
+			
+		answer = 0;
+	}
+
+	/* close kstat */
+	if (kstat_close(kc) != 0)
+	{
+		/* XXX I hope there isn't a resource leak if this ever happens */
+
+		dprintf(D_FULLDEBUG,
+			"solaris_mouse_idle(): Can't close /dev/kstat: %d(%s)\n",
+			errno, strerror(errno));
+	}
+
+	return answer;
+}
+
+#endif
 
 
 /* ok, the purpose of this code is to create an interface that is a C linkage
@@ -672,7 +956,7 @@ sysapi_idle_time_raw(time_t *m_idle, time_t *m_console_idle)
 
 	sysapi_internal_reconfig();
 
-#if( !defined( WIN32 ) && !defined( CONDOR_DARWIN ) )
+#if( !defined( WIN32 ) && !defined( Darwin ) )
 	time_t m_i, m_c;
 
 	/* here calc_idle_time_cpp expects a reference, so let's give it one */

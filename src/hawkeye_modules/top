@@ -17,7 +17,7 @@ use HawkeyeLib;
 sub Init( );
 sub MainLoop( );
 sub Configure( );
-sub RunIt( $ );
+sub RunIt( );
 sub ProcessData( $ );
 sub FixString( $ );
 
@@ -29,31 +29,129 @@ my %Config =
      Debug	=> 0,
      TopPeriod	=> 30,
      RunOnce	=> 0,
+     MaxLoops	=> 100,
+     TopOpt	=> {
+		    Batch => "-b ",
+		    Delay => "-d ",
+		    BlankSep => 0,
+		   },
     );
 
 # Valid field list:
 my %TopFields =
     (
-     pid	=> { enabled => 0, type => "n", l => "PID" },
-     user	=> { enabled => 0, type => "s", l => "USER" },
-     priority	=> { enabled => 0, type => "n", l => "PRI" },
-     nice	=> { enabled => 0, type => "n", l => "NI" },
-     size	=> { enabled => 0, type => "n", l => "SIZE" },
-     rss	=> { enabled => 0, type => "n", l => "RSS" },
-     share	=> { enabled => 0, type => "n", l => "SHARE" },
-     state	=> { enabled => 0, type => "s", l => "STAT" },
-     lib	=> { enabled => 0, type => "n", l => "LIB" },
-     cpu	=> { enabled => 0, type => "%", l => "%CPU" },
-     mem	=> { enabled => 0, type => "%", l => "%MEM" },
-     time	=> { enabled => 0, type => "t", l => "TIME" },
-     command	=> { enabled => 0, type => "s", l => "COMMAND" },
+     pid =>
+     {
+      enabled => 0,
+      type => HawkeyePublish::TypeNumber,
+      l => [ "PID", ],
+     },
+     user =>
+     {
+      enabled => 0,
+      type => HawkeyePublish::TypeString,
+      l => [ "USER", "USERNAME", ],
+     },
+     priority =>
+     {
+      enabled => 0,
+      type => HawkeyePublish::TypeString,
+      l => [ "PRI", ],
+     },
+     thread =>
+     {
+      enabled => 0,
+      type => HawkeyePublish::TypeNumber,
+      l => [ "THR", ],
+     },
+     nice =>
+     {
+      enabled => 0,
+      type => HawkeyePublish::TypeNumber,
+      l => [ "NI", "NICE", ],
+     },
+     size =>
+     {
+      enabled => 0,
+      type => HawkeyePublish::TypeNumber,
+      l => [ "SIZE", ],
+     },
+     rss =>
+     {
+      enabled => 0,
+      type => HawkeyePublish::TypeNumber,
+      l => [ "RSS", "RES" ],
+     },
+     share =>
+     {
+      enabled => 0,
+      type => HawkeyePublish::TypeNumber,
+      l => [ "SHARE", ],
+     },
+     state =>
+     {
+      enabled => 0,
+      type => HawkeyePublish::TypeString,
+      l => [ "STAT", "STATE", ],
+     },
+     lib =>
+     {
+      enabled => 0,
+      type => HawkeyePublish::TypeNumber,
+      l => [ "LIB", ],
+     },
+     cpu =>
+     {
+      enabled => 0,
+       type => "%",
+       l => [ "%CPU", "CPU", ],
+     },
+     mem =>
+     {
+      enabled => 0,
+      type => "%",
+      l => [ "%MEM", ],
+     },
+     time =>
+     {
+      enabled => 0,
+      type => "t",
+      l => [ "TIME", ],
+     },
+     command =>
+     {
+      enabled => 0,
+      type => HawkeyePublish::TypeString,
+      l => [ "COMMAND", ],
+     },
     );
 my %TopTypes =
     (
-     "s"		=> { pubtype => "s", prefix => "" },
-     "n"		=> { pubtype => "n", prefix => "" },
-     "t"		=> { pubtype => "n", prefix => "" },
-     "%"		=> { pubtype => "n", prefix => "pct_" },
+
+     HawkeyePublish::TypeString() =>
+     {
+      pubtype => HawkeyePublish::TypeString,
+      prefix => "",
+     },
+
+     HawkeyePublish::TypeNumber() =>
+     {
+      pubtype => HawkeyePublish::TypeNumber,
+      prefix => "",
+     },
+
+     "t" =>
+     {
+      pubtype => HawkeyePublish::TypeNumber,
+      prefix => "",
+     },
+
+     "%" =>
+     {
+      pubtype => HawkeyePublish::TypeNumber,
+      prefix => "pct_",
+     },
+
     );
 my %SortOut;
 
@@ -64,6 +162,7 @@ print STDERR "My pid = $$\n";
 # Global state variables
 my $Reconfig = 0;
 my $AllDone = 0;
+my $AlarmPending = 0;
 my $TopPid = -1;
 my @TopHeader;
 
@@ -96,6 +195,21 @@ $SIG{CHLD} = sub {
 	print STDERR "\"top\" process $Pid died\n";
     }
     $TopPid = -1;
+};
+$SIG{ALRM} = sub {
+    if ( $TopPid > 0 ) {
+	print STDERR "Got SIGALRM; killing top (PID = $TopPid)\n";
+	kill( "TERM", $TopPid ) || print STDERR "Can't kill $TopPid\n";
+    } else {
+	print STDERR "Got SIGALRM (no top to kill)\n";
+    }
+    if ( $AlarmPending ) {
+	print STDERR "Previous alarm pending; bailing out\n";
+	exit 1;
+    }
+    alarm( $Config{TopPeriod} * 4 );
+    $AllDone++;
+    $AlarmPending++;
 };
 
 # Initialize & Run
@@ -134,11 +248,13 @@ sub MainLoop( )
 	}
 
 	# Run the test
-	RunIt( $Config{RunOnce} );
+	my $Exit = RunIt( );
 
 	# If we're in run once mode, we're "all done"
-	if ( $Config{RunOnce} ) {
+	if ( $Exit ) {
 	    $AllDone++;
+	} else {
+	    sleep( 5 );
 	}
     }
     while( ! $AllDone );
@@ -182,6 +298,27 @@ sub Init( )
     s/^\s+//;
     @TopHeader = split ( /\s+/, $_ );
 
+    # Run top, and look at it's version...
+    my $Cmd = "top -v";
+    if ( open( TOP, "$Cmd 2>&1 |" ) )
+    {
+	$_ = <TOP>; chomp;
+	print STDERR "Top version string: '$_'\n";
+	if ( /procps/ )
+	{
+	    $Config{TopOpt}{Batch} = "-b ";
+	    $Config{TopOpt}{Delay} = "-d ";
+	    $Config{TopOpt}{BlankSep} = 0;
+	}
+	elsif ( /version 3\.5/ )
+	{
+	    $Config{TopOpt}{Batch} = "-b -d999999";
+	    $Config{TopOpt}{Delay} = "-s";
+	    $Config{TopOpt}{BlankSep} = 1;
+	}
+	close( TOP );
+    }
+
     # Do an initial configuration
     Configure( );
 }
@@ -203,11 +340,15 @@ sub Configure( )
     my $ConfigStringFields = HawkeyeLib::ReadConfig( "_fields", "*" );
     my $ConfigStringPeriod = HawkeyeLib::ReadConfig( "_period", "30" );
 
+    # Max loops
+    $Config{MaxLoops} = HawkeyeLib::ReadConfig( "_maxloops", "100" );
+    $Config{MaxLoops} = 1 if ( $Config{RunOnce} );
+
     # Check the config period string
     if ( $ConfigStringPeriod =~ /(\d+)([sSmMhH]?)/ )
     {
 	$Config{TopPeriod} = $1;
-	if ( ( $2 eq "s" ) || ( $2 eq "S" ) )
+	if (  ( $2 eq "s" ) || ( $2 eq "s" ) )
 	{
 	    # Do nothing
 	}
@@ -235,9 +376,12 @@ sub Configure( )
     {
 	foreach my $Key ( keys %TopFields )
 	{
-	    if ( $TopFields{$Key}{l} eq $tf )
+	    foreach my $Label ( @{$TopFields{$Key}{l}} )
 	    {
-		$TopFields{$Key}{offset} = $Offset;
+		if ( $Label eq $tf )
+		{
+		    $TopFields{$Key}{offset} = $Offset;
+		}
 	    }
 	}
 	$Offset++;
@@ -251,7 +395,7 @@ sub Configure( )
 	if ( $PubType eq "%" )
 	{
 	    $Pre = "ptc_";
-	    $PubType = "s";
+	    $PubType = HawkeyePublish::TypeString;
 	}
 	$TopFields{$Name}{pubname} = $Pre . $Name;
 	$TopFields{$Name}{pubtype} = $PubType;
@@ -288,8 +432,9 @@ sub Configure( )
     {
 	my $Fields = "";
 	my $Name;
-	$ConfigStringFields =~ s/\s+/,/g;
-	my ( @List ) = split ( /,+/, $ConfigStringFields );
+	my ( @List ) = split ( /[\s\,]+/, $ConfigStringFields );
+	print STDERR "Enable list: " . join( " ", @List ) . "\n"
+	    if ( $Config{Debug} );
 	if ( $List[0] eq "*" )
 	{
 	    print STDERR "Enabling: " if ( $Config{Debug} );
@@ -315,10 +460,15 @@ sub Configure( )
 			"Warning: Invalid field '$Name' in Top list\n";
 		    next;
 		}
-		next if ( $TopFields{$Name}{offset} < 0 );
+		elsif ( $TopFields{$Name}{offset} < 0 )
+		{
+		    print STDERR
+			"Warning: Field name '$Name' not found in top output\n";
+		    next;
+		}
 		$TopFields{$Name}{enabled} = 1;
 		my $Type = $TopFields{$Name}{type};
-		$Fields = $Fields . $TopTypes{$Type}{prefix} . $Name . " ";
+		$Fields .= $TopTypes{$Type}{prefix} . $Name . " ";
 		print STDERR "$Name " if ( $Config{Debug} );
 	    }
 	    print STDERR "\n" if ( $Config{Debug} );
@@ -331,14 +481,11 @@ sub Configure( )
 ###
 ### Get top output for the top n processes
 ###
-sub RunIt( $ )
+sub RunIt( )
 {
-    # Process args
-    my $RunOnce = shift;
-
     # Build the command & start it
-    my $Summary = HawkeyeHash->new( \$Hawkeye, "Summary_" );
-    my $Cmd = "nice -20 top -b -d $Config{TopPeriod}";
+    my $Cmd = "nice -20 top " . $Config{TopOpt}{Batch} . " " .
+	$Config{TopOpt}{Delay} . "$Config{TopPeriod}";
     $TopPid = open ( TOP, "$Cmd|" );
     Carp::confess( "Can't run top '$Cmd'" ) if ( ! $TopPid );
     print STDERR "$Cmd => $TopPid\n";
@@ -349,8 +496,10 @@ sub RunIt( $ )
     # Flag to skip the first input line
     my $SkipFirst = 0;
 
-    # Are we done yet (yes if in 'run once' mode
+    # Are we done yet (yes if in 'run once' mode)
     my $Done = 0;
+    my $Loops = 0;
+    my $Exit = 0;
 
     # Timing info
     my $LastTime = -1;
@@ -359,8 +508,9 @@ sub RunIt( $ )
     # Loop til top dies..
     while( ! $Done )
     {
-	# Init done to run-once
-	$Done = $RunOnce;
+	# Fire off an alarm if we get hung up...
+	$AlarmPending = 0;
+	alarm( $Config{TopPeriod} * 4 );
 
 	# Throw away the first line
 	$_ = <TOP> if ( $SkipFirst );
@@ -369,11 +519,17 @@ sub RunIt( $ )
 	# Store the # of processes that we should read
 	my $NumProcesses = 0;
 
+	# Hash of the summary info
+	my $Summary = HawkeyeHash->new( \$Hawkeye, "Summary_" );
+
 	# Read the header
       READHEADER:
-	while ( <TOP> ) {
-	    # Uptime display?
-	    if ( /.*up.*load/ ) {
+	my @Buffer;
+	while ( <TOP> )
+	{
+	    # Uptime line?
+	    if ( /.*up.*load average:/ )
+	    {
 		my %Uptime;
 
 		# Parse the uptime line
@@ -382,12 +538,55 @@ sub RunIt( $ )
 		# And, add it to our summary
 		foreach my $Attr ( keys %Uptime )
 		{
-		    my $Type = ( $Attr =~ /string/i ) ? "s" : "n";
+		    my $Type = ( $Attr =~ /string/i ) ?
+			HawkeyePublish::TypeString:HawkeyePublish::TypeNumber;
 		    $Summary->Add( $Attr, $Type, $Uptime{$Attr} );
 		}
 	    }
-	    # Processes summary?
-	    elsif ( /^(\d*)(.*):(.*)/ ) {
+
+	    # Older tops just dump a "load" line
+	    elsif ( /^load averages:\s+(.*)/ )
+	    {
+		chomp;
+
+		# Hack out the commas
+		my @LoadInfo = split( /[\s\,]+/, $1 );
+		if ( $#LoadInfo == 3 )
+		{
+		    my %Load;
+
+		    # Parse the uptime line
+		    $Load{Load01} = shift( @LoadInfo );
+		    $Load{Load05} = shift( @LoadInfo );
+		    $Load{Load15} = shift( @LoadInfo );
+
+		    my $TimeStr = shift( @LoadInfo );
+		    if ( $TimeStr =~ /(\d+):(\d+)([ap])m/ )
+		    {
+			my $Time = ( $1 * 60 ) + $2;
+			$Time += (12 * 60 ) if ( $3 =~ /p/ );
+			$Load{Time} = $Time;
+			$Load{TimeString} = $TimeStr;
+		    }
+		    elsif ( $TimeStr =~ /(\d+):(\d+):(\d+)/ )
+		    {
+			$Load{Time} = ( $1 * 60 ) + $2;
+			$Load{TimeString} = $TimeStr;
+		    }
+
+		    # And, add it to our summary
+		    foreach my $Attr ( keys %Load )
+		    {
+			my $Type = ( $Attr =~ /string/i ) ?
+			    HawkeyePublish::TypeString:HawkeyePublish::TypeNumber;
+			$Summary->Add( $Attr, $Type, $Load{$Attr} );
+		    }
+		}
+	    }
+
+	    # Processes summary information?
+	    elsif ( /^(\d*)(.*):(.*)/ )
+	    {
 		my $Num = $1;
 		my $Name = $2;
 		my $Rest = $3;
@@ -395,8 +594,9 @@ sub RunIt( $ )
 		$Name =~ s/\s+/_/g;
 
 		# Openning summary #?
-		if ( $Num ne "" ) {
-		    $Summary->Add( $Name, "n", $Num );
+		if ( $Num ne "" )
+		{
+		    $Summary->Add( $Name, HawkeyePublish::TypeNumber, $Num );
 		    $NumProcesses = $Num if ( $Name eq "processes" );
 		}
 
@@ -404,13 +604,15 @@ sub RunIt( $ )
 		$Rest =~ s/\s{2,}/,/g;
 		my @Fields = split ( /,/, $Rest );
 		my $Field;
-		foreach $Field ( @Fields ) {
-		    if ( $Field =~ /\s*(\S+)(.*)/ ) {
+		foreach $Field ( @Fields )
+		{
+		    if ( $Field =~ /\s*(\S+)(.*)/ )
+		    {
 			my $Value = $1;
 			my $Var = $2;
 			$Var =~ s/^\s+//;
 			my $Type = FixString( \$Value );
-			my $What = 
+			my $What =
 			    $Name . "_" . $TopTypes{$Type}{prefix} . $Var;
 			$Summary->Add( $What,
 				       $TopTypes{$Type}{pubtype},
@@ -420,7 +622,15 @@ sub RunIt( $ )
 	    }
 
 	    # Header line?
-	    elsif ( /\s+PID\s+USER/ ) {
+	    elsif ( /\s+PID\s+USER/ )
+	    {
+		while( <TOP> )
+		{
+		    chomp;
+		    next if ( ! /\s*\d+/ );
+		    push( @Buffer, $_ );
+		    last;
+		}
 		last;
 	    }
 	}
@@ -434,29 +644,41 @@ sub RunIt( $ )
 	my $Proc = 0;
 	my %Processes;
       READPROC:
-	while ( <TOP> ) {
+	while ( ( $_ = shift @Buffer ) || ( $_ = <TOP> ) )
+	{
+	    chomp;
 
-	    #last if ( ! /^\s*$/ );
+	    last if ( $Config{TopOpt}{BlankSep} && ( /^\s*$/ ) );
 
 	    # Verify that we start with a process ID type thingy,
 	    # then parse it..
 	    next if ( ! /\s*\d+/ );
 	    my @Process = split;
 	    my $Pid = $Process[0];
-	    my $Stat = $TopFields{state}{offset};
 
 	    # Unfortunately, the "State" field can be space separated, so
 	    # split screws it up (bad split, bad bad).
-	    # Here, we combine, say, ("N" "R") into "N R"...
+	    # Here, we combine, say, (HawkeyePublish::TypeNumber "R") into "N R"...
 	    # Note: This assumes that the next "valid" field cannot be a
 	    #   single non-digit
-	    while ( $Process[$Stat+1] =~ /^\D$/ ) {
-		$Process[$Stat] = $Process[$Stat] . " " . $Process[$Stat+1];
-		splice( @Process, $Stat+1, 1 );
+	    my $State = $TopFields{state}{offset};
+	    my $n = 0;
+	    while ( ( ( $State + 1 ) < $#Process ) &&
+		    ( $Process[$State+1] =~ /^(\D)$/ ) )
+	    {
+		$Process[$State] .= " $1";
+		splice( @Process, $State+1, 1 );
+		if ( ++$n > 2 )
+		{
+		    print STDERR "It looks like the NR combining got lost in\n";
+		    print STDERR "'$_'\n";
+		    last;
+		}
 	    }
 
 	    # Clean up numbers where required
-	    foreach my $n ( 0 .. $#Process ) {
+	    foreach my $n ( 0 .. $#Process )
+	    {
 		FixString( \$Process[$n] );
 	    }
 	    $Processes{$Proc} = \@Process;
@@ -474,29 +696,54 @@ sub RunIt( $ )
 	    }
 	}
 
+	# Count a run
+	$Loops++;
+
 	# Ok, process the collected data now
+	if ( $Proc < 3 )
+	{
+	    print STDERR "No process lines found\n";
+	    next;
+	}
 	ProcessData( \%Processes );
+	%Processes = ();
 
 	# Timing logic
 	my $CurTime = time();
 	my $TimeDiff = $CurTime - $LastTime;
 	my $MaxTime = $Config{TopPeriod} * 1.5;
-	if ( ( $LastTime > 0 ) && ( $TimeDiff < $Config{TopPeriod} ) ) {
-	    print STDERR "output looped in $TimeDiff seconds!\n";
+	if ( ( $LastTime > 0 ) && ( $TimeDiff < $Config{TopPeriod} ) )
+	{
+	    print STDERR "output looped in $TimeDiff seconds ($Proc lines)!\n";
 	    $Done++ if ( ++$FastCount > 1 );
-	} else {
+	}
+	else
+	{
 	    $FastCount-- if ( $FastCount > 0 );
 	}
 	$LastTime = $CurTime;
 
 	# Check for reconfig
 	$Done++ if ( $Reconfig );
+
+	# Check for max runs
+	if ( $Loops >= $Config{MaxLoops} )
+	{
+	    $Done++;
+	    $Exit++;
+	}
     }
 
     # All done reading!
-    print STDERR "Killing top (PID = $TopPid )\n";
-    kill( "TERM", $TopPid ) if ( $TopPid >= 0 );
+    sleep( 1 );
+    if ( $TopPid >= 0 )
+    {
+	print STDERR "Killing top (PID = $TopPid )\n";
+	kill( "TERM", $TopPid )
+    }
     close( TOP );
+
+    return $Exit;
 }
 
 ###
@@ -611,7 +858,7 @@ sub FixString( $ )
 	$$String = $Value * 1e3 if ( $Modifier =~ /k/i );
 	$$String = $Value * 1e6 if ( $Modifier =~ /m/i );
 	$$String = $Value * 1e9 if ( $Modifier =~ /g/i );
-	return "n";
+	return HawkeyePublish::TypeNumber;
     }
     # Clean up hrs:minutes
     elsif ( $$String =~ /^(\d+):(\d+)$/ )
@@ -623,7 +870,13 @@ sub FixString( $ )
     elsif ( $$String =~ /^(\d+)m$/ )
     {
 	$$String = $1;
-	return "n";
+	return HawkeyePublish::TypeNumber;
+    }
+    # Clean up nnnnH (ie 12345H = 12345 hours)
+    elsif ( $$String =~ /^([\d\.]+)H$/ )
+    {
+	$$String = $1 * 60;
+	return HawkeyePublish::TypeNumber;
     }
     # Percentages (just return the number portion, strip the %)
     elsif ( $$String =~ /^(\d+\.?\d*)\%$/ )
@@ -634,10 +887,10 @@ sub FixString( $ )
     # Just a plain 'ol number?
     elsif ( $$String =~ /^(\d+)$/ )
     {
-	return "n";
+	return HawkeyePublish::TypeNumber;
     }
     else
     {
-	return "s";
+	return HawkeyePublish::TypeString;
     }
 }

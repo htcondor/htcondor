@@ -11,5 +11,7 @@ period: 30m
 prefix: disk_
 
 # It's parameters
-parameter: HAWKEYE_DF_FSLIST = /,/home,/var
+parameter: FSLIST = /,/home,/var
+Flags: required
+Example: FSLIST = /fs1,/fs2,...
 Comma-separated List of file systems (mount points) to monitor

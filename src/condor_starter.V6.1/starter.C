@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_debug.h"
@@ -33,12 +33,11 @@
 #include "java_proc.h"
 #include "mpi_master_proc.h"
 #include "mpi_comrade_proc.h"
-#include "parallel_master_proc.h"
-#include "parallel_comrade_proc.h"
 #include "my_hostname.h"
 #include "internet.h"
 #include "condor_string.h"  // for strnewp
 #include "condor_attributes.h"
+#include "classad_command_util.h"
 #include "condor_random_num.h"
 #include "../condor_sysapi/sysapi.h"
 
@@ -143,6 +142,22 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* orig_cwd,
 		IMMEDIATE_FAMILY);
 	daemonCore->Register_Reaper("Reaper", (ReaperHandlercpp)&CStarter::Reaper,
 		"Reaper", this);
+
+		// Register a command with DaemonCore to handle ClassAd-only
+		// protocol commands.  For now, the only one we care about is
+		// CA_RECONNECT_JOB, which is used if we get disconnected and
+		// a new shadow comes back to try to reconnect, we're willing
+		// to talk to them...  Arguably, that's shadow-specific, and
+		// therefore it should live in the JICShadow, not here.
+		// However, a) we might support other ClassAd-only commands in
+		// the future that make more sense with non-shadow JIC's and
+		// b) someday even CA_RECONNECT_JOB might have some meaning
+		// for COD, who knows...
+	daemonCore->
+		Register_Command( CA_CMD, "CA_CMD",
+						  (CommandHandlercpp)&CStarter::classadCommand,
+						  "CStarter::classadCommand", this, WRITE );
+
 
 	sysapi_set_resource_limits();
 
@@ -463,20 +478,6 @@ CStarter::SpawnJob( void )
 			}
 			break;
 		}
-		case CONDOR_UNIVERSE_PARALLEL: {
-			int is_master = FALSE;
-			if ( jobAd->LookupBool(ATTR_PARALLEL_IS_MASTER, is_master) < 1 ) {
-				is_master = FALSE;
-			}
-			if ( is_master ) {
-				dprintf ( D_FULLDEBUG, "Starting a ParallelMasterProc\n" );
-				job = new ParallelMasterProc( jobAd );
-			} else {
-				dprintf ( D_FULLDEBUG, "Starting a ParallelComradeProc\n" );
-				job = new ParallelComradeProc( jobAd );
-			}
-			break;
-		}
 		default:
 			dprintf( D_ALWAYS, "Starter doesn't support universe %d (%s)\n",
 					 jobUniverse, CondorUniverseName(jobUniverse) ); 
@@ -627,7 +628,22 @@ void
 CStarter::allJobsDone( void )
 {
 		// No more jobs, notify our JobInfoCommunicator
-	jic->allJobsDone();
+	static bool needs_jic_allJobsDone = true;
+	if( needs_jic_allJobsDone && ! jic->allJobsDone() ) {
+			/*
+			  there was an error with the JIC in this step.  at this
+			  point, the only possible reason is if we're talking to a
+			  shadow and file transfer failed to send back the files.
+			  in this case, just return to DaemonCore and wait for
+			  other events (like the shadow reconnecting or the startd
+			  deciding the job lease expired and killing us)
+			*/
+
+		dprintf( D_ALWAYS, "JIC::allJobsDone() failed, waiting for job "
+				 "lease to expire or for a reconnect attempt\n" );
+		return;
+	}
+	needs_jic_allJobsDone = false;
 
 		// Now that we're done transfering files and/or doing all
 		// our cleanup, we can finally go through the
@@ -636,9 +652,14 @@ CStarter::allJobsDone( void )
 	UserProc *job;
 	CleanedUpJobList.Rewind();
 	while( (job = CleanedUpJobList.Next()) != NULL) {
-		job->JobExit();
-		CleanedUpJobList.DeleteCurrent();
-		delete job;
+		if( job->JobExit() ) {
+			CleanedUpJobList.DeleteCurrent();
+			delete job;
+		} else {
+			dprintf( D_ALWAYS, "JobExit() failed, waiting for job "
+					 "lease to expire or for a reconnect attempt\n" );
+			return;
+		}
 	}
 		// No more jobs, all cleanup done, notify our JIC
 	jic->allJobsGone();
@@ -815,4 +836,37 @@ CStarter::closeSavedStderr( void )
 		close( starter_stderr_fd );
 		starter_stderr_fd = -1;
 	}
+}
+
+
+int
+CStarter::classadCommand( int, Stream* s )
+{
+	ClassAd ad;
+	ReliSock* rsock = (ReliSock*)s;
+	int cmd = 0;
+
+	cmd = getCmdFromReliSock( rsock, &ad, false );
+
+	switch( cmd ) {
+	case FALSE:
+			// error in getCmd().  it will already have dprintf()'ed
+			// aobut it, so all we have to do is return
+		return FALSE;
+		break;
+
+	case CA_RECONNECT_JOB:
+			// hand this off to our JIC, since it will know what to do
+		return jic->reconnect( rsock, &ad );
+		break;
+
+	default:
+		const char* tmp = getCommandString(cmd);
+		MyString err_msg = "Starter does not support command (";
+		err_msg += tmp;
+		err_msg += ')';
+		sendErrorReply( s, tmp, CA_INVALID_REQUEST, err_msg.Value() );
+		return FALSE;
+	}
+	return TRUE;
 }

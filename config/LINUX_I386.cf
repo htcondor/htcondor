@@ -1,46 +1,20 @@
 /* Things specific to I386_LINUX machines (all versions) */
 
-#define Architecture		I386
-#define IS_I386			YES
-#define IS_I386_LINUX		YES
-
-#define	ArchOptimizeFlag	-m486
-
-#if defined( IS_GLIBC23 )
-#   define HAS_GLOBUS	YES
-#   define Platform		INTEL-LINUX-GLIBC23
-#   define PublicTargetName	intel_linux2-glibc23
-#   define LIB_NAME		glibc23
-#elif defined( IS_GLIBC22 )
-#   define HAS_GLOBUS	YES
-#   define Platform		INTEL-LINUX-GLIBC22
-#   define PublicTargetName	intel_linux2-glibc22
-#   define LIB_NAME		glibc22
-#elif defined( IS_GLIBC21 )
-#   define HAS_GLOBUS	YES
-#   define Platform		INTEL-LINUX-GLIBC21
-#   define PublicTargetName	intel_linux2-glibc21
-#   define LIB_NAME		glibc21
-#elif defined( IS_GLIBC20 )
-#   define HAS_GLOBUS   NO
-#   define Platform		INTEL-LINUX-GLIBC20
-#   define PublicTargetName	intel_linux2-glibc20
-#   define LIB_NAME		glibc20
+#ifdef IS_C_COMP_MAJOR_GCC_3
+#define ArchOptimizeFlag -mcpu=i486
 #else
-#   define HAS_GLOBUS	NO
-#   define Platform		INTEL-LINUX-LIBC5
-#   define PublicTargetName	intel_linux2-libc5
-#   define LIB_NAME		libc5
+#define ArchOptimizeFlag -m486
 #endif
 
-#if defined( IS_GLIBC )
-	/* this is a bit wonky here, but otherwise the i686 
-		becomes a ' 1 ' on glib machines with egcs. I don't think i686
-		is used for anything important, so away it goes. */
-#	undef i686
+#define HAS_GLOBUS	YES
+
+#ifdef IS_GLIBC23
+/*#define NEEDS_64BIT_SYSCALLS            YES*/
+/*#define NEEDS_64BIT_STRUCTS             YES*/
 #endif
 
-/*#define IS_CLIPPED YES*/
+#define WANT_PVM	YES
+#define PVM_ARCH	LINUX
 
 #define HAS_GSI		YES
 #define HAS_OPENSSL	YES

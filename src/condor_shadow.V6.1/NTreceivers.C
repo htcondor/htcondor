@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_classad.h"
@@ -28,95 +28,22 @@
 #include "condor_constants.h"
 #include "pseudo_ops.h"
 #include "condor_sys.h"
+#include "baseshadow.h"
+#include "remoteresource.h"
+#include "MyString.h"
 
 
 extern ReliSock *syscall_sock;
+extern BaseShadow *Shadow;
+extern RemoteResource *thisRemoteResource;
 
 
-#ifdef WIN32
-	// This block of code is just temporary for Win32, and should be removed
-	// once the shadow runs as the user on Win32.
-	// These functions check to see if the owner has permission to read or
-	// write a given file.  They are all just stub functions on Unix, because
-	// on Unix the Shadow already runs as the user, so it can just try to 
-	// do a read or write directly and let the OS tell us if it fails.
-	// -Todd Tannenbaum, 1/02
-	#include "perm.h"
-	#include "condor_attributes.h"
-	static perm * perm_obj = NULL;
-
-	static 
-	void
-	initialize_perm_checks()
-	{
-		ClassAd *Ad = NULL;
-
-		pseudo_get_job_info(Ad);
-		if ( !Ad ) {
-			// failure
-			return;
-		}
-
-		char owner[150];
-		if (Ad->LookupString(ATTR_OWNER, owner) != 1) {
-			// no owner specified in ad
-			return;		
-		}
-		// lookup the domain
-		char ntdomain[80];
-		char *p_ntdomain = ntdomain;
-		if (Ad->LookupString(ATTR_NT_DOMAIN, ntdomain) != 1) {
-			// no nt domain specified in the ad; assume local account
-			p_ntdomain = NULL;
-		}
-		perm_obj = new perm();
-		if ( !perm_obj->init(owner,p_ntdomain) ) {
-			// could not find the owner on this system; perm object
-			// already did a dprintf so we don't have to.
-			delete perm_obj;
-			perm_obj = NULL;
-			return;
-		} 
-	}
-
-	static 
-	bool
-	read_access(const char *filename)
-	{
-		bool result = true;
-
-		if ( !perm_obj || (perm_obj->read_access(filename) != 1) ) {
-			// we do _not_ have permission to read this file!!
-			dprintf(D_ALWAYS,
-				"Permission denied to read file %s\n",filename);
-			result = false;
-		}
-
-		return result;
-	}
-
-	static 
-	bool 
-	write_access(const char *filename)
-	{
-		bool result = true;
-
-		// check for write permission on this file
-		if ( !perm_obj || (perm_obj->write_access(filename) != 1) ) {
-			// we do _not_ have permission to write this file!!
-			dprintf(D_ALWAYS,"Permission denied to write file %s!\n",
-					filename);
-			result = false;
-		}
-
-		return result;
-	}
-#else  
-	// Some stub functions on Unix.  See comment above.
-	static void initialize_perm_checks() { return; }
-	static bool read_access(const char *filename) { return true; }
-	static bool write_access(const char *filename) { return true; }
-#endif 
+	// Some stub functions. In days of old, we would fire up
+	// a perm object on windows, but since the shadow runs as
+	// the user now, we don't need to do that stuff.
+static void initialize_perm_checks() { return; }
+static bool read_access(const char *filename) { return true; }
+static bool write_access(const char *filename) { return true; }
 
 
 int
@@ -135,11 +62,36 @@ do_REMOTE_syscall()
 
 	rval = syscall_sock->code(condor_sysnum);
 	if (!rval) {
-		char *execute_machine_ip;
+		MyString err_msg;
+		err_msg = "Can no longer talk to condor_starter <";
+		err_msg += syscall_sock->endpoint_ip_str();
+		err_msg += ':';
+		err_msg += syscall_sock->endpoint_port();
+		err_msg += '>';
+		if( Shadow->supportsReconnect() ) {
+				// instead of having to EXCEPT, we can now try to
+				// reconnect.  happy day! :)
+			dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
+				// the socket is closed, there's no way to recover
+				// from this.  so, we have to cancel the socket
+				// handler in daemoncore and delete the relisock.
+			thisRemoteResource->closeClaimSock();
 
-		execute_machine_ip = syscall_sock->endpoint_ip_str();
-		EXCEPT("Can no longer talk to condor_starter on execute machine (%s)",
-			   (execute_machine_ip != NULL) ? execute_machine_ip : "Unknown");
+			const char* txt = "Socket between submit and execute hosts "
+				"closed unexpectedly";
+			Shadow->logDisconnectedEvent( txt ); 
+
+				// tell the shadow to start trying to reconnect
+			Shadow->reconnect();
+				// we need to return 0 so that our caller doesn't
+				// think the job exited and doesn't do anything to the
+				// syscall socket.
+			return 0;
+		} else {
+				// The remote starter doesn't support it, so give up
+				// like we always used to.
+			EXCEPT( "%s", err_msg.Value() );
+		}
 	}
 
 	dprintf(D_SYSCALLS,

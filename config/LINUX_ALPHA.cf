@@ -1,38 +1,11 @@
 /* Things specific to ALPHA_LINUX machines (all versions) */
 
-#define Architecture		ALPHA
-#define IS_ALPHA		YES
-#define IS_ALPHA_LINUX		YES
-
 #define	ArchOptimizeFlag
-
-#if defined( IS_GLIBC21 )
-#   define Platform		ALPHA-LINUX-GLIBC21
-#   define PublicTargetName	alpha_linux2-glibc21
-#   define LIB_NAME		glibc21
-#elif defined( IS_GLIBC20 )
-#   define Platform		ALPHA-LINUX-GLIBC20
-#   define PublicTargetName	alpha_linux2-glibc20
-#   define LIB_NAME		glibc20
-#else
-#   define Platform		ALPHA-LINUX-LIBC5
-#   define PublicTargetName	alpha_linux2-libc5
-#   define LIB_NAME		libc5
-#endif
 
 /* For now, try a "clipped" version */
 #define IS_CLIPPED YES
 
-#if defined( IS_GLIBC )
-        /* this is a bit wonky here, but otherwise the i686 in the path below
-                becomes a ' 1 ' on glib machines with egcs. I don't think i686
-                is used for anything important, so away it goes. */
-#       undef i686
-#   define EgcsLibc /usr/local/lib/gcc-lib/alphaev5-unknown-linux-gnu/2.95.2/libgcc.a
-#endif
+#define WANT_PVM NO
 
-#undef HAS_PVM
-#define HAS_PVM NO
-
-#undef HAS_KERBEROS
-#define HAS_KERBEROS NO
+#undef WANT_KERBEROS
+#define WANT_KERBEROS NO

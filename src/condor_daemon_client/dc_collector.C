@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_debug.h"
@@ -268,15 +268,18 @@ DCCollector::finishUpdate( Sock* sock, ClassAd* ad1, ClassAd* ad2 )
 {
 	sock->encode();
 	if( ad1 && ! ad1->put(*sock) ) {
-		newError( "Failed to send ClassAd #1 to collector" );
+		newError( CA_COMMUNICATION_ERROR,
+				  "Failed to send ClassAd #1 to collector" );
 		return false;
 	}
 	if( ad2 && ! ad2->put(*sock) ) {
-		newError( "Failed to send ClassAd #2 to collector" );
+		newError( CA_COMMUNICATION_ERROR,
+				  "Failed to send ClassAd #2 to collector" );
 		return false;
 	}
 	if( ! sock->eom() ) {
-		newError( "Failed to send EOM to collector" );
+		newError( CA_COMMUNICATION_ERROR,
+				  "Failed to send EOM to collector" );
 		return false;
 	}
 	return true;
@@ -306,12 +309,13 @@ DCCollector::sendUDPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2 )
 	if( ! ssock.connect(_addr, _port) ) {
 		MyString err_msg = "Failed to connect to collector ";
 		err_msg += udp_update_destination;
-		newError( err_msg.Value() );
+		newError( CA_CONNECT_FAILED, err_msg.Value() );
 		return false;
 	}
 
 	if( ! startCommand(cmd, &ssock, 20) ) { 
-		newError( "Failed to send UDP update command to collector" );
+		newError( CA_COMMUNICATION_ERROR,
+				  "Failed to send UDP update command to collector" );
 		return false;
 	}
 
@@ -376,13 +380,14 @@ DCCollector::initiateTCPUpdate( int cmd, ClassAd* ad1, ClassAd* ad2 )
 	if( ! update_rsock->connect(tcp_collector_addr, tcp_collector_port) ) {
 		MyString err_msg = "Failed to connect to collector ";
 		err_msg += updateDestination();
-		newError( err_msg.Value() );
+		newError( CA_CONNECT_FAILED, err_msg.Value() );
 		delete update_rsock;
 		update_rsock = NULL;
 		return false;
 	}
 	if( ! startCommand(cmd, update_rsock, 20) ) { 
-		newError( "Failed to send TCP update command to collector" );
+		newError( CA_COMMUNICATION_ERROR,
+				  "Failed to send TCP update command to collector" );
 		return false;
 	}
 	return finishUpdate( update_rsock, ad1, ad2 );
@@ -570,7 +575,11 @@ DCCollectorAdSeqMan::DCCollectorAdSeqMan( void )
 // Destructor for the Ad Sequence Number Manager
 DCCollectorAdSeqMan::~DCCollectorAdSeqMan( void )
 {
-	//delete adSeqInfo;
+	int				adNum;
+
+	for ( adNum = 0;  adNum < numAds;  adNum++ ) {
+		delete adSeqInfo[adNum];
+	}
 }
 
 // Get the sequence number

@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 extern "C" {
 /* These remaps are needed by file_state.c */
@@ -32,21 +32,22 @@ REMAP_TWO( dup2, __dup2, int, int, int )
 REMAP_ONE( fchdir, __fchdir, int, int )
 REMAP_THREE_VARARGS( fcntl, __fcntl, int , int , int , int)
 REMAP_ONE( fsync, __fsync, int , int )
-#if defined(GLIBC)
-	REMAP_TWO( ftruncate, __ftruncate, int , int , off_t )
-#else
-	REMAP_TWO( ftruncate, __ftruncate, int , int , size_t )
-#endif
-#if defined(GLIBC)
-	REMAP_THREE_VARARGS( ioctl, __ioctl, int , int , unsigned long , int)
-#else
-	REMAP_THREE_VARARGS( ioctl, __ioctl, int , int , int , int)
+REMAP_TWO( ftruncate, __ftruncate, int , int , off_t )
+REMAP_THREE( poll, __libc_poll, int , struct pollfd *, unsigned long , int )
+REMAP_THREE( poll, __poll, int , struct pollfd *, unsigned long , int )
+REMAP_THREE( getdents64, __getdents64, int , int , struct dirent64 *, size_t )
+
+#if defined(GLIBC23)
+	REMAP_TWO( ftruncate64, __ftruncate64, int , int , off64_t )
 #endif
 
-REMAP_THREE( lseek, __lseek, __off_t, int, __off_t, int )
+REMAP_THREE_VARARGS( ioctl, __ioctl, int , int , unsigned long , int)
 
-#if defined(GLIBC21) || defined(GLIBC22)
+REMAP_THREE( lseek, __lseek, off_t, int, off_t, int )
+
+#if defined(GLIBC21) || defined(GLIBC22) || defined(GLIBC23)
 REMAP_THREE( llseek, __llseek, off64_t, int, off64_t, int )
+REMAP_THREE( llseek, _llseek, off64_t, int, off64_t, int )
 REMAP_THREE( llseek, __lseek64, off64_t, int, off64_t, int )
 REMAP_THREE( llseek, lseek64, off64_t, int, off64_t, int )
 #elif defined(GLIBC20)
@@ -62,19 +63,21 @@ REMAP_THREE( llseek, lseek64, long long int, int, long long int, int )
 
 REMAP_THREE_VARARGS( open, __open, int, const char *, int, int )
 
-REMAP_THREE( read, __read, ssize_t, int, __ptr_t, size_t )
-#if defined(GLIBC21)
-REMAP_THREE( read, __libc_read, ssize_t, int, __ptr_t, size_t )
+#if defined(GLIBC23)
+REMAP_THREE_VARARGS( open64, __open64, int, const char *, int, int )
+REMAP_THREE_VARARGS( open64, __libc_open64, int, const char *, int, int )
 #endif
 
+REMAP_THREE( read, __read, ssize_t, int, __ptr_t, size_t )
+
 REMAP_THREE( write, __write, ssize_t, int, const __ptr_t, size_t )
-#if defined(GLIBC21)
+#if defined(GLIBC22) || defined(GLIBC23)
 REMAP_THREE( write, __libc_write, ssize_t, int, const __ptr_t, size_t )
 #endif
 
 /* make a bunch of __libc remaps for the things that have fd's or paths.
 	These were new entry points in glibc22 */
-#if defined(GLIBC22)
+#if defined(GLIBC22) || defined(GLIBC23)
 REMAP_ONE( close, __libc_close, int , int )
 REMAP_TWO( creat, __libc_creat, int, const char*, mode_t )
 REMAP_ONE( dup, __libc_dup, int, int )
@@ -90,18 +93,23 @@ REMAP_THREE_VARARGS( open, __libc_open, int, const char *, int, int )
 REMAP_THREE( read, __libc_read, ssize_t, int, __ptr_t, size_t )
 #endif
 
+#if defined(GLIBC23)
+REMAP_THREE( lseek, __libc_lseek, off_t, int, off_t, int )
+REMAP_FIVE( select, __libc_select, int , int , fd_set *, fd_set *, fd_set *, struct timeval *)
 #endif
+
+#endif /* if defined(FILE_TABLE) */
 
 /* These remaps are neede by signals_support.c */
 #if defined(SAVE_SIGSTATE)
 
 REMAP_THREE( sigprocmask, __sigprocmask, int, int, const sigset_t *, sigset_t * )
 REMAP_ONE( sigsetmask, __sigsetmask, int, int )
+REMAP_ONE( sigsuspend, __sigsuspend, int, const sigset_t * )
+REMAP_ONE( sigsuspend, __libc_sigsuspend, int, const sigset_t * )
+REMAP_THREE( sigaction, __sigaction, int, int, const struct sigaction *, struct sigaction * )
+REMAP_THREE( sigaction, __libc_sigaction, int, int, const struct sigaction *, struct sigaction * )
 
-#if !defined(GLIBC)
-	REMAP_ONE( sigsuspend, __sigsuspend, int, const sigset_t * )
-	REMAP_THREE( sigaction, __sigaction, int, int, struct sigaction *, struct sigaction * )
-#endif
 
 #endif /* SAVE_SIGSTATE */
 
@@ -119,6 +127,7 @@ REMAP_TWO( fchmod, __fchmod, int , int , mode_t )
 REMAP_THREE( fchown, __fchown, int , int , uid_t , gid_t )
 REMAP_TWO( flock, __flock, int , int , int )
 REMAP_ZERO( fork, __fork, pid_t )
+REMAP_ZERO( fork, __libc_fork, pid_t )
 REMAP_ZERO( vfork, __vfork, pid_t )
 REMAP_TWO( fstatfs, __fstatfs, int , int , struct statfs * )
 REMAP_ZERO( getegid, __getegid, gid_t )
@@ -132,9 +141,12 @@ REMAP_ZERO( getpid, __getpid, pid_t )
 REMAP_ZERO( getppid, __getppid, pid_t )
 REMAP_TWO( getrlimit, __getrlimit, int , int , struct rlimit *)
 REMAP_TWO( gettimeofday, __gettimeofday, int , struct timeval *, struct timezone *)
-#if !defined(GLIBC22)
+
+/* getuid is now a weak alias to __getuid */
+#if !defined(GLIBC22) && !defined(GLIBC23)
 REMAP_ZERO( getuid, __getuid, uid_t )
 #endif
+
 REMAP_TWO( kill, __kill, int, pid_t, int )
 REMAP_TWO( link, __link, int , const char *, const char *)
 REMAP_TWO( mkdir, __mkdir, int , const char *, mode_t )
@@ -142,10 +154,16 @@ REMAP_SIX( mmap, __mmap, void *, void *, size_t, int, int, int, off_t )
 REMAP_FIVE( mount, __mount, int , const char *, const char *, const char *, unsigned long , const void *)
 REMAP_THREE( mprotect, __mprotect, int , MMAP_T, size_t , int )
 REMAP_THREE( msync, __msync, int , void *, size_t , int )
+REMAP_THREE( msync, __libc_msync, int , void *, size_t , int )
 REMAP_TWO( munmap, __munmap, int, void *, size_t )
 REMAP_ONE( pipe, __pipe, int , int *)
 REMAP_THREE( readlink, __readlink, int , const char *, char *, size_t )
 REMAP_THREE( readv, __readv, int, int, const struct iovec *, size_t )
+
+#if defined(GLIBC23)
+REMAP_THREE( readv, __libc_readv, int, int, const struct iovec *, size_t )
+#endif
+
 REMAP_THREE( reboot, __reboot, int , int , int , int )
 REMAP_TWO( rename, __rename, int, const char*, const char* )
 REMAP_ONE( rmdir, __rmdir, int , const char *)
@@ -171,7 +189,7 @@ REMAP_ONE( umask, __umask, mode_t , mode_t )
 REMAP_ONE( umount, __umount, int , const char *)
 
 /* uname is now a weak alias to __uname */
-#if !defined(GLIBC22)
+#if !defined(GLIBC22) && !defined(GLIBC23)
 REMAP_ONE( uname, __uname, int , struct utsname *)
 #endif
 
@@ -179,14 +197,27 @@ REMAP_ONE( unlink, __unlink, int , const char *)
 REMAP_TWO( utime, __utime, int, const char *, const struct utimbuf * )
 REMAP_FOUR( wait4, __wait4, pid_t , pid_t , void *, int , struct rusage *)
 REMAP_THREE( waitpid, __waitpid, pid_t , pid_t , int *, int )
+REMAP_THREE( waitpid, __libc_waitpid, pid_t , pid_t , int *, int )
+
 REMAP_THREE( writev, __writev, int, int, const struct iovec *, size_t )
+
+#if defined(GLIBC23)
+REMAP_THREE( writev, __libc_writev, int, int, const struct iovec *, size_t )
+#endif
+
+REMAP_FOUR( profil, __profil, int , char *, int , int , int );
 
 
 /* Differences */
 
 #if defined(GLIBC)
 
+#if !defined(GLIBC22) && !defined(GLIBC23)
+/* clone has a much different prototype not supported by the stub generator
+	under glibc22 and later machines */
 REMAP_TWO( clone, __clone, pid_t , void *, unsigned long )
+#endif
+
 REMAP_TWO( fstat, __fstat, int , int , struct stat *)
 REMAP_TWO( getrusage, __getrusage, int, int, struct rusage *)
 REMAP_THREE( mknod, __mknod, int , const char *, mode_t , dev_t )

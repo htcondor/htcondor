@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 /* This file is the implementation of the RemoteResource class. */
 
@@ -31,7 +31,7 @@
 #include "condor_attributes.h"
 #include "internet.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
-#include "daemon.h"
+#include "dc_starter.h"
 
 // for remote syscalls, this is currently in NTreceivers.C.
 extern int do_REMOTE_syscall();
@@ -49,7 +49,8 @@ static char *Resource_State_String [] = {
 	"PENDING_DEATH", 
 	"FINISHED",
 	"SUSPENDED",
-	"STARTUP"
+	"STARTUP",
+	"RECONNECT",
 };
 
 
@@ -66,6 +67,7 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	fs_domain = NULL;
 	uid_domain = NULL;
 	claim_sock = NULL;
+	last_job_lease_renewal = 0;
 	exit_reason = -1;
 	exited_by_signal = false;
 	exit_value = -1;
@@ -74,6 +76,9 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	image_size = 0;
 	state = RR_PRE;
 	began_execution = false;
+	supports_reconnect = false;
+	next_reconnect_tid = -1;
+	reconnect_attempts = 0;
 }
 
 
@@ -130,6 +135,7 @@ RemoteResource::activateClaim( int starterVersion )
 				   (SocketHandlercpp)&RemoteResource::handleSysCalls, 
 				   "HandleSyscalls", this );
 			setResourceState( RR_STARTUP );		
+			hadContact();
 			return true;
 			break;
 		case CONDOR_TRY_AGAIN:
@@ -147,6 +153,13 @@ RemoteResource::activateClaim( int starterVersion )
 					 retry_delay ); 
 			sleep( retry_delay );
 			break;
+
+		case CONDOR_ERROR:
+			shadow->dprintf( D_ALWAYS, "%s\n", dc_startd->error() );
+			setExitReason( JOB_NOT_STARTED );
+			return false;
+			break;
+
 		case NOT_OK:
 			shadow->dprintf( D_ALWAYS, 
 							 "Request to run on %s was REFUSED\n",
@@ -220,11 +233,11 @@ RemoteResource::dprintfSelf( int debugLevel )
 					  "host info:\n");
 	if( dc_startd ) {
 		char* addr = dc_startd->addr();
-		char* cap = dc_startd->getCapability();
+		char* id = dc_startd->getClaimId();
 		shadow->dprintf( debugLevel, "\tstartdAddr: %s\n", 
 						 addr ? addr : "Unknown" );
-		shadow->dprintf( debugLevel, "\tcapability: %s\n", 
-						 cap ? cap : "Unknown" );
+		shadow->dprintf( debugLevel, "\tClaimId: %s\n", 
+						 id ? id : "Unknown" );
 	}
 	if( machineName ) {
 		shadow->dprintf( debugLevel, "\tmachineName: %s\n",
@@ -336,7 +349,7 @@ RemoteResource::handleSysCalls( Stream *sock )
 			// close sock on this end...the starter has gone away.
 		return TRUE;
 	}
-
+	hadContact();
 	return KEEP_STREAM;
 }
 
@@ -379,22 +392,22 @@ RemoteResource::getStartdAddress( char *& sinful )
 
 
 void
-RemoteResource::getCapability( char *& cap )
+RemoteResource::getClaimId( char *& id )
 {
-	if( cap ) {
-		cap[0] = '\0';
+	if( id ) {
+		id[0] = '\0';
 	}
 	if( ! dc_startd ) {
 		return;
 	}
-	char* capab = dc_startd->getCapability();
-	if( ! capab ) {
+	char* my_id = dc_startd->getClaimId();
+	if( ! my_id ) {
 		return;
 	}
-	if( ! cap ) {
-		cap = strnewp( capab );
+	if( ! id ) {
+		id = strnewp( my_id );
 	} else {
-		strcpy( cap, capab );
+		strcpy( id, my_id );
 	}
 }
 
@@ -484,6 +497,17 @@ RemoteResource::getClaimSock()
 }
 
 
+void
+RemoteResource::closeClaimSock( void )
+{
+	if( claim_sock ) {
+		daemonCore->Cancel_Socket( claim_sock );
+		delete claim_sock;
+		claim_sock = NULL;
+	}
+}
+
+
 int
 RemoteResource::getExitReason()
 {
@@ -512,18 +536,67 @@ RemoteResource::exitCode( void )
 
 
 void
-RemoteResource::setStartdInfo( const char *sinful, 
-							   const char* capability ) 
+RemoteResource::setStartdInfo( ClassAd* ad )
 {
+	char* name = NULL;
+	ad->LookupString( ATTR_REMOTE_HOST, &name );
+	if( ! name ) {
+		ad->LookupString( ATTR_NAME, &name );
+		if( ! name ) {
+			EXCEPT( "ad includes neither %s nor %s!", ATTR_NAME,
+					ATTR_REMOTE_HOST );
+		}
+	}
+
+	char* pool = NULL;
+	ad->LookupString( ATTR_REMOTE_POOL, &pool );
+		// we don't care if there's no pool specified...
+
+	char* claim_id = NULL;
+	ad->LookupString( ATTR_CLAIM_ID, &claim_id );
+	if( ! claim_id ) {
+		EXCEPT( "ad does not include %s!", ATTR_CLAIM_ID );
+	}
+
+	char* addr = getAddrFromClaimId( claim_id );
+	if( ! addr ) {
+		EXCEPT( "invalid %s in ad (%s)", ATTR_CLAIM_ID, claim_id );
+	}
+
+	initStartdInfo( name, pool, addr, claim_id );
+}
+
+
+void
+RemoteResource::setStartdInfo( const char *sinful, 
+							   const char* claim_id ) 
+{
+	initStartdInfo( sinful, NULL, NULL, claim_id );
+}
+
+
+void
+RemoteResource::initStartdInfo( const char *name, const char *pool,
+								const char *addr, const char* claim_id )
+{
+	dprintf( D_FULLDEBUG, "in RemoteResource::initStartdInfo()\n" );  
+
 	if( dc_startd ) {
 		delete dc_startd;
 	}
-	dc_startd = new DCStartd( sinful, NULL );
-	dc_startd->setCapability( capability );
+	dc_startd = new DCStartd( name, pool, addr, claim_id );
+
+	if( name ) {
+		setMachineName( name );
+	} else if( addr ) {
+		setMachineName( addr );
+	} else {
+		EXCEPT( "in RemoteResource::setStartdInfo() without name or addr" );
+	}
 
 		/*
-		  Tell daemonCore that we're willing to
-		  grant WRITE permission to whatever machine we are claiming.
+		  Tell daemonCore that we're willing to grant DAEMON
+		  permission to whatever machine we are claiming.
 		  This greatly simplifies DaemonCore permission stuff
 		  for flocking, since submitters don't have to know all the
 		  hosts they might possibly run on, all they have to do is
@@ -531,14 +604,106 @@ RemoteResource::setStartdInfo( const char *sinful,
 		  to (which they have to do, already).  
 		  Added on 3/15/01 by Todd Tannenbaum <tannenba@cs.wisc.edu>
 		*/
-	char *addr;
-	if( (addr = string_to_ipstr(sinful)) ) {
-		daemonCore->AddAllowHost( addr, DAEMON );
+	char *ip = string_to_ipstr( dc_startd->addr() );
+	if( ip ) {
+		daemonCore->AddAllowHost( ip, WRITE );
+		daemonCore->AddAllowHost( ip, DAEMON );
 	} else {
 		dprintf( D_ALWAYS, "ERROR: Can't convert \"%s\" to an IP address!\n", 
-				 sinful );
+				 dc_startd->addr() );
 	}
 }
+
+
+void
+RemoteResource::setStarterInfo( ClassAd* ad )
+{
+
+	char* tmp = NULL;
+
+	if( ad->LookupString(ATTR_STARTER_IP_ADDR, &tmp) ) {
+		setStarterAddress( tmp );
+		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_STARTER_IP_ADDR, tmp ); 
+		free( tmp );
+		tmp = NULL;
+	}
+
+	if( ad->LookupString(ATTR_UID_DOMAIN, &tmp) ) {
+		if( uid_domain ) {
+			delete [] uid_domain;
+		}	
+		uid_domain = strnewp( tmp );
+		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_UID_DOMAIN, tmp );
+		free( tmp );
+		tmp = NULL;
+	}
+
+	if( ad->LookupString(ATTR_FILE_SYSTEM_DOMAIN, &tmp) ) {
+		if( fs_domain ) {
+			delete [] fs_domain;
+		}	
+		fs_domain = strnewp( tmp );
+		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_FILE_SYSTEM_DOMAIN,
+				 tmp );  
+		free( tmp );
+		tmp = NULL;
+	}
+
+	if( ad->LookupString(ATTR_MACHINE, &tmp) ) {
+		if( machineName ) {
+			if( is_valid_sinful(machineName) ) {
+				delete [] machineName;
+				machineName = strnewp( tmp );
+			}
+		}	
+		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, tmp );
+		free( tmp );
+		tmp = NULL;
+	}
+
+	if( ad->LookupString(ATTR_ARCH, &tmp) ) {
+		if( starterArch ) {
+			delete [] starterArch;
+		}	
+		starterArch = strnewp( tmp );
+		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_ARCH, tmp ); 
+		free( tmp );
+		tmp = NULL;
+	}
+
+	if( ad->LookupString(ATTR_OPSYS, &tmp) ) {
+		if( starterOpsys ) {
+			delete [] starterOpsys;
+		}	
+		starterOpsys = strnewp( tmp );
+		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_OPSYS, tmp ); 
+		free( tmp );
+		tmp = NULL;
+	}
+
+	if( ad->LookupString(ATTR_VERSION, &tmp) ) {
+		if( starter_version ) {
+			delete [] starter_version;
+		}	
+		starter_version = strnewp( tmp );
+		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_VERSION, tmp ); 
+		free( tmp );
+		tmp = NULL;
+	}
+
+	int tmp_int;
+	if( ad->LookupBool(ATTR_HAS_RECONNECT, tmp_int) ) {
+			// Whatever the starter defines in its own classad
+			// overrides whatever we might think...
+		supports_reconnect = tmp_int;
+		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_HAS_RECONNECT, 
+				 supports_reconnect ? "TRUE" : "FALSE" );
+	} else {
+		dprintf( D_SYSCALLS, "  %s = FALSE (not specified)\n",
+				 ATTR_HAS_RECONNECT );
+	}
+}
+
 
 void
 RemoteResource::setMachineName( const char * mName )
@@ -579,36 +744,6 @@ RemoteResource::setStarterAddress( const char * starterAddr )
 		delete [] starterAddress;
 	}	
 	starterAddress = strnewp( starterAddr );
-}
-
-
-void
-RemoteResource::setStarterArch( const char * arch )
-{
-	if( starterArch ) {
-		delete [] starterArch;
-	}	
-	starterArch = strnewp( arch );
-}
-
-
-void
-RemoteResource::setStarterOpsys( const char * opsys )
-{
-	if( starterOpsys ) {
-		delete [] starterOpsys;
-	}	
-	starterOpsys = strnewp( opsys );
-}
-
-
-void
-RemoteResource::setStarterVersion( const char * version )
-{
-	if( starter_version ) {
-		delete [] starter_version;
-	}	
-	starter_version = strnewp( version );
 }
 
 
@@ -700,6 +835,10 @@ RemoteResource::setJobAd( ClassAd *jA )
 	if( jA->LookupInteger(ATTR_DISK_USAGE, int_value) ) {
 		disk_usage = int_value;
 	}
+
+	if( jA->LookupInteger(ATTR_LAST_JOB_LEASE_RENEWAL, int_value) ) {
+		last_job_lease_renewal = (time_t)int_value;
+	}
 }
 
 
@@ -712,6 +851,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	char tmp[ATTRLIST_MAX_EXPRESSION];
 
 	dprintf( D_FULLDEBUG, "Inside RemoteResource::updateFromStarter()\n" );
+	hadContact();
 
 	if( DebugFlags & D_MACHINE ) {
 		dprintf( D_MACHINE, "Update ad:\n" );
@@ -1036,3 +1176,360 @@ RemoteResource::beginExecution( void )
 	shadow->resourceBeganExecution( this );
 }
 
+void
+RemoteResource::hadContact( void )
+{
+		// Length: ATTR_LAST_JOB_LEASE_RENEWAL is 19, '=' is 1,
+		// MAX_INT is 10, and another 10 to spare should plenty... 
+	char contact_buf[40];
+	last_job_lease_renewal = time(0);
+	snprintf( contact_buf, 32, "%s=%d", ATTR_LAST_JOB_LEASE_RENEWAL,
+			  (int)last_job_lease_renewal );
+	jobAd->Insert( contact_buf );
+}
+
+
+bool
+RemoteResource::supportsReconnect( void )
+{
+		// even if the starter we're talking to supports reconnect, we
+		// only want to return true if the job we're running supports
+		// it too (i.e. has a GlobalJobId and a JobLeaseDuration).
+	const char* gjid = shadow->getGlobalJobId();
+	if( ! gjid ) {
+		return false;
+	}
+	int tmp;
+	if( ! jobAd->LookupInteger(ATTR_JOB_LEASE_DURATION, tmp) ) {
+		return false;
+	}
+
+		// if we got this far, the job supports it, so we can just
+		// return whether the remote resource does or not.
+	return supports_reconnect;
+}
+
+
+void
+RemoteResource::reconnect( void )
+{
+	static int lease_duration = -1;
+	const char* gjid = shadow->getGlobalJobId();
+	if( ! gjid ) {
+		EXCEPT( "Shadow in reconnect mode but %s is not in the job ad!",
+				ATTR_GLOBAL_JOB_ID );
+	}
+	if( lease_duration < 0 ) { 
+			// if it's our first time, figure out what we've got to
+			// work with...
+		dprintf( D_FULLDEBUG, "Trying to reconnect job %s\n", gjid );
+		if( ! jobAd->LookupInteger(ATTR_JOB_LEASE_DURATION,
+								   lease_duration) ) {
+			EXCEPT( "Shadow in reconnect mode but %s is not in the job ad!",
+					ATTR_JOB_LEASE_DURATION );
+		}
+		if( ! last_job_lease_renewal ) {
+				// if we were spawned in reconnect mode, this should
+				// be set.  if we're just trying a reconnect because
+				// the syscall socket went away, we'll already have
+				// initialized last_job_lease_renewal when we started
+				// the job
+			EXCEPT( "Shadow in reconnect mode but %s is not in the job ad!",
+					ATTR_LAST_JOB_LEASE_RENEWAL );
+		}
+		dprintf( D_ALWAYS, "Trying to reconnect to disconnected job\n" );
+		dprintf( D_ALWAYS, "%s: %d %s", ATTR_LAST_JOB_LEASE_RENEWAL,
+				 (int)last_job_lease_renewal, 
+				 ctime(&last_job_lease_renewal) );
+		dprintf( D_ALWAYS, "%s: %d seconds\n",
+				 ATTR_JOB_LEASE_DURATION, lease_duration );
+	}
+
+		// If we got here, we're trying to reconnect.  keep track of
+		// that since we need to know in certain situations...
+	if( state != RR_RECONNECT ) {
+		setResourceState( RR_RECONNECT );
+	}
+
+		// each time we get here, see how much time remains...
+	time_t now = time(0);
+	int remaining = lease_duration - (now - last_job_lease_renewal);
+	if( remaining <= 0 ) {
+	dprintf( D_ALWAYS, "%s remaining: EXPIRED!\n",
+			 ATTR_JOB_LEASE_DURATION );
+		MyString reason = "Job disconnected too long: ";
+		reason += ATTR_JOB_LEASE_DURATION;
+		reason += " (";
+		reason += lease_duration;
+		reason += " seconds) expired";
+		shadow->reconnectFailed( reason.Value() );
+	}
+	dprintf( D_ALWAYS, "%s remaining: %d\n", ATTR_JOB_LEASE_DURATION,
+			 remaining );
+
+	if( next_reconnect_tid >= 0 ) {
+		EXCEPT( "in reconnect() and timer for next attempt already set" );
+	}
+
+    int delay = shadow->nextReconnectDelay( reconnect_attempts );
+	if( delay > remaining ) {
+		delay = remaining;
+	}
+	if( delay ) {
+			// only need to dprintf if we're not doing it right away
+		dprintf( D_ALWAYS, "Scheduling another attempt to reconnect "
+				 "in %d seconds\n", delay );
+	}
+	next_reconnect_tid = daemonCore->
+		Register_Timer( delay,
+						(TimerHandlercpp)&RemoteResource::attemptReconnect,
+						"RemoteResource::attemptReconnect()", this );
+
+	if( next_reconnect_tid < 0 ) {
+		EXCEPT( "Failed to register timer!" );
+	}
+}
+
+
+void
+RemoteResource::attemptReconnect( void )
+{
+		// now that the timer went off, clear out this variable so we
+		// don't get confused later.
+	next_reconnect_tid = -1;
+
+		// if if this attempt fails, we need to remember we tried
+	reconnect_attempts++;
+
+	if( ! starterAddress ) {
+		if( ! locateReconnectStarter() ) {
+			return;
+		}
+	}
+		// if we got here, we already know the starter's address, so
+		// we can go on to directly request a reconnect... 
+	requestReconnect(); 
+}
+
+
+bool
+RemoteResource::locateReconnectStarter( void )
+{
+	dprintf( D_ALWAYS, "Attempting to locate disconnected starter\n" );
+	const char* gjid = shadow->getGlobalJobId();
+	ClassAd reply;
+	if( dc_startd->locateStarter(gjid, &reply, 20) ) {
+			// it worked, save the results and return success.
+		char* tmp = NULL;
+		if( reply.LookupString(ATTR_STARTER_IP_ADDR, &tmp) ) {
+			setStarterAddress( tmp );
+			dprintf( D_ALWAYS, "Found starter: %s\n", tmp );
+			free( tmp );
+			return true;
+		} else {
+			EXCEPT( "impossible: locateStarter() returned success "
+					"but %s not found", ATTR_STARTER_IP_ADDR );
+		}
+	}
+	
+		// if we made it here figure out what kind of error we got and
+		// act accordingly.  in all cases we want to either exit
+		// completely or return false so that attemptReconnect() just
+		// returns instead of calling requestReconnect().
+
+	dprintf( D_ALWAYS, "locateStarter(): %s\n", dc_startd->error() );
+
+	switch( dc_startd->errorCode() ) {
+
+	case CA_FAILURE:
+
+			// communication successful but GlobalJobId or starter not
+			// found.  either way, we know the job is gone, and can
+			// safely give up and restart.
+		shadow->reconnectFailed( "Job not found at execution machine" );
+		break;
+
+	case CA_NOT_AUTHENTICATED:
+			// some condor daemon is listening on the port, but it
+			// doesn't believe us anymore, so it can't still be our
+			// old startd. :( if our job was still there, the old
+			// startd would be willing to talk to us.  Just to be
+			// safe, try one last time to see if we can kill the old
+			// starter.  We don't want the schedd to try this, since
+			// it'd block, but we don't have anything better to do,
+			// and it helps ensure run-only-once semantics for jobs.
+		shadow->cleanUp();
+		shadow->reconnectFailed( "Startd is no longer at old port, "
+								 "job must have been killed" );
+		break;
+
+	case CA_CONNECT_FAILED:
+	case CA_COMMUNICATION_ERROR:
+			// for both of these, we need to keep trying until the
+			// lease_duration expires, since the startd might still be alive
+			// and only the network is dead...
+		reconnect();
+		break;
+
+			// All the errors that can only be programmer mistakes:
+			// starter should never return any of these...
+	case CA_NOT_AUTHORIZED:
+	case CA_INVALID_STATE:
+	case CA_INVALID_REQUEST:
+	case CA_INVALID_REPLY:
+		EXCEPT( "impossible: startd returned %s for locateStarter",
+				getCAResultString(dc_startd->errorCode()) );
+		break;
+	case CA_LOCATE_FAILED:
+			// remember, this means we couldn't even find the address
+			// of the startd, not the starter.  we already know the
+			// startd's addr from the ClaimId...
+		EXCEPT( "impossible: startd address already known" );
+		break;
+	case CA_SUCCESS:
+		EXCEPT( "impossible: success already handled" );
+		break;
+	}
+	return false;
+}
+
+
+void
+RemoteResource::requestReconnect( void )
+{
+	DCStarter starter( starterAddress );
+
+	dprintf( D_ALWAYS, "Attempting to reconnect to starter %s\n", 
+			 starterAddress );
+		// We want this on the heap, since if this works, we're going
+		// to hold onto it and don't want it on the stack...
+	ReliSock* rsock = new ReliSock;
+		// we don't want to block forever trying to connect and
+		// reestablish contact.  We'll retry if we have to.
+	rsock->timeout(30);
+	ClassAd req;
+	ClassAd reply;
+	MyString msg;
+
+		// First, fill up the request with all the data we need
+	shadow->publishShadowAttrs( &req );
+
+		// And also put in the request the ATTR_TRANS_SOCK and
+		// the ATTR_TRANS_KEY --- the starter will need these two
+		// atttribute value in order to re-establish the FileTransfer
+		// objects.  To get the values for these, just instantiate a 
+		// FileTransfer server object right here.  No worries if
+		// one already exists, the FileTransfer object will just
+		// quickly and quietly return success in that case.
+	ASSERT(jobAd);
+	filetrans.Init( jobAd, true, PRIV_USER );
+	char* value = NULL;
+	jobAd->LookupString(ATTR_TRANSFER_KEY,&value);
+	if (value) {
+		msg.sprintf("%s=\"%s\"",ATTR_TRANSFER_KEY,value);
+		req.Insert(msg.Value());
+		free(value);
+		value = NULL;
+	} else {
+		dprintf( D_ALWAYS,"requestReconnect(): failed to determine %s\n",
+			ATTR_TRANSFER_KEY );
+	}
+	jobAd->LookupString(ATTR_TRANSFER_SOCKET,&value);
+	if (value) {
+		msg.sprintf("%s=\"%s\"",ATTR_TRANSFER_SOCKET,value);
+		req.Insert(msg.Value());
+		free(value);
+		value = NULL;
+	} else {
+		dprintf( D_ALWAYS,"requestReconnect(): failed to determine %s\n",
+			ATTR_TRANSFER_SOCKET );
+	}
+
+
+		// try the command itself...
+	if( ! starter.reconnect(&req, &reply, rsock) ) {
+		dprintf( D_ALWAYS, "Attempt to reconnect failed: %s\n", 
+				 starter.error() );
+		delete rsock;
+		switch( starter.errorCode() ) {
+		case CA_CONNECT_FAILED:
+		case CA_COMMUNICATION_ERROR:
+			// for both of these, we need to keep trying until the
+			// lease_duration expires, since the starter might still be alive
+			// and only the network is dead...
+			reconnect();
+			return;  // reconnect will return right away, and we want
+					 // to hand control back to DaemonCore ASAP
+			break;
+
+		case CA_NOT_AUTHORIZED:
+		case CA_NOT_AUTHENTICATED:
+				/*
+				  Somehow we authenticated improperly and the starter
+				  doesn't think we own our job anymore. :( Trying
+				  again won't help us at this point...  Normally this
+				  would never happen.  However, if it does, all we can
+				  do is try to kill the job (maybe the startd will
+				  trust us *grin*), and return failure.
+				*/
+			shadow->cleanUp();
+			msg = "Starter refused request (";
+			msg += starter.error();
+			msg += ')';
+			shadow->reconnectFailed( msg.Value() );
+			break;
+
+				// All the errors that can only be programmer
+				// mistakes: the starter should never return them...  
+		case CA_FAILURE:
+		case CA_INVALID_STATE:
+		case CA_INVALID_REQUEST:
+		case CA_INVALID_REPLY:
+			EXCEPT( "impossible: starter returned %s for %s",
+					getCAResultString(dc_startd->errorCode()),
+					getCommandString(CA_RECONNECT_JOB) );
+			break;
+		case CA_LOCATE_FAILED:
+				// we couldn't even find the address of the starter, but
+				// we already know it or we wouldn't be trying this
+				// method...
+			EXCEPT( "impossible: starter address already known" );
+			break;
+		case CA_SUCCESS:
+			EXCEPT( "impossible: success already handled" );
+			break;
+		}
+	}
+
+	dprintf( D_ALWAYS, "Reconnect SUCCESS: connection re-established\n" );
+
+	dprintf( D_FULLDEBUG, "Registering socket for future syscalls\n" );
+	if( claim_sock ) {
+		dprintf( D_FULLDEBUG, "About to cancel old claim_sock\n" );
+		daemonCore->Cancel_Socket( claim_sock );
+		delete claim_sock;
+	}
+	claim_sock = rsock;
+	claim_sock->timeout( 300 );
+	daemonCore->Register_Socket( claim_sock, "RSC Socket", 
+				   (SocketHandlercpp)&RemoteResource::handleSysCalls, 
+				   "HandleSyscalls", this );
+
+		// Read all the info out of the reply ad and stash it in our
+		// private data members, just like we do when we get the
+		// pseudo syscall on job startup for the starter to register
+		// this stuff about itself. 
+	setStarterInfo( &reply );
+
+	began_execution = true;
+	setResourceState( RR_EXECUTING );
+	reconnect_attempts = 0;
+	hadContact();
+
+		// Tell the Shadow object so it can take care of the rest.
+	shadow->resourceReconnected( this );
+
+		// that's it, we're done!  we can now return to DaemonCore and
+		// wait to service requests on the syscall or command socket
+	return;
+}

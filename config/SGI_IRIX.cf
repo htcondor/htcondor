@@ -10,16 +10,14 @@
 ** Shared IRIX Settings
 **************************************************************************/
 
-#define OperatingSystem		IRIX
-#define IS_IRIX			YES
-#define Architecture		SGI
 
 #define IS_V5				YES
 
 #define NEEDS_KBDD			YES
 
-#define DOES_CHECKPOINTING		YES
-#define DOES_REMOTE_SYSCALLS		YES
+#define IS_CLIPPED			YES
+#define DOES_CHECKPOINTING		NO
+#define DOES_REMOTE_SYSCALLS		NO
 #define DOES_SAVE_SIGSTATE		YES
 #define DO_BENCHMARKING			YES
 
@@ -37,7 +35,6 @@
 #define HAS_RANLIB_TOUCH		NO
 #define HAS_CP_PRESERVE			YES
 #define NEEDS_SPECIAL_SETJMP		NO
-#define HAS_FORTRAN			YES
 #define HAS_FLOCK			YES
 #define HAS_ADJTIME			YES
 #define HAS_GETDTABLESIZE		YES
@@ -55,28 +52,12 @@
 #define HAS_SETEUID			YES
 #define HAS_GETWD			YES
 #define HAS_INSQUE			YES
-
-#define HAS_PVM				YES
+#define WANT_PVM			YES
 #define PVM_ARCH			SGI64
 #define HAS_DLOPEN			NO
 #define HAS_DAGMAN_HELPER   NO
-
-#define HAS_STATIC			NO
-
 #define HAS_UTMPX			YES
 
-#define StaticFlag /**/
-#define UnixName /unix			/* pathname of the system executable */
-#define PsAllFlag /sbin/ps -ef		/* "Ps" flag when you want everything */
-#define PsAwkProg '{ print $2 }'	/* Pick out pid from "ps" output */
-
-#ifndef Ctags
-#define Ctags ctags -t
-#endif Ctags
-
-#ifndef MkDepend
-#define MkDepend /usr/sbin/mkdepend
-#endif MkDepend
 
 /**************************************************************************
 ** Include OS version-specific config files

@@ -68,7 +68,7 @@ BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_preen.bsc"
 BSC32_SBRS= \
 	
 LINK32=link.exe
-LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib ../Debug/condor_common.obj ..\Debug\condor_common_c.obj /nologo /subsystem:console /incremental:yes /pdb:"$(OUTDIR)\condor_preen.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_preen.exe" /pdbtype:sept 
+LINK32_FLAGS=../Debug/condor_common.obj ..\Debug\condor_common_c.obj kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib Crypt32.lib /nologo /subsystem:console /incremental:yes /pdb:"$(OUTDIR)\condor_preen.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_preen.exe" /pdbtype:sept 
 LINK32_OBJS= \
 	"$(INTDIR)\dc_stub.obj" \
 	"$(INTDIR)\preen.obj" \
@@ -122,7 +122,7 @@ BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_preen.bsc"
 BSC32_SBRS= \
 	
 LINK32=link.exe
-LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib ../Release/condor_common.obj ../Release/condor_common_c.obj /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_preen.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_preen.exe" 
+LINK32_FLAGS=../Release/condor_common.obj ../Release/condor_common_c.obj Crypt32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_preen.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_preen.exe" 
 LINK32_OBJS= \
 	"$(INTDIR)\dc_stub.obj" \
 	"$(INTDIR)\preen.obj" \
@@ -186,24 +186,24 @@ LINK32_OBJS= \
 
 "condor_cpp_util - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_cpp_util.mak" CFG="condor_cpp_util - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Debug" 
    cd "."
 
 "condor_cpp_util - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_cpp_util.mak" CFG="condor_cpp_util - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_preen - Win32 Release"
 
 "condor_cpp_util - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_cpp_util.mak" CFG="condor_cpp_util - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Release" 
    cd "."
 
 "condor_cpp_util - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_cpp_util.mak" CFG="condor_cpp_util - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
@@ -212,24 +212,24 @@ LINK32_OBJS= \
 
 "condor_util_lib - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_util_lib.mak" CFG="condor_util_lib - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Debug" 
    cd "."
 
 "condor_util_lib - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_util_lib.mak" CFG="condor_util_lib - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_preen - Win32 Release"
 
 "condor_util_lib - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_util_lib.mak" CFG="condor_util_lib - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Release" 
    cd "."
 
 "condor_util_lib - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_util_lib.mak" CFG="condor_util_lib - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
@@ -238,24 +238,24 @@ LINK32_OBJS= \
 
 "condor_classad - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_classad.mak" CFG="condor_classad - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_classad.mak CFG="condor_classad - Win32 Debug" 
    cd "."
 
 "condor_classad - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_classad.mak" CFG="condor_classad - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_classad.mak CFG="condor_classad - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_preen - Win32 Release"
 
 "condor_classad - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_classad.mak" CFG="condor_classad - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_classad.mak CFG="condor_classad - Win32 Release" 
    cd "."
 
 "condor_classad - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_classad.mak" CFG="condor_classad - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_classad.mak CFG="condor_classad - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
@@ -264,24 +264,24 @@ LINK32_OBJS= \
 
 "condor_io - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_io.mak" CFG="condor_io - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_io.mak CFG="condor_io - Win32 Debug" 
    cd "."
 
 "condor_io - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_io.mak" CFG="condor_io - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_io.mak CFG="condor_io - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_preen - Win32 Release"
 
 "condor_io - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_io.mak" CFG="condor_io - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_io.mak CFG="condor_io - Win32 Release" 
    cd "."
 
 "condor_io - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_io.mak" CFG="condor_io - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_io.mak CFG="condor_io - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
@@ -290,24 +290,24 @@ LINK32_OBJS= \
 
 "condor_qmgmt - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_qmgmt.mak" CFG="condor_qmgmt - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_qmgmt.mak CFG="condor_qmgmt - Win32 Debug" 
    cd "."
 
 "condor_qmgmt - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_qmgmt.mak" CFG="condor_qmgmt - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_qmgmt.mak CFG="condor_qmgmt - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_preen - Win32 Release"
 
 "condor_qmgmt - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_qmgmt.mak" CFG="condor_qmgmt - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_qmgmt.mak CFG="condor_qmgmt - Win32 Release" 
    cd "."
 
 "condor_qmgmt - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_qmgmt.mak" CFG="condor_qmgmt - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_qmgmt.mak CFG="condor_qmgmt - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
@@ -316,24 +316,24 @@ LINK32_OBJS= \
 
 "condor_sysapi - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_sysapi.mak" CFG="condor_sysapi - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_sysapi.mak CFG="condor_sysapi - Win32 Debug" 
    cd "."
 
 "condor_sysapi - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_sysapi.mak" CFG="condor_sysapi - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_sysapi.mak CFG="condor_sysapi - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_preen - Win32 Release"
 
 "condor_sysapi - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_sysapi.mak" CFG="condor_sysapi - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_sysapi.mak CFG="condor_sysapi - Win32 Release" 
    cd "."
 
 "condor_sysapi - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_sysapi.mak" CFG="condor_sysapi - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_sysapi.mak CFG="condor_sysapi - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 

@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
- ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 //
 // Local DAGMan includes
@@ -29,6 +29,7 @@
 #include "debug.h"
 #include "submit.h"
 #include "util.h"
+#include "dagman_main.h"
 
 #include "simplelist.h"
 #include "condor_string.h"  /* for strnewp() */
@@ -156,14 +157,22 @@ bool Dag::Bootstrap (bool recovery) {
 }
 
 //-------------------------------------------------------------------------
-bool Dag::AddDependency (Job * parent, Job * child) {
-    ASSERT( parent != NULL );
-    ASSERT( child  != NULL );
-    
+bool
+Dag::AddDependency( Job* parent, Job* child )
+{
+	if( !parent || !child ) {
+		return false;
+	}
 	if( !parent->AddChild( child ) ) {
 		return false;
 	}
 	if( !child->AddParent( parent ) ) {
+			// reverse earlier successful AddChild() so we don't end
+			// up with asymetric dependencies
+		if( !parent->RemoveChild( child ) ) {
+				// the DAG state is FUBAR, so we should bail...
+			ASSERT( false );
+		}
 		return false;
 	}
     return true;
@@ -351,10 +360,22 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 					  break;
 				  }
 
+				  if( job->_Status == Job::STATUS_ERROR ) {
+						  // sometimes condor prints *both* a
+						  // termination and an abort event for a job;
+						  // in such cases, we need to make sure not
+						  // to process both...
+					  debug_printf( DEBUG_NORMAL,
+									"WARNING: Job %s already marked %s; "
+									"ignoring job aborted event...\n",
+									job->GetJobName(), job->GetStatusName() );
+					  break;
+				  }
+
                   _numJobsSubmitted--;
                   ASSERT( _numJobsSubmitted >= 0 );
 
-				  if( job->retries++ < job->GetRetryMax() ) {
+				  if( job->GetRetries() < job->GetRetryMax() ) {
 					  RestartNode( job, recovery );
 					  break;
 				  }
@@ -461,7 +482,6 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 				  else {
 					  TerminateJob( job, recovery );
 				  }
-				  SubmitReadyJobs();
 				  PrintReadyQ( DEBUG_DEBUG_2 );
 
 				  break;
@@ -568,6 +588,21 @@ bool Dag::ProcessLogEvents (int logsource, bool recovery) {
 								"DAG Node: %1023s", job_name ) == 1 ) {
 						job = GetJob( job_name );
 						if( job ) {
+							if( !recovery ) {
+									// as a sanity-check, compare the
+									// job ID in the userlog with the
+									// one that appeared earlier in
+									// the submit command's stdout
+                                if( condorID.Compare( job->_CondorID ) != 0 ) {
+                                    debug_printf( DEBUG_QUIET,
+												  "ERROR: job %s: job ID in userlog submit event (%d.%d) doesn't match ID reported earlier by submit command (%d.%d)!  Trusting the userlog for now., but this is scary!\n",
+                                                  job_name,
+                                                  condorID._cluster,
+                                                  condorID._proc,
+                                                  job->_CondorID._cluster,
+                                                  job->_CondorID._proc );
+                                }
+							}
 							job->_CondorID = condorID;
 						}
 					}
@@ -648,7 +683,9 @@ Job * Dag::GetJob (const char * jobName) const {
     ListIterator<Job> iList (_jobs);
     Job * job;
     while ((job = iList.Next())) {
-        if (strcmp(job->GetJobName(), jobName) == 0) return job;
+		if( strcasecmp( job->GetJobName(), jobName ) == 0 ) {
+			return job;
+		}
     }
     return NULL;
 }
@@ -697,7 +734,6 @@ Dag::StartNode( Job *node )
     }
 	// no PRE script exists or is done, so add job to the queue of ready jobs
 	_readyQ->Append( node );
-	SubmitReadyJobs();
 	return TRUE;
 }
 
@@ -708,10 +744,14 @@ Dag::SubmitReadyJobs()
 #if defined(BUILD_HELPER)
 	Helper helperObj;
 #endif
+
+	int numSubmitsThisCycle = 0;
+	while( numSubmitsThisCycle < dagman.max_submits_per_interval ) {
+
 //	PrintReadyQ( DEBUG_DEBUG_4 );
 	// no jobs ready to submit
     if( _readyQ->IsEmpty() ) {
-        return 0;
+        return numSubmitsThisCycle;
     }
     // max jobs already submitted
     if( _maxJobsSubmitted && _numJobsSubmitted >= _maxJobsSubmitted ) {
@@ -720,16 +760,8 @@ Dag::SubmitReadyJobs()
 					  "deferring submission of %d ready job%s.\n",
                       _maxJobsSubmitted, _readyQ->Number(),
 					  _readyQ->Number() == 1 ? "" : "s" );
-        return 0;
+        return numSubmitsThisCycle;
     }
-
-        // Sleep for one second here, so we can be sure that this submit
-		// event is unambiguously later than the termination event of the
-		// previous job, given that the logs only have a resolution of
-		// one second.  (Because of the new feature of allowing separate
-		// logs for each job, we can't just rely on the physical order
-		// in a single log file.)  wenger 2003-04-12.
-	sleep(1);
 
 	// remove & submit first job from ready queue
 	Job* job;
@@ -739,14 +771,32 @@ Dag::SubmitReadyJobs()
 	ASSERT( job != NULL );
 	ASSERT( job->GetStatus() == Job::STATUS_READY );
 
-	if (job->job_type == Job::CONDOR_JOB){
-	  debug_printf( DEBUG_VERBOSE, "Submitting Condor Job %s ...\n",
-			job->GetJobName() );
+	if( job->NumParents() > 0 && dagman.submit_delay == 0 ) {
+			// if we don't already have a submit_delay, sleep for one
+			// second here, so we can be sure that this job's submit
+			// event will be unambiguously later than the termination
+			// events of its parents, given that userlog timestamps
+			// only have a resolution of one second.  (Because of the
+			// new feature allowing distinct userlogs for each job, we
+			// can't just rely on the physical order in a single log
+			// file.)
+
+			// TODO: as an optimization, check if, for all parents,
+			// the logfile is the same as the child -- if yes, we can
+			// skip the sleep...
+		sleep( 1 );
 	}
-	else if (job->job_type == Job::DAP_JOB){
-	  debug_printf( DEBUG_VERBOSE, "Submitting DaP Job %s ...\n",
-			job->GetJobName() );
+
+		// sleep for a specified time before submitting
+	if( dagman.submit_delay ) {
+		debug_printf( DEBUG_VERBOSE, "Sleeping for %d s "
+					  "(DAGMAN_SUBMIT_DELAY) to throttle submissions...\n",
+					  dagman.submit_delay );
+		sleep( dagman.submit_delay );
 	}
+
+	debug_printf( DEBUG_VERBOSE, "Submitting %s Job %s ...\n",
+				  job->JobTypeString(), job->GetJobName() );
 
     CondorID condorID(0,0,0);
     MyString cmd_file = job->GetCmdFile();
@@ -770,7 +820,7 @@ Dag::SubmitReadyJobs()
 	free( helper );
 	helper = NULL;
 	// the problem might be specific to that job, so keep submitting...
-	return SubmitReadyJobs();
+	continue;  // while( numSubmitsThisCycle < max_submits_per_interval )
       }
       debug_printf( DEBUG_VERBOSE,
 		    "  using new submit file (%s) from helper\n",
@@ -780,7 +830,7 @@ Dag::SubmitReadyJobs()
     }
 #endif //BUILD_HELPER
 
-    if (job->job_type == Job::CONDOR_JOB){
+    if( job->JobType() == Job::TYPE_CONDOR ) {
       if( ! submit_submit( cmd_file.Value(), condorID, job->GetJobName(),
                            job->varNamesFromDag, job->varValsFromDag ) ) {
 	// NOTE: this failure does not observe the "retry" feature
@@ -789,11 +839,11 @@ Dag::SubmitReadyJobs()
 	_numJobsFailed++;
 	sprintf( job->error_text, "Job submit failed" );
 	// the problem might be specific to that job, so keep submitting...
-	return SubmitReadyJobs();
+	continue;  // while( numSubmitsThisCycle < max_submits_per_interval )
       }
     } //job ==  condor_job
     
-    else if (job->job_type == Job::DAP_JOB) {
+    else if( job->JobType() == Job::TYPE_STORK ) {
       if( ! dap_submit( cmd_file.Value(), condorID, job->GetJobName() ) ) {
 	// NOTE: this failure does not observe the "retry" feature
 	// (for better or worse)
@@ -801,7 +851,7 @@ Dag::SubmitReadyJobs()
 	_numJobsFailed++;
 	sprintf( job->error_text, "Job submit failed" );
 	// the problem might be specific to that job, so keep submitting...
-	return SubmitReadyJobs();
+	continue;  // while( numSubmitsThisCycle < max_submits_per_interval )
       }
     }
 
@@ -814,16 +864,18 @@ Dag::SubmitReadyJobs()
     job->_Status = Job::STATUS_SUBMITTED;
     _numJobsSubmitted++;
     
-    if (job->job_type == Job::CONDOR_JOB){
-	debug_printf( DEBUG_VERBOSE, "\tassigned Condor ID (%d.%d.%d)\n",
-		      condorID._cluster, condorID._proc, condorID._subproc );
-    }
-    else{
-      debug_printf( DEBUG_VERBOSE, "\tassigned DaP ID (%d)\n",
-		    condorID._cluster);
-    }
+        // stash the job ID reported by the submit command, to compare
+        // with what we see in the userlog later as a sanity-check
+        // (note: this sanity-check is not possible during recovery,
+        // since we won't have seen the submit command stdout...)
+	job->_CondorID = condorID;
+
+	debug_printf( DEBUG_VERBOSE, "\tassigned %s ID (%d.%d)\n",
+				  job->JobTypeString(), condorID._cluster, condorID._proc );
     
-    return SubmitReadyJobs() + 1;
+    numSubmitsThisCycle++;
+	}
+	return numSubmitsThisCycle;
 }
 
 //---------------------------------------------------------------------------
@@ -874,7 +926,6 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 					  "successfully.\n", job->GetJobName() );
 		job->_Status = Job::STATUS_READY;
 		_readyQ->Append( job );
-		SubmitReadyJobs();
 	}
 	return true;
 }
@@ -960,24 +1011,34 @@ Dag::PrintReadyQ( debug_level_t level ) const {
 void Dag::RemoveRunningJobs () const {
     char cmd[ARG_MAX];
 
+		// first, remove all Condor jobs submitted by this DAGMan
+	debug_printf( DEBUG_NORMAL, "Removing any/all submitted Condor jobs...\n",
+				  cmd );
+	snprintf( cmd, ARG_MAX, "condor_rm -const \'%s == \"%s\"\'",
+			  DAGManJobIdAttrName, DAGManJobId );
+	debug_printf( DEBUG_VERBOSE, "Executing: %s\n", cmd );
+	util_popen( cmd );
+		// TODO: we need to check for failures here
+
     ListIterator<Job> iList(_jobs);
     Job * job;
     while (iList.Next(job)) {
-		// if the job has been submitted, remove it
-        if (job->GetStatus() == Job::STATUS_SUBMITTED) {
-			switch(job->job_type) {
-			case Job::CONDOR_JOB:
-				sprintf( cmd, "condor_rm %d", job->_CondorID._cluster );
-				util_popen( cmd );
-				break;
-			case Job::DAP_JOB:
-				sprintf( cmd, "dap_rm %d", job->_CondorID._cluster );
-				util_popen( cmd );
-				break;
-			}
+		ASSERT( job != NULL );
+			// if node has a Stork job that is presently submitted,
+			// remove it individually (this is necessary because
+			// DAGMan's job ID can't currently be inserted into the
+			// Stork job ad, and thus we can't do a "dap_rm -const..." 
+			// like we do with Condor; this should be fixed)
+		if( job->JobType() == Job::TYPE_STORK &&
+			job->GetStatus() == Job::STATUS_SUBMITTED ) {
+			snprintf( cmd, ARG_MAX, "dap_rm %d", job->_CondorID._cluster );
+			debug_printf( DEBUG_VERBOSE, "Executing: %s\n", cmd );
+			util_popen( cmd );
+				// TODO: we need to check for failures here
         }
 		// if node is running a PRE script, hard kill it
         else if( job->GetStatus() == Job::STATUS_PRERUN ) {
+			ASSERT( job->_scriptPre );
 			ASSERT( job->_scriptPre->_pid != 0 );
 			if (daemonCore->Shutdown_Fast(job->_scriptPre->_pid) == FALSE) {
 				debug_printf(DEBUG_QUIET,
@@ -987,6 +1048,7 @@ void Dag::RemoveRunningJobs () const {
         }
 		// if node is running a POST script, hard kill it
         else if( job->GetStatus() == Job::STATUS_POSTRUN ) {
+			ASSERT( job->_scriptPost );
 			ASSERT( job->_scriptPost->_pid != 0 );
 			if(daemonCore->Shutdown_Fast(job->_scriptPost->_pid) == FALSE) {
 				debug_printf(DEBUG_QUIET,
@@ -1032,16 +1094,14 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) const {
     //
     it.ToBeforeFirst();
     while (it.Next(job)) {
-      //-->DAP
-      if (job->job_type == Job::CONDOR_JOB){
+		if( job->JobType() == Job::TYPE_CONDOR ) {
 	fprintf (fp, "JOB %s %s %s\n", job->GetJobName(), job->GetCmdFile(),
                  job->_Status == Job::STATUS_DONE ? "DONE" : "");
       }
-      else if (job->job_type == Job::DAP_JOB){
+		else if( job->JobType() == Job::TYPE_STORK ) {
 	fprintf (fp, "DAP %s %s %s\n", job->GetJobName(), job->GetCmdFile(),
                  job->_Status == Job::STATUS_DONE ? "DONE" : "");
       }
-      //<--DAP
       if (job->_scriptPre != NULL) {
 	fprintf (fp, "SCRIPT PRE  %s %s\n", job->GetJobName(),
 		 job->_scriptPre->GetCmd());
@@ -1158,39 +1218,32 @@ void Dag::
 PrintEvent( debug_level_t level, const char* eventName, Job* job,
 			CondorID condorID )
 {
-
- //--> DAP
 	if( job ) {
-	  if (job->job_type == Job::CONDOR_JOB){
-	    debug_printf( level, "Event: %s for Condor Job %s (%d.%d.%d)\n", eventName,
-			  job->GetJobName(), job->_CondorID._cluster,
-			  job->_CondorID._proc, job->_CondorID._subproc );
-	  }
-	  else if (job->job_type == Job::DAP_JOB){
-	    debug_printf( level, "Event: %s for DaP Job %s (%d)\n", eventName,
-			  job->GetJobName(), job->_CondorID._cluster);
-	  }
-	  
-	  
+	    debug_printf( level, "Event: %s for %s Job %s (%d.%d)\n", eventName,
+					  job->JobTypeString(), job->GetJobName(),
+					  job->_CondorID._cluster, job->_CondorID._proc );
 	} else {
-        debug_printf( level, "Event: %s for Unknown Job (%d.%d.%d): "
+        debug_printf( level, "Event: %s for Unknown Job (%d.%d): "
 					  "ignoring...\n", eventName, condorID._cluster,
-					  condorID._proc, condorID._subproc );
+					  condorID._proc );
 	}
-	//<-- DAP
+	return;
 }
 
 void
 Dag::RestartNode( Job *node, bool recovery )
 {
 	node->_Status = Job::STATUS_READY;
+	node->retries++;
+	ASSERT( node->GetRetries() <= node->GetRetryMax() );
 	if( node->_scriptPre ) {
 		// undo PRE script completion
 		node->_scriptPre->_done = false;
 	}
 	strcpy( node->error_text, "" );
-	debug_printf( DEBUG_VERBOSE, "Retrying node %s ...\n",
-				  node->GetJobName() );
+	debug_printf( DEBUG_VERBOSE, "Retrying node %s (retry #%d of %d)...\n",
+				  node->GetJobName(), node->GetRetries(),
+				  node->GetRetryMax() );
 	if( !recovery ) {
 		StartNode( node );
 	}

@@ -222,13 +222,13 @@ GLIDEIN_SERVER_DIR = /p/condor/public/binaries/glidein
 
 ALL_DEBUG               =
 
-MAX_SCHEDD_LOG		= 64000
+MAX_SCHEDD_LOG		= 1000000
 SCHEDD_DEBUG		=
 
-MAX_SHADOW_LOG		= 64000
+MAX_SHADOW_LOG		= 1000000
 SHADOW_DEBUG		=
 
-MAX_MASTER_LOG		= 64000
+MAX_MASTER_LOG		= 1000000
 MASTER_DEBUG		= D_COMMAND
 ##  When the master starts up, should it truncate it's log file?
 #TRUNC_MASTER_LOG_ON_OPEN        = False
@@ -446,10 +446,6 @@ SHADOW_RENICE_INCREMENT	= 10
 ##  default.  Set to 0 to disable.)
 #WALL_CLOCK_CKPT_INTERVAL = 3600
 
-##  Do you want to allow remote machines to be able to submit jobs to
-##  this queue as user "nobody"?
-#ALLOW_REMOTE_SUBMIT	= False
-
 ##  What users do you want to grant super user access to this job
 ##  queue?  (These users will be able to remove other user's jobs). 
 ##  By default, this only includes root.
@@ -560,7 +556,7 @@ GAHP				= $(SBIN)/gahp_server
 ##  Another option is to use /tmp as the location of the GridManager log.
 ##
 
-MAX_GRIDMANAGER_LOG	= 64000
+MAX_GRIDMANAGER_LOG	= 1000000
 GRIDMANAGER_DEBUG	= D_COMMAND
 
 #GRIDMANAGER_LOG = $(LOG)/GridLogs/GridmanagerLog.$(USERNAME)

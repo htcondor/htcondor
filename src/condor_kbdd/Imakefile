@@ -4,13 +4,62 @@ all_target($(NAME))
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS) 
+
+CMNT On Digital Unix 5.0, if we are linking against libX11.a, we need
+CMNT -ldnet_stub.  libX11.a has hooks to support DecNet, and we must
+CMNT link with the DecNet stub library to avoid undefined symbols. 
+#if IS_DUX5
+LDFLAGS = -lX11 -ldnet_stub
+#else
 LDFLAGS = -lX11
+#endif
 
 OBJ = kbdd.o XInterface.o
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
-release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
-strip_target($(NAME),$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
+release_target($(NAME),sbin,EXECUTABLE_MODE)
+strip_target($(NAME),sbin,EXECUTABLE_MODE)
+
+#if IS_DUX5 && NEEDS_OPENSSL
+
+CMNT On Digital Unix 5.0, if we are using OpenSSL security, statically 
+CMNT linking against libX11.a causes additional problems.  libX11.a
+CMNT defines its own version of des_key_sched, an encryption related
+CMNT method that gives us multiply defined symbols when we link with
+CMNT the OpenSSL libcrypto.a.  To get a statically linked kbdd on this
+CMNT platform, we do the ugly hack of using ToUpper to mask the
+CMNT des_key_sched symbol from a local copy of libX11.a.  So, we
+CMNT handle statically linking for DUX5 totally seperate. 
+
+condor_kbdd.static: $(OBJ) $(LIB) ./libX11.a
+	$(CC_LINK) $(STATIC)  $(C_PLUS_FLAGS) -o condor_kbdd.static $(OBJ) $(LIB) -lm ./libX11.a -ldnet_stub $(PLATFORM_LDFLAGS) $(SITE_LDFLAGS)  $(DEMANGLE)
+
+./libX11.a: ToUpper /usr/lib/libX11.a
+	cp -f /usr/lib/libX11.a .
+	/bin/ar -x ./libX11.a krb5_stub.o
+	mv krb5_stub.o krb5_stub.tmp.o
+	./ToUpper ./krb5_stub.tmp.o krb5_stub.o des_key_sched DES_KEY_SCHED
+	/bin/ar -r ./libX11.a krb5_stub.o
+	rm -f krb5_stub.o krb5_stub.tmp.o
+
+ToUpper:
+	ln -s ../condor_ckpt/ToUpper ToUpper
+
+static:: $(STATIC_DIR)/sbin/condor_kbdd
+
+$(STATIC_DIR)/sbin/condor_kbdd: condor_kbdd.static
+	/bin/rm -f $(STATIC_DIR)/sbin/condor_kbdd
+	cp condor_kbdd.static $(STATIC_DIR)/sbin/condor_kbdd
+	chmod EXECUTABLE_MODE $(STATIC_DIR)/sbin/condor_kbdd
+	$(STRIP) $(STATIC_DIR)/sbin/condor_kbdd
+
+clean::
+	rm -f condor_kbdd.static $(OBJ) ./libX11.a ToUpper
+
+#else
+
 static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
+
+#endif
 
 html:

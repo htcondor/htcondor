@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
  
 
@@ -175,7 +175,6 @@ static BOOLEAN condor_restart( );
 static BOOLEAN condor_migrate_to( const char *host_addr, const char *port_num );
 static BOOLEAN condor_migrate_from( const char *fd_no );
 static BOOLEAN condor_exit( const char *status );
-static int open_tcp_stream( unsigned int ip_addr, unsigned short port );
 void display_ip_addr( unsigned int addr );
 void open_std_files();
 void _condor_set_iwd();
@@ -216,7 +215,6 @@ MAIN( int argc, char *argv[], char **envp )
 #endif
 {
 	int		cmd_fd = -1;
-	char	*cmd_name;
 	char	*extra;
 	int		scm;
 	char	*arg;
@@ -492,12 +490,10 @@ MAIN( int argc, char *argv[], char **envp )
 void
 _condor_interp_cmd_stream( int fd )
 {
-	BOOLEAN	at_end = FALSE;
 	FILE	*fp = fdopen( fd, "r" );
 	char	buf[1024];
 	int		argc;
 	char	*argv[256];
-	int		scm;
 
 	while( fgets(buf,sizeof(buf),fp) ) {
 		_condor_scan_cmd( buf, &argc, argv );
@@ -525,7 +521,7 @@ _condor_scan_cmd( char *buf, int *argc, char *argv[] )
 		return;
 	}
 
-	for( i = 1; argv[i] = strtok(NULL," \n"); i++ )
+	for( i = 1; (argv[i] = strtok(NULL," \n")); i++ )
 		;
 	*argc = i;
 }
@@ -595,10 +591,6 @@ _condor_find_cmd( const char *str )
 static BOOLEAN
 condor_iwd( const char *path )
 {
-#if 0
-	dprintf( D_ALWAYS, "condor_iwd: path = \"%s\"\n", path );
-	delay();
-#endif
 	/* Just use the regular chdir -- it will fill in the the file table correctly. */
 	int scm = SetSyscalls( SYS_REMOTE|SYS_MAPPED );
 	chdir( path );
@@ -626,9 +618,6 @@ condor_ckpt( const char *path )
 static BOOLEAN
 condor_restart()
 {
-	int		fd;
-	size_t	n_bytes;
-
 	dprintf( D_ALWAYS, "condor_restart:\n" );
 	get_ckpt_name();
 	restart();
@@ -693,9 +682,6 @@ condor_exit( const char *status )
 int
 open_ckpt_file( const char *name, int flags, size_t n_bytes )
 {
-	char			file_name[ _POSIX_PATH_MAX ];
-	int				status;
-
 	if( !do_remote_syscalls ) {
 		if( flags & O_WRONLY ) {
 			return open( name, O_CREAT | O_TRUNC | O_WRONLY, 0664 );
@@ -761,42 +747,11 @@ _set_priv()
 	return 0;
 }
 
-#define UNIT 10000
 
-#if defined(ALPHA)
-#	define LIM (2000 * UNIT)
-#elif defined(AIX32)
-#	define LIM (225 * UNIT)
-#elif defined(SPARC)
-#	define LIM (260 * UNIT)
-#elif defined(ULTRIX43)
-#	define LIM (170 * UNIT)
-#elif defined(HPPAR)
-#	define LIM (260 * UNIT)
-#elif defined(LINUX)
-#	define LIM (200 * UNIT)
-#elif defined(Solaris)
-#	define LIM (260 * UNIT)
-#elif defined(SGI)
-#	define LIM (200 * UNIT)
-#endif
-
-#if 1
-	delay()
-	{
-		int		i;
-
-		for( i=0; i<LIM; i++ )
-			;
-	}
-#else
-	delay(){}
-#endif
 #define B_NET(x) (((long)(x)&IN_CLASSB_NET)>>IN_CLASSB_NSHIFT)
 #define B_HOST(x) ((long)(x)&IN_CLASSB_HOST)
 #define HI(x) (((long)(x)&0xff00)>>8)
 #define LO(x) ((long)(x)&0xff)
-
 
 void
 display_ip_addr( unsigned int addr )

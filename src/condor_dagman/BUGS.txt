@@ -1,3 +1,17 @@
+- Given a DAG:
+    job test test.submit
+    script post test logargs $RETURN --foo=$RETURN $RETURN
+  Assuming my test.submit job returns 1, the script "logargs" gets
+  arguments of "1" "--foo=$RETURN" "1".  This is surprising.
+
+- submit files that queue multiple jobs are handled *very* poorly --
+  they're not detected and rejected, and what's more, they result in
+  dagman thinking the submit failed, so it re-submits, resulting in
+  tons of bogus jobs in the queue which dagman knows nothing about
+  [see astro:/scratch/pfc/condor/dagman-tests/extra-jobs].
+
+- PRE scripts with $RETURN in their DAG spec aren't being flagged as invalid
+
 - If a second instance of a dag is submitted while the first is still
   running, it will irretrievably hose the first (and be hosed in turn)
 
@@ -14,9 +28,4 @@ it be handled in mid-pause?  think...
   termination (e.g., w/onexiteremove or onexithold... or may even
   leaveinqueue=false)
 
-- dagman doesn't dump pre/post script arguments to recovery DAGs!
-
 - if condor_submit hangs (which it can), DAGMan hangs -- we need a timeout
-
-- condor_submit_dag does not properly consider the job's InitialDir
-  when interpreting the log file location

@@ -42,6 +42,7 @@
 #include "condor_common.h"
 #include "scanner.h"
 extern int yyline;
+extern int yylex( void );
 struct node *
 mk_func_node( char *type, char *name, struct node * p_list,
 	int is_ptr, struct node *action_func_list );
@@ -127,7 +128,7 @@ input
 %%
 
 input
-	: stub_spec
+	: stub_spec { }
 	| non_support_list
 	| ignore_list
 	| input stub_spec
@@ -179,9 +180,10 @@ ignore_begin
 	;
 
 stub_list
-	: /* empty */
-	| stub_spec stub_list
+	: stub_spec stub_list
+	{ }
 	| error stub_body
+	| /* empty */
 	;
 
 stub_spec

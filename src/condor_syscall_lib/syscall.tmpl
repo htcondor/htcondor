@@ -260,6 +260,49 @@ circumstances:
 #include "condor_socket_types.h"
 
 /*
+This group of calls is needed in the syscall lib, the standalone ckpt
+lib, *and* in the clipped version (for the old PVM starter).  All of
+these calls manipulate the open file table.
+*/ 
+#if defined(FILE_TABLE)
+	int open( const char *path, OPEN_FLAGS_T flags, ... )
+		: file_table
+		#if defined(AIX)
+			, no_sys_chk
+		#endif
+	{
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+	}
+
+	int close( int fd ) 
+		: file_table
+		#if defined(AIX)
+			, no_sys_chk
+		#endif
+		;
+
+	int unlink( map_name(const char *path) ) 
+		#if defined(AIX)
+			: no_sys_chk
+		#endif
+	{
+		SEND_PATH( path );
+		ALLOC_PATH( path );
+	}
+
+	int rename( map_name(const char *from), map_name_two(const char *to) ) 
+		: pseudo 
+	{
+		SEND_PATH( from );
+		SEND_PATH( to );
+		ALLOC_PATH( from );
+		ALLOC_PATH( to );
+	}
+#endif /* FILE_TABLE */
+
+
+/*
 This group of calls is needed in the syscall lib and
 the standalone ckpt lib, but not in the clipped version.
 All of these calls manipulate the open file table.
@@ -267,17 +310,8 @@ All of these calls manipulate the open file table.
 
 #if defined(FILE_TABLE) && !defined(CLIP)
 
-	int open( const char *path, OPEN_FLAGS_T flags, ... )
-		: file_table
-	{
-		SEND_PATH( path );
-		ALLOC_PATH( path );
-	}
-
 	int open64( const char *path, OPEN_FLAGS_T flags, ... )
 		: sender_name(open), file_table_name(open), local_name(open);
-
-	int close( int fd ) : file_table;
 
 	ssize_t read( int fd, void *buf, size_t len )
 		: file_table
@@ -310,16 +344,8 @@ All of these calls manipulate the open file table.
 	      at least 32 bit offsets work now. :) 
 	      Derek Wright <wright@cs.wisc.edu> 2/4/00
 	   */
-		#if defined(GLIBC21) || defined(GLIBC22)
+		#if defined(GLIBC22) || defined(GLIBC23)
 			off64_t llseek( int fd, off64_t offset, int whence )
-				: file_table_name(lseek), remote_name(lseek), no_sys_chk, 
-				local_name(lseek);
-		#elif defined(GLIBC20)
-			unsigned long llseek( int fd, unsigned long offset, int whence )
-				: file_table_name(lseek), remote_name(lseek), no_sys_chk, 
-				local_name(lseek);
-		#else
-			long long llseek( int fd, long long offset, int whence )
 				: file_table_name(lseek), remote_name(lseek), no_sys_chk, 
 				local_name(lseek);
 		#endif
@@ -378,11 +404,7 @@ All of these calls manipulate the open file table.
 
 	/* Truncate must go through the table to update the file size. */
 
-	#if defined(LINUX) && !defined(GLIBC)
-		int ftruncate( int fd, size_t length ) :
-	#else
-		int ftruncate( int fd, off_t length ) :
-	#endif
+	int ftruncate( int fd, off_t length ) :
 		#if !defined(SWITCH)
 			/* Sender needed, even if not a true syscall */
 			no_sys_chk,
@@ -455,10 +477,8 @@ version.
 	Most of the switches are special.
 	*/
 
-	#if defined(LINUX) && (defined(GLIBC20)||defined(GLIBC21)||defined(GLIBC22))
+	#if defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23))
 		#define STAT_NEEDS_SPECIAL_SWITCH
-	#elif defined(LINUX)
-		#define STAT_NEEDS_EXTRACT
 	#elif defined(IRIX)
 		#define STAT_NEEDS_SPECIAL_SWITCH
 	#endif
@@ -524,9 +544,17 @@ version.
 	but they send the name of the 32-bit system call on the wire.
 	*/
 
-	#if defined(HAS_64BIT_SYSCALLS)
+	#if defined(HAS_64BIT_SYSCALLS) 
 
-	#if (defined(Solaris) && !defined(Solaris251)) && !defined(IRIX)
+	/*
+	  This is stupid, you'd never have both Solaris + IRIX
+	  defined, but i'm just leaving it in here since eventually
+	  it'll change into "defined(Solaris) || defined(IRIX) once
+	  it's all tested and working, apropos the comments below...
+	    -derek wright <wright@cs.wisc.edu> 11/22/03
+	*/
+	#if defined(Solaris) && !defined(IRIX)
+
 		/* when I can test this for sure, I'll remove the IRIX stuff from
 			below */
 		int fstat64( map(int fd), struct stat64 *buf ) :
@@ -774,18 +802,6 @@ report an error if reside on different devices.
 		ALLOC_PATH( path );
 	}
 
-	int unlink( map_name(const char *path) ) {
-		SEND_PATH( path );
-		ALLOC_PATH( path );
-	}
-
-	int rename( map_name(const char *from), map_name_two(const char *to) ) : pseudo {
-		SEND_PATH( from );
-		SEND_PATH( to );
-		ALLOC_PATH( from );
-		ALLOC_PATH( to );
-	}
-
 	int mknod( map_name(const char *path), mode_t mode, dev_t device ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
@@ -804,11 +820,7 @@ report an error if reside on different devices.
 	}
 
 
-	#if defined(Solaris251)
-	int readlink( map_name(const char *path), void *buf, int buf_size ) {
-	#else
 	int readlink( map_name(const char *path), char *buf, size_t buf_size ) {
-	#endif
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 		out code_bytes_bool( buf, buf_size );
@@ -827,12 +839,7 @@ report an error if reside on different devices.
 		ALLOC_PATH( path );
 	}
 
-	#if defined(LINUX) && !defined(GLIBC)
-		int truncate( map_name(const char *path), size_t length ) : extract {
-			SEND_PATH( path );
-			ALLOC_PATH( path );
-		}
-	#elif defined(Solaris) 
+	#if defined(Solaris) 
 		int truncate( map_name(const char *path), off_t length ) : extract {
 			SEND_PATH( path );
 			ALLOC_PATH( path );
@@ -842,7 +849,7 @@ report an error if reside on different devices.
 			SEND_PATH( path );
 			ALLOC_PATH( path );
 		}
-	#endif /* LINUX */
+	#endif /* Solaris */
 
 
 	int mkdir( map_name(const char *path), mode_t mode ) {
@@ -894,6 +901,29 @@ either file names or file descriptors.
 		}
 	#endif
 
+
+/*
+These are general-purpose system calls.
+They are not needed for remote I/O, but *are* used by the old PVM
+starter to figure out what uid/gid to try to run the job as, which is
+why they can't be left inside an !defined(CLIP) block...
+*/
+#if defined(REMOTE_SYSCALLS)
+	uid_t getuid() 
+		: pseudo
+		#if defined(AIX)
+			, no_sys_chk
+		#endif
+		;
+	gid_t getgid()  
+		: pseudo
+		#if defined(AIX)
+			, no_sys_chk
+		#endif
+		;
+#endif
+
+
 /*
 These are general-purpose system calls.
 They are not needed for remote I/O or for the condor daemons.
@@ -902,8 +932,6 @@ They are not needed for remote I/O or for the condor daemons.
 #if defined(REMOTE_SYSCALLS) && !defined(CLIP)
 
 	pid_t getppid() : EXTRACT, pseudo;
-	uid_t getuid()  : pseudo;
-	gid_t getgid()  : pseudo;
 	pid_t getpid()  : pseudo;
 	pid_t getpgid( pid_t pid );
 	pid_t getpgrp();
@@ -1330,7 +1358,7 @@ they should be built in the special "clipped" version.
 		involved, it's easier to just code the senders by hand.
 		They are implemented in "senders.epilogue".
 		*/
-		int send_file( const char *name, mode_t mode ) : pseudo {
+		int send_a_file( const char *name, mode_t mode ) : pseudo {
 			SEND_PATH( name );
 			ALLOC_PATH( name );
 		}
@@ -1504,16 +1532,17 @@ not_supported {
 not_supported {
 	pid_t fork() : EXTRACT;
 	#if defined(LINUX)
-		pid_t clone(void *sp, unsigned long flags);
+		#if defined(GLIBC22) || defined(GLIBC23)
+			/* XXX the stub generator doesn't understand function prototypes */
+/*			pid_t clone(int (*)(void*), void *sp, int *, void *);*/
+		#else
+			pid_t clone(void *sp, unsigned long flags);
+		#endif
 	#elif defined(Solaris)
 		pid_t fork1();
 	#endif
 
-	#if defined(LINUX) && ! (defined(GLIBC21) || defined(GLIBC22))
-	pid_t vfork() : EXTRACT;
-	#else
 	pid_t vfork();
-	#endif
 
 	int execve( const char *path, char * const argv[], char * const envp [] );
 
@@ -1569,7 +1598,7 @@ not_supported {
 		int profil( char *buf, int buf_size, int offset, int scale );
 	#elif defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
 		void profil( unsigned short *buf, unsigned int buf_size, unsigned long offset, unsigned int scale );
-	#elif defined(Solaris26) || defined(Solaris251)
+	#elif defined(Solaris26)
 		void profil( unsigned short *buf, unsigned int buf_size, unsigned int offset, unsigned int scale );
 	#elif defined(HPUX10)
 		void profil( const void *buf, size_t size, size_t offset, int scale );
@@ -1578,10 +1607,11 @@ not_supported {
 	#else
 		void profil( short *buf, unsigned int buf_size, unsigned int offset, unsigned int scale );
 	#endif
+
 	int quotactl( char *path, int cmd, int id, char *addr );
 	int getsysinfo( unsigned long op, char * buf, unsigned long nbytes, int *start, char *arg );
 
-	#if defined(LINUX) || defined(Solaris251) || defined(IRIX65) || defined(OSF1)
+	#if defined(LINUX) || defined(IRIX65) || defined(OSF1)
 		int setitimer( int which, const struct itimerval *value, struct itimerval *oval );
 		int getitimer( int which, struct itimerval *value );
 	#elif defined(HPUX)

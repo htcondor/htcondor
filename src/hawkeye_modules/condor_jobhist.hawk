@@ -2,9 +2,9 @@
 ModuleFiles: condor_jobhist
 
 Description:
-Monitors the job history of a Condor submit node
-condor_pool parameters by hand In particular, the HAWKEYE_POOL_ENV
-PATH & CONDOR_CONFIG will most likely need to be set
+Monitors the job history of a Condor submit node.
+The ENV, PATH & CONDOR_CONFIG parameters will most likely
+need to be set by hand.
 
 Default: jobs
 options: kill
@@ -15,17 +15,21 @@ prefix: jobhist_
 parameter: CONDOR = /home/condor
 Specify the home of Condor on the system
 
-parameter: HAWKEYE_POOL_ENV = PATH=/bin:/sbin:/usr/bin:$(HAWKEYE)/bin:$(CONDOR)/bin:$(CONDOR)/scripts:CONDOR_CONFIG=$(CONDOR)/etc/condor_config
+parameter: ENV = PATH=/bin:/sbin:/usr/bin:$(HAWKEYE)/bin:$(CONDOR)/bin:$(CONDOR)/scripts:CONDOR_CONFIG=$(CONDOR)/etc/condor_config
 Sets the PATH & CONDOR_CONFIG used by the condor 
 
-parameter: Hawkeye_pool_job_history_long = false
-HAWKEYE_JOBS_LONG = true/false
+parameter: LONG = false
+LONG = true/false
 This parameter controls whether it should generate per-job data.
 
-parameter: Hawkeye_jobs_const =
+parameter: CONST =
 This parameter specifies a constraint that, if specified, is passed to
 'condor_history' to constrain the list of jobs queried.
 
-parameter: Hawkeye_jobs_owner =
+parameter: OWNER =
 This parameter specifies a owner that, if specified, is passed to
 'condor_history' to constrain the list of jobs queried.
+
+parameter: FILE =
+This parameter specifies the job history file.
+

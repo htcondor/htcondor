@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_debug.h"
@@ -124,6 +124,10 @@ static char* uname_opsys = NULL;
 char* get_hpux_arch( struct utsname* );
 #endif
 
+#ifdef AIX
+char* get_aix_arch( struct utsname* );
+#endif
+
 void
 init_arch() 
 {
@@ -144,7 +148,7 @@ init_arch()
 	}
 
 	arch = sysapi_translate_arch( buf.machine, buf.sysname );
-	opsys = sysapi_translate_opsys( buf.sysname, buf.release );
+	opsys = sysapi_translate_opsys( buf.sysname, buf.release, buf.version );
 
 	if ( arch && opsys ) {
 		arch_inited = TRUE;
@@ -157,7 +161,19 @@ sysapi_translate_arch( char *machine, char *sysname )
 	char tmp[64];
 	char *tmparch;
 
-#ifdef HPUX
+#if defined(AIX)
+	/* AIX machines have a ton of different models encoded into the uname
+		structure, so go to some other function to decode and group the
+		architecture together */
+	struct utsname buf;	
+
+	if( uname(&buf) < 0 ) {
+		return NULL;
+	}
+
+	return( get_aix_arch( &buf ) );
+
+#elif defined(HPUX)
 	/*
 	  On HPUX, to figure out if we're HPPA1 or HPPA2, we have to
 	  lookup what we get back from uname in a file that lists all the
@@ -232,7 +248,7 @@ sysapi_translate_arch( char *machine, char *sysname )
 }
 
 char *
-sysapi_translate_opsys( char *sysname, char *release )
+sysapi_translate_opsys( char *sysname, char *release, char *version )
 {
 	char tmp[64];
 	char *tmpopsys;
@@ -322,6 +338,11 @@ sysapi_translate_opsys( char *sysname, char *release )
 			sprintf( tmp, "OSX");
 		}
 	}
+	else if ( !strncmp(sysname, "AIX", 3) ) {
+		if ( !strcmp(version, "5") ) {
+			sprintf(tmp, "%s%s%s", sysname, version, release);
+		}
+	}
 	else {
 			// Unknown, just use what uname gave:
 		sprintf( tmp, "%s%s", sysname, release );
@@ -378,7 +399,7 @@ sysapi_uname_opsys()
 char*
 get_hpux_arch( struct utsname *buf )
 {
-    FILE* fp;
+	FILE* fp;
 	static char *file = "/opt/langtools/lib/sched.models";
 	char machinfo[4096], line[128];
 	char *model;
@@ -392,22 +413,22 @@ get_hpux_arch( struct utsname *buf )
 
 	fp = fopen( file, "r" );
 	if( ! fp ) {
-	    return NULL;
+		return NULL;
 	}	
 	while( ! feof(fp) ) {
-	    fgets( line, 128, fp );
+		fgets( line, 128, fp );
 		if( !strncmp(line, model, len) ) {
-		    found_it = TRUE;
-		    break;
+			found_it = TRUE;
+			break;
 		}
 	}
 	fclose( fp );
 	if( found_it ) {
-  	    sscanf( line, "%s\t%s", cpumodel, cputype );
+  		sscanf( line, "%s\t%s", cpumodel, cputype );
 		if( !strcmp(cputype, "2.0") ) {
-		    tmparch = strdup( "HPPA2" );
+			tmparch = strdup( "HPPA2" );
 		} else {
-		    tmparch = strdup( "HPPA1" );
+			tmparch = strdup( "HPPA1" );
 		}
 		if( !tmparch ) {
 			EXCEPT( "Out of memory!" );
@@ -418,5 +439,237 @@ get_hpux_arch( struct utsname *buf )
 	return tmparch;
 }
 #endif /* HPUX */
+
+#ifdef AIX
+
+char*
+get_aix_arch( struct utsname *buf )
+{
+	char *ret = "UNK";
+	char d[3];
+	int model;
+
+	/* The model number is encoded in the last two non zero digits of the
+		model code. */
+	d[0] = buf->machine[ strlen( buf->machine ) - 4 ];
+	d[1] = buf->machine[ strlen( buf->machine ) - 3 ];
+	d[2] = '\0';
+	model = strtol(d, NULL, 16);
+
+	/* ok, group the model numbers into processor families: */
+	switch(model)
+	{
+	  case 0x10:  
+		/* Model 530/730 */
+		break;
+
+	  case 0x11:
+	  case 0x14:
+		/* Model 540 */
+		break;
+
+	  case 0x18:
+		/* Model 530H */
+		break;
+
+	  case 0x1C:
+		/* Model 550 */
+		break;
+
+	  case 0x20:
+		/* Model 930 */
+		break;
+
+	  case 0x2E:
+		/* Model 950/950E */
+		break;
+
+	  case 0x30:
+		/* Model 520 or 740/741 */
+		break;
+
+	  case 0x31:
+		/* Model 320 */
+		break;
+
+	  case 0x34:
+		/* Model 520H */
+		break;
+
+	  case 0x35:
+		/* Model 32H/320E */
+		break;
+
+	  case 0x37:
+		/* Model 340/34H */
+		break;
+
+	  case 0x38:
+		/* Model 350 */
+		break;
+
+	  case 0x41:
+		/* Model 220/22W/22G/230 */
+		break;
+
+	  case 0x42:
+		/* Model 41T/41W */
+		break;
+
+	  case 0x43:
+		/* Model M20 */
+		break;
+
+	  case 0x45:
+		/* Model 220/M20/230/23W */
+		break;
+
+	  case 0x46:
+	  case 0x49:
+		/* Model 250 */
+		break;
+
+	  case 0x47:
+		/* Model 230 */
+		break;
+
+	  case 0x48:
+		/* Model C10 */
+		break;
+
+	  case 0x4C:
+		/* PowerPC 603/604 model, and later */
+		ret = strdup("PWR3II");
+		break;
+
+	  case 0x4D:
+		/* Model 40P */
+		break;
+
+	  case 0x57:
+		/* Model 390/3AT/3BT */
+		break;
+
+	  case 0x58:
+		/* Model 380/3AT/3BT */
+		break;
+
+	  case 0x59:
+		/* Model 39H/3CT */
+		break;
+
+	  case 0x5C:
+		/* Model 560 */
+		break;
+
+	  case 0x63:
+		/* Model 970/97B */
+		break;
+
+	  case 0x64:
+		/* Model 980/98B */
+		break;
+
+	  case 0x66:
+		/* Model 580/58F */
+		break;
+
+	  case 0x67:
+		/* Model 570/770/R10 */
+		break;
+
+	  case 0x70:
+		/* Model 590 */
+		break;
+
+	  case 0x71:
+		/* Model 58H */
+		break;
+
+	  case 0x72:
+		/* Model 59H/58H/R12/R20 */
+		break;
+
+	  case 0x75:
+		/* Model 370/375/37T */
+		break;
+
+	  case 0x76:
+		/* Model 360/365/36T */
+		break;
+
+	  case 0x77:
+		/* Model 315/350/355/510/550H/550L */
+		break;
+
+	  case 0x79:
+		/* Model 591 */
+		break;
+
+	  case 0x80:
+		/* Model 990 */
+		break;
+
+	  case 0x81:
+		/* Model R24 */
+		break;
+
+	  case 0x82:
+		/* Model R00/R24 */
+		break;
+
+	  case 0x89:
+		/* Model 595 */
+		break;
+
+	  case 0x90:
+		/* Model C20 */
+		break;
+
+	  case 0x91:
+		/* Model 42T */
+		break;
+
+	  case 0x94:
+		/* Model 397 */
+		break;
+
+	  case 0xA0:
+		/* Model J30 */
+		break;
+
+	  case 0xA1:
+		/* Model J40 */
+		break;
+
+	  case 0xA3:
+		/* Model R30 */
+		break;
+
+	  case 0xA4:
+		/* Model R40 */
+		break;
+
+	  case 0xA6:
+		/* Model G30 */
+		break;
+
+	  case 0xA7:
+		/* Model G40 */
+		break;
+
+	  case 0xC4:
+		/* Model F30 */
+		break;
+
+	  default:
+	  	/* unknown model, use default value of ret */
+		break;
+	}
+
+	return ret;
+}
+
+#endif /* AIX */
 
 #endif /* ! WIN32 */

@@ -10,8 +10,29 @@
 #  THIS SCRIPT IS BEST VIEW WITH TAB STOPS IN YOUR EDITOR AT 4 SPACES
 #
 #   Author Todd Tannenbaum, 6/97
-#   Copyright 1997 by the Condor Team, All Rights Reserved.
-#   mailto:condor-admin@cs.wisc.edu  http://www.cs.wisc.edu/condor
+
+############################Copyright-DO-NOT-REMOVE-THIS-LINE##
+#
+# Condor Software Copyright Notice
+# Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+# University of Wisconsin-Madison, WI.
+#
+# This source code is covered by the Condor Public License, which can
+# be found in the accompanying LICENSE.TXT file, or online at
+# www.condorproject.org.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+# IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+# FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+# HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+# MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+# ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+# PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+# RIGHT.
+#
+############################Copyright-DO-NOT-REMOVE-THIS-LINE##
 
 ldargs=$*
 
@@ -35,6 +56,28 @@ if [ $os = "HP-UX" ]; then
 	osmajver=`uname -r | awk -F. '{print $2}' -`
 else
 	osmajver=`uname -r | awk -F. '{print $1}' -`
+fi
+
+# figure out if this version of the Condor syscall libraries were built with 
+# gcc3 or later. 
+is_gcc3=0
+if [ -f $CONDOR_LIBDIR/libcomp_libgcc.a ]; then
+	is_gcc3=1
+	libcomp_libstdcpp="$CONDOR_LIBDIR/libcomp_libstdc++.a"
+	libcomp_libgcc="$CONDOR_LIBDIR/libcomp_libgcc.a"
+	libcomp_libgcc_eh="$CONDOR_LIBDIR/libcomp_libgcc_eh.a"
+fi
+
+# now, if we are gcc3 or later, add the stdc++ archive automatically to the
+# link line just after our syscall library so we can resolve the increasingly 
+# complex c++ bindings in our 
+# system call/remote i/o libs. This is because gcc c++ support has evolved 
+# really far in the internal compiler libraries(which now all depend on each 
+# other in complex ways), and we can no longer construct a 
+# libcondorc++support.a which is good enough anymore for gcc3 and later
+# compilers.
+if [ $is_gcc3 = 1 ]; then
+	CONDOR_CLIB=`echo $CONDOR_CLIB $libcomp_libstdcpp`
 fi
 
 #abi is needed throughout for IRIX
@@ -152,8 +195,12 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
   if [ $os = "Linux" ]; then
 		# some redunancy here, not sure why. But it doesn't hurt anything.
         libc=`condor_version -syscall -libc`
-        if [ $libc = "GLIBC22" ]; then
+        if [ $libc = "GLIBC23" ]; then
+                LINUX_LIB="glibc23"
+        elif [ $libc = "GLIBC22" ]; then
                 LINUX_LIB="glibc22"
+        elif [ -f /lib/libc-2.3* ]; then
+                LINUX_LIB="glibc23"
         elif [ -f /lib/libc-2.2* ]; then
                 LINUX_LIB="glibc22"
         elif [ $libc = "GLIBC21" ]; then
@@ -237,17 +284,77 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 
      case $brokenbase in
 
+	 # mimic -static-libgcc for gcc3+ by throwing this library out since this
+	 # library is just a shard version of libgcc.a
+	 -lgcc_s ) 
+	 	# However, throwing this out is not quite good enough, if we do, then
+		# we MUST include libcomp_libgcc_eh in the link line since that
+		# is a part of the -static-libgcc feature set. This gets done below
+		# when processing -lgcc.
+	 	;;
+	
+	# under linux with gcc3+, we must link our executables statically and this
+	# requires that we use a special crtbegin shipped with the compiler that
+	# allows C++ exceptions to function. XXX This code might change slightly
+	# when we move to other OSes like Solaris under gcc3....
+	crtbegin\.o)
+		if [ $os = "Linux" -a $is_gcc3 = 1 ]; then
+			tmp=`echo $argument | sed -e 's/crtbegin\.o/crtbeginT\.o/'`
+				ldargs=`echo $ldargs $tmp`
+		else
+			# otherwise just propogate what we find if it is just a gcc 2.96
+			# (or anything else) compiler which has a crtbegin.o and, via
+			# manual inspection, not a crtbeginT.o. This is apparently in 
+			# order to make c++ exceptions work.
+			ldargs=`echo $ldargs $argument`
+		fi
+		;;
+		
+	
+	 # Throw out options that ask for shared libs on gcc3+ with linux
+	 -shared )
+	 		if [ $os = "Linux" ]; then
+				ignore=true
+			else
+				ldargs=`echo $ldargs $argument`
+			fi ;;
+
 	 # Replace Standard C lib or GNU Standard C lib with condor_syscall_lib
-     -lgcc )  if [ $lgcc = false ]; then
+     -lgcc )  
+	 		# ok, whenever we see this flag under gcc3, we must replace it with
+			# the hard archives, but we only add the CONDOR_CLIB library the 
+			# *first* time we see this flag.
+			if [ $is_gcc3 = 1 ]; then
+				brokenbase=`echo $libcomp_libgcc $libcomp_libgcc_eh`
+			fi
+			
+			if [ $lgcc = false ]; then
 				if [ $osfull = "SunOS5" ]; then
-                 	ldargs=`echo $ldargs $CONDOR_CLIB -Bdynamic -lsocket -lnsl -lgcc`
+                 	ldargs=`echo $ldargs $CONDOR_CLIB -Bdynamic -lsocket -lnsl $brokenbase`
 				else
-                 	ldargs=`echo $ldargs $CONDOR_CLIB -lgcc`
+                 	ldargs=`echo $ldargs $CONDOR_CLIB $brokenbase`
 				fi
                 lgcc=true 
-              else
-                ldargs=`echo $ldargs -lgcc`
+            else
+                ldargs=`echo $ldargs $brokenbase`
               fi ;;
+
+	# This argument appears only for gcc3 and later compilers
+	-lgcc_eh ) 
+
+			# get rid of this flag, replacing it with a hard archive of it
+			# that we ship with Condor. This library will appear multiple
+			# times on the link line sine it is often paired with -lgcc.
+			# However, in the off chance that -lgcc_eh is used in another
+			# place on the link line by itself cause the user is doing
+			# wierd, I must failthfully translate it.
+
+			brokenbase=`echo $libcomp_libgcc_eh`
+            ldargs=`echo $ldargs $brokenbase`
+
+			;;
+
+
      -lc )  if [ $lgcc = false ]; then
 				if [ $osfull = "SunOS5" ]; then
                  	ldargs=`echo $ldargs $CONDOR_CLIB -Bdynamic -lsocket -lnsl -lc`
@@ -260,7 +367,7 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
               else
 				if [ $os = "OSF1" ]; then				
 					ldargs=`echo $ldargs -lm -lc`
-				elif [ $LINUX_LIB = "glibc21" -o $LINUX_LIB = "glibc22" ]; then
+				elif [ $LINUX_LIB = "glibc21" -o $LINUX_LIB = "glibc22" -o $LINUX_LIB = "glibc23" ]; then
 
 					ldargs=`echo -L$CONDOR_LIBDIR $ldargs -lc -lnss_files -lnss_dns -lresolv -lc -lnss_files -lnss_dns -lresolv -lc`
 				else
@@ -271,7 +378,16 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 	 # Make certain condor_syscall_lib appears on the link line before any of
 	 # the following language-helper libraries.  Note variable $brokenbase is
 	 # currently set to the library name we may match on.
-     -lstdc++ | -lg++ | -lf2c | -lg2c | -lp2c | -lftn | -lf77 | -lF77)
+     -lstdc++ | -lg++ | -lf2c | -lg2c | -lp2c | -lftn | -lf77 | -lF77 | -lfrtbegin)
+
+		# if we see -lstdc++ specifically, then replace it with the archive
+		# version that we ship with Condor. XXX This might need tweaking if
+		# other compilers besides gcc uses libstdc++ too...
+		if [ $is_gcc3 = 1 -a "X$brokenbase" = "X-lstdc++" ]; then
+			brokenbase=`echo $libcomp_libstdcpp`
+		fi
+		
+
 	 		if [ $lgcc = false ]; then
 				if [ $osfull = "SunOS5" ]; then
                  	ldargs=`echo $ldargs $CONDOR_CLIB -Bdynamic -lsocket -lnsl $brokenbase`
@@ -345,8 +461,11 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
   done
 
   # Finally, tack on our C++ support library at the very end of the
-  # link line.
-  ldargs=`echo $ldargs $CONDOR_CPLUS`
+  # link line. However, if we are using gcc3+, then do NOT tack this on
+  # since we now include the entire C++ run time.
+  if [ $is_gcc3 = 0 ]; then
+	ldargs=`echo $ldargs $CONDOR_CPLUS`
+  fi
 
   echo "LINKING FOR CONDOR : $osld $ldargs"
 fi

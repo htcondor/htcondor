@@ -1,3 +1,25 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
 #include "CondorError.h"
 #include "condor_snutils.h"
@@ -33,11 +55,11 @@ void CondorError::init() {
 
 void CondorError::clear() {
 	if (_subsys) {
-		delete _subsys;
+		free( _subsys );
 		_subsys = 0;
 	}
 	if (_message) {
-		delete _message;
+		free( _message );
 		_message = 0;
 	}
 	if (_next) {
@@ -91,21 +113,32 @@ void CondorError::pushf( char* the_subsys, int the_code, char* the_format, ... )
 	_next = tmp;
 }
 
-const char* CondorError::get_full_text() {
+const char*
+CondorError::getFullText( bool want_newline )
+{
 	static MyString errbuf;
+	bool printed_one = false;
 
 	errbuf = "";
 	CondorError* walk = _next;
 	while (walk) {
+		if( printed_one ) {
+			if( want_newline ) {
+				errbuf += '\n';
+			} else {
+				errbuf += '|';
+			}
+		} else {
+			printed_one = true;
+		}
 		errbuf += walk->_subsys;
 		errbuf += ':';
 		errbuf += walk->_code;
 		errbuf += ':';
 		errbuf += walk->_message;
-		errbuf += '\n';
 		walk = walk->_next;
 	}
-	return errbuf.GetCStr();
+	return errbuf.Value();
 }
 
 char* CondorError::subsys(int level) {

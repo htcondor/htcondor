@@ -1,30 +1,31 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_ver_info.h"
+#include "condor_version.h"
 
 #include "authentication.h"
 #include "condor_string.h"
@@ -43,20 +44,23 @@
 extern char* mySubSystem;
 extern bool global_dc_get_cookie(int &len, unsigned char* &data);
 
-ClassAdUnParser unp;
+static ClassAdUnParser unp;
 
-#define SECURITY_HACK_ENABLE
-void zz1printf(KeyInfo *k) {
-	if (k) {
-		char hexout[260];  // holds (at least) a 128 byte key.
-		const unsigned char* dataptr = k->getKeyData();
-		int   length  =  k->getKeyLength();
+void SecMan::key_printf(int debug_levels, KeyInfo *k) {
+	if (param_boolean("SEC_DEBUG_PRINT_KEYS", false)) {
+		if (k) {
+			char hexout[260];  // holds (at least) a 128 byte key.
+			const unsigned char* dataptr = k->getKeyData();
+			int   length  =  k->getKeyLength();
 
-		for (int i = 0; (i < length) && (i < 24); i++) {
-			sprintf (&hexout[i*2], "%02x", *dataptr++);
+			for (int i = 0; (i < length) && (i < 24); i++) {
+				sprintf (&hexout[i*2], "%02x", *dataptr++);
+			}
+
+			dprintf (debug_levels, "KEYPRINTF: [%i] %s\n", length, hexout);
+		} else {
+			dprintf (debug_levels, "KEYPRINTF: [NULL]\n");
 		}
-
-		dprintf (D_FULLDEBUG, "KEYCACHE: [%i] %s\n", length, hexout);
 	}
 }
 
@@ -396,11 +400,10 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	paramer = SecMan::getSecSetting("SEC_%s_CRYPTO_METHODS", auth_level);
 	if (!paramer) {
 		paramer = strdup(SecMan::getDefaultCryptoMethods().Value());
-		dprintf ( D_SECURITY, "getDefCryptoMeth -> %s\n", paramer);
 	}
 
 	if (paramer) {
-		sprintf(buf, "%s", ATTR_SEC_CRYPTO_METHODS, paramer);
+		sprintf(buf, "%s", paramer);
 		free(paramer);
         v.Clear();
         v.SetStringValue(buf);
@@ -425,7 +428,6 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	sprintf( buf, "%s=\"%s\"", ATTR_SEC_NEGOTIATION,
 			 SecMan::sec_req_rev[sec_negotiation] );
 	ad->Insert(buf);
-	dprintf (D_SECURITY, "ad->Insert(%s)\n", buf);
 
 	sprintf (buf, "%s", SecMan::sec_req_rev[sec_negotiation]);
     v.Clear();
@@ -461,7 +463,16 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	// key duration
 	// ZKM TODO HACK
 	// need to check kerb expiry.
-	paramer = SecMan::getSecSetting("SEC_%s_SESSION_DURATION", auth_level);
+
+	// first try the form SEC_<subsys>_<authlev>_SESSION_DURATION
+	// if that does not exist, fall back to old form of
+	// SEC_<authlev>_SESSION_DURATION.
+	char fmt[128];
+	sprintf(fmt, "SEC_%s_%%s_SESSION_DURATION", mySubSystem);
+	paramer = SecMan::getSecSetting(fmt, auth_level);
+	if (!paramer) {
+		paramer = SecMan::getSecSetting("SEC_%s_SESSION_DURATION", auth_level);
+	}
 
 	int sessdur;
 	if (paramer) {
@@ -469,17 +480,23 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
         free( paramer );
 		paramer = NULL;
 	} else {
-		// default: 4 hours
-		sessdur = 14400;
+		// no value defined, use defaults.
+		if (strcmp(mySubSystem, "TOOL") == 0) {
+			// default for tools is 1 minute.
+            sessdur = 60;
+		} else if (strcmp(mySubSystem, "SUBMIT") == 0) {
+			// default for submit is 1 hour.  yeah, that's a long submit
+			// but you never know with file transfer and all.
+            sessdur = 3600;
+		} else {
+			// default for daemons is 100 days.  this is a temporary workaround
+			// for 6.6.X until automatic re-negotiation is implemented.
+            sessdur = 8640000;
+		}
 	}
     v.Clear();
 	v.SetIntegerValue(sessdur);
     ad->InsertAttr(ATTR_SEC_SESSION_DURATION, sessdur);
-
-	if (DebugFlags & D_FULLDEBUG ) {
-    	dprintf ( D_SECURITY, "SECMAN: inserted '%s = %d'\n",
-				  ATTR_SEC_SESSION_DURATION, sessdur);
-	}
 
 	return true;
 }
@@ -766,6 +783,16 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 		dprintf (D_SECURITY, "SECMAN: using session %s for %s.\n", sid.Value(), keybuf);
 		// we have the session id, now get the session from the cache
 		have_session = session_cache->lookup(sid.Value(), enc_key);
+
+		// check the expiration.
+		time_t cutoff_time = time(0);
+		if (enc_key->expiration() && enc_key->expiration() <= cutoff_time) {
+			session_cache->expire(enc_key);
+			have_session = false;
+			enc_key = NULL;
+		}
+
+
 		if (!have_session) {
 			// the session is no longer in the cache... might as well
 			// delete this mapping to it.  (we could delete them all, but
@@ -795,9 +822,8 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 		if (DebugFlags & D_FULLDEBUG) {
 			dprintf (D_SECURITY, "SECMAN: found cached session id %s for %s.\n",
 					enc_key->id(), keybuf);
-#ifdef SECURITY_HACK_ENABLE
-			zz1printf(enc_key->key());
-#endif
+			key_printf(D_SECURITY, enc_key->key());
+			auth_info.dPrint( D_SECURITY );
 		}
 
 		new_session = false;
@@ -1022,6 +1048,21 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 		}
 	}
 
+	// extract the version attribute current in the classad - it is
+	// the version of the remote side.
+	MyString remote_version;
+	char * rvtmp = NULL;
+	auth_info.LookupString ( ATTR_SEC_REMOTE_VERSION, &rvtmp );
+	if (rvtmp) {
+		remote_version = rvtmp;
+		free(rvtmp);
+	} else {
+		remote_version = "unknown";
+	}
+
+	// fill in our version
+	sprintf(buf, "%s=\"%s\"", ATTR_SEC_REMOTE_VERSION, CondorVersion());
+	auth_info.InsertOrUpdate(buf);
 
 	// fill in return address, if we are a daemon
 	char* dcss = global_dc_sinful();
@@ -1034,14 +1075,12 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
     v.Clear();  
     v.SetIntegerValue(cmd);
     auth_info.InsertAttr(ATTR_SEC_COMMAND, cmd);
-	dprintf(D_SECURITY, "SECMAN: inserted '%s = %d'\n", ATTR_SEC_COMMAND, cmd);
 
 	if (cmd == DC_AUTHENTICATE) {
 		// fill in sub-command
 		v.Clear();  
         v.SetIntegerValue(subCmd);
         auth_info.InsertAttr(ATTR_SEC_AUTH_COMMAND, subCmd);
-		dprintf ( D_SECURITY, "SECMAN: inserted '%s'\n", buf);
 	}
 
 
@@ -1111,9 +1150,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 
 				if (DebugFlags & D_FULLDEBUG) {
 					dprintf (D_SECURITY, "SECMAN: about to enable message authenticator.\n");
-#ifdef SECURITY_HACK_ENABLE
-					zz1printf(ki);
-#endif
+					key_printf(D_SECURITY, ki);
 				}
 
 				// prepare the buffer to pass in udp header
@@ -1143,9 +1180,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 
 				if (DebugFlags & D_FULLDEBUG) {
 					dprintf (D_SECURITY, "SECMAN: about to enable encryption.\n");
-#ifdef SECURITY_HACK_ENABLE
-					zz1printf(ki);
-#endif
+					key_printf(D_SECURITY, ki);
 				}
 
 				// prepare the buffer to pass in udp header
@@ -1271,7 +1306,10 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 				dprintf(D_SECURITY, "%s\n", adstring.c_str());
 			}
 
-			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_VERSION );
+			// it makes a difference if the version is empty, so we must
+			// explicitly delete it before we copy it.
+			auth_info.Delete(ATTR_SEC_REMOTE_VERSION);
+			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_REMOTE_VERSION );
 			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_ENACT );
 			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_AUTHENTICATION_METHODS_LIST );
 			sec_copy_attribute( auth_info, auth_response, ATTR_SEC_AUTHENTICATION_METHODS );
@@ -1313,6 +1351,32 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 			return false;
 		}
 
+		// protocol fix:
+		//
+		// up to and including 6.6.0, will_authenticate would be set to true
+		// if we are resuming a session that was authenticated.  this is not
+		// necessary.
+		//
+		// so, as of 6.6.1, if we are resuming a session (as determined
+		// by the expression (!new_session), AND the other side is 6.6.1
+		// or higher, we will force will_authenticate to SEC_FEAT_ACT_NO.
+		//
+		// we can tell easily if the other side is 6.6.1 or higher by the
+		// mere presence of the version, since that is when it was added.
+
+		if ((will_authenticate == SEC_FEAT_ACT_YES)) {
+			if ((!new_session)) {
+				if (remote_version != "unknown") {
+					dprintf( D_SECURITY, "SECMAN: resume, other side is %s, NOT reauthenticating.\n", remote_version.Value() );
+					will_authenticate = SEC_FEAT_ACT_NO;
+				} else {
+					dprintf( D_SECURITY, "SECMAN: resume, other side is pre 6.6.1, reauthenticating.\n", remote_version.Value() );
+				}
+			} else {
+				dprintf( D_SECURITY, "SECMAN: new session, doing initial authentication.\n" );
+			}
+		}
+
 		
 		// at this point, we know exactly what needs to happen.  if we asked
 		// the other side, their choice is in will_authenticate.  if we
@@ -1352,7 +1416,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 						"Protocol Error: No auth methods");
 				return false;
 			} else {
-				dprintf ( D_SECURITY, "SECMAN: Auth methods: %s\n", auth_methods);
+				dprintf ( D_SECURITY, "SECMAN: Auth methods: %s\n", auth_methods.c_str());
 			}
 
 			if (!sock->authenticate(ki, auth_methods.data(), errstack)) {
@@ -1385,9 +1449,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 
 			if (DebugFlags & D_FULLDEBUG) {
 				dprintf (D_SECURITY, "SECMAN: about to enable message authenticator.\n");
-#ifdef SECURITY_HACK_ENABLE
-				zz1printf(ki);
-#endif
+				key_printf(D_SECURITY, ki);
 			}
 
 			sock->encode();
@@ -1407,9 +1469,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 
 			if (DebugFlags & D_FULLDEBUG) {
 				dprintf (D_SECURITY, "SECMAN: about to enable encryption.\n");
-#ifdef SECURITY_HACK_ENABLE
-				zz1printf(ki);
-#endif
+				key_printf(D_SECURITY, ki);
 			}
 
 			sock->encode();
@@ -1430,7 +1490,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 			if( !getOldClassAd(sock, post_auth_info) || !sock->eom() ) {
 				dprintf (D_ALWAYS, "SECMAN: could not receive session info, failing!\n");
 				errstack->push ("SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
-							"could not recieve post_auth_info" );
+							"could not receive post_auth_info" );
 				return false;
 			} else {
 				if (DebugFlags & D_FULLDEBUG) {
@@ -1622,7 +1682,7 @@ void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
                 if (command_map) {
                     cmd_list.rewind();
                     char * cmd = NULL;
-                    while (cmd = cmd_list.next() ) {
+                    while ((cmd = cmd_list.next())) {
                         memset(keybuf, 0, 128);
                         sprintf (keybuf, "{%s,<%s>}", addr, cmd);
                         command_map->remove(keybuf);

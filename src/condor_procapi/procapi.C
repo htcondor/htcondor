@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "procapi.h"
@@ -237,10 +237,8 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	set_priv( priv );
 	return rval;
 
-#endif /* defined(Solaris251) || defined(IRIX) || defined(OSF1) */
-
+#elif defined(Solaris26) || defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
 // This is the version of getProcInfo for Solaris 2.6 and 2.7 and 2.8 and 2.9
-#if defined(Solaris26) || defined(Solaris27) || defined(Solaris28) || defined(Solaris29)
 
 	char path[64];
 	int fd, rval = 0;
@@ -342,11 +340,10 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	set_priv( priv );
 	return 0;
 
-#endif /* Solaris26 || Solaris27 || Solaris28 || Solaris29 */
+#elif defined(LINUX)
 
 // This is the Linux version of getProcInfo.  Everything is easier and
 // actually seems to work in Linux...nice, but annoyingly different.
-#ifdef LINUX
 
 	char path[64];
 	FILE *fp;
@@ -492,23 +489,72 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 		// get the system boot time periodically, since it may change
 		// if the time on the machine is adjusted
 	if( boottime_expiration <= now ) {
-		if( (fp = fopen("/proc/stat", "r")) > 0 ) {
+		// There are two (sometimes conflicting) sources of boottime
+		// information.  One is the /proc/stat "btime" field, and the
+		// other is /proc/uptime.  For some unknown reason, btime
+		// has been observed to suddenly jump forward in time to
+		// the present moment, which totally messes up the process
+		// age calculation, which messes up the CPU usage estimation.
+		// Since this is not well understood, we hedge our bets
+		// and use whichever measure of boot-time is older.
+
+		unsigned long stat_boottime = 0;
+		unsigned long uptime_boottime = 0;
+
+		// get uptime_boottime
+
+		if( (fp = fopen("/proc/uptime","r")) ) {
+			double uptime=0;
+			double junk=0;
+			fgets( s, 256, fp );
+			if (sscanf( s, "%lf %lf", &uptime, &junk ) >= 1) {
+				// uptime is number of seconds since boottime
+				// convert to nearest time stamp
+				uptime_boottime = (unsigned long)(now - uptime + 0.5);
+			}
+			fclose( fp );
+		}
+
+		// get stat_boottime
+		if( (fp = fopen("/proc/stat", "r")) ) {
 			fgets( s, 256, fp );
 			while( strstr(s, "btime") == NULL ) {
 				fgets( s, 256, fp );
 			}
-			sscanf( s, "%s %lu", junk, &boottime );
+			sscanf( s, "%s %lu", junk, &stat_boottime );
 			fclose( fp );
-			boottime_expiration = now+60; // update once every minute
-		} else if (boottime == 0) {
+		}
+
+		if (stat_boottime == 0 && uptime_boottime == 0 && boottime == 0) {
 				// we failed to get the boottime, so we must abort
 				// unless we have an old boottime value to fall back on
 			dprintf( D_ALWAYS, "ProcAPI: Problem opening /proc/stat "
-					 "for btime.\n" );
+					 " and /proc/uptime for boottime.\n" );
 			delete pi; 
 			pi = NULL;
 			set_priv( priv );
 			return -2;
+		}
+
+		if (stat_boottime != 0 || uptime_boottime != 0) {
+			unsigned long old_boottime = boottime;
+
+			// Use the older of the two boottime estimates.
+			// If either one is missing, ignore it.
+			if (stat_boottime == 0) boottime = uptime_boottime;
+			else if (uptime_boottime == 0) boottime = stat_boottime;
+			else boottime = MIN(stat_boottime,uptime_boottime);
+
+			boottime_expiration = now+60; // update once every minute
+
+			// Since boottime is critical for correct cpu usage
+			// calculations, show how we got it.
+			dprintf( D_LOAD,
+					 "ProcAPI: new boottime = %lu; "
+					 "old_boottime = %lu; "
+					 "/proc/stat boottime = %lu; "
+					 "/proc/uptime boottime = %lu\n",
+					 boottime,old_boottime,stat_boottime,uptime_boottime);
 		}
 	}
 		// now we've got the boottime, the start time, and can get
@@ -542,7 +588,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	set_priv( priv );
 	return 0;
 
-#endif /* Linux */
+#elif defined(HPUX)
 
 /* Here's getProcInfo for HPUX.  Calling this a /proc interface is a lie, 
    because there IS NO /PROC for the HPUX's.  I'm using pstat_getproc().
@@ -551,7 +597,6 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
    that pid is returned in buf.  The bonus is, everything works...and
    you can get info on every process.
 */
-#ifdef HPUX
 
 	struct pst_status buf;
 	int rval = 0;
@@ -564,12 +609,21 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	rval = pstat_getproc( &buf, sizeof(buf), 0, pid );
 
 	if ( rval < 0 ) {
-		dprintf( D_ALWAYS, "ProcAPI: Error in pstat_getproc(%d): errno=%d\n",
-				 pid, errno );
+		int		status = -2;
+
+		// Handle "No such process" separately!
+		if ( ESRCH == errno ) {
+			dprintf( D_FULLDEBUG, "ProcAPI: pid %d does not exist.\n", pid );
+			status = -1;
+		} else {
+			dprintf( D_ALWAYS, "ProcAPI: Error in pstat_getproc(%d): errno=%d\n",
+					 pid, errno );
+			status = -2;
+		}
 		delete pi; 
 		pi = NULL;
 		set_priv( priv );
-		return -2;
+		return status;
 	}
 
 	if( pagesize == 0 ) {
@@ -609,10 +663,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	set_priv( priv );
 	return 0;
 
-#endif /* HPUX */
-
-#ifdef CONDOR_DARWIN
-
+#elif defined(Darwin)
 
 	// First, let's get the BSD task info for this stucture. This
 	// will tell us things like the pid, ppid, etc. 
@@ -675,8 +726,9 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 	mach_port_deallocate(mach_task_self(), task);
 	free(kp);
 	return 0;
-#endif
-#ifdef WIN32
+
+#elif defined(WIN32)
+
 /* Danger....WIN32 code follows....
    The getProcInfo call for WIN32 actually gets *all* the information
    on all the processes, but that's not preventable using only
@@ -719,7 +771,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
     DWORD dwStatus;  // return status of fn. calls
 
 /* Note to whom it may concern:  we DO NOT need to set_root_priv here!
-   NT makes this shit available to any old process.  I've left this
+   NT makes this stuff available to any old process.  I've left this
    in and commented out for demonstration purposes, and have removed
    the rest of the priv stuff from the NT code. */
 //	priv_state priv = set_root_priv();
@@ -813,7 +865,55 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi )
 
     return 0;
 
-#endif  // WIN32 getProcInfo
+#elif defined(AIX)
+
+	struct procentry64 pent;
+	struct fdsinfo64 fent;
+	int retval;
+
+	/* I do this so the getprocs64() call doesn't affect what we passed in */
+
+	/* Ask the OS for this one process entry, based on the pid */
+	pid_t index = 0;
+	while( 1 )
+	{
+		retval = getprocs64(&pent, sizeof(struct procentry64),
+							&fent, sizeof(struct fdsinfo64),
+							&index, 1);
+
+		if ( retval == -1 )
+		{
+			// some odd problem with getprocs64(), let the caller figure it out
+			return -1;
+
+			// Not found.  Ug.
+		} else if ( retval == 0 ) {
+			return -1;
+
+			// Found our match?
+		} else if ( pid == pent.pi_pid ) {
+			initpi( pi );
+			pi->imgsize = pent.pi_size * getpagesize();
+			pi->rssize = pent.pi_drss + pent.pi_trss; /* XXX not really right */
+			pi->minfault = pent.pi_minflt;
+			pi->majfault = pent.pi_majflt;
+			pi->user_time = pent.pi_ru.ru_utime.tv_usec; /* XXX fixme microseconds */
+			pi->sys_time = pent.pi_ru.ru_stime.tv_usec; /* XXX fixme microseconds */
+			pi->age = secsSinceEpoch() - pent.pi_start;
+			pi->pid = pent.pi_pid;
+			pi->ppid = pent.pi_ppid;
+			pi->creation_time = pent.pi_start;
+
+			pi->cpuusage = 0.0; /* XXX fixme compute it */
+
+			// All done
+			return 0;
+		}
+	}
+	return -1;
+#else
+#error Please define ProcAPI::getProcInfo( pid_t pid, piPTR& pi ) for this platform!
+#endif
 
 } // 500+ lines later, the closing brace of getProcInfo! (Whew!)
 
@@ -998,7 +1098,7 @@ ProcAPI::do_usage_sampling( piPTR& pi,
    returned for total & available mem are consistent with the numbers
    reported by top.  */
 
-#if ( defined(Solaris)  )
+#if defined(Solaris)
 int
 ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	if( pagesize == 0 ) {
@@ -1008,9 +1108,7 @@ ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	availmem = sysconf(_SC_AVPHYS_PAGES) * pagesize;
 	return 0;
 }
-#endif /* Solaris */
-
-#ifdef LINUX
+#elif defined(LINUX)
 int
 ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
   
@@ -1035,9 +1133,7 @@ ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	}
 	return 0;
 }
-#endif /* LINUX */
-
-#ifdef OSF1
+#elif defined(OSF1)
 int
 ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 
@@ -1057,9 +1153,7 @@ ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	availmem = v.free_count * pagesize;
 	return 0;
 }
-#endif /* OSF1 */
-
-#ifdef IRIX
+#elif defined(IRIX)
 int
 ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
   
@@ -1077,9 +1171,7 @@ ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	availmem = rmi.freemem * pagesize;
 	return 0;
 }
-#endif /* IRIX */
-
-#ifdef HPUX
+#elif defined(HPUX)
 int
 ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 
@@ -1105,9 +1197,9 @@ ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	}
 	return 0;
 }
-#endif /* HPUX */
 
-#if ( defined(CONDOR_DARWIN)  )
+#elif defined(Darwin)
+
 int
 ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	
@@ -1126,17 +1218,30 @@ ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
 	i = sysctl(mib, 2, &availmem, &oldlen, NULL, 0);
 	return 0;
 }
-#endif /* Solaris */
-
+#elif defined(WIN32)
 /* This version for windows is obviously broken. :-) */
-#ifdef WIN32
 int
 ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
     totalmem = 0;
     availmem = 0;
     return 0;
 }
-#endif /* WIN32 */
+#elif defined(AIX)
+int
+ProcAPI::getMemInfo( int& totalmem, int& availmem ) {
+
+/* Found on the web... 
+	-From a C program, you can call the "odm_get_obj" subroutine
+	for class "CuAt" with argument "name=sys0 AND attribute=realmem"- */
+
+	/* XXX obviously, this is not correct */
+	availmem = 0;
+	totalmem = 0;
+	return 0;
+}
+#else
+#error You need to define ProcAPI::getMemInfo(int &, int&) for this platform!
+#endif
 
 #ifndef WIN32
 /* getProcSetInfo returns the sum of the procInfo structs for a set
@@ -1670,7 +1775,7 @@ ProcAPI::getAndRemNextPid () {
    to by pidList, a private data member of ProcAPI.  
  */
 
-#ifndef CONDOR_DARWIN
+#ifndef Darwin
 int
 ProcAPI::buildPidList() {
 
@@ -1717,7 +1822,7 @@ ProcAPI::buildPidList() {
    FreeBSD as well, but FreeBSD does have a /proc that it could look at
  */
 
-#ifdef CONDOR_DARWIN
+#ifdef Darwin
 int
 ProcAPI::buildPidList() {
 
@@ -1776,41 +1881,7 @@ ProcAPI::buildPidList() {
 
 #endif
 
-/* Using the list of processes pointed to by pidList and returned by
-   getAndRemNextPid(), a linked list of procInfo structures is
-   built.  At the end, allProcInfos will point to the head of this
-   list.  This function is used on all OS's except for HPUX.
-*/
-#ifndef HPUX
-int
-ProcAPI::buildProcInfoList() {
-  
-	piPTR current;
-	piPTR temp;
-	pid_t thispid;
-
-		// make a header node for ease of list construction:
-	deallocAllProcInfos();
-	allProcInfos = new procInfo;
-	current = allProcInfos;
-	current->next = NULL;
-
-	temp = NULL;
-	while( (thispid = getAndRemNextPid()) >= 0 ) {
-		if( getProcInfo(thispid, temp) >= 0 ) {
-			current->next = temp;
-			current = temp;
-			temp = NULL;
-		}
-	}
-
-		// we're done; remove header node.
-	temp = allProcInfos;
-	allProcInfos = allProcInfos->next;
-	delete temp;
-	return 0;
-}
-#else
+#ifdef HPUX
 /* now for the HPUX version.  In a sense, it's simpler, because no
    pidlist has to be built......the allProcInfos list
    is built by repeated calls to pstat_getproc(), which will return
@@ -1877,7 +1948,114 @@ ProcAPI::buildProcInfoList() {
 	}
 	return 0;
 }
-#endif   // end of HPUX's buildProcInfoList()
+// end of HPUX's buildProcInfoList()
+
+#elif defined AIX
+/* now for the AIX version.  In a sense, it's simpler, because no
+   pidlist has to be built......the allProcInfos list
+   is built by repeated calls to getprocs64(), which will return
+   information about every process in the system, if asked enough
+   times and in the proper manner.
+*/
+int
+ProcAPI::buildProcInfoList() {
+  
+		// this determines the number of process infos to grab at
+		// once.   10 seems to be a good number.
+	const int BURSTSIZE = 10;    
+	piPTR current;
+
+		// make a header node for ease of list construction:
+	deallocAllProcInfos();
+	allProcInfos = new procInfo;
+	current = allProcInfos;
+	current->next = NULL;
+
+		// loop until count == 0, which will occur when all have been returned
+	pid_t idx = 0;  // index within the context
+	while( 1 ) {
+		struct procentry64 pent[ BURSTSIZE ];
+		struct fdsinfo64 fent[ BURSTSIZE ];
+
+		// Ask AIX for a group of processes
+		int count = getprocs64( pent, sizeof(struct procentry64),
+								fent, sizeof(struct fdsinfo64),
+								&idx, BURSTSIZE );
+
+		// some odd problem with getprocs64(), let the caller figure it out
+		if ( count < 0 ) {
+			dprintf( D_ALWAYS, "ProcAPI: getprocs64() failed\n" );
+			return -1;
+		} else if ( count == 0 ) {
+			break;
+		}
+
+		// Loop through & add them all
+		for( int i=0;  i<count;  i++ ) {
+			piPTR pi = new procInfo;
+			initpi( pi );
+
+			pi->imgsize = pent[i].pi_size * getpagesize();
+			pi->rssize = pent[i].pi_drss + pent[i].pi_trss; /* XXX not really right */
+			pi->minfault = pent[i].pi_minflt;
+			pi->majfault = pent[i].pi_majflt;
+			pi->user_time = pent[i].pi_ru.ru_utime.tv_usec; /* XXX fixme microseconds */
+			pi->sys_time = pent[i].pi_ru.ru_stime.tv_usec; /* XXX fixme microseconds */
+			pi->age = secsSinceEpoch() - pent[i].pi_start;
+			pi->pid = pent[i].pi_pid;
+			pi->ppid = pent[i].pi_ppid;
+			pi->creation_time = pent[i].pi_start;
+
+			pi->cpuusage = 0.0; /* XXX fixme compute it */
+
+			current->next = pi;
+			current = pi;
+		}
+	}
+
+	// remove that header node:
+	piPTR temp = allProcInfos;
+	allProcInfos = allProcInfos->next;
+	delete temp;
+
+	return 0;
+}
+
+/* Using the list of processes pointed to by pidList and returned by
+   getAndRemNextPid(), a linked list of procInfo structures is
+   built.  At the end, allProcInfos will point to the head of this
+   list.  This function is used on all OS's except for HPUX or AIX.
+*/
+#else
+int
+ProcAPI::buildProcInfoList() {
+  
+	piPTR current;
+	piPTR temp;
+	pid_t thispid;
+
+		// make a header node for ease of list construction:
+	deallocAllProcInfos();
+	allProcInfos = new procInfo;
+	current = allProcInfos;
+	current->next = NULL;
+
+	temp = NULL;
+	while( (thispid = getAndRemNextPid()) >= 0 ) {
+		if( getProcInfo(thispid, temp) >= 0 ) {
+			current->next = temp;
+			current = temp;
+			temp = NULL;
+		}
+	}
+
+		// we're done; remove header node.
+	temp = allProcInfos;
+	allProcInfos = allProcInfos->next;
+	delete temp;
+	return 0;
+}
+#endif
 
 /* buildFamily takes a list of procInfo structs pointed to by 
    allProcInfos and an ancestor pid 'daddypid' and builds a list
@@ -2556,7 +2734,7 @@ void ProcAPI::sprog1 ( pid_t *childlist, int numkids, int f ) {
       for ( j = 0 ; j < 1024*(i+1)*f ; j++ ) {
         big[j] = new char[1024];
         if ( big[j] == NULL ) {
-          printf("Shit, new failed in child %i.  j=%i\n", i, j);
+          printf("New failed in child %i.  j=%i\n", i, j);
         }
       }
 
@@ -2609,7 +2787,7 @@ void ProcAPI::sprog2( int numkids, int f ) {
     for ( j = 0 ; j < 1024*i*f ; j++ ) {
       big[j] = new char[1024];
       if ( big[j] == NULL ) {
-        printf("Shit, new failed in child %i.  j=%i\n", i, j);
+        printf("New failed in child %i.  j=%i\n", i, j);
       }
     }
 

@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_version.h"
@@ -36,8 +36,6 @@
 #include "condor_debug.h"
 #include "condor_ckpt_mode.h"
 #include "signals_control.h"
-
-static char *_FileName_ = __FILE__;
 
 extern int _condor_in_file_stream;
 
@@ -72,11 +70,9 @@ extern "C" {
 	extern "C" unsigned int ntohl( unsigned int );
 #elif defined(HPUX)
 #	include <netinet/in.h>
-#elif defined(Solaris) && defined(sun4m)
+#elif defined(Solaris)
 	#define htonl(x)		(x)
 	#define ntohl(x)		(x)
-#elif defined(Solaris)
-	/* Already included it */
 #elif defined(IRIX)
 	#include <sys/endian.h>
 #elif defined(LINUX)
@@ -429,7 +425,6 @@ _condor_prestart( int syscall_mode )
 	   on restart, and we will lose floats on context switches.  -Jim B. */
 #if defined(Solaris)
 	setnetconfig();
-#if defined(sun4m)
 	float x=23, y=14, z=256;
 	if ((x+y)>z) {
 		dprintf(D_ALWAYS,
@@ -437,7 +432,6 @@ _condor_prestart( int syscall_mode )
 		Suicide();
 	}
 	z=x*y;
-#endif
 #endif
 
 }
@@ -2080,23 +2074,6 @@ _condor_save_stack_location()
 {
 	SavedStackLoc = stack_start_addr();
 }
-
-#if defined( X86 ) && defined( Solaris ) 
-int
-__CERROR() 
-{
-	return errno;
-}
-#endif
-
-
-#if defined( X86 ) && defined( Solaris26 ) 
-int
-__CERROR64()
-{
-	return errno;
-}
-#endif
 
 void mydprintf(int foo, const char *fmt, ...)
 {

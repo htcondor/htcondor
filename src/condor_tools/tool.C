@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
  
 
@@ -41,27 +41,42 @@
 #include "sig_install.h"
 #include "command_strings.h"
 #include "condor_distribution.h"
+#include "condor_query.h"
+#include "daemon_list.h"
+#include "string_list.h"
+#include "HashTable.h"
 
-void doCommand( char *name );
+
+void computeRealAction( void );
+bool resolveNames( DaemonList* daemon_list, StringList* name_list );
+void doCommand( Daemon* d );
 void version();
-void namePrintf( FILE* stream, char* name, char* str, ... );
 void handleAll();
 void doSquawk( char *addr );
 int handleSquawk( char *line, char *addr );
 int doSquawkReconnect( char *addr );
 void squawkHelp( char *token );
 int  printAdToFile(ClassAd *ad, char* filename);
+int strncmp_auto(const char *s1, const char *s2);
 
 // Global variables
 int cmd = 0;
+int real_cmd = 0;
 daemon_t dt = DT_NONE;
+daemon_t real_dt = DT_NONE;
 DCCollector* pool = NULL;
 bool fast = false;
 bool full = false;
-int all = 0;
+bool all = false;
 char* subsys = NULL;
 int takes_subsys = 0;
 int cmd_set = 0;
+
+
+template class HashBucket<MyString, bool>;
+template class HashTable<MyString, bool>;
+int hashFunction( const MyString& key, int num_buckets );
+HashTable<MyString, bool> addresses_sent( 100, hashFunction );
 
 
 // The pure-tools (PureCoverage, Purify, etc) spit out a bunch of
@@ -112,11 +127,8 @@ usage( char *str )
 				 "    -full\t\tPerform a full reconfig\n" );
 	}
 	fprintf( stderr, "where [targets] can be zero or more of:\n" );
-#if 0
-		// This isn't supported yet, so don't mention it now.
 	fprintf( stderr, 
-			 "  -all\t\t\tall hosts in your pool (overrides other targets)\n" );
-#endif
+			 "    -all\t\tall hosts in your pool (overrides other targets)\n" );
 	fprintf( stderr, "    hostname\t\tgiven host\n" );
 	fprintf( stderr, "    <ip.address:port>\tgiven \"sinful string\"\n" );
 	fprintf( stderr,
@@ -238,7 +250,11 @@ cmdToStr( int c )
 	case DAEMON_ON:
 		return "Spawn-Daemon";
 	case RESTART:
-		return "Restart";
+		if( fast ) {
+			return "Restart-Fast";
+		} else {
+			return "Restart";
+		}
 	case VACATE_CLAIM:
 		return "Vacate-Claim";
 	case VACATE_CLAIM_FAST:
@@ -289,7 +305,11 @@ main( int argc, char *argv[] )
 {
 	char *daemonname, *MyName = argv[0];
 	char *cmd_str, **tmp;
-	int size, did_one = FALSE;
+	int size;
+	bool found_one = false;
+	StringList names;
+	StringList addrs;
+	DaemonList daemons;
 
 #ifndef WIN32
 	// Ignore SIGPIPE so if we cannot connect to a daemon we do not
@@ -330,36 +350,39 @@ main( int argc, char *argv[] )
 		argv++; argc--;
 	}
 		// Figure out what kind of tool we are.
-	if( !strcmp( cmd_str, "_reconfig" ) ) {
+        // We use strncmp instead of strcmp because 
+        // we want to work on windows when invoked as 
+        // condor_reconfig.exe, not just condor_reconfig
+	if( !strncmp_auto( cmd_str, "_reconfig_schedd" ) ) {
+		fprintf( stderr, "WARNING: condor_reconfig_schedd is deprecated.\n" );
+		fprintf( stderr, "\t Use: \"condor_reconfig -schedd\" instead.\n" );
+		cmd = DC_RECONFIG;
+		dt = DT_SCHEDD;
+    } else if( !strncmp_auto( cmd_str, "_reconfig" ) ) {
 		cmd = DC_RECONFIG;
 		takes_subsys = 1;
-	} else if( !strcmp( cmd_str, "_restart" ) ) {
+	} else if( !strncmp_auto( cmd_str, "_restart" ) ) {
 		cmd = RESTART;
 		takes_subsys = 1;
-	} else if( !strcmp( cmd_str, "_off" ) ) {
+	} else if( !strncmp_auto( cmd_str, "_off" ) ) {
 		cmd = DAEMONS_OFF;
 		takes_subsys = 1;
-	} else if( !strcmp( cmd_str, "_on" ) ) {
+	} else if( !strncmp_auto( cmd_str, "_on" ) ) {
 		cmd = DAEMONS_ON;
 		takes_subsys = 1;
-	} else if( !strcmp( cmd_str, "_master_off" ) ) {
-		fprintf( stderr, "WARNING: condor_master_off is depricated.\n" );
+	} else if( !strncmp_auto( cmd_str, "_master_off" ) ) {
+		fprintf( stderr, "WARNING: condor_master_off is deprecated.\n" );
 		fprintf( stderr, "\t Use: \"condor_off -master\" instead.\n" );
 		cmd = DC_OFF_GRACEFUL;
 		dt = DT_MASTER;
 		takes_subsys = 0;
-	} else if( !strcmp( cmd_str, "_reschedule" ) ) {
+	} else if( !strncmp_auto( cmd_str, "_reschedule" ) ) {
 		cmd = RESCHEDULE;
-	} else if( !strcmp( cmd_str, "_reconfig_schedd" ) ) {
-		fprintf( stderr, "WARNING: condor_reconfig_schedd is depricated.\n" );
-		fprintf( stderr, "\t Use: \"condor_reconfig -schedd\" instead.\n" );
-		cmd = DC_RECONFIG;
-		dt = DT_SCHEDD;
-	} else if( !strcmp( cmd_str, "_vacate" ) ) {
+	} else if( !strncmp_auto( cmd_str, "_vacate" ) ) {
 		cmd = VACATE_CLAIM;
-	} else if( !strcmp( cmd_str, "_checkpoint" ) ) {
+	} else if( !strncmp_auto( cmd_str, "_checkpoint" ) ) {
 		cmd = PCKPT_JOB;
-	} else if ( !strcmp( cmd_str, "_squawk" ) ) {
+	} else if ( !strncmp_auto( cmd_str, "_squawk" ) ) {
 		cmd = SQUAWK;
 		takes_subsys = 1;
 	} else {
@@ -458,7 +481,7 @@ main( int argc, char *argv[] )
 					break;
 				case 'l':
 						// We got a "-all", remember that
-					all = 1;
+					all = true;
 					break;
 				default:
 					fprintf( stderr, 
@@ -468,23 +491,12 @@ main( int argc, char *argv[] )
 					break;
 				}
 			} else {
-					// Until "-all" works, "-a" is not ambiguous,
-					// just treat it as "-addr".
-#if 0
 				fprintf( stderr, 
 						 "ERROR: ambiguous parameter: \"%s\"\n",
 						 *tmp ); 
 				fprintf( stderr, 
 						 "Please specify \"-addr\" or \"-all\"\n" );
 				usage( NULL );
-#else
-				tmp++;
-				if( ! (tmp && *tmp) ) {
-					fprintf( stderr, 
-							 "ERROR: -addr requires another argument\n" ); 
-					usage( NULL );
-				}
-#endif
 			}
 			break;
 		case 'n':
@@ -609,21 +621,22 @@ main( int argc, char *argv[] )
 		}
 	}
 
-		// If we don't know what our dt should be, it should probably
-		// be DT_MASTER, with a few exceptions.
-	if( !dt ) {
-		switch( cmd ) {
-		case VACATE_CLAIM:
-		case PCKPT_JOB:
-			dt = DT_STARTD;
-			break;
-		case RESCHEDULE:
-			dt = DT_SCHEDD;
-			break;
-		default:
-			dt = DT_MASTER;
-			break;
-		}
+		// it's not always obvious what daemon we want to talk to and
+		// what command we want to send.  for example, with
+		// condor_off, even if the target daemon is a startd, we
+		// really need to send something to the master, instead.  so,
+		// this method figures out what kind of daemon we need to
+		// communicate with (regardless of what kind of daemon we're
+		// going to be acting on) and what command we need to send.
+	computeRealAction();
+
+		// While we're parsing command-line args, when we notice a
+		// subsystem flag, we just set subsys to non-NULL to know we
+		// found it, and record the actual subsystem with "dt".  Now
+		// that we know the true target daemon type for whatever
+		// command we're using, want the real string to use.
+	if( subsys ) {
+		subsys = (char*)daemonString( dt );
 	}
 
 	if( all ) {
@@ -634,11 +647,17 @@ main( int argc, char *argv[] )
 		return 0;
 	}
 
-	if( subsys ) {
-		subsys = (char*)daemonString( dt );
-	}
-
 		// Now, process real args, and ignore - options.
+		// At this point, we just save all the real args in lists so
+		// we can just send one query to the collector to get all the
+		// sinful strings at once.  We keep seperate lists for sinful
+		// strings we were passed on the command line and host/daemon
+		// names, since in some cases, we have to send different
+		// commands if we're only passed a sinful string and don't
+		// know what kind of daemon we're talking to.  Aside from
+		// being significantly more efficient to do it this way, it
+		// also helps with security session problems once we reconfig
+		// the collector (if we're doing a reconfig)
 	for( argv++; *argv; argv++ ) {
 		switch( (*argv)[0] ) {
 		case '-':
@@ -652,9 +671,9 @@ main( int argc, char *argv[] )
 			continue;
 		case '<':
 				// This is probably a sinful string, use it
-			did_one = TRUE;
+			found_one = true;
 			if( is_valid_sinful(*argv) ) {
-				doCommand( *argv );
+				addrs.append( *argv );
 			} else {
 				fprintf( stderr, "Address %s is not valid.\n", *argv );
 				fprintf( stderr, "Should be of the form <ip.address.here:port>.\n" );
@@ -664,20 +683,20 @@ main( int argc, char *argv[] )
 			break;
 		default:
 				// This is probably a daemon name, use it.
-			did_one = TRUE;
+			found_one = true;
 			if( (daemonname = get_daemon_name(*argv)) == NULL ) {
 				fprintf( stderr, "%s: unknown host %s\n", MyName, 
 						 get_host_part(*argv) );
 				continue;
 			}
-			doCommand( daemonname );
+			names.append( daemonname );
 			delete [] daemonname;
 			daemonname = NULL;
 			break;
 		}
 	}
 
-	if( ! did_one ) {
+	if( ! found_one ) {
 		if( pool ) {
 				// Evil, they specified a valid pool but didn't give a
 				// real target for what daemon they want to send this
@@ -686,231 +705,507 @@ main( int argc, char *argv[] )
 				// machine. 
 			pool_target_usage();
 		}
-		doCommand( NULL );
+			// if they didn't specify any targets, and aren't trying
+			// to talk to a remote pool, they just want to send their
+			// command to the local host. 
+		Daemon local_d( real_dt, NULL );
+		if( ! local_d.locate() ) {
+			fprintf( stderr, "Can't find address for %s\n", local_d.idStr() );
+			fprintf( stderr, "Perhaps you need to query another pool.\n" ); 
+			return 1;
+		}
+		doCommand( &local_d );
+		return 0;
 	}
 
+		// If we got here, there were some targets specified on the
+		// command line.  that we know all the targets, resolve any
+		// names, with a single query to the collector...
+	if( ! resolveNames(&daemons, &names) ) {
+		fprintf( stderr, "ERROR: Failed to resolve daemon names, aborting\n" );
+		exit( 1 );
+	}
+
+	Daemon* d;
+	char* addr = NULL;
+	if( ! addrs.isEmpty() ) {
+		addrs.rewind();
+		while( (addr = addrs.next()) ) {
+			if( subsys ) {
+				d = new Daemon( dt, addr, NULL );
+			} else {
+				d = new Daemon( DT_ANY, addr, NULL );
+			}
+			daemons.append( d );
+		}
+	}
+
+		// Now, send commands to all the daemons we know about.
+	daemons.rewind();	
+	while( daemons.next(d) ) {
+		doCommand( d );
+	}
 	return 0;
 }
 
 
-#define RESTORE \
-dt = old_dt; \
-cmd = old_cmd
-
 void
-doCommand( char *name )
+computeRealAction( void )
 {
-	int 		sinful = 0, done = 0;
-	daemon_t 	old_dt = dt;
-	int			old_cmd = cmd;
+	real_cmd = -1;
+	switch( cmd ) {
 
-		// See if we were passed a sinful string
-	if( name && *name == '<' ) {
-		sinful = 1;
-		dt = DT_ANY;
-	} 
+	case DC_RECONFIG:
+			// no magic
+		break;
 
-		// DAEMONS_OFF has some special cases to handle:
-	if( cmd == DAEMONS_OFF ) {
-			// if we were passed a sinful string, use the DC version. 
-		if( sinful ) {
-			cmd = DC_OFF_GRACEFUL;
+	case RESTART:
+		if( subsys && dt != DT_MASTER ) {
+				// We're trying to restart something and we were told
+				// a specific subsystem to restart.  So, just send a
+				// DC_OFF to that daemon, and the master will restart
+				// for us.  Note: we don't want to do this if we were
+				// told to restart the master, since if we send this,
+				// the master itself will exit, which we don't want.
+			real_cmd = DC_OFF_GRACEFUL;
 		}
+		break;
+
+	case DAEMONS_OFF:
 		if( subsys ) {
 				// If we were told the subsys, we need a different
 				// cmd, and we want to send it to the master. 
 				// If we were told to use the master, we want to send
 				// a DC_OFF_GRACEFUL, not a DAEMON_OFF 
-			if( old_dt == DT_MASTER ) {
-				cmd = DC_OFF_GRACEFUL;
+			if( dt == DT_MASTER ) {
+				real_cmd = DC_OFF_GRACEFUL;
 			} else {
-				cmd = DAEMON_OFF;
+				real_cmd = DAEMON_OFF;
 			}
-			dt = DT_MASTER;
+			real_dt = DT_MASTER;
+		}
+		break;
+
+	case DAEMONS_ON:
+			// regardless of the target, we always want to send this
+			// to the master...
+		real_dt = DT_MASTER;
+		if( subsys && dt != DT_MASTER ) {
+				// If we were told the subsys (and it's not the
+				// master), we need a different cmd, and we want to
+				// send it to the master.
+			real_cmd = DAEMON_ON;
+		}
+		break;
+
+	case RESCHEDULE:
+		dt = real_dt = DT_SCHEDD;
+		break;
+
+	case VACATE_CLAIM:
+	case PCKPT_JOB:
+		dt = real_dt = DT_STARTD;
+		break;
+
+	case SQUAWK:
+		break;
+	}
+
+	if( real_cmd < 0 ) {
+			// if it hasn't been set yet, set it to cmd, since there's
+			// nothing special going on...
+		real_cmd = cmd;
+	}
+
+		// if we still don't know who we're trying to talk to yet, it
+		// should be the master, since that's the default for most
+		// commands. 
+	if( real_dt == DT_NONE ) {
+		if( dt ) {
+			real_dt = dt;
+		} else {
+			real_dt = DT_MASTER;
 		}
 	}
-	if( cmd == DAEMONS_ON && subsys && (old_dt != DT_MASTER) ) {
-			// If we were told the subsys, so we need a different
-			// cmd, and we want to send it to the master. 
-		cmd = DAEMON_ON;
-		dt = DT_MASTER;
+}
+
+
+bool
+resolveNames( DaemonList* daemon_list, StringList* name_list )
+{
+	Daemon* d = NULL;
+	char* name = NULL;
+	char* tmp = NULL;
+	const char* host = NULL;
+	bool had_error = false;
+
+	if( ! daemon_list ) {
+		EXCEPT( "resolveNames() called with NULL daemon_list" );
 	}
-	if( cmd == RESTART && subsys && old_dt != DT_MASTER ) {
-			// We're trying to restart something and we were told a
-			// specific subsystem to restart.  So, just send a DC_OFF
-			// to that daemon, and the master will restart for us. 
-			// Note: we don't want to do this if we were told to
-			// restart the master, since if we send this, the master
-			// itself will exit, which isn't what we want.
-		cmd = DC_OFF_GRACEFUL;
+		// NULL name_list means we want to do -all and query for
+		// everything.  However, if there's a name_list, but it's
+		// empty, it means we have no work to do.
+	if( name_list && name_list->isEmpty() ) {
+		return true;
+	}
+
+	AdTypes	adtype;
+	switch( real_dt ) {
+	case DT_MASTER:
+		adtype = MASTER_AD;
+		break;
+	case DT_STARTD:
+		adtype = STARTD_AD;
+		break;
+	case DT_SCHEDD:
+		adtype = SCHEDD_AD;
+		break;
+	default:
+			// TODO: can we do better than this?
+		fprintf( stderr, "Unrecognized daemon type while resolving names\n" );
+		usage( NULL );
+	}
+
+	char* pool_addr = pool ? pool->addr() : NULL;
+	CondorQuery query(adtype);
+	ClassAd* ad;
+	ClassAdList ads;
+
+	CondorError errstack;
+	if( query.fetchAds(ads, pool_addr, &errstack) != Q_OK ) {
+		fprintf( stderr, "%s\n", errstack.getFullText(true) );
+		fprintf( stderr, "ERROR: can't connect to %s\n",
+				 pool ? pool->idStr() : "local collector" );
+		had_error = true;
+	} else if( ads.Length() <= 0 ) { 
+			// TODO make this message better
+		fprintf( stderr, "Found no ClassAds when querying pool (%s)\n",
+				 pool ? pool->name() : "local" );
+		had_error = true;
+	}
+	if( had_error ) {
+		if( ! name_list ) {
+			fprintf( stderr, "Can't find addresses for %s's for -all\n", 
+					 real_dt ? daemonString(real_dt) : "daemon" );
+		} else {
+			name_list->rewind();
+			while( (name = name_list->next()) ) {
+				fprintf( stderr, "Can't find address for %s %s\n", 
+						 real_dt ? daemonString(real_dt) : "daemon", name );
+			}
+		}
+		fprintf( stderr, "Perhaps you need to query another pool.\n" );
+		exit( 1 );
 	}
 
 
-	Daemon d( dt, name, pool ? pool->addr() : NULL );
-	if( ! d.locate() ) {
-		namePrintf( stderr, name, "Can't find address for" );
-		fprintf( stderr, "Perhaps you need to query another pool.\n" ); 
-		RESTORE;
-		return;
+	if( ! name_list ) {
+			// no list of names to check, just store everything.
+		ads.Rewind();
+		while( (ad = ads.Next()) ) {
+			d = new Daemon( ad, real_dt, pool_addr );
+			daemon_list->append( d );
+		}
+		return true;
+	}
+
+		// now we have to compare the list of names we're looking for
+		// against the list of ads we got back.  two linked lists
+		// *sigh*.  for now, we just do it the stupid, evil O(N^2)
+		// way.  if this ever turns out to be a problem a) people
+		// should use "-all" (which is only O(N)), or we could make
+		// this smarter.  For now, we do it the slow way since we're
+		// looking for a specific list of names and we need to make
+		// sure we find them all.
+	name_list->rewind();
+	while( (name = name_list->next()) ) {
+		ads.Rewind();
+		while( !d && (ad = ads.Next()) ) {
+			if( real_dt == DT_STARTD ) {
+				host = get_host_part( name );
+				ad->LookupString( ATTR_MACHINE, &tmp );
+				if( ! tmp ) {
+						// weird, malformed ad.
+						// should we print a warning?
+					continue;
+				}
+				if( stricmp(tmp, host) ) {		// no match
+					free( tmp );
+					tmp = NULL;
+					continue;
+				}
+
+					/*
+					  Because we need to keep track of what the user
+					  gave us on the command line (whether it was just
+					  a hostname, or a qualified daemon name), we want
+					  to store back whatever we're using for the
+					  "name" into the daemon object we create.  this
+					  way, we won't get confused when dealing with SMP
+					  startds, or daemons with multiple names if the
+					  user just specified a hostname.  This also saves
+					  us when the user specifies a given vm on an SMP,
+					  and we match with whatever vm from the same host
+					  we hit first.  By inserting the name we're
+					  looking for, we just ensure we've got the right
+					  VM (since all we really care about is the
+					  version and the ip/port, and those will
+					  obviously be the same for all VMs)
+					*/
+				MyString attr = ATTR_NAME;
+				attr += "=\"";
+				attr += name;
+				attr += '"';
+				ad->Insert( attr.GetCStr() );
+				d = new Daemon( ad, real_dt, pool_addr );
+				free( tmp );
+				tmp = NULL;
+
+			} else {  // daemon type != DT_STARTD
+					// everything else always uses ATTR_NAME
+				ad->LookupString( ATTR_NAME, &tmp );
+				if( ! tmp ) {
+						// weird, malformed ad.
+						// should we print a warning?
+					continue;
+				}
+				if( ! stricmp(tmp, name) ) {
+					d = new Daemon( ad, real_dt, pool_addr );
+				}
+				free( tmp );
+				tmp = NULL;
+			} // daemon type
+		} // while( each ad from the collector )
+
+		if( d ) {
+				// we found it, so append it to our list and go on
+			daemon_list->append( d );
+			d = NULL;
+		} else {
+			fprintf( stderr, "Can't find address for %s %s\n",
+					 daemonString(real_dt), name );
+			had_error = true;
+		}
+	} // while( each name we were given ) 
+
+	if( had_error ) {
+		fprintf( stderr,
+				 "Perhaps you need to query another pool.\n" );
+	}
+	return true;
+}
+
+
+void
+doCommand( Daemon* d ) 
+{
+	bool done = false;
+	int	my_cmd = real_cmd;
+
+		// Grab some info about the daemon which is frequently used.
+	char* name = d->name();
+	daemon_t d_type = d->type();
+	bool is_local = d->isLocal();
+	CondorError errstack;
+
+		// If we're trying to send either vacate or checkpoint we have
+		// two possible commands to send, the machine-wide version and
+		// the per-claim version.  we have to treat the per-claim one
+		// as a special case in a couple of places, so figure that out
+		// now and use this bool in the rest of this function.  if
+		// we're doing a -all, if all we know is a sinful string, if
+		// it's a local vacate, or if we only have a hostname but no
+		// "vmX@...", we want to send a machine-wide command, not the
+		// per-claim one.
+	bool is_per_claim_startd_cmd = false;
+	if( real_cmd == VACATE_CLAIM || real_cmd == PCKPT_JOB ) {
+		if( !all && d_type != DT_ANY && !is_local &&
+			(name && strchr(name, '@')) )
+		{
+			is_per_claim_startd_cmd = true;
+		}
+	}
+
+		// in general, we never want to send the same command to the
+		// same address.  the only exception is if we're doing a
+		// per-claim startd command.  in that case, we should honor
+		// the requests even though we're talking to the same address,
+		// since we'll send the claim-id after the command and it
+		// won't be duplication of effort.
+	if( ! is_per_claim_startd_cmd ) {
+		MyString hash_key = d->addr();
+		bool sent_it = false;
+		if( addresses_sent.lookup(hash_key, sent_it) >= 0 && sent_it ) {
+			return;
+		}
+		addresses_sent.insert( hash_key, true );
 	}
 
 		/* Squawking does its own connect... */
-	if ( cmd == SQUAWK ) {
-		doSquawk( d.addr() );
+	if( real_cmd == SQUAWK ) {
+		doSquawk( d->addr() );
 		printf ( "Bye!\n" );
-		done = 1;
-		RESTORE;
 		return;
 	}
-
 
 	/* Connect to the daemon */
 	ReliSock sock;
-	if( !sock.connect(d.addr()) ) {
-		namePrintf( stderr, name, "Can't connect to" );
-		RESTORE;
+	if( !sock.connect(d->addr()) ) {
+		fprintf( stderr, "Can't connect to %s\n", d->idStr() );
 		return;
 	}
 
-	switch(cmd) {
+	switch(real_cmd) {
 	case VACATE_CLAIM:
-		if( fast ) {
-			cmd = VACATE_CLAIM_FAST;
-		}
-		// If no name is specified, or if name is a sinful string or
-		// hostname, we must send VACATE_ALL_CLAIMS.
-		if ( name && !sinful && strchr(name, '@') ) {
-			CondorError errstack;
-			if (!d.startCommand (cmd, &sock, 0, &errstack)) {
-				fprintf (stderr, "ERROR\n%s", errstack.get_full_text());
+		if( is_per_claim_startd_cmd ) {
+				// we've got a specific VM, so send the claim after
+				// the command.
+			if( fast ) {
+				my_cmd = VACATE_CLAIM_FAST;
+			}
+			if (!d->startCommand(my_cmd, &sock, 0, &errstack)) {
+				fprintf(stderr, "ERROR\n%s\n", errstack.getFullText(true));
 			}
 			if( !sock.code(name) || !sock.eom() ) {
-				namePrintf( stderr, name, "Can't send %s command to", 
-							 cmdToStr(cmd) );
-				RESTORE;
+				fprintf( stderr, "Can't send %s command to %s\n", 
+							 cmdToStr(my_cmd), d->idStr() );
 				return;
 			} else {
-				done = 1;
+				done = true;
 			}
 		} else {
 			if( fast ) {
-				cmd = VACATE_ALL_FAST;
+				my_cmd = VACATE_ALL_FAST;
 			} else {
-				cmd = VACATE_ALL_CLAIMS;
+				my_cmd = VACATE_ALL_CLAIMS;
 			}
 		}
 		break;
-	case PCKPT_JOB:
-		// If no name is specified, or if name is a sinful string or
-		// hostname, we must send PCKPT_ALL_JOBS.
-		if( name && !sinful && strchr(name, '@') ) {
-			CondorError errstack;
-			if (!d.startCommand (cmd, &sock, 0, &errstack)) {
-				fprintf (stderr, "ERROR\n%s", errstack.get_full_text());
-			}
-			if( !sock.code(name) || !sock.eom() ) {
-				namePrintf( stderr, name, "Can't send %s command to", 
-							 cmdToStr(cmd) );
-				RESTORE;
-				return;
-			} else {
-				done = 1;
-			}
-		} else {
-			cmd = PCKPT_ALL_JOBS;
-		}
-		break;
-	case DAEMON_OFF:
-		{
-				// if -fast is used, we need to send a different command.
-			if( fast ) {
-				cmd = DAEMON_OFF_FAST;
-			}
 
-			CondorError errstack;
-			if (!d.startCommand( cmd, &sock, 0, &errstack)) {
-				fprintf (stderr, "ERROR\n%s", errstack.get_full_text());
+	case PCKPT_JOB:
+		if( is_per_claim_startd_cmd ) {
+				// we've got a specific VM, so send the claim after
+				// the command.
+			if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
+				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true));
 			}
-			if( !sock.code(subsys) || !sock.eom() ) {
-				namePrintf( stderr, name, "Can't send %s command to", 
-							 cmdToStr(cmd) );
-				RESTORE;
+			if( !sock.code(name) || !sock.eom() ) {
+				fprintf( stderr, "Can't send %s command to %s\n",
+							 cmdToStr(my_cmd), d->idStr() );
 				return;
 			} else {
-				done = 1;
+				done = true;
 			}
+		} else {
+			my_cmd = PCKPT_ALL_JOBS;
 		}
 		break;
+
+	case DAEMON_OFF:
+			// if -fast is used, we need to send a different command.
+		if( fast ) {
+			my_cmd = DAEMON_OFF_FAST;
+		}
+		if( !d->startCommand( my_cmd, &sock, 0, &errstack) ) {
+			fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
+		}
+		if( !sock.code(subsys) || !sock.eom() ) {
+			fprintf( stderr, "Can't send %s command to %s\n",
+						cmdToStr(my_cmd), d->idStr() );
+			return;
+		} else {
+			done = true;
+		}
+		break;
+
 	case DAEMON_ON:
-		{
-			CondorError errstack;
-			if (!d.startCommand (cmd, &sock, 0, &errstack)) {
-				fprintf (stderr, "ERROR\n%s", errstack.get_full_text());
-			}
-			if( !sock.code(subsys) || !sock.eom() ) {
-				namePrintf( stderr, name, "Can't send %s command to", 
-							 cmdToStr(cmd) );
-				RESTORE;
-				return;
-			} else {
-				done = 1;
-			}
+		if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
+			fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
+		}
+		if( !sock.code(subsys) || !sock.eom() ) {
+			fprintf( stderr, "Can't send %s command to %s\n",
+						cmdToStr(my_cmd), d->idStr() );
+			return;
+		} else {
+			done = true;
 		}
 		break;
+
 	case DAEMONS_OFF:
 			// if -fast is used, we need to send a different command.
 		if( fast ) {
-			cmd = DAEMONS_OFF_FAST;
+			my_cmd = DAEMONS_OFF_FAST;
+		}
+		if( d_type != DT_MASTER ) {
+ 				// if we're trying to send this to anything other than
+ 				// a master (for example, if we were just given a
+ 				// sinful string and we don't know the daemon type)
+ 				// we've got to send a different command. 
+			if( fast ) {
+				my_cmd = DC_OFF_FAST;
+			} else {
+				my_cmd = DC_OFF_GRACEFUL;
+			}
 		}
 		break;
+
 	case DC_OFF_GRACEFUL:
 			// if -fast is used, we need to send a different command.
 		if( fast ) {
-			cmd = DC_OFF_FAST;
+			my_cmd = DC_OFF_FAST;
 		}
 		break;
+
 	case DC_RECONFIG:
 			// if -full is used, we need to send a different command.
 		if( full ) {
-			cmd = DC_RECONFIG_FULL;
+			my_cmd = DC_RECONFIG_FULL;
 		}
 		break;
+
 	default:
 		break;
 	}
 
 	if( !done ) {
-		CondorError errstack;
-		if( !d.sendCommand(cmd, &sock, 0, &errstack) ) {
-			fprintf (stderr, "ERROR\n%s", errstack.get_full_text());
-			namePrintf( stderr, name, "Can't send %s command to", 
-						 cmdToStr(cmd) );
-			RESTORE;
+		if( !d->sendCommand(my_cmd, &sock, 0, &errstack) ) {
+			fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
+			fprintf( stderr, "Can't send %s command to %s\n",
+						 cmdToStr(my_cmd), d->idStr() );
 			return;
 		}
 	}
-	if( cmd == DAEMON_ON || cmd == DAEMON_OFF || cmd == DAEMON_OFF_FAST 
-		|| ((cmd == DC_OFF_GRACEFUL || cmd == DC_OFF_FAST) && 
-		 old_dt == DT_MASTER) ) {
-		if( sinful ) {
-			namePrintf( stdout, name, "Sent \"%s\" command to", 
-						 cmdToStr(cmd), daemonString(old_dt) );
-		} else {
-			namePrintf( stdout, name, "Sent \"%s\" command for \"%s\" to", 
-						 cmdToStr(cmd), daemonString(old_dt) );
-		}
-	} else if( old_cmd == RESTART ) {
-		printf( "Sent \"%s", cmdToStr(old_cmd) );
-		if( fast ) {
-			printf( "-Fast" );
-		}
-		namePrintf( stdout, name, "\" command to", cmdToStr(old_cmd) );
-	} else if( cmd_set ) {
-		namePrintf( stdout, name, "Sent command \"%d\" to", cmd );
-	} else {
-		namePrintf( stdout, name, "Sent \"%s\" command to", cmdToStr(cmd) );
+	
+		// for the purposes of reporting, if what we're trying to do
+		// is a restart, we want to print that here.  so, set my_cmd
+		// back to RESTART.
+	if( cmd == RESTART ) {
+		my_cmd = RESTART;
 	}
-	RESTORE;
+
+		// now, print out the right thing depending on what we did
+	if( my_cmd == DAEMON_ON || my_cmd == DAEMON_OFF || 
+		my_cmd == DAEMON_OFF_FAST || 
+		((my_cmd == DC_OFF_GRACEFUL || my_cmd == DC_OFF_FAST) && 
+		 real_dt == DT_MASTER) )
+	{
+		if( d_type == DT_ANY ) {
+			printf( "Sent \"%s\" command to %s\n",
+					cmdToStr(my_cmd), d->idStr() );
+		} else {
+			printf( "Sent \"%s\" command for \"%s\" to %s\n",
+					cmdToStr(my_cmd), daemonString(dt), d->idStr() );
+		}
+	} else if( d_type == DT_STARTD && all ) {
+			// we want to special case printing about this, since
+			// we're doing a machine-wide command...
+		printf( "Sent \"%s\" command to startd %s\n", cmdToStr(my_cmd),
+				d->fullHostname() );
+	} else if( cmd_set ) {
+		printf( "Sent command \"%d\" to %s\n", my_cmd, d->idStr() );
+	} else {
+		printf( "Sent \"%s\" command to %s\n", cmdToStr(my_cmd), d->idStr() );
+	}
 }
 
 
@@ -922,50 +1217,25 @@ version()
 }
 
 
-/*
-  This function takes in a name string, which either holds a hostname,
-  a sinful string, or is NULL.  It also takes a format string and
-  option arguments.  The format string and its args are printed to the
-  specified FILE*, followed by the appropriate descriptive string
-  depending on the value of name, and dt (the daemon type) we're
-  using. 
-*/
-void
-namePrintf( FILE* stream, char* name, char* str, ... )
-{
-	va_list args;
-	va_start( args, str );
-	vfprintf( stream, str, args );
-	va_end( args );
-
-	if( name ) {
-		if( *name == '<' ) {
-				// sinful string,
-			if( dt != DT_NONE && dt != DT_ANY ) {
-				fprintf( stream, " %s at %s\n", daemonString(dt), name );			
-			} else {
-				fprintf( stream, " daemon at %s\n", name );			
-			}
-		} else {
-				// a real name
-			assert( dt ); 
-			fprintf( stream, " %s %s\n", daemonString(dt), name );			
-		}
-	} else {
-			// local daemon
-		assert( dt );
-		fprintf( stream, " local %s\n", daemonString(dt) );
-	}
-}
-
 // Want to send a command to all hosts in the pool.
 void
 handleAll()
 {
-		// Todo *grin*
-	fprintf( stderr, "ERROR: The -all option is not yet implemented\n" );
-	exit( 1 );
+	DaemonList daemons;
+
+	if( ! resolveNames(&daemons, NULL) ) {
+		fprintf( stderr, "ERROR: Failed to find daemons for -all\n" );
+		exit( 1 );
+	}
+
+		// Now, send commands to all the daemons we know about.
+	Daemon* d;
+	daemons.rewind();	
+	while( daemons.next(d) ) {
+		doCommand( d );
+	}
 }
+
 
 void
 doSquawk( char *address ) {
@@ -1019,7 +1289,7 @@ handleSquawk( char *line, char *addr ) {
 		Daemon d( DT_ANY, addr );
 		CondorError errstack;
         if (!d.startCommand(DUMP_STATE, &sock, 0, &errstack)) {
-			fprintf (stderr, "ERROR\n%s", errstack.get_full_text());
+			fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
 		}
 
 		sock.decode();
@@ -1051,7 +1321,7 @@ handleSquawk( char *line, char *addr ) {
 		Daemon d( DT_ANY, addr );
 		CondorError errstack;
 		if (!d.startCommand (DC_RAISESIGNAL, &sock, 0, &errstack)) {
-			fprintf (stderr, "ERROR\n%s", errstack.get_full_text());
+			fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
 		}
 
 		sock.encode();
@@ -1076,7 +1346,7 @@ handleSquawk( char *line, char *addr ) {
 		Daemon d( DT_ANY, addr );
 		CondorError errstack;
 		if (!d.startCommand ( command, &sock, 0, &errstack)) {
-			fprintf (stderr, "%s", errstack.get_full_text());
+			fprintf( stderr, "%s\n", errstack.getFullText(true) );
 		}
 		sock.encode();
 		while( (token = strtok(NULL, " ")) ) {
@@ -1254,6 +1524,17 @@ printAdToFile(ClassAd *ad, char* filename) {
     return TRUE;
 }
 
+
+int
+hashFunction( const MyString& key, int num_buckets )
+{
+	return key.Hash() % num_buckets;
+}
+
+int strncmp_auto(const char *s1, const char *s2)
+{
+    return strncmp(s1, s2, strlen(s2));
+}
 
 extern "C" int SetSyscalls() {return 0;}
 

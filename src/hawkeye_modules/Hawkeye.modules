@@ -1,12 +1,14 @@
 # Master Hawkeye targets data file
-directory: /scratch/nleroy/workspace/Hawkeye-Release/modules
-prefix: Hawkeye-module-
+directory: /local.chopin/nleroy/Hawkeye-Release/modules
+test-directory: /scratch.1/nleroy/Hawkeye-Release-test/modules
 
 target: all
-version: 1.0-rc4
+version: 1.0.rc10
+os: Unix-Any
 +condor_jobhist
 +condor_node
 +condor_pool
++condor_ckpt
 +df
 +downlist
 +gass_cache
@@ -15,6 +17,7 @@ version: 1.0-rc4
 +memory
 +network_stats
 +open_files
++pbs_qstat
 +top
 +uptime
 +vmstat
@@ -22,66 +25,97 @@ version: 1.0-rc4
 +who
 
 target: condor_jobhist
-version: 1.0-rc1
+os: Unix-Any
+version: 1.0.rc2
 +condor_jobhist
 
 target: condor_node
-version: 1.0-rc2
+os: Unix-Any
+version: 1.0.rc3
 +condor_node
 
 target: condor_pool
-version: 1.0-rc3
+os: Unix-Any
+version: 1.0.rc4
 +condor_pool
 
+target: condor_ckpt
+os: Unix-Any
+version: 1.0.rc1
++condor_ckpt
+
+target: cvs_locks
+os: Unix-Any
+version: 1.0.rc3
++cvs_locks
+
 target: downlist
-version: 1.0-rc1
+os: Unix-Any
+version: 1.0.rc2
 +downlist
 
 target: df
-version: 1.0-rc2
+os: Unix-Any
+version: 1.0.rc3
 +df
 
 target: gass_cache
-version: 1.0-rc1
+os: Unix-Any
+version: 1.0.rc2
 +gass_cache
 
 target: gdmphb
-version: 1.0-rc1
+os: Unix-Any
+version: 1.0.rc2
 +gdmphb
 
 target: grid_probe
-version: 1.0-rc1
+os: Unix-Any
+version: 1.0.rc2
 +grid_probe
 
 target: memory
-version: 1.0-rc1
+os: Unix-Any
+version: 1.0.rc2
 +memory
 
 target: network_stats
-version: 1.0-rc1
+os: Unix-Any
+version: 1.0.rc2
 +network_stats
 
 target: open_files
-version: 1.0-rc1
+os: Unix-Any
+version: 1.0.rc2
 +open_files
 
+target: pbs_qstat
+os: Unix-Any
+version: 1.0.rc3
++pbs_qstat
+
 target: top
-version: 1.0-rc1
+os: Unix-Any
+version: 1.0.rc5
 +top
 
 target: uptime
-version: 1.0-rc1
+os: Unix-Any
+version: 1.0.rc2
 +uptime
 
 target: vmstat
-version: 1.0-rc1
+os: Unix-Any
+version: 1.0.rc3
 +vmstat
 
 target: w
-version: 1.0-rc1
+os: Unix-Any
+version: 1.0.rc2
 +w
 
 target: who
-version: 1.0-rc1
+os: Unix-Any
+version: 1.0.rc2
 +who
 

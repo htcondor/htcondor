@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "CondorError.h"
@@ -314,31 +314,42 @@ Condor_Auth_SSPI::sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx)
     
     // now we try to use the context to Impersonate and thereby get the login
     rc = (pf->ImpersonateSecurityContext)( &srvCtx );
+
+	char buf[256];
+	char *dom;
+	DWORD bufsiz = sizeof buf;
+
     if ( rc != SEC_E_OK ) {
         dprintf( D_ALWAYS,
-                 "sspi_server_auth(): Failed to impersonate (returns %d)!\n", rc );
+                 "sspi_server_auth(): Failed to impersonate (returns %d)!\n",
+					 rc );
     } else {
-        char buf[256];
-		char *dom;
-        DWORD bufsiz = sizeof buf;
+
+		// PLEASE READ: We're now running in the context of the
+		// client we're impersonating. This means dprintf()'ing is
+		// OFF LIMITS until we RevertSecurityContext(), since the
+		// dprintf() will likely fail because the client 
+		// probably will not have write access to the log file.
+
         GetUserName( buf, &bufsiz );
-        dprintf( D_FULLDEBUG,
-                 "sspi_server_auth(): user name is: \"%s\"\n", buf );
-        setRemoteUser(buf);
+		setRemoteUser(buf);
 		dom = my_domainname();
-        dprintf( D_FULLDEBUG, "sspi_server_auth(): domain name is: \"%s\"\n", 
-				 dom);
 		setRemoteDomain(dom);
-        it_worked = TRUE;
-        (pf->RevertSecurityContext)( &srvCtx );
+		it_worked = TRUE;
+	   	(pf->RevertSecurityContext)( &srvCtx );
     }
-    
+
+	// Ok, safe to dprintf() now...
+
+	dprintf( D_FULLDEBUG, "sspi_server_auth(): user name is: \"%s\"\n", buf );
+	dprintf( D_FULLDEBUG, "sspi_server_auth(): domain name is: \"%s\"\n", dom);
+
     (pf->FreeContextBuffer)( secPackInfo );
-    
+
     dprintf( D_FULLDEBUG,"sspi_server_auth() exiting\n" );
-    
-    // return success (1) or failure (0)
-    return it_worked;
+
+    // return success (1) or failure (0) 
+	return it_worked;
 }
 
 int

@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #define _POSIX_SOURCE
 
 #include "condor_common.h"
@@ -359,9 +359,9 @@ Directory::do_remove( const char* path, bool is_curr )
 	Set_Access_Priv();
 
 	if( is_curr ) {
-		is_dir = IsDirectory();
+		is_dir = IsDirectory() && !IsSymlink();
 	} else {
-		is_dir = ::IsDirectory( path );
+		is_dir = ::IsDirectory( path ) && !::IsSymlink( path );
 	}
 
 	if( is_dir ) {
@@ -369,7 +369,8 @@ Directory::do_remove( const char* path, bool is_curr )
 		// instead of messing with recursion, worrying about
 		// stack overflows, ACLs, etc, we'll just call upon
 		// the shell to do the dirty work.
-		// TODO: we should really look return val from system()!
+		int try_1_rc = 0;
+		int try_2_rc = 0;
 #ifdef WIN32
 		sprintf( buf,"rmdir /s /q \"%s\"", path );
 #else
@@ -379,7 +380,7 @@ Directory::do_remove( const char* path, bool is_curr )
 #if DEBUG_DIRECTORY_CLASS
 		dprintf(D_ALWAYS,"Directory: about to call %s\n",buf);
 #else
-		system( buf );
+		try_1_rc = system( buf );
 #endif
 
 		// for good measure, repeat the above operation a second
@@ -394,10 +395,23 @@ Directory::do_remove( const char* path, bool is_curr )
 			dprintf(D_ALWAYS,
 				"Directory: with condor priv about to call %s\n",buf);
 #else
-			system( buf );
+			try_2_rc = system( buf );
 #endif
 
 			set_priv(priv);
+		}
+		else {
+			// Let the second attempt have the same error code as the
+			// first attempt, since we require _both_ to fail in order
+			// to detect a failure.
+			try_2_rc = try_1_rc;
+		}
+		if(try_1_rc && try_2_rc && ::IsDirectory(path)) {
+			// Both attempts to remove the directory failed,
+			// and the directory does in fact exist.
+			ret_val = false;
+			errno = 0; //do not know precise errno, so clear it to prevent
+			           //final code below from doing the wrong thing.
 		}
 	} else {
 		// the current file is not a directory, just a file	
@@ -575,6 +589,29 @@ IsDirectory( const char *path )
 	}
 
 	EXCEPT("IsDirectory() unexpected error code"); // does not return
+	return false;
+}
+
+bool 
+IsSymlink( const char *path )
+{
+	StatInfo si( path );
+	switch( si.Error() ) {
+	case SIGood:
+		return si.IsSymlink();
+		break;
+	case SINoFile:
+			// Silently return false
+		return false;
+		break;
+	case SIFailure:
+		dprintf( D_ALWAYS, "IsSymlink: Error in stat(%s), errno: %d\n", 
+				 path, si.Errno() );
+		return false;
+		break;
+	}
+
+	EXCEPT("IsSymlink() unexpected error code"); // does not return
 	return false;
 }
 

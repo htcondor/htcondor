@@ -4,6 +4,8 @@
 %e 2500
 %o 5000
 %{
+#include <string.h>
+#include <ctype.h>
 #include "scanner.h"
 #include "y.tab.h"
 
@@ -148,11 +150,6 @@ rdiscard			return grab( RDISCARD );
 "..."					return grab( ELLIPSIS );
 .					return grab( UNKNOWN );
 %%
-int
-yywrap()
-{
-	return feof(stdin);
-}
 
 int
 grab( int type )

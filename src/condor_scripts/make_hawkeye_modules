@@ -10,6 +10,7 @@ my $Program = "make_hawkeye_modules";
 my %Options =
     (
      "[-d=dir]"		=> "Specify target directory 'dir'",
+     "[-r]"		=> "Enable release mode",
      "[-f]"		=> "force",
      "[-h]"		=> "Dump help",
      "tarball"		=> "Target tarball",
@@ -18,7 +19,7 @@ my %Options =
 
 # Invoke main..
 main( @ARGV );
-#$ARGV = -1;
+$#ARGV = -1;
 
 # ******************************************************
 # Main program..
@@ -29,9 +30,11 @@ sub main( @ )
     my $ModulesFile = "Hawkeye.modules";
     my %KnownTargets;
     my $DefaultDir = ".";
+    my $TestDir = ".";
     my $ModulePrefix = "";
     my $TargetDir = "";
     my $Force = 0;
+    my $ReleaseMode = 0;
 
     # Process the command line...
     foreach my $Arg ( @_ )
@@ -51,6 +54,10 @@ sub main( @ )
 	    elsif ( $Opt =~ /^f$/ )
 	    {
 		$Force = 1;
+	    }
+	    elsif ( $Opt =~ /^r$/ )
+	    {
+		$ReleaseMode = 1;
 	    }
 	    else
 	    {
@@ -74,6 +81,10 @@ sub main( @ )
 	{
 	    $DefaultDir = $1;
 	}
+	elsif ( /^test-directory:\s+(\S+)/i )
+	{
+	    $TestDir = $1;
+	}
 	elsif ( /^prefix:\s+(\S+)/i )
 	{
 	    $ModulePrefix = $1;
@@ -85,6 +96,10 @@ sub main( @ )
 	elsif ( /^version:\s+(\S+)/i )
 	{
 	    $KnownTargets{$Target}{Version} = $1;
+	}
+	elsif ( /^os:\s+(\S+)/i )
+	{
+	    $KnownTargets{$Target}{OS} = $1;
 	}
 	elsif ( /^\+(.*)/ )
 	{
@@ -111,7 +126,7 @@ sub main( @ )
     # Dir logic
     if ( $TargetDir eq "" )
     {
-	$TargetDir = $DefaultDir;
+	$TargetDir = $ReleaseMode ? $DefaultDir : $TestDir;
     }
 
     # Create the directory?
@@ -138,6 +153,11 @@ sub main( @ )
     {
 	die "$Target has no version defined"
 	    if ( ! exists $KnownTargets{$Target}{Version} );
+	if ( ! exists $KnownTargets{$Target}{OS} )
+	{
+	    $KnownTargets{$Target}{OS} = "Unix-Any";
+	    warn "No O/S Specified; assuming 'Unix-Any'";
+	}
 	die "$Target has no files"
 	    if ( ! exists $KnownTargets{$Target}{HawkFiles} );
 	foreach my $File ( @{$KnownTargets{$Target}{HawkFiles}} )
@@ -157,7 +177,9 @@ sub main( @ )
     foreach my $Target ( @Targets )
     {
 	my $Version = $KnownTargets{$Target}{Version};
-	my $TarBall = $ModulePrefix . $Target . "-" . $Version . ".tar.gz";
+	my $OS = $KnownTargets{$Target}{OS};
+	my $TarBall =
+	    $ModulePrefix . $Target . "-" . $Version . "-".  $OS . ".tar.gz";
 	my $TarBallFull = "$TargetDir/$TarBall";
 
 	# Does it already exist?

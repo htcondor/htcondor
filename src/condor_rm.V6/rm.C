@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_config.h"
@@ -43,11 +43,10 @@
 
 
 char	*MyName;
-int mode;
+JobAction mode;
 bool All = false;
 bool had_error = false;
 bool old_messages = false;
-bool forceX = false;
 
 DCSchedd* schedd = NULL;
 
@@ -68,25 +67,45 @@ bool has_constraint;
 MyString global_constraint;
 StringList global_id_list;
 
-void
-usage()
+const char* 
+actionWord( JobAction action, bool past )
 {
-	char word[10];
-	switch( mode ) {
-	case IDLE:
-		sprintf( word, "Release" );
+	switch( action ) {
+	case JA_RELEASE_JOBS:
+		return past ? "released" : "release";
 		break;
-	case HELD:
-		sprintf( word, "Hold" );
+
+	case JA_HOLD_JOBS:
+		return past ? "held" : "hold";
 		break;
-	case REMOVED:
-		sprintf( word, "Remove" );
+
+	case JA_REMOVE_JOBS:
+	case JA_REMOVE_X_JOBS:
+		return past ? "removed" : "remove";
 		break;
+
+	case JA_VACATE_JOBS:
+		return past ? "vacated" : "vacate";
+		break;
+
+	case JA_VACATE_FAST_JOBS:
+		return past ? "fast-vacated" : "fast-vacate";
+		break;
+
 	default:
-		fprintf( stderr, "ERROR: Unknown mode: %d\n", mode );
+		fprintf( stderr, "ERROR: Unknown action: %d\n", action );
 		exit( 1 );
 		break;
 	}
+	return NULL;
+}
+
+
+void
+usage()
+{
+	char word[32];
+	sprintf( word, getJobActionString(mode) );
 	fprintf( stderr, "Usage: %s [options] [constraints]\n", MyName );
 	fprintf( stderr, " where [options] is zero or more of:\n" );
 	fprintf( stderr, "  -help               Display this message and exit\n" );
@@ -99,10 +118,14 @@ usage()
 	fprintf( stderr, "  -name schedd_name   Connect to the given schedd\n" );
 	fprintf( stderr, "  -pool hostname      Use the given central manager to find daemons\n" );
 	fprintf( stderr, "  -addr <ip:port>     Connect directly to the given \"sinful string\"\n" );
-	if( mode == REMOVED ) {
+	if( mode == JA_REMOVE_JOBS || mode == JA_REMOVE_X_JOBS ) {
 		fprintf( stderr,
 				     "  -forcex             Force the immediate local removal of jobs in the X state\n"
 		         "                      (only affects jobs already being removed)\n" );
+	}
+	if( mode == JA_VACATE_JOBS || mode == JA_VACATE_FAST_JOBS ) {
+		fprintf( stderr,
+				     "  -fast               Use a fast vacate (hardkill)\n" );
 	}
 	fprintf( stderr, " and where [constraints] is one or more of:\n" );
 	fprintf( stderr, "  cluster.proc        %s the given job\n", word );
@@ -154,17 +177,22 @@ main( int argc, char *argv[] )
 
 	if (cmd_str && strncmp( cmd_str, "_hold", strlen("_hold") ) == MATCH) { 
 
-		mode = HELD;
+		mode = JA_HOLD_JOBS;
 
 	} else if ( cmd_str && 
 			strncmp( cmd_str, "_release", strlen("_release") ) == MATCH ) {
 
-		mode = IDLE;
+		mode = JA_RELEASE_JOBS;
 
 	} else if ( cmd_str && 
 			strncmp( cmd_str, "_rm", strlen("_rm") ) == MATCH ) {
 
-		mode = REMOVED;
+		mode = JA_REMOVE_JOBS;
+
+	} else if( cmd_str && ! strncmp(cmd_str, "_vacate_job",
+									strlen("_vacate_job")) ) {  
+
+		mode = JA_VACATE_JOBS;
 
 	} else {
 		// don't know what mode we're using, so bail.
@@ -187,16 +215,11 @@ main( int argc, char *argv[] )
 
 	for( argv++; (arg = *argv); argv++ ) {
 		if( arg[0] == '-' ) {
-			if( ! arg[1] ) {
-				usage();
-			}
-			switch( arg[1] ) {
-			case 'd':
+            if (match_prefix(arg, "-debug")) {
 				// dprintf to console
 				Termlog = 1;
 				dprintf_config ("TOOL", 2 );
-				break;
-			case 'c':
+            } else if (match_prefix(arg, "-constraint")) {
 				args[nArgs] = arg;
 				nArgs++;
 				argv++;
@@ -208,40 +231,49 @@ main( int argc, char *argv[] )
 				}				
 				args[nArgs] = *argv;
 				nArgs++;
-				break;
-			case 'a':
-				if( arg[2] && arg[2] == 'd' ) {
-					argv++;
-					if( ! *argv ) {
-						fprintf( stderr, 
-								 "%s: -addr requires another argument\n", 
-								 MyName);
-						exit(1);
-					}				
-					if( is_valid_sinful(*argv) ) {
-						scheddAddr = strdup(*argv);
-						if( ! scheddAddr ) {
-							fprintf( stderr, "Out of Memory!\n" );
-							exit(1);
-						}
-					} else {
-						fprintf( stderr, 
-								 "%s: \"%s\" is not a valid address\n",
-								 MyName, *argv );
-						fprintf( stderr, "Should be of the form "
-								 "<ip.address.here:port>\n" );
-						fprintf( stderr, 
-								 "For example: <123.456.789.123:6789>\n" );
-						exit( 1 );
-					}
-					break;
+            } else if (match_prefix(arg, "-all")) {
+                All = true;
+            } else if (match_prefix(arg, "-addr")) {
+                argv++;
+                if( ! *argv ) {
+                    fprintf( stderr, 
+                             "%s: -addr requires another argument\n", 
+                             MyName);
+                    exit(1);
+                }				
+                if( is_valid_sinful(*argv) ) {
+                    scheddAddr = strdup(*argv);
+                    if( ! scheddAddr ) {
+                        fprintf( stderr, "Out of memory!\n" );
+                        exit(1);
+                    }
+                } else {
+                    fprintf( stderr, 
+                             "%s: \"%s\" is not a valid address\n",
+                             MyName, *argv );
+                    fprintf( stderr, "Should be of the form "
+                             "<ip.address.here:port>\n" );
+                    fprintf( stderr, 
+                             "For example: <123.456.789.123:6789>\n" );
+                    exit( 1 );
+                }
+            } else if (match_prefix(arg, "-forcex")) {
+				if( mode == JA_REMOVE_JOBS ) {
+					mode = JA_REMOVE_X_JOBS;
+				} else {
+                    fprintf( stderr, 
+                             "-forcex is only valid with condor_rm\n" );
+					usage();
 				}
-				All = true;
-				break;
-			case 'f':
-				forceX = true;
-				break;				
-			case 'n': 
+            } else if (match_prefix(arg, "-fast")) {
+				if( mode == JA_VACATE_JOBS ) {
+					mode = JA_VACATE_FAST_JOBS;
+				} else {
+                    fprintf( stderr, 
+                             "-fast is only valid with condor_vacate_job\n" );
+					usage();
+				}
+            } else if (match_prefix(arg, "-name")) {
 				// use the given name as the schedd name to connect to
 				argv++;
 				if( ! *argv ) {
@@ -254,8 +286,7 @@ main( int argc, char *argv[] )
 							 MyName, get_host_part(*argv) );
 					exit(1);
 				}
-				break;
-			case 'p':
+            } else if (match_prefix(arg, "-pool")) {
 				// use the given name as the central manager to query
 				argv++;
 				if( ! *argv ) {
@@ -271,17 +302,13 @@ main( int argc, char *argv[] )
 					fprintf( stderr, "%s: %s\n", MyName, pool->error() );
 					exit(1);
 				}
-				break;
-			case 'v':
+            } else if (match_prefix(arg, "-version")) {
 				version();
-				break;
-			case 'h':
+            } else if (match_prefix(arg, "-help")) {
 				usage();
-				break;
-			default:
+            } else {
 				fprintf( stderr, "Unrecognized option: %s\n", arg ); 
 				usage();
-				break;
 			}
 		} else {
 			if( All ) {
@@ -360,7 +387,7 @@ main( int argc, char *argv[] )
 		CondorError errstack;
 		ClassAd* result_ad = doWorkByList( job_ids, &errstack );
 		if (had_error) {
-			fprintf (stderr, "%s", errstack.get_full_text());
+			fprintf( stderr, "%s\n", errstack.getFullText(true) );
 		}
 		if( old_messages ) {
 			printOldMessages( result_ad, job_ids );
@@ -373,11 +400,11 @@ main( int argc, char *argv[] )
 
 		// If releasing jobs, and no errors happened, do a 
 		// reschedule command now.
-	if ( mode == IDLE && had_error == false ) {
+	if ( mode == JA_RELEASE_JOBS && had_error == false ) {
 		Daemon  my_schedd(DT_SCHEDD, NULL, NULL);
 		CondorError errstack;
 		if (!my_schedd.sendCommand(RESCHEDULE, Stream::safe_sock, 0, &errstack)) {
-			fprintf( stderr, "%s", errstack.get_full_text() );
+			fprintf( stderr, "%s\n", errstack.getFullText(true) );
 		}
 	}
 
@@ -396,19 +423,27 @@ doWorkByConstraint( const char* constraint, CondorError * errstack )
 	ClassAd* ad;
 	bool rval = true;
 	switch( mode ) {
-	case IDLE:
+	case JA_RELEASE_JOBS:
 		ad = schedd->releaseJobs( constraint, "via condor_release", errstack );
 		break;
-	case REMOVED:
-		if( forceX ) {
-			ad = schedd->removeXJobs( constraint, "via condor_rm -forceX", errstack );
-		} else {
-			ad = schedd->removeJobs( constraint, "via condor_rm", errstack );
-		}
+	case JA_REMOVE_X_JOBS:
+		ad = schedd->removeXJobs( constraint, "via condor_rm -forceX",
+								  errstack );
 		break;
-	case HELD:
+	case JA_VACATE_JOBS:
+		ad = schedd->vacateJobs( constraint, VACATE_GRACEFUL, errstack );
+		break;
+	case JA_VACATE_FAST_JOBS:
+		ad = schedd->vacateJobs( constraint, VACATE_FAST, errstack );
+		break;
+	case JA_REMOVE_JOBS:
+		ad = schedd->removeJobs( constraint, "via condor_rm", errstack );
+		break;
+	case JA_HOLD_JOBS:
 		ad = schedd->holdJobs( constraint, "via condor_hold", errstack );
 		break;
+	default:
+		EXCEPT( "impossible: unknown mode in doWorkByConstraint" );
 	}
 	if( ! ad ) {
 		had_error = true;
@@ -429,19 +464,26 @@ doWorkByList( StringList* ids, CondorError *errstack )
 {
 	ClassAd* rval;
 	switch( mode ) {
-	case IDLE:
+	case JA_RELEASE_JOBS:
 		rval = schedd->releaseJobs( ids, "via condor_release", errstack );
 		break;
-	case REMOVED:
-		if( forceX ) {
-			rval = schedd->removeXJobs( ids, "via condor_rm -forcex", errstack );
-		} else {
-			rval = schedd->removeJobs( ids, "via condor_rm", errstack );
-		}
+	case JA_REMOVE_X_JOBS:
+		rval = schedd->removeXJobs( ids, "via condor_rm -forcex", errstack );
 		break;
-	case HELD:
+	case JA_VACATE_JOBS:
+		rval = schedd->vacateJobs( ids, VACATE_GRACEFUL, errstack );
+		break;
+	case JA_VACATE_FAST_JOBS:
+		rval = schedd->vacateJobs( ids, VACATE_FAST, errstack );
+		break;
+	case JA_REMOVE_JOBS:
+		rval = schedd->removeJobs( ids, "via condor_rm", errstack );
+		break;
+	case JA_HOLD_JOBS:
 		rval = schedd->holdJobs( ids, "via condor_hold", errstack );
 		break;
+	default:
+		EXCEPT( "impossible: unknown mode in doWorkByList" );
 	}
 	if( ! rval ) {
 		had_error = true;
@@ -481,17 +523,16 @@ procArg(const char* arg)
 			if( doWorkByConstraint(constraint, &errstack) ) {
 				fprintf( old_messages ? stderr : stdout, 
 						 "Cluster %d %s.\n", c,
-						 (mode == REMOVED && forceX == false) ?
+						 (mode == JA_REMOVE_JOBS) ?
 						 "has been marked for removal" :
-						 (mode == REMOVED && forceX == true) ?
+						 (mode == JA_REMOVE_X_JOBS) ?
 						 "has been removed locally (remote state unknown)" :
-						 (mode==HELD)?"held":"released" );
+						 actionWord(mode,true) );
 			} else {
-				fprintf( stderr, "%s", errstack.get_full_text());
+				fprintf( stderr, "%s\n", errstack.getFullText(true) );
 				fprintf( stderr, 
 						 "Couldn't find/%s all jobs in cluster %d.\n",
-						 (mode==REMOVED)?"remove":(mode==HELD)?"hold":
-						 "release", c );
+						 actionWord(mode,false), c );
 			}
 			return;
 		}
@@ -524,17 +565,16 @@ procArg(const char* arg)
 		sprintf( constraint, "%s == \"%s\"", ATTR_OWNER, arg );
 		if( doWorkByConstraint(constraint, &errstack) ) {
 			fprintf( stdout, "User %s's job(s) %s.\n", arg,
-					 (mode == REMOVED && forceX == false) ?
+					 (mode == JA_REMOVE_JOBS) ?
 					 "have been marked for removal" :
-					 (mode == REMOVED && forceX == true) ?
+					 (mode == JA_REMOVE_X_JOBS) ?
 					 "have been removed locally (remote state unknown)" :
-					 (mode==HELD)?"held":"released" );
+					 actionWord(mode,true) );
 		} else {
-			fprintf( stderr, "%s", errstack.get_full_text() );
+			fprintf( stderr, "%s\n", errstack.getFullText(true) );
 			fprintf( stderr, 
 					 "Couldn't find/%s all of user %s's job(s).\n",
-					 (mode==REMOVED)?"remove":(mode==HELD)?"hold":
-					 "release", arg );
+					 actionWord(mode,false), arg );
 		}
 	} else {
 		fprintf( stderr, "Warning: unrecognized \"%s\" skipped\n", arg );
@@ -568,17 +608,15 @@ handleAll()
 	CondorError errstack;
 	if( doWorkByConstraint(constraint, &errstack) ) {
 		fprintf( stdout, "All jobs %s.\n",
-				 (mode == REMOVED && forceX == false) ?
+				 (mode == JA_REMOVE_JOBS) ?
 				 "marked for removal" :
-				 (mode == REMOVED && forceX == true) ?
+				 (mode == JA_REMOVE_X_JOBS) ?
 				 "removed locally (remote state unknown)" :
-				 (mode==HELD)?"held":"released" );
+				 actionWord(mode,true) );
 	} else {
-		fprintf( stderr, "%s", errstack.get_full_text() );
+		fprintf( stderr, "%s\n", errstack.getFullText(true) );
 		fprintf( stderr, "Could not %s all jobs.\n",
-				 (mode==REMOVED)?"remove":
-				 (mode==HELD)?"hold":"release" );
-
+				 actionWord(mode,false) );
 	}
 }
 
@@ -594,17 +632,17 @@ handleConstraints( void )
 	CondorError errstack;
 	if( doWorkByConstraint(tmp, &errstack) ) {
 		fprintf( stdout, "Jobs matching constraint %s %s\n", tmp,
-				 (mode == REMOVED && forceX == false) ?
+				 (mode == JA_REMOVE_JOBS) ?
 				 "have been marked for removal" :
-				 (mode == REMOVED && forceX == true) ?
+				 (mode == JA_REMOVE_X_JOBS) ?
 				 "have been removed locally (remote state unknown)" :
-				 (mode==HELD)?"held":"released" );
+				 actionWord(mode,true) );
+
 	} else {
-		fprintf( stderr, "%s", errstack.get_full_text() );
+		fprintf( stderr, "%s\n", errstack.getFullText(true) );
 		fprintf( stderr, 
 				 "Couldn't find/%s all jobs matching constraint %s\n",
-				 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release",
-				 tmp );
+				 actionWord(mode,false), tmp );
 	}
 }
 
@@ -613,8 +651,7 @@ void
 printOldFailure( PROC_ID job_id )
 {
 	fprintf( stderr, "Couldn't find/%s job %d.%d.\n",
-			 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release", 
-			 job_id.cluster, job_id.proc );
+			 actionWord(mode,false), job_id.cluster, job_id.proc );
 }
 
 
@@ -625,15 +662,15 @@ printOldMessage( PROC_ID job_id, action_result_t result )
 	case AR_SUCCESS:
 		fprintf( stdout, "Job %d.%d %s.\n", 
 				 job_id.cluster, job_id.proc, 
-				 (mode == REMOVED && forceX == false) ?
+				 (mode == JA_REMOVE_JOBS) ?
 				 "marked for removal" :
-				 (mode == REMOVED && forceX == true) ?
+				 (mode == JA_REMOVE_X_JOBS) ?
 				 "removed locally (remote state unknown)" :
-				 (mode==HELD)?"held":"released" );
+				 actionWord(mode,true) );
 		break;
 
 	case AR_NOT_FOUND:
-		if( mode==IDLE ) {
+		if( mode==JA_RELEASE_JOBS ) {
 			fprintf( stderr, "Couldn't access job queue for %d.%d\n", 
 					 job_id.cluster, job_id.proc );
 			break;
@@ -646,7 +683,7 @@ printOldMessage( PROC_ID job_id, action_result_t result )
 		break;
 
 	case AR_BAD_STATUS:
-		if( mode == IDLE ) {
+		if( mode == JA_RELEASE_JOBS ) {
 			fprintf( stderr, "Job %d.%d not held to be released\n", 
 					 job_id.cluster, job_id.proc );
 			break;
@@ -659,11 +696,11 @@ printOldMessage( PROC_ID job_id, action_result_t result )
 			// the same job over and over again...
 		fprintf( stdout, "Job %d.%d %s.\n", 
 				 job_id.cluster, job_id.proc, 
-				 (mode == REMOVED && forceX == false) ?
+				 (mode == JA_REMOVE_JOBS) ?
 				 "marked for removal" :
-				 (mode == REMOVED && forceX == true) ?
+				 (mode == JA_REMOVE_X_JOBS) ?
 				 "removed locally (remote state unknown)" :
-				 (mode==HELD)?"held":"released" );
+				 actionWord(mode,true) );
 		break;
 
 	case AR_ERROR:

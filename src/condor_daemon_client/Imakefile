@@ -7,13 +7,16 @@ LIB = $(STD_LIBS)
 ### NOTE!  If you add anything here, also add it to the
 ### DAEMON_CLIENT_OBJ line in condor_c++_util/Imakefile   
 OBJ = daemon.o daemon_types.o dc_shadow.o dc_startd.o dc_schedd.o \
-	dc_collector.o daemon_list.o
+	dc_collector.o dc_starter.o daemon_list.o
 
 library_target(libdaemonclient.a,$(OBJ))
 
 c_plus_target(daemon.t,daemon.t.o libdaemonclient.a,$(LIB))
 pure_c_plus_target(daemon.t.pure,daemon.t.o libdaemonclient.a,$(LIB))
 purecov_c_plus_target(daemon.t.pc,daemon.t.o libdaemonclient.a,$(LIB))
+
+c_plus_target(dc_startd.t,dc_startd.t.o libdaemonclient.a,$(LIB))
+c_plus_target(dc_starter.t,dc_starter.t.o libdaemonclient.a,$(LIB))
 
 html_target( documentation )
 

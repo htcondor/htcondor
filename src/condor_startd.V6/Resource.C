@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "startd.h"
@@ -502,12 +502,37 @@ Resource::findClaimById( const char* id )
 	}
 
 		// otherwise, try our opportunistic claims
-	if( r_cur && r_cur->cap()->matches(id) ) {
+	if( r_cur && r_cur->idMatches(id) ) {
 		return r_cur;
 	}
-	if( r_pre && r_pre->cap()->matches(id) ) {
+	if( r_pre && r_pre->idMatches(id) ) {
 		return r_pre;
 	}
+		// if we're still here, we couldn't find it anywhere
+	return NULL;
+}
+
+
+Claim*
+Resource::findClaimByGlobalJobId( const char* id )
+{
+		// first, try our active claim, since that's the only one that
+		// should have it...  
+	if( r_cur && r_cur->globalJobIdMatches(id) ) {
+		return r_cur;
+	}
+
+	if( r_pre && r_pre->globalJobIdMatches(id) ) {
+			// this is bogus, there's no way this should happen, since
+			// the globalJobId is never set until a starter is
+			// activated, and that requires the claim being r_cur, not
+			// r_pre.  so, if for some totally bizzare reason this
+			// becomes true, it's a developer error.
+		EXCEPT( "Preepmting claims should *never* have a GlobalJobId!" );
+	}
+
+		// TODO: ask our CODMgr?
+
 		// if we're still here, we couldn't find it anywhere
 	return NULL;
 }
@@ -634,6 +659,10 @@ Resource::init_classad( void )
 
 	// Publish everything we know about.
 	this->publish( r_classad, A_PUBLIC | A_ALL | A_EVALUATED );
+		// NOTE: we don't use A_SHARED_VM here, since when
+		// init_classad is being called, we don't necessarily have
+		// classads for the other VMs, yet we'll publish the SHARED_VM
+		// attrs after this...
 	
 	return TRUE;
 }
@@ -699,7 +728,7 @@ Resource::do_update( void )
 	ClassAd private_ad;
 	ClassAd public_ad;
 
-	this->publish( &public_ad, A_PUBLIC | A_ALL | A_EVALUATED );
+	this->publish( &public_ad, A_ALL_PUB );
 	this->publish( &private_ad, A_PRIVATE | A_ALL );
 
 		// Send class ads to collector(s)
@@ -1087,14 +1116,18 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 		// Things you only need in private ads
 	if( IS_PRIVATE(mask) && IS_UPDATE(mask) ) {
-			// Add currently useful capability.  If r_pre exists, we  
-			// need to advertise it's capability.  Otherwise, we
-			// should  get the capability from r_cur.
+			// Add currently useful ClaimId.  If r_pre exists, we  
+			// need to advertise it's ClaimId.  Otherwise, we
+			// should get the ClaimId from r_cur.
+			// CRUFT: This shouldn't still be called ATTR_CAPABILITY
+			// in the ClassAd, but for backwards compatibility it is.
+			// When we finally remove all the evil startd private ad
+			// junk this can go away, too.
 		if( r_pre ) {
-			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_pre->capab() );
+			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_pre->id() );
 			cap->Insert( line );
 		} else if( r_cur ) {
-			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_cur->capab() );
+			sprintf( line, "%s = \"%s\"", ATTR_CAPABILITY, r_cur->id() );
 			cap->Insert( line );
 		}		
 	}
@@ -1160,6 +1193,31 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		}
 	}
 
+	if( IS_PUBLIC(mask) && IS_SHARED_VM(mask) ) {
+		resmgr->publishVmAttrs( cap );
+	}
+}
+
+
+void
+Resource::publishVmAttrs( ClassAd* cap )
+{
+	if( ! startd_vm_exprs ) {
+		return;
+	}
+	if( ! cap ) {
+		return;
+	}
+	if( ! r_classad ) {
+		return;
+	}
+	char* ptr;
+	MyString prefix = r_id_str;
+	prefix += '_';
+	startd_vm_exprs->rewind();
+	while( (ptr = startd_vm_exprs->next()) ) {
+		caInsert( cap, r_classad, ptr, prefix.Value() );
+	}
 }
 
 

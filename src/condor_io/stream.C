@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 
 #include "condor_common.h"
@@ -194,6 +194,32 @@ Stream::code( long long	&l)
 
 int 
 Stream::code( unsigned long long	&l)
+{
+	switch(_coding){
+		case stream_encode:
+			return put(l);
+		case stream_decode:
+			return get(l);
+	}
+
+	return FALSE;	/* will never get here	*/
+}
+#else  // Windows
+
+Stream::code( LONGLONG &l)
+{
+	switch(_coding){
+		case stream_encode:
+			return put(l);
+		case stream_decode:
+			return get(l);
+	}
+
+	return FALSE;	/* will never get here	*/
+}
+
+int 
+Stream::code( ULONGLONG &l)
 {
 	switch(_coding){
 		case stream_encode:
@@ -641,7 +667,7 @@ int
 Stream::code(struct rlimit &rl)
 {
 #ifdef LINUX
-	// Oh crap, Cedar is too damn smart for us.  
+	// Cedar is too damn smart for us.  
 	// The issue is Linux changed the type for rlimits
 	// from a signed long (RedHat 6.2 and before) into
 	// an unsigned long (starting w/ RedHat 7.x).  So if
@@ -930,6 +956,33 @@ static unsigned long long ntohLL(unsigned long long netint)
 	}
 	return hostint;
 }
+#else
+// WINDOWS
+static ULONGLONG htonLL(ULONGLONG hostint)
+{
+	ULONGLONG netint;
+	char *hostp = (char *)&hostint;
+	char *netp = (char *)&netint;
+
+	for (unsigned int i=0, j=sizeof(LONGLONG)-1; i < sizeof(LONGLONG); i++, j--) {
+		netp[i] = hostp[j];
+	}
+	return netint;
+}
+
+// no ntoh function is provided for ints > 4 bytes by any OS.
+static ULONGLONG ntohLL(ULONGLONG netint)
+{
+	ULONGLONG hostint;
+	char *hostp = (char *)&hostint;
+	char *netp = (char *)&netint;
+
+	for (unsigned int i=0, j=sizeof(LONGLONG)-1; i < sizeof(LONGLONG); i++, j--) {
+		hostp[i] = netp[j];
+	}
+	return hostint;
+}
+
 #endif
 
 int 
@@ -1076,6 +1129,80 @@ Stream::put( long long unsigned	l)
 
 	return TRUE;
 }
+#else
+// WINDOWS
+int 
+Stream::put( LONGLONG l)
+{
+	char	pad;
+  NETWORK_TRACE("put LONGLONG " << l);
+
+	switch(_code){
+		case internal:
+			if (put_bytes(&l, sizeof(LONGLONG)) != sizeof(LONGLONG)) return FALSE;
+			break;
+
+		case external:
+			if ((sizeof(int) == sizeof(LONGLONG)) || (sizeof(LONGLONG) > INT_SIZE)) {
+				return put((long)l);
+			} else {
+				if (!hton_is_noop()) { // need to convert to network order
+					l = htonLL(l);
+				}
+				if (sizeof(LONGLONG) < INT_SIZE) {
+					pad = (l >= 0) ? 0 : 0xff; // sign extend value
+					for (int s=0; s < INT_SIZE-sizeof(LONGLONG); s++) {
+						if (put_bytes(&pad, 1) != 1) return FALSE;
+					}
+				}
+				if (put_bytes(&l, sizeof(LONGLONG)) != sizeof(LONGLONG)) return FALSE;
+			}
+			break;
+
+		case ascii:
+			return FALSE;
+	}
+
+	return TRUE;
+}
+
+
+
+int 
+Stream::put( ULONGLONG l)
+{
+	char	pad;
+  NETWORK_TRACE("put ULONGLONG " << l);
+
+	switch(_code){
+		case internal:
+			if (put_bytes(&l, sizeof(LONGLONG)) != sizeof(LONGLONG)) return FALSE;
+			break;
+
+		case external:
+			if ((sizeof(int) == sizeof(LONGLONG)) || (sizeof(LONGLONG) > INT_SIZE)) {
+				return put((unsigned long)l);
+			} else {
+				if (!hton_is_noop()) { // need to convert to network order
+					l = htonLL(l);
+				}
+				if (sizeof(LONGLONG) < INT_SIZE) {
+					pad = 0;
+					for (int s=0; s < INT_SIZE-sizeof(LONGLONG); s++) {
+						if (put_bytes(&pad, 1) != 1) return FALSE;
+					}
+				}
+				if (put_bytes(&l, sizeof(LONGLONG)) != sizeof(LONGLONG)) return FALSE;
+			}
+			break;
+
+		case ascii:
+			return FALSE;
+	}
+
+	return TRUE;
+}
+
 #endif
 
 
@@ -1538,6 +1665,78 @@ Stream::get( unsigned long long	&l)
 			return FALSE;
 	}
     NETWORK_TRACE("get long long " << l);
+	return TRUE;
+}
+#else
+// WINDOWS
+int 
+Stream::get( LONGLONG &l)
+{
+	int		i;
+	// On Windows, INT_SIZE == sizeof(LONGLONG).
+	// MSVC won't allocate an array of size 0, so just skip it.
+	//	char	pad[INT_SIZE-sizeof(LONGLONG)], sign;
+	char sign;
+
+	switch(_code){
+		case internal:
+			if (get_bytes(&l, sizeof(LONGLONG)) != sizeof(LONGLONG)) return FALSE;
+			break;
+
+		case external:
+			if ((sizeof(int) == sizeof(LONGLONG)) || (sizeof(LONGLONG) > INT_SIZE)) {
+				if (!get(i)) return FALSE;
+				l = (long) i;
+			} else {
+
+				if (get_bytes(&l, sizeof(LONGLONG)) != sizeof(LONGLONG)) return FALSE;
+				if (!hton_is_noop()) { // need to convert to host order
+					l = ntohLL(l);
+				}
+				sign = (l >= 0) ? 0 : 0xff;
+			}
+			break;
+
+		case ascii:
+			return FALSE;
+	}
+    NETWORK_TRACE("get LONGLONG " << l);
+	return TRUE;
+}
+
+
+
+int 
+Stream::get( ULONGLONG	&l)
+{
+	unsigned int		i;
+	// On Windows, INT_SIZE == sizeof(LONGLONG).
+	// MSVC won't allow us to allocate an array of size 0,
+	// so skip it.
+	// char	pad[INT_SIZE-sizeof(LONGLONG)];
+
+	switch(_code){
+		case internal:
+			if (get_bytes(&l, sizeof(LONGLONG)) != sizeof(LONGLONG)) return FALSE;
+			break;
+
+		case external:
+			if ((sizeof(int) == sizeof(LONGLONG)) || (sizeof(LONGLONG) > INT_SIZE)) {
+				if (!get(i)) return FALSE;
+				l = (ULONGLONG) i;
+			} else {
+				
+				if (get_bytes(&l, sizeof(LONGLONG)) != sizeof(LONGLONG)) return FALSE;
+				if (!hton_is_noop()) { // need to convert to host order
+					l = ntohLL(l);
+				}
+			}
+			break;
+
+		case ascii:
+			return FALSE;
+	}
+    NETWORK_TRACE("get LONGLONG " << l);
 	return TRUE;
 }
 #endif

@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 /*
 
@@ -77,7 +77,7 @@ AllocationNode::AllocationNode( int cluster_id, int n_procs )
 {
 	cluster = cluster_id;
 	num_procs = n_procs;
-	capability = NULL;
+	claim_id = NULL;
 	status = A_NEW;
 	num_resources = 0;
 
@@ -98,19 +98,19 @@ AllocationNode::~AllocationNode()
 	}
 	delete jobs;
 	delete matches;
-	if( capability ) {
-		delete [] capability;
+	if( claim_id ) {
+		delete [] claim_id;
 	}
 }
 
 
 void
-AllocationNode::setCapability( const char* new_capab )
+AllocationNode::setClaimId( const char* new_id )
 {
-	if( capability ) {
-		delete [] capability;
+	if( claim_id ) {
+		delete [] claim_id;
 	}
-	capability = strnewp( new_capab );
+	claim_id = strnewp( new_id );
 }
 
 
@@ -364,7 +364,7 @@ DedicatedScheduler::DedicatedScheduler()
 		( 199, hashFuncInt );
 	all_matches = new HashTable < HashKey, match_rec*>
 		( 199, hashFunction );
-	all_matches_by_cap = new HashTable < HashKey, match_rec*>
+	all_matches_by_id = new HashTable < HashKey, match_rec*>
 		( 199, hashFunction );
 	resource_requests = new Queue<ClassAd*>(64);
 
@@ -408,10 +408,10 @@ DedicatedScheduler::~DedicatedScheduler()
     delete allocations;
 
 		// First, delete the hashtable where we hash based on
-		// capability strings.  Don't actually delete the match
+		// ClaimId strings.  Don't actually delete the match
 		// records themselves, since we'll do those to the main
 		// records stored in all_matches.
-	delete all_matches_by_cap;
+	delete all_matches_by_id;
 
 		// Now, we can clear out the actually match records, too. 
 	all_matches->startIterations();
@@ -773,7 +773,7 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 									  int reqs_matched, int max_reqs )
 {
 	char	temp[512];
-	char	*capability = NULL;	// capability for each match made
+	char	*claim_id = NULL;	// ClaimId for each match made
 	char	*tmp;
 	char	*sinful;
 	int		perm_rval;
@@ -899,8 +899,8 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 							 ATTR_LAST_MATCH_TIME, (int)time(0) );
 #endif
 
-			if( !s->get(capability) ) {
-				dprintf( D_ALWAYS, "Can't receive capability from mgr\n" ); 
+			if( !s->get(claim_id) ) {
+				dprintf( D_ALWAYS, "Can't receive ClaimId from mgr\n" ); 
 				return NR_ERROR;
 			}
 			my_match_ad = NULL;
@@ -910,7 +910,7 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 				if( !my_match_ad->initFromStream(*s) ) {
 					dprintf( D_ALWAYS, "Can't get my match ad from mgr\n" ); 
 					delete my_match_ad;
-					free( capability );
+					free( claim_id );
 					return NR_ERROR;
 				}
 			}
@@ -919,32 +919,32 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 				if( my_match_ad ) {
 					delete my_match_ad;
 				}
-				free( capability );
+				free( claim_id );
 				return NR_ERROR;
 			}
 
-			dprintf( D_PROTOCOL, "## 4. Received capability %s\n",
-					 capability ); 
+			dprintf( D_PROTOCOL, "## 4. Received ClaimId %s\n",
+					 claim_id ); 
 
 			if ( my_match_ad ) {
 				dprintf( D_PROTOCOL, "Received match ad\n" );
 			}
 
-				// capability is in the form
+				// ClaimId is in the form
 				// "<xxx.xxx.xxx.xxx:xxxx>#xxxxxxx" 
 				// where everything upto the # is the sinful
 				// string of the startd
-			sinful = strdup( capability );
+			sinful = strdup( claim_id );
 			tmp = strchr( sinful, '#');
 			if( tmp ) {
 				*tmp = '\0';
 			} else {
-				dprintf( D_ALWAYS, "Can't find '#' in capability!\n" );
+				dprintf( D_ALWAYS, "Can't find '#' in ClaimId!\n" );
 					// What else should we do here?
 				free( sinful );
-				free( capability );
+				free( claim_id );
 				sinful = NULL;
-				capability = NULL;
+				claim_id = NULL;
 				if( my_match_ad ) {
 					delete my_match_ad;
 				}
@@ -967,7 +967,7 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 				// Note, we want to claim this startd as the
 				// "DedicatedScheduler" owner, which is why we call
 				// owner() here...
-			args = new ContactStartdArgs( capability, owner(),
+			args = new ContactStartdArgs( claim_id, owner(),
 										  sinful, id, my_match_ad,	
 										  negotiator_name, true );
 
@@ -977,8 +977,8 @@ DedicatedScheduler::negotiateRequest( ClassAd* req, Stream* s,
 
 			free( sinful );
 			sinful = NULL;
-			free( capability );
-			capability = NULL;
+			free( claim_id );
+			claim_id = NULL;
 			if( my_match_ad ) {
 				delete my_match_ad;
 				my_match_ad = NULL;
@@ -1034,7 +1034,7 @@ DedicatedScheduler::contactStartd( ContactStartdArgs *args )
 
 	dprintf( D_FULLDEBUG, "In DedicatedScheduler::contactStartd()\n" );
 
-    dprintf( D_FULLDEBUG, "%s %s %s %d.%d\n", args->capability(), 
+    dprintf( D_FULLDEBUG, "%s %s %s %d.%d\n", args->claimId(), 
 			 args->owner(), args->sinful(), args->cluster(),
 			 args->proc() ); 
 
@@ -1046,7 +1046,7 @@ DedicatedScheduler::contactStartd( ContactStartdArgs *args )
 	id.proc = -1;
 
 		// Now, create a match_rec for this resource
-	m_rec = new match_rec( args->capability(), args->sinful(), &id,
+	m_rec = new match_rec( args->claimId(), args->sinful(), &id,
 						   args->matchAd(), args->owner(),
 						   args->pool() );  
 
@@ -1061,7 +1061,7 @@ DedicatedScheduler::contactStartd( ContactStartdArgs *args )
 
 		// Next, insert this match_rec into our hashtables
 	all_matches->insert( HashKey(buf), m_rec );
-	all_matches_by_cap->insert( HashKey(m_rec->id), m_rec );
+	all_matches_by_id->insert( HashKey(m_rec->id), m_rec );
 	num_matches++;
 
 	if( claimStartd(m_rec, &dummy_job, true) ) {
@@ -1096,16 +1096,16 @@ DedicatedScheduler::startdContactSockHandler( Stream *sock )
 	scheduler.delRegContact();
 
 		// fetch the match record.  the daemon core DataPtr specifies the
-		// id of the match (which is really the startd capability).  use
+		// id of the match (which is really the startd ClaimId).  use
 		// this id to pull out the actual mrec from our hashtable.
-	char *cap = (char *) daemonCore->GetDataPtr();
+	char *id = (char *) daemonCore->GetDataPtr();
 	match_rec *mrec = NULL;
-	if( cap ) {
-		HashKey key(cap);
-		all_matches_by_cap->lookup(key, mrec);
+	if( id ) {
+		HashKey key(id);
+		all_matches_by_id->lookup(key, mrec);
 			// the id was allocated with strdup() when
 			// Register_DataPtr() was called 
-		free(cap);	
+		free(id);	
 	}
 
 	if( !mrec ) {
@@ -1250,7 +1250,7 @@ DedicatedScheduler::deactivateClaim( match_rec* m_rec )
 
 	if( !sock.put(m_rec->id) ) {
         	dprintf( D_ALWAYS, "ERROR in deactivateClaim(): "
-				 "Can't code capability (%s)\n", m_rec->id );
+				 "Can't code ClaimId (%s)\n", m_rec->id );
 		return false;
 	}
 	if( !sock.end_of_message() ) {
@@ -1431,16 +1431,16 @@ DedicatedScheduler::reaper( int pid, int status )
 
 
 /* 
-   This command handler reads a cluster int and capability off the
+   This command handler reads a cluster int and ClaimId off the
    wire, and replies with the number of matches for that job, followed
-   by the capabilities for each match, and an EOF.
+   by the ClaimIds for each match, and an EOF.
 */
 
 int
 DedicatedScheduler::giveMatches( int, Stream* stream )
 {
 	int cluster;
-	char *cap = NULL, *sinful = NULL;
+	char *id = NULL, *sinful = NULL;
 	MRecArray* matches;
 	ClassAd *job_ad;
 	int i, p, last;
@@ -1454,47 +1454,47 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 			// TODO: other cleanup?
 		return FALSE;
 	}
-	if( ! stream->code(cap) ) {
+	if( ! stream->code(id) ) {
 		dprintf( D_ALWAYS, "ERROR in DedicatedScheduler::giveMatches: "
-				 "can't read capability - aborting\n" );
+				 "can't read ClaimId - aborting\n" );
 			// TODO: other cleanup?
 		return FALSE;
 	}
 	
 		// Now that we have a job id, try to find this job in our
-		// table of matches, and make sure the capability is good
+		// table of matches, and make sure the ClaimId is good
 	AllocationNode* alloc;
 	if( allocations->lookup(cluster, alloc) < 0 ) {
 		dprintf( D_ALWAYS, "ERROR in DedicatedScheduler::giveMatches: "
 				 "can't find cluster %d in allocation table - aborting\n", 
 				 cluster ); 
 			// TODO: other cleanup?
-		free( cap );
+		free( id );
 		return FALSE;
 	}
 
-		// Next, see if the capability we got matches what we have in
+		// Next, see if the ClaimId we got matches what we have in
 		// our table.
 
-	if( strcmp(alloc->capability, cap) ) {
+	if( strcmp(alloc->claim_id, id) ) {
 			// No match, abort
 		dprintf( D_ALWAYS, "ERROR in DedicatedScheduler::giveMatches: "
-				 "incorrect capability (%s) given for cluster %d "
-				 "- aborting\n", cap, cluster );
+				 "incorrect ClaimId (%s) given for cluster %d "
+				 "- aborting\n", id, cluster );
 			// TODO: other cleanup?
-		free( cap );
+		free( id );
 		return FALSE;
 	}		
 
 		// Now that we're done checking it, we must free the
-		// capability string we got back from CEDAR, since that
+		// ClaimId string we got back from CEDAR, since that
 		// allocated memory for us
-	free( cap );
-	cap = NULL;
+	free( id );
+	id = NULL;
 
 		/*
 		  If we got here, we successfully read the job id, found the
-		  job in our table, and verified the correct capability for
+		  job in our table, and verified the correct ClaimId for
 		  the match.  So, we're good to stuff all the required info
 		  onto the wire.
 
@@ -1506,7 +1506,7 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 		      int num_matches[p]
 		      for( m=0, m<num_matches, m++ ) {
 		          char* sinful_string_of_startd[p][m]
-		          char* capability[p][m]
+		          char* ClaimId[p][m]
 		      }
 		  }
 		  EOM
@@ -1541,16 +1541,16 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 
 		for( i=0; i<last; i++ ) {
 			sinful = (*matches)[i]->peer;
-			cap = (*matches)[i]->id;
+			id = (*matches)[i]->id;
 			if( ! stream->code(sinful) ) {
 				dprintf( D_ALWAYS, "ERROR in giveMatches: can't send "
 						 "address (%s) for match %d of proc %d\n", 
 						 sinful, i, p );
 				return FALSE;
 			}				
-			if( ! stream->code(cap) ) {
+			if( ! stream->code(id) ) {
 				dprintf( D_ALWAYS, "ERROR in giveMatches: can't send "
-						 "capability for match %d of proc %d\n", i, p );
+						 "ClaimId for match %d of proc %d\n", i, p );
 				return FALSE;
 			}				
 		}
@@ -1697,6 +1697,9 @@ DedicatedScheduler::handleDedicatedJobs( void )
 // 	now = (int)time(0);
 		// Just for debugging, set now to 0 to make everything easier
 		// to parse when looking at log files.
+	    // NOTE: this _is_ intended to be checked into CVS.  It may
+	    // as well remain this way until the scheduler is improved
+	    // to actually care about this value in any meaningful way.
 	now = 0;
 
 		// first, make sure we've got a shadow that can handle mpi
@@ -1975,7 +1978,7 @@ DedicatedScheduler::spawnJobs( void )
 						 allocation->num_resources );
 
 		allocation->status = A_RUNNING;
-		allocation->setCapability( mrec->id );
+		allocation->setClaimId( mrec->id );
 
 		     // We must set all the match recs to point at this srec.
 		for( p=0; p<allocation->num_procs; p++ ) {
@@ -2441,27 +2444,27 @@ DedicatedScheduler::DelMrec( match_rec* rec )
 
 
 bool
-DedicatedScheduler::DelMrec( char* cap )
+DedicatedScheduler::DelMrec( char* id )
 {
 	match_rec* rec;
 
 	char name_buf[256];
 	name_buf[0] = '\0';
 
-	if( ! cap ) {
+	if( ! id ) {
 		dprintf( D_ALWAYS, "Null parameter to DelMrec() -- "
 				 "match not deleted\n" );
 		return false;
 	}
 
-		// First, delete it from our table hashed on capability. 
-	HashKey key( cap );
-	if( all_matches_by_cap->lookup(key, rec) < 0 ) {
+		// First, delete it from our table hashed on ClaimId. 
+	HashKey key( id );
+	if( all_matches_by_id->lookup(key, rec) < 0 ) {
 		dprintf( D_FULLDEBUG, "mrec for \"%s\" not found -- " 
-				 "match not deleted\n", cap );
+				 "match not deleted\n", id );
 		return false;
 	}
-	all_matches_by_cap->remove(key);
+	all_matches_by_id->remove(key);
 
 		// Now that we have the mrec again, we have to see if this
 		// match record is stored in our table of allocation nodes,

@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_debug.h"
@@ -113,6 +113,7 @@ FileTransfer::FileTransfer()
 	desired_priv_state = PRIV_UNKNOWN;
 	want_priv_change = false;
 	did_init = false;
+	clientSockTimeout = 30;
 	simple_init = true;
 	simple_sock = NULL;
 }
@@ -545,7 +546,8 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 		bool print_comma = false;
 		Directory spool_space( SpoolSpace, PRIV_CONDOR );
 		while ( (current_file=spool_space.Next()) ) {
-			if ( !file_strcmp(UserLogFile,current_file) ) {
+			if ( UserLogFile && 
+				 !file_strcmp(UserLogFile,current_file) ) {
 					// dont send UserLog file to the starter
 				continue;
 			}
@@ -625,10 +627,14 @@ FileTransfer::DownloadFiles(bool blocking)
 			EXCEPT("FileTransfer: DownloadFiles called on server side");
 		}
 
+		sock.timeout(clientSockTimeout);
+
 		Daemon d( DT_ANY, TransSock );
 
 		if ( !sock.connect(TransSock,0) ) {
-			EXCEPT("Unable to connect to server %s\n", TransSock);
+			dprintf( D_ALWAYS, "FileTransfer: Unable to connect to server "
+					 "%s\n", TransSock );
+			return FALSE;
 		}
 
 		d.startCommand(FILETRANS_UPLOAD, &sock, 0);
@@ -860,10 +866,14 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 			return 1;
 		}
 
+		sock.timeout(clientSockTimeout);
+
 		Daemon d( DT_ANY, TransSock );
 
 		if ( !sock.connect(TransSock,0) ) {
-			EXCEPT("Unable to connect to server %s\n", TransSock);
+			dprintf( D_ALWAYS, "FileTransfer: Unable to connect to server "
+					 "%s\n", TransSock );
+			return FALSE;
 		}
 
 		d.startCommand(FILETRANS_DOWNLOAD, &sock);
@@ -984,12 +994,19 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 
 	transobject->Info.duration = time(NULL)-transobject->TransferStart;
 	transobject->Info.in_progress = false;
-	if (WEXITSTATUS(exit_status) > 0) {
-		dprintf(D_ALWAYS, "File transfer completed successfully.\n");
-		transobject->Info.success = true;
-	} else {
-		dprintf(D_ALWAYS, "File transfer failed (status=%d).\n",exit_status);
+	if( WIFSIGNALED(exit_status) ) {
+		dprintf( D_ALWAYS, "File transfer failed (killed by signal=%d)\n",
+				 WTERMSIG(exit_status) );
 		transobject->Info.success = false;
+	} else {
+		if( WEXITSTATUS(exit_status) != 0 ) {
+			dprintf( D_ALWAYS, "File transfer completed successfully.\n" );
+			transobject->Info.success = true;
+		} else {
+			dprintf( D_ALWAYS, "File transfer failed (status=%d).\n",
+					 WEXITSTATUS(exit_status) );
+			transobject->Info.success = false;
+		}
 	}
 
 	read(transobject->TransferPipe[0], (char *)&transobject->Info.bytes,
@@ -1103,7 +1120,8 @@ FileTransfer::DownloadThread(void *arg, Stream *s)
 int
 FileTransfer::DoDownload(ReliSock *s)
 {
-	int reply, bytes, total_bytes = 0;
+	int reply;
+	filesize_t bytes, total_bytes = 0;
 	char filename[_POSIX_PATH_MAX];
 	char* p_filename = filename;
 	char fullname[_POSIX_PATH_MAX];
@@ -1180,7 +1198,7 @@ FileTransfer::DoDownload(ReliSock *s)
 		// minutes!  MLOP!! Since we are doing this, we may as well
 		// not bother to fsync every file.
 //		dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload fullname=%s\n",fullname);
-		if( ((bytes = s->get_file(fullname)) < 0) ) {
+		if( s->get_file( &bytes, fullname ) < 0 ) {
 			return_and_resetpriv( -1 );
 		}
 		if ( want_fsync ) {
@@ -1199,7 +1217,12 @@ FileTransfer::DoDownload(ReliSock *s)
 		total_bytes += bytes;
 	}
 
+#ifdef WIN32
+		// unsigned __int64 to float is not implemented on Win32
+	bytesRcvd += (float)(signed __int64)total_bytes;
+#else
 	bytesRcvd += total_bytes;
+#endif
 
 	if ( !final_transfer && IsServer() ) {
 		char buf[ATTRLIST_MAX_EXPRESSION];
@@ -1285,8 +1308,7 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 	TransferStart = time(NULL);
 
 	if (blocking) {
-
-		Info.bytes = DoUpload((ReliSock *)s);
+		DoUpload( &Info.bytes, (ReliSock *)s);
 		Info.duration = time(NULL)-TransferStart;
 		Info.success = (Info.bytes >= 0);
 		Info.in_progress = false;
@@ -1326,22 +1348,24 @@ FileTransfer::UploadThread(void *arg, Stream *s)
 {
 	dprintf(D_FULLDEBUG,"entering FileTransfer::UploadThread\n");
 	FileTransfer * myobj = ((upload_info *)arg)->myobj;
-	int total_bytes = myobj->DoUpload((ReliSock *)s);
+	filesize_t	total_bytes;
+	int status = myobj->DoUpload( &total_bytes, (ReliSock *)s);
 	write(myobj->TransferPipe[1],	// write end
 			(char *)&total_bytes, sizeof(int));
-	return (total_bytes >= 0);
+	return ( status >= 0 );
 }
 
 int
-FileTransfer::DoUpload(ReliSock *s)
+FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 {
 	char *filename;
 	char *basefilename;
 	char fullname[_POSIX_PATH_MAX];
-	int bytes, total_bytes=0;
+	filesize_t bytes;
 	bool is_the_executable;
 	StringList * filelist = FilesToSend;
-	
+
+	*total_bytes = 0;
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DoUpload\n");
 
 	priv_state saved_priv = PRIV_UNKNOWN;
@@ -1436,7 +1460,7 @@ FileTransfer::DoUpload(ReliSock *s)
 		}
 #endif
 
-		if( ((bytes = s->put_file(fullname)) < 0) ) {
+		if( s->put_file( &bytes, fullname ) < 0 ) {
 			/* if we fail to transfer a file, EXCEPT so the other side can */
 			/* try again. SC2000 hackery. _WARNING_ - I think Keller changed */
 			/* all of this. -epaulson 11/22/2000 */
@@ -1450,7 +1474,7 @@ FileTransfer::DoUpload(ReliSock *s)
 			return_and_resetpriv( -1 );
 		}
 
-		total_bytes += bytes;
+		*total_bytes += bytes;
 	}
 
 	// tell our peer we have nothing more to send
@@ -1458,9 +1482,14 @@ FileTransfer::DoUpload(ReliSock *s)
 
 	dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
 
-	bytesSent += total_bytes;
+#ifdef WIN32
+		// unsigned __int64 to float not implemented on Win32
+	bytesSent += (float)(signed __int64)*total_bytes;
+#else 
+	bytesSent += *total_bytes;
+#endif
 
-	return_and_resetpriv( total_bytes );
+	return_and_resetpriv( 0 );
 }
 
 int
@@ -1502,5 +1531,35 @@ FileTransfer::addOutputFile( const char* filename )
 	OutputFiles->append( filename );
 	return true;
 }
+
+bool
+FileTransfer::changeServer(const char* transkey, const char* transsock)
+{
+
+	if ( transkey ) {
+		if (TransKey) {
+			free(TransKey);
+		}
+		TransKey = strdup(transkey);
+	}
+
+	if ( transsock ) {
+		if (TransSock) {
+			free(TransSock);
+		}
+		TransSock = strdup(transsock);
+	}
+
+	return true;
+}
+
+int	
+FileTransfer::setClientSocketTimeout(int timeout)
+{
+	int old_val = clientSockTimeout;
+	clientSockTimeout = timeout;
+	return old_val;
+}
+
 
 

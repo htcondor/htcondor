@@ -5,7 +5,10 @@ use HawkeyePublish;
 # Hawkeye interface version number
 my $MyInterfaceVersion = 1;
 my $HawkeyeInterfaceVersion;
-my $InterfaceVersionString = "HAWKEYE_INTERFACE_VERSION";
+my $InterfaceVersionEnv = "HAWKEYE_INTERFACE_VERSION";
+my $StartdNameEnv = "STARTD_CRON_NAME";
+my $StartdName = "Hawkeye";
+my $ConfigVal = "hawkeye_config_val";
 
 # Hard config from the command line
 my %HardConfigs;
@@ -20,10 +23,32 @@ if ( $ModuleName =~ /\/([^\/]+)$/ )
 # sub DoConfig( );
 sub DoConfig( )
 {
+    # Prevent recursion
+    if ( exists $ENV{HAWKEYE_MODULE} )
+    {
+	print STDERR "$$: Recustion detected in Hawkeye module '" .
+	    $ENV{HAWKEYE_MODULE} . "'\n";
+	sleep( 5 );
+	die;
+    }
+    $ENV{HAWKEYE_MODULE} = "$0";
+
+    # Get the startd name
+    if ( exists $ENV{$StartdNameEnv} )
+    {
+	$StartdName = $ENV{$StartdNameEnv};
+	my $NameUc = uc( $StartdName );
+	$InterfaceVersionEnv = $NameUc . "_INTERFACE_VERSION";
+	$ConfigVal = "condor_config_val" if ( $NameUc ne "HAWKEYE" );
+    }
+
+    # Get the module name from the command line
     $ModuleName = shift( @ARGV) if ( $#ARGV >= 0 );
+
+    # Handle "--ifversion";
     if ( $ModuleName =~ /^--ifversion/ )
     {
-	print "$InterfaceVersionString=$MyInterfaceVersion\n";
+	print "$InterfaceVersionEnv=$MyInterfaceVersion\n";
 	exit 0;
     }
 
@@ -42,15 +67,21 @@ sub DoConfig( )
 	{
 	    $HardConfigs{$1} = $2;
 	}
+	# Easier for user: --(variable)=value
+	elsif ( $Arg =~ /^--(\w+)=(.*)/ )
+	{
+	    my $Var = $ModuleName . "_" . $1;
+	    $HardConfigs{$Var} = $2;
+	}
 	# Don't queury the config from the startd _at all_
-	elsif ( $Arg =~ /^--noquery/ )
+	elsif ( ( $Arg eq "--noquery" ) || ( $Arg eq "-nq" ) )
 	{
 	    $ConfigQuery = 0;
 	}
 	# Query published interface version
-	elsif ( $Arg =~ /^--ifversion/ )
+	elsif ( $Arg eq "--ifversion" )
 	{
-	    print "$InterfaceVersionString=$MyInterfaceVersion\n";
+	    print "$InterfaceVersionEnv=$MyInterfaceVersion\n";
 	    exit 0;
 	}
 	# Normal param, just keep going..
@@ -70,9 +101,9 @@ sub DoConfig( )
 
     # Interface version stuff...
     $HawkeyeInterfaceVersion = 0;
-    if ( exists $ENV{$InterfaceVersionString} )
+    if ( exists $ENV{$InterfaceVersionEnv} )
     {
-	$HawkeyeInterfaceVersion = $ENV{$InterfaceVersionString};
+	$HawkeyeInterfaceVersion = $ENV{$InterfaceVersionEnv};
     }
 }
 
@@ -118,7 +149,8 @@ sub ReadConfig( $$ )
     if ( exists( $HardConfigs{$Label} )  ) {
 	$String = $HardConfigs{$Label};
     } elsif ( $ConfigQuery ) {
-	$String = `hawkeye_config_val -startd hawkeye_$ModuleName$Ext`;
+	my $Cmd = $ConfigVal . " -startd " . $StartdName . "_$ModuleName$Ext";
+	$String = `$Cmd`;
 	$String = "not defined" if ( -1 == $? );
     }
 
@@ -139,6 +171,10 @@ sub ParseUptime( $$ )
 {
     local $_ = shift;
     my $HashRef = shift;
+
+    # Cleanup the line
+    chomp $_;
+    s/^\s+//;
 
     # Get rid of all the damn commas
     s/,//g;
@@ -267,6 +303,25 @@ sub ParseBytes( $$ )
     $Bytes;
 }
 
+# Detect the running O/S
+sub DetectOs( $ )
+{
+    my $OsRef = shift;
+    my $Os = undef;
+    foreach my $OsNum ( 0 .. $#{$OsRef} )
+    {
+	my $OsType = @{$OsRef}[$OsNum]->{ostype};
+	my $OsRev = @{$OsRef}[$OsNum]->{osrev};
+	if (  ( $ENV{OS_TYPE} =~ /$OsType/ ) &&
+	      ( $ENV{OS_REV}  =~ /$OsRev/ )  )
+	{
+	    $Os = @{$OsRef}[$OsNum];
+	    last;
+	}
+    }
+    return $Os;
+}
+
 sub AddHash( $$$$ )
 {
     my $HashRef = shift;
@@ -326,7 +381,22 @@ sub Add
     my $Value = shift;
 
     my $NewElem = ();
-    $NewElem->{Type} = $Type;
+
+    # If the type is a number, it's modern invocation.
+    if ( $Type =~ /^\d+$/ )
+    {
+	$NewElem->{Type} = $Type;
+    }
+    # Otherwise, we understand "n" == "number"
+    elsif ( $Type =~ /^n/i )
+    {
+	$NewElem->{Type} = HawkeyePublish::TypeNumber;
+    }
+    # Anything else is a string
+    else
+    {
+	$NewElem->{Type} = HawkeyePublish::TypeString;
+    }
     $NewElem->{Value} = $Value;
     $self->{Hash}{$Name} = $NewElem;
 }
@@ -340,15 +410,10 @@ sub Store
     {
 	my $Name = $Label . $Key;
 	my $Value = $self->{Hash}{$Key}->{Value};
+	my $TypeNew = $self->{Hash}{$Key}->{TypeNew};
 	my $Type = $self->{Hash}{$Key}->{Type};
-	if ( $self->{Hash}{$Key}->{Type} =~ /n/i )
-        {
-	    ${$self->{Hawkeye}}->StoreNum( $Name, $Value );
-        }
-	else
-        {
-	    ${$self->{Hawkeye}}->Store( $Name, $Value );
-        }
+
+	${$self->{Hawkeye}}->StoreValue( $Name, $Value, $Type );
 	$Count++;
     }
     return $Count;

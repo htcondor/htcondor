@@ -1,0 +1,268 @@
+#! /usr/bin/env perl
+use warnings;
+use strict;
+
+sub ParseHex($);
+sub DumpHistories( $$ );
+sub DumpHistory( $$$ );
+
+my %Config =
+(
+ HistMin	=> 0,
+ HistMax	=> 99999,
+ Long		=> 0,
+ UpdateInterval => 0,
+ DumpTime	=> 1,
+);
+
+# Parse command line...
+foreach my $Arg ( @ARGV )
+{
+    if ( $Arg =~ /^--history=(\d*)(-(\d+))?$/ )
+    {
+	$Config{HistMin} = $1 if ( $1 ne "" );
+	$Config{HistMax} = $3 if ( defined $3 && $3 ne "" );
+    }
+    elsif ( $Arg =~ /^--interval=(\d+)/ )
+    {
+	$Config{UpdateInterval} = $1;
+	$Config{DumpTime} = 1;
+    }
+    elsif ( $Arg =~ /^--time/ )
+    {
+	$Config{DumpTime} = 1;
+    }
+    elsif ( $Arg =~ /^--notime/ )
+    {
+	$Config{DumpTime} = 0;
+    }
+    elsif (  ( $Arg =~ /^--long$/ ) || ( $Arg =~ /^-l$/ ) )
+    {
+	$Config{Long} = 1;
+    }
+    else
+    {
+	print( STDERR
+	       "usage: condor_updates_stats [options]\n" .
+	       "\t[--long or -l]\t\tEnables long output\n" .
+	       "\t[--history=[min][-max]]\tSet history range from min to max\n" .
+	       "\t[--interval=seconds]\tForce update interval to seconds\n" .
+	       "\t[--time]\t\tEnables time dump (if available)\n" .
+	       "\t[--notime]\t\tDisables time dump\n"
+	       );
+	exit 1;
+    }
+}
+$#ARGV = -1;
+print STDERR "(Reading from stdin)\n";
+
+# Just pull from stdin...
+my %AdInfo;
+my %UpdateTypes;
+my $UpdateHistories = 0;
+while( <> )
+{
+    chomp;
+    if ( /(\w*)\s*=\s*\"(.*)\"$/ )
+    {
+	my $Attr = $1;
+	my $Value = $2;
+	$AdInfo{$Attr} = $Value;
+
+	if ( $Attr =~ /^UpdatesHistory/ )
+	{
+	    $UpdateHistories++;
+	}
+	elsif ( $Attr =~ /^Updates.*_(.*)/ )
+	{
+	    $UpdateTypes{$1} = 1;
+	}
+    }
+    elsif ( /(\w*)\s*=\s*(.*)$/ )
+    {
+	my $Attr = $1;
+	my $Value = $2;
+	$AdInfo{$Attr} = $Value;
+
+	if ( $Attr =~ /^UpdatesHistory/ )
+	{
+	    $UpdateHistories++;
+	}
+	elsif ( $Attr =~ /^Updates.*_(.*)/ )
+	{
+	    $UpdateTypes{$1} = 1;
+	}
+    }
+    else
+    {
+	DumpHistories( \%AdInfo, \%UpdateTypes ) if ( $UpdateHistories );
+
+	%AdInfo = ();
+	%UpdateTypes = ();
+	$UpdateHistories = 0;
+    }
+
+}
+
+# Dump all history info
+sub DumpHistories( $$ )
+{
+    my $Ad = shift;
+    my $Types = shift;
+
+    my $Name = "*Unknown*";
+    my $MyType = "*Unknown*";
+
+    # Pull out the name, etc.
+    if ( exists $Ad->{Name} )
+    {
+	$Name = $Ad->{Name};
+    }
+    elsif ( exists $Ad->{Machine} )
+    {
+	$Name = $Ad->{Machine};
+    }
+    $MyType = $Ad->{MyType} if ( exists $Ad->{MyType} );
+    my $NameStr = "*** Name/Machine = '$Name' MyType = '$MyType' ***";
+
+    if ( DumpHistory( $NameStr, $Ad, undef ) )
+    {
+	$NameStr = "";
+    }
+    foreach my $Type ( keys %{$Types} )
+    {
+	DumpHistory( $NameStr, $Ad, $Type );
+    }
+}
+
+
+# Dump history info
+sub DumpHistory( $$$ )
+{
+    my $NameStr = shift;
+    my $Ad = shift;
+    my $Type = shift;
+    my $UpdateInterval = $Config{UpdateInterval};
+
+    my %Updates;
+    if ( ! defined $Type )
+    {
+	if ( exists $Ad->{UpdatesTotal} )
+	{
+	    $Updates{Total} = $Ad->{UpdatesTotal};
+	    $Updates{Seq} = $Ad->{UpdatesSequenced};
+	    $Updates{Lost} = $Ad->{UpdatesLost};
+	}
+	if ( exists $Ad->{UpdatesHistory} )
+	{
+	    $Updates{Hist} = $Ad->{UpdatesHistory};
+	}
+    }
+    else
+    {
+	if ( exists $Ad->{"UpdatesTotal_".$Type} )
+	{
+	    $Updates{Total} = $Ad->{"UpdatesTotal_".$Type};
+	    $Updates{Seq} = $Ad->{"UpdatesSequenced_".$Type};
+	    $Updates{Lost} = $Ad->{"UpdatesLost_".$Type};
+	}
+	if ( exists $Ad->{"UpdatesHistory_".$Type} )
+	{
+	    $Updates{Hist} = $Ad->{"UpdatesHistory_".$Type};
+	}
+    }
+
+    #Anything to do?
+    if ( ( scalar keys %Updates ) < 0 )
+    {
+	return 0;
+    }
+
+    # Extract the update interval if it exists...
+    if ( exists $Ad->{UpdateInterval} && ( $Ad->{UpdateInterval} =~ /^\d/ ) )
+    {
+	$UpdateInterval = $Ad->{UpdateInterval};
+    }
+
+    # Dump the title string
+    print "$NameStr\n" if ( $NameStr ne "" );
+    print " Type: " . ( ( defined $Type ) ? "$Type" : "Main" ) . "\n";
+
+    # Dump the "summary" info
+    if ( exists $Updates{Total} )
+    {
+	my $LostPercent = "0.00";
+	if ( $Updates{Seq} )
+	{
+	    $LostPercent =
+		sprintf( "%.2f", 100.0 * $Updates{Lost} / $Updates{Seq} );
+	}
+	print "   Stats: Total=$Updates{Total}, Seq=$Updates{Seq}, ".
+	    "Lost=$Updates{Lost} ($LostPercent\%)\n";
+    }
+
+    # Dump the "History" info
+    if ( exists $Updates{Hist} )
+    {
+	my $History = ParseHex( $Updates{Hist} );
+	my $UpdateNum = 0;
+	my $LastStatus = -1;
+	my $Repeats = 0;
+
+	my $Time = time( );
+	$Time = $Ad->{LastHeardFrom} if ( exists $Ad->{LastHeardFrom} );
+
+	foreach my $Sample ( 0 .. $#{@{$History}} )
+	{
+	    if ( ( $Sample >= $Config{HistMin} ) &&
+		 ( $Sample <= $Config{HistMax} ) )
+	    {
+		my $Status = @{$History}[$Sample];
+		if ( ( ! $Config{Long} ) && ( $Status == $LastStatus ) &&
+		     ( $Sample < $#{@{$History}} )  )
+		{
+		    print "  ...\n" if ( ! $Repeats );
+		    $Repeats++;
+		}
+		else
+		{
+		    $Repeats = 0;
+		    my $TimeStr = "";
+		    if ( $UpdateInterval && $Config{DumpTime} )
+		    {
+			$TimeStr = " @ " . localtime( $Time );
+		    }
+		    printf "  %4d%s: %s\n",
+			$UpdateNum, $TimeStr,  $Status ? "Ok" : "Missed";
+		}
+		$LastStatus = $Status;
+	    }
+	    $Time -= $UpdateInterval;
+	    $UpdateNum++;
+	}
+	print "\n";
+    }
+
+    return 1;
+}
+
+# Parse the hex string into array of ints
+sub ParseHex( $ )
+{
+    my $Hex = shift;
+    $Hex =~ s/^0x//i;
+
+    my @History;
+    my $Len = length( $Hex ) - 1;
+    foreach my $Offset ( 0 .. $Len )
+    {
+	my $HexChar = substr( $Hex, $Offset, 1 );
+	my $Value = hex( $HexChar );
+	foreach my $Mask ( 0x8, 0x4, 0x2, 0x1 )
+	{
+	    my $Bit = ( $Mask & $Value ) ? 0 : 1;
+	    push( @History, $Bit );
+	}
+    }
+    \@History;
+}

@@ -1,40 +1,47 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #ifndef CONDOR_SYSTEM_H
 #define CONDOR_SYSTEM_H
 
-#if defined(WIN32)
 
 /******************************
 ** Windows specifics
 ******************************/
-#include "condor_sys_nt.h"
+#if defined(WIN32)
+# include "condor_sys_nt.h"
+#endif
 
-#else
+/********************************************************************
+** Declare base system types (currently the int64_t types, but will
+** probably grow beyond this charter).
+*********************************************************************/
+#include "condor_sys_types.h"
+
 
 /******************************
 ** Unix specifics
 ******************************/
+#if !defined( WIN32 )
 
 /* Things we want defined on all Unix systems */
 
@@ -62,12 +69,12 @@
 #	include "condor_sys_solaris.h"
 #elif defined(OSF1)
 #	include "condor_sys_dux.h"
-#elif defined(CONDOR_DARWIN)
+#elif defined(Darwin)
 #	include "condor_sys_bsd.h"
 #elif defined(AIX)
 #	include "condor_sys_aix.h"
 #else
-#   error "Don't know what Unix this is!"
+#   error "condor_system.h: Don't know what Unix this is!"
 #endif
 
 
@@ -166,12 +173,12 @@
 #include <sys/time.h>
 #include <sys/times.h>
 #include <rpc/types.h>
-#if !defined(CONDOR_DARWIN)
+#if !defined(Darwin)
 #include <values.h>
 #endif
 #include <math.h>
 #include <utime.h>
-#if !defined(CONDOR_DARWIN)
+#if !defined(Darwin)
 #include <sys/poll.h>
 #endif
 
@@ -188,8 +195,42 @@ typedef fd_set *SELECT_FDSET_PTR;
 
 #endif /* UNIX */
 
+
+/* This stuff here is shared by all archs, *INCLUDING* NiceTry */
+
+/* Pull in some required types */
+#if defined( HAS_SYS_TYPES_H )
+# include <sys/types.h>
+#endif
+#if defined( HAS_STDINT_H )
+# include <stdint.h>
+#endif
+#if defined( HAS_INTTYPES_H )
+# define __STDC_FORMAT_MACROS
+# include <inttypes.h>
+#endif
+
+/* Define _O_BINARY, etc. if they're not defined as zero */
+#ifndef _O_BINARY
+ #define _O_BINARY		0x0
+#endif
+#ifndef _O_SEQUENTIAL
+ #define _O_SEQUENTIAL	0x0
+#endif
+#ifndef O_LARGEFILE
+ #define O_LARGEFILE	0x0
+#endif
+
+/* If no inttypes, try to define our own (make a guess) */
+/* The win 32 include file defines the win32 versions */
+#if !defined( PRId64 )
+# define PRId64 "lld"
+#endif
+#if !defined( PRIi64 )
+# define PRIi64 "lli"
+#endif
+#if !defined( PRIu64 )
+# define PRIu64 "llu"
+#endif
+
 #endif /* CONDOR_SYSTEM_H */
-
-
-
-

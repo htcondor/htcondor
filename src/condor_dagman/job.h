@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
- ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #ifndef JOB_H
 #define JOB_H
@@ -66,16 +66,14 @@
      queue) are put on the DAG's ready list.  */
 class Job {
   public:
-  
-  //--> DAP
-  enum job_type_t{
-    CONDOR_JOB,
-    DAP_JOB
-  };
-  
-  job_type_t job_type;
-  
-  //<-- DAP
+
+        // possible kinds of job (e.g., Condor, Stork, etc.)
+        // NOTE: must be kept in sync with _job_type_strings[]
+	typedef enum {
+		TYPE_CONDOR,
+		TYPE_STORK,
+		TYPE_NOOP,	// TODO: yet to be implemented...
+	 } job_type_t;
   
     /** Enumeration for specifying which queue for Add() and Remove().
         If you change this enum, you *must* also update queue_t_names
@@ -110,6 +108,11 @@ class Job {
     */
     static const char *queue_t_names[];
   
+		/** Returns how many direct parents a node has.
+			@return number of parents
+		*/
+	const int NumParents();
+
     /** The Status of a Job
         If you update this enum, you *must* also update status_t_names
 		and the IsActive() method, etc.
@@ -132,13 +135,17 @@ class Job {
 	char error_text[JOB_ERROR_TEXT_MAXLEN];
   
     /** Constructor
+        @param jobType Type of job in dag file.
         @param jobName Name of job in dag file.  String is deep copied.
         @param cmdFile Path to condor cmd file.  String is deep copied.
     */
-    Job (const char *jobName, const char *cmdFile);
+    Job( const job_type_t jobType, const char* jobName, const char* cmdFile );
+		// alternate (old) constructor defaults to Condor job type
+    Job( const char* jobName, const char* cmdFile );
   
-    ///
     ~Job();
+
+	void Init( const char* jobName, const char* cmdFile );
   
 	inline const char* GetJobName() const { return _jobName; }
 	inline const char* GetCmdFile() const { return _cmdFile; }
@@ -147,6 +154,8 @@ class Job {
 	inline const int GetRetries() const { return retries; }
 	const char* GetPreScriptName() const;
 	const char* GetPostScriptName() const;
+	const char* JobTypeString() const;
+	const job_type_t JobType() const;
 
 	bool AddPreScript( const char *cmd, MyString &whynot );
 	bool AddPostScript( const char *cmd, MyString &whynot );
@@ -195,14 +204,29 @@ class Job {
         @return the node's current status
     */
 	status_t GetStatus() const;
+
     /** Returns the node's current status string
         @return address of a string describing the node's current status
     */
 	const char* GetStatusName() const;
 
-	bool HasChild( Job* child );
-	bool HasParent( Job* child );
+    /** Sets the node's current status
+        @return true: status change was successful, false: otherwise
+    */
+	bool SetStatus( status_t newStatus );
 
+		/** Is the specified node a child of this node?
+			@param child Pointer to the node to check for childhood.
+			@return true: specified node is our child, false: otherwise
+		*/
+	bool HasChild( Job* child );
+		/** Is the specified node a parent of this node?
+			@param child Pointer to the node to check for parenthood.
+			@return true: specified node is our parent, false: otherwise
+		*/
+	bool HasParent( Job* parent );
+
+	bool RemoveChild( Job* child );
 	bool RemoveChild( Job* child, MyString &whynot );
 	bool RemoveParent( Job* parent, MyString &whynot );
 	bool RemoveDependency( queue_t queue, JobID_t job );
@@ -222,7 +246,12 @@ class Job {
 	bool SanityCheck() const;
 
 	bool AddParent( Job* parent );
+	bool AddParent( Job* parent, MyString &whynot );
+	bool CanAddParent( Job* parent, MyString &whynot );
+
 	bool AddChild( Job* child );
+	bool AddChild( Job* child, MyString &whynot );
+	bool CanAddChild( Job* child, MyString &whynot );
 
 		// should be called when the job terminates
 	bool TerminateSuccess();
@@ -275,11 +304,17 @@ private:
   
 	bool AddDependency( Job* parent, Job* child );
 
+        // strings for job_type_t (e.g., "Condor, "Stork", etc.)
+    static const char* _job_type_names[];
+
+		// type of job (e.g., Condor, Stork, etc.)
+	job_type_t _jobType;
+
     // filename of condor submit file
     char * _cmdFile;
   
     // name given to the job by the user
-    char * _jobName;
+    const char* _jobName;
   
     /*  Job queue's
       

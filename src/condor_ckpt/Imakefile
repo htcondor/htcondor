@@ -19,11 +19,11 @@ PVM_CHECKPOINT = -DPVM_CHECKPOINTING
 DL_EXTRACT = -DDL_EXTRACT
 #endif
 
-#ifdef ENABLE_NEST
-NEST_CC_FLAGS = -DENABLE_NEST -I NestIncludePath
+#if WANT_NEST
+NEST_CC_FLAGS = -DENABLE_NEST -I$(NEST_INC)
 #endif
 
-FILE_TABLE = -DFILE_TABLE -I ZIncludePath ${NEST_CC_FLAGS}
+FILE_TABLE = -DFILE_TABLE -I$(ZLIB_INC) $(NEST_CC_FLAGS)
 FILE_TABLE_OBJ = file_state.o condor_file.o condor_file_local.o condor_file_remote.o condor_file_special.o condor_file_agent.o condor_file_basic.o condor_file_buffer.o condor_file_fd.o condor_file_compress.o condor_file_append.o condor_file_nest.o file_table_interf.o
 
 #if DOES_SAVE_SIGSTATE
@@ -32,31 +32,24 @@ SAVE_SIGSTATE_OBJ = signals_support.o signals_control.o
 
 #if IS_DUX
 SIG_EXTRACT = SIGACTION.o SIGPROCMASK.o SIGSUSPEND.o SIGNAL.o _SIGSUSPEND.o
-#elif IS_X86_SOLARIS
-SIG_EXTRACT = SIGACTION.o _SIGACTION.o i386_data.o
 #elif IS_SUN4X_SOLARIS
 SIG_EXTRACT = SIGACTION.o _SIGACTION.o
 #elif IS_LINUX
-#if IS_GLIBC_LINUX
 SIG_EXTRACT = SIGSUSPEND.o SIGACTION.o
-#else
-SIG_EXTRACT = SIGSUSPEND.o
-#endif
 #endif
 
 #endif  /* ======= of if DOES_SAVE_SIGSTATE ==========*/
 
-#if IS_GLIBC_LINUX
+#if IS_LINUX
 PLATFORM_EXTRACT = MMAP.o SYSCALL.o SYSDEP.o PIPE.o
-#elif IS_LINUX
-PLATFORM_EXTRACT = MMAP.o SYSCALL.o __PIPE.o
 #elif IS_SOLARIS
 PLATFORM_EXTRACT = MMAP.o SYSCALL.o PIPE.o 
-#elif IS_ALPHA_OSF1
+#elif IS_ALPHA_DUX
 PLATFORM_EXTRACT = MMAP.o SYSCALL.o PIPE.o
 #elif IS_HPUX
 PLATFORM_EXTRACT = SYSCALL.o __SYSCALL.o PIPE.o
 #elif IS_IRIX
+PLATFORM_EXTRACT =
 #else 
 PLATFORM_EXTRACT = PIPE.o
 #endif
@@ -64,18 +57,18 @@ PLATFORM_EXTRACT = PIPE.o
 EXTRACT = $(SIG_EXTRACT) $(PLATFORM_EXTRACT)
 
 #if DOES_COMPRESS_CKPT
-#if IS_SUN4X_SOLARIS
-#if IS_SOLARIS29
+#  if IS_SUN4X_SOLARIS
+#    if IS_SOLARIS29
 /* _rem.o, _div.o, umultiply.o were consolidated into hwmuldiv.o in sol 2.9 */
-COMPRESS_OBJ = malloc-condor.o zimage.o hwmuldiv.o
-#else
-COMPRESS_OBJ = malloc-condor.o zimage.o _rem.o _div.o umultiply.o
-#endif
-#else
-COMPRESS_OBJ = malloc-condor.o zimage.o
-#endif
-COMPRESS_FLAGS = -DCOMPRESS_CKPT -I ZIncludePath
-#endif
+       COMPRESS_OBJ = malloc-condor.o zimage.o hwmuldiv.o
+#    else
+       COMPRESS_OBJ = malloc-condor.o zimage.o _rem.o _div.o umultiply.o
+#    endif
+#  else /* not Solaris */
+     COMPRESS_OBJ = malloc-condor.o zimage.o
+#  endif
+COMPRESS_FLAGS = -DCOMPRESS_CKPT -I $(ZLIB_INC)
+#endif /* DOES_COMPRESS_CKPT */
 
 #if HAS_DYNAMIC_USER_JOBS
 DYNAMIC_FLAGS = -DHAS_DYNAMIC_USER_JOBS
@@ -94,9 +87,7 @@ CFLAGS = $(STD_C_FLAGS) $(STATIC) -DIN_CKPT_LIB $(DYNAMIC_FLAGS)
 CFLAGS = $(STD_C_FLAGS) -DIN_CKPT_LIB $(DYNAMIC_FLAGS) $(DL_EXTRACT)
 #endif
 
-#if IS_IRIX62
-OS = IRIX62
-#elif IS_IRIX65
+#if IS_IRIX65
 OS = IRIX65
 #elif IS_HPUX10
 OS = HPUX10
@@ -108,12 +99,6 @@ OS = OperatingSystem
 ASSEMBLER_OBJ = SYSCALL.MIPS.IRIX65.o MMAP.MIPS.IRIX65.o
 .s.o:
 	gcc $(STD_C_FLAGS) -g -c -o $*.o $*.s
-#endif
-
-#if IS_SGI_IRIX62
-ASSEMBLER_OBJ = SYSCALL.MIPS.IRIX62.o MMAP.MIPS.IRIX62.o
-.s.o:
-	gas -o $*.o $*.s
 #endif
 
 CPP_UTIL_OBJ = condor_version.o
@@ -129,33 +114,47 @@ OBJ =	image.o machdep.$(OS).o tmp_stack.o syscall_mode.o \
 
 #else /* !DOES_CHECKPOINTING */
 
-OBJ =	syscall_mode.o shared_utils.o
-
+#if IS_AIX5
+SHARED_OBJ =
+#else
+SHARED_OBJ = shared_utils.o
 #endif
+OBJ = signals_control.o syscall_mode.o $(SHARED_OBJ)
+
+#endif /* !DOES_CHECKPOINTING */
 
 /* Figure out what should be in the libc++support library, if anything */
 #if DOES_CHECKPOINTING
 
-#	if IS_C_COMP_KIND_EGCS || IS_C_COMP_MINOR_GCC_2_95 
-		CPP_SUPPORT_EXTRACT_OBJ = _eh.o tinfo.o tinfo2.o \
-			  exception.o frame.o __dummy.o _pure.o 
-#	elif IS_C_COMP_MINOR_GCC_2_96
-		CPP_SUPPORT_EXTRACT_OBJ = _eh.o tinfo.o tinfo2.o \
-			  exception.o frame-dwarf2.o __dummy.o _pure.o 
-#	else
-#		error Checkpoint library not compatible with compiler!
-#	endif
-	
-	CPP_SUPPORT_OBJ = c_plus_alloc.o $(CPP_SUPPORT_EXTRACT_OBJ)
+#if IS_C_COMP_MAJOR_GCC_3
+# define NEEDS_CPP_SUPPORT_LIB 0
+  CPP_SUPPORT_LIB =
+#else /* non gcc 3.x */
+#  if IS_C_COMP_KIND_EGCS || IS_C_COMP_MINOR_GCC_2_95 
+     CPP_FRAME_OBJ = frame.o
+#  elif IS_C_COMP_MINOR_GCC_2_96
+     CPP_FRAME_OBJ = frame-dwarf2.o
+#  else
+#    error Checkpoint library not compatible with compiler!
+#  endif /* egcs, gcc 2.95 and gcc 2.96 */
+# define NEEDS_CPP_SUPPORT_LIB 1
+  CPP_SUPPORT_EXTRACT_OBJ = _eh.o tinfo.o tinfo2.o $(CPP_FRAME_OBJ) \
+			    exception.o  __dummy.o _pure.o 
+  CPP_SUPPORT_OBJ = c_plus_alloc.o $(CPP_SUPPORT_EXTRACT_OBJ)
+  CPP_SUPPORT_LIB = libcondorc++support.a
+#endif /* gcc 3.x or not */
 
-    all_target(ToUpper libcondorc++support.a condor_rt0.o \
-	       $(OBJ) $(COMPRESS_LIB) $(RELEASE_OBJ) )
+all_target(ToUpper $(CPP_SUPPORT_LIB) condor_rt0.o $(OBJ) $(COMPRESS_LIB) $(RELEASE_OBJ))
+release:: all
+stripped:: all
+static:: all
 
-    library_target(libcondorc++support.a,$(CPP_SUPPORT_OBJ))
-
-	release_library(libcondorc++support.a,$(RELEASE_DIR)/lib)
-	strip_library(libcondorc++support.a,$(STRIP_DIR)/lib)
-	static_library(libcondorc++support.a,$(STATIC_DIR)/lib)
+#if NEEDS_CPP_SUPPORT_LIB
+library_target(libcondorc++support.a,$(CPP_SUPPORT_OBJ))
+release_library(libcondorc++support.a,lib)
+strip_library(libcondorc++support.a,lib)
+static_library(libcondorc++support.a,lib)
+#endif /* NEEDS_CPP_SUPPORT_LIB */
 
 #else /* Not DOES_CHECKPOINTING */
 
@@ -164,7 +163,8 @@ release:: all
 stripped:: all
 static:: all
 
-#endif
+#endif /* DOES_CHECKPOINTING or not */ 
+
 
 #if IS_HPUX
 SIGNAL.o :  $(SIMPLE_LIBC)  ToUpper
@@ -178,21 +178,10 @@ SIGNAL.o :  $(SIMPLE_LIBC)  ToUpper
 uppercase_target($(SIMPLE_LIBC),signal.o,SIGNAL.o,signal,SIGNAL)
 #endif
 
-#if IS_X86_SOLARIS
-i386_data.o : $(SIMPLE_LIBC)
-	ar x $(SIMPLE_LIBC) i386_data.o
-#endif
-
 uppercase_target($(SIMPLE_LIBC),sigvec.o,SIGVEC.o,sigvec,SIGVEC)
 uppercase_target($(SIMPLE_LIBC),_sigvec.o,_SIGVEC.o,_sigvec,_SIGVEC)
 
-#if IS_X86_SOLARIS
-SIGACTION.o : ToUpper $(SIMPLE_LIBC)
-	ar x $(SIMPLE_LIBC) sigaction.o
-	./ToUpper sigaction.o sigaction.tmp.o sigaction SIGACTION
-	./ToUpper sigaction.tmp.o SIGACTION.o _siguhandler _SIGUHANDLER
-	rm -f sigaction.tmp.o sigaction.o
-#elif IS_ALPHA_OSF1
+#if IS_ALPHA_DUX
 uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
 #else
 uppercase_target($(SIMPLE_LIBC),sigaction.o,SIGACTION.o,sigaction,SIGACTION)
@@ -206,7 +195,7 @@ uppercase_target($(SIMPLE_LIBC),_sigaction.o,_SIGACTION.o,sigaction,SIGACTION)
 
 uppercase_target($(SIMPLE_LIBC),sigprocmask.o,SIGPROCMASK.o,sigprocmask,SIGPROCMASK)
 
-#if IS_ALPHA_OSF1
+#if IS_ALPHA_DUX
 SIGSUSPEND.o :  $(SIMPLE_LIBC)  ToUpper
 	ar x    $(SIMPLE_LIBC)      sigsuspend.o 	  ; mv  sigsuspend.o  $(TMP_DIR)
 	./ToUpper $(TMP_DIR)/sigsuspend.o   $(TMP_DIR)/SIGSUSPEND.o   sigsuspend   SIGSUSPEND
@@ -224,15 +213,6 @@ SIGACTION.o : $(SIMPLE_LIBC) ToUpper
 	./ToUpper $(TMP_DIR)/SIGACTION.o SIGACTION.o _sigtramp _SIGTRAMP
 	rm -f $(TMP_DIR)/sigaction.o $(TMP_DIR)/SIGACTION.o
 
-#elif IS_GLIBC_LINUX && IS_GLIBC20
-uppercase_target($(SIMPLE_LIBC),sigsuspend.o,SIGSUSPEND_TMP.o,sigsuspend,SIGSUSPEND)
-
-SIGSUSPEND.o: SIGSUSPEND_TMP.o ToUpper
-	./ToUpper SIGSUSPEND_TMP.o SIGSUSPEND.o __syscall_SIGSUSPEND __syscall_sigsuspend
-
-clean::
-	rm -f SIGSUSPEND_TMP.o
-
 #else
 uppercase_target($(SIMPLE_LIBC),sigsuspend.o,SIGSUSPEND.o,sigsuspend,SIGSUSPEND)
 #endif
@@ -241,11 +221,11 @@ uppercase_target($(SIMPLE_LIBC),sigsuspend.o,SIGSUSPEND.o,sigsuspend,SIGSUSPEND)
 uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
 #endif
 
-#if DOES_CHECKPOINTING
+#if DOES_CHECKPOINTING && NEEDS_CPP_SUPPORT_LIB
 obj_extract($(GCC_LIBC),$(CPP_SUPPORT_EXTRACT_OBJ))
 #endif
 
-#if IS_GLIBC_LINUX
+#if IS_LINUX && IS_GLIBC
 uppercase_target($(SIMPLE_LIBC),sysdep.o,SYSDEP_TMP.o,__syscall_error,__SYSCALL_ERROR)
 uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL_TMP.o,syscall,SYSCALL)
 
@@ -258,7 +238,7 @@ SYSDEP.o: SYSDEP_TMP.o ToUpper
 
 clean::
 	rm -f SYSCALL_TMP.o
-#elif IS_LINUX || IS_DUX || IS_HPUX
+#elif IS_DUX || IS_HPUX
 uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
 uppercase_target($(SIMPLE_LIBC),__syscall.o,__SYSCALL.o,__syscall,__SYSCALL)
 #endif
@@ -267,15 +247,15 @@ uppercase_target($(SIMPLE_LIBC),pipe.o,PIPE.o,pipe,PIPE)
 uppercase_target($(SIMPLE_LIBC),__pipe.o,__PIPE.o,__pipe,__PIPE)
 
 #if IS_SOLARIS
-program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) MMAP.o SYSCALL.o fake_util_lib.o, )
+program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) MMAP.o SYSCALL.o fake_util_lib.o,$(NULL))
 #else
-program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) fake_util_lib.o, )
+program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) fake_util_lib.o,$(NULL))
 #endif
 
 ToUpper.o: ToUpper.c
 	gcc $(C_FLAGS) -c ToUpper.c
 
-c_plus_target_complex(ToUpper,ToUpper.o,$(TOUPPER_C_PLUS_FLAGS), $(ALL_LDFLAGS), $(NULL))
+program_target_complex(ToUpper,ToUpper.o,$(NULL),$(NULL),$(NULL))
 
 clean::
 	rm -f ToUpper ToUpper.o
@@ -290,22 +270,22 @@ zimage.o : image.C
 /* hwmuldiv.o replaces _rem.o, _div.o, and umultiply.o in solaris 2.9 */
 hwmuldiv.o : $(SIMPLE_LIBC)
 	ar x $(SIMPLE_LIBC) hwmuldiv.o
-#else
+#else /* pre-2.9 Solaris */
 _rem.o : $(SIMPLE_LIBC)
 	ar x $(SIMPLE_LIBC) _rem.o
 _div.o : $(SIMPLE_LIBC)
 	ar x $(SIMPLE_LIBC) _div.o
 umultiply.o : $(SIMPLE_LIBC)
 	ar x $(SIMPLE_LIBC) umultiply.o
-#endif
-#endif
+#endif /* Solaris 2.9 */
+#endif /* Solaris */
 $(COMPRESS_LIB): libcondorckpt.a $(COMPRESS_OBJ)
 	cp libcondorckpt.a $(COMPRESS_LIB)
 	ar -d $(COMPRESS_LIB) image.o
 	ar -r $(COMPRESS_LIB) $(COMPRESS_OBJ)
 clean::
 	rm -f $(COMPRESS_LIB) $(COMPRESS_OBJ)
-#endif
+#endif /* DOES_COMPRESS_CKPT */
 
 CMNT
 CMNT Create a replacement for crt0.o to be linked with condor programs.
@@ -313,32 +293,27 @@ CMNT N.B. This is done differently than other objects in that we start out
 CMNT with a copy of crt0.o, and change the name of "main" to "MAIN".
 CMNT
 #if IS_HPUX
-condor_rt0.o: Crt0 ToUpper
-	./ToUpper Crt0 tmp1 _start _START 
+condor_rt0.o: $(CRT_BEGIN) ToUpper
+	./ToUpper $(CRT_BEGIN) tmp1 _start _START 
 	./ToUpper tmp1 tmp2 _data_START _data_start
 	./ToUpper tmp2 condor_rt0.o _text_START _text_start
 	rm -f tmp1 tmp2
 clean::
 	rm -f condor_rt0.o
 #elif IS_SUN4X_SOLARIS
-condor_rt0.o: Crt0 ToUpper
-	./ToUpper Crt0 condor_rt0.o main  MAIN
+condor_rt0.o: $(CRT_BEGIN) ToUpper
+	./ToUpper $(CRT_BEGIN) condor_rt0.o main  MAIN
 clean::
 	rm -f condor_rt0.o
-#elif  IS_X86_SOLARIS
-condor_rt0.o: Crt0 ToUpper
-	./ToUpper Crt0 condor_rt0.o main  MAIN
-clean::
-	rm -f condor_rt0.o
-#elif IS_GLIBC_LINUX && (IS_GLIBC21 || IS_GLIBC22)
-condor_rt0.o: Crt0 ToUpper
-	./ToUpper Crt0 tmp1 main  MAIN
+#elif IS_GLIBC22 || IS_GLIBC23
+condor_rt0.o: $(CRT_BEGIN) ToUpper
+	./ToUpper $(CRT_BEGIN) tmp1 main  MAIN
 	./ToUpper tmp1 condor_rt0.o __libc_start_MAIN __libc_start_main
 clean::
 	rm -f condor_rt0.o
 #else
-condor_rt0.o: Crt0 ToUpper
-	./ToUpper Crt0 condor_rt0.o main  MAIN
+condor_rt0.o: $(CRT_BEGIN) ToUpper
+	./ToUpper $(CRT_BEGIN) condor_rt0.o main  MAIN
 clean::
 	rm -f condor_rt0.o
 #endif

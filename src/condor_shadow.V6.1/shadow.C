@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "shadow.h"
@@ -109,22 +109,23 @@ UniShadow::updateFromStarter(int command, Stream *s)
 }
 
 
-void UniShadow::init( ClassAd *jobAd, char schedd_addr[], char host[], 
-					  char capability[], char cluster[], char proc[])
+
+void
+UniShadow::init( ClassAd* job_ad, const char* schedd_addr )
 {
-	if ( !jobAd ) {
-		EXCEPT("No jobAd defined!");
+	if ( !job_ad ) {
+		EXCEPT("No job_ad defined!");
 	}
 
-		// we're only dealing with one host, so this is trivial:
-	remRes->setStartdInfo( host, capability );
-		// for now, set this to the sinful string.  when the starter
-		// spawns, it'll do an RSC to register a real hostname...
-	remRes->setMachineName( host );
-	
 		// base init takes care of lots of stuff:
-	baseInit( jobAd, schedd_addr, cluster, proc );
+	baseInit( job_ad, schedd_addr );
 
+		// we're only dealing with one host, so the rest is pretty
+		// trivial.  we can just lookup everything we need in the job
+		// ad, since it'll have the ClaimId, address (in the ClaimId)
+		// startd's name (RemoteHost) and pool (RemotePool).
+	remRes->setStartdInfo( jobAd );
+	
 		// In this case we just pass the pointer along...
 	remRes->setJobAd( jobAd );
 	
@@ -137,11 +138,32 @@ void UniShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 						  (CommandHandlercpp)&UniShadow::updateFromStarter, 
 						  "UniShadow::updateFromStarter", this, DAEMON );
 
-		// finally, we can attempt to activate our claim.
+}
+
+
+void
+UniShadow::spawn( void )
+{
 	if( ! remRes->activateClaim() ) {
 			// we're screwed, give up:
 		shutDown( JOB_NOT_STARTED );
 	}
+}
+
+
+void
+UniShadow::reconnect( void )
+{
+	remRes->reconnect();
+}
+
+
+bool 
+UniShadow::supportsReconnect( void )
+{
+		// For the UniShadow, the answer to this depends on our remote
+		// starter.  If that supports it, so do we.  If not, we don't. 
+	return remRes->supportsReconnect();
 }
 
 
@@ -297,8 +319,15 @@ UniShadow::emailTerminateEvent( int exitReason )
 
 int UniShadow::handleJobRemoval(int sig) {
     dprintf ( D_FULLDEBUG, "In handleJobRemoval(), sig %d\n", sig );
-	remRes->setExitReason( JOB_KILLED );
-	remRes->killStarter();
+	remove_requested = true;
+		// if we're not in the middle of trying to reconnect, we
+		// should immediately kill the starter.  if we're
+		// reconnecting, we'll do the right thing once a connection is
+		// established now that the remove_requested flag is set... 
+	if( remRes->getResourceState() != RR_RECONNECT ) {
+		remRes->setExitReason( JOB_KILLED );
+		remRes->killStarter();
+	}
 		// more?
 	return 0;
 }
@@ -377,3 +406,88 @@ UniShadow::resourceBeganExecution( RemoteResource* rr )
 }
 
 
+void
+UniShadow::resourceReconnected( RemoteResource* rr )
+{
+	ASSERT( rr == remRes );
+
+		// We've only got one remote resource, so if it successfully
+		// reconnected, we can safely log our reconnect event
+	logReconnectedEvent();
+
+		// if we're trying to remove this job, now that connection is
+		// reestablished, we can kill the starter, evict the job, and
+		// handle any output/update messages from the starter.
+	if( remove_requested ) {
+		remRes->setExitReason( JOB_KILLED );
+		remRes->killStarter();
+	}
+
+		// Start the timer for the periodic user job policy  
+	shadow_user_policy.startTimer();
+
+		// Start the timer for updating the job queue for this job 
+	startQueueUpdateTimer();
+}
+
+
+void
+UniShadow::logDisconnectedEvent( const char* reason )
+{
+	JobDisconnectedEvent event;
+	event.setDisconnectReason( reason );
+
+	DCStartd* dc_startd = remRes->getDCStartd();
+	if( ! dc_startd ) {
+		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
+	}
+	event.setStartdAddr( dc_startd->addr() );
+	event.setStartdName( dc_startd->name() );
+
+	if( !uLog.writeEvent(&event) ) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_DISCONNECTED event\n" );
+	}
+}
+
+
+void
+UniShadow::logReconnectedEvent( void )
+{
+	JobReconnectedEvent event;
+
+	DCStartd* dc_startd = remRes->getDCStartd();
+	if( ! dc_startd ) {
+		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
+	}
+	event.setStartdAddr( dc_startd->addr() );
+	event.setStartdName( dc_startd->name() );
+
+	char* starter = NULL;
+	remRes->getStarterAddress( starter );
+	event.setStarterAddr( starter );
+	delete [] starter;
+	starter = NULL;
+
+	if( !uLog.writeEvent(&event) ) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECTED event\n" );
+	}
+}
+
+
+void
+UniShadow::logReconnectFailedEvent( const char* reason )
+{
+	JobReconnectFailedEvent event;
+
+	event.setReason( reason );
+
+	DCStartd* dc_startd = remRes->getDCStartd();
+	if( ! dc_startd ) {
+		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
+	}
+	event.setStartdName( dc_startd->name() );
+
+	if( !uLog.writeEvent(&event) ) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECT_FAILED event\n" );
+	}
+}

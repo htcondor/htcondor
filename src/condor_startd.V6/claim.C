@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 /*  
   	This file implements the classes defined in claim.h.  See that
@@ -42,7 +42,7 @@
 Claim::Claim( Resource* rip, bool is_cod )
 {
 	c_client = new Client;
-	c_cap = new Capability( is_cod );
+	c_id = new ClaimId( is_cod );
 	c_ad = NULL;
 	c_starter = NULL;
 	c_rank = 0;
@@ -50,10 +50,12 @@ Claim::Claim( Resource* rip, bool is_cod )
 	c_universe = -1;
 	c_request_stream = NULL;
 	c_match_tid = -1;
-	c_claim_tid = -1;
+	c_lease_tid = -1;
 	c_aliveint = -1;
+	c_lease_duration = -1;
 	c_cluster = -1;
 	c_proc = -1;
+	c_global_job_id = NULL;
 	c_job_start = -1;
 	c_last_pckpt = -1;
 	c_rip = rip;
@@ -68,6 +70,10 @@ Claim::Claim( Resource* rip, bool is_cod )
 		// so we get all the nice functionality that method provides.
 	c_state = CLAIM_IDLE;
 	changeState( CLAIM_UNCLAIMED );
+	c_job_total_run_time = 0;
+	c_job_total_suspend_time = 0;
+	c_claim_total_run_time = 0;
+	c_claim_total_suspend_time = 0;
 }
 
 
@@ -75,19 +81,19 @@ Claim::~Claim()
 {	
 	if( c_is_cod ) {
 		dprintf( D_FULLDEBUG, "Deleted claim %s (owner '%s')\n", 
-				 c_cap->id(), 
+				 c_id->id(), 
 				 c_client->owner() ? c_client->owner() : "unknown" );  
 	}
 
 		// Cancel any timers associated with this claim
 	this->cancel_match_timer();
-	this->cancel_claim_timer();
+	this->cancelLeaseTimer();
 
 		// Free up memory that's been allocated
 	if( c_ad ) {
 		delete( c_ad );
 	}
-	delete( c_cap );
+	delete( c_id );
 	if( c_client ) {
 		delete( c_client );
 	}
@@ -96,6 +102,9 @@ Claim::~Claim()
 	}
 	if( c_starter ) {
 		delete( c_starter );
+	}
+	if( c_global_job_id ) { 
+		free( c_global_job_id );
 	}
 	if( c_cod_keyword ) {
 		free( c_cod_keyword );
@@ -106,10 +115,10 @@ Claim::~Claim()
 void
 Claim::vacate() 
 {
-	assert( c_cap );
+	assert( c_id );
 		// warn the client of this claim that it's being vacated
 	if( c_client && c_client->addr() ) {
-		c_client->vacate( c_cap->capab() );
+		c_client->vacate( c_id->id() );
 	}
 }
 
@@ -119,6 +128,7 @@ Claim::publish( ClassAd* ad, amask_t how_much )
 {
 	char line[256];
 	char* tmp;
+	char *remoteUser;
 
 	if( IS_PRIVATE(how_much) ) {
 		return;
@@ -128,14 +138,29 @@ Claim::publish( ClassAd* ad, amask_t how_much )
 	ad->Insert( line );
 
 	if( c_client ) {
-		tmp = c_client->user();
-		if( tmp ) {
-			sprintf( line, "%s=\"%s\"", ATTR_REMOTE_USER, tmp );
+		remoteUser = c_client->user();
+		if( remoteUser ) {
+			sprintf( line, "%s=\"%s\"", ATTR_REMOTE_USER, remoteUser );
 			ad->Insert( line );
 		}
 		tmp = c_client->owner();
 		if( tmp ) {
 			sprintf( line, "%s=\"%s\"", ATTR_REMOTE_OWNER, tmp );
+			ad->Insert( line );
+		}
+		tmp = c_client->accountingGroup();
+		if( tmp ) {
+			char *uidDom = NULL;
+				// The accountant wants to see ATTR_ACCOUNTING_GROUP 
+				// fully qualified
+			if ( remoteUser ) {
+				uidDom = strchr(remoteUser,'@');
+			}
+			if ( uidDom ) {
+				sprintf( line, "%s=\"%s%s\"",ATTR_ACCOUNTING_GROUP,tmp,uidDom);
+			} else {
+				sprintf( line, "%s=\"%s\"", ATTR_ACCOUNTING_GROUP, tmp );
+			}
 			ad->Insert( line );
 		}
 		tmp = c_client->host();
@@ -150,6 +175,11 @@ Claim::publish( ClassAd* ad, amask_t how_much )
 		ad->Insert( line );
 	}
 
+	if( c_global_job_id ) {
+		sprintf( line, "%s=\"%s\"", ATTR_GLOBAL_JOB_ID, c_global_job_id );
+		ad->Insert( line );
+	}
+
 	if( c_job_start > 0 ) {
 		sprintf(line, "%s=%d", ATTR_JOB_START, c_job_start );
 		ad->Insert( line );
@@ -159,6 +189,8 @@ Claim::publish( ClassAd* ad, amask_t how_much )
 		sprintf(line, "%s=%d", ATTR_LAST_PERIODIC_CHECKPOINT, c_last_pckpt );
 		ad->Insert( line );
 	}
+
+	publishStateTimes( ad );
 }
 
 
@@ -197,6 +229,16 @@ Claim::publishCOD( ClassAd* ad )
 			line = codId();
 			line += '_';
 			line += ATTR_REMOTE_USER;
+			line += "=\"";
+			line += tmp;
+			line += '"';
+			ad->Insert( line.Value() );
+		}
+		tmp = c_client->accountingGroup();
+		if( tmp ) {
+			line = codId();
+			line += '_';
+			line += ATTR_ACCOUNTING_GROUP;
 			line += "=\"";
 			line += tmp;
 			line += '"';
@@ -251,6 +293,53 @@ Claim::publishCOD( ClassAd* ad )
 
 
 void
+Claim::publishStateTimes( ClassAd* ad )
+{
+	MyString line;
+	time_t now, time_dif = 0;
+	time_t my_job_run = c_job_total_run_time;
+	time_t my_job_sus = c_job_total_suspend_time;
+	time_t my_claim_run = c_claim_total_run_time;
+	time_t my_claim_sus = c_claim_total_suspend_time;
+
+		// If we're currently claimed or suspended, add on the time
+		// we've spent in the current state, since we only increment
+		// the private data members on state changes... 
+	if( c_state == CLAIM_RUNNING || c_state == CLAIM_SUSPENDED ) {
+		now = time( NULL );
+		time_dif = now - c_entered_state;
+	}
+	if( c_state == CLAIM_RUNNING ) { 
+		my_job_run += time_dif;
+		my_claim_run += time_dif;
+	}
+	if( c_state == CLAIM_SUSPENDED ) {
+		my_job_sus += time_dif;
+		my_claim_sus += time_dif;
+	}
+
+		// Now that we have all the right values, publish them.
+	if( my_job_run > 0 ) {
+		line.sprintf( "%s=%d", ATTR_TOTAL_JOB_RUN_TIME, my_job_run );
+		ad->Insert( line.Value() );
+	}
+	if( my_job_sus > 0 ) {
+		line.sprintf( "%s=%d", ATTR_TOTAL_JOB_SUSPEND_TIME, my_job_sus );
+		ad->Insert( line.Value() );
+	}
+	if( my_claim_run > 0 ) {
+		line.sprintf( "%s=%d", ATTR_TOTAL_CLAIM_RUN_TIME, my_claim_run );
+		ad->Insert( line.Value() );
+	}
+	if( my_claim_sus > 0 ) {
+		line.sprintf( "%s=%d", ATTR_TOTAL_CLAIM_SUSPEND_TIME, my_claim_sus );
+		ad->Insert( line.Value() );
+	}
+}
+
+
+
+void
 Claim::dprintf( int flags, char* fmt, ... )
 {
 	va_list args;
@@ -278,7 +367,7 @@ Claim::start_match_timer()
 {
 	if( c_match_tid != -1 ) {
 			/*
-			  We got matched twice for the same capability.  This
+			  We got matched twice for the same ClaimId.  This
 			  must be because we got matched, we sent an update that
 			  said we're unavailable, but the collector dropped that
 			  update, and we got matched again.  This shouldn't be a
@@ -287,7 +376,7 @@ Claim::start_match_timer()
 			  continue. 
 			*/
 		
-	   dprintf( D_FAILURE|D_ALWAYS, "Warning: got matched twice for same capability."
+	   dprintf( D_FAILURE|D_ALWAYS, "Warning: got matched twice for same ClaimId."
 				" Canceling old match timer (%d)\n", c_match_tid );
 	   if( daemonCore->Cancel_Timer(c_match_tid) < 0 ) {
 		   dprintf( D_ALWAYS, "Failed to cancel old match timer (%d): "
@@ -333,25 +422,25 @@ Claim::cancel_match_timer()
 int
 Claim::match_timed_out()
 {
-	char* my_cap = capab();
-	if( !my_cap ) {
+	char* my_id = id();
+	if( !my_id ) {
 			// We're all confused.
 			// Don't use our dprintf(), use the "real" version, since
 			// if we're this confused, our rip pointer might be messed
 			// up, too, and we don't want to seg fault.
 		::dprintf( D_FAILURE|D_ALWAYS,
-				   "ERROR: Match timed out but there's no capability\n" );
+				   "ERROR: Match timed out but there's no ClaimId\n" );
 		return FALSE;
 	}
 		
-	Resource* rip = resmgr->get_by_any_cap( my_cap );
+	Resource* rip = resmgr->get_by_any_id( my_id );
 	if( !rip ) {
 		::dprintf( D_FAILURE|D_ALWAYS,
 				   "ERROR: Can't find resource of expired match\n" );
 		return FALSE;
 	}
 
-	if( rip->r_cur->cap()->matches( capab() ) ) {
+	if( rip->r_cur->idMatches( id() ) ) {
 		if( rip->state() != matched_state ) {
 				/* 
 				   This used to be an EXCEPT(), since it really
@@ -372,12 +461,15 @@ Claim::match_timed_out()
 			return FALSE;
 		}
 		delete rip->r_cur;
+			// once we've done this delete, the this pointer is now in
+			// a weird, invalid state.  don't rely on using any member
+			// functions or data until we return.
 		rip->r_cur = new Claim( rip );
-		dprintf( D_FAILURE|D_ALWAYS, "State change: match timed out\n" );
+		rip->dprintf( D_FAILURE|D_ALWAYS, "State change: match timed out\n" );
 		rip->change_state( owner_state );
 	} else {
 			// The match that timed out was the preempting claim.
-		assert( rip->r_pre->cap()->matches( capab() ) );
+		assert( rip->r_pre->idMatches( id() ) );
 			// We need to generate a new preempting claim object,
 			// restore our reqexp, and update the CM. 
 		delete rip->r_pre;
@@ -398,7 +490,7 @@ Claim::beginClaim( void )
 	if( ! c_is_cod ) {
 			// if we're an opportunistic claim, we want to start our
 			// claim timer, too.  
-		start_claim_timer();
+		startLeaseTimer();
 	}
 }
 
@@ -413,8 +505,8 @@ Claim::beginActivation( time_t now )
 		// See if the classad we got includes an ATTR_USER field,
 		// so we know who to charge for our services.  If not, we use
 		// the same user that claimed us.
-	char* remote_user = NULL;
-	if( ! c_ad->LookupString(ATTR_USER, &remote_user) ) {
+	char* tmp = NULL;
+	if( ! c_ad->LookupString(ATTR_USER, &tmp) ) {
 		if( ! c_is_cod ) { 
 			c_rip->dprintf( D_FULLDEBUG, "WARNING: %s not defined in "
 						  "request classad!  Using old value (%s)\n", 
@@ -422,9 +514,18 @@ Claim::beginActivation( time_t now )
 		}
 	} else {
 		c_rip->dprintf( D_FULLDEBUG, 
-					  "Got RemoteUser (%s) from request classad\n",	
-					  remote_user );
-		c_client->setuser( remote_user );
+						"Got RemoteUser (%s) from request classad\n", tmp ); 
+		c_client->setuser( tmp );
+		free( tmp );
+		tmp = NULL;
+	}
+
+		// Only stash this if it's in the ad, but don't print anything
+		// if it's not.
+	if( c_ad->LookupString(ATTR_ACCOUNTING_GROUP, &tmp) ) {
+		c_client->setAccountingGroup( tmp );
+		free( tmp );
+		tmp = NULL;
 	}
 
 	c_job_start = (int)now;
@@ -460,6 +561,17 @@ Claim::beginActivation( time_t now )
 
 
 void
+Claim::setaliveint( int alive )
+{
+	c_aliveint = alive;
+		// for now, set our lease_duration, too, just so it's
+		// initalized to something reasonable.  once we get the job ad
+		// we'll reset it to the real value if it's defined.
+	c_lease_duration = max_claim_alives_missed * alive;
+}
+
+
+void
 Claim::saveJobInfo( ClassAd* request_ad )
 {
 		// this does not make a copy, so we assume we have control
@@ -477,57 +589,86 @@ Claim::saveJobInfo( ClassAd* request_ad )
 		c_rip->dprintf( D_ALWAYS, "Remote job ID is %d.%d\n", 
 						c_cluster, c_proc );
 	}
+
+	c_ad->LookupString( ATTR_GLOBAL_JOB_ID, &c_global_job_id );
+	if( c_global_job_id ) {
+			// only print this if the request specified it...
+		c_rip->dprintf( D_FULLDEBUG, "Remote global job ID is %s\n", 
+						c_global_job_id );
+	}
+
+		// check for an explicit job lease duration.  if it's not
+		// there, we have to use the old default of 3 * aliveint. :( 
+	if( c_ad->LookupInteger(ATTR_JOB_LEASE_DURATION, c_lease_duration) ) {
+		dprintf( D_FULLDEBUG, "%s defined in job ClassAd: %d\n", 
+				 ATTR_JOB_LEASE_DURATION, c_lease_duration );
+		dprintf( D_FULLDEBUG,
+				 "Resetting ClaimLease timer (%d) with new duration\n", 
+				 c_lease_tid );
+	} else {
+		c_lease_duration = max_claim_alives_missed * c_aliveint;
+		dprintf( D_FULLDEBUG, "%s not defined: using %d ("
+				 "alive_interval [%d] * max_missed [%d]\n", 
+				 ATTR_JOB_LEASE_DURATION, c_lease_duration,
+				 c_aliveint, max_claim_alives_missed );
+	}
+		/* 
+		   This resets the timer for us, and also, we should consider
+		   a request to activate a claim (which is what just happened
+		   if we're in this function) as another keep-alive...
+		*/
+	alive();  
 }
 
 
 void
-Claim::start_claim_timer()
+Claim::startLeaseTimer()
 {
-	if( c_aliveint < 0 ) {
-		dprintf( D_ALWAYS, 
-				 "Warning: starting claim timer before alive interval set.\n" );
-		c_aliveint = 300;
+	if( c_lease_duration < 0 ) {
+		dprintf( D_ALWAYS, "Warning: starting ClaimLease timer before "
+				 "lease duration set.\n" );
+		c_lease_duration = 1200;
 	}
-	if( c_claim_tid != -1 ) {
-	   EXCEPT( "Claim::start_claim_timer() called w/ c_claim_tid = %d", 
-			   c_claim_tid );
+	if( c_lease_tid != -1 ) {
+	   EXCEPT( "Claim::startLeaseTimer() called w/ c_lease_tid = %d", 
+			   c_lease_tid );
 	}
-	c_claim_tid =
-		daemonCore->Register_Timer( (3 * c_aliveint), 0,
-				(TimerHandlercpp)&Claim::claim_timed_out,
-				"claim_timed_out", this );
-	if( c_claim_tid == -1 ) {
+	c_lease_tid =
+		daemonCore->Register_Timer( c_lease_duration, 0, 
+				(TimerHandlercpp)&Claim::leaseExpired,
+				"Claim::leaseExpired", this );
+	if( c_lease_tid == -1 ) {
 		EXCEPT( "Couldn't register timer (out of memory)." );
 	}
-	dprintf( D_FULLDEBUG, "Started claim timer (%d) w/ %d second "
-			 "alive interval.\n", c_claim_tid, c_aliveint );
+	dprintf( D_FULLDEBUG, "Started ClaimLease timer (%d) w/ %d second "
+			 "lease duration\n", c_lease_tid, c_lease_duration );
 }
 
 
 void
-Claim::cancel_claim_timer()
+Claim::cancelLeaseTimer()
 {
 	int rval;
-	if( c_claim_tid != -1 ) {
-		rval = daemonCore->Cancel_Timer( c_claim_tid );
+	if( c_lease_tid != -1 ) {
+		rval = daemonCore->Cancel_Timer( c_lease_tid );
 		if( rval < 0 ) {
-			dprintf( D_ALWAYS, "Failed to cancel claim timer (%d): "
-					 "daemonCore error\n", c_claim_tid );
+			dprintf( D_ALWAYS, "Failed to cancel ClaimLease timer (%d): "
+					 "daemonCore error\n", c_lease_tid );
 		} else {
-			dprintf( D_FULLDEBUG, "Canceled claim timer (%d)\n",
-					 c_claim_tid );
+			dprintf( D_FULLDEBUG, "Canceled ClaimLease timer (%d)\n",
+					 c_lease_tid );
 		}
-		c_claim_tid = -1;
+		c_lease_tid = -1;
 	}
 }
 
 
 int
-Claim::claim_timed_out()
+Claim::leaseExpired()
 {
-	Resource* rip = resmgr->get_by_cur_cap( capab() );
+	Resource* rip = resmgr->get_by_cur_id( id() );
 	if( !rip ) {
-		EXCEPT( "Can't find resource of expired claim." );
+		EXCEPT( "Can't find resource of expired claim" );
 	}
 		// Note that this claim timed out so we don't try to send a 
 		// command to our client.
@@ -536,7 +677,8 @@ Claim::claim_timed_out()
 		c_client = NULL;
 	}
 
-	dprintf( D_FAILURE|D_ALWAYS, "State change: claim timed out (condor_schedd gone?)\n" );
+	dprintf( D_FAILURE|D_ALWAYS, "State change: claim lease expired "
+			 "(condor_schedd gone?)\n" );
 
 		// Kill the claim.
 	rip->kill_claim();
@@ -547,8 +689,9 @@ Claim::claim_timed_out()
 void
 Claim::alive()
 {
+	dprintf( D_PROTOCOL, "Keep alive for ClaimId %s\n", id() );
 		// Process a keep alive command
-	daemonCore->Reset_Timer( c_claim_tid, (3 * c_aliveint), 0 );
+	daemonCore->Reset_Timer( c_lease_tid, c_lease_duration, 0 );
 }
 
 
@@ -576,18 +719,21 @@ Claim::setRequestStream(Stream* stream)
 char*
 Claim::id( void )
 {
-	return capab();
-}
-
-
-char*
-Claim::capab( void )
-{
-	if( c_cap ) {
-		return c_cap->id();
+	if( c_id ) {
+		return c_id->id();
 	} else {
 		return NULL;
 	}
+}
+
+
+bool
+Claim::idMatches( const char* id )
+{
+	if( c_id ) {
+		return c_id->matches( id );
+	}
+	return false;
 }
 
 
@@ -919,6 +1065,46 @@ Claim::verifyCODAttrs( ClassAd* req )
 
 
 bool
+Claim::publishStarterAd( ClassAd* ad )
+{
+	MyString line;
+	
+	if( ! c_starter ) {
+		return false;
+	}
+
+	char* ip_addr = c_starter->getIpAddr();
+	if( ip_addr ) {
+		line = ATTR_STARTER_IP_ADDR;
+		line += "=\"";
+		line += ip_addr;
+		line += '"';
+		ad->Insert( line.Value() );
+	}
+
+		// stuff in everything we know about from the Claim object
+	this->publish( ad, A_PUBLIC );
+
+		// stuff in starter-specific attributes, if we have them.
+	StringList ability_list;
+	c_starter->publish( ad, A_STATIC | A_PUBLIC, &ability_list );
+	char* ability_str = ability_list.print_to_string();
+	if( ability_str ) {
+		line = ATTR_STARTER_ABILITY_LIST;
+		line += "=\"";
+		line += ability_str;
+		line += '"';
+		ad->Insert( line.Value() );
+		free( ability_str );
+	}
+
+		// TODO add more goodness to this ClassAd??
+
+	return true;
+}
+
+
+bool
 Claim::periodicCheckpoint( void )
 {
 	if( c_starter ) {
@@ -938,6 +1124,16 @@ Claim::ownerMatches( const char* owner )
 		return true;
 	}
 		// TODO: handle COD_SUPER_USERS
+	return false;
+}
+
+
+bool
+Claim::globalJobIdMatches( const char* id )
+{
+	if( c_global_job_id && !strcmp(c_global_job_id, id) ) {
+		return true;
+	}
 	return false;
 }
 
@@ -1078,11 +1274,17 @@ Claim::resetClaim( void )
 	c_proc = -1;
 	c_job_start = -1;
 	c_last_pckpt = -1;
+	if( c_global_job_id ) {
+		free( c_global_job_id );
+		c_global_job_id = NULL;
+	}
 	if( c_cod_keyword ) {
 		free( c_cod_keyword );
 		c_cod_keyword = NULL;
 	}
 	c_has_job_ad = 0;
+	c_job_total_run_time = 0;
+	c_job_total_suspend_time = 0;
 }
 
 
@@ -1092,8 +1294,29 @@ Claim::changeState( ClaimState s )
 	if( c_state == s ) {
 		return;
 	}
+	
+	time_t now = time(NULL);
+	if( c_state == CLAIM_RUNNING || c_state == CLAIM_SUSPENDED ) {
+			// the state we're leaving is one of the ones we're
+			// keeping track of total times for, so we've got to
+			// update some things.
+		time_t time_dif = now - c_entered_state;
+		if( c_state == CLAIM_RUNNING ) { 
+			c_job_total_run_time += time_dif;
+			c_claim_total_run_time += time_dif;
+		}
+		if( c_state == CLAIM_SUSPENDED ) {
+			c_job_total_suspend_time += time_dif;
+			c_claim_total_suspend_time += time_dif;
+
+		}
+	}
+
+		// now that all the appropriate time values are updated, we
+		// can actually do the deed.
 	c_state = s;
-	c_entered_state = time(NULL); 
+	c_entered_state = now;
+
 		// everytime a cod claim changes state, we want to update the
 		// collector. 
 	if( c_is_cod ) {
@@ -1135,6 +1358,7 @@ Client::Client()
 {
 	c_user = NULL;
 	c_owner = NULL;
+	c_acctgrp = NULL;
 	c_addr = NULL;
 	c_host = NULL;
 }
@@ -1144,6 +1368,7 @@ Client::~Client()
 {
 	if( c_user) free( c_user );
 	if( c_owner) free( c_owner );
+	if( c_acctgrp) free( c_acctgrp );
 	if( c_addr) free( c_addr );
 	if( c_host) free( c_host );
 }
@@ -1178,6 +1403,20 @@ Client::setowner( const char* owner )
 
 
 void
+Client::setAccountingGroup( const char* grp ) 
+{
+	if( c_acctgrp ) {
+		free( c_acctgrp);
+	}
+	if( grp ) {
+		c_acctgrp = strdup( grp );
+	} else {
+		c_acctgrp = NULL;
+	}
+}
+
+
+void
 Client::setaddr( const char* addr )
 {
 	if( c_addr ) {
@@ -1206,7 +1445,7 @@ Client::sethost( const char* host )
 
 
 void
-Client::vacate(char* cap)
+Client::vacate(char* id)
 {
 	ReliSock* sock;
 
@@ -1224,8 +1463,8 @@ Client::vacate(char* cap)
 		dprintf(D_FAILURE|D_ALWAYS, "Can't connect to schedd (%s)\n", c_addr);
 		return;
 	}
-	if( !sock->put( cap ) ) {
-		dprintf(D_ALWAYS, "Can't send capability to client\n");
+	if( !sock->put( id ) ) {
+		dprintf(D_ALWAYS, "Can't send ClaimId to client\n");
 	} else if( !sock->eom() ) {
 		dprintf(D_ALWAYS, "Can't send EOM to client\n");
 	}
@@ -1236,56 +1475,15 @@ Client::vacate(char* cap)
 
 
 ///////////////////////////////////////////////////////////////////////////
-// Capability
+// ClaimId
 ///////////////////////////////////////////////////////////////////////////
 
-char*
-newCapabilityString()
-{
-	char cap[128];
-	char tmp[128];
-	char randbuf[12];
-	randbuf[0] = '\0';
-	int i, len;
-
-		// Create a really mangled 10 digit random number: The first 6
-		// digits are generated as follows: for the ith digit, pull
-		// the ith digit off a new random int.  So our 1st slot comes
-		// from the 1st digit of 1 random int, the 2nd from the 2nd
-		// digit of a 2nd random it, etc...  If we're trying to get a
-		// digit from a number that's too small to have that many, we
-		// just use the last digit.  The last 4 digits of our number
-		// come from the first 4 digits of the current time multiplied
-		// by a final random int.  That should keep 'em guessing. :)
-		// -Derek Wright 1/8/98
-	for( i=0; i<6; i++ ) {
-		sprintf( tmp, "%d", get_random_int() );
-		len = strlen(tmp);
-		if( i < len ) {
-			tmp[i+1] = '\0';
-			strcat( randbuf, tmp+i );
-		} else {
-			strcat( randbuf, tmp+(len-1) );
-		}
-	}
-	sprintf( tmp, "%f", (double)((float)time(NULL) * (float)get_random_int()) );
-	tmp[4]='\0';
-	strcat( randbuf, tmp );
-
-		// Capability string is "<ip:port>#random_number"
-	strcpy( cap, daemonCore->InfoCommandSinfulString() );
-	strcat( cap, "#" );
-	strcat( cap, randbuf );
-	return strdup( cap );
-}
-
-
-
+static 
 int
-newCODIdString( char** id_str_ptr )
+newIdString( char** id_str_ptr )
 {
-		// COD id string (capability) is of the form:
-		// "<ip:port>#COD#startd_bday#sequence_num"
+		// ClaimId string is of the form:
+		// "<ip:port>#startd_bday#sequence_num"
 
 	static int sequence_num = 0;
 	sequence_num++;
@@ -1301,22 +1499,20 @@ newCODIdString( char** id_str_ptr )
 }
 
 
-Capability::Capability( bool is_cod )
+ClaimId::ClaimId( bool is_cod )
 {
-
+	int num = newIdString( &c_id );
 	if( is_cod ) { 
-		int num = newCODIdString( &c_id );
 		char buf[64];
 		sprintf( buf, "COD%d", num );
 		c_cod_id = strdup( buf );
 	} else {
-		c_id = newCapabilityString();
 		c_cod_id = NULL;
 	}
 }
 
 
-Capability::~Capability()
+ClaimId::~ClaimId()
 {
 	free( c_id );
 	if( c_cod_id ) {
@@ -1326,8 +1522,8 @@ Capability::~Capability()
 
 
 bool
-Capability::matches( const char* capab )
+ClaimId::matches( const char* id )
 {
-	return( strcmp(capab, c_id) == 0 );
+	return( strcmp(id, c_id) == 0 );
 }
 

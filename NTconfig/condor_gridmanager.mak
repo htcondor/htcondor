@@ -42,20 +42,27 @@ ALL : "$(OUTDIR)\condor_gridmanager.exe"
 
 !ELSE 
 
-ALL : "condor_util_lib - Win32 Debug" "condor_sysapi - Win32 Debug" "condor_io - Win32 Debug" "condor_daemon_core - Win32 Debug" "condor_cpp_util - Win32 Debug" "condor_classad - Win32 Debug" "$(OUTDIR)\condor_gridmanager.exe"
+ALL : "condor_qmgmt - Win32 Debug" "condor_util_lib - Win32 Debug" "condor_sysapi - Win32 Debug" "condor_io - Win32 Debug" "condor_daemon_core - Win32 Debug" "condor_cpp_util - Win32 Debug" "condor_classad - Win32 Debug" "$(OUTDIR)\condor_gridmanager.exe"
 
 !ENDIF 
 
 !IF "$(RECURSE)" == "1" 
-CLEAN :"condor_classad - Win32 DebugCLEAN" "condor_cpp_util - Win32 DebugCLEAN" "condor_daemon_core - Win32 DebugCLEAN" "condor_io - Win32 DebugCLEAN" "condor_sysapi - Win32 DebugCLEAN" "condor_util_lib - Win32 DebugCLEAN" 
+CLEAN :"condor_classad - Win32 DebugCLEAN" "condor_cpp_util - Win32 DebugCLEAN" "condor_daemon_core - Win32 DebugCLEAN" "condor_io - Win32 DebugCLEAN" "condor_sysapi - Win32 DebugCLEAN" "condor_util_lib - Win32 DebugCLEAN" "condor_qmgmt - Win32 DebugCLEAN" 
 !ELSE 
 CLEAN :
 !ENDIF 
+	-@erase "$(INTDIR)\basejob.obj"
+	-@erase "$(INTDIR)\baseresource.obj"
 	-@erase "$(INTDIR)\gahp-client.obj"
 	-@erase "$(INTDIR)\globusjob.obj"
 	-@erase "$(INTDIR)\globusresource.obj"
 	-@erase "$(INTDIR)\gridmanager.obj"
 	-@erase "$(INTDIR)\gridmanager_main.obj"
+	-@erase "$(INTDIR)\gt3job.obj"
+	-@erase "$(INTDIR)\gt3resource.obj"
+	-@erase "$(INTDIR)\mirrorjob.obj"
+	-@erase "$(INTDIR)\mirrorresource.obj"
+	-@erase "$(INTDIR)\proxymanager.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(INTDIR)\vc60.pdb"
 	-@erase "$(OUTDIR)\condor_gridmanager.exe"
@@ -71,19 +78,27 @@ BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_gridmanager.bsc"
 BSC32_SBRS= \
 	
 LINK32=link.exe
-LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib ../Debug/condor_common.obj ..\Debug\condor_common_c.obj /nologo /subsystem:console /incremental:yes /pdb:"$(OUTDIR)\condor_gridmanager.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_gridmanager.exe" /pdbtype:sept 
+LINK32_FLAGS=../Debug/condor_common.obj ..\Debug\condor_common_c.obj kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib imagehlp.lib Crypt32.lib /nologo /subsystem:console /incremental:yes /pdb:"$(OUTDIR)\condor_gridmanager.pdb" /debug /machine:I386 /out:"$(OUTDIR)\condor_gridmanager.exe" /pdbtype:sept 
 LINK32_OBJS= \
 	"$(INTDIR)\gahp-client.obj" \
 	"$(INTDIR)\globusjob.obj" \
 	"$(INTDIR)\globusresource.obj" \
 	"$(INTDIR)\gridmanager.obj" \
 	"$(INTDIR)\gridmanager_main.obj" \
+	"$(INTDIR)\proxymanager.obj" \
+	"$(INTDIR)\basejob.obj" \
+	"$(INTDIR)\gt3job.obj" \
+	"$(INTDIR)\gt3resource.obj" \
+	"$(INTDIR)\mirrorjob.obj" \
+	"$(INTDIR)\mirrorresource.obj" \
+	"$(INTDIR)\baseresource.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_daemon_core.lib" \
 	"$(OUTDIR)\condor_io.lib" \
 	"$(OUTDIR)\condor_sysapi.lib" \
-	"..\src\condor_util_lib\condor_util.lib"
+	"..\src\condor_util_lib\condor_util.lib" \
+	"$(OUTDIR)\condor_qmgmt.lib"
 
 "$(OUTDIR)\condor_gridmanager.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
     $(LINK32) @<<
@@ -104,20 +119,27 @@ ALL : "$(OUTDIR)\condor_gridmanager.exe"
 
 !ELSE 
 
-ALL : "condor_util_lib - Win32 Release" "condor_sysapi - Win32 Release" "condor_io - Win32 Release" "condor_daemon_core - Win32 Release" "condor_cpp_util - Win32 Release" "condor_classad - Win32 Release" "$(OUTDIR)\condor_gridmanager.exe"
+ALL : "condor_qmgmt - Win32 Release" "condor_util_lib - Win32 Release" "condor_sysapi - Win32 Release" "condor_io - Win32 Release" "condor_daemon_core - Win32 Release" "condor_cpp_util - Win32 Release" "condor_classad - Win32 Release" "$(OUTDIR)\condor_gridmanager.exe"
 
 !ENDIF 
 
 !IF "$(RECURSE)" == "1" 
-CLEAN :"condor_classad - Win32 ReleaseCLEAN" "condor_cpp_util - Win32 ReleaseCLEAN" "condor_daemon_core - Win32 ReleaseCLEAN" "condor_io - Win32 ReleaseCLEAN" "condor_sysapi - Win32 ReleaseCLEAN" "condor_util_lib - Win32 ReleaseCLEAN" 
+CLEAN :"condor_classad - Win32 ReleaseCLEAN" "condor_cpp_util - Win32 ReleaseCLEAN" "condor_daemon_core - Win32 ReleaseCLEAN" "condor_io - Win32 ReleaseCLEAN" "condor_sysapi - Win32 ReleaseCLEAN" "condor_util_lib - Win32 ReleaseCLEAN" "condor_qmgmt - Win32 ReleaseCLEAN" 
 !ELSE 
 CLEAN :
 !ENDIF 
+	-@erase "$(INTDIR)\basejob.obj"
+	-@erase "$(INTDIR)\baseresource.obj"
 	-@erase "$(INTDIR)\gahp-client.obj"
 	-@erase "$(INTDIR)\globusjob.obj"
 	-@erase "$(INTDIR)\globusresource.obj"
 	-@erase "$(INTDIR)\gridmanager.obj"
 	-@erase "$(INTDIR)\gridmanager_main.obj"
+	-@erase "$(INTDIR)\gt3job.obj"
+	-@erase "$(INTDIR)\gt3resource.obj"
+	-@erase "$(INTDIR)\mirrorjob.obj"
+	-@erase "$(INTDIR)\mirrorresource.obj"
+	-@erase "$(INTDIR)\proxymanager.obj"
 	-@erase "$(INTDIR)\vc60.idb"
 	-@erase "$(OUTDIR)\condor_gridmanager.exe"
 	-@erase "$(OUTDIR)\condor_gridmanager.map"
@@ -131,19 +153,27 @@ BSC32_FLAGS=/nologo /o"$(OUTDIR)\condor_gridmanager.bsc"
 BSC32_SBRS= \
 	
 LINK32=link.exe
-LINK32_FLAGS=kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib ../Release/condor_common.obj ../Release/condor_common_c.obj /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_gridmanager.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_gridmanager.exe" 
+LINK32_FLAGS=../Release/condor_common.obj ../Release/condor_common_c.obj kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ws2_32.lib mswsock.lib netapi32.lib imagehlp.lib Crypt32.lib /nologo /subsystem:console /pdb:none /map:"$(INTDIR)\condor_gridmanager.map" /debug /machine:I386 /out:"$(OUTDIR)\condor_gridmanager.exe" 
 LINK32_OBJS= \
 	"$(INTDIR)\gahp-client.obj" \
 	"$(INTDIR)\globusjob.obj" \
 	"$(INTDIR)\globusresource.obj" \
 	"$(INTDIR)\gridmanager.obj" \
 	"$(INTDIR)\gridmanager_main.obj" \
+	"$(INTDIR)\proxymanager.obj" \
+	"$(INTDIR)\basejob.obj" \
+	"$(INTDIR)\gt3job.obj" \
+	"$(INTDIR)\gt3resource.obj" \
+	"$(INTDIR)\mirrorjob.obj" \
+	"$(INTDIR)\mirrorresource.obj" \
+	"$(INTDIR)\baseresource.obj" \
 	"$(OUTDIR)\condor_classad.lib" \
 	"$(OUTDIR)\condor_cpp_util.lib" \
 	"$(OUTDIR)\condor_daemon_core.lib" \
 	"$(OUTDIR)\condor_io.lib" \
 	"$(OUTDIR)\condor_sysapi.lib" \
-	"..\src\condor_util_lib\condor_util.lib"
+	"..\src\condor_util_lib\condor_util.lib" \
+	"$(OUTDIR)\condor_qmgmt.lib"
 
 "$(OUTDIR)\condor_gridmanager.exe" : "$(OUTDIR)" $(DEF_FILE) $(LINK32_OBJS)
     $(LINK32) @<<
@@ -198,24 +228,24 @@ LINK32_OBJS= \
 
 "condor_classad - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_classad.mak" CFG="condor_classad - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_classad.mak CFG="condor_classad - Win32 Debug" 
    cd "."
 
 "condor_classad - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_classad.mak" CFG="condor_classad - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_classad.mak CFG="condor_classad - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_gridmanager - Win32 Release"
 
 "condor_classad - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_classad.mak" CFG="condor_classad - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_classad.mak CFG="condor_classad - Win32 Release" 
    cd "."
 
 "condor_classad - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_classad.mak" CFG="condor_classad - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_classad.mak CFG="condor_classad - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
@@ -224,24 +254,24 @@ LINK32_OBJS= \
 
 "condor_cpp_util - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_cpp_util.mak" CFG="condor_cpp_util - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Debug" 
    cd "."
 
 "condor_cpp_util - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_cpp_util.mak" CFG="condor_cpp_util - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_gridmanager - Win32 Release"
 
 "condor_cpp_util - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_cpp_util.mak" CFG="condor_cpp_util - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Release" 
    cd "."
 
 "condor_cpp_util - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_cpp_util.mak" CFG="condor_cpp_util - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_cpp_util.mak CFG="condor_cpp_util - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
@@ -250,24 +280,24 @@ LINK32_OBJS= \
 
 "condor_daemon_core - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_daemon_core.mak" CFG="condor_daemon_core - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_daemon_core.mak CFG="condor_daemon_core - Win32 Debug" 
    cd "."
 
 "condor_daemon_core - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_daemon_core.mak" CFG="condor_daemon_core - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_daemon_core.mak CFG="condor_daemon_core - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_gridmanager - Win32 Release"
 
 "condor_daemon_core - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_daemon_core.mak" CFG="condor_daemon_core - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_daemon_core.mak CFG="condor_daemon_core - Win32 Release" 
    cd "."
 
 "condor_daemon_core - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_daemon_core.mak" CFG="condor_daemon_core - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_daemon_core.mak CFG="condor_daemon_core - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
@@ -276,24 +306,24 @@ LINK32_OBJS= \
 
 "condor_io - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_io.mak" CFG="condor_io - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_io.mak CFG="condor_io - Win32 Debug" 
    cd "."
 
 "condor_io - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_io.mak" CFG="condor_io - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_io.mak CFG="condor_io - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_gridmanager - Win32 Release"
 
 "condor_io - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_io.mak" CFG="condor_io - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_io.mak CFG="condor_io - Win32 Release" 
    cd "."
 
 "condor_io - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_io.mak" CFG="condor_io - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_io.mak CFG="condor_io - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
@@ -302,24 +332,24 @@ LINK32_OBJS= \
 
 "condor_sysapi - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_sysapi.mak" CFG="condor_sysapi - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_sysapi.mak CFG="condor_sysapi - Win32 Debug" 
    cd "."
 
 "condor_sysapi - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_sysapi.mak" CFG="condor_sysapi - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_sysapi.mak CFG="condor_sysapi - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_gridmanager - Win32 Release"
 
 "condor_sysapi - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_sysapi.mak" CFG="condor_sysapi - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_sysapi.mak CFG="condor_sysapi - Win32 Release" 
    cd "."
 
 "condor_sysapi - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_sysapi.mak" CFG="condor_sysapi - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_sysapi.mak CFG="condor_sysapi - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
@@ -328,27 +358,65 @@ LINK32_OBJS= \
 
 "condor_util_lib - Win32 Debug" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_util_lib.mak" CFG="condor_util_lib - Win32 Debug" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Debug" 
    cd "."
 
 "condor_util_lib - Win32 DebugCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_util_lib.mak" CFG="condor_util_lib - Win32 Debug" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Debug" RECURSE=1 CLEAN 
    cd "."
 
 !ELSEIF  "$(CFG)" == "condor_gridmanager - Win32 Release"
 
 "condor_util_lib - Win32 Release" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_util_lib.mak" CFG="condor_util_lib - Win32 Release" 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Release" 
    cd "."
 
 "condor_util_lib - Win32 ReleaseCLEAN" : 
    cd "."
-   $(MAKE) /$(MAKEFLAGS) /F ".\condor_util_lib.mak" CFG="condor_util_lib - Win32 Release" RECURSE=1 CLEAN 
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_util_lib.mak CFG="condor_util_lib - Win32 Release" RECURSE=1 CLEAN 
    cd "."
 
 !ENDIF 
+
+!IF  "$(CFG)" == "condor_gridmanager - Win32 Debug"
+
+"condor_qmgmt - Win32 Debug" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_qmgmt.mak CFG="condor_qmgmt - Win32 Debug" 
+   cd "."
+
+"condor_qmgmt - Win32 DebugCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_qmgmt.mak CFG="condor_qmgmt - Win32 Debug" RECURSE=1 CLEAN 
+   cd "."
+
+!ELSEIF  "$(CFG)" == "condor_gridmanager - Win32 Release"
+
+"condor_qmgmt - Win32 Release" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_qmgmt.mak CFG="condor_qmgmt - Win32 Release" 
+   cd "."
+
+"condor_qmgmt - Win32 ReleaseCLEAN" : 
+   cd "."
+   $(MAKE) /$(MAKEFLAGS) /F .\condor_qmgmt.mak CFG="condor_qmgmt - Win32 Release" RECURSE=1 CLEAN 
+   cd "."
+
+!ENDIF 
+
+SOURCE=..\src\condor_gridmanager\basejob.C
+
+"$(INTDIR)\basejob.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_gridmanager\baseresource.C
+
+"$(INTDIR)\baseresource.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
 
 SOURCE="..\src\condor_gridmanager\gahp-client.C"
 
@@ -377,6 +445,36 @@ SOURCE=..\src\condor_gridmanager\gridmanager.C
 SOURCE=..\src\condor_gridmanager\gridmanager_main.C
 
 "$(INTDIR)\gridmanager_main.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_gridmanager\gt3job.C
+
+"$(INTDIR)\gt3job.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_gridmanager\gt3resource.C
+
+"$(INTDIR)\gt3resource.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_gridmanager\mirrorjob.C
+
+"$(INTDIR)\mirrorjob.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_gridmanager\mirrorresource.C
+
+"$(INTDIR)\mirrorresource.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
+	$(CPP) $(CPP_PROJ) $(SOURCE)
+
+
+SOURCE=..\src\condor_gridmanager\proxymanager.C
+
+"$(INTDIR)\proxymanager.obj" : $(SOURCE) "$(INTDIR)" "$(INTDIR)\condor_common.pch"
 	$(CPP) $(CPP_PROJ) $(SOURCE)
 
 

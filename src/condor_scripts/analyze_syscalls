@@ -10,7 +10,7 @@
 SYSCALL_LIB='../condor_syscall_lib/libcondorsyscall.a'
 
 ######################################################################
-# Figure out the platform-specific crap:
+# Figure out the platform-specific junk:
 ######################################################################
 
 # Don't forget that IRIX's uname might be "IRIX64" on 64 bit
@@ -182,7 +182,7 @@ if [ $UNAME = "IRIX" ]; then
 else 
 	$NM $LIBC | awk '{print $1}' -  | sort | uniq > /tmp/asc5.$$
 fi
-awk '{printf "_%s\n__%s\n___%s\n____%s\n",$0,$0,$0,$0}' /tmp/asc1.$$  |\
+awk '{printf "_%s\n__%s\n__libc_%s\n___%s\n____%s\n",$0,$0,$0,$0,$0}' /tmp/asc1.$$  |\
    cat - /tmp/asc5.$$ | sort | uniq -d  | tee /tmp/asc6.$$ | awk \
 '{ printf "%20.20s",sprintf("%s()",$0)
    i++
@@ -198,7 +198,7 @@ END { if ( i != 0 )
 ' -
 
 echo "*** UNDERSCORE SYSTEM CALLS TRAPPED IN CONDOR"
-awk '{printf "_%s\n__%s\n___%s\n____%s\n",$0,$0,$0,$0}' /tmp/asc3.$$  |\
+awk '{printf "_%s\n__%s\n__libc_%s\n___%s\n____%s\n",$0,$0,$0,$0,$0}' /tmp/asc3.$$  |\
    sort | tee /tmp/asc8.$$ | cat - /tmp/asc2.$$ | sort | uniq -d  |\
    tee /tmp/asc7.$$ | awk \
 '{ printf "%20.20s",sprintf("%s()",$0)
@@ -235,7 +235,7 @@ echo "*** SUGGESTED MACRO CALLS TO INSERT INTO switches.prolog"
 MISSED=`cat /tmp/asc9.$$`
 for UNDERSCORE in $MISSED
 do
-	SYSCALL=`echo "$UNDERSCORE" | sed 's/^_*//'`
+	SYSCALL=`echo "$UNDERSCORE" | sed -e 's/^__libc_*//' -e 's/^_*//'`
 	PROTO=A`grep "^$SYSCALL|" ../condor_syscall_lib/syscall-list`
 	if [ "$PROTO" != "A" ]; then
 		# found it in syscall-list, thus we have a prototype

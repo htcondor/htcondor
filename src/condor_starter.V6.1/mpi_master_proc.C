@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "mpi_master_proc.h"
@@ -27,6 +27,7 @@
 #include "condor_attributes.h"
 #include "condor_string.h"  // for strnewp
 #include "my_hostname.h"
+#include "env.h"
 
 extern int main_shutdown_graceful();
 
@@ -131,12 +132,16 @@ MPIMasterProc::alterEnv()
     dprintf ( D_FULLDEBUG, "MPIMasterProc::alterPath()\n" );
 
     char *tmp;
-	char env[_POSIX_ARG_MAX];
-	if ( !JobAd->LookupString( ATTR_JOB_ENVIRONMENT, env )) {
+	char *env_str = NULL;
+	Env envobject;
+	if ( !JobAd->LookupString( ATTR_JOB_ENVIRONMENT, &env_str )) {
 		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting.\n", 
 				 ATTR_JOB_ENVIRONMENT );
 		return 0;
 	}
+
+	envobject.Merge(env_str);
+	free(env_str);
 
     char *condor_rsh = param( "MPI_CONDOR_RSH_PATH" );
     if ( !condor_rsh ) {
@@ -145,60 +150,34 @@ MPIMasterProc::alterEnv()
         return 0;
     }
 
-    char path[_POSIX_ARG_MAX];
-    if ( (env[0] == '\0') ||
-         (!strstr( env, "PATH" ) ) ) {
-            // User did not specify any env, or there is no 'PATH'
-            // in env sent along.  We get $PATH and alter it.
+	MyString path;
+	MyString new_path;
+
+	new_path = condor_rsh;
+	new_path += ":";
+
+	if(envobject.getenv("PATH",path)) {
+        // The user gave us a path in env.  Find & alter:
+        dprintf ( D_FULLDEBUG, "$PATH in ad:%s\n", path.Value() );
+
+		new_path += path;
+	}
+	else {
+        // User did not specify any env, or there is no 'PATH'
+        // in env sent along.  We get $PATH and alter it.
 
         tmp = getenv( "PATH" );
         if ( tmp ) {
             dprintf ( D_FULLDEBUG, "No Path in ad, $PATH in env\n" );
             dprintf ( D_FULLDEBUG, "before: %s\n", tmp );
-            sprintf ( path, "PATH=%s:%s", condor_rsh, tmp );
+			new_path += tmp;
         }
         else {   // no PATH in env.  Make one.
             dprintf ( D_FULLDEBUG, "No Path in ad, no $PATH in env\n" );
-            sprintf ( path, "PATH=%s", condor_rsh );
-        }
-
-        if ( env[0] == '\0' ) {
-            sprintf ( env, "%s = \"%s", ATTR_JOB_ENVIRONMENT, path );
-        } else {
-            char bar[4096];
-            sprintf ( bar, "%s = \"%s;%s", ATTR_JOB_ENVIRONMENT, env, path );
-            strcpy( env, bar );
+			new_path = condor_rsh;
         }
     }
-    else {
-            // The user gave us a path in env.  Find & alter:
-        dprintf ( D_FULLDEBUG, "$PATH in ad...env:\n" );
-        dprintf ( D_FULLDEBUG, "%s\n", env );
-        
-        /* The env. is a ';' delimited list, the elements within 
-           the path are ':' delimited.  */
-
-        char *tok;
-        int n = 0;
-        tmp = strnewp( env );
-        memset( env, 0, _POSIX_ARG_MAX );
-
-        n += sprintf ( env, "%s = \"", ATTR_JOB_ENVIRONMENT );
-
-        tok = strtok( tmp, ";" );
-        while ( tok ) {
-            if ( !strncmp( tok, "PATH=", 5 ) ) {
-                    // match!
-                n += sprintf( &env[n], "PATH=%s:%s;", condor_rsh, &tok[5] );
-            }
-            else {  // not PATH, stick back in...
-                n += sprintf( &env[n], "%s;", tok );
-            }
-            tok = strtok( NULL, ";" );
-        }
-
-        delete [] tmp;
-    }
+	envobject.Put("PATH",new_path.Value());
     
         /* We want to add one little thing to the environment:
            We want to put the var MPI_MY_ADDRESS in here, 
@@ -212,18 +191,25 @@ MPIMasterProc::alterEnv()
 		return 0;
 	}
 
-    sprintf( foo, ";PARALLEL_SHADOW_SINFUL=%s", shad );
-    strcat( env, foo );
+    envobject.Put( "PARALLEL_SHADOW_SINFUL",shad );
 
 		// In case the user job is linked with a newer version of
 		// MPICH that honors the P4_RSHCOMMAND env var, let's set
 		// that, too.
-    sprintf( foo, ";P4_RSHCOMMAND=%s/rsh\"", condor_rsh );
-    strcat( env, foo );
+	MyString condor_rsh_command;
+	condor_rsh_command = condor_rsh;
+	condor_rsh_command += "/rsh";
+	envobject.Put( "P4_RSHCOMMAND", condor_rsh_command.Value());
 
         // now put the env back into the JobAd:
-    dprintf ( D_FULLDEBUG, "%s\n", env );
-	if ( !JobAd->InsertOrUpdate( env ) ) {
+	env_str = envobject.getDelimitedString();
+    dprintf ( D_FULLDEBUG, "New env: %s\n", env_str );
+
+	bool assigned = JobAd->Assign( ATTR_JOB_ENVIRONMENT,env_str );
+	if(env_str) {
+		delete[] env_str;
+	}
+	if(!assigned) {
 		dprintf( D_ALWAYS, "Unable to update env! Aborting.\n" );
 		return 0;
 	}
@@ -269,29 +255,28 @@ MPIMasterProc::preparePortFile( void )
 		// environment of our job ad so we set the right env var so
 		// MPICH puts the port in here.
 
-		// Eventually, we're going to need to reinsert this as a
-		// ClassAd attribute, so we might as well initialize it with 
-		// 'ATTR_JOB_ENVIRONMENT = "'...
-	char buf[1024];
-	sprintf( buf, "%s = \"", ATTR_JOB_ENVIRONMENT );
-	MyString env( buf );
+	Env envobject;
 
 		// Now, grab the existing environment.  Do so without static
 		// buffers so we can handle really huge environments
 		// correctly.  
 	char* env_str = NULL;
 	if( JobAd->LookupString(ATTR_JOB_ENVIRONMENT, &env_str) ) {
-		env += env_str;
+		envobject.Merge(env_str);
 		free( env_str );
 	} else {
 			// Maybe this is a little harsh, but it should never 
 			// happen.   
 		EXCEPT( "MPI Master node started w/o an environment!" );
 	}
-	sprintf( buf, "%cMPICH_EXTRA=%s\"", env_delimiter, port_file );
-	env += buf;
+	envobject.Put("MPICH_EXTRA",port_file);
 
-	if( JobAd->Insert(env.Value()) ) {
+	env_str = envobject.getDelimitedString();
+	bool assigned = JobAd->Assign(ATTR_JOB_ENVIRONMENT,env_str);
+	if(env_str) {
+		delete[] env_str;
+	}
+	if(assigned) {
 		return true;
 	} 
 	return false;

@@ -5,7 +5,7 @@ MPI Wisdom
 The protocol for getting matches from the schedd to the MPI shadow is
 as follows:
 
-1) shadow is spawned w/ 1st capability as a command line arg
+1) shadow is spawned w/ 1st ClaimId as a command line arg
 
 Ideally, we would then do the following:
 
@@ -25,10 +25,10 @@ A) The shadow connects to the schedd and sends the following schema:
 
 int cmd
 int cluster
-char* capability string (capability of the master MPI process)
+char* ClaimId string (ClaimId of the master MPI process)
 EOM
 
-B) Schedd looks up the cluster and confirms the capability is good.
+B) Schedd looks up the cluster and confirms the ClaimId is good.
    Then, it sends the following reply:
 
 int num_procs (job "classes", for different requirements, etc)
@@ -36,7 +36,7 @@ for( p=0, p<num_procs, p++ ) {
     ClassAd job_ad[p]
     int num_matches[p]
     for( m=0, m<num_matches, m++ ) {
-        char* capability[p][m]
+        char* ClaimId[p][m]
     }
 }
 EOM
@@ -52,7 +52,7 @@ for( p=0, p<num_procs, p++ ) {
     int num_matches[p]
     for( m=0, m<num_matches, m++ ) {
         char* sinful_string_of_startd[p][m]
-        char* capability[p][m]
+        char* ClaimId[p][m]
     }
 }
 EOM

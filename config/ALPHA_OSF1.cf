@@ -1,16 +1,8 @@
-#define OperatingSystem	OSF1
-#define Architecture	ALPHA
-
-#define GLOBUS_FLAVOR gcc64dbg
-
 #define PlatformLdFlags -lmld
 #define VendorFTestFlags -assume recursive 
 
 #define SimpleLibC /lib/libc.a
 #define LibC SimpleLibC
-
-#define XLibPath /usr/lib/libX11.a /usr/lib/libdnet_stub.a
-#define XExtLibPath /usr/lib/libXext.a
 
 #define DebugFlag -ggdb
 
@@ -34,7 +26,6 @@
 #define HAS_RANLIB_TOUCH		YES
 #define HAS_CP_PRESERVE			YES
 #define NEEDS_SPECIAL_SETJMP		NO
-#define HAS_FORTRAN			YES
 #define HAS_FLOCK			YES
 #define HAS_ADJTIME			YES
 #define HAS_GETDTABLESIZE		YES
@@ -53,25 +44,17 @@
 #define HAS_GETWD			YES
 #define HAS_INSQUE			YES
 #define HAS_SETLINEBUF			YES
-#define HAS_PVM				YES
-#define PVM_ARCH			ALPHA
 #define USE_GCC				YES
-#define HAS_STATIC			YES
 
 #define HAS_DYNAMIC_USER_JOBS	NO
 
-#define StaticFlag -static
-#define UnixName /vmunix		/* pathname of the system executable */
-#define PsAllFlag /bin/ps -e		/* "Ps" flag when you want everything */
-#define PsAwkProg '{ print $1 }'	/* Pick out pid from "ps" output */
-
-#ifndef Ctags
-#define Ctags ctags -t
-#endif Ctags
-
-#ifndef MkDepend
-#define MkDepend ../../GENERIC/mdepend.sh
-#endif MkDepend
+/*
+** Settings related to various externals that are shared across all
+** versions of Digital Unix.
+*/
+#define HAS_GLOBUS	YES
+#define HAS_GSI		YES
+#define HAS_OPENSSL	YES
 
 #define VendorCTestFlags -std
 

@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department,
- *University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.
- *No use of the CONDOR Software Program Source Code is authorized
- *without the express consent of the CONDOR Team.  For more
- *information contact: CONDOR Team, Attention: Professor Miron Livny,
- *7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685,
- *(608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #ifndef _CONDOR_DC_STARTD_H
 #define _CONDOR_DC_STARTD_H
@@ -42,16 +42,17 @@ public:
 		*/
 	DCStartd( const char* const name = NULL, const char* pool = NULL );
 
+		/** Alternate constructor that takes more info if have it
+			@param name The name of the daemon, NULL for local  
+			@param pool The name of the pool, NULL for local
+			@param addr The address (sinful string), NULL if unknown
+			@param id The ClaimId, NULL if unknown
+		*/
+	DCStartd( const char* const name, const char* const pool,
+			  const char* const addr, const char* const id );
+
 		/// Destructor.
 	~DCStartd();
-
-		/** Set the capability for use when talking to this startd.
-			This method is deprecated.  You should use setClaimId(),
-			instead.  
-			@param cap_str The capability string
-			@return true on success, false on invalid input (NULL)
-		*/
-	bool setCapability( const char* cap_str );
 
 		/** Set the ClaimId to use when talking to this startd. 
 			@param id The ClaimID string
@@ -60,12 +61,9 @@ public:
 	bool setClaimId( const char* id );
 
 
-		/** @return the capability string for this startd, NULL if we
-			don't have a value yet.  This method is deprecated.  You
-			should use getClaimId(), instead.  
-
+		/** @return the ClaimId string for this startd, NULL if we
+			don't have a value yet.
 		*/
-	char* getCapability( void ) { return claim_id; };
 	char* getClaimId( void ) { return claim_id; };
 
 		/** Send the command to this startd to deactivate the claim 
@@ -105,6 +103,9 @@ public:
 						  int timeout = -1 );
 
 	bool releaseClaim( VacateType type, ClassAd* reply,
+					   int timeout = -1 );
+
+	bool locateStarter( const char* global_job_id, ClassAd* reply, 
 					   int timeout = -1 );
 
  private:

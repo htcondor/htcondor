@@ -80,20 +80,20 @@ lex.yy.o: lex.yy.c
 	$(CC) $(CFLAGS) -c lex.yy.c
 
 stub_gen: y.tab.o lex.yy.o
-	$(CC) $(CFLAGS) -o stub_gen y.tab.o lex.yy.o $(ALL_LDFLAGS)
+	$(CC) $(CFLAGS) -o stub_gen y.tab.o lex.yy.o $(LEXLIB) $(ALL_LDFLAGS)
 
 clean::
 	rm -f stub_gen y.tab.o lex.yy.o 
 
 lex.yy.c: stub_gen_lex.l scanner.h y.tab.h
-	lex stub_gen_lex.l
+	$(LEX) stub_gen_lex.l
 clean::
 	rm -f lex.yy.c
 
 y.tab.h: y.tab.c
 
 y.tab.c: stub_gen_yacc.y scanner.h
-	YACC -d stub_gen_yacc.y
+	$(YACC) -d stub_gen_yacc.y
 clean::
 	rm -f y.tab.c y.tab.h
 

@@ -1,8 +1,16 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_dagman.mak
 
 ..\src\condor_dagman\dag.C : \
+	"..\..\program files\microsoft sdk\include\basetsd.h"\
+	"..\..\program files\microsoft sdk\include\guiddef.h"\
+	"..\..\program files\microsoft sdk\include\propidl.h"\
+	"..\..\program files\microsoft sdk\include\reason.h"\
+	"..\..\program files\microsoft sdk\include\stralign.h"\
+	"..\..\program files\microsoft sdk\include\tvout.h"\
+	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -18,6 +26,7 @@
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_dagman\dag.h"\
+	"..\src\condor_dagman\dagman_main.h"\
 	"..\src\condor_dagman\debug.h"\
 	"..\src\condor_dagman\job.h"\
 	"..\src\condor_dagman\script.h"\
@@ -37,6 +46,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_getmnt.h"\
@@ -53,7 +63,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -68,9 +78,88 @@
 	"..\src\h\util_lib_proto.h"\
 	
 
-..\src\condor_dagman\dagman_instantiate.C : \
+..\src\condor_dagman\dagman_commands.C : \
+	"..\..\program files\microsoft sdk\include\basetsd.h"\
+	"..\..\program files\microsoft sdk\include\guiddef.h"\
+	"..\..\program files\microsoft sdk\include\propidl.h"\
+	"..\..\program files\microsoft sdk\include\reason.h"\
+	"..\..\program files\microsoft sdk\include\stralign.h"\
+	"..\..\program files\microsoft sdk\include\tvout.h"\
+	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
+	"..\src\condor_c++_util\CondorError.h"\
+	"..\src\condor_c++_util\extArray.h"\
+	"..\src\condor_c++_util\HashTable.h"\
+	"..\src\condor_c++_util\my_hostname.h"\
+	"..\src\condor_c++_util\MyString.h"\
+	"..\src\condor_c++_util\ntsysinfo.h"\
+	"..\src\condor_c++_util\read_multiple_logs.h"\
+	"..\src\condor_c++_util\simplelist.h"\
+	"..\src\condor_c++_util\string_list.h"\
+	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_c++_util\translation_utils.h"\
+	"..\src\condor_c++_util\user_log.c++.h"\
+	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
+	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
+	"..\src\condor_dagman\dag.h"\
+	"..\src\condor_dagman\dagman_commands.h"\
+	"..\src\condor_dagman\dagman_main.h"\
+	"..\src\condor_dagman\debug.h"\
+	"..\src\condor_dagman\job.h"\
+	"..\src\condor_dagman\parse.h"\
+	"..\src\condor_dagman\script.h"\
+	"..\src\condor_dagman\scriptQ.h"\
+	"..\src\condor_includes\buffers.h"\
+	"..\src\condor_includes\condor_adtypes.h"\
+	"..\src\condor_includes\condor_ast.h"\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_attrlist.h"\
+	"..\src\condor_includes\condor_classad.h"\
+	"..\src\condor_includes\condor_commands.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_crypt.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
+	"..\src\condor_includes\condor_exprtype.h"\
+	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_includes\condor_io.h"\
+	"..\src\condor_includes\condor_md.h"\
+	"..\src\condor_includes\condor_old_shadow_types.h"\
+	"..\src\condor_includes\condor_perms.h"\
+	"..\src\condor_includes\condor_random_num.h"\
+	"..\src\condor_includes\condor_secman.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_includes\condor_uid.h"\
+	"..\src\condor_includes\condor_universe.h"\
+	"..\src\condor_includes\CryptKey.h"\
+	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\reli_sock.h"\
+	"..\src\condor_includes\safe_sock.h"\
+	"..\src\condor_includes\SafeMsg.h"\
+	"..\src\condor_includes\sock.h"\
+	"..\src\condor_includes\sockCache.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\file_lock.h"\
+	"..\src\h\proc.h"\
+	"..\src\h\startup.h"\
+	
+
+..\src\condor_dagman\dagman_instantiate.C : \
+	"..\..\program files\microsoft sdk\include\basetsd.h"\
+	"..\..\program files\microsoft sdk\include\guiddef.h"\
+	"..\..\program files\microsoft sdk\include\propidl.h"\
+	"..\..\program files\microsoft sdk\include\reason.h"\
+	"..\..\program files\microsoft sdk\include\stralign.h"\
+	"..\..\program files\microsoft sdk\include\tvout.h"\
+	"..\..\program files\microsoft sdk\include\winefs.h"\
+	"..\src\condor_c++_util\command_strings.h"\
+	"..\src\condor_c++_util\condor_event.h"\
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -101,6 +190,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
@@ -114,7 +204,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -128,8 +218,16 @@
 	
 
 ..\src\condor_dagman\dagman_main.C : \
+	"..\..\program files\microsoft sdk\include\basetsd.h"\
+	"..\..\program files\microsoft sdk\include\guiddef.h"\
+	"..\..\program files\microsoft sdk\include\propidl.h"\
+	"..\..\program files\microsoft sdk\include\reason.h"\
+	"..\..\program files\microsoft sdk\include\stralign.h"\
+	"..\..\program files\microsoft sdk\include\tvout.h"\
+	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -169,6 +267,7 @@
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_environ.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_getmnt.h"\
@@ -185,7 +284,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -201,8 +300,16 @@
 	
 
 ..\src\condor_dagman\dagman_submit.C : \
+	"..\..\program files\microsoft sdk\include\basetsd.h"\
+	"..\..\program files\microsoft sdk\include\guiddef.h"\
+	"..\..\program files\microsoft sdk\include\propidl.h"\
+	"..\..\program files\microsoft sdk\include\reason.h"\
+	"..\..\program files\microsoft sdk\include\stralign.h"\
+	"..\..\program files\microsoft sdk\include\tvout.h"\
+	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -218,6 +325,7 @@
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_dagman\dag.h"\
+	"..\src\condor_dagman\dagman_main.h"\
 	"..\src\condor_dagman\debug.h"\
 	"..\src\condor_dagman\job.h"\
 	"..\src\condor_dagman\script.h"\
@@ -234,6 +342,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
@@ -247,7 +356,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -261,6 +370,13 @@
 	
 
 ..\src\condor_dagman\dagman_util.C : \
+	"..\..\program files\microsoft sdk\include\basetsd.h"\
+	"..\..\program files\microsoft sdk\include\guiddef.h"\
+	"..\..\program files\microsoft sdk\include\propidl.h"\
+	"..\..\program files\microsoft sdk\include\reason.h"\
+	"..\..\program files\microsoft sdk\include\stralign.h"\
+	"..\..\program files\microsoft sdk\include\tvout.h"\
+	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_dagman\debug.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -273,7 +389,15 @@
 	
 
 ..\src\condor_dagman\debug.C : \
+	"..\..\program files\microsoft sdk\include\basetsd.h"\
+	"..\..\program files\microsoft sdk\include\guiddef.h"\
+	"..\..\program files\microsoft sdk\include\propidl.h"\
+	"..\..\program files\microsoft sdk\include\reason.h"\
+	"..\..\program files\microsoft sdk\include\stralign.h"\
+	"..\..\program files\microsoft sdk\include\tvout.h"\
+	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\command_strings.h"\
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -298,6 +422,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
@@ -311,7 +436,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -325,6 +450,13 @@
 	
 
 ..\src\condor_dagman\helper.C : \
+	"..\..\program files\microsoft sdk\include\basetsd.h"\
+	"..\..\program files\microsoft sdk\include\guiddef.h"\
+	"..\..\program files\microsoft sdk\include\propidl.h"\
+	"..\..\program files\microsoft sdk\include\reason.h"\
+	"..\..\program files\microsoft sdk\include\stralign.h"\
+	"..\..\program files\microsoft sdk\include\tvout.h"\
+	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_dagman\helper.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -337,6 +469,13 @@
 	
 
 ..\src\condor_dagman\job.C : \
+	"..\..\program files\microsoft sdk\include\basetsd.h"\
+	"..\..\program files\microsoft sdk\include\guiddef.h"\
+	"..\..\program files\microsoft sdk\include\propidl.h"\
+	"..\..\program files\microsoft sdk\include\reason.h"\
+	"..\..\program files\microsoft sdk\include\stralign.h"\
+	"..\..\program files\microsoft sdk\include\tvout.h"\
+	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -380,8 +519,16 @@
 	
 
 ..\src\condor_dagman\parse.C : \
+	"..\..\program files\microsoft sdk\include\basetsd.h"\
+	"..\..\program files\microsoft sdk\include\guiddef.h"\
+	"..\..\program files\microsoft sdk\include\propidl.h"\
+	"..\..\program files\microsoft sdk\include\reason.h"\
+	"..\..\program files\microsoft sdk\include\stralign.h"\
+	"..\..\program files\microsoft sdk\include\tvout.h"\
+	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -397,6 +544,7 @@
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_dagman\dag.h"\
+	"..\src\condor_dagman\dagman_commands.h"\
 	"..\src\condor_dagman\debug.h"\
 	"..\src\condor_dagman\job.h"\
 	"..\src\condor_dagman\parse.h"\
@@ -415,6 +563,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_getmnt.h"\
@@ -430,7 +579,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -446,7 +595,15 @@
 	
 
 ..\src\condor_dagman\script.C : \
+	"..\..\program files\microsoft sdk\include\basetsd.h"\
+	"..\..\program files\microsoft sdk\include\guiddef.h"\
+	"..\..\program files\microsoft sdk\include\propidl.h"\
+	"..\..\program files\microsoft sdk\include\reason.h"\
+	"..\..\program files\microsoft sdk\include\stralign.h"\
+	"..\..\program files\microsoft sdk\include\tvout.h"\
+	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\command_strings.h"\
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\env.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -477,6 +634,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_getmnt.h"\
@@ -493,7 +651,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -509,8 +667,16 @@
 	
 
 ..\src\condor_dagman\scriptQ.C : \
+	"..\..\program files\microsoft sdk\include\basetsd.h"\
+	"..\..\program files\microsoft sdk\include\guiddef.h"\
+	"..\..\program files\microsoft sdk\include\propidl.h"\
+	"..\..\program files\microsoft sdk\include\reason.h"\
+	"..\..\program files\microsoft sdk\include\stralign.h"\
+	"..\..\program files\microsoft sdk\include\tvout.h"\
+	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
+	"..\src\condor_c++_util\CondorError.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -541,6 +707,7 @@
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_error_codes.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
 	"..\src\condor_includes\condor_header_features.h"\
@@ -554,7 +721,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -568,6 +735,13 @@
 	
 
 ..\src\condor_dagman\types.C : \
+	"..\..\program files\microsoft sdk\include\basetsd.h"\
+	"..\..\program files\microsoft sdk\include\guiddef.h"\
+	"..\..\program files\microsoft sdk\include\propidl.h"\
+	"..\..\program files\microsoft sdk\include\reason.h"\
+	"..\..\program files\microsoft sdk\include\stralign.h"\
+	"..\..\program files\microsoft sdk\include\tvout.h"\
+	"..\..\program files\microsoft sdk\include\winefs.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\

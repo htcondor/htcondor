@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
 #include <math.h>
 #include <float.h>
@@ -57,6 +57,8 @@ Matchmaker ()
 	AccountantHost  = NULL;
 	PreemptionReq = NULL;
 	PreemptionRank = NULL;
+	NegotiatorPreJobRank = NULL;
+	NegotiatorPostJobRank = NULL;
 	sockCache = NULL;
 
 	sprintf (buf, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
@@ -82,6 +84,8 @@ Matchmaker::
 	delete rankCondPrioPreempt;
 	delete PreemptionReq;
 	delete PreemptionRank;
+	delete NegotiatorPreJobRank;
+	delete NegotiatorPostJobRank;
 	delete sockCache;
 }
 
@@ -102,6 +106,9 @@ initialize ()
     daemonCore->Register_Command (RESET_USAGE, "ResetUsage",
             (CommandHandlercpp) &Matchmaker::RESET_USAGE_commandHandler, 
 			"RESET_USAGE_commandHandler", this, ADMINISTRATOR);
+    daemonCore->Register_Command (DELETE_USER, "DeleteUser",
+            (CommandHandlercpp) &Matchmaker::DELETE_USER_commandHandler, 
+			"DELETE_USER_commandHandler", this, ADMINISTRATOR);
     daemonCore->Register_Command (SET_PRIORITYFACTOR, "SetPriorityFactor",
             (CommandHandlercpp) &Matchmaker::SET_PRIORITYFACTOR_commandHandler, 
 			"SET_PRIORITYFACTOR_commandHandler", this, ADMINISTRATOR);
@@ -199,6 +206,32 @@ reinitialize ()
 
 	if( tmp ) free( tmp );
 
+	if (NegotiatorPreJobRank) delete NegotiatorPreJobRank;
+	NegotiatorPreJobRank = NULL;
+	tmp = param("NEGOTIATOR_PRE_JOB_RANK");
+	if( tmp ) {
+		if( Parse(tmp, NegotiatorPreJobRank) ) {
+			EXCEPT ("Error parsing NEGOTIATOR_PRE_JOB_RANK expression: %s", tmp);
+		}
+	}
+
+	dprintf (D_ALWAYS,"NEGOTIATOR_PRE_JOB_RANK = %s\n", (tmp?tmp:"None"));
+
+	if( tmp ) free( tmp );
+
+	if (NegotiatorPostJobRank) delete NegotiatorPostJobRank;
+	NegotiatorPostJobRank = NULL;
+	tmp = param("NEGOTIATOR_POST_JOB_RANK");
+	if( tmp ) {
+		if( Parse(tmp, NegotiatorPostJobRank) ) {
+			EXCEPT ("Error parsing NEGOTIATOR_POST_JOB_RANK expression: %s", tmp);
+		}
+	}
+
+	dprintf (D_ALWAYS,"NEGOTIATOR_POST_JOB_RANK = %s\n", (tmp?tmp:"None"));
+
+	if( tmp ) free( tmp );
+
 #ifdef WANT_NETMAN
 	netman.Config();
 #endif
@@ -243,6 +276,27 @@ RESET_ALL_USAGE_commandHandler (int, Stream *strm)
 	return TRUE;
 }
 
+int Matchmaker::
+DELETE_USER_commandHandler (int, Stream *strm)
+{
+	char	scheddName[64];
+	char	*sn = scheddName;
+	int		len = 64;
+
+	// read the required data off the wire
+	if (!strm->get(sn, len) 	|| 
+		!strm->end_of_message())
+	{
+		dprintf (D_ALWAYS, "Could not read accountant record name\n");
+		return FALSE;
+	}
+
+	// reset usage
+	dprintf (D_ALWAYS,"Deleting accountanting record of %s\n",scheddName);
+	accountant.DeleteRecord (scheddName);
+	
+	return TRUE;
+}
 
 int Matchmaker::
 RESET_USAGE_commandHandler (int, Stream *strm)
@@ -658,6 +712,7 @@ negotiationTime ()
 				case MM_ERROR:
 				default:
 					dprintf(D_ALWAYS,"  Error: Ignoring schedd for this cycle\n" );
+					sockCache->invalidateSock( scheddAddr );
 					scheddAds.Delete( schedd );
 			}
 		}
@@ -766,8 +821,12 @@ obtainAdsFromCollector (
 			newSequence = -1;	
 			ad->LookupInteger(ATTR_UPDATE_SEQUENCE_NUMBER, newSequence);
 
+			if(!ad->LookupString(ATTR_NAME, remoteHost)) {
+				dprintf(D_FULLDEBUG,"Rejecting unnamed startd ad.");
+				continue;
+			}
+
 			if( reevaluate_ad && newSequence != -1 ) {
-				ad->LookupString(ATTR_NAME, remoteHost);
 				oldAd = NULL;
 				oldAdEntry = NULL;
 				MyString rhost(remoteHost);
@@ -861,11 +920,14 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 		sock = schedd.reliSock( NegotiatorTimeout );
 		if( ! sock ) {
 			dprintf( D_ALWAYS, "    Failed to connect to %s\n", scheddAddr );
+				// invalidateSock() might be unecessary, but doesn't hurt...
+			sockCache->invalidateSock( scheddAddr );
 			return MM_ERROR;
 		}
 		if( ! schedd.startCommand(NEGOTIATE, sock, NegotiatorTimeout) ) {
 			dprintf( D_ALWAYS, "    Failed to send NEGOTIATE to %s\n",
 					 scheddAddr );
+			sockCache->invalidateSock( scheddAddr );
 			return MM_ERROR;
 		}
 			// finally, add it to the cache for later...
@@ -992,6 +1054,7 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 		{
 			dprintf (D_ALWAYS, "    Could not get %s and %s from request\n",
 					ATTR_CLUSTER_ID, ATTR_PROC_ID);
+			sockCache->invalidateSock( scheddAddr );
 			return MM_ERROR;
 		}
 		dprintf(D_ALWAYS, "    Request %05d.%05d:\n", cluster, proc);
@@ -1122,6 +1185,29 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 	return MM_RESUME;
 }
 
+float Matchmaker::
+EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
+                        ClassAd &request,ClassAd *resource)
+{
+	EvalResult result;
+	float rank = -(FLT_MAX);
+
+	if(expr && expr->EvalTree(resource,&request,&result)) {
+		if( result.type == LX_FLOAT ) {
+			rank = result.f;
+		} else if( result.type == LX_INTEGER ) {
+			rank = result.i;
+		} else {
+			dprintf(D_ALWAYS, "Failed to evaluate %s "
+			                  "expression to a float.\n",expr_name);
+		}
+	} else if(expr) {
+		dprintf(D_ALWAYS, "Failed to evaluate %s "
+		                  "expression.\n",expr_name);
+	}
+	return rank;
+}
+
 	// the order of values in this enumeration is important!
 enum PreemptState {PRIO_PREEMPTION,RANK_PREEMPTION,NO_PREEMPTION};
 
@@ -1134,11 +1220,15 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 		// to store values pertaining to a particular candidate offer
 	ClassAd 		*candidate;
 	double			candidateRankValue;
+	double			candidatePreJobRankValue;
+	double			candidatePostJobRankValue;
 	double			candidatePreemptRankValue;
 	PreemptState	candidatePreemptState;
 		// to store the best candidate so far
 	ClassAd 		*bestSoFar = NULL;	
 	double			bestRankValue = -(FLT_MAX);
+	double			bestPreJobRankValue = -(FLT_MAX);
+	double			bestPostJobRankValue = -(FLT_MAX);
 	double			bestPreemptRankValue = -(FLT_MAX);
 	PreemptState	bestPreemptState = (PreemptState)-1;
 	bool			newBestFound;
@@ -1344,59 +1434,63 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 		}
 #endif
 
+		candidatePreJobRankValue = EvalNegotiatorMatchRank(
+		  "NEGOTIATOR_PRE_JOB_RANK",NegotiatorPreJobRank,
+		  request,candidate);
+
 		// calculate the request's rank of the offer
 		if(!request.EvalFloat(ATTR_RANK,candidate,tmp)) {
 			tmp = 0.0;
 		}
 		candidateRankValue = tmp;
 
+		candidatePostJobRankValue = EvalNegotiatorMatchRank(
+		  "NEGOTIATOR_POST_JOB_RANK",NegotiatorPostJobRank,
+		  request,candidate);
+
+		candidatePreemptRankValue = -(FLT_MAX);
+		if(candidatePreemptState != NO_PREEMPTION) {
+			candidatePreemptRankValue = EvalNegotiatorMatchRank(
+			  "PREEMPTION_RANK",PreemptionRank,
+			  request,candidate);
+		}
+
 		// the quality of a match is determined by a lexicographic sort on
 		// the following values, but more is better for each component
+		//  1. negotiator pre job rank
 		//  1. job rank of offer 
-		//	2. preemption state (2=no preempt, 1=rank-preempt, 0=prio-preempt)
-		//  3. preemption rank (if preempting)
-		newBestFound = false;
-		candidatePreemptRankValue = -(FLT_MAX);
-		if( candidatePreemptState != NO_PREEMPTION ) {
-			// calculate the preemption rank
-			if( PreemptionRank ) {
-//			   		PreemptionRank->EvalTree(candidate,&request,&result) ) {
-//				if( result.type == LX_FLOAT ) {
-//					candidatePreemptRankValue = result.f;
-//				} else if( result.type == LX_INTEGER ) {
-//					candidatePreemptRankValue = result.i;
-				PreemptionRank->SetParentScope( candidate );
-				candidate->EvaluateExpr( PreemptionRank, result );
-				if( !result.IsRealValue( candidatePreemptRankValue ) ) {
-					if( result.IsIntegerValue( intValue ) ) {
-						candidatePreemptRankValue = intValue;
-					}
-					else {
-						dprintf(D_ALWAYS, "Failed to evaluate PREEMPTION_RANK "
-								"expression to a float.\n");
-					}
-				}
-			} else if( PreemptionRank ) {
-				dprintf(D_ALWAYS, "Failed to evaluate PREEMPTION_RANK "
-					"expression.\n");
-			}
-		}
-		if( ( candidateRankValue > bestRankValue ) || 	// first by job rank
-				( candidateRankValue==bestRankValue && 	// then by preempt state
-				candidatePreemptState > bestPreemptState ) ) {
-			newBestFound = true;
-		} else if( candidateRankValue==bestRankValue && // then by preempt rank
-				candidatePreemptState==bestPreemptState && 
-				bestPreemptState != NO_PREEMPTION ) {
-				// check if the preemption rank is better than the best
-			if( candidatePreemptRankValue > bestPreemptRankValue ) {
-				newBestFound = true;
-			}
-		} 
+		//  2. negotiator post job rank
+		//	3. preemption state (2=no preempt, 1=rank-preempt, 0=prio-preempt)
+		//  4. preemption rank (if preempting)
 
-		if( newBestFound ) {
+		newBestFound = false;
+		if(candidatePreJobRankValue < bestPreJobRankValue);
+		else if(candidatePreJobRankValue > bestPreJobRankValue) {
+			newBestFound = true;
+		}
+		else if(candidateRankValue < bestRankValue);
+		else if(candidateRankValue > bestRankValue) {
+			newBestFound = true;
+		}
+		else if(candidatePostJobRankValue < bestPostJobRankValue);
+		else if(candidatePostJobRankValue > bestPostJobRankValue) {
+			newBestFound = true;
+		}
+		else if(candidatePreemptState < bestPreemptState);
+		else if(candidatePreemptState > bestPreemptState) {
+			newBestFound = true;
+		}
+		//NOTE: if NO_PREEMPTION, PreemptRank is a constant
+		else if(candidatePreemptRankValue < bestPreemptRankValue);
+		else if(candidatePreemptRankValue > bestPreemptRankValue) {
+			newBestFound = true;
+		}
+
+		if( newBestFound || !bestSoFar ) {
 			bestSoFar = candidate;
+			bestPreJobRankValue = candidatePreJobRankValue;
 			bestRankValue = candidateRankValue;
+			bestPostJobRankValue = candidatePostJobRankValue;
 			bestPreemptState = candidatePreemptState;
 			bestPreemptRankValue = candidatePreemptRankValue;
 		}
@@ -1527,6 +1621,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	{
 		dprintf (D_ALWAYS, "      Could not send PERMISSION\n" );
 		dprintf( D_FULLDEBUG, "      (Capability is \"%s\")\n", capability);
+		sockCache->invalidateSock( scheddAddr );
 		return MM_ERROR;
 	}
 
@@ -1653,7 +1748,7 @@ void Matchmaker::
 reeval(ClassAd *ad) 
 {
 	int cur_matches;
-	MapEntry *oldAdEntry;
+	MapEntry *oldAdEntry = NULL;
 	char    remoteHost[MAXHOSTNAMELEN];	
 	char    buffer[255];
 	
@@ -1667,8 +1762,10 @@ reeval(ClassAd *ad)
 	cur_matches++;
 	snprintf(buffer, 255, "CurMatches = %d", cur_matches);
 	ad->InsertOrUpdate(buffer);
-	delete(oldAdEntry->oldAd);
-	oldAdEntry->oldAd = new ClassAd(*ad);
+	if(oldAdEntry) {
+		delete(oldAdEntry->oldAd);
+		oldAdEntry->oldAd = new ClassAd(*ad);
+	}
 }
 
 int Matchmaker::HashFunc(const MyString &Key, int TableSize) {

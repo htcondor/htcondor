@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-2002 CONDOR Team, Computer Sciences Department,
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.
- * No use of the CONDOR Software Program Source Code is authorized
- * without the express consent of the CONDOR Team.  For more
- * information contact: CONDOR Team, Attention: Professor Miron Livny,
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685,
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_debug.h"
@@ -184,6 +184,56 @@ DCSchedd::releaseJobs( StringList* ids, const char* reason,
 }
 
 
+ClassAd*
+DCSchedd::vacateJobs( const char* constraint, VacateType vacate_type,
+					  CondorError * errstack,
+					  action_result_type_t result_type,
+					  bool notify_scheduler )
+{
+	if( ! constraint ) {
+		dprintf( D_ALWAYS, "DCSchedd::vacateJobs: "
+				 "constraint is NULL, aborting\n" );
+		return NULL;
+	}
+	JobAction cmd;
+	const char* cmd_str = NULL;
+	if( vacate_type == VACATE_FAST ) {
+		cmd = JA_VACATE_FAST_JOBS;
+		cmd_str = "vacate-fast";
+	} else {
+		cmd = JA_VACATE_JOBS;
+		cmd_str = "vacate";
+	}
+	return actOnJobs( cmd, cmd_str, constraint, NULL, NULL, NULL,
+					  result_type, notify_scheduler, errstack );
+}
+
+
+ClassAd*
+DCSchedd::vacateJobs( StringList* ids, VacateType vacate_type,
+					  CondorError * errstack,
+					  action_result_type_t result_type,
+					  bool notify_scheduler )
+{
+	if( ! ids ) {
+		dprintf( D_ALWAYS, "DCSchedd::vacateJobs: "
+				 "list of jobs is NULL, aborting\n" );
+		return NULL;
+	}
+	JobAction cmd;
+	const char* cmd_str = NULL;
+	if( vacate_type == VACATE_FAST ) {
+		cmd = JA_VACATE_FAST_JOBS;
+		cmd_str = "vacate-fast";
+	} else {
+		cmd = JA_VACATE_JOBS;
+		cmd_str = "vacate";
+	}
+	return actOnJobs( cmd, cmd_str, NULL, ids, NULL, NULL,
+					  result_type, notify_scheduler, errstack );
+}
+
+
 bool
 DCSchedd::reschedule()
 {
@@ -216,7 +266,8 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 
 		// First, if we're not already authenticated, force that now. 
 	if (!forceAuthentication( &rsock, errstack )) {
-		dprintf(D_ALWAYS,"DCSchedd: authentication failure\n%s", errstack->get_full_text());
+		dprintf( D_ALWAYS, "DCSchedd: authentication failure: %s\n",
+				 errstack->getFullText() );
 		return false;
 	}
 
@@ -276,7 +327,7 @@ DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError 
 
 
 ClassAd*
-DCSchedd::actOnJobs( job_action_t action, const char* action_str, 
+DCSchedd::actOnJobs( JobAction action, const char* action_str, 
 					 const char* constraint, StringList* ids, 
 					 const char* reason, const char* reason_attr,
 					 action_result_type_t result_type,
@@ -369,7 +420,8 @@ DCSchedd::actOnJobs( job_action_t action, const char* action_str,
 	}
 		// First, if we're not already authenticated, force that now. 
 	if (!forceAuthentication( &rsock, errstack )) {
-		dprintf(D_ALWAYS,"DCSchedd: authentication failure\n%s", errstack->get_full_text());
+		dprintf( D_ALWAYS, "DCSchedd: authentication failure: %s\n",
+				 errstack->getFullText() );
 		return NULL;
 	}
 
@@ -518,7 +570,9 @@ JobActionResults::readResults( ClassAd* ad )
 		case JA_REMOVE_JOBS:
 		case JA_REMOVE_X_JOBS:
 		case JA_RELEASE_JOBS:
-			action = (job_action_t)tmp;
+		case JA_VACATE_JOBS:
+		case JA_VACATE_FAST_JOBS:
+			action = (JobAction)tmp;
 			break;
 		default:
 			action = JA_ERROR;
@@ -641,8 +695,12 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 	case AR_SUCCESS:
 		sprintf( buf, "Job %d.%d %s", job_id.cluster, job_id.proc,
 				 (action==JA_REMOVE_JOBS)?"marked for removal":
-				 (action==JA_REMOVE_X_JOBS)?"removed locally (remote state unknown)":
-				 (action==JA_HOLD_JOBS)?"held":"released" );
+				 (action==JA_REMOVE_X_JOBS)?
+				 "removed locally (remote state unknown)":
+				 (action==JA_HOLD_JOBS)?"held":
+				 (action==JA_RELEASE_JOBS)?"released":
+				 (action==JA_VACATE_JOBS)?"vacated":
+				 (action==JA_VACATE_FAST_JOBS)?"fast-vacated":"ERROR" );
 		rval = true;
 		break;
 
@@ -660,13 +718,25 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 		sprintf( buf, "Permission denied to %s job %d.%d", 
 				 (action==JA_REMOVE_JOBS)?"remove":
 				 (action==JA_REMOVE_X_JOBS)?"force removal of":
-				 (action==JA_HOLD_JOBS)?"hold":"release", 
+				 (action==JA_HOLD_JOBS)?"hold":
+				 (action==JA_RELEASE_JOBS)?"release":
+				 (action==JA_VACATE_JOBS)?"vacate":
+				 (action==JA_VACATE_FAST_JOBS)?"fast-vacate":"ERROR",
 				 job_id.cluster, job_id.proc );
 		break;
 
 	case AR_BAD_STATUS:
-		if( action == JA_RELEASE_JOBS ) {
+		if( action == JA_RELEASE_JOBS ) { 
 			sprintf( buf, "Job %d.%d not held to be released", 
+					 job_id.cluster, job_id.proc );
+		} else if( action == JA_REMOVE_X_JOBS ) {
+			sprintf( buf, "Job %d.%d not in `X' state to be forcibly removed", 
+					 job_id.cluster, job_id.proc );
+		} else if( action == JA_VACATE_JOBS ) {
+			sprintf( buf, "Job %d.%d not running to be vacated", 
+					 job_id.cluster, job_id.proc );
+		} else if( action == JA_VACATE_FAST_JOBS ) {
+			sprintf( buf, "Job %d.%d not running to be fast-vacated", 
 					 job_id.cluster, job_id.proc );
 		} else {
 				// Nothing else should use this.
@@ -690,7 +760,7 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 					 job_id.cluster, job_id.proc );
 		} else {
 				// we should have gotten AR_BAD_STATUS if we tried to
-				// release a job that wasn't held...
+				// act on a job that had already had the action done
 			sprintf( buf, "Invalid result for job %d.%d", 
 					 job_id.cluster, job_id.proc );
 		}
@@ -700,6 +770,4 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 	*str = strdup( buf );
 	return rval;
 }
-
-
 

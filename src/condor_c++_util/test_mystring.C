@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
- ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "MyString.h"
@@ -278,7 +278,34 @@ int main (int argc, char **argv)
 	if ( retval == false ) {
 		printf("OK: reserve() returned false in line %d.\n", __LINE__);
 	} else {
-		printf("FAILED: reserved() didn't returned false in line %d.\n",
+		printf("FAILED: reserve() didn't return false in line %d.\n",
+			   __LINE__);
+		everythingOkay = false;
+	}
+
+	retval = a.reserve(0);
+	if ( retval == true ) {
+		printf("OK: reserve() returned true in line %d.\n", __LINE__);
+	} else {
+		printf("FAILED: reserve() didn't return true in line %d.\n",
+			   __LINE__);
+		everythingOkay = false;
+	}
+
+	retval = a.reserve_at_least(-1);
+	if ( retval == true ) {
+		printf("OK: reserve_at_least() returned true in line %d.\n", __LINE__);
+	} else {
+		printf("FAILED: reserve_at_least() didn't return true in line %d.\n",
+			   __LINE__);
+		everythingOkay = false;
+	}
+
+	retval = a.reserve_at_least(0);
+	if ( retval == true ) {
+		printf("OK: reserve_at_least() returned true in line %d.\n", __LINE__);
+	} else {
+		printf("FAILED: reserve_at_least() didn't return true in line %d.\n",
 			   __LINE__);
 		everythingOkay = false;
 	}
@@ -307,9 +334,14 @@ int main (int argc, char **argv)
 
 
 	MyString b2;
-	// What effect should this actually have?!?  wenger 2003-04-28.
-	b2[0] = 'a';
-	printf("OK: operator[] assignment worked in line %d.\n", __LINE__);
+	// Note: this should not actually change the string.
+	b2.setChar(0, 'a');
+	if ( b2 == "" && b2.Length() == 0 ) {
+		printf("OK: setChar worked in line %d.\n", __LINE__);
+	} else {
+	    printf("FAILED: setChar error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
 
 	MyString b3a, b3b;
 	b3a += b3b;
@@ -334,19 +366,15 @@ int main (int argc, char **argv)
 	}
 
 
-/*
-	// ---- Assignment of '\0' into the middle of the string buffer --
-	// causes problems as of 2003-04-29.  wenger
     b3a = "Eddy Merckx";
-	b3a[5] = '\0';
+	b3a.setChar(5, '\0');
 	if (b3a.Length() == (int)strlen(b3a.GetCStr())) {
-	    printf("OK: operator[] assignment worked in line %d.\n", __LINE__);
+	    printf("OK: setChar worked in line %d.\n", __LINE__);
 	} else {
-	    printf("FAILED: operator[] assignment produces length conflict "
+	    printf("FAILED: setChar produces length conflict "
 				"in line %d.\n", __LINE__);
 		everythingOkay = false;
 	}
-*/
 
     // ---- Test making a string *shorter* with reserve().
 	b3a = "Miguel Indurain";
@@ -371,7 +399,91 @@ int main (int argc, char **argv)
 		everythingOkay = false;
 	}
 
+    // ---- Test tokenizing functions.
+	MyString tt1("To  be or not to be; that is the question");
 
+	// Make sure that calling GetNextToken() before calling Tokenize()
+	// returns NULL...
+	if ( tt1.GetNextToken(" ;", false) == NULL ) {
+	   	printf("OK: GetNextToken() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: GetNextToken() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
+	MyString tt2("    Ottavio Bottechia_");
+	tt1.Tokenize();
+	tt2.Tokenize();
+
+	const char *token = tt2.GetNextToken(" ", true);
+	if ( token != NULL && !strcmp(token, "Ottavio") ) {
+	   	printf("OK: GetNextToken() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: GetNextToken() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
+	const char *tokens[] = {"To", "", "be", "or", "not", "to", "be", "",
+			"that", "is", "the", "question"};
+	int tokCount = sizeof(tokens) / sizeof(tokens[0]);
+	for ( int tokNum = 0; tokNum < tokCount; tokNum++ ) {
+		token = tt1.GetNextToken(" ;", false);
+		if ( token != NULL && !strcmp(token, tokens[tokNum]) ) {
+	    	printf("OK: GetNextToken() worked in line %d.\n", __LINE__);
+		} else {
+	    	printf("FAILED: GetNextToken() error in line %d.\n", __LINE__);
+			everythingOkay = false;
+		}
+	}
+	if ( tt1.GetNextToken(" ;", false) == NULL ) {
+	   	printf("OK: GetNextToken() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: GetNextToken() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
+	// Make sure that if we call GetNextToken() after we've hit the
+	// end things are still okay...
+	if ( tt1.GetNextToken(" ;", false) == NULL ) {
+	   	printf("OK: GetNextToken() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: GetNextToken() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
+
+
+
+	token = tt2.GetNextToken("_", false);
+	if ( token != NULL && !strcmp(token, "Bottechia") ) {
+	   	printf("OK: GetNextToken() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: GetNextToken() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
+	// Make sure tokenizing works on an empty string.
+	MyString	tt3;
+	tt3.Tokenize();
+	if ( tt3.GetNextToken(" ", false) == NULL ) {
+	   	printf("OK: GetNextToken() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: GetNextToken() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
+	// Make sure we can handle an empty delimiter string.
+	MyString	tt4("foobar");
+	tt4.Tokenize();
+	if ( tt4.GetNextToken("", false) == NULL ) {
+	   	printf("OK: GetNextToken() worked in line %d.\n", __LINE__);
+	} else {
+	   	printf("FAILED: GetNextToken() error in line %d.\n", __LINE__);
+		everythingOkay = false;
+	}
+
+
+    // ---- Final summary.
 	printf("\n");
 	if (everythingOkay) {
 	    printf("All tests OK!\n");

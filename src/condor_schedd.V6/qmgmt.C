@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "condor_io.h"
@@ -40,7 +40,9 @@
 #include "condor_ckpt_name.h"
 #include "scheduler.h"	// for shadow_rec definition
 #include "condor_email.h"
+#include "condor_universe.h"
 #include "globus_utils.h"
+#include "env.h"
 
 extern char *Spool;
 extern char *Name;
@@ -52,13 +54,15 @@ extern "C" {
 	int	prio_compar(prio_rec*, prio_rec*);
 }
 
+
+
 extern	int		Parse(const char*, ExprTree*&);
 extern  void    cleanup_ckpt_files(int, int, const char*);
 extern	bool	service_this_universe(int, ClassAd *);
 static ReliSock *Q_SOCK = NULL;
 
 int		do_Q_request(ReliSock *);
-void	FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, 
+void	FindRunnableJob(PROC_ID & jobid, const ClassAd* my_match_ad,
 					 char * user);
 void	FindPrioJob(PROC_ID &);
 int		Runnable(PROC_ID*);
@@ -83,9 +87,9 @@ const char HeaderKey[] = "0.0";
 
 static void AppendHistory(ClassAd*);
 
-// Create a hash table which, given a cluster id, tells how 
+// Create a hash table which, given a cluster id, tells how
 // many procs are in the cluster
-static inline int compute_clustersize_hash(const int &key,int numBuckets) { 
+static inline int compute_clustersize_hash(const int &key,int numBuckets) {
 	return ( key % numBuckets );
 }
 typedef HashTable<int, int> ClusterSizeHashTable_t;
@@ -93,7 +97,7 @@ static ClusterSizeHashTable_t *ClusterSizeHashTable = 0;
 
 static char	**super_users = NULL;
 static int	num_super_users = 0;
-static char *default_super_user = 
+static char *default_super_user =
 #if defined(WIN32)
 	"Administrator";
 #else
@@ -102,7 +106,7 @@ static char *default_super_user =
 
 //static int allow_remote_submit = FALSE;
 
-static 
+static
 char *
 IdToStr(int cluster, int proc)
 {
@@ -227,7 +231,7 @@ InitJobQueue(const char *job_queue_name)
 	HashKey key;
 	int 	cluster_num, cluster, proc, universe;
 	int		stored_cluster_num;
-	int 	*numOfProcs = NULL;	
+	int 	*numOfProcs = NULL;
 	bool	CreatedAd = false;
 	char	cluster_str[40];
 	char	owner[_POSIX_PATH_MAX];
@@ -312,7 +316,7 @@ InitJobQueue(const char *job_queue_name)
 
 			if( !ad->LookupInteger( ATTR_JOB_UNIVERSE, universe ) ) {
 				dprintf( D_ALWAYS,
-						 "Job %s has no %s attribute.  Removing....\n", 
+						 "Job %s has no %s attribute.  Removing....\n",
 						 tmp, ATTR_JOB_UNIVERSE );
 				JobQueue->DestroyClassAd( tmp );
 				continue;
@@ -321,9 +325,9 @@ InitJobQueue(const char *job_queue_name)
 				// Figure out what ATTR_USER *should* be for this job
 			int nice_user = 0;
 			ad->LookupInteger( ATTR_NICE_USER, nice_user );
-			sprintf( correct_user, "%s%s@%s", 
-					 (nice_user) ? "nice-user." : "", owner, 
-					 scheduler.uidDomain() );  
+			sprintf( correct_user, "%s%s@%s",
+					 (nice_user) ? "nice-user." : "", owner,
+					 scheduler.uidDomain() );
 
 			if (!ad->LookupString(ATTR_USER, user)) {
 				dprintf( D_FULLDEBUG,
@@ -349,7 +353,7 @@ InitJobQueue(const char *job_queue_name)
 
 				// Make sure ATTR_SCHEDULER is correct.
 				// XXX TODO: Need a better way than hard-coded
-				// universe check to decide if a job is "dedicated" 
+				// universe check to decide if a job is "dedicated"
 			if( universe == CONDOR_UNIVERSE_MPI ||
 				universe == CONDOR_UNIVERSE_PARALLEL ) {
 				if( !ad->LookupString(ATTR_SCHEDULER, attr_scheduler) ) { 
@@ -357,7 +361,7 @@ InitJobQueue(const char *job_queue_name)
 							 "Inserting one now...\n", tmp,
 							 ATTR_SCHEDULER );
 					sprintf( buf, "%s = \"%s\"", ATTR_SCHEDULER,
-							 correct_scheduler ); 
+							 correct_scheduler );
 					ad->Insert( buf );
 					JobQueueDirty = true;
 				} else {
@@ -372,13 +376,13 @@ InitJobQueue(const char *job_queue_name)
 								 "Inserting correct value now...\n",
 								 tmp, ATTR_SCHEDULER );
 						sprintf( buf, "%s = \"%s\"", ATTR_SCHEDULER,
-								 correct_scheduler ); 
+								 correct_scheduler );
 						ad->Insert( buf );
 						JobQueueDirty = true;
 					}
 				}
 			}
-				
+
 
 			// count up number of procs in cluster, update ClusterSizeHashTable
 			if ( ClusterSizeHashTable->lookup(cluster_num,numOfProcs) == -1 ) {
@@ -482,7 +486,7 @@ grow_prio_recs( int newsize )
 
 
 bool
-isQueueSuperUser( const char* user ) 
+isQueueSuperUser( const char* user )
 {
 	int i;
 	if( ! (user && super_users) ) {
@@ -498,7 +502,7 @@ isQueueSuperUser( const char* user )
 
 
 // Test if this owner matches my owner, so they're allowed to update me.
-int
+bool
 OwnerCheck(ClassAd *ad, const char *test_owner)
 {
 	char	my_owner[_POSIX_PATH_MAX];
@@ -510,7 +514,7 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 	// a QMGMT command internally which is allowed.
 	if (test_owner == NULL) {
 		dprintf(D_ALWAYS,"QMGT command failed: anonymous user not permitted\n" );
-		return 0;
+		return false;
 	}
 
 	// check if the IP address of the peer has daemon core write permission
@@ -521,7 +525,7 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 		// this machine does not have write permission; return failure
 		dprintf(D_ALWAYS,"QMGT command failed: no WRITE permission for %s\n",
 			Q_SOCK->endpoint_ip_str() );
-		return 0;
+		return false;
 	}
 
 	// The super users are always allowed to do updates.  They are
@@ -529,7 +533,7 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 	// config file.  Defaults to root and condor.
 	if( isQueueSuperUser(test_owner) ) {
 		dprintf( D_FULLDEBUG, "OwnerCheck retval 1 (success), super_user\n" );
-		return 1;
+		return true;
 	}
 
 #if !defined(WIN32) 
@@ -540,14 +544,14 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 		if( strcmp(get_real_username(), test_owner) == MATCH ) {
 			dprintf(D_FULLDEBUG, "OwnerCheck success: owner (%s) matches "
 					"my username\n", test_owner );
-			return 1;
+			return true;
 		} else {
 			errno = EACCES;
 			dprintf( D_FULLDEBUG, "OwnerCheck: reject owner: %s non-super\n",
 					 test_owner );
 			dprintf( D_FULLDEBUG, "OwnerCheck: username: %s, test_owner: %s\n",
 					 get_real_username(), test_owner );
-			return 0;
+			return false;
 		}
 	}
 #endif
@@ -556,11 +560,11 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 		// gotten this far, how can we deny service?
 	if( !ad ) {
 		dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success),no ad\n");
-		return 1;
+		return true;
 	}
 	if( ad->LookupString(ATTR_OWNER, my_owner) == 0 ) {
 		dprintf(D_FULLDEBUG,"OwnerCheck retval 1 (success),no owner\n");
-		return 1;
+		return true;
 	}
 
 		// Finally, compare the owner of the ad with the entity trying
@@ -571,10 +575,10 @@ OwnerCheck(ClassAd *ad, const char *test_owner)
 #endif
 		dprintf( D_FULLDEBUG, "ad owner: %s, queue submit owner: %s\n",
 				my_owner, test_owner );
-		return 0;
+		return false;
 	} 
 	else {
-		return 1;
+		return true;
 	}
 }
 
@@ -611,10 +615,10 @@ handle_q(Service *, int, Stream *sock)
 
 	// store the cluster num so when we commit the transaction, we can easily
 	// see if new clusters have been submitted and thus make links to cluster ads
-	old_cluster_num = next_cluster_num;	
+	old_cluster_num = next_cluster_num;
 
 	// initialize per-connection variables.  back in the day this
-	// was essentially InvalidateConnection().  of particular 
+	// was essentially InvalidateConnection().  of particular
 	// importance is setting Q_SOCK... this tells the rest of the QMGMT
 	// code the request is from an external user instead of originating
 	// from within the schedd itself.
@@ -629,8 +633,8 @@ handle_q(Service *, int, Stream *sock)
 	} while(rval >= 0);
 
 
-	// reset the per-connection variables.  of particular 
-	// importance is setting Q_SOCK back to NULL. this tells the rest of 
+	// reset the per-connection variables.  of particular
+	// importance is setting Q_SOCK back to NULL. this tells the rest of
 	// the QMGMT code the request originated internally, and it should
 	// be permitted (i.e. we only call OwnerCheck if Q_SOCK is not NULL).
 	//Q_SOCK->unAuthenticate();
@@ -643,26 +647,26 @@ handle_q(Service *, int, Stream *sock)
 	// be committed in CloseConnection().
 	if ( JobQueue->AbortTransaction() ) {
 		/*	If we made it here, a transaction did exist that was not
-			committed, and we now aborted it.  This would happen if 
+			committed, and we now aborted it.  This would happen if
 			somebody hit ctrl-c on condor_rm or condor_status, etc,
 			or if any of these client tools bailed out due to a fatal error.
 			Because the removal of ads from the queue has been backed out,
 			we need to "back out" from any changes to the ClusterSizeHashTable,
 			since this may now contain incorrect values.  Ideally, the size of
-			the cluster should just be kept in the cluster ad -- that way, it 
-			gets committed or aborted as part of the transaction.  But alas, 
-			it is not; same goes a bunch of other stuff: removal of ckpt and 
-			ickpt files, appending to the history file, etc.  Sigh.  
+			the cluster should just be kept in the cluster ad -- that way, it
+			gets committed or aborted as part of the transaction.  But alas,
+			it is not; same goes a bunch of other stuff: removal of ckpt and
+			ickpt files, appending to the history file, etc.  Sigh.
 			This should be cleaned up someday, probably with the new schedd.
 			For now, to "back out" from changes to the ClusterSizeHashTable, we
-			use brute force and blow the whole thing away and recompute it. 
+			use brute force and blow the whole thing away and recompute it.
 			-Todd 2/2000
 		*/
 		ClusterSizeHashTable->clear();
 		ClassAd *ad;
 		HashKey key;
 		const char *tmp;
-		int 	*numOfProcs = NULL;	
+		int 	*numOfProcs = NULL;
 		int cluster_num;
 		JobQueue->StartIterateAllClassAds();
 		while (JobQueue->IterateAllClassAds(ad,key)) {
@@ -683,6 +687,61 @@ handle_q(Service *, int, Stream *sock)
 	}	// end of if JobQueue->AbortTransaction == True
 
 	return 0;
+}
+
+int GetMyProxyPassword (int, int, char **);
+
+int get_myproxy_password_handler(Service * service, int i, Stream *socket) {
+
+	//	For debugging
+//	DebugFP = stderr;
+
+	int cluster_id;
+	int proc_id;
+	int result;
+
+	socket->decode();
+
+	result = socket->code(cluster_id);
+	if( !result ) {
+		dprintf(D_ALWAYS, "get_myproxy_password_handler: Failed to recv cluster_id.\n");
+		return -1;
+	}
+
+	result = socket->code(proc_id);
+	if( !result ) {
+		dprintf(D_ALWAYS, "get_myproxy_password_handler: Failed to recv proc_id.\n");
+		return -1;
+	}
+
+	char * password = "";
+
+	if (GetMyProxyPassword (cluster_id, proc_id, &password) != 0) {
+		// Try not specifying a proc
+		if (GetMyProxyPassword (cluster_id, 0, &password) != 0) {
+			//return -1;
+			// Just return empty string if can't find password
+		}
+	}
+
+
+	socket->eom();
+	socket->encode();
+	if( ! socket->code(password) ) {
+		dprintf( D_ALWAYS,
+			"get_myproxy_password_handler: Failed to send result.\n" );
+		return -1;
+	}
+
+	if( ! socket->eom() ) {
+		dprintf( D_ALWAYS,
+			"get_myproxy_password_handler: Failed to send end of message.\n");
+		return -1;
+	}
+
+
+	return 0;
+
 }
 
 
@@ -706,7 +765,7 @@ NewCluster()
 {
 //	LogSetAttribute *log;
 	char cluster_str[40];
-	
+
 	if( Q_SOCK && !OwnerCheck(NULL, Q_SOCK->getOwner()  ) ) {
 		dprintf( D_FULLDEBUG, "NewCluser(): OwnerCheck failed\n" );
 		return -1;
@@ -758,8 +817,24 @@ NewProc(int cluster_id)
 		(*numOfProcs)++;
 	}
 
+		// now that we have a real job ad with a valid proc id, then
+		// also insert the appropriate GlobalJobId while we're at it.
+	MyString gjid = "\"";
+	gjid += Name;             // schedd's name
+	int now = (int)time(0);
+	gjid += "#";
+	gjid += now;
+	gjid += "#";
+	gjid += cluster_id;
+	gjid += ".";
+	gjid += proc_id;
+	gjid += "\"";
+	JobQueue->SetAttribute( key, ATTR_GLOBAL_JOB_ID, gjid.Value() );
+
 	return proc_id;
 }
+
+int 	DestroyMyProxyPassword (int cluster_id, int proc_id);
 
 int DestroyProc(int cluster_id, int proc_id)
 {
@@ -836,7 +911,7 @@ int DestroyProc(int cluster_id, int proc_id)
 		// fetched out of the hash table via the call to lookup() above.
 		(*numOfProcs)--;
 
-		// If this is the last job in the cluster, remove the initial 
+		// If this is the last job in the cluster, remove the initial
 		//    checkpoint file and the entry in the ClusterSizeHashTable.
 		if ( *numOfProcs == 0 ) {
 			ClusterCleanup(cluster_id);
@@ -845,6 +920,10 @@ int DestroyProc(int cluster_id, int proc_id)
 
 		// remove any match (startd) ad stored w/ this job
 	RemoveMatchedAd(cluster_id,proc_id);
+
+
+	// ckireyev: Destroy MyProxyPassword
+	(void)DestroyMyProxyPassword (cluster_id, proc_id);
 
 	JobQueueDirty = true;
 
@@ -903,7 +982,7 @@ int DestroyCluster(int cluster_id)
 //				JobQueue->AppendLog(log);
 
 				JobQueue->DestroyClassAd(key.value());
-					
+
 					// remove any match (startd) ad stored w/ this job
 				if ( scheduler.resourcesByProcID ) {
 					ClassAd *ad_to_remove = NULL;
@@ -921,8 +1000,11 @@ int DestroyCluster(int cluster_id)
 	}
 
 	ClusterCleanup(cluster_id);
+	
+	// Destroy myproxy password
+	DestroyMyProxyPassword (cluster_id, -1);
 
-	JobQueueDirty = true; 
+	JobQueueDirty = true;
 
 	return 0;
 }
@@ -975,7 +1057,7 @@ static bool EvalBool(ClassAd *ad, const char *constraint)
 	else if( result.IsIntegerValue( intValue ) ) {
 		return (bool)intValue;
 	}
-	dprintf(D_ALWAYS, "contraint (%s) does not evaluate to bool\n", 
+	dprintf(D_ALWAYS, "contraint (%s) does not evaluate to bool\n",
 		constraint);
 	return false;
 }
@@ -1035,7 +1117,7 @@ SetAttributeByConstraint(const char *constraint, const char *attr_name,
 						 const char *attr_value)
 {
 	ClassAd	*ad;
-	int cluster_num, proc_num;	
+	int cluster_num, proc_num;
 	int found_one = 0, had_error = 0;
 	HashKey key;
 
@@ -1094,10 +1176,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			return -1;
 		}
 	}
-		
+
 	// check for security violations.
 	// first, make certain ATTR_OWNER can only be set to who they really are.
-	if (stricmp(attr_name, ATTR_OWNER) == 0) 
+	if (stricmp(attr_name, ATTR_OWNER) == 0)
 	{
 		if ( !Q_SOCK ) {
 			EXCEPT( "Trying to setAttribute( ATTR_OWNER ) and Q_SOCK is NULL" );
@@ -1140,11 +1222,11 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			}
 		}
 		GetAttributeInt( cluster_id, proc_id, ATTR_NICE_USER,
-						 &nice_user ); 
+						 &nice_user );
 		sprintf( user, "\"%s%s@%s\"", (nice_user) ? "nice-user." : "",
-				 owner, scheduler.uidDomain() );  
+				 owner, scheduler.uidDomain() );
 		SetAttribute( cluster_id, proc_id, ATTR_USER, user );
-	} 
+	}
 	else if (stricmp(attr_name, ATTR_CLUSTER_ID) == 0) {
 		if (atoi(attr_value) != cluster_id) {
 #if !defined(WIN32)
@@ -1154,7 +1236,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				atoi(attr_value), cluster_id);
 			return -1;
 		}
-	} 
+	}
 	else if (stricmp(attr_name, ATTR_NICE_USER) == 0) {
 			// Because we're setting a new value for nice user, we
 			// should create a new value for ATTR_USER while we're at
@@ -1167,18 +1249,18 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		if( ! stricmp(attr_value, "TRUE") ) {
 			nice_user = true;
 		}
-		if( GetAttributeString(cluster_id, proc_id, ATTR_OWNER, owner_buf) 
+		if( GetAttributeString(cluster_id, proc_id, ATTR_OWNER, owner_buf)
 			>= 0 ) {
-				// carefully strip off any '"' marks from ATTR_OWNER.  
+				// carefully strip off any '"' marks from ATTR_OWNER.
 			if( *owner == '"' ) {
 				owner++;
 				int endquoteindex = strlen(owner) - 1;
-				if ( endquoteindex >= 0 && owner[endquoteindex] == '"' ) { 
+				if ( endquoteindex >= 0 && owner[endquoteindex] == '"' ) {
 					owner[endquoteindex] = '\0';
 				}
 			}
 			sprintf( user, "\"%s%s@%s\"", (nice_user) ? "nice-user." :
-					 "", owner, scheduler.uidDomain() );  
+					 "", owner, scheduler.uidDomain() );
 			SetAttribute( cluster_id, proc_id, ATTR_USER, user );
 		}
 	}
@@ -1200,6 +1282,169 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	JobQueueDirty = true;
 
 	return 0;
+}
+
+char * simple_encode (int key, const char * src);
+char * simple_decode (int key, const char * src);
+
+// Store a simply-encoded attribute
+int
+SetMyProxyPassword (int cluster_id, int proc_id, const char *pwd) {
+
+	// This is sortof a hack
+	if (proc_id == -1)	{
+		proc_id = 0;
+	}
+
+	// Create filename
+	char filename[_POSIX_PATH_MAX];
+	sprintf (filename, "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
+
+	// Swith to root temporarily
+	priv_state old_priv = set_root_priv();
+	// Delete the file
+	struct stat stat_buff;
+	if (stat (filename, &stat_buff) == 0) {
+		// If the exists, delete it
+		if (unlink (filename)) {
+			set_priv(old_priv);
+			return -1;
+		}
+	}
+
+	// Create the file
+	int fd = open (filename, O_CREAT | O_WRONLY, S_IREAD | S_IWRITE);
+	if (fd < 0) {
+		set_priv(old_priv);
+		return -1;
+	}
+
+	char * encoded_value = simple_encode (cluster_id+proc_id, pwd);
+	int len = strlen(encoded_value);
+	if (write (fd, encoded_value, len) != len) {
+		set_priv(old_priv);
+		return -1;
+	}
+	close (fd);
+
+	// Switch back to non-priviledged user
+	set_priv(old_priv);
+
+	free (encoded_value);
+
+	return 0;
+
+}
+
+
+int
+DestroyMyProxyPassword( int cluster_id, int proc_id )
+{
+	MyString filename;
+	filename.sprintf( "%s%cmpp.%d.%d", Spool, DIR_DELIM_CHAR,
+					  cluster_id, proc_id );
+
+  	// Swith to root temporarily
+	priv_state old_priv = set_root_priv();
+
+	// Delete the file
+	struct stat stat_buff;
+	if( stat(filename.Value(), &stat_buff) == 0 ) {
+			// If the exists, delete it
+		if( unlink( filename.Value()) < 0 ) {
+			dprintf( D_ALWAYS, "unlink(%s) failed: errno %d (%s)\n",
+					 filename.Value(), errno, strerror(errno) );
+		 	set_priv(old_priv);
+			return -1;
+
+		}
+		dprintf( D_FULLDEBUG, "Destroyed MPP %d.%d: %s\n", cluster_id, 
+				 proc_id, filename.Value() );
+	}
+
+	// Switch back to non-root
+	set_priv(old_priv);
+
+	return 0;
+}
+
+
+int GetMyProxyPassword (int cluster_id, int proc_id, char ** value) {
+	// Create filename
+
+	// Swith to root temporarily
+	priv_state old_priv = set_root_priv();
+	
+	char filename[_POSIX_PATH_MAX];
+	sprintf (filename, "%s/mpp.%d.%d", Spool, cluster_id, proc_id);
+	int fd = open (filename, O_RDONLY);
+	if (fd < 0) {
+		set_priv(old_priv);
+		return -1;
+	}
+
+	char buff[_POSIX_PATH_MAX];
+	int bytes = read (fd, buff, _POSIX_PATH_MAX);
+	buff [bytes] = '\0';
+
+	close (fd);
+
+	// Switch back to non-priviledged user
+	set_priv(old_priv);
+
+	*value = simple_decode (cluster_id + proc_id, buff);
+	return 0;
+}
+
+
+
+
+const char * mesh = "Rr1aLvzki/#6`QeNoWl^\"(!x\'=OE3HBn [A)GtKu?TJ.mdS9%Fh;<\\+w~4yPDIq>2Ufs$Xc_@g0Y5Mb|{&*}]7,CpV-j:8Z";
+
+char * simple_encode (int key, const char * src) {
+
+  char * result = (char*)strdup (src);
+
+  char buff[2];
+  buff [1]='\n';
+
+  unsigned int i= 0;
+  for (; i<strlen (src); i++) {
+    int c = (int)src[i]-(int)' ';
+    c=(c+key)%strlen(mesh);
+    result[i]=mesh[c];
+  }
+
+  return result;
+}
+
+char * simple_decode (int key, const char * src) {
+  char * result = (char*)strdup (src);
+
+  char buff[2];
+  buff[1]='\0';
+
+  unsigned int i= 0;
+  unsigned int j =0;
+  unsigned int c =0;
+
+  for (; j<strlen(src); j++) {
+
+	//
+    for (i=0; i<strlen (mesh); i++) {
+      if (mesh[i] == src[j]) {
+		c = i;
+		break;
+		}
+    }
+
+    c=(c+strlen(mesh)-(key%strlen(mesh)))%strlen(mesh);
+    
+    sprintf(buff, "%c", c+(int)' ');
+    result[j]=buff[0];
+    
+  }
+  return result;
 }
 
 
@@ -1230,7 +1475,7 @@ CloseConnection()
 	JobQueue->CommitTransaction();
 		// If this failed, the schedd will EXCEPT.  So, if we got this
 		// far, we can always return success.  -Derek Wright 4/2/99
-	
+
 	// Now that the transaction has been commited, we need to chain proc
 	// ads to cluster ads if any new clusters have been submitted.
 	if ( old_cluster_num != next_cluster_num ) {
@@ -1800,6 +2045,65 @@ GetJobAd(int cluster_id, int proc_id, bool expStartdAd)
 			}
 		}
 
+
+		if ( startd_ad && job_universe != CONDOR_UNIVERSE_GLOBUS ) {
+			//Convert environment delimiters to syntax expected by target.
+			//In windows, the delimiter is '|'.  In Unix, it is ';'.
+			char* new_env = NULL;
+			char* job_env = NULL;
+			ad->LookupString( ATTR_JOB_ENVIRONMENT, &job_env );
+			Env env_obj;
+			env_obj.Merge( job_env );
+			bool has_env = (job_env != NULL && *job_env);
+			free( job_env );
+			job_env = NULL; 
+
+			if(has_env) {
+				char* opsys = NULL;
+				startd_ad->LookupString( ATTR_OPSYS, &opsys );
+				env_obj.GenerateParseMessages();
+				new_env = env_obj.getDelimitedStringForOpSys(opsys);
+				if( ! new_env ) {
+					attribute_not_found = true;
+					MyString hold_reason;
+					char const *err_msg = env_obj.GetParseMessages();
+					hold_reason.sprintf(
+					  "Failed to convert environment to target syntax"
+					  " for %s: %s\n",
+					  opsys ? opsys : "NULL",err_msg);
+
+
+					dprintf( D_ALWAYS, 
+					  "Putting job %d.%d on hold - cannot convert environment"
+					  " to target syntax for %s: %s\n",
+					  cluster_id, proc_id, opsys ? opsys : "NULL", err_msg );
+
+					// SetAttribute does security checks if Q_SOCK is
+					// not NULL.  So, set Q_SOCK to be NULL before
+					// placing the job on hold so that SetAttribute
+					// knows this request is not coming from a client.
+					// Then restore Q_SOCK back to the original value.
+
+					ReliSock* saved_sock = Q_SOCK;
+					Q_SOCK = NULL;
+					holdJob(cluster_id, proc_id, hold_reason.Value());
+					Q_SOCK = saved_sock;
+				}
+				else {
+					dprintf(D_FULLDEBUG,
+					  "Environment for target OpSys (%s): %s\n",opsys,new_env);
+					expanded_ad->Assign( ATTR_JOB_ENVIRONMENT, new_env );
+				}
+				if(new_env) {
+					delete[] new_env;
+				}
+				if(opsys) {
+					free( opsys );
+					opsys = NULL;
+				}
+			}
+		}
+
 		if ( attribute_value ) free(attribute_value);
 		if ( bigbuf2 ) free (bigbuf2);
 
@@ -1914,8 +2218,9 @@ SendSpoolFile(char *filename)
 	Q_SOCK->eom();
 
 	/* Read file size from client. */
+	filesize_t	size;
 	Q_SOCK->decode();
-	if (Q_SOCK->get_file(path) < 0) {
+	if (Q_SOCK->get_file(&size, path) < 0) {
 		dprintf(D_ALWAYS, "Failed to receive file from client in SendSpoolFile.\n");
 		Q_SOCK->eom();
 		return -1;
@@ -1961,8 +2266,20 @@ int get_job_prio(ClassAd *job)
 	int 	niceUser;
 	int		universe;
 
+	ASSERT(job);
+
 	buf[0] = '\0';
 	owner[0] = '\0';
+
+		// We must call getAutoClusterid() in get_job_prio!!!  We CANNOT
+		// return from this function before we call getAutoClusterid(), so call
+		// it early on (before any returns) right now.  The reason for this is
+		// getAutoClusterid() performs a mark/sweep algorithm to garbage collect
+		// old autocluster information.  If we fail to call getAutoClusterid, the
+		// autocluster information for this job will be removed, causing the schedd
+		// to ASSERT later on in the autocluster code. 
+		// Quesitons?  Ask Todd <tannenba@cs.wisc.edu> 01/04
+	int auto_id = scheduler.autocluster.getAutoClusterid(job);
 
 	job->LookupInteger(ATTR_JOB_UNIVERSE, universe);
 	job->LookupInteger(ATTR_JOB_STATUS, job_status);
@@ -1992,7 +2309,11 @@ int get_job_prio(ClassAd *job)
 		strcpy(owner,NiceUserName);
 		strcat(owner,".");
 	}
-    job->LookupString(ATTR_OWNER, buf);
+	buf[0] = '\0';
+	job->LookupString(ATTR_ACCOUNTING_GROUP,buf,sizeof(buf));  // TODDCORE
+	if ( buf[0] == '\0' ) {
+		job->LookupString(ATTR_OWNER, buf, sizeof(buf));  
+	}
 	strcat(owner,buf);
 		// Note, we should use this method instead of just looking up
 		// ATTR_USER directly, since that includes UidDomain, which we
@@ -2010,7 +2331,6 @@ int get_job_prio(ClassAd *job)
     PrioRec[N_PrioRecs].job_prio = job_prio;
     PrioRec[N_PrioRecs].status   = job_status;
     PrioRec[N_PrioRecs].qdate    = q_date;
-	int auto_id = scheduler.autocluster.getAutoClusterid(job);
 	if ( auto_id == -1 ) {
 		PrioRec[N_PrioRecs].auto_cluster_id = id.cluster;
 	} else {
@@ -2028,12 +2348,50 @@ int get_job_prio(ClassAd *job)
 	return cur_hosts;
 }
 
+static bool
+jobLeaseIsValid( ClassAd* job, int cluster, int proc )
+{
+	int last_renewal, duration;
+	time_t now;
+	if( ! job->LookupInteger(ATTR_JOB_LEASE_DURATION, duration) ) {
+		return false;
+	}
+	if( ! job->LookupInteger(ATTR_LAST_JOB_LEASE_RENEWAL, last_renewal) ) {
+		return false;
+	}
+	now = time(0);
+	int diff = now - last_renewal;
+	int remaining = duration - diff;
+	dprintf( D_FULLDEBUG, "%d.%d: %s is defined: %d\n", cluster, proc, 
+			 ATTR_JOB_LEASE_DURATION, duration );
+	dprintf( D_FULLDEBUG, "%d.%d: now: %d, last_renewal: %d, diff: %d\n", 
+			 cluster, proc, (int)now, last_renewal, diff );
+
+	if( remaining <= 0 ) {
+		dprintf( D_ALWAYS, "%d.%d: %s remaining: EXPIRED!\n", 
+				 cluster, proc, ATTR_JOB_LEASE_DURATION );
+		return false;
+	} 
+	dprintf( D_ALWAYS, "%d.%d: %s remaining: %d\n", cluster, proc,
+			 ATTR_JOB_LEASE_DURATION, remaining );
+	return true;
+}
+
 extern void mark_job_stopped(PROC_ID* job_id);
 
 int mark_idle(ClassAd *job)
 {
     int     status, cluster, proc, hosts, job_managed, universe;
 	PROC_ID	job_id;
+	static char birthdateAttr[200];
+	static time_t bDay = 0;
+
+		// Update ATTR_SCHEDD_BIRTHDATE in job ad at startup
+	if (bDay == 0) {
+		bDay = time(NULL);
+		sprintf(birthdateAttr,"%s=%d",ATTR_SCHEDD_BIRTHDATE,bDay);
+	}
+	job->Insert(birthdateAttr);
 
 	if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) < 0) {
 		universe = CONDOR_UNIVERSE_STANDARD;
@@ -2047,6 +2405,15 @@ int mark_idle(ClassAd *job)
 			// in control.  stay out of its way!  -Todd 9/13/02
 			return 1;
 		}
+	}
+
+	int mirror_active = 0;
+	job->LookupBool(ATTR_MIRROR_ACTIVE, mirror_active);
+	if ( mirror_active ) {
+		// Don't touch a job that has an active mirror.  Once we are in count jobs, we will
+		// startup a gridmanager for this job that will retrieve the current job status from
+		// our schedd mirror.
+		return 1;
 	}
 
 	job->LookupInteger(ATTR_CLUSTER_ID, cluster);
@@ -2086,7 +2453,15 @@ int mark_idle(ClassAd *job)
 						 (int)time(0) );
 	}
 	else if ( status == RUNNING || hosts > 0 ) {
-		mark_job_stopped(&job_id);
+		if( universeCanReconnect(universe) &&
+			jobLeaseIsValid(job, cluster, proc) )
+		{
+			dprintf( D_FULLDEBUG, "Job %d.%d might still be alive, "
+					 "spawning shadow to reconnect\n", cluster, proc );
+			scheduler.enqueueReconnectJob( job_id );
+		} else {
+			mark_job_stopped(&job_id);
+		}
 	}
 		
 	int wall_clock_ckpt = 0;
@@ -2247,7 +2622,8 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad, char * user)
 			constraint += strlen(constraintbuf);
 		}
 
-		sprintf(constraint, "(%s == \"%s\")", ATTR_OWNER, user);
+		sprintf(constraint, "((%s =?= \"%s\") || (%s =?= UNDEFINED && %s =?= \"%s\"))", 
+			ATTR_ACCOUNTING_GROUP,user,ATTR_ACCOUNTING_GROUP,ATTR_OWNER,user);  // TODDCORE
 
 			// OK, we're finished building the constraint now, so set
 			// the constraint pointer to the head of the string.

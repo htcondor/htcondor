@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-2003 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
- ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
 #include "job.h"
@@ -48,26 +48,50 @@ const char * Job::status_t_names[] = {
     "STATUS_ERROR    ",
 };
 
+// NOTE: must be kept in sync with the job_type_t enum
+const char* Job::_job_type_names[] = {
+    "Condor",
+    "Stork",
+    "No-Op",
+};
+
 //---------------------------------------------------------------------------
 Job::~Job() {
 	delete [] _cmdFile;
-	delete [] _jobName;
+	delete [] (char*)_jobName;
 	delete [] _logFile;
 	delete varNamesFromDag;
 	delete varValsFromDag;
 }
 
-//---------------------------------------------------------------------------
-Job::Job (const char *jobName, const char *cmdFile):
-	job_type (CONDOR_JOB),
-    _scriptPre  (NULL),
-    _scriptPost (NULL),
-    _Status     (STATUS_READY),
-	countedAsDone (false),
-	_waitingCount (0)
+Job::
+Job( const char* jobName, const char* cmdFile ) :
+	_jobType( TYPE_CONDOR )
+{
+	Init( jobName, cmdFile );
+}
+
+
+Job::
+Job( const job_type_t jobType, const char* jobName, const char* cmdFile ) :
+	_jobType( jobType )
+{
+	Init( jobName, cmdFile );
+}
+
+
+void Job::
+Init( const char* jobName, const char* cmdFile )
 {
 	ASSERT( jobName != NULL );
 	ASSERT( cmdFile != NULL );
+
+    _scriptPre = NULL;
+    _scriptPost = NULL;
+    _Status = STATUS_READY;
+	countedAsDone = false;
+	_waitingCount = 0;
+
     _jobName = strnewp (jobName);
     _cmdFile = strnewp (cmdFile);
 
@@ -85,6 +109,8 @@ Job::Job (const char *jobName, const char *cmdFile):
 
 	varNamesFromDag = new List<MyString>;
 	varValsFromDag = new List<MyString>;
+
+	return;
 }
 
 //---------------------------------------------------------------------------
@@ -120,28 +146,14 @@ void Job::Dump () const {
 	if( retry_max > 0 ) {
 		dprintf( D_ALWAYS, "          Retry: %d\n", retry_max );
 	}
-	//-->DAP
 	if( _CondorID._cluster == -1 ) {
-	  if (job_type == CONDOR_JOB){
-	    dprintf( D_ALWAYS, "  Condor Job ID: [not yet submitted]\n" );
-	  }
-	  else if (job_type == DAP_JOB){
-	    dprintf( D_ALWAYS, "     DaP Job ID: [not yet submitted]\n" );
-	  }
+		dprintf( D_ALWAYS, "%8s Job ID: [not yet submitted]\n",
+				 JobTypeString() );
 	}
 	else {
-	  if (job_type == CONDOR_JOB){
-	  dprintf( D_ALWAYS, "  Condor Job ID: (%d.%d.%d)\n", _CondorID._cluster,
-		   _CondorID._proc, _CondorID._subproc );
-	  }
-	  else if (job_type == DAP_JOB){
-	    dprintf( D_ALWAYS, "     DaP Job ID: (%d)\n", _CondorID._cluster);
-	  }
+		dprintf( D_ALWAYS, "%7s Job ID: (%d.%d.%d)\n", JobTypeString(),
+				 _CondorID._cluster, _CondorID._proc, _CondorID._subproc );
 	}
-	//<--DAP
-
-
-
   
     for (int i = 0 ; i < 3 ; i++) {
         dprintf( D_ALWAYS, "%15s: ", queue_t_names[i] );
@@ -222,10 +234,68 @@ Job::GetStatus() const
 	return _Status;
 }
 
+
+bool
+Job::SetStatus( status_t newStatus )
+{
+		// TODO: add some state transition sanity-checking here?
+	_Status = newStatus;
+	return true;
+}
+
+
 bool
 Job::AddParent( Job* parent )
 {
-	ASSERT( parent != NULL );
+	bool success;
+	MyString whynot;
+	success = AddParent( parent, whynot );
+	if( !success ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: AddParent( %s ) failed for node %s: %s\n",
+					  parent ? parent->GetJobName() : "(null)",
+					  this->GetJobName(), whynot.Value() );
+	}
+	return success;
+}
+
+
+bool
+Job::AddParent( Job* parent, MyString &whynot )
+{
+	if( !this->CanAddParent( parent, whynot ) ) {
+		return false;
+	}
+	if( !Add( Q_PARENTS, parent->GetJobID() ) ) {
+		whynot = "unknown error appending to PARENTS queue";
+		return false;
+	}
+    if( parent->GetStatus() != STATUS_DONE ) {
+		if( !Add( Q_WAITING, parent->GetJobID() ) ) {
+            // this node's dependency queues are now out of sync and
+            // thus the DAG state is FUBAR, so we should bail...
+			ASSERT( false );
+			return false;
+		}
+		_waitingCount++;
+	}
+	whynot = "n/a";
+    return true;
+}
+
+
+bool
+Job::CanAddParent( Job* parent, MyString &whynot )
+{
+	if( !parent ) {
+		whynot = "parent == NULL";
+		return false;
+	}
+	if( this->HasParent( parent ) )
+	{
+		whynot = "dependency already exists";
+		return false;
+	}
 
 		// we don't currently allow a new parent to be added to a
 		// child that has already been started (unless the parent is
@@ -234,32 +304,62 @@ Job::AddParent( Job* parent )
 		// future once we figure out the right way for the DAG to
 		// respond...
 	if( _Status != STATUS_READY && parent->GetStatus() != STATUS_DONE ) {
-		debug_printf( DEBUG_QUIET, "ERROR: Job::AddParent(): can't add a new "
-					  "%s parent node (%s) to a %s child (%s)!\n",
-					  parent->GetStatusName(), parent->GetJobName(),
-					  this->GetStatusName(), this->GetJobName() );
+		whynot.sprintf( "%s child may not be given a new %s parent",
+						this->GetStatusName(), parent->GetStatusName() );
 		return false;
 	}
-
-	if( !Add( Q_PARENTS, parent->GetJobID() ) ) {
-		return false;
-	}
-    if( !Add( Q_WAITING, parent->GetJobID() ) ) {
-		return false;
-	}
-	_waitingCount++;
-    return true;
+	whynot = "n/a";
+	return true;
 }
+
 
 bool
 Job::AddChild( Job* child )
 {
-    ASSERT( child  != NULL );
-    if( !Add( Q_CHILDREN, child->GetJobID() ) ) {
+	bool success;
+	MyString whynot;
+	success = AddChild( child, whynot );
+	if( !success ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: AddChild( %s ) failed for node %s: %s\n",
+					  child ? child->GetJobName() : "(null)",
+					  this->GetJobName(), whynot.Value() );
+	}
+	return success;
+}
+
+
+bool
+Job::AddChild( Job* child, MyString &whynot )
+{
+	if( !this->CanAddChild( child, whynot ) ) {
 		return false;
 	}
+	if( !Add( Q_CHILDREN, child->GetJobID() ) ) {
+		whynot = "unknown error appending to CHILDREN queue";
+		return false;
+	}
+	whynot = "n/a";
+    return true;
+}
+
+
+bool
+Job::CanAddChild( Job* child, MyString &whynot )
+{
+	if( !child ) {
+		whynot = "child == NULL";
+		return false;
+	}
+	if( this->HasChild( child ) )
+	{
+		whynot = "dependency already exists";
+		return false;
+	}
+	whynot = "n/a";
 	return true;
 }
+
 
 bool
 Job::TerminateSuccess()
@@ -290,7 +390,7 @@ Job::Add( const queue_t queue, const JobID_t jobID )
 bool
 Job::AddPreScript( const char *cmd, MyString &whynot )
 {
-	return AddScript( false, cmd, whynot );
+return AddScript( false, cmd, whynot );
 }
 
 bool
@@ -365,6 +465,22 @@ Job::HasParent( Job* parent ) {
 
 
 bool
+Job::RemoveChild( Job* child )
+{
+	bool success;
+	MyString whynot;
+	success = RemoveChild( child, whynot );
+	if( !success ) {
+		debug_printf( DEBUG_QUIET,
+					  "ERROR: RemoveChild( %s ) failed for node %s: %s\n",
+                      child ? child->GetJobName() : "(null)",
+                      this->GetJobName(), whynot.Value() );
+	}
+	return success;
+}
+
+
+bool
 Job::RemoveChild( Job* child, MyString &whynot )
 {
 	if( !child ) {
@@ -373,6 +489,7 @@ Job::RemoveChild( Job* child, MyString &whynot )
 	}
 	return RemoveDependency( Q_CHILDREN, child->GetJobID(), whynot );
 }
+
 
 bool
 Job::RemoveParent( Job* parent, MyString &whynot )
@@ -406,4 +523,34 @@ Job::RemoveDependency( queue_t queue, JobID_t job, MyString &whynot )
     }
 	whynot = "no such dependency";
 	return false;
+}
+
+
+const Job::job_type_t
+Job::JobType() const
+{
+    return _jobType;
+}
+
+
+const char*
+Job::JobTypeString() const
+{
+    return _job_type_names[_jobType];
+}
+
+
+/*
+const char* Job::JobIdString() const
+{
+
+}
+*/
+
+
+const int
+Job::NumParents()
+{
+	int n = _queues[Q_PARENTS].Number();
+	return n;
 }

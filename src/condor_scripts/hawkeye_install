@@ -10,13 +10,32 @@ sub DoConfig( $$ );
 sub DoPrefs( $ );
 sub Lookup( $$ );
 
-# Check command line..
-my $Usage = "$0 [TargetDir [tarball]]";
+# Directories
+my $Usage = "$0 tarball TargetDir";
 my $TargetDir = "/home/hawkeye";
-my $TarBall = "TARBALL";
-$TargetDir = shift( @ARGV ) if ( $#ARGV >= 0 );
+my $TarBall = "";
+my $DataDir = ".";
+
+# Check command line..
 $TarBall = shift( @ARGV ) if ( $#ARGV >= 0 );
+$TargetDir = shift( @ARGV ) if ( $#ARGV >= 0 );
 my %Daemons;
+
+# Make sure we have a tarball..
+die "$Usage" if ( $TarBall eq "" );
+
+# Try to find the tarball
+if ( ! -f $TarBall )
+{
+    my @Path = split( /\/+/, $0 );
+    pop @Path if ( $#Path >= 0 );
+    push( @Path, "." ) if ( $#Path < 0 );
+    $DataDir = join( "/", @Path );
+    my $TmpTarBall = $DataDir . "/" . $TarBall;
+    die "Tarball '$TarBall' does not exist" if ( ! -f $TmpTarBall );
+    $TarBall = $TmpTarBall;
+}
+print "Using tarball '$TarBall'\n";
 
 $| = 1;
 Main( );
@@ -60,7 +79,7 @@ sub Main( )
     print "\n\nExtracting tarballs into '$TargetDir'...\n";
     system( "tar -C $TargetDir -xvf $TarBall" );
     system( "tar --gzip -C $TargetDir -xvf hcav.tgz" ) if ( -f "hcav.tgz" );
-    system( "cp README* $TargetDir" );
+    system( "cp $DataDir/README* $TargetDir" );
 
     # Create extra directories...
     die if CreateDir( "$TargetDir/etc" );
@@ -88,36 +107,56 @@ sub Main( )
 
     # Create a simple script to run Hawkeye for the user
     {
+	print "\nCreating setup / start scripts...\n";
+
 	my $Script = "$TargetDir/StartHawkeye";
-	print "Creating $Script to start Hawkeye\n";
 	if ( open( OUT, ">$Script" ) )
 	{
-	    print OUT "#! /bin/bash\n";
-	    print OUT "export HAWKEYE_CONFIG=$ConfigOut\n";
-	    print OUT "export PATH=$PathBin:$PathSbin:\$PATH\n";
+	    print OUT "#! /bin/sh\n";
+	    print OUT "HAWKEYE_CONFIG=\"$ConfigOut\"\n";
+	    print OUT "export HAWKEYE_CONFIG\n";
+	    print OUT "PATH=\"$PathBin:$PathSbin:\$PATH\"\n";
+	    print OUT "export PATH\n";
 	    print OUT "$TargetDir/sbin/hawkeye_master\n";
 	    close( OUT );
 	    chmod( 0750, $Script);
+	    print "'$Script' has been created to start Hawkeye for you\n";
 	}
-	print "A '$Script' script has been created for you\n";
+
+	$Script = "$TargetDir/SetHawkeye.sh";
+	if ( open( OUT, ">$Script" ) )
+	{
+	    print OUT "HAWKEYE_CONFIG=\"$ConfigOut\"\n";
+	    print OUT "export HAWKEYE_CONFIG\n";
+	    print OUT "PATH=\"$PathBin:$PathSbin:\$PATH\"\n";
+	    print OUT "export PATH\n";
+	    close( OUT );
+	    chmod( 0750, $Script);
+	    print "'$Script' has been created to set Hawkeye for you (sh version)\n";
+	}
+
+	$Script = "$TargetDir/SetHawkeye.csh";
+	if ( open( OUT, ">$Script" ) )
+	{
+	    print OUT "setenv HAWKEYE_CONFIG \"$ConfigOut\"\n";
+	    print OUT "setenv PATH \"$PathBin\":\"$PathSbin\":\"\$PATH\"\n";
+	    close( OUT );
+	    chmod( 0750, $Script);
+	    print "'$Script' has been created to set Hawkeye for you (csh version)\n";
+	}
     }
 
     # Create the "real" add module script
-    my $InstallModuleIn = "$TargetDir/install/hawkeye_install_module.example";
-    my $InstallModuleOut = "$TargetDir/sbin/hawkeye_install_module";
-    print "Creating module install script '$InstallModuleOut'\n";
-    if ( open( IN, $InstallModuleIn ) )
+    my $InstallModulePerl = "$TargetDir/sbin/hawkeye_install_module.pl";
+    my $InstallModule = "$TargetDir/sbin/hawkeye_install_module";
+    if ( open( OUT, ">$InstallModule" ) )
     {
-	if ( open( OUT, ">$InstallModuleOut" ) )
-	{
-	    while( <IN> )
-	    {
-		chomp;
-		s/\"HAWKEYE_CONFIG_DIR\"/\"$TargetDir\"/;
-		print OUT "$_\n";
-	    }
-	    chmod( 0755, "$InstallModuleOut" );
-	}
+	print OUT "#! /bin/sh\n";
+	print OUT "HAWKEYE_ROOT_DIR=\"$TargetDir\"\n";
+	print OUT "export HAWKEYE_ROOT_DIR\n";
+	print OUT "$InstallModulePerl \$*\n";
+	close OUT;
+	chmod( 0755, $InstallModule );
     }
 
     # Output to user

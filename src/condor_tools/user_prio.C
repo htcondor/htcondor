@@ -1,25 +1,25 @@
 /***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
- * CONDOR Copyright Notice
- *
- * See LICENSE.TXT for additional notices and disclaimers.
- *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
- * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
- * No use of the CONDOR Software Program Source Code is authorized 
- * without the express consent of the CONDOR Team.  For more information 
- * contact: CONDOR Team, Attention: Professor Miron Livny, 
- * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
- * (608) 262-0856 or miron@cs.wisc.edu.
- *
- * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
- * by the U.S. Government is subject to restrictions as set forth in 
- * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
- * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
- * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
- * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
- * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
- * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
-****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+  *
+  * Condor Software Copyright Notice
+  * Copyright (C) 1990-2004, Condor Team, Computer Sciences Department,
+  * University of Wisconsin-Madison, WI.
+  *
+  * This source code is covered by the Condor Public License, which can
+  * be found in the accompanying LICENSE.TXT file, or online at
+  * www.condorproject.org.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  * AND THE UNIVERSITY OF WISCONSIN-MADISON "AS IS" AND ANY EXPRESS OR
+  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  * WARRANTIES OF MERCHANTABILITY, OF SATISFACTORY QUALITY, AND FITNESS
+  * FOR A PARTICULAR PURPOSE OR USE ARE DISCLAIMED. THE COPYRIGHT
+  * HOLDERS AND CONTRIBUTORS AND THE UNIVERSITY OF WISCONSIN-MADISON
+  * MAKE NO MAKE NO REPRESENTATION THAT THE SOFTWARE, MODIFICATIONS,
+  * ENHANCEMENTS OR DERIVATIVE WORKS THEREOF, WILL NOT INFRINGE ANY
+  * PATENT, COPYRIGHT, TRADEMARK, TRADE SECRET OR OTHER PROPRIETARY
+  * RIGHT.
+  *
+  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
  
 
@@ -77,6 +77,7 @@ main(int argc, char* argv[])
 
   bool LongFlag=false;
   int ResetUsage=0;
+  int DeleteUser=0;
   int SetFactor=0;
   int SetPrio=0;
   bool ResetAll=false;
@@ -100,6 +101,11 @@ main(int argc, char* argv[])
     else if (strcmp(argv[i],"-resetusage")==0) {
       if (i+1>=argc) usage(argv[0]);
       ResetUsage=i;
+      i+=1;
+    }
+    else if (strcmp(argv[i],"-delete")==0) {
+      if (i+1>=argc) usage(argv[0]);
+      DeleteUser=i;
       i+=1;
     }
     else if (strcmp(argv[i],"-resetall")==0) {
@@ -249,6 +255,35 @@ main(int argc, char* argv[])
     delete sock;
 
     printf("The accumulated usage of %s was reset\n",argv[ResetUsage+1]);
+
+  }
+
+  else if (DeleteUser) { // remove a user record from the accountant
+
+    char* tmp;
+	if( ! (tmp = strchr(argv[DeleteUser+1], '@')) ) {
+		fprintf( stderr, 
+				 "%s: You must specify the full name of the record you wish\n",
+				 argv[0] );
+		fprintf( stderr, "\tto delete (%s or %s)\n", 
+				 "user@uid.domain", "user@full.host.name" );
+		exit(1);
+	}
+
+    // send request
+    Sock* sock;
+    if( !(sock = negotiator.startCommand(DELETE_USER,
+										 Stream::reli_sock, 0) ) ||
+        !sock->put(argv[DeleteUser+1]) ||
+        !sock->end_of_message()) {
+      fprintf( stderr, "failed to send DELETE_USER command to negotiator\n" );
+      exit(1);
+    }
+
+    sock->close();
+    delete sock;
+
+    printf("The accountant record named %s was deleted\n",argv[DeleteUser+1]);
 
   }
 
@@ -506,7 +541,9 @@ static void PrintInfo(ClassAd* ad, LineRec* LR, int NumElem)
 //-----------------------------------------------------------------
 
 static void usage(char* name) {
-  fprintf( stderr, "usage: %s [ -pool hostname ] [ -all | -usage | { -setprio | -setfactor }  user value | -resetusage user | -resetall | -getreslist user ] [-allusers | -activefrom month day year] [-l]\n", name );
+  fprintf( stderr, "usage: %s [ -pool hostname ] [ -all | -usage | { -setprio | -setfactor }  user value | "
+			"-resetusage user | -resetall | -getreslist user | -delete user ] "
+			"[-allusers | -activefrom month day year] [-l]\n", name );
   exit(1);
 }
 
