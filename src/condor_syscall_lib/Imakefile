@@ -123,7 +123,7 @@ LONGJMP = _longjmp.AIX32.o
 #endif
 
 URL_OBJ = url_condor.o include_urls.o cbstp_url.o file_url.o http_url.o \
-	cfilter_url.o filter_url.o mailto_url.o
+	cfilter_url.o filter_url.o mailto_url.o ftp_url.o
 
 
 #if DOES_CHECKPOINTING

@@ -60,7 +60,7 @@ UTIL_OBJ = dprintf.o dprintf_config.o except.o condor_errlst.o flock.o
 #endif
 
 URL_OBJ = url_condor.o include_urls.o cbstp_url.o file_url.o http_url.o \
-	cfilter_url.o filter_url.o mailto_url.o
+	cfilter_url.o filter_url.o mailto_url.o ftp_url.o
 
 SRC =	ToUpper.c image.C machdep.$(OS).C file_state.C tmp_stack.C \
 	syscall_mode.c local_startup.c fake_remote_syscall.c fake_hooks.c \
