@@ -1094,59 +1094,60 @@ void Dag::Rescue (const char * rescue_file, const char * datafile) const {
     //
     it.ToBeforeFirst();
     while (it.Next(job)) {
-		if( job->JobType() == Job::TYPE_CONDOR ) {
-	fprintf (fp, "JOB %s %s %s\n", job->GetJobName(), job->GetCmdFile(),
-                 job->_Status == Job::STATUS_DONE ? "DONE" : "");
-      }
-		else if( job->JobType() == Job::TYPE_STORK ) {
-	fprintf (fp, "DAP %s %s %s\n", job->GetJobName(), job->GetCmdFile(),
-                 job->_Status == Job::STATUS_DONE ? "DONE" : "");
-      }
-      if (job->_scriptPre != NULL) {
-	fprintf (fp, "SCRIPT PRE  %s %s\n", job->GetJobName(),
-		 job->_scriptPre->GetCmd());
-      }
-      if (job->_scriptPost != NULL) {
-	fprintf (fp, "SCRIPT POST %s %s\n", job->GetJobName(),
-		 job->_scriptPost->GetCmd());
-      }
-      if( job->retry_max > 0 ) {
-	ASSERT( job->retries <= job->retry_max );
-	// print (job->retry_max - job->retries) so that
-	// job->retries isn't reset upon recovery
-	int retries = (job->retry_max - job->retries);
-	fprintf( fp,
-		 "# %d of %d retries already performed; %d remaining\n",
-		 job->retries, job->retry_max, retries );
-	fprintf( fp, "Retry %s %d\n", job->GetJobName(), retries );
+        if( job->JobType() == Job::TYPE_CONDOR ) {
+            fprintf (fp, "JOB %s %s %s\n", 
+                     job->GetJobName(), job->GetCmdFile(),
+                     job->_Status == Job::STATUS_DONE ? "DONE" : "");
+        }
+        else if( job->JobType() == Job::TYPE_STORK ) {
+            fprintf (fp, "DAP %s %s %s\n", 
+                     job->GetJobName(), job->GetCmdFile(),
+                     job->_Status == Job::STATUS_DONE ? "DONE" : "");
+        }
+        if (job->_scriptPre != NULL) {
+            fprintf (fp, "SCRIPT PRE  %s %s\n", 
+                     job->GetJobName(), job->_scriptPre->GetCmd());
+        }
+        if (job->_scriptPost != NULL) {
+            fprintf (fp, "SCRIPT POST %s %s\n", 
+                     job->GetJobName(), job->_scriptPost->GetCmd());
+        }
+        if( job->retry_max > 0 ) {
+            ASSERT( job->retries <= job->retry_max );
+            // print (job->retry_max - job->retries) so that
+            // job->retries isn't reset upon recovery
+            int retries = (job->retry_max - job->retries);
+            fprintf( fp,
+                     "# %d of %d retries already performed; %d remaining\n",
+                     job->retries, job->retry_max, retries );
+            fprintf( fp, "Retry %s %d\n", job->GetJobName(), retries );
+        }
+        fprintf( fp, "\n" );
 
-      }
-      fprintf( fp, "\n" );
-
-	if(!job->varNamesFromDag->IsEmpty()) {
-		fprintf(fp, "VARS %s", job->GetJobName());
+        if(!job->varNamesFromDag->IsEmpty()) {
+            fprintf(fp, "VARS %s", job->GetJobName());
 	
-		ListIterator<MyString> names(*job->varNamesFromDag);
-		ListIterator<MyString> vals(*job->varValsFromDag);
-		names.ToBeforeFirst();
-		vals.ToBeforeFirst();
-		MyString *strName, *strVal;
-		while((strName = names.Next()) && (strVal = vals.Next())) {
-			fprintf(fp, " %s=\"", strName->Value());
-			// now we print the value, but we have to re-escape certain characters
-			for(int i = 0; i < strVal->Length(); i++) {
-				char c = (*strVal)[i];
-				if(c == '\"')
-					fprintf(fp, "\\\"");
-				else if(c == '\\')
-					fprintf(fp, "\\\\");
-				else
-					fprintf(fp, "%c", c);
-			}
-			fprintf(fp, "\"");
-		}
-		fprintf(fp, "\n");
-	}
+            ListIterator<MyString> names(*job->varNamesFromDag);
+            ListIterator<MyString> vals(*job->varValsFromDag);
+            names.ToBeforeFirst();
+            vals.ToBeforeFirst();
+            MyString *strName, *strVal;
+            while((strName = names.Next()) && (strVal = vals.Next())) {
+                fprintf(fp, " %s=\"", strName->Value());
+                // now we print the value, but we have to re-escape certain characters
+                for(int i = 0; i < strVal->Length(); i++) {
+                    char c = (*strVal)[i];
+                    if(c == '\"')
+                        fprintf(fp, "\\\"");
+                    else if(c == '\\')
+                        fprintf(fp, "\\\\");
+                    else
+                        fprintf(fp, "%c", c);
+                }
+                fprintf(fp, "\"");
+            }
+            fprintf(fp, "\n");
+        }
     }
 
     //
