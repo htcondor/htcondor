@@ -2711,16 +2711,15 @@ int DaemonCore::Create_Process(
 	// START A NEW PROCESS ON UNIX
 
 	// First, check to see that the specified executable exists.
-	struct stat stat_struct;
-	if( stat(name, &stat_struct) == -1 ) {
+	if( access(source,F_OK | X_OK) < 0 ) {
 		dprintf(D_ALWAYS, 
-				"Create_Process: Specified executable %s cannot be found.\n",
+				"Create_Process: File %s is not executable or non-existant.\n",
 				name);	   
 		return FALSE;
 	}
-	dprintf (D_DAEMONCORE, "%s has mode: 0%o\n", name, stat_struct.st_mode );
 
 	// Next, check to see that the cwd exists.
+	struct stat stat_struct;
 	if( cwd && (cwd[0] != '\0') ) {
 		if( stat(cwd, &stat_struct) == -1 ) {
 			dprintf(D_ALWAYS, 
