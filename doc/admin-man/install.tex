@@ -13,7 +13,7 @@ Please read the copyright and disclaimer information in
 section~\ref{sec:copyright-and-disclaimer} on
 page~\pageref{sec:copyright-and-disclaimer} of the manual, or in the
 file \File{LICENSE.TXT}, before proceeding.  Installation and
-use of Condor is acknowledgement that you have read and agree to the
+use of Condor is acknowledgment that you have read and agree to the
 terms.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -25,7 +25,7 @@ Obtaining Condor}
 \index{download}
 The first step to installing Condor is to download it from the Condor
 web site, \Url{http://www.cs.wisc.edu/condor}.
-The downloads are available from the downlaods page,
+The downloads are available from the downloads page,
 at \Url{http://www.cs.wisc.edu/condor/downloads/}.
 
 The platform-dependent Condor files are currently available from two sites.
@@ -223,7 +223,7 @@ directory (\Macro{LOCAL\_DIR} = \MacroU{TILDE} in the
 configuration file).
 If this user's home directory is shared among all machines in your
 pool, you would want to create a directory for each host (named by
-hostname) for the local directory (for example, \Macro{LOCAL\_DIR} =
+host name) for the local directory (for example, \Macro{LOCAL\_DIR} =
 \MacroU{TILDE}/hosts/\MacroU{HOSTNAME}).  If you do not
 have a condor account on your machines, you can put these directories
 wherever you'd like.  However, where to place them will require some
@@ -604,7 +604,7 @@ what each step is for, and suggests how to answer the questions
 
      If you are installing Condor for multiple machines and you have
      a shared file system, then \Condor{install} will prompt you for the
-     hostnames of each machine you want to add to your Condor pool.
+     host names of each machine you want to add to your Condor pool.
      If you do not have a shared file system, you will have to run
      \Condor{install} locally on each machine, so \Condor{install}
      does not
@@ -700,7 +700,7 @@ what each step is for, and suggests how to answer the questions
 
      For the UID domain, Condor needs to know if all users across all
      the machines in your pool have a unique UID.  
-     If so, \Macro{UID\_DOMAIN} will be set to the domainname of the
+     If so, \Macro{UID\_DOMAIN} will be set to the domain name of the
      machine running \condor{install}. 
      If not, \Macro{UID\_DOMAIN} will be set to
      \MacroU{FULL\_HOSTNAME}, indicating that each machine is in its 
@@ -765,9 +765,9 @@ Skip to the appropriate section below, based on the kind of installation.
 
 \item[STEP 8: What machine will be your central manager?]
 
-     Type in the full hostname of the machine you have chosen
+     Type in the full host name of the machine you have chosen
      for your central manager.  If \Condor{install} cannot find
-     information about the host you typed by querying your nameserver,
+     information about the host you typed by querying your name server,
      it will print out an error message and ask you to confirm.
 
 
@@ -778,11 +778,11 @@ Skip to the appropriate section below, based on the kind of installation.
      as to what directory you want to use for the purpose.
      Agree to the correct guess, or (when \Condor{install} has run out
      of guesses) type in what you want.  Since this directory needs to
-     be unique, it is common to use the hostname of each machine in
+     be unique, it is common to use the host name of each machine in
      its name.  When typing in your own path, you can use
      '\MacroU{HOSTNAME}' which \Condor{install}
      (and the Condor configuration files)
-     will expand to the hostname of the machine you are currently on.
+     will expand to the host name of the machine you are currently on.
      \Condor{install} will try to create the corresponding directories
      for all the machines you told it about in STEP 2 above.
 
@@ -866,7 +866,7 @@ the installation.
 \item[STEP 6: continued. ]
      A submit-only machine has the option of submission to more than
      one Condor pool.
-     The full hostname of the central manager is required for each
+     The full host name of the central manager is required for each
      pool.
      The first entered becomes the default for start up and job
      submission.
@@ -892,10 +892,9 @@ things you should check before you start up Condor.
 \item Read through the \Release{etc/condor\_config} file.  There are a
     lot of possible settings and you should at least take a look at
     the first two main sections to make sure everything looks okay.
-    In particular, you might want to set up host/ip based security for
-    Condor.  See the section~\ref{sec:Host-Security} on
-    page~\pageref{sec:Host-Security} in the manual to learn how to do
-    this.
+    In particular, you might want to set up security for
+    Condor.  See the section~\ref{sec:Config-Security} on
+    page~\pageref{sec:Config-Security} to learn how to do this.
 
 \item Condor can monitor the activity of your mouse and keyboard,
     provided that you tell it where to look.  You do this with the
