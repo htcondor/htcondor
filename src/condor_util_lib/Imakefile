@@ -113,7 +113,7 @@ GETMNT_OBJ = getmnt.o
 	syscall_numbers.o sig_install.o internet.o startup_info.o \
 	ckpt_server_api_stubs.o ckpt_util.o get_random_num.o
 
-all_target( util_lib.a stub_gen )
+all_target( util_lib.a stub_gen setsyscalls.o )
 
 test.o: test.c
 	gcc $(CFLAGS) -c test.c
