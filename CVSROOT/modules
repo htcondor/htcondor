@@ -40,7 +40,10 @@ validate_user	-i co validate_user
 # Add other modules here...
 TOOLS	-a Distfile GENERIC Imakefile config
 DOC		-a TOOLS doc
-COMMON_CODE	-a src/Imakefile src/condor_c++_util src/condor_ckpt  src/condor_collector \
+COMMON_CODE	-a src/Imakefile \
+			src/condor_c++_util \
+			src/condor_ckpt \
+			src/condor_collector \
 			src/condor_globalq \
 			src/condor_includes \
 			src/condor_kbdd \
@@ -59,7 +62,6 @@ COMMON_CODE	-a src/Imakefile src/condor_c++_util src/condor_ckpt  src/condor_col
 			src/condor_starter \
 			src/condor_submit.v2 \
 			src/condor_submit.v3 \
-			src/condor_syscall_lib_aix \
 			src/condor_test_suite_C \
 			src/condor_test_suite_F \
 			src/condor_tools \
