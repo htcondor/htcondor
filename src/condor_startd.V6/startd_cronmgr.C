@@ -20,38 +20,27 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#ifndef _RES_STATE_H
-#define _RES_STATE_H
 
-#include "condor_state.h"
+#include "startd_cronmgr.h"
+#include "startd_cronjob.h"
 
-class ResState
+// Basic constructor
+StartdCronMgr::StartdCronMgr( void ) :
+		CondorCronMgr( "startd_" )
 {
-public:
-	ResState(Resource* rip);
-	State	state( void ) { return r_state; };
-	Activity activity( void ) { return r_act; };
-	void	publish( ClassAd*, amask_t );
-	int		change( Activity );
-	int		change( State );
-	int		change( State, Activity );
-	int 	eval( void );
-	void	set_destination( State );
-	State	destination( void ) { return r_destination; };
+}
 
-	void	dprintf( int, char*, ... );
-private:
-	Resource*	rip;
-	State 		r_state;
-	State 		r_destination;
-	Activity	r_act;		
+// Basic destructor
+StartdCronMgr::~StartdCronMgr( )
+{
+	dprintf( D_FULLDEBUG, "StartdCronMgr: Bye\n" );
+}
 
-	int		stime;		// time we entered the current state
-	int		atime;		// time we entered the current activitiy
-
-	int		enter_action( State, Activity, int, int );
-	int		leave_action( State, Activity, int, int );
-};
-
-#endif /* _RES_STATE_H */
-
+// Create a new job
+CondorCronJob *
+StartdCronMgr::NewJob( const char *name )
+{
+	dprintf( D_FULLDEBUG, "*** Creating a Startd job '%s'***\n", name );
+	StartdCronJob *job = new StartdCronJob( name );
+	return (CondorCronJob *) job;
+}

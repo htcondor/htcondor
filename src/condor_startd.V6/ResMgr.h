@@ -32,6 +32,7 @@
 
 #include "simplelist.h"
 #include "extArray.h"
+#include "Resource.h"
 
 typedef int (Resource::*ResourceMember)();
 typedef float (Resource::*ResourceFloatMember)();
@@ -50,6 +51,19 @@ private:
 	ExtArray<bool> free_ids;
 };
 
+// A name / ClassAd pair to manage together
+class NamedClassAd
+{
+  public:
+	NamedClassAd( const char *name, ClassAd *ad = NULL );
+	~NamedClassAd( void );
+	char *GetName( void ) { return myName; };
+	ClassAd *GetAd( void ) { return myClassAd; };
+	void ReplaceAd( ClassAd *newAd );
+  private:
+	char	*myName;
+	ClassAd	*myClassAd;
+};
 
 class ResMgr : public Service
 {
@@ -111,6 +125,12 @@ public:
 	// function.  
 	void resource_sort( ComparisonFunc );
 
+	// Manipulate the supplemental Class Ad list
+	int		adlist_register( const char *name );
+	int		adlist_replace( const char *name, ClassAd *ad );
+	int		adlist_delete( const char *name );
+	int		adlist_publish( ClassAd *resAd, amask_t mask );
+
 	// Methods to control various timers
 	void	check_polling( void );	// See if we need to poll frequently
 	int		start_update_timer(void); // Timer for updating the CM(s)
@@ -170,6 +190,9 @@ private:
 		// Data members we need to handle dynamic reconfig:
 	SimpleList<CpuAttributes*>		alloc_list;		
 	SimpleList<Resource*>			destroy_list;
+
+	// List of Supplemental ClassAds to publish
+	SimpleList<NamedClassAd*>		extra_ads;
 
 		// Builds a CpuAttributes object to represent the virtual
 		// machine described by the given machine type.

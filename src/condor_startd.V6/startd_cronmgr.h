@@ -20,38 +20,23 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-#ifndef _RES_STATE_H
-#define _RES_STATE_H
+#ifndef _STARTD_CRONMGR_H
+#define _STARTD_CRONMGR_H
 
-#include "condor_state.h"
+#include "condor_cronmgr.h"
 
-class ResState
+// Define a simple class to run child tasks periodically.
+class StartdCronMgr : public CondorCronMgr
 {
-public:
-	ResState(Resource* rip);
-	State	state( void ) { return r_state; };
-	Activity activity( void ) { return r_act; };
-	void	publish( ClassAd*, amask_t );
-	int		change( Activity );
-	int		change( State );
-	int		change( State, Activity );
-	int 	eval( void );
-	void	set_destination( State );
-	State	destination( void ) { return r_destination; };
+  public:
+	StartdCronMgr( void );
+	virtual ~StartdCronMgr( void );
 
-	void	dprintf( int, char*, ... );
-private:
-	Resource*	rip;
-	State 		r_state;
-	State 		r_destination;
-	Activity	r_act;		
+  protected:
+	virtual CondorCronJob *NewJob( const char *name );
 
-	int		stime;		// time we entered the current state
-	int		atime;		// time we entered the current activitiy
-
-	int		enter_action( State, Activity, int, int );
-	int		leave_action( State, Activity, int, int );
+  private:
+	
 };
 
-#endif /* _RES_STATE_H */
-
+#endif /* _STARTD_CRONMGR_H */

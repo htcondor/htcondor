@@ -30,6 +30,8 @@
 #ifndef _CONDOR_STARTD_STARTER_H
 #define _CONDOR_STARTD_STARTER_H
 
+#include "killfamily.h"
+
 typedef struct jobstartinfo {
 	char *ji_hname;
 	int ji_sock1;

@@ -448,7 +448,7 @@ Resource::init_classad( void )
 	if( r_classad ) delete(r_classad);
 	r_classad = new ClassAd( *resmgr->config_classad );
 
-		// Publish everything we know about.
+	// Publish everything we know about.
 	this->publish( r_classad, A_PUBLIC | A_ALL | A_EVALUATED );
 	
 	return TRUE;
@@ -462,6 +462,7 @@ Resource::refresh_classad( amask_t mask )
 			// Nothing to do (except prevent a segfault *grin*)
 		return;
 	}
+
 	this->publish( r_classad, (A_PUBLIC | mask) );
 }
 
@@ -981,6 +982,10 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 		// Put in availability statistics
 	r_avail_stats.publish( cap, mask );
+
+	// Publish the supplemental Class Ads
+	resmgr->adlist_publish( cap, mask );
+
 }
 
 

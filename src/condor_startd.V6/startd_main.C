@@ -28,6 +28,7 @@
  */
 #define _STARTD_NO_DECLARE_GLOBALS 1
 #include "startd.h"
+#include "startd_cronmgr.h"
 
 // Define global variables
 
@@ -80,6 +81,9 @@ int		pid_snapshot_interval = 50;
 char*	mySubSystem = "STARTD";
 
 int main_reaper = 0;
+
+// Cron stuff
+StartdCronMgr	*Cronmgr;
 
 // Define static variables
 static	int old_polling_interval;
@@ -171,7 +175,6 @@ main_init( int, char* argv[] )
 	check_perms();
 	cleanup_execute_dir( 0 );	// 0 indicates we should clean everything.
 
-
 		// Instantiate Resource objects in the ResMgr
 	resmgr->init_resources();
 
@@ -196,6 +199,10 @@ main_init( int, char* argv[] )
 	}
 
 	resmgr->walk( &(Resource::init_classad) );
+
+	// Startup Cron
+	Cronmgr = new StartdCronMgr( );
+	Cronmgr->Reconfig( );
 
 		// Now that we have our classads, we can compute things that
 		// need to be evaluated
@@ -358,6 +365,8 @@ finish_main_config( void )
 	if( old_polling_interval != polling_interval ) {
 		resmgr->walk( &(Resource::resize_load_queue) );
 	}
+	dprintf( D_FULLDEBUG, "MainConfig finish\n" );
+	Cronmgr->Reconfig( );
 
 		// Re-evaluate and update the CM for each resource (again, we
 		// don't need to recompute, since we just did that, so we call

@@ -23,6 +23,15 @@
 #ifndef _STARTD_RESOURCE_H
 #define _STARTD_RESOURCE_H
 
+#include "ResAttributes.h"
+#include "ResState.h"
+#include "Starter.h"
+#include "Match.h"
+#include "Reqexp.h"
+#include "LoadQueue.h"
+#include "../condor_procapi/procapi.h"
+#include "AvailStats.h"
+
 class Resource : public Service
 {
 public:
