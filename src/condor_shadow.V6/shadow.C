@@ -849,7 +849,9 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 		}
 	}
 
-	DisconnectQ(0);
+	if (!DisconnectQ(0)) {
+		EXCEPT("Failed to commit updated job queue status!");
+	}
 }
 
 /*
