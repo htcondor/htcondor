@@ -2534,17 +2534,17 @@ DedicatedScheduler::computeSchedule( void )
 				nodes_per_proc[proc]++;
 			}
 
+			struct PreemptCandidateNode* preempt_candidate_array = NULL;
 			jobs->Rewind();
 			while( (job = jobs->Next()) ) {
 				job->LookupInteger(ATTR_PROC_ID, proc);
 				nodes = nodes_per_proc[proc];
-
 				
 					// We may not need all of this array, this is
 					// worst-case allocation we will fill and sort a
 					// num_candidates number of entries
 				int len = busy_resources->Length();
-				struct PreemptCandidateNode preempt_candidate_array[len];
+				preempt_candidate_array = new struct PreemptCandidateNode[len];
 				int num_candidates = 0;
 
 				busy_resources->Rewind();
@@ -2617,10 +2617,15 @@ DedicatedScheduler::computeSchedule( void )
 
 							// Found all the machines we needed!
 						if (nodes == 0) {
+							delete [] preempt_candidate_array;
+							preempt_candidate_array = NULL;
 							break;
 						}
 					}
 				}
+
+				delete [] preempt_candidate_array;
+				preempt_candidate_array = NULL;
 
 				if( jobs->Number() == 0) {
 					break;
