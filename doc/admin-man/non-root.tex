@@ -16,7 +16,7 @@ access has on the various parts of Condor:
 
 \begin{description}
 
-\item[\Condor{startd}] : If you're setting up a machine to run Condor
+\item[\Condor{startd}] If you're setting up a machine to run Condor
    jobs and don't start the \Condor{startd} as root, you're basically
    relying on the goodwill of your Condor users to agree to the policy
    you configure the startd to enforce as far as starting, suspending,
@@ -57,7 +57,7 @@ access has on the various parts of Condor:
    whatever group has read access to \File{/dev/kmem} on your system)
    and that would at least solve the system information problem.
 
-\item[\Condor{schedd}] : The biggest problem running the schedd
+\item[\Condor{schedd}] The biggest problem running the schedd
     without root access is that the \Condor{shadow} processes which it
     spawns are stuck with the same UID the \Condor{schedd} has.  This
     means that users submitting their jobs have to go out of their way
@@ -76,16 +76,16 @@ access has on the various parts of Condor:
     know to set the right permissions on the directories they submit
     from.
 
-\item[\Condor{master}] : The \Condor{master} is what spawns the
+\item[\Condor{master}] The \Condor{master} is what spawns the
     \Condor{startd} and \Condor{schedd}, so if want them both running
     as root, you should have the master run as root.  This happens
     automatically if you start the master from your boot scripts.
 
 \item[\Condor{negotiator}]
-\item[\Condor{collector}] : There is no need to have either of these
+\item[\Condor{collector}] There is no need to have either of these
 daemons running as root.
 
-\item[\Condor{kbdd}] : On platforms that need the \Condor{kbdd}
+\item[\Condor{kbdd}] On platforms that need the \Condor{kbdd}
     (Digital Unix and IRIX) the \Condor{kbdd} has to run as root.  If
     it is started as any other user, it will not work.  You might
     consider installing this program as a setuid root binary if you
