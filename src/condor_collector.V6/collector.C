@@ -54,9 +54,11 @@ int ClientSocket  = -1;
 int CollectorCOMM_UDPSocket;  // used for updates
 int CollectorCOMM_TCPSocket;  // used for queries
 
+#if defined(USE_XDR)
 // old style
 int CollectorXDR_UDPSocket;  // used for updates
 int CollectorXDR_TCPSocket;  // used for queries
+#endif
 
 // the shipping socket abstractions
 SafeSock   COMM_UDP_sock;
@@ -66,11 +68,13 @@ int		Foreground = 0;
 int		Termlog;
 
 // misc functions
+#if defined(USE_XDR)
 extern "C" XDR *xdr_Init ();
 extern "C" XDR *xdr_Udp_Init ();
 extern "C" int  xdr_context (XDR *, CONTEXT *);
 extern "C" int  xdr_mywrapstring (XDR *, char **);
 extern "C" int  xdr_mach_rec (XDR *, MACH_REC *);
+#endif
 extern "C" int  SetSyscalls () {}
 extern     void initializeParams (void);
 extern     int  initializeTCPSocket (const char *, int);
@@ -88,16 +92,18 @@ void sighup_handler ();
 void sigpipe_handler();
 
 // internal function prototypes
+#if defined(USE_XDR)
 void giveStatus              (XDR *);
 bool sendTerminatingMachRec  (XDR *);
-void houseKeeper   		     (void);
 void processXDR_TCP_Command  (void);
 void processXDR_UDP_Command  (void);
+void processXDR_query        (AdTypes, ClassAd &, XDR *);
+int  xdr_send_classad_as_mach_rec (XDR *, ClassAd *);
+#endif
+void houseKeeper   		     (void);
 void processCOMM_TCP_Command (void);
 void processCOMM_UDP_Command (void);
-void processXDR_query        (AdTypes, ClassAd &, XDR *);
 void processCOMM_query       (AdTypes, ClassAd &, Sock *);
-int  xdr_send_classad_as_mach_rec (XDR *, ClassAd *);
 
 void usage(char* name)
 {
@@ -179,8 +185,10 @@ int main (int argc, char *argv[])
 	{
 	  const char *coll = "condor_collector";
 
+#if defined(USE_XDR)
 	  CollectorXDR_TCPSocket =initializeTCPSocket (coll, COLLECTOR_PORT);
 	  CollectorXDR_UDPSocket =initializeUDPSocket (coll, COLLECTOR_UDP_PORT);
+#endif
 	  CollectorCOMM_TCPSocket=initializeTCPSocket (coll, COLLECTOR_COMM_PORT);
 	  CollectorCOMM_UDPSocket=initializeUDPSocket(coll,COLLECTOR_UDP_COMM_PORT);
 
@@ -203,8 +211,10 @@ int main (int argc, char *argv[])
 		FD_ZERO (&readfds);
 		FD_SET  (CollectorCOMM_TCPSocket, &readfds);
 		FD_SET	(CollectorCOMM_UDPSocket, &readfds);
+#if defined(USE_XDR)
 		FD_SET  (CollectorXDR_TCPSocket, &readfds);
 		FD_SET  (CollectorXDR_UDPSocket, &readfds);
+#endif
 
 		// await communication activity
 		count = select (FD_SETSIZE, (fd_set *) &readfds, (fd_set *) 0,
@@ -226,11 +236,13 @@ int main (int argc, char *argv[])
 		}
 
 		// process given command
+#if defined(USE_XDR)
 		if (FD_ISSET (CollectorXDR_TCPSocket, &readfds))
 			processXDR_TCP_Command ();
 
 		if (FD_ISSET (CollectorXDR_UDPSocket, &readfds))
 			processXDR_UDP_Command ();
+#endif
 
 		if (FD_ISSET (CollectorCOMM_TCPSocket, &readfds))
 			processCOMM_TCP_Command ();
@@ -244,6 +256,7 @@ int main (int argc, char *argv[])
 	return 1;
 }
 
+#if defined(USE_XDR)
 void 
 processXDR_TCP_Command (void)
 {
@@ -329,7 +342,7 @@ processXDR_TCP_Command (void)
 	(void) close (ClientSocket);
 	ClientSocket = -1;
 }
-
+#endif
 
 void
 processCOMM_TCP_Command (void)
@@ -412,6 +425,7 @@ processCOMM_TCP_Command (void)
 }
 
 
+#if defined(USE_XDR)
 void
 processXDR_UDP_Command (void)
 {
@@ -457,7 +471,7 @@ processXDR_UDP_Command (void)
 	(void) close (ClientSocket);
 	ClientSocket = -1;
 }
-
+#endif
 
 void
 processCOMM_UDP_Command (void)
@@ -497,11 +511,14 @@ processCOMM_UDP_Command (void)
 }
 
 static ClassAd *__query__;
+#if defined(USE_XDR)
 static XDR *__xdrs__;
+#endif
 static Sock *__sock__;
 static int __numAds__;
 static int __failed__;
 
+#if defined(USE_XDR)
 int
 XDR_query_scanFunc (ClassAd *ad)
 {
@@ -520,7 +537,7 @@ XDR_query_scanFunc (ClassAd *ad)
 
 	return 1;
 }
-
+#endif
 
 int
 COMM_query_scanFunc (ClassAd *ad)
@@ -541,7 +558,7 @@ COMM_query_scanFunc (ClassAd *ad)
     return 1;
 }
 
-
+#if defined(USE_XDR)
 void
 processXDR_query (AdTypes whichAds, ClassAd &query, XDR *xdrs)
 {
@@ -578,6 +595,7 @@ processXDR_query (AdTypes whichAds, ClassAd &query, XDR *xdrs)
 	(void) timer.CancelTimer (timerID);
 	dprintf (D_ALWAYS, "(Sent %d ads in response to query)\n", __numAds__);
 }	
+#endif
 
 void
 processCOMM_query (AdTypes whichAds, ClassAd &query, Sock *sock)
@@ -616,6 +634,7 @@ processCOMM_query (AdTypes whichAds, ClassAd &query, Sock *sock)
 	dprintf (D_ALWAYS, "(Sent %d ads in response to query)\n", __numAds__);
 }	
 
+#if defined(USE_XDR)
 int
 XDR_give_status_scanFunc (ClassAd *ad)
 {
@@ -678,6 +697,7 @@ sendTerminatingMachRec (XDR *xdrs)
 
 	return true;
 }
+#endif
 
 	
 // signal handlers ...

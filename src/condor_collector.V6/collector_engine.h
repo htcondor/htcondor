@@ -25,7 +25,9 @@ class CollectorEngine : public Service
 	void toggleLogging (void);
 
 	// perform the collect operation of the given command
+#if defined(USE_XDR)
 	ClassAd *collect (int, XDR *, sockaddr_in *, int &);
+#endif
 	ClassAd *collect (int, Sock *, sockaddr_in *, int &);
 	ClassAd *collect (int, ClassAd *, sockaddr_in *, int &);
 

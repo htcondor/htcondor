@@ -18,10 +18,13 @@
 
 static char *_FileName_ = __FILE__;
 
+#if defined(USE_XDR)
 extern "C" XDR *xdr_Udp_Init ();
 extern "C" int xdr_context (XDR *, CONTEXT *);
 
 static bool backwardCompatibility (int &, ClassAd *&, XDR *);
+#endif
+
 static void killHashTable (CollectorHashTable &);
 static ClassAd* updateClassAd(CollectorHashTable&,char*,ClassAd*,HashKey&,
 							  char*, int &);
@@ -193,6 +196,7 @@ collect (int command, Sock *sock, sockaddr_in *from, int &insert)
 	return (collect(command, clientAd, from, insert));
 }
 
+#if defined(USE_XDR)
 ClassAd *CollectorEngine::
 collect (int command, XDR *xdrs, sockaddr_in *from, int &insert)
 {
@@ -214,6 +218,7 @@ collect (int command, XDR *xdrs, sockaddr_in *from, int &insert)
 
 	return (collect(command, clientAd, from, insert));
 }
+#endif
 
 ClassAd *CollectorEngine::
 collect (int command, ClassAd *clientAd, sockaddr_in *from, int &insert)
@@ -512,6 +517,7 @@ engine_housekeepingHandler (Service *x)
 }
 
 
+#if defined(USE_XDR)
 static bool 
 backwardCompatibility (int &command, ClassAd *&clientAd, XDR *xdrs)
 {
@@ -579,6 +585,7 @@ backwardCompatibility (int &command, ClassAd *&clientAd, XDR *xdrs)
 
 	return true;
 }
+#endif
 
 static void
 killHashTable (CollectorHashTable &table)
