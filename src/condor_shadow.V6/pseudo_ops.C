@@ -665,10 +665,6 @@ pseudo_put_file_stream(
 		return 0;
 	}
 
-	if (UseCkptServer) {
-		return -1;
-	}
-
 	// need Condor privileges to access checkpoint files
 	if (CkptFile || ICkptFile) {
 		priv = set_condor_priv();
