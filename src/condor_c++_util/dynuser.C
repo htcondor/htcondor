@@ -17,7 +17,10 @@ dynuser::dynuser() {
 	sidBufferSize = 100;
 	domainBufferSize = 80;
 	logon_token = NULL;
+	accountname = NULL;
+	password = NULL;
 	accountname_t = NULL;
+	password_t = NULL;
 }
 
 ////
@@ -27,10 +30,14 @@ dynuser::dynuser() {
 ////
 
 bool dynuser::createuser(char *username){ 
-	accountname = new char[100];
-	password = new char[100];
-	accountname_t = new wchar_t[100];
-	password_t = new wchar_t[100];
+	if (!accountname) 
+		accountname = new char[100];
+	if (!password)
+		password = new char[100];
+	if (!accountname_t)
+		accountname_t = new wchar_t[100];
+	if (!password_t)
+		password_t = new wchar_t[100];
 	this->createpass();
 
 	strcpy(accountname, username);  // This used to add condor-run- to the username, but
@@ -88,10 +95,10 @@ dynuser::~dynuser() {
 		}
 	}
 
-	if ( accountname )		delete accountname;
-	if ( accountname_t )	delete accountname_t;
-	if ( password )			delete password;
-	if ( password_t )		delete password_t;
+	if ( accountname )		delete [] accountname;
+	if ( accountname_t )	delete [] accountname_t;
+	if ( password )			delete [] password;
+	if ( password_t )		delete [] password_t;
 	
 	if ( logon_token )		CloseHandle ( logon_token );
 }
@@ -118,11 +125,15 @@ void dynuser::createpass() {
 
 
 void dynuser::update_t() {
-	if (!MultiByteToWideChar( 0, MB_ERR_INVALID_CHARS, accountname, -1, accountname_t, 100)) {
-		abort();
+	if ( accountname && accountname_t ) {
+		if (!MultiByteToWideChar( 0, MB_ERR_INVALID_CHARS, accountname, -1, accountname_t, 100)) {
+			abort();
+		}
 	}
-	if (!MultiByteToWideChar( 0, MB_ERR_INVALID_CHARS, password, -1, password_t, 100)) {
-		abort();
+	if ( password && password_t ) {
+		if (!MultiByteToWideChar( 0, MB_ERR_INVALID_CHARS, password, -1, password_t, 100)) {
+			abort();
+		}
 	}
 }
 
@@ -302,13 +313,21 @@ void dynuser::update_psid() {
 
 
 bool dynuser::deleteuser(char* username ) {
-	accountname = new char[100];
+	if (!accountname) 
+		accountname = new char[100];
+	if (!accountname_t)
+		accountname_t = new wchar_t[100];
 
 	strcpy( accountname, username);	// Used to add condor-run-, but not anymore.
 	
 	this->update_t( );				// Make the accountname_t and password_t accounts
 
 	NET_API_STATUS nerr = NetUserDel( NULL, accountname_t);
+
+	// Delete accountname_t so destructor does not try to remove the account again
+	delete [] accountname_t;
+	accountname_t = NULL;
+	
 	if ( nerr != NERR_Success ) return false;
 	
 	return true;
