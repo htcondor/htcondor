@@ -26,6 +26,7 @@
 // $id:$
 //----------------------------------------------------------------------
 
+#include "condor_common.h"
 #include "condor_cred_kerberos.h"
 #include <krb5.h>                        // Kerberos API
 #include "condor_debug.h"
@@ -71,9 +72,7 @@ Condor_Kerberos :: Condor_Kerberos()
     ccname_             (NULL)
 {
   krb5_error_code retval;
-  krb5_ccache     ccdef;       // default credential cache for user
-  krb5_creds      creds;
-  krb5_creds      fwdcred;     // forwarding credential
+
   //------------------------------------------
   // If not forwared, let's try to create a new one for the user
   //------------------------------------------
@@ -290,13 +289,10 @@ bool Condor_Kerberos :: receive_credential(ReliSock * sock)
   bool ret = FALSE;
   krb5_creds **     creds;
   krb5_error_code   retval;
-  krb5_ccache       ccache = NULL;
   krb5_auth_context auth_context = NULL;
-  extern char *ticket;
   static krb5_principal rcache_server = 0;
   static krb5_rcache rcache;
-  krb5_address *local_addr, *remote_addr;
-  int type, msgLength;
+  int type;
   krb5_data    krb5data;
   
   // First, check for message
@@ -334,23 +330,21 @@ bool Condor_Kerberos :: receive_credential(ReliSock * sock)
       
     }
     
-    if (retval=krb5_rd_cred(context_,auth_context, &krb5data,&creds,NULL))
-      {
-	dprintf(D_FULLDEBUG, "Error getting forwarded credential");
-	sock->encode();
-	type = CONDOR_KERBEROS_TGT_FAIL;
-	sock->code( type );
-	sock->end_of_message();
-	return FALSE;
-      }
-    else{
-      // Store the credential locally.
-      store_credential(*creds);
-      sock->encode();
-      type = CONDOR_KERBEROS_RECEIVE_TGT;
-      sock->code( type );   // Tell the other end
+    if( (retval=krb5_rd_cred(context_,auth_context, 
+							 &krb5data,&creds,NULL)) ) {
+		dprintf(D_FULLDEBUG, "Error getting forwarded credential");
+		sock->encode();
+		type = CONDOR_KERBEROS_TGT_FAIL;
+		sock->code( type );
+		sock->end_of_message();
+		return FALSE;
+	} else {
+			// Store the credential locally.
+		store_credential(*creds);
+		sock->encode();
+		type = CONDOR_KERBEROS_RECEIVE_TGT;
+		sock->code( type );   // Tell the other end
     }
-  
   }
   return ret;
 }
