@@ -7,6 +7,15 @@
 ** of that here.  (New tags should be added at the top of the file,
 ** just after this header).  Thanks!  Derek Wright, 3/17/03
 **********************************************************************
+4/29/04 V6_7-pre-merge-V6_6-doc-merge-4
+    The state of the doc directory in V6_7-branch before merging
+    changes from the V6_6-branch as tagged V6_6-doc-merge-4.
+
+4/29/04 V6_6-doc-merge-4
+    The state of the doc directory in V6_6-branch before a 
+    merge into the V6_7-branch. 
+
+
 3/16/04 V6_7-post-merge-V6_6-doc-merge-3
     The state of the doc directory in V6_7-branch after merging
     changes from the V6_6-branch as tagged V6_6-doc-merge-3.
@@ -14,6 +23,25 @@
 3/16/04 V6_7-pre-merge-V6_6-doc-merge-3
     The state of the doc directory in V6_7-branch before merging
     changes from the V6_6-branch as tagged V6_6-doc-merge-3.
+
+
+3/26/04 V6_6-post-merge-V6_6_2-doc-merge-1
+    The state of the doc directory in V6_6-branch after merging
+    changes from the V6_6_2-branch as tagged V6_6_2-doc-merge-1.
+
+3/26/04 V6_6-pre-merge-V6_6_2-doc-merge-1
+    The state of the doc directory in V6_6-branch before merging
+    changes from the V6_6_2-branch as tagged V6_6_2-doc-merge-1.
+
+3/26/04 V6_6_2-doc-merge-1
+    The state of the doc directory in V6_6_2-branch before the
+    first merge into V6_6-branch.
+
+
+3/18/04 V6_6_2-branch
+    A release branch for the 6.6.2 manual.  Created from the
+    V6_6_2-root tag.  Any changes to the 6.6.2 manual should be done
+    here, and the V6_6-branch can be used for 6.6.3 and future work. 
 
 3/16/04 V6_6-doc-merge-3
     The state of the doc directory in V6_6-branch before a 
