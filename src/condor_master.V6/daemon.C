@@ -261,6 +261,23 @@ daemon::runs_on_this_host()
 			}
 		}
 	}
+	if(strcmp(name_in_config_file, "KBDD") == 0)
+	// X_RUNS_HERE controls whether or not to run kbdd if it's presented in
+	// the config file
+	{
+		tmp = param("X_RUNS_HERE");
+		if(tmp)
+		{
+			if(*tmp == 'T' || *tmp == 't')
+			{
+				flag = TRUE;
+			}
+			else
+			{
+				flag = FALSE;
+			}
+		}
+	}
 	return flag;
 }
 
