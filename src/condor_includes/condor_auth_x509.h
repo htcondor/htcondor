@@ -63,7 +63,7 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
     // RETURNS:
     //------------------------------------------
 
-    int wrap(const char* input, int input_len, char*& output, int& output_len);
+    int wrap(char* input, int input_len, char*& output, int& output_len);
     //------------------------------------------
     // PURPOSE: Wrap the buffer
     // REQUIRE: 
@@ -71,7 +71,7 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
     //          May need more code later on
     //------------------------------------------
     
-    int unwrap(const char* input, int input_len, char*& output, int& output_len);
+    int unwrap(char* input, int input_len, char*& output, int& output_len);
     //------------------------------------------
     // PURPOSE: Unwrap the buffer
     // REQUIRE: 

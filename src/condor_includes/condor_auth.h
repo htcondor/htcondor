@@ -86,7 +86,7 @@ class Condor_Auth_Base {
     // RETURNS: TRUE or FALSE
     //------------------------------------------
 
-    virtual int wrap(const char*  input, 
+    virtual int wrap(char*  input, 
                      int    input_len, 
                      char*& output,
                      int&   output_len);
@@ -99,7 +99,7 @@ class Condor_Auth_Base {
     //          May need more code later on
     //------------------------------------------
     
-    virtual int unwrap(const char*  input, 
+    virtual int unwrap(char*  input, 
                        int    input_len, 
                        char*& output, 
                        int&   output_len);

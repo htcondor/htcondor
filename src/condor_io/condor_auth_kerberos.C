@@ -159,10 +159,10 @@ int Condor_Auth_Kerberos :: authenticate(const char * remoteHost)
     return( status );
 }
 
-int Condor_Auth_Kerberos :: wrap(const char* input, 
-                                 int         input_len, 
-                                 char*&      output, 
-                                 int&        output_len)
+int Condor_Auth_Kerberos :: wrap(char*  input, 
+                                 int    input_len, 
+                                 char*& output, 
+                                 int&   output_len)
 {
     krb5_error_code code;
     krb5_data       in_data, test;
@@ -211,10 +211,10 @@ int Condor_Auth_Kerberos :: wrap(const char* input,
     return FALSE;
 }
 
-int Condor_Auth_Kerberos :: unwrap(const char*  input, 
-                                   int          input_len, 
-                                   char*&       output, 
-                                   int&         output_len)
+int Condor_Auth_Kerberos :: unwrap(char*  input, 
+                                   int    input_len, 
+                                   char*& output, 
+                                   int&   output_len)
 {
     int code;
     krb5_data     out_data;
@@ -519,7 +519,7 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     krb5_keytab       keytab = 0;
     int               time, message, rc = FALSE;
     krb5_ticket *     ticket = NULL;
-    char * principal;
+    const char * principal;
 
     request.data = 0;
     reply.data   = 0;
@@ -530,7 +530,7 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos()
     principal = param(STR_CONDOR_SERVER_PRINCIPAL);
     
     if (principal == NULL) {
-        principal = strdup(STR_DEFAULT_CONDOR_SERVICE);
+        principal = STR_DEFAULT_CONDOR_SERVICE;
     }
     //------------------------------------------
     // First, find out the principal mapping
