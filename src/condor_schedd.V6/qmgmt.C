@@ -1366,8 +1366,14 @@ static void AppendHistory(ClassAd* ad)
 
   // save job ad to the log
   FILE* LogFile=fopen(LogFileName,AccMode);
+  
+  if ( !LogFile ) {
+	dprintf(D_ALWAYS,"ERROR saving to history file; cannot open %s\n",LogFileName.Value());
+  }
+
   if (!ad->fPrint(LogFile)) {
     dprintf(D_ALWAYS, "ERROR in Scheduler::LogMatchEnd - failed to write clas ad to log file %s\n",LogFileName.Value());
+	fclose(LogFile);
     return;
   }
   
