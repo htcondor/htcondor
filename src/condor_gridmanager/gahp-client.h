@@ -85,6 +85,9 @@ class GahpClient : public Service {
 		///
 		int getMaxPendingRequests() { return max_pending_requests; }
 
+		///
+		static bool getUsePrefix() { return use_prefix; }
+
 		/** @name Mode methods.
 		 * Methods to set/get the mode.
 		 */
@@ -289,6 +292,7 @@ class GahpClient : public Service {
 			const char *command=NULL);
 		bool command_commands();
 		bool command_async_mode_on();
+		bool command_response_prefix(const char *prefix);
 
 			// Private Data Members
 		static unsigned int m_reference_count;
@@ -314,6 +318,7 @@ class GahpClient : public Service {
 		static int m_gahp_writefd;
 		static char m_gahp_version[150];
 		static StringList * m_commands_supported;
+		static bool use_prefix;
 		static void write_line(const char *command);
 		static void write_line(const char *command,int req,const char *args);
 		static void Reaper(Service*,int pid,int status);
