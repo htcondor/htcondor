@@ -28,7 +28,7 @@ SRC = state_machine_driver.C event_handler.C name_tab.C NON_POSIX.select.C \
 	classad_hashtable.C classad_log.C log_transaction.C log.C \
 	classad_collection.C usagemon.C \
 	get_full_hostname.C format_time.C renice_self.C condor_version.C \
-	limit.C my_arch.C my_subsystem.C daemon_types.C killfamily.C \
+	limit.C my_arch.C my_subsystem.C daemon_types.C killfamily.C strnewp.C \
 	access.C access.t.C
 
 OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
@@ -40,7 +40,8 @@ OBJ = state_machine_driver.o event_handler.o name_tab.o NON_POSIX.select.o \
 	classad_hashtable.o classad_log.o log_transaction.o log.o \
 	classad_collection.o usagemon.o \
 	get_full_hostname.o format_time.o renice_self.o condor_version.o \
-	limit.o my_arch.o my_subsystem.o daemon_types.o killfamily.o access.o
+	limit.o my_arch.o my_subsystem.o daemon_types.o killfamily.o access.o \
+	strnewp.o
 
 
 CEDAR_LIBS = ../condor_io/libcondor.a
