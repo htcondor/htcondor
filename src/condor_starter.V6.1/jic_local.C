@@ -209,6 +209,8 @@ JICLocal::notifyJobExit( int exit_status, int reason, UserProc*
 		// depending on the exit reason, we want a different event. 
 	u_log->logJobExit( &ad, reason );
 
+	writeOutputAdFile( &ad );
+
 	return true;
 }
 
