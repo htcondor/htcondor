@@ -8,8 +8,6 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
-extern int DebugFlags;	/* Bits to look for in dprintf                       */
-
 #if !defined(__STDC__) && !defined(__cplusplus)
 #define const
 #endif
@@ -37,12 +35,15 @@ static const int D_PREEMPT		= (1<<16);
 static const int D_PROTOCOL		= (1<<17);
 static const int D_PRIV			= (1<<18);
 static const int D_TAPENET		= (1<<19);
+static const int D_DAEMONCORE	= (1<<20);
 static const int D_MAXFLAGS		= 32;
 static const int D_ALL			= (~(1<<5));
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
+
+extern int DebugFlags;	/* Bits to look for in dprintf */
 
 #if defined(__STDC__) || defined(__cplusplus)
 void dprintf_init ( int fd );
@@ -54,10 +55,7 @@ void Suicide();
 void config ();
 char * param ();
 void _EXCEPT_ ();
-#endif
-
-#if defined(__cplusplus)
-}
+void dprintf ();
 #endif
 
 /*
@@ -78,6 +76,11 @@ extern int	_EXCEPT_Line;			/* Line number of the exception    */
 extern char	*_EXCEPT_File;			/* File name of the exception      */
 extern int	_EXCEPT_Errno;			/* errno from most recent system call */
 extern int (*_EXCEPT_Cleanup)();	/* Function to call to clean up (or NULL) */
+extern void _EXCEPT_(char*, ...);
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif
 
