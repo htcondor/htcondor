@@ -46,7 +46,7 @@
 #	define fchmod	__hide_fchmod
 #endif
 
-#if defined(LINUX)
+#if defined(LINUX) && !defined(GLIBC)
 #define fstat __hide_fstat 
 #define stat __hide_stat 
 #define lstat __hide_lstat 
@@ -54,7 +54,8 @@
 
 #include <sys/stat.h>
 
-#include <sys/time.h>
+#include "condor_fix_sys_time.h"
+
 #if defined(HPUX9)
 #	undef mknod
 #	undef select
@@ -86,14 +87,15 @@ struct stat;
 struct statfs;
 #endif
 
-#if defined(LINUX)
+#if defined(LINUX) && !defined(GLIBC)
 #undef fstat 
 #undef stat 
 #undef lstat
 struct stat;
 #endif
 
-#include <sys/resource.h>
+#include "condor_fix_sys_resource.h"
+
 #if defined(HPUX9)
 #undef _PROTOTYPES
 #endif
@@ -193,7 +195,9 @@ struct stat;
 #if defined(LINUX)
 #	include <signal.h>
 #	include <sys/vfs.h>
+#if !defined(GLIBC)
 #	include <linux/ipc.h>
+#endif /* GLIBC */
 #	define	TRUE 1
 #	define	FALSE 0
 #endif
@@ -404,10 +408,6 @@ return old( arg_1, arg_2, arg_3, arg_4, arg_5, arg_6 ); \
 }
 
 
-#ifdef LINUX
-#include "switches.linux.h"
-#endif
-
 #ifdef IRIX53
 REMAP_ONE( getwd, _getwd, char *, char * )
 REMAP_SIX( mmap, _mmap, char *, char *, size_t, int, int, int, off_t )
@@ -426,4 +426,14 @@ REMAP_SIX( mmap, _mmap, char *, char *, size_t, int, int, int, off_t )
 #if defined(OSF1)
 #define FORK _FORK
 #endif
+
+#if defined(LINUX) 
+#	define PIPE(x) (__PIPE(x))
+#	define FORK(x) (__FORK(x))
+#	define GETEGID(x)  (__GETEGID(x))
+#	define GETPPID(x)  (__GETPPID(x))
+#	define GETEUID(x)  (__GETEUID(x))
+#endif /* LINUX */
+
+
 
