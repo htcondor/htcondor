@@ -85,7 +85,7 @@ private functions declarations and all the extern junk for global variables
 shared across the library modules.
 
 This was done so when someone who wants to use the library looks at sysapi.h,
-they see a clean interface to the library and not a bunch of crap.
+they see a clean interface to the library and not a bunch of superfluous junk.
 
 Also, comment the sysapi.h header file nicely.
 

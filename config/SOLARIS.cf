@@ -66,6 +66,7 @@
 #define NEEDS_64BIT_SYSCALLS		YES
 #define NEEDS_64BIT_STRUCTS		YES
 
+#define WANT_PVM			YES
 #define	PVM_ARCH			SUN4SOL2
 #define	HAS_PURIFY			YES
 
@@ -78,7 +79,7 @@
 #define TestPlatformLdFlags -lnsl -lsocket -lresolv
 
 /*
-    When we're linking for purify, we don't want all the static crap,
+    When we're linking for purify, we don't want all the static junk,
     either, but we need more libs than just the test suite.  So, we 
     define this here to specify the flags we want to give to the
     linker when we're building the Condor Daemons under purify.

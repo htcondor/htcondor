@@ -92,8 +92,13 @@ pseudo_get_job_info(ClassAd *&ad)
 	the_ad = thisRemoteResource->getJobAd();
 	ASSERT( the_ad );
 
-		// FileTransfer now makes sure we only do Init() once
-	thisRemoteResource->filetrans.Init( the_ad, true, PRIV_USER );
+		// FileTransfer now makes sure we only do Init() once.
+		//
+		// New for WIN32: want_check_perms = false.
+		// Since the shadow runs as the submitting user, we
+		// let the OS enforce permissions instead of relying on
+		// the pesky perm object to get it right.
+	thisRemoteResource->filetrans.Init( the_ad, false, PRIV_USER );
 
 	Shadow->publishShadowAttrs( the_ad );
 

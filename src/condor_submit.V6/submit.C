@@ -319,7 +319,7 @@ void TestFilePermissions( char *scheddAddr = NULL )
 {
 #ifdef WIN32
 	// this isn't going to happen on Windows since:
-	// 1. this uid/gid crap isn't portable to windows
+	// 1. this uid/gid stuff isn't portable to windows
 	// 2. The shadow runs as the user now anyways, so there's no
 	//    need for condor to waste time finding out if SYSTEM can
 	//    write to some path. The one exception is if the user
@@ -329,11 +329,11 @@ void TestFilePermissions( char *scheddAddr = NULL )
 	gid_t gid = getgid();
 	uid_t uid = getuid();
 
-	int result, crap;
+	int result, junk;
 	MyString name;
 
 	CheckFilesRead.startIterations();
-	while( ( CheckFilesRead.iterate( name, crap ) ) )
+	while( ( CheckFilesRead.iterate( name, junk ) ) )
 	{
 		result = attempt_access((char *)name.Value(), ACCESS_READ, uid, gid, scheddAddr);
 		if( result == FALSE ) {
@@ -343,7 +343,7 @@ void TestFilePermissions( char *scheddAddr = NULL )
 	}
 
 	CheckFilesWrite.startIterations();
-	while( ( CheckFilesWrite.iterate( name, crap ) ) )
+	while( ( CheckFilesWrite.iterate( name, junk ) ) )
 	{
 		result = attempt_access((char *)name.Value(), ACCESS_WRITE, uid, gid, scheddAddr );
 		if( result == FALSE ) {
@@ -795,7 +795,6 @@ check_and_universalize_path(MyString &path, char *lhs)
 		} else {
 			uni = (UNIVERSAL_NAME_INFO*)&name_info_buf;
 			path = uni->lpUniversalName;
-			printf("Universal path is: '%s'\n", path.Value());
 			retval = 1; // signal that we changed somthing
 		}
 	}
@@ -3921,19 +3920,19 @@ check_open( const char *name, int flags )
 	(void)close( fd );
 
 	// Queue files for testing access if not already queued
-	int crap;
+	int junk;
 	if( flags & O_WRONLY )
 	{
-		if ( CheckFilesWrite.lookup(strPathname,crap) < 0 ) {
+		if ( CheckFilesWrite.lookup(strPathname,junk) < 0 ) {
 			// this file not found in our list; add it
-			CheckFilesWrite.insert(strPathname,crap);
+			CheckFilesWrite.insert(strPathname,junk);
 		}
 	}
 	else
 	{
-		if ( CheckFilesRead.lookup(strPathname,crap) < 0 ) {
+		if ( CheckFilesRead.lookup(strPathname,junk) < 0 ) {
 			// this file not found in our list; add it
-			CheckFilesRead.insert(strPathname,crap);
+			CheckFilesRead.insert(strPathname,junk);
 		}
 	}
 }

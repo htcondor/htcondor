@@ -29,7 +29,7 @@
 LineBuffer::
 LineBuffer( int maxsize )
 {
-	// TODO This is fucked up but it works for now TODO
+	// TODO This is fubar but it works for now TODO
 	//bufptr = buffer = (char *) malloc( maxsize + 1 );
 	bufptr = buffer = (char *) malloc( maxsize + 1 );
 	assert( buffer );

@@ -622,7 +622,7 @@ GahpServer::Startup()
 
 		// Try and use a reponse prefix, to shield against
 		// errors which could arise if the Globus libraries
-		// linked with the GAHP server spit out crap to stdout.
+		// linked with the GAHP server spit out information to stdout.
 	use_prefix = command_response_prefix( GAHP_PREFIX );
 
 		// try to turn on gahp async notification mode

@@ -473,7 +473,7 @@ sub install {
 #    }
 
     # Move the sbin directories instead of overwriting them,
-    # so that the running daemons don't crap out
+    # so that the running daemons don't blow up 
     if ( -d "$release_dir/sbin" ) {
 	rename ("$release_dir/sbin", "$release_dir/sbin.old.$timestamp") or
 	    die "Unable to move $release_dir/sbin!\n";

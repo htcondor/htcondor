@@ -48,7 +48,7 @@ find if we can resolve the $(HOSTNAME) macro. :(
 
    I'm still not sure what's the right way to handle this chicken/egg
 problem.  We have a similar problem with the DEFAULT_DOMAIN_NAME macro
-(which admins can set if their DNS/NIS stuff is so fucked that they
+(which admins can set if their DNS/NIS stuff is so fubared that they
 can't get fully-resolved hostnames).  The way we resolved that was we
 said that if you wanted to define DEFAULT_DOMAIN_NAME, you had to do
 it in your global config file.  When we read in the global config

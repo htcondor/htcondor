@@ -2,6 +2,35 @@
    The state of the V6_7-branch before merging in the V6_6-branch as
    tagged at V6_6-merge-5.
 
+02/19/04 V6_6-merge-5
+   The state of the V6_6-branch for another merge into V6_7-branch.
+   This is from after the V6_6_1 release, and it also includes a few
+   pre-6.6.2 changes, fixes, build system improvements, etc.
+
+02/16/04 V6_6-cdf-branch
+   A new branch off of V6_6-branch created from the V6_6-cdf-root tag.
+   This will hold various changed made for CDF, some of which are new
+   features.
+
+02/12/04 V6_6-infn-branch
+   A new branch off of V6_6-branch (post V6_6_1) that will be used for
+   various startd enhancements for the Bolonga Batch System (BBS) at
+   INFN.  These changes will be merged back into the V6_7-branch, not
+   V6_6 (since they are totally new features), but they're being given
+   to INFN from code as close to the stable 6.6.1 release as possible.
+   This branch was created from the V6_6-infn-root tag.
+
+02/11/04 V6_6_1
+   The official 6.6.1 release tag!  This is a re-tagging of
+   "BUILD-V6_6-branch-2004-2-5" with a few minor modifications for
+   IRIX.  The tag lives on the V6_6-branch for the V6_6_ALL module,
+   and on the trunk for the V6_6_1_EXT module of the externals tree.
+   In NMI land most of the binaries/tarballs came from build ID 2732.
+   The test suite ran on most platforms as is reported on that build
+   ID.  IRIX was built manually due to various evil things.  
+   The version string for all platforms (except IRIX and maybe 
+   windows) is: "$CondorVersion: 6.6.1 Feb 5 2003 $"
+
 02/01/04 V6_7-mirror-2-branch
    A new branch off of V6_7-branch for the final product we're sending
    to CORE.  It will contain all of the HighAvailability locking stuff

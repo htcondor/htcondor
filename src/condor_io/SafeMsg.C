@@ -236,7 +236,7 @@ void _condorPacket :: checkHeader(int & len, void *& dta)
     short flags = 0, mdKeyIdLen = 0, encKeyIdLen = 0;
 
     if(memcmp(data, THIS_IS_TOO_UGLY_FOR_THE_SAKE_OF_BACKWARD, 4) == 0) {
-        // We found crap, go with 6.3 header format
+        // We found stuff, go with 6.3 header format
         // First six bytes are MD5/encryption related
         data += 4;
         memcpy(&flags, data, 2);

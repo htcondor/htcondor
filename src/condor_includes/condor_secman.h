@@ -92,6 +92,9 @@ public:
 	SecMan::sec_feat_act	ReconcileSecurityAttribute(const char* attr, ClassAd &cli_ad, ClassAd &srv_ad);
 	MyString			ReconcileMethodLists( char * cli_methods, char * srv_methods );
 
+
+	static  void			key_printf(int debug_levels, KeyInfo *k);
+
 	static	int 			getAuthBitmask ( const char * methods );
 	static	char* 			getSecSetting( const char* fmt, const char* authorization_level );
 	static	MyString 		getDefaultAuthenticationMethods();

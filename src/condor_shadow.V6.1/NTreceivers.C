@@ -38,90 +38,12 @@ extern BaseShadow *Shadow;
 extern RemoteResource *thisRemoteResource;
 
 
-#ifdef WIN32
-	// This block of code is just temporary for Win32, and should be removed
-	// once the shadow runs as the user on Win32.
-	// These functions check to see if the owner has permission to read or
-	// write a given file.  They are all just stub functions on Unix, because
-	// on Unix the Shadow already runs as the user, so it can just try to 
-	// do a read or write directly and let the OS tell us if it fails.
-	// -Todd Tannenbaum, 1/02
-	#include "perm.h"
-	#include "condor_attributes.h"
-	static perm * perm_obj = NULL;
-
-	static 
-	void
-	initialize_perm_checks()
-	{
-		ClassAd *Ad = NULL;
-
-		pseudo_get_job_info(Ad);
-		if ( !Ad ) {
-			// failure
-			return;
-		}
-
-		char owner[150];
-		if (Ad->LookupString(ATTR_OWNER, owner) != 1) {
-			// no owner specified in ad
-			return;		
-		}
-		// lookup the domain
-		char ntdomain[80];
-		char *p_ntdomain = ntdomain;
-		if (Ad->LookupString(ATTR_NT_DOMAIN, ntdomain) != 1) {
-			// no nt domain specified in the ad; assume local account
-			p_ntdomain = NULL;
-		}
-		perm_obj = new perm();
-		if ( !perm_obj->init(owner,p_ntdomain) ) {
-			// could not find the owner on this system; perm object
-			// already did a dprintf so we don't have to.
-			delete perm_obj;
-			perm_obj = NULL;
-			return;
-		} 
-	}
-
-	static 
-	bool
-	read_access(const char *filename)
-	{
-		bool result = true;
-
-		if ( !perm_obj || (perm_obj->read_access(filename) != 1) ) {
-			// we do _not_ have permission to read this file!!
-			dprintf(D_ALWAYS,
-				"Permission denied to read file %s\n",filename);
-			result = false;
-		}
-
-		return result;
-	}
-
-	static 
-	bool 
-	write_access(const char *filename)
-	{
-		bool result = true;
-
-		// check for write permission on this file
-		if ( !perm_obj || (perm_obj->write_access(filename) != 1) ) {
-			// we do _not_ have permission to write this file!!
-			dprintf(D_ALWAYS,"Permission denied to write file %s!\n",
-					filename);
-			result = false;
-		}
-
-		return result;
-	}
-#else  
-	// Some stub functions on Unix.  See comment above.
-	static void initialize_perm_checks() { return; }
-	static bool read_access(const char *filename) { return true; }
-	static bool write_access(const char *filename) { return true; }
-#endif 
+	// Some stub functions. In days of old, we would fire up
+	// a perm object on windows, but since the shadow runs as
+	// the user now, we don't need to do that stuff.
+static void initialize_perm_checks() { return; }
+static bool read_access(const char *filename) { return true; }
+static bool write_access(const char *filename) { return true; }
 
 
 int

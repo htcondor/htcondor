@@ -4010,7 +4010,7 @@ int DaemonCore::Continue_Process(pid_t pid)
 			}
 			// Note: SuspendThread returns 0 if thread was previously active
 			if ( ::SuspendThread(hThreads[j]) == 0 ) {
-				// Oh shit! This process was already active.  Resume all
+				// This process was already active.  Resume all
 				// the threads we have suspended and return.
 				dprintf(D_DAEMONCORE,
 						"Continue_Process: pid %d has active thread\n",pid);

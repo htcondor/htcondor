@@ -44,18 +44,21 @@
 extern char* mySubSystem;
 extern bool global_dc_get_cookie(int &len, unsigned char* &data);
 
-#define SECURITY_HACK_ENABLE
-void zz1printf(KeyInfo *k) {
-	if (k) {
-		char hexout[260];  // holds (at least) a 128 byte key.
-		const unsigned char* dataptr = k->getKeyData();
-		int   length  =  k->getKeyLength();
+void SecMan::key_printf(int debug_levels, KeyInfo *k) {
+	if (param_boolean("SEC_DEBUG_PRINT_KEYS", false)) {
+		if (k) {
+			char hexout[260];  // holds (at least) a 128 byte key.
+			const unsigned char* dataptr = k->getKeyData();
+			int   length  =  k->getKeyLength();
 
-		for (int i = 0; (i < length) && (i < 24); i++) {
-			sprintf (&hexout[i*2], "%02x", *dataptr++);
+			for (int i = 0; (i < length) && (i < 24); i++) {
+				sprintf (&hexout[i*2], "%02x", *dataptr++);
+			}
+
+			dprintf (debug_levels, "KEYPRINTF: [%i] %s\n", length, hexout);
+		} else {
+			dprintf (debug_levels, "KEYPRINTF: [NULL]\n");
 		}
-
-		dprintf (D_FULLDEBUG, "KEYCACHE: [%i] %s\n", length, hexout);
 	}
 }
 
@@ -786,6 +789,16 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 		dprintf (D_SECURITY, "SECMAN: using session %s for %s.\n", sid.Value(), keybuf);
 		// we have the session id, now get the session from the cache
 		have_session = session_cache->lookup(sid.Value(), enc_key);
+
+		// check the expiration.
+		time_t cutoff_time = time(0);
+		if (enc_key->expiration() && enc_key->expiration() <= cutoff_time) {
+			session_cache->expire(enc_key);
+			have_session = false;
+			enc_key = NULL;
+		}
+
+
 		if (!have_session) {
 			// the session is no longer in the cache... might as well
 			// delete this mapping to it.  (we could delete them all, but
@@ -814,9 +827,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 		if (DebugFlags & D_FULLDEBUG) {
 			dprintf (D_SECURITY, "SECMAN: found cached session id %s for %s.\n",
 					enc_key->id(), keybuf);
-#ifdef SECURITY_HACK_ENABLE
-			zz1printf(enc_key->key());
-#endif
+			key_printf(D_SECURITY, enc_key->key());
 			auth_info.dPrint( D_SECURITY );
 		}
 
@@ -1136,9 +1147,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 
 				if (DebugFlags & D_FULLDEBUG) {
 					dprintf (D_SECURITY, "SECMAN: about to enable message authenticator.\n");
-#ifdef SECURITY_HACK_ENABLE
-					zz1printf(ki);
-#endif
+					key_printf(D_SECURITY, ki);
 				}
 
 				// prepare the buffer to pass in udp header
@@ -1168,9 +1177,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 
 				if (DebugFlags & D_FULLDEBUG) {
 					dprintf (D_SECURITY, "SECMAN: about to enable encryption.\n");
-#ifdef SECURITY_HACK_ENABLE
-					zz1printf(ki);
-#endif
+					key_printf(D_SECURITY, ki);
 				}
 
 				// prepare the buffer to pass in udp header
@@ -1442,9 +1449,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 
 			if (DebugFlags & D_FULLDEBUG) {
 				dprintf (D_SECURITY, "SECMAN: about to enable message authenticator.\n");
-#ifdef SECURITY_HACK_ENABLE
-				zz1printf(ki);
-#endif
+				key_printf(D_SECURITY, ki);
 			}
 
 			sock->encode();
@@ -1464,9 +1469,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, CondorError* err
 
 			if (DebugFlags & D_FULLDEBUG) {
 				dprintf (D_SECURITY, "SECMAN: about to enable encryption.\n");
-#ifdef SECURITY_HACK_ENABLE
-				zz1printf(ki);
-#endif
+				key_printf(D_SECURITY, ki);
 			}
 
 			sock->encode();

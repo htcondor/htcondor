@@ -220,7 +220,7 @@ if( ! $cp_cmd ) {
 }
 
 `rm -rf $skel`;
-mkdir( "$skel", 0777 );
+mkdir( "$skel", 0777 ) || die "Can't mkdir($skel): $!\n";
 
 ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime;
 $mon++;
@@ -237,15 +237,22 @@ foreach $module ( @modules ) {
 
     # Setup skeleton directory
     print "Setting up skeleton directory for \"$module\"... ";
-    mkdir( "$skel/$release", 0777 );
+    mkdir( "$skel/$release", 0777 ) || 
+	die "Can't mkdir($skel/$release): $!\n";
 
     # You always want the same version of LICENSE.TXT in everything. 
-    `cp -f $realskel/LICENSE.TXT $skel/$release`;
+    $out = `cp -f $realskel/LICENSE.TXT $skel/$release`;
+    if( ($? >> 8) != 0 ) {
+	die "Can't cp $realskel/LICENSE.TXT: $out";
+    }
 
     # Now, you always want a README, DOC, and INSTALL
-	foreach $file ( "README", "INSTALL", "DOC" ) {
-	    `cp -f $realskel/$file $skel/$release/`;
-    } 
+    foreach $file ( "README", "INSTALL", "DOC" ) {
+	$out = `cp -f $realskel/$file $skel/$release/`;
+	if( ($? >> 8) != 0 ) {
+	    die "Can't cp $realskel/$file: $out";
+	}
+    }
 
     # Now, handle any special case files for a given module
     foreach $file ( @{$skelfiles{$module}} ) {
@@ -259,7 +266,10 @@ foreach $module ( @modules ) {
 		} else {
 	   	 $dest = $file;
 		}
-		`$cp_cmd $src $skel/$release/$dest`;
+		$out = `$cp_cmd $src $skel/$release/$dest`;
+		if( ($? >> 8) != 0 ) {
+		    die "Can't $cp_cmd $src: $out";
+		}
     }
     `rm -rf $skel/$release/CVS`;
     `rm -rf $skel/$release/*/CVS`;
@@ -287,19 +297,29 @@ foreach $module ( @modules ) {
 	}
 
 	# Copy the tarfile with the right permissions into the skeleton. 
-	`cp $releaselocation{$linktype}/$tarfile $skel/$release/$tarfile`;
+	$out = `cp $releaselocation{$linktype}/$tarfile $skel/$release/$tarfile`;
+	if( ($? >> 8) != 0 ) {
+	    die "Can't cp $releaselocation{$linktype}/$tarfile: $out";
+	}
 
 	# Create full archive 
 	chdir( $skel ) || die "Can't chdir to $skel: $!\n";
 	print "Creating full archive: $release.tar\n";
 	print `$tar_cmd -cvf $release.tar $release`;
+	if( ($? >> 8) != 0 ) {
+	    die "Can't tar $release.tar $release\n";
+	}
+
 	chdir( ".." ) || die "Can't chdir to ..: $!\n";
 
 	# Delete the release.tar we're now done with.
 	unlink( "$skel/$release/$tarfile" );
 
 	# Fix ownerships in the full archive.
-	`cp $skel/$release.tar $skel/$release-$platform.tar`;
+	$out = `cp $skel/$release.tar $skel/$release-$platform.tar`;
+	if( ($? >> 8) != 0 ) {
+	    die "Can't cp $skel/$release.tar $skel/$release-$platform.tar: $out";
+	}
 
 	# Delete the tar file we're now done with.
 	unlink( "$skel/$release.tar" );
@@ -321,15 +341,27 @@ foreach $module ( @modules ) {
 	# Compress as appropriate, and move to the final location.
 	if( $platform =~ /.*linux.*/ ) {
 	    print "gzipping $skel/$release-$platform.tar\n";
-	    system( "gzip $skel/$release-$platform.tar" );
+	    $out = `gzip $skel/$release-$platform.tar`;
+	    if( ($? >> 8) != 0 ) {
+		die "Can't gzip $skel/$release-$platform.tar: $out";
+	    }
 	    print "Moving $release-$platform.tar.gz into $targetdir ... ";
-	    `mv $skel/$release-$platform.tar.gz $targetdir`;
+	    $out = `mv $skel/$release-$platform.tar.gz $targetdir`;
+	    if( ($? >> 8) != 0 ) {
+		die "Can't mv $skel/$release-$platform.tar.gz $targetdir: $out";
+	    }
 	    print "done.\n";
 	} else {
 	    print "compressing $skel/$release-$platform.tar\n";
-	    system( "compress $skel/$release-$platform.tar" );
+	    $out = `compress $skel/$release-$platform.tar`;
+	    if( ($? >> 8) != 0 ) {
+		die "Can't compress $skel/$release-$platform.tar: $out";
+	    }
 	    print "Moving $release-$platform.tar.Z into $targetdir ... ";
-	    `mv $skel/$release-$platform.tar.Z $targetdir`;
+	    $out = `mv $skel/$release-$platform.tar.Z $targetdir`;
+	    if( ($? >> 8) != 0 ) {
+		die "Can't mv $skel/$release-$platform.tar.Z $targetdir: $out";
+	    }
 	    print "done.\n";
 	}
     }

@@ -289,7 +289,7 @@ init_user_ids(const char username[], const char domain[])
 
 				
 		if ( !myDynuser->init_user() ) {
-			// Oh shit.  
+			// This is indicative of a serious problem.
 			EXCEPT("Failed to create a user nobody");
 		}
 	

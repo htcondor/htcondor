@@ -699,7 +699,7 @@ bool dynuser::update_psid() {
 	domainBufferSize = max_domain_length;
 
 	if ( !LookupAccountName( 0,				// Domain
-		accountname,						// Acocunt name
+		accountname,						// Account name
 		psid, &sidBufferSize,				// Sid
 		domainBuffer, &domainBufferSize,	// Domain
 		&snu ) )							// SID TYPE
@@ -807,8 +807,8 @@ bool dynuser::deleteuser(char* username ) {
 
 		// We do NOT do a NetUserDel here, since we want to either remove
 		// all traces of the account or nothing at all.  We don't want to remove
-		// just the visible part and leave policy crap bloating the registry behind
-		// the scenes.
+		// just the visible part and leave policy junk bloating the registry 
+		// behind the scenes.
 
 	} else {
 

@@ -1,0 +1,72 @@
+#!/usr/bin/env perl
+
+######################################################################
+# This script finds the binary tarballs packaged up by the nightly
+# build and makes RPMs out of them by invoking make-condor-rpm.sh on
+# each one.  It assumes that "make public" has already finished
+# successfully.  
+######################################################################
+
+# First, set up a few variables and make sure we can find the script
+# we'll eventually need to call to do the actualy RPM creation.
+chdir( ".." ) || die "Can't chdir(..): $!\n";
+chomp($root = `pwd`);
+print "root: $root\n";
+$make_rpm = "$root/src/condor_scripts/make-condor-rpm.sh";
+if( ! -f $make_rpm ) {
+    die "Can't find make-condor-rpm.sh script!";
+}
+
+# Make a temporary build directory in ../public for RPM generation.
+chdir "public" || die "Can't chdir(public): $!\n";
+if( ! -d "rpm-build" ) {
+    mkdir( "rpm-build", 0777 ) || die "Can't mkdir(rpm-build): $!\n";
+}
+$build_dir="$root/public/rpm-build";
+print "build_dir: $build_dir\n";
+
+# Now, figure out what tarballs we're going to be working on.
+opendir PUBLIC, "." || die "Can't opendir(.): $!\n";
+$vers_dir = "";
+foreach $file ( readdir(PUBLIC) ) {
+    if( $file =~ /v\d*\.\d*/ ) {
+	$vers_dir = $file;
+	break;
+    }
+}
+closedir PUBLIC;
+if( ! $vers_dir ) {
+    die "Can't find directory of public tarballs to make rpms from!";
+}
+chdir $vers_dir;
+opendir VERS_DIR, "." || die "Can't opendir(public/$vers_dir): $!\n";
+@tarballs = ();
+foreach $file ( readdir(VERS_DIR) ) {
+    if( $file =~ /condor-\d*\.\d*\.\d*.*/ ) {
+	push @tarballs, $file; 
+    }
+}
+closedir VERS_DIR;
+if( $#tarballs < 0 ) {
+    die "Can't find any public tarballs in $vers_dir!";
+}
+
+# Finally, do the real work by invoking make-condor-rpm.sh
+foreach $tarball (@tarballs) {
+    print "************************************************************\n";
+    print "Making rpms out of $tarball\n";
+    print "************************************************************\n";
+    open( RPM, "$make_rpm $tarball $build_dir|" ) 
+	|| die "can't open condor-make-rpm.sh as a pipe: $!\n";
+    while( <RPM> ) {
+	print;
+    } 
+    close RPM;
+}
+
+print "************************************************************\n";
+print "All done, cleaning up\n";
+print "************************************************************\n";
+`rm -rf $build_dir`;
+exit 0;
+

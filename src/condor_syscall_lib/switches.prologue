@@ -81,7 +81,7 @@ extern "C" int errno;
 	#define SYS_RECVMSG     17
 	
 	/* Glibc has an entry point for getdirentries, but in order to get the
-	   prototype you have to define a bunch of crap that we dont' turn on.
+	   prototype you have to define a bunch of junk that we dont' turn on.
 	   We'll just define it ourselves on Linux */ 
 extern "C" {
 	ssize_t getdirentries(int fd, char *buf, size_t nbytes,  off_t *basep);

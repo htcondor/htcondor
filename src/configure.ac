@@ -1103,7 +1103,9 @@ if test "x$_cv_libc_kind" = "xGLIBC" -a "x$_cv_arch" = "xI386" ; then
     _cv_ext_glibc_version="glibc-2.2.93"
     ;;
   "2.3.2" )
-    _cv_ext_glibc_version="glibc-2.3.2"
+    # the glibc 2.3.2 from redhat's source rpms are very different than the
+	# stock 2.3.2 you can download off of the web.
+    _cv_ext_glibc_version="glibc-2.3.2.27.9.7"
     ;;
   * )  
     AC_MSG_RESULT([ERROR])

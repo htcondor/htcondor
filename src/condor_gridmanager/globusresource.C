@@ -607,7 +607,7 @@ GlobusResource::AbandonMonitor()
 {
 	dprintf(D_ALWAYS, "Giving up on grid_monitor for site %s.  "
 		"Will retry in %d seconds (%d minutes)\n",
-		resourceName, GM_DISABLE_LENGTH);
+		resourceName, GM_DISABLE_LENGTH, GM_DISABLE_LENGTH / 60);
 	StopMonitor();
 	daemonCore->Reset_Timer( checkMonitorTid, GM_DISABLE_LENGTH);
 	initialMonitorStart = true;

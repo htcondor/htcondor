@@ -516,7 +516,7 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 			ATTR_GLOBUS_STATUS, G_UNSUBMITTED );
 	}
 
-	// If we are only managing one job, the above constraint is crap.
+	// If we are only managing one job, the above constraint is junk.
 	if  ( m_cluster ) {
 		sprintf( expr_buf,"job %d.%d\n",m_cluster,m_proc);
 	}

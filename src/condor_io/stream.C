@@ -641,7 +641,7 @@ int
 Stream::code(struct rlimit &rl)
 {
 #ifdef LINUX
-	// Oh crap, Cedar is too damn smart for us.  
+	// Cedar is too damn smart for us.  
 	// The issue is Linux changed the type for rlimits
 	// from a signed long (RedHat 6.2 and before) into
 	// an unsigned long (starting w/ RedHat 7.x).  So if
