@@ -30,12 +30,7 @@
 
 #include "condor_debug.h"
 
-#if defined(GSS_AUTHENTICATION)
-#include "auth_sock.h"
-#else
-#define AuthSock ReliSock
-#endif
-
+static char *_FileName_ = __FILE__;  // used by EXCEPT 
 
 #define _NO_EXTERN_DAEMON_CORE 1	
 #include "condor_daemon_core.h"
@@ -576,7 +571,7 @@ int main( int argc, char** argv )
 	int		dcargs = 0;		// number of daemon core command-line args found
 	char	*ptmp, *ptmp1;
 	int		i;
-	AuthSock* rsock = NULL;	// tcp command socket
+	ReliSock* rsock = NULL;	// tcp command socket
 	SafeSock* ssock = NULL;	// udp command socket
 	int		wantsKill = FALSE, wantsQuiet = FALSE;
 	char	*logAppend = NULL;
@@ -928,7 +923,7 @@ int main( int argc, char** argv )
 		// already inherit them above.
 		// If rsock/ssock are not NULL, it means we inherited them from our parent
 		if ( rsock == NULL && ssock == NULL ) {
-			rsock = new AuthSock;
+			rsock = new ReliSock;
 			ssock = new SafeSock;
 			if ( !rsock ) {
 				EXCEPT("Unable to create command Relisock");
@@ -942,7 +937,7 @@ int main( int argc, char** argv )
 					EXCEPT("BindAnyCommandPort failed");
 				}
 				if ( !rsock->listen() ) {
-					EXCEPT("Failed to post listen on command AuthSock");
+					EXCEPT("Failed to post listen on command ReliSock");
 				}
 			} else {
 				// use well-known port specified by command_port

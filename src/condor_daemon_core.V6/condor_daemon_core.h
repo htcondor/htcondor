@@ -48,12 +48,6 @@
 #include "ntsysinfo.h"
 #endif
 
-#if defined(GSS_AUTHENTICATION)
-#include "auth_sock.h"
-#else
-#define AuthSock ReliSock
-#endif
-
 static const int KEEP_STREAM = 100;
 static const int MAX_SOCKS_INHERITED = 4;
 static char* EMPTY_DESCRIP = "<NULL>";
@@ -93,10 +87,7 @@ typedef int		(Service::*ReaperHandlercpp)(int pid,int exit_status);
 #endif
 
 // helper function for finding available port for both TCP and UDP command socket
-#if !defined(GSS_AUTHENTICATION)
-#define AuthSock ReliSock
-#endif
-int BindAnyCommandPort(AuthSock *rsock, SafeSock *ssock);
+int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock);
 
 class DaemonCore : public Service
 {
@@ -218,7 +209,7 @@ class DaemonCore : public Service
 		int		HandleSigCommand(int command, Stream* stream);
 		int		HandleReq(int socki);
 		int		HandleSig(int command, int sig);
-		void	Inherit( AuthSock* &rsock, SafeSock* &ssock );  // called in main()
+		void	Inherit( ReliSock* &rsock, SafeSock* &ssock );  // called in main()
 		int		HandleProcessExitCommand(int command, Stream* stream);
 		int		HandleProcessExit(pid_t pid, int exit_status);
 		int		HandleDC_SIGCHLD(int sig);

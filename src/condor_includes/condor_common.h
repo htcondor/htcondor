@@ -23,6 +23,12 @@
 #ifndef CONDOR_COMMON_H
 #define CONDOR_COMMON_H
 
+#if defined(GSS_AUTHENTICATION)
+#ifndef _GSSAPI_H_
+#define _GSSAPI_H_
+#include "gssapi.h"
+#endif
+#endif
 
 /**********************************************************************
 ** Special macros and things we always want our header files to have

@@ -28,6 +28,7 @@
 #include "buffers.h"
 #include "sock.h"
 #include "reli_sock.h"
+#include "condor_classad.h"
 
 #include "globus_gss_assist.h"
 
@@ -126,9 +127,11 @@ public:
 	/** Perform synchronous GSS authentication over current AuthSock.
 	    Must be balanced by a call to authenticate on the other side 
        of the connection. 
-	    @return TRUE on success else FALSE
+	    @return ClassAd* on completion, NULL on error.
+	    NOTE: non-NULL return values does NOT mean they are authenticated!
+	    you must check the attributes of the ad to verify!
 	 */
-	int authenticate();
+	ClassAd * authenticate();
 
 	/** Check X509 certificate and possibly prompt for passphrase.
 	    Passphrase is needed for certificates of submittors to Condor. 
