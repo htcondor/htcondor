@@ -217,6 +217,12 @@ TOOLS		-a config imake
 DOC		-a doc
 NT_TOOLS	-a NTconfig
 
+# Modules for externals.  for now, there's only one.  this will get
+# more complicated once we start needing different versions on
+# different branches...
+V6_6_EXTERNALS	-a externals
+V6_7_EXTERNALS	-a externals
+
 # Windows-only programs. dagedit will be added here too.
 NT_PROGRAMS -a src/condor_birdwatcher 
 
@@ -238,11 +244,13 @@ V6_5_ALL	-a DOC TOOLS NT_TOOLS NT_PROGRAMS V6_5_SRC
 V6_6_CODE	-a TOOLS V6_6_SRC
 V6_6_NT_CODE	-a NT_TOOLS NT_PROGRAMS V6_6_SRC
 V6_6_ALL	-a DOC TOOLS NT_TOOLS NT_PROGRAMS V6_6_SRC 
+V6_6_BUILD	-a V6_6_ALL V6_6_EXTERNALS
 # For now, V6_7 also shares the same directories as V6_5.
 # This might change, but until then, we leave it like this.
 V6_7_CODE	-a TOOLS V6_5_SRC
 V6_7_NT_CODE	-a NT_TOOLS NT_PROGRAMS V6_5_SRC
 V6_7_ALL	-a DOC TOOLS NT_TOOLS NT_PROGRAMS V6_5_SRC 
+V6_7_BUILD	-a V6_7_ALL V6_7_EXTERNALS
 
 
 # Point these to whatever version is living on the trunk.
