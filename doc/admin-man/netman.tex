@@ -1,0 +1,192 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Bandwidth-Alloc}
+Allocating Bandwidth}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+An experimental mechanism for allocating bandwidth for checkpointing
+and remote system calls has been introduced in Condor version 6.3.0.
+This mechanism enables the \Condor{negotiator} to limit job placements
+and preemptions to within configured bandwidth limits.
+If a bandwidth limit is reached for a host or network subnet, the
+\Condor{negotiator} won't schedule jobs that require additional
+bandwidth on that host or subnet.
+Instead, the \Condor{negotiator} will attempt to run the job on
+another host or network where bandwidth is available.
+If that is not possible, the job will remain idle until network load
+decreases below the configured limits.
+
+Allocating bandwidth allows the system to perform more efficiently
+when the network is a bottleneck and avoids oversubscribing the
+capacity of networks and servers.
+Limiting Condor's bandwidth usage can also be a way to reserve
+bandwidth for other uses.
+
+To allocate bandwidth, the \Condor{negotiator} must have information
+about jobs' bandwidth requirements and bandwidth usage.
+Condor is able to obtain information about the bandwidth requirements
+for checkpoint and executable transfers and remote system calls.
+Other network usage, such as NFS or AFS I/O is currently not monitored
+or allocated.
+
+The \Condor{negotiator} allocates bandwidth using a sliding window in
+time.
+The size of the window defines the allocation granularity and is
+typically set to the \Condor{negotiator}'s scheduling interval.
+For example, a bandwidth limit of 10 Mbps using the default window of
+5 minutes will restrict bandwidth allocations to 375 MB every 5
+minutes.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Bandwidth-Alloc-Configure}
+Configuring Bandwidth Allocation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The following parameters must be defined in your central manager's
+configuration file to enable bandwidth allocation.
+\begin{description}
+\item[\Macro{NETWORK\_ROUTING\_INFO}]
+  The path to the network routing table configuration file (described
+  below).
+\item[\Macro{NETWORK\_CAPACITY\_INFO}]
+  The path to the network capacity configuration file (described
+  below).
+\end{description}
+
+The following optional parameters may also be defined in your central
+manager's configuration file.
+\begin{description}
+\item[\Macro{NETWORK\_HORIZON}]
+  What is the bandwidth allocation granularity (the size of the
+  allocation window in seconds)?  This parameter should
+  usually be equal to the scheduling granularity set by
+  \MacroU{NEGOTIATOR\_INTERVAL}.
+\item[\Macro{NETWORK\_USAGE\_HORIZON}]
+  Over what horizon (in seconds) do we calculate per-user fair-share
+  network allocations (3600 by default)?
+\item[\Macro{NETWORK\_CAPACITY\_ALLOCATION\_LIMIT}]
+  What is the maximum network capacity (in seconds) allowed in a
+  single allocation (900 by default)?
+\item[\Macro{MAX\_GOODPUT\_NETWORK\_CAPACITY\_PER\_JOB}]
+  What is the maximum percentage (between 0.0 and 1.0) of network
+  capacity for job placement that a qualified goodput transfer may
+  request (0.0 by default)?  Jobs that require less network capacity
+  than this limit get a priority boost when bandwidth is
+  oversubscribed to start running on idle CPUs.  This allows Condor to
+  keep CPUs busy even when the network is a bottleneck for higher
+  priority jobs.
+\item[\Macro{NETWORK\_CAPACITY\_RESERVED\_FOR\_GOODPUT}]
+  What percentage (between 0.0 and 1.0) of capacity do we reserve for
+  qualified goodput transfers when needed (0.0 by default)?  This
+  controls how much of a priority boost jobs with low network
+  requirements receive when bandwidth is oversubscribed.
+\end{description}
+
+To enable collection of network usage information in the Condor pool, 
+\begin{verbatim}
+        MANAGE_BANDWIDTH = True
+\end{verbatim}
+should be defined for all machines in the Condor pool (if possible).
+If \MacroU{CKPT\_SERVER\_HOST} is defined, then
+\MacroU{STARTD\_EXPRS} should also include \Attr{CkptServer}:
+\begin{verbatim}
+        CkptServer : "$(CKPT_SERVER_HOST)"
+        STARTD_EXPRS = CkptServer
+\end{verbatim}
+Finally, \MacroU{STARTD\_EXPRS} should contain the following
+attributes:
+\begin{verbatim}
+        STARTD_JOB_EXPRS = ImageSize, ExecutableSize, JobUniverse
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Bandwidth-Alloc-Routes}
+Configuring Routing for Bandwidth Allocation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The configuration file specified by the
+\MacroU{NETWORK\_ROUTING\_INFO} macro defines a network routing table
+for Condor's bandwidth allocation, allowing the \Condor{negotiator} to
+allocate bandwidth for network segments in addition to network hosts.
+To allocate bandwidth for a network transfer, the \Condor{negotiator}
+computes the transfer's route from the routing table and allocates
+bandwidth on each hop in the route.
+
+The format of the configuration file is:
+\begin{verbatim}
+        IP-ADDR SUBNET-MASK
+        --> NEXT-HOP IP-ADDR SUBNET-MASK
+\end{verbatim}
+where IP-ADDR, SUBNET-MASK, and NEXT-HOP are all given in the standard
+numbers-and-dots notation.  The first line defines a network resource
+and the "\verb+-->+" lines that follow define hops from that network resource
+to other network resources.
+A rule applies to a network address when the subnet-masked bits of the
+address match the rule's address.
+If an address matches multiple rules, the routing algorithm chooses
+the match with the most bits in the mask.
+
+The simplest configuration is:
+\begin{verbatim}
+        0.0.0.0 0.0.0.0
+\end{verbatim}
+This configuration defines a single network segment connecting all
+endpoints.
+The SUBNET-MASK of 0.0.0.0 will match any IP address.
+Any bandwidth limits defined for the 0.0.0.0 network will be applied
+to all transfers between endpoints.
+Bandwidth limits can also be set for specific endpoint addresses using
+this configuration.
+
+The following example defines a network with 2 subnets, connected to
+each other through a backbone network:
+\begin{verbatim}
+        0.0.0.0 0.0.0.0
+        --> 128.105.101.0 128.105.101.0 255.255.255.0
+        --> 128.105.102.0 128.105.102.0 255.255.255.0
+        128.105.101.0 255.255.255.0
+        --> 0.0.0.0 0.0.0.0 0.0.0.0
+        128.105.102.0 255.255.255.0
+        --> 0.0.0.0 0.0.0.0 0.0.0.0
+\end{verbatim}
+Some example routes that would be computed from this configuration
+are:
+\begin{verbatim}
+        128.105.101.5 --> 128.105.101.0 --> 0.0.0.0
+          --> 128.105.102.0 --> 128.105.102.3
+        128.105.101.5 --> 128.105.101.0 --> 128.105.101.7
+        128.105.101.5 --> 128.105.101.0 --> 0.0.0.0 
+          --> 128.105.65.3
+\end{verbatim}
+
+Depending on how you intend to use it, the routing table can be very
+detailed or may describe a very idealized representation of your
+network.
+There is no need to include endpoints in the table.
+The route always starts with the source address and ends with the
+destination address of a network flow.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Bandwidth-Alloc-Capinfo}
+Configuring Available Bandwidth}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The configuration file specified by the 
+\MacroU{NETWORK\_CAPACITY\_INFO} parameter defines bandwidth limits
+for network segments and hosts in the network.
+An empty file defines no limits.
+
+The format of the configuration file is:
+\begin{verbatim}
+        IP-ADDR CAPACITY
+\end{verbatim}
+where IP-ADDR indicates an endpoint IP address or a network resource
+from the routing table configuration file in the standard
+numbers-and-dots notation and CAPACITY is a floating-point number
+indicating the network capacity (in Mbps) of the resource.
+For example:
+\begin{verbatim}
+        128.105.101.0 40.0
+        128.105.65.3 5.0
+\end{verbatim}
+defines a 40 Mbps limit on the 128.105.101.0 subnet and a 5 Mbps limit
+for the host 128.105.65.3.

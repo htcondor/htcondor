@@ -1,18 +1,18 @@
 
 \begin{enumerate}
 
-\index{UNIX!fork}
-\index{UNIX!exec}
-\index{UNIX!system}
+\index{Unix!fork}
+\index{Unix!exec}
+\index{Unix!system}
 \item Multi-process jobs are not allowed.  This includes system calls such as
 \Syscall{fork}, \Syscall{exec}, and \Syscall{system}.
 
-\index{UNIX!pipe}
-\index{UNIX!semaphore}
-\index{UNIX!shared memory}
+\index{Unix!pipe}
+\index{Unix!semaphore}
+\index{Unix!shared memory}
 \item Interprocess communication is not allowed.  This includes pipes, semaphores, and shared memory.
 
-\index{UNIX!socket}
+\index{Unix!socket}
 \index{network}
 \item Network communication must be brief.  A job \emph{may} make network
 connections using system calls such as \Syscall{socket}, but a network
@@ -25,9 +25,9 @@ connection left open for long periods will delay checkpointing and migration.
 Condor reserves these signals for its own use.  Sending or receiving all
 other signals \emph{is} allowed.
 
-\index{UNIX!alarm}
-\index{UNIX!timer}
-\index{UNIX!sleep}
+\index{Unix!alarm}
+\index{Unix!timer}
+\index{Unix!sleep}
 \item Alarms, timers, and sleeping are not allowed.  This includes system
 calls such as \Syscall{alarm}, \Syscall{getitimer}, and \Syscall{sleep}.
 
@@ -37,13 +37,13 @@ calls such as \Syscall{alarm}, \Syscall{getitimer}, and \Syscall{sleep}.
 multiple user-level threads \emph{are} allowed.
 
 \index{file!memory-mapped}
-\index{UNIX!mmap}
+\index{Unix!mmap}
 \item Memory mapped files are not allowed.  This includes system calls such
 as \Syscall{mmap} and \Syscall{munmap}.
 
 \index{file!locking}
-\index{UNIX!flock}
-\index{UNIX!lockf}
+\index{Unix!flock}
+\index{Unix!lockf}
 \item File locks are allowed, but not retained between checkpoints.
 
 \index{file!read only}

@@ -1,11 +1,11 @@
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \section{\label{sec:Configuring-Policy}
 Configuring The Startd Policy}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!startd policy}
 \index{startd!configuration}
-\index{daemon!\Condor{startd}}
+\index{daemon!condor\_startd@\Condor{startd}}
 This section describes the configuration of the \Condor{startd} to
 implement the desired policy for when remote jobs should start, be
 suspended, (possibly) resumed, vacate (with a checkpoint) or be killed
@@ -15,7 +15,7 @@ between the needs and wishes of resource owners (machine owners) and
 resource users (people submitting their jobs to Condor).
 Please read
 this section carefully if you plan to change any of the settings
-described here, as getting it wrong can have a severe impact on
+described here, as a wrong setting can have a severe impact on
 either the owners of machines in your pool (they may
 ask to be removed from the pool entirely) or the users of your pool
 (they may stop using Condor).
@@ -26,27 +26,27 @@ Before we get into the details, there are a few things to note:
 probably want to read through section~\ref{classad-reference} on
 ClassAd expressions before continuing with this.
 
-\item If you are familiar with the version 6.0 policy expressions and
-what they do, you read
+\item If you are primarily familiar with the version 6.0 policy
+expressions and what they do, read
 section~\ref{sec:V60-Policy-diffs} on
-page~\pageref{sec:V60-Policy-diffs} which explains the differences
+page~\pageref{sec:V60-Policy-diffs}.  This section explains the differences
 between the version 6.0 policy expressions and later versions.  
 
-\item If you are defining the policy for an SMP (multi-CPU) machine,
-also read section~\ref{sec:Configuring-SMP} on
-Configuring The Startd for SMP Machines.  
-Each \Term{virtual machine} represented by the \condor{startd} on an
-SMP machine will have its own \Term{state} and \Term{activity}
-(described below). 
+\item If you are defining the policy for an SMP machine
+(a multi-CPU machine),
+also read section~\ref{sec:Configuring-SMP} for specific information on
+configuring the \Condor{startd} for SMP machines.  
+Each \Term{virtual machine} represented by the \Condor{startd} on an
+SMP machine has its own \Term{state} and \Term{activity}
+(as described below). 
 In the future, each virtual machine will be able to have its
-own policy expressions defined.
-For the rest of this section, the word ``machine''
-means an individual virtual machine, for
-an SMP machine that is showing up as multiple virtual
-machines in your pool.  
+own individual policy expressions defined.
+Within this manual section, the word ``machine''
+refers to an individual virtual machine within
+an SMP machine.
 \end{itemize}
 
-To define your policy, you set expressions in
+To define your policy, set expressions in
 the configuration file (see section~\ref{sec:Configuring-Condor} on
 Configuring Condor for an introduction to Condor's
 configuration files).
@@ -55,17 +55,17 @@ and a job ClassAd.
 The expressions can therefore reference attributes from either
 ClassAd. 
 Listed in this section are
-the attributes that are included in the machine's ClassAd and
+both the attributes that are included in the machine's ClassAd and
 the attributes that are included in a job ClassAd. 
 \index{START@\Expr{START} expression}
 \index{configuration!START@\Expr{START} expression}
-The \Expr{START} expression, which describes
-to Condor what conditions must be met for a machine to start a job
-are explained.
+The \Expr{START} expression is explained.
+It describes the conditions that must be met for a machine to
+start a job.
 The \Expr{RANK} expression is described.
 It allows the specification of
 the kinds of jobs a machine prefers to run.
-A final discussion details how the \Condor{startd} works.
+A final discussion details how the \Condor{startd} daemon works.
 Included are
 the machine \Term{states} and \Term{activities}, to give
 an idea of what is possible in policy decisions.
@@ -76,13 +76,16 @@ Two example policy settings are presented.
 Startd ClassAd Attributes}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{\condor{startd}}
-The \Condor{startd} represents the machine on which it is running to
-the Condor pool.  It publishes characteristics about the
-machine in its ClassAd to aid matchmaking with resource requests.
-The values of these attributes can be found by using
+\index{condor\_startd daemon@\condor{startd} daemon}
+\index{daemon!condor\_startd@\Condor{startd}}
+\index{Condor daemon!condor\_startd@\Condor{startd}}
+The \Condor{startd} daemon represents the machine on which it is running to
+the Condor pool.  
+The daemon publishes characteristics about the
+machine in the machine's ClassAd to aid matchmaking with resource requests.
+The values of these attributes may be listed by using the command:
 \Prog{\condor{status} -l hostname}.
-On an SMP machine, the startd will break the machine up and advertise
+On an SMP machine, the \Condor{startd} will break the machine up and advertise
 it as separate virtual machines, each with its own name and ClassAd.
 The attributes themselves and what they represent are described below:
 
@@ -101,26 +104,25 @@ The \Expr{START} expression}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{expression!\Expr{START}}
-The most important expression in the startd (and possibly in all of
-Condor) is the \Expr{START} expression.  
-This expression describes the conditions to must be met for a
-machine to service a resource request (in other words, to start a
-job). 
-This expression (like other expressions) can reference attributes
+The most important expression to the \Condor{startd}
+is the \Expr{START} expression.  
+This expression describes the conditions that must be met for a
+machine to run a job. 
+This expression can reference attributes
 in the machine's ClassAd (such as \Attr{KeyboardIdle} and \Attr{LoadAvg})
 or attributes in a job ClassAd (such as
-\Attr{Owner}, \Attr{Imagesize}, and even \Attr{Cmd}, the name of the
-executable the requester wants to run).
-What the \Expr{START} expression evaluates to plays a crucial role in
+\Attr{Owner}, \Attr{Imagesize}, and \Attr{Cmd}, the name of the
+executable the job will run).
+The value after \Expr{START} expression evaluation plays a crucial role in
 determining the state and activity of a machine.
 
-It is the \Expr{Requirements} expression that is used for
-matching with other jobs.
-The startd defines the
-\Expr{Requirements} expression as the \Expr{START} expression.
-However, in situations where a machine wants to make itself
-unavailable for further matches, it sets its \Expr{Requirements}
-expression to FALSE, not its \Expr{START} expression.  
+The \Expr{Requirements} expression is used for
+matching machines with jobs.
+The \Condor{startd} defines the
+\Expr{Requirements} expression by using the \Expr{START} expression.
+In situations where a machine wants to make itself
+unavailable for further matches, the \Expr{Requirements}
+expression is set to FALSE.  
 When the \Expr{START} expression locally evaluates to TRUE, the
 machine advertises the \Expr{Requirements} expression as TRUE and
 does not publish the \Expr{START} expression.
@@ -144,10 +146,10 @@ how undefined terms are handled in ClassAd expression evaluation.
   your machine with low priority.
   Then, set up your machines with:
 \begin{verbatim}
-        START : True
-        SUSPEND : False
-        PREEMPT : False
-        KILL : False
+        START = True
+        SUSPEND = False
+        PREEMPT = False
+        KILL = False
 \end{verbatim}
   In this way, Condor jobs always run and never be kicked off. 
   However, because they would run with ``nice priority'', interactive 
@@ -193,7 +195,7 @@ expression on your machines to reference the \Attr{Owner} attribute and
 prefer requests where that attribute matches one of the people in your
 group as in
 \begin{verbatim}
-        RANK : Owner == "coltrane" || Owner == "tyner" \
+        RANK = Owner == "coltrane" || Owner == "tyner" \
                || Owner == "garrison" || Owner == "jones"
 \end{verbatim}
 
@@ -214,7 +216,7 @@ To set this up for Jimmy Garrison,
 place the following entry in Jimmy Garrison's local
 configuration file \File{bass.local}:
 \begin{verbatim}
-        RANK : (Owner == "coltrane") + (Owner == "tyner") \
+        RANK = (Owner == "coltrane") + (Owner == "tyner") \
                + ((Owner == "garrison") * 10) + (Owner == "jones")
 \end{verbatim}
 \Note The parentheses in this expression are important, because ``+''
@@ -246,7 +248,7 @@ You can configure your
 large-memory machine to prefer to run jobs with larger memory
 requirements:
 \begin{verbatim}
-        RANK : ImageSize
+        RANK = ImageSize
 \end{verbatim}
 
 That's all there is to it.
@@ -258,7 +260,7 @@ A little less altruistic is John's \Expr{RANK} that
 prefers his jobs over those with the largest
 \Attr{Imagesize}:
 \begin{verbatim}
-        RANK : (Owner == "coltrane" * 1000000000000) + Imagesize
+        RANK = (Owner == "coltrane" * 1000000000000) + Imagesize
 \end{verbatim}
 This \Expr{RANK} breaks if a job is submitted with an image
 size of more $10^{12}$ Kbytes.
@@ -464,7 +466,7 @@ there is no possible request in the Condor system that could match it.
 The machine is unavailable to Condor and stays in the Owner state.
 For example, if the \Expr{START} expression is
 \begin{verbatim}
-START : KeyboardIdle > 15 * $(MINUTE) && Owner == "coltrane" 
+START = KeyboardIdle > 15 * $(MINUTE) && Owner == "coltrane" 
 \end{verbatim}
 and if \Attr{KeyboardIdle} is 34 seconds,
 then the machine would remain in the Owner state.
@@ -473,7 +475,7 @@ Owner is undefined, and
 
 If, however, the \Expr{START} expression is
 \begin{verbatim}
-        START : KeyboardIdle > 15 * $(MINUTE) || Owner == "coltrane"
+        START = KeyboardIdle > 15 * $(MINUTE) || Owner == "coltrane"
 \end{verbatim}
 and \Attr{KeyboardIdle} is 34 seconds, then the machine
 leaves the Owner state and becomes Unclaimed.
@@ -533,7 +535,7 @@ whenever it runs benchmarks, so commonly \Attr{RunBenchmarks} is
 defined in terms of this attribute, for example:
 \begin{verbatim}
         BenchmarkTimer = (CurrentTime - LastBenchmark)
-        RunBenchmarks : $(BenchmarkTimer) >= (4 * $(HOUR))
+        RunBenchmarks = $(BenchmarkTimer) >= (4 * $(HOUR))
 \end{verbatim}
 Here, a macro, \MacroNI{BenchmarkTimer} is defined to help write the
 expression.
@@ -613,18 +615,18 @@ They depend on the universe of the request: standard or vanilla.
 The standard universe expressions are the normal expressions.
 For example:
 \begin{verbatim}
-        WANT_SUSPEND            : True
-        WANT_VACATE             : $(ActivationTimer) > 10 * $(MINUTE)
-        SUSPEND                 : $(KeyboardBusy) || $(CPUBusy)
+        WANT_SUSPEND            = True
+        WANT_VACATE             = $(ActivationTimer) > 10 * $(MINUTE)
+        SUSPEND                 = $(KeyboardBusy) || $(CPUBusy)
         ...
 \end{verbatim}
 
 The vanilla expressions have the string``\_VANILLA'' appended to their names.
 For example:
 \begin{verbatim}
-        WANT_SUSPEND_VANILLA    : True
-        WANT_VACATE_VANILLA     : True
-        SUSPEND_VANILLA         : $(KeyboardBusy) || $(CPUBusy)
+        WANT_SUSPEND_VANILLA    = True
+        WANT_VACATE_VANILLA     = True
+        SUSPEND_VANILLA         = $(KeyboardBusy) || $(CPUBusy)
         ...
 \end{verbatim}
 
@@ -875,21 +877,19 @@ It serves as a quick reference.
   request claiming it.
 
 \end{description}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Example-Policy}Example Policy Settings}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-The following section provides two examples of how you might configure
-the policy at your pool.  Each one is described in English, then the
-actual macros and expressions used are listed and explained with
-comments.  Finally the entire set of macros and expressions are listed
-in one block so you can see them in one place for easy reference.
-
 \index{machine state!transitions|)}
 \index{machine activity!transitions|)}
 \index{state!transitions|)}
 \index{activity!transitions|)}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Policy-Settings}Policy Settings}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This section describes the default configuration
+policy and then provides examples of extensions to these
+policies.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Default-Policy}Default Policy Settings}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -938,17 +938,24 @@ clearly.
 \item[\Macro{MaxVacateTime}] Amount of time a job may be
   checkpointing before we give up kill it outright.
 
-\item[\Macro{KeyboardBusy}] A boolean string that evaluates to TRUE
+\item[\Macro{KeyboardBusy}] A boolean expression that evaluates to TRUE
     when the keyboard is being used.
 
-\item[\Macro{CPU\_Idle}] A boolean string that evaluates to TRUE
+\item[\Macro{CPUIdle}] A boolean expression that evaluates to TRUE
     when the CPU is idle.
 
-\item[\Macro{CPU\_Busy}] A boolean string that evaluates to TRUE
-    when the CPU is busy.
+\item[\Macro{CPUBusy}] A boolean expression that evaluates
+    to TRUE when the CPU is busy.
 
 \item[\Macro{MachineBusy}] The CPU or the Keyboard is busy.
 
+\item[\Macro{CPUIsBusy}] A boolean value set to the same value as 
+    \Macro{CPUBusy}.
+
+\item[\Macro{CPUBusyTime}] The value 0 if \Macro{CPUBusy}
+    is False; the time in seconds since
+    \Macro{CPUBusy} became True.
+    
 \end{description}
 
 \begin{verbatim}
@@ -958,6 +965,7 @@ HOUR            = (60 * $(MINUTE))
 StateTimer      = (CurrentTime - EnteredCurrentState)
 ActivityTimer   = (CurrentTime - EnteredCurrentActivity)
 ActivationTimer = (CurrentTime - JobStart)
+LastCkpt        = (CurrentTime - LastPeriodicCheckpoint)
 
 NonCondorLoadAvg        = (LoadAvg - CondorLoadAvg)
 BackgroundLoad          = 0.3
@@ -965,40 +973,59 @@ HighLoad                = 0.5
 StartIdleTime           = 15 * $(MINUTE)
 ContinueIdleTime        = 5 * $(MINUTE)
 MaxSuspendTime          = 10 * $(MINUTE)
-MaxVacateTime           = 5 * $(MINUTE)
+MaxVacateTime           = 10 * $(MINUTE)
 
 KeyboardBusy            = KeyboardIdle < $(MINUTE)
-CPU_Idle                = $(NonCondorLoadAvg) <= $(BackgroundLoad)
-CPU_Busy                = $(NonCondorLoadAvg) >= $(HighLoad)
-MachineBusy             = ($(CPU_Busy) || $(KeyboardBusy))
+ConsoleBusy             = (ConsoleIdle  < $(MINUTE))
+CPUIdle                = $(NonCondorLoadAvg) <= $(BackgroundLoad)
+CPUBusy                = $(NonCondorLoadAvg) >= $(HighLoad)
+KeyboardNotBusy         = ($(KeyboardBusy) == False)
+MachineBusy             = ($(CPUBusy) || $(KeyboardBusy)
 \end{verbatim}
 
-Macros are defined to always want to suspend jobs.
-If that is not enough, always try to gracefully vacate them,
-unless they have only been running for less than 10 minutes anyway, in
-which case just kill them, instead of trying to checkpoint those
-10 minutes of work.
+Macros are defined to want to suspend jobs (instead of
+killing them) in the case of jobs that use little memory,
+when the keyboard is not being used, and for vanilla universe
+and PVM universe jobs.
+We want to gracefully vacate jobs which
+have been running for more than 10 minutes
+or are vanilla universe or PVM universe jobs.
 \begin{verbatim}
-WANT_SUSPEND            : True
-WANT_VACATE             : $(ActivationTimer) > 10 * $(MINUTE)
+WANT_SUSPEND       = ( $(SmallJob) || $(KeyboardNotBusy) \
+                       || $(IsPVM) || $(IsVanilla) )
+WANT_VACATE        = ( $(ActivationTimer) > 10 * $(MINUTE) \
+                       || $(IsPVM) || $(IsVanilla) )
 \end{verbatim}
 
 Finally, definitions of the actual expressions.
-Start any job if the CPU is idle (as defined by the macro)
-and the keyboard has been idle long enough.
+Start a job if 
+the keyboard has been idle long enough and
+the load average is low enough OR the machine is currently
+running a Condor job.
+Note that Condor would only run one job at a time.
+It just may prefer to run a different job, as defined by
+the machine rank or user priorities.
 \begin{verbatim}
-START           : $(CPU_Idle) && KeyboardIdle > $(StartIdleTime)
+START        = ( (KeyboardIdle > $(StartIdleTime)) \
+                  && ( $(CPUIdle) || \
+                       (State != "Unclaimed" && State != "Owner")) )
 \end{verbatim}
 
-Suspend a job if the machine is busy.
+Suspend a job if the keyboard has been touched.
+Alternatively, suspend if the CPU has been busy for more than two minutes
+and the job has been running for more than 90 seconds.
 \begin{verbatim}
-SUSPEND         : $(MachineBusy)
+SUSPEND         = ( $(KeyboardBusy) || \
+                 ( (CpuBusyTime > 2 * $(MINUTE)) \
+                    && $(ActivationTimer) > 90 ) )
 \end{verbatim}
 
-Continue a suspended job if the CPU is idle and the Keyboard has been
-idle for long enough.
+Continue a suspended job if the CPU is idle, the Keyboard has been
+idle for long enough, and the job has been suspended more
+than 10 seconds.
 \begin{verbatim}
-CONTINUE        : $(CPU_Idle) && KeyboardIdle > $(ContinueIdleTime)
+CONTINUE        = ( $(CPUIdle) && ($(ActivityTimer) > 10) \
+                  && (KeyboardIdle > $(ContinueIdleTime)) )
 \end{verbatim}
 
 There are two conditions that signal preemption.
@@ -1006,23 +1033,31 @@ The first condition is if the job is suspended,
 but it has been suspended too long.
 The second condition is if suspension is not desired and the machine is busy. 
 \begin{verbatim}
-PREEMPT	        : ( ($(ActivityTimer) > $(MaxSuspendTime)) && \
-                   (Activity == "Suspended") ) || \
-                  ( SUSPEND && (WANT_SUSPEND == False) )
+PREEMPT	        = ( ((Activity == "Suspended") && \
+                    ($(ActivityTimer) > $(MaxSuspendTime))) \
+                    || (SUSPEND && (WANT_SUSPEND == False)) )
 \end{verbatim}
 
-Kill a job if it has been vacating for too long.
+Kill jobs that take too long leaving gracefully.
 \begin{verbatim}
-KILL            : $(ActivityTimer) > $(MaxVacateTime)
+KILL            = $(ActivityTimer) > $(MaxVacateTime)
 \end{verbatim}
 
 Finally, specify periodic checkpointing.  
 For jobs smaller than 60 Mbytes, do a periodic checkpoint every 6 hours.  
 For larger jobs, only checkpoint every 12 hours.
 \begin{verbatim}
-PERIODIC_CHECKPOINT     : ( (ImageSize < 60000) && \
+PERIODIC_CHECKPOINT     = ( (ImageSize < 60000) && \
                             ($(LastCkpt) > (6 * $(HOUR))) ) || \ 
                           ( $(LastCkpt) > (12 * $(HOUR)) )
+\end{verbatim}
+
+\index{policy!at UW-Madison}
+
+At UW-Madison, we have a fast network.
+We simplify our expression considerably to
+\begin{verbatim}
+PERIODIC_CHECKPOINT     = $(LastCkpt) > (3 * $(HOUR))
 \end{verbatim}
 
 For reference, the entire set of policy settings are included
@@ -1035,7 +1070,7 @@ HOUR            = (60 * $(MINUTE))
 StateTimer      = (CurrentTime - EnteredCurrentState)
 ActivityTimer   = (CurrentTime - EnteredCurrentActivity)
 ActivationTimer = (CurrentTime - JobStart)
-LastCkpt	= (CurrentTime - LastPeriodicCheckpoint)
+LastCkpt        = (CurrentTime - LastPeriodicCheckpoint)
 
 NonCondorLoadAvg        = (LoadAvg - CondorLoadAvg)
 BackgroundLoad          = 0.3
@@ -1043,183 +1078,42 @@ HighLoad                = 0.5
 StartIdleTime           = 15 * $(MINUTE)
 ContinueIdleTime        = 5 * $(MINUTE)
 MaxSuspendTime          = 10 * $(MINUTE)
-MaxVacateTime           = 5 * $(MINUTE)
+MaxVacateTime           = 10 * $(MINUTE)
 
 KeyboardBusy            = KeyboardIdle < $(MINUTE)
-CPU_Idle                = $(NonCondorLoadAvg) <= $(BackgroundLoad)
-CPU_Busy                = $(NonCondorLoadAvg) >= $(HighLoad)
-MachineBusy             = ($(CPU_Busy) || $(KeyboardBusy))
+ConsoleBusy             = (ConsoleIdle  < $(MINUTE))
+CPUIdle                = $(NonCondorLoadAvg) <= $(BackgroundLoad)
+CPUBusy                = $(NonCondorLoadAvg) >= $(HighLoad)
+KeyboardNotBusy         = ($(KeyboardBusy) == False)
+MachineBusy             = ($(CPUBusy) || $(KeyboardBusy)
 
-WANT_SUSPEND            : True
-WANT_VACATE             : $(ActivationTimer) > 10 * $(MINUTE)
-
-START           : $(CPU_Idle) && KeyboardIdle > $(StartIdleTime)
-SUSPEND         : $(MachineBusy)
-CONTINUE        : $(CPU_Idle) && KeyboardIdle > $(ContinueIdleTime)
-PREEMPT	        : ( ($(ActivityTimer) > $(MaxSuspendTime)) && \
-                   (Activity == "Suspended") ) || \
-                  ( $(MachineBusy) && (WANT_SUSPEND == False) )
-KILL            : $(ActivityTimer) > $(MaxVacateTime)
-
-PERIODIC_CHECKPOINT     : ( (ImageSize < 60000) && \
+WANT_SUSPEND       = ( $(SmallJob) || $(KeyboardNotBusy) \
+                       || $(IsPVM) || $(IsVanilla) )
+WANT_VACATE        = ( $(ActivationTimer) > 10 * $(MINUTE) \
+                       || $(IsPVM) || $(IsVanilla) )
+START        = ( (KeyboardIdle > $(StartIdleTime)) \
+                  && ( $(CPUIdle) || \
+                       (State != "Unclaimed" && State != "Owner")) )
+SUSPEND         = ( $(KeyboardBusy) || \
+                 ( (CpuBusyTime > 2 * $(MINUTE)) \
+                    && $(ActivationTimer) > 90 ) )
+CONTINUE        = ( $(CPUIdle) && ($(ActivityTimer) > 10) \
+                  && (KeyboardIdle > $(ContinueIdleTime)) )
+PREEMPT	        = ( ((Activity == "Suspended") && \
+                    ($(ActivityTimer) > $(MaxSuspendTime))) \
+                    || (SUSPEND && (WANT_SUSPEND == False)) )
+KILL            = $(ActivityTimer) > $(MaxVacateTime)
+PERIODIC_CHECKPOINT     = ( (ImageSize < 60000) && \
                             ($(LastCkpt) > (6 * $(HOUR))) ) || \ 
                           ( $(LastCkpt) > (12 * $(HOUR)) )
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:UW-Policy}
-UW-Madison CS Condor Pool Policy Settings} 
+\subsubsection{\label{sec:Policy-Examples}
+Policy Examples}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{policy!at UW-Madison}
-Due to a recent increase in the number of Condor users and the size of
-their jobs (many users here are submitting jobs with an
-\Attr{Imagesize} of more than 100 Mbytes!), we have had to customize our
-policy to try to better handle this range of \Attr{Imagesize}.
-
-Whether or not we suspend or vacate jobs is now a function
-of the \Attr{Imagesize} of the job currently running.
-We divide the \Attr{Imagesize}
-into three possible categories, which are defined with macros.
-\Attr{Imagesize} is defined in terms of kilobytes.
-\begin{verbatim}
-BigJob          = (ImageSize > (30 * 1024))
-MediumJob       = (ImageSize <= (30 * 1024) && ImageSize >= (10 * 1024))
-SmallJob        = (ImageSize < (10 * 1024))
-\end{verbatim}
-
-The policy may be summarized by: If the
-job is Small, it goes through the normal progression of suspend to
-vacate to kill based on the tried and true times.
-If the job is Medium, then when a user returns,
-the job starts vacating the machine right away.
-The idea is that 
-with an immediate checkpoint, the job will find all its pages
-still in memory, and checkpointing will be fast.
-The memory pages will be freed up as soon as the checkpoint completes.
-If the job was suspended instead, its pages
-start getting swapped out and when it is time to checkpoint (10
-minutes later), the user's pages will be swapped out
-again, and the user will see reduced performance.
-In addition, checkpointing will take much longer.
-If the job is Big, we do not bother checkpointing,
-since the checkpointing will not finish before the owner
-gets too upset.
-It is a waste to
-put the load on the network and checkpoint server.
-
-The logic for our special policy is tuned with the
-\Expr{WANT\_\*} expressions. 
-All other expressions and macros use defaults.
-We want to suspend jobs if they are Small, and we only want
-to vacate jobs that are Small or Medium.  
-Vanilla jobs are always suspended, regardless of their size.
-\begin{verbatim}
-WANT_SUSPEND            : $(SmallJob)
-WANT_VACATE             : $(MediumJob) || $(SmallJob)
-WANT_SUSPEND_VANILLA    : True
-WANT_VACATE_VANILLA     : True
-\end{verbatim}
-
-The following are the expressions.
-It is done with macros and the expressions are defined using
-the macros.
-As strange as it seems,
-we do this because it makes for easier
-customized settings (for example, for testing purposes)
-and still references the defaults.
-There is a brief example of this at the end of this section.
-\begin{verbatim}
-CS_START        = $(CPU_Idle) && KeyboardIdle > $(StartIdleTime)
-CS_SUSPEND      = $(MachineBusy)
-CS_CONTINUE     = (KeyboardIdle > $(ContinueIdleTime)) && $(CPU_Idle)
-CS_PREEMPT      = ( ($(ActivityTimer) > $(MaxSuspendTime)) && \
-                   (Activity == "Suspended") ) || \
-                  ( CS_SUSPEND && (WANT_SUSPEND == False) )
-CS_KILL         = ($(ActivityTimer) > $(MaxVacateTime))
-\end{verbatim}
-
-We define the expressions in terms of our special macros.
-\begin{verbatim}
-START       : $(CS_START)
-SUSPEND     : $(CS_SUSPEND)
-CONTINUE    : $(CS_CONTINUE)
-PREEMPT     : $(CS_PREEMPT)
-KILL        : $(CS_KILL)
-\end{verbatim}
-
-There are no
-separate vanilla versions of any of
-these, since we already have a different \Expr{WANT\_SUSPEND} for
-vanilla jobs, and all of the policy expressions are written in
-terms of that.
-
-Periodic checkpoints also take image size into account.  
-We periodically checkpoint Big jobs more frequently (every 3 hours),
-since the Big jobs are killed right away at eviction time.
-Utilization of checkpoints is the only way Big jobs make forward progress.
-However, with all the Big jobs' periodic checkpoints occurring
-frequently, we do not want to bog down our network or our checkpoint
-servers.
-Small or Medium jobs receive a periodic checkpoint
-every 12 hours,
-since they get the privilege of checkpointing at eviction time.
-\begin{verbatim}
-PERIODIC_CHECKPOINT  : (($(LastCkpt) > (3 * $(HOUR))) \
-      && $(BigJob)) || (($(LastCkpt) > (12 * $(HOUR))) && \
-      ($(SmallJob) || $(MediumJob)))
-\end{verbatim}
-
-For reference, the entire set of policy settings are
-given here, without comments:
-\begin{verbatim}
-ActivationTimer = (CurrentTime - JobStart)
-StateTimer      = (CurrentTime - EnteredCurrentState)
-ActivityTimer   = (CurrentTime - EnteredCurrentActivity)
-LastCkpt        = (CurrentTime - LastPeriodicCheckpoint)
-
-NonCondorLoadAvg   = (LoadAvg - CondorLoadAvg)
-BackgroundLoad     = 0.3
-HighLoad           = 0.5
-StartIdleTime      = 15 * $(MINUTE)
-ContinueIdleTime   = 5 * $(MINUTE)
-MaxSuspendTime     = 10 * $(MINUTE)
-MaxVacateTime      = 5 * $(MINUTE)
-
-KeyboardBusy       = KeyboardIdle < $(MINUTE)
-CPU_Idle           = $(NonCondorLoadAvg) <= $(BackgroundLoad)
-CPU_Busy           = $(NonCondorLoadAvg) >= $(HighLoad)
-MachineBusy        = ($(CPU_Busy) || $(KeyboardBusy))
-
-BigJob       = (ImageSize > (30 * 1024))
-MediumJob    = (ImageSize <= (30 * 1024) && ImageSize >= (10 * 1024))
-SmallJob     = (ImageSize < (10 * 1024))
-
-WANT_SUSPEND            : $(SmallJob)
-WANT_VACATE             : $(MediumJob) || $(SmallJob)
-WANT_SUSPEND_VANILLA    : True
-WANT_VACATE_VANILLA     : True
-
-CS_START    = $(CPU_Idle) && KeyboardIdle > $(StartIdleTime)
-CS_SUSPEND  = $(CPU_Busy) || $(KeyboardBusy)
-CS_CONTINUE = (KeyboardIdle > $(ContinueIdleTime)) && $(CPU_Idle)
-CS_PREEMPT  = ( ($(ActivityTimer) > $(MaxSuspendTime)) && \
-               (Activity == "Suspended") ) || \
-              ( CS_SUSPEND && (WANT_SUSPEND == False) )
-CS_KILL     = ($(ActivityTimer) > $(MaxVacateTime))
-
-START       : $(CS_START)
-SUSPEND     : $(CS_SUSPEND)
-CONTINUE    : $(CS_CONTINUE)
-PREEMPT     : $(CS_PREEMPT)
-KILL        : $(CS_KILL)
-
-PERIODIC_CHECKPOINT  : (($(LastCkpt) > (3 * $(HOUR))) \
-      && $(BigJob)) || (($(LastCkpt) > (12 * $(HOUR))) && \
-      ($(SmallJob) || $(MediumJob)))
-\end{verbatim}
-
-This last example shows how the default macros can be used to
+This example shows how the default macros can be used to
 set up a machine for testing.
 Suppose we want the machine to
 behave normally, except if user coltrane submits a job.
@@ -1230,19 +1124,90 @@ This is reasonable if
 we know coltrane is submitting very short
 running programs testing purposes. 
 The jobs should be executed right away.
-The following configuration works with any machine
-(or the whole pool, for that matter) with the following 5 expressions:
+This works with any machine
+(or the whole pool, for that matter) by adding the following 5 expressions
+to the existing configuration:
 \begin{verbatim}
-        START      : ($(CS_START)) || Owner == "coltrane"
-        SUSPEND    : ($(CS_SUSPEND)) && Owner != "coltrane"
-        CONTINUE   : $(CS_CONTINUE)
-        PREEMPT    : ($(CS_PREEMPT)) && Owner != "coltrane"
-        KILL       : $(CS_KILL)
+        START      = ($(START)) || Owner == "coltrane"
+        SUSPEND    = ($(SUSPEND)) && Owner != "coltrane"
+        CONTINUE   = $(CONTINUE)
+        PREEMPT    = ($(PREEMPT)) && Owner != "coltrane"
+        KILL       = $(KILL)
 \end{verbatim}
 Notice that there is nothing special in either the
 \Expr{CONTINUE} or \Expr{KILL} expressions.
 If Coltrane's jobs never suspend, they never look at \Expr{CONTINE}.  
 Similarly, if they never preempt, they never look at \Expr{KILL}. 
+
+\index{policy!time of day}
+Condor can be
+configured to only run jobs at
+certain times of the day.
+In general, we discourage configuring a system like this, since you
+can often get lots of good cycles out of machines, even when their
+owners say ``I'm always using my machine during the day.''
+However, if you submit mostly vanilla jobs or other jobs that cannot
+checkpoint, it might be a good idea to only allow the jobs to run when
+you know the machines will be idle and when they will not be
+interrupted.
+
+To configure this kind of policy, you should use the \Attr{ClockMin}
+and \Attr{ClockDay} attributes, defined in
+section~\ref{sec:Startd-Attributes} on ``Startd ClassAd Attributes''.
+These are special attributes which are automatically inserted by the
+\Condor{startd} into its ClassAd, so you can always reference them in
+your policy expressions.
+\Attr{ClockMin} defines the number of minutes that have passed since
+midnight.  
+For example, 8:00am is 8 hours after midnight, or 8 * 60 minutes, or
+480.
+5:00pm is 17 hours after midnight, or 17 * 60, or 1020.
+\Attr{ClockDay} defines the day of the week, Sunday = 0, Monday = 1,
+and so on.  
+
+To make the policy expressions easy to read, we recommend using macros
+to define the time periods when you want jobs to run or not run.  
+For example, assume regular ``work hours'' at your site are from
+8:00am until 5:00pm, Monday through Friday: 
+
+\begin{verbatim}
+WorkHours = ( (ClockMin >= 480 && ClockMin < 1020) && \
+              (ClockDay > 0 && ClockDay < 6) ) 
+AfterHours = ( (ClockMin < 480 || ClockMin >= 1020) || \
+               (ClockDay == 0 || ClockDay == 6) )
+\end{verbatim}
+
+Of course, you can fine-tune these settings by changing the definition
+of \Macro{AfterHours} and \Macro{WorkHours} for your site.
+
+Assuming you are using the default policy expressions discussed above,
+there are only a few minor changes required to force Condor jobs to
+stay off of your machines during work hours:
+
+\begin{verbatim}
+# Only start jobs after hours.
+START = $(AfterHours) && $(CPUIdle) && KeyboardIdle > $(StartIdleTime)
+
+# Consider the machine busy during work hours, or if the keyboard or
+# CPU are busy.
+MachineBusy = ( $(WorkHours) || $(CPUBusy) || $(KeyboardBusy) )
+\end{verbatim}
+
+By default, the \Macro{MachineBusy} macro is used to define the
+\Expr{SUSPEND} and \Expr{PREEMPT} expressions.  
+If you have changed these expressions at your site, you will need to
+add \MacroU{WorkHours} to your \Expr{SUSPEND} and \Expr{PREEMPT}
+expressions as appropriate.  
+
+Depending on your site, you might also want to avoid suspending jobs
+during work hours, so that in the morning, if a job is running, it
+will be immediately preempted, instead of being suspended for some
+length of time:
+
+\begin{verbatim}
+WANT_SUSPEND = $(AfterHours)
+\end{verbatim}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:V60-Policy-diffs}Differences from the 

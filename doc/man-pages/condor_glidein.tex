@@ -1,0 +1,220 @@
+\begin{ManPage}{\label{man-condor-glidein}\Condor{glidein}}{1}
+{add a Globus resource to a Condor pool}
+\Synopsis \SynProg{\Condor{glidein}}
+\oOpt{-\hspace{.25 mm}-help}
+\oOptArg{-\hspace{.25 mm}-basedir}{basedir}
+\oOptArg{-\hspace{.25 mm}-archdir}{dir}
+\oOptArg{-\hspace{.25 mm}-localdir}{dir}
+\oOpt{-\hspace{.25 mm}-setuponly}
+\oOpt{-\hspace{.25 mm}-runonly}
+\oOptArg{-\hspace{.25 mm}-scheduler}{name}
+\oOptArg{-\hspace{.25 mm}-queue}{name}
+\oOptArg{-\hspace{.25 mm}-project}{name}
+\oOptArg{-\hspace{.25 mm}-memory}{MBytes}
+\oOptArg{-\hspace{.25 mm}-count}{CPUcount}
+\oOptArg{-\hspace{.25 mm}-vms}{VMcount}
+\oOptArg{-\hspace{.25 mm}-idletime}{minutes}
+\oOptArg{-\hspace{.25 mm}-runtime}{minutes}
+\oOpt{-\hspace{.25 mm}-anybody}
+\oOptArg{-\hspace{.25 mm}-admin}{address}
+\oOpt{-\hspace{.25 mm}-genconfig}
+\oOptArg{-\hspace{.25 mm}-useconfig}{filename}
+\OptArg{\{-\hspace{.25 mm}-contactfile}{filename} \} \Bar \Opt{Globus contact string}
+
+\index{Condor commands!condor\_glidein}
+\index{condor\_glidein command}
+
+\Description
+
+\Condor{glidein} allows the temporary addition of a Globus resource to
+a local Condor pool.
+The addition is accomplished by installing and executing some of the Condor
+daemons on the Globus resource.
+A condor\_shadow.globus job appears in the queue of the local
+Condor pool for each glidein request.
+To remove the Globus resource from the local Condor pool,
+use \Condor{rm} to remove the condor\_shadow.globus job from
+the job queue.
+
+You must have an X.509 certificate and access
+to the Globus resource to use \Condor{glidein}.
+The Globus software must also be installed.
+
+Globus is a software system that provides uniform access to
+different high-performance computing resources.
+When specifying a machine to use with Globus,
+you provide a \Opt{Globus contact string}.
+Often, the contact string can be just the hostname of the machine.
+Sometimes, a more complicated contact string is required.
+For example, if a machine has multiple schedulers (ways to run a job),
+the contact string may need to specify which to use.
+See the Globus home page, \Url{www.globus.org} for more
+information about Globus.
+
+\Condor{glidein} works in two steps: set up and execution.
+During set up, a configuration file and the Condor daemons
+master, startd and starter are installed on the Globus
+resource.
+Binaries for the correct architecture are copied from a central server.
+To obtain access to the server,
+send
+e-mail to \Email{condor-admin@cs.wisc.edu} with your X.509
+certificate name.
+Globus software version 1.1.3 does not yet include
+the Globus program \Prog{gsincftp},
+the Globus secure version of \Prog{ftp}.
+\Condor{glidein} needs this program.
+Install \Prog{gsincftp}, obtained from
+\Url{http://www.globus.org/datagrid/deliverables/gsiftp-tools.html}.
+Set up need only be done once per machine and version of Condor.
+The execution step starts the Condor daemons running through
+the resource's Globus interface.
+
+By default, all files placed on the remote machine are placed in
+\File{\MacroUNI{HOME}/Condor\_glidein}.
+Each use of \Condor{glidein} will generate spool and log
+files on the Globus resource.
+These files should be occasionally removed.
+
+\begin{Options}
+    \OptItem{\Opt{-\hspace{.25 mm}-help}}{Display brief usage information and exit}
+    \OptItem{\OptArg{-\hspace{.25 mm}-basedir}{basedir}}{
+	Specifies the base directory on the Globus resource
+	used for placing files.
+	The default file is \File{\MacroUNI{HOME}/Condor\_glidein}
+	on the Globus resource.
+	}
+    \OptItem{\OptArg{-\hspace{.25 mm}-archdir}{dir}}{
+	Specifies the directory on the Globus resource for placement
+	of the executables. 
+	The default value for \OptArg{-\hspace{.25 mm}-archdir},
+	given according to version information on the Globus resource, is 
+	\Arg{basedir}\File{/\Sinful{condor-version}-\Sinful{Globus canonicalsystemname}} 
+	An example of the directory
+	(without the base directory on the Globus resource)
+	for Condor version 6.1.13
+	running on a Sun Sparc machine with Solaris 2.6 is
+	\File{6.1.13-sparc-sun-solaris-2.6} }
+    \OptItem{\OptArg{-\hspace{.25 mm}-localdir}{dir}}{
+	Specifies the directory on the Globus resource
+	in which to create log and execution 
+	subdirectories needed by Condor.
+	If limited disk quota in the home or base directory
+	on the Globus resource is a problem,
+	set \Opt{-\hspace{.25 mm}-localdir} to a large temporary space,
+	such as \File{/tmp} or \File{/scratch}
+	}
+    \OptItem{\OptArg{-\hspace{.25 mm}-contactfile}{filename}}{
+	Allows the use of a file of Globus contact strings,
+	rather than the single
+	Globus contact string given in the command line.
+	For each of the contacts listed in the file,
+	the Globus resource is added to the local Condor pool.
+	}
+    \OptItem{\Opt{-\hspace{.25 mm}-setuponly}}{
+        Performs only the placement of files on the Globus resource.
+        This option cannot be run simultaneously with \Opt{-\hspace{.25 mm}-runonly} }
+    \OptItem{\Opt{-\hspace{.25 mm}-runonly}}{
+	Starts execution of the Condor daemons on the Globus
+	resource.
+        If any of the files are missing, exits with an error code.
+        This option cannot be run simultaneously with \Opt{-\hspace{.25 mm}-setuponly} }
+    \OptItem{\OptArg{-\hspace{.25 mm}-scheduler}{name}}{
+	Selects the Globus job scheduler type.
+	Defaults to \Arg{fork}.
+	NOTE: Contact strings which already contain the scheduler
+	type will \emph{not} be overridden by this option.
+	}
+    \OptItem{\OptArg{-\hspace{.25 mm}-queue}{name}}{
+	The argument \Arg{name} is a string which specifies which
+	job queue is to be used for submission on the Globus resource.
+	}
+    \OptItem{\OptArg{-\hspace{.25 mm}-project}{name}}{
+	The argument \Arg{name} is a string which specifies which
+	project is to be used for submission on the Globus resource.
+	}
+    \OptItem{\OptArg{-\hspace{.25 mm}-memory}{MBytes}}{
+	The maximum memory size to request from the Globus resource
+	(in megabytes).
+	}
+    \OptItem{\OptArg{-\hspace{.25 mm}-count}{CPUcount}}{
+	Number of CPUs to request, default is 1. }
+    \OptItem{\OptArg{-\hspace{.25 mm}-vms}{VMcount}}{
+        For machines with multiple CPUs, the CPUs maybe divided
+	up into virtual machines. \Arg{VMcount} is the number
+	of virtual machines that results.
+	By default, Condor divides multiple-CPU resources such that
+	each CPU is a virtual machine, each with an equal share of RAM,
+	disk, and swap space.
+	This option configures the number of virtual machines, so that
+	multi-threaded jobs can run in a virtual machine with multiple
+	CPUs.
+	For example, if 4 CPUs are requested and 
+	\Opt{-\hspace{.25 mm}-vms} is not specified, Condor will
+	divide the request up into 4 virtual machines with 1 CPU each.
+	However, if \OptArg{-\hspace{.25 mm}-vms}{2} is specified,
+	Condor will divide the request up into 2 virtual machines with
+	2 CPUs each, and if \OptArg{-\hspace{.25 mm}-vms}{1} is
+	specified, Condor will put all 4 CPUs into one virtual
+	machine. }
+    \OptItem{\OptArg{-\hspace{.25 mm}-idletime}{minutes}}{
+	How long the Condor daemons on the Globus resource
+	can remain idle before the resource reverts back to its
+	former state of not being part of the local Condor pool.
+	If the value is 0 (zero), the resource will not
+	revert back to its former state.
+	In this case,
+	the Condor daemons will run until the \Arg{runtime} time expires,
+	or they are killed by the resource or
+	with \Condor{rm}.
+	The default value is 20 minutes.  }
+    \OptItem{\OptArg{-\hspace{.25 mm}-runtime}{minutes}}{
+	How long the Condor daemons on the Globus resource
+	will run before shutting themselves down. This option is useful
+	for resources with enforced maximum run times. Setting
+	\Arg{runtime} to be a few minutes shorter than the allowable
+	limit gives the daemons time to perform a graceful shutdown.
+	}
+    \OptItem{\Arg{-\hspace{.25 mm}-anybody}}{
+	Sets the Condor \Expr{START} expression to TRUE
+	to allow any user job which meets the job's requirements to run on
+	the Globus resource added to the local Condor pool.
+	Without this option, only jobs owned by the user executing
+	\Condor{glidein} can execute on the Globus resource. WARNING:
+	Using this option may violate the usage policies of many
+	institutions.
+	}
+    \OptItem{\OptArg{-\hspace{.25 mm}-admin}{address}}{
+	Where to send e-mail with problems.
+	The defaults is the login of the user running
+	\Condor{glidein} at UID domain of the local Condor pool.  }
+    \OptItem{\Opt{-\hspace{.25 mm}-genconfig}}{
+	This option creates a local copy of the configuration file used
+	on the Globus resource.
+	The file is called \File{\condor{config.glidein}}.
+        }
+    \OptItem{\OptArg{-\hspace{.25 mm}-useconfig}{filename}}{
+	Install \Arg{filename} as the configuration file on the Globus resource
+	instead of the default configuration file during the set up phase.
+	}
+
+\end{Options}
+
+\ExitStatus
+
+\Condor{glidein} will exit with a status value of 0 (zero) upon 
+complete success.
+The script exits with non-zero values upon failure.
+The status value will be 1 (one) if 
+\Condor{glidein} encountered an error making a directory,
+was unable to copy a tar file,
+encountered an error in parsing the command line,
+or was not able to gather required information.
+The status value will be 2 (two) if 
+there was an error in the remote set up.
+The status value will be 3 (three) if 
+there was an error in remote submission.
+The status value will be -1 (negative one) if 
+no resource was specified in the command line.
+
+\end{ManPage}

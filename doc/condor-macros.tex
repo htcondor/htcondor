@@ -3,7 +3,7 @@
 %
 \newcommand{\AuthorNotice}{Condor Team, University of Wisconsin--Madison}
 \newcommand{\VersionNotice}{Version 6.5.0}
-\newcommand{\CopyrightNotice}{Copyright \copyright\ 1990-2000 Condor Team, Computer Sciences Department, 
+\newcommand{\CopyrightNotice}{Copyright \copyright\ 1990-2002 Condor Team, Computer Sciences Department, 
   University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
   No use of the Condor Software Program is authorized 
   without the express consent of the Condor Team.  For more information 
@@ -30,6 +30,7 @@
 \newcommand{\Term}[1]{\emph{#1}}			% Use this to introduce terminology
 \newcommand{\Cmd}[2]{\textit{#1}(#2)}           	% Command w/ section number
 \newcommand{\Sinful}[1]{$<$#1$>$}         	% Sinful string
+\newcommand{\SinfulAny}{$<$a.b.c.d:port$>$}        	% Arbitrary Sinful string
 \newcommand{\Url}[1]{\htmladdnormallink{#1}{#1}}	% a URL
 \newcommand{\Email}[1]{\htmladdnormallink{#1}{mailto:#1}}
 \newcommand{\File}[1]{\texttt{#1}}        	    	% File name
@@ -46,6 +47,12 @@
 \newcommand{\oArg}[1]{\mbox{[\Arg{#1}]}}            % optional Argument
 \newcommand{\oOpt}[1]{\mbox{[\Opt{#1}]}}            % optional Option
 \newcommand{\oOptArg}[2]{\mbox{[\OptArg{#1\ }{#2}]}}% optional Option w/ Arg
+\newcommand{\Optnm}[1]{\textbf{#1}}            % Option w/o mbox
+\newcommand{\Argnm}[1]{\textit{#1}}            % Argument w/o mbox
+\newcommand{\OptArgnm}[2]{\Optnm{#1\ }\Argnm{#2}}% Option with Argument w/o mbox
+\newcommand{\oArgnm}[1]{[\Argnm{#1}]}            % optional Argument w/o mbox
+\newcommand{\oOptnm}[1]{[\Optnm{#1}]}            % optional Option w/o mbox
+\newcommand{\oOptArgnm}[2]{[\OptArgnm{#1\ }{#2}]}% optional Option w/Arg w/o mbox
 \newcommand{\Env}[1]{\texttt{#1}}		% Environment variable
 \newcommand{\DCPerm}[1]{\texttt{#1}}		% DC Permission
 \newcommand{\ShortExpr}[1]{\mbox{\texttt{#1}}}		% A pithy config file expression

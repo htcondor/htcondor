@@ -10,19 +10,18 @@
 
 \Description 
 
-\Condor{reconfig\_schedd} reconfigures the \condor{schedd} in accordance with 
-the current
-status of the condor configuration file(s).  Once reconfiguration is complete,
-the daemon will behave according to the policies stated in the configuration
-file(s).  This command is similar to the \Condor{reconfig} command except that
-it only updates the schedd.  The schedd is the condor daemon responsible for
-managing user's jobs submitted from this machine.  
+\Condor{reconfig\_schedd} no longer exists.
 
 
-\begin{Options}
-	\OptItem{\Opt{-help}}{Display usage information}
-	\OptItem{\Opt{-version}}{Display version information}
-	\OptItem{\Opt{hostname ...}}{Reconfigure condor on this list of machines}
-\end{Options}
+\GenRem
+\Condor{reconfig\_schedd} no longer exists as a Condor command.
+Instead, use
+\begin{verbatim}
+        condor_reconfig -schedd
+\end{verbatim}
+to accomplish this task.
+
+\SeeAlso
+See the \Condor{reconfig} manual page.
 
 \end{ManPage}

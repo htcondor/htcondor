@@ -1,33 +1,68 @@
 \begin{ManPage}{\label{man-condor-vacate}\Condor{vacate}}{1}
 {Vacate jobs that are running on the specified hosts}
 \Synopsis \SynProg{\Condor{vacate}}
-\oOpt{-help}
-\oOpt{-version}
-\oOpt{-fast}
-\oOpt{hostname ...}
+\ToolArgsBase
+
+\SynProg{\Condor{vacate}}
+\oOptnm{-graceful $|$ -fast}
+\ToolArgsLocate
 
 \index{Condor commands!condor\_vacate}
 \index{condor\_vacate command}
 
 \Description
-\Condor{vacate} causes the condor startd to checkpoint any running jobs
-and make them vacate the machine. The job remains in
-the submitting machine's job queue, however. 
+\Condor{vacate} causes Condor to checkpoint any running jobs
+on a set of machines
+and force the jobs to vacate the machine.
+The job(s) remains in
+the submitting machine's job queue. 
 
-If the job on the specified host is running in the Standard Universe, then the
-job is first checkpointed and then killed (and will then restart somewhere
-else where it left off). If the job on the specified host is running in the
-Vanilla Universe, then the job is not checkpointed but is simply killed (and
-will then restart somewhere else from the beginning). If there is currently
-no Condor job running on that host, then \Condor{vacate} has no effect. 
- Normally there is no need for the user or administrator to explicitly run
-\Condor{vacate}. Vacating a running condor job off of a machine is handled
-automatically by Condor by following the policies stated in Condor's
-configuration files.   
+Given the (default) \Opt{-graceful} option,
+a job running under the standard universe
+will first produce a checkpoint and then the job will be killed.
+Condor will then restart the job somewhere else, using the checkpoint to
+continue from where it left off.
+A job running under the vanilla universe
+is killed, and Condor
+restarts the job from the beginning somewhere else.
+\Condor{vacate} has no effect on a machine with 
+no Condor job currently running. 
+
+There is generally no need for the user or administrator to explicitly run
+\Condor{vacate}.
+Condor takes care of jobs in this way
+automatically following the policies given in configuration files.   
+
 \begin{Options}
-    \OptItem{\Opt{-help}}{Display usage information}
-    \OptItem{\Opt{-version}}{Display version information}
+	\ToolArgsBaseDesc
+    \OptItem{\Opt{-graceful}}{Inform the job to checkpoint, then soft-kill it.}
     \OptItem{\Opt{-fast}}{Hard-kill jobs instead of checkpointing them}
+	\ToolArgsLocateDesc
 \end{Options}
+
+\ExitStatus
+
+\Condor{vacate} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\Examples
+To send a \Condor{vacate} command to two named machines:
+\begin{verbatim}
+% condor_vacate  robin cardinal
+\end{verbatim}
+
+To send the \Condor{vacate} command to a machine
+within a pool of machines other than the local pool,
+use the \Opt{-pool} option.
+The argument is the name of the central manager for the pool.
+Note that one or more machines within the pool must be
+specified as the targets for the command.
+This command sends the command to
+a the single machine named \Opt{cae17} within the
+pool of machines that has \Opt{condor.cae.wisc.edu} as
+its central manager:
+\begin{verbatim}
+% condor_vacate -pool condor.cae.wisc.edu -name cae17
+\end{verbatim}
 
 \end{ManPage}

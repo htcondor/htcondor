@@ -1,0 +1,289 @@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:Java}Java Applications}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Condor allows users to access a wide variety of
+machines distributed around the world.
+The Java Virtual Machine (JVM)
+\index{Java}
+\index{Java Virtual Machine}
+\index{JVM}
+provides a uniform platform on any machine, regardless of the
+machine's architecture or operating system.
+The Condor Java universe brings together these
+two features to create a distributed, homogeneous computing environment.
+
+Compiled Java programs can be submitted to Condor, and Condor
+can execute the programs on any machine in the pool that will run
+the Java Virtual Machine.
+
+The \Condor{status} command can be used to see a list of
+machines in the pool for which Condor can use the Java Virtual
+Machine.
+
+\begin{verbatim}
+% condor_status -java
+
+Name          JavaVendor  Ver    State      Activity   LoadAv Mem   ActvtyTime
+
+coral.cs.wisc Sun Microsy 1.2.2  Unclaimed  Idle       0.000   511  0+02:28:04
+doc.cs.wisc.e Sun Microsy 1.2.2  Unclaimed  Idle       0.000   511  0+01:05:04
+dsonokwa.cs.w Sun Microsy 1.2.2  Unclaimed  Idle       0.000   511  0+01:05:04
+...
+\end{verbatim}
+
+If there is no output from the
+\Condor{status} command,
+then Condor does not know the location details of the Java Virtual
+Machine on machines in the pool,
+or no machines have Java correctly installed.
+In this case,
+contact your system administrator or see section \ref{sec:java-install}
+for more information on getting Condor to work together
+with Java.
+
+Here is a complete, if simple, example.
+Start with a simple Java program, \File{Hello.java}:
+
+\begin{verbatim}
+public class Hello {
+        public static void main( String [] args ) {
+                System.out.println("Hello, world!\n");
+        }
+}
+\end{verbatim}
+
+Build this program using your Java compiler.
+On most platforms, this is
+accomplished with the command
+\begin{verbatim}
+javac Hello.java
+\end{verbatim}
+
+Submission to Condor requires a submit description file.
+This is a simple one that works:
+
+\begin{verbatim}
+  ####################
+  #
+  # Example 1
+  # Execute a single Java class
+  #
+  ####################
+
+  universe       = java
+  executable     = Hello.class
+  arguments      = Hello
+  output         = Hello.output
+  error          = Hello.error
+  queue
+\end{verbatim}
+
+The Java universe must be explicitly selected.
+
+The main class of the program is given in the \Code{executable} statement.
+This is a file name which contains the entry point of the program.
+The name of the main class (not a file name) must
+be specified as the first argument to the program.
+
+To submit the job, where the submit description file
+is named \File{Hello.cmd}, 
+execute 
+\begin{verbatim}
+condor_submit Hello.cmd
+\end{verbatim}
+
+To monitor the job, the commands \Condor{q} and \Condor{rm}
+are used as with all jobs.
+
+For programs that 
+consist of more than one \Code{.class} file,
+one option that tells Condor of the additional files adds
+this line to the submit description file:
+
+\begin{verbatim}
+transfer_input_files = Larry.class Curly.class Moe.class
+\end{verbatim}
+
+If the program consists of a large number of class files,
+it may be easier to collect them all together into
+a single Java Archive (JAR) file.
+A JAR can be created with:
+
+\begin{verbatim}
+% jar cvf Library.jar Larry.class Curly.class Moe.class
+\end{verbatim}
+
+Condor must then be told where to find the JAR by
+adding the 
+following to the submit description file:
+
+\begin{verbatim}
+jar_files = Library.jar
+\end{verbatim}
+
+Note that the JVM must know whether it is receiving JAR files
+or class files.
+Therefore, Condor must also be informed, in order to pass the
+information on to the JVM.
+That is why there is a difference in submit description file commands
+for the two ways of specifying files (\verb@transfer_input_files@
+and \verb@jar_files@).
+
+If the program uses Java features found only in certain
+JVMs, then inform Condor by adding a \Code{requirements}
+statement to the submit description file.
+For example, to require version 3.2, add to the submit description
+file:
+
+\begin{verbatim}
+requirements = (JavaVersion=="3.2")
+\end{verbatim}
+
+Each machine with Java capability in a Condor pool
+will execute a benchmark to determine its speed.
+The benchmark is taken when Condor is started on
+the machine, and it uses the SciMark2
+(\Url{http://math.nist.gov/scimark2}) benchmark.
+The result of the benchmark is held as an attribute
+within the 
+machine ClassAd.
+The attribute is called \AdAttr{JavaMFlops}.
+Jobs that are run under the Java universe (as all other Condor jobs)
+may prefer or require a machine of a specific speed
+by setting \AdAttr{rank} or \AdAttr{requirements} in
+the submit description file.
+As an example, to execute only on machines of a minimum speed:
+
+\begin{verbatim}
+requirements = (JavaMFlops>4.5)
+\end{verbatim}
+
+By default, Condor moves all input files
+to each execution site before the job runs, and it moves
+all output files back when the job completes.
+
+\index{Chirp}
+If a job has more sophisticated I/O requirements, then
+you may use a facility called Chirp.
+Chirp has two advantages over simple whole-file transfers.
+First, it permits the input files to be decided upon at run-time
+rather than submit time, and second,
+it permits partial-file I/O with results than can be seen as the
+program executes.
+However, you must make small changes to the program
+in order to take advantage of Chirp.
+Depending on the style of the program, use either Chirp I/O streams
+or UNIX-like I/O functions.
+
+\index{Chirp!ChirpInputStream}
+\index{Chirp!ChirpOutputStream}
+Chirp I/O streams are the easiest way to get started.
+Modify the program to use the objects \Code{ChirpInputStream}
+and \Code{ChirpOutputStream} instead of \Code{FileInputStream} and
+\Code{FileOutputStream}.
+These classes are completely documented
+\index{Software Developer's Kit!Chirp}
+\index{SDK!Chirp}
+in the Condor Software Developer's Kit (SDK).
+Here is a simple code example:
+
+\begin{verbatim}
+import java.io.*;
+import edu.wisc.cs.condor.chirp.*;
+
+public class TestChirp {
+
+   public static void main( String args[] ) {
+
+      try {
+         BufferedReader in = new BufferedReader(
+            new InputStreamReader(
+               new ChirpInputStream("input")));
+
+         PrintWriter out = new PrintWriter(
+            new OutputStreamWriter(
+               new ChirpOutputStream("output")));
+
+         while(true) {
+            String line = in.readLine();
+            if(line==null) break;
+            out.println(line);
+         }
+      } catch( IOException e ) {
+         System.out.println(e);
+      }
+   }
+}
+\end{verbatim}
+
+\index{Chirp!ChirpClient}
+To perform UNIX-like I/O with Chirp,
+create a \Code{ChirpClient} object.
+This object supports familiar operations such as \Code{open}, \Code{read},
+\Code{write}, and \Code{close}.
+Exhaustive detail of the methods may be found in the Condor 
+SDK, but here is a brief example:
+
+\begin{verbatim}
+import java.io.*;
+import edu.wisc.cs.condor.chirp.*;
+
+public class TestChirp {
+
+   public static void main( String args[] ) {
+
+      try {
+         ChirpClient client = new ChirpClient();
+         String message = "Hello, world!\n";
+         byte [] buffer = message.getBytes();
+
+         // Note that we should check that actual==length.
+         // However, skip it for clarity.
+
+         int fd = client.open("output","wct",0777);
+         int actual = client.write(fd,buffer,0,buffer.length);
+         client.close(fd);
+
+         client.rename("output","output.new");
+         client.unlink("output.new");
+
+      } catch( IOException e ) {
+         System.out.println(e);
+      }
+   }
+}
+\end{verbatim}
+
+\index{Chirp!Chirp.jar}
+Regardless of which I/O style, 
+the Chirp library must be specified and included with the job.
+The Chirp JAR (\Code{Chirp.jar})
+is found in the \File{lib} directory of the Condor installation.
+Copy it into your working directory in order to
+compile the program after modification to use Chirp I/O.
+
+\begin{verbatim}
+% condor_config_val LIB
+/usr/local/condor/lib
+% cp /usr/local/condor/lib/Chirp.jar .
+\end{verbatim}
+
+Rebuild the program with the Chirp JAR file in the class path.
+
+\begin{verbatim}
+% javac -classpath Chirp.jar:. TestChirp.java
+\end{verbatim}
+
+The Chirp JAR file must be specified in the submit description file.
+Here is an example submit description file that works for both
+of the given test programs:
+
+\begin{verbatim}
+universe = java
+executable = TestChirp.class
+arguments = TestChirp
+jar_files = Chirp.jar
+queue
+\end{verbatim}

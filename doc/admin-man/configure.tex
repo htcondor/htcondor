@@ -8,7 +8,7 @@ Configuring Condor}
 
 This section describes how to configure all parts of the Condor
 system.  General information about the configuration
-files and their syntax is follwed by a description of
+files and their syntax is followed by a description of
 settings that affect all
 Condor daemons and tools.  At the end is a section describing the
 settings for each part of Condor.  The 
@@ -51,7 +51,7 @@ and~\ref{sec:Multiple-Platforms} below.
 Config File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{macro definitions}
+\index{macro!in configuration file}
 \index{configuration file!macro definitions}
 
 Macro definitions are of the form:
@@ -115,7 +115,7 @@ evaluate.
 \Note Macros should not be incrementally defined in the
 \Macro{LOCAL\_ROOT\_CONFIG\_FILE} for security reasons.
 
-\Note Condor used to distingish between ``macros'' and ``expressions''
+\Note Condor used to distinguish between ``macros'' and ``expressions''
 in its config files.
 Begining with Condor version 6.1.13, this distinction has been
 removed.
@@ -124,11 +124,33 @@ in your config files, and these attributes will just be treated as
 macros.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Config-File-Env}
+Config File Environment References}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{configuration file!\$ENV definition}
+\index{\$ENV!in configuration file}
+References to the Condor process's environment are also allowed in the
+configuration file.
+Environment references are of the form:
+\begin{verbatim}
+        $ENV(environment_variable_name)
+\end{verbatim}
+For example, 
+\begin{verbatim}
+        A = $ENV(HOME)
+\end{verbatim}
+binds \MacroNI{A} to the value of the HOME environment variable.
+Environment references are not currently used in standard Condor
+configurations.
+However, they can sometimes be useful in custom configurations.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Other-Syntax}
 Comments and Line Continuations}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Other than macros, a Condor configuration file can contain comments or
+A Condor configuration file can also contain comments or
 line continuations.
 A comment is any line beginning with a ``\#'' character.
 A continuation is any entry that continues across multiples lines.
@@ -169,9 +191,12 @@ the library routine which parses the configuration files.
 \item[\MacroU{HOSTNAME}] \label{param:Hostname}
   The hostname of the local machine (no domain name).
   
+\item[\MacroU{IP\_ADDRESS}] \label{param:IpAddress}
+  The ASCII string version of the local machine's IP address.
+
 \item[\MacroU{TILDE}] \label{param:Tilde}
   The full path to the
-  home directory of the UNIX user condor, if such a user exists on the
+  home directory of the Unix user condor, if such a user exists on the
   local machine.
 
 \label{sec:Condor-Subsystem-Names}
@@ -182,6 +207,8 @@ the library routine which parses the configuration files.
   This is a unique string which identifies a given daemon within the
   Condor system.  The possible subsystem names are:
 
+\index{subsystem names}
+\index{macro!subsystem names}
   \begin{itemize}
   \item STARTD
   \item SCHEDD
@@ -193,6 +220,7 @@ the library routine which parses the configuration files.
   \item STARTER
   \item CKPT\_SERVER
   \item SUBMIT
+  \item GRIDMANAGER
   \label{list:subsystem names}
   \end{itemize}
 
@@ -390,6 +418,15 @@ system.
   of that daemon's log file and a brief message that describes what
   signal or exit status that daemon exited with.
   
+\item[\Macro{CONDOR\_SUPPORT\_EMAIL}] \label{param:CondorSupportEmail}
+  The email address to be included at the bottom of all email Condor
+  sends out under the label ``Email address of the local Condor
+  administrator:''.  
+  This is the address where Condor users at your site should send
+  their questions about Condor and get technical support.
+  If this setting is not defined, Condor will use the address
+  specified in \Macro{CONDOR\_ADMIN} (described above).
+
 \item[\Macro{MAIL}] \label{param:Mail} The full path to a mail
   sending program that uses \Opt{-s} to
   specify a subject for the message.  On all platforms,
@@ -423,6 +460,8 @@ system.
   running as root, and there is a condor account, it is most
   likely condor.
   Otherwise, it is whatever you set in the \Env{CONDOR\_IDS}
+  \index{environment variables!CONDOR\_IDS@\texttt{CONDOR\_IDS}}
+  \index{CONDOR\_IDS@\texttt{CONDOR\_IDS}!environment variable}
   environment variable.  See section~\ref{sec:uids} on UIDs in
   Condor for details.
 
@@ -450,6 +489,59 @@ system.
   reading the global configuration file, Condor figures out the right values
   for \MacroU{HOSTNAME} and \MacroU{FULL\_HOSTNAME} and inserts them
   into its configuration table.
+
+%%%%%%%%%%%%%%%%%%
+\item[\Macro{NETWORK\_INTERFACE}] \label{param:NetworkInterface}
+  For systems with multiple network interfaces, Condor chooses the
+  first one defined.  To choose a network interface other than the
+  first one, this macro is defined by giving the IP address
+  to use.
+
+\item[\Macro{CM\_IP\_ADDR}] \label{param:CMIPAddr}
+  If neither \MacroNI{COLLECTOR\_HOST} nor 
+  \MacroNI{COLLECTOR\_IP\_ADDR} macros are defined, then this
+  macro will be used to determine the IP address of the central
+  manager (collector daemon).
+  This macro is defined by an IP address.
+
+\item[\Macro{HIGHPORT}] \label{param:HighPort}
+  Specifies an upper limit of given port numbers for Condor to use,
+  such that Condor is restricted to a range of port numbers.
+  If this macro is not explicitly specified, then Condor will
+  not restrict the port numbers that it uses. Condor will use
+  system-assigned port numbers.
+  For this macro to work, both \MacroNI{HIGHPORT} and
+  \MacroNI{LOWPORT} (given below) must be defined.
+
+\item[\Macro{LOWPORT}] \label{param:LowPort}
+  Specifies a lower limit of given port numbers for Condor to use,
+  such that Condor is restricted to a range of port numbers.
+  If this macro is not explicitly specified, then Condor will
+  not restrict the port numbers that it uses. Condor will use
+  system-assigned port numbers.
+  For this macro to work, both \MacroNI{HIGHPORT} (given above) and
+  \MacroNI{LOWPORT} must be defined.
+%%%%%%%%%%%%%%%%%%
+
+\item[\Macro{EMAIL\_DOMAIN}] \label{param:EmailDomain}
+  By default, if a user does not specify \AdAttr{notify\_user} in the
+  submit description file, any email Condor sends about that job will
+  go to "username@UID\_DOMAIN".
+  If your machines all share a common UID domain (so that you would
+  set \Macro{UID\_DOMAIN} to be the same across all machines in your
+  pool), but email to user@UID\_DOMAIN is not the right place for
+  Condor to send email for your site, you can define the default
+  domain to use for email.
+  A common example would be to set \Macro{EMAIL\_DOMAIN} to the fully
+  qualified hostname of each machine in your pool, so users submitting
+  jobs from a specific machine would get email sent to
+  user@machine.your.domain, instead of user@your.domain.  
+  You would do this by setting \Macro{EMAIL\_DOMAIN} to
+  \MacroU{FULL\_HOSTNAME}. 
+  In general, you should leave this setting commented out unless two
+  things are true: 1) \Macro{UID\_DOMAIN} is set to your domain, not
+  \MacroU{FULL\_HOSTNAME}, and 2) email to user@UID\_DOMAIN will not 
+  work. 
 
 \item[\Macro{CREATE\_CORE\_FILES}] \label{param:CreateCoreFiles}
   Defines whether or not Condor daemons are to
@@ -481,7 +573,7 @@ These entries control how and where the Condor daemons write their log
 files.  Each of the entries in this section represents multiple
 macros. There is one for each subsystem (listed
 in section~\ref{sec:Condor-Subsystem-Names}).
-The macro name for each substitutes \Macro{SUBSYS} with the name
+The macro name for each substitutes \MacroNI{SUBSYS} with the name
 of the subsystem corresponding to the daemon.
 \begin{description}
  
@@ -536,24 +628,32 @@ of the subsystem corresponding to the daemon.
 \begin{description}
 \label{list:debug-level-description}
   
-\item[\Dflag{FULLDEBUG}] \label{dflag:fulldebug} This level
+\item[\Dflag{FULLDEBUG}] \label{dflag:fulldebug}
+  \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_FULLDEBUG@\texttt{D\_FULLDEBUG}}
+  This level
   provides very verbose output in the log files.  
   Only exceptionally frequent log messages for very specific debugging
   purposes would be excluded. In those cases, the messages would
   be viewed by having that another flag and \Dflag{FULLDEBUG} both
   listed in the configuration file.
 
-\item[\Dflag{DAEMONCORE}] \label{dflag:daemoncore} Provides log
+\item[\Dflag{DAEMONCORE}] \label{dflag:daemoncore} 
+  \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_DAEMONCORE@\texttt{D\_DAEMONCORE}}
+  Provides log
   file entries specific to DaemonCore, such as
   timers the daemons have set and the commands that are registered.
   If both \Dflag{FULLDEBUG} and \Dflag{DAEMONCORE} are set,
   expect \emph{very} verbose output.
 
-\item[\Dflag{PRIV}] \label{dflag:priv} This flag provides log
+\item[\Dflag{PRIV}] \label{dflag:priv}
+  \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_PRIV@\texttt{D\_PRIV}}
+  This flag provides log
   messages about the \Term{privilege state} switching that the daemons
   do.  See section~\ref{sec:uids} on UIDs in Condor for details.
 
-\item[\Dflag{COMMAND}] \label{dflag:command} With this flag set, any
+\item[\Dflag{COMMAND}] \label{dflag:command}
+  \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_COMMAND@\texttt{D\_COMMAND}}
+  With this flag set, any
   daemon that uses DaemonCore will print out a log message
   whenever a command comes in.  The name and integer of the command,
   whether the command was sent via UDP or TCP, and where
@@ -564,7 +664,9 @@ of the subsystem corresponding to the daemon.
   printed with \Dflag{FULLDEBUG} enabled, it is best if this setting
   is used for all daemons.
 
-\item[\Dflag{LOAD}] \label{dflag:load} The \Condor{startd} keeps track
+\item[\Dflag{LOAD}] \label{dflag:load}
+  \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_LOAD@\texttt{D\_LOAD}}
+The \Condor{startd} keeps track
   of the load average on the machine where it is running.  Both the
   general system load average, and the load average being generated by
   Condor's activity there are determined.
@@ -574,23 +676,30 @@ of the subsystem corresponding to the daemon.
   \Condor{startd}.
 
 \item[\Dflag{KEYBOARD}] \label{dflag:keyboard} 
+  \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_KEYBOARD@\texttt{D\_KEYBOARD}}
   With this flag set, the \Condor{startd} will print out a log message
   with the current values for remote and local keyboard idle time.
   This flag affects only the \Condor{startd}.
 
-\item[\Dflag{JOB}] \label{dflag:job} When this flag is set, the
+\item[\Dflag{JOB}] \label{dflag:job}
+  \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_JOB@\texttt{D\_JOB}}
+  When this flag is set, the
   \Condor{startd} will send to its log file the contents of any
   job ClassAd that the \Condor{schedd} sends to claim the
   \Condor{startd} for its use.  This flag affects only the
   \Condor{startd}.
   
-\item[\Dflag{MACHINE}] \label{dflag:machine} When this flag is set,
+\item[\Dflag{MACHINE}] \label{dflag:machine}
+  \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_MACHINE@\texttt{D\_MACHINE}}
+  When this flag is set,
   the \Condor{startd} will send to its log file the contents of
   its resource ClassAd when the \Condor{schedd} tries to claim the
   \Condor{startd} for its use.  This flag affects only the
   \Condor{startd}.
 
-\item[\Dflag{SYSCALLS}] \label{dflag:syscalls} This flag is used to
+\item[\Dflag{SYSCALLS}] \label{dflag:syscalls}
+  \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_SYSCALLS@\texttt{D\_SYSCALLS}}
+  This flag is used to
   make the \Condor{shadow} log remote syscall requests and return
   values.  This can help track down problems a user is having with a
   particular job by providing the system calls the job is
@@ -600,17 +709,25 @@ of the subsystem corresponding to the daemon.
   defined in \Macro{SCHEDD\_DEBUG} there will be verbose logging of all
   queue management operations the \Condor{schedd} performs.  
 
-\item[\Dflag{BANDWIDTH}] \label{dflag:bandwidth} When this flag is
-  set, the negotiator logs a message for every match. It 
-  includes the amount of network bandwidth used for job placement and
-  preemption.
+\item[\Dflag{MATCH}] \label{dflag:match}
+  \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_MATCH@\texttt{D\_MATCH}}
+  When this flag is
+  set, the negotiator logs a message for every match.
 
-\item[\Dflag{NETWORK}] \label{dflag:network} When this flag is set,
+\item[\Dflag{NETWORK}] \label{dflag:network}
+  \index{SUBSYS\_DEBUG macro levels@\texttt{SUBSYS\_DEBUG} macro levels!D\_NETWORK@\texttt{D\_NETWORK}}
+  When this flag is set,
   all Condor daemons will log a message on every TCP accept, connect,
   and close, and on every UDP send and receive.  This flag is not
   yet fully supported in the \Condor{shadow}.
 
 \end{description}
+
+\item[\Macro{ALL\_DEBUG}] \label{param:AllDebug} To make all subsystems
+  share a debug flag, simply set the parameter \Macro{ALL\_DEBUG}
+  instead of changing all of the individual parameters.  For example,
+  to turn on network debugging in all subsystems, set
+  \verb$ALL_DEBUG = D_NETWORK$.
 
 \end{description}
 
@@ -652,6 +769,18 @@ server, shadow, and starter, none of which use DaemonCore yet).
   See section~\ref{sec:Host-Security} on Setting up
   IP/host-based security in Condor for details on these
   macros and how to configure them.
+
+\item[\Macro{SETTABLE\_ATTRS\Dots}] \label{param:SettableAttrs} All
+  macros that begin with \Macro{SETTABLE\_ATTRS} or
+  \Macro{SUBSYS\_SETTABLE\_ATTRS} are settings used to restrict the 
+  configuration values that can be changed using the \Condor{config\_val} 
+  command.
+  Section~\ref{sec:Host-Security} on Setting up
+  IP/Host-Based Security in Condor for details on these
+  macros and how to configure them.  
+  In particular, section~\ref{sec:Config-Val-Security}
+  on page~\pageref{sec:Config-Val-Security} contains details specific to
+  these macros.
 
 \item[\Macro{SHUTDOWN\_GRACEFUL\_TIMEOUT}]
   \label{param:ShutdownGracefulTimeout} Determines how long
@@ -766,98 +895,126 @@ be sure to read section~\ref{sec:Condor-AFS} on Using Condor with
 AFS.
 \begin{description}
 
-\item[\Macro{UID\_DOMAIN}] \label{param:UidDomain} Often times,
-  especially if all the machines in the pool are administered by the
-  same organization, all the machines to be added into a Condor pool
-  share the same login account information.  User X
-  has UID Y on all machines within a given Internet/DNS domain. This
-  is usually the case if a central authority creates user logins and
-  maintains a common \File{/etc/passwd} file on all machines.
-  If this is the case,
-  then set this macro to the name of the Internet/DNS domain
-  where this is true. For instance, if all the machines in this Condor
-  pool within the Internet/DNS zone ``cs.wisc.edu'' have a common
-  password file, \MacroU{UID\_DOMAIN} is set to ``cs.wisc.edu''. If
-  this is not the case, comment out the entry and Condor will
-  automatically use the fully qualified hostname of each machine.
-  An asterisk character ( ``*'') is a wildcard to match all domains and
-  therefore to honor all UIDs - a dangerous idea.
-          
-  Condor uses this information to determine if it should run a given
-  Condor job on the remote execute machine with the UID of whomever
-  submitted the job or with the UID of the Unix user nobody.  If the
-  macro is set
-  to ``none'' or not set, then Condor jobs will
-  always execute with the access permissions of user nobody.  For
-  security purposes, it is not a bad idea to have Condor jobs that
-  migrate around on machines across an entire organization to run as
-  user nobody, which by convention has very restricted access to
-  the disk files of a machine.  Standard universe Condor jobs are
-  fine running as user nobody since all I/O is redirected
-  back through the use of remote system calls to a shadow process
-  running on the
-  submit machine (which is authenticated as the user).  If you only plan
-  on running standard universe jobs, then it is a good idea to simply
-  set this to ``none'' or omit it.  Vanilla universe jobs,
-  however, cannot take advantage of Condor's remote system calls.
-  Vanilla universe jobs are dependent upon NFS, RFS, AFS, or some
-  shared file system set up to read/write files as they bounce around
-  from machine to machine. If you want to run vanilla jobs and your
-  shared file systems are via AFS, then you can safely leave this as
-  ``none'' as well. But, if you wish to use vanilla jobs with Condor
-  and you have shared file systems with NFS or RFS, then
-  enter in a legitimate domain name where all your UIDs match (you
-  should be doing this with NFS anyway!) on all machines in the pool,
-  or else users in your pool who submit vanilla jobs will have to make
-  their files world read/write (so that user nobody can access them).
-          
-  Some gritty details for folks who want to know: If the submitting
-  machine and the remote machine about to execute the job both have
-  the same login name in the password file for a given UID, and the
-  \MacroU{UID\_DOMAIN} claimed by the submit machine is indeed found to
-  be a subset of what an inverse lookup to a DNS (domain name server)
-  or NIS reports as the fully qualified domain name for the submit
-  machine's IP address (this security measure safeguards against the
-  submit machine from lying), \emph{then} the job will run
-  with the same UID as the user who submitted the job.  Otherwise it
-  will run as user nobody.
-          
-  Note: the \MacroU{UID\_DOMAIN} parameter is also used when Condor
-  sends e-mail back to the user about a completed job; the address
-  \texttt{Job-Owner@UID\_DOMAIN} is used, unless \MacroU{UID\_DOMAIN}
-  is ``none'', in which case \texttt{Job-Owner@submit-machine} is
-  used.
-  
+\item[\Macro{UID\_DOMAIN}] \label{param:UidDomain}
+The \Macro{UID\_DOMAIN} macro
+is used to decide under which user to run your jobs.
+If the \MacroU{UID\_DOMAIN}
+on the submitting machine is different than
+the \MacroU{UID\_DOMAIN}
+on the machine that runs your job, then Condor will run
+the job as the user called ``nobody''.
+For example, if the submit machine has
+the \MacroU{UID\_DOMAIN}
+``flippy.cs.wisc.edu'' and the machine where the job will execute
+has the \MacroU{UID\_DOMAIN}
+``cs.wisc.edu'', the job will run as user nobody, because
+the two \MacroU{UID\_DOMAIN}s are not the same.
+If the \MacroU{UID\_DOMAIN}
+is the same on both the submit and execute machines,
+then Condor will run the job as the user that submitted the job.
+
+A further check attempts to assure that the submitting
+machine can not lie about its \MacroU{UID\_DOMAIN}.
+Condor compares the 
+submit machine's claimed \MacroU{UID\_DOMAIN}
+to its fully qualified name.
+If the two do not end the same, then the submit machine
+is presumed to be lying about its \MacroU{UID\_DOMAIN}.
+In this case, Condor will run the job as user nobody.
+For example, a job submission to the Condor pool at the UW Madison
+from ``flippy.example.com'', claiming a \MacroU{UID\_DOMAIN}
+of ``cs.wisc.edu'',
+will run the job as the user nobody.
+
+Because of this verification, you need to set your
+\MacroU{UID\_DOMAIN}
+to a real domain name. At the Computer Sciences department
+at the UW Madison, we set the \MacroU{UID\_DOMAIN}
+to be ``cs.wisc.edu'' to
+indicate that whenever someone submits from a department machine, we
+will run the job as the user who submits it.
+
+Also see \Macro{SOFT\_UID\_DOMAIN}
+below for information about one more check
+that Condor performs before running a job as a given user.
+
+A few details:
+
+You could set \MacroU{UID\_DOMAIN}
+to ``*''. This will match all domains,
+but it is a gaping security hole. It is not recommended.
+
+You can set \MacroU{UID\_DOMAIN}
+to ``none'' or leave it undefined. This will
+force Condor to always run jobs as user nobody.
+Running standard universe jobs as user nobody enhances
+your security and should cause no problems, because the jobs use remote
+I/O to access all of their files.
+However, if vanilla jobs are run as
+user nobody, then files that need to be accessed by the job will need
+to be marked as world readable/writable so the user nobody can access
+them.
+
+When Condor sends e-mail about a job, Condor sends the e-mail to
+%% This is the wrong LaTeX  macro to use, but we don't have a correct one.
+\File{user@UID\_DOMAIN}.
+If \MacroU{UID\_DOMAIN}
+is set to ``none'' or it is undefined, 
+the e-mail is
+sent to \File{user@submitmachinename}.
+
+
 \item[\Macro{SOFT\_UID\_DOMAIN}] \label{param:SoftUidDomain}
-  Used in conjunction with the \MacroU{UID\_DOMAIN} macro
-  described above.  If the \MacroU{UID\_DOMAIN} settings match on both
-  the execute and submit machines, but the UID of the user who
-  submitted the job is not in the password file (or password
-  information if NIS is being used)
-  of the execute machine, the \Condor{starter} will
-  exit with an error.  If you set \MacroU{SOFT\_UID\_DOMAIN}
-  to be TRUE, Condor will start the job with the specified
-  UID, even if it is not in the password file.
+When Condor is about to run a job as a particular user (instead of the
+user nobody), it verifies that the UID given for the user is in the
+password file and actually matches the given user name.
+However, some
+installations may not have every user in every machine's password
+file, so this check will fail. If you prefer that Condor not do
+this check, because users are not in every password file, set
+this attribute to True.
+
+
 
 \item[\Macro{FILESYSTEM\_DOMAIN}] \label{param:FilesystemDomain}
-  Similar in concept to \MacroU{UID\_DOMAIN}, but this is
-  the Internet/DNS domain name where all the machines within that
-  domain can access the same set of NFS file servers.  
-          
-  Often times, especially if all the machines in the pool are
-  administered by the same organization, all the machines to be added
-  into a Condor pool can mount the same set of NFS fileservers onto
-  the same place in the directory tree.  If all the
-  machines in the pool within a specific Internet/DNS domain mount the
-  same set of NFS file servers onto the same path mount-points,
-  then set this macro to the name of the
-  Internet/DNS domain where this is true.  For instance, if all the
-  machines in the Condor pool within the Internet/DNS zone
-  ``cs.wisc.edu'' have a common password file and mount the same volumes
-  from the same NFS servers, set \MacroU{FILESYSTEM\_DOMAIN} to
-  ``cs.wisc.edu''.  If this is not the case, comment out the
-  entry, and Condor will automatically set it to the fully qualified
-  hostname of the local machine.
+The \Macro{FILESYSTEM\_DOMAIN}
+macro is an arbitrary string that is used to decide if
+two machines (a submitting machine and an execute machine) share a
+file system.
+Although the macro name contains the word ``DOMAIN'',
+the macro is not required to be a domain name, although it often is.
+
+Vanilla Unix jobs currently require a shared file system in order to
+share any data files or see the output of the program.
+Condor decides if there is a shared filesystem by comparing the values
+of 
+\MacroU{FILESYSTEM\_DOMAIN}
+of both the submitting and execute machines.
+If the values are the same,
+Condor assume there is a shared file system.
+Condor implements the check
+by extending the Requirements for your job.
+You can see these requirements by using the \oArg{-v} argument
+to \Condor{submit}.
+
+Note that this implementation is not ideal: machines may share some
+file systems but not others. Condor currently has no way to express
+this automatically. You can express the need to use a
+particular file system by adding additional attributes to your machines
+and submit files, similar to the example given in 
+Frequently Asked Questions, 
+section~\ref{sec:FAQ} on
+how to run jobs only on machines that have 
+certain software installations.
+
+Note that if you do not set 
+\MacroU{FILESYSTEM\_DOMAIN}, Condor will
+automatically set the macro's value to be the fully qualified hostname
+of the local machine.
+Since each machine will have a different
+\MacroU{FILESYSTEM\_DOMAIN},
+they will not be considered to have shared file systems.
+
   
 \item[\Macro{HAS\_AFS}] \label{param:HasAfs} Set this macro to TRUE if
   all the machines you plan on adding in your pool can all access a
@@ -1044,6 +1201,14 @@ These macros control the \Condor{master}.
   special daemon that we can acquire this information on those
   platforms. 
 
+\item[\Macro{DC\_DAEMON\_LIST}] \label{param:DCDaemonList} This macro
+  lists the daemons in \Macro{DAEMON\_LIST} which use the Condor
+  DaemonCore library.  The \Condor{master} must differentiate between
+  daemons that use DaemonCore and those that don't so it uses the
+  appropriate inter-process communication mechanisms.  This list
+  currently includes all Condor daemons except the checkpoint server
+  by default.
+
 \item[\Macro{SUBSYS}] \label{param:SUBSYS} Once you have defined which
   subsystems you want the \Condor{master} to start, you must provide
   it with the full path to each of these binaries.  For example:
@@ -1053,7 +1218,21 @@ These macros control the \Condor{master}.
         SCHEDD          = $(SBIN)/condor_schedd
 \end{verbatim}
   These are most often defined relative to the \MacroU{SBIN} macro.
-  
+
+\item[\Macro{DAEMONNAME\_ENVIRONMENT}] \label{param:DaemonNameEnvironment}
+  For each subsystem defined in \Macro{DAEMON\_LIST}, you may specify
+  changes to the environment that daemon is started with by setting
+  \Macro{DAEMONNAME\_ENVIRONMENT}, where \MacroNI{DAEMONNAME} is the name of
+  a daemon listed in \Macro{DAEMON\_LIST}. It should be set to a semicolon
+  delimited list of name=value pairs. For example, if you wish to redefine the
+  \Env{TMP} and \Env{CONDOR\_CONFIG} environment variables seen by the
+  \Condor{schedd}, you could place the following in the config file:
+\begin{verbatim}
+        SCHEDD_ENVIRONMENT = TMP=/new/value;CONDOR_CONFIG=/special/config
+\end{verbatim}
+  When the \Condor{schedd} was started by the \Condor{master}, it would
+  see the specified values of \Env{TMP} and \Env{CONDOR\_CONFIG}.
+
 \item[\Macro{SUBSYS\_ARGS}] \label{param:SubsysArgs} This macro
   allows the specification of additional command line arguments for any
   process spawned by the \Condor{master}.
@@ -1229,6 +1408,20 @@ will not want to change them for any reason.
   section~\ref{param:SubsysAddressFile} as
   \Macro{SUBSYS\_ADDRESS\_FILE} 
 
+\item[\Macro{SECONDARY\_COLLECTOR\_LIST}]
+  \label{param:SecondaryCollectorList} This macro lists the hostnames
+  of secondary collectors.  A secondary collector is a machine
+  running a \Condor{collector} daemon that is not the central manager.
+  A secondary collector makes it possible to execute administrative
+  commands in the pool when the central manager is down by using the
+  \Opt{-pool} argument to specify the name of a secondary collector to
+  use to locate the \Condor{master} daemon.
+
+\item[\Macro{ALLOW\_ADMIN\_COMMANDS}]
+  \label{param:AllowAdminCommands} If set to NO for a given host, this
+  macro disables administrative commands, such as 
+  \Condor{restart}, \Condor{on}, and \Condor{off}, to that host.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1370,6 +1563,19 @@ control state or activity transitions within the
   did not want to be matched with machines that were only really
   offering ``fractional CPUs''.
 
+\item[\Macro{MEMORY}] \label{param:Memory}
+  Normally, Condor will automatically detect the amount of physical
+  memory available on your machine.  Define \Macro{MEMORY} to tell
+  Condor how much physical memory (in MB) your machine has, overriding
+  the value Condor computes automatically.
+
+\item[\Macro{RESERVED\_MEMORY}] \label{param:ReservedMemory}
+  How much memory would you like reserved from Condor?  By default,
+  Condor considers all the physical memory of your machine as
+  available to be used by Condor jobs.  If \Macro{RESERVED\_MEMORY} is
+  defined, Condor subtracts it from the amount of memory it advertises
+  as available.
+
 \end{description}
 
 These macros only apply to the startd when it is running on an
@@ -1470,6 +1676,57 @@ change to take effect (for example, using ``\condor{restart}
 
 \end{description}
 
+The following macros control the optional computation of resource
+availability statistics in the startd.
+
+\begin{description}
+
+\item[\Macro{STARTD\_COMPUTE\_AVAIL\_STATS}]
+\label{param:StartdComputeAvailStats}
+  A boolean that determines if the startd computes resource
+  availability statistics.  The default is False.
+
+\item[\Macro{STARTD\_AVAIL\_CONFIDENCE}]
+\label{param:StartdAvailConfidence}
+  A floating point number that sets the confidence level of the
+  startd's AvailTime estimate.  By default, the estimate is based on
+  the 80th percentile of past values (i.e., the macro is set to 0.8).
+
+\item[\Macro{STARTD\_MAX\_AVAIL\_PERIOD\_SAMPLES}]
+\label{param:StartdMaxAvailPeriodSamples}
+  An integer that limits the number of samples of past available
+  intervals stored by the startd to limit memory and disk consumption.
+  Each sample requires 4 bytes of memory and approximately 10 bytes of
+  disk space.
+
+\end{description}
+
+If \Macro{STARTD\_COMPUTE\_AVAIL\_STATS} = True, the startd will
+define the following ClassAd attributes for resources:
+
+\begin{description}
+\item[\AdAttr{AvailTime}]
+  What proportion of the time (between 0.0 and 1.0)
+  has this resource been in a state other than ``Owner''?
+\item[\AdAttr{LastAvailInterval}]
+  What was the duration (in seconds) of the
+  last period between ``Owner'' states?
+\end{description}
+
+The following attributes will also be included if the resource is
+not in the ``Owner'' state:
+
+\begin{description}
+\item[\AdAttr{AvailSince}]
+  At what time did the resource last leave the
+  ``Owner'' state?  Measured in the number of seconds since the
+  epoch (00:00:00 UTC, Jan 1, 1970).
+\item[\AdAttr{AvailTimeEstimate}]
+  Based on past history, this is an estimate
+  of how long the current period between ``Owner'' states will
+  last.
+\end{description}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Schedd-Config-File-Entries}
@@ -1540,7 +1797,7 @@ These macros control the \Condor{schedd}.
   \label{param:ShadowReniceIncrement} When the schedd spawns a new
   \Condor{shadow}, it can do so with a \Term{nice-level}.  A
   nice-level is a
-  UNIX mechanism that allows users to assign their own processes a lower 
+  Unix mechanism that allows users to assign their own processes a lower 
   priority so that the processes do not interfere with interactive use of the
   machine.  This is very handy for keeping a submit machine with lots
   of shadows running still useful to the owner of the machine.  The
@@ -1664,6 +1921,23 @@ These macros control the \Condor{schedd}.
   \MacroU{CONDOR\_VIEW\_HOST} does not appear in the
   \MacroU{FLOCK\_VIEW\_SERVERS} list.
 
+\item[\Macro{NEGOTIATE\_ALL\_JOBS\_IN\_CLUSTER}]
+  \label{param:NegotiateAllJobsInCluster}
+  If this macro is set to False (the default), when the schedd fails
+  to start an idle job, it will not try to start any other
+  idle jobs in the same cluster during that negotiation cycle.  This
+  makes negotiation much more efficient for large job clusters.
+  However, in some cases other jobs in the cluster can be started even
+  though an earlier job can't.  For example, the jobs' requirements
+  may differ, because of different disk space, memory, or
+  operating system requirements.  Or, machines may be willing to run
+  only some jobs in the cluster, because their requirements reference
+  the jobs' virtual memory size or other attribute.  Setting this
+  macro to True will force the schedd to try to start all idle jobs in
+  each negotiation cycle.  This will make negotiation cycles last
+  longer, but it will ensure that all jobs that can be started will be
+  started.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1748,11 +2022,24 @@ special shadow.  See section~\ref{sec:Shadow-Config-File-Entries}.
 These settings affect the \Condor{starter}.
 \begin{description}
 
+\item[\Macro{EXEC\_TRANSFER\_ATTEMPTS}] \label{param:ExecTransferAttempts}
+  Sometimes due to a router misconfiguration, kernel bug, or other Act
+  of God network problem, the transfer of the initial checkpoint from
+  the submit machine to the execute machine will fail midway through.
+  This parameter allows a retry of the transfer a certain number of times
+  that must be equal to or greater than 1. If this parameter is not
+  specified, or specified incorrectly, then it will default to three.
+  If the transfer of the initial executable fails every attempt, then
+  the job goes back into the idle state until the next renegotiation
+  cycle.
+
+  \Note: This parameter does not exist in the NT starter.
+
 \item[\Macro{JOB\_RENICE\_INCREMENT}] \label{param:JobReniceIncrement}
   When the starter spawns a Condor job, it can do so with a
   \Term{nice-level}.  
   A nice-level is a
-  UNIX mechanism that allows users to assign their own processes a lower 
+  Unix mechanism that allows users to assign their own processes a lower 
   priority so that the processes do not interfere with interactive use of the
   machine.
   If you have machines with lots
@@ -1811,6 +2098,12 @@ jobs at your site use the following macros:
   
 \item[\Macro{APPEND\_REQ\_STANDARD}] \label{param:AppendReqStandard}
   Expression to be appended to standard job requirements.
+
+\item[\Macro{APPEND\_REQUREMENTS}] \label{param:AppendReqStandard}
+  Expression to be appended to any type of universe jobs. 
+  However, if \Macro{APPEND\_REQ\_VANILLA} or \Macro{APPEND\_REQ\_STANDARD}
+  is defined, then ignore the \Macro{APPEND\_REQUREMENTS} for those
+  universes.
 
 \item[\Macro{APPEND\_RANK\_STANDARD}] \label{param:AppendRankStandard}
   Expression to be appended to standard job rank.
@@ -1875,11 +2168,19 @@ as:
   command will override this default.  If this macro is undefined, a
   default size of 32 KB will be used.
 
+\item[\Macro{SUBMIT\_SKIP\_FILECHECK}] \label{param:SubmitSkipFilecheck}
+  If True, \Condor{submit} behaves as if the \Opt{-d} 
+  command-line option is used.
+  This tells \Condor{submit} to disable file permission checks when
+  submitting a job.
+  This can significantly decrease the amount of time required to submit
+  a large group of jobs.
+  The default value is False.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Preen-Config-File-Entries}
-\condor{preen} Configutation File Entries}
+\condor{preen} Configuration File Entries}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 These macros affect \Condor{preen}.
@@ -2045,6 +2346,11 @@ These macros affect the \Condor{negotiator}.
   on User Priorities for details.  It is defined in seconds and defaults
   to 86400 (1 day).
 
+\item[\Macro{DEFAULT\_PRIO\_FACTOR}] \label{param:DefaultPrioFactor} 
+  This macro sets the priority factor for local users. See
+  section~\ref{sec:user-priority-explained}
+  on User Priorities for details.  Defaults to 1.
+
 \item[\Macro{NICE\_USER\_PRIO\_FACTOR}] \label{param:NiceUserPrioFactor} 
   This macro sets the priority factor for nice users. See
   section~\ref{sec:user-priority-explained}
@@ -2062,6 +2368,16 @@ These macros affect the \Condor{negotiator}.
   the value of this macro. Usually, this macro is set
   to the local UID\_DOMAIN. If it is not defined, all users are considered
   local.
+
+\item[\Macro{MAX\_ACCOUNTANT\_DATABASE\_SIZE}] 
+  \label{param:MaxAccountantDatabaseSize}
+  This macro defines the maximum size (in bytes) that the accountant
+  database log file can reach before it is truncated (which re-writes
+  the file in a more compact format).
+  If, after truncating, the file is larger than one half the maximum
+  size specified with this macro, the maximum size will be
+  automatically expanded.
+  The default is 1 megabyte (1000000).
 
 \item[\Macro{NEGOTIATOR\_SOCKET\_CACHE\_SIZE}]
   \label{param:NegotiatorSocketCacheSize} This macro defines the
@@ -2089,26 +2405,6 @@ These macros affect the \Condor{negotiator}.
   with an idle machine over a preemptable machine, if the job has no
   preference between them.
 
-\item[\Macro{NEGOTIATOR\_TRAFFIC\_LIMIT}]
-  \label{param:NegotiatorTrafficLimit} This macro specifies the
-  maximum amount of network traffic (in Kbytes) that the negotiator may
-  initiate per \Macro{NEGOTIATOR\_TRAFFIC\_INTERVAL} for job placement
-  and preemption.  The negotiator uses the job \AdAttr{ImageSize} and
-  \AdAttr{ExecutableSize} parameters to track network usage.  The negotiator
-  will try to use bandwidth up to the limit, so if starting a large
-  \AdAttr{ImageSize} job would put the negotiator over the limit, it will try
-  to start a small \AdAttr{ImageSize} job in its place.  Thus, using traffic
-  limits penalizes large \AdAttr{ImageSize} jobs for the load they place on the
-  network.  This parameter defaults to 0, which disables network usage
-  management in the negotiator.
-
-\item[\Macro{NEGOTIATOR\_TRAFFIC\_INTERVAL}]
-  \label{param:NegotiatorTrafficInterval} This macro specifies the
-  interval (in seconds) to be used in maintaining the
-  \Macro{NEGOTIATOR\_TRAFFIC\_LIMIT}.  This macro defaults to 0,
-  which disables network usage management in the negotiator.  It is
-  common to set this macro equal to \Macro{NEGOTIATOR\_INTERVAL}.
-  
 \item[\Macro{NEGOTIATOR\_DEBUG}] \label{param:NegotiatorDebug} This macro
   (and other settings related to debug logging in the negotiator) is
   described in section~\ref{param:SubsysDebug} as \Macro{SUBSYS\_DEBUG}.
@@ -2130,6 +2426,20 @@ contrib module.
   
 \item[\Macro{EVENT\_LIST}] \label{param:EventList} List of macros
 which define events to be managed by the event daemon.
+
+\item[\Macro{EVENTD\_CAPACITY\_INFO}] \label{param:EventdCapInfo}
+Configures the bandwidth limits used when scheduling job checkpoint
+transfers before \Macro{SHUTDOWN} events.
+The \Macro{EVENTD\_CAPACITY\_INFO} file has the same
+format as the \Macro{NETWORK\_CAPACITY\_INFO} file, described in
+section~\ref{sec:Bandwidth-Alloc-Capinfo}.
+
+\item[\Macro{EVENTD\_ROUTING\_INFO}] \label{param:EventdRouteInfo}
+Configures the network routing information used when scheduling job
+checkpoint transfers before \Macro{SHUTDOWN} events.
+The \Macro{EVENTD\_ROUTING\_INFO} file has the same
+format as the \Macro{NETWORK\_ROUTING\_INFO} file, described in
+section~\ref{sec:Bandwidth-Alloc-Routes}.
 
 \item[\Macro{EVENTD\_INTERVAL}] \label{param:EventdInterval} The number
 of seconds between collector queries to determine pool

@@ -1,0 +1,274 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:Config-Dedicated-Jobs}
+Configuring Condor for Running Dedicated Jobs} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{MPI}
+\index{MPI!Condor configuration}
+\index{dedicated machines}
+
+Beginning with Condor version 6.3.0, users can submit applications to
+Condor which cannot be preempted and which require multiple resources.
+Condor's unique solution to this problem involves a combination of
+\index{scheduling!opportunistic}
+\index{opportunistic scheduling}
+\Term{opportunistic scheduling} and \Term{dedicated scheduling} within
+a single system.
+\Term{Opportunistic scheduling} involves placing jobs on non-dedicated
+resources under the assumption that the resources might not be
+available for the entire duration of the jobs.
+\index{scheduling!dedicated}
+\index{dedicated scheduling}
+\Term{Dedicated scheduling} assumes the constant availability of
+resources to compute fixed schedules.
+In other words, dedicated scheduling involves placing jobs on
+resources where it is assumed that the job can run to completion
+without interruption.
+
+This section describes how to configure a Condor pool for scheduling
+and running parallel jobs on dedicated resources.
+The user manual, section~\ref{sec:MPI} on page~\pageref{sec:MPI}
+contains information on how to submit MPI jobs under Condor.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Overview-Dedicated-Condor}
+Overview of how Condor Manages Dedicated Jobs and Resources}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+To support dedicated applications, a Condor administrator must
+configure some resources in the pool to be dedicated resources.
+These are machines which will not preempt jobs.
+These resources are controlled by a dedicated scheduler, a
+single machine within the pool that runs a \Condor{schedd} daemon.
+In general, there is no limit on the number of dedicated schedulers within
+a Condor pool.
+However, each dedicated resource may only be managed by a single
+dedicated scheduler.
+Therefore, running multiple dedicated schedulers in a single pool
+results in a greater fragmentation of dedicated resources.
+This can create a situation where jobs will not run, because the jobs
+can not get needed resources.  
+
+After a \Condor{schedd} daemon has been selected as the dedicated scheduler
+for the pool and resources are configured to be
+dedicated, users submit MPI jobs to that \Condor{schedd}.
+When an idle MPI job is found in the queue, the dedicated scheduler
+performs its own scheduling algorithm to find appropriate
+resources for the job.
+The dedicated scheduler claims the resources and uses them to
+service the MPI job.
+When a resource can no longer be used to serve dedicated jobs, it is
+allowed to run opportunistic jobs.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Setup-Dedicated-Scheduler}
+Selecting and Setting up your Dedicated Scheduler}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+We recommend that you select a single host to act as the
+dedicated scheduler.
+This is the host from which all users submit their MPI jobs.
+If you have a dedicated cluster of compute nodes and a single
+front-end machine from which users are supposed to submit jobs, that
+machine would be a perfect choice for your dedicated
+scheduler.
+If your pool does not have an obvious choice for a submit machine,
+choose a host that all of your users can log into, and one
+that is likely to be up and running all the time.
+All of the Condor's other resource requirements for a submit node apply to
+this machine, such as having enough disk space in the spool
+directory to hold jobs (see section~\ref{sec:Preparing-to-Install} on
+page~\pageref{sec:Preparing-to-Install} for details on these issues). 
+
+Once you have selected a machine to serve as the dedicated scheduler,
+ensure that the machine is running version of the \Condor{schedd}
+and \Condor{shadow} daemons that support MPI jobs.
+These versions must be the same,
+and they should be at least 6.3.0.
+The default configuration files with Condor version 6.3.0 include all
+required settings.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Configure-Dedicated-Resource}
+Configuration for Dedicated Resources} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+To configure a dedicated resource under a given scheduler, the
+resource owner or administrator sets a few lines in the
+\Condor{startd}'s configuration file.
+Starting with Condor version 6.3.0, all of these settings are supplied
+in an example local configuration file called
+\File{condor\_config.local.dedicated.resource} which can be found in
+the \File{etc} directory once you unpack the Condor binaries.
+
+Each dedicated resource advertises a special attribute in its ClassAd
+that says which dedicated scheduler it is willing to be managed by.
+This is accomplished by modifying the following lines within the local
+configuration file for any dedicated resource:
+
+\begin{verbatim}
+DedicatedScheduler = ``DedicatedScheduler@full.host.name''
+STARTD_EXPRS = $(STARTD_EXPRS), DedicatedScheduler
+\end{verbatim}
+
+Substitute the real host name of the dedicated scheduler
+machine. 
+
+All dedicated resources must have policy expressions which allow for
+dedicated jobs to always run and to never be evicted.
+The resource must also be configured to prefer jobs from the dedicated 
+scheduler over all other jobs.
+A dedicated resource in Condor is simply configured so that the
+dedicated scheduler of its choice has the highest rank.
+See section~\ref{sec:Configuring-Policy} on
+page~\pageref{sec:Configuring-Policy} 
+for more details on Condor's policy expressions. 
+
+It is worth noting that Condor puts no other requirements on a
+resource for it to be considered dedicated.  
+If the owners of desk-top workstations were willing to allow their
+machines to be configured in this way, those workstations would be
+dedicated resources in Condor, and would behave exactly like the nodes
+in a Beowulf compute cluster.
+
+To aid in the definition of the policy expressions, the dedicated
+scheduler adds an attribute to all resource request ClassAds it
+generates, the \Attr{Scheduler} attribute.
+This attribute identifies each ClassAd as a request of a particular
+dedicated scheduler.
+For example, if your dedicated scheduler were running on a host named
+front-end.cs.wisc.edu, the \Attr{Scheduler} attribute for all jobs
+submitted from there would be
+DedicatedScheduler@front-end.cs.wisc.edu. 
+
+The owners of the resources can easily define separate policies for
+dedicated and opportunistic jobs, simply by including two cases in
+each policy expression, one case for when the Scheduler attribute
+identifies the request as one belonging to the preferred dedicated
+scheduler, and one for if the Scheduler attribute is not defined or
+points to a different scheduler.
+
+In the following sections, we will discuss a couple of different
+policy scenarios you might want to use for your dedicated resources
+and give you the exact policy expressions to put in your configuration
+file to implement them.
+The configuration settings for each scenario are provided in the
+\File{condor\_config.local.dedicated.resource} file.
+
+\Note You can configure different resources in your pool to have
+different dedicated policies.
+For example, you might have a cluster of machines in racks which have
+no interactive user and which can always run jobs, along-side desk-top
+machines that are willing to run dedicated jobs when necessary, but
+which will still preempt and evict non-dedicated jobs if the machine
+is being used by its owner.  
+Both of these policy scenarios are discussed below, and both might be
+present in a single pool.
+In other words, the following policy scenarios are specific to a given
+machine, not to a whole pool.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Configure-Dedicated-Only-Policy}
+Policy Scenario One: Run Only Dedicated Jobs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+One possible scenario for the use of dedicated resources
+is to only allow dedicated jobs to run on them.  
+This is the most basic policy for dedicated resources.
+To enact this policy, the following expressions are used in
+the configuration file:
+
+\begin{verbatim}
+START     = Scheduler =?= $(DedicatedScheduler)
+SUSPEND   = False
+CONTINUE  = True
+PREEMPT   = False
+KILL      = False
+WANT_SUSPEND   = False
+WANT_VACATE    = False
+RANK      = Scheduler =?= $(DedicatedScheduler)
+\end{verbatim}
+
+The \Macro{START} expression specifies that the \Attr{Scheduler}
+attribute in the job ClassAd must match the string specified for
+the \Attr{DedicatedScheduler} attribute in the machine ClassAd.
+The \Macro{RANK} expression specifies that a job with the
+\Attr{Scheduler} attribute appropriately defined will have the highest
+rank, which will prevent any other jobs from preempting it based on
+user priorities.
+The rest of the expressions disable all of the \Condor{startd} daemon's
+regular policies for evicting jobs when keyboard and CPU activity is
+discovered on the machine.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Configure-Dedicated-Opportunistic-Policy}
+Policy Scenario Two: Running Dedicated and Opportunistic Jobs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+While the first example works nicely for dedicated jobs,
+it can 
+lead to poor resource utilization if there are not enough dedicated
+jobs to keep the dedicated machines busy.  
+A more sophisticated strategy allows 
+the machines to run non-dedicated jobs when no dedicated jobs exist.
+The machine is
+configured to prefer dedicated jobs, yet
+run opportunistic jobs if no dedicated jobs are available.
+Note that those jobs that do not require a dedicated resource
+are executed as if they were dedicated jobs.
+
+To implement this,
+configure machines as dedicated resources.
+Then, modify the \MacroNI{START} expression to be:
+
+\begin{verbatim}
+START = True
+\end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Configure-Dedicated-Opportunistic-Policy}
+Policy Scenario Three: Running Dedicated Jobs on Desk-Top Resources}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+A third policy example allows both dedicated and non-dedicated
+jobs.
+It assumes resources that are not
+configured to prefer or always run dedicated jobs.
+These desk-top machines have a \MacroNI{START} expression that
+takes the machine owner's usage into account for non-dedicated
+jobs.
+The machine does not preempt jobs that must run on dedicated
+resources,
+while it will preempt other jobs based on a previously set
+policy for running jobs.
+So, the default pool policy is used for starting and
+stopping non-dedicated jobs, but dedicated jobs always start 
+and are not preempted.
+
+Allowing both dedicated and opportunistic jobs on the resources
+requires that an opportunistic policy is already defined.
+In the local configuration file for resources with this hybrid policy,
+a second case is added to policy expressions that overrides
+the initial policy expression specifically for
+dedicated jobs.
+The following represent the only settings that need to be modified
+to implement this policy. 
+
+\begin{verbatim}
+SUSPEND    = Scheduler =!= $(DedicatedScheduler) && ($(SUSPEND))
+PREEMPT    = Scheduler =!= $(DedicatedScheduler) && ($(PREEMPT))
+RANK_FACTOR    = 1000000
+RANK   = (Scheduler =?= $(DedicatedScheduler) * $(RANK_FACTOR)) + $(RANK)
+START  = (Scheduler =?= $(DedicatedScheduler)) || ($(START))
+\end{verbatim}
+
+\Note For everything to work, you MUST set Macro{RANK\_FACTOR} to be a
+larger value than the maximum value your existing rank expression
+could possibly evaluate to.
+\Macro{RANK} is just a floating point value, so there is no harm in
+having a value that is very large. 
+

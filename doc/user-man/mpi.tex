@@ -1,190 +1,90 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:MPI}Running MPICH jobs in Condor}
+\section{\label{sec:MPI}MPI Support}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-In addition to PVM, Condor also supports the execution of parallel jobs
-that utilize MPI.
-Our current implementation supports the following features:
-\begin{itemize}
-\item There are no alterations to the MPICH implementation.  You can directly
-use the version from Argonne National Labs.
+\index{MPI|(}
+MPI stands for Message Passing Interface.
+It provides an environment under which parallel programs
+may synchronize, 
+by providing communication support.
+Running the MPI-based parallel programs within Condor 
+eases the programmer's effort.
+Condor dedicates machines for running the programs,
+and it does so using the same interface used when submitting
+non-MPI jobs.
 
-\item You do not have to re-compile or re-link your MPICH job.  Just
-compile it using the regular \Prog{mpicc}.  Note that you have to be using
-the ch\_p4 subsystem provided by Argonne.
-
-\item The communication speed of the MPI nodes is not affected by 
-running it under Condor.
-\end{itemize}
-However, there are some limitations to our current implementation.
-
-\subsection{\label{sec:MPI-caveats}Caveats}
-\begin{description}
-\item[MPICH] Your MPI job must be compiled with MPICH, Argonne National
-Labs' implementation of MPI.  Specifically, you must use the ``ch\_p4'' 
-device for MPICH.  For information on MPICH, see Argonne's web page
-at \Url{http://www-unix.mcs.anl.gov/mpi/mpich/}. Your version of MPICH must
-not be compiled with the path to RSH hard-coded into the library 
-(As a result of running configure as \verb ./configure -rsh=/path/to/your/rsh
-possilbly.) Condor provides a special version of rsh that it uses to start 
-jobs. 
-
-\item[Dedicated Resources] You must make sure that your MPICH jobs
-will be running on machines that will not vacate the job before the job
-terminates naturally.  (This is a limitation of MPICH and the MPI 
-specification.) Unlike PVM (Section~\ref{sec:PVM}), the current MPICH
-implementation does not support dynamic resource management.  That is, 
-processes in the virtual machine may NOT join or leave the computation at 
-any time.  If you start an MPI job with 4 nodes, for example, none of those 4 
-nodes can be preempted by other Condor jobs or the machine's owner.
-
-\item[Scheduling] We do not yet have a sophisticated scheduling 
-algorithm in place for MPI jobs.  If you set things up properly, 
-there shouldn't be much of a problem.  However, if there are several
-users trying to run MPI jobs on the same machines, it may be the case 
-that no jobs will run at all and Condor's scheduling will deadlock.  
-Writing a good scheduler for this environment is high on the priority 
-list for Condor version 6.5.
-
-\item[``New'' shadow and starter] We have been developing new versions
-of the \Condor{shadow} and the \Condor{starter}.  You have to use these
-new versions to run MPI jobs.  For information on obtaining these 
-binaries, see below.
-
-\item[Shared File System] The machines where you want your MPI job
-to run must have a shared file system.  There is no remote I/O for
-our MPI support like there is for our Standard Universe jobs.
-
-\item[Condor Version 6.1.15+] You must be running this version of 
-the Condor distribution (or greater) in order to use this contrib 
-module.
-\end{description}
-
+Condor currently supports MPICH version ch\_p4, the implementation
+offered by Argonne National Labs.
+This version is available without charge by download.
+See the web page at
+\Url{http://www-unix.mcs.anl.gov/mpi/mpich/}
+for details and availability.
+Programs to be submitted for execution under Condor will have
+been compiled using \Prog{mpicc}.
+No further compilation or linking is necessary to run jobs
+under Condor.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:MPI-binaries}Getting the Binaries}
+\subsection{\label{sec:MPI-setup}MPI Details of Set Up}
 
-There is now an MPI ``contrib'' module available with Condor.  It can
-be found in the contrib section of the downloads.  When you un-tar the 
-tarfile, there will be three files:
+Administratively, Condor must be configured such that resources
+(machines) running MPI jobs are dedicated.
+\index{scheduling!dedicated}
+Dedicated machines are ones that, once they begin execution of
+a program, will continue executing the program until
+the program ends.
+The program will not be preempted (to run another program) or
+suspended.
+Since Condor is not ordinarily used in this manner (Condor uses
+opportunistic scheduling),
+machines that are to be used as dedicated resources
+must be configured as such.
+Section~\ref{sec:Config-Dedicated-Jobs} of
+Administrator's Manual describes the necessary
+configuration and provides detailed examples.
 
-\begin{itemize}
-\item\Condor{starter.v61}
-\item\Condor{shadow.v61}
-\item\Prog{rsh}
-\end{itemize}
-
-The last item is named \File{rsh}, but it is not the \Prog{rsh} utility you're 
-familiar with --- it's a wrapper that is required for our implementation to 
-function correctly. 
-These three binaries should go in Condor's \File{sbin} directory, where
-many other files like them reside.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:MPI-config}Configuring Condor }
-
-Now that you've got the necessary binaries, you'll have to configure Condor
-to use MPI.  Insert the following lines in the main \condor{config} file:
-\begin{verbatim}
-ALTERNATE_STARTER_2	= $(SBIN)/condor_starter.v61
-STARTER_2_IS_DC		= TRUE
-MPI_CONDOR_RSH_PATH	= $(SBIN)
-SHADOW_MPI		= $(SBIN)/condor_shadow.v61
-\end{verbatim}
-Reconfigure your pool by typing
-\begin{verbatim}
-condor_reconfig `condor_status -m`
-\end{verbatim}
-The -m argument tells \Condor{status} to return just the names of all
-the running \Condor{master} daemons in your pool.  Note that you have to do 
-this from a machine with administrator privileges.
+To simplify the dedicated scheduling of resources,
+a single machine becomes the scheduler of dedicated resources.
+This leads to a further restriction that jobs submitted
+to execute under the MPI universe (with dedicated machines)
+must be
+submitted from the machine running as the dedicated scheduler.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:MPI-machines}Managing Dedicated Machines}
+\subsection{\label{sec:MPI-submit}MPI Job Submission}
 
-There are several ways that you can set up a pool to run MPI jobs without 
-interruption.  We will cover two methods that will work, although more
-sophisticated solutions are possible. 
-Familiarity with Startd policy configuration
-(Section~\ref{sec:Configuring-Policy}) is necessary to understand the
-following examples.
-
-For the first example, let's assume that you have a cluster of machines which
-do not have regular users on them.  Let's also assume that these machines are 
-solely dedicated to the use of Condor.  
-The simplest way to set up your policy is as follows:
-\begin{verbatim}
-START       = TRUE
-CONTINUE    = TRUE
-SUSPEND     = FALSE
-PREEMPT     = FALSE
-KILL        = FALSE
-\end{verbatim}
-
-With the above configuration, the machines will accept any Condor job, and the
-jobs will never be suspended, preempted, or killed.  You will never have to 
-worry about an MPI job (or any job, for that matter) being evicted from the 
-machines.
-
-For a more complex example, let us assume you have machines with sophisticated 
-policies already in place, and you'd like the machines to manage MPI jobs 
-differently.  The following macros (which should be specified
-near other Startd policy support macros) allow you to accomplish the task 
-easily.
-\begin{verbatim}
-MPI	  = 8
-IsMPI = (JobUniverse == $(MPI))
-\end{verbatim}
-Now change your configuration from
-\begin{verbatim}
-START	= /* your interesting policy here */
-\end{verbatim}
-to 
-\begin{verbatim}
-FORMER_START	= /* your interesting policy here */
-\end{verbatim}
-Similarly, the \Macro{CONTINUE}, \Macro{SUSPEND}, \Macro{PREEMPT}, and 
-\Macro{KILL} expressions should be changed to macros named 
-\MacroNI{FORMER\_CONTINUE}, etc.  The following configuration will ensure that
-MPI jobs are never suspended or evicted while implementing your former policy
-for all other jobs.
-\begin{verbatim}
-START		= ( $(FORMER_START) )
-CONTINUE	= ( $(FORMER_CONTINUE) )
-SUSPEND		= ( $(FORMER_SUSPEND) && ((IsMPI) == FALSE ) )
-PREEMPT		= ( $(FORMER_PREEMPT) && ((IsMPI) == FALSE ) )
-KILL		= ( $(FORMER_KILL) && ((IsMPI) == FALSE ) )
-\end{verbatim}
-Thus, Condor will never attempt to vacate an MPI job from a machine once 
-it starts running on that machine.  
-Some machine owners may not like this setup, so you may need to customize 
-your configuration to suit your needs.  
-The most important point to remember when creating your Startd policy is 
-that MPI jobs are immediately killed if one or more nodes of the job leave
-the computation.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:MPI-submit}Submitting to Condor}
-
-Here is a minimal submit file to submit an MPI job to Condor.  For more 
-information on writing submit files, see Section~\ref{sec:sample-submit-files}.
+Once the programs are written and compiled, and Condor resources
+are correctly configured, jobs may be submitted.
+Each Condor job requires a submit description file.
+The simplest submit description file for an MPI job:
 
 \begin{verbatim}
+#############################################
+##   submit description file for mpi_program
+#############################################
 universe = MPI
-executable = your_mpi_program
+executable = mpi_program
 machine_count = 4
 queue 
 \end{verbatim}
 
-This tells Condor to start the executable named \File{your\_mpi\_program}
-on four machines.  These four machines will be of the same architechture
-and operating system as the submitting machine.  Note the 
-\verb+universe = MPI+ line tells Condor that an MPICH job is being submitted.  
+This job specifies the \Attr{universe} as \Attr{mpi},
+letting Condor know that dedicated resources will be required.
+The \Attr{machine\_count} command identifies the number
+of machines required by the job.
+The four machines that run the program will default to
+be of the same architecture
+and operating system as the machine on which the job is submitted,
+since a platform is not specified as a requirement.
 
-Now let's try a more sophisticated submit file:
+The simplest example does not specify an input or output,
+meaning that the computation completed is useless,
+since both input comes from and the output goes to \File{/dev/null}.
+A more complex example of a submit description file
+utilizes other features.
 \begin{verbatim}
-###################################################################
-## submitfile                                                    ##
-###################################################################
+######################################
+## MPI example submit description file
+######################################
 universe = MPI
 executable = simplempi
 log = logfile
@@ -195,23 +95,33 @@ machine_count = 4
 queue
 \end{verbatim}
 
-Notice the \MacroU{NODE} macro, which is expanded when the job starts so that
-it becomes equivalent to the MPI ``id'' of the MPICH job.  The first 
-process started becomes ``0'', the second is ``1'', etc.  For example, 
-let's say I prepared four input files, named \File{infile.0} through 
-\File{infile.3}:
-\begin{verbatim}
-infile.0: 
-Hello number zero.
+The specification of the input, output, and error files
+utilize a predefined macro that is only relevant to
+mpi universe jobs.
+\index{macro!predefined}
+See the \Condor{submit} manual page on
+page~\pageref{man-condor-submit} 
+for further description of predefined macros.
+The \MacroU{NODE} macro is given a unique value as
+programs are assigned to machines.
+This value is what the MPICH version ch\_p4 implementation
+terms the rank of a program.
+Note that this term is unrelated and independent of the
+Condor term rank.
+The \MacroUNI{NODE} value is fixed for the entire length
+of the job.
+It can therefore be used to identify individual aspects
+of the computation.
+In this example, it is used to give unique names to input
+and output files.
 
-infile.1: 
-Hello number one.
-\end{verbatim}
-etc.  I then created a simple MPI job, named \File{simplempi.c}
+Consider the following C program that uses this example submit
+description file.
+
 \begin{verbatim}
-/******************************************************************
+/**************
  * simplempi.c
- ******************************************************************/
+ **************/
 #include <stdio.h>
 #include "mpi.h"
 
@@ -234,13 +144,16 @@ int main(argc,argv)
     return 0;
 }
 \end{verbatim}
-And to complete the demonstration, here's the \File{Makefile}:
+
+Here is a makefile that works with the example.
+It would build the MPI executable, using the MPICH
+version ch\_p4 implementation.
 \begin{verbatim}
 ###################################################################
 ## This is a very basic Makefile                                 ##
 ###################################################################
 
-# Change this part to your mpicc, obviously....
+# the location of the MPICH compiler
 CC          = /usr/local/bin/mpicc
 CLINKER     = $(CC)
 
@@ -256,11 +169,25 @@ simplempi: simplempi.o
         $(CC) $(CFLAGS) -c $*.c
 \end{verbatim}
 
-Once \File{simplempi} is built, use \Condor{submit} to submit your job.
-This job should finish pretty quickly once it finds machines to run on,
-and the results will be what you expect:  8 files will be created:  
-\File{errfile.[0-3]} and \File{outfile.[0-3]}.  For example, \File{outfile.0}
-will contain
+The submission to Condor requires exactly four machines,
+and queues four programs.
+Each of these programs requires an input file (correctly
+named) and produces an output file.
+
+If input file for \MacroUNI{NODE} = 0 (called \File{infile.0}) contains
+\begin{verbatim}
+Hello number zero.
+\end{verbatim}
+and
+the input file for \MacroUNI{NODE} = 1 (called \File{infile.1}) contains
+\begin{verbatim}
+Hello number one.
+\end{verbatim}
+then after the job is submitted to Condor,
+there will be 
+eight files created:  
+\File{errfile.[0-3]} and \File{outfile.[0-3]}.
+\File{outfile.0} will contain
 \begin{verbatim}
 Printing to stdout...0
 From stdin: Hello number zero.
@@ -270,7 +197,4 @@ and \File{errfile.0} will contain
 Printing to stderr...0
 \end{verbatim}
 
-Of course, individual tasks may open other files; this example was 
-constructed to demonstrate the \MacroUNI{NODE} feature and the setup of
-the expected \File{stdin}, \File{stdout}, and \File{stderr} files in the MPI
-universe.  
+\index{MPI|)}

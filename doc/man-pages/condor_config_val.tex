@@ -1,5 +1,5 @@
 \begin{ManPage}{\label{man-condor-config-val}\Condor{config\_val}}{1}
-{Query or set a given condor configuration variable}
+{Query or set a given Condor configuration variable}
 \Synopsis \SynProg{\Condor{config\_val}}
 \oArg{options}
 \Opt{variable}
@@ -51,7 +51,16 @@ variables for a specific daemon on a given machine.  Each daemon
 remembers settings made by \Condor{config\_val}.  The configuration
 file is not modified by this command.  Persistent settings remain when
 the daemon is restarted.  Runtime settings are lost when the daemon is
-restarted.  
+restarted.  In general, modifying a host's configuration with
+\Condor{config\_val}  
+requires the \DCPerm{CONFIG} access level, which is disabled on all
+hosts by default.  See section~\ref{sec:Security-Access-Levels} on
+page~\pageref{sec:Security-Access-Levels} for more details.
+Begining with Condor version 6.3.2, administrators have more
+fine-grained control over which access levels can modify which
+settings.
+See section~\ref{sec:Config-Val-Security} on
+page~\pageref{sec:Config-Val-Security} for more details.
 
 \Note The changes will not take effect until you perform a
 \Condor{reconfig}.
@@ -94,25 +103,66 @@ cause all the Condor daemons in your pool to exit.
 	\OptItem{\Opt{variable \Dots}}{The variables to query. }
 \end{Options}
 
+\ExitStatus
+
+\Condor{config\_val} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
 \Examples
 
+To request the schedd daemon on host perdita
+to give the value of the
+\MacroNI{MAX\_JOBS\_RUNNING}
+configuration variable:
 \begin{verbatim}
-% condor_config_val -name perdita -schedd MAX_JOBS_RUNNING
-500
-% condor_config_val -name perdita -schedd -set ``MAX_JOBS_RUNNING = 10''
-Successfully set configuration "MAX_JOBS_RUNNING = 10" on 
-schedd perdita.cs.wisc.edu <128.105.73.32:52067>.
-% condor_reconfig -schedd perdita
-Sent "Reconfig" command to schedd perdita.cs.wisc.edu
-% condor_config_val -name perdita -schedd MAX_JOBS_RUNNING
-10
-% condor_config_val -name perdita -schedd -unset MAX_JOBS_RUNNING
-Successfully unset configuration "MAX_JOBS_RUNNING" on 
-schedd perdita.cs.wisc.edu <128.105.73.32:52067>.
-% condor_reconfig -schedd perdita
-Sent "Reconfig" command to schedd perdita.cs.wisc.edu
-% condor_config_val -name perdita -schedd MAX_JOBS_RUNNING
-500
+   % condor_config_val -name perdita -schedd MAX_JOBS_RUNNING
+   500
+\end{verbatim}
+
+To request the schedd daemon on host perdita
+to set the value of the 
+\MacroNI{MAX\_JOBS\_RUNNING}
+configuration variable
+to the value 10.
+\begin{verbatim}
+   % condor_config_val -name perdita -schedd -set "MAX_JOBS_RUNNING = 10"
+   Successfully set configuration "MAX_JOBS_RUNNING = 10" on 
+   schedd perdita.cs.wisc.edu <128.105.73.32:52067>.
+\end{verbatim}
+
+A command that will implement the change just set in the previous
+example.
+\begin{verbatim}
+   % condor_reconfig -schedd perdita
+   Sent "Reconfig" command to schedd perdita.cs.wisc.edu
+\end{verbatim}
+
+A re-check of the configuration variable reflects the change implemented:
+\begin{verbatim}
+   % condor_config_val -name perdita -schedd MAX_JOBS_RUNNING
+   10
+\end{verbatim}
+
+To set the configuration variable \MacroNI{MAX\_JOBS\_RUNNING}
+back to what it was before the command to set it to 10:
+\begin{verbatim}
+   % condor_config_val -name perdita -schedd -unset MAX_JOBS_RUNNING
+   Successfully unset configuration "MAX_JOBS_RUNNING" on 
+   schedd perdita.cs.wisc.edu <128.105.73.32:52067>.
+\end{verbatim}
+
+A command that will implement the change just set in the previous
+example.
+\begin{verbatim}
+   % condor_reconfig -schedd perdita
+   Sent "Reconfig" command to schedd perdita.cs.wisc.edu
+\end{verbatim}
+
+A re-check of the configuration variable reflects that variable
+has gone back to is value before initial set of the variable:
+\begin{verbatim}
+   % condor_config_val -name perdita -schedd MAX_JOBS_RUNNING
+   500
 \end{verbatim}
 
 \end{ManPage}

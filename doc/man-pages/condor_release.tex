@@ -1,10 +1,14 @@
 \begin{ManPage}{\label{man-condor-release}\Condor{release}}{1}
-{release held jobs in the condor queue}
+{release held jobs in the Condor queue}
 \Synopsis \SynProg{\Condor{release}}
-\oOptArg{-n}{schedd\_name}
-\oArg{-help}
-\oArg{-version}
-\oArg{job identifiers}
+\ToolArgsBase 
+\ToolLocate
+\ToolJobs
+
+\SynProg{\Condor{release}}
+\ToolArgsBase 
+\ToolLocate
+\ToolAll
 
 \index{Condor commands!condor\_release}
 \index{condor\_release command}
@@ -13,7 +17,7 @@
 
 \Condor{release} releases one or more jobs from the Condor job queue that were 
 previously placed in hold state.  
-If the \Opt{-n} option is specified, the named \Condor{schedd} is targeted
+If the \Opt{-name} option is specified, the named \Condor{schedd} is targeted
 for processing.  
 Otherwise, the local \Condor{schedd} is targeted.
 The jobs to be released are identified by one or more job identifiers, as
@@ -22,22 +26,28 @@ For any given job, only the owner of the job or one of the queue super users
 (defined by the \MacroNI{QUEUE\_SUPER\_USERS} macro) can release the job.
 
 \begin{Options}
-    \OptItem{\Arg{-help}}{Display usage information and exit}
-    \OptItem{\Arg{-version}}{Display version information and exit}
-    \OptItem{\OptArg{-n}{schedd\_name}}{Remove jobs in the queue of the 
-		specified schedd}
-	\OptItem{\Arg{cluster}}{(Job identifier.) Remove all jobs in the specified 
-		cluster}
-	\OptItem{\Arg{cluster.process}}{(Job identifier.) Remove the specific job 
-		in the cluster}
-	\OptItem{\Arg{name}}{(Job identifier.) Remove jobs belonging to specified 
-		user}
-    \OptItem{\Opt{-a}}{(Job identifier.) Remove all the jobs in the queue}
-	\OptItem{\Arg{-constraint \emph{constraint}}}{(Job identifier.) Remove 
-		jobs matching specified constraint}
+	\ToolArgsBaseDesc
+	\ToolLocateDesc
+	\OptItem{\Arg{cluster}}{Release all jobs in the specified cluster}
+	\OptItem{\Arg{cluster.process}}{Release the specific job in the cluster}
+	\OptItem{\Arg{user}}{Release jobs belonging to specified user}
+        \OptItem{\Arg{-all}}{Release all the jobs in the queue}
 \end{Options}
 
 \SeeAlso
 \Condor{hold} (on page~\pageref{man-condor-hold})
+
+\GenRem
+
+When releasing a held PVM universe job, you must release the entire
+job cluster.  (In the PVM universe, each PVM job is assigned its own
+cluster number, and each machine class is assigned a ``process''
+number in the job's cluster.)  Releasing a subset of the machine
+classes for a PVM job is not supported.
+
+\ExitStatus
+
+\Condor{release} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
 
 \end{ManPage}

@@ -1,30 +1,77 @@
 \begin{ManPage}{\label{man-condor-restart}\Condor{restart}}{1}
-{Restart the \Condor{master}}
+{Restart the a set of Condor daemons}
 \Synopsis \SynProg{\Condor{restart}}
-\oOpt{-help}
-\oOpt{-version}
-\oOpt{hostname ...}
+\ToolArgsBase
+
+\SynProg{\Condor{restart}}
+\ToolArgsLocate
+\ToolArgsAffect
+
+\SynProg{\Condor{restart}}
+\ToolWhere
+\ToolArgsAffect
 
 \index{Condor commands!condor\_restart}
 \index{condor\_restart command}
 
 \Description 
 
-\Condor{restart} restarts the \Condor{master} on the local machine, or all the
-machines specified in the hostname list.  If, for some reason, the
-\Condor{master} needs to be restarted again with a fresh state, this is the
-command that should be used to do so.  Also, if the DAEMON\_LIST variable in
-the condor configuration file has been changed, one must restart the
-\Condor{master} in order to see these changes.  A simple \Condor{reconfigure}
-is not enough in this situation.  \Condor{restart} will safely shut down
-all running jobs and all submitted jobs from the machine being restarted,
-shutdown all the child daemons of the \Condor{master}, and restart the
-\Condor{master}.
+\Condor{restart} restarts a set of Condor daemon(s) on a set
+of machines.
+The daemon(s) will be put into a consistent state,
+killed, and then started anew.
+
+If, for example, the \Condor{master} needs to be restarted again with
+a fresh state, this is the command that should be used to do so.
+If the DAEMON\_LIST variable in the configuration file has
+been changed, this command is used to restart the \Condor{master}
+in order to see this change.
+The \Condor{reconfigure} command cannot be used in the case where the
+\Attr{DAEMON\_LIST} expression changes.
+
+The command
+\Condor{restart} with no arguments or the command
+\Condor{restart -master}
+will safely shut down all running jobs and all submitted
+jobs from the machine(s) being restarted, then shut down
+all the child daemons of the \Condor{master},
+and then restart the \Condor{master}.
+This, in turn, will allow the \Condor{master} to start up
+other daemons as specified in the \Attr{DAEMON\_LIST} configuration
+file entry.
 
 \begin{Options}
-	\OptItem{\Opt{-help}}{Display usage information}
-	\OptItem{\Opt{-version}}{Display version information}
-	\OptItem{\Opt{hostname ...}}{A list of machines to restart the \Condor{master} on.}
+	\ToolArgsDesc
 \end{Options}
+
+\ExitStatus
+
+\Condor{restart} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\Examples
+To restart the \Condor{master} and all its children
+on the local host:
+\begin{verbatim}
+% condor_restart
+\end{verbatim}
+
+To restart only the \Condor{startd} on a named machine:
+\begin{verbatim}
+% condor_restart -name bluejay -startd
+\end{verbatim}
+
+To restart a machine within a pool
+other than the local pool, use the \Opt{-pool} option.
+The argument is the name of the central manager for the pool.
+Note that one or more machines within the pool must be
+specified as the targets for the command.
+This command restarts
+the single machine named \Opt{cae17} within the
+pool of machines that has \Opt{condor.cae.wisc.edu} as
+its central manager:
+\begin{verbatim}
+% condor_restart -pool condor.cae.wisc.edu -name cae17
+\end{verbatim}
 
 \end{ManPage}

@@ -67,7 +67,7 @@
 
 \begin{document}
 
-\title{Condor \VersionNotice\ Manual}
+\title{Condor\textsuperscript{\small{\textregistered}} \VersionNotice\ Manual}
 \author{\AuthorNotice}
 \maketitle
 
@@ -97,7 +97,6 @@
 \label{admin-manual}
 \input{admin-man/admin.tex}
 
-
 \chapter{Miscellaneous Concepts}
 \section{\label{classad-reference}
 An Introduction to Condor's ClassAd Mechanism}
@@ -105,10 +104,13 @@ An Introduction to Condor's ClassAd Mechanism}
 \section{\label{ckpt-reference}
 An Introduction to Condor's Checkpointing Mechanism}
 \input{misc/ckpt.tex}
-
 \section{\label{condor-pm}
 The Condor Perl Module}
 \input{misc/condor.pm.tex}
+
+\chapter{Condor-G}
+\label{condor-G}
+\input{condor-g/condor-g.tex}
 
 \chapter{Condor for Microsoft Windows NT 4.0}
 \label{condor-nt}
@@ -116,8 +118,12 @@ The Condor Perl Module}
 \input{admin-man/install-nt.tex}
 
 \chapter{Frequently Asked Questions (FAQ)}
-\label{FAQ}
+\label{sec:FAQ}
 \input{faq.tex}
+
+\chapter{Condor Version History}
+\label{Version-History}
+\input{version-history/history.tex}
 
 \chapter{Command Reference Manual (man pages)}
 \label{command-reference}

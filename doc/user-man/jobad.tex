@@ -15,7 +15,19 @@ A ``cluster'' is a group of jobs that were submitted together.  Each
 job has its own unique job identifier within the cluser, but shares a
 common cluster identifier.
 %
+\item[\AdAttr{CumulativeSuspensionTime}] : A running total of the number of
+seconds the job has spent in suspension for the life of the job.
+%
 \item[\AdAttr{ExecutableSize}] : Size of the executable in kbytes.
+%
+\item[\AdAttr{ExitBySignal}] : When a user job exits, this is true if the
+job exited via a signal, and false otherwise. Currently this is available for use only in Standard and Vanilla universe jobs.
+%
+\item[\AdAttr{ExitCode}] : When a user job exits by means other than a signal,
+this is the exit return code of the user job. Currently this is available for use only in Standard and Vanilla universe jobs.
+%
+\item[\AdAttr{ExitSignal}] : When a user job exits by means of an unhandled 
+signal, this attribute takes on the numeric value of the signal. Currently this is available for use only in Standard and Vanilla universe jobs.
 %
 \item[\AdAttr{ImageSize}] : Estimate of the memory image size of the
 job in kbytes.  The initial estimate may be specified in the job
@@ -27,6 +39,10 @@ checkpoint file contains the job's memory image).
 \item[\AdAttr{JobPrio}] : Integer priority for this job, set by
 \Condor{submit} or \Condor{prio}.  The default value is 0.  The higher
 the number, the worse the priority.
+%
+\item[\AdAttr{JobStartDate}] : Time at which the job first began
+running.  Measured in the
+number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
 %
 \item[\AdAttr{JobStatus}] : Integer which indicates the current
 status of the job, where 1 = Idle, 2 = Running, 3 = Removed, 4 =
@@ -41,6 +57,10 @@ servers, this tells the job where to find its checkpoint file.
 %
 \item[\AdAttr{LastCkptTime}] : Time at which the job last performed a
 successful checkpoint.  Measured in the number of seconds since the
+epoch (00:00:00 UTC, Jan 1, 1970).
+%
+\item[\AdAttr{LastSuspensionTime}] : Time at which the job last performed a
+successful suspension.  Measured in the number of seconds since the
 epoch (00:00:00 UTC, Jan 1, 1970).
 %
 \item[\AdAttr{LastVacateTime}] : Time at which the job was last
@@ -63,12 +83,11 @@ job.
 a cluster of many jobs, each job will have the same ClusterId but will
 have a unique ProcId.
 %
+\item[\AdAttr{TotalSuspensions}] : A count of the number of times this job
+has been suspended during its lifetime.
+%
 \item[\AdAttr{QDate}] : Time at which the job was submitted to the job
 queue.  Measured in the
-number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
-%
-\item[\AdAttr{JobStartDate}] : Time at which the job first began
-running.  Measured in the
 number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
 %
 \end{description}

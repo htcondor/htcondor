@@ -1,10 +1,14 @@
 \begin{ManPage}{\label{man-condor-hold}\Condor{hold}}{1}
-{put jobs in the queue in hold state}
+{put jobs in the queue into the hold state}
 \Synopsis \SynProg{\Condor{hold}}
-\oOptArg{-n}{schedd\_name}
-\oArg{-help}
-\oArg{-version}
-\oArg{job identifiers}
+\ToolArgsBase
+\ToolLocate 
+\ToolJobs
+
+\SynProg{\Condor{hold}}
+\ToolArgsBase
+\ToolLocate 
+\ToolAll
 
 \index{Condor commands!condor\_hold}
 \index{condor\_hold command}
@@ -12,7 +16,7 @@
 \Description
 
 \Condor{hold} places one or more jobs from the Condor job queue in hold state.
-If the \Opt{-n} option is specified, the named \Condor{schedd} is targeted
+If the \Opt{-name} option is specified, the named \Condor{schedd} is targeted
 for processing.  
 Otherwise, the local \Condor{schedd} is targeted.
 The jobs to be held are identified by one or more job identifiers, as
@@ -21,22 +25,32 @@ For any given job, only the owner of the job or one of the queue super users
 (defined by the \MacroNI{QUEUE\_SUPER\_USERS} macro) can place the job on hold.
 
 \begin{Options}
-    \OptItem{\Arg{-help}}{Display usage information and exit}
-    \OptItem{\Arg{-version}}{Display version information and exit}
-    \OptItem{\OptArg{-n}{schedd\_name}}{Target jobs in the queue of the named 
-		schedd}
-	\OptItem{\Arg{cluster}}{(Job identifier.) Hold all jobs in the specified 
-		cluster}
-	\OptItem{\Arg{cluster.process}}{(Job identifier.) Hold the specific job 
-		in the cluster}
-	\OptItem{\Arg{name}}{(Job identifier.) Hold jobs belonging to specified 
-		user}
-    \OptItem{\Opt{-a}}{(Job identifier.) Hold all the jobs in the queue}
-	\OptItem{\Arg{-constraint \emph{constraint}}}{(Job identifier.) Hold 
-		jobs matching specified constraint}
+
+	\ToolArgsBaseDesc
+	\ToolLocateDesc
+        \OptItem{\Arg{cluster}}{Hold all jobs in the specified cluster}
+        \OptItem{\Arg{cluster.process}}{Hold the specific job in the cluster}
+        \OptItem{\Arg{user}}{Hold jobs belonging to specified user}
+        \OptItem{\Arg{-all}}{Hold all the jobs in the queue}
+        \OptItem{\Arg{-constraint constraint}}{Hold
+        jobs matching specified constraint}
+
 \end{Options}
 
 \SeeAlso
 \Condor{release} (on page~\pageref{man-condor-release})
+
+\GenRem
+
+To put a PVM universe job on hold, you must put each ``process'' in
+the PVM job cluster on hold.  (In the PVM universe, each PVM job is
+assigned its own cluster number, and each machine class is assigned a
+``process'' number in the job's cluster.)  Putting a subset of the
+machine classes for a PVM job on hold is not supported.
+
+\ExitStatus
+
+\Condor{hold} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
 
 \end{ManPage}

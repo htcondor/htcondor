@@ -1,69 +1,70 @@
-\section{Introduction to Condor NT Preview}
+\section{Introduction to Condor NT \VersionNotice}
 \index{Windows NT!introduction|(}
 Welcome to Condor for Windows NT!  
-We view Windows NT as a strategic platform for Condor, and therefore we are
-doing a full-blown ``deep port'' to Windows NT.
+Windows NT is a strategic platform for Condor,
+and therefore we have been working toward a complete
+port to Windows NT.
 Our goal is to make Condor every bit as capable on Windows NT as it is on
 Unix -- or even more capable.  
 
-Porting Condor from Unix to Windows NT is a formidable task because many
+Porting Condor from Unix to Windows NT is a formidable task,
+because many
 components of Condor must interact closely with the underlying operating
-system.  Instead of waiting until all components of Condor are running and
-stabilized on Windows NT before making an initial public release, we have
-decided to make frequent ``\Term{preview releases}'' of Condor for Windows
-NT.  These preview releases are not feature complete and should be
-considered beta quality.  However, many sites do not require all the
-components included in a full-blown release of Condor.  Still other sites
-may desire to get their feet wet with a preview release of Condor NT in
-anticipation of setting up a production environment once a full-blown
-release on Windows NT is completed.
+system.
+Instead of waiting until all components of Condor are running
+and stabilized on Windows NT,
+we have decided to make a clipped version of Condor for Windows NT.
+A clipped version is one in which there is no checkpointing
+and there are no remote system calls.
 
-This chapter contains additional information specific to running Condor on
-Windows NT.  Eventually this information will be integrated into the Condor
-Manual as a whole, and this section will disappear.  In order to effectively
-use Condor NT, you must first read chapters 1 (``Overview'') and 2 (``Users'
-Manual'') in this
-manual.  If you will also be administrating or customizing the policy/setup of
-Condor NT, you should also read chapter 3 (``Administrators' Manual'').
-After reading these chapters, then review the information in this chapter
-for important information and differences when using and administrating
-Condor on Windows NT.  For information on installing Condor NT, see
+This section contains additional information specific to running
+Condor on Windows NT.  Eventually this information will be integrated
+into the Condor Manual as a whole, and this section will disappear.
+In order to effectively use Condor NT, first read the overview
+chapter (section~\ref{sec:overview})
+and the user's manual (section~\ref{sec:usermanual}).
+If you will
+also be administrating or customizing the policy and set up of Condor NT,
+also read the administrator's manual 
+chapter (section~\ref{sec:Admin-Intro}).
+After reading these chapters,
+review the information in this chapter for
+important information and differences when using and administrating
+Condor on Windows NT.
+For information on installing Condor NT, see
 section~\ref{sec:NT-Install}.
 \index{Windows NT!introduction|)}
 
 
-\section{Release Notes for Condor NT Preview 6.1.8}
+\section{Release Notes for Condor NT \VersionNotice}
 \index{Windows NT!release notes|(}
 
-Released mid-October 1999, this is the first public release of Condor NT.
+\subsubsection{What is missing from Condor NT \VersionNotice?}
 
-\subsubsection{What is missing from Condor NT Preview 6.1.8?}
-
-In general, this preview release on NT works the same as the full-blown
+In general, this release on NT works the same as the 
 release of Condor for Unix.  
 
-However,
-following items are still being worked on and are not supported in this
-preview:
+However, the following items are not supported in this version:
 
 \begin{itemize}
 
-\item The STANDARD, PVM, GLOBUS, and SCHEDULER job universes are not yet present.
-All jobs must be submitted to the VANILLA universe.
-This means transparent process checkpoint/migration, remote system calls,
-and DagMan are not available in this release (they will debut in
-upcoming releases).  All job submit files must contain the statement:
-\begin{verbatim}
-        universe = vanilla
-\end{verbatim}
+\item The STANDARD,Globus, and PVM job universes are not yet present.  
+This is no
+transparent process checkpoint/migration, and there are no
+remote system calls.
 
-\item Support for accessing files via a network share (i.e. files stored on
-a network volume managed by NT Server, Novell Netware, AFS) is not yet
-supported.  All files required by the job must exist on a local disk on
-machine where the job was submitted.  Condor NT will then automatically
-transfer the files to/from the submit machine to the machine selected to
-execute the job(s).  See section~\ref{sec:File-Transfer} for important
-information on Condor NT's file transfer mechanism.
+\item \Condor{submit\_dag} does not exist for NT.
+
+\item Accessing files via a network share (that is,
+files stored on a network volume managed by NT Server, Novell Netware, AFS)
+is not yet supported.
+All files required by the job must exist on a local disk on
+machine where the job was submitted.
+Condor NT transfers 
+needed files to/from the submit machine to the machine selected to
+execute the job(s) using the file transfer mechanisms.
+See section~\ref{sec:File-Transfer} for details on the
+file transfer mechanism.
 
 \item The ability to run the job with the same credentials as the submitting
 user is not yet supported.  Instead, Condor dynamically creates and runs the
@@ -71,197 +72,69 @@ job in a special user account with minimal access rights.
 
 \end{itemize}
 
-\subsubsection{What is included in Condor NT Preview 6.1.8?}
+\subsubsection{What is included in Condor NT \VersionNotice?}
 
-Except for the functionality listed above, practically everything else works
-the same way in Condor NT Preview as it does in the full-blown release.
-This Preview release is based on the Condor 6.1.8 source tree, and thus the
-feature set is the same as 6.1.8.  For instance, all of the following works in Condor NT:
+Except for those items listed above, most everything works
+the same way in Condor NT as it does in the Unix release.
+This release is based on the Condor \VersionNotice source tree, and thus the
+feature set is the same as Condor \VersionNotice for Unix.  
+For instance, all of the following work in Condor NT:
 \begin{itemize}
 
 \item The ability to submit, run, and manage queues of jobs running on a
 cluster of NT machines.
 
-\item All tools (such as \Condor{q}, \Condor{status}, \Condor{userprio},
-etc), with the exception of \Condor{compile} and \Condor{submit\_dag}, are included.
+\item All tools such as \Condor{q}, \Condor{status}, \Condor{userprio},
+are included. Only \Condor{compile} and \Condor{submit\_dag} are
+\emph{not} included.
 
-\item The ability to customize job policy using Classified Ads.  The machine
-ClassAds contain all the information included in the full-blown version,
+\item The ability to customize job policy using ClassAds.
+The machine ClassAds contain all the information included in the Unix version,
 including current load average, RAM and virtual memory sizes, integer and
 floating-point performance, keyboard/mouse idle time, etc.  Likewise, job
 ClassAds contain a full complement of information, including system
 dependent entries such as dynamic updates of the job's image size and CPU
 usage.
 
-\item Everything necessary to run a Condor Central Manager on Windows NT.
+\item Everything necessary to run a Condor central manager on Windows NT.
 
-\item Several security mechanisms (more details below).
+\item Security mechanisms.
 
 \item Support for SMP machines.
 
 \item Condor NT can run jobs at a lower operating system priority level.
-Jobs can be suspended (prevented from using any CPU at all), soft-killed via
-a WM\_CLOSE message, or hard-killed automatically based upon policy
-expressions.  For example, Condor NT can automatically suspend a job
+Jobs can be suspended, soft-killed by using a WM\_CLOSE message,
+or hard-killed automatically based upon policy expressions.
+For example, Condor NT can automatically suspend a job
 whenever keyboard/mouse or non-Condor created CPU activity is detected, and
 continue the job after the the machine has been idle for a specified amount
 of time.
 
 \item Condor NT correctly manages jobs which create multiple processes.  For
-instance, if the job spawns multiple processes and Condor needs to kill the
-job, all processes created by the job will be terminated.
+instance, if a Condor job spawns multiple processes and Condor
+needs to kill the job,
+all processes created by the job will be terminated.
 
 \item In addition to interactive tools, users and administrators can receive
-information from Condor via email (standard SMTP) and/or via log files.
+information from Condor by e-mail (standard SMTP) and/or by log files.
 
-\item Condor NT includes a friendly GUI installation/setup program which can
-perform a full install or deinstall of Condor.
-Information specified by the user in the setup program is stored in the
-system registry.  The setup program can update a current installation with a
-new release with a minimal amount of effort.
-
-\end{itemize}
-
-\subsection{\label{sec:File-Transfer}Condor File Transfer Mechanism}
-
-Condor remote system calls and the ability to access network shares is not
-yet supported on NT --- they will be in the near future.  For now, Condor NT users must utilize
-the Condor File Transfer mechanism.  
-
-When Condor finds a machine willing to execute your job, it will create a
-temporary subdirectory for your job on the execute machine.
-The Condor File Transfer mechanism will then send via TCP the job executable(s)
-and input files from the submitting machine into this temporary directory on the execute machine. 
-After the input files have been transferred, the execute machine will start
-running the job with the temporary directory as the job's current working
-directory.
-When the
-job completes or is kicked off, Condor File Transfer will automatically send
-back to the submit machine any output files created by the job.  After the
-files have been sent back successfully, the temporary working directory on
-the execute machine is deleted.
-
-Condor's File Transfer mechanism has several features to ensure data
-integrity in a non-dedicated environment.  For instance, transfers of
-multiple files are performed atomically.
-
-\subsubsection{File Transfer Submit-Description Parameters}
-Condor File Transfer behavior is specified at job submit time via the
-submit-description file and \Condor{submit}.  Along with all the other job
-submit-description parameters (see section~\ref{man-condor-submit} on
-page~\pageref{man-condor-submit}), use the following new commands in
-the submit-description file:
-
-\begin{description}
-
-\item[transfer\_input\_files = $<$ file1, file2, file... $>$] Use this
-parameter to list all the files which should be transferred into the 
-working directory for the job before the job is started.  Separate multiple
-filenames with a comma.  By default, the file specified via the
-\Opt{Executable} parameter and any file specified via the \Opt{Input}
-parameter (i.e. stdin) are transferred.
-
-\item[transfer\_output\_files = $<$ file1, file2, file... $>$] Use this
-parameter to explicitly list which output files to transfer back from the
-temporary working directory on the execute machine to the submit machine.
-Most of the time, however, there is no need to use
-this parameter.  If \Opt{transfer\_output\_files} is not
-specified, Condor will automatically transfer back all files in the job's
-temporary working directory which have been
-modified or created by the job.  This is usually the desired behavior.
-Explicitly listing output files is typically only done when the job creates
-many files, and the user really only cares to keep a subset of
-the files created. \Warn Do not specify \Opt{transfer\_output\_file} in your
-submit-description file unless you really have a good reason --- it is
-almost always best to let Condor figure things out by itself based upon what
-the job actually wrote.
-
-\item[transfer\_files = $<$ONEXIT \Bar\ ALWAYS$>$] Setting
-\Opt{transfer\_files} equal to \Arg{ONEXIT} will cause Condor to transfer the
-job's output files back to the submitting machine only when the job
-completes (exits).  If not specified, \Arg{ONEXIT} is used as the default.
-Specifying \Arg{ALWAYS} tells Condor to transfer back the output files when
-the job completes \emph{or} whenever Condor kicks off the job (preempts)
-from a machine prior to job completion (if, for example, activity is
-detected on the keyboard).  The \Arg{ALWAYS} option is specifically intended
-for fault-tolerant jobs which periodocially write out their state to disk and
-can restart where the left off.  Any output files transferred back to the
-submit machine when Condor kicks off a job will automatically be sent back
-out again as input files when the job restarts.
-
-\end{description}
-
-\subsubsection{Ensuring File Transfer has enough disk space}
-
-It is \Bold{highly recommended} that you specify a \Opt{Requirements}
-expression in your submit-description file that checks the size of the
-\AdAttr{Disk} attribute when using File Transfer!  Doing so can ensure
-that Condor picks a machine with enough local disk space for your job.
-Here is a sample submit-description file:
-
-\begin{verbatim}
-        # Condor submit file for program "foo.exe".
-        #
-        # foo reads from files "my-input-data" and "my-other-input-data".
-        # foo then writes out results into several files.
-        # The total disk space foo uses for all input and output files
-        # is never more than 10 megabytes.
-        #
-        executable = foo.exe
-        # Now set Requirements saying that the machine which runs our job
-        # must have more than 10megs of free disk space.  Note that "Disk"
-        # is expressed in kilobytes; 10meg is 10000 kbytes.
-        requirements = Disk > 10000
-        # 
-        queue
-\end{verbatim}
-
-If you do not specify a requirement on \AdAttr{Disk} (a bad idea!),
-\Condor{submit} will append to the job ad \Opt{Requirements} that
-\ShortExpr{Disk >= DiskUsage}.  The \AdAttr{DiskUsage} attribute is in the
-job ad and represents the maximum amount total disk space required by the
-job in kilobytes.  Condor will automatically update \AdAttr{DiskUsage}
-approx every 20 minutes while your job runs with the amount of space being
-used by the job on the execute machine.  
-
-\subsubsection{Current Limitations of File Transfer}
-
-Itemized below are some current limitations of the File Transfer mechanism.  We
-anticipate improvement on these areas in upcoming releases.
-
-\begin{itemize}
-
-\item Transfer of subdirectories is not performed.  When starting your job,
-Condor will create a temporary working directory on the execute machine and
-place your executable and all input files into this directory.  Condor will
-then start your job with this directory as the current working directory.
-When your job completes, any files created in this temporary working
-directory are transferred back to the submit machine.  However, if the job
-creates any subdirectories, files in those subdirectories are not
-transferred back.  Similarly, only filenames, not directory names, can be
-specified with the \Opt{transfer\_input\_files} submit-description file
-parameter.
-
-\item Running out of disk space on the submit machine is not handled as
-gracefully as it should be. 
-
-\item By default, any files created or modified by the job are automatically
-sent back to the submit machine.  However, if the job deleted any files in
-its temporary working directory, they currently are not deleted back on the
-submit machine.  This could cause problems if 
-\Opt{transfer\_files} is set to \Arg{ALWAYS} and the job uses the presence
-of a file as a lock file.  Note there is no problem if \Opt{transfer\_files}
-is set to the default, which is \Arg{ONEXIT}.
+\item Condor NT includes a friendly GUI installation and set up program,
+which can perform a full install or deinstall of Condor.
+Information specified by the user in the set up program is stored in the
+system registry.  
+The set up program can update a current installation with a
+new release using a minimal amount of effort.
 
 \end{itemize}
 
-\subsection{Some details on how Condor NT starts/stops a job}
+
+\subsection{Details on how Condor NT starts/stops a job}
 
 This section provides some details on how Condor NT starts and stops jobs.
 This discussion is geared for the Condor administrator or advanced user who is
-already familiar with the material in Chapter 2 (the Administrators' Manual)
+already familiar with the material in the Administrators' Manual
 and wishes to know detailed information on what Condor NT does when
-starting/stopping jobs.
+starting and stopping jobs.
 
 When Condor NT is about to start a job, the \Condor{startd} on the execute
 machine spawns a \Condor{starter} process.  The \Condor{starter} then
@@ -272,65 +145,84 @@ creates:
 ``condor-run-dir\_XXX'', where XXX is the process ID of the
 \Condor{starter}.  This account is added to group Users and group Everyone.
 
-\item a new temporary working subdirectory for the job on the execute machine.  This subdirectory is
+\item a new temporary working directory for the job on the execute machine.
+This directory is
 named ``dir\_XXX'', where XXX is the process ID of the \Condor{starter}.
-The subdirectory is created in the \MacroUNI{EXECUTE} subdirectory as
-specified in Condor's configuration file.  Then Condor grants write
-permission to this subdirectory for user account it just created for the
+The directory is created in the \MacroUNI{EXECUTE} directory as
+specified in Condor's configuration file.  Condor then grants write
+permission to this directory for the user account newly created for the
 job.
 
 \item a new, non-visible Window Station and Desktop for the job.
 Permissions are set so that only the
-user account just created has access rights to this Desktop.  Any windows
-created by this job are not seen by anyone; the job is run ``in the
-background''.
+user account newly created has access rights to this Desktop.  Any windows
+created by this job are not seen by anyone; the job is run in the
+background.
 
 \end{enumerate}
 
-Next, the \Condor{starter} (henceforth called the starter) contacts the \Condor{shadow} (henceforth called the shadow) process which is
-running on the submitting machine and pulls over the job's executable and
-input files.  These files are placed into the temporary working subdirectory for the
-job.  After all files have been received, the starter spawns the
-user's executable as user ``condor-run-dir\_XXX'' with its current working
-directory set to the temporary working subdirectory (i.e. \MacroUNI{EXECUTE}/dir\_XXX).
+Next, the \Condor{starter} (called the starter) contacts the \Condor{shadow}
+(called the shadow) process, which is
+running on the submitting machine, and pulls over the job's executable and
+input files.
+These files are placed into the temporary working directory for the job.
+After all files have been received,
+the starter spawns the user's executable as user ``condor-run-dir\_XXX''
+with its current working directory set to the temporary working directory
+(that is, \MacroUNI{EXECUTE}/dir\_XXX).
 
-While the job is running, the starter is closely monitoring the CPU
-usage and image size of all processes started by the job.  Every 20 minutes it sends this
-information, along with the total size of all files contained in the job's
-working subdirectory, to the shadow.  The shadow then
-inserts this information into the job's ClassAd so policy/scheduling
-expressions can make use of this dynamic information.
+While the job is running, the starter closely monitors the CPU
+usage and image size of all processes started by the job.
+Every 20 minutes the starter sends this information,
+along with the total size of all files contained in the job's
+temporary working directory, to the shadow.
+The shadow then
+inserts this information into the job's ClassAd so that policy and
+scheduling expressions can make use of this dynamic information.
 
-If the job exits of its own accord (i.e. the job completes), the starter
+If the job exits of its own accord (that is, the job completes),
+the starter
 first terminates any processes started by the job which could still be
-laying around if the job did not clean up after itself.
-examines the job's temporary working subdirectory for any files which have been
-created or modified and sends these files back to the shadow running on the
-submit machine.  The shadow
+around if the job did not clean up after itself.
+The starter examines the job's temporary working directory for any
+files which have been created or modified and sends these files back
+to the shadow running on the submit machine.
+The shadow
 places these files into the \Opt{initialdir} specified in the
-submit-description file; if no \Opt{initialdir} was specified, the files go
-into the directory where the user ran \Condor{submit}.  Once all the output
-files are safely transferred back, the job is removed from the queue.  If,
-however, the \Condor{startd} forcibly kills the job before all output files
+submit description file; if no \Opt{initialdir} was specified, the files go
+into the directory where the user invoked \Condor{submit}.
+Once all the output files are safely transferred back,
+the job is removed from the queue.
+If, however, the \Condor{startd} forcibly kills the job before all output files
 could be transferred, the job is not removed from the queue but instead
-switches back to Idle.  
+switches back to the Idle state.  
 
-If the \Condor{startd} decides to vacate a job prematurely (perhaps because
-the startd policy says to kick off jobs whenever activity on the keyboard is
-detected, or whatever), the starter sends a WM\_CLOSE message to the job.
+If the \Condor{startd} decides to vacate a job prematurely,
+the starter sends a WM\_CLOSE message to the job.
 If the job spawned multiple child processes, the WM\_CLOSE message is only
-sent to the parent process (i.e. the one started by the starter).  The
+sent to the parent process (that is, the one started by the starter).
+The
 WM\_CLOSE message is the preferred way to terminate a process on Windows NT,
 since this method allows the job to cleanup and free any resources it may
-have allocated.  Then when the job exits, the starter cleans up any
-processes left behind.  At this point if \Opt{transfer\_files} was set to
-\Arg{ONEXIT} (the default) in this job's submit file, the job simply
-switches from state Running to state Idle and no files are transferred
-back.  But if \Opt{transfer\_files} is set to \Arg{ALWAYS}, then any files
+have allocated.
+When the job exits, the starter cleans up any processes left behind.
+At this point, if \Opt{transfer\_files} is set to
+\Arg{ONEXIT} (the default) in the job's submit description file,
+the job switches from states, from Running to Idle,
+and no files are transferred back.
+If \Opt{transfer\_files} is set to \Arg{ALWAYS}, then any files
 in the job's temporary working directory which were changed or modified are
-first sent back to the shadow.  But this time, the shadow places these
+first sent back to the submitting machine.
+But this time, the shadow places these
 so-called intermediate files into a subdirectory created in the
-\MacroUNI{SPOOL} directory on the submitting machine (\MacroUNI{SPOOL} is specified in Condor's configuration file).  Then the job is switched back to the Idle state until Condor finds a different machine for it to run on.  When the job is started again, Condor will place into the job's temporary working directory the executable and input files as before, \emph{plus} any files stored in the submit machine's \MacroUNI{SPOOL} directory for that job.  
+\MacroUNI{SPOOL} directory on the submitting machine
+(\MacroUNI{SPOOL} is specified in Condor's configuration file).
+The job is then switched back to the Idle state until Condor finds
+a different machine on which to run.
+When the job is started again,
+Condor places into the job's temporary working directory the executable
+and input files as before,
+\emph{plus} any files stored in the submit machine's \MacroUNI{SPOOL} directory for that job.  
 
 \Note A Windows console process can intercept a WM\_CLOSE message
 via the Win32 SetConsoleCtrlHandler() function if it needs to do special
@@ -339,20 +231,21 @@ generates a CTRL\_CLOSE\_EVENT.  See SetConsoleCtrlHandler() in the Win32
 documentation for more info.
 
 \Note The default handler in Windows NT for a WM\_CLOSE message is for the
-process to exit.  Of course, the job could be coded to ignore it an not
+process to exit.  Of course, the job could be coded to ignore it and not
 exit, but eventually the \Condor{startd} will get impatient and hard-kill
 the job (if that is the policy desired by the administrator).
 
-Finally, after the job has left and any files transferred back, the
-\Condor{starter} will delete the temporary working directory, the temporary
-run account, the WindowStation and the desktop before exiting itself.  If
-the starter should terminate abnormally for some reason, the \Condor{startd}
-will take upon itself to cleanup the directory, the account, etc.  If for
-some reason the \Condor{startd} should disappear as well (i.e. if 
-the entire machine was power-cycled hard), the \Condor{startd} will cleanup the temporary directory(s) and/or account(s) left behind when Condor is restarted at
-reboot time.
+Finally, after the job has left and any files transferred back,
+the starter
+deletes the temporary working directory, the temporary
+account, the WindowStation and the Desktop before exiting itself.
+If the starter should terminate abnormally, the \Condor{startd}
+attempts the clean up.
+If for some reason the \Condor{startd} should disappear as well
+(that is, if the entire machine was power-cycled hard),
+the \Condor{startd} will clean up when Condor is restarted.
 
-\subsection{Security considerations in Condor NT Preview}
+\subsection{Security considerations in Condor NT}
 
 On the execute machine, the user job is run using the access token of an
 account dynamically created by Condor which has bare-bones access rights and
@@ -410,70 +303,58 @@ To protect the actual job queue files themselves, the Condor NT installation
 program will automatically set permissions on the entire Condor release
 directory so that only Administrators have write access.
 
-Finally, Condor NT Preview has all the IP/Host-based security mechanisms present in the full-blown version of Condor.  See section~\ref{sec:Host-Security} starting on page~\pageref{sec:Host-Security} for complete information on how to allow/deny access to Condor based upon machine hostname or IP address.
+Finally, Condor NT has all the IP/Host-based security mechanisms present
+in the full-blown version of Condor.  See section~\ref{sec:Host-Security}
+starting on page~\pageref{sec:Host-Security} for complete information
+on how to allow/deny access to Condor based upon machine host name or
+IP address.
 
 \subsection{Interoperability between Condor for Unix and Condor NT}
 
-Unix machines and Windows NT machines running Condor can happily co-exist in
-the same Condor pool without any problems.  For now, the only restriction is jobs
-submitted on Windows NT must run on Windows NT, and job submitted on Unix
-must run on Unix.  You will get this behavior by default, since
-\Condor{submit} will automatically set a \AdAttr{Requirements} expression in
-the job ClassAd stating that the execute machine must have the same
-architecture and operating system as the submit machine. 
+Unix machines and Windows NT machines running Condor can happily
+co-exist in the same Condor pool without any problems.
+Jobs submitted on Windows NT can run on Windows NT or Unix,
+and jobs submitted on Unix can run on Unix or Windows NT.
+Without any specification
+(using the \AdAttr{requirements} expression in the submit description file),
+the default behavior will be to 
+require the execute machine to be of the same architecture and operating
+system as the submit machine.
 
-There is absolutely no need to run more than one Condor central manager, even if
-you have both Unix and NT machines.  The Condor central manager itself can run on
-either Unix or NT; there is no advantage to choosing one over the other.
-Here at University of Wisconsin-Madison, for instance, we have hundreds of
-Unix (Solaris, Linux, Irix, etc) and Windows NT machines in our Computer Science Department Condor pool.  Our
-central manager is running on Windows NT.  All is happy.
+There is absolutely no need to run more than one Condor central manager,
+even if you have both Unix and NT machines.  The Condor central manager
+itself can run on either Unix or NT; there is no advantage to choosing
+one over the other.  Here at University of Wisconsin-Madison, for
+instance, we have hundreds of Unix (Solaris, Linux, Irix, etc) and
+Windows NT machines in our Computer Science Department Condor pool.
+Our central manager is running on Windows NT.  All is happy.
 
 \subsection{Some differences between Condor for Unix -vs- Condor NT}
 
 \begin{itemize}
 
-\item As of Condor NT Preview 6.1.8, only VANILLA universe is
-supported on NT.  Additionally, on Unix VANILLA universe requires a shared
-filesystem.  On NT, a shared filesystem is not required (in fact, use of a
-shared filesystem is not yet supported), and the Condor File Transfer
-mechanism must be used. \Note The Condor File Transfer mechanism is
-currently only on Condor NT.
-
 \item On Unix, we recommend the creation of a ``\textit{condor}'' account
-when installing Condor.  On NT, this is not necesary, as Condor NT is
+when installing Condor.  On NT, this is not necessary, as Condor NT is
 designed to run as a system service as user LocalSystem.
 
-\item On Unix, the job ClassAd attributes relating to image size and CPU
-usage are not updated while the job is running.  On NT, they are updated
-every 20 minutes while the job is running and again at job exit.  Furthermore, on Unix image size and CPU usage only 
-reflect the parent process of a job that spawns child processes.  So if you
-submit a shell script on Unix which ultimately spawns your job, Condor's
-image size and CPU usage only report the size and usage of the shell script.
-On NT, image size and CPU usage is totaled across all processes spawned by
-the job.
-
-\item The job ClassAd attribute \AdAttr{DiskUsage} exists only on NT.
-Similarly, several job attributes relating to transparent process
-checkpointing only exist on Unix.
-
-\item On Unix, Condor finds the \File{condor\_config} main configuration file by
-looking in ~condor, in /etc, or via an environment variable.  On NT, the
-location of \File{condor\_config} file is determined via the registry key
-\File{HKEY\_LOCAL\_MACHINE/Software/Condor}.  You can override this value by
-setting an environment variable named \Env{CONDOR\_CONFIG}.
+\item On Unix, Condor finds the \File{condor\_config} main configuration
+file by looking in ~condor, in /etc, or via an environment variable.
+On NT, the location of \File{condor\_config} file is determined
+via the registry key \File{HKEY\_LOCAL\_MACHINE/Software/Condor}.
+You can override this value by setting an environment variable named
+\Env{CONDOR\_CONFIG}.
 
 \item On Unix, in the VANILLA universe at job vacate time Condor sends the
 job a softkill signal defined in the submit-description file (defaults to
 SIGTERM).  On NT, Condor sends a WM\_CLOSE message to the job at vacate
 time.
 
-\item On Unix, if one of the Condor daemons has a fault, a core file will be
-created in the \MacroUNI{Log} directory.  On Condor NT, a ``core'' file will also
-be created, but instead of a memory dump of the process it will be a very
-short ASCII text file which describes what fault occurred and where it
-happened.  This information can be used by the Condor developers to fix the
-problem.
+\item On Unix, if one of the Condor daemons has a fault, a core file
+will be created in the \MacroUNI{Log} directory.  On Condor NT, a
+``core'' file will also be created, but instead of a memory dump of the
+process it will be a very short ASCII text file which describes what
+fault occurred and where it happened.  This information can be used by
+the Condor developers to fix the problem.
 
 \end{itemize}
 \index{Windows NT!release notes|)}

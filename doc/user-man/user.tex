@@ -9,6 +9,7 @@
 % hastily written by a very tired Todd.... Good Luck.  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\label{sec:usermanual}
 \index{Condor!user manual|(}
 \index{user manual|(}
 Presenting Condor \VersionNotice! Condor is developed by
@@ -23,8 +24,8 @@ have a profound impact on its size, complexity, and scope. Over the
 years, the Condor Team has established collaborations with scientists
 from around the world and has provided them with access to surplus
 cycles (one of whom has consumed 100 CPU years!). Today, our
-department's pool consists of more than 350 desktop UNIX workstations.
-On a typical day, our pool delivers more than 180 CPU days to UW
+department's pool consists of more than 700 desktop Unix workstations.
+On a typical day, our pool delivers more than 500 CPU days to UW
 researchers. Additional Condor pools have been established over the
 years across our campus and the world. Groups of researchers, engineers,
 and scientists have used Condor to establish compute pools ranging in
@@ -39,8 +40,8 @@ will help revolutionize your compute environment as well.
 
 In a nutshell, Condor is a specialized batch system 
 \index{batch system}
-for managing
-compute-intensive jobs.  Like most batch systems, Condor provides a
+for managing compute-intensive jobs.
+Like most batch systems, Condor provides a
 queueing mechanism, scheduling policy, priority scheme, and resource
 classifications.  Users submit their compute jobs to Condor, Condor puts
 the jobs in a queue, runs them, and then informs the user as to the
@@ -80,28 +81,21 @@ Understanding the
 unique framework by which Condor matches submitted jobs with machines is
 the key to getting the most from Condor's scheduling algorithm. 
 
-Condor is unlike most other batch systems. The others typically involve
-submitting a job to one of several pre-defined job queues. These
-environments tend to become both constrained and complicated, as
-system administrators add more queues in response to the
-variety of user needs. Likewise, the user is asked to make compromises
-and is given the burden of both keeping track of which queues
-have which properties and deciding which queue would be the
-optimal one to use.
-
-Condor simplifies matters by acting as a matchmaker of ClassAds. Condor's
-ClassAds
+Condor simplifies job submission by acting as a matchmaker of ClassAds.
+Condor's ClassAds
 \index{ClassAd}
 are analogous to the classified advertising section of the
 newspaper. Sellers advertise specifics about what they have to sell,
 hoping to attract a buyer. Buyers may advertise specifics about what
-they wish to purchase. Both buyers and sellers may have constraints that
-need to be satisfied. For instance, perhaps the buyer is not willing to
-spend more than X dollars, and the seller requires to receive a minimum
-of Y dollars. Furthermore, both want to rank requests
-to their own advantage. Certainly a seller would rank
-an offer  of \$50 dollars higher than a different
-offer of \$25 for the same service. In Condor, users submitting
+they wish to purchase. Both buyers and sellers list constraints that
+need to be satisfied.
+For instance, a buyer has a maximum spending limit, 
+and a seller requires a minimum purchase price.
+Furthermore, both want to rank requests to their own advantage.
+Certainly a seller would rank
+one offer of \$50 dollars higher than a different
+offer of \$25.
+In Condor, users submitting
 jobs can be thought of as buyers of compute resources and machine owners
 are sellers. 
 
@@ -188,10 +182,10 @@ in the pool.
 
 Refer to the \Condor{status} command 
 reference page located on page~\pageref{man-condor-status}
-for a complete description of \Condor{status} command.
+for a complete description of the \Condor{status} command.
 
-Figure~\ref{fig:CondorStatusL} shows the complete machine ad
-\index{ClassAd!example}
+Figure~\ref{fig:CondorStatusL} shows the complete machine ClassAd
+\index{ClassAd!machine example}
 \index{machine ClassAd}
 for a single workstation: alfred.cs.wisc.edu. Some of the listed
 attributes are used by
@@ -251,76 +245,95 @@ LastHeardFrom = 892191963
 \section{Road-map for running jobs with Condor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{job!preparation}
 The road to using Condor effectively is a short one.  The basics
-are quickly and easily learned.  Unlike some other network-cluster
-solutions, Condor typically does not require you to make any
-changes to your program, even to do more advanced tasks such as
-process checkpoint and migration. 
+are quickly and easily learned.
 
-Using Condor can be broken down into the following steps:
-
+Here are all the steps needed to run a job using Condor.
 \begin{description}
 
-\item[Job Preparation.]Prepare your job for
-Condor. This involves preparing it to run as a background batch job,
-deciding which Condor runtime environment (or \Term{universe}) to use,
-and possibly re-linking your program with the Condor library via the
-\Condor{compile} command. 
+\item[Code Preparation.]
+A job run under Condor must be able to 
+run as a background batch job.
+\index{job!batch ready}
+Condor runs the program unattended and in the background. 
+A program that runs in the background will not be able
+to do interactive input and output.
+Condor can redirect console output (stdout and stderr)
+and keyboard input (stdin)
+to and from files for you.
+Create any needed files that contain
+the proper keystrokes needed for program input.
+Make certain the program will run correctly with the files.
 
-\item[Submit Job to Condor.]Submit your program to Condor with
-the \Condor{submit} command.
-\index{Condor commands!condor\_submit}
-With \Condor{submit} you tell Condor
-information about the run, such as what executable to run, what
-filenames to use for keyboard and screen (stdin and stdout) data,
-on what type of platform to run your program, and
-where to send e-mail when the job completes. You can also tell Condor how
-many times to run a program; many users may want to run the same program
+\item[The Condor Universe.]
+Condor has several 
+runtime environments (called a \Term{universe}) from which to choose.
+Of the universes, two are likely choices when learning
+to submit a job to Condor: the standard universe and the vanilla universe.
+The standard universe allows a job running under Condor to
+handle system calls by returning them to the machine where the
+job was submitted.
+The standard universe also provides the mechanisms necessary
+to take a checkpoint and migrate a partially completed job,
+should the machine on which the job is executing become
+unavailable.
+To use the standard universe, it is necessary to
+relink the program with the Condor library using the
+\Condor{compile} command.
+The manual page for \Condor{compile} on page~\pageref{man-condor-compile} has details.
+
+The vanilla universe provides a way to run jobs that cannot be
+relinked.
+It depends on a shared file system for access to input and output
+files,
+and there is no way to take a checkpoint or migrate a job executed
+under the vanilla universe.
+
+Choose a universe under which to run the Condor program,
+and re-link the program if necessary.
+
+\item[Submit description file.]
+Controlling the details of a job submission is a
+submit description file.
+The file contains information
+about the job such as what executable to run, the
+files to use for keyboard and screen data,
+the platform type required to run the program, and
+where to send e-mail when the job completes.
+You can also tell Condor how many times to run a program;
+it is simple to run the same program
 multiple times with multiple data sets.
 
-\item[Condor Runs the Job.]Once submitted, monitor your job's
-progress with the \Condor{q}
+Write a submit description file to go with the job, using
+the examples provided in section~\ref{sec:sample-submit-files}
+for guidance.
+
+\item[Submit the Job.]Submit the program to Condor with
+the \Condor{submit} command.
+\index{Condor commands!condor\_submit}
+
+\end{description}
+
+Once submitted, Condor does the rest toward running
+the job.
+Monitor the job's progress with the \Condor{q}
 \index{Condor commands!condor\_q}
 and \Condor{status} commands.
 \index{Condor commands!condor\_status}
 You may modify the order in which Condor will run your jobs with
-\Condor{prio}. If desired, Condor can even inform you every time your job
-is checkpointed and/or migrated to a different machine. 
+\Condor{prio}. If desired, Condor can even inform you in a log file 
+every time your job is checkpointed and/or migrated to a different machine. 
 
-\item[Job Completion.]When your program completes, Condor will tell you
+When your program completes, Condor will tell you
 (by e-mail, if preferred) the exit status of your program and various
 statistics about its performances, including time used and I/O performed.
+If you are using a log file for the job(which is recommended) the exit
+status will be recorded in the log file.
 You can remove a job from the
 queue prematurely with \Condor{rm}. 
 \index{Condor commands!condor\_rm}
 
-\end{description}  % of Road Map steps
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:job-preparation}Job Preparation}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Before submitting your program to Condor, you make certain
-your program is batch ready.  Next, you decide upon a Condor
-universe, or runtime environment, for your job.
-\index{job!preparation}
-
-%%%%%%%%%%%%%%
-\subsection{A Batch Ready Program}
-%%%%%%%%%%%%%%
-
-Condor runs your program unattended and in the background. 
-\index{job!batch ready}
-A program that runs in the background will not be able
-to do input and output in an interactive way.
-Make certain
-that your program will run this way before submitting it to Condor.
-Condor can
-redirect console output (stdout and stderr) and keyboard input (stdin)
-to and from files for you.
-You may have to create one or more files that contain
-the proper keystrokes needed for program input.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Choosing-Universe}
@@ -331,34 +344,41 @@ A \Term{universe} in Condor
 \index{universe}
 \index{Condor!universe}
 defines an execution environment. 
-Condor \VersionNotice\ supports five different
+Condor \VersionNotice\ supports several different
 universes for user jobs:
 \begin{itemize}
 	\item Standard
 	\item Vanilla
 	\item PVM
-	\item MPI
+ 	\item MPI
 	\item Globus
+	\item Java
 \end{itemize}
-You state the universe to use for each job in a
-submit description file when the job is submitted. 
+
+The \AdAttr{Universe} attribute is specified in the submit description file.
+If a universe is not specified, the default is \Expr{standard}.
 
 \index{universe!standard}
-The standard universe provides migration and reliability, but has some
+The \Expr{standard} universe provides migration and reliability, but has some
 restrictions on the programs that can be run. 
 \index{universe!vanilla}
-The vanilla universe provides fewer services, but has very few
+The \Expr{vanilla} universe provides fewer services, but has very few
 restrictions.
 \index{universe!PVM}
-The PVM universe is for programs written to the Parallel Virtual
+The \Expr{PVM} universe is for programs written to the Parallel Virtual
 Machine interface.  See section~\ref{sec:PVM} for more about PVM and Condor.
 \index{universe!MPI}
-The MPI universe is for programs written to the MPICH interface.
+The \Expr{MPI} universe is for programs written to the MPICH interface.
 See section~\ref{sec:MPI} for more about MPI and Condor.
 \index{universe!Globus}
 The Globus universe allows users to submit Globus jobs through the
 Condor interface.  See \Url{http://www.globus.org} for more about Globus.
-
+\index{universe!Java}
+\index{Java}
+\index{Java Virtual Machine}
+\index{JVM}
+The Java universe allows users to run jobs written for the
+Java Virtual Machine (JVM).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:standard-universe}Standard Universe}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -367,51 +387,58 @@ Condor interface.  See \Url{http://www.globus.org} for more about Globus.
 In the standard universe, Condor provides \Term{checkpointing} and
 \Term{remote system calls}.  These features make a job more reliable
 and allow it uniform access to resources from anywhere in the pool.
-To prepare a program as a standard universe job, it must be re-linked
+To prepare a program as a standard universe job, it must be relinked
 with \Condor{compile}.  Most programs can be prepared as a standard
 universe job, but there are a few restrictions.
 
 \index{checkpoint}
 \index{checkpoint image}
 Condor checkpoints a job at regular intervals.
-A \Term{checkpoint image} is like a snapshot of the current
-state of a job.  If a job must be migrated from one machine to another,
+A \Term{checkpoint image} is essentially a snapshot of the current
+state of a job. 
+If a job must be migrated from one machine to another,
 Condor makes a checkpoint image, copies the image to the new machine,
-and restarts the job \emph{right where it left off}.  If a machine should
+and restarts the job continuing the job from where it left off.
+If a machine should
 crash or fail while it is running a job, Condor can restart the job on
-a new machine from the most recent checkpoint image.  In this way, jobs
+a new machine using the most recent checkpoint image.
+In this way, jobs
 can run for months or years even in the face of occasional computer failures.
 
 \index{remote system call}
 \index{shadow}
 Remote system calls make a job perceive that it is executing on its home
-machine, even though it may execute on many different machines over its
-lifetime.  When your job runs on a remote machine, a second process, called
-a \Condor{shadow} runs on the machine where you submitted the job.
+machine, even though the job may execute on many different machines over its
+lifetime.
+When a job runs on a remote machine, a second process, called
+a \Condor{shadow} runs on the machine where the job was submitted.
 \index{condor\_shadow}
 \index{agents!condor\_shadow}
 \index{Condor daemon!condor\_shadow}
 \index{remote system call!condor\_shadow}
-Whenever your job attempts a system call, the \Condor{shadow} performs
-it instead and sends the results back.  So, if your job attempts to
-open a file that is stored only on the submitting machine,
-the \Condor{shadow} will find it and send the data to the machine where
-your job happens to be running.
+When the job attempts a system call, the \Condor{shadow} performs
+the system call instead and sends the results to the remote
+machine.
+For example, if a job attempts to open a file that is
+stored on the submitting machine,
+the \Condor{shadow} will find the file,
+and send the data to the machine where
+the job is running.
 
 To convert your program into a standard universe job, you must use
-\Condor{compile} to re-link it with the Condor libraries.  Simply
-put \Condor{compile} in front of your usual link command.
+\Condor{compile} to relink it with the Condor libraries.
+Put \Condor{compile} in front of your usual link command.
 You do not need to modify the program's source code,
-but you do need access to its un-linked object files.  A commercial
-program that is packaged as a single executable file cannot be
+but you do need access to the unlinked object files.
+A commercial program that is packaged as a single executable file cannot be
 converted into a standard universe job.
 
-For example, if you normally link your job by executing:
+For example, if you would have linked the job by executing:
 \begin{verbatim}
 % cc main.o tools.o -o program
 \end{verbatim}
 
-Then you can re-link your job for Condor with:
+Then, relink the job for Condor with:
 \begin{verbatim}
 % condor_compile cc main.o tools.o -o program
 \end{verbatim}
@@ -441,10 +468,54 @@ Condor has only two choices.  It can suspend the job, hoping to
 complete it at a later time,
 or it can give up and restart the job \emph{from the beginning} 
 on another machine in the pool.
-Jobs submitted as vanilla universe jobs must also rely on an
-external mechanism 
-for accessing data files from different machines
+
+\Notice{
+Under Unix, jobs submitted as vanilla universe jobs rely on an
+external mechanism for accessing data files,
 such as NFS or AFS.
+The job \emph{must} be able to access the data
+files from any machine on which it could potentially run.
+As an example,
+suppose a job is submitted from blackbird.cs.wisc.edu, and the job requires
+a particular data file called \File{/u/p/s/psilord/data.txt}.
+If the job were to run on cardinal.cs.wisc.edu, the file
+\File{/u/p/s/psilord/data.txt} must be available through either
+NFS or AFS for the job to run correctly.
+
+Condor deals with this restriction imposed by the vanilla universe by
+using
+the \AdAttr{FileSystemDomain} and \AdAttr{UidDomain} machine
+ClassAd attributes.
+These attributes reflect the reality of the pool's disk
+mounting structure.
+For a large pool spanning multiple
+\AdAttr{UidDomain} and/or \AdAttr{FileSystemDomain}s, the job
+must specify
+its \AdAttr{requirements} to use the correct \AdAttr{UidDomain} and/or
+\AdAttr{FileSystemDomain}s.
+
+This mechanism is not required under Windows NT.
+The vanilla universe does \emph{not} require
+a shared file system due to the Condor File Transfer mechanism. Please see
+chapter~\ref{condor-nt} for more details about Condor NT.
+}
+
+%%%%%%%%%%%%
+\subsubsection{PVM Universe}
+%%%%%%%%%%%%
+
+\index{universe!PVM}
+The PVM universe allows programs written for the Parallel Virtual Machine
+interface to be used within the opportunistic Condor environment.
+Please see section~\ref{sec:PVM} for more details.
+
+%%%%%%%%%%%%
+\subsubsection{MPI Universe}
+%%%%%%%%%%%%
+\index{universe!MPI}
+The MPI universe allows programs written to the MPICH
+interface to be used within the opportunistic Condor environment.
+Please see section~\ref{sec:MPI} for more details.
 
 %%%%%%%%%%%%
 \subsubsection{Globus Universe}
@@ -455,8 +526,21 @@ The Globus universe in Condor is intended to provide the standard
 Condor interface to users who wish to start Globus system jobs
 from Condor. Each job queued in the job submission file is translated
 into a Globus RSL string and used as the arguments to the \Prog{globusrun}
-program. The manual page for \Condor{submit} has detailed descriptions for
+program. The manual page for \Condor{submit}
+on page~\pageref{man-condor-submit}
+has detailed descriptions of
 the Globus-related attributes.
+
+%%%%%%%%%%%%
+\subsubsection{Java Universe}
+%%%%%%%%%%%%
+
+\index{universe!Java}
+
+A program submitted to the Java universe may run on any sort of machine
+with a JVM regardless of its location, owner, or JVM version.  Condor
+will take care of all the details such as finding the JVM binary and
+setting the classpath.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Submitting a Job to Condor}
@@ -513,7 +597,8 @@ in the
 \subsubsection{Example 1} 
 
 Example 1 is the simplest submit description
-file possible. It queues up one copy of the program \Prog{foo} for execution
+file possible. It queues up one copy of the program \Prog{foo}(which had been
+created by \Condor{compile}) for execution
 by Condor.
 Since no platform is specified, Condor will use its default,
 which is to run the job on a machine which has the
@@ -529,15 +614,21 @@ files \File{stdin}, \File{stdout}, and \File{stderr} will all refer to
 \File{/dev/null}.
 The program may produce output by explicitly opening a file and writing to
 it.
+A log file, \File{foo.log}, will also be produced that contains events
+the job had during its lifetime inside of Condor.
+When the job finishes, its exit conditions will be noted in the log file.
+It is recommended that you always have a log file so you know what
+happened to your jobs.
 \begin{verbatim}
   ####################                                                    
   # 
-  # Example 1                                                                       
+  # Example 1                                                            
   # Simple condor job description file                                    
   #                                                                       
   ####################                                                    
                                                                           
   Executable     = foo                                                    
+  Log            = foo.log                                                    
   Queue    
 \end{verbatim}
 
@@ -548,7 +639,7 @@ first copy will run in directory \File{run\_1}, and the second will run in
 directory \File{run\_2}. For both queued copies, 
 \File{stdin} will be \File{test.data},
 \File{stdout} will be \File{loop.out}, and
-\File{sterr} will be \File{loop.error}.
+\File{stderr} will be \File{loop.error}.
 There will be two sets of files written,
 as the files are each written to their own directories.
 This is a convenient way to organize data if you
@@ -570,6 +661,7 @@ and/or object code to program \Prog{mathematica} is not available.
   input   = test.data                
   output  = loop.out                
   error   = loop.error             
+  Log     = loop.log                                                    
                                   
   Initialdir     = run_1         
   Queue                         
@@ -583,7 +675,7 @@ and/or object code to program \Prog{mathematica} is not available.
 The submit description file for Example 3 queues 150
 \index{running multiple programs}
 runs of program \Prog{foo} which has been compiled and linked for
-Silicon Graphics workstations running IRIX 6.x. 
+Silicon Graphics workstations running IRIX 6.5. 
 This job requires Condor to run the program on machines which have
 greater than 32 megabytes of physical memory, and expresses a
 preference to run the program on machines with more than 64 megabytes,
@@ -610,7 +702,7 @@ will be written into file \File{foo.log}.
   ####################                                                    
 
   Executable     = foo                                                    
-  Requirements   = Memory >= 32 && OpSys == "IRIX6" && Arch =="SGI"     
+  Requirements   = Memory >= 32 && OpSys == "IRIX65" && Arch =="SGI"     
   Rank		 = Memory >= 64
   Image_Size     = 28 Meg                                                 
 
@@ -639,7 +731,8 @@ Using them effectively requires care, and this section presents
 those details.
 
 Both \AdAttr{requirements} and \AdAttr{rank} need to be specified 
-as valid Condor ClassAd expressions.
+as valid Condor ClassAd expressions, however, default values are set by the
+\Condor{submit} program if these are not defined in the submit description file.
 From the \Condor{submit} manual page and the above examples, you see
 that writing ClassAd expressions is intuitive, especially if you
 are familiar with the programming language C.  There are some
@@ -681,101 +774,346 @@ descriptions follow for the attributes which will be common to every
 machine ClassAd. Remember that because ClassAds are flexible, the
 machine ads in your pool may include additional attributes specific
 to your site's installation and policies. 
+
 \subsubsection{\label{user-man-machad}ClassAd Machine Attributes}
 \input{user-man/machad.tex}
+
 \subsubsection{\label{user-man-machad}ClassAd Job Attributes}
 \input{user-man/jobad.tex}
 
+\subsubsection{\label{user-man-machad}Rank Expression Examples}
 
+\index{rank attribute!examples}
+\index{ClassAd attribute!rank examples}
+When considering the match between a job and a machine, rank is used
+to choose a match from among all machines that satisfy the job's
+requirements and are available to the user, after accounting for
+the user's priority and the machine's rank of the job.
+The rank expressions, simple or complex, define a numerical value
+that expresses preferences.
+
+The job's \AdAttr{rank} expression evaluates to one of three values.
+It can be UNDEFINED, ERROR, or a floating point value.
+If \AdAttr{rank} evaluates to a floating point value,
+the best match will be the one with the largest, positive value.
+If no \AdAttr{rank} is given 
+in the submit description file,
+then Condor substitutes a default value of 0.0 when considering
+machines to match.
+If the job's \AdAttr{rank} of a given machine evaluates
+to UNDEFINED or ERROR,
+this same value of 0.0 is used.
+Therefore, the machine is still considered for a match,
+but has no rank above any other.
+
+A boolean expression evaluates to the numerical value of 1.0
+if true, and 0.0 if false.
+
+The following \AdAttr{rank} expressions provide examples to
+follow.
+
+For a job that desires the machine with the most available memory:
+\begin{verbatim}
+   Rank = memory
+\end{verbatim}
+
+For a job that prefers to run on a friend's machine
+on Saturdays and Sundays:
+\begin{verbatim}
+   Rank = ( (clockday == 0) || (clockday == 6) )
+          && (machine == "friend.cs.wisc.edu")
+\end{verbatim}
+
+For a job that prefers to run on one of three specific machines:
+\begin{verbatim}
+   Rank = (machine == "friend1.cs.wisc.edu") ||
+          (machine == "friend2.cs.wisc.edu") ||
+          (machine == "friend3.cs.wisc.edu")
+\end{verbatim}
+
+For a job that wants the machine with the best floating point
+performance (on Linpack benchmarks):
+\begin{verbatim}
+   Rank = kflops
+\end{verbatim}
+This particular example highlights a difficulty with rank expression
+evaluation as currently defined.
+While all machines have floating point processing ability,
+not all machines will have the \AdAttr{kflops} attribute defined.
+For machines where this attribute is not defined,
+\AdAttr{Rank} will evaluate to the value UNDEFINED, and
+Condor will use a default rank of the machine of 0.0.
+The \AdAttr{rank} attribute will only rank machines where
+the attribute is defined.
+Therefore, the machine with the highest floating point
+performance may not be the one given the highest rank.
+
+So, it is wise when writing a \AdAttr{rank} expression to check
+if the expression's evaluation will lead to the expected
+resulting ranking of machines.
+This can be accomplished using the \Condor{status} command with the
+\oArg{-constraint} argument.  This allows the user to see a list of
+machines that fit a constraint.
+To see which machines in the pool have \AdAttr{kflops} defined,
+use
+\begin{verbatim}
+condor_status -constraint kflops
+\end{verbatim}
+Alternatively, to see a list of machines where 
+\AdAttr{kflops} is not defined, use
+\begin{verbatim}
+condor_status -constraint "kflops=?=undefined"
+\end{verbatim}
+
+For a job that prefers specific machines in a specific order:
+\begin{verbatim}
+   Rank = ((machine == "friend1.cs.wisc.edu")*3) +
+          ((machine == "friend2.cs.wisc.edu")*2) +
+           (machine == "friend3.cs.wisc.edu")
+\end{verbatim}
+If the machine being ranked is \AdStr{friend1.cs.wisc.edu}, then the
+expression
+\begin{verbatim}
+   (machine == "friend1.cs.wisc.edu")
+\end{verbatim}
+is true, and gives the value 1.0.
+The expressions
+\begin{verbatim}
+   (machine == "friend2.cs.wisc.edu")
+\end{verbatim}
+and
+\begin{verbatim}
+   (machine == "friend3.cs.wisc.edu")
+\end{verbatim}
+are false, and give the value 0.0.
+Therefore, \AdAttr{rank} evaluates to the value 3.0.
+In this way, machine \AdStr{friend1.cs.wisc.edu} is ranked higher than
+machine \AdStr{friend2.cs.wisc.edu},
+machine \AdStr{friend2.cs.wisc.edu}
+is ranked higher than 
+machine \AdStr{friend3.cs.wisc.edu},
+and all three of these machines are ranked higher than others.
 
 %%%%%%%%%%%% 
-\subsection{Heterogeneous Submit: Submitting to a Different Architecture} 
+\subsection{Heterogeneous Submit: Execution on Differing Architectures} 
 %%%%%%%%%%%%
 
 \index{job!heterogeneous submit}
 \index{running a job!on a different architecture}
 \index{heterogeneous pool!submitting a job to}
-There are times when you would like to submit jobs across machine
-architectures. For instance, you have an Intel machine running
-LINUX. This is the machine where you do all your
-work and where all your files are stored. But, perhaps the majority of
-machines in your pool are Sun SPARC machines running Solaris. You
-want to submit jobs directly from your LINUX box that run on the
-SPARC machines.
+If executables are available for the different platforms of machines
+in the Condor pool,
+Condor can be allowed the choice of a larger number of machines
+when allocating a machine for a job.
+Modifications to the submit description file allow this choice
+of platforms.
 
-This is easily accomplished.  You will need to create your
-executable for the same type of machine where your job will run.
-Condor does not convert machine instructions from one architecture
-to another. 
-Given the correct executable, use the
-\AdAttr{requirements} command in
-the submit description file to
-specify the target architecture.
-Without this, \Condor{submit}
-\index{Condor commands!condor\_submit}
-will use its default architecture, 
-the type of machine you are submitting from.
-An example of the\AdAttr{requirements} command is
+A simplified example is a cross submission.
+An executable is available for one platform, but
+the submission is done from a different platform.
+Given the correct executable, the \AdAttr{requirements} command in
+the submit description file specifies the target architecture.
+For example, an executable compiled for a Sun 4, submitted
+from an Intel architecture running Linux would add the 
+\AdAttr{requirement}
 \begin{verbatim}
   requirements = Arch == "SUN4x" && OpSys == "SOLARIS251"
 \end{verbatim}
-To see the architecture and operating systems of the machines
-in your pool,
-run \Condor{status}.
+Without this \AdAttr{requirement}, \Condor{submit}
+will assume that the program is to be executed on
+a machine with the same platform as the machine where the job
+is submitted.
+
+Cross submission works for both
+\Expr{standard} and \Expr{vanilla} universes.
+The burden is on the user to both obtain and specify
+the correct executable for the target architecture.
+To list the architecture and operating systems of the machines
+in a pool, run \Condor{status}.
 
 %%%%%%%%%%%% 
-\subsection{Submitting to Multiple Architectures or Operating Systems} 
+\subsection{Vanilla Universe Example for Execution on Differing Architectures} 
 %%%%%%%%%%%%
 
-\index{running a job!on multiple architectures}
-\index{running a job!on multiple operating systems}
-\index{heterogeneous pool!submitting a job to}
+A more complex example of a heterogeneous submission
+occurs when a job may be executed on
+many different architectures to gain full
+use of a diverse architecture and operating system pool.
+If the executables are available for the different architectures,
+then a modification to the submit description file
+will allow Condor to choose an executable after an
+available machine is chosen.
 
-Some jobs are able to run on multiple architectures or operating
-systems.  For example, a shell script may be able to run on any
-machine in your pool.  Or, a SPARC binary may be able to run on either
-``SUN4x'' or ``SUN4u'' machines.
-
-You can use the 
-\AdAttr{requirements} command in
-the submit description file to
-specify the target architectures and operating systems.
-For example, if your shell script will run on either SPARC Solaris
-machines or Intel LINUX machines, you can specify
+A special-purpose MachineAd substitution macro can be used in
+the \AdAttr{executable}, \AdAttr{environment},  and \AdAttr{arguments}
+attributes in the submit description file.
+The macro has the form
 \begin{verbatim}
-  requirements = (Arch == "SUN4x" && OpSys == "SOLARIS26") || \
-                 (Arch == "INTEL" && OpSys == "LINUX"
+  $$(MachineAdAttribute)
 \end{verbatim}
-Or, if your executable can run on any SPARC Solaris machine, you can
-specify
+Note that this macro is ignored in all other submit description attributes.
+The \$\$() informs Condor to substitute the requested 
+\AdAttr{MachineAdAttribute} 
+from the machine where the job will be executed.
+
+An example of the heterogeneous job submission
+has executables available for three platforms:
+LINUX Intel, Solaris26 Intel, and Irix 6.5 SGI machines.
+This example uses \Prog{povray}
+to render images using a popular free rendering engine.
+
+The substitution macro chooses a specific executable after
+a platform for running the job is chosen.
+These executables must therefore be named based on the
+machine attributes that describe a platform.
+The executables named \begin{verbatim}
+  povray.LINUX.INTEL
+  povray.SOLARIS26.INTEL
+  povray.IRIX65.SGI
+\end{verbatim}
+will work correctly for the macro
 \begin{verbatim}
-  requirements = (Arch == "SUN4x" || Arch == "SUN4u") && \
-                 (OpSys == "SOLARIS251" || OpSys == "SOLARIS26")
+  povray.$$(OpSys).$$(Arch)
 \end{verbatim}
 
-Note that Condor checkpoints can not be transferred across
-architectures.  Once a job has checkpointed, it must run only on
-machines of the exact same architecture and operating system.  This
-can be enforced with a more complex \AdAttr{requirements} expression.  For
-example, if your job will run on any SPARC Solaris machine, you can
-specify
+The executables or links to executables with this name
+are placed into the initial working directory so that they may be
+found by Condor. 
+A submit description file that queues three jobs for this example:
+
 \begin{verbatim}
-  +CkptRequirements = ((CkptArch == Arch) || (CkptArch =?= UNDEFINED)) && \
+  ####################
+  #
+  # Example of heterogeneous submission
+  #
+  ####################
+
+  universe     = vanilla
+  Executable   = povray.$$(OpSys).$$(Arch)
+  Log          = povray.log
+  Output       = povray.out.$(Process)
+  Error        = povray.err.$(Process)
+
+  Requirements = (Arch == "INTEL" && OpSys == "LINUX") || \
+                 (Arch == "INTEL" && OpSys =="SOLARIS26") || \
+                 (Arch == "SGI" && OpSys == "IRIX65")
+
+  Arguments    = +W1024 +H768 +Iimage1.pov
+  Queue 
+
+  Arguments    = +W1024 +H768 +Iimage2.pov
+  Queue 
+
+  Arguments    = +W1024 +H768 +Iimage3.pov
+  Queue 
+\end{verbatim}
+
+These jobs are submitted to the vanilla universe
+to assure that once a job is started on a specific platform,
+it will finish running on that platform.
+Switching platforms in the middle of job execution cannot
+work correctly.
+
+There are two common errors made with the substitution macro.
+The first is the use of a non-existent \AdAttr{MachineAdAttribute}.
+If the specified \AdAttr{MachineAdAttribute} does not
+exist in the machine's ClassAd, then Condor will place
+the job in the machine state of hold until the problem is resolved.
+
+The second common error occurs due to an incomplete job set up.
+For example, the submit description file given above specifies
+three available executables.
+If one is missing, Condor report back that an
+executable is missing when it happens to match the
+job with a resource that requires the missing binary.
+
+%%%%%%%%%%%% 
+\subsection{Standard Universe Example for Execution on Differing Architectures} 
+%%%%%%%%%%%%
+
+Jobs submitted to the standard universe may produce checkpoints.
+A checkpoint can then be used to start up and continue execution
+of a partially completed job.
+For a partially completed job, the checkpoint and the job are specific
+to a platform.
+If migrated to a different machine, correct execution requires that
+the platform must remain the same.
+
+In previous versions of Condor, the author of the heterogeneous
+submission file would need to write extra policy expressions in the
+\AdAttr{requirements} expression to force Condor to choose the
+same type of platform when continuing a checkpointed job.
+However, since it is needed in the common case, this
+additional policy is now automatically added
+to the \AdAttr{requirements} expression.
+The additional expression is added
+provided the user does not use
+\AdAttr{CkptArch} in the \AdAttr{requirements} expression.
+Condor will remain backwards compatible for those users who have explicitly
+specified \AdAttr{CkptRequirements}--implying use of \AdAttr{CkptArch},
+in their \AdAttr{requirements} expression.
+
+The expression added when the attribute \AdAttr{CkptArch} is not specified 
+will default to
+
+\begin{verbatim}
+  # Added by Condor
+  CkptRequirements = ((CkptArch == Arch) || (CkptArch =?= UNDEFINED)) && \
                       ((CkptOpSys == OpSys) || (CkptOpSys =?= UNDEFINED))
-  Requirements = (OpSys == "SOLARIS251" || OpSys == "SOLARIS26") && \
-                 (Arch == "SUN4x" || Arch == "SUN4u") && CkptRequirements
+
+  Requirements = (<user specified policy>) && $(CkptRequirements)
 \end{verbatim}
-The \AdAttr{Requirements} expression in this example includes a
-reference to a \AdAttr{CkptRequirements} expression.  The \AdAttr{CkptRequirements}
-expression ensures that the job will run on a machine only if the job
-has not yet checkpointed (i.e., \AdAttr{CkptArch} and \AdAttr{CkptOpSys} are both
-UNDEFINED) or the machine has \AdAttr{Arch} and \AdAttr{OpSys} attributes which match
-the job's \AdAttr{CkptArch} and \AdAttr{CkptOpSys} values.
-This example uses the ``+'' syntax to add expressions to the Job
-ClassAd.  See the \Condor{submit} manual page on
-page~\pageref{man-condor-submit} for details.
 
+% DONE TO HERE
+The behavior of the \AdAttr{CkptRequirements} expressions and its addition to
+\AdAttr{requirements} is as follows.
+The \AdAttr{CkptRequirements} expression guarantees correct operation
+in the two possible cases for a job.
+In the first case, the job has not produced a checkpoint.
+The ClassAd attributes \Attr{CkptArch} and \Attr{CkptOpSys}
+will be undefined, and therefore the meta operator (\verb@=?=@)
+evaluates to true.
+In the second case, the job has produced a checkpoint.
+The Machine ClassAd is restricted to require further execution
+only on a machine of the same platform.
+The attributes \Attr{CkptArch} and \Attr{CkptOpSys}
+will be defined, ensuring that the platform chosen for further
+execution will be the same as the one used just before the
+checkpoint.
 
+Note that this restriction of platforms also applies to platforms where
+the executables are binary compatible.
+
+The complete submit description file for this example:
+
+\begin{verbatim}
+  ####################
+  #
+  # Example of heterogeneous submission
+  #
+  ####################
+
+  universe     = standard
+  Executable   = povray.$$(OpSys).$$(Arch)
+  Log          = povray.log
+  Output       = povray.out.$(Process)
+  Error        = povray.err.$(Process)
+
+  # Condor automatically adds the correct expressions to insure that the
+  # checkpointed jobs will restart on the correct platform types.
+  Requirements = ( (Arch == "INTEL" && OpSys == "LINUX") || \
+                 (Arch == "INTEL" && OpSys =="SOLARIS26") || \
+                 (Arch == "SGI" && OpSys == "IRIX65") )
+
+  Arguments    = +W1024 +H768 +Iimage1.pov
+  Queue 
+
+  Arguments    = +W1024 +H768 +Iimage2.pov
+  Queue 
+
+  Arguments    = +W1024 +H768 +Iimage3.pov
+  Queue 
+\end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Managing a Condor Job}
@@ -783,7 +1121,7 @@ page~\pageref{man-condor-submit} for details.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Priorities in Condor}
+\section{\label{sec:Priorities}Priorities in Condor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Condor has two independent priority controls: \Term{job}
@@ -880,6 +1218,27 @@ the user priority of any specific Condor user very high.
 If done, for example, with a guest account,
 the guest could only use cycles not wanted by other users of the system.
 
+\subsection{Environment Variables}
+
+\index{environment variables}
+\index{execution environment}
+Condor provides several tidbits of information to your job that
+allow it to make sensible decisions when running in a batch mode.
+These are provided in the form of environment variables that your
+job may read in the manner provided by your language.
+
+\begin{itemize}
+\item \Env{CONDOR\_SCRATCH\_DIR} \index{CONDOR\_SCRATCH\_DIR} - This variable gives the name of a directory
+where your job may place temporary data files.  This directory is unique for
+every job that is run, and is always deleted, no matter how your job completes.
+\item \Env{CONDOR\_VM} \index{CONDOR\_VM} - This variable gives the name of the virtual machine,
+if any, on which your job is run.
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{user-man/java.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{user-man/pvm.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -889,11 +1248,15 @@ the guest could only use cycles not wanted by other users of the system.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{user-man/glidein.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \input{user-man/dagman.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{user-man/glidein.tex}
+\input{user-man/logview.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -904,7 +1267,7 @@ About How Condor Jobs Vacate Machines}
 \index{vacate}
 When Condor needs a job to vacate a machine for whatever reason, it
 sends the job an asynchronous signal specified in the \AdAttr{KillSig}
-attribute of the job's classad.
+attribute of the job's ClassAd.
 The value of this attribute can be specified by
 the user at submit time by placing the \Opt{kill\_sig} option in the
 Condor submit description file.  
@@ -967,7 +1330,7 @@ If a standard universe job, then the host ACL needs
 to give read/write permission to any process on the submit machine.
 If vanilla universe job, then you need to set the ACL such that any host 
 in the pool can access the files without being authenticated.
-If you do not know how to use an AFS host ACL, ask ther person at your 
+If you do not know how to use an AFS host ACL, ask the person at your 
 site responsible for the AFS configuration.
 \end{enumerate}
 
@@ -1039,19 +1402,19 @@ can be overridden by setting the X509\_* variables in your environment
 or the submit description file.
 \Note AFS issues apply here, so you may have to copy your certificate,
 trusted certificates directory, private key, and proxy to a local
-filesystem disk.
+file system disk.
 
 \item[\Condor{glidein}] \index {Globus!\Condor{glidein}} requires a valid 
 Globus X.509 certificate, and the PATH to the \Prog{globusrun} program 
 must be in your environment.
 \Note to allow a globus resource to join your Condor pool, your 
-administrator must add the hostname(s) to the HOSTALLOW\_WRITE and
+administrator must add the host name(s) to the HOSTALLOW\_WRITE and
 HOSTALLOW\_READ configuration values.
 \end{enumerate}
 
 \subsection{Condor Daemons That Do Not Run as root}
 
-\index{UNIX daemon!running as root}
+\index{Unix daemon!running as root}
 \index{daemon!running as root}
 Condor is normally installed such that the Condor daemons have root
 permission.
@@ -1082,7 +1445,7 @@ running with root access.  If the
 \AdAttr{RealUid} attribute is not zero, then the Condor daemons do not have
 root access.
 
-\Note The UNIX program \Prog{ps}
+\Note The Unix program \Prog{ps}
 is \emph{not} an effective
 method of determining if Condor is running with root access.
 When using \Prog{ps},
@@ -1115,7 +1478,7 @@ on the directory where you submit your Condor job.
 When Condor starts up your job, it renames argv[0] (which usually
 contains the name of the program) to \condor{exec}.
 This is
-convenient when examining a machine's processes with the UNIX
+convenient when examining a machine's processes with the Unix
 command \Prog{ps}; the process
 is easily identified as a Condor job.  
 

@@ -300,3 +300,86 @@ problem.  Viewing the job's error and log files
 (specified in the submit command file) and Condor's \Macro{SHADOW\_LOG} file
 may assist in tracking down the problem.  If the cause is still unclear, please
 contact your system administrator.
+
+\subsection{\label{sec:job-completion}Job Completion}
+\index{job!completion}
+
+When your Condor job completes(either through normal means or abnormal
+termination by signal), Condor will remove it from the job queue (i.e.,
+it will no longer appear in the output of \Condor{q}) and insert it into
+the job history file.  You can examine the job history file with the
+\Condor{history} command. If you specified a log file in your submit
+description file, then the job exit status will be recorded there as well.
+
+By default, Condor will send you an email message
+when your job completes.  You can modify this behavior with the
+\Condor{submit} ``notification'' command.
+The message will include the exit status of your job (i.e., the
+argument your job passed to the exit system call when it completed) or
+notification that your job was killed by a signal.  It will also
+include the following statistics (as appropriate) about your job:
+
+\begin{description}
+
+\item[Submitted at:] when the job was submitted with \Condor{submit}
+
+\item[Completed at:] when the job completed
+
+\item[Real Time:] elapsed time between when the job was submitted and
+when it completed (days hours:minutes:seconds)
+
+\item[Run Time:] total time the job was running (i.e., real time minus
+queueing time)
+
+\item[Committed Time:] total run time that contributed to job
+completion (i.e., run time minus the run time that was lost because
+the job was evicted without performing a checkpoint)
+
+\item[Remote User Time:] total amount of committed time the job spent
+executing in user mode
+
+\item[Remote System Time:] total amount of committed time the job spent
+executing in system mode 
+
+\item[Total Remote Time:] total committed CPU time for the job
+
+\item[Local User Time:] total amount of time this job's
+\Condor{shadow} (remote system call server) spent executing in user
+mode
+
+\item[Local System Time:] total amount of time this job's
+\Condor{shadow} spent executing in system mode
+
+\item[Total Local Time:] total CPU usage for this job's \Condor{shadow}
+
+\item[Leveraging Factor:] the ratio of total remote time to total
+system time (a factor below 1.0 indicates that the job ran
+inefficiently, spending more CPU time performing remote system calls
+than actually executing on the remote machine)
+
+\item[Virtual Image Size:] memory size of the job, computed when the
+job checkpoints
+
+\item[Checkpoints written:] number of successful checkpoints performed
+by the job
+
+\item[Checkpoint restarts:] number of times the job successfully
+restarted from a checkpoint
+
+\item[Network:] total network usage by the job for checkpointing and
+remote system calls
+
+\item[Buffer Configuration:] configuration of remote system call I/O
+buffers
+
+\item[Total I/O:] total file I/O detected by the remote system call
+library
+
+\item[I/O by File:] I/O statistics per file produced by the remote
+system call library
+
+\item[Remote System Calls:] listing of all remote system calls
+performed (both Condor-specific and Unix system calls) with a count of
+the number of times each was performed
+
+\end{description}

@@ -1,28 +1,76 @@
 \begin{ManPage}{\label{man-condor-off}\Condor{off}}{1}
 {Shutdown condor daemons}
 \Synopsis \SynProg{\Condor{off}}
-\oOpt{-help}
-\oOpt{-version}
-\oOpt{hostname ...}
+\ToolArgsBase
+
+\SynProg{\Condor{off}}
+\oOptnm{-graceful $|$ -fast}
+\ToolArgsLocate
+\ToolArgsAffect
+
+\SynProg{\Condor{off}}
+\oOptnm{-graceful $|$ -fast}
+\ToolWhere
+\ToolArgsAffect
 
 \index{Condor commands!condor\_off}
 \index{condor\_off command}
 
 \Description 
 
-\Condor{off} shuts down all of the condor daemons running on a given
-machine.  It does this cleanly without a loss of work done by any jobs
+\Condor{off} shuts down a set of the Condor daemons running on a set of
+one or more machines.
+It does this cleanly without a loss of work done by any jobs
 currently running on this machine, or jobs that are running on other machines
-that have been submitted from this machine.  The only daemon that remains
-running is the \Condor{master}, which can handle both local and remote
-requests to restart the other condor daeomns if need be.  To restart
-condor running on a machine, see the \Condor{on} command.
+that have been submitted from this machine.
 
+The command \Condor{off} without any arguments will shut down
+all daemons except \Condor{master}.
+The \Condor{master} can then handle both local and remote
+requests to restart the other Condor daemons if need be.  To restart
+Condor running on a machine, see the \Condor{on} command.
+
+The command \Condor{off -master} will shut down
+all daemons including the \Condor{master}.
+The command \Condor{off -otherdaemon} will shut down
+only the specified daemon.
 
 \begin{Options}
-	\OptItem{\Opt{-help}}{Display usage information}
-	\OptItem{\Opt{-version}}{Display version information}
-	\OptItem{\Opt{hostname ...}}{Turn condor off on this list of machines}
+	\ToolArgsBaseDesc
+	\OptItem{\Opt{-graceful}}{Gracefully shutdown daemons (the default)}
+	\OptItem{\Opt{-fast}}{Quickly shutdown daemons}
+	\ToolArgsLocateDesc
+	\ToolArgsAffectDesc
 \end{Options}
+
+\ExitStatus
+\Condor{off} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+
+\Examples
+To shut down all daemons (other than \Condor{master}) on the
+local host:
+\begin{verbatim}
+% condor_off
+\end{verbatim}
+
+To shut down only the \Condor{collector} on three named machines:
+\begin{verbatim}
+% condor_off  cinnamon cloves vanilla -collector
+\end{verbatim}
+
+To shut down daemons within a pool of machines other than the
+local pool, use the \Opt{-pool} option.
+The argument is the name of the central manager for the pool.
+Note that one or more machines within the pool must be
+specified as the targets for the command.
+This command shuts down all daemons except the \Condor{master}
+on the single machine named \Opt{cae17} within the
+pool of machines that has \Opt{condor.cae.wisc.edu} as
+its central manager:
+\begin{verbatim}
+% condor_off  -pool condor.cae.wisc.edu -name cae17
+\end{verbatim}
 
 \end{ManPage}

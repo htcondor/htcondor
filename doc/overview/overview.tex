@@ -1,188 +1,179 @@
+% include capabilities of:  CondorView  Flocking
+%                           MW  DAGMan Glidein
+% mention variety of platforms available
 
-This chapter provides a basic, high-level overview of Condor, including
-Condor's major features and limitations. Because Condor is a system to
-implement a High-Throughput Computing environment, this section begins
-defining what is meant by High-Throughput Computing.
-
-
-\section{What is High-Throughput Computing (HTC) ?}
+\section{\label{sec:overview}High-Throughput Computing (HTC) and its Requirements}
 
 \index{Condor!overview|(}
 \index{overview|(}
 For many research and engineering projects, the quality of the research
 or the product is heavily dependent upon the quantity of computing
-cycles available. It is not uncommon to find problems that require weeks
-or months of computation to solve. Scientists and engineers engaged in
+cycles available.
+It is not uncommon to find problems that require weeks
+or months of computation to solve.
+Scientists and engineers engaged in
 this sort of work need a computing environment that delivers large
-amounts of computational power over a long period of time. Such an
-environment is called a High-Throughput Computing (HTC) environment.
+amounts of computational power over a long period of time.
+Such an environment is called a High-Throughput Computing (HTC) environment.
 \index{High-Throughput Computing (HTC)}
 \index{HTC (High-Throughput Computing)}
 In contrast, High Performance Computing (HPC)
 \index{High-Performance Computing (HPC)}
 \index{HPC (High-Performance Computing)}
 environments deliver a
-tremendous amount of compute power over a short period of time. HPC
-environments are often measured in terms of FLoating point Operations
-per Second (FLOPS). 
-A growing community is not concerned about FLOPS,
-as their problems are of a much larger scale.
-These people are
-concerned with floating point operations per month or per year.
+tremendous amount of compute power over a short period of time.
+HPC environments are often measured in terms of FLoating point Operations
+Per Second (FLOPS). 
+A growing community is not concerned about operations per second,
+but operations per month or per year.
+Their problems are of a much larger scale.
 They are
 more interested in how many jobs they can complete over a long period of
 time instead of how fast an individual job can complete.
 
-\section{HTC and Distributed Ownership}
-
 The key to HTC is to efficiently harness the use of all available
 resources. Years ago, the engineering and scientific community relied on
-large centralized mainframe and/or big-iron supercomputers to do
-computational work. A large number of individuals and groups needed
-to pool their financial resources to afford such a machine. Users had
-to wait for their turn on the mainframe, 
-and they only had a certain amount of time allocated to them.
-While this environment was
-inconvenient for users, it was very efficient, because the mainframe
-was busy nearly all the time.
+a large, centralized mainframe or a supercomputer to do
+computational work. 
+A large number of individuals and groups needed
+to pool their financial resources to afford such a machine.
+Users had to wait for their turn on the mainframe, 
+and they had a limited amount of time allocated.
+While this environment was inconvenient for users,
+the utilization of the mainframe was high;
+it was busy nearly all the time.
 
-As computers became smaller, faster, and cheaper, users moved
-away from centralized mainframes and purchased personal desktop
-workstations and PCs. An individual or small group could afford a
-computing resource that was available whenever they wanted it. The
-personal computer was
-usually far slower than the large centralized machine, but it
-was worthwhile due to its
-exclusive access.
-Now, instead of one giant
-computer for a large institution, there might be hundreds or thousands
-of personal computers. This is an environment of distributed ownership,
+As computers became smaller, faster, and cheaper, 
+users moved away from centralized mainframes and purchased personal desktop
+workstations and PCs.
+An individual or small group could afford a
+computing resource that was available whenever they wanted it.
+The personal computer is slower than the large centralized machine,
+but it provides exclusive access.
+Now, instead of one giant computer for a large institution,
+there may be hundreds or thousands of personal computers.
+This is an environment of distributed ownership,
 \index{distributed ownership!of machines}
 where individuals throughout an organization own their own resources.
-The total computational power of the institution as a whole might rise
-dramatically as the result of such a change, but because of distributed
-ownership, individuals could not capitalize on the institutional growth of
-computing power. And while distributed ownership is more convenient for
-the users, it is much less efficient. Many personal desktop
+The total computational power of the institution as a whole may rise
+dramatically as the result of such a change,
+but because of distributed ownership,
+individuals have not been able to capitalize on the institutional growth of
+computing power.
+And, while distributed ownership is more convenient for the users,
+the utilization of the computing power is lower.
+Many personal desktop
 machines sit idle for very long periods of time while their owners are
 busy doing other things (such as being away at lunch, in meetings,
 or at home sleeping). 
 
-\section{\label{sec:what-is-condor}What is Condor ?}
+\section{\label{sec:what-is-condor}Condor's Power}
 
 Condor is a software system that creates a High-Throughput Computing
-(HTC) environment by effectively harnessing the power of a cluster of
-UNIX or NT workstations on a network. Although Condor can manage a
-dedicated cluster of workstations, a key appeal of Condor is its
-ability to effectively harness non-dedicated, preexisting resources in
-a distributed ownership 
+(HTC) environment.
+It effectively utilizes the computing power of workstations that
+communicate over a network.
+Condor can manage a dedicated cluster of workstations.
+Its power comes from the
+ability to effectively harness non-dedicated,
+preexisting resources under distributed ownership. 
 \index{distributed ownership!of machines}
-setting such as machines sitting on people's desks
-in offices and labs. 
 
-\subsection{A Hunter of Available Workstations}
-
-Instead of running a CPU-intensive job in the background on their own
-workstation, a user submits their job to Condor. Condor finds an
-available machine on the network and begins running the job on
-that machine. When Condor detects that a machine running a Condor job
+A user submits the job to Condor.
+Condor finds an available machine on the network and begins
+running the job on that machine.
+Condor has the capability to detect that a machine running a Condor job
 is no longer available (perhaps because the owner of the machine
-came back from lunch and started typing on the keyboard), Condor
-checkpoints 
+came back from lunch and started typing on the keyboard).
+It can checkpoint 
 \index{checkpoint}
-the job and migrates 
+the job and move (migrate)
 \index{migration}
-it over the network to a
-different machine which would otherwise be idle. Condor restarts
-the job on the new machine to continue from precisely where it left off.
-If no
-machine on the network is currently available, then the job is stored in
-a queue on disk until a machine becomes available.
+the jobs to a different machine which would otherwise be idle.
+Condor continues job on the new machine from
+precisely where it left off.
 
-As an example, a compute job that typically takes 5
-hours to run is submitted to Condor.
-Condor may start running the job on Machine A, but after 3
-hours Condor detects activity on the keyboard.
-Condor will checkpoint
-the job and migrates it to Machine B.
-After two hours on Machine B,
-the job completes (notifying the submitter via e-mail). 
-
-Perhaps this 5 hour compute job must be run 250 different times
-\index{job!multiple data sets}
-(perhaps on 250 different data sets).
-In this case, Condor can be a real time saver.
-With one command, all 250 runs are submitted to Condor.
-Depending upon the number of machines in the organization's Condor
-pool, there could be dozens or even hundreds of otherwise idle machines
-running the job at any given moment.
-
+In those cases where Condor can checkpoint and migrate a job,
 Condor makes it easy to maximize the number of machines which can run
-a job. Because Condor does not require participating machines to
-share file systems (via NFS or AFS for example), machines across the
-entire enterprise can run a job, including machines in different
-administrative domains.
-Condor does not require an
-account (login) on machines where it runs a job.
-Condor can do this
-because of its \Term{remote system call}
+a job.
+In this case, there is no requirement for machines to
+share file systems (for example, with NFS or AFS),
+so that machines across an entire enterprise can run a job,
+including machines in different administrative domains.
+
+Condor can be a real time saver when a job
+must be run many (hundreds of) different times,
+\index{job!multiple data sets}
+perhaps with hundreds of different data sets.
+With one command, all of the hundreds of jobs are submitted to Condor.
+Depending upon the number of machines in the Condor pool,
+dozens or even hundreds of otherwise idle machines
+can be running the job at any given moment.
+
+Condor does not require an account (login) on machines where it runs a job.
+Condor can do this because of its \Term{remote system call}
 \index{remote system call}
-technology, which traps
-operating system calls for such operations as reading or writing from disk
-files and sends them back over the network to be performed on the machine
-where the job was submitted. 
+technology,
+which traps
+library calls for such operations as reading or writing from disk
+files.
+The calls are transmitted over the network to be performed on the machine
+where the job was submitted.
 
-\subsection{Effective Resource Management}
-
-In addition to migrating jobs to available machines, Condor provides
-sophisticated and distributed resource management.
 \index{Condor!resource management}
 \index{resource!management}
-Match-making resource
+Condor provides powerful resource management by
+match-making resource
 \index{matchmaking}
-owners with resource consumers is the cornerstone of a successful HTC
-environment.
-Unlike many other compute cluster resource management
-systems which attach properties to the job queues themselves (resulting
-in user confusion over which queue to use as well as administrative
+owners with resource consumers.
+This is the cornerstone of a successful HTC environment.
+Other compute cluster resource management
+systems attach properties to the job queues themselves,
+resulting in user confusion over which queue to use as well as administrative
 hassle in constantly adding and editing queue properties to satisfy user
-demands), Condor implements a clean design called \Term{ClassAds}. 
+demands.
+Condor implements 
+\Term{ClassAds},
 \index{ClassAd}
+a clean design that simplifies the user's submission of jobs.
 
 ClassAds work in a fashion similar to the newspaper classified
 advertising want-ads. All machines in the Condor pool advertise their
-resource properties, such as available RAM memory, CPU type and speed,
-virtual memory size, physical location, current load average, and many
-other static and dynamic properties, into a \Term{resource offer} ad.
+resource properties, both static and dynamic,
+such as available RAM memory, CPU type, CPU speed,
+virtual memory size, physical location, and current load average,
+in a \Term{resource offer} ad.
 \index{resource!offer}
-Likewise,
-when submitting a job, users can specify a \Term{resource request} ad
+A user specifies a \Term{resource request} ad
 \index{resource!request}
-which
-defines both the required and a desired set of properties to run the job.
-Similarly, a resource offer ad can define requirements and preferences.
+when submitting a job.
+The request defines both the required and a desired set of properties
+of the resource to run the job.
 Condor acts as a broker by matching and ranking resource
 offer ads with resource request ads, making certain that all
-requirements in both ads are satisfied. During this match-making
-process, Condor also takes several layers of priority values into
-consideration: the priority the user assigned to the resource request
-ad, the priority of the user which submitted the ad, and desire of
+requirements in both ads are satisfied.
+During this match-making process,
+Condor also considers several layers of priority values:
+the priority the user assigned to the resource request ad,
+the priority of the user which submitted the ad,
+and desire of
 machines in the pool to accept certain types of ads over others. 
 
-\section{Distinguishing Features}
+\section{Exceptional Features}
 
 \begin{description}
-	\item[Checkpoint and Migration.] Users of Condor may be assured that
-their jobs will eventually complete even in an opportunistic computing
-environment. If a user submits a job to Condor which runs on another's
-workstation, but the job is not finished when the workstation
-owner returns, the job can be checkpointed.
+	\item[Checkpoint and Migration.] Where programs can be
+linked with Condor libaries, users of Condor may be assured that
+their jobs will eventually complete,
+even in the ever changing environment that Condor
+utilizes.
+As a machine running a job submitted to Condor
+becomes unavailable,
+the job can be checkpointed.
 \index{checkpoint}
-The job continues
-by migrating 
+The job may continue after migrating 
 \index{migration}
-to another machine. It makes progress toward
-its completion by the checkpoint and migration feature.
+to another machine.
 Condor's periodic checkpoint feature 
 \index{checkpoint!periodic}
 periodically checkpoints a job even in lieu of migration in order to
@@ -201,34 +192,55 @@ running as the user that submitted the job on the workstation where it
 was originally submitted, no matter on which machine it really ends up
 executing on.
 	\item[No Changes Necessary to User's Source Code.] No special
-programming is required to use Condor. Condor is able to run normal
-non-interactive UNIX or NT programs.  The checkpoint and migration of
+programming is required to use Condor.
+Condor is able to run non-interactive programs.
+The checkpoint and migration of
 programs by Condor is transparent and automatic, as is the use of
-remote system calls.  If these facilities are desired, the user only
-re-links the program.  The code is not compiled or changed.
-	\item[Sensitive to the Desires of Workstation Owners.] The
-owner of a
-workstation has complete priority over the workstation,
-by default.
-A workstation owner is generally happy to let others compute on
-the workstation while it is idle, but wants the workstation back
+remote system calls.
+If these facilities are desired, the user only
+re-links the program.  The code is neither recompiled nor changed.
+	\item[Pools of Machines can be Hooked Together.] Flocking is
+a feature of Condor that allows jobs submitted within a first pool of
+Condor machines to execute on a second pool.
+The mechanism is flexible, following requests from the job
+submission,
+while allowing the second pool, or a subset of machines within
+the second pool to set policies over the conditions under
+which jobs are executed.
+	\item[Jobs can be Ordered.] The ordering of job execution
+required by dependencies among jobs in a set is easily handled.
+The set of jobs is specified using a directed acyclic graph,
+where each job is a node in the graph.
+Jobs are submitted to Condor following the dependencies given
+by the graph.
+	\item[Condor Enables Grid Computing.] As grid computing
+becomes a reality, Condor is already there.
+The technique of glidein allows jobs submitted to Condor
+to be executed on grid machines in various locations worldwide.
+As the details of grid computing evolve, so does Condor's
+ability, starting with Globus-controlled resources.
+	\item[Sensitive to the Desires of Machine Owners.] The
+owner of a machine has complete priority over the use
+of the machine.
+An owner is generally happy to let others compute on
+the machine while it is idle, but wants it back
 promptly upon returning. The owner does not want to take special
 action to regain control. Condor handles this automatically. 
 	\item[ClassAds.]The ClassAd mechanism 
 \index{ClassAd}
 in Condor provides an extremely
 flexible, expressive framework for matchmaking
-resource requests with resource offers. One result is that users can
-easily request practically any resource, both in terms of job
-requirements and job desires.
+resource requests with resource offers.
+Users can easily request both job requirements and job desires.
 For example, a user can require that a job run on a machine
 with 64 Mbytes of RAM,
-but state a preference for 128 Mbytes if available.
-Likewise, a workstation
-can state a preference in a resource offer to run jobs
-from a specified set of users, and it can require that there be
-no interactive workstation
-activity detectable between 9 am and 5 pm before starting a job.
+but state a preference for 128 Mbytes, if available.
+A workstation owner
+can state a preference that the workstation runs jobs
+from a specified set of users. 
+The owner can also require that there be no interactive workstation
+activity detectable at certain hours before Condor could
+start a job.
 Job requirements/preferences and resource availability constraints can be
 described in terms of powerful expressions, resulting in
 Condor's adaptation to nearly any desired policy. 
@@ -301,14 +313,13 @@ desire the Condor source code, please contact the Condor Team in order to discus
 \begin{tabular}{|ll|} \hline
 \emph{Architecture} & \emph{Operating System} \\ \hline \hline
 Hewlett Packard PA-RISC (both PA7000 and PA8000 series) & HPUX 10.20 \\ \hline
-Sun SPARC Sun4{m,c}, Sun UltraSPARC & Solaris 2.5.x, 2.6, 2.7 \\ \hline
-Silicon Graphics MIPS (R4400, R4600, R8000, R10000) & IRIX 6.2, 6.3, 6.4 \\ 
- & IRIX 6.5 \\ \hline
-Intel x86 & RedHat Linux 5.2, 6.x \\
+Sun SPARC Sun4{m,c}, Sun UltraSPARC & Solaris 2.5.x, 2.6, 2.7, 2.8 \\ \hline
+Silicon Graphics MIPS (R4400, R4600, R8000, R10000) & IRIX 6.5 \\ \hline
+Intel x86 & RedHat Linux 5.2, 6.x, 7.1 \\
  & Solaris 2.5.x, 2.6, 2.7 \\ 
  & Windows NT 4.0 (``clipped'') \\ \hline
-Digital ALPHA & OSF/1 (Digital Unix) 4.x \\
- & Linux 2.0.x, Linux 2.2.x (``clipped'') \\ \hline
+Digital ALPHA & OSF/1 (Digital Unix) 4.x to 5.0a \\
+ & Linux 2.2.x \\ \hline
 \end{tabular}
 \caption{\label{supported-platforms}Condor \VersionNotice\ supported platforms}
 \end{table}
@@ -316,8 +327,6 @@ Digital ALPHA & OSF/1 (Digital Unix) 4.x \\
 
 \Note Other Linux distributions (Debian, etc.) may work, but are not tested
 or supported.
-
-\input{overview/version-history.tex}
 
 \section{\label{contact-info}Contact Information}
 
@@ -327,7 +336,7 @@ High-Throughput Computing
 research can be found at the official web site for Condor at  
 \Url{http://www.cs.wisc.edu/condor}.
 
-In addition, there is an e-mail list at \Url{mailto:condor-world@cs.wisc.edu}.  The Condor Team 
+In addition, there is an e-mail list at \Email{condor-world@cs.wisc.edu}.  The Condor Team 
 uses this e-mail list to announce new releases of Condor and other major Condor-related 
 news items.  Membership into condor-world is automated by MajorDomo software.  To 
 subscribe or unsubscribe from the the list, follow the instructions at  

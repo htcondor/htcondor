@@ -4,10 +4,10 @@
 
 \newcommand{\func}[1]{\texttt{#1}}
 
-\index{PVM (Parallel Virtual Machines)|(}
-\index{Parallel Virtual Machines (PVM)}
+\index{PVM (Parallel Virtual Machine)|(}
+\index{Parallel Virtual Machine (PVM)}
 \index{Condor-PVM}
-Applications that use PVM (Parallel Virtual Machines) may use
+Applications that use PVM (Parallel Virtual Machine) may use
 Condor.
 PVM offers a set of message passing primitives for use in
 C and C++ language programs.
@@ -16,6 +16,8 @@ allow parallelism at the program level.
 Multiple processes
 may run on multiple machines,
 while communicating with each other.
+More information about PVM is available at 
+\Url{http://www.epm.ornl.gov/pvm/}.
 
 Condor-PVM provides a framework to run PVM applications
 in Condor's opportunistic environment.
@@ -33,13 +35,13 @@ and adds it to the virtual machine.
 If a machine needs to leave the pool, the
 PVM program is notified by normal PVM mechanisms.
 
-This manual section
-discusses the differences between running under normal PVM
-and running PVM within the Condor
-environment.  The most effective way to use Condor-PVM is
-presented, along with an example program.
-A sample Condor submit description file for a PVM job illustrates
-how to submit a Condor-PVM job.
+% This manual section
+% discusses the differences between running under normal PVM
+% and running PVM within the Condor
+% environment.  The most effective way to use Condor-PVM is
+% presented, along with an example program.
+% A sample Condor submit description file for a PVM job illustrates
+% how to submit a Condor-PVM job.
 
 \Note Condor-PVM is an optional Condor module.  It is not
 automatically installed with Condor. To check and see if
@@ -54,7 +56,7 @@ file \File{condor\_pvmd} on your system, then the Condor-PVM module
 is installed.
 If not,
 ask your site administrator to download and install Condor-PVM from
-\Url{http://www.cs.wisc.edu/condor/downloads}
+\Url{http://www.cs.wisc.edu/condor/downloads/}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Effective Usage: the Master-Worker Paradigm}
@@ -98,6 +100,16 @@ a replacement node every time it is notified that a worker has
 gone away. The benefit of this paradigm is that the number of workers is
 not important and changes in the size of
 the virtual machine are easily handled.
+
+A tool called \Term{MW} has been developed to assist in the
+development of master-worker style applications for
+distributed, opportunistic environments like Condor.
+MW provides a C++ API which hides the complexities of managing a
+master-worker Condor-PVM application.
+We suggest that you consider modifying your PVM application to use MW
+instead of developing your own dynamic PVM master from scratch.
+Additional information about MW is available at 
+\Url{http://www.cs.wisc.edu/condor/mw/}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Binary Compatibility and Runtime Differences}
@@ -165,6 +177,16 @@ Condor environment:
   \func{pvm\_addhosts()}. When a host is added later, the program
   will be notified in the usual PVM 
   fashion (with a \func{PvmHostAdd} notification message).
+
+  After receiving a \func{PvmHostAdd} notification, the PVM master can
+  unpack the following information about the added host: an integer
+  specifying the TID of the new host, a string specifying the name of
+  the new host, followed by a string specifying the machine class of
+  the new host.  The PVM master can then call \func{pvm\_spawn()} to
+  start a worker process on the new host, specifying this machine
+  class as the architecture and using the appropriate executable path
+  for this machine class.  Note that the name of the host is given by
+  the startd and may be of the form ``vmN@hostname'' on SMP machines.
     
 
 \item \func{pvm\_notify()}.  Under Condor, there are two additional 
@@ -172,6 +194,7 @@ Condor environment:
   to the function \func{pvm\_notify()}.
   They are \func{PvmHostSuspend} and
   \func{PvmHostResume}.
+\index{PVM!PvmHostSuspend and PvmHostResume notifications}
   The program calls \func{pvm\_notify()}
   with a host tid and \func{PvmHostSuspend} (or \func{PvmHostResume})
   as arguments, and the program will receive
@@ -190,8 +213,37 @@ Condor environment:
   notification.  When it resumes, set up a \func{PvmHostSuspend}
   notification.
 
+  If your application uses the \func{PvmHostSuspend} and
+  \func{PvmHostResume} notification types, you will need to modify
+  your PVM distribution to support them as follows.  First, go to your
+  \$(PVM\_ROOT). In \File{include/pvm3.h}, add
+\begin{verbatim}
+#define PvmHostSuspend  6   /* condor suspension */
+#define PvmHostResume   7   /* condor resumption */
+\end{verbatim}
 
-\item \func{pvm\_spawn()}.  If  the flag in \func{pvm\_spawn()} is 
+  to the list of "pvm\_notify kinds".
+  In \File{src/lpvmgen.c}, in \func{pvm\_notify()}, change 
+
+\begin{verbatim}
+} else {
+        switch (what) {
+        case PvmHostDelete:
+        ....
+\end{verbatim}
+to 
+\begin{verbatim}
+} else {
+        switch (what) {
+        case PvmHostSuspend:  /* for condor */
+        case PvmHostResume:   /* for condor */
+        case PvmHostDelete:
+        ....
+\end{verbatim}
+And that's it. Re-compile, and you're done. 
+
+
+\item \func{pvm\_spawn()}.  If the flag in \func{pvm\_spawn()} is 
   \func{PvmTaskArch}, then a machine class string 
   should be used.  If there is only one machine class
   in a virtual machine, ``0'' is the string for the desired architecture.
@@ -206,473 +258,26 @@ Condor environment:
   Having more than one PVM task per node pushes the load
   higher than the threshold.
 
+  Also, Condor only supports starting one copy of the executable with
+  each call to \func{pvm\_spawn()} (i.e., the fifth argument must
+  always be equal to one).  To spawn multiple copies of an executable
+  in Condor, you must call \func{pvm\_spawn()} once for each copy.
+
   A good fault tolerant program will be able to deal with
   \func{pvm\_spawn()} failing.  It happens more often in opportunistic 
   environments like Condor than in dedicated ones.
 
+\item \func{pvm\_exit()}.  If a PVM task calls \func{pvm\_catchout()}
+  during its run to catch the output of child tasks,
+  \func{pvm\_exit()} will attempt to gather the output of all child
+  tasks before returning.  Due to the dynamic nature of the virtual
+  machine in Condor, this cleanup procedure (in the PVM library and
+  daemon) is error-prone and should be avoided.  So, any PVM tasks
+  which call \func{pvm\_catchout()} should be sure to call it again
+  with a NULL argument to disable output collection before calling
+  \func{pvm\_exit()}.
+
 \end{itemize}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{A Sample PVM program for Condor-PVM}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-The following is a sample PVM program that works well under Condor.
-It is an extensively commented skeleton of a sample PVM
-\index{PVM!example program}
-program \Prog{master\_sum.c}, which will help you to
-write PVM code that is better suited for a non-dedicated opportunistic
-environment like Condor.
-
-\CondorVerySmall
-\begin{verbatim}
-/* 
- * master_sum.c
- *
- * master program to perform parallel addition - takes a number n 
- * as input and returns the result of the sum 0..(n-1).  Addition 
- * is performed in parallel by k tasks, where k is also taken as 
- * input.  The numbers 0..(n-1) are stored in an array, and each 
- * worker adds a portion of the array, and returns the sum to the 
- * master.  The Master adds these sums and prints final sum.  
- *
- * To make the program fault-tolerant, the master has to monitor 
- * the tasks that exited without sending the result back.  The 
- * master creates some new tasks to do the work of those tasks 
- * that have exited. 
- */
-
-#define NOTIFY_NUM 5  /* number of items to notify */
-
-#define HOSTDELETE 12
-#define HOSTSUSPEND 13
-#define HOSTRESUME 14
-#define TASKEXIT 15
-#define HOSTADD 16
-    
-/* send the pertask and start number to the worker task i */
-void send_data_to_worker(int i, int *tid, int *num, int pertask, 
-            FILE *fp, int round)
-{
-     int status;
-     int start_val;
-     
-     /* send the round number */
-     pvm_initsend(PvmDataDefault); /* XDR format */
-     pvm_pkint(&round, 1, 1);    /* number of numbers to add */
-     status = pvm_send(tid[i], ROUND_TAG);
-
-     pvm_initsend(PvmDataDefault); /* XDR format */
-     pvm_pkint(&pertask, 1, 1);    /* number of numbers to add */
-     status = pvm_send(tid[i], NUM_NUM_TAG);
-
-     pvm_initsend(PvmDataDefault); /* XDR format */
-     start_val = i * pertask; /* initial number for this task */
-     pvm_pkint(&start_val, 1, 1);     /* the initial number */
-     status = pvm_send(tid[i], START_NUM_TAG);   
-
-     fprintf(fp, "Round %d: Send data %d to worker task %d, ``
-           ``tid =%x. status %d \n", round, start_val, i, tid[i], status);
-}
-
-/* 
- * to see if more hosts are needed 
- * 1 = yes; 0 = no 
- */
-int need_more_hosts(int i)
-{
-     int nhost, narch;
-     char *hosts="0";  /* any host in arch class 0 */
-     struct pvmhostinfo *hostp = (struct pvmhostinfo *) 
-                     calloc (1, sizeof(struct pvmhostinfo));
-
-     /* get the current configuration */
-     pvm_config(&nhost, &narch, &hostp);
-     
-     if (nhost > i)
-        return 0;
-     else 
-        return 1;
-}
-
-/* 
- * Add a new host until success, assuming that request for 
- * PvmAddHost notification has already been sent 
- */
-void add_a_host(FILE *fp)
-{
-     int done = 0;
-     int buf_id;
-     int success = 0;
-     int tid;
-     int msg_len, msg_tag, msg_src;
-     char *hosts="0";  /* any host in arch class 0 */
-     int infos[1];
-
-     while (done != 1) {
-        /* 
-        * add one host - no specific machine named 
-        * add host will asynchronously, so we need
-        * to receive the notification before go on.
-        */
-        pvm_addhosts(&hosts,1 , infos);
-      
-        /* receive hostadd notification from anyone */
-        buf_id = pvm_recv(-1, HOSTADD);
-      
-        if (buf_id < 0) {
-            fprintf(fp, "Error with buf_id = %d\n", buf_id);
-            done = 0;
-            continue;
-        }
-        done = 1;
-     
-        pvm_bufinfo(buf_id, &msg_len , &msg_tag, &msg_src);
-        pvm_upkint(&tid, 1, 1);
-
-        pvm_notify(PvmHostDelete, HOSTDELETE, 1, &tid);
-
-        fprintf(fp, "Received HOSTADD: ");
-        fprintf(fp, "Host %x added from %x\n", tid, msg_src);
-        fflush(fp);
-    }
-}
-
-/* 
- * Spawn a worker task until success.  
- * Return its tid, and the tid of its host. 
- */
-void spawn_a_worker(int i, int* tid, int * host_tid, FILE *fp)
-{
-     int numt = 0;
-     int status;
-
-     while (numt == 0){
-          /* spawn a worker on a host belonging to arch class 0 */
-          numt = pvm_spawn ("worker_sum", NULL, PvmTaskArch, "0", 1, &tid[i]);
-
-          fprintf(fp, "master spawned %d task tid[%d] = %x\n",numt,i,tid[i]);
-          fflush(fp);
-         
-          /* if the spawn is successful */
-          if (numt == 1) {
-               /* notify when the task exits */
-               status = pvm_notify(PvmTaskExit, TASKEXIT, 1, &tid[i]);
-               
-               fprintf(fp, "Notify status for exit = %d\n", status);
-               
-               if (pvm_pstat(tid[i]) != PvmOk) numt = 0;
-          }
-          
-          if (numt != 1) {
-               fprintf(fp, "!! Failed to spawn task[%d]\n", i);
-               
-               /* 
-                * currently Condor-pvm allows only one task running on 
-                * a host
-                */
-                while (need_more_hosts(i) == 1)
-                    add_a_host(fp);
-          }
-     }
-}
-
-
-main()
-{
-    int n;                  /* will add <n> numbers n .. n-1 */
-    int ntasks;             /* need <ntask> workers to do the addition. */
-    int pertask;            /* numbers to add per task */
-    int tid[MAX_TASKS];     /* tids of tasks */ 
-    int deltid[MAX_TASKS];  /* tids monitored for deletion */
-    int sum[MAX_TASKS];     /* hold the reported sum */
-    int num[MAX_TASKS];     /* the initial numbers the workers should add */
-    int host_tid[MAX_TASKS];/* the tids of the host that the *
-                             * tasks <0..ntasks> are running on*/
-    
-    int i, numt, nhost, narch, status;
-    int result;
-    int mytid;    /* task id of master */
-    int mypid;    /* process id of master */
-    int buf_id;   /* id of recv buffer */
-    int msg_leg, msg_tag, msg_src, msg_len;
-    int int_val;  
-
-    int infos[MAX_TASKS];
-    char * hosts[MAX_TASKS];
-    struct pvmhostinfo *hostp = (struct pvmhostinfo *) 
-                    calloc (MAX_TASKS, sizeof(struct pvmhostinfo));
-
-    FILE *fp;
-    char outfile_name[100];
-
-    char *codes[NOTIFY_NUM] = {"HostDelete", "HostSuspend", 
-            "HostResume", "TaskExit", "HostAdd"};
-    
-    int count;   /* the number of times that while loops */
-    int round_val;
-    int correct = 0;
-    int wrong = 0;
-
-    mypid = getpid();
-
-    sprintf(outfile_name, "out_sum.%d", mypid);
-    fp = fopen(outfile_name, "w"); 
-
-    /* redirect all children tasks' stdout to fp */
-    pvm_catchout(stderr);  
-
-    if (pvm_parent() == PvmNoParent){
-        fprintf(fp, "I have no parent!\n");
-        fflush(fp);
-    }
-
-    /* will add <n> numbers 0..(n-1) */
-    fprintf(fp, "How many numbers? ");
-    fflush(fp);
-    scanf("%d", &n);
-    fprintf(fp, "%d\n", n);
-    fflush(fp);
-
-    /* will spawn ntasks workers to perform addition */
-    fprintf(fp, "How many tasks? ");
-    fflush(fp);
-    scanf("%d", &ntasks);
-    fprintf(fp, "%d\n\n", ntasks);
-    fflush(fp);
-
-    /* will iterate count loops */
-    fprintf(fp, "How many loops? ");
-    fflush(fp);
-    scanf("%d", &count);
-    fprintf(fp, "%d\n", count);
-    fflush(fp);
-
-    /* set the hosts to be in arch class 0 */
-    for (i = 0; i< ntasks; i++) hosts[i] = "0";
-
-    /* numbers to be added by each worker */
-    pertask = n/ntasks;
-
-    /* get the master's TID */
-    mytid = pvm_mytid();
-    fprintf(fp, "mytid = %x; mypid = %d\n", mytid, mypid);
-
-    /* get the current configuration */
-    pvm_config(&nhost, &narch, &hostp);
-
-    fprintf(fp, "current number of hosts = %d\n", nhost);
-    fflush(fp);
-
-    /* 
-     * notify request for host addition, with tag HOSTADD, 
-     * no tids to monitor.  
-     *
-     * -1 turns the notification request on;
-     * 0 turns it off;
-     * a positive integer n will generate at most n 
-     * notifications.
-     */     
-    pvm_notify(PvmHostAdd, HOSTADD, -1, NULL);
-
-    /* add more hosts - no specific machine named */
-    i = ntasks - nhost;
-    if (i > 0) {
-        status = pvm_addhosts(hosts, i , infos);
-      
-        fprintf(fp, "master: addhost status = %d\n", status);
-        fflush(fp);
-    }
-     
-    /* if not enough hosts, loop and call pvm_addhosts */
-    for (i = nhost; i < ntasks; i++) {
-        /* receive notification from anyone, with HostAdd tag */
-        buf_id = pvm_recv(-1, HOSTADD);
-
-        if (buf_id < 0) {
-           fprintf(fp, "Error with buf_id = %d\n", buf_id);
-        } else {
-           fprintf(fp, "Success with buf_id = %d\n", buf_id);
-        }
-
-        pvm_bufinfo(buf_id, &msg_len , &msg_tag, &msg_src);
-        if (msg_tag==HOSTADD) {
-            pvm_upkint(&int_val, 1, 1);
-
-            fprintf(fp, "Received HOSTADD: ");
-            fprintf(fp, "Host %x added from %x\n", int_val, msg_src);
-           fflush(fp);
-        } else {
-           fprintf(fp, "Received unexpected message with tag: %d\n", msg_tag);
-        }
-    }
-
-    /* get current configuration */
-    pvm_config(&nhost, &narch, &hostp);
-
-    /* notify all exceptional conditions about the hosts*/
-    status = pvm_notify(PvmHostDelete, HOSTDELETE, ntasks, deltid);
-    fprintf(fp, "Notify status for delete = %d\n", status);
-     
-    status = pvm_notify(PvmHostSuspend, HOSTSUSPEND, ntasks, deltid);
-    fprintf(fp, "Notify status for suspend = %d\n", status);
-     
-    status = pvm_notify(PvmHostResume, HOSTRESUME, ntasks, deltid);
-    fprintf(fp, "Notify status for resume = %d\n", status);
-
-    /* spawn <ntasks> */
-    for (i = 0; i < ntasks ; i++) {
-        /* spawn the i-th task, with notifications. */
-        spawn_a_worker(i, tid, host_tid, fp);
-    }
-
-    /* add the result <count> times */
-    while (count > 0) {
-        /* 
-         * if array length was not perfectly divisible by ntasks, 
-         *    some numbers are remaining. Add these yourself 
-         */
-        result = 0;
-        for ( i = ntasks * pertask ; i < n ; i++)
-           result += i;
-     
-        /* initialize the sum array with -1 */
-        for (i = 0; i< ntasks; i++) 
-            sum[i] = -1;
- 
-        /* send array partitions to each task */
-        for (i = 0; i < ntasks ; i++) {
-           send_data_to_worker(i, tid, num, pertask, fp, count);
-        }
-
-        /* 
-        * Wait for results.  If a task exited without 
-        * sending back the result, start another task to do
-        * its job. 
-        */
-        for (i = 0; i< ntasks; ) {   
-            buf_id = pvm_recv(-1, -1);
-            pvm_bufinfo(buf_id, &msg_len , &msg_tag, &msg_src);
-            fprintf(fp, "Receive: task %x returns mesg tag %d, ``
-                ``buf_id = %d\n", msg_src, msg_tag, buf_id);
-            fflush(fp);
-           
-            /* is a result returned by a worker */
-            if(msg_tag == RESULT_TAG)  {
-                int j;
-                
-                pvm_upkint(&round_val, 1, 1);
-                fprintf(fp, "  round_val = %d\n", round_val);
-                fflush(fp);
-             
-                if (round_val != count) continue;
-
-                pvm_upkint(&int_val, 1, 1);
-                for (j=0; (j<ntasks) && (tid[j] != msg_src); j++)
-                    ;
-                fprintf(fp, "  Data from task %d, tid = %x : %d\n", 
-                    j, msg_src, int_val);
-                fflush(fp);
-                
-                if (sum[j] == -1) {
-                    sum[j] = int_val; /* store the sum */
-                    i++;
-                }
-           } else if (msg_tag == TASKEXIT) {
-                /* A task has exited. */
-                /* Find out which task has exited. */ 
-                int which_tid, j;          
-                pvm_upkint(&which_tid, 1, 1);
-                for (j=0; (j<ntasks) && (tid[j] != which_tid); j++)
-                 ;
-                fprintf(fp, "  from tid %x : task %d, tid =  %x, ``
-                    ``exited.\n", 
-                    msg_src, j, which_tid);
-                fflush(fp);
-                /* 
-                 * If a task exited before sending back the message,
-                 * create another task to do the same job.
-                 */
-                if (j < ntasks && sum[j] == -1) {
-                     /* spawn the j-th task */
-                     spawn_a_worker(j, tid, host_tid, fp);
-                     
-                     /* send unfinished work to the new task */
-                     send_data_to_worker(j, tid, num, pertask, fp, count);
-                }
-            } else if (msg_tag == HOSTDELETE) {
-                /* 
-                * If a host has been deleted, check to see if 
-                * the tasks running on it has been finished.  
-                * If not, should create  new worker tasks to do 
-                * the work on some other  hosts.
-                */
-                int which_tid, j;
-                    
-                /* get which host has been suspended/deleted */
-                pvm_upkint(&which_tid, 1, 1);
-                    
-                fprintf(fp, "  from tid %x : %x %s\n", msg_src, which_tid, 
-                    codes[msg_tag - HOSTDELETE]);
-                fflush(fp);
-                    
-                /* 
-                 * If the task on that host has not finished its
-                 * work, then create new task to do the work.
-                 */
-                for (j = 0; j < ntasks; j++) {
-                     if (host_tid[j] == which_tid && sum[j] == -1) {
-                          fprintf(fp, "host_tid[%d] = %x, ``
-                            ``need new task\n",
-                              j, host_tid[j]);
-                          fflush(fp);
-                          
-                          /* spawn the i-th task, with notifications. */
-                          spawn_a_worker(j, tid, host_tid, fp);
-                          
-                          /* send the unfinished work to the new task */
-                          send_data_to_worker(j,tid,num,pertask,fp,count);
-                     }
-                }
-            } else {
-                /* print out some other notifications or messages */
-                int which_tid;
-                pvm_upkint(&which_tid, 1, 1);
-        
-                fprintf(fp, "  from tid %x : %x %s\n", msg_src,
-                        which_tid,   codes[msg_tag - HOSTDELETE]);
-                fflush(fp);
-            }
-        }        
-      
-        /* add up the sum */
-        for (i=0; i<ntasks; i++)
-           result += sum[i];
-          
-        fprintf(fp, "Sum from  0 to %d is %d\n", n-1 , result);
-        fflush(fp);
-          
-        /* check correctness */
-        if (result == (n-1)*n/2) {
-           correct++;
-           fprintf(fp, "*** Result Correct! ***\n");
-        } else {
-           wrong++;
-           fprintf(fp, "*** Result WRONG! ***\n");
-        }
-
-        fflush(fp);
-        count--;
-    }
-     
-     fprintf(fp, "correct = %d; wrong = %d\n", correct, wrong);
-     fflush(fp);
-
-     pvm_exit();
-     exit(0);
-}
-
-\end{verbatim}
-\normalsize
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:PVM-Submit}Sample PVM submit file}
@@ -683,7 +288,7 @@ main()
 PVM jobs are submitted to the PVM universe.
 The following is an
 example of a submit description file for a PVM job.  
-This job has a master PVM program called \func{master\_pvm}.
+This job has a master PVM program called \func{master.exe}.
 
 \CondorSmall
 \begin{verbatim}
@@ -695,29 +300,38 @@ This job has a master PVM program called \func{master\_pvm}.
 # The job is a PVM universe job.
 universe = PVM  
 
-# The executable of the master PVM program is ``master_pvm''.
-executable = master_pvm
+# The executable of the master PVM program is ``master.exe''.
+executable = master.exe
 
-In = "in_sum"
-Out = "stdout_sum"
-Err = "err_sum"
+input = "in.dat"
+output = "out.dat"
+error = "err.dat"
 
-###################  Architecture class 0  ##################
+###################  Machine class 0  ##################
 
-Requirements = (Arch == "INTEL") && (OpSys == "SOLARIS251") 
+Requirements = (Arch == "INTEL") && (OpSys == "LINUX") 
 
 # We want at least 2 machines in class 0 before starting the 
 # program.  We can use up to 4 machines.
 machine_count = 2..4  
 queue
 
-###################  Architecture class 1  ##################
+###################  Machine class 1  ##################
 
-Requirements = (Arch == "SUN4x") && (OpSys == "SOLARIS251") 
+Requirements = (Arch == "SUN4x") && (OpSys == "SOLARIS26") 
 
 # We need at least 1 machine in class 1 before starting the 
 # executable.  We can use up to 3 to start with.
 machine_count = 1..3
+queue
+
+###################  Machine class 2  ##################
+
+Requirements = (Arch == "INTEL") && (OpSys == "SOLARIS26") 
+
+# We don't need any machines in this class at startup, but we can use
+# up to 3. 
+machine_count = 0..3
 queue
 
 ###############################################################
@@ -727,29 +341,38 @@ queue
 \end{verbatim}
 \normalsize
 
-
 In this sample submit file, the command \verb@universe = PVM@
 specifies that the jobs should be submitted into PVM universe.
 
-The command \verb@executable = master_pvm@ tells Condor that the PVM
-master program is \Prog{master\_sum}.  This program will be started on
+The command \verb@executable = master.exe@ tells Condor that the PVM
+master program is \Prog{master.exe}.  This program will be started on
 the submitting machine.  The workers should be spawned by this master
 program during execution.
 
+The \verb@input@, \verb@output@, and \verb@error@ commands specify
+files that should be redirected to the standard in, out, and error of
+the PVM master program.  Note that these files will not include output
+from worker processes unless the master calls \func{pvm\_catchout()}.
+
 This submit file also tells Condor that the virtual machine
-consists of two different classes of machine.  Class
-0 contains machines with INTEL architecture running SOLARIS251; class
-1 contains machines with SUN4x (SPARC) architecture running SOLARIS251.
+consists of three different classes of machine.  Class
+0 contains machines with INTEL processors running LINUX; class
+1 contains machines with SUN4x (SPARC) processors running SOLARIS26;
+class 2 contains machines with INTEL processors running SOLARIS26.
 
 By using \verb@machine_count = <min>..<max>@, the submit file tells
-Condor that before the PVM program, there should be at least \verb@<min>@
+Condor that before the PVM master is started, there should be at least
+\verb@<min>@ 
 number of machines of the current class.  It also asks Condor to give
 it as many as \verb@<max>@ machines.  During the execution of the program,
 the application may request more machines of each of the class by calling
 \func{pvm\_addhosts()} with a string specifying the machine
 class.
+It is often useful to specify \verb@<min>@ of 0 for each
+class, so the PVM master will be started immediately when the first
+host from any machine class is allocated.
 
 The \func{queue} command should be inserted after the specifications of
 each class.
 
-\index{PVM (Parallel Virtual Machines)|)}
+\index{PVM (Parallel Virtual Machine)|)}

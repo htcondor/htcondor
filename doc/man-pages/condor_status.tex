@@ -47,6 +47,7 @@ options} may be specified.
 		and display checkpoint server attributes}
     \OptItem{\OptArg{-direct}{hostname}}{(Query option) Go directly to
     the given hostname to get the ads to display}
+    \OptItem{\Opt{-java}}{(Query option) Display only Java-capable resources.}
     \OptItem{\Opt{-master}}{(Query option) Query \Condor{master} ads and display
 		daemon master attributes}
     \OptItem{\OptArg{-pool}{hostname}}{Query the specified central manager. 
@@ -166,6 +167,11 @@ vm2@vulture.c SOLARIS26   INTEL  Claimed    Busy       1.006  128   0+01:16:03
 
                Total        1     0       1         0       0          0
 \end{verbatim}
+
+\ExitStatus
+
+\Condor{status} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
 
 \end{ManPage}
 

@@ -1,10 +1,14 @@
 \begin{ManPage}{\label{man-condor-rm}\Condor{rm}}{1}
-{remove jobs from the condor queue}
+{remove jobs from the Condor queue}
 \Synopsis \SynProg{\Condor{rm}}
-\oOptArg{-n}{schedd\_name}
-\oOpt{-help}
-\oOpt{-version}
-\oOpt{job identifiers}
+\ToolArgsBase
+\ToolLocate
+\ToolJobs
+
+\SynProg{\Condor{rm}}
+\ToolArgsBase
+\ToolLocate
+\ToolAll
 
 \index{Condor commands!condor\_rm}
 \index{condor\_rm command}
@@ -12,7 +16,7 @@
 \Description
 
 \Condor{rm} removes one or more jobs from the Condor job queue.  
-If the \Opt{-n} option is specified, the named \Condor{schedd} is targeted
+If the \Opt{-name} option is specified, the named \Condor{schedd} is targeted
 for processing.  
 Otherwise, the local \Condor{schedd} is targeted.
 The jobs to be removed are identified by one or more job identifiers, as
@@ -21,19 +25,25 @@ For any given job, only the owner of the job or one of the queue super users
 (defined by the \MacroNI{QUEUE\_SUPER\_USERS} macro) can remove the job.
 
 \begin{Options}
-    \OptItem{\Opt{-help}}{Display usage information and exit}
-    \OptItem{\Opt{-version}}{Display version information and exit}
-    \OptItem{\OptArg{-n}{schedd\_name}}{Remove jobs in the queue of the 
-		specified schedd}
-	\OptItem{\Arg{cluster}}{(Job identifier.) Remove all jobs in the specified 
-		cluster}
-	\OptItem{\Arg{cluster.process}}{(Job identifier.) Remove the specific job 
-		in the cluster}
-	\OptItem{\Arg{name}}{(Job identifier.) Remove jobs belonging to specified 
-		user}
-    \OptItem{\Opt{-a}}{(Job identifier.) Remove all the jobs in the queue}
-	\OptItem{\Arg{-constraint \emph{constraint}}}{(Job identifier.) Remove 
-		jobs matching specified constraint}
+	\ToolArgsBaseDesc
+	\ToolLocateDesc
+	\OptItem{\Arg{cluster}}{Remove all jobs in the specified cluster}
+	\OptItem{\Arg{cluster.process}}{Remove the specific job in the cluster}
+	\OptItem{\Arg{user}}{Remove jobs belonging to specified user}
+        \OptItem{\Arg{-all}}{Remove all the jobs in the queue}
 \end{Options}
+
+\GenRem
+
+When removing a PVM universe job, you should always remove the entire
+job cluster.  (In the PVM universe, each PVM job is assigned its own
+cluster number, and each machine class is assigned a ``process''
+number in the job's cluster.)  Removing a subset of the machine
+classes for a PVM job is not supported.
+
+\ExitStatus
+
+\Condor{rm} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
 
 \end{ManPage}

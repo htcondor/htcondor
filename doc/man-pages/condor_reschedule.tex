@@ -2,30 +2,60 @@
 {Update scheduling information to the central manager}
 
 \Synopsis \SynProg{\Condor{reschedule}}
-\oOpt{-help}
-\oOpt{-version}
-\oOpt{hostname ...}
+\ToolArgsBase
+
+\SynProg{\Condor{reschedule}}
+\ToolArgsLocate
+
+\SynProg{\Condor{reschedule}}
+\ToolWhere
 
 \index{Condor commands!condor\_reschedule}
 \index{condor\_reschedule command}
 
 \Description 
 
-\Condor{reschedule} updates the information about a given machines resources
-and jobs to the central manager.  This can be used if one wants to see the
-current status of a machine.  In order to do this, one would first run
-\Condor{reschedule}, and then use the \Condor{status} command to get 
-specific information about that machine.  \Condor{reschedule} also
+\Condor{reschedule} updates the information about a set of machines' resources
+and jobs to the central manager.
+This command is used to force an update before viewing the
+current status of a machine.
+Viewing the status of a machine is done with 
+the \Condor{status} command.
+\Condor{reschedule} also
 starts a new negotiation cycle between resource owners and resource providers
 on the central managers, so that jobs can be matched with machines right
-away.  This can be useful in situations where the time between negotiation
-cycles is somewhat long, and an administrator wants to see if a job they have
+away.
+This can be useful in situations where the time between negotiation
+cycles is somewhat long, and an administrator wants to see if a job 
 in the queue will get matched without waiting for the next negotiation cycle.
 
 \begin{Options}
-	\OptItem{\Opt{-help}}{Display usage information}
-	\OptItem{\Opt{-version}}{Display version information}
-	\OptItem{\Opt{hostname ...}}{Reconfigure condor on this list of machines}
+	\ToolArgsBaseDesc \ToolArgsLocateDesc
 \end{Options}
+
+\ExitStatus
+
+\Condor{reschedule} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\Examples
+
+To update the information on three named machines:
+\begin{verbatim}
+% condor_reschedule robin cardinal bluejay
+\end{verbatim}
+
+To reschedule on a machine within a pool
+other than the local pool, use the \Opt{-pool} option.
+The argument is the name of the central manager for the pool.
+Note that one or more machines within the pool must be
+specified as the targets for the command.
+This command reschedules 
+the single machine named \Opt{cae17} within the
+pool of machines that has \Opt{condor.cae.wisc.edu} as
+its central manager:
+\begin{verbatim}
+% condor_reschedule -pool condor.cae.wisc.edu -name cae17
+\end{verbatim}
 
 \end{ManPage}

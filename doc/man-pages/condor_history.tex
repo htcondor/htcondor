@@ -18,7 +18,7 @@ summarizes each job on a single line, and  contains the following items:
 \item[ID] The cluster/process id of the condor job. 
 \item[OWNER] The owner of the job. 
 \item[SUBMITTED] The month, day, hour, and minute the job was submitted to the queue. 
-\item[CPU\_USAGE] Remote CPU time accumulated by the job to date in days, hours, minutes, and seconds.
+\item[CPU\_USAGE] Remote user CPU time accumulated by the job to date in days, hours, minutes, and seconds.
 \item[ST] Completion status of the job (C = completed and X = removed).
 \item[COMPLETED] The time the job was completed.
 \item[PRI] User specified priority of the job, ranges from -20 to +20, with higher numbers corresponding to greater priority. 
@@ -38,5 +38,10 @@ specified boolean expression.
     \OptItem{\OptArg{-constraint}{expr}}{Display jobs that satisfy the expression}
     \OptItem{\Opt{-l}}{Display job ads in long format}
 \end{Options}
+
+\ExitStatus
+
+\Condor{history} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
 
 \end{ManPage}

@@ -1,0 +1,97 @@
+%% This section constructs various classes of argument options. A class
+%% is a set of arguments that all perform a similar function or should
+%% always be together.
+
+%% Every single tool should implement these
+\newcommand{\ToolArgsBase}{
+\oOptnm{-help $|$ -version}
+}
+
+%% How to locate the machines with which you want to mess.
+\newcommand{\ToolArgsLocate}{
+\oOptnm{-name hostname $|$ hostname $|$ -addr "\SinfulAny" $|$ "\SinfulAny" } \Opt{\Dots} \\
+}
+
+%% for checkpoint, off, on, reconfig, reschedule, restart and vacate
+\newcommand{\ToolWhere}{
+\Optnm{-pool centralmanagerhostname}\\
+\Optnm{-name hostname $|$ hostname $|$ -addr "\SinfulAny" $|$ "\SinfulAny" } \Optnm{\Dots} \\
+}
+
+%% Alternative to locate the machines with which you want to mess.
+%% Used by _rm, _hold, and _release.
+\newcommand{\ToolLocate}{
+\oOptnm{-pool centralmanagerhostname}
+\oOptnm{-name hostname $|$ -addr "\SinfulAny" }
+}
+
+%% Specification of the jobs with which you want to mess.
+\newcommand{\ToolJobs}{
+\Argnm{ cluster\Dots $|$ cluster.process\Dots $|$ user\Dots } 
+}
+
+%% Specification of the jobs with which you want to mess.
+\newcommand{\ToolAll}{
+\Argnm{ -all } 
+}
+
+%% Which daemons you wish to affect. XXX maybe split up nicer...
+\newcommand{\ToolArgsAffect}{
+\oOptnm{-master $|$ -startd $|$ -schedd $|$ -collector $|$ -negotiator 
+	$|$ -kbdd}
+}
+
+%% This is the common set of arguments
+\newcommand{\ToolArgs}{
+\ToolArgsBase
+\ToolArgsLocate
+\ToolArgsAffect
+}
+
+%% ----- descriptions of above arguments
+
+\newcommand{\ToolArgsBaseDesc}{
+\OptItem{\Opt{-help}}{Display usage information}
+\OptItem{\Opt{-version}}{Display version information}
+}
+
+%%  Argument descriptions for different classes of arguments 
+\newcommand{\ToolArgsLocateDesc}{
+\OptItem{\OptArg{-pool}{centralmanagerhostname}}{Specify a pool by giving the
+	central manager's hostname}
+\OptItem{\OptArg{-name}{hostname}}{Send the command to a machine identified by \Arg{hostname}}
+\OptItem{\Opt{hostname}}{Send the command to a machine identified by \Opt{hostname}}
+\OptItem{\OptArg{-addr}{"\SinfulAny"}}{Send the command
+	to a machine's master located at \Arg{"\SinfulAny"}}
+\OptItem{\Opt{"\SinfulAny"}}{Send the command
+	to a machine located at \Opt{"\SinfulAny"}}
+}
+
+
+%%  Alternative argument descriptions for different classes of arguments 
+%%  Used by _rm, _hold, and _release.
+\newcommand{\ToolLocateDesc}{
+\OptItem{\OptArg{-pool}{centralmanagerhostname}}{Specify a pool by giving the
+	central manager's hostname}
+\OptItem{\OptArg{-name}{hostname}}{Send the command to a machine identified by \Opt{hostname}}
+\OptItem{\OptArg{-addr}{"\SinfulAny"}}{Send the command
+	to a machine located at "\SinfulAny"}
+}
+
+%% Descriptions of Affected Daemons
+\newcommand{\ToolArgsAffectDesc}{
+\OptItem{\Opt{-master}}{Send the command to the master (default)}
+\OptItem{\Opt{-startd}}{Send the command to the startd daemon}
+\OptItem{\Opt{-schedd}}{Send the command to the schedd daemon}
+\OptItem{\Opt{-collector}}{Send the command to the collector daemon}
+\OptItem{\Opt{-kbdd}}{Send the command to the kbdd daemon}
+}
+
+%% This is the description of the common arguments
+\newcommand{\ToolArgsDesc}{
+\ToolArgsBaseDesc
+\ToolArgsLocateDesc
+\ToolArgsAffectDesc
+}
+
+

@@ -6,6 +6,40 @@ Installing PVM Support in Condor}
 \index{contrib module!PVM}
 \index{PVM contrib module}
 \index{installation!PVM contrib module}
-To install support for PVM in Condor, download the file archive from
-\Url{http://www.cs.wisc.edu/condor/downloads} and follow the directions
-found the \File{INSTALL} file contained in the archive.
+
+To install the PVM contrib module, you must first download the
+appropriate binary module for whatever platform(s) you plan to use for 
+Condor-PVM.
+You can find all of the Condor binary modules at
+\Url{http://www.cs.wisc.edu/condor/downloads}.
+
+\Note The PVM contrib module version must match with your installed
+Condor version.
+
+Once you have downloaded each module, uncompressed and untarred it,
+you will be left with a directory that contains a \File{pvm.tar},
+\File{README} and so on.
+The \File{pvm.tar} acts much like the \File{release.tar} file for a
+main release.
+It contains all the binaries and supporting files you would install in
+your release directory to enable Condor-PVM:
+\begin{verbatim}
+        sbin/condor_pvmd
+        sbin/condor_pvmgs
+        sbin/condor_shadow.pvm
+        sbin/condor_starter.pvm
+\end{verbatim}
+
+You must install these files in the release directory for the platform
+they were built for.  
+Since these files do not exist in a main release, you can safely untar
+the \File{pvm.tar} directly into the appropriate release directory.
+You do not need to worry about shutting down Condor, moving files out
+of the way, and so on.
+Once the \File{pvm.tar} file has been untarred into the release
+directory, you are done installing the PVM contrib module.
+You will now be able to submit PVM jobs to your Condor pool.  
+
+For complete documentation on using PVM in Condor, see the
+section~\ref{sec:PVM} on page~\pageref{sec:PVM} entitled ``Parallel
+Applications in Condor: Condor-PVM''. 

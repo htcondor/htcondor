@@ -71,7 +71,7 @@ explicitly redirect input from a file to the shell command.  For
 example:
 
 \begin{verbatim}
-$ condor_run "cat input.dat | myprog > output.dat"
+$ condor_run "myprog < input.dat > output.dat"
 \end{verbatim}
 
 \Files
@@ -126,5 +126,12 @@ script or explicitly call perl from the command line:
 \begin{verbatim}
 $ perl [path-to-condor]/bin/condor_run "shell-cmd"
 \end{verbatim}
+
+\ExitStatus
+
+\Condor{run} exits with a status value of 0 (zero) upon complete success.
+The exit status of \Condor{run} will be non-zero upon failure.
+The exit status in the case of a single error due to a system call
+will be the error number (\Code{errno}) of the failed call.
 
 \end{ManPage}

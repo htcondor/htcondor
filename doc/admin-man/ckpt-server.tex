@@ -204,7 +204,7 @@ about your new server:
 
 \begin{description}
    \item[\Macro{USE\_CKPT\_SERVER}] This parameter should be set to
-   TRUE.
+   TRUE (the default).
 
    \item[\Macro{CKPT\_SERVER\_HOST}] This parameter should be set to
    the full hostname of the machine that is now running your checkpoint
@@ -216,7 +216,7 @@ so they affect all submission machines.
 However, you may configure each submission machine separately (using
 local configuration files) if you do not want all of your submission machines
 to start using the checkpoint server at one time.
-If \Macro{USE\_CKPT\_SERVER} is set to FALSE or is undefined, the
+If \Macro{USE\_CKPT\_SERVER} is set to FALSE, the
 submission machine will not use a checkpoint server.
 
 Once these settings are in place, send a
@@ -254,7 +254,7 @@ owners see Condor jobs leave their machines quicker.
 Once you have multiple checkpoint servers running in your pool, the
 following configuration changes are required to make them active.
 
-First, \Macro{USE\_CKPT\_SERVER} should be set to TRUE on all
+First, \Macro{USE\_CKPT\_SERVER} should be set to TRUE (the default) on all
 submitting machines where Condor jobs should use a checkpoint server.
 Additionally, \Macro{STARTER\_CHOOSES\_CKPT\_SERVER} should be set to
 TRUE (the default) on these submitting machines.
@@ -350,7 +350,7 @@ server domain of each machine.
 To restrict jobs to one checkpoint server domain, we need to modify
 the jobs' \AdAttr{Requirements} expression as follows:
 \begin{verbatim}
-  Requirements = ((LastCkptServer == CkptServer) || (LastCkptServer =?= UNDEFINED))
+  Requirements = ((LastCkptServer == TARGET.CkptServer) || (LastCkptServer =?= UNDEFINED))
 \end{verbatim}
 This \AdAttr{Requirements} expression uses the \AdAttr{LastCkptServer}
 attribute in the job's ClassAd, which specifies where the job last
@@ -368,7 +368,7 @@ server domains when there are no available machines in the current
 checkpoint server domain, we need to modify the jobs' \AdAttr{Rank} expression
 as follows:
 \begin{verbatim}
-  Rank = ((LastCkptServer == CkptServer) || (LastCkptServer =?= UNDEFINED))
+  Rank = ((LastCkptServer == TARGET.CkptServer) || (LastCkptServer =?= UNDEFINED))
 \end{verbatim}
 This \AdAttr{Rank} expression will evaluate to 1 for machines in the
 job's checkpoint server domain and 0 for other machines.  So, the job

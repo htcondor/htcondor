@@ -3,33 +3,128 @@
 Machines With Multiple Network Interfaces } 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% CMNT I'm going to leave the original documentation here in case someone
+% CMNT needs the CM_IP_ADDR stuff better documented. For now, though, I've
+% CMNT removed it from the documentation because the code should deal with
+% CMNT CONDOR_HOST being a straight ip_addr just fine. The new docs I've
+% CMNT written don't even reference CM_IP_ADDR because it seems the code
+% CMNT doesn't need it.
+
+%Beginning with Condor version 6.1.5, Condor can run on machines with
+%multiple network interfaces.
+%Basically, you tell each host with multiple interfaces which IP
+%address you want the host to use for ingoing and outgoing Condor
+%network communication.
+%You do this by setting the \Macro{NETWORK\_INTERFACE} parameter in
+%the local config file for each host you need to.
+%There are a few other special cases you might have to deal with,
+%described below.
+%
+%If your Central Manager is on a machine with multiple interfaces,
+%instead of defining the \Macro{COLLECTOR\_HOST} or
+%\Macro{NEGOTIATOR\_HOST} parameters (which are usually both defined in
+%terms of \Macro{CONDOR\_HOST}), you should set the
+%\Macro{CM\_IP\_ADDR}.
+%
+%\Warn The default \Macro{HOSTALLOW\_ADMINISTRATOR} setting in the
+%config file references \MacroU{CONDOR\_HOST}, and the default
+%\Macro{HOSTALLOW\_NEGOTIATOR} setting references
+%\MacroU{NEGOTIATOR\_HOST}.
+%So you'll need to change both of these settings to reference
+%\MacroU{CM\_IP\_ADDR} instead.   
+%
+%If your Checkpoint Server is on a machine with multiple interfaces,
+%the only way to get things to work is if your different interfaces
+%have different hostnames associated with them, and you set
+%\Macro{CKPT\_SERVER\_HOST} to the hostname that corresponds with the
+%IP address you want to use.  
+%You will still need to specify \Macro{NETWORK\_INTERFACE} in the local
+%config file for your Checkpoint Server.
+%
+%XXX
+
 Beginning with Condor version 6.1.5, Condor can run on machines with
-multiple network interfaces.
-Basically, you tell each host with multiple interfaces which IP
-address you want the host to use for ingoing and outgoing Condor
-network communication.
-You do this by setting the \Macro{NETWORK\_INTERFACE} parameter in
-the local config file for each host you need to.
-There are a few other special cases you might have to deal with,
-described below.
+multiple network interfaces. Here are some common scenarios that you might
+encounter and how you go about solving them.
 
-If your Central Manager is on a machine with multiple interfaces,
-instead of defining the \Macro{COLLECTOR\_HOST} or
-\Macro{NEGOTIATOR\_HOST} parameters (which are usually both defined in
-terms of \Macro{CONDOR\_HOST}), you should set the
-\Macro{CM\_IP\_ADDR}.
+\subsubsection{Central Manager with Two or More NICs}
 
-\Warn The default \Macro{HOSTALLOW\_ADMINISTRATOR} setting in the
-config file references \MacroU{CONDOR\_HOST}, and the default
-\Macro{HOSTALLOW\_NEGOTIATOR} setting references
-\MacroU{NEGOTIATOR\_HOST}.
-So you'll need to change both of these settings to reference
-\MacroU{CM\_IP\_ADDR} instead.   
+Often users of Condor wish to set up ``compute farms'' where there is one
+machine with two network interface cards(one for the public internet,
+and one for the private net). It is convenient to set up the ``head''
+node as a central manager in most cases and so here are the instructions
+required to do so.
+
+Setting up the central manager on a machine with more than one NIC can
+be a little confusing because there are a few external variables
+that could make the process difficult. One of the biggest mistakes
+in getting this to work is that either one of the separate interfaces is
+not active, or the host/domain names associated with the interfaces are
+incorrectly configured. 
+
+Given that the interfaces are up and functioning, and they have good
+host/domain names associated with them here is how to configure Condor:
+
+In this example, \Bold{farm-server.farm.org} maps to the private interface.
+
+On your central manager's global(to the cluster) config file: \\
+\Macro{CONDOR\_HOST} = \Bold{farm-server.farm.org}
+
+On your central manager's local configuration file: \\
+\MacroNI{NETWORK\_INTERFACE} = ip address of \Bold{farm-server.farm.org} \\
+\MacroNI{NEGOTIATOR} = \MacroUNI{SBIN}/condor\_negotiator \\
+\MacroNI{COLLECTOR} = \MacroUNI{SBIN}/condor\_collector \\
+\MacroNI{DAEMON\_LIST} = \MacroNI{MASTER}, \MacroNI{COLLECTOR}, \MacroNI{NEGOTIATOR}, \MacroNI{SCHEDD}, \MacroNI{STARTD}
+
+If your central manager and farm machines are all NT, then you only have
+vanilla universe and it will work now.  However, if you have this setup
+for UNIX, then at this point, standard universe jobs should be able to
+function in the pool, but if you did not configure the \Macro{UID\_DOMAIN}
+macro to be homogeneous across the farm machines, the standard universe
+jobs will run as \Bold{nobody} on the farm machines.
+
+In order to get vanilla jobs and file server load balancing for standard
+universe jobs working(under unix), you need to do some more work both in
+the cluster you have put together and in Condor to make everything work.
+First, you need a file server(which could also be the central manager) to
+serve files to all of the farm machines. This could be NFS or AFS, it does
+not really matter to Condor. The mount point of the directories you wish
+your users to use must be the same across all of the farm machines. Now,
+configure \Macro{UID\_DOMAIN} and \Macro{FILESYSTEM\_DOMAIN} to be
+homogeneous across the farm machines and the central manager. Now, you
+will have to inform Condor that an NFS or AFS filesystem exists and that
+is done in this manner. In the global(to the farm) configuration file:
+
+\begin{verbatim}
+# If you have NFS
+USE_NFS = True
+# If you have AFS
+HAS_AFS = True
+USE_AFS = True
+# if you want both NFS and AFS, then enable both sets above
+\end{verbatim}
+
+Now, if you've set up your cluster so that it is possible for a machine
+name to never have a domain name(for example: you've placed a machine
+name but no fully qualified domain name in \File{/etc/hosts}), you must
+configure \Macro{DEFAULT\_DOMAIN\_NAME} to be the domain that you wish
+to be added on to the end of your hostname.
+
+\subsubsection{A Client Machine with Multiple Interfaces}
+
+If you have a client machine with two or more NICs, then there might be
+a specific network interface with which you desire a client machine to
+communicate with the rest of the Condor pool. In this case, in the local
+configuration file for that machine, place: \\ 
+\Macro{NETWORK\_INTERFACE} = ip address of interface desired \\
+
+\subsubsection{A Checkpoint Server on a Machine with Multiple NICs}
 
 If your Checkpoint Server is on a machine with multiple interfaces,
 the only way to get things to work is if your different interfaces
 have different hostnames associated with them, and you set
 \Macro{CKPT\_SERVER\_HOST} to the hostname that corresponds with the
-IP address you want to use.  
+IP address you want to use in the global configuration file for your pool.
 You will still need to specify \Macro{NETWORK\_INTERFACE} in the local
 config file for your Checkpoint Server.
+

@@ -1,0 +1,88 @@
+\begin{ManPage}{\label{man-condor-submit-dag}\Condor{submit\_dag}}{1}
+{Manage and queue jobs within a specified DAG for execution on remote machines}
+\Synopsis \SynProg{\Condor{submit\_dag}}
+\oOpt{-no\_submit}
+\oOpt{-verbose}
+\oOpt{-force}
+\oOptArg{-maxjobs}{NumberOfJobs}
+\oOptArg{-maxpre}{NumberOfPREscripts}
+\oOptArg{-maxpost}{NumberOfPOSTscripts}
+\oOpt{-nopostfail}
+\oOptArg{-log}{LogFileName}
+\oOptArg{-notification}{value}
+\Arg{DAGInputFile}
+
+\index{Condor commands!condor\_submit\_dag}
+\index{condor\_submit\_dag command}
+
+\Description
+
+\Condor{submit\_dag} is the program for submitting a DAG (directed
+acyclic graph) of jobs for execution under Condor.
+The program enforces the job dependencies defined
+in the \Arg{DAGInputFile}.
+The \Arg{DAGInputFile} contains commands
+to direct the submission of jobs implied by the nodes
+of a DAG to Condor.
+See the Condor User Manual, section~\ref{sec:DAGMan} for a complete
+description.
+
+\begin{Options}
+  \OptItem{\Opt{-no\_submit}}{Produce the Condor submit description file
+     for DAGMan, but do not submit DAGMan as a Condor job.}
+  \OptItem{\Opt{-verbose}}{Give verbose error messages.}
+  \OptItem{\Opt{-force}}{Require \Condor{submit\_dag} to overwrite
+     the files that it produces, if the files already exist.}
+  \OptItem{\OptArg{-maxjobs}{NumberOfJobs}}{Sets the maximum number of jobs
+     within the DAG that will be submitted to Condor at one time.
+     \Arg{NumberOfJobs} is a positive integer. If the option is
+     omitted, the default number of jobs is unlimited.}
+  \OptItem{\OptArg{-maxpre}{NumberOfPREscripts}}{Sets the maximum number of PRE
+     scripts within the DAG that may be running at one time.
+     \Arg{NumberOfPREScripts} is a positive integer. If this option is
+     omitted, the default number of PRE scripts is unlimited.}
+  \OptItem{\OptArg{-maxpost}{NumberOfPOSTscripts}}{Sets the maximum number of 
+     POST scripts within the DAG that may be running at one time.
+     \Arg{NumberOfPOSTScripts} is a positive integer. If this option is
+     omitted, the default number of POST scripts is unlimited.}
+  \OptItem{\Opt{-nopostfail}}{An option applied to all nodes within
+     the DAG that prevents the POST script within a node
+     from running in the case that the job within the node fails.
+     Without this option, POST scripts always run when jobs fail.}
+  \OptItem{\OptArg{-log}{LogFileName}}{Forces \Condor{submit\_dag}
+     to omit the check of Condor submit description files for nodes
+     within the DAG to verify that they all use the same log file.
+     The argument \Arg{LogFileName} is used as the single, common log file.}
+  \OptItem{\OptArg{-notification}{value}}{Sets the e-mail notification
+     for DAGMan itself. This information will be used within the Condor
+     submit description file for DAGMan. This file is produced by
+     \Condor{submit\_dag}. See \Opt{notification}
+     within the section of submit description file commands in the
+     \Condor{submit} manual page on page~\pageref{man-condor-submit}
+     for specification of \Arg{value}.
+     }
+  \end{Options}
+
+\SeeAlso
+Condor User Manual
+
+\ExitStatus
+
+\Condor{submit\_dag} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure.
+
+\end{ManPage}
+
+%%  Usage: condor_submit_dag [options] filename
+%%  where filename is the name of your DAG input file
+%%  and where [options] is one or more of:
+%%  -no_submit          (DAG is not submitted to Condor)
+%%  -verbose            (Verbose error messages from condor_submit_dag)
+%%  -force              (Overwrite files condor_submit_dag uses if they exist)
+%%  -maxjobs number     (Maximum number of jobs ever submitted at once)
+%%  -log filename       (Specify the log file shared by all jobs in the DAG)
+%%  -notification value (Determines how much email you get from Condor
+             %%  about the life of the condor_dagman job.  'value' must be
+             %%  one of "always", "never", "error", or "complete".
+             %%  See the condor_submit man page for details.)
+

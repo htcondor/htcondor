@@ -54,7 +54,7 @@ space reserved with the \Macro{RESERVED\_DISK} macro.
 \item[\AdAttr{EnteredCurrentActivity}] : Time at which the machine
 entered the current Activity (see \AdAttr{Activity} entry above).  On
 all platforms (including NT), this is measured in the number of
-seconds since the UNIX epoch (00:00:00 UTC, Jan 1, 1970).
+seconds since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 %
 \item[\AdAttr{FileSystemDomain}] : A ``domain'' name configured by the
 Condor administrator which describes a cluster of machines which all
@@ -107,11 +107,15 @@ vulture.cs.wisc.edu.
 machine.  For Condor \VersionNotice\ typically one of the following:
 	\begin{description}
 	\item[\AdStr{HPUX10}] : for HPUX 10.20
-	\item[\AdStr{IRIX6}]  : for IRIX 6.2, 6.3, or 6.4
-	\item[\AdStr{LINUX}]  : for LINUX 2.0.x or LINUX 2.2.x kernel systems
-	\item[\AdStr{OSF1}]  : for Digital Unix 4.x
+	\item[\AdStr{IRIX6}] : for IRIX 6.2, 6.3, or 6.4
+	\item[\AdStr{IRIX65}] : for IRIX 6.5
+	\item[\AdStr{LINUX}] : for LINUX 2.0.x or LINUX 2.2.x kernel systems
+	\item[\AdStr{OSF1}] : for Digital Unix 4.x
 	\item[\AdStr{SOLARIS251}]
 	\item[\AdStr{SOLARIS26}]
+	\item[\AdStr{SOLARIS27}]
+	\item[\AdStr{SOLARIS28}]
+	\item[\AdStr{WINNT40}] : for Windows NT 4.0
 	\end{description}
 %
 \item[\AdAttr{Requirements}] : A boolean, which when evaluated within the context
@@ -150,3 +154,61 @@ the same \File{passwd} file entries, and therefore all have the same logins.
 (swap space) expressed in kbytes.
 
 \end{description}
+
+In addition, there are a few attributes that are automatically
+inserted into the machine ClassAd whenever a resource is in the
+Claimed state:
+
+\begin{description}
+
+\item[\AdAttr{ClientMachine}] : The hostname of the machine that has
+claimed this resource
+
+\item[\AdAttr{CurrentRank}] : The value of the \Expr{RANK} expression
+when evaluated against the ClassAd of the ``current'' job using this
+machine.
+If the resource has been claimed but no job is running, the
+``current'' job ClassAd is the one that was used when claiming the
+resource.
+If a job is currently running, that job's ClassAd is the ``current''
+one.  
+If the resource is between jobs, the ClassAd of the last job that was
+run is used for \AdAttr{CurrentRank}.
+
+\item[\AdAttr{RemoteOwner}] : The name of the user who originally
+claimed this resource.
+
+\item[\AdAttr{RemoteUser}] : The name of the user who is currently
+using this resource.
+In general, this will always be the same as the \AdAttr{RemoteOwner},
+but in some cases, a resource can be claimed by one entity that hands
+off the resource to another entity which uses it.
+In that case, \AdAttr{RemoteUser} would hold the name of the entity
+currently using the resource, while \AdAttr{RemoteOwner} would hold
+the name of the entity that claimed the resource.
+
+\end{description}
+
+Finally, there are a few attributes that are only inserted into the
+machine ClassAd if a job is currently executing.  
+If the resource is claimed but no job are running, none of these
+attributes will be defined.
+
+\begin{description}
+
+\item[\AdAttr{JobId}] : The job's identifier (for example,
+\begin{verbatim}152.3\end{verbatim}), like you would see in \Condor{q}
+on the submitting machine.
+
+\item[\AdAttr{JobStart}] : The timestamp of when the job began
+executing. 
+
+\item[\AdAttr{LastPeriodicCheckpoint}] : If the job has performed a
+periodic checkpoint, this attribute will be defined and will hold the
+timestamp of when the last periodic checkpoint was begun.
+If the job has yet to perform a periodic checkpoint, or cannot
+checkpoint at all, the \AdAttr{LastPeriodicCheckpoint} attribute will
+not be defined.
+
+\end{description}
+
