@@ -530,15 +530,18 @@ bool Dag::ProcessLogEvents (bool recovery) {
               case ULOG_SUBMIT:
 			  {
 				SubmitEvent* submit_event = (SubmitEvent*) e;
-				char job_name[1024];
-				if( sscanf( submit_event->submitEventLogNotes,
-							"DAG Node: %1023s", job_name ) != 1 ) {
-					debug_printf( DEBUG_NORMAL, "WARNING: no DAG Node info "
-								  "found in userlog (submit event)\n" );
-				}
-				job = GetJob( job_name );
-				if( job ) {
-					job->_CondorID = condorID;
+				char job_name[1024] = "";
+				if( submit_event->submitEventLogNotes ) {
+					if( sscanf( submit_event->submitEventLogNotes,
+								"DAG Node: %1023s", job_name ) != 1 ) {
+						job_name[0] = '\0';
+					}
+					else {
+						job = GetJob( job_name );
+						if( job ) {
+							job->_CondorID = condorID;
+						}
+					}
 				}
 				PrintEvent( DEBUG_VERBOSE, eventName, job, condorID );
 				if( !job ) {
@@ -985,7 +988,7 @@ PrintEvent( debug_level_t level, const char* eventName, Job* job,
 					  job->GetJobName(), job->_CondorID._cluster,
 					  job->_CondorID._proc, job->_CondorID._subproc );
 	} else {
-		debug_printf( level, "Event: %s for Unknown Job (%d.%d.%d) -- "
+		debug_printf( level, "Event: %s for Unknown Job (%d.%d.%d): "
 					  "ignoring...\n", eventName, condorID._cluster,
 					  condorID._proc, condorID._subproc );
 	}
