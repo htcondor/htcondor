@@ -26,6 +26,15 @@
 #include "match_prefix.h"
 #include "sysapi.h"
 
+/* ok, here's the deal with these. For some reason, gcc on IRIX is just old 
+	enough to where it doesn't understand things like static const FALSE = 0.
+	So these two things used to be defined as the above, but it would fail with
+	a 'initializer element is not constant' during compile. I have defined
+	them as to make the preprocessor do the work instead of a const int.
+	-psilord 06/01/99 */
+#define TRUE 1
+#define FALSE 0
+
 static char *_FileName_ = __FILE__;
 
 #if defined(WIN32)
