@@ -252,7 +252,11 @@ set_user_id( USER_LOG *LP )
 	LP->saved_uid = geteuid();
 	LP->saved_gid = getegid();
 
+#if 0
 	if( LP->saved_uid != LP->user_uid || LP->saved_gid != LP->user_gid ) {
+#else
+	if( LP->saved_uid != LP->user_uid ) {
+#endif
 		switch_ids( LP->user_uid, LP->user_gid );
 	}
 }
@@ -280,11 +284,13 @@ switch_ids( uid_t new_euid, gid_t new_egid )
 		exit( errno );
 	}
 
+#if 0
 		/* Now set the egid as desired */
 	if( setegid(new_egid) < 0 ) {
 		fprintf( stderr, "Can't set egid to %d\n", new_egid );
 		exit( errno );
 	}
+#endif
 
 		/* Now set the euid as desired */
 	if( seteuid(new_euid) < 0 ) {
