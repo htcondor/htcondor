@@ -46,7 +46,7 @@
 #include "exit.h"
 #include "condor_uid.h"
 #include "basename.h"
-
+#include "get_mysubsystem.h"
 
 FILE *debug_lock(int debug_level);
 FILE *open_debug_file( int debug_level, char flags[] );
@@ -59,7 +59,7 @@ int _condor_mkargv( int* argc, char* argv[], char* line );
 
 extern	DLL_IMPORT_MAGIC int		errno;
 extern	int		DebugFlags;
-extern  char*	mySubSystem;
+
 
 FILE	*DebugFP = 0;
 
@@ -679,7 +679,7 @@ _condor_dprintf_exit( int error_code, const char* msg )
 
 	tmp = param( "LOG" );
 	if( tmp ) {
-		sprintf( buf, "%s/dprintf_failure.%s", tmp, mySubSystem );
+		sprintf( buf, "%s/dprintf_failure.%s", tmp, get_mySubSystem() );
 		fail_fp = fopen( buf, "w" );
 		if( fail_fp ) {
 			fprintf( fail_fp, "%s", header );
