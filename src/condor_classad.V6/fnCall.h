@@ -88,9 +88,15 @@ class FunctionCall : public ExprTree
 					Value&);
 
 			// sum, average and bounds (max and min)
+		/*
 		static bool sumAvgFrom(const char*,const ArgumentList&,EvalState&,
 					Value&);
 		static bool boundFrom(const char*,const ArgumentList&,EvalState&,
+					Value&);
+		*/
+		static bool sumAvg(const char*,const ArgumentList&,EvalState&,
+					Value&);
+		static bool minMax(const char*,const ArgumentList&,EvalState&,
 					Value&);
 
 			// time management (constructors)

@@ -56,6 +56,12 @@ FunctionCall( )
 		functionTable["member"		] =	(void*)testMember;
 		functionTable["ismember"	] =	(void*)testMember;
 
+		// Some list functions, useful for lists as sets
+		functionTable["sum"         ] = (void*)sumAvg;
+		functionTable["avg"         ] = (void*)sumAvg;
+		functionTable["min"         ] = (void*)minMax;
+		functionTable["max"         ] = (void*)minMax;
+
 			// basic apply-like functions
 		/*
 		functionTable["sumfrom"		sumAvgFrom );
@@ -543,6 +549,166 @@ boundFrom (char *fn, const ArgumentList &argList, EvalState &state, Value &val)
 	return true;
 }
 */
+
+bool FunctionCall::
+sumAvg(const char *name, const ArgumentList &argList, 
+	   EvalState &state, Value &val)
+{
+	Value             listElementValue, listVal;
+	const ExprTree    *listElement;
+	Value             numElements, result;
+	ExprList          *listToSum;
+	ExprListIterator  listIterator;
+	bool		      first;
+	int			      len;
+	bool              onlySum = (strcasecmp("sum", name) == 0 );
+
+	// we accept only one argument
+	if (argList.size() != 1) {
+		val.SetErrorValue();
+		return( true );
+	}
+	
+	// argument must Evaluate to a list
+	if (!argList[0]->Evaluate(state, listVal)) {
+		val.SetErrorValue();
+		return false;
+	} else if (listVal.IsUndefinedValue()) {
+		val.SetUndefinedValue();
+		return true;
+	} else if (!listVal.IsListValue(listToSum)) {
+		val.SetErrorValue();
+		return( true );
+	}
+
+	onlySum = (strcasecmp("sum", name) == 0 );
+	listIterator.Initialize(listToSum);
+	result.SetUndefinedValue();
+	len = 0;
+	first = true;
+
+	// Walk over each element in the list, and sum.
+	for (listElement = listIterator.CurrentExpr();
+		 listElement != NULL;
+		 listElement = listIterator.NextExpr()) {
+		if (listElement != NULL) {
+			len++;
+			// Make sure this element is a number.
+			if (!listElement->Evaluate(state, listElementValue)) {
+				val.SetErrorValue();
+				return false;
+			} else if (   !listElementValue.IsRealValue() 
+						  && !listElementValue.IsIntegerValue()) {
+				val.SetErrorValue();
+				return true;
+			}
+
+			// Either take the number if it's the first, 
+			// or add to the running sum.
+			if (first) {
+				result.CopyFrom(listElementValue);
+				first = false;
+			} else {
+				Operation::Operate(Operation::ADDITION_OP, result, 
+								   listElementValue, result);
+			}
+		}
+	}
+
+    // if the sum() function was called, we don't need to find the average
+    if (onlySum) {
+		val.CopyFrom(result);
+		return true;
+	}
+
+	if (len > 0) {
+		numElements.SetRealValue(len);
+		Operation::Operate(Operation::DIVISION_OP, result, 
+						   numElements, result);
+	} else {
+		val.SetUndefinedValue();
+	}
+
+	val.CopyFrom( result );
+	return true;
+}
+
+
+bool FunctionCall::
+minMax(const char *fn, const ArgumentList &argList, 
+	   EvalState &state, Value &val)
+{
+	Value		       listElementValue, listVal, cmp;
+	const ExprTree     *listElement;
+	Value              result;
+	ExprList           *listToBound;
+	ExprListIterator   listIterator;
+    bool		       first = true, b = false;
+	Operation::OpKind  comparisonOperator;
+
+	// we accept only one argument
+	if (argList.size() != 1) {
+		val.SetErrorValue();
+		return true;
+	}
+
+	// first argument must Evaluate to a list
+	if(!argList[0]->Evaluate(state, listVal)) {
+		val.SetErrorValue();
+		return false;
+	} else if (listVal.IsUndefinedValue()) {
+		val.SetUndefinedValue();
+		return true;
+	} else if (!listVal.IsListValue(listToBound)) {
+		val.SetErrorValue();
+		return true;
+	}
+
+	// fn is either "min..." or "max..."
+	if (tolower(fn[1]) == 'i') {
+		comparisonOperator = Operation::LESS_THAN_OP;
+	} else {
+		comparisonOperator = Operation::GREATER_THAN_OP;
+	}
+
+	listIterator.Initialize(listToBound);
+	result.SetUndefinedValue();
+
+	// Walk over the list, calculating the bound the whole way.
+	for (listElement = listIterator.CurrentExpr();
+		 listElement != NULL;
+		 listElement = listIterator.NextExpr()) {
+		if (listElement != NULL) {
+
+			// For this element of the list, make sure it is 
+			// acceptable.
+			if(!listElement->Evaluate(state, listElementValue)) {
+				val.SetErrorValue();
+				return false;
+			} else if (   !listElementValue.IsRealValue() 
+						  && !listElementValue.IsIntegerValue()) {
+				val.SetErrorValue();
+				return true;
+			}
+			
+			// If it's the first element, copy it to the bound,
+			// otherwise compare to decide what to do.
+			if (first) {
+				result.CopyFrom(listElementValue);
+				first = false;
+			} else {
+				Operation::Operate(comparisonOperator, listElementValue, 
+								   result, cmp);
+				if (cmp.IsBooleanValue(b) && b) {
+					result.CopyFrom(listElementValue);
+				}
+			}
+		}
+	}
+
+	val.CopyFrom(result);
+	return true;
+}
 
 bool FunctionCall::
 currentTime (const char *, const ArgumentList &argList, EvalState &, Value &val)
