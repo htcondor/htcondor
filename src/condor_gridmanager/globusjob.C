@@ -1766,6 +1766,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 			jmVersion = GRAM_V_UNKNOWN;
 			errorString = "";
 			ClearCallbacks();
+			useGridJobMonitor = true;
 			// HACK!
 			retryStdioSize = true;
 			if ( jobContact != NULL ) {
@@ -1930,6 +1931,15 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 				ClearCallbacks();
 			} else {
 				GetCallbacks();
+			}
+			if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
+				// The GRAM poll script returned FAILED, which the
+				// jobmanager considers a permanent, fatal error.
+				// Disable the grid monitor for this job submission so
+				// that we don't put the jobmanager right back to sleep
+				// after we restart it. We want it to do a poll itself
+				// and enter the FAILED state.
+				useGridJobMonitor = false;
 			}
 			globusError = 0;
 			if ( JmShouldSleep() == false ) {
