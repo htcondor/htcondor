@@ -530,7 +530,7 @@ bool ClassAdParser::
 parseRelationalExpression(ExprTree *&tree)
 {
     ExprTree 			*treeL = NULL, *treeR = NULL;
-	Operation			*newTree;
+	Operation			*newTree = NULL;
 	Lexer::TokenType	tt;
     Operation::OpKind 	op=Operation::__NO_OP__;
 
