@@ -49,7 +49,7 @@ CONDOR_ADMIN		= condor-admin@your.domain
 
 ##  Full path to a mail delivery program that understands that "-s"
 ##  means you want to specify a subject:
-MAIL			= /usr/ucb/mail
+MAIL			= /usr/bin/mail
 
 
 ######################################################################
@@ -106,11 +106,6 @@ RESERVED_SWAP		= 15
 ##  to spawn shadows for?
 MAX_JOBS_RUNNING	= 200
 
-##  Do you want the condor_schedd to renice the condor_shadow
-##  processes on your submit machines?  If so, uncomment this line and
-##  set it to the value (0-20) of how "nice" you want the shadows.
-#SHADOW_RENICE_INCREMENT	= 5
-
 ##  Condor needs to create a few lock files to syncronize access to
 ##  various log files.  Because of problems we've had with network
 ##  filesystems and file locking over the years, we HIGHLY recomend
@@ -143,13 +138,13 @@ MAX_SHADOW_LOG		= 64000
 SHADOW_DEBUG		=
 
 MAX_STARTD_LOG		= 64000
-STARTD_DEBUG		=
+STARTD_DEBUG		= D_COMMAND
 
-STARTER_DEBUG		= D_NODATE
 MAX_STARTER_LOG		= 64000
+STARTER_DEBUG		= D_NODATE
 
 MAX_MASTER_LOG		= 64000
-MASTER_DEBUG		=
+MASTER_DEBUG		= D_COMMAND
 ##  When the master starts up, should it truncate it's log file?
 TRUNC_MASTER_LOG_ON_OPEN        = False
 
@@ -355,6 +350,10 @@ UPDATE_INTERVAL         = 300
 ##  How long is the startd willing to stay in the "matched" state?
 MATCH_TIMEOUT		= 300
 
+##  How long is the startd willing to stay in the preempting/killing
+##  state before it just kills the starter directly?
+KILLING_TIMEOUT		= 30
+
 ##  When a machine unclaimed, when should it run benchmarks?
 ##  LastBenchmark is initialized to 0, so this expression says as soon
 ##  as we're unclaimed, run the benchmarks.  Thereafter, if we're
@@ -364,11 +363,7 @@ MATCH_TIMEOUT		= 300
 BenchmarkTimer = (CurrentTime - LastBenchmark)
 RunBenchmarks : (LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
 
-##  These entries allow the startd to monitor keyboard and mouse
-##  activity by checking the modification times on special files in
-##  /dev.  The specific files to use are platform-dependent.
-#KBD_DEVICE	= tty00
-#MOUSE_DEVICE	= ttya
+#KBD_DEVICE   # This line is used by customize, don't delete it.
 
 
 ##--------------------------------------------------------------------
@@ -392,6 +387,10 @@ ALIVE_INTERVAL		= 300
 ##  Estimated virtual memory size of each condor_shadow process. 
 ##  Specified in kilobytes.
 SHADOW_SIZE_ESTIMATE	= 1800
+
+##  The condor_schedd can renice the condor_shadow processes on your
+##  submit machines.  How how "nice" do you want the shadows? (0-20)
+SHADOW_RENICE_INCREMENT	= 10
 
 ######
 ## Queue management settings:
