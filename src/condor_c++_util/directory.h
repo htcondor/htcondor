@@ -75,7 +75,7 @@ public:
 	*/
 	StatInfo( const char* dirpath, const char* filename, time_t
 			  time_access,  time_t time_create, time_t time_modify,
-			  bool is_dir );  
+			  unsigned long fsize, bool is_dir );  
 #endif
 
 	/// Destructor<p>
@@ -135,6 +135,11 @@ public:
     */
 	time_t GetCreateTime() { return create_time; }
 
+	/** Get file size.
+		@return size of the file in bytes
+	*/
+	unsigned long GetFileSize() { return file_size; }
+
 	/** Determine if the file is the name of a subdirectory,
 		or just a file.
 		@return true if the file is a subdirectory name, false if not
@@ -148,6 +153,7 @@ private:
 	time_t access_time;
 	time_t modify_time;
 	time_t create_time;
+	unsigned long file_size;
 	char* dirpath;
 	char* filename;
 	char* fullpath;
@@ -196,8 +202,11 @@ public:
 	/** Fetch information on the next file in the subdirectory and
 		make it the 'current' file.
 		@return The filename of the next file, or NULL if there are 
-		no more files.  Do not free or delete this memory; the class handles all memory management. 
+		no more files.  The filename returned is just the basename; call
+		GetFullPath() to get the complete pathname.
+		Do not free or delete this memory; the class handles all memory management. 
 		<b>Warning:</b> This pointer is meaningless when the Directory object is deleted.
+		@see GetFullPath()
 	*/
 	const char* Next();
 
@@ -222,6 +231,21 @@ public:
 	    file, return 0. 
 		@return time in seconds since 00:00:00 UTC, January 1, 1970 */
 	time_t GetCreateTime() { return curr ? curr->GetCreateTime() : 0; };
+
+	/** Get size of current file.  If there is no current file, return 0.
+		@return size of file in bytes */
+	unsigned long GetFileSize() { return curr ? curr->GetFileSize() : 0; };
+
+	/** Get the size of all the files and all the files in all subdirectories,
+		starting with the directory specified by the constructor.
+		@return the size of bytes (if we receive an error trying to determine
+		the size of any file, we consider that file to have a size of zero). */
+	unsigned long Directory::GetDirectorySize();
+
+	/** Get full path name to the current file.  If there is no current file,
+		return NULL.
+		@return file pathname of the file */
+	const char* GetFullPath() { return curr ? curr->FullPath() : NULL; };
 
 	/** Determine if the current file is the name of a subdirectory,
 		or just a file.  If there is no current file, return false.
@@ -254,8 +278,6 @@ private:
 	StatInfo* curr;
 	bool want_priv_change;
 	priv_state desired_priv_state;
-	priv_state saved_priv;
-	inline void Directory::Set_Access_Priv();
 	bool do_remove( const char *path, bool is_curr );
 #ifdef WIN32
 	long dirp;

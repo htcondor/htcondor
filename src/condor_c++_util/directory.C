@@ -34,10 +34,14 @@
 // the work.  Good luck!
 #define DEBUG_DIRECTORY_CLASS 0
 
-//  --- A macro to reset our priv state and return
+//  --- Macros to set and reset our priv state and/or return
+#define Set_Access_Priv()	\
+	priv_state saved_priv;	\
+	if ( want_priv_change ) \
+		saved_priv = _set_priv(desired_priv_state,__FILE__,__LINE__,1);
 #define return_and_resetpriv(i) \
 	if ( want_priv_change ) 		\
-		set_priv(saved_priv);		\
+		_set_priv(saved_priv,__FILE__,__LINE__,1);		\
 	return i;
 // -----------------------------------------------
 
@@ -80,7 +84,7 @@ StatInfo::StatInfo( const char *dirpath, const char *filename )
 #ifdef WIN32
 StatInfo::StatInfo( const char* dirpath, const char* filename, 
 					time_t time_access, time_t time_create, 
-					time_t time_modify, bool is_dir )
+					time_t time_modify, unsigned long fsize, bool is_dir )
 {
 	this->dirpath = strnewp( dirpath );
 	this->filename = strnewp( filename );
@@ -90,6 +94,7 @@ StatInfo::StatInfo( const char* dirpath, const char* filename,
 	access_time = time_access;
 	modify_time = time_modify;
 	create_time = time_create;
+	file_size = fsize;
 	isdirectory = is_dir;
 }
 #endif /* WIN32 */
@@ -136,6 +141,7 @@ StatInfo::do_stat( const char *path )
 		access_time = statbuf.st_atime;
 		create_time = statbuf.st_ctime;
 		modify_time = statbuf.st_mtime;
+		file_size = statbuf.st_size;
 #ifndef WIN32
 		isdirectory = S_ISDIR(statbuf.st_mode);
 #else
@@ -250,11 +256,11 @@ Directory::Directory( const char *name, priv_state priv )
 	curr_dir = strnewp(name);
 	ASSERT(curr_dir);
 
+	desired_priv_state = priv;
 	if ( priv == PRIV_UNKNOWN ) {
 		want_priv_change = false;
 	} else {
 		want_priv_change = true;
-		desired_priv_state = priv;
 	}
 }
 
@@ -276,12 +282,27 @@ Directory::~Directory()
 #endif
 }
 
-inline void
-Directory::Set_Access_Priv()
+unsigned long
+Directory::GetDirectorySize()
 {
-	if ( want_priv_change ) {
-		saved_priv = set_priv(desired_priv_state);
+	const char* thefile = NULL;
+	unsigned long dir_size = 0;
+
+	Set_Access_Priv();
+
+	Rewind();
+
+	while ( (thefile=Next()) ) {
+		if ( IsDirectory() ) {
+			// recursively traverse down directory tree
+			Directory subdir( GetFullPath(), desired_priv_state );
+			dir_size += subdir.GetDirectorySize();
+		} else {
+			dir_size += GetFileSize();
+		}
 	}
+
+	return_and_resetpriv(dir_size);
 }
 
 bool
@@ -511,6 +532,7 @@ Directory::Next()
 							 filedata.time_access,
 							 filedata.time_create,
 							 filedata.time_write, 
+							 filedata.size,
 							 ((filedata.attrib & _A_SUBDIR) != 0) ); 
 	} else {
 		curr = NULL;
