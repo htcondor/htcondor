@@ -81,8 +81,8 @@ char *_FileName_ = __FILE__;
 
 #define HISTORY_LENGTH 32
 
-static uid_t CondorUid, UserUid;
-static gid_t CondorGid, UserGid;
+static uid_t CondorUid, UserUid, MyUid, RealCondorUid;
+static gid_t CondorGid, UserGid, MyGid, RealCondorGid;
 static int CondorIdsInited = FALSE;
 static int UserIdsInited = FALSE;
 static int SwitchIds = TRUE;
@@ -125,8 +125,6 @@ init_condor_ids()
 {
 	struct passwd *pwd;
 	int scm;
-	uid_t myuid;
-	gid_t mygid;
 	char *buf;
 
         /*
@@ -136,12 +134,22 @@ init_condor_ids()
         */
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
 
-	myuid = getuid();
-	mygid = getgid();
+	MyUid = getuid();
+	MyGid = getgid();
 	
+
+	pwd=getpwnam("condor");
+	if( pwd ) {
+		RealCondorUid = pwd->pw_uid;
+		RealCondorGid = pwd->pw_gid;
+	} else {
+		RealCondorUid = -1;
+		RealCondorGid = -1;
+	}
+
 	/* If we're root, set the Condor Uid and Gid to the value
 	   specified in the "CONDOR_IDS" environment variable */
-	if( myuid == ROOT ) {
+	if( MyUid == ROOT ) {
 		if( (buf = getenv( "CONDOR_IDS" )) ) {	
 			if( sscanf(buf, "%d.%d", &CondorUid, &CondorGid) != 2 ) {
 				fprintf(stderr, "ERROR: badly formed value in CONDOR_IDS ");
@@ -153,10 +161,9 @@ init_condor_ids()
 			}
 		} else {
 			/* No CONDOR_IDS set, use condor.condor */
-			pwd=getpwnam("condor");
-			if( pwd ) {
-				CondorUid = pwd->pw_uid;
-				CondorGid = pwd->pw_gid;
+			if( RealCondorUid > 0 ) {
+				CondorUid = RealCondorUid;
+				CondorGid = RealCondorGid;
 			} else {
 				fprintf(stderr,
 						"Can't find \"condor\" in the password file and\n"
@@ -167,8 +174,8 @@ init_condor_ids()
 		dprintf(D_PRIV, "running as root; privilege switching in effect\n");
 	} else {
 		/* Non-root.  Set the CondorUid/Gid to our current uid/gid */
-		CondorUid = myuid;
-		CondorGid = mygid;
+		CondorUid = MyUid;
+		CondorGid = MyGid;
 		/* no need to try to switch ids when running as non-root */
 		dprintf(D_PRIV, "running as non-root; no privilege switching\n");
 		SwitchIds = FALSE;
@@ -330,7 +337,55 @@ get_user_uid()
 gid_t
 get_user_gid()
 {
-	return UserUid;
+	if( !CondorIdsInited ) {
+		init_condor_ids();
+	}
+
+	return UserGid;
+}
+
+
+uid_t
+get_my_uid()
+{
+	if( !CondorIdsInited ) {
+		init_condor_ids();
+	}
+
+	return MyUid;
+}
+
+
+gid_t
+get_my_gid()
+{
+	if( !CondorIdsInited ) {
+		init_condor_ids();
+	}
+
+	return MyGid;
+}
+
+
+uid_t
+get_real_condor_uid()
+{
+	if( !CondorIdsInited ) {
+		init_condor_ids();
+	}
+
+	return RealCondorUid;
+}
+
+
+gid_t
+get_real_condor_gid()
+{
+	if( !CondorIdsInited ) {
+		init_condor_ids();
+	}
+
+	return RealCondorGid;
 }
 
 
@@ -432,4 +487,4 @@ set_condor_rgid()
 	return SET_REAL_GID(CondorGid);
 }
 
-#endif
+#endif  /* #if defined(WIN32) */
