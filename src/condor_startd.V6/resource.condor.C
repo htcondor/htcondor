@@ -737,6 +737,7 @@ calc_idle_time(resource_info_t* rip, int & user_idle, int & console_idle)
 		++kbdd_counter != polls_per_update_kbdd) {
 		user_idle = oldval;
 		console_idle = console_oldval;
+		kbdd_counter = 0;
 		return;
 	}
 
