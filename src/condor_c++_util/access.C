@@ -53,8 +53,9 @@ void attempt_access_handler(Service *, int i, Stream *s)
 	int result;
 	priv_state priv;
 	int access_result;
-	int t = TRUE;
-	int f = FALSE;
+	int open_result;
+	int errno_result = 0;
+	int answer = FALSE;
 
 	s->decode();
 
@@ -63,77 +64,72 @@ void attempt_access_handler(Service *, int i, Stream *s)
 	if( result == FALSE )
 	{
 		dprintf(D_ALWAYS, "ATTEMPT_ACCESS: code_access_request failed.\n");
-		if (filename) free(filename);
+		if( filename ) {
+			free( filename );
+		}
 		return;
 	}
 
-	dprintf(D_FULLDEBUG, "Switching to user uid: %d gid: %d.\n", uid, gid);
+	dprintf( D_FULLDEBUG, "ATTEMPT_ACCESS: Switching to user uid: "
+			 "%d gid: %d.\n", uid, gid );
 
 	set_user_ids(uid, gid);
 	priv = set_user_priv();
 
-	dprintf(D_FULLDEBUG, "After switch uid: %d gid: %d.\n", 
-		get_my_uid(), 	get_my_gid() );
-
-	// First check to make sure it exists.
-	access_result = access(filename, F_OK);
-	if( access_result == 0 )
-	{
-		switch(mode)
-		{
-		  case ACCESS_READ:
-			dprintf(D_FULLDEBUG, "Checking file %s for read permission.\n",
-					filename);
-			access_result = access(filename, R_OK);
-			break;
-		  case ACCESS_WRITE:
-			dprintf(D_FULLDEBUG, "Checking file %s for write permission.\n",
-					filename);
-			access_result = access(filename, W_OK);
-			break;
-		  default:
-			dprintf(D_ALWAYS, "ATTEMPT_ACCESS: Unknown access mode.\n");
-			if (filename) free(filename);
-			return;
+	switch(mode) {
+	case ACCESS_READ:
+		dprintf( D_FULLDEBUG, "Checking file %s for read permission.\n", 
+				 filename );
+		open_result = open( filename, O_RDONLY, 0666 );
+		break;
+	case ACCESS_WRITE:
+		dprintf( D_FULLDEBUG, "Checking file %s for write permission.\n",
+				 filename );
+		open_result = open( filename, O_WRONLY, 0666 );
+		break;
+	default:
+		dprintf( D_ALWAYS, "ATTEMPT_ACCESS: Unknown access mode.\n" );
+		if( filename ) {
+			free( filename );
 		}
+		return;
 	}
-	else
-	{
-		dprintf(D_FULLDEBUG, 
-				"File %s doesn't exist, not checking permissions.\n", 
-				filename);
+	errno_result = errno;
+
+	if( open_result < 0 ) {
+		if( errno_result == ENOENT ) {
+			dprintf( D_FULLDEBUG, "ATTEMPT_ACCESS: "
+					 "File %s doesn't exist.\n", filename );
+		} else {
+			dprintf( D_FULLDEBUG, "ATTEMPT_ACCESS: open() failed, "
+					 "errno: %d\n", errno_result );
+		}
+		answer = FALSE;
+	} else {
+		close( open_result );
+		answer = TRUE;
 	}
-	if (filename) free(filename);
-	
+
+	if( filename ) {
+		free( filename );
+	}
+
 	dprintf(D_FULLDEBUG, "Switching back to old priv state.\n");
 	set_priv(priv);
 
 	s->encode();
-
-	if( access_result == 0 )
-	{
-		result = s->code(t);
-	}
-	else
-	{
-		result = s->code(f);
-	}
-	
-	if( !result ) {
-		dprintf(D_FULLDEBUG,
-				"ATTEMPT_ACCESS: Failed to send result.\n");
+	if( ! s->code(answer) ) {
+		dprintf( D_ALWAYS,
+				 "ATTEMPT_ACCESS: Failed to send result.\n" );
 		return;
 	}
-
-	result = s->eom();		
 	
-	if( !result ) {
-		dprintf(D_FULLDEBUG,
-				"ATTEMPT_ACCESS: Failed to send end of message.\n");
+	if( ! s->eom() ) {
+		dprintf( D_ALWAYS,
+				 "ATTEMPT_ACCESS: Failed to send end of message.\n");
 	}
-
   	return;
-}
+}	
 
 int attempt_access(char *filename, int mode, int uid, int gid, 
 	char *scheddAddress )
