@@ -1,8 +1,12 @@
 NAME = condor_submit
 all_target($(NAME))
 
-CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+#if IS_CLIPPED
+CLIPPED = -DCLIPPED
+#endif
+
+CFLAGS = $(STD_C_FLAGS) $(CLIPPED)
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CLIPPED)
 LIB = $(STD_LIBS)
 
 OBJ = submit.o
