@@ -21,6 +21,7 @@
 #include "proc.h"
 #include "internet.h"
 #include "expr.h"
+#include "condor_fix_string.h"
 
 /* 
 **  returns the internet address of this host 
@@ -122,4 +123,58 @@ int				proc;
 }
 
 
+
+/* Convert a string of the form "<xx.xx.xx.xx:pppp>" to a sockaddr_in  JCP */
+
+int
+string_to_sin(char *string, struct sockaddr_in *sin)
+{
+	int             i;
+	char    *cur_byte;
+	char    *end_string;
+
+	string++;					/* skip the leading '<' */
+	cur_byte = (char *) &(sin->sin_addr);
+	for(end_string = string; end_string != 0; ) {
+		end_string = strchr(string, '.');
+		if (end_string == 0) {
+			end_string = strchr(string, ':');
+		}
+		if (end_string) {
+			*end_string = '\0';
+			*cur_byte = atoi(string);
+			cur_byte++;
+			string = end_string + 1;
+			*end_string = '.';
+		}
+	}
+	
+	string[strlen(string) - 1] = '\0'; /* Chop off the trailing '>' */
+	sin->sin_port = htons(atoi(string));
+}
+
+
+char *
+sin_to_string(struct sockaddr_in *sin)
+{
+	int             i;
+	static  char    buf[24];
+	char    tmp_buf[10];
+	char    *cur_byte;
+	unsigned char   this_byte;
+
+	buf[0] = '<';
+	buf[1] = '\0';
+	cur_byte = (char *) &(sin->sin_addr);
+	for (i = 0; i < sizeof(sin->sin_addr); i++) {
+		this_byte = (unsigned char) *cur_byte;
+		sprintf(tmp_buf, "%u.", this_byte);
+		cur_byte++;
+		strcat(buf, tmp_buf);
+	}
+	buf[strlen(buf) - 1] = ':';
+	sprintf(tmp_buf, "%d>", ntohs(sin->sin_port));
+	strcat(buf, tmp_buf);
+	return buf;
+}
 
