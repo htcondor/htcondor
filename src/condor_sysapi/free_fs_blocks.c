@@ -280,6 +280,8 @@ const char *filename;
 		   filesystem block size", not f_bsize, the "preferred file
 		   system block size".  3/25/98  Derek Wright */
 	kbytes_per_block = ( (unsigned long)statfsbuf.f_frsize / (float)1024 );
+#elif defined(OSF1)
+	kbytes_per_block = ( (unsigned long)statfsbuf.f_fsize / (float)512 );
 #else
 	kbytes_per_block = ( (unsigned long)statfsbuf.f_bsize / (float)1024 );
 #endif
