@@ -85,11 +85,14 @@ extern "C" BOOLEAN	xdr_proc_id(XDR *, PROC_ID *);
 extern "C" int gethostname(char*, int);
 #endif
 
+char				hostname[512];
+
+
 void
 usage()
 {
 	fprintf( stderr,
-		"Usage: %s -a | { cluster | cluster.proc | user } ... \n",
+		"Usage: %s [-r host] -a | { cluster | cluster.proc | user } ... \n",
 		MyName
 	);
 	exit( 1 );
@@ -111,7 +114,6 @@ main( int argc, char *argv[] )
 	int					nArgs = 0;				// number of args to be deleted
 	int					i;
 	Qmgr_connection*	q;
-	char				hostname[200];
 #endif
 
 	MyName = argv[0];
@@ -125,6 +127,7 @@ main( int argc, char *argv[] )
 		usage();
 	}
 
+	hostname[0] = '\0';
 	for( argv++; arg = *argv; argv++ ) {
 		if( arg[0] == '-' && arg[1] == 'a' ) {
 			All = TRUE;
@@ -137,6 +140,11 @@ main( int argc, char *argv[] )
 				// out the job from the queue without any checks except for
 				// permission.  -Todd 10/95
 				Force = TRUE;
+			} else 
+			if ( arg[0] == '-' && arg[1] == 'r' ) {
+				// use the given name as the host name to connect to
+				argv++;
+				strcpy (hostname, *argv);	
 			} else {
 			#if DBM_QUEUE
 				if( !PFilter->Append(arg) ) {
@@ -173,13 +181,17 @@ main( int argc, char *argv[] )
 	ProcObj::delete_list( proc_list );
 	delete PFilter;
 #else
-	if(gethostname(hostname, 200) < 0)
+	if (hostname[0] == '\0')
 	{
-		EXCEPT("gethostname failed, errno = %d", errno);
+		// hostname was not set at command line; obtain from system
+		if(gethostname(hostname, 200) < 0)
+		{
+			EXCEPT("gethostname failed, errno = %d", errno);
+		}
 	}
 	if((q = ConnectQ(hostname)) == 0)
 	{
-		EXCEPT("Failed to connect to qmgr");
+		EXCEPT("Failed to connect to qmgr on host %s", hostname);
 	}
 	for(i = 0; i < nArgs; i++)
 	{
@@ -217,14 +229,17 @@ notify_schedd( int cluster, int proc )
 	int			sock = -1;
 	int			cmd;
 	XDR			xdr, *xdrs = NULL;
-	char		hostname[512];
 	PROC_ID		job_id;
 
 	job_id.cluster = cluster;
 	job_id.proc = proc;
 
-	if( gethostname(hostname,sizeof(hostname)) < 0 ) {
-		EXCEPT( "gethostname failed" );
+	if (hostname[0] == '\0')
+	{
+		// if the hostname was not set at command line, obtain from system
+		if( gethostname(hostname,sizeof(hostname)) < 0 ) {
+			EXCEPT( "gethostname failed" );
+		}
 	}
 
 		/* Connect to the schedd */
