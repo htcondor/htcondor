@@ -64,12 +64,15 @@ The expression
 will let \Condor{findhost} know that it can claim a machine even
 if Condor would not normally preempt a job running on that machine.
 
+\ExitStatus
+
 The exit status of \Condor{findhost} is zero on success.
 If not able to identify as many machines as requested,
 it returns one more than the number of machines identified.
 For example, if 8 machines are requested, and \Condor{findhost}
 only locates 6, the exit status will be 7.
-If not able to locate any machines, \Condor{findhost} will return the value 1.
+If not able to locate any machines, or an error is encountered,
+\Condor{findhost} will return the value 1.
 
 \end{ManPage}
 
