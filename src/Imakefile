@@ -24,7 +24,7 @@
 #define DAGManFiles bin/condor_dagman bin/condor_submit_dag \
   bin/condor_submit
 
-#define CkptServerFiles sbin/condor_ckpt_server sbin/condor_cleanckpts \
+#define CkptServerFiles sbin/condor_ckpt_server sbin/condor_clean_checkpoints \
   etc/examples/condor_config.local.ckpt.server
 
 #define EventdFiles sbin/condor_eventd etc/examples/condor_config.local.eventd
