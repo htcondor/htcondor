@@ -70,6 +70,7 @@
 #define	PVM_ARCH			SUN4SOL2
 #define	HAS_PURIFY			YES
 
+#defined WANT_GT3GAHP			YES
 
 /*
     In the test suite, we only need to make sure we've got the network 

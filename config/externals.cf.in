@@ -11,6 +11,7 @@ EXT_GAHP_VERSION = @ext_gahp_version@
 EXT_ZLIB_VERSION = @ext_zlib_version@
 EXT_PVM_VERSION = @ext_pvm_version@
 EXT_MAN_VERSION = man-current
+EXT_GT3GAHP_VERSION = @ext_gt3gahp_version@
 
 #define WANT_EXT_GLIBC @want_ext_glibc@
 #if WANT_EXT_GLIBC
@@ -63,3 +64,5 @@ ZLIB_INC = $(ZLIB_DIR)/include
 
 
 PVM_DIR = $(EXT_INSTALL)/$(EXT_PVM_VERSION)
+
+GT3GAHP_DIR = $(EXT_INSTALL)/$(EXT_GT3GAHP_VERSION)

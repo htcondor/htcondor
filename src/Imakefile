@@ -333,6 +333,11 @@ ext_target(EXT_PVM_VERSION,$(NULL))
 ext_nodep_target(EXT_MAN_VERSION,$(NULL))
 
 
+# if WANT_GT3GAHP
+ext_target(EXT_GT3GAHP_VERSION,$(NULL))
+#endif
+
+
 clean::
 	rm -rf $(PURE_DIR)
 
