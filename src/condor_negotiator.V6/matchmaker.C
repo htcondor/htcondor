@@ -726,7 +726,7 @@ obtainAdsFromCollector (
 	QueryResult result;
 	ClassAd *ad, *oldAd;
 	MapEntry *oldAdEntry;
-	int newSequence, oldSequence, MaxMatches, reevaluate_ad;
+	int newSequence, oldSequence, reevaluate_ad;
 	char    remoteHost[MAXHOSTNAMELEN];
 
 	dprintf(D_ALWAYS, "  Getting all public ads ...\n");
@@ -1091,7 +1091,8 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 		// 2g.  Delete ad from list so that it will not be considered again in 
 		//		this negotiation cycle
 		int reevaluate_ad = false;
-		if(offer->LookupBool(ATTR_WANT_AD_REVAULATE, reevaluate_ad)) {
+		offer->LookupBool(ATTR_WANT_AD_REVAULATE, reevaluate_ad);
+		if( reevaluate_ad ) {
 			reeval(offer);
 		} else  {
 			startdAds.Delete (offer);
@@ -1594,7 +1595,6 @@ reeval(ClassAd *ad)
 {
 	int cur_matches;
 	MapEntry *oldAdEntry;
-	ClassAd *oldAd;
 	char    remoteHost[MAXHOSTNAMELEN];	
 	char    buffer[255];
 	
