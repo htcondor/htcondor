@@ -1143,12 +1143,15 @@ SetTransferFiles()
 		if ( files_specified ) {
 			sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"ONEXIT");
 		} else {
-#ifdef WIN32
-			sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"ONEXIT");
-#else
-			sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"NEVER");
-			never_transfer = true;
-#endif
+			// MPI currently relies on not transfering the files, and staying
+			// in the submit directory. Otherwise, we should copy the
+			// executable over. 
+			if(JobUniverse == MPI) { 
+				sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"NEVER");
+				never_transfer = true;
+			} else {
+				sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_FILES,"ONEXIT");
+			}
 		}
 	}
 
