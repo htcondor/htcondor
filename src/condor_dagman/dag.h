@@ -74,11 +74,14 @@ class Dag {
 		       one time
         @param maxPostScripts the maximum number of POST scripts to spawn at
 		       one time
+		@param allowExtraRuns whether to tolerate the Condor "submit once,
+			   run twice" bug
+		@param dapLogName the name of the Stork (DaP) log file
     */
 
     Dag( StringList &condorLogFiles, const int maxJobsSubmitted,
 		 const int maxPreScripts, const int maxPostScripts, 
-		 const char *dapLogName );
+		 bool allowExtraRuns, const char *dapLogName );
 
     ///
     ~Dag();
@@ -136,16 +139,25 @@ class Dag {
 	bool ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
 			bool recovery, bool doEventChecks, bool &done);
 
+	/** Print a submit event (we try to match it up with the right DAG
+			node).
+	    @param The event.
+		@param The name of the event.
+		@param The job corresponding to this event (NOTE: may be changed
+				by the function!).
+		@param	The job ID of the event.
+		@param Whether we're in recovery mode.
+	*/
+	void PrintSubmitEvent(const ULogEvent *event, const char *eventName,
+			Job *&job, const CondorID &condorID, bool recovery);
 
 	/** Process an abort or executable error event.
 	    @param The event.
 		@param The job corresponding to this event.
 		@param Whether we're in recovery mode.
-		@param Whether this event should be checked for consistency
-			(set by this function).
 	*/
 	void ProcessAbortEvent(const ULogEvent *event, Job *job,
-			bool recovery, bool &checkThisEvent);
+			bool recovery);
 
 	/** Process a terminated event.
 	    @param The event.
@@ -253,6 +265,14 @@ class Dag {
         kills Dagman.
     */
     void RemoveRunningJobs ( const Dagman & ) const;
+
+    /** Remove all pre- and post-scripts that are currently running.
+	All currently running scripts will be killed via daemoncore.
+	This function is called when the Dagman Condor job itself is
+	removed by the user via condor_rm.  This function <b>is not</b>
+	called when the schedd kills Dagman.
+    */
+    void RemoveRunningScripts ( const Dagman & ) const;
 
     /** Creates a DAG file based on the DAG in memory, except all
         completed jobs are premarked as DONE.

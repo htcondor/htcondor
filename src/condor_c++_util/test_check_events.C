@@ -37,6 +37,10 @@ enum Status { STATUS_OK, STATUS_CANCEL, STATUS_ERROR };
 Status
 CheckArgs(int argc, char **argv);
 
+void
+CheckAnEvent(CheckEvents &ce, const ULogEvent *event,
+		bool expectedResult, bool expectedGoodEvent, bool &result);
+
 int main(int argc, char **argv)
 {
 		// Set up the dprintf stuff...
@@ -53,6 +57,11 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	//-------------------------------------------------------------------------
+
+	printf("\n### Testing various error conditions (multiple "
+			"submits, etc.)\n\n");
+
 	CheckEvents		ce1;
 	MyString		errorMsg;
 
@@ -63,21 +72,11 @@ int main(int argc, char **argv)
 	se1.subproc = 0;
 
 	printf("Testing submit... ");
-	if ( ce1.CheckAnEvent(&se1, errorMsg) ) {
-		printf("...succeeded\n");
-	} else {
-		printf("...failed (%s)\n", errorMsg.Value());
-		result = false;
-	}
+	CheckAnEvent(ce1, &se1, true, true, result);
 
 		// Re-do the same submit event -- this should generate an error.
 	printf("Testing submit... ");
-	if ( ce1.CheckAnEvent(&se1, errorMsg) ) {
-		printf("...should have gotten an error (test failed)\n");
-		result = false;
-	} else {
-		printf("...got expected error (%s)\n", errorMsg.Value());
-	}
+	CheckAnEvent(ce1, &se1, false, false, result);
 
 		// Test a submit event for a new job.
 	SubmitEvent		se2;
@@ -86,12 +85,7 @@ int main(int argc, char **argv)
 	se2.subproc = 1;
 
 	printf("Testing submit... ");
-	if ( ce1.CheckAnEvent(&se2, errorMsg) ) {
-		printf("...succeeded\n");
-	} else {
-		printf("...failed (%s)\n", errorMsg.Value());
-		result = false;
-	}
+	CheckAnEvent(ce1, &se2, true, true, result);
 
 		// Test a terminate event.  This should fail because we have
 		// two submits for this job.
@@ -101,12 +95,7 @@ int main(int argc, char **argv)
 	te1.subproc = 0;
 
 	printf("Testing terminate... ");
-	if ( ce1.CheckAnEvent(&te1, errorMsg) ) {
-		printf("...should have gotten an error (test failed)\n");
-		result = false;
-	} else {
-		printf("...got expected error (%s)\n", errorMsg.Value());
-	}
+	CheckAnEvent(ce1, &te1, false, false, result);
 
 		// Test a job aborted event.
 	JobAbortedEvent	ae2;
@@ -115,12 +104,7 @@ int main(int argc, char **argv)
 	ae2.subproc = 1;
 
 	printf("Testing job aborted... ");
-	if ( ce1.CheckAnEvent(&ae2, errorMsg) ) {
-		printf("...succeeded\n");
-	} else {
-		printf("...failed (%s)\n", errorMsg.Value());
-		result = false;
-	}
+	CheckAnEvent(ce1, &ae2, true, true, result);
 
 		// Test an execute event.  This should fail because we already
 		// got an aborted event for this job.
@@ -128,26 +112,18 @@ int main(int argc, char **argv)
 	exec.cluster = 1234;
 	exec.proc = 0;
 	exec.subproc = 1;
+
 	printf("Testing execute... ");
-	if ( ce1.CheckAnEvent(&exec, errorMsg) ) {
-		printf("...should have gotten an error (test failed)\n");
-		result = false;
-	} else {
-		printf("...got expected error (%s)\n", errorMsg.Value());
-	}
+	CheckAnEvent(ce1, &exec, false, false, result);
 
 		// Test an execute event.  This should fail because we haven't
 		// gotten a submit event for this job.
 	exec.cluster = 1234;
 	exec.proc = 5;
 	exec.subproc = 1;
+
 	printf("Testing execute... ");
-	if ( ce1.CheckAnEvent(&exec, errorMsg) ) {
-		printf("...should have gotten an error (test failed)\n");
-		result = false;
-	} else {
-		printf("...got expected error (%s)\n", errorMsg.Value());
-	}
+	CheckAnEvent(ce1, &exec, false, false, result);
 
 		// Test a terminate event.  This should fail because we already
 		// got an aborted event for this job.
@@ -157,12 +133,7 @@ int main(int argc, char **argv)
 	te2.subproc = 1;
 
 	printf("Testing terminate... ");
-	if ( ce1.CheckAnEvent(&te2, errorMsg) ) {
-		printf("...should have gotten an error (test failed)\n");
-		result = false;
-	} else {
-		printf("...got expected error (%s)\n", errorMsg.Value());
-	}
+	CheckAnEvent(ce1, &te2, false, false, result);
 
 		// Test a job aborted event.  This should fail because we
 		// don't have a submit event for this job yet.
@@ -172,12 +143,7 @@ int main(int argc, char **argv)
 	ae3.subproc = 0;
 
 	printf("Testing job aborted... ");
-	if ( ce1.CheckAnEvent(&ae3, errorMsg) ) {
-		printf("...should have gotten an error (test failed)\n");
-		result = false;
-	} else {
-		printf("...got expected error (%s)\n", errorMsg.Value());
-	}
+	CheckAnEvent(ce1, &ae3, false, false, result);
 
 		// Test a submit event for the job that just aborted.  This
 		// should fail because we got the abort before the submit.
@@ -187,16 +153,11 @@ int main(int argc, char **argv)
 	se3.subproc = 0;
 
 	printf("Testing submit... ");
-	if ( ce1.CheckAnEvent(&se3, errorMsg) ) {
-		printf("...should have gotten an error (test failed)\n");
-		result = false;
-	} else {
-		printf("...got expected error (%s)\n", errorMsg.Value());
-	}
+	CheckAnEvent(ce1, &se3, false, false, result);
 
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce1.CheckAllJobs(errorMsg) ) {
-		printf("...should have gotten an error (test failed)\n");
+		printf("...should have gotten an error (test FAILED)\n");
 		result = false;
 	} else {
 		printf("...got expected error (%s)\n", errorMsg.Value());
@@ -204,38 +165,25 @@ int main(int argc, char **argv)
 
 	//-------------------------------------------------------------------------
 
+	printf("\n### Testing good events\n\n");
+
 		// Make a new CheckEvents object where we only insert "correct"
 		// events...
 	CheckEvents		ce2;
-	printf("\nTesting submit... ");
-	if ( ce2.CheckAnEvent(&se1, errorMsg) ) {
-		printf("...succeeded\n");
-	} else {
-		printf("...failed (%s)\n", errorMsg.Value());
-		result = false;
-	}
+	printf("Testing submit... ");
+	CheckAnEvent(ce2, &se1, true, true, result);
 
 	printf("Testing submit... ");
-	if ( ce2.CheckAnEvent(&se2, errorMsg) ) {
-		printf("...succeeded\n");
-	} else {
-		printf("...failed (%s)\n", errorMsg.Value());
-		result = false;
-	}
+	CheckAnEvent(ce2, &se2, true, true, result);
 
 	printf("Testing terminate... ");
-	if ( ce2.CheckAnEvent(&te1, errorMsg) ) {
-		printf("...succeeded\n");
-	} else {
-		printf("...failed (%s)\n", errorMsg.Value());
-		result = false;
-	}
+	CheckAnEvent(ce2, &te1, true, true, result);
 
 		// This should fail because the second job doesn't have a terminate
 		// or abort event.
 	printf("Testing CheckAllJobs()... ");
 	if ( ce2.CheckAllJobs(errorMsg) ) {
-		printf("...should have gotten an error (test failed)\n");
+		printf("...should have gotten an error (test FAILED)\n");
 		result = false;
 	} else {
 		printf("...got expected error (%s)\n", errorMsg.Value());
@@ -247,26 +195,157 @@ int main(int argc, char **argv)
 	ee2.subproc = 1;
 
 	printf("Testing executable error... ");
-	if ( ce2.CheckAnEvent(&ee2, errorMsg) ) {
-		printf("...succeeded\n");
-	} else {
-		printf("...failed (%s)\n", errorMsg.Value());
-		result = false;
-	}
+	CheckAnEvent(ce2, &ee2, true,true, result);
 
 	printf("\nTesting CheckAllJobs()... ");
 	if ( ce2.CheckAllJobs(errorMsg) ) {
 		printf("...succeeded\n");
 	} else {
-		printf("...failed (%s)\n", errorMsg.Value());
+		printf("...FAILED (%s)\n", errorMsg.Value());
 		result = false;
 	}
+
+	//-------------------------------------------------------------------------
+
+	printf("\n### Testing allowing \"extra\" abort events\n\n");
+
+		// Make a new CheckEvents object that allows extra abort events
+		// (apparently Condor sometimes generates a terminate and an abort
+		// event).
+	CheckEvents		ce3(true, false);
+
+	SubmitEvent		se4;
+	se4.cluster = 9876;
+	se4.proc = 5;
+	se4.subproc = 9;
+
+	printf("Testing submit... ");
+	CheckAnEvent(ce3, &se4, true, true, result);
+
+	ExecuteEvent exec2;
+	exec2.cluster = 9876;
+	exec2.proc = 5;
+	exec2.subproc = 9;
+
+	printf("Testing execute... ");
+	CheckAnEvent(ce3, &exec2, true, true, result);
+
+	JobTerminatedEvent	te3;
+	te3.cluster = 9876;
+	te3.proc = 5;
+	te3.subproc = 9;
+
+	printf("Testing terminate... ");
+	CheckAnEvent(ce3, &te3, true, true, result);
+
+	JobAbortedEvent	ae4;
+	ae4.cluster = 9876;
+	ae4.proc = 5;
+	ae4.subproc = 9;
+
+	printf("Testing job aborted... ");
+	CheckAnEvent(ce3, &ae4, true, false, result);
+
+	printf("\nTesting CheckAllJobs()... ");
+	if ( ce3.CheckAllJobs(errorMsg) ) {
+		printf("...succeeded\n");
+	} else {
+		printf("...FAILED (%s)\n", errorMsg.Value());
+		result = false;
+	}
+
+	//-------------------------------------------------------------------------
+
+	printf("\n### Testing that we catch \"extra\" abort events if we don't "
+			"explicitly allow them\n\n");
+
+	CheckEvents		ce4;
+
+	printf("Testing submit... ");
+	CheckAnEvent(ce4, &se4, true, true, result);
+
+	printf("Testing execute... ");
+	CheckAnEvent(ce4, &exec2, true, true, result);
+
+	printf("Testing terminate... ");
+	CheckAnEvent(ce4, &te3, true, true, result);
+
+	printf("Testing job aborted... ");
+	CheckAnEvent(ce4, &ae4, false, false, result);
+
+	printf("\nTesting CheckAllJobs()... ");
+	if ( ce4.CheckAllJobs(errorMsg) ) {
+		printf("...should have gotten an error (test FAILED)\n");
+		result = false;
+	} else {
+		printf("...got expected error (%s)\n", errorMsg.Value());
+	}
+
+	//-------------------------------------------------------------------------
+
+	printf("\n### Testing allowing multiple runs\n\n");
+	CheckEvents		ce5(false, true);
+
+	printf("Testing submit... ");
+	CheckAnEvent(ce5, &se4, true, true, result);
+
+	printf("Testing execute... ");
+	CheckAnEvent(ce5, &exec2, true, true, result);
+
+	printf("Testing terminate... ");
+	CheckAnEvent(ce5, &te3, true, true, result);
+
+	printf("Testing execute... ");
+	CheckAnEvent(ce5, &exec2, true, false, result);
+
+	printf("Testing terminate... ");
+	CheckAnEvent(ce5, &te3, true, false, result);
+
+	printf("\nTesting CheckAllJobs()... ");
+	if ( ce5.CheckAllJobs(errorMsg) ) {
+		printf("...succeeded\n");
+	} else {
+		printf("...FAILED (%s)\n", errorMsg.Value());
+		result = false;
+	}
+
+	//-------------------------------------------------------------------------
+
+	printf("\n### Testing that we catch multiple runs if we don't "
+			"explicitly allow them\n\n");
+
+	CheckEvents		ce6;
+
+	printf("Testing submit... ");
+	CheckAnEvent(ce6, &se4, true, true, result);
+
+	printf("Testing execute... ");
+	CheckAnEvent(ce6, &exec2, true, true, result);
+
+	printf("Testing terminate... ");
+	CheckAnEvent(ce6, &te3, true, true, result);
+
+	printf("Testing execute... ");
+	CheckAnEvent(ce6, &exec2, false, false, result);
+
+	printf("Testing terminate... ");
+	CheckAnEvent(ce6, &te3, false, false, result);
+
+	printf("\nTesting CheckAllJobs()... ");
+	if ( ce6.CheckAllJobs(errorMsg) ) {
+		printf("...should have gotten an error (test FAILED)\n");
+		result = false;
+	} else {
+		printf("...got expected error (%s)\n", errorMsg.Value());
+	}
+
+	//-------------------------------------------------------------------------
 
 	if ( result ) {
 		printf("\nTest succeeded\n");
 		return 0;
 	} else {
-		printf("\nTest failed\n");
+		printf("\nTest FAILED!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 		return 1;
 	}
 }
@@ -307,4 +386,48 @@ CheckArgs(int argc, char **argv)
 	}
 
 	return status;
+}
+
+void
+CheckAnEvent(CheckEvents &ce, const ULogEvent *event,
+		bool expectedResult, bool expectedGoodEvent, bool &result)
+{
+	MyString		errorMsg;
+	bool			eventIsGood;
+
+	bool	tmpResult = ce.CheckAnEvent(event, errorMsg,
+				eventIsGood);
+
+	if ( expectedResult ) {
+		if ( tmpResult ) {
+			printf("...succeeded\n");
+		} else {
+			printf("...FAILED (%s)\n", errorMsg.Value());
+			result = false;
+		}
+	} else {
+		if ( tmpResult ) {
+			printf("...should have gotten an error (test FAILED)\n");
+			result = false;
+		} else {
+			printf("...got expected error (%s)\n", errorMsg.Value());
+		}
+	}
+
+	if ( expectedGoodEvent ) {
+		if ( eventIsGood ) {
+			// No op.
+		} else {
+			printf("FAILED: expected good event, got bad event\n");
+			result = false;
+		}
+	} else {
+		if ( eventIsGood ) {
+			printf("FAILED: expected bad event, got good event\n");
+			result = false;
+		} else {
+			// No op.
+		}
+	}
+
 }

@@ -52,7 +52,16 @@ class Dagman {
 	bool startup_cycle_detect;
     char* stork_server;
 	bool doEventChecks;
+
+		// Allow the job to execute even if we have an error determining
+		// the log files (e.g., the log file is missing from one of the
+		// node submit files).
 	bool allowLogError;
+
+		// Setting this causes DAGMan to tolerate the Condor bug of
+		// a job getting run more than once; otherwise this will be
+		// a fatal error.  (Default is false.)
+	bool allowExtraRuns;
 
     bool Config();
 };

@@ -29,10 +29,12 @@
 
 //-----------------------------------------------------------------------------
 
-CheckEvents::CheckEvents() :
+CheckEvents::CheckEvents(bool allowExtraAborts, bool allowExtraRuns) :
 		jobHash(JOB_HASH_SIZE, ReadMultipleUserLogs::hashFuncJobID,
 		rejectDuplicateKeys)
 {
+	this->allowExtraAborts = allowExtraAborts;
+	this->allowExtraRuns = allowExtraRuns;
 }
 
 //-----------------------------------------------------------------------------
@@ -50,8 +52,10 @@ CheckEvents::~CheckEvents()
 //-----------------------------------------------------------------------------
 
 bool
-CheckEvents::CheckAnEvent(const ULogEvent *event, MyString &errorMsg)
+CheckEvents::CheckAnEvent(const ULogEvent *event, MyString &errorMsg,
+		bool &eventIsGood)
 {
+	eventIsGood = true;
 	bool		result = true;
 	errorMsg = "";
 
@@ -85,11 +89,13 @@ CheckEvents::CheckAnEvent(const ULogEvent *event, MyString &errorMsg)
 				errorMsg = idStr + " submitted; submit count != 1 (" +
 						MyString(info->submitCount) + ")";
 				result = false;
+				eventIsGood = false;
 			}
-			if ( info->termAbortCount != 0 ) {
-				errorMsg = idStr + " submitted; abort/terminate count != 0 (" +
-						MyString(info->termAbortCount) + ")";
+			if ( info->TotalEndCount() != 0 ) {
+				errorMsg = idStr + " submitted; total end count != 0 (" +
+						MyString(info->TotalEndCount()) + ")";
 				result = false;
+				eventIsGood = false;
 			}
 			break;
 
@@ -98,33 +104,67 @@ CheckEvents::CheckAnEvent(const ULogEvent *event, MyString &errorMsg)
 				errorMsg = idStr + " executing; submit count != 1 (" +
 						MyString(info->submitCount) + ")";
 				result = false;
+				eventIsGood = false;
 			}
-			if ( info->termAbortCount != 0 ) {
-				errorMsg = idStr + " executing; abort/terminate count != 0 (" +
-						MyString(info->termAbortCount) + ")";
-				result = false;
+			if ( info->TotalEndCount() != 0 ) {
+				errorMsg = idStr + " executing; total end count != 0 (" +
+						MyString(info->TotalEndCount()) + ")";
+				if ( !allowExtraRuns ) {
+					result = false;
+				}
+				eventIsGood = false;
 			}
 			break;
 
 		case ULOG_EXECUTABLE_ERROR:
-		case ULOG_JOB_TERMINATED:
+			info->errorCount++;
+			result = CheckJobEnd(idStr, info, errorMsg, eventIsGood);
+			break;
+
 		case ULOG_JOB_ABORTED:
-			info->termAbortCount++;
-			if ( info->submitCount != 1 ) {
-				errorMsg = idStr + " aborted or terminated; submit count != 1 (" +
-						MyString(info->submitCount) + ")";
-				result = false;
-			}
-			if ( info->termAbortCount != 1 ) {
-				errorMsg = idStr + " aborted or terminated; abort/terminate count != 1 (" +
-						MyString(info->termAbortCount) + ")";
-				result = false;
-			}
+			info->abortCount++;
+			result = CheckJobEnd(idStr, info, errorMsg, eventIsGood);
+			break;
+
+		case ULOG_JOB_TERMINATED:
+			info->termCount++;
+			result = CheckJobEnd(idStr, info, errorMsg, eventIsGood);
 			break;
 
 		default:
 			break;
 		}
+	}
+
+	return result;
+}
+
+//-----------------------------------------------------------------------------
+bool
+CheckEvents::CheckJobEnd(const MyString &idStr, const JobInfo *info,
+		MyString &errorMsg, bool &eventIsGood)
+{
+	bool		result = true;
+
+	if ( info->submitCount != 1 ) {
+		errorMsg = idStr + " ended; submit count != 1 (" +
+				MyString(info->submitCount) + ")";
+		result = false;
+		eventIsGood = false;
+	}
+
+	if ( info->TotalEndCount() != 1 ) {
+		errorMsg = idStr + " ended; total end "
+				"count != 1 (" + MyString(info->TotalEndCount()) + ")";
+		if ( allowExtraAborts &&
+				(info->abortCount == 1) && (info->termCount == 1) ) {
+			// Okay.
+		} else if ( allowExtraRuns ) {
+			// Okay.
+		} else {
+			result = false;
+		}
+		eventIsGood = false;
 	}
 
 	return result;
@@ -144,26 +184,21 @@ CheckEvents::CheckAllJobs(MyString &errorMsg)
 	jobHash.startIterations();
 	while ( jobHash.iterate(id, info) != 0 ) {
 
-			// Put a limit on the maximum message length so we don't have a chance
-			// of ending up with a ridiculously large MyString...
+			// Put a limit on the maximum message length so we don't
+			// have a chance of ending up with a ridiculously large
+			// MyString...
 		if ( errorMsg.Length() > MAX_MSG_LEN ) {
 			errorMsg += " ...";
 			break;
 		}
 
-		if ( info->submitCount != 1 ) {
-			char		idBuf[128];
-			snprintf(idBuf, sizeof(idBuf), "%d.%d.%d", id.cluster, id.proc, id.subproc);
-			errorMsg += MyString("JOB ERROR: job ") + idBuf + " has submit count != 1 (" +
-					MyString(info->submitCount) + "); ";
-			result = false;
-		}
-		if ( info->termAbortCount != 1 ) {
-			char		idBuf[128];
-			snprintf(idBuf, sizeof(idBuf), "%d.%d.%d", id.cluster, id.proc, id.subproc);
-			errorMsg += MyString("JOB ERROR: job ") + idBuf +
-					" has terminate/abort count != 1 (" +
-					MyString(info->termAbortCount) + "); ";
+		char		idBuf[128];
+		snprintf(idBuf, sizeof(idBuf), "%d.%d.%d", id.cluster, id.proc,
+				id.subproc);
+		MyString	idStr("JOB ERROR: job ");
+		idStr += idBuf;
+		bool		eventIsGood; // dummy
+		if ( !CheckJobEnd(idStr, info, errorMsg, eventIsGood) ) {
 			result = false;
 		}
 	}

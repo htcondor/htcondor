@@ -117,6 +117,7 @@ Dagman::Config()
 	max_submits_per_interval =
 		param_integer( "DAGMAN_MAX_SUBMITS_PER_INTERVAL", 5, 1, 1000 );
 	stork_server = param( "STORK_SERVER" );
+	allowExtraRuns = param_boolean( "DAGMAN_ALLOW_EXTRA_RUNS", false );
 	return true;
 }
 
@@ -155,9 +156,15 @@ int main_shutdown_rescue() {
 			// otherwise if we crashed, failed, or were killed while
 			// removing them, we would leave the DAG in an
 			// unrecoverable state...
+		debug_printf( DEBUG_DEBUG_1, "We have %d running jobs to remove\n",
+					dagman.dag->NumJobsSubmitted() );
 		if( dagman.dag->NumJobsSubmitted() > 0 ) {
 			debug_printf( DEBUG_NORMAL, "Removing submitted jobs...\n" );
 			dagman.dag->RemoveRunningJobs(dagman);
+		}
+		if ( dagman.dag->NumScriptsRunning() > 0 ) {
+			debug_printf( DEBUG_NORMAL, "Removing running scripts...\n" );
+			dagman.dag->RemoveRunningScripts(dagman);
 		}
 	}
 	unlink( lockFileName ); 
@@ -333,9 +340,6 @@ int main_init (int argc, char ** const argv) {
         } else if( !strcasecmp( "-AllowLogError", argv[i] ) ) {
 			dagman.allowLogError = true;
 
-        } else if( !strcasecmp( "-AllowLogError", argv[i] ) ) {
-			dagman.allowLogError = true;
-
         } else if( !strcasecmp( "-WaitForDebug", argv[i] ) ) {
 			wait_for_debug = 1;
 
@@ -461,7 +465,7 @@ int main_init (int argc, char ** const argv) {
 
     dagman.dag = new Dag( dagman.condorLogFiles, dagman.maxJobs,
 						  dagman.maxPreScripts, dagman.maxPostScripts,
-						  dapLogName ); //<-- DaP
+						  dagman.allowExtraRuns, dapLogName ); //<-- DaP
 
     if( dagman.dag == NULL ) {
         EXCEPT( "ERROR: out of memory!\n");
@@ -630,6 +634,7 @@ void condor_event_timer () {
 
     if( dagman.dag->DetectDaPLogGrowth() ) {
       if( dagman.dag->ProcessLogEvents( dagman, DAPLOG ) == false ) {
+debug_printf( DEBUG_NORMAL, "ProcessLogEvents(DAPLOG) returned false\n");
 	dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
 	main_shutdown_rescue();
 	return;

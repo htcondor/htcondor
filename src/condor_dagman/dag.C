@@ -42,7 +42,7 @@
 //---------------------------------------------------------------------------
 Dag::Dag( StringList &condorLogFiles, const int maxJobsSubmitted,
 		  const int maxPreScripts, const int maxPostScripts,
-		  const char* dapLogName ) :
+		  bool allowExtraRuns, const char* dapLogName ) :
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
     _condorLogFiles       (condorLogFiles),
@@ -53,7 +53,8 @@ Dag::Dag( StringList &condorLogFiles, const int maxJobsSubmitted,
     _numJobsDone          (0),
     _numJobsFailed        (0),
     _numJobsSubmitted     (0),
-    _maxJobsSubmitted     (maxJobsSubmitted)
+    _maxJobsSubmitted     (maxJobsSubmitted),
+	_ce                   (true, allowExtraRuns)
 {
 
 	ASSERT( condorLogFiles.number() > 0 || dapLogName );
@@ -300,6 +301,8 @@ bool Dag::ProcessLogEvents (const Dagman & dm, int logsource, bool recovery) {
 
 		bool tmpResult = ProcessOneEvent( outcome, e, recovery,
 					dm.doEventChecks, done );
+			// If ProcessOneEvent returns false, the result here must
+			// be false.
 		result = result && tmpResult;
 
 		if( e != NULL ) {
@@ -381,22 +384,61 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
 			Job *job = GetJob( condorID );
 			const char *eventName = ULogEventNumberNames[event->eventNumber];
 
-				// submit events are printed specially below, since we
+				// submit events are printed specially, since we
 				// want to match them with their DAG nodes first...
+				// Note: I made the new PrintSubmitEvent function because
+				// I *really* wanted to do all of the event printing in the
+				// same place -- it would be too confusing if you bailed
+				// out because of a bad event, but hadn't printed it yet.
+				// wenger 2004-11-01.
 			if ( event->eventNumber != ULOG_SUBMIT ) {
 				PrintEvent( DEBUG_VERBOSE, eventName, job, condorID );
+			} else {
+				PrintSubmitEvent(event, eventName, job, condorID, recovery);
 			}
 
-				// This variable is used to turn off the new event checking
-				// code for duplicate terminate/abort events.  DAGMan
-				// tolerates them, but the CheckEvents class does not.
-			bool	checkThisEvent = true;
+				// Check whether this is a "good" event ("bad" events
+				// include Condor sometimes writing a terminated/aborted
+				// pair instead of just aborted, and the "submit once,
+				// run twice" bug).  Extra abort events we just ignore;
+				// other bad events will abort the DAG unless configured
+				// to continue.
+			if ( doEventChecks ) {
+				MyString	eventError;
+				bool		eventIsGood;
+				bool checkResult = _ce.CheckAnEvent(event, eventError,
+							eventIsGood);
+				if ( eventIsGood ) {
+					debug_printf( DEBUG_DEBUG_1, "Event is okay\n");
+				} else {
+					debug_printf( DEBUG_VERBOSE, "%s\n", eventError.Value() );
+					debug_printf( DEBUG_VERBOSE, "WARNING: bad event here "
+								"may indicate a serious bug in Condor "
+								"-- beware!\n");
+
+					if ( checkResult ) {
+						debug_printf( DEBUG_VERBOSE, "Continuing with DAG "
+									"because DAGMAN_ALLOW_EXTRA_RUNS is "
+									"set or the event is a spurious "
+									"extra abort\n");
+					} else {
+						debug_printf( DEBUG_VERBOSE, "Aborting DAG because of "
+									"bad event\n" );
+						result = false;
+					}
+
+						// Don't do any further processing of this event,
+						// because it can goof us up (e.g., decrement count
+						// of running jobs when we shouldn't).
+					break;
+				}
+			}
 
 			switch(event->eventNumber) {
 
 			case ULOG_EXECUTABLE_ERROR:
 			case ULOG_JOB_ABORTED:
-				ProcessAbortEvent(event, job, recovery, checkThisEvent);
+				ProcessAbortEvent(event, job, recovery);
 				break;
               
 			case ULOG_JOB_TERMINATED:
@@ -426,17 +468,6 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
 			default:
 				break;
 			}
-
-			if ( doEventChecks && checkThisEvent ) {
-				MyString	eventError;
-				if ( !_ce.CheckAnEvent(event, eventError) ) {
-					debug_printf( DEBUG_VERBOSE, "%s\n",
-								eventError.Value() );
-					result = false;
-				} else {
-					debug_printf( DEBUG_DEBUG_1, "Event okay\n");
-				}
-			}
 		}
 		break;
 
@@ -451,8 +482,49 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome, const ULogEvent *event,
 
 //---------------------------------------------------------------------------
 void
+Dag::PrintSubmitEvent(const ULogEvent *event, const char *eventName,
+		Job *&job, const CondorID &condorID, bool recovery) {
+
+	SubmitEvent* submit_event = (SubmitEvent*) event;
+	if ( submit_event->submitEventLogNotes ) {
+		char job_name[1024] = "";
+		if ( sscanf( submit_event->submitEventLogNotes,
+					"DAG Node: %1023s", job_name ) == 1 ) {
+			job = GetJob( job_name );	// from submit cmd
+			if ( job ) {
+				if ( !recovery ) {
+						// as a sanity-check, compare the
+						// job ID in the userlog with the
+						// one that appeared earlier in
+						// the submit command's stdout
+					if ( condorID.Compare( job->_CondorID ) != 0 ) {
+						debug_printf( DEBUG_QUIET,
+								"ERROR: job %s: job ID in userlog submit "
+								"event (%d.%d) doesn't match ID reported "
+								"earlier by submit command (%d.%d)!  "
+								"Trusting the userlog for now., but this "
+								"is scary!\n",
+								job_name,
+									// userlog job id
+								condorID._cluster,
+								condorID._proc,
+									// submit cmd job id
+								job->_CondorID._cluster,
+								job->_CondorID._proc );
+					}
+				}
+				job->_CondorID = condorID;
+			}
+		}
+	}
+
+	PrintEvent( DEBUG_VERBOSE, eventName, job, condorID );
+}
+
+//---------------------------------------------------------------------------
+void
 Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
-		bool recovery, bool &checkThisEvent) {
+		bool recovery) {
 
 	if ( job ) {
 
@@ -465,7 +537,6 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 							"WARNING: Job %s already marked %s; "
 							"ignoring job aborted event...\n",
 							job->GetJobName(), job->GetStatusName() );
-			checkThisEvent = false;
 			return;
 		}
 
@@ -681,41 +752,6 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 void
 Dag::ProcessSubmitEvent(const ULogEvent *event, const char *eventName,
 		Job *job, const CondorID &condorID, bool recovery) {
-
-	SubmitEvent* submit_event = (SubmitEvent*) event;
-	if ( submit_event->submitEventLogNotes ) {
-		char job_name[1024] = "";
-		if ( sscanf( submit_event->submitEventLogNotes,
-					"DAG Node: %1023s", job_name ) == 1 ) {
-			job = GetJob( job_name );	// from submit cmd
-			if ( job ) {
-				if ( !recovery ) {
-						// as a sanity-check, compare the
-						// job ID in the userlog with the
-						// one that appeared earlier in
-						// the submit command's stdout
-					if ( condorID.Compare( job->_CondorID ) != 0 ) {
-						debug_printf( DEBUG_QUIET,
-								"ERROR: job %s: job ID in userlog submit "
-								"event (%d.%d) doesn't match ID reported "
-								"earlier by submit command (%d.%d)!  "
-								"Trusting the userlog for now., but this "
-								"is scary!\n",
-								job_name,
-									// userlog job id
-								condorID._cluster,
-								condorID._proc,
-									// submit cmd job id
-								job->_CondorID._cluster,
-								job->_CondorID._proc );
-					}
-				}
-				job->_CondorID = condorID;
-			}
-		}
-	}
-
-	PrintEvent( DEBUG_VERBOSE, eventName, job, condorID );
 
 	if ( !job ) {
 		return;
@@ -1120,19 +1156,37 @@ Dag::PrintReadyQ( debug_level_t level ) const {
 
 //---------------------------------------------------------------------------
 void Dag::RemoveRunningJobs ( const Dagman &dm) const {
+
+	debug_printf( DEBUG_NORMAL, "Removing any/all submitted Condor/"
+				"Stork jobs...\n");
+
     char cmd[ARG_MAX];
 
 		// first, remove all Condor jobs submitted by this DAGMan
-	debug_printf( DEBUG_NORMAL, "Removing any/all submitted Condor jobs...\n",
-				  cmd );
-	snprintf( cmd, ARG_MAX, "condor_rm -const \'%s == \"%s\"\'",
-			  DAGManJobIdAttrName, DAGManJobId );
-	debug_printf( DEBUG_VERBOSE, "Executing: %s\n", cmd );
-	util_popen( cmd );
-		// TODO: we need to check for failures here
-
-    ListIterator<Job> iList(_jobs);
+		// Make sure we have at least one Condor (not Stork) job before
+		// we call condor_rm...
+	bool	haveCondorJob = false;
+    ListIterator<Job> jobList(_jobs);
     Job * job;
+    while (jobList.Next(job)) {
+		ASSERT( job != NULL );
+		if ( job->JobType() == Job::TYPE_CONDOR ) {
+			haveCondorJob = true;
+			break;
+		}
+	}
+
+	if ( haveCondorJob ) {
+		snprintf( cmd, ARG_MAX, "condor_rm -const \'%s == \"%s\"\'",
+			  	DAGManJobIdAttrName, DAGManJobId );
+		debug_printf( DEBUG_VERBOSE, "Executing: %s\n", cmd );
+		if ( util_popen( cmd ) ) {
+			debug_printf( DEBUG_VERBOSE, "Error removing DAGMan jobs\n");
+		}
+	}
+
+		// Okay, now remove any Stork jobs.
+    ListIterator<Job> iList(_jobs);
     while (iList.Next(job)) {
 		ASSERT( job != NULL );
 			// if node has a Stork job that is presently submitted,
@@ -1145,13 +1199,28 @@ void Dag::RemoveRunningJobs ( const Dagman &dm) const {
 			snprintf( cmd, ARG_MAX, "stork_rm %s %d",
 					dm.stork_server, job->_CondorID._cluster );
 			debug_printf( DEBUG_VERBOSE, "Executing: %s\n", cmd );
-			util_popen( cmd );
-				// TODO: we need to check for failures here
+			if ( util_popen( cmd ) ) {
+				debug_printf( DEBUG_VERBOSE, "Error removing Stork job\n");
+			}
         }
+	}
+
+	return;
+}
+
+//---------------------------------------------------------------------------
+void Dag::RemoveRunningScripts ( const Dagman &dm ) const {
+    ListIterator<Job> iList(_jobs);
+    Job * job;
+    while (iList.Next(job)) {
+		ASSERT( job != NULL );
+
 		// if node is running a PRE script, hard kill it
-        else if( job->GetStatus() == Job::STATUS_PRERUN ) {
+        if( job->GetStatus() == Job::STATUS_PRERUN ) {
 			ASSERT( job->_scriptPre );
 			ASSERT( job->_scriptPre->_pid != 0 );
+			debug_printf( DEBUG_DEBUG_1, "Killing PRE script %d\n",
+						job->_scriptPre->_pid);
 			if (daemonCore->Shutdown_Fast(job->_scriptPre->_pid) == FALSE) {
 				debug_printf(DEBUG_QUIET,
 				             "WARNING: shutdown_fast() failed on pid %d: %s\n",
@@ -1162,6 +1231,8 @@ void Dag::RemoveRunningJobs ( const Dagman &dm) const {
         else if( job->GetStatus() == Job::STATUS_POSTRUN ) {
 			ASSERT( job->_scriptPost );
 			ASSERT( job->_scriptPost->_pid != 0 );
+			debug_printf( DEBUG_DEBUG_1, "Killing POST script %d\n",
+						job->_scriptPost->_pid);
 			if(daemonCore->Shutdown_Fast(job->_scriptPost->_pid) == FALSE) {
 				debug_printf(DEBUG_QUIET,
 				             "WARNING: shutdown_fast() failed on pid %d: %s\n",
