@@ -4,11 +4,12 @@ Condor Manual.  The complete Condor Manual is available for
 download or online browsing at URL:
    http://www.cs.wisc.edu/condor/manual
 
-We recommend that you go to the above URL and download the Condor Manual.
-However, section 3.2 of the manual which provides installation directions
-is reproduced below in ASCII.
+We recommend that you go to the above URL and download the Condor
+Manual.  However, section 3.2 of the 6.1 manual, which provides
+installation directions for the main Condor release, is reproduced
+below in ASCII. 
 
-
+     _________________________________________________________________
 
                           3.2 Installation of Condor
                                        
@@ -522,7 +523,37 @@ is reproduced below in ASCII.
           using supports '-s'. The man page for that program will
           probably tell you.
           
-   STEP 5: Where should public programs be installed?
+   STEP 5: Filesystem and UID domains.
+          While Condor does not depend on a shared filesystem or common
+          UID space for running standard jobs, if you intend to run
+          vanilla jobs (ones that aren't relinked with the Condor
+          libaries), you need a shared filesystem and a common UID space.
+          Therefore, it is very important for you to correctly configure
+          Condor to tell it about a shared filesystem if you have one.
+          For complete details on what these settings do and how you
+          should answer the questions, be sure to read section 3.4.5,
+          ``Shared Filesystem Config File Entries'', on page  [*] .
+          
+          You will be asked if you have a shared filesystem. If so,
+          condor_install will configure your FILESYSTEM_DOMAIN setting to
+          be set to the domainname of the machine running condor_install.
+          If not, FILESYSTEM_DOMAIN will be set to $(FULL_HOSTNAME),
+          indicating that each machine is in its own domain.
+          
+          For the UID domain, Condor needs to know if all users across
+          all the machines in your pool have a unique UID. If so,
+          UID_DOMAIN will be set to the domainname of the machine running
+          condor_install. If not, UID_DOMAIN will be set to
+          MacroUFULL_HOSTNAME, indicating that each machine is in its own
+          domain.
+          
+          If you have a common UID_DOMAIN, condor_install will ask you if
+          have a soft UID domain , meaning that although you have unique
+          UIDs, not every machine in your pool has all the users in their
+          individual password files. Please see the description of
+          SOFT_UID_DOMAIN in section 3.4.5 on page  [*] for details.
+          
+   STEP 6: Where should public programs be installed?
           It is recommended that you install the user-level condor
           programs in the release directory, (where they go by default).
           This way, when you want to install a new version of the Condor
@@ -554,14 +585,14 @@ is reproduced below in ASCII.
    
   Full Install
   
-   STEP 6: What machine will be your central manager?
+   STEP 7: What machine will be your central manager?
           Simply type in the full hostname of the machine you have chosen
           for your central manager. If condor_install can't find
           information about the host you typed by querying your
           nameserver, it will print out an error message and ask you to
           confirm.
           
-   STEP 7: Where will the 'local directory' go?
+   STEP 8: Where will the 'local directory' go?
           This is the directory discussed in question #5 from the
           introduction. condor_install tries to make some educated
           guesses as to what directory you want to use for the purpose.
@@ -591,7 +622,7 @@ is reproduced below in ASCII.
           each machine in your pool to create the lock directory before
           you can start up Condor.
           
-   STEP 8: Where will the local (machine-specific) config files go?
+   STEP 9: Where will the local (machine-specific) config files go?
           As discussed in question #6 above, there are a few different
           levels of Condor config file. There's the global config file
           that will be installed in <release_dir>/etc/condor_config, and
@@ -608,7 +639,7 @@ is reproduced below in ASCII.
           recommend the first option, since it makes it easier to
           configure your pool from a centralized location.
           
-   STEP 9: How do you want Condor to find its config file?
+   STEP 10: How do you want Condor to find its config file?
           Since there are a few known places Condor looks to find your
           config file, we recommend that you put a soft link from one of
           them to point to <release_dir>/etc/condor_config. This way, you
@@ -621,7 +652,7 @@ is reproduced below in ASCII.
           condor_install will ask you if you want to create a soft link
           from either of the two fixed locations that Condor searches.
           
-   Once you have completed STEP 9, you're done. condor_install prints out
+   Once you have completed STEP 10, you're done. condor_install prints out
    a messages describing what to do next. Please skip to
    section 3.2.3 below.
    
