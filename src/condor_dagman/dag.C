@@ -644,6 +644,16 @@ bool Dag::ProcessLogEvents (const Dagman & dm, int logsource, bool recovery) {
 					break;
 				}
 
+				// if we only have one log, compare
+				// the order of submit events in the
+				// log to the order in which we
+				// submitted the jobs -- but if we
+				// have >1 userlog we can't count on
+				// any order, so we can't sanity-check
+				// in this way
+
+				if( condorLogFiles.number() == 1 ) {
+
 					// as a sanity check, compare the job from the
 					// submit event to the job we expected to see from
 					// our submit queue
@@ -668,6 +678,7 @@ bool Dag::ProcessLogEvents (const Dagman & dm, int logsource, bool recovery) {
 
 						break;
 					}
+				}
 
 					PrintReadyQ( DEBUG_DEBUG_2 );
 					break;
