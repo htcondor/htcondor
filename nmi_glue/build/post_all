@@ -1,9 +1,10 @@
 #!/usr/bin/env perl
 
 ######################################################################
-# $Id: post_all,v 1.1.2.4 2004-06-29 21:56:06 wright Exp $
+# $Id: post_all,v 1.1.2.5 2004-07-24 14:11:44 wright Exp $
 # Submit-side NMI build system infrastructure to save results after
-# all the platform-specific jobs have completed
+# all the platform-specific jobs have completed.  In this case, all we 
+# care about is saving the platform-independent stuff.  
 ######################################################################
 
 use Cwd;
