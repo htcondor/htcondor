@@ -51,7 +51,7 @@ void attempt_access_handler(Service *, int i, Stream *s)
 	int mode;
 	int uid, gid;
 	int result;
-	priv_state state;
+	priv_state priv;
 	int access_result;
 	int t = TRUE;
 	int f = FALSE;
@@ -67,10 +67,15 @@ void attempt_access_handler(Service *, int i, Stream *s)
 		return;
 	}
 
-	state = set_root_priv();
-	
+	priv = set_root_priv();
+
+	dprintf(D_FULLDEBUG, "Switching to user uid: %d gid: %d.\n", uid, gid);
+
 	set_user_ids(uid, gid);
 	set_user_priv();
+
+	dprintf(D_FULLDEBUG, "After switch uid: %d gid: %d.\n", geteuid(), 
+			getegid());
 
 	// First check to make sure it exists.
 	access_result = access(filename, F_OK);
@@ -100,19 +105,33 @@ void attempt_access_handler(Service *, int i, Stream *s)
 				filename);
 	}
 	
-	set_priv(state);
+	dprintf(D_FULLDEBUG, "Switching back to old priv state.\n");
+	set_priv(priv);
 
 	s->encode();
 
 	if( access_result == 0 )
 	{
-		s->code(t);
+		result = s->code(t);
 	}
 	else
 	{
-		s->code(f);
+		result = s->code(f);
 	}
-	s->eom();		
+	
+	if( !result ) {
+		dprintf(D_FULLDEBUG,
+				"ATTEMPT_ACCESS: Failed to send result.\n");
+		return;
+	}
+
+	result = s->eom();		
+	
+	if( !result ) {
+		dprintf(D_FULLDEBUG,
+				"ATTEMPT_ACCESS: Failed to send end of message.\n");
+	}
+
   	return;
 }
 
