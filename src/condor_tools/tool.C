@@ -877,7 +877,7 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 		fprintf( stderr, "ERROR: can't connect to %s\n",
 				 pool ? pool->idStr() : "local collector" );
 		had_error = true;
-	} else if( ! ads.Length() > 0 ) { 
+	} else if( ads.Length() <= 0 ) { 
 			// TODO make this message better
 		fprintf( stderr, "Found no ClassAds when querying pool (%s)\n",
 				 pool ? pool->name() : "local" );

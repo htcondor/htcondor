@@ -366,6 +366,22 @@ main(
 		/* Test case insensitivity */
 		test_eval_bool(classads[11], "DoesMatch",   1, __LINE__, &test_results);
 		test_eval_bool(classads[11], "DoesntMatch", 0, __LINE__, &test_results);
+
+        /* Test that reading from a FILE works */
+        FILE *classad_file;
+        ClassAd *classad_from_file;
+        classad_file = fopen("classad_file", "w");
+        classads[1]->fPrint(classad_file);
+        fprintf(classad_file, "***\n");
+        fclose(classad_file);
+
+        int iseof, error, empty;
+        classad_file = fopen("classad_file", "r");
+        classad_from_file = new ClassAd(classad_file, "***", iseof, error, empty);
+        fclose(classad_file);
+		test_integer_value(classad_from_file, "B", 2, __LINE__, &test_results);
+		test_integer_value(classad_from_file, "C", 3, __LINE__, &test_results);
+		test_string_value(classad_from_file, "D", "alain", __LINE__, &test_results);
 	}
 
 	if (parameters.test_references) {

@@ -178,7 +178,7 @@ int
 pseudo_get_user_info(ClassAd *&ad)
 {
 	static ClassAd* user_ad = NULL;
-	char buf[1024];
+
 
 	if( ! user_ad ) {
 			// if we don't have the ClassAd yet, allocate it and fill
@@ -186,6 +186,8 @@ pseudo_get_user_info(ClassAd *&ad)
 		user_ad = new ClassAd;
 
 #ifndef WIN32
+		char buf[1024];
+
 		sprintf( buf, "%s = %d", ATTR_UID, (int)get_user_uid() );
 		user_ad->Insert( buf );
 

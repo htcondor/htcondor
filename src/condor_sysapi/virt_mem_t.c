@@ -103,7 +103,7 @@ int virt_memory_test(int	test_blocksize,
 						i, (int)raw_testblocks_sd[i]);
 
 		num_tests++;
-		if (raw_testblocks_sd[i] > max_sd_varation_ratio*mean) {
+		if (raw_testblocks_sd[i] > max_sd_varation_ratio*raw_mean) {
 			dprintf(D_ALWAYS, "SysAPI: WARNING: Raw testblock %d had a standard deviation of %d, "
 							"which is more than %2.2f%% of the mean.\n", i, 
 							(int)raw_testblocks_sd[i], max_sd_varation_ratio*100);

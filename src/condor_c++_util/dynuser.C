@@ -73,7 +73,6 @@ getWellKnownName( DWORD subAuth1, DWORD subAuth2, bool domainname ) {
 	SID_IDENTIFIER_AUTHORITY auth = SECURITY_NT_AUTHORITY;
 	char *systemName;
 	char *systemDomain;
-	char *well_known_name;
 	DWORD name_size, domain_size;
 	SID_NAME_USE sidUse;
 	bool result;

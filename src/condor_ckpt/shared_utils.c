@@ -58,8 +58,11 @@ _condor_vfprintf_va( int fd, char* fmt, va_list args )
 	double f;		/* any float-like quantity from va_list */
 	int d;			/* any int-like quantity from va_list */
 	int index;		/* index usage in for loops */
+#if 0
+		/* neither of these are used, i wonder why they're here */
 	int signedness;	/* is the int-like quantity signed or not? */
 	int val;		/* how many chars the ASCII rep is of a number */
+#endif
 
 	/* how many digits you need to represent in ASCII base 10 a 64 bit 
 		quantity plus a minus sign and a null character. For those interested,
@@ -258,12 +261,12 @@ _condor_itoa(int quantity, char *out, int base)
 {
 	int i;
 	unsigned int mask;
-	unsigned char byte, hi, lo;
+	unsigned char byte;
 	unsigned int hexquant;
 	unsigned int octquant;
 	int numchars, maxchars;
 	char *p, *q;
-	int div, sum, mod, neg;
+	int div, sum, mod;
 	unsigned char basemap[16];
 
 	/* if it is zero, just fast quit */

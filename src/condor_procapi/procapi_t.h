@@ -144,10 +144,10 @@ PID_ENTRY* fork_tree(int depth, int breadth, int tree_breadth_change, bool verbo
 // used by fork tree to make the forked processes do something interesting
 // allocates k kilobytes and spins for an amount of time specified above by
 // a constant
-static void do_work(int k, bool verbose);
+void do_work(int k, bool verbose);
 
 // does the majority of the work for fork_tree
-static PID_ENTRY* recursive_fork(int depth, int breadth, bool verbose);
+PID_ENTRY* recursive_fork(int depth, int breadth, bool verbose);
 
 // cleans up the tree when it is no longer needed must be used with fork tree
 void end_tree(PID_ENTRY* pids, int num_pids);

@@ -1245,7 +1245,6 @@ int
 _condor_fxstat64(int version, int fd, struct stat64 *buf)
 {
 	int rval;
-	int use_local_access = FALSE;
 	struct kernel_stat kbuf;
 	struct stat sbuf;
 
@@ -1426,7 +1425,6 @@ extern "C" int REMOTE_CONDOR_fstat( int, struct stat * );
 int _fxstat(const int ver, int fd, struct stat *buf)
 {
 	int	rval;
-	int use_local_access = FALSE;
 
 	sigset_t omask = _condor_signals_disable();
 
@@ -1756,12 +1754,11 @@ getlogin()
 {
 	int rval;
 	static char *loginbuf = NULL;
-	char *loc_rval;
 
 	if( LocalSysCalls() ) {
 #if defined( SYS_getlogin )
-		loc_rval = (char *) syscall( SYS_getlogin );
-		return loc_rval;
+		rval = (char *) syscall( SYS_getlogin );
+		return rval;
 #elif defined( DL_EXTRACT ) 
 		{
         void *handle;
@@ -1831,9 +1828,6 @@ int
 #endif
 sync( void )
 {
-	int rval;
-	pid_t my_pid;	
-
 	/* Always flush buffered data from the file table */
 	_condor_file_table_init();
 	FileTab->flush();

@@ -1417,6 +1417,7 @@ int CondorFileTable::is_file_name_local( const char *incomplete_name, char *loca
 			return 0;
 		}
 	}
+	return 0;
 }
 
 

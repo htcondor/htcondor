@@ -98,6 +98,8 @@ static	int DprintfBroken = 0;
 static	int DebugUnlockBroken = 0;
 #ifdef WIN32
 static CRITICAL_SECTION	*_condor_dprintf_critsec = NULL;
+extern int lock_file(int fd, LOCK_TYPE type, int do_block);
+extern int vprintf_length(const char *format, va_list args);
 #endif
 
 extern char *_condor_DebugFlagNames[];
@@ -485,7 +487,9 @@ preserve_log_file(int debug_level)
 	int			still_in_old_file = FALSE;
 	int			failed_to_rotate = FALSE;
 	int			save_errno;
+#ifndef WIN32
 	struct stat buf;
+#endif
 	char msg_buf[_POSIX_PATH_MAX];
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);

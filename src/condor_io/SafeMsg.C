@@ -188,8 +188,8 @@ int _condorPacket::getHeader(bool &last,
                              _condorMsgID &mID,
                              void *&dta)
 {
-    short flags = 0, mdKeyIdLen, encKeyIdLen;
-
+    short flags = 0;
+	
     if (md_) {
         free(md_);
         md_ = 0;

@@ -833,13 +833,14 @@ activate_claim( Resource* rip, Stream* stream )
 		// Formerly known as "startjob"
 	int mach_requirements = 1;
 	ClassAd	*req_classad = NULL, *mach_classad = rip->r_classad;
-
-	int sock_1, sock_2;
 	ReliSock rsock_1, rsock_2;
+#ifndef WIN32
+	int sock_1, sock_2;
 	int fd_1, fd_2;
 	struct sockaddr_in frm;
-	int len = sizeof frm;
+	int len = sizeof frm;	
 	StartdRec stRec;
+#endif
 	int starter;
 	Sock* sock = (Sock*)stream;
 	char* shadow_addr = strdup( sin_to_string( sock->endpoint() ));

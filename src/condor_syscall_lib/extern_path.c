@@ -25,7 +25,7 @@
 #include "debug.h"
 #include "condor_getmnt.h"
 
-static init();
+static void init( void );
 static char * remote_part( char *mnt_pt, char *name );
 static char * xlate_link(  char *name );
 static char	* compress( char *path );
@@ -38,10 +38,8 @@ static int				InitDone;
 /*
 ** Translate a name which may cross a mount point.
 */
-external_name( name, buf, bufsize )
-const char	*name;
-char	*buf;
-int		bufsize;
+int
+external_name( const char *name, char* buf, int bufsize )
 {
 	int					i;
 	char				*local_name, *remote_name, *mount_pt;
@@ -120,7 +118,8 @@ int		bufsize;
 }
 
 static
-init()
+void
+init( void )
 {
 	int		start = 0;
 
@@ -137,7 +136,6 @@ init()
 	}
 
 	InitDone = TRUE;
-
 }
 
 /*
@@ -147,9 +145,7 @@ init()
 ** itself, the part returned will be NULL.
 */
 static char *
-remote_part( mnt_pt, name )
-char	*mnt_pt;
-char	*name;
+remote_part( char* mnt_pt, char* name )
 {
 	char	*x, *y;
 
@@ -172,8 +168,7 @@ char	*name;
 ** containing no symbolic links.
 */
 static char *
-xlate_link(  name )
-char	*name;
+xlate_link( char* name )
 {
 	struct stat		st_buf;
 	char			*ptr, *end, *dst, *cur;
@@ -243,8 +238,7 @@ char	*name;
 ** the original string is lost.
 */
 static char	*
-compress( path )
-char	*path;
+compress( char* path )
 {
 	char	*src, *dst;
 

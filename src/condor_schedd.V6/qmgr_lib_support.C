@@ -43,7 +43,6 @@ Qmgr_connection *
 ConnectQ(char *qmgr_location, int timeout, bool read_only, CondorError* errstack )
 {
 	int		rval, ok;
-	char*	tmp;
 
 		// do we already have a connection active?
 	if( qmgmt_sock ) {

@@ -37,8 +37,6 @@
 #include "condor_ckpt_mode.h"
 #include "signals_control.h"
 
-static char *_FileName_ = __FILE__;
-
 extern int _condor_in_file_stream;
 
 const int KILO = 1024;

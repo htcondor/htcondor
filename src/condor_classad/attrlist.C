@@ -148,9 +148,10 @@ AttrList(FILE *file, char *delimitor, int &isEOF, int &error, int &empty)
 	: AttrListAbstract(ATTRLISTENTITY)
 {
     ExprTree 	*tree;
-	char		buffer[ATTRLIST_MAX_EXPRESSION];
+	char		*delim_buffer;
 	int			delimLen = strlen( delimitor );
 	int 		index;
+    MyString    line_buffer;
 
 	seq 			= 0;
     exprList 		= NULL;
@@ -163,62 +164,69 @@ AttrList(FILE *file, char *delimitor, int &isEOF, int &error, int &empty)
     ptrExprInChain = false;
     ptrNameInChain = false;
 	empty			= TRUE;
+    delim_buffer    = NULL;
 
-	buffer[0] = '\0';
+	delim_buffer = (char *) malloc(delimLen+1);
 	while( 1 ) {
 			// get a line from the file
-		if( fgets( buffer, delimLen+1, file ) == NULL ) {
+		if( fgets( delim_buffer, delimLen+1, file ) == NULL ) {
 			error = ( isEOF = feof( file ) ) ? 0 : errno;
+            free(delim_buffer);
 			return;
 		}
 
 			// did we hit the delimitor?
-		if( strncmp( buffer, delimitor, delimLen ) == 0 ) {
+		if( strncmp( delim_buffer, delimitor, delimLen ) == 0 ) {
 				// yes ... stop
 			isEOF = feof( file );
 			error = 0;
+            free(delim_buffer);
 			return;
 		} else {
 				// no ... read the rest of the line (into the same buffer)
-			if( fgets( buffer+delimLen, ATTRLIST_MAX_EXPRESSION-delimLen, file )
-					== NULL ) {
+            line_buffer = delim_buffer;
+			if( line_buffer.readLine(file, true) == false) {
 				error = ( isEOF = feof( file ) ) ? 0 : errno;
+                free(delim_buffer);
 				return;
 			}
 		}
 
 			// if the string is empty, try reading again
-		if( strlen( buffer ) == 0 || strcmp( buffer, "\n" ) == 0 ) {
+		if( line_buffer.Length() == 0 || strcmp( line_buffer.Value(), "\n" ) == 0 ) {
 			continue;
 		}
 
 			// if the string starts with a pound character ("#"),
 			// treat as a comment.
 		index = 0;
-		while ( buffer[index]==' ' || buffer[index]=='\t' ) {
+		while ( line_buffer[index]==' ' || line_buffer[index]=='\t' ) {
 			index++;
 		}
-		if ( buffer[index] == '#' ) {
+		if ( line_buffer[index] == '#' ) {
 			continue;
 		}
 
 			// parse the expression in the string
-		if( Parse( buffer, tree ) || Insert( tree ) == FALSE ) {
+		if( Parse( line_buffer.Value(), tree ) || Insert( tree ) == FALSE ) {
 				// print out where we barfed to the log file
 			dprintf(D_ALWAYS,"failed to create classad; bad expr = %s\n",
-				buffer);
+				line_buffer.Value());
 				// read until delimitor or EOF; whichever comes first
-			while( strncmp( buffer, delimitor, delimLen ) && !feof( file ) ) {
-				fgets( buffer, delimLen+1, file );
+            delim_buffer[0] = 0;
+			while( strncmp( delim_buffer, delimitor, delimLen ) && !feof( file ) ) {
+				fgets( delim_buffer, delimLen+1, file );
 			}
 			isEOF = feof( file );
 			error = -1;
+            free(delim_buffer);
 			return;
 		} else {
 			empty = FALSE;
 		}
 	}
 	ClearAllDirtyFlags();
+    free(delim_buffer);
 	return;
 }
 

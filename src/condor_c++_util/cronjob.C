@@ -313,7 +313,7 @@ CondorCronJob::SetEventHandler(
 	Service				*s )
 {
 	// No nests, etc.
-	if ( NULL != eventHandler ) {
+	if( eventHandler ) {
 		return -1;
 	}
 
@@ -557,7 +557,7 @@ CondorCronJob::Reaper( int exitPid, int exitStatus )
 	ProcessOutputQueue( );
 
 	// Finally, notify my manager
-	if ( NULL != eventHandler ) {
+	if( eventHandler ) {
 		(eventService->*eventHandler)( this, CONDOR_CRON_JOB_DIED );
 	}
 
@@ -701,7 +701,7 @@ RunProcess( void )
 	state = CRON_RUNNING;
 
 	// Finally, notify my manager
-	if ( NULL != eventHandler ) {
+	if( eventHandler ) {
 		(eventService->*eventHandler)( this, CONDOR_CRON_JOB_START );
 	}
 

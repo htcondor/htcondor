@@ -613,7 +613,7 @@ ReliSock::put_file( int fd )
 
 	dprintf(D_FULLDEBUG, "ReliSock: put_file: sent %d bytes\n", total);
 
-	if (total < (int)filesize) {
+	if (total < filesize) {
 		dprintf(D_ALWAYS,"ReliSock: put_file: only sent %d bytes out of %d\n",
 			total, filesize);
 		return -1;

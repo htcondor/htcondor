@@ -663,7 +663,7 @@ istream& operator>>(istream& is, MyString& S)
 
 
 bool
-MyString::readLine( FILE* fp )
+MyString::readLine( FILE* fp, bool append )
 {
 	char buf[1024];
 	bool first_time = true;
@@ -675,7 +675,7 @@ MyString::readLine( FILE* fp )
 			}
 			return true;
 		}
-		if( first_time ) {
+		if( first_time && !append) {
 			*this = buf;
 			first_time = false;
 		} else {

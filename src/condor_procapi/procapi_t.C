@@ -88,8 +88,6 @@ int main(int argc, char* argv[])
 
 /* Mike Yoder's old testing code... */
 int run_tests(void) {
-    int i;
-    char* file;
 
     if(verbose){
     printf ( "Test | Description\n" );

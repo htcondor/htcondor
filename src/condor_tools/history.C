@@ -155,7 +155,7 @@ if (constraint) puts(constraint);
   }
  
   fclose(LogFile);
-  exit(0);
+  return 0;
 }
 
 //------------------------------------------------------------------------

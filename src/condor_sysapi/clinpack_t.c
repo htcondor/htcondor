@@ -81,7 +81,6 @@ int kflops_test(int test_blocksize,
 	int test[test_blocksize], raw_test[test_blocksize];
 	double testblocks_sd[test_blocksize], raw_testblocks_sd[test_blocksize];
 	double testblocks_mean[test_blocksize], raw_testblocks_mean[test_blocksize];
-	double	max_sd;
 
 	dprintf(D_ALWAYS, 
 		"SysAPI: Running kflops_test.\n");

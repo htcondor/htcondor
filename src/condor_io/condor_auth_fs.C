@@ -44,8 +44,6 @@ int Condor_Auth_FS::authenticate(const char * remoteHost, CondorError* errstack)
     int retval = -1;
 	int fail = -1 == 0;
     
-    char * RendezvousDirectory = NULL;
-
     if ( mySock_->isClient() ) {
         mySock_->decode();
         if (!mySock_->code( new_file )) { 

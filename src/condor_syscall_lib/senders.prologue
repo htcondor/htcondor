@@ -20,8 +20,6 @@
 #	undef access
 #endif
 
-static char *_FileName_ = __FILE__;
-
 int CurrentSysCall;
 
 extern ReliSock *syscall_sock;

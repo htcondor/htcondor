@@ -2,6 +2,13 @@
    The state of the V6_7-branch before merging in the V6_6-branch as
    tagged at V6_6-merge-2.
 
+12/08/03 V6_6-merge-2
+   The state of the V6_6-branch for another merge into V6_7-branch.
+   Just want to get all of the bug fixes and other minor changes since
+   the last merge into V6_7-branch before we start making lots of
+   other branches off of that (core, unicore, stork, stale-classads,
+   etc).  
+
 12/08/03 V6_7-post-V6_7-MB-V6_5-gridmanager_reorg-merge-1-MB-m-1
    The state of the V6_7-branch after merging the
    V6_7-MB-V6_5-gridmanager_reorg-merge-1-branch as tagged at
