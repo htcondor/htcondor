@@ -51,6 +51,7 @@
 #include "alloc.h"
 #include "condor_qmgr.h"
 #include "condor_classad.h"
+#include "condor_attributes.h"
 
 #if defined(OSF1)
 #pragma define_template List<char>
@@ -95,7 +96,6 @@ BOOLEAN proc_exists( int, int );
 BOOLEAN do_unlink( const char *path );
 BOOLEAN remove_directory( const char *name );
 int do_stat( const char *path, struct stat *buf );
-int findJobAd( int cluster_id, int proc_id );
 
 /*
   Tell folks how to use this program.
@@ -369,13 +369,16 @@ static int		__proc;
 BOOLEAN
 cluster_exists( int cluster )
 {
-	__exists = FALSE;
-	__cluster = cluster;
-	__proc = -1;
-	
-	WalkJobQueue(findJobAd);
+	ClassAd ad, *adptr = &ad;
+	char constraint[60];
 
-	return __exists;
+	sprintf(constraint, "%s == %d", ATTR_CLUSTER_ID, cluster);
+
+	if (GetJobByConstraint(constraint, adptr) == 0) {
+		return TRUE;
+	}
+
+	return FALSE;
 }
 
 /*
@@ -386,22 +389,17 @@ cluster_exists( int cluster )
 BOOLEAN
 proc_exists( int cluster, int proc )
 {
-	__exists = FALSE;
-	__cluster = cluster;
-	__proc = proc;
-	
-	WalkJobQueue(findJobAd);
+	ClassAd ad, *adptr = &ad;
+	char constraint[120];
 
-	return __exists;
-}
+	sprintf(constraint, "(%s == %d) && (%s == %d)", ATTR_CLUSTER_ID, cluster,
+		ATTR_PROC_ID, proc);
 
-int findJobAd(int cluster_id, int proc_id)
-{
-	if ((__cluster == cluster_id) && (__proc == -1 || __proc == proc_id)) {
-		__exists = TRUE;
-		return -1;				// we've found it -- stop walking
+	if (GetJobByConstraint(constraint, adptr) == 0) {
+		return TRUE;
 	}
-	return 0;
+
+	return FALSE;
 }
 
 /*
