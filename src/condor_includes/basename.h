@@ -25,9 +25,24 @@
 extern "C" {
 #endif
 
-// returns pointer one after final '\' or '//' character in path or returns
-// path if no '\' or '//' is found
-char *basename(const char *path);
+/*
+  A basename() function that is happy on both Unix and NT.
+  It returns a pointer to the last element of the path it was given,
+  or the whole string, if there are no directory delimiters.  There's
+  no memory allocated, overwritten or changed in anyway.
+*/
+char* basename( const char* path );
+
+
+/*
+  A dirname() function that is happy on both Unix and NT.
+  This allocates space for a new string that holds the path of the
+  parent directory of the path it was given.  If the given path has no
+  directory delimiters, or is NULL, we just return ".".  In all
+  cases, the string we return is new space, and must be deallocated
+  with free().
+*/
+char* dirname( const char* path );
 
 #if defined(__cplusplus)
 }
