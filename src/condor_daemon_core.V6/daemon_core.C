@@ -4474,7 +4474,7 @@ int DaemonCore::Create_Process(
 			if ( (!rsock.listen( want_command_port)) ||
 				 (!ssock.bind( want_command_port)) ) {
 				dprintf(D_ALWAYS,"Create_Process:Failed to post listen "
-						"on command socket(s)\n");
+						"on command socket(s) (port %d)\n", want_command_port );
 				goto wrapup;
 			}
 		}
