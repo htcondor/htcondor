@@ -22,15 +22,16 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "condor_syscall_mode.h"
 #include "condor_uid.h"
 #include "condor_string.h"
-
-#include "dynuser.h"
 
 /* See condor_uid.h for description. */
 static char* CondorUserName = NULL;
 
 #if defined(WIN32)
+
+#include "dynuser.h"
 
 // Lots of functions just stubs on Win NT for now....
 priv_state _set_priv(priv_state s, char file[], int line, int dologging) { return s; }
@@ -364,12 +365,12 @@ uninit_user_ids()
 
 
 void
-log_priv(priv_state prev, priv_state new, char file[], int line)
+log_priv(priv_state prev, priv_state new_priv, char file[], int line)
 {
 	dprintf(D_PRIV, "%s --> %s at %s:%d\n",	priv_state_name[prev],
-			priv_state_name[new], file, line);
+			priv_state_name[new_priv], file, line);
 	priv_history[ph_head].timestamp = time(NULL);
-	priv_history[ph_head].priv = new;
+	priv_history[ph_head].priv = new_priv;
 	priv_history[ph_head].file = file; /* should be a constant - no alloc */
 	priv_history[ph_head].line = line;
 	ph_head = (ph_head + 1) % HISTORY_LENGTH;
