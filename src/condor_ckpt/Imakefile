@@ -29,9 +29,9 @@ ASSEMBLER_OBJ = _longjmp.AIX32.o
 	m4 /usr/include/sys/asdef.s $*.s | as -o $*.o
 #endif
 
-SRC = image.C machdep.$(OS).C file_state.C tmp_stack.C
-OBJ = image.o machdep.$(OS).o file_state.o tmp_stack.o $(ASSEMBLER_OBJ)
-MODE = ../condor_syscall_lib/syscall_mode.o
+SRC = image.C machdep.$(OS).C file_state.C tmp_stack.C interp.c
+OBJ = image.o machdep.$(OS).o file_state.o tmp_stack.o $(ASSEMBLER_OBJ) interp.o
+SYSCALL_LIB =  ../condor_syscall_lib/condor_syscall_lib.a
 
 
 all_target(machdep_test libcondor.a)
@@ -39,8 +39,8 @@ depend_target($(SRC) )
 
 program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o,,no_release)
 
-libcondor.a: $(OBJ)
-	cp ../condor_syscall_lib/condor_syscall_lib.a libcondor.a
+libcondor.a: $(OBJ) $(SYSCALL_LIB)
+	cp $(SYSCALL_LIB) libcondor.a
 	AR_REPLACE( libcondor.a, $(OBJ) )
 release:: libcondor.a
 	COPY_LIBRARY( libcondor.a, $(RELEASE_DIR)/lib )
