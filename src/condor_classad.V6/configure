@@ -73,7 +73,7 @@ echo "Creating Makefile.config..."
 cat <<EOF >Makefile.config
 # Generated at `date` by `whoami`@`uname -n`
 
-INSTALL_DIR = ${install_dir}
+DESTDIR = ${install_dir}
 EOF
 
 if [ ${enable_shlib} = 1 ]
