@@ -82,7 +82,7 @@ char	 buffer[_POSIX_ARG_MAX + 64];
 
 char	*OperatingSystem;
 char	*Architecture;
-char	*Spool;
+// char	*Spool;
 char	*Flavor;
 char	*ScheddName = NULL;
 char	*ScheddAddr = NULL;
@@ -914,7 +914,7 @@ SetUniverse()
 
 
 	if( univ && stricmp(univ,"globus") == MATCH ) {
-		if ( have_condor_g() == 0 ) {
+		if ( (!Remote) && (have_condor_g() == 0) ) {
 			fprintf( stderr, "This version of Condor doesn't support Globus Universe jobs.\n" );
 			exit( 1 );
 		}
@@ -3457,12 +3457,14 @@ init_params()
 		exit( 1 );
 	}
 
+#if 0
 	Spool = param( "SPOOL" );
 	if( Spool == NULL ) {
 		fprintf(stderr,"SPOOL not specified in config file\n" );
 		DoCleanup(0,0,NULL);
 		exit( 1 );
 	}
+#endif
 
 	Flavor = param( "FLAVOR" );
 	if( Flavor == NULL ) {
