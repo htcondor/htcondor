@@ -9,13 +9,18 @@
 #ifndef _RES_ATTRIBUTES_H
 #define _RES_ATTRIBUTES_H
 
+#if !defined(WIN32)
+#include "afs.h"
+#endif
+
 class ResAttributes
 {
 public:
 	ResAttributes(Resource *);
+	~ResAttributes();
 
-	void update();		// Refresh attributes only needed for updating CM
-	void timeout();		// Refresh attributes needed at every timeout
+	void update( ClassAd* );	// Refresh attributes only needed for updating CM
+	void timeout( ClassAd* );	// Refresh attributes needed at every timeout
 	void benchmark();	// Compute kflops and mips
 
 	float 		load()			{return r_load;};
@@ -26,6 +31,9 @@ public:
 	int			console_idle()	{return r_console_idle;};
 	unsigned long	virtmem()	{return r_virtmem;};
 	unsigned long	disk()		{return r_disk;};
+#if !defined(WIN32)
+	char*		afs_cell();
+#endif
 
 private:
 	Resource*	 	rip;
@@ -37,6 +45,10 @@ private:
 	int             r_console_idle;
 	int				r_mips;
 	int				r_kflops;
+#if !defined(WIN32)
+	AFS_Info*		r_afs_info;
+#endif
+
 };	
 
 void deal_with_benchmarks( Resource* );
