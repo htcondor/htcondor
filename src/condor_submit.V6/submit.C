@@ -175,6 +175,11 @@ char	*TransferFiles = "transfer_files";
 
 char	*CopyToSpool = "copy_to_spool";
 
+char	*PeriodicHoldCheck = "periodic_hold";
+char	*PeriodicRemoveCheck = "periodic_remove";
+char	*OnExitHoldCheck = "on_exit_hold";
+char	*OnExitRemoveCheck = "on_exit_remove";
+
 char	*DAGNodeName = "dag_node_name";
 char	*DAGManJobId = "dagman_job_id";
 
@@ -234,7 +239,10 @@ int	  SaveClassAd ();
 void	InsertJobExpr (char *expr, bool clustercheck = true);
 void	check_umask();
 void setupAuthentication();
-
+void	SetPeriodicHoldCheck(void);
+void	SetPeriodicRemoveCheck(void);
+void	SetExitHoldCheck(void);
+void	SetExitRemoveCheck(void);
 void SetDAGNodeName();
 void SetDAGManJobId();
 void SetLogNotes();
@@ -377,6 +385,9 @@ init_job_ad()
 	InsertJobExpr (buffer);
 
 	(void) sprintf (buffer, "%s = 0", ATTR_CUMULATIVE_SUSPENSION_TIME);
+	InsertJobExpr (buffer);
+
+	(void) sprintf (buffer, "%s = FALSE", ATTR_ON_EXIT_BY_SIGNAL);
 	InsertJobExpr (buffer);
 
 	config_fill_ad( job );
@@ -1316,6 +1327,86 @@ SetPriority()
 		InsertJobExpr( buffer );
 
 	}
+}
+
+void
+SetPeriodicHoldCheck(void)
+{
+	char *phc = condor_param(PeriodicHoldCheck);
+
+	if (phc == NULL)
+	{
+		/* user didn't have one, so add one */
+		sprintf( buffer, "%s = FALSE", ATTR_PERIODIC_HOLD_CHECK );
+	}
+	else
+	{
+		/* user had a value for it, leave it alone */
+		sprintf( buffer, "%s = %s", ATTR_PERIODIC_HOLD_CHECK, phc );
+		free(phc);
+	}
+
+	InsertJobExpr( buffer );
+}
+
+void
+SetPeriodicRemoveCheck(void)
+{
+	char *prc = condor_param(PeriodicRemoveCheck);
+
+	if (prc == NULL)
+	{
+		/* user didn't have one, so add one */
+		sprintf( buffer, "%s = FALSE", ATTR_PERIODIC_REMOVE_CHECK );
+	}
+	else
+	{
+		/* user had a value for it, leave it alone */
+		sprintf( buffer, "%s = %s", ATTR_PERIODIC_REMOVE_CHECK, prc );
+		free(prc);
+	}
+
+	InsertJobExpr( buffer );
+}
+
+void
+SetExitHoldCheck(void)
+{
+	char *ehc = condor_param(OnExitHoldCheck);
+
+	if (ehc == NULL)
+	{
+		/* user didn't have one, so add one */
+		sprintf( buffer, "%s = FALSE", ATTR_ON_EXIT_HOLD_CHECK );
+	}
+	else
+	{
+		/* user had a value for it, leave it alone */
+		sprintf( buffer, "%s = %s", ATTR_ON_EXIT_HOLD_CHECK, ehc );
+		free(ehc);
+	}
+
+	InsertJobExpr( buffer );
+}
+
+void
+SetExitRemoveCheck(void)
+{
+	char *erc = condor_param(OnExitRemoveCheck);
+
+	if (erc == NULL)
+	{
+		/* user didn't have one, so add one */
+		sprintf( buffer, "%s = TRUE", ATTR_ON_EXIT_REMOVE_CHECK );
+	}
+	else
+	{
+		/* user had a value for it, leave it alone */
+		sprintf( buffer, "%s = %s", ATTR_ON_EXIT_REMOVE_CHECK, erc );
+		free(erc);
+	}
+
+	InsertJobExpr( buffer );
 }
 
 void
@@ -2269,6 +2360,10 @@ queue(int num)
 		SetImageSize();		// must be called _after_ SetTransferFiles()
 		SetRequirements();	// must be called _after_ SetTransferFiles()
 		SetForcedAttributes();
+		SetPeriodicHoldCheck();
+		SetPeriodicRemoveCheck();
+		SetExitHoldCheck();
+		SetExitRemoveCheck();
 			//SetArguments needs to be last for Globus universe args
 		SetArguments(); 
 		SetGlobusParams();
