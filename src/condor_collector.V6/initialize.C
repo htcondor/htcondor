@@ -51,26 +51,57 @@ initializeParams()
 		EXCEPT ("Variable 'CONDOR_ADMIN' not found in condfig file.");
 	}
 
-    MaxCollectorLog = (tmp = param ("MAX_COLLECTOR_LOG")) ? atoi (tmp) : 64000;
+	tmp = param ("MAX_COLLECTOR_LOG");
+	if( tmp ) {
+		MaxCollectorLog = atoi( tmp );
+		free( tmp );
+	} else {
+		MaxCollectorLog = 64000;
+	}
 
-    ClientTimeout = (tmp = param ("CLIENT_TIMEOUT")) ? atoi (tmp) : 30;
+	tmp = param ("CLIENT_TIMEOUT");
+	if( tmp ) {
+		ClientTimeout = atoi( tmp );
+		free( tmp );
+	} else {
+		ClientTimeout = 30;
+	}
 
-	QueryTimeout = (tmp = param ("QUERY_TIMEOUT")) ? atoi (tmp) : 60;
+	tmp = param ("QUERY_TIMEOUT");
+	if( tmp ) {
+		ClientTimeout = atoi( tmp );
+		free( tmp );
+	} else {
+		ClientTimeout = 60;
+	}
 
-    MachineUpdateInterval = (tmp = param ("MACHINE_UPDATE_INTERVAL")) ?
-		atoi (tmp) : 300;
-    
-	MasterCheckInterval = (tmp = param ("MASTER_CHECK_INTERVAL")) ? 
-		atoi (tmp) : 10800; 	// three hours
+	tmp = param ("MACHINE_UPDATE_INTERVAL");
+	if( tmp ) {
+		ClientTimeout = atoi( tmp );
+		free( tmp );
+	} else {
+		ClientTimeout = 300;
+	}
+
+	tmp = param ("MASTER_CHECK_INTERVAL");
+	if( tmp ) {
+		ClientTimeout = atoi( tmp );
+		free( tmp );
+	} else {
+		ClientTimeout = 10800; 	// three hours
+	}
 
 	tmp = param ("CONDOR_DEVELOPERS");
 	if (tmp == NULL) {
-		tmp = "condor@cs.wisc.edu";
-	} else
-	if (strcmp (tmp, "NONE") == 0) {
-		tmp = NULL;
+		CondorDevelopers = strdup("condor-admin@cs.wisc.edu");
+	} else {
+		if( strcmp(tmp, "NONE") == 0 ) {
+			CondorDevelopers = NULL;
+			free( tmp );
+		} else {
+			CondorDevelopers = tmp;
+		}
 	}
-	CondorDevelopers = tmp;
 }
 
 
