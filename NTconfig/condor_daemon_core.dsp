@@ -38,8 +38,8 @@ CPP=cl.exe
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 0
-# PROP Output_Dir "..\src\condor_daemon_core"
-# PROP Intermediate_Dir "..\src\condor_daemon_core"
+# PROP Output_Dir "..\src\condor_daemon_core.V6"
+# PROP Intermediate_Dir "..\src\condor_daemon_core.V6"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /FD /TP /c
 # ADD CPP /nologo /W3 /GX /O2 /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX"..\src\condor_includes\condor_common.h" /FD /TP /c
@@ -59,8 +59,8 @@ LIB32=link.exe -lib
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 1
-# PROP Output_Dir "..\src\condor_daemon_core"
-# PROP Intermediate_Dir "..\src\condor_daemon_core"
+# PROP Output_Dir "..\src\condor_daemon_core.V6"
+# PROP Intermediate_Dir "..\src\condor_daemon_core.V6"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /FD /c
 # ADD CPP /nologo /MTd /W3 /GX /Z7 /Od /I "..\src\h" /I "..\src\condor_includes" /I "..\src\condor_c++_util" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX"..\src\condor_includes\condor_common.h" /FD /TP /c
@@ -79,23 +79,23 @@ LIB32=link.exe -lib
 # Name "condor_daemon_core - Win32 Debug"
 # Begin Source File
 
-SOURCE=..\src\condor_includes\condor_daemon_core.h
+SOURCE=..\src\condor_daemon_core.V6\condor_daemon_core.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_includes\condor_timer_manager.h
+SOURCE=..\src\condor_daemon_core.V6\condor_timer_manager.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_daemon_core\daemon_core.C
+SOURCE=..\src\condor_daemon_core.V6\daemon_core.C
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_daemon_core\daemon_core_main.C
+SOURCE=..\src\condor_daemon_core.V6\daemon_core_main.C
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\condor_daemon_core\timer_manager.C
+SOURCE=..\src\condor_daemon_core.V6\timer_manager.C
 # End Source File
 # End Target
 # End Project
