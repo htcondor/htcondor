@@ -1774,21 +1774,19 @@ mark_job_stopped(PROC_ID* job_id)
 	int		had_orig;
 	char	ckpt_name[MAXPATHLEN];
 	char	owner[_POSIX_PATH_MAX];
+	float 	cpu_time;
 
-	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, &status);
 	had_orig = GetAttributeInt(job_id->cluster, job_id->proc, 
 							   ATTR_ORIG_MAX_HOSTS, &orig_max);
-
-//	if( status != RUNNING ) {
-//		EXCEPT( "Trying to stop job %d.%d, but not marked RUNNING!",
-//			job_id->cluster, job_id->proc );
-//	}
 
 	strcpy(ckpt_name, gen_ckpt_name(Spool,job_id->cluster,job_id->proc,0) );
 	if ( GetAttributeString(job_id->cluster, job_id->proc, ATTR_OWNER, owner) < 0 )
 		strcpy(owner,"nobody");
 
-    if (FileExists(ckpt_name, owner)) {
+	// set job status to either IDLE or UNEXPANDED depending upon CPU time.
+	cpu_time = 0.0;
+	GetAttributeFloat(job_id->cluster,job_id->proc,ATTR_JOB_REMOTE_USER_CPU,&cpu_time);
+	if ( cpu_time ) {
 		status = IDLE;
 	} else {
 		status = UNEXPANDED;
