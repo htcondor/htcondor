@@ -66,6 +66,7 @@ char		*AccountantHost=NULL;
 /*
  * Hosts.
  */
+char	*negotiator_host=NULL;
 char	*collector_host=NULL;
 char	*alt_collector_host=NULL;
 
@@ -276,6 +277,7 @@ static void init_params()
 {
 	char *tmp, *pval, buf[1024];
 	int i;
+	struct hostent *hp;
 
 	if (log_path)
 		free(log_path);
@@ -290,6 +292,17 @@ static void init_params()
 	if (exec_path == NULL) {
 		EXCEPT("No Execute file specified in config file");
 	}
+
+	// make sure we have the canonical name for the negotiator host
+	tmp = param("NEGOTIATOR_HOST");
+	if (tmp == NULL) {
+		EXCEPT("No Negotiator host specified in config file");
+	}
+	if ((hp = gethostbyname(tmp)) == NULL) {
+		EXCEPT("gethostbyname failed for negotiator host");
+	}
+	free(tmp);
+	negotiator_host = strdup(hp->h_name);
 
 	if (collector_host)
 		free(collector_host);
