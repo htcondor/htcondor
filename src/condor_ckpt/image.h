@@ -95,12 +95,7 @@ void restart();
 const int MAGIC = 0xfeafea;
 const int SEG_INCR = 25;
 
-#if defined(AIX32)
-#include "setjmp.AIX32.h"
-#else
-#include <setjmp.h>
-#endif
-
+#include "condor_fix_setjmp.h"
 extern "C" {
 	int SETJMP( jmp_buf env );
 	void LONGJMP( jmp_buf env, int retval );

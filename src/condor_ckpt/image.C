@@ -5,15 +5,13 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
+#include "condor_fix_fcntl.h"
 #include <string.h>
-#include <syscall.h>
+#include "condor_syscalls.h"
 #include "image.h"
 #include "stubs.h"
 #include "file_table_interf.h"
 #include "condor_syscalls.h"
-
-extern "C" syscall( int, ... );
 
 #ifndef SIG_DFL
 #include <signal.h>
