@@ -102,7 +102,9 @@ char* calc_subnet_name( char* host );
 
 int is_ipaddr(const char *inbuf, struct in_addr *sin_addr);
 
-
+/* Binds the given fd to any port on the correct local interface for
+   this machine.   Returns 1 if successful, 0 on error. */
+int _condor_local_bind( int fd );
 
 #if defined(__cplusplus)
 }

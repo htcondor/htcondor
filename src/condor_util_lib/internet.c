@@ -482,3 +482,21 @@ string_to_ip( const char* addr )
 	free( sinful );
 	return ip;
 }
+
+
+/* Bind the given fd to the correct local interface. */
+int
+_condor_local_bind( int fd )
+{
+	struct sockaddr_in sin;
+	memset( (char *)&sin, 0, sizeof(sin) );
+	sin.sin_family = AF_INET;
+	sin.sin_port = 0;
+	sin.sin_addr.s_addr = htonl(my_ip_addr());
+	if( bind(fd, (struct sockaddr*)&sin, sizeof(sin)) < 0 ) {
+		dprintf( D_ALWAYS, "ERROR: bind(%s:%d) failed, errno: %d\n",
+				 inet_ntoa(sin.sin_addr), sin.sin_port, errno );
+		return 0;
+	}
+	return 1;
+}
