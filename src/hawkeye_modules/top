@@ -59,9 +59,11 @@ $SIG{HUP} = sub {
     $Reconfig = 1;
 };
 $SIG{TERM} = sub {
-    print STDERR "Got SIGTERM (PID = $TopPid)\n";
     if ( $TopPid > 0 ) {
+	print STDERR "Got SIGTERM; killing top (PID = $TopPid)\n";
 	kill( "TERM", $TopPid ) || print STDERR "Can't kill $TopPid\n";
+    } else {
+	print STDERR "Got SIGTERM (no top to kill)\n";
     }
     $AllDone++;
 };
@@ -219,7 +221,8 @@ sub Configure {
 	foreach $String ( @List )
 	{
 	    my ( $Name, $Count ) = split ( /:/, $String );
-	    $Count = 1 if ( $Count eq "" );
+	    $Count = 1
+		if ( ( ! defined $Count ) || ( $Count eq "" ) );
 
 	    # "*" and "" mean use top's sort
 	    if (  ($Name eq "*" ) || ( $Name eq "" )  )
@@ -232,7 +235,7 @@ sub Configure {
 	    }
 	    else
 	    {
-		print STDERR "Warning: Ignoring $Name: not supported by cvs2svn $Count\n";
+		print STDERR "Warning: Ignoring sort key '$Name': $Count\n";
 	    }
 	}
     }
@@ -392,7 +395,9 @@ sub RunIt
 	    # Unfortunately, the "State" field can be space separated, so
 	    # split screws it up (bad split, bad bad).
 	    # Here, we combine, say, ("N" "R") into "N R"...
-	    while ( $Process[$Stat+1] =~ /[a-zA-Z]/ ) {
+	    # Note: This assumes that the next "valid" field cannot be a
+	    #   single non-digit
+	    while ( $Process[$Stat+1] =~ /^\D$/ ) {
 		$Process[$Stat] = $Process[$Stat] . " " . $Process[$Stat+1];
 		splice( @Process, $Stat+1, 1 );
 	    }
@@ -459,29 +464,50 @@ sub ProcessData
     {
 	my $Count = $SortOut{$SortKey};
 	print STDERR "Sorting on $SortKey ($Count)\n" if ( $Debug );
-	#my $SortFunc;
+
 	my @SortedProcs;
-	if ( $SortKey eq "*" )
+	my $SortOk = 1;
+	if ( $SortKey ne "*" )
+	{
+	    my $SO = undef;
+	    if ( ! exists $TopFields{$SortKey} )
+	    {
+		print STDERR "WARNING: Bad sort order key '$SortKey'\n";
+		$SortOk = 0;
+	    }
+	    else
+	    {
+		$SO = $TopFields{$SortKey}{offset};
+		if ( ! defined $SO )
+		{
+		    print STDERR "WARNING: Sort order undefined";
+		    $SortOk = 0;
+		}
+		elsif ( $SO =~ /^\D/ )
+		{
+		    print STDERR "WARNING: Bad sort order offset '$SO'";
+		    $SortOk = 0;
+		}
+	    }
+
+	    # Sort OK?
+	    if ( $SortOk )
+	    {
+		my @Keys = keys %{$ProcessHash};
+		@SortedProcs = sort
+		{ @{$ProcessHash->{$a}}[$SO] <=> @{$ProcessHash->{$b}}[$SO] }
+		    keys %{$ProcessHash};
+	    }
+	    else
+	    {
+		print STDERR "WARNING: Reverting to default sort\n";
+	    }
+	}
+
+	# Use default sort
+	if ( ( $SortKey eq "*" ) || ( ! $SortOk ) )
 	{
 	    @SortedProcs = sort keys %{$ProcessHash};
-	    # $SortFunc = sub { $a <=> $b; };
-
-	}
-	else
-	{
-	    my $SO = $TopFields{$SortKey}{offset};
-	    #$SortFunc =
-		#sub
-		#{
-		#    return (  ( @{$ProcessHash{$b}}[$SortOffset] ) <=>
-		#	      ( @{$ProcessHash{$a}}[$SortOffset] )  );
-		#};
-	    die "Sort order undefined" if ( ! defined $SO );
-	    die "Bad sort order '$SO'" if ( $SO =~ /^\D/ );
-	    my @Keys = keys %{$ProcessHash};
-	    @SortedProcs = sort
-	    { @{$ProcessHash->{$a}}[$SO] <=> @{$ProcessHash->{$b}}[$SO] }
-		keys %{$ProcessHash};
 	}
 
 	# Walk through the process list...
