@@ -20,7 +20,6 @@
  * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
-/* Copyright Condor Team, 1997 */
 
 #include "condor_common.h"
 #include "condor_config.h"
@@ -41,6 +40,10 @@ static char *_FileName_ = __FILE__;  // used by EXCEPT
 
 #define _NO_EXTERN_DAEMON_CORE 1	
 #include "condor_daemon_core.h"
+
+#ifdef WIN32
+#include "exphnd.WIN32.h"
+#endif
 
 // Externs to Globals
 extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc. 
@@ -106,6 +109,10 @@ DC_Exit( int status )
 		// First, delete any files we might have created, like the
 		// address file or the pid file.
 	clean_files();
+
+		// Log a message
+	dprintf(D_ALWAYS,"**** %s (CONDOR_%s) EXITING WITH STATUS %d\n",
+		myName,mySubSystem,status);
 
 		// Now, delete the daemonCore object, since we allocated it. 
 	delete daemonCore;
@@ -255,20 +262,41 @@ set_log_dir()
 
 // See if we should set the limits on core files.  If the parameter is
 // defined, do what it says.  Otherwise, do nothing.
+// On NT, if CREATE_CORE_FILES is False, then we will use the
+// default NT exception handler which brings up the "Abort or Debug"
+// dialog box, etc.  Otherwise, we will just write out a core file
+// "summary" in the log directory and not display the dialog.
 void
 check_core_files()
 {
-#ifndef WIN32	// no "core" files on NT
 	char* tmp;
+	int want_set_error_mode = TRUE;
+
 	if( (tmp = param("CREATE_CORE_FILES")) ) {
+#ifndef WIN32	
 		if( *tmp == 't' || *tmp == 'T' ) {
 			limit( RLIMIT_CORE, RLIM_INFINITY );
 		} else {
 			limit( RLIMIT_CORE, 0 );
 		}
+#endif
+		if( *tmp == 'f' || *tmp == 'F' ) {
+			want_set_error_mode = FALSE;
+		}
 		free( tmp );
 	}
+
+#ifdef WIN32
+		// Call SetErrorMode so that Win32 "critical errors" and such
+		// do not open up a dialog window!
+	if ( want_set_error_mode ) {
+		::SetErrorMode( 
+			SEM_NOGPFAULTERRORBOX | SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX );
+	} else {
+		::SetErrorMode( 0 );
+	}
 #endif
+
 }
 
 
@@ -421,7 +449,7 @@ handle_dc_sigterm( Service*, int )
 
 	dprintf(D_ALWAYS, "Got SIGTERM. Performing graceful shutdown.\n");
 
-#ifdef WIN32
+#if defined(WIN32) && 0
 	if ( line_where_service_stopped != 0 ) {
 		dprintf(D_ALWAYS,"Line where service stopped = %d\n",
 			line_where_service_stopped);
@@ -481,12 +509,8 @@ int main( int argc, char** argv )
 	int		wantsKill = FALSE, wantsQuiet = FALSE;
 	char	*logAppend = NULL;
 
-#ifdef WIN32
-		// Call SetErrorMode so that Win32 "critical errors" and such
-		// do not open up a dialog window!
-	::SetErrorMode( SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX );
-#else // UNIX
 
+#ifndef WIN32
 		// Set a umask value so we get reasonable permissions on the
 		// files we create.  Derek Wright <wright@cs.wisc.edu> 3/3/98
 	umask( 022 );
@@ -513,7 +537,7 @@ int main( int argc, char** argv )
 	install_sig_handler_with_mask(SIGCHLD, &fullset, unix_sigchld);
 	install_sig_handler_with_mask(SIGUSR1, &fullset, unix_sigusr1);
 	install_sig_handler(SIGPIPE, SIG_IGN );
-#endif // WIN32
+#endif // of ifndef WIN32
 
 		// Figure out if we're the master or not.  The master is a
 		// special case daemon in many ways, so we want to just set a
@@ -638,6 +662,7 @@ int main( int argc, char** argv )
 			ptr++;
 			if( ptr && *ptr ) {
 				logAppend = *ptr;
+				dcargs += 2;
 			} else {
 				fprintf( stderr, 
 						 "DaemonCore: ERROR: -append needs another argument.\n" );
@@ -721,6 +746,8 @@ int main( int argc, char** argv )
 
 	// chdir to the LOG directory so that if we dump a core
 	// it will go there.
+	// and on Win32, tell our ExceptionHandler class to drop
+	// its pseudo-core file to the LOG directory as well.
 	ptmp = param("LOG");
 	if ( ptmp ) {
 		if ( chdir(ptmp) < 0 ) {
@@ -729,6 +756,14 @@ int main( int argc, char** argv )
 	} else {
 		EXCEPT("No LOG directory specified in config file(s)");
 	}
+#ifdef WIN32
+	{
+		char pseudoCoreFileName[MAX_PATH];
+		sprintf(pseudoCoreFileName,"%s\\core.%s.WIN32",ptmp,
+			mySubSystem);
+		g_ExceptionHandler.SetLogFileName(pseudoCoreFileName);
+	}
+#endif
 	free(ptmp);
 
 	// Arrange to run in the background.
@@ -769,6 +804,17 @@ int main( int argc, char** argv )
 
 	dprintf(D_ALWAYS,"** PID = %lu\n",daemonCore->getpid());
 	dprintf(D_ALWAYS,"******************************************************\n");
+
+#ifdef WIN32
+		// On NT, we need to make certain we have a console allocated,
+		// since many standard mechanisms do not work without a console
+		// attached [like popen(), stdin/out/err, GenerateConsoleEvent].
+		// There are several reasons why we may not have a console
+		// right now: a) we are running as a service, and services are 
+		// born without a console, or b) the user did not specify "-f" 
+		// or "-t", and thus we called FreeConsole() above.
+	AllocConsole();
+#endif
 
 		// Now that we have our pid, we could dump our pidfile, if we
 		// want it. 
