@@ -1,0 +1,15 @@
+
+}	/* End of switch on system call number */
+}	/* End of do_REMOTE_syscall() procedure */
+
+CONDOR_NotSupported( int condor_sysnum,  ... )
+{
+	errno = 0;
+	PERM_ERR( "%s - system call not supported by Condor",
+									_condor_syscall_name(condor_sysnum) );
+	EXCEPT( "Unsupported system call %s (%d)",
+						_condor_syscall_name(condor_sysnum), condor_sysnum );
+
+		/* Can never get here */
+	return -1;
+}

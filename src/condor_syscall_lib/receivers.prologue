@@ -1,0 +1,49 @@
+#include "condor_common.h"
+#include "condor_debug.h"
+#include "xdr_lib.h"
+#include "condor_rsc.h"
+#include "condor_xdr.h"
+#include "condor_sys.h"
+#include "condor_jobqueue.h"
+#include <assert.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/resource.h>
+#include <sys/utsname.h>
+
+#if defined(ULTRIX42) || defined(ULTRIX43) || defined(OSF1)
+#	include <sys/param.h>
+#	include <sys/mount.h>
+#else
+#	include <sys/mount.h>
+#endif
+
+#if defined(OSF1)
+#include <sys/poll.h>
+#endif
+
+#include "syscall_param_sizes.h"
+
+static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)    */
+
+extern XDR *xdr_syscall;
+
+
+int CONDOR_NotSupported( int num, ... );
+
+int
+do_REMOTE_syscall()
+{
+	int condor_sysnum;
+	int	rval;
+	xdr_syscall->x_op = XDR_DECODE;
+
+	ASSERT( xdrrec_skiprecord(xdr_syscall) );
+	ASSERT( xdr_int(xdr_syscall, &condor_sysnum) );
+
+	dprintf(D_SYSCALLS,
+		"Shadow: got request for syscall %d <%s>\n",
+		condor_sysnum, _condor_syscall_name(condor_sysnum)
+	);
+
+	switch( condor_sysnum ) {
