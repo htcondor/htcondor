@@ -44,6 +44,7 @@
 ************************************************************************/
 
 #include "condor_common.h"
+
 #include <varargs.h>
 
 #include "condor_sys.h"
@@ -52,11 +53,12 @@
 #include "except.h"
 #include "condor_uid.h"
 
+
 FILE *debug_lock();
 FILE *open_debug_file( char flags[] );
 void debug_unlock();
 void preserve_log_file();
-
+void dprintf_exit();
 
 extern int	errno;
 
@@ -73,6 +75,8 @@ HANDLE	LockHandle = INVALID_HANDLE_VALUE;
 #else
 int		LockFd = -1;
 #endif
+
+static	int DprintfBroken = 0;
 
 static char _FileName_[] = __FILE__;
 
@@ -103,7 +107,7 @@ dprintf_init( int fd )
 		DebugFP = fp;
 	} else {
 		fprintf(stderr, "dprintf_init: failed to fdopen(%d)\n", fd );
-		exit( 1 );
+		dprintf_exit();
 	}
 }
 #endif
@@ -139,8 +143,12 @@ va_dcl
 	int	saved_flags;
 	priv_state	priv;
 
-	va_start(pvar);
+		/* If we hit some fatal error in dprintf, this flag is set.
+		   If dprintf is broken and someone (like _EXCEPT_Cleanup)
+		   trys to dprintf, we just return to avoid infinite loops. */
+	if( DprintfBroken ) return;
 
+	va_start(pvar);
 	flags = va_arg(pvar, int);
 
 		/* See if this is one of the messages we are logging */
@@ -152,8 +160,6 @@ va_dcl
 
 	saved_flags = DebugFlags;       /* Limit recursive calls */
 	DebugFlags = 0;
-
-
 
 	scm = SetSyscalls( SYS_LOCAL | SYS_RECORDED );
 
@@ -239,7 +245,7 @@ debug_lock()
 			LockHandle = CreateFile(DebugLock, GENERIC_WRITE, 0, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 			if( LockHandle == INVALID_HANDLE_VALUE ) {
 				fprintf( DebugFP, "Can't open \"%s\", errno = %d\n", DebugLock, errno );
-				exit( errno );
+				dprintf_exit();
 			}
 		}
 #else
@@ -248,7 +254,8 @@ debug_lock()
 			LockFd = open(DebugLock,O_CREAT|O_WRONLY,0660);
 			if( LockFd < 0 ) {
 				fprintf( DebugFP, "Can't open \"%s\"\n", DebugLock );
-				exit( errno );
+				dprintf_exit();
+
 			}
 			(void) umask( oumask );
 		}
@@ -256,7 +263,7 @@ debug_lock()
 		if( flock(LockFd,LOCK_EX) < 0 ) {
 			fprintf( DebugFP, "Can't get exclusive lock on \"%s\"\n",
 							DebugLock);
-			exit( errno );
+			dprintf_exit();
 		}
 #endif
 	}
@@ -273,12 +280,12 @@ debug_lock()
 			}
 #endif
 			fprintf(stderr, "Could not open DebugFile <%s>\n", DebugFile);
-			exit( errno );
+			dprintf_exit();
 		}
 			/* Seek to the end */
 		if( (length=lseek(fileno(DebugFP),0,2)) < 0 ) {
 			fprintf( DebugFP, "Can't seek to end of DebugFP file\n" );
-			exit( errno );
+			dprintf_exit();
 		}
 
 			/* If it's too big, preserve it and start a new one */
@@ -313,7 +320,7 @@ debug_unlock()
 		if( flock(LockFd,LOCK_UN) < 0 ) {
 			fprintf(DebugFP,"Can't release exclusive lock on \"%s\"\n",
 															DebugLock );
-			exit( errno );
+			dprintf_exit();
 		}
 #endif
 	}
@@ -350,7 +357,7 @@ preserve_log_file()
 
 	/* use rename on WIN32, since link isn't available */
 	if (rename(DebugFile, old) < 0)
-		exit (__LINE__);
+		dprintf_exit();
 
 #else
 
@@ -362,10 +369,11 @@ preserve_log_file()
     */
 
 	if (link (DebugFile, old) < 0)
-		exit (__LINE__);
+		dprintf_exit();
 
 	if (unlink (DebugFile) < 0)
-		exit (__LINE__);
+		dprintf_exit();
+
 
 #endif
 
@@ -377,13 +385,13 @@ preserve_log_file()
 			/* Debug file exists! */
 			fprintf (DebugFP, "Double check on rename failed!\n");
 			fprintf (DebugFP, "%s still exists\n", DebugFile);
-			exit (__LINE__);
+			dprintf_exit();
 		}
 	}
 
 	DebugFP = open_debug_file("a");
 
-	if (DebugFP == NULL) exit (__LINE__);
+	if (DebugFP == NULL) dprintf_exit();
 
 	fprintf (DebugFP, "Now in new log file %s\n", DebugFile);
 
@@ -409,7 +417,7 @@ char	*file;
 	}
 
 	if( DebugFP == NULL ) {
-		exit( EMFILE );
+		dprintf_exit();
 	}
 		/* Seek to the end */
 	(void)lseek( fileno(DebugFP), 0, 2 );
@@ -417,7 +425,7 @@ char	*file;
 	fprintf( DebugFP,
 	"**** PANIC -- OUT OF FILE DESCRIPTORS at line %d in %s\n", line, file );
 	(void)fflush( DebugFP );
-	exit( EMFILE );
+	dprintf_exit();
 }
 #endif
 	
@@ -479,12 +487,29 @@ open_debug_file(char flags[])
 		fprintf( DebugFP, "errno = %d, euid = %d, egid = %d\n",
 				 errno, geteuid(), getegid() );
 #endif
-		perror( "open" );
-		abort();
+		dprintf_exit();
 	}
 	// (void) umask( oumask );  // perhaps no longer need this...
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
 
 	return fp;
+}
+
+/* dprintf() hit some fatal error and is going to exit. */
+void
+dprintf_exit()
+{
+		/* First, set a flag so we know not to try to keep using
+		   dprintf during the rest of this */
+	DprintfBroken = 1;
+
+		/* If _EXCEPT_Cleanup is set for cleaning up during EXCEPT(),
+		   we call that here, as well. */
+	if( _EXCEPT_Cleanup ) {
+		(*_EXCEPT_Cleanup)();
+	}
+
+		/* Actually exit now */
+	exit(1);
 }
