@@ -52,10 +52,6 @@
 #include <stdio.h>
 #include <errno.h>
 #include "file_lock.h"
-#include "fake_flock.h" /* Solaris
-specific change because of the enclosure of this header in HPUX9 definition but is used unconditionally in following code ..dhaval 6/24 */
-
-
 
 #if defined( HPUX9 )
 #define USE_FLOCK 0
@@ -83,6 +79,7 @@ specific change because of the enclosure of this header in HPUX9 definition but 
 #endif
 
 #if defined(Solaris) /* dhaval */
+#include "fake_flock.h"
 #define USE_FLOCK 0
 #endif
 
