@@ -1,7 +1,7 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_io.mak
 
 ..\src\condor_io\authentication.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -43,7 +43,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -60,7 +60,7 @@
 	
 
 ..\src\condor_io\buffers.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_includes\buffers.h"\
 	"..\src\condor_includes\condor_adtypes.h"\
@@ -93,7 +93,7 @@
 	
 
 ..\src\condor_io\condor_auth.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -148,7 +148,7 @@
 	
 
 ..\src\condor_io\condor_auth_anonymous.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_c++_util\my_username.h"\
 	"..\src\condor_c++_util\string_list.h"\
@@ -187,7 +187,7 @@
 	
 
 ..\src\condor_io\condor_auth_claim.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_c++_util\my_username.h"\
 	"..\src\condor_c++_util\string_list.h"\
@@ -225,7 +225,7 @@
 	
 
 ..\src\condor_io\condor_auth_sspi.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_c++_util\my_username.h"\
 	"..\src\condor_c++_util\string_list.h"\
@@ -264,7 +264,7 @@
 	
 
 ..\src\condor_io\condor_crypt.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_crypt.h"\
@@ -280,7 +280,7 @@
 	
 
 ..\src\condor_io\condor_rw.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_includes\buffers.h"\
 	"..\src\condor_includes\condor_adtypes.h"\
@@ -312,7 +312,7 @@
 	
 
 ..\src\condor_io\condor_secman.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_merge.h"\
 	"..\src\condor_c++_util\condor_ver_info.h"\
 	"..\src\condor_c++_util\extArray.h"\
@@ -362,7 +362,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -380,7 +380,7 @@
 	
 
 ..\src\condor_io\CryptKey.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -393,7 +393,7 @@
 	
 
 ..\src\condor_io\errno_num.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -405,7 +405,7 @@
 	
 
 ..\src\condor_io\open_flags.c : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -417,7 +417,7 @@
 	
 
 ..\src\condor_io\reli_sock.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_c++_util\my_username.h"\
 	"..\src\condor_c++_util\string_list.h"\
@@ -457,7 +457,7 @@
 	
 
 ..\src\condor_io\safe_sock.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -510,7 +510,7 @@
 	
 
 ..\src\condor_io\SafeMsg.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_includes\buffers.h"\
 	"..\src\condor_includes\condor_adtypes.h"\
@@ -543,7 +543,7 @@
 	
 
 ..\src\condor_io\sock.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_c++_util\my_username.h"\
 	"..\src\condor_c++_util\string_list.h"\
@@ -583,7 +583,7 @@
 	
 
 ..\src\condor_io\sockCache.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -616,7 +616,7 @@
 	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -631,7 +631,7 @@
 	
 
 ..\src\condor_io\stream.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_includes\buffers.h"\
 	"..\src\condor_includes\condor_adtypes.h"\

@@ -1,7 +1,7 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_sysapi.mak
 
 ..\src\condor_sysapi\arch.c : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -22,7 +22,7 @@
 	
 
 ..\src\condor_sysapi\free_fs_blocks.c : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -35,7 +35,7 @@
 	
 
 ..\src\condor_sysapi\idle_time.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_config.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -49,7 +49,7 @@
 	
 
 ..\src\condor_sysapi\last_x_event.c : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -62,7 +62,7 @@
 	
 
 ..\src\condor_sysapi\load_avg.c : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -74,7 +74,7 @@
 	
 
 ..\src\condor_sysapi\ncpus.c : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -87,7 +87,7 @@
 	
 
 ..\src\condor_sysapi\phys_mem.c : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -100,7 +100,7 @@
 	
 
 ..\src\condor_sysapi\reconfig.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_config.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -114,7 +114,7 @@
 	
 
 ..\src\condor_sysapi\resource_limits.c : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\limit.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -127,11 +127,11 @@
 	
 
 ..\src\condor_sysapi\timers_b.c : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	
 
 ..\src\condor_sysapi\virt_mem.c : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\

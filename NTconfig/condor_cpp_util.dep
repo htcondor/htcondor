@@ -1,7 +1,7 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_cpp_util.mak
 
 "..\src\condor_c++_util\access.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\access.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\get_daemon_addr.h"\
@@ -41,7 +41,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -56,7 +56,7 @@
 	
 
 "..\src\condor_c++_util\ad_printmask.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\ad_printmask.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -91,7 +91,7 @@
 	
 
 "..\src\condor_c++_util\classad_collection.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_collection.h"\
 	"..\src\condor_c++_util\classad_collection_types.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
@@ -131,7 +131,7 @@
 	
 
 "..\src\condor_c++_util\classad_hashtable.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -145,7 +145,7 @@
 	
 
 "..\src\condor_c++_util\classad_helpers.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -179,7 +179,7 @@
 	
 
 "..\src\condor_c++_util\classad_log.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_hashtable.h"\
 	"..\src\condor_c++_util\classad_log.h"\
 	"..\src\condor_c++_util\extArray.h"\
@@ -221,7 +221,7 @@
 	
 
 "..\src\condor_c++_util\classad_merge.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\classad_merge.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -254,7 +254,7 @@
 	
 
 "..\src\condor_c++_util\condor_attributes.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_attributes.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -268,7 +268,7 @@
 	
 
 "..\src\condor_c++_util\condor_common.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -285,7 +285,7 @@
 	
 
 "..\src\condor_c++_util\condor_config.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\condor_version.h"\
 	"..\src\condor_c++_util\directory.h"\
 	"..\src\condor_c++_util\extArray.h"\
@@ -337,7 +337,7 @@
 	
 
 "..\src\condor_c++_util\condor_environ.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_auth_x509.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -352,7 +352,7 @@
 	
 
 "..\src\condor_c++_util\condor_event.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -394,7 +394,7 @@
 	
 
 "..\src\condor_c++_util\condor_md.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -408,7 +408,7 @@
 	
 
 "..\src\condor_c++_util\condor_q.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\condor_q.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\format_time.h"\
@@ -447,7 +447,7 @@
 	
 
 "..\src\condor_c++_util\condor_query.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\condor_query.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\generic_query.h"\
@@ -487,7 +487,7 @@
 	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -503,7 +503,7 @@
 	
 
 "..\src\condor_c++_util\condor_state.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -516,7 +516,7 @@
 	
 
 "..\src\condor_c++_util\condor_ver_info.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\condor_ver_info.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -529,7 +529,7 @@
 	
 
 "..\src\condor_c++_util\config.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -569,7 +569,7 @@
 	
 
 "..\src\condor_c++_util\cron.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -607,7 +607,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\linebuffer.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
@@ -623,7 +623,7 @@
 	
 
 "..\src\condor_c++_util\cronjob.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -661,7 +661,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\linebuffer.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
@@ -677,7 +677,7 @@
 	
 
 "..\src\condor_c++_util\cronmgr.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -716,7 +716,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\linebuffer.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
@@ -732,7 +732,7 @@
 	
 
 ..\src\condor_daemon_client\daemon.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\condor_query.h"\
 	"..\src\condor_c++_util\condor_ver_info.h"\
 	"..\src\condor_c++_util\extArray.h"\
@@ -783,7 +783,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -801,7 +801,7 @@
 	
 
 ..\src\condor_daemon_client\daemon_types.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_daemon_client\daemon_types.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -814,7 +814,7 @@
 	
 
 ..\src\condor_daemon_client\dc_schedd.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -849,7 +849,7 @@
 	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -864,7 +864,7 @@
 	
 
 ..\src\condor_daemon_client\dc_shadow.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\condor_ver_info.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -906,7 +906,7 @@
 	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -924,7 +924,7 @@
 	
 
 ..\src\condor_daemon_client\dc_startd.C : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -958,7 +958,7 @@
 	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -973,7 +973,7 @@
 	
 
 "..\src\condor_c++_util\dc_stub.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -985,7 +985,7 @@
 	
 
 "..\src\condor_c++_util\directory.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\directory.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -1027,7 +1027,7 @@
 	
 
 "..\src\condor_c++_util\distribution.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -1040,7 +1040,7 @@
 	
 
 "..\src\condor_c++_util\dynuser.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\dynuser.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -1077,7 +1077,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -1092,7 +1092,7 @@
 	
 
 "..\src\condor_c++_util\email_cpp.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -1128,7 +1128,7 @@
 	
 
 "..\src\condor_c++_util\env.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\env.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -1169,7 +1169,7 @@
 	
 
 "..\src\condor_c++_util\environ.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\environ.h"\
 	"..\src\condor_includes\condor_auth_x509.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -1183,8 +1183,59 @@
 	"..\src\h\file_lock.h"\
 	
 
+"..\src\condor_c++_util\error_utils.C" : \
+	"..\src\condor_c++_util\extArray.h"\
+	"..\src\condor_c++_util\HashTable.h"\
+	"..\src\condor_c++_util\MyString.h"\
+	"..\src\condor_c++_util\print_wrapped_text.h"\
+	"..\src\condor_c++_util\simplelist.h"\
+	"..\src\condor_c++_util\string_list.h"\
+	"..\src\condor_c++_util\stringSpace.h"\
+	"..\src\condor_includes\cedar_enums.h"\
+	"..\src\condor_includes\condor_ast.h"\
+	"..\src\condor_includes\condor_astbase.h"\
+	"..\src\condor_includes\condor_attrlist.h"\
+	"..\src\condor_includes\condor_classad.h"\
+	"..\src\condor_includes\condor_commands.h"\
+	"..\src\condor_includes\condor_common.h"\
+	"..\src\condor_includes\condor_config.h"\
+	"..\src\condor_includes\condor_constants.h"\
+	"..\src\condor_includes\condor_crypt.h"\
+	"..\src\condor_includes\condor_debug.h"\
+	"..\src\condor_includes\condor_exprtype.h"\
+	"..\src\condor_includes\condor_file_lock.h"\
+	"..\src\condor_includes\condor_fix_access.h"\
+	"..\src\condor_includes\condor_fix_assert.h"\
+	"..\src\condor_includes\condor_fix_sys_resource.h"\
+	"..\src\condor_includes\condor_fix_sys_stat.h"\
+	"..\src\condor_includes\condor_fix_sys_time.h"\
+	"..\src\condor_includes\condor_fix_sys_utsname.h"\
+	"..\src\condor_includes\condor_fix_unistd.h"\
+	"..\src\condor_includes\condor_header_features.h"\
+	"..\src\condor_includes\condor_hpux_64bit_types.h"\
+	"..\src\condor_includes\condor_macros.h"\
+	"..\src\condor_includes\condor_network.h"\
+	"..\src\condor_includes\condor_snutils.h"\
+	"..\src\condor_includes\condor_sys_dux.h"\
+	"..\src\condor_includes\condor_sys_hpux.h"\
+	"..\src\condor_includes\condor_sys_irix.h"\
+	"..\src\condor_includes\condor_sys_linux.h"\
+	"..\src\condor_includes\condor_sys_nt.h"\
+	"..\src\condor_includes\condor_sys_solaris.h"\
+	"..\src\condor_includes\condor_system.h"\
+	"..\src\condor_includes\condor_universe.h"\
+	"..\src\condor_includes\CryptKey.h"\
+	"..\src\condor_includes\stream.h"\
+	"..\src\condor_sysapi\sysapi.h"\
+	"..\src\h\fake_flock.h"\
+	"..\src\h\file_lock.h"\
+	"..\src\h\proc.h"\
+	"..\src\h\sched.h"\
+	"..\src\h\startup.h"\
+	
+
 "..\src\condor_c++_util\file_lock.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -1196,7 +1247,7 @@
 	
 
 "..\src\condor_c++_util\file_transfer.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\directory.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\file_transfer.h"\
@@ -1244,7 +1295,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\nullfile.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
@@ -1262,7 +1313,7 @@
 	
 
 "..\src\condor_c++_util\format_time.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -1274,7 +1325,7 @@
 	
 
 "..\src\condor_c++_util\generic_query.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\generic_query.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -1310,7 +1361,7 @@
 	
 
 "..\src\condor_c++_util\get_daemon_addr.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\get_full_hostname.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -1352,7 +1403,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -1369,7 +1420,7 @@
 	
 
 "..\src\condor_c++_util\get_full_hostname.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -1409,7 +1460,7 @@
 	
 
 "..\src\condor_c++_util\get_mysubsystem.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -1421,7 +1472,7 @@
 	
 
 "..\src\condor_c++_util\HashTable.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -1433,7 +1484,7 @@
 	
 
 "..\src\condor_c++_util\iso_dates.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\iso_dates.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -1446,7 +1497,7 @@
 	
 
 "..\src\condor_c++_util\java_config.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -1479,7 +1530,7 @@
 	
 
 "..\src\condor_c++_util\KeyCache.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -1502,7 +1553,7 @@
 	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\stream.h"\
 	"..\src\condor_sysapi\sysapi.h"\
 	"..\src\h\file_lock.h"\
@@ -1512,7 +1563,7 @@
 	
 
 "..\src\condor_c++_util\killfamily.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\dynuser.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -1549,7 +1600,7 @@
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\keycache.h"\
+	"..\src\condor_includes\KeyCache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -1565,7 +1616,7 @@
 	
 
 "..\src\condor_c++_util\linebuffer.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -1578,7 +1629,7 @@
 	
 
 "..\src\condor_c++_util\log.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\log.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -1591,7 +1642,7 @@
 	
 
 "..\src\condor_c++_util\log_transaction.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\log.h"\
 	"..\src\condor_c++_util\log_transaction.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -1605,7 +1656,7 @@
 	
 
 "..\src\condor_c++_util\metric_units.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\metric_units.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -1618,7 +1669,7 @@
 	
 
 "..\src\condor_c++_util\misc_utils.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -1630,7 +1681,7 @@
 	
 
 "..\src\condor_c++_util\my_distribution.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -1643,7 +1694,7 @@
 	
 
 "..\src\condor_c++_util\my_dynuser.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\dynuser.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -1656,7 +1707,7 @@
 	
 
 "..\src\condor_c++_util\my_hostname.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\get_full_hostname.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -1702,7 +1753,7 @@
 	
 
 "..\src\condor_c++_util\my_username.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\my_username.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -1715,7 +1766,7 @@
 	
 
 "..\src\condor_c++_util\MyString.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\MyString.h"\
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -1729,7 +1780,7 @@
 	
 
 "..\src\condor_c++_util\ntsysinfo.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\ntsysinfo.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -1743,7 +1794,7 @@
 	
 
 "..\src\condor_c++_util\perm.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\perm.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -1756,7 +1807,7 @@
 	
 
 "..\src\condor_c++_util\print_wrapped_text.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\print_wrapped_text.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -1769,7 +1820,7 @@
 	
 
 "..\src\condor_c++_util\sig_name.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -1781,7 +1832,7 @@
 	
 
 "..\src\condor_c++_util\string_list.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -1794,7 +1845,7 @@
 	
 
 "..\src\condor_c++_util\stringSpace.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -1811,7 +1862,7 @@
 	
 
 "..\src\condor_c++_util\strnewp.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\
@@ -1823,7 +1874,7 @@
 	
 
 "..\src\condor_c++_util\uids.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\dynuser.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
@@ -1863,7 +1914,7 @@
 	
 
 "..\src\condor_c++_util\usagemon.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\usagemon.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -1876,7 +1927,7 @@
 	
 
 "..\src\condor_c++_util\user_job_policy.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
@@ -1910,7 +1961,7 @@
 	
 
 "..\src\condor_c++_util\user_log.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\user_log.c++.h"\
 	"..\src\condor_includes\condor_common.h"\
@@ -1925,7 +1976,7 @@
 	
 
 "..\src\condor_c++_util\which.C" : \
-	"..\..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\progra~1\micros~2\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\directory.h"\
 	"..\src\condor_c++_util\MyString.h"\
 	"..\src\condor_c++_util\simplelist.h"\
