@@ -330,7 +330,13 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 #endif
 			ExecFile = strdup(buf);
 		}
-		if ( !InputFiles->contains(ExecFile) )
+
+		int xferExec;
+		if(!Ad->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec)) {
+			xferExec=1;
+		}
+
+		if ( xferExec && !InputFiles->contains(ExecFile) )
 			InputFiles->append(ExecFile);	
 	}
 
