@@ -23,12 +23,18 @@ Opsys=""
 Other=""
 Other2=""
 
-# kerberos discovery *SHOULD* go here eventually.  this isn't
-# "discovery" at all, it's just hard-coding stuff (that's wrong on
-# many platforms), but eventually, this is where the code should go. 
-KerbPath="-DKERBEROS_PATH=/s/krb5"
-HasKerb="-DHAS_KERBEROS=YES"
-KerbFlags="$KerbPath $HasKerb"
+# kerberos discovery *SHOULD* go here eventually.
+if [ -f /s/krb5/lib/libkrb5.a ] ; then
+      KerbPath="-DKERBEROS_PATH=/s/krb5"
+      HasKerb="-DHAS_KERBEROS=YES"
+      if [ -f /s/krb5/lib/libk5crypto.a ] ; then
+              KerbK5="-DKERBEROS_K5=YES"
+      else
+              KerbK5="-DKERBEROS_K5=NO"
+      fi
+
+      KerbFlags="$KerbPath $HasKerb $KerbK5"
+fi
 
 # figure out where that annoying libgcc is... 
 LIBGCC=`gcc -print-libgcc-file-name`
