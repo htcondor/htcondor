@@ -46,18 +46,3 @@ CMNT c_plus_target(qmgr_rm, qmgr_rm.o libqmgmt.a, $(LIB))
 5.7: condor_schedd.57 libqmgmt.a
 
 IMPORT_LINKS = ../../config/import_links
-import(../condor_util_lib, stub_gen)
-
-qmgmt_receivers.C: qmgmt.tmpl stub_gen qmgmt_receivers.prologue qmgmt_receivers.epilogue
-	$(CPP) -DRECEIVER  qmgmt.tmpl | \
-	stub_gen -n syscheck -mode receivers -p qmgmt_receivers.prologue \
-	-e qmgmt_receivers.epilogue > qmgmt_receivers.C
-
-qmgmt_send_stubs.C: qmgmt.tmpl stub_gen qmgmt_send_stubs.prologue qmgmt_send_stubs.epilogue
-	$(CPP) -DSWITCHES  qmgmt.tmpl | \
-	stub_gen -mode send_stub -n syscheck -n localcalls \
-	-p qmgmt_send_stubs.prologue -e qmgmt_send_stubs.epilogue \
-	> qmgmt_send_stubs.C
-
-clean::
-	rm -f qmgmt_receivers.C qmgmt_send_stubs.C
