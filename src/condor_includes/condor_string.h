@@ -38,13 +38,12 @@ int mkargv();
 void lower_case();
 char * getline();
 char * ltrunc ();
-
-
 #endif
+
+char * chomp( char *buffer );
 
 END_C_DECLS
 
-extern "C" char * chomp( char *buffer );
 
 #ifdef __cplusplus
 /* like strdup() but uses new[] */
