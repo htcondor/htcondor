@@ -6,6 +6,8 @@
 #define Platform	ALPHA_OSF1
 #define GccArch		alpha-dec-osf4.0
 
+#define PlatformFlags	-DDUX
+
 #define Tilde /**/
 #define RpcLib /**/
 #define MldLib -lmld
