@@ -46,7 +46,7 @@
 */
 
 const char usage[] =
-"usage: %s [-total | -raw] [-debug] [-evict] [-j cluster[.proc]] [-all] [-ipaddres] logfile ...\n"
+"usage: %s [-total | -raw] [-debug] [-evict] [-j cluster[.proc]] [-all] [-hostname] logfile ...\n"
 "\t-help\t\tThis message\n"
 "\t-total\t\tOnly display job totals\n"
 "\t-raw\t\tDisplay raw data only\n"
@@ -54,7 +54,7 @@ const char usage[] =
 "\t-j\t\tSelect a specific cluster or cluster.proc\n"
 "\t-evict\t\tSelect only allocations which ended due to eviction\n"
 "\t-all\t\tSelect all clusters and all allocations\n"
-"\t-ipaddrs\tAvoid DNS lookup by displaying IP addresses\n";
+"\t-hostname\tDisplay hostname instead of IP address\n";
 
 void read_log(const char *filename, int select_cluster, int select_proc);
 void display_stats();
@@ -100,7 +100,7 @@ bool totals_only = false;
 bool debug_mode = false;
 bool evict_only = false;
 bool raw_data = false;
-bool avoid_dns = false;
+bool avoid_dns = true;
 
 int
 main(int argc, char *argv[])
@@ -144,8 +144,8 @@ main(int argc, char *argv[])
 				raw_data = true;
 				break;
 			}
-			case 'i': {
-				avoid_dns = true;
+			case 'h': {
+				avoid_dns = false;
 				break;
 			}
 			default:
