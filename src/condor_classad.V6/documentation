@@ -1,55 +1,15 @@
-/**@name ClassAd Distribution Documentation
-Please contact <A HREF="mailto:condor-admin@cs.wisc.edu">condor-admin</A>
-for support.
-*/
-//@{
-	/**@name ClassAd Library Classes
-	The ClassAd Library consists of several classes.  The library user will
-	find some classes more relevant than others.  To ease navigation
-	of the documentation, we have divided the library classes into
-	three categories, ranked on relevance to the user. 
-	*/
-	//@{
-		/**@name Primary ClassAd Library Classes 
-		These classes form the ``base'' level interface to the classad 
-		library, and are therefore of primary importance for library users. */
-		//@{
-			//@Include: source.h
-			//@Include: sink.h
-			//@Include: classad.h
-			//@Include: exprTree.h
-			//@Include: value.h
-			//@Include: matchClassad.h
-		//@}
+//@Include: operators.h
+//@Include: exprTree.h
 
-		/**@name Secondary ClassAd Library Classes 
-		The following classes can be useful in some situations.
-		*/
-		//@{
-			//@Include: exprList.h
-			//@Include: classadItor.h
-		//@}
+//@Include: classad.h
+//@Include: literals.h
+//@Include: attrrefs.h
+//@Include: exprList.h
+//@Include: fnCall.h
+//@Include: value.h
 
-		/**@name Auxillary ClassAd Library Classes 
-		The following classes are mostly unimportant to users.  There
-		are some fairly esoteric situations when knowledge of these classes
-		can be useful, but the documentation is included mostly for 
-		completeness.
-		*/
-		//@{
-			//@Include: attrrefs.h
-			//@Include: fnCall.h
-			//@Include: literals.h
-			//@Include: operators.h
-		//@}
+//@Include: source.h
+//@Include: sink.h
+//@Include: matchClassad.h
 
-		/**@name Enumerations of Interest
-		*/
-		//@{
-			//@Include: common.h
-		//@}
-
-	//@}
-
-
-//@}
+//@Include: classadItor.h
