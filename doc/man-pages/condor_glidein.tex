@@ -186,4 +186,21 @@ These files should be occasionally removed.
 
 \end{Options}
 
+\ExitStatus
+
+\Condor{glidein} will exit with a status value of 0 (zero) upon 
+complete success.
+The script exits with non-zero values upon failure.
+The status value will be 1 (one) if 
+\Condor{glidein} encountered an error making a directory,
+was unable to copy a tar file,
+encountered an error in parsing the command line,
+or was not able to gather required information.
+The status value will be 2 (two) if 
+there was an error in the remote set up.
+The status value will be 3 (three) if 
+there was an error in remote submission.
+The status value will be -1 (negative one) if 
+no resource was specified in the command line.
+
 \end{ManPage}
