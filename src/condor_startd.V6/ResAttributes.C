@@ -49,6 +49,10 @@ MachAttributes::~MachAttributes()
 #if !defined(WIN32)
 	delete m_afs_info;
 #endif
+	if( m_arch ) free( m_arch );
+	if( m_opsys ) free( m_opsys );
+	if( m_uid_domain ) free( m_uid_domain );
+	if( m_filesystem_domain ) free( m_filesystem_domain );
 }
 
 
