@@ -618,13 +618,24 @@ sub install($) {
     # Condor doesn't start using "central-manager-hostname.your.domain"
     $global_config{CONDOR_HOST}="";
 
+    if (-x "/sbin/ifconfig") {
+        my @network_interfaces=`/sbin/ifconfig | grep \"inet addr:\" | grep -v 127.0.0.1`;
+        if ($? == 0 && $#network_interfaces > 0) {
+            log_message("WARNING: Multiple network interfaces detected. "
+                        . "Condor might not work properly until you "
+                        . "set NETWORK_INTERFACE = <interface IP>\n");
+        }
+    }
+
     chomp (my $network_interface=`host $host | grep \"has address\" | awk \'\{print \$4\}\'`);
     
     if ($? == 0 && 
 	($network_interface =~ m/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/ )) {
 	#$local_config{NETWORK_INTERFACE}=$network_interface;
     } else {
-	print "\nWARNING: Unable to determine local IP address. Condor might not work propertly until you set NETWORK_INTERFACE=<machine IP address>\n";
+	log_message( "\nWARNING: Unable to determine local IP address. Condor "
+                 ." might not work propertly until you set "
+                 ." NETWORK_INTERFACE=<machine IP address>\n");
     }  
 
     set_mail_settings();
