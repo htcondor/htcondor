@@ -1,166 +1,68 @@
-12/03/93	Preliminary_CVS:A
-	Installed on Ultrix 4.2 non AFS DecStations
-01/06/94	Preliminary_Ultrix4_3a:A
-	Installed on Ultrix 4.3a with AFS DecStations - does not support
-	checkpointing or access to files within the AFS file tree.
-01/10/94	Sparc_Sunos4_1:A
-	Installed on both instructional and research suns.
-01/11/94	Sparc_Sunos4_1:A
-	Installed on both instructional and research suns.  Purpose to fix
-	bug caused by calling popen() to run "fs" command when reserving
-	file space for the AFS cache.  Replaced popen() with my_popen()
-	which is more careful to only reap the one child process it starts,
-	and to eat up one instance of SIGCHLD for the child it starts.
-01/17/94	Jan_17_94
-	Fixed memory leaks in condor_startd using purify.  Installed
-	only condor_startd on local MIPS_ULTRIX42 machines.
-02/23/94	V3:A
-	Applies only to src/condor_ckpt.  The checkpointing code with saving
-	and restoring the state of open files.  Only runs on the Alphas,
-	but compiles on the R6000's (haven't built a syscall() routine
-	for the 6000's yet).  Does not cover memory mapped files.
-02/27/94	V4:A
-	Applies to src/condor_ckpt src/condor_includes config.
-	The checkpointing code with saving and restoring state of ordinary
-	files.  Runs on OSF/1, HP-UX9, Ultrix4.2a, Ultrix 4.3a, SunOs 4.1.3
-	and compiles on Aix 3.2.  Haven't tried to get to run on AIX yet
-	because I need to build a syscall() routine there.
-04/19/94	DecAlpha_Almost
-	Applies to
-		src/condor_ckpt
-		src/condor_syscall_lib
-		src/h
-		src/condor_includes
-		src/condor_c++_util
-		src/condor_util_lib
-		src/condor_xdr_lib
-		src/condor_test_suite
-		src/condor_starter.Alpha
-		src/condor_shadow.Alpha
-		config
-	Mostly working version of remote system calls.  Works with or
-	without starter, but in either case only in "debugging" mode -
-	the mode where we use named pipes to simulate the TCP
-	connections to the shadow.
-4/26/94 DecApha_CKPT_Local_Remote
-	This one works for both local and remote checkpoint/restart on the
-	alpha.  Only tested in the "debugging" mode where we use named
-	pipes to communicate with the shadow.  Also not tested under the
-	starter, but in the mode where the user program makes its shadow
-	connections itself and reads the command stream from a file.
-	Contains many "hacks" to get the remote restart to work.
-4/27/94 IBM_version
-    Version actually checked out earlier on AIX 3.2.5.  Checked in
-    now using "cvs tag" (not rtag), to make sure I can reproduce.
-    Intend to give this version to Bob Mikrut of DoIt on 4/28/94.
-4/28/94 DoIt_1
-	Version with no AFS access and some AIX 3.2.5 problems fixed up.  Can
-	at least build, run, and run the "loop" program.
-5/14/94 DecApha_CKPT_Local_Remote_2
-	This one works for both local and remote checkpoint/restart on the
-	alpha.  Only tested in the "debugging" mode where we use named
-	pipes to communicate with the shadow.  Also not tested under the
-	starter, but in the mode where the user program makes its shadow
-	connections itself and reads the command stream from a file.
-	Many previous "hacks" fixed up.  No longer depends on constructors
-	to initialize objects at global scope - all constructors removed
-	from the checkpointing code.  Also uses CONDOR_get_file_stream
-	to read checkpoint files and CONDOR_put_file_stream to write
-	them - faster and symmetric.
-5/19/94 DecAlpha_Task4
-	Dec Alpha OSF/1 v1.3 - runs test jobs submitted in normal way using
-	Shaodow, Startd, and Starter.  Done with normal remote system call
-	connection via TCP.
-5/25/94 DecAlpha_a1
-	Dec Alpha OSF/1 v1.3 - Pretty much every thing works here, all the
-	deamons (including collector and negotiator), tools, etc.  Everything
-	has been checked in, checked back out, re-compiled from scratch,
-	and tested.
-5/27/94 DecAlpha_a2
-	Everything from "DecAlpha_a1", plus customization program for creating
-	site specific versions of "script files" from platform specific ones.
-6/7/94 DecAlpha_a3
-	Includes test programs for C, C++, and Fortran, plus a few minor bug
-	fixes which were necessary to get all the test programs running.
-6/9/94 DecAlpha_a4
-	Fixes memory leak in schedd and problem where condor_rm didn't kill
-	remotely running process.
-6/14/94 DecAlpha_a5
-	Supports generation of "examples" and "doc" directories for binary
-	distribution.
-6/14/94 DecAlpha_a6
-	Released to the world as "Condor_5.1a_DecAlpha".
-	
-* 6/22/94 bp_Local_Sun_Dec (Branch Point Tag)
-	This is the code running on our local pool Dec and Suns since around
-	2/11/94.  It is tagged with a "date" option for that date.  This
-	is to become the "local branch" Local_Sun_Dec which is intended to
-	include small improvements and patches to the local code.
+3/16/99 V6_3-NewAds-1-branch
+	This is a new branch for the New-Classads/egcs/STL conversion
+	process.  We created the branch, then we will merge the
+	V6_1-NewAds-branch directly into this new branch, not the
+	trunk.  Eventually, this branch will be merged into the trunk
+	once it's at 6.3.X.
 
-6/22/94 Local_Sun_Dec
-	This is the initial version of "latest local code" based on the above
-	bp_Local_Sun_Dec branch.
-	
-6/24/94 Local_Sun_Dec_2
-	Installed on both Sun and Dec in local pool this date.  Includes
-	use of AFS for file transfers, but not user code accesses to
-	data.  File transfers include
-		checkpoint file:		from submitting to executing machine
-		checkpoint file:		from executing machine to submitting machine
-		(abnormal) core file:	from executing machine to submitting machine
+3/16/99 co-alloc-1-branch
+	Branch created for Adiel to use for his changes to the
+	negotiator to support co-allocation of licences w/ machines
+	(primarily for CORE).
 
-6/27/94 bp_Alpha_Alpha (Branch Point Tag)
-	Alpha release of Condor for Dec Alpha.  This is (very close to) the
-	code released on the net as "Condor_5.1a_DecAlpha".  (This branch
-	point should have been created at the release date, but was created
-	later.)
+3/16/99 V6_1-unix-dc-pm-1-branch
+	Branch to get DaemonCore (DC) Process Management (PM) working
+	on Unix before it gets merged into the trunk.  This will
+	hopefully be done quickly and merged back in before we move to
+	V6_2.  After this branch was created, the initial check-ins to
+	enable Unix DCPM to the schedd were undone on the trunk, since
+	they were creating too many problems.
 
-6/27/94 Alpha_Alpha (Branch Point Tag)
-	Alpha release of Condor for Dec Alpha.  This tag refers to the 
-	latest code on the Alpha_Alpha branch.  It is intended for any
-	minor fixes which may be needed for that distribution, not
-	general development.
+3/11/99 son-of-vics-branch
+	New branch for Vic Zandy to do his process hijacking work on.
+	The vics-branch was abandonded since there were so many
+	changes on the trunk that it would be hell to merge back in. 
 
-7/3/94 V5_Alpha_Sparc_1
-	V5 code which compiles and works on both Dec Alpha and Sparc Sunos
-	platforms - clipped wing version only.  Tested very little.
+3/11/99 new-syscall-branch
+	New branch for Doug Thain's re-do of remote syscalls, file
+	table stuff, buffering, etc. 
 
-7/21/94 SparcSunos_a1
-	Limited Release to the world as "Condor_5.1a_SunOS".
+3/9/99	V6_1-pre-merge-V6_1_4
+	The trunk, before merging in the V6_1_3-branch, which contains
+	both V6_1_3 and V6_1_4.  We're merging from where V6_1_4 is
+	tagged. 
 
-7/27/94 V5_a2
-	Released in department on Sun and Alpha.  Known bugs
-		1. Vanilla jobs run by users other than "condor" crash
-		2. Jobs which execute non-supported syscalls remain in queue forever
+3/3/99	V6_1_4
+	Version 6.1.4, tagged on the V6_1_3-branch.  Almost
+	exclusively bug fixes to V6_1_3, including the fix to the
+	fatal FPE exception caused by uninitialized memory in Cedar. 
 
-9/7/94 V5_a3
-	Runs on SunOs, AIX, and OSF1.  Released in dept on "steves" and
-	"huey", "louie", and "frigg".  Given to DoIt this date.
+2/26/99	V6_1_3
+	Version 6.1.3, tagged on the V6_1_3-branch.  Lots of SMP bug
+	fixes, but lots of other new, unstable features.
 
-11/1/94 V5_a4
-	Runs on HPUX, ULTRIX, AIX . Released on snakes and dec-stations.
+2/?/99	V6_1_3-branch
+	Branch to get 6.1.3 ready for release.
 
-12/12/94 V5_a5
-	Runs on ULTRIX, OSF/1, and SunOS.  To be released on local Suns
-	and DecStations on 12/13.  Fixes:
-		1. Lock on job queue moved to LOG dir to avoid AFS locking problem.
-		2. IP address byte ordering fixed to allow cross platform execution.
-		3. Checkpoint time limit increased from 1 min to 5 mins.
+1/13/99	V6_1-pre-merge-V6_1_2
+	The trunk, before merging in the V6_1_1-branch, which contains
+	both V6_1_1 and V6_1_2.  We're merging from where V6_1_2 is
+	tagged. 
 
-12/12/94 bp_V5_a5
-	Branch point for V5_a5
+1/12/99 V6_1_2
+	Most directories are tagged on the V6_1_1-branch, with some
+	bug fixes and improvements after the V6_1_1 release was
+	tagged.  However, V6_1_2 includes the trunk versions of
+	condor_dagman and the pvm directories:
+	condor_(shadow|starter).jim.  
 
-12/22/94 V5_a5_1
-	Fixes bugs in chdir and keeping track of working directory across
-	checkpoints.  Installed on local DecStations and Suns this date.
+?/?/98	V6_1_1
+	Version 6.1.1, tagged on the V6_1_1 branch.
 
-1/4/95	V5_a5_2
-	Fixes bug where recipt of a checkpoint signal during a restart
-	caused a damaged checkpoint file.  Now the process just exits,
-	as the checkpoint we already have is up to date.
-2/6/95	V5_a5_3
-	Supports Signals and Threads code.  Released to local Dec and Sun
-	machines on 2/7/95.
-2/20/95	V5_a5_4
-	Fixes negotiator bugs related to preemption.  Installed on local
-	Sun and Dec machines 2/21/95.
+12/21/98 V6_1_1-branch
+	Branch for the V6_1_1 development series release.  Only src is
+	tagged, not config.
+
+?/?/98	V6_1-NewAds-branch
+
+12/9/98	V6_1_0
