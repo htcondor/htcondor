@@ -912,13 +912,15 @@ ParseClassAd( ClassAd &ad , bool full )
 
 		// the next token must be a ';' or a ']'
 		tt = lexer.PeekToken();
-		if( tt == LEX_SEMICOLON )
-			lexer.ConsumeToken();
-		else
-		if( tt != LEX_CLOSE_BOX ) {
-			ad.Clear();
-			return false;
+		if( tt != LEX_SEMICOLON && tt != LEX_CLOSE_BOX ) {
+			ad.Clear( );
+			return( false );
 		}
+
+		if( tt == LEX_SEMICOLON ) {
+			lexer.ConsumeToken();
+			tt = lexer.PeekToken();
+		} 
 	}
 
 	lexer.ConsumeToken();
