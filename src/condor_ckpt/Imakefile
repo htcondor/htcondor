@@ -121,38 +121,35 @@ OBJ =	syscall_mode.o shared_utils.o
 /* Figure out what should be in the libc++support library, if anything */
 #if DOES_CHECKPOINTING
 
-#	if IS_C_COMP_KIND_EGCS || IS_C_COMP_MINOR_GCC_2_95 
-		CPP_SUPPORT_EXTRACT_OBJ = _eh.o tinfo.o tinfo2.o \
-			  exception.o frame.o __dummy.o _pure.o 
-#	elif IS_C_COMP_MINOR_GCC_2_96
-		CPP_SUPPORT_EXTRACT_OBJ = _eh.o tinfo.o tinfo2.o \
-			  exception.o frame-dwarf2.o __dummy.o _pure.o 
-#	elif IS_C_COMP_MAJOR_GCC_3
-		CPP_SUPPORT_EXTRACT_OBJ =
-#	else
-#		error Checkpoint library not compatible with compiler!
-#	endif
-	CPP_SUPPORT_OBJ = c_plus_alloc.o $(CPP_SUPPORT_EXTRACT_OBJ)
+#if IS_C_COMP_MAJOR_GCC_3
+# define NEEDS_CPP_SUPPORT_LIB 0
+  CPP_SUPPORT_LIB =
+#else /* non gcc 3.x */
+#  if IS_C_COMP_KIND_EGCS || IS_C_COMP_MINOR_GCC_2_95 
+     CPP_FRAME_OBJ = frame.o
+#  elif IS_C_COMP_MINOR_GCC_2_96
+     CPP_FRAME_OBJ = frame-dwarf2.o
+#  else
+#    error Checkpoint library not compatible with compiler!
+#  endif /* egcs, gcc 2.95 and gcc 2.96 */
+# define NEEDS_CPP_SUPPORT_LIB 1
+  CPP_SUPPORT_EXTRACT_OBJ = _eh.o tinfo.o tinfo2.o $(CPP_FRAME_OBJ) \
+			    exception.o  __dummy.o _pure.o 
+  CPP_SUPPORT_OBJ = c_plus_alloc.o $(CPP_SUPPORT_EXTRACT_OBJ)
+  CPP_SUPPORT_LIB = libcondorc++support.a
+#endif /* gcc 3.x or not */
 
-#	if defined(IS_C_COMP_MAJOR_GCC_2)
+all_target(ToUpper $(CPP_SUPPORT_LIB) condor_rt0.o $(OBJ) $(COMPRESS_LIB) $(RELEASE_OBJ))
+release:: all
+stripped:: all
+static:: all
 
-    all_target(ToUpper libcondorc++support.a condor_rt0.o \
-	       $(OBJ) $(COMPRESS_LIB) $(RELEASE_OBJ))
-
-    library_target(libcondorc++support.a,$(CPP_SUPPORT_OBJ))
-
-	release_library(libcondorc++support.a,lib)
-	strip_library(libcondorc++support.a,lib)
-	static_library(libcondorc++support.a,lib)
-
-#	else
-
-    all_target(ToUpper condor_rt0.o $(OBJ) $(COMPRESS_LIB) $(RELEASE_OBJ))
-	release:: all
-	stripped:: all
-	static:: all
-	
-#	endif
+#if NEEDS_CPP_SUPPORT_LIB
+library_target(libcondorc++support.a,$(CPP_SUPPORT_OBJ))
+release_library(libcondorc++support.a,lib)
+strip_library(libcondorc++support.a,lib)
+static_library(libcondorc++support.a,lib)
+#endif /* NEEDS_CPP_SUPPORT_LIB */
 
 #else /* Not DOES_CHECKPOINTING */
 
@@ -161,7 +158,8 @@ release:: all
 stripped:: all
 static:: all
 
-#endif
+#endif /* DOES_CHECKPOINTING or not */ 
+
 
 #if IS_HPUX
 SIGNAL.o :  $(SIMPLE_LIBC)  ToUpper
@@ -218,10 +216,8 @@ uppercase_target($(SIMPLE_LIBC),sigsuspend.o,SIGSUSPEND.o,sigsuspend,SIGSUSPEND)
 uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
 #endif
 
-#if DOES_CHECKPOINTING
-#if defined(IS_C_COMP_MAJOR_GCC_2)
+#if DOES_CHECKPOINTING && NEEDS_CPP_SUPPORT_LIB
 obj_extract($(GCC_LIBC),$(CPP_SUPPORT_EXTRACT_OBJ))
-#endif
 #endif
 
 #if IS_LINUX && IS_GLIBC
