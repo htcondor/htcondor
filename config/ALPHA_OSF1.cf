@@ -91,5 +91,4 @@
 #endif MkDepend
 
 #define VendorCTestFlags -std
-#define VendorCPPTestFlags -std
 
