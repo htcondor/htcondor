@@ -149,6 +149,15 @@ CKPT_OBJ =	file_state.o image.o tmp_stack.o machdep.$(DEP_OS).o \
 CKPT_OBJ = syscall_mode.o eprintf.o
 #endif
 
+#if DOES_COMPRESS_CKPT
+#if IS_SUN4X_SOLARIS
+COMPRESS_OBJ = malloc.o zimage.o _rem.o
+#else
+COMPRESS_OBJ = malloc.o zimage.o
+#endif
+COMPRESS_LIB = condor_syscall_zlib.a
+#endif
+
 SYSCALL_SUPPORT_OBJ=senders.o receivers.o syscall_mode.o syscall_connect.o remote_syscall.o syscall_numbers.o xfer_file.o
 
 UTIL_OBJ =  $(FLOCK_OBJ) dprintf.o dprintf_config.o except.o update_rusage.o \
@@ -165,7 +174,7 @@ SIMPLE_OBJ = condor_rt0.o extern_path.o xfer_file.o
 SYSCALL_LIB = condor_syscall_lib.a
 
 #if DOES_REMOTE_SYSCALLS
-all_target($(SYSCALL_LIB) receivers.o $(SIMPLE_OBJ) $(AIX_OBJ) syscall-list)
+all_target($(SYSCALL_LIB) $(COMPRESS_LIB) receivers.o $(SIMPLE_OBJ) $(AIX_OBJ) syscall-list)
 #else 
 all_target($(SYSCALL_SUPPORT_OBJ))
 #endif
@@ -355,6 +364,16 @@ import(../condor_io,$(IO_OBJ))
 import(../condor_util_lib,$(UTIL_OBJ))
 import(../condor_ckpt,condor_rt0.o)
 import(../condor_ckpt,$(CKPT_OBJ))
+import(../condor_ckpt,$(COMPRESS_OBJ))
 import(../h,syscall_numbers.c)
 import(../condor_util_lib, stub_gen)
 import(../condor_shadow.V6, pseudo_ops.h)
+
+#if DOES_COMPRESS_CKPT
+$(COMPRESS_LIB) : $(SYSCALL_LIB) $(COMPRESS_OBJ)
+	cp $(SYSCALL_LIB) $(COMPRESS_LIB)
+	ar -d $(COMPRESS_LIB) image.o
+	ar -r $(COMPRESS_LIB) $(COMPRESS_OBJ)
+clean::
+	rm -f $(COMPRESS_LIB) $(COMPRESS_OBJ)
+#endif
