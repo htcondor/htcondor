@@ -29,12 +29,7 @@
 #include "condor_classad.h"
 #include "user_log.c++.h"
 #include "exit.h"
-
-/* I'm not sure if this is 100% necessary, but it was in the 
-   old shadow's log_events.C... */
-#if !defined( WCOREDUMP )
-#define  WCOREDUMP(stat)      ((stat)&WCOREFLG)
-#endif
+#include "../h/shadow.h"
 
 /* Forward declaration to prevent loops... */
 class RemoteResource;
@@ -119,6 +114,26 @@ class BaseShadow : public Service
 		 */
 	virtual void shutDown( int reason, int exitStatus ) = 0;
 
+		/** The total number of bytes sent over the network on
+			behalf of this job.
+			Each shadow class should override this function and
+			do whatever it needs to do.
+			The default implementation in the base just returns
+			zero bytes.
+			@return number of bytes sent over the network.
+		*/
+	virtual float bytesSent() { return 0.0; }
+
+		/** The total number of bytes received over the network on
+			behalf of this job.
+			Each shadow class should override this function and
+			do whatever it needs to do.
+			The default implementation in the base just returns
+			zero bytes.
+			@return number of bytes sent over the network.
+		*/
+	virtual float bytesReceived() { return 0.0; }
+
 		/** Initializes the user log.  'Nuff said. 
 		 */
 	void initUserLog();
@@ -173,9 +188,16 @@ class BaseShadow : public Service
         /// Returns the owner of the job - found in the job ad
     char *getOwner() { return owner; }
 
+		/// Called by EXCEPT handler to log to user log
+	static void BaseShadow::log_except(char *msg);
+
+		/// Used by static and global functions to access shadow object
+	static BaseShadow* myshadow_ptr;
+
  protected:
 
-	UserLog uLog;
+		// make UserLog static so it can be accessed by EXCEPTION handler
+	static UserLog uLog;
 	
 		/** Note that this is the base, "unexpanded" ClassAd for the job.
 			If we're a regular shadow, this pointer gets copied into the
