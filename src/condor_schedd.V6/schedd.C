@@ -616,15 +616,15 @@ Scheduler::negotiate(int, Stream* s)
 					if (!ad) {
 						dprintf( D_ALWAYS, "Can't get job ad %d.%d\n",
 								 id.cluster, id.proc );
+						return;
+					}
+					if( !ad->put(*s) ) {
+						dprintf( D_ALWAYS,
+								"Can't send job ad to mgr\n" );
 						FreeJobAd(ad);
 						return;
 					}
 					FreeJobAd(ad);
-					if( !ad->put(*s) ) {
-						dprintf( D_ALWAYS,
-								"Can't send job ad to mgr\n" );
-						return;
-					}
 					if( !s->end_of_message() ) {
 						dprintf( D_ALWAYS,
 								"Can't send job ad to mgr\n" );
