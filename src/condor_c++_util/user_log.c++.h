@@ -160,17 +160,20 @@ class ReadUserLog
   public:
 
     ///
-    ReadUserLog();
+    inline ReadUserLog() : _fd(-1), _fp(0) {}
 
     ///
-    ~ReadUserLog();
+    ReadUserLog (const char * filename);
+                                      
+    ///
+    inline ~ReadUserLog() { if (_fp) fclose(_fp); }
 
     /** Initialize the log file.  This function will abort the program
         (by calling EXCEPT) if it can't open the log file.
         @param file the file to read from
         @return 1 for success
     */
-    int initialize (const char *file);
+    bool initialize (const char *filename);
 
     /** Read the next event from the log file.  The event pointer to
         set to point to a newly instatiated ULogEvent object.
@@ -185,17 +188,17 @@ class ReadUserLog
         "bad" event (i.e., read up to and including the event separator (...))
         so that the rest of the events can be read.
 
-        @return 0 for failure, 1 for success
+        @return true: success, false: failure
     */
-    int synchronize (void);
+    bool synchronize ();
 
     /// Get the log's file descriptor
-    inline int getfd() const { return fd; }
+    inline int getfd() const { return _fd; }
 
     private:
 
-    /** The log's file descriptor */  int    fd;
-    /** The log's file pointer    */  FILE * fp;
+    /** The log's file descriptor */  int    _fd;
+    /** The log's file pointer    */  FILE * _fp;
 };
 
 #endif /* __cplusplus */

@@ -354,35 +354,19 @@ EndUserLogBlock( LP *lp )
 
 // ReadUserLog class
 
-
 ReadUserLog::
-ReadUserLog ()
+ReadUserLog (const char * filename)
 {
-	fp = 0;
+    if (!initialize(filename)) EXCEPT ("Failed to open %s", filename);
 }
 
 
-ReadUserLog::
-~ReadUserLog ()
-{
-	if (fp) fclose(fp);
-}
-
-
-int ReadUserLog::
-initialize (const char *file)
+bool ReadUserLog::
+initialize (const char *filename)
 {	
-	if ((fd = open (file, O_RDONLY, 0)) == -1)
-	{
-		EXCEPT ("open(%s)", file);
-	}
-
-	if ((fp = fdopen (fd, "r")) == NULL)
-	{
-		EXCEPT ("fdopen(%d)", fd);
-	}
-
-	return 1;
+	if ((_fd = open (filename, O_RDONLY, 0)) == -1) return false;
+	if ((_fp = fdopen (_fd, "r")) == NULL) return false;
+	return true;
 }
 	
 
@@ -395,10 +379,10 @@ readEvent (ULogEvent *& event)
 	
 	// store file position so that if we are unable to read the event, we can
 	// rewind to this location
-	if (!fp || ((filepos = ftell(fp)) == -1L))
+	if (!_fp || ((filepos = ftell(_fp)) == -1L))
 		return ULOG_UNK_ERROR;
 
-	retval1 = fscanf (fp, "%d", &eventnumber);
+	retval1 = fscanf (_fp, "%d", &eventnumber);
 
 	// so we don't dump core if the above fscanf failed
 	if (retval1 != 1) eventnumber = 1;
@@ -411,7 +395,7 @@ readEvent (ULogEvent *& event)
 	}
 
 	// read event from file; check for result
-	retval2 = event->getEvent (fp);
+	retval2 = event->getEvent (_fp);
 		
 	// check if error in reading event
 	if (!retval1 || !retval2)
@@ -420,15 +404,15 @@ readEvent (ULogEvent *& event)
 		if (synchronize())
 		{
 			// if synchronization was successful, reset file position and ...
-			if (fseek (fp, filepos, SEEK_SET))
+			if (fseek (_fp, filepos, SEEK_SET))
 			{
 				EXCEPT ("fseek()");
 			}
 			
 			// ... attempt to read the event again
-			clearerr (fp);
-			retval1 = fscanf (fp, "%d", &eventnumber);
-			retval2 = event->getEvent (fp);
+			clearerr (_fp);
+			retval1 = fscanf (_fp, "%d", &eventnumber);
+			retval2 = event->getEvent (_fp);
 
 			// if failed again, we have a parse error
 			if (!retval1 || !retval2)
@@ -447,11 +431,11 @@ readEvent (ULogEvent *& event)
 		{
 			// if we could not synchronize the log, we don't have the full	
 			// event in the stream yet; restore file position and return
-			if (fseek (fp, filepos, SEEK_SET))
+			if (fseek (_fp, filepos, SEEK_SET))
 			{
 				EXCEPT ("fseek()");
 			}
-			clearerr (fp);
+			clearerr (_fp);
 			delete event;
 			event = NULL;  // To prevent FMR: Free memory read
 			return ULOG_NO_EVENT;
@@ -470,7 +454,7 @@ readEvent (ULogEvent *& event)
 			// event
 			delete event;
 			event = NULL;  // To prevent FMR: Free memory read
-			clearerr (fp);
+			clearerr (_fp);
 			return ULOG_NO_EVENT;
 		}
 	}
@@ -480,21 +464,13 @@ readEvent (ULogEvent *& event)
 }
 
 
-int ReadUserLog::
-synchronize (void)
+bool ReadUserLog::
+synchronize ()
 {
-	int retval = 0;
 	char buffer[32];
-	while (1)
-	{
-		if (fgets (buffer, 32, fp) == NULL) break;
-
-		if (strcmp (buffer, SynchDelimiter) == 0)
-		{
-			retval = 1;
-			break;
-		}
+	while (1) {
+		if (fgets (buffer, 32, _fp) == NULL)      return false;
+		if (strcmp (buffer, SynchDelimiter) == 0) return true;
 	}
-
-	return retval;
+    return false;
 }
