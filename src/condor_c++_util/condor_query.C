@@ -259,7 +259,7 @@ fetchAds (ClassAdList &adList, const char *poolName)
     QueryResult result;
     ClassAd     queryAd, *ad;
 
-	if( is_valid_sinful(poolName) ) {
+	if( is_valid_sinful((char *)poolName) ) {
 			// We already have a sinful string, use that.
 		pool = poolName;
 	} else {
