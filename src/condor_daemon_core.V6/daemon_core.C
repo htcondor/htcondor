@@ -5243,7 +5243,8 @@ int DaemonCore::Create_Process(
 	pidtmp->pipeReady = 0;
 	pidtmp->deallocate = 0;
 #endif 
-	assert( pidTable->insert(newpid,pidtmp) == 0 );  
+	int insert_result = pidTable->insert(newpid,pidtmp);  
+	assert( insert_result == 0); 
 	dprintf(D_DAEMONCORE,
 		"Child Process: pid %lu at %s\n",newpid,pidtmp->sinful_string);
 #ifdef WIN32
