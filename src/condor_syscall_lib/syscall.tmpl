@@ -126,7 +126,7 @@
 		therefore their switches are implemented in "condor_ckpt/file_state.C",
 		but we still need to generate senders and receivers for them here.
 		*/
-	int open( const char *path, int flags, int mode ) {
+	int open( const char *path, open_flags_t flags, int mode ) {
 		SEND_PATH( path );
 		ALLOC_PATH( path );
 	}
