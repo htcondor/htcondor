@@ -26,9 +26,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed bug whereby \Condor{dagman}, if removed from the queue via
-      \Condor{rm}, could fail to remove all of its submitted jobs if
-      any of their submit events had not yet appeared in the userlog.
+\item Fixed a bug where \Condor{dagman}, if removed from the queue via
+      \Condor{rm}, would fail to remove jobs it had just submitted, if
+      those jobs' submit events had not yet appeared in the userlog.
 
 \item Fixed the bug whereby \Condor{preen} could potentially remove
   files related to a valid Computing on Demand (COD) claim on an
@@ -62,6 +62,10 @@ function to track mouse activity that does not have a tendancy to fail.
 \item The error message in the SchedLog that indicates that swap space
   has been depleted has been rephrased so it appears to be
   significant. 
+
+\item Fixed a \Condor{negotiator} bug that could, in certain rare
+      circumstances, cause a \Condor{schedd} to hang for five minutes
+      while trying to communicate with it.
 
 \end{itemize}
 
