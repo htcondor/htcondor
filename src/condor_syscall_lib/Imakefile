@@ -223,7 +223,7 @@ SYSCALL_SUPPORT_OBJ=senders.o receivers.o syscall_mode.o syscall_connect.o remot
 UTIL_OBJ =  $(FLOCK_OBJ) dprintf_common.o except.o update_rusage.o \
 	internet.o $(PLATFORM_UTIL_OBJ) mkargv.o filename_tools.o
 
-CPP_UTIL_OBJ = condor_version.o 
+CPP_UTIL_OBJ = condor_version.o condor_md.o
 
 CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o errno_num.o
 
@@ -246,7 +246,7 @@ PLATFORM_MD_OBJ = PlatformMdObj
 #else
 #error YOU MUST DEFINE PlatformMdObj IF YOU WANT TO USE ENCRYPTION
 #endif
-CONDOR_MD_OBJ = ../condor_c++_util/condor_md.o $(OPENSSL_MD_OBJ) $(PLATFORM_MD_OBJ)
+CONDOR_MD_OBJ = $(OPENSSL_MD_OBJ) $(PLATFORM_MD_OBJ)
 
 CONDOR_CRYPT_OBJ = condor_crypt.o ../condor_util_lib/get_random_num.o $(CONDOR_DES_OBJ) $(CONDOR_BLOWFISH_OBJ) $(CONDOR_MD_OBJ)
 
@@ -570,6 +570,10 @@ import( ZLibPath , libz.a )
 authentication.o: ../condor_io/authentication.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
 		-DSKIP_AUTHENTICATION -c ../condor_io/authentication.C
+
+condor_md.o: ../condor_c++_util/condor_md.C
+	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_c++_util \
+	        -DSKIP_AUTHENTICATION -c ../condor_c++_util/condor_md.C
 
 condor_crypt_3des.o: ../condor_io/condor_crypt_3des.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) -I../condor_io \
