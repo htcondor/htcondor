@@ -63,7 +63,8 @@ fi
 ##################################################
 
 arch=`uname -m`
-osversion=`uname -r`
+osrelease=`uname -r`
+osversion=`uname -v`
 # Make sure if we get back something that begins with "IRIX" that we
 # strip off anything after it (e.g. "IRIX64", etc).
 os=`uname -s | sed 's/IRIX.*/IRIX/'`
@@ -110,10 +111,10 @@ fi
 LIBGCC=`gcc -print-libgcc-file-name`
 EgcsLib="-DLIB_GCC=$LIBGCC"
 
-if [ $os = "HP-UX" -a $osversion = "B.10.20" ] ; then
+if [ $os = "HP-UX" -a $osrelease = "B.10.20" ] ; then
 	Opsys="-DIS_HPUX10"
 
-elif [ $os = "OSF1" -a $osversion = "V4.0" ] ; then
+elif [ $os = "OSF1" -a $osrelease = "V4.0" ] ; then
 	Opsys="-DIS_DUX4"
 
 elif [ $os = "Linux" ]; then
@@ -143,29 +144,39 @@ elif [ $os = "SunOS" ]; then
 		ArchFlag="-DIS_X86"
 	fi
 
-	if [ $osversion = "5.5.1" ] ; then
+	if [ $osrelease = "5.5.1" ] ; then
 		Opsys="-DIS_SOLARIS251"
-	elif [ $osversion = "5.6" ] ; then
+	elif [ $osrelease = "5.6" ] ; then
 		Opsys="-DIS_SOLARIS26"
-	elif [ $osversion = "5.7" ] ; then
+	elif [ $osrelease = "5.7" ] ; then
 		Opsys="-DIS_SOLARIS27"
-	elif [ $osversion = "5.8" ] ; then
+	elif [ $osrelease = "5.8" ] ; then
 		Opsys="-DIS_SOLARIS28"
-	elif [ $osversion = "5.9" ] ; then
+	elif [ $osrelease = "5.9" ] ; then
 		Opsys="-DIS_SOLARIS29"
 	fi
 
 elif [ $os = "IRIX" ] ; then
-	if [ $osversion = "6.5" ] ; then
+	if [ $osrelease = "6.5" ] ; then
 		Opsys="-DIS_IRIX65"
 	else
 		Opsys="-DIS_IRIX62"
 	fi
+
+elif [ $os = "AIX" ] ; then
+	Opsys="-DIS_AIX"
+	if [ $osversion = "5" ] ; then
+		Other="-DIS_AIX5"
+	fi
+
+	# add detection to this when ia64 is needed
+	ArchFlag="-DIS_PPC"
 fi
 
 ##################################################
 # Finally, call imake with all the flags
 ##################################################
 
+echo $IMAKE -s Makefile $ArchFlag $Opsys $Other $Other2 $EgcsLib $KerbFlags -I../config -I../../config $*
 $IMAKE -s Makefile $ArchFlag $Opsys $Other $Other2 $EgcsLib $KerbFlags -I../config -I../../config $*
 
