@@ -378,7 +378,11 @@ OpenFileTable::DoSocket(int addr_family, int type, int protocol )
 
 		// Try to open the file
 	if( LocalSysCalls() ) {
+#if defined(LINUX)
+		real_fd = syscall( SYS_socketcall, addr_family, type, protocol );
+#else
 		real_fd = syscall( SYS_socket, addr_family, type, protocol );
+#endif
 	} else {
 		real_fd = -1;
 	}
@@ -750,7 +754,7 @@ dup2( int old, int new_fd )
 #endif
 
 #if defined(PVM_CHECKPOINTING)
-#if defined(SYS_socket)
+#if defined(SYS_socket) || (defined(LINUX) && defined(SYS_socketcall))
 int
 socket( int addr_family, int type, int protocol )
 {
@@ -762,7 +766,11 @@ socket( int addr_family, int type, int protocol )
 	}
 
 	if( LocalSysCalls() ) {
+#if defined(LINUX)
+		rval =  syscall( SYS_socketcall, addr_family, type, protocol );
+#else
 		rval =  syscall( SYS_socket, addr_family, type, protocol );
+#endif
 	} else {
 		rval =  -1;		/* What to do with a remote socket() call? JCP */
 	}
