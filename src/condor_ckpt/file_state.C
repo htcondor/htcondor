@@ -840,7 +840,6 @@ dup2( int old, int new_fd )
 }
 #endif
 
-#if defined(PVM_CHECKPOINTING)
 #if defined(SYS_socket) || (defined(LINUX) && defined(SYS_socketcall))
 int
 socket( int addr_family, int type, int protocol )
@@ -859,13 +858,12 @@ socket( int addr_family, int type, int protocol )
 		rval =  syscall( SYS_socket, addr_family, type, protocol );
 #endif
 	} else {
-		rval =  -1;		/* What to do with a remote socket() call? JCP */
+		rval =  REMOTE_syscall( CONDOR_socket, addr_family, type, protocol );
 	}
 
 	return rval;
 }
 #endif /* SYS_socket */
-#endif /* PVM_CHECKPOINTING */
 
 extern "C" void DisplaySyscallMode();
 
