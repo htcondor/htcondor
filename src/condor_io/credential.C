@@ -22,6 +22,8 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
 #include "authentication.h"
+#include "environ.h"
+
 #if !defined(SKIP_AUTHENTICATION)
 #   include "condor_debug.h"
 #   include "condor_string.h"
@@ -32,6 +34,7 @@
 #   include "string_list.h"
 #endif /* !defined(SKIP_AUTHENTICATION) */
 #include "credential.h"
+extern DLL_IMPORT_MAGIC char **environ;
 
 #ifdef GSS_AUTHENTICATION
 
