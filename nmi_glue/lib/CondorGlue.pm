@@ -3,7 +3,7 @@
 # build and test "glue" scripts for use with the NMI-NWO framework.
 #
 # Originally written by Derek Wright <wright@cs.wisc.edu> 2004-12-30
-# $Id: CondorGlue.pm,v 1.1.2.6 2005-01-02 18:17:14 wright Exp $
+# $Id: CondorGlue.pm,v 1.1.2.7 2005-01-02 18:17:51 wright Exp $
 #
 ######################################################################
 
@@ -27,7 +27,7 @@ sub printPrereqs
     my $fh = shift;
 
     # global prereqs
-    print $fh "prereqs = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, coreutils-5.2.1, binutils-2.15\n";
+    print $fh "prereqs = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, binutils-2.15\n";
 
     # platform-specific prereqs
     print $fh "prereqs_sun4u_sol_5.9 = gcc-2.95.3\n";
