@@ -174,7 +174,3 @@ extern ssize_t __read(int __fd, __ptr_t __buf, size_t __nbytes)
 {
 	return(read(__fd, __buf, __nbytes));
 }
-extern int __fcntl(int __fd, int __cmd, long __arg)
-{
-	return(fcntl(__fd, __cmd, __arg));
-}
