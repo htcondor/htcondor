@@ -437,6 +437,8 @@ private:
 	shadow_rec*		find_shadow_by_cluster( PROC_ID * );
 #endif
 
+	void			expand_mpi_procs(StringList *, StringList *);
+
 	HashTable <HashKey, match_rec *> *matches;
 	HashTable <int, shadow_rec *> *shadowsByPid;
 	HashTable <PROC_ID, shadow_rec *> *shadowsByProcID;

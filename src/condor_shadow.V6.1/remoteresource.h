@@ -406,6 +406,9 @@ private:
 		// Making these private PREVENTS copying.
 	RemoteResource( const RemoteResource& );
 	RemoteResource& operator = ( const RemoteResource& );
+
+	bool already_killed_graceful;
+	bool already_killed_fast;
 };
 
 

@@ -79,6 +79,9 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	supports_reconnect = false;
 	next_reconnect_tid = -1;
 	reconnect_attempts = 0;
+
+	already_killed_graceful = false;
+	already_killed_fast = false;
 }
 
 
@@ -185,9 +188,6 @@ RemoteResource::activateClaim( int starterVersion )
 bool
 RemoteResource::killStarter( bool graceful )
 {
-	static bool already_killed_graceful = false;
-	static bool already_killed_fast = false;
-
 	if( (graceful && already_killed_graceful) ||
 		(!graceful && already_killed_fast) ) {
 			// we've already sent this command to the startd.  we can

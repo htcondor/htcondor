@@ -1,3 +1,8 @@
+12/23/04 V6_7-dedicated-merge-1
+   The state of the V6_7-dedicated-branch for its merge back into the
+   V6_7-branch.  We'll abandon the V6_7-dedicated-branch after this
+   merge, and continue development in new branches.
+
 12/23/04 V6_7-pre_merge-V6_7-dedicated-merge-1
    The state of the V6_7-branch before merging in the
    V6_7-dedicated-branch as tagged at V6_7-dedicated-merge-1

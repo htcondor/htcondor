@@ -1009,11 +1009,18 @@ count( ClassAd *job )
 		}
 			// We want to record the cluster id of all idle MPI and parallel
 		    // jobs
+
 		if( (universe == CONDOR_UNIVERSE_MPI ||
 			 universe == CONDOR_UNIVERSE_PARALLEL) && status == IDLE ) {
 			int cluster = 0;
 			job->LookupInteger( ATTR_CLUSTER_ID, cluster );
-			dedicated_scheduler.addDedicatedCluster( cluster );
+
+			int proc = 0;
+			job->LookupInteger( ATTR_PROC_ID, proc );
+				// Don't add all the procs in the cluster, just the first
+			if( proc == 0) {
+				dedicated_scheduler.addDedicatedCluster( cluster );
+			}
 		}
 
 		// bailout now, since all the crud below is only for jobs
@@ -1327,8 +1334,8 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 		}
 	}
 
-	if (job_universe == CONDOR_UNIVERSE_PVM) {
-		job_id.proc = 0;		// PVM shadow is always associated with proc 0
+	if( (job_universe == CONDOR_UNIVERSE_PVM) || (job_universe == CONDOR_UNIVERSE_MPI) ) {
+		job_id.proc = 0;		// PVM and MPI shadow is always associated with proc 0
 	} 
 
 	// If it is not a Globus Universe job (which has already been
@@ -2832,8 +2839,10 @@ Scheduler::actOnJobs(int, Stream* s)
 			// No need to iterate through the queue, just act on the
 			// specific ids we care about...
 
-		job_ids.rewind();
-		while( (tmp=job_ids.next()) ) {
+		StringList expanded_ids;
+		expand_mpi_procs(&job_ids, &expanded_ids);
+		expanded_ids.rewind();
+		while( (tmp=expanded_ids.next()) ) {
 			tmp_id = getProcByString( tmp );
 			if( tmp_id.cluster < 0 || tmp_id.proc < 0 ) {
 				continue;
@@ -3021,12 +3030,13 @@ Scheduler::actOnJobs(int, Stream* s)
 	case JA_REMOVE_JOBS:
 	case JA_VACATE_JOBS:
 	case JA_VACATE_FAST_JOBS:
-		for( i=0; i<num_matches; i++ ) {
-			if( i % 10 == 0 ) {
-				daemonCore->ServiceCommandSocket();
-			}
-			abort_job_myself( jobs[i], action, true, notify );
+		 for( i=0; i<num_matches; i++ ) {
+ 			if( i % 10 == 0 ) {
+ 				daemonCore->ServiceCommandSocket();
+ 			}
+ 			abort_job_myself( jobs[i], action, true, notify );
 		}
+
 		break;
 
 	case JA_RELEASE_JOBS:
@@ -6128,7 +6138,7 @@ mark_job_running(PROC_ID* job_id)
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE,
 					&universe);
-	if (universe == CONDOR_UNIVERSE_PVM) {
+	if( universe == CONDOR_UNIVERSE_PVM ) {
 		ClassAd *ad;
 		ad = GetNextJob(1);
 		while (ad != NULL) {
@@ -6153,7 +6163,7 @@ mark_job_stopped(PROC_ID* job_id)
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE,
 					&universe);
-	if (universe == CONDOR_UNIVERSE_PVM) {
+	if( (universe == CONDOR_UNIVERSE_PVM) || (universe == CONDOR_UNIVERSE_MPI) ){
 		ClassAd *ad;
 		ad = GetNextJob(1);
 		while (ad != NULL) {
@@ -6433,6 +6443,46 @@ Scheduler::find_shadow_by_cluster( PROC_ID *id )
 }
 #endif
 
+/*
+  If we have an MPI cluster with > 1 proc, the user
+  might condor_rm/_hold/_release one of those procs.
+  If so, we need to treat it as if all of the procs
+  in the cluster are _rm'd/_held/_released.  This
+  copies all the procs from job_ids to expanded_ids,
+  adding any sibling mpi procs if needed.
+*/
+void
+Scheduler::expand_mpi_procs(StringList *job_ids, StringList *expanded_ids) {
+	job_ids->rewind();
+	char *id;
+	char buf[40];
+	while( (id = job_ids->next())) {
+		expanded_ids->append(id);
+	}
+
+	job_ids->rewind();
+	while( (id = job_ids->next()) ) {
+		PROC_ID p = getProcByString(id);
+		if( (p.cluster < 0) || (p.proc < 0) ) {
+			continue;
+		}
+
+		int universe = -1;
+		GetAttributeInt(p.cluster, p.proc, ATTR_JOB_UNIVERSE, &universe);
+		if (universe != CONDOR_UNIVERSE_MPI)
+			continue;
+		
+		int proc_index = 0;
+		while( (GetJobAd(p.cluster, proc_index, false) )) {
+			sprintf(buf, "%d.%d", p.cluster, proc_index);
+			if (! expanded_ids->contains(buf)) {
+				expanded_ids->append(buf);
+			}
+			proc_index++;
+		}
+	}
+}
+
 void
 Scheduler::mail_problem_message()
 {
@@ -6577,7 +6627,7 @@ set_job_status(int cluster, int proc, int status)
 {
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	GetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, &universe);
-	if (universe == CONDOR_UNIVERSE_PVM) {
+	if( (universe == CONDOR_UNIVERSE_PVM) || ( universe == CONDOR_UNIVERSE_MPI)) {
 		ClassAd *ad;
 		ad = GetNextJob(1);
 		while (ad != NULL) {

@@ -64,8 +64,6 @@ template class ExtArray<MRecArray*>;
 template class ExtArray<ClassAd*>;
 template class HashTable<int,AllocationNode*>;
 template class HashBucket<int,AllocationNode*>;
-template class List<ResTimeNode>;
-template class Item<ResTimeNode>;
 template class List<ClassAd>;
 template class Item<ClassAd>;
 template class Queue<ClassAd*>;
