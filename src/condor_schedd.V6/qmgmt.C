@@ -1283,38 +1283,6 @@ int get_job_prio(ClassAd *job)
 	return cur_hosts;
 }
 
-/*
-** This is different from "job_prio()" because we want to send all jobs
-** regardless of the state they are in.
-*/
-
-int
-all_job_prio(int cluster, int proc)
-{
-    int job_prio;
-    int job_status;
-    PROC_ID job_id;
-    int job_q_date;
-    char    own_buf[100], *owner;
-    GetAttributeInt(cluster, proc, ATTR_JOB_PRIO, &job_prio);
-    GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &job_status);
-    GetAttributeInt(cluster, proc, ATTR_Q_DATE, &job_q_date);
-    GetAttributeString(cluster, proc, ATTR_OWNER, own_buf);
-    owner = own_buf;
-    job_id.cluster = cluster;
-    job_id.proc = proc;
-
-    PrioRec[N_PrioRecs].id = job_id;
-    PrioRec[N_PrioRecs].job_prio = job_prio;
-    PrioRec[N_PrioRecs].status = job_status;
-    PrioRec[N_PrioRecs].qdate = job_q_date;
-    N_PrioRecs += 1;
-	if ( N_PrioRecs == MAX_PRIO_REC ) {
-		grow_prio_recs( 2 * N_PrioRecs );
-	}
-	return 0;
-}
-
 extern void mark_job_stopped(PROC_ID* job_id);
 
 int mark_idle(ClassAd *job)
