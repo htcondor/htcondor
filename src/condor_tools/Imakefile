@@ -16,8 +16,7 @@ SRC = config_val.C preen.C user_prio.C history.C tool.C view.C
 LIB= ../condor_c++_util/cplus_lib.a $(CLASSAD_LIB) ../condor_util_lib/util_lib.a 
 LIBDIRS =../condor_util_lib ../condor_c++_util
 PROGRAMS =  	condor_config_val condor_preen condor_view \
-		condor_userprio condor_history condor test_calc \
-		condor_master_on condor_kill
+		condor_userprio condor_history condor test_calc
 
 all_target( $(PROGRAMS) )
 tags_target($(SRC),$(LIBDIRS))
