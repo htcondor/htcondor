@@ -35,7 +35,7 @@ static const char * DELIMITERS = " \t";
 static const int    MAX_LENGTH = 255;
 
 static bool parse_job(Dag *dag, char *filename, int lineNumber);
-static bool parse_script(char *line, Dag *dag, char *filename, int lineNumber);
+static bool parse_script(char *endline, Dag *dag, char *filename, int lineNumber);
 static bool parse_parent(Dag *dag, char *filename, int lineNumber);
 static bool parse_retry(Dag *dag, char *filename, int lineNumber);
 static bool parse_dot(Dag *dag, char *filename, int lineNumber);
@@ -92,6 +92,13 @@ bool parse (char *filename, Dag *dag) {
     while ( ((line=getline(fp)) != NULL) ) {
         lineNumber++;
 
+		//
+		// Find the terminating '\0'
+		//
+		char * endline = line;
+		while (*endline != '\0') endline++;
+
+
 		// Note that getline will truncate leading spaces (as defined by isspace())
 		// so we don't need to do that before checking for empty lines or comments.
         if (line[0] == 0)       continue;  // Ignore blank lines
@@ -110,7 +117,7 @@ bool parse (char *filename, Dag *dag) {
         // Handle a SCRIPT spec
         // Example Syntax is:  SCRIPT (PRE|POST) JobName ScriptName Args ...
         else if ( strcasecmp(token, "SCRIPT") == 0 ) {
-			parsed_line_successfully = parse_script(line, dag, 
+			parsed_line_successfully = parse_script(endline, dag, 
 													filename, lineNumber);
 		}
 
@@ -231,7 +238,7 @@ parse_job(
 //-----------------------------------------------------------------------------
 static bool 
 parse_script(
-	char *line,
+	char *endline,
 	Dag  *dag, 
 	char *filename, 
 	int  lineNumber)
@@ -240,12 +247,6 @@ parse_script(
 	Job * job = NULL;
 	MyString whynot;
 
-	//
-	// Find the terminating '\0'
-	//
-	char * endline = line;
-	while (*endline != '\0') endline++;
-	
 	//
 	// Second keyword is either PRE or POST
 	//
@@ -280,6 +281,7 @@ parse_script(
 		exampleSyntax (example);
 		return false;
 	} else {
+		debug_printf(DEBUG_QUIET, "jobName: %s\n", jobName);
 		job = dag->GetJob(jobName);
 		if (job == NULL) {
 			debug_printf( DEBUG_QUIET, 
