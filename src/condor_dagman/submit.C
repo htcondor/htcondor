@@ -79,7 +79,9 @@ bool submit_submit (const char * cmdFile, CondorID & condorID) {
   
   char * command = new char[strlen(exe) + strlen(cmdFile) + 10];
   if (command == NULL) {
-    debug_error (1, DEBUG_QUIET, "%s %s: Out of memory", exe, cmdFile);
+	  printf( "\nERROR: out of memory (%s() in %s:%d)!\n", __FUNCTION__,
+			  __FILE__, __LINE__ );
+	  return false;
   }
   sprintf( command, "%s %s%s", exe, cmdFile,
 		   DEBUG_LEVEL( DEBUG_VERBOSE ) ? "" : "2>&1" );
