@@ -26,7 +26,7 @@
 class Resource : public Service
 {
 public:
-	Resource( Sock*, Sock* );
+	Resource();
 	~Resource();
 
 		// Public methods that can be called from command handlers
@@ -110,9 +110,6 @@ private:
 		// Make public and private ads out of our classad
 	void make_public_ad( ClassAd* );
 	void make_private_ad( ClassAd* );
-		// Send given classads to the given sock.  If either pointer
-		// is NULL, the class ad is not sent.  
-	send_classad_to_sock( Sock* sock, ClassAd* pubCA, ClassAd* privCA );
 
 	int		up_tid;		// DaemonCore timer id for update timer.
 	int		poll_tid;	// DaemonCore timer id for polling timer.
