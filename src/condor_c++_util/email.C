@@ -79,26 +79,38 @@ email_user_open( ClassAd *jobAd, const char *subject )
 	}
 
     if ( strchr(email_addr,'@') == NULL ) {
-			// No host name specified; add uid domain. 
-			// Note: UID_DOMAIN is set to the fullhostname by default.
-		char domain[256];
-		domain[0] = '\0';
-		if ( (!jobAd->LookupString(ATTR_UID_DOMAIN, domain)) ||
-			 (domain[0] == '\0') ) {
-				// No uid domain found in the job ClassAd, fall back
-				// on the uid domain specified in the config file.
-				char *config_uid_domain;
-				if ( (config_uid_domain=param("UID_DOMAIN")) != NULL ) {
-					strcpy(domain,config_uid_domain);
-					free(config_uid_domain);
-				} else {
-					// No uid domain in the job ad or in the
-					// config file!  Use fullhostname.
-					strcpy( domain, my_full_hostname() );
-				}
+			// No host name specified; add a domain. 
+		char* domain = NULL;
+
+			// First, we check for EMAIL_DOMAIN in the config file
+		domain = param( "EMAIL_DOMAIN" );
+
+			// If that's not defined, we look for UID_DOMAIN in the
+			// job ad
+		if( ! domain ) {
+			jobAd->LookupString( ATTR_UID_DOMAIN, &domain );
 		}
+
+			// If that's not there, look for UID_DOMAIN in the config
+			// file
+		if( ! domain ) {
+			domain = param( "UID_DOMAIN" );
+		} 
+
+			// If we still don't know what to do, just use our own
+			// fully qualifed hostname.  We should never get this far,
+			// but we might as well be robust...
+		if( ! domain ) {
+			domain = strdup( my_full_hostname() );
+		}
+
+			// Now, we can append the domain to our address.
         strcat( email_addr, "@" );
         strcat( email_addr, domain );
+
+			// No matter what method we used above to find the domain,
+			// we've got to free() it now so we don't leak memory.
+		free( domain );
     }
 
     return email_open( email_addr, subject );
