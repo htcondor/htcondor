@@ -798,7 +798,9 @@ class DaemonCore : public Service
 			   is called in the parent, giving the return value as
 			   the thread exit status.
 			   The function must take a single argument of type
-			   (void *) and return an int.
+			   (void *) and return an int.  The value of the return int
+			   should ONLY be a 0 or a 1.... the thread reaper can only
+			   distinguish between 0 and non-zero.
 			@param arg The (void *) argument to be passed to the thread.
 			   If not NULL, this must point to a buffer malloc()'ed by
 			   the caller.  DaemonCore will free() this memory when
@@ -811,7 +813,14 @@ class DaemonCore : public Service
 			   the copy given to the thread when the thread exits; the
 			   caller (parent) is responsible for eventually closing
 			   the copy kept with the caller.  
-			@param reaper_id The reaper number to use.  Default = 1.
+			@param reaper_id The reaper number to use.  Default = 1.  
+			   IMPORTANT: the exit_status passed to the reaper will
+			   be a 0 if the start_func returned with 0, and the reaper
+			   exit_status will be non-zero if the start_func returns with
+			   a 1.  Example: start_func returns 1, the reaper exit_status
+			   could be set to 1, or 128, or -1, or 255.... or anything 
+			   except 0.  Example: start_func returns 0, the reaper exit_status
+			   will be 0, and only 0.
 			@return The tid of the newly created thread.
 		*/
 	int Create_Thread(

@@ -117,6 +117,8 @@ int ZZZ_always_increase() {
 	return ZZZZZ++;
 }
 
+static int _condor_exit_with_exec = 0;
+
 extern int LockFd;
 
 extern void drop_addr_file( void );
@@ -4371,6 +4373,57 @@ int DaemonCore::SetEnv( char *env_var )
 #endif
 }
 
+#ifndef WIN32
+	/* On Unix, we define our own exit() call.  The reason is messy: 
+	 * Basically, daemonCore Create_Thread call fork() on Unix.  
+	 * When the forked child calls exit, however, all the class 
+	 * destructors are called.  However, the code was never written in 
+	 * a way that expects the daemons to be forked.  For instance, some
+	 * global constructor in the schedd tells the gridmanager to shutdown...
+	 * certainly we do not want this happening in our forked child!  Also,
+	 * we've seen problems were the forked child gets stuck in libc realloc
+	 * on Linux trying to free up space in the gsi libraries after being 
+	 * called by some global destructor.  So.... for now, if we are
+	 * forked via Create_Thread, we have our child exit _without_ calling
+	 * any c++ destructors.  How do we accomplish that magic feat?  By
+	 * exiting via a call to exec()!  So here it is... we overload exit()
+	 * inside of daemonCore -- we do it this way so we catch all calls to
+	 * exit, including ones buried in dprintf etc.  Note we dont want to
+	 * do this via a macro setting, because some .C files that call exit
+	 * do not include condor_daemon_core.h, and we don't want to put it
+	 * into condor_common.h (because we only want to overload exit for
+	 * daemonCore daemons).  So doing it this way works for all cases.
+	 */
+extern "C" {
+void exit(int status)
+{
+
+	if ( _condor_exit_with_exec == 0 ) {
+		_exit(status);
+	}
+
+		// First try to just use /bin/true or /bin/false.
+	if ( status == 0 ) {
+		execve("/bin/true",NULL,NULL);
+		execve("/usr/bin/true",NULL,NULL);
+	} else {
+		execve("/bin/false",NULL,NULL);
+		execve("/usr/bin/false",NULL,NULL);
+	}
+
+		// If we made it here, we cannot use /bin/[true|false].
+		// So we need to use the condor_exit_code utility, if
+		// it exists.
+		// TODO
+
+		// If we made it here, we are out of options.  So we will
+		// just call _exit(), and hope for the best.
+	_condor_exit_with_exec = 0;  
+	_exit(status ? 1 : 0);
+}
+}
+#endif
+
 
 int DaemonCore::Create_Process(
 			const char	*name,
@@ -5404,6 +5457,7 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 	int tid;
 	tid = fork();
 	if (tid == 0) {				// new thread (i.e., child process)
+		_condor_exit_with_exec = 1;
 		exit(start_func(arg, sock));
 	} else if (tid < 0) {
 		dprintf(D_ALWAYS, "Create_Thread: fork() failed: %s (%d)\n",
