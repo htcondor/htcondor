@@ -276,9 +276,7 @@ obtainAdsFromCollector (ClassAdList &startdAds,
 	// set the constraints on the various queries
 	// 1.  Fetch ads of startds that are CLAIMED or UNCLAIMED
 	dprintf (D_ALWAYS, "\tGetting startd ads ...\n");
-	sprintf (buffer, "(TARGET.%s == \"%s\") || (TARGET.%s == \"%s\")", 
-					ATTR_STATE, state_to_string(claimed_state), 
-					ATTR_STATE, state_to_string(unclaimed_state));
+	sprintf (buffer, "(TARGET.%s =!= FALSE)", ATTR_REQUIREMENTS);
 	if (((result = startdQuery.addConstraint(buffer))	!= Q_OK) ||
 		((result = startdQuery.fetchAds(startdAds))		!= Q_OK))
 	{
