@@ -590,7 +590,7 @@ req_ckpt_exit_all()
 		// Request all the processes to ckpt and then exit
 	UProcList.Rewind();
 	while( proc = UProcList.Next() ) {
-		dprintf( D_ALWAYS, "req_exit_all: Proc %d in state %s\n", 
+		dprintf( D_ALWAYS, "req_ckpt_exit_all: Proc %d in state %s\n", 
 				 proc->get_id(),	ProcStates.get_name(proc->get_state())
 				 );
 		if( proc->is_running() || proc->is_suspended() ) {
