@@ -89,6 +89,8 @@ work.  A low CPU\_UTIL indicates that the job is not running
 efficiently, perhaps because it is I/O bound or because the job
 requires more memory than available on the remote workstations.  If
 the job has not (yet) checkpointed, this column contains \texttt{[??????]}.
+\item[Mb/s] The network usage of this job, in Megabits per second of
+run-time.
 \end{description}
 
 If the \Opt{-cputime} option is specified, the RUN\_TIME 
@@ -153,7 +155,7 @@ instantaneous and local information.  Therefore, there are some situations
 (such as when several submitters are contending for resources, or if the pool 
 is rapidly changing state) which cannot be accurately diagnosed.
 
-\Arg{-goodput} and \Arg{-cputime} are only useful for STANDARD
+\Arg{-goodput} and \Arg{-cputime} are most useful for STANDARD
 universe jobs, since they rely on values computed when a job
 checkpoints.
 
