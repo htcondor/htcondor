@@ -6,7 +6,7 @@
 
 typedef unsigned int	Bit;
 typedef int				BOOL;
-typedef unsigned short	FD;
+typedef int				FD;
 
 class OpenFileTable;
 
