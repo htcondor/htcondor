@@ -119,7 +119,7 @@ extern "C" {
 	void MvTmpCkpt();
 	void get_local_rusage( struct rusage *bsd_rusage );
 	void handle_termination( PROC *proc, char *notification,
-				union wait *jobstatus, char *coredir );
+				int *jobstatus, char *coredir );
 }
 
 #if defined(NEW_PROC)
@@ -143,7 +143,7 @@ char *strcpy();
 #include "condor_qmgr.h"
 
 extern int MainSymbolExists;
-extern union wait JobStatus;
+extern int JobStatus;
 extern char    *MailerPgm;
 extern char My_UID_Domain[];
 extern char *_FileName_;
@@ -203,7 +203,7 @@ NotifyUser( char *buf, PROC *proc, char *email_addr )
                                 return;
                         }
                 case NOTIFY_ERROR:
-                        if( (proc->status == COMPLETED) && (JobStatus.w_termsig != 0) ) {
+                        if( (proc->status == COMPLETED) && (WTERMSIG(JobStatus)!= 0) ) {
                                 break;
                         } else {
                                 return;
@@ -467,29 +467,30 @@ get_local_rusage( struct rusage *bsd_rusage )
 }
 
 void
-handle_termination( PROC *proc, char *notification, union wait *jobstatus,
+handle_termination( PROC *proc, char *notification, int *jobstatus,
 			char *coredir )
 {
+	int stat = *jobstatus;
 	char my_coredir[4096];
 	dprintf(D_FULLDEBUG, "handle_termination() called.\n");
 
-	switch( jobstatus->w_termsig ) {
+	switch( WTERMSIG(stat) ) {
 
 	 case 0: /* If core, bad executable -- otherwise a normal exit */
-		if( jobstatus->w_coredump && jobstatus->w_retcode == ENOEXEC ) {
+		if( WCOREDUMP(stat) && WEXITSTATUS(stat) == ENOEXEC ) {
 			(void)sprintf( notification, "is not executable." );
 			dprintf( D_ALWAYS, "Shadow: Job file not executable" );
 			ExitReason = JOB_EXCEPTION;
-		} else if( jobstatus->w_coredump && jobstatus->w_retcode == 0 ) {
+		} else if( WCOREDUMP(stat) && WEXITSTATUS(stat) == 0 ) {
 				(void)sprintf(notification,
 "was killed because it was not properly linked for execution \nwith Version 6 Condor.\n" );
 				MainSymbolExists = FALSE;
 				ExitReason = JOB_EXCEPTION;
 		} else {
 			(void)sprintf(notification, "exited with status %d.",
-					jobstatus->w_retcode );
+					WEXITSTATUS(stat) );
 			dprintf(D_ALWAYS, "Shadow: Job exited normally with status %d\n",
-				jobstatus->w_retcode );
+				WEXITSTATUS(stat) );
 			ExitReason = JOB_EXITED;
 		}
 
@@ -521,22 +522,22 @@ handle_termination( PROC *proc, char *notification, union wait *jobstatus,
 			getwd( coredir );
 #endif
 		}
-		if( jobstatus->w_coredump ) {
+		if( WCOREDUMP(stat) ) {
 			if( strcmp(proc->rootdir, "/") == 0 ) {
 				(void)sprintf(notification,
 					"was killed by signal %d.\nCore file is %s/core.%d.%d.",
-					 jobstatus->w_termsig,
+					 WTERMSIG(stat) ,
 						coredir, proc->id.cluster, proc->id.proc);
 			} else {
 				(void)sprintf(notification,
 					"was killed by signal %d.\nCore file is %s%s/core.%d.%d.",
-					 jobstatus->w_termsig,proc->rootdir, coredir, 
+					 WTERMSIG(stat) ,proc->rootdir, coredir, 
 					 proc->id.cluster, proc->id.proc);
 			}
 			ExitReason = JOB_COREDUMPED;
 		} else {
 			(void)sprintf(notification,
-				"was killed by signal %d.", jobstatus->w_termsig);
+				"was killed by signal %d.", WTERMSIG(stat));
 			ExitReason = JOB_KILLED;
 		}
 		dprintf(D_ALWAYS, "Shadow: %s\n", notification);

@@ -21,7 +21,7 @@
 
 extern UserLog		ULog;
 
-extern "C" union wait JobStatus;
+extern int JobStatus;
 extern "C" PROC  *Proc;
 
 extern "C" void 
@@ -33,11 +33,11 @@ initializeUserLog (PROC *p)
 extern "C" void
 log_termination (struct rusage *localr, struct rusage *remoter)
 {
-	switch (JobStatus.w_termsig)
+	switch (WTERMSIG(JobStatus))
 	{
 	  case 0:
 		// if core, bad exectuable --- otherwise, a normal exit
-		if (JobStatus.w_coredump && JobStatus.w_retcode == ENOEXEC)
+		if (WCOREDUMP(JobStatus) && WEXITSTATUS(JobStatus) == ENOEXEC)
 		{
 			// log the ULOG_EXECUTABLE_ERROR event
 			ExecutableErrorEvent event;
@@ -48,7 +48,7 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 			}
 		}
 		else
-		if (JobStatus.w_coredump && JobStatus.w_retcode == 0)
+		if (WCOREDUMP(JobStatus) && WEXITSTATUS(JobStatus) == 0)
 		{		
 			// log the ULOG_EXECUTABLE_ERROR event
 			ExecutableErrorEvent event;
@@ -63,7 +63,7 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 			// log the ULOG_JOB_TERMINATED event
 			JobTerminatedEvent event;
 			event.normal = true; // normal termination
-			event.returnValue = JobStatus.w_retcode;
+			event.returnValue = WEXITSTATUS(JobStatus);
 			event.total_local_rusage = Proc->local_usage;
 			event.total_remote_rusage = Proc->remote_usage[0];
 			event.run_local_rusage = *localr;
@@ -119,8 +119,8 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 #endif
 
 			event.normal = false;
-			event.signalNumber = JobStatus.w_termsig;
-			if (JobStatus.w_coredump)
+			event.signalNumber = WTERMSIG(JobStatus);
+			if (WCOREDUMP(JobStatus))
 			{
 				if (strcmp (Proc->rootdir, "/") == 0)
 				{

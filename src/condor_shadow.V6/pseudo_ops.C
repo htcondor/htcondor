@@ -1311,7 +1311,7 @@ pseudo_suspended(int suspended)
 
 
 int
-pseudo_subproc_status(int subproc, union wait *statp, struct rusage *rusagep)
+pseudo_subproc_status(int subproc, int *statp, struct rusage *rusagep)
 {
 	struct rusage local_rusage;
 

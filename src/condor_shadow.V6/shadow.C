@@ -128,7 +128,7 @@ extern "C" {
 	void Wrapup();
 	void send_quit( char *host, char *capability );
 	void handle_termination( PROC *proc, char *notification,
-				union wait *jobstatus, char *coredir );
+				int *jobstatus, char *coredir );
 	void get_local_rusage( struct rusage *bsd_rusage );
 	int calc_virt_memory();
 	int close_kmem();
@@ -209,7 +209,7 @@ int		HadErr = 0;
 int		InitialJobStatus = -1;
 #endif NOTDEF
 
-union wait JobStatus;
+int JobStatus;
 struct rusage JobRusage;
 struct rusage AccumRusage;
 int ChildPid;
@@ -563,8 +563,8 @@ HandleSyscalls()
 				  "Shadow: Job %d.%d exited, 
 				  termsig = %d, coredump = %d, retcode = %d\n",
 				  Proc->id.cluster, Proc->id.proc, 
-				  JobStatus.w_termsig, JobStatus.w_coredump, 
-				  JobStatus.w_retcode );
+				  WTERMSIG(JobStatus), WCOREDUMP(JobStatus), 
+				  WEXITSTATUS(JobStatus));
 			  
 			  Proc = &(plist->proc);
 			  Wrapup();
@@ -695,8 +695,8 @@ v			      ((tempproc->next != plist)&&(ProcList != plist));
 
 	dprintf(D_ALWAYS,
 		"Shadow: Job %d.%d exited, termsig = %d, coredump = %d, retcode = %d\n",
-			Proc->id.cluster, Proc->id.proc, JobStatus.w_termsig,
-			JobStatus.w_coredump, JobStatus.w_retcode );
+			Proc->id.cluster, Proc->id.proc, WTERMSIG(JobStatus),
+			WCOREDUMP(JobStatus), WEXITSTATUS(JobStatus));
 
 }
 
@@ -1239,7 +1239,7 @@ reaper()
 	int found;
 #endif
 #if defined(AIX32)
-	union wait 		status;
+	int 		status;
 #else
 	int			status;
 #endif

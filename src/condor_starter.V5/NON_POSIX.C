@@ -166,6 +166,30 @@ physical_file_size( char *name )
 #include "startup.h"
 #include "user_proc.h"
 
+#ifdef  __cplusplus
+extern "C" {
+#endif
+
+/*
+ * macros for setting stat
+ */
+
+#if !defined(_POSIX_C_SOURCE) && !defined(_XOPEN_SOURCE)
+
+#define SETCOREDUMP(stat, flag)         ((int)((flag) ? ((stat) | WCOREFLG) \
+                                                : ((stat) & (~(WCOREFLG)))))
+
+#endif /* !defined(_POSIX_C_SOURCE) && !defined(_XOPEN_SOURCE) */
+
+#define SETEXITSTATUS(stat, flag)       ((int)(((stat) & 0xFFFF00FF) | \
+                                                ((flag) << 8)))
+#define SETTERMSIG(stat, flag)          ((int)(((stat) & 0xFFFFFF80) | \
+                                                ((flag) & 0x7F)))
+
+#ifdef  __cplusplus
+}
+#endif
+
 /*
 Encode the status of a user process in the way the shadow is expecting
 it.  The encoding is a BSD style "union wait" structure with the
@@ -173,11 +197,12 @@ exit status of the process and a few goodies thrown in for special
 cases.  We keep the encoding in a static memory area and return a
 pointer to it as a "void *" so that POSIX code doesn't have to know
 about it.
+Changed the union wait to int to be POSIX conformant - 12/01/97
 */
 void *
 bsd_status( int posix_st, PROC_STATE state, int ckpt_trans, int core_trans )
 {
-	static union wait	bsd_status;
+	static int	bsd_status;
 
 	memcpy( &bsd_status, &posix_st, sizeof(bsd_status) );
 
@@ -201,43 +226,43 @@ bsd_status( int posix_st, PROC_STATE state, int ckpt_trans, int core_trans )
 	  case CHECKPOINTING:
 	  case CANT_FETCH:
 		if( ckpt_trans ) {
-			bsd_status.w_termsig = SIGQUIT;
+			bsd_status = SETTERMSIG(bsd_status, SIGQUIT);
 			dprintf( D_ALWAYS, "STATUS encoded as CKPT, *IS* TRANSFERRED\n" );
 		} else {
-			bsd_status.w_termsig = SIGKILL;
+			bsd_status = SETTERMSIG(bsd_status, SIGKILL);
 			dprintf( D_ALWAYS, "STATUS encoded as CKPT, *NOT* TRANSFERRED\n" );
 		}
 		break;
 
 	  case ABNORMAL_EXIT:
 		if( core_trans ) {
-			bsd_status.w_coredump = 1;
+			bsd_status = SETCOREDUMP(bsd_status, 1);
 			dprintf( D_ALWAYS, "STATUS encoded as ABNORMAL, WITH CORE\n" );
 		} else {
-			bsd_status.w_coredump = 0;
+			bsd_status = SETCOREDUMP(bsd_status, 0);
 			dprintf( D_ALWAYS, "STATUS encoded as ABNORMAL, NO CORE\n" );
 		}
 		break;
 
 	  case BAD_MAGIC:
-		bsd_status.w_termsig = 0;
-		bsd_status.w_coredump = 1;
-		bsd_status.w_retcode = ENOEXEC;
+		bsd_status = SETTERMSIG(bsd_status, 0);
+		bsd_status = SETCOREDUMP(bsd_status, 1);
+		bsd_status = SETEXITSTATUS(bsd_status, ENOEXEC);
 		dprintf( D_ALWAYS, "STATUS encoded as BAD MAGIC\n" );
 		break;
 
 	  case BAD_LINK:
-		bsd_status.w_termsig = 0;
-		bsd_status.w_coredump = 1;
-		bsd_status.w_retcode = 0;
+		bsd_status = SETTERMSIG(bsd_status, 0);
+		bsd_status = SETCOREDUMP(bsd_status, 1);
+		bsd_status = SETEXITSTATUS(bsd_status, 0);
 		dprintf( D_ALWAYS, "STATUS encoded as BAD LINK\n" );
 		break;
 
 /*
 	  case CANT_FETCH:
-		bsd_status.w_termsig = 0;
-		bsd_status.w_coredump = 1;
-		bsd_status.w_retcode = posix_st;
+		bsd_status = SETTERMSIG(bsd_status, 0);
+		bsd_status = SETCOREDUMP(bsd_status, 1);
+		bsd_status = SETEXITSTATUS(bsd_status, posix_st);
 */
 
 	}
