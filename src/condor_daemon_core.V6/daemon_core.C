@@ -4724,6 +4724,14 @@ int DaemonCore::Create_Process(
 			job_environ.Put("PATH",envbuf);
 		}
 
+		// do the same for what likely is the system default TEMP
+		// directory.
+		envbuf[0]='\0';
+		GetEnvironmentVariable("TEMP",envbuf,sizeof(envbuf));
+		if (envbuf[0]) {
+			job_environ.Put("TEMP",envbuf);
+		}
+
 			// now add in env vars from user
 		if ( env ) {
 			job_environ.Merge(env);		
