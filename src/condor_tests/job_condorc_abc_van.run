@@ -20,6 +20,7 @@ $mycorenamecmd = $corename . ".cmd";
 $mycorenamecmdout = $corename . ".cmd.out";
 $mycorenamelog = $corename . ".log";
 
+system("date");
 print "Master PID is $mypid\n";
 print "Master PID submit file is $mysubmitnm\n";
 
@@ -139,3 +140,4 @@ $ENV{CONDOR_CONFIG} = $midconfig;
 sleep 20;
 print "sleeping............\n";
 system("condor_off -master");
+system("date");
