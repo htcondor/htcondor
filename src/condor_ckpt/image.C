@@ -47,6 +47,7 @@ static char *_FileName_ = __FILE__;
 #endif
 
 extern int errno;
+extern int _condor_in_file_stream;
 
 const int KILO = 1024;
 
@@ -74,14 +75,14 @@ void terminate_with_sig( int sig );
 void Suicide();
 static void find_stack_location( RAW_ADDR &start, RAW_ADDR &end );
 static int SP_in_data_area();
-static size_t stack_to_save();
+static void calc_stack_to_save();
 extern "C" void _install_signal_handler( int sig, SIG_HANDLER handler );
 
 Image MyImage;
 static jmp_buf Env;
 static RAW_ADDR SavedStackLoc;
 int InRestart = FALSE;
-
+static size_t StackSaveSize;
 
 void
 Header::Init()
@@ -165,6 +166,8 @@ _condor_prestart( int syscall_mode )
 		// Install initial signal handlers
 	_install_signal_handler( SIGTSTP, (SIG_HANDLER)Checkpoint );
 	_install_signal_handler( SIGUSR1, (SIG_HANDLER)Suicide );
+
+	calc_stack_to_save();
 
 }
 
@@ -476,6 +479,8 @@ Image::Write( int fd )
 	int		i;
 	ssize_t	pos = 0;
 	ssize_t	nbytes;
+	ssize_t ack;
+	int		status;
 
 		// Write out the header
 	if( (nbytes=write(fd,&head,sizeof(head))) < 0 ) {
@@ -497,12 +502,29 @@ Image::Write( int fd )
 		// Write out the Segments
 	for( i=0; i<head.N_Segs(); i++ ) {
 		if( (nbytes=map[i].Write(fd,pos)) < 0 ) {
+			dprintf( D_ALWAYS, "Write() of segment %d failed\n", i );
+			dprintf( D_ALWAYS, "errno = %d, nbytes = %d\n", errno, nbytes );
 			return -1;
 		}
 		pos += nbytes;
 		dprintf( D_ALWAYS, "Wrote Segment[%d] OK\n", i );
 	}
 	dprintf( D_ALWAYS, "Wrote all Segments OK\n" );
+
+		/* When using the stream protocol the shadow echo's the number
+		   of bytes transferred as a final acknowledgement. */
+	if( _condor_in_file_stream ) {
+		status = read( fd, &ack, sizeof(ack) );
+		if( status < 0 ) {
+			EXCEPT( "Can't read final ack from the shadow" );
+		}
+
+		ack = ntohl( ack );		// Ack is in network byte order, fix here
+		if( ack != len ) {
+			EXCEPT( "Ack - expected %d, but got %d\n", len, ack );
+		}
+	}
+
 	return 0;
 }
 
@@ -789,10 +811,10 @@ find_stack_location( RAW_ADDR &start, RAW_ADDR &end )
 		dprintf( D_ALWAYS, "Stack pointer in data area\n" );
 		if( StackGrowsDown ) {
 			end = stack_end_addr();
-			start = end - stack_to_save();
+			start = end - StackSaveSize;
 		} else {
 			start = stack_start_addr();
-			end = start + stack_to_save();
+			end = start + StackSaveSize;
 		}
 	} else {
 		start = stack_start_addr();
@@ -800,21 +822,21 @@ find_stack_location( RAW_ADDR &start, RAW_ADDR &end )
 	}
 }
 
+extern "C" double atof( const char * );
+
 const size_t	MEG = (1024 * 1024);
-static size_t
-stack_to_save()
+
+void
+calc_stack_to_save()
 {
-	size_t	answer;
 	char	*ptr;
 
 	ptr = getenv( "CONDOR_STACK_SIZE" );
 	if( ptr ) {
-		answer = (int)( atof(ptr) * MEG );
+		StackSaveSize = (size_t) (atof(ptr) * MEG);
 	} else {
-		answer = MEG * 2;	// default 2 megabytes
+		StackSaveSize = MEG * 2;	// default 2 megabytes
 	}
-	dprintf( D_ALWAYS, "Saving %f megabytes\n", answer / float(MEG) );
-	return answer;
 }
 
 /*
