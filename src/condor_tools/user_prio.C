@@ -37,30 +37,52 @@
 #include "condor_debug.h"
 #include "condor_io.h"
 #include "TimeClass.h"
+#include "MyString.h"
 
 //-----------------------------------------------------------------
 
-static void PrintInfo(AttrList* ad);
+struct LineRec {
+  MyString Name;
+  float Priority;
+  int Res;
+};
+
+//-----------------------------------------------------------------
+
 static void Usage(char* argv[]);
+static void ProcessInfo(AttrList* ad);
+static int CountElem(AttrList* ad);
+static void CollectInfo(AttrList* ad, LineRec* LR);
+static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem);
+
+//-----------------------------------------------------------------
+
+extern "C" {
+int CompPrio(LineRec* a, LineRec* b);
+}
 
 //-----------------------------------------------------------------
 
 main(int argc, char* argv[])
 {
+  int SetMode=0;
+
+  if (argc>1) { // set priority
+    if (argc!=4 || strcmp(argv[1],"-set")!=0 ) {
+      Usage(argv);
+      exit(1);
+    }
+    SetMode=1;
+  }
+
   config( 0 );
   char* NegotiatorHost = param( "NEGOTIATOR_HOST" );
   if (!NegotiatorHost) {
     printf( "No NegotiatorHost host specified in config file\n" );
   }
 
-  ReliSock sock(NegotiatorHost, NEGOTIATOR_PORT);
 
-  if (argc>1) { // set priority
-
-    if (argc!=4 || strcmp(argv[1],"-set")!=0 ) {
-      Usage(argv);
-      exit(1);
-    }
+  if (SetMode) { // set priority
 
     char* UidDomain=param("UID_DOMAIN");
     if (!UidDomain) {
@@ -73,6 +95,7 @@ main(int argc, char* argv[])
     double Priority=atof(argv[3]);
 
     // send request
+    ReliSock sock(NegotiatorHost, NEGOTIATOR_PORT);
     sock.encode();
     if (!sock.put(SET_PRIORITY) ||
         !sock.put(tmp) ||
@@ -87,6 +110,7 @@ main(int argc, char* argv[])
   else {  // list priorities
 
     // send request
+    ReliSock sock(NegotiatorHost, NEGOTIATOR_PORT);
     sock.encode();
     if (!sock.put(GET_PRIORITY) ||
         !sock.end_of_message()) {
@@ -103,7 +127,7 @@ main(int argc, char* argv[])
       exit(1);
     }
 
-    PrintInfo(ad);
+    ProcessInfo(ad);
   }
 
   exit(0);
@@ -111,14 +135,59 @@ main(int argc, char* argv[])
 
 //-----------------------------------------------------------------
 
-static void PrintInfo(AttrList* ad)
+static void ProcessInfo(AttrList* ad)
+{
+  int NumElem=CountElem(ad);
+  LineRec* LR=new LineRec[NumElem];
+  CollectInfo(ad,LR);
+  qsort(LR,NumElem,sizeof(LineRec),CompPrio);  
+  PrintInfo(ad,LR,NumElem);
+} 
+
+//-----------------------------------------------------------------
+
+static int CountElem(AttrList* ad)
+{
+  int count=0;
+  ad->ResetExpr();
+  while(ad->NextExpr()) count++;
+  return (count-1)/3;
+} 
+
+//-----------------------------------------------------------------
+
+extern "C" {
+int CompPrio(LineRec* a, LineRec* b) 
+{
+  if (a->Priority>b->Priority) return 1;
+  return -1;
+}
+}
+
+//-----------------------------------------------------------------
+
+static void CollectInfo(AttrList* ad, LineRec* LR)
+{
+  ExprTree* exp;
+  ad->ResetExpr();
+  exp=ad->NextExpr();
+  int i=0;
+  while(exp=ad->NextExpr()) {
+    LR[i].Name=((String*) exp->RArg())->Value();
+    LR[i].Priority=((Float*) ad->NextExpr()->RArg())->Value();
+    LR[i].Res=((Integer*) ad->NextExpr()->RArg())->Value();
+    i++;
+  }
+
+  return;
+}
+
+//-----------------------------------------------------------------
+
+static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
 {
   // ad->AttrList::fPrint(stdout);
-  char tmp[10000];
   ExprTree* exp;
-  char* Name;
-  float Priority;
-  int Res;
   ad->ResetExpr();
   exp=ad->NextExpr();
   Time T=((Integer*) exp->RArg())->Value();
@@ -131,11 +200,8 @@ static void PrintInfo(AttrList* ad)
   printf(Fmt2,"Name","Priority","Resources Used");
   printf(Fmt2,"----","--------","--------------");
 
-  while(exp=ad->NextExpr()) {
-    Name=((String*) exp->RArg())->Value();
-    Priority=((Float*) ad->NextExpr()->RArg())->Value();
-    Res=((Integer*) ad->NextExpr()->RArg())->Value();
-    printf(Fmt1,Name,Priority,Res);
+  for (int i=0; i<NumElem; i++) {
+    printf(Fmt1,(const char*)LR[i].Name,LR[i].Priority,LR[i].Res);
   }
 
   return;
