@@ -45,7 +45,6 @@
 #define HAS_INSQUE			YES
 #define HAS_SETLINEBUF			YES
 #define USE_GCC				YES
-#define HAS_STATIC			YES
 
 #define HAS_DYNAMIC_USER_JOBS	NO
 
@@ -57,8 +56,6 @@
 #define HAS_GLOBUS	YES
 #define HAS_GSI		YES
 #define HAS_OPENSSL	YES
-
-#define StaticFlag -static
 
 #define VendorCTestFlags -std
 

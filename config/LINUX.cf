@@ -73,10 +73,7 @@
 #define HAS_INSQUE			YES
 #define HAS_SETLINEBUF			YES
 #define MALLOC_DEBUG			NO
-#define HAS_STATIC			YES
 #define HAS_DLOPEN			YES
-
-#define StaticFlag	-static
 
 
 /**************************************************************************

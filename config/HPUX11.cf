@@ -23,9 +23,6 @@
 /* inet_nota() with gcc is broken under 64-bit compilation mode, so use ours */
 #define HAS_INET_NTOA		NO
 
-/* Grrr.... libxnet.so (the XOpen interface) does NOT have a .a equivalent */
-#define HAS_STATIC	NO
-
 #define HAS_DYNAMIC_USER_JOBS	NO
 
 #define HAS_GLOBUS			NO

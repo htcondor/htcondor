@@ -36,9 +36,6 @@
 #define HAS_SETEGID			NO
 #define HAS_SETEUID			NO
 #define DO_BENCHMARKING			YES
-#define HAS_STATIC			YES
-
-#define StaticFlag -static
 
 #define ShadowSizeEstimate 200
 
