@@ -22,21 +22,10 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #define _POSIX_SOURCE
 
-#if defined(IRIX62)
-typedef struct fd_set fd_set;
-#endif
-
-#include <string.h>
-#include <unistd.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <signal.h>
-#include <stdlib.h>
+#include "condor_common.h"
 #include "subproc.h"
 #include "condor_string.h"
 #include "condor_constants.h"
-#include <limits.h>
 
 static char * search( const char *targ, char *buf );
 static char * grab_substr( const char *left, const char *right, char *buf );
