@@ -25,16 +25,24 @@
 
   This file implements config(), the function all daemons call to
   configure themselves.  It takes up to two arguments: a pointer to a
-  ClassAd to fill up with the expressions in the config_file, and a
-  pointer to a string containing the name of the daemon calling config
-  (mySubSystem).  
+  ClassAd to fill up with the expressions in the config_file, and
+  optionally a pointer to a string containing the hostname that should
+  be inserted for $(HOSTNAME).
 
-  In general, when looking for a given config file (either global,
-  local, global-root or local-root), config() checks an environment
-  variable to find the location of the global config files.  If that
-  doesn't exist, it looks in /etc/condor.  If the files aren't there,
-  it try's ~condor/.  If none of the above locations contain a config
-  file, config() prints an error message and exits. 
+  When looking the global config file, config() checks the
+  "CONDOR_CONFIG" environment variable to find its location.  If that
+  doesn't exist, it looks in /etc/condor.  If the condor_config isn't
+  there, it try's ~condor/.  If none of the above locations contain a
+  config file, config() prints an error message and exits.
+
+  The root config file is found in the same way, except no environment
+  variable is checked.  
+
+  In each "global" config file, a list of "local" config files can be
+  specified.  Each file given in the list is read and processed in
+  order.  These lists can be used to specify both platform-specific
+  config files and machine-specific config files, in addition to a
+  single, pool-wide, platform-independent config file.
 
 */
 
@@ -47,6 +55,7 @@
 #include "string_list.h"
 #include "condor_attributes.h"
 #include "my_hostname.h"
+#include "my_arch.h"
 #include "condor_version.h"
 
 #if defined(__cplusplus)
@@ -54,24 +63,23 @@ extern "C" {
 #endif
 	
 // Function prototypes
-void real_config(ClassAd *classAd, char *mySubsystem, char* host);
+void real_config(ClassAd *classAd, char* host);
 int Read_config(char*, ClassAd*, BUCKET**, int, int);
-char* get_arch();
-char* get_op_sys();
 int SetSyscalls(int);
 char* find_global();
-char* find_local();
 char* find_global_root();
-char* find_local_root();
-char* find_file( const char*, const char*);
+char* find_file(const char*, const char*);
 void init_tilde();
 void fill_attributes(ClassAd*);
 void init_config();
 void clear_config();
-void reinsert_specials( char* );
+void reinsert_specials(char*);
+void process_file(char*, char*, char*, ClassAd*);
+void process_locals( char*, char*, ClassAd*);
 
 // External variables
 extern int	ConfigLineNo;
+extern char* mySubSystem;
 
 // Global variables
 BUCKET	*ConfigTab[TABLESIZE];
@@ -80,16 +88,16 @@ static char* tilde = NULL;
 // Function implementations
 
 void
-config_fill_ad(ClassAd* ad, char* mySubsys)
+config_fill_ad( ClassAd* ad )
 {
 	char 		buffer[1024];
 	char 		*tmp;
 	char		*expr;
 	StringList	reqdExprs;
 	
-	if (!mySubsys || !ad) return;
+	if( !ad ) return;
 
-	sprintf (buffer, "%s_EXPRS", mySubsys);
+	sprintf (buffer, "%s_EXPRS", mySubSystem);
 	tmp = param (buffer);
 	if( tmp ) {
 		reqdExprs.initializeFromString (tmp);	
@@ -112,23 +120,25 @@ config_fill_ad(ClassAd* ad, char* mySubsys)
 
 
 void
-config( ClassAd* classAd, char* mySubsystem )
+config( ClassAd* classAd )
 {
-	real_config( classAd, mySubsystem, NULL );
+	real_config( classAd, NULL );
 }
 
 
 void
-config_host( ClassAd* classAd, char* mySubsystem, char* host )
+config_host( ClassAd* classAd, char* host )
 {
-	real_config( classAd, mySubsystem, host );
+	real_config( classAd, host );
 }
 
+
 void
-real_config(ClassAd *classAd, char *mySubsystem, char* host)
+real_config(ClassAd *classAd, char* host)
 {
-	char	*config_file;
-	int		scm, rval;
+	char		*config_file;
+	int			scm, rval;
+	StringList	*local_files;
 
 	static int first_time = TRUE;
 	if( first_time ) {
@@ -157,6 +167,16 @@ real_config(ClassAd *classAd, char *mySubsystem, char* host)
 			// What about tilde if there's no ~condor? 
 	}
 
+		// Insert some default values for attributes we want even if
+		// they're not defined in the config files: ARCH, OPSYS,
+		// FILESYSTEM_DOMAIN and UID_DOMAIN.  We do this now since if
+		// they are defined in the config files, these values will get
+		// overridden.  However, we want them defined to begin with so
+		// that people can use them in the global config file to
+		// specify the location of platform-specific config files,
+		// etc.  -Derek Wright 6/8/98
+	fill_attributes( classAd );
+
 		// Try to find the global config file
 	if( ! (config_file = find_global()) ) {
 		fprintf(stderr,"\nNeither the environment variable CONDOR_CONFIG,\n" );
@@ -170,15 +190,8 @@ real_config(ClassAd *classAd, char *mySubsystem, char* host)
 		exit( 1 );
 	}
 
-		// Actually read in the global file
-	rval = Read_config( config_file, classAd, ConfigTab, TABLESIZE,
-						EXPAND_LAZY );
-	if( rval < 0 ) {
-		fprintf( stderr,
-				 "Configuration Error Line %d while reading global config file %s\n",
-				 ConfigLineNo, config_file );
-		exit( 1 );
-	}
+		// Read in the global file
+	process_file( config_file, "global config file", NULL, classAd );
 	free( config_file );
 
 		// Insert entries for "hostname" and "full_hostname".  We do
@@ -200,84 +213,80 @@ real_config(ClassAd *classAd, char *mySubsystem, char* host)
 		insert( "tilde", tilde, ConfigTab, TABLESIZE );
 	}
 
-		// Try to find and read the local config file
-	if( config_file = find_local() ) {
-		if( access( config_file, R_OK ) != 0 ) {
-			if( !host ) {
-				fprintf( stderr, "ERROR: Can't read local config file %s\n", 
-						 config_file );
-				exit( 1 );
-			} 
-		} else {
-			rval = Read_config( config_file, classAd, ConfigTab, 
-								TABLESIZE, EXPAND_LAZY ); 
-			if( rval < 0 ) {
-				fprintf( stderr,
-				  "Configuration Error Line %d while reading local config file %s\n",
-						 ConfigLineNo, config_file );
-				exit( 1 );
-			}
-		}
-		free( config_file );
-	}
-
+		// Read in the LOCAL_CONFIG_FILE as a string list and process
+		// all the files in the order they are listed.
+	process_locals( "LOCAL_CONFIG_FILE", host, classAd );
+			
 		// Re-insert the special macros.  We don't want the user to 
 		// override them, since it's not going to work.
 	reinsert_specials( host );
 
 		// Try to find and read the global root config file
 	if( config_file = find_global_root() ) {
-		rval = Read_config( config_file, classAd, ConfigTab, 
-							TABLESIZE, EXPAND_LAZY ); 
-		if( rval < 0 ) {
-			fprintf( stderr,
-					 "Configuration Error Line %d while reading global root config file %s\n",
-					 ConfigLineNo, config_file );
-			exit( 1 );
-		}
+		process_file( config_file, "global root config file", host, classAd );
 		free( config_file );
+
+			// Re-insert the special macros.  We don't want the user
+			// to override them, since it's not going to work.
+		reinsert_specials( host );
+
+			// Read in the LOCAL_ROOT_CONFIG_FILE as a string list and
+			// process all the files in the order they are listed.
+		process_locals( "LOCAL_ROOT_CONFIG_FILE", host, classAd );
 	}
 
 		// Re-insert the special macros.  We don't want the user to 
 		// override them, since it's not going to work.
 	reinsert_specials( host );
-
-		// Try to find and read the local root config file
-	if( config_file = find_local_root() ) {
-		if( access( config_file, R_OK ) != 0 ) {
-			if( !host ) {
-				fprintf( stderr, "ERROR: Can't read local root config file %s\n", 
-						 config_file );
-				exit( 1 );
-			} 
-		} else {
-			rval = Read_config( config_file, classAd, ConfigTab, 
-								TABLESIZE, EXPAND_LAZY ); 
-			if( rval < 0 ) {
-				fprintf( stderr,
-				 "Configuration Error Line %d while reading local root config file %s\n",
-						 ConfigLineNo, config_file );
-				exit( 1 );
-			}
-		}
-		free( config_file );
-	}
-
-		// Re-insert the special macros.  We don't want the user to 
-		// override them, since it's not going to work.
-	reinsert_specials( host );
-
-		// Now that we've read all the config files, there are some
-		// attributes we want to define with defaults if they're not
-		// defined in the config files: ARCH, OPSYS,
-		// FILESYSTEM_DOMAIN and UID_DOMAIN.
-	fill_attributes( classAd );
 
 		// If mySubSystem_EXPRS is set, insert those expressions into
 		// the given classad.
-	config_fill_ad( classAd, mySubsystem );
+	config_fill_ad( classAd );
 
 	(void)SetSyscalls( scm );
+}
+
+
+void
+process_file( char* file, char* name, char* host, ClassAd* classAd )
+{
+	int rval;
+	if( access( file, R_OK ) != 0 ) {
+		if( !host ) {
+			fprintf( stderr, "ERROR: Can't read %s %s\n", 
+					 name, file );
+			exit( 1 );
+		} 
+	} else {
+		rval = Read_config( file, classAd, ConfigTab, TABLESIZE,
+							EXPAND_LAZY );
+		if( rval < 0 ) {
+			fprintf( stderr,
+					 "Configuration Error Line %d while reading %s %s\n",
+					 ConfigLineNo, name, file );
+			exit( 1 );
+		}
+	}
+}
+
+
+// Param for given name, read it in as a string list, and process each
+// config file listed there.
+void
+process_locals( char* param_name, char* host, ClassAd* classAd )
+{
+	StringList locals;
+	char *file;
+
+	file = param( param_name );
+	if( file ) {
+		locals.initializeFromString( file );
+		free( file );
+		locals.rewind();
+		while( (file = locals.next()) ) {
+			process_file( file, "config file", host, classAd );
+		}
+	}
 }
 
 
@@ -314,22 +323,9 @@ find_global()
 
 
 char*
-find_local()
-{
-	return param( "LOCAL_CONFIG_FILE" );
-}
-
-
-char*
 find_global_root()
 {
 	return find_file( "CONDOR_CONFIG_ROOT", "condor_config.root" );
-}
-
-char*
-find_local_root()
-{
-	return param( "LOCAL_ROOT_CONFIG_FILE" );
 }
 
 
@@ -387,25 +383,24 @@ find_file(const char *env_name, const char *file_name)
 
 
 void
-fill_attributes(ClassAd* classAd)
+fill_attributes( ClassAd* classAd )
 {
 
-		/* Now that we've read in the whole config file, there are a
-		   few attributes that we want to insert values for even if 
-		   they're not defined in the file.  These are: ARCH, OPSYS,
-		   UID_DOMAIN and FILESYSTEM_DOMAIN.  ARCH and OPSYS we get
-		   from uname().  If either UID_DOMAIN or FILESYSTEM_DOMAIN
-		   are not defined, we use the fully qualified hostname of
-		   this host.  In all cases, the value in the config file
-		   overrides these defaults.  Arch and OpSys by Jim B.  Uid
-		   and FileSys by Derek Wright, 1/12/98 */
+		/* There are a few attributes that we want to insert values
+		   for even if they're not defined in the config files.  These
+		   are: ARCH, OPSYS, UID_DOMAIN and FILESYSTEM_DOMAIN.  ARCH
+		   and OPSYS we get from uname().  If either UID_DOMAIN or
+		   FILESYSTEM_DOMAIN are not defined, we use the fully
+		   qualified hostname of this host.  In all cases, the value
+		   in the config file overrides these defaults.  Arch and
+		   OpSys by Jim B.  Uid and FileSys by Derek Wright, 1/12/98 */
 
-	char *arch, *op_sys, *uid_domain, *filesys_domain;
+	char *arch, *opsys, *uid_domain, *filesys_domain;
 	char line[1024];
 
   	arch = param("ARCH");
 	if( !arch ) {
-		if( (arch = get_arch()) != NULL ) {
+		if( (arch = my_arch()) != NULL ) {
 			insert( "ARCH", arch, ConfigTab, TABLESIZE );
 			if(classAd)	{
 				sprintf( line, "%s=\"%s\"", ATTR_ARCH, arch );
@@ -416,17 +411,17 @@ fill_attributes(ClassAd* classAd)
 		free( arch );
 	}
 
-	op_sys = param("OPSYS");
-	if( !op_sys ) {
-		if( (op_sys = get_op_sys()) != NULL ) {
-			insert( "OPSYS", op_sys, ConfigTab, TABLESIZE );
+	opsys = param("OPSYS");
+	if( !opsys ) {
+		if( (opsys = my_opsys()) != NULL ) {
+			insert( "OPSYS", opsys, ConfigTab, TABLESIZE );
 			if(classAd) {
-				sprintf( line, "%s=\"%s\"", ATTR_OPSYS, op_sys );
+				sprintf( line, "%s=\"%s\"", ATTR_OPSYS, opsys );
 				classAd->Insert(line);
 			}
 		}
 	} else {
-		free( op_sys );
+		free( opsys );
 	}
 
 	filesys_domain = param("FILESYSTEM_DOMAIN");
@@ -452,7 +447,7 @@ fill_attributes(ClassAd* classAd)
 	} else {
 		free( uid_domain );
 	}
-
+	insert( "subsystem", mySubSystem, ConfigTab, TABLESIZE );
 }
 
 
@@ -533,96 +528,6 @@ param_in_pattern( char *parameter, char *pattern )
 }
 
 
-#if defined(WIN32)
-
-char *
-get_arch()
-{
-	static char answer[1024];	
-	SYSTEM_INFO info;
-	GetSystemInfo(&info);
-	switch(info.wProcessorArchitecture) {
-	case PROCESSOR_ARCHITECTURE_INTEL:
-		sprintf(answer, "INTEL");
-		break;
-	case PROCESSOR_ARCHITECTURE_MIPS:
-		sprintf(answer, "MIPS");
-		break;
-	case PROCESSOR_ARCHITECTURE_ALPHA:
-		sprintf(answer, "ALPHA");
-		break;
-	case PROCESSOR_ARCHITECTURE_PPC:
-		sprintf(answer, "PPC");
-		break;
-	case PROCESSOR_ARCHITECTURE_UNKNOWN:
-	default:
-		sprintf(answer, "UNKNOWN");
-		break;
-	}
-
-	return answer;
-}
-
-char *
-get_op_sys()
-{
-	static char answer[1024];
-	OSVERSIONINFO info;
-	info.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-	if (GetVersionEx(&info) > 0) {
-		switch(info.dwPlatformId) {
-		case VER_PLATFORM_WIN32s:
-			sprintf(answer, "WIN32s%d%d", info.dwMajorVersion, info.dwMinorVersion);
-			break;
-		case VER_PLATFORM_WIN32_WINDOWS:
-			sprintf(answer, "WIN32%d%d", info.dwMajorVersion, info.dwMinorVersion);
-			break;
-		case VER_PLATFORM_WIN32_NT:
-			sprintf(answer, "WINNT%d%d", info.dwMajorVersion, info.dwMinorVersion);
-			break;
-		default:
-			sprintf(answer, "UNKNOWN");
-			break;
-		}
-	} else {
-		sprintf(answer, "ERROR");
-	}
-
-	return answer;
-}
-
-#else
-/* uname() is POSIX, so this should work on all platforms.  -Jim */
-#include <sys/utsname.h>
-
-char *
-get_arch()
-{
-	static struct utsname buf;
-
-	if( uname(&buf) < 0 ) {
-		return NULL;
-	}
-
-	return buf.machine;
-}
-
-char *
-get_op_sys()
-{
-	static char	answer[1024];
-	struct utsname buf;
-
-	if( uname(&buf) < 0 ) {
-		return NULL;
-	}
-
-	strcpy( answer, buf.sysname );
-	strcat( answer, buf.release );
-	return answer;
-}
-
-#endif
 
 void
 reinsert_specials( char* host )
@@ -636,6 +541,7 @@ reinsert_specials( char* host )
 		insert( "hostname", my_hostname(), ConfigTab, TABLESIZE );
 	}
 	insert( "full_hostname", my_full_hostname(), ConfigTab, TABLESIZE );
+	insert( "subsystem", mySubSystem, ConfigTab, TABLESIZE );
 }
 
 
