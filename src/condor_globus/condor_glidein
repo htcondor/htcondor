@@ -124,6 +124,11 @@ sub do_submit() {
 		$GLOBUSENV .= "_condor_ARCH=HPPA1;";
 	}
 
+	chomp( $skipauth = `$CONFIGVAL SKIP_AUTHENTICATION 2>/dev/null` );
+	if ( $skipauth ne "" ) {
+		$GLOBUSENV .= "_condor_SKIP_AUTHENTICATION=$skipauth;";
+	}
+
 	chop $GLOBUSENV;
 
 		##Escape '$' in submit file entries
