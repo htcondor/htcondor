@@ -503,6 +503,9 @@ sub host_info()
 			$osname =~ s/osname=//;
 			chomp( $osversion = $SEARCH5[$i] );
 			$osversion =~ s/osversion=//;
+			if ( $osname eq "linux" ) {
+				$osversion =~ s/(\d+\.\d+)\..*/\1/;
+			}
 			last;
 		}
 	}
