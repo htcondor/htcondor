@@ -56,7 +56,17 @@ enum Command
     cmd_Print,
     cmd_Same,
     cmd_Diff,
-    cmd_Help
+    cmd_Set,
+    cmd_Help,
+    cmd_Quit
+};
+
+enum PrintFormat
+{
+    print_Compact,
+    print_Pretty,
+    print_XML,
+    print_XMLPretty
 };
 
 class Parameters
@@ -70,6 +80,16 @@ public:
 	void ParseCommandLine(int argc, char **argv);
 };
 
+class State
+{
+public:
+    State();
+
+    int         number_of_errors;
+    int         line_number;
+    PrintFormat format;
+};
+
 typedef map<string, Variable *> VariableMap;
 
 /*--------------------------------------------------------------------
@@ -78,17 +98,30 @@ typedef map<string, Variable *> VariableMap;
  *
  *--------------------------------------------------------------------*/
 
-bool read_line(string &line, Parameters &parameters);
-bool replace_variables(string &line, string &error, Parameters &parameters);
+bool read_line(string &line, State &state, Parameters &parameters);
+bool replace_variables(string &line, State &state, Parameters &parameters);
 Command get_command(string &line, Parameters &parameters);
-void get_variable_name(string &line, bool swallow_equals, string &variable_name, Parameters &parameters);
-ExprTree *get_expr(string &line, Parameters &parameters);
-void get_two_exprs(string &line, ExprTree *&tree1, ExprTree *&tree2, string &error, Parameters &parameters);
-void print_expr(ExprTree *tree, Parameters &parameters);
+bool get_variable_name(string &line, bool swallow_equals, string &variable_name, 
+                       State &state, Parameters &parameters);
+ExprTree *get_expr(string &line, State &state, Parameters &parameters);
+void get_two_exprs(string &line, ExprTree *&tree1, ExprTree *&tree2, 
+                   State &state, Parameters &parameters);
+void print_expr(ExprTree *tree, State &state, Parameters &parameters);
 bool evaluate_expr(ExprTree *tree, Value &value, Parameters &parameters);
 void shorten_line(string &line, int offset);
-void print_help(void);
+bool handle_command(Command command, string &line, State &state, 
+                    Parameters &parameters);
+void handle_let(string &line, State &state, Parameters &parameters);
+void handle_eval(string &line, State &state, Parameters &parameters);
+void handle_same(string &line, State &state, Parameters &parameters);
+void handle_diff(string &line, State &state, Parameters &parameters);
+void handle_set(string &line, State &state, Parameters &parameters);
+void handle_print(string &line, State &state, Parameters &parameters);
+void handle_help(void);
 void print_version(void);
+void print_error_message(char *error, State &state);
+void print_error_message(string &error, State &state);
+void print_final_state(State &state);
 
 /*********************************************************************
  *
@@ -97,7 +130,9 @@ void print_version(void);
  *           if there are any problems. 
  *
  *********************************************************************/
-void Parameters::ParseCommandLine(int argc, char **argv)
+void Parameters::ParseCommandLine(
+    int  argc, 
+    char **argv)
 {
 	// First we set up the defaults.
 	debug       = false;
@@ -124,7 +159,29 @@ void Parameters::ParseCommandLine(int argc, char **argv)
 	return;
 }
 
-Variable::Variable(string &name, ExprTree *tree)
+/*********************************************************************
+ *
+ * Function: 
+ * Purpose:  
+ *
+ *********************************************************************/
+State::State()
+{
+    number_of_errors = 0;
+    line_number      = 0;
+    format           = print_Compact;
+    return;
+}
+
+/*********************************************************************
+ *
+ * Function: 
+ * Purpose:  
+ *
+ *********************************************************************/
+Variable::Variable(
+    string  &name, 
+    ExprTree *tree)
 {
     _name    = name;
     _tree    = tree;
@@ -132,7 +189,15 @@ Variable::Variable(string &name, ExprTree *tree)
     return;
 }
 
-Variable::Variable(string &name, Value &value)
+/*********************************************************************
+ *
+ * Function: 
+ * Purpose:  
+ *
+ *********************************************************************/
+Variable::Variable(
+    string &name, 
+    Value  &value)
 {
     _name    = name;
     _value   = value;
@@ -141,6 +206,12 @@ Variable::Variable(string &name, Value &value)
     return;
 }
 
+/*********************************************************************
+ *
+ * Function: 
+ * Purpose:  
+ *
+ *********************************************************************/
 Variable::~Variable()
 {
     if (_is_tree && _tree != NULL) {
@@ -150,7 +221,14 @@ Variable::~Variable()
     return;
 }
 
-void Variable::GetStringRepresentation(string &representation)
+/*********************************************************************
+ *
+ * Function: 
+ * Purpose:  
+ *
+ *********************************************************************/
+void Variable::GetStringRepresentation(
+    string &representation)
 {
     ClassAdUnParser unparser;
 
@@ -166,93 +244,36 @@ VariableMap  variables;
 
 /*********************************************************************
  *
- * Function: 
- * Purpose:  
+ * Function: main
+ * Purpose:  The main control loop.
  *
  *********************************************************************/
-int main(int argc, char **argv)
+int main(
+    int  argc, 
+    char **argv)
 {
+    bool        quit;
     string      line;
+    State       state;
     Parameters  parameters;
 
     print_version();
-
     parameters.ParseCommandLine(argc, argv);
+    quit = false;
 
-    while (read_line(line, parameters) == true) {
+    while (!quit && read_line(line, state, parameters) == true) {
         bool      good_line;
         string    error;
         Command   command;
-        string    variable_name;
-        ExprTree  *tree, *tree2;
-        Variable  *variable;
-        
 
-        good_line = replace_variables(line, error, parameters);
-        if (!good_line) {
-            cout << "Error: " << error << endl;
-        } else {
+        good_line = replace_variables(line, state, parameters);
+        if (good_line) {
             command = get_command(line, parameters);
-            switch (command) {
-            case cmd_NoCommand:
-                cout << "Error: No command on line.\n";
-                break;
-            case cmd_InvalidCommand:
-                cout << "Unknown command on line.\n";
-                break;
-            case cmd_Let:
-                get_variable_name(line, true, variable_name, parameters);
-                tree = get_expr(line, parameters);
-                if (tree == NULL) {
-                    cout << "Couldn't parse rvalue.\n";
-                } else {
-                    variable = new Variable(variable_name, tree);
-                    variables[variable_name] = variable;
-                    print_expr(tree, parameters);
-                }
-                break;
-            case cmd_Eval:
-                get_variable_name(line, true, variable_name, parameters);
-                tree = get_expr(line, parameters);
-                if (tree == NULL) {
-                    cout << "Couldn't parse rvalue.\n";
-                } else {
-                    Value value;
-                    if (!evaluate_expr(tree, value, parameters)) {
-                        cout << "Couldn't evaluate rvalue.\n";
-                    } else {
-                        variable = new Variable(variable_name, value);
-                        variables[variable_name] = variable;
-                        cout << value << endl;
-                    }
-                }
-                break;
-            case cmd_Print:
-                tree = get_expr(line, parameters);
-                print_expr(tree, parameters);
-                break;
-            case cmd_Same:
-                get_two_exprs(line, tree, tree2, error, parameters);
-                if (tree == NULL || tree2 == NULL) {
-                    cout << "Error: " << error << endl;
-                } else {
-                    if (tree->SameAs(tree2)) {
-                        cout << "Same.\n";
-                    } else {
-                        cout << "Different.\n";
-                    }
-                }
-                break;
-            case cmd_Diff:
-                break;
-            case cmd_Help:
-                print_help();
-                break;
-            }
+            quit = handle_command(command, line, state, parameters);
         }
-        
     }
-    cout << endl;
+    print_final_state(state);
+
     return 0;
 }
 
@@ -262,7 +283,10 @@ int main(int argc, char **argv)
  * Purpose:  
  *
  *********************************************************************/
-bool read_line(string &line, Parameters &parameters)
+bool read_line(
+    string     &line, 
+    State      &state, 
+    Parameters &parameters)
 {
     bool have_input;
 
@@ -274,11 +298,18 @@ bool read_line(string &line, Parameters &parameters)
     } else {
         cout << "> ";
         getline(cin, line, '\n');
+        state.line_number++;
         if (cin.eof() && line.size() == 0) {
             have_input = false;
         } else {
             have_input = true;
         }
+    }
+
+    if (!have_input) {
+        // The user did not explicitly quit, but the end of input
+        // was reached. So print out a newline to look nice.
+        cout << endl;
     }
 
     return have_input;
@@ -290,9 +321,13 @@ bool read_line(string &line, Parameters &parameters)
  * Purpose:  
  *
  *********************************************************************/
-bool replace_variables(string &line, string &error, Parameters &parameters)
+bool replace_variables(
+    string     &line, 
+    State      &state, 
+    Parameters &parameters)
 {
-    bool      good_line;
+    bool    good_line;
+    string  error;
 
     good_line = true;
     error = "";
@@ -345,9 +380,13 @@ bool replace_variables(string &line, string &error, Parameters &parameters)
     
 
     if (parameters.debug) {
-        cerr << "after replacement: " << line << endl;
+        cerr << "# after replacement: " << line << endl;
     }
     
+    if (!good_line) {
+        print_error_message(error, state);
+    }
+
     return good_line;
 }
 
@@ -357,7 +396,9 @@ bool replace_variables(string &line, string &error, Parameters &parameters)
  * Purpose:  
  *
  *********************************************************************/
-Command get_command(string &line, Parameters &parameters)
+Command get_command(
+    string     &line, 
+    Parameters &parameters)
 {
     int      current_position;
     int      length;
@@ -391,8 +432,12 @@ Command get_command(string &line, Parameters &parameters)
         command = cmd_Same;
     } else if (command_name == "diff") {
         command = cmd_Diff;
+    } else if (command_name == "set") {
+        command = cmd_Set;
     } else if (command_name == "help") {
         command = cmd_Help;
+    } else if (command_name == "quit") {
+        command = cmd_Quit;
     } else {
         command = cmd_InvalidCommand;
     }
@@ -402,139 +447,217 @@ Command get_command(string &line, Parameters &parameters)
 
 /*********************************************************************
  *
- * Function: get_variable_name
+ * Function: handle_command
  * Purpose:  
  *
  *********************************************************************/
-void get_variable_name(string &line, bool swallow_equals, string &variable_name, Parameters &parameters)
+bool handle_command(
+    Command    command, 
+    string     &line, 
+    State      &state, 
+    Parameters &parameters)
 {
-    int      current_position;
-    int      length;
+    bool quit = false;
 
-    current_position = 0;
-    length           = line.size();
-    variable_name    = "";
+    switch (command) {
+    case cmd_NoCommand:
+        print_error_message("* No command on line.", state);
+        break;
+    case cmd_InvalidCommand:
+        print_error_message("* Unknown command on line", state);
+        break;
+    case cmd_Let:
+        handle_let(line, state, parameters);
+        break;
+    case cmd_Eval:
+        handle_eval(line, state, parameters);
+        break;
+    case cmd_Print:
+        handle_print(line, state, parameters);
+        break;
+    case cmd_Same:
+        handle_same(line, state, parameters);
+        break;
+    case cmd_Diff:
+        handle_diff(line, state, parameters);
+        break;
+    case cmd_Set:
+        handle_set(line, state, parameters);
+        break;
+    case cmd_Help:
+        handle_help();
+        break;
+    case cmd_Quit:
+        quit = true;
+        break;
+    }
+    return quit;
+}
 
-    // Skip whitespace
-    while (current_position < length && isspace(line[current_position])) {
-        current_position++;
-    }
-    // Find variable name
-    while (current_position < length && isalpha(line[current_position])) {
-        variable_name += line[current_position];
-        current_position++;
-    }
-    if (swallow_equals) {
-        // Skip whitespace
-        while (current_position < length && isspace(line[current_position])) {
-            current_position++;
+/*********************************************************************
+ *
+ * Function: handle_let
+ * Purpose:  
+ *
+ *********************************************************************/
+void handle_let(
+    string     &line, 
+    State      &state, 
+    Parameters &parameters)
+{
+    string    variable_name;
+    ExprTree  *tree;
+    Variable  *variable;
+
+    if (get_variable_name(line, true, variable_name, state, parameters)) {
+        tree = get_expr(line, state, parameters);
+        if (tree != NULL) {
+            variable = new Variable(variable_name, tree);
+            variables[variable_name] = variable;
+            print_expr(tree, state, parameters);
         }
-        if (line[current_position] == '=') {
-            current_position++;
-        }
-        // We should probably report an error if we didn't find an equal sign. 
-        // Maybe later.
     }
-
-    shorten_line(line, current_position);
     return;
 }
 
 /*********************************************************************
  *
- * Function: get_expr
+ * Function: handle_eval
  * Purpose:  
  *
  *********************************************************************/
-ExprTree *get_expr(string &line, Parameters &parameters)
+void handle_eval(
+    string     &line, 
+    State      &state, 
+    Parameters &parameters)
 {
-    int               offset;
-    ExprTree          *tree;
-    ClassAdParser     parser;
-    StringLexerSource lexer_source(&line);
+    string    variable_name;
+    ExprTree  *tree;
+    Variable  *variable;
 
-    tree = parser.ParseExpression(&lexer_source, false);
-    offset = lexer_source.GetCurrentLocation();
-    shorten_line(line, offset);
-    return tree;
-}
-
-void get_two_exprs(string &line, ExprTree *&tree1, ExprTree *&tree2, string &error, Parameters &parameters)
-{
-    int offset;
-    ClassAdParser parser;
-    StringLexerSource lexer_source(&line);
-
-    tree1 = parser.ParseExpression(&lexer_source, false);
-    if (tree1 == NULL) {
-        error = "Couldn't parse first expression.";
-    } else {
-        if (parameters.debug) {
-            cout << "Tree1: "; 
-            print_expr(tree1, parameters); 
-            cout << endl;
-        }
-    
-        if (parser.PeekToken() != Lexer::LEX_COMMA) {
-            error =  "Missing comma.\n";
-            delete tree1;
-            tree1 = NULL;
-            tree2 = NULL;
-        } else {
-            parser.ConsumeToken();
-            tree2 = parser.ParseNextExpression();
-            offset = lexer_source.GetCurrentLocation();
-            shorten_line(line, offset);
-            if (tree2 == NULL) {
-                error = "Couldn't parse second expression.";
-                delete tree1;
-                tree1 = NULL;
-            } else if (parameters.debug){
-                cout << "Tree2: "; 
-                print_expr(tree2, parameters); 
-                cout << endl;
+    if (get_variable_name(line, true, variable_name, state, parameters)) {
+        tree = get_expr(line, state, parameters);
+        if (tree != NULL) {
+            Value value;
+            if (!evaluate_expr(tree, value, parameters)) {
+                print_error_message("Couldn't evaluate rvalue", state);
+            } else {
+                variable = new Variable(variable_name, value);
+                variables[variable_name] = variable;
+                cout << value << endl;
             }
         }
     }
-
     return;
 }
 
-
-void print_expr(ExprTree *tree, Parameters &parameters)
+/*********************************************************************
+ *
+ * Function: handle_print
+ * Purpose:  
+ *
+ *********************************************************************/
+void handle_print(
+    string     &line, 
+    State      &state, 
+    Parameters &parameters)
 {
-    string output;
-    ClassAdUnParser unparser;
-    
-    unparser.Unparse(output, tree);
-    cout << output << endl;
-    return;
-}
+    ExprTree *tree;
 
-bool evaluate_expr(ExprTree *tree, Value &value, Parameters &parameters)
-{
-    ClassAd classad;
-    bool    success;
-
-    classad.Insert("internal___", tree);
-    success = classad.EvaluateAttr("internal___", value);
-    classad.Remove("internal___");
-    return success;
-}
-
-void shorten_line(string &line, int offset)
-{
-    // We have to be careful with substr() because with gcc 2.96, it likes to 
-    // assert/except if you give it values that are too large.
-    if (offset < (int) line.size()) {
-        line = line.substr(offset);
-    } else {
-        line = "";
+    tree = get_expr(line, state, parameters);
+    if (tree) {
+        print_expr(tree, state, parameters);
     }
     return;
 }
 
-void print_help(void)
+/*********************************************************************
+ *
+ * Function: handle_same
+ * Purpose:  
+ *
+ *********************************************************************/
+void handle_same(
+    string     &line, 
+    State      &state, 
+    Parameters &parameters)
+{
+    ExprTree  *tree, *tree2;
+
+    get_two_exprs(line, tree, tree2, state, parameters);
+    if (tree != NULL || tree2 != NULL) {
+        if (!tree->SameAs(tree2)) {
+            print_error_message("* the expressions are different.", state);
+        }
+    }
+    return;
+}
+
+/*********************************************************************
+ *
+ * Function: handle_diff
+ * Purpose:  
+ *
+ *********************************************************************/
+void handle_diff(
+    string     &line, 
+    State      &state, 
+    Parameters &parameters)
+{
+    ExprTree  *tree, *tree2;
+
+    get_two_exprs(line, tree, tree2, state, parameters);
+    if (tree != NULL || tree2 != NULL) {
+        if (tree->SameAs(tree2)) {
+            print_error_message("* the expressions are the same.", state);
+        }
+    }
+    return;
+}
+
+/*********************************************************************
+ *
+ * Function: handle_set
+ * Purpose:  
+ *
+ *********************************************************************/
+void handle_set(
+    string     &line, 
+    State      &state, 
+    Parameters &parameters)
+{
+    string  option_name;
+    string  option_value;
+
+    if (get_variable_name(line, false, option_name, state, parameters)) {
+        if (get_variable_name(line, false, option_value, state, parameters)) {
+            if (option_name == "format") {
+                if (option_value == "compact") {
+                    state.format = print_Compact;
+                } else if (option_value == "pretty") {
+                    state.format = print_Pretty; 
+                } else if (option_value == "xml") {
+                    state.format = print_XML;
+                } else if (option_value == "xmlpretty") {
+                    state.format = print_XMLPretty;
+                } else {
+                    print_error_message("Unknown print format. Use compact, pretty, xml, or xmlpretty", state);
+                }
+            } else {
+                print_error_message("Unknown option. The only option currently available is format", state);
+            }
+        }
+    }
+    return;
+}
+
+/*********************************************************************
+ *
+ * Function: handle_help
+ * Purpose:  
+ *
+ *********************************************************************/
+void handle_help(void)
 {
     print_version();
 
@@ -546,9 +669,233 @@ void print_help(void)
     cout << "quit              Exit this program.\n";
     cout << "help              Print this message.\n";
 
-    
+    return;
 }
 
+/*********************************************************************
+ *
+ * Function: get_variable_name
+ * Purpose:  
+ *
+ *********************************************************************/
+bool get_variable_name(
+    string     &line, 
+    bool       swallow_equals, 
+    string     &variable_name, 
+    State      &state,
+    Parameters &parameters)
+{
+    int      current_position;
+    int      length;
+    bool     have_good_name;
+
+    current_position = 0;
+    length           = line.size();
+    variable_name    = "";
+    have_good_name   = false;
+
+    // Skip whitespace
+    while (current_position < length && isspace(line[current_position])) {
+        current_position++;
+    }
+    // Find variable name
+    if (current_position < length && isalpha(line[current_position])) {
+        variable_name += line[current_position];
+        current_position++;
+        // As soon as we have at least one character in the name, it's good.
+        have_good_name = true;
+
+        while (   current_position < length 
+                  && (isalnum(line[current_position]) || line[current_position] == '_')) {
+            variable_name += line[current_position];
+            current_position++;
+        }
+    }
+    if (!have_good_name) {
+        print_error_message("Bad variable name", state);
+    } else if (swallow_equals) {
+        // Skip whitespace
+        while (current_position < length && isspace(line[current_position])) {
+            current_position++;
+        }
+        if (line[current_position] == '=') {
+            current_position++;
+        } else {
+            print_error_message("Missing equal sign", state);
+            have_good_name = false;
+        }
+    }
+
+    if (parameters.debug) {
+        if (have_good_name) {
+            cout << "# Got variable name: " << variable_name << endl;
+        } else {
+            cout << "# Bad variable name: " << variable_name << endl;
+        }
+    }
+
+    shorten_line(line, current_position);
+    return have_good_name;
+}
+
+/*********************************************************************
+ *
+ * Function: get_expr
+ * Purpose:  
+ *
+ *********************************************************************/
+ExprTree *get_expr(
+    string     &line, 
+    State      &state, 
+    Parameters &parameters)
+{
+    int               offset;
+    ExprTree          *tree;
+    ClassAdParser     parser;
+    StringLexerSource lexer_source(&line);
+
+    tree = parser.ParseExpression(&lexer_source, false);
+    offset = lexer_source.GetCurrentLocation();
+    shorten_line(line, offset);
+
+    if (tree == NULL) {
+        print_error_message("Missing epxression", state);
+    }
+
+    return tree;
+}
+
+/*********************************************************************
+ *
+ * Function: get_two_exprs
+ * Purpose:  
+ *
+ *********************************************************************/
+void get_two_exprs(
+    string     &line, 
+    ExprTree   *&tree1, 
+    ExprTree   *&tree2, 
+    State      &state, 
+    Parameters &parameters)
+{
+    int offset;
+    ClassAdParser parser;
+    StringLexerSource lexer_source(&line);
+
+    tree1 = parser.ParseExpression(&lexer_source, false);
+    if (tree1 == NULL) {
+        print_error_message("Couldn't parse first expression.", state);
+    } else {
+        if (parameters.debug) {
+            cout << "# Tree1: "; 
+            print_expr(tree1, state, parameters); 
+            cout << endl;
+        }
+    
+        if (parser.PeekToken() != Lexer::LEX_COMMA) {
+            print_error_message("Missing comma.\n", state);
+            delete tree1;
+            tree1 = NULL;
+            tree2 = NULL;
+        } else {
+            parser.ConsumeToken();
+            tree2 = parser.ParseNextExpression();
+            offset = lexer_source.GetCurrentLocation();
+            shorten_line(line, offset);
+            if (tree2 == NULL) {
+                print_error_message("Couldn't parse second expression.", state);
+                delete tree1;
+                tree1 = NULL;
+            } else if (parameters.debug){
+                cout << "# Tree2: "; 
+                print_expr(tree2, state, parameters); 
+                cout << endl;
+            }
+        }
+    }
+
+    return;
+}
+
+
+/*********************************************************************
+ *
+ * Function: print_expr
+ * Purpose:  
+ *
+ *********************************************************************/
+void print_expr(
+    ExprTree   *tree, 
+    State      &state,
+    Parameters &parameters)
+{
+    string output;
+
+    if (state.format == print_Compact) {
+        ClassAdUnParser unparser;
+        unparser.Unparse(output, tree);
+    } else if (state.format == print_Pretty) {
+        PrettyPrint     unparser;
+        unparser.Unparse(output, tree);
+    } else if (state.format == print_XML) {
+        ClassAdXMLUnParser unparser;
+        unparser.SetCompactSpacing(true);
+        unparser.Unparse(output, tree);
+    } else if (state.format == print_XMLPretty) {
+        ClassAdXMLUnParser unparser;
+        unparser.SetCompactSpacing(false);
+        unparser.Unparse(output, tree);
+    }
+    cout << output << endl;
+    return;
+}
+
+/*********************************************************************
+ *
+ * Function: evaluate_expr
+ * Purpose:  
+ *
+ *********************************************************************/
+bool evaluate_expr(
+    ExprTree   *tree, 
+    Value      &value, 
+    Parameters &parameters)
+{
+    ClassAd classad;
+    bool    success;
+
+    classad.Insert("internal___", tree);
+    success = classad.EvaluateAttr("internal___", value);
+    classad.Remove("internal___");
+    return success;
+}
+
+/*********************************************************************
+ *
+ * Function: shorten_line
+ * Purpose:  
+ *
+ *********************************************************************/
+void shorten_line(
+    string &line, 
+    int    offset)
+{
+    // We have to be careful with substr() because with gcc 2.96, it likes to 
+    // assert/except if you give it values that are too large.
+    if (offset < (int) line.size()) {
+        line = line.substr(offset);
+    } else {
+        line = "";
+    }
+    return;
+}
+
+/*********************************************************************
+ *
+ * Function: print_version
+ * Purpose:  
+ *
+ *********************************************************************/
 void print_version(void)
 {
     string classad_version;
@@ -557,5 +904,55 @@ void print_version(void)
 
     cout << "ClassAd Tester v" << classad_version << endl;
 
+    return;
+}
+
+/*********************************************************************
+ *
+ * Function: print_error_message
+ * Purpose:  
+ *
+ *********************************************************************/
+void print_error_message(
+    char  *error, 
+    State &state)
+{
+    string error_s = error;
+    print_error_message(error_s, state);
+    return;
+}
+
+
+/*********************************************************************
+ *
+ * Function: print_error_message
+ * Purpose:  
+ *
+ *********************************************************************/
+void print_error_message(
+    string &error, 
+    State  &state)
+{
+    cout << "* Line " << state.line_number << ": " << error << endl;
+    state.number_of_errors++;
+    return;
+}
+
+/*********************************************************************
+ *
+ * Function: print_final_state
+ * Purpose:  
+ *
+ *********************************************************************/
+void print_final_state(
+    State &state)
+{
+    if (state.number_of_errors == 0) {
+        cout << "No errors.\n";
+    } else if (state.number_of_errors == 1) {
+        cout << "1 error.\n";
+    } else {
+        cout << state.number_of_errors << " errors\n";
+    }
     return;
 }
