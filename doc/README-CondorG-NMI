@@ -1,0 +1,107 @@
+Condor-G NMI Release April 2002
+
+Installation
+------------
+This distribution is packaged using the Grid Packaging Tools [Technology?]
+(GPT). To install it, you must first install the GPT. You can obtain GPT
+1.0 from the following locations:
+
+http://www-unix.globus.org/ftppub/gt2/2.0/gpt/gpt-1.0.tar.gz
+ftp://ftp.globus.org/pub/gt2/2.0/gpt/gpt-1.0.tar.gz
+
+GPT Requirements:
+
+The Grid Packaging Tools are written in perl. An installation of Perl
+5.005 or greater is required on your system. Perl can be downloaded from 
+www.perl.com. 
+
+Setting Up a Packaging Environment:
+
+There is one environment variable (GLOBUS_LOCATION) required to use the
+packaging framework. This is the location where the output of 
+builds/install of Globus packages will be placed. You can switch between
+multiple installations by changing the value of $GLOBUS_LOCATION.
+
+There is an optional environment variable (GPT_LOCATION) that will affect
+the packaging infrastructure. This can be used to have the packaging tools
+installed in a separate location from Globus packages. You do not have to
+however, define GPT_LOCATION. If you do not, the packaging tools will be
+installed behind GLOBUS_LOCATION, as is most commonly done. 
+
+In the instructions below, we show how to build if you have set both
+GPT_LOCATION and GLOBUS_LOCATION. However, we do not expect that every
+user will want to maintain separate directories for Globus and its
+packaging toolkit. If you would like, simply replace GPT_LOCATION with
+GLOBUS_LOCATION throughout the instructions below to install both the
+packaging toolkit as well as the Globus toolkit in the same location, as
+is most commonly done. That way, you will only have to set one environment
+variable, GLOBUS_LOCATION. 
+
+Installing GPT:
+
+This step is required for both binary and source bundles. Untar the
+distribution and enter the following commands.
+
+    % cd gpt-1.0
+    % ./build_gpt
+
+Note: If your perl 5.005 executable is not named "perl" or is not in your
+command search path, add --with-perl={perl-cmd} to the build_gpt command
+to identify the perl executable to be used by the packaging tools. 
+
+All of the perl libraries will be installed in $GPT_LOCATION/lib/perl. All
+of the scripts will be installed into $GPT_LOCATION/sbin. (If 
+$GPT_LOCATION is not set, $GLOBUS_LOCATION will be used for both of the
+above locations.) 
+
+Installing Condor-G Basic
+-------------------------
+Once the GPT is installed and the GLOBUS_LOCATION (and possibly 
+GPT_LOCATION) environment variable is set, you can install the Condor-G
+Basic bundle. The following commands assume you're installing the linux
+version. Change names as appropriate for other platforms.
+
+    % $GPT_LOCATION/sbin/globus-install \
+        condorg_basic_bundle-linux-i686.tar.gz
+
+Note: Remember to replace GPT_LOCATION with GLOBUS_LOCATION if you did not
+create a separate packaging directory.
+
+    % $GPT_LOCATION/sbin/gpt-postinstall
+
+Condor-G includes daemons that must be running on the local machine for
+proper operation. Run the following command as root to start the daemons.
+Condor-G can be run as a non-root service if it will only be used by a
+single user. In that case, run this command as that user.
+
+    % $GLOBUS_LOCATION/sbin/SXXcondor start
+
+To ensure that the Condor-G daemons are restarted automatically when the
+machine reboots, copy the script $GLOBUS_LOCATION/sbin/SXXcondor into the
+system's startup scripts directory (e.g. /etc/rc.d).
+
+A simple way to tell if Condor-G is running [properly] is to try to access
+the job queue.
+
+    % $GLOBUS_LOCATION/bin/condor_q
+    
+You should see something like the following output:
+    
+-- Submitter: nostos.cs.wisc.edu : <128.105.165.29:34896> : nostos.cs.wisc.edu
+ ID      OWNER            SUBMITTED     RUN_TIME ST PRI SIZE CMD               
+
+0 jobs; 0 idle, 0 running, 0 held
+
+
+[Do we want to say anything about certificates and/or other
+bundles/packages that should be installed? At the very least, the user
+will need the GSI programs (grid-proxy-*) and CA certificates to use
+Condor-G).]
+
+Overview
+--------
+[Describe Condor-G and Condor.]
+
+Examples
+--------
+[Demonstrate running a job.]
