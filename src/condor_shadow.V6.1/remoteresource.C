@@ -936,12 +936,24 @@ RemoteResource::resourceExit( int exit_reason, int exit_status )
 			   always done in the past, so it's no less accurate than
 			   an old shadow talking to the same starter...
 			*/
+		char tmp[64];
 		if( WIFSIGNALED(exit_status) ) {
 			exited_by_signal = true;
+			sprintf( tmp, "%s=TRUE", ATTR_ON_EXIT_BY_SIGNAL );
+			jobAd->Insert( tmp );
+
 			exit_value = WTERMSIG( exit_status );
+			sprintf( tmp, "%s=%d", ATTR_ON_EXIT_SIGNAL, exit_value );
+			jobAd->Insert( tmp );
+
 		} else {
 			exited_by_signal = false;
+			sprintf( tmp, "%s=FALSE", ATTR_ON_EXIT_BY_SIGNAL );
+			jobAd->Insert( tmp );
+
 			exit_value = WEXITSTATUS( exit_status );
+			sprintf( tmp, "%s=%d", ATTR_ON_EXIT_CODE, exit_value );
+			jobAd->Insert( tmp );
 		}
 	}
 }
