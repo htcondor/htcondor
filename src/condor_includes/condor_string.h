@@ -23,9 +23,9 @@
 #ifndef _STRING
 #define _STRING
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
+#include "condor_header_features.h"
+
+BEGIN_C_DECLS
 
 #if defined(__STDC__) || (__cplusplus)
 int mkargv ( int *argc, char *argv[], char *line );
@@ -33,18 +33,16 @@ void lower_case ( char *str );
 int blankline ( const char *str );
 char * getline ( FILE *fp );
 char * ltrunc ( register char *str );
-char * basename( const char * );
 #else
 int mkargv();
 void lower_case();
 int blankline();
 char * getline();
 char * ltrunc ();
-char * basename ();
 #endif
 
-#if defined(__cplusplus)
-}
-#endif
+END_C_DECLS
+
+#include "basename.h"
 
 #endif /* _STRING */
