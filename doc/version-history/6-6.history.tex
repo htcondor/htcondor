@@ -123,6 +123,12 @@ with the message, "caInsert: Can't insert CpuBusy into target classad."
   \Condor{schedd} making this mistake, rendering this error
   impossible.
 
+\item Fixed a bug that occured when submitted Condor-G jobs while
+  using the grid monitor. If the grid job monitor returned a FAILED
+  status for a job while the jobmanager is asleep, the gridmanager
+  could sometimes end up in a loop, continuously restarting the remote
+  Globus jobmanager then putting it back to sleep.
+
 \end{itemize}
 
 \noindent Known Bugs:
