@@ -86,7 +86,11 @@ bool getOldClassAd( Stream *sock, ClassAd& ad )
 	}
 
 		// put exprs into ad
-	ad.Update( *upd );
+	ClassAd *tmpAd = new ClassAd( );
+	tmpAd->Update( *upd );
+	tmpAd = tmpAd->AddExplicitTargetRefs( );
+	ad.Update( *tmpAd );
+	delete tmpAd;
 	delete upd;
 
 	return true;
