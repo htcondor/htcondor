@@ -967,7 +967,7 @@ BaseShadow::updateExprTree( ExprTree* tree )
 		return false;
 	}
 	dprintf( D_FULLDEBUG, 
-			 "updateExprTree: SetAttribute(%s, %s)\n",
+			 "Updating Job Queue: SetAttribute(%s, %s)\n",
 			 name, tmp );
 	free( tmp );
 	return true;
@@ -1028,8 +1028,7 @@ void BaseShadow::dprintf_va( int flags, char* fmt, va_list args )
 {
 		// Print nothing in this version.  A subclass like MPIShadow
 		// might like to say ::dprintf( flags, "(res %d)"
-	::dprintf( flags, "" );
-	::_condor_dprintf_va( flags | D_NOHEADER, fmt, args );
+	::_condor_dprintf_va( flags, fmt, args );
 }
 
 void BaseShadow::dprintf( int flags, char* fmt, ... )
