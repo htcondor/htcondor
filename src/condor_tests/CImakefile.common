@@ -15,7 +15,7 @@
 
 DESC(job_core_bigenv_std,"Standard job with an enormous environment")
 CBUILD($(CC),job_core_bigenv,c)
-DEPS(job_core_bigenv_std,job_core_bigenv.exe)
+DEPS(job_core_bigenv_std,job_core_bigenv.exe job_core_bigenv.cndr.exe)
 DEP_SYMLINK_EXT(job_core_bigenv_std,cmd)
 RUN(job_core_bigenv_std)
 TESTCLASS(job_core_bigenv_std,quick)

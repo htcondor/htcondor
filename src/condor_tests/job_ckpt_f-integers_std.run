@@ -2,7 +2,7 @@
 
 use CondorTest;
 
-$cmd = 'job_ckpt_f-registers_std.cmd';
+$cmd = 'job_ckpt_f-integers_std.cmd';
 $testname = 'Registers Test';
 
 $foo  = <<"_EOX";

@@ -29,7 +29,6 @@ GetOptions (
     'notify'          => $opt_notify,
 );
 
-my $NIGHTLY_IDS_FILE = "/nmi/condor_nightly/test_ids";
 my $NMIDIR = "/nmi/run";
 
 # database parameters
@@ -68,6 +67,7 @@ if ( defined($opt_tag) or defined($opt_module) ) {
     exit 1;
 }
 #if ( defined($opt_nightly) ) {
+#    %tags = &get_nightlytags();
 #}
 #else {
 #    if ( defined($opt_tag) or defined($opt_module) ) {
@@ -75,25 +75,24 @@ if ( defined($opt_tag) or defined($opt_module) ) {
 #        print_usage();
 #        exit 1;
 #    }
-#    %tags = &get_nightlytags();
 #}
     %tags = &get_nightlytags();
-
-# Remove the stale $NIGHTLY_IDS_FILE 
-if (-f $NIGHTLY_IDS_FILE) {
-    unlink ("$NIGHTLY_IDS_FILE") ||
-        warn "I was unable to remove the $NIGHTLY_IDS_FILE file. This " . 
-             "may lead to more runids being fed to the nightly tests\n";
-}
 
 while ( my($tag, $module) = each(%tags) ) {
     my $cmdfile = &generate_cmdfile($tag, $module);
     print "Submitting condor build with tag = $tag, module = $module ...\n";
-    run("/nmi/bin/nmi_submit $cmdfile", 0);
-    # Sleep for sometime till the records are available in db
-    # 10 mins is a good resonable time
-    sleep 600;
-    write_runid_for_build($tag, $module);
+    my $output_str=`/nmi/bin/nmi_submit $cmdfile`;
+    my $status = $?;
+    if (not $status) {
+        # Sleep for sometime till the records are available in db
+        # 30sec is a good resonable time
+        sleep 30;
+        my @lines = split("\n", $output_str);
+        write_runid_for_build($lines[15], $tag, $module);
+    }
+    else {
+        print "nmi_submit failed\n";
+    }
 } 
 chdir($cwd);
 run("rm -rf $workspace", 0);
@@ -167,65 +166,43 @@ sub get_nightlytags() {
 }
 
 sub write_runid_for_build() {
-    my ($tag, $module) = @_;
+    my ($nmirundir, $tag, $module) = @_;
 
-    (my $release = $module) =~ s/_BUILD//;
-    $release =~ s/V//; 
-    my @versions = split("_", $release);
-    my $srcsfile = "condor_srcsfile-$tag";
+    my @toks = split("/", $nmirundir);
+    my $gid = $toks[3];
 
-    my $project = "condor";
-    my $project_version = "$versions[0], $versions[1], x";
-    my $component = "condor";
-    my $component_version = "$versions[0], $versions[1], x";
-    my $description = "nightly condor $versions[0].$versions[1] build run";
-
-    my $runid = guess_runid($project, $project_version,
-                           $component, $component_version,
-                           $description, $srcsfile);
+    my $runid = get_runid($gid);
     print "I have guessed that the runid = $runid should be tested\n";
 
+    my $BUILD_INFO_FILE = "$nmirundir/userdir/common/test_ids"; 
+    print "BUILD_INFO_FILE = $BUILD_INFO_FILE\n";
     if ($runid) {
-        open (NIGHTLY_IDS, ">>$NIGHTLY_IDS_FILE") ||
-            die "Unable to open $NIGHTLY_IDS_FILE for writing $!";
-        print NIGHTLY_IDS "$runid $tag $module\n";
-        close NIGHTLY_IDS;
+        open (INFO_FILE, ">>$BUILD_INFO_FILE") ||
+            die "Unable to open $BUILD_INFO_FILE for writing $!";
+        print INFO_FILE "$runid $tag $module\n";
+        close INFO_FILE;
     }
 }
 
-sub guess_runid() {
-    my ($project, $project_version, $component,
-        $component_version, $description, $srcsfile) = @_;
-
-    my $matched_runid = 0;
-    my $runid = 0;
-    my $gid = "";
+sub get_runid() {
+    my ($gid) = @_;
+    my $runid = "";
 
     my $db = DBI->connect("$DB_CONNECT_STR","$username","$password") ||
              die "Could not connect to database: $!\n";
-    my $cmd_str = qq/SELECT runid, gid from $RUN_TABLE WHERE (project='$project' AND project_version='$project_version' AND component='$component' AND component_version='$component_version' AND description='$description') ORDER BY runid DESC/;
+    my $cmd_str = qq/SELECT runid from $RUN_TABLE WHERE gid='$gid'/;
     print "$cmd_str\n";
 
     my $handle = $db->prepare("$cmd_str");
     $handle->execute();
     while ( my $row = $handle->fetchrow_hashref() ) {
         $runid = $row->{'runid'};
-        $gid = $row->{'gid'};
-       
-        print "Checking runid = $runid and gid = $gid\n";
-        # Now check if the srcsfile exists in the /nmi/run/$gid
-        # if this exists then this is the build and return the runid
-        # else keep trying in the reverse order till we have no more
-        # ids to verify in which case return 0 as the runid
-        if ( ( -d "$NMIDIR/$gid" ) and ( -f "$NMIDIR/$gid/$srcsfile" ) ) {
-            $matched_runid = $runid;
-            last;
-        }
+        last;
     }
     $handle->finish();
     $db->disconnect;
 
-    return $matched_runid;
+    return $runid;
 }
 
 sub print_usage() {

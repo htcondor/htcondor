@@ -17,11 +17,15 @@ $(STRIP_DIR)/etc/examples/README:
 	/bin/cp -f $(FILES) $(STRIP_DIR)/etc/examples
 	perl ./customize $(STRIP_DIR)
 
+#if HAS_STATIC
 static:: $(STATIC_DIR)/etc/examples/README
 
 $(STATIC_DIR)/etc/examples/README:
 	/bin/cp -f $(FILES) $(STATIC_DIR)/etc/examples
 	perl ./customize $(STATIC_DIR)
+#else  /* ! HAS_STATIC */
+static::
+#endif  /* HAS_STATIC */
 
 html:
 
