@@ -85,9 +85,9 @@ char *sin_to_string(struct sockaddr_in *sin);
 
 char *sock_to_string(SOCKET sockd);
 
-/* Return the hostname of a machine given a sin; return NULL if it cannot
- * be found or error */
-char *sin_to_hostname(const struct sockaddr_in *sin);
+/* Return the real hostname of a machine given a sin; return NULL if it cannot
+ * be found or error.  Also return aliases. */
+char *sin_to_hostname(const struct sockaddr_in *sin, char ***aliases);
 
 void
 display_from( struct sockaddr_in *from );

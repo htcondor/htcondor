@@ -250,7 +250,7 @@ sock_to_string(SOCKET sockd)
 }
 
 char *
-sin_to_hostname( const struct sockaddr_in *from)
+sin_to_hostname( const struct sockaddr_in *from, char ***aliases)
 {
     struct hostent  *hp;
 #ifndef WIN32
@@ -269,6 +269,8 @@ sin_to_hostname( const struct sockaddr_in *from)
     } else {
 		// CAREFULL: we are returning a staic buffer from gethostbyaddr.
 		// The caller had better use the result immediately or copy it.
+		// Also note this is not thread safe.  (as are lots of things in internet.c).
+		*aliases = hp->h_aliases;
 		return hp->h_name;
     }
 }
