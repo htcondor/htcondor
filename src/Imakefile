@@ -64,7 +64,6 @@ BINARY = ../R6000_AIX32_BIN.tar
 #endif
 
 obj_distrib: release
-	cd ../doc; make obj_distrib
 	cd condor_test_suite_C.V5; make obj_distrib
 #if HAS_FORTRAN
 	cd condor_test_suite_F.V5; make obj_distrib
@@ -115,9 +114,6 @@ object_target(tools)
 	object_target(classad)
 	object_target(daemon_core)
 	object_target(expressions)
-makefiles:: ../doc/Makefile
-../doc/Makefile:
-	cd ../doc; imake -I../config -DTilde=/usr/home/condor -s Makefile
 makefiles:: h/Makefile
 h/Makefile:
 	cd h; imake IMAKE_FLAGS
@@ -132,9 +128,6 @@ h: h/Makefile
 #	endif
 	object_target(ckpt)
 	object_target(syscall_lib)
-makefiles:: ../doc/Makefile
-../doc/Makefile:
-	cd ../doc; imake -I../config -DTilde=/usr/home/condor -s Makefile
 makefiles:: h/Makefile
 h/Makefile:
 	cd h; imake IMAKE_FLAGS

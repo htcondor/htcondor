@@ -8,7 +8,11 @@ CFLAGS = $(STD_C_FLAGS) -g
 SRC = kbdd.c
 OBJ = kbdd.o
 STD_LIB = ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a 
+#if IS_SGI_IRIX53
+X_LIB = -lX11 -lXext
+#else
 X_LIB = XExtLibPath XLibPath
+#endif
 LIB = $(STD_LIB) RpcLib SocketLib 
 LIBDIRS = ../condor_util_lib ../condor_xdr_lib
 LDFLAGS = $(X_LIB)

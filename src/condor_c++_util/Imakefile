@@ -15,7 +15,7 @@ C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -fexternal-templates -DNEW_PROC $(WANT_V6)
 CFLAGS = $(STD_C_FLAGS) -DNEW_PROC $(WANT_V6)
 
 #if IS_SPARC_SUNOS41
-sYSPARAM = sysparam_sun
+SYSPARAM = sysparam_sun
 #endif
 #if IS_SUN4M_SOLARIS || IS_SUN4M_SOLARIS251
 SYSPARAM = sysparam_solaris

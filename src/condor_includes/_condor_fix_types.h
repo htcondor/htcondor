@@ -14,8 +14,8 @@
 typedef int		bool_t;
 #endif
 
-#if defined(Solaris)
-/* Solaris specific change ..dhaval 6/26 */
+/* undefine _POSIX_SOURCE temporarily on suns so u_int & friends get defined */
+#if defined(Solaris) || defined(SUNOS41)
 #if defined(_POSIX_SOURCE)
 #define HOLD_POSIX_SOURCE
 #undef _POSIX_SOURCE

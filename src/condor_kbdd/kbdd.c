@@ -426,7 +426,7 @@ X_is_active()
 	if( (fp=popen("ps -ef","r")) == NULL ) {
 		EXCEPT( "popen(\"ps -ef\",\"r\")" );
 	}
-#elif defined(Solaris) | defined(IRIX62)
+#elif defined(Solaris) | defined(IRIX62) | defined(IRIX53)
 	if( (fp=popen("/bin/ps -ef","r")) == NULL ) {
 		EXCEPT( "popen(\"/bin/ps -ef\",\"r\")" );
 	} 
@@ -530,7 +530,7 @@ XErrorEvent	*event;
 														sizeof(error_text) );
 	dprintf( D_ALWAYS, "\ttext = \"%s\"\n", error_text );
 
-#if !defined(OSF1) && !defined(LINUX) && !defined(Solaris) && !defined(IRIX62)
+#if !defined(OSF1) && !defined(LINUX) && !defined(Solaris) && !defined(IRIX62) && !defined(IRIX53)
 	if( close(d->fd) == 0 ) {
 		dprintf( D_ALWAYS, "Closed display fd (%d)\n", d->fd );
 	} else {
@@ -561,7 +561,7 @@ Display		*d;
 
 	dprintf( D_ALWAYS, "Got X I/O Error, errno = %d\n", errno );
 
-#if !defined(OSF1) && !defined(LINUX) && !defined(Solaris) && !defined(IRIX62)
+#if !defined(OSF1) && !defined(LINUX) && !defined(Solaris) && !defined(IRIX62) && !defined(IRIX53)
 	if( close(d->fd) == 0 ) {
 		dprintf( D_ALWAYS, "Closed display fd (%d)\n", d->fd );
 	} else {

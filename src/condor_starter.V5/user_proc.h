@@ -31,7 +31,7 @@
 
 #include "environ.h"
 
-#define EXECFAILED 255 // exit status if call to execv() fails
+#define EXECFAILED 129 // exit status if call to execv() fails
 
 	// Reason user process exited (or didn't execute)
 typedef enum {

@@ -5,20 +5,21 @@
 /*
  * GccVersion should be the only one that needs to be changed from time to time
  */
-#define GccVersion 2.7.2.1
+#define GccVersion 2.7.2.1-2
 
 #define GccPath concat(/s/gcc-,GccVersion)
-#define CCompiler concat3(GccPath,/bin/,gcc)
-#define CPlusCompiler concat3(GccPath,/bin/,g++)
+
+#define CCompiler gcc 
+#define CPlusCompiler g++
 #define PreProcessCmd CCompiler -E -x c-header
 
-#define CrtLibPath concat5(GccPath,/lib/gcc-lib/,GccArch,/,GccVersion)
+#define CrtLibPath concat5(GccPath,/lib/gcc-lib/,GccArch,/,2.7.2.1)
 #define X11LibPath /s/X11R6-2/lib
 #define X11Include /s/X11R6-2/include
-#define SC_VERS SC3.0.1
-#define IS_V6 YES
+#define MkDepend ../../GENERIC/mdepend.sh
+/* #define SC_VERS SC3.0.1  */
+#define IS_V6 NO
 #define HAS_NEW_FORTRAN         YES
-#define HAS_X YES
 #endif
 
 #ifdef AfterVendorCF

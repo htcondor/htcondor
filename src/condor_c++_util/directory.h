@@ -11,12 +11,12 @@
 
 #include <dirent.h>
 
-#if defined(SUNOS41)
+#if defined(SUNOS41) && defined(_POSIX_SOURCE)
 	/* Note that function seekdir() is not required by POSIX, but the sun
 	   implementation of rewinddir() (which is required by POSIX) is
 	   a macro utilizing seekdir().  Thus we need the prototype.
 	*/
-	extern "C" void seekdir( DIR *dirp, int loc );
+	extern "C" void seekdir( DIR *dirp, long loc );
 #endif
 
 class Directory

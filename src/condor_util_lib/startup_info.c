@@ -1,6 +1,6 @@
 #define _POSIX_SOURCE
 
-#if defined(Solaris)
+#if defined(Solaris) || defined(SUNOS41)
 #include "_condor_fix_types.h"
 #endif
 #if defined(IRIX62)
@@ -9,6 +9,9 @@ typedef struct fd_set fd_set;
 
 #include <sys/types.h>
 #include "condor_common.h"
+#ifdef SUNOS41
+#define bool_t int
+#endif
 #include "condor_jobqueue.h"
 #include "condor_constants.h"
 #include "condor_debug.h"

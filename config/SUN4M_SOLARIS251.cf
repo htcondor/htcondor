@@ -103,6 +103,8 @@
 #define IS_SUN4M_SOLARIS251		YES  /* Dhaval defined it */
 #define IS_SUN4M_SOLARIS		YES
 
+#define IS_V5	YES
+
 #ifndef HAS_X
 #define HAS_X					NO
 #endif

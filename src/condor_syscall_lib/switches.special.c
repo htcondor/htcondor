@@ -32,9 +32,9 @@
 *******************************************************************/
 #define _POSIX_SOURCE
 
-#if defined(Solaris)
+#if defined(Solaris) || defined(SUNOS41)
 #include "../condor_includes/_condor_fix_types.h"
-#if !defined(Solaris251)
+#if !defined(Solaris251) && !defined(SUNOS41)
 #include </usr/ucbinclude/sys/rusage.h>
 #endif
 #endif 
@@ -74,6 +74,11 @@ int _lxstat(int, const char *, struct stat *);
 #include <sys/uio.h>
 #include <errno.h>
 #include "debug.h"
+
+#if defined(IRIX53)
+#   include <dlfcn.h>   /* for dlopen and dlsym */
+#   include <sys/mman.h>    /* for mmap */
+#endif
 
 static int fake_readv( int fd, const struct iovec *iov, int iovcnt );
 static int fake_writev( int fd, const struct iovec *iov, int iovcnt );
@@ -928,9 +933,25 @@ getlogin()
 		loc_rval = (char *) syscall( SYS_getlogin );
 		return loc_rval;
 #else
+#if defined(IRIX53) 
+		{
+        void *handle;
+        char * (*fptr)();
+        if ((handle = dlopen("/usr/lib/libc.so", RTLD_LAZY)) == NULL) {
+            return NULL;
+        }
+
+        if ((fptr = (char * (*)())dlsym(handle, "getlogin")) == NULL) {
+            return NULL;
+        }
+
+        return (*fptr)();
+		}
+#else
 		extern char *GETLOGIN();
 		return (  GETLOGIN() );
-#endif
+#endif  /* of else part of IRIX53 */
+#endif	/* of else part of defined SYS_getlogin */
 	} else {
 		if (loginbuf == NULL)
 			loginbuf = (char *)malloc(35);

@@ -9,11 +9,16 @@ extern "C" {
 #	include <time.h>
 #endif
 
-/* Solaris specific change ..dhaval 6/25 */
-#if defined(Solaris) && !defined(Solaris251)
+#if (defined(Solaris) && !defined(Solaris251)) || defined(SUNOS41)
 #	include <sys/time.h>
 #	include "condor_fix_timeval.h"
+#	if !defined(SUNOS41)
 #	include </usr/ucbinclude/sys/rusage.h>
+#	endif
+#endif
+
+#if defined(Solaris251)
+#	include "condor_fix_timeval.h"
 #endif
 
 #if defined(SUNOS41) || ( defined(HPUX9) && !defined(HPUX10) ) || defined(ULTRIX43)

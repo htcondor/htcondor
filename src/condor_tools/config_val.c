@@ -46,7 +46,7 @@ char	*MyName;
 
 usage()
 {
-	fprintf( stderr, "Usage: %s variable ...\n", MyName );
+	fprintf( stderr, "Usage: %s [-value] variable ...\n", MyName );
 	exit( 1 );
 }
 
@@ -56,6 +56,7 @@ char	*argv[];
 {
 	char *value;
 	char	*tmp;
+	int valonly = 0;
 
 	MyName = argv[0];
 
@@ -66,6 +67,10 @@ char	*argv[];
 	config( MyName, (CONTEXT *)0 );
 	
 	while( *++argv ) {
+		if ( strcmp(*argv,"-value") == 0 ) {
+			valonly = 1;
+			continue;
+		}
 		tmp = strdup( *argv );
 		value = param( tmp );
 		free( tmp );
@@ -73,7 +78,10 @@ char	*argv[];
 			fprintf(stderr, "Not defined: %s\n", *argv);
 			exit( 1 );
 		} else {
-			printf("set %s=%s ;\n", *argv, value);
+			if ( valonly )
+				printf("%s\n", value);
+			else
+				printf("set %s=%s ;\n", *argv, value);
 			free( value );
 		}
 	}

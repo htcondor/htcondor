@@ -36,4 +36,4 @@
 ** Define a significant value to signify that the starter couldn't
 ** exec the condor job.
 */
-#define EXECFAILED 255
+#define EXECFAILED 129

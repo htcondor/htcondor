@@ -71,15 +71,18 @@ SunOs::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 	switch ( sys )
 	{
 	case Arch:                            // get_arch()
+		{
 		struct utsname buf;
 		if( uname(&buf) < 0 )  return -1;
 		size =  strlen(buf.machine) + 1;
 		t    =  String;
 		buffer = new char[size];
 		memcpy(buffer, buf.machine, size);
+		}
 		break;	
 
 	case OpSys:							// get_op_sys()
+		{
         struct utsname buf1;
         if( uname(&buf1) < 0 )  return -1;
 		size = strlen(buf1.sysname) + strlen(buf1.release) +1;
@@ -87,9 +90,11 @@ SunOs::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 		buffer = new char[size];
 		strcpy( buffer, buf1.sysname );
 		strcat( buffer, buf1.release );
+		}
 		break;
 
 	case LoadAvg:						// lookup_load_avg()
+		{
 		long avenrun[3];
         if (kvm_read (specific.kd, specific.nl[X_AVENRUN].n_value, 
 						avenrun, sizeof (avenrun)) != sizeof(avenrun))
@@ -104,9 +109,11 @@ SunOs::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 		t    =  Float;
 		buffer = (char *)new  float[1];
 		*(float *)buffer = ((float)avenrun[0])/FSCALE;
+		}
 		break;
 	
 	case SwapSpace:  					// calc_virt_memory()
+		{
 		struct anoninfo a_info;
 		if (kvm_read (specific.kd, specific.nl[X_ANONINFO].n_value, 
 						&a_info, sizeof (a_info)) != sizeof(a_info))
@@ -122,9 +129,11 @@ SunOs::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 		buffer = (char *)new int[1];
 		int page_to_k = getpagesize() / 1024;
 		*(int *)buffer = (int)(a_info.ani_max - a_info.ani_resv)* page_to_k;
+		}
 		break;
 
 	case PhyMem:						//  calc_phys_memory()
+		{
 		unsigned int	phy;
 		if (kvm_read (specific.kd, SunOsSpecific::nl[X_PHYMEM].n_value, 
 								&phy, sizeof (phy)) != sizeof(phy))
@@ -147,6 +156,7 @@ SunOs::readSysParam(const SysParamName sys, char*& buffer, int& size,SysType& t)
 		t    =  Integer;
 		buffer = (char *)new int[1];
 		*(int *)buffer = phy ;
+		}
 		break;
 
 	case CpuType:

@@ -16,10 +16,13 @@
 #   define _DEFINE_FD_SET
     typedef int fd_mask;
 #elif defined( SUNOS41 )
+#	undef _DEFINE_FD_SET
+#ifdef NOT_THERE
 #	define	FD_SETSIZE	256
 #	define NFDBITS (sizeof (fd_mask) * NBBY)   /* bits per mask */
 #	define _DEFINE_FD_SET
 	typedef long fd_mask;
+#endif
 #elif defined(HPUX9)
 #	undef _DEFINE_FD_SET
 #elif defined(LINUX)
