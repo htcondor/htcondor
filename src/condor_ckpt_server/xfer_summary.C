@@ -203,9 +203,7 @@ XferSummary::time_out(time_t now)
 		}
 	}
 
-	if (now - start_time > XFER_SUMMARY_INTERVAL) {
-		init();
-	}
+	init();
 }
 
 void
