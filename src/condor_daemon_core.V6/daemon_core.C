@@ -2360,8 +2360,6 @@ int DaemonCore::HandleReq(int socki)
 	}
 	
 				
-	// At this point, the stream should be a TCP/ReliSock stream
-
 	if ( reqFound == TRUE ) {
 
 		// Check the daemon core permission for this command handler
@@ -2373,7 +2371,9 @@ int DaemonCore::HandleReq(int socki)
 				strcpy(user, t);
 			}
         } else {
-			// user is filled in above
+			// user is filled in above, but we should make it part of
+			// the SafeSock too.
+			((SafeSock*)stream)->setFullyQualifiedUser(user);
 		}
 
 		if ( (perm = Verify(comTable[index].perm, ((Sock*)stream)->endpoint(), user)) != USER_AUTH_SUCCESS )
@@ -5580,8 +5580,8 @@ DaemonCore::CheckConfigSecurity( const char* config, Sock* sock )
 			// if they qualify for the perm level we're considering.
 			// so, now see if the connection qualifies for this access
 			// level.
-		// HACK- passing NULL for user, please fix after merge!
-		if( Verify((DCpermission)i, sock->endpoint(), NULL)) {
+		
+		if( Verify((DCpermission)i, sock->endpoint(), sock->getFullyQualifiedUser())) {
 				// now we can see if the specific attribute they're
 				// trying to set is in our list.
 			if( (SettableAttrsLists[i])->
