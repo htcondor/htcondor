@@ -100,7 +100,7 @@ END_C_DECLS
 
 typedef void* MMAP_T;
 
-#if defined(Solaris26)
+#if defined(Solaris251) || defined(Solaris26)
 	typedef int socklen_t;
 #endif
 
