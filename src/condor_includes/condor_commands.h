@@ -116,6 +116,7 @@
 #define MASTER_OFF_FAST		(SCHED_VERS+62)
 #define GET_RESLIST			(SCHED_VERS+63)		// negotiator
 #define ATTEMPT_ACCESS		(SCHED_VERS+64) // schedd, test a file
+#define VACATE_CLAIM		(SCHED_VERS+65)     // vacate a given claim
 
 /************
 *** Command ids used by the collector 
