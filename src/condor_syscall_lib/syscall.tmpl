@@ -573,6 +573,21 @@ int rename( const char *from, const char *to ) : pseudo {
 		alloc( port_num, U_SHORT_SIZE );
 	}
 
+	int choose_ckpt_server( const char *host ): pseudo {
+		SEND_PATH( host );
+		ALLOC_PATH( host );
+	}
+
+	int register_arch( const char *arch ): pseudo {
+		SEND_PATH( arch );
+		ALLOC_PATH( arch );
+	}
+
+	int register_opsys( const char *opsys ): pseudo {
+		SEND_PATH( opsys );
+		ALLOC_PATH( opsys );
+	}
+
 #	if !defined( SENDER )
 		/*
 		These two functions implement protocols for sending and fetching
