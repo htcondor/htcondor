@@ -189,6 +189,12 @@ RemoteResource::killStarter()
 		setResourceState( RR_PENDING_DEATH );
 	}
 	already_killed_starter = true;
+
+	char* addr = dc_startd->addr();
+	if( addr ) {
+		dprintf( D_FULLDEBUG, "Killed starter at %s\n", addr );
+	}
+
 	return true;
 }
 
