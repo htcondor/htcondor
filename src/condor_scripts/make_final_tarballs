@@ -34,6 +34,10 @@ while( $_ = shift( @ARGV ) ) {
 	$libc = shift(@ARGV);
 	last SWITCH;
     }
+    if( /-c.*/ ) {
+	$tar_cmd = shift(@ARGV);
+	last SWITCH;
+    }
   }
 }
 
@@ -223,6 +227,10 @@ $arch = $archname{$sys};
 $opsys = $opsysname{$sys};
 $libc = $libcname{$sys};
 
+if( ! $tar_cmd ) {
+    $tar_cmd = "tar --owner=root --group=root";
+}
+
 `rm -rf $skel`;
 mkdir( "$skel", 0777 );
 
@@ -301,7 +309,7 @@ foreach $module ( @modules ) {
 	# Create full archive 
 	chdir( $skel ) || die "Can't chdir to $skel: $!\n";
 	print "Creating full archive: $release.tar\n";
-	print `tar -cvf $release.tar --owner=root --group=root $release`;
+	print `$tar_cmd -cvf $release.tar $release`;
 	chdir( ".." ) || die "Can't chdir to ..: $!\n";
 
 	# Delete the release.tar we're now done with.
