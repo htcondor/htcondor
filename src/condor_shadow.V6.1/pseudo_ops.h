@@ -36,6 +36,5 @@ int pseudo_register_starter_info( ClassAd* ad );
 int pseudo_get_job_info(ClassAd *&ad);
 int pseudo_get_user_info(ClassAd *&ad);
 int pseudo_job_exit(int status, int reason, ClassAd* ad);
-int pseudo_register_mpi_master_info(char *str);
-
+int pseudo_register_mpi_master_info( ClassAd* ad );
 #endif

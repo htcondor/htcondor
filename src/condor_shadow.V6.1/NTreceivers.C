@@ -499,13 +499,12 @@ do_REMOTE_syscall()
 
 	case CONDOR_register_mpi_master_info:
 	{
-		char* str = NULL;
-
-		assert( syscall_sock->code(str) );
+		ClassAd ad;
+		assert( ad.initFromStream(*syscall_sock) );
 		assert( syscall_sock->end_of_message() );
 
 		errno = 0;
-		rval = pseudo_register_mpi_master_info( str );
+		rval = pseudo_register_mpi_master_info( &ad );
 		terrno = (condor_errno_t)errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
@@ -515,9 +514,6 @@ do_REMOTE_syscall()
 			assert( syscall_sock->code( terrno ) );
 		}
 		assert( syscall_sock->end_of_message() );
-
-		free( str );
-
 		return 0;
 	}
 

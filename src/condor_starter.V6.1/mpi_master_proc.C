@@ -298,7 +298,7 @@ MPIMasterProc::checkPortFile( void )
 {
 		// First, see if the file's got anything tasty in it. 
 	FILE* fp;
-	char buf[100];
+	char buf[256];
 	char* rval;
 
 	if( ! port_file ) {
@@ -324,11 +324,14 @@ MPIMasterProc::checkPortFile( void )
 
 				// At this point, we can actually do our pseudo
 				// syscall to tell the shadow.  First, create the
-				// string we need: 
-			sprintf( buf, "%s:%d", inet_ntoa(*(my_sin_addr())), port );
+				// string we need and stuff it in a ClassAd 
+			sprintf( buf, "%s=\"%s:%d\"", ATTR_MPI_MASTER_ADDR, 
+					 inet_ntoa(*(my_sin_addr())), port );
+			ClassAd ad;
+			ad.Insert( buf );
 
 				// Now, do the call:
-			REMOTE_CONDOR_register_mpi_master_info( buf );
+			REMOTE_CONDOR_register_mpi_master_info( &ad );
 
 				// clear our tid (since we're not going to reset the
 				// timer) 

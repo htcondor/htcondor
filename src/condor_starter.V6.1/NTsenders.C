@@ -411,7 +411,7 @@ REMOTE_CONDOR_rename( char *  from , char *  to)
 }
 
 int
-REMOTE_CONDOR_register_mpi_master_info( char* str )
+REMOTE_CONDOR_register_mpi_master_info( ClassAd* ad )
 {
 	condor_errno_t		terrno;
 	int		rval=-1;
@@ -420,9 +420,14 @@ REMOTE_CONDOR_register_mpi_master_info( char* str )
 
 	CurrentSysCall = CONDOR_register_mpi_master_info;
 
+	if( ! ad ) {
+		EXCEPT( "CONDOR_register_mpi_master_info called with NULL ClassAd!" ); 
+		return -1;
+	}
+
 	syscall_sock->encode();
 	assert( syscall_sock->code(CurrentSysCall) );
-	assert( syscall_sock->code(str) );
+	assert( ad->put(*syscall_sock) );
 	assert( syscall_sock->end_of_message() );
 
 	syscall_sock->decode();
