@@ -31,6 +31,7 @@
 #include "list.h"                // List class
 #include "internet.h"            // sinful->hostname stuff
 #include "daemon.h"
+#include "Env.h"
 
 
 MPIShadow::MPIShadow() {
@@ -621,7 +622,7 @@ MPIShadow::modifyNodeAd( ClassAd* ad )
 		// what node we're spawning...
 	char nextResourceToStartStr[127];
 	sprintf(nextResourceToStartStr,"%d",nextResourceToStart);
-	env.Put(buf,"MPICH_IPROC",nextResourceToStartStr);
+	env.Put("MPICH_IPROC",nextResourceToStartStr);
 
 		// Now, if we're a comrade (rank > 0), we also need to add
 		// MPICH_ROOT, which is what we got from our pseudo syscall. 
