@@ -78,6 +78,7 @@ extern int			shutdown_fast_timeout;
 extern int			Lines;
 extern int			PublishObituaries;
 extern int			StartDaemons;
+extern int			GotDaemonsOff;
 extern char*		MasterName;
 
 ///////////////////////////////////////////////////////////////////////////
@@ -936,7 +937,9 @@ Daemons::DaemonsOn()
 {
 		// Maybe someday we'll add code here to edit the config file.
 	StartDaemons = TRUE;
+	GotDaemonsOff = FALSE;
 	StartAllDaemons();
+	StartNewExecTimer();
 }
 
 
@@ -945,7 +948,9 @@ Daemons::DaemonsOff( int fast )
 {
 		// Maybe someday we'll add code here to edit the config file.
 	StartDaemons = FALSE;
+	GotDaemonsOff = TRUE;
 	all_daemons_gone_action = MASTER_RESET;
+	CancelNewExecTimer();
 	if( fast ) {
 		StopFastAllDaemons();
 	} else {
@@ -1300,21 +1305,6 @@ Daemons::StartTimers()
 		old_update_int = update_interval;
 	}
 
-	int new_check = (int)( old_check_int != check_new_exec_interval );
-	if( new_check || !StartDaemons ) {
-		if( check_new_exec_tid != -1 ) {
-			daemonCore->Cancel_Timer( check_new_exec_tid );
-			check_new_exec_tid = -1;
-		}
-	}
-	if( new_check && StartDaemons ) {
-		check_new_exec_tid = daemonCore->
-			Register_Timer( 5, check_new_exec_interval,
-							(TimerHandlercpp)&Daemons::CheckForNewExecutable,
-							"Daemons::CheckForNewExecutable()", this );
-	}
-	old_check_int = check_new_exec_interval;
-
 	int new_preen = (int)( old_preen_int != preen_interval );
 	int first_preen = MIN( HOUR, preen_interval );
 	if( !FS_Preen || new_preen ) {
@@ -1329,7 +1319,50 @@ Daemons::StartTimers()
 							"run_preen()" );
 	}
 	old_preen_int = preen_interval;
+
+	if( old_check_int != check_new_exec_interval ) {
+			// new value, restart timer
+		CancelNewExecTimer();
+		StartNewExecTimer();
+	}
+	old_check_int = check_new_exec_interval;
 }	
+
+
+void
+Daemons::StartNewExecTimer( void )
+{
+	if( ! check_new_exec_interval ) {
+			// Nothing to do.
+		return;
+	}
+	if( check_new_exec_tid != -1 ) {
+			// Timer already on, nothing to do.
+		return;
+	}
+	if( ! StartDaemons ) {
+			// Don't want to check for new executables if we're not
+			// supposed to be running daemons.
+		return;
+	}
+	check_new_exec_tid = daemonCore->
+		Register_Timer( 5, check_new_exec_interval,
+						(TimerHandlercpp)&Daemons::CheckForNewExecutable,
+						"Daemons::CheckForNewExecutable()", this );
+	if( check_new_exec_tid == -1 ) {
+		dprintf( D_ALWAYS, "ERROR! Can't register DaemonCore timer!\n" );
+	}
+}
+
+
+void
+Daemons::CancelNewExecTimer( void )
+{
+	if( check_new_exec_tid != -1 ) {
+		daemonCore->Cancel_Timer( check_new_exec_tid );
+		check_new_exec_tid = -1;
+	}
+}
 
 
 // Fill in Timestamp and startTime for all daemons info into a
