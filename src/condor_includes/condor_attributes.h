@@ -31,10 +31,9 @@
 #define __CONDOR_ATTRIBUTES_H__
 
 const char ATTR_ACTIVITY				 [] = "Activity";
-const char ATTR_AFS_CELL				 [] = "AFSCell";
 const char ATTR_ARCH                     [] = "Arch";
-const char ATTR_BUFFER_SIZE		 [] = "BufferSize";
-const char ATTR_BUFFER_BLOCK_SIZE	 [] = "BufferBlockSize";
+const char ATTR_BUFFER_SIZE				 [] = "BufferSize";
+const char ATTR_BUFFER_BLOCK_SIZE		 [] = "BufferBlockSize";
 const char ATTR_BUFFER_PREFETCH_SIZE	 [] = "BufferPrefetchSize";
 const char ATTR_BYTES_SENT				 [] = "BytesSent";
 const char ATTR_BYTES_RECVD				 [] = "BytesRecvd";
@@ -81,6 +80,7 @@ const char ATTR_JOB_LOCAL_USER_CPU		 [] = "LocalUserCpu";
 const char ATTR_JOB_NOTIFICATION		 [] = "JobNotification";
 const char ATTR_JOB_OUTPUT				 [] = "Out";
 const char ATTR_JOB_PRIO                 [] = "JobPrio";
+const char ATTR_JOB_COMMITTED_TIME		 [] = "CommittedTime";
 const char ATTR_JOB_REMOTE_SYS_CPU		 [] = "RemoteSysCpu";
 const char ATTR_JOB_REMOTE_USER_CPU		 [] = "RemoteUserCpu";
 const char ATTR_JOB_REMOTE_WALL_CLOCK	 [] = "RemoteWallClockTime";
@@ -94,6 +94,8 @@ const char ATTR_KILL                     [] = "Kill";
 const char ATTR_KILL_SIG				 [] = "KillSig";
 const char ATTR_LAST_BENCHMARK			 [] = "LastBenchmark";
 const char ATTR_LAST_CKPT_SERVER		 [] = "LastCkptServer";
+const char ATTR_LAST_CKPT_TIME			 [] = "LastCkptTime";
+const char ATTR_LAST_VACATE_TIME		 [] = "LastVacateTime";
 const char ATTR_LAST_HEARD_FROM          [] = "LastHeardFrom";
 const char ATTR_LAST_PERIODIC_CHECKPOINT [] = "LastPeriodicCheckpoint";
 const char ATTR_LAST_REMOTE_HOST		 [] = "LastRemoteHost";
