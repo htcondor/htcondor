@@ -242,6 +242,7 @@ void 	SetRootDir();
 #endif
 void 	SetRequirements();
 void 	SetTransferFiles();
+void    process_input_file_list(StringList * input_list, char *input_files, bool * files_specified);
 bool 	SetNewTransferFiles( void );
 void 	SetOldTransferFiles( bool, bool );
 void	InsertFileTransAttrs( FileTransferOutput_t when_output );
@@ -1247,6 +1248,37 @@ calc_image_size( const char *name)
 	return (buf.st_size + 1023) / 1024;
 }
 
+void
+process_input_file_list(StringList * input_list, char *input_files, bool * files_specified)
+{
+	int count;
+	MyString tmp;
+	char* tmp_ptr;
+
+	if( ! input_list->isEmpty() ) {
+		input_list->rewind();
+		count = 0;
+		while ( (tmp_ptr=input_list->next()) ) {
+			count++;
+			tmp = tmp_ptr;
+			if ( check_and_universalize_path(tmp,TransferInputFiles) != 0) {
+				// path was universalized, so update the string list
+				input_list->deleteCurrent();
+				input_list->insert(tmp.Value());
+			}
+			check_open(tmp.Value(), O_RDONLY);
+			TransferInputSize += calc_image_size(tmp.Value());
+		}
+		if ( count ) {
+			tmp_ptr = input_list->print_to_string();
+			(void) sprintf( input_files, "%s = \"%s\"",
+						ATTR_TRANSFER_INPUT_FILES, tmp_ptr );
+			free( tmp_ptr );
+			*files_specified = true;
+		}
+	}
+}
+
 // Note: SetTransferFiles() sets a global variable TransferInputSize which
 // is the size of all the transferred input files.  This variable is used
 // by SetImageSize().  So, SetTransferFiles() must be called _before_ calling
@@ -1312,28 +1344,8 @@ SetTransferFiles()
 #endif /* WIN32 */
 
 	if( ! input_file_list.isEmpty() ) {
-		input_file_list.rewind();
-		count = 0;
-		while ( (tmp_ptr=input_file_list.next()) ) {
-			count++;
-			tmp = tmp_ptr;
-			if ( check_and_universalize_path(tmp,TransferInputFiles) != 0) {
-				// path was universalized, so update the string list
-				input_file_list.deleteCurrent();
-				input_file_list.insert(tmp.Value());
-			}
-			check_open(tmp.Value(), O_RDONLY);
-			TransferInputSize += calc_image_size(tmp.Value());
-		}
-		if ( count ) {
-			tmp_ptr = input_file_list.print_to_string();
-			(void) sprintf( input_files, "%s = \"%s\"", 
-							ATTR_TRANSFER_INPUT_FILES, tmp_ptr );
-			free( tmp_ptr );
-			in_files_specified = true;
-		}
+		process_input_file_list(&input_file_list, input_files, &in_files_specified);
 	}
-
 
 	macro_value = condor_param( TransferOutputFiles,
 								"TransferOutputFiles" ); 
@@ -1385,26 +1397,21 @@ SetTransferFiles()
 	  executables left and right, which we don't want.
 	*/
 
+	/* We need to have our best guess of file transfer needs processed before
+	  we change things to deal with the jar files and class file which
+	  is the executable and should not be renamed. But we can't just
+	  change and set ATTR_TRANSFER_INPUT_FILES as it is done later as the saved
+	  settings in input_files and output_files is dumped out undoing our
+	  careful efforts. So we will append to the input_file_list and regenerate
+	  input_files. bt
+	*/
+
 	if( should_transfer!=STF_NO && JobUniverse==CONDOR_UNIVERSE_JAVA ) {
-
-		char file_list[ATTRLIST_MAX_EXPRESSION];
-
-		if(job->LookupString(ATTR_TRANSFER_INPUT_FILES,file_list)!=1) {
-			file_list[0] = 0;
-		}
 
 		macro_value = condor_param(Executable);
 		if(macro_value) {
 			MyString executable_str = macro_value;
-			check_and_universalize_path(executable_str,TransferInputFiles);
-			check_open(executable_str.Value(),O_RDONLY);
-			TransferInputSize += calc_image_size(executable_str.Value());
-			if(file_list[0]) {
-				strcat(file_list,",");
-				strcat(file_list,executable_str.Value());
-			} else {
-				strcpy(file_list,executable_str.Value());
-			}
+			input_file_list.append(executable_str.Value());
 			free(macro_value);
 		}
 
@@ -1414,21 +1421,14 @@ SetTransferFiles()
 			files.rewind();
 			while ( (tmp_ptr=files.next()) ) {
 				tmp = tmp_ptr;
-				check_and_universalize_path(tmp,TransferInputFiles);
-				check_open(tmp.Value(), O_RDONLY);
-				TransferInputSize += calc_image_size(tmp.Value());
-				if(file_list[0]) {
-					strcat(file_list,",");
-					strcat(file_list,tmp.Value());
-				} else {
-					strcpy(file_list,tmp.Value());
-				}
+				input_file_list.append(tmp.Value());
 			}
 			free(macro_value);
 		}
 
-		sprintf(buffer,"%s = \"%s\"",ATTR_TRANSFER_INPUT_FILES,file_list);
-		InsertJobExpr(buffer);
+		if( ! input_file_list.isEmpty() ) {
+				process_input_file_list(&input_file_list, input_files, &in_files_specified);
+		}
 
 		sprintf(buffer,"%s = \"java\"",ATTR_JOB_CMD);
 		InsertJobExpr( buffer );
