@@ -39,6 +39,9 @@ extern "C" {
 /** Display known info about the file table */
 void _condor_file_table_dump();
 
+/** Aggravate bugs by forcing virtual fds to be different from real fds. */
+void _condor_file_table_aggravate( int on_off );
+
 /** Set up the file table if necessary.  Calling this function multiple times is harmless.  All system calls that access FileTab should call this function first. */
 void _condor_file_table_init();
 
