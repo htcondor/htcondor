@@ -69,12 +69,22 @@ int JavaProc::StartJob()
 	length = strlen(job_args);
 	job_args[length-1] = '\0'; // destroy last quote
 
-	// added a few extra backwhacked quotes here so we can have 
-	// spaces in the paths.  -stolley 8/02
+	/*
+	We really need to be passing these arguments through an
+	argv-like interface to DaemonCore.  However, we don't have
+	one.  Currently, the Windows version interprets and removes
+	quotes in argument strings, but the UNIX version does not.
+	Thus, we need two different strings, depending on the platform.
+	Todd and Colin promise to fix this.  -thain
+	*/
 	
 	sprintf(tmp,
-		"%s=\"%s -Dchirp.config=\\\"%s%cchirp.config\\\" CondorJavaWrapper "
-		"\\\"%s\\\" \\\"%s\\\" %s\"",
+#ifdef WIN32
+		"%s=\"%s -Dchirp.config=\\\"%s%cchirp.config\\\" CondorJavaWrapper \\\"%s\\\" \\\"%s\\\" %s\"",
+#else
+		"%s=\"%s -Dchirp.config=%s%cchirp.config CondorJavaWrapper %s %s %s\"",
+#endif
+
 		ATTR_JOB_ARGUMENTS,
 		java_args,
 		execute_dir,
