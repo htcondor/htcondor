@@ -138,9 +138,8 @@ main( int argc, char* argv[] )
 		} else if( match_prefix( argv[i], "-name" ) ) {
 			if( argv[i + 1] ) {
 				i++;
-				if( (tmp = get_daemon_name(argv[i])) ) { 
-					name = strdup( tmp );
-				} else {
+				name = get_daemon_name( argv[i] );
+				if( ! name ) {
 					fprintf( stderr, "%s: unknown host %s\n", MyName, 
 							 get_host_part(argv[i]) );
 					my_exit( 1 );
@@ -167,9 +166,8 @@ main( int argc, char* argv[] )
 		} else if( match_prefix( argv[i], "-pool" ) ) {
 			if( argv[i + 1] ) {
 				i++;
-				if( (tmp = get_daemon_name(argv[i])) ) {
-					pool = strdup( tmp );
-				} else {
+				pool = get_daemon_name( argv[i] );
+				if( ! pool ) {
 					fprintf( stderr, "%s: unknown host %s\n", MyName, 
 							 get_host_part(argv[i]) );
 					my_exit( 1 );

@@ -253,7 +253,6 @@ main( int argc, char *argv[] )
 	char	**ptr;
 	char	*cmd_file = NULL;
 	int dag_pause = 0;
-	char	*scheddname;
 
 	setbuf( stdout, NULL );
 
@@ -303,12 +302,14 @@ main( int argc, char *argv[] )
 							 MyName );
 					exit(1);
 				}					
-				if( !(scheddname = get_daemon_name(*ptr)) ) {
+				if( ScheddName ) {
+					delete [] ScheddName;
+				}
+				if( !(ScheddName = get_daemon_name(*ptr)) ) {
 					fprintf( stderr, "%s: unknown host %s\n", 
 							 MyName, get_host_part(*ptr) );
 					exit(1);
 				}
-				ScheddName = strdup(scheddname);
 				break;
 			case 'n':
 				ptr++;
@@ -317,12 +318,14 @@ main( int argc, char *argv[] )
 							 MyName );
 					exit(1);
 				}					
-				if( !(scheddname = get_daemon_name(*ptr)) ) {
+				if( ScheddName ) {
+					delete [] ScheddName;
+				}
+				if( !(ScheddName = get_daemon_name(*ptr)) ) {
 					fprintf( stderr, "%s: unknown host %s\n", 
 							 MyName, get_host_part(*ptr) );
 					exit(1);
 				}
-				ScheddName = strdup(scheddname);
 				break;
 			default:
 				usage();

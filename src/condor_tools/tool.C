@@ -320,12 +320,11 @@ main( int argc, char *argv[] )
 			case 'p':
 				tmp++;
 				if( tmp && *tmp ) {
-					if( (foo = get_daemon_name(*tmp)) == NULL ) {
+					if( (pool = get_daemon_name(*tmp)) == NULL ) {
 						fprintf( stderr, "%s: unknown host %s\n", MyName, 
 								 get_host_part(*tmp) );
 						exit( 1 );	
 					}
-					pool = strdup( foo );
 				} else {
 					usage( MyName );
 				}
@@ -473,6 +472,8 @@ main( int argc, char *argv[] )
 				continue;
 			}
 			doCommand( daemonname );
+			delete [] daemonname;
+			daemonname = NULL;
 			break;
 		}
 	}

@@ -275,9 +275,7 @@ firstPass (int argc, char *argv[])
 			if( !pool ) {
 				fprintf( stderr, "Error:  unknown host %s\n", argv[i] );
 				exit( 1 );
-			} else {
-				pool = strdup( pool );
-			}	
+			} 
 		} else
 		if (matchPrefix (argv[i], "-format")) {
 			setPPstyle (PP_CUSTOM, i, argv[i]);
@@ -426,6 +424,8 @@ secondPass (int argc, char *argv[])
 			  default:
 				fprintf(stderr,"Error: Don't know how to process %s\n",argv[i]);
 			}
+			delete [] daemonname;
+			daemonname = NULL;
 		} else 
 		if (matchPrefix (argv[i], "-constraint")) {
 			if (diagnose) {

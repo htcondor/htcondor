@@ -37,7 +37,7 @@ char	*MyName;
 
 void ProcArg( const char * );
 
-char	DaemonName[512];
+char	*DaemonName = NULL;
 
 void
 usage()
@@ -69,7 +69,6 @@ main( int argc, char *argv[] )
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
-	DaemonName[0] = '\0';
 	for( argv++; arg = *argv; argv++ ) {
 		if( arg[0] == '-' && arg[1] == 'n' ) {
 			// use the given name as the schedd name to connect to
@@ -79,12 +78,11 @@ main( int argc, char *argv[] )
 						 MyName);
 				exit(1);
 			}				
-			if( !(daemonname = get_daemon_name(*argv)) ) { 
+			if( !(DaemonName = get_daemon_name(*argv)) ) { 
 				fprintf( stderr, "%s: unknown host %s\n", 
 						 MyName, get_host_part(*argv) );
 				exit(1);
 			}
-			strcpy( DaemonName, daemonname );
 		} else {
 			args[nArgs] = arg;
 			nArgs++;
@@ -94,7 +92,7 @@ main( int argc, char *argv[] )
 		// Open job queue
 	q = ConnectQ(DaemonName);
 	if( !q ) {
-		if( *DaemonName ) {
+		if( DaemonName ) {
 			fprintf( stderr, "Failed to connect to queue manager %s\n", 
 					 DaemonName );
 		} else {
