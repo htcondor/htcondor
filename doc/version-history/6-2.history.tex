@@ -85,6 +85,14 @@ during reading of a corrupted log file.
 \item Fixed a bug where we used to EXCEPT if we couldn't email the
 administrator of the pool. We now do not EXCEPT anymore.
 
+\item In the \Condor{startd}, messages were being printed into the log
+file about load average and idle time computations whenever
+\Dflag{FULLDEBUG} was included in the \Macro{STARTD\_DEBUG} config
+file setting.
+Now, to see the periodic messages printing out the current load
+averages, you must include \Dflag{LOAD} in \Macro{STARTD\_DEBUG}, and
+to see the messages about idle time, you must include \Dflag{IDLE}.
+
 \end{itemize}
 
 \noindent Known Bugs:
