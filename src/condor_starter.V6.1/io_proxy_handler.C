@@ -7,6 +7,8 @@
 
 #include <errno.h>
 
+static int sscanf_chirp( char const *input,char const *fmt,... );
+
 IOProxyHandler::IOProxyHandler()
 {
 	cookie = 0;
@@ -95,6 +97,80 @@ void IOProxyHandler::handle_cookie_request( ReliSock *r, char *line )
 	r->put_line_raw(line);
 }
 
+
+/*
+sscanf_chirp -- A simplified version of sscanf that handles escapes.
+
+Format tokens recognized:
+
+%d  --  decimal
+%s  --  word, possibly containing escaped characters
+%%  --  match %
+*/
+
+int
+sscanf_chirp( char const *input,char const *fmt,... )
+{
+  va_list args;
+  int args_parsed = 0;
+  va_start(args,fmt);
+
+  while(*input && *fmt) {
+    if(*fmt == '%') { //parse an argument
+      switch(*(++fmt)) {
+      case 'd': { //read a decimal
+	long d;
+	char *end;
+	fmt++;
+	d = strtol(input,&end,10);
+	if(end > input) {
+	  args_parsed++;
+	  *(va_arg(args,int *)) = d;
+	  input = end;
+	}
+	else goto parse_failed;
+	break;
+      }
+      case 's': { //read a word
+	//assume provided buffer is big enough
+	char *word = va_arg(args,char *);
+	fmt++;
+	while(*input && !isspace(*input)) {
+	  if(*input == '\\') {
+	    input++;
+	    if(!*input) break;
+	  }
+	  *(word++) = *(input++);
+	}
+	*word = '\0';
+	args_parsed++;
+	break;
+      }
+      case '%':
+	if(*input != *fmt) goto parse_failed;
+	input++;
+	fmt++;
+	break;
+      default: //unexpected fmt token!?
+	goto parse_failed;
+      }
+    } else if(isspace(*fmt)) { //match whitespace
+      while(isspace(*input)) input++;
+      while(isspace(*fmt)) fmt++;
+    } else { //normal character match
+      if(*input != *fmt) goto parse_failed;
+      input++;
+      fmt++;
+    }
+  }
+
+ parse_failed:
+  //like sscanf, we just return number of parsed args when something fails
+
+  va_end(args);
+  return args_parsed;
+}
+
 /*
 Handle an incoming line from the client.
 A valid cookie is assumedf to have been received, so decode and execute any request.
@@ -109,7 +185,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 	dprintf(D_SYSCALLS,"IOProxyHandler: request: %s\n",line);
 
-	if(sscanf(line,"open %s %s %d",path,flags_string,&mode)==3) {
+	if(sscanf_chirp(line,"open %s %s %d",path,flags_string,&mode)==3) {
 
 		flags = 0;
 
@@ -132,13 +208,13 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
-	} else if(sscanf(line,"close %d",&fd)==1) {
+	} else if(sscanf_chirp(line,"close %d",&fd)==1) {
 
 		result = REMOTE_CONDOR_close(fd);
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
-	} else if(sscanf(line,"lseek %d %d %d",&fd,&offset,&whence)) {
+	} else if(sscanf_chirp(line,"lseek %d %d %d",&fd,&offset,&whence)) {
 
 		int whence_valid = 1;
 
@@ -167,37 +243,37 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		sprintf(line,"%d",result);
 		r->put_line_raw(line);
 
-	} else if(sscanf(line,"unlink %s",path)==1) {
+	} else if(sscanf_chirp(line,"unlink %s",path)==1) {
 
 		result = REMOTE_CONDOR_unlink(path);
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
-	} else if(sscanf(line,"rename %s %s",path,newpath)==2) {
+	} else if(sscanf_chirp(line,"rename %s %s",path,newpath)==2) {
 
 		result = REMOTE_CONDOR_rename(path,newpath);
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
-	} else if(sscanf(line,"mkdir %s %d",path,&mode)==2) {
+	} else if(sscanf_chirp(line,"mkdir %s %d",path,&mode)==2) {
 
 		result = REMOTE_CONDOR_mkdir(path,mode);
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
-	} else if(sscanf(line,"rmdir %s",path)==1) {
+	} else if(sscanf_chirp(line,"rmdir %s",path)==1) {
 
 		result = REMOTE_CONDOR_rmdir(path);
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
-	} else if(sscanf(line,"fsync %d",&fd)==1) {
+	} else if(sscanf_chirp(line,"fsync %d",&fd)==1) {
 
 		result = REMOTE_CONDOR_fsync(fd);
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
-	} else if(sscanf(line,"read %d %d",&fd,&length)==2) {
+	} else if(sscanf_chirp(line,"read %d %d",&fd,&length)==2) {
 
 		char *buffer = (char*) malloc(length);
 		if(buffer) {
@@ -212,7 +288,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 			sprintf(line,"%d",CHIRP_ERROR_NO_MEMORY);
 		}
 		
-	} else if(sscanf(line,"write %d %d",&fd,&length)==2) {
+	} else if(sscanf_chirp(line,"write %d %d",&fd,&length)==2) {
 
 		char *buffer = (char*) malloc(length);
 		if(buffer) {
@@ -229,7 +305,11 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		}
 		r->put_line_raw(line);
 		
-	} else {
+	} else if(strncmp(line,"version",7)==0) {
+	    sprintf(line,"%d",CHIRP_VERSION);
+	    r->put_line_raw(line);
+	}
+	else {
 		sprintf(line,"%d",CHIRP_ERROR_INVALID_REQUEST);
 		r->put_line_raw(line);
 	}
