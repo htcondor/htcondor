@@ -88,6 +88,7 @@ extern char My_UID_Domain[];
 static char *_FileName_ = __FILE__;
 
 ClassAd *JobAd = NULL;			// ClassAd which describes this job
+extern char *schedd;
 
 char *
 d_format_time( double dsecs )
@@ -499,6 +500,23 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 }
 
 int
+InitJobAd(int cluster, int proc)
+{
+  if (!JobAd) {   // just get the job ad from the schedd once
+	  if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT, true)) {
+		EXCEPT("Failed to connect to schedd!");
+	  }
+  	JobAd = GetJobAd( cluster, proc );
+  	DisconnectQ(NULL);
+  }
+  if (!JobAd) {
+	  EXCEPT( "failed to get job ad" );
+  }
+
+  return 0;
+}
+
+int
 part_send_job(
 	      int test_starter,
 	      char *host,
@@ -559,17 +577,10 @@ part_send_job(
     EXCEPT( "sock->code(%d)", test_starter );
   }
 
+  // make sure we have the job classad
+  InitJobAd(proc->id.cluster, proc->id.proc);
+
   /* Send the job info */
-  if (!JobAd) {   // just get the job ad from the schedd once
-	  if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT, true)) {
-		EXCEPT("Failed to connect to schedd!");
-	  }
-  	JobAd = GetJobAd( proc->id.cluster, proc->id.proc );
-  	DisconnectQ(NULL);
-  }
-  if (!JobAd) {
-	  EXCEPT( "failed to get job ad" );
-  }
   if( !JobAd->put(*sock) ) {
     EXCEPT( "failed to send job ad" );
   }
@@ -674,4 +685,107 @@ send_cmd_to_startd(char *sin_host, char *capability, int cmd)
 		   cmd, sin_host, capability );
 
   return 0;
+}
+
+/* Fill in a PROC structure given a job ClassAd.  This function replaces
+   GetProc from qmgr_lib_support.C, so we just get the job classad once
+   from the schedd and fill in the PROC structure directly. */
+int
+MakeProc(ClassAd *ad, PROC *p)
+{
+	char buf[ATTRLIST_MAX_EXPRESSION];
+	float	utime,stime;
+	char	*s;
+	ExprTree *e;
+
+	p->version_num = 3;
+	ad->LookupInteger(ATTR_CLUSTER_ID, p->id.cluster);
+	ad->LookupInteger(ATTR_PROC_ID, p->id.proc);
+	ad->LookupInteger(ATTR_JOB_UNIVERSE, p->universe);
+	ad->LookupInteger(ATTR_WANT_CHECKPOINT, p->checkpoint);
+	ad->LookupInteger(ATTR_WANT_REMOTE_SYSCALLS, p->remote_syscalls);
+	ad->LookupString(ATTR_OWNER, buf);
+	p->owner = strdup(buf);
+	ad->LookupInteger(ATTR_Q_DATE, p->q_date);
+	ad->LookupInteger(ATTR_COMPLETION_DATE, p->completion_date);
+	ad->LookupInteger(ATTR_JOB_STATUS, p->status);
+	ad->LookupInteger(ATTR_JOB_PRIO, p->prio);
+	ad->LookupInteger(ATTR_JOB_NOTIFICATION, p->notification);
+	ad->LookupInteger(ATTR_IMAGE_SIZE, p->image_size);
+	ad->LookupString(ATTR_JOB_ENVIRONMENT, buf);
+	p->env = strdup(buf);
+
+	p->n_cmds = 1;
+	p->cmd = (char **) malloc(p->n_cmds * sizeof(char *));
+	p->args = (char **) malloc(p->n_cmds * sizeof(char *));
+	p->in = (char **) malloc(p->n_cmds * sizeof(char *));
+	p->out = (char **) malloc(p->n_cmds * sizeof(char *));
+	p->err = (char **) malloc(p->n_cmds * sizeof(char *));
+	p->exit_status = (int *) malloc(p->n_cmds * sizeof(int));
+
+	ad->LookupString(ATTR_JOB_CMD, buf);
+	p->cmd[0] = strdup(buf);
+	ad->LookupString(ATTR_JOB_ARGUMENTS, buf);
+	p->args[0] = strdup(buf);
+	ad->LookupString(ATTR_JOB_INPUT, buf);
+	p->in[0] = strdup(buf);
+	ad->LookupString(ATTR_JOB_OUTPUT, buf);
+	p->out[0] = strdup(buf);
+	ad->LookupString(ATTR_JOB_ERROR, buf);
+	p->err[0] = strdup(buf);
+	ad->LookupInteger(ATTR_JOB_EXIT_STATUS, p->exit_status[0]);
+
+	ad->LookupInteger(ATTR_MIN_HOSTS, p->min_needed);
+	ad->LookupInteger(ATTR_MAX_HOSTS, p->max_needed);
+
+	ad->LookupString(ATTR_JOB_ROOT_DIR, buf);
+	p->rootdir = strdup(buf);
+	ad->LookupString(ATTR_JOB_IWD, buf);
+	p->iwd = strdup(buf);
+
+	e = ad->Lookup(ATTR_REQUIREMENTS);
+	if (e) {
+		buf[0] = '\0';
+		e->PrintToStr(buf);
+		s = strchr(buf, '=');
+		if (s) {
+			s++;
+			p->requirements = strdup(s);
+		} 
+		else {
+			p->requirements = strdup(buf);
+		}
+	} else {
+	   p->requirements = NULL;
+	}
+	e = ad->Lookup(ATTR_RANK);
+	if (e) {
+		buf[0] = '\0';
+		e->PrintToStr(buf);
+		s = strchr(buf, '=');
+		if (s) {
+			s++;
+			p->preferences = strdup(s);
+		} 
+		else {
+			p->preferences = strdup(buf);
+		}
+	} else {
+		p->preferences = NULL;
+	}
+
+	ad->LookupFloat(ATTR_JOB_LOCAL_USER_CPU, utime);
+	ad->LookupFloat(ATTR_JOB_LOCAL_SYS_CPU, stime);
+	float_to_rusage(utime, stime, &(p->local_usage));
+
+	p->remote_usage = (struct rusage *) malloc(p->n_cmds * 
+		sizeof(struct rusage));
+
+	memset(p->remote_usage, 0, sizeof( struct rusage ));
+
+	ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, utime);
+	ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, stime);
+	float_to_rusage(utime, stime, &(p->remote_usage[0]));
+	
+	return 0;
 }
