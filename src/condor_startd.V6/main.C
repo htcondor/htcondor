@@ -63,6 +63,13 @@ int		disconnected_keyboard_boost;	// # of seconds before when we
 	// started up that we advertise as the last key press for
 	// resources that aren't connected to anything.  
 
+int		startd_noclaim_shutdown = 0;	
+    // # of seconds we can go without being claimed before we "pull
+    // the plug" and tell the master to shutdown.
+
+
+
+
 char*	mySubSystem = "STARTD";
 
 // Define static variables
@@ -473,6 +480,12 @@ init_params( int first_time)
 		free( tmp );
 	}
 
+	startd_noclaim_shutdown = 0;
+	tmp = param( "STARTD_NOCLAIM_SHUTDOWN" );
+	if( tmp ) {
+		startd_noclaim_shutdown = atoi( tmp );
+		free( tmp );
+	} 
 	return TRUE;
 }
 

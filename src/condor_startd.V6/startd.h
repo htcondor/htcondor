@@ -115,6 +115,10 @@ extern	int		disconnected_keyboard_boost;
     // # of seconds before when we started up that we advertise as the
 	// last key press for resources that aren't connected to anything.
 
+extern	int		startd_noclaim_shutdown;	
+    // # of seconds we can go without being claimed before we "pull
+    // the plug" and tell the master to shutdown.
+
 #endif /* _STARTD_NO_DECLARE_GLOBALS */
 
 #endif /* _CONDOR_STARTD_H */
