@@ -1,0 +1,95 @@
+#!/usr/bin/env perl
+
+use CondorTest;
+
+$cmd = 'job_ckpt_f-registers_std.cmd';
+$testname = 'Registers Test';
+
+$foo  = <<"_EOX";
+ About to checkpoint
+ Returned from checkpoint
+ args:  35  35  35  35  35  35  35  35
+ args:  34  34  34  34  34  34  34  34
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  33  33  33  33  33  33  33  33
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  32  32  32  32  32  32  32  32
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  31  31  31  31  31  31  31  31
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  30  30  30  30  30  30  30  30
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  29  29  29  29  29  29  29  29
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  28  28  28  28  28  28  28  28
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  27  27  27  27  27  27  27  27
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  26  26  26  26  26  26  26  26
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  25  25  25  25  25  25  25  25
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  24  24  24  24  24  24  24  24
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  23  23  23  23  23  23  23  23
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  22  22  22  22  22  22  22  22
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  21  21  21  21  21  21  21  21
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  20  20  20  20  20  20  20  20
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  19  19  19  19  19  19  19  19
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  18  18  18  18  18  18  18  18
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  17  17  17  17  17  17  17  17
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  16  16  16  16  16  16  16  16
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  15  15  15  15  15  15  15  15
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  14  14  14  14  14  14  14  14
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  13  13  13  13  13  13  13  13
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  12  12  12  12  12  12  12  12
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  11  11  11  11  11  11  11  11
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  10  10  10  10  10  10  10  10
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  9  9  9  9  9  9  9  9
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  8  8  8  8  8  8  8  8
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  7  7  7  7  7  7  7  7
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  6  6  6  6  6  6  6  6
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  5  5  5  5  5  5  5  5
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  4  4  4  4  4  4  4  4
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  3  3  3  3  3  3  3  3
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  2  2  2  2  2  2  2  2
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  1  1  1  1  1  1  1  1
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+ args:  0  0  0  0  0  0  0  0
+ locals:  -35  -35  -35  -35  -35  -35  -35  -35
+_EOX
+
+@CondorTest::expected_output = split '\n', $foo;
+
+CondorTest::RegisterExitedSuccess( $testname,
+                   \&CondorTest::DefaultOutputTest );
+CondorTest::RegisterExitedFailure( $testname,
+                   \&CondorTest::DefaultOutputTest );
+
+# fortran can return success or failure, we don't check the return value.
+CondorTest::RunTest($testname, $cmd, 0);
+print "$testname: SUCCESS\n";
+exit(0);
+
