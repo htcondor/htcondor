@@ -34,6 +34,7 @@ typedef struct jobstartinfo {
 	char *ji_hname;
 	int ji_sock1;
 	int ji_sock2;
+	Stream* shadowCommandSock;
 } start_info_t;
 
 class Starter
@@ -63,6 +64,7 @@ private:
 	char*	s_name;
 	int		reallykill(int, int);
 	int		exec_starter(char*, char*, int, int);
+	int		exec_starter(char*, char*, Stream*);
 	pid_t*	s_pidfamily;
 	int		s_family_size;
 	ProcFamily*	s_procfam;
