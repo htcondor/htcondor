@@ -35,7 +35,9 @@ Dag::Dag(const char *condorLogName, const char *lockFileName,
     _lockFileName  = strnewp (lockFileName);
 
 	_scriptQ = new ScriptQ( this );
+	assert( _scriptQ != NULL );
 	_submitQ = new Queue<Job*>;
+	assert( _submitQ != NULL );
 }
 
 //-------------------------------------------------------------------------
@@ -49,35 +51,39 @@ Dag::~Dag() {
 
 //-------------------------------------------------------------------------
 bool Dag::Bootstrap (bool recovery) {
+    Job* job;
+    ListIterator<Job> jobs (_jobs);
+
+    // update dependencies for pre-completed jobs (jobs marked DONE in
+    // the DAG input file)
+	jobs.ToBeforeFirst();
+    while( jobs.Next( job ) ) {
+        if( job->_Status == Job::STATUS_DONE ) {
+			TerminateJob( job );
+		}
+    }
+	debug_println( DEBUG_VERBOSE, "Number of pre-completed jobs: %d",
+                   NumJobsDone() );
+    
     // Add a virtual dependency for jobs that have no parent.  In
     // other words, pretend that there is an invisible "God" job that
     // has the orphan jobs as its children.  The God job will have the
     // value (Job *) NULL.
+	TQI* god = new TQI;
+	jobs.ToBeforeFirst();
+	while( jobs.Next( job ) ) {
+		if( job->IsEmpty( Job::Q_WAITING ) ) {
+			god->children.Append( job->GetJobID() );
+		}
+	}
 
-    {
-        TQI * god = new TQI;   // Null parent and empty children list
-        ListIterator<Job> iList (_jobs);
-        Job * job;
-        while (iList.Next(job)) {
-            if (job->IsEmpty(Job::Q_PARENTS))
-                god->children.Append(job->GetJobID());
-        }
-        _termQ.Append (god);
-    }
+	// if there are no such jobs, remove the god job
+	if( god->children.IsEmpty() ) {
+		delete god;
+	}
 
-    //--------------------------------------------------
-    // Update dependencies for pre-terminated jobs
-    // (jobs marked DONE in the dag input file)
-    //--------------------------------------------------
-    Job * job;
-    ListIterator<Job> iList (_jobs);
-    while ((job = iList.Next()) != NULL) {
-        if (job->_Status == Job::STATUS_DONE) TerminateJob(job);
-    }
-    
-    debug_println (DEBUG_VERBOSE, "Number of Pre-completed Jobs: %d",
-                   NumJobsDone());
-    
+	_termQ.Append( god );
+
     if (recovery) {
         debug_println (DEBUG_NORMAL, "Running in RECOVERY mode...");
         if (!ProcessLogEvents (recovery)) return false;
@@ -309,8 +315,6 @@ bool Dag::ProcessLogEvents (bool recovery) {
 					  job->_Status = Job::STATUS_POSTRUN;
 					  _scriptQ->Run( job->_scriptPost );
 					  done = true;
-					  printf( "_scriptQ->NumScriptsRunning() = %d\n",
-							  _scriptQ->NumScriptsRunning() );
 					  break;
 				  }
 
