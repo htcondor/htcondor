@@ -121,6 +121,11 @@ class BaseShadow : public Service
 		 */
 	virtual void shutDown( int reason );
 
+		/** Graceful shutdown method.  This is virtual so each kind of
+			shadow can do the right thing.
+		 */
+	virtual void gracefulShutDown( void ) = 0;
+
 		/** Put this job on hold, if requested, notify the user about
 			it, and exit with the appropriate status so that the
 			schedd actually puts the job on hold.<p>
