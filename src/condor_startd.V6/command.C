@@ -235,7 +235,10 @@ command_request_claim( Service*, int cmd, Stream* stream )
 
 	if( ! stream->code(cap) ) {
 		dprintf( D_ALWAYS, "Can't read capability\n" );
-		free( cap );
+		if( cap ) { 
+			free( cap );
+		}
+		refuse( stream );
 		return FALSE;
 	}
 
@@ -245,18 +248,21 @@ command_request_claim( Service*, int cmd, Stream* stream )
 				 "Error: can't find resource with capability (%s)\n",
 				 cap );
 		free( cap );
+		refuse( stream );
 		return FALSE;
 	}
 
 	if( resmgr->isShuttingDown() ) {
 		rip->log_shutdown_ignore( cmd );
 		free( cap );
+		refuse( stream );
 		return FALSE;
 	}
 
 	State s = rip->state();
 	if( s == preempting_state ) {
 		rip->log_ignore( REQUEST_CLAIM, s );
+		refuse( stream );
 		rval = FALSE;
 	} else {
 		rval = request_claim( rip, cap, stream );
@@ -476,11 +482,6 @@ command_query_ads( Service*, int, Stream* stream)
 //////////////////////////////////////////////////////////////////////
 // Protocol helper functions
 //////////////////////////////////////////////////////////////////////
-#define REFUSE \
-stream->end_of_message();	\
-stream->encode();			\
-stream->put(NOT_OK);		\
-stream->end_of_message();			
 
 #define ABORT \
 delete req_classad;						\
@@ -600,7 +601,7 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 		if( !req_requirements ) {
 			rip->dprintf( D_ALWAYS, "Job requirements not satisfied.\n" );
 		}
-		REFUSE;
+		refuse( stream );
 		ABORT;
 	}
 
@@ -615,7 +616,7 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 		if( !rip->r_pre ) {
 			rip->dprintf( D_ALWAYS, 
 			   "In CLAIMED state without preempting match object, aborting.\n" );
-			REFUSE;
+			refuse( stream );
 			ABORT;
 		}
 		if( rip->r_pre->cap()->matches(cap) ) {
@@ -686,7 +687,7 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 			// finish the claiming process.
 		return accept_request_claim( rip );
 	} else {
-		REFUSE;
+		refuse( stream );
 		ABORT;
 	}
 }
@@ -829,10 +830,11 @@ activate_claim( Resource* rip, Stream* stream )
 	int universe, job_cluster, job_proc, starter;
 	Sock* sock = (Sock*)stream;
 	char* shadow_addr = strdup( sin_to_string( sock->endpoint() ));
+	bool found_attr_user = false;	// did we find ATTR_USER in the ad?
 
 	if( rip->state() != claimed_state ) {
 		rip->dprintf( D_ALWAYS, "Not in claimed state, aborting.\n" );
-		REFUSE;
+		refuse( stream );
 		ABORT;
 	}
 
@@ -844,18 +846,18 @@ activate_claim( Resource* rip, Stream* stream )
 	if( ! stream->code( starter ) ) {
 		rip->dprintf( D_ALWAYS, "Can't read starter type from %s\n",
 				 shadow_addr );
-		REFUSE;
+		refuse( stream );
 		ABORT;
 	}
 	if( starter >= MAX_STARTERS ) {
 	    rip->dprintf( D_ALWAYS, "Requested starter is out of range.\n" );
-		REFUSE;
+		refuse( stream );
 	    ABORT;
 	}
 
 	if( ! (rip->r_starter->settype(starter)) ) {
 	    rip->dprintf( D_ALWAYS, "Requested starter is invalid.\n" );
-		REFUSE;
+		refuse( stream );
 	    ABORT;
 	}
 
@@ -911,7 +913,7 @@ activate_claim( Resource* rip, Stream* stream )
 	    rip->dprintf( D_ALWAYS, "Requirements check failed! "
 					  "resource = %d, request = %d\n",
 					  mach_requirements, req_requirements );
-		REFUSE;
+		refuse( stream );
 	    ABORT;
 	}
 
@@ -922,14 +924,14 @@ activate_claim( Resource* rip, Stream* stream )
 	remote_user[0] = '\0';
 	if( req_classad->EvalString(ATTR_USER, rip->r_classad, 
 								remote_user) == 0 ) {
-		rip->dprintf( D_ALWAYS, "ERROR: %s not defined in request "
-					  "classad!  Refusing job\n", ATTR_USER );
-		REFUSE;
-		ABORT;
+		rip->dprintf( D_FULLDEBUG, "WARNING: %s not defined in request "
+					  "classad!  Using old value (%s)\n", ATTR_USER,
+					  rip->r_cur->client()->user() );
 	} else {
 		rip->dprintf( D_FULLDEBUG, 
 					  "Got RemoteUser (%s) from request classad\n",	
 					  remote_user );
+		found_attr_user = true;
 	}
 
 		// If we're here, we've decided to activate the claim.  Tell
@@ -1050,7 +1052,9 @@ activate_claim( Resource* rip, Stream* stream )
 					  "Startd using standard control expressions.\n" );
 	}
 
-	rip->r_cur->client()->setuser( remote_user );
+	if( found_attr_user ) {
+		rip->r_cur->client()->setuser( remote_user );
+	}
 	rip->r_cur->setproc( job_proc );
 	rip->r_cur->setcluster( job_cluster );
 	rip->r_cur->setad( req_classad );

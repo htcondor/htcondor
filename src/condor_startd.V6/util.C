@@ -31,16 +31,23 @@ check_perms()
 {
 	struct stat st;
 	mode_t mode;
+#ifdef WIN32
+	mode_t desired_mode = _S_IREAD | _S_IWRITE;
+#else
+	mode_t desired_mode = (0777 | S_ISVTX);
+#endif
+		// We want execute to be world-writable w/ the sticky bit set.  
 
 	if (stat(exec_path, &st) < 0) {
-		EXCEPT("stat exec path");
+		EXCEPT( "stat exec path (%s), errno: %d", exec_path, errno ); 
 	}
 
-	if ((st.st_mode & 0777) != 0777) {
+	if ((st.st_mode & desired_mode) != desired_mode) {
 		dprintf(D_FULLDEBUG, "Changing permission on %s\n", exec_path);
-		mode = st.st_mode | 0777;
+		mode = st.st_mode | desired_mode;
 		if (chmod(exec_path, mode) < 0) {
-			EXCEPT("chmod exec path");
+			EXCEPT( "chmod exec path (%s), errno: %d", exec_path,
+					errno );  
 		}
 	}
 }
@@ -52,6 +59,7 @@ cleanup_execute_dir(int pid)
 	char buf[2048];
 
 #if defined(WIN32)
+
 	dynuser nobody_login;
 
 	if( pid ) {
@@ -74,23 +82,15 @@ cleanup_execute_dir(int pid)
 		// get rid of everything in the execute directory
 		Directory dir(exec_path);
 
-		// loop through the subdirs we find, and remove any nobody
-		// accounts left laying about by the starter.
-		const char *curdir = dir.Next();
-		while (curdir) {
-			if ( dir.IsDirectory() && (strncmp(curdir,"dir_",4)==0) ) {
-				sprintf(buf,"condor-run-%s",curdir);
-				if ( nobody_login.deleteuser(buf) ) {
-					dprintf(D_FULLDEBUG,
-						"Removed account %s left by starter\n",buf);
-				}
-			}
-			curdir = dir.Next();
-		}	
+		// remove all users matching this prefix
+		nobody_login.cleanup_condor_users("condor-run-");
+
 		// now that we took care of any old nobody accounts, blow away
 		// everything in the execute directory.
 		dir.Remove_Entire_Directory();
 	}
+
+
 #else
 	if( pid ) {
 		sprintf( buf, "/bin/rm -rf %.256s/dir_%d",
@@ -169,15 +169,30 @@ command_to_string( int cmd )
 }
 
 
-int
+bool
 reply( Stream* s, int cmd )
 {
 	s->encode();
 	if( !s->code( cmd ) || !s->end_of_message() ) {
-		return FALSE;
+		return false;
 	} else {
-		return TRUE;
+		return true;
 	}
+}
+
+
+bool
+refuse( Stream* s )
+{
+	s->end_of_message();
+	s->encode();
+	if( !s->put(NOT_OK) ) {
+		return false;
+	} 
+	if( !s->end_of_message() ) {
+		return false;
+	}
+	return true;
 }
 
 

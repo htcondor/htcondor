@@ -142,6 +142,8 @@ public:
 	void	SetAllGoneAction( AllGoneT a ) {all_daemons_gone_action=a;};
 	void	StartTimers();
 	void	CancelRestartTimers();
+	void	StartNewExecTimer();
+	void	CancelNewExecTimer();
 
 	int		immediate_restart;
 	int		immediate_restart_master;

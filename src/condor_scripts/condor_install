@@ -24,7 +24,8 @@ umask 0022;
 @tool_names=("checkpoint", "off", "on", "reconfig", "reconfig_schedd", 
 	       "reschedule", "restart", "vacate" );
 @bin_names=( "q", "rm", "submit", "status", "prio", "userprio", 
-		"compile", "history", "config_val" );
+		"compile", "history", "config_val", "findhost", "glidein", "release",
+         "run", "userlog" );
 @full_lib_names=( "ld", "libcondorc++support.a", "condor_rt0.o",
 		  "libcondorsyscall.a" );
 @sbin_master_names=( "master", "preen" );
@@ -1241,10 +1242,10 @@ sub configure_full_install {
 	    if( $_ =~ s/^(.*)\/\$\(HOSTNAME\)$/$1/ ) {
 			$local_dir = $_;
 			$has_mach = 1;
-		} else {
+	    } else {
 			$local_dir = $local_dir_str;
 			$has_mach = 0;
-	    }
+		}
 	    if( ! -d $local_dir ) {
 		mkdir($local_dir, 0777) || 
 		    die "\nCan't create $local_dir: $!\n\n";

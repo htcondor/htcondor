@@ -6,7 +6,8 @@
 #define MasterFiles sbin/condor_master AdminTools
 
 #define SubmitSbinFiles sbin/condor_schedd sbin/condor_shadow \
-  sbin/condor_checkpoint sbin/condor_vacate sbin/condor_reschedule
+  sbin/condor_checkpoint sbin/condor_vacate sbin/condor_reschedule \
+  sbin/condor_shadow.v61
 
 #define SubmitOnlyFiles bin lib include etc SubmitSbinFiles MasterFiles
 
@@ -15,7 +16,7 @@
 #define PvmFiles sbin/condor_pvmd sbin/condor_pvmgs \
   sbin/condor_shadow.pvm sbin/condor_starter.pvm
 
-#define MpiFiles sbin/condor_shadow.v61 sbin/condor_starter.v61 sbin/rsh
+#define MpiFiles sbin/condor_starter.v61 sbin/rsh
 
 #define CkptServerFiles sbin/condor_ckpt_server sbin/condor_cleanckpts \
   etc/examples/condor_config.local.ckpt.server
@@ -316,3 +317,7 @@ pure_target( condor_negotiator.V6, condor_negotiator.pure )
 
 clean::
 	rm -rf $(PURE_DIR)
+
+today:
+	/bin/rm -f condor_c++_util/condor_version.o
+	cd condor_c++_util; make

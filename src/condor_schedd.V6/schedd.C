@@ -264,6 +264,12 @@ Scheduler::Scheduler()
 	num_reg_contacts = 0;
 #ifndef WIN32
 	MAX_STARTD_CONTACTS = getdtablesize() - 20;  // save 20 fds...
+		// Just in case getdtablesize() returns <= 20, we've got to
+		// let the schedd try at least 1 connection at a time.
+		// Derek, Todd, Pete K. 1/19/01
+	if( MAX_STARTD_CONTACTS < 1 ) {
+		MAX_STARTD_CONTACTS = 1;
+	}
 #else
 	// on Windows NT, it appears you can open up zillions of sockets
 	MAX_STARTD_CONTACTS = 2000;
@@ -359,7 +365,8 @@ Scheduler::timeout()
 	 * call preempt() here if we are shutting down.  When shutting down, we have
 	 * a timer which is progressively preempting just one job at a time.
 	 */
-	int real_jobs = numShadows-SchedUniverseJobsRunning;
+
+	int real_jobs = numShadows - SchedUniverseJobsRunning;
 	if( (real_jobs > MaxJobsRunning) && (!ExitWhenDone) ) {
 		dprintf( D_ALWAYS, 
 				 "Preempting %d jobs due to MAX_JOBS_RUNNING change\n",
@@ -980,14 +987,29 @@ abort_job_myself(PROC_ID job_id)
 			char owner[_POSIX_PATH_MAX];
 			owner[0] = '\0';
 			GetAttributeString(job_id.cluster, job_id.proc, ATTR_OWNER, owner);
-			dprintf(D_FULLDEBUG,
-				"Sending SIGTERM to scheduler universe job"
-				" pid=%d owner=%s\n",srec->pid,owner);
 			init_user_ids(owner);
 			int kill_sig = DC_SIGTERM;
-			GetAttributeInt(job_id.cluster, job_id.proc, ATTR_KILL_SIG,
-							&kill_sig);
+				// First, try ATTR_REMOVE_KILL_SIG
+			if( GetAttributeInt(job_id.cluster, job_id.proc,
+								ATTR_REMOVE_KILL_SIG, &kill_sig) < 0 ) {
+					// Fall back on the regular ATTR_KILL_SIG
+				GetAttributeInt(job_id.cluster, job_id.proc,
+								ATTR_KILL_SIG, &kill_sig);
+			}
+			dprintf( D_FULLDEBUG,
+					 "Sending remove signal (%d) to scheduler universe job"
+					 " pid=%d owner=%s\n", kill_sig, srec->pid, owner );
 			priv_state priv = set_user_priv();
+
+				// TODO!!!!
+				// This is really broken, since DC::Send_Signal()
+				// assumes you're giving it a DC_SIGXXX brand of
+				// signal number.  So, what users define in their
+				// submit files isn't what they're really going to
+				// get!  This is evil.  We need to either do the
+				// appropriate translation, store everything as
+				// strings, or come up with a better solution. 
+				// -Derek Wright 3/23/01
 			if ( daemonCore->Send_Signal( srec->pid, kill_sig ) == TRUE ) {
 				// successfully sent signal
 				srec->preempted = TRUE;
@@ -3956,6 +3978,7 @@ Scheduler::child_exit(int pid, int status)
 {
 	shadow_rec*		srec;
 	int				StartJobsFlag=TRUE;
+	int				q_status;  // status of this job in the queue 
 
 	srec = FindSrecByPid(pid);
 
@@ -4018,6 +4041,11 @@ Scheduler::child_exit(int pid, int status)
 				,pid);
 			status = JOB_EXCEPTION;
 		}
+		if( GetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
+							ATTR_JOB_STATUS, &q_status) < 0 ) {
+			EXCEPT( "ERROR no job status for %d.%d in child_exit()!",
+					srec->job_id.cluster, srec->job_id.proc );
+		}
 		if( WIFEXITED(status) ) {			
             dprintf( D_FULLDEBUG, "Shadow pid %d exited with status %d\n",
 					 pid, WEXITSTATUS(status) );
@@ -4045,13 +4073,17 @@ Scheduler::child_exit(int pid, int status)
 			case JOB_NO_CKPT_FILE:
 			case JOB_KILLED:
 			case JOB_COREDUMPED:
-				set_job_status( srec->job_id.cluster, srec->job_id.proc, 
-								REMOVED );
+				if( q_status != HELD ) {
+					set_job_status( srec->job_id.cluster,
+									srec->job_id.proc, REMOVED ); 
+				}
 				break;
 			case JOB_EXITED:
 				dprintf(D_FULLDEBUG, "Reaper: JOB_EXITED\n");
-				set_job_status( srec->job_id.cluster, srec->job_id.proc,
-								COMPLETED );
+				if( q_status != HELD ) {
+					set_job_status( srec->job_id.cluster,
+									srec->job_id.proc, COMPLETED ); 
+				}
 				break;
 			case JOB_SHOULD_HOLD:
 				dprintf( D_ALWAYS, "Putting job %d.%d on hold\n",

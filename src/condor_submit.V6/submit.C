@@ -187,6 +187,7 @@ char	*LogNotes = "submit_event_notes";
 
 #if !defined(WIN32)
 char	*KillSig			= "kill_sig";
+char	*RmKillSig			= "remove_kill_sig";
 #endif
 
 void 	reschedule();
@@ -232,7 +233,6 @@ int 	whitespace( const char *str);
 void 	delete_commas( char *ptr );
 void 	compress( char *str );
 char	*full_path(const char *name, bool use_iwd=true);
-void 	magic_check();
 void 	log_submit();
 void 	get_time_conv( int &hours, int &minutes );
 int	  SaveClassAd ();
@@ -1678,14 +1678,28 @@ SetRank()
 	char *append_rank = NULL;
 	rank[0] = '\0';
 
-	if ( JobUniverse == STANDARD ) {
+	switch( JobUniverse ) {
+	case STANDARD:
 		default_rank = param("DEFAULT_RANK_STANDARD");
 		append_rank = param("APPEND_RANK_STANDARD");
-	}
-	if ( JobUniverse == VANILLA ) {
+		break;
+	case VANILLA:
 		default_rank = param("DEFAULT_RANK_VANILLA");
 		append_rank = param("APPEND_RANK_VANILLA");
-	} 
+		break;
+	default:
+		default_rank = NULL;
+		append_rank = NULL;
+	}
+
+		// If they're not yet defined, or they're defined but empty,
+		// try the generic, non-universe-specific versions.
+	if( ! default_rank || ! default_rank[0]  ) {
+		default_rank = param("DEFAULT_RANK");
+	}
+	if( ! append_rank || ! append_rank[0]  ) {
+		append_rank = param("APPEND_RANK");
+	}
 
 		// If any of these are defined but empty, treat them as
 		// undefined, or else, we get nasty errors.  -Derek W. 8/21/98
@@ -1997,6 +2011,10 @@ SetKillSig()
 		if (signo == 0 && isalnum(sig[0])) {
 			signo = sig_name_lookup(sig);
 		}
+		if( signo == 0 ) {
+			fprintf( stderr, "\nERROR: invalid signal %s\n", sig );
+			exit( 1 );
+		}
 		free(sig);
 	} else {
 		switch(JobUniverse) {
@@ -2011,6 +2029,22 @@ SetKillSig()
 
 	(void) sprintf (buffer, "%s = %d", ATTR_KILL_SIG, signo);
 	InsertJobExpr(buffer);
+
+	sig = condor_param(RmKillSig);
+
+	if (sig) {
+		signo = atoi(sig);
+		if (signo == 0 && isalnum(sig[0])) {
+			signo = sig_name_lookup(sig);
+		}
+		if( signo == 0 ) {
+			fprintf( stderr, "\nERROR: invalid signal %s\n", sig );
+			exit( 1 );
+		}
+		free(sig);
+		(void) sprintf (buffer, "%s = %d", ATTR_REMOVE_KILL_SIG, signo);
+		InsertJobExpr(buffer);
+	} 
 }
 #endif  // of ifndef WIN32
 
@@ -2437,43 +2471,100 @@ check_requirements( char *orig )
 	int		has_opsys = FALSE;
 	int		has_arch = FALSE;
 	int		has_disk = FALSE;
-	int		has_virtmem = FALSE;
+	int		has_mem = FALSE;
 	int		has_fsdomain = FALSE;
-	char	*ptr;
-	static char	answer[2048];
+	int		has_ckpt_arch = FALSE;
+	char	*ptr, *tmp;
+	static char	answer[4096];
 
-	for( ptr = orig; *ptr; ptr++ ) {
+	if( strlen(orig) ) {
+		(void) sprintf( answer, "(%s)", orig );
+	} else {
+		answer[0] = '\0';
+	}
+
+	switch( JobUniverse ) {
+	case VANILLA:
+		ptr = param( "APPEND_REQ_VANILLA" );
+		break;
+	case STANDARD:
+		ptr = param( "APPEND_REQ_STANDARD" );
+		break;
+	default:
+		ptr = NULL;
+		break;
+	} 
+	if( ptr == NULL ) {
+			// Didn't find a per-universe version, try the generic,
+			// non-universe specific one:
+		ptr = param( "APPEND_REQUIREMENTS" );
+	}
+
+	if( ptr != NULL ) {
+			// We found something to append.  
+		if( answer[0] ) {
+				// We've already got something in requirements, so we
+				// need to append an AND clause.
+			(void) strcat( answer, " && (" );
+		} else {
+				// This is the first thing in requirements, so just
+				// put this as the first clause.
+			(void) strcat( answer, "(" );
+		}
+		(void) strcat( answer, ptr );
+		(void) strcat( answer, ")" );
+		free( ptr );
+	}
+
+				
+	for( ptr = answer; *ptr; ptr++ ) {
 		if( strincmp(ATTR_ARCH,ptr,4) == MATCH ) {
 			has_arch = TRUE;
 			break;
 		}
 	}
 
-	for( ptr = orig; *ptr; ptr++ ) {
+	for( ptr = answer; *ptr; ptr++ ) {
 		if( strincmp(ATTR_OPSYS,ptr,5) == MATCH ) {
 			has_opsys = TRUE;
 			break;
 		}
 	}
  
-	for( ptr = orig; *ptr; ptr++ ) {
+	for( ptr = answer; *ptr; ptr++ ) {
 		if( strincmp(ATTR_DISK,ptr,5) == MATCH ) {
 			has_disk = TRUE;
 			break;
 		}
 	}
  
-	for( ptr = orig; *ptr; ptr++ ) {
-		if( strincmp(ATTR_VIRTUAL_MEMORY,ptr,5) == MATCH ) {
-			has_virtmem = TRUE;
+	for( ptr = answer; *ptr; ptr++ ) {
+		if( strincmp(ATTR_MEMORY,ptr,5) == MATCH ) {
+				// We found "Memory", but we need to make sure that's
+				// not part of "VirtualMemory"...
+			if( ptr == answer ) {
+					// We're at the beginning, must be Memory, since
+					// there's nothing before it.
+				has_mem = TRUE;
+				break;
+			}
+				// Otherwise, it's safe to go back one position:
+			tmp = ptr - 1;
+			if( *tmp == 'l' || *tmp == 'L' ) {
+					// Must be VirtualMemory, keep searching...
+				continue;
+			}
+				// If it wasn't an 'l', we must have found it...
+			has_mem = TRUE;
 			break;
 		}
 	}
  
-	if( strlen(orig) ) {
-		(void)sprintf( answer, "(%s)", orig );
-	} else {
-		answer[0] = '\0';
+	for( ptr = answer; *ptr; ptr++ ) {
+		if( strincmp(ATTR_CKPT_ARCH,ptr,4) == MATCH ) {
+			has_ckpt_arch = TRUE;
+			break;
+		}
 	}
 
 	if( !has_arch ) {
@@ -2492,16 +2583,19 @@ check_requirements( char *orig )
 		(void)strcat( answer, "\")" );
 	}
 
-	if( !has_opsys && !has_arch ) {
-		magic_check();
+	if ( JobUniverse == STANDARD && !has_ckpt_arch ) {
+		(void)strcat( answer, " && ((CkptArch == Arch) ||" );
+		(void)strcat( answer, " (CkptArch =?= UNDEFINED))" );
+		(void)strcat( answer, " && ((CkptOpSys == OpSys) ||" );
+		(void)strcat( answer, "(CkptOpSys =?= UNDEFINED))" );
 	}
 
 	if( !has_disk ) {
 		(void)strcat( answer, " && (Disk >= DiskUsage)" );
 	}
 
-	if ( !has_virtmem ) {
-		(void)strcat( answer, " && (VirtualMemory >= ImageSize)" );
+	if ( !has_mem ) {
+		(void)strcat( answer, " && ( (Memory * 1024) >= ImageSize )" );
 	}
 
 	if ( JobUniverse == PVM ) {
@@ -2521,19 +2615,12 @@ check_requirements( char *orig )
 	} 
 
 	if ( JobUniverse == VANILLA ) {
-		ptr = param("APPEND_REQ_VANILLA");
-		if ( ptr != NULL ) {
-			(void) strcat( answer," && (" );
-			(void) strcat( answer, ptr );
-			(void) strcat( answer,")" );
-		}
 		for( ptr = answer; *ptr; ptr++ ) {
 			if( strincmp("FileSystemDo",ptr,12) == MATCH ) {
 				has_fsdomain = TRUE;
 				break;
 			}
 		}
-
 		if ( !has_fsdomain && never_transfer) {
 			(void)strcat( answer, " && (FileSystemDomain == \"" );
 			(void)strcat( answer, My_fs_domain );
@@ -2542,15 +2629,6 @@ check_requirements( char *orig )
 
 	}
 
-	if ( JobUniverse == STANDARD ) {
-		ptr = param("APPEND_REQ_STANDARD");
-		if ( ptr != NULL ) {
-			(void) strcat( answer," && (" );
-			(void) strcat( answer, ptr );
-			(void) strcat( answer,")" );
-		}
-	}
-				
 	return answer;
 }
 
@@ -2767,11 +2845,6 @@ compress( char *str )
 	*dst = '\0';
 }
 
-void
-magic_check()
-{
-	return;
-}
 
 void
 delete_commas( char *ptr )

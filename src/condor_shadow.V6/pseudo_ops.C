@@ -1355,7 +1355,7 @@ int
 create_tcp_port( u_short *port, int *fd )
 {
 	struct sockaddr_in	sin;
-	SOCKET_LENGTH_TYPE addr_len = sizeof sin;
+	SOCKET_LENGTH_TYPE	addr_len = sizeof sin;
 
 		/* create a tcp socket */
 	if( (*fd=socket(AF_INET,SOCK_STREAM,0)) < 0 ) {

@@ -91,7 +91,10 @@ Resource::~Resource()
 	this->cancel_kill_timer();
 
 	if ( update_tid != -1 ) {
-		daemonCore->Cancel_Timer(update_tid);
+		if( daemonCore->Cancel_Timer(update_tid) < 0 ) {
+			::dprintf( D_ALWAYS, "failed to cancel update timer (%d): "
+					   "daemonCore error\n", update_tid );
+		}
 		update_tid = -1;
 	}
 
@@ -582,10 +585,17 @@ Resource::start_kill_timer( void )
 void
 Resource::cancel_kill_timer( void )
 {
+	int rval;
 	if( kill_tid != -1 ) {
-		daemonCore->Cancel_Timer( kill_tid );
+		rval = daemonCore->Cancel_Timer( kill_tid );
+		if( rval < 0 ) {
+			dprintf( D_ALWAYS, "Failed to cancel kill timer (%d): "
+					 "daemonCore error\n", kill_tid );
+		} else {
+			dprintf( D_FULLDEBUG, "Canceled claim timer (%d)\n",
+					 kill_tid );
+		}
 		kill_tid = -1;
-		dprintf( D_FULLDEBUG, "Canceled kill timer.\n" );
 	}
 }
 

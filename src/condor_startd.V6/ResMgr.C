@@ -1261,10 +1261,17 @@ ResMgr::start_poll_timer( void )
 void
 ResMgr::cancel_poll_timer( void )
 {
+	int rval;
 	if( poll_tid != -1 ) {
-		daemonCore->Cancel_Timer( poll_tid );
+		rval = daemonCore->Cancel_Timer( poll_tid );
+		if( rval < 0 ) {
+			dprintf( D_ALWAYS, "Failed to cancel polling timer (%d): "
+					 "daemonCore error\n", poll_tid );
+		} else {
+			dprintf( D_FULLDEBUG, "Canceled polling timer (%d)\n",
+					 poll_tid );
+		}
 		poll_tid = -1;
-		dprintf( D_FULLDEBUG, "Canceled polling timer.\n" );
 	}
 }
 

@@ -146,7 +146,7 @@ public:
 	void setjobstart(int jobstart) 	{m_job_start=jobstart;};
 
 private:
-	Resource	*rip;
+	Resource	*m_rip;
 	Client 		*m_client;
 	Capability 	*m_cap;
 	ClassAd*	m_ad;

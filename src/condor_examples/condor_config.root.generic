@@ -76,6 +76,7 @@ SCHEDD			= $(SBIN)/condor_schedd
 SHADOW			= $(SBIN)/condor_shadow
 SHADOW_PVM		= $(SBIN)/condor_shadow.pvm
 SHADOW_GLOBUS		= $(SBIN)/condor_shadow.globus
+SHADOW_NT		= $(SBIN)/condor_shadow.v61
 
 ##  Where is the condor pvm daemon installed?
 PVMD			= $(SBIN)/condor_pvmd

@@ -31,8 +31,8 @@ foreach $CONTACT ( @CONTACTS ) {
 	}
 	if ( !$setuponly ) {
 		if ( do_submit() ) {
-		    print STDERR "Error: condor_submit failed.\n";
-		    exit( 3 );
+			print STDERR "Error: condor_submit failed.\n";
+			exit( 3 );
 		}
 	}
 }
@@ -118,10 +118,10 @@ sub do_submit() {
 		##minimal OS install.  So, set the ARCH here if we
 		##know it.
 	if ( $arch =~ /hppa2/ ) {
-	    $GLOBUSENV .= "(_condor_ARCH HPPA2 )";
+		$GLOBUSENV .= "(_condor_ARCH HPPA2 )";
 	}
 	elsif ( $arch =~ /hppa1/ ) {
-	    $GLOBUSENV .= "(_condor_ARCH HPPA1 )";
+		$GLOBUSENV .= "(_condor_ARCH HPPA1 )";
 	}
 
 	$GLOBUSENV .= ")";
@@ -306,9 +306,9 @@ sub parse_command_line() {
 	}
 
 	if ( $vmcount == 0 ) {
-	    $vmcount = $cpucount;
+		$vmcount = $cpucount;
 	} elsif ( $cpucount % $vmcount ) {
-	    return( "ERROR: $NAME --vms must be a factor of --count");
+		return( "ERROR: $NAME --vms must be a factor of --count");
 	}
 
 	if ( $localdir eq "" ) {
@@ -495,7 +495,7 @@ sub do_remote_setup() {
 		return( "Couldn't retrieve $arch.tar.gz from server" );
 	}
 
-	$REM_SETUP = "/tmp/remote_setup.glidein";
+	$REM_SETUP = "/tmp/remote_setup.glidein.$$";
 	open( REM_SETUP, ">$REM_SETUP" );
 	print REM_SETUP<<"EOF";
 
