@@ -39,6 +39,9 @@
    A new branch off V6_7-branch for features we're adding for CORE. 
    Created from the V6_7-core-root tag.  We'll need to document
    the changes somewhere... ;)
+   NOTE: There were no merge-worthy changes made to the doc directory
+   on this branch, so it is being abandonded without a merge.  
+   (Derek Wright, 2004-01-14)
 
 11/17/03 V6_6_0-branch
     A release branch for the 6.6.0 manual.  Created from the
