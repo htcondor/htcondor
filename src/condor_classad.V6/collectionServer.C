@@ -22,6 +22,8 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "condor_debug.h"
+#include "condor_attributes.h"
 #include "condor_io.h"
 #include "common.h"
 #include "transaction.h"
