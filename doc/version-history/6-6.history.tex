@@ -14,7 +14,7 @@
 
 \begin{itemize}
 
-\item The standard-universe fetch_files feature was not cleaning up
+\item The standard-universe fetch\_files feature was not cleaning up
 temporary files on the execution machine.
 
 \item In rare circumstances, a Linux kernel bug results in conflicting
@@ -24,6 +24,10 @@ the present moment and then stays at that value.  This
 was resulting in incorrect estimation of process ages, which caused
 Condor's estimation of CondorLoadAvg to be completely wrong.  A more
 robust heuristic is now being used.
+
+\item A long configuration line with with continuation lines can cause the
+config file parser to not properly skip the leading whitespace from
+the continued lines.  This has been corrected.
 
 \end{itemize}
 
