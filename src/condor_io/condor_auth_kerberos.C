@@ -887,6 +887,7 @@ int Condor_Auth_Kerberos :: init_realm_mapping()
     if ( !(fd = fopen(  filename, "r" ) ) ) {
         dprintf( D_SECURITY, "unable to open map file %s, errno %d\n", 
                  filename, errno );
+		free(filename);
         return FALSE;
     }
     
@@ -914,6 +915,8 @@ int Condor_Auth_Kerberos :: init_realm_mapping()
         to.deleteCurrent();
     }
     fclose(fd);
+
+	free(filename);
     return TRUE;
 }
    
