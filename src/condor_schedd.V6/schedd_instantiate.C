@@ -57,6 +57,7 @@ template class List<ResTimeNode>;
 template class Item<ResTimeNode>;
 template class List<ClassAd>;
 template class Item<ClassAd>;
+template class Queue<ClassAd*>;
 // You'd think we'd need to instantiate a HashTable and HashBucket for
 // <HashKey, ClassAd*> here, but those are already instantiated in
 // classad_log.C in the c++_util_lib (not in c++_util_instantiate.C
