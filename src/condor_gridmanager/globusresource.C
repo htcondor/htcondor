@@ -678,7 +678,7 @@ GlobusResource::ReadMonitorJobStatusFile()
 			GlobusJob *job = NULL;
 
 			rc = JobsByContact.lookup( HashKey( globusJobId(contact) ), job );
-			if ( rc == 0 & job != NULL ) {
+			if ( rc == 0 && job != NULL ) {
 				if ( status == GLOBUS_GRAM_PROTOCOL_JOB_STATE_DONE ) {
 					status=GLOBUS_GRAM_PROTOCOL_JOB_STATE_STAGE_OUT;
 				}
