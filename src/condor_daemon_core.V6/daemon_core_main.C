@@ -125,7 +125,10 @@ handle_dc_sighup( Service*, int )
 	}
 	free(ptmp);
 
-		// Re-drop the address file, if it's defined, just to be safe.
+	// call daemon-core's ReInit
+	daemonCore->ReInit();
+
+	// Re-drop the address file, if it's defined, just to be safe.
 	drop_addr_file();
 
 	// call this daemon's specific main_config()
@@ -463,6 +466,7 @@ int main( int argc, char** argv )
 
 		// now register any DaemonCore "default" handlers
 
+#ifdef WANT_DC_PM
 		// register the command handler to take care of signals
 		daemonCore->Register_Command(DC_RAISESIGNAL,"DC_RAISESIGNAL",
 				(CommandHandlercpp)daemonCore->HandleSigCommand,
@@ -472,7 +476,7 @@ int main( int argc, char** argv )
 		daemonCore->Register_Command(DC_PROCESSEXIT,"DC_PROCESSEXIT",
 				(CommandHandlercpp)daemonCore->HandleProcessExitCommand,
 				"HandleProcessExitCommand()",daemonCore,IMMEDIATE_FAMILY);
-
+#endif
 	}
 	
 		// Install DaemonCore signal handlers common to all daemons.
@@ -485,6 +489,10 @@ int main( int argc, char** argv )
 	daemonCore->Register_Signal( DC_SIGTERM, "DC_SIGTERM", 
 								 (SignalHandler)handle_dc_sigterm,
 								 "handle_dc_sigterm" );
+
+
+	// call daemon-core ReInit
+	daemonCore->ReInit();
 
 	// call the daemons main_init()
 	main_init( argc, argv );

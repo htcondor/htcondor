@@ -1,0 +1,457 @@
+/**************************************************************
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright © 1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+**************************************************************/
+
+#include "condor_common.h"
+#include "condor_ipverify.h"
+#include "internet.h"
+#include "condor_config.h"
+
+// Externs to Globals
+extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc. 
+static	char*  	_FileName_ = __FILE__;	// used by EXCEPT
+
+// The "order" of entries in perm_names and perm_ints must match
+const char* IpVerify::perm_names[] = {"READ","WRITE","ADMINISTRATOR","OWNER",NULL};
+const int IpVerify::perm_ints[] = {READ,WRITE,ADMINISTRATOR,OWNER,-1};  // must end with -1
+
+// Hash function for Permission hash table
+static int compute_perm_hash(const struct in_addr &in_addr, int numBuckets)
+{
+	unsigned int h = *((unsigned int *)&in_addr);
+	return ( h % numBuckets );
+}
+
+// == operator for struct in_addr, also needed for hash table template
+bool operator==(const struct in_addr a, const struct in_addr b) {
+	return a.s_addr == b.s_addr;
+}
+
+// Constructor
+IpVerify::IpVerify() 
+{
+	int i;
+
+	did_init = FALSE;
+	for (i=0;i<IPVERIFY_MAX_PERM_TYPES;i++) {
+		PermTypeArray[i] = NULL;
+	}
+
+	cache_DNS_results = TRUE;
+
+	PermHashTable = new PermHashTable_t(797, compute_perm_hash);
+}
+
+// Destructor
+IpVerify::~IpVerify()
+{
+	int i;
+
+	// Clear the Permission Hash Table
+	if (PermHashTable)
+		delete PermHashTable;
+
+	// Clear the Permission Type Array
+	for (i=0;i<IPVERIFY_MAX_PERM_TYPES;i++) {
+		if ( PermTypeArray[i] )
+			delete PermTypeArray[i];
+	}
+}
+
+// is_ipaddr() returns TRUE if buf is an ascii IP address (like "144.11.11.11")
+// and false if not (like "cs.wisc.edu").  Allow wildcard "*".
+// if return TRUE, sin_addr filled in with what should go in hash table.
+int
+IpVerify::is_ipaddr(const char *inbuf, struct in_addr *sin_addr)
+{
+	int len;
+	char buf[17];
+	int part = 0;
+	int i,j,x;
+	char save_char;
+	unsigned char *cur_byte = (unsigned char *) sin_addr;
+
+	len = strlen(inbuf);
+	if ( len < 3 || len > 16 ) 
+		return FALSE;	// shortest possible IP addr is "1.*" - 3 chars
+	
+	// copy to our local buf
+	strcpy(buf,inbuf);
+
+	// on IP addresses, wildcards only permitted at the end, 
+	// i.e. 144.92.* , _not_ *.92.11
+	if ( buf[0] == '*' ) 
+		return FALSE;
+
+	// strip off any trailing wild card or '.'
+	if ( buf[len-1] == '*' || buf[len-1] == '.' ) {
+		if ( buf[len-2] == '.' )
+			buf[len-2] = '\0';
+		else
+			buf[len-1] = '\0';
+	}
+
+	// Make certain we have a valid IP address, and count the parts,
+	// and fill in sin_addr
+	i = 0;
+	for(;;) {
+		
+		j = i;
+		while (buf[i] >= '0' && buf[i] <= '9') i++;
+		// make certain a number was here
+		if ( i == j )
+			return FALSE;	
+		// now that we know there was a number, check it is between 0 & 255
+		save_char = buf[i];
+		buf[i] = '\0';
+		x = atoi( &(buf[j]) );
+		if ( x < 0 || x > 255 )
+			return FALSE;
+		*cur_byte = x;	// save into sin_addr
+		cur_byte++;
+		buf[i] = save_char;
+
+		part++;
+		
+		if ( buf[i] == '\0' ) 
+			break;
+		
+		if ( buf[i] == '.' )
+			i++;
+		else
+			return FALSE;
+
+		if ( part >= 4 )
+			return FALSE;
+	}
+	
+	for (i=0; i < 4 - part; i++) {
+		*cur_byte = (unsigned char) 255;
+		cur_byte++;
+	}
+
+	return TRUE;
+}
+
+
+int
+IpVerify::Init()
+{
+	char buf[50];
+	char *pAllow, *pDeny;
+	int i;
+	
+	did_init = TRUE;
+	
+	// Clear the Permission Hash Table in case re-initializing
+	if (PermHashTable)
+		PermHashTable->clear();
+
+	// and Clear the Permission Type Array
+	for (i=0;i<IPVERIFY_MAX_PERM_TYPES;i++) {
+		if ( PermTypeArray[i] ) {
+			delete PermTypeArray[i];
+			PermTypeArray[i] = NULL;
+		}
+	}
+
+	for ( i=0; perm_ints[i] >= 0; i++ ) {
+		if ( !perm_names[i] || PermTypeArray[perm_ints[i]] ) {
+			EXCEPT("IP VERIFY code misconfigured");
+		}
+
+		PermTypeEntry* pentry = new PermTypeEntry();
+		if ( !pentry ) {
+			EXCEPT("IP VERIFY out of memory");
+		} else {
+			PermTypeArray[perm_ints[i]] = pentry;
+		}
+		
+
+		sprintf(buf,"HOSTALLOW_%s_%s",perm_names[i],mySubSystem);
+		if ( (pAllow = param(buf)) == NULL ) {
+			sprintf(buf,"HOSTALLOW_%s",perm_names[i]);
+			pAllow = param(buf);
+		}
+	
+		sprintf(buf,"HOSTDENY_%s_%s",perm_names[i],mySubSystem);
+		if ( (pDeny = param(buf)) == NULL ) {
+			sprintf(buf,"HOSTDENY_%s",perm_names[i]);
+			pDeny = param(buf);
+		}
+	
+		if ( !pAllow && !pDeny ) {
+			pentry->behavior = IPVERIFY_ALLOW;
+		} else {
+			if ( pDeny && !pAllow ) {
+				pentry->behavior = IPVERIFY_ONLY_DENIES;
+			} else {
+				pentry->behavior = IPVERIFY_USE_TABLE;
+			}
+			if ( pAllow ) {
+				pentry->allow_hosts = new StringList(pAllow);
+				fill_table( pentry->allow_hosts,
+					allow_mask(perm_ints[i]) );
+				free(pAllow);
+			}
+			if ( pDeny ) {
+				pentry->deny_hosts = new StringList(pDeny);
+				fill_table( pentry->deny_hosts,
+					deny_mask(perm_ints[i]) );
+				free(pDeny);
+			}
+		}
+
+	}	// end of for i loop
+
+	return TRUE;
+}
+
+int
+IpVerify::add_hash_entry(struct in_addr & sin_addr,int new_mask)
+{
+	int old_mask = 0;  // must init old_mask to zero!!!
+
+	// assert(PermHashTable);
+	if ( PermHashTable->lookup(sin_addr,old_mask) != -1 ) {
+		// found an existing entry.  
+		
+		// hueristic: if the mask already contains what we
+		// want, we are done.
+		if ( old_mask & new_mask == new_mask ) {
+			return TRUE;
+		}
+
+		// remove it because we are going to edit the mask below
+		// and re-insert it.
+		PermHashTable->remove(sin_addr);
+	}
+
+	// insert entry with new mask
+	if ( PermHashTable->insert(sin_addr,old_mask | new_mask) == 0 )
+		return TRUE;	// successfully inserted 
+	else
+		return FALSE;	// error inserting into hash table
+}
+
+int 
+IpVerify::fill_table(StringList *slist, int mask)
+{
+	struct in_addr sin_addr;
+	char *addr;
+	int result = TRUE;
+	struct hostent	*hostptr;
+
+	slist->rewind();
+
+	while ( (addr=slist->next()) ) {
+		if ( is_ipaddr(addr,&sin_addr) == TRUE ) {
+			// This address is an IP addr in numeric form.
+			// Add it into the hash table.
+			if ( add_hash_entry(sin_addr,mask) == FALSE ) {
+				result = FALSE;
+			}
+			// and remove it from the string list, so when we are
+			// done the string list just contains string hostnames.
+			slist->deleteCurrent();
+		} else {
+			// This address is a hostname.  If it has no wildcards, resolve to
+			// and IP address here, add it to our hashtable, and remove the entry
+			// (i.e. treat it just like an IP addr).  If it has wildcards, then
+			// leave it in this StringList.
+			if ( strchr(addr,'*') == NULL ) {
+				// No wildcards; resolve the name
+				if ( (hostptr=gethostbyname(addr)) != NULL) {
+					if ( hostptr->h_addrtype == AF_INET ) {
+						if (add_hash_entry((*(struct in_addr *)(hostptr->h_addr_list[0])),mask) == FALSE) {
+							result = FALSE;
+						}
+					}
+				}
+				slist->deleteCurrent();
+			}
+		}
+	}
+
+	return result;
+}
+
+int
+IpVerify::Verify( DCpermission perm, const struct sockaddr_in *sin )
+{
+	int mask, found_match, i;
+	struct in_addr sin_addr;
+	
+	memcpy(&sin_addr,&sin->sin_addr,sizeof(sin_addr));
+
+	switch ( perm ) {
+
+	case ALLOW:
+		return TRUE;
+		break;
+
+	default:
+		if ( perm >= IPVERIFY_MAX_PERM_TYPES || !PermTypeArray[perm] ) {
+			EXCEPT("IpVerify::Verify: called with unknown permission %d\n",perm);
+		}
+		
+		if ( PermTypeArray[perm]->behavior == IPVERIFY_ALLOW ) {
+			// allow if no HOSTALLOW_* or HOSTDENY_* restrictions 
+			// specified.
+			return TRUE;
+		}
+		
+		if ( PermHashTable->lookup(sin_addr,mask) == -1 ) {
+			// did not find an existing entry.  
+			found_match = FALSE;
+			unsigned char *cur_byte = (unsigned char *) &sin_addr;
+			for (i=3; i>0; i--) {
+				cur_byte[i] = (unsigned char) 255;
+				if ( PermHashTable->lookup(sin_addr,mask) != -1 ) {
+					found_match = TRUE;
+					// We found a match due to a wildcard.  Insert a non-wild card
+					// entry into the hash table for this address so that next
+					// time we'll catch it with just one lookup.  We do not call
+					// add_hash_entry() method here because we already know it
+					// does not exist in the table, and therefore we do not
+					// need to check again for it like add_hash_entry() does.
+					// Use the original address (sin->sin_addr), not the one 
+					// we've munged up with wildcards (sin_addr).
+					PermHashTable->insert(sin->sin_addr,mask);
+					break;
+				}
+			}
+		} else {
+			found_match = TRUE;
+		}
+
+		// if we still have not found a match, try to match via hostname lists
+		if ( found_match == FALSE ) {
+			char *thehost;			
+			mask = 0;
+			if ( (thehost=sin_to_hostname(sin)) != NULL ) {
+				if ( PermTypeArray[perm]->allow_hosts &&
+					 PermTypeArray[perm]->allow_hosts->contains_withwildcard(thehost) == TRUE )
+					mask |= allow_mask(perm);
+				if ( PermTypeArray[perm]->deny_hosts &&
+					 PermTypeArray[perm]->deny_hosts->contains_withwildcard(thehost) == TRUE )
+					mask |= deny_mask(perm);
+			}
+			// if we found something via our hostname mactching, we now have 
+			// a mask, and we should add it into our table so we need not
+			// do a gethostbyaddr() next time.  if we still do not have a mask
+			// (perhaps because this host doesn't appear in any list), create one
+			// and then add to the table.
+			if ( mask == 0 ) {
+				if ( PermTypeArray[perm]->behavior == IPVERIFY_ONLY_DENIES ) 
+					mask |= allow_mask(perm);
+				else 
+					mask |= deny_mask(perm);
+			}
+			if ( cache_DNS_results == TRUE )
+				PermHashTable->insert(sin->sin_addr,mask);			
+		}
+
+		// we now have a mask (either because we found a match or we 
+		// created a new mask).  decode the mask and return True or False to the user.
+		if ( mask & deny_mask(perm) )
+			return FALSE;
+		if ( mask & allow_mask(perm) )
+			return TRUE;
+		else
+			return FALSE;
+
+		break;
+	
+	}	// end of switch(perm)
+
+	// should never make it here
+	EXCEPT("IP Verify: could not decide, should never make it here!");
+	return FALSE;
+}
+
+#ifdef WANT_STANDALONE_TESTING
+char *mySubSystem = "COLLECTOR";
+#include "condor_io.h"
+#ifdef WIN32
+#	include <crtdbg.h>
+   _CrtMemState s1, s2, s3;
+#endif
+int
+main()
+{
+	char buf[50];
+	char buf1[50];
+	struct sockaddr_in sin;
+	SafeSock ssock;
+	IpVerify* ipverify;
+
+	config(NULL);
+
+#ifdef WIN32
+	_CrtMemCheckpoint( &s1 );
+#endif
+
+	ipverify = new IpVerify();
+
+	ipverify->Init();
+
+	buf[0] = '\0';
+
+	while( 1 ) {
+		printf("Enter test:\n");
+		scanf("%s",buf);
+		if ( strncmp(buf,"exit",4) == 0 )
+			break;
+		if ( strncmp(buf,"reinit",6) == 0 ) {
+			config(NULL);
+			ipverify->Init();
+			continue;
+		}
+		printf("Verifying %s ... ",buf);
+		sprintf(buf1,"<%s:1970>",buf);
+		string_to_sin(buf1,&sin);
+		if ( ipverify->Verify(WRITE,&sin) == TRUE )
+			printf("ALLOW\n");
+		else
+			printf("DENY\n");
+	}
+	
+	delete ipverify;
+
+#ifdef WIN32
+	_CrtMemCheckpoint( &s2 );
+	// _CrtMemDumpAllObjectsSince( &s1 );
+    _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDOUT);
+    _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDOUT);
+    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDOUT);
+	if ( _CrtMemDifference( &s3, &s1, &s2 ) )
+      _CrtMemDumpStatistics( &s3 );
+	// _CrtDumpMemoryLeaks();	// report any memory leaks on Win32
+#endif
+
+	return TRUE;
+}
+#endif	// of WANT_STANDALONE_TESTING

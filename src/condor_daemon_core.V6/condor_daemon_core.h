@@ -51,12 +51,11 @@
 #include "condor_uid.h"
 #include "condor_io.h"
 #include "condor_timer_manager.h"
+#include "condor_ipverify.h"
 #include "condor_commands.h"
 #include "HashTable.h"
 #include "list.h"
 
-// enum for Daemon Core socket/command/signal permissions
-enum DCpermission { ALLOW, READ, WRITE, NEGOTIATOR, IMMEDIATE_FAMILY };
 
 static const int KEEP_STREAM = 100;
 static char* EMPTY_DESCRIP = "<NULL>";
@@ -97,7 +96,7 @@ typedef DWORD pid_t;
 
 class DaemonCore : public Service
 {
-	friend class TimerManager;
+	friend class TimerManager; 
 #ifdef WIN32
 	friend dc_main( int argc, char** argv );
 	friend DWORD pidWatcherThread(void*);	
@@ -110,6 +109,10 @@ class DaemonCore : public Service
 		~DaemonCore();
 
 		void	Driver();
+
+		int		ReInit();
+
+		int		Verify(DCpermission perm, const struct sockaddr_in *sin );
 		
 		int		Register_Command(int command, char *com_descrip, CommandHandler handler, 
 					char *handler_descrip, Service* s = NULL, DCpermission perm = ALLOW);
@@ -322,9 +325,13 @@ class DaemonCore : public Service
 		static				TimerManager t;
 		void				DumpTimerList(int, char* = NULL);
 
+		IpVerify			ipverify;	
+
 		void				free_descrip(char *p) { if(p &&  p != EMPTY_DESCRIP) free(p); }
 	
 		fd_set				readfds; 
+
+		struct in_addr		negotiator_sin_addr;	// used by Verify method
 
 #ifdef WIN32
 		DWORD	dcmainThreadId;		// the thread id of the thread running the main daemon core

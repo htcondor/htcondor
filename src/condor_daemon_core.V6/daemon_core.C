@@ -42,6 +42,8 @@ static const char* DEFAULT_INDENT = "DaemonCore--> ";
 #include "condor_io.h"
 #include "internet.h"
 #include "condor_debug.h"
+#include "get_daemon_addr.h"
+
 static	char*  	_FileName_ = __FILE__;	// used by EXCEPT
 
 extern "C" 
@@ -190,6 +192,10 @@ DaemonCore::~DaemonCore()
 	t.CancelAllTimers();
 }
 
+/********************************************************
+ Here are a bunch of public methods with parameter overloading.  These methods here
+ just call the actual method implementation with a default parameter set.
+ ********************************************************/
 int	DaemonCore::Register_Command(int command, char* com_descrip, CommandHandler handler, 
 								char* handler_descrip, Service* s, DCpermission perm) {
 	return( Register_Command(command, com_descrip, handler, (CommandHandlercpp)NULL, handler_descrip, s, perm, FALSE) );
@@ -267,6 +273,9 @@ int	DaemonCore::Cancel_Timer( int id ) {
 int DaemonCore::Reset_Timer( int id, unsigned when, unsigned period ) {
 	return( t.ResetTimer(id,when,period) );
 }
+
+/************************************************************************/
+
 
 int DaemonCore::Register_Command(int command, char* command_descrip, CommandHandler handler, 
 					CommandHandlercpp handlercpp, char *handler_descrip, Service* s, 
@@ -864,6 +873,58 @@ void DaemonCore::DumpSocketTable(int flag, const char* indent)
 	dprintf(flag, "\n");
 }
 
+int
+DaemonCore::ReInit()
+{
+	char *addr;
+	struct sockaddr_in sin;
+
+	// Fetch the negotiator address for the Verify method to use
+	addr = get_negotiator_addr(NULL);	// get sinful string of negotiator
+	if ( addr ) {
+		string_to_sin(addr,&sin);
+		memcpy(&negotiator_sin_addr,&(sin.sin_addr),sizeof(negotiator_sin_addr));
+	} else {
+		// we failed to get the address of the negotiator
+		memset(&negotiator_sin_addr,'\0',sizeof(negotiator_sin_addr));
+	}
+
+	// Reset our IpVerify object
+	ipverify.Init();
+
+	return TRUE;
+}
+
+
+int
+DaemonCore::Verify(DCpermission perm, const struct sockaddr_in *sin )
+{
+	switch (perm) {
+	case ALLOW:
+		return TRUE;
+		break;
+
+	case NEGOTIATOR:
+		if ( memcmp(&negotiator_sin_addr,&(sin->sin_addr),sizeof(negotiator_sin_addr)) == 0 )
+			return TRUE;
+		else
+			return FALSE;
+		break;
+
+	case IMMEDIATE_FAMILY:
+		// TODO!!!  Implement IMMEDIATE_FAMILY someday!
+		return TRUE;
+		break;
+
+	default:
+		return ipverify.Verify(perm,sin);
+		break;
+	}
+
+	// Should never make it here, but we return to satisfy C++
+	EXCEPT("bad DC Verify");
+	return FALSE;
+}
 
 // This function never returns. It is responsible for monitor signals and
 // incoming messages or requests and invoke corresponding handlers.
@@ -1017,7 +1078,8 @@ void DaemonCore::Driver()
 						// call it now.  otherwise, call the daemoncore HandleReq()
 						// handler which strips off the command request number and
 						// calls any registered command handler.
-						// But first pdate curr_dataptr for GetDataPtr()
+
+						// Update curr_dataptr for GetDataPtr()
 						curr_dataptr = &(sockTable[i].data_ptr);
 						if ( sockTable[i].handler )
 							// a C handler
@@ -1115,7 +1177,7 @@ int DaemonCore::HandleReq(int socki)
 	old_timeout = stream->timeout(20);
 	stream->decode();
 	result = stream->code(req);
-	// For now, let keep the timeout, so all command handlers are called with
+	// For now, lets keep the timeout, so all command handlers are called with
 	// a timeout of 20 seconds on their socket.
 	// stream->timeout(old_timeout);
 	if(!result) {
@@ -1156,27 +1218,40 @@ int DaemonCore::HandleReq(int socki)
 			}
 	}
 
-	if ( reqFound == TRUE )
-		dprintf(D_COMMAND, "DaemonCore: received command %d (%s), calling handler (%s)\n", req,
+	if ( reqFound == TRUE ) {
+		// Check the daemon core permission for this command handler
+		if ( Verify(comTable[index].perm,stream->endpoint()) == FALSE ) {
+			// Permission check FAILED
+			reqFound = FALSE;	// so we do not call the handler function below
+			result = 0;	// make result != to KEEP_STREAM, so we blow away this socket below
+			dprintf(D_ALWAYS,"DaemonCore: PERMISSION DENIED to host %s for command %d (%s)\n",
+				sin_to_string(stream->endpoint()),req,comTable[index].command_descrip);
+		} else {
+			dprintf(D_COMMAND, "DaemonCore: received command %d (%s), calling handler (%s)\n", req,
 			comTable[index].command_descrip, comTable[index].handler_descrip);
-	else
-		dprintf(D_ALWAYS,"DaemonCore: received unregistered command request %d !\n",req);
-
-	// call the handler function; first curr_dataptr for GetDataPtr()
-	curr_dataptr = &(comTable[index].data_ptr);
-
-	if ( comTable[index].is_cpp ) {
-		// the handler is c++ and belongs to a 'Service' class
-		if ( comTable[index].handlercpp ) 
-			result = (comTable[index].service->*(comTable[index].handlercpp))(req,stream);
+		}
 	} else {
-		// the handler is in c (not c++), so pass a Service pointer
-		if ( comTable[index].handler )
-			result = (*(comTable[index].handler))(comTable[index].service,req,stream);
+		dprintf(D_ALWAYS,"DaemonCore: received unregistered command request %d !\n",req);
+		result = 0;		// make result != to KEEP_STREAM, so we blow away this socket below
 	}
 
-	// clear curr_dataptr
-	curr_dataptr = NULL;
+	if ( reqFound == TRUE ) {
+		// call the handler function; first curr_dataptr for GetDataPtr()
+		curr_dataptr = &(comTable[index].data_ptr);
+
+		if ( comTable[index].is_cpp ) {
+			// the handler is c++ and belongs to a 'Service' class
+			if ( comTable[index].handlercpp ) 
+				result = (comTable[index].service->*(comTable[index].handlercpp))(req,stream);
+		} else {
+			// the handler is in c (not c++), so pass a Service pointer
+			if ( comTable[index].handler )
+				result = (*(comTable[index].handler))(comTable[index].service,req,stream);
+		}
+
+		// clear curr_dataptr
+		curr_dataptr = NULL;
+	}
 	
 	// finalize; the handler is done with the command.  the handler will return
 	// with KEEP_STREAM if we should not touch the stream; otherwise, cleanup
@@ -1194,7 +1269,7 @@ int DaemonCore::HandleReq(int socki)
 		} else {
 			stream->end_of_message();
 			result = KEEP_STREAM;	// HACK: keep all UDP sockets for now.  The only ones
-									// in Condor so far are Intial command socks, so keep it.
+									// in Condor so far are Initial command socks, so keep it.
 		}
 	}
 
