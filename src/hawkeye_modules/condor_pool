@@ -211,11 +211,11 @@ sub RunAbsent()
     close( ABSENT );
 
     # Cluster Down list
-    $Hash->Add( "Cluster_DownList", "s", join( ",", @ClusterDown ) );
+    $Hash->Add( "Cluster_DownList", "s", join( " ", @ClusterDown ) );
     $Hawkeye->StoreIndex( "Cluster_DownList" );
 
     # Absent list
-    $Hash->Add( "Absent_List", "s", join( ",", @Absent ) );
+    $Hash->Add( "Absent_List", "s", join( " ", @Absent ) );
     $Hawkeye->StoreIndex( "Absent_List" );
 }
 
