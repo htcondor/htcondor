@@ -1,0 +1,296 @@
+#!/bin/sh 
+#  THIS SCRIPT IS BEST VIEWED WITH TAB STOPS IN YOUR EDITOR AT 4 SPACES
+#	Author Todd Tannenbaum, 6/97
+#	Copyright 1997 by the Condor Team, All Rights Reserved.
+#	mailto:condor-admin@cs.wisc.edu  http://www.cs.wisc.edu/condor
+
+# --------------------------------------------------
+
+# Here are the default paths/directories to use.
+# These defaults can be overidden with command-line args.
+# Customize these if desired.  The defaults provided should be
+# correct for most installations, however.
+CONDOR_LIBDIR=`config_val -value LIB`
+CONDOR_CLIB=$CONDOR_LIBDIR/condor_syscall_lib.a
+CONDOR_RT0=$CONDOR_LIBDIR/condor_rt0.o
+CONDOR_CPLUS=$CONDOR_LIBDIR/c_plus_alloc.o
+CONDOR_LD_DIR=$CONDOR_LIBDIR
+
+# --------------------------------------------------
+
+# Tell our "ld" to link to with the Condor libs
+CONDOR_COMPILE=yes
+export CONDOR_COMPILE
+
+# Handle any command-line args
+while [ A = A  ]
+do
+	if [ $# = 0 ]; then
+		break;
+	fi
+
+	if [ $1 = "-condor_syscall_lib" ]; then
+		shift
+		CONDOR_CLIB=$1
+		shift
+		continue
+	fi
+
+	if [ $1 = "-condor_rt0" ]; then
+		shift
+		CONDOR_RT0=$1
+		shift
+		continue
+	fi
+
+	if [ $1 = "-condor_plus_alloc" ]; then
+		shift
+		CONDOR_CPLUS=$1
+		shift
+		continue
+	fi
+
+	if [ $1 = "-condor_ld_dir" ]; then
+		shift
+		CONDOR_LD_DIR=$1
+		shift
+		continue
+	fi
+
+	if [ $1 = "-condor_standalone" ]; then
+		CONDOR_CLIB=$CONDOR_LIBDIR/libckpt.a
+		shift
+		continue
+	fi
+
+	if [ $1 = "-condor_lib" ]; then
+		shift
+		CONDOR_LIBDIR=$1
+		shift
+		# Reset anything based off of the libdir by default
+		CONDOR_CLIB=$CONDOR_LIBDIR/condor_syscall_lib.a
+		CONDOR_RT0=$CONDOR_LIBDIR/condor_rt0.o
+		CONDOR_CPLUS=$CONDOR_LIBDIR/c_plus_alloc.o
+		CONDOR_LD_DIR=$CONDOR_LIBDIR
+		continue
+	fi
+
+	# if we made it here, there are no more command-line options
+	break
+done
+
+# Export these so our special "ld" script can find them
+export CONDOR_LIBDIR
+export CONDOR_CLIB
+export CONDOR_RT0
+export CONDOR_CPLUS
+export CONDOR_LD_DIR
+
+# Since uname and awk live in different places on various
+# platforms, use a PATH.
+PATH=/bin:/usr/bin:$PATH
+
+# Figure out what architecture we're running on 
+os=`uname`
+osver=`uname -r`
+if [ $os = "HP-UX" ]; then
+	osmajver=`uname -r | awk -F. '{print $2}' -`
+else
+	osmajver=`uname -r | awk -F. '{print $1}' -`
+fi
+osfull="$os$osmajver"
+
+# Determine if the system ld has been replaced with our ld script
+# or not.
+CONDOR_FULLINSTALL=false
+case $os in
+	IRIX | IRIX5 | IRIX53 | IRIX62 | IRIX63 | IRIX64 )
+		if [ -x /usr/lib/ld.real -a -x /usr/lib/uld.real ]; then
+			CONDOR_FULLINSTALL=true
+		fi
+		;;
+	HP-UX )
+		if [ $osmajver = "10" ]; then
+			if [ -x /usr/ccs/bin/ld.real ]; then
+				CONDOR_FULLINSTALL=true
+			fi 
+		fi
+		if [ $osmajver = "09" ]; then
+			if [ -x /bin/ld.real ]; then
+				CONDOR_FULLINSTALL=true
+			fi 
+		fi
+		;;
+	SunOS )
+		if [ $osmajver = 5 ]; then
+			if [ -x /usr/ccs/bin/ld.real ]; then
+				CONDOR_FULLINSTALL=true
+			fi 
+		fi
+		if [ $osmajver = 4 ]; then
+			if [ -x /bin/ld.real ]; then
+				CONDOR_FULLINSTALL=true
+			fi 
+		fi
+		;;
+	Linux )
+		if [ -x /usr/bin/ld.real ]; then
+			CONDOR_FULLINSTALL=true
+		fi 
+		;;
+	OSF1 )
+		if [ -x /usr/lib/cmplrs/cc/ld.real ]; then
+			CONDOR_FULLINSTALL=true
+		fi 
+		;;
+	* )
+		if [ -x /bin/ld.real ]; then
+			CONDOR_FULLINSTALL=true
+		fi 
+		;;
+esac
+
+# Usage info should go here...
+if [ $# = 0 ]; then
+	echo "Usage: condor_compile [ -condor_standalone ] <command> [options/files .... ]"
+	if [ $CONDOR_FULLINSTALL = true ]; then
+		echo "  where <commmand> is whatever you enter to compile/link your application."
+		exit 1
+	fi
+	echo "  where <command> is one of the following:"
+	echo "  gcc, g++, g77, cc, acc, c89, CC, f77, fort77, ld "
+	echo "  (on some platforms, f90 is also allowed)"
+	exit 1
+fi
+
+# if fully installed, then just run the command - eventually we'll 
+# hit our special ld
+
+if [ $CONDOR_FULLINSTALL = true ]; then
+	exec $*
+fi
+
+# If not fully installed, add options to force the compiler to use
+# our special ld
+
+# Handle GNU compilers
+if [ $1 = "gcc" ]; then
+	exec $* -B$CONDOR_LD_DIR/
+fi 
+
+if [ $1 = "g++" ]; then
+	exec $* -B$CONDOR_LD_DIR/
+fi 
+
+if [ $1 = "g77" ]; then
+	exec $* -B$CONDOR_LD_DIR/
+fi 
+
+# Handle ld (linker)
+if [ $1 = "ld" ]; then
+	exec $CONDOR_LD_DIR/$*
+fi
+
+# Handle all the vendor system compilers ---------------
+# the idea here is to simply append whatever command line
+# option(s) allows us to use $CONDOR_LIBDIR/ld instead
+# of the default path for ld.
+
+case $os in 
+
+	IRIX | IRIX62 | IRIX63 | IRIX64 | OSF1 )
+		if [ $1 = "cc" ]; then
+			exec $* -tul -h$CONDOR_LD_DIR -B
+		fi
+
+		if [ $1 = "CC" ]; then
+			exec $* -tul -h$CONDOR_LD_DIR -B
+		fi
+
+		if [ $1 = "c89" ]; then
+			exec $* -tul -h$CONDOR_LD_DIR -B
+		fi
+
+		if [ $1 = "f77" ]; then
+			exec $* -tul -h$CONDOR_LD_DIR -B
+		fi 
+	
+		if [ $1 = "f90" -a $os = "OSF1" ]; then	
+			exec $* -tul -h$CONDOR_LD_DIR -B
+		fi 
+	
+		;;
+
+	HP-UX )
+		if [ $1 = "cc" ]; then
+			exec $* -tl,$CONDOR_LD_DIR/ld
+		fi
+
+		if [ $1 = "CC" ]; then
+			exec $* -tl,$CONDOR_LD_DIR/ld
+		fi
+
+		if [ $1 = "c89" ]; then
+			exec $* -tl,$CONDOR_LIBDIR/ld
+		fi
+
+		if [ $1 = "f77" ]; then
+			exec $* -tl,$CONDOR_LIBDIR/ld
+		fi 
+
+		if [ $1 = "fort77" ]; then
+			exec $* -tl,$CONDOR_LIBDIR/ld
+		fi 
+		
+		;;
+
+	SunOS )
+		use_qpath=`cc -help -flags | grep Qpath | wc -l`
+		if [ $1 = "cc" -a $use_qpath = 0 ]; then
+			exec $* -Yl,$CONDOR_LD_DIR
+		fi
+		if [ $1 = "cc" -a $use_qpath != 0 ]; then
+			exec $* -Qpath $CONDOR_LD_DIR
+		fi
+
+		if [ $1 = "acc" ]; then
+			exec $* -Qpath $CONDOR_LD_DIR
+		fi
+
+		if [ $1 = "CC" ]; then
+			exec $* -Qpath $CONDOR_LD_DIR
+		fi
+
+		if [ $1 = "f77" ]; then
+			exec $* -Qpath $CONDOR_LD_DIR
+		fi 
+		
+		;;
+
+	Linux )
+		# Linux's system compilers are GNU 
+		if [ $1 = "cc" ]; then
+			exec $* -B$CONDOR_LD_DIR/
+		fi 
+
+		if [ $1 = "c++" ]; then
+			exec $* -B$CONDOR_LD_DIR/
+		fi 
+
+		if [ $1 = "f77" ]; then
+			exec $* -B$CONDOR_LD_DIR/
+		fi 
+		
+		;;
+esac
+
+# If we made it here, we did not do anything, so print out usage
+	echo "Usage: condor_compile [ -condor_standalone ] <command> [options/files .... ]"
+	if [ $CONDOR_FULLINSTALL = true ]; then
+		echo "  where <commmand> is whatever you enter to compile/link your application."
+		exit 1
+	fi
+	echo "  where <command> is one of the following:"
+	echo "  gcc, g++, g77, cc, acc, c89, CC, f77, fort77, ld "
+	echo "  (on some platforms, f90 is also allowed)"
+	exit 1

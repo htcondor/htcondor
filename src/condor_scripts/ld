@@ -1,0 +1,310 @@
+#!/bin/sh
+#condor_compile ld
+#
+#  This script can conditionally adjust the arguments to ld to link in
+#  the Condor libraries.  If this script is invoked from condor_compile,
+#  then the Condor libraries are linked in.  If this script is not
+#  invoked via condor_compile, then it just forwards all the arguments
+#  along directly to the system linker. 
+#
+#  THIS SCRIPT IS BEST VIEW WITH TAB STOPS IN YOUR EDITOR AT 4 SPACES
+#
+#   Author Todd Tannenbaum, 6/97
+#   Copyright 1997 by the Condor Team, All Rights Reserved.
+#   mailto:condor-admin@cs.wisc.edu  http://www.cs.wisc.edu/condor
+
+ldargs=$*
+
+# Since uname and basename live in different places on various
+# platforms, use a PATH.
+PATH=/bin:/usr/bin:$PATH
+
+# Determine where the real "ld" is.  It will either be /bin/ld or
+# /bin/ld.real depending upon if condor_compile was fully installed
+# or not.  On IRIX, however, things are more complicated because there
+# are multiple linkers, so we mess around to see which one we should call.
+# On linux and SunOS5, they are simply in a directory other than /bin.
+CONDOR_FULLINSTALL=false
+os=`uname`
+if [ $os = "HP-UX" ]; then
+	osmajver=`uname -r | awk -F. '{print $2}' -`
+else
+	osmajver=`uname -r | awk -F. '{print $1}' -`
+fi
+case $os in
+	IRIX | IRIX5 | IRIX53 | IRIX62 | IRIX63 | IRIX64 )
+		if [ -x /usr/lib/ld.real -a -x /usr/lib/uld.real ]; then
+			CONDOR_FULLINSTALL=true
+		fi
+	 	# Strip off any pathnames and see which linker was called
+     	brokenbase=`basename /stupidbasename/$0`
+     	if [ A$brokenbase = A ]; then
+       		brokenbase=$0
+     	fi
+		if [ $CONDOR_FULLINSTALL = true ]; then
+			if [ $brokenbase = "old_ld" -o $brokenbase = "uld" ]; then
+				osld="/usr/lib/condor/$brokenbase"
+			else
+				osld="/usr/lib/ld.real"
+			fi
+		else
+			if [ $brokenbase = "old_ld" ]; then
+				osld="/usr/lib/old_ld"
+			elif [ $brokenbase = "real-ld" -a $osmajver = 6 ]; then
+				osld="/usr/lib/old_ld"
+			else
+				osld="/bin/$brokenbase"
+			fi
+		fi
+		;;
+	HP-UX )
+		if [ $osmajver = "10" ]; then
+			if [ -x /usr/ccs/bin/ld.real ]; then
+				CONDOR_FULLINSTALL=true
+			fi
+			if [ $CONDOR_FULLINSTALL = true ]; then
+				osld="/usr/ccs/bin/ld.real"
+			else
+				osld="/usr/ccs/bin/ld"
+			fi
+		fi
+		if [ $osmajver = "09" ]; then
+			if [ -x /bin/ld.real ]; then
+				CONDOR_FULLINSTALL=true
+			fi
+			if [ $CONDOR_FULLINSTALL = true ]; then
+				osld="/bin/ld.real"
+			else
+				osld="/bin/ld"
+			fi
+		fi
+		;;
+	SunOS )
+		if [ $osmajver = 5 ]; then
+			if [ -x /usr/ccs/bin/ld.real ]; then
+				CONDOR_FULLINSTALL=true
+			fi
+			if [ $CONDOR_FULLINSTALL = true ]; then
+				osld="/usr/ccs/bin/ld.real"
+			else
+				osld="/usr/ccs/bin/ld"
+			fi
+		fi
+		if [ $osmajver = 4 ]; then
+			if [ -x /bin/ld.real ]; then
+				CONDOR_FULLINSTALL=true
+			fi
+			if [ $CONDOR_FULLINSTALL = true ]; then
+				osld="/bin/ld.real"
+			else
+				osld="/bin/ld"
+			fi
+		fi
+		;;
+	Linux )
+		if [ -x /usr/bin/ld.real ]; then
+			CONDOR_FULLINSTALL=true
+		fi
+		if [ $CONDOR_FULLINSTALL = true ]; then
+			osld="/usr/bin/ld.real"
+		else
+			osld="/usr/bin/ld"
+		fi
+		;;
+	OSF1 )
+		if [ -x /usr/lib/cmplrs/cc/ld.real ]; then
+			CONDOR_FULLINSTALL=true
+		fi
+		if [ $CONDOR_FULLINSTALL = true ]; then
+			osld="/usr/lib/cmplrs/cc/ld.real"
+		else
+			osld="/usr/lib/cmplrs/cc/ld"
+		fi
+		;;
+	* )
+		if [ -x /bin/ld.real ]; then
+			CONDOR_FULLINSTALL=true
+		fi
+		if [ $CONDOR_FULLINSTALL = true ]; then
+			osld="/bin/ld.real"
+		else
+			osld="/bin/ld"
+		fi
+		;;
+esac
+
+if [ A$CONDOR_COMPILE = Ayes ]; then
+  osver=`uname -r`
+  osfull="$os$osmajver"
+  oscrt0="crt0.o"
+  osldalt="/bin/ld"
+
+  case $os in
+
+     HP-UX )	
+				ldargs="-a archive" ;;
+
+     SunOS )	
+	 			if [ $osmajver = 4 ]; then
+					ldargs="-Bstatic" 
+				else
+					oscrt0="crt1.o"
+					ldargs="-Bdynamic"
+				fi ;;
+
+     OSF1 )		
+				ldargs="-non_shared" ;;
+
+	 Linux )
+				oscrt0="crt1.o"
+				ldargs="" ;;
+
+	 IRIX | IRIX62 | IRIX63 | IRIX64 )		
+				oscrt0="crt1.o"
+				ldargs="-mips2 -o32" 
+				# must use old_ld to link with Condor on IRIX6
+				# this is because the Condor libs are compiled
+				# with gcc/g++ ver 2.7.2 which only deals with old_ld
+	 			if [ $osmajver = 6 ]; then
+					if [ $CONDOR_FULLINSTALL = true ]; then
+						osld="/usr/lib/condor/old_ld"
+					else
+						osld="/usr/lib/old_ld"
+					fi
+				fi ;;
+
+     * ) 		echo "ERROR: condor_compile: I do not know how to link for this operating system"
+         		exit 1 ;;
+
+  esac
+
+  lgcc=false
+  ignore=false
+  # Handle the "-c" option to ld which reads ld commands from a file
+  while [ A$1 != A ]
+  do
+     brokenbase=$1
+     if [ $brokenbase = -c ]; then
+        shift
+        tmp_for_me=`cat $1`
+        newargs=`echo $newargs $tmp_for_me`
+     else
+        newargs=`echo $newargs $brokenbase`
+     fi
+     shift
+  done
+  # Now loop through all the ld arguments
+  for argument in $newargs
+  do
+	 # Strip off any pathnames so we can recognize crt[01].o sans paths...
+     brokenbase=`basename /stupidbasename/$argument`
+     if [ A$brokenbase = A ]; then
+        brokenbase=$argument
+     fi
+
+
+     case $brokenbase in
+
+	 # Replace Standard C lib or GNU Standard C lib with condor_syscall_lib
+     -lgcc )  if [ $lgcc = false ]; then
+				if [ $osfull = "SunOS5" ]; then
+                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lsocket -lnsl -lgcc`
+				else
+                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lgcc`
+				fi
+                lgcc=true 
+              else
+                ldargs=`echo $ldargs -lgcc`
+              fi ;;
+     -lc )  if [ $lgcc = false ]; then
+				if [ $osfull = "SunOS5" ]; then
+                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lsocket -lnsl -lc`
+				else
+                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lc`
+				fi
+                lgcc=true 
+              else
+                ldargs=`echo $ldargs -lc`
+              fi ;;
+     -lstdc++ )  if [ $lgcc = false ]; then
+				if [ $osfull = "SunOS5" ]; then
+                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lsocket -lnsl -lstdc++`
+				else
+                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lstdc++`
+				fi
+                lgcc=true 
+              else
+                ldargs=`echo $ldargs -lstdc++`
+              fi ;;
+     -lg++ )  if [ $lgcc = false ]; then
+				if [ $osfull = "SunOS5" ]; then
+                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lsocket -lnsl -lg++`
+				else
+                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lg++`
+				fi
+                lgcc=true 
+              else
+                ldargs=`echo $ldargs -lg++`
+              fi ;;
+
+	 # Replace crt[01].o with condor_rt0
+     $oscrt0 ) ldargs=`echo $ldargs $CONDOR_RT0` ;;
+
+	 # Throw out options that tell the linker to strip the binary.
+	 # If the binary is stripped, then Condor complains that a STANDARD
+	 # universe job was not linked with condor_syscall_lib.
+     -s ) ;;
+
+	 # Condor on IRIX6 only supports old-32 bit mode, because of 
+	 # restrictions with gcc/g++ (which compiled up condor_syscall_lib),
+	 # thus throw out any options that try using any other MIPS ABI modes
+	 -n32 | -64 | -mips3 | -mips4 )
+			if [ $osfull != "IRIX6" ]; then
+				ldargs=`echo $ldargs $argument`
+		  	fi ;;
+
+	 # Throw out options that ask for shared libs on HPUX
+	 -a ) 			
+			if [ $os = "HP-UX" ]; then
+		 		ignore=true
+		  	else
+				ldargs=`echo $ldargs $argument`
+		  	fi ;;
+
+	 # Throw out options that ask for shared libs on SunOS 4.x
+	 -Bdynamic ) 
+			if [ $osfull != "SunOS4" ]; then
+				ldargs=`echo $ldargs $argument`
+		  	fi ;;
+
+	 # Throw out options that ask for static libs on SunOS 5.x
+	 -Bstatic ) 
+			if [ $osfull != "SunOS5" ]; then
+				ldargs=`echo $ldargs $argument`
+		  	fi ;;
+
+	 # Throw out options that ask for shared libs on OSF1
+     -call_shared | -shared )  
+			if [ $os != "OSF1" ]; then
+				ldargs=`echo $ldargs $argument`
+	   		fi;;
+
+	 # Just copy over any other arguments, unless ignore is true
+     * )  if [ $ignore = false ]; then
+			ldargs=`echo $ldargs $argument` 
+		  else 
+			ignore=false
+	      fi ;;
+
+     esac
+  done
+  echo "LINKING FOR CONDOR : $osld $ldargs"
+fi
+
+# We always run the code below this point, whether called from condor_compile
+# or not...  
+
+# Fire up the "real" linker now that arguments have been modified if need be.
+
+eval $osld $ldargs
+
