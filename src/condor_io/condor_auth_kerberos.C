@@ -795,8 +795,8 @@ int Condor_Auth_Kerberos :: map_kerberos_name(krb5_ticket * ticket)
             memset(claimToBe, '\0', size);
             memcpy(claimToBe, client, size -1);
             
-            if ((strncmp(claimToBe, "host"  , strlen("host")) == 0) || 
-                (strncmp(claimToBe, "condor", strlen("condor")) == 0)) {
+            if ((strcmp(claimToBe, "host") == 0) || 
+                (strcmp(claimToBe, "condor") == 0)) {
                 // Make the user condor, this is a hack for now. We need to 
                 // create a condor service!
                 free(claimToBe);
