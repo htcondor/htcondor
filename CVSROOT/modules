@@ -128,6 +128,7 @@ V_TRUNK_SRC		-a \
 			src/condor_chirp \
 			src/condor_classad.V6 \
 			src/condor_classad_analysis \
+			src/condor_credd.TEMPORARY \
 			src/condor_daemon_client \
 			src/condor_data_manager \
 			src/condor_dcskel \
