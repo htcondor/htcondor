@@ -465,10 +465,12 @@ get_string( elem )
 ELEM	*elem;
 {
 	char	*ptr;
-
+	char *tmpIn;
 	In++;
-	for( ptr=In; *ptr && *ptr != '"'; ptr++ )
-		;
+	tmpIn = strdup(In);
+
+	for( ptr=tmpIn; *ptr && *ptr != '"'; ptr++ )
+	  In++;
 
 	if( *ptr != '"' ) {
 		SCAN_ERROR( "Quote not closed" );
@@ -477,9 +479,9 @@ ELEM	*elem;
 
 	*ptr = '\0';
 	elem->type = STRING;
-	elem->s_val = strdup( In );
-	In = ptr + 1;
-	*ptr = '"';
+	elem->s_val = strdup( tmpIn );
+	In++;
+	free (tmpIn);
 	return elem;
 }
 
@@ -488,16 +490,17 @@ ELEM	*
 get_name( elem )
 ELEM	*elem;
 {
-	char	*ptr, tmp;
+	char	*ptr;
+	char *tmpIn = strdup(In);
 
-	for( ptr=In; ALPHA(*ptr); ptr++ )
-		;
-	tmp = *ptr;
+	for( ptr=tmpIn; ALPHA(*ptr); ptr++ )
+	  In++;
 	*ptr = '\0';
+	
 	elem->type = NAME;
-	elem->s_val = strdup( In );
-	*ptr = tmp;
-	In = ptr;
+	elem->s_val = strdup( tmpIn );
+	free (tmpIn);
+
 
 	if( strcmp(elem->s_val,"T") == MATCH ) {
 		FREE( elem->s_val );
