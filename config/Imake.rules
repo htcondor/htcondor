@@ -422,7 +422,7 @@ all:: vanillatarg
 #ifndef uppercase_target
 #define uppercase_target( libname, objname, newname, old_string, new_string )	@@\
 newname: libname ToUpper						@@\
-	AR_EXTRACT( libname, objname ); mv objname $(TMP_DIR)		@@\
+	cd $(TMP_DIR); AR_EXTRACT( libname, objname );			@@\
 	./ToUpper $(TMP_DIR)/##objname newname old_string new_string 	@@\
 	rm -f $(TMP_DIR)/##objname
 #endif
