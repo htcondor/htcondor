@@ -228,8 +228,9 @@ specified in the environment is currently limited to 4096 characters.
 Condor will write a log file of what is happening with this job cluster.
 For example, Condor will log into this file when and where the job
 begins running, when the job is checkpointed and/or migrated, when the
-job completes, etc. Most users find specifying a LOG file to be very
-handy; its use is recommended. 
+job completes, etc. Most users find specifying a \Opt{log} file to be very
+handy; its use is recommended. If no \Opt{log} entry is specified, 
+Condor does not create a log for this cluster.
 
 %%%%%%%%%%%%%%%%%%%
 %% universe
@@ -262,7 +263,8 @@ estimate about its size and adjust this estimate as your program runs.
 If the image size of your job is underestimated, it may crash due to
 inability to acquire more address space, e.g. malloc() fails. If the image
 size is overestimated, Condor may have difficulty finding machines which
-have the required resources. 
+have the required resources. \Arg{size} must be in kbytes, e.g. for
+an image size of 8 megabytes, use a \Arg{size} of 8000.
 
 %%%%%%%%%%%%%%%%%%%
 %% machine_count
@@ -270,11 +272,14 @@ have the required resources.
 
 \item[machine\_count = $<$min..max$>$] If \Opt{machine\_count} is
 specified, Condor will not start the job until it can simultaneously
-supply the job with \Arg{min} machines.  Condor will try to provide up
+supply the job with \Arg{min} machines.  Condor will continue to try to provide up
 to \Arg{max} machines, but will not delay starting of the job to do so.
+If the job is started with fewer than \Arg{max} machines, the job
+will be notified via a usual PvmHostAdd notification as additional
+hosts come on line.
 \textbf{Important:} only use \Opt{machine\_count} if an only if
 submitting into the PVM Universe.  At this time, \Opt{machine\_count}
-must be used with a parallel PVM application.
+must be used only with a parallel PVM application.
 
 %%%%%%%%%%%%%%%%%%%
 %% coresize
@@ -298,7 +303,7 @@ should have last priority amongst all users and all jobs. So jobs
 submitted in this fashion run only on machines which no other
 non-nice\_user job wants --- a true ``bottom-feeder'' job! This is very
 handy if a user has some jobs they wish to run, but do not wish to use
-resources they could instead be used to run other people's Condor jobs. Jobs
+resources that could instead be used to run other people's Condor jobs. Jobs
 submitted in this fashion have ``nice-user.'' pre-appended in front of
 the owner name when viewed from \Condor{q} or \Condor{userprio}.  The
 default value if \Arg{False}.
