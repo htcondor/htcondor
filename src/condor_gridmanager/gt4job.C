@@ -276,6 +276,8 @@ int Gt4JobStateToInt( const char *status ) {
 		return GT4_JOB_STATE_UNSUBMITTED;
 	} else if ( !strcmp( status, "StageIn" ) ) {
 		return GT4_JOB_STATE_STAGE_IN;
+	} else if ( !strcmp( status, "StageOut" ) ) {
+		return GT4_JOB_STATE_STAGE_OUT;
 	} else if ( !strcmp( status, "CleanUp" ) ) {
 		return GT4_JOB_STATE_CLEAN_UP;
 	} else {
