@@ -467,8 +467,17 @@ clean:: 						@@\
 clean::		 						@@\
 	rm -f program objlist
 
+
+#define	pure_target( dir, program )				@@\
+$(PURE_DIR)/##program: $(PURE_DIR) dir##/##program		@@\
+	cp dir##/##program $(PURE_DIR)/##program		@@\
+dir##/##program: dir						@@\
+	cd dir; make program					@@\
+pure:: $(PURE_DIR)/##program
+
 #else 
 
+#define	pure_target( dir, program )			/* NULL MACRO */
 #define	pure_c_plus_target( program, objlist, libs )	/* NULL MACRO */
 #define	purecov_c_plus_target( program, objlist, libs )	/* NULL MACRO */
 #define	quantify_c_plus_target( program, objlist, libs ) /* NULL MACRO */
