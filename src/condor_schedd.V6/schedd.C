@@ -2851,6 +2851,7 @@ Scheduler::send_alive()
     int     	numsent=0;
 	int			alive = ALIVE;
 	match_rec	*rec;
+	char		*id;
 
 	matches->startIterations();
 	while (matches->iterate(rec) == 1) {
@@ -2861,8 +2862,9 @@ Scheduler::send_alive()
 		numsent++;
 		sock = new SafeSock(rec->peer, 0);
 		sock->encode();
+		id = rec->id;
 		if( !sock->put(alive) || 
-			!sock->code((char *&)(rec->id)) || 
+			!sock->code(id) || 
 			!sock->end_of_message() ) {
 				// UDP transport out of buffer space!
 			dprintf(D_ALWAYS, "\t(Can't send alive message to %d)\n",
