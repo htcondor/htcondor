@@ -349,7 +349,7 @@ CONTEXT *context;
 	store_stmt( expr, context );
 }
 
-void Config(const char* MyName)
+void Config(char* MyName)
 {
 	struct passwd*		pwd;
 	char*				config_location;
