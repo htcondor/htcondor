@@ -11,19 +11,10 @@ FLOCK_HOSTS to contact the schedd.  (Similarly, the negotiators of the
 remote pools must be configured to listen to requests from this
 schedd.)
 
-KNOWN BUGS:
-  - The count of running jobs advertized by the schedd and reported by
-    condor_status is a total of all jobs from this schedd running in
-    all pools.  So, this count may be higher than the number of jobs
-    running in the local pool.
-  - While a central manager in the FLOCK_HOSTS list is unreachable, the
-    schedd will not start jobs in pools which follow it in the list,
-    since the schedd waits until it goes through the matchmaking process
-    and is unsatisfied before continuing on to other central managers in
-    the list.  The local pool and pools earlier in the list will continue
-    to be used.
-  - If any job from any user is unsatisfied, the schedd will start
-    contacting other pools.  If a single schedd is being used to
-    submit different types of jobs by different users, then some jobs
-    may run in a non-local pool when they could have run in the local
-    pool, if at least one job is unsatisfied by the local pool.
+If the collector and negotiator aren't running on the same machine,
+then the FLOCK_COLLECTOR_HOSTS and FLOCK_NEGOTIATOR_HOSTS parameters
+may be used instead of FLOCK_HOSTS.
+
+The schedd now flocks per-user, so only users who have idle jobs will
+flock with remote pools.  Unfortunately, the list of FLOCK_HOSTS is
+still schedd-wide.  (This should change at some point.)
