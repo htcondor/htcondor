@@ -402,6 +402,7 @@ check_execute_dir()
 	char	pathname[_POSIX_PATH_MAX];
 	int		age;
 	struct stat	buf;
+	State	s = get_machine_state();
 
 
 	while( f = dir.Next() ) {
@@ -409,7 +410,7 @@ check_execute_dir()
 			// if we know the state of the machine, we can use a simple
 			// algorithm.  If we are hosting a job - anything goes, otherwise
 			// the execute directory should be empty.
-		switch( get_machine_state() ) {
+		switch( s ) {
 		case owner_state:	
 		case unclaimed_state:
 		case matched_state:	
