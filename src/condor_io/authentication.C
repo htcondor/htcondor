@@ -212,6 +212,9 @@ int Authentication::setOwner( const char *owner )
 //----------------------------------------------------------------------
 const char * Authentication :: getRemoteAddress() const
 {
+#if defined(SKIP_AUTHENTICATION)
+    return NULL;
+#else
     // If we are not using Kerberos
     if (authenticator_) {
         return authenticator_->getRemoteHost();
@@ -219,6 +222,7 @@ const char * Authentication :: getRemoteAddress() const
     else {
         return NULL;
     }
+#endif
 }
 
 //----------------------------------------------------------------------
@@ -260,18 +264,23 @@ const char * Authentication::getOwner() const
 bool Authentication :: is_valid()
 {
     bool valid = FALSE;
-
+#if defined(SKIP_AUTHENTICATION)
+    return valid;
+#else
     if (authenticator_) {
         valid = authenticator_->isValid();
     }
 
     return valid;
+#endif
 }
 
 int Authentication :: encrypt(bool flag)
 {
     int code = 0;
-
+#if defined(SKIP_AUTHENTICATION)
+    return code;
+#else
     if (flag == TRUE) {
         if (is_valid()){//check for flags to support shd be added 
             t_mode = ENCRYPT;
@@ -288,28 +297,41 @@ int Authentication :: encrypt(bool flag)
     }
 
     return code;
+#endif
 }
 
 bool Authentication :: is_encrypt()
 {
+#if defined(SKIP_AUTHENTICATION)
+    return FALSE;
+#else
     if ( t_mode ==  ENCRYPT || t_mode == ENCRYPT_HDR )
         return TRUE;
     return FALSE;
+#endif
 }
 
-int Authentication :: hdr_encrypt(){
+int Authentication :: hdr_encrypt()
+{
+#if defined(SKIP_AUTHENTICATION)
+    return FALSE;
+#else
     if ( t_mode == ENCRYPT){
         t_mode = ENCRYPT_HDR;
-        return 0;
     }
-    return -1;
+    return TRUE;
+#endif
 }
 
 bool Authentication :: is_hdr_encrypt(){
+#if defined(SKIP_AUTHENTICATION)
+    return FALSE;
+#else
     if (t_mode  == ENCRYPT_HDR)  
         return TRUE;
     else 
         return FALSE;
+#endif
 }
 
 int Authentication :: wrap(char*  input, 
@@ -317,6 +339,9 @@ int Authentication :: wrap(char*  input,
 			   char*& output,
 			   int&   output_len)
 {
+#if defined(SKIP_AUTHENTICATION)
+    return FALSE;
+#else
     // Shouldn't we check the flag first?
     if (authenticator_) {
         return authenticator_->wrap(input, input_len, output, output_len);
@@ -324,6 +349,7 @@ int Authentication :: wrap(char*  input,
     else {
         return FALSE;
     }
+#endif
 }
 	
 int Authentication :: unwrap(char*  input, 
@@ -331,6 +357,9 @@ int Authentication :: unwrap(char*  input,
 			     char*& output, 
 			     int&   output_len)
 {
+#if defined(SKIP_AUTHENTICATION)
+    return FALSE;
+#else
     // Shouldn't we check the flag first?
     if (authenticator_) {
         return authenticator_->unwrap(input, input_len, output, output_len);
@@ -338,6 +367,7 @@ int Authentication :: unwrap(char*  input,
     else {
         return FALSE;
     }
+#endif
 }
 
 
