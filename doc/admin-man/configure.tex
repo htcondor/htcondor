@@ -39,18 +39,11 @@ platform-specific, machine-specific, and root-owned configuration files.
 The result is a list of constants and expressions which are
 evaluated as needed at run time.
 
-Definitions in the configuration file come in two flavors, macros and
-expressions.  Macros provide string-valued constants which remain
-static throughout the execution of the program.  Expressions can be
-arithmetic, boolean, or string-valued, and can be evaluated
-dynamically at run time.
-
-The order in which macros and expressions are defined is important,
-since you cannot define anything in terms of something else that
-has not yet been defined.  This is particularly important if
-configuration files are broken up
-using the \Macro{LOCAL\_CONFIG\_FILE} setting
-described in sections~\ref{sec:Condor-wide-Config-File-Entries}
+The order in which attributes are defined is important, since later
+definitions will override existing definitions.
+This is particularly important if configuration files are broken up
+using the \Macro{LOCAL\_CONFIG\_FILE} setting described in
+sections~\ref{sec:Condor-wide-Config-File-Entries}
 and~\ref{sec:Multiple-Platforms} below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -73,9 +66,14 @@ Macro invocations are of the form:
 \begin{verbatim}
         $(macro_name)
 \end{verbatim}
-Macro definitions may contain references to \emph{previously-defined
-macros}.  Nothing in a configuration file can reference
-macros which have not yet been defined.  The example
+
+Macro definitions may contain references to other macros, even ones
+that aren't yet defined (so long as they are eventually defined in
+your config files somewhere).
+All macro expansion is done after all config files have been parsed
+(with the exception of macros that reference themselves, described
+below). 
+
 \begin{verbatim}
         A = xxx
         C = $(A) 
@@ -94,15 +92,7 @@ As a further example,
         A = yyy
 \end{verbatim}
 is also a legal set of macro definitions, and the resulting value of
-\MacroNI{C} is \Expr{yyy}.  However,
-\begin{verbatim}
-        A = $(C)
-        C = xxx
-\end{verbatim}
-is not legal.
-It is an example of a forward reference,
-and it will result in the Condor daemons and tools exiting
-when they try to parse their configuration files.
+\MacroNI{C} is \Expr{yyy}.  
 
 A macro may be incrementally defined by invoking itself in its
 definition.  For example,
@@ -125,57 +115,28 @@ evaluate.
 \Note Macros should not be incrementally defined in the
 \Macro{LOCAL\_ROOT\_CONFIG\_FILE} for security reasons.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Config-File-Expressions}
-Config File Expressions}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Expression definitions are of the form:
-\begin{verbatim}
-        <expression_name> : <expression>
-\end{verbatim}
-\Note White space must appear between the expression name,
-the ``:'' sign, and the expression definition.  Expressions may
-contain constants, operators, other expressions, and macros.
-Constants may be booleans (with a value of TRUE or FALSE),
-signed integers, floating point values,
-or strings enclosed in double quotes (").
-All configuration file expressions are inserted into various
-ClassAds.
-
-Note that expressions which contain references to other expressions are
-bound to the expression's definition, not its current value.
-Expressions which contain macro invocations are bound to the current
-value of the macro.  For example,
-\begin{verbatim}
-        X : "xxx"
-        Y : X
-        X : "yyy"
-\end{verbatim}
-will result in \Expr{Y} being evaluated as \Expr{"yyy"} at run time, but
-\begin{verbatim}
-        X = "xxx"
-        Y : $(X)
-        X = "yyy" 
-\end{verbatim}
-will result in \Expr{Y} having a run time value of \Expr{"xxx"}.
+\Note Condor used to distingish between ``macros'' and ``expressions''
+in its config files.
+Begining with Condor version 6.1.13, this distinction has been
+removed.
+For backwards compatibility, you can still use ``:'' instead of ``=''
+in your config files, and these attributes will just be treated as
+macros.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Other-Syntax}
 Comments and Line Continuations}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Other than macros and expressions, a Condor configuration
-file can contain
-comments or line continuations.  A comment is any line beginning with a
-``\#'' character.
-A continuation is any entry (either macro or expression) that
-continues across multiples lines.  Line continuation
-is accomplished by placing the
-``$\backslash$'' character at the end of any line 
-to be continued onto another.  Valid examples of line continuation are
+Other than macros, a Condor configuration file can contain comments or
+line continuations.
+A comment is any line beginning with a ``\#'' character.
+A continuation is any entry that continues across multiples lines.
+Line continuation is accomplished by placing the ``$\backslash$''
+character at the end of any line to be continued onto another.
+Valid examples of line continuation are
 \begin{verbatim}
-        START : (KeyboardIdle > 15 * $(MINUTE)) && \
+        START = (KeyboardIdle > 15 * $(MINUTE)) && \
                 ((LoadAvg - CondorLoadAvg) <= 0.3)
 \end{verbatim}
 and
@@ -187,29 +148,18 @@ and
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Pre-Defined-Macros-and-Expressions}
-Pre-Defined Macros and Expressions}
+\subsubsection{\label{sec:Pre-Defined-Macros}
+Pre-Defined Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor provides pre-defined macros and expressions that
-help configure Condor.  Pre-defined macros are listed as
-\MacroUNI{macro\_name}, while pre-defined expressions are listed as
-\Expr{expression\_name}.
+Condor provides pre-defined macros that help configure Condor.
+Pre-defined macros are listed as \MacroUNI{macro\_name}.
 
 This first set are entries whose values are determined at
 run time and cannot be overwritten.  These are inserted automatically by
 the library routine which parses the configuration files.
 \index{configuration file!pre-defined macros}
 \begin{description}
-  
-\item[\Expr{CurrentTime}] \label{param:CurrentTime}
-\index{CurrentTime expression@\texttt{CurrentTime} expression}
-\index{configuration expression!\texttt{CurrentTime}}
-  An expression
-  providing the current result of the system call \Cmd{time}{2}.  It
-  is an integer containing the number of seconds elapsed
-  since an arbitrary date defined by UNIX as the ``beginning of time'',
-  referred to as the \Term{UNIX date}.
   
 \item[\MacroU{FULL\_HOSTNAME}] \label{param:FullHostname}
   The
@@ -248,9 +198,8 @@ the library routine which parses the configuration files.
 
 \end{description}
 
-This second set of macros and expressions
-are entries whose default values are determined
-automatically at runtime but which can be overwritten.  
+This second set of macros are entries whose default values are
+determined automatically at runtime but which can be overwritten.  
 \index{configuration file!macros}
 \begin{description}
 
@@ -790,18 +739,18 @@ server, shadow, and starter, none of which use DaemonCore yet).
   Because of the different syntax of the configuration
   file and ClassAds, a little extra work is required to get a
   given entry into a ClassAd.  In particular, ClassAds require quote
-  marks (") around strings.  Numeric values can go in directly,
-  as can expressions or boolean macros.  For example, if 
-  the startd is to advertise a string macro, a numeric macro,
-  and a boolean expression, do something similar to:
+  marks (") around strings.  Numeric values and boolean expressions
+  can go in directly.  
+  For example, if the startd is to advertise a string macro, a numeric
+  macro, and a boolean expression, do something similar to:
 
 \begin{verbatim}
-        STRING_MACRO = This is a string macro
-        NUMBER_MACRO = 666
-        BOOL_MACRO = True
-        EXPR : CurrentTime >= $(NUMBER_MACRO) || $(BOOL_MACRO)
-        MY_STRING_MACRO = "$(STRING_MACRO)"
-        STARTD_EXPRS = MY_STRING_MACRO, NUMBER_MACRO, BOOL_MACRO, EXPR
+        STRING = This is a string 
+        NUMBER = 666
+        BOOL1 = True
+        BOOL2 = CurrentTime >= $(NUMBER_MACRO) || $(BOOL1)
+        MY_STRING = "$(STRING_MACRO)"
+        STARTD_EXPRS = MY_STRING, NUMBER, BOOL1, BOOL2
 \end{verbatim}
 
 \end{description}
@@ -1321,12 +1270,12 @@ control state or activity transitions within the
 \item[\Macro{UPDATE\_INTERVAL}] \label{param:UpdateInterval}
   Determines how often the startd should send a ClassAd update
   to the \Condor{collector}.  The startd also sends update on any
-  state or activity change, or if the value of its \Expr{START} expression
+  state or activity change, or if the value of its \Macro{START} expression
   changes.  See section~\ref{sec:States} on \condor{startd}
   States, section~\ref{sec:Activities} on \condor{startd}
   Activities, and section~\ref{sec:Start-Expr} on \condor{startd}
-  \Expr{START} expression for details on states, activities, and the
-  \Expr{START} expression.  This macro is defined in
+  \Macro{START} expression for details on states, activities, and the
+  \Macro{START} expression.  This macro is defined in
   terms of seconds and defaults to 300 (5 minutes).
   
 \item[\Macro{STARTD\_HAS\_BAD\_UTMP}] \label{param:StartdHasBadUtmp}
@@ -2088,14 +2037,14 @@ These macros affect the \Condor{negotiator}.
   value greater than the number of schedds submitting jobs to the
   negotiator at any time.
 
-\item[\Expr{PREEMPTION\_REQUIREMENTS}]
+\item[\Macro{PREEMPTION\_REQUIREMENTS}]
   \label{param:PreemptionRequirements} The negotiator will not preempt
   a job running on a given machine unless the
-  \Expr{PREEMPTION\_REQUIREMENTS} expression evaluates to TRUE and the
+  \Macro{PREEMPTION\_REQUIREMENTS} expression evaluates to TRUE and the
   owner of the idle job has a better priority than the owner of the
   running job.  This expression defaults to TRUE.
 
-\item[\Expr{PREEMPTION\_RANK}] \label{param:PreemptionRank} This
+\item[\Macro{PREEMPTION\_RANK}] \label{param:PreemptionRank} This
   expression is used to rank machines that the job ranks the same.
   For example, if the job has no preference, it is usually preferable
   to preempt a job with a small \AdAttr{ImageSize} instead of a job with a
@@ -2104,10 +2053,10 @@ These macros affect the \Condor{negotiator}.
   with an idle machine over a preemptable machine, if the job has no
   preference between them.
 
-\item[\Expr{NEGOTIATOR\_TRAFFIC\_LIMIT}]
+\item[\Macro{NEGOTIATOR\_TRAFFIC\_LIMIT}]
   \label{param:NegotiatorTrafficLimit} This macro specifies the
   maximum amount of network traffic (in Kbytes) that the negotiator may
-  initiate per \Expr{NEGOTIATOR\_TRAFFIC\_INTERVAL} for job placement
+  initiate per \Macro{NEGOTIATOR\_TRAFFIC\_INTERVAL} for job placement
   and preemption.  The negotiator uses the job \AdAttr{ImageSize} and
   \AdAttr{ExecutableSize} parameters to track network usage.  The negotiator
   will try to use bandwidth up to the limit, so if starting a large
@@ -2117,12 +2066,12 @@ These macros affect the \Condor{negotiator}.
   network.  This parameter defaults to 0, which disables network usage
   management in the negotiator.
 
-\item[\Expr{NEGOTIATOR\_TRAFFIC\_INTERVAL}]
+\item[\Macro{NEGOTIATOR\_TRAFFIC\_INTERVAL}]
   \label{param:NegotiatorTrafficInterval} This macro specifies the
   interval (in seconds) to be used in maintaining the
-  \Expr{NEGOTIATOR\_TRAFFIC\_LIMIT}.  This macro defaults to 0,
+  \Macro{NEGOTIATOR\_TRAFFIC\_LIMIT}.  This macro defaults to 0,
   which disables network usage management in the negotiator.  It is
-  common to set this macro equal to \Expr{NEGOTIATOR\_INTERVAL}.
+  common to set this macro equal to \Macro{NEGOTIATOR\_INTERVAL}.
   
 \item[\Macro{NEGOTIATOR\_DEBUG}] \label{param:NegotiatorDebug} This macro
   (and other settings related to debug logging in the negotiator) is
