@@ -143,12 +143,14 @@ char	*CoreSize		= "coresize";
 char	*NiceUser		= "nice_user";
 
 char	*X509UserProxy	= "x509userproxy";
-
+char	*X509Directory	= "x509directory";
+char	*GlobusScheduler = "globusscheduler";
 char	*RendezvousDir	= "rendezvousdir";
+char	*SsleayConf	= "ssleayconf";
+
 char	*FileRemaps = "file_remaps";
 char	*BufferSize = "buffer_size";
 char	*BufferBlockSize = "buffer_block_size";
-char	*GlobusScheduler    = "globusscheduler";
 
 #if !defined(WIN32)
 char	*KillSig			= "kill_sig";
@@ -2356,26 +2358,97 @@ setupAuthentication()
 	}
 
 		//X509_USER_PROXY needed for Globus universe and glideins under condor
-	char *UserProxy = NULL;
-	if ( UserProxy = condor_param( X509UserProxy ) ) {
-		dprintf( D_FULLDEBUG, "setting X509_USER_PROXY=%s\n", UserProxy );
-		sprintf( buffer, "X509_USER_PROXY=%s", UserProxy );
+	char *UserFile = NULL;
+	if ( UserFile = condor_param( X509UserProxy ) ) {
+		dprintf( D_FULLDEBUG, "setting X509_USER_PROXY=%s\n", UserFile );
+		sprintf( buffer, "X509_USER_PROXY=%s", UserFile );
 		if ( JobUniverse == GLOBUS_UNIVERSE ) {
 			strcat( GlobusEnv, buffer );
 			strcat( GlobusEnv, env_delimiter );
+				//Put it in the ClassAd as well (per directive from 7th floor...)
+			sprintf( buffer, "X509_USER_PROXY = \"%s\"", UserFile );
+			InsertJobExpr( buffer );
 		}
 		else { 
 			putenv( strdup( buffer ) );
 		}
-		sprintf( buffer, "X509_USER_PROXY = \"%s\"", UserProxy );
-		InsertJobExpr( buffer );
-
-			//Put it in the ClassAd as well (per directive from 7th floor...)
 		
-		free( UserProxy );
+		free( UserFile );
+		UserFile = NULL;
 	}
 
-		//Either GLOBUS_INSTALL_PATH or GLOBUS_DEPLOY_PATH, as well as
-		//HOME and the path to globus, condor and /bin user programs must 
-		//be in the users environment 
+	char *ssleay = condor_param( SsleayConf );
+
+	if ( UserFile = condor_param( X509Directory ) ) {
+		dprintf( D_FULLDEBUG, "X509_DIRECTORY=%s\n", UserFile );
+
+			//if it's Globus universe, set all defaults, else just put in ENV
+		if ( JobUniverse != GLOBUS_UNIVERSE ) {
+				//put x509_directory in ENV for authentication code to use.
+			sprintf( buffer, "X509_DIRECTORY=%s", UserFile );
+			putenv( strdup( buffer ) );
+		}
+		else {
+			//set all the X509_* stuff to default names under this directory
+
+			sprintf( buffer, "X09_CERT_DIR=%s/certdir", UserFile );
+			strcat( GlobusEnv, buffer );
+			strcat( GlobusEnv, env_delimiter );
+				//Put it in the ClassAd as well (per directive from 7th floor...)
+			sprintf( buffer, "X509_CERT_DIR = \"%s/certdir\"", UserFile );
+			InsertJobExpr( buffer );
+
+			sprintf( buffer, "X09_USER_CERT=%s/usercert.pem", UserFile );
+			strcat( GlobusEnv, buffer );
+			strcat( GlobusEnv, env_delimiter );
+				//Put it in the ClassAd as well (per directive from 7th floor...)
+			sprintf( buffer, "X509_USER_CERT = \"%s/usercert.pem\"", UserFile );
+			InsertJobExpr( buffer );
+
+			sprintf( buffer, "X09_USER_KEY=%s/userkey.pem", UserFile );
+			strcat( GlobusEnv, buffer );
+			strcat( GlobusEnv, env_delimiter );
+				//Put it in the ClassAd as well (per directive from 7th floor...)
+			sprintf( buffer, "X509_USER_KEY = \"%s/userkey.pem\"", UserFile );
+			InsertJobExpr( buffer );
+
+			char sslFile[_POSIX_PATH_MAX];
+			if ( ssleay ) {
+					//if specified, override condor default
+				strcpy( sslFile, ssleay );
+			}
+			else {
+					//use condor default
+				sprintf( sslFile, "%s/condor_ssl.cnf", UserFile );
+			}
+			sprintf( buffer, "SSLEAY_CONF=%s", sslFile );
+			strcat( GlobusEnv, buffer );
+			strcat( GlobusEnv, env_delimiter );
+				//Put it in the ClassAd as well (per directive from 7th floor...)
+			sprintf( buffer, "SSLEAY_CONF = \"%s\"", sslFile );
+			InsertJobExpr( buffer );
+		}
+			
+		free( UserFile );
+		UserFile = NULL;
+	}
+	else if ( ssleay ) {
+		sprintf( buffer, "SSLEAY_CONF=%s", ssleay );
+		if ( JobUniverse == GLOBUS_UNIVERSE ) {
+			strcat( GlobusEnv, buffer );
+			strcat( GlobusEnv, env_delimiter );
+				//Put it in the ClassAd as well (per directive from 7th floor...)
+			sprintf( buffer, "SSLEAY_CONF = \"%s\"", ssleay );
+			InsertJobExpr( buffer );
+		}
+		else {
+			putenv( strdup( buffer ) );
+		}
+	}
+
+		//For condor_glidein to run under condor, either GLOBUS_INSTALL_PATH 
+		//or GLOBUS_DEPLOY_PATH, as well as HOME and the path to globus, condor 
+		//and /bin user programs must be in the users environment. I check
+		//that stuff in condor_glidein, but mention it here because it is
+		//apropososos.
 }
