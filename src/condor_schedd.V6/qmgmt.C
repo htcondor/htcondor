@@ -754,8 +754,9 @@ int
 CloseConnection()
 {
 	JobQueue->CommitTransaction();
-	/* Just force the clean-up code to happen */
-	return -1;
+		// If this failed, the schedd will EXCEPT.  So, if we got this
+		// far, we can always return success.  -Derek Wright 4/2/99
+	return 0;
 }
 
 
