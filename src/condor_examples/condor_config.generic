@@ -191,8 +191,9 @@ HOSTALLOW_NEGOTIATOR = $(NEGOTIATOR_HOST)
 
 ##  Do you want the starter on the execute machine to choose the
 ##  checkpoint server?  If False, the CKPT_SERVER_HOST set on
-##  the submit machine is used.  The default is false.
-#STARTER_CHOOSES_CKPT_SERVER = False
+##  the submit machine is used.  Otherwise, the CKPT_SERVER_HOST set
+##  on the execute machine is used.  The default is true.
+#STARTER_CHOOSES_CKPT_SERVER = True
 
 ##--------------------------------------------------------------------
 ##  Miscellaneous:
