@@ -1237,6 +1237,42 @@ int AttrList::fPrintExpr(FILE* f, char* name)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Print an expression with a certain name into a buffer. Returns FALSE if the
+// named expression can not be found in this AttrList; TRUE if otherwise.
+// The caller should pass the size of the buffer in buffersize.
+// If buffer is NULL, then space will be allocated with malloc(), and it needs
+// to be free-ed with free() by the user.
+////////////////////////////////////////////////////////////////////////////////
+char *
+AttrList::sPrintExpr(char *buffer, unsigned int buffersize, const char* name)
+{
+    if(!name)
+    {
+	return NULL;
+    }
+
+    ExprTree*	tmpExpr = Lookup(name);
+    char	tmpStr[ATTRLIST_MAX_EXPRESSION] = "";
+
+    if(!tmpExpr)
+    // the named expression is not found
+    {
+	return NULL;
+    }
+
+    tmpExpr->PrintToStr(tmpStr);
+	if (buffer) {
+		strncpy(buffer,tmpStr,buffersize);
+	} else {
+		if ( (buffer=strdup(tmpStr)) == NULL ) {
+			EXCEPT("Out of memory");
+		}
+	}
+    
+	return buffer;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // print the whole AttrList into a file. The expressions are in infix notation.
 // Returns FALSE if the file pointer is NULL; TRUE otherwise.
 ////////////////////////////////////////////////////////////////////////////////
