@@ -37,6 +37,8 @@ class HashTable {
   void startIterations (void);
   int  iterate (Value &value);
   int  iterate (Index &index, Value &value);
+  int  getCurrentKey (Index &index);
+  int  iterate (Index &index, Value &value);
     
  private:
 #ifdef DEBUGHASH
@@ -276,6 +278,16 @@ iterate (Value &v)
 		return 1;
 	}
 }
+
+template <class Index, class Value>
+int HashTable<Index,Value>::
+getCurrentKey (Index &index)
+{
+    if (!currentItem) return -1;
+    index = currentItem->index;
+    return 0;
+}
+
 
 template <class Index, class Value>
 int HashTable<Index,Value>::
