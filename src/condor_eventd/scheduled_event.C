@@ -357,21 +357,21 @@ int
 ShutdownSortFunc(ClassAd *m1, ClassAd *m2, void *r)
 {
 	ExprTree *rank = (ExprTree *)r;
-	int val1=0, val2=0;
+	float val1=0.0, val2=0.0;
 	EvalResult	result;
 	rank->EvalTree(m1, m2, &result);
 	if (result.type == LX_INTEGER) {
-		val1 = result.i;
+		val1 = (float)result.i;
 	} else if (result.type == LX_FLOAT) {
-		val1 = (int)result.f;
+		val1 = result.f;
 	}
 	rank->EvalTree(m2, m1, &result);
 	if (result.type == LX_INTEGER) {
-		val2 = result.i;
+		val2 = (float)result.i;
 	} else if (result.type == LX_FLOAT) {
-		val2 = (int)result.f;
+		val2 = result.f;
 	}
-	return m1-m2;
+	return (val1 < val2);
 }
 
 int
@@ -448,7 +448,13 @@ ScheduledShutdownEvent::Timeout()
 	
 	if (StartdList == NULL) {
 		if (GetStartdList() < 0) {
-			TimeoutTid = -1;
+			// can't contact collector, so try again in EventInterval seconds
+			if (daemonCore->Reset_Timer(TimeoutTid, EventInterval) < 0) {
+				dprintf(D_ALWAYS, "Failed to reset timer for SHUTDOWN event "
+						"%s!\n", id);
+				TimeoutTid = -1;
+				return -1;
+			}
 			return -1;
 		}
 	}
@@ -495,6 +501,7 @@ ScheduledShutdownEvent::Timeout()
 			continue;
 		}
 		ReliSock sock;
+		sock.timeout(10);
 		if (!sock.connect(startd_addr, 0)) {
 			dprintf(D_ALWAYS, "Failed to connect to startd %s %s.\n",
 					startd_name, startd_addr);
@@ -573,6 +580,7 @@ ScheduledShutdownEvent::EnterShutdownMode(const char startd_name[],
 										  const char startd_addr[])
 {
 	ReliSock sock;
+	sock.timeout(10);
 	if (!sock.connect((char *)startd_addr, 0)) {
 		dprintf(D_ALWAYS, "Failed to connect to %s %s.\n", startd_name,
 				startd_addr);
@@ -616,6 +624,7 @@ ScheduledShutdownEvent::CleanupShutdownModeConfig(const char startd_name[],
 												  const char startd_addr[])
 {
 	ReliSock sock;
+	sock.timeout(10);
 	if (!sock.connect((char *)startd_addr, 0)) {
 		dprintf(D_ALWAYS, "Failed to connect to %s %s.\n", startd_name,
 				startd_addr);
