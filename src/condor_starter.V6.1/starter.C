@@ -249,6 +249,11 @@ CStarter::StartJob()
 	set_priv ( priv );
 
     // printAdToFile( jobAd, "/tmp/starter_ad" );
+	if( DebugFlags & D_JOB ) {
+		dprintf( D_JOB, "*** Job ClassAd ***\n" );  
+		jobAd->dPrint( D_JOB );
+        dprintf( D_JOB, "--- End of ClassAd ---\n" );
+	}
 
 		// Now that the scratch dir is setup, we can figure out what
 		// kind of job we're starting up, instantiate the appropriate
