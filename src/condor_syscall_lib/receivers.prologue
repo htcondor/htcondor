@@ -15,11 +15,16 @@
 #include "condor_debug.h"
 #include "condor_io.h"
 #include "condor_sys.h"
+#include "condor_mmap.h"
 #include "startup.h"
 #include "pseudo_ops.h"
+#include "../condor_shadow.V6/job_report.h"
 
-#include "syscall_sysdep.h"
-#include "syscall_64bit.h"
+#if defined(Solaris)
+extern "C" {
+	int flock( int, int );
+}
+#endif
 
 #if defined(OSF1) 
 extern "C" {
@@ -72,6 +77,9 @@ do_REMOTE_syscall()
 		"Got request for syscall %d <%s>\n",
 		condor_sysnum, _condor_syscall_name(condor_sysnum)
 	);
+
+	job_report_store_call( condor_sysnum );
+
 	switch( condor_sysnum ) {
 #else
 

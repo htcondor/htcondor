@@ -8,70 +8,30 @@
 **
 ***********************************************************/
 
-#include "syscall_sysdep.h"
+/* When this flags is defined, static and inline definitions
+   of *stat will be killed by the header files.  We do this
+   here so that we can use the same mechanism of include
+   files as the rest of the condor source. */
 
-#if defined(OSF1) && !defined(__GNUC__)
-#	define __STDC__
+#if defined(LINUX) || defined(Solaris)
+#define CONDOR_KILLS_STAT_DEFINITIONS
+#define CONDOR_KILLS_UNAME_DEFINITIONS
 #endif
 
-#if defined(Solaris)
-#define fstat __hide_fstat 
-#define stat __hide_stat 
-#define lstat __hide_lstat 
-#define mknod __hide_mknod 
-#define uname __hide_uname
-#define _uname __hide__uname
-#define profil __hide_profil
-#define mount __hide_mount
-#define __EXTENSIONS__
-#include <sys/types.h>
-#endif /* Solaris */
-
+#include "condor_common.h"
 #include "syscall_numbers.h"
 #include "syscall_macros.h"
+
 #include "condor_syscall_mode.h"
 #include "file_table_interf.h"
-#include "condor_sys.h"
 
+#include "../condor_ckpt/file_state.h"
+#include "../condor_ckpt/signals_control.h"
 
-#if defined(HPUX)
-#	define _XPG4_EXTENDED
-#	define mknod	__hide_mknod
-#	define select	__hide_select
-#	define setitimer __hide_setitimer
-#	define settimeofday __hide_settimeofday
-#	define profil	__hide_profil
-#endif
-
-#include <stdio.h>
-#include <sys/types.h>
-
-#include "syscall_64bit.h"
-
-#if defined(LINUX) && !defined(GLIBC)
-#define fstat __hide_fstat 
-#define stat __hide_stat 
-#define lstat __hide_lstat 
-#endif
-
-#include <sys/stat.h>
-
-#include "condor_fix_sys_time.h"
-
-#if defined(HPUX) 
-#	undef mknod
-#	undef select
-#	undef setitimer
-#	undef settimeofday
-#	undef profil
-	int select();
-	int setitimer( int which, const struct itimerval *,struct itimerval * );	
-	int	settimeofday( struct timeval *tp, struct timezone *tzp );
-	void profil( short *buf, unsigned int size, unsigned int ,unsigned int  );
-#endif
+extern "C" int errno;
 
 #if defined(DL_EXTRACT)
-#	include <dlfcn.h>	/* for dlopen and dlsym */
+	#include <dlfcn.h>	/* dlopen and dlsym */
 #endif
 
 #if defined(IRIX)
@@ -80,245 +40,21 @@ struct exportfsdata;
 #endif
 
 #if defined(HPUX)
-struct exportfsdata;
-struct msqid_ds;
-struct sembuf;
-struct shmid_ds;
-#endif
-
-#if defined(Solaris)
-#undef fstat 
-#undef stat 
-#undef lstat
-#undef mknod
-struct stat;
-struct statfs;
-#endif
-
-#if defined(LINUX) && !defined(GLIBC)
-#undef fstat 
-#undef stat 
-#undef lstat
-struct stat;
-#endif
-
-#include "condor_fix_sys_resource.h"
-
-#if defined(HPUX)
-#undef _PROTOTYPES
-#endif
-
-#include "condor_mmap.h"
-
-
-#if defined(IRIX)
-#	define sendmsg __hide_sendmsg
-#	define recvfrom __hide_recvfrom
-#	define accept __hide_accept
-#	define getpeername __hide_getpeername
-#	define getsockname __hide_getsockname
-#	define connect __hide_connect
-#	define recv __hide_recv
-#	define bind __hide_bind
-#	define sendto __hide_sendto
-#	define getsockopt __hide_getsockopt
-#	define setsockopt __hide_setsockopt
-#endif
-
-#include <sys/socket.h>
-
-#if defined(IRIX)
-#	undef sendmsg
-#	undef recvfrom
-#	undef accept
-#	undef getpeername
-#	undef getsockname
-#	undef connect
-#	undef recv
-#	undef bind
-#	undef sendto
-#	undef getsockopt
-#	undef setsockopt
-	int sendmsg( int socket, struct msghdr *message, int flags );
-	int recvfrom( int socket, char *buffer, int length, int flags, 
-				struct sockaddr *address, int *addr_len );
-	int accept( int socket, struct sockaddr *address, int *addr_len );
-	int getpeername( int socket, struct sockaddr *address, int *addr_len );
-	int getsockname( int socket, struct sockaddr *address, int *addr_len );
-	int connect( int sock, struct sockaddr *address, int addr_len );
-	int recv( int socket, char *msg, int length, int flags );
-	int bind( int socket, struct sockaddr *address, int addr_len );
-	int sendto( int sock, char *msg, int msg_len, int flags, 
-				struct sockaddr *dest, int dest_len );
-	int getsockopt( int sock, int level, int opt_name, char *opt_val, 
-				int *opt_len );
-	int setsockopt( int sock, int level, int opt_name, char *opt_val, 
-				int opt_len );
-#endif
-
-#include <sys/utsname.h>
-
-#if defined(IRIX) || defined(Solaris) || defined(OSF1)
-#	include <signal.h>
-#endif
-
-#if defined(Solaris)
-#	undef uname
-#	undef _uname
-#endif
-
-#if defined(IRIX)
-#	undef kill
-	int kill( pid_t pid, int sig );
-#endif
-
-#if defined(HPUX)
-#	undef _PROTOTYPES
-#	include <signal.h>
-#	define async_daemon	__hide_async_daemon
-#	include <nfs/nfs.h>
-#	undef async_daemon
-	int async_daemon();	
-#endif
-#if defined(OSF1)
-#	include <rpc/types.h>
-#	include <errno.h>
-#	include <sys/param.h>
-#	include <nfs/nfs.h>
-#	include <sys/ipc.h>
-#	include <sys/shm.h>
-#	include <sys/msg.h>
-#	include <sys/mman.h>
-#	include <sys/addrconf.h>
-/* #	include <sys/sysinfo.h> */
-#endif
-
-#if defined(LINUX)
-#	include <signal.h>
-#	include <sys/vfs.h>
-#	include <sys/types.h>
-#	include <utime.h>
-#if !defined(GLIBC)
-#	include <linux/ipc.h>
-#endif /* GLIBC */
-struct module;
+	#define FORK _FORK_sys
+	#define PIPE _PIPE_sys
 #endif
 
 #if defined(OSF1)
-#	define semctl __hide_semctl
-#	define semop __hide_semop
-#	include <sys/sem.h>
-#	undef semctl
-#	undef semop
-	int semop(int, struct sembuf *, unsigned int );
-	int semctl(int , int , int , void *);
-#endif
-
-#if defined(IRIX)
-#	define mount __hide_mount
-#endif
-
-#if defined(OSF1)
-#	include <sys/param.h>
-#endif
-#include <sys/mount.h>
-
-
-#if defined(IRIX)
-#	undef mount
-	int mount( char *spec, char *dir, int mflag, int fstyp, char *pt, int len );
-#endif
-
-#if defined(HPUX) 
-#   define mknod  	__hide_mknod
-#	define readlink	__hide_readlink
-#	define setpgrp  __hide_setpgrp
-#elif defined(IRIX)
-#	define select	__hide_select
-#	define readlink __hide_readlink
-#	define gethostid __hide_gethostid
-#	define sethostid __hide_sethostid
-#	define profil __hide_profil
-#	define acct __hide_acct
-#	define sethostname __hide_sethostname
-#	define setdomainname __hide_setdomainname
-#	define ptrace __hide_ptrace
-#endif
-
-#include "condor_fix_unistd.h"
-
-#if defined(Solaris)
-#	undef profil
-#	undef mount
-#endif
-
-#if defined(HPUX)
-#   undef mknod
-#	undef readlink
-#	undef setpgrp
-	int mknod( const char *path, int mode, dev_t device );
-	int readlink( const char *path, void *buf, int buf_size );
-	int setpgrp(  );
-#elif defined(IRIX)
-#	undef select
-#	undef readlink
-#	undef gethostid
-#	undef sethostid
-#	undef profil
-#	undef acct
-#	undef sethostname
-#	undef setdomainname
-#	undef ptrace
-	/* leave readlink() out, at least on IRIX62; not sure about IRIX53 */
-	/* int readlink( const char *path, void *buf, int buf_size ); */
-	int select();
-	int gethostid();
-	int sethostid( int hostid );
-	void profil( short *buf, unsigned int size, unsigned int ,unsigned int  );
-	int acct( char *path );
-	int sethostname( char *address, int address_len );
-	int setdomainname( char *name, int namelen );
-	int ptrace( long req, long int process, unsigned long *address, unsigned long data);
-#endif
-
-
-#if defined(HPUX) 
-#	undef _PROTOTYPES
-#	include <sys/vfs.h>		 /* for struct statfs */
-#endif
-
-#if !defined(TRUE)
-#	define TRUE 1
-#endif
-#if !defined(FALSE)
-#	define FALSE 0
-#endif
-
-#include <sys/types.h>
-
-
-/* On HPUX10, libc fork.o and pipe.o have code entry points of
- * _pipe_sys and _fork_sys.  Wonder if these are "safe" to extract
- * on HPUX10.  We won't worry about it today since they are currently
- * defined to be unsupported in syscall.tmpl  -Todd 4/97 
- */
-#if defined(HPUX10)
-#define FORK _FORK_sys
-#define PIPE _PIPE_sys
-#endif
-
-#if defined(OSF1)
-#define FORK _FORK
+	#define FORK _FORK
 #endif
 
 #if defined(LINUX) 
-#	define PIPE(x) (__PIPE(x))
-#	define FORK(x) (__FORK(x))
-#	define GETEGID(x)  (__GETEGID(x))
-#	define GETPPID(x)  (__GETPPID(x))
-#	define GETEUID(x)  (__GETEUID(x))
-#endif /* LINUX */
+	#define PIPE __PIPE
+	#define FORK __FORK
+	#define GETEGID  __GETEGID
+	#define GETPPID  __GETPPID
+	#define GETEUID  __GETEUID
+#endif
 
-sigset_t condor_block_signals();
-void condor_restore_sigmask(sigset_t);
+extern "C" {
 

@@ -131,7 +131,6 @@
 #include "condor_syscall_mode.h"
 #include "syscall_numbers.h"
 #include "condor_debug.h"
-#include "condor_file_info.h"
 
 enum result { NOT_OK = 0, OK = 1, END };
 
@@ -189,7 +188,6 @@ int open_file_stream( const char *local_path, int flags, size_t *len );
 int open_ckpt_file( const char *name, int flags, size_t n_bytes );
 void get_ckpt_name();
 extern volatile int InRestart;
-extern void InitFileState();
 void _condor_setup_dprintf();
 
 extern int	_condor_DebugFD;
@@ -361,7 +359,7 @@ MAIN( int argc, char *argv[], char **envp )
 	if( cmd_fd < 0) {
 			/* Run the job "normally" outside of condor */
 		SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-		InitFileState();  /* to create a file_state table so no SEGV */
+		_condor_file_table_init();
 		if ( warning ) {
 			fprintf( stderr,
 					 "WARNING: This binary has been linked for Condor.\n"
@@ -409,12 +407,8 @@ MAIN( int argc, char *argv[], char **envp )
 		   dprintf() before we get our sockets initialized. -Derek
 		*/
 	dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorVersion() );
-	dprintf( D_ALWAYS | D_NOHEADER , "User Job - %s\n", CondorPlatform() );
 
 	_condor_set_iwd();
-
-	pre_open( cmd_fd, TRUE, FALSE );
-
 	_condor_interp_cmd_stream( cmd_fd );
 
 	_condor_unblock_signals();
@@ -546,7 +540,6 @@ condor_iwd( const char *path )
 	delay();
 #endif
 	REMOTE_syscall( CONDOR_chdir, path );
-	Set_CWD( path );
 	return TRUE;
 }
 
@@ -770,44 +763,30 @@ display_ip_addr( unsigned int addr )
   Open a standard file (0, 1, or 2), given its fd number.
 */
 void
-open_std_file( int which )
+open_std_file( int fd )
 {
-	char	name[ _POSIX_PATH_MAX ];
-	char	buf[ _POSIX_PATH_MAX + 50 ];
-	int		pipe_fd;
-	int		answer;
-	int		status;
+	char	logical_name[ _POSIX_PATH_MAX ];
+	int	result;
+	int	new_fd;
+	int	flags;
 
-		/* The ckpt layer assumes the process is attached to a terminal,
-		   so these are "pre_opened" in our open file table.  Here we must
-		   get rid of those entries so we can open them properly for
-		   remotely running jobs.
-		*/
-	close( which );
-
-	status =  REMOTE_syscall( CONDOR_std_file_info, which, name, &pipe_fd );
-	if( status == IS_PRE_OPEN ) {
-		answer = pipe_fd;			/* it's a pipe */
-	} else {
-		switch( which ) {			/* it's an ordinary file */
-		  case 0:
-			answer = open( name, O_RDONLY, 0 );
-			break;
-		  case 1:
-		  case 2:
-			answer = open( name, O_WRONLY, 0 );
-			break;
+	result = REMOTE_syscall(CONDOR_get_std_file_info,fd,logical_name);
+	if(result==0) {
+		close(fd);
+		if(fd==0) {
+			flags = O_RDONLY;
+		} else {
+			flags = O_WRONLY;
 		}
-	}
-	if( answer < 0 ) {
-		sprintf( buf, "Can't open \"%s\"", name );
-		REMOTE_syscall(CONDOR_perm_error, buf );
-		dprintf( D_ALWAYS, buf );
-		Suicide();
-	} else {
-		if( answer != which ) {
-			dup2( answer, which );
+		new_fd = open(logical_name,flags,0);
+		if(new_fd<0) {
+			_condor_error_retry("Couldn't open standard file '%s'", logical_name );
 		}
+		if(new_fd!=fd) {
+			dup2(fd,new_fd);
+		}
+	} else {
+		_condor_error_fatal("Couldn't get info on standard file %d",fd );
 	}
 }
 
@@ -819,7 +798,7 @@ _condor_set_iwd()
 
 	if( REMOTE_syscall(CONDOR_get_iwd,iwd) < 0 ) {
 		REMOTE_syscall(
-			CONDOR_perm_error,
+			CONDOR_report_error,
 			"Can't determine initial working directory"
 		);
 		dprintf( D_ALWAYS, "Can't determine initial working directory\n" );
@@ -827,11 +806,10 @@ _condor_set_iwd()
 	}
 	if( REMOTE_syscall(CONDOR_chdir,iwd) < 0 ) {
 		sprintf( buf, "Can't open working directory \"%s\"", iwd );
-		REMOTE_syscall( CONDOR_perm_error, buf );
+		REMOTE_syscall( CONDOR_report_error, buf );
 		dprintf( D_ALWAYS, "Can't chdir(%s)\n", iwd );
 		Suicide();
 	}
-	Set_CWD( iwd );
 }
 
 void

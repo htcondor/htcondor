@@ -1,0 +1,1196 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
+/*
+System call stubs which cannot be built automatically by the stub
+generator go in here.
+
+This file can be processed with several purposes in mind.
+	FILE_TABLE - build switches needed to trap open file table changes
+	REMOTE_SYSCALLS - build general-purpose remote syscalls
+	SIGNALS_SUPPORT - build switches for signals support
+	(currently all signals switches are in signals_support.c)
+*/
+
+#include "condor_common.h"
+#include "syscall_numbers.h"
+#include "condor_syscall_mode.h"
+#include "file_table_interf.h"
+#include "debug.h"
+#include "../condor_ckpt/signals_control.h"
+#include "../condor_ckpt/file_state.h"
+
+#if defined(DL_EXTRACT)
+#   include <dlfcn.h>   /* for dlopen and dlsym */
+#endif
+
+extern unsigned int _condor_numrestarts;  /* in image.C */
+
+extern "C" {
+
+int GETRUSAGE(...);
+int update_rusage(...);
+int _libc_FORK(...);
+int SYSCONF(...);
+int SYSCALL(...);
+
+#if defined(LINUX)
+int _condor_xstat(int version, const char *path, struct stat *buf);
+int _condor_lxstat(int version, const char *path, struct stat *buf);
+int _condor_fxstat(int version, int fd, struct stat *buf);
+
+int _xstat(int, const char *, struct stat *);
+int _fxstat(int, int, struct stat *);
+int _lxstat(int, const char *, struct stat *);
+int __xstat(int, const char *, struct stat *);
+int __fxstat(int, int, struct stat *);
+int __lxstat(int, const char *, struct stat *);
+
+#if defined(GLIBC21)
+int _condor_xstat64(int version, const char *path, struct stat64 *buf);
+int _condor_lxstat64(int version, const char *path, struct stat64 *buf);
+int _condor_fxstat64(int versino, int fd, struct stat64 *buf);
+
+int _xstat64(int, const char *, struct stat64 *);
+int _fxstat64(int, int, struct stat64 *);
+int _lxstat64(int, const char *, struct stat64 *);
+int __xstat64(int, const char *, struct stat64 *);
+int __fxstat64(int, int, struct stat64 *);
+int __lxstat64(int, const char *, struct stat64 *);
+#endif
+
+#endif /* LINUX */
+
+/*************************************************************
+The following switches are for syscalls that affect the open
+file table.  These switches are built for _both_ full remote
+syscalls and standalone checkpointing.
+*************************************************************/
+
+#ifdef FILE_TABLE
+
+/*
+  This is some kind of cleanup routine for dynamically linked programs which
+  is called by exit.  For some reason it occasionally cuases a SEGV
+  when mixed with the condor checkpointing code.  Since condor programs
+  are always statically linked, we just make a dummy here to avoid
+  the problem.
+*/
+
+#if defined(OSF1)
+void ldr_atexit() {}
+#endif
+
+/*
+gcc seems to make pure virtual functions point to this symbol instead
+of to zero.  Although we never instantiate an object with pure virtuals,
+this symbol remains undefined when linking against C programs, so
+we must define it here.
+*/
+
+void __pure_virtual()
+{
+}
+
+/*
+Send and recv are special cases of sendfrom and recvto.
+On some platforms (OSF1), send and recv are defined or otherwise
+mucked with, so instead of trapping them, convert them into
+sendto and recvfrom.
+*/
+
+#if defined(OSF1)
+
+int send( int fd, const void *data, int length, int flags )
+{
+	return sendto(fd,data,length,flags,0,0);
+}
+
+int __send( int fd, const void *data, int length, int flags )
+{
+	return send(fd,data,length,flags);
+}
+
+int recv( int fd, void *data, int length, int flags )
+{
+	return recvfrom(fd,data,length,flags,0,0);
+}
+
+int __recv( int fd, void *data, int length, int flags )
+{
+	return recv(fd,data,length,flags);
+}
+
+#endif
+
+/*
+On all UNIXes, creat() is a system call, but has the same semantics
+as open() with a particular flag.  We will turn creat() into an
+open() so that it follows the same code path in Condor.
+*/
+
+int creat(const char *path, mode_t mode)
+{
+	return open((char*)path, O_WRONLY | O_CREAT | O_TRUNC, mode);
+}
+
+#ifdef SYS_open64
+int creat64(const char *path, mode_t mode)
+{
+	return open64((char*)path, O_WRONLY | O_CREAT | O_TRUNC, mode );
+}
+#endif
+
+/*
+On Solaris, socket() is usually found in libsocket.so.  However, many
+functions (such as DNS lookups) bypass this interface and go directly
+to so_socket in libc.  We need to trap so_socket.  I haven't a clue
+what each of these parameters do, and I am throwing them to the wind.
+Whee!
+*/
+
+#if defined(Solaris)
+
+int so_socket( int a, int b, int c, int d, int e )
+{
+	int result;
+	sigset_t sigs;
+
+	_condor_signals_disable();
+
+	if(MappingFileDescriptors()) {
+		_condor_file_table_init();
+		result = FileTab->socket(a,b,c);
+	} else {
+		if(LocalSysCalls()) {
+			result = syscall( SYS_so_socket, a, b, c, d, e );
+		} else {
+			result = REMOTE_syscall( CONDOR_socket, a, b, c );
+		}
+	}
+
+	_condor_signals_enable();
+
+	return result;
+}
+int _so_socket( int a, int b, int c, int d, int e )
+{
+	return so_socket(a,b,c,d,e);
+}
+
+int __so_socket( int a, int b, int c, int d, int e )
+{
+	return so_socket(a,b,c,d,e);
+}
+
+#endif /* Solaris */
+
+/*
+The Linux C library uses mmap for several purposes.  The I/O
+system uses mmap() to get a nicely aligned buffer.  The memory
+system also uses mmap() for large allocation requests.  In general,
+we don't support mmap(), but we can support calls with particular
+flags (MAP_ANON|MAP_PRIVATE) because they translate to "give me
+a clean new segment".  In these cases, we turn around and malloc()
+some new memory and trust that the caller doesn't really care that
+it came from the heap.
+*/
+
+#if defined( LINUX  )
+#include "condor_mmap.h"
+MMAP_T
+mmap( MMAP_T a, size_t l, int p, int f, int fd, off_t o )
+{
+        MMAP_T rval;
+        static int recursive=0;
+
+        if( (f==(MAP_ANONYMOUS|MAP_PRIVATE)) ) {
+                if(recursive) {
+                        rval = (MMAP_T) MAP_FAILED;
+                } else {
+                        recursive = 1;
+                        rval = (MMAP_T) malloc( l );
+                        recursive = 0;
+                }
+        } else {
+                if( LocalSysCalls() ) {
+                        rval = (MMAP_T) MAP_FAILED;
+                } else {
+                        rval = REMOTE_syscall( CONDOR_mmap, a, l, p, f, fd, o );
+                }
+        }
+
+        return rval;
+}
+
+int munmap( MMAP_T addr, size_t length ) 
+{
+        if(addr) free(addr);
+        return 0;
+}
+#endif /* defined( LINUX ) */
+
+#if defined(LINUX)
+
+/* 
+   There's a whole bunch of Linux-specific evilness w/ [_fxl]*stat.
+   Basically, we need to trap all these things and send them over the
+   wire as CONDOR_stat, CONDOR_fstat, or CONDOR_lstat as appropriate
+   and handle them locally with whatever SYS_*stat is defined on this
+   host.  While it's all the same actual number, glibc and libc5 do
+   this differently, which is why we need all the pre-processor junk.
+  
+   If that's not bad enough, there are two versions of the stat
+   structure (struct stat) on Linux!  One is a version of the stat
+   structure the kernel understands, which is the "old" stat.  The
+   other is the version of the stat structure that glibc understands,
+   which is the "new" stat.  Each of [_fxl]*stat pass in a version
+   argument, which specifies which version of the stat structure the
+   caller wants.
+  
+   So, if we want to do a local stat(), we call syscall() and pass in
+   a pointer to a struct kernel_stat, which we define.  This is the
+   version of the stat structure that the kernel expects.  Then, we
+   pass a pointer to this structure, the pointer we were given, and
+   the version number, into _condor_k_stat_convert(), which converts a
+   struct kernel_stat into the appropriate struct stat, depending on
+   the version.
+
+   If we need to do a remote stat(), we use the native struct stat,
+   whatever that happens to be, since that's what CEDAR knows about.
+   The RSC will get the fields we care about, and CEDAR knows how to
+   give those to us.  Again, we have to convert this into the right
+   kind of stat structure, depending on what our caller expects, so we
+   use _condor_s_stat_convert() which converts a struct stat into the
+   right version of the struct stat we were passed.  This might seem
+   unneccesary, but CEDAR only knows about certain fields, and if our
+   caller is looking for a "new" struct stat, we've got to zero out
+   everything else.  "Just memset() it to 0 before you give it to
+   CEDAR!", you say?  And what sizeof() do you propose we use?  We
+   have no idea what size the struct stat we are being passed is,
+   since it depends on the version.  This method just seems safer to
+   me.  If someone has a better solution, I'm all ears.
+
+  -Derek Wright 6/30/99
+*/
+
+/* 
+   First, do all the hell to figure out what actual numbers we'll want
+   to use with syscall() in the local cases.  Define our own
+   CONDOR_SYS_stat* to be whatever pre-processor definition we already
+   have.
+*/
+
+#if defined(SYS_prev_stat)
+#   define CONDOR_SYS_stat SYS_prev_stat
+#elif defined(SYS_stat)
+#   define CONDOR_SYS_stat SYS_stat
+#elif defined(SYS_old_stat)
+#   define CONDOR_SYS_stat SYS_old_stat
+#else
+#   error "No local version of SYS_*_stat on this platform!"
+#endif
+
+#if defined(SYS_prev_fstat)
+#   define CONDOR_SYS_fstat SYS_prev_fstat
+#elif defined(SYS_fstat)
+#   define CONDOR_SYS_fstat SYS_fstat
+#elif defined(SYS_old_fstat)
+#   define CONDOR_SYS_fstat SYS_old_fstat
+#else
+#error "No local version of SYS_*_fstat on this platform!"
+#endif
+
+#if defined(SYS_prev_lstat)
+#   define CONDOR_SYS_lstat SYS_prev_lstat
+#elif defined(SYS_lstat)
+#   define CONDOR_SYS_lstat SYS_lstat
+#elif defined(SYS_old_lstat)
+#   define CONDOR_SYS_lstat SYS_old_lstat
+#else
+#error "No local version of SYS_*_lstat on this platform!"
+#endif
+
+
+/* 
+   Now, trap all the various [_flx]*stat calls, and convert them all
+   to _condor_[xlf]stat().
+*/
+
+int _xstat(int version, const char *path, struct stat *buf)
+{
+	return _condor_xstat( version, path, buf );
+}
+
+
+int __xstat(int version, const char *path, struct stat *buf)
+{
+	return _condor_xstat( version, path, buf );
+}
+
+
+int _fxstat(int version, int fd, struct stat *buf)
+{
+	return _condor_fxstat( version, fd, buf );
+}
+
+
+int __fxstat(int version, int fd, struct stat *buf)
+{
+	return _condor_fxstat( version, fd, buf );
+}
+
+
+int _lxstat(int version, const char *path, struct stat *buf)
+{
+	return _condor_lxstat( version, path, buf );
+}
+
+
+int __lxstat(int version, const char *path, struct stat *buf)
+{
+	return _condor_lxstat( version, path, buf );
+}
+
+#if defined(GLIBC21)
+int _xstat64(int version, const char *path, struct stat64 *buf)
+{
+	return _condor_xstat64( version, path, buf );
+}
+
+int __xstat64(int version, const char *path, struct stat64 *buf)
+{
+	return _condor_xstat64( version, path, buf );
+}
+
+int _fxstat64(int version, int fd, struct stat64 *buf)
+{
+	return _condor_fxstat64( version, fd, buf );
+}
+
+int __fxstat64(int version, int fd, struct stat64 *buf)
+{
+	return _condor_fxstat64( version, fd, buf );
+}
+
+int _lxstat64(int version, const char *path, struct stat64 *buf)
+{
+	return _condor_lxstat64( version, path, buf );
+}
+
+int __lxstat64(int version, const char *path, struct stat64 *buf)
+{
+	return _condor_lxstat64( version, path, buf );
+}
+#endif /* GLIBC21 */
+
+/*
+   _condor_k_stat_convert() takes in a version, and two pointers, one
+   to a struct kernel_stat (which we define in kernel_stat.h), and one
+   to a struct stat (the type of which is determined by the version
+   arg).  For all versions of struct stat, copy out the fields we care
+   about, and depending on the version, zero out the fields we don't
+   care about.  
+*/
+
+
+#include "linux_kernel_stat.h"
+
+void 
+_condor_k_stat_convert( int version, const struct kernel_stat *source, 
+						struct stat *target )
+{
+		/* In all cases, we need to copy the fields we care about. */
+	target->st_dev = source->st_dev;
+	target->st_ino = source->st_ino;
+	target->st_mode = source->st_mode;
+	target->st_nlink = source->st_nlink;
+	target->st_uid = source->st_uid;
+	target->st_gid = source->st_gid;
+	target->st_rdev = source->st_rdev;
+	target->st_size = source->st_size;
+	target->st_blksize = source->st_blksize;
+	target->st_blocks = source->st_blocks;
+	target->st_atime = source->st_atime;
+	target->st_mtime = source->st_mtime;
+	target->st_ctime = source->st_ctime;
+
+		/* Now, handle the different versions we might be passed */
+	switch( version ) {
+	case _STAT_VER_LINUX_OLD:
+			/*
+			  This is the old version, which is identical to the
+			  kernel version.  We already copied all the fields we
+			  care about, so we're done.
+			*/
+		break;
+    case _STAT_VER_LINUX:
+			/* 
+			  This is the new version, that has some extra fields we
+			  need to 0-out.
+			*/
+		target->__pad1 = 0;
+		target->__pad2 = 0;
+		target->__unused1 = 0;
+		target->__unused2 = 0;
+		target->__unused3 = 0;
+		target->__unused4 = 0;
+		target->__unused5 = 0;
+		break;
+	default:
+			/* Some other version: blow-up */
+		EXCEPT( "_condor_k_stat_convert: unknown version (%d) of struct stat!", version );
+		break;
+	}
+}
+
+#if defined(GLIBC21)
+void 
+_condor_k_stat_convert64( int version, const struct kernel_stat *source, 
+						struct stat64 *target )
+{
+		/* In all cases, we need to copy the fields we care about. */
+	target->st_dev = source->st_dev;
+	target->st_ino = source->st_ino;
+	target->st_mode = source->st_mode;
+	target->st_nlink = source->st_nlink;
+	target->st_uid = source->st_uid;
+	target->st_gid = source->st_gid;
+	target->st_rdev = source->st_rdev;
+	target->st_size = source->st_size;
+	target->st_blksize = source->st_blksize;
+	target->st_blocks = source->st_blocks;
+	target->st_atime = source->st_atime;
+	target->st_mtime = source->st_mtime;
+	target->st_ctime = source->st_ctime;
+
+		/* Now, handle the different versions we might be passed */
+	switch( version ) {
+	case _STAT_VER_LINUX_OLD:
+			/*
+			  This is the old version, which is identical to the
+			  kernel version.  We already copied all the fields we
+			  care about, so we're done.
+			*/
+		break;
+	case _STAT_VER_LINUX:
+			/* 
+			  This is the new version, that has some extra fields we
+			  need to 0-out.
+			*/
+		target->__pad1 = 0;
+		target->__pad2 = 0;
+		target->__unused1 = 0;
+		target->__unused2 = 0;
+		target->__unused3 = 0;
+		target->__unused4 = 0;
+		target->__unused5 = 0;
+		break;
+	default:
+			/* Some other version: blow-up */
+		EXCEPT( "_condor_k_stat_convert64: unknown version (%d) of struct stat!", version );
+		break;
+	}
+}
+#endif
+
+/*
+  _condor_s_stat_convert() is just like _condor_k_stat_convert(),
+  except that it deals with two struct stat's, instead of a struct
+  kernel_stat and a struct_stat 
+*/
+
+void 
+_condor_s_stat_convert( int version, const struct stat *source, 
+						struct stat *target )
+{
+		/* In all cases, we need to copy the fields we care about. */
+	target->st_dev = source->st_dev;
+	target->st_ino = source->st_ino;
+	target->st_mode = source->st_mode;
+	target->st_nlink = source->st_nlink;
+	target->st_uid = source->st_uid;
+	target->st_gid = source->st_gid;
+	target->st_rdev = source->st_rdev;
+	target->st_size = source->st_size;
+	target->st_blksize = source->st_blksize;
+	target->st_blocks = source->st_blocks;
+	target->st_atime = source->st_atime;
+	target->st_mtime = source->st_mtime;
+	target->st_ctime = source->st_ctime;
+
+		/* Now, handle the different versions we might be passed */
+	switch( version ) {
+	case _STAT_VER_LINUX_OLD:
+			/*
+			  This is the old version, which is identical to the
+			  kernel version.  We already copied all the fields we
+			  care about, so we're done.
+			*/
+		break;
+	case _STAT_VER_LINUX:
+			/* 
+			  This is the new version, that has some extra fields we
+			  need to 0-out.
+			*/
+		target->__pad1 = 0;
+		target->__pad2 = 0;
+		target->__unused1 = 0;
+		target->__unused2 = 0;
+		target->__unused3 = 0;
+		target->__unused4 = 0;
+		target->__unused5 = 0;
+		break;
+	default:
+			/* Some other version: blow-up */
+		EXCEPT( "_condor_s_stat_convert: unknown version (%d) of struct stat!", version );
+		break;
+	}
+}
+
+#if defined(GLIBC21)
+void 
+_condor_s_stat_convert64( int version, const struct stat *source, 
+						struct stat64 *target )
+{
+		/* In all cases, we need to copy the fields we care about. */
+		/* here we downcast the stat64 into a stat */
+	target->st_dev = source->st_dev;
+	target->st_ino = source->st_ino;
+	target->st_mode = source->st_mode;
+	target->st_nlink = source->st_nlink;
+	target->st_uid = source->st_uid;
+	target->st_gid = source->st_gid;
+	target->st_rdev = source->st_rdev;
+	target->st_size = source->st_size;
+	target->st_blksize = source->st_blksize;
+	target->st_blocks = source->st_blocks;
+	target->st_atime = source->st_atime;
+	target->st_mtime = source->st_mtime;
+	target->st_ctime = source->st_ctime;
+
+		/* Now, handle the different versions we might be passed */
+	switch( version ) {
+	case _STAT_VER_LINUX_OLD:
+			/*
+			  This is the old version, which is identical to the
+			  kernel version.  We already copied all the fields we
+			  care about, so we're done.
+			*/
+		break;
+	case _STAT_VER_LINUX:
+			/* 
+			  This is the new version, that has some extra fields we
+			  need to 0-out.
+			*/
+		target->__pad1 = 0;
+		target->__pad2 = 0;
+		target->__unused1 = 0;
+		target->__unused2 = 0;
+		target->__unused3 = 0;
+		target->__unused4 = 0;
+		target->__unused5 = 0;
+		break;
+	default:
+			/* Some other version: blow-up */
+		EXCEPT( "_condor_s_stat_convert64: unknown version (%d) of struct stat!", version );
+		break;
+	}
+}
+#endif
+
+/*
+   Finally, implement the _condor_[xlf]stat() functions which do all
+   the work of checking if we want local or remote, and handle the
+   different versions of the stat struct as appropriate.
+*/
+
+int _condor_xstat(int version, const char *path, struct stat *buf)
+{
+	int rval;
+	struct kernel_stat kbuf;
+	struct stat sbuf;
+
+	_condor_signals_disable();
+
+	if( LocalSysCalls() ) {
+		rval = syscall( CONDOR_SYS_stat, path, &kbuf );
+		_condor_k_stat_convert( version, &kbuf, buf );
+	} else {
+		rval = REMOTE_syscall( CONDOR_stat, path, &sbuf );
+		_condor_s_stat_convert( version, &sbuf, buf );
+	}
+	_condor_signals_enable();
+	return rval;
+}
+
+#if defined(GLIBC21)
+int _condor_xstat64(int version, const char *path, struct stat64 *buf)
+{
+	int rval;
+	struct kernel_stat kbuf;
+	struct stat sbuf;
+
+	_condor_signals_disable();
+
+	if( LocalSysCalls() ) {
+		rval = syscall( CONDOR_SYS_stat, path, &kbuf );
+		_condor_k_stat_convert64( version, &kbuf, buf );
+	} else {
+		rval = REMOTE_syscall( CONDOR_stat, path, &sbuf );
+		_condor_s_stat_convert64( version, &sbuf, buf );
+	}
+	_condor_signals_enable();
+	return rval;
+}
+#endif
+
+int
+_condor_fxstat(int version, int fd, struct stat *buf)
+{
+	int rval;
+	int real_fd;
+	struct kernel_stat kbuf;
+	struct stat sbuf;
+
+	_condor_signals_disable();
+
+	if( (real_fd=_condor_file_table_map(fd)) < 0 ) {
+		rval = -1;
+	} else {
+		if( LocalSysCalls() || _condor_file_is_local(fd) ) {
+			rval = syscall( CONDOR_SYS_fstat, fd, &kbuf );
+			_condor_k_stat_convert( version, &kbuf, buf );
+		} else {
+			rval = REMOTE_syscall( CONDOR_fstat, real_fd, &sbuf );
+			_condor_s_stat_convert( version, &sbuf, buf );
+		}
+	}
+
+	_condor_signals_enable();
+	return rval;
+}
+
+#if defined(GLIBC21)
+int
+_condor_fxstat64(int version, int fd, struct stat64 *buf)
+{
+	int rval;
+	int real_fd;
+	int use_local_access = FALSE;
+	struct kernel_stat kbuf;
+	struct stat sbuf;
+
+	_condor_signals_disable();
+
+	if( (real_fd=_condor_file_table_map(fd)) < 0 ) {
+		rval = -1;
+	} else {
+		if( LocalSysCalls() || _condor_file_is_local(fd) ) {
+			rval = syscall( CONDOR_SYS_fstat, fd, &kbuf );
+			_condor_k_stat_convert64( version, &kbuf, buf );
+		} else {
+			rval = REMOTE_syscall( CONDOR_fstat, real_fd, &sbuf );
+			_condor_s_stat_convert64( version, &sbuf, buf );
+		}
+	}
+
+	_condor_signals_enable();
+	return rval;
+}
+#endif
+
+int _condor_lxstat(int version, const char *path, struct stat *buf)
+{
+	int rval;
+	struct kernel_stat kbuf;
+	struct stat sbuf;
+
+	_condor_signals_disable();
+
+	if( LocalSysCalls() ) {
+		rval = syscall( CONDOR_SYS_lstat, path, &kbuf );
+		_condor_k_stat_convert( version, &kbuf, buf );
+	} else {
+		rval = REMOTE_syscall( CONDOR_lstat, path, &sbuf );
+		_condor_s_stat_convert( version, &sbuf, buf );
+	}
+	_condor_signals_enable();
+	return rval;
+}
+
+#if defined(GLIBC21)
+int _condor_lxstat64(int version, const char *path, struct stat64 *buf)
+{
+	int rval;
+	struct kernel_stat kbuf;
+	struct stat sbuf;
+
+	_condor_signals_disable();
+
+	if( LocalSysCalls() ) {
+		rval = syscall( CONDOR_SYS_lstat, path, &kbuf );
+		_condor_k_stat_convert64( version, &kbuf, buf );
+	} else {
+		rval = REMOTE_syscall( CONDOR_lstat, path, &sbuf );
+		_condor_s_stat_convert64( version, &sbuf, buf );
+	}
+	_condor_signals_enable();
+	return rval;
+}
+#endif
+
+#endif /* LINUX stat hell */
+
+/*
+On Solaris and IRIX, stat, lstat, and fstat are statically defined in stat.h,
+so we can't override them.  Instead, we override the following three
+xstat definitions.
+
+These definitions look wrong to me.  I think they may need to change
+to be similar to the Linux definitions.  thain, 28 Dec 1999.
+*/
+
+#if defined(IRIX) || defined(Solaris)
+
+#if defined(Solaris) || defined(IRIX)
+int _xstat(const int ver, const char *path, struct stat *buf)
+#endif
+{
+	int	rval;
+
+	_condor_signals_disable();
+
+	if( LocalSysCalls() ) {
+		rval = syscall( SYS_xstat, ver, path, buf );
+	} else {
+		rval = REMOTE_syscall( CONDOR_stat, path, buf );
+	}
+
+	_condor_signals_enable();
+	return rval;
+}
+
+#if defined(Solaris) || defined(IRIX)
+int _lxstat(const int ver, const char *path, struct stat *buf)
+#endif
+{
+	int	rval;
+
+	_condor_signals_disable();
+
+	if( LocalSysCalls() ) {
+		rval = syscall( SYS_lxstat, ver, path, buf );
+	} else {
+		rval = REMOTE_syscall( CONDOR_lstat, path, buf );
+	}
+
+	_condor_signals_enable();
+	return rval;
+}
+
+#if defined(Solaris) || defined(IRIX)
+int _fxstat(const int ver, int fd, struct stat *buf)
+#endif
+{
+	int	rval;
+	int	real_fd;
+	int use_local_access = FALSE;
+
+	_condor_signals_disable();
+
+	if( (real_fd=_condor_file_table_map(fd)) < 0 ) {
+		rval = -1;
+	} else {
+		if( LocalSysCalls() || _condor_file_is_local(fd) ) {
+			rval = syscall( SYS_fxstat, ver, real_fd, buf );
+		} else {
+			rval = REMOTE_syscall( CONDOR_fstat, real_fd, buf );
+		}
+	}
+
+	_condor_signals_enable();
+	return rval;
+}
+#endif /* IRIX || Solaris */
+
+#endif FILE_TABLE
+
+
+/*************************************************************
+The following switches are for general purpose remote syscalls.
+Notice that some of these deal with files and fds, but none
+consult or change the open file table.
+*************************************************************/
+
+#ifdef REMOTE_SYSCALLS
+
+/*
+We don't handle readv directly in ANY case.  Split up the read
+and pass it through the regular read mechanism to take advantage
+of whatever magic is implemented there.  Notice that this works for
+both remote and local system calls.
+*/
+
+#if defined(HPUX9) || defined(LINUX) 
+ssize_t readv( int fd, const struct iovec *iov, size_t iovcnt )
+#elif defined(IRIX) || defined(OSF1)|| defined(HPUX10) || defined(Solaris26)
+ssize_t readv( int fd, const struct iovec *iov, int iovcnt )
+#else
+int readv( int fd, struct iovec *iov, int iovcnt )
+#endif
+{
+	int i, rval = 0, cc;
+
+	for( i = 0; i < iovcnt; i++ ) {
+		cc = read( fd, iov->iov_base, iov->iov_len );
+		if( cc < 0 ) return cc;
+		rval += cc;
+		if( cc != iov->iov_len ) return rval;
+		iov++;
+	}
+
+	return rval;
+}
+
+/*
+We don't handle writev directly in ANY case.  Split up the write
+and pass it through the regular write mechanism to take advantage
+of whatever magic is implemented there.  Notice that this works for
+both remote and local system calls.
+*/
+
+#if defined(HPUX9) || defined(LINUX) 
+ssize_t writev( int fd, const struct iovec *iov, size_t iovcnt )
+#elif defined(Solaris) || defined(IRIX) || defined(OSF1) || defined(HPUX10)
+ssize_t writev( int fd, const struct iovec *iov, int iovcnt )
+#else
+int writev( int fd, struct iovec *iov, int iovcnt )
+#endif
+{
+	int i, rval = 0, cc;
+
+	for( i = 0; i < iovcnt; i++ ) {
+		cc = write( fd, iov->iov_base, iov->iov_len );
+		if( cc < 0 ) return cc;
+		rval += cc;
+		if( cc != iov->iov_len ) return rval;
+		iov++;
+	}
+
+	return rval;
+}
+
+/*
+  The process should exit making the status value available to its parent
+  (the starter) - can only be a local operation.
+*/
+void _exit( int status )
+{
+	(void) syscall( SYS_exit, status );
+}
+
+/*
+  getrusage()
+
+  Condor doesn't support the fork() system call, so by definition the
+  resource usage of all our child processes is zero.  We must support
+  this, since those users in the POSIX world will call utimes() which
+  probably checks resource ruage for children - even though there are
+  none.
+
+  In the remote case things are a bit more complicated.  The rusage
+  should he the sum of what the user process has accumulated on the
+  current machine, and the usages it accumulated on all the machines
+  where it has run in the past.
+*/
+int
+getrusage( int who, struct rusage *rusage )
+{
+	int rval = 0;
+	int rval1 = 0;
+	int scm;
+	static struct rusage accum_rusage;
+	static int num_restarts = 50;  /* must not initialize to 0 */
+	sigset_t omask;
+
+	_condor_signals_disable();
+
+	/* Get current rusage for this process accumulated on this machine */
+
+	/* Set syscalls to local, since getrusage() in libc often calls
+	 * things like _open(), and we wish to avoid an infinite loop
+ 	 */
+	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+		
+#if defined( SYS_getrusage )
+	rval1 = syscall( SYS_getrusage, who, rusage);
+#elif defined( DL_EXTRACT )
+	{
+	        void *handle;
+		int (*fptr)(int,struct rusage *);
+
+		if ((handle = dlopen("/usr/lib/libc.so", RTLD_LAZY)) == NULL) {
+			rval = -1;
+		} else {
+			if ((fptr = (int (*)(int,struct rusage *))dlsym(handle, "getrusage")) == NULL) {
+				rval = -1;
+			} else {
+				rval1 = (*fptr)(who,rusage);
+			}
+		}
+	}
+#else
+	rval1 = GETRUSAGE(who,rusage);
+#endif 
+
+	/* Set syscalls back to what it was */
+	SetSyscalls(scm);
+
+	/* If in remote mode, we need to add in resource usage from previous runs as well */
+	if( !LocalSysCalls() ) {
+
+		/* Condor user processes don't have children - yet */
+		if( who != RUSAGE_SELF ) {
+			memset( (char *)rusage, '\0', sizeof(struct rusage) );
+			_condor_signals_enable();
+			return 0;
+		}
+
+		/* If our local getrusage above was successful, query the shadow 
+		 * for past usage */
+		if ( rval1 == 0 ) {  
+			/*
+			 * Get accumulated rusage from previous runs, but only once per
+			 * restart instead of doing a REMOTE_syscall every single time
+			 * getrusage() is called, which can be very frequently.
+			 * Note: _condor_numrestarts is updated in the restart code in
+			 * image.C whenver Condor does a restart from a checkpoint.
+			 */
+			if ( _condor_numrestarts != num_restarts ) {
+				num_restarts = _condor_numrestarts;
+				rval = REMOTE_syscall( CONDOR_getrusage, who, &accum_rusage );
+				/* on failure, clear out accum_rusage so we do not blow up
+				 * inside of update_rusage()
+				 */
+				if ( rval != 0 ) {
+					memset( (char *)&accum_rusage, '\0', sizeof(struct rusage) );
+				}
+			}
+
+			/* Sum up current rusage and past accumulated rusage */
+			update_rusage(rusage, &accum_rusage);
+		}
+	}
+
+	_condor_signals_enable();
+	if ( rval == 0  && rval1 == 0 ) {
+		return 0;
+	} else {
+		return -1;
+	}
+}
+
+/*
+  This routine which is normally provided in the C library determines
+  whether a given file descriptor refers to a tty.  The underlying
+  mechanism is an ioctl, but Condor does not support ioctl.  We
+  therefore provide a "quick and dirty" substitute here.  This may
+  not always be correct, but it will get you by in most cases.
+*/
+int __isatty( int filedes )
+{
+	if( RemoteSysCalls() ) {
+		return FALSE;
+	}
+
+	switch( filedes ) {
+		case 0:
+		case 1:
+		case 2:
+			return TRUE;
+		default:
+			return FALSE;
+	}
+}
+
+int _isatty( int fd )
+{
+	return __isatty(fd);
+}
+
+int isatty( int fd )
+{
+	return __isatty(fd);
+}
+
+/* Same purpose as isatty, but asks if tape.  Present in Fortran library.
+   I don't know if this is the real function format, but it's a good guess. */
+
+int __istape( int fd )
+{
+        return 0;
+}
+
+/* Force the dummy functions to be loaded and linked.  Even if the user's code
+   does not make use of it, we want to override the C library version.  */
+
+void _condor_force_isatty( int fd )
+{
+        isatty(fd);
+        __istape(fd);
+}
+
+/* fork() and sigaction() are not in fork.o or sigaction.o on Solaris 2.5
+   but instead are only in the threads libraries.  We access the old
+   versions through their new names. */
+
+
+#if defined(Solaris)
+pid_t
+FORK()
+{
+	return _libc_FORK();
+}
+
+#endif
+
+/* On Solaris, if an application uses sysconf() to query whether mmap()
+   support is enabled, override and return 0 (FALSE).  Condor does not
+   currently support mmap().  */
+
+#if defined(Solaris)
+long sysconf(int name)
+{
+	if (name == _SC_MAPPED_FILES) return 0;
+	return SYSCONF(name);
+}
+
+long _sysconf(int name)
+{
+	return sysconf(name);
+}
+#endif
+
+/* getlogin needs to be special because it returns a char*, and until
+ * we make stub_gen return longs instead of ints, casting char* to an int
+ * causes problems on some platforms...  also, stubgen does not deal
+ * well with a function like getlogin which returns a NULL on error */
+char *
+getlogin()
+{
+	int rval;
+	static char *loginbuf = NULL;
+	char *loc_rval;
+
+	if( LocalSysCalls() ) {
+#if defined( SYS_getlogin )
+		loc_rval = (char *) syscall( SYS_getlogin );
+		return loc_rval;
+#elif defined( DL_EXTRACT ) 
+		{
+        void *handle;
+        char * (*fptr)();
+        if ((handle = dlopen("/usr/lib/libc.so", RTLD_LAZY)) == NULL) {
+            return NULL;
+        }
+
+        if ((fptr = (char * (*)())dlsym(handle, "getlogin")) == NULL) {
+            return NULL;
+        }
+
+        return (*fptr)();
+		}
+#else
+		extern char *GETLOGIN();
+		return (  GETLOGIN() );
+#endif
+	} else {
+		if (loginbuf == NULL) {
+			loginbuf = (char *)malloc(35);
+			memset( loginbuf, 0, 35 );
+		}
+		rval = REMOTE_syscall( CONDOR_getlogin, loginbuf );
+	}
+
+	if ( rval >= 0 )
+		return loginbuf;
+	else
+		return NULL;  
+}
+
+/* Special kill that allows us to send signals to ourself, but not any
+   other pids.  Written on 7/8 by Derek Wrigh <wright@cs.wisc.edu> */
+int
+kill( pid_t pid, int sig )
+{
+	int rval;
+	pid_t my_pid;	
+
+	if( LocalSysCalls() ) {
+			/* We're in local mode, do exactly what we were told. */
+		rval = SYSCALL( SYS_kill, pid, sig );
+	} else {
+			/* Remote mode.  Only allow signals to be sent to ourself.
+			   Call the same getpid() the user job is calling to see
+			   if it is trying to send a signal to itself */
+		my_pid = getpid();   
+		if( pid == my_pid ) {
+				/* The user job thinks it's sending a signal to
+				   itself... let that work by getting our real pid. */
+			my_pid = SYSCALL( SYS_getpid );
+			rval = SYSCALL( SYS_kill, my_pid, sig );			
+		} else {
+				/* We don't allow you to send signals to anyone else */
+			rval = -1;
+		}
+	}	
+	return rval;
+}
+
+#if SYNC_RETURNS_VOID
+void
+#else
+int
+#endif
+sync( void )
+{
+	int rval;
+	pid_t my_pid;	
+
+	/* Always want to do a local sync() */
+	SYSCALL( SYS_sync );
+
+	/* If we're in remote mode, also want to send a sync() to the shadow */
+	if( RemoteSysCalls() ) {
+		REMOTE_syscall( CONDOR_sync );
+	}
+#if ! SYNC_RETURNS_VOID
+	return 0;
+#endif
+}
+
+#endif /* REMOTE_SYSCALLS */
+
+
+} // end extern "C"

@@ -222,19 +222,18 @@
 	}
 
 	  default:
-		SetSyscalls( scm );
-		dprintf(
-			D_ALWAYS,
-			"Don't know how to do system call %d <%s> remotely - yet\n",
-			syscall_num, _condor_syscall_name( syscall_num )
-		);
-		rval =  -1;
+		_condor_warning("%s -- system call not supported",
+			_condor_syscall_name( syscall_num ),
+			syscall_num );
+		errno = EINVAL;
+		rval = -1;
+		break;
 	}
 #if defined(USE_STUB_CLUMPS) || defined(IRIX)
 	}
 #endif 
 
-	condor_restore_sigmask(omask);
+	_condor_signals_enable();
 
 	SetSyscalls( scm );
 	return rval;
