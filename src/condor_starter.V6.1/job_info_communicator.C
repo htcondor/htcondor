@@ -152,6 +152,21 @@ JobInfoCommunicator::streamError()
 	return false;
 }
 
+bool
+JobInfoCommunicator::streamStdFile( const char *which )
+{
+	if(!strcmp(which,ATTR_JOB_INPUT)) {
+		return streamInput();
+	} else if(!strcmp(which,ATTR_JOB_OUTPUT)) {
+		return streamOutput();
+	} else if(!strcmp(which,ATTR_JOB_ERROR)) {
+		return streamError();
+	} else {
+		return false;
+	}
+}
+
+
 const char*
 JobInfoCommunicator::jobIWD( void )
 {

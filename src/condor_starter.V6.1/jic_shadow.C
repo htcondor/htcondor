@@ -1125,6 +1125,12 @@ JICShadow::getJobStdFile( const char* attr_name, const char* alt_name )
 	char filename[_POSIX_PATH_MAX];
 	filename[0] = '\0';
 
+	if(streamStdFile(attr_name)) {
+		if(!tmp && alt_name) job_ad->LookupString(alt_name,&tmp);
+		if(!tmp && attr_name) job_ad->LookupString(attr_name,&tmp);
+		return tmp;
+	}
+
 	if( ! wants_file_transfer && alt_name ) {
 		job_ad->LookupString( alt_name, &tmp );
 	}

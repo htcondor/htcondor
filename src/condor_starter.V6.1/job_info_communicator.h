@@ -95,6 +95,7 @@ public:
 	virtual bool streamInput();
 	virtual bool streamOutput();
 	virtual bool streamError();
+	virtual bool streamStdFile( const char *which );
 
 		/** Return a pointer to the job's initial working directory. 
 		*/
