@@ -137,6 +137,7 @@ int CondorFileBasic::fsync()
 int CondorFileBasic::flush()
 {
 	/* nothing to flush */
+	return 0;
 }
 
 int CondorFileBasic::is_readable()

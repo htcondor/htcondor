@@ -353,6 +353,7 @@ int CondorFileBuffer::fsync()
 int CondorFileBuffer::flush()
 {
 	flush(0);
+	return 0;
 }
 
 int CondorFileBuffer::fstat(struct stat *buf)

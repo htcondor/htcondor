@@ -21,5 +21,6 @@ int CondorFileSpecial::attach( int fd_in )
 	fd = fd_in;
 	readable = writeable = 1;
 	size = -1;
+	return 0;
 }
 

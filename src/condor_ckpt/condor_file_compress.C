@@ -397,6 +397,7 @@ int CondorFileCompress::write_int( int bytes, int x )
 		original->write( poffset++, &b, 1 );
 		x = x>>8;
 	}
+	return 0;
 }
 
 int CondorFileCompress::fcntl( int cmd, int arg )
