@@ -38,6 +38,8 @@
 #include "common.h"
 #include "exprTree.h"
 #include "matchClassad.h"
+#include "source.h"
+#include "sink.h"
 
 #if defined(COLLECTIONS)
 #include "collectionServer.h"
