@@ -29,26 +29,15 @@
                 S.Chandrasekar
 */
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <iostream.h>
-#include <errno.h>
+#include "condor_common.h"
+#include "condor_debug.h"
 #include "ios_common.h"
 #include "ios_stub.h"
 #include "shadow.h"
 #include "../condor_ckpt/file_state.h"
 #include "condor_file_info.h"
 #include "syscall_numbers.h"
-#include "condor_debug.h"
 #include "condor_sys.h"
-
-#define FALSE 0
-#define TRUE 1
-
 
 extern OpenFileTable   *FileTab; 
 
