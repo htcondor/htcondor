@@ -826,6 +826,7 @@ dc_reconfig( bool is_full )
 			ptmp = NULL;
 			char segfault;	
 			segfault = *ptmp; // should blow up here
+			ptmp[0] = 'a';
 			
 			// should never make it to here!
 			EXCEPT("FAILED TO DROP CORE");	
@@ -971,6 +972,7 @@ int main( int argc, char** argv )
 	// from the front of the command line.
 	i = 0;
 	bool done = false;
+
 	for(ptr = argv + 1; *ptr && (i < argc - 1); ptr++,i++) {
 		if(ptr[0][0] != '-') {
 			break;
