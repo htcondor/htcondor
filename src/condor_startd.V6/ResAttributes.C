@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "startd.h"
-#include "JavaInfo.h"
 
 
 MachAttributes::MachAttributes()
@@ -60,7 +59,6 @@ MachAttributes::MachAttributes()
 				 );
 		EXCEPT( "Can't compute physical memory." );
 	}
-	javaInfo = new JavaInfo();
 }
 
 
@@ -71,7 +69,6 @@ MachAttributes::~MachAttributes()
 	if( m_uid_domain ) free( m_uid_domain );
 	if( m_filesystem_domain ) free( m_filesystem_domain );
 	if( m_subnet ) free( m_subnet );
-	if( javaInfo ) delete javaInfo;
 }
 
 
@@ -203,8 +200,6 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 {
 	char line[100];
 
-	javaInfo->publish(cp,how_much);
-
 	if( IS_STATIC(how_much) || IS_PUBLIC(how_much) ) {
 
 			// STARTD_IP_ADDR 
@@ -325,8 +320,6 @@ MachAttributes::benchmark( Resource* rip, int force )
 		dprintf( D_ALWAYS, "State change: benchmarks completed\n" );
 		rip->change_state( idle_act );
 	}
-
-	javaInfo->compute(A_STATIC);
 }
 
 

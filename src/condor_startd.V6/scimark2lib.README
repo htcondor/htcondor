@@ -1,7 +1,0 @@
-
-scimark2lib.jar is used for benchmarking Java virtual machines.
-It is called directly by CondorJavaInfo.class, so it must be
-placed in the $(LIB) directory along with the other Java
-components.
-
-More information can be found at http://math.nist.gov/scimark2/

@@ -31,7 +31,6 @@
 #ifndef _RES_ATTRIBUTES_H
 #define _RES_ATTRIBUTES_H
 
-class JavaInfo;
 class Resource;
 
 typedef int amask_t;
@@ -117,7 +116,6 @@ private:
 	char*			m_filesystem_domain;
 	char*			m_subnet;
 	int				m_idle_interval; 	// for D_IDLE dprintf messages
-	JavaInfo		*javaInfo;
 };	
 
 
