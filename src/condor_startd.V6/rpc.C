@@ -27,6 +27,7 @@ extern "C" int create_tcpsock(char *service, int port);
 extern "C" int call_incoming(int is, int socktype, resource_id_t rid);
 extern "C" int create_port(int *sock);
 extern "C" int reply(Sock *sock, int answer);
+
 int command_main(Sock *sock, struct sockaddr_in *from, resource_id_t rid);
 
 static char *_FileName_ = __FILE__;
@@ -229,64 +230,47 @@ vacate_client(resource_id_t rid)
 	ReliSock *sock;
 	resource_info_t *rip;
 
-	if (!(rip = resmgr_getbyrid(rid)))
+	if( !(rip = resmgr_getbyrid(rid)) ) {
 		return;
+	}
 
 	dprintf(D_FULLDEBUG, "vacate_client %s...\n", rip->r_client);
-	if ((sd = do_connect(rip->r_client, "condor_schedd", 0)) < 0)
-	{
+	if( (sd = do_connect(rip->r_client, "condor_schedd", 0)) < 0 ) {
 		dprintf(D_ALWAYS, "Can't connect to schedd (%s)\n", rip->r_client);
-	}
-	else
-	{
+	} else {
 		sock = new ReliSock();
 		sock->attach_to_file_desc(sd);
-		if(!sock->put(VACATE_SERVICE))
-		{
+		if( !sock->put(VACATE_SERVICE) ) {
 			dprintf(D_ALWAYS, "Can't send VACATE_SERVICE command\n");
-		}
-		else if(!sock->put(rip->r_capab))
-		{
+		} else if( !sock->put(rip->r_capab) ) {
 			dprintf(D_ALWAYS, "Can't send capability\n");
-		}
-		else if(!sock->eom())
-		{
+		} else if( !sock->eom() ) {
 			dprintf(D_ALWAYS, "Can't send EOM to schedd\n");
 		}
 		delete sock;
 	}
 
 	/* send VACATE_SERVICE and capability to accountant */
-	if (AccountantHost)
-	{
-		if ((sd = do_connect(AccountantHost, "condor_accountant",
-							 ACCOUNTANT_PORT)) < 0)
-		{
-				dprintf(D_ALWAYS, "Couldn't connect to accountant\n");
-		}
-		else
-		{
+	if( AccountantHost ) {
+		if( (sd = do_connect(AccountantHost, "condor_accountant",
+							 ACCOUNTANT_PORT)) < 0 ) {
+			dprintf(D_ALWAYS, "Couldn't connect to accountant\n");
+		} else {
 			sock = new ReliSock();
 			sock->attach_to_file_desc(sd);
-			if(!sock->put(VACATE_SERVICE))
-			{
+			if( !sock->put(VACATE_SERVICE) ) {
 				dprintf(D_ALWAYS, "Can't send VACATE_SERVICE command\n");
-			}
-			else if(!sock->put(rip->r_capab))
-			{
+			} else if( !sock->put(rip->r_capab) ) {
 				dprintf(D_ALWAYS, "Can't send capability\n");
-			}
-			else if(!sock->eom())
-			{
-				dprintf(D_ALWAYS, "Can't send EOM to schedd\n");
+			} else if( !sock->eom() ) {
+				dprintf(D_ALWAYS, "Can't send EOM to accountant\n");
 			}
 			delete sock;
 		}
 	}
+
 	dprintf(D_ALWAYS, "Done vacating client %s\n", rip->r_client);
-	free(rip->r_client);
-	rip->r_client = NULL;
-	free(rip->r_capab);
-	rip->r_capab = NULL;
-	rip->r_claimed = FALSE;
+		// resource_free deletes a whole bunch of stuff, including
+		// r_client, so print out the message before we call it. 
+	resource_free( rid );
 }
