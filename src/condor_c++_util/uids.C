@@ -36,6 +36,9 @@ static char* CondorUserName = NULL;
 static const char* RealUserName = NULL;
 THREAD_LOCAL_STORAGE static priv_state CurrentPrivState = PRIV_UNKNOWN;
 static int SwitchIds = TRUE;
+static int UserIdsInited = FALSE;
+static int OwnerIdsInited = FALSE;
+
 
 /* must be listed in the same order as enum priv_state in condor_uid.h */
 static char *priv_state_name[] = {
@@ -44,6 +47,7 @@ static char *priv_state_name[] = {
 	"PRIV_CONDOR",
 	"PRIV_USER",
 	"PRIV_USER_FINAL"
+	"PRIV_FILE_OWNER"
 };
 
 
@@ -106,6 +110,14 @@ get_priv()
 	return CurrentPrivState;
 }
 
+
+int
+can_switch_ids( void )
+{
+	return SwitchIds;
+}
+
+
 /* End Common Bits */
 
 
@@ -121,6 +133,9 @@ void init_condor_ids() {}
 int set_user_ids(uid_t uid, gid_t gid) { return FALSE; }
 uid_t get_my_uid() { return 999999; }
 gid_t get_my_gid() { return 999999; }
+int set_file_owner_ids( uid_t uid, gid_t gid ) { return FALSE; }
+void uninit_file_owner_ids() {}
+
 
 // Cover our getuid...
 uid_t getuid() { return get_my_uid(); }
@@ -149,6 +164,7 @@ void uninit_user_ids()
 	UserLoginName = NULL;
 	UserDomainName= NULL;
 	CurrUserHandle = NULL;
+	UserIdsInited = false;
 }
 
 HANDLE priv_state_get_handle()
@@ -175,6 +191,9 @@ init_user_ids(const char username[], const char domain[])
 	   	return 0;
    	}
 
+		// we default to true, and only set this to false in the few
+		// cases where this method would return failure.
+	UserIdsInited = true;
 	
 	// see if we already have a user handle for the requested user.
 	// if so, just return 1. 
@@ -247,6 +266,7 @@ init_user_ids(const char username[], const char domain[])
 		if ( ! w_pw ) {
 			dprintf(D_ALWAYS, "ERROR: Could not locate credential for user "
 				"'%s@%s'\n", username, domain);
+			UserIdsInited = false;
 			return 0;
 		} else {
 			sprintf(pw, "%S", w_pw);
@@ -285,6 +305,7 @@ init_user_ids(const char username[], const char domain[])
 			if ( !retval ) {
 				dprintf(D_ALWAYS, "init_user_ids: LogonUser failed with NT Status %ld\n", 
 					GetLastError());
+				UserIdsInited = false;
 				return 0;
 			} else {
 				// stash the new token in our cache
@@ -522,17 +543,19 @@ int setegid(gid_t);
 
 #define ROOT 0
 
-static uid_t CondorUid, UserUid, MyUid, RealCondorUid;
-static gid_t CondorGid, UserGid, MyGid, RealCondorGid;
+static uid_t CondorUid, UserUid, MyUid, RealCondorUid, OwnerUid;
+static gid_t CondorGid, UserGid, MyGid, RealCondorGid, OwnerGid;
 static int CondorIdsInited = FALSE;
-static int UserIdsInited = FALSE;
 static char* UserName = NULL;
+static char* OwnerName = NULL;
 static passwd_cache pcache;
 
 static int set_condor_euid();
 static int set_condor_egid();
 static int set_user_euid();
 static int set_user_egid();
+static int set_owner_euid();
+static int set_owner_egid();
 static int set_user_ruid();
 static int set_user_rgid();
 static int set_root_euid();
@@ -900,6 +923,38 @@ uninit_user_ids()
 }
 
 
+void
+uninit_file_owner_ids() 
+{
+	OwnerIdsInited = FALSE;
+}
+
+
+int
+set_file_owner_ids( uid_t uid, gid_t gid )
+{
+	if( OwnerIdsInited && OwnerUid != uid  ) {
+		dprintf( D_ALWAYS, 
+				 "warning: setting OwnerUid to %d, was %d previosly\n",
+				 (int)uid, (int)OwnerUid );
+	}
+	OwnerUid = uid;
+	OwnerGid = gid;
+	OwnerIdsInited = TRUE;
+
+	// find the user login name for this uid.  note we should not
+	// EXCEPT or log an error if we do not find it; it is OK for the
+	// user not to be in the passwd file...
+	if( OwnerName ) {
+		free( OwnerName );
+	}
+	if ( !pcache.get_user_name( OwnerUid, OwnerName ) ) {
+		OwnerName = NULL;
+	}
+	return TRUE;
+}
+
+
 priv_state
 _set_priv(priv_state s, char file[], int line, int dologging)
 {
@@ -935,6 +990,11 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 			set_root_euid();	/* must be root to switch */
 			set_user_egid();
 			set_user_euid();
+			break;
+		case PRIV_FILE_OWNER:
+			set_root_euid();	/* must be root to switch */
+			set_owner_egid();
+			set_owner_euid();
 			break;
 		case PRIV_USER_FINAL:
 			set_root_euid();	/* must be root to switch */
@@ -1008,6 +1068,30 @@ get_user_gid()
 	}
 
 	return UserGid;
+}
+
+
+uid_t
+get_file_owner_uid()
+{
+	if( !OwnerIdsInited ) {
+		dprintf( D_ALWAYS,
+				 "get_file_owner_uid() called when OwnerIds not inited!\n" );
+		return (uid_t)-1;
+	}
+	return OwnerUid;
+}
+
+
+gid_t
+get_file_owner_gid()
+{
+	if( !OwnerIdsInited ) {
+		dprintf( D_ALWAYS,
+				 "get_file_owner_gid() called when OwnerIds not inited!\n" );
+		return (gid_t)-1;
+	}
+	return OwnerGid;
 }
 
 
@@ -1164,6 +1248,46 @@ set_root_euid()
 }
 
 
+int
+set_owner_euid()
+{
+	if( !OwnerIdsInited ) {
+		dprintf( D_ALWAYS,
+				 "set_user_euid() called when OwnerIds not inited!\n" );
+		return -1;
+	}
+	return SET_EFFECTIVE_UID(OwnerUid);
+}
+
+
+int
+set_owner_egid()
+{
+	if( !OwnerIdsInited ) {
+		dprintf( D_ALWAYS,
+				 "set_owner_egid() called when OwnerIds not inited!\n" );
+		return -1;
+	}
+	
+		// Now, call our caching version of initgroups with the 
+		// right username so the user can access files belonging
+		// to any group (s)he is a member of.  If we did not call
+		// initgroups here, the user could only access files
+		// belonging to his/her default group, and might be left
+		// with access to the groups that root belongs to, which 
+		// is a serious security problem.
+	if( OwnerName ) {
+		errno = 0;
+		if(!pcache.init_groups(OwnerName) ) {
+			dprintf( D_ALWAYS, 
+					 "set_owner_egid - ERROR: initgroups(%s, %d) failed, "
+					 "errno: %s\n", OwnerName, OwnerGid, strerror(errno) );
+		}			
+	}
+	return SET_EFFECTIVE_GID(UserGid);
+}
+
+
 #if 0   // these functions not needed... probably could be removed completely
 int
 set_condor_ruid()
@@ -1214,3 +1338,71 @@ get_user_loginname() {
 	return UserName;
 }
 #endif  /* #if defined(WIN32) */
+
+
+const char*
+priv_identifier( priv_state s )
+{
+	static char id[256];
+	int id_sz = 256;	// for use w/ snprintf()
+
+	switch( s ) {
+
+	case PRIV_UNKNOWN:
+		snprintf( id, id_sz, "unknown user" );
+		break;
+
+	case PRIV_FILE_OWNER:
+		if( ! OwnerIdsInited ) {
+			EXCEPT( "Programmer Error: priv_identifier() called for "
+					"PRIV_FILE_OWNER, but owner ids are not initialized" );
+		}
+#ifdef WIN32
+		EXCEPT( "Programmer Error: priv_identifier() called for "
+				"PRIV_FILE_OWNER, on WIN32" );
+#else
+		snprintf( id, id_sz, "file owner '%s' (%d.%d)",
+				  OwnerName ? OwnerName : "unknown", OwnerUid, OwnerGid );
+#endif
+		break;
+
+	case PRIV_USER:
+	case PRIV_USER_FINAL:
+		if( ! UserIdsInited ) {
+			EXCEPT( "Programmer Error: priv_identifier() called for "
+					"%s, but user ids are not initialized",
+					priv_to_string(s) );
+		}
+#ifdef WIN32
+		snprintf( id, id_sz, "%s@%s", UserLoginName, UserDomainName );
+#else
+		snprintf( id, id_sz, "User '%s' (%d.%d)", 
+				  UserName ? UserName : "unknown", UserUid, UserGid );
+#endif
+		break;
+
+#ifdef WIN32
+	case PRIV_ROOT:
+	case PRIV_CONDOR:
+		snprintf( id, id_sz, "SuperUser (system)" );
+		break;
+#else /* UNIX */
+	case PRIV_ROOT:
+		snprintf( id, id_sz, "SuperUser (root)" );
+		break;
+
+	case PRIV_CONDOR:
+		snprintf( id, id_sz, "Condor daemon user '%s' (%d.%d)", 
+				  CondorUserName, CondorUid, CondorGid );
+		break;
+#endif /* WIN32 vs. UNIX */
+
+	default:
+		EXCEPT( "Programmer error: unknown state (%d) in priv_identifier", 
+				(int)s );
+
+	} /* end of switch */
+
+	return (const char*) id;
+}
+

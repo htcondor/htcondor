@@ -58,6 +58,7 @@ typedef enum {
 	PRIV_CONDOR,
 	PRIV_USER,
 	PRIV_USER_FINAL,
+	PRIV_FILE_OWNER,
 	_priv_state_threshold
 } priv_state;
 
@@ -65,6 +66,7 @@ typedef enum {
 #define set_condor_priv() _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 1)
 #define set_user_priv()	_set_priv(PRIV_USER, __FILE__, __LINE__, 1)
 #define set_user_priv_final() _set_priv(PRIV_USER_FINAL, __FILE__, __LINE__, 1)
+#define set_file_owner_priv() _set_priv(PRIV_FILE_OWNER, __FILE__, __LINE__, 1)
 #define set_root_priv()	_set_priv(PRIV_ROOT, __FILE__, __LINE__, 1)
 
 #ifdef WIN32
@@ -75,9 +77,12 @@ HANDLE priv_state_get_handle();
 
 const char *get_user_loginname(); 
 void _condor_disable_uid_switching();
+int can_switch_ids( void );
 void clear_passwd_cache();
 void init_condor_ids();
 void uninit_user_ids();
+void uninit_file_owner_ids();
+int set_file_owner_ids( uid_t uid, gid_t gid );
 int init_user_ids(const char username[], const char domain[]);
 int init_user_ids_quiet(const char username[]);
 int set_user_ids(uid_t uid, gid_t gid);
@@ -87,6 +92,7 @@ uid_t get_my_uid();
 gid_t get_my_gid();
 priv_state get_priv();
 const char* priv_to_string( priv_state s );
+const char* priv_identifier( priv_state s );
 
 
 #if !defined(WIN32)
@@ -94,6 +100,8 @@ uid_t get_condor_uid();
 gid_t get_condor_gid();
 uid_t get_user_uid();
 gid_t get_user_gid();
+uid_t get_file_owner_uid();
+gid_t get_file_owner_gid();
 uid_t get_real_condor_uid();
 gid_t get_real_condor_gid();
 #else

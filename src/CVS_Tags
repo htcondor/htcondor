@@ -1,3 +1,9 @@
+07/23/04 V6_6-merge-16
+   The state of the V6_6-branch for yet another merge into
+   V6_7-branch.  This gets the major bug fixes for the sandbox cleanup
+   code for 6.6.6 that i had to do since merge-15.  a few other minor
+   improvements like the fix to configure to find vendor compilers.
+
 07/23/04 V6_7-pre_merge-V6_6-merge-16
    The beginning of a merge of V6_6-branch into V6_7-branch.
 

@@ -729,9 +729,11 @@ if test "$os" = "Linux" || test "$os" = "Darwin" ; then
   _cv_has_vendor_f90="NO"
 else
   if test "$os" = "HP-UX" ; then
-    _vendor_cc_PATH="/usr/bin:$PATH"
+    _vendor_cc_PATH="/opt/ansic/bin:/opt/CC/bin:/usr/bin:/bin:$PATH"
+    _vendor_f_PATH="/opt/fortran/bin:/opt/fortran90/bin:/usr/bin:/bin:$PATH"
   else
-    _vendor_cc_PATH="$PATH:/opt/SUNWspro/bin:/usr/ucb"
+    _vendor_cc_PATH="/opt/SUNWspro/bin:/usr/ucb:/usr/bin:/bin:$PATH"
+    _vendor_f_PATH=$_vendor_cc_PATH
   fi
   AC_PATH_PROG([_cv_vendor_cc],[cc],[no],[$_vendor_cc_PATH])
   if test "$_cv_vendor_cc" = "no" ; then
@@ -740,8 +742,7 @@ else
     _cv_has_vendor_cc="YES"
   fi
 
-  AC_PATH_PROGS([_cv_vendor_cplus],[CC cxx],[no],
-                [$PATH:/opt/SUNWspro/bin:/usr/ucb])
+  AC_PATH_PROGS([_cv_vendor_cplus],[CC cxx],[no],[$_vendor_cc_PATH])
   if test "$_cv_vendor_cplus" = "no" ; then
     _cv_has_vendor_cplus="NO"
   else
@@ -750,15 +751,14 @@ else
       AC_SUBST([_cv_vendor_cplus_name],[$_cv_vendor_cplus_name])
   fi
 
-  AC_PATH_PROG([_cv_vendor_f77],[f77],[no],[$PATH])
+  AC_PATH_PROG([_cv_vendor_f77],[f77],[no],[$_vendor_f_PATH])
   if test "$_cv_vendor_f77" = "no" ; then
     _cv_has_vendor_f77="NO"
   else
     _cv_has_vendor_f77="YES"
   fi
 
-  AC_PATH_PROG([_cv_vendor_f90],[f90],[no],
-               [$PATH:/opt/SUNWspro/bin:/usr/ucb])
+  AC_PATH_PROG([_cv_vendor_f90],[f90],[no],[$_vendor_f_PATH])
   if test "$_cv_vendor_f90" = "no" ; then
     _cv_has_vendor_f90="NO"
   else
