@@ -25,7 +25,6 @@
 #include "killfamily.h"
 #include "../condor_procapi/procapi.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
-static char *_FileName_ = __FILE__;         // Used by EXCEPT (see except.h)
 
 // We do all this stuff here so killfamily.C can be linked in
 // with program using DaemonCore as well as programs which are
@@ -203,6 +202,9 @@ ProcFamily::takesnapshot()
 	// grab all pids in the family we can see now
 	if ( procAPI->getPidFamily(daddy_pid,pidfamily) < 0 ) {
 		// daddy_pid must be gone!
+		dprintf( D_PROCFAMILY, 
+				 "ProcFamily::takesnapshot: getPidFamily(%d) failed.\n", 
+				 daddy_pid );
 		pidfamily[0] = 0;
 	}
 		// Don't need to insert daddypid, it's already in there. 
@@ -215,11 +217,6 @@ ProcFamily::takesnapshot()
 		for (i=0;(*old_pids)[i].pid;i++) {
 
 			currpid = (*old_pids)[i].pid;
-
-			// skip our daddy_pid, cuz getPidFamily() only returns
-			// decendants, not the daddy_pid itself.
-			if (currpid == daddy_pid)
-				continue;
 
 			// see if currpid exists in our new list
 			for (j=0;pidfamily[j] != currpid;j++) {
@@ -276,6 +273,10 @@ ProcFamily::takesnapshot()
 		delete pinfo;
 	}
 
+	if( (DebugFlags & D_PROCFAMILY) && (DebugFlags & D_FULLDEBUG) ) {
+		display();
+	}
+
 	// set our priv state back to what it originally was
 	set_priv(priv);
 }
@@ -296,3 +297,16 @@ ProcFamily::currentfamily( pid_t* & ptr  )
 	ptr = tmp;
 	return family_size;
 }
+
+
+void
+ProcFamily::display()
+{
+	int i;
+	dprintf( D_PROCFAMILY, "ProcFamily: parent: %d others:", daddy_pid );
+	for( i=0; i<family_size; i++ ) {
+		dprintf( D_PROCFAMILY | D_NOHEADER, " %d", (*old_pids)[i].pid );
+	}
+	dprintf( D_PROCFAMILY | D_NOHEADER, "\n" );
+}
+
