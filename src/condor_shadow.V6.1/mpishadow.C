@@ -42,6 +42,10 @@ MPIShadow::MPIShadow() {
 	actualExitReason = -1;
 	actualExitStatus = -1;    
 	info_tid = -1;
+#if ! MPI_USES_RSH
+	master_addr = NULL;
+	mpich_jobid = NULL;
+#endif
 }
 
 MPIShadow::~MPIShadow() {
@@ -49,12 +53,23 @@ MPIShadow::~MPIShadow() {
     for ( int i=0 ; i<=ResourceList.getlast() ; i++ ) {
         delete ResourceList[i];
     }
+#if ! MPI_USES_RSH
+	if( master_addr ) {
+		free( master_addr );
+	}
+	if( mpich_jobid ) {
+		free( mpich_jobid );
+	}
+
+#endif /* ! MPI_USES_RSH */
 }
 
 void 
 MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[], 
                  char capability[], char cluster[], char proc[])
 {
+
+	char buf[256];
 
     if ( !jobAd ) {
         EXCEPT( "No jobAd defined!" );
@@ -72,10 +87,21 @@ MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 						  (CommandHandlercpp)&MPIShadow::updateFromStarter,
 						  "MPIShadow::updateFromStarter", this, WRITE ); 
 
+#if MPI_USES_RSH	
+
         /* Register Command for sneaky rsh: */
 	daemonCore->Register_Command( MPI_START_COMRADE, "MPI_START_COMRADE", 
 		 (CommandHandlercpp)&MPIShadow::startComrade, "startComrade", 
 		 this, WRITE );
+
+#else /* ! MPI_USES_RSH */
+
+		// initialize mpich_jobid, since we'll need it to spawn later
+	sprintf( buf, "%s.%d.%d", my_full_hostname(), getCluster(),
+			 getProc() );
+	mpich_jobid = strdup( buf );
+
+#endif /* ! MPI_USES_RSH */
 
         // make first remote resource the "master".  Put it first in list.
     MpiResource *rr = new MpiResource( this );
@@ -84,7 +110,6 @@ MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
     rr->setMachineName ( "Unknown" );
     ClassAd *temp = new ClassAd( *(getJobAd() ) );
 
-    char buf[128];
     sprintf ( buf, "%s = %s", ATTR_MPI_IS_MASTER, "TRUE" );
     if ( !temp->Insert( buf )) {
         dprintf ( D_ALWAYS, "Failed to insert %s into jobAd.\n", buf );
@@ -259,9 +284,24 @@ MPIShadow::getResources( void )
 void
 MPIShadow::startMaster()
 {
+    MpiResource *rr;
     dprintf ( D_FULLDEBUG, "In MPIShadow::startMaster()\n" );
 
-    MpiResource *rr;
+		// This function does *TOTALLY* different things depending on
+		// if we're using rsh to spawn the comrade nodes or if we're
+		// getting the ip/port of the master via a file specified in
+		// the environment and passing that back to the shadow to
+		// spawn all the comrades at once.  However, in both cases, we
+		// have to contact a startd to spawn the master node, so that
+		// code is shared at the end...
+
+#if MPI_USES_RSH
+
+		// If we're using rsh, we've got to setup the procgroup file
+		// (which is pretty expensive), hack the master ad to deal w/
+		// file transfer stuff, command line args to specify the
+		// procgroup file, etc, etc.
+
     char mach[128];
     char *sinful = new char[128];
     struct sockaddr_in sin;
@@ -339,23 +379,31 @@ MPIShadow::startMaster()
         // alter the master's args...
     hackMasterAd( rr->getJobAd() );
 
-        // yak with this startd.  Others will come in startComrade.
-    if ( rr->requestIt() == -1 ) {
-        shutDown( JOB_NOT_STARTED, 0 );
-    }
+        // Once we actually spawn the job (below), the sneaky rsh
+		// intercepts the master's call to rsh, and sends stuff to
+		// startComrade()... 
 
-		// Register the master's claimSock for remote
-		// system calls.  It's a bit funky, but works.
-	daemonCore->Register_Socket(rr->getClaimSock(), "RSC Socket", 
-       (SocketHandlercpp)&MpiResource::handleSysCalls,"HandleSyscalls",rr);
+#else /* ! MPI_USES_RSH */
 
-    nextResourceToStart++;
+		// All we have to do is modify the ad for the master to append
+		// the MPICH-specific environment variables.
+	rr = ResourceList[0];
+	modifyNodeAd( rr->getJobAd() );
+
+#endif /* ! MPI_USES_RSH */
+
+		// In both cases, we've got to actually talk to a startd to
+		// spawn the master node, register the claimSock for remote
+		// system calls, and keep track of which resource to use
+		// next.  All this stuff is done by spawnNode(), so just use
+		// that.  
+	spawnNode( rr );
 
     dprintf ( D_PROTOCOL, "#3 - Just requested Master resource.\n" );
 
-        /* Now the sneaky rsh intercepts the master's call to rsh, 
-           and sends stuff to startComrade()... */
 }
+
+#if (MPI_USES_RSH) 
 
 int
 MPIShadow::startComrade( int cmd, Stream* s )
@@ -375,33 +423,15 @@ MPIShadow::startComrade( int cmd, Stream* s )
     dprintf ( D_PROTOCOL, "#8 - Received args from sneaky rsh\n" );
     dprintf ( D_FULLDEBUG, "Comrade args: %s\n", comradeArgs );
 
-    MpiResource *rr = ResourceList[nextResourceToStart++];
+    MpiResource *rr = ResourceList[nextResourceToStart];
     
         // modify this comrade's arguments...using the comradeArgs given.
     hackComradeAd( comradeArgs, rr->getJobAd() );
 
     dprintf ( D_PROTOCOL, "#9 - Added args to jobAd, now requesting:\n" );
 
-        // yak with this startd; 
-    if ( rr->requestIt() == -1 ) {
-        shutDown( JOB_NOT_STARTED, 0 );
-    }
-
-		// Register the remote instance's claimSock for remote
-		// system calls.  It's a bit funky, but works.
-	daemonCore->Register_Socket(rr->getClaimSock(), "RSC Socket", 
-       (SocketHandlercpp)&MpiResource::handleSysCalls,"HandleSyscalls",rr);
-    
-    dprintf ( D_PROTOCOL, "#10 - Just requested Comrade resource\n" );
-
-	if ( nextResourceToStart == numNodes ) {
-			/* This is the last node we're starting...make an execute event. */
-		ExecuteEvent event;
-		strcpy( event.executeHost, "MPI_job" );
-		if ( !uLog.writeEvent( &event )) {
-			dprintf ( D_ALWAYS, "Unable to log EXECUTE event." );
-		}
-	}
+		// Now, call the shared method to really spawn this node
+	spawnNode( rr );
 
     return TRUE;
 }
@@ -505,6 +535,164 @@ MPIShadow::hackComradeAd( char *comradeArgs, ClassAd *ad )
         shutDown( JOB_NOT_STARTED, 0 );
     }
 }
+
+#else /* ! MPI_USES_RSH */
+
+void
+MPIShadow::spawnAllComrades( void )
+{
+		/* 
+		   If this function is being called, we've already spawned the
+		   root node and gotten its ip/port from our special pseudo
+		   syscall.  So, all we have to do is loop over our remote
+		   resource list, modify each resource's job ad with the
+		   appropriate info, and spawn our node on each resource.
+		*/
+
+    MpiResource *rr;
+	int last = ResourceList.getlast();
+	while( nextResourceToStart <= last ) {
+        rr = ResourceList[nextResourceToStart];
+		modifyNodeAd( rr->getJobAd() );
+		spawnNode( rr );  // This increments nextResourceToStart 
+    }
+	assert( nextResourceToStart == numNodes );
+}
+
+
+bool
+MPIShadow::modifyNodeAd( ClassAd* ad )
+{
+		/*
+		  This function has to set 3 environment variables which need
+		  to be set whether we're the root or a comrade node:
+
+		  MPICH_JOBID - Job id string
+		  MPICH_IPROC - The rank number of this node
+		  MPICH_NPROC - The # of total ranks
+
+		  In addition, if we're a comrade, we also need to set:
+
+		  MPICH_ROOT  - host or ip and port of the root node.
+
+		*/
+
+	bool had_env = false;
+	char buf[1024];
+
+		// Initialize env_delimiter string... note that const char
+		// env_delimiter is defined in condor_constants.h
+	char env_delim_str[3];
+    sprintf(env_delim_str,"%c",env_delimiter);
+
+		// Eventually, we're going to need to insert this as a ClassAd
+		// attribute, so we might as well initialize it with
+		// 'ATTR_JOB_ENVIRONMENT = "'...
+	sprintf( buf, "%s = \"", ATTR_JOB_ENVIRONMENT );
+	MyString env( buf );
+
+		// Now, grab the existing environment.  Do so without static
+		// buffers so we can handle really huge environments
+		// correctly.  
+	char* env_str = NULL;
+	if( ad->LookupString(ATTR_JOB_ENVIRONMENT, &env_str) ) {
+		if( env_str && env_str[0] ) {
+				// There's something there!
+			dprintf( D_FULLDEBUG, "env_str: %s\n", env_str );
+			had_env = true;
+			env += env_str;
+		} else {
+				// No existing environment
+			dprintf( D_FULLDEBUG, "empty environment\n" );
+		}
+		free( env_str );
+	}
+
+	if( had_env ) {
+			// If there's already an environment, we've got to use the
+			// delimiter before we add our first variable.  If there's
+			// no environment, we should just insert our first
+			// variable without a delimiter.  Either way, all the rest
+			// of the variables should use the delimiter...
+		env += env_delim_str;
+	}
+
+		// Now, add all the MPICH-specific variables.
+
+		// NPROC is easy, since numNodes already holds the total
+		// number of nodes we're going to spawn
+	sprintf( buf, "MPICH_NPROC=%d", numNodes );
+	env += buf;
+
+		// We need the delimiter for all the rest of them... 
+
+		// The value we should use for MPICH_JOBID is held in
+		// mpich_jobid, since we want that to be constant across all
+		// nodes we spawn, and we can just compute it once when we
+		// start up and reuse it.
+	env += env_delim_str;
+	sprintf( buf, "MPICH_JOBID=%s", mpich_jobid );
+	env += buf;
+
+		// Conveniently, nextResourceToStart always holds the right
+		// value for IPROC, since that's what we use to keep track of
+		// what node we're spawning...
+	env += env_delim_str;
+	sprintf( buf, "MPICH_IPROC=%d", nextResourceToStart );
+	env += buf;
+
+		// Now, if we're a comrade (rank > 0), we also need to add
+		// MPICH_ROOT, which is what we got from our pseudo syscall. 
+	if( nextResourceToStart > 0 ) {
+		env += env_delim_str;
+		sprintf( buf, "MPICH_ROOT=%s", master_addr );
+		env += buf;
+	}
+
+		// Now that we're done appending stuff, we've got to terminate
+		// the string for the ClassAd attribute we're constructing.
+	sprintf( buf, "\"" );
+	env += buf;
+
+		// Now, the env MyString contains the modified environment
+		// attribute, so we just need to re-insert that into our ad. 
+	if( ad->Insert(env.GetCStr()) ) {
+		return true;
+	} 
+	return false;
+}
+
+#endif /* MPI_USES_RSH */
+
+
+void 
+MPIShadow::spawnNode( MpiResource* rr )
+{
+		// First, contact the startd to spawn the job
+    if ( rr->requestIt() == -1 ) {
+        shutDown( JOB_NOT_STARTED, 0 );
+    }
+
+		// Register the remote instance's claimSock for remote
+		// system calls.  It's a bit funky, but works.
+	daemonCore->Register_Socket( rr->getClaimSock(), "RSC Socket", 
+       (SocketHandlercpp)&RemoteResource::handleSysCalls,
+       "HandleSyscalls", rr );
+    
+    dprintf ( D_PROTOCOL, "Just requested resource for node %d\n",
+			  nextResourceToStart );
+
+	if ( nextResourceToStart == numNodes ) {
+			/* This is the last node we're starting...make an execute event. */
+		ExecuteEvent event;
+		strcpy( event.executeHost, "MPI_job" );
+		if ( !uLog.writeEvent( &event )) {
+			dprintf ( D_ALWAYS, "Unable to log EXECUTE event." );
+		}
+	}
+	nextResourceToStart++;
+}
+
 
 void 
 MPIShadow::shutDown( int exitReason, int exitStatus ) {
@@ -930,5 +1118,33 @@ MPIShadow::bytesReceived( void )
 }
 
 
+
+
+bool
+MPIShadow::setMpiMasterInfo( char* str )
+{
+#if ! MPI_USES_RSH
+	if( master_addr ) {
+		free( master_addr );
+	}
+	master_addr = strdup( str );
+
+		// now that we know this, we can set a timer to actually start 
+		// spawning all the comrade nodes.  we do this with a timer so
+		// that we can quickly complete the pseudo syscall we're in
+		// the middle of and return to DaemonCore ASAP...
+	int tid;
+	tid = daemonCore->
+		Register_Timer( 0, 0,
+						(TimerHandlercpp)&MPIShadow::spawnAllComrades,  
+						"MPIShadow::spawnAllComrades", this ); 
+	if( tid < 0 ) {
+		EXCEPT( "Can't register DaemonCore Timer!" );
+	}
+	return true;
+#else /* ! MPI_USES_RSH */
+	return false;
+#endif /* ! MPI_USES_RSH */
+}
 
 
