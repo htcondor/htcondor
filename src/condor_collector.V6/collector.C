@@ -1,11 +1,9 @@
 #include "condor_common.h"
 #include "_condor_fix_resource.h"
 #include <iostream.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <signal.h>
 #include <time.h>
 #include <netinet/in.h>
+#include <sys/param.h>
 
 #include "condor_classad.h"
 #include "condor_parser.h"
