@@ -65,9 +65,9 @@ EXTRACT = $(SIG_EXTRACT) $(PLATFORM_EXTRACT)
 
 #if DOES_COMPRESS_CKPT
 #if IS_SUN4X_SOLARIS
-COMPRESS_OBJ = malloc.o zimage.o _rem.o _div.o umultiply.o
+COMPRESS_OBJ = malloc-condor.o zimage.o _rem.o _div.o umultiply.o
 #else
-COMPRESS_OBJ = malloc.o zimage.o
+COMPRESS_OBJ = malloc-condor.o zimage.o
 #endif
 COMPRESS_FLAGS = -DCOMPRESS_CKPT -I ZIncludePath
 #endif
@@ -120,7 +120,7 @@ OBJ =	image.o machdep.$(OS).o tmp_stack.o syscall_mode.o \
 	fake_remote_syscall.o fake_hooks.o condor_error.o \
 	$(SAVE_SIGSTATE_OBJ) fake_util_lib.o eprintf.o $(EXTRACT) \
 	$(ASSEMBLER_OBJ) $(CPP_UTIL_OBJ) $(UTIL_OBJ) $(FILE_TABLE_OBJ) \
-	$(COMPRESS_OBJ) shared_utils.o
+	$(COMPRESS_OBJ) shared_utils.o malloc-user.o
 
 #else /* !DOES_CHECKPOINTING */
 
@@ -281,8 +281,8 @@ clean::
 	rm -f ToUpper ToUpper.o
 
 #if DOES_COMPRESS_CKPT
-malloc.o : malloc.c
-	$(CC) -O2 -g -DMORECORE=condor_morecore -DHAVE_MMAP=0 -Dmalloc_getpagesize=8192 -c malloc.c
+malloc-condor.o : malloc-condor.c malloc.c
+	$(CC) -O2 -g -DMORECORE=condor_morecore -DHAVE_MMAP=0 -Dmalloc_getpagesize=8192 -c malloc-condor.c
 zimage.o : image.C
 	$(CPlusPlus) $(C_PLUS_FLAGS) $(COMPRESS_FLAGS) -o zimage.o -c image.C
 #if IS_SUN4X_SOLARIS
