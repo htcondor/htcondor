@@ -13,7 +13,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Added the \Opt{-jobad} option to the \Condor{cod} command-line
+  tool when activiating Computing On Demand (COD) jobs.
+  This allows the user to specify dynamic attributes at the point when
+  they request the job to start, instead of having to define
+  everything ahead of time in the Condor configuration files at the
+  execution site.
 
 \end{itemize}
 
@@ -39,6 +44,13 @@ The details of each version are described below.
       Previously, no warnings were printed.  Also, under Windows,
       values above 19 used to be incorrectly adjusted to 0 (i.e.,
       normal priority) instead of 19 (i.e., idle priority class).
+
+\item When Condor is testing to see if a given submit machine is in
+  the same \MacroNI{UID_DOMAIN} as the execution machine, it now uses
+  a case-insensitive test.
+  Previous versions of Condor that used a case-sensitive comparison
+  caused problems for sites that have mixed-case hostnames in their
+  DNS records.
 
 \end{itemize}
 
