@@ -1,6 +1,7 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_shadow.mak
 
 ..\src\condor_shadow.V6.1\baseshadow.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\condor_ver_info.h"\
@@ -19,7 +20,6 @@
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_includes\buffers.h"\
-	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
@@ -34,37 +34,19 @@
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_email.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
-	"..\src\condor_includes\condor_file_lock.h"\
-	"..\src\condor_includes\condor_fix_access.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
-	"..\src\condor_includes\condor_fix_sys_resource.h"\
-	"..\src\condor_includes\condor_fix_sys_stat.h"\
-	"..\src\condor_includes\condor_fix_sys_time.h"\
-	"..\src\condor_includes\condor_fix_sys_utsname.h"\
-	"..\src\condor_includes\condor_fix_unistd.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_hpux_64bit_types.h"\
 	"..\src\condor_includes\condor_io.h"\
-	"..\src\condor_includes\condor_macros.h"\
 	"..\src\condor_includes\condor_md.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_qmgr.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
-	"..\src\condor_includes\condor_snutils.h"\
-	"..\src\condor_includes\condor_sys_aix.h"\
-	"..\src\condor_includes\condor_sys_dux.h"\
-	"..\src\condor_includes\condor_sys_hpux.h"\
-	"..\src\condor_includes\condor_sys_irix.h"\
-	"..\src\condor_includes\condor_sys_linux.h"\
-	"..\src\condor_includes\condor_sys_nt.h"\
-	"..\src\condor_includes\condor_sys_solaris.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -84,6 +66,7 @@
 	
 
 ..\src\condor_shadow.V6.1\mpiresource.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\enum_utils.h"\
@@ -109,7 +92,6 @@
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_includes\buffers.h"\
-	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
@@ -123,36 +105,18 @@
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
-	"..\src\condor_includes\condor_file_lock.h"\
-	"..\src\condor_includes\condor_fix_access.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
-	"..\src\condor_includes\condor_fix_sys_resource.h"\
-	"..\src\condor_includes\condor_fix_sys_stat.h"\
-	"..\src\condor_includes\condor_fix_sys_time.h"\
-	"..\src\condor_includes\condor_fix_sys_utsname.h"\
-	"..\src\condor_includes\condor_fix_unistd.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_hpux_64bit_types.h"\
 	"..\src\condor_includes\condor_io.h"\
-	"..\src\condor_includes\condor_macros.h"\
 	"..\src\condor_includes\condor_md.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
-	"..\src\condor_includes\condor_snutils.h"\
-	"..\src\condor_includes\condor_sys_aix.h"\
-	"..\src\condor_includes\condor_sys_dux.h"\
-	"..\src\condor_includes\condor_sys_hpux.h"\
-	"..\src\condor_includes\condor_sys_irix.h"\
-	"..\src\condor_includes\condor_sys_linux.h"\
-	"..\src\condor_includes\condor_sys_nt.h"\
-	"..\src\condor_includes\condor_sys_solaris.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -174,6 +138,7 @@
 	
 
 ..\src\condor_shadow.V6.1\mpishadow.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\enum_utils.h"\
@@ -199,7 +164,6 @@
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_includes\buffers.h"\
-	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
@@ -214,37 +178,19 @@
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_email.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
-	"..\src\condor_includes\condor_file_lock.h"\
-	"..\src\condor_includes\condor_fix_access.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
-	"..\src\condor_includes\condor_fix_sys_resource.h"\
-	"..\src\condor_includes\condor_fix_sys_stat.h"\
-	"..\src\condor_includes\condor_fix_sys_time.h"\
-	"..\src\condor_includes\condor_fix_sys_utsname.h"\
-	"..\src\condor_includes\condor_fix_unistd.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_hpux_64bit_types.h"\
 	"..\src\condor_includes\condor_io.h"\
-	"..\src\condor_includes\condor_macros.h"\
 	"..\src\condor_includes\condor_md.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_qmgr.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
-	"..\src\condor_includes\condor_snutils.h"\
-	"..\src\condor_includes\condor_sys_aix.h"\
-	"..\src\condor_includes\condor_sys_dux.h"\
-	"..\src\condor_includes\condor_sys_hpux.h"\
-	"..\src\condor_includes\condor_sys_irix.h"\
-	"..\src\condor_includes\condor_sys_linux.h"\
-	"..\src\condor_includes\condor_sys_nt.h"\
-	"..\src\condor_includes\condor_sys_solaris.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -268,6 +214,7 @@
 	
 
 ..\src\condor_shadow.V6.1\NTreceivers.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -278,7 +225,6 @@
 	"..\src\condor_c++_util\stringSpace.h"\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_includes\buffers.h"\
-	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
@@ -291,31 +237,13 @@
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
-	"..\src\condor_includes\condor_file_lock.h"\
-	"..\src\condor_includes\condor_fix_access.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
-	"..\src\condor_includes\condor_fix_sys_resource.h"\
-	"..\src\condor_includes\condor_fix_sys_stat.h"\
-	"..\src\condor_includes\condor_fix_sys_time.h"\
-	"..\src\condor_includes\condor_fix_sys_utsname.h"\
-	"..\src\condor_includes\condor_fix_unistd.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_hpux_64bit_types.h"\
 	"..\src\condor_includes\condor_io.h"\
-	"..\src\condor_includes\condor_macros.h"\
 	"..\src\condor_includes\condor_md.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
-	"..\src\condor_includes\condor_snutils.h"\
-	"..\src\condor_includes\condor_sys_aix.h"\
-	"..\src\condor_includes\condor_sys_dux.h"\
-	"..\src\condor_includes\condor_sys_hpux.h"\
-	"..\src\condor_includes\condor_sys_irix.h"\
-	"..\src\condor_includes\condor_sys_linux.h"\
-	"..\src\condor_includes\condor_sys_nt.h"\
-	"..\src\condor_includes\condor_sys_solaris.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\reli_sock.h"\
@@ -336,6 +264,7 @@
 	
 
 ..\src\condor_shadow.V6.1\parallelresource.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\enum_utils.h"\
@@ -361,7 +290,6 @@
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_includes\buffers.h"\
-	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
@@ -375,36 +303,18 @@
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
-	"..\src\condor_includes\condor_file_lock.h"\
-	"..\src\condor_includes\condor_fix_access.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
-	"..\src\condor_includes\condor_fix_sys_resource.h"\
-	"..\src\condor_includes\condor_fix_sys_stat.h"\
-	"..\src\condor_includes\condor_fix_sys_time.h"\
-	"..\src\condor_includes\condor_fix_sys_utsname.h"\
-	"..\src\condor_includes\condor_fix_unistd.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_hpux_64bit_types.h"\
 	"..\src\condor_includes\condor_io.h"\
-	"..\src\condor_includes\condor_macros.h"\
 	"..\src\condor_includes\condor_md.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
-	"..\src\condor_includes\condor_snutils.h"\
-	"..\src\condor_includes\condor_sys_aix.h"\
-	"..\src\condor_includes\condor_sys_dux.h"\
-	"..\src\condor_includes\condor_sys_hpux.h"\
-	"..\src\condor_includes\condor_sys_irix.h"\
-	"..\src\condor_includes\condor_sys_linux.h"\
-	"..\src\condor_includes\condor_sys_nt.h"\
-	"..\src\condor_includes\condor_sys_solaris.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -426,6 +336,7 @@
 	
 
 ..\src\condor_shadow.V6.1\parallelshadow.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\enum_utils.h"\
@@ -451,7 +362,6 @@
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_includes\buffers.h"\
-	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
@@ -466,37 +376,19 @@
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_email.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
-	"..\src\condor_includes\condor_file_lock.h"\
-	"..\src\condor_includes\condor_fix_access.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
-	"..\src\condor_includes\condor_fix_sys_resource.h"\
-	"..\src\condor_includes\condor_fix_sys_stat.h"\
-	"..\src\condor_includes\condor_fix_sys_time.h"\
-	"..\src\condor_includes\condor_fix_sys_utsname.h"\
-	"..\src\condor_includes\condor_fix_unistd.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_hpux_64bit_types.h"\
 	"..\src\condor_includes\condor_io.h"\
-	"..\src\condor_includes\condor_macros.h"\
 	"..\src\condor_includes\condor_md.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_qmgr.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
-	"..\src\condor_includes\condor_snutils.h"\
-	"..\src\condor_includes\condor_sys_aix.h"\
-	"..\src\condor_includes\condor_sys_dux.h"\
-	"..\src\condor_includes\condor_sys_hpux.h"\
-	"..\src\condor_includes\condor_sys_irix.h"\
-	"..\src\condor_includes\condor_sys_linux.h"\
-	"..\src\condor_includes\condor_sys_nt.h"\
-	"..\src\condor_includes\condor_sys_solaris.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -520,6 +412,7 @@
 	
 
 ..\src\condor_shadow.V6.1\pseudo_ops.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\condor_version.h"\
@@ -546,7 +439,6 @@
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_includes\buffers.h"\
-	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
@@ -561,37 +453,19 @@
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
-	"..\src\condor_includes\condor_file_lock.h"\
-	"..\src\condor_includes\condor_fix_access.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
-	"..\src\condor_includes\condor_fix_sys_resource.h"\
-	"..\src\condor_includes\condor_fix_sys_stat.h"\
-	"..\src\condor_includes\condor_fix_sys_time.h"\
-	"..\src\condor_includes\condor_fix_sys_utsname.h"\
-	"..\src\condor_includes\condor_fix_unistd.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_hpux_64bit_types.h"\
 	"..\src\condor_includes\condor_io.h"\
-	"..\src\condor_includes\condor_macros.h"\
 	"..\src\condor_includes\condor_md.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
-	"..\src\condor_includes\condor_snutils.h"\
-	"..\src\condor_includes\condor_sys_aix.h"\
-	"..\src\condor_includes\condor_sys_dux.h"\
-	"..\src\condor_includes\condor_sys_hpux.h"\
-	"..\src\condor_includes\condor_sys_irix.h"\
-	"..\src\condor_includes\condor_sys_linux.h"\
-	"..\src\condor_includes\condor_sys_nt.h"\
-	"..\src\condor_includes\condor_sys_solaris.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\filename_tools.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -614,6 +488,7 @@
 	
 
 ..\src\condor_shadow.V6.1\remoteresource.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\enum_utils.h"\
@@ -640,7 +515,6 @@
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_includes\basename.h"\
 	"..\src\condor_includes\buffers.h"\
-	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
@@ -656,39 +530,21 @@
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
-	"..\src\condor_includes\condor_file_lock.h"\
-	"..\src\condor_includes\condor_fix_access.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
-	"..\src\condor_includes\condor_fix_sys_resource.h"\
-	"..\src\condor_includes\condor_fix_sys_stat.h"\
-	"..\src\condor_includes\condor_fix_sys_time.h"\
-	"..\src\condor_includes\condor_fix_sys_utsname.h"\
-	"..\src\condor_includes\condor_fix_unistd.h"\
 	"..\src\condor_includes\condor_getmnt.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_hpux_64bit_types.h"\
 	"..\src\condor_includes\condor_io.h"\
-	"..\src\condor_includes\condor_macros.h"\
 	"..\src\condor_includes\condor_md.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
-	"..\src\condor_includes\condor_snutils.h"\
 	"..\src\condor_includes\condor_status.h"\
 	"..\src\condor_includes\condor_string.h"\
-	"..\src\condor_includes\condor_sys_aix.h"\
-	"..\src\condor_includes\condor_sys_dux.h"\
-	"..\src\condor_includes\condor_sys_hpux.h"\
-	"..\src\condor_includes\condor_sys_irix.h"\
-	"..\src\condor_includes\condor_sys_linux.h"\
-	"..\src\condor_includes\condor_sys_nt.h"\
-	"..\src\condor_includes\condor_sys_solaris.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -712,6 +568,7 @@
 	
 
 ..\src\condor_shadow.V6.1\shadow.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\enum_utils.h"\
@@ -738,7 +595,6 @@
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_includes\buffers.h"\
-	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
@@ -753,37 +609,19 @@
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_email.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
-	"..\src\condor_includes\condor_file_lock.h"\
-	"..\src\condor_includes\condor_fix_access.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
-	"..\src\condor_includes\condor_fix_sys_resource.h"\
-	"..\src\condor_includes\condor_fix_sys_stat.h"\
-	"..\src\condor_includes\condor_fix_sys_time.h"\
-	"..\src\condor_includes\condor_fix_sys_utsname.h"\
-	"..\src\condor_includes\condor_fix_unistd.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_hpux_64bit_types.h"\
 	"..\src\condor_includes\condor_io.h"\
-	"..\src\condor_includes\condor_macros.h"\
 	"..\src\condor_includes\condor_md.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_qmgr.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
-	"..\src\condor_includes\condor_snutils.h"\
-	"..\src\condor_includes\condor_sys_aix.h"\
-	"..\src\condor_includes\condor_sys_dux.h"\
-	"..\src\condor_includes\condor_sys_hpux.h"\
-	"..\src\condor_includes\condor_sys_irix.h"\
-	"..\src\condor_includes\condor_sys_linux.h"\
-	"..\src\condor_includes\condor_sys_nt.h"\
-	"..\src\condor_includes\condor_sys_solaris.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -805,6 +643,7 @@
 	
 
 ..\src\condor_shadow.V6.1\shadow_initializer.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\enum_utils.h"\
@@ -830,7 +669,6 @@
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_includes\buffers.h"\
-	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
@@ -844,37 +682,19 @@
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
-	"..\src\condor_includes\condor_file_lock.h"\
-	"..\src\condor_includes\condor_fix_access.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
-	"..\src\condor_includes\condor_fix_sys_resource.h"\
-	"..\src\condor_includes\condor_fix_sys_stat.h"\
-	"..\src\condor_includes\condor_fix_sys_time.h"\
-	"..\src\condor_includes\condor_fix_sys_utsname.h"\
-	"..\src\condor_includes\condor_fix_unistd.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_hpux_64bit_types.h"\
 	"..\src\condor_includes\condor_io.h"\
-	"..\src\condor_includes\condor_macros.h"\
 	"..\src\condor_includes\condor_md.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_qmgr.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
-	"..\src\condor_includes\condor_snutils.h"\
-	"..\src\condor_includes\condor_sys_aix.h"\
-	"..\src\condor_includes\condor_sys_dux.h"\
-	"..\src\condor_includes\condor_sys_hpux.h"\
-	"..\src\condor_includes\condor_sys_irix.h"\
-	"..\src\condor_includes\condor_sys_linux.h"\
-	"..\src\condor_includes\condor_sys_nt.h"\
-	"..\src\condor_includes\condor_sys_solaris.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -902,6 +722,7 @@
 	
 
 ..\src\condor_shadow.V6.1\shadow_user_policy.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\extArray.h"\
@@ -919,7 +740,6 @@
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_includes\buffers.h"\
-	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
@@ -932,36 +752,18 @@
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
-	"..\src\condor_includes\condor_file_lock.h"\
-	"..\src\condor_includes\condor_fix_access.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
-	"..\src\condor_includes\condor_fix_sys_resource.h"\
-	"..\src\condor_includes\condor_fix_sys_stat.h"\
-	"..\src\condor_includes\condor_fix_sys_time.h"\
-	"..\src\condor_includes\condor_fix_sys_utsname.h"\
-	"..\src\condor_includes\condor_fix_unistd.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_hpux_64bit_types.h"\
 	"..\src\condor_includes\condor_io.h"\
-	"..\src\condor_includes\condor_macros.h"\
 	"..\src\condor_includes\condor_md.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
-	"..\src\condor_includes\condor_snutils.h"\
-	"..\src\condor_includes\condor_sys_aix.h"\
-	"..\src\condor_includes\condor_sys_dux.h"\
-	"..\src\condor_includes\condor_sys_hpux.h"\
-	"..\src\condor_includes\condor_sys_irix.h"\
-	"..\src\condor_includes\condor_sys_linux.h"\
-	"..\src\condor_includes\condor_sys_nt.h"\
-	"..\src\condor_includes\condor_sys_solaris.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
@@ -981,6 +783,7 @@
 	
 
 ..\src\condor_shadow.V6.1\shadow_v61_main.C : \
+	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\command_strings.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\condor_version.h"\
@@ -1007,7 +810,6 @@
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_includes\buffers.h"\
-	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_ast.h"\
 	"..\src\condor_includes\condor_astbase.h"\
@@ -1021,37 +823,19 @@
 	"..\src\condor_includes\condor_crypt.h"\
 	"..\src\condor_includes\condor_debug.h"\
 	"..\src\condor_includes\condor_exprtype.h"\
-	"..\src\condor_includes\condor_file_lock.h"\
-	"..\src\condor_includes\condor_fix_access.h"\
 	"..\src\condor_includes\condor_fix_assert.h"\
-	"..\src\condor_includes\condor_fix_sys_resource.h"\
-	"..\src\condor_includes\condor_fix_sys_stat.h"\
-	"..\src\condor_includes\condor_fix_sys_time.h"\
-	"..\src\condor_includes\condor_fix_sys_utsname.h"\
-	"..\src\condor_includes\condor_fix_unistd.h"\
 	"..\src\condor_includes\condor_header_features.h"\
-	"..\src\condor_includes\condor_hpux_64bit_types.h"\
 	"..\src\condor_includes\condor_io.h"\
-	"..\src\condor_includes\condor_macros.h"\
 	"..\src\condor_includes\condor_md.h"\
 	"..\src\condor_includes\condor_network.h"\
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_qmgr.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
-	"..\src\condor_includes\condor_snutils.h"\
-	"..\src\condor_includes\condor_sys_aix.h"\
-	"..\src\condor_includes\condor_sys_dux.h"\
-	"..\src\condor_includes\condor_sys_hpux.h"\
-	"..\src\condor_includes\condor_sys_irix.h"\
-	"..\src\condor_includes\condor_sys_linux.h"\
-	"..\src\condor_includes\condor_sys_nt.h"\
-	"..\src\condor_includes\condor_sys_solaris.h"\
-	"..\src\condor_includes\condor_system.h"\
 	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
-	"..\src\condor_includes\KeyCache.h"\
+	"..\src\condor_includes\keycache.h"\
 	"..\src\condor_includes\reli_sock.h"\
 	"..\src\condor_includes\safe_sock.h"\
 	"..\src\condor_includes\SafeMsg.h"\
