@@ -170,6 +170,8 @@ class Scheduler : public Service
 	int				ExitWhenDone;  // Flag set for graceful shutdown
 	Queue<shadow_rec*> RunnableJobQueue;
 	int				StartJobTimer;
+	int				timeoutid;		// daemoncore timer id for timeout()
+	int				startjobsid;	// daemoncore timer id for StartJobs()
 	
 	// useful names
 	char*			CondorViewHost;

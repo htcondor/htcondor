@@ -156,6 +156,8 @@ Scheduler::Scheduler()
 	numShadows = 0;
 	IdleSchedUniverseJobIDs = NULL;
 	StartJobTimer=-1;
+	timeoutid = -1;
+	startjobsid = -1;
 }
 
 Scheduler::~Scheduler()
@@ -211,6 +213,9 @@ Scheduler::timeout()
 	if( (numShadows-SchedUniverseJobsRunning) > MaxJobsRunning ) {
 		preempt( numShadows - MaxJobsRunning );
 	}
+
+	/* Reset our timer */
+	daemonCore->Reset_Timer(timeoutid,SchedDInterval);
 }
 
 /*
@@ -1150,6 +1155,10 @@ Scheduler::StartJobs()
 	if (SchedUniverseJobsIdle > 0) {
 		StartSchedUniverseJobs();
 	}
+
+	/* Reset the our Timer */
+	daemonCore->Reset_Timer(startjobsid,SchedDInterval);
+
 	dprintf(D_FULLDEBUG, "-------- Done starting jobs --------\n");
 }
 
@@ -1315,8 +1324,13 @@ void Scheduler::StartJobHandler() {
     // Re-set timer if there are any jobs left in the queue
     if (!RunnableJobQueue.IsEmpty()) {
         StartJobTimer=daemonCore->Register_Timer(JobStartDelay,(Eventcpp)StartJobHandler,"start_job", this);
-    }
-
+    } else {
+		// if there are no more jobs in the queue, this is a great time to
+		// update the central manager since things are pretty "stable".
+		// this way, "condor_status -sub" and other views such as 
+		// "condor_status -run" will be more likely to match
+		timeout();
+	}
 }
 
 shadow_rec*
@@ -2582,7 +2596,7 @@ Scheduler::Register()
 void
 Scheduler::RegisterTimers()
 {
-	static int timeoutid = -1, startjobsid = -1, aliveid = -1, cleanid = -1;
+	static int aliveid = -1, cleanid = -1;
 
 	// clear previous timers
 	if (timeoutid >= 0) {
@@ -2599,9 +2613,9 @@ Scheduler::RegisterTimers()
 	}
 
     // timer handlers
-    timeoutid = daemonCore->Register_Timer(10,SchedDInterval,(Eventcpp)timeout,
+    timeoutid = daemonCore->Register_Timer(10,(Eventcpp)timeout,
 										   "timeout",this);
-	startjobsid = daemonCore->Register_Timer(10,SchedDInterval,
+	startjobsid = daemonCore->Register_Timer(10,
 											 (Eventcpp)StartJobs,"StartJobs",
 											 this);
     aliveid = daemonCore->Register_Timer(aliveInterval, aliveInterval,
