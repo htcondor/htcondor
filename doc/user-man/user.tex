@@ -15,16 +15,17 @@
 Presenting Condor \VersionNotice! Condor is developed by
 the Condor Team at the University of Wisconsin-Madison (UW-Madison), and
 was first installed as a production system in the UW-Madison Computer
-Sciences department nearly 10 years ago. This Condor pool has since
+Sciences department more than 10 years ago. This Condor pool has since
 served as a major source of computing cycles to UW faculty and students.
 For many, it has revolutionized the role computing plays in their
 research. An increase of one, and sometimes even two, orders of
 magnitude in the computing throughput of a research organization can
 have a profound impact on its size, complexity, and scope. Over the
 years, the Condor Team has established collaborations with scientists
-from around the world and has provided them with access to surplus
-cycles (one of whom has consumed 100 CPU years!). Today, our
-department's pool consists of more than 700 desktop Unix workstations.
+from around the world, and it has provided them with access to surplus
+cycles (one scientist has consumed 100 CPU years!). Today, our
+department's pool consists of more than 700 desktop Unix workstations
+and more than 100 Windows 2000 machines.
 On a typical day, our pool delivers more than 500 CPU days to UW
 researchers. Additional Condor pools have been established over the
 years across our campus and the world. Groups of researchers, engineers,
@@ -34,7 +35,7 @@ will help revolutionize your compute environment as well.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{What does Condor do?}
+\section{Introduction}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -71,7 +72,7 @@ discussion of these features before reading any further.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Condor Matchmaking with ClassAds}
+\section{Matchmaking with ClassAds}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Before you learn about how to submit a job, it is important to
@@ -246,7 +247,7 @@ LastHeardFrom = 892191963
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Road-map for running jobs with Condor}
+\section{Road-map for Running Jobs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{job!preparation}
@@ -546,7 +547,7 @@ will take care of all the details such as finding the JVM binary and
 setting the classpath.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Submitting a Job to Condor}
+\section{Submitting a Job}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{job!submitting}
@@ -1194,12 +1195,12 @@ The complete submit description file for this example:
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Managing a Condor Job}
+\section{Managing a Job}
 \input{user-man/managing.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:Priorities}Priorities in Condor}
+\section{\label{sec:Priorities}Priorities and Preemption}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Condor has two independent priority controls: \Term{job}
@@ -1313,33 +1314,10 @@ every job that is run, and is always deleted, no matter how your job completes.
 if any, on which your job is run.
 \end{itemize}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{user-man/java.tex}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{user-man/pvm.tex}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{user-man/mpi.tex}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{user-man/glidein.tex}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{user-man/dagman.tex}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{user-man/logview.tex}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:Vacate-Explained}
-About How Condor Jobs Vacate Machines}
+\subsection{\label{sec:Vacate-Explained}
+Details About How Condor Jobs Vacate Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{vacate}
@@ -1371,14 +1349,39 @@ universe.
 The user's code may still checkpoint itself at any time
 by calling one of the following functions exported by the Condor libraries:
 \begin{description}
-\item[\func{ckpt()}] Performs a checkpoint and then returns.
-\item[\func{ckpt\_and\_exit()}] Checkpoints and exits; Condor will then
+\item[\Procedure{ckpt()}] Performs a checkpoint and then returns.
+\item[\Procedure{ckpt\_and\_exit()}] Checkpoints and exits; Condor will then
 restart the process again later, potentially on a different machine.
 \end{description}
 
 For jobs submitted into the vanilla universe, the default value for
 \AdAttr{KillSig} is SIGTERM,
 the usual method to nicely terminate a Unix program.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{user-man/java.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{user-man/pvm.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{user-man/mpi.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{user-man/dagman.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{user-man/glidein.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{user-man/logview.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Special Environment Considerations}
