@@ -21,21 +21,48 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#include "condor_header_features.h"
+ 
 
-#define   LOCK_SH   1<<0
-#define   LOCK_EX   1<<1
-#define   LOCK_NB   1<<2
-#define   LOCK_UN   1<<3
+#include <sys/types.h>
 
-/* Solaris specific -- found at in sys/file.h in OSF1 ..dhaval 6/23 */
 
-#define L_XTND          2       /* relative to end of file */
+#if defined(AIX31) || defined(AIX32) || defined(OSF1)
+#include <string.h>
+#endif
 
-/* Also need a prototype, otherwise C++ gets confused by
-   the definition of a struct flock, and thinks flock() is
-   a constructor for a class by the same name.  */
+#if 0
+#if !defined(AIX31) && !defined(AIX32)  && !defined(HPUX8) && !defined(OSF1)
+char	*calloc();
+char	*ctime();
+char	*getwd();
+char	*malloc();
+char	*param();
+char	*realloc();
+char	*strcat();
+char	*strcpy();
+char	*strncpy();
+char	*sprintf();
+#endif
+#endif
 
-BEGIN_C_DECLS
-extern int flock(int fd, int op);
-END_C_DECLS
+#if !defined( OSF1 ) && !defined(WIN32) && !( defined(LINUX) && defined(GLIBC) ) && !defined(Solaris)
+#ifndef htons
+u_short	htons();
+#endif htons
+
+#ifndef ntohs
+u_short	ntohs();
+#endif ntohs
+
+#ifndef htonl
+u_long	htonl();
+#endif htonl
+
+#ifndef ntohl
+u_long	ntohl();
+#endif ntohl
+
+#ifndef time
+time_t	time();
+#endif time
+#endif	/* !OSF1 && !WIN32 */
