@@ -34,8 +34,6 @@ AC_MSG_NOTICE([checking for critical tools used by configure])
 AC_PROG_AWK
 REQUIRE_PATH_PROG([GREP],[grep])
 REQUIRE_PATH_PROG([CUT],[cut])
-REQUIRE_PATH_PROG([TRUE],[true])
-AC_SUBST(TRUE,$TRUE)
 AC_PATH_PROG([WHICH],[which],[no],[$PATH])
 
 # Condor only requires 5.002, but GPT apparently relies on 5.005_03 or
@@ -1096,6 +1094,10 @@ AC_PATH_PROG(ac_m4prog,m4,no,[$PATH])
 if test $ac_m4prog = no; then
     AC_MSG_ERROR( [m4 is required] )
 fi
+
+# true is used in the imake build system, esp. in condor_tests 
+REQUIRE_PATH_PROG([TRUE],[true])
+AC_SUBST(TRUE,$TRUE)
 
 AC_PATH_PROG(ac_purify,purify,no,[$PATH])
 if test "$ac_purify" = "purify"; then
