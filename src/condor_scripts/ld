@@ -297,6 +297,12 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 		if [ $os = "Linux" -a $is_gcc3 = 1 ]; then
 			tmp=`echo $argument | sed -e 's/crtbegin\.o/crtbeginT\.o/'`
 				ldargs=`echo $ldargs $tmp`
+		else
+			# otherwise just propogate what we find if it is just a gcc 2.96
+			# (or anything else) compiler which has a crtbegin.o and, via
+			# manual inspection, not a crtbeginT.o. This is apparently in 
+			# order to make c++ exceptions work.
+			ldargs=`echo $ldargs $argument`
 		fi
 		;;
 		
