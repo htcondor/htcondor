@@ -167,9 +167,8 @@ bool Dag::ProcessLogEvents (bool recovery) {
           case ULOG_RD_ERROR:
 			if( ++ulog_rd_error_count >= 10 ) {
 				debug_printf( DEBUG_QUIET, "ERROR: repeated (%d) failures to "
-							  "read job log; exiting...\n",
+							  "read job log; quitting...\n",
 							  ulog_rd_error_count );
-				done   = true;
 				result = false;
 			}
 			else {
@@ -180,19 +179,18 @@ bool Dag::ProcessLogEvents (bool recovery) {
 							  "exits\n\tunfinished, but reports no failed "
 							  "jobs, re-submit the rescue file\n\tto complete "
 							  "the DAG.\n" );
-				// attempt to get past error and move on
-				sleep( 1 );
-				_condorLog.synchronize();
 			}
+			done = true;
             break;
             //----------------------------------------------------------------
           case ULOG_UNK_ERROR:
             log_unk_count++;
             if (recovery || log_unk_count >= 5) {
-                debug_printf (DEBUG_QUIET, "  ERROR: Unknown log error");
+				debug_printf( DEBUG_QUIET, "ERROR: repeated (%d) unknown log "
+							  "errors; quitting...\n", log_unk_count );
                 result = false;
             }
-            debug_printf (DEBUG_VERBOSE, "\n");
+			debug_printf( DEBUG_NORMAL, "ERROR: unknown log error\n" );
             done   = true;
             break;
             //----------------------------------------------------------------
@@ -261,10 +259,8 @@ bool Dag::ProcessLogEvents (bool recovery) {
                   }
                   
                   if (job == NULL) {
-                      debug_println (DEBUG_QUIET,
-                                     "Unknown terminated job found in log\n");
-                      done   = true;
-                      result = false;
+					  debug_printf( DEBUG_QUIET, "ERROR: unknown terminated "
+									"job found in log\n" );
                       break;
                   }
 
@@ -335,8 +331,6 @@ bool Dag::ProcessLogEvents (bool recovery) {
 					debug_printf( DEBUG_QUIET,
 								  "Unknown submit event (job \"%s\") found "
 								  "in log\n", job_name );
-                    done = true;
-                    result = false;
                     break;
 				}
 
@@ -354,20 +348,18 @@ bool Dag::ProcessLogEvents (bool recovery) {
 									  "Unrecognized submit event (for job "
 									  "\"%s\") found in log (none expected)\n",
 									  job->GetJobName() );
-						done = true;
-						result = false;
 						break;
 					}
-					assert( expectedJob != NULL );
-					if( job != expectedJob ) {
+					else if( job != expectedJob ) {
+						assert( expectedJob != NULL );
 						debug_printf( DEBUG_QUIET,
                                       "Unexpected submit event (for job "
                                       "\"%s\") found in log; job \"%s\" "
 									  "was expected.\n",
 									  job->GetJobName(),
 									  expectedJob->GetJobName() );
-						done = true;
-						result = false;
+						// put expectedJob back onto submit queue
+						_submitQ->enqueue( expectedJob );
 						break;
 					}
 				}
