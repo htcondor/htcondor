@@ -1035,12 +1035,13 @@ submit description file solves the problem.
 Use of the Globus project software \Url{http://www.globus.org} with
 Condor affects these issues:
 
+\begin{enumerate}
 \item[GSS Authentication] Is an option only in special versions of Condor,
 available by request only, due to cryptographic software export controls
 and Condor distribution policy.
 Sites running the Condor software distributed with GSS-Authentication can 
 set up their own Certification Authority (CA) by running the 
-\Prog{create_ca} script. 
+\Prog{create\_ca} script. 
 Once the CA is set up, the \Condor{ca} script is used to generate 
 certificates for the Condor daemons (e.g., \Condor{schedd}) and to sign
 user and daemon certificates. Users can generate certificate requests
@@ -1048,29 +1049,29 @@ and other needed files with the \Condor{cert} program.
 An X509 certificate directory pointed to by the submit description file 
 variable \Arg{x509CertDir} indicates a client program which can use GSS
 authentication as a possible authentication method. Alternately, the
-environment variables \Env{X509_CERT_DIR}, \Env{X509_USER_CERT},
-\Env{X509_USER_KEY} can be used to override the default filenames and 
+environment variables \Env{X509\_CERT\_DIR}, \Env{X509\_USER\_CERT},
+\Env{X509\_USER\_KEY} can be used to override the default filenames and 
 locations.
-\Note{the AUTHENTICATION_METHOD configuration value list must contain 
-the value 'GSS' for GSS authentication to be attempted.}
+\Note the AUTHENTICATION\_METHOD configuration value list must contain 
+the value 'GSS' for GSS authentication to be attempted.
 
 \item[Submitting to the Globus Universe] \index{Globus!Globus universe}
 \index{universe!Globus}
 requires Globus version 1.1, as well as a valid Globus X509 certificate. 
-The default location for the necessary files is $HOME/.globus, but they 
-can be overridden by setting the X509_* variables in your enviroment 
+The default location for the necessary files is \$HOME/.globus, but they 
+can be overridden by setting the X509\_* variables in your enviroment 
 or the submit description file.
-\Note{AFS issues apply here, so you may have to copy your certificate,
+\Note AFS issues apply here, so you may have to copy your certificate,
 trusted certificates directory, private key, and proxy to a local
-filesystem disk.}
+filesystem disk.
 
 \item[\Condor{glidein}] \index {Globus!\Condor{glidein}} requires a valid 
 Globus X509 certificate, and the PATH to the \Prog{globusrun} program 
 must be in your environment.
-\Note{to allow a globus resource to join your Condor pool, your 
-administrator must add the hostname(s) to the HOSTALLOW_WRITE and
-HOSTALLOW_READ configuration values.}
-
+\Note to allow a globus resource to join your Condor pool, your 
+administrator must add the hostname(s) to the HOSTALLOW\_WRITE and
+HOSTALLOW\_READ configuration values.
+\end{enumerate}
 
 \subsection{Condor Daemons That Do Not Run as root}
 
@@ -1094,7 +1095,7 @@ since Condor is designed to be run as the Unix user root.
 To see if Condor is
 running as root on a specific machine, enter the command
 \begin{verbatim}
-        condor_status -master -l <machine-name>
+        condor\_status -master -l <machine-name>
 \end{verbatim}
 
 where \verb@machine-name@ is the name of the specified machine.
