@@ -254,7 +254,6 @@ main(
 			classads[classad_index]->sPrint(before_classad_string);
 
 			unparser.SetUseCompactSpacing(false);
-			unparser.SetUseCompactNames(false);
 			unparser.Unparse(classads[classad_index], xml);
 			if (parameters.verbose) {
 				printf("Classad %d in XML:\n%s", classad_index, xml.Value());
