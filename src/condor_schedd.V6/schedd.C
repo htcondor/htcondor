@@ -3644,7 +3644,9 @@ Scheduler::preempt(int n)
 void
 send_vacate(match_rec* match,int cmd)
 {
-	ReliSock	sock;
+	//SC2000
+	//ReliSock	sock;
+	SafeSock	sock;
 
 	dprintf( D_FULLDEBUG, "Called send_vacate( %s, %d )\n", match->peer, cmd );
 	 
@@ -5015,7 +5017,9 @@ Scheduler::FindSrecByProcID(PROC_ID proc)
 void
 Scheduler::Relinquish(match_rec* mrec)
 {
-	ReliSock	*sock;
+	// SC2000
+	//ReliSock	*sock;
+	SafeSock	*sock;
 	int				flag = FALSE;
 
 	if (!mrec) {
@@ -5025,7 +5029,8 @@ Scheduler::Relinquish(match_rec* mrec)
 
 	// inform the startd
 
-	sock = new ReliSock;
+	//sock = new ReliSock;
+	sock = new SafeSock;
 	sock->timeout(STARTD_CONTACT_TIMEOUT);
 	sock->encode();
 	if(!sock->connect(mrec->peer)) {
@@ -5049,6 +5054,9 @@ Scheduler::Relinquish(match_rec* mrec)
 	}
 	delete sock;
 
+// SC2000 - ifdef'd to 0 because there is no accountant, so just skip over
+// all this stuff for now. Todd / Erik Nov 22 2000
+#if 0
 	// inform the accountant
 	if(!AccountantName)
 	{
@@ -5093,6 +5101,8 @@ Scheduler::Relinquish(match_rec* mrec)
 		}
 		delete sock;
 	}
+#endif 
+
 	if(flag)
 	{
 		dprintf(D_PROTOCOL, "## 7. Successfully relinquished match:\n");
