@@ -487,8 +487,16 @@ main( int argc, char *argv[] )
 
 	//  Parse the file and queue the jobs 
 	if( read_condor_file(fp) < 0 ) {
-		fprintf(stderr, "\nERROR: Failed to parse command file.\n");
+		fprintf(stderr, "\nERROR: Failed to parse command file (line %d).\n",
+				LineNo);
 		exit(1);
+	}
+
+	if( !GotQueueCommand ) {
+		fprintf(stderr, "\nERROR: \"%s\" doesn't contain any \"queue\"",
+				cmd_file ? cmd_file : "(stdin)" );
+		fprintf( stderr, " commands -- no jobs queued\n" );
+		exit( 1 );
 	}
 
 	if ( !DisconnectQ(0) ) {
@@ -528,12 +536,6 @@ main( int argc, char *argv[] )
 	if(ProcId != -1 ) 
 	{
 		reschedule();
-	}
-
-	if( !GotQueueCommand ) {
-		fprintf(stderr, "ERROR: \"%s\" doesn't contain any \"queue\"", cmd_file );
-		fprintf( stderr, " commands -- no jobs queued\n" );
-		exit( 1 );
 	}
 
 	if ( !DisableFileChecks ) {
@@ -1399,7 +1401,6 @@ SetArguments()
 		if ( strcmp( args, "" ) ) {
 				//handle args in either Condor format or Globus RSL format
 			StringList newargs( args, " ,\"" );
-			char buf[1024];
 			newargs.rewind();
 			strcat( GlobusArgs, "(arguments=" );
 			for ( char *nextarg = NULL; nextarg = newargs.next();  ) {
@@ -1420,7 +1421,6 @@ SetArguments()
       }
 			//extract "GLOBUSRUN" value from config file
 		char *globusrun;
-		struct stat statbuf;
 		if ( !(globusrun = param( "GLOBUSRUN" )) ) {
 			fprintf(stderr, "\"GLOBUSRUN\" value not configured in your pool\n" );
 			DoCleanup(0,0,NULL);
@@ -1921,6 +1921,7 @@ read_condor_file( FILE *fp )
 		force = 0;
 
 		name = getline(fp);
+		LineNo++;
 		if( name == NULL ) {
 			break;
 		}
@@ -2718,7 +2719,7 @@ InsertJobExpr (char *expr, bool clustercheck)
 		// We are working on building the ad which will serve as our
 		// cluster ad.  Thus insert this expr into our hashtable.
 		if ( ClusterAdAttrs.insert(hashkey,unused) < 0 ) {
-			fprintf(stderr,"Unable to insert expression into hashtable\n", expr);
+			fprintf(stderr,"Unable to insert expression into hashtable: %s\n", expr);
 			DoCleanup(0,0,NULL);
 			exit( 1 );
 		}
