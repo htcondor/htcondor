@@ -91,7 +91,8 @@ GETMNT_OBJ = getmnt.o
 	$(SETRGID_SRC) $(SETREGID_SRC) $(SETEGID_SRC) $(SETEUID_SRC) \
 	$(GETPAGESIZE_SRC) $(SETLINEBUF_SRC) $(GETWD_SRC) $(INSQUE_SRC) \
 	$(MALLOC_SRC) disk_req.c env_param.c ckpt_name.c lock_file.NON_POSIX.c \
-	block_condor.c my_popen.c $(GETMNT_SRC) syscall_numbers.c $(VIRT_MEM_SRC)
+	block_condor.c my_popen.c $(GETMNT_SRC) syscall_numbers.c $(VIRT_MEM_SRC) \
+	sig_install.c
 
 #define ObjectFiles \
 	blankline.o config.o do_connect.o dprintf.o dprintf_config.o except.o \
@@ -104,7 +105,7 @@ GETMNT_OBJ = getmnt.o
 	$(SETEGID_OBJ) $(SETEUID_OBJ) $(GETPAGESIZE_OBJ) $(SETLINEBUF_OBJ) \
 	$(GETWD_OBJ) $(INSQUE_OBJ) disk_req.o env_param.o ckpt_name.o \
 	lock_file.NON_POSIX.o block_condor.o my_popen.o $(GETMNT_OBJ) \
-	syscall_numbers.o
+	syscall_numbers.o sig_install.o
 
 all_target( util_lib.a )
 
