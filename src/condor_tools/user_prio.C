@@ -115,7 +115,7 @@ main(int argc, char* argv[])
       // printf("Date translation: %d/%d/%d = %d\n",month,day,year,FromDate);
       i+=3;
     }
-    else if (strcmp(argv[i],"-nonactive")==0) {
+    else if (strcmp(argv[i],"-allusers")==0) {
       MinLastUsageTime=-1;
     }
     else if (strcmp(argv[i],"-usage")==0) {
@@ -458,7 +458,7 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem)
 //-----------------------------------------------------------------
 
 static void usage(char* name) {
-  fprintf( stderr, "usage: %s [ -all | -usage | { -setprio | -setfactor }  user value | -resetusage user | -resetall | -getreslist user ] [-nonactive | -activefrom month day year] [-l]\n", name );
+  fprintf( stderr, "usage: %s [ -all | -usage | { -setprio | -setfactor }  user value | -resetusage user | -resetall | -getreslist user ] [-allusers | -activefrom month day year] [-l]\n", name );
   exit(1);
 }
 
