@@ -39,7 +39,7 @@ public:
 	virtual ~JavaProc();
 
 	virtual int  StartJob();
-	virtual int  JobExit(int pid, int status);
+	virtual int  JobCleanup( int pid, int status );
 	virtual bool PublishUpdateAd( ClassAd *ad );
 
 private:

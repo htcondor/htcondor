@@ -222,7 +222,7 @@ and return a POSIX status that resembles exactly what
 happened.
 */
 
-int JavaProc::JobExit(int pid, int status)
+int JavaProc::JobCleanup(int pid, int status)
 {
 	if(pid==JobPid) {
 		dprintf(D_ALWAYS,"JavaProc: JVM pid %d has finished\n",pid);
@@ -241,7 +241,7 @@ int JavaProc::JobExit(int pid, int status)
 				break;
 		}
 
-		return VanillaProc::JobExit(pid,status);
+		return VanillaProc::JobCleanup(pid,status);
 
 	} else {
 		return 0;
