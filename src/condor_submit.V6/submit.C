@@ -152,8 +152,6 @@ char	*NiceUser		= "nice_user";
 char	*X509UserProxy	= "x509userproxy";
 char	*X509Directory	= "x509directory";
 char	*GlobusScheduler = "globusscheduler";
-char	*GlobusArguments = "globusarguments";
-char	*GlobusExecutable = "globusexecutable";
 char	*GlobusRSL = "globusrsl";
 char	*RendezvousDir	= "rendezvousdir";
 char	*SsleayConf	= "ssleayconf";
@@ -634,17 +632,7 @@ SetExecutable()
 	char	*ename = NULL;
 	char	*copySpool = NULL;
 
-#if !defined(WIN32)
-		//Allow GlobusExecutable to override executable
-	if ( JobUniverse == GLOBUS_UNIVERSE ) {
-		ename = condor_param( GlobusExecutable );
-	}
-#endif
-
-	if ( ename == NULL ) {
-		ename = condor_param(Executable);
-	}
-
+	ename = condor_param(Executable);
 
 	if( ename == NULL ) {
 		fprintf( stderr, "No '%s' parameter was provided\n", Executable);
@@ -1391,16 +1379,7 @@ SetArguments()
 {
 	char	*args = NULL;
 
-#if !defined(WIN32)
-	//allow GlobusArguments to override arguments
-	if ( JobUniverse == GLOBUS_UNIVERSE ) {
-		args = condor_param(GlobusArguments);
-	}
-#endif
-
-	if ( args == NULL ) {
-		args = condor_param(Arguments);
-	}
+	args = condor_param(Arguments);
 
 	if( args == NULL ) {
 		args = strdup("");
@@ -2046,8 +2025,7 @@ read_condor_file( FILE *fp )
 
 		lower_case( name );
 
-		if ( (strcmp(name, Executable) == 0)
-			|| ( strcmp(name, GlobusExecutable) == 0) )
+		if ( strcmp(name, Executable) == 0 )
 		{
 			NewExecutable = true;
 		}
@@ -2067,20 +2045,15 @@ condor_param( char *name )
 {
 	char *pval = lookup_macro(name, ProcVars, PROCVARSIZE);
 
-
 	if( pval == NULL ) {
 		return( NULL );
 	}
 
-	//DON'T expand values that start with "globus", they need to
-	//be passed unexpanded to globusrun
-	if ( strncasecmp( name, "GLOBUS", strlen( "GLOBUS" ) ) ) {
-		pval = expand_macro(pval, ProcVars, PROCVARSIZE);
+	pval = expand_macro(pval, ProcVars, PROCVARSIZE);
 
-		if (pval == NULL) {
-			fprintf(stderr, "\nERROR: Failed to expand macros in: %s\n", name);
-			exit(1);
-		}
+	if (pval == NULL) {
+		fprintf(stderr, "\nERROR: Failed to expand macros in: %s\n", name);
+		exit(1);
 	}
 
 	return( pval );
