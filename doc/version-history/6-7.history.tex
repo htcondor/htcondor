@@ -42,6 +42,11 @@ The details of each version are described below.
 \item Changed default value of \Macro{CREATE\_CORE\_FILES} macro to
 \textsc{TRUE} to enable generation of daemon core files by default.
 
+\item Added new macro \Macro{JOB\_START\_COUNT} that works in
+conjunction with existing macro \Macro{JOB\_START\_DELAY} to pace job
+starts.  Together, this macro pair provides greater flexibility
+tuning job start rate versus available \Condor{schedd} performance.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
