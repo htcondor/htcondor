@@ -1746,7 +1746,7 @@ Dag::CheckForDagAbort(Job *job, int exitVal, const char *type)
 
 
 const MyString
-Dag::ParentListString( const Job *node, const char delim ) const
+Dag::ParentListString( Job *node, const char delim ) const
 {
 	SimpleListIterator <JobID_t> parent_list;
 	JobID_t parentID;

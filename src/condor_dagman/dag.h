@@ -320,7 +320,7 @@ class Dag {
 			of the given node's parents.
 			@return delimited string of parent node names
 		*/
-	const MyString ParentListString( const Job *node, const char delim = ',' ) const;
+	const MyString ParentListString( Job *node, const char delim = ',' ) const;
 
 	
   protected:
