@@ -49,6 +49,7 @@
 #include <sys/file.h>
 #include <netinet/in.h>
 #include <sys/wait.h>
+#include <values.h>
 #endif
 
 #include "sched.h"
@@ -528,7 +529,14 @@ Scheduler::negotiate(int, Stream* s)
 
 	dprintf (D_PROTOCOL, "## 2. Negotiating with CM\n");
 
-	SwapSpace = calc_virt_memory();
+ 	/* if ReservedSwap is 0, then we are not supposed to make any
+ 	 * swap check, so we can avoid the expensive calc_virt_memory 
+ 	 * calculation -Todd, 9/97 */
+ 	if ( ReservedSwap != 0 ) {
+ 		SwapSpace = calc_virt_memory();
+ 	} else {
+ 		SwapSpace = MAXINT;
+ 	}
 
 	N_PrioRecs = 0;
 
@@ -657,7 +665,7 @@ Scheduler::negotiate(int, Stream* s)
 								JobsStarted, jobs - JobsStarted );
 						return KEEP_STREAM;
 					}
-					if( SwapSpaceExhausted ) {
+					if( SwapSpaceExhausted && (ReservedSwap != 0) ) {
 						if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
 							dprintf( D_ALWAYS, 
 									"Can't send NO_MORE_JOBS to mgr\n" );
@@ -668,7 +676,7 @@ Scheduler::negotiate(int, Stream* s)
 								JobsStarted, jobs - JobsStarted );
 						return KEEP_STREAM;
 					}
-					if( ShadowSizeEstimate && JobsStarted >= start_limit_for_swap ) { 
+					if( ShadowSizeEstimate && JobsStarted >= start_limit_for_swap && ReservedSwap != 0) { 
 						if( !s->snd_int(NO_MORE_JOBS,TRUE) ) {
 							dprintf( D_ALWAYS, 
 									"Can't send NO_MORE_JOBS to mgr\n" );
