@@ -21,7 +21,8 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
+#if !defined( _CONDOR_USER_LOG_CPP_H )
+#define _CONDOR_USER_LOG_CPP_H
 
 #if defined(__cplusplus)
 
@@ -225,3 +226,5 @@ extern "C" {
 #if defined(__cplusplus)
 }
 #endif
+
+#endif /* _CONDOR_USER_LOG_CPP_H */
