@@ -107,8 +107,10 @@ class GlobusJob : public Service
 	MyString errorString;
 	char *localOutput;
 	char *localError;
-	bool spoolOutput;
-	bool spoolError;
+	bool streamOutput;
+	bool streamError;
+	bool stageOutput;
+	bool stageError;
 	int globusError;
 	bool submitLogged;
 	bool executeLogged;

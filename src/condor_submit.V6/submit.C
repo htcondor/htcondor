@@ -189,6 +189,9 @@ char	*TransferInput = "transfer_input";
 char	*TransferOutput = "transfer_output";
 char	*TransferError = "transfer_error";
 
+char	*StreamOutput = "stream_output";
+char	*StreamError = "stream_error";
+
 char	*CopyToSpool = "copy_to_spool";
 char	*LeaveInQueue = "leave_in_queue";
 
@@ -1528,7 +1531,9 @@ void
 SetStdFile( int which_file )
 {
 	bool	transfer_it = true;
+	bool	stream_it = true;
 	char	*macro_value = NULL;
+	char	*macro_value2 = NULL;
 	char	*generic_name;
 	char	 buffer[_POSIX_PATH_MAX + 32];
 
@@ -1541,10 +1546,12 @@ SetStdFile( int which_file )
 	case 1:
 		generic_name = Output;
 		macro_value = condor_param( TransferOutput );
+		macro_value2 = condor_param( StreamOutput );
 		break;
 	case 2:
 		generic_name = Error;
 		macro_value = condor_param( TransferError );
+		macro_value2 = condor_param( StreamError );
 		break;
 	default:
 		fprintf( stderr, "\nERROR: Unknown standard file descriptor (%d)\n",
@@ -1559,11 +1566,19 @@ SetStdFile( int which_file )
 		free( macro_value );
 	}
 
+	if ( macro_value2 ) {
+		if ( macro_value2[0] == 'F' || macro_value2[0] == 'f' ) {
+			stream_it = false;
+		}
+		free( macro_value2 );
+	}
+
 	macro_value = condor_param( generic_name, NULL );
 	
 	if( !macro_value || *macro_value == '\0') 
 	{
 		transfer_it = false;
+		stream_it = false;
 		// always canonicalize to the UNIX null file (i.e. /dev/null)
 		macro_value = strdup(UNIX_NULL_FILE);
 	}
@@ -1595,6 +1610,10 @@ SetStdFile( int which_file )
 		InsertJobExpr (buffer);
 		if ( transfer_it ) {
 			check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
+			if ( !stream_it ) {
+				sprintf( buffer, "%s = FALSE", ATTR_STREAM_OUTPUT );
+				InsertJobExpr( buffer );
+			}
 		} else {
 			sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_OUTPUT );
 			InsertJobExpr( buffer );
@@ -1605,6 +1624,10 @@ SetStdFile( int which_file )
 		InsertJobExpr (buffer);
 		if ( transfer_it ) {
 			check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
+			if ( !stream_it ) {
+				sprintf( buffer, "%s = FALSE", ATTR_STREAM_ERROR );
+				InsertJobExpr( buffer );
+			}
 		} else {
 			sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_ERROR );
 			InsertJobExpr( buffer );

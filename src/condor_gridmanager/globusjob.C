@@ -201,8 +201,10 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 	jobContact = NULL;
 	localOutput = NULL;
 	localError = NULL;
-	spoolOutput = false;
-	spoolError = false;
+	streamOutput = false;
+	streamError = false;
+	stageOutput = false;
+	stageError = false;
 	globusStateErrorCode = 0;
 	globusStateBeforeFailure = 0;
 	callbackGlobusState = 0;
@@ -294,7 +296,11 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 
 			strcat( buff2, buff );
 			localOutput = strdup( buff2 );
-			spoolOutput = true;
+
+			int stream = 1;
+			ad->LookupBool( ATTR_STREAM_OUTPUT, stream );
+			streamOutput = stream != 0;
+			stageOutput = !streamOutput;
 		}
 	}
 
@@ -309,7 +315,11 @@ GlobusJob::GlobusJob( ClassAd *classad, GlobusResource *resource )
 
 			strcat( buff2, buff );
 			localError = strdup( buff2 );
-			spoolError = true;
+
+			int stream = 1;
+			ad->LookupBool( ATTR_STREAM_ERROR, stream );
+			streamError = stream != 0;
+			stageError = !streamError;
 		}
 	}
 
@@ -513,7 +523,7 @@ int GlobusJob::doEvaluateState()
 			if ( jmVersion >= GRAM_V_1_5 ) {
 				gmState = GM_STDIO_UPDATE;
 			} else {
-				if ( spoolOutput || spoolError ) {
+				if ( streamOutput || streamError ) {
 					gmState = GM_CANCEL;
 				} else {
 					gmState = GM_SUBMITTED;
@@ -846,7 +856,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) jobmanager timed out on commit, clearing request\n"
 				gmState = GM_DONE_COMMIT;
 			} else {
 				char size_str[128];
-				if ( spoolOutput == false && spoolError == false ) {
+				if ( streamOutput == false && streamError == false ) {
 					gmState = GM_DONE_SAVE;
 					break;
 				}
@@ -1869,35 +1879,43 @@ MyString *GlobusJob::buildSubmitRSL()
 		attr_value = NULL;
 	}
 
-	if ( spoolOutput ) {
+	if ( streamOutput ) {
 		*rsl += ")(stdout=";
 		buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localOutput );
 		*rsl += rsl_stringify( buff.Value() );
 	} else {
-		if ( ad->LookupString(ATTR_JOB_OUTPUT, &attr_value) && *attr_value &&
-			 strcmp( attr_value, NULL_FILE ) ) {
-			*rsl += ")(stdout=";
-			*rsl += rsl_stringify( attr_value );
-		}
-		if ( attr_value != NULL ) {
-			free( attr_value );
-			attr_value = NULL;
+		if ( stageOutput ) {
+			*rsl += ")(stdout=$(GLOBUS_CACHED_STDOUT)";
+		} else {
+			if ( ad->LookupString(ATTR_JOB_OUTPUT, &attr_value) &&
+				 *attr_value && strcmp( attr_value, NULL_FILE ) ) {
+				*rsl += ")(stdout=";
+				*rsl += rsl_stringify( attr_value );
+			}
+			if ( attr_value != NULL ) {
+				free( attr_value );
+				attr_value = NULL;
+			}
 		}
 	}
 
-	if ( spoolError ) {
+	if ( streamError ) {
 		*rsl += ")(stderr=";
 		buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localError );
 		*rsl += rsl_stringify( buff.Value() );
 	} else {
-		if ( ad->LookupString(ATTR_JOB_ERROR, &attr_value) && *attr_value &&
-			 strcmp( attr_value, NULL_FILE ) ) {
-			*rsl += ")(stderr=";
-			*rsl += rsl_stringify( attr_value );
-		}
-		if ( attr_value != NULL ) {
-			free( attr_value );
-			attr_value = NULL;
+		if ( stageError ) {
+			*rsl += ")(stderr=$(GLOBUS_CACHED_STDERR)";
+		} else {
+			if ( ad->LookupString(ATTR_JOB_ERROR, &attr_value) &&
+				 *attr_value && strcmp( attr_value, NULL_FILE ) ) {
+				*rsl += ")(stderr=";
+				*rsl += rsl_stringify( attr_value );
+			}
+			if ( attr_value != NULL ) {
+				free( attr_value );
+				attr_value = NULL;
+			}
 		}
 	}
 
@@ -1940,8 +1958,8 @@ MyString *GlobusJob::buildSubmitRSL()
 		attr_value = NULL;
 	}
 
-	if ( ad->LookupString(ATTR_TRANSFER_OUTPUT_FILES, &attr_value) &&
-		 *attr_value ) {
+	if ( ( ad->LookupString(ATTR_TRANSFER_OUTPUT_FILES, &attr_value) &&
+		   *attr_value ) || stageOutput || stageError ) {
 		if ( jmVersion < GRAM_V_1_6 && jmVersion != GRAM_V_UNKNOWN ) {
 			// the jobmanager doesn't support file transfers.
 			dprintf(D_ALWAYS,
@@ -1953,9 +1971,24 @@ MyString *GlobusJob::buildSubmitRSL()
 			return NULL;
 		}
 		StringList filelist( attr_value, "," );
-		if ( !filelist.isEmpty() ) {
+		if ( !filelist.isEmpty() || stageOutput || stageError ) {
 			char *filename;
 			*rsl += ")(file_stage_out=";
+
+			if ( stageOutput ) {
+				*rsl += "($(GLOBUS_CACHED_STDOUT) ";
+				buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localOutput );
+				*rsl += rsl_stringify( buff );
+				*rsl += ')';
+			}
+
+			if ( stageError ) {
+				*rsl += "($(GLOBUS_CACHED_STDERR) ";
+				buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localError );
+				*rsl += rsl_stringify( buff );
+				*rsl += ')';
+			}
+
 			filelist.rewind();
 			while ( (filename = filelist.next()) != NULL ) {
 				// append file pairs to rsl
@@ -2028,13 +2061,13 @@ MyString *GlobusJob::buildRestartRSL()
 	rsl->sprintf( "&(rsl_substitution=(GRIDMANAGER_GASS_URL %s))(restart=%s)"
 				  "(remote_io_url=$(GRIDMANAGER_GASS_URL))", gassServerUrl,
 				  jobContact );
-	if ( spoolOutput ) {
+	if ( streamOutput ) {
 		*rsl += "(stdout=";
 		buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localOutput );
 		*rsl += rsl_stringify( buff.Value() );
 		*rsl += ")(stdout_position=0)";
 	}
-	if ( spoolError ) {
+	if ( streamError ) {
 		*rsl += "(stderr=";
 		buff.sprintf( "$(GRIDMANAGER_GASS_URL)%s", localError );
 		*rsl += rsl_stringify( buff.Value() );
@@ -2053,13 +2086,13 @@ MyString *GlobusJob::buildStdioUpdateRSL()
 	DeleteOutput();
 
 	rsl->sprintf( "&(remote_io_url=%s)", gassServerUrl );
-	if ( spoolOutput ) {
+	if ( streamOutput ) {
 		*rsl += "(stdout=";
 		buff.sprintf( "%s%s", gassServerUrl, localOutput );
 		*rsl += rsl_stringify( buff.Value() );
 		*rsl += ")(stdout_position=0)";
 	}
-	if ( spoolError ) {
+	if ( streamError ) {
 		*rsl += "(stderr=";
 		buff.sprintf( "%s%s", gassServerUrl, localError );
 		*rsl += rsl_stringify( buff.Value() );
@@ -2078,8 +2111,8 @@ MyString *GlobusJob::buildStdioUpdateRSL()
 		attr_value = NULL;
 	}
 
-	if ( ad->LookupString(ATTR_TRANSFER_OUTPUT_FILES, &attr_value) &&
-		 *attr_value ) {
+	if ( ( ad->LookupString(ATTR_TRANSFER_OUTPUT_FILES, &attr_value) &&
+		   *attr_value ) || stageOutput || stageError ) {
 		// GRAM 1.6 won't let you change file transfer info in a
 		// stdio-update, so force it to fail, resulting in a stop-and-
 		// restart
@@ -2099,7 +2132,7 @@ bool GlobusJob::GetOutputSize( int& output_size, int& error_size )
 	struct stat file_status;
 	bool retval = true;
 
-	if ( spoolOutput ) {
+	if ( streamOutput ) {
 		rc = stat( localOutput, &file_status );
 		if ( rc < 0 ) {
 			dprintf( D_ALWAYS,
@@ -2112,7 +2145,7 @@ bool GlobusJob::GetOutputSize( int& output_size, int& error_size )
 		}
 	}
 
-	if ( spoolError ) {
+	if ( streamError ) {
 		rc = stat( localError, &file_status );
 		if ( rc < 0 ) {
 			dprintf( D_ALWAYS,
@@ -2132,7 +2165,7 @@ void GlobusJob::DeleteOutput()
 {
 	int rc;
 
-	if ( spoolOutput ) {
+	if ( streamOutput ) {
 		rc = unlink( localOutput );
 		if ( rc < 0 ) {
 			dprintf( D_ALWAYS, "(%d.%d) Failed to unlink %s\n",
@@ -2147,7 +2180,7 @@ void GlobusJob::DeleteOutput()
 		}
 	}
 
-	if ( spoolError ) {
+	if ( streamError ) {
 		rc = unlink( localError );
 		if ( rc < 0 ) {
 			dprintf( D_ALWAYS, "(%d.%d) Failed to unlink %s\n",
