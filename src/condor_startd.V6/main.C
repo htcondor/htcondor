@@ -153,8 +153,12 @@ main_init( int, char* [] )
 int
 main_config()
 {
-	resmgr->walk( config_classad );
+		// Re-read config file for startd-wide stuff.
 	init_params(0);
+		// Re-read config file for each resource.
+	resmgr->walk( config_classad );  
+		// Re-evaluate and update the CM for each resource.
+	resmgr->walk( Resource::eval_and_update );
 	return TRUE;
 }
 
