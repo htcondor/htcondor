@@ -6585,7 +6585,7 @@ Scheduler::shutdown_graceful()
  	 */
 	MaxJobsRunning = 0;
 	ExitWhenDone = TRUE;
-	daemonCore->Register_Timer(0,JobStartDelay,
+	daemonCore->Register_Timer( 0, MAX(JobStartDelay,1), 
 					(TimerHandlercpp)&Scheduler::preempt_one_job,
 					"preempt_one_job()", this );
 }
