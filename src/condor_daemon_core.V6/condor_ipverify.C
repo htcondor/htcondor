@@ -25,6 +25,7 @@
 #include "condor_ipverify.h"
 #include "internet.h"
 #include "condor_config.h"
+#include "condor_perms.h"
 
 // Externs to Globals
 extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc. 
@@ -37,39 +38,13 @@ extern char* mySubSystem;	// the subsys ID, such as SCHEDD, STARTD, etc.
   not neccessarily all of the permission levels DaemonCore itself
   cares about (for example, there's nothing in here for
   "IMMEDIATE_FAMILY").  They can *not* be used to convert DCpermission
-  enums into strings, you need to use PermString() for that.
+  enums into strings, you need to use PermString() (in the util lib) for
+  that.
 */
 const char* IpVerify::perm_names[] = {"READ","WRITE","DAEMON", "ADMINISTRATOR","OWNER","NEGOTIATOR","CONFIG",NULL};
 const int IpVerify::perm_ints[] = {READ,WRITE,DAEMON,ADMINISTRATOR,OWNER,NEGOTIATOR,CONFIG_PERM,-1};  // must end with -1
 const char TotallyWild[] = "*";
 
-const char*
-PermString( DCpermission perm )
-{
-	switch( perm ) {
-	case ALLOW:
-		return "ALLOW";
-	case READ:
-		return "READ";
-	case WRITE:
-		return "WRITE";
-    case DAEMON:
-        return "DAEMON";
-	case NEGOTIATOR:
-		return "NEGOTIATOR";
-	case IMMEDIATE_FAMILY:
-		return "IMMEDIATE_FAMILY";
-	case ADMINISTRATOR:
-		return "ADMINISTRATOR";
-	case OWNER:
-		return "OWNER";
-	case CONFIG_PERM:
-		return "CONFIG";
-	default:
-		return "Unknown";
-	}
-	return "Unknown";
-};
 
 // Hash function for Permission hash table
 static int
