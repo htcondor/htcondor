@@ -13,12 +13,13 @@ LIB= ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a ../condor_xdr_
 #else
 LIB= ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a 
 #endif
+
 LIBDIRS =../condor_util_lib ../condor_xdr_lib ../condor_c++_util
 
 PROGRAMS =  \
 	config_val condor_history condor_preen condor_reconfig_schedd \
 	condor_reschedule condor_status condor_summary condor_vacate watch_status \
-	block_jobs condor_customize condor_jobqueue condor_schedd_info
+	block_jobs condor_customize condor_jobqueue condor_schedd_info condor_checkpoint
 
 all_target( $(PROGRAMS) )
 tags_target($(SRC),$(LIBDIRS))
@@ -53,6 +54,9 @@ release_target(condor_status,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
 program_target(condor_vacate,vacate.o,$(LIB))
 release_target(condor_vacate,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+
+program_target(condor_checkpoint,checkpoint.o,$(LIB))
+release_target(condor_checkpoint,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
 program_target(watch_status,watch_status.o,$(LIB))
 release_target(watch_status,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
