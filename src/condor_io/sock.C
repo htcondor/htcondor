@@ -1052,7 +1052,11 @@ static void async_handler( int s )
 }
 
 /*
-Set this fd up for asynchronous operation.  There are many ways of accomplishing this.  Some systems require multiple calls, some systems only support a few of these calls, and some support multiple, but only require one.  On top of that, many calls with defined constants are known to fail.  So, we will throw all of our knives at once and ignore return values.
+Set this fd up for asynchronous operation.  There are many ways of accomplishing this.  
+Some systems require multiple calls, some systems only support a few of these calls, 
+and some support multiple, but only require one.  
+On top of that, many calls with defined constants are known to fail.  
+So, we will throw all of our knives at once and ignore return values.
 */
 
 static void make_fd_async( int fd )
@@ -1115,7 +1119,10 @@ static void  make_fd_sync( int fd )
 }
 
 /*
-This function adds a new entry to the handler table and marks the fd as asynchronous.  If the table does not exist yet, it is allocated and the async_handler is installed as the handler for SIGIO.  If "handler" is null, then async notification is disabled for that fd.
+This function adds a new entry to the handler table and marks the fd as 
+asynchronous.  If the table does not exist yet, it is allocated and the 
+async_handler is installed as the handler for SIGIO.  
+If "handler" is null, then async notification is disabled for that fd.
 */
 
 static int install_async_handler( int fd, CedarHandler *handler, Stream *stream )
