@@ -34,7 +34,6 @@
 #include "condor_common.h"
 #include "condor_io.h"
 #include <sys/stat.h>
-#include "_condor_fix_types.h"
 #include "condor_fix_socket.h"
 #include <netinet/in.h>
 #include <sys/param.h>
@@ -633,8 +632,6 @@ int GetNextJob(int cluster_id, int proc_id, int *next_cluster, int *next_proc)
 //			even if it means scanning to the next cluster, but not if
 //			(cluster_id, proc_id) doesn't exist.
    
-
-
 	if (cluster_id == -1) {
 		cl = FirstCluster();
 	} else {
