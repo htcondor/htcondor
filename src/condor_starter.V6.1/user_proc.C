@@ -191,6 +191,10 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 	bool wants_stream = false;
 	const char* name;
 
+		///////////////////////////////////////////////////////
+		// Figure out what we're trying to open, if anything
+		///////////////////////////////////////////////////////
+
 	if( attr ) {
 		filename = Starter->jic->getJobStdFile( attr );
 		wants_stream = Starter->jic->streamStdFile( attr );
@@ -214,66 +218,12 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 		}
 	}
 
-	if( filename ) {
-		if( allow_dash && filename[0] == '-' && ! filename[1] ) {
-				// special case, use the starter's fd
-			used_starter_fd = true;
-			switch( type ) {
-			case SFT_IN:
-				fd = Starter->starterStdinFd();
-				dprintf( D_ALWAYS, "%s: using STDIN of %s\n", log_header,
-						 mySubSystem );
-				break;
-			case SFT_OUT:
-				fd = Starter->starterStdoutFd();
-				dprintf( D_ALWAYS, "%s: using STDOUT of %s\n", log_header,
-						 mySubSystem );
-				break;
-			case SFT_ERR:
-				fd = Starter->starterStderrFd();
-				dprintf( D_ALWAYS, "%s: using STDERR of %s\n", log_header,
-						 mySubSystem );
-				break;
-			}
 
-		} else if( wants_stream ) {
-			StreamHandler *handler = new StreamHandler;
-			if( !handler->Init(filename, name, false) ) {
-				MyString err_msg;
-				err_msg.sprintf( "unable to establish %s stream", phrase );
-				Starter->jic->notifyStarterError( err_msg.Value(), true );
-				return -1;
-			}
-			fd = handler->GetJobPipe();
-			dprintf( D_ALWAYS, "%s: streaming from remote file %s\n",
-					 log_header, filename );
-		} else {
-			switch( type ) {
-			case SFT_IN:
-				fd = open( filename, O_RDONLY );
-				break;
-			case SFT_OUT:
-			case SFT_ERR:
-				fd = open( filename, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
-				if( fd < 0 ) {
-						// if failed, try again without O_TRUNC
-					fd = open( filename, O_WRONLY|O_CREAT, 0666 );
-				}
-				break;
-			}
-			if( fd < 0 ) {
-				char const *errno_str = strerror( errno );
-				MyString err_msg;
-				err_msg.sprintf( "Failed to open %s file '%s': %s "
-								 "(errno %d)", phrase, filename,
-								 errno_str, errno );
-				dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
-				Starter->jic->notifyStarterError( err_msg.Value(), true );
-				return -1;
-			}
-			dprintf( D_ALWAYS, "%s: %s\n", log_header, filename );
-		}
-	} else { 
+		///////////////////////////////////////////////////////
+		// Deal with the "nothing-specified" case
+		///////////////////////////////////////////////////////
+
+	if( ! filename ) {
 	#ifndef WIN32
 		switch( type ) {
 		case SFT_IN:
@@ -298,7 +248,87 @@ UserProc::openStdFile( std_file_type type, const char* attr,
 			return -1;
 		}
 	#endif
+			// if we're here, we successfully opened the NULL file, so
+			// we can safely return the fd
+		return fd;
 	}
+
+
+		///////////////////////////////////////////////////////
+		// Deal with other special cases
+		///////////////////////////////////////////////////////
+
+		////////////////////////////////////
+		// Use the starter's equivalent fd
+		////////////////////////////////////
+	if( allow_dash && filename[0] == '-' && ! filename[1] ) {
+			// use the starter's fd
+		used_starter_fd = true;
+		switch( type ) {
+		case SFT_IN:
+			fd = Starter->starterStdinFd();
+			dprintf( D_ALWAYS, "%s: using STDIN of %s\n", log_header,
+					 mySubSystem );
+			break;
+		case SFT_OUT:
+			fd = Starter->starterStdoutFd();
+			dprintf( D_ALWAYS, "%s: using STDOUT of %s\n", log_header,
+					 mySubSystem );
+			break;
+		case SFT_ERR:
+			fd = Starter->starterStderrFd();
+			dprintf( D_ALWAYS, "%s: using STDERR of %s\n", log_header,
+					 mySubSystem );
+			break;
+		}
+		return fd;
+	}
+
+		//////////////////////
+		// Use streaming I/O
+		//////////////////////
+	if( wants_stream ) {
+		StreamHandler *handler = new StreamHandler;
+		if( !handler->Init(filename, name, false) ) {
+			MyString err_msg;
+			err_msg.sprintf( "unable to establish %s stream", phrase );
+			Starter->jic->notifyStarterError( err_msg.Value(), true );
+			return -1;
+		}
+		fd = handler->GetJobPipe();
+		dprintf( D_ALWAYS, "%s: streaming from remote file %s\n",
+				 log_header, filename );
+		return fd;
+	}
+
+
+		///////////////////////////////////////////////////////
+		// The regular case of a local file 
+		///////////////////////////////////////////////////////
+
+	switch( type ) {
+	case SFT_IN:
+		fd = open( filename, O_RDONLY );
+		break;
+	case SFT_OUT:
+	case SFT_ERR:
+		fd = open( filename, O_WRONLY|O_CREAT|O_TRUNC, 0666 );
+		if( fd < 0 ) {
+				// if failed, try again without O_TRUNC
+			fd = open( filename, O_WRONLY|O_CREAT, 0666 );
+		}
+		break;
+	}
+	if( fd < 0 ) {
+		char const *errno_str = strerror( errno );
+		MyString err_msg;
+		err_msg.sprintf( "Failed to open %s file '%s': %s (errno %d)",
+						 phrase, filename, errno_str, errno );
+		dprintf( D_ALWAYS, "%s\n", err_msg.Value() );
+		Starter->jic->notifyStarterError( err_msg.Value(), true );
+		return -1;
+	}
+	dprintf( D_ALWAYS, "%s: %s\n", log_header, filename );
 	return fd;
 }
 
