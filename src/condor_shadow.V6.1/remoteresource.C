@@ -722,6 +722,15 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		jobAd->Insert( tmp );
 	}
 
+	if( update_ad->LookupBool(ATTR_JOB_CORE_DUMPED, int_value) ) {
+		if( int_value ) {
+			sprintf( tmp, "%s=TRUE", ATTR_JOB_CORE_DUMPED );
+		} else {
+			sprintf( tmp, "%s=FALSE", ATTR_JOB_CORE_DUMPED );
+		}
+		jobAd->Insert( tmp );
+	}
+
 	char* job_state = NULL;
 	ResourceState new_state = state;
 	update_ad->LookupString( ATTR_JOB_STATE, &job_state );
