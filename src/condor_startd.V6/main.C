@@ -42,11 +42,8 @@
 /*
  * Polling vars.
  */
-static int	polling_freq;
-static int	owner_polling_freq;
-int	polls_per_update;
-int	polls_per_update_kbdd;
-int	polls_per_update_load;
+int polling_interval;
+int update_interval;
 
 /*
  * Flags from the commandline.
@@ -73,9 +70,7 @@ char	*alt_collector_host=NULL;
 /*
  * Others.
  */
-int	last_timeout;
 int	capab_timeout;
-int	memory;
 extern int	Termlog;
 char	*MyName;
 char	*admin;
@@ -92,7 +87,6 @@ static char *_FileName_ = __FILE__;
 
 extern volatile int want_reconfig;
 extern int HasSigchldHandler;
-extern bool owner_state;		// see event.C
 
 
 /*
@@ -120,7 +114,7 @@ static void usage(const char *s);
 static void init_params(void);
 static void mainloop(void);
 static char *get_full_hostname(void);
-static int res_config_context(resource_info_t *);
+static int res_config_classad(resource_info_t *);
 
 int main(int argc, char** argv)
 {
@@ -170,8 +164,6 @@ int main(int argc, char** argv)
 	resmgr_init();
 	resource_init();
 	
-	event_timeout();
-
 	if (chdir(log_path) < 0) {
 		EXCEPT("chdir to log directory %s", log_path);
 	}
@@ -205,9 +197,9 @@ int main(int argc, char** argv)
 	return 0;
 }
 
-static int res_config_context(resource_info_t* rip)
+static int res_config_classad(resource_info_t* rip)
 {
-	config( rip->r_context );
+	config( rip->r_classad );
 }
 
 static void usage(const char* s)
@@ -221,26 +213,14 @@ static void mainloop()
 	int count;
 	struct timeval timer;
 	int stashed_errno;
+	int next_timeout = (int)time((time_t *)0);
+			// initialize next_timeout so that we do a timeout right away. 
 
-	for (;;) {
+	for(;;) {
 		FD_ZERO(&readfds);
 		resmgr_setsocks(&readfds);
 		timer.tv_usec = 0;
-
-		if (owner_state) {
-			timer.tv_sec = owner_polling_freq -
-				((int)time((time_t *)0) - last_timeout);
-			if (timer.tv_sec > owner_polling_freq)
-				timer.tv_sec = 0;
-		} else {
-			timer.tv_sec = polling_freq -
-				((int)time((time_t *)0) - last_timeout);
-			if (timer.tv_sec > polling_freq)
-				timer.tv_sec = 0;
-		}
-
-		if(timer.tv_sec < 0)
-			timer.tv_sec = 0;
+		timer.tv_sec = next_timeout - (int)time((time_t *)0);
 
 #if defined(AIX31) || defined(AIX32)
 		errno = EINTR;
@@ -249,27 +229,28 @@ static void mainloop()
 			       &timer);
 		stashed_errno = errno;	// reconfig will trample our errno
 
-		if (want_reconfig) {
+		if( want_reconfig ) {
 			dprintf( D_ALWAYS, "Re reading config file\n" );
-			dprintf_config("STARTD", 2);
-			resmgr_walk(res_config_context);
+			dprintf_config( "STARTD", 2 );
+			resmgr_walk( res_config_classad );
 			init_params();
 			want_reconfig = 0;
 		}
 
 		if (count < 0) {
-			if (stashed_errno == EINTR)
+			if( stashed_errno == EINTR ) {
 				continue;
-			else {
-				EXCEPT("select(FD_SETSIZE,0%o,0,0,%d sec)",
-					readfds, timer.tv_sec);
+			} else {
+				EXCEPT( "select(FD_SETSIZE,0%o,0,0,%d sec)",
+						readfds, timer.tv_sec);
 			}
 		}
 
-		if (NFDS(count) == 0)
-			event_timeout();
-		else
+		if( NFDS(count) == 0 ) {
+			next_timeout = event_timeout();
+		} else {
 			resmgr_call(&readfds);
+		}
 	}
 }
 
@@ -315,42 +296,19 @@ static void init_params()
 		free(alt_collector_host);
 	alt_collector_host = param("CONDOR_VIEW_HOST");
 
-	tmp = param("POLLING_FREQUENCY");
+	tmp = param("POLLING_INTERVAL");
 	if (tmp == NULL) {
-		polling_freq = 30;
+		polling_interval = 5;
 	} else {
-		polling_freq = atoi(tmp);
+		polling_interval = atoi(tmp);
 		free(tmp);
 	}
 
-	tmp = param("OWNER_POLLING_FREQUENCY");
+	tmp = param("UPDATE_INTERVAL");
 	if (tmp == NULL) {
-		owner_polling_freq = polling_freq;
+		update_interval = 60;
 	} else {
-		owner_polling_freq = atoi(tmp);
-		free(tmp);
-	}
-
-	tmp = param("POLLS_PER_UPDATE");
-	if (tmp == NULL) {
-		polls_per_update = 4;
-	} else {
-		polls_per_update = atoi(tmp);
-	}
-
-	tmp = param("POLLS_PER_UPDATE_KBDD");
-	if (tmp == NULL) {
-		polls_per_update_kbdd = 6;
-	} else {
-		polls_per_update_kbdd = atoi(tmp);
-		free(tmp);
-	}
-
-	tmp = param( "POLLS_PER_UPDATE_LOAD" );
-	if(tmp == NULL) {
-		polls_per_update_load = 12;
-	} else {
-		polls_per_update_load = atoi( tmp );
+		update_interval = atoi(tmp);
 		free(tmp);
 	}
 
@@ -359,6 +317,8 @@ static void init_params()
 		EXCEPT("STARTD_DEBUG not defined in config file");
 	}
 	free(tmp);
+
+		/* XXX  What's going on here?  This is weird! -Derek */
 	if (!fgflag)
 		fgflag = boolean("STARTD_DEBUG", "Foreground");
 
@@ -367,15 +327,6 @@ static void init_params()
 	admin = param("CONDOR_ADMIN");
 	if (admin == NULL ) {
 		EXCEPT("CONDOR_ADMIN not specified in config file");
-	}
-
-	tmp = param("MEMORY");
-	if (tmp != NULL) {
-		memory = atoi(tmp);
-		free(tmp);
-	}
-	if (memory <= 0) {
-		memory =  DEFAULT_MEMORY;
 	}
 
 	if (spool_path)
@@ -412,9 +363,9 @@ static void init_params()
 	AccountantHost = param("ACCOUNTANT_HOST");
 
 	tmp = param("CAPABILITY_TIMEOUT");
-	if (!tmp)
+	if (!tmp) {
 		capab_timeout = 120;
-	else {
+	} else {
 		capab_timeout = atoi(tmp);
 		free(tmp);
 	}
