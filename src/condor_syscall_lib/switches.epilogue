@@ -3,6 +3,6 @@
 #include "switches.remap-HPUX9.h"
 #endif 
 
-#ifdef SOLARIS251
+#ifdef Solaris
 #include "switches.remap-SOLARIS251.h"
 #endif
