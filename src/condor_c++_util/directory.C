@@ -418,8 +418,7 @@ Directory::do_remove( const char* path, bool is_curr, dir_rempriv_t rem_priv )
 #elif defined( WIN32 )
 		try_1_rc = system( buf );
 #else
-		try_1_rc = my_spawnl( "/bin/rm", TRUE, "/bin/rm", "-rf",
-							  path, NULL );
+		try_1_rc = my_spawnl( "/bin/rm", "/bin/rm", "-rf", path, NULL );
 #endif
 
 			// for good measure, repeat the above operation a second
@@ -465,8 +464,7 @@ Directory::do_remove( const char* path, bool is_curr, dir_rempriv_t rem_priv )
 			dprintf(D_ALWAYS,
 				"Directory: with \"owner\" priv about to call %s\n",buf);
 #else
-			try_2_rc = my_spawnl( "/bin/rm", TRUE, "/bin/rm", "-rf",
-								  path, NULL );
+			try_2_rc = my_spawnl( "/bin/rm", "/bin/rm", "-rf", path, NULL );
 #endif
 
 				// When all of that is done, switch back to our normal user
@@ -493,8 +491,7 @@ Directory::do_remove( const char* path, bool is_curr, dir_rempriv_t rem_priv )
 #elif defined( WIN32 )
 			try_2_rc = system( buf );
 #else
-			try_2_rc = my_spawnl( "/bin/rm", TRUE, "/bin/rm", "-rf",
-								  path, NULL );
+			try_2_rc = my_spawnl( "/bin/rm", "/bin/rm", "-rf", path, NULL );
 #endif
 
 			set_priv(priv);

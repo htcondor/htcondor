@@ -94,9 +94,8 @@ PROC *ConstructProc( int, PROC *);
 
 FILE *my_popen( const char *cmd, const char * mode );
 int my_pclose(FILE *fp);
-int my_spawnl( const char* cmd, int wait_for_child, ... );
-int my_spawnv( const char* cmd, int wait_for_child, char *const argv[] );
-int my_spawn_wait( void );
+int my_spawnl( const char* cmd, ... );
+int my_spawnv( const char* cmd, char *const argv[] );
 
 #else /* HAS_PROTO */
 

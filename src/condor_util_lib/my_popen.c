@@ -153,7 +153,7 @@ my_pclose(FILE *fp)
 */
 #define MAXARGS	32
 int
-my_spawnl( const char* cmd, int wait_for_child, ... )
+my_spawnl( const char* cmd, ... )
 {
 	int		rval;
 	int		argno = 0;
@@ -162,7 +162,7 @@ my_spawnl( const char* cmd, int wait_for_child, ... )
 	const char * argv[MAXARGS + 1];
 
 	/* Convert the args list into an argv array */
-    va_start( va, wait_for_child );
+    va_start( va, cmd );
 	for( argno = 0;  argno < MAXARGS;  argno++ ) {
 		const char	*p;
 		p = va_arg( va, const char * );
@@ -175,7 +175,7 @@ my_spawnl( const char* cmd, int wait_for_child, ... )
     va_end( va );
 
 	/* Invoke the real spawnl to do the work */
-    rval = my_spawnv( cmd, wait_for_child, (char *const*) argv );
+    rval = my_spawnv( cmd, (char *const*) argv );
 
 	/* Done */
 	return rval;
@@ -191,14 +191,10 @@ my_spawnl( const char* cmd, int wait_for_child, ... )
 
   Returns:
     -1: failure
-    wait_for_child == true:
-	  >0 == Return status of child
-    wait_for_child == false:
-      0: Success (wait == true)
-	  >0 == PID of child
+    >0 == Return status of child
 */
 int
-my_spawnv( const char* cmd, int wait_for_child, char *const argv[] )
+my_spawnv( const char* cmd, char *const argv[] )
 {
 	int					status;
 
@@ -221,30 +217,6 @@ my_spawnv( const char* cmd, int wait_for_child, char *const argv[] )
 		execv( cmd, argv );
 		_exit( ENOEXEC );		/* This isn't safe ... */
 	}
-
-		/* Finally, the parent must wait for the child */
-	if( ! wait_for_child ) {
-			/* We're not waiting, so don't reset ChildPid! */
-		return( ChildPid );
-	}
-
-		/* Wait for child process to exit and get its status */
-	while( waitpid(ChildPid,&status,0) < 0 ) {
-		if( errno != EINTR ) {
-			status = -1;
-			break;
-		}
-	}
-
-		/* Now return status from child process */
-	ChildPid = 0;
-	return status;
-}
-		
-int
-my_spawn_wait( void )
-{
-	int			status;
 
 		/* Wait for child process to exit and get its status */
 	while( waitpid(ChildPid,&status,0) < 0 ) {
