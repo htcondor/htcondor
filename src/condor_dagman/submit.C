@@ -3,6 +3,7 @@
 //
 // Local DAGMan includes
 //
+#include "dag.h"
 #include "submit.h"
 #include "util.h"
 #include "debug.h"
@@ -64,27 +65,35 @@ static bool submit_try (const char *exe,
 }
 
 //-------------------------------------------------------------------------
-bool submit_submit (const char * cmdFile, CondorID & condorID) {
-  // the '-p' parameter to condor_submit will now cause condor_submit
-  // to pause ~4 seconds after a successfull submit.  this prevents
-  // the race condition of condor_submit finishing before dagman
-  // does a pclose, which at least on SGI IRIX causes a nasty 'Broken Pipe'
-  // [joev] - took this out on Todd's advice ....
-  
-  // char * exe = "condor_submit -p";
+bool
+submit_submit( const char* cmdFile, CondorID& condorID,
+			   const char* DAGNodeName )
+{
   const char * exe = "condor_submit";
-  
-  // 'subproc' is not used in newer versions of condor Version 6 doesn't
-  // use 'proc' either.  We set this to zero for now
-  
-  char * command = new char[strlen(exe) + strlen(cmdFile) + 10];
+  char prependLines[8192];
+  char* command;
+  int cmdLen;
+
+  // add arguments to condor_submit to identify the job's name in the
+  // DAG and the DAGMan's job id, and to print the former in the
+  // submit log
+
+  sprintf( prependLines, 
+		   "-a 'dag_node_name = %s' "
+		   "-a 'dagman_job_id = %s' "
+		   "-a 'submit_event_notes = DAG Node: $(dag_node_name)'",
+		   DAGNodeName, DAGManJobId );
+
+  cmdLen = strlen( exe ) + strlen( prependLines ) + strlen( cmdFile ) + 16;
+  command = new char[cmdLen];
   if (command == NULL) {
 	  printf( "\nERROR: out of memory (%s() in %s:%d)!\n", __FUNCTION__,
 			  __FILE__, __LINE__ );
 	  return false;
   }
+
   // we use 2>&1 to make sure we get both stdout and stderr from command
-  sprintf( command, "%s %s 2>&1", exe, cmdFile );
+  sprintf( command, "%s %s %s 2>&1", exe, prependLines, cmdFile );
   
   bool success = false;
   const int tries = 6;
