@@ -1,0 +1,27 @@
+	The condor keyboard daemon monitors X events on machines where the
+operating system does not provide a way of monitoring the idle time of the
+keyboard or mouse.  In particular, this is necessary on Digial Unix machines
+and IRIX machines.  NOTE: If you are running on Solaris, Linux, or HP/UX, you
+do not need to use the keyboard daemon. Although great measures have been
+taken to make this daemon as robust as possible, the X window system was not
+designed to facilitate such a need, and thus is less then optimal on machines
+where many users log in and out on the console frequently.
+
+	In order to work with X authority, the system by which X authorizes 
+processes to connect to X servers, the condor keyboard daemon needs to run
+with super user privaledges.  Currently, the daemon assumes that X uses the
+HOME environement variable in order to locate a file named .Xauthority, which
+contains keys necessary to connect to an X server.  The keyboard daemon
+attempts to set this environment variable to various users home directories in
+order to gain a connection to the X server and monitor events.  This may fail
+to work on your system, if you are using a non-standard approach.  If the
+keyboard daemon is not allowed to attach to the X server, the state of a
+machine may be incorrectly set to idle when a user is, in fact, using the
+machine.
+
+	To see how well the keyboard daemon is working on your system, review
+the log for the daemon and look for succesfull connections to the X
+server.  If you see none, you may have a situation where the keyboard daemon
+is unable to connect to your machines X server.  If this happends, please
+send mail to condor-admin@cs.wisc.edu and let us know about your situation.
+
