@@ -254,6 +254,12 @@ and similar calls are not implemented.
 \index{UNIX!signals}
 are supported, but Condor reserves the 
 SIGUSR2 and SIGTSTP signals and does not permit their use by user code.
+Timers (set with setitimer(2)
+\index{UNIX system call!setitimer(2)}
+and
+alarm(2))
+\index{UNIX system call!alarm(2)}
+will not be saved in the checkpoint.
 	\item Interprocess communication (IPC) is not
 supported, including 
 sockets, 
@@ -274,6 +280,10 @@ system call is not supported.
 Read-only and write-only file accesses work correctly,
 but programs which both read and write to the same file may not
 work correctly.
+	\item File locks
+\index{UNIX!file locks}
+are not saved in the checkpoint.  All locks
+are released when the process exits.
 	\item Each Condor job that has been checkpointed has an associated 
 checkpoint file.
 \index{file, size of}
