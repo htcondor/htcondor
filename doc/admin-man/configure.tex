@@ -1179,7 +1179,7 @@ These settings control the \Condor{schedd}.
   priority so that they don't interfere with interactive use of the
   machine.  This is very handy for keeping a submit machine with lots
   of shadows running still useful to the owner of the machine.  The
-  entry can be any integer between 0 and 20.  It defaults to 10.
+  entry can be any integer between 1 and 19.  It defaults to 10.
 
 \item[\Macro{QUEUE\_CLEAN\_INTERVAL}] \label{param:QueueCleanInterval}
   The schedd maintains the job queue on a given machine.  It does so
@@ -1284,6 +1284,22 @@ Condor'' for details.
 This setting effects the \Condor{starter}.
 
 \begin{description}
+
+\item[\Macro{JOB\_RENICE\_INCREMENT}] \label{param:JobReniceIncrement}
+  When the starter spawns a Condor job, it can do so with a
+  \Term{nice-level}.  This is a mechanism in UNIX where you can assign
+  your own processes a lower priority so that they don't interfere
+  with interactive use of the machine.  If you have machines with lots
+  of real memory and swap space so the only scarce resource is CPU
+  time, you could use this setting in conjunction with a policy that
+  always allowed Condor to start jobs on your machines so that Condor
+  jobs would always run, but interactive response on your machines
+  would never suffer.  You probably wouldn't even notice Condor was
+  running jobs.  See section~\ref{sec:Configuring-Policy} on
+  ``Configuring The Startd Policy'' for full details on setting up a
+  policy for starting and stopping jobs on a given machine.  The entry
+  can be any integer between 1 and 19.  It is commented out by
+  default.
 
 \item[\Macro{STARTER\_LOCAL\_LOGGING}]
   \label{param:StarterLocalLogging} This macro determines whether the
