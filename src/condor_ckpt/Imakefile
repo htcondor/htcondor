@@ -14,13 +14,10 @@ SRC_DIR = $(SRC_TREE)/condor_ckpt
 
 OS = OperatingSystem
 
-DRIVER_SRC = driver.C driver2.C driver3.C display.C gen_test.C file_test.c
-PACKAGE_SRC = \
-	image.C machdep.$(OS).C stubs.c file_state.C condor_syscalls.c
 
 #if IS_HPPAR_HPUX9
-ASSEMBLER_SRC = get_reginfo.s
-ASSEMBLER_OBJ = get_reginfo.o
+ASSEMBLER_SRC = get_reginfo.HPUX.s
+ASSEMBLER_OBJ = get_reginfo.HPUX.o
 .s.o:
 	as /lib/pcc_prefix.s $<
 #endif
@@ -32,36 +29,21 @@ ASSEMBLER_OBJ = _longjmp.AIX32.o
 	m4 /usr/include/sys/asdef.s $*.s | as -o $*.o
 #endif
 
-SRC = $(DRIVER_SRC) $(PACKAGE_SRC) $(FILE_STATE_SRC)
-PACKAGE = \
-	image.o stubs.o machdep.$(OS).o $(ASSEMBLER_OBJ) \
-	file_state.o syscall_stubs.o condor_syscalls.o
+SRC = image.C machdep.$(OS).C file_state.C tmp_stack.C
+OBJ = image.o machdep.$(OS).o file_state.o tmp_stack.o $(ASSEMBLER_OBJ)
+MODE = ../condor_syscall_lib/syscall_mode.o
 
-all_target(noenv gen_test test3 file_test)
+
+all_target(machdep_test libcondor.a)
 depend_target($(SRC) )
 
-lex.yy.c: stub_gen_lex.l scanner.h y.tab.h
-	lex stub_gen_lex.l
+program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o,,no_release)
 
-y.tab.c: stub_gen_yacc.y scanner.h
-	yacc -d stub_gen_yacc.y
-
+libcondor.a: $(OBJ)
+	cp ../condor_syscall_lib/condor_syscall_lib.a libcondor.a
+	AR_REPLACE( libcondor.a, $(OBJ) )
+release:: libcondor.a
+	COPY_LIBRARY( libcondor.a, $(RELEASE_DIR)/lib )
+	RANLIB_TOUCH( $(RELEASE_DIR)/lib/libcondor.a )
 clean::
-	rm -f lex.yy.c y.tab.c y.tab.h syscall_stubs.c
-
-syscall_stubs.c: stubs.tmpl stub_gen
-	stub_gen < stubs.tmpl > syscall_stubs.c
-
-program_target(stub_gen,y.tab.o lex.yy.o,$(NULL),no_realeas)
-c_plus_target(file_test,file_test.o machine_name.o $(PACKAGE),$(NULL),no_release)
-program_target(noenv,noenv.o,$(NULL),no_release)
-program_target(my_printenv,my_printenv.o,$(NULL),no_release)
-c_plus_target(test,driver.o $(PACKAGE),$(NULL),no_release)
-c_plus_target(test2,driver2.o $(PACKAGE),$(NULL),no_release)
-c_plus_target(test3,driver3.o machine_name.o $(PACKAGE),$(NULL),no_release)
-c_plus_target(test4,driver4.o $(PACKAGE),$(NULL),no_release)
-c_plus_target(display,display.o $(PACKAGE),$(NULL),no_release)
-c_plus_target(gen_test,gen_test.o $(PACKAGE),$(NULL),no_release)
-
-clean::
-	rm -f Ckpt.13.13 core
+	rm -f libcondor.a
