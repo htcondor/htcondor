@@ -613,20 +613,20 @@ NUM_CPUS = 1
 ##+	You may want set the vmstat parameters by hand
 ##    MODULE condor_node:Condor_:condor_node:5m
 ##+	Monitors the status of an individual Condor pool node
-##+	You may want set the condor_node parameters by hand
+##+	You probably need set the condor_node parameters by hand
 ##+	In particular, the hawkeye_node_env PATH will most likely need
 ##+	to be set
 ##    MODULE condor_pool:pool_:condor_pool:5m
 ##+	Monitors the status of a Condor pool
-##+	You may want set the condor_pool parameters by hand
+##+	You probably need set some condor_pool parameters by hand
 ##+	In particular, the hawkeye_pool_env PATH will most likely need
 ##+	to be set
 ##    MODULE grid:grid_:grid_probe:0:continuous
 ##+	Monitors the status of a Condor/Globus grid
-##+	You will NEED to set the grid_ parameters by hand (quite a few)
+##+	You will need to set the grid_ parameters by hand (quite a few)
 ##    MODULE gass_cache:cache_:gass_cache:20m
 ##+	Monitors the status of a Globus GASS cache
-##+	You will NEED to set the gass_cache_ parameters by hand
+##+	You will need to set the gass_cache_ parameters by hand
 ##+	In particular, the Hawkeye_gass_cache_directory is most likely
 ##+	not valid for your system
 ##
