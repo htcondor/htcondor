@@ -55,13 +55,13 @@
 ##--------------------------------------------------------------------
 ##  condor_collector
 ##--------------------------------------------------------------------
-##  How long can a classad remain in the collector before it is
+##  How long can a ClassAd remain in the collector before it is
 ##  discarded as stale information?  (Defaults to 15 minutes.  The 
 ##  daemons send updates every 5 minutes by default).
 #CLASSAD_LIFETIME	= 900
 
 ##  How often should the collector check for machines that don't have
-##  classads from the condor_master and send email about it? (3
+##  ClassAds from the condor_master and send email about it? (3
 ##  hours by default).
 #MASTER_CHECK_INTERVAL	= 10800
 
@@ -108,7 +108,7 @@
 ##  to the schedds and startds?
 #NEGOTIATOR_TIMEOUT	= 30
 
-##  What is the halflife of the user priorities? (1 day)
+##  What is the half-life of the user priorities? (1 day)
 #PRIORITY_HALFLIFE	= 86400
 
 ##  The default priority factor for nice users
@@ -132,11 +132,11 @@ PREEMPTION_REQUIREMENTS : $(StateTimer) > (1 * $(HOUR)) && RemoteUserPrio > Subm
 
 ##  The PREEMPTION_RANK expression is used to rank machines which the
 ##  job ranks the same.  For example, if the job has no preference, it
-##  is usually preferrable to preempt a job with a small ImageSize
+##  is usually preferable to preempt a job with a small ImageSize
 ##  instead of a job with a large ImageSize.  The default is to rank
-##  all preemptible matches the same.  However, the negotiator will
+##  all preemptable matches the same.  However, the negotiator will
 ##  always prefer to match the job with an idle machine over a
-##  preemptible machine, if the job has no preference between them.
+##  preemptable machine, if the job has no preference between them.
 PREEMPTION_RANK : (RemoteUserPrio * 1000000) - ImageSize
 
 ##  The NEGOTIATOR_TRAFFIC_LIMIT macro specifies the maximum

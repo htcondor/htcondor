@@ -13,7 +13,7 @@
 ##  What daemons do you want to run on your checkpoint server?
 ##  NOTE: For it to be the checkpoint server, you need the 
 ##  CKPT_SERVER to run.  It's optional whether or not you want to
-##  run the schedd (to allow jobs to be submited) and/or the startd
+##  run the schedd (to allow jobs to be submitted) and/or the startd
 ##  (to allow Condor jobs to execute) on your checkpoint server.
 DAEMON_LIST	= MASTER, CKPT_SERVER, STARTD, SCHEDD
 

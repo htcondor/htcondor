@@ -11,7 +11,7 @@
 ##  know what you're doing)
 ##
 ##  Please read the INSTALL file (or the Install chapter in the
-##  Condor Administrator's Manual) for detailed explainations of the 
+##  Condor Administrator's Manual) for detailed explanations of the 
 ##  various settings in here and possible ways to configure your
 ##  pool. 
 ##
@@ -48,7 +48,7 @@ LOCAL_DIR		= $(TILDE)
 ##  If you would like to have all of the log files in one directory
 ##  tree you might want to do this.  However, be aware that you will
 ##  need to have all of hostnames for all of your machines defined.
-##  (condor_init will do this for you if you've chosen to instal it
+##  (condor_init will do this for you if you've chosen to install it
 ##  this way).
 #LOCAL_DIR		= $(RELEASE_DIR)/hosts/$(HOSTNAME)
 
@@ -59,7 +59,7 @@ LOCAL_CONFIG_FILE	= $(LOCAL_DIR)/condor_config.local
 ##--------------------------------------------------------------------
 ##  Mail parameters:
 ##--------------------------------------------------------------------
-##  When something goes wrong with condor at your site, who chould get
+##  When something goes wrong with condor at your site, who should get
 ##  the email?
 CONDOR_ADMIN		= condor-admin@your.domain
 
@@ -79,7 +79,7 @@ MAIL			= /usr/bin/mail
 UID_DOMAIN		= your.domain
 #UID_DOMAIN		= $(FULL_HOSTNAME)
 
-##  Internet domain of machines shareing a common file system.
+##  Internet domain of machines sharing a common file system.
 ##  If your machines don't use a network file system, use the second
 ##  entry which specifies that each machine has its own file system. 
 FILESYSTEM_DOMAIN	= your.domain
@@ -141,9 +141,9 @@ RESERVED_SWAP		= 35
 ##  to spawn shadows for?
 MAX_JOBS_RUNNING	= 500
 
-##  Condor needs to create a few lock files to syncronize access to
+##  Condor needs to create a few lock files to synchronize access to
 ##  various log files.  Because of problems we've had with network
-##  filesystems and file locking over the years, we HIGHLY recomend
+##  filesystems and file locking over the years, we HIGHLY recommend
 ##  that you put these lock files on a local partition on each
 ##  machine.  If you don't have your LOCAL_DIR on a local partition,
 ##  be sure to change this entry.  Whatever user (or group) condor is
@@ -177,7 +177,7 @@ LOCK		= $(LOCAL_DIR)/log
 
 
 ##--------------------------------------------------------------------
-##  Settings that control the daemon's debuging output:
+##  Settings that control the daemon's debugging output:
 ##--------------------------------------------------------------------
 MAX_COLLECTOR_LOG	= 64000
 COLLECTOR_DEBUG		=
@@ -273,7 +273,7 @@ RESERVE_AFS_CACHE   = False
 ##  checkpoint server or custom user daemons)?
 #DC_DAEMON_LIST = MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD
 
-##  When the master starts up, it can place it's address (ip and port)
+##  When the master starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
 ##  need to query the central manager to find the master.  This
 ##  feature can be turned off by commenting out this setting.
@@ -335,7 +335,7 @@ MASTER_ADDRESS_FILE = $(LOG)/.master_address
 ##  The setting on where various starter binaries are installed is
 ##  located in the condor_config.root file.
 
-##  When the startd starts up, it can place it's address (ip and port)
+##  When the startd starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
 ##  need to query the central manager to find the startd.  This
 ##  feature can be turned off by commenting out this setting.
@@ -380,15 +380,15 @@ RunBenchmarks = (LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
 ##  This entry allows the startd to monitor console (keyboard and
 ##  mouse) activity by checking the access times on special files in
 ##  /dev.  Activity on these files shows up as "ConsoleIdle" time in
-##  the startd's ClassAd.  Just give a comma-seprated list of the
+##  the startd's ClassAd.  Just give a comma-separated list of the
 ##  names of devices you want considered the console, without the
 ##  "/dev/" portion of the pathname.
 #CONSOLE_DEVICES = mouse, console
 
 ##  The STARTD_EXPRS entry allows you to have the startd advertise
 ##  arbitrary expressions from the config file in its ClassAd.  Give
-##  the comma-seperated list of entries from the config file you want
-##  in the startd classad.
+##  the comma-separated list of entries from the config file you want
+##  in the startd ClassAd.
 ##  Note: because of the different syntax of the config file and
 ##  ClassAds, you might have to do a little extra work to get a given
 ##  entry into the ClassAd.  In particular, ClassAds require "'s
@@ -405,7 +405,7 @@ RunBenchmarks = (LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
 #STARTD_EXPRS = MY_CONSOLE_DEVICES, RunBenchmarks, UPDATE_INTERVAL
 
 ##  When the startd is claimed by a remote user, it can also advertise
-##  arbitrary attributes from the classad of the job its working on.
+##  arbitrary attributes from the ClassAd of the job its working on.
 ##  Just list the attribute names you want advertised.  
 ##  Note: since this is already a ClassAd, you don't have to do
 ##  anything funny with strings, etc.  This feature can be turned off
@@ -509,7 +509,7 @@ STARTD_JOB_EXPRS = ImageSize, JobUniverse
 ##  The macros that define where the various shadows are installed
 ##  is located in condor_config.root
 
-##  When the schedd starts up, it can place it's address (ip and port)
+##  When the schedd starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
 ##  need to query the central manager to find the schedd.  This
 ##  feature can be turned off by commenting out this setting.
@@ -560,7 +560,7 @@ SHADOW_RENICE_INCREMENT	= 10
 ######
 ## Queue management settings:
 ######
-##  How often should the schedd truncate it's job queue transation
+##  How often should the schedd truncate it's job queue transaction
 ##  log?  (Specified in seconds, once a day is the default.)
 #QUEUE_CLEAN_INTERVAL	= 86400
 
@@ -636,10 +636,10 @@ PVMGS			= $(SBIN)/condor_pvmgs
 #STARTER_LOCAL_LOGGING	= TRUE
 
 ##  If the UID_DOMAIN settings match on both the execute and submit
-##  machines, but the uid of the user who submitted the job isn't in
+##  machines, but the UID of the user who submitted the job isn't in
 ##  the passwd file of the execute machine, the starter will normally
 ##  exit with an error.  Do you want the starter to just start up the
-##  job with the specified uid, even if it's not in the passwd file?
+##  job with the specified UID, even if it's not in the passwd file?
 #SOFT_UID_DOMAIN	= FALSE
 
 
@@ -657,12 +657,12 @@ PVMGS			= $(SBIN)/condor_pvmgs
 ##  These are default values for the rank expression that are used if
 ##  none are specified in the submit file.  Comment these out to
 ##  disable the feature.
-DEFAULT_RANK_VANILLA	= ((Memory*1024) > Imagesize)
-DEFAULT_RANK_STANDARD	= ((Memory*1024) > Imagesize)
+DEFAULT_RANK_VANILLA	= ((Memory*1024) > ImageSize)
+DEFAULT_RANK_STANDARD	= ((Memory*1024) > ImageSize)
 
 ##  If you want condor_submit to automatically append expressions to
 ##  the job ClassAds it creates, you can uncomment and define the
-##  SUBMIT_EXRP setting.  It works just like the STARTD_EXPRS
+##  SUBMIT_EXPRS setting.  It works just like the STARTD_EXPRS
 ##  described above with respect to ClassAd vs. config file syntax,
 ##  strings, etc.  One common use would be to have the full hostname
 ##  of the machine where a job was submitted placed in the job

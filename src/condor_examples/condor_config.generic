@@ -12,14 +12,14 @@
 ##  condor_config.policy	- This file contains all the configuration
 ##			entries for controlling how your jobs are
 ##			run on your machine.
-##  condor_config.securty	- This file contains the security methods
+##  condor_config.security	- This file contains the security methods
 ##			for Condor.
 ##  condor_config.flocking	- If you are going to be using flocking,
 ##			this file contains the appropriate configuration
 ##			files.
 ##
 ##  Please read the INSTALL file (or the Install chapter in the
-##  Condor Administrator's Manual) for detailed explainations of the 
+##  Condor Administrator's Manual) for detailed explanations of the 
 ##  various settings in here and possible ways to configure your
 ##  pool. 
 ##

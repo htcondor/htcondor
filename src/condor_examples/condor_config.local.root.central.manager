@@ -18,7 +18,7 @@
 ##  What daemons do you want to run on your central manager?  
 ##  NOTE: For it to be the central manager, you need the NEGOTIATOR
 ##  and COLLECTOR to run.  It's optional whether or not you want to
-##  run the schedd (to allow jobs to be submited) and/or the startd
+##  run the schedd (to allow jobs to be submitted) and/or the startd
 ##  (to allow Condor jobs to execute) on your central manager.
 DAEMON_LIST	= MASTER, COLLECTOR, NEGOTIATOR, STARTD, SCHEDD
 

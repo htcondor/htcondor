@@ -111,15 +111,15 @@ UWCS_WANT_VACATE 	= $(ActivationTimer) > 10 * $(MINUTE) \
 ##  (Where the first ## is not there, and 12 is the number of megabytes
 ##  of RAM they are going to use)
 ##  If they do NOT specify this (which is often), we'll assume that they'll
-##  need 113 meg of RAM (128 - 15 meg that we tyically save for the
+##  need 113 megabytes of RAM (128 - 15 megabytes that we typically save for the
 ##  operating system.)
 ##  So, the expression below is, if the CPU & Keyboard are both idle,
 ##  and the MemoryRequirements fit (or are not defined and this machine
-##  has 128 or greater meg of RAM), then the job can start here.
+##  has 128 or greater megabytes of RAM), then the job can start here.
 ##
 ##  If you decide to use this, please be aware that if you do not
-##  have any (or many) machines with 128 meg (or more) of RAM, your
-##  jobs will *NOT* start unless you specify MemoryRequrements in 
+##  have any (or many) machines with 128 megabytes (or more) of RAM, your
+##  jobs will *NOT* start unless you specify MemoryRequirements in 
 ##  your command file!
 #UWCS_START		= ( ($(CPU_Idle) && KeyboardIdle > $(StartIdleTime)) \
 #			   && (TARGET.ImageSize <= ((Memory - 15)*1024)) \
@@ -127,7 +127,7 @@ UWCS_WANT_VACATE 	= $(ActivationTimer) > 10 * $(MINUTE) \
 #			   (MemoryRequirements =?= UNDEFINED && \
 #			   (RemoteUserCpu > 0.0 || Memory > 127)) ) )
 
-##  An easier-to-use start expression follows.  It is only dependant on
+##  An easier-to-use start expression follows.  It is only dependent on
 ##  if the CPU is idle, and if the keyboard has been idle for a while.
 ##  (The memory requirements are implied to be that the amount of RAM
 ##  the incoming job requires will be less than the amount of memory on
@@ -154,7 +154,7 @@ UWCS_KILL		= $(ActivityTimer) > $(MaxVacateTime)
 UWCS_PERIODIC_CHECKPOINT	= $(LastCkpt) > (3 * $(HOUR))
 
 ##  You might want to checkpoint a little less often.  A good
-##  example of this is below.  For jobs smaller than 60 megs, we
+##  example of this is below.  For jobs smaller than 60 megabytes, we
 ##  periodic checkpoint every 6 hours.  For larger jobs, we only
 ##  checkpoint every 12 hours.
 #UWCS_PERIODIC_CHECKPOINT	= ( (ImageSize < 60000) && \
