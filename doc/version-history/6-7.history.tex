@@ -84,6 +84,9 @@ network problems.
 
 \begin{itemize}
 
+\item Fixed a performance problem with the standard universe when
+\Syscall{gettimeofday} is called in a very tight loop by the application.
+
 \item Fixed the default value of \Macro{OPSYS} in the MacOSX version
   of Condor.
   Once again, Condor reports \verb@OSX@ for all versions of MacOSX.
