@@ -146,6 +146,7 @@ $realskel="condor_release";
   "sgi_63"        => "irix6",
   "sgi_64"        => "irix6",
   "sgi_65"        => "irix65",
+  "ppc_macosx"    => "MacOSX",
   "hp_ux102"      => "hpux10.20",
   "hp_ux110"      => "hpux11.00"
 );
@@ -176,6 +177,7 @@ $realskel="condor_release";
   "sgi_63"        => "SGI",
   "sgi_64"        => "SGI",
   "sgi_65"        => "SGI",
+  "ppc_macosx"    => "PPC",
   "hp_ux102"      => "HPPAR",
   "hp_ux110"      => "HPPAR"
 );
