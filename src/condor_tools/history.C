@@ -166,7 +166,7 @@ displayJobShort(AttrList* ad)
                 !ad->EvalInteger (ATTR_PROC_ID, NULL, proc)             ||
                 !ad->EvalInteger (ATTR_Q_DATE, NULL, date)              ||
                 !ad->EvalInteger (ATTR_COMPLETION_DATE, NULL, CompDate)	||
-                !ad->EvalFloat   (ATTR_JOB_REMOTE_USER_CPU, NULL, utime)||
+                !ad->EvalFloat   (ATTR_JOB_REMOTE_WALL_CLOCK, NULL, utime)||
                 !ad->EvalInteger (ATTR_JOB_STATUS, NULL, status)        ||
                 !ad->EvalInteger (ATTR_JOB_PRIO, NULL, prio)            ||
                 !ad->EvalInteger (ATTR_IMAGE_SIZE, NULL, image_size)    ||
@@ -194,7 +194,7 @@ short_header (void)
         "ID",
         "OWNER",
         "SUBMITTED",
-        "CPU_USAGE",
+        "RUN_TIME",
         "ST",
 		"COMPLETED",
         "CMD"
