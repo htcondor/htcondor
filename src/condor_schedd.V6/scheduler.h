@@ -14,7 +14,6 @@
 #include "condor_classad.h"
 #include "condor_io.h"
 #include "proc.h"
-#include "condor_daemon_core.h"
 #include "sched.h"
 #include "prio_rec.h"
 
