@@ -1,4 +1,5 @@
 #include "classad_package.h"
+using namespace classad;
 
 	// prototypes
 void doMatchNotification( ClassAd *, ClassAd * );

@@ -14,6 +14,7 @@
 #include <sys/stat.h>
 
 #include "classad_package.h"
+using namespace classad;
 
 //-------------------------------------------------------------
 
