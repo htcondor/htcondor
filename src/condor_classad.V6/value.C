@@ -388,6 +388,7 @@ bool convertValueToRealValue(const Value value, Value &realValue)
             break;
 
 		case Value::STRING_VALUE:
+            could_convert = true;
 			value.IsStringValue(buf);
 			rvalue = strtod(buf.c_str(), (char**) &end);
 			if (end == buf && rvalue == 0.0) {
@@ -407,8 +408,9 @@ bool convertValueToRealValue(const Value value, Value &realValue)
 					could_convert = false;
                     break;
 			}
-            could_convert = true;
-			realValue.SetRealValue(rvalue*Value::ScaleFactor[nf]);
+            if (could_convert) {
+                realValue.SetRealValue(rvalue*Value::ScaleFactor[nf]);
+            }
             break;
 
 		case Value::BOOLEAN_VALUE:
