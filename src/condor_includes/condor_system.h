@@ -156,6 +156,9 @@ typedef fd_set *SELECT_FDSET_PTR;
 #include <values.h>
 #include <math.h>
 
+#define stricmp strcasecmp		/* stricmp no longer exits in egcs, but strcasecmp does */
+#define strincmp strncasecmp	/* strincmp no longer exits in egcs, but strncasecmp does */
+
 #endif /* UNIX */
 
 #endif /* CONDOR_SYSTEM_H */
