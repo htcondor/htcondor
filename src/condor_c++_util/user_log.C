@@ -158,6 +158,7 @@ initialize( const char *owner, const char *file, int c, int p, int s )
 {
 	priv_state		priv;
 
+	uninit_user_ids();
 	init_user_ids(owner);
 
 		// switch to user priv, saving the current user
