@@ -5,7 +5,7 @@ include Makefile.config
 
 LD_FLAGS = $(EXTRA_LD_FLAGS) -L. -lclassad
 
-all:: libclassad.a test_classads cxi extra_tests test_xml sample
+all:: libclassad.a test_classads tester cxi extra_tests test_xml sample
 
 LIB_INSTALL = $(DESTDIR)/lib
 BIN_INSTALL = $(DESTDIR)/bin
@@ -35,14 +35,20 @@ libclassad.a:  $(LIB_OBJ)
 instantiations.o:   instantiations.C
 	$(CPlusPlus) $(INST_C_PLUS_FLAGS) -c instantiations.C -o instantiations.o
 
+test_instantiations.o:   test_instantiations.C
+	$(CPlusPlus) $(INST_C_PLUS_FLAGS) -c test_instantiations.C -o test_instantiations.o
+
 cxi: cxi.o libclassad.a
 	$(CPlusPlus) -o cxi cxi.o $(LD_FLAGS)
 
-test_classads: test_classads.o libclassad.a
-	$(CPlusPlus) -o test_classads test_classads.o $(LD_FLAGS)
+test_classads: test_classads.o libclassad.a test_instantiations.o
+	$(CPlusPlus) -o test_classads test_classads.o test_instantiations.o $(LD_FLAGS)
 
 test_classads.pure: test_classads.o libclassad.a
 	$(PURIFY) -o test_classads.pure test_classads.o $(LD_FLAGS)
+
+tester: tester.o libclassad.a test_instantiations.o
+	$(CPlusPlus) -o tester tester.o test_instantiations.o $(LD_FLAGS)
 
 test_xml: test_xml.o libclassad.a
 	$(CPlusPlus) -o test_xml test_xml.o $(LD_FLAGS)
@@ -63,8 +69,9 @@ install:: libclassad.a test_classads
 	mkdir -p $(LIB_INSTALL)
 	mkdir -p $(BIN_INSTALL)
 	mkdir -p $(INCLUDE_INSTALL)
-	cp libclassad.a $(LIB_INSTALL)
+	cp libclassad.a  $(LIB_INSTALL)
 	cp test_classads $(BIN_INSTALL)
+	cp tester        $(BIN_INSTALL)
 	cp $(HEADER_FILES) $(INCLUDE_INSTALL)
 
 clean: tidy

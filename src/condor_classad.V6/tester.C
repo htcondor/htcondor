@@ -21,18 +21,25 @@
  *
  *********************************************************************/
 
+#if defined( CLASSAD_DISTRIBUTION )
 #include "classad_distribution.h"
+#else
+#include "condor_classad.h"
+#endif
 #include "lexerSource.h"
 #include "xmlSink.h"
 #include <fstream>
 #include <iostream>
 #include <ctype.h>
 #include <assert.h>
+#include "tester.h"
 
 using namespace std;
 #ifdef WANT_NAMESPACES
 using namespace classad;
 #endif
+
+typedef map<string, Variable *> VariableMap;
 
 /*--------------------------------------------------------------------
  *
@@ -61,23 +68,6 @@ public:
 	string  input_file;
 	
 	void ParseCommandLine(int argc, char **argv);
-};
-
-class Variable
-{
-public:
-    // When you give a Variable an ExprTree, it owns it. You don't. 
-    Variable(string &name, ExprTree *tree);
-    Variable(string &name, Value &value);
-    ~Variable();
-
-    void GetStringRepresentation(string &representation);
-
-private:
-    string   _name;
-    bool     _is_tree; // If false, then is value
-    ExprTree *_tree;
-    Value    _value;
 };
 
 typedef map<string, Variable *> VariableMap;

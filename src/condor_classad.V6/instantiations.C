@@ -58,9 +58,6 @@ template hash_map<const ExprTree*, Value, ExprHash >::iterator;
 template vector< pair<string, ExprTree*> >;
 template vector<ExprTree*>;
 
-template map<string, ClassAd *>;
-template map<string, ClassAdCollection *>;
-
 #ifdef CLASSAD_DISTRIBUTION
 END_NAMESPACE
 template vector<string>;

@@ -79,6 +79,7 @@ release:: all
 
 /* template instantiations go in here */
 template_inst( instantiations.C, instantiations.o ) 	/* main classad insts */
+template_inst( test_instantiations.C, test_instantiations.o ) /* test program insts */
 template_inst( coll-comm-inst.C, coll-comm-inst.o ) 	/* common collection  */
 template_inst( coll-serv-inst.C, coll-serv-inst.o ) 	/* collection server  */
 template_inst( coll-client-inst.C,coll-client-inst.o) 	/* collection client*/
@@ -94,10 +95,11 @@ exprTree.h extra_tests.C fnCall.C fnCall.h indexfile.h indexfile.C		\
 instantiations.C lexer.C lexer.h lexerSource.C lexerSource.h			\
 literals.C literals.h matchClassad.C matchClassad.h operators.C			\
 operators.h query.C query.h sample.C shared.C sink.C sink.h source.C	\
-source.h test_classads.C test_xml.C tests.txt transaction.C				\
-transaction.h util.C util.h value.C value.h view.C view.h xmlLexer.C xmlLexer.h \
-xmlSink.h xmlSink.C xmlSource.h xmlSource.C classad_distribution.h		\
-cclassad.C cclassad.h classad_stl.h LICENSE README CHANGELOG configure
+source.h tester.C tester.h test_classads.C test_instantiations.C		\
+test_xml.C tests.txt transaction.C transaction.h util.C util.h value.C	\
+value.h view.C view.h xmlLexer.C xmlLexer.h xmlSink.h xmlSink.C			\
+xmlSource.h xmlSource.C classad_distribution.h cclassad.C cclassad.h	\
+classad_stl.h LICENSE README CHANGELOG configure
 
 WIN32_FILES = win32/classad_dist.dep win32/classad_dist.dsp \
 	win32/classad_dist.dsw win32/classad_dist.mak win32/make.bat
@@ -133,8 +135,8 @@ LDFLAGS =  -Xlinker --export-dynamic -ldl
 #endif
 
 c_plus_target (cxi, cxi.o, $(LIB))
-c_plus_target (test_classads, test_classads.o, $(LIB))
-c_plus_target (tester, tester.o, $(LIB))
+c_plus_target (test_classads, test_classads.o test_instantiations.o, $(LIB))
+c_plus_target (tester, tester.o test_instantiations.o, $(LIB))
 c_plus_target (test_xml, test_xml.o, $(LIB))
 c_plus_target (extra_tests, extra_tests.o, $(LIB))
 c_plus_target (sample, sample.o, $(LIB))
