@@ -21,10 +21,11 @@ Init();
 RunIt();
 
 sub Init {
+    HawkeyeLib::DoConfig( );
+
     $Hawkeye = HawkeyePublish->new;
     $Hawkeye->Quiet( 1 );
     $Hawkeye->AutoIndexSet( 1 );
-
 }
 
 # Do the real work here...

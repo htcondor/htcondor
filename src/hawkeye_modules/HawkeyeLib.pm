@@ -18,6 +18,8 @@ sub DoConfig( )
 
     chop( $ENV{OS_TYPE} = `uname -s` );
     chop( $ENV{OS_REV} = `uname -r` );
+    chop( $ENV{HOST} = `hostname` );
+    print STDERR "$ENV{HOST}\n";
 }
 
 # Get my name..
