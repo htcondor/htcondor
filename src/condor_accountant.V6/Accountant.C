@@ -1,27 +1,34 @@
 #pragma implementation "HashTable.h"
 #include "Accountant.h"
-#include "debug.h"
+#include "condor_debug.h"
+#include "condor_config.h"
 #include "condor_attributes.h"
 
-extern "C"
+
+Accountant::Accountant(int MaxCustomers, int MaxResources) 
+  : Customers(MaxCustomers, HashFunc), Resources(MaxResources, HashFunc)
 {
-  void config(ClassAd*);
-  void dprintf_config(char*, int);
-  void dprintf(int, char*...); 
+  HalfLifePeriod=1.5;
+  LastUpdateTime=SysCalls::GetTime();
+  MinPriority=0.5;
+  Epsilon=0.001;
 }
 
-void Accountant::SetAccountant(char* sin) {
+void Accountant::SetAccountant(char* sin) 
+{
   return;
 }
 
-int Accountant::GetPriority(const MyString& CustomerName) 
+double Accountant::GetPriority(const MyString& CustomerName) 
 {
   CustomerRecord* Customer;
-  if (Customers.lookup(CustomerName,Customer)==-1) return 0;
-  return Customer->Priority;
+  double Priority=0;
+  if (Customers.lookup(CustomerName,Customer)==0) Priority=Customer->Priority;
+  if (Priority<MinPriority) Priority=MinPriority;
+  return Priority;
 }
 
-void Accountant::SetPriority(const MyString& CustomerName, int Priority) 
+void Accountant::SetPriority(const MyString& CustomerName, double Priority) 
 {
   CustomerRecord* Customer;
   if (Customers.lookup(CustomerName,Customer)==-1) {
@@ -29,7 +36,7 @@ void Accountant::SetPriority(const MyString& CustomerName, int Priority)
     Customer=new CustomerRecord;
     if (Customers.insert(CustomerName,Customer)==-1) {
       dprintf (D_ALWAYS, "ERROR in Accountant::SetPriority - unable to insert to customers table");
-      throw int(1);
+      EXCEPT ("ERROR in Accountant::SetPriority - unable to insert to customers table");
     }
   }
   Customer->Priority=Priority;
@@ -44,14 +51,14 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
     Customer=new CustomerRecord;
     if (Customers.insert(CustomerName,Customer)==-1) {
       dprintf (D_ALWAYS, "ERROR in Accountant::AddMatch - unable to insert to Customers table");
-      throw int(1);
+      EXCEPT ("ERROR in Accountant::AddMatch - unable to insert to Customers table");
     }
   }
   Customer->ResourceNames.Add(ResourceName);
   ResourceRecord* Resource=new ResourceRecord;
   if (Resources.insert(ResourceName,Resource)==-1) {
     dprintf (D_ALWAYS, "ERROR in Accountant::AddMatch - unable to insert to Resources table");
-    throw int(1);
+    EXCEPT ("ERROR in Accountant::AddMatch - unable to insert to Resources table");
   }
   Resource->CustomerName=CustomerName;
   Resource->Ad=new ClassAd(*ResourceAd);
@@ -69,37 +76,42 @@ void Accountant::RemoveMatch(const MyString& ResourceName)
 }
 
 void Accountant::CheckMatches(ClassAdList& ResourceList) {
+  ResourceList.Open();
+  ClassAd* ResourceAd;
+  while ((ResourceAd=ResourceList.Next())!=NULL) {
+    if (NotClaimed(ResourceAd)) RemoveMatch(GetResourceName(ResourceAd));
+  }
   return;
 }
 
 void Accountant::UpdatePriorities() 
 {
+  SysCalls::Time CurUpdateTime=SysCalls::GetTime();
+  double TimePassed=SysCalls::DiffTime(LastUpdateTime,CurUpdateTime);
+  double AgingFactor=SysCalls::Power(0.5,TimePassed/HalfLifePeriod);
+  LastUpdateTime=CurUpdateTime;
+
 #ifdef DEBUG_FLAG
-#include <iostream.h>
-  cout << "Updating Priorities" << endl;
-  int TotResources=0;
+  dprintf(D_ALWAYS,"Updating Priorities: AgingFactor=%5.3f , TimePassed=%5.3f\n",AgingFactor,TimePassed);
 #endif
   CustomerRecord* Customer;
   MyString CustomerName;
   Customers.startIterations();
   while (Customers.iterate(CustomerName, Customer)) {
-    int Priority=Customer->Priority;
-    int ResourcesUsed=Customer->ResourceNames.Count();
+    double Priority=Customer->Priority;
+    double ResourcesUsed=Customer->ResourceNames.Count();
+    Priority=Priority*AgingFactor+ResourcesUsed*(1-AgingFactor);
 #ifdef DEBUG_FLAG
-    TotResources+=ResourcesUsed;
-    cout << "CustomerName: " << CustomerName.Value() << " Priority: " << Priority << " ResourcesUsed: " << ResourcesUsed << endl << "Resources: ";
+    dprintf(D_ALWAYS,"CustomerName=%s , Old Priority=%5.3f , New Priority=%5.3f , ResourcesUsed=%1.0f\n",CustomerName.Value(),Customer->Priority,Priority,ResourcesUsed);
+    dprintf(D_ALWAYS,"Resources: ");
     Customer->ResourceNames.PrintSet();
 #endif
-    Priority=int(Priority*0.6)+ResourcesUsed*10;
     Customer->Priority=Priority;
-    if (Customer->Priority==0 && Customer->ResourceNames.Count()==0) {
+    if (Customer->Priority<Epsilon && Customer->ResourceNames.Count()==0) {
       delete Customer;
       Customers.remove(CustomerName);
     }
   }
-#ifdef DEBUG_FLAG
-  cout << "TotResources:" << TotResources << endl;
-#endif
 }
 
 //---------------------------------------------------------------
@@ -110,24 +122,37 @@ void Accountant::UpdatePriorities()
 MyString Accountant::GetResourceName(ClassAd* Resource) 
 {
   ExprTree *tree;
+	char startdName[64];
+	char startdAddr[64];
   
   // get the name of the startd
-  tree=Resource->Lookup("Name");
-  if (!tree) tree=Resource->Lookup("Machine");
-  if (!tree) {
-    dprintf (D_ALWAYS, "GetResourceName: Error: Neither 'Name' nor 'Machine' specified\n");
-    throw int(1);
+  if (!Resource->LookupString (ATTR_NAME, startdName))
+  {
+      dprintf(D_ALWAYS,"ERROR in Accountant::GetResourceName - '%s' not specified\n",ATTR_NAME);
+      EXCEPT ("ERROR in GetResourceName: Error - Name not specified\n");
   }
-  MyString Name=((String *)tree->RArg())->Value();
-        
-  // get the IP and port of the startd 
-  tree=Resource->Lookup (ATTR_STARTD_IP_ADDR);
-  if (!tree) tree=Resource->Lookup("STARTD_IP_ADDR");
-  if (!tree) {
-    dprintf (D_ALWAYS, "GetResourceName: Error: No IP addr in class ad\n");
-    throw int(1);
+  MyString Name=startdName;
+
+  if (!Resource->LookupString (ATTR_STARTD_IP_ADDR, startdAddr))
+  {
+    // get the IP and port of the startd 
+    dprintf (D_ALWAYS, "ERROR in Accountant::GetResourceName - No IP addr in class ad\n");
+    EXCEPT ("ERROR in Accountant::GetResourceName - No IP addr in class ad\n");
   }
-  Name+=((String *)tree->RArg())->Value();
+  Name+=startdAddr;
 
   return Name;
+}
+
+// Check class ad of startd to see if it's claimed: return 1 if it's not, 
+// otherwise 0
+int Accountant::NotClaimed(ClassAd* ResourceAd) {
+  int state;
+  if (!ResourceAd->LookupInteger (ATTR_STATE, state))
+	{
+		dprintf (D_ALWAYS, "Could not lookup state --- assuming CLAIMED\n");
+		return 0;
+	}
+ 
+  return 0;
 }

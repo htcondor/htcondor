@@ -2,6 +2,9 @@
 #define _StringSet_H_
 
 #include "MyString.h"
+#include "condor_config.h"
+#include "condor_debug.h"
+
 
 class StringSet {
 
@@ -69,14 +72,13 @@ public:
   }
   
 #ifdef DEBUG_FLAG
-#include <iostream.h>
   void PrintSet() {
     Elem* N=Head;
     while(N) {
-      cout << N->Name.Value() << " ";
+      dprintf(D_ALWAYS,"%s ",N->Name.Value());
       N=N->Next;
     }
-    cout << endl;
+    dprintf(D_ALWAYS,"\n");
   }
 #endif
 

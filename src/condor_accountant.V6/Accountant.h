@@ -2,9 +2,11 @@
 #define _Accountant_H_
 
 #include "condor_classad.h"
-#include "MyString.h"
 #include "HashTable.h"
+
+#include "MyString.h"
 #include "StringSet.h"
+#include "SysCalls.h"
 
 class Accountant {
 
@@ -14,8 +16,8 @@ public:
 
   void SetAccountant(char* sin); // set accountant remote/local mode
 
-  int GetPriority(const MyString& CustomerName); // get priority for a customer
-  void SetPriority(const MyString& CustomerName, int Priority); // set priority for a customer
+  double GetPriority(const MyString& CustomerName); // get priority for a customer
+  void SetPriority(const MyString& CustomerName, double Priority); // set priority for a customer
 
   void AddMatch(const MyString& CustomerName, ClassAd* ResourceAd); // Add new match
   void RemoveMatch(const MyString& ResourceAd); // remove a match
@@ -32,16 +34,19 @@ public:
     return (count % TableSize);
   }
   
-  Accountant(int MaxCustomers, int MaxResources) 
-    : Customers(MaxCustomers, HashFunc), Resources(MaxResources, HashFunc) {}
+  Accountant(int MaxCustomers=1024, int MaxResources=1024);
                                                 
 private:
 
   // int LoadPriorities(); // Save to file
   // int SavePriorities(); // Read from file
 
+  //---------------------------------------------
+  // Data structures & members
+  //---------------------------------------------
+
   struct CustomerRecord {
-    int Priority;
+    double Priority;
     StringSet ResourceNames;
     CustomerRecord() { Priority=0; }
   };
@@ -59,9 +64,19 @@ private:
   typedef HashTable<MyString, ResourceRecord*> ResourceTable;
   ResourceTable Resources;
 
-  // --------------------------------------------------------
+  // Configuration variables
+
+  double MinPriority;
+  double Epsilon;
+  double HalfLifePeriod; // The time in sec in which the priority is halved by aging
+  SysCalls::Time LastUpdateTime;
+
+  //--------------------------------------------------------
+  // Misc functions
+  //--------------------------------------------------------
 
   MyString GetResourceName(ClassAd* Resource);
+  int NotClaimed(ClassAd* ResourceAd);
 
 };
 
