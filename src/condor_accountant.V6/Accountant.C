@@ -819,7 +819,8 @@ bool Accountant::DeleteClassAd(const MyString& Key)
 void Accountant::SetAttributeInt(const MyString& Key, const MyString& AttrName, int AttrValue)
 {
   ClassAd* ad;
-  if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) {
+  //if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) {
+  if (AcctLog->AdExistsInTableOrTransaction(Key.Value()) == false) {
     LogNewClassAd* log=new LogNewClassAd(Key.Value(),"*","*");
     AcctLog->AppendLog(log);
   }
@@ -836,7 +837,8 @@ void Accountant::SetAttributeInt(const MyString& Key, const MyString& AttrName, 
 void Accountant::SetAttributeFloat(const MyString& Key, const MyString& AttrName, float AttrValue)
 {
   ClassAd* ad;
-  if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) {
+  //if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) {
+  if (AcctLog->AdExistsInTableOrTransaction(Key.Value()) == false) {
     LogNewClassAd* log=new LogNewClassAd(Key.Value(),"*","*");
     AcctLog->AppendLog(log);
   }
@@ -854,7 +856,8 @@ void Accountant::SetAttributeFloat(const MyString& Key, const MyString& AttrName
 void Accountant::SetAttributeString(const MyString& Key, const MyString& AttrName, const MyString& AttrValue)
 {
   ClassAd* ad;
-  if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) {
+  //if (AcctLog->table.lookup(HashKey(Key.Value()),ad)==-1) {
+  if (AcctLog->AdExistsInTableOrTransaction(Key.Value()) == false) {
     LogNewClassAd* log=new LogNewClassAd(Key.Value(),"*","*");
     AcctLog->AppendLog(log);
   }

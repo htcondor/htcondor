@@ -208,6 +208,53 @@ ClassAdLog::CommitTransaction()
 	active_transaction = NULL;
 }
 
+bool
+ClassAdLog::AdExistsInTableOrTransaction(const char *key)
+{
+	bool adexists = false;
+
+		// first see if it exists in the "commited" hashtable
+	HashKey hkey(key);
+	ClassAd *ad = NULL;
+	table.lookup(hkey, ad);
+	if ( ad ) {
+		adexists = true;
+	}
+
+		// if there is no pending transaction, we're done
+	if (!active_transaction) {
+		return adexists;
+	}
+
+		// see what is going on in any current transaction
+	for (LogRecord *log = active_transaction->FirstEntry(); log; 
+		 log = active_transaction->NextEntry(log)) 
+	{
+		switch (log->get_op_type()) {
+		case CondorLogOp_NewClassAd: {
+			char *lkey = ((LogNewClassAd *)log)->get_key();
+			if (strcmp(lkey, key) == 0) {
+				adexists = true;
+			}
+			free(lkey);
+			break;
+		}
+		case CondorLogOp_DestroyClassAd: {
+			char *lkey = ((LogDestroyClassAd *)log)->get_key();
+			if (strcmp(lkey, key) == 0) {
+				adexists = false;
+			}
+			free(lkey);
+			break;
+		}
+		default:
+			break;
+		}
+	}
+
+	return adexists;
+}
+
 int
 ClassAdLog::LookupInTransaction(const char *key, const char *name, char *&val)
 {
