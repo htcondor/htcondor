@@ -2,6 +2,8 @@
 NAME = condor_starter
 RSH_NAME = rsh
 WRAPPER_CLASS = CondorJavaWrapper.class
+INFO_CLASS = CondorJavaInfo.class
+BENCHMARK_CLASS = scimark2lib.jar
 
 all_target($(NAME) $(RSH_NAME))
 
@@ -23,7 +25,8 @@ OS = OperatingSystem
 # it will suffice for now:
 OBJ = starter_v61_main.o starter.o NTsenders.o \
 	os_proc.o vanilla_proc.o mpi_master_proc.o mpi_comrade_proc.o \
-	starter_v61_instantiate.o io_proxy.o io_proxy_handler.o java_proc.o
+	starter_v61_instantiate.o io_proxy.o io_proxy_handler.o \
+	java_proc.o java_detect.o
 
 RSH_OBJ = condor_rsh.o
 
@@ -42,3 +45,12 @@ html_target( starter.h user_proc.h os_proc.h vanilla_proc.h )
 release_copy_target($(WRAPPER_CLASS),$(RELEASE_DIR)/lib,$(WRAPPER_CLASS),EXECUTABLE_MODE)
 strip_copy_target($(WRAPPER_CLASS),$(STRIP_DIR)/lib,$(WRAPPER_CLASS),EXECUTABLE_MODE)
 static_copy_target($(WRAPPER_CLASS),$(STATIC_DIR)/lib,$(WRAPPER_CLASS),EXECUTABLE_MODE)
+
+release_copy_target($(INFO_CLASS),$(RELEASE_DIR)/lib,$(INFO_CLASS),EXECUTABLE_MODE)
+strip_copy_target($(INFO_CLASS),$(STRIP_DIR)/lib,$(INFO_CLASS),EXECUTABLE_MODE)
+static_copy_target($(INFO_CLASS),$(STATIC_DIR)/lib,$(INFO_CLASS),EXECUTABLE_MODE)
+
+release_copy_target($(BENCHMARK_CLASS),$(RELEASE_DIR)/lib,$(BENCHMARK_CLASS),EXECUTABLE_MODE)
+strip_copy_target($(BENCHMARK_CLASS),$(STRIP_DIR)/lib,$(BENCHMARK_CLASS),EXECUTABLE_MODE)
+static_copy_target($(BENCHMARK_CLASS),$(STATIC_DIR)/lib,$(BENCHMARK_CLASS),EXECUTABLE_MODE)
+

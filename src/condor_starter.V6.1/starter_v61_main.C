@@ -28,6 +28,8 @@
 #include "condor_version.h"
 #include "starter.h"
 #include "condor_debug.h"
+#include "condor_config.h"
+#include "java_detect.h"
 
 extern "C" int exception_cleanup(int,int,char*);	/* Our function called by EXCEPT */
 
@@ -53,17 +55,30 @@ printClassAd( void )
 	printf( "%s = True\n", ATTR_HAS_MPI );
 	printf( "%s = \"%s\"\n", ATTR_VERSION, CondorVersion() );
 
-/*
-The starter should not automatically advertise that it has Java
-until it has sucessfully tested the local installation.
-Currently, this is done in the startd, thus this attribute
-is commented out.  A more clean solution would put the testing of
-this feature into the starter itself.  I'm working on it now.  -thain
-	printf( "%s = True\n", ATTR_HAS_JAVA );
-*/
+	config(true);
 
+	ClassAd *ad = java_detect();
+	if(ad) {
+		int gotone=0;
+		float mflops;
+		char str[ATTRLIST_MAX_EXPRESSION];
+
+		if(ad->LookupString(ATTR_JAVA_VENDOR,str)) {
+			printf("%s = \"%s\"\n",ATTR_JAVA_VENDOR,str);
+			gotone++;
+		}
+		if(ad->LookupString(ATTR_JAVA_VERSION,str)) {
+			printf("%s = \"%s\"\n",ATTR_JAVA_VERSION,str);
+			gotone++;
+		}
+		if(ad->LookupFloat(ATTR_JAVA_MFLOPS,mflops)) {
+			printf("%s = %f\n", ATTR_JAVA_MFLOPS,mflops);
+			gotone++;
+		}
+		if(gotone>0) printf( "%s = True\n",ATTR_HAS_JAVA);		
+		delete ad;
+	}
 }
-
 
 void
 main_pre_dc_init( int argc, char* argv[] )
