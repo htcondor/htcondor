@@ -197,7 +197,7 @@ display_dprintf_header(FILE *fp)
 		mypid = daemonCore->getpid();
 	}
 
-	fprintf( fp, "[%ld] ", mypid );
+	fprintf( fp, "[%ld] ", (long)mypid );
 
 	return TRUE;
 }
