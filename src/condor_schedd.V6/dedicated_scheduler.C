@@ -2648,17 +2648,23 @@ DedicatedScheduler::computeSchedule( void )
 					idle_candidates->markScheduled();
 					delete idle_candidates;
 					idle_candidates = NULL;
+					delete idle_candidate_jobs;
+					idle_candidate_jobs = NULL;
 				}
 			
 				if( limbo_candidates ) {
 					limbo_candidates->markScheduled();
 					delete limbo_candidates;
 					limbo_candidates = NULL;
+					delete limbo_candidates_jobs;
+					limbo_candidates_jobs = NULL;
 				}
 				
 				if( unclaimed_candidates ) {
 					delete unclaimed_candidates;
 					unclaimed_candidates = NULL;
+					delete unclaimed_candidates_jobs;
+					unclaimed_candidates_jobs = NULL;
 				}
 
 				delete preempt_candidates;
