@@ -443,7 +443,8 @@ pseudo_rename(char *from, char *to)
 	}
 	
 	if (CkptFile) {
-		RenameRemoteFile(p->owner, from, to);
+		if (RenameRemoteFile(p->owner, from, to) < 0)
+			return -1;
 	}
 
 	return 0;
