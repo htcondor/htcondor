@@ -224,7 +224,14 @@ const int QUERY_HIST_CKPTSRVR_LIST = 31;
 #define DC_OFF_GRACEFUL		(DC_BASE+5)
 #define DC_OFF_FAST			(DC_BASE+6)
 #define DC_CONFIG_VAL		(DC_BASE+7)
+#define DC_CHILDALIVE		(DC_BASE+8)
 
+/*
+*** Commands used by the FileTransfer object
+*/
+#define FILETRANSFER_BASE 61000
+#define FILETRANS_UPLOAD (FILETRANSFER_BASE+0)
+#define FILETRANS_DOWNLOAD (FILETRANSFER_BASE+1)
 
 /*
 *** Condor Password Daemon Commands
