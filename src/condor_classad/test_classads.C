@@ -105,6 +105,7 @@ struct parameters
 	bool test_xml;
 	bool test_dirty;
 	bool test_functions;
+    bool test_random;
 };
 
 class TestResults
@@ -203,6 +204,7 @@ static void test_functions(
 void print_truncated_string(const char *s, int max_characters);
 static void make_big_string(int length, char **string,
     char **quoted_string);
+void test_random(TestResults *results);
 
 int 
 main(
@@ -442,6 +444,10 @@ main(
 	}
 #endif
 
+    if (parameters.test_random) {
+        test_random(&test_results);
+    }
+
 	//ClassAd *many_ads[LARGE_NUMBER_OF_CLASSADS];
 	/*
 	for (int i = 0; i < LARGE_NUMBER_OF_CLASSADS; i++) {
@@ -494,6 +500,7 @@ parse_command_line(
 	parameters->test_xml              = false;
 	parameters->test_dirty            = false;
 	parameters->test_functions        = false;
+    parameters->test_random           = false;
 	argument_index = 1;
 
 	while (argument_index < argc) {
@@ -515,6 +522,7 @@ parse_command_line(
 			parameters->test_xml              = true;
 			parameters->test_dirty            = true;
 			parameters->test_functions        = true;
+            parameters->test_random           = true;
 		} else if (!strcmp(argv[argument_index], "-s")
 		    || !strcmp(argv[argument_index], "-scanner")) {
 			parameters->test_scanner          = true;
@@ -541,6 +549,8 @@ parse_command_line(
 		} else if (!strcmp(argv[argument_index], "-f")
 		    || !strcmp(argv[argument_index], "-functions")) {
 			parameters->test_functions        = true;
+		} else if (!strcmp(argv[argument_index], "-random")) {
+			parameters->test_random           = true;
 		} else {
 			fprintf(stderr, "Unknown argument: %s\n", 
 					argv[argument_index]);
@@ -1567,4 +1577,69 @@ make_big_string(
 		sprintf(*quoted_string, "\"%s\"", *string);
 	}
 	return;
+}
+
+/***************************************************************
+ *
+ * Function: test_random
+ * Purpose:  Test the random() function in ClassAds. Our testing
+ *           is a bit wonky: since we are getting random numbers,
+ *           we can't be sure our tests will work, but chances
+ *           are good. :)
+ *
+ ***************************************************************/
+void test_random(
+    TestResults *results)
+{
+    char *classad_string = "R1 = random(), R2 = random(10)";
+    int  base_r1, r1;
+    int  r2;
+    bool have_different_numbers;
+    bool numbers_in_range;
+
+    ClassAd *classad;
+
+    classad = new ClassAd(classad_string, ',');
+
+    // First we check that random gives us different numbers
+    have_different_numbers = false;
+    classad->EvalInteger("R1", NULL, base_r1);
+    for (int i = 0; i < 10; i++) {
+        classad->EvalInteger("R1", NULL, r1);
+        if (r1 != base_r1) {
+            have_different_numbers = true;
+            break;
+        }
+    }
+
+    // Then we check that random gives numbers in the correct range
+    numbers_in_range = true;
+    for (int i = 0; i < 10; i++) {
+        classad->EvalInteger("R2", NULL, r2);
+        if (r2 < 0 || r2 >= 10) {
+            numbers_in_range = false;
+            break;
+        }
+    }
+
+    if (have_different_numbers) {
+        printf("Passed: Random generates a variety of numbers in line %d\n", 
+               __LINE__);
+        results->AddResult(true);
+    } else {
+        printf("Failed: Random does not generate a variety of numbers in line %d\n", 
+               __LINE__);
+        results->AddResult(false);
+    }
+
+    if (numbers_in_range) {
+        printf("Passed: Random generates numbers in correct range in %d\n", 
+               __LINE__);
+        results->AddResult(true);
+    } else {
+        printf("Passed: Random does not generate numbers in correct range in %d\n", 
+               __LINE__);
+        results->AddResult(false);
+    }
+
 }
