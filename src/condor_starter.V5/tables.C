@@ -40,9 +40,6 @@
 #include "name_tab.h"
 #include <signal.h>
 #include "state_machine_driver.h"
-#if defined(LINK_PVM)
-#include "sdpro.h"
-#endif
 #define INSERT_TABLES
 #include "starter.h"
 #include "startup.h"
