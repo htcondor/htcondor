@@ -60,6 +60,7 @@ calc_virt_memory()
 	struct anoninfo 	ai;
 	int avail;
 
+	memset( &ai, 0, sizeof(ai) );
 	if( swapctl(SC_AINFO, &ai) >= 0 ) {
 		avail = ctok( ai.ani_max - ai.ani_resv );
 		return avail;
