@@ -43,6 +43,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a minor bug in file transfer.  Specifically, if your VANILLA
+  job had \Expr{when\_to\_transfer\_output} set to ON\_EXIT\_OR\_EVICT, wrote
+  more than one output file, and was actually evicted, the \Condor{shadow}
+  would EXCEPT and your job would be rerun.
+
 \item Fixed an error in \Condor{dagman}: if submit files for individual
   nodes referred to the same log file with different paths, \Condor{dagman}
   would read log events incorrectly and the DAG would fail.  \Condor{dagman}
