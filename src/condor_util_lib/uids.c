@@ -113,3 +113,11 @@ set_root_euid()
 		EXCEPT( "SET_EFFECTIVE_ID(%d)", ROOT );
 	}
 }
+
+
+set_effective_uid(uid_t new_uid)
+{
+	if( SET_EFFECTIVE_ID(new_uid) < 0 ) {
+		EXCEPT( "SET_EFFECTIVE_ID(%d)", new_uid );
+	}
+}
