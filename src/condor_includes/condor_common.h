@@ -29,6 +29,7 @@
 #include "_condor_fix_types.h"
 #include "condor_fix_stdio.h"
 #include "condor_fix_unistd.h"
+#include "_condor_fix_resource.h"
 #include "condor_fix_string.h"
 #include "condor_fix_signal.h"
 #include "condor_fix_sys_ioctl.h"
