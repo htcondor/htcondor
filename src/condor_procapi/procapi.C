@@ -702,6 +702,7 @@ ProcAPI::do_usage_sampling( piPTR& pi, double ustime,
         dprintf ( D_ALWAYS, "ProcAPI sanity failure, cpuusage = %f\n", 
                   pi->cpuusage );
         pi->cpuusage = 0.0;
+		assert(0);
 	}
 	if( pi->user_time < 0 ) {
 		dprintf ( D_ALWAYS, "ProcAPI sanity failure, user_time = %ld\n", 
