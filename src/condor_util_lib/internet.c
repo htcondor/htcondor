@@ -423,14 +423,31 @@ is_valid_network( const char *network, struct in_addr *ip, struct in_addr *mask)
 	return FALSE;
 }
 
+
 int
 is_valid_sinful( const char *sinful )
 {
 	char* tmp;
+	char* copy;
 	if( !sinful ) return FALSE;
 	if( !(sinful[0] == '<') ) return FALSE;
-	if( !(tmp = strchr(sinful, ':')) ) return FALSE;
 	if( !(tmp = strrchr(sinful, '>')) ) return FALSE;
+	copy = strdup( sinful );
+
+	if( !(tmp = strchr(copy, ':')) ) {
+		free( copy );
+		return FALSE;
+	}
+	*tmp = '\0';
+	if( ! copy[1] ) {
+		free( copy );
+		return FALSE;
+	}
+	if( ! is_ipaddr(&copy[1], NULL) ) {
+		free( copy );
+		return FALSE;
+	}
+	free( copy );
 	return TRUE;
 }
 
