@@ -16,7 +16,9 @@ TEST_SUITE_C = test_suite_C.V5
 
 TEST_SUITE_BASE = test_suite_base
 
-#if !(NEEDS_KBDD)
+#if NEEDS_KBDD
+#   define KbddProgs kbdd
+#else
 #   define KbddProgs
 #endif
 
