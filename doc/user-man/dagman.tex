@@ -579,60 +579,6 @@ The number of retries will be set to the appropriate remaining
 number of retries. 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{DAGMan Configuration}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{DAGMan!configuration}
-
-\index{DAGMan!DAGMAN\_MAX\_SUBMITS\_PER\_INTERVAL}
-\Macro{DAGMAN\_MAX\_SUBMITS\_PER\_INTERVAL} is an integer that
-controls how many individual jobs \Condor{dagman} will submit in a row
-before servicing other requests (such as a \Condor{rm}).  It cannot be
-set to less than 1, or more than 1000; if undefined, it defaults to 5.
-
-\index{DAGMan!DAGMAN\_MAX\_SUBMIT\_ATTEMPTS}
-\index{DAGMan!submit retry}
-\Macro{DAGMAN\_MAX\_SUBMIT\_ATTEMPTS} is an integer that controls how
-many times in a row \Condor{dagman} will attempt to execute
-\Condor{submit} for a given job before giving up.  Note that
-consecutive attempts use an exponential backoff, starting with 1
-second.  DAGMAN\_MAX\_SUBMIT\_ATTEMPTS cannot be set to less than 1,
-or more than 16 (which would result in \Condor{dagman} trying for
-approximately 36 hours before giving up); if left undefined, it
-defaults to 6 (approximately two minutes before giving up).
-
-\index{DAGMan!DAGMAN\_SUBMIT\_DELAY}
-\Macro{DAGMAN\_SUBMIT\_DELAY} is an integer that controls the number
-of seconds \Condor{dagman} will sleep before submitting consecutive
-jobs.  It can be increased to help reduce the load on the schedd.  It
-cannot be set to less than 0 or more than 60; if undefined, it
-defaults to 0.
-
-\index{DAGMan!DAGMAN\_STARTUP\_CYCLE\_DETECT}
-\Macro{DAGMAN\_STARTUP\_CYCLE\_DETECT} is a boolean that controls
-whether \Condor{dagman} checks for cycles in the DAG structure at
-startup, in addition to its runtime cycle detection.  The startup
-check can be expensive for large DAGs, so if undefined, it defaults to
-False.
-
-\index{STORK\_SERVER}
-\Macro{STORK\_SERVER} (needs explanation here)
-
-\index{DAGMAN\_IGNORE\_DUPLICATE\_JOB\_EXECUTION}
-\Macro{DAGMAN\_IGNORE\_DUPLICATE\_JOB\_EXECUTION} is a boolean that controls
-whether \Condor{dagman} allows "extra" runs of a given DAG node
-job.  This is a workaround for a bug in Condor itself:  (very)
-occasionally a job gets run twice, even though it was submitted
-only once.  If this happens, \Condor{dagman} considers it a fatal
-error unless \Macro{DAGMAN\_IGNORE\_DUPLICATE\_JOB\_EXECUTION} is set to true
-(the default is false).  Note that this value should be set to
-false about 99.99 percent of the time -- only set it to true if you
-have run into problems because of "extra" jobs runs, and are sure
-that having a node job run twice won't corrupt the DAG.  If you
-do set \Macro{DAGMAN\_IGNORE\_DUPLICATE\_JOB\_EXECUTION} to true, you should
-check your *.dagman.out files for "EVENT ERROR" messages, and
-carefully check the output of any runs that have such errors.
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Visualizing DAGs with \Prog{dot}}

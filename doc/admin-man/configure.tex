@@ -3797,6 +3797,93 @@ These macros affect the \Prog{grid\_monitor}.
 
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:DAGMan-Config-File-Entries}
+Configuration File Entries for DAGMan}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{configuration!DAGMan configuration variables}
+These macros affect the operation of DAGMan and DAGMan
+jobs within Condor.
+
+\begin{description}
+\item[\Macro{DAGMAN\_MAX\_SUBMITS\_PER\_INTERVAL}]
+\label{param:DAGManMaxSubmitsPerInterval}
+An integer that controls how many individual jobs
+\Condor{dagman} will submit in a row
+before servicing other requests (such as a \Condor{rm}).
+The legal range of values is 1 to 1000.
+If defined with a value less than 1, the  value 1 will be used.
+If defined with a value greater than 1000, the value 1000 will be used.
+If undefined, it defaults to 5.
+
+\item[\Macro{DAGMAN\_MAX\_SUBMIT\_ATTEMPTS}]
+\label{param:DAGManMaxSubmitAttempts}
+An integer that controls how
+many times in a row \Condor{dagman} will attempt to execute
+\Condor{submit} for a given job before giving up.
+Note that consecutive attempts use an exponential backoff,
+starting with 1 second.
+The legal range of values is 1 to 16.
+If defined with a value less than 1, the  value 1 will be used.
+If defined with a value greater than 16, the value 16 will be used.
+Note that a value of 16 would result in \Condor{dagman} trying for
+approximately 36 hours before giving up.
+If left undefined,
+it defaults to 6 (approximately two minutes before giving up).
+
+\item[\Macro{DAGMAN\_SUBMIT\_DELAY}]
+\label{param:DAGManSubmitDelay}
+An integer that controls the number of seconds
+that \Condor{dagman} will sleep before submitting consecutive jobs.
+It can be increased to help reduce the load on the \Condor{schedd} daemon.
+The legal range of values is 0 to 60.
+If defined with a value less than 0, the  value 0 will be used.
+If defined with a value greater than 60, the value 60 will be used.
+The default value is 0.
+
+\item[\Macro{DAGMAN\_STARTUP\_CYCLE\_DETECT}]
+\label{param:DAGManStartupCycleDetect}
+A boolean value that when \Expr{True}
+causes \Condor{dagman} to check for cycles in the DAG before
+submitting DAG node jobs,
+in addition to its run time cycle detection.
+If undefined, it defaults to \Expr{False}.
+
+\item[\Macro{STORK\_SERVER}]
+\label{param:StorkServer}
+
+\item[\Macro{DAGMAN\_IGNORE\_DUPLICATE\_JOB\_EXECUTION}]
+\label{param:DAGManIgnoreDuplicateJobExecution}
+A boolean value that controls
+whether \Condor{dagman} aborts or continues with a DAG
+in the rare case that Condor erroneously executes
+the job within a DAG node more than once.
+A bug in Condor very occasionally causes a job to run twice.
+Running a job twice is contrary to the semantics of a DAG.
+The configuration macro \MacroNI{DAGMAN\_IGNORE\_DUPLICATE\_JOB\_EXECUTION}
+determines whether  \Condor{dagman} considers this a fatal error or not.
+The default value is \Expr{False}; \Condor{dagman} considers
+running the job more than once a fatal error, 
+logs this fact,
+and aborts the DAG.
+When set to \Expr{True}, \Condor{dagman} still
+logs this fact,
+but continues with the DAG. 
+
+This configuration macro is to remain at its default value 
+except in the case
+where a site encounters the Condor bug in which DAG job nodes
+are executed twice,
+and where it is certain
+that having a DAG job node run twice will not corrupt the DAG.
+The logged messages within \File{*.dagman.out} files
+in the case of that a node job runs twice
+contain the string
+"EVENT ERROR."
+
+\end{description}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Security-Config-File-Entries}
