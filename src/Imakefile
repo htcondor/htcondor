@@ -54,7 +54,7 @@
 		accountant.V6 ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts shadow.V6 startd.V6 starter.V5 submit.V6 status.V6 \
-		tools kbdd collector.V6 PvmProgs dagman userlog eventd globus
+		tools kbdd collector.V6 PvmProgs dagman userlog eventd
 
 #define Libraries \
 		util_lib c++_util procapi sysapi io classad daemon_core.V6 \
@@ -232,7 +232,6 @@ object_target(daemon_core.V6)
 #endif
 object_target(prio)
 object_target(scripts)
-object_target(globus)
 
 object_dir_target(h)
 object_dir_target(condor_includes)
@@ -241,6 +240,7 @@ object_dir_target(condor_shadow.V6.1)
 object_dir_target(condor_starter.V6.1)
 object_dir_target(html)
 object_dir_target(condor_bypass)
+object_dir_target(globus)
 
 single_target(condor_schedd.V6, libqmgmt.a)
 single_target(condor_accountant.V6, libacct.a)
