@@ -468,7 +468,6 @@ int daemon::StartDaemon()
 		/* Daemons need to be started as root. */
 		if(getuid()==0) {
 			set_condor_euid();
-			set_condor_ruid(); 
 		}
 
 		pid = getpid();
