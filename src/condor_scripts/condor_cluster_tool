@@ -5,8 +5,10 @@
 # 14-Jan-2000 Derek Wright <wright@cs.wisc.edu>
 # 21-Jan-2000 Peter Couvares <pfc@cs.wisc.edu> many fixes/improvements
 # 25-Feb-2000 Peter Couvares <pfc@cs.wisc.edu> added logging
-# 15-Mar-2000 Derek Wright <wright@cs.wisc.edu> fixing bugs reported
-#                                               by wylie@cs
+# 15-Mar-2000 Derek Wright <wright@cs.wisc.edu> fixed bugs reported by
+#             wylie@cs.wisc.edu
+# 19-Apr-2000 Peter Couvares <pfc@cs.wisc.edu> made 'off' persistent
+#             across reboots
 #
 # This is a very simple, first pass to solve this problem.
 # Future work required:
