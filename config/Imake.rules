@@ -621,18 +621,25 @@ XCOMM End translation of func(static_copy_target)
 #endif  /* HAS_STATIC */
 #endif /* static_copy_target */
 
+
 /*
 ** Static target is released by recursive copying
 */
 #ifndef static_recursive_copy_target
+#if HAS_STATIC
 #define static_recursive_copy_target(src,dest)			@@\
-XCOMM Begin translation of func(strip_recursive_copy_target)	@@\
+XCOMM Begin translation of func(static_recursive_copy_target)	@@\
 static:: $(STATIC_DIR)/dest					@@\
-								@@\
 $(STATIC_DIR)/dest: src						@@\
 	/bin/rm -rf $(STATIC_DIR)/dest				@@\
 	$(CP_CMD) src $(STATIC_DIR)/dest			@@\
-XCOMM End translation of func(strip_recursive_copy_target)
+XCOMM End translation of func(static_recursive_copy_target)
+#else  /* ! HAS_STATIC */
+#define static_recursive_copy_target(src,dest)			@@\
+XCOMM Begin translation of func(static_recursive_copy_target)	@@\
+static::							@@\
+XCOMM End translation of func(static_recursive_copy_target)
+#endif  /* HAS_STATIC */
 #endif /* static_recursive_copy_target */
 
 
