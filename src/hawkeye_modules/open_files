@@ -57,9 +57,9 @@ sub RunIt
 	while( <PROC> )
 	{
 	    my ( $NrFiles, $NrFreeFiles, $MaxFiles ) = split;
-	    $Hash->Add( "Limit", "n", $MaxFiles );
-	    $Hash->Add( "MaxUsed", "n", $NrFiles );
-	    $Hash->Add( "Available", "n",
+	    $Hash->Add( "Limit", HawkeyePublish::TypeNumber, $MaxFiles );
+	    $Hash->Add( "MaxUsed", HawkeyePublish::TypeNumber, $NrFiles );
+	    $Hash->Add( "Available", HawkeyePublish::TypeNumber,
 			$MaxFiles - ( $NrFiles - $NrFreeFiles ) );
 	}
 	$Hash->Store( );
