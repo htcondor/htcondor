@@ -219,9 +219,9 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 	 # Replace Standard C lib or GNU Standard C lib with condor_syscall_lib
      -lgcc )  if [ $lgcc = false ]; then
 				if [ $osfull = "SunOS5" ]; then
-                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -Bdynamic -lsocket -lnsl -lgcc`
+                 	ldargs=`echo $ldargs $CONDOR_CLIB -Bdynamic -lsocket -lnsl -lgcc`
 				else
-                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lgcc`
+                 	ldargs=`echo $ldargs $CONDOR_CLIB -lgcc`
 				fi
                 lgcc=true 
               else
@@ -229,11 +229,11 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
               fi ;;
      -lc )  if [ $lgcc = false ]; then
 				if [ $osfull = "SunOS5" ]; then
-                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -Bdynamic -lsocket -lnsl -lc`
+                 	ldargs=`echo $ldargs $CONDOR_CLIB -Bdynamic -lsocket -lnsl -lc`
 				elif [ $os = "OSF1" ]; then
-                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lm -lc`
+                 	ldargs=`echo $ldargs $CONDOR_CLIB -lm -lc`
 				else
-                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -lc`
+                 	ldargs=`echo $ldargs $CONDOR_CLIB -lc`
 				fi
                 lgcc=true 
               else
@@ -250,9 +250,9 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
      -lstdc++ | -lg++ | -lf2c | -lg2c | -lp2c )  
 	 		if [ $lgcc = false ]; then
 				if [ $osfull = "SunOS5" ]; then
-                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS -Bdynamic -lsocket -lnsl $brokenbase`
+                 	ldargs=`echo $ldargs $CONDOR_CLIB -Bdynamic -lsocket -lnsl $brokenbase`
 				else
-                 	ldargs=`echo $ldargs $CONDOR_CLIB $CONDOR_CPLUS $brokenbase`
+                 	ldargs=`echo $ldargs $CONDOR_CLIB $brokenbase`
 				fi
                 lgcc=true 
             else
@@ -320,6 +320,9 @@ if [ A$CONDOR_COMPILE = Ayes ]; then
 
      esac
   done
+  # Finally, tack on our C++ support library at the very end of the
+  # link line.
+  ldargs=`echo $ldargs $CONDOR_CPLUS`
   echo "LINKING FOR CONDOR : $osld $ldargs"
 fi
 
