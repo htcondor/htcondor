@@ -9,6 +9,18 @@ The details of each version are described below.
 \subsection{\label{sec:New-6-7-0}Version 6.7.0}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Version 6.7.0 contains all of the features, ports, and bug fixes
+  from the previous stable series, up to and including version 6.6.4.
+  In addition, a number of new features and some bug fixes have been
+  made, which are described below in more detail.
+
+\end{itemize}
+
+
 \noindent New Features:
 
 \begin{itemize}
@@ -125,6 +137,9 @@ transferred executables, input files and output files.
 \item Added the ability for jobs to stream back standard input, output, and
 error files while running.  This is activated by the \Opt{stream\_input},
 \Opt{stream\_output}, and \Opt{stream\_error} options to \Condor{submit}.
+Note that this feature is incompatible with the new feature described
+above where the shadow and starter can reconnect in certain
+circumstances. 
 
 \end{itemize}
 
