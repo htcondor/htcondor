@@ -1,5 +1,5 @@
 
-Last Updated: 2/16/2004
+Last Updated: 9/23/2004
 This README file describes the DRMAA Condor UNIX C library.  
 
 GENERAL: libDrmaa.a
@@ -25,6 +25,8 @@ to the library is referred to as the "user process".
 in /tmp or specified by the environment variables TEMP, TMP, or SPOOL.  The
 user process and local schedd must have read, write, and traverse rights to the
  spool space.
+   3) On platforms where libpthread, the POSIX threading library, is supported
+the user process is linked with libpthread.
 
 ITEMS NOT SUPPORTED:
 	
