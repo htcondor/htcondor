@@ -27,7 +27,7 @@ void
 initializeParams()
 {
     char *tmp;
-	int		MachineUpdateInterval;
+	int		ClassadLifetime;
 	int		MasterCheckInterval;
 
 	if (CondorAdministrator) free (CondorAdministrator);
@@ -52,12 +52,12 @@ initializeParams()
 		QueryTimeout = 60;
 	}
 
-	tmp = param ("MACHINE_UPDATE_INTERVAL");
+	tmp = param ("CLASSAD_LIFETIME");
 	if( tmp ) {
-		MachineUpdateInterval = atoi( tmp );
+		ClassadLifetime = atoi( tmp );
 		free( tmp );
 	} else {
-		MachineUpdateInterval = 300;
+		ClassadLifetime = 900;
 	}
 
 	tmp = param ("MASTER_CHECK_INTERVAL");
@@ -79,11 +79,10 @@ initializeParams()
 	}
 	CondorDevelopers = tmp;
 
-
 	// set the appropriate parameters in the collector engine
-	collector.setClientTimeout (ClientTimeout);
-	collector.scheduleHousekeeper (MachineUpdateInterval);
-	collector.scheduleDownMasterCheck(MasterCheckInterval);
+	collector.setClientTimeout( ClientTimeout );
+	collector.scheduleHousekeeper( ClassadLifetime );
+	collector.scheduleDownMasterCheck( MasterCheckInterval );
 }
 
 #ifndef WIN32
