@@ -51,7 +51,7 @@ class Authentication {
     // REQUIRE: hostAddr -- host to authenticate
     //          clientCanUse -- what protocols
     //                       does client support
-    // RETURNS:
+    // RETURNS: -1 -- failure
     //------------------------------------------
     
     int isAuthenticated();
