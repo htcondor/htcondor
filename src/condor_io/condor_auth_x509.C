@@ -329,6 +329,10 @@ StringList * getDaemonList(ReliSock * sock)
     char * fqh         = sin_to_hostname(sock->endpoint(), NULL);
     char * entry       = NULL;
 
+	if (!daemonNames) {
+		daemonNames = strdup("*");
+	}
+
     StringList * original_names = new StringList(daemonNames, ",");
     StringList * expanded_names = new StringList(NULL, ",");
 
