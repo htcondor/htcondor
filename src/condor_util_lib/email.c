@@ -22,7 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-#include "config.h"
+#include "condor_config.h"
 #include "debug.h"
 #include "condor_uid.h"
 #include "condor_email.h"
@@ -42,7 +42,7 @@ email_open( const char *email_addr, const char *subject )
 	FILE *mailerstream;
 	priv_state priv;
 	char RelayHost[150];
-	char *FinalSubject = "\0";
+	const char *FinalSubject = "\0";
 	char final_command[2000];
 
 	RelayHost[0] = '\0';
