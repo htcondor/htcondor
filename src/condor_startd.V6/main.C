@@ -237,6 +237,10 @@ main_init( int argc, char* argv[] )
 		// OWNER permission commands
 	daemonCore->Register_Command( VACATE_ALL_CLAIMS,
 								  "VACATE_ALL_CLAIMS",
+								  (CommandHandler)command_vacate_all,
+								  "command_vacate_all", 0, OWNER );
+	daemonCore->Register_Command( VACATE_CLAIM,
+								  "VACATE_CLAIM",
 								  (CommandHandler)command_vacate,
 								  "command_vacate", 0, OWNER );
 
