@@ -61,7 +61,9 @@ CStarter::CStarter()
 	jobUniverse = CONDOR_UNIVERSE_VANILLA;
 	pre_script = NULL;
 	post_script = NULL;
-
+	starter_stdin_fd = -1;
+	starter_stdout_fd = -1;
+	starter_stderr_fd = -1;
 }
 
 
@@ -87,7 +89,8 @@ CStarter::~CStarter()
 
 bool
 CStarter::Init( JobInfoCommunicator* my_jic, const char* orig_cwd,
-				bool is_gridshell )
+				bool is_gridshell, int stdin_fd, int stdout_fd, 
+				int stderr_fd )
 {
 	if( ! my_jic ) {
 		EXCEPT( "CStarter::Init() called with no JobInfoCommunicator!" ); 
@@ -101,6 +104,9 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* orig_cwd,
 		this->orig_cwd = strdup( orig_cwd );
 	}
 	this->is_gridshell = is_gridshell;
+	starter_stdin_fd = stdin_fd;
+	starter_stdout_fd = stdout_fd;
+	starter_stderr_fd = stderr_fd;
 
 	Config();
 
@@ -745,4 +751,31 @@ CStarter::getMyVMNumber( void )
 }
 
 
+void
+CStarter::closeSavedStdin( void )
+{
+	if( starter_stdin_fd > -1 ) {
+		close( starter_stdin_fd );
+		starter_stdin_fd = -1;
+	}
+}
 
+
+void
+CStarter::closeSavedStdout( void )
+{
+	if( starter_stdout_fd > -1 ) {
+		close( starter_stdout_fd );
+		starter_stdout_fd = -1;
+	}
+}
+
+
+void
+CStarter::closeSavedStderr( void )
+{
+	if( starter_stderr_fd > -1 ) {
+		close( starter_stderr_fd );
+		starter_stderr_fd = -1;
+	}
+}

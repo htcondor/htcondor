@@ -50,7 +50,8 @@ public:
 			sets resource limits, then calls StartJob()
 		*/
 	virtual bool Init( JobInfoCommunicator* my_jic, 
-					   const char* orig_cwd, bool is_gridshell );
+					   const char* orig_cwd, bool is_gridshell,
+					   int stdin_fd, int stdout_fd, int stderr_fd );
 
 		/** Params for "EXECUTE" and other useful stuff 
 		 */
@@ -140,6 +141,12 @@ public:
 
 	bool isGridshell( void ) {return is_gridshell;};
 	const char* origCwd( void ) {return (const char*) orig_cwd;};
+	int starterStdinFd( void ) { return starter_stdin_fd; };
+	int starterStdoutFd( void ) { return starter_stdout_fd; };
+	int starterStderrFd( void ) { return starter_stderr_fd; };
+	void closeSavedStdin( void );
+	void closeSavedStdout( void );
+	void closeSavedStderr( void );
 
 protected:
 	List<UserProc> JobList;
@@ -159,6 +166,9 @@ private:
 	char *orig_cwd;
 	bool is_gridshell;
 	int ShuttingDown;
+	int starter_stdin_fd;
+	int starter_stdout_fd;
+	int starter_stderr_fd;
 
 	UserProc* pre_script;
 	UserProc* post_script;
