@@ -102,12 +102,12 @@ void attempt_access_handler(Service *, int i, Stream *s)
 	case ACCESS_READ:
 		dprintf( D_FULLDEBUG, "Checking file %s for read permission.\n", 
 				 filename );
-		open_result = open( filename, O_RDONLY, 0666 );
+		open_result = open( filename, O_RDONLY | O_LARGEFILE, 0666 );
 		break;
 	case ACCESS_WRITE:
 		dprintf( D_FULLDEBUG, "Checking file %s for write permission.\n",
 				 filename );
-		open_result = open( filename, O_WRONLY, 0666 );
+		open_result = open( filename, O_WRONLY | O_LARGEFILE, 0666 );
 		break;
 	default:
 		dprintf( D_ALWAYS, "ATTEMPT_ACCESS: Unknown access mode.\n" );
