@@ -28,7 +28,7 @@ class Class
     private:
 
 		ExprTree*		definition;	// definition of this class
-		ClassAdList*	list;		// classads belong to this class
+		ClassAdList*	list;	// classads belong to this class
 		Class*			next;
 };
 

@@ -7,6 +7,7 @@
 //******************************************************************************
 
 #include <std.h>
+#include "proc_obj.h"
 #include "classad.h"
 #include "classifiedjobs.h"
 #include "parser.h"
