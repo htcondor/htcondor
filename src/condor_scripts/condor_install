@@ -1546,7 +1546,7 @@ sub find_lock_dir {
     "\nDo you want to specify a local partition for file locking? [yes] ";
     $_ = <STDIN>;
     if( /^[Nn].*/ ) {
-	print "\nAlright, but you might run into trouble latter...\n";
+	print "\nAlright, but you might run into trouble later...\n";
 	return "";
     }
 
