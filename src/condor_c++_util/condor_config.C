@@ -638,7 +638,7 @@ clear_config()
 ** if the given parameter is not defined.
 */
 char *
-param( char *name )
+param( const char *name )
 {
 	char *val = lookup_macro( name, ConfigTab, TABLESIZE );
 
@@ -650,7 +650,7 @@ param( char *name )
 
 
 char *
-macro_expand( char *str )
+macro_expand( const char *str )
 {
 	return( expand_macro(str, ConfigTab, TABLESIZE) );
 }
