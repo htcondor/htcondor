@@ -879,6 +879,13 @@ EvaluateAttrClassAd( const string &attr, ClassAd *&classad ) const
 }
 
 bool ClassAd::
+EvaluateAttrList( const string &attr, ExprList *&l ) const
+{
+    Value val;
+	return( EvaluateAttr( attr, val ) && val.IsListValue( l ) );
+}
+
+bool ClassAd::
 GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames )
 {
     EvalState       state;

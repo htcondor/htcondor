@@ -416,6 +416,7 @@ e		*/
 		*/
         bool EvaluateAttrClassAd( const std::string &attr, ClassAd *&classad ) const;
 
+        bool EvaluateAttrList( const std::string &attr, ExprList *&l ) const;
 		//@}
 
 		/**@name STL-like Iterators */
