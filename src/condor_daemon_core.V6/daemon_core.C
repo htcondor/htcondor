@@ -4503,10 +4503,10 @@ int DaemonCore::Create_Process(
 	BOOL inherit_handles = FALSE;
 
 	char *newenv = NULL;
-
 	MyString strArgs;
-
+	int namelen = 0;
 	bool bIs16Bit = FALSE;
+
 #else
 	int inherit_handles;
 #endif
@@ -4816,6 +4816,7 @@ int DaemonCore::Create_Process(
 	//		NULL for the app name
 	//		args begins with app name
 	strArgs = args;
+	namelen = strlen(namebuf);
 	if (bIs16Bit)
 	{
 		// surround the executable name with quotes or you'll have problems 
@@ -4834,6 +4835,36 @@ int DaemonCore::Create_Process(
 		
 		args = const_cast<char *>(strArgs.GetCStr());
 		dprintf(D_ALWAYS, "Create_Process: 16-bit job detected, args=%s\n", args);
+
+	} else if ( (stricmp(".bat",&(namebuf[namelen-4])) == 0) || 
+			(stricmp(".cmd",&(namebuf[namelen-4])) == 0) ) {
+		
+		char systemshell[_POSIX_PATH_MAX+1];
+		int firstspace; 
+		
+		// deal with .cmd and .bat files, so they're exec'd properly too
+
+		// first, skip argv[0], since that will goof up the args to the 
+		// batch script.
+		firstspace = strArgs.FindChar(' ');
+		if ( firstspace != -1 ) {
+			strArgs = args+firstspace+1;
+		}
+
+		// next, stuff the extra cmd.exe args in with the arguments
+		strArgs = " /Q /C \"" + MyString(namebuf) + MyString("\" ") + strArgs;
+		args = strArgs.Value();
+
+		// now find out where cmd.exe lives on this box and
+		// set it to our executable
+		::GetSystemDirectory(systemshell, MAX_PATH);
+		strncat(systemshell, "\\cmd.exe", _POSIX_PATH_MAX);
+		free((void*)namebuf);
+		namebuf = strdup(systemshell);		
+
+		dprintf(D_ALWAYS, "Executable is a batch script, so executing %s %s\n",
+			namebuf, args);
+
 	}
 	
 	BOOL cp_result;
@@ -4843,7 +4874,7 @@ int DaemonCore::Create_Process(
 	} else {
 		// here we want to create a process as user for PRIV_USER_FINAL
 
-			// Get the token for	 the user
+			// Get the token for the user
 		HANDLE user_token = priv_state_get_handle();
 		ASSERT(user_token);
 
