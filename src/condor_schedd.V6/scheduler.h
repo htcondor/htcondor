@@ -43,6 +43,7 @@
 #include "list.h"
 #include "classad_hashtable.h"	// for HashKey class
 #include "Queue.h"
+#include "user_log.c++.h"
 
 const 	int			MAX_NUM_OWNERS = 512;
 const 	int			MAX_REJECTED_CLUSTERS = 1024;
@@ -149,7 +150,11 @@ class Scheduler : public Service
 	void			StartSchedUniverseJobs();
 	void			send_alive();
 	void			StartJobHandler();
-	bool			WriteAbortToUserLog(PROC_ID job_id);
+	UserLog*		InitializeUserLog( PROC_ID job_id );
+	bool			WriteAbortToUserLog( PROC_ID job_id );
+	bool			WriteExecuteToUserLog( PROC_ID job_id, const char* sinful = NULL );
+	bool			WriteEvictToUserLog( PROC_ID job_id, bool checkpointed = false );
+	bool			WriteTerminateToUserLog( PROC_ID job_id, int status );
 	void			RequestBandwidth(int cluster, int proc, match_rec *rec);
 	
   private:
