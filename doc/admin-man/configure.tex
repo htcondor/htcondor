@@ -1000,7 +1000,10 @@ checkpoint server host (see below).
 
 \item[\Macro{USE\_CKPT\_SERVER}] \label{param:UseCkptServer} A boolean
   which determines if you want a given submit machine to use a
-  checkpoint server.
+  checkpoint server if one is available.  If a
+  checkpoint server isn't available or \Macro{USE\_CKPT\_SERVER} is set to
+  False, checkpoints will be written to the local \MacroU{SPOOL} directory on
+  the submission machine.
 
 \item[\Macro{MAX\_DISCARDED\_RUN\_TIME}]
   \label{param:MaxDiscardedRunTime} If the shadow is unable to read a

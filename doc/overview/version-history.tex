@@ -48,6 +48,11 @@ the Condor Account, instead of root or Super User.
 to the queue in the hold state.  Held jobs will not run until released
 with \Condor{release}.
 
+\item \Macro{USE\_CKPT\_SERVER} now defaults to True if a checkpoint
+server is available.  It is usually more efficient to use a checkpoint
+server near the execution site instead of storing the checkpoint back
+to the submission machine, especially when flocking.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
