@@ -1,3 +1,7 @@
+12/03/04 V6_7-dedicated
+   Adding preemption support and machine classes to the dedicated 
+   scheduler
+
 11/28/04 V6_7-post_merge-V6_6-merge-25
    The state of the V6_7-branch after yet another merge from V6_6-branch.
 
