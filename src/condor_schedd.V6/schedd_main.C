@@ -98,7 +98,7 @@ extern "C"
 	int		boolean(char*, char*);
 	int		SetSyscalls() {}
 	int		ReadLog(char*);
-	void	config_from_server(char*, CONTEXT*, char*); 
+	void	config_from_server(char*, char*, CONTEXT*); 
 }
 extern	void	mark_jobs_idle();
 
@@ -166,13 +166,11 @@ main(int argc, char* argv[])
 			Foreground = 0;
 			break;
 		  case 'n':
-			strcpy(Name, *(++ptr));
-			++ptr;
+			strcpy(Name, *(++ptr)); 
 			ScheddName++;
 			break;
-		case 'c':
+		  case 'c':
 			strcpy(config_file, *(++ptr));
-			++ptr;
 			break; 
 		  default:
 			usage(argv[0]);
@@ -186,7 +184,7 @@ main(int argc, char* argv[])
 	}
 	else
 	{
-		config_from_server(argv[0], MachineContext, config_file);
+		config_from_server(config_file, argv[0], MachineContext);
 	}
 	
 	myAd = new ClassAd(MachineContext); 
