@@ -442,10 +442,13 @@ handle_termination( PROC *proc, char *notification, int *jobstatus,
 		dprintf(D_ALWAYS, "Shadow: Job was kicked off without a checkpoint\n" );
 		DoCleanup();
 		ExitReason = JOB_NOT_CKPTED;
+#if 0 /* This is a problem for the new feature where we choose our executable
+		 dynamically, so don't do it. */
 		if( stat(ICkptName,&st_buf) < 0) {
 			dprintf(D_ALWAYS,"No initial ckpt found\n");
 			ExitReason = JOB_NO_CKPT_FILE;
 		}
+#endif
 		break;
 
 	 case SIGQUIT:	/* Kicked off, but with a checkpoint */
