@@ -33,7 +33,7 @@ void func();
 void loop( int n );
 void check_buf( char *buf, char fill_char, size_t size );
 void fill_buf( char *buf, char fill_char, size_t size );
-void ckpt_and_exit();
+#include "x_fake_ckpt.h"
 #include "x_waste_second.h"
 
 
