@@ -459,7 +459,7 @@ find_file(const char *env_name, const char *file_name)
 {
 
 	char	*config_file = NULL, *env;
-#if defined(CONDOR-G)
+#if defined(CONDOR_G)
 	char	*home_dir;
 #endif
 	int		fd;
@@ -480,7 +480,7 @@ find_file(const char *env_name, const char *file_name)
 
 #ifndef WIN32
 	// Only look in /etc/condor and in ~condor on Unix.
-#if defined(CONDOR-G)
+#if defined(CONDOR_G)
     // For Condor-G, first check in the default install path, which is the
     // user's homedirectory/CondorG/etc/condor_config 
 	if( ! config_file ) {
@@ -504,7 +504,7 @@ find_file(const char *env_name, const char *file_name)
 			free( home_dir);
 		}
 	}
-#endif /* CONDOR-G */
+#endif /* CONDOR_G */
 
 	if( ! config_file ) {
 		// try /etc/condor/file_name

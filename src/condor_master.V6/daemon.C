@@ -1402,7 +1402,7 @@ Daemons::UpdateCollector()
 	int		cmd = UPDATE_MASTER_AD;
 	int		error_debug;
 
-#if defined(CONDOR-G)
+#if defined(CONDOR_G)
 	error_debug = D_FULLDEBUG;
 #else
 	error_debug = D_ALWAYS;
