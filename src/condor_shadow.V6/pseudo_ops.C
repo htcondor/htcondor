@@ -1474,6 +1474,17 @@ pseudo_register_uid_domain( const char *uid_domain )
 	return 0;
 }
 
+/*
+  Take note that the job is about to start executing and log that to
+  the userlog
+*/
+int
+pseudo_register_begin_execution( void )
+{
+	log_execute( ExecutingHost );
+	return 0;
+}
+
 int
 use_local_access( const char *file )
 {
