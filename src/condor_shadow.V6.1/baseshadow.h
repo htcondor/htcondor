@@ -42,7 +42,7 @@ typedef enum {
 	U_HOLD,
 	U_REMOVE,
 	U_REQUEUE,
-	U_ABORT
+	U_EVICT
 } update_t;
 
 /** This is the base class for the various incarnations of the Shadow.<p>
@@ -154,21 +154,22 @@ class BaseShadow : public Service
 		*/
 	void requeueJob( const char* reason );
 
-		/** The job exited, but we want to put it back in the job
-			queue so it will run again.  If requested, notify the user about
-			it, and exit with the appropriate status so that the
-			schedd doesn't remove the job from the queue.<p>
+		/** The job exited, and it's ready to leave the queue.  If
+			requested, notify the user about it, log a terminate
+			event, update the job queue, etc.<p>
 			This uses the virtual cleanUp() method to take care of any
 			universe-specific code before we exit.
 		*/
-	void terminateJob( int exit_reason = -1 );
+	void terminateJob( void );
 
-		/** We want to abort the job (due to condor_rm or
-			condor_hold).  This doesn't send email or write userlog
-			events, it just calls cleanUp(), updateJobQueue(), and
-			DC_Exit().
+		/** The job exited but it's not ready to leave the queue.  
+			We still want to log an evict event, possibly email the
+			user, etc.  We want to update the job queue, but not with
+			anything about how the job was killed.<p>
+			This uses the virtual cleanUp() method to take care of any
+			universe-specific code before we exit.
 		*/
-	void abortJob( void );
+	void evictJob( int reason );
 
 		/** The total number of bytes sent over the network on
 			behalf of this job.
@@ -313,6 +314,9 @@ class BaseShadow : public Service
 		// virtual void emailRequeueEvent( const char* reason );
 
 	void logTerminateEvent( int exitReason );
+
+	void logEvictEvent( int exitReason );
+
 	virtual void emailTerminateEvent( int exitReason ) = 0;
 
 		/** Initialize our StringLists for attributes we want to keep
