@@ -728,9 +728,12 @@ Resource::compute_condor_load()
 			num_called = 0;
 		}
 
-		resmgr->m_proc->getProcSetInfo( r_starter->pidfamily(), 
-										r_starter->pidfamily_size(), 
-										pinfo ); 
+		if( (resmgr->m_proc->
+			 getProcSetInfo(r_starter->pidfamily(), 
+							r_starter->pidfamily_size(),  
+							pinfo) < 0) ) {
+			EXCEPT( "Can't get process info for the starter and decendents" ); 
+		}
 		if( !pinfo ) {
 			EXCEPT( "Out of memory!" );
 		}
