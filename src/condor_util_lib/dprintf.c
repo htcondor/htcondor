@@ -392,7 +392,7 @@ preserve_log_file(int debug_level)
 			 * the file over (instead of renaming it) and then truncate
 			 * our original. */
 
-			if ( ::CopyFile(DebugFile[debug_level],old,FALSE) == 0 ) {
+			if ( CopyFile(DebugFile[debug_level],old,FALSE) == 0 ) {
 				/* Even our attempt to copy failed.  We're screwed. */
 				failed_to_rotate = TRUE;
 			}
