@@ -18,8 +18,12 @@ checkpointed, this attribute is UNDEFINED.
 \index{ClassAd job attribute!ClusterId}
 \item[\AdAttr{ClusterId}] : Integer cluster identifier for this job.
 A ``cluster'' is a group of jobs that were submitted together.  Each
-job has its own unique job identifier within the cluser, but shares a
+job has its own unique job identifier within the cluster, but shares a
 common cluster identifier.
+
+%%% ClassAd attribute: Cmd
+\index{ClassAd job attribute!Cmd}
+\item[\AdAttr{Cmd}] : The path to and the file name of the job to be executed.
 
 %%% ClassAd attribute: CompletionDate
 \index{ClassAd job attribute!CompletionDate}
@@ -249,5 +253,91 @@ but failed to do so.
 this job failed to match with a resource ad,
 this attribute will contain a string with a
 human-readable message about why the match failed.
+
+%%% ClassAd attribute: StreamOut
+\index{ClassAd job attribute!StreamOut}
+\item[\AdAttr{StreamOut}] :  
+An attribute utilized only for globus universe jobs.
+The default value is \Arg{True}.
+If \Arg{True}, and \Attr{TransferOut} is \Arg{True}, then 
+job output is streamed back to the submit machine, instead
+of doing the transfer (as a whole) after the job completes.
+If \Arg{False}, then
+job output is transferred back to the submit machine
+(as a whole) after the job completes.
+If \Attr{TransferOut} is \Arg{False}, then this job attribute is ignored.
+
+%%% ClassAd attribute: StreamErr
+\index{ClassAd job attribute!StreamErr}
+\item[\AdAttr{StreamErr}] :  
+An attribute utilized only for globus universe jobs.
+The default value is \Arg{True}.
+If \Arg{True}, and \Attr{TransferErr} is \Arg{True}, then 
+standard error is streamed back to the submit machine, instead
+of doing the transfer (as a whole) after the job completes.
+If \Arg{False}, then
+standard error is transfered back to the submit machine
+(as a whole) after the job completes.
+If \Attr{TransferErr} is \Arg{False}, then this job attribute is ignored.
+
+%  Jaime will check on this before they get documented.
+%%%% Vanilla universe assumes value of True for
+%%% ClassAd attribute: TransferOut
+%%% ClassAd attribute: TransferIn
+%%% ClassAd attribute: TransferErr
+%%% ClassAd attribute: TransferExecutable
+
+%%% ClassAd attribute: TransferOut
+\index{ClassAd job attribute!TransferOut}
+\item[\AdAttr{TransferOut}] :  
+An attribute utilized only for globus universe jobs.
+The default value is \Arg{True}.
+If \Arg{True}, then the output from the job
+is transferred from the remote machine back to the submit machine.
+The name of the file after transfer is the file referred to
+by job attribute \Attr{Out}.
+If \Arg{False}, no transfer takes place (remote to submit machine),
+and the name of the file is the file referred to
+by job attribute \Attr{Out}.
+
+%%% ClassAd attribute: TransferIn
+\index{ClassAd job attribute!TransferIn}
+\item[\AdAttr{TransferIn}] :  
+An attribute utilized only for globus universe jobs.
+The default value is \Arg{True}.
+If \Arg{True}, then the job input is transferred from the submit
+machine to the remote machine.
+The name of the file that is transferred is given by the
+job attribute \Attr{In}.
+If \Arg{False}, then the job's input is taken from a file on the
+remote machine (pre-staged), and 
+the name of the file is given by the job attribute \Attr{In}.
+
+%%% ClassAd attribute: TransferErr
+\index{ClassAd job attribute!TransferErr}
+\item[\AdAttr{TransferErr}] :  
+An attribute utilized only for globus universe jobs.
+The default value is \Arg{True}.
+If \Arg{True}, then the error output from the job
+is transferred from the remote machine back to the submit machine.
+The name of the file after transfer is the file referred to
+by job attribute \Attr{Err}.
+If \Arg{False}, no transfer takes place (remote to submit machine),
+and the name of the file is the file referred to
+by job attribute \Attr{Err}.
+
+%%% ClassAd attribute: TransferExecutable
+\index{ClassAd job attribute!TransferExecutable}
+\item[\AdAttr{TransferExecutable}] :  
+An attribute utilized only for globus universe jobs.
+The default value is \Arg{True}.
+If \Arg{True}, then the job executable is transferred from the submit
+machine to the remote machine.
+The name of the file (on the submit machine)
+that is transferred is given by the
+job attribute \Attr{Cmd}.
+If \Arg{False}, no transfer takes place, and
+the name of the file used (on the remote machine) will be as
+given in the job attribute \Attr{Cmd}.
 
 \end{description}
