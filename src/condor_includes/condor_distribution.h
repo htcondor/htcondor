@@ -26,19 +26,9 @@
 // Max length of the distribution name
 static const int MAX_DISTRIBUTION_NAME = 20;
 
-#include "condor_singleton.h"
-#include "condor_tsapi.h"
-
 class Distribution
 {
-# ifdef WIN32
-	friend int dc_main(int argc, char **argv );
-# else
-	friend int main(int argc, char **argv );
-# endif
-
   public:
-  	DECLARE_SINGLETON(Distribution);
 	int Init( int argc, char **argv );
 
 	// Get my distribution name..
@@ -47,10 +37,8 @@ class Distribution
 	const char *GetCap() { return distribution_cap; };
 	int GetLen() { return distribution_length; };
 
-  private:
 	Distribution( );
 	~Distribution( );
-	I_CANT_BE_COPIED(Distribution);
 	void	SetDistribution( const char *name = "condor" );
 
   private:
@@ -60,9 +48,7 @@ class Distribution
 	int		distribution_length;
 };
 
-typedef TransparentSingletonAPI<Distribution> s_Distribution;
-
-extern s_Distribution myDistro;
+extern Distribution	myDistribution, *myDistro;
 
 #endif	/* _CONDOR_DISTRIBUTION_H */
 

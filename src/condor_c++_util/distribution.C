@@ -51,8 +51,6 @@ Distribution::~Distribution( )
 {
 }
 
-IMPLEMENT_SINGLETON(Distribution);
-
 // Set my actual distro name
 void Distribution :: SetDistribution( const char *name )
 {
@@ -77,6 +75,4 @@ void Distribution :: SetDistribution( const char *name )
 
 	// Cache away it's length
 	distribution_length = strlen( distribution );
-	
 }
-

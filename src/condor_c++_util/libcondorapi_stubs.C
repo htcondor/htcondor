@@ -1,5 +1,4 @@
 #include "condor_common.h"
-#include "condor_distribution.h"
 
 BEGIN_C_DECLS
 char* param(const char *str)
@@ -12,4 +11,3 @@ char* param(const char *str)
 }
 END_C_DECLS
 
-template class TransparentSingletonAPI<Distribution>;
