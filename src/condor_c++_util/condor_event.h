@@ -70,7 +70,10 @@ enum ULogEventNumber {
     /** Node executed   	      */  ULOG_NODE_EXECUTE,
     /** Node terminated	    	  */  ULOG_NODE_TERMINATED,
     /** POST script terminated    */  ULOG_POST_SCRIPT_TERMINATED,
-	/** Job Submitted to Globus   */  ULOG_GLOBUS_SUBMIT
+	/** Job Submitted to Globus   */  ULOG_GLOBUS_SUBMIT,
+	/** Globus Submit failed      */  ULOG_GLOBUS_SUBMIT_FAILED,
+	/** Globus Resource Up        */  ULOG_GLOBUS_RESOURCE_UP,
+	/** Globus Submit failed      */  ULOG_GLOBUS_RESOURCE_DOWN
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
@@ -626,6 +629,7 @@ class PostScriptTerminatedEvent : public ULogEvent
 };
 
 
+
 //----------------------------------------------------------------------------
 /** Framework for a GlobusSubmitEvent object.  Occurs when a Globus Universe
     job is actually submitted to a Globus Gatekeeper (and the submit is 
@@ -662,6 +666,86 @@ class GlobusSubmitEvent : public ULogEvent
 	bool restartableJM;
 };
 
+//----------------------------------------------------------------------------
+/** Framework for a GlobusSubmitiAbortedEvent object.  Occurs when a Globus 
+	Universe job is is removed from the queue because it was unable to be
+	sucessfully submitted to a Globus Gatekeeper after a certain number of 
+	attempts.
+*/
+class GlobusSubmitFailedEvent : public ULogEvent
+{
+  public:
+    ///
+    GlobusSubmitFailedEvent();
+    ///
+    ~GlobusSubmitFailedEvent();
+
+    /** Read the body of the next SubmitAborted event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next SubmitAborted event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+    /// Globus Resource Manager (Gatekeeper) Conctact String
+    char* reason;
+
+};
+
+class GlobusResourceUpEvent : public ULogEvent
+{
+  public:
+    ///
+    GlobusResourceUpEvent();
+    ///
+    ~GlobusResourceUpEvent();
+
+    /** Read the body of the next ResoruceUp event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next SubmitAborted event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+    /// Globus Resource Manager (Gatekeeper) Conctact String
+    char* rmContact;
+
+};
+
+class GlobusResourceDownEvent : public ULogEvent
+{
+  public:
+    ///
+    GlobusResourceDownEvent();
+    ///
+    ~GlobusResourceDownEvent();
+
+    /** Read the body of the next SubmitAborted event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next SubmitAborted event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+    /// Globus Resource Manager (Gatekeeper) Conctact String
+    char* rmContact;
+
+};
 
 //----------------------------------------------------------------------------
 /** Framework for a JobImageSizeEvent object.  Occurs when the image size of a

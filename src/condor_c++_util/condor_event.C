@@ -57,6 +57,9 @@ const char * ULogEventNumberNames[] = {
 	"ULOG_NODE_TERMINATED",  		// MPI Node terminated
 	"ULOG_POST_SCRIPT_TERMINATED",	// POST script terminated
 	"ULOG_GLOBUS_SUBMIT"			// Job Submitted to Globus
+	"ULOG_GLOBUS_SUBMIT_FAILED"		// Globus Submit Failed 
+	"ULOG_GLOBUS_RESOURCE_UP"		// Globus Machine UP 
+	"ULOG_GLOBUS_RESOURCE_DOWN"		// Globus Machine Down
 };
 
 const char * ULogEventOutcomeNames[] = {
@@ -127,6 +130,15 @@ instantiateEvent (ULogEventNumber event)
 
 	case ULOG_GLOBUS_SUBMIT:
 		return new GlobusSubmitEvent;
+
+	case ULOG_GLOBUS_SUBMIT_FAILED:
+		return new GlobusSubmitFailedEvent;
+
+	case ULOG_GLOBUS_RESOURCE_DOWN:
+		return new GlobusResourceDownEvent;
+
+	case ULOG_GLOBUS_RESOURCE_UP:
+		return new GlobusResourceUpEvent;
 
 	  default:
         EXCEPT( "Invalid ULogEventNumber" );
@@ -400,6 +412,199 @@ readEvent (FILE *file)
 	return 1;
 }
 
+// ----- the GlobusSubmitFailedEvent class
+GlobusSubmitFailedEvent::
+GlobusSubmitFailedEvent()
+{	
+	eventNumber = ULOG_GLOBUS_SUBMIT_FAILED;
+	reason = NULL;
+}
+
+GlobusSubmitFailedEvent::
+~GlobusSubmitFailedEvent()
+{
+    if( reason ) {
+        delete[] reason;
+    }
+}
+
+int GlobusSubmitFailedEvent::
+writeEvent (FILE *file)
+{
+	const char * unknown = "UNKNOWN";
+	const char * reasonString = unknown;
+
+	int retval = fprintf (file, "Globus job submission failed!\n");
+	if (retval < 0)
+	{
+		return 0;
+	}
+	
+	if ( reason ) reasonString = reason;
+
+	retval = fprintf( file, "    Reason: %.8191s\n", reasonString );
+	if( retval < 0 ) {
+		return 0;
+	}
+
+	return (1);
+}
+
+int GlobusSubmitFailedEvent::
+readEvent (FILE *file)
+{
+	char s[8192];
+
+	if ( reason ) {
+		delete [] reason;
+		reason = NULL;
+	} 
+	int retval = fscanf (file, "Globus job submission failed!\n");
+    if (retval != 0)
+    {
+		return 0;
+    }
+	s[0] = '\0';
+
+	fpos_t filep;
+	fgetpos( file, &filep );
+     
+	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
+		fsetpos( file, &filep );
+		return 1;
+	}
+ 
+	// remove trailing newline
+	s[ strlen( s ) - 1 ] = '\0';
+
+	// Copy after the "Reason: "
+	reason = strnewp( &s[8] );
+	return 1;
+}
+
+// ----- the GlobusResourceUp class
+GlobusResourceUpEvent::
+GlobusResourceUpEvent()
+{	
+	eventNumber = ULOG_GLOBUS_RESOURCE_UP;
+	rmContact = NULL;
+}
+
+GlobusResourceUpEvent::
+~GlobusResourceUpEvent()
+{
+    if( rmContact ) {
+        delete[] rmContact;
+    }
+}
+
+int GlobusResourceUpEvent::
+writeEvent (FILE *file)
+{
+	const char * unknown = "UNKNOWN";
+	const char * rm = unknown;
+
+	int retval = fprintf (file, "Globus Resource Back Up\n");
+	if (retval < 0)
+	{
+		return 0;
+	}
+	
+	if ( rmContact ) rm = rmContact;
+
+	retval = fprintf( file, "    RM-Contact: %.8191s\n", rm );
+	if( retval < 0 ) {
+		return 0;
+	}
+
+	return (1);
+}
+
+int GlobusResourceUpEvent::
+readEvent (FILE *file)
+{
+	char s[8192];
+
+	if ( rmContact ) {
+		delete [] rmContact;
+		rmContact = NULL;
+	} 
+	int retval = fscanf (file, "Globus Resource Back Up\n");
+    if (retval != 0)
+    {
+		return 0;
+    }
+	s[0] = '\0';
+	retval = fscanf( file, "    RM-Contact: %8191s\n", s );
+	if ( retval != 1 )
+	{
+		return 0;
+	}
+	rmContact = strnewp(s);	
+	return 1;
+}
+
+// ----- the GlobusResourceUp class
+GlobusResourceDownEvent::
+GlobusResourceDownEvent()
+{	
+	eventNumber = ULOG_GLOBUS_RESOURCE_DOWN;
+	rmContact = NULL;
+}
+
+GlobusResourceDownEvent::
+~GlobusResourceDownEvent()
+{
+    if( rmContact ) {
+        delete[] rmContact;
+    }
+}
+
+int GlobusResourceDownEvent::
+writeEvent (FILE *file)
+{
+	const char * unknown = "UNKNOWN";
+	const char * rm = unknown;
+
+	int retval = fprintf (file, "Detected Down Globus Resource\n");
+	if (retval < 0)
+	{
+		return 0;
+	}
+	
+	if ( rmContact ) rm = rmContact;
+
+	retval = fprintf( file, "    RM-Contact: %.8191s\n", rm );
+	if( retval < 0 ) {
+		return 0;
+	}
+
+	return (1);
+}
+
+int GlobusResourceDownEvent::
+readEvent (FILE *file)
+{
+	char s[8192];
+
+	if ( rmContact ) {
+		delete [] rmContact;
+		rmContact = NULL;
+	} 
+	int retval = fscanf (file, "Detected Down Globus Resource\n");
+    if (retval != 0)
+    {
+		return 0;
+    }
+	s[0] = '\0';
+	retval = fscanf( file, "    RM-Contact: %8191s\n", s );
+	if ( retval != 1 )
+	{
+		return 0;
+	}
+	rmContact = strnewp(s);	
+	return 1;
+}
 
 #if defined(GENERIC_EVENT)
 // ----- the GenericEvent class
