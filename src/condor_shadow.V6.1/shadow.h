@@ -86,9 +86,14 @@ class UniShadow : public BaseShadow
 		 */
 	int handleJobRemoval(int sig);
 
+	float bytesSent();
+	float bytesReceived();
+
  private:
 
 	RemoteResource *remRes;
+
+	int UpdateFromStarter(int command, Stream *s);
 
 };
 
