@@ -89,7 +89,11 @@ MAIN( int argc, char *argv[], char **envp )
 		argc -= 2;
 		argv += 2;
 		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
+#if defined(HPUX9)
+		return(_start( argc, argv, envp ));
+#else
 		return main( argc, argv, envp );
+#endif
 	}
 
 		/*
