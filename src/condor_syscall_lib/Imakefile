@@ -24,7 +24,7 @@ UTIL_OBJ = dprintf.o dprintf_config.o except.o update_rusage.o condor_errlst.o
 
 LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL) $(NAME_TAB) $(XDR_OBJ) $(UTIL_OBJ) $(CKPT_OBJ)
 
-all_target(condor_syscall_lib.a condor_rt0.o)
+all_target(condor_syscall_lib.a receivers.c condor_rt0.o)
 stubs: switches.c senders.c receivers.c
 
 uppercase_target($(SIMPLE_LIBC),geteuid.o,GETEUID.o,geteuid,GETEUID)
