@@ -220,19 +220,19 @@ class GahpClient : public Service {
 
 		///
 		int 
-		globus_gram_client_job_cancel(char * job_contact);
+		globus_gram_client_job_cancel(const char * job_contact);
 
 		///
 		int
-		globus_gram_client_job_status(char * job_contact,
+		globus_gram_client_job_status(const char * job_contact,
 			int * job_status,
 			int * failure_code);
 
 		///
 		int
-		globus_gram_client_job_signal(char * job_contact,
+		globus_gram_client_job_signal(const char * job_contact,
 			globus_gram_protocol_job_signal_t signal,
-			char * signal_arg,
+			const char * signal_arg,
 			int * job_status,
 			int * failure_code);
 

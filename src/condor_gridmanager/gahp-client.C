@@ -890,7 +890,7 @@ GahpClient::globus_gram_client_job_request(
 }
 
 int 
-GahpClient::globus_gram_client_job_cancel(char * job_contact)
+GahpClient::globus_gram_client_job_cancel(const char * job_contact)
 {
 
 	static const char* command = "GRAM_JOB_CANCEL";
@@ -944,7 +944,7 @@ GahpClient::globus_gram_client_job_cancel(char * job_contact)
 }
 
 int
-GahpClient::globus_gram_client_job_status(char * job_contact,
+GahpClient::globus_gram_client_job_status(const char * job_contact,
 	int * job_status,
 	int * failure_code)
 {
@@ -1004,9 +1004,9 @@ GahpClient::globus_gram_client_job_status(char * job_contact,
 
 
 int
-GahpClient::globus_gram_client_job_signal(char * job_contact,
+GahpClient::globus_gram_client_job_signal(const char * job_contact,
 	globus_gram_protocol_job_signal_t signal,
-	char * signal_arg,
+	const char * signal_arg,
 	int * job_status,
 	int * failure_code)
 {
