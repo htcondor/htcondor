@@ -26,6 +26,29 @@ DaemonCore*	daemonCore;
 static int is_master = 0;
 
 
+void
+drop_addr_file() {
+	FILE	*ADDR_FILE;
+	char	addr_file[100];
+	char	*tmp;
+
+	sprintf( addr_file, "%s_ADDRESS_FILE", mySubSystem );
+	tmp = param( addr_file );
+	if( tmp ) {
+		if( (ADDR_FILE = fopen(tmp, "w")) ) {
+			fprintf( ADDR_FILE, "%s\n", 
+					 daemonCore->InfoCommandSinfulString() );
+			fclose( ADDR_FILE );
+		} else {
+			dprintf( D_ALWAYS,
+					 "DaemonCore: ERROR: Can't open address file %s\n",
+					 tmp );
+		}
+		free( tmp );
+	}
+}
+
+
 #ifndef WIN32
 void
 unix_sighup(int)
@@ -80,6 +103,9 @@ handle_dc_sighup( Service*, int )
 	}
 	free(ptmp);
 
+		// Re-drop the address file, if it's defined, just to be safe.
+	drop_addr_file();
+
 	// call this daemon's specific main_config()
 	main_config();
 
@@ -132,6 +158,7 @@ handle_dc_sigquit( Service*, int )
 	return TRUE;
 }
 
+
 // This is the main entry point for daemon core.  On WinNT, however, we
 // have a different, smaller main which checks if "-f" is ommitted from
 // the command line args of the condor_master, in which case it registers as 
@@ -145,8 +172,7 @@ int main( int argc, char** argv )
 	char**	ptr;
 	int		command_port = -1;
 	int		dcargs = 0;		// number of daemon core command-line args found
-	char*	ptmp;
-	char*	ptmp1;
+	char	*ptmp, *ptmp1;
 	int		i;
 	ReliSock* rsock = NULL;	// tcp command socket
 	SafeSock* ssock = NULL;	// udp command socket
@@ -405,8 +431,13 @@ int main( int argc, char** argv )
 		// now register these new command sockets
 		daemonCore->Register_Command_Socket( (Stream*)rsock );
 		daemonCore->Register_Command_Socket( (Stream*)ssock );
-		dprintf(D_ALWAYS,"DaemonCore: Command Socket at %s\n",
-			daemonCore->InfoCommandSinfulString());
+
+		dprintf( D_ALWAYS,"DaemonCore: Command Socket at %s\n",
+				 daemonCore->InfoCommandSinfulString());
+
+			// Now, drop this sinful string into a file, if
+			// mySubSystem_ADDRESS_FILE is defined.
+		drop_addr_file();
 
 		// now register any DaemonCore "default" handlers
 
@@ -419,6 +450,7 @@ int main( int argc, char** argv )
 		daemonCore->Register_Command(DC_PROCESSEXIT,"DC_PROCESSEXIT",
 				(CommandHandlercpp)daemonCore->HandleProcessExitCommand,
 				"HandleProcessExitCommand()",daemonCore,IMMEDIATE_FAMILY);
+
 	}
 	
 		// Install DaemonCore signal handlers common to all daemons.
