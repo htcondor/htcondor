@@ -241,6 +241,8 @@ Scheduler::count_jobs()
 	int		prio_compar();
 	char	tmp[512];
 
+	static int OldFlockLevel = 0;
+
     // copy owner data to old-owners table
     OwnerData OldOwners[MAX_NUM_OWNERS];
     int Old_N_Owners=N_Owners;
@@ -314,6 +316,11 @@ Scheduler::count_jobs()
 	ad->Delete (ATTR_TOTAL_RUNNING_JOBS);
 	ad->Delete (ATTR_TOTAL_IDLE_JOBS);
 
+	// when all jobs are finished, reset FlockLevel
+	if (N_Owners == 0) {
+		FlockLevel = 0;
+	}
+
 	for ( i=0; i<N_Owners; i++) {
 
 		// TODO: set running job counts with flocking in mind
@@ -339,8 +346,6 @@ Scheduler::count_jobs()
 						 CONDOR_VIEW_PORT);
 	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
 			   Owners[i].Name, UidDomain );
-
-	  static OldFlockLevel = 0;
 
 	  // Request matches from other pools if FlockLevel > 0
 	  if (FlockHosts && FlockLevel > 0) {
@@ -369,8 +374,6 @@ Scheduler::count_jobs()
 			  }
 		  }
 	  }
-	  OldFlockLevel = FlockLevel;
-
 	}
 
     // send info about deleted owners
@@ -409,7 +412,18 @@ Scheduler::count_jobs()
 	  dprintf (D_ALWAYS, "Sent owner (0 jobs) ad to central manager\n");
 	  update_central_mgr(UPDATE_SUBMITTOR_AD, CollectorHost,
 						 COLLECTOR_UDP_COMM_PORT);
+
+	  // also update all of the flock hosts
+	  char *host;
+	  int i;
+	  for (i=1, FlockHosts->rewind();
+		   i <= OldFlockLevel && (host = FlockHosts->next()); i++) {
+		  update_central_mgr(UPDATE_SUBMITTOR_AD, host,
+							 COLLECTOR_UDP_COMM_PORT);
+	  }
 	}
+
+	OldFlockLevel = FlockLevel;
 
 	return 0;
 }
