@@ -776,7 +776,7 @@ RunBenchmarks : (LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
 ##  Note: since this is already a ClassAd, you don't have to do
 ##  anything funny with strings, etc.  This feature can be turned off
 ##  by commenting out this setting (there is no default).
-STARTD_JOB_EXPRS = ImageSize, JobUniverse
+STARTD_JOB_EXPRS = ImageSize, ExecutableSize, JobUniverse, NiceUser
 
 ##  If you want to "lie" to Condor about how many CPUs your machine
 ##  has, you can use this setting to override Condor's automatic
