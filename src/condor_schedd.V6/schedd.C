@@ -928,6 +928,7 @@ count( ClassAd *job )
 	owner = buf;
 
 	// grab the domain too, if it exists
+	domain[0] = '\0';
 	job->LookupString(ATTR_NT_DOMAIN, domain);
 	
 	// With NiceUsers, the number of owners is
