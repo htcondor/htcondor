@@ -157,15 +157,15 @@ sub generate_cmdfile() {
     print CMDFILE "platform_pre = nmi_glue/test/platform_pre\n";
     print CMDFILE "remote_pre_declare = nmi_glue/test/remote_pre_declare\n";
     print CMDFILE "remote_declare = nmi_glue/test/remote_declare\n";
-    # select scope of testsuite run - quick takes 30 minutes, full takes 12 hours 
-    #print CMDFILE "remote_declare_args = full\n";
-    print CMDFILE "remote_declare_args = quick\n";
+    # select scope of testsuite run 
+    # all takes 30 minutes
+    print CMDFILE "remote_declare_args = all\n";
     print CMDFILE "remote_pre = nmi_glue/test/remote_pre\n";
     print CMDFILE "remote_task = nmi_glue/test/remote_task\n";
     print CMDFILE "remote_post = nmi_glue/test/remote_post\n";
     print CMDFILE "platforms = ";
     foreach $platform (@platforms) { 
-      print CMDFILE "$platform,";
+        print CMDFILE "$platform,";
     }
     print CMDFILE "\n";
     print CMDFILE "prereqs = perl-5.8.5, tar-1.14, patch-2.5.4, m4-1.4.1, binutils-2.15, flex-2.5.4a, make-3.80, byacc-1.9, bison-1.25, gzip-1.2.4, gcc-2.95.3, coreutils-5.2.1\n";
