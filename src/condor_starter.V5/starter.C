@@ -75,7 +75,6 @@ ReliSock	*SyscallStream = NULL;	// stream to shadow for remote system calls
 List<UserProc>	UProcList;		// List of user processes
 char	*Execute;				// Name of directory where user procs execute
 int		ExecTransferAttempts;	// How many attempts at getting the initial ckpt
-int		DoDelays;				// Insert artificial delays for testing
 char	*UidDomain=NULL;		// Machines we share UID space with
 bool	TrustUidDomain=false;	// Should we trust what the submit side claims?
 
@@ -161,50 +160,6 @@ main( int argc, char *argv[] )
 	return 0;
 }
 
-
-/*
-  If TESTING is set to TRUE, we delay approximately sec seconds for
-  purposes of debugging.  If TESTING is not TRUE, we just return.
-*/
-void
-delay( int sec )
-{
-	int		i;
-	int		j, k;
-
-#if defined(SPARC)
-	int		lim = 250000;
-#elif defined(Solaris)
-	int		lim = 250000;
-#elif defined(R6000)
-	int		lim = 250000;
-#elif defined(MIPS)
-	int		lim = 200000;
-#elif defined(ALPHA)
-	int		lim = 300000;
-#elif defined(HPPAR)
-	int		lim = 650000;
-#elif defined(CONDOR_DARWIN)
-	int		lim = 650000;
-#elif defined(LINUX)
-	int		lim = 300000;
-#elif defined(SGI)
-	int		lim = 300000;
-#endif
-
-
-	if( !DoDelays || sec == 0 ) {
-		return;
-	}
-
-	for( i=sec; i > 0; i-- ) {
-		dprintf( D_ALWAYS | D_NOHEADER,  "%d\n", i );
-		for( j=0; j<lim; j++ ) {
-			for( k=0; k<5; k++ );
-		}
-	}
-	dprintf( D_ALWAYS | D_NOHEADER,  "0\n" );
-}
 
 /*
   Initialization stuff to be done before getting any use processes.
@@ -350,16 +305,6 @@ init_params()
 		EXCEPT( "Execute directory not specified in config file" );
 	}
 
-	if( (tmp=param("STARTER_DELAYS")) == NULL ) {
-		DoDelays = FALSE;
-	} else {
-		if( tmp[0] == 't' || tmp[0] == 'T' ) {
-			DoDelays = TRUE;
-		} else {
-			DoDelays = FALSE;
-		}
-	}
-
 		// find out domain of machines whose UIDs we honor
 	UidDomain = param( "UID_DOMAIN" );
 
@@ -438,7 +383,6 @@ get_exec()
 
 
 	new_process = UProcList.Current();
-	delay( 5 );
 	if( new_process->fetch_ckpt() != TRUE ) {
 		return FAILURE;
 	}

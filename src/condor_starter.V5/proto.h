@@ -41,7 +41,6 @@ extern "C" {
 BOOLEAN EarlyAbort( int *reason );
 void GenerateEarlyAbort( int event );
 void set_posix_environment();
-void delay( int );
 
 int Start_Synch();
 int GetJob_Synch();
@@ -83,8 +82,6 @@ void do_rename();
 void copy_file( char *old_name, char *new_name, mode_t mode );
 void signal_user_job( pid_t pid, int sig );
 char *generate_ckpt_name( int cluster, int proc, char *ext );
-void delay( int sec );
-void waste_a_second();
 void get_ckpt_file();
 int verify_ckpt_file();
 char *get_user_env_param( char * );
