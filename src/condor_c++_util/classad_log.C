@@ -401,7 +401,7 @@ LogSetAttribute::Play(ClassAdHashTable &table)
 	char *tmp_expr = new char [strlen(name) + strlen(value) + 4];
 	sprintf(tmp_expr, "%s = %s", name, value);
 	rval = ad->Insert(tmp_expr);
-	delete tmp_expr;
+	delete [] tmp_expr;
 	return rval;
 }
 
