@@ -123,7 +123,8 @@ main (int argc, char *argv[])
 	}
 
 	if ((q = query->fetchAds (result, pool)) != Q_OK) {
-		fprintf (stderr, "Error:  Could not fetch ads --- error %d\n", q);
+		fprintf (stderr, "Error:  Could not fetch ads --- error %s\n", 
+					StrQueryResult[q]);
 		exit (1);
 	}
 
