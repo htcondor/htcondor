@@ -2031,7 +2031,7 @@ int pidHash(const int &pid, int numBuckets)
 
 int procIDHash(const PROC_ID &procID, int numBuckets)
 {
-	return procID.cluster+procID.proc*17;
+	return (procID.cluster+(procID.proc*17) % numBuckets);
 }
 
 // initialize the configuration parameters
