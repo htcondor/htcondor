@@ -26,7 +26,7 @@
 #include "util.h"
 
 using namespace std;
-extern  time_t timezone;
+extern DLL_IMPORT_MAGIC time_t timezone;
 
 BEGIN_NAMESPACE( classad )
 
@@ -637,7 +637,8 @@ UnparseAux(string &buffer,Operation::OpKind op,ExprTree *op1,ExprTree *op2,
 	ExprTree *op3)
 {
 	if( !minimalParens ) {
-		return( ClassAdUnParser::UnparseAux( buffer, op, op1, op2, op3 ) );
+		ClassAdUnParser::UnparseAux( buffer, op, op1, op2, op3 );
+		return;
 	}
 
 		// case 0: parentheses op
