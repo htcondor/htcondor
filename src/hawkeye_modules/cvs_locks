@@ -54,6 +54,9 @@ sub RunIt {
     # Store off the fields
     $Hash->Add( "FIELDS", "s", join( " ", keys %Fields ) );
 
+    # List of valid repositories
+    my @CheckedRepositories;
+
     # Walk through the repositories
     foreach my $Repository ( @Repositories )
     {
@@ -79,6 +82,9 @@ sub RunIt {
 	    print STDERR "Error running '$Find' in '$RepoDir'\n";
 	    next;
 	}
+
+	# Add it to the list of checked repositories
+	push( @CheckedRepositories, $RepoName );
 
 	# Look through it...
 	my @Locks;
@@ -138,6 +144,8 @@ sub RunIt {
 	}
 
     }
+
+    $Hash->Add( "REPOSITORIES", "s", join( " ", @CheckedRepositories ) );
 
     # Ok, summary is done...
     $Hash->Store( );
