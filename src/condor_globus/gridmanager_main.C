@@ -87,6 +87,7 @@ main_init( int argc, char **argv )
 
 	err = globus_gass_server_ez_init( &gassServerListener, NULL, NULL, NULL,
 									  GLOBUS_GASS_SERVER_EZ_READ_ENABLE |
+									  GLOBUS_GASS_SERVER_EZ_LINE_BUFFER |
 									  GLOBUS_GASS_SERVER_EZ_WRITE_ENABLE,
 									  NULL );
 	if ( err != GLOBUS_SUCCESS ) {
