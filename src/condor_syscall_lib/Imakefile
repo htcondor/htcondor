@@ -309,6 +309,12 @@ strip_library(condor_syscall_lib.a,$(STRIP_DIR)/lib)
 static_library(condor_syscall_lib.a,$(STATIC_DIR)/lib)
 #endif
 
+#if DOES_COMPRESS_CKPT
+release_library($(COMPRESS_LIB),$(RELEASE_DIR)/lib)
+strip_library($(COMPRESS_LIB),$(STRIP_DIR)/lib)
+static_library($(COMPRESS_LIB),$(STATIC_DIR)/lib)
+#endif
+
 CMNT If no remote syscalls & no checkpointing support, then no need
 CMNT to release anything into RELEASEDIR/lib, since we only do VANILLA jobs
 #if (!DOES_CHECKPOINTING) && (!DOES_REMOTE_SYSCALLS)
