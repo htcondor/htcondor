@@ -23,7 +23,7 @@
 		accountant.V6 ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts shadow.V6 startd.V6 starter.V5 submit.V6 status.V6 \
-		tools kbdd collector.V6 PvmProgs
+		tools kbdd collector.V6 PvmProgs dagman
 
 #define Libraries \
 		util_lib c++_util procapi io classad daemon_core.V6 \
@@ -145,6 +145,7 @@ object_target(starter.V5)
 object_target(startd.V6)
 object_target(schedd.V6)
 object_target(status.V6)
+object_target(dagman)
 #if HAS_X
    object_target(kbdd)
 #endif
