@@ -68,7 +68,7 @@ submit_try( const char *exe, const char *command, CondorID &condorID )
     if (util_getline(fp, buffer, UTIL_MAX_LINE_LENGTH) == EOF) {
       pclose(fp);
 	  debug_printf(DEBUG_NORMAL, "failed while reading from pipe.\n");
-	  debug_printf(DEBUG_NORMAL, "Read so far: %s\n", command_output.GetCStr());
+	  debug_printf(DEBUG_NORMAL, "Read so far: %s\n", command_output.Value());
       return false;
     }
 	command_output += buffer;
