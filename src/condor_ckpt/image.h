@@ -35,19 +35,26 @@ typedef unsigned long RAW_ADDR;
 typedef int BOOL;
 
 const int MAGIC = 0xfeafea;
+const int COMPRESS_MAGIC = 0xfeafeb;
 const int SEG_INCR = 25;
 const int  MAX_SEGS = 200;
+const int ALT_HEAP_SIZE = 10*1024*1024;	// 10MB
+const int RESERVED_HEAP = 1024*1024*1024; // 1GB
 
 class Header {
 public:
 	void Init();
 	void IncrSegs() { n_segs += 1; }
 	int	N_Segs() { return n_segs; }
+	RAW_ADDR AltHeap() { return alt_heap; }
+	void AltHeap(RAW_ADDR loc) { alt_heap = loc; }
 	void Display();
+	int Magic() { return magic; }
 private:
 	int		magic;
 	int		n_segs;
-	char	pad[ 1024 - 2 * sizeof(int) - NAME_LEN ];
+	RAW_ADDR	alt_heap;
+	char	pad[ 1024 - 2 * sizeof(int) - NAME_LEN - sizeof(RAW_ADDR)];
 };
 
 class SegMap {
@@ -58,6 +65,8 @@ public:
 	ssize_t SetPos( ssize_t my_pos );
 	BOOL Contains( void *addr );
 	char *GetName() { return name; }
+	RAW_ADDR GetLoc() { return core_loc; }
+	long GetLen() { return len; }
 	void Display();
 private:
 	char		name[14];
@@ -87,6 +96,9 @@ public:
 	void SetFd( int fd );
 	void SetFileName( char *ckpt_name );
 	void SetMode( int syscall_mode );
+#if defined(COMPRESS_CKPT)
+	void *FindAltHeap();
+#endif
 	ExecutionMode	GetMode() { return mode; }
 	size_t			GetLen()  { return len; }
 	int				GetFd()   { return fd; }

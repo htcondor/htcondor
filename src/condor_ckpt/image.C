@@ -49,6 +49,21 @@ extern "C" void condor_save_sigstates();
 extern "C" void condor_restore_sigstates();
 #endif
 
+#if defined(COMPRESS_CKPT)
+#include "zlib.h"
+extern "C" {
+	int condor_malloc_data_size();
+	int condor_malloc_init(void *start);
+	char *condor_malloc(size_t);
+	void condor_free(void *);
+	void *condor_morecore(int);
+	static struct z_stream *zstr = NULL;
+	unsigned char *zbuf = Z_NULL;
+	const int zbufsize = 64*1024;
+	int condor_compress_ckpt = 1; // compression off(0) or on(1)
+}
+#endif
+
 #if defined(OSF1)
 	extern "C" unsigned int htonl( unsigned int );
 	extern "C" unsigned int ntohl( unsigned int );
@@ -105,11 +120,105 @@ net_read(int fd, void *buf, int size)
 	return bytes_read;
 }
 
+#if defined(COMPRESS_CKPT)
+void *condor_map_seg(void *base, size_t size)
+{
+	int zfd;
+	if ((zfd = SYSCALL(SYS_open, "/dev/zero", O_RDWR)) == -1) {
+		dprintf( D_ALWAYS,
+				 "Unable to open /dev/zero in read/write mode.\n");
+		dprintf( D_ALWAYS, "open: %s\n", strerror(errno));
+		Suicide();
+	}
+
+	int flags;
+	if (base == NULL) {
+		flags = MAP_PRIVATE;
+	} else {
+		flags = MAP_PRIVATE|MAP_FIXED;
+	}
+	base = MMAP((MMAP_T)base, (size_t)size, PROT_READ|PROT_WRITE,
+				flags, zfd, (off_t)0);
+	if (base == MAP_FAILED) {
+		dprintf(D_ALWAYS, "mmap: %s", strerror(errno));
+		Suicide();
+	}
+	return base;
+}
+
+// TODO: deallocate segments on negative incr
+void *condor_morecore(int incr)
+{
+	// begin points to the start of our heap segment
+	// corestart points to the start of the allocated portion of the segment
+	// *coreend points to the end of the allocated portion of the segment
+	// *segend points to the end of our allocated segment
+	// coreend and segend are stored at the start of the segment because
+	//   we don't want them to be overwritten on a restart
+	static void *begin = NULL, *corestart = NULL,
+		**coreend = NULL, **segend = NULL;
+	static int pagesize = -1;
+
+	if (pagesize == -1) {
+		pagesize = getpagesize();
+	}
+	
+	if (begin == NULL) {
+		begin = MyImage.FindAltHeap();
+		int malloc_static_data = condor_malloc_data_size();
+		int segincr =
+			(((incr+malloc_static_data+
+			   (2*sizeof(void *)))/pagesize)+1)*pagesize;
+		begin = condor_map_seg(begin, segincr);
+		corestart = begin+(2*sizeof(void *))+malloc_static_data;
+		condor_malloc_init(begin+(2*sizeof(void *)));
+		coreend = (void **)begin;
+		segend = (void **)(begin+sizeof(void *));
+		*segend = begin+segincr;
+		*coreend = corestart+incr;
+		return corestart;
+	} else if (incr == 0) {
+		return *coreend;
+	} else {
+		void *old_break = *coreend;
+		*coreend += incr;
+		if (*coreend > *segend) {
+			int segincr = (((*coreend-*segend)/pagesize)+1)*pagesize;
+			if (condor_map_seg(*segend, segincr) != *segend) {
+				dprintf(D_ALWAYS, "failed to allocate contiguous segments in "
+						"condor_morecore!\n");
+				Suicide();
+			}
+			*segend += segincr;
+		}
+		return old_break;
+	}
+}
+
+void *
+zalloc(voidpf opaque, uInt items, uInt size)
+{
+	return condor_malloc(items*size);
+}
+
+void
+zfree(voidpf opaque, voidpf address)
+{
+	condor_free(address);
+}
+#endif
+
 void
 Header::Init()
 {
+#if defined(COMPRESS_CKPT)
+	if (condor_compress_ckpt)
+		magic = COMPRESS_MAGIC;
+	else
+#endif
 	magic = MAGIC;
 	n_segs = 0;
+	alt_heap = 0;
 }
 
 void
@@ -166,6 +275,57 @@ Image::SetMode( int syscall_mode )
 		mode = REMOTE;
 	}
 }
+
+#if defined(COMPRESS_CKPT)
+/* 
+** Return the start of the alternate heap, used internally by the
+** checkpointing library.  The alternate heap is always located in
+** the free area above the heap, leaving ALT_HEAP_SIZE of space between
+** the start of the alt heap and the end of the free area.  It is
+** essential that this heap be located in the same place after a
+** restart, so our static pointer to the alt heap is not trashed.
+** We never save the alt heap at checkpoint time.
+*/
+void *
+Image::FindAltHeap()
+{
+	if (head.AltHeap() > 0) return (void *)head.AltHeap();
+
+	void *datatop = 0, *freetop = (void *)-1;
+
+	for (int i=0; i < head.N_Segs(); i++) {
+		if (strcmp(map[i].GetName(), "DATA") == MATCH) {
+			void *ptr = (void *) map[i].GetLoc() + map[i].GetLen();
+			if (ptr > datatop) {
+				datatop = ptr;
+			}
+		}
+	}
+
+	for (int i=0; i < head.N_Segs(); i++) {
+		if (strcmp(map[i].GetName(), "DATA") != MATCH) {
+			void *ptr = (void *) map[i].GetLoc();
+			if (ptr > datatop && ptr < freetop) {
+				freetop = ptr;
+			}
+		}
+	}
+
+	// if we didn't find anything above the heap, we don't want to
+	// return (void *)-1 - ALT_HEAP_SIZE, because this address might
+	// be too big on 64 bit architectures, so we instead return
+	// datatop + RESERVED_HEAP - ALT_HEAP_SIZE
+	if (freetop == (void *)-1) {
+		freetop = datatop + RESERVED_HEAP;
+	}
+
+	// make sure that we begin on a page boundary
+	int pagesize = getpagesize();
+	freetop = (void *)(((RAW_ADDR)freetop/pagesize)*pagesize);
+	head.AltHeap((RAW_ADDR)freetop - ALT_HEAP_SIZE);
+	return (void *)head.AltHeap();
+}
+#endif
 
 
 /*
@@ -269,8 +429,15 @@ Image::Save()
 	ssize_t		pos;
 	int			i;
 
+#if defined(COMPRESS_CKPT)
+	RAW_ADDR	alt_heap = head.AltHeap();
+#endif
 
 	head.Init();
+
+#if defined(COMPRESS_CKPT)
+	head.AltHeap(alt_heap);
+#endif
 
 #if !defined(Solaris) && !defined(LINUX) && !defined(IRIX53)
 
@@ -332,10 +499,12 @@ Image::Save()
 			Suicide();
 			break;
 		case 0:
+			if (addr_start != head.AltHeap()) {	// don't ckpt alt heap
 #if defined(LINUX)
-			addr_end=find_correct_vm_addr(addr_start, addr_end, prot);
+				addr_end=find_correct_vm_addr(addr_start, addr_end, prot);
 #endif
-			AddSegment( "SHARED LIB", addr_start, addr_end, prot);
+				AddSegment( "SHARED LIB", addr_start, addr_end, prot);
+			}
 			break;
 		case 1:
 			break;		// don't checkpoint text segment
@@ -456,6 +625,30 @@ Image::Restore()
 	user_restore_pre(user_data, sizeof(user_data));
 #endif
 
+#if defined(COMPRESS_CKPT)
+	if (head.Magic() == COMPRESS_MAGIC) {
+		dprintf( D_ALWAYS, "Reading compressed segments...\n" );
+		condor_morecore(0);			// initialize alt heap
+		zstr = (z_stream *) condor_malloc(sizeof(z_stream));
+		if (!zstr) {
+			dprintf( D_ALWAYS, "out of memory in condor_malloc!\n");
+			Suicide();
+		}
+		zbuf = (unsigned char *)condor_malloc(zbufsize);
+		if (!zbuf) {
+			dprintf( D_ALWAYS, "out of memory in condor_malloc!\n");
+			Suicide();
+		}
+		zstr->zalloc = zalloc;
+		zstr->zfree = zfree;
+		zstr->opaque = Z_NULL;
+		if (inflateInit(zstr) != Z_OK) {
+			dprintf( D_ALWAYS, "zlib (inflateInit): %s\n", zstr->msg );
+			Suicide();
+		}
+	}
+#endif
+
 		// Overwrite our data segment with the one saved at checkpoint
 		// time *and* restore any saved shared libraries.
 	RestoreAllSegsExceptStack();
@@ -478,6 +671,26 @@ Image::Restore()
 	dprintf( D_ALWAYS, "Error: reached code past the restore point!\n" );
 	Suicide();
 }
+
+#if defined(COMPRESS_CKPT)
+/* zlib uses memcpy, but we can't assume that libc.so is in a good state,
+   so we provide our own version... - Jim B. */
+extern "C" {
+void *memcpy(void *s1, const void *s2, size_t n)
+{
+	void *r = s1;
+	while (n > 0) {
+		*((char *)s1)++ = *((char *)s2)++;
+		n--;
+	}
+	return r;
+}
+void *_memcpy(void *s1, const void *s2, size_t n)
+{
+	return memcpy(s1, s2, n);
+}
+}
+#endif
 
 /* don't assume we have libc.so in a good state right now... - Jim B. */
 static int mystrcmp(const char *str1, const char *str2)
@@ -569,6 +782,20 @@ RestoreStack()
 	user_restore_post(global_user_data, sizeof(global_user_data));
 #endif
 
+#if defined(COMPRESS_CKPT)
+	if (zstr) {
+		int rval = inflateEnd(zstr);
+		if (rval != Z_OK) {
+			dprintf( D_ALWAYS, "zlib (inflateEnd): %d\n", rval );
+			Suicide();
+		}
+		condor_free(zstr);
+		zstr = NULL;
+		condor_free(zbuf);
+		zbuf = Z_NULL;
+	}
+#endif
+
 	LONGJMP( Env, 1 );
 }
 
@@ -626,10 +853,18 @@ Image::Write( const char *ckpt_file )
 	// if( (fd=open_url(ckpt_file,O_WRONLY|O_TRUNC|O_CREAT,len)) < 0 ) {
 		sprintf( tmp_name, "%s.tmp", ckpt_file );
 		dprintf( D_ALWAYS, "Tmp name is \"%s\"\n", tmp_name );
+#if defined(COMPRESS_CKPT)
+		/* If we are writing a compressed checkpoint, we don't send the file
+		   size, since we don't know it yet.  The file transfer code accepts
+		   a file size of -1 to mean that the size is unknown. */
 		if ((fd = open_ckpt_file(tmp_name, O_WRONLY|O_TRUNC|O_CREAT,
-								len)) < 0)  {
-				dprintf( D_ALWAYS, "ERROR:open_ckpt_file failed, aborting ckpt\n");
-				return -1;
+								 condor_compress_ckpt ? -1 : len)) < 0)  {
+#else
+		if ((fd = open_ckpt_file(tmp_name, O_WRONLY|O_TRUNC|O_CREAT,
+								 len)) < 0)  {
+#endif
+			dprintf( D_ALWAYS, "ERROR:open_ckpt_file failed, aborting ckpt\n");
+			return -1;
 		}
 	// }  // this is the matching brace to the open_url; see comment above
 
@@ -701,6 +936,30 @@ Image::Write( int fd )
 	}
 	dprintf( D_ALWAYS, "Wrote all SegMaps OK\n" );
 
+#if defined(COMPRESS_CKPT)
+	if (condor_compress_ckpt) {
+		dprintf( D_ALWAYS, "Writing compressed segments...\n" );
+		condor_morecore(0);			// initialize alt heap
+		zstr = (z_stream *) condor_malloc(sizeof(z_stream));
+		if (!zstr) {
+			dprintf( D_ALWAYS, "out of memory in condor_malloc!\n");
+			Suicide();
+		}
+		zbuf = (unsigned char *) condor_malloc(zbufsize);
+		if (!zbuf) {
+			dprintf( D_ALWAYS, "out of memory in condor_malloc!\n");
+			Suicide();
+		}
+		zstr->zalloc = zalloc;
+		zstr->zfree = zfree;
+		zstr->opaque = Z_NULL;
+		if (deflateInit(zstr, Z_DEFAULT_COMPRESSION) != Z_OK) {
+			dprintf( D_ALWAYS, "zlib (deflateInit): %s\n", zstr->msg );
+			Suicide();
+		}
+	}
+#endif
+
 		// Write out the Segments
 	for( i=0; i<head.N_Segs(); i++ ) {
 		if( (nbytes=map[i].Write(fd,pos)) < 0 ) {
@@ -711,11 +970,61 @@ Image::Write( int fd )
 		pos += nbytes;
 		dprintf( D_ALWAYS, "Wrote Segment[%d] OK\n", i );
 	}
+
+#if defined(COMPRESS_CKPT)
+	if (condor_compress_ckpt) {
+		int bytes_to_go, rval;
+		unsigned char *ptr;
+
+		zstr->next_out = zbuf;
+		zstr->avail_out = zbufsize;
+		if (deflate(zstr, Z_FINISH) != Z_STREAM_END) {
+			dprintf( D_ALWAYS, "zlib (deflate): %s\n", zstr->msg );
+			Suicide();
+		}
+		for (bytes_to_go = (zbufsize-zstr->avail_out), ptr = zbuf;
+			 bytes_to_go > 0;
+			 bytes_to_go -= rval, ptr += rval, zstr->avail_out += rval) {
+			rval = write(fd,ptr,bytes_to_go);
+			if (rval < 0) {
+				dprintf(D_ALWAYS, "write failed with errno %d in "
+						"SegMap::Write\n", errno);
+				Suicide();
+			}
+		}
+		if (zstr->avail_out != zbufsize) {
+			dprintf(D_ALWAYS, "deflate logic error, avail_out (%d) != "
+					"zbufsize (%d)\n", zstr->avail_out, zbufsize);
+			Suicide();
+		}
+
+		zstr->avail_out = 0;
+		zstr->next_out = Z_NULL;
+		condor_free(zbuf);
+		zbuf = Z_NULL;
+	
+		rval = deflateEnd(zstr);
+		if (rval != Z_OK) {
+			dprintf( D_ALWAYS, "zlib (deflateEnd): %d\n", rval );
+			Suicide();
+		}
+		condor_free(zstr);
+		zstr = NULL;
+	}
+#endif
+
 	dprintf( D_ALWAYS, "Wrote all Segments OK\n" );
 
 		/* When using the stream protocol the shadow echo's the number
-		   of bytes transferred as a final acknowledgement. */
+		   of bytes transferred as a final acknowledgement.  If, however,
+		   we wrote a compressed checkpoint, then our peer won't know
+		   that we have finished until we close the socket, so we can't
+		   expect the acknowledgement. */
+#if defined(COMPRESS_CKPT)
+	if( _condor_in_file_stream && !condor_compress_ckpt ) {
+#else
 	if( _condor_in_file_stream ) {
+#endif
 		status = net_read( fd, &ack, sizeof(ack) );
 		if( status < 0 ) {
 			dprintf( D_ALWAYS, "Can't read final ack from the shadow\n" );
@@ -838,9 +1147,6 @@ SegMap::Read( int fd, ssize_t pos )
 	     - Memory should be private, so we don't mess with any other
 	       processes that might be accessing the same library. */
 
-//		fprintf(stderr, "Calling mmap(loc = 0x%lx, size = 0x%lx, "
-//			"prot = %d, fd = %d, offset = 0)\n", core_loc, segSize,
-//			prot|PROT_WRITE, zfd);
 #if defined(Solaris) || defined(LINUX)
 		if ((MMAP((MMAP_T)core_loc, (size_t)segSize,
 				  prot|PROT_WRITE,
@@ -884,6 +1190,41 @@ SegMap::Read( int fd, ssize_t pos )
 		// them.
 	bytes_to_go = saved_len;
 	ptr = (char *)saved_core_loc;
+
+#if defined(COMPRESS_CKPT)
+	if (zstr) {
+		struct z_stream *saved_zstr = zstr;
+		unsigned char *saved_zbuf = zbuf;
+		saved_zstr->next_out = (unsigned char *)saved_core_loc;
+		saved_zstr->avail_out = saved_len;
+		while (saved_zstr->avail_out > 0) {
+			int stashed_avail_in = saved_zstr->avail_in;
+			// make at least 32 bytes available
+			if (saved_zstr->avail_in < 32) {
+				if (saved_zstr->avail_in > 0) {
+					memcpy(saved_zbuf, saved_zstr->next_in,
+						   saved_zstr->avail_in);
+				}
+				nbytes = SYSCALL(SYS_read, fd,
+								 saved_zbuf+saved_zstr->avail_in,
+								 zbufsize-saved_zstr->avail_in);
+				if (nbytes > 0) {
+					saved_zstr->avail_in += nbytes;
+				}
+				saved_zstr->next_in = saved_zbuf;
+			}
+			if (inflate(saved_zstr, Z_PARTIAL_FLUSH) != Z_OK &&
+				saved_zstr->avail_out > 0) {
+				dprintf( D_ALWAYS, "zlib (inflate): %s\n", saved_zstr->msg );
+				Suicide();
+			}
+		}
+		zstr = saved_zstr;
+		zbuf = saved_zbuf;
+		return pos + saved_len;
+	}
+#endif
+
 	while( bytes_to_go ) {
 		read_size = bytes_to_go > 4096 ? 4096 : bytes_to_go;
 #if defined(Solaris) || defined(IRIX53) || defined(LINUX)
@@ -912,6 +1253,39 @@ SegMap::Write( int fd, ssize_t pos )
 				 pos, file_loc );
 		Suicide();
 	}
+#if defined(COMPRESS_CKPT)
+	if (condor_compress_ckpt) {
+		int bytes_to_go, rval;
+		unsigned char *ptr;
+
+		zstr->next_in = (unsigned char *)core_loc;
+		zstr->avail_in = len;
+		while (zstr->avail_in > 0) {
+			zstr->next_out = zbuf;
+			zstr->avail_out = zbufsize;
+			if (deflate(zstr, Z_PARTIAL_FLUSH) != Z_OK) {
+				dprintf( D_ALWAYS, "zlib (deflate): %s\n", zstr->msg );
+				Suicide();
+			}
+			for (bytes_to_go = (zbufsize-zstr->avail_out), ptr = zbuf;
+				 bytes_to_go > 0;
+				 bytes_to_go -= rval, ptr += rval, zstr->avail_out += rval) {
+				rval = write(fd,ptr,bytes_to_go);
+				if (rval < 0) {
+					dprintf(D_ALWAYS, "write failed with errno %d in "
+							"SegMap::Write\n", errno);
+					Suicide();
+				}
+			}
+			if (zstr->avail_out != zbufsize) {
+				dprintf(D_ALWAYS, "deflate logic error, avail_out (%d) != "
+						"zbufsize (%d)\n", zstr->avail_out, zbufsize);
+				Suicide();
+			}
+		}
+		return len;
+	}
+#endif
 	dprintf( D_ALWAYS, "write(fd=%d,core_loc=0x%lx,len=0x%lx)\n",
 			fd, core_loc, len );
 	return write(fd,(void *)core_loc,(size_t)len);
