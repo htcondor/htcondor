@@ -273,7 +273,7 @@ SetAbsoluteTimeValue( abstime_t asecs )
 bool Value::
 SameAs(const Value &otherValue) const
 {
-    bool is_same;
+    bool is_same = false;
     if (valueType != otherValue.valueType) {
         is_same = false;
     } else {
@@ -293,10 +293,10 @@ SameAs(const Value &otherValue) const
             is_same = (realValue == otherValue.realValue);
             break;
         case Value::LIST_VALUE:
-            // To do!
+            is_same = listValue->SameAs(otherValue.listValue);
             break;
         case Value::CLASSAD_VALUE:
-            // To do!
+            is_same = classadValue->SameAs(otherValue.classadValue);
             break;
         case Value::RELATIVE_TIME_VALUE:
             is_same = (relTimeValueSecs == otherValue.relTimeValueSecs);
@@ -366,7 +366,8 @@ bool convertValueToRealValue(const Value value, Value &realValue)
 {
     bool                could_convert;
 	string	            buf;
-	char	            *end;
+	const char	        *start;
+    char                *end;
 	int		            ivalue;
 	time_t	            rtvalue;
 	abstime_t           atvalue;
@@ -390,8 +391,9 @@ bool convertValueToRealValue(const Value value, Value &realValue)
 		case Value::STRING_VALUE:
             could_convert = true;
 			value.IsStringValue(buf);
-			rvalue = strtod(buf.c_str(), (char**) &end);
-			if (end == buf && rvalue == 0.0) {
+            start = buf.c_str();
+			rvalue = strtod(start, &end);
+			if (end == start && rvalue == 0.0) {
 				// strtod() returned an error
 				realValue.SetErrorValue();
 				could_convert = false;
