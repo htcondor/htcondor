@@ -28,7 +28,6 @@
 #include "_condor_fix_types.h"
 #include "condor_fix_stdio.h"
 #include "condor_fix_unistd.h"
-#include "condor_fix_limits.h"
 #include "condor_fix_string.h"
 #include "condor_fix_signal.h"
 #include "condor_fix_sys_ioctl.h"
@@ -36,6 +35,9 @@
 #include "condor_fix_sys_stat.h"
 #include "condor_fix_sys_wait.h"
 #include "condor_fix_assert.h"
+#include "condor_fix_socket.h"
+#include <sys/utsname.h>		
+#include "condor_fix_limits.h"
 #include <stdlib.h>
 #include <ctype.h>
 #include <fcntl.h>	
@@ -44,10 +46,11 @@
 #include <pwd.h>
 #include <time.h>
 #include <sys/time.h>
-#include <sys/socket.h>
+#include <sys/times.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/param.h>
+
 
 #endif /* System specific stuff */
 
