@@ -7,6 +7,10 @@
 #include "scanner.h"
 #include "y.tab.h"
 
+#ifdef yywrap
+#undef yywrap
+#endif
+
 #if defined(AIX32) && !defined(OBJ_DATA)
 #	define OBJ_DATA(x) (x).obj	/* needed for gcc's toupper/tolower */
 #endif
