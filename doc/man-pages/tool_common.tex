@@ -14,14 +14,14 @@
 
 %% for checkpoint, off, on, reconfig, reschedule, restart and vacate
 \newcommand{\ToolWhere}{
-\Optnm{-pool centralmanagerhostname}\\
+\Optnm{-pool centralmanagerhostname[:portnumber]}\\
 \Optnm{-name hostname $|$ hostname $|$ -addr "\SinfulAny" $|$ "\SinfulAny" } \Optnm{\Dots} \\
 }
 
 %% Alternative to locate the machines with which you want to mess.
 %% Used by _rm, _hold, and _release.
 \newcommand{\ToolLocate}{
-\oOptnm{-pool centralmanagerhostname}
+\oOptnm{-pool centralmanagerhostname\oOptnm{:portnumber}}
 \oOptnm{-name hostname $|$ -addr "\SinfulAny" }
 }
 
@@ -57,8 +57,8 @@
 
 %%  Argument descriptions for different classes of arguments 
 \newcommand{\ToolArgsLocateDesc}{
-\OptItem{\OptArg{-pool}{centralmanagerhostname}}{Specify a pool by giving the
-	central manager's hostname}
+\OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}{Specify a pool by giving the
+	central manager's hostname and an optional port number}
 \OptItem{\OptArg{-name}{hostname}}{Send the command to a machine identified by \Arg{hostname}}
 \OptItem{\Opt{hostname}}{Send the command to a machine identified by \Opt{hostname}}
 \OptItem{\OptArg{-addr}{"\SinfulAny"}}{Send the command
@@ -71,8 +71,8 @@
 %%  Alternative argument descriptions for different classes of arguments 
 %%  Used by _rm, _hold, and _release.
 \newcommand{\ToolLocateDesc}{
-\OptItem{\OptArg{-pool}{centralmanagerhostname}}{Specify a pool by giving the
-	central manager's hostname}
+\OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}{Specify a pool by giving the
+	central manager's hostname and an optional port number}
 \OptItem{\OptArg{-name}{hostname}}{Send the command to a machine identified by \Opt{hostname}}
 \OptItem{\OptArg{-addr}{"\SinfulAny"}}{Send the command
 	to a machine located at "\SinfulAny"}
