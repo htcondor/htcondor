@@ -122,8 +122,6 @@ extern "C" {
 				union wait *jobstatus, char *coredir );
 }
 
-extern "C" int GetJobAd(int, int, ClassAd *&);
-
 #if defined(NEW_PROC)
         extern PROC    *Proc;
 #else
@@ -609,13 +607,17 @@ part_send_job(
   }
 
   /* Send the job info */
-  ClassAd ad, *adptr = &ad;
+  ClassAd *ad;
   ConnectQ(schedd);
-  GetJobAd( proc->id.cluster, proc->id.proc, adptr );
+  ad = GetJobAd( proc->id.cluster, proc->id.proc );
   DisconnectQ(NULL);
-  if( !ad.put(*sock) ) {
+  if (!ad) {
+	  EXCEPT( "failed to get job ad" );
+  }
+  if( !ad->put(*sock) ) {
     EXCEPT( "failed to send job ad" );
   }
+  FreeJobAd(ad);
   if( !sock->end_of_message() ) {
     EXCEPT( "end_of_message failed" );
   }

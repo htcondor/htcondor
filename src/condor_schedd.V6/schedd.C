@@ -86,7 +86,6 @@
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 extern char *gen_ckpt_name();
 extern void	Init();
-extern "C" int getJobAd(int cluster_id, int proc_id, ClassAd *&new_ad);
 
 #include "condor_qmgr.h"
 
@@ -612,8 +611,15 @@ Scheduler::negotiate(int, Stream* s)
 						dprintf( D_ALWAYS, "Can't send JOB_INFO to mgr\n" );
 						return;
 					}
-					ClassAd *ad = NULL;
-					getJobAd( id.cluster, id.proc, ad );
+					ClassAd *ad;
+					ad = GetJobAd( id.cluster, id.proc );
+					if (!ad) {
+						dprintf( D_ALWAYS, "Can't get job ad %d.%d\n",
+								 id.cluster, id.proc );
+						FreeJobAd(ad);
+						return;
+					}
+					FreeJobAd(ad);
 					if( !ad->put(*s) ) {
 						dprintf( D_ALWAYS,
 								"Can't send job ad to mgr\n" );
@@ -736,6 +742,12 @@ Scheduler::permission(char* id, char *user, char* server, PROC_ID* jobId)
 	if(!mrec) {
 		return 0;
 	}
+	ClassAd *jobAd = GetJobAd(jobId.cluster, jobId.proc);
+	if (!jobAd) {
+		dprintf(D_ALWAYS, "failed to find job %d.%d\n", jobId.cluster, jobId.proc);
+		return 0;
+	}
+	ClassAd *jobAdCopy = new ClassAd(jobAd);	// make a copy for Agent
 	switch((pid = fork())) 	{
 	    case -1:	/* error */
 
@@ -746,6 +758,8 @@ Scheduler::permission(char* id, char *user, char* server, PROC_ID* jobId)
                 dprintf(D_ALWAYS, "fork() failed, errno = %d\n", errno);
             }
 			DelMrec(mrec);
+			FreeJobAd(jobAd);
+			delete jobAdCopy;
 			return 0;
 
         case 0:     /* the child */
@@ -754,12 +768,14 @@ Scheduler::permission(char* id, char *user, char* server, PROC_ID* jobId)
             for(i = 3; i < lim; i++) {
                 close(i);
             }
-            Agent(server, id, MySockName, user, aliveInterval, jobId);
+            Agent(server, id, MySockName, user, aliveInterval, jobAdCopy);
 			
 
         default:    /* the parent */
 
             mrec->agentPid = pid;
+			FreeJobAd(jobAd);
+			delete JobAdCopy;	// THREAD SHARED MEMORY WARNING
 			return 1;
 	}
 #endif
@@ -2282,12 +2298,9 @@ Scheduler::MarkDel(char* id)
 
 void
 Scheduler::Agent(char* server, char* capability, 
-				 char* name, char *user, int aliveInterval, PROC_ID* jobId) 
+				 char* name, char *user, int aliveInterval, ClassAd* jobAd) 
 {
     int     	reply;                              /* reply from the startd */
-
-	ClassAd *jobAd = NULL;
-	getJobAd( jobId->cluster, jobId->proc, jobAd );
 
 	// add User = "owner@uiddomain" to ad
 	{
@@ -2315,6 +2328,7 @@ Scheduler::Agent(char* server, char* capability,
 		dprintf( D_ALWAYS, "Couldn't send job classad to startd.\n" );	
 		exit(EXITSTATUS_NOTOK);
 	}
+	delete jobAd;	// allocated by parent
 	
 	if( !sock.end_of_message() ) {
 		dprintf( D_ALWAYS, "Couldn't send eom to startd.\n" );	

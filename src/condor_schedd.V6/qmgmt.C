@@ -45,6 +45,7 @@
 static char *_FileName_ = __FILE__;	 /* Used by EXCEPT (see condor_debug.h) */
 
 #include "qmgmt.h"
+#include "condor_qmgr.h"
 #include "log_transaction.h"
 #include "log.h"
 #include "classad_log.h"
@@ -783,51 +784,53 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 }
 
 
-int
-GetJobAd(int cluster_id, int proc_id, ClassAd *&ad)
+ClassAd *
+GetJobAd(int cluster_id, int proc_id)
 {
 	char	key[_POSIX_PATH_MAX];
+	ClassAd	*ad;
 
 	sprintf(key, "%d.%d", cluster_id, proc_id);
-	return JobQueue->table.lookup(HashKey(key), ad);
+	if (JobQueue->table.lookup(HashKey(key), ad) == 1)
+		return ad;
+	else
+		return NULL;
 }
 
 
-int
-getJobAd(int c, int p, ClassAd *&ad)
+ClassAd *
+GetJobByConstraint(const char *constraint)
 {
-	return GetJobAd(c, p, ad);
-}
+	ClassAd	*ad;
 
-int
-GetJobByConstraint(const char *constraint, ClassAd *&ad)
-{
 	if(CheckConnection() < 0) {
-		return -1;
+		return NULL;
 	}
 
 	JobQueue->table.startIterations();
 	while(JobQueue->table.iterate(ad) == 1) {
 		if (EvalBool(ad, constraint)) {
-			return 0;
+			return ad;
 		}
 	}
-	return -1;
+	return NULL;
 }
 
 
-int
-GetNextJob(ClassAd *&ad, int initScan)
+ClassAd *
+GetNextJob(int initScan)
 {
-	return GetNextJobByConstraint(NULL, ad, initScan);
+	return GetNextJobByConstraint(NULL, initScan);
 }
 
 
-int
-GetNextJobByConstraint(const char *constraint, ClassAd *&ad, int initScan)
+ClassAd *
+GetNextJobByConstraint(const char *constraint, int initScan)
 {
+	ClassAd	*ad;
+
 	if(CheckConnection() < 0) {
-		return -1;
+		return NULL;
 	}
 
 	if (initScan) {
@@ -836,17 +839,24 @@ GetNextJobByConstraint(const char *constraint, ClassAd *&ad, int initScan)
 
 	while(JobQueue->table.iterate(ad) == 1) {
 		if (!constraint || !constraint[0] || EvalBool(ad, constraint)) {
-			return 0;
+			return ad;
 		}
 	}
-	return -1;
+	return NULL;
+}
+
+
+void
+FreeJobAd(ClassAd *ad)
+{
+	// NOOP
 }
 
 
 int GetJobList(const char *constraint, ClassAdList &list)
 {
 	int			flag = 1;
-	ClassAd		*ad=NULL;
+	ClassAd		*ad=NULL, *newad;
 
 	if(CheckConnection() < 0) {
 		return -1;
@@ -857,7 +867,8 @@ int GetJobList(const char *constraint, ClassAdList &list)
 	while(JobQueue->table.iterate(ad) == 1) {
 		if (!constraint || !constraint[0] || EvalBool(ad, constraint)) {
 			flag = 0;
-			list.Insert(ad);
+			newad = new ClassAd(*ad);	// insert copy so list doesn't
+			list.Insert(newad);			// destroy the original ad
 		}
 	}
 	if(flag) return -1;
@@ -1095,16 +1106,19 @@ int mark_idle(ClassAd *job)
 void
 WalkJobQueue(scan_func func)
 {
-	ClassAd *ad = NULL;
-	int rval;
+	ClassAd *ad;
+	int rval = 0;
 
-	rval = GetNextJob(ad, 1);
-	while (rval != -1) {
+	ad = GetNextJob(1);
+	while (ad != NULL && rval >= 0) {
 		rval = func(ad);
 		if (rval >= 0) {
-			rval = GetNextJob(ad, 0);
+			FreeJobAd(ad);
+			ad = GetNextJob(0);
 		}
-	} 
+	}
+	if (ad != NULL)
+		FreeJobAd(ad);
 }
 
 /*

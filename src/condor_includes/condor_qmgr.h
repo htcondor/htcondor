@@ -33,11 +33,14 @@ int GetAttributeString(int, int, const char *, char *);
 int GetAttributeExpr(int, int, const char *, char *);
 int DeleteAttribute(int, int, const char *);
 
-int GetJobAd(int cluster_id, int proc_id, ClassAd *&ad);
-int GetJobByConstraint(const char *constraint, ClassAd *&ad);
-int GetNextJob(ClassAd *&ad, int initScan);
-int GetNextJobByConstraint(const char *constraint, ClassAd *&ad, int initScan);
-int GetJobList(const char *constraint, ClassAdList &list);
+/* These functions return NULL on failure, and return the
+   job ClassAd on success.  The caller MUST call FreeJobAd
+   when the ad is no longer in use. */
+ClassAd *GetJobAd(int cluster_id, int proc_id);
+ClassAd *GetJobByConstraint(const char *constraint);
+ClassAd *GetNextJob(int initScan);
+ClassAd *GetNextJobByConstraint(const char *constraint, int initScan);
+void FreeJobAd(ClassAd *ad);
 
 int SendSpoolFile(char *filename);		/* prepare for file xfer */
 int SendSpoolFileBytes(char *filename); /* actually do file xfer */

@@ -157,6 +157,11 @@ DisconnectQ(Qmgr_connection *conn)
 }
 
 
+void
+FreeJobAd(ClassAd *ad)
+{
+	delete ad;
+}
 
 int
 SendSpoolFileBytes(char *filename)
@@ -218,19 +223,19 @@ SendSpoolFileBytes(char *filename)
 void
 WalkJobQueue(scan_func func)
 {
-	ClassAd *ad = new ClassAd();
-	int rval;
+	ClassAd *ad;
+	int rval = 0;
 
-	rval = GetNextJob(ad, 1);
-	while (rval != -1) {
+	ad = GetNextJob(1);
+	while (ad != NULL && rval >= 0) {
 		rval = func(ad);
 		if (rval >= 0) {
-			delete ad;
-			ad = new ClassAd;
-			rval = GetNextJob(ad, 0);
+			FreeJobAd(ad);
+			ad = GetNextJob(0);
 		}
 	} 
-	delete ad;
+	if (ad != NULL)
+		FreeJobAd(ad);
 }
 
 

@@ -229,18 +229,16 @@ void ProcArg(const char* arg)
 		if(*tmp == '\0')
 		// update prio for all jobs in the cluster
 		{
-			ClassAd	*ad = new ClassAd;
+			ClassAd	*ad;
 			char constraint[100];
 			sprintf(constraint, "%s == %d", ATTR_CLUSTER_ID, cluster);
 			int firstTime = 1;
-			while(GetNextJobByConstraint(constraint, ad, firstTime) >= 0) {
+			while((ad = GetNextJobByConstraint(constraint, firstTime)) != NULL) {
 				ad->LookupInteger(ATTR_PROC_ID, proc);
-				delete ad;
-				ad = new ClassAd;
+				FreeJobAd(ad);
 				UpdateJobAd(cluster, proc);
 				firstTime = 0;
 			}
-			delete ad;
 			return;
 		}
 		if(*tmp == '.')
@@ -264,32 +262,29 @@ void ProcArg(const char* arg)
 	}
 	else if(arg[0] == '-' && arg[1] == 'a')
 	{
-		ClassAd *ad = new ClassAd;
+		ClassAd *ad;
 		int firstTime = 1;
-		while(GetNextJob(ad, firstTime) >= 0) {
+		while((ad = GetNextJob(firstTime)) != NULL) {
 			ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
 			ad->LookupInteger(ATTR_PROC_ID, proc);
-			delete ad;
-			ad = new ClassAd;
+			FreeJobAd(ad);
 			UpdateJobAd(cluster, proc);
 			firstTime = 0;
 		}
-		delete ad;
 	}
 	else if(isalpha(*arg))
 	// update prio by user name
 	{
 		char	constraint[100];
-		ClassAd	*ad = new ClassAd;
+		ClassAd	*ad;
 		int firstTime = 1;
 		
 		sprintf(constraint, "%s == \"%s\"", ATTR_OWNER, arg);
 
-		while (GetNextJobByConstraint(constraint, ad, firstTime) >= 0) {
+		while ((ad = GetNextJobByConstraint(constraint, firstTime)) != NULL) {
 			ad->LookupInteger(ATTR_CLUSTER_ID, cluster);
 			ad->LookupInteger(ATTR_PROC_ID, proc);
-			delete ad;
-			ad = new ClassAd;
+			FreeJobAd(ad);
 			UpdateJobAd(cluster, proc);
 			firstTime = 0;
 		}

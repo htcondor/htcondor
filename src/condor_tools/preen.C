@@ -369,12 +369,13 @@ static int		__proc;
 BOOLEAN
 cluster_exists( int cluster )
 {
-	ClassAd ad, *adptr = &ad;
+	ClassAd *ad;
 	char constraint[60];
 
 	sprintf(constraint, "%s == %d", ATTR_CLUSTER_ID, cluster);
 
-	if (GetJobByConstraint(constraint, adptr) == 0) {
+	if ((ad = GetJobByConstraint(constraint)) != NULL) {
+		FreeJobAd(ad);
 		return TRUE;
 	}
 
@@ -389,13 +390,14 @@ cluster_exists( int cluster )
 BOOLEAN
 proc_exists( int cluster, int proc )
 {
-	ClassAd ad, *adptr = &ad;
+	ClassAd *ad;
 	char constraint[120];
 
 	sprintf(constraint, "(%s == %d) && (%s == %d)", ATTR_CLUSTER_ID, cluster,
 		ATTR_PROC_ID, proc);
 
-	if (GetJobByConstraint(constraint, adptr) == 0) {
+	if ((ad = GetJobByConstraint(constraint)) != NULL) {
+		FreeJobAd(ad);
 		return TRUE;
 	}
 

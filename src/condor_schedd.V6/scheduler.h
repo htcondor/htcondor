@@ -110,7 +110,7 @@ class Scheduler : public Service
 	shadow_rec*		FindSrecByPid(int);
 	void			RemoveShadowRecFromMrec(shadow_rec*);
 	int				AlreadyMatched(PROC_ID*);
-	void			Agent(char*, char*, char*, char*, int, PROC_ID*);
+	void			Agent(char*, char*, char*, char*, int, ClassAd*);
 	void			StartJobs();
 	void			StartSchedUniverseJobs();
 	void			send_alive();
