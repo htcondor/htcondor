@@ -821,8 +821,7 @@ The substitution macro chooses a specific executable after
 a platform for running the job is chosen.
 These executables must therefore be named based on the
 machine attributes that describe a platform.
-The executables named
-\begin{verbatim}
+The executables named \begin{verbatim}
   povray.LINUX.INTEL
   povray.SOLARIS26.INTEL
   povray.IRIX65.SGI
@@ -895,20 +894,32 @@ to a platform.
 If migrated to a different machine, correct execution requires that
 the platform must remain the same.
 
-A more complex \AdAttr{requirements} expression tells Condor
-to migrate a partially
-completed job to another machine with the same platform.
+In previous versions of Condor, the author of the heterogeneous
+submission file would have to write extra policy expressions in the
+\AdAttr{requirements} expression that would force Condor to choose the
+same type of platform to restart a checkpointed job.
+However, since it in needed in the common case, we at Condor added a default
+to the \AdAttr{requirements} expression that automatically enforces
+this policy with the checkpointed job provided the user does not use
+\AdAttr{CkptArch} in the \AdAttr{requirements} expression.
+Condor will remain backwards compatible for those users who have explicitly
+specified \AdAttr{CkptRequirements}--implying use of \AdAttr{CkptArch},
+in their \AdAttr{requirements} expression.
+
+If you do not specify \AdAttr{CkptArch} in your \AdAttr{requirements}
+expression, then we will add this expression to your \AdAttr{requirements}
+expression in this way:
 
 \begin{verbatim}
+  # Added by Condor
   CkptRequirements = ((CkptArch == Arch) || (CkptArch =?= UNDEFINED)) && \
                       ((CkptOpSys == OpSys) || (CkptOpSys =?= UNDEFINED))
-  Requirements = ( (Arch == "INTEL" && OpSys == "LINUX") || \
-                 (Arch == "INTEL" && OpSys =="SOLARIS26") || \
-                 (Arch == "SGI" && OpSys == "IRIX65") ) && $(CkptRequirements)
+
+  Requirements = (<user specified policy>) && $(CkptRequirements)
 \end{verbatim}
 
-The \AdAttr{Requirements} expression in the example uses a macro
-to add an additional expression, called \AdAttr{CkptRequirements}.
+The behavior of the \AdAttr{CkptRequirements} expressions and its addition to
+\AdAttr{requirements} is as follows.
 The \AdAttr{CkptRequirements} expression guarantees correct operation
 in the two possible cases for a job.
 In the first case, the job has not produced a checkpoint.
@@ -941,11 +952,11 @@ The complete submit description file for this example:
   Output       = povray.out.$(Process)
   Error        = povray.err.$(Process)
 
-  CkptRequirements = ((CkptArch == Arch) || (CkptArch =?= UNDEFINED)) && \
-                      ((CkptOpSys == OpSys) || (CkptOpSys =?= UNDEFINED))
+  # Condor automatically adds the correct expressions to insure that the
+  # checkpointed jobs will restart on the correct platform types.
   Requirements = ( (Arch == "INTEL" && OpSys == "LINUX") || \
                  (Arch == "INTEL" && OpSys =="SOLARIS26") || \
-                 (Arch == "SGI" && OpSys == "IRIX65") ) && $(CkptRequirements)
+                 (Arch == "SGI" && OpSys == "IRIX65") )
 
   Arguments    = +W1024 +H768 +Iimage1.pov
   Queue 
@@ -1064,8 +1075,10 @@ the guest could only use cycles not wanted by other users of the system.
 \input{user-man/pvm.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% Commented out by psilord until the new world order in MPI is 
+% redocumented.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\input{user-man/mpi.tex}
+%%\input{user-man/mpi.tex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
