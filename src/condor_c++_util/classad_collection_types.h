@@ -8,11 +8,29 @@
 #include "MyString.h"
 
 //-------------------------------------------------------------------------
+
+class RankedClassAd {
+
+public:
+
+  RankedClassAd() { Rank=0.0; }
+  RankedClassAd(const MyString& oid) { OID=oid; Rank=0.0; }
+  RankedClassAd(const MyString& oid, float rank) { OID=oid; Rank=rank; }
+  MyString OID;
+  float Rank;
+  friend int operator==(const RankedClassAd& RankedAd1, const RankedClassAd& RankedAd2) {
+    return (RankedAd1.OID==RankedAd2.OID);
+  }
+
+};
+
+//-------------------------------------------------------------------------
 // Collection Hierarchy
 //-------------------------------------------------------------------------
 
 typedef Set<MyString> StringSet;
 typedef Set<int> IntegerSet;
+typedef Set<RankedClassAd> RankedAdSet;
 
 enum CollectionType { ExplicitCollection_e, ConstraintCollection_e, PartitionParent_e, PartitionChild_e };
 
@@ -36,7 +54,7 @@ public:
   int GetParentCoID() { return ParentCoID; }
 
   IntegerSet Children;
-  StringSet Members;
+  RankedAdSet Members;
 
 protected:
 

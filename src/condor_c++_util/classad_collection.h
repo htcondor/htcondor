@@ -52,7 +52,7 @@ public:
   bool IterateChildCollections(int ParentCoID, int& CoID);
 
   bool StartIterateClassAds(int CoID);
-  bool IterateClassAds(int CoID, MyString& OID);
+  bool IterateClassAds(int CoID, RankedClassAd& OID);
 
   void StartIterateAllClassAds() { table.startIterations(); }
   bool IterateAllClassAds(ClassAd*& Ad) { return (table.iterate(Ad)==1); }
@@ -70,6 +70,7 @@ public:
   int GetCollectionType(int CoID);
 
   void Print();
+  void Print(int CoID);
 
   static int HashFunc(const int& Key, int TableSize) { return (Key % TableSize); }
 
@@ -88,9 +89,10 @@ private:
   bool ChangeClassAd(int CoID, const MyString& OID);
   bool ChangeClassAd(int CoID, const MyString& OID, ClassAd* ad);
 
-  int CompareClassAds(ClassAd* Ad1, ClassAd* Ad2, const MyString& Rank);
   bool RemoveCollection(int CoID, BaseCollection* Coll);
   bool TraverseTree(int CoID, bool (ClassAdCollection::*Func)(int,BaseCollection*));
+  static float GetClassAdRank(ClassAd* Ad, const MyString& RankExpr);
+
 };
 
 //-----------------------------------------------------------------------------------

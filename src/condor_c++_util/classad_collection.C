@@ -1,5 +1,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "condor_attributes.h"
 
 #include "classad_collection.h"
 
@@ -109,9 +110,9 @@ int ClassAdCollection::CreateExplicitCollection(int ParentCoID, const MyString& 
   Parent->Children.Add(CoID);
 
   // Add Parents members to new collection
-  MyString OID;
+  RankedClassAd RankedAd;
   Parent->Members.StartIterations();
-  while(Parent->Members.Iterate(OID)) AddClassAd(CoID,OID);
+  while(Parent->Members.Iterate(RankedAd)) AddClassAd(CoID,RankedAd.OID);
 
   return LastCoID;
 }
@@ -136,9 +137,9 @@ int ClassAdCollection::CreateConstraintCollection(int ParentCoID, const MyString
   Parent->Children.Add(CoID);
 
   // Add Parents members to new collection
-  MyString OID;
+  RankedClassAd RankedAd;
   Parent->Members.StartIterations();
-  while(Parent->Members.Iterate(OID)) AddClassAd(CoID,OID);
+  while(Parent->Members.Iterate(RankedAd)) AddClassAd(CoID,RankedAd.OID);
 
   return LastCoID;
 }
@@ -174,25 +175,26 @@ bool ClassAdCollection::AddClassAd(int CoID, const MyString& OID, ClassAd* Ad)
   // Get collection pointer
   BaseCollection* Coll;
   if (Collections.lookup(CoID,Coll)==-1) return false;
-  if (Coll->Members.Exist(OID)) return false;
 
   // Check if ad matches the collection
   if (!Coll->CheckClassAd(Ad)) return false;
 
+  // Create the Ranked Ad
+  RankedClassAd RankedAd(OID,GetClassAdRank(Ad,Coll->GetRank()));
+  if (Coll->Members.Exist(RankedAd)) return false;
+
   // Insert the add in the correct place in the list of members
-  ClassAd* CurrAd;
-  MyString CurrOID;
+  RankedClassAd CurrRankedAd;
   bool Inserted=false;
   Coll->Members.StartIterations();
-  while (Coll->Members.Iterate(CurrOID)) {
-    if (table.lookup(HashKey(CurrOID.Value()),CurrAd)==-1) return false;
-    if (CompareClassAds(Ad,CurrAd,Coll->GetRank())<=0) {
-      Coll->Members.Insert(OID);
+  while (Coll->Members.Iterate(CurrRankedAd)) {
+    if (RankedAd.Rank<=CurrRankedAd.Rank) {
+      Coll->Members.Insert(RankedAd);
       Inserted=true;
       break;
     }
   }
-  if (!Inserted) Coll->Members.Insert(OID);
+  if (!Inserted) Coll->Members.Insert(RankedAd);
     
   // Insert into chldren
   int ChildCoID;
@@ -214,8 +216,8 @@ bool ClassAdCollection::RemoveClassAd(int CoID, const MyString& OID)
   if (Collections.lookup(CoID,Coll)==-1) return false;
 
   // Check if ad is in the collection and remove it
-  if (!Coll->Members.Exist(OID)) return false;
-  Coll->Members.Remove(OID);
+  if (!Coll->Members.Exist(RankedClassAd(OID))) return false;
+  Coll->Members.Remove(RankedClassAd(OID));
     
   // remove from children
   int ChildCoID;
@@ -253,33 +255,38 @@ bool ClassAdCollection::ChangeClassAd(int CoID, const MyString& OID, ClassAd* Ad
   if (CoID!=0) {
     BaseCollection* Parent;
     if (Collections.lookup(Coll->GetParentCoID(),Parent)==-1) return false;
-    if (!Parent->Members.Exist(OID)) return false;
+    if (!Parent->Members.Exist(RankedClassAd(OID))) return false;
   }
   
   // it it didn't exist before just add it (and check that it belongs)
-  bool Existed=Coll->Members.Exist(OID);
-  if (!Existed) return AddClassAd(CoID,OID,Ad);
+  RankedClassAd RankedAd(OID);
+  if (!Coll->Members.Exist(RankedAd)) return AddClassAd(CoID,OID,Ad);
 
   // if it doesn't belong anymore, remove it
-  bool Matches=Coll->CheckClassAd(Ad);
-  if (!Matches) return RemoveClassAd(CoID,OID);
+  if (!Coll->CheckClassAd(Ad)) return RemoveClassAd(CoID,OID);
 
+  // re-insert the ad in a new position
+  Coll->Members.Remove(RankedAd);
+  RankedAd.Rank=GetClassAdRank(Ad,Coll->GetRank());
+  RankedClassAd CurrRankedAd;
+  bool Inserted=false;
+  Coll->Members.StartIterations();
+  while (Coll->Members.Iterate(CurrRankedAd)) {
+    if (RankedAd.Rank<=CurrRankedAd.Rank) {
+      Coll->Members.Insert(RankedAd);
+      Inserted=true;
+      break;
+    }
+  }
+  if (!Inserted) Coll->Members.Insert(RankedAd);
+    
   // Do recursive calls on children
   int ChildCoID;
   BaseCollection* ChildColl;
   Coll->Children.StartIterations();
   while (Coll->Children.Iterate(ChildCoID)) ChangeClassAd(ChildCoID,OID,Ad);
 
-  return false;  // Ad remains in the collection (no change)
-}
-
-//----------------------------------------------------------------------------------
-// Compare Class Ads according to a rank expression
-//----------------------------------------------------------------------------------
-
-int ClassAdCollection::CompareClassAds(ClassAd* Ad1, ClassAd* Ad2, const MyString& Rank)
-{
-  return 0;
+  return true;  // Ad remains in the collection (no change)
 }
 
 //----------------------------------------------------------------------------------
@@ -349,18 +356,31 @@ bool ClassAdCollection::StartIterateClassAds(int CoID)
 
 //----------------------------------------------------------------------------------
 
-bool ClassAdCollection::IterateClassAds(int CoID, MyString& OID)
+bool ClassAdCollection::IterateClassAds(int CoID, RankedClassAd& RankedAd)
 {
   // Get collection pointer
   BaseCollection* Coll;
   if (Collections.lookup(CoID,Coll)==-1) return false;
   
-  if (Coll->Members.Iterate(OID)) return true;
+  if (Coll->Members.Iterate(RankedAd)) return true;
   return false;
 }
 
 //----------------------------------------------------------------------------------
 // Misc methods
+//----------------------------------------------------------------------------------
+
+float ClassAdCollection::GetClassAdRank(ClassAd* Ad, const MyString& RankExpr)
+{
+  if (RankExpr.Length()==0) return 0.0;
+  char tmp[200];
+  sprintf(tmp,"%s=%s",ATTR_RANK,RankExpr.Value());
+  AttrList RankingAd(tmp,'\0');
+  float Rank;
+  if (!RankingAd.EvalFloat(ATTR_RANK,Ad,Rank)) Rank=0.0;
+  return Rank;
+}
+
 //----------------------------------------------------------------------------------
 
 int ClassAdCollection::GetCollectionType(int CoID)
@@ -390,6 +410,7 @@ void ClassAdCollection::Print()
 {
   int CoID;
   MyString OID;
+  RankedClassAd RankedAd;
   int ChildCoID;
   BaseCollection* Coll;
   printf("-----------------------------------------\n");
@@ -402,7 +423,27 @@ void ClassAdCollection::Print()
     while (Coll->Children.Iterate(ChildCoID)) printf("%d ",ChildCoID);
     printf("\nMembers: ");
     Coll->Members.StartIterations();
-    while(Coll->Members.Iterate(OID)) printf("%s ",OID.Value());
+    while(Coll->Members.Iterate(RankedAd)) printf("%s(%.1f) ",RankedAd.OID.Value(),RankedAd.Rank);
     printf("\n-----------------------------------------\n");
   }
+}
+//----------------------------------------------------------------------------------
+  
+void ClassAdCollection::Print(int CoID)
+{
+  MyString OID;
+  RankedClassAd RankedAd;
+  int ChildCoID;
+  BaseCollection* Coll;
+  if (Collections.lookup(CoID,Coll)==-1) return;
+  printf("-----------------------------------------\n");
+  MyString Rank=Coll->GetRank();
+  printf("CoID=%d Type=%d Rank=%s\n",CoID,Coll->Type(),Rank.Value());
+  printf("Children: ");
+  Coll->Children.StartIterations();
+  while (Coll->Children.Iterate(ChildCoID)) printf("%d ",ChildCoID);
+  printf("\nMembers: ");
+  Coll->Members.StartIterations();
+  while(Coll->Members.Iterate(RankedAd)) printf("%s(%.1f) ",RankedAd.OID.Value(),RankedAd.Rank);
+  printf("\n-----------------------------------------\n");
 }
