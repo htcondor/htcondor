@@ -34,6 +34,7 @@
 #include "basejob.h"
 #include "condor_config.h"
 #include "condor_email.h"
+#include "gridutil.h"
 
 
 BaseJob::BaseJob( ClassAd *classad )
@@ -105,39 +106,27 @@ BaseResource *BaseJob::GetResource()
 
 void BaseJob::UpdateJobAd( const char *name, const char *value )
 {
-	char buff[1024];
-	sprintf( buff, "%s = %s", name, value );
-	ad->InsertOrUpdate( buff );
+	UpdateClassAd(ad, name, value);
 }
 
 void BaseJob::UpdateJobAdInt( const char *name, int value )
 {
-	char buff[16];
-	sprintf( buff, "%d", value );
-	UpdateJobAd( name, buff );
+	UpdateClassAdInt(ad, name, value);
 }
 
 void BaseJob::UpdateJobAdFloat( const char *name, float value )
 {
-	char buff[16];
-	sprintf( buff, "%f", value );
-	UpdateJobAd( name, buff );
+	UpdateClassAdFloat(ad, name, value);
 }
 
 void BaseJob::UpdateJobAdBool( const char *name, int value )
 {
-	if ( value ) {
-		UpdateJobAd( name, "TRUE" );
-	} else {
-		UpdateJobAd( name, "FALSE" );
-	}
+	UpdateClassAdBool(ad, name, value);
 }
 
 void BaseJob::UpdateJobAdString( const char *name, const char *value )
 {
-	char buff[1024];
-	sprintf( buff, "\"%s\"", value );
-	UpdateJobAd( name, buff );
+	UpdateClassAdString(ad, name, value);
 }
 
 void BaseJob::JobSubmitted( const char *remote_host)
