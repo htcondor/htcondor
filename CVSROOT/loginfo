@@ -19,4 +19,4 @@ DEFAULT		(echo ""; echo $USER; date; cat) >> $CVSROOT/CVSROOT/commitlog
 
 # unfortunately, raven is dead for now, so this line isn't helping anyone.
 # we can uncomment it again once raven is up and running.
-#ALL              $CVSROOT/CVSROOT/dolog.pl -r /p/condor/repository/CONDOR_SRC bonsai-checkin-daemon@raven.cs.wisc.edu -h raven.cs.wisc.edu
+ALL              $CVSROOT/CVSROOT/dolog.pl -r /p/condor/repository/CONDOR_SRC bonsai-checkin-daemon@bonsai.cs.wisc.edu -h bonsai.cs.wisc.edu
