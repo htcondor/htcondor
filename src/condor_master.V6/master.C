@@ -40,6 +40,7 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 #include "condor_io.h"
 #include "exit.h"
 #include "string_list.h"
+#include "get_daemon_addr.h"
 
 #ifndef WANT_DC_PM
 int standard_sigchld(Service *,int);
@@ -192,8 +193,6 @@ int
 main_init( int argc, char* argv[] )
 {
 	char	**ptr;
-	char	*tmp;
-	int		size;
 
 #ifdef WIN32
 	// Daemon Core will call main_init with argc -1 if need to register
