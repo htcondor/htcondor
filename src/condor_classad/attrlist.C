@@ -17,7 +17,6 @@
 # include "debug.h"
 # include "condor_astbase.h"
 # include "condor_expressions.h"
-# include "proc_obj.h"
 # include "condor_attrlist.h"
 # include "condor_parser.h"
 
@@ -1110,8 +1109,8 @@ AttrListList::AttrListList(AttrListList& oldList)
     if(oldList.head)
     // the AttrList list to be copied is not empty
     {
-	oldList.OpenList();
-	while((tmpAttrList = oldList.NextAttrList()))
+	oldList.Open();
+	while((tmpAttrList = oldList.Next()))
 	{
 	    switch(tmpAttrList->Type())
 	    {
@@ -1121,29 +1120,29 @@ AttrListList::AttrListList(AttrListList& oldList)
 				break;
 	    }
 	}
-	oldList.CloseList();
+	oldList.Close();
     }
 }
 
 AttrListList::~AttrListList()
 {
-    this->OpenList();
-    AttrList *tmpAttrList = NextAttrList();
+    this->Open();
+    AttrList *tmpAttrList = Next();
 
     while(tmpAttrList)
     {
 		Delete(tmpAttrList);
-		tmpAttrList = NextAttrList();
+		tmpAttrList = Next();
     }
-    this->CloseList();
+    this->Close();
 }
 
-void AttrListList::OpenList()
+void AttrListList::Open()
 {
   ptr = head;
 }
 
-void AttrListList::CloseList()
+void AttrListList::Close()
 {
   ptr = NULL;
 }
@@ -1151,7 +1150,7 @@ void AttrListList::CloseList()
 ////////////////////////////////////////////////////////////////////////////////
 // Returns the pointer to the AttrList in the list pointed to by "ptr".
 ////////////////////////////////////////////////////////////////////////////////
-AttrList *AttrListList::NextAttrList()
+AttrList *AttrListList::Next()
 {
     if(!ptr)
         return NULL;
@@ -1380,17 +1379,17 @@ ExprTree* AttrListList::Lookup(char* name, AttrList*& attrList)
     AttrList*	tmpAttrList;
     ExprTree*	tmpExpr;
 
-    OpenList();
-    for(tmpAttrList = NextAttrList(); tmpAttrList; tmpAttrList = NextAttrList())
+    Open();
+    for(tmpAttrList = Next(); tmpAttrList; tmpAttrList = Next())
     {
         if((tmpExpr = tmpAttrList->Lookup(name)))
         {
-            CloseList();
+            Close();
             attrList = tmpAttrList;
             return tmpExpr;
         }
     }
-    CloseList();
+    Close();
     return NULL;
 }
 
@@ -1399,16 +1398,16 @@ ExprTree* AttrListList::Lookup(char* name)
     AttrList*	tmpAttrList;
     ExprTree*	tmpExpr;
 
-    OpenList();
-    for(tmpAttrList = NextAttrList(); tmpAttrList; tmpAttrList = NextAttrList())
+    Open();
+    for(tmpAttrList = Next(); tmpAttrList; tmpAttrList = Next())
     {
         if((tmpExpr = tmpAttrList->Lookup(name)))
         {
-            CloseList();
+            Close();
             return tmpExpr;
         }
     }
-    CloseList();
+    Close();
     return NULL;
 }
 
@@ -1418,12 +1417,12 @@ void AttrListList::UpdateAgg(ExprTree* expr, int operation)
 
     if(associatedAttrLists)
     {
-    	associatedAttrLists->OpenList();
-    	while((tmpAttrList = associatedAttrLists->NextAttrList()))
+    	associatedAttrLists->Open();
+    	while((tmpAttrList = associatedAttrLists->Next()))
     	{
 	    tmpAttrList->UpdateAgg(expr, operation);
     	}
-    	associatedAttrLists->CloseList();
+    	associatedAttrLists->Close();
     }
 }
 
@@ -1431,8 +1430,8 @@ void AttrListList::fPrintAttrListList(FILE* f)
 {
     AttrList *tmpAttrList;
 
-    OpenList();
-    for(tmpAttrList = NextAttrList(); tmpAttrList; tmpAttrList = NextAttrList())
+    Open();
+    for(tmpAttrList = Next(); tmpAttrList; tmpAttrList = Next())
     {
 	switch(tmpAttrList->Type())
 	{
@@ -1443,7 +1442,7 @@ void AttrListList::fPrintAttrListList(FILE* f)
 	}
         fprintf(f, "\n");
     }
-    CloseList();
+    Close();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1458,8 +1457,8 @@ ExprTree* AttrListList::BuildAgg(char* name, LexemeType op)
     ExprTree*	newTree = NULL;	// the newly built aggregate expression
     ExprTree*	tmpTree = NULL;	// tree to be added to the aggregate expression
 
-    OpenList();
-    while((tmpAttrList = NextAttrList()))
+    Open();
+    while((tmpAttrList = Next()))
     {
 	switch(op)
 	{
@@ -1503,7 +1502,7 @@ ExprTree* AttrListList::BuildAgg(char* name, LexemeType op)
 		return NULL;
 	}
     }
-    CloseList();
+    Close();
 
     if(newTree)
     {
