@@ -260,22 +260,6 @@ int oldd, newd;
 }
 #endif
 
-#if 0
-/*
-**	We don't really want the shadow to exit here because the 
-**	starter may want to make a new checkpoint file.  So, just
-**	respond with an error-free return code and hang out; the
-**	shadow will (should) go away when (if) the starter closes
-**	the LogSock.
-*/
-/* ARGSUSED */
-condor_exit(status)
-int status;
-{
-	return( 0 );
-}
-#endif
-
 /*
 **	getppid normally returns the parents id, right?  Well in
 **	the CONDOR case, this job may be started and checkpointed many
