@@ -3,8 +3,12 @@
 
 #if defined( AIX32)
 #	include "syscall.aix.h"
-#elif defined(Solaris) || defined(IRIX53)
+#elif defined(Solaris)
 #	include <sys/syscall.h>
+#elif defined(IRIX53)
+#	undef SYSVoffset
+#	undef __SYS_S__
+#	include <sys.s>
 #else
 #	include <syscall.h>
 #endif
