@@ -171,6 +171,16 @@ ParseFactor(char*& s, ExprTree*& newTree, int& count)
     		count = count + t->length;
             break;
 
+	    case LX_TIME:
+			t = ReadToken(s);
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+            newTree = new Time(t->strVal);
+#else
+            newTree = new Time(StrCpy(t->strVal));
+#endif
+    		count = count + t->length;
+			break;
+
         case LX_BOOL :
 
             t = ReadToken(s);
