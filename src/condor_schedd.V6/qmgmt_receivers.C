@@ -354,6 +354,7 @@ do_Q_request(ReliSock *syscall_sock)
 		assert( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
 		value = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
+		value[0] = '\0';
 		attr_name = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
 		assert( syscall_sock->code(attr_name) );
 		assert( syscall_sock->end_of_message() );;
