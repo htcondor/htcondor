@@ -44,13 +44,6 @@
   functions print error messages and exit
 */
 
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#if !defined(WIN32)
-#include <pwd.h>
-#include <netdb.h>
-#endif
 #include "condor_common.h"
 #include "debug.h"
 #include "clib.h"
