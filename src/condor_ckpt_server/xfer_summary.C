@@ -93,7 +93,7 @@ XferSummary::init()
 
 
 XferSummary::Result(transferinfo *tinfo, bool success_flag,
-					struct in_addr peer)
+					struct in_addr peer, int bytes_transferred)
 {
 	time_t	now;
 	int		xfer_len;
@@ -131,7 +131,7 @@ XferSummary::Result(transferinfo *tinfo, bool success_flag,
 				xfer_size, xfer_len, xfer_bandwidth);
 	}
 
-	log_transfer(now, tinfo, success_flag, peer);
+	log_transfer(now, tinfo, success_flag, peer, bytes_transferred);
 }
 
 extern "C" {
@@ -213,7 +213,7 @@ XferSummary::time_out(time_t now)
 
 void
 XferSummary::log_transfer(time_t now, transferinfo *tinfo, bool success_flag,
-						  struct in_addr peer)
+						  struct in_addr peer, int xfer_size)
 {
 	struct tm *tm;
 	char peer_IP[20];
@@ -234,7 +234,7 @@ XferSummary::log_transfer(time_t now, transferinfo *tinfo, bool success_flag,
 	fprintf( log_file, "%s %s %u bytes %d sec %s %s@%s\n",
 			(tinfo->status == RECV ? "R" : "S"),
 			(success_flag ? "S" : "F"),
-			tinfo->file_size,
+			xfer_size,
 			now - tinfo->start_time,
 			peer_IP,
 			tinfo->owner,

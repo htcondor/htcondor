@@ -46,6 +46,7 @@
 /* Header Files */
 
 #include "condor_common.h"
+#include "condor_debug.h"
 #include "constants2.h"
 #include "network2.h"
 #include "xferstat2.h"
@@ -346,7 +347,7 @@ void TransferState::Insert(int            child_pid,
 
 
 int TransferState::Delete(int child_pid, bool success_flag,
-						  struct in_addr peer)
+						  struct in_addr peer, int xfer_size)
 {
 	transferinfo* ptr;
 	extern XferSummary	xfer_summary;
@@ -372,9 +373,9 @@ int TransferState::Delete(int child_pid, bool success_flag,
 			ptr->next->prev = ptr->prev;
 		}
 		if (ptr->file_size == -1) {
-			ptr->file_size = get_file_size(ptr->filename);
+			ptr->file_size = xfer_size;
 		}
-		xfer_summary.Result(ptr, success_flag, peer);
+		xfer_summary.Result(ptr, success_flag, peer, xfer_size);
 		delete ptr;
 		num_transfers--;
 		return CKPT_OK;

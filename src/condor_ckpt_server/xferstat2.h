@@ -221,7 +221,8 @@ class TransferState
     transferinfo* Find(struct in_addr SM_addr,
 		       const char*    owner,
 		       const char*    filename);
-    int Delete(int child_pid, bool success_flag, struct in_addr peer);
+    int Delete(int child_pid, bool success_flag, struct in_addr peer,
+			   int xfer_size);
     int GetXferType(int child_pid);
     int GetKey(int child_pid);
     int GetKey(struct in_addr SM_addr,
