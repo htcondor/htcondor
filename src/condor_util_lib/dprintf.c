@@ -515,7 +515,7 @@ preserve_log_file(int debug_level)
 ** Can't open log or lock file becuase we are out of fd's.  Try to let
 ** somebody know what happened.
 */
-fd_panic( line, file )
+void fd_panic( line, file )
 int		line;
 char	*file;
 {
