@@ -44,6 +44,7 @@
 #include "condor_sys.h"
 #include "image.h"
 #include "file_table_interf.h"
+#include "url_condor.h"
 #include "condor_debug.h"
 static char *_FileName_ = __FILE__;
 
@@ -56,7 +57,6 @@ extern int _condor_in_file_stream;
 
 const int KILO = 1024;
 
-extern "C" int open_ckpt_file( const char *name, int flags, size_t n_bytes );
 extern "C" void report_image_size( int );
 
 #ifdef SAVE_SIGSTATE
@@ -91,6 +91,24 @@ volatile int check_sig;		// the signal which activated the checkpoint; used
 							// by some routines to determine if this is a periodic
 							// checkpoint (USR2) or a check & vacate (TSTP).
 static size_t StackSaveSize;
+
+static int
+net_read(int fd, void *buf, int size)
+{
+	int		bytes_read;
+	int		this_read;
+
+	bytes_read = 0;
+	do {
+		this_read = read(fd, buf, size - bytes_read);
+		if (this_read < 0) {
+			return this_read;
+		}
+		bytes_read += this_read;
+		buf += this_read;
+	} while (bytes_read < size);
+	return bytes_read;
+}
 
 void
 Header::Init()
@@ -443,15 +461,19 @@ Image::Write( const char *ckpt_file )
 	}
 
 		// Generate tmp file name
-	sprintf( tmp_name, "%s.tmp", ckpt_file );
 	dprintf( D_ALWAYS, "Checkpoint name is \"%s\"\n", ckpt_file );
-	dprintf( D_ALWAYS, "Tmp name is \"%s\"\n", tmp_name );
 
 		// Open the tmp file
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
-	if( (fd=open_ckpt_file(tmp_name,O_WRONLY|O_TRUNC|O_CREAT,len)) < 0 ) {
-		perror( "open_ckpt_file" );
-		exit( 1 );
+	tmp_name[0] = '\0';
+	if( (fd=open_url(tmp_name,O_WRONLY|O_TRUNC|O_CREAT,len)) < 0 ) {
+		sprintf( tmp_name, "%s.tmp", ckpt_file );
+		dprintf( D_ALWAYS, "Tmp name is \"%s\"\n", tmp_name );
+		if ((fd = open_ckpt_file(tmp_name, O_WRONLY|O_TRUNC|O_CREAT,
+								len)) < 0)  {
+			perror( "open_ckpt_file" );
+			exit( 1 );
+		}
 	}
 
 		// Write out the checkpoint
@@ -534,7 +556,7 @@ Image::Write( int fd )
 		/* When using the stream protocol the shadow echo's the number
 		   of bytes transferred as a final acknowledgement. */
 	if( _condor_in_file_stream ) {
-		status = read( fd, &ack, sizeof(ack) );
+		status = net_read( fd, &ack, sizeof(ack) );
 		if( status < 0 ) {
 			EXCEPT( "Can't read final ack from the shadow" );
 		}
@@ -565,22 +587,24 @@ Image::Read()
 
 		// Make sure we have a valid file descriptor to read from
 	if( fd < 0 && file_name && file_name[0] ) {
-		if( (fd=open_ckpt_file(file_name,O_RDONLY,0)) < 0 ) {
-			sprintf(buf, "open_ckpt_file(%s)", file_name);
-			perror( buf );
-			exit( 1 );
+		if( (fd=open_url(file_name,O_RDONLY,0)) < 0 ) {
+			if( (fd=open_ckpt_file(file_name,O_RDONLY,0)) < 0 ) {
+				sprintf(buf, "open_ckpt_file(%s)", file_name);
+				perror( buf );
+				exit( 1 );
+			}
 		}
 	}
 
 		// Read in the header
-	if( (nbytes=read(fd,&head,sizeof(head))) < 0 ) {
+	if( (nbytes=net_read(fd,&head,sizeof(head))) < 0 ) {
 		return -1;
 	}
 	pos += nbytes;
 
 		// Read in the segment maps
 	for( i=0; i<head.N_Segs(); i++ ) {
-		if( (nbytes=read(fd,&map[i],sizeof(SegMap))) < 0 ) {
+		if( (nbytes=net_read(fd,&map[i],sizeof(SegMap))) < 0 ) {
 			return -1;
 		}
 		pos += nbytes;
