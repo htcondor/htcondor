@@ -21,8 +21,6 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
 
 /*
 **	Definitions for flags to pass to dprintf
@@ -59,7 +57,11 @@
 **	Important external variables...
 */
 
-extern int errno;
+extern int	errno;
+#if !( defined(LINUX) && defined(GLIBC) )
+extern int	sys_nerr;
+extern char	*sys_errlist[];
+#endif
 
 extern int DebugFlags;	/* Bits to look for in dprintf                       */
 extern int MaxLog;		/* Maximum size of log file (if D_TRUNCATE is set)   */
