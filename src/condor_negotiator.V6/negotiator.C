@@ -211,7 +211,7 @@ main( int argc, char** argv )
 	char	**ptr;
 	fd_set	readfds;
 	struct timeval timer;
-	
+
 #ifdef NFSFIX
 	/* Must be condor to write to log files. */
 	set_condor_euid(__FILE__,__LINE__);
@@ -1290,8 +1290,14 @@ call_schedd( char* schedd_address, int timeout )
 		(void)close( scheduler );
 		return -1;
 	case 1:
+		errno = 0;
 		if( ioctl(scheduler,FIONBIO,(char *)&off) < 0 ) {
-			EXCEPT( "ioctl" );
+			if(errno == ECONNREFUSED)
+			{
+				(void)close(scheduler);
+				return -1;
+			} 
+			EXCEPT( "ioctl, errno = %d", errno );
 		}
 		return scheduler;
 	default:
