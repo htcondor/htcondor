@@ -300,7 +300,7 @@ char *envp[];
 	}
 	else
 	{
-		config_from_server( argv[0], (CONTEXT *)0, config_file );
+		config_from_server( config_file, argv[0], (CONTEXT *)0 );
 	}
 	
 	dprintf_config( "SHADOW", SHADOW_LOG );

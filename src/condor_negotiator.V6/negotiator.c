@@ -211,7 +211,7 @@ char	*argv[];
 	}
 	else
 	{
-		config_from_server( argv[0], NegotiatorContext, config_file );
+		config_from_server( config_file, argv[0], NegotiatorContext );
 	}
 	
 	init_params();
