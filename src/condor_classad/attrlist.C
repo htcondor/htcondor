@@ -1739,14 +1739,13 @@ int AttrList::get(Stream& s)
         
         if(!Parse(line, tree)) {
             if(tree->MyType() == LX_ERROR) {
-                cerr << "Parse error in the incomming stream -- quitting !" << endl;
                 delete [] line;
-                exit(1);
+				return 0;
             }
         }
         else {
-            cerr << "Parse error in the incomming stream -- quitting !" << endl;            delete [] line;
-            exit(1);
+			delete [] line;
+			return 0;
         }
         
         Insert(tree);
