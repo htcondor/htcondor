@@ -141,6 +141,31 @@ do_REMOTE_syscall()
 		return -1;
 	}
 
+
+	case CONDOR_register_mpi_master_info:
+	{
+		char* str = NULL;
+
+		assert( syscall_sock->code(str) );
+		assert( syscall_sock->end_of_message() );
+
+		errno = 0;
+		rval = pseudo_register_mpi_master_info( str );
+		terrno = errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		assert( syscall_sock->end_of_message() );
+
+		free( str );
+
+		return 0;
+	}
+
 	default:
 	{
 		EXCEPT( "unknown syscall %d received\n", condor_sysnum );
