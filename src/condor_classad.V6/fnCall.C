@@ -26,6 +26,10 @@
 #include "sink.h"
 #include <regex.h>
 
+#ifdef ENABLE_SHARED_LIBRARY_FUNCTIONS
+#include "dlfcn.h"
+#endif
+
 using namespace std;
 extern long timezone;
 
@@ -157,6 +161,83 @@ Copy( ) const
 	return newTree;
 }
 
+void FunctionCall::RegisterFunction(
+	string &functionName, 
+	ClassAdFunc function)
+{
+	if (functionTable.find(functionName) == functionTable.end()) {
+		functionTable[functionName] = (void *) function;
+	}
+	return;
+}
+
+void FunctionCall::RegisterFunctions(
+	ClassAdFunctionMapping *functions)
+{
+	if (functions != NULL) {
+		while (functions->function != NULL) {
+			RegisterFunction(functions->functionName, 
+							 (ClassAdFunc) functions->function);
+			functions++;
+		}
+	}
+	return;
+}
+
+#ifdef ENABLE_SHARED_LIBRARY_FUNCTIONS
+bool FunctionCall::RegisterSharedLibraryFunctions(
+	const char *shared_library_path)
+{
+	bool success;
+	void *dynamic_library_handle;
+		
+	success = false;
+	if (shared_library_path) {
+		dynamic_library_handle = dlopen(shared_library_path, RTLD_LAZY|RTLD_GLOBAL);
+		if (dynamic_library_handle) {
+			ClassAdSharedLibraryInit init_function;
+
+			init_function = (ClassAdSharedLibraryInit) dlsym(dynamic_library_handle, 
+															 "Init");
+			if (init_function != NULL) {
+				ClassAdFunctionMapping *functions;
+				
+				functions = init_function();
+				if (functions != NULL) {
+					RegisterFunctions(functions);
+					success = true;
+					/*
+					while (functions->apparentFunctionName != NULL) {
+						void *function;
+						string functionName = functions->apparentFunctionName;
+						function = dlsym(dynamic_library_handle, 
+										 functions->actualFunctionName);
+						RegisterFunction(functionName,
+										 (ClassAdFunc) function);
+						success = true;
+						functions++;
+					}
+					*/
+				} else {
+					CondorErrno  = ERR_CANT_LOAD_DYNAMIC_LIBRARY;
+					CondorErrMsg = "Init function returned NULL.";
+				}
+			} else {
+				CondorErrno  = ERR_CANT_LOAD_DYNAMIC_LIBRARY;
+				CondorErrMsg = "Couldn't find Init() function.";
+			}
+		} else {
+			CondorErrno  = ERR_CANT_LOAD_DYNAMIC_LIBRARY;
+			CondorErrMsg = "Couldn't open shared library with dlopen.";
+		}
+	} else {
+		CondorErrno  = ERR_CANT_LOAD_DYNAMIC_LIBRARY;
+		CondorErrMsg = "No shared library was specified.";
+	}
+
+	return success;
+}
+#endif /* ENABLE_SHARED_LIBRARY_FUNCTIONS */
 
 void FunctionCall::
 _SetParentScope( const ClassAd* parent )
