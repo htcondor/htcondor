@@ -17,8 +17,12 @@ The details of each version are described below.
 \begin{itemize}
 
 \item Added full support (including standard universe jobs with
-  checkpointing and remote system calls) for Linux i386 RedHat 8.x
-  (using gcc/g++ version 3.2.x and glibc version 2.2.93). 
+  checkpointing and remote system calls) for Linux i386 RedHat 9
+  (using gcc/g++ version 3.2.2 and glibc version 2.3.2). 
+
+\item Added full support (including standard universe jobs with
+  checkpointing and remote system calls) for Linux i386 RedHat 8
+  (using gcc/g++ version 3.2 and glibc version 2.2.93). 
 
 \item The time it takes \Condor{dagman} to submit jobs has been
       reduced slightly to improve up the startup time of large DAGs.
@@ -154,6 +158,11 @@ The statically linked distributions of Condor now include a static gahp\_server.
 machines (or vice versa) fails for machine\_count > 1.  This is
 not a new bug.  Cross-platform submission of MPI jobs between
 Unix and Windows has always had this problem.
+
+\item A multiple install of Condor's standard universe support libraries
+onto an NFS server for the purposes of having a heterogeneous mix of Linux
+distribution revisions all being able to utilize the same \Condor{compile}
+does not function correctly if Redhat 9 is one of the distributions.
 
 \end{itemize}
 
