@@ -46,6 +46,9 @@
 definition of FIONBIO in Solaris */
 #endif 
 
+#if defined(AIX32)
+#include <sys/select.h>
+#endif
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 extern int	errno;
