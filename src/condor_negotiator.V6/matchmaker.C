@@ -574,6 +574,11 @@ negotiationTime ()
 	netman.PrepareForSchedulingCycle();
 #endif
 
+	// We need to nuke our MatchList from the previous negotiation cycle,
+	// since a different set of machines may now be available.
+	if (MatchList) delete MatchList;
+	MatchList = NULL;
+
 	// ----- Get all required ads from the collector
 	dprintf( D_ALWAYS, "Phase 1:  Obtaining ads from collector ...\n" );
 	if( !obtainAdsFromCollector( allAds, startdAds, scheddAds,
@@ -1625,12 +1630,15 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 	if ( (want_matchlist_caching) && (requestAutoCluster != -1) ) {
 			// create a new MatchList cache.
 		if ( MatchList ) delete MatchList;
-		MatchList = new MatchListType( startdAds.Length() );
-		cachedAutoCluster = requestAutoCluster;
-		if ( cachedName ) free(cachedName);
-		if ( cachedAddr ) free(cachedAddr);
-		cachedName = strdup(scheddName);
-		cachedAddr = strdup(scheddAddr);
+		MatchList = NULL;
+		if ( startdAds.Length() > 0 ) {
+			MatchList = new MatchListType( startdAds.Length() );
+			cachedAutoCluster = requestAutoCluster;
+			if ( cachedName ) free(cachedName);
+			if ( cachedAddr ) free(cachedAddr);
+			cachedName = strdup(scheddName);
+			cachedAddr = strdup(scheddAddr);
+		}
 	}
 	
 
