@@ -117,6 +117,9 @@ bool
 Starter::provides( const char* ability )
 {
 	int has_it = 0;
+	if( ! s_ad ) {
+		return false;
+	}
 	if( ! s_ad->EvalBool(ability, NULL, has_it) ) { 
 		has_it = 0;
 	}
