@@ -933,6 +933,7 @@ SendSpoolFile(char *filename)
 	if (!Q_SOCK->code(filesize)) {
 		dprintf(D_ALWAYS, "Failed to receive file size from client in SendSpoolFile.\n");
 		Q_SOCK->eom();
+		fclose(fp);
 		return -1;
 	}
 
