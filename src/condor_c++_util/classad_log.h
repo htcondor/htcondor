@@ -17,11 +17,18 @@ public:
 	ClassAdLog();
 	ClassAdLog(const char *filename);
 	~ClassAdLog();
+
 	void AppendLog(LogRecord *log);
 	void TruncLog();
+
 	void BeginTransaction();
 	void AbortTransaction();
 	void CommitTransaction();
+
+	// returns 1 and sets val if corresponding SetAttribute found
+	// returns 0 if no SetAttribute found
+	// return -1 if DeleteAttribute or DestroyClassAd found
+	int LookupInTransaction(const char *key, const char *name, char *&val);
 
 	ClassAdHashTable table;
 private:
@@ -36,6 +43,9 @@ public:
 	LogNewClassAd(const char *key, char *mytype, char *targettype);
 	~LogNewClassAd();
 	int Play(ClassAdHashTable &table);
+	char *get_key() { return strdup(key); }
+	char *get_mytype() { return strdup(mytype); }
+	char *get_targettype() { return strdup(targettype); }
 
 private:
 	virtual int WriteBody(int fd);
@@ -52,6 +62,7 @@ public:
 	LogDestroyClassAd(const char *key);
 	~LogDestroyClassAd();
 	int Play(ClassAdHashTable &table);
+	char *get_key() { return strdup(key); }
 
 private:
 	virtual int WriteBody(int fd) { return write(fd, key, strlen(key)); }
@@ -66,6 +77,9 @@ public:
 	LogSetAttribute(const char *key, const char *name, char *value);
 	~LogSetAttribute();
 	int Play(ClassAdHashTable &table);
+	char *get_key() { return strdup(key); }
+	char *get_name() { return strdup(name); }
+	char *get_value() { return strdup(value); }
 
 private:
 	virtual int WriteBody(int fd);
@@ -81,6 +95,8 @@ public:
 	LogDeleteAttribute(const char *key, const char *name);
 	~LogDeleteAttribute();
 	int Play(ClassAdHashTable &table);
+	char *get_key() { return strdup(key); }
+	char *get_name() { return strdup(name); }
 
 private:
 	virtual int WriteBody(int fd);

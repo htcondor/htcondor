@@ -34,6 +34,8 @@ class Transaction {
 public:
 	void Commit(int fd, ClassAdHashTable &table);
 	void AppendLog(LogRecord *);
+	LogRecord *FirstEntry() { return op_log.FirstEntry(); }
+	LogRecord *NextEntry(LogRecord *ptr) { return op_log.NextEntry(ptr); }
 private:
 	LogPtrList op_log;
 };

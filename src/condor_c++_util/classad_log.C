@@ -170,6 +170,78 @@ ClassAdLog::CommitTransaction()
 	active_transaction = NULL;
 }
 
+int
+ClassAdLog::LookupInTransaction(const char *key, const char *name, char *&val)
+{
+	bool AdDeleted=false, ValDeleted=false, ValFound=false;
+
+	if (!active_transaction) return 0;
+
+	for (LogRecord *log = active_transaction->FirstEntry(); log; 
+		 log = active_transaction->NextEntry(log)) {
+
+		switch (log->get_op_type()) {
+		case CondorLogOp_NewClassAd: {
+			if (AdDeleted) {	// check to see if ad is created after a delete
+				char *lkey = ((LogNewClassAd *)log)->get_key();
+				if (strcmp(lkey, key) == 0) {
+					AdDeleted = false;
+				}
+				free(lkey);
+			}
+			break;
+		}
+		case CondorLogOp_DestroyClassAd: {
+			char *lkey = ((LogDestroyClassAd *)log)->get_key();
+			if (strcmp(lkey, key) == 0) {
+				AdDeleted = true;
+			}
+			free(lkey);
+			break;
+		}
+		case CondorLogOp_SetAttribute: {
+			char *lkey = ((LogSetAttribute *)log)->get_key();
+			if (strcmp(lkey, key) == 0) {
+				char *lname = ((LogSetAttribute *)log)->get_name();
+				if (strcmp(lname, name) == 0) {
+					if (ValFound) {
+						free(val);
+					}
+					val = ((LogSetAttribute *)log)->get_value();
+					ValFound = true;
+					ValDeleted = false;
+				}
+				free(lname);
+			}
+			free(lkey);
+			break;
+		}
+		case CondorLogOp_DeleteAttribute: {
+			char *lkey = ((LogDeleteAttribute *)log)->get_key();
+			if (strcmp(lkey, key) == 0) {
+				char *lname = ((LogDeleteAttribute *)log)->get_name();
+				if (strcmp(lname, name) == 0) {
+					if (ValFound) {
+						free(val);
+					}
+					ValFound = false;
+					ValDeleted = true;
+				}
+				free(lname);
+			}
+			free(lkey);
+			break;
+		}
+		default:
+			break;
+		}
+	}
+
+	if (AdDeleted || ValDeleted) return -1;
+	if (ValFound) return 1;
+	return 0;
+}
+
 void
 ClassAdLog::LogState(int fd)
 {
