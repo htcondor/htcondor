@@ -22,6 +22,7 @@ getPPStyleStr ()
     	case PP_CKPT_SRVR_NORMAL:return"Normal (CkptSrvr)";
     	case PP_STARTD_SERVER:	return "Server";
     	case PP_STARTD_RUN:		return "Run";
+		case PP_STARTD_STATE:	return "State";
     	case PP_VERBOSE:		return "Verbose";
     	case PP_CUSTOM:			return "Custom";
 		default:				return "<Unknown!>";

@@ -17,6 +17,7 @@ void printMasterNormal 	(ClassAd *);
 void printCkptSrvrNormal(ClassAd *);
 void printServer 		(ClassAd *);
 void printRun    		(ClassAd *);
+void printState			(ClassAd *);
 void printVerbose   	(ClassAd *);
 void printCustom    	(ClassAd *);
 
@@ -40,6 +41,10 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 
 			  case PP_STARTD_RUN:
 				printRun (ad);
+				break;
+
+			  case PP_STARTD_STATE:
+				printState( ad );
 				break;
 
 			  case PP_SCHEDD_NORMAL:
@@ -165,6 +170,52 @@ printServer (ClassAd *ad)
 	}
 }
 
+void
+printState (ClassAd *ad)
+{
+	static bool first = true;
+	static AttrListPrintMask pm; 
+	static time_t now;
+	int	   stateTime, activityTime, kbdIdle;
+
+	if (ad)
+	{
+		// print header if necessary
+		if (first)
+		{
+			(void) time( &now );
+
+			printf ("\n%-10.10s %-3.3s %-5.5s %-6.6s "
+					"%-8.8s %-4.4s %-12.12s %-12.12s "
+					"%-12.12s\n\n", 
+				ATTR_NAME, ATTR_CPUS, ATTR_MEMORY, "LoadAv", 
+				ATTR_STATE, ATTR_ACTIVITY, ATTR_KEYBOARD_IDLE, "StateTime",
+				"ActvtyTime");
+		
+			pm.registerFormat("%-10.10s ", ATTR_NAME, "[????????] ");
+			pm.registerFormat("%-3d " , ATTR_CPUS, "[??] ");
+			pm.registerFormat("%-5d " , ATTR_MEMORY, "[???] ");
+			pm.registerFormat("%-.3f ", ATTR_LOAD_AVG, "[????]  ");
+			pm.registerFormat("%-8.8s ",  ATTR_STATE, "[????????]  ");
+			pm.registerFormat("%-4.4s ",  ATTR_ACTIVITY, "[????????]  ");
+
+			first = false;
+		}
+
+		pm.display (stdout, ad);
+
+		if( ad->LookupInteger( ATTR_ENTERED_CURRENT_STATE, stateTime )		&&
+			ad->LookupInteger( ATTR_ENTERED_CURRENT_ACTIVITY, activityTime )&&
+			ad->LookupInteger( ATTR_KEYBOARD_IDLE, kbdIdle ) )
+		{
+			stateTime = now - stateTime;
+			activityTime = now - activityTime;
+			kbdIdle = now - kbdIdle;
+			printf( "%s %s %s\n", format_time( stateTime ), 
+						format_time( activityTime ), format_time( kbdIdle ) );
+		}
+	}
+}
 
 void
 printRun (ClassAd *ad)

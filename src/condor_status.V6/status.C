@@ -238,6 +238,9 @@ firstPass (int argc, char *argv[])
 		if (matchPrefix (argv[i], "-server")) {
 			setPPstyle (PP_STARTD_SERVER, i, argv[i]);
 		} else
+		if (matchPrefix (argv[i], "-state")) {
+			setPPstyle (PP_STARTD_STATE, i, argv[i]);
+		} else
 		if (matchPrefix (argv[i], "-startd")) {
 			setMode (MODE_STARTD_NORMAL,i, argv[i]);
 		} else
