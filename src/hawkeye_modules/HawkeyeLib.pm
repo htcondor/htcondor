@@ -59,13 +59,12 @@ sub ReadConfig( $$ )
     # Parse it
     if ( $String =~ /not defined/i )
     {
-	return lc( $Default );
+	return $Default;
     }
     else
     {
 	chomp $String;
 	$String =~ s/\"//g;
-	#return lc( $String );
 	return $String;
     }
 }
