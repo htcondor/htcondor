@@ -85,3 +85,38 @@ with the versions of gcc and glibc that come with Red Hat 8.x.
 Red Hat version 9.x is fully supported in Condor \VersionNotice.
 \Condor{compile} works to link user jobs for the Standard universe
 with the versions of gcc and glibc that come with Red Hat 9.x.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:platform-linux-fed}Red Hat Fedora 1, 2, and 3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{platform-specific information!Red Hat Fedora 1, 2, and 3}
+
+Redhat Fedora Core 1, 2, and 3 now support the checkpointing of statically
+linked executables just like previous revisions of Condor for Red Hat.
+\Condor{compile} works to link user jobs for the Standard universe with
+the versions of gcc that are distributed with Red Hat Fedora Core 1, 2,
+and 3.
+
+However, there are some caveats: A) You must install and use the dynamic
+Red Hat 9.x binaries on the Fedora machine and B) if you wish to do
+run a \Condor{compile}d binary in standalone mode(either initially
+or in resumption mode), then you must prepend the execution of said
+binary with \Bold{setarch i386}. Here is an example: suppose we have a
+Condor-linked binary called \Bold{myapp}, running this application as a
+standalone executable will result in this command: \Bold{setarch i386
+myapp}. The subsequent resumption command will be: 
+\Bold{setarch i386 myapp -\_condor\_restart myapp.ckpt}.
+
+When standard universe executables \Condor{compile}d under any currently
+supported Linux architecture of the same kind (including Fedora 1,
+2, and 3) are running inside Condor, they will automatically execute
+in the i386 execution domain. This means that the \Bold{exec\_shield}
+functionality (if available) will be turned off and the shared segment
+layout will default to Red Hat 9 style. There is no need to do the
+above instructions concerning \Bold{setarch} if the executables are
+being submitted directly into Condor via \Condor{submit}.
+
+
+
+
+
