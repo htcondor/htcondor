@@ -151,6 +151,8 @@ char *ValidLogFiles[] = {
 	"machine_status",
 	"QueueLock",
 	"CondorViewLog",
+	"CkptServerLog",
+	"CkptServerLog.old",
 	"OldFiles",		// AFS backup directory
 	0
 };
