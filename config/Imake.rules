@@ -74,7 +74,7 @@ clean::							@@\
 #ifndef program_target
 #define	program_target( program, objlist, libs )		@@\
 program: objlist libs						@@\
-	$(CC) $(CFLAGS) -o program objlist libs $(LDFLAGS)	@@\
+	$(CC) $(CFLAGS) -o program objlist libs $(LDFLAGS) $(SITE_LDFLAGS) @@\
 clean::								@@\
 	rm -f program objlist
 #endif  program_target
@@ -84,10 +84,11 @@ clean::								@@\
 ** Build a C++ program from .o files and libraries.
 */
 #ifndef c_plus_target
-#define	c_plus_target( program, objlist, libs )		@@\
-program: objlist libs					@@\
-	$(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(LDFLAGS) $(DEMANGLE) @@\
-clean:: 						@@\
+#define	c_plus_target( program, objlist, libs )			@@\
+program: objlist libs						@@\
+	$(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs \
+		$(LDFLAGS) $(SITE_LDFLAGS) $(DEMANGLE)		@@\
+clean::								@@\
 	rm -f program objlist
 #endif  c_plus_target
 
