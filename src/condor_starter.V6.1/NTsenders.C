@@ -789,7 +789,7 @@ REMOTE_CONDOR_ulog( ClassAd *ad )
 }
 
 int
-REMOTE_CONDOR_get_job_attr(const char *  attrname , char *  expr)
+REMOTE_CONDOR_get_job_attr(char *  attrname , char *  expr)
 {
 	int	rval;
 	condor_errno_t	terrno;
@@ -797,25 +797,25 @@ REMOTE_CONDOR_get_job_attr(const char *  attrname , char *  expr)
 	CurrentSysCall = CONDOR_get_job_attr;
 
 	syscall_sock->encode();
-	assert( syscall_sock->code(CurrentSysCall) );
-	assert( syscall_sock->code((char*)attrname) );
-	assert( syscall_sock->end_of_message() );
+	ASSERT( syscall_sock->code(CurrentSysCall) );
+	ASSERT( syscall_sock->code(attrname) );
+	ASSERT( syscall_sock->end_of_message() );
 
 	syscall_sock->decode();
-	assert( syscall_sock->code(rval) );
+	ASSERT( syscall_sock->code(rval) );
 	if( rval < 0 ) {
-		assert( syscall_sock->code(terrno) );
-		assert( syscall_sock->end_of_message() );
+		ASSERT( syscall_sock->code(terrno) );
+		ASSERT( syscall_sock->end_of_message() );
 		errno = (int)terrno;
 		return rval;
 	}
-	assert( syscall_sock->code(expr) );
-	assert( syscall_sock->end_of_message() );
+	ASSERT( syscall_sock->code(expr) );
+	ASSERT( syscall_sock->end_of_message() );
 	return rval;
 }
 
 int
-REMOTE_CONDOR_set_job_attr(const char *  attrname , const char *  expr)
+REMOTE_CONDOR_set_job_attr(char *  attrname , char *  expr)
 {
 	int	rval;
 	condor_errno_t	terrno;
@@ -823,25 +823,25 @@ REMOTE_CONDOR_set_job_attr(const char *  attrname , const char *  expr)
 	CurrentSysCall = CONDOR_set_job_attr;
 
 	syscall_sock->encode();
-	assert( syscall_sock->code(CurrentSysCall) );
-	assert( syscall_sock->code((char*)expr) );
-	assert( syscall_sock->code((char*)attrname) );
-	assert( syscall_sock->end_of_message() );
+	ASSERT( syscall_sock->code(CurrentSysCall) );
+	ASSERT( syscall_sock->code(expr) );
+	ASSERT( syscall_sock->code(attrname) );
+	ASSERT( syscall_sock->end_of_message() );
 
 	syscall_sock->decode();
-	assert( syscall_sock->code(rval) );
+	ASSERT( syscall_sock->code(rval) );
 	if( rval < 0 ) {
-		assert( syscall_sock->code(terrno) );
-		assert( syscall_sock->end_of_message() );
+		ASSERT( syscall_sock->code(terrno) );
+		ASSERT( syscall_sock->end_of_message() );
 		errno = (int)terrno;
 		return rval;
 	}
-	assert( syscall_sock->end_of_message() );
+	ASSERT( syscall_sock->end_of_message() );
 	return rval;
 }
 
 int
-REMOTE_CONDOR_constrain( const char *  expr)
+REMOTE_CONDOR_constrain( char *  expr)
 {
 	int	rval;
 	condor_errno_t	terrno;
@@ -849,19 +849,19 @@ REMOTE_CONDOR_constrain( const char *  expr)
 	CurrentSysCall = CONDOR_constrain;
 
 	syscall_sock->encode();
-	assert( syscall_sock->code(CurrentSysCall) );
-	assert( syscall_sock->code((char*)expr) );
-	assert( syscall_sock->end_of_message() );
+	ASSERT( syscall_sock->code(CurrentSysCall) );
+	ASSERT( syscall_sock->code(expr) );
+	ASSERT( syscall_sock->end_of_message() );
 
 	syscall_sock->decode();
-	assert( syscall_sock->code(rval) );
+	ASSERT( syscall_sock->code(rval) );
 	if( rval < 0 ) {
-		assert( syscall_sock->code(terrno) );
-		assert( syscall_sock->end_of_message() );
+		ASSERT( syscall_sock->code(terrno) );
+		ASSERT( syscall_sock->end_of_message() );
 		errno = (int)terrno;
 		return rval;
 	}
-	assert( syscall_sock->end_of_message() );
+	ASSERT( syscall_sock->end_of_message() );
 	return rval;
 }
 
