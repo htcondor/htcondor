@@ -30,8 +30,6 @@
 #include "condor_config.h"       // for param()
 #include "condor_email.h"        // for (you guessed it) email stuff
 
-static char *_FileName_ = __FILE__;   /* Used by EXCEPT (see except.h) */
-
 // this appears at the bottom of this file:
 extern "C" int display_dprintf_header(FILE *fp);
 
@@ -90,7 +88,9 @@ void BaseShadow::baseInit( ClassAd *jobAd, char schedd_addr[],
 	set_user_priv();
 
 		// change directory, send mail if failure:
-	cdToIwd();
+	if ( cdToIwd() == -1 ) {
+		EXCEPT("Could not cd to initial working directory");
+	}
 }
 
 void BaseShadow::config()
@@ -150,7 +150,17 @@ int BaseShadow::cdToIwd() {
 		dprintf( D_ALWAYS, "(Can't chdir to %s)\n", iwd);
 		char *buf = new char [strlen(iwd)+20];
 		sprintf(buf, "Can't access \"%s\".", iwd);
-		// TODO: need to have some handler to email the user here
+		FILE *mailer = NULL;
+		if ( (mailer=emailUser(buf)) ) {
+			fprintf(mailer,"Your job %d.%d specified an initial working\n",
+				getCluster(),getProc());
+			fprintf(mailer,"directory of %s.\nThis directory currently does\n",
+				iwd);
+			fprintf(mailer,"not exist.  If this directory is on a shared\n"
+				"filesystem, this could be just a temporary problem.  Thus\n"
+				"I will try again later\n");
+			email_close(mailer);
+		}
 		delete buf;
 		return -1;
 	}
@@ -306,6 +316,4 @@ display_dprintf_header(FILE *fp)
 
 	return TRUE;
 }
-
-
 
