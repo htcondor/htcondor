@@ -215,6 +215,7 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 
 		/* Grab the time info only once, instead of inside the for
 		   loop.  -Derek 9/14 */
+	memset((void*)&clock,0,sizeof(time_t)); // just to stop Purify UMR errors
 	(void)time(  (time_t *)&clock );
 	tm = localtime( (time_t *)&clock );
 

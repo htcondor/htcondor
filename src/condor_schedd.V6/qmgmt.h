@@ -48,13 +48,15 @@ void CommitTransaction();
 void AbortTransaction();
 void dirtyJobQueue( void );
 bool isQueueSuperUser( const char* user );
-bool OwnerCheck( ClassAd *ad, const char *test_owner );
 
 int get_myproxy_password_handler(Service *, int, Stream *sock);
 #if defined(__cplusplus)
 }
 #endif
 
-
+#if defined(__cplusplus)
+bool OwnerCheck(int,int);
+bool OwnerCheck(ClassAd *, const char *);
+#endif
 
 #endif /* _QMGMT_H */

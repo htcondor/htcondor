@@ -36,24 +36,54 @@
 
 template class List<GT3Job>;
 template class Item<GT3Job>;
+template class HashTable<HashKey, GT3Resource *>;
+template class HashBucket<HashKey, GT3Resource *>;
 
 int GT3Resource::probeInterval = 300;	// default value
 int GT3Resource::probeDelay = 15;		// default value
 int GT3Resource::gahpCallTimeout = 300;	// default value
 
-//////////////from gridmanager.C
 #define HASH_TABLE_SIZE			500
 
-template class HashTable<HashKey, GT3Resource *>;
-template class HashBucket<HashKey, GT3Resource *>;
+HashTable <HashKey, GT3Resource *>
+    GT3Resource::ResourcesByName( HASH_TABLE_SIZE,
+								  hashFunction );
 
-HashTable <HashKey, GT3Resource *> GT3ResourcesByName( HASH_TABLE_SIZE,
-													   hashFunction );
-////////////////////////////////
+GT3Resource *GT3Resource::FindOrCreateResource( const char *resource_name,
+												const char *proxy_subject )
+{
+	int rc;
+	GT3Resource *resource = NULL;
 
-GT3Resource::GT3Resource( const char *resource_name )
+	const char *canonical_name = CanonicalName( resource_name );
+	ASSERT(canonical_name);
+
+	const char *hash_name = HashName( canonical_name, proxy_subject );
+	ASSERT(hash_name);
+
+	rc = ResourcesByName.lookup( HashKey( hash_name ), resource );
+	if ( rc != 0 ) {
+		resource = new GT3Resource( canonical_name, proxy_subject );
+		ASSERT(resource);
+		if ( resource->Init() == false ) {
+			delete resource;
+			resource = NULL;
+		} else {
+			ResourcesByName.insert( HashKey( hash_name ), resource );
+		}
+	} else {
+		ASSERT(resource);
+	}
+
+	return resource;
+}
+
+GT3Resource::GT3Resource( const char *resource_name,
+						  const char *proxy_subject)
 	: BaseResource( resource_name )
 {
+	initialized = false;
+	proxySubject = strdup( proxy_subject );
 	resourceDown = false;
 	firstPingDone = false;
 	pingTimerId = daemonCore->Register_Timer( 0,
@@ -61,16 +91,9 @@ GT3Resource::GT3Resource( const char *resource_name )
 								"GT3Resource::DoPing", (Service*)this );
 	lastPing = 0;
 	lastStatusChange = 0;
-		// TODO This assumes that at least one GT3Job has already
-		// initialized the gahp server. Need a better solution.
-	gahp = new GahpClient( "GT3", GAHPCLIENT_DEFAULT_SERVER_PATH );
-	gahp->setNotificationTimerId( pingTimerId );
-	gahp->setMode( GahpClient::normal );
-	gahp->setTimeout( gahpCallTimeout );
 	submitLimit = DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE;
 	jobLimit = DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE;
-
-	Reconfig();
+	gahp = NULL;
 }
 
 GT3Resource::~GT3Resource()
@@ -79,6 +102,34 @@ GT3Resource::~GT3Resource()
 	if ( gahp != NULL ) {
 		delete gahp;
 	}
+	if ( proxySubject ) {
+		free( proxySubject );
+	}
+}
+
+bool GT3Resource::Init()
+{
+	if ( initialized ) {
+		return true;
+	}
+
+	char *gahp_path = param("GT3_GAHP");
+	if ( gahp_path == NULL ) {
+		dprintf( D_ALWAYS, "GT3_GAHP not defined in condor config file\n" );
+		return false;
+	} else {
+		gahp = new GahpClient( "GT3", gahp_path );
+		gahp->setNotificationTimerId( pingTimerId );
+		gahp->setMode( GahpClient::normal );
+		gahp->setTimeout( gahpCallTimeout );
+		free( gahp_path );
+	}
+
+	initialized = true;
+
+	Reconfig();
+
+	return true;
 }
 
 void GT3Resource::Reconfig()
@@ -175,6 +226,16 @@ const char *GT3Resource::CanonicalName( const char *name )
 	return name;
 }
 
+const char *GT3Resource::HashName( const char *resource_name,
+								   const char *proxy_subject )
+{
+	static MyString hash_name;
+
+	hash_name.sprintf( "%s#%s", resource_name, proxy_subject );
+
+	return hash_name.Value();
+}
+
 void GT3Resource::RegisterJob( GT3Job *job, bool already_submitted )
 {
 	registeredJobs.Append( job );
@@ -197,6 +258,11 @@ void GT3Resource::UnregisterJob( GT3Job *job )
 	CancelSubmit( job );
 	registeredJobs.Delete( job );
 	pingRequesters.Delete( job );
+
+	if ( IsEmpty() ) {
+		ResourcesByName.remove( HashKey( resourceName ) );
+		delete this;
+	}
 }
 
 void GT3Resource::RequestPing( GT3Job *job )

@@ -26,32 +26,37 @@
 #include "condor_config.h"
 #include "string_list.h"
 
-#include "mirrorresource.h"
+#include "condorresource.h"
 #include "gridmanager.h"
 
-template class List<MirrorJob>;
-template class Item<MirrorJob>;
-template class HashTable<HashKey, MirrorResource *>;
-template class HashBucket<HashKey, MirrorResource *>;
+template class List<CondorJob>;
+template class Item<CondorJob>;
+template class HashTable<HashKey, CondorResource *>;
+template class HashBucket<HashKey, CondorResource *>;
 
 #define HASH_TABLE_SIZE			500
 
-HashTable <HashKey, MirrorResource *>
-    MirrorResource::ResourcesByName( HASH_TABLE_SIZE,
+HashTable <HashKey, CondorResource *>
+    CondorResource::ResourcesByName( HASH_TABLE_SIZE,
 									 hashFunction );
 
-int MirrorResource::scheddPollInterval = 300;		// default value
+int CondorResource::scheddPollInterval = 300;		// default value
 
-MirrorResource *MirrorResource::FindOrCreateResource( const char * resource_name )
+CondorResource *CondorResource::FindOrCreateResource( const char * resource_name,
+													  const char *pool_name )
 {
 	int rc;
-	MirrorResource *resource = NULL;
+	MyString resource_key;
+	CondorResource *resource = NULL;
 
-	rc = ResourcesByName.lookup( HashKey( resource_name ), resource );
+	resource_key.sprintf( "%s/%s", pool_name ? pool_name : "NULL",
+						  resource_name );
+
+	rc = ResourcesByName.lookup( HashKey( resource_key.Value() ), resource );
 	if ( rc != 0 ) {
-		resource = new MirrorResource( resource_name );
+		resource = new CondorResource( resource_name, pool_name );
 		ASSERT(resource);
-		ResourcesByName.insert( HashKey( resource_name ), resource );
+		ResourcesByName.insert( HashKey( resource_key.Value() ), resource );
 	} else {
 		ASSERT(resource);
 	}
@@ -59,43 +64,49 @@ MirrorResource *MirrorResource::FindOrCreateResource( const char * resource_name
 	return resource;
 }
 
-MirrorResource::MirrorResource( const char *resource_name )
+CondorResource::CondorResource( const char *resource_name, const char *pool_name )
 	: BaseResource( resource_name )
 {
 	scheddPollTid = TIMER_UNSET;
-	registeredJobs = new List<MirrorJob>;
-	mirrorScheddName = strdup( resource_name );
+	registeredJobs = new List<CondorJob>;
+	scheddName = strdup( resource_name );
 	gahp = NULL;
-	scheddUpdateActive = false;
 	scheddStatusActive = false;
 	submitter_constraint = "";
 
-	scheddPollTid = daemonCore->Register_Timer( 0,
-							(TimerHandlercpp)&MirrorResource::DoScheddPoll,
-							"MirrorResource::DoScheddPoll", (Service*)this );
-
-	char *gahp_path = param("MIRROR_GAHP");
-	if ( gahp_path == NULL ) {
-		gahp_path = param( "CONDOR_GAHP" );
-		if ( gahp_path == NULL ) {
-			EXCEPT( "CONDOR_GAHP not defined in condor config file" );
-		}
+	if ( pool_name != NULL ) {
+		poolName = strdup( pool_name );
 	} else {
-		// TODO remove mirrorScheddName from the gahp server key if/when
+		poolName = NULL;
+	}
+
+	scheddPollTid = daemonCore->Register_Timer( 0,
+							(TimerHandlercpp)&CondorResource::DoScheddPoll,
+							"CondorResource::DoScheddPoll", (Service*)this );
+
+	char *gahp_path = param("CONDOR_GAHP");
+	if ( gahp_path == NULL ) {
+		EXCEPT( "CONDOR_GAHP not defined in condor config file" );
+	} else {
+		// TODO remove scheddName from the gahp server key if/when
 		//   a gahp server can handle multiple schedds
 		MyString buff;
 		MyString buff2;
-		buff.sprintf( "MIRRORRESOURCE/%s", mirrorScheddName );
-		buff2.sprintf( "-f -s %s", mirrorScheddName );
+		buff.sprintf( "CONDORRESOURCE/%s/%s", poolName ? poolName : "NULL",
+					  scheddName );
+		buff2.sprintf( "-f -s %s", scheddName );
+		if ( poolName != NULL ) {
+			buff2.sprintf_cat( " -P %s", poolName );
+		}
 		gahp = new GahpClient( buff.Value(), gahp_path, buff2.Value() );
 		gahp->setNotificationTimerId( scheddPollTid );
 		gahp->setMode( GahpClient::normal );
-		gahp->setTimeout( MirrorJob::gahpCallTimeout );
+		gahp->setTimeout( CondorJob::gahpCallTimeout );
 		free( gahp_path );
 	}
 }
 
-MirrorResource::~MirrorResource()
+CondorResource::~CondorResource()
 {
 	if ( scheddPollTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( scheddPollTid );
@@ -106,22 +117,22 @@ MirrorResource::~MirrorResource()
 	if ( gahp != NULL ) {
 		delete gahp;
 	}
-	if ( mirrorScheddName != NULL ) {
-		free( mirrorScheddName );
+	if ( scheddName != NULL ) {
+		free( scheddName );
 	}
 }
 
-bool MirrorResource::IsEmpty()
+bool CondorResource::IsEmpty()
 {
 	return registeredJobs->IsEmpty();
 }
 
-void MirrorResource::Reconfig()
+void CondorResource::Reconfig()
 {
 	BaseResource::Reconfig();
 }
 
-void MirrorResource::RegisterJob( MirrorJob *job, const char *submitter_id )
+void CondorResource::RegisterJob( CondorJob *job, const char *submitter_id )
 {
 	registeredJobs->Append( job );
 
@@ -129,17 +140,17 @@ void MirrorResource::RegisterJob( MirrorJob *job, const char *submitter_id )
 		submitter_ids.append( submitter_id );
 		if ( submitter_constraint.Length() == 0 ) {
 			submitter_constraint.sprintf( "(%s=?=\"%s\")",
-										  ATTR_MIRROR_SUBMITTER_ID,
+										  ATTR_SUBMITTER_ID,
 										  submitter_id );
 		} else {
 			submitter_constraint.sprintf_cat( "||(%s=?=\"%s\")",
-											  ATTR_MIRROR_SUBMITTER_ID,
+											  ATTR_SUBMITTER_ID,
 											  submitter_id );
 		}
 	}
 }
 
-void MirrorResource::UnregisterJob( MirrorJob *job )
+void CondorResource::UnregisterJob( CondorJob *job )
 {
 	registeredJobs->Delete( job );
 
@@ -147,12 +158,11 @@ void MirrorResource::UnregisterJob( MirrorJob *job )
 		//   this object
 }
 
-int MirrorResource::DoScheddPoll()
+int CondorResource::DoScheddPoll()
 {
 	int rc;
 
-	if ( registeredJobs->IsEmpty() && scheddUpdateActive == false &&
-		 scheddStatusActive == false ) {
+	if ( registeredJobs->IsEmpty() && scheddStatusActive == false ) {
 			// No jobs, so nothing to poll/update
 		daemonCore->Reset_Timer( scheddPollTid, scheddPollInterval );
 		return 0;
@@ -160,53 +170,15 @@ int MirrorResource::DoScheddPoll()
 
 	if ( gahp->isStarted() == false ) {
 		if ( gahp->Startup() == false ) {
+			// TODO Don't except here, let jobs be put on hold when they
+			//   fail to start gahp
 			EXCEPT( "Failed to start gahp server" );
 		}
 	}
 
 	daemonCore->Reset_Timer( scheddPollTid, TIMER_NEVER );
 
-	if ( scheddUpdateActive == false  && scheddStatusActive == false ) {
-
-			// start schedd update command
-		MyString buff;
-		MyString constraint;
-		int new_lease;
-
-dprintf(D_FULLDEBUG,"***starting schedd-update\n");
-		constraint.sprintf( "(%s)", submitter_constraint.Value() );
-
-		new_lease = time(NULL) + MirrorJob::leaseInterval;
-
-		ClassAd update_ad;
-		buff.sprintf( "%s = %d", ATTR_MIRROR_LEASE_TIME, new_lease );
-		update_ad.Insert( buff.Value() );
-
-		rc = gahp->condor_job_update_constrained( mirrorScheddName,
-												  constraint.Value(),
-												  &update_ad );
-
-		if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
-			dprintf( D_ALWAYS, "gahp->condor_job_update_constrained returned %d\n",
-					 rc );
-			EXCEPT( "condor_job_update_constrained failed!" );
-		}
-		scheddUpdateActive = true;
-
-	} else if ( scheddUpdateActive == true ) {
-
-			// finish schedd update command
-dprintf(D_FULLDEBUG,"***finishing(hopefully) schedd-update\n");
-		rc = gahp->condor_job_update_constrained( NULL, NULL, NULL );
-
-		if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
-dprintf(D_FULLDEBUG,"***schedd-update still pending\n");
-			return 0;
-		} else if ( rc != 0 ) {
-			dprintf( D_ALWAYS, "gahp->condor_job_update_constrained returned %d\n",
-					 rc );
-		}
-		scheddUpdateActive = false;
+	if ( scheddStatusActive == false ) {
 
 			// start schedd status command
 dprintf(D_FULLDEBUG,"***starting schedd-status\n");
@@ -214,7 +186,7 @@ dprintf(D_FULLDEBUG,"***starting schedd-status\n");
 
 		constraint.sprintf( "(%s)", submitter_constraint.Value() );
 
-		rc = gahp->condor_job_status_constrained( mirrorScheddName,
+		rc = gahp->condor_job_status_constrained( scheddName,
 												  constraint.Value(),
 												  NULL, NULL );
 
@@ -225,7 +197,7 @@ dprintf(D_FULLDEBUG,"***starting schedd-status\n");
 		}
 		scheddStatusActive = true;
 
-	} else if ( scheddStatusActive == true ) {
+	} else {
 
 			// finish schedd status command
 dprintf(D_FULLDEBUG,"***finishing(hopefully) schedd-status\n");
@@ -249,15 +221,15 @@ dprintf(D_FULLDEBUG,"***schedd-status still pending\n");
 				int rc;
 				int cluster, proc;
 				MyString job_id_string;
-				MirrorJob *job;
+				CondorJob *job;
 
 				status_ads[i]->LookupInteger( ATTR_CLUSTER_ID, cluster );
 				status_ads[i]->LookupInteger( ATTR_PROC_ID, proc );
 
-				job_id_string.sprintf( "%s/%d.%d", mirrorScheddName, cluster,
+				job_id_string.sprintf( "%s/%d.%d", scheddName, cluster,
 									   proc );
 
-				rc = MirrorJobsById.lookup( HashKey( job_id_string.Value() ),
+				rc = CondorJobsById.lookup( HashKey( job_id_string.Value() ),
 											job );
 				if ( rc == 0 ) {
 					job->NotifyNewRemoteStatus( status_ads[i] );
@@ -273,7 +245,7 @@ dprintf(D_FULLDEBUG,"***schedd-status still pending\n");
 
 		scheddStatusActive = false;
 
-dprintf(D_FULLDEBUG,"***schedd-poll cycle complete\n");
+dprintf(D_FULLDEBUG,"***schedd-status complete\n");
 		daemonCore->Reset_Timer( scheddPollTid, scheddPollInterval );
 	}
 

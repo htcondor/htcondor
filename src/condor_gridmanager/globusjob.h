@@ -144,8 +144,8 @@ class GlobusJob : public BaseJob
 	char *gramCallbackContact;
 
 
-	Proxy *myProxy;
-	GahpClient gahp;
+	Proxy *jobProxy;
+	GahpClient *gahp;
 
 	MyString *buildSubmitRSL();
 	MyString *buildRestartRSL();
@@ -195,7 +195,8 @@ private:
 
 bool WriteGlobusSubmitEventToUserLog( ClassAd *job_ad );
 bool WriteGlobusSubmitFailedEventToUserLog( ClassAd *job_ad,
-											int failure_code );
+											int failure_code,
+											const char *failure_mesg);
 bool WriteGlobusResourceUpEventToUserLog( ClassAd *job_ad );
 bool WriteGlobusResourceDownEventToUserLog( ClassAd *job_ad );
 

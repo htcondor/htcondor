@@ -149,6 +149,7 @@ io_loop(void * arg, Stream * sock) {
 							GAHP_COMMAND_JOB_HOLD,
 							GAHP_COMMAND_JOB_RELEASE,
 							GAHP_COMMAND_JOB_STAGE_IN,
+							GAHP_COMMAND_JOB_STAGE_OUT,
 							GAHP_COMMAND_ASYNC_MODE_ON,
 							GAHP_COMMAND_ASYNC_MODE_OFF,
 							GAHP_COMMAND_RESULTS,
@@ -259,12 +260,20 @@ verify_gahp_command(char ** argv, int argc) {
 
 		return TRUE;
 	} else if ((strcasecmp (argv[0], GAHP_COMMAND_JOB_SUBMIT) == 0) ||
-				(strcasecmp (argv[0], GAHP_COMMAND_JOB_STAGE_IN) == 0)) {
+			   (strcasecmp (argv[0], GAHP_COMMAND_JOB_STAGE_IN) == 0) ) {
 		// Expected: CONDOR_JOB_SUBMIT <req id> <schedd name> <job ad>
 		return verify_number_args (argc, 4) &&
 				verify_request_id (argv[1]) &&
 				verify_schedd_name (argv[2]) &&
 				verify_class_ad (argv[3]);
+
+		return TRUE;
+	} else if (strcasecmp (argv[0], GAHP_COMMAND_JOB_STAGE_OUT) == 0) {
+		// Expected: CONDOR_JOB_STAGE_OUT <req id> <schedd name> <job id>
+		return verify_number_args (argc, 4) &&
+				verify_request_id (argv[1]) &&
+				verify_schedd_name (argv[2]) &&
+				verify_job_id (argv[3]);
 
 		return TRUE;
 	} else if (strcasecmp (argv[0], GAHP_COMMAND_RESULTS) == 0 ||
@@ -276,6 +285,7 @@ verify_gahp_command(char ** argv, int argc) {
 	    // These are no-arg commands
 	    return verify_number_args (argc, 1);
 	}
+
 
 	dprintf (D_ALWAYS, "Unknown command\n");
 
@@ -353,7 +363,15 @@ verify_job_id (const char * s) {
 int
 parse_gahp_command (const char* raw, char *** _argv, int * _argc) {
 
-	char ** argv = (char**)malloc (10*sizeof(char*)); 	// Max possible number of arguments
+	*_argv = NULL;
+	*_argc = 0;
+
+	if (!raw) {
+		dprintf(D_ALWAYS,"ERROR parse_gahp_command: empty command\n");
+		return FALSE;
+	}
+
+	char ** argv = (char**)calloc (10,sizeof(char*)); 	// Max possible number of arguments
 	int argc = 0;
 
 	int beginning = 0;

@@ -177,6 +177,47 @@ AcquireProxy( const char *proxy_path, int notify_tid )
 	ProxySubject *proxy_subject = NULL;
 	char *subject_name = NULL;
 
+	// Special handling for "use best proxy"
+	if ( proxy_path[0] == '#' ) {
+		subject_name = strdup( &proxy_path[1] );
+		if ( SubjectsByName.lookup( HashKey(subject_name),
+									proxy_subject ) != 0 ) {
+			// We don't know about this proxy subject yet,
+			// create a new ProxySubject and fill it out
+			proxy_subject = new ProxySubject;
+			proxy_subject->subject_name = strdup( subject_name );
+
+			// Create a master proxy for our new ProxySubject
+			Proxy *new_master = new Proxy;
+			new_master->id = next_proxy_id++;
+			MyString tmp;
+			tmp.sprintf( "%s/master_proxy.%d", GridmanagerScratchDir,
+						 new_master->id );
+			new_master->proxy_filename = strdup( tmp.Value() );
+			new_master->num_references = 0;
+			new_master->subject = proxy_subject;
+//			SetMasterProxy( new_master, proxy );
+			new_master->expiration_time = -1;
+			new_master->near_expired = true;
+			ProxiesByFilename.insert( HashKey(new_master->proxy_filename),
+									  new_master );
+
+			proxy_subject->master_proxy = new_master;
+
+			SubjectsByName.insert(HashKey(proxy_subject->subject_name),
+								  proxy_subject);
+		}
+		// Now that we have a proxy_subject, return it's master proxy
+		proxy = proxy_subject->master_proxy;
+		proxy->num_references++;
+		if ( notify_tid > 0 &&
+			 proxy->notification_tids.IsMember( notify_tid ) == false ) {
+			proxy->notification_tids.Append( notify_tid );
+		}
+		free( subject_name );
+		return proxy;
+	}
+
 	if ( ProxiesByFilename.lookup( HashKey(proxy_path), proxy ) == 0 ) {
 		// We already know about this proxy,
 		// return the existing Proxy struct
@@ -196,9 +237,9 @@ AcquireProxy( const char *proxy_path, int notify_tid )
 				 proxy_path );
 		return NULL;
 	}
-	subject_name = x509_proxy_subject_name( proxy_path );
+	subject_name = x509_proxy_identity_name( proxy_path );
 	if ( subject_name == NULL ) {
-		dprintf( D_ALWAYS, "Failed to get subject of proxy %s\n", proxy_path );
+		dprintf( D_ALWAYS, "Failed to get identity of proxy %s\n", proxy_path );
 		return NULL;
 	}
 
@@ -315,6 +356,8 @@ ReleaseProxy( Proxy *proxy, int notify_tid )
 		if ( proxy_subject->proxies.IsEmpty() &&
 			 proxy_subject->master_proxy->num_references <= 0 ) {
 
+			// TODO shouldn't we be deleting the physical file for the
+			//   master proxy, since we created it?
 			ProxiesByFilename.remove( HashKey(proxy_subject->master_proxy->proxy_filename) );
 			free( proxy_subject->master_proxy->proxy_filename );
 			delete proxy_subject->master_proxy;

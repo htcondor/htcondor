@@ -54,6 +54,8 @@ template class HashBucket<HashKey, GahpProxyInfo *>;
 #define HASH_TABLE_SIZE			50
 
 bool logGahpIo = true;
+int logGahpIoSize = 0;
+bool useXMLClassads = false;
 
 HashTable <HashKey, GahpServer *>
     GahpServer::GahpServersById( HASH_TABLE_SIZE,
@@ -66,6 +68,9 @@ void GahpReconfig()
 	int tmp_int;
 
 	logGahpIo = param_boolean( "GRIDMANAGER_GAHPCLIENT_DEBUG", true );
+	logGahpIoSize = param_integer( "GRIDMANAGER_GAHPCLIENT_DEBUG_SIZE", 0 );
+
+	useXMLClassads = param_boolean( "GAHP_USE_XML_CLASSADS", false );
 
 	tmp_int = param_integer( "GRIDMANAGER_MAX_PENDING_REQUESTS", 50 );
 
@@ -205,7 +210,14 @@ GahpServer::write_line(const char *command)
 	write(m_gahp_writefd,"\r\n",2);
 
 	if ( logGahpIo ) {
-		dprintf( D_FULLDEBUG, "GAHP[%d] <- '%s'\n", m_gahp_pid, command );
+		MyString debug = command;
+		debug.sprintf( "'%s'", command );
+		if ( logGahpIoSize > 0 && debug.Length() > logGahpIoSize ) {
+			debug = debug.Substr( 0, logGahpIoSize );
+			debug += "...";
+		}
+		dprintf( D_FULLDEBUG, "GAHP[%d] <- %s\n", m_gahp_pid,
+				 debug.Value() );
 	}
 
 	return;
@@ -228,13 +240,18 @@ GahpServer::write_line(const char *command, int req, const char *args)
 	write(m_gahp_writefd,"\r\n",2);
 
 	if ( logGahpIo ) {
+		MyString debug = command;
 		if ( args ) {
-			dprintf( D_FULLDEBUG, "GAHP[%d] <- '%s%s%s'\n", m_gahp_pid,
-					 command, buf, args );
+			debug.sprintf( "'%s%s%s'", command, buf, args );
 		} else {
-			dprintf( D_FULLDEBUG, "GAHP[%d] <- '%s%s'\n", m_gahp_pid, command,
-					 buf );
+			debug.sprintf( "'%s%s'", command, buf );
 		}
+		if ( logGahpIoSize > 0 && debug.Length() > logGahpIoSize ) {
+			debug = debug.Substr( 0, logGahpIoSize );
+			debug += "...";
+		}
+		dprintf( D_FULLDEBUG, "GAHP[%d] <- %s\n", m_gahp_pid,
+				 debug.Value() );
 	}
 
 	return;
@@ -466,20 +483,30 @@ GahpServer::read_argv(Gahp_Args &g_args)
 			}
 
 			if ( logGahpIo ) {
-				buf[0] = '\0';
+				static MyString debug;
+				debug = "";
 				if( g_args.argc > 0 ) {
-					strcat( buf, "'" );
+					debug += "'";
 					for ( int i = 0; i < g_args.argc; i++ ) {
 						if ( i != 0 ) {
-							strcat( buf, "' '" );
+							debug += "' '";
 						}
 						if ( g_args.argv[i] ) {
-							strcat( buf, g_args.argv[i] );
+							debug += g_args.argv[i];
+						}
+						if ( logGahpIoSize > 0 &&
+							 debug.Length() > logGahpIoSize ) {
+							break;
 						}
 					}
-					strcat( buf, "'" );
+					debug += "'";
 				}
-				dprintf( D_FULLDEBUG, "GAHP[%d] -> %s\n", m_gahp_pid, buf );
+				if ( logGahpIoSize > 0 && debug.Length() > logGahpIoSize ) {
+					debug = debug.Substr( 0, logGahpIoSize );
+					debug += "...";
+				}
+				dprintf( D_FULLDEBUG, "GAHP[%d] -> %s\n", m_gahp_pid,
+						 debug.Value() );
 			}
 			return;
 		}
@@ -607,7 +634,7 @@ GahpServer::Startup()
 	     (daemonCore->Create_Pipe(stdout_pipefds) == FALSE) ||
 	     (daemonCore->Create_Pipe(stderr_pipefds, TRUE) == FALSE)) 
 	{
-		dprintf(D_ALWAYS,"GahpClient::Initialize - pipe() failed, errno=%d\n",
+		dprintf(D_ALWAYS,"GahpServer::Startup - pipe() failed, errno=%d\n",
 			errno);
 		free( gahp_path );
 		if (gahp_args) free(gahp_args);
@@ -746,11 +773,13 @@ GahpServer::Initialize( Proxy *proxy )
 
 		// Give the server our x509 proxy.
 	if ( command_initialize_from_file( master_proxy->proxy->proxy_filename ) == false ) {
-		EXCEPT( "Failed to initialize from file" );
+		dprintf( D_ALWAYS, "GAHP: Failed to initialize from file\n" );
+		return false;
 	}
 
 	if ( cacheProxyFromFile( master_proxy ) == false ) {
-		EXCEPT( "Failed to cache proxy from file!" );
+		dprintf( D_ALWAYS, "GAHP: Failed to cache proxy from file!\n" );
+		return false;
 	}
 
 	master_proxy->cached_expiration = master_proxy->proxy->expiration_time;
@@ -2681,11 +2710,19 @@ GahpClient::condor_job_submit(const char *schedd_name, ClassAd *job_ad,
 	if (!job_ad) {
 		ad_string=NULLSTRING;
 	} else {
-		ClassAdXMLUnparser xml_unp;
-		xml_unp.SetUseCompactSpacing( true );
-		xml_unp.SetOutputType( false );
-		xml_unp.SetOutputTargetType( false );
-		xml_unp.Unparse( job_ad, ad_string );
+		if ( useXMLClassads ) {
+			ClassAdXMLUnparser unparser;
+			unparser.SetUseCompactSpacing( true );
+			unparser.SetOutputType( false );
+			unparser.SetOutputTargetType( false );
+			unparser.Unparse( job_ad, ad_string );
+		} else {
+			NewClassAdUnparser unparser;
+			unparser.SetUseCompactSpacing( true );
+			unparser.SetOutputType( false );
+			unparser.SetOutputTargetType( false );
+			unparser.Unparse( job_ad, ad_string );
+		}
 	}
 	MyString reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
@@ -2762,11 +2799,19 @@ GahpClient::condor_job_update_constrained(const char *schedd_name,
 	if (!update_ad) {
 		ad_string=NULLSTRING;
 	} else {
-		ClassAdXMLUnparser xml_unp;
-		xml_unp.SetUseCompactSpacing( true );
-		xml_unp.SetOutputType( false );
-		xml_unp.SetOutputTargetType( false );
-		xml_unp.Unparse( update_ad, ad_string );
+		if ( useXMLClassads ) {
+			ClassAdXMLUnparser unparser;
+			unparser.SetUseCompactSpacing( true );
+			unparser.SetOutputType( false );
+			unparser.SetOutputTargetType( false );
+			unparser.Unparse( update_ad, ad_string );
+		} else {
+			NewClassAdUnparser unparser;
+			unparser.SetUseCompactSpacing( true );
+			unparser.SetOutputType( false );
+			unparser.SetOutputTargetType( false );
+			unparser.Unparse( update_ad, ad_string );
+		}
 	}
 	MyString reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
@@ -2882,8 +2927,13 @@ GahpClient::condor_job_status_constrained(const char *schedd_name,
 		if ( num_ads > 0 ) {
 			*ads = (ClassAd **)malloc( *num_ads * sizeof(ClassAd*) );
 			for ( int i = 0; i < *num_ads; i++ ) {
-				ClassAdXMLParser xml_parser;
-				(*ads)[i] = xml_parser.ParseClassAd( result->argv[4 + i] );
+				if ( useXMLClassads ) {
+					ClassAdXMLParser parser;
+					(*ads)[i] = parser.ParseClassAd( result->argv[4 + i] );
+				} else {
+					NewClassAdParser parser;
+					(*ads)[i] = parser.ParseClassAd( result->argv[4 + i] );
+				}
 			}
 		}
 		delete result;
@@ -2985,11 +3035,19 @@ GahpClient::condor_job_update(const char *schedd_name, PROC_ID job_id,
 	if (!update_ad) {
 		ad_string=NULLSTRING;
 	} else {
-		ClassAdXMLUnparser xml_unp;
-		xml_unp.SetUseCompactSpacing( true );
-		xml_unp.SetOutputType( false );
-		xml_unp.SetOutputTargetType( false );
-		xml_unp.Unparse( update_ad, ad_string );
+		if ( useXMLClassads ) {
+			ClassAdXMLUnparser unparser;
+			unparser.SetUseCompactSpacing( true );
+			unparser.SetOutputType( false );
+			unparser.SetOutputTargetType( false );
+			unparser.Unparse( update_ad, ad_string );
+		} else {
+			NewClassAdUnparser unparser;
+			unparser.SetUseCompactSpacing( true );
+			unparser.SetOutputType( false );
+			unparser.SetOutputTargetType( false );
+			unparser.Unparse( update_ad, ad_string );
+		}
 	}
 	MyString reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
@@ -3195,11 +3253,19 @@ GahpClient::condor_job_stage_in(const char *schedd_name, ClassAd *job_ad)
 	if (!job_ad) {
 		ad_string=NULLSTRING;
 	} else {
-		ClassAdXMLUnparser xml_unp;
-		xml_unp.SetUseCompactSpacing( true );
-		xml_unp.SetOutputType( false );
-		xml_unp.SetOutputTargetType( false );
-		xml_unp.Unparse( job_ad, ad_string );
+		if ( useXMLClassads ) {
+			ClassAdXMLUnparser unparser;
+			unparser.SetUseCompactSpacing( true );
+			unparser.SetOutputType( false );
+			unparser.SetOutputTargetType( false );
+			unparser.Unparse( job_ad, ad_string );
+		} else {
+			NewClassAdUnparser unparser;
+			unparser.SetUseCompactSpacing( true );
+			unparser.SetOutputType( false );
+			unparser.SetOutputTargetType( false );
+			unparser.Unparse( job_ad, ad_string );
+		}
 	}
 	MyString reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
@@ -3207,6 +3273,70 @@ GahpClient::condor_job_stage_in(const char *schedd_name, ClassAd *job_ad)
 	bool x = reqline.sprintf("%s %s", esc1, esc2);
 	free( esc1 );
 	free( esc2 );
+	ASSERT( x == true );
+	const char *buf = reqline.Value();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command,buf,deleg_proxy);
+	}
+
+		// If we made it here, command is pending.
+		
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if (result->argc != 3) {
+			EXCEPT("Bad %s Result",command);
+		}
+		int rc = 1;
+		if ( result->argv[1][0] == 'S' ) {
+			rc = 0;
+		}
+		if ( strcasecmp(result->argv[2], NULLSTRING) ) {
+			error_string = result->argv[2];
+		} else {
+			error_string = "";
+		}
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int
+GahpClient::condor_job_stage_out(const char *schedd_name, PROC_ID job_id)
+{
+	static const char* command = "CONDOR_JOB_STAGE_OUT";
+
+	MyString ad_string;
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	if (!schedd_name) schedd_name=NULLSTRING;
+	MyString reqline;
+	char *esc1 = strdup( escapeGahpString(schedd_name) );
+	bool x = reqline.sprintf("%s %d.%d", esc1, job_id.cluster, job_id.proc);
+	free( esc1 );
 	ASSERT( x == true );
 	const char *buf = reqline.Value();
 

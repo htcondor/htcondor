@@ -267,47 +267,56 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		}
 	}
 
-	if ( IsServer() && (Ad->LookupString(ATTR_JOB_CMD, buf) == 1) ) {
+	if ( (IsServer() || (IsClient() && simple_init))&& 
+		 (Ad->LookupString(ATTR_JOB_CMD, buf) == 1) ) 
+	{
 		// stash the executable name for comparison later, so
 		// we know that this file should be called condor_exec on the
 		// client machine.  if an executable for this cluster exists
 		// in the spool dir, use it instead.
-		char *source;
-		char *Spool;
-		int Cluster = 0;
-		int Proc = 0;
 
-		Ad->LookupInteger(ATTR_CLUSTER_ID, Cluster);
-		Ad->LookupInteger(ATTR_PROC_ID, Proc);
-		Spool = param("SPOOL");
-		if ( Spool ) {
+		// Only check the spool directory if we're the server.
+		// Note: This will break Condor-C jobs if the executable is ever
+		//   spooled the old-fashioned way (which doesn't happen currently).
+		if ( IsServer() ) {
+			char *source;
+			char *Spool;
+			int Cluster = 0;
+			int Proc = 0;
 
-			SpoolSpace = strdup( gen_ckpt_name(Spool,Cluster,Proc,0) );
-			TmpSpoolSpace = (char*)malloc( strlen(SpoolSpace) + 10 );
-			sprintf(TmpSpoolSpace,"%s.tmp",SpoolSpace);
+			Ad->LookupInteger(ATTR_CLUSTER_ID, Cluster);
+			Ad->LookupInteger(ATTR_PROC_ID, Proc);
+			Spool = param("SPOOL");
+			if ( Spool ) {
 
-			priv_state old_priv = set_condor_priv();
-			
-			if( (mkdir(SpoolSpace,0777) < 0) ) {
-				// mkdir can return 17 = EEXIST (dirname exists) or 2 = ENOENT (path not found)
-				dprintf( D_FULLDEBUG, 
-						 "FileTransfer::Init(): mkdir(%s) failed, errno: %d\n",
-						 SpoolSpace, errno );
+				SpoolSpace = strdup( gen_ckpt_name(Spool,Cluster,Proc,0) );
+				TmpSpoolSpace = (char*)malloc( strlen(SpoolSpace) + 10 );
+				sprintf(TmpSpoolSpace,"%s.tmp",SpoolSpace);
+
+				priv_state old_priv = set_condor_priv();
+
+				if( (mkdir(SpoolSpace,0777) < 0) ) {
+					// mkdir can return 17 = EEXIST (dirname exists) or 2 = ENOENT (path not found)
+					dprintf( D_FULLDEBUG, 
+							 "FileTransfer::Init(): mkdir(%s) failed, errno: %d\n",
+							 SpoolSpace, errno );
+				}
+				if( (mkdir(TmpSpoolSpace,0777) < 0) ) {
+					dprintf( D_FULLDEBUG, 
+							 "FileTransfer::Init(): mkdir(%s) failed, errno: %d\n",
+							 TmpSpoolSpace, errno );
+				}
+				source = gen_ckpt_name(Spool,Cluster,ICKPT,0);
+				free(Spool);
+				if ( access(source,F_OK | X_OK) >= 0 ) {
+					// we can access an executable in the spool dir
+					ExecFile = strdup(source);
+				}
+				set_priv( old_priv );
+
 			}
-			if( (mkdir(TmpSpoolSpace,0777) < 0) ) {
-				dprintf( D_FULLDEBUG, 
-						 "FileTransfer::Init(): mkdir(%s) failed, errno: %d\n",
-						 TmpSpoolSpace, errno );
-			}
-			source = gen_ckpt_name(Spool,Cluster,ICKPT,0);
-			free(Spool);
-			if ( access(source,F_OK | X_OK) >= 0 ) {
-				// we can access an executable in the spool dir
-				ExecFile = strdup(source);
-			}
-			set_priv( old_priv );
-
 		}
+
 		if ( !ExecFile ) {
 			// apparently the executable is not in the spool dir.
 			// so we must make certain the user has permission to read
@@ -398,6 +407,10 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	} else {
 		DontEncryptOutputFiles = new StringList(NULL,",");
 	}
+
+	int spool_completion_time = 0;
+	Ad->LookupInteger(ATTR_STAGE_IN_FINISH,spool_completion_time);
+	last_download_time = spool_completion_time;
 
 	did_init = true;
 	return 1;
@@ -522,8 +535,15 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv )
 		Directory spool_space( SpoolSpace, PRIV_CONDOR );
 		while ( (current_file=spool_space.Next()) ) {
 			if ( UserLogFile && 
-				 !file_strcmp(UserLogFile,current_file) ) {
+				 !file_strcmp(UserLogFile,current_file) ) 
+			{
 					// dont send UserLog file to the starter
+				continue;
+			}				
+			if ( last_download_time > 0 &&
+				 spool_space.GetModifyTime() <= last_download_time ) 
+			{
+					// Make certain file isn't just an input file
 				continue;
 			}
 			if ( print_comma ) {
@@ -638,13 +658,13 @@ FileTransfer::DownloadFiles(bool blocking)
 	// time in last_download_time so in UploadFiles we have a timestamp
 	// to compare.  If it is a non-blocking download, we do all this
 	// in the thread reaper.
-	if ( blocking && ret_value == 1 && upload_changed_files ) {
+	if ( !simple_init && blocking && ret_value == 1 && upload_changed_files ) {
 		time(&last_download_time);
 		// Now sleep for 1 second.  If we did not do this, then jobs
 		// which run real quickly (i.e. less than a second) would not
 		// have their output files uploaded.  The real reason we must
 		// sleep here is time_t is only at the resolution on 1 second.
-		if ( !simple_init ) sleep(1);
+		sleep(1);
 	}
 
 	return ret_value;
@@ -836,10 +856,15 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 	// direction we are going.
 	if ( FilesToSend == NULL ) {
 		if ( simple_init ) {
-			// condor_submit going to the schedd
-			FilesToSend = InputFiles;
-			EncryptFiles = EncryptInputFiles;
-			DontEncryptFiles = DontEncryptInputFiles;
+			if ( IsClient() ) {
+				// condor_submit sending to the schedd
+				FilesToSend = InputFiles;
+				EncryptFiles = EncryptInputFiles;
+				DontEncryptFiles = DontEncryptInputFiles;
+			} else {
+				// schedd sending to condor_transfer_data
+				FilesToSend = OutputFiles;
+			}
 		} else {
 			// starter sending back to the shadow
 			FilesToSend = OutputFiles;
@@ -1135,7 +1160,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	// is _not_ when it was really modified, but when the modifications are actually
 	// commited to disk.  thus we must fsync in order to make certain we do not think
 	// that files like condor_exec.exe have been modified, etc. -Todd <tannenba@cs>
-	bool want_fsync = ( ((IsClient() && !simple_init) || (IsServer() && simple_init)) 
+	bool want_fsync = ( ((IsClient() && !simple_init) ||  // starter receiving
+						 (IsServer() && simple_init))     // schedd receiving
 						 && upload_changed_files );
 
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DoDownload sync=%d\n",
@@ -1490,7 +1516,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			s->set_crypto_mode(false);
 		}
 
-		if ( ExecFile && ( file_strcmp(ExecFile,filename)==0 ) ) {
+		if ( ExecFile && !simple_init && (file_strcmp(ExecFile,filename)==0 )) {
 			// this file is the job executable
 			is_the_executable = true;
 			basefilename = (char *)CONDOR_EXEC ;

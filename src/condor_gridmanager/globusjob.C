@@ -146,8 +146,8 @@ static char *GMStateNames[] = {
 
 #define CHECK_PROXY \
 { \
-	if ( ((PROXY_NEAR_EXPIRED( myProxy ) && condorState != REMOVED) || \
-		  (PROXY_IS_EXPIRED( myProxy ) && condorState == REMOVED)) \
+	if ( ((PROXY_NEAR_EXPIRED( jobProxy ) && condorState != REMOVED) || \
+		  (PROXY_IS_EXPIRED( jobProxy ) && condorState == REMOVED)) \
 		 && gmState != GM_PROXY_EXPIRED ) { \
 		dprintf( D_ALWAYS, "(%d.%d) proxy is about to expire, changing state to GM_PROXY_EXPIRED\n", \
 				 procID.cluster, procID.proc ); \
@@ -168,8 +168,6 @@ template class HashTable<HashKey, GlobusJob *>;
 template class HashBucket<HashKey, GlobusJob *>;
 template class List<OrphanCallback_t>;
 template class Item<OrphanCallback_t>;
-
-static GahpClient GahpMain;
 
 HashTable <HashKey, GlobusJob *> JobsByContact( HASH_TABLE_SIZE,
 												hashFunction );
@@ -309,9 +307,9 @@ void GlobusJobReconfig()
 	// Tell all the resource objects to deal with their new config values
 	GlobusResource *next_resource;
 
-	ResourcesByName.startIterations();
+	GlobusResource::ResourcesByName.startIterations();
 
-	while ( ResourcesByName.iterate( next_resource ) != 0 ) {
+	while ( GlobusResource::ResourcesByName.iterate( next_resource ) != 0 ) {
 		next_resource->Reconfig();
 	}
 }
@@ -661,10 +659,11 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	retryStdioSize = true;
 	resourceManagerString = NULL;
 	myResource = NULL;
-	myProxy = NULL;
+	jobProxy = NULL;
 	gassServerUrl = NULL;
 	gramCallbackContact = NULL;
 	communicationTimeoutTid = -1;
+	gahp = NULL;
 
 	useGridShell = false;
 	mergedGridShellOutClassad = false;
@@ -682,15 +681,17 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		UpdateJobAd( ATTR_HOLD_REASON, "UNDEFINED" );
 	}
 
-	gahp.setNotificationTimerId( evaluateStateTid );
-	gahp.setMode( GahpClient::normal );
-	gahp.setTimeout( gahpCallTimeout );
-
 	buff[0] = '\0';
 	ad->LookupString( ATTR_X509_USER_PROXY, buff );
+	if ( buff[0] == '\0' ) {
+		ad->LookupString( ATTR_X509_USER_PROXY_SUBJECT, buff2 );
+		if ( buff2[0] != '\0' ) {
+			snprintf( buff, sizeof(buff), "#%s", buff2 );
+		}
+	}
 	if ( buff[0] != '\0' ) {
-		myProxy = AcquireProxy( buff, evaluateStateTid );
-		if ( myProxy == NULL ) {
+		jobProxy = AcquireProxy( buff, evaluateStateTid );
+		if ( jobProxy == NULL ) {
 			dprintf( D_ALWAYS, "(%d.%d) error acquiring proxy!\n",
 					 procID.cluster, procID.proc );
 		}
@@ -741,18 +742,18 @@ GlobusJob::GlobusJob( ClassAd *classad )
 
 				dprintf (D_FULLDEBUG,
 						 "Adding new MyProxy entry for proxy %s : host=%s, cred name=%s\n",
-						 myProxy->proxy_filename,
+						 jobProxy->proxy_filename,
 						 myProxyEntry->myproxy_host,
 						 (myProxyEntry->myproxy_credential_name!=NULL)?(myProxyEntry->myproxy_credential_name):"<default>");
-				myProxy->myproxy_entries.Prepend (myProxyEntry); // Add at the top of the list, so it'll be used first
+				jobProxy->myproxy_entries.Prepend (myProxyEntry); // Add at the top of the list, so it'll be used first
 
 
 				// See if we already have a MyProxy entry for the given host/credential name
 				/*int found = FALSE;
 				MyProxyEntry * currentMyProxyEntry = NULL;
-				myProxy->myproxy_entries.Rewind();
+				jobProxy->myproxy_entries.Rewind();
 
-				while (myProxy->myproxy_entries.Next (currentMyProxyEntry)) {
+				while (jobProxy->myproxy_entries.Next (currentMyProxyEntry)) {
 					if (strcmp (currentMyProxyEntry->myproxy_host, myProxyEntry->myproxy_host)) {
 						continue;
 					}
@@ -778,10 +779,10 @@ GlobusJob::GlobusJob( ClassAd *classad )
 				if (!found) {
 					dprintf (D_FULLDEBUG,
 							 "Adding new MyProxy entry for proxy %s : host=%s, cred name=%s\n",
-							 myProxy->proxy_filename,
+							 jobProxy->proxy_filename,
 							 myProxyEntry->myproxy_host,
 							 (myProxyEntry->myproxy_credential_name!=NULL)?(myProxyEntry->myproxy_credential_name):"<default>");
-					myProxy->myproxy_entries.Append (myProxyEntry);
+					jobProxy->myproxy_entries.Append (myProxyEntry);
 				} else {
 					// No need to insert this
 					delete myProxyEntry;
@@ -795,7 +796,7 @@ GlobusJob::GlobusJob( ClassAd *classad )
 				(void)GetMyProxyPasswordFromSchedD(procID.cluster, procID.proc, &myproxy_pwd); */
 
 				//dprintf( D_ALWAYS, "Calling SetMyProxyHostForProxy %s, dn=%s\n", buff, (pDN != NULL)?pDN:"NULL");
-				//SetMyProxyHostForProxy (buff, pDN, myProxy);
+				//SetMyProxyHostForProxy (buff, pDN, jobProxy);
 
 			}
 		}
@@ -803,6 +804,13 @@ GlobusJob::GlobusJob( ClassAd *classad )
 		dprintf( D_ALWAYS, "(%d.%d) %s not set in job ad!\n",
 				 procID.cluster, procID.proc, ATTR_X509_USER_PROXY );
 	}
+
+	snprintf( buff, sizeof(buff), "GLOBUS/%s",
+			  jobProxy->subject->subject_name );
+	gahp = new GahpClient( buff );
+	gahp->setNotificationTimerId( evaluateStateTid );
+	gahp->setMode( GahpClient::normal );
+	gahp->setTimeout( gahpCallTimeout );
 
 	ad->LookupInteger( ATTR_GLOBUS_GRAM_VERSION, jmVersion );
 
@@ -816,26 +824,15 @@ GlobusJob::GlobusJob( ClassAd *classad )
 	}
 
 	// Find/create an appropriate GlobusResource for this job
-	{
-		const char *canonical_name = GlobusResource::CanonicalName( resourceManagerString );
-		int rc;
-		ASSERT(canonical_name);
-		rc = ResourcesByName.lookup( HashKey( canonical_name ),
-									 myResource );
-
-		if ( rc != 0 ) {
-			myResource = new GlobusResource( canonical_name );
-			ASSERT(myResource);
-			ResourcesByName.insert( HashKey( canonical_name ),
-									myResource );
-		} else {
-			ASSERT(myResource);
-		}
+	myResource = GlobusResource::FindOrCreateResource( resourceManagerString,
+													   jobProxy->subject->subject_name);
+	if ( myResource == NULL ) {
+		error_string = "Failed to initialized GlobusResource object";
+		goto error_exit;
 	}
 
 	resourceDown = false;
 	resourceStateKnown = false;
-//	myResource = resource;
 	// RegisterJob() may call our NotifyResourceUp/Down(), so be careful.
 	myResource->RegisterJob( this, job_already_submitted );
 
@@ -924,13 +921,11 @@ GlobusJob::GlobusJob( ClassAd *classad )
 
 GlobusJob::~GlobusJob()
 {
+	if ( gahp ) {
+		delete gahp;
+	}
 	if ( myResource ) {
 		myResource->UnregisterJob( this );
-		// Should the GlobusResource be responsible for doing this?...
-		if ( myResource->IsEmpty() ) {
-			ResourcesByName.remove( HashKey( myResource->ResourceName() ) );
-			delete myResource;
-		}
 	}
 	if ( resourceManagerString ) {
 		free( resourceManagerString );
@@ -948,8 +943,8 @@ GlobusJob::~GlobusJob()
 	if ( localError ) {
 		free( localError );
 	}
-	if ( myProxy ) {
-		ReleaseProxy( myProxy, evaluateStateTid );
+	if ( jobProxy ) {
+		ReleaseProxy( jobProxy, evaluateStateTid );
 	}
 	if ( gassServerUrl ) {
 		free( gassServerUrl );
@@ -966,7 +961,7 @@ GlobusJob::~GlobusJob()
 void GlobusJob::Reconfig()
 {
 	BaseJob::Reconfig();
-	gahp.setTimeout( gahpCallTimeout );
+	gahp->setTimeout( gahpCallTimeout );
 }
 
 int GlobusJob::doEvaluateState()
@@ -994,9 +989,9 @@ int GlobusJob::doEvaluateState()
 		// state that contacts to the jobmanager should be jumping to
 		// GM_RESTART instead.
 	if ( !resourceStateKnown || resourcePingPending || resourceDown ) {
-		gahp.setMode( GahpClient::results_only );
+		gahp->setMode( GahpClient::results_only );
 	} else {
-		gahp.setMode( GahpClient::normal );
+		gahp->setMode( GahpClient::normal );
 	}
 
 	do {
@@ -1023,7 +1018,7 @@ int GlobusJob::doEvaluateState()
 				break;
 			}
 
-			if ( !myProxy ) {
+			if ( !jobProxy ) {
 				UpdateJobAdString( ATTR_HOLD_REASON,
 								   "Proxy file missing or corrupted" );
 				UpdateJobAdInt(ATTR_HOLD_REASON_CODE,
@@ -1033,7 +1028,13 @@ int GlobusJob::doEvaluateState()
 				break;
 			}
 
-			if ( gahp.Initialize( myProxy ) == false ) {
+			if ( !PROXY_IS_VALID(jobProxy) ) {
+				dprintf( D_FULLDEBUG, "(%d.%d) proxy not valid, waiting\n",
+						 procID.cluster, procID.proc );
+				break;
+			}
+
+			if ( gahp->Initialize( jobProxy ) == false ) {
 				dprintf( D_ALWAYS, "(%d.%d) Error initializing GAHP\n",
 						 procID.cluster, procID.proc );
 				UpdateJobAdString( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
@@ -1041,23 +1042,23 @@ int GlobusJob::doEvaluateState()
 				break;
 			}
 
-			gahp.setDelegProxy( myProxy );
+			gahp->setDelegProxy( jobProxy );
 
-			gahp.setMode( GahpClient::blocking );
+			gahp->setMode( GahpClient::blocking );
 
-			err = gahp.globus_gram_client_callback_allow( gramCallbackHandler,
-														  NULL,
-														  &gramCallbackContact );
+			err = gahp->globus_gram_client_callback_allow( gramCallbackHandler,
+														   NULL,
+														   &gramCallbackContact );
 			if ( err != GLOBUS_SUCCESS ) {
 				dprintf( D_ALWAYS, "(%d.%d) Error enabling GRAM callback, err=%d - %s\n", 
 						 procID.cluster, procID.proc, err,
-						 gahp.globus_gram_client_error_string(err) );
+						 gahp->globus_gram_client_error_string(err) );
 				UpdateJobAdString( ATTR_HOLD_REASON, "Failed to initialize GAHP" );
 				gmState = GM_HOLD;
 				break;
 			}
 
-			err = gahp.globus_gass_server_superez_init( &gassServerUrl, 0 );
+			err = gahp->globus_gass_server_superez_init( &gassServerUrl, 0 );
 			if ( err != GLOBUS_SUCCESS ) {
 				dprintf( D_ALWAYS, "(%d.%d) Error enabling GASS server, err=%d\n",
 						 procID.cluster, procID.proc, err );
@@ -1066,7 +1067,7 @@ int GlobusJob::doEvaluateState()
 				break;
 			}
 
-			gahp.setMode( GahpClient::normal );
+			gahp->setMode( GahpClient::normal );
 
 			gmState = GM_START;
 			} break;
@@ -1106,7 +1107,7 @@ int GlobusJob::doEvaluateState()
 			// Register for callbacks from an already-running jobmanager.
 			GOTO_RESTART_IF_JM_DOWN;
 			CHECK_PROXY;
-			rc = gahp.globus_gram_client_job_callback_register( jobContact,
+			rc = gahp->globus_gram_client_job_callback_register( jobContact,
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
 										gramCallbackContact, &status,
 										&error );
@@ -1155,7 +1156,7 @@ int GlobusJob::doEvaluateState()
 			if ( RSL == NULL ) {
 				RSL = buildStdioUpdateRSL();
 			}
-			rc = gahp.globus_gram_client_job_signal( jobContact,
+			rc = gahp->globus_gram_client_job_signal( jobContact,
 								GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_STDIO_UPDATE,
 								RSL->Value(), &status, &error );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -1236,7 +1237,7 @@ int GlobusJob::doEvaluateState()
 					gmState = GM_HOLD;
 					break;
 				}
-				rc = gahp.globus_gram_client_job_request( 
+				rc = gahp->globus_gram_client_job_request( 
 										resourceManagerString,
 										RSL->Value(),
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
@@ -1258,7 +1259,7 @@ int GlobusJob::doEvaluateState()
 					break;
 				}
 				numSubmitAttempts++;
-				jmProxyExpireTime = myProxy->expiration_time;
+				jmProxyExpireTime = jobProxy->expiration_time;
 				if ( rc == GLOBUS_SUCCESS ) {
 					// Previously this supported GRAM 1.0
 					dprintf(D_ALWAYS, "(%d.%d) Unexpected remote response.  GRAM %s is now required.\n", procID.cluster, procID.proc, MIN_SUPPORTED_GRAM_V_STRING);
@@ -1274,7 +1275,7 @@ int GlobusJob::doEvaluateState()
 					SetJobContact(job_contact);
 					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
 									   job_contact );
-					gahp.globus_gram_client_job_contact_free( job_contact );
+					gahp->globus_gram_client_job_contact_free( job_contact );
 					gmState = GM_SUBMIT_SAVE;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_RSL_EVALUATION_FAILED &&
 							(jmVersion == GRAM_V_UNKNOWN || jmVersion >= GRAM_V_1_6) ) {
@@ -1292,7 +1293,8 @@ int GlobusJob::doEvaluateState()
 							procID.cluster, procID.proc,RSL->Value());
 					submitFailureCode = globusError = rc;
 					WriteGlobusSubmitFailedEventToUserLog( ad,
-														   submitFailureCode );
+														   submitFailureCode,
+														   gahp->globus_gram_client_error_string(submitFailureCode) );
 					gmState = GM_UNSUBMITTED;
 					reevaluate_state = true;
 				}
@@ -1336,7 +1338,7 @@ int GlobusJob::doEvaluateState()
 				}
 				GOTO_RESTART_IF_JM_DOWN;
 				CHECK_PROXY;
-				rc = gahp.globus_gram_client_job_signal( jobContact,
+				rc = gahp->globus_gram_client_job_signal( jobContact,
 								GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_REQUEST,
 								NULL, &status, &error );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -1353,7 +1355,8 @@ int GlobusJob::doEvaluateState()
 					// unhandled error
 					LOG_GLOBUS_ERROR( "globus_gram_client_job_signal(COMMIT_REQUEST)", rc );
 					globusError = rc;
-					WriteGlobusSubmitFailedEventToUserLog( ad, globusError );
+					WriteGlobusSubmitFailedEventToUserLog( ad, globusError,
+														   gahp->globus_gram_client_error_string(globusError) );
 					gmState = GM_CANCEL;
 				} else {
 					gmState = GM_SUBMITTED;
@@ -1377,7 +1380,7 @@ int GlobusJob::doEvaluateState()
 					reevaluate_state = true;
 					break;
 				}
-				if ( jmProxyExpireTime < myProxy->expiration_time ) {
+				if ( jmProxyExpireTime < jobProxy->expiration_time ) {
 					gmState = GM_REFRESH_PROXY;
 					break;
 				}
@@ -1406,7 +1409,7 @@ int GlobusJob::doEvaluateState()
 			} else {
 				GOTO_RESTART_IF_JM_DOWN;
 				CHECK_PROXY;
-				rc = gahp.globus_gram_client_job_refresh_credentials(
+				rc = gahp->globus_gram_client_job_refresh_credentials(
 																jobContact );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -1425,7 +1428,7 @@ int GlobusJob::doEvaluateState()
 					gmState = GM_STOP_AND_RESTART;
 					break;
 				}
-				jmProxyExpireTime = myProxy->expiration_time;
+				jmProxyExpireTime = jobProxy->expiration_time;
 				gmState = GM_SUBMITTED;
 			}
 			} break;
@@ -1435,8 +1438,8 @@ int GlobusJob::doEvaluateState()
 			} else {
 				GOTO_RESTART_IF_JM_DOWN;
 				CHECK_PROXY;
-				rc = gahp.globus_gram_client_job_status( jobContact,
-														 &status, &error );
+				rc = gahp->globus_gram_client_job_status( jobContact,
+														  &status, &error );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -1479,7 +1482,7 @@ int GlobusJob::doEvaluateState()
 				int error_size = -1;
 				GetOutputSize( output_size, error_size );
 				sprintf( size_str, "%d %d", output_size, error_size );
-				rc = gahp.globus_gram_client_job_signal( jobContact,
+				rc = gahp->globus_gram_client_job_signal( jobContact,
 									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_STDIO_SIZE,
 									size_str, &status, &error );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -1598,7 +1601,7 @@ int GlobusJob::doEvaluateState()
 			// Tell the jobmanager it can clean up and exit.
 			GOTO_RESTART_IF_JM_DOWN;
 			CHECK_PROXY;
-			rc = gahp.globus_gram_client_job_signal( jobContact,
+			rc = gahp->globus_gram_client_job_signal( jobContact,
 									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_END,
 									NULL, &status, &error );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -1645,7 +1648,7 @@ int GlobusJob::doEvaluateState()
 			// it and restart it to clear up the problem.
 			GOTO_RESTART_IF_JM_DOWN;
 			CHECK_PROXY;
-			rc = gahp.globus_gram_client_job_signal( jobContact,
+			rc = gahp->globus_gram_client_job_signal( jobContact,
 								GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_STOP_MANAGER,
 								NULL, &status, &error );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -1695,7 +1698,7 @@ int GlobusJob::doEvaluateState()
 				if ( RSL == NULL ) {
 					RSL = buildRestartRSL();
 				}
-				rc = gahp.globus_gram_client_job_request(
+				rc = gahp->globus_gram_client_job_request(
 										resourceManagerString,
 										RSL->Value(),
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
@@ -1762,13 +1765,13 @@ int GlobusJob::doEvaluateState()
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_UNDEFINED_EXE ) {
 					gmState = GM_CLEAR_REQUEST;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_WAITING_FOR_COMMIT ) {
-					jmProxyExpireTime = myProxy->expiration_time;
+					jmProxyExpireTime = jobProxy->expiration_time;
 					jmDown = false;
 					rehashJobContact( this, jobContact, job_contact );
 					SetJobContact(job_contact);
 					UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
 									   job_contact );
-					gahp.globus_gram_client_job_contact_free( job_contact );
+					gahp->globus_gram_client_job_contact_free( job_contact );
 					if ( globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 						globusState = globusStateBeforeFailure;
 					}
@@ -1796,7 +1799,7 @@ int GlobusJob::doEvaluateState()
 			// Tell the jobmanager it can proceed with the restart.
 			GOTO_RESTART_IF_JM_DOWN;
 			CHECK_PROXY;
-			rc = gahp.globus_gram_client_job_signal( jobContact,
+			rc = gahp->globus_gram_client_job_signal( jobContact,
 								GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_REQUEST,
 								NULL, &status, &error );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -1836,7 +1839,7 @@ int GlobusJob::doEvaluateState()
 				 globusState != GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED ) {
 				GOTO_RESTART_IF_JM_DOWN;
 				CHECK_PROXY;
-				rc = gahp.globus_gram_client_job_cancel( jobContact );
+				rc = gahp->globus_gram_client_job_cancel( jobContact );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -1887,7 +1890,7 @@ int GlobusJob::doEvaluateState()
 				if ( now >= lastProbeTime + probeInterval ) {
 					GOTO_RESTART_IF_JM_DOWN;
 					CHECK_PROXY;
-					rc = gahp.globus_gram_client_job_status( jobContact,
+					rc = gahp->globus_gram_client_job_status( jobContact,
 														&status, &error );
 					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 						 rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -1947,7 +1950,7 @@ int GlobusJob::doEvaluateState()
 					// forget lost job submissions.
 					GOTO_RESTART_IF_JM_DOWN;
 					CHECK_PROXY;
-					rc = gahp.globus_gram_client_job_signal( jobContact,
+					rc = gahp->globus_gram_client_job_signal( jobContact,
 									GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_COMMIT_END,
 									NULL, &status, &error );
 					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -2007,7 +2010,7 @@ int GlobusJob::doEvaluateState()
 				break;
 			}
 			snprintf( cleanup_rsl, sizeof(cleanup_rsl), "&(cleanup=%s)", jobContact );
-			rc = gahp.globus_gram_client_job_request( 
+			rc = gahp->globus_gram_client_job_request( 
 										resourceManagerString, 
 										cleanup_rsl,
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
@@ -2186,13 +2189,13 @@ int GlobusJob::doEvaluateState()
 				if ( holdReason[0] == '\0' && globusStateErrorCode != 0 ) {
 					snprintf( holdReason, 1024, "Globus error %d: %s",
 							  globusStateErrorCode,
-							  gahp.globus_gram_client_error_string( globusStateErrorCode ) );
+							  gahp->globus_gram_client_error_string( globusStateErrorCode ) );
 					holdCode = CONDOR_HOLD_CODE_GlobusGramError;
 					holdSubCode = globusStateErrorCode;
 				}
 				if ( holdReason[0] == '\0' && globusError != 0 ) {
 					snprintf( holdReason, 1024, "Globus error %d: %s", globusError,
-							  gahp.globus_gram_client_error_string( globusError ) );
+							  gahp->globus_gram_client_error_string( globusError ) );
 					holdCode = CONDOR_HOLD_CODE_GlobusGramError;
 					holdSubCode = globusError;
 				}
@@ -2219,8 +2222,8 @@ int GlobusJob::doEvaluateState()
 				break;
 			}
 			now = time(NULL);
-			// if ( myProxy->expiration_time > JM_MIN_PROXY_TIME + now ) {
-			if ( myProxy->expiration_time > (minProxy_time + 60) + now ) {
+			// if ( jobProxy->expiration_time > JM_MIN_PROXY_TIME + now ) {
+			if ( jobProxy->expiration_time > (minProxy_time + 60) + now ) {
 				// resume handling the job.
 				gmState = GM_START;
 			} else {
@@ -2230,7 +2233,7 @@ int GlobusJob::doEvaluateState()
 		case GM_PUT_TO_SLEEP: {
 			GOTO_RESTART_IF_JM_DOWN;
 			CHECK_PROXY;
-			rc = gahp.globus_gram_client_job_signal( jobContact,
+			rc = gahp->globus_gram_client_job_signal( jobContact,
 								GLOBUS_GRAM_PROTOCOL_JOB_SIGNAL_STOP_MANAGER,
 								NULL, &status, &error );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -2290,7 +2293,7 @@ int GlobusJob::doEvaluateState()
 			enteredCurrentGmState = time(NULL);
 			// If we were waiting for a pending globus call, we're not
 			// anymore so purge it.
-			gahp.purgePendingRequests();
+			gahp->purgePendingRequests();
 			// If we were calling a globus call that used RSL, we're done
 			// with it now, so free it.
 			if ( RSL ) {
@@ -2464,7 +2467,8 @@ void GlobusJob::UpdateGlobusState( int new_state, int new_error_code )
 				submitFailureCode = new_error_code;
 				if ( !submitFailedLogged ) {
 					WriteGlobusSubmitFailedEventToUserLog( ad,
-														   submitFailureCode );
+														   submitFailureCode,
+														   gahp->globus_gram_client_error_string(submitFailureCode) );
 					submitFailedLogged = true;
 				}
 			} else {
@@ -3150,7 +3154,7 @@ bool GlobusJob::FailureNeedsCommit( int error_code )
 bool
 GlobusJob::JmShouldSleep()
 {
-	if ( jmProxyExpireTime < myProxy->expiration_time ) {
+	if ( jmProxyExpireTime < jobProxy->expiration_time ) {
 		return false;
 	}
 	if ( condorState != IDLE && condorState != RUNNING ) {
@@ -3228,7 +3232,8 @@ WriteGlobusSubmitEventToUserLog( ClassAd *job_ad )
 }
 
 bool
-WriteGlobusSubmitFailedEventToUserLog( ClassAd *job_ad, int failure_code )
+WriteGlobusSubmitFailedEventToUserLog( ClassAd *job_ad, int failure_code,
+									   const char *failure_mesg )
 {
 	int cluster, proc;
 	char buf[1024];
@@ -3248,8 +3253,7 @@ WriteGlobusSubmitFailedEventToUserLog( ClassAd *job_ad, int failure_code )
 
 	GlobusSubmitFailedEvent event;
 
-	snprintf( buf, 1024, "%d %s", failure_code,
-			GahpMain.globus_gram_client_error_string(failure_code) );
+	snprintf( buf, 1024, "%d %s", failure_code, failure_mesg );
 	event.reason =  strnewp(buf);
 
 	int rc = ulog->writeEvent(&event);

@@ -76,6 +76,10 @@ public:
 	static SchedDRequest * createJobStageInRequest (const int request_id,
 													const ClassAd * classad);
 
+	static SchedDRequest * createJobStageOutRequest (const int request_id,
+													 const int cluster_id,
+													 const int proc_id);
+
 													
 	~SchedDRequest() {
 		if (classad)
@@ -116,6 +120,7 @@ typedef enum {
 		SDC_UPDATE_CONSTRAINED,
 		SDC_UPDATE_JOB,
 		SDC_JOB_STAGE_IN,
+		SDC_JOB_STAGE_OUT,
 } schedd_command_type;
 	
 	schedd_command_type command;

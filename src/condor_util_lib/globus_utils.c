@@ -209,6 +209,81 @@ x509_proxy_subject_name( const char *proxy_file )
 #endif /* !defined(GSS_AUTHENTICATION) */
 }
 
+/* Return the identity name of a given X509 cert. For proxy certs, this
+  will return the identity that the proxy can act on behalf of, rather than
+  the subject of the proxy cert itself. Normally, this will have the
+  practical effect of stripping off any "/CN=proxy" strings from the subject
+  name.
+  On error, return NULL.
+  On success, return a pointer to a null-terminated string.
+  IT IS THE CALLER'S RESPONSBILITY TO DE-ALLOCATE THE STIRNG
+  WITH free().
+ */
+char *
+x509_proxy_identity_name( const char *proxy_file )
+{
+#if !defined(CONDOR_GSI)
+	_globus_error_message = "This version of Condor doesn't support X509 credentials!" ;
+	return NULL;
+#else
+
+	globus_gsi_cred_handle_t         handle       = NULL;
+	globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
+	char *subject_name = NULL;
+	int must_free_proxy_file = FALSE;
+
+	if ( activate_globus_gsi() != 0 ) {
+		return NULL;
+	}
+
+	if (globus_gsi_cred_handle_attrs_init(&handle_attrs)) {
+		_globus_error_message = "problem during internal initialization1";
+		goto cleanup;
+	}
+
+	if (globus_gsi_cred_handle_init(&handle, handle_attrs)) {
+		_globus_error_message = "problem during internal initialization2";
+		goto cleanup;
+	}
+
+	/* Check for proxy file */
+	if (proxy_file == NULL) {
+		proxy_file = get_x509_proxy_filename();
+		if (proxy_file == NULL) {
+			goto cleanup;
+		}
+		must_free_proxy_file = TRUE;
+	}
+
+	// We should have a proxy file, now, try to read it
+	if (globus_gsi_cred_read_proxy(handle, proxy_file)) {
+		_globus_error_message = "unable to read proxy file";
+	   goto cleanup;
+	}
+
+	if (globus_gsi_cred_get_identity_name(handle, &subject_name)) {
+		_globus_error_message = "unable to extract identity name";
+		goto cleanup;
+	}
+
+ cleanup:
+	if (must_free_proxy_file) {
+		free(proxy_file);
+	}
+
+	if (handle_attrs) {
+		globus_gsi_cred_handle_attrs_destroy(handle_attrs);
+	}
+
+	if (handle) {
+		globus_gsi_cred_handle_destroy(handle);
+	}
+
+	return subject_name;
+
+#endif /* !defined(GSS_AUTHENTICATION) */
+}
+
 /* Return the time at which the proxy expires. On error, return -1.
  */
 time_t

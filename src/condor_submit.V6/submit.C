@@ -104,6 +104,7 @@ int		DisableFileChecks = 0;
 int	  ClusterId = -1;
 int	  ProcId = -1;
 int	  JobUniverse;
+char *JobGridType = NULL;
 int		Remote=0;
 int		ClusterCreated = FALSE;
 int		ActiveQueueConnection = FALSE;
@@ -168,6 +169,8 @@ char	*X509UserProxy	= "x509userproxy";
 char	*GlobusScheduler = "globusscheduler";
 char    *GridShell = "gridshell";
 char	*GlobusRSL = "globusrsl";
+char	*RemoteSchedd = "remote_schedd";
+char	*RemotePool = "remote_pool";
 char	*RendezvousDir	= "rendezvousdir";
 
 char	*FileRemaps = "file_remaps";
@@ -920,7 +923,9 @@ SetExecutable()
 	if( copySpool == NULL)
 	{
 		copySpool = (char *)malloc(16);
-		if ( JobUniverse == CONDOR_UNIVERSE_GLOBUS && !Remote ) {
+		if ( Remote ) {
+			strcpy(copySpool,"FALSE");
+		} else if ( JobUniverse == CONDOR_UNIVERSE_GLOBUS ) {
 			strcpy(copySpool, "FALSE");
 		} else {
 			strcpy(copySpool, "TRUE");
@@ -1023,34 +1028,38 @@ SetUniverse()
 		(void) sprintf (buffer, "%s = %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_GLOBUS);
 		InsertJobExpr (buffer);
 		free(univ);
+		univ = 0;
 	
-		// Set Grid_Type (for Globus jobs)
-		univ = condor_param( Grid_Type, ATTR_JOB_GRID_TYPE );
-		if( !univ ) {
-			univ = strdup("globus");
+		// Set Grid_Type
+		if ( JobGridType != NULL ) {
+			free( JobGridType );
+		}
+		JobGridType = condor_param( Grid_Type, ATTR_JOB_GRID_TYPE );
+		if( !JobGridType ) {
+			JobGridType = strdup("globus");
 		} else {
 			// Validate
 			// Valid values are (as of 6.7): nordugrid, oracle, gt3, globus,
-			//    gt2, infn
-			if ((stricmp (univ, "globus") == MATCH) ||
-				(stricmp (univ, "gt2") == MATCH) ||
-				(stricmp (univ, "gt3") == MATCH) ||
-				(stricmp (univ, "infn") == MATCH) ||
-				(stricmp (univ, "blah") == MATCH) ||
-				(stricmp (univ, "nordugrid") == MATCH) ||
-				(stricmp (univ, "oracle") == MATCH)) {
+			//    gt2, infn, condor
+			if ((stricmp (JobGridType, "globus") == MATCH) ||
+				(stricmp (JobGridType, "gt2") == MATCH) ||
+				(stricmp (JobGridType, "gt3") == MATCH) ||
+				(stricmp (JobGridType, "infn") == MATCH) ||
+				(stricmp (JobGridType, "blah") == MATCH) ||
+				(stricmp (JobGridType, "condor") == MATCH) ||
+				(stricmp (JobGridType, "nordugrid") == MATCH) ||
+				(stricmp (JobGridType, "oracle") == MATCH)) {
 				// We're ok	
 				// Values are case-insensitive for gridmanager, so we don't need to change case			
 			} else {
-				fprintf( stderr, "\nERROR: Invalid value '%s' for grid_type\n", univ );
-				fprintf( stderr, "Must be one of: globus, gt2, gt3, nordugrid, or oracle\n" );
+				fprintf( stderr, "\nERROR: Invalid value '%s' for grid_type\n", JobGridType );
+				fprintf( stderr, "Must be one of: globus, gt2, gt3, condor, nordugrid, or oracle\n" );
 				exit( 1 );
 			}
 		}			
 		
-		(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_GRID_TYPE, univ);
+		(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_GRID_TYPE, JobGridType);
 		InsertJobExpr (buffer);
-		free (univ);
 		
 		return;
 	};
@@ -2020,8 +2029,15 @@ SetStdFile( int which_file )
 	char	*generic_name;
 	char	 buffer[_POSIX_PATH_MAX + 32];
 
-	if(JobUniverse==CONDOR_UNIVERSE_GLOBUS) {
-		stream_it = true;
+	if(JobUniverse==CONDOR_UNIVERSE_GLOBUS && which_file != 0) {
+		if ( stricmp (JobGridType, "globus") == MATCH ||
+			 stricmp (JobGridType, "gt2") == MATCH ||
+			 stricmp (JobGridType, "gt3") == MATCH ) {
+
+			stream_it = true;
+		} else {
+			stream_it = false;
+		}
 	} else {
 		stream_it = false;
 	}
@@ -3223,18 +3239,15 @@ SetGlobusParams()
 	char buff[2048];
 	char *tmp;
 	char *use_gridshell;
-	char *grid_type;
 
 	if ( JobUniverse != CONDOR_UNIVERSE_GLOBUS )
 		return;
 
-	grid_type = condor_param( Grid_Type, ATTR_JOB_GRID_TYPE );
-
-	if ((grid_type == NULL ||
-			(stricmp (grid_type, "globus") == MATCH) ||
-			(stricmp (grid_type, "gt2") == MATCH) ||
-			(stricmp (grid_type, "gt3") == MATCH) ||
-			(stricmp (grid_type, "nordugrid") == MATCH))) {
+	if ( stricmp (JobGridType, "globus") == MATCH ||
+		 stricmp (JobGridType, "gt2") == MATCH ||
+		 stricmp (JobGridType, "gt3") == MATCH ||
+		 stricmp (JobGridType, "oracle") == MATCH ||
+		 stricmp (JobGridType, "nordugrid") == MATCH ) {
 
 		char *globushost;
 
@@ -3260,6 +3273,19 @@ SetGlobusParams()
 		}
 
 		free( globushost );
+
+		sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_CONTACT_STRING,
+				 NULL_JOB_CONTACT );
+		InsertJobExpr (buffer);
+
+		if( (tmp = condor_param(GlobusResubmit,ATTR_GLOBUS_RESUBMIT_CHECK)) ) {
+			sprintf( buff, "%s = %s", ATTR_GLOBUS_RESUBMIT_CHECK, tmp );
+			free(tmp);
+			InsertJobExpr (buff, false );
+		} else {
+			sprintf( buff, "%s = FALSE", ATTR_GLOBUS_RESUBMIT_CHECK);
+			InsertJobExpr (buff, false );
+		}
 	}
 
 	if ( (use_gridshell = condor_param(GridShell)) ) {
@@ -3271,28 +3297,20 @@ SetGlobusParams()
 		free(use_gridshell);
 	}
 
-	sprintf( buffer, "%s = \"%s\"", ATTR_GLOBUS_CONTACT_STRING,
-			 NULL_JOB_CONTACT );
-	InsertJobExpr (buffer);
+	if ( stricmp (JobGridType, "globus") == MATCH ||
+		 stricmp (JobGridType, "gt2") == MATCH ||
+		 stricmp (JobGridType, "gt3") == MATCH ) {
 
-	sprintf( buffer, "%s = %d", ATTR_GLOBUS_STATUS,
-			 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED );
-	InsertJobExpr (buffer);
+		sprintf( buffer, "%s = %d", ATTR_GLOBUS_STATUS,
+				 GLOBUS_GRAM_PROTOCOL_JOB_STATE_UNSUBMITTED );
+		InsertJobExpr (buffer);
+
+		sprintf( buffer, "%s = 0", ATTR_NUM_GLOBUS_SUBMITS );
+		InsertJobExpr (buffer, false );
+	}
 
 	sprintf( buffer, "%s = False", ATTR_WANT_CLAIMING );
 	InsertJobExpr(buffer);
-
-	sprintf( buffer, "%s = 0", ATTR_NUM_GLOBUS_SUBMITS );
-	InsertJobExpr (buffer, false );
-
-	if( (tmp = condor_param(GlobusResubmit,ATTR_GLOBUS_RESUBMIT_CHECK)) ) {
-		sprintf( buff, "%s = %s", ATTR_GLOBUS_RESUBMIT_CHECK, tmp );
-		free(tmp);
-		InsertJobExpr (buff, false );
-	} else {
-		sprintf( buff, "%s = FALSE", ATTR_GLOBUS_RESUBMIT_CHECK);
-		InsertJobExpr (buff, false );
-	}
 
 	if( (tmp = condor_param(GlobusRematch,ATTR_REMATCH_CHECK)) ) {
 		sprintf( buff, "%s = %s", ATTR_REMATCH_CHECK, tmp );
@@ -3306,7 +3324,41 @@ SetGlobusParams()
 		InsertJobExpr ( buff );
 	}
 
+	if ( stricmp ( JobGridType, "condor" ) == MATCH ) {
 
+		char *remote_schedd;
+
+		if ( !(remote_schedd = condor_param( RemoteSchedd, ATTR_REMOTE_SCHEDD ) ) ) {
+			fprintf(stderr, "\nERROR: Condor grid jobs require a \"%s\" parameter\n",
+					RemoteSchedd );
+			DoCleanup( 0, 0, NULL );
+			exit( 1 );
+		}
+
+		sprintf( buffer, "%s = \"%s\"", ATTR_REMOTE_SCHEDD, remote_schedd );
+		InsertJobExpr (buffer);
+
+		if( (tmp = condor_param(RemotePool, ATTR_REMOTE_POOL)) ) {
+			sprintf( buff, "%s = \"%s\"", ATTR_REMOTE_POOL, tmp );
+			free( tmp );
+			InsertJobExpr ( buff );
+		}
+
+		if ( strstr(remote_schedd,"$$") ) {
+
+			// We need to perform matchmaking on the job in order to find
+			// the RemoteSchedd.
+			sprintf(buffer,"%s = FALSE", ATTR_JOB_MATCHED);
+			InsertJobExpr (buffer);
+			sprintf(buffer,"%s = 0", ATTR_CURRENT_HOSTS);
+			InsertJobExpr (buffer);
+			sprintf(buffer,"%s = 1", ATTR_MAX_HOSTS);
+			InsertJobExpr (buffer);
+		}
+
+		free( remote_schedd );
+
+	}
 
 	//ckireyev: MyProxy-related crap
 	if ((tmp = condor_param (ATTR_MYPROXY_HOST_NAME))) {
@@ -3351,10 +3403,6 @@ SetGlobusParams()
 	}
 
 	// END MyProxy-related crap
-
-	if (grid_type != NULL) {
-		free (grid_type);
-	}
 }
 
 #if !defined(WIN32)
@@ -3707,8 +3755,12 @@ queue(int num)
 	for (int i=0; i < num; i++) {
 
 		if (NewExecutable) {
- 			if ((ClusterId = NewCluster()) == -1) {
+ 			if ((ClusterId = NewCluster()) < 0) {
 				fprintf(stderr, "\nERROR: Failed to create cluster\n");
+				if ( ClusterId == -2 ) {
+					fprintf(stderr,
+					"Number of submitted jobs would exceed MAX_JOBS_SUBMITTED\n");
+				}
 				exit(1);
 			}
 				// We only need to call init_job_ad the second time we see
@@ -3728,6 +3780,16 @@ queue(int num)
 		}
 
 		ProcId = NewProc (ClusterId);
+
+		if ( ProcId < 0 ) {
+			fprintf(stderr, "\nERROR: Failed to create proc\n");
+			if ( ProcId == -2 ) {
+				fprintf(stderr,
+				"Number of submitted jobs would exceed MAX_JOBS_SUBMITTED\n");
+			}
+			DoCleanup(0,0,NULL);
+			exit(1);
+		}
 
 		/*
 		**	Insert the current idea of the cluster and
@@ -3750,69 +3812,80 @@ queue(int num)
 			SetExecutable();
 		}
 		SetMachineCount();
-//		if ( JobUniverse == CONDOR_UNIVERSE_GLOBUS ) {
+
 			// Find the X509 user proxy
-			// First param for it in the submit file. If it's not there,
-			// then check the usual locations (as defined by GSI).
+			// First param for it in the submit file. If it's not there
+			// and the job type requires an x509 proxy (globus, nordugrid),
+			// then check the usual locations (as defined by GSI) and
+			// bomb out if we can't find it.
 
 		char *proxy_file = condor_param( X509UserProxy );
 
-		if ( proxy_file == NULL ) {
-			proxy_file = get_x509_proxy_filename();
-		}
+		if ( proxy_file == NULL && JobUniverse == CONDOR_UNIVERSE_GLOBUS &&
+			 (stricmp (JobGridType, "globus") == MATCH ||
+			  stricmp (JobGridType, "gt2") == MATCH ||
+			  stricmp (JobGridType, "gt3") == MATCH ||
+			  stricmp (JobGridType, "nordugrid") == MATCH)) {
 
-		// Issue an error if (no proxy) && (universe=globus,gt2,gt3,nordugrid)
-		if ( proxy_file == NULL) {
-			char * grid_type = condor_param( Grid_Type, ATTR_JOB_GRID_TYPE );
-			if (JobUniverse == CONDOR_UNIVERSE_GLOBUS &&
-				(grid_type == NULL ||
-					(stricmp (grid_type, "globus") == MATCH) ||
-					(stricmp (grid_type, "gt2") == MATCH) ||
-					(stricmp (grid_type, "gt3") == MATCH) ||
-					(stricmp (grid_type, "nordugrid") == MATCH))) {
+			proxy_file = get_x509_proxy_filename();
+
+			if ( proxy_file == NULL ) {
+
 				fprintf( stderr, "\nERROR: can't determine proxy filename\n" );
 				fprintf( stderr, "x509 user proxy is required for globus, gt2, gt3 or nordugrid jobs\n");
 				exit (1);
 			}
 		}
-				
 
 		if (proxy_file != NULL) {
-#ifndef WIN32
-			if ( check_x509_proxy(proxy_file) != 0 ) {
-				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
-				exit( 1 );
-			}
+			if ( proxy_file[0] == '#' ) {
+				(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
+							   &proxy_file[1]);
+				InsertJobExpr(buffer);	
 
-			/* Insert the proxy subject name into the ad */
-			char *proxy_subject = x509_proxy_subject_name(proxy_file);
-			if ( !proxy_subject ) {
-				fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
-				exit( 1 );
-			}
-			/* Dreadful hack: replace all the spaces in the cert subject
-			* with underscores.... why?  because we need to pass this
-			* as a command line argument to the gridmanager, and until
-			* daemoncore handles command-line args w/ an argv array, spaces
-			* will cause trouble.  
-			*/
-			char *space_tmp;
-			do {
-				if ( (space_tmp = strchr(proxy_subject,' ')) ) {
-					*space_tmp = '_';
+//				(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY, 
+//							   proxy_file);
+//				InsertJobExpr(buffer);	
+				free( proxy_file );
+			} else {
+#ifndef WIN32
+				if ( check_x509_proxy(proxy_file) != 0 ) {
+					fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
+					exit( 1 );
 				}
-			} while (space_tmp);
-			(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
-						proxy_subject);
-			InsertJobExpr(buffer);	
-			free( proxy_subject );
+
+				/* Insert the proxy subject name into the ad */
+				char *proxy_subject = x509_proxy_identity_name(proxy_file);
+				if ( !proxy_subject ) {
+					fprintf( stderr, "\nERROR: %s\n", x509_error_string() );
+					exit( 1 );
+				}
+				/* Dreadful hack: replace all the spaces in the cert subject
+				* with underscores.... why?  because we need to pass this
+				* as a command line argument to the gridmanager, and until
+				* daemoncore handles command-line args w/ an argv array, spaces
+				* will cause trouble.  
+				*/
+	/*
+				char *space_tmp;
+				do {
+					if ( (space_tmp = strchr(proxy_subject,' ')) ) {
+						*space_tmp = '_';
+					}
+				} while (space_tmp);
+	*/
+				(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY_SUBJECT, 
+							proxy_subject);
+				InsertJobExpr(buffer);	
+				free( proxy_subject );
 #endif
 
-					
-			(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY, 
-						full_path(proxy_file));
-			InsertJobExpr(buffer);	
-			free( proxy_file );
+						
+				(void) sprintf(buffer, "%s=\"%s\"", ATTR_X509_USER_PROXY, 
+							full_path(proxy_file));
+				InsertJobExpr(buffer);	
+				free( proxy_file );
+			}
 		}
 	
 

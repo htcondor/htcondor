@@ -77,6 +77,8 @@ struct ProxySubject {
     ((p)->expiration_time - time(NULL) <= minProxy_time)
 #define PROXY_IS_EXPIRED( p ) \
     ((p)->expiration_time - time(NULL) <= 180)
+#define PROXY_IS_VALID( p ) \
+    ((p)->expiration_time >= 0)
 
 extern int CheckProxies_interval;
 extern int minProxy_time;

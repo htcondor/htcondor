@@ -18,7 +18,7 @@ CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(ORACLE_JOB_FLAGS) $(NORDUGRID_JOB_FLAGS) $(STD_C_PLUS_FLAGS)
 LIB = $(ORACLE_JOB_LIB) $(NORDUGRID_JOB_LIB) $(DAEMONCORE_LIB) $(STD_LIBS)
 
-OBJ = gridmanager_main.o gridmanager.o gridutil.o globusjob.o globusresource.o gt3job.o gt3resource.o infnbatchjob.o mirrorjob.o mirrorresource.o proxymanager.o gahp-client.o $(ORACLE_JOB_OBJ) $(NORDUGRID_JOB_OBJ) basejob.o baseresource.o
+OBJ = gridmanager_main.o gridmanager.o gridutil.o globusjob.o globusresource.o gt3job.o gt3resource.o infnbatchjob.o mirrorjob.o mirrorresource.o condorjob.o condorresource.o proxymanager.o gahp-client.o $(ORACLE_JOB_OBJ) $(NORDUGRID_JOB_OBJ) basejob.o baseresource.o
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 

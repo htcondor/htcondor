@@ -36,15 +36,14 @@
 class GlobusJob;
 class GlobusResource;
 
-extern HashTable <HashKey, GlobusResource *> ResourcesByName;
-
 class GlobusResource : public BaseResource
 {
- public:
-
-	GlobusResource( const char *resource_name );
+ protected:
+	GlobusResource( const char *resource_name, const char *proxy_subject );
 	~GlobusResource();
 
+ public:
+	bool Init();
 	void Reconfig();
 	void RegisterJob( GlobusJob *job, bool already_submitted );
 	void UnregisterJob( GlobusJob *job );
@@ -61,6 +60,11 @@ class GlobusResource : public BaseResource
 	time_t getLastStatusChangeTime() { return lastStatusChange; }
 
 	static const char *CanonicalName( const char *name );
+	static const char *HashName( const char *resource_name,
+								 const char *proxy_subject );
+
+	static GlobusResource *FindOrCreateResource( const char *resource_name,
+												 const char *proxy_subject );
 
 	static void setProbeInterval( int new_interval )
 		{ probeInterval = new_interval; }
@@ -74,6 +78,9 @@ class GlobusResource : public BaseResource
 	static void setEnableGridMonitor( bool enable )
 		{ enableGridMonitor = enable; }
 
+	// This should be private, but GlobusJob references it directly for now
+	static HashTable <HashKey, GlobusResource *> ResourcesByName;
+
  private:
 	int DoPing();
 	int CheckMonitor();
@@ -86,6 +93,9 @@ class GlobusResource : public BaseResource
 	int ReadMonitorLogFile();
 	void AbandonMonitor();
 
+	bool initialized;
+
+	char *proxySubject;
 	bool resourceDown;
 	bool firstPingDone;
 	int pingTimerId;

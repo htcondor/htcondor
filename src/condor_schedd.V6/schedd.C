@@ -260,6 +260,7 @@ Scheduler::Scheduler()
 	QueueCleanInterval = 0; JobStartDelay = 0;
 	RequestClaimTimeout = 0;
 	MaxJobsRunning = 0;
+	MaxJobsSubmitted = INT_MAX;
 	NegotiateAllJobsInCluster = false;
 	JobsStarted = 0;
 	JobsIdle = 0;
@@ -409,10 +410,6 @@ Scheduler::~Scheduler()
 			free( Owners[i].Name );
 			Owners[i].Name = NULL;
 		}
-		if( Owners[i].X509 ) { 
-			free( Owners[i].X509 );
-			Owners[i].X509 = NULL;
-		}
 	}
 
 	if (_gridlogic)
@@ -488,8 +485,6 @@ Scheduler::count_jobs()
 	int		prio_compar();
 	char	tmp[512];
 
-	ExtArray<OwnerData> SubmittingOwners;
-
 	 // copy owner data to old-owners table
 	ExtArray<OwnerData> OldOwners(Owners);
 	int Old_N_Owners=N_Owners;
@@ -509,7 +504,6 @@ Scheduler::count_jobs()
 	for ( i = 0; i < Owners.getsize(); i++) {
 		Owners[i].Name = NULL;
 		Owners[i].Domain = NULL;
-		Owners[i].X509 = NULL;
 		Owners[i].JobsRunning = 0;
 		Owners[i].JobsIdle = 0;
 		Owners[i].JobsHeld = 0;
@@ -540,7 +534,7 @@ Scheduler::count_jobs()
 	while(matches->iterate(rec) == 1) {
 		char *at_sign = strchr(rec->user, '@');
 		if (at_sign) *at_sign = '\0';
-		int OwnerNum = insert_owner( rec->user, NULL );
+		int OwnerNum = insert_owner( rec->user );
 		if (at_sign) *at_sign = '@';
 		if (rec->shadowRec && !rec->pool) {
 			Owners[OwnerNum].JobsRunning++;
@@ -680,59 +674,35 @@ Scheduler::count_jobs()
 	ad->InsertOrUpdate(tmp);
 
 
-		// Make another owners array that is independent of X509 proxy stuff.
-	int numSubmittingOwners = 0;
-	for (i=0;i<N_Owners;i++) {
-		bool already_done = false;
-		int j;
-		for (j=0;j<numSubmittingOwners;j++) {
-			if (strcmp(SubmittingOwners[j].Name,Owners[i].Name)==0) {
-				already_done = true;
-				SubmittingOwners[j].JobsRunning += Owners[i].JobsRunning;
-				SubmittingOwners[j].JobsIdle += Owners[i].JobsIdle;
-				SubmittingOwners[j].JobsHeld += Owners[i].JobsHeld;
-				SubmittingOwners[j].JobsFlocked += Owners[i].JobsFlocked;
-				break;
-			}
-		}
-		if ( already_done ) continue;
-		j = numSubmittingOwners;
-		SubmittingOwners[j].JobsRunning = Owners[i].JobsRunning;
-		SubmittingOwners[j].JobsIdle = Owners[i].JobsIdle;
-		SubmittingOwners[j].JobsHeld = Owners[i].JobsHeld;
-		SubmittingOwners[j].JobsFlocked = Owners[i].JobsFlocked;
-		SubmittingOwners[j].Name = Owners[i].Name;
-		numSubmittingOwners++;
-	}
-
-	for ( i=0; i<numSubmittingOwners; i++) {
-	  sprintf(tmp, "%s = %d", ATTR_RUNNING_JOBS, SubmittingOwners[i].JobsRunning);
+	for ( i=0; i<N_Owners; i++) {
+	  sprintf(tmp, "%s = %d", ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
-	  sprintf(tmp, "%s = %d", ATTR_IDLE_JOBS, SubmittingOwners[i].JobsIdle);
+	  sprintf(tmp, "%s = %d", ATTR_IDLE_JOBS, Owners[i].JobsIdle);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
-	  sprintf(tmp, "%s = %d", ATTR_HELD_JOBS, SubmittingOwners[i].JobsHeld);
+	  sprintf(tmp, "%s = %d", ATTR_HELD_JOBS, Owners[i].JobsHeld);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
-	  sprintf(tmp, "%s = %d", ATTR_FLOCKED_JOBS, SubmittingOwners[i].JobsFlocked);
+	  sprintf(tmp, "%s = %d", ATTR_FLOCKED_JOBS, Owners[i].JobsFlocked);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
-	  sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, SubmittingOwners[i].Name, UidDomain);
+	  sprintf(tmp, "%s = \"%s@%s\"", ATTR_NAME, Owners[i].Name, UidDomain);
 	  dprintf (D_FULLDEBUG, "Changed attribute: %s\n", tmp);
 	  ad->InsertOrUpdate(tmp);
 
-
+	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
+			   Owners[i].Name, UidDomain );
 
 		// Update collectors
 	  int num_updates = Collectors->sendUpdates( UPDATE_SUBMITTOR_AD, ad );
 	  dprintf( D_ALWAYS, "Sent ad to %d collectors for %s@%s\n", 
 				 num_updates,
-				 SubmittingOwners[i].Name, UidDomain );
+				 Owners[i].Name, UidDomain );
 	}
 
 	// update collector of the pools with which we are flocking, if
@@ -760,7 +730,7 @@ Scheduler::count_jobs()
 			while(matches->iterate(rec) == 1) {
 				char *at_sign = strchr(rec->user, '@');
 				if (at_sign) *at_sign = '\0';
-				int OwnerNum = insert_owner( rec->user, NULL );
+				int OwnerNum = insert_owner( rec->user );
 				if (at_sign) *at_sign = '@';
 				if (rec->shadowRec && rec->pool &&
 					!strcmp(rec->pool, flock_neg->pool())) {
@@ -815,7 +785,7 @@ Scheduler::count_jobs()
 		for (i=0; i < N_Owners; i++) {
 			if ( Owners[i].GlobusJobs > 0 ) {
 				GridUniverseLogic::JobCountUpdate(Owners[i].Name, 
-						Owners[i].Domain,Owners[i].X509, NULL, 0, 0, 
+						Owners[i].Domain,NULL, NULL, 0, 0, 
 						Owners[i].GlobusJobs,Owners[i].GlobusUnmanagedJobs);
 			}
 		}
@@ -846,10 +816,6 @@ Scheduler::count_jobs()
 		if ( OldOwners[i].Name ) {
 			free(OldOwners[i].Name);
 			OldOwners[i].Name = NULL;
-		}
-		if ( OldOwners[i].X509 ) {
-			free(OldOwners[i].X509);
-			OldOwners[i].X509 = NULL;
 		}
 
 		  // If k < N_Owners, we found this OldOwner in the current
@@ -920,7 +886,6 @@ count( ClassAd *job )
 	int		niceUser;
 	char 	buf[_POSIX_PATH_MAX];
 	char 	buf2[_POSIX_PATH_MAX];
-	char*	x509userproxy;
 	char*	owner;
 	char 	domain[_POSIX_PATH_MAX];
 	int		cur_hosts;
@@ -968,24 +933,6 @@ count( ClassAd *job )
 		universe = CONDOR_UNIVERSE_STANDARD;
 	}
 
-	x509userproxy = NULL;
-	if ( GridUniverseLogic::group_per_subject() ) {
-		job->LookupString(ATTR_X509_USER_PROXY_SUBJECT, &x509userproxy);
-		if ( (!x509userproxy) && (universe==CONDOR_UNIVERSE_GLOBUS) ) {
-			int cluster = 0;
-			int proc = 0;
-			job->LookupInteger(ATTR_CLUSTER_ID, cluster);
-			job->LookupInteger(ATTR_PROC_ID, proc);
-			dprintf(D_ALWAYS, 
-				"ERROR %d.%d has no %s attribute.  Ignoring. "
-				"Update your condor_submit!\n",
-				cluster, proc, ATTR_X509_USER_PROXY_SUBJECT);
-			return 0;
-		}
-	} else {
-		job->LookupString(ATTR_X509_USER_PROXY, &x509userproxy);
-	}
-
 	// calculate owner for per submittor information.
 	buf[0] = '\0';
 	job->LookupString(ATTR_ACCOUNTING_GROUP,buf,sizeof(buf));	// TODDCORE
@@ -994,9 +941,6 @@ count( ClassAd *job )
 		if ( buf[0] == '\0' ) {	
 			dprintf(D_ALWAYS, "Job has no %s attribute.  Ignoring...\n",
 					ATTR_OWNER);
-			if (x509userproxy != NULL) {
-				free(x509userproxy);
-			}
 			return 0;
 		}
 	}
@@ -1022,7 +966,7 @@ count( ClassAd *job )
 
 	// insert owner even if REMOVED or HELD for condor_q -{global|sub}
 	// this function makes its own copies of the memory passed in 
-	int OwnerNum = scheduler.insert_owner( owner, x509userproxy );
+	int OwnerNum = scheduler.insert_owner( owner );
 
 	// make certain gridmanager has a copy of mirrored jobs
 	char *mirror_schedd_name = NULL;
@@ -1074,9 +1018,6 @@ count( ClassAd *job )
 
 		// bailout now, since all the crud below is only for jobs
 		// which the schedd needs to service
-		if (x509userproxy != NULL) {
-			free(x509userproxy);
-		}
 		return 0;
 	} 
 
@@ -1130,15 +1071,12 @@ count( ClassAd *job )
 			int proc = 0;
 			job->LookupInteger(ATTR_CLUSTER_ID, cluster);
 			job->LookupInteger(ATTR_PROC_ID, proc);
-			GridUniverseLogic::JobCountUpdate(owner,domain,x509userproxy,NULL,
-				cluster, proc, needs_management, job_managed ? 0 : 1);
+			GridUniverseLogic::JobCountUpdate(owner,domain,NULL,NULL,
+					cluster, proc, needs_management, job_managed ? 0 : 1);
 		}
 			// If we do not need to do matchmaking on this job (i.e.
 			// service this globus universe job), than we can bailout now.
 		if (!want_service) {
-			if (x509userproxy != NULL) {
-				free(x509userproxy);
-			}
 			return 0;
 		}
 		status = real_status;	// set status back for below logic...
@@ -1157,9 +1095,6 @@ count( ClassAd *job )
 		scheduler.JobsRemoved++;
 	}
 
-	if (x509userproxy != NULL) {
-		free(x509userproxy);
-	}
 	return 0;
 }
 
@@ -1217,24 +1152,16 @@ service_this_universe(int universe, ClassAd* job)
 }
 
 int
-Scheduler::insert_owner(char* owner, char *x509proxy)
+Scheduler::insert_owner(char* owner)
 {
 	int		i;
 	for ( i=0; i<N_Owners; i++ ) {
 		if( strcmp(Owners[i].Name,owner) == 0 ) {
-			if(x509proxy == NULL && Owners[i].X509 == NULL)
-				return i; //neither of us want an X509
-			if(x509proxy != NULL && Owners[i].X509 != NULL 
-				 && strcmp(Owners[i].X509,x509proxy) == 0)
-				return i; //We both have an X509
+			return i;
 		}
 	}
 
 	Owners[i].Name = strdup( owner );
-	if(x509proxy) 
-		Owners[i].X509 = strdup( x509proxy); 
-	else
-		Owners[i].X509 = NULL;
 
 	N_Owners +=1;
 	return i;
@@ -1387,21 +1314,14 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 		if ( job_managed  ) {
 			char owner[_POSIX_PATH_MAX];
 			char domain[_POSIX_PATH_MAX];
-			char proxy[_POSIX_PATH_MAX];
 			owner[0] = '\0';
-			proxy[0] = '\0';
 			domain[0] = '\0';
 			job_ad->LookupString(ATTR_OWNER,owner);
 			job_ad->LookupString(ATTR_NT_DOMAIN,domain);
-			if ( GridUniverseLogic::group_per_subject() ) {
-				job_ad->LookupString(ATTR_X509_USER_PROXY_SUBJECT,proxy);
-			} else {
-				job_ad->LookupString(ATTR_X509_USER_PROXY,proxy);
-			}
 			if ( gridman_per_job ) {
-				GridUniverseLogic::JobRemoved(owner,domain,proxy,NULL,job_id.cluster,job_id.proc);
+				GridUniverseLogic::JobRemoved(owner,domain,NULL,NULL,job_id.cluster,job_id.proc);
 			} else {
-				GridUniverseLogic::JobRemoved(owner,domain,proxy,NULL,0,0);
+				GridUniverseLogic::JobRemoved(owner,domain,NULL,NULL,0,0);
 			}
 			return;
 		}
@@ -2075,10 +1995,50 @@ Scheduler::abort_job(int, Stream* s)
 }
 
 int
+Scheduler::transferJobFilesReaper(int tid,int exit_status)
+{
+	ExtArray<PROC_ID> *jobs;
+	int i;
+
+	dprintf(D_FULLDEBUG,"transferJobFilesReaper tid=%d status=%d\n",
+			tid,exit_status);
+
+		// find the list of jobs which we just finished receiving the files
+	spoolJobFileWorkers->lookup(tid,jobs);
+
+	if (!jobs) {
+		dprintf(D_ALWAYS,
+			"ERROR - transferJobFilesReaper no entry for tid %d\n",tid);
+		return FALSE;
+	}
+
+	if (exit_status == FALSE) {
+		dprintf(D_ALWAYS,"ERROR - Staging of job files failed!\n");
+		spoolJobFileWorkers->remove(tid);
+		delete jobs;
+		return FALSE;
+	}
+
+		// For each job, modify its ClassAd
+	time_t now = time(NULL);
+	int len = (*jobs).getlast() + 1;
+	for (i=0; i < len; i++) {
+			// TODO --- maybe put this in a transaction?
+		SetAttributeInt((*jobs)[i].cluster,(*jobs)[i].proc,ATTR_STAGE_OUT_FINISH,now);
+	}
+
+		// Now, deallocate memory
+	spoolJobFileWorkers->remove(tid);
+	delete jobs;
+	return TRUE;
+}
+
+int
 Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 {
 	ExtArray<PROC_ID> *jobs;
 	const char *AttrsToModify[] = { 
+		ATTR_JOB_CMD,
 		ATTR_JOB_INPUT,
 		ATTR_JOB_OUTPUT,
 		ATTR_JOB_ERROR,
@@ -2089,7 +2049,10 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		NULL };		// list must end with a NULL
 
 
-	dprintf(D_FULLDEBUG,"JobFilesReaper tid=%d status=%d\n",tid,exit_status);
+	dprintf(D_FULLDEBUG,"spoolJobFilesReaper tid=%d status=%d\n",
+			tid,exit_status);
+
+	time_t now = time(NULL);
 
 		// find the list of jobs which we just finished receiving the files
 	spoolJobFileWorkers->lookup(tid,jobs);
@@ -2196,6 +2159,19 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 			}
 		}
 
+			// Set ATTR_STAGE_IN_FINISH if not already set.
+		int spool_completion_time = 0;
+		ad->LookupInteger(ATTR_STAGE_IN_FINISH,spool_completion_time);
+		if ( !spool_completion_time ) {
+			// Note: we used to subtract one from the time here, because
+			// we were worried about making certain we'd transfer back 
+			// output files that changed even of the job ran for less than
+			// one second.  The problem is we were also transferring back
+			// input files.  Doo!! So now instead, we sleep for one second in
+			// the forked child to solve these issues.
+			SetAttributeInt(cluster,proc,ATTR_STAGE_IN_FINISH,now);
+		}
+
 			// And now release the job.
 		releaseJob(cluster,proc,"Data files spooled",false,false,false,false);
 		CommitTransaction();
@@ -2210,15 +2186,33 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 }
 
 int
+Scheduler::transferJobFilesWorkerThread(void *arg, Stream* s)
+{
+	return generalJobFilesWorkerThread(arg,s,TRANSFER_DATA);
+}
+
+int
 Scheduler::spoolJobFilesWorkerThread(void *arg, Stream* s)
+{
+	int ret_val;
+	ret_val = generalJobFilesWorkerThread(arg,s,SPOOL_JOB_FILES);
+		// Now we sleep here for one second.  Why?  So we are certain
+		// to transfer back output files even if the job ran for less 
+		// than one second.
+	sleep(1);
+	return ret_val;
+}
+
+int
+Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s, int mode)
 {
 	ReliSock* rsock = (ReliSock*)s;
 	int JobAdsArrayLen = 0;
 	int i;
 	ExtArray<PROC_ID> **tjobs = ( ExtArray<PROC_ID> **) arg;
 	ExtArray<PROC_ID> *jobs = *tjobs;
+	int result;
 	int old_timeout;
-
 	int cluster, proc;
 	
 	/* Setup a large timeout; when lots of jobs are being submitted w/ 
@@ -2228,31 +2222,67 @@ Scheduler::spoolJobFilesWorkerThread(void *arg, Stream* s)
 
 	JobAdsArrayLen = jobs->getlast() + 1;
 //	dprintf(D_FULLDEBUG,"TODD spoolJobFilesWorkerThread: JobAdsArrayLen=%d\n",JobAdsArrayLen);
+	if ( mode == TRANSFER_DATA ) {
+		// if sending sandboxes, first tell the client how many
+		// we are about to send.
+		rsock->encode();
+		if ( !rsock->code(JobAdsArrayLen) || !rsock->eom() ) {
+			dprintf( D_ALWAYS, "generalJobFilesWorkerThread(): "
+					 "failed to send JobAdsArrayLen (%d) \n",
+					 JobAdsArrayLen );
+			refuse(s);
+			return FALSE;
+		}
+	}
 	for (i=0; i<JobAdsArrayLen; i++) {
 		FileTransfer ftrans;
 		cluster = (*jobs)[i].cluster;
 		proc = (*jobs)[i].proc;
 		ClassAd * ad = GetJobAd( cluster, proc );
 		if ( !ad ) {
-			dprintf( D_ALWAYS, "spoolJobFiles(): "
+			dprintf( D_ALWAYS, "generalJobFilesWorkerThread(): "
 					 "job ad %d.%d not found\n",cluster,proc );
 			refuse(s);
 			s->timeout(old_timeout);
 			return FALSE;
 		} else {
-			dprintf(D_FULLDEBUG,"spoolJobFiles(): "
+			dprintf(D_FULLDEBUG,"generalJobFilesWorkerThread(): "
 					"transfer files for job %d.%d\n",cluster,proc);
 		}
-		if ( !ftrans.SimpleInit(ad, true, true, rsock) ) {
-			dprintf( D_ALWAYS, "spoolJobFiles(): "
+
+			// Create a file transfer object, with schedd as the server
+		result = ftrans.SimpleInit(ad, true, true, rsock);
+		if ( !result ) {
+			dprintf( D_ALWAYS, "generalJobFilesWorkerThread(): "
 					 "failed to init filetransfer for job %d.%d \n",
 					 cluster,proc );
 			refuse(s);
 			s->timeout(old_timeout);
 			return FALSE;
 		}
-		if ( !ftrans.DownloadFiles() ) {
-			dprintf( D_ALWAYS, "spoolJobFiles(): "
+
+			// Send or receive files as needed
+		if ( mode == SPOOL_JOB_FILES ) {
+			// receive sandbox into the schedd
+			result = ftrans.DownloadFiles();
+		} else {
+			// send sandbox out of the schedd
+			rsock->encode();
+			// first send the classad for the job
+			result = ad->put(*rsock);
+			if (!result) {
+				dprintf(D_ALWAYS, "generalJobFilesWorkerThread(): "
+					"failed to send job ad for job %d.%d \n",
+					cluster,proc );
+			} else {
+				rsock->eom();
+				// and then upload the files
+				result = ftrans.UploadFiles();
+			}
+		}
+
+		if ( !result ) {
+			dprintf( D_ALWAYS, "generalJobFilesWorkerThread(): "
 					 "failed to transfer files for job %d.%d \n",
 					 cluster,proc );
 			refuse(s);
@@ -2264,25 +2294,38 @@ Scheduler::spoolJobFilesWorkerThread(void *arg, Stream* s)
 		
 	rsock->eom();
 
-	rsock->encode();
-	int answer = OK;
+	int answer;
+	if ( mode == SPOOL_JOB_FILES ) {
+		rsock->encode();
+		answer = OK;
+	} else {
+		rsock->decode();
+		answer = -1;
+	}
 	rsock->code(answer);
 	rsock->eom();
 	s->timeout(old_timeout);
 
-	return TRUE;
+	if (answer == OK ) {
+		return TRUE;
+	} else {
+		return FALSE;
+	}
 }
 
 
 int
-Scheduler::spoolJobFiles(int, Stream* s)
+Scheduler::spoolJobFiles(int mode, Stream* s)
 {
 	ReliSock* rsock = (ReliSock*)s;
 	int JobAdsArrayLen = 0;
 	ExtArray<PROC_ID> *jobs = NULL;
+	char *constraint_string = NULL;
 	int i;
-	static int reaper_id = -1;
+	static int spool_reaper_id = -1;
+	static int transfer_reaper_id = -1;
 	PROC_ID a_job;
+	int tid;
 
 		// make sure this connection is authenticated, and we know who
 		// the user is.  also, set a timeout, since we don't want to
@@ -2315,40 +2358,87 @@ Scheduler::spoolJobFiles(int, Stream* s)
 		}
 	}	
 
-		// read the number of jobs involved
+
 	rsock->decode();
-	if ( !rsock->code(JobAdsArrayLen) || JobAdsArrayLen <= 0 ) {
+	if ( mode == SPOOL_JOB_FILES ) {
+			// read the number of jobs involved
+//		if ( !rsock->code(JobAdsArrayLen) || JobAdsArrayLen <= 0 ) {
+		if ( !rsock->code(JobAdsArrayLen) ) {
+				dprintf( D_ALWAYS, "spoolJobFiles(): "
+						 "failed to read JobAdsArrayLen (%d)\n",JobAdsArrayLen );
+				refuse(s);
+				return FALSE;
+		}
+		if ( JobAdsArrayLen <= 0 ) {
 			dprintf( D_ALWAYS, "spoolJobFiles(): "
-					 "failed to read JobAdsArrayLen (%d)\n",JobAdsArrayLen );
+					 "read bad JobAdsArrayLen value %d\n", JobAdsArrayLen );
 			refuse(s);
 			return FALSE;
-	}
-	rsock->eom();
-	dprintf(D_FULLDEBUG,"spoolJobFiles(): read JobAdsArrayLen - %d\n",JobAdsArrayLen);
+		}
+		rsock->eom();
+		dprintf(D_FULLDEBUG,"spoolJobFiles(): read JobAdsArrayLen - %d\n",JobAdsArrayLen);
 
-	if (JobAdsArrayLen <= 0) {
-		refuse(s);
-		return FALSE;
+		if (JobAdsArrayLen <= 0) {
+			refuse(s);
+			return FALSE;
+		}
+	}
+
+	if ( mode == TRANSFER_DATA ) {
+			// read constraint string
+		if ( !rsock->code(constraint_string) || constraint_string == NULL ) {
+				dprintf( D_ALWAYS, "spoolJobFiles(): "
+						 "failed to read constraint string\n" );
+				refuse(s);
+				return FALSE;
+		}
 	}
 
 	jobs = new ExtArray<PROC_ID>;
 	ASSERT(jobs);
 
-	for (i=0; i<JobAdsArrayLen; i++) {
-		rsock->code(a_job);
-		(*jobs)[i] = a_job;
+	setQSock(rsock);	// so OwnerCheck() will work
+
+	time_t now = time(NULL);
+
+	if ( mode == SPOOL_JOB_FILES ) {
+		for (i=0; i<JobAdsArrayLen; i++) {
+			rsock->code(a_job);
+				// Only add jobs to our list if the caller has permission to do so;
+				// cuz only the owner of a job (or queue super user) is allowed
+				// to transfer data to/from a job.
+			if (OwnerCheck(a_job.cluster,a_job.proc)) {
+				(*jobs)[i] = a_job;
+				SetAttributeInt(a_job.cluster,a_job.proc,ATTR_STAGE_IN_START,now);
+			}
+		}
 	}
+
+	if ( mode == TRANSFER_DATA ) {
+		JobAdsArrayLen = 0;
+		ClassAd * tmp_ad = GetNextJobByConstraint(constraint_string,1);
+		while (tmp_ad) {
+			if ( tmp_ad->LookupInteger(ATTR_CLUSTER_ID,a_job.cluster) &&
+				 tmp_ad->LookupInteger(ATTR_PROC_ID,a_job.proc) &&
+				 OwnerCheck(a_job.cluster, a_job.proc) )
+			{
+				(*jobs)[JobAdsArrayLen++] = a_job;
+			}
+			tmp_ad = GetNextJobByConstraint(constraint_string,0);
+		}
+		if (constraint_string) free(constraint_string);
+			// Now set ATTR_STAGE_OUT_START
+		for (i=0; i<JobAdsArrayLen; i++) {
+				// TODO --- maybe put this in a transaction?
+			SetAttributeInt((*jobs)[i].cluster,(*jobs)[i].proc,ATTR_STAGE_OUT_START,now);
+		}
+
+	}
+
+
+	unsetQSock();
 
 	rsock->eom();
-
-	if ( reaper_id == -1 ) {
-		reaper_id = daemonCore->Register_Reaper(
-				"spoolJobFilesReaper",
-				(ReaperHandlercpp) &Scheduler::spoolJobFilesReaper,
-				"spoolJobFilesReaper",
-				this
-			);
-	}
 
 		// We want to pass out thread a pointer to the jobs ExtArray.
 		// But daemonCore frees the thread argument when the thread exits.
@@ -2358,13 +2448,44 @@ Scheduler::spoolJobFiles(int, Stream* s)
 	void ** thread_arg = (void **)malloc( sizeof(jobs) );
 	*thread_arg = (void *)jobs;
 
-		// Start a new thread (process on Unix) to do the work
-	int tid = daemonCore->Create_Thread(
-			(ThreadStartFunc) &Scheduler::spoolJobFilesWorkerThread,
-			(void *)thread_arg,
-			s,
-			reaper_id
-			);
+	if ( mode == SPOOL_JOB_FILES ) {
+		if ( spool_reaper_id == -1 ) {
+			spool_reaper_id = daemonCore->Register_Reaper(
+					"spoolJobFilesReaper",
+					(ReaperHandlercpp) &Scheduler::spoolJobFilesReaper,
+					"spoolJobFilesReaper",
+					this
+				);
+		}
+
+
+			// Start a new thread (process on Unix) to do the work
+		tid = daemonCore->Create_Thread(
+				(ThreadStartFunc) &Scheduler::spoolJobFilesWorkerThread,
+				(void *)thread_arg,
+				s,
+				spool_reaper_id
+				);
+	}
+
+	if ( mode == TRANSFER_DATA ) {
+		if ( transfer_reaper_id == -1 ) {
+			transfer_reaper_id = daemonCore->Register_Reaper(
+					"transferJobFilesReaper",
+					(ReaperHandlercpp) &Scheduler::transferJobFilesReaper,
+					"transferJobFilesReaper",
+					this
+				);
+		}
+
+			// Start a new thread (process on Unix) to do the work
+		tid = daemonCore->Create_Thread(
+				(ThreadStartFunc) &Scheduler::transferJobFilesWorkerThread,
+				(void *)thread_arg,
+				s,
+				transfer_reaper_id
+				);
+	}
 
 	if ( tid == FALSE ) {
 		free(thread_arg);
@@ -7047,6 +7168,8 @@ Scheduler::Init()
 		MaxJobsRunning = atoi( tmp );
 		free( tmp );
 	}
+
+	MaxJobsSubmitted = param_integer("MAX_JOBS_SUBMITTED",INT_MAX);
 	
 	tmp = param( "NEGOTIATE_ALL_JOBS_IN_CLUSTER" );
 	if( !tmp || tmp[0] == 'f' || tmp[0] == 'F' ) {
@@ -7287,6 +7410,9 @@ Scheduler::Register()
 			(CommandHandlercpp)&Scheduler::actOnJobs, 
 			"actOnJobs", this, WRITE);
 	 daemonCore->Register_Command(SPOOL_JOB_FILES, "SPOOL_JOB_FILES", 
+			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
+			"spoolJobFiles", this, WRITE);
+	 daemonCore->Register_Command(TRANSFER_DATA, "TRANSFER_DATA", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
 			"spoolJobFiles", this, WRITE);
 
@@ -8027,6 +8153,7 @@ Scheduler::dumpState(int, Stream* s) {
 	intoAd ( ad, "JobStartCount", JobStartCount );
 	intoAd ( ad, "JobsThisBurst", JobsThisBurst );
 	intoAd ( ad, "MaxJobsRunning", MaxJobsRunning );
+	intoAd ( ad, "MaxJobsSubmitted", MaxJobsSubmitted );
 	intoAd ( ad, "JobsStarted", JobsStarted );
 	intoAd ( ad, "SwapSpace", SwapSpace );
 	intoAd ( ad, "ShadowSizeEstimate", ShadowSizeEstimate );

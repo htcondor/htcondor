@@ -34,7 +34,7 @@
 #include "dc_schedd.h"
 
 #include "gridmanager.h"
-#include "mirrorjob.h"
+#include "condorjob.h"
 #include "condor_config.h"
 
 
@@ -46,10 +46,10 @@
 #define GM_SUBMIT				4
 #define GM_SUBMIT_SAVE			5
 #define GM_STAGE_IN				6
-#define GM_SUBMITTED_MIRROR_INACTIVE	7
+#define GM_SUBMITTED			7
 #define GM_DONE_SAVE			8
 #define GM_DONE_COMMIT			9
-#define GM_CANCEL_1				10
+#define GM_CANCEL				10
 #define GM_FAILED				11
 #define GM_DELETE				12
 #define GM_CLEAR_REQUEST		13
@@ -57,15 +57,11 @@
 #define GM_PROXY_EXPIRED		15
 #define GM_REFRESH_PROXY		16
 #define GM_START				17
-#define GM_MIRROR_ACTIVE_SAVE	18
-#define GM_VACATE_SCHEDD		19
-#define GM_SUBMITTED_MIRROR_ACTIVE	20
-#define GM_HOLD_MIRROR_ACTIVE	21
-#define GM_HOLD_REMOTE_JOB		22
-#define GM_RELEASE_REMOTE_JOB	23
-#define GM_CANCEL_2				24
-#define GM_VACATE_WAIT			25
-#define GM_POLL_ACTIVE			26
+#define GM_HOLD_REMOTE_JOB		18
+#define GM_RELEASE_REMOTE_JOB	19
+#define GM_POLL_ACTIVE			20
+#define GM_STAGE_OUT			21
+#define GM_RECOVER_POLL			22
 
 static char *GMStateNames[] = {
 	"GM_INIT",
@@ -75,10 +71,10 @@ static char *GMStateNames[] = {
 	"GM_SUBMIT",
 	"GM_SUBMIT_SAVE",
 	"GM_STAGE_IN",
-	"GM_SUBMITTED_MIRROR_INACTIVE",
+	"GM_SUBMITTED",
 	"GM_DONE_SAVE",
 	"GM_DONE_COMMIT",
-	"GM_CANCEL_1",
+	"GM_CANCEL",
 	"GM_FAILED",
 	"GM_DELETE",
 	"GM_CLEAR_REQUEST",
@@ -86,15 +82,11 @@ static char *GMStateNames[] = {
 	"GM_PROXY_EXPIRED",
 	"GM_REFRESH_PROXY",
 	"GM_START",
-	"GM_MIRROR_ACTIVE_SAVE",
-	"GM_VACATE_SCHEDD",
-	"GM_SUBMITTED_MIRROR_ACTIVE",
-	"GM_HOLD_MIRROR_ACTIVE",
 	"GM_HOLD_REMOTE_JOB",
 	"GM_RELEASE_REMOTE_JOB",
-	"GM_CANCEL_2",
-	"GM_VACATE_WAIT",
-	"GM_POLL_ACTIVE"
+	"GM_POLL_ACTIVE",
+	"GM_STAGE_OUT",
+	"GM_RECOVER_POLL"
 };
 
 #define JOB_STATE_UNKNOWN				-1
@@ -113,129 +105,68 @@ static char *GMStateNames[] = {
 
 #define HASH_TABLE_SIZE			500
 
-template class HashTable<HashKey, MirrorJob *>;
-template class HashBucket<HashKey, MirrorJob *>;
+template class HashTable<HashKey, CondorJob *>;
+template class HashBucket<HashKey, CondorJob *>;
 
-HashTable <HashKey, MirrorJob *> MirrorJobsById( HASH_TABLE_SIZE,
+HashTable <HashKey, CondorJob *> CondorJobsById( HASH_TABLE_SIZE,
 												 hashFunction );
 
 
-void MirrorJobInit()
+void CondorJobInit()
 {
 }
 
-void MirrorJobReconfig()
+void CondorJobReconfig()
 {
 	int tmp_int;
 
-	tmp_int = param_integer( "MIRROR_JOB_POLL_INTERVAL", 5 * 60 );
-	MirrorResource::setPollInterval( tmp_int );
+	tmp_int = param_integer( "CONDOR_JOB_POLL_INTERVAL", 5 * 60 );
+	CondorResource::setPollInterval( tmp_int );
 
 	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 5 * 60 );
-	MirrorJob::setGahpCallTimeout( tmp_int );
+	CondorJob::setGahpCallTimeout( tmp_int );
 
 	tmp_int = param_integer("GRIDMANAGER_CONNECT_FAILURE_RETRY_COUNT",3);
-	MirrorJob::setConnectFailureRetry( tmp_int );
-
-	tmp_int = param_integer("MIRROR_JOB_LEASE_INTERVAL",1800);
-	MirrorJob::setLeaseInterval( tmp_int );
+	CondorJob::setConnectFailureRetry( tmp_int );
 }
 
-const char *MirrorJobAdConst = "JobUniverse =?= 5 && MirrorSchedd =!= Undefined";
+const char *CondorJobAdConst = "JobUniverse =?= 9 && (JobGridType == \"condor\") =?= True";
 
-bool MirrorJobAdMustExpand( const ClassAd *jobad )
+bool CondorJobAdMustExpand( const ClassAd *jobad )
 {
 	int must_expand = 0;
 
 	jobad->LookupBool(ATTR_JOB_MUST_EXPAND, must_expand);
+	if ( !must_expand ) {
+		char resource_name[800];
+		jobad->LookupString( ATTR_REMOTE_SCHEDD, resource_name );
+		if ( strstr(resource_name,"$$") ) {
+			must_expand = 1;
+		}
+	}
 
 	return must_expand != 0;
 }
 
-BaseJob *MirrorJobCreate( ClassAd *jobad )
+BaseJob *CondorJobCreate( ClassAd *jobad )
 {
-	return (BaseJob *)new MirrorJob( jobad );
+	return (BaseJob *)new CondorJob( jobad );
 }
 
 
-static
-ClassAd *ClassAdDiff( ClassAd *old_ad, ClassAd *new_ad )
-{
-	ClassAd *diff_ad;
-	ExprTree *old_expr;
-	ExprTree *new_expr;
-	const char *next_name;
-	StringList new_attr_names;
+int CondorJob::submitInterval = 300;			// default value
+int CondorJob::gahpCallTimeout = 300;			// default value
+int CondorJob::maxConnectFailures = 3;			// default value
 
-	if ( old_ad == NULL || new_ad == NULL ) {
-		return NULL;
-	}
-
-	diff_ad = new ClassAd;
-
-	new_ad->ResetName();
-	while ( (next_name = new_ad->NextNameOriginal()) != NULL ) {
-		new_attr_names.append( next_name );
-
-		old_expr = old_ad->Lookup( next_name );
-		new_expr = new_ad->Lookup( next_name );
-
-		if ( new_expr == NULL ) {
-			EXCEPT( "ClassAdDiff: new_expr is NULL" );
-		}
-
-		if ( ( old_expr == NULL &&
-			   new_expr->RArg()->MyType() != LX_UNDEFINED ) ||
-			 (*old_expr == *new_expr) == false ) {
-
-			diff_ad->Insert( new_expr->DeepCopy() );
-		}
-	}
-
-	old_ad->ResetName();
-	while ( (next_name = old_ad->NextNameOriginal()) != NULL ) {
-		MyString buff;
-		if ( new_attr_names.contains_anycase( next_name ) == false && 
-			 old_ad->Lookup( next_name )->RArg()->MyType() != LX_UNDEFINED ) {
-
-			buff.sprintf( "%s = Undefined", next_name );
-			diff_ad->Insert( buff.Value() );
-		}
-	}
-
-	return diff_ad;
-}
-
-static
-void ClassAdPatch( ClassAd *orig_ad, ClassAd *diff_ad )
-{
-	ExprTree *diff_expr;
-
-	if ( orig_ad == NULL || diff_ad == NULL ) {
-		return;
-	}
-
-	diff_ad->ResetExpr();
-	while ( (diff_expr = diff_ad->NextExpr()) != NULL ) {
-		orig_ad->Insert( diff_expr->DeepCopy() );
-	}
-}
-
-int MirrorJob::submitInterval = 300;			// default value
-int MirrorJob::gahpCallTimeout = 300;			// default value
-int MirrorJob::maxConnectFailures = 3;			// default value
-int MirrorJob::leaseInterval = 1800;			// default value
-
-MirrorJob::MirrorJob( ClassAd *classad )
+CondorJob::CondorJob( ClassAd *classad )
 	: BaseJob( classad )
 {
-	int tmp;
 	char buff[4096];
 	char buff2[4096];
 	char *error_string = NULL;
 	char *gahp_path;
 
-	mirrorJobId.cluster = 0;
+	remoteJobId.cluster = 0;
 	gahpAd = NULL;
 	gmState = GM_INIT;
 	remoteState = JOB_STATE_UNKNOWN;
@@ -244,11 +175,11 @@ MirrorJob::MirrorJob( ClassAd *classad )
 	lastSubmitAttempt = 0;
 	numSubmitAttempts = 0;
 	submitFailureCode = 0;
-	mirrorScheddName = NULL;
+	remoteScheddName = NULL;
+	remotePoolName = NULL;
 	remoteJobIdString = NULL;
-	mirrorActive = false;
-	mirrorReleased = false;
 	submitterId = NULL;
+	jobProxy = NULL;
 	myResource = NULL;
 	newRemoteStatusAd = NULL;
 	newRemoteStatusServerTime = 0;
@@ -269,16 +200,32 @@ MirrorJob::MirrorJob( ClassAd *classad )
 	}
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_MIRROR_SCHEDD, buff );
+	ad->LookupString( ATTR_X509_USER_PROXY, buff );
 	if ( buff[0] != '\0' ) {
-		mirrorScheddName = strdup( buff );
+		jobProxy = AcquireProxy( buff, evaluateStateTid );
+		if ( jobProxy == NULL ) {
+			dprintf( D_ALWAYS, "(%d.%d) error acquiring proxy!\n",
+					 procID.cluster, procID.proc );
+		}
+	}
+
+	buff[0] = '\0';
+	ad->LookupString( ATTR_REMOTE_SCHEDD, buff );
+	if ( buff[0] != '\0' ) {
+		remoteScheddName = strdup( buff );
 	} else {
-		error_string = "MirrorSchedd is not set in the job ad";
+		error_string = "RemoteSchedd is not set in the job ad";
 		goto error_exit;
 	}
 
 	buff[0] = '\0';
-	ad->LookupString( ATTR_MIRROR_JOB_ID, buff );
+	ad->LookupString( ATTR_REMOTE_POOL, buff );
+	if ( buff[0] != '\0' ) {
+		remotePoolName = strdup( buff );
+	}
+
+	buff[0] = '\0';
+	ad->LookupString( ATTR_REMOTE_JOB_ID, buff );
 	if ( buff[0] != '\0' ) {
 		SetRemoteJobId( buff );
 	} else {
@@ -298,39 +245,30 @@ MirrorJob::MirrorJob( ClassAd *classad )
 		goto error_exit;
 	}
 
-	myResource = MirrorResource::FindOrCreateResource( mirrorScheddName );
+	myResource = CondorResource::FindOrCreateResource( remoteScheddName,
+													   remotePoolName );
 	myResource->RegisterJob( this, submitterId );
 
-	gahp_path = param("MIRROR_GAHP");
+	gahp_path = param("CONDOR_GAHP");
 	if ( gahp_path == NULL ) {
-		gahp_path = param( "CONDOR_GAHP" );
-		if ( gahp_path == NULL ) {
-			error_string = "CONDOR_GAHP not defined";
-			goto error_exit;
-		}
+		error_string = "CONDOR_GAHP not defined";
+		goto error_exit;
 	}
-		// TODO remove mirrorScheddName from the gahp server key if/when
+		// TODO remove remoteScheddName from the gahp server key if/when
 		//   a gahp server can handle multiple schedds
-	sprintf( buff, "MIRROR/%s", mirrorScheddName );
-	sprintf( buff2, "-f -s %s", mirrorScheddName );
+	sprintf( buff, "CONDOR/%s/%s", remotePoolName ? remotePoolName : "NULL",
+			 remoteScheddName );
+	sprintf( buff2, "-f -s %s", remoteScheddName );
+	if ( remotePoolName ) {
+		strcat( buff2, " -P " );
+		strcat( buff2, remotePoolName );
+	}
 	gahp = new GahpClient( buff, gahp_path, buff2 );
 	free( gahp_path );
 
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
-
-	tmp = 0;
-	ad->LookupBool( ATTR_MIRROR_ACTIVE, tmp );
-	if ( tmp != 0 ) {
-		mirrorActive = true;
-	}
-
-	tmp = 0;
-	ad->LookupBool( ATTR_MIRROR_RELEASED, tmp );
-	if ( tmp != 0 ) {
-		mirrorReleased = true;
-	}
 
 	return;
 
@@ -344,8 +282,11 @@ MirrorJob::MirrorJob( ClassAd *classad )
 	return;
 }
 
-MirrorJob::~MirrorJob()
+CondorJob::~CondorJob()
 {
+	if ( jobProxy != NULL ) {
+		ReleaseProxy( jobProxy, evaluateStateTid );
+	}
 	if ( submitterId != NULL ) {
 		free( submitterId );
 	}
@@ -356,11 +297,14 @@ MirrorJob::~MirrorJob()
 		myResource->UnregisterJob( this );
 	}
 	if ( remoteJobIdString != NULL ) {
-		MirrorJobsById.remove( HashKey( remoteJobIdString ) );
+		CondorJobsById.remove( HashKey( remoteJobIdString ) );
 		free( remoteJobIdString );
 	}
-	if ( mirrorScheddName ) {
-		free( mirrorScheddName );
+	if ( remoteScheddName ) {
+		free( remoteScheddName );
+	}
+	if ( remotePoolName ) {
+		free( remotePoolName );
 	}
 	if ( gahpAd ) {
 		delete gahpAd;
@@ -370,13 +314,13 @@ MirrorJob::~MirrorJob()
 	}
 }
 
-void MirrorJob::Reconfig()
+void CondorJob::Reconfig()
 {
 	BaseJob::Reconfig();
 	gahp->setTimeout( gahpCallTimeout );
 }
 
-int MirrorJob::doEvaluateState()
+int CondorJob::doEvaluateState()
 {
 	int old_gm_state;
 	int old_remote_state;
@@ -427,15 +371,81 @@ int MirrorJob::doEvaluateState()
 			// attempt a restart of a jobmanager only to be told that the
 			// old jobmanager process is still alive.
 			errorString = "";
-			if ( mirrorJobId.cluster == 0 ) {
+			if ( remoteJobId.cluster == 0 ) {
 				gmState = GM_CLEAR_REQUEST;
-			} else if ( mirrorReleased == false ) {
-				gmState = GM_SUBMITTED_MIRROR_INACTIVE;
-			} else if ( mirrorActive == false ) {
-				gmState = GM_VACATE_SCHEDD;
+			} else if ( condorState == COMPLETED ) {
+				gmState = GM_DONE_COMMIT;
 			} else {
-				gmState = GM_SUBMITTED_MIRROR_ACTIVE;
+				gmState = GM_RECOVER_POLL;
 			}
+			} break;
+		case GM_RECOVER_POLL: {
+			int num_ads = 0;
+			int tmp_int = 0;
+			ClassAd **status_ads = NULL;
+			MyString constraint;
+			constraint.sprintf( "%s==%d&&%s==%d", ATTR_CLUSTER_ID,
+								remoteJobId.cluster, ATTR_PROC_ID,
+								remoteJobId.proc );
+			rc = gahp->condor_job_status_constrained( remoteScheddName,
+													  constraint.Value(),
+													  &num_ads, &status_ads );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+			if ( rc != GLOBUS_SUCCESS ) {
+				// unhandled error
+				dprintf( D_ALWAYS,
+						 "(%d.%d) condor_job_status_constrained() failed: %s\n",
+						 procID.cluster, procID.proc, gahp->getErrorString() );
+				errorString = gahp->getErrorString();
+				gmState = GM_CANCEL;
+				break;
+			}
+			if ( num_ads != 1 ) {
+					// Didn't get the number of ads we expected. Abort!
+				dprintf( D_ALWAYS,
+						 "(%d.%d) condor_job_status_constrained() returned %d ads\n",
+						 procID.cluster, procID.proc, num_ads );
+				errorString = "Remote schedd returned multiple ads";
+				gmState = GM_CANCEL;
+			} else if ( status_ads[0]->LookupInteger( ATTR_STAGE_IN_FINISH,
+													  tmp_int ) == 0 ||
+						tmp_int <= 0 ) {
+					// We haven't finished staging in files yet
+				gmState = GM_STAGE_IN;
+			} else {
+
+					// Copy any attributes we care about from the remote
+					// ad to our local one before doing anything else
+				ProcessRemoteAd( status_ads[0] );
+				int server_time;
+				if ( status_ads[0]->LookupInteger( ATTR_SERVER_TIME,
+												   server_time ) == 0 ) {
+					dprintf( D_ALWAYS, "(%d.%d) Ad from remote schedd has "
+							 "no %s, faking with current local time\n",
+							 procID.cluster, procID.proc, ATTR_SERVER_TIME );
+					server_time = time(NULL);
+				}
+				lastRemoteStatusServerTime = server_time;
+
+				if ( remoteState == COMPLETED &&
+					 status_ads[0]->LookupInteger( ATTR_STAGE_OUT_FINISH,
+												   tmp_int ) != 0 &&
+					 tmp_int > 0 ) {
+
+						// We already staged out all the files
+					gmState = GM_DONE_SAVE;
+				} else {
+						// All other cases can be handled by GM_SUBMITTED
+					gmState = GM_SUBMITTED;
+				}
+			}
+			for ( int i = 0; i < num_ads; i++ ) {
+				delete status_ads[i];
+			}
+			free( status_ads );
 			} break;
 		case GM_UNSUBMITTED: {
 			// There are no outstanding remote submissions for this job (if
@@ -458,8 +468,7 @@ int MirrorJob::doEvaluateState()
 				break;
 			}
 			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
-				UpdateJobAdString( ATTR_HOLD_REASON,
-									"Attempts to submit failed" );
+				errorString = gahp->getErrorString();
 				gmState = GM_HOLD;
 				break;
 			}
@@ -475,7 +484,7 @@ int MirrorJob::doEvaluateState()
 					gmState = GM_HOLD;
 					break;
 				}
-				rc = gahp->condor_job_submit( mirrorScheddName,
+				rc = gahp->condor_job_submit( remoteScheddName,
 											  gahpAd,
 											  &job_id_string );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -488,13 +497,48 @@ int MirrorJob::doEvaluateState()
 					SetRemoteJobId( job_id_string );
 					gmState = GM_SUBMIT_SAVE;
 				} else {
-					// unhandled error
 					dprintf( D_ALWAYS,
 							 "(%d.%d) condor_job_submit() failed: %s\n",
 							 procID.cluster, procID.proc,
 							 gahp->getErrorString() );
-					gmState = GM_UNSUBMITTED;
-					reevaluate_state = true;
+					int jcluster = -1;
+					int jproc = -1;
+					if(job_id_string) {
+							// job_id_string is null in many failure cases.
+						sscanf( job_id_string, "%d.%d", &jcluster, &jproc );
+					}
+					// if the job failed to submit, the cluster number
+					// will hold the error code for the call to 
+					// NewCluster(), and the proc number will hold
+					// error code for the call to NewProc().
+					// now check if either call failed w/ -2, which
+					// signifies MAX_JOBS_SUBMITTED was exceeded.
+					if ( jcluster==-2 || jproc==-2 ) {
+						// MAX_JOBS_SUBMITTED error.
+						// For now, we will always put this job back
+						// to idle and tell the schedd to find us
+						// another match.
+						// TODO: this hard-coded logic should be
+						// replaced w/ a WANT_REMATCH expression, like
+						// is currently done in the Globus gridtype.
+						dprintf(D_ALWAYS,"(%d.%d) Requesting schedd to "
+							"rematch job because of MAX_JOBS_SUBMITTED\n",
+							procID.cluster, procID.proc);
+						// Set ad attributes so the schedd finds a new match.
+						int dummy;
+						if ( ad->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
+							UpdateJobAdBool( ATTR_JOB_MATCHED, 0 );
+							UpdateJobAdInt( ATTR_CURRENT_HOSTS, 0 );
+						}
+						// We are rematching,  so forget about this job 
+						// cuz we wanna pull a fresh new job ad, with 
+						// a fresh new match, from the all-singing schedd.
+						gmState = GM_DELETE;
+					} else {
+						// unhandled error
+						gmState = GM_UNSUBMITTED;
+						reevaluate_state = true;
+					}
 				}
 				if ( job_id_string != NULL ) {
 					free( job_id_string );
@@ -512,7 +556,7 @@ int MirrorJob::doEvaluateState()
 		case GM_SUBMIT_SAVE: {
 			// Save the job id for a new remote submission.
 			if ( condorState == REMOVED || condorState == HELD ) {
-				gmState = GM_CANCEL_1;
+				gmState = GM_CANCEL;
 			} else {
 				done = requestScheddUpdate( this );
 				if ( !done ) {
@@ -523,7 +567,7 @@ int MirrorJob::doEvaluateState()
 			} break;
 		case GM_STAGE_IN: {
 			// Now stage files to the remote schedd
-#if 0
+#if 1
 			if ( gahpAd == NULL ) {
 				gahpAd = buildStageInAd();
 			}
@@ -531,14 +575,14 @@ int MirrorJob::doEvaluateState()
 				gmState = GM_HOLD;
 				break;
 			}
-			rc = gahp->condor_job_stage_in( mirrorScheddName, gahpAd );
+			rc = gahp->condor_job_stage_in( remoteScheddName, gahpAd );
 #else
 			if ( gahpAd == NULL ) {
 				gahpAd = new ClassAd;
 				gahpAd->Assign( ATTR_STAGE_IN_START, (int)time(NULL) );
 				gahpAd->Assign( ATTR_STAGE_IN_FINISH, (int)time(NULL) );
 			}
-			rc = gahp->condor_job_update( mirrorScheddName, mirrorJobId,
+			rc = gahp->condor_job_update( remoteScheddName, remoteJobId,
 										  gahpAd );
 #endif
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -546,116 +590,41 @@ int MirrorJob::doEvaluateState()
 				break;
 			}
 			if ( rc == 0 ) {
-				gmState = GM_SUBMITTED_MIRROR_INACTIVE;
+				// We go to GM_POLL_ACTIVE here because if we get a status
+				// ad from our CondorResource that's from before the stage
+				// in completed, we'll get confused by the jobStatus of
+				// HELD. By doing an active probe, we'll automatically
+				// ignore any update ads from before the probe.
+				gmState = GM_POLL_ACTIVE;
 			} else {
 				// unhandled error
 				dprintf( D_ALWAYS,
 						 "(%d.%d) condor_job_stage_in() failed: %s\n",
 						 procID.cluster, procID.proc, gahp->getErrorString() );
-				gmState = GM_CANCEL_1;
+				errorString = gahp->getErrorString();
+				gmState = GM_CANCEL;
 			}
 			} break;
-		case GM_SUBMITTED_MIRROR_INACTIVE: {
+		case GM_SUBMITTED: {
 			// The job has been submitted. Wait for completion or failure,
 			// and poll the remote schedd occassionally to let it know
 			// we're still alive.
-			if ( remoteState == COMPLETED ) {
-				gmState = GM_DONE_SAVE;
-			} else if ( condorState == REMOVED || condorState == HELD ||
-						condorState == COMPLETED ) {
-				gmState = GM_CANCEL_1;
-			} else if ( mirrorReleased ) {
-				gmState = GM_MIRROR_ACTIVE_SAVE;
-			} else if ( newRemoteStatusAd != NULL ) {
-				if ( newRemoteStatusServerTime <= lastRemoteStatusServerTime ) {
-dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too long!\n",procID.cluster,procID.proc);
-					delete newRemoteStatusAd;
-					newRemoteStatusAd = NULL;
-				} else {
-					ProcessRemoteAdInactive( newRemoteStatusAd );
-					if ( mirrorReleased ) {
-						// Leave the new remote status ad looking like an
-						// unprocessed one so that GM_SUBMITTED_MIRROR_ACTIVE
-						// look at it as well
-						gmState = GM_MIRROR_ACTIVE_SAVE;
-					} else {
-						lastRemoteStatusServerTime = newRemoteStatusServerTime;
-						delete newRemoteStatusAd;
-						newRemoteStatusAd = NULL;
-					}
-					reevaluate_state = true;
-				}
-			}
-			} break;
-		case GM_MIRROR_ACTIVE_SAVE: {
-			// The mirror has just become active. Make sure that state has
-			// been saved in the schedd before we send the vacate command.
-			done = requestScheddUpdate( this );
-			if ( !done ) {
-				break;
-			}
-
-			gmState = GM_VACATE_SCHEDD;
-			} break;
-		case GM_VACATE_SCHEDD: {
-			// The mirror has just become active. Send a vacate command to
-			// the schedd to stop any local execution of the job.
-
-			action_result_t result;
-			done = requestScheddVacate( this, result );
-			if ( done == false ) {
-				break;
-			} else if ( result != AR_SUCCESS && result != AR_BAD_STATUS ) {
-				dprintf( D_FULLDEBUG, "(%d.%d) vacateJobs failed, result=%d\n",
-						 procID.cluster, procID.proc, result );
-			} else {
-				dprintf( D_FULLDEBUG, "(%d.%d) vacateJobs succeeded, result=%d\n",
-						 procID.cluster, procID.proc, result );
-			}
-
-			gmState = GM_VACATE_WAIT;
-			} break;
-		case GM_VACATE_WAIT: {
-
-			int job_status;
-			done = requestJobStatus( this, job_status );
-			if ( done == false ) {
-				break;
-			} else if ( job_status == RUNNING ) {
-				// The shadow is still running, wait and poll again
-				reevaluate_state = true;
-				break;
-			} else if ( job_status == COMPLETED ) {
-				// Cancel the mirror job and let the local job complete
-				gmState = GM_CANCEL_1;
-			} else {
-				mirrorActive = true;
-				UpdateJobAdBool( ATTR_MIRROR_ACTIVE, 1 );
-				requestScheddUpdate( this );
-				gmState = GM_SUBMITTED_MIRROR_ACTIVE;
-			}
-			} break;
-		case GM_SUBMITTED_MIRROR_ACTIVE: {
-			// The job has been submitted. Wait for completion or failure,
-			// and poll the remote schedd occassionally to let it know
-			// we're still alive.
-			writeUserLog = true;
 			if ( condorState == REMOVED ) {
-				gmState = GM_CANCEL_1;
+				gmState = GM_CANCEL;
 			} else if ( newRemoteStatusAd != NULL ) {
 				if ( newRemoteStatusServerTime <= lastRemoteStatusServerTime ) {
-dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too long!\n",procID.cluster,procID.proc);
+dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too old!\n",procID.cluster,procID.proc);
 					delete newRemoteStatusAd;
 					newRemoteStatusAd = NULL;
 				} else {
-					ProcessRemoteAdActive( newRemoteStatusAd );
+					ProcessRemoteAd( newRemoteStatusAd );
 					lastRemoteStatusServerTime = newRemoteStatusServerTime;
 					delete newRemoteStatusAd;
 					newRemoteStatusAd = NULL;
 					reevaluate_state = true;
 				}
 			} else if ( remoteState == COMPLETED ) {
-				gmState = GM_DONE_SAVE;
+				gmState = GM_STAGE_OUT;
 			} else if ( condorState == HELD ) {
 				if ( remoteState == HELD ) {
 					// The job is on hold both locally and remotely. We're
@@ -671,7 +640,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too long!\n",procID.cluster,procI
 			}
 			} break;
 		case GM_HOLD_REMOTE_JOB: {
-			rc = gahp->condor_job_hold( mirrorScheddName, mirrorJobId,
+			rc = gahp->condor_job_hold( remoteScheddName, remoteJobId,
 										"by gridmanager" );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -682,13 +651,14 @@ dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too long!\n",procID.cluster,procI
 				dprintf( D_ALWAYS,
 						 "(%d.%d) condor_job_hold() failed: %s\n",
 						 procID.cluster, procID.proc, gahp->getErrorString() );
-				gmState = GM_CANCEL_1;
+				errorString = gahp->getErrorString();
+				gmState = GM_CANCEL;
 				break;
 			}
 			gmState = GM_POLL_ACTIVE;
 			} break;
 		case GM_RELEASE_REMOTE_JOB: {
-			rc = gahp->condor_job_release( mirrorScheddName, mirrorJobId,
+			rc = gahp->condor_job_release( remoteScheddName, remoteJobId,
 										   "by gridmanager" );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -699,7 +669,8 @@ dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too long!\n",procID.cluster,procI
 				dprintf( D_ALWAYS,
 						 "(%d.%d) condor_job_release() failed: %s\n",
 						 procID.cluster, procID.proc, gahp->getErrorString() );
-				gmState = GM_CANCEL_1;
+				errorString = gahp->getErrorString();
+				gmState = GM_CANCEL;
 				break;
 			}
 			gmState = GM_POLL_ACTIVE;
@@ -709,9 +680,9 @@ dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too long!\n",procID.cluster,procI
 			ClassAd **status_ads = NULL;
 			MyString constraint;
 			constraint.sprintf( "%s==%d&&%s==%d", ATTR_CLUSTER_ID,
-								mirrorJobId.cluster, ATTR_PROC_ID,
-								mirrorJobId.proc );
-			rc = gahp->condor_job_status_constrained( mirrorScheddName,
+								remoteJobId.cluster, ATTR_PROC_ID,
+								remoteJobId.proc );
+			rc = gahp->condor_job_status_constrained( remoteScheddName,
 													  constraint.Value(),
 													  &num_ads, &status_ads );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -723,17 +694,19 @@ dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too long!\n",procID.cluster,procI
 				dprintf( D_ALWAYS,
 						 "(%d.%d) condor_job_status_constrained() failed: %s\n",
 						 procID.cluster, procID.proc, gahp->getErrorString() );
-				gmState = GM_CANCEL_1;
+				errorString = gahp->getErrorString();
+				gmState = GM_CANCEL;
 				break;
 			}
 			if ( num_ads != 1 ) {
 				dprintf( D_ALWAYS,
 						 "(%d.%d) condor_job_status_constrained() returned %d ads\n",
 						 procID.cluster, procID.proc, num_ads );
-				gmState = GM_CANCEL_1;
+				errorString = "Remote schedd returned multiple ads";
+				gmState = GM_CANCEL;
 				break;
 			}
-			ProcessRemoteAdActive( status_ads[0] );
+			ProcessRemoteAd( status_ads[0] );
 			int server_time;
 			if ( status_ads[0]->LookupInteger( ATTR_SERVER_TIME,
 											   server_time ) == 0 ) {
@@ -745,7 +718,25 @@ dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too long!\n",procID.cluster,procI
 			lastRemoteStatusServerTime = server_time;
 			delete status_ads[0];
 			free( status_ads );
-			gmState = GM_SUBMITTED_MIRROR_ACTIVE;
+			gmState = GM_SUBMITTED;
+			} break;
+		case GM_STAGE_OUT: {
+			// Now stage files back from the remote schedd
+			rc = gahp->condor_job_stage_out( remoteScheddName, remoteJobId );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			}
+			if ( rc == 0 ) {
+				gmState = GM_DONE_SAVE;
+			} else {
+				// unhandled error
+				dprintf( D_ALWAYS,
+						 "(%d.%d) condor_job_stage_out() failed: %s\n",
+						 procID.cluster, procID.proc, gahp->getErrorString() );
+				errorString = gahp->getErrorString();
+				gmState = GM_CANCEL;
+			}
 			} break;
 		case GM_DONE_SAVE: {
 			// Report job completion to the schedd.
@@ -766,7 +757,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too long!\n",procID.cluster,procI
 				expr.sprintf( "%s = False", ATTR_JOB_LEAVE_IN_QUEUE );
 				gahpAd->Insert( expr.Value() );
 			}
-			rc = gahp->condor_job_update( mirrorScheddName, mirrorJobId,
+			rc = gahp->condor_job_update( remoteScheddName, remoteJobId,
 										  gahpAd );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -777,7 +768,8 @@ dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too long!\n",procID.cluster,procI
 				dprintf( D_ALWAYS,
 						 "(%d.%d) condor_job_update() failed: %s\n",
 						 procID.cluster, procID.proc, gahp->getErrorString() );
-				gmState = GM_CANCEL_1;
+				errorString = gahp->getErrorString();
+				gmState = GM_CANCEL;
 				break;
 			}
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
@@ -790,44 +782,27 @@ dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too long!\n",procID.cluster,procI
 				gmState = GM_CLEAR_REQUEST;
 			}
 			} break;
-		case GM_CANCEL_1: {
-			if ( gahpAd == NULL ) {
-				MyString buff;
-				gahpAd = new ClassAd;
-				buff.sprintf( "%s = False", ATTR_JOB_LEAVE_IN_QUEUE );
-				gahpAd->Insert( buff.Value() );
-			}
-			rc = gahp->condor_job_update( mirrorScheddName, mirrorJobId,
-										  gahpAd );
-			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-				 rc == GAHPCLIENT_COMMAND_PENDING ) {
-				break;
-			}
-			if ( rc != GLOBUS_SUCCESS ) {
-				dprintf( D_FULLDEBUG,
-					"(%d.%d) GM_CANCEL_1: condor_job_update() failed: %s\n",
-					procID.cluster, procID.proc, gahp->getErrorString() );
-			}
-			gmState = GM_CANCEL_2;
-			} break;
-		case GM_CANCEL_2: {
+		case GM_CANCEL: {
 			// We need to cancel the job submission.
 
 			// Should this if-stmt be here? Even if the job is completed,
 			// we may still want to remove it (say if we have trouble
 			// fetching the output files).
 			if ( remoteState != COMPLETED ) {
-				rc = gahp->condor_job_remove( mirrorScheddName, mirrorJobId,
+				rc = gahp->condor_job_remove( remoteScheddName, remoteJobId,
 											  "by gridmanager" );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
+					// TODO what about error "Already done"? We should
+					//   recognize it and act accordingly
 				if ( rc != GLOBUS_SUCCESS ) {
 					// unhandled error
 					dprintf( D_ALWAYS,
 							 "(%d.%d) condor_job_remove() failed: %s\n",
 							 procID.cluster, procID.proc, gahp->getErrorString() );
+					errorString = gahp->getErrorString();
 					gmState = GM_CLEAR_REQUEST;
 					break;
 				}
@@ -848,13 +823,12 @@ dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too long!\n",procID.cluster,procI
 		case GM_CLEAR_REQUEST: {
 			// Remove all knowledge of any previous or present job
 			// submission, in both the gridmanager and the schedd.
-			bool tmp_bool;
 
 			// For now, put problem jobs on hold instead of
 			// forgetting about current submission and trying again.
 			// TODO: Let our action here be dictated by the user preference
 			// expressed in the job ad.
-			if ( mirrorJobId.cluster != 0 && condorState != REMOVED ) {
+			if ( remoteJobId.cluster != 0 && condorState != REMOVED ) {
 				gmState = GM_HOLD;
 				break;
 			}
@@ -864,25 +838,10 @@ dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too long!\n",procID.cluster,procI
 				delete newRemoteStatusAd;
 				newRemoteStatusAd = NULL;
 			}
-			// If we haven't failed over to the mirror job, don't change
-			// any attributes that may affect the local job execution.
-			if ( mirrorActive == true ) {
-				JobIdle();
-				if ( submitLogged ) {
-					JobEvicted();
-				}
+			JobIdle();
+			if ( submitLogged ) {
+				JobEvicted();
 			}
-			if ( mirrorActive == true ||
-				 ad->LookupBool( ATTR_MIRROR_ACTIVE, tmp_bool ) == false ) {
-				UpdateJobAdBool( ATTR_MIRROR_ACTIVE, 0 );
-				mirrorActive = false;
-			}
-			if ( mirrorReleased == true ||
-				 ad->LookupBool( ATTR_MIRROR_RELEASED, tmp_bool ) == false ) {
-				UpdateJobAdBool( ATTR_MIRROR_RELEASED, 0 );
-				mirrorReleased = false;
-			}
-			writeUserLog = false;
 
 			// If there are no updates to be done when we first enter this
 			// state, requestScheddUpdate will return done immediately
@@ -972,35 +931,35 @@ dprintf(D_FULLDEBUG,"(%d.%d) newRemoteStatusAd too long!\n",procID.cluster,procI
 	return TRUE;
 }
 
-void MirrorJob::SetRemoteJobId( const char *job_id )
+void CondorJob::SetRemoteJobId( const char *job_id )
 {
 	if ( remoteJobIdString != NULL && job_id != NULL &&
 		 strcmp( remoteJobIdString, job_id ) == 0 ) {
 		return;
 	}
 	if ( remoteJobIdString != NULL ) {
-		MirrorJobsById.remove( HashKey( remoteJobIdString ) );
+		CondorJobsById.remove( HashKey( remoteJobIdString ) );
 		free( remoteJobIdString );
 		remoteJobIdString = NULL;
-		mirrorJobId.cluster = 0;
-		UpdateJobAd( ATTR_MIRROR_JOB_ID, "UNDEFINED" );
+		remoteJobId.cluster = 0;
+		UpdateJobAd( ATTR_REMOTE_JOB_ID, "UNDEFINED" );
 	}
 	if ( job_id != NULL ) {
 		MyString id_string;
-		sscanf( job_id, "%d.%d", &mirrorJobId.cluster, &mirrorJobId.proc );
-		id_string.sprintf( "%s/%d.%d", mirrorScheddName, mirrorJobId.cluster,
-						   mirrorJobId.proc );
+		sscanf( job_id, "%d.%d", &remoteJobId.cluster, &remoteJobId.proc );
+		id_string.sprintf( "%s/%d.%d", remoteScheddName, remoteJobId.cluster,
+						   remoteJobId.proc );
 		remoteJobIdString = strdup( id_string.Value() );
-		MirrorJobsById.insert( HashKey( remoteJobIdString ), this );
-		UpdateJobAdString( ATTR_MIRROR_JOB_ID, job_id );
+		CondorJobsById.insert( HashKey( remoteJobIdString ), this );
+		UpdateJobAdString( ATTR_REMOTE_JOB_ID, job_id );
 	}
 	requestScheddUpdate( this );
 }
 
-void MirrorJob::NotifyNewRemoteStatus( ClassAd *update_ad )
+void CondorJob::NotifyNewRemoteStatus( ClassAd *update_ad )
 {
 	int tmp_int;
-	dprintf( D_FULLDEBUG, "(%d.%d) ***got classad from MirrorResource\n",
+	dprintf( D_FULLDEBUG, "(%d.%d) ***got classad from CondorResource\n",
 			 procID.cluster, procID.proc );
 	if ( update_ad->LookupInteger( ATTR_SERVER_TIME, tmp_int ) == 0 ) {
 		dprintf( D_ALWAYS, "(%d.%d) Ad from remote schedd has no %s\n",
@@ -1022,53 +981,43 @@ void MirrorJob::NotifyNewRemoteStatus( ClassAd *update_ad )
 	SetEvaluateState();
 }
 
-void MirrorJob::ProcessRemoteAdInactive( ClassAd *remote_ad )
+void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 {
-	int rc;
-	int tmp_int;
-
-	if ( remote_ad == NULL ) {
-		return;
-	}
-
-	dprintf( D_FULLDEBUG, "(%d.%d) ***ProcessRemoteAdInactive\n",
-			 procID.cluster, procID.proc );
-
-	remote_ad->LookupInteger( ATTR_JOB_STATUS, tmp_int );
-
-	if ( tmp_int != HELD ) {
-		UpdateJobAdBool( ATTR_MIRROR_RELEASED, 1 );
-		mirrorReleased = true;
-	}
-	remoteState = tmp_int;
-
-	rc = remote_ad->LookupInteger( ATTR_MIRROR_LEASE_TIME,
-								   tmp_int );
-	if ( rc ) {
-		UpdateJobAdInt( ATTR_MIRROR_REMOTE_LEASE_TIME, tmp_int );
-	} else {
-		UpdateJobAd( ATTR_MIRROR_REMOTE_LEASE_TIME, "Undefined" );
-	}
-
-	requestScheddUpdate( this );
-
-	return;
-}
-
-void MirrorJob::ProcessRemoteAdActive( ClassAd *remote_ad )
-{
-	int rc;
-	int tmp_int;
 	int new_remote_state;
-	ClassAd *diff_ad;
 	MyString buff;
-	const char *next_name;
+	ExprTree *new_expr, *old_expr;
+
+	int index;
+	const char *attrs_to_copy[] = {
+		ATTR_BYTES_SENT,
+		ATTR_BYTES_RECVD,
+		ATTR_COMPLETION_DATE,
+		ATTR_JOB_RUN_COUNT,
+		ATTR_JOB_START_DATE,
+		ATTR_ON_EXIT_BY_SIGNAL,
+		ATTR_ON_EXIT_SIGNAL,
+		ATTR_ON_EXIT_CODE,
+		ATTR_EXIT_REASON,
+		ATTR_JOB_CURRENT_START_DATE,
+		ATTR_JOB_LOCAL_SYS_CPU,
+		ATTR_JOB_LOCAL_USER_CPU,
+		ATTR_JOB_REMOTE_SYS_CPU,
+		ATTR_JOB_REMOTE_USER_CPU,
+		ATTR_NUM_CKPTS,
+		ATTR_NUM_GLOBUS_SUBMITS,
+		ATTR_NUM_MATCHES,
+		ATTR_NUM_RESTARTS,
+		ATTR_JOB_REMOTE_WALL_CLOCK,
+		ATTR_JOB_CORE_DUMPED,
+		ATTR_EXECUTABLE_SIZE,
+		ATTR_IMAGE_SIZE,
+		NULL };		// list must end with a NULL
 
 	if ( remote_ad == NULL ) {
 		return;
 	}
 
-	dprintf( D_FULLDEBUG, "(%d.%d) ***ProcessRemoteAdActive\n",
+	dprintf( D_FULLDEBUG, "(%d.%d) ***ProcessRemoteAd\n",
 			 procID.cluster, procID.proc );
 
 	remote_ad->LookupInteger( ATTR_JOB_STATUS, new_remote_state );
@@ -1103,122 +1052,75 @@ void MirrorJob::ProcessRemoteAdActive( ClassAd *remote_ad )
 	remoteState = new_remote_state;
 
 
-	diff_ad = ClassAdDiff( ad, remote_ad );
+	index = -1;
+	while ( attrs_to_copy[++index] != NULL ) {
+		old_expr = ad->Lookup( attrs_to_copy[index] );
+		new_expr = remote_ad->Lookup( attrs_to_copy[index] );
 
-	rc = diff_ad->LookupInteger( ATTR_MIRROR_LEASE_TIME, tmp_int );
-	if ( rc ) {
-		diff_ad->Assign( ATTR_MIRROR_REMOTE_LEASE_TIME, tmp_int );
-	} else {
-		buff.sprintf( "%s = Undefined", ATTR_MIRROR_REMOTE_LEASE_TIME );
-		diff_ad->Insert( buff.Value() );
-	}
-
-	diff_ad->Delete( ATTR_CLUSTER_ID );
-	diff_ad->Delete( ATTR_PROC_ID );
-	diff_ad->Delete( ATTR_MIRROR_ACTIVE );
-	diff_ad->Delete( ATTR_MIRROR_RELEASED );
-	diff_ad->Delete( ATTR_MIRROR_SCHEDD );
-	diff_ad->Delete( ATTR_MIRROR_JOB_ID );
-	diff_ad->Delete( ATTR_MIRROR_LEASE_TIME );
-	diff_ad->Delete( ATTR_ULOG_FILE );
-	diff_ad->Delete( ATTR_Q_DATE );
-	diff_ad->Delete( ATTR_ENTERED_CURRENT_STATUS );
-	diff_ad->Delete( ATTR_JOB_LEAVE_IN_QUEUE );
-	diff_ad->Delete( ATTR_HOLD_REASON );
-	diff_ad->Delete( ATTR_HOLD_REASON_CODE );
-	diff_ad->Delete( ATTR_HOLD_REASON_SUBCODE );
-	diff_ad->Delete( ATTR_LAST_HOLD_REASON );
-	diff_ad->Delete( ATTR_LAST_HOLD_REASON_CODE );
-	diff_ad->Delete( ATTR_LAST_HOLD_REASON_SUBCODE );
-	diff_ad->Delete( ATTR_RELEASE_REASON );
-	diff_ad->Delete( ATTR_LAST_RELEASE_REASON );
-	diff_ad->Delete( ATTR_REMOVE_REASON );
-	diff_ad->Delete( ATTR_JOB_STATUS_ON_RELEASE );
-	diff_ad->Delete( ATTR_JOB_STATUS );
-	diff_ad->Delete( ATTR_JOB_MANAGED );
-	diff_ad->Delete( ATTR_PERIODIC_HOLD_CHECK );
-	diff_ad->Delete( ATTR_PERIODIC_RELEASE_CHECK );
-	diff_ad->Delete( ATTR_PERIODIC_REMOVE_CHECK );
-	diff_ad->Delete( ATTR_ON_EXIT_HOLD_CHECK );
-	diff_ad->Delete( ATTR_ON_EXIT_REMOVE_CHECK );
-	diff_ad->Delete( ATTR_SERVER_TIME );
-	diff_ad->Delete( ATTR_WANT_MATCHING );
-	diff_ad->Delete( ATTR_GLOBAL_JOB_ID );
-	diff_ad->Delete( ATTR_JOB_NOTIFICATION );
-	diff_ad->Delete( ATTR_MIRROR_SUBMITTER_ID );
-	diff_ad->Delete( ATTR_STAGE_IN_START );
-	diff_ad->Delete( ATTR_STAGE_IN_FINISH );
-
-	// Remove attributes that were renamed by the remote schedd because
-	// of moving the job's sandbox. These can be identified by looking
-	// for pairs of attributes named <attr name> and SUBMIT_<attr name>.
-	diff_ad->ResetName();
-	while ( (next_name = diff_ad->NextNameOriginal()) != NULL ) {
-		if ( strncmp( next_name, "SUBMIT_", 7 ) == 0 &&
-			 remote_ad->Lookup( &next_name[7] ) != NULL ) {
-			diff_ad->Delete( next_name );
-			diff_ad->Delete( &next_name[7] );
+		if ( new_expr != NULL && ( old_expr == NULL || !(*old_expr == *new_expr) ) ) {
+			ad->Insert( new_expr->DeepCopy() );
 		}
 	}
 
-	ClassAdPatch( ad, diff_ad );
-
 	requestScheddUpdate( this );
-
-	delete diff_ad;
 
 	return;
 }
 
-BaseResource *MirrorJob::GetResource()
+BaseResource *CondorJob::GetResource()
 {
 	return (BaseResource *)NULL;
 }
 
-ClassAd *MirrorJob::buildSubmitAd()
+#if 0
+// Old white-list version
+ClassAd *CondorJob::buildSubmitAd()
 {
 	int now = time(NULL);
 	MyString expr;
 	ClassAd *submit_ad;
+	ExprTree *next_expr;
 
-		// Base the submit ad on our own job ad
-	submit_ad = new ClassAd( *ad );
+	int index;
+	const char *attrs_to_copy[] = {
+		ATTR_JOB_CMD,
+		ATTR_JOB_ARGUMENTS,
+		ATTR_JOB_ENVIRONMENT,
+		ATTR_JOB_INPUT,
+		ATTR_JOB_OUTPUT,
+		ATTR_JOB_ERROR,
+		ATTR_REQUIREMENTS,
+		ATTR_RANK,
+		ATTR_OWNER,
+		ATTR_DISK_USAGE,
+		ATTR_IMAGE_SIZE,
+		ATTR_EXECUTABLE_SIZE,
+		ATTR_MAX_HOSTS,
+		ATTR_MIN_HOSTS,
+		ATTR_JOB_PRIO,
+		ATTR_JOB_IWD,
+		ATTR_SHOULD_TRANSFER_FILES,
+		ATTR_WHEN_TO_TRANSFER_OUTPUT,
+		ATTR_TRANSFER_INPUT_FILES,
+		ATTR_TRANSFER_OUTPUT_FILES,
+		ATTR_NICE_USER,
+		NULL };		// list must end with a NULL
 
-	submit_ad->Delete( ATTR_CLUSTER_ID );
-	submit_ad->Delete( ATTR_PROC_ID );
-	submit_ad->Delete( ATTR_MIRROR_REMOTE_LEASE_TIME );
-	submit_ad->Delete( ATTR_MIRROR_ACTIVE );
-	submit_ad->Delete( ATTR_MIRROR_RELEASED );
-	submit_ad->Delete( ATTR_MIRROR_SCHEDD );
-	submit_ad->Delete( ATTR_MIRROR_JOB_ID );
-	submit_ad->Delete( ATTR_MIRROR_LEASE_TIME );
-	submit_ad->Delete( ATTR_WANT_MATCHING );
-	submit_ad->Delete( ATTR_PERIODIC_HOLD_CHECK );
-	submit_ad->Delete( ATTR_PERIODIC_RELEASE_CHECK );
-	submit_ad->Delete( ATTR_PERIODIC_REMOVE_CHECK );
-	submit_ad->Delete( ATTR_ON_EXIT_HOLD_CHECK );
-	submit_ad->Delete( ATTR_ON_EXIT_REMOVE_CHECK );
-	submit_ad->Delete( ATTR_HOLD_REASON );
-	submit_ad->Delete( ATTR_HOLD_REASON_CODE );
-	submit_ad->Delete( ATTR_HOLD_REASON_SUBCODE );
-	submit_ad->Delete( ATTR_LAST_HOLD_REASON );
-	submit_ad->Delete( ATTR_LAST_HOLD_REASON_CODE );
-	submit_ad->Delete( ATTR_LAST_HOLD_REASON_SUBCODE );
-	submit_ad->Delete( ATTR_RELEASE_REASON );
-	submit_ad->Delete( ATTR_LAST_RELEASE_REASON );
-	submit_ad->Delete( ATTR_JOB_STATUS_ON_RELEASE );
-	submit_ad->Delete( ATTR_DAG_NODE_NAME );
-	submit_ad->Delete( ATTR_DAGMAN_JOB_ID );
-	submit_ad->Delete( ATTR_ULOG_FILE );
-	submit_ad->Delete( ATTR_SERVER_TIME );
-	submit_ad->Delete( ATTR_JOB_MANAGED );
-	submit_ad->Delete( ATTR_GLOBAL_JOB_ID );
-	submit_ad->Delete( ATTR_STAGE_IN_START );
-	submit_ad->Delete( ATTR_STAGE_IN_FINISH );
+	submit_ad = new ClassAd;
+
+	index = -1;
+	while ( attrs_to_copy[++index] != NULL ) {
+		if ( ( next_expr = ad->Lookup( attrs_to_copy[index] ) ) != NULL ) {
+			submit_ad->Insert( next_expr->DeepCopy() );
+		}
+	}
 
 	submit_ad->Assign( ATTR_JOB_STATUS, HELD );
-	submit_ad->Assign( ATTR_HOLD_REASON, "submitted on hold at user's request" );
+	submit_ad->Assign( ATTR_HOLD_REASON, "Spooling input data files" );
+	submit_ad->Assign( ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VANILLA );
+
 	submit_ad->Assign( ATTR_Q_DATE, now );
+	submit_ad->Assign( ATTR_CURRENT_HOSTS, 0 );
 	submit_ad->Assign( ATTR_COMPLETION_DATE, 0 );
 	submit_ad->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, (float)0.0 );
 	submit_ad->Assign( ATTR_JOB_LOCAL_USER_CPU, (float)0.0 );
@@ -1235,42 +1137,160 @@ ClassAd *MirrorJob::buildSubmitAd()
 	submit_ad->Assign( ATTR_CUMULATIVE_SUSPENSION_TIME, 0 );
 	submit_ad->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
 	submit_ad->Assign( ATTR_CURRENT_HOSTS, 0 );
-	submit_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, now );
+	submit_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, now  );
 	submit_ad->Assign( ATTR_JOB_NOTIFICATION, NOTIFY_NEVER );
-	submit_ad->Assign( ATTR_JOB_LEAVE_IN_QUEUE, true );
 
-	expr.sprintf( "%s = (%s >= %s) =!= True && CurrentTime > %s + %d",
+	expr.sprintf( "%s = (%s > 0) =!= True && CurrentTime > %s + %d",
 				  ATTR_PERIODIC_REMOVE_CHECK, ATTR_STAGE_IN_FINISH,
-				  ATTR_STAGE_IN_START, ATTR_Q_DATE, 1800 );
+				  ATTR_Q_DATE, 1800 );
 	submit_ad->Insert( expr.Value() );
 
-	// TODO In the current expression below, if the remote schedd crashes
-	//   and restarts, it'll wait 15 minutes for an updated lease before
-	//   releasing the mirror job. Should this timeout be based on the
-	//   lease update interval (15 minutes is 3 times the current default).
-	expr.sprintf( "%s = %s == %s && (%s >= %s) =?= True && (CurrentTime > %s) =?= True && (CurrentTime > %s + %d) =!= False",
-				  ATTR_PERIODIC_RELEASE_CHECK, ATTR_ENTERED_CURRENT_STATUS,
-				  ATTR_Q_DATE, ATTR_STAGE_IN_FINISH, ATTR_STAGE_IN_START,
-				  ATTR_MIRROR_LEASE_TIME, ATTR_SCHEDD_BIRTHDATE, 15*60 );
+	expr.sprintf( "%s = %s == %d", ATTR_JOB_LEAVE_IN_QUEUE, ATTR_JOB_STATUS,
+				  COMPLETED );
 	submit_ad->Insert( expr.Value() );
 
-	submit_ad->Assign( ATTR_MIRROR_SUBMITTER_ID, submitterId );
+	submit_ad->Assign( ATTR_SUBMITTER_ID, submitterId );
+
+	ad->ResetExpr();
+	while ( (next_expr = ad->NextExpr()) != NULL ) {
+		if ( strncasecmp( ((Variable*)next_expr->LArg())->Name(), "REMOTE_", 7 ) == 0 ) {
+			char *attr_value;
+			MyString buf;
+			next_expr->RArg()->PrintToNewStr(&attr_value);
+			buf.sprintf( "%s = %s", &((Variable*)next_expr->LArg())->Name()[7],
+						 attr_value );
+			submit_ad->Insert( buf.Value() );
+			free(attr_value);
+		}
+	}
+
 
 		// worry about ATTR_JOB_[OUTPUT|ERROR]_ORIG
 
 	return submit_ad;
 }
+#else
+// New black-list version
+ClassAd *CondorJob::buildSubmitAd()
+{
+	int now = time(NULL);
+	MyString expr;
+	ClassAd *submit_ad;
+	ExprTree *next_expr;
 
-ClassAd *MirrorJob::buildStageInAd()
+		// Base the submit ad on our own job ad
+	submit_ad = new ClassAd( *ad );
+
+	submit_ad->Delete( ATTR_CLUSTER_ID );
+	submit_ad->Delete( ATTR_PROC_ID );
+	submit_ad->Delete( ATTR_REMOTE_SCHEDD );
+	submit_ad->Delete( ATTR_REMOTE_POOL );
+	submit_ad->Delete( ATTR_JOB_MATCHED );
+	submit_ad->Delete( ATTR_JOB_MANAGED );
+	submit_ad->Delete( ATTR_MIRROR_ACTIVE );
+	submit_ad->Delete( ATTR_MIRROR_JOB_ID );
+	submit_ad->Delete( ATTR_MIRROR_LEASE_TIME );
+	submit_ad->Delete( ATTR_MIRROR_RELEASED );
+	submit_ad->Delete( ATTR_MIRROR_REMOTE_LEASE_TIME );
+	submit_ad->Delete( ATTR_MIRROR_SCHEDD );
+	submit_ad->Delete( ATTR_STAGE_IN_FINISH );
+	submit_ad->Delete( ATTR_STAGE_IN_START );
+	submit_ad->Delete( ATTR_SCHEDD_BIRTHDATE );
+	submit_ad->Delete( ATTR_X509_USER_PROXY );
+	submit_ad->Delete( ATTR_X509_USER_PROXY_SUBJECT );
+	submit_ad->Delete( ATTR_FILE_SYSTEM_DOMAIN );
+	submit_ad->Delete( ATTR_ULOG_FILE );
+	submit_ad->Delete( ATTR_ULOG_USE_XML );
+	submit_ad->Delete( ATTR_NOTIFY_USER );
+	submit_ad->Delete( ATTR_ON_EXIT_HOLD_CHECK );
+	submit_ad->Delete( ATTR_ON_EXIT_REMOVE_CHECK );
+	submit_ad->Delete( ATTR_PERIODIC_HOLD_CHECK );
+	submit_ad->Delete( ATTR_PERIODIC_RELEASE_CHECK );
+	submit_ad->Delete( ATTR_PERIODIC_REMOVE_CHECK );
+	submit_ad->Delete( ATTR_SERVER_TIME );
+	submit_ad->Delete( ATTR_JOB_MANAGED );
+	submit_ad->Delete( ATTR_GLOBAL_JOB_ID );
+	submit_ad->Delete( "CondorPlatform" );
+	submit_ad->Delete( "CondorVersion" );
+	submit_ad->Delete( ATTR_JOB_GRID_TYPE );
+	submit_ad->Delete( ATTR_WANT_CLAIMING );
+	submit_ad->Delete( ATTR_WANT_MATCHING );
+	submit_ad->Delete( ATTR_HOLD_REASON );
+	submit_ad->Delete( ATTR_HOLD_REASON_CODE );
+	submit_ad->Delete( ATTR_HOLD_REASON_SUBCODE );
+	submit_ad->Delete( ATTR_LAST_HOLD_REASON );
+	submit_ad->Delete( ATTR_LAST_HOLD_REASON_CODE );
+	submit_ad->Delete( ATTR_LAST_HOLD_REASON_SUBCODE );
+	submit_ad->Delete( ATTR_RELEASE_REASON );
+	submit_ad->Delete( ATTR_LAST_RELEASE_REASON );
+	submit_ad->Delete( ATTR_JOB_STATUS_ON_RELEASE );
+
+	submit_ad->Assign( ATTR_JOB_STATUS, HELD );
+	submit_ad->Assign( ATTR_HOLD_REASON, "Spooling input data files" );
+	submit_ad->Assign( ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VANILLA );
+
+	submit_ad->Assign( ATTR_Q_DATE, now );
+	submit_ad->Assign( ATTR_CURRENT_HOSTS, 0 );
+	submit_ad->Assign( ATTR_COMPLETION_DATE, 0 );
+	submit_ad->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, (float)0.0 );
+	submit_ad->Assign( ATTR_JOB_LOCAL_USER_CPU, (float)0.0 );
+	submit_ad->Assign( ATTR_JOB_LOCAL_SYS_CPU, (float)0.0 );
+	submit_ad->Assign( ATTR_JOB_REMOTE_USER_CPU, (float)0.0 );
+	submit_ad->Assign( ATTR_JOB_REMOTE_SYS_CPU, (float)0.0 );
+	submit_ad->Assign( ATTR_JOB_EXIT_STATUS, 0 );
+	submit_ad->Assign( ATTR_NUM_CKPTS, 0 );
+	submit_ad->Assign( ATTR_NUM_RESTARTS, 0 );
+	submit_ad->Assign( ATTR_NUM_SYSTEM_HOLDS, 0 );
+	submit_ad->Assign( ATTR_JOB_COMMITTED_TIME, 0 );
+	submit_ad->Assign( ATTR_TOTAL_SUSPENSIONS, 0 );
+	submit_ad->Assign( ATTR_LAST_SUSPENSION_TIME, 0 );
+	submit_ad->Assign( ATTR_CUMULATIVE_SUSPENSION_TIME, 0 );
+	submit_ad->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
+	submit_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, now  );
+	submit_ad->Assign( ATTR_JOB_NOTIFICATION, NOTIFY_NEVER );
+
+	expr.sprintf( "%s = (%s > 0) =!= True && CurrentTime > %s + %d",
+				  ATTR_PERIODIC_REMOVE_CHECK, ATTR_STAGE_IN_FINISH,
+				  ATTR_Q_DATE, 1800 );
+	submit_ad->Insert( expr.Value() );
+
+	expr.sprintf( "%s = %s == %d", ATTR_JOB_LEAVE_IN_QUEUE, ATTR_JOB_STATUS,
+				  COMPLETED );
+	submit_ad->Insert( expr.Value() );
+
+	submit_ad->Assign( ATTR_SUBMITTER_ID, submitterId );
+
+	ad->ResetExpr();
+	while ( (next_expr = ad->NextExpr()) != NULL ) {
+		if ( strncasecmp( ((Variable*)next_expr->LArg())->Name(), "REMOTE_", 7 ) == 0 ) {
+			char *attr_value;
+			MyString buf;
+			submit_ad->Delete( ((Variable*)next_expr->LArg())->Name() );
+			next_expr->RArg()->PrintToNewStr(&attr_value);
+			buf.sprintf( "%s = %s", &((Variable*)next_expr->LArg())->Name()[7],
+						 attr_value );
+			submit_ad->Insert( buf.Value() );
+			free(attr_value);
+		}
+	}
+
+		// worry about ATTR_JOB_[OUTPUT|ERROR]_ORIG
+
+	return submit_ad;
+}
+#endif
+
+ClassAd *CondorJob::buildStageInAd()
 {
 	MyString expr;
 	ClassAd *stage_in_ad;
 
 		// Base the stage in ad on our own job ad
-	stage_in_ad = new ClassAd( *ad );
+//	stage_in_ad = new ClassAd( *ad );
+	stage_in_ad = buildSubmitAd();
 
-	stage_in_ad->Assign( ATTR_CLUSTER_ID, mirrorJobId.cluster );
-	stage_in_ad->Assign( ATTR_PROC_ID, mirrorJobId.proc );
+	stage_in_ad->Assign( ATTR_CLUSTER_ID, remoteJobId.cluster );
+	stage_in_ad->Assign( ATTR_PROC_ID, remoteJobId.proc );
 
 	stage_in_ad->Delete( ATTR_ULOG_FILE );
 

@@ -96,7 +96,7 @@ static char *GMStateNames[] = {
 
 #define CHECK_PROXY \
 { \
-	if ( PROXY_NEAR_EXPIRED( myProxy ) && gmState != GM_PROXY_EXPIRED ) { \
+	if ( PROXY_NEAR_EXPIRED( jobProxy ) && gmState != GM_PROXY_EXPIRED ) { \
 		dprintf( D_ALWAYS, "(%d.%d) proxy is about to expire\n", \
 				 procID.cluster, procID.proc ); \
 		gmState = GM_PROXY_EXPIRED; \
@@ -115,9 +115,6 @@ static bool WriteGT3ResourceDownEventToUserLog( ClassAd *job_ad );
 
 template class HashTable<HashKey, GT3Job *>;
 template class HashBucket<HashKey, GT3Job *>;
-
-// TODO need to get rid of this
-static GahpClient GahpMain;
 
 HashTable <HashKey, GT3Job *> GT3JobsByContact( HASH_TABLE_SIZE,
 												hashFunction );
@@ -208,9 +205,9 @@ void GT3JobReconfig()
 	// Tell all the resource objects to deal with their new config values
 	GT3Resource *next_resource;
 
-	GT3ResourcesByName.startIterations();
+	GT3Resource::ResourcesByName.startIterations();
 
-	while ( GT3ResourcesByName.iterate( next_resource ) != 0 ) {
+	while ( GT3Resource::ResourcesByName.iterate( next_resource ) != 0 ) {
 		next_resource->Reconfig();
 	}
 }
@@ -360,7 +357,7 @@ GT3Job::GT3Job( ClassAd *classad )
 	retryStdioSize = true;
 	resourceManagerString = NULL;
 	myResource = NULL;
-	myProxy = NULL;
+	jobProxy = NULL;
 	gassServerUrl = NULL;
 	gramCallbackContact = NULL;
 	gahp = NULL;
@@ -371,23 +368,11 @@ GT3Job::GT3Job( ClassAd *classad )
 		UpdateJobAd( ATTR_HOLD_REASON, "UNDEFINED" );
 	}
 
-	char *gahp_path = param("GT3_GAHP");
-	if ( gahp_path == NULL ) {
-		error_string = "GT3_GAHP not defined";
-		goto error_exit;
-	}
-	gahp = new GahpClient( "GT3", gahp_path );
-	free( gahp_path );
-
-	gahp->setNotificationTimerId( evaluateStateTid );
-	gahp->setMode( GahpClient::normal );
-	gahp->setTimeout( gahpCallTimeout );
-
 	buff[0] = '\0';
 	ad->LookupString( ATTR_X509_USER_PROXY, buff );
 	if ( buff[0] != '\0' ) {
-		myProxy = AcquireProxy( buff, evaluateStateTid );
-		if ( myProxy == NULL ) {
+		jobProxy = AcquireProxy( buff, evaluateStateTid );
+		if ( jobProxy == NULL ) {
 			dprintf( D_ALWAYS, "(%d.%d) error acquiring proxy!\n",
 					 procID.cluster, procID.proc );
 		}
@@ -395,6 +380,20 @@ GT3Job::GT3Job( ClassAd *classad )
 		dprintf( D_ALWAYS, "(%d.%d) %s not set in job ad!\n",
 				 procID.cluster, procID.proc, ATTR_X509_USER_PROXY );
 	}
+
+	char *gahp_path = param("GT3_GAHP");
+	if ( gahp_path == NULL ) {
+		error_string = "GT3_GAHP not defined";
+		goto error_exit;
+	}
+	snprintf( buff, sizeof(buff), "GT3/%s",
+			  jobProxy->subject->subject_name );
+	gahp = new GahpClient( buff, gahp_path );
+	free( gahp_path );
+
+	gahp->setNotificationTimerId( evaluateStateTid );
+	gahp->setMode( GahpClient::normal );
+	gahp->setTimeout( gahpCallTimeout );
 
 	buff[0] = '\0';
 	ad->LookupString( ATTR_GLOBUS_RESOURCE, buff );
@@ -405,28 +404,15 @@ GT3Job::GT3Job( ClassAd *classad )
 		goto error_exit;
 	}
 
-////////////////from gridmanager.C
-{
-	const char *canonical_name = GT3Resource::CanonicalName( resourceManagerString );
-	int rc;
-	ASSERT(canonical_name);
-	rc = GT3ResourcesByName.lookup( HashKey( canonical_name ),
-								 myResource );
-
-	if ( rc != 0 ) {
-		myResource = new GT3Resource( canonical_name );
-		ASSERT(myResource);
-		GT3ResourcesByName.insert( HashKey( canonical_name ),
-								myResource );
-	} else {
-		ASSERT(myResource);
+	myResource = GT3Resource::FindOrCreateResource( resourceManagerString,
+													jobProxy->subject->subject_name);
+	if ( myResource == NULL ) {
+		error_string = "Failed to initialized GT3Resource object";
+		goto error_exit;
 	}
-}
-//////////////////////////////////
 
 	resourceDown = false;
 	resourceStateKnown = false;
-//	myResource = resource;
 	// RegisterJob() may call our NotifyResourceUp/Down(), so be careful.
 	myResource->RegisterJob( this, job_already_submitted );
 
@@ -514,11 +500,6 @@ GT3Job::~GT3Job()
 {
 	if ( myResource ) {
 		myResource->UnregisterJob( this );
-		// Should the GT3Resource be responsible for doing this?...
-		if ( myResource->IsEmpty() ) {
-			GT3ResourcesByName.remove( HashKey( myResource->ResourceName() ) );
-			delete myResource;
-		}
 	}
 	if ( resourceManagerString ) {
 		free( resourceManagerString );
@@ -536,8 +517,8 @@ GT3Job::~GT3Job()
 	if ( localError ) {
 		free( localError );
 	}
-	if ( myProxy ) {
-		ReleaseProxy( myProxy, evaluateStateTid );
+	if ( jobProxy ) {
+		ReleaseProxy( jobProxy, evaluateStateTid );
 	}
 	if ( gassServerUrl ) {
 		free( gassServerUrl );
@@ -601,7 +582,7 @@ int GT3Job::doEvaluateState()
 			// constructor is called while we're connected to the schedd).
 			int err;
 
-			if ( gahp->Initialize( myProxy ) == false ) {
+			if ( gahp->Initialize( jobProxy ) == false ) {
 				dprintf( D_ALWAYS, "(%d.%d) Error initializing GAHP\n",
 						 procID.cluster, procID.proc );
 				
@@ -610,7 +591,7 @@ int GT3Job::doEvaluateState()
 				break;
 			}
 
-			gahp->setDelegProxy( myProxy );
+			gahp->setDelegProxy( jobProxy );
 
 			gahp->setMode( GahpClient::blocking );
 
@@ -794,7 +775,7 @@ int GT3Job::doEvaluateState()
 				myResource->SubmitComplete(this);
 				lastSubmitAttempt = time(NULL);
 				numSubmitAttempts++;
-				jmProxyExpireTime = myProxy->expiration_time;
+				jmProxyExpireTime = jobProxy->expiration_time;
 				if ( rc == GLOBUS_SUCCESS ) {
 					callbackRegistered = true;
 					rehashJobContact( this, jobContact, job_contact );
@@ -875,7 +856,7 @@ int GT3Job::doEvaluateState()
 					reevaluate_state = true;
 					break;
 				}
-				if ( jmProxyExpireTime < myProxy->expiration_time ) {
+				if ( jmProxyExpireTime < jobProxy->expiration_time ) {
 					gmState = GM_REFRESH_PROXY;
 					break;
 				}
@@ -918,7 +899,7 @@ rc=0;
 					gmState = GM_CANCEL;
 					break;
 				}
-				jmProxyExpireTime = myProxy->expiration_time;
+				jmProxyExpireTime = jobProxy->expiration_time;
 				gmState = GM_SUBMITTED;
 			}
 			} break;
@@ -1213,7 +1194,7 @@ rc=0;
 			// If requested, put the job on hold. Otherwise, wait for the
 			// proxy to be refreshed, then resume handling the job.
 			now = time(NULL);
-			if ( myProxy->expiration_time > JM_MIN_PROXY_TIME + now ) {
+			if ( jobProxy->expiration_time > JM_MIN_PROXY_TIME + now ) {
 				gmState = GM_START;
 			} else {
 				// Do nothing. Our proxy is about to expire.

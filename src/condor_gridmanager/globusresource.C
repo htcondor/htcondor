@@ -50,13 +50,47 @@ bool GlobusResource::enableGridMonitor = false;
 template class HashTable<HashKey, GlobusResource *>;
 template class HashBucket<HashKey, GlobusResource *>;
 
-HashTable <HashKey, GlobusResource *> ResourcesByName( HASH_TABLE_SIZE,
-													   hashFunction );
+HashTable <HashKey, GlobusResource *>
+    GlobusResource::ResourcesByName( HASH_TABLE_SIZE,
+									 hashFunction );
+
 static unsigned int g_MonitorUID = 0;
 
-GlobusResource::GlobusResource( const char *resource_name )
+GlobusResource *GlobusResource::FindOrCreateResource( const char *resource_name,
+													  const char *proxy_subject )
+{
+	int rc;
+	GlobusResource *resource = NULL;
+
+	const char *canonical_name = CanonicalName( resource_name );
+	ASSERT(canonical_name);
+
+	const char *hash_name = HashName( canonical_name, proxy_subject );
+	ASSERT(hash_name);
+
+	rc = ResourcesByName.lookup( HashKey( hash_name ), resource );
+	if ( rc != 0 ) {
+		resource = new GlobusResource( canonical_name, proxy_subject );
+		ASSERT(resource);
+		if ( resource->Init() == false ) {
+			delete resource;
+			resource = NULL;
+		} else {
+			ResourcesByName.insert( HashKey( hash_name ), resource );
+		}
+	} else {
+		ASSERT(resource);
+	}
+
+	return resource;
+}
+
+GlobusResource::GlobusResource( const char *resource_name,
+								const char *proxy_subject )
 	: BaseResource( resource_name )
 {
+	initialized = false;
+	proxySubject = strdup( proxy_subject );
 	resourceDown = false;
 	firstPingDone = false;
 	pingTimerId = daemonCore->Register_Timer( 0,
@@ -64,10 +98,6 @@ GlobusResource::GlobusResource( const char *resource_name )
 								"GlobusResource::DoPing", (Service*)this );
 	lastPing = 0;
 	lastStatusChange = 0;
-	gahp = new GahpClient();
-	gahp->setNotificationTimerId( pingTimerId );
-	gahp->setMode( GahpClient::normal );
-	gahp->setTimeout( gahpCallTimeout );
 	submitLimit = DEFAULT_MAX_PENDING_SUBMITS_PER_RESOURCE;
 	jobLimit = DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE;
 
@@ -78,8 +108,7 @@ GlobusResource::GlobusResource( const char *resource_name )
 	monitorLogFile = 0;
 	logFileTimeoutLastReadTime = 0;
 	initialMonitorStart = true;
-
-	Reconfig();
+	gahp = NULL;
 }
 
 GlobusResource::~GlobusResource()
@@ -92,6 +121,31 @@ GlobusResource::~GlobusResource()
 		daemonCore->Cancel_Timer( checkMonitorTid );
 	}
 	CleanupMonitorJob();
+	if ( proxySubject ) {
+		free( proxySubject );
+	}
+}
+
+bool GlobusResource::Init()
+{
+	if ( initialized ) {
+		return true;
+	}
+
+	MyString gahp_name;
+	gahp_name.sprintf( "GLOBUS/%s", proxySubject );
+
+	gahp = new GahpClient( gahp_name.Value() );
+
+	gahp->setNotificationTimerId( pingTimerId );
+	gahp->setMode( GahpClient::normal );
+	gahp->setTimeout( gahpCallTimeout );
+
+	initialized = true;
+
+	Reconfig();
+
+	return true;
 }
 
 void GlobusResource::Reconfig()
@@ -200,6 +254,16 @@ const char *GlobusResource::CanonicalName( const char *name )
 	return canonical.Value();
 }
 
+const char *GlobusResource::HashName( const char *resource_name,
+									  const char *proxy_subject )
+{
+	static MyString hash_name;
+
+	hash_name.sprintf( "%s#%s", resource_name, proxy_subject );
+
+	return hash_name.Value();
+}
+
 void GlobusResource::RegisterJob( GlobusJob *job, bool already_submitted )
 {
 	registeredJobs.Append( job );
@@ -222,6 +286,11 @@ void GlobusResource::UnregisterJob( GlobusJob *job )
 	CancelSubmit( job );
 	registeredJobs.Delete( job );
 	pingRequesters.Delete( job );
+
+	if ( IsEmpty() ) {
+		ResourcesByName.remove( HashKey( HashName( resourceName, proxySubject ) ) );
+		delete this;
+	}
 }
 
 void GlobusResource::RequestPing( GlobusJob *job )

@@ -95,6 +95,7 @@ static inline int compute_clustersize_hash(const int &key,int numBuckets) {
 }
 typedef HashTable<int, int> ClusterSizeHashTable_t;
 static ClusterSizeHashTable_t *ClusterSizeHashTable = 0;
+static int TotalJobsCount = 0;
 
 static char	**super_users = NULL;
 static int	num_super_users = 0;
@@ -155,6 +156,59 @@ ClusterCleanup(int cluster_id)
 	// blow away the initial checkpoint file from the spool dir
 	char *ckpt_file_name = gen_ckpt_name( Spool, cluster_id, ICKPT, 0 );
 	(void)unlink( ckpt_file_name );
+}
+
+
+static
+int
+IncrementClusterSize(int cluster_num)
+{
+	int 	*numOfProcs = NULL;
+
+	if ( ClusterSizeHashTable->lookup(cluster_num,numOfProcs) == -1 ) {
+		// First proc we've seen in this cluster; set size to 1
+		ClusterSizeHashTable->insert(cluster_num,1);
+	} else {
+		// We've seen this cluster_num go by before; increment proc count
+		(*numOfProcs)++;
+	}
+	TotalJobsCount++;
+
+		// return the number of procs in this cluster
+	if ( numOfProcs ) {
+		return *numOfProcs;
+	} else {
+		return 1;
+	}
+}
+
+static
+int
+DecrementClusterSize(int cluster_id)
+{
+	int 	*numOfProcs = NULL;
+
+	if ( ClusterSizeHashTable->lookup(cluster_id,numOfProcs) != -1 ) {
+		// We've seen this cluster_num go by before; increment proc count
+		// NOTICE that numOfProcs is a _reference_ to an int which we
+		// fetched out of the hash table via the call to lookup() above.
+		(*numOfProcs)--;
+
+		// If this is the last job in the cluster, remove the initial
+		//    checkpoint file and the entry in the ClusterSizeHashTable.
+		if ( *numOfProcs == 0 ) {
+			ClusterCleanup(cluster_id);
+		}
+	}
+	TotalJobsCount--;
+	
+		// return the number of procs in this cluster
+	if ( numOfProcs ) {
+		return *numOfProcs;
+	} else {
+		// if it isn't in our hashtable, there are no procs, so return 0
+		return 0;
+	}
 }
 
 static 
@@ -224,6 +278,7 @@ InitJobQueue(const char *job_queue_name)
 	assert(!JobQueue);
 	JobQueue = new ClassAdCollection(job_queue_name);
 	ClusterSizeHashTable = new ClusterSizeHashTable_t(37,compute_clustersize_hash);
+	TotalJobsCount = 0;
 
 	/* We read/initialize the header ad in the job queue here.  Currently,
 	   this header ad just stores the next available cluster number. */
@@ -232,7 +287,6 @@ InitJobQueue(const char *job_queue_name)
 	HashKey key;
 	int 	cluster_num, cluster, proc, universe;
 	int		stored_cluster_num;
-	int 	*numOfProcs = NULL;
 	bool	CreatedAd = false;
 	char	cluster_str[40];
 	char	owner[_POSIX_PATH_MAX];
@@ -386,13 +440,7 @@ InitJobQueue(const char *job_queue_name)
 
 
 			// count up number of procs in cluster, update ClusterSizeHashTable
-			if ( ClusterSizeHashTable->lookup(cluster_num,numOfProcs) == -1 ) {
-				// First proc we've seen in this cluster; set size to 1
-				ClusterSizeHashTable->insert(cluster_num,1);
-			} else {
-				// We've seen this cluster_num go by before; increment proc count
-				(*numOfProcs)++;
-			}
+			IncrementClusterSize(cluster_num);
 
 		}
 	}
@@ -439,6 +487,7 @@ DestroyJobQueue( void )
 		// There's also our hashtable of the size of each cluster
 	delete ClusterSizeHashTable;
 	ClusterSizeHashTable = NULL;
+	TotalJobsCount = 0;
 
 		// Also, clean up the array of super users
 	if( super_users ) {
@@ -501,6 +550,23 @@ isQueueSuperUser( const char* user )
 	return false;
 }
 
+bool
+OwnerCheck(int cluster_id,int proc_id)
+{
+	char				key[_POSIX_PATH_MAX];
+	ClassAd				*ad = NULL;
+
+	if (!Q_SOCK) {
+		return 0;
+	}
+
+	strcpy(key, IdToStr(cluster_id,proc_id) );
+	if (!JobQueue->LookupClassAd(key, ad)) {
+		return 0;
+	}
+
+	return OwnerCheck(ad, Q_SOCK->getOwner());
+}
 
 // Test if this owner matches my owner, so they're allowed to update me.
 bool
@@ -664,10 +730,10 @@ handle_q(Service *, int, Stream *sock)
 			-Todd 2/2000
 		*/
 		ClusterSizeHashTable->clear();
+		TotalJobsCount = 0;
 		ClassAd *ad;
 		HashKey key;
 		const char *tmp;
-		int 	*numOfProcs = NULL;
 		int cluster_num;
 		JobQueue->StartIterateAllClassAds();
 		while (JobQueue->IterateAllClassAds(ad,key)) {
@@ -675,14 +741,7 @@ handle_q(Service *, int, Stream *sock)
 			if ( *tmp == '0' ) continue;	// skip cluster & header ads
 			if ( (cluster_num = atoi(tmp)) ) {
 				// count up number of procs in cluster, update ClusterSizeHashTable
-				if ( ClusterSizeHashTable->lookup(cluster_num,numOfProcs) == -1 ) {
-					// First proc we've seen in this cluster; set size to 1
-					ClusterSizeHashTable->insert(cluster_num,1);
-				} else {
-					// We've seen this cluster_num go by before; increment proc count
-					(*numOfProcs)++;
-				}
-
+				IncrementClusterSize(cluster_num);
 			}
 		}
 	}	// end of if JobQueue->AbortTransaction == True
@@ -772,6 +831,12 @@ NewCluster()
 		return -1;
 	}
 
+	if ( TotalJobsCount >= scheduler.getMaxJobsSubmitted() ) {
+		dprintf(D_ALWAYS,
+			"NewCluster(): MAX_JOBS_SUBMITTED exceeded, submit failed\n");
+		return -2;
+	}
+
 	next_proc_num = 0;
 	active_cluster_num = next_cluster_num++;
 	sprintf(cluster_str, "%d", next_cluster_num);
@@ -792,7 +857,6 @@ NewProc(int cluster_id)
 	int				proc_id;
 	char			key[_POSIX_PATH_MAX];
 //	LogNewClassAd	*log;
-	int				*numOfProcs = NULL;
 
 	if( Q_SOCK && !OwnerCheck(NULL, Q_SOCK->getOwner() ) ) {
 		return -1;
@@ -804,19 +868,20 @@ NewProc(int cluster_id)
 #endif
 		return -1;
 	}
+	
+	if ( TotalJobsCount >= scheduler.getMaxJobsSubmitted() ) {
+		dprintf(D_ALWAYS,
+			"NewProc(): MAX_JOBS_SUBMITTED exceeded, submit failed\n");
+		return -2;
+	}
+
 	proc_id = next_proc_num++;
 	sprintf(key, "%d.%d", cluster_id, proc_id);
 //	log = new LogNewClassAd(key, JOB_ADTYPE, STARTD_ADTYPE);
 //	JobQueue->AppendLog(log);
 	JobQueue->NewClassAd(key, JOB_ADTYPE, STARTD_ADTYPE);
 
-	if ( ClusterSizeHashTable->lookup(cluster_id,numOfProcs) == -1 ) {
-		// First proc we've seen in this cluster; set size to 1
-		ClusterSizeHashTable->insert(cluster_id,1);
-	} else {
-		// We've seen this cluster_num go by before; increment proc count
-		(*numOfProcs)++;
-	}
+	IncrementClusterSize(cluster_id);
 
 		// now that we have a real job ad with a valid proc id, then
 		// also insert the appropriate GlobalJobId while we're at it.
@@ -842,7 +907,6 @@ int DestroyProc(int cluster_id, int proc_id)
 	char				key[_POSIX_PATH_MAX];
 	ClassAd				*ad = NULL;
 //	LogDestroyClassAd	*log;
-	int					*numOfProcs = NULL;
 
 	strcpy(key, IdToStr(cluster_id,proc_id) );
 	if (!JobQueue->LookupClassAd(key, ad)) {
@@ -906,18 +970,7 @@ int DestroyProc(int cluster_id, int proc_id)
 //	JobQueue->AppendLog(log);
 	JobQueue->DestroyClassAd(key);
 
-	if ( ClusterSizeHashTable->lookup(cluster_id,numOfProcs) != -1 ) {
-		// We've seen this cluster_num go by before; increment proc count
-		// NOTICE that numOfProcs is a _reference_ to an int which we
-		// fetched out of the hash table via the call to lookup() above.
-		(*numOfProcs)--;
-
-		// If this is the last job in the cluster, remove the initial
-		//    checkpoint file and the entry in the ClusterSizeHashTable.
-		if ( *numOfProcs == 0 ) {
-			ClusterCleanup(cluster_id);
-		}
-	}
+	DecrementClusterSize(cluster_id);
 
 		// remove any match (startd) ad stored w/ this job
 	RemoveMatchedAd(cluster_id,proc_id);
@@ -1163,7 +1216,13 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 			return -1;
 		}
 	} else {
-		if (cluster_id != active_cluster_num) {
+		// If we made it here, the user is adding attributes to an ad
+		// that has not been committed yet (and thus cannot be found
+		// in the JobQueue above).  Restrict the user to only adding
+		// attributes to the current cluster returned by NewCluster,
+		// and also restrict the user to procs that have been 
+		// returned by NewProc.
+		if ((cluster_id != active_cluster_num) || (proc_id >= next_proc_num)) {
 #if !defined(WIN32)
 			errno = EACCES;
 #endif
@@ -2358,7 +2417,7 @@ int mark_idle(ClassAd *job)
 		// Update ATTR_SCHEDD_BIRTHDATE in job ad at startup
 	if (bDay == 0) {
 		bDay = time(NULL);
-		sprintf(birthdateAttr,"%s=%d",ATTR_SCHEDD_BIRTHDATE,bDay);
+		sprintf(birthdateAttr,"%s=%d",ATTR_SCHEDD_BIRTHDATE,(int)bDay);
 	}
 	job->Insert(birthdateAttr);
 

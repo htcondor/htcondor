@@ -264,7 +264,7 @@ int main (int argc, char **argv)
 								 !expert ); 
 		exit( 1 );
 	case Q_NO_COLLECTOR_HOST:
-		assert( pool );
+		ASSERT( pool );
 		fprintf( stderr, "Error: Can't contact condor_collector: "
 				 "invalid hostname: %s\n", pool->name() );
 		exit( 1 );

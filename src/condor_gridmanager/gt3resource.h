@@ -36,17 +36,14 @@
 class GT3Job;
 class GT3Resource;
 
-////////////from gridmanager.C
-extern HashTable <HashKey, GT3Resource *> GT3ResourcesByName;
-//////////////////////////////
-
 class GT3Resource : public BaseResource
 {
- public:
-
-	GT3Resource( const char *resource_name );
+ protected:
+	GT3Resource( const char *resource_name, const char *proxy_subject );
 	~GT3Resource();
 
+ public:
+	bool Init();
 	void Reconfig();
 	void RegisterJob( GT3Job *job, bool already_submitted );
 	void UnregisterJob( GT3Job *job );
@@ -61,6 +58,11 @@ class GT3Resource : public BaseResource
 	time_t getLastStatusChangeTime() { return lastStatusChange; }
 
 	static const char *CanonicalName( const char *name );
+	static const char *HashName( const char *resource_name,
+								 const char *proxy_subject );
+
+	static GT3Resource *FindOrCreateResource( const char *resource_name,
+											  const char *proxy_subject );
 
 	static void setProbeInterval( int new_interval )
 		{ probeInterval = new_interval; }
@@ -71,9 +73,15 @@ class GT3Resource : public BaseResource
 	static void setGahpCallTimeout( int new_timeout )
 		{ gahpCallTimeout = new_timeout; }
 
+	// This should be private, but GT3Job references it directly for now
+	static HashTable <HashKey, GT3Resource *> ResourcesByName;
+
  private:
 	int DoPing();
 
+	bool initialized;
+
+	char *proxySubject;
 	bool resourceDown;
 	bool firstPingDone;
 	int pingTimerId;

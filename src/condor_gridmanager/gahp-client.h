@@ -454,6 +454,9 @@ class GahpClient : public Service {
 		condor_job_stage_in(const char *schedd_name, ClassAd *job_ad);
 
 		int
+		condor_job_stage_out(const char *schedd_name, PROC_ID job_id);
+
+		int
 		blah_job_submit(ClassAd *job_ad, char **job_id);
 
 		int

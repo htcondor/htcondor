@@ -153,3 +153,22 @@ SchedDRequest * SchedDRequest::createJobStageInRequest (const int request_id,
 	return req;
 
 }
+
+SchedDRequest * SchedDRequest::createJobStageOutRequest (const int request_id,
+														 const int cluster_id,
+														 const int proc_id) {
+
+	SchedDRequest * req = new SchedDRequest;
+	req->cluster_id = cluster_id;
+	req->proc_id = proc_id;
+	req->classad = NULL;
+	req->constraint = NULL;
+	req->reason = NULL;
+
+	req->command = SDC_JOB_STAGE_OUT;
+	req->status = SDCS_NEW;
+	req->request_id = request_id;
+
+	return req;
+
+}

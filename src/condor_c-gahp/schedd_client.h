@@ -43,6 +43,7 @@
 #define TIMER_UNSET -1
 
 extern char *ScheddAddr;
+extern char *ScheddPool;
 extern char *ScheddJobConstraint;
 extern char *GridmanagerScratchDir;
 extern char *Owner;
@@ -54,6 +55,8 @@ extern int contactScheddTid;
 #define GAHP_NULL_PARAM "NULL"
 
 
+
+extern bool useXMLClassads;
 
 // initialization
 void Init();

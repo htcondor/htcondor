@@ -28,6 +28,7 @@
 #include "condor_classad.h"
 #include "condor_io.h"
 #include "enum_utils.h"
+#include "daemon.h"
 
 
 typedef enum {
@@ -245,6 +246,8 @@ public:
 	bool reschedule();
 
 	bool spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError * errstack);
+
+	bool receiveJobSandbox(const char* constraint, CondorError * errstack);
 
 private:
 		/** This method actually does all the brains for all versions

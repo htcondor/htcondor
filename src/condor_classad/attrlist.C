@@ -2531,4 +2531,11 @@ Assign(char const *variable,float value)
 	buf.sprintf("%s = %f",variable,value);
 	return Insert(buf.GetCStr());
 }
+int AttrList::
+Assign(char const *variable,bool value)
+{
+	MyString buf;
+	buf.sprintf("%s = %s",variable,value?"TRUE":"FALSE");
+	return Insert(buf.GetCStr());
+}
 

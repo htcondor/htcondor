@@ -240,6 +240,130 @@ DCSchedd::reschedule()
 	return sendCommand(RESCHEDULE, Stream::safe_sock, 0);
 }
 
+bool
+DCSchedd::receiveJobSandbox(const char* constraint, CondorError * errstack)
+{
+	ExprTree *tree = NULL, *lhs = NULL, *rhs = NULL;
+	char *lhstr, *rhstr;
+	int reply;
+	int i;
+	ReliSock rsock;
+	int JobAdsArrayLen;
+
+		// // // // // // // //
+		// On the wire protocol
+		// // // // // // // //
+
+	rsock.timeout(20);   // years of research... :)
+	if( ! rsock.connect(_addr) ) {
+		dprintf( D_ALWAYS, "DCSchedd::receiveJobSandbox: "
+				 "Failed to connect to schedd (%s)\n", _addr );
+		return false;
+	}
+	if( ! startCommand(TRANSFER_DATA, (Sock*)&rsock) ) {
+		dprintf( D_ALWAYS, "DCSchedd::receiveJobSandbox: "
+				 "Failed to send command (TRANSFER_DATA) to the schedd\n" );
+		return false;
+	}
+
+		// First, if we're not already authenticated, force that now. 
+	if (!forceAuthentication( &rsock, errstack )) {
+		dprintf( D_ALWAYS, 
+			"DCSchedd::receiveJobSandbox: authentication failure: %s\n",
+			errstack->getFullText() );
+		return false;
+	}
+
+		// Send the constraint
+	rsock.encode();
+	char * nc_constraint = (char*) constraint;	// cast away const... sigh.
+	if ( !rsock.code(nc_constraint) ) {
+		dprintf(D_ALWAYS,"DCSchedd:receiveJobSandbox: "
+				"Can't send JobAdsArrayLen to the schedd\n");
+		return false;
+	}
+
+	rsock.eom();
+
+		// Now, read how many jobs matched the constraint.
+	rsock.decode();
+	if ( !rsock.code(JobAdsArrayLen) ) {
+		dprintf(D_ALWAYS,"DCSchedd:receiveJobSandbox: "
+				"Can't receive JobAdsArrayLen from the schedd\n");
+		return false;
+	}
+
+	rsock.eom();
+
+		// Now read all the files via the file transfer object
+	for (i=0; i<JobAdsArrayLen; i++) {
+		FileTransfer ftrans;
+		ClassAd job;
+
+			// grab job ClassAd
+		if ( !job.initFromStream(rsock) ) {
+			dprintf(D_ALWAYS,"DCSchedd:receiveJobSandbox: "
+				"Can't receive job ad %d from the schedd\n", i+1);
+			return false;
+		}
+
+		rsock.eom();
+
+			// translate the job ad by replacing the 
+			// saved SUBMIT_ attributes
+		job.ResetExpr();
+		while( (tree = job.NextExpr()) ) {
+			lhstr = NULL;
+			if( (lhs = tree->LArg()) ) { 
+				lhs->PrintToNewStr (&lhstr); 
+			}
+			if ( lhstr && strncasecmp("SUBMIT_",lhstr,7)==0 ) {
+					// this attr name starts with SUBMIT_
+					// compute new lhs (strip off the SUBMIT_)
+				char *new_attr_name = strchr(lhstr,'_');
+				ASSERT(new_attr_name);
+				new_attr_name++;
+					// compute new rhs (just use the same)
+				rhstr = NULL;
+				if( (rhs = tree->RArg()) ) { 
+					rhs->PrintToNewStr (&rhstr); 
+				}
+					// insert attribute
+				if(rhstr) {
+					MyString newattr;
+					newattr += new_attr_name;
+					newattr += "=";
+					newattr += rhstr;
+					job.Insert(newattr.Value());
+					free(rhstr);
+				}
+			}
+			if ( lhstr ) {
+				free(lhstr);
+			}
+		}	// while next expr
+
+		if ( !ftrans.SimpleInit(&job,false,false,&rsock) ) {
+			return false;
+		}
+		if ( !ftrans.DownloadFiles() ) {
+			return false;
+		}
+	}	
+		
+		
+	rsock.eom();
+
+	rsock.encode();
+
+	reply = OK;
+	rsock.code(reply);
+	rsock.eom();
+
+	return true;
+}
+
+
 bool 
 DCSchedd::spoolJobFiles(int JobAdsArrayLen, ClassAd* JobAdsArray[], CondorError * errstack)
 {
