@@ -196,10 +196,10 @@ RESCHEDULE_commandHandler (int, Stream *)
 	double		maxPrioValue;
 	double		normalFactor;
 	double		scheddPrio;
+	double		scheddShare;
 	int			scheddLimit;
 	int			scheddUsage;
-	int			can_run_niceuser;
-	int			scheddsRemaining; 
+	int			MaxscheddLimit;
 	int			hit_schedd_prio_limit;
 
 	dprintf( D_ALWAYS, "---------- Started Negotiation Cycle ----------\n" );
@@ -226,17 +226,17 @@ RESCHEDULE_commandHandler (int, Stream *)
 	do {
 		spin_pie++;
 		hit_schedd_prio_limit = FALSE;
-		can_run_niceuser = TRUE;
 		calculateNormalizationFactor( scheddAds, maxPrioValue, normalFactor);
-		scheddsRemaining = scheddAds.MyLength();
+		numStartdAds = startdAds.MyLength();
+		MaxscheddLimit = 0;
 		// ----- Negotiate with the schedds in the sorted list
 		dprintf( D_ALWAYS, "Phase 4.%d:  Negotiating with schedds ...\n",spin_pie );
+		dprintf (D_FULLDEBUG, "\t\tNumStartdAds = %d\n", numStartdAds);
+		dprintf (D_FULLDEBUG, "\t\tNormalFactor = %f\n", normalFactor);
+		dprintf (D_FULLDEBUG, "\t\tMaxPrioValue = %f\n", maxPrioValue);
 		scheddAds.Open();
 		while( (schedd = scheddAds.Next()) )
 		{
-			// decrement our count of schedds remaining
-			scheddsRemaining--;
-	
 			// get the name and address of the schedd
 			if( !schedd->LookupString( ATTR_NAME, scheddName ) ||
 				!schedd->LookupString( ATTR_SCHEDD_IP_ADDR, scheddAddr ) )
@@ -249,45 +249,18 @@ RESCHEDULE_commandHandler (int, Stream *)
 	
 			// calculate the percentage of machines that this schedd can use
 			scheddPrio = accountant.GetPriority ( scheddName );
-			if (scheddPrio==HUGE_VAL) {
-				scheddUsage = 0;
-			}
-			else { 
-				scheddUsage = accountant.GetResourcesUsed ( scheddName );
-			}
-			numStartdAds = startdAds.MyLength();
-			dprintf (D_FULLDEBUG, "\tCalculating schedd limit with the following "
-						"parameters\n");
-			dprintf (D_FULLDEBUG, "\t\tMaxPrioValue = %f\n", maxPrioValue);
-			dprintf (D_FULLDEBUG, "\t\tScheddPrio   = %f\n", scheddPrio);
-			dprintf (D_FULLDEBUG, "\t\tScheddUsage  = %d\n", scheddUsage);
-			dprintf (D_FULLDEBUG, "\t\tNormalFactor = %f\n", normalFactor);
-			dprintf (D_FULLDEBUG, "\t\tNumStartdAds = %d\n", numStartdAds);
-	
-			if ( scheddPrio != HUGE_VAL ) {
-				// a normal user, i.e. not the "nice-user"
-				scheddLimit  = (int) ceil (maxPrioValue/(scheddPrio*normalFactor) *
-										numStartdAds) - scheddUsage;
-			} else {
-				// handle the "nice-user" 
-				// if any other schedd before us did not get all the 
-				// resources they wanted, bail out now.
-				if ( !can_run_niceuser ) {
-					dprintf(D_ALWAYS,"\tNice-User skipped; other schedds want more\n");
-					continue;    // dont waste the time calling negotiate
-				}
-				// Ok, if we made it here we can run nice-user jobs.
-				// Run nice-user jobs round-robin amongst the schedds; since
-				// the schedds are sorted by priority we know that all the
-				// remaining schedds are also nice-user; so we can get
-				// round-robin by setting the limit to the number of
-				// machines divided by the number of nice-user schedds left.
-				scheddLimit = (int) ceil (numStartdAds/(scheddsRemaining + 1)) -
-					scheddUsage;
-			}
+			scheddUsage = accountant.GetResourcesUsed ( scheddName );
+			scheddShare = maxPrioValue/(scheddPrio*normalFactor);
+			scheddLimit  = (int) rint((scheddShare*numStartdAds)-scheddUsage);
+			if (scheddLimit>MaxscheddLimit) MaxscheddLimit=scheddLimit;
 
-			dprintf(D_ALWAYS,"\tSchedd %s's resource limit set at %d\n",
-					scheddName,scheddLimit);
+			// print some debug info
+			dprintf (D_FULLDEBUG, "\tCalculating schedd limit with the following parameters\n");
+			dprintf (D_FULLDEBUG, "\t\tScheddPrio     = %f\n", scheddPrio);
+			dprintf (D_FULLDEBUG, "\t\tscheddShare    = %f\n", scheddShare);
+			dprintf (D_FULLDEBUG, "\t\tScheddUsage    = %d\n", scheddUsage);
+			dprintf (D_FULLDEBUG, "\t\tscheddLimit    = %d\n", scheddLimit);
+			dprintf (D_FULLDEBUG, "\t\tMaxscheddLimit = %d\n", MaxscheddLimit);
 		
 			if ( scheddLimit < 1 ) {
 				// Optimization: If limit is 0, don't waste time with negotiate
@@ -302,10 +275,7 @@ RESCHEDULE_commandHandler (int, Stream *)
 				case MM_RESUME:
 					// the schedd hit its resource limit.  must resume negotiations
 					// at a later negotiation cycle.
-					// do not allow nice_user jobs to run, since this schedd
-					// still wants more resources.
 					dprintf(D_FULLDEBUG,"\tThis schedd hit its scheddlimit.\n");
-					can_run_niceuser = FALSE;
 					hit_schedd_prio_limit = TRUE;
 					break;
 				case MM_DONE: 
@@ -321,7 +291,7 @@ RESCHEDULE_commandHandler (int, Stream *)
 			}
 		}
 		scheddAds.Close();
-	} while ( hit_schedd_prio_limit == TRUE );
+	} while ( hit_schedd_prio_limit == TRUE && MaxscheddLimit>0);
 
 	// ----- Done with the negotiation cycle
 	dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
@@ -767,7 +737,6 @@ calculateNormalizationFactor (ClassAdList &scheddAds, double &max,
 	int 	num_scheddAds;
 
 	// find the maximum of the priority values (i.e., lowest priority)
-	// note: ignore the "nice user" priority (HUGE_VAL)
 	max = DBL_MIN;
 	scheddAds.Open();
 	while ((ad = scheddAds.Next()))
@@ -775,12 +744,11 @@ calculateNormalizationFactor (ClassAdList &scheddAds, double &max,
 		// this will succeed (comes from collector)
 		ad->LookupString (ATTR_NAME, scheddName);
 		prio = accountant.GetPriority (scheddName);
-		if (prio > max && prio != HUGE_VAL) max = prio;
+		if (prio > max) max = prio;
 	}
 	scheddAds.Close();
 
 	// calculate the normalization factor, i.e., sum of the (max/scheddprio)
-	// again, do not enter the "nice user" into the calculation.
 	// also, do not factor in ads with the same ATTR_NAME more than once -
 	// ads with the same ATTR_NAME signify the same user submitting from multiple
 	// machines.  count the number of ads with unique ATTR_NAME's into 
@@ -792,13 +760,11 @@ calculateNormalizationFactor (ClassAdList &scheddAds, double &max,
 	while ((ad = scheddAds.Next()))
 	{
 		ad->LookupString (ATTR_NAME, scheddName);
-		if ( strcmp(scheddName,old_scheddName) != 0) {
-			strncpy(old_scheddName,scheddName,sizeof(old_scheddName));
-			num_scheddAds++;
-			prio = accountant.GetPriority (scheddName);
-			if ( prio != HUGE_VAL )
-				normalFactor = normalFactor + max/prio;
-		}
+		if ( strcmp(scheddName,old_scheddName) == 0) continue;
+		strncpy(old_scheddName,scheddName,sizeof(old_scheddName));
+		num_scheddAds++;
+		prio = accountant.GetPriority (scheddName);
+		normalFactor = normalFactor + max/prio;
 	}
 	scheddAds.Close();
 
