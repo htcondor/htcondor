@@ -219,13 +219,13 @@ DaemonCore::~DaemonCore()
  just call the actual method implementation with a default parameter set.
  ********************************************************/
 int	DaemonCore::Register_Command(int command, char* com_descrip, CommandHandler handler, 
-								char* handler_descrip, Service* s, DCpermission perm) {
-	return( Register_Command(command, com_descrip, handler, (CommandHandlercpp)NULL, handler_descrip, s, perm, FALSE) );
+								char* handler_descrip, Service* s, DCpermission perm, int dprintf_flag) {
+	return( Register_Command(command, com_descrip, handler, (CommandHandlercpp)NULL, handler_descrip, s, perm, dprintf_flag, FALSE) );
 }
 
 int	DaemonCore::Register_Command(int command, char *com_descrip, CommandHandlercpp handlercpp, 
-								char* handler_descrip, Service* s, DCpermission perm) {
-	return( Register_Command(command, com_descrip, NULL, handlercpp, handler_descrip, s, perm, TRUE) ); 
+								char* handler_descrip, Service* s, DCpermission perm, int dprintf_flag) {
+	return( Register_Command(command, com_descrip, NULL, handlercpp, handler_descrip, s, perm, dprintf_flag, TRUE) ); 
 }
 
 int	DaemonCore::Register_Signal(int sig, char* sig_descrip, SignalHandler handler, 
@@ -301,7 +301,7 @@ int DaemonCore::Reset_Timer( int id, unsigned when, unsigned period ) {
 
 int DaemonCore::Register_Command(int command, char* command_descrip, CommandHandler handler, 
 					CommandHandlercpp handlercpp, char *handler_descrip, Service* s, 
-					DCpermission perm, int is_cpp)
+					DCpermission perm, int dprintf_flag, int is_cpp)
 {
     int     i;		// hash value
     int     j;		// for linear probing
@@ -349,6 +349,7 @@ int DaemonCore::Register_Command(int command, char* command_descrip, CommandHand
 	comTable[i].perm = perm;
 	comTable[i].service = s;
 	comTable[i].data_ptr = NULL;
+	comTable[i].dprintf_flag = dprintf_flag;
 	free_descrip(comTable[i].command_descrip);
 	if ( command_descrip )
 		comTable[i].command_descrip = strdup(command_descrip);
@@ -1284,9 +1285,6 @@ int DaemonCore::HandleReq(int socki)
 			stream = insock;
 		}
 
-		dprintf( D_COMMAND, "DaemonCore: Command received via TCP from %s\n", 
-				 sin_to_string(stream->endpoint()) );
-
 	}
 	// set up a connection for a udp socket
 	else {
@@ -1306,6 +1304,10 @@ int DaemonCore::HandleReq(int socki)
 	// a timeout of 20 seconds on their socket.
 	// stream->timeout(old_timeout);
 	if(!result) {
+		if (is_tcp) {
+			dprintf(D_ALWAYS, "DaemonCore: Command received via TCP from %s\n",
+					sin_to_string(stream->endpoint()) );
+		}
 		dprintf(D_ALWAYS, "DaemonCore: Can't receive command request (perhaps a timeout?)\n");
 		if ( insock != stream )	{   // delete the stream only if we did an accept
 			delete stream;		   //     
@@ -1315,12 +1317,6 @@ int DaemonCore::HandleReq(int socki)
 		return KEEP_STREAM;
 	}
 	
-	// If UDP, display who message is from now, since we could not do it above
-	if ( !is_tcp ) {		
-		dprintf( D_COMMAND, "DaemonCore: Command received via UDP from %s\n", 
-				 sin_to_string(stream->endpoint()) );
-	}
-
 	// get the handler function
 
 	// first compute the hash
@@ -1355,10 +1351,17 @@ int DaemonCore::HandleReq(int socki)
 			if ( !is_tcp)
 				stream->end_of_message();
 		} else {
-			dprintf(D_COMMAND, "DaemonCore: received command %d (%s), calling handler (%s)\n", req,
+			dprintf(comTable[index].dprintf_flag,
+					"DaemonCore: Command received via %s from %s\n",
+					(is_tcp) ? "TCP" : "UDP",
+					sin_to_string(stream->endpoint()) );
+			dprintf(comTable[index].dprintf_flag, "DaemonCore: received command %d (%s), calling handler (%s)\n", req,
 			comTable[index].command_descrip, comTable[index].handler_descrip);
 		}
 	} else {
+		dprintf(D_ALWAYS, "DaemonCore: Command received via %s from %s\n",
+				(is_tcp) ? "TCP" : "UDP",
+				sin_to_string(stream->endpoint()) );
 		dprintf(D_ALWAYS,"DaemonCore: received unregistered command request %d !\n",req);
 		result = 0;		// make result != to KEEP_STREAM, so we blow away this socket below
 	}
