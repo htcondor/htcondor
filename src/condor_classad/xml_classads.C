@@ -130,7 +130,7 @@ struct tag_name
 static struct tag_name tag_names[] = 
 {
 	{tag_ClassAds,  "classads", },
-	{tag_ClassAd,   "ca",  },
+	{tag_ClassAd,   "c",  },
 	{tag_Attribute, "a",   },
 	{tag_Number,    "n",   },
 	{tag_String,    "s",   },
