@@ -1,3 +1,12 @@
+11/28/04 V6_6-merge-25
+   The state of the V6_6-branch for yet another merge into V6_7.  This
+   includes autoconf changes to remove tail/head + to find/use full
+   paths to all tools; some more ProcFamily fixes on windoze; the
+   HIGHPORT/LOWPORT bug w/ SO_KEEPALIVE, the fix to old classad
+   PrintToStr(); moving the DaemonCore dprintf() about exit status to
+   right before exit(); DAG support in CondorTest.pm; console idle
+   time fixes on linux, and a few additions to condor_tests.
+
 10/26/04 V6_6-merge-24
    The state of the V6_6-branch for yet another merge into
    V6_7-branch.  This includes some minor tweaks to the imake system,
