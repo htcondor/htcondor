@@ -4,8 +4,6 @@
 
 static char *_FileName_ = __FILE__;
 
-enum { EVAL_OK , EVAL_UNDEF , EVAL_ERROR };
-
 AttributeReference::
 AttributeReference()
 {
@@ -63,7 +61,7 @@ _copy( CopyMode cm )
 }
 
 void AttributeReference::
-setParentScope( ClassAd *parent ) 
+_setParentScope( ClassAd *parent ) 
 {
 	if( expr ) expr->setParentScope( parent );
 }
@@ -82,61 +80,71 @@ toSink (Sink &s)
 }
 
 
-void AttributeReference::
+bool AttributeReference::
 _evaluate (EvalState &state, Value &val)
 {
 	ExprTree	*tree, *dummy;
 	ClassAd		*curAd;
+	bool		rval;
 
 	// find the expression and the evalstate
 	curAd = state.curAd;
 	switch( findExpr( state, tree, dummy, false ) ) {
+		case EVAL_FAIL:
+			return false;
+
 		case EVAL_ERROR:
 			val.setErrorValue();
 			state.curAd = curAd;
-			return;
+			return true;
 
 		case EVAL_UNDEF:
 			val.setUndefinedValue();
 			state.curAd = curAd;
-			return;
+			return true;
 
 		case EVAL_OK:
-			tree->evaluate( state , val );
+			rval = tree->evaluate( state , val );
 			state.curAd = curAd;
-			return;
+			return rval;
 
 		default:  EXCEPT( "ClassAd:  Should not reach here" );
 	}
+	return false;
 }
 
 
-void AttributeReference::
+bool AttributeReference::
 _evaluate (EvalState &state, Value &val, ExprTree *&sig )
 {
 	ExprTree	*tree;
 	ClassAd		*curAd;
+	bool		rval;
 
 	// find the expression and the evalstate
 	curAd = state.curAd;
 	switch( findExpr( state , tree , sig , true ) ) {
+		case EVAL_FAIL:
+			return false;
+
 		case EVAL_ERROR:
 			val.setErrorValue();
 			state.curAd = curAd;
-			return;
+			return true;
 
 		case EVAL_UNDEF:
 			val.setUndefinedValue();
 			state.curAd = curAd;
-			return;
+			return true;
 
 		case EVAL_OK:
-			tree->evaluate( state , val );
+			rval = tree->evaluate( state , val );
 			state.curAd = curAd;
-			return;
+			return rval;
 
 		default:  EXCEPT( "ClassAd:  Should not reach here" );
 	}
+	return false;
 }
 
 
@@ -148,7 +156,9 @@ _flatten( EvalState &state, Value &val, ExprTree*&ntree, OpKind*)
 		return( ntree != NULL );
 	}
 
-	evaluate( state, val );
+	if( !evaluate( state, val ) ) {
+		return false;
+	}
 
 	if( val.isClassAdValue() || val.isListValue() || val.isUndefinedValue() ) {
 		ntree = copy();
@@ -163,14 +173,12 @@ _flatten( EvalState &state, Value &val, ExprTree*&ntree, OpKind*)
 int AttributeReference::
 findExpr( EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig )
 {
-	ClassAd 	*current=NULL, *parent=NULL;
-	ExprTree	*tmp, *sigExpr = NULL;
+	ClassAd 	*current=NULL;
+	ExprTree	*sigXpr = NULL;
 	Value		val;
-	bool		seen;
-	int			rval = EVAL_OK;
+	bool		rval;
 
 	sig = NULL;
-	state.superChase.clear( );
 
 	// establish starting point for search
 	if( expr == NULL ) {
@@ -178,86 +186,31 @@ findExpr( EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig )
 		current = absolute ? state.rootAd : state.curAd;
 	} else {
 		// "expr.attr"
-		if( wantSig ) {
-			expr->evaluate( state, val, sigExpr );
-		} else {
-			expr->evaluate( state, val );
+		rval=wantSig?expr->evaluate(state,val,sigXpr):expr->evaluate(state,val);
+		if( !rval ) {
+			return( EVAL_FAIL );
 		}
+
 		if( val.isUndefinedValue( ) ) {
-			if( wantSig ) delete sigExpr;
+			sig = sigXpr;
 			return( EVAL_UNDEF );
 		}
 		if( !val.isClassAdValue( current ) ) {
-			if( wantSig ) delete sigExpr;
+			if( wantSig ) {
+				if(!(sig=new AttributeReference(sigXpr,attributeStr,absolute))){
+					return( EVAL_FAIL );
+				}
+			}
 			return( EVAL_ERROR );
 		}
 	}
 
-	tree = current->lookup( attributeStr );
-
-	while( !tree ) {
-		// mark this scope as visited while chasing scopes
-		if( state.superChase.insert( current, true ) < 0 ) {
-			rval = EVAL_ERROR;
-			break;
-		}
-
-		// determine parent scope
-		if( ( tmp = current->lookup( "super" ) ) ) {
-			// explicit "super" attribute specified
-			state.curAd = current;
-			tmp->evaluate( state, val );
-			if( val.isUndefinedValue( ) ) {
-				rval = EVAL_UNDEF;
-				break;
-			} else if( !val.isClassAdValue( parent ) ) {
-				rval = EVAL_ERROR;
-				break;
-			}
-		} else {
-			// no explicit "super" attribute; get natural lexical parent
-			parent = current->parentScope;
-		}
-
-		if( parent == NULL ) {
-			// must have reached root scope
-			rval = EVAL_UNDEF;
-			break;
-		} else {
-			// continue searching from parent scope
-			current = parent;
-		}
-		
-		// have we already visited this scope?
-		if( state.superChase.lookup( current, seen ) == 0 && seen ) {
-			rval = EVAL_UNDEF;
-			break;
-		} 
-
-		// if the attr ref is "super", just return the parent scope
-		if( CLASSAD_RESERVED_STRCMP( attributeStr, "super" ) == 0 ) {
-			tree = current;
-			rval = EVAL_OK;
-			break;
-		}
-			
-		// continue search from this scope
-		tree = current->lookup( attributeStr );
-	}
-
-	state.superChase.clear( );
-
 	if( wantSig ) {
-		if( rval != EVAL_OK ) {
-			delete sigExpr;
-			sig = NULL;
-		} else {
-			sig = new AttributeReference( sigExpr, attributeStr, absolute );
-		}
+		sig = new AttributeReference( sigXpr, attributeStr, absolute );
 	}
 
-	state.curAd = current;
-	return( rval );
+	// lookup with scope; this may side-affect state
+	return( current->lookupInScope( attributeStr, tree, state ) );
 }
 
 
