@@ -47,14 +47,13 @@ $syscall = $ARGV[0];
 $file = find_file( $syscall );
 do_it( $file );
 print "\n";
-exit 0;
-
+exit( 0 );
 
 ######################################################################
 # Subroutines
 ######################################################################
 
-sub find_file() {
+sub find_file {
     my( $sys ) = $_[0];
     my( $file, $i );
 
@@ -80,7 +79,7 @@ sub find_file() {
 # If not, recursively call ourselves with the output from
 #    find_alternate(), which sees if there's a different man page we
 #    should display for this syscall.
-sub do_it() {
+sub do_it {
     my( $file ) = $_[0];
     if( !$file ) {
 	return 0;
@@ -110,7 +109,7 @@ sub do_it() {
 #   "\\-" = match exactly "\-", which is what begins the synopsis
 #   "(.*)" = everything upto a newline, save it into $2 ($2, since we 
 #           already used ()'s around something earlier in this regexp)  
-sub display_line() {
+sub display_line {
     my( $file ) = $_[0];
 
     open( MAN, "$cat < $file |" );
@@ -138,7 +137,7 @@ sub display_line() {
 # Open the given man page, seach for ".so", and grab everything after
 # it (usually something like "man2/wait.2") as the "alternate man
 # page" we should display. 
-sub find_alternate() {
+sub find_alternate {
     my( $file ) = $_[0];
 
     open( MAN, "$cat < $file |" );
