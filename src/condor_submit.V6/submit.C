@@ -1511,7 +1511,7 @@ queue(int num)
 		if (NewExecutable) {
 			NewExecutable = false;
  			if ((ClusterId = NewCluster()) == -1) {
-				fprintf(stderr, "\nERROR: Failed to create cluster, errno: %d\n",errno);
+				fprintf(stderr, "\nERROR: Failed to create cluster\n");
 				exit(1);
 			}
 			ProcId = -1;
