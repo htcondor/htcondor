@@ -85,7 +85,7 @@ Match::send_accountant( int cmd )
 	}
 	ReliSock sock;
 	sock.timeout( 30 );
-	if( sock.connect( accountant_host, ACCOUNTANT_PORT ) < 0 ) {
+	if( ! sock.connect( accountant_host, ACCOUNTANT_PORT ) ) {
 		dprintf(D_ALWAYS, "Couldn't connect to accountant\n");
 		return FALSE;
 	}
@@ -316,7 +316,7 @@ void
 Client::vacate(char* cap)
 {
 	ReliSock sock;
-	sock.timeout( 30 );
+	sock.timeout( 20 );
 
 	if( ! (c_addr || c_host || c_name ) ) {
 			// Client not really set, nothing to do.
@@ -325,7 +325,7 @@ Client::vacate(char* cap)
 
 	dprintf(D_FULLDEBUG, "Entered vacate_client %s %s...\n", c_addr, c_host);
 	
-	if(	sock.connect( c_addr, 0 ) < 0 ) {
+	if(	! sock.connect( c_addr, 0 ) ) {
 		dprintf(D_ALWAYS, "Can't connect to schedd (%s)\n", c_addr);
 	} else {
 		if( !sock.put( RELEASE_CLAIM ) ) {
