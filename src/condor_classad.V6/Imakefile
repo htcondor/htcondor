@@ -110,6 +110,10 @@ WIN32_FILES = win32/classad_dist.dep win32/classad_dist.dsp \
 dist: $(DIST_FILES)
 	cp build_external build_classads-$(DIST_VERSION)
 	chmod 755 build_classads-$(DIST_VERSION)
+	chmod 664 $(DIST_FILES)
+	chmod 775 configure
+	chmod 664 $(WIN32_FILES)
+	chmod 775 win32/make.bat
 	rm -rf $(DISTRIBUTION_DIR) *.gz
 	mkdir $(DISTRIBUTION_DIR)
 	mkdir $(DISTRIBUTION_DIR)/win32
@@ -119,6 +123,7 @@ dist: $(DIST_FILES)
 	unix2dos $(DISTRIBUTION_DIR)/win32/classad_dist*
 	tar cf $(DISTRIBUTION_DIR).tar $(DISTRIBUTION_DIR)
 	gzip $(DISTRIBUTION_DIR).tar
+	chmod 664 $(DISTRIBUTION_DIR).tar.gz
 
 /* Rule to make documentation */
 doc: html
