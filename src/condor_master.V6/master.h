@@ -73,8 +73,6 @@ public:
 	int		NumberRestarts(int pid);        // number of restarts
 	int		IsDaemon(int pid);	       // returns 1 if pid is a daemon
 	void	CheckForNewExecutable();
-	int 	NumDaemons(){ return( no_daemons - 1 ); };  
-	//	Returns the number of daemons this master has registered.
 };
 
 

@@ -44,7 +44,6 @@
 #include <sys/file.h>
 #include "condor_fix_timeval.h"  // FIX
 #include <sys/resource.h>
-#include <sys/wait.h>
 #include <math.h>
 
 #include "condor_constants.h"
@@ -82,6 +81,7 @@ extern void		do_killpg(int, int);
 extern void		do_kill( int pid, int sig );
 extern int 	   	NewExecutable(char* file, time_t* tsp);
 extern int		DoCleanup();
+extern void		wait_all_children();
 
 int		hourly_housekeeping(void);
 extern "C"
@@ -563,18 +563,7 @@ void Daemons::RestartMaster()
 	}
 
 		/* Wait until all children die */
-	for(;;) {
-		pid = wait( 0 );
-		dprintf( D_ALWAYS, "Wait() returns pid %d\n", pid );
-		if( pid < 0 ) {
-			if( errno == ECHILD ) {
-				break;
-			} else {
-				EXCEPT( "wait( 0 )" );
-			}
-		}
-	}
-	dprintf( D_ALWAYS, "Done waiting for all children\n" );
+	wait_all_children();
 
 	if ( MasterLock->release() == FALSE ) {
 		dprintf(D_ALWAYS,

@@ -153,7 +153,7 @@ char	*param(char*) ;
 void	sigchld_handler(), sigquit_handler(),  sighup_handler();
 void	RestartMaster();
 void	siggeneric_handler(int); 
-void 	sigterm_handler(), wait_all_daemons_and_exit();
+void 	sigterm_handler(), wait_all_children();
 
 // local function prototypes
 void	init_params();
@@ -782,10 +782,15 @@ void
 sigquit_handler()
 {
 	dprintf( D_ALWAYS, "Killed by SIGQUIT.  Performing quick shut down.\n" );
-	install_sig_handler( SIGCHLD, wait_all_daemons_and_exit );
+	install_sig_handler( SIGCHLD, (SIGNAL_HANDLER)SIG_IGN );
 	dprintf( D_ALWAYS, "Sending all daemons a SIGQUIT\n" );
 	daemons.SignalAll(SIGQUIT);
+	wait_all_children();
+	dprintf( D_ALWAYS, "All daemons have exited.\n" );
+	set_machine_status( CONDOR_DOWN );
+	exit( 0 );
 }
+
 
 /*
  ** Cause job(s) to vacate, kill all daemons and go away.
@@ -793,45 +798,34 @@ sigquit_handler()
 void
 sigterm_handler()
 {
+	int pid;
 	dprintf( D_ALWAYS, "Killed by SIGTERM.  Performing graceful shut down.\n" );
-	install_sig_handler( SIGCHLD, wait_all_daemons_and_exit );
+	install_sig_handler( SIGCHLD, (SIGNAL_HANDLER)SIG_IGN );
 	dprintf( D_ALWAYS, "Sending all daemons a SIGTERM\n" );
 	daemons.SignalAll(SIGTERM);
+	wait_all_children();
+	dprintf( D_ALWAYS, "All daemons have exited.\n" );
+	set_machine_status( CONDOR_DOWN );
+	exit( 0 );
 }
 
 void
-wait_all_daemons_and_exit()
+wait_all_children()
 {
-	int pid = 0;
-	int status;
-		/* 
-		   NumDaemons returns the total number of daemons this master
-		   is trying to keep track of, including the master itself.
-		   We want one less since we're not waiting for the master to
-		   exit.  Derek Wright 7/28/97
-		 */
-	static int num_left = daemons.NumDaemons() - 1;
-
-	while( (pid=waitpid(-1,&status,WNOHANG)) != 0 ) {
-		if( pid == -1 ) {
-			if( errno = ECHILD) {
-				continue;
+	int pid;
+	dprintf( D_FULLDEBUG, "Begining to wait for all children\n" );
+	for(;;) {
+		pid = wait( 0 );
+		dprintf( D_FULLDEBUG, "Wait() returns pid %d\n", pid );
+		if( pid < 0 ) {
+			if( errno == ECHILD ) {
+				break;
+			} else {
+				EXCEPT( "wait( 0 ), errno = %d", errno );
 			}
-			EXCEPT( "waitpid(), error # = %d", errno );
-		}
-		if( WIFSTOPPED(status) ) {
-			continue;
-		}
-		if( daemons.IsDaemon(pid) ) {
-			num_left--;
-		}
-		if( num_left <= 0 ) {
-			dprintf( D_ALWAYS,
-					"All daemons have exited.\n" );
-			set_machine_status( CONDOR_DOWN );
-			exit( 0 );
 		}
 	}
+	dprintf( D_FULLDEBUG, "Done waiting for all children\n" );
 }
 
 time_t
