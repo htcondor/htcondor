@@ -173,6 +173,10 @@ char	*AppendFiles = "append_files";
 char	*TransferInputFiles = "transfer_input_files";
 char	*TransferOutputFiles = "transfer_output_files";
 char	*TransferFiles = "transfer_files";
+char	*TransferExecutable = "transfer_executable";
+char	*TransferInput = "transfer_input";
+char	*TransferOutput = "transfer_output";
+char	*TransferError = "transfer_error";
 
 char	*CopyToSpool = "copy_to_spool";
 
@@ -676,7 +680,9 @@ void
 SetExecutable()
 {
 	char	*ename = NULL;
+	char	*full_ename = NULL;
 	char	*copySpool = NULL;
+	char	*transfer = NULL;
 
 	ename = condor_param(Executable);
 
@@ -686,9 +692,23 @@ SetExecutable()
 		exit( 1 );
 	}
 
-	check_path_length(full_path(ename,false), Executable);
+	transfer = condor_param( TransferExecutable );
+	if ( transfer == NULL ) {
+		transfer = (char *)malloc( 16 );
+		strcpy( transfer, "TRUE" );
+	}
 
-	(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_CMD, full_path(ename,false));
+	// If we're not transfering the executable, leave a relative pathname
+	// unresolved. This is mainly important for the Globus universe.
+	if ( *transfer != 'F' && *transfer != 'f' ) {
+		full_ename = full_path( ename, false );
+	} else {
+		full_ename = ename;
+	}
+
+	check_path_length(full_ename, Executable);
+
+	(void) sprintf (buffer, "%s = \"%s\"", ATTR_JOB_CMD, full_ename);
 	InsertJobExpr (buffer);
 
 		/* MPI REALLY doesn't like these! */
@@ -735,7 +755,8 @@ SetExecutable()
 
 	// spool executable only if no $$(arch).$$(opsys) specified
 
-	if ( !strstr(ename,"$$") && *copySpool != 'F' && *copySpool != 'f' ) {	
+	if ( !strstr(ename,"$$") && *copySpool != 'F' && *copySpool != 'f' &&
+		 *transfer != 'F' && *transfer != 'f' ) {	
 
 		if (SendSpoolFile(IckptName) < 0) {
 			fprintf(stderr,"permission to transfer executable %s denied\n",IckptName);
@@ -743,7 +764,7 @@ SetExecutable()
 			exit( 1 );
 		}
 
-		if (SendSpoolFileBytes(full_path(ename,false)) < 0) {
+		if (SendSpoolFileBytes(full_ename) < 0) {
 			fprintf(stderr,"failed to transfer executable file %s\n", ename);
 			DoCleanup(0,0,NULL);
 			exit( 1 );
@@ -752,6 +773,7 @@ SetExecutable()
 	}
 
 	free(ename);
+	free(transfer);
 	free(copySpool);
 }
 
@@ -1165,6 +1187,30 @@ SetTransferFiles()
 		if ( output_files[0] ) {
 			InsertJobExpr (output_files);
 		}
+	}
+
+	macro_value = condor_param( TransferExecutable ) ;
+	if ( macro_value && (macro_value[0] == 'F' || macro_value[0] == 'f') ) {
+		sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_EXECUTABLE );
+		InsertJobExpr( buffer );
+	}
+
+	macro_value = condor_param( TransferInput ) ;
+	if ( macro_value && (macro_value[0] == 'F' || macro_value[0] == 'f') ) {
+		sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_INPUT );
+		InsertJobExpr( buffer );
+	}
+
+	macro_value = condor_param( TransferOutput ) ;
+	if ( macro_value && (macro_value[0] == 'F' || macro_value[0] == 'f') ) {
+		sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_OUTPUT );
+		InsertJobExpr( buffer );
+	}
+
+	macro_value = condor_param( TransferError ) ;
+	if ( macro_value && (macro_value[0] == 'F' || macro_value[0] == 'f') ) {
+		sprintf( buffer, "%s = FALSE", ATTR_TRANSFER_ERROR );
+		InsertJobExpr( buffer );
 	}
 }
 
