@@ -144,7 +144,7 @@ main (int argc, char *argv[])
 		if (diagnose) {
 			printf ("Adding constraint [%s]\n", buffer);
 		}
-		query->addConstraint (buffer);
+		query->addORConstraint (buffer);
 		break;
 
 
@@ -154,7 +154,7 @@ main (int argc, char *argv[])
 		if (diagnose) {
 			printf ("Adding constraint [%s]\n", buffer);
 		}
-		query->addConstraint (buffer);
+		query->addORConstraint (buffer);
 		break;
 
 
@@ -162,31 +162,6 @@ main (int argc, char *argv[])
 		break;
 	}	
 									
-		// If we're sorting because of the user, add the implied
-		// constraints from that.  We can't just use addConstraint for
-		// each one, since then we'd get each one OR'ed together, and
-		// we want AND.  So, just do our own work to create the big
-		// AND expression we want to use as a single constraint
-	if( sortConstraints ) {
-		char req [10240];
-		char buf [1024];
-		char* str;
-		sortConstraints->rewind(); 
-		req[0] = '(';
-		bool firstTime = true;
-		while( (str = sortConstraints->next()) ) { 
-            sprintf( buf, "%s(%s)", firstTime ? " " : " && ", str );
-            strcat( req, buf );
-            firstTime = false;
-        }
-        strcat( req, " )" );
-		if (diagnose) {
-			printf ("Adding constraint [%s]\n", req);
-		}
-		query->addConstraint( req );
-		delete sortConstraints;
-	}
-
 	// second pass:  add regular parameters and constraints
 	if (diagnose) {
 		printf ("----------\n");
@@ -438,18 +413,8 @@ firstPass (int argc, char *argv[])
 			}
 			sortEqualExprs[sortEqualExprs.getlast()+1] = sortExpr;
 
-				// If we're explicitly sorting because of the user, we
-				// add an implicit constraint that the attribute
-				// they're sorting on must be defined.  This is a hack
-				// until we have a good ClassAd interface that allows
-				// us to handle UNDEFINED better.  We use a StringList
-				// since we could possibly get many -sort arguments.  
-				// Derek Wright 8/18/99 
-			if( ! sortConstraints ) {
-				sortConstraints = new StringList;
-			}
-			sprintf( exprString, "TARGET.%s =!= UNDEFINED", argv[i] );
-			sortConstraints->append( exprString );
+				// the silent constraint TARGET.%s =!= UNDEFINED is added
+				// as a customAND constraint on the second pass
 		} else
 		if (matchPrefix (argv[i], "-submitters")) {
 			setMode (MODE_SCHEDD_SUBMITTORS, i, argv[i]);
@@ -494,8 +459,7 @@ secondPass (int argc, char *argv[])
 	char *daemonname;
 	for (int i = 1; i < argc; i++) {
 		// omit parameters which qualify switches
-		if (matchPrefix (argv[i], "-pool") || matchPrefix( argv[i], "-sort")
-			|| matchPrefix( argv[i], "-direct") ) {
+		if( matchPrefix(argv[i],"-pool") || matchPrefix(argv[i],"-direct") ) {
 			i++;
 			continue;
 		}
@@ -506,6 +470,12 @@ secondPass (int argc, char *argv[])
 						i, argv[i+1], argv[i+2]);
 			}
 			i += 2;
+			continue;
+		}
+		if( matchPrefix(argv[i], "-sort") ) {
+			i++;
+			sprintf( buffer, "TARGET.%s =!= UNDEFINED", argv[i] );
+			query->addANDConstraint( buffer );
 			continue;
 		}
 
@@ -531,12 +501,12 @@ secondPass (int argc, char *argv[])
 			  case MODE_COLLECTOR_NORMAL:
 			  case MODE_CKPT_SRVR_NORMAL:
     		  case MODE_STARTD_AVAIL:
-				sprintf (buffer, "(TARGET.%s == \"%s\") || (TARGET.%s == \"%s\")", 
+				sprintf(buffer,"(TARGET.%s==\"%s\") || (TARGET.%s==\"%s\")", 
 						 ATTR_NAME, daemonname, ATTR_MACHINE, daemonname );
 				if (diagnose) {
 					printf ("[%s]\n", buffer);
 				}
-				query->addConstraint (buffer);
+				query->addORConstraint (buffer);
 				break;
 
     		  case MODE_STARTD_RUN:
@@ -544,7 +514,7 @@ secondPass (int argc, char *argv[])
 				if (diagnose) {
 					printf ("[%s]\n", buffer);
 				}
-				query->addConstraint (buffer);
+				query->addORConstraint (buffer);
 				break;
 
 			  default:
@@ -557,7 +527,7 @@ secondPass (int argc, char *argv[])
 			if (diagnose) {
 				printf ("[%s]\n", argv[i+1]);
 			}
-			query->addConstraint (argv[i+1]);
+			query->addANDConstraint (argv[i+1]);
 			i++;
 		}
 	}

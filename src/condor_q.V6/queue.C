@@ -137,7 +137,7 @@ int main (int argc, char **argv)
 		querySchedds = true;
 		sprintf( constraint, "%s > 0 || %s > 0", ATTR_TOTAL_RUNNING_JOBS,
 				ATTR_TOTAL_IDLE_JOBS );
-		result = scheddQuery.addConstraint( constraint );
+		result = scheddQuery.addANDConstraint( constraint );
 		if( result != Q_OK ) {
 			fprintf( stderr, "Error: Couldn't add constraint %s\n", constraint);
 			exit( 1 );
@@ -248,7 +248,7 @@ processCommandLineArguments (int argc, char *argv[])
 			sprintf (constraint, "%s == \"%s\"", ATTR_NAME, daemonname);
 			delete [] daemonname;
 
-			result = scheddQuery.addConstraint (constraint);
+			result = scheddQuery.addORConstraint (constraint);
 			if (result != Q_OK) {
 				fprintf (stderr, "Argument %d (%s): Error %s\n", i, argv[i],
 							getStrQueryResult(result));
@@ -291,7 +291,7 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 
 			// insert the constraints
-			result = submittorQuery.addConstraint (constraint);
+			result = submittorQuery.addORConstraint (constraint);
 			if (result != Q_OK) {
 				fprintf (stderr, "Argument %d (%s): Error %s\n", i, argv[i],
 							getStrQueryResult(result));
@@ -322,7 +322,7 @@ processCommandLineArguments (int argc, char *argv[])
 				exit(1);
 			}
 
-			if (Q.add (argv[++i]) != Q_OK) {
+			if (Q.addAND (argv[++i]) != Q_OK) {
 				fprintf (stderr, "Error:  Argument %d (%s)\n", i, argv[i]);
 				exit (1);
 			}
@@ -340,16 +340,17 @@ processCommandLineArguments (int argc, char *argv[])
 
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
-				fprintf( stderr, "Argument -address requires another parameter\n");
+				fprintf( stderr,
+					"Argument -address requires another parameter\n");
 				exit(1);
 			}
 			if( ! is_valid_sinful(argv[i+1]) ) {
 				fprintf( stderr, 
-						 "Address must be of the form: \"<ip.address:port>\"\n" );
+					 "Address must be of the form: \"<ip.address:port>\"\n" );
 				exit(1);
 			}
-			sprintf (constraint, "%s == \"%s\"", ATTR_SCHEDD_IP_ADDR, argv[i+1]);
-			result = scheddQuery.addConstraint (constraint);
+			sprintf(constraint, "%s == \"%s\"", ATTR_SCHEDD_IP_ADDR, argv[i+1]);
+			result = scheddQuery.addORConstraint(constraint);
 			if (result != Q_OK) {
 				fprintf (stderr, "Argument %d (%s): Error %s\n", i, argv[i],
 							getStrQueryResult(result));
@@ -363,13 +364,13 @@ processCommandLineArguments (int argc, char *argv[])
 			sprintf (constraint, "((%s == %d) && (%s == %d))", 
 									ATTR_CLUSTER_ID, cluster,
 									ATTR_PROC_ID, proc);
-			Q.add (constraint);
+			Q.addOR (constraint);
 			summarize = 0;
 		} 
 		else
 		if (sscanf (argv[i], "%d", &cluster) == 1) {
 			sprintf (constraint, "(%s == %d)", ATTR_CLUSTER_ID, cluster);
-			Q.add (constraint);
+			Q.addOR (constraint);
 			summarize = 0;
 		} 
 		else
