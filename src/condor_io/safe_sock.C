@@ -456,6 +456,7 @@ int SafeSock::handle_incoming_packet()
 	dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string(&_who) );
 	length = received;
 
+    _shortMsg.reset();
 	int code = _shortMsg.getHeader(last, seqNo, length, mID, data);
     if (code == 1) {
         // short message, checksum maybe okay
@@ -471,7 +472,7 @@ int SafeSock::handle_incoming_packet()
         return TRUE;
     }
     else if (code == -1) {
-        dprintf(D_ALWAYS, "SafeSock: incorrect Message Digest\n");
+        dprintf(D_SECURITY, "SafeSock: unable to decode header\n");
         _shortMsg.reset();
         return false;
     }
