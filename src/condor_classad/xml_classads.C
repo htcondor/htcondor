@@ -641,14 +641,16 @@ ClassAdXMLUnparser::Unparse(ExprTree *expression, MyString &buffer)
 				break;
 			case LX_STRING:
 				add_tag(buffer, tag_String, true);
-				fix_characters(((StringBase *)value_expr)->Value(), fixed_string);
+				fix_characters(((StringBase *)value_expr)->Value(), 
+							   fixed_string);
 				buffer += fixed_string;
 				fixed_string = "";
 				add_tag(buffer, tag_String, false);
 				break;
 			case LX_TIME:
 				add_tag(buffer, tag_Time, true);
-				fix_characters(((TimeBase *)value_expr)->Value(), fixed_string);
+				fix_characters(((ISOTimeBase *)value_expr)->Value(), 
+							   fixed_string);
 				buffer += fixed_string;
 				fixed_string = "";
 				add_tag(buffer, tag_Time, false);
@@ -1439,7 +1441,7 @@ static void fix_entities(const char *source, MyString &dest)
 				dest += '"';
 				source += 6;
 			} else if (!strncmp(source, "&apos;", 6)) {
-				dest += '<';
+				dest += '\'';
 				source += 6;
 			} else {
 				dest += *source;
