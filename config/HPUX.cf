@@ -20,8 +20,7 @@
 
 #define MALLOC_DEBUG 			NO
 
-#define HAS_X_EXTENSIONS		NO
-#define HAS_X				NO
+#define NEEDS_KBDD			NO
 
 #define DOES_CHECKPOINTING		YES
 #define DOES_REMOTE_SYSCALLS		YES

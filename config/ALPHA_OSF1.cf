@@ -31,8 +31,7 @@
 #define DOES_SAVE_SIGSTATE		YES
 #define DO_BENCHMARKING			YES
 
-#define HAS_X				YES
-#define HAS_X_EXTENSIONS		NO
+#define NEEDS_KBDD			YES
 #define HAS_NDBM			YES
 #define HAS_FSTATFS			NO
 #define NEEDS_XDR_FLOAT			NO

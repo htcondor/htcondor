@@ -56,8 +56,7 @@
 #define DO_BENCHMARKING			YES
 #define HAS_DYNAMIC_USER_JOBS		NO
 
-#define HAS_X				NO	
-#define HAS_X_EXTENSIONS		NO
+#define NEEDS_KBDD			NO	
 #define HAS_NDBM			YES
 #define HAS_FSTATFS			YES
 #define NEEDS_XDR_FLOAT			NO
