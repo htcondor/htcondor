@@ -52,6 +52,7 @@
 #include "condor_string.h"
 #include "string_list.h"
 #include "condor_attributes.h"
+#include "my_hostname.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -63,11 +64,6 @@ int Read_config(char*, ClassAd*, BUCKET**, int, int);
 char *get_arch();
 char *get_op_sys();
 int SetSyscalls(int);
-#if defined(LINUX) || defined(HPUX9)
-    int gethostname(char*, unsigned int);
-#elif !defined(WIN32)
-    int gethostname(char*, int);
-#endif
 
 
 // External variables
@@ -229,7 +225,6 @@ real_config(const char *env_name, const char *file_name,
 		// Build a hash table with entries for "tilde" and
 		// "hostname". Note that "hostname" ends up as just the
 		// machine name w/o the . separators
-
 	if( tilde ) {
 		insert( "tilde", tilde, ConfigTab, TABLESIZE );
 		free( tilde );
@@ -237,15 +232,8 @@ real_config(const char *env_name, const char *file_name,
 	} else {
 			// What about tilde if there's no ~condor? 
 	}
-  
-	if( gethostname(hostname,sizeof(hostname)) < 0 ) {
-		fprintf( stderr, "gethostname failed, errno = %d\n", errno );
-		exit( 1 );
-	}
-  
-	if( ptr=(char *)strchr((const char *)hostname,'.') )
-		*ptr = '\0';
-	insert( "hostname", hostname, ConfigTab, TABLESIZE );
+	insert( "hostname", my_hostname(), ConfigTab, TABLESIZE );
+
 
 		// Actually read in the file
 
