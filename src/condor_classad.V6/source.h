@@ -33,14 +33,17 @@ class FunctionCall;
 
 /**
 	Defines an abstraction for the input source from which expressions
-	can be parsed.  The source may be pointed to a string, a CEDAR socket
-	(if compiled with WANT_CEDAR), a file descriptor or a FILE *.
+	can be parsed.  The source may be pointed to a string, a file descriptor 
+	or a FILE *.  Additionally, the ByteSource class may be extended for
+	custom situations.
 */
 class Source
 {
 	public:
-		// ctor/dtor
+		/// Constructor
 		Source();
+
+		/// Destructor
 		~Source();
 
 		// Set the stream source for the parse
