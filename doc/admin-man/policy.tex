@@ -190,9 +190,11 @@ the actual machine owner has even more priority on their own machine.
 For example, you'd put the following entry in Jimmy Garrison's local
 config file \File{bass.local}:
 \begin{verbatim}
-        RANK : Owner == "coltrane" + Owner == "tyner" \
-               + (Owner == "garrison") * 10 + Owner == "jones"
+        RANK : (Owner == "coltrane") + (Owner == "tyner") \
+               + ((Owner == "garrison") * 10) + (Owner == "jones")
 \end{verbatim}
+\Note The paretheses in this expression are important, because ``+''
+               has higher default precedence than ``==''.
 Notice, we're using ``+'' instead of ``\Bar\Bar'', since we want to be able
 to distinguish which terms matched and which ones didn't.  Now, if
 anyone who wasn't in the John Coltrane quartet was running a job on
@@ -228,7 +230,7 @@ jobs, you want to run them, regardless of everyone else's
         RANK : (Owner == "coltrane" * 1000000000000) + Imagesize
 \end{verbatim}
 This scheme would break down if someone submitted a job with an image
-size of more 10\Circum12 kbytes.  However, if they did, this Rank expression
+size of more $10^12$ kbytes.  However, if they did, this Rank expression
 preferring their job over yours wouldn't be the only problem Condor
 had. :-)
 
