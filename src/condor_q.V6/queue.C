@@ -47,6 +47,7 @@
 #include "basename.h"
 #include "metric_units.h"
 #include "globus_utils.h"
+#include "error_utils.h"
 #include "print_wrapped_text.h"
 #include "condor_distribution.h"
 
@@ -235,9 +236,22 @@ int main (int argc, char **argv)
 			submittorQuery.fetchAds(scheddList);
 	}
 
-	if (result != Q_OK) {
-		fprintf (stderr, "Error %d: %s\n", result, getStrQueryResult(result));
-		exit(1);
+	switch( result ) {
+	case Q_OK:
+		break;
+	case Q_COMMUNICATION_ERROR: 
+			// if we're not an expert, we want verbose output
+		printNoCollectorContact( stderr, pool, !expert );
+		exit( 1 );
+	case Q_NO_COLLECTOR_HOST:
+		assert( pool );
+		fprintf( stderr, "Error: Can't contact condor_collector: "
+				 "invalid hostname: %s\n", pool );
+		exit( 1 );
+	default:
+		fprintf( stderr, "Error fetching ads: %s\n", 
+				 getStrQueryResult(result) );
+		exit( 1 );
 	}
 	
 
