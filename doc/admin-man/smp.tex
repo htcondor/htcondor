@@ -1,18 +1,18 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Configuring The Startd for SMP Machines}
-\label{sec:Configuring-SMP}
+\subsection{\label{sec:Configuring-SMP}
+Configuring The Startd for SMP Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This section describes how to configure the \Condor{startd} for SMP
-(Symetric Multi-Processor) machines.
+(Symmetric Multi-Processor) machines.
 Beginning with Condor version 6.1, machines with more than one CPU can
 be configured to run more than one job at a time.
 As always, owners of the resources have great flexibility in defining
 the policy under which multiple jobs may run, suspend, vacate, etc.  
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{How Shared Resources are Represented to Condor}
-\label{sec:How-Resources-Represented}
+\subsubsection{\label{sec:How-Resources-Represented}
+How Shared Resources are Represented to Condor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The way SMP machines are represented to the Condor system is that
@@ -22,22 +22,22 @@ Each virtual machine is represented by an individual ``ClassAd''
 (see the ClassAd reference, section~\ref{classad-reference}, for
 details). 
 In this way, a single SMP machine will appear to the Condor system as
-a collection of seperate virtual machines.  
+a collection of separate virtual machines.  
 So for example, if you had an SMP machine named
 ``vulture.cs.wisc.edu'', it would appear to Condor as multiple
 machines, named ``vm1@vulture.cs.wisc.edu'',
 ``vm2@vulture.cs.wisc.edu'', and so on.
 
-For now, the \Condor{startd} simply creates a seperate virtual machine
+For now, the \Condor{startd} simply creates a separate virtual machine
 for every CPU.
 All shared system resources (like RAM, disk space, swap space, etc)
-are divided evenly among all the virtual machines
+are divided evenly among all the virtual machines.
 In future versions of Condor, you will be able to configure what
 percentage or total value of each resource will go to each vm.  
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Configuring Startd Policy for SMP Machines}
-\label{sec:Config-SMP-Policy}
+\subsubsection{\label{sec:Config-SMP-Policy}
+Configuring Startd Policy for SMP Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \Note Be sure you have read and understand
@@ -48,10 +48,10 @@ Each virtual machine from an SMP is treated as an independent machine,
 with its own view of its machine state.
 For now, a single set of policy expressions is in place for all
 virtual machines simultaneously.  
-Eventually, you will be able to explicitly specify seperate policies
+Eventually, you will be able to explicitly specify separate policies
 for each one.
 However, since you do have control over each virtual machine's view of
-its own state, you can effectively have seperate policies for each
+its own state, you can effectively have separate policies for each
 resource.
 
 For example, you can configure how many of the virtual machines
@@ -61,36 +61,36 @@ ConsoleIdle and KeyboardIdle times from when the startd was started,
 (plus a configurable number of seconds).
 So, you can setup a 4 CPU machine with all the default startd policy
 settings and with the keyboard and console ``connected'' to only one
-resource offer.  
+virtual machine.
 Assuming there isn't too much load average (see
 section~\ref{sec:SMP-Load} below on ``Load Average for SMP
-Machines''), only one resource offer will suspend or vacate its job
+Machines''), only one virtual machine will suspend or vacate its job
 when the owner starts typing at their machine again.
-The rest of the resource offers could be matched with jobs and leave
+The rest of the virtual machines could be matched with jobs and leave
 them running, even while the user was interactively using the
 machine. 
 
-Or, if you wish, you can configure all resources offers to notice all
+Or, if you wish, you can configure all virtual machines to notice all
 tty and console activity.
 In this case, if a machine owner came back to her machine, all the
 currently running jobs would suspend or preempt (depending on your
 policy expressions), all at the same time.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Load Average for SMP Machines}
-\label{sec:SMP-Load}
+\subsubsection{\label{sec:SMP-Load}
+Load Average for SMP Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Most operating systems define the load average for an SMP machine as
 the total load on all CPUs.
-For example, if you have a 4 CPU machine with 3 CPU bound processes
+For example, if you have a 4 CPU machine with 3 CPU-bound processes
 running at the same time, the load would be 3.0
 In Condor, we maintain this view of the total load average and publish
-it in all resource classads as \Attr{TotalLoadAvg}.
+it in all resource ClassAds as \Attr{TotalLoadAvg}.
 
 However, we also define the ``per-CPU'' load average for SMP machines.
 In this way, the model that each node on an SMP is a virtual machine,
-totally seperate from the other nodes, can be maintained.
+totally separate from the other nodes, can be maintained.
 All of the default, single-CPU policy expressions can be used directly
 on SMP machines, without modification, since the \Attr{LoadAvg} and
 \Attr{CondorLoadAvg} attributes are the per-virtual machine versions,
@@ -105,15 +105,15 @@ Here's how it works:
 We already compute the load average generated by Condor on each
 virtual machine.
 We do this by close monitoring of all processes spawned by any of the
-Condor daemons, even ones that are orphened and then inheritted by
+Condor daemons, even ones that are orphaned and then inherited by
 init. 
 This \Term{Condor load average} per virtual machine is reported as
-\Attr{CondorLoadAvg} in all resource classads, and the total Condor
+\Attr{CondorLoadAvg} in all resource ClassAds, and the total Condor
 load average for the entire machine is reported as
 \Attr{TotalCondorLoadAvg}. 
 We also have the total, system-wide load average for the entire
 machine (reported as \Attr{TotalLoadAvg}).
-Basically, we walk through all the resource offers and assign out
+Basically, we walk through all the virtual machines and assign out
 portions of the total load average to each one. 
 First, we assign out the known Condor load average to each node that
 is generating any.  
@@ -124,28 +124,35 @@ ones that have keyboard activity, etc), are the first to get assigned
 this owner load.
 We hand out owner load in increments of at most 1.0, so generally
 speaking, no virtual machine has a load average above 1.0.
-If we run out of total load average before we run out of resource
-offers, all the remaining offers think they have no load average at
-all.
-If, instead, we run out of resource offers and we still have owner
+If we run out of total load average before we run out of virtual
+machines, all the remaining machines think they have no load average
+at all.
+If, instead, we run out of virtual machines and we still have owner
 load left, we start assigning that load to Condor nodes, too, creating
 individual nodes with a load average higher than 1.0.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{New Config File Parameters for the SMP Startd}
-\label{sec:New-SMP-Parameters}
+\subsubsection{\label{sec:New-SMP-Parameters}
+New Config File Parameters for the SMP Startd}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-This section describes the config file settings that you might want to
+This section lists the config file settings that you might want to
 customize on an SMP machine.  
 These control each virtual machine's view of the system resources, as
 described in section~\ref{sec:Config-SMP-Policy} above.
-
-\input{admin-man/smp-params.tex}
+These settings are fully described above in
+section~\ref{sec:Startd-Config-File-Entries} on
+page~\pageref{sec:Startd-Config-File-Entries} which lists all the
+config file settings for the \Condor{startd}.
+\begin{itemize}
+\item \Macro{VIRTUAL\_MACHINES\_CONNECTED\_TO\_CONSOLE}
+\item \Macro{VIRTUAL\_MACHINES\_CONNECTED\_TO\_KEYBOARD}
+\item \Macro{DISCONNECTED\_KEYBOARD\_IDLE\_BOOST}
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Debug logging in the SMP Startd}
-\label{sec:SMP-logging}
+\subsubsection{\label{sec:SMP-logging}
+Debug logging in the SMP Startd}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This section describes how the startd handles its debug messages for
@@ -153,7 +160,7 @@ SMP machines.
 In general, a given log message will either be something that is
 machine-wide (like reporting the total system load average), or it
 will be specific to a given virtual machine.
-Any log entires specific to a virtual machine will have an extra
+Any log entrees specific to a virtual machine will have an extra
 header printed out in the entry: \texttt{vm\#:}.  
 So, for example, here's the output about system resources that are
 being gathered (with \Dflag{FULLDEBUG} and \Dflag{LOAD} turned on) on
