@@ -30,6 +30,7 @@
 
 #include "condor_common.h"
 #include "starter_common.h"
+#include "condor_version.h"
 #include "basename.h"
 #include "internet.h"
 
@@ -133,6 +134,9 @@ initial_bookeeping( int argc, char *argv[] )
 
 	init_logging();
 	dprintf( D_ALWAYS, "********** STARTER starting up ***********\n" );
+	dprintf( D_ALWAYS, "** %s\n", CondorVersion() );
+	dprintf( D_ALWAYS, "** %s\n", CondorPlatform() );
+	dprintf( D_ALWAYS, "******************************************\n" );
 
 	InitiatingHost = submitHost;
 	dprintf( D_ALWAYS, "Submitting machine is \"%s\"\n", InitiatingHost );
