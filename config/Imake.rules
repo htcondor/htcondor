@@ -12,6 +12,7 @@
 #define SET_GID_MODE		02775
 #define EXECUTABLE_MODE		0755
 #define OBJECT_MODE		0644
+#define TEXT_MODE		OBJECT_MODE
 
 #if defined(Demangler)
 DEMANGLE = 2>&1 | Demangler
@@ -115,11 +116,11 @@ clean::								@@\
 */
 #ifndef release_target
 #define release_target( file, dir, mode )		@@\
-dir##/##file: file					@@\
-	/bin/rm -f dir##/##file				@@\
-	cp file dir					@@\
-	chmod mode dir##/##file				@@\
-release:: dir##/##file
+$(RELEASE_DIR)/##dir##/##file: file					@@\
+	/bin/rm -f $(RELEASE_DIR)/##dir##/##file				@@\
+	cp file $(RELEASE_DIR)/##dir					@@\
+	chmod mode $(RELEASE_DIR)/##dir##/##file				@@\
+release:: $(RELEASE_DIR)/##dir##/##file
 #endif  /* release_target */
 
 
@@ -128,10 +129,10 @@ release:: dir##/##file
 */
 #ifndef release_library
 #define release_library( lib, dir ) 			@@\
-dir##/##lib: lib					@@\
-	COPY_LIBRARY( lib, dir##/##lib )		@@\
-	RANLIB_TOUCH( dir##/##lib )			@@\
-release:: dir##/##lib
+$(RELEASE_DIR)/##dir##/##lib: lib					@@\
+	COPY_LIBRARY( lib, $(RELEASE_DIR)/##dir##/##lib )		@@\
+	RANLIB_TOUCH( $(RELEASE_DIR)/##dir##/##lib )			@@\
+release:: $(RELEASE_DIR)/##dir##/##lib
 #endif  release_library
 
 
@@ -190,12 +191,12 @@ $(RELEASE_DIR)/##dir##/##dest##: src			@@\
 */
 #ifndef strip_target
 #define strip_target( file, dir, mode )			@@\
-##dir##/##file##: file					@@\
-	/bin/rm -f dir##/##file				@@\
-	cp file dir					@@\
-	strip dir##/##file				@@\
-	chmod mode dir##/##file				@@\
-stripped:: dir##/##file
+$(STRIP_DIR)/##dir##/##file##: file			@@\
+	/bin/rm -f $(STRIP_DIR)/##dir##/##file		@@\
+	cp file $(STRIP_DIR)/##dir			@@\
+	strip $(STRIP_DIR)/##dir##/##file		@@\
+	chmod mode $(STRIP_DIR)/##dir##/##file		@@\
+stripped:: $(STRIP_DIR)/##dir##/##file
 #endif  strip_target
 
 
@@ -204,11 +205,11 @@ stripped:: dir##/##file
 */
 #ifndef strip_library
 #define strip_library( lib, dir )			@@\
-dir##/##lib: lib					@@\
-	COPY_LIBRARY( lib, dir##/##lib )		@@\
-	RANLIB_TOUCH( dir##/##lib )			@@\
-	chmod OBJECT_MODE dir##/##lib			@@\
-stripped:: dir##/##lib
+$(STRIP_DIR)/##dir##/##lib: lib				@@\
+	COPY_LIBRARY( lib, $(STRIP_DIR)/##dir##/##lib )	@@\
+	RANLIB_TOUCH( $(STRIP_DIR)/##dir##/##lib )	@@\
+	chmod OBJECT_MODE $(STRIP_DIR)/##dir##/##lib	@@\
+stripped:: $(STRIP_DIR)/##dir##/##lib
 #endif  strip_library
 
 
@@ -217,11 +218,11 @@ stripped:: dir##/##lib
 */
 #ifndef strip_copy_target
 #define strip_copy_target( src, dir, file, mode )	@@\
-dir##/##file: src					@@\
-	/bin/rm -f dir##/##file				@@\
-	cp src dir##/##file				@@\
-	chmod mode dir##/##file				@@\
-stripped:: dir##/##file
+$(STRIP_DIR)/##dir##/##file: src			@@\
+	/bin/rm -f $(STRIP_DIR)/##dir##/##file		@@\
+	cp src $(STRIP_DIR)/##dir##/##file		@@\
+	chmod mode $(STRIP_DIR)/##dir##/##file		@@\
+stripped:: $(STRIP_DIR)/##dir##/##file
 #endif /* strip_copy_target */
 
 
@@ -286,11 +287,11 @@ static:: dir##/##program
 */
 #ifndef static_library
 #define static_library( lib, dir )			@@\
-dir##/##lib: lib					@@\
-	COPY_LIBRARY( lib, dir##/##lib )		@@\
-	RANLIB_TOUCH( dir##/##lib )			@@\
-	chmod OBJECT_MODE dir##/##lib			@@\
-static:: dir##/##lib
+$(STATIC_DIR)/##dir##/##lib: lib			@@\
+	COPY_LIBRARY( lib, $(STATIC_DIR)/##dir##/##lib ) @@\
+	RANLIB_TOUCH( $(STATIC_DIR)/##dir##/##lib )	@@\
+	chmod OBJECT_MODE $(STATIC_DIR)/##dir##/##lib	@@\
+static:: $(STATIC_DIR)/##dir##/##lib
 #endif  static_library
 
 
@@ -299,11 +300,11 @@ static:: dir##/##lib
 */
 #ifndef static_copy_target
 #define static_copy_target( src, dir, file, mode )	@@\
-dir##/##file: src					@@\
-	/bin/rm -f dir##/##file				@@\
-	cp src dir##/##file				@@\
-	chmod mode dir##/##file				@@\
-static:: dir##/##file
+$(STATIC_DIR)/##dir##/##file: src			@@\
+	/bin/rm -f $(STATIC_DIR)/##dir##/##file		@@\
+	cp src $(STATIC_DIR)/##dir##/##file		@@\
+	chmod mode $(STATIC_DIR)/##dir##/##file		@@\
+static:: $(STATIC_DIR)/##dir##/##file
 #endif static_copy_target
 
 
@@ -606,7 +607,7 @@ clean::						@@\
 */
 #ifndef object_dir_target
 #define object_dir_target(dir_name)					@@\
-## dir_name##:								@@\
+##dir_name##:								@@\
 	rm -rf dir_name							@@\
 	mkdir dir_name							@@\
 	cd dir_name##; for file in `ls $(SRC_TREE)/##dir_name##`; \	@@\
