@@ -49,10 +49,10 @@ extern unsigned int _condor_numrestarts;  /* in image.C */
 extern "C" {
 
 int GETRUSAGE(...);
-int update_rusage(...);
 int _libc_FORK(...);
 int SYSCONF(...);
 int SYSCALL(...);
+void update_rusage( register struct rusage *ru1, register struct rusage *ru2 );
 
 #if defined(LINUX) || defined(IRIX)
 int _condor_xstat(int version, const char *path, struct stat *buf);
