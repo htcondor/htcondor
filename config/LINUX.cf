@@ -12,7 +12,6 @@
 
 #define OperatingSystem		LINUX
 #define IS_LINUX		YES
-#define ImakeOpsysFlag		-DIS_LINUX
 
 /* We want the binaries we release to the CS pool for Linux to be
 statically linked to avoid problems */
@@ -29,12 +28,14 @@ statically linked to avoid problems */
 #   undef IS_GLIBC20
 #	define IS_GLIBC20	YES
 #   define GlibCFlag		-DGLIBC=GLIBC -DGLIBC20=GLIBC20
-#   define ImakeOtherFlag	-DIS_GLIBC -DIS_GLIBC20
 #elif defined( IS_GLIBC21 )
 #	undef IS_GLIBC21
 #	define IS_GLIBC21	YES
 #   define GlibCFlag		-DGLIBC=GLIBC -DGLIBC21=GLIBC21
-#   define ImakeOtherFlag	-DIS_GLIBC -DIS_GLIBC21
+#elif defined( IS_GLIBC22 )
+#	undef IS_GLIBC22
+#	define IS_GLIBC22	YES
+#   define GlibCFlag		-DGLIBC=GLIBC -DGLIBC22=GLIBC22
 #endif
 
 #else /* Non IS_GLIBC */
