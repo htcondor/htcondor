@@ -250,7 +250,7 @@ isatty( int filedes )
 #if defined(HPUX9) || defined(LINUX)
 ssize_t
 readv( int fd, const struct iovec *iov, size_t iovcnt )
-#elif defined(IRIX62) || defined(OSF1)
+#elif defined(IRIX62) || defined(OSF1) || defined(Solaris26)
 ssize_t
 readv( int fd, const struct iovec *iov, int iovcnt )
 #else
@@ -765,7 +765,7 @@ char *_getcwd ( char *buffer, size_t size )
    but instead are only in the threads libraries.  We access the old
    versions through their new names. */
 
-#if defined(Solaris251)
+#if defined(Solaris)
 pid_t
 FORK()
 {
@@ -955,3 +955,35 @@ mmap( MMAP_T a, size_t l, int p, int f, int fd, off_t o )
 #endif /* defined( LINUX ) */
 
 
+#if defined( Solaris26 )
+/*
+  There's an open64() on Solaris 2.6 that we want to trap.  We could
+  just remap it, except open() takes a variable number of args.  So
+  we just put in a definition here that deals with variable args and
+  calls the real open, which we'll trap and do our magic with.
+  -Derek Wright, 6/24/98
+  We also want _open64() and __open64().  -Derek 6/25/98
+*/
+
+int
+open64( const char* path, int oflag, ... ) {
+	va_list ap;
+	va_start( ap, oflag );
+	return open( path, oflag, ap );
+}
+
+int
+_open64( const char* path, int oflag, ... ) {
+	va_list ap;
+	va_start( ap, oflag );
+	return open( path, oflag, ap );
+}
+
+int
+__open64( const char* path, int oflag, ... ) {
+	va_list ap;
+	va_start( ap, oflag );
+	return open( path, oflag, ap );
+}
+
+#endif /* defined( Solaris26 ) */
