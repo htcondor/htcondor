@@ -17,22 +17,21 @@ An example of this would yield output similar to:
 \begin{verbatim}
 %  condor_status -submitters
 
-Name                 Machine     Running  IdleJobs  MaxJobsRunning
+Name                 Machine      Running IdleJobs HeldJobs
 
-ashoks@jules.ncsa.ui jules.ncsa       74       54       200
-breach@cs.wisc.edu   bianca.cs.       11        0       500
-breach@cs.wisc.edu   neufchatel       23        0       500
-jbasney@cs.wisc.edu  froth.cs.w        0        1       500
-wright@raven.cs.wisc raven.cs.w        1       48       200
+ballard@cs.wisc.edu  bluebird.c         0       11        0
+nice-user.condor@cs. cardinal.c         6      504        0
+wright@cs.wisc.edu   finch.cs.w         1        1        0
+jbasney@cs.wisc.edu  perdita.cs         0        0        5
 
-                           RunningJobs             IdleJobs
+                           RunningJobs           IdleJobs           HeldJobs
 
-wright@raven.cs.wisc                 1                   48
-ashoks@jules.ncsa.ui                74                   54
- jbasney@cs.wisc.edu                 0                    1
-  breach@cs.wisc.edu                34                    0
+ ballard@cs.wisc.edu                 0                 11                  0
+ jbasney@cs.wisc.edu                 0                  0                  5
+nice-user.condor@cs.                 6                504                  0
+  wright@cs.wisc.edu                 1                  1                  0
 
-               Total               109                  103
+               Total                 7                516                  5
 \end{verbatim}
 
 \subsection{Checking on the progress of jobs}
