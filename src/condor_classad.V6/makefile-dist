@@ -3,7 +3,7 @@ INSTALL_DIR = /usr/include
 # This include will redefine INSTALL_DIR, if Makefile.config exists
 include Makefile.config
 
-all: libclassad.a test_classads sample
+all: libclassad.a test_classads test_xml sample
 
 LIB_INSTALL = $(INSTALL_DIR)/lib
 BIN_INSTALL = $(INSTALL_DIR)/bin
@@ -38,6 +38,9 @@ test_classads: test_classads.o libclassad.a
 test_classads.pure: test_classads.o libclassad.a
 	$(PURIFY) -o test_classads.pure test_classads.o -L. -lclassad
 
+test_xml: test_xml.o libclassad.a
+	$(CPlusPlus) -o test_xml test_xml.o -L. -lclassad
+
 sample: sample.o libclassad.a
 	$(CPlusPlus) -o sample sample.o -L. -lclassad
 
@@ -50,7 +53,7 @@ install:: libclassad.a test_classads
 	cp $(HEADER_FILES) $(INCLUDE_INSTALL)
 
 clean: tidy
-	rm -f test_classads test_classads.pure libclassad.a
+	rm -f test_classads test_classads.pure test_xml sameple libclassad.a
 tidy:
 	rm -f *.o *~ *.bak
 
