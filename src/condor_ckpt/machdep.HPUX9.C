@@ -56,7 +56,7 @@ stack_end_addr()
 {
 	jmp_buf env;
 	(void)SETJMP( env );
-	return (JMP_BUF_SP(env) + 1023) / 1024 * 1024; // Curr sp, rounded up
+	return (JMP_BUF_SP(env) + 1023) & ~1023; // Curr sp, rounded up
 }
 
 /*

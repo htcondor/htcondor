@@ -5,7 +5,7 @@
 */
 #include <sys/param.h>
 extern int etext;
-int
+long
 data_start_addr()
 {
 	return ((long)&etext + DATA_ALIGN - 1) / DATA_ALIGN * DATA_ALIGN;
@@ -14,19 +14,19 @@ data_start_addr()
 /*
   Return ending address of the data segment
 */
-int
+long
 data_end_addr()
 {
-	return (int)sbrk(0);
+	return (long)sbrk(0);
 }
 
 /*
   Return TRUE if the stack grows toward lower addresses, and FALSE
   otherwise.
 */
-int StackGrowsDown()
+BOOL StackGrowsDown()
 {
-	return 1;
+	return TRUE;
 }
 
 /*
@@ -42,19 +42,21 @@ int JmpBufSP_Index()
 /*
   Return starting address of stack segment.
 */
-int
+long
 stack_start_addr()
 {
+	long	answer;
+
 	jmp_buf env;
 	(void)SETJMP( env );
-	return JMP_BUF_SP(env) / 1024 * 1024; // Curr sp, rounded down
+	return JMP_BUF_SP(env) & ~1023; // Curr sp, rounded down
 }
 
 /*
   Return ending address of stack segment.
 */
 #include <sys/vmparam.h>
-int
+long
 stack_end_addr()
 {
 	return USRSTACK;
