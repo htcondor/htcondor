@@ -88,12 +88,13 @@ int send_request(CCTP_Client client, CCTP_Action action, char* ad, char sp, char
             attrList -- string of attribute list
             sp       -- the seperator of the attribute list string
             reason   -- reason for the failure
+			timestamp-- timestamp on this attrlist
 
      RETURN: the seq. num. of the request this response is for, on success
              0,         if fail to retrieve response
 */
 
-int get_response(char* id, CCTP_Status* status, char* attrList, char sp, char* reason);
+int get_response(char* id, CCTP_Status* status, char* attrList, char sp, char* reason, time_t* timestamp);
 
 /* Close the connection to the configuration server
  ------------------------------------------------
