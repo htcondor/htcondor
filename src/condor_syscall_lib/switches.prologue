@@ -81,13 +81,16 @@
 #undef fstat 
 #undef stat 
 #undef lstat
-#undef mknod 
+#undef mknod
+struct stat;
+struct statfs;
 #endif
 
 #if defined(LINUX)
 #undef fstat 
 #undef stat 
 #undef lstat
+struct stat;
 #endif
 
 #include <sys/resource.h>
