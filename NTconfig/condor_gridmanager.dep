@@ -103,6 +103,7 @@
 	"..\src\condor_includes\condor_attrlist.h"\
 	"..\src\condor_includes\condor_auth.h"\
 	"..\src\condor_includes\condor_auth_x509.h"\
+	"..\src\condor_includes\condor_ckpt_name.h"\
 	"..\src\condor_includes\condor_classad.h"\
 	"..\src\condor_includes\condor_commands.h"\
 	"..\src\condor_includes\condor_common.h"\

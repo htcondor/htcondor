@@ -1,6 +1,8 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_qmgmt.mak
 
 ..\src\condor_schedd.V6\qmgmt_common.C : \
+	"..\src\condor_c++_util\MyString.h"\
+	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
 	"..\src\condor_includes\condor_debug.h"\

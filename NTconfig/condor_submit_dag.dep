@@ -1,7 +1,7 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_submit_dag.mak
 
 ..\src\condor_tools\condor_submit_dag.C : \
-	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\MyString.h"\
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\

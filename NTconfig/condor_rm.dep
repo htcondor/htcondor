@@ -1,7 +1,7 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_rm.mak
 
 ..\src\condor_rm.V6\rm.C : \
-	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\alloc.h"\
 	"..\src\condor_c++_util\condor_ver_info.h"\
 	"..\src\condor_c++_util\condor_version.h"\
@@ -10,13 +10,16 @@
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_c++_util\MyString.h"\
+	"..\src\condor_c++_util\ntsysinfo.h"\
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
 	"..\src\condor_daemon_client\daemon.h"\
 	"..\src\condor_daemon_client\daemon_types.h"\
 	"..\src\condor_daemon_client\dc_schedd.h"\
+	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_includes\buffers.h"\
 	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_ast.h"\
@@ -41,6 +44,7 @@
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
+	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\keycache.h"\

@@ -1,7 +1,7 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_submit.mak
 
 ..\src\condor_submit.V6\submit.C : \
-	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\access.h"\
 	"..\src\condor_c++_util\condor_event.h"\
 	"..\src\condor_c++_util\environ.h"\
@@ -23,6 +23,7 @@
 	"..\src\condor_c++_util\which.h"\
 	"..\src\condor_daemon_client\daemon.h"\
 	"..\src\condor_daemon_client\daemon_types.h"\
+	"..\src\condor_daemon_client\dc_schedd.h"\
 	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
 	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\

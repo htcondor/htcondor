@@ -1,7 +1,7 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_q.mak
 
 ..\src\condor_q.V6\queue.C : \
-	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\ad_printmask.h"\
 	"..\src\condor_c++_util\condor_q.h"\
 	"..\src\condor_c++_util\condor_query.h"\

@@ -253,7 +253,7 @@
 	
 
 "..\src\condor_c++_util\condor_common.C" : \
-	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_includes\cedar_enums.h"\
 	"..\src\condor_includes\condor_common.h"\
 	"..\src\condor_includes\condor_constants.h"\
@@ -780,16 +780,21 @@
 
 ..\src\condor_daemon_client\dc_schedd.C : \
 	"..\src\condor_c++_util\extArray.h"\
+	"..\src\condor_c++_util\file_transfer.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
 	"..\src\condor_c++_util\MyString.h"\
+	"..\src\condor_c++_util\ntsysinfo.h"\
+	"..\src\condor_c++_util\perm.h"\
 	"..\src\condor_c++_util\simplelist.h"\
 	"..\src\condor_c++_util\string_list.h"\
 	"..\src\condor_c++_util\stringSpace.h"\
 	"..\src\condor_daemon_client\daemon.h"\
 	"..\src\condor_daemon_client\daemon_types.h"\
 	"..\src\condor_daemon_client\dc_schedd.h"\
+	"..\src\condor_daemon_core.V6\condor_daemon_core.h"\
 	"..\src\condor_daemon_core.V6\condor_ipverify.h"\
+	"..\src\condor_daemon_core.V6\condor_timer_manager.h"\
 	"..\src\condor_includes\buffers.h"\
 	"..\src\condor_includes\condor_adtypes.h"\
 	"..\src\condor_includes\condor_ast.h"\
@@ -812,6 +817,7 @@
 	"..\src\condor_includes\condor_perms.h"\
 	"..\src\condor_includes\condor_random_num.h"\
 	"..\src\condor_includes\condor_secman.h"\
+	"..\src\condor_includes\condor_uid.h"\
 	"..\src\condor_includes\condor_universe.h"\
 	"..\src\condor_includes\CryptKey.h"\
 	"..\src\condor_includes\keycache.h"\
@@ -1819,7 +1825,6 @@
 	
 
 "..\src\condor_c++_util\token_cache.C" : \
-	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\MyString.h"\
 	"..\src\condor_c++_util\simplelist.h"\
@@ -1834,7 +1839,6 @@
 	
 
 "..\src\condor_c++_util\uids.C" : \
-	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\dynuser.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\

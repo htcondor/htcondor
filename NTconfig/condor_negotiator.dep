@@ -1,7 +1,7 @@
 # Microsoft Developer Studio Generated Dependency File, included by condor_negotiator.mak
 
 ..\src\condor_negotiator.V6\main.C : \
-	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\extArray.h"\
 	"..\src\condor_c++_util\HashTable.h"\
 	"..\src\condor_c++_util\my_hostname.h"\
@@ -53,7 +53,7 @@
 	
 
 ..\src\condor_negotiator.V6\matchmaker.C : \
-	"..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
+	"..\..\..\program files\microsoft visual studio\vc98\include\basetsd.h"\
 	"..\src\condor_c++_util\ad_printmask.h"\
 	"..\src\condor_c++_util\condor_api.h"\
 	"..\src\condor_c++_util\condor_event.h"\

@@ -226,12 +226,12 @@ LIB32_OBJS= \
 	"$(INTDIR)\string_list.obj" \
 	"$(INTDIR)\stringSpace.obj" \
 	"$(INTDIR)\strnewp.obj" \
+	"$(INTDIR)\token_cache.obj" \
 	"$(INTDIR)\uids.obj" \
 	"$(INTDIR)\usagemon.obj" \
 	"$(INTDIR)\user_job_policy.obj" \
 	"$(INTDIR)\user_log.obj" \
-	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\token_cache.obj"
+	"$(INTDIR)\which.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
@@ -438,12 +438,12 @@ LIB32_OBJS= \
 	"$(INTDIR)\string_list.obj" \
 	"$(INTDIR)\stringSpace.obj" \
 	"$(INTDIR)\strnewp.obj" \
+	"$(INTDIR)\token_cache.obj" \
 	"$(INTDIR)\uids.obj" \
 	"$(INTDIR)\usagemon.obj" \
 	"$(INTDIR)\user_job_policy.obj" \
 	"$(INTDIR)\user_log.obj" \
-	"$(INTDIR)\which.obj" \
-	"$(INTDIR)\token_cache.obj"
+	"$(INTDIR)\which.obj"
 
 "$(OUTDIR)\condor_cpp_util.lib" : "$(OUTDIR)" $(DEF_FILE) $(LIB32_OBJS)
     $(LIB32) @<<
