@@ -268,7 +268,7 @@ GridManager::ADD_JOBS_signalHandler( int signal )
 	dprintf(D_FULLDEBUG,"in ADD_JOBS_signalHandler\n");
 	
 	if(X509Proxy) {
-		sprintf(owner_buf, "%s == \"%s\" && %s == \"%s\" ", ATTR_OWNER, Owner,
+		sprintf(owner_buf, "%s == \"%s\" && %s =?= \"%s\" ", ATTR_OWNER, Owner,
 				ATTR_X509_USER_PROXY, X509Proxy);
 	} else {
 		sprintf(owner_buf, "%s == \"%s\" && %s =?= UNDEFINED ", ATTR_OWNER, 
@@ -409,7 +409,7 @@ GridManager::REMOVE_JOBS_signalHandler( int signal )
 	dprintf(D_FULLDEBUG,"in REMOVE_JOBS_signalHandler\n");
 
 	if(X509Proxy) {
-		sprintf(owner_buf, "%s == \"%s\" && %s == \"%s\" ", ATTR_OWNER, Owner,
+		sprintf(owner_buf, "%s == \"%s\" && %s =?= \"%s\" ", ATTR_OWNER, Owner,
 				ATTR_X509_USER_PROXY, X509Proxy);
 	} else {
 		sprintf(owner_buf, "%s == \"%s\" && %s =?= UNDEFINED ", ATTR_OWNER, 
