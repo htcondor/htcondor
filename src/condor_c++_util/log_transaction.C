@@ -26,8 +26,8 @@
 #define _POSIX_SOURCE
 
 #include "condor_common.h"
-
 #include "log_transaction.h"
+#include "condor_debug.h"
 
 LogPtrList::~LogPtrList()
 {
@@ -115,11 +115,20 @@ Transaction::Commit(int fd, void *data_structure)
 	LogRecord		*log;
 
 	for (log = op_log.FirstEntry(); log != 0; 
-		 log = op_log.NextEntry(log)) {
-		if (fd >= 0) log->Write(fd);
+		 log = op_log.NextEntry(log)) 
+	{
+		if (fd >= 0) {
+			if (log->Write(fd) < 0) {
+				EXCEPT("write inside a transaction failed, errno = %d",errno);
+			}
+		}
 		log->Play(data_structure);
 	}
-	if (fd >= 0) fsync(fd);
+	if (fd >= 0) {
+		if (fsync(fd) < 0) {
+			EXCEPT("fsync inside a transaction failed, errno = %d",errno);
+		}
+	}
 }
 
 
