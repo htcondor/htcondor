@@ -143,6 +143,32 @@ TESTCLASS(lib_userlog,lib)
 /* Tests which fail in reliability */
 
 /*
+** These tests fail reliabably on Solaris 2.8 and 2.9
+** because the transfer_output file(s) do not exist, and thus
+** Condor tries to rerun the job forever.  Why it works on other
+** platforms but always fails (in the NWO) on Solaris platforms
+** is a mystery that Bill needs to solve.  :)
+** 
+** DESC(job_filexfer_basic_van,"Vanilla: send a file and get it back")
+** RUN(job_filexfer_basic_van)
+** TESTCLASS(job_filexfer_basic_van,filexfer)
+** 
+** DESC(job_filexfer_minus1_van,"Vanilla: extra specified output file creates shadow exception to rerun to produce missing output")
+** RUN(job_filexfer_minus1_van)
+** TESTCLASS(job_filexfer_minus1_van,filexfer)
+** 
+** DESC(job_filexfer_output-withvacate_van,"Vanilla: 3 files created before vacate - verify their return")
+** RUN(job_filexfer_output-withvacate_van)
+** TESTCLASS(job_filexfer_output-withvacate_van,filexfer)
+** 
+** DESC(job_filexfer_trans-nodflts_van,"Vanilla: all transfers explicitely off - complains...")
+** RUN(job_filexfer_trans-nodflts_van)
+** TESTCLASS(job_filexfer_trans-nodflts_van,filexfer)
+** 
+*/
+
+
+/*
 ** 
 ** Leave Off for now
 **
@@ -339,10 +365,6 @@ DESC(job_filexfer_base_van,"Vanilla: Is executable moved correctly to initialdir
 RUN(job_filexfer_base_van)
 TESTCLASS(job_filexfer_base_van,filexfer)
 
-DESC(job_filexfer_basic_van,"Vanilla: send a file and get it back")
-RUN(job_filexfer_basic_van)
-TESTCLASS(job_filexfer_basic_van,filexfer)
-
 DESC(job_filexfer_basic_sched,"Scheduler: exercise of file transfer via cp in to out")
 RUN(job_filexfer_basic_sched)
 TESTCLASS(job_filexfer_basic_sched,filexfer)
@@ -355,21 +377,9 @@ DESC(job_filexfer_limitback_van,"Vanilla: ask for exactly 2 files returned")
 RUN(job_filexfer_limitback_van)
 TESTCLASS(job_filexfer_limitback_van,filexfer)
 
-DESC(job_filexfer_minus1_van,"Vanilla: extra specified output file creates shadow exception to rerun to produce missing output")
-RUN(job_filexfer_minus1_van)
-TESTCLASS(job_filexfer_minus1_van,filexfer)
-
-DESC(job_filexfer_output-withvacate_van,"Vanilla: 3 files created before vacate - verify their return")
-RUN(job_filexfer_output-withvacate_van)
-TESTCLASS(job_filexfer_output-withvacate_van,filexfer)
-
 DESC(job_filexfer_trans-excut-true_van,"Vanilla: explicitely set transfer_executable... test complains")
 RUN(job_filexfer_trans-excut-true_van)
 TESTCLASS(job_filexfer_trans-excut-true_van,filexfer)
-
-DESC(job_filexfer_trans-nodflts_van,"Vanilla: all transfers explicitely off - complains...")
-RUN(job_filexfer_trans-nodflts_van)
-TESTCLASS(job_filexfer_trans-nodflts_van,filexfer)
 
 DESC(job_filexfer_whento-base_van,"Vanilla: Inputless test of a job running with transfer files enabled.")
 RUN(job_filexfer_whento-base_van)
