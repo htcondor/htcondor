@@ -120,7 +120,7 @@ negotiationTime ()
 int Matchmaker::
 SET_PRIORITY_commandHandler (int, Stream *strm)
 {
-	float	priority;
+	double	priority;
 	char	scheddName[64];
 	char	*sn = scheddName;
 	int		len = 64;
@@ -152,12 +152,11 @@ RESCHEDULE_commandHandler (int, Stream *)
 	ClassAd		*schedd;
 	char		scheddName[80];
 	char		scheddAddr[32];
-	char		startdAddr[32];
 	int			result;
 	int			numStartdAds;
-	float		maxPrioValue;
-	float		normalFactor;
-	float		scheddPrio;
+	double		maxPrioValue;
+	double		normalFactor;
+	double		scheddPrio;
 	int			scheddLimit;
 
 
@@ -185,7 +184,7 @@ RESCHEDULE_commandHandler (int, Stream *)
 	// ----- Negotiate with the schedds in the sorted list
 	dprintf( D_ALWAYS, "Phase 4:  Negotiating with schedds ...\n" );
 	scheddAds.Open();
-	while( schedd = scheddAds.Next())
+	while( (schedd = scheddAds.Next()) )
 	{
 		// get the name and address of the schedd
 		if( !schedd->LookupString( ATTR_NAME, scheddName ) ||
@@ -244,7 +243,7 @@ comparisonFunction (ClassAd *ad1, ClassAd *ad2, void *m)
 {
 	char	scheddName1[64];
 	char	scheddName2[64];
-	float	prio1, prio2;
+	double	prio1, prio2;
 	Matchmaker *mm = (Matchmaker *) m;
 
 	if (!ad1->LookupString (ATTR_NAME, scheddName1) ||
@@ -317,14 +316,13 @@ obtainAdsFromCollector (ClassAdList &startdAds,
 
 
 int Matchmaker::
-negotiate (char *scheddName, char *scheddAddr, float priority, int scheddLimit,
+negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 			ClassAdList &startdAds, ClassAdList &startdPvtAds, 
 			ClassAdList &consumedStartds)
 {
 	ReliSock	sock;
 	int			i;
 	int			reply;
-	int			scheddPrio;
 	int			cluster, proc;
 	int			result;
 	ClassAd		request;
@@ -475,16 +473,15 @@ negotiate (char *scheddName, char *scheddAddr, float priority, int scheddLimit,
 
 
 ClassAd *Matchmaker::
-matchmakingAlgorithm(ClassAd &request,ClassAdList &startdAds,float preemptPrio)
+matchmakingAlgorithm(ClassAd &request,ClassAdList &startdAds,double preemptPrio)
 {
 	ClassAd 	*candidate;
-	float		candidateRank;
+	double		candidateRank;
 	ClassAd 	*bestSoFar = NULL;	// using best match
-	float		bestRank = -(FLT_MAX);
+	double		bestRank = -(FLT_MAX);
 	ExprTree	*requestRank;
 	ExprTree	*offerRank;
 	ExprTree 	*matchCriterion;
-	char 		buffer[80];
 	char		remoteUser[128];
 	EvalResult	result;
 
@@ -496,7 +493,7 @@ matchmakingAlgorithm(ClassAd &request,ClassAdList &startdAds,float preemptPrio)
 
 	// scan the offer ads
 	startdAds.Open ();
-	while (candidate = startdAds.Next ())
+	while ((candidate = startdAds.Next ()))
 	{
 		// are we in preemption mode? 
 		if (preemptPrio >= 0)
@@ -532,12 +529,16 @@ matchmakingAlgorithm(ClassAd &request,ClassAdList &startdAds,float preemptPrio)
 				}
 				else
 				{
+					float temp;
+
 					// calculate the request's rank of the offer
-					if (!request.EvalFloat (ATTR_RANK,candidate,candidateRank))
+					if (!request.EvalFloat (ATTR_RANK,candidate,temp))
 					{
 						// could not evaluate; hold old best rank
 						continue;
 					}
+
+					candidateRank = (double) temp;
 
 					// if this rank is the best so far, choose it
 					if (candidateRank > bestRank) bestSoFar = candidate;
@@ -630,17 +631,17 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
 
 void Matchmaker::
-calculateNormalizationFactor (ClassAdList &scheddAds, float &max, 
-				float &normalFactor)
+calculateNormalizationFactor (ClassAdList &scheddAds, double &max, 
+				double &normalFactor)
 {
 	ClassAd *ad;
 	char	scheddName[64];
-	float	prio;
+	double	prio;
 
 	// find the maximum of the priority values (i.e., lowest priority)
-	max = FLT_MIN;
+	max = DBL_MIN;
 	scheddAds.Open();
-	while (ad = scheddAds.Next())
+	while ((ad = scheddAds.Next()))
 	{
 		// this will succeed (comes from collector)
 		ad->LookupString (ATTR_NAME, scheddName);
@@ -652,7 +653,7 @@ calculateNormalizationFactor (ClassAdList &scheddAds, float &max,
 	// calculate the normalization factor, i.e., sum of the (max/scheddprio)
 	normalFactor = 0.0;
 	scheddAds.Open();
-	while (ad = scheddAds.Next())
+	while ((ad = scheddAds.Next()))
 	{
 		ad->LookupString (ATTR_NAME, scheddName);
 		prio = accountant.GetPriority (scheddName);
@@ -673,7 +674,7 @@ getCapability (char *startdName, ClassAdList &startdPvtAds)
 	char	name[64];
 
 	startdPvtAds.Open();
-	while (pvtAd = startdPvtAds.Next())
+	while ((pvtAd = startdPvtAds.Next()))
 	{
 		if (pvtAd->LookupString (ATTR_NAME, name)	&&
 			strcmp (name, startdName) == 0			&&
