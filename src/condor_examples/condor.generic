@@ -16,8 +16,6 @@ $sbin="$release_dir/sbin";
 $bin="$release_dir/bin";
 %configlocation = (
 );
-%nameused = (
-);
 
 ###########################################################################
 # Script begins:
@@ -37,19 +35,16 @@ SWITCH: {
     if( /^condor_q/ ) {
 	$tool="condor_q";
 	$toolpath="$bin/$tool";
-	$needs_name=1;
 	last SWITCH;
     }
     if( /^condor_rm/ ) {
 	$tool="condor_rm";
 	$toolpath="$bin/$tool";
-	$needs_name=1;
 	last SWITCH;
     }
     if( /^condor_submit/ ) {
 	$tool="condor_submit";
 	$toolpath="$bin/$tool";
-	$needs_name=1;
 	last SWITCH;
     }
     if( /^condor_status/ ) {
@@ -60,7 +55,6 @@ SWITCH: {
     if( /^condor_prio/ ) {
 	$tool="condor_prio";
 	$toolpath="$bin/$tool";
-	$needs_name=1;
 	last SWITCH;
     }
     if( /^condor_userprio/ ) {
@@ -86,7 +80,6 @@ SWITCH: {
     if( /^condor_master/ ) {
 	$tool="condor_master";
 	$toolpath="$sbin/$tool";
-	$needs_name=1;
 	last SWITCH;
     }
     if( /^condor_checkpoint/ ) {
@@ -97,37 +90,31 @@ SWITCH: {
     if( /^condor_off/ ) {
 	$tool="condor_off";
 	$toolpath="$sbin/$tool";
-	$needs_name=1;
 	last SWITCH;
     }
     if( /^condor_on/ ) {
 	$tool="condor_on";
 	$toolpath="$sbin/$tool";
-	$needs_name=1;
 	last SWITCH;
     }
     if( /^condor_reconfig/ ) {
 	$tool="condor_reconfig";
 	$toolpath="$sbin/$tool";
-	$needs_name=1;
 	last SWITCH;
     }
     if( /^condor_reconfig_schedd/ ) {
 	$tool="condor_reconfig_schedd";
 	$toolpath="$sbin/$tool";
-	$needs_name=1;
 	last SWITCH;
     }
     if( /^condor_reschedule/ ) {
 	$tool="condor_reschedule";
 	$toolpath="$sbin/$tool";
-	$needs_name=1;
 	last SWITCH;
     }
     if( /^condor_restart/ ) {
 	$tool="condor_restart";
 	$toolpath="$sbin/$tool";
-	$needs_name=1;
 	last SWITCH;
     }
     if( /^condor_vacate/ ) {
@@ -143,8 +130,7 @@ SWITCH: {
 
 # Now, parse the arguments.  Process any -pool option (and don't pass
 # it on to the real condor program, unless it's condor_status, and we
-# don't know what pool they're talking about) and notice if we see a
-# -name. 
+# don't know what pool they're talking about)
 while( $_ = $ARGV[0] ) {
     shift;
     if( /^-p/ ) { 
@@ -162,7 +148,6 @@ while( $_ = $ARGV[0] ) {
 	}
 	next;
     }
-    if( /^-n/ )	{ $saw_name++; }
     push( @args, $_ );
 }
 
@@ -172,18 +157,10 @@ if( ! $pool ) {
 }
 
 # Now figure out the right settings, based on the value of $POOL:
-$name=$nameused{$pool};
 $config=$configlocation{$pool};
 
 # Make sure those settings make sense:
 -f $config || die "Can't read config file $config\n";
-$name || die "Can't find name to use with pool $pool\n";
-
-# If we didn't see a -n option but need one, add it to our arg list: 
-if( $needs_name && ! $saw_name ) {
-    push( @args, "-n" );
-    push( @args, $name );
-}
 
 # Now, set the CONDOR_CONFIG environment variable 
 $ENV{CONDOR_CONFIG}=$config;
