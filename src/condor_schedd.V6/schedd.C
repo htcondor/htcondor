@@ -922,15 +922,16 @@ count( ClassAd *job )
 	x509userproxy = NULL;
 	if ( GridUniverseLogic::group_per_subject() ) {
 		job->LookupString(ATTR_X509_USER_PROXY_SUBJECT, &x509userproxy);
-		if ( !x509userproxy ) {
+		if ( (!x509userproxy) && (universe==CONDOR_UNIVERSE_GLOBUS) ) {
 			int cluster = 0;
 			int proc = 0;
 			job->LookupInteger(ATTR_CLUSTER_ID, cluster);
 			job->LookupInteger(ATTR_PROC_ID, proc);
 			dprintf(D_ALWAYS, 
 				"ERROR %d.%d has no %s attribute.  Ignoring. "
-				"Update you condor_submit!\n",
+				"Update your condor_submit!\n",
 				cluster, proc, ATTR_X509_USER_PROXY_SUBJECT);
+			return 0;
 		}
 	} else {
 		job->LookupString(ATTR_X509_USER_PROXY, &x509userproxy);
