@@ -1,3 +1,7 @@
+===== Code =====
+Write or restrict copy constructors and assignment
+operators. 
+
 ===== Documentation =====
 Document how to have relative and absolute times in a classad
 directly. (Use the apostrophe.) 
