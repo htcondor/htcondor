@@ -106,8 +106,8 @@ that checkpointing is enabled and to inform you where the checkpoint
 image is stored:
 
 \begin{verbatim}
-Condor: Will checkpoint to program_name.ckpt
-Condor: Remote system calls disabled.
+Condor: Notice: Will checkpoint to program_name.ckpt
+Condor: Notice: Remote system calls disabled.
 \end{verbatim}
 
 To force the program to write a checkpoint image and stop, send it
@@ -122,6 +122,65 @@ image file.
 To use a different filename for the checkpoint image, use the option
 ''-\_condor\_ckpt'' and the name of the file you want checkpoints
 written to.
+
+\subsection{\label{sec:ckpt-safety}Checkpoint Safety}
+
+Some programs have fundamental limitations that make them
+unsafe for checkpointing.  For example, a program that both reads
+and writes a single file may enter an unexpected state. Here
+is an example of how this might happen.
+
+\begin{enumerate}
+\item Record a checkpoint image.
+\item Read data from a file.
+\item Write data to the same file.
+\item Execution failure, so roll back to step 2.
+\end{enumerate}
+
+In this example, the program would re-read data from the file, but
+instead of finding the original data, would see data created in the
+future, and yield unexpected results.
+
+To prevent this sort of accident, Condor displays a warning
+if a file is used for both reading and writing.  You can ignore or disable
+these warnings if you choose (see section \ref{sec:ckpt-warnings},) but
+please understand that your program may compute incorrect results.
+
+\subsection{\label{sec:ckpt-warnings}Checkpoint Warnings}
+
+Condor has a number of messages that warn you of unexpected
+behaviors in your program.  For example, if a file is opened for reading
+and writing, you will see:
+
+\begin{verbatim}
+Condor: Warning: READWRITE: File '/tmp/x' used for both reading and writing.
+\end{verbatim}
+
+You may control how these messages are displayed with the
+\verb$-_condor_warning$ command-line argument.  This argument
+accepts a warning category and a mode.  The category describes a certain
+class of messages, such as READWRITE or ALL.  The mode describes what
+to do with the category.  It may be ON, OFF, or ONCE.
+If a category is ON, it is always displayed.
+If a category is OF, it is never displayed.
+If a category is ONCE, it is displayed only once.
+To show all the available categories and modes, just use
+\verb$-_condor_warning$ with no arguments.
+
+For example, to limit read/write warnings to one instance:
+
+\begin{verbatim}
+-_condor_warning READWRITE ONCE
+\end{verbatim}
+
+To turn all ordinary notices off:
+
+\begin{verbatim}
+-_condor_warning NOTICE OFF
+\end{verbatim}
+
+The same effect can be accomplished within a program by using the function
+\verb$_condor_warning_config$, described in section \ref{sec:ckpt-api}.
 
 \subsection{\label{sec:ckpt-api}Checkpoint Library Interface}
 
@@ -176,13 +235,15 @@ must occur in matched pairs.  \verb$_condor_ckpt_enable()$ must
 be called once for every time that \verb$_condor_ckpt_disable()$
 is called.
 
+\item \verb$int _condor_warning_config( const char *kind, const char *mode )$\\
+This function controls what warnings are displayed by Condor.
+The \verb$kind$ and \verb$mode$ arguments are the same as for the
+\verb$-_condor_warning$ option described in section \ref{sec:ckpt-warnings}.  This function returns true
+if the arguments are understood and accepted.  Otherwise, it returns false.
+
 \item \verb$extern int condor_compress_ckpt$\\
 Setting this variable to one causes checkpoint images to be compressed.
 Setting it to zero disables compression.
 
-\item \verb$extern int condor_debug_output$\\
-Setting this variable to one causes additional debugging information
-to be shown during the checkpoint process.  Setting it to zero
-disables debug messages.
-
 \end{itemize}
+
