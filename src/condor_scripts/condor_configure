@@ -30,14 +30,6 @@ my $no_config_modify=0;
 
 &parse_command_line();
 
-if ($opt_vdt_post_install) {
-	open(LOGFILE, ">>$opt_vdt_post_install")
-		or die "Couldn't open $opt_vdt_post_install\n";
-	$logfile = *LOGFILE;
-} else {
-	$logfile = *STDOUT;
-}
-
 my $timestamp=time();
 
 # Hashes to store values that will go into config files
@@ -56,6 +48,11 @@ if ($opt_owner) {
     $owner=&find_owner($opt_owner);
 } else {
     $owner=&find_owner();
+}
+
+if (defined ($opt_install) || defined ($opt_owner)) {
+    my $gid=(getpwuid ($owner))[3]; #Get group id
+    $local_config{CONDOR_IDS}="$owner.$gid";
 }
 
 my @pwuid=getpwuid ($owner);
@@ -311,7 +308,7 @@ config files and local directory will be preserved.
 Specifies the installation directory (the root of Condor installation).
 
 --local-dir=<path>
-Creates the local directory at the specified location (if one does not exist there).
+Sets the local directory at the specified location (if one does not exist there). Moves log,spool,execute directories there from the old local directory (if applicable).
 
 --make-personal-condor
 Creates a personal Condor (i.e. a 1-node pool running on local machine). 
@@ -322,11 +319,8 @@ Determines which role(s) the machine will perform in a pool (which translates to
 --central-manager=<host>
 Connect to existing pool with Central manager on <host>. 
 
---owner=<uid.gid>
-Run Condor daemons as user: uid (Group: gid). (Only applicable when 
-condor_configure is run by root). Changes ownership of log,spool,execute
-directories to specified user, and instructs Condor system to run
-as that user.
+--owner=<user>
+Run Condor daemons as specified user (can be either ID or username). (Only applicable when condor_configure is run by root, otherwise the current user is assumed). Changes ownership of log,spool,execute directories to specified user, and instructs Condor system to run as that user (by setting CONDOR_IDS in the config file).
 
 --verbose
 Print more information. 
@@ -341,7 +335,6 @@ sub find_owner {
     my $param = shift(@_);
 
     my $uid;
-    my $gid;
     my $uname;
 
     if ( $< ) {
@@ -364,17 +357,13 @@ sub find_owner {
 using the --owner option\n";
     }
 
-    my @uinfo;
     if ($uname) {
-	@uinfo=getpwnam ($uname);
-    } else {
-	@uinfo=getpwuid ($uid);
+	$uid=(getpwnam ($uname))[2];
     }
 
-    $uid=$uinfo[2];
-    $gid=$uinfo[3];
-
-    $local_config{CONDOR_IDS}="$uid.$gid";
+    if ((!$uid) || (!getpwuid($uid))) {
+	die "\nInvalid user: $param\n";
+    }
         
     return $uid;
 }
@@ -730,11 +719,12 @@ sub set_java_jvm_path()
     # accept what I found. 
 
     if ($jvm eq "") {
-	log_message ( "Unable to find a valid Java installation \
+	print "Unable to find a valid Java installation \
 Java Universe will not work properly until the JAVA \
-(and JAVA_MAXHEAP_ARGUMENT) parameters are set in the configuration file!");
+(and JAVA_MAXHEAP_ARGUMENT) parameters are set in the configuration file!";
 return;
 }
+
 
 &debug ("Setting JAVA=$jvm");
 
@@ -791,23 +781,4 @@ sub debug() {
     if (defined($opt_verbose)) {
 		print "$str\n";
     }
-}
-
-sub log_message()
-{
-	my $message = shift;
-	
-	if ($opt_vdt_post_install ne "") {
-		if ($printed_log_message == 0) {
-			print wrap("", "", "You should look inside the post-install README file ",
-			           "for some details about how Condor was installed.\n");
-			$printed_log_message = 1;
-
-			print $logfile "----------------------------------------------------------------------\n\n";
-			print $logfile "Condor Installation Notes\n\n";
-		}
-	}
-	print $logfile (wrap("", "", $message));
-	print $logfile "\n";
-	return;
 }
