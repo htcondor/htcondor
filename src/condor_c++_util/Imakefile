@@ -83,6 +83,13 @@ release_copy_target(../h/file_lock.h,include,file_lock.h,TEXT_MODE)
 strip_copy_target(../h/file_lock.h,include,file_lock.h,TEXT_MODE)
 static_copy_target(../h/file_lock.h,include,file_lock.h,TEXT_MODE)
 
+release_copy_target(../condor_includes/condor_constants.h,\
+                    include,condor_constants.h,TEXT_MODE)
+strip_copy_target(../condor_includes/condor_constants.h, \
+                  include,condor_constants.h,TEXT_MODE)
+static_copy_target(../condor_includes/condor_constants.h, \
+                   include,condor_constants.h,TEXT_MODE)
+
 foo.o: user_log.h
 test.o: user_log.h
 
