@@ -24,6 +24,7 @@ Copy( )
 	if (newTree == 0) return 0;
 	newTree->value.CopyFrom( value );
 	newTree->nodeKind = nodeKind;
+	newTree->parentScope = parentScope;
 	return newTree;
 }
 
