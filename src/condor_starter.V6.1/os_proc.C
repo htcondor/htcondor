@@ -161,8 +161,10 @@ OsProc::StartJob()
 	} 
 		// Either way, we now have to add the user-specified args as
 		// the rest of the Args string.
-	strcat( Args, " " );
-	strcat( Args, tmp );
+	if ( tmp[0] != '\0' ) {
+		strcat( Args, " " );
+		strcat( Args, tmp );
+	}
 
 		// // // // // // 
 		// Environment 
