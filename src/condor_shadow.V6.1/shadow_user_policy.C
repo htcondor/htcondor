@@ -116,14 +116,21 @@ void
 ShadowUserPolicy::doAction( int action, bool is_periodic ) 
 {
 	const char* firing_expr = user_policy.FiringExpression();
-	char* tmp = NULL;
-	ExprTree *tree, *rhs = NULL;
+//	char* tmp = NULL;
+	const char* tmp;
+//	ExprTree *tree, *rhs = NULL;
+	ExprTree *tree;
+	ClassAdUnParser unp;
+	string bufString;
 
 	tree = job_ad->Lookup( firing_expr );
-	if( tree && (rhs=tree->RArg()) ) {
+//	if( tree && (rhs=tree->RArg()) ) {
+	if( tree ) {
 			// cool, we've found the right expression.  let's print it
 			// out to a string so we can use it.
-		rhs->PrintToNewStr( &tmp );
+//		rhs->PrintToNewStr( &tmp );
+		unp.Unparse( bufString, tree );
+		tmp = bufString.c_str( );
 	} else {
 			// this is really strange, we think the firing expr went
 			// off, but now we can't look it up in the job ad.
@@ -137,7 +144,7 @@ ShadowUserPolicy::doAction( int action, bool is_periodic )
 	reason += firing_expr;
 	reason += " expression '";
 	reason += tmp;
-	free( tmp );
+//	free( tmp );
 
 	reason += "' evaluated to ";
 	switch( firing_value ) {
