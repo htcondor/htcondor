@@ -63,7 +63,6 @@
 
 
 #define StaticFlag -static
-/* #define syscall_lib  */
 #define PsAllFlag /bin/ps -e		/* "Ps" flag when you want everything */
 #define PsAwkProg '{ print $1 }'	/* Pick out pid from "ps" output */
 

@@ -78,9 +78,8 @@
 #define HAS_STATIC			YES
 
 #define StaticFlag -static
-#define UnixName /vmunix			/* pathname of the system executable */
-#define syscall_lib syscall_lib
-#define PsAllFlag /bin/ps -e				/* "Ps" flag when you want everything */
+#define UnixName /vmunix		/* pathname of the system executable */
+#define PsAllFlag /bin/ps -e		/* "Ps" flag when you want everything */
 #define PsAwkProg '{ print $1 }'	/* Pick out pid from "ps" output */
 
 #ifndef Ctags
