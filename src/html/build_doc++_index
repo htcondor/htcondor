@@ -1,0 +1,41 @@
+#!/s/std/bin/perl
+
+# This perl script is used to find any directories in the condor src
+# tree that have an html subdirectory, and an "index.html" file in
+# that html directory.  These files are created by html_target()
+# entries in the Imakefile, and create an HTML version of all Doc++
+# comments in the specified header files.  When this script is run, it
+# creates an "index.html" file that just contains a sorted list of all
+# the subdirectories with Doc++ html, and contains links to each one.
+#
+# Written on 2/2/99 by Derek Wright <wright@cs.wisc.edu>
+
+opendir( DIR, ".." ) || die "Can't opendir \"..\": $!\n";
+
+# Grab all the entries in the parent directory, except . and .. 
+@alldirs = grep !/^\.\.?$/, readdir(DIR);
+
+# For each entry, see if the html/index.html file exists, and if so,
+# stuff it in a hashtable.
+foreach $dir (@alldirs) {
+    $file = "../$dir/html/index.html";
+    if( -f $file ) {
+	$html_files{$dir} = $file;
+    }
+}
+
+# Finally, print out our top-level html index of all doc++ stuff. 
+open( OUT, ">index.html" ) || die "Can't open index.html: $!\n";
+
+print OUT "<h1>Condor Doc++ Entries</h1>\n\n";
+print OUT "<ul>\n";
+
+foreach $dir ( sort(keys %html_files) ) {
+    print OUT "<li><a href=\"$html_files{$dir}\">$dir</a>\n";
+}
+
+print OUT "</ul>\n";
+
+# We're done, clean up.
+close OUT;
+closedir DIR;
