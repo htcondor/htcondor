@@ -23,6 +23,7 @@ extern "C" {
 #endif
 
 int SetSyscalls( int mode );
+int GetSyscallMode();
 BOOL LocalSysCalls();
 BOOL RemoteSysCalls();
 BOOL MappingFileDescriptors();
