@@ -1150,6 +1150,7 @@ int get_job_prio(ClassAd *job)
 
 	if ( PrioRec[N_PrioRecs].owner ) {
 		free( PrioRec[N_PrioRecs].owner );
+		PrioRec[N_PrioRecs].owner=NULL;
 	}
 	PrioRec[N_PrioRecs].owner = strdup( owner );
 
