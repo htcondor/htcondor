@@ -188,6 +188,18 @@ e		*/
 		*/
 		bool InsertAttr( const std::string &attrName, const char *value );
 
+		/** Inserts an attribute into a nested classad.  The scope expression
+		 		is evaluated to obtain a nested classad, and the insertion is
+				made in the nested classad.  The string value is
+				converted into a Literal expression to yield the expression to
+				be inserted.
+			@param scopeExpr The scope expression.
+			@param attrName The name of the attribute.
+			@param value The string attribute
+		*/
+		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName, 
+				const char *value );
+
 		/** Inserts an attribute into the ClassAd.  The string value is
 				converted into a Literal expression, and then inserted into
 				the classad.
@@ -204,9 +216,6 @@ e		*/
 			@param scopeExpr The scope expression.
 			@param attrName The name of the attribute.
 			@param value The string attribute
-			@param dup If dup is true, the value is duplicated internally.
-				Otherwise, the string is assumed to have been created with new[]
-				and the classad assumes responsibility for freeing the storage.
 		*/
 		bool DeepInsertAttr( ExprTree *scopeExpr, const std::string &attrName, 
 				const std::string &value );

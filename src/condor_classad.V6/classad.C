@@ -248,6 +248,14 @@ InsertAttr( const string &name, const char *value )
 }
 
 bool ClassAd::
+DeepInsertAttr( ExprTree *scopeExpr, const string &name, const char *value )
+{
+	ClassAd *ad = _GetDeepScope( scopeExpr );
+	if( !ad ) return( false );
+	return( ad->InsertAttr( name, value ) );
+}
+
+bool ClassAd::
 InsertAttr( const string &name, const string &value )
 {
 	Value val;
