@@ -111,8 +111,7 @@ initialize ()
 		(CommandHandlercpp) &Matchmaker::GET_RESLIST_commandHandler, 
 			"GET_RESLIST_commandHandler", this, READ);
 
-	// Set a timer to renegotiate.  This timer gets reset to 
-	// Negotiator interval after each negotiation.
+	// Set a timer to renegotiate.
     negotiation_timerID = daemonCore->Register_Timer (0,  NegotiatorInterval,
 			(TimerHandlercpp) &Matchmaker::negotiationTime, 
 			"Time to negotiate", this);
@@ -215,8 +214,8 @@ RESCHEDULE_commandHandler (int, Stream *)
 {
 	if (GotRescheduleCmd) return TRUE;
 	GotRescheduleCmd=true;
-	daemonCore->Reset_Timer(negotiation_timerID,10,
-		NegotiatorInterval);
+	daemonCore->Reset_Timer(negotiation_timerID,0,
+							NegotiatorInterval);
 	return TRUE;
 }
 
@@ -495,17 +494,6 @@ negotiationTime ()
 
 	// ----- Done with the negotiation cycle
 	dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
-
-	// Reset the timer forward for the next negotiation cycle.  We do this
-	// because we renegotiate not only whenever the timer goes off, but also
-	// upon request (i.e. whenver a condor_submit, condor_reschedule, or
-	// pvm_addhost happens).  We don't want a timer induced negotiation to
-	// happen right after a requested negotiation cycle...
-	// Use a periodic timer, since we return in several places above on error
-	// conditions, and this way we do not have to worry about resetting the
-	// timer whenever there is an exceptional error.
-	daemonCore->Reset_Timer(negotiation_timerID,NegotiatorInterval,
-		NegotiatorInterval);
 
 	return TRUE;
 }
