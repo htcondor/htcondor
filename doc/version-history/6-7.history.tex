@@ -62,12 +62,11 @@ if the keyboard has requested attention. This does not work for USB keyboards
 or pseudo TTYs, so \Attr{ConsoleIdle} on 2.6 kernels will be wrong for some
 devices. Future versions of Condor or Linux may correct this.
 
-\item \Condor{dagman} no longer removes the X509\_USER\_PROXY environment.
+\item \Condor{dagman} no longer removes the X509\_USER\_PROXY environment 
+variable.
 This should allow users to set the environment variable before invoking 
 \Condor{submit\_dag} and have the jobs submitted by \Condor{dagman} correctly
 find the proxy file.
-
-variable.
 
 \end{itemize}
 
@@ -121,7 +120,7 @@ in recovery mode.
 
 \begin{itemize}
 
-\item Condor \VersionNotice includes some bug fixes from Version 6.6.7,
+\item Condor Version 6.7.2 includes some bug fixes from Version 6.6.7,
 but none from Version 6.6.8.
 
 \item MPI users who are upgrading from previous versions of Condor
