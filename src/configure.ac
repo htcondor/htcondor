@@ -238,7 +238,7 @@ fi
 # supported gcc version, we might as well catch them here, before they
 # get very far.
 AC_MSG_CHECKING([for exact version of gcc])
-gcc_vers=`((gcc -v) 2>&1) | tail -1 | perl  -ne '{/.*gcc version\s*(\S*).*/; print "$1\n"}'`
+gcc_vers=`gcc -v 2>&1 | tail -1 | perl  -ne '{/.*gcc version\s*(\S*).*/; print "$1\n"}'`
 
 case "$gcc_vers" in
  "egcs-2.91.66" )
