@@ -13,20 +13,18 @@
 #ifndef _CONDOR_DAEMON_CORE_H_
 #define _CONDOR_DAEMON_CORE_H_
 
-#if defined(Solaris)
-#define __EXTENSIONS__
-#endif
-#include <sys/types.h>
-#include <sys/time.h>
+#include "_condor_fix_types.h"
+#include "condor_fix_timeval.h"
+
 #if defined(USE_XDR)
 #include <rpc/types.h>
 #include <rpc/xdr.h>
 #endif
+
 #include "condor_io.h"
 #include "condor_fdset.h"
-#if defined(Solaris)
-#undef __EXTENSIONS__
-#endif
+
+
 #include "condor_timer_manager.h"
 
 const	int	 MAXDC	= 5; 
