@@ -69,6 +69,10 @@ The details of each version are described below.
   If a job is succesfully removed, it will always have a
   \Attr{RemoveReason} attribute.
 
+\item The default setting for \Macro{POOL\_HISTORY\_DIR} is no
+  longer \Macro{SPOOL}.  Using the spool directory would result
+  in history files being obliterated by \Condor{preen}.
+
 \end{itemize}
 
 \noindent Known Bugs:
