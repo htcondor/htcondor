@@ -56,14 +56,22 @@ EXTRACT = GETWD.o MMAP.o SYSCALL.o __GETEUID.o __GETEGID.o __GETPPID.o \
 #	elif IS_ALPHA_OSF1
 EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 		  MMAP.o PIPE.o SYSCALL.o
-#	elif (IS_X86_SOLARIS25)
+#	elif (IS_X86_SOLARIS251) 
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o GETCWD.o \
 		  i386_data.o SYSCONF.o GETLOGIN.o
-#	elif (IS_SUN4M_SOLARIS) || (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS)
+#	elif (IS_X86_SOLARIS26)
+EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
+		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o GETCWD.o \
+		  i386_data.o SYSCONF.o GETLOGIN.o LSEEK64.o MMAP64.o
+#	elif (IS_SUN4X_SOLARIS251)
 EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
 		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o GETCWD.o \
 		  SYSCONF.o GETLOGIN.o
+#	elif (IS_SUN4X_SOLARIS26)
+EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o \
+		  MMAP.o SYSCALL.o PIPE.o _SIGACTION.o TRUNCATE.o GETCWD.o \
+		  SYSCONF.o GETLOGIN.o LSEEK64.o MMAP64.o
 #	elif IS_SGI_IRIX53
 EXTRACT = /* don't extract anything */
 #	else
@@ -77,7 +85,7 @@ EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 EXTRACT = GETEUID.o GETEGID.o
 #	elif IS_R6000_AIX32
 /* Don't extract anything */
-#     elif (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS) || (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS25)
+#     elif (IS_SOLARIS)
 EXTRACT = GETEUID.o GETEGID.o
 #	else 
 EXTRACT = GETEUID.o GETEGID.o GETWD.o
@@ -167,7 +175,7 @@ CONDOR_TYPE_OBJ = sig_num.o proc.o open_flags.o fcntl_cmd.o
 IO_OBJ = stream.o sock.o reli_sock.o safe_sock.o buffers.o $(CONDOR_TYPE_OBJ)
 
 LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL) $(NAME_TAB) $(XDR_OBJ) $(UTIL_OBJ) \
-	$(CKPT_OBJ) $(UTIL_EXTRACT) $(HP_UTIL) $(IOS_STUBS) $(IO_OBJ)
+	$(CKPT_OBJ) $(UTIL_EXTRACT) $(IOS_STUBS) $(IO_OBJ)
 
 SIMPLE_OBJ = condor_rt0.o extern_path.o xfer_file.o 
 SYSCALL_LIB = condor_syscall_lib.a
@@ -183,6 +191,9 @@ stubs: switches.c senders.C receivers.C
 ToUpper:
 	ln -s ../condor_ckpt/ToUpper ToUpper
 
+clean::
+	rm -f ToUpper
+
 uppercase_target($(SIMPLE_LIBC),geteuid.o,GETEUID.o,geteuid,GETEUID)
 uppercase_target($(SIMPLE_LIBC),getppid.o,GETPPID.o,getppid,GETPPID)
 uppercase_target($(SIMPLE_LIBC),getegid.o,GETEGID.o,getegid,GETEGID)
@@ -190,7 +201,7 @@ uppercase_target($(SIMPLE_LIBC),getlogin.o,GETLOGIN.o,getlogin,GETLOGIN)
 uppercase_target($(SIMPLE_LIBC),fork.o,FORK.o,fork,FORK)
 uppercase_target($(SIMPLE_LIBC),kill.o,KILL.o,kill,KILL)
 
-#if (IS_X86_SOLARIS25)
+#if (IS_X86_SOLARIS)
 SIGACTION.o : ToUpper $(SIMPLE_LIBC)
 	ar x $(SIMPLE_LIBC) sigaction.o
 	./ToUpper sigaction.o sigaction.tmp.o sigaction SIGACTION
@@ -200,7 +211,7 @@ SIGACTION.o : ToUpper $(SIMPLE_LIBC)
 uppercase_target($(SIMPLE_LIBC),sigaction.o,SIGACTION.o,sigaction,SIGACTION)
 #endif
 
-#if (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS25)
+#if (IS_SOLARIS)
 uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
 uppercase_target($(SIMPLE_LIBC),_sigaction.o,_SIGACTION.o,sigaction,SIGACTION)
 uppercase_target($(SIMPLE_LIBC),truncate.o,TRUNCATE.o,ftruncate,FTRUNCATE)
@@ -216,6 +227,12 @@ uppercase_target($(SIMPLE_LIBC),__kill.o,__KILL.o,__kill,__KILL)
 uppercase_target($(SIMPLE_LIBC),__sigact.o,__SIGACT.o,__sigaction,__SIGACTION)
 uppercase_target($(SIMPLE_LIBC),__fork.o,__FORK.o,__fork,__FORK)
 uppercase_target($(SIMPLE_LIBC),__pipe.o,__PIPE.o,__pipe,__PIPE)
+
+
+#if (IS_SOLARIS26)
+uppercase_target($(SIMPLE_LIBC),lseek64.o,LSEEK64.o,lseek64,LSEEK64)
+uppercase_target($(SIMPLE_LIBC),mmap64.o,MMAP64.o,mmap64,MMAP64)
+#endif
 
 
 #if (IS_I386_LINUX) 
@@ -244,12 +261,12 @@ uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
 #endif
 
 
-#if (IS_X86_SOLARIS25)
+#if (IS_X86_SOLARIS)
 i386_data.o : $(SIMPLE_LIBC)
 	ar x $(SIMPLE_LIBC) i386_data.o
 #endif
 
-#if (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS25)
+#if (IS_SOLARIS)
 SYSCONF.o :  $(SIMPLE_LIBC)  ToUpper
 	ar x    $(SIMPLE_LIBC)      sysconf.o 	  ; mv  sysconf.o  $(TMP_DIR)
 	./ToUpper $(TMP_DIR)/sysconf.o   $(TMP_DIR)/SYSCONF.o   sysconf   SYSCONF
@@ -263,7 +280,7 @@ strip_copy_target( condor_rt0.o, $(STRIP_DIR)/lib, condor_rt0.o, OBJECT_MODE )
 static_copy_target( condor_rt0.o, $(STATIC_DIR)/lib, condor_rt0.o, OBJECT_MODE )
 #endif
 
-#if (IS_X86_SOLARIS25)
+#if (IS_X86_SOLARIS)
 	library_target(libtmp.a,$(LIB_OBJ))
 
 condor_syscall_lib.a: libtmp.a ToUpper
@@ -297,9 +314,14 @@ switches.c: syscall.tmpl switches.prologue stub_gen switches.epilogue
 	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) GlibCFlag syscall.tmpl | \
 	./stub_gen -mode switches  -p switches.prologue -e switches.epilogue \
 	> switches.c
-#elif IS_SUN4M_SOLARIS251 || IS_X86_SOLARIS25
+#elif IS_SOLARIS251
 switches.c: syscall.tmpl switches.prologue stub_gen switches.epilogue
 	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) -DSolaris251 \
+	syscall.tmpl | ./stub_gen -mode switches  -p switches.prologue -e switches.epilogue \
+	> switches.c
+#elif IS_SOLARIS26
+switches.c: syscall.tmpl switches.prologue stub_gen switches.epilogue
+	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) -DSolaris26 \
 	syscall.tmpl | ./stub_gen -mode switches  -p switches.prologue -e switches.epilogue \
 	> switches.c
 #else
@@ -309,6 +331,20 @@ switches.c: syscall.tmpl switches.prologue stub_gen switches.epilogue
 	> switches.c
 #endif
 
+#if IS_SOLARIS26
+senders.C: syscall.tmpl stub_gen senders.prologue senders.epilogue
+	$(CPP) -DSENDER $(CLIP) $(SAVE_SIGSTATE) -D$(OS) -DSolaris26 \
+	syscall.tmpl | \
+	./stub_gen -mode senders -p senders.prologue -e senders.epilogue \
+	-n syscheck $(STUB_CLUMP_SIZE) > senders.C
+
+receivers.C: syscall.tmpl stub_gen receivers.prologue receivers.epilogue
+	$(CPP) -DRECEIVER $(CLIP) $(SAVE_SIGSTATE) -D$(OS) -DSolaris26 \
+	syscall.tmpl | \
+	./stub_gen -mode receivers -p receivers.prologue \
+	-e receivers.epilogue -n syscheck $(STUB_CLUMP_SIZE) \
+	> receivers.C
+#else
 senders.C: syscall.tmpl stub_gen senders.prologue senders.epilogue
 	$(CPP) -DSENDER $(CLIP) $(SAVE_SIGSTATE) -D$(OS) syscall.tmpl | \
 	./stub_gen -mode senders -p senders.prologue -e senders.epilogue \
@@ -319,6 +355,8 @@ receivers.C: syscall.tmpl stub_gen receivers.prologue receivers.epilogue
 	./stub_gen -mode receivers -p receivers.prologue \
 	-e receivers.epilogue -n syscheck $(STUB_CLUMP_SIZE) \
 	> receivers.C
+#endif
+
 
 syscall-list: syscall.tmpl stub_gen 
 	$(CPP) -DSWITCH $(CLIP) $(SAVE_SIGSTATE) -D$(OS) syscall.tmpl | \
