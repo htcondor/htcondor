@@ -31,6 +31,42 @@ commands), each with distinct requirements.  This is useful for placing
 the head node of an MPI job on a specific machine, and the rest of the 
 nodes elsewhere. See ~\ref{sec:MPI} for details.
 
+\item The \Condor{negotiator} now publishes its own ClassAd to the
+  \Condor{collector} which includes the IP address and port where it
+  is listening.
+  This negotiator ClassAd can be viewed using the new
+  \Opt{-negotiator} option with \Condor{status}.
+  In addition to removing an unnecessary fixed port for the
+  \Condor{negotiator}, this change corrects some problems with
+  commands that attempted to communicate directly with the
+  \Condor{negotiator}.
+  These bugs were first listed in the Known Bugs section of the 6.6.0
+  version history.
+
+  To enable this feature and have the \Condor{negotiator} listen on a
+  dynamic port, you must comment out the \Macro{NEGOTIATOR\_HOST}
+  setting in your configuration file.
+  The new example configutation files shipped with version 6.7.4 and
+  later will already have this setting undefined.
+  However, if you upgrade your binaries and retain an older copy of
+  your configuration files, you should consider commenting out 
+  \MacroNI{NEGOTIATOR\_HOST}.
+
+  To disable this feature and have the \Condor{negotiator} still
+  listen on a well-known port, you can uncomment the
+  \MacroNI{NEGOTIATOR\_HOST} setting in the default configuration. 
+  For example:
+\begin{verbatim}
+NEGOTIATOR_HOST = $(CONDOR_HOST)
+\end{verbatim}
+
+  Pools that are comprised of older versions of Condor and a 6.7.4 or
+  later central manager machine should either continue to use their
+  old \File{condor\_config} file (which will still have
+  \MacroNI{NEGOTIATOR\_HOST} defined) or they should re-define the
+  \MacroNI{NEGOTIATOR\_HOST} setting in the new example configuration
+  files which are used during the installation process.
+
 \item Added optional \Expr{DAGMAN\_RETRY\_SUBMIT\_FIRST} configuration
 parameter that tells \Condor{dagman} whether to immediately retry
 the submit if a node submit fails, or to put that job at the end of
