@@ -253,6 +253,15 @@ ClassAd::~ClassAd()
 //
 void ClassAd::SetMyTypeName(char *tempName)
 {
+	if(!tempName)
+	{
+		if(myType)
+		{
+			delete myType;
+		}
+		myType = NULL;
+		return;
+	}
     if(myType)
     {
         delete myType;
@@ -286,6 +295,15 @@ char *ClassAd::GetMyTypeName()
 //
 void ClassAd::SetTargetTypeName(char *tempName)
 {
+	if(!tempName)
+	{
+		if(targetType)
+		{
+			delete targetType;
+		}
+		targetType = NULL;
+		return;
+	}
     if(targetType)
     {
         delete targetType;
@@ -599,16 +617,34 @@ int ClassAd::code(Stream& s)
 
 int ClassAd::put (XDR *xdrs)
 {
+	char*	tmp = NULL;
+
 	xdrs->x_op = XDR_ENCODE;
 
 	if (!AttrList::put (xdrs))
 		return 0;
 
-	if (!xdr_mywrapstring (xdrs, &myType->name))
-		return 0;
+	if(myType)
+	{
+		if (!xdr_mywrapstring (xdrs, &myType->name))
+			return 0;
+	}
+	else
+	{
+		if (!xdr_mywrapstring (xdrs, &tmp))
+			return 0;
+	}
 
-	if (!xdr_mywrapstring (xdrs, &targetType->name))
-		return 0;
+	if(targetType)
+	{
+		if (!xdr_mywrapstring (xdrs, &targetType->name))
+			return 0;
+	}
+	else
+	{
+		if (!xdr_mywrapstring (xdrs, &tmp))
+			return 0;
+	}
 
 	return 1;
 }
