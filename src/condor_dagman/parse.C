@@ -446,7 +446,9 @@ parse_parent(
 		while ((child = children.Next()) != NULL) {
 			if (!dag->AddDependency (parent, child)) {
 				debug_printf( DEBUG_QUIET,
-							  "Failed to add dependency to dag\n" );
+							  "ERROR: failed to add dependency between "
+							  "parent node \"%s\" and child node \"%s\"\n",
+							  parent->GetJobName(), child->GetJobName() );
 				return false;
 			}
 			debug_printf( DEBUG_DEBUG_3,
