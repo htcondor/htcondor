@@ -251,6 +251,25 @@ same_host(const char *h1, const char *h2)
 
 
 /*
+  Return TRUE if the given domain contains the given hostname, FALSE
+  if not.  Origionally taken from condor_starter.V5/starter_common.C. 
+  Moved here on 1/18/02 by Derek Wright.
+*/
+int
+host_in_domain( const char *host, const char *domain )
+{
+	const char	*ptr;
+
+	for( ptr=host; *ptr; ptr++ ) {
+		if( strcmp(ptr,domain) == MATCH ) {
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+
+/*
   is_ipaddr() returns TRUE if buf is an ascii IP address (like
   "144.11.11.11") and false if not (like "cs.wisc.edu").  Allow
   wildcard "*".  If we return TRUE, and we were passed in a non-NULL 
