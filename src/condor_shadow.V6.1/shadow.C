@@ -192,7 +192,9 @@ void UniShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 
 		// we're only dealing with one host, so this is trivial:
 	remRes->setStartdInfo( host, capability );
-	remRes->setMachineName( "Unknown" );
+		// for now, set this to the sinful string.  when the starter
+		// spawns, it'll do an RSC to register a real hostname...
+	remRes->setMachineName( host );
 	
 		// base init takes care of lots of stuff:
 	baseInit( jobAd, schedd_addr, cluster, proc );

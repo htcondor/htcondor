@@ -105,8 +105,11 @@ MPIShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 
         // make first remote resource the "master".  Put it first in list.
     MpiResource *rr = new MpiResource( this );
-    rr->setStartdInfo( host, capability );
-    rr->setMachineName ( "Unknown" );
+	rr->setStartdInfo( host, capability );
+		// for now, set this to the sinful string.  when the starter
+		// spawns, it'll do an RSC to register a real hostname...
+	rr->setMachineName( host );
+
     ClassAd *temp = new ClassAd( *(getJobAd() ) );
 
     sprintf ( buf, "%s = %s", ATTR_MPI_IS_MASTER, "TRUE" );
@@ -238,7 +241,11 @@ MPIShadow::getResources( void )
 
             rr = new MpiResource( this );
             rr->setStartdInfo( host, capability );
-            rr->setMachineName ( "Unknown" );
+ 				// for now, set this to the sinful string.  when the
+ 				// starter spawns, it'll do an RSC to register a real
+				// hostname... 
+			rr->setMachineName( host );
+
 			tmp_ad = new ClassAd ( *job_ad );
 			replaceNode ( tmp_ad, nodenum );
 			rr->setNode( nodenum );
