@@ -1,0 +1,78 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd      = 'job_core_holdrelease_sched.cmd';
+$testname = 'Jobs properly hold and release - scheduler U';
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+my $alreadydone=0;
+
+$execute = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	# avoid reentrant death
+	if($alreadydone != 0) {
+		return true;
+	} else {
+		$alreadydone = 1;
+	}
+	
+	print "Putting cluster $cluster on hold\n";
+	system("condor_hold $cluster");
+
+};
+
+$abort = sub {
+	print "Job is gone now, cool.\n";
+};
+
+$hold = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	print "Good. Cluster $cluster is supposed to be held.....\n";
+	print "Releasing cluster $cluster\n";
+	system("condor_release $cluster");
+	# must reschedule to get released job out of Inactive and into Running
+	system("condor_reschedule");
+};
+
+$release = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	print "Good hold and release both worked! removing job\n";
+	system("condor_rm $cluster");
+};
+
+$success = sub
+{
+	die "Hold/Release/Remove/Abort is expected event trail!\n";
+};
+
+$timed = sub
+{
+	die "Job should have ended by now. Hold/Realease broken!\n";
+};
+
+CondorTest::RegisterExecute($testname, $execute);
+CondorTest::RegisterAbort($testname, $abort);
+CondorTest::RegisterHold($testname, $hold);
+CondorTest::RegisterRelease($testname, $release);
+CondorTest::RegisterExitedSuccess($testname, $success);
+CondorTest::RegisterTimed($testname, $timed, 900);
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

@@ -1,0 +1,111 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = 'job_core_matchlist_van.cmd';
+$testname = 'Test match_list_length - vanilla U';
+my $counter = 5;
+my $lmn1 = "";
+my $nextlmn1 = "";
+
+
+
+$ExitSuccess = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	print "Saw job exit!<<$counter>>\n";
+	$counter -= 1;
+	if( $counter == 0 )
+	{
+		system("condor_rm $cluster");
+	}
+};
+
+$evicted = sub {
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+	print "Saw job evicted!<<$counter>>\n";
+	$counter -= 1;
+	print "counter now $counter\n";
+	if( $counter == 0 )
+	{
+		print "Counter 0 so removing cluster\n";
+		system("condor_rm $cluster");
+	}
+};
+
+$execute = sub 
+{
+	print "Saw job executing! Crunching ads\n";
+	my $lmn0 = "";
+	my $remote = "";
+	# get host for test via RemoteHost from job ad
+	open(AD,"condor_q -l $cluster | ") || die  "Can not get job ads $!\n";
+	while(<AD>)
+	{
+		my $line = "";
+		chomp($_);
+		$line = $_;
+		if( $line =~ /^RemoteHost.*/ )
+		{
+			print "$line\n";
+		}
+		elsif( $line =~ /^\s*LastMatchName0\s*=\s*\"([@\.a-zA-Z_0-9]+)\"\s*$/ )
+		{
+			$lmn0 = $1;
+			print "LastMatchName0 is <<<< $lmn0 >>>>\n";
+		}
+		elsif( $line =~ /^\s*LastMatchName1\s*=\s*\"([@\.a-zA-Z_0-9]+)\"\s*$/ )
+		{
+			$lmn1 = $1;
+			print "Last Match 1 <<<< $lmn1 >>>>\n";
+		}
+		elsif( $line =~ /LastMatchName.*/ )
+		{
+			print "$line\n";
+		}
+		elsif( $line =~ /^\s*MATCH_name\s*=\s*\"([@\.a-zA-Z_0-9]+)\"\s*$/ )
+		{
+			$remote = $1;
+			print "Remote is <<<< $remote >>>>\n";
+		}
+	}
+	if( ($nextlmn1 ne "") && ($lmn1 ne $nextlmn1) )
+	{
+		die "rotating failed.... $lmn1 ne $nextlmn1\n";
+	}
+	if( $lmn0 ne $remote )
+	{
+		print "$lmn0 = lmn0\n";
+		print "$remote = remote\n";
+		die "LastMatchName out of sync with current Match\n";
+	}
+	$nextlmn1 = $lmn0;
+};
+
+$aborted = sub
+{
+	if($counter == 0)
+	{
+		print "Abort expected after job removal!\n";
+	}
+	else
+	{
+		die "Unexpected Abort!\n";
+	}
+};
+
+system("rm job_core_matchlist.data");
+system("touch job_core_matchlist.data");
+
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterEvicted($testname, $evicted);
+CondorTest::RegisterExecute($testname, $execute);
+CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

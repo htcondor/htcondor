@@ -1,0 +1,24 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$testname = 'Condor PERIODIC_HOLD policy test - scheduler U';
+
+my $nostatus = CondorTest::verbose_system("job_core_perhold-false_sched.pl");
+my $willstatus = CondorTest::verbose_system("job_core_perhold-true_sched.pl");
+
+if($nostatus != 0)
+{
+	print "PERIODIC_HOLD: failed no trigger test\n";
+}
+
+if($willstatus != 0)
+{
+	print "PERIODIC_HOLD: failed trigger test\n";
+}
+
+if(($willstatus != 0) || ($nostatus != 0))
+{
+	die "Failed one PERIODIC_HOLD test\n";
+}
+
+

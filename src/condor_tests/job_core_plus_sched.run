@@ -1,0 +1,81 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = 'job_core_plus_sched.cmd';
+$testname = 'Condor_submit correctly places things into JobAds - scheduler U';
+
+$success = sub 
+{
+	my %info = @_;
+	my $cluster = $info{"cluster"};
+	my $job     = $info{"job"};
+};
+
+$died = sub 
+{
+	my %info = @_;
+	my $expectedsig = $info{"job"}+1;
+	my $gotsig      = $info{"signal"};
+	my $error 		= $info{"error"};
+};
+
+my $alreadydone=0;
+my $foundcount=0;
+
+$execute = sub 
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	# avoid reentrant death
+	if($alreadydone != 0) 
+	{
+		return true;
+	} 
+	else 
+	{
+		$alreadydone = 1;
+	}
+
+	system("condor_config_val -config");
+	print "Checking Job Ads for $cluster\n";
+	open(PULL, "condor_q -l $cluster 2>&1 |") || die "Trying for job ads: $!\n";
+	while(<PULL>)
+	{
+		chomp $_;
+
+		if( $_ =~ /^foo\s*=\s*"(.*)"\s*$/)
+		{
+			print "************** $1 ************\n";
+			$foundcount += 1;
+		}
+		elsif( $_ =~ /^bar\s*=\s*"(.*)"\s*$/)
+		{
+			print "************** $1 ************\n";
+			$foundcount += 1;
+		}
+		elsif( $_ =~ /^last\s*=\s*"(.*)"\s*$/)
+		{
+			print "************** $1 ************\n";
+			$foundcount += 1;
+		}
+		elsif( $_ =~ /^done\s*=\s*(.*)\s*$/)
+		{
+			print "************** $1 ************\n";
+			$foundcount += 1;
+		}
+	}
+	die "Missed some ads" unless $foundcount == 4;
+};
+
+CondorTest::RegisterExecute($testname, $execute);
+CondorTest::RegisterExitedFailure( $testname, $died );
+CondorTest::RegisterExitedSuccess( $testname, $success );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

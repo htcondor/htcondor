@@ -1,0 +1,59 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = 'job_core_rmkillsig_sched.cmd';
+$testname = 'Condor allows change of remove kill signal - scheduler U';
+
+my $killedchosen = 0;
+
+$abnormal = sub {
+	my %info = @_;
+
+	print "keys:".join(" ",keys %info)."\n";
+	my $gotsig   = $info{"signal"};
+};
+
+$aborted = sub {
+	my %info = @_;
+	print "Abort event expected\n";
+	my $gotsig   = $info{"signal"};
+	my $outfile = $info{"output"};
+	my $killsig = $info{"remove_kill_sig"};
+	print "Want to see $killsig in this file $outfile\n";
+	open( FILE, "<$outfile" ) || die "error opening $file: $!\n";
+	while(<FILE>)
+	{
+		chomp;
+		print "Found $_\n";
+		if($_ eq $killsig)
+		{
+			print "Good\n";
+			return;
+		}
+		else
+		{
+			die "Needed to see $killsig as killing signal\n";
+																														        		}
+	}
+};
+
+$executed = sub
+{
+	my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	system("condor_rm $cluster");
+	sleep 5;
+};
+
+CondorTest::RegisterExecute($testname, $executed);
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort         ( $testname, $aborted );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

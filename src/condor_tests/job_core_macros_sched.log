@@ -1,0 +1,59 @@
+000 (1257.000.000) 01/03 15:01:51 Job submitted from host: <128.105.185.11:43335>
+...
+001 (1257.000.000) 01/03 15:01:51 Job executing on host: <128.105.185.11:43335>
+...
+005 (1257.000.000) 01/03 15:01:51 Job terminated.
+	(1) Normal termination (return value 0)
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+000 (1302.000.000) 01/04 14:54:17 Job submitted from host: <128.105.185.11:43335>
+...
+001 (1302.000.000) 01/04 14:54:19 Job executing on host: <128.105.185.11:43335>
+...
+005 (1302.000.000) 01/04 14:56:50 Job terminated.
+	(1) Normal termination (return value 0)
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...
+000 (1537.000.000) 01/05 13:15:51 Job submitted from host: <128.105.185.11:44496>
+...
+001 (1537.000.000) 01/05 13:22:08 Job executing on host: <128.105.185.11:32792>
+...
+004 (1537.000.000) 01/05 13:22:15 Job was evicted.
+	(0) Job was not checkpointed.
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+...
+009 (1537.000.000) 01/05 13:22:15 Job was aborted by the user.
+	via condor_rm (by user bt)
+...
+000 (1568.000.000) 01/05 13:23:25 Job submitted from host: <128.105.185.11:32792>
+...
+001 (1568.000.000) 01/05 13:23:34 Job executing on host: <128.105.185.11:32792>
+...
+005 (1568.000.000) 01/05 13:23:41 Job terminated.
+	(1) Normal termination (return value 0)
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Remote Usage
+		Usr 0 00:00:00, Sys 0 00:00:00  -  Total Local Usage
+	0  -  Run Bytes Sent By Job
+	0  -  Run Bytes Received By Job
+	0  -  Total Bytes Sent By Job
+	0  -  Total Bytes Received By Job
+...

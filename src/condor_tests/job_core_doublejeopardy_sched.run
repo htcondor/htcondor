@@ -1,0 +1,22 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = 'job_core_doublejeopardy_sched.cmd';
+$testname = 'Condor does not generate an abort event along with abnormal termination - scheduler U';
+
+my $killedchosen = 0;
+
+$aborted = sub {
+	die "Bad. Condor generated an extraneous abort event.\n";
+};
+
+CondorTest::RegisterExitedAbnormal( $testname, sub{} );
+CondorTest::RegisterAbort         ( $testname, $aborted );
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+
