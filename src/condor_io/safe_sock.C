@@ -403,6 +403,8 @@ int SafeSock::handle_incoming_packet()
 		dprintf(D_NETWORK, "recvfrom failed: errno = %d\n", errno);
 		return FALSE;
 	}
+	dprintf( D_NETWORK, "RECV %s ", sock_to_string(_sock) );
+	dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string(&_who) );
 	length = received;
 	if(_shortMsg.getHeader(last, seqNo, length, mID, data)) { // short message
 		_shortMsg.curIndex = 0;

@@ -352,6 +352,9 @@ int _condorOutMsg::sendMsg(const int sock,
 			clearMsg();
 			return -1;
 		}
+		dprintf( D_NETWORK, "SEND %s ", sock_to_string(sock) );
+		dprintf( D_NETWORK|D_NOHEADER, "%s\n",
+				 sin_to_string((sockaddr_in *)who) );
 		total += sent;
 		delete tempPkt;
 	}
@@ -370,6 +373,8 @@ int _condorOutMsg::sendMsg(const int sock,
 			headPacket->reset();
 			return -1;
 		}
+		dprintf( D_NETWORK, "SEND %s ", sock_to_string(sock) );
+		dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string((sockaddr_in *)who) );
 		total = sent;;
 	} else { // the last packet of a long message
 		lastPacket->makeHeader(true, seqNo, msgID);
@@ -386,6 +391,8 @@ int _condorOutMsg::sendMsg(const int sock,
 			headPacket->reset();
 			return -1;
 		}
+		dprintf( D_NETWORK, "SEND %s ", sock_to_string(sock) );
+		dprintf( D_NETWORK|D_NOHEADER, "%s\n", sin_to_string((sockaddr_in *)who) );
 		total += sent;
 	}
 
