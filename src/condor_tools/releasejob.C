@@ -37,6 +37,7 @@ char	*MyName;
 
 void ProcArg( const char * );
 
+bool	processed_any_jobs = false;
 char	*DaemonName = NULL;
 
 void
@@ -106,6 +107,11 @@ main( int argc, char *argv[] )
 	}
 	DisconnectQ(q);
 
+	if ( !processed_any_jobs ) {
+		fprintf(stderr,"Could not find any jobs that match your criteria\n");
+		exit(1);
+	}
+
 	return 0;
 }
 
@@ -118,6 +124,7 @@ void UpdateJobAd(int cluster, int proc)
 				cluster, proc);
 		return;
 	}
+	processed_any_jobs = true;
 }
 
 void ProcArg(const char* arg)
