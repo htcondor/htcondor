@@ -61,6 +61,10 @@ number of hosts where the job is running is displayed.
 \item Fixed the \Condor{startd} so that it no longer prints gobs of 
 ProcAPI errors to the log file when it is being run as non-root.  
 
+\item \Macro{FS\_PATHNAME} and \Macro{VOS\_PATHNAME} are no longer
+used.  AFS support now works similar to NFS support, via the
+\Macro{FILESYSTEM\_DOMAIN} macro.
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

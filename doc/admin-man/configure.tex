@@ -835,18 +835,6 @@ AFS''
   all the machines you plan on adding in your pool all can access a
   common set of AFS fileservers.  Otherwise, set it to ``False''.
       
-\item[\Macro{FS\_PATHNAME}] \label{param:FsPathname} If you're using
-  AFS, Condor needs to know where the AFS ``fs'' command is located so
-  that it can verify the AFS cell-names of machines in the pool.  The
-  default value of \File{/usr/afsws/bin/fs} is also the default that
-  AFS uses.
-  
-\item[\Macro{VOS\_PATHNAME}] \label{param:VosPathname} If you're using
-  AFS, Condor needs to know where the AFS ``vos'' command is located
-  so that it can compare fileserver names of volumes.  The default
-  value of \File{/usr/afsws/etc/vos} is also the default that AFS
-  uses. 
-
 \item[\Macro{RESERVE\_AFS\_CACHE}] \label{param:ReserveAfsCache} If
   your machine is running AFS and the AFS cache lives on the same
   partition as the other Condor directories, and you want Condor to
@@ -904,8 +892,8 @@ AFS''
   the job must be in the same \Macro{FILESYSTEM\_DOMAIN} and the same
   \Macro{UID\_DOMAIN}.
   
-\item[\Macro{USE\_AFS}] \label{param:UseAfs} If your machines have AFS
-  and the submit and execute machines are in the same AFS cell, this
+\item[\Macro{USE\_AFS}] \label{param:UseAfs} If your machines have AFS,
+  this
   setting determines whether Condor will use remote system calls for
   Standard Universe jobs to send I/O requests to the submit machine,
   or if it should use local file access on the execute machine (which
