@@ -36,6 +36,8 @@ int ProcAPI::pagesize		= 0;
 long unsigned ProcAPI::boottime	= 0;
 #endif // LINUX
 #else // WIN32
+#include "ntsysinfo.h"
+static CSysinfo ntSysInfo;	// for getting parent pid on NT
 PPERF_DATA_BLOCK ProcAPI::pDataBlock	= NULL;
 struct Offset * ProcAPI::offsets		= NULL;
 #endif // WIN32

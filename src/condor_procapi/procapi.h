@@ -73,7 +73,6 @@ typedef DWORD pid_t;
 #define UNICODE 1
 #define _UNICODE 1
 
-#include "ntsysinfo.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
