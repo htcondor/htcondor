@@ -424,6 +424,13 @@ Scheduler::count_jobs()
 
 	WalkJobQueue((int(*)(ClassAd *)) count );
 
+	if( dedicated_scheduler.hasDedicatedClusters() ) {
+			// We found some dedicated clusters to service.  Wake up
+			// the DedicatedScheduler class in a few seconds to deal
+			// with them.
+		dedicated_scheduler.handleDedicatedJobTimer( 2 );
+	}
+
 		// set JobsRunning/JobsFlocked for owners
 	matches->startIterations();
 	match_rec *rec;
