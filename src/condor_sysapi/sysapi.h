@@ -24,7 +24,6 @@
 #ifndef SYSAPI_H
 #define SYSAPI_H
 
-#include "condor_common.h"
 
 BEGIN_C_DECLS
 

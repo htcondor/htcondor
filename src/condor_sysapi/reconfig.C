@@ -40,30 +40,38 @@
 #include "sysapi_externs.h"
 
 /* needed by idle_time.C and last_x_event.c */
+#ifndef WIN32
 StringList *_sysapi_console_devices = NULL;
+#endif
 /* this is not configured here, but is global, look in last_x_event.c */
 int _sysapi_last_x_event = 0;
 
 /* needed by free_fs_blocks.c */
+#ifndef WIN32
 int _sysapi_reserve_afs_cache = FALSE;
+#endif
 int _sysapi_reserve_disk = 0;
 
 /* needed by idle_time.C */
+#ifndef WIN32
 int _sysapi_startd_has_bad_utmp = FALSE;
+#endif
 
 /* needed by everyone, if this is false, then call sysapi_reconfig() */
-int _sysapi_config = FALSE;
+int _sysapi_config = 0;
 
 
 /* the function that configures the above variables each time it is called.
    This function is meant to be called outside of the library to configure it
 */
+BEGIN_C_DECLS
 
-extern "C" void
+void
 sysapi_reconfig(void)
 {
 	char *tmp = NULL;
 
+#ifndef WIN32
 	/* configuration set up for idle_time.C */
     if( _sysapi_console_devices ) {
         delete( _sysapi_console_devices );
@@ -92,6 +100,7 @@ sysapi_reconfig(void)
 		_sysapi_reserve_afs_cache = FALSE;
 	}
 	if (tmp) free(tmp);
+#endif
 
 	_sysapi_reserve_disk = 0;
 	tmp = param( "RESERVED_DISK" );
@@ -106,7 +115,7 @@ sysapi_reconfig(void)
 
 /* this function is to be called by any and all sysapi functions in sysapi.h */
 /* except of course, for sysapi_reconfig() */
-extern "C" void
+void
 sysapi_internal_reconfig(void)
 {
 	if (_sysapi_config == FALSE) {
@@ -114,4 +123,4 @@ sysapi_internal_reconfig(void)
 	}
 }
 
-
+END_C_DECLS

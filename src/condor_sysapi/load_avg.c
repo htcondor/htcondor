@@ -359,8 +359,6 @@ get_k_vars()
 
 #undef TESTING
 
-int calc_ncpus();
-
 static CRITICAL_SECTION cs;		/* protects samples array */
 static struct {
 	double load;
@@ -483,7 +481,7 @@ sysapi_load_avg_raw(void)
 	sysapi_internal_reconfig();
 
 	if (threadHandle == NULL) {
-		ncpus = calc_ncpus();
+		ncpus = sysapi_ncpus();
 		InitializeCriticalSection(&cs);
 		threadHandle = CreateThread(NULL, 0, sample_load, 
 									NULL, 0, &threadID);
@@ -525,14 +523,6 @@ sysapi_load_avg_raw(void)
 }
 
 #if defined(TESTING)
-int
-calc_ncpus()
-{
-	SYSTEM_INFO info;
-	GetSystemInfo(&info);
-	return info.dwNumberOfProcessors;
-}
-
 int main()
 {
 	while (1) {

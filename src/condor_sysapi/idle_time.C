@@ -23,29 +23,34 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
-#include "string_list.h"
 #include "condor_debug.h"
 #include "sysapi.h"
 #include "sysapi_externs.h"
 
 /* define some static functions */
 #if defined(WIN32)
-static BOOL ThreadInteract(HDESK & hdesk, HWINSTA & hwinsta);
-extern "C" static DWORD WINAPI message_loop_thread(void *);
+static BOOL ThreadInteract(HDESK * hdesk, HWINSTA * hwinsta);
+static DWORD WINAPI message_loop_thread(void *);
+static void calc_idle_time_cpp(time_t * m_idle, time_t * m_console_idle);
+extern int WINAPI KBInitialize(void);
+extern int WINAPI KBShutdown(void);
+extern int WINAPI KBQuery(void);
 #else /* Not defined WIN32 */
+#include "string_list.h"
 static time_t utmp_pty_idle_time( time_t now );
 static time_t all_pty_idle_time( time_t now );
 static time_t dev_idle_time( char *path, time_t now );
+static void calc_idle_time_cpp(time_t & m_idle, time_t & m_console_idle);
 #endif
 
 /* the local function that does the main work */
-static void calc_idle_time_cpp(time_t & m_idle, time_t & m_console_idle);
+
 
 #if defined(WIN32)
 
 // ThreadInteract allows the calling thread to access the visable,
 // interactive desktop in order to set a hook. 
-BOOL ThreadInteract(HDESK & hdesk, HWINSTA & hwinsta)   
+BOOL ThreadInteract(HDESK * hdesk, HWINSTA * hwinsta)   
 {      
 	HDESK   hdeskTest;
 	
@@ -92,15 +97,15 @@ BOOL ThreadInteract(HDESK & hdesk, HWINSTA & hwinsta)
 }
 
 
-extern "C" static DWORD WINAPI
-message_loop_thread(void *)
+static DWORD WINAPI
+message_loop_thread(void *foo)
 {
 	MSG msg;
 	HDESK hdesk;
 	HWINSTA hwinsta;
 
 	// first allow this thread access to the interactive(visable) desktop
-	while ( !ThreadInteract(hdesk,hwinsta) ) {
+	while ( !ThreadInteract(&hdesk,&hwinsta) ) {
 		// failed to get access to the desktop!!!  Perhaps we are still
 		// at the login screen....
 		dprintf(D_ALWAYS,
@@ -139,7 +144,7 @@ message_loop_thread(void *)
 }
 
 void
-calc_idle_time_cpp( time_t & user_idle, time_t & console_idle)
+calc_idle_time_cpp( time_t * user_idle, time_t * console_idle)
 {
 	static HANDLE threadHandle = NULL;
 	static DWORD threadID = -1;
@@ -155,12 +160,13 @@ calc_idle_time_cpp( time_t & user_idle, time_t & console_idle)
 		// to the same thread which performs the hook.  So, whatever
 		// thread calls SetWindowsHookEx also needs to have a message
 		// pump.
-		threadHandle = ::CreateThread(NULL, 0, message_loop_thread, 
+		threadHandle = CreateThread(NULL, 0, message_loop_thread, 
 									NULL, 0, &threadID);
 		if (threadHandle == NULL) {
 			dprintf(D_ALWAYS, "failed to create message loop thread, errno = %d\n",
 					GetLastError());
-			user_idle = console_idle = -1;
+			*user_idle = -1;
+			*console_idle = -1;
 		}		
 	} else {
 
@@ -172,7 +178,7 @@ calc_idle_time_cpp( time_t & user_idle, time_t & console_idle)
 		} else {
 			// no keypress detected, test if mouse moved
 			POINT current_pos;
-			if ( ! ::GetCursorPos(&current_pos) ) {
+			if ( ! GetCursorPos(&current_pos) ) {
 				dprintf(D_ALWAYS,"GetCursorPos failed\n");
 			} else {
 				if ( (current_pos.x != previous_pos.x) || 
@@ -186,11 +192,11 @@ calc_idle_time_cpp( time_t & user_idle, time_t & console_idle)
 
 	}
 
-	user_idle = now - _sysapi_last_x_event;
-	console_idle = user_idle;
+	*user_idle = now - _sysapi_last_x_event;
+	*console_idle = *user_idle;
 
 	dprintf( D_FULLDEBUG, "Idle Time: user= %d , console= %d seconds\n",
-			 (int)user_idle, (int)console_idle );
+			 *user_idle, *console_idle );
 
 	return;
 }
@@ -419,12 +425,17 @@ dev_idle_time( char *path, time_t now )
  out of this file. This will get a little ugly. The sysapi entry points
  are C linkage */
 
-extern "C" void
+BEGIN_C_DECLS
+
+void
 sysapi_idle_time_raw(time_t *m_idle, time_t *m_console_idle)
 {
-	time_t m_i, m_c;
+
 
 	sysapi_internal_reconfig();
+
+#ifndef WIN32
+	time_t m_i, m_c;
 
 	m_i = *m_idle;
 	m_c = *m_console_idle;
@@ -434,9 +445,12 @@ sysapi_idle_time_raw(time_t *m_idle, time_t *m_console_idle)
 
 	*m_idle = m_i;
 	*m_console_idle = m_c;
+#else
+	calc_idle_time_cpp(m_idle,m_console_idle);
+#endif
 }
 
-extern "C" void
+void
 sysapi_idle_time(time_t *m_idle, time_t *m_console_idle)
 {
 	sysapi_internal_reconfig();
@@ -444,4 +458,4 @@ sysapi_idle_time(time_t *m_idle, time_t *m_console_idle)
 	sysapi_idle_time_raw(m_idle, m_console_idle);
 }
 
-
+END_C_DECLS

@@ -21,6 +21,7 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#include "condor_common.h"
 #include "sysapi.h"
  
 #if defined(HPUX)
@@ -190,8 +191,6 @@ sysapi_phys_memory_raw(void)
 
 #elif defined(WIN32)
 
-#include "condor_common.h"
-
 int
 sysapi_phys_memory_raw(void)
 {
@@ -203,7 +202,6 @@ sysapi_phys_memory_raw(void)
 
 #elif defined(OSF1)
 
-#include "condor_common.h"
 
 /* Need these two to avoid compiler warning since <sys/table.h>
    includes a stupid version of <net/if.h> that does forward decls of

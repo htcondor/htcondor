@@ -39,8 +39,6 @@
 #define FALSE 0
 #endif
 
-static char *_FileName_ = __FILE__;
-
 #if defined(WIN32)
 
 char *

@@ -21,6 +21,8 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+#include "condor_common.h"
+
 /*
 ** free_fs_blocks: reports the number of kbytes free for the filesystem where
 ** given filename resides.
@@ -30,16 +32,13 @@
 #include "sysapi_externs.h"
 
 /* static function declarations */
-#if !defined(WIN32)
-static int reserve_for_fs();
 static int reserve_for_afs_cache();
-#endif
+static int reserve_for_fs();
 
 /* the code starts here */
 
 #if defined(WIN32)
 
-#include "condor_common.h"
 #include <limits.h>
 
 int
@@ -63,7 +62,6 @@ sysapi_disk_space_raw(const char *filename)
 
 #else
 
-#include "condor_common.h"
 #include "debug.h"
 
 /* Can't include condor_config.h since it depends on classads which is
@@ -86,13 +84,18 @@ FILE * my_popen();
 int my_pclose();
 #endif
 
+#endif
+
 /*
   How much disk space we need to reserve for the AFS cache.  Answer is
   in kilobytes.
 */
-int
+static int
 reserve_for_afs_cache()
 {
+#ifdef WIN32
+	return 0;
+#else
 	int		answer;
 	FILE	*fp;
 	char	cmd[512];
@@ -129,13 +132,14 @@ reserve_for_afs_cache()
 
 	dprintf( D_FULLDEBUG, "Reserving %d kbytes for AFS cache\n", answer );
 	return answer;
+#endif
 }
 
 /*
   How much disk space we need to reserve for the regular file system.
   Answer is in kilobytes.
 */
-int
+static int
 reserve_for_fs()
 {
 	/* XXX make cleaner */
@@ -293,8 +297,6 @@ const char *filename;
 }
 #endif /* I386 && DYNIX */
 
-#endif /* !WIN32 */
-
 /*
   Return number of kbytes condor may play with in the named file
   system.  System administrators may reserve space which condor should
@@ -314,19 +316,15 @@ const char *filename;
 int
 sysapi_disk_space(const char *filename)
 {
+	int answer;
 
-#if defined(WIN32)
 	sysapi_internal_reconfig();
-	/* XXX fixme, this might not be right */
-	return sysapi_disk_space_raw(filename);
-#else
-	int		answer;
-	sysapi_internal_reconfig();
+
 	answer =  sysapi_disk_space_raw(filename)
 			- reserve_for_afs_cache()
 			- reserve_for_fs();
 	return answer < 0 ? 0 : answer;
-#endif	
+
 }
 
 
