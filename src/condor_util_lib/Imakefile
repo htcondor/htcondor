@@ -94,7 +94,10 @@ GETMNT_OBJ = getmnt.o
 	$(MALLOC_SRC) disk_req.c env_param.c ckpt_name.c lock_file.NON_POSIX.c \
 	block_condor.c my_popen.c $(GETMNT_SRC) syscall_numbers.c $(VIRT_MEM_SRC) \
 	sig_install.c internet.c user_log.c startup_info.c \
-	ckpt_server_api_stubs.c ckpt_util.c
+	ckpt_server_api_stubs.c ckpt_util.c \
+	stub_gen_lex.l \
+	stub_gen_yacc.y \
+
 
 #define ObjectFiles \
 	blankline.o config.o do_connect.o dprintf.o dprintf_config.o except.o \
@@ -110,7 +113,7 @@ GETMNT_OBJ = getmnt.o
 	syscall_numbers.o sig_install.o internet.o user_log.o startup_info.o \
 	ckpt_server_api_stubs.o ckpt_util.o
 
-all_target( util_lib.a )
+all_target( util_lib.a stub_gen )
 
 test.o: test.c
 	gcc $(CFLAGS) -c test.c
@@ -119,6 +122,13 @@ test: test.o util_lib.a
 	gcc $(CFLAGS) -o test test.o util_lib.a
 
 library_target(util_lib.a,ObjectFiles)
+program_target(stub_gen,y.tab.o lex.yy.o,$(NULL))
+
+lex.yy.c: stub_gen_lex.l scanner.h y.tab.h
+	lex stub_gen_lex.l
+
+y.tab.c: stub_gen_yacc.y scanner.h
+	yacc -d stub_gen_yacc.y
 
 tags_target(SourceFiles,$(NULL))
 depend_target(SourceFiles)
