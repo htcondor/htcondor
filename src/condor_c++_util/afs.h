@@ -32,8 +32,8 @@
   of given files.
 */
 
-#ifndef _AFS_H
-#define AFS_H
+#ifndef CONDOR_AFS_H
+#define CONDOR_AFS_H
 
 #include <limits.h>
 #include <stdio.h>
@@ -78,4 +78,4 @@ char *get_file_srvr( const char *path );
 }
 #endif
 
-#endif
+#endif CONDOR_AFS_H
