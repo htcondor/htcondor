@@ -96,17 +96,6 @@ typedef int     (Service::*ReaperHandlercpp)(int pid,int exit_status);
 typedef int		(*ThreadStartFunc)(void *,Stream*);
 //@}
 
-// other macros and protos needed on WIN32 for exit status
-#ifdef WIN32
-#define WEXITSTATUS(stat) ((int)(stat))
-#define WTERMSIG(stat) ((int)(stat))
-#define WIFSTOPPED(stat) ((int)(0))
-///
-int WIFEXITED(DWORD stat);
-///
-int WIFSIGNALED(DWORD stat);
-#endif  // of ifdef WIN32
-
 // some constants for HandleSig().
 #define _DC_RAISESIGNAL 1
 #define _DC_BLOCKSIGNAL 2

@@ -6138,46 +6138,6 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 	return TRUE;
 }
 
-#define EXCEPTION( x ) case EXCEPTION_##x: return 0;
-int 
-WIFEXITED(DWORD stat) 
-{
-	switch (stat) {
-		EXCEPTION( ACCESS_VIOLATION )
-        EXCEPTION( DATATYPE_MISALIGNMENT )        
-		EXCEPTION( BREAKPOINT )
-        EXCEPTION( SINGLE_STEP )        
-		EXCEPTION( ARRAY_BOUNDS_EXCEEDED )
-        EXCEPTION( FLT_DENORMAL_OPERAND )        
-		EXCEPTION( FLT_DIVIDE_BY_ZERO )
-        EXCEPTION( FLT_INEXACT_RESULT )
-        EXCEPTION( FLT_INVALID_OPERATION )        
-		EXCEPTION( FLT_OVERFLOW )
-        EXCEPTION( FLT_STACK_CHECK )        
-		EXCEPTION( FLT_UNDERFLOW )
-        EXCEPTION( INT_DIVIDE_BY_ZERO )        
-		EXCEPTION( INT_OVERFLOW )
-        EXCEPTION( PRIV_INSTRUCTION )        
-		EXCEPTION( IN_PAGE_ERROR )
-        EXCEPTION( ILLEGAL_INSTRUCTION )
-        EXCEPTION( NONCONTINUABLE_EXCEPTION )        
-		EXCEPTION( STACK_OVERFLOW )
-        EXCEPTION( INVALID_DISPOSITION )        
-		EXCEPTION( GUARD_PAGE )
-        EXCEPTION( INVALID_HANDLE )
-	}
-	return 1;
-}
-
-int 
-WIFSIGNALED(DWORD stat) 
-{
-	if ( WIFEXITED(stat) )
-		return 0;
-	else
-		return 1;
-}
-#endif  // of WIN32
 
 int DaemonCore::HandleProcessExitCommand(int command, Stream* stream)
 {
