@@ -315,8 +315,8 @@ dprintf(D_FULLDEBUG,"CheckProxies called\n");
 	// 60 seconds longer than the current master proxy.
 	new_master = NULL;
 	new_max_expire = MasterProxy.expiration_time + 60;
-	if ( new_max_expire < now + minProxy_time ) {
-		new_max_expire = now + minProxy_time;
+	if ( new_max_expire < now + 180 ) {
+		new_max_expire = now + 180;
 	}
 
 	ProxiesByPath.startIterations();
@@ -339,7 +339,7 @@ dprintf(D_FULLDEBUG,"  removing old proxy %d\n",next_proxy->gahp_proxy_id);
 		// If the proxy is valid, and either it hasn't been cached in the
 		// gahp_server yet or it's been updated, (re)cache it in the
 		// gahp_server and notify everyone who cares.
-		if ( new_expiration > now + minProxy_time &&
+		if ( new_expiration > now + 180 &&
 			 ( next_proxy->gahp_proxy_id == -1 ||
 			   new_expiration > next_proxy->expiration_time ) ) {
 
@@ -363,7 +363,9 @@ dprintf(D_FULLDEBUG,"  (re)caching proxy %d\n",next_proxy->gahp_proxy_id);
 				daemonCore->Reset_Timer( tid, 0 );
 			}
 
-		} else if ( new_expiration <= now + minProxy_time ) {
+		} 
+		
+		if ( new_expiration <= now + minProxy_time ) {
 			// This proxy has expired or is about to expire. Mark it
 			// as such and notify everyone who cares.
 			if ( next_proxy->near_expired == false ) {
