@@ -1,5 +1,5 @@
-CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -DNEW_PROC
+CFLAGS = $(STD_C_FLAGS) 
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 
 SRC = network2.c gen_lib.C fileinfo2.C fileindex2.C imds2.C xferstat2.C \
 	signal2.C alarm2.C server2.C xfer_summary.C replication.C
@@ -11,8 +11,8 @@ UTIL_LIB = ../condor_util_lib/util_lib.a
 C_PLUS_UTIL_LIB = ../condor_c++_util/cplus_lib.a
 CLASSAD_LIB = ../condor_classad/expr_lib.a
 
-LIB = $(C_PLUS_UTIL_LIB) $(CLASSAD_LIB) $(UTIL_LIB) SocketLib
-LDFLAGS = -lm
+LIB = $(C_PLUS_UTIL_LIB) $(CLASSAD_LIB) $(UTIL_LIB) 
+LDFLAGS = -lm SocketLib
 
 SERVER_STAT_OBJ = server_stat.o gen_lib.o network2.o
 
