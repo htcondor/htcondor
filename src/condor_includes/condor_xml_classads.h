@@ -129,7 +129,7 @@ class ClassAdXMLUnparser
 	void add_attribute_start_tag(MyString &buffer, const char *name);
 	void add_bool_start_tag(MyString &buffer, BooleanBase *bool_expr);
 	void add_empty_tag(MyString &buffer, TagName which_tag);
-	void fix_characters(char *source, MyString &dest);
+	void fix_characters(const char *source, MyString &dest);
 
  private:
 	bool _use_compact_spacing;
