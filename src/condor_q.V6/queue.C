@@ -64,6 +64,9 @@ static	CondorQuery	scheddQuery(SCHEDD_AD);
 static	CondorQuery submittorQuery(SUBMITTOR_AD);
 static	ClassAdList	scheddList;
 
+static  bool		cputime = false;
+static	bool		current_run = false;
+static  char		*JOB_TIME = "RUN_TIME";
 static	bool		querySchedds 	= false;
 static	bool		querySubmittors = false;
 static	char		constraint[4096];
@@ -387,6 +390,15 @@ processCommandLineArguments (int argc, char *argv[])
 			run = true;
 		}
 		else
+		if (match_prefix( arg, "cputime")) {
+			cputime = true;
+			JOB_TIME = "CPU_TIME";
+		}
+		else
+		if (match_prefix( arg, "currentrun")) {
+			current_run = true;
+		}
+		else
 		{
 			// assume name of owner of job
 			if (Q.add (CQ_OWNER, argv[i]) != Q_OK) {
@@ -397,6 +409,38 @@ processCommandLineArguments (int argc, char *argv[])
 	}
 }
 
+static float
+job_time(float cpu_time,ClassAd *ad)
+{
+	if ( cputime ) {
+		return cpu_time;
+	}
+
+		// here user wants total wall clock time, not cpu time
+	int job_status = !RUNNING;
+	int cur_time = 0;
+	int shadow_bday = 0;
+	float previous_runs = 0;
+
+	ad->LookupInteger( ATTR_JOB_STATUS, job_status);
+	ad->LookupInteger( ATTR_SERVER_TIME, cur_time);
+	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
+	if ( current_run == false ) {
+		ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, previous_runs );
+	}
+
+		// if we have an old schedd, there is no ATTR_SERVER_TIME,
+		// so return a "-1".  This will cause "?????" to show up
+		// in condor_q.
+	if ( cur_time == 0 ) {
+		return -1;
+	}
+
+	float total_wall_time = previous_runs + 
+		(cur_time - shadow_bday)*(job_status == RUNNING);
+
+	return total_wall_time;
+}
 
 static void
 displayJobShort (ClassAd *ad)
@@ -434,6 +478,7 @@ displayJobShort (ClassAd *ad)
 		strcat (cmd, args);
 	}
 	shorten (cmd, 18);
+	utime = job_time(utime,ad);
 	short_print (cluster, proc, owner, date, (int)utime, status, prio,
 					image_size, cmd); 
 
@@ -453,7 +498,7 @@ short_header (void)
         "ID",
         "OWNER",
         "SUBMITTED",
-        "CPU_USAGE",
+        JOB_TIME,
         "ST",
         "PRI",
         "SIZE",
@@ -493,9 +538,9 @@ format_remote_host (char *, AttrList *ad)
 }
 
 static char *
-format_cpu_time (float utime, AttrList *)
+format_cpu_time (float utime, AttrList *ad)
 {
-	return format_time((int)utime);
+	return format_time( (int) job_time(utime,(ClassAd *)ad) );
 }
 
 static char *
@@ -539,6 +584,8 @@ usage (char *myName)
 		"\t\t-long\t\t\tVerbose output\n"
 		"\t\t-analyze\t\tPerform schedulability analysis on jobs\n"
 		"\t\t-run\t\t\tGet information about running jobs\n"
+		"\t\t-cputime\t\tDisplay CPU_TIME instead of RUN_TIME\n"
+		"\t\t-currentrun\t\tDisplay times only for current run\n"
 		"\t\trestriction list\n"
 		"\twhere each restriction may be one of\n"
 		"\t\t<cluster>\t\tGet information about specific cluster\n"
@@ -556,7 +603,11 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 	ClassAd		*job;
 
 		// fetch queue from schedd	
-	if( Q.fetchQueueFromHost(jobs, scheddAddr) != Q_OK ) return false;
+	if( Q.fetchQueueFromHost(jobs, scheddAddr) != Q_OK ) {
+		printf ("\n-- Timed out fetching ads from: %s : %s\n", 
+									scheddAddr, scheddMachine);	
+		return false;
+	}
 
 		// sort jobs by (cluster.proc)
 	jobs.Sort( (SortFunctionType)JobSort );
@@ -599,7 +650,7 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 			summarize = false;
 			AttrListPrintMask mask;
 			printf( " %-7s %-14s %11s %12s %-16s\n", "ID", "OWNER",
-					"SUBMITTED", "CPU_USAGE",
+					"SUBMITTED", JOB_TIME,
 					"HOST(S)" );
 			mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
 			mask.registerFormat ("%-3d ", ATTR_PROC_ID);
