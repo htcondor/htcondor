@@ -92,6 +92,10 @@ int pclose(FILE *stream);
 #include <sys/stat.h>
 #include <sys/statfs.h>
 
+/* Needed to get TIOCNOTTY defined */
+#include <sys/ttold.h>
+
+
 /****************************************
 ** Condor-specific system definitions
 ****************************************/
