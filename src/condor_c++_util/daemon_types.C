@@ -40,7 +40,23 @@ extern "C" {
 const char*
 daemon_string( daemonType dt )
 {	
-	return daemonNames[dt];
+	if( dt < _dt_threshold_ ) {
+		return daemonNames[dt];
+	} else {
+		return "Unknown";
+	}
+}
+
+daemonType
+string_to_daemon_type( char* name )
+{
+	int i;
+	for( i=0; i<_dt_threshold_; i++ ) {
+		if( !stricmp(daemonNames[i], name) ) {
+			return (daemonType)i;
+		}
+	}
+	return DT_NONE;
 }
 
 } /* extern "C" */

@@ -3,13 +3,14 @@
 
 enum daemonType { DT_NONE, DT_MASTER, DT_SCHEDD, DT_STARTD,
 				  DT_COLLECTOR, DT_NEGOTIATOR, DT_KBDD, 
-				  DT_DAGMAN };
+				  DT_DAGMAN, _dt_threshold_ };
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 const char* daemon_string( daemonType dt );
+daemonType string_to_daemon_type( char* name );
 
 #ifdef __cplusplus
 }
