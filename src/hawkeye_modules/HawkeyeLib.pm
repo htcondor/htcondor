@@ -145,7 +145,11 @@ sub ParseSeconds( $$ )
     my $TimeString = shift;
     my $Seconds = shift;
 
-    if ( $TimeString =~ /(\d+)([sSmMhHdD]?)/ )
+    if ( $TimeString eq "" )
+    {
+	# Do nothing
+    }
+    elsif ( $TimeString =~ /(\d+)([sSmMhHdD]?)/ )
     {
 	$Seconds = $1;
 	if ( ( $2 eq "s" ) || ( $2 eq "S" ) )
