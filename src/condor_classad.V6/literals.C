@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+#include "common.h"
 #include "exprTree.h"
 
 BEGIN_NAMESPACE( classad )
@@ -30,7 +31,7 @@ Literal::
 Literal ()
 {
 	nodeKind = LITERAL_NODE;
-	factor = NO_FACTOR;
+	factor = Value::NO_FACTOR;
 }
 
 
@@ -95,9 +96,9 @@ MakeRelTime( time_t secs )
 
 
 Literal* Literal::
-MakeLiteral( const Value& val, NumberFactor f ) 
+MakeLiteral( const Value& val, Value::NumberFactor f ) 
 {
-	if( val.GetType( ) == CLASSAD_VALUE && val.GetType( ) == LIST_VALUE ) {
+	if(val.GetType()==Value::CLASSAD_VALUE && val.GetType()==Value::LIST_VALUE){
 		CondorErrno = ERR_BAD_VALUE;
 		CondorErrMsg = "list and classad values are not literals";
 		return( NULL );
@@ -110,7 +111,7 @@ MakeLiteral( const Value& val, NumberFactor f )
 		return NULL;
 	}
 	lit->value.CopyFrom( val );
-	if( !val.IsNumber( ) ) f = NO_FACTOR;
+	if( !val.IsNumber( ) ) f = Value::NO_FACTOR;
 	lit->factor = f;
 
 	return lit;
@@ -127,19 +128,19 @@ GetValue( Value &val ) const
 
 	// if integer or real, multiply by the factor
 	if (val.IsIntegerValue(i)) {
-		if( factor != NO_FACTOR ) {
-			val.SetRealValue( ((double)i)*factor );
-		} else {
-			val.SetIntegerValue (i*factor);
+		if( factor != Value::NO_FACTOR ) {
+			val.SetRealValue( ((double)i)*Value::ScaleFactor[factor] );
 		}
 	} else if (val.IsRealValue(r)) {
-		val.SetRealValue (r*(double)factor);
+		if( factor != Value::NO_FACTOR ) {
+			val.SetRealValue (r*Value::ScaleFactor[factor]);
+		}
 	}
 }
 
 
 void Literal::
-GetComponents( Value &val, NumberFactor &f ) const
+GetComponents( Value &val, Value::NumberFactor &f ) const
 {
 	val = value;
 	f = factor;
@@ -156,10 +157,10 @@ _Evaluate (EvalState &, Value &val) const
 
 	// if integer or real, multiply by the factor
 	if (val.IsIntegerValue(i)) {
-		if( factor != NO_FACTOR ) {
-			val.SetRealValue( ((double)i)*factor );
+		if( factor != Value::NO_FACTOR ) {
+			val.SetRealValue( ((double)i)*Value::ScaleFactor[factor] );
 		} else {
-			val.SetIntegerValue (i*factor);
+			val.SetIntegerValue(i);
 		}
 	} else if (val.IsRealValue(r)) {
 		val.SetRealValue (r*(double)factor);
@@ -178,7 +179,7 @@ _Evaluate( EvalState &state, Value &val, ExprTree *&tree ) const
 
 
 bool Literal::
-_Flatten( EvalState &state, Value &val, ExprTree *&tree, OpKind*) const
+_Flatten( EvalState &state, Value &val, ExprTree *&tree, int*) const
 {
 	tree = NULL;
 	return( _Evaluate( state, val ) );

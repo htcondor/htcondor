@@ -24,7 +24,7 @@
 #ifndef __LITERALS_H__
 #define __LITERALS_H__
 
-BEGIN_NAMESPACE( classad )
+BEGIN_NAMESPACE( classad );
 
 /** Represents the literals of the ClassAd language, such as integers,
 		reals, booleans, strings, undefined and real.
@@ -32,8 +32,6 @@ BEGIN_NAMESPACE( classad )
 class Literal : public ExprTree 
 {
   	public:
-		/// Constructor
-    	Literal ();
 		/// Destructor
     	~Literal ();
 
@@ -60,11 +58,33 @@ class Literal : public ExprTree
 		 */
 		static Literal* MakeRelTime( time_t t1, time_t t2 );
 
+		/// Make a deep copy
 		virtual Literal* Copy( ) const;
 
-		static Literal*MakeLiteral( const Value&, NumberFactor f=NO_FACTOR );
-		void GetComponents( Value&, NumberFactor &f ) const;
-		void GetValue( Value& ) const;
+		/** Factory method to construct a Literal
+		 * @param v The value to convert to a literal. (Cannot be a classad or
+		 * 			list value.)
+		 * @param f The number factor (B, K, M, G, T) --- ignored for
+		 * 			non-numeric values.
+		 * @return The constructed literal expression
+		 */
+		static Literal*MakeLiteral( const Value& v, Value::NumberFactor f=
+					Value::NO_FACTOR );
+
+		/** Deconstructor to get the components of the literal 
+		 * 	@param v The encapsulated value
+		 * 	@param f The number factor (invalid if v is non-numeric)
+		 */
+		void GetComponents( Value& v, Value::NumberFactor &f ) const;
+
+		/** Deconstructor to get the encapsulated value
+		 * 	@param v The value encapsulated by the literal
+		 */
+		void GetValue( Value& v ) const;
+
+	protected:
+		/// Constructor
+    	Literal ();
 
   	private:
 		friend FunctionCall;
@@ -73,13 +93,13 @@ class Literal : public ExprTree
 		friend Operation;
 
 		virtual void _SetParentScope( const ClassAd* ){ }
-		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, OpKind* ) const;
+		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
  		virtual bool _Evaluate (EvalState &, Value &) const;
  		virtual bool _Evaluate (EvalState &, Value &, ExprTree *&) const;
 
 		// literal specific information
-    	Value   		value;
-		NumberFactor	factor;
+    	Value   			value;
+		Value::NumberFactor	factor;
 };
 
 END_NAMESPACE // classad
