@@ -555,7 +555,7 @@ int GlobusJob::doEvaluateState()
 				break;
 			}
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
-				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
+				 // rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 				globusError = GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER;
 				gmState = GM_RESTART;
@@ -609,7 +609,7 @@ int GlobusJob::doEvaluateState()
 				break;
 			}
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
-				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
+				 // rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 				connect_failure = true;
 				break;
@@ -692,7 +692,7 @@ int GlobusJob::doEvaluateState()
 				myResource->SubmitComplete(this);
 				lastSubmitAttempt = time(NULL);
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
-					 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
+					 // rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 					connect_failure = true;
 					break;
@@ -800,7 +800,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) jobmanager timed out on commit, clearing request\n"
 					break;
 				}
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
-					 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
+					 // rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 					connect_failure = true;
 					break;
@@ -873,7 +873,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) jobmanager timed out on commit, clearing request\n"
 					break;
 				}
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
-					 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
+					 // rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 					connect_failure = true;
 					break;
@@ -900,7 +900,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) jobmanager timed out on commit, clearing request\n"
 					break;
 				}
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
-					 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
+					 // rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 					connect_failure = true;
 					break;
@@ -943,7 +943,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) jobmanager timed out on commit, clearing request\n"
 					break;
 				}
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
-					 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
+					 // rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 					connect_failure = true;
 					break;
@@ -1054,7 +1054,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 					break;
 				}
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
-					 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
+					 // rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 					connect_failure = true;
 					break;
@@ -1095,7 +1095,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 				break;
 			}
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
-				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
+				 // rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 				connect_failure = true;
 				break;
@@ -1148,7 +1148,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 				myResource->SubmitComplete(this);
 				lastRestartAttempt = time(NULL);
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
-					 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
+					 // rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 					connect_failure = true;
 					break;
@@ -1242,7 +1242,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 				break;
 			}
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
-				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
+				 // rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 				connect_failure = true;
 				break;
@@ -1278,7 +1278,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 					break;
 				}
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
-					 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
+					 // rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 					connect_failure = true;
 					break;
@@ -1328,7 +1328,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 						break;
 					}
 					if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
-						 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
+						 // rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 						 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 						connect_failure = true;
 						break;
@@ -1387,7 +1387,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 						break;
 					}
 					if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
-						 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
+						 // rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 						 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 						connect_failure = true;
 						break;
@@ -1456,7 +1456,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 			}
 			myResource->SubmitComplete(this);
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
-				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
+				 // rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 				connect_failure = true;
 				break;
@@ -1656,7 +1656,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 				break;
 			}
 			if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONTACTING_JOB_MANAGER ||
-				 rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
+				 // rc == GLOBUS_GRAM_PROTOCOL_ERROR_AUTHORIZATION ||
 				 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
 				connect_failure = true;
 				break;
