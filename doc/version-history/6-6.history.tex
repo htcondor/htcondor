@@ -30,13 +30,19 @@ this ouput and displays it to the user in a readable format.
 
 \item Re-added PVM support for IRIX 6.5.
 
+\item Fixed an indirect bug whereby \Condor{dagman} could fail with an
+assertion error if it encounters both a terminate and a abort event in
+the userlog for the same job; this can happen due to a bug in the
+\Condor{schedd}, which is not yet fixed.
+
 \end{itemize}
 
 \noindent Known Bugs:
 
 \begin{itemize}
 
-\item None.
+\item If a job terminates via SIGSEGV, the \Condor{schedd} logs both a
+      terminate event and an abort event to the userlog.
 
 \end{itemize}
 
