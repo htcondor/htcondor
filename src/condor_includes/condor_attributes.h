@@ -107,6 +107,7 @@ const char ATTR_JOB_START                [] = "JobStart";
 const char ATTR_JOB_START_DATE			 [] = "JobStartDate";
 const char ATTR_JOB_STATUS               [] = "JobStatus";
 const char ATTR_JOB_UNIVERSE             [] = "JobUniverse";
+const char ATTR_JOB_WALL_CLOCK_CKPT		 [] = "WallClockCheckpoint";
 const char ATTR_KEYBOARD_IDLE            [] = "KeyboardIdle";
 const char ATTR_KFLOPS                   [] = "KFlops";
 const char ATTR_KILL                     [] = "Kill";
