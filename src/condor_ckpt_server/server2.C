@@ -1704,8 +1704,20 @@ int main(int   argc,
 	 char* argv[])
 {
 	int xfers, sends, recvs;
+	int	wait_for_debug;
 
-	if ((argc != 2) && (argc != 4)) {
+	/* Consume a '-f' flag which the condor_master always gives to its
+	   children */
+	if (argv[1][0] == '-' && argv[1][1] == 'f') {
+		argc--;
+		argv++;
+	}
+
+	if (getuid() == 0) {
+		set_condor_ruid();
+	}
+
+	if ((argc != 1) && (argc != 2) && (argc != 4)) {
 		cerr << endl << "ERROR:" << endl;
 		cerr << "ERROR:" << endl;
 		cerr << "ERROR: incorrect number of parameters" << endl;
@@ -1716,7 +1728,12 @@ int main(int   argc,
 		exit(BAD_PARAMETERS);
 	}
 	
-	xfers = atoi(argv[1]);
+	if (argc > 1) {
+		xfers = atoi(argv[1]);
+	} else {
+		xfers = DEFAULT_XFERS;
+	}
+
 	if (xfers <= 0) {
 		cerr << endl << "ERROR:" << endl;
 		cerr << "ERROR:" << endl;
@@ -1726,7 +1743,7 @@ int main(int   argc,
 		cerr << "ERROR:" << endl << endl;
 		exit(BAD_PARAMETERS);
 	}
-	if (argc == 2) {
+	if (argc == 2 || argc == 1) {
 		sends = xfers;
 		recvs = xfers;
 	} else {
@@ -1751,6 +1768,7 @@ int main(int   argc,
 			exit(BAD_PARAMETERS);
 		}      
 	}
+
 	server.Init(xfers, recvs, sends);
 	server.Execute();
 	return 0;                            // Should never execute
