@@ -29,7 +29,8 @@
 /*
 ** Add ru2 rusage struct to ru1 rusage struct.
 */
-update_rusage( struct rusage *ru1, struct rusage *ru2 )
+void
+update_rusage( register struct rusage *ru1, register struct rusage *ru2 )
 {
 	dprintf( D_FULLDEBUG, "Entering update_rusage()\n");
 	ru1->ru_utime.tv_usec += ru2->ru_utime.tv_usec;
