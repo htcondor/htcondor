@@ -538,7 +538,7 @@ parsePostfixExpression(ExprTree *&tree)
 				tree = NULL;
 				return false;
 			}
-			newTree->setReference( treeL, lexer.getCharString( tv.strValue ) );
+			newTree->setReference( treeL, tv.strValue );
 			tree = newTree;
 		}
 	}
@@ -573,7 +573,7 @@ parsePrimaryExpression(ExprTree *&tree)
 					return false;
 				}
 
-				newTree->setFunctionName( lexer.getCharString( tv.strValue ) );
+				newTree->setFunctionName( tv.strValue );
 
 				if( !parseArgumentList( newTree ) ) {
 					if( newTree ) delete newTree;
@@ -589,7 +589,7 @@ parsePrimaryExpression(ExprTree *&tree)
 					return false;
 				}
 
-				newTree->setReference( NULL, lexer.getCharString(tv.strValue) );
+				newTree->setReference( NULL, tv.strValue );
 				tree = newTree;
 			}
 			return true;
@@ -606,8 +606,7 @@ parsePrimaryExpression(ExprTree *&tree)
 				}
 
 				// the boolean final arg signifies that reference is absolute
-				newTree->setReference( NULL, lexer.getCharString(tv.strValue), 
-										true);
+				newTree->setReference( NULL, tv.strValue, true);
 				tree = newTree;
 				return true;
 			}
@@ -731,7 +730,7 @@ parsePrimaryExpression(ExprTree *&tree)
 					tree = NULL;
 					return false;
 				}
-				newTree->setStringValue( lexer.getCharString( tv.strValue ) );
+				newTree->setStringValue( tv.strValue );
 				tree = newTree;
 			}
 			return true;
@@ -801,7 +800,7 @@ parseClassAd( ClassAd *ad , bool full )
 			ad->clear();
 			return false;
 		}
-		attr = lexer.getCharString( tv.strValue );
+		attr = tv.strValue;
 
 		// consume the intermediate '='
 		if( ( tt = lexer.consumeToken() ) != LEX_BOUND_TO ) {

@@ -9,6 +9,11 @@ class ExprTree;
 class ExprList;
 class FunctionCall;
 
+/**
+	Defines an abstraction for the input source from which expressions
+	can be parsed.  The source may be pointed to a string, a CEDAR socket,
+	a file descriptor or a FILE *.
+*/
 class Source
 {
 	public:
@@ -17,15 +22,65 @@ class Source
 		~Source();
 
 		// Set the stream source for the parse
-		bool setSource (char *, int);	// strings
-        bool setSource (Sock &);    	// CEDAR
-        bool setSource (int);           // file descriptor
-        bool setSource (FILE *);       	// FILE structure
+		/** Points the source at a string.
+			@param str String containing the expression
+			@param len The length of the string.  If the parameter is not
+				supplied, it is determined internally with strlen().
+			@return false if the operation failed, true otherwise
+		*/
+		bool setSource (char *str, int len=-1);	// strings
+
+		/** Points the source at a CEDAR socket.
+			@param sock The CEDAR socket from which the expression can be
+				read.
+			@return false if the operation failed, true otherwise
+		*/
+        bool setSource (Sock &sock);    		// CEDAR
+
+		/** Points the source at a file descriptor.
+			@param file_desc File descriptor from which the expression can
+				be read.
+			@return false if the operation failed, true otherwise
+		*/
+        bool setSource (int file_desc);         // file descriptor
+
+		/** Points the source at a FILE *.
+			@param file_ptr Pointer to the FILE structure from which the
+				expression can be read.
+			@return false if the operation failed, true otherwise
+		*/
+        bool setSource (FILE *file_ptr);       	// FILE structure
 
 		// parser entry points
-		bool parseClassAd( ClassAd*, bool full=false );
-		bool parseExpression(ExprTree*&, bool full=false);
-		bool parseExprList( ExprList*, bool full=false );
+		/** Parses a ClassAd from this Source object.
+			@param ad_ptr Pointer to ClassAd which will be populated with
+				the named expressions coming in from the Source.
+			@param full If this parameter is true, the parse is considered to
+				succeed only if the ClassAd was parsed successfully and no
+				other tokens follow the ClassAd.
+			@return true if the parse succeeded, false otherwise.
+		*/
+		bool parseClassAd( ClassAd* ad_ptr, bool full=false );
+
+		/** Parses an expression from this Source object.
+			@param expr Reference to a ExprTree pointer, which will be pointed
+				to the parsed expression.
+			@param full If this parameter is true, the parse is considered to
+				succeed only if the expression was parsed successfully and no
+				other tokens follow the expression.
+			@return true if the parse succeeded, false otherwise.
+		*/
+		bool parseExpression(ExprTree*& expr, bool full=false);
+
+		/** Parses a expression list from this Source object.
+			@param exprList_ptr Pointer to an expression list which will be 
+				populated with the expressions coming in from the source.
+			@param full If this parameter is true, the parse is considered to
+				succeed only if the ExprList was parsed successfully and no
+				other tokens follow the ExprList.
+			@return true if the parse succeeded, false otherwise.
+		*/
+		bool parseExprList( ExprList* exprList_ptr, bool full=false );
 
 	private:
 		// lexical analyser for parser
