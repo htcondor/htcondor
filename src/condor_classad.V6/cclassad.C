@@ -1,4 +1,5 @@
 
+#include "common.h"
 #include "cclassad.h"
 #include "classad.h"
 #include "source.h"
