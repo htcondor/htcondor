@@ -297,11 +297,13 @@ Scheduler::timeout()
 	 * call preempt() here if we are shutting down.  When shutting down, we have
 	 * a timer which is progressively preempting just one job at a time.
 	 */
-	if( ((numShadows-SchedUniverseJobsRunning) > MaxJobsRunning) && 
-					(!ExitWhenDone) ) {
-		dprintf(D_ALWAYS,"Preempting %d jobs due to MAX_JOBS_RUNNING change\n",
-			numShadows-SchedUniverseJobsRunning);
-		preempt( numShadows - MaxJobsRunning );
+
+	int real_jobs = numShadows - SchedUniverseJobsRunning;
+	if( (real_jobs > MaxJobsRunning) && (!ExitWhenDone) ) {
+		dprintf( D_ALWAYS, 
+				 "Preempting %d jobs due to MAX_JOBS_RUNNING change\n",
+				 (real_jobs - MaxJobsRunning) );
+		preempt( real_jobs - MaxJobsRunning );
 	}
 
 	/* Reset our timer */
