@@ -43,7 +43,7 @@ static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
 
 detach()
 {
-#if !defined(HPUX9) && !defined(Solaris)
+#if !defined(HPUX) && !defined(Solaris)
 	int		fd;
 	if( (fd=open("/dev/tty",O_RDWR,0)) < 0 ) {
 			/* There's no /dev/tty, nothing to detach from */

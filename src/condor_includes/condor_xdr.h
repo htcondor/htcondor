@@ -23,8 +23,6 @@
 #ifndef _CONDOR_XDR
 #define _CONDOR_XDR
 
-#include "_condor_fix_types.h"
-
 #if defined(__cplusplus)
 extern "C" {
 #endif

@@ -35,19 +35,6 @@
 #define _CONDOR_DAEMON_CORE_H_
 
 #include "condor_common.h"
-
-#ifndef WIN32
-#if defined(Solaris)
-#define __EXTENSIONS__
-#endif
-#include <sys/types.h>
-#include <sys/time.h>
-#include "condor_fdset.h"
-#if defined(Solaris)
-#undef __EXTENSIONS__
-#endif
-#endif  /* ifndef WIN32 */
-
 #include "condor_uid.h"
 #include "condor_io.h"
 #include "condor_timer_manager.h"
@@ -332,6 +319,8 @@ class DaemonCore : public Service
 		fd_set				readfds; 
 
 		struct in_addr		negotiator_sin_addr;	// used by Verify method
+
+		int					reinit_timer_id;
 
 #ifdef WIN32
 		DWORD	dcmainThreadId;		// the thread id of the thread running the main daemon core

@@ -24,28 +24,26 @@
 #ifndef _CONDOR_MMAP_H
 #define _CONDOR_MMAP_H
 
-#if defined(LINUX) || defined(IRIX62) || defined(Solaris)
-
 #include <sys/mman.h>
 
 #if defined(LINUX)
-
 #	if defined(GLIBC) 
 #		define MMAP_T char*
 #	else
 #		define MMAP_T void*
 #	endif
-#define MAP_FAILED ((MMAP_T)-1)
-
+#	if !defined(MAP_FAILED)
+#		define MAP_FAILED ((MMAP_T)-1)
+#	endif
 #elif defined(IRIX62)
-
 #	define MA_SHARED	0x0008	/* mapping is a shared or mapped object */
 #	define MMAP_T void*
-
 #elif defined(Solaris)
-
 #	define MMAP_T char*
-
+#elif defined(HPUX)
+#	define MMAP_T void*
+#elif defined(OSF1)
+#	define MMAP_T void*
 #endif
 
 
@@ -59,9 +57,6 @@ MMAP_T mmap(MMAP_T, size_t, int, int, int, off_t);
 #if defined(__cplusplus)
 }
 #endif
-
-
-#endif /* LINUX, IRIX62 or Solaris */
 
 #endif /* _CONDOR_MMAP_H */
 

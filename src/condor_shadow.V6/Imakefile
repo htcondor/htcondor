@@ -56,6 +56,6 @@ CMNT    CC -I../h -I../condor_includes -I../condor_c++_util -DSGI -D$(OS_FLAG) -
 #endif 
 
 IMPORT_LINKS = ../../config/import_links
-import(../condor_syscall_lib,receivers.C)
+import(../condor_syscall_lib,receivers.o)
 import(../condor_syscall_lib,extern_path.o)
 import(../condor_util_lib,getmnt.o)

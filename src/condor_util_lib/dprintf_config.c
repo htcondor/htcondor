@@ -141,7 +141,7 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 				exit( 1 );
 			}
 
-#if defined(HPUX9)
+#if defined(HPUX)
 			stderr->__fileL = logfd & 0xf0;	/* Low byte of fd */
 			stderr->__fileH = logfd & 0x0f;	/* High byte of fd */
 #elif defined(ULTRIX43) || defined(IRIX331) || defined(Solaris251) || defined(WIN32)

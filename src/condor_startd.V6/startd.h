@@ -30,7 +30,6 @@
 // Condor includes
 #include "condor_classad.h"
 #include "condor_adtypes.h"
-#include "condor_types.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
 #include "util_lib_proto.h"

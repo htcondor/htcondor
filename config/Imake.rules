@@ -1,18 +1,4 @@
 /*
-** Set up platform-dependent Imake flags
-*/
-#if IS_SUN4M_SOLARIS251
-#define IMAKE_FLAGS	-I../../config -DIS_SUN4M_SOLARIS251 -s Makefile
-PLATFORM_FLAG=-DIS_SUN4M_SOLARIS251
-#elif IS_X86_SOLARIS25
-#define IMAKE_FLAGS 	-I../../config -DIS_X86_SOLARIS25 -s Makefile
-#elif IS_GLIBC
-#define IMAKE_FLAGS 	-I../../config -DIS_GLIBC -s Makefile
-#else
-#define IMAKE_FLAGS	-I../../config -s Makefile
-#endif
-
-/*
 ** Set up some shared, common rules and defininitions
 */
 .SUFFIXES: .C
@@ -88,7 +74,7 @@ clean::							@@\
 #ifndef program_target
 #define	program_target( program, objlist, libs )		@@\
 program: objlist libs						@@\
-	$(CC) $(CFLAGS) -o program objlist libs $(LDFLAGS)	@@\
+	$(CC) $(CFLAGS) -o program objlist libs $(LDFLAGS) $(SITE_LDFLAGS) @@\
 clean::								@@\
 	rm -f program objlist
 #endif  program_target
@@ -98,10 +84,11 @@ clean::								@@\
 ** Build a C++ program from .o files and libraries.
 */
 #ifndef c_plus_target
-#define	c_plus_target( program, objlist, libs )		@@\
-program: objlist libs					@@\
-	$(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs $(LDFLAGS) $(DEMANGLE) @@\
-clean:: 						@@\
+#define	c_plus_target( program, objlist, libs )			@@\
+program: objlist libs						@@\
+	$(CPlusPlus) $(C_PLUS_FLAGS) -o program objlist libs \
+		$(LDFLAGS) $(SITE_LDFLAGS) $(DEMANGLE)		@@\
+clean::								@@\
 	rm -f program objlist
 #endif  c_plus_target
 
@@ -212,6 +199,7 @@ stripped:: dir##/##file
 dir##/##lib: lib					@@\
 	COPY_LIBRARY( lib, dir##/##lib )		@@\
 	RANLIB_TOUCH( dir##/##lib )			@@\
+	chmod OBJECT_MODE dir##/##lib			@@\
 stripped:: dir##/##lib
 #endif  strip_library
 
@@ -274,7 +262,7 @@ $(STRIP_DIR)/##dir##/##dest##: src			@@\
 #ifndef	static_target
 #define	static_target( program, objlist, libs, dir )		@@\
 dir##/##program: objlist libs					@@\
-	$(CPlusPlus) $(STATIC) $(C_PLUS_FLAGS) -o program##.static objlist libs $(LDFLAGS) $(DEMANGLE) @@\
+	$(CPlusPlus) $(STATIC)  $(C_PLUS_FLAGS) -o program##.static objlist libs $(LDFLAGS) $(SITE_LDFLAGS) $(DEMANGLE) @@\
 	strip program##.static					@@\
 	/bin/rm -f dir##/##program				@@\
 	cp program##.static dir##/##program			@@\
@@ -293,6 +281,7 @@ static:: dir##/##program
 dir##/##lib: lib					@@\
 	COPY_LIBRARY( lib, dir##/##lib )		@@\
 	RANLIB_TOUCH( dir##/##lib )			@@\
+	chmod OBJECT_MODE dir##/##lib			@@\
 static:: dir##/##lib
 #endif  static_library
 
@@ -343,7 +332,7 @@ $(STATIC_DIR)/##dir##/##dest##: src			@@\
 ** for either purify, or purecoverage.
 ***********************************************************************/
 
-#if IS_SUN4M_SOLARIS251
+#if IS_SUN4X
 
 #define PureCollector concat3(-collector=,CrtLibPath,/ld)
 
@@ -374,7 +363,7 @@ clean:: 						@@\
 ** condor_compile.  These are used primarily in the test suites. 
 ***********************************************************************/
 
-CONDOR_COMPILE = ../condor_scripts/condor_compile
+CONDOR_COMPILE = ../../condor_scripts/condor_compile
 
 /*
 ** Link all three types of binaries
@@ -434,7 +423,7 @@ all:: vanillatarg
 #ifndef uppercase_target
 #define uppercase_target( libname, objname, newname, old_string, new_string )	@@\
 newname: libname ToUpper						@@\
-	AR_EXTRACT( libname, objname ); mv objname $(TMP_DIR)		@@\
+	cd $(TMP_DIR); AR_EXTRACT( libname, objname );			@@\
 	./ToUpper $(TMP_DIR)/##objname newname old_string new_string 	@@\
 	rm -f $(TMP_DIR)/##objname
 #endif
@@ -488,7 +477,7 @@ clean::						@@\
 	mkdir dir_name							@@\
 	cd dir_name##; for file in `ls $(SRC_TREE)/##dir_name##`; \	@@\
 		do ln -s $(SRC_TREE)/##dir_name##/$$file .; done;	@@\
-	rm dir_name##/CVS
+	rm -f dir_name##/CVS
 #endif /* object_dir_target */
 
 
@@ -541,6 +530,53 @@ clean::							@@\
 	rm -f tags
 #endif 
 
+/*
+** Build directory strucuture for a compiler in the test suite.
+*/
+#ifndef C_COMPILER_TARGET
+#define C_COMPILER_TARGET(compiler) 				@@\
+all:: compiler							@@\
+								@@\
+all:: 								@@\
+	cd compiler; $(MAKE)					@@\
+								@@\
+compiler##: 							@@\
+	mkdir compiler						@@\
+	cd compiler; ln -s ../CImakefile Imakefile		@@\
+	cd compiler; imake IMAKE_FLAGS	-I../../../config -DC_COMPILER=##compiler	@@\
+								@@\
+clean::								@@\
+	rm -rf compiler						
+#endif
 
+#ifndef CPP_COMPILER_TARGET
+#define CPP_COMPILER_TARGET(compiler) 				@@\
+all:: compiler							@@\
+								@@\
+all:: 								@@\
+	cd compiler; $(MAKE)					@@\
+								@@\
+compiler##: 							@@\
+	mkdir compiler						@@\
+	cd compiler; ln -s ../CPPImakefile Imakefile		@@\
+	cd compiler; imake IMAKE_FLAGS -I../../../config -DCPP_COMPILER=##compiler	@@\
+								@@\
+clean::								@@\
+	rm -rf compiler						
+#endif
 
-
+#ifndef F_COMPILER_TARGET
+#define F_COMPILER_TARGET(compiler)			@@\
+all:: compiler						@@\
+							@@\
+all::							@@\
+	cd compiler; $(MAKE)				@@\
+							@@\
+compiler##:						@@\
+	mkdir compiler					@@\
+	cd compiler; ln -s ../FImakefile Imakefile	@@\
+	cd compiler; imake IMAKE_FLAGS -I../../../config -DF_COMPILER=##compiler @@\
+							@@\
+clean::							@@\
+	rm -rf compiler					
+#endif

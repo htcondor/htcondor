@@ -58,12 +58,10 @@
 #include "my_arch.h"
 #include "condor_version.h"
 
-#if defined(__cplusplus)
 extern "C" {
-#endif
 	
 // Function prototypes
-void real_config(ClassAd *classAd, char* host);
+void real_config(ClassAd *classAd, char* host, int wantsQuiet);
 int Read_config(char*, ClassAd*, BUCKET**, int, int);
 int SetSyscalls(int);
 char* find_global();
@@ -76,6 +74,7 @@ void clear_config();
 void reinsert_specials(char*);
 void process_file(char*, char*, char*, ClassAd*);
 void process_locals( char*, char*, ClassAd*);
+void check_params();
 
 // External variables
 extern int	ConfigLineNo;
@@ -120,21 +119,21 @@ config_fill_ad( ClassAd* ad )
 
 
 void
-config( ClassAd* classAd )
+config( ClassAd* classAd, int wantsQuiet )
 {
-	real_config( classAd, NULL );
+	real_config( classAd, NULL, wantsQuiet );
 }
 
 
 void
 config_host( ClassAd* classAd, char* host )
 {
-	real_config( classAd, host );
+	real_config( classAd, host, 0 );
 }
 
 
 void
-real_config(ClassAd *classAd, char* host)
+real_config(ClassAd *classAd, char* host, int wantsQuiet)
 {
 	char		*config_file;
 	int			scm, rval;
@@ -179,6 +178,10 @@ real_config(ClassAd *classAd, char* host)
 
 		// Try to find the global config file
 	if( ! (config_file = find_global()) ) {
+		if( wantsQuiet ) {
+			fprintf( stderr, "Condor error: can't find config file.\n" ); 
+			exit( 1 );
+		}
 		fprintf(stderr,"\nNeither the environment variable CONDOR_CONFIG,\n" );
 		fprintf(stderr,"/etc/condor/, nor ~condor/ contain a condor_config "
 				"file.\n" );
@@ -242,6 +245,10 @@ real_config(ClassAd *classAd, char* host)
 		// If mySubSystem_EXPRS is set, insert those expressions into
 		// the given classad.
 	config_fill_ad( classAd );
+
+		// We have to do some platform-specific checking to make sure
+		// all the parameters we think are defined really are.  
+	check_params();
 
 	(void)SetSyscalls( scm );
 }
@@ -494,11 +501,13 @@ param( char *name )
 	return( expand_macro(val, ConfigTab, TABLESIZE) );
 }
 
+
 char *
 macro_expand( char *str )
 {
 	return( expand_macro(str, ConfigTab, TABLESIZE) );
 }
+
 
 /*
 ** Return non-zero iff the named configuration parameter contains the given
@@ -528,7 +537,6 @@ param_in_pattern( char *parameter, char *pattern )
 }
 
 
-
 void
 reinsert_specials( char* host )
 {
@@ -546,8 +554,8 @@ reinsert_specials( char* host )
 
 
 void
-config_insert( char* attrName, char* attrValue ) {
-
+config_insert( char* attrName, char* attrValue )
+{
 	if( ! (attrName && attrValue) ) {
 		return;
 	}
@@ -555,6 +563,35 @@ config_insert( char* attrName, char* attrValue ) {
 }
 
 
-#if defined(__cplusplus)
-}
+void
+check_params()
+{
+#if defined( HPUX )
+		// Only on HPUX does this check matter...
+	char* tmp;
+	if( !(tmp = param("ARCH")) ) {
+			// Arch isn't defined.  That means the user didn't define
+			// it _and_ the special file we use that maps workstation
+			// models to CPU types doesn't exist either.  Print a
+			// verbose message and exit.  -Derek Wright 8/14/98
+		fprintf( stderr, "ERROR: Condor must know if you are running " 
+				 "on an HPPA1 or an HPPA2 CPU.\n" );
+		fprintf( stderr, "Normally, we look in %s for your model.\n",
+				 "/opt/langtools/lib/sched.models" );
+		fprintf( stderr, "This file lists all HP models and the "
+				 "corresponding CPU type.  However,\n" );
+		fprintf( stderr, "this file does not exist on your machine " 
+				 "or your model (%s)\n", my_uname_arch() );
+		fprintf( stderr, "was not listed.  You should either explicitly "
+				 "set the ARCH parameter\n" );
+		fprintf( stderr, "in your config file, or install the "
+				 "sched.models file.\n" );
+		exit( 1 );
+	} else {
+		free( tmp );
+	}
 #endif
+}
+
+
+} /* extern "C" */

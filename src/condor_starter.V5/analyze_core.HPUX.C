@@ -36,7 +36,6 @@ Portability:
 #include "condor_common.h"
 #include <sys/core.h>
 #include "condor_debug.h"
-#include "types.h"
 #include "proto.h"
 
 

@@ -7,16 +7,7 @@ CKPT_FLAG = -DNO_CKPT
 CFLAGS = $(STD_C_FLAGS) $(CKPT_FLAG) 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(CKPT_FLAG) -fno-implicit-templates
 
-/*
-  The OS dependent files are the same for Ultrix 4.2 and Ultrix 4.3, so
-  we set up to use the 4.2 code on 4.3 systems rather than create
-  new (identical) versions.
-*/
-#if IS_MIPS_ULTRIX43
-OS = ULTRIX42
-#elif IS_HPPAR_HPUX9
-OS = HPUX
-#elif IS_SGI_IRIX62
+#if IS_SGI_IRIX62
 OS = IRIX62
 #else
 OS = OperatingSystem
@@ -55,7 +46,11 @@ REMOTE_SYSCALL_LIB = \
 	$(UTIL_LIB) \
 	$(IO_LIB) 
 
-LIB = $(REMOTE_SYSCALL_LIB) 
+#if IS_SGI_IRIX62
+LIB = $(REMOTE_SYSCALL_LIB) ../condor_procapi/libprocapi.a
+#else
+LIB = $(REMOTE_SYSCALL_LIB)
+#endif
 
 #if (IS_I386_LINUX)
 LDFLAGS = KernLib RpcLib MldLib -lbfd -liberty
@@ -63,7 +58,11 @@ LDFLAGS = KernLib RpcLib MldLib -lbfd -liberty
 LDFLAGS = KernLib SocketLib RpcLib MldLib 
 #endif
 
+#if IS_SGI_IRIX62
+LIBDIRS = ../condor_util_lib ../condor_io ../condor_procapi
+#else
 LIBDIRS = ../condor_util_lib ../condor_io
+#endif
 
 TOY_SRC = state_machine_driver.C signals.C name_tab.C starter.toy.C \
 	alarm.C

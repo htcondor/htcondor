@@ -23,75 +23,22 @@
 #ifndef CONDOR_COMMON_H
 #define CONDOR_COMMON_H
 
+
+/**********************************************************************
+** Special macros and things we always want our header files to have
+*********************************************************************/
+#include "condor_header_features.h"
+
 /**********************************************************************
 ** System specific headers and definitions
 *********************************************************************/
-
-/******************************
-** Windoze NT specifics
-******************************/
-#if defined(WIN32)
-
-#define NOGDI
-#define NOSOUND
-#include <winsock2.h>
-#include <windows.h>
-#include "_condor_fix_nt.h"
-#include <stdlib.h>
-#include <stdio.h>
-#include <limits.h>
-#include <math.h>
-#include <errno.h>
-#include "condor_file_lock.h"
-
-/******************************
-** Unix specifics
-******************************/
-#else
-
-#define _POSIX_SOURCE
-#include "_condor_fix_types.h"
-#include "condor_fix_unistd.h"
-#include <stdarg.h>		/* Include this before stdio.h so GNU's va_list is defined */
-#include "condor_fix_stdio.h"
-#include "condor_fix_signal.h" /* before param.h since on IRIX, param includes signal.h */
-#include <sys/param.h>  /* before fdset since on glibc, this defines NBBY w/o check */
-#include "condor_fdset.h"
-#include "condor_fix_string.h"
-#include "condor_fix_sys_ioctl.h"
-#include "condor_fix_sys_stat.h"
-#include "condor_fix_sys_wait.h"
-#include "condor_file_lock.h"
-#include "condor_fix_assert.h"
-#include "condor_fix_sys_uio.h"	/* before socket since on Alpha, socket includes uio */
-#include "condor_fix_socket.h"
-#include "condor_fix_netdb.h"
-#include <sys/utsname.h>		
-#include "condor_fix_limits.h"
-#include "condor_fix_sys_resource.h"
-#include <stdlib.h>
-#include <ctype.h>
-#include <fcntl.h>	
-#include <errno.h>
-#include <pwd.h>
-#include <time.h>
-#include <sys/time.h>
-#include <sys/times.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <values.h>
-#include <math.h>
-#include <sys/file.h>
-
-#endif /* System specific stuff */
-
+#include "condor_system.h"
 
 /**********************************************************************
 ** Condor specific headers and definitions
 **********************************************************************/
 #include "condor_constants.h"
 #include "condor_macros.h"
-
 
 /**********************************************************************
 ** C++ specific stuff 

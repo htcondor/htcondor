@@ -117,10 +117,6 @@ private:
 
 	int		did_update;		// Flag set when we do an update.
 	int		fast_shutdown;	// Flag set if we're in fast shutdown mode.
-
-	Sock*	coll_sock;		// Sock to the collector.
-	Sock* 	alt_sock;		// Sock to the alternate collector.
-
 };
 
 #endif _STARTD_RESOURCE_H

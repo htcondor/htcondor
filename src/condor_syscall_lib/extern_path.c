@@ -50,7 +50,7 @@ static char	* compress( char *path );
 extern int		errno;
 
 char	*getcwd(), *malloc();
-#if !defined(AIX32) && !defined(OSF1) &&!defined(HPUX9) && !defined(ULTRIX43) && !defined(LINUX) && !defined(Solaris) && !defined(IRIX53)
+#if !defined(AIX32) && !defined(OSF1) &&!defined(HPUX) && !defined(ULTRIX43) && !defined(LINUX) && !defined(Solaris) && !defined(IRIX53)
 extern char *sprintf();
 #elif defined(Solaris)
 extern int	sprintf(); /* was char *sprintf() but change required for Solaris ..dhaval 7/12 */

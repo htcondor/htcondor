@@ -218,7 +218,7 @@ main( int argc, char *argv[] )
 #if !defined(WIN32)	
 		// Make sure root isn't trying to submit.
 	if( getuid() == 0 || getgid() == 0 ) {
-		fprintf( stderr, "Submitting jobs as user/group 0 (root) is not "
+		fprintf( stderr, "ERROR: Submitting jobs as user/group 0 (root) is not "
 				 "allowed for security reasons.\n" );
 		exit( 1 );
 	}
@@ -300,9 +300,9 @@ main( int argc, char *argv[] )
 
 	if( !(tmp_pointer = get_schedd_addr(ScheddName)) ) {
 		if( ScheddName ) {
-			fprintf( stderr, "Can't find address of schedd %s\n", ScheddName );
+			fprintf( stderr, "ERROR: Can't find address of schedd %s\n", ScheddName );
 		} else {
-			fprintf( stderr, "Can't find address of local schedd\n" );
+			fprintf( stderr, "ERROR: Can't find address of local schedd\n" );
 		}
 		exit(1);
 	}
@@ -312,12 +312,12 @@ main( int argc, char *argv[] )
 
 	// open submit file
 	if( (fp=fopen(cmd_file,"r")) == NULL ) {
-		fprintf( stderr, "Failed to open command file\n");
+		fprintf( stderr, "ERROR: Failed to open command file\n");
 		exit(1);
 	}
 	//  Parse the file, stopping at "queue" command
 	if( read_condor_file( fp, 1 ) < 0 ) {
-		fprintf(stderr, "Failed to parse command file.\n");
+		fprintf(stderr, "ERROR: Failed to parse command file.\n");
 		exit(1);
 	}
 
@@ -365,10 +365,10 @@ main( int argc, char *argv[] )
 	// connect to the schedd
 	if (ConnectQ(ScheddAddr, 1 ) == 0) { //mju
 		if( ScheddName ) {
-			fprintf( stderr, "Failed to connect to queue manager %s\n",
+			fprintf( stderr, "ERROR: Failed to connect to queue manager %s\n",
 					 ScheddName );
 		} else {
-			fprintf( stderr, "Failed to connect to local queue manager\n" );
+			fprintf( stderr, "ERROR: Failed to connect to local queue manager\n" );
 		}
 		exit(1);
 	}
@@ -410,7 +410,7 @@ main( int argc, char *argv[] )
 
 	//  Parse the file and queue the jobs 
 	if( read_condor_file(fp) < 0 ) {
-		fprintf(stderr, "Failed to parse command file.\n");
+		fprintf(stderr, "\nERROR: Failed to parse command file.\n");
 		exit(1);
 	}
 
@@ -451,7 +451,7 @@ main( int argc, char *argv[] )
 	}
 
 	if( !GotQueueCommand ) {
-		fprintf( stderr, "\"%s\" doesn't contain any \"queue\"", cmd_file );
+		fprintf( stderr, "ERROR: \"%s\" doesn't contain any \"queue\"", cmd_file );
 		fprintf( stderr, " commands -- no jobs queued\n" );
 		exit( 1 );
 	}
@@ -493,7 +493,7 @@ void
 check_path_length(char *path, char *lhs)
 {
 	if (strlen(path) > _POSIX_PATH_MAX) {
-		fprintf(stderr, "ERROR: Value for \"%s\" is too long:\n"
+		fprintf(stderr, "\nERROR: Value for \"%s\" is too long:\n"
 				"\tPosix limits path names to %d bytes\n",
 				lhs, _POSIX_PATH_MAX);
 		DoCleanup();
@@ -840,7 +840,7 @@ SetArguments()
 	}
 
 	if (strlen(args) > _POSIX_ARG_MAX) {
-		fprintf(stderr, "ERROR: arguments are too long:\n"
+		fprintf(stderr, "\nERROR: arguments are too long:\n"
 				"\tPosix limits argument lists to %d bytes\n",
 				_POSIX_ARG_MAX);
 		DoCleanup();
@@ -965,53 +965,66 @@ SetRank()
 	char *orig_rank = condor_param(Rank);
 	char *default_rank = NULL;
 	char *append_rank = NULL;
+	rank[0] = '\0';
 
-	if (orig_pref && orig_rank) {
-		fprintf(stderr, "%s and %s may not both be specified for a job\n",
-				Preferences, Rank);
-		exit(1);
-	} else if (orig_rank) {
-		(void)strcpy(rank, orig_rank);
-	} else if (orig_pref) {
-		(void)strcpy(rank, orig_pref);
-	} else {
-		rank[0] = '\0';
-	}
-
-	if ( JobUniverse == STANDARD ) 
-	{
+	if ( JobUniverse == STANDARD ) {
 		default_rank = param("DEFAULT_RANK_STANDARD");
 		append_rank = param("APPEND_RANK_STANDARD");
-	} 
-	if ( JobUniverse == VANILLA ) 
-	{
+	}
+	if ( JobUniverse == VANILLA ) {
 		default_rank = param("DEFAULT_RANK_VANILLA");
 		append_rank = param("APPEND_RANK_VANILLA");
 	} 
 
-	if ( default_rank != NULL && rank[0] == '\0' ) {
-		(void) strcpy( rank, default_rank );
+		// If any of these are defined but empty, treat them as
+		// undefined, or else, we get nasty errors.  -Derek W. 8/21/98
+	if( default_rank && !default_rank[0] ) {
+		default_rank = NULL;
+	}
+	if( append_rank && !append_rank[0] ) {
+		append_rank = NULL;
 	}
 
-	if ( append_rank != NULL ) {
+		// If we've got a rank to append to something that's already 
+		// there, we need to enclose the origional in ()'s
+	if( append_rank && (orig_rank || orig_pref || default_rank) ) {
+		(void)strcat( rank, "(" );
+	}		
+
+	if( orig_pref && orig_rank ) {
+		fprintf(stderr, "\nERROR: %s and %s may not both be specified for a job\n",
+			   Preferences, Rank);
+		exit(1);
+	} else if( orig_rank ) {
+		(void)strcat( rank, orig_rank );
+	} else if( orig_pref ) {
+		(void)strcat( rank, orig_pref );
+	} else if( default_rank ) {
+		(void)strcat( rank, default_rank );
+	} 
+
+	if( append_rank ) {
 		if( rank[0] ) {
-			(void)strcat( rank, " && (" );
+				// We really want to add this expression to our
+				// existing Rank expression, not && it, since Rank is
+				// just a float.  If we && it, we're forcing the whole
+				// expression to now be a bool that evaluates to
+				// either 0 or 1, which is obviously not what we
+				// want.  -Derek W. 8/21/98
+			(void)strcat( rank, ") + (" );
 		} else {
-			(void)strcpy( rank, "(" );
+			(void)strcat( rank, "(" );
 		}
-		(void) strcat( rank, append_rank );
-		(void) strcat( rank,")" );
+		(void)strcat( rank, append_rank );
+		(void)strcat( rank, ")" );
 	}
 				
-	if( rank[0] == '\0' ) 
-	{
-		(void) sprintf (buffer, "%s = 0", ATTR_RANK);
-		InsertJobExpr (buffer);
-	} 
-	else 
-	{
-		(void) sprintf (buffer, "%s = %s", ATTR_RANK, rank);
-		InsertJobExpr (buffer);
+	if( rank[0] == '\0' ) {
+		(void)sprintf( buffer, "%s = 0", ATTR_RANK );
+		InsertJobExpr( buffer );
+	} else {
+		(void)sprintf( buffer, "%s = %s", ATTR_RANK, rank );
+		InsertJobExpr( buffer );
 	}
 }
 
@@ -1056,6 +1069,7 @@ void
 check_iwd( char *iwd )
 {
 	char	pathname[ _POSIX_PATH_MAX ];
+	pathname[0] = '\0';
 
 #if defined(WIN32)
 	(void)sprintf( pathname, "%s", iwd );
@@ -1099,7 +1113,7 @@ SetCoreSize()
 	long coresize;
 
 	if (size == NULL) {
-#if defined(HPUX9) || defined(WIN32) /* RLIMIT_CORE not supported */
+#if defined(HPUX) || defined(WIN32) /* RLIMIT_CORE not supported */
 		size = "";
 #else
 		struct rlimit rl;
@@ -1161,7 +1175,7 @@ SetForcedAttributes()
 		exValue = expand_macro( (char*)value.Value(), ProcVars, PROCVARSIZE );
 		if( !exValue )
 		{
-			fprintf( stderr, "Warning:  Unable to expand macros in \"%s\"."
+			fprintf( stderr, "\nWarning:  Unable to expand macros in \"%s\"."
 							"  Ignoring.\n", value.Value() );
 			continue;
 		}
@@ -1182,7 +1196,7 @@ sig_name_lookup(char sig[])
 			return SigNameArray[i].v;
 		}
 	}
-	fprintf( stderr, "unknown signal %s\n", sig );
+	fprintf( stderr, "\nERROR: unknown signal %s\n", sig );
 	exit(1);
 }
 
@@ -1313,13 +1327,15 @@ read_condor_file( FILE *fp, int stopBeforeQueuing=0 )
 			name = expand_macro( name, ProcVars, PROCVARSIZE );
 			if( name == NULL ) {
 				(void)fclose( fp );
-				fprintf(stderr, "failed to expand macros in: %s\n", name);
+				fprintf(stderr, "\nERROR: Failed to expand macros in: %s\n", name);
 				return( -1 );
 			}
 
 		}
 
-		/* if the user wanted to force the parameter into the classad, do it */
+		/* if the user wanted to force the parameter into the classad, do it 
+		   We want to remove it first, so we get the new value if it's
+		   already in there. -Derek Wright 7/13/98 */
 		if (force == 1) {
 			forcedAttributes.remove( MyString( name ) );
 			forcedAttributes.insert( MyString( name ), MyString( value ) );
@@ -1354,7 +1370,7 @@ condor_param( char *name )
 	pval = expand_macro(pval, ProcVars, PROCVARSIZE);
 
 	if (pval == NULL) {
-		fprintf(stderr, "failed to expand macros in: %s\n", name);
+		fprintf(stderr, "\nERROR: Failed to expand macros in: %s\n", name);
 		exit(1);
 	}
 
@@ -1389,7 +1405,7 @@ queue(int num)
 		if (NewExecutable) {
 			NewExecutable = false;
  			if ((ClusterId = NewCluster()) == -1) {
-				fprintf(stderr, "\nError: Failed to create cluster\n");
+				fprintf(stderr, "\nERROR: Failed to create cluster\n");
 				exit(1);
 			}
 			ProcId = -1;
@@ -1397,7 +1413,7 @@ queue(int num)
 		}
 
 		if ( ClusterId == -1 ) {
-			fprintf(stderr,"\nError: Used queue command without specifying an executable\n");
+			fprintf(stderr,"\nERROR: Used queue command without specifying an executable\n");
 			exit(1);
 		}
 
@@ -1440,7 +1456,7 @@ queue(int num)
 		case 1:
 			break;
 		default:		/* Failed for some other reason... */
-			fprintf( stderr, "Failed to queue job.\n" );
+			fprintf( stderr, "\nERROR: Failed to queue job.\n" );
 			exit(1);
 		}
 
@@ -1593,6 +1609,7 @@ check_open( char *name, int flags )
 {
 	int		fd;
 	char	pathname[_POSIX_PATH_MAX];
+	pathname[0] = '\0';
 
 	/* No need to check for existence of the Null file. */
 	if (strcmp(name, NullFile) == MATCH) return;
@@ -1720,12 +1737,13 @@ compress( char *str )
 	src = str;
 	dst = str;
 
-	while( *dst ) {
+	while( *src ) {
 		*dst++ = *src++;
 		while( *(src - 1) == '/' && *src == '/' ) {
 			src++;
 		}
 	}
+	*dst = '\0';
 }
 
 void
@@ -1782,7 +1800,7 @@ log_submit()
 			for (int j=SubmitInfo[i].firstjob; j<=SubmitInfo[i].lastjob; j++) {
 				usr_log.initialize(SubmitInfo[i].cluster, j, 0);
 				if (!usr_log.writeEvent (&jobSubmit))
-					fprintf (stderr, "Error logging submit event.\n");
+					fprintf (stderr, "\nERROR: Failed to log submit event.\n");
 				if (Quiet) fprintf(stdout, ".");
 			}
 		}
@@ -1811,7 +1829,7 @@ SaveClassAd (ClassAd &ad)
 		if (rhs = tree->RArg()) rhs->PrintToStr (rhstr);
 		if (!lhs || !rhs) retval = -1;
 		if (SetAttribute (ClusterId, ProcId, lhstr, rhstr) == -1) {
-			fprintf(stderr, "Failed to set %s=%s for job %d.%d\n", lhstr, rhstr, ClusterId, ProcId);
+			fprintf(stderr, "\nERROR: Failed to set %s=%s for job %d.%d\n", lhstr, rhstr, ClusterId, ProcId);
 			retval = -1;
 		}
 	}
@@ -1824,12 +1842,14 @@ void
 InsertJobExpr (char *expr)
 {
 	ExprTree *tree, *lhs;
-	char		name[128];
+	char      name[128];
+	name[0] = '\0';
+
 	int retval = Parse (expr, tree);
 
 	if (retval)
 	{
-		fprintf (stderr, "Parse error in expression: \n\t%s\n\t", expr);
+		fprintf (stderr, "\nERROR: Parse error in expression: \n\t%s\n\t", expr);
 		while (retval--) {
 			fputc( ' ', stderr );
 		}
@@ -1841,7 +1861,7 @@ InsertJobExpr (char *expr)
 		lhs->PrintToStr (name);
 	else
 	{
-		fprintf (stderr, "Expression not assignment: %s\n", expr);
+		fprintf (stderr, "\nERROR: Expression not assignment: %s\n", expr);
 		EXCEPT ("Error in submit file");
 	}
 	
@@ -1849,6 +1869,7 @@ InsertJobExpr (char *expr)
 	{	
 		EXCEPT ("Unable to insert expression: %s\n", expr);
 	}
+	delete tree;
 }
 
 static int 

@@ -1,8 +1,5 @@
-#if IS_HPPAR_HPUX9
-BSD_LIB = /usr/lib/libBSD.a
-#endif
-
 SRC_DIR = $(SRC_TREE)/condor_master
+
 #if defined(USE_CONFIG_SERVER)
 CFLAGS = $(STD_C_FLAGS) -DUSE_CONFIG_SERVER
 C_PLUS_FLAGS =  $(STD_C_PLUS_FLAGS) -DUSE_CONFIG_SERVER 

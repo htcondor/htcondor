@@ -35,7 +35,6 @@
 #include "condor_adtypes.h"
 #include "condor_string.h"
 #include "environ.h"
-// #include "url_condor.h"
 #include "condor_updown.h"
 #include "condor_uid.h"
 #include "my_hostname.h"
@@ -2161,7 +2160,7 @@ Scheduler::mail_problem_message()
 		/* don't use 'pclose()' here, it does its own wait, and messes
 	       with our handling of SIGCHLD! */
 		/* except on HPUX it is both safe and required */
-#if defined(HPUX9)
+#if defined(HPUX)
 	pclose( mailer );
 #else
 	(void)fclose( mailer );

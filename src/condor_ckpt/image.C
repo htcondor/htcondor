@@ -52,7 +52,7 @@ extern "C" void condor_restore_sigstates();
 #if defined(OSF1)
 	extern "C" unsigned int htonl( unsigned int );
 	extern "C" unsigned int ntohl( unsigned int );
-#elif defined(HPUX9)
+#elif defined(HPUX)
 #	include <netinet/in.h>
 #elif defined(Solaris) && defined(sun4m)
     #define htonl(x)        (x)
@@ -85,6 +85,7 @@ volatile int check_sig;		// the signal which activated the checkpoint; used
 							// by some routines to determine if this is a periodic
 							// checkpoint (USR2) or a check & vacate (TSTP).
 static size_t StackSaveSize;
+unsigned int _condor_numrestarts = 0;
 
 static int
 net_read(int fd, void *buf, int size)
@@ -434,11 +435,11 @@ SegMap::Contains( void *addr )
 }
 
 
+#define USER_DATA_SIZE 256
 #if defined(PVM_CHECKPOINTING)
 extern "C" user_restore_pre(char *, int);
 extern "C" user_restore_post(char *, int);
-
-int		global_user_data;
+char	global_user_data[USER_DATA_SIZE];
 #endif
 
 /*
@@ -449,7 +450,7 @@ void
 Image::Restore()
 {
 	int		save_fd = fd;
-	int		user_data;
+	char	user_data[USER_DATA_SIZE];
 
 #if defined(PVM_CHECKPOINTING)
 	user_restore_pre(user_data, sizeof(user_data));
@@ -574,7 +575,13 @@ RestoreStack()
 int
 Image::Write()
 {
-	return Write( file_name );
+	dprintf( D_FULLDEBUG, "Image::Write(): fd %d file_name %s\n",
+			 fd, file_name?file_name:"(NULL)");
+	if (fd == -1) {
+		return Write( file_name );
+	} else {
+		return Write( fd );
+	}
 }
 
 
@@ -951,6 +958,7 @@ Checkpoint( int sig, int code, void *scp )
 
 	if( MyImage.GetMode() == REMOTE ) {
 		scm = SetSyscalls( SYS_REMOTE | SYS_UNMAPPED );
+#if !defined(PVM_CHECKPOINTING)
 		if ( MyImage.GetFd() != -1 ) {
 			// Here we make _certain_ that fd is -1.  on remote checkpoints,
 			// the fd is always new since we open a fresh TCP socket to the
@@ -959,9 +967,12 @@ Checkpoint( int sig, int code, void *scp )
 			// related to the fact that fd is _not_ -1 here, so we make
 			// certain.  Hopefully the real bug will be found someday and
 			// this "patch" can go away...  -Todd 11/95
-			dprintf(D_ALWAYS,"WARNING: fd is %d for remote checkpoint, should be -1\n",MyImage.GetFd());
-			MyImage.SetFd( -1 );
+			
+		dprintf(D_ALWAYS,"WARNING: fd is %d for remote checkpoint, should be -1\n",MyImage.GetFd());
+		MyImage.SetFd( -1 );
 		}
+#endif
+
 	} else {
 		scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	}
@@ -1088,6 +1099,7 @@ Checkpoint( int sig, int code, void *scp )
 		dprintf( D_ALWAYS, "Done restoring signal state\n" );
 #endif
 
+		_condor_numrestarts++;
 		SetSyscalls( scm );
 		dprintf( D_ALWAYS, "About to return to user code\n" );
 		InRestart = FALSE;
@@ -1308,5 +1320,15 @@ __CERROR()
 	return errno;
 }
 #endif
+
+
+#if defined( X86 ) && defined( Solaris26 ) 
+int
+__CERROR64()
+{
+	return errno;
+}
+#endif
+
 
 } /* extern "C" */

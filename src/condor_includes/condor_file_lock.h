@@ -32,7 +32,7 @@
 ** we include "fake_flock.h" instead, which defines them for us.
 **********************************************************************/
 
-#if defined( HPUX9 )
+#if defined( HPUX ) 
 #define CONDOR_USE_FLOCK 0
 #include "fake_flock.h" 
 #endif

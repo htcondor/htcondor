@@ -30,8 +30,6 @@
 #ifndef FSA_H
 #define FSA_H
 
-#include "condor_fix_signal.h"
-
 #define N_POSIX_SIGS 19
 
 /* pointer to function taking no args and returning an integer */

@@ -23,8 +23,6 @@
 #ifndef _CONDOR_SIG_INSTALL_H
 #define _CONDOR_SIG_INSTALL_H
 
-#include "condor_fix_signal.h"
-
 #ifdef __cplusplus 
 extern "C" {
 #endif

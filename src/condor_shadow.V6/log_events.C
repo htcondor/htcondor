@@ -142,7 +142,7 @@ log_termination (struct rusage *localr, struct rusage *remoter)
 			char coredir[_POSIX_PATH_MAX];
 			JobTerminatedEvent event;
 
-#if defined(Solaris) || defined(HPUX9)
+#if defined(Solaris) || defined(HPUX)
 			getcwd(coredir,_POSIX_PATH_MAX);
 #else	
 			getwd( coredir );

@@ -94,7 +94,7 @@ physical_file_size( char *name )
 	       defined, and appears to be in 512 byte blocks. */
 	return buf.st_blocks / 2;
 
-#elif defined(HPUX9) || defined(LINUX)
+#elif defined(HPUX) || defined(LINUX)
 
 	/*  On this systems struct stat member st_blocks is
 	   defined, and appears to be in 1024 byte blocks. */
@@ -114,9 +114,6 @@ physical_file_size( char *name )
 #	error "Don't know how to determine file size on this platform."
 #endif
 }
-
-
-
 
 #ifdef  __cplusplus
 extern "C" {

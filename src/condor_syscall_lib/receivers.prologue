@@ -1,6 +1,12 @@
-#if defined(Solaris)
-#include <nfs/nfs.h>		/* for fhandle_t.  Include before
-			condor_common to avoid duplicate definitions of MIN */ 
+#if defined(Solaris251)
+#include <nfs/nfs.h>	
+    /* 
+	nfs.h defines fhandle_t.  Include before condor_common to
+	avoid duplicate definitions of MIN.  However, only do this on 
+	Solaris251, since in Solaris26, all the 64-bit interface stuff
+	gets broken if you do this and you don't have the problem with
+	MIN.  -Derek 6/24/98
+    */  
 #endif
 
 #include "condor_common.h"
@@ -10,18 +16,24 @@
 #include "condor_rsc.h"
 #include "condor_io.h"
 #include "condor_sys.h"
-#include "condor_constants.h"
 #include "startup.h"
 #include "pseudo_ops.h"
 
-#if defined(OSF1)
+#include "syscall_sysdep.h"
+#include "syscall_64bit.h"
+
+#if defined(OSF1) 
 extern "C" {
 	int statfs( char*, struct statfs*, int );
 	int flock( int, int );
 }
 #endif
 
-#define MODE_T unsigned int	/* use 32 bits on all platforms */
+#if defined(HPUX)
+extern "C" {
+	int flock( int, int );
+}
+#endif
 
 #include "../condor_syscall_lib/syscall_param_sizes.h"
 
@@ -138,4 +150,35 @@ do_REMOTE_syscall(ReliSock *sock, int process)
                 return 0;
         }
 #endif  // of ifdef PVM_RECEIVE
+	case CONDOR_startup_info_request:
+	  {
+		STARTUP_INFO *s;
+		int terrno;
 
+		s = (STARTUP_INFO *)malloc( (unsigned)STARTUP_INFO_SIZE );
+		memset( s, 0, (unsigned)STARTUP_INFO_SIZE );
+		assert( syscall_sock->end_of_message() );;
+
+		errno = 0;
+		rval = pseudo_startup_info_request( s );
+		terrno = errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		if( rval >= 0 ) {
+			assert( syscall_sock->code(s) );
+		}
+		free( s->cmd );
+		free( s->args );
+		free( s->env );
+		free( s->iwd );
+		free( s );
+
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+		
+	}

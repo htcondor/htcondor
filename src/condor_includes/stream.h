@@ -125,8 +125,6 @@
 #ifndef STREAM_H
 #define STREAM_H
 
-#include <assert.h>
-
 #include "condor_common.h"
 
 // This #define is a desperate move. GNU g++ seems to choke at runtime on our
@@ -149,22 +147,7 @@
 #	include "sched.h"
 #endif
 
-#include "condor_constants.h"	/* to get BOOLEAN typedef... */
 #include "startup.h"
-
-#if !defined(WIN32)
-
-#include <sys/stat.h>
-
-#if defined(OSF1)
-#  include <sys/mount.h>
-#elif defined(LINUX) || defined(HPUX9)
-#  include <sys/vfs.h>
-#else
-#  include <sys/statfs.h>
-#endif
-
-#endif // !defined(WIN32)
 
 /* We need to define a special code() method for certain integer arguments.
    To take advantage of overloading, we need make these arguments have a
@@ -253,6 +236,11 @@ public:
 	int code(struct timeval &);
 	int code(struct rlimit &);
 
+#if HAS_64BIT_STRUCTS
+	int code(struct stat64 &);
+	int code(struct rlimit64 &);
+#endif
+
 #endif // !defined(WIN32)
 
 	//   allow pointers instead of references to ease XDR compatibility
@@ -285,6 +273,12 @@ public:
 	int code(struct rlimit *x)		{ return code(*x); }
 
 #endif // !defined(WIN32)
+
+#if HAS_64BIT_STRUCTS
+	int code(struct stat64 *x)		{ return code(*x); }
+	int code(struct rlimit64 *x)	{ return code(*x); }
+#endif
+
 
 	//	Put operations
 	//

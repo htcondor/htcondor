@@ -21,27 +21,13 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#define _POSIX_SOURCE
-
-#include "_condor_fix_types.h"
 #include "condor_common.h"
-#include "condor_constants.h"
 #include "condor_debug.h"
 #include "condor_jobqueue.h"
-#include <time.h>
-#include <sys/wait.h>
-#include <pwd.h>
 #include "proc_obj.h"
 #include "proc_obj_tmpl.h"
-/* Solaris specific change ... dhaval 6/27 */
-/* Solaris 2.5.1 specific change ... weiru */
-/*
-#if defined(Solaris) && !defined(Solaris251)
-#include </usr/ucbinclude/sys/rusage.h>
-#endif
-*/
-static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
+static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
 /* GET THESE OUT OF HERE -- mike */
 static char *Notifications[] = {

@@ -111,8 +111,6 @@ File::Init()
 	ioserversocket = -1;
 }
 
-extern "C" char *getwd( char * );
-
 void
 OpenFileTable::Init()
 {
@@ -1684,7 +1682,7 @@ OpenFileTable::FlushBuf()
 			tempBuf->next = NULL;
 			delete tempBuf;
 		    }
-		} else if( file[i].isWriteable && ! file[i].isReadable() ) {
+		} else if( file[i].isWriteable() && ! file[i].isReadable() ) {
 		    while( file[i].firstBuf ) {
 		        tempBuf = file[i].firstBuf;
 			file[i].firstBuf = tempBuf->next;
@@ -1725,7 +1723,7 @@ OpenFileTable::DisplayBuf()
 	    if( tempBuf = file[i].firstBuf ) {
 	        if( file[i].isReadable() && !file[i].isWriteable() ) {
 		    printf( "%s%d%s\n", "\nRDONLY file ", i, " : " );
-		} else if( file[i].isWriteable && ! file[i].isReadable() ) {
+		} else if( file[i].isWriteable() && ! file[i].isReadable() ) {
 		    printf( "%s%d%s\n", "\nWRONLY file ", i, " : " );
 		} else {
 		    dprintf(D_ALWAYS, "invalid case in OpenFileTable::DisplayBuf()\n");
@@ -2045,10 +2043,8 @@ int open_stream( const char *local_path, int flags, int *_FileStreamLen );
 int _FileStreamWanted;
 int _FileStreamLen;
 
-int
-open( const char *path, int flags, ... )
+int	_condor_open( const char *path, int flags, va_list ap )
 {
-	va_list ap;
 	int		creat_mode = 0;
 	char	local_path[ _POSIX_PATH_MAX ];	// pathname on this machine
 	int		pipe_fd;	// fd number if this file is already open as a pipe
@@ -2061,7 +2057,6 @@ open( const char *path, int flags, ... )
 		InitFileState();
 
 	if( flags & O_CREAT ) {
-		va_start( ap, flags );
 		creat_mode = va_arg( ap, int );
 	}
 
@@ -2137,34 +2132,36 @@ open_stream( const char *local_path, int flags, int *_FileStreamLen )
 }
 
 int
+open( const char *path, int flags, ... )
+{
+	va_list ap;
+	int rval;
+	va_start( ap, flags );
+	rval = _condor_open( path, flags, ap );
+	va_end( ap );
+	return rval;
+}
+
+
+int
 _open( const char *path, int flags, ... )
 {
 	va_list ap;
-	int		creat_mode = 0;
-
-	if( flags & O_CREAT ) {
-		va_start( ap, flags );
-		creat_mode = va_arg( ap, int );
-		return open( path, flags, creat_mode );
-	} else {
-		return open( path, flags );
-	}
-
+	int rval;
+	va_start( ap, flags );
+	rval = _condor_open( path, flags, ap );
+	va_end( ap );
+	return rval;
 }
 
 __open( const char *path, int flags, ... )
 {
 	va_list ap;
-	int		creat_mode = 0;
-
-	if( flags & O_CREAT ) {
-		va_start( ap, flags );
-		creat_mode = va_arg( ap, int );
-		return open( path, flags, creat_mode );
-	} else {
-		return open( path, flags );
-	}
-
+	int rval;
+	va_start( ap, flags );
+	rval = _condor_open( path, flags, ap );
+	va_end( ap );
+	return rval;
 }
 
 #if defined(OSF1)
@@ -2420,73 +2417,78 @@ int creat(const char *path, mode_t mode)
 
 #if defined (SYS_fcntl)
 int
-fcntl(int fd, int cmd, ...)
+_condor_fcntl( int fd, int cmd, va_list ap )
 {
 	int arg = 0;
-	va_list ap;
-        int user_fd;
-        int use_local_access = FALSE;
-		int rval;
-
+	int user_fd;
+	int use_local_access = FALSE;
+	int rval;
+	
 	if ( FileTab == NULL )
 		InitFileState();
+	
+	if ((user_fd = MapFd(fd)) < 0) {
+		return -1;
+	}
+	
+	if ( LocalAccess(fd) ) {
+		use_local_access = TRUE;
+	}
+	
+	switch (cmd) {
+	case F_DUPFD:
+#if HAS_F_DUP2FD
+	case F_DUP2FD:
+#endif
 
-        if ((user_fd = MapFd(fd)) < 0) {
-                return -1;
-        }
-	
-        if ( LocalAccess(fd) ) {
-                use_local_access = TRUE;
-        }
-	
-        switch (cmd) {
-        case F_DUPFD:
-                va_start( ap, cmd );
 // Linux uses a long as the type for the third argument.  All other
 // platforms use an int.  For Linux, we just cast the long to an int
 // for use with our remote syscall.  Derek Wright 4/11/97
 #if defined(LINUX)
-                arg = (int) va_arg( ap, long );
+		arg = (int) va_arg( ap, long );
 #else
-                arg = va_arg( ap, int );
+		arg = va_arg( ap, int );
 #endif
 
-				if( MappingFileDescriptors() ) {
-					rval =  FileTab->DoDup2( fd, arg );
-		// In STANDALONE mode, this must make an actual dup of the fd. -Jim B. 
-					if (rval == arg && MyImage.GetMode() == STANDALONE) {
-                        rval = syscall( SYS_fcntl, fd, cmd, arg );
-					}
-					return rval;
-				}
+		if( MappingFileDescriptors() ) {
+			rval =  FileTab->DoDup2( fd, arg );
+				// In STANDALONE mode, this must make an actual dup of
+				// the fd. -Jim B.  
+			if (rval == arg && MyImage.GetMode() == STANDALONE) {
+				rval = syscall( SYS_fcntl, fd, cmd, arg );
+			}
+			return rval;
+		}
 
-                if ( LocalSysCalls() || use_local_access ) {
-                        return syscall( SYS_fcntl, fd, cmd, arg );
-				} else {
-						return REMOTE_syscall( CONDOR_fcntl, fd, cmd, arg );
-				}
-
-        case F_GETFD:
-        case F_GETFL:
-                if ( LocalSysCalls() || use_local_access ) {
-                        return syscall( SYS_fcntl, user_fd, cmd, arg );
-				} else {
-						return REMOTE_syscall( CONDOR_fcntl,
-											   user_fd, cmd, arg );
-				}
-        case F_SETFD:
-        case F_SETFL:
-                va_start( ap, cmd );
+		if ( LocalSysCalls() || use_local_access ) {
+			return syscall( SYS_fcntl, fd, cmd, arg );
+		} else {
+				// In remote mode, we want to send a CONDOR_dup2 on
+				// the wire, not an fcntl(), so we have a prayer of
+				// heterogeneous syscalls working.  -Derek W. and Jim
+				// B. 8/18/98
+			return REMOTE_syscall( CONDOR_dup2, fd, arg );
+		}
+	case F_GETFD:
+	case F_GETFL:
+		if ( LocalSysCalls() || use_local_access ) {
+			return syscall( SYS_fcntl, user_fd, cmd, arg );
+		} else {
+			return REMOTE_syscall( CONDOR_fcntl,
+								   user_fd, cmd, arg );
+		}
+	case F_SETFD:
+	case F_SETFL:
 #if defined(LINUX)
-                arg = (int) va_arg( ap, long );
+		arg = (int) va_arg( ap, long );
 #else
-                arg = va_arg( ap, int );
+		arg = va_arg( ap, int );
 #endif
-                if ( LocalSysCalls() || use_local_access ) {
-                        return syscall( SYS_fcntl, user_fd, cmd, arg );
+		if ( LocalSysCalls() || use_local_access ) {
+			return syscall( SYS_fcntl, user_fd, cmd, arg );
 		} else {
 			return REMOTE_syscall( CONDOR_fcntl, user_fd, cmd, arg );
-		}
+		}	
 
 	// These fcntl commands use a struct flock pointer for their
 	// 3rd arg.  Supporting these as remote calls would require a
@@ -2496,84 +2498,100 @@ fcntl(int fd, int cmd, ...)
 	case F_SETLK: 
 	case F_SETLKW: 
 		struct flock *lockarg;
-		va_list ap;
-                va_start( ap, cmd );
 		lockarg = va_arg ( ap, struct flock* );
-                if ( LocalSysCalls() || use_local_access ) {
-                        return syscall( SYS_fcntl, user_fd, cmd, lockarg );
+		if ( LocalSysCalls() || use_local_access ) {
+			return syscall( SYS_fcntl, user_fd, cmd, lockarg );
 		} else {
 			dprintf( D_ALWAYS, "Unsupported fcntl() command %d\n", cmd );
 			return -1;
 		}
+	// If we have 64 bit syscalls/structs, we'll have some flock64
+	// versions of these, as well.  -Derek W. 8/18/98
+#if HAS_64BIT_SYSCALLS
+	case F_GETLK64:
+	case F_SETLK64: 
+	case F_SETLKW64: 
+		struct flock64 *lock64arg;
+		lock64arg = va_arg ( ap, struct flock64* );
+		if ( LocalSysCalls() || use_local_access ) {
+			return syscall( SYS_fcntl, user_fd, cmd, lock64arg );
+		} else {
+			dprintf( D_ALWAYS, "Unsupported fcntl() command %d\n", cmd );
+			return -1;
+		}
+#endif /* HAS_64BIT_SYSCALLS */
 	default:
 		dprintf( D_ALWAYS, "Unsupported fcntl() command %d\n", cmd );
 	}
 	return -1;
 }
+
+
 /* _fcntl and __fcntl must have the same cases as fcntl so the correct
    third argument gets passed.  -Jim B. */
+
+/* To avoid totally nasty code duplication, we can just use a va_list
+   to pass the variable args for _fcntl() and __fcntl() to our real
+   fcntl() function above.  -Derek W. 8/18/98 */
+
+/* Actually, you can't just setup a va_list and pass it as an arg to a
+   function expecting "...", since it doesn't work like you think.
+   Inside the function expecting "...", when you do a "va_arg(ap,
+   int)", for example, you get garbage, since there's no int in the
+   arg list, there's just a va_list.
+
+   Instead, you need to define a function that takes a va_list
+   explicitly as it's last argument, and have stub functions that take
+   "..." and setup the va_list themselves.  So, we define
+   _condor_fcntl() to take a va_list, and define stubs for (_*)fcntl()
+   which are all identical: they just put a va_list on their stack,
+   call va_start() to set it up, call _condor_fcntl passing this
+   va_list, when that returns, they clean up the va_list by calling
+   va_end(), and finally return what _condor_fcntl() returned.
+
+   Inside _condor_fcntl, we never call va_start (since the va_list has
+   already been setup), we just call va_arg() whenever we think we need
+   to.  _condor_open() works the same way, with (_*)open() and
+   (_*)open64() all looking almost identical to fcntl() below.
+
+   -Derek W. 8/20/98 */
+
+int
+fcntl(int fd, int cmd, ...)
+{
+	int rval;
+	va_list ap;
+	va_start( ap, cmd );
+	rval = _condor_fcntl( fd, cmd, ap );
+	va_end( ap );
+	return rval;
+}
+
+
 int
 _fcntl(int fd, int cmd, ...)
 {
+	int rval;
 	va_list ap;
-	int arg = 0;
-	struct flock *lockarg = NULL;
-	switch (cmd) {
-	case F_DUPFD:
-	case F_SETFD:
-	case F_SETFL:
-		va_start( ap, cmd );
-#if defined(LINUX)
-		arg = (int) va_arg( ap, long );
-#else
-		arg = va_arg( ap, int );
-#endif
-		return fcntl(fd,cmd,arg);
-	case F_GETFD:
-	case F_GETFL:
-		return fcntl(fd,cmd);
-	case F_GETLK:
-	case F_SETLK:
-	case F_SETLKW:
-		va_start( ap, cmd );
-		lockarg = va_arg( ap, struct flock * );
-		return fcntl(fd,cmd,lockarg);
-	default:
-		break;
-	}
-	return fcntl(fd,cmd);
+	va_start( ap, cmd );
+	rval = _condor_fcntl( fd, cmd, ap );
+	va_end( ap );
+	return rval;
 }
+
+
 int
 __fcntl(int fd, int cmd, ...)
 {
+	int rval;
 	va_list ap;
-	int arg = 0;
-	struct flock *lockarg = NULL;
-	switch (cmd) {
-	case F_DUPFD:
-	case F_SETFD:
-	case F_SETFL:
-		va_start( ap, cmd );
-#if defined(LINUX)
-		arg = (int) va_arg( ap, long );
-#else
-		arg = va_arg( ap, int );
-#endif
-		return fcntl(fd,cmd,arg);
-	case F_GETFD:
-	case F_GETFL:
-		return fcntl(fd,cmd);
-	case F_GETLK:
-	case F_SETLK:
-	case F_SETLKW:
-		va_start( ap, cmd );
-		lockarg = va_arg( ap, struct flock * );
-		return fcntl(fd,cmd,lockarg);
-	default:
-		break;
-	}
-	return fcntl(fd,cmd);
+	va_start( ap, cmd );
+	rval = _condor_fcntl( fd, cmd, ap );
+	va_end( ap );
+	return rval;
 }
-#endif
+
+#endif /* SYS_fcntl */
 
 } // end of extern "C"
+

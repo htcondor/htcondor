@@ -22,7 +22,6 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
-#include "types.h"
 
 /*
   Format a date expressed in "UNIX time" into "month/day hour:minute".

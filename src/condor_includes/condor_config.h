@@ -44,7 +44,7 @@ extern "C" {
 #endif
 
 #if defined(__STDC__) || defined(__cplusplus)
-	void config( ClassAd* classAd=NULL );
+	void config( ClassAd* classAd=NULL, int wantsQuiet=0 );
 	void config_host( ClassAd* classAd=NULL, char* host=NULL );
 	int	 config_from_server(char*, char*, CONTEXT*);
 	char * get_tilde();

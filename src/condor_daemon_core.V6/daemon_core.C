@@ -133,6 +133,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,int SocSize,int Reap
 	curr_dataptr = NULL;
 	curr_regdataptr = NULL;
 
+	reinit_timer_id = -1;
+
 #ifdef WIN32
 	dcmainThreadId = ::GetCurrentThreadId();
 #endif
@@ -892,6 +894,14 @@ DaemonCore::ReInit()
 	// Reset our IpVerify object
 	ipverify.Init();
 
+	// Setup a timer to call ourselves (ReInit) again in eight hours.  This
+	// is a safeguard in case DNS addresses change and we are caching them.
+	if ( reinit_timer_id != -1 ) {
+		Cancel_Timer( reinit_timer_id );
+	}
+	reinit_timer_id = Register_Timer( 8 * 60 * 60, (Eventcpp)ReInit,
+		"DaemonCore::ReInit", this);
+
 	return TRUE;
 }
 
@@ -1036,13 +1046,7 @@ void DaemonCore::Driver()
 #endif
 
 		errno = 0;
-
-#if defined(HPUX9)
-		rv = select(FD_SETSIZE, (int *) &readfds, NULL, NULL, ptimer);
-#else
-		rv = select(FD_SETSIZE, &readfds, NULL, NULL, ptimer);
-#endif
-		
+		rv = select(FD_SETSIZE, (SELECT_FDSET_PTR) &readfds, NULL, NULL, ptimer);
 		tmpErrno = errno;
 
 #ifndef WIN32

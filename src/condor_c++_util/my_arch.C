@@ -59,6 +59,14 @@ my_arch()
 	return answer;
 }
 
+
+char *
+my_uname_arch() 
+{
+	return my_arch();
+}
+
+
 char *
 my_opsys()
 {
@@ -91,7 +99,12 @@ my_opsys()
 
 static int arch_inited = FALSE;
 static char* arch = NULL;
+static char* uname_arch = NULL;
 static char* opsys = NULL;
+
+#ifdef HPUX
+char* get_hpux_arch( struct utsname* );
+#endif
 
 void
 init_arch() 
@@ -103,6 +116,22 @@ init_arch()
 		return;
 	}
 
+	uname_arch = strdup( buf.machine );
+	if( !uname_arch ) {
+		EXCEPT( "Out of memory!" );
+	}
+
+#ifdef HPUX
+	/*
+	  On HPUX, to figure out if we're HPPA1 or HPPA2, we have to
+	  lookup what we get back from uname in a file that lists all the
+	  different HP models and what kinds of CPU each one has.  We do
+	  this in a seperate function to keep this function somewhat
+	  readable.   -Derek Wright 7/20/98
+	*/
+
+	arch = get_hpux_arch( &buf );
+#else 
 		// Get ARCH
 	if( !strcmp(buf.machine, "alpha") ) {
 		sprintf( tmp, "ALPHA" );
@@ -131,6 +160,8 @@ init_arch()
 		EXCEPT( "Out of memory!" );
 	}
 
+#endif /* HPUX */
+
 		// Get OPSYS
 	if( !strcmp(buf.sysname, "Linux") ) {
 		if( access("/lib/libc.so.6", R_OK) != 0 ) {
@@ -150,6 +181,12 @@ init_arch()
 		}
 	} else if( !strcmp(buf.sysname, "OSF1") ) {
 		sprintf( tmp, "OSF1" );
+	} else if( !strcmp(buf.sysname, "HP-UX") ) {
+		if( !strcmp(buf.release, "B.10.20") ) {
+			sprintf( tmp, "HPUX10" );
+		} else {
+			sprintf( tmp, "HPUX%s", buf.release );
+		}
 	} else if( match_prefix(buf.sysname, "IRIX") ) {
 		if( buf.release[0] == '6' ) {
 			sprintf( tmp, "IRIX6" );
@@ -164,8 +201,8 @@ init_arch()
 	if( !opsys ) {
 		EXCEPT( "Out of memory!" );
 	}
+	arch_inited = TRUE;
 }
-
 
 
 char *
@@ -177,6 +214,7 @@ my_arch()
 	return arch;
 }
 
+
 char *
 my_opsys()
 {
@@ -185,6 +223,59 @@ my_opsys()
 	}
 	return opsys;
 }
+
+
+char *
+my_uname_arch()
+{
+	if( ! arch_inited ) {
+		init_arch();
+	}
+	return uname_arch;
+}
+
+
+#if defined(HPUX)
+char*
+get_hpux_arch( struct utsname *buf )
+{
+    FILE* fp;
+	static char *file = "/opt/langtools/lib/sched.models";
+	char machinfo[4096], line[128];
+	char *model;
+	char cputype[128], cpumodel[128];
+	int len, found_it = FALSE;
+
+	model = strchr( buf->machine, '/' );
+	model++;
+	len = strlen( model );
+
+	fp = fopen( file, "r" );
+	if( ! fp ) {
+	    return NULL;
+	}	
+	while( ! feof(fp) ) {
+	    fgets( line, 128, fp );
+		if( !strncmp(line, model, len) ) {
+		    found_it = TRUE;
+		    break;
+		}
+	}
+	fclose( fp );
+	if( found_it ) {
+  	    sscanf( line, "%s\t%s", cpumodel, cputype );
+		if( !strcmp(cputype, "2.0") ) {
+		    arch = strdup( "HPPA2" );
+		} else {
+		    arch = strdup( "HPPA1" );
+		}
+		if( !arch ) {
+			EXCEPT( "Out of memory!" );
+		}
+	}
+	return arch;
+}
+#endif /* HPUX */
 
 #endif /* ! WIN32 */
 

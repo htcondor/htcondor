@@ -1,187 +1,69 @@
 /**********
 **
-** We are told what platform we are compiling for on the command line
+** We are told what platform we are compiling for on the command
+** line.  This is now always the case.
 **
 **********/
 
-#if defined(IS_ALPHA_OSF1)
-#	define Platform ALPHA_OSF1
+#if defined( IS_DUX4 )
 #	define PlatformIncludeFile <ALPHA_OSF1.cf>
-#	define GccArch alpha-dec-osf3.2
-#	undef IS_ALPHA_OSF1
-#elif defined(IS_SUN4M_SOLARIS251)
-#	undef sun
-#	undef sparc
-#	define Platform SUN4M_SOLARIS
-#	define SpecificPlatform SUN4M_SOLARIS251
-#	define PlatformIncludeFile <SUN4M_SOLARIS251.cf>
-#	define GccArch sparc-sun-solaris2.5.1
-#	undef IS_SUN4M_SOLARIS251
-#elif defined(IS_HPPAR_HPUX10)
-#	undef hpux
-#	undef hp9000s800
-#	define Platform HPPAR_HPUX10
-#	define PlatformIncludeFile <HPPAR_HPUX10.cf>
-#	define GccArch hppa1.1-hp-hpux10.20
-#	undef IS_HPPAR_HPUX10		/* its is redefined in HPPAR-HPUX10.cf */
-#elif defined(IS_I386_LINUX)
-#	undef i386
-#	undef linux
-#	define Platform I386_LINUX
-#	define PlatformIncludeFile <I386_LINUX.cf>
-#	undef IS_I386_LINUX
+#	undef IS_DUX4
 #endif
 
-
-/*************
-**
-** Figure out what platform we are compiling for.
-**
-*************/
-#ifndef Platform
-
-#ifdef RiscAIX
-#undef RiscAIX
-#define Platform R6000_AIX31
-#define PlatformIncludeFile <R6000_AIX31.cf>
-#endif
-
-#ifdef RiscAIX32
-#undef RiscAIX32
-#define Platform R6000_AIX32
-#define PlatformIncludeFile <R6000_AIX32.cf>
-#define GccArch rs6000-ibm-aix3.2.5
-#endif
-
-#if defined(ultrix43a)
-#undef mips
-#undef ultrix
-#define Platform MIPS_ULTRIX43
-#define PlatformIncludeFile <MIPS_ULTRIX43.cf>
-
-#elif defined(ultrix)
-#undef mips
-#undef ultrix
-#define Platform MIPS_ULTRIX43
-#define PlatformIncludeFile <MIPS_ULTRIX43.cf>
-
-#endif
-
-#if defined(sun) && defined(mc68020)
-#undef sun
-#undef mc68020
-#define Platform MC68020_SUNOS41
-#define PlatformIncludeFile <MC68020_SUNOS41.cf>
-#endif
-
-#if defined(cm5)
-#undef sun
-#undef sparc
-#undef cm5
-#define Platform SPARC_CMOS
-#define PlatformIncludeFile <SPARC_CMOS.cf>
-#endif
-
-/*
- * differing automatically between Solaris and SunOS is difficult
- * the cpp does not predefine anything that might give us a clue that this
- * might be Solaris
- */
-#if defined(sun) && defined(sparc)
-#undef sun
-#undef sparc
-
-/* this works, but is pretty ugly */
-#include <limits.h>
-
-#if defined(CHAS_WILLIAMS) /* sorry - my SunOs 4.1 system defines MB_LEN_MAX*/
-#	ifndef MB_LEN_MAX
-#		define Platform SPARC_SUNOS41
-#		define PlatformIncludeFile <SPARC_SUNOS41.cf>
-#		define GccArch sparc-sun-sunos4.1.3
-#	else
-#		define Platform SUN4M_SOLARIS /* change by Dhaval */
-#		define PlatformIncludeFile <SUN4M_SOLARIS.cf>
-#		define GccArch sparc-sun-solaris2.4
+#if defined( IS_SOLARIS251 ) || defined( IS_SOLARIS26 )
+#	define PlatformIncludeFile <SOLARIS.cf>
+#	if defined( IS_SUN4X ) 
+#		define ArchIncludeFile <SOLARIS_SUN4X.cf>
+#		undef IS_SUN4X
 #	endif
-#else
-#	define Platform SPARC_SUNOS41
-#	define PlatformIncludeFile <SPARC_SUNOS41.cf>
-#	define GccArch sparc-sun-sunos4.1.3
+#	if defined( IS_X86 ) 
+#		define ArchIncludeFile <SOLARIS_X86.cf>
+#		undef IS_X86
+#	endif
 #endif
 
+#if defined( IS_SOLARIS251 )
+#	define OSVersionIncludeFile <SOLARIS251.cf>
+#	undef IS_SOLARIS251
+#elif defined( IS_SOLARIS26 )
+#	define OSVersionIncludeFile <SOLARIS26.cf>
+#	undef IS_SOLARIS26
 #endif
 
-#if defined(mc68000) && defined(hp300)
-#undef mc68000
-#undef hp300
-#define Platform MC68020_BSD43
-#define PlatformIncludeFile <MC68020_BSD43.cf>
+#if defined( IS_HPUX10 )
+#	define PlatformIncludeFile <HPUX.cf>
+#	define OSVersionIncludeFile <HPUX10.cf>
+#	undef IS_HPUX10
 #endif
 
-#if defined(vax) && defined(ultrix)
-#undef vax
-#undef ultrix
-#define Platform VAX_ULTRIX42
-#define PlatformIncludeFile <VAX_ULTRIX42.cf>
+#if defined( IS_LINUX )
+#	define PlatformIncludeFile <LINUX.cf>
+#	undef IS_LINUX
+#	if defined( IS_I386 ) 
+#		define ArchIncludeFile <LINUX_I386.cf>
+#		undef IS_I386
+#	elif defined( IS_ALPHA )
+#		define ArchIncludeFile <LINUX_ALPHA.cf>
+#		undef IS_ALPHA
+#	endif
 #endif
 
-#if defined(i386) && defined(linux)
-#undef i386
-#undef linux
-#define Platform I386_LINUX
-#define PlatformIncludeFile <I386_LINUX.cf>
-#undef IS_I386_LINUX
+#if defined( IS_IRIX6 )
+#	define PlatformIncludeFile <SGI_IRIX62.cf>
+#	undef IS_IRIX6
 #endif
 
-#if defined(i386) && defined(sequent)
-#undef i386
-#undef sequent
-#define Platform I386_DYNIX
-#define PlatformIncludeFile <I386_DYNIX.cf>
-#endif
 
-#if defined(ibm032)
-#undef ibm032
-#define Platform IBM032_BSD43
-#define PlatformIncludeFile <IBM032_BSD43.cf>
-#endif
-
-#if defined(sgi)
-#undef sgi
-#define Platform SGI_IRIX62
-#define PlatformIncludeFile <SGI_IRIX62.cf>
-#endif
-
-#if defined(hpux) && defined(hp9000s800)
-#undef hpux
+/***************************************************************************
+** Undefine any symbols the compiler might have defined for us since
+** they may trip us up later.
+***************************************************************************/
+#undef sun
+#undef sparc
+#undef i386		
 #undef hp9000s800
-#define Platform HPPAR_HPUX9
-#define PlatformIncludeFile <HPPAR_HPUX9.cf>
-#define GccArch hppa1.1-hp-hpux9.01
-#endif
-
-#if defined(__alpha)
 #undef __alpha
-#define Platform ALPHA_OSF1
-#define PlatformIncludeFile <ALPHA_OSF1.cf>
-#define GccArch alpha-dec-osf3.2
-#endif
-
-#if defined(i386) && defined(sun) || defined(IS_X86_SOLARIS25)
-#	undef i386
-#   undef sun
-#   define Platform X86_SOLARIS
-#if defined(IS_X86_SOLARIS25)
-#   define PlatformIncludeFile <X86_SOLARIS25.cf>
-#   define SpecificPlatform X86_SOLARIS25
-#   define GccArch i386-unknown-solaris2.5.1
-#   undef IS_X86_SOLARIS25
-#else
-#   define GccArch i386-sun-solaris2.4
-#   define PlatformIncludeFile <X86_SOLARIS.cf>
-#endif
-#   undef IS_X86_SOLARIS
-#endif
-
-#endif
+#undef sgi
+#undef alpha
+#undef hpux
+#undef linux

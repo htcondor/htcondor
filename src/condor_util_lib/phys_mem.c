@@ -22,53 +22,22 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
  
+#if defined(HPUX)
 
-#if defined(HPUX9)
+#include <sys/pstat.h>
 
-#include "condor_uid.h"
-#include <stdio.h>
-#include <nlist.h>
-#include <sys/types.h>
-#include <sys/file.h>
-
-struct nlist memnl[] = {
-	{ "physmem",0,0 },
-    { NULL }
-};
-
+int
 calc_phys_memory()
 {
-  int kmem;
-  int maxmem, physmem;
-  priv_state      priv;
-  priv = set_root_priv();
-  /*
-   *   Lookup addresses of variables.
-  */
-#if defined(HPUX9) && !defined(HPUX10)
-  if ((nlist("/hp-ux",memnl) <0) || (memnl[0].n_type ==0)) return(-1); 
-#endif
-#if defined(HPUX10)
-  if ((nlist("/stand/vmunix",memnl) <0) || (memnl[0].n_type ==0)) return(-1);
-#endif
-
-  /*
-   *   Open kernel memory and read variables.
-  */
-  if ((kmem=open("/dev/kmem",0)) <0) return (-1);
-
-
-  if (-1==lseek(kmem,(long) memnl[0].n_value,0)) return (-1);
-  if (read(kmem,(char *) &physmem, sizeof(int)) <0) return (-1);
-  close(kmem);
-
-  /*
-   *  convert to megabytes
-  */
-  physmem/=256; /* *4 /1024 */
-
-  set_priv(priv);
-  return(physmem);
+  int pagesize;
+  struct pst_static s;
+  
+  if (pstat_getstatic(&s, sizeof(s), (size_t)1, 0) != -1) {
+    return( (s.physical_memory * s.page_size) >> 20 );
+  }
+  else {
+    return -1;
+  }
 }
 
 #elif defined(IRIX62)

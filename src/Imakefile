@@ -26,8 +26,8 @@
 		tools kbdd collector.V6 PvmProgs
 
 #define Libraries \
-		util_lib c++_util io classad daemon_core.V6 \
-		ckpt syscall_lib
+		util_lib c++_util procapi io classad daemon_core.V6 \
+		ckpt syscall_lib 
 
 #define Directories \
 	release_dir release_dir/bin release_dir/lib release_dir/sbin \
@@ -44,6 +44,7 @@ all: h h_all condor_includes makefiles Directories Libraries Programs examples
 release:: all
 stripped:: all
 static:: all
+libs:: h h_all condor_includes makefiles Directories Libraries
 
 #define SubmitSbinFiles sbin/condor_master sbin/condor_schedd \
 	sbin/condor_shadow sbin/condor_preen sbin/condor_checkpoint \
@@ -52,15 +53,22 @@ static:: all
 	sbin/condor_restart sbin/condor_vacate sbin/condor_master_off
 
 
-#if IS_GLIBC && IS_I386_LINUX
-  PUBLIC_D_TARGET = /p/condor/workspaces/release/V6_releases/i386_linux2-glibc
-  PUBLIC_S_TARGET = /p/condor/workspaces/release/V6_static_releases/i386_linux2-glibc
+PUBLIC_TARGET_PATH = /p/condor/workspaces/release
+#if defined( PublicTargetName )
+  PUBLIC_TARGET_NAME = PublicTargetName
+  PUBLIC_D_TARGET = $(PUBLIC_TARGET_PATH)/V6_releases/$(PUBLIC_TARGET_NAME)
+  PUBLIC_S_TARGET = $(PUBLIC_TARGET_PATH)/V6_static_releases/$(PUBLIC_TARGET_NAME)
 #else 
-  PUBLIC_D_TARGET = /p/condor/workspaces/release/V6_release
-  PUBLIC_S_TARGET = /p/condor/workspaces/release/V6_static_release
+  PUBLIC_D_TARGET = $(PUBLIC_TARGET_PATH)/V6_release
+  PUBLIC_S_TARGET = $(PUBLIC_TARGET_PATH)/V6_static_release
 #endif
 
+
+#if WantsStatic
 public_all: public public_static
+#else 
+public_all: public
+#endif
 
 public: strip.tar 
 	rm -f $(PUBLIC_D_TARGET)/release.tar 
@@ -127,6 +135,7 @@ simple_dir_target(static_ckpt_server/etc/examples)
 
 object_target(util_lib)
 object_target(c++_util)
+object_target(procapi)
 object_target(tools)
 object_target(examples)
 object_target(accountant.V6)
@@ -166,7 +175,9 @@ object_dir_target(condor_includes)
 
 h_all: h/Makefile h/syscall_numbers.h h/syscall_numbers.o
 
-h/Makefile: h/Imakefile
+makefiles:: h/Makefile
+
+h/Makefile: h h/Imakefile
 	cd h; imake IMAKE_FLAGS
 
 h/syscall_numbers.h: h/syscall_numbers.tmpl h/Makefile
@@ -179,6 +190,6 @@ check_platform_target
 
 clean::
 	cd h; make clean
-	rm -rf Makefile */Makefile */Makefile.* release_dir \
+	rm -rf make.out Makefile */Makefile */Makefile.* release_dir \
 		strip_dir strip_pvm strip_ckpt_server \
 		static_dir static_pvm static_ckpt_server

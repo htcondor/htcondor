@@ -30,7 +30,7 @@ solaris		ptype;
 Ultrix     	ptype;
 #elif		defined(OSF1)
 Osf1		ptype;
-#elif		defined(HPUX9)
+#elif		defined(HPUX9) || defined(HPUX10)
 Hpux		ptype;
 #elif 		defined(AIX32)
 Aix		ptype;

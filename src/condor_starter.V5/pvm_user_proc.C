@@ -22,35 +22,12 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
  
-
-#define _POSIX_SOURCE
-
 #include "condor_common.h"
-#include <stdio.h>
-#include <ctype.h>
-#include <errno.h>
-#include "types.h"
 #include "proto.h"
-#include <sys/wait.h>
-#include <sys/file.h>
-#include <sys/stat.h>
-#include <sys/times.h>
-#include <sys/types.h>
 #include "name_tab.h"
-
-typedef unsigned short u_short;
-typedef unsigned char u_char;
-typedef unsigned long u_long;
-#include <sys/socket.h>
-
-extern "C" {
-#include <netinet/in.h>
-}
 #include "fileno.h"
 #include "condor_rsc.h"
 #include "util_lib_proto.h"
-#include "condor_fix_unistd.h"
-#include "condor_fix_socket.h"
 #include "list.h"
 #include "starter.h"
 

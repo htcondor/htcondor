@@ -146,7 +146,7 @@ killkids(pid_t inpid, int sig)
         /* don't use 'pclose()' here, it does its own wait, and messes
            with our handling of SIGCHLD! */
         /* except on HPUX pclose() is both safe & required - Todd */
-#if   defined(HPUX9) || defined(Solaris) 
+#if   defined(HPUX) || defined(Solaris) 
    pclose(ps);
 #else
    (void)fclose(ps);

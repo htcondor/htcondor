@@ -31,7 +31,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "condor_constants.h"
 #include "condor_io.h"
 #include "condor_config.h"
 #include "condor_uid.h"
@@ -42,9 +41,9 @@
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "my_hostname.h"
+#include "get_daemon_addr.h"
 #include "condor_state.h"
 
-extern "C" char *get_startd_addr(const char *);
 State get_machine_state();
 
 static char *_FileName_ = __FILE__;		/* Used by EXCEPT (see except.h)     */
@@ -59,6 +58,7 @@ char		*PreenAdmin;		// who to send mail to in case of trouble
 char		*MyName;			// name this program was invoked by
 char        *ValidSpoolFiles;   // well known files in the spool dir
 char        *ValidLogFiles;     // well known files in the log dir
+char		*MailPrg;			// what program to use to send email
 BOOLEAN		MailFlag;			// true if we should send mail about problems
 BOOLEAN		VerboseFlag;		// true if we should produce verbose output
 BOOLEAN		RmFlag;				// true if we should remove extraneous files
@@ -170,7 +170,7 @@ produce_output()
 	FILE	*mailer;
 	char	cmd[ 1024 ];
 
-	sprintf( cmd, "%s %s", BIN_MAIL, PreenAdmin );
+	sprintf( cmd, "%s %s", MailPrg, PreenAdmin );
 
 	if( MailFlag ) {
 		if( (mailer=popen(cmd,"w")) == NULL ) {
@@ -516,8 +516,12 @@ init_params()
 		EXCEPT ( "VALID_SPOOL_FILES not specified in config file" );
 	}
 
-	if ( (ValidLogFiles = param("VALID_LOG_FILES")) == NULL ) {
+	if( (ValidLogFiles = param("VALID_LOG_FILES")) == NULL ) {
 		EXCEPT ( "VALID_LOG_FILES not specified in config file" );
+	}
+
+	if( (MailPrg = param("MAIL")) == NULL ) {
+		EXCEPT ( "MAIL not specified in config file" );
 	}
 }
 
@@ -673,7 +677,7 @@ State
 get_machine_state()
 {
 	char* addr = get_startd_addr(0);
-	char* state_str;
+	char* state_str = NULL;
 	State s;
 
 	if( !addr ) {

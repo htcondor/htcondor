@@ -113,6 +113,13 @@ static int ph_head=0, ph_count=0;
 
 
 void
+_condor_disable_uid_switching()
+{
+	CondorIdsInited = TRUE;
+	SwitchIds = FALSE;
+}
+
+void
 init_condor_ids()
 {
 	struct passwd *pwd;

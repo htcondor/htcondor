@@ -127,7 +127,7 @@ int
 command_vacate( Service*, int, Stream* ) 
 {
 	dprintf( D_ALWAYS, "command_vacate() called.\n" );
-	resmgr->walk( Resource::release_claim );
+	resmgr->walk( &Resource::release_claim );
 	return TRUE;
 }
 
@@ -136,7 +136,7 @@ int
 command_pckpt_all( Service*, int, Stream* ) 
 {
 	dprintf( D_ALWAYS, "command_pckpt_all() called.\n" );
-	resmgr->walk( Resource::periodic_checkpoint );
+	resmgr->walk( &Resource::periodic_checkpoint );
 	return TRUE;
 }
 

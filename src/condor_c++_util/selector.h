@@ -21,15 +21,8 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
 #ifndef SELECTOR_H
 #define SELECTOR_H
-
-#include <sys/times.h>
-#include "condor_fdset.h"
-
-
 
 typedef enum {
 	IO_READ, IO_WRITE, IO_EXCEPT

@@ -28,7 +28,6 @@
 #include <magic.h>
 #include <nlist.h>
 #include "condor_debug.h"
-#include "types.h"
 #include "proto.h"
 
 extern "C" {

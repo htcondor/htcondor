@@ -127,43 +127,12 @@
 */
 
 
-
-#define _POSIX_SOURCE
-#if defined(Solaris)
-#include "_condor_fix_types.h"
-#endif
-
-#if defined(OSF1) && !defined(__GNUC__)
-#define __STDC__
-#endif
-
 #include "condor_common.h"
 #include "condor_syscall_mode.h"
 #include "syscall_numbers.h"
-#include "condor_fix_assert.h"
-
-#include <sys/socket.h>
-
-#include <netinet/in.h>
-#include <netdb.h>
-#include <errno.h>
-#include <signal.h>
-
 #include "condor_debug.h"
 #include "condor_file_info.h"
 static char *_FileName_ = __FILE__;
-
-#ifndef TRUE
-#define TRUE 1
-#endif
-
-#ifndef FALSE
-#define FALSE 0
-#endif
-
-#ifndef MATCH
-#define MATCH 0   /* for strcmp */
-#endif
 
 enum result { NOT_OK = 0, OK = 1, END };
 
@@ -223,9 +192,10 @@ int open_ckpt_file( const char *name, int flags, size_t n_bytes );
 void get_ckpt_name();
 extern volatile int InRestart;
 extern void InitFileState();
+void _condor_disable_uid_switching();
 
 int
-#if defined(HPUX9)
+#if defined(HPUX)
 _START( int argc, char *argv[], char **envp )
 #else
 MAIN( int argc, char *argv[], char **envp )
@@ -238,6 +208,18 @@ MAIN( int argc, char *argv[], char **envp )
 	char	*argv0;
 	char 	*argv1;
 	
+		/* 
+		   Since we're the user job, we want to just disable any
+		   priv-state switching.  We would, eventually, anyway, since
+		   we'd realize we weren't root, but then we hit the somewhat
+		   expensive init_condor_ids() code in uids.c, which is
+		   segfaulting on HPUX10 on a machine using YP.  So, we just
+		   call a helper function here that sets the flags in uids.c
+		   how we want them so we don't do switching, period.
+		   -Derek Wright 7/21/98
+		*/
+	_condor_disable_uid_switching();
+
 #undef WAIT_FOR_DEBUGGER
 #if defined(WAIT_FOR_DEBUGGER)
 	int		do_wait = 1;
@@ -282,7 +264,7 @@ MAIN( int argc, char *argv[], char **envp )
 				}
 
 				/* Now start running user code and forget about condor */
-#if defined(HPUX9)
+#if defined(HPUX)
 				exit(_start( argc, argv, envp ));
 #else
 				exit( main( argc, argv, envp ));
@@ -404,7 +386,7 @@ MAIN( int argc, char *argv[], char **envp )
 
 	InRestart = FALSE;
 		/* Now start running user code */
-#if defined(HPUX9)
+#if defined(HPUX)
 	exit(_start( argc, argv, envp ));
 #else
 	exit( main( argc, argv, envp ));

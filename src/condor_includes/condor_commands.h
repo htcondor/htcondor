@@ -108,9 +108,11 @@
 #define DAEMONS_OFF			(SCHED_VERS+54)
 #define DAEMONS_ON			(SCHED_VERS+55)
 #define MASTER_OFF			(SCHED_VERS+56)
-#define RESET_USAGE			(SCHED_VERS+57)		// negotiator
-#define SET_PRIORITYFACTOR	(SCHED_VERS+58)		// negotiator
-#define RESET_ALL_USAGE		(SCHED_VERS+59)		// negotiator
+#define CONFIG_VAL			(SCHED_VERS+57)
+#define RESET_USAGE			(SCHED_VERS+58)		// negotiator
+#define SET_PRIORITYFACTOR	(SCHED_VERS+59)		// negotiator
+#define RESET_ALL_USAGE		(SCHED_VERS+60)		// negotiator
+
 
 /************
 *** Command ids used by the collector 

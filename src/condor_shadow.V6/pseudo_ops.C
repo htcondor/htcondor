@@ -223,6 +223,19 @@ pseudo_send_rusage( struct rusage *use_p )
 }
 
 int
+pseudo_getrusage(int who, struct rusage *use_p )
+{
+
+	// No need to look at the "who" param; the special switch for getrusage
+	// already checks the "who" param and verifies it is RUSAGE_SELF
+
+	// Pass back the rusage committed so far via checkpoint
+	memcpy(use_p, &Proc->remote_usage[0], sizeof(struct rusage) );
+
+	return 0;
+}
+
+int
 pseudo_perm_error( const char *msg )
 {
 	PERM_ERR( msg );
@@ -884,11 +897,12 @@ char * find_env( const char * name, const char * env );
 char *strdup( const char *);
 char *Strdup( const char *str)
 {
-	char*	dup = (char*)malloc(1);
+	char*	dup;
 
-	dup[0] = '\0';
 	if(str == NULL)
 	{
+		dup = (char *)malloc(1);
+		dup[0] = '\0';
 		return dup;
 	}
 	return strdup(str);
@@ -1015,7 +1029,7 @@ pseudo_file_info( const char *name, int *pipe_fd, char *extern_path )
 
 	strcpy( extern_path, full_path );
 
-#ifdef HPUX9
+#ifdef HPUX
 	/* I have no idea why this is happening, but I have seen it happen many
 	 * times on the HPUX version, so here is a quick hack -Todd 5/19/95 */
 	if ( strcmp(extern_path,"/usr/lib/nls////strerror.cat") == 0 )
@@ -1478,6 +1492,19 @@ pseudo_lseekwrite(int fd, off_t offset, int whence, const void *buf, size_t len)
 
 	rval = write( fd, buf, len );
 	return rval;
+}
+
+
+/* 
+   For sync(), we just want to call sync, since on most systems,
+   sync() just returns void, and we'll pass back a 0 anyway. 
+   -Derek Wright 7/17/98
+*/
+int
+pseudo_sync()
+{
+    sync();
+	return 0;
 }
 
 } /* extern "C" */

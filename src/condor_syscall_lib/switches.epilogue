@@ -1,13 +1,17 @@
 
-#ifdef HPUX9
-#include "switches.remap-HPUX9.h"
+#ifdef HPUX
+#include "switches.remap-HPUX.h"
 #endif 
 
 #ifdef Solaris
-#include "switches.remap-SOLARIS251.h"
+#include "switches.remap-SOLARIS.h"
 #endif
 
-#ifdef IRIX53
+#ifdef Solaris26
+#include "switches.remap-SOLARIS26.h"
+#endif
+
+#ifdef IRIX62
 #include "switches.remap-IRIX62.h"
 #endif
 
@@ -18,3 +22,4 @@
 #ifdef OSF1
 #include "switches.remap-DUX4.h"
 #endif
+

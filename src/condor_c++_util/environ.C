@@ -21,20 +21,8 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
-#define _POSIX_SOURCE
-
-/* Solaris specific change ..dhaval 6/27 */
-#if defined(Solaris)
-#include "_condor_fix_types.h"
-#endif
-
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "condor_constants.h"
-#include <string.h>
-#include <ctype.h>
 #include "environ.h"
 
 inline int

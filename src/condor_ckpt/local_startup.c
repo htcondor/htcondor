@@ -67,7 +67,7 @@ int _condor_in_file_stream;
 static char	*executable_name;
 
 int
-#if defined(HPUX9)
+#if defined(HPUX)
 _START( int argc, char *argv[], char **envp )
 #else
 MAIN( int argc, char *argv[], char **envp )
@@ -112,7 +112,7 @@ MAIN( int argc, char *argv[], char **envp )
 		argv += 2;
 		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 		InRestart = FALSE;
-#if defined(HPUX9)
+#if defined(HPUX)
 		return(_start( argc, argv, envp ));
 #else
 		return main( argc, argv, envp );
@@ -140,7 +140,7 @@ MAIN( int argc, char *argv[], char **envp )
 		init_image_with_file_name( buf );
 		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
 		InRestart = FALSE;
-#if defined(HPUX9)
+#if defined(HPUX)
 		return(_start( argc, argv, envp ));
 #else
 		return main( argc, argv, envp );

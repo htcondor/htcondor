@@ -4,27 +4,33 @@ CMNT compiled.  This will require that the PVM library be linked into
 CMNT the application.
 CMNT
 
-CMNT PVM_CHECKPOINT = -DPVM_CHECKPOINTING
+PVM_CHECKPOINT = -DPVM_CHECKPOINTING
 
 #if DOES_SAVE_SIGSTATE
 SAVE_SIGSTATE = -DSAVE_SIGSTATE
 SAVE_SIGSTATE_OBJ = signals_support.o
 SAVE_SIGSTATE_SRC = signals_support.c
 
-#if IS_ALPHA_OSF1
+#if IS_DUX
 SIG_EXTRACT = SIGACTION.o SIGPROCMASK.o SIGSUSPEND.o SIGNAL.o
-#elif (IS_X86_SOLARIS25)
+#elif IS_X86_SOLARIS
 SIG_EXTRACT = SIGACTION.o _SIGACTION.o i386_data.o
-#elif (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS251)
+#elif IS_SUN4X_SOLARIS
 SIG_EXTRACT = SIGACTION.o _SIGACTION.o
+#elif IS_HPUX
+PLATFORM_EXTRACT = SYSCALL.o __SYSCALL.o
 #endif
 
 #endif  /* ======= of if DOES_SAVE_SIGSTATE ==========*/
 
-#if (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS25) || (IS_I386_LINUX)
+#if IS_GLIBC_LINUX
+PLATFORM_EXTRACT = MMAP.o SYSCALL.o SYSDEP.o
+#elif IS_LINUX || IS_SOLARIS
 PLATFORM_EXTRACT = MMAP.o SYSCALL.o 
-#elif (IS_ALPHA_OSF1)
+#elif IS_ALPHA_OSF1
 PLATFORM_EXTRACT = SYSCALL.o
+#elif IS_HPUX
+PLATFORM_EXTRACT = SYSCALL.o __SYSCALL.o
 #else
 PLATFORM_EXTRACT = 
 #endif
@@ -33,7 +39,7 @@ EXTRACT = $(SIG_EXTRACT) $(PLATFORM_EXTRACT)
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) $(SAVE_SIGSTATE) $(STATIC) $(PVM_CHECKPOINT)
 
-#if IS_HPPAR_HPUX10
+#if IS_HPUX10
 CFLAGS = $(STD_C_FLAGS) $(STATIC)
 #else
 CFLAGS = $(STD_C_FLAGS)
@@ -41,29 +47,17 @@ CFLAGS = $(STD_C_FLAGS)
 
 SRC_DIR = $(SRC_TREE)/condor_ckpt
 
-#if IS_SGI_IRIX62
+#if IS_IRIX62
 OS = IRIX62
-#elif IS_HPPAR_HPUX10
+#elif IS_HPUX10
 OS = HPUX10
 #else
 OS = OperatingSystem
 #endif
 
-#if IS_HPPAR_HPUX9 && !IS_HPPAR_HPUX10
-ASSEMBLER_SRC = get_reginfo.HPUX.s
-ASSEMBLER_OBJ = get_reginfo.HPUX.o
-.s.o:
-	as /lib/pcc_prefix.s $<
-#endif
-
 #if IS_SGI_IRIX62
 ASSEMBLER_SRC = SYSCALL.MIPS.IRIX62.s MMAP.MIPS.IRIX62.s
 ASSEMBLER_OBJ = SYSCALL.MIPS.IRIX62.o MMAP.MIPS.IRIX62.o
-.s.o:
-	gas -o $*.o $*.s
-#elif IS_SGI_IRIX53
-ASSEMBLER_SRC = SYSCALL.MIPS.IRIX53.s MMAP.MIPS.IRIX53.s
-ASSEMBLER_OBJ = SYSCALL.MIPS.IRIX53.o MMAP.MIPS.IRIX53.o
 .s.o:
 	gas -o $*.o $*.s
 #endif
@@ -82,33 +76,43 @@ OBJ =	syscall_mode.o
 #endif
 
 #if DOES_CHECKPOINTING
-	all_target(ToUpper machdep_test libckpt.a c_plus_alloc.o condor_rt0.o $(RELEASE_OBJ) )
 
-#if (IS_X86_SOLARIS25)
+	all_target(ToUpper libckpt.a c_plus_alloc.o condor_rt0.o $(RELEASE_OBJ) )
+
+#if IS_X86_SOLARIS || IS_GLIBC_LINUX
 	library_target(libtmp.a,$(OBJ))
-
-libckpt.a: libtmp.a ToUpper
-	ToUpper libtmp.a libckpt.a __cerror __CERROR
 
 clean::
 	rm -f libckpt.a
-#else 
+
+libckpt.a: libtmp.a ToUpper
+#   if (IS_X86_SOLARIS)
+	./ToUpper libtmp.a libckpt.a __cerror __CERROR
+#   else /* GLIBC Linux */
+	./ToUpper libtmp.a libckpt.a __syscall_error __SYSCALL_ERROR
+#   endif /* Solaris */
+#else  /* Not GLIBC Linux or Intel Solaris */
+
 	library_target(libckpt.a,$(OBJ))
-#endif 
+
+#endif /* GLIBC Linux or Intel Solaris */
+
 	release_library(libckpt.a,$(RELEASE_DIR)/lib)
 	release_target(c_plus_alloc.o,$(RELEASE_DIR)/lib,OBJECT_MODE)
 	strip_library(libckpt.a,$(STRIP_DIR)/lib)
 	strip_copy_target(c_plus_alloc.o,$(STRIP_DIR)/lib,c_plus_alloc.o,OBJECT_MODE)
 	static_library(libckpt.a,$(STATIC_DIR)/lib)
 	static_copy_target(c_plus_alloc.o,$(STATIC_DIR)/lib,c_plus_alloc.o,OBJECT_MODE)
-#else
+
+#else /* Not DOES_CHECKPOINTING */
+
 	all_target(syscall_mode.o ToUpper)
 release:: all
 stripped:: all
 #endif
 
 
-#if IS_HPPAR_HPUX9
+#if IS_HPUX
 SIGNAL.o :  $(SIMPLE_LIBC)  ToUpper
 	ar x    $(SIMPLE_LIBC)      signal.o      ; mv  signal.o  $(TMP_DIR)
 	./ToUpper $(TMP_DIR)/signal.o   SIGNAL.o   signal   SIGNAL
@@ -120,7 +124,7 @@ SIGNAL.o :  $(SIMPLE_LIBC)  ToUpper
 uppercase_target($(SIMPLE_LIBC),signal.o,SIGNAL.o,signal,SIGNAL)
 #endif
 
-#if (IS_X86_SOLARIS25)
+#if IS_X86_SOLARIS
 i386_data.o : $(SIMPLE_LIBC)
 	ar x $(SIMPLE_LIBC) i386_data.o
 #endif
@@ -128,7 +132,7 @@ i386_data.o : $(SIMPLE_LIBC)
 uppercase_target($(SIMPLE_LIBC),sigvec.o,SIGVEC.o,sigvec,SIGVEC)
 uppercase_target($(SIMPLE_LIBC),_sigvec.o,_SIGVEC.o,_sigvec,_SIGVEC)
 
-#if (IS_X86_SOLARIS25)
+#if IS_X86_SOLARIS
 SIGACTION.o : ToUpper $(SIMPLE_LIBC)
 	ar x $(SIMPLE_LIBC) sigaction.o
 	./ToUpper sigaction.o sigaction.tmp.o sigaction SIGACTION
@@ -138,7 +142,7 @@ SIGACTION.o : ToUpper $(SIMPLE_LIBC)
 uppercase_target($(SIMPLE_LIBC),sigaction.o,SIGACTION.o,sigaction,SIGACTION)
 #endif
 
-#if (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS25)
+#if IS_SOLARIS
 uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
 uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
 uppercase_target($(SIMPLE_LIBC),_sigaction.o,_SIGACTION.o,sigaction,SIGACTION)
@@ -162,12 +166,13 @@ SIGACTION.o : $(SIMPLE_LIBC) ToUpper
 uppercase_target($(SIMPLE_LIBC),sigsuspend.o,SIGSUSPEND.o,sigsuspend,SIGSUSPEND)
 #endif
 
-#if IS_I386_LINUX
+#if IS_LINUX
 uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
 #endif
 
 
-#if (IS_GLIBC) && (IS_I386_LINUX)
+#if IS_GLIBC_LINUX
+uppercase_target($(SIMPLE_LIBC),sysdep.o,SYSDEP.o,__syscall_error,__SYSCALL_ERROR)
 uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL_TMP.o,syscall,SYSCALL)
 
 SYSCALL.o: SYSCALL_TMP.o ToUpper
@@ -175,18 +180,15 @@ SYSCALL.o: SYSCALL_TMP.o ToUpper
 
 clean::
 	rm -f SYSCALL_TMP.o
-#elif (IS_I386_LINUX) || (IS_ALPHA_OSF1)
+#elif IS_LINUX || IS_DUX || IS_HPUX
 uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
+uppercase_target($(SIMPLE_LIBC),__syscall.o,__SYSCALL.o,__syscall,__SYSCALL)
 #endif
 
 depend_target($(SRC) )
 
-#if (IS_SUN4M_SOLARIS) || (IS_X86_SOLARIS) || (IS_SUN4M_SOLARIS251) || (IS_X86_SOLARIS25)
+#if IS_SOLARIS
 program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) MMAP.o SYSCALL.o fake_util_lib.o, )
-#elif (IS_HPPAR_HPUX9)
-program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) fake_util_lib.o, )
-#elif (IS_I386_LINUX)
-program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) fake_util_lib.o, )
 #else
 program_target(machdep_test,machdep_test.o machdep.$(OS).o tmp_stack.o $(ASSEMBLER_OBJ) fake_util_lib.o, )
 #endif
@@ -198,7 +200,7 @@ CMNT Create a replacement for crt0.o to be linked with condor programs.
 CMNT N.B. This is done differently than other objects in that we start out
 CMNT with a copy of crt0.o, and change the name of "main" to "MAIN".
 CMNT
-#if IS_HPPAR_HPUX9
+#if IS_HPUX
 condor_rt0.o: Crt0 ToUpper
 	./ToUpper Crt0 tmp1 _start _START 
 	./ToUpper tmp1 tmp2 _data_START _data_start
@@ -206,24 +208,16 @@ condor_rt0.o: Crt0 ToUpper
 	rm -f tmp1 tmp2
 clean::
 	rm -f condor_rt0.o
-#elif (IS_SUN4M_SOLARIS) || (IS_SUN4M_SOLARIS251)
-#undef sparc
-#undef sun
+#elif IS_SUN4X_SOLARIS
 condor_rt0.o: Crt0 ToUpper
 	./ToUpper Crt0 condor_rt0.o main  MAIN
 clean::
 	rm -f condor_rt0.o
-#define sparc
-#define sun
-#elif  (IS_X86_SOLARIS)
-#undef i386
-#undef sun
+#elif  IS_X86_SOLARIS
 condor_rt0.o: Crt0 ToUpper
 	./ToUpper Crt0 condor_rt0.o main  MAIN
 clean::
 	rm -f condor_rt0.o
-#define i386
-#define sun
 #else
 condor_rt0.o: Crt0 ToUpper
 	./ToUpper Crt0 condor_rt0.o main  MAIN

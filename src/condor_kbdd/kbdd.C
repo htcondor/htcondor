@@ -25,15 +25,13 @@
 
 #include "my_hostname.h"
 #include "condor_query.h"
+#include "get_daemon_addr.h"
 
 #include <utmp.h>
 #include <sys/file.h>
 #include <netinet/in.h>
 #include <rpc/types.h>
 #include <X11/Xlib.h>
-
-
-extern "C" char *get_startd_addr(const char *);
 
 char       *mySubSystem = "KBDD";
 XInterface *xinter;

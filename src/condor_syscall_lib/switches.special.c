@@ -28,6 +28,16 @@
   automatically go here...
 *******************************************************************/
 #include "condor_common.h"
+#include "syscall_sysdep.h"
+
+/* Since we've included condor_common.h, we know off64_t has been
+   defined, so we want to define this macro so the syscall_64bit.h
+   header file doesn't try to redefine off64_t.  In other places, we 
+   include syscall_64bit.h w/o condor_common.h, so it needs to define
+   off64_t in that case. -Derek W. 8/20/98 */
+#define _CONDOR_OFF64_T
+#include "syscall_64bit.h"
+#undef _CONDOR_OFF64_T
 
 #if defined(LINUX)
 int _xstat(int, const char *, struct stat *);
@@ -35,31 +45,29 @@ int _fxstat(int, int, struct stat *);
 int _lxstat(int, const char *, struct stat *);
 #endif
 
-	/* Temporary - need to get real PSEUDO definitions brought in... */
-#define PSEUDO_getwd	1
-
 #include "syscall_numbers.h"
 #include "condor_syscall_mode.h"
 #include "file_table_interf.h"
 
-#if defined(HPUX9)
+#if defined(HPUX)
 #	ifdef _PROTOTYPES   /* to remove compilation errors unistd.h */
 #	undef _PROTOTYPES
 #	endif
 #endif
 
-
-
 #include "debug.h"
 
-#if defined(IRIX53)
+#if defined(DL_EXTRACT)
 #   include <dlfcn.h>   /* for dlopen and dlsym */
 #endif
+
+extern unsigned int _condor_numrestarts;  /* in image.C */
 
 static int fake_readv( int fd, const struct iovec *iov, int iovcnt );
 static int fake_writev( int fd, const struct iovec *iov, int iovcnt );
 char	*getwd( char * );
 void    *malloc();     
+int	_condor_open( const char *path, int flags, va_list ap );
 
 /*
   The process should exit making the status value available to its parent
@@ -144,7 +152,7 @@ store_working_directory()
 	char	tbuf[ _POSIX_PATH_MAX ];
 	char	*status;
 
-#if defined(HPUX9)
+#if defined(HPUX)
 	/* avoid infinite recursion in HPUX9, where getwd calls chdir, which
 	   calls store_working_directory, which calls getwd...  - Jim B. */
 	static int inside_call = 0;
@@ -155,23 +163,25 @@ store_working_directory()
 #endif
 
 		/* Get the information */
-	status = getwd( tbuf );
+	status = getcwd( tbuf, sizeof(tbuf) );
 
 		/* This routine returns 0 on error! */
 	if( !status ) {
-		dprintf( D_ALWAYS, "getwd failed in store_working_directory()!\n" );
+		dprintf( D_ALWAYS, "getcwd failed in store_working_directory()!\n" );
 		Suicide();
 	}
 
 		/* Ok - everything worked */
 	Set_CWD( tbuf );
 
-#if defined(HPUX9)
+#if defined(HPUX)
 	inside_call = 0;
 #endif
 }
 
 /*
+  getrusage()
+
   Condor doesn't support the fork() system call, so by definition the
   resource usage of all our child processes is zero.  We must support
   this, since those users in the POSIX world will call utimes() which
@@ -183,37 +193,86 @@ store_working_directory()
   current machine, and the usages it accumulated on all the machines
   where it has run in the past.
 */
-
-#if !defined(Solaris) && !defined(IRIX53)
 int
 getrusage( int who, struct rusage *rusage )
 {
-	int rval;
-	struct rusage accum_rusage;
+	int rval = 0;
+	int rval1 = 0;
+	int scm;
+	static struct rusage accum_rusage;
+	static int num_restarts = 50;  /* must not initialize to 0 */
 
-	if( LocalSysCalls() ) {
-		rval = syscall( SYS_getrusage, who, rusage );
-	} else {
+	/* Get current rusage for this process accumulated on this machine */
 
-			/* Condor user processes don't have children - yet */
+	/* Set syscalls to local, since getrusage() in libc often calls
+	 * things like _open(), and we wish to avoid an infinite loop
+ 	 */
+	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+		
+#if defined( SYS_getrusage )
+		rval1 = syscall( SYS_getrusage, who, rusage);
+#elif defined( DL_EXTRACT )
+		{
+        void *handle;
+        int (*fptr)(int,struct rusage *);
+        if ((handle = dlopen("/usr/lib/libc.so", RTLD_LAZY)) == NULL) {
+            rval = -1;
+        } else {
+        	if ((fptr = (int (*)(int,struct rusage *))dlsym(handle, "getrusage")) == NULL) {
+           		 rval = -1;
+        	} else {
+        		rval1 = (*fptr)(who,rusage);
+			}
+		}
+		}
+#else
+		rval1 = GETRUSAGE(who,rusage);
+#endif 
+
+	/* Set syscalls back to what it was */
+	SetSyscalls(scm);
+
+	/* If in remote mode, we need to add in resource usage from previous runs as well */
+	if( !LocalSysCalls() ) {
+
+		/* Condor user processes don't have children - yet */
 		if( who != RUSAGE_SELF ) {
 			memset( (char *)rusage, '\0', sizeof(struct rusage) );
 			return 0;
 		}
 
-			/* Get current rusage for the running job. */
-		syscall( SYS_getrusage, who, rusage);
+		/* If our local getrusage above was successful, query the shadow 
+		 * for past usage */
+		if ( rval1 == 0 ) {  
+			/*
+			 * Get accumulated rusage from previous runs, but only once per
+			 * restart instead of doing a REMOTE_syscall every single time
+			 * getrusage() is called, which can be very frequently.
+			 * Note: _condor_numrestarts is updated in the restart code in
+			 * image.C whenver Condor does a restart from a checkpoint.
+			 */
+			if ( _condor_numrestarts != num_restarts ) {
+				num_restarts = _condor_numrestarts;
+				rval = REMOTE_syscall( CONDOR_getrusage, who, &accum_rusage );
+				/* on failure, clear out accum_rusage so we do not blow up
+				 * inside of update_rusage()
+				 */
+				if ( rval != 0 ) {
+					memset( (char *)&accum_rusage, '\0', sizeof(struct rusage) );
+				}
+			}
 
-			/* Get accumulated rusage from previous runs */
-		rval = REMOTE_syscall( CONDOR_getrusage, who, &accum_rusage );
-
-			/* Sum the two. */
-		update_rusage(rusage, &accum_rusage);
+			/* Sum up current rusage and past accumulated rusage */
+			update_rusage(rusage, &accum_rusage);
+		}
 	}
 
-	return( rval );
+	if ( rval == 0  && rval1 == 0 ) {
+		return 0;
+	} else {
+		return -1;
+	}
 }
-#endif
 
 /*
   This routine which is normally provided in the C library determines
@@ -247,10 +306,10 @@ isatty( int filedes )
   We don't handle readv directly in remote system calls.  Instead we
   break the readv up into a series of individual reads.
 */
-#if defined(HPUX9) || defined(LINUX)
+#if defined(HPUX9) || defined(LINUX) 
 ssize_t
 readv( int fd, const struct iovec *iov, size_t iovcnt )
-#elif defined(IRIX62) || defined(OSF1)
+#elif defined(IRIX62) || defined(OSF1)|| defined(HPUX10) || defined(Solaris26)
 ssize_t
 readv( int fd, const struct iovec *iov, int iovcnt )
 #else
@@ -335,7 +394,7 @@ linux_fake_readv( int fd, const struct iovec *iov, int iovcnt )
 #if defined(HPUX9) || defined(LINUX) 
 ssize_t
 writev( int fd, const struct iovec *iov, size_t iovcnt )
-#elif defined(Solaris) || defined(IRIX62) || defined(OSF1)
+#elif defined(Solaris) || defined(IRIX62) || defined(OSF1) || defined(HPUX10)
 ssize_t
 writev( int fd, const struct iovec *iov, int iovcnt )
 #else
@@ -413,12 +472,12 @@ linux_fake_writev( int fd, const struct iovec *iov, int iovcnt )
 #endif
 
 
-#if defined(HPUX9)
+#if defined(HPUX)
 #	include <sys/mib.h>
 #	include <sys/ioctl.h>
 #endif
 
-#if defined(Solaris) || defined(LINUX) || defined(OSF1) || defined(IRIX53)
+#if defined(Solaris) || defined(LINUX) || defined(OSF1) || defined(IRIX53) || defined(HPUX10)
 /* int
 ioctl( int fd, int request, ...) */
 #else
@@ -475,62 +534,42 @@ ioctl( int fd, int request, caddr_t arg )
 }
 #endif
 
-#if defined(AIX32)
-	char *
-	getwd( char *path )
-	{
-		if( LocalSysCalls() ) {
-			return getcwd( path, _POSIX_PATH_MAX );
-		} else {
-			return (char *)REMOTE_syscall( CONDOR_getwd, path );
-		}
-	}
+int
+#if defined(LINUX)
+ftruncate( int fd, size_t length )
+#else
+ftruncate( int fd, off_t length )
 #endif
+{
+	int	rval;
+	int	user_fd;
+	int use_local_access = FALSE;
 
-#if defined(Solaris)
-char *
-	getwd( char *path )
-	{
-		if( LocalSysCalls() ) {
-			return (char *)GETCWD( path, _POSIX_PATH_MAX );
-		} else {
-			return (char *)REMOTE_syscall( CONDOR_getwd, path );
-		}
+	/* The below length check is a hack to patch an f77 problem on
+	   OSF1.  - Jim B. */
+
+	if (length < 0)
+		return 0;
+
+	if( (user_fd=MapFd(fd)) < 0 ) {
+		return (int)-1;
+	}
+	if( LocalAccess(fd) ) {
+		use_local_access = TRUE;
 	}
 
-	char *
-	getcwd( char *path, size_t size )
-	{
-		if( LocalSysCalls() ) {
-			return (char *)GETCWD( path, size );
-		} else {
-			return (char *)REMOTE_syscall( CONDOR_getwd, path );
-		}
-	}
-
-	int
-	ftruncate( int fd, off_t length )
-	{
-		int	rval;
-		int	user_fd;
-		int use_local_access = FALSE;
-	
-		if( (user_fd=MapFd(fd)) < 0 ) {
-			return (int)-1;
-		}
-		if( LocalAccess(fd) ) {
-			use_local_access = TRUE;
-		}
-	
-		if( LocalSysCalls() || use_local_access ) {
-			rval = FTRUNCATE( user_fd, length );
-		} else {
-			rval = REMOTE_syscall( CONDOR_ftruncate, user_fd, length );
-		}
-	
-		return rval;
-	}
+	if( LocalSysCalls() || use_local_access ) {
+#if defined( SYS_ftruncate )
+		rval = syscall( SYS_ftruncate, user_fd, length );
+#else 
+		rval = FTRUNCATE( user_fd, length );
 #endif
+	} else {
+		rval = REMOTE_syscall( CONDOR_ftruncate, user_fd, length );
+	}
+
+	return rval;
+}
 
 #if defined(AIX32)
 	int
@@ -592,9 +631,8 @@ char *
   are always statically linked, we just make a dummy here to avoid
   the problem.
 */
-
 void ldr_atexit() {}
-#endif
+#endif /* defined OSF1 */
 
 /* This has been added to solve the problem with the printf and fprintf 
 statements on alphas but have not enclosed it in ifdefs since it will not
@@ -603,14 +641,14 @@ harm to other platforms */
 #if !defined(LINUX)
 __write(int fd, char *buf, int size)
 {
-return write(fd,buf,size);
+	return write(fd,buf,size);
 }
 #endif
 
 /* These are similar additions as above.  This problem cropped up for 
    FORTRAN programs on Solaris 2.4 and OSF1.  -Jim B. */
 
-#if !defined(HPUX9)
+#if !defined(HPUX)
 #if defined( SYS_write )
 _write( int fd, const void *buf, size_t len )
 {
@@ -629,8 +667,8 @@ __read( int fd, void *buf, size_t len )
 {
 	return read(fd,buf,len);
 }
-#endif
-#endif
+#endif /* !defined(LINUX) */
+#endif /* defined(SYS_read) */
 
 #if defined( SYS_lseek )
 off_t
@@ -644,49 +682,11 @@ __lseek( int fd, off_t offset, int whence )
 {
 	return lseek(fd,offset,whence);
 }
-#endif
-#endif
 
-#if defined(OSF1)
-char *
-__getwd( char *path_name )
-{
-	return getwd(path_name);
-}
+#endif /* !defined(LINUX) */
+#endif /* defined(SYS_lseek) */
 
-#if defined( SYS_ftruncate )
-int
-ftruncate( int fd, off_t length )
-{
-	int	rval;
-	int	user_fd;
-	int use_local_access = FALSE;
-
-	/* The below length check is a hack to patch an f77 problem on
-	   OSF1.  - Jim B. */
-
-	if (length < 0)
-		return 0;
-
-	if( (user_fd=MapFd(fd)) < 0 ) {
-		return (int)-1;
-	}
-	if( LocalAccess(fd) ) {
-		use_local_access = TRUE;
-	}
-
-	if( LocalSysCalls() || use_local_access ) {
-		rval = syscall( SYS_ftruncate, user_fd, length );
-	} else {
-		rval = REMOTE_syscall( CONDOR_ftruncate, user_fd, length );
-	}
-
-	return rval;
-}
-#endif /* defined( SYS_ftruncate ) */
-
-#endif /* defined(OSF1) */
-#endif /* !defined(HPUX9) */
+#endif /* !defined(HPUX) */
 
 #if defined(SYS_prev_stat) && defined(LINUX)
 int _xstat(int version, const char *path, struct stat *buf)
@@ -742,30 +742,12 @@ int _lxstat(int version, const char *path, struct stat *buf)
 }
 #endif
 
-#if defined(OSF1) || defined(IRIX53)
-char *getcwd ( char *buffer, size_t size )
-{
-	if (buffer == NULL) {
-		buffer = (char *)malloc(size);
-	}
-	fprintf(stderr, "getcwd called\n");
-	return getwd( buffer );
-}	
-#endif
-
-#if defined(IRIX53)
-char *_getcwd ( char *buffer, size_t size )
-{
-	fprintf(stderr, "_getcwd called\n");
-	return getcwd(buffer, size);
-}
-#endif
 
 /* fork() and sigaction() are not in fork.o or sigaction.o on Solaris 2.5
    but instead are only in the threads libraries.  We access the old
    versions through their new names. */
 
-#if defined(Solaris251)
+#if defined(Solaris)
 pid_t
 FORK()
 {
@@ -877,8 +859,7 @@ getlogin()
 #if defined( SYS_getlogin )
 		loc_rval = (char *) syscall( SYS_getlogin );
 		return loc_rval;
-#else
-#if defined(IRIX53) 
+#elif defined( DL_EXTRACT ) 
 		{
         void *handle;
         char * (*fptr)();
@@ -895,11 +876,12 @@ getlogin()
 #else
 		extern char *GETLOGIN();
 		return (  GETLOGIN() );
-#endif  /* of else part of IRIX53 */
-#endif	/* of else part of defined SYS_getlogin */
+#endif
 	} else {
-		if (loginbuf == NULL)
+		if (loginbuf == NULL) {
 			loginbuf = (char *)malloc(35);
+			memset( loginbuf, 0, 35 );
+		}
 		rval = REMOTE_syscall( CONDOR_getlogin, loginbuf );
 	}
 
@@ -955,3 +937,102 @@ mmap( MMAP_T a, size_t l, int p, int f, int fd, off_t o )
 #endif /* defined( LINUX ) */
 
 
+#if defined( Solaris26 )
+/*
+  There's an open64() on Solaris 2.6 that we want to trap.  We could
+  just remap it, except open() takes a variable number of args.  So
+  we just put in a definition here that deals with variable args and
+  calls the real open, which we'll trap and do our magic with.
+  -Derek Wright, 6/24/98
+
+  We also want _open64() and __open64().  -Derek 6/25/98
+
+  We really need to use the va_list differently.  We now setup our
+  va_list in (_*)open64() and always call _condor_open() which expects
+  a va_list as its 3rd arg.  -Derek 8/20/98
+*/
+
+int
+open64( const char* path, int oflag, ... ) {
+	va_list ap;
+	int rval;
+	va_start( ap, oflag );
+	rval = _condor_open( path, oflag, ap );
+	va_end( ap );
+	return rval;
+}
+
+int
+_open64( const char* path, int oflag, ... ) {
+	va_list ap;
+	int rval;
+	va_start( ap, oflag );
+	rval = _condor_open( path, oflag, ap );
+	va_end( ap );
+	return rval;
+}
+
+int
+__open64( const char* path, int oflag, ... ) {
+	va_list ap;
+	int rval;
+	va_start( ap, oflag );
+	rval = _condor_open( path, oflag, ap );
+	va_end( ap );
+	return rval;
+}
+
+#endif /* defined( Solaris26 ) */
+
+
+/* Special kill that allows us to send signals to ourself, but not any
+   other pids.  Written on 7/8 by Derek Wrigh <wright@cs.wisc.edu> */
+int
+kill( pid_t pid, int sig )
+{
+	int rval;
+	pid_t my_pid;	
+
+	if( LocalSysCalls() ) {
+			/* We're in local mode, do exactly what we were told. */
+		rval = SYSCALL( SYS_kill, pid, sig );
+	} else {
+			/* Remote mode.  Only allow signals to be sent to ourself.
+			   Call the same getpid() the user job is calling to see
+			   if it is trying to send a signal to itself */
+		my_pid = getpid();   
+		if( pid == my_pid ) {
+				/* The user job thinks it's sending a signal to
+				   itself... let that work by getting our real pid. */
+			my_pid = SYSCALL( SYS_getpid );
+			rval = SYSCALL( SYS_kill, my_pid, sig );			
+		} else {
+				/* We don't allow you to send signals to anyone else */
+			rval = -1;
+		}
+	}	
+	return rval;
+}
+
+
+#if SYNC_RETURNS_VOID
+void
+#else
+int
+#endif
+sync( void )
+{
+	int rval;
+	pid_t my_pid;	
+
+	/* Always want to do a local sync() */
+	SYSCALL( SYS_sync );
+
+	/* If we're in remote mode, also want to send a sync() to the shadow */
+	if( RemoteSysCalls() ) {
+		REMOTE_syscall( CONDOR_sync );
+	}
+#if ! SYNC_RETURNS_VOID
+	return 0;
+#endif
+}

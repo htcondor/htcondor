@@ -44,8 +44,6 @@
 #ifndef _UID_H
 #define _UID_H
 
-#include "_condor_fix_types.h"
-
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -64,6 +62,7 @@ typedef enum {
 #define set_user_priv_final() _set_priv(PRIV_USER_FINAL, __FILE__, __LINE__, 1)
 #define set_root_priv()	_set_priv(PRIV_ROOT, __FILE__, __LINE__, 1)
 
+void _condor_disable_uid_switching();
 void init_condor_ids();
 void init_user_ids(const char username[]);
 void uninit_user_ids();

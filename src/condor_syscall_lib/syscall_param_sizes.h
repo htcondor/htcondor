@@ -47,3 +47,8 @@
 #define U_SHORT_SIZE sizeof(u_short)
 #define U_INT_SIZE sizeof(u_int)
 #define NEG_ONE -1
+
+#if defined( HAS_64BIT_STRUCTS )
+#define STAT64_SIZE sizeof(struct stat64)
+#define RLIMIT64_SIZE sizeof(struct rlimit64)
+#endif
