@@ -272,7 +272,7 @@ bool
 SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad, 
 								bool other_side_can_negotiate )
 {
-	char buf[512];
+	char buf[1024];
 
 	if( ! ad ) {
 		EXCEPT( "SecMan::FillInSecurityPolicyAd called with NULL ad!" );
@@ -469,7 +469,7 @@ SecMan::getSecSetting( const char* fmt, const char* authorization_level ) {
 	// for those of you reading this code, a 'paramer'
 	// is a thing that param()s.
 	char *paramer = NULL;
-	char buf[512];
+	char buf[1024];
 
 	if (authorization_level && authorization_level[0]) {
 		sprintf(buf, fmt, authorization_level);
@@ -639,7 +639,7 @@ SecMan::ReconcileSecurityPolicyAds(ClassAd &cli_ad, ClassAd &srv_ad) {
 	// make a classad with the results
 	ClassAd * action_ad = new ClassAd();
 
-	char buf[128];
+	char buf[1024];
 
 	sprintf (buf, "%s=\"%s\"", ATTR_SEC_AUTHENTICATION, SecMan::sec_feat_act_rev[authentication_action]);
 	action_ad->Insert(buf);
@@ -747,7 +747,7 @@ SecMan::startCommand( int cmd, Sock* sock, bool &can_negotiate, int subCmd)
 
 
 	// need a temp buffer handy throughout.
-	char buf[256];
+	char buf[1024];
 
 	// this one is a temp for storing key ids
 	char keybuf[128];
