@@ -113,6 +113,14 @@ typedef DWORD pid_t;
 
 #define ETIMEDOUT ERROR_TIMEOUT
 
+/* Some missing ERRNO values.... */
+#ifndef ETXTBSY
+#	define ETXTBSY EBUSY
+#endif
+#ifndef EWOULDBLOCK
+#	define EWOULDBLOCK EAGAIN
+#endif
+
 typedef fd_set *SELECT_FDSET_PTR;
 
 struct rusage {
