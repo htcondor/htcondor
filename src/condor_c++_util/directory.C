@@ -47,6 +47,11 @@
 // -----------------------------------------------
 
 
+#ifndef WIN32
+static bool GetIds( const char *path, uid_t *owner, gid_t *group );
+#endif
+
+
 StatInfo::StatInfo( const char *path )
 {
 	char *s, *last = NULL;
@@ -146,6 +151,8 @@ StatInfo::do_stat( const char *path )
 		// consider it to be executable.
 		isexecutable = ((statbuf.st_mode & (S_IXUSR|S_IXGRP|S_IXOTH)) != 0 );
 		issymlink = S_ISLNK(statbuf.st_mode);
+		owner = statbuf.st_uid;
+		group = statbuf.st_gid;
 #else
 		isdirectory = ((_S_IFDIR & statbuf.st_mode) != 0);
 		isexecutable = ((_S_IEXEC & statbuf.st_mode) != 0);
@@ -310,7 +317,28 @@ Directory::GetDirectorySize()
 }
 
 bool
-Directory::Remove_Entire_Directory()
+Directory::Find_Named_Entry( const char *name )
+{
+	const char* entry = NULL;
+	bool ret_value = false;
+
+	Set_Access_Priv();
+
+	Rewind();
+
+	while ( (entry = Next()) ) {
+		if ( ! strcmp( entry, name ) ) {
+			ret_value = true;
+			break;
+		}
+	}
+
+	// Done
+	return_and_resetpriv( ret_value );
+}
+
+bool
+Directory::Remove_Entire_Directory( dir_rempriv_t rem_priv )
 {
 	const char* thefile = NULL;
 	bool ret_value = true;
@@ -320,7 +348,7 @@ Directory::Remove_Entire_Directory()
 	Rewind();
 
 	while ( (thefile=Next()) ) {
-		if ( Remove_Current_File() == false ) {
+		if ( Remove_Current_File( rem_priv ) == false ) {
 			ret_value = false;
 		}
 	}
@@ -328,28 +356,35 @@ Directory::Remove_Entire_Directory()
 	return_and_resetpriv(ret_value);
 }
 
-
 bool 
-Directory::Remove_File( const char* path )
+Directory::Remove_Entry( const char* name, dir_rempriv_t rem_priv )
 {
-	return do_remove( path, false );
+	char	path[_POSIX_PATH_MAX];
+
+	sprintf( path, "%s%c%s", curr_dir, DIR_DELIM_CHAR, name );
+	return do_remove( path, false, rem_priv );
 }
 
+bool
+Directory::Remove_Full_Path( const char *path, dir_rempriv_t rem_priv )
+{
+	return do_remove( path, false, rem_priv );
+}
 
 bool 
-Directory::Remove_Current_File()
+Directory::Remove_Current_File( dir_rempriv_t rem_priv )
 {
 	if ( curr == NULL ) {
 		// there is no current file; user probably did not call
 		// Next() yet.
 		return false;
 	}
-	return do_remove( curr->FullPath(), true );
+	return do_remove( curr->FullPath(), true, rem_priv );
 } 
 
 
 bool 
-Directory::do_remove( const char* path, bool is_curr )
+Directory::do_remove( const char* path, bool is_curr, dir_rempriv_t rem_priv )
 {
 	char buf[_POSIX_PATH_MAX];
 	bool ret_val = true;
@@ -371,48 +406,100 @@ Directory::do_remove( const char* path, bool is_curr )
 		// the shell to do the dirty work.
 		int try_1_rc = 0;
 		int try_2_rc = 0;
+
 #ifdef WIN32
-		sprintf( buf,"rmdir /s /q \"%s\"", path );
+		sprintf( buf, "rmdir /s /q \"%s\"", path );
 #else
-		sprintf( buf,"/bin/rm -rf %s", path );
+		sprintf( buf, "/bin/rm -rf %s", path );
 #endif
 
 #if DEBUG_DIRECTORY_CLASS
-		dprintf(D_ALWAYS,"Directory: about to call %s\n",buf);
-#else
+		dprintf(D_ALWAYS,"Directory: about to call %s\n", buf);
+#elsif defined( WIN32 )
 		try_1_rc = system( buf );
+#else
+		try_1_rc = my_spawnl( "/bin/rm", TRUE, "/bin/rm", "-rf",
+							  path, NULL );
 #endif
 
-		// for good measure, repeat the above operation a second
-		// time as user Condor.  We do this because if we currently
-		// have root priv, and we are accessing files across NFS, we
-		// will get re-mapped to user "nobody" by any NFS daemon worth
-		// its salt.  
+			// for good measure, repeat the above operation a second
+			// time // as the owner of the entry.  We do this because
+			// if we // currently have root priv, and we are accessing
+			// files across // NFS, we will get re-mapped to user
+			// "nobody" by any NFS // daemon worth its salt.
+#ifndef WIN32
+		if ( ( want_priv_change ) && ( rem_priv == DIR_REMPRIV_OWNER ) ) {
+
+				// Let's learn about the file's owner
+			uid_t		uid;
+			gid_t		gid;
+			const char	*full;
+			if ( is_curr ) {
+				uid = curr->GetOwner( );
+				gid = curr->GetGroup( );
+				full = curr->FullPath( );
+			} else {
+				GetIds( path, &uid, &gid );
+				full = path;
+			}
+
+				// !! Refuse to remove entries owned by root !!
+			if ( ( 0 == uid ) || ( 0 == gid ) ) {
+				dprintf( D_ALWAYS, "NOT Removing %s as with ids to %d.%d\n",
+						 full, uid, gid );
+				dprintf( D_ALWAYS, "It's owned by root, I won't do that\n" );
+				return_and_resetpriv(ret_val);
+			}
+
+				// Log what we're about to do
+			dprintf( D_FULLDEBUG, "Removing %s as with ids to %d.%d\n",
+					 full, uid, gid );
+
+				// Become the user who owns the directory
+			uninit_user_ids( );
+			set_user_ids( uid, gid );
+			priv = set_user_priv( );
+
+				// Finally, do the work
+#if DEBUG_DIRECTORY_CLASS
+			dprintf(D_ALWAYS,
+				"Directory: with \"owner\" priv about to call %s\n",buf);
+#else
+			try_2_rc = my_spawnl( "/bin/rm", TRUE, "/bin/rm", "-rf",
+								  path, NULL );
+#endif
+
+				// When all of that is done, switch back to our normal user
+			set_priv(priv);
+		}
+
+		else
+#endif
+
+			// for good measure, repeat the above operation a second
+			// time as user Condor.  We do this because if we currently
+			// have root priv, and we are accessing files across NFS, we
+			// will get re-mapped to user "nobody" by any NFS daemon worth
+			// its salt.
 		if ( want_priv_change && (desired_priv_state == PRIV_ROOT) ) {
 			priv = set_condor_priv(); 
+
+			dprintf( D_FULLDEBUG, 
+					 "Removing %s as condor user\n", curr->FullPath() );
 
 #if DEBUG_DIRECTORY_CLASS
 			dprintf(D_ALWAYS,
 				"Directory: with condor priv about to call %s\n",buf);
-#else
+#elsif defined( WIN32 )
 			try_2_rc = system( buf );
+#else
+			try_2_rc = my_spawnl( "/bin/rm", TRUE, "/bin/rm", "-rf",
+								  path, NULL );
 #endif
 
 			set_priv(priv);
 		}
-		else {
-			// Let the second attempt have the same error code as the
-			// first attempt, since we require _both_ to fail in order
-			// to detect a failure.
-			try_2_rc = try_1_rc;
-		}
-		if(try_1_rc && try_2_rc && ::IsDirectory(path)) {
-			// Both attempts to remove the directory failed,
-			// and the directory does in fact exist.
-			ret_val = false;
-			errno = 0; //do not know precise errno, so clear it to prevent
-			           //final code below from doing the wrong thing.
-		}
+
 	} else {
 		// the current file is not a directory, just a file	
 
@@ -614,6 +701,33 @@ IsSymlink( const char *path )
 	EXCEPT("IsSymlink() unexpected error code"); // does not return
 	return false;
 }
+
+
+#ifndef WIN32
+static bool 
+GetIds( const char *path, uid_t *owner, gid_t *group )
+{
+	StatInfo si( path );
+	switch( si.Error() ) {
+	case SIGood:
+		*owner = si.GetOwner( );
+		*group = si.GetGroup( );
+		break;
+	case SINoFile:
+			// Silently return false
+		return false;
+		break;
+	case SIFailure:
+		dprintf( D_ALWAYS, "GetIds: Error in stat(%s), errno: %d\n", 
+				 path, si.Errno() );
+		return false;
+		break;
+	}
+
+	EXCEPT("GetIds() unexpected error code"); // does not return
+	return false;
+}
+#endif
 
 
 /*
