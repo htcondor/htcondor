@@ -799,35 +799,6 @@ char *_getcwd ( char *buffer, size_t size )
 	fprintf(stderr, "_getcwd called\n");
 	return getcwd(buffer, size);
 }
-
-int
-fstat( int fd, struct stat *buf )
-{
-	int	rval;
-	int	user_fd;
-	int use_local_access = FALSE;
-
-	if( (user_fd=MapFd(fd)) < 0 ) {
-		return (int)-1;
-	}
-	if( LocalAccess(fd) ) {
-		use_local_access = TRUE;
-	}
-
-	if( LocalSysCalls() || use_local_access ) {
-		rval = fxstat( 2, user_fd, buf );
-	} else {
-		rval = REMOTE_syscall( CONDOR_fstat, user_fd, buf );
-	}
-
-	return rval;
-}
-
-int
-_fstat( int fd, struct stat *buf )
-{
-	return fstat( fd, buf );
-}
 #endif
 
 /* fork() and sigaction() are not in fork.o or sigaction.o on Solaris 2.5
@@ -863,11 +834,11 @@ _sysconf(int name)
 }
 #endif
 
-/* On Solaris, stat, lstat, and fstat are statically defined in stat.h,
+/* On Solaris and IRIX, stat, lstat, and fstat are statically defined in stat.h,
    so we can't override them.  Instead, we override the following three
    xstat definitions.  */
 
-#if defined(Solaris)
+#if defined(Solaris) || defined(IRIX53)
 int _xstat(int ver, char *path, struct stat *buf)
 {
 	int	rval;
