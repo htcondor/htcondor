@@ -8,6 +8,7 @@
 \oOpt{-d}
 % this option needs the dots in boldface, so using the macro oOptArg won't work
 \Lbr\Opt{-a} \Arg{command} \Opt{\Dots}\Rbr 
+\oOpt{-s}
 \oArg{submit description file}
 
 \index{Condor commands!condor\_submit}
@@ -844,8 +845,6 @@ If nothing is specified in the submit description file,
 it will use the environment variable X509\_USER\_CERT.
 If that variable is not present,
 it will search in the default location.
-%Commented out by Karen for 6.4.3.
-%See section~\ref{sec:X509-Authentication} for more info.
 
 %%%%%%%%%%%%%%%%%%%
 %% globusscheduler
@@ -876,11 +875,25 @@ string attributes which are not covered by regular submit description
 file parameters.
 
 %%%%%%%%%%%%%%%%%%%
+%% leave_in_queue
+%%%%%%%%%%%%%%%%%%%
+
+\item[leave\_in\_queue = $<$ClassAd Boolean Expression$>$] 
+When the ClassAd Expression evaluates to \Arg{True}, the job is
+not removed from the queue upon completion.
+The job remains in the queue until the user runs \Condor{rm}
+to remove the job from the queue.
+This allows the user of a remotely spooled job to retrieve output
+files in cases where Condor would have removed them as part of
+the cleanup associated with completion.
+Defaults to \Arg{False}.
+
+%%%%%%%%%%%%%%%%%%%
 %% Transfer_Executable
 %%%%%%%%%%%%%%%%%%%
 
 \item[transfer\_executable = $<$True \Bar\ False$>$] If \Opt{transfer\_executable} is set to
-\Arg{false}, then Condors look for the executable on the remote machine, and
+\Arg{false}, then Condor looks for the executable on the remote machine, and
 does not transfer the executable over.
 This is useful if you have already pre-staged your
 executable and wish to have Condor behave more like rsh.
@@ -946,7 +959,7 @@ executable before the \Prog{exec}.
    # for this host
    scp elsewhere@cs.wisc.edu:${host} executable
 
-   # The pid MUST stay the same, so exec the new standard universe process.
+   # The PID MUST stay the same, so exec the new standard universe process.
    exec executable ${1+"$@"}
 \end{verbatim} 
 If this command is not present (defined), then the value
@@ -1078,6 +1091,16 @@ Multiple commands are specified by using the \Opt{-a} option multiple times.
 Each new command is given in a separate \Opt{-a} option.
 Commands with spaces in them will need to be enclosed in double quote
 marks.}
+
+\OptItem{\Opt{-s}}{Spool all required input files, user log, and
+proxy to the machine defined by the \Macro{SCHEDD\_HOST} configuration
+variable.
+This is an alternative way to accomplish the same as using
+the 
+\OptArg{-r}{schedd\_name} option.
+With the 
+\Opt{-s} option, the remote \Condor{schedd} is specified using
+a configuration variable instead of a command line argument.}
 
 \OptItem{submit description file}{The pathname to the submit description
 file. If this optional argument is missing, then the commands are
