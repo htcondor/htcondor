@@ -17,7 +17,64 @@ being added, many bugs fixed, etc.
 It should not be used for a production pool.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:New-6-1-1}Version 6.1.2}
+\subsubsection{\label{sec:New-6-1-3}Version 6.1.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{itemize}
+
+\item Owners can now specify how the SMP-Startd partitions the system
+resources into the different types and numbers of virtual machines,
+specifying the number of CPUs, megs of RAM, megs of swap space, etc.,
+in each.  
+The number of virtual machines reporting of any given type can also be
+changed dynamically through the \Condor{smp\_admin} tool.  
+
+\item Fixed a bug in the reporting of virtual memory and disk space on
+SMP machines where each virtual machine represented was advertising
+the total in the system for itself, instead of its own share.
+Now, both the totals, and the virtual machine-specific values are
+advertised.  
+
+\item Fixed bug in ClassAd printing when you tried to display an
+integer or float attribute that didn't exist in the given ClassAd. 
+This could show up in condor_status, condor_q, condor_history, etc.
+  
+\item Various commands sent to the Condor daemons now have seperate
+debug levels associated with them.
+For example, commands such as ``keep-alives'', and the command sent
+from the \Condor{kbdd} to the \Condor{startd} are only seen in the
+various log files if \Dflag{FULLDEBUG} is turned on, instead of
+\Dflag{COMMAND}, which the default and now enabled for all daemons on
+all platforms by default.
+Administrators retaining their old configuration when upgrading to
+this version are encouraged to enable \Dflag{COMMAND} in the
+\Macro{SCHEDD\_DEBUG} setting.  
+In addition, for IRIX and Digital Unix machines, it should be enabled
+in the \Macro{STARTD\_DEBUG} setting as well.
+See section~\ref{sec:Daemon-Logging-Config-File-Entries} on
+page~\pageref{sec:Daemon-Logging-Config-File-Entries} for details on
+debug levels in Condor.
+
+\item New debug levels added to Condor: 
+\begin{itmeize}
+\item \Dflag{NETWORK}, used by various daemons in Condor to report
+various network statistics about the Condor daemons. 
+\item \Dflag{KEYBOARD}, used by the \Condor{startd} to print out
+statistics about remote tty and console idle times in the
+\Condor{startd}.
+This information used to be logged at \Dflag{FULLDEBUG}, along with
+everything else, so now, you can see just the idle times, and/or have
+the information stored to a seperate file.
+\end{itemize}
+
+\item Fixed up bug in the SMP-Startd's load average computation that
+could cause certain rare exceptions to be treated as fatal, when in
+fact, the Startd could recover from them.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:New-6-1-2}Version 6.1.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{itemize}
@@ -48,7 +105,7 @@ from \Condor{starter.pvm} into the \File{ShadowLog} file of the
 machine that submitted the job (as opposed to the \File{StarterLog}
 file on the machine executing the job).  
 
-\end{itemize}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:New-6-1-1}Version 6.1.1}
