@@ -25,11 +25,14 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_string.h"
+#include "condor_attributes.h"
 #include "internet.h"
 #include "daemon.h"
 #include "dc_collector.h"
 #include "condor_parameters.h"
 
+// Instantiate things
+template class ExtArray<DCCollectorAdSeq *>;
 
 DCCollector::DCCollector( const char* name, const char* pool, 
 						  UpdateType type ) 
@@ -59,6 +62,7 @@ DCCollector::init( void )
 	use_tcp = false;
 	udp_update_destination = NULL;
 	tcp_update_destination = NULL;
+	startTime = time( NULL );
 	reconfig();
 }
 
@@ -193,6 +197,26 @@ DCCollector::sendUpdate( int cmd, ClassAd* ad1, ClassAd* ad2 )
 	if( ! _is_configured ) {
 			// nothing to do, treat it as success...
 		return true;
+	}
+
+	// Add start time & seq # to the ads before we publish 'em
+	char	tmp [80];
+	sprintf( tmp, "%s=%ld", ATTR_DAEMON_START_TIME, (long) startTime );
+	if ( ad1 ) {
+		ad1->InsertOrUpdate( tmp );
+	}
+	if ( ad2 ) {
+		ad2->InsertOrUpdate( tmp );
+	}
+	if ( ad1 ) {
+		int	seq = adSeqMan.GetSequence( ad1 );
+		sprintf( tmp, "%s=%u", ATTR_UPDATE_SEQUENCE_NUMBER, seq );
+		ad1->InsertOrUpdate( tmp );
+	}
+	if ( ad2 ) {
+		int	seq = adSeqMan.GetSequence( ad2 );
+		sprintf( tmp, "%s=%u", ATTR_UPDATE_SEQUENCE_NUMBER, seq );
+		ad2->InsertOrUpdate( tmp );
 	}
 
 	if( cmd == UPDATE_COLLECTOR_AD || cmd == INVALIDATE_COLLECTOR_ADS ) {
@@ -411,4 +435,136 @@ DCCollector::initDestinationStrings( void )
 		dest += ')';
 		tcp_update_destination = strnewp( dest.Value() );
 	}
+}
+
+// Constructor for the Ad Sequence Number
+DCCollectorAdSeq::DCCollectorAdSeq( const char *inName,
+									const char *inMyType,
+									const char *inMachine )
+{
+	// Copy the fields
+	if ( inName ) {
+		Name = strdup( inName );
+	} else {
+		Name = NULL;
+	}
+	if ( inMyType ) {
+		MyType = strdup( inMyType );
+	} else {
+		MyType = NULL;
+	}
+	if ( inMachine ) {
+		Machine = strdup( inMachine );
+	} else {
+		Machine = NULL;
+	}
+	sequence = 0;
+}
+
+// Destructor for the Ad Sequence Number
+DCCollectorAdSeq::~DCCollectorAdSeq( void )
+{
+	// Free the allocated strings
+	if ( Name ) {
+		free( Name );
+	}
+	if ( MyType ) {
+		free( MyType );
+	}
+	if ( Machine ) {
+		free( Machine );
+	}
+}
+
+// Match operator
+bool DCCollectorAdSeq::Match( const char *inName,
+							  const char *inMyType,
+							  const char *inMachine )
+{
+	// Check for complete match.. Return false if there are ANY mismatches
+	if ( inName ) {
+		if ( ! Name ) {
+			return false;
+		}
+		if ( strcmp( Name, inName ) ) {
+			return false;
+		}
+	} else if ( Name )
+	{
+		return false;
+	}
+
+	if ( inMyType ) {
+		if ( ! MyType ) {
+			return false;
+		}
+		if ( strcmp( MyType, inMyType ) ) {
+			return false;
+		}
+	} else if ( MyType )
+	{
+		return false;
+	}
+
+	if ( inMachine ) {
+		if ( ! Machine ) {
+			return false;
+		}
+		if ( strcmp( Machine, inMachine ) ) {
+			return false;
+		}
+	} else if ( Machine )
+	{
+		return false;
+	}
+
+	// If we passed all the tests, must be good.
+	return true;
+}
+
+// Get the sequence number
+unsigned DCCollectorAdSeq::GetSequence( void )
+{
+	return sequence++;
+}
+
+
+// Constructor for the Ad Sequence Number Manager
+DCCollectorAdSeqMan::DCCollectorAdSeqMan( void ) 
+{
+	// adSeqInfo = new ExtArray<DCCollectorAdSeq*>;
+	numAds = 0;
+}
+
+// Destructor for the Ad Sequence Number Manager
+DCCollectorAdSeqMan::~DCCollectorAdSeqMan( void )
+{
+	//delete adSeqInfo;
+}
+
+// Get the sequence number
+unsigned DCCollectorAdSeqMan::GetSequence( ClassAd *ad )
+{
+	int			adNum;
+	char		*name = NULL;
+	char		*myType = NULL;
+	char		*machine = NULL;
+
+	// Extract the 'key' attributes of the ClassAd
+	ad->LookupString( ATTR_NAME, &name );
+	ad->LookupString( ATTR_MY_TYPE, &myType );
+	ad->LookupString( ATTR_MACHINE, &machine );
+
+	// Walk through the ads that we know of, find a match...
+	for ( adNum = 0;  adNum < numAds;  adNum++ ) {
+		if ( adSeqInfo[adNum]->Match( name, myType, machine ) ) {
+			unsigned seq = adSeqInfo[adNum]->GetSequence( );
+			return seq;
+		}
+	}
+
+	// No matches; create a new one, add to the list
+	DCCollectorAdSeq	*newAdSeq = new DCCollectorAdSeq ( name, myType, machine );
+	adSeqInfo[numAds++] = newAdSeq;
+	return newAdSeq->GetSequence( );
 }

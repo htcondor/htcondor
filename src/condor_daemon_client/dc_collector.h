@@ -28,7 +28,38 @@
 #include "daemon.h"
 #include "condor_classad.h"
 #include "condor_io.h"
+#include "extArray.h"
 
+/** Class to manage the sequence nubmers of individual ClassAds
+ * published by the application
+ **/
+class DCCollectorAdSeq {
+  public:
+	DCCollectorAdSeq( const char *, const char *, const char * );
+	~DCCollectorAdSeq( void );
+	bool Match( const char *, const char *, const char * );
+	unsigned GetSequence( void );
+
+  private:
+	char		*Name;			// "Name" in the ClassAd
+	char		*MyType;		// "MyType" in the ClassAd
+	char		*Machine;		// "Machine" in ClassAd
+	unsigned sequence;		// The sequence number for it.
+};
+
+/** Class to manage the sequence nubmers of all ClassAds published by
+ * the application
+ **/
+class DCCollectorAdSeqMan {
+  public:
+	DCCollectorAdSeqMan( void );
+	~DCCollectorAdSeqMan( void );
+	unsigned GetSequence( ClassAd *ad );
+
+  private:
+	ExtArray<DCCollectorAdSeq *> adSeqInfo;
+	int		numAds;
+};
 
 /** This is the Collector-specific class derived from Daemon.  It
 	implements some of the collectors's daemonCore command interface.  
@@ -100,6 +131,10 @@ private:
 
 
 	void displayResults( void );
+
+	// Items to manage the sequence numbers
+	time_t startTime;
+	DCCollectorAdSeqMan adSeqMan;
 };
 
 
