@@ -29,7 +29,7 @@ elif [ $os = "OSF1" -a $osversion = "V4.0" ] ; then
 
 elif [ $os = "Linux" ]; then
 	Opsys="-DIS_LINUX"
-	if [ -f /lib/libc.so.6 ] ; then
+	if [ -f /lib/libc.so.6* ] ; then
 		Other="-DIS_GLIBC"
 	fi
 	if [ $arch = "i686" -o $arch = "i586" -o $arch = "i486" ] ; then
