@@ -19,7 +19,7 @@ The way SMP machines are represented to the Condor system is that
 the shared resources are broken up into individual \Term{virtual
 machines} (``vm'') that can be matched with and claimed by users.
 Each virtual machine is represented by an individual ``ClassAd''
-(see the ClassAd reference, section~\ref{classad-refernce}, for
+(see the ClassAd reference, section~\ref{classad-reference}, for
 details). 
 In this way, a single SMP machine will appear to the Condor system as
 a collection of seperate virtual machines.  
@@ -44,8 +44,8 @@ percentage or total value of each resource will go to each vm.
 section~\ref{sec:Configuring-Policy} on ``Configuring The Startd
 Policy'' before you proceed with this section.
 
-Each virtual machine from an SMP machine is treated as an independent
-machine, with its own view of its machine state.
+Each virtual machine from an SMP is treated as an independent machine,
+with its own view of its machine state.
 For now, a single set of policy expressions is in place for all
 virtual machines simultaneously.  
 Eventually, you will be able to explicitly specify seperate policies
