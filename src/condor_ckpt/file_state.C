@@ -1547,16 +1547,16 @@ close( int fd )
 			return syscall( SYS_close, fd );
 		}
 		dprintf(D_FULLDEBUG, "standalone close: fd=%d, rval = %d\n", fd, rval);
-		dprintf(D_FULLDEBUG, "Leaving close(): closing fd  = %d\n", fd);
+		dprintf(D_FULLDEBUG, "Leaving close(): closing fd = %d\n", fd);
 		return rval;
 	} else {
 		if( LocalSysCalls() ) {
 			dprintf(D_FULLDEBUG, 
-				"Leaving close(): closing fd  = %d\n", fd);
+				"Leaving close(): closing fd = %d\n", fd);
 			return syscall( SYS_close, fd );
 		} else {
 			dprintf(D_FULLDEBUG, 
-				"Leaving close(): remote closing fd  = %d\n", fd);
+				"Leaving close(): remote closing fd = %d\n", fd);
 			return REMOTE_syscall( CONDOR_close, fd );
 		}
 	}
