@@ -443,18 +443,38 @@ SecMan::FillInSecurityPolicyAd( const char *auth_level, ClassAd* ad,
 	// key duration
 	// ZKM TODO HACK
 	// need to check kerb expiry.
-	paramer = SecMan::getSecSetting("SEC_%s_SESSION_DURATION", auth_level);
+
+	// first try the form SEC_<subsys>_<authlev>_SESSION_DURATION
+	// if that does not exist, fall back to old form of
+	// SEC_<authlev>_SESSION_DURATION.
+	char fmt[128];
+	sprintf(fmt, "SEC_%s_%%s_SESSION_DURATION", mySubSystem);
+	paramer = SecMan::getSecSetting(fmt, auth_level);
+	if (!paramer) {
+		paramer = SecMan::getSecSetting("SEC_%s_SESSION_DURATION", auth_level);
+	}
 
 	if (paramer) {
+		// take whichever value we found and put it in the ad.
 		sprintf(buf, "%s=\"%s\"", ATTR_SEC_SESSION_DURATION, paramer);
 		free( paramer );
 		paramer = NULL;
 
 		ad->Insert(buf);
 	} else {
-		// default: 100 days.  this is a temporary workaround for 6.6.0
-		sprintf(buf, "%s=\"8640000\"", ATTR_SEC_SESSION_DURATION);
-
+		// no value defined, use defaults.
+		if (strcmp(mySubSystem, "TOOL") == 0) {
+			// default for tools is 1 minute.
+			sprintf(buf, "%s=\"60\"", ATTR_SEC_SESSION_DURATION);
+		} else if (strcmp(mySubSystem, "SUBMIT") == 0) {
+			// default for submit is 1 hour.  yeah, that's a long submit
+			// but you never know with file transfer and all.
+			sprintf(buf, "%s=\"3600\"", ATTR_SEC_SESSION_DURATION);
+		} else {
+			// default for daemons is 100 days.  this is a temporary workaround
+			// for 6.6.X until automatic re-negotiation is implemented.
+			sprintf(buf, "%s=\"8640000\"", ATTR_SEC_SESSION_DURATION);
+		}
 		ad->Insert(buf);
 	}
 
