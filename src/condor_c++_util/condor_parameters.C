@@ -28,8 +28,9 @@
 #include "condor_network.h" 
 
 // Collector parameters
-const char *PARAM_COLLECTOR_PORT    = "COLLECTOR_PORT";
-const char *PARAM_CONDOR_VIEW_PORT  = "CONDOR_VIEW_PORT";
+const char *PARAM_COLLECTOR_PORT                   = "COLLECTOR_PORT";
+const char *PARAM_CONDOR_VIEW_PORT                 = "CONDOR_VIEW_PORT";
+const char *PARAM_CONDOR_DEVELOPERS_COLLECTOR_PORT = "CONDOR_DEVELOPERS_COLLECTOR_PORT";
 
 // Negotiator parameters
 const char *PARAM_NEGOTIATOR_PORT   = "NEGOTIATOR_PORT";
@@ -77,6 +78,31 @@ int param_get_condor_view_port(void)
 	}
 
 	return condor_view_port;
+}
+
+/****************************************************************************
+ *
+ * Function: param_get_collector_port
+ * Purpose:  Find the port that the collector should be running on. 
+ *           This occurs in multiple places in the code, so we made it
+ *           into a function, even though it is rather simple.
+ *
+ ****************************************************************************/
+int param_get_condor_developers_collector_port(void)
+{
+	int collector_port;
+
+	collector_port = param_integer(PARAM_CONDOR_DEVELOPERS_COLLECTOR_PORT, 
+								   COLLECTOR_PORT);
+
+	if (collector_port <= 0 || collector_port >= 65536) {
+		dprintf(D_ALWAYS, "%s has bad value (%d), resetting to %d\n",
+				PARAM_CONDOR_DEVELOPERS_COLLECTOR_PORT, collector_port, 
+				COLLECTOR_PORT);
+		collector_port = COLLECTOR_PORT;
+	}
+
+	return collector_port;
 }
 
 /****************************************************************************

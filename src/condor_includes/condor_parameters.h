@@ -30,6 +30,7 @@
 // Collector parameters
 extern const char *PARAM_COLLECTOR_PORT;
 extern const char *PARAM_CONDOR_VIEW_PORT;
+extern const char *PARAM_CONDOR_DEVELOPERS_COLLECTOR_PORT;
 
 // Negotiator parameters
 extern const char *PARAM_NEGOTIATOR_PORT;
@@ -37,6 +38,7 @@ extern const char *PARAM_NEGOTIATOR_PORT;
 // Utility functions
 int param_get_collector_port(void);
 int param_get_condor_view_port(void);
+int param_get_condor_developers_collector_port();
 int param_get_negotiator_port(void);
 
 #endif /* CONDOR_PARAMETERS_H */
