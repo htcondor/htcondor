@@ -9,6 +9,8 @@
 \oOpt{-analyze}
 \oOpt{-run}
 \oOpt{-long}
+\oOpt[-cputime}
+\oOpt{-currentrun}
 \oArg{\{cluster \Bar cluster.process \Bar owner \Bar
   \OptArg{-constraint}{expression} \Dots \} }
 
@@ -87,6 +89,14 @@ per machine basis.
 	\OptItem{\Opt{-run}}{Get information about running jobs.}
 	\OptItem{\OptArg{-name}{name}}{Show only the job queue of the named schedd}
 	\OptItem{\Opt{-long}}{Display job ads in long format}
+	\OptItem{\Opt{-cputime}} Instead of wall-clock allocation time (RUN\_TIME), 
+		display remote CPU time accumulated by the job to date in days,
+		hours, minutes, and seconds.  (If the job is currently running, time
+		accumulated during the current run is \emph{not} shown.)
+	\OptItem{\Opt{-currentrun}} Normally, RUN\_TIME contains all the time
+		accumulated during the current run plus all previous runs.  If this
+		option is specified, RUN\_TIME only displays the time accumulated so
+		far on this current run.
 	\OptItem{Restriction list}{The restriction list may have zero or more items,
 		each of which may be:
 		\begin{description}
