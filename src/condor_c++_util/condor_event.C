@@ -43,11 +43,9 @@ const char * ULogEventNumberNames[] = {
 	"ULOG_JOB_EVICTED     ", // Job evicted from machine
 	"ULOG_JOB_TERMINATED  ", // Job terminated
 	"ULOG_IMAGE_SIZE      ", // Image size of job updated
-	"ULOG_SHADOW_EXCEPTION"  // Shadow threw an exception
-#if defined(GENERIC_EVENT)
-	,"ULOG_GENERIC        "
-#endif	    
-	,"ULOG_JOB_ABORTED    "  // Job terminated
+	"ULOG_SHADOW_EXCEPTION", // Shadow threw an exception
+	"ULOG_GENERIC         ",
+	"ULOG_JOB_ABORTED     ", // Job terminated
 };
 
 const char * ULogEventOutcomeNames[] = {
@@ -87,10 +85,8 @@ instantiateEvent (ULogEventNumber event)
 	  case ULOG_SHADOW_EXCEPTION:
 		return new ShadowExceptionEvent;
 
-#if defined(GENERIC_EVENT)
 	case ULOG_GENERIC:
 		return new GenericEvent;
-#endif
 
 	  case ULOG_JOB_ABORTED:
 		return new JobAbortedEvent;
@@ -232,7 +228,6 @@ readEvent (FILE *file)
 }
 
 
-#if defined(GENERIC_EVENT)
 // ----- the GenericEvent class
 GenericEvent::
 GenericEvent()
@@ -784,4 +779,3 @@ readRusage (FILE *file, rusage &usage)
 
 	return (1);
 }
-
