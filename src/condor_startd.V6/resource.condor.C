@@ -993,6 +993,11 @@ static void init_static_info(resource_info_t* rip)
   
 	sprintf(tmp,"%s=\"%s\"",(char *)ATTR_STARTD_IP_ADDR,addrname);
 	config_context->Insert(tmp);
+
+	// Quick hack to refer to the START expression as the machine
+	// classad requirements.  Eventually we should do some more
+	// intelligent local evaluation or some such here.  -Todd 7/97
+	config_context->SetRequirements("Requirements = START");
 }
 
 static char *
