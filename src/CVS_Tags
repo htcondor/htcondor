@@ -1,3 +1,9 @@
+07/27/04 V6_7-condorc-3-branch
+   A new branch off of V6_7-branch created from the V6_7-condorc-3-root
+   tag. This is the 3rd generation of the V6_7-condorc-branch. The
+   V6_7-branch has infn_batch code and links with globus 2.4.*, both of
+   which we now want on the condorc branch.
+
 07/27/04 V6_7-post_merge-V6_6-merge-18
    The end of a merge of V6_6-branch into V6_7-branch.
 
