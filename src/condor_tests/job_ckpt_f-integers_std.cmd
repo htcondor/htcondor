@@ -4,10 +4,10 @@
 ##
 ####################
 
-executable      = job_ckpt_f-registers.remote.$$(OPSYS).$$(ARCH)
-error           = job_ckpt_f-registers.err
-output          = job_ckpt_f-registers.out
-log		= job_ckpt_f-registers.log
+executable      = job_ckpt_f-integers_std.cndr.$$(OPSYS).$$(ARCH)
+error           = job_ckpt_f-integers_std.err
+output          = job_ckpt_f-integers_std.out
+log		= job_ckpt_f-integers_std.log
 arguments = -_condor_aggravate_bugs
 
 

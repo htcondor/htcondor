@@ -4,7 +4,7 @@
 ##
 ####################
 
-executable      = job_ckpt_f-floats_std.remote.$$(OPSYS).$$(ARCH)
+executable      = job_ckpt_f-floats_std.cndr.$$(OPSYS).$$(ARCH)
 error           = job_ckpt_f-floats_std.err
 output          = job_ckpt_f-floats_std.out
 log		= job_ckpt_f-floats_std.log
