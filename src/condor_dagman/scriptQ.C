@@ -15,6 +15,11 @@ ScriptQ::ScriptQ( Dag* dag )
     _scriptPidTable = new HashTable<int,Script*>( 499, &hashFuncInt );
     _waitingQueue = new Queue<Script*>();
 
+    if( _scriptPidTable == NULL || _waitingQueue == NULL ) {
+        EXCEPT( "ERROR: out of memory (%s() in %s:%d)!\n",
+                __FUNCTION__, __FILE__, __LINE__ );
+    }
+
  	// register daemonCore reaper for PRE/POST script completion
     _scriptReaperId =
 		daemonCore->Register_Reaper( "PRE/POST Script Reaper",

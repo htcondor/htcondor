@@ -50,6 +50,11 @@ Job::GetJobName()
 {
 	if( !_jobName ) {
 		char *s = new char[32];
+		if( s == NULL ) {
+			debug_error( 1, DEBUG_SILENT,
+						 "ERROR: out of memory (%s() in %s:%d)!\n",
+						 __FUNCTION__, __FILE__, __LINE__ );
+		}
 		sprintf( s, "#%d (unnamed)", _jobID );
 		return s;
 	}

@@ -35,9 +35,12 @@ Dag::Dag(const char *condorLogName, const char *lockFileName,
     _lockFileName  = strnewp (lockFileName);
 
 	_scriptQ = new ScriptQ( this );
-	assert( _scriptQ != NULL );
 	_submitQ = new Queue<Job*>;
-	assert( _submitQ != NULL );
+
+	if( _scriptQ == NULL || _submitQ == NULL ) {
+		EXCEPT( "ERROR: out of memory (%s() in %s:%d)!\n",
+				__FUNCTION__, __FILE__, __LINE__ );
+	}
 }
 
 //-------------------------------------------------------------------------
@@ -70,6 +73,11 @@ bool Dag::Bootstrap (bool recovery) {
     // has the orphan jobs as its children.  The God job will have the
     // value (Job *) NULL.
 	TQI* god = new TQI;
+	if( god == NULL ) {
+		debug_error( 1, DEBUG_SILENT,
+					 "ERROR: out of memory (%s() in %s:%d)!\n",
+					 __FUNCTION__, __FILE__, __LINE__ );
+	}
 	jobs.ToBeforeFirst();
 	while( jobs.Next( job ) ) {
 		if( job->IsEmpty( Job::Q_WAITING ) ) {
@@ -754,6 +762,11 @@ Dag::TerminateJob( Job* job, bool bootstrap )
 	// add job to the termination queue if it has any children
 	if( !bootstrap && !job->IsEmpty( Job::Q_CHILDREN ) ) {
 		TQI* tqi = new TQI( job, qp );
+		if( tqi == NULL ) {
+			debug_error( 1, DEBUG_SILENT, "\nERROR: out of memory "
+						 "(%s() in %s:%d)!\n",
+						 __FUNCTION__, __FILE__, __LINE__ );
+		}
 		_termQ.Append(tqi);
 	}
 }

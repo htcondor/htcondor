@@ -232,6 +232,11 @@ int main_init (int argc, char **argv) {
     //
   
     G.dag = new Dag( condorLogName, lockFileName, G.maxJobs, G.maxScripts );
+
+    if( G.dag == NULL ) {
+        EXCEPT( "ERROR: out of memory (%s() in %s:%d)!\n",
+                __FUNCTION__, __FILE__, __LINE__ );
+    }
   
     //
     // Parse the input file.  The parse() routine
