@@ -26,10 +26,6 @@
 **
 */ 
 
-#ifdef __GNUG__
-#pragma implementation "HashTable.h"
-#endif
-
 #include "classad_hashtable.h"
 
 void HashKey::sprint(char *s)
