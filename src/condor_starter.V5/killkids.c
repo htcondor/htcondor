@@ -17,7 +17,11 @@
 
 #define MAX_NUM_PIDS 2000
 
-#if defined(BERKELEY_PS) || defined(SUNOS41)
+#if defined(SUNOS41) || defined(LINUX)
+#define BERKELEY_PS
+#endif
+
+#if defined(BERKELEY_PS)
 #define PS_CMD "/bin/ps -jax"
 #elif defined(ULTRIX42) || defined(ULTRIX43)
 #define PS_CMD "/bin/ps -axl"
@@ -87,7 +91,7 @@ killkids(pid_t inpid, int sig)
    fgets(line,249,ps);  /* skip the column header line */
 
    while ( fgets(line,249,ps) != NULL ) {
-#if defined(BERKELEY_PS) || defined(SUNOS41)
+#if defined(BERKELEY_PS)
 	if ( sizeof(pid_t) == sizeof(long) )
 		sscanf(line,"%ld %ld ",&ppid,&pid);
 	else
