@@ -587,9 +587,11 @@ version.
 
 	#if defined(HPUX) || defined(OSF1) || defined(LINUX)
 	    #if defined(LINUX)
-		int getdirentries( map(int fd), char *buf, size_t nbytes, off_t *basep )
+		int getdirentries( map(int fd), char *buf, size_t nbytes, 
+								off_t *basep ) : no_sys_chk, extract 
 	    #else
-		int getdirentries( map(int fd), struct dirent *buf, size_t nbytes, off_t *basep )
+		int getdirentries( map(int fd), struct dirent *buf, size_t nbytes, 
+			off_t *basep ) 
 	    #endif
 
 		{
@@ -599,7 +601,9 @@ version.
 			alloc( buf, nbytes );
 			alloc( basep, LONG_SIZE );
 		}
-	#elif defined(Solaris) || defined(IRIX) || defined(LINUX)
+	#endif
+
+	#if defined(Solaris) || defined(IRIX)  
 		int getdents( map(int fd), struct dirent *buf, size_t nbytes ) :
 			also_implements(getdents64)
 		{

@@ -72,7 +72,7 @@ EXTRACT = FORK.o GETEUID.o GETPPID.o GETEGID.o SYSCALL.o __SYSCALL.o \
 #	elif IS_GLIBC_LINUX
 EXTRACT = GETCWD.o MMAP.o SYSCALL.o GETEUID.o GETEGID.o GETPPID.o \
 		$(FORK_OBJ) PIPE.o SIGACTION.o GETLOGIN.o SYSDEP.o SIGSUSPEND.o \
-		TRUNCATE.o SIGACTION.o 
+		TRUNCATE.o SIGACTION.o GETDIRENTRIES.o 
 #	elif IS_I386_LINUX
 EXTRACT = GETCWD.o MMAP.o SYSCALL.o __GETEUID.o __GETEGID.o __GETPPID.o \
 		$(FORK_OBJ) __PIPE.o __SIGACT.o ____SIG.o GETLOGIN.o \
@@ -299,6 +299,8 @@ uppercase_target($(SIMPLE_LIBC),sigsuspend.o,SIGSUSPEND.o,sigsuspend,SIGSUSPEND)
 #endif
 uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
 uppercase_target($(SIMPLE_LIBC),pipe.o,PIPE.o,pipe,PIPE)
+uppercase_target($(SIMPLE_LIBC),getdirentries.o,GETDIRENTRIES.o,getdirentries,GETDIRENTRIES)
+
 
 uppercase_target($(SIMPLE_LIBC),__geteuid.o,__GETEUID.o,__geteuid,__GETEUID)
 uppercase_target($(SIMPLE_LIBC),__getegid.o,__GETEGID.o,__getegid,__GETEGID)
