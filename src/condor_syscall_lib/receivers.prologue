@@ -150,4 +150,35 @@ do_REMOTE_syscall(ReliSock *sock, int process)
                 return 0;
         }
 #endif  // of ifdef PVM_RECEIVE
+	case CONDOR_startup_info_request:
+	  {
+		STARTUP_INFO *s;
+		int terrno;
 
+		s = (STARTUP_INFO *)malloc( (unsigned)STARTUP_INFO_SIZE );
+		memset( s, 0, (unsigned)STARTUP_INFO_SIZE );
+		assert( syscall_sock->end_of_message() );;
+
+		errno = 0;
+		rval = pseudo_startup_info_request( s );
+		terrno = errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		if( rval >= 0 ) {
+			assert( syscall_sock->code(s) );
+		}
+		free( s->cmd );
+		free( s->args );
+		free( s->env );
+		free( s->iwd );
+		free( s );
+
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+		
+	}
