@@ -1,6 +1,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "sockCache.h"
+#include <limits.h> // for INT_MAX
 
 static char _FileName_[] = __FILE__;
 
