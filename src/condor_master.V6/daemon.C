@@ -489,19 +489,39 @@ int daemon::RealStart( )
 			// which duplicates some effort and is less efficient. 
 			// **** END OLD
 
-            // ckireyev 8/25/04: This approach is not great b/c we can have
-			// several collectors with different ports. The right thing to 
-			// do is to get the COLLECTOR_PORT parameter in the config file
+			// ckireyev 09/10/04
+			// Now that we have multiple collectors, the way to figure out
+			// the port on this machine, is to go through all of the
+			// collectors until we find the one for THIS machine. Then
+			// get the port from that entry
 
-		char * collector_port_config = param ( "COLLECTOR_PORT" );
-		if ( collector_port_config && *collector_port_config ) {
-			command_port = atoi (collector_port_config);
-		} else {
-			command_port = COLLECTOR_PORT; // the default
+		if (!Collectors) {
+			Collectors =  DCCollector::getCollectors();
 		}
-		if (collector_port_config) {
-			free( collector_port_config );
+
+
+		command_port = -1;
+
+		if (Collectors) {
+			char * my_hostname = my_full_hostname();
+			Daemon * daemon;
+			Collectors->rewind();
+			while (Collectors->next (daemon)) {
+				if (same_host (my_hostname, 
+							   daemon->fullHostname())) {
+					command_port = daemon->port();
+					break;
+				}
+			}
 		}
+
+		if (command_port == -1) {
+				// strange....
+			command_port = COLLECTOR_PORT;
+		}
+
+		dprintf (D_FULLDEBUG, "Staring Collector on port %d\n", command_port);
+
 
 			// We can't do this b/c of needing to read host certs as root 
 			// wants_condor_priv = true;
