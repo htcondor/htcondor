@@ -552,7 +552,7 @@ char *Print_elem(ELEM *elem, char *str)
   return tmpChar;
 }
 
-AttrList::AttrList(CONTEXT* context) : AttrListAbstract(ATTRLISTENTITY)
+AttrList::AttrList(const CONTEXT* context) : AttrListAbstract(ATTRLISTENTITY)
 {
 	STACK		stack;
 	ELEM*		elem, *lElem, *rElem;
