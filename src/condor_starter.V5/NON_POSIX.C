@@ -36,22 +36,13 @@ Portability
 */
 	
 
-#define _POSIX_SOURCE
-
-#if defined(ULTRIX42) || defined(ULTRIX43)
-typedef char *  caddr_t;
-#endif
 
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_jobqueue.h"
 #include "condor_sys.h"
-#include <signal.h>
-#include <sys/stat.h>
-#if defined(LINUX)
-#include <unistd.h>
-typedef long	rlim_t;
-#endif
+#include "startup.h"
+#include "user_proc.h"
 
 extern "C" {
 	int SetSyscalls( int );
@@ -158,13 +149,7 @@ physical_file_size( char *name )
 }
 
 
-#include "condor_fix_wait.h"
 
-
-#include <errno.h>
-#include "condor_constants.h"
-#include "startup.h"
-#include "user_proc.h"
 
 #ifdef  __cplusplus
 extern "C" {
@@ -265,11 +250,6 @@ bsd_status( int posix_st, PROC_STATE state, int ckpt_trans, int core_trans )
 
 
 
-#include <sys/resource.h>
-#define _POSIX_SOURCE
-#include <time.h>		// to get CLK_TCK
-#undef _POSIX_SOURCE
-
 /*
 Convert a time value from the POSIX style "clock_t" to a BSD style
 "struct timeval".
@@ -319,25 +299,7 @@ bsd_rusage( clock_t user, clock_t sys )
   conforming mode".  Isn't it ironic that such a request is itself
   non-POSIX conforming?
 */
-#if defined(ULTRIX42) || defined(ULTRIX43)
-#include <sys/sysinfo.h>
-#define A_POSIX 2		// from exec.h, which I prefer not to include here...
-extern "C" {
-	int setsysinfo( unsigned, char *, unsigned, unsigned, unsigned );
-}
-void
-set_posix_environment()
-{
-	int		name_value[2];
 
-	name_value[0] = SSIN_PROG_ENV;
-	name_value[1] = A_POSIX;
-
-	if( setsysinfo(SSI_NVPAIRS,(char *)name_value,1,0,0) < 0 ) {
-		EXCEPT( "setsysinfo" );
-	}
-}
-#else
 void
 set_posix_environment() {}
-#endif
+
