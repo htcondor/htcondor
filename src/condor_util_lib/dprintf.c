@@ -169,6 +169,15 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 #endif
 
 	/* log files owned by condor system acct */
+
+		/* If we're in PRIV_USER_FINAL, there's a good chance we won't
+		   be able to write to the log file.  We can't rely on Condor
+		   code to refrain from calling dprintf() after switching to
+		   PRIV_USER_FINAL.  So, we check here and simply don't try to
+		   log anything when we're in PRIV_USER_FINAL, to avoid
+		   exit(DPRINTF_ERROR). */
+	if (get_priv() == PRIV_USER_FINAL) return;
+
 		/* avoid priv macros so we can bypass priv logging */
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
