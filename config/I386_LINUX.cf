@@ -1,7 +1,6 @@
 #define OperatingSystem LINUX
 #define Architecture I386
 
-
 #define Tilde /home/condor
 #define RpcLib /**/
 #define SocketLib /**/
@@ -17,15 +16,20 @@
 #define XExtLibPath /usr/X11R6/lib/libXext.a
 #define DbmLibrary -lmgdbm
 
-#define IS_I386_LINUX			YES
-#define IS_V5					YES
+#if defined( IS_GLIBC )
+#   undef IS_GLIBC
+#   define IS_GLIBC			YES
+#endif
 
+#define IS_I386_LINUX			YES
+
+#define IS_V5				YES
 #define DOES_CHECKPOINTING		YES
-#define DOES_REMOTE_SYSCALLS	YES
+#define DOES_REMOTE_SYSCALLS		YES
 #define DOES_SAVE_SIGSTATE		YES
 #define DO_BENCHMARKING			YES
 
-#define HAS_X					NO	
+#define HAS_X				NO	
 #define HAS_X_EXTENSIONS		NO
 #define HAS_NDBM			YES
 #define HAS_FSTATFS			YES
