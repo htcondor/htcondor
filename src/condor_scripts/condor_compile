@@ -50,12 +50,12 @@ CONDOR_LD_IN_USE_FILE=$CONDOR_LD_IN_USE_FILE
 # if the above is not set, then we know we are the root invocation, and later
 # this has meaning when we create and remove this file.
 if [ "X$CONDOR_LD_IN_USE_FILE" = "X" ]; then
-	CONDOR_LD_ROOT_INVOCATION=true
+	CONDOR_LD_ROOT_INVOCATION=yes
 	# if it was undefined, then set it right here.
 	CONDOR_LD_IN_USE_FILE="/tmp/.condor_ld_in_use.$$"
 else
 	# we are some child of another condor_compile.
-	CONDOR_LD_ROOT_INVOCATION=false
+	CONDOR_LD_ROOT_INVOCATION=no
 	# we will transparently transfer the in use file name to this invocation
 	# as well.
 fi
@@ -80,15 +80,15 @@ invoke_linker () {
 	# and when it returns, check to see if the in use file was touched. If
 	# it was, then our linker was called at least once
 
-	if [ $CONDOR_LD_ROOT_INVOCATION = true ]; then
+	if [ "X$CONDOR_LD_ROOT_INVOCATION" = "Xyes" ]; then
 		# I'm the root invocation, see if the file my children made exists,
 		# and raise an error if it doesn't
-		if [ ! -e "$CONDOR_LD_IN_USE_FILE" ] ; then
-			echo "ERROR: Internal ld was not invoked!"
-			echo "ERROR: Executable may not be linked properly for Condor!"
-			echo "ERROR: To learn more about this error, visit this web page:"
-			echo "ERROR: http://www.cs.wisc.edu/condor/manual/faq.html"
-			echo "ERROR: and read the FAQ entry about this problem."
+		if [ ! -f "$CONDOR_LD_IN_USE_FILE" ]; then
+			echo 'ERROR: Internal ld was not invoked!'
+			echo 'ERROR: Executable may not be linked properly for Condor!'
+			echo 'ERROR: To learn more about this error, visit this web page:'
+			echo 'ERROR: http://www.cs.wisc.edu/condor/manual/faq.html'
+			echo 'ERROR: and read the FAQ entry about this problem.'
 			rm -f $CONDOR_LD_IN_USE_FILE
 			exit 1;
 		fi
