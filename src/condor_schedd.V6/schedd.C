@@ -3681,10 +3681,10 @@ Scheduler::mail_problem_message()
 
 	dprintf( D_ALWAYS, "Mailing administrator (%s)\n", CondorAdministrator );
 
-	(void)sprintf( cmd, "%s -s \"CONDOR Problem\" %s", Mail, 
-					CondorAdministrator );
-	if( (mailer=popen(cmd,"w")) == NULL ) {
-		EXCEPT( "popen(\"%s\",\"w\")", cmd );
+	mailer = email_admin_open("CONDOR Problem");
+	if (mailer == NULL)
+	{
+		EXCEPT( "Could not open mailer to admininstrator!" );
 	}
 
 	fprintf( mailer, "Problem with condor_schedd %s\n", Name );
@@ -3692,14 +3692,7 @@ Scheduler::mail_problem_message()
 												BadCluster, BadProc );
 	fprintf( mailer, "but we already have a shadow record for it.\n" );
 
-		/* don't use 'pclose()' here, it does its own wait, and messes
-			 with our handling of SIGCHLD! */
-		/* except on HPUX it is both safe and required */
-#if defined(HPUX)
-	pclose( mailer );
-#else
-	(void)fclose( mailer );
-#endif
+	email_close(mailer);
 #endif /* !defined(WIN32) */
 }
 
@@ -3763,15 +3756,17 @@ Scheduler::NotifyUser(shadow_rec* srec, char* msg, int status, int JobStatus)
 	}
 
 	// Send mail to user
-	sprintf(buf, "%s -s \"Condor Job %d.%d\" %s\n", Mail, srec->job_id.cluster, srec->job_id.proc, owner);
-	dprintf( D_FULLDEBUG, "Notify user using cmd: %s\n",buf);
-	FILE* mailer = popen( buf, "w" );
-	if (!mailer) {
-		EXCEPT("cannot execute %s %s\n", buf, "w");
+	sprintf(buf, "Condor Job %d.%d", srec->job_id.cluster, srec->job_id.proc);
+	dprintf( D_FULLDEBUG, "Unknown user notification selection\n");
+	dprintf( D_FULLDEBUG, "\tNotify user with subject: %s\n",buf);
+
+	FILE* mailer = email_open(buf, owner);
+	if (mailer == NULL) {
+		EXCEPT("Could not open mail to user!");
 	}
 	fprintf(mailer, "Your condor job %s%d.\n\n", msg, status);
 	fprintf(mailer, "Job: %s %s\n", cmd, args);
-	pclose(mailer);
+	email_close(mailer);
 
 /*
 	sprintf(url, "mailto:%s", owner);
