@@ -545,30 +545,33 @@ BaseShadow::shutDownEmail( int reason )
 	// send email if user requested it
 	int notification = NOTIFY_COMPLETE;	// default
 	jobAd->LookupInteger(ATTR_JOB_NOTIFICATION,notification);
-	int send_email = TRUE;
+	int send_email = FALSE;
 	switch( notification ) {
 		case NOTIFY_NEVER:
-			send_email = FALSE;
 			break;
 		case NOTIFY_ALWAYS:
+			send_email = TRUE;
 			break;
 		case NOTIFY_COMPLETE:
-			if( reason != JOB_EXITED ) {
-				send_email = FALSE;
+			if( (reason == JOB_EXITED) || (reason == JOB_COREDUMPED) ) {
+				send_email = TRUE;
 			}
 			break;
 		case NOTIFY_ERROR:
-			// do not send email if the job has not exited yet, or
-			// if the job exited with something other than a signal.
-			if( (reason != JOB_EXITED) || 
-				((reason == JOB_EXITED) && !(exitedBySignal())) ) {
-                send_email = FALSE;
+				// only send email if the was killed by a signal
+				// and/or core dumped.
+			if( (reason == JOB_COREDUMPED) || 
+				((reason == JOB_EXITED) && (exitedBySignal())) ) {
+                send_email = TRUE;
 			}
 			break;
 		default:
 			dprintf(D_ALWAYS, 
 				"Condor Job %d.%d has unrecognized notification of %d\n",
 				cluster, proc, notification );
+				// When in doubt, better send it anyway...
+			send_email = TRUE;
+			break;
 	}
 
 		// return the mailer 
