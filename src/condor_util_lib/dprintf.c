@@ -56,7 +56,7 @@ void _condor_dprintf_exit();
 extern	int		errno;
 extern	int		DebugFlags;
 
-FILE*	DebugFP		= NULL;
+FILE	*DebugFP = 0;
 
 /*
 ** These arrays must be D_NUMLEVELS+1 in size since we can have a
@@ -110,6 +110,9 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 	priv_state	priv;
 	int debug_level;
 
+		/* DebugFP should be static initialized to stderr,
+	 	   but stderr is not a constant on all systems. */
+	if( !DebugFP ) DebugFP = stderr;
 
 		/* If we hit some fatal error in dprintf, this flag is set.
 		   If dprintf is broken and someone (like _EXCEPT_Cleanup)

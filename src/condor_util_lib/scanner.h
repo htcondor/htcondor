@@ -32,6 +32,7 @@
 #define NOSUPP_FUNC		6
 #define RETURN_FUNC		7
 
+#define NAME_LENGTH		80
 
 struct token {
 	int		tok_type;
@@ -45,19 +46,28 @@ struct node {
 	int		is_ptr;
 	int		is_const;
 	int		is_const_ptr;
-	int		is_mapped;
+	int		is_tabled;
 	int		is_array;
 	int		is_ref;
+	int		is_vararg;
+	int		is_mapped;
+	int		is_indirect;
 	int		in_param;
 	int		out_param;
 	int		extract;
 	int		dl_extract;
 	int		sys_chk;
 	int		pseudo;
+	int		ldiscard;
+	int		rdiscard;
 	struct node	*next;
 	struct node *prev;
 	struct node *param_list;
 	struct node *action_func_list;
+	char		table_name[NAME_LENGTH];
+	char		remote_name[NAME_LENGTH];
+	char		local_name[NAME_LENGTH];
+	char		sender_name[NAME_LENGTH];
 };
 
 #define XDR_FUNC id
