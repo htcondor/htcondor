@@ -49,12 +49,6 @@
 #include "condor_qmgr.h"
 #include "sig_install.h"
 
-#if defined(GSS_AUTHENTICATION)
-#include "auth_sock.h"
-#else
-#define AuthSock ReliSock
-#endif
-
 #include "extArray.h"
 #include "HashTable.h"
 #include "MyString.h"
@@ -321,7 +315,6 @@ main( int argc, char *argv[] )
 		fprintf( stderr, "ERROR: Failed to open command file\n");
 		exit(1);
 	}
-
 	//  Parse the file, stopping at "queue" command
 	if( read_condor_file( fp, 1 ) < 0 ) {
 		fprintf(stderr, "ERROR: Failed to parse command file.\n");
@@ -370,11 +363,7 @@ main( int argc, char *argv[] )
 	//end of authentication setup
 
 	// connect to the schedd
-#if defined(GSS_AUTHENTICATION)
 	if (ConnectQ(ScheddAddr, 1 ) == 0) { //mju
-#else
-	if (ConnectQ(ScheddAddr, 0 ) == 0) { //mju
-#endif
 		if( ScheddName ) {
 			fprintf( stderr, "ERROR: Failed to connect to queue manager %s\n",
 					 ScheddName );

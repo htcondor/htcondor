@@ -27,12 +27,6 @@
 #include "condor_debug.h"
 #include "condor_fix_assert.h"
 
-#if defined(GSS_AUTHENTICATION)
-#include "auth_sock.h"
-#else
-#define AuthSock ReliSock
-#endif
-
 #include "../condor_syscall_lib/syscall_param_sizes.h"
 
 #include "condor_qmgr.h"
@@ -46,43 +40,23 @@
 
 #define assert(x) if (!(x)) return -1;
 
-extern char *CondorCertDir;
-
 int
-do_Q_request(AuthSock *syscall_sock)
+do_Q_request(ReliSock *syscall_sock)
 {
 	int	request_num;
 	int	rval;
-	int auth = 1;
-
-	if ( !CondorCertDir ) 
-		auth = 0;
 
 	syscall_sock->decode();
 
-	assert( syscall_sock->code(request_num) );
+	if (!syscall_sock->code(request_num)) {
+		return -1;
+	}
 
 	dprintf(D_SYSCALLS, "Got request #%d\n", request_num);
 
 	switch( request_num ) {
-
-	case CONDOR_InitializeConnectionAuth:
-	{
-		qmgmt_sock->end_of_message();
-		qmgmt_sock->encode();
-		qmgmt_sock->code( auth ); 
-		qmgmt_sock->end_of_message();
-		if ( auth ) {
-			int time = qmgmt_sock->timeout(60 * 5); //wait 5 min for user to type
-      	assert( qmgmt_sock->authenticate() );
-			qmgmt_sock->timeout(time);
-		}
-		syscall_sock->decode();
-		//allow code to fall thru to CONDOR_InitializeConnection!!
-	}
-
 	case CONDOR_InitializeConnection:
-	{
+	  {
 		char *owner=NULL;
 		// XXX: shouldn't need a fixed size here -- at least keep
 		// it off the stack to avoid overflow attacks
@@ -90,7 +64,7 @@ do_Q_request(AuthSock *syscall_sock)
 		int terrno;
 
 		assert( syscall_sock->code(owner) );
-		assert( syscall_sock->end_of_message() );
+		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;
 		rval = InitializeConnection( owner, tmp_file );

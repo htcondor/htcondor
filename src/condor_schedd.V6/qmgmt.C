@@ -27,12 +27,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 
-#if defined(GSS_AUTHENTICATION)
-#include "auth_sock.h"
-#else
-#define AuthSock ReliSock
-#endif
-
 static char *_FileName_ = __FILE__;	 /* Used by EXCEPT (see condor_debug.h) */
 
 #include "qmgmt.h"
@@ -61,9 +55,9 @@ extern "C" {
 
 extern	int		Parse(const char*, ExprTree*&);
 extern  void    cleanup_ckpt_files(int, int, char*);
-static AuthSock *Q_SOCK;
+static ReliSock *Q_SOCK;
 
-int		do_Q_request(AuthSock *);
+int		do_Q_request(ReliSock *);
 void	FindRunnableJob(int, int&);
 void	FindPrioJob(int&);
 int		Runnable(PROC_ID*);
@@ -473,12 +467,12 @@ handle_q(Service *, int, Stream *sock)
 
 	JobQueue->BeginTransaction();
 
-	Q_SOCK = (AuthSock *)sock;
+	Q_SOCK = (ReliSock *)sock;
 
 	InvalidateConnection();
 	do {
 		/* Probably should wrap a timer around this */
-		rval = do_Q_request( (AuthSock *)sock );
+		rval = do_Q_request( (ReliSock *)sock );
 	} while(rval >= 0);
 	FreeConnection();
 	dprintf(D_FULLDEBUG, "QMGR Connection closed\n");
@@ -497,7 +491,7 @@ handle_q(Service *, int, Stream *sock)
 
 
 int
-InitializeConnection( char *owner, char *tmp_file, int auth=0 )
+InitializeConnection( char *owner, char *tmp_file )
 {
 	char	*new_file;
 

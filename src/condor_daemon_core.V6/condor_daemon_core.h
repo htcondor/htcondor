@@ -43,11 +43,6 @@
 #include "HashTable.h"
 #include "list.h"
 
-#ifdef GSS_AUTHENTICATION
-#include "auth_sock.h"
-#else
-#define AuthSock ReliSock
-#endif
 
 static const int KEEP_STREAM = 100;
 static char* EMPTY_DESCRIP = "<NULL>";
@@ -188,7 +183,7 @@ class DaemonCore : public Service
 		int		HandleSigCommand(int command, Stream* stream);
 		int		HandleReq(int socki);
 		int		HandleSig(int command, int sig);
-		void	Inherit( AuthSock* &rsock, SafeSock* &ssock );  // called in main()
+		void	Inherit( ReliSock* &rsock, SafeSock* &ssock );  // called in main()
 		int		HandleProcessExitCommand(int command, Stream* stream);
 		int		HandleProcessExit(pid_t pid, int exit_status);
 
