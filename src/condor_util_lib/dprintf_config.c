@@ -67,7 +67,16 @@ int logfd;		/* logfd is the descriptor to use if the log output goes to a tty */
 	DebugFlags = D_ALWAYS;
 
 	/*
-	**	Pick up the subsys_DEBUG parameters.   Note: if we don't have
+	** First, add the debug flags that are shared by everyone.
+	*/
+	pval = param("ALL_DEBUG");
+	if( pval ) {
+		_condor_set_debug_flags( pval );
+		free( pval );
+	}
+
+	/*
+	**  Then, pick up the subsys_DEBUG parameters.   Note: if we don't have
 	**  anything set, we just leave it as D_ALWAYS.
 	*/
 	(void)sprintf(pname, "%s_DEBUG", subsys);
