@@ -59,3 +59,9 @@ main_pre_dc_init( int argc, char* argv[] )
 		// dprintf isn't safe yet...
 }
 
+
+void
+main_pre_command_sock_init( )
+{
+}
+

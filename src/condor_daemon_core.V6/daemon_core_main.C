@@ -51,6 +51,7 @@ extern int main_config(bool is_full);
 extern int main_shutdown_fast();
 extern int main_shutdown_graceful();
 extern void main_pre_dc_init(int argc, char *argv[]);
+extern void main_pre_command_sock_init();
 
 // Internal protos
 void dc_reconfig( bool is_full );
@@ -1284,6 +1285,8 @@ int main( int argc, char** argv )
 			EXCEPT("Failed to create async pipe");
 	}
 #endif
+
+	main_pre_command_sock_init();
 
 		// SETUP COMMAND SOCKET
 	daemonCore->InitCommandSocket( command_port );

@@ -177,3 +177,9 @@ int exception_cleanup(int,int,char*)
 	return 0;
 }
 
+void
+main_pre_command_sock_init( )
+{
+}
+
+
