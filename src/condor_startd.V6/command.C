@@ -596,10 +596,10 @@ request_claim( Resource* rip, char* cap, Stream* stream )
 	if( !mach_requirements || !req_requirements ) {
 	    rip->dprintf( D_ALWAYS, "Request to claim resource refused.\n" );
 		if( !mach_requirements ) {
-			rip->dprintf( D_ALWAYS, "Machine requirements not satisfied.\n" );
+			rip->dprintf( D_FAILURE|D_ALWAYS, "Machine requirements not satisfied.\n" );
 		}
 		if( !req_requirements ) {
-			rip->dprintf( D_ALWAYS, "Job requirements not satisfied.\n" );
+			rip->dprintf( D_FAILURE|D_ALWAYS, "Job requirements not satisfied.\n" );
 		}
 		// Possibly print out the ads we just got to the logs.
 	rip->dprintf( D_JOB, "REQ_CLASSAD:\n" );
@@ -808,7 +808,7 @@ accept_request_claim( Resource* rip )
 		// Since we're done talking to this schedd agent, delete the stream.
 	rip->r_cur->setagentstream( NULL );
 
-	rip->dprintf( D_ALWAYS, "State change: claiming protocol successful\n" );
+	rip->dprintf( D_FAILURE|D_ALWAYS, "State change: claiming protocol successful\n" );
 	rip->change_state( claimed_state );
 
 		// Want to return KEEP_STREAM so that daemon core doesn't try
@@ -1127,7 +1127,7 @@ match_info( Resource* rip, char* cap )
 
 				// Entering matched state sets our reqexp to unavail
 				// and updates CM.
-			rip->dprintf( D_ALWAYS, 
+			rip->dprintf( D_FAILURE|D_ALWAYS, 
 						  "State change: match notification protocol successful\n" );
 			rip->change_state( matched_state );
 			rval = TRUE;
