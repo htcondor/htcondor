@@ -434,7 +434,7 @@ static void
 doBitwise (OpKind op, Value &v1, Value &v2, Value &result)
 {
 	int	i1, i2;
-	int signMask = 1 << (WORD_BIT-1);	// now at the position of the sign bit
+	int signMask = ~INT_MAX;			// 1 at the position of the sign bit
 	int val;
 
 	// bitwise operations are defined only on integers
