@@ -1366,6 +1366,9 @@ regular_setup( char *host, char *cluster, char *proc, char *capability )
 		"Hostname = \"%s\", Job = %s.%s\n",
 		host, cluster, proc
 	);
+	if( Spool ) {
+		free( Spool );
+	}
 	Spool = param( "SPOOL" );
 	if( Spool == NULL ) {
 		EXCEPT( "Spool directory not specified in config file" );
@@ -1377,7 +1380,6 @@ regular_setup( char *host, char *cluster, char *proc, char *capability )
 	ExecutingHost = host;
 	start_job( cluster, proc );
 	send_job( Proc, host, capability );
-    free( Spool );
 }
 
 void
@@ -1388,6 +1390,9 @@ pipe_setup( char *cluster, char *proc, char *capability )
 	UsePipes = TRUE;
 	dprintf( D_ALWAYS, "Job = %s.%s\n", cluster, proc );
 
+	if( Spool ) {
+		free( Spool );
+	}
 	Spool = param( "SPOOL" );
 	if( Spool == NULL ) {
 		EXCEPT( "Spool directory not specified in config file" );
@@ -1407,8 +1412,6 @@ pipe_setup( char *cluster, char *proc, char *capability )
 
 	sock_RSC1 = RSC_ShadowInit( RSC_SOCK, CLIENT_LOG );
 	start_job( cluster, proc );
-
-    free( Spool );
 }
 
 /*
