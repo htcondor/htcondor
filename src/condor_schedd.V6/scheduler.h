@@ -355,9 +355,6 @@ class Scheduler : public Service
 	void   			mark_cluster_rejected(int); 
 	int				count_jobs();
 	int				insert_owner(char*, char*);
-#ifndef WANT_DC_PM
-	void			reaper(int);
-#endif
 	void			child_exit(int, int);
 	void			clean_shadow_recs();
 	void			preempt(int);

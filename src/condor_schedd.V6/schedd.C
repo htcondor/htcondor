@@ -3199,7 +3199,6 @@ void Scheduler::StartJobHandler() {
 	int		pid;
 	int sh_is_dc;
 
-#ifdef WANT_DC_PM
 	char	args[_POSIX_ARG_MAX];
 
 	if (Shadow) free(Shadow);
@@ -3320,81 +3319,25 @@ void Scheduler::StartJobHandler() {
 	} 
 	free(Shadow);
 	Shadow = NULL;
-#else
-	// here we are not using WANT_DC_PM, so prepare an argv[] array for
-	// exec and do an actual honest to goodness fork().
-	(void)sprintf( cluster, "%d", job_id->cluster );
-	(void)sprintf( proc, "%d", job_id->proc );
-	argv[0] = "condor_shadow";
-	argv[1] = MyShadowSockName;
-	argv[2] = mrec->peer;
-	argv[3] = mrec->id;
-	argv[4] = cluster;
-	argv[5] = proc;
-	argv[6] = 0;
 
-	pid = fork();
-#endif
-
-	switch(pid) {
-		case -1:	/* error */
-#ifndef WANT_DC_PM
-			if( errno == ENOMEM ) {
-				dprintf(D_FAILURE|D_ALWAYS, "fork() failed, due to lack of swap space\n");
-				swap_space_exhausted();
-			} else {
-				dprintf(D_FAILURE|D_ALWAYS, "fork() failed, errno = %d\n" );
-			}
-#endif
-			mark_job_stopped(job_id);
-			RemoveShadowRecFromMrec(srec);
-			delete srec;
-			break;
-
-#ifndef WANT_DC_PM
-		case 0:		/* the child */
-			
-			// Renice 
-			renice_shadow();
-
-			(void)close( 0 );
-#	ifdef CARMI_OPS
-			if ((retval = dup2( pipes[0], 0 )) < 0)
-			  {
-				 dprintf(D_ALWAYS, "Dup2 returns %d\n", retval);  
-				 EXCEPT("Could not dup pipe to stdin\n");
-			  }
-				  else
-				 dprintf(D_ALWAYS, " Duped 0 to %d \n", pipes[0]);
-#	endif		
-			// Close descriptors we do not want inherited by the shadow
-			lim = getdtablesize();
-			for( int i=3; i<lim; i++ ) {
-				(void)close( i );
-			}
-
-			Shadow = param("SHADOW");
-			(void)execve( Shadow, argv, environ );
-			dprintf( D_FAILURE|D_ALWAYS, "exec(%s) failed, errno = %d\n", Shadow, errno);
-			if (errno == ENOMEM) {
-				exit( JOB_NO_MEM );
-			} else {
-				exit( JOB_EXEC_FAILED );
-			}
-			break;
-#endif // of ifndef WANT_DC_PM
-
-		default:	/* the parent */
-			dprintf( D_ALWAYS, "Started shadow for job %d.%d on \"%s\", (shadow pid = %d)\n",
-				job_id->cluster, job_id->proc, mrec->peer, pid );
-			srec->pid=pid;
-			add_shadow_rec(srec);
+	if( pid < 0 ) {
+		mark_job_stopped(job_id);
+		RemoveShadowRecFromMrec(srec);
+		delete srec;
+	} else {
+		dprintf( D_ALWAYS, "Started shadow for job %d.%d on \"%s\", "
+				 "(shadow pid = %d)\n", job_id->cluster, job_id->proc,
+				 mrec->peer, pid );
+		srec->pid=pid;
+		add_shadow_rec(srec);
 	}
 
 	 // Re-set timer if there are any jobs left in the queue
 	 if (!RunnableJobQueue.IsEmpty()) {
-		  StartJobTimer=daemonCore->Register_Timer(JobStartDelay,
-						(Eventcpp)&Scheduler::StartJobHandler,"start_job", this);
+		 StartJobTimer = daemonCore->
+			 Register_Timer( JobStartDelay,
+							 (Eventcpp)&Scheduler::StartJobHandler,
+							 "start_job", this ); 
 	 } else {
 		// if there are no more jobs in the queue, this is a great time to
 		// update the central manager since things are pretty "stable".
@@ -3547,12 +3490,6 @@ shadow_rec*
 Scheduler::start_sched_universe_job(PROC_ID* job_id)
 {
 #if !defined(WIN32) /* NEED TO PORT TO WIN32 */
-
-#ifndef WANT_DC_PM
-	dprintf ( D_ALWAYS, "Starting sched universe jobs no longer "
-			  "supported without WANT_DC_PM\n" );
-	return NULL;
-#else
 
 	char	a_out_name[_POSIX_PATH_MAX];
 	char	input[_POSIX_PATH_MAX];
@@ -3741,7 +3678,6 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_CURRENT_HOSTS, 1);
 	WriteExecuteToUserLog( *job_id );
 	return add_shadow_rec(pid, job_id, NULL, -1);
-#endif /* of WANT_DC_PM code */
 #else
 	return NULL;
 #endif /* !defined(WIN32) */
@@ -4553,37 +4489,6 @@ static int IsSchedulerUniverse(shadow_rec* srec)
 	return TRUE;
 }
 
-#ifndef WANT_DC_PM
-/*
-** Allow child processes to die a decent death, don't keep them
-** hanging around as <defunct>.
-*/
-void
-Scheduler::reaper(int sig)
-{
-	pid_t			pid;
-	 int	  		status;
-
-	 if( sig == 0 ) {
-		  dprintf( D_FULLDEBUG, "***********  Begin Extra Checking ********\n" );
-	 } else {
-		  dprintf( D_ALWAYS, "Entered reaper( %d, %d )\n", sig );
-	 }
-
-	for(;;) {
-		  errno = 0;
-		  if( (pid = waitpid(-1,&status,WNOHANG)) <= 0 ) {
-				dprintf( D_FULLDEBUG, "waitpid() returned %d, errno = %d\n",
-																				pid, errno );
-				break;
-		  }
-		child_exit(pid, status);
-	}
-	 if( sig == 0 ) {
-		  dprintf( D_FULLDEBUG, "***********  End Extra Checking ********\n" );
-	 }
-}
-#endif
 
 /*
 ** Wrapper for setting the job status to deal with PVM jobs, which can 
@@ -5372,15 +5277,9 @@ Scheduler::Register()
 								  "dumpState", this, READ  );
 	
 	 // reaper
-#ifdef WANT_DC_PM
 	daemonCore->Register_Reaper( "reaper", 
                                  (ReaperHandlercpp)&Scheduler::child_exit,
 								 "child_exit", this );
-#else
-    daemonCore->Register_Signal( DC_SIGCHLD, "SIGCHLD", 
-                                 (SignalHandlercpp)&Scheduler::reaper, 
-								 "reaper", this );
-#endif
 
 	// register all the timers
 	RegisterTimers();
