@@ -2609,8 +2609,16 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 		SetAttributeString(new_rec->job_id.cluster, new_rec->job_id.proc,
 			ATTR_REMOTE_HOST,new_rec->match->peer);
 	}
+	int current_time = (int)time(NULL);
+	int job_start_date = 0;
 	SetAttributeInt(new_rec->job_id.cluster, new_rec->job_id.proc, 
-		ATTR_SHADOW_BIRTHDATE, time(NULL));
+		ATTR_SHADOW_BIRTHDATE, current_time);
+	if (GetAttributeInt(new_rec->job_id.cluster, new_rec->job_id.proc,
+						ATTR_JOB_START_DATE, &job_start_date) < 0) {
+		// this is the first time the job has ever run, so set JobStartDate
+		SetAttributeInt(new_rec->job_id.cluster, new_rec->job_id.proc, 
+						ATTR_JOB_START_DATE, current_time);
+	}
 
 	dprintf( D_FULLDEBUG, "Added shadow record for PID %d, job (%d.%d)\n",
 			new_rec->pid, new_rec->job_id.cluster, new_rec->job_id.proc );
