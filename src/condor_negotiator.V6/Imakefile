@@ -1,0 +1,13 @@
+SRC_DIR = $(SRC_TREE)/condor_negotiator
+CFLAGS = $(STD_C_FLAGS)
+
+SRC = negotiator.c
+OBJ = negotiator.o
+LIB = ../condor_util_lib/util_lib.a ../condor_xdr_lib/xdr_lib.a RpcLib SocketLib KernLib
+LIBDIRS = ../condor_util_lib ../condor_xdr_lib
+
+all_target(condor_negotiator)
+tags_target($(SRC),$(LIBDIRS))
+depend_target($(SRC))
+program_target(condor_negotiator,$(OBJ),$(LIB))
+release_target(condor_negotiator,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
