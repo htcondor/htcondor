@@ -6,18 +6,13 @@
 #define ImakeOpsysFlag		-DIS_IRIX65
 #define IS_SGI_IRIX65		YES
 #define IS_IRIX65		YES
+#define VersionPlatformFlags	-DIRIX65=IRIX65
 
-#if defined(IS_MIPS3)
-#define PlatformFlags		-DIRIX65=IRIX65 -mips3 -mabi=n32
-#else
-#define PlatformFlags		-DIRIX65=IRIX65
-#endif
-
-#define BaseLibPath /usr/lib32
-#define IRIXABI -n32
+#define IS_N32			YES
+#define MIPS_VERSION		3
 
 /* inet_ntoa is broken in GCC for -n32 and -64 ABIs */
 #define HAS_INET_NTOA NO
 
 /* For now, build a "clipped" version */
-#define IS_CLIPPED NO
+#define IS_CLIPPED YES
