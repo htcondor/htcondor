@@ -54,6 +54,9 @@ extern "C"{
 FILE * email_user_open( ClassAd* jobAd, const char *subject );
 
 void email_custom_attributes( FILE* mailer, ClassAd* job_ad );
+
+char* email_check_domain( const char* addr, ClassAd* job_ad );
+
 }
 #endif
 
