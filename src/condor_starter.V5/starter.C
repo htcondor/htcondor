@@ -23,6 +23,9 @@
 
 #include "condor_common.h"
 #include "starter_common.h"
+#include "condor_attributes.h"
+#include "condor_version.h"
+#include "condor_distribution.h"
 
 #include "proto.h"
 #include "name_tab.h"
@@ -37,6 +40,8 @@
 #include "list.h"
 #include "user_proc.h"
 #include "sig_install.h"
+#include "../condor_sysapi/sysapi.h"
+
 
 #if !defined(X86)
 typedef List<UserProc> listuserproc; 
@@ -66,11 +71,12 @@ char* mySubSystem = "STARTER";
 	// Constants
 const pid_t	ANY_PID = -1;		// arg to waitpid() for any process
 
-ReliSock	*SyscallStream;		// stream to shadow for remote system calls
+ReliSock	*SyscallStream = NULL;	// stream to shadow for remote system calls
 List<UserProc>	UProcList;		// List of user processes
 char	*Execute;				// Name of directory where user procs execute
+int		ExecTransferAttempts;	// How many attempts at getting the initial ckpt
 int		DoDelays;				// Insert artificial delays for testing
-char	*UidDomain;				// Machines we share UID space with
+char	*UidDomain=NULL;		// Machines we share UID space with
 
 Alarm		MyAlarm;			// Don't block forever on user process exits
 char	*InitiatingHost;		// Machine where shadow is running
@@ -97,10 +103,18 @@ void req_exit_all();
 void req_ckpt_exit_all();
 int needed_fd( int fd );
 void determine_user_ids( uid_t &requested_uid, gid_t &requested_gid );
-int host_in_domain( const char *domain, const char *hostname );
 void init_environment_info();
-
+void determine_user_ids( uid_t &requested_uid, gid_t &requested_gid );
 StateMachine	*condor_starter_ptr;
+
+void
+printClassAd( void )
+{
+	printf( "%s = False\n", ATTR_IS_DAEMON_CORE );
+	printf( "%s = True\n", ATTR_HAS_REMOTE_SYSCALLS );
+	printf( "%s = True\n", ATTR_HAS_CHECKPOINTING );
+	printf( "%s = \"%s\"\n", ATTR_VERSION, CondorVersion() );
+}
 
 
 /*
@@ -111,6 +125,12 @@ StateMachine	*condor_starter_ptr;
 int
 main( int argc, char *argv[] )
 {
+	myDistro->Init( argc, argv );
+	if( argc == 2 && strincmp(argv[1], "-cl", 3) == MATCH ) {
+		printClassAd();
+		exit( 0 );
+	}
+
 	StateMachine condor_starter( StateTab, TransTab, EventSigs, START, END );
 
 #define DEBUGGING FALSE
@@ -135,6 +155,7 @@ main( int argc, char *argv[] )
 	condor_starter_ptr = &(condor_starter);
 //	condor_starter.display();
 	condor_starter.execute();
+    free(UidDomain);
 	dprintf( D_ALWAYS, "********* STARTER terminating normally **********\n" );
 	return 0;
 }
@@ -190,7 +211,7 @@ init()
 {
 	move_to_execute_directory();
 	init_environment_info();
-	set_resource_limits();
+	sysapi_set_resource_limits();
 	close_unused_file_descriptors();
 
 	return DEFAULT;
@@ -265,21 +286,6 @@ init_shadow_connections()
 		   the user job exits in the middle of a remote system call, leaving
 		   the shadow blocked.  -Jim B. */
 	SyscallStream->timeout(300);
-}
-
-/*
-  Get relevant information from "condor_config" and "condor_config.local"
-  files.
-*/
-void
-read_config_files( void )
-{
-	config();
-
-		/* bring important parameters into global data items */
-	init_params();
-
-	dprintf( D_ALWAYS, "Done reading config files\n" );
 }
 
 /*
@@ -363,6 +369,26 @@ init_params()
 	if( UidDomain[0] == '*' ) {
 		UidDomain[0] = '\0';
 	}
+
+	// We can configure how many times the starter wishes to attempt to
+	// pull over the initial checkpoint
+	if ( (tmp=param( "EXEC_TRANSFER_ATTEMPTS" )) == NULL)
+	{
+		ExecTransferAttempts = 3;
+	}
+	else
+	{
+		ExecTransferAttempts = atoi(tmp);
+		// This catches errors on atoi(), and if the user did something stupid
+		if (ExecTransferAttempts < 1)
+		{
+			dprintf( D_ALWAYS, "Please check your EXEC_TRANSFER_ATTEMPTS "
+			"macro. It must be a number greater than or equal to one. "
+			"Defaulting EXEC_TRANSFER_ATTEMPTS to 3.\n") ;
+			ExecTransferAttempts = 3;
+		}
+		free(tmp);
+	}
 }
 
 /*
@@ -404,20 +430,6 @@ get_exec()
 		return FAILURE;
 	}
 	return SUCCESS;
-}
-
-
-/*
-  We've been asked to vacate the machine, but we're allowed to checkpoint
-  any running jobs or complete any checkpoints we have in progress first.
-*/
-int
-handle_vacate_req()
-{
-	// dprintf( D_ALWAYS, "Entering function handle_vacate_req()\n" );
-
-	stop_all();				// stop any running user procs
-	return(0);
 }
 
 
@@ -487,7 +499,7 @@ req_exit_all()
 		// Request all the processes to exit
 	UProcList.Rewind();
 	while( proc = UProcList.Next() ) {
-		if ( proc->get_class() != PVMD ) {
+		if ( proc->get_class() != CONDOR_UNIVERSE_PVMD ) {
 			dprintf( D_ALWAYS, "req_exit_all: Proc %d in state %s\n", 
 					proc->get_id(),	ProcStates.get_name(proc->get_state())
 					);
@@ -546,6 +558,7 @@ dispose_all()
 		send_final_status( proc );
 		proc->delete_files();
 		UProcList.DeleteCurrent();
+		delete proc; // DeleteCurrent() doesn't delete it, so we do
 	}
 
 	return DEFAULT;
@@ -581,19 +594,20 @@ send_final_status( UserProc *proc )
 #if 0
 	image_size = proc->get_image_size();
 	if ( image_size > 0 ) {
-		(void)REMOTE_syscall( CONDOR_image_size, image_size );
+		(void)REMOTE_CONDOR_image_size( image_size );
 	}
 #endif
 
 		// update shadow with it's resource usage and exit status
 	status = proc->bsd_exit_status();
-	if( proc->get_class() == PVM ) {
+	if( proc->get_class() == CONDOR_UNIVERSE_PVM ) {
 		rusage = proc->accumulated_rusage();	// All resource usage
 		id = proc->get_id();
-		(void)REMOTE_syscall( CONDOR_subproc_status, id, status, rusage);
+		(void)REMOTE_CONDOR_subproc_status( (int)id, (int*)status, 
+			(struct rusage*)rusage);
 	} else {
 		rusage = proc->guaranteed_rusage();		// Only usage guaranteed by ckpt
-		(void)REMOTE_syscall( CONDOR_reallyexit, status, rusage);
+		(void)REMOTE_CONDOR_reallyexit( (int*)status, (struct rusage*)rusage);
 	}
 
 	dprintf( D_FULLDEBUG,
@@ -674,9 +688,48 @@ susp_ckpt_timer()
 int
 susp_all()
 {
+	char *susp_msg = "TISABH Starter: Suspended user job: ";
+	char *unsusp_msg = "TISABH Starter: Unsuspended user job.";
+	char msg[4096];
+	UserProc	*proc;
+	int sum;
+
 	stop_all();
 
+	/* determine how many pids the starter suspended */
+	sum = 0;
+	UProcList.Rewind();
+	while( proc = UProcList.Next() ) {
+		if( proc->is_suspended() ) {
+			sum += proc->get_num_pids_suspended();
+		}
+	}
+
+	/* Now that we've suspended the jobs, write to our client log
+		fd some information about what we did so the shadow
+		can figure out we suspended the job. TISABH stands for
+		"This Is Such A Bad Hack".  Note: The starter isn't
+		supposed to be messing with this fd like this, but
+		the high poobah wanted this feature hacked into
+		the old starter/shadow combination. So here it
+		is. Sorry. If you change this string, please go to
+		ops.C in the shadow.V6 directory and change the function
+		log_old_starter_shadow_suspend_event_hack() to reflect
+		the new choice.  -psilord 2/1/2001 */
+
+	sprintf(msg, "%s%d\n", susp_msg, sum);
+	/* Hmm... maybe I should write a loop that checks to see if this is ok */
+	write(CLIENT_LOG, msg, strlen(msg));
+
 	susp_self();
+
+	/* Before we unsuspend the jobs, write to the client log that we are
+		about to so the shadow knows. Make sure to do this BEFORE we unsuspend
+		the jobs.
+		-psilord 2/1/2001 */
+	sprintf(msg, "%s\n", unsusp_msg);
+	/* Hmm... maybe I should write a loop that checks to see if this is ok */
+	write(CLIENT_LOG, msg, strlen(msg));
 
 	resume_all();
 
@@ -707,7 +760,7 @@ stop_all()
 
 	UProcList.Rewind();
 	while( proc = UProcList.Next() ) {
-		if( proc->is_running() && proc->get_class() != PVMD ) {
+		if( proc->is_running() && proc->get_class() != CONDOR_UNIVERSE_PVMD ) {
 			proc->suspend();
 			dprintf( D_ALWAYS, "\tRequested user job to suspend\n" );
 		}
@@ -715,7 +768,7 @@ stop_all()
 
 	UProcList.Rewind();
 	while( proc = UProcList.Next() ) {
-		if( proc->is_running() && proc->get_class() == PVMD ) {
+		if( proc->is_running() && proc->get_class() == CONDOR_UNIVERSE_PVMD ) {
 			proc->suspend();
 			dprintf( D_ALWAYS, "\tRequested user job to suspend\n" );
 		}
@@ -735,7 +788,7 @@ resume_all()
 
 	UProcList.Rewind();
 	while( proc = UProcList.Next() ) {
-		if( proc->is_suspended() && proc->get_class() == PVMD ) {
+		if( proc->is_suspended() && proc->get_class() == CONDOR_UNIVERSE_PVMD ) {
 			proc->resume();
 			dprintf( D_ALWAYS, "\tRequested user job to resume\n" );
 		}
@@ -743,7 +796,7 @@ resume_all()
 
 	UProcList.Rewind();
 	while( proc = UProcList.Next() ) {
-		if( proc->is_suspended() && proc->get_class() != PVMD ) {
+		if( proc->is_suspended() && proc->get_class() != CONDOR_UNIVERSE_PVMD ) {
 			proc->resume();
 			dprintf( D_ALWAYS, "\tRequested user job to resume\n" );
 		}
@@ -916,7 +969,9 @@ dispose_one()
 
 		// Delete proc from our list
 	proc->delete_files();
+	
 	UProcList.DeleteCurrent();
+	delete proc; // DeleteCurrent() doesn't delete it, so we do
 	return(0);
 }
 
@@ -989,7 +1044,7 @@ update_cpu()
 	proc = UProcList.Current();
 
 	rusage = proc->accumulated_rusage();
-	(void)REMOTE_syscall( CONDOR_send_rusage, rusage );
+	(void)REMOTE_CONDOR_send_rusage( rusage );
 #endif
 	return(0);
 }
@@ -1018,7 +1073,7 @@ get_job_info()
 	dprintf( D_ALWAYS, "Entering get_job_info()\n" );
 
 	memset( &s, 0, sizeof(s) );
-	REMOTE_syscall( CONDOR_startup_info_request, &s );
+	REMOTE_CONDOR_startup_info_request( &s );
 	display_startup_info( &s, D_ALWAYS );
 
 	determine_user_ids( s.uid, s.gid );
@@ -1030,10 +1085,10 @@ get_job_info()
 
 	switch( s.job_class ) {
 #if 0
-		case PVMD:
+		case CONDOR_UNIVERSE_PVMD:
 			u_proc = new PVMdProc( s );
 			break;
-		case PVM:
+		case CONDOR_UNIVERSE_PVM:
 			u_proc = new PVMUserProc( s );
 			break;
 #endif
@@ -1043,6 +1098,18 @@ get_job_info()
 	}
 
 	u_proc->display();
+
+	// We need to clean up the memory allocated in the STARTUP_INFO I
+	// think that STARTUP_INFO should probably be a class with a
+	// destructor, but I am pretty unfamiliar with the code, so I'm
+	// going to make a minimal change here. By the way, we know it's
+    // safe to free this memory, because the UserProc class makes
+	// copies of it. --Alain 25-Sep-2001
+	if (s.cmd)  free(s.cmd);
+	if (s.args) free(s.args);
+	if (s.env)  free (s.env);
+	if (s.iwd)  free (s.iwd);
+
 	return u_proc;
 }
 
@@ -1063,18 +1130,20 @@ cleanup()
 
 	UProcList.Rewind();
 	while( proc = UProcList.Next() ) {
-		if ( proc->get_class() != PVMD ) {
+		if ( proc->get_class() != CONDOR_UNIVERSE_PVMD ) {
 			proc->kill_forcibly();
 			proc->delete_files();
 			UProcList.DeleteCurrent();
+			delete proc; // DeleteCurrent() doesn't delete it, so we do
 		}
 	}
 	UProcList.Rewind();
 	while ( proc = UProcList.Next() ) {
-		if ( proc->get_class() == PVMD ) {
+		if ( proc->get_class() == CONDOR_UNIVERSE_PVMD ) {
 			proc->kill_forcibly();
 			proc->delete_files();
 			UProcList.DeleteCurrent();
+			delete proc; // DeleteCurrent() doesn't delete it, so we do
 		}
 	}
 	return(0);
@@ -1166,100 +1235,6 @@ needed_fd( int fd )
 }
 
 /*
-  Return true if the given domain contains the given hostname.  For
-  example the domain "cs.wisc.edu" constain the host "padauk.cs.wisc.edu".
-*/
-int
-host_in_domain( const char *domain, const char *hostname )
-{
-	const char	*ptr;
-
-	for( ptr=hostname; *ptr; ptr++ ) {
-		if( strcmp(ptr,domain) == MATCH ) {
-			return TRUE;
-		}
-	}
-
-	return FALSE;
-}
-
-/*
-  We've been requested to start the user job with the given UID, but
-  we apply our own rules to determine whether we'll honor that request.
-*/
-void
-determine_user_ids( uid_t &requested_uid, gid_t &requested_gid )
-{
-
-	struct passwd	*pwd_entry;
-
-		// don't allow any root processes
-	if( requested_uid == 0 || requested_gid == 0 ) {
-		EXCEPT( "Attempt to start user process with root privileges" );
-	}
-		
-		// if the submitting machine is in our shared UID domain, honor
-		// the request
-	if( host_in_domain(UidDomain,InitiatingHost) ) {
-
-		/* check to see if there is an entry in the passwd file for this uid */
-		if( (pwd_entry=getpwuid(requested_uid)) == NULL ) {
-			char *want_soft = NULL;
-	
-			if ( (want_soft=param("SOFT_UID_DOMAIN")) == NULL || 
-				 (*want_soft != 'T' && *want_soft != 't') ) {
-			  EXCEPT("Uid not found in passwd file & SOFT_UID_DOMAIN is False");
-			}
-			if ( want_soft ) {
-				free(want_soft);
-			}
-		}
-		(void)endpwent();
-
-		return;
-	}
-
-		// otherwise, we run the process an "nobody"
-	if( (pwd_entry = getpwnam("nobody")) == NULL ) {
-#ifdef HPUX
-		// the HPUX9 release does not have a default entry for nobody,
-		// so we'll help condor admins out a bit here...
-		requested_uid = 59999;
-		requested_gid = 59999;
-		return;
-#else
-		EXCEPT( "Can't find UID for \"nobody\" in passwd file" );
-#endif
-	}
-
-	requested_uid = pwd_entry->pw_uid;
-	requested_gid = pwd_entry->pw_gid;
-
-#ifdef HPUX
-	// HPUX9 has a bug in that getpwnam("nobody") always returns
-	// a gid of 60001, no matter what the group file (or NIS) says!
-	// on top of that, legal UID/GIDs must be -1<x<60000, so unless we
-	// patch here, we will generate an EXCEPT later when we try a
-	// setgid().  -Todd Tannenbaum, 3/95
-	if ( (requested_uid > 59999) || (requested_uid < 0) )
-		requested_uid = 59999;
-	if ( (requested_gid > 59999) || (requested_gid < 0) )
-		requested_gid = 59999;
-#endif
-
-#ifdef IRIX
-		// Same weirdness on IRIX.  60001 is the default uid for
-		// nobody, lets hope that works.
-	if ( (requested_uid >= UID_MAX ) || (requested_uid < 0) )
-		requested_uid = 60001;
-	if ( (requested_gid >= UID_MAX) || (requested_gid < 0) )
-		requested_gid = 60001;
-#endif
-
-}
-
-
-/*
   Find out information about our UID domain and file sharing
   domain.  Register this information with the shadow.
 */
@@ -1274,32 +1249,32 @@ init_environment_info()
 
 	my_fs_domain = param( "FILESYSTEM_DOMAIN" );
 	if( my_fs_domain ) {
-		REMOTE_syscall( CONDOR_register_fs_domain, my_fs_domain );
+		REMOTE_CONDOR_register_fs_domain( my_fs_domain );
 		free(my_fs_domain);
 	}
 
 	my_uid_domain = param( "UID_DOMAIN" );
 	if( my_uid_domain ) {
-		REMOTE_syscall( CONDOR_register_uid_domain, my_uid_domain );
+		REMOTE_CONDOR_register_uid_domain( my_uid_domain );
 		free(my_uid_domain);
 	}
 
 #if !defined(CONTRIB)
 	ckpt_server_host = param( "CKPT_SERVER_HOST" );
 	if( ckpt_server_host ) {
-		REMOTE_syscall( CONDOR_register_ckpt_server, ckpt_server_host );
+		REMOTE_CONDOR_register_ckpt_server( ckpt_server_host );
 		free(ckpt_server_host);
 	}
 
 	arch = param( "ARCH" );
 	if (arch) {
-		REMOTE_syscall( CONDOR_register_arch, arch );
+		REMOTE_CONDOR_register_arch( arch );
 		free(arch);
 	}
 
 	opsys = param( "OPSYS" );
 	if (opsys) {
-		REMOTE_syscall( CONDOR_register_opsys, opsys);
+		REMOTE_CONDOR_register_opsys( opsys );
 		free(opsys);
 	}
 #endif

@@ -1,6 +1,7 @@
 PROGRAMS =  	condor_config_val condor_preen condor_stats \
 		condor_userprio condor_history condor test_calc \
-		view_collection condor_qedit
+		view_collection condor_qedit condor_advertise condor_version \
+		condor_fetch_log condor_submit_dag
 
 all_target( $(PROGRAMS) )
 
@@ -13,6 +14,18 @@ release_target(condor_preen,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
 strip_target(condor_preen,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
 static_target(condor_preen,preen.o,$(LIB),$(STATIC_DIR)/sbin)
 pure_c_plus_target(condor_preen.pure,preen.o,$(LIB))
+
+c_plus_target(condor_advertise,advertise.o command_strings.o,$(LIB))
+release_target(condor_advertise,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
+strip_target(condor_advertise,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
+static_target(condor_advertise,advertise.o command_strings.o,$(LIB),$(STATIC_DIR)/sbin)
+pure_c_plus_target(condor_advertise.pure,advertise.o command_strings.o,$(LIB))
+
+c_plus_target(condor_fetch_log,fetch_log.o,$(LIB))
+release_target(condor_fetch_log,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
+strip_target(condor_fetch_log,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
+static_target(condor_fetch_log,fetch_log.o,$(LIB),$(STATIC_DIR)/sbin)
+pure_c_plus_target(condor_fetch_log.pure,fetch_log.o,$(LIB))
 
 c_plus_target(condor_config_val,config_val.o,$(LIB))
 release_target(condor_config_val,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
@@ -33,7 +46,7 @@ static_target(condor_userprio,user_prio.o,$(LIB),$(STATIC_DIR)/bin)
 c_plus_target(condor_findhost,give_interactive.o,$(LIB))
 release_target(condor_findhost,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 strip_target(condor_findhost,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
-static_target(condor_findhost,history.o,$(LIB),$(STATIC_DIR)/bin)
+static_target(condor_findhost,give_interactive.o,$(LIB),$(STATIC_DIR)/bin)
 
 c_plus_target(condor_history,history.o,$(LIB))
 release_target(condor_history,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
@@ -44,6 +57,13 @@ c_plus_target(condor_qedit,qedit.o,$(LIB))
 release_target(condor_qedit,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 strip_target(condor_qedit,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
 static_target(condor_qedit,qedit.o,$(LIB),$(STATIC_DIR)/bin)
+
+c_plus_target(condor_submit_dag,condor_submit_dag.o,$(LIB))
+
+c_plus_target(condor_version,version.o,$(LIB))
+release_target(condor_version,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+strip_target(condor_version,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
+static_target(condor_version,version.o,$(LIB),$(STATIC_DIR)/bin)
 
 c_plus_target(condor,tool.o command_strings.o,$(LIB))
 release_target(condor,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
@@ -98,19 +118,22 @@ static_link_target($(STATIC_DIR)/bin/condor,bin,condor_vacate)
 static_link_target($(STATIC_DIR)/bin/condor,bin,condor_reschedule)
 
 c_plus_target(condor_stats,stats.o,$(LIB))
-static_target(condor_stats,stats.o,$(LIB),$(STATIC_DIR)/sbin)
-strip_target(condor_stats,$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
-release_target(condor_stats,$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
+static_target(condor_stats,stats.o,$(LIB),$(STATIC_DIR)/bin)
+strip_target(condor_stats,$(STRIP_DIR)/bin,EXECUTABLE_MODE)
+release_target(condor_stats,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
 c_plus_target(test_calc,test_calc.o,$(LIB))
 
 c_plus_target(view_collection,view_collection.o,$(LIB))
 
+c_plus_target(condor_invalidate_host,invalidate_host.o,$(LIB))
+
+
 condor_master_on: master_on.c
-	gcc -o condor_master_on master_on.c
+	gcc -I/usr/afsws/include -o condor_master_on master_on.c
 
 condor_kill: kill.C
-	g++ -o condor_kill kill.C -I../condor_c++_util
+	g++ -o condor_kill kill.C -I../condor_c++_util -I../condor_includes
 
 clean::
 	rm -f condor_kill condor_master_on *.o

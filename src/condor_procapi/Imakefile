@@ -1,21 +1,22 @@
-all_target(libprocapi.a)
+all_target(libprocapi.a condor_procapi)
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 CFLAGS = $(STD_C_FLAGS)
-LIB = $(STD_LIBS) ../condor_classad/libclassad.a ../condor_io/libcedar.a
+LIB = $(STD_LIBS) ../condor_classad.V6/libclassad.a ../condor_io/libcedar.a
 
 OBJ = procapi.o procinterface.o procapi_instantiate.o
 
+TEST_OBJS = procapi_t.o procapi_getproc_t.o procapi_faminfo_t.o \
+	procapi_fork_t.o procapi_perm_t.o procapi_set_t.o procapi_pidfam_t.o \
+	procapi_cpu_t.o procapi_mem_t.o
+
 library_target(libprocapi.a,$(OBJ))
 
-c_plus_target(procapi.tester,procapi.t.o,$(LIB))
-pure_c_plus_target(procapi.tester.pure,procapi.t.o,$(LIB))
-c_plus_target(nt-testprocapi, testprocapi.o, $(LIB))
-pure_c_plus_target(nt-testprocapi.pure, testprocapi.o, $(LIB))
+c_plus_target(condor_procapi, $(TEST_OBJS), $(LIB))
+pure_c_plus_target(condor_procapi.pure, $(TEST_OBJS), $(LIB))
 
 html_target( procapi.h procinterface.h )
 
-release:
-stripped:
-static: 
-
+release:: all
+stripped:: all
+static:: all

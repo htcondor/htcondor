@@ -31,13 +31,15 @@
 _EXCEPT_(foo)
 char	*foo;
 { printf( foo ); }
-#else LINT
+#else /* LINT */
 
 int		_EXCEPT_Line;
 int		_EXCEPT_Errno;
 char	*_EXCEPT_File;
 int		(*_EXCEPT_Cleanup)(int,int,char*);
 int		SetSyscalls(int);
+
+extern int		_condor_dprintf_works;
 
 void
 _EXCEPT_(char *fmt, ...)
@@ -50,8 +52,13 @@ _EXCEPT_(char *fmt, ...)
 
 	vsprintf( buf, fmt, pvar );
 
-	dprintf( D_ALWAYS, "ERROR \"%s\" at line %d in file %s: %s\n",
-			 buf, _EXCEPT_Line, _EXCEPT_File, strerror(errno) );
+	if( _condor_dprintf_works ) {
+		dprintf( D_ALWAYS|D_FAILURE, "ERROR \"%s\" at line %d in file %s\n",
+				 buf, _EXCEPT_Line, _EXCEPT_File );
+	} else {
+		fprintf( stderr, "ERROR \"%s\" at line %d in file %s\n",
+				 buf, _EXCEPT_Line, _EXCEPT_File );
+	}
 
 	if( _EXCEPT_Cleanup ) {
 		(*_EXCEPT_Cleanup)( _EXCEPT_Line, _EXCEPT_Errno, buf );
@@ -61,4 +68,4 @@ _EXCEPT_(char *fmt, ...)
 
 	exit( JOB_EXCEPTION );
 }
-#endif LINT
+#endif /* LINT */

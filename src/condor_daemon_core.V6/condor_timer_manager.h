@@ -100,6 +100,10 @@ typedef int     (Service::*Eventcpp)();
 #define TimerHandler Event
 #define TimerHandlercpp Eventcpp
 
+// This value, passed for "when", will cause the timer to never expire
+const unsigned	TIMER_NEVER = 0xffffffff;
+
+
 //-----------------------------------------------------------------------------
 /// Not_Yet_Documented
 struct tagTimer {

@@ -1,32 +1,23 @@
-nmake /f condor_util_lib.mak
-nmake /f condor_cpp_util.mak
-nmake /f condor_io.mak
-nmake /f condor_classad.mak
-nmake /f condor_kbdd_dll.mak
-nmake /f condor_procapi.mak
-nmake /f condor_sysapi.mak
-nmake /f condor_daemon_core.mak
-nmake /f condor_acct.mak
-nmake /f condor_ckpt_server_api.mak
-nmake /f condor_qmgmt.mak
-nmake /f condor_collector.mak
-nmake /f condor_config_val.mak
-# nmake /f condor_give_interactive.mak
-nmake /f condor_history.mak
-nmake /f condor_mail.mak
-nmake /f condor_master.mak
-nmake /f condor_negotiator.mak
-nmake /f condor_preen.mak
-nmake /f condor_prio.mak
-nmake /f condor_q.mak
-nmake /f condor_qedit.mak
-nmake /f condor_rm.mak
-nmake /f condor_schedd.mak
-nmake /f condor_shadow.mak
-nmake /f condor_startd.mak
-nmake /f condor_starter.mak
-nmake /f condor_stats.mak
-nmake /f condor_status.mak
-nmake /f condor_submit.mak
-nmake /f condor_tool.mak
-nmake /f condor_userprio.mak
+@echo off
+REM Build Condor from a batch file
+REM Todd Tannenbaum <tannenba@cs.wisc.edu> Feb 2002
+if defined INCLUDE goto :compiler_ready
+call VCVARS32.BAT
+if defined INCLUDE goto :compiler_ready
+echo *** Visual C++ bin direcotory not in the path, or compiler not installed.
+goto failure
+:compiler_ready
+set conf=Release
+if /i A%1==Arelease shift
+if /i A%1==Adebug (set conf=Debug& shift & echo Debug Build - Output going to ..\Debug) else (echo Release Build - Output going to ..\Release)
+call dorenames.bat > NUL
+if not errorlevel 2 call dorenames.bat > NUL
+REM Note - Order is important in the loop below
+for %%f in ( condor_util_lib condor_cpp_util condor_io condor_classad condor_kbdd_dll condor_procapi condor_sysapi condor_daemon_core condor_acct condor_qmgmt condor_collector condor_config_val condor_dagman condor_findhost condor_history condor_mail condor_master condor_negotiator condor_preen condor_prio condor_q condor_qedit condor_submit_dag condor_rm condor_schedd condor_shadow condor_startd condor_starter condor_eventd condor_stats condor_advertise condor_status condor_submit condor_tool condor_userlog condor_userprio) do ( echo *** Building %%f & echo . & nmake /C /f %%f.mak RECURSE="0" CFG="%%f - Win32 %conf%" %* || goto failure )
+echo .
+echo *** Done.  Build is all happy.  Congrats!  Go drink beer.  
+exit /B 0
+:failure
+echo .
+echo *** Build Stopped.  Please fix errors and try again.
+exit /B 1

@@ -39,6 +39,8 @@
 #include <signal.h>
 #include <syslog.h>
 #include <assert.h>
+#include <dirent.h>
+#include <errno.h>
 
 #include "list.h"
 
@@ -54,14 +56,6 @@ private:
 };
 
 
-// Global variables
-extern int errno;
-
-// We know Linux's ps is BSD-like
-#if defined( linux ) && !defined( BSD_PS )
-#define BSD_PS
-#endif
-
 #if defined( BSD_PS ) 
 static const char* PS_CMD = "/bin/ps auwwx";
 #else 
@@ -74,8 +68,9 @@ List<CondorPid>* condor_pids = NULL;
 // Prototypes
 void usage(char*);			// print usage info and exit
 void my_exit(int);			// close the syslog and exit
-void find_condor_pids();	// find all pids from ps that begin with "condor_"
+void find_condor_pids();	// find all processes that begin with "condor_"
 CondorPid* find_cpid(pid_t);	// find the CondorPid object with the given pid
+bool isaNum( char *s );     // checks if string contains solely numeric chars
 
 
 int
@@ -144,6 +139,99 @@ usage( char* name ) {
 	my_exit( 1 );
 }
 
+// for Linux we use a special /proc-based version of find_condor_pids
+#if defined( linux )
+
+// Finds all Condor processes in the system by looking in /proc for
+// directories representing processes (i.e., those that are numeric),
+// opening "cmdline" in each one, and, if the command begins with
+// "condor_", adding its pid to our list of condor pids.  We also save
+// the corresponding command line to print out in the syslog.
+void
+find_condor_pids() {
+
+    DIR *proc_root;
+    struct dirent *proc_dir;
+    char tmp_name[PATH_MAX];
+    FILE *fp;
+    char cmdline[64];
+    pid_t pid;
+    CondorPid *cpid;
+
+    if( ! (condor_pids = new List<CondorPid>) ) {
+        fprintf( stderr, "error: out of memory!\n" );
+        my_exit( 1 );
+    }
+
+    if( ! (proc_root = opendir( "/proc" )) ) {
+        fprintf( stderr, "error: can't open /proc (%s)\n", strerror( errno ) );
+		my_exit( 1 );
+    }
+
+    while( (proc_dir = readdir( proc_root )) != NULL ) {
+
+        // if this a numerically-named directory (i.e., a process)
+        if( isaNum( proc_dir->d_name ) ) {
+	    char	*cmdptr;
+
+            // construct the filename to open (/proc/[pid]/cmdline)
+            strncpy( tmp_name, "/proc/", PATH_MAX );
+            strncat( tmp_name, proc_dir->d_name,
+                     (PATH_MAX - strlen(tmp_name)) );
+            strncat( tmp_name, "/cmdline",
+                     (PATH_MAX - strlen(tmp_name)) );
+
+            // open it, and slurp up the command line
+            if( ! (fp = fopen( tmp_name, "r" )) ) {
+                fprintf( stderr, "error: can't open %s (%s)\n", tmp_name,
+                         strerror( errno ) );
+		my_exit( 1 );
+            }
+            fgets( cmdline, 64, fp );
+            fclose( fp );
+
+	    // Grab the 'program name' portion of the command line
+	    if (  ( cmdptr = strrchr( cmdline, '/' ) ) != NULL ) {
+		cmdptr++;		// Point to the fist char after the /
+	    } else {
+		cmdptr = cmdline;	// No slash -- no path in cmdline
+	    }
+
+	    // if the command begins with "condor_", save the pid
+	    if( strstr( cmdptr, "condor_" ) == cmdptr ) {
+		pid = atoi( proc_dir->d_name );
+		cpid = new CondorPid( pid, cmdline );
+		condor_pids->Append( cpid );
+	    }
+	}
+    }
+
+    closedir( proc_root );
+	return;
+}
+
+
+// returns 1 if s consists solely of digits 0-9, otherwise returns 0
+bool isaNum( char *s )
+{
+    int i;
+
+    // return 0 if empty
+    if( s[0] == '\0' ) {
+        return 0;
+    }
+
+    // check each char for non-digit values
+    for( i = 0; s[i] != '\0'; i++ ) {
+        if( s[i] < '0' || s[i] > '9' ) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+// for all other OSs we use a ps-based version of find_condor_pids
+#else
 
 // Find all Condor processes in the system.  We open /bin/ps, and find
 // all entries that have "condor_" in argv[0].  For each pid, we save
@@ -152,7 +240,7 @@ void
 find_condor_pids() {
 
 	FILE *ps;
-	char line[250], *tmp;
+	char line[250];
 	pid_t pid;
 	CondorPid *cpid;
 
@@ -171,9 +259,8 @@ find_condor_pids() {
 
 	fgets( line, 249, ps );  /* skip the column header line */
 	while( fgets(line,249,ps) != NULL ) {
-		tmp = strstr( line, "condor_" );
-		if( tmp ) {
-				// Found a line that contains "condor_", grab the pid
+		if( strstr( line, "condor_" ) == line ) {
+			// found a line that begins with "condor_", so grab the pid
 			sscanf( line, "%*s %ld", &pid );
 			cpid = new CondorPid( pid, line );
 			condor_pids->Append( cpid );
@@ -181,6 +268,7 @@ find_condor_pids() {
 	}    
 }
 
+#endif	// defined( linux )	
 
 // Return a pointer to the CondorPid object with the given pid
 CondorPid*

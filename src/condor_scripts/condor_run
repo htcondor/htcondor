@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 ###########################################################################
 #
@@ -17,6 +17,19 @@
 #  condor_run by Jim Basney <jbasney@cs.wisc.edu> 4/3/2000
 #
 ###########################################################################
+
+# possible universe argument (don't "use Getopt::Std")
+# must be first thing before shell command
+$universe = 'vanilla';
+if ( defined $ARGV[0] ) {
+    if ( $ARGV[0] eq '-u' && defined $ARGV[1] ) {
+	shift;
+	$universe = shift;
+    } elsif ( $ARGV[0] =~ /^-u(.*)/ ) {
+	$universe = $1;
+	shift;
+    }
+}
 
 # check arguments
 if (!defined($ARGV[0]) || $ARGV[0] eq "-h" || $ARGV[0] eq "-help") {
@@ -73,7 +86,7 @@ open(CMD, ">.condor_run.$$") ||
 print CMD "#!", $shell, "\n";
 foreach $arg (@ARGV) {
     print CMD $arg, " ";
-n}
+}
 print CMD "\n";
 close(CMD) ||
     &abort("Failed to write temporary (CMD) file in current directory.\n");
@@ -81,7 +94,7 @@ close(CMD) ||
 # create a job description file to submit the shell script to Condor
 open(JDF, ">.condor_submit.$$") ||
     &abort("Can't create temporary (JDF) file in current directory.\n");
-print JDF "universe = vanilla\n";
+print JDF "universe = $universe\n";
 print JDF "executable = .condor_run.$$\n";
 print JDF "notification = NEVER\n";
 print JDF "log = .condor_log.$$\n";
@@ -126,6 +139,9 @@ while (!$done) {
 	    $done = 1;
 	} elsif (/termination \(signal (\d+)\)/) {
 	    print STDERR "Condor job killed by signal ", $1 , ".\n";
+	    $done = 1;
+        } elsif ( /^009/ && /Job was aborted by the user/ ) {
+	    print STDERR "DAGMan was aborted by the user";
 	    $done = 1;
 	}
     }

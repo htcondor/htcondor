@@ -1,0 +1,105 @@
+#! /s/std/bin/perl -w
+use strict;
+
+# Things we know about
+my $Hawkeye = "hawkeye_dir";
+my $Release = "release_dir";
+my @BinDirs = ( "bin", "sbin" );
+my @KillList = (
+		"condor_checkpoint",
+		"condor_compile",
+		"condor_dagman",
+		"condor_findhost",
+		"condor_hold",
+		"condor_prio",
+		"condor_release",
+		"condor_reschedule",
+		"condor_negotiator",
+		"condor_rm",
+		"condor_run",
+		"condor_submit_dag",
+		"condor_userlog",
+		"condor_vacate",
+		"condor_ckpt_server",
+		"condor_preen",
+		"condor_pvm.*",
+		"condor_reconfig_schedd",
+		"condor_reschedule",
+		"condor_shadow.*",
+		"condor_starter.*",
+		"condor_vacate",
+		"condor_userprio",
+		"condor_submit",
+		"condor_schedd",
+		"condor_q",
+		"condor_qedit",
+		"rsh",
+	       );
+
+# Are we in the right home?
+die "No '$Release' dir!" if ( ! -d $Release );
+
+# Process command line..
+my $DoCopy = 0;
+foreach my $Arg ( @ARGV )
+{
+    if ( $Arg eq "-c" )
+    {
+	$DoCopy = 1;
+    }
+}
+
+# Blow away the current Hawkeye dir
+if ( -d $Hawkeye )
+{
+    system( "rm -fr $Hawkeye" );
+}
+die "Can't create $Hawkeye" if ( ! mkdir( $Hawkeye, 0755 ) );
+
+# Make stdout unbufferred...
+$| = 1;
+
+# Rebuild it
+foreach my $Bin ( @BinDirs )
+{
+    my $RelBin = "$Release/$Bin";
+    my $HawkBin = "$Hawkeye/$Bin";
+    die "Can't create $HawkBin" if ( ! mkdir( $HawkBin, 0755 ) );
+    my @Files = split( /\s+/, `/bin/ls -1 $RelBin` );
+  FILE:
+    foreach my $File ( @Files )
+    {
+	foreach my $Kill ( @KillList )
+	{
+	    next FILE if ( $File =~ /$Kill/ );
+	}
+
+	# Create the actual names
+	my $CondFile = "$RelBin/$File";
+	my $Tmp = $File;
+	$Tmp =~ s/condor/hawkeye/;
+	my $HawkFile = "$HawkBin/$Tmp";
+	print "$CondFile -> $HawkFile:  ";
+
+	# Copy / link 'em
+	if ( $DoCopy )
+	{
+	    if ( system( "cp $CondFile $HawkFile" ) )
+	    {
+		print "ERROR\n";
+		next;
+	    }
+	    print "Ok\n";
+	}
+	else
+	{
+	    my $LinkFile = "../../$CondFile";
+	    if ( ! symlink( $LinkFile, $HawkFile ) )
+	    {
+		print "ERROR\n";
+		next;
+	    }
+	    print "Ok\n";
+	}
+    }
+}

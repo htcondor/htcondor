@@ -33,7 +33,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
-#include <assert.h>
+#include "condor_fix_assert.h"
 #include <string.h>
 #if !defined(WIN32)
 #include <unistd.h>
@@ -129,7 +129,7 @@ int IsLocal(const char* path)
 }
 
 
-int FileExists(const char *filename, const char *owner)
+int FileExists(const char *filename, const char *owner, const char *schedd)
 {
 	int rval;
 
@@ -137,7 +137,7 @@ int FileExists(const char *filename, const char *owner)
 		return TRUE;
 	}
 
-	rval = FileOnServer(owner, filename);
+	rval = FileOnServer(owner, schedd, filename);
 	if (rval == 0) {
 		return TRUE;
 	} else if (rval == DOES_NOT_EXIST) {
@@ -149,6 +149,7 @@ int FileExists(const char *filename, const char *owner)
 
 
 int RequestStore(const char*     owner,
+				 const char*	 schedd,
 				 const char*     filename,
 				 size_t          len,
 				 struct in_addr* server_IP,
@@ -172,7 +173,15 @@ int RequestStore(const char*     owner,
 	req.priority = htonl(0);
 	req.time_consumed = htonl(0);
 	req.key = htonl(key);
-	strncpy(req.owner, owner, MAX_NAME_LENGTH);
+	strncpy(req.owner, owner, MAX_NAME_LENGTH-1);
+	if (schedd) {
+		int space_left = MAX_NAME_LENGTH-strlen(req.owner)-1;
+		if (space_left) {
+			strcat(req.owner, "@");
+			space_left--;
+			strncat(req.owner, schedd, space_left);
+		}
+	}
 	StripPrefix(filename, req.filename);
 	ret_code = net_write(server_sd, (char*) &req, sizeof(req));
 	if (ret_code != sizeof(req)) {
@@ -208,6 +217,7 @@ int RequestStore(const char*     owner,
 
 
 int RequestRestore(const char*     owner,
+				   const char*	   schedd,
 				   const char*     filename,
 				   size_t*         len,
 				   struct in_addr* server_IP,
@@ -228,7 +238,15 @@ int RequestRestore(const char*     owner,
 	req.ticket = htonl(AUTHENTICATION_TCKT);
 	req.priority = htonl(0);
 	req.key = htonl(key);
-	strncpy(req.owner, owner, MAX_NAME_LENGTH);
+	strncpy(req.owner, owner, MAX_NAME_LENGTH-1);
+	if (schedd) {
+		int space_left = MAX_NAME_LENGTH-strlen(req.owner)-1;
+		if (space_left) {
+			strcat(req.owner, "@");
+			space_left--;
+			strncat(req.owner, schedd, space_left);
+		}
+	}
 	StripPrefix(filename, req.filename);
 	/* assert(net_write(server_sd, (char*) &req, sizeof(req)) == sizeof(req)); */
 	if ( !(net_write(server_sd, (char*) &req, sizeof(req)) == sizeof(req)) ) {
@@ -264,6 +282,7 @@ int RequestRestore(const char*     owner,
 
 
 int RequestService(const char*     owner,
+				   const char*     schedd,
 				   const char*     filename,
 				   const char*     new_filename,
 				   service_type    type,
@@ -287,8 +306,17 @@ int RequestService(const char*     owner,
 	req.ticket = htonl(AUTHENTICATION_TCKT);
 	req.key = htonl(key);
 	req.service = htons((short)type);
-	if (owner != NULL)
-		strncpy(req.owner_name, owner, MAX_NAME_LENGTH);
+	if (owner != NULL) {
+		strncpy(req.owner_name, owner, MAX_NAME_LENGTH-1);
+		if (schedd) {
+			int space_left = MAX_NAME_LENGTH-strlen(req.owner_name)-1;
+			if (space_left) {
+				strcat(req.owner_name, "@");
+				space_left--;
+				strncat(req.owner_name, schedd, space_left);
+			}
+		}
+	}
 	if (filename != NULL)
 		StripPrefix(filename, req.file_name);
 	if (new_filename != NULL)
@@ -332,36 +360,40 @@ int RequestService(const char*     owner,
 
 
 int FileOnServer(const char* owner,
+				 const char* schedd,
 				 const char* filename)
 {
-	return (RequestService(owner, filename, NULL, SERVICE_EXIST,
+	return (RequestService(owner, schedd, filename, NULL, SERVICE_EXIST,
 						   NULL, NULL, NULL, NULL));
 }
 
 
 int RemoveRemoteFile(const char* owner,
+					 const char* schedd,
 					 const char* filename)
 {
-	return (RequestService(owner, filename, NULL, SERVICE_DELETE, NULL,
+	return (RequestService(owner, schedd, filename, NULL, SERVICE_DELETE, NULL,
 						   NULL, NULL, NULL));
 }
 
 
 int RemoveLocalOrRemoteFile(const char* owner,
+							const char* schedd,
 							const char* filename)
 {
 	unlink(filename);
-	return (RequestService(owner, filename, NULL, SERVICE_DELETE, NULL,
+	return (RequestService(owner, schedd, filename, NULL, SERVICE_DELETE, NULL,
 						   NULL, NULL, NULL));
 }
 
 
 int RenameRemoteFile(const char* owner,
+					 const char* schedd,
 					 const char* filename,
 					 const char* new_filename)
 {
-	return (RequestService(owner, filename, new_filename, SERVICE_RENAME,
-						   NULL, NULL, NULL, NULL));
+	return (RequestService(owner, schedd, filename, new_filename,
+						   SERVICE_RENAME, NULL, NULL, NULL, NULL));
 }
 
 static char *server_host = NULL;

@@ -22,7 +22,11 @@
  ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
 #include "condor_common.h"
+// this define is necessary to force condor_attributes.h
+// to declare the static CondorAttrList array.
+#define _CONDOR_ATTR_MAIN
 #include "condor_attributes.h"
+#include "condor_distribution.h"
 
 const char ATTR_ACTIVITY[] = "Activity";
 const char ATTR_ARCH[]     = "Arch";
@@ -48,8 +52,8 @@ const char ATTR_CLOCK_DAY                [] = "ClockDay";
 const char ATTR_CLOCK_MIN                [] = "ClockMin";
 const char ATTR_CLUSTER_ID               [] = "ClusterId";
 const char ATTR_COMPLETION_DATE			 [] = "CompletionDate";
-const char ATTR_CONDOR_LOAD_AVG			 [] = "CondorLoadAvg";
-const char ATTR_CONDOR_ADMIN			 [] = "CondorAdmin";
+//const char ATTR_CONDOR_LOAD_AVG			 [] = "CondorLoadAvg";
+//const char ATTR_CONDOR_ADMIN			 [] = "CondorAdmin";
 const char ATTR_CONSOLE_IDLE			 [] = "ConsoleIdle";
 const char ATTR_CONTINUE                 [] = "Continue";
 const char ATTR_CORE_SIZE				 [] = "CoreSize";
@@ -136,11 +140,16 @@ const char ATTR_NUM_HOPS_TO_LAST_CKPT_SERVER[] = "NumHopsToLastCkptServer";
 const char ATTR_NUM_HOPS_TO_CKPT_SERVER	 [] = "NumHopsToCkptServer";
 const char ATTR_NUM_RESTARTS			 [] = "NumRestarts";
 const char ATTR_NUM_USERS                [] = "NumUsers";
+const char ATTR_ON_EXIT_BY_SIGNAL        [] = "ExitBySignal";
+const char ATTR_ON_EXIT_CODE		     [] = "ExitCode";
+const char ATTR_ON_EXIT_HOLD_CHECK		 [] = "OnExitHold";
+const char ATTR_ON_EXIT_REMOVE_CHECK	 [] = "OnExitRemove";
+const char ATTR_ON_EXIT_SIGNAL		     [] = "ExitSignal";
 const char ATTR_OPSYS                    [] = "OpSys";
 const char ATTR_ORIG_MAX_HOSTS			 [] = "OrigMaxHosts";
 const char ATTR_OWNER                    [] = "Owner"; 
 const char ATTR_PERIODIC_CHECKPOINT      [] = "PeriodicCheckpoint";
-const char ATTR_PLATFORM                 [] = "CondorPlatform";
+//const char ATTR_PLATFORM                 [] = "CondorPlatform";
 const char ATTR_PREFERENCES				 [] = "Preferences";
 const char ATTR_PREV_SEND_ESTIMATE		 [] = "PrevSendEstimate";
 const char ATTR_PREV_RECV_ESTIMATE		 [] = "PrevRecvEstimate";
@@ -162,6 +171,28 @@ const char ATTR_SHADOW_IP_ADDR			 [] = "ShadowIpAddr";
 const char ATTR_MY_ADDRESS               [] = "MyAddress";
 const char ATTR_SCHEDD_IP_ADDR           [] = "ScheddIpAddr";
 const char ATTR_SCHEDD_NAME				 [] = "ScheddName";
+const char ATTR_SEC_AUTH_COMMAND         [] = "AuthCommand";
+const char ATTR_SEC_AUTHENTICATION       [] = "Authentication";
+const char ATTR_SEC_AUTHENTICATION_METHODS[] = "AuthMethods";
+const char ATTR_SEC_COMMAND              [] = "Command";
+const char ATTR_SEC_CRYPTO_METHODS       [] = "CryptoMethods";
+const char ATTR_SEC_ENACT                [] = "Enact";
+const char ATTR_SEC_ENCRYPTION           [] = "Encryption";
+const char ATTR_SEC_INTEGRITY            [] = "Integrity";
+const char ATTR_SEC_NEGOTIATION          [] = "OutgoingNegotiation";
+const char ATTR_SEC_NEW_SESSION          [] = "NewSession";
+const char ATTR_SEC_PACKET_COUNT         [] = "PacketCount";
+const char ATTR_SEC_RESPOND              [] = "Respond";
+const char ATTR_SEC_SERVER_COMMAND_SOCK  [] = "ServerCommandSock";
+const char ATTR_SEC_SERVER_ENDPOINT      [] = "ServerEndpoint";
+const char ATTR_SEC_SERVER_PID           [] = "ServerPid";
+const char ATTR_SEC_SESSION_DURATION     [] = "SessionDuration";
+const char ATTR_SEC_SID                  [] = "Sid";
+const char ATTR_SEC_SUBSYSTEM            [] = "Subsystem";
+const char ATTR_SEC_USER                 [] = "User";
+const char ATTR_SEC_USE_SESSION          [] = "UseSession";
+const char ATTR_SEC_VALID_COMMANDS       [] = "ValidCommands";
+const char ATTR_SEC_VERSION              [] = "Version";
 const char ATTR_SOURCE					 [] = "Source";
 const char ATTR_START                    [] = "Start";
 const char ATTR_STARTD_IP_ADDR           [] = "StartdIpAddr";
@@ -171,7 +202,7 @@ const char ATTR_SUBMITTOR_PRIO           [] = "SubmittorPrio";
 const char ATTR_SUBNET                   [] = "Subnet";
 const char ATTR_SUSPEND                  [] = "Suspend";
 const char ATTR_TARGET_TYPE				 [] = "TargetType";
-const char ATTR_TOTAL_CONDOR_LOAD_AVG	 [] = "TotalCondorLoadAvg";
+//const char ATTR_TOTAL_CONDOR_LOAD_AVG	 [] = "TotalCondorLoadAvg";
 const char ATTR_TOTAL_CPUS				 [] = "TotalCpus";
 const char ATTR_TOTAL_DISK				 [] = "TotalDisk";
 const char ATTR_TOTAL_REMOVED_JOBS		 [] = "TotalRemovedJobs";
@@ -186,6 +217,7 @@ const char ATTR_UID_DOMAIN               [] = "UidDomain";
 const char ATTR_ULOG_FILE				 [] = "UserLog";
 const char ATTR_UPDATE_INTERVAL			 [] = "UpdateInterval";
 const char ATTR_UPDATE_PRIO              [] = "UpdatePrio";
+const char ATTR_UPDATE_SEQUENCE_NUMBER   [] = "UpdateSequenceNumber";
 const char ATTR_USE_CKPT_SERVER			 [] = "UseCkptServer";
 const char ATTR_USER					 [] = "User";
 const char ATTR_VACATE                   [] = "Vacate";
@@ -201,7 +233,7 @@ const char ATTR_NUM_HOSTS_TOTAL			 [] = "HostsTotal";
 const char ATTR_NUM_HOSTS_CLAIMED		 [] = "HostsClaimed";
 const char ATTR_NUM_HOSTS_UNCLAIMED		 [] = "HostsUnclaimed";
 const char ATTR_NUM_HOSTS_OWNER			 [] = "HostsOwner";
-const char ATTR_VERSION					 [] = "CondorVersion";
+//const char ATTR_VERSION					 [] = "CondorVersion";
 const char ATTR_VIRTUAL_MACHINE_ID		 [] = "VirtualMachineID";
 const char ATTR_TRANSFER_TYPE			 [] = "TransferType";
 const char ATTR_TRANSFER_FILES			 [] = "TransferFiles";
@@ -212,4 +244,161 @@ const char ATTR_TRANSFER_SOCKET			 [] = "TransferSocket";
 const char ATTR_SERVER_TIME				 [] = "ServerTime";
 const char ATTR_SHADOW_BIRTHDATE		 [] = "ShadowBday";
 const char ATTR_HOLD_REASON				 [] = "HoldReason";
+const char ATTR_WANT_IO_PROXY		[] = "WantIOProxy";
+const char ATTR_WANT_MATCH_DIAGNOSTICS	 [] = "WantMatchDiagnostics";
 const char ATTR_WANT_RESOURCE_AD		 [] = "WantResAd";
+const char ATTR_X509_USER_PROXY          [] = "x509userproxy";			
+
+const char ATTR_UID						 [] = "Uid";
+const char ATTR_TRANSFER_OUTPUT			 [] = "TransferOut";
+const char ATTR_TRANSFER_INPUT			 [] = "TransferIn";
+const char ATTR_TRANSFER_ERROR			 [] = "TransferErr";
+const char ATTR_TOTAL_FLOCKED_JOBS		 [] = "TotalFlockedJobs";
+const char ATTR_TOTAL_SUSPENSIONS        [] = "TotalSuspensions";
+const char ATTR_TRANSFER_EXECUTABLE		 [] = "TransferExecutable";
+const char ATTR_TRANSFER_INTERMEDIATE_FILES [] = "TransferIntermediate";
+const char ATTR_STARTER_IP_ADDR          [] = "StarterIpAddr";
+const char ATTR_STARTER_ABILITY_LIST     [] = "StarterAbilityList";
+const char ATTR_STARTER_WAIT_FOR_DEBUG   [] = "StarterWaitForDebug";
+const char ATTR_SHADOW_VERSION			 [] = "ShadowVersion";
+const char ATTR_SHADOW_WAIT_FOR_DEBUG    [] = "ShadowWaitForDebug";
+const char ATTR_SCHEDULER				 [] = "Scheduler";
+const char ATTR_REQUEUE_REASON           [] = "RequeueReason";
+const char ATTR_REMOVE_KILL_SIG          [] = "RemoveKillSig";
+const char ATTR_REMOVE_REASON            [] = "RemoveReason";
+const char ATTR_REMOTE_VIRTUAL_MACHINE_ID [] = "RemoteVirtualMachineID";
+const char ATTR_REMOTE_OWNER			 [] = "RemoteOwner";
+const char ATTR_PERIODIC_HOLD_CHECK		 [] = "PeriodicHold";
+const char ATTR_PERIODIC_REMOVE_CHECK	 [] = "PeriodicRemove";
+const char ATTR_NODE					 [] = "Node";
+const char ATTR_NOTIFY_JOB_SCHEDULER     [] = "NotifyJobScheduler";
+const char ATTR_NUM_PIDS                 [] = "NumPids";
+const char ATTR_MPI_MASTER_ADDR       	 [] = "MPIMasterAddr";
+const char ATTR_LOCAL_FILES		[] = "LocalFiles";
+const char ATTR_LAST_REJ_MATCH_REASON	 [] = "LastRejMatchReason";
+const char ATTR_LAST_REJ_MATCH_TIME		 [] = "LastRejMatchTime";
+const char ATTR_LAST_SUSPENSION_TIME     [] = "LastSuspensionTime";
+const char ATTR_LAST_RELEASE_REASON      [] = "LastReleaseReason";
+const char ATTR_RELEASE_REASON			 [] = "ReleaseReason";
+const char ATTR_LAST_HOLD_REASON         [] = "LastHoldReason";
+const char ATTR_LAST_MATCH_TIME			 [] = "LastMatchTime";
+const char ATTR_JOB_ACTION               [] = "JobAction";
+const char ATTR_JOB_CORE_DUMPED			 [] = "JobCoreDumped";
+const char ATTR_JOB_CURRENT_START_DATE	 [] = "JobCurrentStartDate";
+const char ATTR_JOB_DURATION			 [] = "JobDuration";
+const char ATTR_JOB_ERROR_SIZE			 [] = "ErrSize";
+const char ATTR_JOB_EXIT_REQUIREMENTS	 [] = "ExitRequirements";
+const char ATTR_JOB_LANGUAGE             [] = "JobLanguage";
+const char ATTR_JOB_LAST_START_DATE		 [] = "JobLastStartDate";
+const char ATTR_JOB_MANAGED				 [] = "Managed";
+const char ATTR_JOB_OUTPUT_SIZE			 [] = "OutSize";
+const char ATTR_JOB_REMOTE_IWD			 [] = "RemoteIwd";
+const char ATTR_JOB_RUN_COUNT			 [] = "JobRunCount";
+const char ATTR_JOB_SPOOL_EXECUTABLE	 [] = "SpoolExecutable";
+const char ATTR_JOB_STATE                [] = "JobState";
+const char ATTR_LAST_AVAIL_INTERVAL		 [] = "LastAvailInterval";
+const char ATTR_IS_DAEMON_CORE           [] = "IsDaemonCore";
+const char ATTR_IS_OWNER                 [] = "IsOwner";
+const char ATTR_IS_QUEUE_SUPER_USER      [] = "IsQueueSuperUser";
+const char ATTR_ACTION_CONSTRAINT		 [] = "ActionConstraint";
+const char ATTR_ACTION_IDS				 [] = "ActionIds";
+const char ATTR_ACTION_RESULT			 [] = "ActionResult";
+const char ATTR_ACTION_RESULT_TYPE		 [] = "ActionResultType";
+const char ATTR_APPEND_FILES			[] = "AppendFiles";
+const char ATTR_AVAIL_SINCE				 [] = "AvailSince";
+const char ATTR_AVAIL_TIME				 [] = "AvailTime";
+const char ATTR_AVAIL_TIME_ESTIMATE		 [] = "AvailTimeEstimate";
+const char ATTR_COMPRESS_FILES			 [] = "CompressFiles";
+const char ATTR_BUFFER_FILES				 [] = "BufferFiles";
+const char ATTR_CKPT_SERVER				 [] = "CkptServer";
+const char ATTR_CPU_BUSY                 [] = "CpuBusy";
+const char ATTR_CPU_BUSY_TIME            [] = "CpuBusyTime";
+const char ATTR_CPU_IS_BUSY              [] = "CpuIsBusy";
+const char ATTR_CUMULATIVE_SUSPENSION_TIME[] = "CumulativeSuspensionTime";
+const char ATTR_DAEMON_START_TIME		 [] = "DaemonStartTime";
+const char ATTR_DAGMAN_JOB_ID			 [] = "DAGManJobId";
+const char ATTR_DAG_NODE_NAME			 [] = "DAGNodeName";
+const char ATTR_ENTERED_CURRENT_STATUS	 [] = "EnteredCurrentStatus";
+const char ATTR_EXCEPTION_HIERARCHY      [] = "ExceptionHierarchy";
+const char ATTR_EXCEPTION_NAME           [] = "ExceptionName";
+const char ATTR_EXCEPTION_TYPE           [] = "ExceptionType";
+const char ATTR_EXIT_REASON              [] = "ExitReason";
+const char ATTR_FETCH_FILES			 [] = "FetchFiles";
+const char ATTR_FLOCKED_JOBS			 [] = "FlockedJobs";
+const char ATTR_GLOBUS_RESOURCE			 [] = "GlobusResource";
+const char ATTR_GLOBUS_RSL				 [] = "GlobusRSL";
+const char ATTR_GLOBUS_STATUS			 [] = "GlobusStatus";
+const char ATTR_HAS_CHECKPOINTING        [] = "HasCheckpointing";
+const char ATTR_HAS_FILE_TRANSFER        [] = "HasFileTransfer";
+const char ATTR_HAS_IO_PROXY             [] = "HasIOProxy";
+const char ATTR_HAS_JAVA                 [] = "HasJava";
+const char ATTR_HAS_MPI                  [] = "HasMPI";
+const char ATTR_HAS_OLD_VANILLA          [] = "HasOldVanilla";
+const char ATTR_HAS_PVM                  [] = "HasPVM";
+const char ATTR_HAS_REMOTE_SYSCALLS      [] = "HasRemoteSyscalls";
+const char ATTR_JAR_FILES                [] = "JarFiles";
+const char ATTR_JAVA_MFLOPS              [] = "JavaMFlops";
+const char ATTR_JAVA_VENDOR              [] = "JavaVendor";
+const char ATTR_JAVA_VERSION             [] = "JavaVersion";
+
+
+
+// Initialize our logic
+int
+AttrInit( void )
+{
+    unsigned    i;
+    for ( i=0;  i<sizeof(CondorAttrList)/sizeof(CONDOR_ATTR_ELEM);  i++ )
+    {
+        // Sanity check
+        if ( (unsigned) CondorAttrList[i].sanity != i ) {
+            fprintf( stderr, "Attribute sanity check failed!!\n" );
+            return -1;
+        }
+        CondorAttrList[i].cached = NULL;
+    }
+    return 0;
+}
+
+// Get an attribute variable's name
+const char *
+AttrGetName( CONDOR_ATTR which )
+{
+    CONDOR_ATTR_ELEM    *local = &CondorAttrList[which];
+
+    // Simple case first; out of cache
+    if ( local->cached ) {
+        return local->cached;
+    }
+
+    // Otherwise, fill the cache
+    char    *tmps;
+    switch ( local->flag )
+    {
+    case  ATTR_FLAG_NONE:
+        tmps = (char *) local->string;
+        break;
+    case ATTR_FLAG_DISTRO:
+        // Yeah, this allocates a couple more bytes than required, but
+        // oh well...
+        tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
+        sprintf( tmps, local->string, myDistro->Get() );
+        break;
+    case ATTR_FLAG_DISTRO_UC:
+        // Yeah, this allocates a couple more bytes than required, but
+        // oh well...
+        tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
+        sprintf( tmps, local->string, myDistro->GetUc() );
+        break;
+    case ATTR_FLAG_DISTRO_CAP:
+        // Yeah, this allocates a couple more bytes than required, but
+        // oh well...
+        tmps = (char *) malloc( strlen(local->string) + myDistro->GetLen() );
+        sprintf( tmps, local->string, myDistro->GetCap() );
+        break;
+    }
+
+    // Then, return it
+    return ( local->cached = (const char * ) tmps );
+}
+

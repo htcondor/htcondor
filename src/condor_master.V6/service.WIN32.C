@@ -76,8 +76,9 @@ BOOL InitService()
 // complete
 VOID StopService() 
 {	
-	if (daemonCore->Send_Signal(daemonCore->getpid(), DC_SIGTERM) == TRUE)
+	if( daemonCore->Send_Signal(daemonCore->getpid(), SIGTERM) ) {
 		runningService=FALSE;
+	}
 }
 
 // This function consolidates the activities of 
@@ -180,7 +181,7 @@ VOID ServiceCtrlHandler (DWORD controlCode)
 		// Do nothing in a shutdown. Could do cleanup
 		// here but it must be very quick.
 		case SERVICE_CONTROL_SHUTDOWN:
-			daemonCore->Send_Signal(daemonCore->getpid(), DC_SIGQUIT);
+			daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
 			line_where_service_stopped = __LINE__;
 			return;
 		default:

@@ -26,14 +26,17 @@
 #ifndef ENVIRON_H
 #define ENVIRON_H
 
+#include "condor_environ.h"
+
 const int INITIAL_SIZE = 32;
 
 class Environ {
 public:
 	Environ();
 	~Environ();
-	void	add_string( char * );
-	char	*getenv( char * );
+	void	add_string( const char * );
+	char	*getenv( const char * );
+	char	*getenv( CONDOR_ENVIRON logical );
 	void	display();
 	char	**get_vector();
 private:

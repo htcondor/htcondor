@@ -1,14 +1,14 @@
 	default:
 	{
-		int terrno;
+		condor_errno_t terrno;
 
 		/* consume arguments */
 		syscall_sock->end_of_message();
 
 		errno = 0;
 		rval = CONDOR_NotSupported( condor_sysnum );
-		terrno = errno;
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+		terrno = (condor_errno_t)errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, (int)terrno );
 
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );

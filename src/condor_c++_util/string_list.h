@@ -33,21 +33,34 @@
 */
 class StringList {
 public:
-	StringList(char *s = NULL, char *delim = " ," ); 
+	StringList(const char *s = NULL, const char *delim = " ," ); 
 	~StringList();
-	void initializeFromString (char *);
+	void initializeFromString (const char *);
 	BOOLEAN contains( const char * );
-	BOOLEAN substring( const char * );
-	BOOLEAN contains_withwildcard(const char *string);
+	BOOLEAN substring( const char * );	
+	BOOLEAN contains_anycase( const char * );
+	BOOLEAN contains_withwildcard( const char *str );				
+	BOOLEAN contains_anycase_withwildcard( const char * );
+    const char *  string_anycase_withwildcard( const char *);
 	void print (void);
 	void rewind (void) { strings.Rewind(); }
 	void append (const char* str) { strings.Append( strdup(str) ); }
-	void remove (char* str);
+	void insert (const char* str) { strings.Insert( strdup(str) ); }
+	void remove (const char* str);
+	void remove_anycase (const char* str);
 	char *next (void) { return strings.Next(); }
 	void deleteCurrent();
 	int number (void) { return strings.Number(); };
 	bool isEmpty(void) { return strings.IsEmpty(); };
+
+	/* return a comma delimited list if the internals of the class. This will
+		rewind the string in order to construct this char array, and you
+		are responsible to release the memory allocated by this function 
+		with free() */
+	char* print_to_string(void);
+
 private:
+    const char * contains_withwildcard(const char *string, bool anycase);
 	List<char> strings;
 	char *delimiters;
 

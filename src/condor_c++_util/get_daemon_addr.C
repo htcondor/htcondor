@@ -185,6 +185,7 @@ default_daemon_name( void )
 		return NULL;
 	}
 	sprintf( ans, "%s@%s", name, host );
+	free(name);
 	return ans;
 }
 

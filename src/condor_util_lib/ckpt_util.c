@@ -33,8 +33,16 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include <sys/socket.h>
-#include <netinet/in.h>
+#include "condor_network.h"
+#include "internet.h"
+#include "my_hostname.h"
+
+
+#ifdef WANT_NETMAN
+/* Perform a callback during file stream transfers so we can manage
+   our network usage. */
+void file_stream_progress_report(int bytes_moved);
+#endif
 
 /*
   Transfer a whole file from the "src_fd" to the "dst_fd".  Return
@@ -100,6 +108,11 @@ stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes )
 			);
 			return bytes_moved;
 		}
+#ifdef WANT_NETMAN
+		else {
+			file_stream_progress_report((int)bytes_moved);
+		}
+#endif
 	}
 }
 

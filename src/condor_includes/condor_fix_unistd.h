@@ -164,4 +164,4 @@ extern "C" {
 }
 #endif
 
-#endif FIX_UNISTD_H
+#endif /* FIX_UNISTD_H */

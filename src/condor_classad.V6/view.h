@@ -26,9 +26,14 @@
 // STL includes
 #include <string>
 #include <set>
+#if (__GNUC__<3)
 #include <hash_map>
 #include <slist>
-
+#else
+#include <ext/hash_map>
+#include <ext/slist>
+using namespace __gnu_cxx;
+#endif
 #include "exprTree.h"
 #include "matchClassad.h"
 

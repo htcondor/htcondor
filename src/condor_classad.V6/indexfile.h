@@ -21,11 +21,14 @@
  *********************************************************************/
 
 #include <fcntl.h>
-#include <iostream>
 #include <stdio.h>
 #include <string>
 #include <map>
+#if (__GNUC__<3)
 #include <hash_map>
+#else
+#include <ext/hash_map>
+#endif
 #include <sys/types.h>
 
 BEGIN_NAMESPACE( classad );

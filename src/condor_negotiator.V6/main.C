@@ -49,7 +49,15 @@ int main_shutdown_fast()
 	return 0;
 }
 
-int main_config ()
+int
+main_config( bool is_full )
 {
 	return (matchMaker.reinitialize ());
 }
+
+
+void
+main_pre_dc_init( int argc, char* argv[] )
+{
+}
+

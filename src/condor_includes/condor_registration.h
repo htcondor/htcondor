@@ -37,7 +37,7 @@ class Registration
 
         Registration(int = 10);           // constructor.
         ~Registration();                  // destructor.
-        int RegisterType(char *);         // it registers a (new) type. 
+        int RegisterType(const char *);   // it registers a (new) type. 
 
     private:
 

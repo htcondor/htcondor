@@ -32,9 +32,8 @@
 
 extern "C" int lock_file( int fd, LOCK_TYPE type, BOOLEAN do_block );
 
-FileLock::FileLock( int f )
+FileLock::FileLock( int f, FILE *fp ) : fd(f), fp(fp)
 {
-	fd = f;
 	blocking = TRUE;
 	state = UN_LOCK;
 }
@@ -85,7 +84,28 @@ FileLock::set_blocking( BOOLEAN val )
 BOOLEAN
 FileLock::obtain( LOCK_TYPE t )
 {
+// lock_file uses lseeks in order to lock the first 4 bytes of the file on NT
+// It DOES properly reset the lseek version of the file position, but that is
+// not the same (in some very inconsistent and weird ways) as the fseek one,
+// so if the user has given us a FILE *, we need to make sure we don't ruin
+// their current position.  The lesson here is don't use fseeks and lseeks
+// interchangeably...
+
+	long lPosBeforeLock;
+	if (fp) // if the user has a FILE * as well as an fd
+	{
+		// save their FILE*-based current position
+		lPosBeforeLock = ftell(fp); 
+	}
+	
 	int		status = lock_file( fd, t, blocking );
+	
+	if (fp)
+	{
+		// restore their FILE*-position
+		fseek(fp, lPosBeforeLock, SEEK_SET); 	
+	}
+
 	if( status == 0 ) {
 		state = t;
 	}

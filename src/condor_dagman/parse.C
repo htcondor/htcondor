@@ -1,3 +1,26 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-2001 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+ ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
 #include "condor_common.h"
 
 #include "job.h"
@@ -10,17 +33,17 @@
 static const char   COMMENT    = '#';
 static const char * DELIMITERS = " \t";
 static const int    MAX_LENGTH = 255;
-
+static int DFS_ORDER;
 //-----------------------------------------------------------------------------
 void exampleSyntax (const char * example) {
-    debug_println (DEBUG_QUIET, "Example syntax is: %s", example);
+    debug_printf( DEBUG_QUIET, "Example syntax is: %s\n", example);
 }
 
 //-----------------------------------------------------------------------------
 bool isKeyWord (char *token) {
-    const unsigned int numKeyWords = 6;
+    const unsigned int numKeyWords = 7;
     const char * keywords[numKeyWords] = {
-        "JOB", "PARENT", "CHILD", "PRE", "POST", "DONE"
+        "JOB", "PARENT", "CHILD", "PRE", "POST", "DONE", "Retry",
     };
     for (unsigned int i = 0 ; i < numKeyWords ; i++) {
         if (!strcasecmp (token, keywords[i])) return true;
@@ -31,12 +54,12 @@ bool isKeyWord (char *token) {
 //-----------------------------------------------------------------------------
 bool parse (char *filename, Dag *dag) {
 
-    assert (dag != NULL);
+    ASSERT( dag != NULL );
   
     FILE *fp = fopen(filename, "r");
     if (fp == NULL) {
         if (DEBUG_LEVEL(DEBUG_QUIET)) {
-            debug_println (DEBUG_QUIET, "Could not open file %s for input",
+            debug_printf( DEBUG_QUIET, "Could not open file %s for input\n",
                            filename);
             return false;
         }
@@ -79,7 +102,7 @@ bool parse (char *filename, Dag *dag) {
 
             char *jobName = strtok(NULL, DELIMITERS);
             if (jobName == NULL) {
-                debug_println (DEBUG_QUIET, "%s(%d): Missing job name",
+                debug_printf( DEBUG_QUIET, "%s(%d): Missing job name\n",
                                filename, lineNumber);
                 exampleSyntax (example);
                 fclose(fp);
@@ -89,19 +112,19 @@ bool parse (char *filename, Dag *dag) {
             // The JobName cannot be a keyword
             //
             if (isKeyWord(jobName)) {
-                debug_println (DEBUG_QUIET,
-                               "%s(%d): JobName cannot be a keyword.",
-                               filename, lineNumber);
+                debug_printf( DEBUG_QUIET, 
+							  "%s(%d): JobName cannot be a keyword.\n",
+							  filename, lineNumber );
                 exampleSyntax (example);
                 fclose(fp);
                 return false;
             }
-
+			
             // Next token is the condor command file
             //
             char *cmd = strtok(NULL, DELIMITERS);
             if (cmd == NULL) {
-                debug_println (DEBUG_QUIET, "%s(%d): Missing condor cmd file",
+                debug_printf( DEBUG_QUIET, "%s(%d): Missing condor cmd file\n",
                                filename, lineNumber);
                 exampleSyntax (example);
                 fclose(fp);
@@ -109,7 +132,7 @@ bool parse (char *filename, Dag *dag) {
             }
 	  
             Job * job = new Job (jobName, cmd);
-            if (job == NULL) debug_error (1, DEBUG_QUIET, "Out of Memory");
+            if (job == NULL) debug_error( 1, DEBUG_QUIET, "Out of Memory\n");
 	  
             // Check if the user has pre-definied a Job as being done
             //
@@ -119,17 +142,13 @@ bool parse (char *filename, Dag *dag) {
             }
 
             if (!dag->Add (*job)) {
-                if (DEBUG_LEVEL(DEBUG_QUIET)) {
-                    printf ("ERROR adding JOB ");
-                    job->Print();
-                    printf (" to Dag\n");
-                }
+				debug_printf( DEBUG_QUIET, "ERROR adding Job %s to DAG\n",
+							  job->GetJobName() );
                 fclose(fp);
                 return false;
-            } else if (DEBUG_LEVEL(DEBUG_DEBUG_3)) {
-                printf ("%s: Added JOB: ", __FUNCTION__);
-                job->Print();
-                putchar('\n');
+            } else {
+                debug_printf( DEBUG_DEBUG_3, "Added Job %s\n",
+							  job->GetJobName() );
             }
         }
       
@@ -152,7 +171,7 @@ bool parse (char *filename, Dag *dag) {
             else if (!strcasecmp (prepost, "POST")) post = true;
             else {
               MISSING_PREPOST:
-                debug_println (DEBUG_QUIET, "%s(%d): Expected PRE or POST",
+                debug_printf( DEBUG_QUIET, "%s(%d): Expected PRE or POST\n",
                                filename, lineNumber);
                 exampleSyntax (example);
                 fclose(fp);
@@ -164,22 +183,22 @@ bool parse (char *filename, Dag *dag) {
             //
             char *jobName = strtok(NULL, DELIMITERS);
             if (jobName == NULL) {
-                debug_println (DEBUG_QUIET, "%s(%d): Missing job name",
+                debug_printf( DEBUG_QUIET, "%s(%d): Missing job name\n",
                                filename, lineNumber);
                 exampleSyntax (example);
                 fclose(fp);
                 return false;
             } else if (isKeyWord(jobName)) {
-                debug_println (DEBUG_QUIET,
-                               "%s(%d): JobName cannot be a keyword.",
-                               filename, lineNumber);
+                debug_printf( DEBUG_QUIET,
+							  "%s(%d): JobName cannot be a keyword.\n",
+							  filename, lineNumber);
                 exampleSyntax (example);
                 fclose(fp);
                 return false;
             } else {
                 job = dag->GetJob(jobName);
                 if (job == NULL) {
-                    debug_println (DEBUG_QUIET, "%s(%d): Unknown Job %s",
+                    debug_printf( DEBUG_QUIET, "%s(%d): Unknown Job %s\n",
                                    filename, lineNumber, jobName);
                     fclose(fp);
                     return false;
@@ -190,7 +209,7 @@ bool parse (char *filename, Dag *dag) {
             // Make sure this job doesn't already have a script
             //
             if (post ? job->_scriptPost != NULL : job->_scriptPre  != NULL) {
-                debug_println (DEBUG_QUIET, "%s(%d): Job previously assigned "
+                debug_printf( DEBUG_QUIET, "%s(%d): Job previously assigned \n"
                                "a %s script.", filename, lineNumber,
                                post ? "POST" : "PRE");
                 fclose(fp);
@@ -204,8 +223,22 @@ bool parse (char *filename, Dag *dag) {
             while (*rest != '\0') rest++;
             if (rest < endline)   rest++;
 
-            if (post) job->_scriptPost = new Script (post, rest, job);
-            else      job->_scriptPre  = new Script (post, rest, job);
+            if( post ) {
+				job->_scriptPost =
+					new Script( post, rest, job );
+				if( job->_scriptPost == NULL ) {
+					debug_error( 1, DEBUG_SILENT,
+								 "ERROR: out of memory\n");
+				}
+			}
+            else {
+				job->_scriptPre =
+					new Script( post, rest, job );
+				if( job->_scriptPre == NULL ) {
+					debug_error( 1, DEBUG_SILENT,
+								 "ERROR: out of memory\n");
+				}
+			}
         }
 
         //
@@ -224,7 +257,7 @@ bool parse (char *filename, Dag *dag) {
                    strcasecmp (jobName, "CHILD") != 0) {
                 Job * job = dag->GetJob(jobName);
                 if (job == NULL) {
-                    debug_println (DEBUG_QUIET, "%s(%d): Unknown Job %s",
+                    debug_printf( DEBUG_QUIET, "%s(%d): Unknown Job %s\n",
                                    filename, lineNumber, jobName);
                     fclose(fp);
                     return false;
@@ -235,7 +268,7 @@ bool parse (char *filename, Dag *dag) {
             // There must be one or more parent job names before
             // the CHILD token
             if (parents.Number() < 1) {
-                debug_println (DEBUG_QUIET, "%s(%d): Missing Parent Job names",
+                debug_printf( DEBUG_QUIET, "%s(%d): Missing Parent Job names\n",
                                filename, lineNumber);
                 exampleSyntax (example);
                 fclose(fp);
@@ -243,7 +276,7 @@ bool parse (char *filename, Dag *dag) {
             }
 
             if (jobName == NULL) {
-                debug_println (DEBUG_QUIET, "%s(%d): Expected CHILD token",
+                debug_printf( DEBUG_QUIET, "%s(%d): Expected CHILD token\n",
                                filename, lineNumber);
                 exampleSyntax (example);
                 fclose(fp);
@@ -255,7 +288,7 @@ bool parse (char *filename, Dag *dag) {
             while ((jobName = strtok (NULL, DELIMITERS)) != NULL) {
                 Job * job = dag->GetJob(jobName);
                 if (job == NULL) {
-                    debug_println (DEBUG_QUIET, "%s(%d): Unknown Job %s",
+                    debug_printf( DEBUG_QUIET, "%s(%d): Unknown Job %s\n",
                                    filename, lineNumber, jobName);
                     fclose(fp);
                     return false;
@@ -264,7 +297,7 @@ bool parse (char *filename, Dag *dag) {
             }
 
             if (children.Number() < 1) {
-                debug_println (DEBUG_QUIET, "%s(%d): Missing Child Job names",
+                debug_printf( DEBUG_QUIET, "%s(%d): Missing Child Job names\n",
                                filename, lineNumber);
                 exampleSyntax (example);
                 fclose(fp);
@@ -282,28 +315,70 @@ bool parse (char *filename, Dag *dag) {
                 children.Rewind();
                 while ((child = children.Next()) != NULL) {
                     if (!dag->AddDependency (parent, child)) {
-                        debug_println (DEBUG_QUIET,
-                                       "Failed to add dependency to dag");
+                        debug_printf( DEBUG_QUIET,
+									  "Failed to add dependency to dag\n" );
                         fclose(fp);
                         return false;
                     }
-                    if (DEBUG_LEVEL(DEBUG_DEBUG_3)) {
-                        printf ("%s: Added Dependency PARENT: ", __FUNCTION__);
-                        parent->Print();
-                        printf ("  CHILD: ");
-                        child->Print();
-                        putchar ('\n');
-                    }
+					debug_printf( DEBUG_DEBUG_3,
+								  "Added Dependency PARENT: %s  CHILD: %s\n",
+								  parent->GetJobName(), child->GetJobName() );
                 }
             }
+		}
+			
+		//
+		// Handle a Retry token
+		//
+		// Example Syntax is:  Retry JobName 3
+		//
+		else if( strcasecmp( token, "Retry" ) == 0 ) {
+			const char *example = "Retry JobName 3";
+
+			char *jobName = strtok( NULL, DELIMITERS );
+			if( jobName == NULL ) {
+                debug_printf( DEBUG_QUIET, "%s(%d): Missing job name\n",
+							  filename, lineNumber );
+                exampleSyntax( example );
+                fclose( fp );
+                return false;
+            }
+
+            Job *job = dag->GetJob( jobName );
+			if( job == NULL ) {
+				debug_printf( DEBUG_QUIET, "%s(%d): Unknown Job %s\n",
+							  filename, lineNumber, jobName );
+				fclose( fp );
+				return false;
+			}
+
+            char *s = strtok( NULL, DELIMITERS );
+            if( s == NULL ) {
+				debug_printf( DEBUG_QUIET, "%s(%d): Missing Retry value\n",
+                              filename, lineNumber );
+                exampleSyntax( example );
+                fclose( fp );
+                return false;
+			}
+
+			char *tmp;
+			job->retry_max = (int)strtol( s, &tmp, 10 );
+			if( tmp == s ) {
+				debug_printf( DEBUG_QUIET,
+							  "%s(%d): Invalid Retry value \"%s\"\n",
+							  filename, lineNumber, s );
+				exampleSyntax( example );
+				fclose(fp);
+				return false;
+			}
 
         } else {
             //
             // Bad token in the input file
             //
-            debug_println( DEBUG_QUIET,
-                           "%s(%d): Expected JOB, SCRIPT, or PARENT token",
-                           filename, lineNumber );
+            debug_printf( DEBUG_QUIET,
+						  "%s(%d): Expected JOB, SCRIPT, or PARENT token\n",
+						  filename, lineNumber );
             fclose(fp);
             return false;
         }
@@ -311,3 +386,7 @@ bool parse (char *filename, Dag *dag) {
     }
     return true;
 }
+
+
+
+

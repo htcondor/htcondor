@@ -21,117 +21,171 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
- 
-
-
 #ifndef AUTHENTICATION_H
 #define AUTHENTICATION_H
 
-#if defined(GSS_AUTHENTICATION)
-#include "globus_gss_assist.h"
-#endif
-
-#ifdef WIN32
-#define	SECURITY_WIN32 1
-#include "sspi.NT.h"
-#endif
-
 #include "reli_sock.h"
+#include "condor_auth.h"
+#include "CryptKey.h"
 
 #define MAX_USERNAMELEN 128
 
-/**
-    To use GSS ReliSock, you must define the following environment
-	 variable: X509_DIRECTORY. This is read and other necessary vars
-	 are set in member methods.
- */
-
-
-/** Communications structure used with GSS's send/receive methods.
-    Use of GSS-API requires us to supply our own send/received methods
-    because we are sending/receiving over an existing ReliSock.
- */
-
-class GSSComms {
-public:
-   ReliSock *sock;
-   void *buffer;
-   int size;
+enum transfer_mode {
+  NORMAL = 1,
+  ENCRYPT,
+  ENCRYPT_HDR
 };
 
 class Authentication {
 	
-friend class ReliSock;
+    friend class ReliSock;
 
-public:
-	/// States to track status/authentication level
-   enum authentication_state { 
-		CAUTH_NONE=0, 
-		CAUTH_ANY=1,
-		CAUTH_CLAIMTOBE=2,
-		CAUTH_FILESYSTEM=4, 
-		CAUTH_NTSSPI=8,
-		CAUTH_GSS=16,
-		CAUTH_FILESYSTEM_REMOTE=32
-		//, 32, 64, etc.
-   };
+ public:
+    /// States to track status/authentication level
+    Authentication( ReliSock *sock );
+    
+    ~Authentication();
+    
+    int authenticate( char *hostAddr, int clientFlags = 0 );
+    //------------------------------------------
+    // PURPOSE: authenticate with the other side 
+    // REQUIRE: hostAddr    -- host to authenticate
+    //          clientFlags -- what protocols
+    //                         does client support
+    // RETURNS: -1 -- failure
+    //------------------------------------------
 
-	Authentication( ReliSock *sock );
-	~Authentication();
-	int authenticate( char *hostAddr );
-	int isAuthenticated();
-	void unAuthenticate();
+    int authenticate( char *hostAddr, KeyInfo *& key , int clientFlags = 0 );
+    //------------------------------------------
+    // PURPOSE: To send the secret key over. this method
+    //          is written to keep compatibility issues
+    //          Later on, we can get rid of the first authenticate method
+    // REQUIRE: hostAddr  -- host address
+    //          key       -- the key to be sent over, see CryptKey.h
+    //          clientFlags -- protocols client supports
+    // RETURNS: -1 -- failure
+    //------------------------------------------
+    
+    int isAuthenticated();
+    //------------------------------------------
+    // PURPOSE: Return the state of the authentication
+    // REQUIRE: None
+    // RETURNS: true -- 1; false -- 0
+    //------------------------------------------
+    
+    void unAuthenticate();
+    //------------------------------------------
+    // PURPOSE:
+    // REQUIRE:
+    // RETURNS:
+    //------------------------------------------
+    
+    void setAuthAny();
+    
+    int setOwner( const char *owner );
 
-	void setAuthAny();
-	int setOwner( const char *owner );
-	const char *getOwner();
-
-private:
+    const char *getFullyQualifiedUser() const;
+    
+    const char *getOwner() const;
+    
+    const char *getDomain() const;
+    
+    const char * getRemoteAddress() const;
+    //----------------------------------------
+    // PURPOSE: Get remote address 
+    // REQUIRE: None
+    // RETURNS: IP address of the remote machine
+    //------------------------------------------
+    
+    bool is_valid();
+    //------------------------------------------
+    // PURPOSE: Whether the security context supports
+    //          encryption or not?
+    // REQUIRE: NONE
+    // RETURNS: TRUE or FALSE
+    //------------------------------------------
+    
+    int end_time();
+    //------------------------------------------
+    // PURPOSE: Return the expiration time for the
+    //          authenticator
+    // REQUIRE: None
+    // RETURNS: -1 -- invalid, for Kerberos, X.509, etc
+    //           0 -- undefined, for FS, 
+    //          >0 -- for Kerberos and X.509
+    //------------------------------------------
+    int encrypt(bool);
+    //------------------------------------------
+    // PURPOSE: Turn encryption mode on or off
+    // REQUIRE: bool flag
+    // RETURNS: TRUE or FALSE
+    //------------------------------------------
+   
+    bool is_encrypt();
+    //------------------------------------------
+    // PURPOSE: Return encryption mode
+    // REQUIRE: NONE
+    // RETURNS: TRUE -- encryption is on
+    //          FALSE -- otherwise
+    //------------------------------------------
+    
+    int hdr_encrypt();
+    //------------------------------------------
+    // PURPOSE: set header encryption?
+    // REQUIRE:
+    // RETURNS:
+    //------------------------------------------
+    
+    bool is_hdr_encrypt();
+    //------------------------------------------
+    // PURPOSE: Return status of hdr encryption
+    // REQUIRE:
+    // RETURNS: TRUE -- header encryption is on
+    //          FALSE -- otherwise
+    //------------------------------------------
+    
+    int wrap(char* input, int input_len, char*& output,int& output_len);
+    //------------------------------------------
+    // PURPOSE: Wrap the buffer
+    // REQUIRE: 
+    // RETUNRS: TRUE -- success, FALSE -- falure
+    //          May need more code later on
+    //------------------------------------------
+    
+    int unwrap(char* input, int input_len, char*& output, int& output_len);
+    //------------------------------------------
+    // PURPOSE: Unwrap the buffer
+    // REQUIRE: 
+    // RETURNS: TRUE -- success, FALSE -- failure
+    //------------------------------------------
+    
+ private:
 #if !defined(SKIP_AUTHENTICATION)
-	Authentication() {}; //should never be called, make private to help that!
-	int handshake();
+    Authentication() {}; //should never be called, make private to help that!
+    
+    int handshake(int clientCanUse);
 
-	void setAuthType( authentication_state state );
-	int authenticate_claimtobe();
-#if defined(WIN32)
-	static PSecurityFunctionTable pf;
-	int sspi_client_auth(CredHandle& cred,CtxtHandle& cliCtx, 
-		const char *tokenSource);
-	int sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx);
-	int authenticate_nt();
-#else
-	int authenticate_filesystem( int remote = 0 );
-#endif
-	int selectAuthenticationType( int clientCanUse );
-	void setupEnv( char *hostAddr );
-
-#if defined (GSS_AUTHENTICATION)
-	int authenticate_gss();
-	int authenticate_self_gss();
-	int authenticate_client_gss();
-	int authenticate_server_gss();
-	int lookup_user_gss( char *username );
-	int nameGssToLocal();
-#endif
-
-#endif !SKIP_AUTHENTICATION
-
-#if defined (GSS_AUTHENTICATION)
-	/// Personal credentials
-	static gss_cred_id_t credential_handle;
-#endif
-
-	/// Track accomplished authentication state.
-	authentication_state auth_status;
-	char *serverShouldTry;
-
-	ReliSock *mySock;
-	GSSComms authComms;
-	char *GSSClientname;
-	char *claimToBe;
-	int canUseFlags;
-	char *RendezvousDirectory;
-
+    int exchangeKey(KeyInfo *& key);
+    
+    void setAuthType( int state );
+    
+    int selectAuthenticationType( int methods );
+    
+    int default_auth_methods();
+    
+#endif /* !SKIP_AUTHENTICATION */
+    
+    //------------------------------------------
+    // Data (private)
+    //------------------------------------------
+    Condor_Auth_Base *   authenticator_;    // This is it.
+    ReliSock         *   mySock;
+    transfer_mode        t_mode;
+    int                  auth_status;
+    // int                  canUseFlags;
+    // char             *   serverShouldTry;
 };
 
-#endif define AUTHENTICATION_H
+#endif /* AUTHENTICATION_H */
+
+

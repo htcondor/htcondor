@@ -57,13 +57,6 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 
 
 void
-_condor_dprintf_exit( void )
-{
-	exit( DPRINTF_ERROR );
-}
-
-
-void
 _EXCEPT_(char* fmt, ...)
 {
 	if (DebugFlags) {

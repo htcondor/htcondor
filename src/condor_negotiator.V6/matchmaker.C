@@ -28,12 +28,16 @@
 #include "condor_config.h"
 #include "condor_attributes.h"
 #include "condor_api.h"
+#include "condor_classad_lookup.h"
+#include "condor_query.h"
+#include "daemon.h"
+#include "daemon_types.h"
 
 // the comparison function must be declared before the declaration of the
 // matchmaker class in order to preserve its static-ness.  (otherwise, it
 // is forced to be extern.)
 
-static int comparisonFunction (ClassAd *, ClassAd *, void *);
+static int comparisonFunction (AttrList *, AttrList *, void *);
 #include "matchmaker.h"
 
 // possible outcomes of negotiating with a schedd
@@ -42,7 +46,7 @@ enum { MM_ERROR, MM_DONE, MM_RESUME };
 // possible outcomes of a matchmaking attempt
 enum { _MM_ERROR, MM_NO_MATCH, MM_GOOD_MATCH, MM_BAD_MATCH };
 
-typedef int (*lessThanFunc)(AttrListAbstract*, AttrListAbstract*, void*);
+typedef int (*lessThanFunc)(AttrList*, AttrList*, void*);
 
 Matchmaker::
 Matchmaker ()
@@ -86,7 +90,7 @@ initialize ()
     // register commands
     daemonCore->Register_Command (RESCHEDULE, "Reschedule", 
             (CommandHandlercpp) &Matchmaker::RESCHEDULE_commandHandler, 
-			"RESCHEDULE_commandHandler", (Service*) this, WRITE);
+			"RESCHEDULE_commandHandler", (Service*) this, DAEMON);
     daemonCore->Register_Command (RESET_ALL_USAGE, "ResetAllUsage",
             (CommandHandlercpp) &Matchmaker::RESET_ALL_USAGE_commandHandler, 
 			"RESET_ALL_USAGE_commandHandler", this, ADMINISTRATOR);
@@ -105,6 +109,11 @@ initialize ()
     daemonCore->Register_Command (GET_RESLIST, "GetResList",
 		(CommandHandlercpp) &Matchmaker::GET_RESLIST_commandHandler, 
 			"GET_RESLIST_commandHandler", this, READ);
+#ifdef WANT_NETMAN
+	daemonCore->Register_Command (REQUEST_NETWORK, "RequestNetwork",
+	    (CommandHandlercpp) &Matchmaker::REQUEST_NETWORK_commandHandler,
+			"REQUEST_NETWORK_commandHandler", this, WRITE);
+#endif
 
 	// Set a timer to renegotiate.
     negotiation_timerID = daemonCore->Register_Timer (0,  NegotiatorInterval,
@@ -118,8 +127,6 @@ int Matchmaker::
 reinitialize ()
 {
 	char *tmp;
-	int TrafficInterval=0;
-	double TrafficLimit = 0.0;
 
     // Initialize accountant params
     accountant.Initialize();
@@ -153,20 +160,6 @@ reinitialize ()
 		sockCache = new SocketCache;
 	}
 
-	tmp = param("NEGOTIATOR_TRAFFIC_LIMIT");
-	if( tmp ) {
-		TrafficLimit = atof(tmp);
-		free( tmp );
-	}
-
-	tmp = param("NEGOTIATOR_TRAFFIC_INTERVAL");
-	if( tmp ) {
-		TrafficInterval = atoi(tmp);
-		free( tmp );
-	}
-
-	NetUsage.SetMax(TrafficLimit, TrafficInterval);
-
 	// get PreemptionReq expression
 	if (PreemptionReq) delete PreemptionReq;
 	PreemptionReq = NULL;
@@ -182,9 +175,6 @@ reinitialize ()
 			AccountantHost : "None (local)");
 	dprintf (D_ALWAYS,"NEGOTIATOR_INTERVAL = %d sec\n",NegotiatorInterval);
 	dprintf (D_ALWAYS,"NEGOTIATOR_TIMEOUT = %d sec\n",NegotiatorTimeout);
-	dprintf (D_ALWAYS,"NEGOTIATOR_TRAFFIC_LIMIT = %f kbytes\n",TrafficLimit);
-	dprintf (D_ALWAYS,"NEGOTIATOR_TRAFFIC_INTERVAL = %d sec\n",
-			 TrafficInterval);
 	dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS = %s\n", (tmp?tmp:"None"));
 
 	if( tmp ) free( tmp );
@@ -202,14 +192,25 @@ reinitialize ()
 
 	if( tmp ) free( tmp );
 
+#ifdef WANT_NETMAN
+	netman.Config();
+#endif
+
 	// done
 	return TRUE;
 }
 
 
 int Matchmaker::
-RESCHEDULE_commandHandler (int, Stream *)
+RESCHEDULE_commandHandler (int, Stream *strm)
 {
+	// read the required data off the wire
+	if (!strm->end_of_message())
+	{
+		dprintf (D_ALWAYS, "Could not read eom\n");
+		return FALSE;
+	}
+
 	if (GotRescheduleCmd) return TRUE;
 	GotRescheduleCmd=true;
 	daemonCore->Reset_Timer(negotiation_timerID,0,
@@ -315,7 +316,7 @@ GET_PRIORITY_commandHandler (int, Stream *strm)
 	// read the required data off the wire
 	if (!strm->end_of_message())
 	{
-		dprintf (D_ALWAYS, "Could not read eom\n");
+		dprintf (D_ALWAYS, "GET_PRIORITY: Could not read eom\n");
 		return FALSE;
 	}
 
@@ -372,14 +373,48 @@ GET_RESLIST_commandHandler (int, Stream *strm)
 	return TRUE;
 }
 
+#ifdef WANT_NETMAN
+int Matchmaker::
+REQUEST_NETWORK_commandHandler (int, Stream *stream)
+{
+	return netman.HandleNetworkRequest(stream);
+}
+#endif
+
+/*
+Look for an ad matching the given constraint string
+in the table given by arg.  Return a duplicate on success.
+Otherwise, return 0.
+*/
+
+static ClassAd * lookup_global( const char *constraint, void *arg )
+{
+	ClassAdList *list = (ClassAdList*) arg;
+	ClassAd *ad;
+	ClassAd queryAd;
+
+	CondorQuery query(ANY_AD);
+	query.addANDConstraint(constraint);
+	query.getQueryAd(queryAd);
+	queryAd.SetTargetTypeName (ANY_ADTYPE);
+
+	list->Open();
+	while( (ad = list->Next()) ) {
+		if(queryAd <= *ad) {
+			return new ClassAd(*ad);
+		}
+	}
+
+	return 0;
+}
 
 int Matchmaker::
 negotiationTime ()
 {
-	ClassAdList startdAds;			// 1. get from collector
-	ClassAdList startdPvtAds;		// 2. get from collector
-	ClassAdList scheddAds;			// 3. get from collector
-	ClassAdList ClaimedStartdAds;   // 4. get from collector
+	ClassAdList startdAds;
+	ClassAdList startdPvtAds;
+	ClassAdList scheddAds;
+	ClassAdList allAds;
 
 	ClassAd		*schedd;
 	char		scheddName[80];
@@ -387,15 +422,22 @@ negotiationTime ()
 	int			result;
 	int			numStartdAds;
 	double		maxPrioValue;
+	double		maxAbsPrioValue;
 	double		normalFactor;
+	double		normalAbsFactor;
 	double		scheddPrio;
+	double		scheddPrioFactor;
 	double		scheddShare;
+	double		scheddAbsShare;
 	int			scheddLimit;
 	int			scheddUsage;
 	int			MaxscheddLimit;
 	int			hit_schedd_prio_limit;
+	int			hit_network_prio_limit;
 	int 		send_ad_to_schedd;	
 	static time_t completedLastCycleTime = 0;
+	bool ignore_schedd_limit;
+	int			num_idle_jobs;
 
 	// Check if we just finished a cycle less than 20 seconds ago.
 	// If we did, reset our timer so at least 20 seconds will elapse
@@ -415,25 +457,32 @@ negotiationTime ()
 		return FALSE;
 	}
 
-
 	dprintf( D_ALWAYS, "---------- Started Negotiation Cycle ----------\n" );
 
 	GotRescheduleCmd=false;  // Reset the reschedule cmd flag
 
+#ifdef WANT_NETMAN
+	netman.PrepareForSchedulingCycle();
+#endif
+
 	// ----- Get all required ads from the collector
 	dprintf( D_ALWAYS, "Phase 1:  Obtaining ads from collector ...\n" );
-	if( !obtainAdsFromCollector( startdAds, scheddAds, startdPvtAds, 
-		ClaimedStartdAds ) )
+	if( !obtainAdsFromCollector( allAds, startdAds, scheddAds,
+		startdPvtAds ) )
 	{
 		dprintf( D_ALWAYS, "Aborting negotiation cycle\n" );
 		// should send email here
 		return FALSE;
 	}
 
+	// Register a lookup function that passes through the list of all ads.
+
+	ClassAdLookupRegister( lookup_global, &allAds );
+
 	// ----- Recalculate priorities for schedds
 	dprintf( D_ALWAYS, "Phase 2:  Performing accounting ...\n" );
 	accountant.UpdatePriorities();
-	accountant.CheckMatches( ClaimedStartdAds );
+	accountant.CheckMatches( startdAds );
 	// for ads which have RemoteUser set, add RemoteUserPrio
 	addRemoteUserPrios( startdAds ); 
 
@@ -443,9 +492,24 @@ negotiationTime ()
 
 	int spin_pie=0;
 	do {
+#if WANT_NETMAN
+		allocNetworkShares = true;
+		if (spin_pie && !hit_schedd_prio_limit) {
+				// If this is not our first pie spin and we didn't hit
+				// a CPU limit for any schedds on our last spin, then
+				// we're spinning again because all remaining schedds
+				// have been allocated their network fair-share, and
+				// they want more network capacity.  We don't want to
+				// under-allocate the network, so let them have any
+				// remaining network capacity in priority order.
+			allocNetworkShares = false;
+		}
+#endif
 		spin_pie++;
 		hit_schedd_prio_limit = FALSE;
-		calculateNormalizationFactor( scheddAds, maxPrioValue, normalFactor);
+		hit_network_prio_limit = FALSE;
+		calculateNormalizationFactor( scheddAds, maxPrioValue, normalFactor,
+									  maxAbsPrioValue, normalAbsFactor);
 		numStartdAds = startdAds.MyLength();
 		MaxscheddLimit = 0;
 		// ----- Negotiate with the schedds in the sorted list
@@ -465,8 +529,16 @@ negotiationTime ()
 							ATTR_NAME, ATTR_SCHEDD_IP_ADDR);
 				return FALSE;
 			}	
-			dprintf(D_ALWAYS,"  Negotiating with %s at %s\n",scheddName,
-				scheddAddr);
+			num_idle_jobs = 0;
+			schedd->LookupInteger(ATTR_IDLE_JOBS,num_idle_jobs);
+			if ( num_idle_jobs < 0 ) {
+				num_idle_jobs = 0;
+			}
+
+			if ( num_idle_jobs > 0 ) {
+				dprintf(D_ALWAYS,"  Negotiating with %s at %s\n",scheddName,
+					scheddAddr);
+			}
 
 			// should we send the startd ad to this schedd?
 			send_ad_to_schedd = FALSE;
@@ -477,23 +549,68 @@ negotiationTime ()
 			scheddUsage = accountant.GetResourcesUsed ( scheddName );
 			scheddShare = maxPrioValue/(scheddPrio*normalFactor);
 			scheddLimit  = (int) rint((scheddShare*numStartdAds)-scheddUsage);
+			if( scheddLimit < 0 ) {
+				scheddLimit = 0;
+			}
 			if (scheddLimit>MaxscheddLimit) MaxscheddLimit=scheddLimit;
 
+			// calculate this schedd's absolute fair-share for allocating
+			// resources other than CPUs (like network capacity and licenses)
+			scheddPrioFactor = accountant.GetPriorityFactor ( scheddName );
+			scheddAbsShare =
+				maxAbsPrioValue/(scheddPrioFactor*normalAbsFactor);
+
 			// print some debug info
-			dprintf (D_FULLDEBUG, "  Calculating schedd limit with the "
-				"following parameters\n");
-			dprintf (D_FULLDEBUG, "    ScheddPrio     = %f\n", scheddPrio);
-			dprintf (D_FULLDEBUG, "    scheddShare    = %f\n", scheddShare);
-			dprintf (D_FULLDEBUG, "    ScheddUsage    = %d\n", scheddUsage);
-			dprintf (D_FULLDEBUG, "    scheddLimit    = %d\n", scheddLimit);
-			dprintf (D_FULLDEBUG, "    MaxscheddLimit = %d\n", MaxscheddLimit);
-		
-			if ( scheddLimit < 1 ) {
-				// Optimization: If limit is 0, don't waste time with negotiate
-				result = MM_RESUME;
+			if ( num_idle_jobs > 0 ) {
+				dprintf (D_FULLDEBUG, "  Calculating schedd limit with the "
+					"following parameters\n");
+				dprintf (D_FULLDEBUG, "    ScheddPrio       = %f\n",
+					scheddPrio);
+				dprintf (D_FULLDEBUG, "    ScheddPrioFactor = %f\n",
+					 scheddPrioFactor);
+				dprintf (D_FULLDEBUG, "    scheddShare      = %f\n",
+					scheddShare);
+				dprintf (D_FULLDEBUG, "    scheddAbsShare   = %f\n",
+					scheddAbsShare);
+				dprintf (D_FULLDEBUG, "    ScheddUsage      = %d\n",
+					scheddUsage);
+				dprintf (D_FULLDEBUG, "    scheddLimit      = %d\n",
+					scheddLimit);
+				dprintf (D_FULLDEBUG, "    MaxscheddLimit   = %d\n",
+					MaxscheddLimit);
+			}
+
+			// initialize reasons for match failure; do this now
+			// in case we never actually call negotiate() below.
+			rejForNetwork = false;
+			rejForNetworkShare = false;
+			rejPreemptForPrio = false;
+			rejPreemptForPolicy = false;
+			rejPreemptForRank = false;
+
+			// Optimizations: 
+			// If number of idle jobs = 0, don't waste time with negotiate.
+			// Likewise, if limit is 0, don't waste time with negotiate EXCEPT
+			// on the first spin of the pie (spin_pie==1), we must
+			// still negotiate because on the first spin we tell the negotiate
+			// function to ignore the scheddLimit w/ respect to jobs which
+			// are strictly preferred by resource offers (via startd rank).
+			if ( num_idle_jobs == 0 ) {
+				result = MM_DONE;
 			} else {
-				result=negotiate( scheddName,scheddAddr,scheddPrio,scheddLimit, 
-							startdAds, startdPvtAds, send_ad_to_schedd);
+				if ( scheddLimit < 1 && spin_pie > 1 ) {
+					result = MM_RESUME;
+				} else {
+					if ( spin_pie == 1 ) {
+						ignore_schedd_limit = true;
+					} else {
+						ignore_schedd_limit = false;
+					}
+					result=negotiate( scheddName,scheddAddr,scheddPrio,
+								  scheddAbsShare, scheddLimit,
+								  startdAds, startdPvtAds, 
+								  send_ad_to_schedd,ignore_schedd_limit);
+				}
 			}
 
 			switch (result)
@@ -501,15 +618,25 @@ negotiationTime ()
 				case MM_RESUME:
 					// the schedd hit its resource limit.  must resume 
 					// negotiations at a later negotiation cycle.
-					dprintf(D_FULLDEBUG,"  This schedd hit its scheddlimit.\n");
+					dprintf(D_FULLDEBUG,
+							"  This schedd hit its scheddlimit.\n");
 					hit_schedd_prio_limit = TRUE;
 					break;
 				case MM_DONE: 
-					// the schedd got all the resources it wanted. delete this 
-					// schedd ad.
-					dprintf(D_FULLDEBUG,"  This schedd got all it wants; "
-						"removing it.\n");
-					scheddAds.Delete( schedd);
+					if (rejForNetworkShare) {
+							// We negotiated for all jobs, but some
+							// jobs were rejected because this user
+							// exceeded her fair-share of network
+							// resources.  Resume negotiations for
+							// this user at a later cycle.
+						hit_network_prio_limit = TRUE;
+					} else {
+							// the schedd got all the resources it
+							// wanted. delete this schedd ad.
+						dprintf(D_FULLDEBUG,"  Schedd %s got all it wants; "
+								"removing it.\n", scheddName );
+						scheddAds.Delete( schedd);
+					}
 					break;
 				case MM_ERROR:
 				default:
@@ -518,7 +645,8 @@ negotiationTime ()
 			}
 		}
 		scheddAds.Close();
-	} while ( hit_schedd_prio_limit == TRUE && MaxscheddLimit>0 );
+	} while ( (hit_schedd_prio_limit == TRUE || hit_network_prio_limit == TRUE)
+			 && (MaxscheddLimit > 0) && (startdAds.MyLength() > 0) );
 
 	// ----- Done with the negotiation cycle
 	dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
@@ -530,12 +658,14 @@ negotiationTime ()
 
 
 static int
-comparisonFunction (ClassAd *ad1, ClassAd *ad2, void *m)
+comparisonFunction (AttrList *ad1, AttrList *ad2, void *m)
 {
 	char	scheddName1[64];
 	char	scheddName2[64];
 	double	prio1, prio2;
 	Matchmaker *mm = (Matchmaker *) m;
+
+
 
 	if (!ad1->LookupString (ATTR_NAME, scheddName1) ||
 		!ad2->LookupString (ATTR_NAME, scheddName2))
@@ -552,97 +682,102 @@ comparisonFunction (ClassAd *ad1, ClassAd *ad2, void *m)
 	// usually the case because 95% of the time each user in the
 	// system has a different priority.
 
-	if (prio1==prio2) return (strcmp(scheddName1,scheddName2) < 0);
+	if (prio1==prio2) {
+		int namecomp = strcmp(scheddName1,scheddName2);
+		if (namecomp != 0) return (namecomp < 0);
+
+			// We don't always want to negotiate with schedds with the
+			// same name in the same order or we might end up only
+			// running jobs this user has submitted to the first
+			// schedd.  The general problem is that we rely on the
+			// schedd to order each user's jobs, so when a user
+			// submits to multiple schedds, there is no guaranteed
+			// order.  Our hack is to order the schedds randomly,
+			// which should be a little bit better than always
+			// negotiating in the same order.  We use the timestamp on
+			// the classads to get a random ordering among the schedds
+			// (consistent throughout our sort).
+
+		int ts1=0, ts2=0;
+		ad1->LookupInteger (ATTR_LAST_HEARD_FROM, ts1);
+		ad2->LookupInteger (ATTR_LAST_HEARD_FROM, ts2);
+		return ( (ts1 % 1009) < (ts2 % 1009) );
+	}
+
 	return (prio1 < prio2);
 }
 
-
-
 bool Matchmaker::
-obtainAdsFromCollector (ClassAdList &startdAds, 
+obtainAdsFromCollector (
+						ClassAdList &allAds,
+						ClassAdList &startdAds, 
 						ClassAdList &scheddAds, 
-						ClassAdList &startdPvtAds,
-						ClassAdList &ClaimedStartdAds)
+						ClassAdList &startdPvtAds )
 {
-	CondorQuery startdQuery    (STARTD_AD);
-	CondorQuery scheddQuery    (SUBMITTOR_AD);
-	CondorQuery startdPvtQuery (STARTD_PVT_AD);
-	CondorQuery ClaimedStartdQuery    (STARTD_AD);
+	CondorQuery publicQuery(ANY_AD);
+	CondorQuery privateQuery(STARTD_PVT_AD);
 	QueryResult result;
-	char buffer[1024];
+	ClassAd *ad;
 
-	// set the constraints on the various queries
-	// 1.  Fetch ads of startds that are CLAIMED or UNCLAIMED
-	dprintf (D_ALWAYS, "  Getting startd ads ...\n");
-	sprintf (buffer, "(TARGET.%s =!= FALSE)", ATTR_REQUIREMENTS);
-	if (((result = startdQuery.addANDConstraint(buffer))	!= Q_OK) ||
-		((result = startdQuery.fetchAds(startdAds))		!= Q_OK))
-	{
-		dprintf (D_ALWAYS, 
-			"Error %s:  failed to fetch startd ads ... aborting\n",
-			getStrQueryResult(result));
+	dprintf(D_ALWAYS, "  Getting all public ads ...\n");
+	result = publicQuery.fetchAds(allAds);
+	if( result!=Q_OK ) {
+		dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
 		return false;
 	}
 
-	// 2.  Only obtain schedd ads that have idle jobs
-	dprintf (D_ALWAYS, "  Getting schedd ads ...\n");
-	sprintf (buffer, "%s > 0", ATTR_IDLE_JOBS);
-	if (((result = scheddQuery.addANDConstraint (buffer)) != Q_OK) ||
-		((result = scheddQuery.fetchAds(scheddAds))    != Q_OK))
-	{
-		dprintf (D_ALWAYS, 
-			"Error %s:  failed to fetch schedd ads ... aborting\n",
-			getStrQueryResult(result));
+	dprintf(D_ALWAYS, "  Sorting %d ads ...\n",allAds.MyLength());
+
+	allAds.Open();
+	while( (ad=allAds.Next()) ) {
+
+		// Insert each ad into the appropriate list.
+		// After we insert it into a list, do not delete the ad...
+
+		if( !strcmp(ad->GetMyTypeName(),STARTD_ADTYPE) ) {
+			startdAds.Insert(ad);
+		} else if( !strcmp(ad->GetMyTypeName(),SUBMITTER_ADTYPE) ) {
+			scheddAds.Insert(ad);
+		}
+	}
+	allAds.Close();
+
+	dprintf(D_ALWAYS,"  Getting startd private ads ...\n");
+	result = privateQuery.fetchAds(startdPvtAds);
+	if( result!=Q_OK ) {
+		dprintf(D_ALWAYS, "Couldn't fetch ads: %s\n", getStrQueryResult(result));
 		return false;
 	}
 
-	// 3. (no constraint on private ads)	
-	dprintf (D_ALWAYS, "  Getting startd private ads ...\n");
-	if	((result = startdPvtQuery.fetchAds(startdPvtAds)) != Q_OK)
-	{
-		dprintf (D_ALWAYS, 
-			"Error %s:  failed to fetch startd private ads ... aborting\n",
-			getStrQueryResult(result));
-		return false;
-	}
+	dprintf(D_ALWAYS, "Got ads: %d public and %d private\n",
+	        allAds.MyLength(),startdPvtAds.MyLength());
 
-	// set the constraints on the various queries
-	// 4.  Fetch ads of startds that are CLAIMED
-	dprintf (D_ALWAYS, "  Getting startd ads ...\n");
-	sprintf (buffer,"(%s == \"%s\")",ATTR_STATE,state_to_string(claimed_state));
-	if (((result = ClaimedStartdQuery.addANDConstraint(buffer))	!= Q_OK) ||
-		((result = ClaimedStartdQuery.fetchAds(ClaimedStartdAds))!= Q_OK))
-	{
-		dprintf (D_ALWAYS, 
-			"Error %s:  failed to fetch startd ads ... aborting\n",
-			getStrQueryResult(result));
-		return false;
-	}
-
-	dprintf (D_ALWAYS, "Got ads: %d startd ; %d schedd ; %d startd private ; "
-		"%d claimed startd\n", startdAds.MyLength(), scheddAds.MyLength(), 
-		startdPvtAds.MyLength(),ClaimedStartdAds.MyLength());
+	dprintf(D_ALWAYS, "Public ads include %d schedd, %d startd\n",
+		scheddAds.MyLength(), startdAds.MyLength() );
 
 	return true;
 }
 
 
 int Matchmaker::
-negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
-	ClassAdList &startdAds, ClassAdList &startdPvtAds, int send_ad_to_schedd)
+negotiate( char *scheddName, char *scheddAddr, double priority, double share,
+		   int scheddLimit,
+		   ClassAdList &startdAds, ClassAdList &startdPvtAds, 
+		   int send_ad_to_schedd, bool ignore_schedd_limit)
 {
 	ReliSock	*sock;
 	int			i;
 	int			reply;
 	int			cluster, proc;
-	int			placement_bw, preempt_bw, bw_request, job_universe;
 	int			result;
 	ClassAd		request;
 	ClassAd		*offer;
-	char		prioExpr[128], startdAddr[32], remoteUser[128];
+	bool		only_consider_startd_rank;
+	bool		display_overlimit = true;
+	char		prioExpr[128], remoteUser[128];
 
 	// 0.  connect to the schedd --- ask the cache for a connection
-	if (!sockCache->getReliSock((Sock *&)sock, scheddAddr, NegotiatorTimeout))
+	if (!sockCache->getReliSock((Sock *&)sock, scheddAddr, NEGOTIATE, NegotiatorTimeout))
 	{
 		dprintf (D_ALWAYS, "    Failed to connect to %s\n", scheddAddr);
 		return MM_ERROR;
@@ -650,9 +785,9 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 
 	// 1.  send NEGOTIATE command, followed by the scheddName (user@uiddomain)
 	sock->encode();
-	if (!sock->put(NEGOTIATE)||!sock->put(scheddName)||!sock->end_of_message())
+	if (!sock->put(scheddName) || !sock->end_of_message())
 	{
-		dprintf (D_ALWAYS, "    Failed to send NEGOTIATE/scheddName/eom\n");
+		dprintf (D_ALWAYS, "    Failed to send scheddName/eom\n");
 		sockCache->invalidateSock(scheddAddr);
 		return MM_ERROR;
 	}
@@ -661,7 +796,8 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 	(void) sprintf( prioExpr , "%s = %f" , ATTR_SUBMITTOR_PRIO , priority );
 
 	// 2.  negotiation loop with schedd
-	for (i = 0; i < scheddLimit;  i++)
+	// for (i = 0; i < scheddLimit;  i++)
+	for (i=0;true;i++)
 	{
 		// Service any interactive commands on our command socket.
 		// This keeps condor_userprio hanging to a minimum when
@@ -670,6 +806,26 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 		// any reschedule requests queued up on our command socket, so
 		// we do not negotiate over & over unnecesarily.
 		daemonCore->ServiceCommandSocket();
+
+		// Handle the case if we are over the scheddLimit
+		if ( i >= scheddLimit ) {
+			if ( ignore_schedd_limit ) {
+				only_consider_startd_rank = true;
+				if ( display_overlimit ) {  // print message only once
+					display_overlimit = false;
+					dprintf (D_ALWAYS, 	
+						"    Over schedd resource limit (%d) ... "
+					    "only consider startd ranks\n", scheddLimit);
+				}
+			} else {
+				dprintf (D_ALWAYS, 	
+				"    Reached schedd resource limit: %d ... stopping\n", i);
+				break;	// get out of the infinite for loop & stop negotiating
+			}
+		} else {
+			only_consider_startd_rank = false;
+		}
+
 
 		// 2a.  ask for job information
 		dprintf (D_FULLDEBUG, "    Sending SEND_JOB_INFO/eom\n");
@@ -697,7 +853,16 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 		{
 			dprintf (D_ALWAYS, "    Got NO_MORE_JOBS;  done negotiating\n");
 			sock->end_of_message ();
-			return MM_DONE;
+				// If we have negotiated above our scheddLimit, we have only
+				// considered matching if the offer strictly prefers the request.
+				// So in this case, return MM_RESUME since there still may be 
+				// jobs which the schedd wants scheduled but have not been considered
+				// as candidates for no preemption or user priority preemption.
+			if ( i >= scheddLimit ) {
+				return MM_RESUME;
+			} else {
+				return MM_DONE;
+			}
 		}
 		else
 		if (reply != JOB_INFO)
@@ -711,7 +876,7 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 
 		// 2d.  get the request 
 		dprintf (D_FULLDEBUG,"    Got JOB_INFO command; getting classad/eom\n");
-		if (!request.get(*sock) || !sock->end_of_message())
+		if (!request.initFromStream(*sock) || !sock->end_of_message())
 		{
 			dprintf(D_ALWAYS, "    JOB_INFO command not followed by ad/eom\n");
 			sock->end_of_message();
@@ -738,14 +903,44 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 		while (result == MM_BAD_MATCH) 
 		{
 			// 2e(i).  find a compatible offer
-			if (!(offer=matchmakingAlgorithm(scheddName, request, startdAds,
-											 priority)))
+			if (!(offer=matchmakingAlgorithm(scheddName, scheddAddr, request,
+											 startdAds, priority,
+											 share, only_consider_startd_rank)))
 			{
-				// no preemptable resource offer either ... 
-				dprintf(D_ALWAYS,
-						"      Rejected\n");
+				int want_match_diagnostics = 0;
+				request.LookupBool (ATTR_WANT_MATCH_DIAGNOSTICS,
+									want_match_diagnostics);
+				char *diagnostic_message = NULL;
+				// no match found
+				dprintf(D_ALWAYS|D_MATCH, "      Rejected %d.%d %s %s: ",
+						cluster, proc, scheddName, scheddAddr);
+				if (rejForNetwork) {
+					diagnostic_message = "insufficient bandwidth";
+					dprintf(D_ALWAYS|D_MATCH|D_NOHEADER, "%s\n",
+							diagnostic_message);
+#if WANT_NETMAN
+					netman.ShowDeniedRequests(D_BANDWIDTH);
+#endif
+				} else {
+					if (rejForNetworkShare) {
+						diagnostic_message = "network share exceeded";
+					} else if (rejPreemptForPolicy) {
+						diagnostic_message =
+							"PREEMPTION_REQUIREMENTS == False";
+					} else if (rejPreemptForPrio) {
+						diagnostic_message = "insufficient priority";
+					} else {
+						diagnostic_message = "no match found";
+					}
+					dprintf(D_ALWAYS|D_MATCH|D_NOHEADER, "%s\n",
+							diagnostic_message);
+				}
 				sock->encode();
-				if (!sock->put(REJECTED) || !sock->end_of_message())
+				if ((want_match_diagnostics) ? 
+					(!sock->put(REJECTED_WITH_REASON) ||
+					 !sock->put(diagnostic_message) ||
+					 !sock->end_of_message()) :
+					(!sock->put(REJECTED) || !sock->end_of_message()))
 					{
 						dprintf (D_ALWAYS, "      Could not send rejection\n");
 						sock->end_of_message ();
@@ -756,93 +951,27 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 				result = MM_NO_MATCH;
 				continue;
 			}
-			else
+
+			char	remoteHost[MAXHOSTNAMELEN];
+			double	remotePriority;
+
+			if (offer->LookupString(ATTR_REMOTE_USER, remoteUser) == 1)
 			{
-				char	remoteHost[MAXHOSTNAMELEN];
-				double	remotePriority;
+				offer->LookupString(ATTR_NAME, remoteHost);
+				remotePriority = accountant.GetPriority (remoteUser);
 
-				if (offer->LookupString(ATTR_REMOTE_USER, remoteUser) == 1)
-				{
-					offer->LookupString(ATTR_NAME, remoteHost);
-					remotePriority = accountant.GetPriority (remoteUser);
-
-					// got a candidate preemption --- print a helpful message
-					dprintf( D_ALWAYS, "      Preempting %s (prio=%.2f) on %s "
-							 "for %s (prio=%.2f)\n", remoteUser,
-							 remotePriority, remoteHost, scheddName,
-							 priority );
-				} else {
-					strcpy(remoteUser, "none");
-				}
-			}
-
-			// Make sure this offer won't put us over our network bandwidth
-			// limit.
-			if (!request.LookupInteger (ATTR_DISK_USAGE,placement_bw)) {
-				if (!request.LookupInteger (ATTR_EXECUTABLE_SIZE,
-											placement_bw)) {
-					placement_bw = 0;
-				}
-			}
-			if (!request.LookupInteger (ATTR_JOB_UNIVERSE, job_universe)) {
-				job_universe = STANDARD; // err on the safe side
-			}
-			if (job_universe == STANDARD) {
-				float cpu_time;
-				if (!request.LookupFloat (ATTR_JOB_REMOTE_USER_CPU,
-										  cpu_time)) {
-					cpu_time = 1.0;	// err on the safe side
-				}
-				if (cpu_time > 0.0) {
-					// if job_universe is STANDARD (checkpointing is
-					// enabled) and cpu_time > 0.0 (job has committed
-					// some work), then the job will need to read a
-					// checkpoint to restart, so we set the placement
-					// cost to be the image size, which includes the
-					// executable size.
-					request.LookupInteger (ATTR_IMAGE_SIZE, placement_bw);
-				}
-			}
-			if (!offer->LookupInteger (ATTR_JOB_UNIVERSE, job_universe)) {
-				job_universe = STANDARD; // err on the safe side
-			}
-			if (job_universe == STANDARD) {
-				// if preempted job is a STANDARD universe job, it will
-				// need to write a checkpoint, so we include image size
-				// in the preemption cost
-				if (offer->LookupInteger (ATTR_IMAGE_SIZE, preempt_bw) == 0) {
-					preempt_bw = 0;
-				}
+				// got a candidate preemption --- print a helpful message
+				dprintf( D_ALWAYS, "      Preempting %s (prio=%.2f) on %s "
+						 "for %s (prio=%.2f)\n", remoteUser,
+						 remotePriority, remoteHost, scheddName,
+						 priority );
 			} else {
-				preempt_bw = 0;
-			}
-			if (offer->LookupString (ATTR_STARTD_IP_ADDR, startdAddr) == 0) {
-				strcpy(startdAddr, "<0.0.0.0:0>");
-			}
-			bw_request = NetUsage.Request(placement_bw+preempt_bw);
-			dprintf( D_BANDWIDTH,
-					 "    %d+%d KB for %d.%d %s %s preempting %s %s %s\n",
-					 placement_bw, preempt_bw, cluster, proc, scheddName,
-					 scheddAddr, remoteUser, startdAddr, 
-					 (bw_request > 0) ? "DENIED" : "GRANTED");
-			if (bw_request > 0) { // reject match -- over bw limit
-				dprintf( D_ALWAYS, "    Not enough bandwidth for this job ---"
-						 " rejecting.\n" );
-				sock->encode();
-				if (!sock->put(REJECTED) || !sock->end_of_message())
-				{
-					dprintf (D_ALWAYS, "      Could not send rejection\n");
-					sock->end_of_message ();
-					sockCache->invalidateSock(scheddAddr);
-					return MM_ERROR;
-				}
-				result = MM_NO_MATCH;
-				continue;
+				strcpy(remoteUser, "none");
 			}
 
 			// 2e(ii).  perform the matchmaking protocol
 			result = matchmakingProtocol (request, offer, startdPvtAds, sock, 
-					scheddName, send_ad_to_schedd);
+					scheddName, scheddAddr, send_ad_to_schedd);
 
 			// 2e(iii). if the matchmaking protocol failed, do not consider the
 			//			startd again for this negotiation cycle.
@@ -870,12 +999,6 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 		startdAds.Delete (offer);
 	}
 
-	// 3.  check if we hit our resource limit
-	if (i == scheddLimit)
-	{
-		dprintf (D_ALWAYS, 	
-				"    Reached schedd resource limit: %d ... stopping\n", i);
-	}
 
 	// break off negotiations
 	sock->encode();
@@ -889,13 +1012,15 @@ negotiate (char *scheddName, char *scheddAddr, double priority, int scheddLimit,
 	return MM_RESUME;
 }
 
+	// the order of values in this enumeration is important!
+enum PreemptState {PRIO_PREEMPTION,RANK_PREEMPTION,NO_PREEMPTION};
 
 ClassAd *Matchmaker::
-matchmakingAlgorithm(char *, ClassAd &request,ClassAdList &startdAds,
-			double preemptPrio)
+matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
+					 ClassAdList &startdAds,
+					 double preemptPrio, double share,
+					 bool only_for_startdrank)
 {
-		// the order of values in this enumeration is important!
-	enum PreemptState {PRIO_PREEMPTION,RANK_PREEMPTION,NO_PREEMPTION};
 		// to store values pertaining to a particular candidate offer
 	ClassAd 		*candidate;
 	double			candidateRankValue;
@@ -908,25 +1033,112 @@ matchmakingAlgorithm(char *, ClassAd &request,ClassAdList &startdAds,
 	PreemptState	bestPreemptState = (PreemptState)-1;
 	bool			newBestFound;
 		// to store results of evaluations
-	char			remoteUser[128];
+	char			remoteUser[256];
 	EvalResult		result;
 	float			tmp;
 
+#ifdef WANT_NETMAN
+	// initialize network information for this request
+	char scheddIPbuf[128];
+	strcpy(scheddIPbuf, scheddAddr);
+	char *colon = strchr(scheddIPbuf, ':');
+	if (!colon) {
+		dprintf(D_ALWAYS, "      Invalid %s: %s\n", ATTR_SCHEDD_IP_ADDR,
+				scheddIPbuf);
+		return NULL;
+	}
+	*colon = '\0';
+	char *scheddIP = scheddIPbuf+1;	// skip the leading '<'
+	int executableSize = 0;
+	request.LookupInteger(ATTR_EXECUTABLE_SIZE, executableSize);
+	int universe = CONDOR_UNIVERSE_STANDARD;
+	int ckptSize = 0;
+	request.LookupInteger(ATTR_JOB_UNIVERSE, universe);
+	char lastCkptServer[MAXHOSTNAMELEN], lastCkptServerIP[16];
+	lastCkptServerIP[0] = '\0';
+	if (universe == CONDOR_UNIVERSE_STANDARD) {
+		float cputime = 1.0;
+		request.LookupFloat(ATTR_JOB_REMOTE_USER_CPU, cputime);
+		if (cputime > 0.0) {
+			// if job_universe is STANDARD (checkpointing is
+			// enabled) and cputime > 0.0 (job has committed
+			// some work), then the job will need to read a
+			// checkpoint to restart, so we must set ckptSize
+			request.LookupInteger(ATTR_IMAGE_SIZE, ckptSize);
+			ckptSize -= executableSize;	// imagesize = ckptsize + executablesz
+			if (ckptSize > 0) {
+				if (request.LookupString(ATTR_LAST_CKPT_SERVER,
+										 lastCkptServer)) {
+					struct hostent *hp = gethostbyname(lastCkptServer);
+					if (!hp) {
+						dprintf(D_ALWAYS,
+								"      DNS lookup for %s %s failed!\n",
+								ATTR_LAST_CKPT_SERVER, lastCkptServer);
+					} else {
+						strcpy(lastCkptServerIP,
+							   inet_ntoa(*((struct in_addr *)hp->h_addr)));
+					}
+				} else {
+					strcpy(lastCkptServerIP, scheddIP);
+				}
+			}
+		}
+	}
+#endif
+
+	// initialize reasons for match failure
+	rejForNetwork = false;
+	rejForNetworkShare = false;
+	rejPreemptForPrio = false;
+	rejPreemptForPolicy = false;
+	rejPreemptForRank = false;
 
 	// scan the offer ads
 	startdAds.Open ();
 	while ((candidate = startdAds.Next ())) {
-		// the candidate offer and request must match
+
+			// the candidate offer and request must match
 		if( !( *candidate == request ) ) {
 				// they don't match; continue
 			continue;
 		}
 
 		candidatePreemptState = NO_PREEMPTION;
+
+		remoteUser[0] = '\0';
+		candidate->LookupString(ATTR_REMOTE_USER, remoteUser);
+
+		// if only_for_startdrank flag is true, check if the offer strictly
+		// prefers this request.  Since this is the only case we care about
+		// when the only_for_startdrank flag is set, if the offer does 
+		// not prefer it, just continue with the next offer ad....  we can
+		// skip all the below logic about preempt for user-priority, etc.
+		if ( only_for_startdrank ) {
+			if ( remoteUser[0] == '\0' ) {
+					// offer does not have a remote user, thus we cannot eval
+					// startd rank yet because it does not make sense (the
+					// startd has nothing to compare against).  
+					// So try the next offer...
+				continue;
+			}
+			if ( !(rankCondStd->EvalTree(candidate, &request, &result) && 
+					result.type == LX_INTEGER && result.i == TRUE) ) {
+					// offer does not strictly prefer this request.
+					// try the next offer since only_for_statdrank flag is set
+				continue;
+			}
+			// If we made it here, we have a candidate which strictly prefers
+			// this request.  Set the candidatePreemptState properly so that
+			// we consider PREEMPTION_RANK down below as we should.
+			candidatePreemptState = RANK_PREEMPTION;
+		}
+
 		// if there is a remote user, consider preemption ....
-		if (candidate->LookupString (ATTR_REMOTE_USER, remoteUser) ) {
-				// check if we are preempting for rank or priority
-			if( rankCondStd->EvalTree( candidate, &request, &result ) && 
+		// Note: we skip this if only_for_startdrank is true since we already
+		//       tested above for the only condition we care about.
+		if ( (remoteUser[0] != '\0') &&
+			 (!only_for_startdrank) ) {
+			if( rankCondStd->EvalTree(candidate, &request, &result) && 
 					result.type == LX_INTEGER && result.i == TRUE ) {
 					// offer strictly prefers this request to the one
 					// currently being serviced; preempt for rank
@@ -942,6 +1154,7 @@ matchmakingAlgorithm(char *, ClassAd &request,ClassAdList &startdAds,
 				if (PreemptionReq && 
 						!(PreemptionReq->EvalTree(candidate,&request,&result) &&
 						result.type == LX_INTEGER && result.i == TRUE) ) {
+					rejPreemptForPolicy = true;
 					continue;
 				}
 					// (2) we need to make sure that the machine ranks the job
@@ -950,15 +1163,35 @@ matchmakingAlgorithm(char *, ClassAd &request,ClassAdList &startdAds,
 				if(!(rankCondPrioPreempt->EvalTree(candidate,&request,&result)&&
 						result.type == LX_INTEGER && result.i == TRUE ) ) {
 						// machine doesn't like this job as much -- find another
+					rejPreemptForRank = true;
 					continue;
 				}
 			} else {
 					// don't have better priority *and* offer doesn't prefer
 					// request --- find another machine
+				if (strcmp(remoteUser, scheddName)) {
+						// only set rejPreemptForPrio if we aren't trying to
+						// preempt one of our own jobs!
+					rejPreemptForPrio = true;
+				}
 				continue;
 			}
 		}
 
+#if WANT_NETMAN
+			// is network bandwidth available for this match?
+		double networkShare = (allocNetworkShares) ? share : 1.0;
+		int rval = netman.RequestPlacement(scheddName, networkShare, scheddIP,
+										   executableSize, lastCkptServerIP,
+										   ckptSize, request, *candidate);
+		if (rval == 1) {
+			rejForNetworkShare = true;
+			continue;
+		} else if (rval == 0) {
+			rejForNetwork = true;
+			continue;
+		}
+#endif
 
 		// calculate the request's rank of the offer
 		if(!request.EvalFloat(ATTR_RANK,candidate,tmp)) {
@@ -976,12 +1209,18 @@ matchmakingAlgorithm(char *, ClassAd &request,ClassAdList &startdAds,
 		if( candidatePreemptState != NO_PREEMPTION ) {
 			// calculate the preemption rank
 			if( PreemptionRank &&
-			   		PreemptionRank->EvalTree(candidate,&request,&result) &&
-					result.type == LX_FLOAT) {
-				candidatePreemptRankValue = result.f;
+			   		PreemptionRank->EvalTree(candidate,&request,&result) ) {
+				if( result.type == LX_FLOAT ) {
+					candidatePreemptRankValue = result.f;
+				} else if( result.type == LX_INTEGER ) {
+					candidatePreemptRankValue = result.i;
+				} else {
+					dprintf(D_ALWAYS, "Failed to evaluate PREEMPTION_RANK "
+							"expression to a float.\n");
+				}
 			} else if( PreemptionRank ) {
 				dprintf(D_ALWAYS, "Failed to evaluate PREEMPTION_RANK "
-					"expression to a float.\n");
+					"expression.\n");
 			}
 		}
 		if( ( candidateRankValue > bestRankValue ) || 	// first by job rank
@@ -1006,6 +1245,14 @@ matchmakingAlgorithm(char *, ClassAd &request,ClassAdList &startdAds,
 	}
 	startdAds.Close ();
 
+#if WANT_NETMAN
+	if (bestSoFar) {
+		// request the network bandwidth for our choice
+		netman.RequestPlacement(scheddName, share, scheddIP, executableSize,
+								lastCkptServerIP, ckptSize, request,
+								*bestSoFar);
+	}
+#endif
 
 	// this is the best match
 	return bestSoFar;
@@ -1014,14 +1261,16 @@ matchmakingAlgorithm(char *, ClassAd &request,ClassAdList &startdAds,
 
 int Matchmaker::
 matchmakingProtocol (ClassAd &request, ClassAd *offer, 
-						ClassAdList &startdPvtAds, Sock *sock, char* scheddName,
+						ClassAdList &startdPvtAds, Sock *sock,
+					    char* scheddName, char* scheddAddr,
 						int send_ad_to_schedd)
 {
 	int  cluster, proc;
 	char startdAddr[32];
 	char startdName[64];
+	char remoteUser[128];
 	char *capability;
-	ReliSock startdSock;
+	SafeSock startdSock;
 	bool send_failed;
 
 	// these will succeed
@@ -1048,20 +1297,22 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	// 1.  contact the startd 
 	dprintf (D_FULLDEBUG, "      Connecting to startd %s at %s\n", 
 				startdName, startdAddr); 
-	startdSock.timeout (NegotiatorTimeout);
+
+    startdSock.timeout (NegotiatorTimeout);
 	if (!startdSock.connect (startdAddr, 0))
 	{
 		dprintf(D_ALWAYS,"      Could not connect to %s\n", startdAddr);
 		return MM_BAD_MATCH;
 	}
 
+	Daemon startd (startdAddr, 0);
+	startd.startCommand (MATCH_INFO, &startdSock);
+
 	// 2.  pass the startd MATCH_INFO and capability string
 	dprintf (D_FULLDEBUG, "      Sending MATCH_INFO/capability\n" );
 	dprintf (D_FULLDEBUG, "      (Capability is \"%s\" )\n", capability);
 	startdSock.encode();
-	if (!startdSock.put (MATCH_INFO) || 
-		!startdSock.put (capability) || 
-		!startdSock.end_of_message())
+	if ( !startdSock.put (capability) || !startdSock.end_of_message())
 	{
 		dprintf (D_ALWAYS,"      Could not send MATCH_INFO/capability to %s\n",
 					startdName );
@@ -1098,6 +1349,22 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		return MM_ERROR;
 	}
 
+	if (offer->LookupString(ATTR_REMOTE_USER, remoteUser) == 0) {
+		strcpy(remoteUser, "none");
+	}
+	if (offer->LookupString (ATTR_STARTD_IP_ADDR, startdAddr) == 0) {
+		strcpy(startdAddr, "<0.0.0.0:0>");
+	}
+	dprintf(D_MATCH, "      Matched %d.%d %s %s preempting %s %s\n",
+			cluster, proc, scheddName, scheddAddr, remoteUser,
+			startdAddr);
+
+#if WANT_NETMAN
+	// match was successful; commit our network bandwidth allocation
+	// (this will generate D_BANDWIDTH debug messages)
+	netman.CommitPlacement(scheddName);
+#endif
+
     // 4. notifiy the accountant
 	dprintf(D_FULLDEBUG,"      Notifying the accountant\n");
 	accountant.AddMatch(scheddName, offer);
@@ -1109,17 +1376,17 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 
 
 void Matchmaker::
-calculateNormalizationFactor (ClassAdList &scheddAds, double &max, 
-				double &normalFactor)
+calculateNormalizationFactor (ClassAdList &scheddAds,
+							  double &max, double &normalFactor,
+							  double &maxAbs, double &normalAbsFactor)
 {
 	ClassAd *ad;
 	char	scheddName[64];
-	double	prio;
+	double	prio, prioFactor;
 	char	old_scheddName[64];
-	int 	num_scheddAds;
 
 	// find the maximum of the priority values (i.e., lowest priority)
-	max = DBL_MIN;
+	max = maxAbs = DBL_MIN;
 	scheddAds.Open();
 	while ((ad = scheddAds.Next()))
 	{
@@ -1127,16 +1394,17 @@ calculateNormalizationFactor (ClassAdList &scheddAds, double &max,
 		ad->LookupString (ATTR_NAME, scheddName);
 		prio = accountant.GetPriority (scheddName);
 		if (prio > max) max = prio;
+		prioFactor = accountant.GetPriorityFactor (scheddName);
+		if (prioFactor > maxAbs) maxAbs = prioFactor;
 	}
 	scheddAds.Close();
 
 	// calculate the normalization factor, i.e., sum of the (max/scheddprio)
 	// also, do not factor in ads with the same ATTR_NAME more than once -
 	// ads with the same ATTR_NAME signify the same user submitting from multiple
-	// machines.  count the number of ads with unique ATTR_NAME's into 
-	// the num_scheddsAds paramenter.
+	// machines.
 	normalFactor = 0.0;
-	num_scheddAds = 0;	
+	normalAbsFactor = 0.0;
 	old_scheddName[0] = '\0';
 	scheddAds.Open();
 	while ((ad = scheddAds.Next()))
@@ -1144,9 +1412,10 @@ calculateNormalizationFactor (ClassAdList &scheddAds, double &max,
 		ad->LookupString (ATTR_NAME, scheddName);
 		if ( strcmp(scheddName,old_scheddName) == 0) continue;
 		strncpy(old_scheddName,scheddName,sizeof(old_scheddName));
-		num_scheddAds++;
 		prio = accountant.GetPriority (scheddName);
 		normalFactor = normalFactor + max/prio;
+		prioFactor = accountant.GetPriorityFactor (scheddName);
+		normalAbsFactor = normalAbsFactor + maxAbs/prioFactor;
 	}
 	scheddAds.Close();
 

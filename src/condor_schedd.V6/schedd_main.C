@@ -36,8 +36,10 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_qmgr.h"
 #include "scheduler.h"
+#include "dedicated_scheduler.h"
 #include "condor_adtypes.h"
 #include "condor_uid.h"
+#include "grid_universe.h"
 
 #if defined(BSD43) || defined(DYNIX)
 #	define WEXITSTATUS(x) ((x).w_retcode)
@@ -60,12 +62,14 @@ char*		X509Directory = NULL;
 
 // global objects
 Scheduler	scheduler;
+DedicatedScheduler dedicated_scheduler;
 
 void usage(char* name)
 {
 	dprintf( D_ALWAYS, "Usage: %s [-f] [-t] [-n schedd_name]", name); 
 	exit( 1 );
 }
+
 
 int
 main_init(int argc, char* argv[])
@@ -99,6 +103,9 @@ main_init(int argc, char* argv[])
 	InitJobQueue(job_queue_name);
 	mark_jobs_idle();
 
+		// Initialize the dedicated scheduler stuff
+	dedicated_scheduler.initialize();
+
 		// Do a timeout now at startup to get the ball rolling...
 	scheduler.timeout();
 
@@ -106,9 +113,11 @@ main_init(int argc, char* argv[])
 } 
 
 int
-main_config()
+main_config( bool is_full )
 {
+	GridUniverseLogic::reconfig();
 	scheduler.reconfig();
+	dedicated_scheduler.reconfig();
 	return 0;
 }
 
@@ -116,6 +125,8 @@ main_config()
 int
 main_shutdown_fast()
 {
+	dedicated_scheduler.shutdown_fast();
+	GridUniverseLogic::shutdown_fast();
 	scheduler.shutdown_fast();
 	return 0;
 }
@@ -124,7 +135,15 @@ main_shutdown_fast()
 int
 main_shutdown_graceful()
 {
+	dedicated_scheduler.shutdown_graceful();
+	GridUniverseLogic::shutdown_graceful();
 	scheduler.shutdown_graceful();
 	return 0;
+}
+
+
+void
+main_pre_dc_init( int argc, char* argv[] )
+{
 }
 

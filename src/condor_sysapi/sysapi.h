@@ -82,13 +82,22 @@ int sysapi_swap_space(void);
 
 /* these are functions that spit out data about the library, useful for
 	testing or debugging purposes */
-void sysapi_test_dump_all(void);
+void sysapi_test_dump_all(int, char *[]);
 void sysapi_test_dump_internal_vars(void);
 void sysapi_test_dump_functions(void);
 
 /* tranlate between uname-type or LDAP entry values and Condor values */
 char * sysapi_translate_arch( char *machine, char *sysname );
 char *sysapi_translate_opsys( char *sysname, char *release );
+
+/* set appropriate resource limits on each platform */
+void sysapi_set_resource_limits( void );
+
+/* check the magic number of the given executable */
+int sysapi_magic_check( char* executable );
+
+/* make sure the given executable is linked with Condor */
+int sysapi_symbol_main_check( char* executable );
 
 END_C_DECLS
 

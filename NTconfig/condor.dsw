@@ -68,6 +68,24 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name condor_status
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_mail
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_userlog
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_dagman
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_findhost
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_submit_dag
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_eventd
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -84,6 +102,33 @@ Package=<4>
 
 ###############################################################################
 
+Project: "condor_advertise"=.\condor_advertise.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name condor_classad
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_cpp_util
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_io
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_util_lib
+    End Project Dependency
+}}}
+
+###############################################################################
+
 Project: "condor_classad"=.\condor_classad.dsp - Package Owner=<4>
 
 Package=<5>
@@ -92,6 +137,12 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name condor_cpp_util
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_util_lib
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -177,6 +228,126 @@ Package=<4>
 
 ###############################################################################
 
+Project: "condor_dagman"=.\condor_dagman.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name condor_cpp_util
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_daemon_core
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_io
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_util_lib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_classad
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_procapi
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "condor_eventd"=.\condor_eventd.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name condor_classad
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_cpp_util
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_daemon_core
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_util_lib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_io
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "condor_findhost"=.\condor_findhost.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name condor_classad
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_cpp_util
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_io
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_util_lib
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "condor_gridmanager"=.\condor_gridmanager.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name condor_classad
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_cpp_util
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_daemon_core
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_io
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_util_lib
+    End Project Dependency
+}}}
+
+###############################################################################
+
 Project: "condor_history"=.\condor_history.dsp - Package Owner=<4>
 
 Package=<5>
@@ -217,6 +388,18 @@ Package=<4>
 ###############################################################################
 
 Project: "condor_kbdd_dll"=.\condor_kbdd_dll.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "condor_mail"=.\condor_mail.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -362,15 +545,6 @@ Package=<5>
 
 Package=<4>
 {{{
-    Begin Project Dependency
-    Project_Dep_Name condor_classad
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name condor_cpp_util
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name condor_util_lib
-    End Project Dependency
 }}}
 
 ###############################################################################
@@ -708,6 +882,33 @@ Package=<4>
 
 ###############################################################################
 
+Project: "condor_submit_dag"=.\condor_submit_dag.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name condor_cpp_util
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_util_lib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_classad
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_io
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
+}}}
+
+###############################################################################
+
 Project: "condor_sysapi"=.\condor_sysapi.dsp - Package Owner=<4>
 
 Package=<5>
@@ -742,6 +943,33 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name condor_sysapi
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "condor_userlog"=.\condor_userlog.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name condor_cpp_util
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_util_lib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_io
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_sysapi
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name condor_classad
     End Project Dependency
 }}}
 

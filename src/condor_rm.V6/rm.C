@@ -3,7 +3,7 @@
  *
  * See LICENSE.TXT for additional notices and disclaimers.
  *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * Copyright (c)1990-2002 CONDOR Team, Computer Sciences Department, 
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
@@ -21,12 +21,9 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
-#ifdef __GNUG__
-#pragma implementation "list.h"
-#endif
-
 #include "condor_common.h"
 #include "condor_config.h"
+#include "condor_debug.h"
 #include "condor_network.h"
 #include "condor_io.h"
 #include "sched.h"
@@ -35,33 +32,39 @@
 #include "internet.h"
 #include "condor_attributes.h"
 #include "match_prefix.h"
-#include  "list.h"
 #include "sig_install.h"
 #include "condor_version.h"
+#include "condor_ver_info.h"
+#include "string_list.h"
 #include "daemon.h"
+#include "dc_schedd.h"
+#include "condor_distribution.h"
 
-#include "condor_qmgr.h"
-
-template class List<PROC_ID>;
-template class Item<PROC_ID>;
 
 char	*MyName;
-BOOLEAN	TroubleReported;
-BOOLEAN All = FALSE;
-int nToProcess = 0;
 int mode;
-List<PROC_ID> ToProcess;
-Daemon* schedd = NULL;
+bool All = false;
+bool had_error = false;
+bool old_messages = false;
+
+DCSchedd* schedd = NULL;
+
+StringList* job_ids = NULL;
 
 	// Prototypes of local interest
-void handle_constraint(const char *);
-void ProcArg(const char*);
-void notify_schedd();
+void addConstraint(const char *);
+void procArg(const char*);
 void usage();
-void handle_all();
+void handleAll();
+void handleConstraints( void );
+ClassAd* doWorkByList( StringList* ids );
+void printOldMessages( ClassAd* result_ad, StringList* ids );
+void printNewMessages( ClassAd* result_ad, StringList* ids );
 
+bool has_constraint;
 
-
+MyString global_constraint;
+StringList global_id_list;
 
 void
 usage()
@@ -114,12 +117,15 @@ main( int argc, char *argv[] )
 	char	**args = (char **)malloc(sizeof(char *)*(argc - 1)); // args 
 	int					nArgs = 0;				// number of args 
 	int					i;
-	Qmgr_connection*	q;
 	char*	cmd_str;
 	char* pool = NULL;
 	char* scheddName = NULL;
 	char* scheddAddr = NULL;
 
+		// Initialize our global variables
+	has_constraint = false;
+
+	myDistro->Init( argc, argv );
 	MyName = strrchr( argv[0], DIR_DELIM_CHAR );
 	if( !MyName ) {
 		MyName = argv[0];
@@ -138,6 +144,7 @@ main( int argc, char *argv[] )
 
 	config();
 
+
 	if( argc < 2 ) {
 		usage();
 	}
@@ -146,12 +153,30 @@ main( int argc, char *argv[] )
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
-	for( argv++; arg = *argv; argv++ ) {
+	for( argv++; (arg = *argv); argv++ ) {
 		if( arg[0] == '-' ) {
 			if( ! arg[1] ) {
 				usage();
 			}
 			switch( arg[1] ) {
+			case 'd':
+				// dprintf to console
+				Termlog = 1;
+				dprintf_config ("TOOL", 2 );
+				break;
+			case 'c':
+				args[nArgs] = arg;
+				nArgs++;
+				argv++;
+				if( ! *argv ) {
+					fprintf( stderr, 
+							 "%s: -constraint requires another argument\n", 
+							 MyName);
+					exit(1);
+				}				
+				args[nArgs] = *argv;
+				nArgs++;
+				break;
 			case 'a':
 				if( arg[2] && arg[2] == 'd' ) {
 					argv++;
@@ -171,15 +196,15 @@ main( int argc, char *argv[] )
 						fprintf( stderr, 
 								 "%s: \"%s\" is not a valid address\n",
 								 MyName, *argv );
-						fprintf( stderr, 
-								 "Should be of the form <ip.address.here:port>.\n" );
+						fprintf( stderr, "Should be of the form "
+								 "<ip.address.here:port>\n" );
 						fprintf( stderr, 
 								 "For example: <123.456.789.123:6789>\n" );
 						exit( 1 );
 					}
 					break;
 				}
-				All = TRUE;
+				All = true;
 				break;
 			case 'n': 
 				// use the given name as the schedd name to connect to
@@ -212,7 +237,7 @@ main( int argc, char *argv[] )
 				version();
 				break;
 			default:
-					// This gets hit for "-h", too.
+					// This gets hit for "-h", too
 				usage();
 				break;
 			}
@@ -232,126 +257,145 @@ main( int argc, char *argv[] )
 		usage();
 	}
 
+	old_messages = false;
+	char* tmp = param( "TOOLS_PROVIDE_OLD_MESSAGES" );
+	if( tmp ) {
+		if( tmp[0] == 'T' || tmp[0] == 't' ) {
+			old_messages = true;
+		}
+		free( tmp );
+	}
+
 		// We're done parsing args, now make sure we know how to
 		// contact the schedd. 
 	if( ! scheddAddr ) {
 			// This will always do the right thing, even if either or
 			// both of scheddName or pool are NULL.
-		schedd = new Daemon( DT_SCHEDD, scheddName, pool );
+		schedd = new DCSchedd( scheddName, pool );
 	} else {
-		schedd = new Daemon( DT_SCHEDD, scheddAddr );
+		schedd = new DCSchedd( scheddAddr );
 	}
 	if( ! schedd->locate() ) {
 		fprintf( stderr, "%s: %s\n", MyName, schedd->error() ); 
 		exit( 1 );
 	}
 
-		// Open job queue
-	q = ConnectQ( schedd->addr() );
-	if( !q ) {
-		fprintf( stderr, "Failed to connect to %s\n", schedd->idStr() );
-		exit(1);
+		// If this schedd doesn't support the new protocol, give a
+		// useful error message.
+	CondorVersionInfo ver_info( schedd->version(), "SCHEDD" );
+	if( ! ver_info.built_since_version(6, 3, 3) ) {
+		fprintf( stderr, "The version of the condor_schedd you want to "
+				 "communicate with is:\n%s\n", schedd->version() );
+		fprintf( stderr, "It is too old to support this version of "
+				 "%s:\n%s\n", MyName, CondorVersion() );
+		fprintf( stderr, "To use this version of %s you must upgrade "
+				 "the\n%s to at least version 6.3.3.\nAborting.\n",
+				 MyName, schedd->idStr() ); 
+		exit( 1 );
 	}
 
+		// Process the args so we do the work.
 	if( All ) {
-		handle_all();
+		handleAll();
 	} else {
-			// Set status of requested jobs to REMOVED/HELD/RELEASED
 		for(i = 0; i < nArgs; i++) {
 			if( match_prefix( args[i], "-constraint" ) ) {
 				i++;
-				handle_constraint( args[i] );
+				addConstraint( args[i] );
 			} else {
-				ProcArg(args[i]);
+				procArg(args[i]);
 			}
 		}
 	}
 
-	// Close job queue
-	DisconnectQ(q);
+		// Deal with all the -constraint constraints
+	handleConstraints();
 
-	// If we did a condor_rm or a condor_hold, we need to tell the schedd what 
-	// we did.  We send the schedd the
-	// KILL_FRGN_JOB command.  We pass the number of jobs to
-	// remove/hold _unless_ one or more of the jobs are to be
-	// removed/held via cluster or via user name, in which case we say
-	// "-1" jobs to remove/hold.  Telling the schedd there are "-1"
-	// jobs to remove forces the schedd to scan the queue looking for
-	// jobs which have a REMOVED/HELD status.  If all jobs to be removed/held
-	// are via a cluster.proc, we then send the schedd all the
-	// cluster.proc numbers to save the schedd from having to scan the
-	// entire queue.
-	if ( mode != IDLE && nToProcess != 0 )
-		notify_schedd();
-
-#if defined(ALLOC_DEBUG)
-	print_alloc_stats();
-#endif
-
-	return 0;
+		// Finally, do the actual work for all our args which weren't
+		// constraints...
+	if( job_ids ) {
+		ClassAd* result_ad = doWorkByList( job_ids );
+		if( old_messages ) {
+			printOldMessages( result_ad, job_ids );
+		} else {
+				// happy day, we can use the new messages! :)
+			printNewMessages( result_ad, job_ids );
+		}
+		delete( result_ad );
+	}
+	return had_error;
 }
 
 
-extern "C" int SetSyscalls( int foo ) { return foo; }
+
+// For now, just return true if the constraint worked on at least
+// one job, false if not.  Someday, we can fix up the tool to take
+// advantage of all the slick info the schedd gives us back about this
+// request.  
+bool
+doWorkByConstraint( const char* constraint )
+{
+	ClassAd* ad;
+	bool rval = true;
+	switch( mode ) {
+	case IDLE:
+		ad = schedd->releaseJobs( constraint, "via condor_release" );
+		break;
+	case REMOVED:
+		ad = schedd->removeJobs( constraint, "via condor_rm" );
+		break;
+	case HELD:
+		ad = schedd->holdJobs( constraint, "via condor_hold" );
+		break;
+	}
+	if( ! ad ) {
+		had_error = true;
+		rval = false;
+	} else {
+		int result = FALSE;
+		if( !ad->LookupInteger(ATTR_ACTION_RESULT, result) || !result ) {
+			had_error = true;
+			rval = false;
+		}
+	}
+	return rval;
+}
+
+
+ClassAd*
+doWorkByList( StringList* ids )
+{
+	ClassAd* rval;
+	switch( mode ) {
+	case IDLE:
+		rval = schedd->releaseJobs( ids, "via condor_release" );
+		break;
+	case REMOVED:
+		rval = schedd->removeJobs( ids, "via condor_rm" );
+		break;
+	case HELD:
+		rval = schedd->holdJobs( ids, "via condor_hold" );
+		break;
+	}
+	if( ! rval ) {
+		had_error = true;
+	} else {
+		int result = FALSE;
+		if( !rval->LookupInteger(ATTR_ACTION_RESULT, result) || !result ) {
+			had_error = true;
+		}
+	}
+	return rval;
+}
 
 
 void
-notify_schedd()
-{
-	ReliSock	sock;
-	int			cmd;
-	PROC_ID		*job_id;
-	int 		i;
-
-		/* Connect to the schedd */
-	if( !sock.connect(schedd->addr(), 0) ) {
-		if( !TroubleReported ) {
-			fprintf( stderr, "%s: can't connect to %s\n", MyName, 
-					 schedd->idStr() );
-			TroubleReported = 1;
-		}
-		return;
-	}
-
-	sock.encode();
-
-	cmd = KILL_FRGN_JOB;
-	if( !sock.code(cmd) ) {
-		fprintf( stderr,
-			"Warning: can't send KILL_JOB command to condor scheduler\n" );
-		return;
-	}
-
-	if( !sock.code(nToProcess) ) {
-		fprintf( stderr,
-			"Warning: can't send num jobs to process to schedd (%d)\n",
-			nToProcess );
-		return;
-	}
-
-	ToProcess.Rewind();
-	for (i=0;i<nToProcess;i++) {
-		job_id = ToProcess.Next();
-		if( !sock.code(*job_id) ) {
-			fprintf( stderr,
-				"Error: can't send a proc_id to condor scheduler\n" );
-			return;
-		}
-	}
-
-	if( !sock.end_of_message() ) {
-		fprintf( stderr,
-			"Warning: can't send end of message to condor scheduler\n" );
-		return;
-	}
-}
-
-
-void ProcArg(const char* arg)
+procArg(const char* arg)
 {
 	int		c, p;								// cluster/proc #
 	char*	tmp;
-	PROC_ID *id;
+
+	char constraint[ATTRLIST_MAX_EXPRESSION];
 
 	if(isdigit(*arg))
 	// process by cluster/proc #
@@ -360,28 +404,23 @@ void ProcArg(const char* arg)
 		if(c <= 0)
 		{
 			fprintf(stderr, "Invalid cluster # from %s.\n", arg);
+			had_error = true;
 			return;
 		}
 		if(*tmp == '\0')
 		// delete the cluster
 		{
-			char constraint[ATTRLIST_MAX_EXPRESSION];
-
-			if( mode == IDLE ) {
-				sprintf( constraint, "%s==%d && %s==%d", ATTR_JOB_STATUS, HELD,
-					ATTR_CLUSTER_ID, c );
+			sprintf( constraint, "%s == %d", ATTR_CLUSTER_ID, c );
+			if( doWorkByConstraint(constraint) ) {
+				fprintf( old_messages ? stderr : stdout, 
+						 "Cluster %d %s.\n", c,
+						 (mode==REMOVED)?"has been marked for removal":
+						 (mode==HELD)?"held":"released" );
 			} else {
-				sprintf(constraint, "%s == %d", ATTR_CLUSTER_ID, c);
-			}
-
-			if(SetAttributeIntByConstraint(constraint,ATTR_JOB_STATUS,mode)<0)
-			{
-				fprintf( stderr, "Couldn't find/%s all jobs in cluster %d.\n",
-					 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release", c);
-			} else {
-				fprintf(stderr, "Cluster %d %s.\n", c,
-					(mode==REMOVED)?"removed":(mode==HELD)?"held":"released",c);
-				nToProcess = -1;
+				fprintf( stderr, 
+						 "Couldn't find/%s all jobs in cluster %d.\n",
+						 (mode==REMOVED)?"remove":(mode==HELD)?"hold":
+						 "release", c );
 			}
 			return;
 		}
@@ -391,118 +430,197 @@ void ProcArg(const char* arg)
 			if(p < 0)
 			{
 				fprintf( stderr, "Invalid proc # from %s.\n", arg);
+				had_error = 1;
 				return;
 			}
 			if(*tmp == '\0')
 			// process a proc
 			{
-				if( mode==IDLE ) {
-					int status;
-					if( GetAttributeInt(c,p,ATTR_JOB_STATUS,&status) < 0 ) {
-						fprintf(stderr,"Couldn't access job queue for %d.%d\n", 
-							c, p );
-						return;
-					}
-					if( status != HELD ) {
-						fprintf(stderr,"Job %d.%d not held to be released\n",
-							c, p);
-						return;
-					}
+				if( ! job_ids ) {
+					job_ids = new StringList();
 				}
-					
-				if(SetAttributeInt(c, p, ATTR_JOB_STATUS, mode ) < 0)
-				{
-					fprintf( stderr, "Couldn't find/%s job %d.%d.\n",
-					 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release", c);
-				} else {
-					fprintf(stdout, "Job %d.%d %s.\n", c, p,
-						(mode==REMOVED)?"removed":(mode==HELD)?"held":"released"
-						,c);
-					if ( mode != IDLE && nToProcess != -1 ) {
-						nToProcess++;
-						id = new PROC_ID;
-						id->proc = p;
-						id->cluster = c;
-						ToProcess.Append(id);
-					}
-				}
+				job_ids->append( arg );
 				return;
 			}
-			fprintf( stderr, "Warning: unrecognized \"%s\" skipped.\n", arg );
-			return;
 		}
 		fprintf( stderr, "Warning: unrecognized \"%s\" skipped.\n", arg );
+		return;
 	}
 	else if(isalpha(*arg))
 	// process by user name
 	{
-		char	constraint[ATTRLIST_MAX_EXPRESSION];
-
-		if( mode == IDLE ) {
-			sprintf( constraint, "%s==%d && %s==\"%s\"", ATTR_JOB_STATUS, HELD,
-				ATTR_OWNER, arg );
+		sprintf( constraint, "%s == \"%s\"", ATTR_OWNER, arg );
+		if( doWorkByConstraint(constraint) ) {
+			fprintf( stdout, "User %s's job(s) %s.\n", arg,
+					 (mode==REMOVED)?"have been marked for removal":
+					 (mode==HELD)?"held":"released" );
 		} else {
-			sprintf(constraint, "Owner == \"%s\"", arg);
+			fprintf( stderr, 
+					 "Couldn't find/%s all of user %s's job(s).\n",
+					 (mode==REMOVED)?"remove":(mode==HELD)?"hold":
+					 "release", arg );
 		}
-		if(SetAttributeIntByConstraint(constraint,ATTR_JOB_STATUS,mode) < 0)
-		{
-			fprintf( stderr, "Couldn't find/%s all of user %s's job(s).\n",
-				 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release",arg );
-		} else {
-			fprintf(stdout, "User %s's job(s) %s.\n", arg,
-				(mode==REMOVED)?"removed":(mode==HELD)?"held":"released");
-			nToProcess = -1;
-		}
-	}
-	else 
-	{
-		fprintf( stderr, "Warning: unrecognized \"%s\" skipped.\n", arg );
-	}
-}
-
-void
-handle_constraint( const char *constraint )
-{
-	char expr[ATTRLIST_MAX_EXPRESSION];
-	if( mode == IDLE ) {
-		sprintf( expr, "%s==%d && %s", ATTR_JOB_STATUS, HELD, constraint );
 	} else {
-		strcpy( expr, constraint );
-	}
-	if( SetAttributeIntByConstraint( constraint, ATTR_JOB_STATUS, mode ) < 0 ) {
-		fprintf( stderr, "Couldn't find/%s all jobs matching constraint %s\n",
-				 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release",
-				 constraint);
-	} else {
-		fprintf( stdout, "Jobs matching constraint %s %s\n", constraint,
-				(mode==REMOVED)?"removed":(mode==HELD)?"held":"released");
-		nToProcess = -1;
+		fprintf( stderr, "Warning: unrecognized \"%s\" skipped\n", arg );
 	}
 }
 
 
 void
-handle_all()
+addConstraint( const char *constraint )
 {
-	char	constraint[1000];
-
-		// Remove/Hold/Release all jobs... let queue management code decide
-		// which ones we can and can not remove.
-	if( mode == IDLE ) {
-			// in the case of "release", make sure we only release HELD jobs
-		sprintf( constraint, "%s==%d && %s>=%d", ATTR_JOB_STATUS, HELD,
-			ATTR_CLUSTER_ID, 0 );
+	static bool has_clause = false;
+	if( has_clause ) {
+		global_constraint += " && (";
 	} else {
-		sprintf(constraint, "%s >= %d", ATTR_CLUSTER_ID, 0 );
+		global_constraint += "(";
 	}
-	if( SetAttributeIntByConstraint(constraint,ATTR_JOB_STATUS,mode) < 0 ) {
-		fprintf( stdout, "Could not %s all jobs.\n",
-				 (mode==REMOVED)?"remove":
-				 (mode==HELD)?"hold":"release" );
-	} else {
+	global_constraint += constraint;
+	global_constraint += ")";
+
+	has_clause = true;
+	has_constraint = true;
+}
+
+
+void
+handleAll()
+{
+	char constraint[128];
+	sprintf( constraint, "%s >= 0", ATTR_CLUSTER_ID );
+
+	if( doWorkByConstraint(constraint) ) {
 		fprintf( stdout, "All jobs %s.\n",
 				 (mode==REMOVED)?"marked for removal":
 				 (mode==HELD)?"held":"released" );
+	} else {
+		fprintf( stderr, "Could not %s all jobs.\n",
+				 (mode==REMOVED)?"remove":
+				 (mode==HELD)?"hold":"release" );
+
 	}
-	nToProcess = -1;
 }
+
+
+void
+handleConstraints( void )
+{
+	if( ! has_constraint ) {
+		return;
+	}
+	const char* tmp = global_constraint.Value();
+
+	if( doWorkByConstraint(tmp) ) {
+		fprintf( stdout, "Jobs matching constraint %s %s\n", tmp,
+				 (mode==REMOVED)?"have been marked for removal":
+				 (mode==HELD)?"held":"released" );
+	} else {
+		fprintf( stderr, 
+				 "Couldn't find/%s all jobs matching constraint %s\n",
+				 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release",
+				 tmp );
+	}
+}
+
+
+void
+printOldFailure( PROC_ID job_id )
+{
+	fprintf( stderr, "Couldn't find/%s job %d.%d.\n",
+			 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release", 
+			 job_id.cluster, job_id.proc );
+}
+
+
+void
+printOldMessage( PROC_ID job_id, action_result_t result )
+{
+	switch( result ) {
+	case AR_SUCCESS:
+		fprintf( stdout, "Job %d.%d %s.\n", 
+				 job_id.cluster, job_id.proc, 
+				 (mode==REMOVED)?"marked for removal":
+				 (mode==HELD)?"held":"released" );
+		break;
+
+	case AR_NOT_FOUND:
+		if( mode==IDLE ) {
+			fprintf( stderr, "Couldn't access job queue for %d.%d\n", 
+					 job_id.cluster, job_id.proc );
+			break;
+		} 
+		printOldFailure( job_id );
+		break;
+
+	case AR_PERMISSION_DENIED: 
+		printOldFailure( job_id );
+		break;
+
+	case AR_BAD_STATUS:
+		if( mode == IDLE ) {
+			fprintf( stderr, "Job %d.%d not held to be released\n", 
+					 job_id.cluster, job_id.proc );
+			break;
+		} 
+		printOldFailure( job_id );
+		break;
+
+	case AR_ALREADY_DONE:
+			// The old tool allowed you to repeatedly hold or remove
+			// the same job over and over again...
+		fprintf( stdout, "Job %d.%d %s.\n", 
+				 job_id.cluster, job_id.proc, 
+				 (mode==REMOVED)?"marked for removal":
+				 (mode==HELD)?"held":"released" );
+		break;
+
+	case AR_ERROR:
+		printOldFailure( job_id );
+		break;
+	}
+}
+
+
+void
+printOldMessages( ClassAd* result_ad, StringList* ids )
+{
+	char* tmp;
+	PROC_ID job_id;
+	action_result_t result;
+
+	JobActionResults results;
+	results.readResults( result_ad );
+
+	ids->rewind();
+	while( (tmp = ids->next()) ) {
+		job_id = getProcByString( tmp );
+		result = results.getResult( job_id );
+		printOldMessage( job_id, result );
+	}
+}
+
+
+void
+printNewMessages( ClassAd* result_ad, StringList* ids )
+{
+	char* tmp;
+	char* msg;
+	PROC_ID job_id;
+	bool rval;
+
+	JobActionResults results;
+	results.readResults( result_ad );
+
+	ids->rewind();
+	while( (tmp = ids->next()) ) {
+		job_id = getProcByString( tmp );
+		rval = results.getResultString( job_id, &msg );
+		if( rval ) {
+			fprintf( stdout, "%s\n", msg );
+		} else {
+			fprintf( stderr, "%s\n", msg );
+		}
+		free( msg );
+	}
+}
+

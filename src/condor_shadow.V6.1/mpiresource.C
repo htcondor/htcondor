@@ -28,42 +28,9 @@
 MpiResource::MpiResource( BaseShadow *shadow ) :
 	RemoteResource( shadow ) 
 {
-	state = PRE;
+	node_num = -1;
 }
 
-MpiResource::MpiResource( BaseShadow *shadow, 
-						  const char *executingHost, 
-						  const char *capability ) :
-	RemoteResource( shadow, executingHost, capability ) 
-{
-	state = PRE;
-}
-
-
-int 
-MpiResource::requestIt( int starterVersion )  {
-	int r = RemoteResource::requestIt( starterVersion );
-	if ( r == 0 ) { // success
-		setResourceState( EXECUTING );
-	}
-	return r;
-}
-
-int
-MpiResource::killStarter() {
-	int r = RemoteResource::killStarter();
-	if ( r == 0 ) {
-		setResourceState( PENDING_DEATH );
-	}
-	return r;
-}
-
-void
-MpiResource::dprintfSelf( int debugLevel) {
-	RemoteResource::dprintfSelf( debugLevel );
-	shadow->dprintf ( debugLevel, "\tstate:         %s\n", 
-					  Resource_State_String[state] );
-}
 
 void 
 MpiResource::printExit( FILE *fp ) {
@@ -72,19 +39,107 @@ MpiResource::printExit( FILE *fp ) {
 	RemoteResource::printExit( fp );
 }
 
-void 
-MpiResource::setResourceState( Resource_State s ) {
-	shadow->dprintf ( D_FULLDEBUG,"Resource %s changing state from %s to %s\n",
-					  machineName ? machineName : "???", 
-					  Resource_State_String[state], 
-					  Resource_State_String[s] );
-	state = s;
+
+void
+MpiResource::resourceExit( int reason, int status ) 
+{
+	dprintf( D_FULLDEBUG, "Inside MpiResource::resourceExit()\n" );
+
+	RemoteResource::resourceExit( reason, status );
+
+		// Also log a NodeTerminatedEvent to the ULog
+
+	NodeTerminatedEvent event;
+	switch( reason ) {
+	case JOB_COREDUMPED:
+	case JOB_EXITED:
+		{
+			// Job exited on its own, normally or abnormally
+			NodeTerminatedEvent event;
+			event.node = node_num;
+			if( exited_by_signal ) {
+				event.normal = false;
+				event.signalNumber = exit_value;
+			} else {
+				event.normal = true;
+				event.returnValue = exit_value;
+			}
+			
+			int had_core = 0;
+			jobAd->LookupBool( ATTR_JOB_CORE_DUMPED, had_core );
+			if( had_core ) {
+				event.setCoreFile( shadow->getCoreName() );
+			}
+
+				// TODO: fill in local/total rusage
+				// event.run_local_rusage = r;
+			event.run_remote_rusage = remote_rusage;
+				// event.total_local_rusage = r;
+			event.total_remote_rusage = remote_rusage;
+			
+				/* we want to log the events from the perspective
+				   of the user job, so if the shadow *sent* the
+				   bytes, then that means the user job *received*
+				   the bytes */
+			event.recvd_bytes = bytesSent();
+			event.sent_bytes = bytesReceived();
+				// TODO: total sent and recvd
+			event.total_recvd_bytes = bytesSent();
+			event.total_sent_bytes = bytesReceived();
+			if( !writeULogEvent(&event) ) {
+				dprintf( D_ALWAYS,"Unable to log "
+						 "ULOG_NODE_TERMINATED event\n" );
+			}
+		}
+		break;	
+	case JOB_CKPTED:
+	case JOB_NOT_CKPTED:
+			// XXX Todo: Do we want a Node evicted event?
+		break;
+	default:
+		dprintf( D_ALWAYS, "Warning: Unknown exit_reason %d in "
+				 "MpiResource::resourceExit()\n", reason );  
+	}	
+
 }
 
-void 
-MpiResource::setExitStatus( int status ) {
-		/* If you're setting the exit status, you must be done! */
-	RemoteResource::setExitStatus( status );
-	setResourceState( FINISHED );
+
+bool
+MpiResource::writeULogEvent( ULogEvent* event )
+{
+	bool rval;
+	shadow->uLog.initialize( shadow->getCluster(), 
+							 shadow->getProc(), node_num );
+	rval = RemoteResource::writeULogEvent( event );
+	shadow->uLog.initialize( shadow->getCluster(), 
+							 shadow->getProc(), 0 ); 
+	return rval;
+}
+
+
+void
+MpiResource::beginExecution( void )
+{
+	char* startd_addr;
+	if( ! dc_startd ) {
+		dprintf( D_ALWAYS, "beginExecution() "
+				 "called with no DCStartd object!\n" ); 
+		return;
+	}
+	if( ! (startd_addr = dc_startd->addr()) ) {
+		dprintf( D_ALWAYS, "beginExecution() "
+				 "called with no startd contact info!\n" );
+		return;
+	}
+
+	NodeExecuteEvent event;
+	strcpy( event.executeHost, startd_addr );
+	event.node = node_num;
+	if( ! writeULogEvent(&event) ) {
+		dprintf( D_ALWAYS, "Unable to log NODE_EXECUTE event." );
+	}
+
+		// Call our parent class's version to handle everything else. 
+	RemoteResource::beginExecution();
 }
 

@@ -44,7 +44,7 @@ StringList::isSeparator( char x )
 	return 0;
 }
 
-StringList::StringList(char *s, char *delim ) 
+StringList::StringList(const char *s, const char *delim ) 
 {
 	delimiters = strnewp( delim );
 	if ( s ) {
@@ -53,27 +53,32 @@ StringList::StringList(char *s, char *delim )
 }
 
 void
-StringList::initializeFromString (char *s)
+StringList::initializeFromString (const char *s)
 {
-	char buffer[1024];
-	char *ptr = s;
-	int  index = 0;
+	char *walk_ptr = (char*)s;
 
-	while (*ptr != '\0')
+	while (*walk_ptr != '\0')
 	{
 		// skip leading separators & whitespace
-		while ((isSeparator (*ptr) || isspace(*ptr)) 
-					&& *ptr != '\0') 
-			ptr++;
+		while ((isSeparator (*walk_ptr) || isspace(*walk_ptr)) 
+					&& *walk_ptr != '\0') 
+			walk_ptr++;
 
-		// copy filename into buffer
-		index = 0;
-		while (!isSeparator (*ptr) && *ptr != '\0')
-			buffer[index++] = *ptr++;
+		// mark the beginning of this String in the list.
+		char *begin_ptr = walk_ptr;
 
+		// walk to the end of this string
+		while (!isSeparator (*walk_ptr) && *walk_ptr != '\0')
+			walk_ptr++;
+
+		// malloc new space for just this item
+		int len = (walk_ptr - begin_ptr);
+		char *tmp_string = (char*)malloc( 1 + len );
+		strncpy (tmp_string, begin_ptr, len);
+		tmp_string[len] = '\0';
+		
 		// put the string into the StringList
-		buffer[index] = '\0';
-		strings.Append (strdup (buffer));
+		strings.Append (tmp_string);
 	}
 }
 
@@ -82,7 +87,7 @@ StringList::print (void)
 {
 	char *x;
 	strings.Rewind ();
-	while (x = strings.Next ())
+	while ((x = strings.Next ()))
 		printf ("[%s]\n", x);
 }
 
@@ -90,7 +95,7 @@ StringList::~StringList ()
 {
 	char *x;
 	strings.Rewind ();
-	while (x = strings.Next ())
+	while ((x = strings.Next ()))
 	{
 		deleteCurrent();
 	}
@@ -104,7 +109,7 @@ StringList::contains( const char *st )
 	char	*x;
 
 	strings.Rewind ();
-	while (x = strings.Next ()) {
+	while ((x = strings.Next ())) {
 		if( strcmp(st, x) == MATCH ) {
 			return TRUE;
 		}
@@ -112,19 +117,47 @@ StringList::contains( const char *st )
 	return FALSE;
 }
 
+
+BOOLEAN
+StringList::contains_anycase( const char *st )
+{
+	char	*x;
+
+	strings.Rewind ();
+	while ((x = strings.Next ())) {
+		if( stricmp(st, x) == MATCH ) {
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+
 void
-StringList::remove(char *str)
+StringList::remove(const char *str)
 {
 	char *x;
 
 	strings.Rewind();
-	while (x = strings.Next()) {
+	while ((x = strings.Next())) {
 		if (strcmp(str, x) == MATCH) {
 			deleteCurrent();
 		}
 	}
 }
 
+void
+StringList::remove_anycase(const char *str)
+{
+	char *x;
+
+	strings.Rewind();
+	while ((x = strings.Next())) {
+		if (stricmp(str, x) == MATCH) {
+			deleteCurrent();
+		}
+	}
+}
 
 BOOLEAN
 StringList::substring( const char *st )
@@ -133,7 +166,7 @@ StringList::substring( const char *st )
 	int len;
 	
 	strings.Rewind ();
-	while( x = strings.Next() ) {
+	while( (x = strings.Next()) ) {
 		len = strlen(x);
 		if( strncmp(st, x, len) == MATCH ) {
 			return TRUE;
@@ -142,31 +175,54 @@ StringList::substring( const char *st )
 	return FALSE;
 }
 
+BOOLEAN
+StringList::contains_withwildcard(const char *string)
+{
+	return (contains_withwildcard(string, false) != NULL);
+}
+
+BOOLEAN
+StringList::contains_anycase_withwildcard(const char *string)
+{
+	return (contains_withwildcard(string, true) != NULL);
+}
+
+const char * StringList :: string_anycase_withwildcard( const char * string)
+{
+    return contains_withwildcard(string, true);
+}
+
 // contains_withwildcard() is just like the contains() method except that
 // list members can have an asterisk wildcard in them.  So, if
 // the string passed in is "pppmiron.cs.wisc.edu", and an entry in the
 // the list is "ppp*", then it will return TRUE.
-BOOLEAN
-StringList::contains_withwildcard(const char *string)
+const char *
+StringList::contains_withwildcard(const char *string, bool anycase)
 {
 	char *x;
 	char *matchstart;
 	char *matchend;
 	char *asterisk;
 	int matchendlen, len;
-	BOOLEAN result;
+    BOOLEAN result; 
+	int temp;
 	
 	if ( !string )
-		return FALSE;
+		return NULL;
 
 	strings.Rewind();
 
-	while ( x=strings.Next() ) {
+	while ( (x=strings.Next()) ) {
 
 		if ( (asterisk = strchr(x,'*')) == NULL ) {
 			// There is no wildcard in this entry; just compare
-			if ( strcmp(x,string) == MATCH )
-				return TRUE;
+			if (anycase) {
+				temp = strcasecmp(x,string);
+			} else {
+				temp = strcmp(x,string);
+			}
+			if ( temp == MATCH )
+				return x;
 			else
 				continue;
 		}
@@ -179,10 +235,14 @@ StringList::contains_withwildcard(const char *string)
 			if ( asterisk[1] == '\0' ) {
 				// asterisk at the end behavior.
 				*asterisk = '\0';	// remove asterisk
-				int temp = strncmp(x,string,strlen(x));
+				if (anycase) {
+					temp = strncasecmp(x,string,strlen(x));
+				} else {
+					temp = strncmp(x,string,strlen(x));
+				}
 				*asterisk = '*';	// replace asterisk
 				if ( temp == MATCH ) {
-					return TRUE;
+					return x;
 				} else {
 					continue;
 				}				
@@ -200,7 +260,12 @@ StringList::contains_withwildcard(const char *string)
 		result = TRUE;
 		*asterisk = '\0';	// replace asterisk with a NULL
 		if ( matchstart ) {
-			if ( strncmp(matchstart,string,strlen(matchstart)) != MATCH ) 
+			if ( anycase ) {
+				temp = strncasecmp(matchstart,string,strlen(matchstart));
+			} else {
+				temp = strncmp(matchstart,string,strlen(matchstart));
+			}
+			if ( temp != MATCH ) 
 				result = FALSE;
 		}
 		if ( matchend && result == TRUE) {
@@ -208,17 +273,71 @@ StringList::contains_withwildcard(const char *string)
 			matchendlen = strlen(matchend);
 			if ( matchendlen > len )	// make certain we do not SEGV below
 				result = FALSE;
-			if ( result == TRUE && strcmp(&(string[len-matchendlen]),matchend) != MATCH )
-				result = FALSE;
+			if ( result == TRUE ) {
+				if (anycase) {
+					temp = strcasecmp(&(string[len-matchendlen]),matchend);
+				} else {
+					temp = strcmp(&(string[len-matchendlen]),matchend);
+				}
+				if ( temp != MATCH )
+					result = FALSE;
+			}
 		}
 		*asterisk = '*';	// set asterisk back no matter what the result
 		if ( result == TRUE ) {
-			return TRUE;
+			return x;
 		}
 	
 	}	// end of while loop
 
-	return FALSE;
+	return NULL;
+}
+
+/* returns a malloc'ed string that contains a comma delimited list of
+the internals of the string list. */
+char*
+StringList::print_to_string(void)
+{
+	char *tmp;
+	int num, i;
+	int sum = 0;
+
+	strings.Rewind();
+	num = strings.Number();
+
+	/* no string at all if there isn't anything in it */
+	if(num == 0)
+	{
+		return NULL;
+	}
+
+	for (i = 0; i < num; i++)
+	{
+		sum += strlen(strings.Next());
+	}
+
+	/* get memory for all of the strings, plus the ',' character between them
+		and one more for the \0 */
+	tmp = (char*)calloc(sum + num + 1, 1);
+	if (tmp == NULL)
+	{
+		EXCEPT("Out of memory in StringList::print_to_string");
+	}
+	tmp[0] = '\0';
+
+	strings.Rewind();
+	for (i = 0; i < num; i++)
+	{
+		strcat(tmp, strings.Next());
+		
+		/* add commas until the last attr entry in the list */
+		if (i < (num - 1))
+		{
+			strcat(tmp, ",");
+		}
+	}
+
+	return tmp;
 }
 
 

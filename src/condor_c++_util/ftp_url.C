@@ -72,12 +72,12 @@ int open_ftp( const char *name, int flags, size_t n_bytes )
 	struct sockaddr_in	sin;
 	int		sock_fd;
 	int		status;
-	char	*port_sep;
+	//char	*port_sep; // commented out, because it is unused, avoiding warning
 	char	*end_of_addr;
 	int		port_num = FTP_PORT;
 	struct hostent *he;
 	char	ftp_cmd[1024];
-	int		read_count;
+	//int		read_count; // commented out, because it is unused, avoiding warning
 	char	*ftp_resp;
 	int		ip_addr[4];
 	int		port[2];
@@ -130,6 +130,7 @@ int open_ftp( const char *name, int flags, size_t n_bytes )
 	if (status < 0) {
 		fprintf(stderr, "http connect() FAILED, errno = %d\n", errno);
 		fflush(stderr);
+		close( sock_fd );
 		return status;
 	}
 

@@ -113,7 +113,13 @@ EventHandler::install()
 		signo = next_sig();
 		if( sigismember(&mask,signo) ) {
 			// explicit type cast to eliminate type check warning  -- Rajesh
+#if (defined(LINUX) && defined(GLIBC22))
+			// bad craziness with the type cast --psilord
+			action.sa_handler = (void (*)(int)) func;
+#else
 			action.sa_handler = (void (*)(...)) func;
+#endif
+
 			action.sa_mask = mask;
 			action.sa_flags = SA_NOCLDSTOP;
 			if( sigaction(signo,&action,&o_action[i]) < 0 ) {
@@ -135,7 +141,7 @@ void
 EventHandler::de_install()
 {
 	NameTableIterator next_sig( SigNames );
-	struct sigaction action;
+	//struct sigaction action;//unused variable, avoiding warning.
 	int		signo;
 	int		i;
 

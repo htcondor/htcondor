@@ -21,7 +21,11 @@
  * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 
+/* the below is defined in test suite programs that use these files. */
+#ifndef NO_CONDOR_COMMON
 #include "condor_common.h"
+#endif
+
 #include "memory_file.h"
 
 static const int DEFAULT_BUFFER_SIZE=1024;
@@ -31,7 +35,7 @@ memory_file::memory_file()
 {
 	buffer = new char[DEFAULT_BUFFER_SIZE];
 	bufsize = DEFAULT_BUFFER_SIZE;
-	bzero(buffer,bufsize);
+	memset(buffer, 0, bufsize);
 	pointer = filesize = 0;
 }
 
@@ -57,8 +61,10 @@ int memory_file::compare( char *filename )
 		return 100;
 	}
 
-	do {
+	while(1) {
 		chunksize = ::read(fd,cbuffer,COMPARE_BUFFER_SIZE);
+		if(chunksize<=0) break;
+
 		errors += count_errors( cbuffer, &buffer[position], chunksize, position );
 		position += chunksize;
 
@@ -67,9 +73,9 @@ int memory_file::compare( char *filename )
 			break;
 		}
 
-	} while( chunksize==COMPARE_BUFFER_SIZE );
+	}
 
-	if( (position!=filesize) && (chunksize!=COMPARE_BUFFER_SIZE) ) {
+	if(position!=filesize) {
 		cout << "SIZE ERROR:\nFile was " << position
 		     << " bytes, but mem was " << filesize
 		     << " bytes.\n";
@@ -165,7 +171,7 @@ void memory_file::ensure( int needed )
 
 		char *newbuffer = new char[newsize];
 		memcpy(newbuffer,buffer,bufsize);
-		bzero(&newbuffer[bufsize],newsize-bufsize);
+		memset(&newbuffer[bufsize], 0, newsize-bufsize);
 		delete [] buffer;
 		buffer = newbuffer;
 		bufsize = newsize;

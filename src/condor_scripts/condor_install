@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 ###########################################################################
 #
@@ -10,8 +10,7 @@
 #  Please read the INSTALL file or the Installation chapter of the
 #  Condor Administrator's Manual.
 #
-#  Other than setting the proper path to perl above, you should not
-#  need to edit this script at all.
+#  You shouldn't need to edit this script at all.
 #
 #  condor_install by Derek Wright <wright@cs.wisc.edu> 2/19/98
 #
@@ -24,15 +23,17 @@ umask 0022;
 @tool_names=("checkpoint", "off", "on", "reconfig", "reconfig_schedd", 
 	       "reschedule", "restart", "vacate" );
 @bin_names=( "q", "rm", "submit", "status", "prio", "userprio", 
-		"compile", "history", "config_val" );
+		"compile", "history", "config_val", "findhost", "release",
+         "run", "userlog", "version" );
 @full_lib_names=( "ld", "libcondorc++support.a", "condor_rt0.o",
 		  "libcondorsyscall.a" );
 @sbin_master_names=( "master", "preen" );
-@perl_scripts=( "sbin/condor_install", "bin/condor_submit_dag" );
 $needs_lock=0;
 $fs_domain="";
 $uid_domain="";
 $soft_uid="";
+$java_jvm_path="";
+$java_jvm_maxmem_arg="";
 
 # Print the opening remarks:
 print "\n" x 50, 
@@ -123,16 +124,6 @@ $release_dir = &install_release_dir();
 print "\nUsing $release_dir as the Condor release directory.\n",
 "\nPress enter to continue. ";
 $_ = <STDIN>;
-
-###  Figure out if perl is in a non-standard location, and if so where
-###  it's installed.
-$perl_path = &find_perl();
-###  Now that we have it, fix the path in our scripts.
-if( $perl_path ) {
-    foreach $script (@perl_scripts) {
-	&fix_perl_path( "$release_dir/$script" );
-    }
-}
 
 ###  Do what we need to do:
 if( grep(/submit/, @install_type) ) {
@@ -292,7 +283,7 @@ sub configure_submit_only {
     "I can either install these files into a directory that is already in\n",
     "your PATH that you have write access to, or I can put them into any\n",
     "directory you specify (in which case you would have to add that\n",
-    "directory to your PATH or explicity use a full pathname to access the\n",
+    "directory to your PATH or explicitly use a full pathname to access the\n",
     "Condor tools).\n";
     $path = &prompt_install_path();
 
@@ -323,52 +314,6 @@ sub configure_submit_only {
 }
 
 
-# Finds where perl is installed and returns the path to it.  If it's
-# installed in /usr/bin/perl (the standard location), we just return "". 
-sub find_perl {
-    local( $perl, $FOO );
-    local( $install ) = "$release_dir/sbin/condor_install";
-
-    # Try some obvious defaults
-    -f "/usr/bin/perl" && -x "/usr/bin/perl" && return "/usr/bin/perl";
-    -f "/usr/local/bin/perl" && -x "/usr/local/bin/perl" && 
-	return "/usr/local/bin/perl";
-
-    # See what we've got in the condor_install script in the
-    # release directory
-    open( FOO, "<$install" ) || die "Can't open $install for reading: !$\n";
-    $_ = <FOO>;
-    close FOO;
-    if( ! /^#!\/usr\/bin\/perl\s.*$/ ) {
-       # If it's not still /usr/bin/perl, it's probably right.
-       /^#!(\S*)/;
-       -f $1 && -x $1 && return $1;
-    }
-
-    # We give up, ask the user.
-    print "\nWARNING: perl is not installed in a standard location.\n\n";
-    chop( $perl = `which perl` );
-    if( -x $perl && -f $perl ) {
-	print "$perl is in your PATH, should I use that? [yes] ";
-	$_ = <STDIN>;
-	/(^y.*)|^$/i && return $perl;
-    }
-    while( 1 ) {
-	print "Where is perl installed? (give the full path) ";
-	chop( $_ = <STDIN> );
-	-x $_ && -f $_ && return $_;
-	if( /^.*\/$/ ) { 
-	    # What they gave ends in "/", try appending "perl"
-	    $perl = $_ . "perl";
-	} else {
-	    # Doesn't end in "/", try appending "/perl"
-	    $perl = $_ . "/perl";
-	}
-	-x $perl && -f $perl && return $perl;
-	print "I can't execute \"$_\", try again.\n";
-    }
-}
-
 sub customize_condor_script {
     local( *pool_ref, *conf_ref ) = @_;
     local( $def_pool, $pool, $tool );
@@ -397,10 +342,6 @@ sub customize_condor_script {
 	      }
 	      last SWITCH;
 	  }
-	  if( $perl_path && /^\#\!\/usr\/bin\/perl.*$/ ) {
-	      print CONDOR "#!$perl_path\n";
-	      last SWITCH;
-	  }	     
 	  print CONDOR $_;
       }
     }
@@ -417,29 +358,6 @@ sub customize_condor_script {
 	link( "$path/condor", "$path/condor_$tool" ) || 
 	    die "Can't create link: $path/condor_$tool: $!\n";
     }
-}
-
-sub fix_perl_path {
-    local( $file ) = @_;
-    local( $tmp_name, $args );
-    -f $file || die "Error: $file doesn't exist!\n";
-    $tmp_name = "$file.tmp";
-    rename( $file, $tmp_name );
-    open( IN, "<$tmp_name" ) || die "Can't open $tmp_name for reading: $!\n";
-    open( OUT, ">$file" ) || die "Can't open $file for writing: $!\n";
-    $args = "";
-    $_ = <IN>;
-    if( /^#!\S*(.*)$/ ) {
-       $args = $1;
-    }
-    print OUT "#!$perl_path$args\n";
-    while( <IN> ) {
-	print OUT $_;
-    }
-    close IN;
-    close OUT;
-    unlink( $tmp_name ) || die "Can't unlink $tmp_name: $!\n";
-    chmod( 0755, $file ) || die "Can't chmod $file: $!\n";
 }
 
 
@@ -796,11 +714,11 @@ sub customize_config_file {
 	  if( /^CONDOR_HOST.*$/ ) { $_ = "CONDOR_HOST\t\t= $cm\n"; last SWITCH; }
 	  if( /^RELEASE_DIR.*$/ ) { $_ = "RELEASE_DIR\t\t= $release_dir\n"; last SWITCH; }
 	  if( /^LOCAL_DIR.*$/ ) { $_ = "LOCAL_DIR\t\t= $local_dir_str\n"; last SWITCH; }
-	  if( /^LOCAL_CONFIG_FILE.*$/ ) { 
+	  if( /^LOCAL[^_A-Za-z0-9]*$/ ) { 
 	      if( $local_config_str ) {
-		  $_ = "LOCAL_CONFIG_FILE\t\t= $local_config_str\n";
+		  $_ = "LOCAL\t\t= $local_config_str\n";
 	      } else {
-		  $_ = "#LOCAL_CONFIG_FILE\t\t= \$(LOCAL_DIR)/condor_config.local\n";
+		  $_ = "#LOCAL\t\t= \$(LOCAL_DIR)/condor_config.local\n";
 	      }
 	      last SWITCH;
 	  }  
@@ -809,6 +727,13 @@ sub customize_config_file {
 	      last SWITCH;
 	  }
 	  if( /^MAIL.*$/ ) { $_ = "MAIL\t\t\t= $mail_path\n"; last SWITCH; }
+	  if( /^JAVA[^_A-Za-z0-9]/ ) { 
+	  	$_ = "JAVA\t= $java_jvm_path\n"; last SWITCH; 
+	  }
+	  if( /^JAVA_MAXHEAP_ARGUMENT[^_A-Za-z0-9]/ ) { 
+	  	$_ = "JAVA_MAXHEAP_ARGUMENT\t= $java_jvm_maxmem_arg\n"; 
+		last SWITCH; 
+	  }
 	  if( $lock && /^LOCK.*$/ ) { $_ = "LOCK\t\t\t= $lock\n"; last SWITCH; }
 	  if( $ckpt && /^#USE_CKPT_SERVER.*$/ ) { 
 	      $_ = "USE_CKPT_SERVER\t\t= True\n"; last SWITCH; 
@@ -1126,8 +1051,20 @@ sub configure_full_install {
     $has_mach = 0;
     $is_cm = 0;
 
+	print "\n***************************************************************************\n",
+    "\tSTEP 6: Java Universe support in Condor.\n",
+    "***************************************************************************\n";
+
+$java_jvm_path = &prompt_java_jvm_path();
+
+print "\nUsing JVM $java_jvm_path for Java universe support.\n" 
+	if ($java_jvm_path ne "");
+
+print "\nPress enter to continue. ";
+$_ = <STDIN>;
+
     print "\n***************************************************************************\n",
-    "\tSTEP 6: Where should public programs be installed?\n",
+    "\tSTEP 7: Where should public programs be installed?\n",
     "***************************************************************************\n";
     $path = "$release_dir/bin";
     print "\n",
@@ -1140,7 +1077,7 @@ sub configure_full_install {
 	"in the default PATH to point to these binaries, so that Condor users do not\n",
 	"have to change their PATH.  Alternatively, I can leave them where they are\n",
 	"and Condor users will have to add $path\n",
-	"to their PATH or explicity use a full pathname to access the Condor tools.\n",
+	"to their PATH or explicitly use a full pathname to access the Condor tools.\n",
 	"\nShall I create links in some other directory? [yes] ";
 	chop( $_ = <STDIN> );
 	if( /(^[Yy].*)|^$/ ) {    
@@ -1158,7 +1095,7 @@ sub configure_full_install {
     $_ = <STDIN>;
 
     print "\n***************************************************************************\n",
-    "\tSTEP 7: What machine will be your central manager?\n",
+    "\tSTEP 8: What machine will be your central manager?\n",
     "***************************************************************************\n";
     $cm = &prompt_central_manager( 0 );
     
@@ -1171,7 +1108,7 @@ sub configure_full_install {
     $_ = <STDIN>;
 
     print "\n***************************************************************************\n",
-    "\tSTEP 8: Where will the \"local directory\" go?\n",
+    "\tSTEP 9: Where will the \"local directory\" go?\n",
     "***************************************************************************\n";
     
     if( @machines ) {
@@ -1239,9 +1176,12 @@ sub configure_full_install {
 	    chop( $_ = <STDIN> );
 	    $local_dir_str = $_;
 	    if( $_ =~ s/^(.*)\/\$\(HOSTNAME\)$/$1/ ) {
-		$local_dir = $_;
-		$has_mach = 1;
-	    }
+			$local_dir = $_;
+			$has_mach = 1;
+	    } else {
+			$local_dir = $local_dir_str;
+			$has_mach = 0;
+		}
 	    if( ! -d $local_dir ) {
 		mkdir($local_dir, 0777) || 
 		    die "\nCan't create $local_dir: $!\n\n";
@@ -1305,7 +1245,7 @@ sub configure_full_install {
     $_ = <STDIN>;
 
     print "\n***************************************************************************\n",
-    "\tSTEP 9: Where will the local (machine-specific) config files go?\n",
+    "\tSTEP 10: Where will the local (machine-specific) config files go?\n",
     "***************************************************************************\n";
 
     if( @machines ) {
@@ -1339,7 +1279,7 @@ sub configure_full_install {
     }
 
     print "\n***************************************************************************\n",
-    "\tSTEP 10: How do you want Condor to find its config file?\n",
+    "\tSTEP 11: How do you want Condor to find its config file?\n",
     "***************************************************************************\n";
     $has_config=0;
 
@@ -1524,7 +1464,7 @@ sub find_lock_dir {
     "\nDo you want to specify a local partition for file locking? [yes] ";
     $_ = <STDIN>;
     if( /^[Nn].*/ ) {
-	print "\nAlright, but you might run into trouble latter...\n";
+	print "\nAlright, but you might run into trouble later...\n";
 	return "";
     }
 
@@ -1770,9 +1710,9 @@ sub prompt_fullhost {
 	chop($fh = <STDIN>);    
 	print "\nYou entered: $fh\n";
 	if( $fh =~ /.?\..?/ ) {
-	    print "Is that right? [no]";
+	    print "Is that right? [no] ";
 	    chop($_ = <STDIN>);    
-	    if( /^y$/i ) {
+	    if( /((^y$)|(^yes$))/i ) {
 		return $fh;
 	    }
 	} else {
@@ -1781,3 +1721,100 @@ sub prompt_fullhost {
 	}
     }
 }
+
+# Search for default locations for java, and then test to see if it is a
+# Sun JVM for the maxheap size argument Java needs in the config files.
+# Do a bunch of stuff to make it interactive friendly too.
+sub prompt_java_jvm_path()
+{
+	my $jvm = "";
+	my @default_jvm_locations = ("/bin/java", "/usr/bin/java", 
+							"/usr/local/bin/java", "/s/std/bin/java");
+	my $java_libdir = "$release_dir/lib";
+	my $exec_result;
+	my $default_jvm_location;
+
+	# Ask if they even want support for java
+	print "\nEnable Java Universe support? [yes] ";
+	chomp($_ = <STDIN>);
+   	if( ! /(^[Yy].*)|^$/ ) {
+		print "Ok, Java Universe will be left unconfigured.\n";
+		return "";
+	}
+
+	# check some default locations for java and pick first valid one
+	foreach $default_jvm_location (@default_jvm_locations) {
+		if ( -f $default_jvm_location && -x $default_jvm_location) {
+			$jvm = $default_jvm_location;
+			last;
+		}
+	}
+
+	# if nothing is found, explain that, otherwise see if they just want to
+	# accept what I found. 
+
+	if ($jvm eq "") {
+		print "\nI wasn't able to find a valid JVM.\n";
+	} else {
+		print "\nI have found a JVM: $jvm.\n\nIs this acceptable? [yes] ";
+    	chop( $_ = <STDIN> );
+    	if( /(^[Yy].*)|^$/ ) {
+			goto JAVA_MEM_CHECK; # sorry....
+		}
+	}
+
+	# If they didn't accept my choice for one reason or another then force
+	# a fully qualified java executable path from them.
+
+    while( 1 ) {
+		print "\nPlease enter the full path to the JVM:\n";
+		chomp($jvm = <STDIN>);    
+		print "\nYou entered: $jvm\n";
+		if( $jvm =~ /^\//) {
+			if ( -f $jvm && -x $jvm) {
+	    		print "Is that right? [no] ";
+	    		chop($_ = <STDIN>);    
+	    		if( /((^y$)|(^yes$))/i ) {
+					last; # break out of while loop
+	    		}
+			} else {
+			print "That executable seems to not be present or executable!\n",
+				"Please try again.\n";
+			}
+		} else {
+	    	print "That path doesn't start with an '/'.\n",
+	    	"Please try again.\n";
+		}
+    }
+
+	# Now that we have an executable JVM, see if it is a Sun jvm because that
+	# JVM it supports the -Xmx argument then, which is used to specify the
+	# maximum size to which the heap can grow.
+
+	JAVA_MEM_CHECK: 
+	print "\nChecking to see if you have a Sun JVM...";
+
+	# execute a program in the condor lib directory that just got installed.
+	# We are going to pass an -Xmx flag to it and see if we have a Sun JVM,
+	# if so, mark that fact for the config file.
+
+	$tmp = $ENV{"CLASSPATH"};
+	$ENV{"CLASSPATH"} = $java_libdir;
+	$exec_result = 0xffff &
+		system("$jvm -Xmx1024m CondorJavaInfo new 0 > /dev/null 2>&1");
+	$ENV{"CLASSPATH"} = $tmp;
+
+	if ($exec_result == 0) {
+		print "yes.\n";
+		$java_jvm_maxmem_arg = "-Xmx"; # Sun JVM max heapsize flag
+	} else {
+		print "no.\n";
+		$java_jvm_maxmem_arg = "";
+	}
+
+	return $jvm;
+}
+
+
+
+

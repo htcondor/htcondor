@@ -56,8 +56,8 @@ extern "C" void _condor_restore_sigstates();
 #if defined(COMPRESS_CKPT)
 #include "zlib.h"
 extern "C" {
-	int condor_malloc_data_size();
-	int condor_malloc_init(void *start);
+	int condor_malloc_init_size();
+	void condor_malloc_init(void *start);
 	char *condor_malloc(size_t);
 	void condor_free(void *);
 	void *condor_morecore(int);
@@ -90,6 +90,11 @@ extern "C" {
 extern "C" int _sigreturn();
 #endif
 
+#if defined(Solaris)
+/* for undocumented calls in GETPAGESIZE() */
+#include <sys/sysconfig.h>
+#endif
+
 void terminate_with_sig( int sig );
 static void find_stack_location( RAW_ADDR &start, RAW_ADDR &end );
 static int SP_in_data_area();
@@ -111,6 +116,9 @@ unsigned int _condor_numrestarts = 0;
 int condor_compress_ckpt = 1; // compression off(0) or on(1)
 int condor_slow_ckpt = 0;
 
+/* these are the remote system calls we use in this file */
+extern "C" int REMOTE_CONDOR_send_rusage(struct rusage *use_p);
+
 // set mySubSystem for Condor components which expect it
 char *mySubSystem = "JOB";
 
@@ -123,8 +131,8 @@ net_read(int fd, void *buf, int size)
 	bytes_read = 0;
 	do {
 		this_read = read(fd, buf, size - bytes_read);
-		if (this_read < 0) {
-			return this_read;
+		if (this_read <= 0) {
+			return -1;
 		}
 		bytes_read += this_read;
 		buf = (void *) ( (char *) buf + this_read );
@@ -177,7 +185,7 @@ void *condor_morecore(int incr)
 	
 	if (begin == NULL) {
 		begin = MyImage.FindAltHeap();
-		int malloc_static_data = condor_malloc_data_size();
+		int malloc_static_data = condor_malloc_init_size();
 		int segincr =
 			(((incr+malloc_static_data+
 			   (2*sizeof(void *)))/pagesize)+1)*pagesize;
@@ -310,12 +318,22 @@ Image::SetFd( int f )
 void
 Image::SetFileName( char *ckpt_name )
 {
-		// Save the checkpoint file name
+	static bool done_once = false;
+	if(done_once && file_name) 
+		delete[] file_name;
+
+	// Save the checkpoint file name
 	file_name = new char [ strlen(ckpt_name) + 1 ];
+	if(file_name == NULL) {
+		dprintf(D_ALWAYS,
+				"Internal error: Could not allocate memory for ckpt_filename\n");
+		Suicide();
+	}
 	strcpy( file_name, ckpt_name );
 
 	fd = -1;
 	pos = 0;
+	done_once = true;
 }
 
 void
@@ -757,7 +775,7 @@ Image::Restore()
 	Suicide();
 }
 
-#if defined(COMPRESS_CKPT)
+#if defined(COMPRESS_CKPT) && defined(HAS_DYNAMIC_USER_JOBS)
 /* zlib uses memcpy, but we can't assume that libc.so is in a good state,
    so we provide our own version... - Jim B. */
 extern "C" {
@@ -795,12 +813,17 @@ static int mystrcmp(const char *str1, const char *str2)
 
 #if defined(HAS_DYNAMIC_USER_JOBS)
 extern "C"  int GETPAGESIZE(void);
-#if defined(SYS_getpagesize)
+
 static int GETPAGESIZE(void)
 {
+#if defined(SYS_getpagesize)
 	return SYSCALL(SYS_getpagesize);
-}
+#elif defined(SYS_sysconfig)
+	return SYSCALL(SYS_sysconfig, _CONFIG_PAGESIZE);
+#else
+#error "Please port me.  I need a safe method of getting the pagesize."
 #endif
+}
 #endif
 
 void
@@ -899,8 +922,6 @@ RestoreStack()
 
 	dprintf(D_CKPT, "RestoreStack() Exit!\n");
 	
-	_condor_signals_enable();
-
 	LONGJMP( Env, 1 );
 }
 
@@ -952,36 +973,7 @@ Image::Write( const char *ckpt_file )
 		ckpt_file = file_name;
 	}
 
-	if( MyImage.GetMode() == REMOTE ) {
-		// In remote mode we update the shadow on our image size
-		report_image_size( (MyImage.GetLen() + KILO - 1) / KILO );
-
-		// Get checkpoint parameters from the shadow
-		int mode = get_ckpt_mode(check_sig);
-		if (mode > 0) {
-			condor_compress_ckpt = (mode&CKPT_MODE_USE_COMPRESSION) ? 1 : 0;
-			if (mode&CKPT_MODE_SLOW) {
-				condor_slow_ckpt = get_ckpt_speed();
-				dprintf(D_ALWAYS, "Checkpointing at %d KB/s.\n",
-						condor_slow_ckpt);
-			} else {
-				condor_slow_ckpt = 0;
-			}
-			if (mode&CKPT_MODE_MSYNC) {
-				dprintf(D_ALWAYS,
-						"Performing an msync() on all dirty pages...\n");
-				MSync();
-			}
-			if (mode&CKPT_MODE_ABORT) {
-				dprintf(D_ALWAYS, "Checkpoint aborted by shadow request.\n");
-				return -1;
-			}
-		} else {
-			condor_compress_ckpt = condor_slow_ckpt = 0;
-		}
-		head.ResetMagic();			// set magic according to compression mode
-	}
-
+	head.ResetMagic();		// set magic according to compression mode
 
 		// Generate tmp file name
 	dprintf( D_ALWAYS, "Checkpoint name is \"%s\"\n", ckpt_file );
@@ -1257,6 +1249,9 @@ SegMap::Read( int fd, ssize_t pos )
 	long	saved_len = len;
 	int 	saved_prot = prot;
 	RAW_ADDR	saved_core_loc = core_loc;
+	int segSize;
+	int zfd;
+	char *segLoc;
 
 	if( pos != file_loc ) {
 		dprintf( D_ALWAYS, "Checkpoint sequence error (%d != %d)\n", pos,
@@ -1279,8 +1274,8 @@ SegMap::Read( int fd, ssize_t pos )
 
 #if defined(HAS_DYNAMIC_USER_JOBS)
 	else if ( mystrcmp(name,"SHARED LIB") == 0) {
-		int zfd, segSize = len;
-		char *segLoc = (char *)core_loc;
+		segSize = len;
+		segLoc = (char *)core_loc;
 		if ((zfd = SYSCALL(SYS_open, "/dev/zero", O_RDWR)) == -1) {
 			dprintf( D_ALWAYS,
 					 "Unable to open /dev/zero in read/write mode.\n");
@@ -1421,7 +1416,7 @@ SegMap::Read( int fd, ssize_t pos )
 #else
 		nbytes =  syscall( SYS_read, fd, (void *)ptr, read_size );
 #endif
-		if( nbytes < 0 ) {
+		if( nbytes <= 0 ) {
 			dprintf(D_ALWAYS, "in Segmap::Read(): fd = %d, read_size=%d\n", fd,
 				read_size);
 			dprintf(D_ALWAYS, "core_loc=%x, nbytes=%d\n",
@@ -1535,22 +1530,28 @@ Checkpoint( int sig, int code, void *scp )
 	int		scm, p_scm;
 	int		do_full_restart = 1; // set to 0 for periodic checkpoint
 	int		write_result;
+	sigset_t	mask;
 
-		// First thing, make sure we don't do recursive checkpointing.
-	_condor_ckpt_disable();
+		// Block ckpt signals while we are ckpting
+	mask = _condor_signals_disable();
+
+		// If checkpointing is temporarily disabled, remember that and return
+	if( _condor_ckpt_is_disabled() )  {
+		_condor_ckpt_defer(sig);
+		_condor_signals_enable(mask);
+		return;
+	}
 
 	if( InRestart ) {
-		if ( sig == SIGTSTP )
+		if ( sig == SIGTSTP ) {
 			Suicide();		// if we're supposed to vacate, kill ourselves
-		else {
+		} else {
+			_condor_signals_enable(mask);
 			return;			// if periodic ckpt or we're currently ckpting
 		}
 	} else {
 		InRestart = TRUE;
 	}
-
-	_condor_save_sigstates();
-	dprintf( D_ALWAYS, "Saved signal state.\n");
 
 	check_sig = sig;
 
@@ -1597,13 +1598,12 @@ Checkpoint( int sig, int code, void *scp )
 		bsd_usage.ru_stime.tv_usec = posix_usage.tms_stime % clock_tick;
 		(bsd_usage.ru_stime.tv_usec) *= 1000000 / clock_tick;
 		SetSyscalls( SYS_REMOTE | SYS_UNMAPPED );
-		(void)REMOTE_syscall( CONDOR_send_rusage, (void *) &bsd_usage );
+		(void)REMOTE_CONDOR_send_rusage( &bsd_usage );
 		SetSyscalls( p_scm );
 
 	} else {
 		scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
 	}
-
 
 	if ( sig == SIGTSTP ) {
 		dprintf( D_ALWAYS, "Got SIGTSTP\n" );
@@ -1617,13 +1617,86 @@ Checkpoint( int sig, int code, void *scp )
 	while( wait_up )
 		;
 #endif
-	if( SETJMP(Env) == 0 ) {	// Checkpoint
+
+		// These two things must be done BEFORE saving of the process image.
+		_condor_save_sigstates();
+		dprintf( D_ALWAYS, "Saved signal state.\n");
+
 		dprintf( D_ALWAYS, "About to save file state\n");
 		_condor_file_table_checkpoint();
 		dprintf( D_ALWAYS, "Done saving file state\n");
 
-		dprintf( D_ALWAYS, "About to save MyImage\n" );
+	if( SETJMP(Env) == 0 ) {	// Checkpoint
+			// First, take a snapshot of our memory image to prepare
+			// for the checkpoint and accurately report our image size.
+
+			// WARNING!!!! Once we have taken this snapshot, we MUST not do
+			// WARNING!!!! any libc memory managment anymore because it could
+			// WARNING!!!! screw up the segment boundaries.
+			// WARNING!!!! We should't be doing ANY memory management in the
+			// WARNING!!!! Checkpoint function call because we are in a signal
+			// WARNING!!!! handler anyway.
+			// WARNING!!!! We need to inspect the code to see if this
+			// WARNING!!!! happens. which I suspect it does... psilord 9/24/01
+		dprintf( D_ALWAYS, "About to update MyImage\n" );
 		MyImage.Save();
+
+			// If we're in REMOTE mode, report our status and ask the
+			// shadow for instructions.  We need to do this before we
+			// start checkpointing our file state or memory image,
+			// since the shadow may tell us not to checkpoint at all.
+			// It may just want a status update.
+		if( MyImage.GetMode() == REMOTE ) {
+				// Give the shadow our updated image size
+			report_image_size( (MyImage.GetLen() + KILO - 1) / KILO );
+
+				// Report some file table statistics here???
+
+				// Get checkpoint parameters from the shadow.
+				// At some point, this may also include some instructions
+				// for manipulating the file table without doing a full
+				// checkpoint.
+			int mode = get_ckpt_mode(check_sig);
+			if (mode > 0) {
+				condor_compress_ckpt = (mode&CKPT_MODE_USE_COMPRESSION)?1:0;
+				if (mode&CKPT_MODE_SLOW) {
+					condor_slow_ckpt = get_ckpt_speed();
+					dprintf(D_ALWAYS, "Checkpointing at %d KB/s.\n",
+							condor_slow_ckpt);
+				} else {
+					condor_slow_ckpt = 0;
+				}
+				if (mode&CKPT_MODE_MSYNC) {
+					dprintf(D_ALWAYS,
+							"Performing an msync() on all dirty pages...\n");
+					MyImage.MSync();
+				}
+				if (mode&CKPT_MODE_ABORT) {
+					dprintf(D_ALWAYS,
+							"Checkpoint aborted by shadow request.\n");
+
+					// We can't just return here.  We need to cleanup
+					// anything we've done above first.
+
+					dprintf( D_ALWAYS, "About to restore file state\n");
+					_condor_file_table_resume();
+					dprintf( D_ALWAYS, "Done restoring file state\n" );
+
+					dprintf( D_ALWAYS, "About to restore signal state\n" );
+					_condor_restore_sigstates();
+
+					SetSyscalls( scm );
+					dprintf( D_ALWAYS, "About to return to user code\n" );
+					InRestart = FALSE;
+					_condor_signals_enable(mask);
+					return;
+				}
+			} else {
+				condor_compress_ckpt = condor_slow_ckpt = 0;
+			}
+		}
+
+		dprintf( D_ALWAYS, "About to write checkpoint\n");
 		write_result = MyImage.Write();
 		if ( sig == SIGTSTP ) {
 			/* we have just checkpointed; now time to vacate */
@@ -1680,8 +1753,8 @@ Checkpoint( int sig, int code, void *scp )
 			patch_registers( scp );
 		}
 
-       		dprintf( D_ALWAYS, "About to restore file state\n");
-	       	_condor_file_table_resume();
+		dprintf( D_ALWAYS, "About to restore file state\n");
+		_condor_file_table_resume();
 		dprintf( D_ALWAYS, "Done restoring file state\n" );
 
 #ifdef HPUX10
@@ -1737,11 +1810,9 @@ Checkpoint( int sig, int code, void *scp )
 		dprintf( D_ALWAYS, "About to restore signal state\n" );
 		_condor_restore_sigstates();
 
-			// match _condor_ckpt_disable() call at start of function
-		_condor_ckpt_enable();
-
 		dprintf( D_ALWAYS, "About to return to user code\n" );
 		InRestart = FALSE;
+		_condor_signals_enable(mask);
 		return;
 	}
 }
@@ -1749,7 +1820,9 @@ Checkpoint( int sig, int code, void *scp )
 void
 init_image_with_file_name( char *ckpt_name )
 {
+	_condor_ckpt_disable();
 	MyImage.SetFileName( ckpt_name );
+	_condor_ckpt_enable();
 }
 
 void
@@ -1966,6 +2039,10 @@ calc_stack_to_save()
 {
 	char	*ptr;
 
+	// NRL 2002-04-22: In an ideal world, this would be something like:
+	//   ptr = getenv( EnvGetName( ENV_STACKSIZE ) );
+	// However, this causes all kinds of linkage problems for programs
+	// that are condor_compiled, and I just don't want to go there.
 	ptr = getenv( "CONDOR_STACK_SIZE" );
 	if( ptr ) {
 		StackSaveSize = (size_t) (atof(ptr) * MEG);

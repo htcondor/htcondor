@@ -51,6 +51,7 @@
 #include "debug.h"
 #include <unistd.h>
 #include <errno.h>
+#include <ctype.h>
 
 #ifndef WORD_BIT
 #define WORD_BIT 32
@@ -100,6 +101,7 @@ static const char ATTR_RANK					[]	= "Rank";
 #endif
 
 #if defined(__cplusplus)
+using namespace std;
 #include <string>
 struct CaseIgnLTStr {
     bool operator( )( const string &s1, const string &s2 ) const {
@@ -154,6 +156,10 @@ extern string 	CondorErrMsg;
 static const string NULL_XACTION = "";
 #endif
 
+#if defined(CLASSAD_DISTRIBUTION)
 #include "classadErrno.h"
+#else
+#include "condor_errno.h"
+#endif
 
 #endif//__COMMON_H__

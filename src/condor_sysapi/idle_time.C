@@ -50,10 +50,15 @@ static void calc_idle_time_cpp(time_t & m_idle, time_t & m_console_idle);
 
 // ThreadInteract allows the calling thread to access the visable,
 // interactive desktop in order to set a hook. 
-BOOL ThreadInteract(HDESK * hdesk, HWINSTA * hwinsta)   
+BOOL ThreadInteract(HDESK * hdesk_input, HWINSTA * hwinsta_input)   
 {      
 	HDESK   hdeskTest;
+	HDESK	hdesk;
+	HWINSTA	hwinsta;
 	
+	*hdesk_input = NULL;
+	*hwinsta_input = NULL;
+
 	// Obtain a handle to WinSta0 - service must be running
 	// in the LocalSystem account or this will fail!!!!!     
 	hwinsta = OpenWindowStation("winsta0", FALSE,
@@ -92,6 +97,9 @@ BOOL ThreadInteract(HDESK * hdesk, HWINSTA * hwinsta)
 	// Set the desktop to be "default"   
 	if (!SetThreadDesktop(hdesk))           
 	  return FALSE;   
+
+	*hdesk_input = hdesk;
+	*hwinsta_input = hwinsta;
 
 	return TRUE;
 }
@@ -195,9 +203,8 @@ calc_idle_time_cpp( time_t * user_idle, time_t * console_idle)
 	*user_idle = now - _sysapi_last_x_event;
 	*console_idle = *user_idle;
 
-	dprintf( D_FULLDEBUG, "Idle Time: user= %d , console= %d seconds\n",
+	dprintf( D_IDLE, "Idle Time: user= %d , console= %d seconds\n",
 			 *user_idle, *console_idle );
-
 	return;
 }
 
@@ -258,12 +265,15 @@ calc_idle_time_cpp( time_t & m_idle, time_t & m_console_idle )
 		m_console_idle = now - _sysapi_last_x_event;
 	}
 
-	dprintf( D_FULLDEBUG, "Idle Time: user= %d , console= %d seconds\n",
-			 (int)m_idle, (int)m_console_idle );
+	if( (DebugFlags & D_IDLE) && (DebugFlags & D_FULLDEBUG) ) {
+		dprintf( D_IDLE, "Idle Time: user= %d , console= %d seconds\n", 
+				 (int)m_idle, (int)m_console_idle );
+	}
 	return;
 }
 
 #include <utmp.h>
+#define UTMP_KIND utmp
 
 #if defined(OSF1)
 static char *UtmpName = "/var/adm/utmp";
@@ -271,6 +281,12 @@ static char *AltUtmpName = "/etc/utmp";
 #elif defined(LINUX)
 static char *UtmpName = "/var/run/utmp";
 static char *AltUtmpName = "/var/adm/utmp";
+#elif defined(Solaris28)
+#include <utmpx.h>
+static char *UtmpName = "/etc/utmpx";
+static char *AltUtmpName = "/var/adm/utmpx";
+#undef UTMP_KIND
+#define UTMP_KIND utmpx
 #else
 static char *UtmpName = "/etc/utmp";
 static char *AltUtmpName = "/var/adm/utmp";
@@ -284,7 +300,7 @@ utmp_pty_idle_time( time_t now )
 	time_t answer = (time_t)INT_MAX;
 	static time_t saved_now;
 	static time_t saved_idle_answer = -1;
-	struct utmp utmp;
+	struct UTMP_KIND utmp_info;
 
 	if ((fp=fopen(UtmpName,"r")) == NULL) {
 		if ((fp=fopen(AltUtmpName,"r")) == NULL) {
@@ -292,15 +308,15 @@ utmp_pty_idle_time( time_t now )
 		}
 	}
 
-	while (fread((char *)&utmp, sizeof utmp, 1, fp)) {
+	while (fread((char *)&utmp_info, sizeof(struct UTMP_KIND), 1, fp)) {
 #if defined(AIX31) || defined(AIX32) || defined(IRIX331) || defined(IRIX53) || defined(LINUX) || defined(OSF1) || defined(IRIX62) || defined(IRIX65)
-		if (utmp.ut_type != USER_PROCESS)
+		if (utmp_info.ut_type != USER_PROCESS)
 #else
-			if (utmp.ut_name[0] == '\0')
+			if (utmp_info.ut_name[0] == '\0')
 #endif
 				continue;
 		
-		tty_idle = dev_idle_time(utmp.ut_line, now);
+		tty_idle = dev_idle_time(utmp_info.ut_line, now);
 		answer = MIN(tty_idle, answer);
 	}
 	fclose(fp);
@@ -328,9 +344,24 @@ time_t
 all_pty_idle_time( time_t now )
 {
 	char	*f;
+
 	static Directory *dev = NULL;
+	static Directory *dev_pts = NULL;
+	static bool checked_dev_pts = false;
 	time_t	idle_time;
 	time_t	answer = (time_t)INT_MAX;
+	struct stat	statbuf;
+
+	if( ! checked_dev_pts ) {
+		if( stat("/dev/pts", &statbuf) >= 0 ) {
+				// "/dev/pts" exists, let's just make sure it's a
+				// directory and then we know we're in good shape.
+			if( S_ISDIR(statbuf.st_mode) ) {
+				dev_pts = new Directory( "/dev/pts" );
+			}
+		}
+		checked_dev_pts = true;
+	}
 
 	if( !dev ) {
 #if defined(Solaris)
@@ -353,6 +384,45 @@ all_pty_idle_time( time_t now )
 			}
 		}
 	}
+
+		// Now, if there's a /dev/pts, search all the devices in there.  
+	if( dev_pts ) {
+		char pathname[100];
+		for( dev_pts->Rewind();  (f = (char*)dev_pts->Next()); ) {
+			sprintf( pathname, "pts/%s", f );
+			idle_time = dev_idle_time( pathname, now );
+			if( idle_time < answer ) {
+				answer = idle_time;
+			}
+		}
+	}	
+
+	/* Under linux kernel 2.4, the /dev directory is dynamic. This means tty 
+		entries come and go depending upon the number of users actually logged
+		in.  If we keep the Directory object static, then we will never know or
+		incorrectly check ttys that might or might not exist. 
+		Hopefully the performance might not be that bad under linux because
+		this stuff is created each and every time this function is called.
+		psilord 1/4/2002
+	*/
+#if defined(LINUX) && defined(GLIBC22)
+	if (dev != NULL)
+	{
+		delete dev;
+		dev = NULL;
+	}
+
+	if (checked_dev_pts == true)
+	{
+		if (dev_pts != NULL)
+		{
+			delete dev_pts;
+			dev_pts = NULL;
+		}
+		checked_dev_pts = false;
+	}
+#endif
+
 	return answer;
 }
 
@@ -402,8 +472,8 @@ dev_idle_time( char *path, time_t now )
 	
 	strcpy( &pathname[5], path );
 	if (stat(pathname,&buf) < 0) {
-		dprintf( D_FULLDEBUG, "Error on stat(%s,0x%x), errno = %d\n",
-				 pathname, &buf, errno );
+		dprintf( D_FULLDEBUG, "Error on stat(%s,0x%x), errno = %d(%s)\n",
+				 pathname, &buf, errno, strerror(errno) );
 		buf.st_atime = 0;
 	}
 	if ( null_major_device > -1 && null_major_device == major(buf.st_rdev) ) {
@@ -414,7 +484,11 @@ dev_idle_time( char *path, time_t now )
 	if( buf.st_atime > now ) {
 		answer = 0;
 	}
-        // dprintf( D_FULLDEBUG, "%s: %d secs\n", pathname, (int)answer );
+
+	if( (DebugFlags & D_FULLDEBUG) && (DebugFlags & D_IDLE) ) {
+        dprintf( D_IDLE, "%s: %d secs\n", pathname, (int)answer );
+	}
+
 	return answer;
 }
 

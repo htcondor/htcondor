@@ -31,6 +31,9 @@ static char* DEFAULT_INDENT = "DaemonCore--> ";
 
 static	TimerManager*	_t = NULL;
 
+const time_t TIME_T_NEVER	= 0x7fffffff;
+
+
 TimerManager::TimerManager()
 {
 	if(_t)
@@ -91,7 +94,11 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, Event event, Eventcpp
 	new_timer->period = period;
 	new_timer->service = s; 
 	new_timer->is_cpp = is_cpp;
-	new_timer->when = deltawhen + time(NULL);
+	if ( TIMER_NEVER == deltawhen ) {
+		new_timer->when = TIME_T_NEVER;
+	} else {
+		new_timer->when = deltawhen + time(NULL);
+	}
 	new_timer->data_ptr = NULL;
 	if ( event_descrip ) 
 		new_timer->event_descrip = strdup(event_descrip);
@@ -204,7 +211,10 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period)
 		// now clear curr_regdataptr; the above NewTimer should appear "transparent"
 		// as far as the user code/API is concerned
 		daemonCore->curr_regdataptr = NULL;
-		// set flag letting Timeout() know if a timer handler reset itself
+		// set flag letting Timeout() know if a timer handler reset itself.  note
+		// this is probably redundant since our call to NewTimer above called
+		// CancelTimer, and CancelTimer already set the did_reset flag.  But
+		// what the hell.
 		if ( did_reset == id )
 			did_reset = -1;
 		// DumpTimerList(D_DAEMONCORE | D_FULLDEBUG);
@@ -268,7 +278,10 @@ int TimerManager::CancelTimer(int id)
 
 	delete timer_ptr;
 	
-	// DumpTimerList(D_DAEMONCORE | D_FULLDEBUG);
+	// set flag letting Timeout() know if a timer handler reset itself
+	if ( did_reset == id ) {
+		did_reset = -1;
+	}
 
 	return 0;
 }
@@ -355,10 +368,13 @@ TimerManager::Timeout()
 		// by service*.  If we were told the handler is a c function, we call
 		// it and pass the service* as a parameter.
 		if ( timer_list->is_cpp ) {
-			(s->*handlercpp)();		// typedef int (*Eventcpp)()
+			(s->*handlercpp)();			// typedef int (*Eventcpp)(int)
 		} else {
-			(*handler)(s);		// typedef int (*Event)(Service*)
+			(*handler)(s);				// typedef int (*Event)(Service*,int)
 		}
+
+		// Make sure we didn't leak our priv state
+		daemonCore->CheckPrivState();
 
 		// Clear curr_dataptr
 		daemonCore->curr_dataptr = NULL;

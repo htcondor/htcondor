@@ -70,12 +70,14 @@ public:
 	Client();
 	~Client();
 
-	char*	name()	{return c_name;};
-	char*	user()	{return c_name;};	// For compatibility only
+	char*	name()	{return c_user;};	// For compatibility only
+	char*	user()	{return c_user;};
+	char*	owner()	{return c_owner;};
 	char*	host()	{return c_host;};
 	char*	addr() 	{return c_addr;};
 
-	void	setname(char* name);
+	void	setuser(char* user);
+	void	setowner(char* owner);
 	void	setaddr(char* addr);
 	void	sethost(char* host);
 
@@ -83,7 +85,8 @@ public:
 		// is a being vacated
 	void	vacate(char* cap);
 private:
-	char	*c_name;	// name of the client, a.k.a. "user"
+	char	*c_owner;	// name of the owner
+	char	*c_user;	// name of the user
 	char	*c_host;	// hostname of the clientmachine
 	char	*c_addr;	// <ip:port> of the client
 };
@@ -98,9 +101,6 @@ public:
 		// Operations you can perform on a Match
 	void vacate();	// Send a vacate command to the client of this match
 	void alive();	// Process a keep alive for this match
-		// Send the given cmd to the accountant, followed by the
-		// capability of this match. 
-	int	send_accountant( int );	
 
 	void publish( ClassAd*, amask_t );
 
@@ -146,7 +146,7 @@ public:
 	void setjobstart(int jobstart) 	{m_job_start=jobstart;};
 
 private:
-	Resource	*rip;
+	Resource	*m_rip;
 	Client 		*m_client;
 	Capability 	*m_cap;
 	ClassAd*	m_ad;
@@ -173,5 +173,5 @@ private:
 };
 
 
-#endif _MATCH_H
+#endif /* _MATCH_H */
 

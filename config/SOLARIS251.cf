@@ -5,10 +5,9 @@
 
 #define HAS_PVM	YES
 
-
 #define		IS_SOLARIS251		YES
-#define		ImakeOpsysFlag		-DIS_SOLARIS251
 
+#define		NEED_SNPRINTF		YES
 #if IS_X86
 #define		IS_X86_SOLARIS251	YES
 #define		GccArch			i386-unknown-solaris2.5.1
@@ -21,6 +20,10 @@
 #define		Platform		SUN4X-SOLARIS251
 #define		IS_EGCS_BUILD		YES
 #define EgcsPath /usr/local/lib/gcc-lib/sparc-sun-solaris2.5.1/egcs-2.91.66
+
+#define HAS_GLOBUS			YES
+#define HAS_GSI				YES
+#define HAS_OPENSSL			YES
 #endif
 
 #ifndef SC_VERS
@@ -33,5 +36,5 @@
    On Solaris 2.5.1, we use the GNU ld, instead of the vendor ld.  GNU
    ld expects -Bstatic, while the vendor ld expects -B static...
 */
-#define PlatformLdFlags -ldl -lkstat -lelf -lsocket -lnsl -lm -lc \
+#define PlatformLdFlags -ldl -lkstat -lelf -lsocket -lnsl -lm -lc -lresolv \
   -Xlinker -Bstatic -lstdc++ -lgcc

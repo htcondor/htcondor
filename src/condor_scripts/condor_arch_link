@@ -1,4 +1,4 @@
-#!/s/std/bin/perl
+#!/usr/bin/env perl
 
 # Simple perl script to find the arch/opsys of the local system, and
 # create a symlink to the file given as an argument which contains

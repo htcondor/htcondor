@@ -34,11 +34,6 @@ FILE * email_admin_open(const char *subject);
 
 FILE * email_developers_open(const char *subject);
 
-#if defined(__cplusplus)
-class ClassAd;
-FILE * email_user_open( ClassAd* jobAd, const char *subject );
-#endif
-
 void email_close(FILE *mailer);
 
 void email_asciifile_tail( FILE* mailer, const char* filename,
@@ -47,6 +42,16 @@ void email_asciifile_tail( FILE* mailer, const char* filename,
 void email_corefile_tail( FILE* mailer, const char* subsystem_name );
 
 #if defined(__cplusplus)
+}
+#endif
+
+/* I, Alain Roy, moved the declaration for this down from where it was
+ * above.  It's a bad move to include c++ header files within an
+ * extern C.  */
+#if defined(__cplusplus)
+#include "condor_classad.h"
+extern "C"{
+FILE * email_user_open( ClassAd* jobAd, const char *subject );
 }
 #endif
 

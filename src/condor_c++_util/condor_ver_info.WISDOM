@@ -1,0 +1,82 @@
+************************************************************************
+
+PLEASE UPDATE THIS FILE IF YOU CHANGE THE LOGIC IN condor_ver_info.C,
+OR IF YOU INSTANTIATE A CondorVersionInfo OBJECT IN A NEW PLACE.
+
+************************************************************************
+
+This file is meant to be a repository of information about where and
+how we use the CondorVersionInfo object.  It lists all the known
+wisdom about compatibility checks in Condor, and what kinds of things
+will work and what won't.
+
+---------------------------------------------------------------------------
+condor_schedd.V6
+---------------------------------------------------------------------------
+
+1) During the claiming protocol, we check the version of the startd
+   we're talking to.  If the startd is version 6.1.11 or later, it
+   understands the new claiming protocol where we send all info at the
+   begining, instead of waiting to send the alive interval and a few
+   other things until after we've successfully claimed.
+
+   Uses is_compatible(): No, has the version it cares about hard coded
+   into the check.
+
+   Compatibility: Fully backwards and forwards compatible
+
+2) When we're cleaning up checkpoint files, we check the version
+   string in the job classad.  Starting with version 6.2.0, we store
+   checkpoints on the ckpt server using "owner@scheddName", instead of
+   just "owner".  So, if the job was submitted before this change, we
+   need to try to remove the file with the old naming scheme.
+
+   Uses is_compatible(): No, has the version it cares about hard coded
+   into the check.
+
+   Compatibility: Fully backwards and forwards compatible
+
+---------------------------------------------------------------------------
+condor_shadow.V6
+---------------------------------------------------------------------------
+
+1) Inside pseudo_register_syscall_version(), we get the version
+   string of the job ad and compare it against our own version.  We
+   call is_compatible(), and if it's not compatible, we put the job
+   on hold.
+
+   Uses is_compatible(): Yes
+
+   Compatibility: Always compatible across a given stable release.
+   Otherwise, backwards compatibility is assumed, and forwards
+   compatibility is not.  So, new shadows can always work with old
+   syscall libs, but new syscall libs can only work with the same
+   version of the shadow, or another version of the shadow from the
+   same stable release.
+
+2) When we're cleaning up checkpoint files, we check the version
+   string in the job classad.  Starting with version 6.2.0, we store
+   checkpoints on the ckpt server using "owner@scheddName", instead of
+   just "owner".  So, if the job was submitted before this change, we
+   need to try to remove the file with the old naming scheme.
+
+   Uses is_compatible(): No, has the version it cares about hard coded
+   into the check.
+
+   Compatibility: Fully backwards and forwards compatible
+
+
+---------------------------------------------------------------------------
+condor_c++_util/daemon.C
+---------------------------------------------------------------------------
+
+1) When negotiating authentication, we use the version object to find out
+   if the other side understands this negotiation.  Starting in 6.3.1, it
+   does.  If it doesn't (pre 6.3.1), we don't bother negotiating, since
+   failure is the only possible outcome.
+   
+   Uses is_compatible(): No, has the version it cares about hard coded
+   into the check.
+
+   Compatibility: Fully backwards and forwards compatible.
+

@@ -107,13 +107,7 @@ static int event_due( int pattern[], int prev[], int now[] );
 static int before( int t1[], int t2[] );
 static int next_rightmost( int pattern[], int i );
 static void get_moment( int cur[] );
-static void display_moment( int mom[] );
 static void check_schedule( int prev[], int now[] );
-
-
-
-
-
 
 
 /* Exported function */
@@ -170,6 +164,7 @@ check_schedule( int prev[], int now[] )
 ** see if the event is due, (or overdue), now.
 */
 static
+int
 event_due( int pattern[], int prev[], int now[] )
 {
 	int		alpha[N_ELEM];
@@ -211,6 +206,7 @@ event_due( int pattern[], int prev[], int now[] )
 ** Return true if t1 is before t2, and false otherwise.
 */
 static
+int
 before( int t1[], int t2[] )
 {
 	int		i;
@@ -231,6 +227,7 @@ before( int t1[], int t2[] )
 ** the next rightmost STAR in the pattern.  If there is none, return -1.
 */
 static
+int
 next_rightmost( int pattern[], int i )
 {
 	for( i--; i >= 0; i-- ) {
@@ -257,14 +254,5 @@ get_moment( int cur[] )
 	cur[CHOUR] = tm->tm_hour;
 	cur[CMINUTE] = tm->tm_min;
 	cur[CSECOND] = tm->tm_sec;
-	/*
-	display_moment( cur );
-	*/
 }
 
-static void
-display_moment( int mom[] )
-{
-	printf( "%02d/%02d %02d:%02d:%02d\n",
-			mom[CMONTH], mom[CDAY], mom[CHOUR], mom[CMINUTE], mom[CSECOND] );
-}

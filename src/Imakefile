@@ -1,4 +1,4 @@
-#define AllFiles etc include lib bin sbin
+#define AllFiles etc include lib bin sbin man
 
 #define AdminTools sbin/condor_off sbin/condor_on sbin/condor_reconfig \
   sbin/condor_restart sbin/condor_master_off sbin/condor_preen
@@ -6,7 +6,8 @@
 #define MasterFiles sbin/condor_master AdminTools
 
 #define SubmitSbinFiles sbin/condor_schedd sbin/condor_shadow \
-  sbin/condor_checkpoint sbin/condor_vacate sbin/condor_reschedule
+  sbin/condor_checkpoint sbin/condor_vacate sbin/condor_reschedule \
+  sbin/condor_shadow.v61
 
 #define SubmitOnlyFiles bin lib include etc SubmitSbinFiles MasterFiles
 
@@ -15,27 +16,29 @@
 #define PvmFiles sbin/condor_pvmd sbin/condor_pvmgs \
   sbin/condor_shadow.pvm sbin/condor_starter.pvm
 
-#define MpiFiles sbin/condor_shadow.v61 sbin/condor_starter.v61 sbin/rsh
+#define CondorGFiles sbin/condor_gridmanager sbin/gahp_server \
+    etc/examples/condor_config.local.condor-g
+ 
+#define DAGManFiles bin/condor_dagman bin/condor_submit_dag \
+  bin/condor_submit
 
 #define CkptServerFiles sbin/condor_ckpt_server sbin/condor_cleanckpts \
   etc/examples/condor_config.local.ckpt.server
 
 #define EventdFiles sbin/condor_eventd etc/examples/condor_config.local.eventd
 
-#define SMPFiles sbin/condor_startd sbin/condor_preen bin/condor_status \
-  sbin/condor_vacate sbin/condor_checkpoint
-
-#define SMPContribFiles etc/examples/condor_config.local.smp \
-  sbin/condor_starter
+#define SDKFiles src include lib/libcondorsdk.a
 
 #define ViewServerFiles sbin/condor_collector sbin/condor_stats
-
-#define ViewServerContribFiles etc/examples/condor_config.local.view_server
 
 #define ViewClientFiles sbin/condor_stats
 
 #if HAS_FORTRAN
   TEST_SUITE_F = test_suite_F.V5
+#endif
+
+#if WANT_JAVA
+  TEST_SUITE_JAVA = test_suite_java
 #endif
 
 #if !(NEEDS_KBDD)
@@ -52,22 +55,44 @@
 #define PvmProgs
 #endif
 
+#if WANT_CONDOR_G && HAS_GLOBUS
+#define GlobusProgs gridmanager
+#else
+#define GlobusProgs
+#endif
+
+#if WANT_NETMAN
+#define NetmanLibs netman
+#define Eventd eventd
+#define EventdTar eventd.tar
+#define AfsEventdTar afs_eventd.tar
+#else
+#define NetmanLibs
+#define Eventd
+#define EventdTar
+#define AfsEventdTar
+#endif
+
 #define Programs \
-		accountant.V6 ckpt_server \
+		procapi sysapi accountant.V6 ckpt_server \
 		master.V6 negotiator.V6 schedd.V6 prio q.V6 rm.V6 \
 		scripts shadow.V6 startd.V6 starter.V5 submit.V6 status.V6 \
-		tools kbdd collector.V6 PvmProgs dagman userlog eventd \
-		globus starter.V6.1 shadow.V6.1 data_manager nest
+		tools kbdd collector.V6 PvmProgs dagman userlog Eventd \
+		GlobusProgs starter.V6.1 shadow.V6.1 dcskel data_manager nest
 
 #define Libraries \
-		util_lib c++_util procapi sysapi io classad.V6 daemon_core.V6 \
-		condor_ckpt_server/ckpt_server_api.a \
-		ckpt syscall_lib
+		util_lib daemon_client c++_util condor_procapi/libprocapi.a \
+		condor_sysapi/libsysapi.a io classad.V6 classad_analysis \
+		daemon_core.V6 condor_ckpt_server/ckpt_server_api.a \
+		condor_schedd.V6/libqmgmt.a ckpt \
+		syscall_lib NetmanLibs chirp
+/* condor_accountant.V6/libacct.a */
 
 #if HAS_STATIC
 #define StaticDirectories \
 	static_dir static_dir/bin static_dir/sbin static_dir/lib \
 	static_dir/etc static_dir/etc/examples static_dir/include \
+	static_dir/man static_dir/man/man1 \
 	static_contrib static_contrib/bin static_contrib/lib \
 	static_contrib/sbin static_contrib/etc \
 	static_contrib/etc/examples static_contrib/include
@@ -78,9 +103,10 @@
 #define Directories \
 	html condor_release \
 	release_dir release_dir/bin release_dir/lib release_dir/sbin \
-	release_dir/include pure_bin \
+	release_dir/include release_dir/man release_dir/man/man1 pure_bin \
 	strip_dir strip_dir/bin strip_dir/sbin strip_dir/lib \
 	strip_dir/etc strip_dir/etc/examples strip_dir/include \
+	strip_dir/man strip_dir/man/man1 \
 	strip_contrib strip_contrib/bin strip_contrib/lib \
 	strip_contrib/sbin strip_contrib/etc \
 	strip_contrib/etc/examples strip_contrib/include StaticDirectories
@@ -95,7 +121,7 @@ libs:: h h_all condor_includes makefiles Directories Libraries
 public:: strip.tar 
 
 strip.tar: stripped
-	cd strip_dir; rm -f release.tar; tar -cvf release.tar --owner=root --group=root AllFiles
+	cd strip_dir; rm -f release.tar; tar -cvf release.tar --owner=root --group=root --exclude sbin/condor_gridmanager --exclude sbin/gahp_server AllFiles
 
 afs_release.tar:: afs_strip.tar
 
@@ -108,7 +134,7 @@ public:: static.tar
 afs_release.tar:: afs_static.tar
 
 static.tar: static
-	cd static_dir; rm -f release.tar; tar -cvf release.tar --owner=root --group=root AllFiles
+	cd static_dir; rm -f release.tar; tar -cvf release.tar --owner=root --group=root --exclude sbin/condor_gridmanager --exclude sbin/gahp_server AllFiles
 
 afs_static.tar: static.tar
 	cp static_dir/release.tar $(PUBLIC_S_TARGET)
@@ -118,14 +144,14 @@ afs_static.tar: static.tar
 release_tarball( submit.tar, SubmitOnlyFiles )
 release_tarball( link.tar, LinkOnlyFiles  )
 release_tarball( master.tar, MasterFiles )
+release_tarball( dagman.tar, DAGManFiles )
 
 /* contrib_tarball( view_client.tar, ViewClientFiles ) */
 contrib_tarball( ckpt_server.tar, CkptServerFiles )
 contrib_tarball( eventd.tar, EventdFiles )
+/* contrib_tarball( sdk.tar, SDKFiles ) */
 
-both_tarball( smp_startd.tar, SMPFiles, SMPContribFiles )
 both_tarball( view_server.tar, ViewServerFiles, ViewServerContribFiles )
-
 
 #if WANT_PVM && HAS_PVM
 #define PvmTar pvm.tar
@@ -136,12 +162,16 @@ contrib_tarball( pvm.tar, PvmFiles )
 #define AfsPvmTar 
 #endif 
 
-contrib_tarball( mpi.tar, MpiFiles )
+#if WANT_CONDOR_G && HAS_GLOBUS
+#define CondorGTar condor-g.tar
+contrib_tarball( condor-g.tar, CondorGFiles )
+#else
+#define CondorGTar 
+#endif /* Condor-G */
+all_tarballs: view_server.tar ckpt_server.tar eventd.tar PvmTar dagman.tar CondorGTar
 
-all_tarballs: smp_startd.tar view_server.tar ckpt_server.tar eventd.tar PvmTar mpi.tar
-
-afs_tarballs: afs_smp_startd.tar afs_view_server.tar afs_release.tar \
-	afs_ckpt_server.tar afs_eventd.tar AfsPvmTar afs_mpi.tar
+afs_tarballs: afs_view_server.tar afs_release.tar \
+	afs_ckpt_server.tar AfsEventdTar AfsPvmTar
 
 public:: all_tarballs
 
@@ -160,6 +190,8 @@ simple_dir_target(release_dir/bin)
 simple_dir_target(release_dir/lib)
 simple_dir_target(release_dir/sbin)
 simple_dir_target(release_dir/include)
+simple_dir_target(release_dir/man)
+simple_dir_target(release_dir/man/man1)
 
 simple_dir_target(pure_bin)
 
@@ -170,6 +202,8 @@ simple_dir_target(strip_dir/sbin)
 simple_dir_target(strip_dir/etc)
 simple_dir_target(strip_dir/etc/examples)
 simple_dir_target(strip_dir/include)
+simple_dir_target(strip_dir/man)
+simple_dir_target(strip_dir/man/man1)
 
 simple_dir_target(strip_contrib)
 simple_dir_target(strip_contrib/bin)
@@ -187,7 +221,8 @@ simple_dir_target(static_dir/sbin)
 simple_dir_target(static_dir/etc)
 simple_dir_target(static_dir/etc/examples)
 simple_dir_target(static_dir/include)
-
+simple_dir_target(static_dir/man)
+simple_dir_target(static_dir/man/man1)
 simple_dir_target(static_contrib)
 simple_dir_target(static_contrib/bin)
 simple_dir_target(static_contrib/lib)
@@ -195,6 +230,7 @@ simple_dir_target(static_contrib/sbin)
 simple_dir_target(static_contrib/etc)
 simple_dir_target(static_contrib/etc/examples)
 simple_dir_target(static_contrib/include)
+simple_dir_target(static_contrib/src)
 #endif /* HAS_STATIC */
 
 object_target(util_lib)
@@ -226,25 +262,37 @@ object_target(rm.V6)
 object_target(submit.V6)
 object_target(ckpt)
 object_target(syscall_lib)
+#if WANT_NETMAN
+object_target(netman)
+#endif
 object_target(io)
 object_target(classad.V6)
+object_target(classad_analysis)
 object_target(daemon_core.V6)
+object_target(daemon_client)
 #if WANT_PVM && HAS_PVM
    object_target(starter.jim)
    object_target(shadow.jim)
 #endif
 object_target(prio)
 object_target(scripts)
-object_target(globus)
+#if WANT_CONDOR_G && HAS_GLOBUS
+    object_target(gridmanager)
+#endif
 object_target(starter.V6.1)
 object_target(shadow.V6.1)
+object_target(dcskel)
+object_target(chirp)
 
 object_dir_target(h)
 object_dir_target(condor_includes)
 object_dir_target(condor_release)
 object_dir_target(html)
 object_dir_target(condor_bypass)
+object_dir_target(condor_sdk)
 
+single_target(condor_procapi,libprocapi.a)
+single_target(condor_sysapi,libsysapi.a)
 single_target(condor_schedd.V6, libqmgmt.a)
 single_target(condor_accountant.V6, libacct.a)
 single_target(condor_ckpt_server, ckpt_server_api.a)
@@ -253,13 +301,16 @@ object_target(test_suite_C.V5)
 #if HAS_FORTRAN
    object_target($(TEST_SUITE_F))
 #endif
+#if WANT_JAVA
+   object_target($(TEST_SUITE_JAVA))
+#endif
 
 h_all: h/Makefile h/syscall_numbers.h h/syscall_numbers.o
 
 makefiles:: h/Makefile
 
 h/Makefile: h h/Imakefile
-	cd h; imake IMAKE_FLAGS
+	cd h; ../condor_imake
 
 h/syscall_numbers.h: h/syscall_numbers.tmpl h/Makefile
 	cd h; make syscall_numbers.h
@@ -277,7 +328,8 @@ really-clean:: clean-up
 
 clean-up:
 	rm -rf *.out Makefile */Makefile* release_* \
-		strip_dir strip_contrib static_dir static_contrib pure_bin
+		strip_dir strip_contrib static_dir static_contrib pure_bin \
+		g gpt gpt-2.1  BUILD binaries
 
 reallyclean: really-clean
 
@@ -287,10 +339,16 @@ htmldocs: html docs
 pure_target( condor_startd.V6, condor_startd.pure )
 pure_target( condor_schedd.V6, condor_schedd.pure )
 pure_target( condor_master.V6, condor_master.pure )
-pure_target( condor_shadow.V6, condor_shadow.pure )
-pure_target( condor_starter.V5, condor_starter.pure )
+pure_target( condor_shadow.V6, condor_shadow.std.pure )
+pure_target( condor_starter.V5, condor_starter.std.pure )
+pure_target( condor_shadow.V6.1, condor_shadow.pure )
+pure_target( condor_starter.V6.1, condor_starter.pure )
 pure_target( condor_collector.V6, condor_collector.pure )
 pure_target( condor_negotiator.V6, condor_negotiator.pure )
 
 clean::
 	rm -rf $(PURE_DIR)
+
+today:
+	/bin/rm -f condor_c++_util/condor_version.o
+	cd condor_c++_util; make

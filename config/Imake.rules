@@ -4,7 +4,7 @@
 .SUFFIXES: .C
 
 .C.o:
-	$(CPlusPlus) $(NON_INST_C_PLUS_FLAGS) -c $<
+	$(CPlusPlus) $(C_PLUS_FLAGS) -c $<
 
 .f.o:
 	$(Fortran) $(FFLAGS) -c $<
@@ -32,13 +32,15 @@ stripped:: condor_##obj_name					@@\
 	cd condor_##obj_name; make stripped			@@\
 static:: condor_##obj_name					@@\
 	cd condor_##obj_name; make static			@@\
+depend:: condor_##obj_name					@@\
+	cd condor_##obj_name; make depend			@@\
 clean:: condor_##obj_name					@@\
 	cd condor_##obj_name; make clean			@@\
 docs:: condor_##obj_name					@@\
 	cd condor_##obj_name; make html				@@\
 makefiles:: condor_##obj_name condor_##obj_name##/Makefile	@@\
 condor_##obj_name##/Makefile:					@@\
-	cd condor_##obj_name ; imake IMAKE_FLAGS		@@\
+	cd condor_##obj_name ; ../condor_imake 	@@\
 object_dir_target(condor_##obj_name)		
 #endif /* object_target */
 
@@ -53,7 +55,7 @@ all:: targetlist
 */
 #define single_target(dir, target)			@@\
 ##dir##/##target##: dir					@@\
-	cd dir; make target
+	cd dir; make $(SMP_FLAGS) target
 
 
 /***********************************************************************
@@ -88,6 +90,18 @@ clean::								@@\
 	rm -f program 
 #endif  /* program_target */
 
+/*
+** Build a C program from .o files and libraries supplying the compile time
+** and link time flags. For building utilitoes with special flags.
+*/
+#ifndef program_target_complex
+#define	program_target_complex( program, objlist, comflags, linkflags, libs )		@@\
+program: objlist libs						@@\
+	$(C_LINK) comflags -o program objlist libs linkflags	@@\
+clean::								@@\
+	rm -f program objlist
+#endif  program_target_complex
+
 
 /*
 ** Build a C++ program from .o files and libraries.
@@ -101,6 +115,18 @@ clean::								@@\
 	rm -f program objlist
 #endif  /* c_plus_target */
 
+/*
+** Build a C++ program from .o files and libraries supplying the compile and
+** link flags. For building utility programs with special flags.
+*/
+#ifndef c_plus_target_complex
+#define	c_plus_target_complex( program, objlist, comflags, linkflags, libs )	@@\
+program: objlist libs						@@\
+	$(CC_LINK) comflags -o program objlist libs \
+		linkflags $(DEMANGLE)			@@\
+clean::								@@\
+	rm -f program objlist
+#endif  c_plus_target_complex
 
 /*
 ** Build a template instantiation object
@@ -110,6 +136,33 @@ clean::								@@\
 objfile: srcfile                                        @@\
 	 $(CPlusPlus) $(INST_C_PLUS_FLAGS) -c srcfile -o objfile
 #endif /* template_inst_obj */
+
+/*
+** Build a Java class from a .java file.
+**
+*/
+
+#ifndef java_target
+#define java_target( classfile, sourcefile, cpath )        @@\
+classfile: sourcefile                                      @@\
+	$(JAVAC) $(JAVACFLAGS) -classpath cpath sourcefile @@\
+clean::                                                    @@\
+	rm -f classfile
+#endif
+
+/*
+** Build a JAR file from several .java files.
+**
+*/
+
+#ifndef jar_target
+#define jar_target( jarfile, sourcefiles, classroot ) @@\
+jarfile: sourcefiles                                  @@\
+	$(JAVAC) $(JAVACFLAGS) -d . sourcefiles       @@\
+	$(JAR) $(JARFLAGS) cf $@ classroot            @@\
+clean::                                               @@\
+	rm -rf jarfile classroot
+#endif
 
 
 /***********************************************************************
@@ -165,6 +218,18 @@ $(RELEASE_DIR)/##dir##/##dest##: 			@@\
 	ln -s src $(RELEASE_DIR)/##dir##/##dest			
 #endif /* release_symlink_target */
 
+/*
+** Just create a symlink. We need this for the test suite 
+*/
+#ifndef release_plain_symlink_target
+#define release_plain_symlink_target( src, dest )		@@\
+release:: dest					@@\
+dest: 						@@\
+	/bin/rm -f dest				@@\
+	ln -s src dest				@@\
+clean::						@@\
+	/bin/rm -f dest
+#endif /* release_plain_symlink_target */
 
 /*
 ** Target is released by creating a hard link to another.
@@ -387,6 +452,7 @@ clean::						@@\
 #endif /* all_symlink_target */
 
 
+
 /***********************************************************************
 ** tarball targets
 **
@@ -494,7 +560,7 @@ static_dir/##name##: static					@@\
 ** PureSoftware targets
 **
 ** These rules are used for creating special debugging binaries built
-** for either purify, or purecoverage.
+** for either purify, purecoverage, or both.
 ***********************************************************************/
 
 #if IS_SUN4X
@@ -503,20 +569,26 @@ static_dir/##name##: static					@@\
 
 #define	pure_c_plus_target( program, objlist, libs )	@@\
 ##program: objlist libs					@@\
-	purify -g++=yes -collector=PureCollector $(CC_LINK) $(NON_INST_C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)	@@\
+	purify -g++=yes PureCollector purecov -g++=yes PureCollector $(CC_LINK) $(NON_INST_C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)	@@\
+clean::							@@\
+	rm -f program objlist
+
+#define	purify_c_plus_target( program, objlist, libs )	@@\
+##program: objlist libs					@@\
+	purify -g++=yes PureCollector $(CC_LINK) $(NON_INST_C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)	@@\
 clean::							@@\
 	rm -f program objlist
 
 #define	purecov_c_plus_target( program, objlist, libs )	@@\
 ##program: objlist libs					@@\
-	purecov -g++=yes -collector=PureCollector $(CC_LINK) $(NON_INST_C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)						@@\
+	purecov -g++=yes PureCollector $(CC_LINK) $(NON_INST_C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)						@@\
 clean:: 						@@\
 	rm -f program objlist
 
 
 #define	quantify_c_plus_target( program, objlist, libs )	@@\
 ##program: objlist libs						@@\
-	quantify -g++=yes -collector=PureCollector $(CC_LINK) $(NON_INST_C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)	                                 @@\
+	quantify -g++=yes PureCollector $(CC_LINK) $(NON_INST_C_PLUS_FLAGS) -o program objlist libs $(ALL_LDFLAGS)	                                 @@\
 clean::		 						@@\
 	rm -f program objlist
 
@@ -532,6 +604,7 @@ pure:: $(PURE_DIR)/##program
 
 #define	pure_target( dir, program )			/* NULL MACRO */
 #define	pure_c_plus_target( program, objlist, libs )	/* NULL MACRO */
+#define	purify_c_plus_target( program, objlist, libs )	/* NULL MACRO */
 #define	purecov_c_plus_target( program, objlist, libs )	/* NULL MACRO */
 #define	quantify_c_plus_target( program, objlist, libs ) /* NULL MACRO */
 
@@ -602,7 +675,7 @@ compiledir##/Imakefile:	CImakefile				@@\
 	cd compiledir; ln -s ../CImakefile Imakefile		@@\
 								@@\
 compiledir##/Makefile: compiledir compiledir##/Imakefile	@@\
-	cd compiledir; imake IMAKE_FLAGS -I../../../config \	@@\
+	cd compiledir; ../../condor_imake -I../../../config \	@@\
 	   -DC_COMPILER=##compiler \				@@\
 	   -DFLAGS_MACRO_NAME=##flags_macro_name		@@\
 								@@\
@@ -622,7 +695,7 @@ compiledir##/Imakefile: CPPImakefile				@@\
 	cd compiledir; ln -s ../CPPImakefile Imakefile		@@\
 								@@\
 compiledir##/Makefile: compiledir compiledir##/Imakefile	@@\
-	cd compiledir; imake IMAKE_FLAGS -I../../../config \	@@\
+	cd compiledir; ../../condor_imake -I../../../config \	@@\
 	   -DCPP_COMPILER=##compiler \				@@\
 	   -DFLAGS_MACRO_NAME=##flags_macro_name		@@\
 								@@\
@@ -642,7 +715,7 @@ compiledir##/Imakefile: FImakefile				@@\
 	cd compiledir; ln -s ../FImakefile Imakefile		@@\
 								@@\
 compiledir##/Makefile: compiledir compiledir##/Imakefile	@@\
-	cd compiledir; imake IMAKE_FLAGS -I../../../config \	@@\
+	cd compiledir; ../../condor_imake -I../../../config \	@@\
 		-DFORTRAN_HAS_RECURSION=##has_recursion \	@@\
 		-DF_COMPILER=##compiler	\			@@\
 		-DFLAGS_MACRO_NAME=##flags_macro_name		@@\
@@ -659,6 +732,14 @@ BUILD_FILES( name, ext )			@@\
 RLINK( cmplr, name##.remote, name##.o )		@@\
 VLINK( cmplr, name##.vanilla, name##.o )
 
+#define BUILD_SPECIFIC_VANILLA(compiler, progname, objfiles, cmdfile, runfile, ext) @@\
+BUILD_FILES_SPECIFIC(progname, cmdfile, runfile, ext) @@\
+VLINK(compiler, progname##.vanilla, objfiles)
+
+#define BUILD_SPECIFIC_STANDARD(compiler, progname, objfiles, cmdfile, runfile, ext) @@\
+BUILD_FILES_SPECIFIC(progname, cmdfile, runfile, ext) @@\
+RLINK(compiler, progname##.remote, objfiles)
+
 #define RBUILD( cmplr, name, ext )		@@\
 BUILD_FILES( name, ext )			@@\
 RLINK( cmplr, name##.remote, name##.o )
@@ -674,6 +755,16 @@ name##.run:					@@\
 clean::						@@\
 	rm -f name##.##ext name##.cmd name##.run
 
+#define BUILD_FILES_SPECIFIC( progname, cmdfile, runfile, ext )		@@\
+all:: progname##.##ext cmdfile##.cmd runfile##.run	@@\
+progname##.##ext##:					@@\
+	ln -s ../##progname##.##ext .		@@\
+cmdfile##.cmd:					@@\
+	ln -s ../##cmdfile##.cmd .			@@\
+runfile##.run:					@@\
+	ln -s ../##runfile##.run .			@@\
+clean::						@@\
+	rm -f progname##.##ext cmdfile##.cmd runfile##.run
 
 /***********************************************************************
 ** Doc++ rules  
@@ -684,11 +775,10 @@ clean::						@@\
 #define html_target( files )					@@\
 html: files							@@\
 	/bin/rm -rf html					@@\
-	/unsup/doc++/bin/doc++ -H -d html -u -g -l -j -p \	@@\
+	DocCompiler -H -d html -u -g -l -j -p       \           @@\
 		-m -f -B ../html/condor_banner.html \		@@\
 		files
 #endif /* html_target */
-
 
 /***********************************************************************
 ** misc rules
@@ -791,7 +881,7 @@ really-clean::								@@\
 platform.init: platform ALWAYS				@@\
 	cp GENERIC/CheckPlatformType.c platform		@@\
 	cp Imakefile.platform_skel platform/Imakefile	@@\
-	cd platform ; imake IMAKE_FLAGS			@@\
+	cd platform ; ../condor_imake 		@@\
 	cd platform ; make directories; make depend	@@\
 platform: 						@@\
 	mkdir platform
@@ -813,13 +903,53 @@ CheckPlatformType:					@@\
 
 /*
 ** Build Makefile dependencies for an object tree.
+**
+** We could just make one rule that takes a list of the source
+** files. Because we have a lot of Imakefiles, and it's a pain to 
+** list the source files, I have made a few different methods:
+** 1) A target that takes a list of source files.
+** 2) A target that takes a list of C++ objects and derives the
+**    the list of C++ files. Note that you use it like:
+**           depend_target_cplus_objects(OBJ)
+**    That is, you don't have $OBJ, just OBJ.
+** 3) A target that takes a list of C objects and derives the
+**    list of C files. It is used like number #2.
+**
+** Also note that you can only use one of these in an Imakefile. 
+** If you can't use #2 xor #3 for convenience, you have to list
+** list out the sources to use for #1. 
 */
-#ifndef depend_target
-#define depend_target( src_list )			@@\
-depend: ALWAYS						@@\
-	$(MKDEPEND) $(CFLAGS) src_list
+
+#ifndef depend_source_target
+#define depend_source_target(source_list)  @@\
+sinclude dependencies                      @@\
+                                           @@\
+depend:	ALWAYS                             @@\
+	$(CPlusPlus) $(C_PLUS_FLAGS) -MM source_list > dependencies
 #endif
 
+#ifndef depend_cplus_objects_target
+#define depend_cplus_objects_target(obj_list)   @@\
+sinclude dependencies                           @@\
+DEPEND_CPLUS_SRC := $(##obj_list##:.o=.C)       @@\
+                                                @@\
+depend:	ALWAYS				                    @@\
+	$(CPlusPlus) $(C_PLUS_FLAGS) -MM $(DEPEND_CPLUS_SRC) > dependencies
+#endif
+
+#ifndef depend_c_objects_target
+#define depend_c_objects_target(obj_list)  @@\
+sinclude dependencies                      @@\
+DEPEND_C_SRC := $(##obj_list##:.o=.c)      @@\
+                                           @@\
+depend:	ALWAYS				               @@\
+	$(CPlusPlus) $(CFLAGS) -MM $(DEPEND_C_SRC) > dependencies
+#endif
+
+/* The old definition of depend
+depend: ALWAYS						@@\
+	$(MKDEPEND) $(CFLAGS) src_list
+*/
 
 /*
 ** Build a tags file for a source directory.

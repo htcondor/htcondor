@@ -35,12 +35,6 @@ static char *Notifications[] = {
 static char	*Status[] = {
 	"Unexpanded", "Idle", "Running", "Removed", "Completed", "Submission Err"
 };
- 
-// 0 wasn't anything, 2 was PIPE and 3 was LINDA.
-static char	*Universe[] = {
-	"", "STANDARD", "", "", "PVM", "VANILLA", 
-	"PVMD", "SCHED_UNIVERSE", "MPI"
-};
 
 static CurIndent;				// current indent level for display functions
 static int	InvokingUid;		// user id of person ivoking this program
@@ -763,7 +757,7 @@ V3_ProcObj::get_proc_long_info()
 	long_info[counter] = b_bool( "remote_syscalls", p->remote_syscalls );
 	counter++;
 
-	long_info[counter] = b_enum( Universe, "universe", p->universe );
+	long_info[counter] = b_string( "universe", CondorUniverseName(p->universe) );
 	counter++;
 
 	long_info[counter] = b_int( "min_needed", p->min_needed );
@@ -807,7 +801,7 @@ V3_ProcObj::display()
 		// Display stuff which is new to V3
 	d_bool( "checkpoint", p->checkpoint );
 	d_bool( "remote_syscalls", p->remote_syscalls );
-	d_enum( Universe, "universe", p->universe );
+	d_string( "universe", CondorUniverseName(p->universe) );
 	d_int( "min_needed", p->min_needed );
 	d_int( "max_needed", p->max_needed );
 

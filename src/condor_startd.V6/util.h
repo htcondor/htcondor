@@ -33,14 +33,17 @@ void	check_perms(void);
 float	compute_rank( ClassAd*, ClassAd* );
 int 	create_port( ReliSock* );
 char*	command_to_string( int );
-int		reply( Stream*, int );
+bool	reply( Stream*, int );
+bool	refuse( Stream* );
 bool	caInsert( ClassAd* target, ClassAd* source, const char* attr,
 				  int verbose = 0 ); 
 bool	configInsert( ClassAd* ad, const char* attr, bool is_fatal );
+bool	configInsert( ClassAd* ad, const char* param_name, 
+					  const char* attr, bool is_fatal );
 
 		// Send given classads to the given sock.  If either pointer
 		// is NULL, the class ad is not sent.  
-int		send_classad_to_sock( int cmd, Sock* sock, ClassAd* pubCA,
+int		send_classad_to_sock( int cmd, Daemon* d, ClassAd* pubCA,
 							  ClassAd* privCA ); 
 Resource* stream_to_rip( Stream* );
 

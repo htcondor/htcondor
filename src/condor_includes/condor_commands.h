@@ -127,7 +127,9 @@
 #define REQUEST_NETWORK		(SCHED_VERS+73)	// negotiator network mgmt
 #define VACATE_ALL_FAST		(SCHED_VERS+74)		// fast vacate for whole machine
 #define VACATE_CLAIM_FAST	(SCHED_VERS+75)  	// fast vacate for a given VM
-
+#define REJECTED_WITH_REASON (SCHED_VERS+76) // diagnostic version of REJECTED
+#define START_AGENT		(SCHED_VERS+77) // have the master start an agent
+#define ACT_ON_JOBS		(SCHED_VERS+78) // have the schedd act on some jobs (rm, hold, release)
 
 /************
 *** Command ids used by the collector 
@@ -174,47 +176,16 @@ const int UPDATE_LICENSE_AD			= 42;
 const int QUERY_LICENSE_ADS			= 43;
 const int INVALIDATE_LICENSE_ADS	= 44;
 
+const int UPDATE_STORAGE_AD = 45;
+const int QUERY_STORAGE_ADS = 46;
+const int INVALIDATE_STORAGE_ADS = 47;
+
+const int QUERY_ANY_ADS = 48;
+
 /*
 *** Daemon Core Signals
 */
-// Generic Unix signals.
-// defines for signals; compatibility with traditional UNIX 
-// values maintained where possible.
-#define	DC_SIGHUP	1	/* hangup */
-#define	DC_SIGINT	2	/* interrupt (rubout) */
-#define	DC_SIGQUIT	3	/* quit (ASCII FS) */
-#define	DC_SIGILL	4	/* illegal instruction (not reset when caught) */
-#define	DC_SIGTRAP	5	/* trace trap (not reset when caught) */
-#define	DC_SIGIOT	6	/* IOT instruction */
-#define	DC_SIGABRT	6	/* used by abort, replace DC_SIGIOT in the future */
-#define	DC_SIGEMT	7	/* EMT instruction */
-#define	DC_SIGFPE	8	/* floating point exception */
-#define	DC_SIGKILL	9	/* kill (cannot be caught or ignored) */
-#define	DC_SIGBUS	10	/* bus error */
-#define	DC_SIGSEGV	11	/* segmentation violation */
-#define	DC_SIGSYS	12	/* bad argument to system call */
-#define	DC_SIGPIPE	13	/* write on a pipe with no one to read it */
-#define	DC_SIGALRM	14	/* alarm clock */
-#define	DC_SIGTERM	15	/* software termination signal from kill */
-#define	DC_SIGUSR1	16	/* user defined signal 1 */
-#define	DC_SIGUSR2	17	/* user defined signal 2 */
-#define	DC_SIGCLD	18	/* child status change */
-#define	DC_SIGCHLD	18	/* child status change alias (POSIX) */
-#define	DC_SIGPWR	19	/* power-fail restart */
-#define	DC_SIGWINCH 20	/* window size change */
-#define	DC_SIGURG	21	/* urgent socket condition */
-#define	DC_SIGPOLL 22	/* pollable event occured */
-#define	DC_SIGIO	DC_SIGPOLL	/* socket I/O possible (DC_SIGPOLL alias) */
-#define	DC_SIGSTOP 23	/* stop (cannot be caught or ignored) */
-#define	DC_SIGTSTP 24	/* user stop requested from tty */
-#define	DC_SIGCONT 25	/* stopped process has been continued */
-#define DC_SIGTTIN 26
-#define DC_SIGTTOU 27
-#define DC_SIGXCPU 28
-#define DC_SIGXFSZ 29
-#define DC_SIGVTALRM 30
-#define DC_SIGPROF 31
-#define DC_SIGINFO 32
+
 
 // Signals used for Startd -> Starter communication
 #define DC_SIGSUSPEND	100
@@ -224,7 +195,7 @@ const int INVALIDATE_LICENSE_ADS	= 44;
 #define DC_SIGPCKPT		104	// periodic checkpoint
 
 /*
-*** Daemon Core Commands
+*** Daemon Core Commands and Signals
 */
 #define DC_BASE	60000
 #define DC_RAISESIGNAL		(DC_BASE+0)
@@ -236,6 +207,32 @@ const int INVALIDATE_LICENSE_ADS	= 44;
 #define DC_OFF_FAST			(DC_BASE+6)
 #define DC_CONFIG_VAL		(DC_BASE+7)
 #define DC_CHILDALIVE		(DC_BASE+8)
+#define DC_SERVICEWAITPIDS	(DC_BASE+9) 
+#define DC_AUTHENTICATE     (DC_BASE+10)
+#define DC_NOP              (DC_BASE+11)
+#define DC_RECONFIG_FULL	(DC_BASE+12)
+#define DC_FETCH_LOG        (DC_BASE+13)
+#define DC_INVALIDATE_KEY   (DC_BASE+14)
+
+/*
+*** Log type supported by DC_FETCH_LOG
+*** These are not interpreted directly by DaemonCore,
+*** so it's ok that they start at zero.
+*/
+
+#define DC_FETCH_LOG_TYPE_PLAIN 0
+  /* Add more type here... */
+
+/*
+*** Result codes given by DC_FETCH_LOG.
+*** These are not interpreted directly by DaemonCore,
+*** so it's ok that they start at zero.
+*/
+
+#define DC_FETCH_LOG_RESULT_SUCCESS   0
+#define DC_FETCH_LOG_RESULT_NO_NAME   1
+#define DC_FETCH_LOG_RESULT_CANT_OPEN 2
+#define DC_FETCH_LOG_RESULT_BAD_TYPE  3
 
 /*
 *** Commands used by the FileTransfer object
@@ -259,11 +256,21 @@ const int INVALIDATE_LICENSE_ADS	= 44;
 #define SHADOW_UPDATEINFO	(DCSHADOW_BASE+0)
 #define TAKE_MATCH          (DCSHADOW_BASE+1)  // for MPI shadow
 #define MPI_START_COMRADE   (DCSHADOW_BASE+2)  // for MPI shadow
+#define GIVE_MATCHES 	    (DCSHADOW_BASE+3)  // for MPI shadow
+#define RECEIVE_JOBAD		(DCSHADOW_BASE+4)
+
 
 /*
 *** Used only in THE TOOL to choose the condor_squawk option.
 */
 #define SQUAWK 72000
+
+/*
+*** Commands used by the gridmanager daemon
+*/
+#define DCGRIDMANAGER_BASE 73000
+#define GRIDMAN_REMOVE_JOBS SIGUSR1
+#define GRIDMAN_ADD_JOBS SIGUSR2
 
 /*
 *** Replies used in various stages of various protocols

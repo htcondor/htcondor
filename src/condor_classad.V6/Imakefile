@@ -5,7 +5,7 @@ SRC_DIR = $(SRC_TREE)/condor_classad.V6
 
 
 C_PLUS_FLAGS 		= -Wall $(STD_C_PLUS_FLAGS)
-CFLAGS 				= -Wall $(STD_C_FLAGS) 
+CFLAGS 			= -Wall $(STD_C_FLAGS)
 
 
 /* The basic classad source and object files */
@@ -47,12 +47,12 @@ CLASSAD_OBJ_2		= $(CLASSAD_OBJ_1)
 #endif
 
 
-SRC = $(CLASSAD_SRC_2)
-OBJ = $(CLASSAD_OBJ_2)
+SRC = $(CLASSAD_SRC_2) ../condor_c++_util/condor_attributes.C
+OBJ = $(CLASSAD_OBJ_2) ../condor_c++_util/condor_attributes.o
 
 
 LIB =  ./libclassad.a ../condor_c++_util/cplus_lib.a \
-      ../condor_util_lib/util_lib.a ../condor_io/libcedar.a \
+      ../condor_util_lib/util_lib.a \
       ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a \
 	../condor_util_lib/util_lib.a ../condor_sysapi/libsysapi.a 
 

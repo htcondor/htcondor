@@ -1,0 +1,12 @@
+
+NAME=Chirp.jar
+
+all::
+
+clean::
+
+release_copy_target($(NAME),$(RELEASE_DIR)/lib,$(NAME),EXECUTABLE_MODE);
+strip_copy_target($(NAME),$(RELEASE_DIR)/lib,$(NAME),EXECUTABLE_MODE);
+static_copy_target($(NAME),$(RELEASE_DIR)/lib,$(NAME),EXECUTABLE_MODE);
+
+html_target( ChirpClient.java ChirpInputStream.java ChirpOutputStream.java )

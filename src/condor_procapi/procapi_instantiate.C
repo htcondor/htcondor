@@ -23,5 +23,6 @@
 #include "condor_common.h"
 #include "HashTable.h"
 #include "procapi.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 template class HashTable<pid_t, procHashNode *>;

@@ -30,12 +30,13 @@
 #ifndef _ATTRLIST_H
 #define _ATTRLIST_H
 
-#include <stdio.h>
-
 #include "condor_exprtype.h"
 #include "condor_astbase.h"
+#include "condor_debug.h"
+#include "MyString.h"
 
 #include "stream.h"
+#include "list.h"
 
 #define		ATTRLIST_MAX_EXPRESSION		10240
 
@@ -52,7 +53,13 @@ class AttrListElem
 
         AttrListElem(ExprTree*);			// constructor
         AttrListElem(AttrListElem&);		// copy constructor
-        ~AttrListElem() { delete tree; }	// destructor
+        ~AttrListElem() 
+			{
+				delete tree; 
+			}
+
+		bool IsDirty(void)            { return dirty;              }
+		void SetDirty(bool new_dirty) { dirty = new_dirty; return; }
 
         friend class AttrList;
         friend class ClassAd;
@@ -61,7 +68,7 @@ class AttrListElem
     private :
 
         ExprTree*		tree;	// the tree pointed to by this element
-		int				dirty;	// has this tree been changed?
+	    bool			dirty;	// has this element been changed?
 		char*			name;	// the name of the tree
         class AttrListElem*	next;	// next element in the list
 };
@@ -94,8 +101,10 @@ class AttrListRep: public AttrListAbstract
 
         AttrListRep(AttrList*, AttrListList*);	// constructor
 
-		friend			AttrList;
-		friend			AttrListList;
+		const AttrList* GetOrigAttrList() { return attrList; }
+
+		friend	class		AttrList;
+		friend	class		AttrListList;
 
     private:
 
@@ -107,6 +116,7 @@ class AttrList : public AttrListAbstract
 {
     public :
 	    void ChainToAd( AttrList * );
+		void unchain( void );
 
 		// ctors/dtor
 		AttrList();							// No associated AttrList list
@@ -118,16 +128,18 @@ class AttrList : public AttrListAbstract
         AttrList(AttrList&);				// copy constructor
         virtual ~AttrList();				// destructor
 
+		AttrList& operator=(const AttrList& other);
+
 		// insert expressions into the ad
-        int        	Insert(char*);			// insert at the tail
+        int        	Insert(const char*);	// insert at the tail
         int        	Insert(ExprTree*);		// insert at the tail
-		int			InsertOrUpdate(char*expr) { return Insert(expr); }
+		int			InsertOrUpdate(const char *expr) { return Insert(expr); }
 
 		// deletion of expressions	
         int			Delete(const char*); 	// delete the expr with the name
 
 		// to update expression trees
-		void		ResetFlags();			// reset the all the dirty flags
+		void		ClearAllDirtyFlags();
 #if 0
 		int			UpdateExpr(char*, ExprTree*);	// update an expression
 		int			UpdateExpr(ExprTree*);
@@ -136,16 +148,23 @@ class AttrList : public AttrListAbstract
 		// for iteration through expressions
 		void		ResetExpr() { this->ptrExpr = exprList; }
 		ExprTree*	NextExpr();					// next unvisited expression
+		ExprTree*   NextDirtyExpr();
 
 		// for iteration through names (i.e., lhs of the expressions)
 		void		ResetName() { this->ptrName = exprList; }
 		char*		NextName();					// next unvisited name
+		const char* NextNameOriginal();
+		char*       NextDirtyName();
 
 		// lookup values in classads  (for simple assignments)
-		ExprTree*   Lookup(char *);  		// for convenience
-        ExprTree*	Lookup(const char*);	// look up an expression
-		ExprTree*	Lookup(const ExprTree*);
+		ExprTree*   Lookup(char *) const;  		// for convenience
+        ExprTree*	Lookup(const char*) const;	// look up an expression
+		ExprTree*	Lookup(const ExprTree*) const;
 		int         LookupString(const char *, char *); 
+		int         LookupString(const char *, char *, int); //uses strncpy
+		int         LookupString (const char *name, char **value);
+		int         LookupTime(const char *name, char **value);
+		int         LookupTime(const char *name, struct tm *time, bool *is_utc);
         int         LookupInteger(const char *, int &);
         int         LookupFloat(const char *, float &);
         int         LookupBool(const char *, int &);
@@ -160,7 +179,9 @@ class AttrList : public AttrListAbstract
 
 		// output functions
 		int			fPrintExpr(FILE*, char*);	// print an expression
+		char*		sPrintExpr(char*, unsigned int, const char*); // print expression to buffer
         virtual int	fPrint(FILE*);				// print the AttrList to a file
+		int         sPrint(MyString &output);   // put the AttrList in a string. 
 		void		dPrint( int );				// dprintf to given dprintf level
 
 		// conversion function
@@ -168,8 +189,14 @@ class AttrList : public AttrListAbstract
 
         // shipping functions
         int put(Stream& s);
-        int get(Stream& s);
-        int code(Stream& s);
+		int initFromStream(Stream& s);
+
+		void clear( void );
+
+		void GetReferences(const char *attribute, 
+						   StringList &internal_references, 
+						   StringList &external_references) const;
+		bool IsExternalReference(const char *name, char **simplified_name) const;
 
 #if defined(USE_XDR)
 		int put (XDR *);
@@ -192,8 +219,8 @@ class AttrList : public AttrListAbstract
         AttrListElem*	exprList;		// my collection of expressions
 		AttrListList*	associatedList;	// the AttrList list I'm associated with
 		AttrListElem*	tail;			// used by Insert
-		AttrListElem*	ptrExpr;		// used by NextExpr 
-		AttrListElem*	ptrName;		// used by NextName
+		AttrListElem*	ptrExpr;		// used by NextExpr and NextDirtyExpr
+		AttrListElem*	ptrName;		// used by NextName and NextDirtyName
 		int				seq;			// sequence number
 private:
 	bool inside_insert;
@@ -216,7 +243,7 @@ class AttrListList
       	void 	  	Insert(AttrList*);	// insert at the tail of the list
       	int			Delete(AttrList*); 	// delete a AttrList
 
-      	void  	  	fPrintAttrListList(FILE *); 	// print out the list
+      	void  	  	fPrintAttrListList(FILE *, bool use_xml = false);// print out the list
       	int 	  	MyLength() { return length; } 	// length of this list
       	ExprTree* 	BuildAgg(char*, LexemeType);	// build aggregate expr
 

@@ -22,6 +22,7 @@
 
 #include "classad_distribution.h"
 #include <fstream.h>
+#include <iostream>
 #include <ctype.h>
 
 /*--------------------------------------------------------------------
@@ -81,7 +82,7 @@ static void mark_classad_in_collection(string name);
 static void unmark_classad_in_collection(string name);
 static bool is_classad_in_collection(string name);
 static void process_file(
-	ifstream &input_file, const Parameters &parameters,
+    ifstream &input_file, const Parameters &parameters,
     ErrorCount *errors);
 static void process_classad(
 	ifstream &input_file, const string &line,
@@ -140,7 +141,11 @@ main(int argc, char **argv)
 			 << "\"\n";
 	}
 	else {
+#if (__GNUC__<3)
 		input_file.flags(0);
+#else
+		input_file.flags((_Ios_Fmtflags)0);
+#endif
 		process_file(input_file, parameters, &errors);
 		cleanup();
 		errors.PrintErrors();

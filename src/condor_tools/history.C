@@ -25,6 +25,7 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
+#include "condor_distribution.h"
 
 #include "MyString.h"
 
@@ -39,6 +40,7 @@ static char* format_date( time_t date );
 static char* format_time( int tot_secs );
 static char encode_status( int status );
 static bool EvalBool(AttrList *ad, ExprTree *tree);
+
 
 //------------------------------------------------------------------------
 
@@ -59,6 +61,7 @@ main(int argc, char* argv[])
   int cluster, proc;
   char tmp[512];
   int i;
+  myDistro->Init( argc, argv );
 
   for(i=1; i<argc; i++) {
     if (strcmp(argv[i],"-l")==0) {
@@ -162,11 +165,16 @@ displayJobShort(AttrList* ad)
         float utime;
         char owner[64], cmd[2048], args[2048];
 
+	if(!ad->EvalFloat(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,utime)) {
+		if(!ad->EvalFloat(ATTR_JOB_REMOTE_USER_CPU,NULL,utime)) {
+			utime = 0;
+		}
+	}
+
         if (!ad->EvalInteger (ATTR_CLUSTER_ID, NULL, cluster)           ||
                 !ad->EvalInteger (ATTR_PROC_ID, NULL, proc)             ||
                 !ad->EvalInteger (ATTR_Q_DATE, NULL, date)              ||
                 !ad->EvalInteger (ATTR_COMPLETION_DATE, NULL, CompDate)	||
-                !ad->EvalFloat   (ATTR_JOB_REMOTE_USER_CPU, NULL, utime)||
                 !ad->EvalInteger (ATTR_JOB_STATUS, NULL, status)        ||
                 !ad->EvalInteger (ATTR_JOB_PRIO, NULL, prio)            ||
                 !ad->EvalInteger (ATTR_IMAGE_SIZE, NULL, image_size)    ||
@@ -194,7 +202,7 @@ short_header (void)
         "ID",
         "OWNER",
         "SUBMITTED",
-        "CPU_USAGE",
+        "RUN_TIME",
         "ST",
 		"COMPLETED",
         "CMD"

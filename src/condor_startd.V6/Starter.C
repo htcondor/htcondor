@@ -30,96 +30,173 @@
 
 #include "condor_common.h"
 #include "startd.h"
+#include "classad_merge.h"
 
-Starter::Starter( Resource* rip )
+
+Starter::Starter()
 {
-	this->rip = rip;
+	s_ad = NULL;
+	s_path = NULL;
+	s_is_dc = false;
+
+	initRunData();
+}
+
+
+Starter::Starter( const Starter& s )
+{
+	if( s.rip || s.s_pid || s.s_procfam || s.s_family_size
+		|| s.s_pidfamily || s.s_birthdate ) {
+		EXCEPT( "Trying to copy a Starter object that's already running!" );
+	}
+
+	if( s.s_ad ) {
+		s_ad = new ClassAd( *(s.s_ad) );
+	} else {
+		s_ad = NULL;
+	}
+
+	if( s.s_path ) {
+		s_path = strnewp( s.s_path );
+	} else {
+		s_path = NULL;
+	}
+
+	s_is_dc = s.s_is_dc;
+
+	initRunData();
+}
+
+
+void
+Starter::initRunData( void ) 
+{
+	rip = NULL;
 	s_pid = 0;		// pid_t can be unsigned, so use 0, not -1
-	s_name = NULL;
 	s_procfam = NULL;
-	s_pidfamily = NULL;
 	s_family_size = 0;
-	s_type = -1;
-	s_is_dc = 0;
+	s_pidfamily = NULL;
+	s_birthdate = 0;
+	s_last_snapshot = 0;
 }
 
 
 Starter::~Starter()
 {
-	free( s_name );
+	if (s_path) {
+		delete [] s_path;
+	}
 	if( s_procfam ) {
 		delete s_procfam;
 	}
 	if( s_pidfamily ) {
 		delete [] s_pidfamily;
+		s_pidfamily = NULL;
+	}
+	if( s_ad ) {
+		delete( s_ad );
 	}
 }
 
 
-int
-Starter::settype( int type )
+bool
+Starter::satisfies( ClassAd* job_ad, ClassAd* mach_ad )
 {
-	char buf[256], *tmp;
-	s_type = type;
-
-	if( s_name ) {
-		free( s_name );
-		s_name = NULL;
-	}		
-
-	if( type == 0 ) {
-		sprintf( buf, "STARTER" );
-		if( (tmp = param(buf)) ) {
-			s_name = tmp;
-		}
+	int requirements = 0;
+	ClassAd* merged_ad = new ClassAd( *mach_ad );
+	MergeClassAds( merged_ad, s_ad, true );
+	if( ! job_ad->EvalBool(ATTR_REQUIREMENTS, merged_ad, requirements) ) { 
+		requirements = 0;
 	}
-	if( ! s_name ) {
-		sprintf( buf, "STARTER_%d", type );
-		if( (tmp = param(buf)) ) {
-			s_name = tmp;
+	delete( merged_ad );
+	return (bool)requirements;
+}
+
+
+bool
+Starter::provides( const char* ability )
+{
+	int has_it = 0;
+	if( ! s_ad ) {
+		return false;
+	}
+	if( ! s_ad->EvalBool(ability, NULL, has_it) ) { 
+		has_it = 0;
+	}
+	return (bool)has_it;
+}
+
+
+void
+Starter::setAd( ClassAd* ad )
+{
+	if( s_ad ) {
+		delete( s_ad );
+	}
+	s_ad = ad;
+}
+
+
+void
+Starter::setPath( const char* path )
+{
+	if( s_path ) {
+		delete [] s_path;
+	}
+	s_path = strnewp( path );
+}
+
+
+void
+Starter::setIsDC( bool is_dc )
+{
+	s_is_dc = is_dc;
+}
+
+
+void
+Starter::setResource( Resource* rip )
+{
+	this->rip = rip;
+}
+
+
+void
+Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
+{
+	if( !(IS_STATIC(mask) && IS_PUBLIC(mask)) ) {
+		return;
+	}
+
+		// Attributes that begin with "Has" go in the ClassAd and
+		// also in the StringList.  Attributes that begin with Java
+		// only go into the ClassAd.
+
+	ExprTree *tree, *lhs;
+	char *expr_str = NULL, *lhstr = NULL;
+	s_ad->ResetExpr();
+	while( (tree = s_ad->NextExpr()) ) {
+		if( (lhs = tree->LArg()) ) {
+			lhs->PrintToNewStr( &lhstr );
 		} else {
-				// Try to be backwards compatible.
-			sprintf( buf, "ALTERNATE_STARTER_%d", type );
-			if( (tmp = param(buf)) ) {
-				s_name = tmp;
+			dprintf( D_ALWAYS, 
+					 "ERROR parsing Starter classad attribute!\n" );
+			continue;
+		}
+		tree->PrintToNewStr( &expr_str );
+		if( strincmp(lhstr, "Has", 3) == MATCH ) {
+			ad->Insert( expr_str );
+			if( list ) {
+				list->append( lhstr );
 			}
+		} else if( strincmp(lhstr, "Java", 4) == MATCH ) {
+			ad->Insert( expr_str );
 		}
+		free( expr_str );
+		expr_str = NULL;
+		free( lhstr );
+		lhstr = NULL;
 	}
-	if( !s_name ) {
-		dprintf( D_ALWAYS, 
-				 "ERROR: Can't find starter binary for type %d\n", type );
-		return FALSE;
-	}
-
-#if defined( WIN32 ) 
-	s_is_dc = TRUE;
-#else
-	s_is_dc = FALSE;
-#endif
-
-	sprintf( buf, "STARTER_%d_IS_DC", type );
-	if( (tmp = param(buf)) ) {
-		if( *tmp == 't' || *tmp == 'T' ) {
-			s_is_dc = TRUE;
-		}
-		free( tmp );
-	} else {
-#if ! defined( WIN32 ) 
-		dprintf( D_FULLDEBUG, 
-				 "%s not defined, defaulting to non-DaemonCore\n", buf );
-#endif
-	}
-	
-	if( s_is_dc ) {
-		dprintf( D_FULLDEBUG, 
-				 "Using DaemonCore starter type %d (%s)\n", type,
-				 s_name ); 
-	} else {
-		dprintf( D_FULLDEBUG, 
-				 "Using non-DaemonCore starter type %d (%s)\n", type,
-				 s_name ); 
-	}
-	return TRUE;
 }
 
 
@@ -163,12 +240,12 @@ Starter::reallykill( int signo, int type )
 		sprintf( signame, "DC_SIGSUSPEND" );
 		break;
 	case DC_SIGHARDKILL:
-		signo = DC_SIGQUIT;
-		sprintf( signame, "DC_SIGQUIT" );
+		signo = SIGQUIT;
+		sprintf( signame, "SIGQUIT" );
 		break;
 	case DC_SIGSOFTKILL:
-		signo = DC_SIGTERM;
-		sprintf( signame, "DC_SIGTERM" );
+		signo = SIGTERM;
+		sprintf( signame, "SIGTERM" );
 		break;
 	case DC_SIGPCKPT:
 		sprintf( signame, "DC_SIGPCKPT" );
@@ -176,11 +253,11 @@ Starter::reallykill( int signo, int type )
 	case DC_SIGCONTINUE:
 		sprintf( signame, "DC_SIGCONTINUE" );
 		break;
-	case DC_SIGHUP:
-		sprintf( signame, "DC_SIGHUP" );
+	case SIGHUP:
+		sprintf( signame, "SIGHUP" );
 		break;
-	case DC_SIGKILL:
-		sprintf( signame, "DC_SIGKILL" );
+	case SIGKILL:
+		sprintf( signame, "SIGKILL" );
 		break;
 	default:
 		EXCEPT( "Unknown signal (%d) in Starter::reallykill", signo );
@@ -193,11 +270,11 @@ Starter::reallykill( int signo, int type )
 		case DC_SIGSUSPEND:
 			sig = SIGUSR1;
 			break;
-		case DC_SIGQUIT:
+		case SIGQUIT:
 		case DC_SIGHARDKILL:
 			sig = SIGINT;
 			break;
-		case DC_SIGTERM:
+		case SIGTERM:
 		case DC_SIGSOFTKILL:
 			sig = SIGTSTP;
 			break;
@@ -207,10 +284,10 @@ Starter::reallykill( int signo, int type )
 		case DC_SIGCONTINUE:
 			sig = SIGCONT;
 			break;
-		case DC_SIGHUP:
+		case SIGHUP:
 			sig = SIGHUP;
 			break;
-		case DC_SIGKILL:
+		case SIGKILL:
 			sig = SIGKILL;
 			break;
 		default:
@@ -252,7 +329,7 @@ Starter::reallykill( int signo, int type )
 	int needs_stat = TRUE, first_time = TRUE;
 	while( needs_stat ) {
 		errno = 0;
-		ret = stat(s_name, &st);
+		ret = stat(s_path, &st);
 		if( ret >=0 ) {
 			needs_stat = FALSE;
 			continue;
@@ -278,7 +355,7 @@ Starter::reallykill( int signo, int type )
 		case ENOLINK:
 			dprintf( D_ALWAYS, 
 					 "Can't stat binary (%s), file server probably down.\n",
-					 s_name );
+					 s_path );
 			if( first_time ) {
 				dprintf( D_ALWAYS, 
 						 "Will retry every 15 seconds until server is back up.\n" );
@@ -289,7 +366,7 @@ Starter::reallykill( int signo, int type )
 #endif
 		default:
 			EXCEPT( "stat(%s) failed with unexpected errno (%d)", 
-					s_name, errno );
+					s_path, errno );
 		}
 	}
 #endif	// if !defined(WIN32)
@@ -329,7 +406,7 @@ Starter::reallykill( int signo, int type )
 			// If we're just doing a plain kill, and the signal we're
 			// sending isn't SIGSTOP or SIGCONT, send a SIGCONT to the 
 			// starter just for good measure.
-		if( sig != DC_SIGSTOP && sig != SIGCONT && sig != DC_SIGKILL ) {
+		if( sig != SIGSTOP && sig != SIGCONT && sig != SIGKILL ) {
 			if( type == 1 ) { 
 				ret = ::kill( -(s_pid), SIGCONT );
 			} else if( type == 0 ) {
@@ -367,10 +444,10 @@ Starter::reallykill( int signo, int type )
 #endif /* ! WIN32 */
 
 	case 2:
-		if( signo != DC_SIGKILL ) {
+		if( signo != SIGKILL ) {
 			dprintf( D_ALWAYS, 
 					 "In Starter::killkids() with %s\n", signame );
-			EXCEPT( "Starter::killkids() can only handle DC_SIGKILL!" );
+			EXCEPT( "Starter::killkids() can only handle SIGKILL!" );
 		}
 		s_procfam->hardkill();  // This really sends SIGKILL
 		break;
@@ -379,25 +456,31 @@ Starter::reallykill( int signo, int type )
 	set_priv(priv);
 
 	if( ret < 0 ) {
-		dprintf( D_ALWAYS, "Error sending signal to starter, errno = %d\n", 
-				 errno );
-		return -1;
+		if(errno==ESRCH) {
+			/* Aha, the starter is already dead */
+			return 0;
+		} else {
+			dprintf( D_ALWAYS, "Error sending signal to starter, errno = %d\n", 
+					 errno );
+			return -1;
+		}
+	} else {
+		return ret;
 	}
-	return ret;
 }
 
 
 int 
-Starter::spawn( start_info_t* info )
+Starter::spawn( start_info_t* info, time_t now )
 {
 
 	if( is_dc() ) {
 			// Use spiffy new starter.
-		s_pid = exec_starter( s_name, info->ji_hname, 
+		s_pid = exec_starter( s_path, info->ji_hname, 
 							  info->shadowCommandSock);
 	} else {
 			// Use old icky non-daemoncore starter.
-		s_pid = exec_starter( s_name, info->ji_hname, 
+		s_pid = exec_starter( s_path, info->ji_hname, 
 							  info->ji_sock1,
 							  info->ji_sock2 );
 	}
@@ -405,17 +488,19 @@ Starter::spawn( start_info_t* info )
 	if( s_pid == 0 ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter returned %d\n", s_pid );
 	} else {
+		s_birthdate = now;
 		s_procfam = new ProcFamily( s_pid, PRIV_ROOT );
 #if WIN32
 		// we only support running jobs as user nobody for the first pass
 		char nobody_login[60];
-		sprintf(nobody_login,"condor-run-dir_%d",s_pid);
+		//sprintf(nobody_login,"condor-run-dir_%d",s_pid);
+		sprintf(nobody_login,"condor-run-%d",s_pid);
 		// set ProcFamily to find decendants via a common login name
 		s_procfam->setFamilyLogin(nobody_login);
 #endif
 		dprintf( D_PROCFAMILY, 
 				 "Created new ProcFamily w/ pid %d as the parent.\n", s_pid );
-		recompute_pidfamily();
+		recompute_pidfamily( now );
 	}
 	return s_pid;
 }
@@ -430,22 +515,8 @@ Starter::exited()
 
 		// Now, delete any files lying around.
 	cleanup_execute_dir( s_pid );
-
-		// Finally, we can free up our memory and data structures.
-	s_pid = 0;
-	free( s_name );
-	s_name = NULL;
-
-	if( s_procfam ) {
-		delete s_procfam;
-		s_procfam = NULL;
-	}
-	if( s_pidfamily ) {
-		delete [] s_pidfamily;
-		s_pidfamily = NULL;
-	}
-	s_family_size = 0;
 }
+
 
 int
 Starter::exec_starter( char* starter, char* hostname, 
@@ -464,7 +535,7 @@ Starter::exec_starter( char* starter, char* hostname,
 
 	dprintf ( D_FULLDEBUG, "About to Create_Process \"%s\".\n", args );
 
-	s_pid = daemonCore->Create_Process( s_name, args, PRIV_ROOT, 1, TRUE, 
+	s_pid = daemonCore->Create_Process( s_path, args, PRIV_ROOT, main_reaper, TRUE, 
 										NULL, NULL, TRUE, sock_inherit_list );
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
@@ -620,22 +691,53 @@ Starter::dprintf( int flags, char* fmt, ... )
 {
 	va_list args;
 	va_start( args, fmt );
-	rip->dprintf_va( flags, fmt, args );
+	if( rip ) {
+		rip->dprintf_va( flags, fmt, args );
+	} else {
+		::_condor_dprintf_va( flags, fmt, args );
+	}
 	va_end( args );
 }
 
 
 void
-Starter::recompute_pidfamily() 
+Starter::recompute_pidfamily( time_t now ) 
 {
 	if( !s_procfam ) {
 		dprintf( D_PROCFAMILY, 
-				 "Starter::recompute_pidfamily: ERROR: No ProcFamily object.\n" );
+		 "Starter::recompute_pidfamily: ERROR: No ProcFamily object.\n" );
 		return;
 	}
+	dprintf( D_PROCFAMILY, "Recomputing pid family\n" );
 	s_procfam->takesnapshot();
 	if( s_pidfamily ) {
 		delete [] s_pidfamily;
+		s_pidfamily = NULL;
 	}
 	s_family_size = s_procfam->currentfamily( s_pidfamily );
+	if( ! s_family_size ) {
+		dprintf( D_ALWAYS, 
+			"WARNING: No processes found in starter's family\n" );
+	}
+	if( now ) {
+		s_last_snapshot = now;
+	} else {
+		s_last_snapshot = time( NULL );
+	}
+}
+
+
+void
+Starter::printInfo( int debug_level )
+{
+	dprintf( debug_level, "Info for \"%s\":\n", s_path );
+	dprintf( debug_level | D_NOHEADER, "IsDaemonCore: %s\n", 
+			 s_is_dc ? "True" : "False" );
+	if( ! s_ad ) {
+		dprintf( debug_level | D_NOHEADER, 
+				 "No ClassAd available!\n" ); 
+	} else {
+		s_ad->dPrint( debug_level );
+	}
+	dprintf( debug_level | D_NOHEADER, "*** End of starter info ***\n" ); 
 }

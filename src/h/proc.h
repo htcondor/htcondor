@@ -24,6 +24,9 @@
 #ifndef CONDOR_PROC_INCLUDED
 #define CONDOR_PROC_INCLUDED
 
+#include "condor_universe.h"
+#include "condor_header_features.h"
+
 #define NEW_PROC 1
 
 typedef struct {
@@ -36,19 +39,6 @@ typedef struct {
 	int		reader;	/* index into cmd array */
 	char	*name;	/* for named pipes, NULL otherwise */
 } P_DESC;
-
-	/* Condor "universes" */
-#define STANDARD	1	/* Original - single process jobs, 1 per machine */
-/* 
-   2 and 3 used to be "PIPE" and "LINDA", which never worked and just
-   cluttered the namespace.
-*/
-#define PVM			4	/* Parallel applications via Parallel Virtual Machine */
-#define VANILLA		5	/* Non- condor linked jobs (PVMD) */
-#define PVMD		6	/* Explicit, PVM daemon process */
-#define SCHED_UNIVERSE	7	/* Scheduler universe: run job locally */
-#define MPI         8   /* Parallel app via MPI */
-#define GLOBUS_UNIVERSE  9   /* Use Globusrun as scheduler universe */
 
 #if !defined(WIN32) // hopefully we won't need PROC structures in V6 so don't bother porting to NT
 /*
@@ -217,6 +207,11 @@ char    *JobStatusNames[] = {
 extern char *JobStatusNames[];
 #endif
 
+BEGIN_C_DECLS
+
+PROC_ID getProcByString( const char* str );
+
+END_C_DECLS
 
 #define ICKPT -1
 

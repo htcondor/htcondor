@@ -5,7 +5,5 @@
 #define		IS_X86			YES
 #define		IS_X86_SOLARIS		YES
 
-#define		ImakeArchFlag		-DIS_X86
-
 #define		PVM_ARCH		X86SOL2
 

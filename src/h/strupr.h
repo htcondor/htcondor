@@ -28,8 +28,10 @@
 
 BEGIN_C_DECLS
 
+#ifndef WIN32	/* on Win32, these come out of libc */
 char* strupr( char * );
 char* strlwr( char * );
+#endif
 
 END_C_DECLS
 

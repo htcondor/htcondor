@@ -25,6 +25,9 @@
 
 #if defined(WIN32)
 
+/******************************
+** Windows specifics
+******************************/
 #include "condor_sys_nt.h"
 
 #else
@@ -33,11 +36,16 @@
 ** Unix specifics
 ******************************/
 
-/* Things we want defined on all systems */
+/* Things we want defined on all Unix systems */
 
 #ifndef _POSIX_SOURCE
-#define _POSIX_SOURCE
+# define _POSIX_SOURCE
 #endif
+
+#ifndef UNIX
+# define UNIX
+#endif
+
 
 /**********************************************************************
 ** These system-specific files will "fix" anything that needs fixing,
@@ -54,13 +62,18 @@
 #	include "condor_sys_solaris.h"
 #elif defined(OSF1)
 #	include "condor_sys_dux.h"
+#else
+#   error "Don't know what Unix this is!"
 #endif
+
 
 /**********************************************************************
 ** Files that need to be fixed on all (or nearly all) platforms 
 **********************************************************************/
+#include "condor_fix_access.h"
 #include "condor_file_lock.h"
 #include "condor_fix_assert.h"
+#include "condor_snutils.h"
 
 
 /**********************************************************************

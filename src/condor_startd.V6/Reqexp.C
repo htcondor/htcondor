@@ -38,7 +38,7 @@ Reqexp::Reqexp( Resource* rip )
 	sprintf( tmp, "%s = %s", ATTR_REQUIREMENTS, "START" );
 	origreqexp = strdup( tmp );
 	origstart = NULL;
-	rstate = UNAVAIL;
+	rstate = ORIG;
 }
 
 
@@ -68,32 +68,15 @@ Reqexp::~Reqexp()
 }
 
 
-int
-Reqexp::eval() 
-{
-	ExprTree *tree;
-	ClassAd ad;
-	EvalResult res;
-
-	Parse( origreqexp, tree );
-	tree->EvalTree( rip->r_classad, &ad, &res);
-	delete tree;
-
-	if( res.type != LX_INTEGER ) {
-		return -1;
-	} else {
-		return res.i;
-	}
-}
-
-
-void
+bool
 Reqexp::restore()
 {
 	if( rstate != ORIG ) {
 		rip->r_classad->InsertOrUpdate( origreqexp );
 		rstate = ORIG;
+		return true;
 	}
+	return false;
 }
 
 
@@ -104,36 +87,6 @@ Reqexp::unavail()
 	sprintf( tmp, "%s = False", ATTR_REQUIREMENTS );
 	rip->r_classad->InsertOrUpdate( tmp );
 	rstate = UNAVAIL;
-}
-
-
-void
-Reqexp::avail() 
-{
-	char tmp[100];
-	sprintf( tmp, "%s = True", ATTR_REQUIREMENTS );
-	rip->r_classad->InsertOrUpdate( tmp );
-	rstate = AVAIL;
-}
-
-
-// Returns TRUE if there's a state change.
-int
-Reqexp::pub()
-{
-	reqexp_state old_state = rstate;
-	switch( this->eval() ) {
-	case 0:							// requirements == false
-		this->unavail();
-		break;
-	case 1:							// requirements == true
-		this->avail();		
-		break;
-	case -1:						// requirements undefined
-		this->restore();			
-		break;
-	}
-	return( old_state != rstate );
 }
 
 
@@ -150,9 +103,6 @@ Reqexp::publish( ClassAd* ca, amask_t how_much )
 	case ORIG:
 		ca->InsertOrUpdate( origstart );
 		sprintf( tmp, "%s", origreqexp );
-		break;
-	case AVAIL:
-		sprintf( tmp, "%s = True", ATTR_REQUIREMENTS );
 		break;
 	case UNAVAIL:
 		sprintf( tmp, "%s = False", ATTR_REQUIREMENTS );

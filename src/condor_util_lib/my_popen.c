@@ -66,7 +66,6 @@ char *mode;
 	int		pipe_d[2];
 	int		parent_reads;
 	struct sigaction act;
-	sigset_t	mask;
 
 		/* Figure out who reads and who writes on the pipe */
 	parent_reads = mode[0] == 'r';
@@ -135,7 +134,6 @@ my_pclose(fp)
 FILE	*fp;
 {
 	int			status;
-	sigset_t	mask;
 
 		/* Close the pipe */
 	(void)fclose( fp );

@@ -29,15 +29,18 @@
 
 #include "condor_common.h"
 #include "condor_config.h"
+#include "condor_debug.h"
 #include "condor_version.h"
 #include "condor_io.h"
 #include "my_hostname.h"
 #include "get_daemon_addr.h"
 #include "internet.h"
 #include "get_full_hostname.h"
+#include "daemon.h"
 #include "daemon_types.h"
 #include "sig_install.h"
 #include "command_strings.h"
+#include "condor_distribution.h"
 
 void doCommand( char *name );
 void version();
@@ -53,11 +56,13 @@ int  printAdToFile(ClassAd *ad, char* filename);
 int cmd = 0;
 daemon_t dt = DT_NONE;
 char* pool = NULL;
-int fast = 0;
+bool fast = false;
+bool full = false;
 int all = 0;
 char* subsys = NULL;
 int takes_subsys = 0;
 int cmd_set = 0;
+
 
 // The pure-tools (PureCoverage, Purify, etc) spit out a bunch of
 // stuff to stderr, which is where we normally put our error
@@ -102,7 +107,10 @@ usage( char *str )
 		fprintf( stderr, 
 				 "    -fast\t\tquickly vacate the jobs (no checkpointing)\n" );
 	}
-
+	if( cmd == DC_RECONFIG ) {
+		fprintf( stderr, 
+				 "    -full\t\tPerform a full reconfig\n" );
+	}
 	fprintf( stderr, "where [targets] can be zero or more of:\n" );
 #if 0
 		// This isn't supported yet, so don't mention it now.
@@ -182,8 +190,9 @@ usage( char *str )
 				 "they are done checkpointing." );
 		break;
 	case SQUAWK:
-		fprintf( stderr, "  %s\n", str, 
-				 "is a developer-only command used to talk to daemons." );
+		fprintf( stderr, "  %s\n"
+				 "is a developer-only command used to talk to daemons.", 
+				 str );
 		break;
 	default:
 		fprintf( stderr, "  Valid commands are:\n%s%s",
@@ -194,6 +203,18 @@ usage( char *str )
 		break;
 	}
 	fprintf(stderr, "\n" );
+	exit( 1 );
+}
+
+
+void
+pool_target_usage( void )
+{
+	fprintf( stderr, "ERROR: You have asked to find a machine in "
+			 "another pool (with\n"
+			 "the -pool option) but you have not specified which machine.\n"
+			 "Please also use -addr, -name, or list the hostname(s).\n"
+			 "For more information, use -help.\n" );
 	exit( 1 );
 }
 
@@ -234,6 +255,8 @@ cmdToStr( int c )
 		return "Reschedule";
 	case DC_RECONFIG:
 		return "Reconfig";
+	case DC_RECONFIG_FULL:
+		return "Full-Reconfig";
 	case SQUAWK:
 		return "Squawk";
 	}
@@ -274,6 +297,7 @@ main( int argc, char *argv[] )
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
+	myDistro->Init( argc, argv );
 	config();
 
 	MyName = strrchr( argv[0], DIR_DELIM_CHAR );
@@ -370,21 +394,53 @@ main( int argc, char *argv[] )
 			}
 			break;
 		case 'f':
-			fast = 1;
-			switch( cmd ) {
-			case DAEMONS_OFF:
-			case DC_OFF_GRACEFUL:
-			case RESTART:
-			case VACATE_CLAIM:
-				break;
-			default:
-				fprintf( stderr, "ERROR: \"-fast\" is not valid with %s\n",
-						 MyName );
+			if( (*tmp)[2] ) {
+				switch( (*tmp)[2] ) {
+				case 'u':
+					if( cmd == DC_RECONFIG ) {
+						full = true;
+					} else {
+						fprintf( stderr, "ERROR: \"-full\" "
+								 "is not valid with %s\n", MyName );
+						usage( NULL );
+					}
+					break;
+				case 'a':
+					fast = true;
+					switch( cmd ) {
+					case DAEMONS_OFF:
+					case DC_OFF_GRACEFUL:
+					case RESTART:
+					case VACATE_CLAIM:
+						break;
+					default:
+						fprintf( stderr, "ERROR: \"-fast\" "
+								 "is not valid with %s\n", MyName );
+						usage( NULL );
+					}
+					break;
+				default:
+					fprintf( stderr, 
+							 "ERROR: unknown parameter: \"%s\"\n",
+							 *tmp ); 
+					usage( NULL );
+					break;
+				}
+			} else {
+				fprintf( stderr, 
+						 "ERROR: ambiguous parameter: \"%s\"\n",
+						 *tmp ); 
+				fprintf( stderr, 
+						 "Please specify \"-full\" or \"-fast\"\n" );
 				usage( NULL );
 			}
 			break;
+		case 'd':
+			Termlog = 1;
+			dprintf_config ("TOOL", 2);
+			break;
 		case 'g':
-			fast = 0;
+			fast = false;
 			break;
 		case 'a':
 			if( (*tmp)[2] ) {
@@ -621,6 +677,14 @@ main( int argc, char *argv[] )
 	}
 
 	if( ! did_one ) {
+		if( pool ) {
+				// Evil, they specified a valid pool but didn't give a
+				// real target for what daemon they want to send this
+				// command to.  We need to print an error and die,
+				// instead of just sending the command to the local
+				// machine. 
+			pool_target_usage();
+		}
 		doCommand( NULL );
 	}
 
@@ -672,10 +736,13 @@ doCommand( char *name )
 		cmd = DAEMON_ON;
 		dt = DT_MASTER;
 	}
-	if( cmd == RESTART && subsys ) {
+	if( cmd == RESTART && subsys && old_dt != DT_MASTER ) {
 			// We're trying to restart something and we were told a
 			// specific subsystem to restart.  So, just send a DC_OFF
 			// to that daemon, and the master will restart for us. 
+			// Note: we don't want to do this if we were told to
+			// restart the master, since if we send this, the master
+			// itself will exit, which isn't what we want.
 		cmd = DC_OFF_GRACEFUL;
 	}
 
@@ -700,6 +767,8 @@ doCommand( char *name )
 	}
 
 		/* Connect to the daemon */
+	Daemon d(addr);
+	/* Connect to the daemon */
 	ReliSock sock;
 	if(!sock.connect(addr)) {
 		namePrintf( stderr, name, "Can't connect to" );
@@ -707,7 +776,6 @@ doCommand( char *name )
 		return;
 	}
 
-	sock.encode();
 	switch(cmd) {
 	case VACATE_CLAIM:
 		if( fast ) {
@@ -716,7 +784,8 @@ doCommand( char *name )
 		// If no name is specified, or if name is a sinful string or
 		// hostname, we must send VACATE_ALL_CLAIMS.
 		if ( name && !sinful && strchr(name, '@') ) {
-			if( !sock.code(cmd) || !sock.code(name) || !sock.eom() ) {
+			d.startCommand (cmd, &sock);
+			if( !sock.code(name) || !sock.eom() ) {
 				namePrintf( stderr, name, "Can't send %s command to", 
 							 cmdToStr(cmd) );
 				RESTORE;
@@ -736,7 +805,8 @@ doCommand( char *name )
 		// If no name is specified, or if name is a sinful string or
 		// hostname, we must send PCKPT_ALL_JOBS.
 		if( name && !sinful && strchr(name, '@') ) {
-			if( !sock.code(cmd) || !sock.code(name) || !sock.eom() ) {
+			d.startCommand (cmd, &sock, 0);
+			if( !sock.code(name) || !sock.eom() ) {
 				namePrintf( stderr, name, "Can't send %s command to", 
 							 cmdToStr(cmd) );
 				RESTORE;
@@ -749,27 +819,34 @@ doCommand( char *name )
 		}
 		break;
 	case DAEMON_OFF:
-			// if -fast is used, we need to send a different command.
-		if( fast ) {
-			cmd = DAEMON_OFF_FAST;
-		}
-		if( !sock.code(cmd) || !sock.code(subsys) || !sock.eom() ) {
-			namePrintf( stderr, name, "Can't send %s command to", 
-						 cmdToStr(cmd) );
-			RESTORE;
-			return;
-		} else {
-			done = 1;
+		{
+				// if -fast is used, we need to send a different command.
+			if( fast ) {
+				cmd = DAEMON_OFF_FAST;
+			}
+
+			d.startCommand( cmd, &sock, 0);
+			if( !sock.code(subsys) || !sock.eom() ) {
+				namePrintf( stderr, name, "Can't send %s command to", 
+							 cmdToStr(cmd) );
+				RESTORE;
+				return;
+			} else {
+				done = 1;
+			}
 		}
 		break;
 	case DAEMON_ON:
-		if( !sock.code(cmd) || !sock.code(subsys) || !sock.eom() ) {
-			namePrintf( stderr, name, "Can't send %s command to", 
-						 cmdToStr(cmd) );
-			RESTORE;
-			return;
-		} else {
-			done = 1;
+		{
+			d.startCommand (cmd, &sock, 0);
+			if( !sock.code(subsys) || !sock.eom() ) {
+				namePrintf( stderr, name, "Can't send %s command to", 
+							 cmdToStr(cmd) );
+				RESTORE;
+				return;
+			} else {
+				done = 1;
+			}
 		}
 		break;
 	case DAEMONS_OFF:
@@ -784,12 +861,18 @@ doCommand( char *name )
 			cmd = DC_OFF_FAST;
 		}
 		break;
+	case DC_RECONFIG:
+			// if -full is used, we need to send a different command.
+		if( full ) {
+			cmd = DC_RECONFIG_FULL;
+		}
+		break;
 	default:
 		break;
 	}
 
 	if( !done ) {
-		if( !sock.code(cmd) || !sock.eom() ) {
+		if( !d.sendCommand(cmd, &sock) ) {
 			namePrintf( stderr, name, "Can't send %s command to", 
 						 cmdToStr(cmd) );
 			RESTORE;
@@ -905,7 +988,14 @@ handleSquawk( char *line, char *addr ) {
 	
 	char *token;
 	int command, signal;
+    ReliSock sock;
 
+    if ( !sock.connect( addr ) ) {
+        printf ( "Problems connecting to %s\n", addr );
+        return TRUE;
+    }
+
+        
 	token = strtok( line, " " );
 
 	if ( !token ) return TRUE;
@@ -916,21 +1006,14 @@ handleSquawk( char *line, char *addr ) {
 		return FALSE;
 		
 	case 'd': { /* dump state */
-		ReliSock sock;
-		if ( !sock.connect( addr ) ) {
-			printf ( "Problems connecting to %s\n", addr );
-			return TRUE;
-		}
-		sock.encode();
-		sock.put( DUMP_STATE );
-		sock.eom();
-		sock.decode();
-		ClassAd *ad = new ClassAd;
-		ad->get ( sock );
+		Daemon d(addr);
+        d.startCommand(DUMP_STATE, &sock, 0);
 
-		printAdToFile( ad, NULL );
-		
-		delete ad;
+		sock.decode();
+
+		ClassAd ad;
+		ad.initFromStream( sock );
+		printAdToFile( &ad, NULL );
 		
 		return TRUE;
 	}
@@ -952,13 +1035,10 @@ handleSquawk( char *line, char *addr ) {
 			return TRUE;
 		}
 		
-		ReliSock sock;
-		if ( !sock.connect( addr ) ) {
-			printf ( "Problems connecting to %s\n", addr );
-			return TRUE;
-		}
+		Daemon d(addr);
+		d.startCommand (DC_RAISESIGNAL, &sock, 0);
+
 		sock.encode();
-		sock.put( DC_RAISESIGNAL );
 		sock.code( signal );
 		sock.eom();
 		
@@ -977,13 +1057,9 @@ handleSquawk( char *line, char *addr ) {
 			return TRUE;
 		}
 
-		ReliSock sock;
-		if ( !sock.connect( addr ) ) {
-			printf ( "Problems connecting to %s\n", addr );
-			return TRUE;
-		}
+		Daemon d(addr);
+		d.startCommand ( command, &sock, 0);
 		sock.encode();
-		sock.code( command );
 		while ( token = strtok( NULL, " " ) ) {
 			if ( isdigit(token[0]) ) {
 				int dig = atoi( token );

@@ -146,5 +146,5 @@ int config_server_disconnect();
 }
 #endif
 
-#endif CCTP_H_
+#endif /* CCTP_H_ */
 

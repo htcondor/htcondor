@@ -26,6 +26,7 @@
 #include "format_time.h"
 #include "classad_hashtable.h"
 #include "internet.h"
+#include "condor_distribution.h"
 
 /* 
 ** Job Record format: cluster.proc evict_time wall_time good_time cpu_usage
@@ -109,6 +110,7 @@ main(int argc, char *argv[])
 	bool log_read = false;
 	int select_cluster = -1, select_proc = -1;
 
+	myDistro->Init( argc, argv );
 	if (argc == 1) {
 		fprintf(stderr, usage, argv[0]);
 		exit(1);
@@ -195,6 +197,8 @@ statsort(const void *vi, const void *vj)
 void
 display_stats()
 {
+	int i;
+
 	// display HostStatistics
 	printf("%-15.15s %9.9s %9.9s %9.9s %9.9s %9.9s %7.7s %6.6s\n",
 		   "Host/Job", "Wall Time", "Good Time", "CPU Usage",
@@ -223,10 +227,10 @@ display_stats()
 	printf("\n");
 
 	// display JobStatistics
-	JobStatistics **statarray = new (JobStatistics *) [numJobStats];
+	JobStatistics **statarray = new JobStatistics* [numJobStats];
 	JobStatistics *js;
 	Stats.startIterations();
-	for (int i=0; Stats.iterate(js) == 1; i++) {
+	for (i=0; Stats.iterate(js) == 1; i++) {
 		statarray[i] = js;
 	}
 
@@ -235,7 +239,7 @@ display_stats()
 	int allocations=0, kills=0;
 	int wall_time=0, good_time=0, cpu_usage=0;
 	char job[40];
-	for (int i=0; i < numJobStats; i++) {
+	for (i=0; i < numJobStats; i++) {
 		js = statarray[i];
 		sprintf(job, "%d.%d", js->cluster, js->proc);
 		printf("%-15.15s ", job);
@@ -263,7 +267,9 @@ display_stats()
 	printf("%9.9s ", format_time_nosecs(wall_time));
 	printf("%9.9s ", format_time_nosecs(good_time));
 	printf("%9.9s ", format_time_nosecs(cpu_usage));
-	printf("%9.9s ", format_time_nosecs(wall_time/allocations));
+	printf("%9.9s ", allocations ?
+		   format_time_nosecs(wall_time/allocations) :
+		   "0+00:00");
 	printf("%9.9s ", kills ?
 		   format_time_nosecs((wall_time-good_time)/kills) :
 		   "0+00:00");
@@ -294,16 +300,6 @@ new_record(int cluster, int proc, int start_time, int evict_time,
 					"%d.%d!\n", cluster, proc);
 			fprintf(stderr, "  (records around the turn of "
 					"the year are not handled correctly)\n");
-		}
-		return;
-	}
-	// Another type of bad record is when cpu_usage is greater than
-	// good_time.  This should not be possible.  It may be caused if
-	// two instances of the same job are running at the same time.
-	if (cpu_usage > good_time) {
-		if (debug_mode) {
-			fprintf(stderr, "internal error: cpu usage > good time (%d > %d) "
-					"for %d.%d!\n", cpu_usage, good_time, cluster, proc);
 		}
 		return;
 	}
@@ -392,10 +388,51 @@ read_log(const char *filename, int select_cluster, int select_proc)
 			case ULOG_SUBMIT:
 				delete event;
 				break;
-			case ULOG_EXECUTE:
+			case ULOG_EXECUTE: {
 				sprintf(hash, "%d.%d", event->cluster, event->proc);
-				ExecRecs.insert(HashKey(hash), (ExecuteEvent *)event);
+				HashKey key(hash);
+				// check if we already have an execute event for this job
+				ExecuteEvent *execEvent;
+				if (ExecRecs.lookup(key, execEvent) >= 0) {
+					// This means we found two execute events for the
+					// job not separated by an evict or terminate
+					// event.  Which one should we throw out?  If the
+					// executeHosts are the same, then we throw out
+					// the later event, since the 6.1.15 and 6.1.16
+					// shadows logged execute events before every
+					// other event, so keeping the first execute event
+					// gives correct results for those shadows.
+					// Otherwise, we throw out the previous event.
+					if (!strcmp(((ExecuteEvent *)event)->executeHost,
+								execEvent->executeHost)) {
+						if (debug_mode) {
+							fprintf(stderr,
+									"warning: discarding execute event "
+									"(job %s)\n  found before evict or "
+									"termination event for previous execute "
+									"event.\n", hash);
+						}
+						delete event;
+						break;
+					}
+					if (ExecRecs.remove(key) < 0) {
+						if (debug_mode) {
+							fprintf(stderr, "internal error: hashtable remove "
+									"failed for exec event %s!\n", hash);
+						}
+						delete event;
+						break;
+					}
+					if (debug_mode) {
+						fprintf(stderr, "warning: discarding execute event "
+								"(job %s)\n  with no corresponding evict or "
+								"termination event.\n", hash);
+					}
+					delete execEvent;
+				}
+				ExecRecs.insert(key, (ExecuteEvent *)event);
 				break;
+			}
 			case ULOG_CHECKPOINTED: {
 				sprintf(hash, "%d.%d", event->cluster, event->proc);
 				HashKey key(hash);

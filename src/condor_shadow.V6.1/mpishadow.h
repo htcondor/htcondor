@@ -29,6 +29,12 @@
 #include "mpiresource.h"
 #include "list.h"
 
+#if defined( WIN32 )
+#define MPI_USES_RSH FALSE
+#else
+#define MPI_USES_RSH TRUE
+#endif
+
 /** This is the MPI Shadow class.  It acts as a shadow for an MPI
 	job submitted to Condor.<p>
 
@@ -78,15 +84,66 @@ class MPIShadow : public BaseShadow
 	void init( ClassAd *jobAd, char schedd_addr[], char host[], 
 			   char capability[], char cluster[], char proc[]);
 
-		/** Shut down properly.  Send email to the user if requested.
-			Calls DC_Exit(), therefore it doesn't return.
+		/** Shut down properly.  We have MPI-specific logic in this
+			version which decides if we're really ready to shutdown or
+			not.  Once it's going to really shutdown, it just calls
+			the BaseShadow version to do the real work (which is the
+			same in both cases).
 			@param exitReason The reason this mpi job exited.
-			@param exitStatus The Status upon exit. 
 		*/
-	void shutDown( int exitReason, int exitStatus );
+	void shutDown( int exitReason );
 
 		/** Handle job removal. */
 	int handleJobRemoval( int sig );
+
+	int updateFromStarter(int command, Stream *s);
+
+	struct rusage getRUsage( void );
+
+	int getImageSize( void );
+
+	int getDiskUsage( void );
+
+	int getExitReason( void );
+
+	float bytesSent( void );
+	float bytesReceived( void );
+
+	bool exitedBySignal( void );
+
+	int exitSignal( void );
+
+	int exitCode( void );
+
+		/** Record the IP and port where the MPI master is running for
+			this computation.  Once we get this info, we can spawn all
+			the workers, so start the ball rolling on that, too.
+			@param str A string containing the IP and port, separated
+			by a semicolon (e.g. "128.105.102.46:2342")
+			@return Always return true, since we're an MPI shadow
+		*/
+	bool setMpiMasterInfo( char* str );
+
+		/** If desired, send the user email now that this job has
+			terminated.  For MPI jobs, we print out all the hosts
+			where the job ran, and any other useful info.
+		*/
+	virtual void emailTerminateEvent( int exitReason );
+
+		/** Do all work to cleanup before this shadow can exit.  To
+			cleanup an MPI job, we've got to kill all our starters,
+			and remove the procgroup file, if we're using one.
+		*/
+	virtual void cleanUp( void );
+
+		/** Do a graceful shutdown of this computation.
+			Unfortunately, there's no such thing as a graceful
+			shutdown of an MPI job, so we're just going to have to
+			call cleanUp() in the MPI case. 
+		*/
+	virtual void gracefulShutDown( void );
+
+	virtual void resourceBeganExecution( RemoteResource* rr );
 
  private:
 
@@ -94,31 +151,51 @@ class MPIShadow : public BaseShadow
             and then sends us a RESOURCE_AVAILABLE signal.  Upon
             receipt of that signal (it's registered in init()), we
             enter this function */
-    int getResources( int cmd, Stream *s );
+    int getResources( void );
 
         /** When we've got all the resources we need, we enter this
             function, which starts the mpi job */
     void startMaster();
 
+#if (MPI_USES_RSH) 
         /** We will be given the args to start the mpi process by 
             the sneaky rsh program.  Start a Comrade with them */
     int startComrade(int cmd, Stream *s);
 
         /** Does necessary things to the args obtained from the 
             sneaky rsh. */
-    void hackComradeArgs( char *comradeArgs, ClassAd *ad );
+    void hackComradeAd( char *comradeArgs, ClassAd *ad );
 
         /** Pretty simple: takes the args, adds a -p4gp ..., puts
             the args back in. */
-    void hackMasterArgs( ClassAd *ad );
+    void hackMasterAd( ClassAd *ad );
     
+#else
+		/** Once we have the IP and port of the master, we can spawn
+			all the comrade nodes at once.  
+		*/
+	void spawnAllComrades( void );
+
+		/** Adds the necessary variables to the environment of any
+			node in the MPI computation so it can properly execute. 
+			@param ad Pointer to the ClassAd to modify
+		 */
+	bool modifyNodeAd( ClassAd* );
+
+#endif /* ! MPI_USES_RSH */
+
+		/** This function is shared by all the different methods that
+			spawn nodes (root vs. comrade and rsh vs. non-rsh).
+			@param rr Pointer to the RemoteResource to spawn
+		*/
+	void spawnNode( MpiResource* rr );
+
 		/** A complex function that deals with the end of an MPI
 			job.  It has two functions: 1) figure out if all the 
 			resources should be told to kill themselves and 
 			2) return TRUE if every resource is dead. 
-		    @param exitReason The job exit reason.
-		    @param exitStatus The exit status.*/
-	int shutDownLogic( int& exitReason, int& exitStatus );
+		    @param exitReason The job exit reason. */
+	int shutDownLogic( int& exitReason );
 
         /** The number of the next resource to start...when in start mode */
     int nextResourceToStart;
@@ -132,8 +209,12 @@ class MPIShadow : public BaseShadow
 		/** Used to determine actual exit conditions...*/
 	int actualExitReason;
 	
-		/** Used to determine actual exit conditions...*/
-	int actualExitStatus;
+		/** Find the MpiResource corresponding to the given node
+			number.
+			@param node Which node you're looking for.
+			@return The MpiResource object, or NULL if not found. 
+		*/
+	MpiResource* findResource( int node );
 
 		// the list of remote (mpi) resources
 		// Perhaps use STL soon.
@@ -142,9 +223,18 @@ class MPIShadow : public BaseShadow
 		/** Replace $(NODE) with the proper node number */
 	void replaceNode ( ClassAd *ad, int nodenum );
 	
-    int printAdToFile(ClassAd *ad, char *JobHistoryFileName);
+	int info_tid;	// DC id for our timer to get resource info 
+
+#if ! MPI_USES_RSH
+	char* master_addr;   // string containing the IP and port where
+		                 // the MPI master node is running.
+
+	char* mpich_jobid;   // job ID string, we use
+                         // "submit_host.cluster.proc" 
+
+#endif
 
 };
 
 
-#endif
+#endif /* MPISHADOW_H */

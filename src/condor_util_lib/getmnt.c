@@ -23,19 +23,7 @@
 
  
 
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/param.h>
-#include <sys/stat.h>
-/* #include <sys/dir.h>  This is wrong
-path for Solaris (alternative provided
-below) ..dhaval 6/24*/
-/* Solaris specific change .dhaval 6/24
-*/
-#if defined(Solaris)
-#include </usr/ucbinclude/sys/dir.h>
-#endif
-
+#include "condor_common.h"
 #include "condor_getmnt.h"
 
 char			*strdup(), *malloc();
@@ -228,12 +216,9 @@ char			*path;
 FILE			*setmntent();
 struct mntent	*getmntent();
 
-getmnt( start, buf, bufsize, mode, path )
-int				*start;
-struct fs_data	buf[];
-unsigned		bufsize;
-int				mode;
-char			*path;
+int
+getmnt( int* start, struct fs_data buf[], unsigned int bufsize, 
+		int	mode, char* path )
 {
 	FILE			*tab;
 	struct mntent	*ent;

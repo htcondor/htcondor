@@ -6,6 +6,4 @@
 #define		IS_SUN4X		YES
 #define		IS_SUN4X_SOLARIS	YES
 
-#define		ImakeArchFlag		-DIS_SUN4X
-
 #define		PVM_ARCH		SUN4SOL2

@@ -250,10 +250,10 @@ display (FILE *file, ClassAdList *list)
 	ClassAd *ad;
 
 	list->Open();
-    while (ad = (ClassAd *) list->Next())
-    {
-		if (!display (file, ad))
+    while( (ad = (ClassAd *) list->Next()) ) {
+		if( !display (file, ad) ) {
 			retval = 0;
+		}
     }
     list->Close ();
 
@@ -265,8 +265,7 @@ clearList (List<char> &l)
 {
     char *x;
     l.Rewind ();
-    while (x = l.Next ())
-    {
+    while( (x = l.Next()) ) {
         delete [] x;
         l.DeleteCurrent ();
     }
@@ -277,8 +276,7 @@ clearList (List<Formatter> &l)
 {
     Formatter *x;
     l.Rewind ();
-    while (x = l.Next ())
-    {
+    while( (x = l.Next ()) ) {
 		if( x->fmtKind == PRINTF_FMT ) delete [] x->printfFmt;
 		delete x;
         l.DeleteCurrent ();
@@ -292,8 +290,7 @@ copyList (List<Formatter> &to, List<Formatter> &from)
 
 	clearList (to);
 	from.Rewind ();
-	while (item = from.Next ())
-	{
+	while( (item = from.Next()) ) {
 		newItem = new Formatter;
 		*newItem = *item;
 		if( newItem->fmtKind == PRINTF_FMT )
@@ -310,8 +307,9 @@ copyList (List<char> &to, List<char> &from)
 
 	clearList (to);
 	from.Rewind ();
-	while (item = from.Next ())
+	while( (item = from.Next()) ) {
 		to.Append (new_strdup (item));
+	}
 }
 
 

@@ -288,7 +288,7 @@ sub Monitor
 	    chomp $line;
 	    $linenum++;
 
-	    if( $line =~ /^\s+\(0\) Job was not checkpointed./ )
+	    if( $line =~ /^\s+\(0\) Job was not checkpointed\./ )
 	    {
 		debug( "job was evicted without ckpt\n" );
 		# execute callback if one is registered
@@ -296,7 +296,7 @@ sub Monitor
 		    if defined $EvictedWithoutCheckpointCallback;
 
 	    }
-	    elsif( $line =~ /^\s+\(1\) Job was checkpointed./ )
+	    elsif( $line =~ /^\s+\(1\) Job was checkpointed\./ )
 	    {
 		debug( "job was evicted with ckpt\n" );
 		# execute callback if one is registered

@@ -264,7 +264,11 @@ _Flatten( EvalState &state, Value &val, ExprTree*&ntree, int*) const
 			rval = tree->Flatten( state, val, ntree );
 
 			// don't inline if it didn't flatten to a value, and clear cache
+			// do inline if FlattenAndInline was called
 			if( ntree ) {
+				if( state.flattenAndInline ) {	// NAC
+					return true;   				// NAC
+				}								// NAC
 				delete ntree;
 				ntree = Copy( );
 				val.SetUndefinedValue( );

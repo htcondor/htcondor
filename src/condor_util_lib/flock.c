@@ -30,6 +30,9 @@
 
 extern int	errno;
 
+void display_flock( struct flock *f );
+void display_cmd( int cmd );
+
 /*
 ** Compatibility routine for systems which utilize various forms of the
 ** fcntl() call for this purpose.  Note that semantics are a bit different
@@ -37,9 +40,8 @@ extern int	errno;
 ** only be applied if the file is open for writing, and a read lock
 ** (shared lock) can only be applied if the file is open for reading.
 */
-flock( fd, op )
-int		fd;
-int		op;
+int
+flock( int fd, int op )
 {
 	struct flock	f;
 	int				cmd;
@@ -81,8 +83,8 @@ int		op;
 	break
 
 #define DEBUG(name,fmt) dprintf( D_ALWAYS, "name = fmt\n", name );
-display_flock( f )
-struct flock	*f;
+void
+display_flock( struct flock	*f )
 {
 	switch( f->l_type ) {
 		CASE( l_type, F_RDLCK );
@@ -102,8 +104,8 @@ struct flock	*f;
 }
 
 
-display_cmd( cmd )
-int		cmd;
+void
+display_cmd( int cmd )
 {
 	switch( cmd ) {
 		CASE( cmd, F_DUPFD );

@@ -32,6 +32,17 @@
 int open_tcp_stream( unsigned int ip_addr, unsigned short port );
 int open_file_stream( const char *file, int flags, size_t *len );
 
+/* remote system call prototypes */
+extern int REMOTE_CONDOR_file_info(char *logical_name, int *fd, 
+	char *physical_name);
+extern int REMOTE_CONDOR_put_file_stream(char *file, size_t len, 
+	unsigned int *ip_addr, u_short *port_num);
+extern int REMOTE_CONDOR_get_file_stream(char *file, size_t *len, 
+	unsigned int *ip_addr, u_short *port_num);
+extern int REMOTE_CONDOR_file_info(char *logical_name, int *fd, 
+	char *physical_name);
+
+
 int _condor_in_file_stream;
 
 /*
@@ -56,7 +67,7 @@ open_file_stream( const char *file, int flags, size_t *len )
 	_condor_in_file_stream = FALSE;
 
 		/* Ask the shadow how we should access this file */
-	mode = REMOTE_syscall( CONDOR_file_info, file, &pipe_fd, local_path );
+	mode = REMOTE_CONDOR_file_info(file, &pipe_fd, local_path );
 
 	if( mode < 0 ) {
 		EXCEPT( "CONDOR_file_info failed in open_file_stream\n" );
@@ -83,9 +94,9 @@ open_file_stream( const char *file, int flags, size_t *len )
 		/* Try to access it using the file stream protocol  */
 	if( fd < 0 ) {
 		if( flags & O_WRONLY ) {
-			st = REMOTE_syscall(CONDOR_put_file_stream, file,*len,&addr,&port);
+			st = REMOTE_CONDOR_put_file_stream(file,*len,&addr,&port);
 		} else {
-			st = REMOTE_syscall(CONDOR_get_file_stream, file, len,&addr,&port);
+			st = REMOTE_CONDOR_get_file_stream(file, len,&addr,&port);
 		}
 
 		if( st < 0 ) {

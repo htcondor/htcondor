@@ -29,7 +29,6 @@
 #include "condor_syscall_mode.h"
 
 #include "condor_debug.h"
-static char *_FileName_ = __FILE__;
 
 #include "file_state.h"
 #include "file_table_interf.h"
@@ -40,13 +39,23 @@ static char *_FileName_ = __FILE__;
 #include "condor_file_special.h"
 #include "condor_file_agent.h"
 #include "condor_file_buffer.h"
+#include "condor_file_compress.h"
+#include "condor_file_append.h"
+#include "condor_file_nest.h"
 #include "condor_error.h"
 
 #include <stdarg.h>
 #include <sys/errno.h>
 
-// XXX Where is the header for this?
-extern int errno;
+/* These are the remote system calls we use in this file */
+extern "C" int REMOTE_CONDOR_report_file_info_new(char *name, 
+	long long open_count, long long read_count, long long write_count,
+	long long seek_count, long long read_bytes, long long write_bytes);
+extern "C" int REMOTE_CONDOR_get_file_info_new(char *logical_name,
+	char *actual_url);
+extern "C" int REMOTE_CONDOR_get_buffer_info(int *bytes, int *block_size, 
+	int *prefetch_size);
+extern "C" int REMOTE_CONDOR_chdir(const char *path);
 
 CondorFileTable *FileTab=0;
 
@@ -72,7 +81,8 @@ public:
 
 	void	report() {
 		if( RemoteSysCalls() ) {
-			REMOTE_syscall( CONDOR_report_file_info_new, info_name, open_count, read_count, write_count, seek_count, read_bytes, write_bytes );
+			REMOTE_CONDOR_report_file_info_new( info_name, open_count, 
+				read_count, write_count, seek_count, read_bytes, write_bytes );
 		}
 	}
 
@@ -120,24 +130,18 @@ public:
 };
 
 /*
-This is a little tricky.
-
-When a program exits, the last thing the startup code does is flush
-any (stdio or iostream) buffered files and close them. If any files are
-(Condor) buffered, this data will sit in the (Condor) buffer until file
-is closed, whereupon it will be flushed to the shadow.
-
-However, files don't always get closed nicely, so we don't know exactly
-when to flush them.  There is no mechanism that ensures Condor gets the
-last laugh at exit time, so we will have atexit() warn us when an
-exit is imminent.  This will cause a flag to be set in CondorFileBuffer
-that instructs any further writes to be flushed immediately to disk.
+We register this function to be the last thing executed before a job exits.
+Here, we call fflush() to force all the stio buffers into the Condor buffers,
+and then close all the files.  We are obliged to close all of our files manually,
+because several file types have commit semantics that only force data when a file
+Anything output after this point will be lost, so users relying on output from
+global destructors will be disappointed.
 */
 
-static void _condor_disable_buffering()
+static void _condor_file_table_shutdown()
 {
-	FileTab->flush();
-	FileTab->set_flush_mode(1);	
+	fflush(0);
+	FileTab->close_all();
 	FileTab->report_all();
 }
 
@@ -152,7 +156,6 @@ notice.
 void CondorFileTable::init()
 {
 	got_buffer_info = 0;
-	flush_mode = 0;
 	buffer_size = 0;
 	buffer_block_size = 0;
 	info_count = 0;
@@ -179,7 +182,7 @@ void CondorFileTable::init()
 
 	strcpy( working_dir, "." );
 
-	atexit( _condor_disable_buffering );
+	atexit( _condor_file_table_shutdown );
 }
 
 void CondorFileTable::flush()
@@ -187,7 +190,7 @@ void CondorFileTable::flush()
 	for( int i=0; i<length; i++ ) {
 		if( pointers[i] ) {
 			if( pointers[i]->file ) {
-				pointers[i]->file->fsync();
+				pointers[i]->file->flush();
 			}
 		}
 	}
@@ -202,9 +205,11 @@ void CondorFileTable::report_all()
 	}
 }
 
-void CondorFileTable::set_flush_mode( int on_off )
+void CondorFileTable::close_all()
 {
-	flush_mode = on_off;
+	for( int i=0; i<length; i++ ) {
+		close(i);
+	}
 }
 
 void CondorFileTable::set_aggravate_mode( int on_off )
@@ -368,80 +373,136 @@ void CondorFileTable::lookup_url( char *logical_name, char *url )
 	}
 
 	// If in local mode, just use local:logical_name.
-	// Otherwise, ask shadow.  If that fails, try remote:logical_name.
+	// Otherwise, ask shadow.  If that fails, try buffer:remote:logical_name.
 
 	if( LocalSysCalls() ) {
 		sprintf(url,"local:%s",logical_name);
 	} else {
-		int result = REMOTE_syscall( CONDOR_get_file_info, logical_name, url );
+		int result = REMOTE_CONDOR_get_file_info_new( logical_name, url );
 		if( result<0 ) {
-			sprintf(url,"remote:%s",logical_name);
+			sprintf(url,"buffer:remote:%s",logical_name);
 		}
 
 		if(!got_buffer_info) {
 			int temp;
-			REMOTE_syscall( CONDOR_get_buffer_info, &buffer_size, &buffer_block_size, &temp );
+			REMOTE_CONDOR_get_buffer_info( &buffer_size, &buffer_block_size, 
+				&temp );
 			got_buffer_info = 1;
 		}
 	}
-
 }
 
 /*
-Given a url, create and open an instance of CondorFile.
+Convert a nested url into a url chain.  For example, compress:fetch:remote:/tmp/file
+becomes CondorFileCompress( CondorFileFetch( CondorFileRemote ) )
 */
 
-CondorFile * CondorFileTable::open_url( char *url, int flags, int mode, int allow_buffer )
+CondorFile * CondorFileTable::create_url_chain( char *url )
 {
+	char method[_POSIX_PATH_MAX];
+	char rest[_POSIX_PATH_MAX];
+	char *next;
 	CondorFile *f;
 
-	if(!strncmp(url,"local",5)) {
-		f = new CondorFileLocal;
-	} else if(!strncmp(url,"fd",2)) {
-		f = new CondorFileFD;
-	} else if(!strncmp(url,"special",7)) {
-		f = new CondorFileSpecial;
-	} else if(!strncmp(url,"remote",6)) {
-		if( !allow_buffer || !buffer_size || !buffer_block_size ) {
-			f = new CondorFileRemote;
-		} else {
-			f = new CondorFileBuffer(new CondorFileRemote);
+	int fields = sscanf( url, "%[^:]:%s", method, rest );
+	if( fields!=2 ) return 0;
+
+	/* Options interpreted by each layer go in () following the : */
+	/* If we encounter that here, skip it. */
+
+	next = rest;
+	if( *next=='(' ) {
+		while(*next) {
+			next++;
+			if(*next==')') {
+				next++;
+				break;
+			}
 		}
+	}
+
+	/* Now examine the method. */
+
+	if( !strcmp( method, "local" ) ) {
+		return new CondorFileLocal;
+	} else if( !strcmp( method, "fd" ) )  {
+		return new CondorFileFD;
+	} else if( !strcmp( method, "special" ) ) {
+		return new CondorFileSpecial;
+	} else if( !strcmp( method, "remote" ) ) {
+		return new CondorFileRemote;
+
+#ifdef ENABLE_NEST
+	} else if( !strcmp( method, "nest" ) ) {
+		return new CondorFileNest;
+#endif
+
+	} else if( !strcmp( method, "buffer" ) ) {
+		f = create_url_chain( next );
+		if(f) return new CondorFileBuffer( f, buffer_size, buffer_block_size );
+		else return 0;
+	} else if( !strcmp( method, "fetch" ) ) {
+		f = create_url_chain( next );
+		if(f) return new CondorFileAgent( f );
+		else return 0;
+	} else if( !strcmp( method, "compress" ) ) {
+		f = create_url_chain( next );
+		if(f) return new CondorFileCompress( f );
+		else return 0;
+	} else if( !strcmp( method, "append" ) ) {
+		f = create_url_chain( next );
+		if(f) return new CondorFileAppend( f );
+		else return 0;
 	} else {
-		_condor_warning("I don't understand url (%s).",url);
+		_condor_warning(CONDOR_WARNING_KIND_BADURL,"I don't understand url (%s).",url);
 		errno = ENOENT;
 		return 0;
 	}
+}
 
-	if( f->open(url,flags,mode)>=0 ) {
-		return f;
-	} else {
-		delete f;
+/* Given a url, create and open a url chain. */
+
+CondorFile * CondorFileTable::open_url( char *url, int flags, int mode )
+{
+	CondorFile *f = create_url_chain( url );
+
+	if( !f ) {
+		_condor_warning(CONDOR_WARNING_KIND_BADURL,"I can't parse url type (%s).",url);
+		errno = ENOENT;
 		return 0;
+	} else {
+		if( f->open(url,flags,mode)>=0 ) {
+			return f;
+		} else {
+			delete f;
+			return 0;
+		}
 	}
 }
 
-/*
-Open a url.  If the open fails, retry using remote system calls when possible.
-*/
+/* Open a url.  If the open fails, fall back on buffered remote system calls. */
 
-CondorFile * CondorFileTable::open_url_retry( char *url, int flags, int mode, int allow_buffer )
+CondorFile * CondorFileTable::open_url_retry( char *url, int flags, int mode )
 {
 	CondorFile *f;
 
-	f = open_url( url, flags, mode, allow_buffer );
+	f = open_url( url, flags, mode );
 	if(f) return f;
 
-	char method[_POSIX_PATH_MAX];
-	char path[_POSIX_PATH_MAX];
-	char new_url[_POSIX_PATH_MAX];
-
 	if( RemoteSysCalls() ) {
-		if( strncmp(url,"remote",6) ) {
-			sscanf(url,"%[^:]:%s",method,path);
-			sprintf(new_url,"remote:%s",path);
-			return open_url( new_url, flags, mode, allow_buffer );
-		}
+		char new_url[_POSIX_PATH_MAX];
+		char *path;
+
+		if( strstr(url,"remote:") ) return 0;
+
+		path = strrchr(url,':');
+		if(!path) return 0;
+
+		path++;
+		if(!*path) return 0;
+
+		sprintf(new_url,"buffer:remote:%s",path);
+		return open_url( new_url, flags, mode );
 	}
 
 	return 0;
@@ -462,10 +523,30 @@ static int needs_reopen( int old_flags, int new_flags )
 }
 
 /*
-Create and open a file object from a logical name.  If either the logical name or url are already in the file table AND the file was previously opened with compatible flags, then share the object.  If not, elevate the flags to a common denominator and open a new object suitable for both purposes.
+Find any pointers to one file and replace it with another.
 */
 
-CondorFile * CondorFileTable::open_file_unique( char *logical_name, int flags, int mode, int allow_buffer )
+void CondorFileTable::replace_file( CondorFile *old_file, CondorFile *new_file )
+{
+	int i;
+
+	for( i=0;i<length; i++ ) {
+		if(pointers[i] && pointers[i]->file==old_file) {
+			pointers[i]->file=new_file;
+		}
+	}
+}
+
+
+/*
+Create and open a file object from a logical name.  If either the logical
+name or url are already in the file table AND the file was previously
+opened with compatible flags, then share the object.  If not, elevate
+the flags to a common denominator and open a new object suitable for
+both purposes.
+*/
+
+CondorFile * CondorFileTable::open_file_unique( char *logical_name, int flags, int mode )
 {
 	char url[_POSIX_PATH_MAX];
 
@@ -474,26 +555,28 @@ CondorFile * CondorFileTable::open_file_unique( char *logical_name, int flags, i
 		lookup_url( (char*)logical_name, url );
 		match = find_url( url );
 		if( match==-1 ) {
-			return open_url_retry( url, flags, mode, allow_buffer );
+			return open_url_retry( url, flags, mode );
 		}
 	}
 
 	CondorFilePointer *p = pointers[match];
+	CondorFile *old_file;
 
 	if( needs_reopen( p->flags, flags ) ) {
 		flags &= ~(O_RDONLY);
 		flags &= ~(O_WRONLY);
 		flags |= O_RDWR;
 
-		p->file->fsync();
+		p->file->flush();
 
-		CondorFile *f = open_url_retry( p->file->get_url(), flags, mode, allow_buffer );
+		CondorFile *f = open_url_retry( p->file->get_url(), flags, mode );
 		if(!f) return 0;
 
-		if( p->file->close()!=0 ) return 0;
-		delete p->file;
+		old_file = p->file;
+		if( old_file->close()!=0 ) return 0;
 
-		p->file = f;
+		replace_file( old_file, f );
+		delete old_file;
 	}
 
 	return p->file;
@@ -528,7 +611,6 @@ int CondorFileTable::open( const char *logical_name, int flags, int mode )
 	complete_path( logical_name, full_logical_name );
 
 	// Find a fresh file descriptor
-	// This has to come first so we know if this is stderr
 
 	int fd = find_empty();
 	if(fd<0) {
@@ -536,7 +618,7 @@ int CondorFileTable::open( const char *logical_name, int flags, int mode )
 		return -1;
 	}
 
-	file = open_file_unique( (char*) full_logical_name, flags, mode, fd!=2 );
+	file = open_file_unique( (char*) full_logical_name, flags, mode );
 	if(!file) return -1;
 
 	info = make_info( (char*) full_logical_name );
@@ -723,6 +805,9 @@ ssize_t CondorFileTable::write( int fd, const void *data, size_t nbyte )
 	// If there is an error, don't touch the offset.
 	if(actual<0) return -1;
 
+	// Special case: always flush data on stderr
+	if(fd==2) f->flush();
+
 	// Update the offset by the amount written
 	fp->offset += actual;
 
@@ -733,11 +818,6 @@ ssize_t CondorFileTable::write( int fd, const void *data, size_t nbyte )
 	// Perhaps send a warning message
 	check_safety(fp);
 
-	// If flush_mode is enabled, flush it to disk
-	if(flush_mode) {
-		f->fsync();
-	}
-
 	// Return the number of bytes written
 	return actual;
 }
@@ -746,7 +826,7 @@ void CondorFileTable::check_safety( CondorFilePointer *fp )
 {
 	if( fp->info->read_bytes && fp->info->write_bytes && !fp->info->already_warned ) {
 		fp->info->already_warned = 1;
-		_condor_warning("File '%s' used for both reading and writing.  This is not checkpoint-safe.\n",fp->logical_name);
+		_condor_warning(CONDOR_WARNING_KIND_READWRITE,"File '%s' used for both reading and writing.  This is not checkpoint-safe.\n",fp->logical_name);
 	}
 }
 
@@ -762,6 +842,14 @@ off_t CondorFileTable::lseek( int fd, off_t offset, int whence )
 	CondorFilePointer *fp = pointers[fd];
 	CondorFile *f = fp->file;
 	int temp;
+
+	// This error could conceivably be simply a warning and return with errno=ESPIPE.
+	// Despite this, most programs assume that a seek performed on a regular file
+	// will succeed and do not check the error code.  So, this must be a fatal error.
+
+	if( !f->is_seekable() ) {
+		_condor_error_fatal("Seek operation attempted on non-seekable file %s.",f->get_url());
+	}
 
 	// Compute the new offset first.
 	// If the new offset is illegal, don't change it.
@@ -876,7 +964,7 @@ int CondorFileTable::chdir( const char *path )
 	int result;
 
 	if( MyImage.GetMode() != STANDALONE ) {
-		result = REMOTE_syscall( CONDOR_chdir, path );
+		result = REMOTE_CONDOR_chdir( path );
 	} else {
 		result = syscall( SYS_chdir, path );
 	}
@@ -993,6 +1081,93 @@ int CondorFileTable::fsync( int fd )
 	return pointers[fd]->file->fsync();
 }
 
+int CondorFileTable::fstat( int fd, struct stat *buf)
+{
+	if( resume(fd)<0 ) return -1;
+	return pointers[fd]->file->fstat(buf);
+}
+
+int CondorFileTable::stat( const char *name, struct stat *buf)
+{
+	int fd;
+	int scm, oscm;
+	int ret;
+	int do_local;
+	char newname[_POSIX_PATH_MAX];
+
+	/* See if the file is open, if so, then just do an fstat. If it isn't open
+		then call the normal stat in unmapped mode with whatever the shadow
+		said the location of the file was. */
+	fd = find_logical_name((char*)name);
+	if (fd == -1)
+	{
+		oscm = scm = GetSyscallMode();
+
+		/* determine where the shadow says to deal with this file. */
+		do_local = _condor_is_file_name_local( name, newname );
+		if (LocalSysCalls() || do_local) {
+			scm |= SYS_LOCAL;		/* turn on SYS_LOCAL */
+			scm &= ~(SYS_REMOTE);	/* turn off SYS_REMOTE */
+		}
+		else {
+			scm |= SYS_REMOTE;		/* Turn on SYS_REMOTE */
+			scm &= ~(SYS_LOCAL);	/* Turn off SYS_LOCAL */
+		}
+
+		/* either way, it needs to be unmapped so we don't recurse into here */
+		scm |= SYS_UNMAPPED; /* turn on SYS_UNMAPPED */
+		scm &= ~(SYS_MAPPED); /* turn off SYS_MAPPED */
+
+		/* invoke it with where the shadow said the file was */
+		SetSyscalls(scm);
+		ret = ::stat(newname, buf);
+		SetSyscalls(oscm); /* set it back to what it was */
+		
+		return ret;
+	}
+	return fstat(fd, buf);
+}
+
+int CondorFileTable::lstat( const char *name, struct stat *buf)
+{
+	int fd;
+	int scm, oscm;
+	int ret;
+	int do_local;
+	char newname[_POSIX_PATH_MAX];
+
+	/* See if the file is open, if so, then just do an fstat. If it isn't open
+		then call the normal lstat in unmapped mode with whatever the shadow
+		said the location of the file was. */
+	fd = find_logical_name((char*)name);
+	if (fd == -1)
+	{
+		oscm = scm = GetSyscallMode();
+
+		/* determine where the shadow says to deal with this file. */
+		do_local = _condor_is_file_name_local( name, newname );
+		if (LocalSysCalls() || do_local) {
+			scm |= SYS_LOCAL;		/* turn on SYS_LOCAL */
+			scm &= ~(SYS_REMOTE);	/* turn off SYS_REMOTE */
+		}
+		else {
+			scm |= SYS_REMOTE;		/* Turn on SYS_REMOTE */
+			scm &= ~(SYS_LOCAL);	/* Turn off SYS_LOCAL */
+		}
+
+		/* either way, it needs to be unmapped so we don't recurse into here */
+		scm |= SYS_UNMAPPED; /* turn on SYS_UNMAPPED */
+		scm &= ~(SYS_MAPPED); /* turn off SYS_MAPPED */
+
+		SetSyscalls(scm);
+		ret = ::lstat(newname, buf);
+		SetSyscalls(oscm); /* set it back to what it was */
+		
+		return ret;
+	}
+	return fstat(fd, buf);
+}
+
 /*
 poll converts each fd into its mapped equivalent and then does a local poll.  A poll() on a non local file causes a warning and failure with EINVAL
 */
@@ -1012,7 +1187,7 @@ int CondorFileTable::poll( struct pollfd *fds, int nfds, int timeout )
 			realfds[i].fd = _condor_get_unmapped_fd(fds[i].fd);
 			realfds[i].events = fds[i].events;
 		} else {
-			_condor_warning("poll() is not supported for remote files");
+			_condor_warning(CONDOR_WARNING_KIND_UNSUP,"poll() is not supported for remote files");
 			free(realfds);
 			errno = EINVAL;
 			return -1;
@@ -1065,7 +1240,7 @@ int CondorFileTable::select( int n, fd_set *r, fd_set *w, fd_set *e, struct time
 				if( (r && FD_ISSET(fd,r)) ||
 				    (w && FD_ISSET(fd,w)) ||
 				    (e && FD_ISSET(fd,e)) ) {
-					_condor_warning("select() is not supported for remote files.");
+					_condor_warning(CONDOR_WARNING_KIND_UNSUP,"select() is not supported for remote files.");
 					errno = EINVAL;
 					return -1;
 				}
@@ -1100,16 +1275,6 @@ int CondorFileTable::select( int n, fd_set *r, fd_set *w, fd_set *e, struct time
 	return result;
 }
 
-int CondorFileTable::get_buffer_size()
-{
-	return buffer_size;
-}
-
-int CondorFileTable::get_buffer_block_size()
-{
-	return buffer_block_size;
-}
-
 /*
 Checkpoint the state of the file table.  This involves reporting the disposition of all files, and flushing and closing them.  The closed files will be re-bound and re-opened lazily after a resume.  Notice that these need to be closed even for a periodic checkpoint, because logical names must be re-bound to physical urls.  If a close fails at this point, we must roll-back, otherwise the data on disk would not be consistent with the checkpoint image.
 */
@@ -1123,7 +1288,8 @@ void CondorFileTable::checkpoint()
 	dump();
 
 	if( MyImage.GetMode() != STANDALONE ) {
-		REMOTE_syscall( CONDOR_get_buffer_info, &buffer_size, &buffer_block_size, &temp );
+		REMOTE_CONDOR_get_buffer_info( &buffer_size, &buffer_block_size, 
+			&temp );
 	}
 	dprintf(D_ALWAYS,"working dir = %s\n",working_dir);
 
@@ -1158,8 +1324,9 @@ void CondorFileTable::resume()
 	dprintf(D_ALWAYS,"working dir = %s\n",working_dir);
 
 	if(MyImage.GetMode()!=STANDALONE) {
-		REMOTE_syscall( CONDOR_get_buffer_info, &buffer_size, &buffer_block_size, &temp );
-		result = REMOTE_syscall(CONDOR_chdir,working_dir);
+		REMOTE_CONDOR_get_buffer_info( &buffer_size, &buffer_block_size, 
+			&temp );
+		result = REMOTE_CONDOR_chdir(working_dir);
 	} else {
 		result = ::chdir( working_dir );
 	}
@@ -1185,7 +1352,7 @@ int CondorFileTable::resume( int fd )
 	p = pointers[fd];
 
 	if( !p->file ) {
-		p->file = open_file_unique( p->logical_name, p->flags, 0, fd!=2 );
+		p->file = open_file_unique( p->logical_name, p->flags, 0 );
 		if( !p->file ) {
 			_condor_error_retry("Couldn't re-open '%s' after a restart.  Please fix it.\n",p->logical_name);
 		}
@@ -1206,13 +1373,12 @@ int CondorFileTable::is_fd_local( int fd )
 	return pointers[fd]->file->is_file_local();
 }
 
-int CondorFileTable::is_file_name_local( const char *incomplete_name )
+int CondorFileTable::is_file_name_local( const char *incomplete_name, char *local_name )
 {
 	char url[_POSIX_PATH_MAX];
 	char logical_name[_POSIX_PATH_MAX];
 
 	// Convert the incomplete name into a complete path
-
 	complete_path( incomplete_name, logical_name );
 
 	// Now look to see if the file is already open.
@@ -1220,19 +1386,29 @@ int CondorFileTable::is_file_name_local( const char *incomplete_name )
 
 	int match = find_logical_name( logical_name );
 	if(match!=-1) {
+		CondorFile *file;
 		resume(match);
-		return pointers[match]->file->is_file_local();
+		file = pointers[match]->file;
+		strcpy(local_name,strrchr(file->get_url(),':')+1); 
+		return file->is_file_local();
 	}
 
 	// Otherwise, resolve the url by normal methods.
 	lookup_url( logical_name, url );
 
-	// Finally, return true if the url begins with "local"
+	// Copy the local path name out
+	strcpy(local_name,strrchr(url,':')+1);
 
-	if(!strncmp(url,"local:",6)) {
-		return 1;
-	} else {
-		return 0;
+	// Create a URL chain and ask it if it is local.
+	CondorFile *f = create_url_chain(url);
+	if(f) {
+		if( f->is_file_local() ) {
+			delete f;
+			return 1;
+		} else {
+			delete f;
+			return 0;
+		}
 	}
 }
 

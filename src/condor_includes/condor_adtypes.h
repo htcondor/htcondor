@@ -26,18 +26,19 @@
 #ifndef __CONDOR_ADTYPES__
 #define __CONDOR_ADTYPES__
 
-/* these should really be const, but that causes problems with 
-   ClassAd::SetMyTypeName and ClassAd::SetTargetTypeName.  -Jim B. */
-
-static const char STARTD_ADTYPE		[] = "Machine";
-static const char SCHEDD_ADTYPE		[] = "Scheduler";
-static const char MASTER_ADTYPE		[] = "DaemonMaster";
-static const char CKPT_SRVR_ADTYPE	[] = "CkptServer";
-static const char JOB_ADTYPE	 	[] = "Job";
-static const char QUERY_ADTYPE		[] = "Query";
-static const char COLLECTOR_ADTYPE	[] = "Collector";
-static const char CKPT_FILE_ADTYPE	[] = "CkptFile";
-static const char USERAUTH_ADTYPE   [] = "Authentication"; //mikeu added 
-static const char LICENSE_ADTYPE	[] = "License";
+static const char  STARTD_ADTYPE	[] = "Machine";
+static const char  SCHEDD_ADTYPE	[] = "Scheduler";
+static const char  MASTER_ADTYPE	[] = "DaemonMaster";
+static const char  CKPT_SRVR_ADTYPE	[] = "CkptServer";
+static const char  JOB_ADTYPE		[] = "Job";
+static const char  QUERY_ADTYPE		[] = "Query";
+static const char  COLLECTOR_ADTYPE	[] = "Collector";
+static const char  CKPT_FILE_ADTYPE	[] = "CkptFile";
+static const char  USERAUTH_ADTYPE	[] = "Authentication";
+static const char  LICENSE_ADTYPE	[] = "License";
+static const char  STORAGE_ADTYPE	[] = "Storage";
+static const char  ANY_ADTYPE		[] = "Any";
+static const char  SUBMITTER_ADTYPE	[] = "Submitter";
 
 #endif
+

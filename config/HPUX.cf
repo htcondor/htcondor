@@ -45,15 +45,12 @@
 #define HAS_GETDTABLESIZE		NO
 #define HAS__UTSSYS			YES
 #define HAS_GETPGRP2			YES
-#define HAS_SETREGID			NO
 #define HAS_UTIME			YES
 #define HAS_VHANGUP			NO
-#define HAS_SETRESUID			YES
-#define HAS_SETRESGID			YES
 #define HAS_SETEGID			NO
 #define HAS_SETEUID			NO
 #define DO_BENCHMARKING			YES
-#define HAS_PVM				NO
+#define HAS_PVM				YES
 #define PVM_ARCH			HPPA
 #define HAS_STATIC			YES
 

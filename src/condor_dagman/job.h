@@ -1,3 +1,26 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-2001 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+ ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
 #ifndef JOB_H
 #define JOB_H
 
@@ -12,27 +35,33 @@
 #include "debug.h"
 #include "script.h"
 
+#define JOB_ERROR_TEXT_MAXLEN 128
+
 /**  The job class represents a job in the DAG and it's state in the Condor
      system.  A job is given a name, a CondorID, and three queues.  The
-     incoming queue is a list of parent jobs that this one depends on.  That
+     parents queue is a list of parent jobs that this one depends on.  That
      queue never changes once set.  The waiting queue is the same as the
-     incoming queue, but shrinks to emptiness has the parent jobs complete.
-     The outgoing queue is a list of child jobs that depend on this one.
+     parents queue, but shrinks to emptiness has the parent jobs complete.
+     The children queue is a list of child jobs that depend on this one.
      Once set, this queue never changes.<p>
 
-     From DAGMan's point of view, a job has four basic states in the Condor
-     system (refer to the Job::status_t enumeration).  It starts out as
-     READY, meaning that it has not yet been submitted.  The job's state
-     changes to SUBMITTED once in the Condor system.  Only one of the remaining
-     states is possible after that.  Either the job is DONE, if I completes
-     successfully, or is in the ERROR if it completes abnormally.<p>
+     From DAGMan's point of view, a job has six basic states in the
+     Condor system (refer to the Job::status_t enumeration).  It
+     starts out as READY, meaning that it has not yet been submitted.
+     If the job has a PRE script defined it changes to PRERUN while
+     that script executes.  The job's state changes to SUBMITTED once
+     in the Condor system.  If it completes successfully and the job
+     has a POST script defined it changes to POSTRUN while that script
+     executes, otherwise if it completes successfully it is DONE, or
+     is in the ERROR state if it completes abnormally.<p>
 
-     The DAG class will control the job by modifying and viewing its three
-     queues.  Once the WAITING queue becomes empty, the job is submitted, and
-     its state goes from READY to SUBMITTED.  If the job completes
-     successfully, its state is changed to DONE, and the children (listed in
-     this jobs OUTGOING queue) are put on the DAG's ready list.
-*/
+     The DAG class will control the job by modifying and viewing its
+     three queues.  Once the WAITING queue becomes empty, the job
+     state either changes to PRERUN while the job's PRE script runs,
+     or the job is submitted and its state changes immediately to
+     SUBMITTED.  If the job completes successfully, its state is
+     changed to DONE, and the children (listed in this jobs CHILDREN
+     queue) are put on the DAG's ready list.  */
 class Job {
   public:
   
@@ -43,7 +72,7 @@ class Job {
         /** Parents of this job.  The list of parent jobs, which does not
             change while DAGMan is running.
         */
-        Q_INCOMING,
+        Q_PARENTS,
 
         /** Parents of this job not finished.  The list of parents that
             have not yet finished.  Once this queue is empty, this job may
@@ -54,17 +83,17 @@ class Job {
         /** Children of this job.  The list of child jobs, which does not
             change while DAGMan is running.
         */
-        Q_OUTGOING
+        Q_CHILDREN
     };
 
     /** The string names for the queue_t enumeration.  Use this for printing
-        the names "Q_INCOMING", "Q_WAITING", or "Q_OUTGOING".  For example,
-        to print out whether the outgoing queue is empty:<p>
+        the names "Q_PARENTS", "Q_WAITING", or "Q_CHILDREN".  For example,
+        to print out whether the children queue is empty:<p>
         <pre>
           Job * job;  // Assume this is assigned to a job
           printf ("The %s queue of job %s is %s empty\n",
-                  Job::queue_t_names[Q_OUTGOING], job->GetJobName(),
-                  job->IsEmpty(Q_OUTGOING) ? "", "not");
+                  Job::queue_t_names[Q_CHILDREN], job->GetJobName(),
+                  job->IsEmpty(Q_CHILDREN) ? "", "not");
         </pre>
     */
     static const char *queue_t_names[];
@@ -74,15 +103,20 @@ class Job {
     */
     enum status_t {
         /** Job is ready for submission */ STATUS_READY,
+        /** Job waiting for PRE script */  STATUS_PRERUN,
         /** Job has been submitted */      STATUS_SUBMITTED,
+        /** Job waiting for POST script */ STATUS_POSTRUN,
         /** Job is done */                 STATUS_DONE,
-        /** Job exited abnormally */       STATUS_ERROR
+        /** Job exited abnormally */       STATUS_ERROR,
     };
 
     /** The string names for the status_t enumeration.  Use this the same
         way you would use the queue_t_names array.
     */
     static const char * status_t_names[];
+
+	// explanation text for errors
+	char error_text[JOB_ERROR_TEXT_MAXLEN];
   
     /** Constructor
         @param jobName Name of job in dag file.  String is deep copied.
@@ -93,7 +127,9 @@ class Job {
     ///
     ~Job();
   
-    /** */ inline char *  GetJobName () const { return _jobName; }
+    // returns _jobName
+	inline const char* GetJobName() { return _jobName; }
+
     /** */ inline char *  GetCmdFile () const { return _cmdFile; }
     /** */ inline JobID_t GetJobID   () const { return _jobID;   }
 
@@ -106,7 +142,7 @@ class Job {
     }
 
     /** Add a job to one of the queues.  Adds the job with ID jobID to
-        the incoming, outgoing, or waiting queue of this job.
+        the parents, children, or waiting queue of this job.
         @param jobID ID of the job to be added.  Should not be this job's ID
         @param queue The queue to add the job to
         @return true: success, false: failure (lack of memory)
@@ -123,7 +159,7 @@ class Job {
     }
 
     /** Remove a job from one of the queues.  Removes the job with ID
-        jobID from the incoming, outgoing, or waiting queue of this job.
+        jobID from the parents, children, or waiting queue of this job.
         @param jobID ID of the job to be removed.  Should not be this job's ID
         @param queue The queue to add the job to
         @return true: success, false: failure (jobID not found in queue)
@@ -150,7 +186,20 @@ class Job {
   
     /** */ CondorID _CondorID;
     /** */ status_t _Status;
-  
+
+    // maximum number of times to retry this node
+    int retry_max;
+    // number of retries so far
+    int retries;
+
+    // the return code of the job
+    int retval;
+	
+    //Node has been visited by DFS order
+	bool _visited; 
+	
+	//DFS ordering of the node
+	int _dfsOrder; 
   private:
   
     // filename of condor submit file
@@ -161,8 +210,8 @@ class Job {
   
     /*  Job queue's
       
-        incoming -> dependencies coming into the Job
-        outgoing -> dependencies going out of the Job
+        parents -> dependencies coming into the Job
+        children -> dependencies going out of the Job
         waiting -> Jobs on which the current Job is waiting for output 
     */
     SimpleList<JobID_t> _queues[3];

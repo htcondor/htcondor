@@ -1,0 +1,284 @@
+#! /usr/bin/env perl
+#! /s/std/bin/perl -w
+use strict;
+
+# ******************************************************
+# Command line options
+# ******************************************************
+my %Options =
+    (
+     "[-ping]"		=> "Enable ping test",
+     "[-]"		=> "Read roster from STDIN",
+     "[-reserved]"	=> "Check the reserved list",
+     "[-cluster]"	=> "Report \"Cluster\" nodes that are down",
+     "[-h]"		=> "Dump help",
+    );
+
+# Process command line
+my $DoPing = 0;
+my $DoReserved = 0;
+my $DoClusterCheck = 0;
+my $RosterFile = "";
+my $Program = $0;
+foreach my $Arg ( @ARGV )
+{
+    if ( $Arg =~ /-ping/ )
+    {
+	$DoPing = 1;
+    }
+    elsif ( $Arg =~ /^-$/ )
+    {
+	$RosterFile = "<\&STDIN";
+    }
+    elsif ( $Arg =~ /-reserved/ )
+    {
+	$DoReserved = 1;
+    }
+    elsif ( $Arg =~ /-cluster/ )
+    {
+	$DoClusterCheck = 1;
+    }
+    elsif ( $Arg =~ /-h/ )
+    {
+	Help( );
+	exit 0;
+    }
+    else
+    {
+	Usage( $Arg );
+	die "$0: Unknown option '$Arg'";
+    }
+}
+
+# -cluster w/o -ping doesn't make sense
+if (  ( $DoClusterCheck ) && ( ! $DoPing )  )
+{
+    print STDERR "Warning: -cluster has no effect without -ping\n";
+}
+
+# Set this to the file that contains the list of machines in your
+# pool, sorted and unique.  It should contain just hostnames, not full
+# hostnames with domains.
+my $RosterDir = "/p/condor/home/admin";
+if ( defined( $ENV{CONDOR_ROSTER_DIR} ) )
+{
+    $RosterDir = $ENV{CONDOR_ROSTER_DIR};
+}
+$RosterFile = "$RosterDir/roster" if ( $RosterFile eq "" );
+if ( defined( $ENV{CONDOR_ROSTER_FILE} ) )
+{
+    $RosterFile = $ENV{CONDOR_ROSTER_FILE};
+}
+my $RosterStateFile = "$RosterDir/roster.state";
+if ( defined( $ENV{CONDOR_ROSTER_STATE} ) )
+{
+    $RosterStateFile = $ENV{CONDOR_ROSTER_STATE};
+}
+my $CondorStatus = "condor_status";
+my $CondorStatusArgs = "-pool condor.cs.wisc.edu -master";
+my $CondorReserved = "condor_reserved";
+
+# Read the state; all we really need is the "ClusterNodes" list
+my %ClusterNodes;
+my $ClusterCount;
+die "can't read '$RosterStateFile'" if (! open ( IN, $RosterStateFile ) );
+while ( <IN> )
+{
+    chomp;
+    s/\#.*$//g;
+    next if ( $_ eq "" );
+    if ( /arch\s+=\s+\"(.+)\"/i )
+    {
+    }
+    elsif ( /ExcludeUser\s+=\s+\"(.+?)\"/i )
+    {
+    }
+    elsif ( /ExcludeSponsor\s+=\s+\"(.+?)\"/i )
+    {
+    }
+    elsif ( /ExcludeRoom\s+=\s+\"(.+?)\"/i )
+    {
+    }
+    elsif ( /ExcludeAll\s+=\s+\"(.+?)\"/i )
+    {
+    }
+    elsif ( /ExcludeHost\s+=\s+\"(.+?)\"/i )
+    {
+    }
+    elsif ( /IncludeHost\s+=\s+\"(.+?)\"/i )
+    {
+    }
+    elsif ( /ClusterNode\s+=\s+\"(.+?)\"/i )
+    {
+	$ClusterNodes{$1} = $1;
+	$ClusterCount++;
+    }
+    elsif ( /Down\s+=\s+\"(.+?)\"/i )
+    {
+    }
+    elsif ( ! /^$/ )
+    {
+	print "Can't parse state line $. '$_'\n";
+    }
+}
+close( IN );
+
+# Read in the current roster, build the "%Absent" hash of names
+die "Can't open '$RosterFile'" if ( ! open( IN, "$RosterFile" )  );
+my $RosterCount;
+my %Absent;
+while ( <IN> )
+{
+    chomp;
+    next if ( /^\s+$/ );
+    $Absent{$_} = $_;
+    $RosterCount++;
+}
+close( IN );
+
+
+# This is the actual work: Take the output from condor_status, remove
+# any entries that have an '@' (which are from submit-only nodes to
+# our pool), get just the hostnames, without the domain, and compare
+# it to the roster.  Delete from the %Absent hash each entry found..
+{
+    my $Cmd = "$CondorStatus $CondorStatusArgs";
+    die "Can't run '$Cmd'" if ( ! open( IN, "$Cmd|" )  );
+    while ( <IN> )
+    {
+	chomp;
+	next if ( /@/ );
+	s/\..*//g;
+	delete $Absent{$_};
+    }
+    close( IN );
+}
+
+# Run the cluster tool...
+my $ReservedCount = 0;
+if ( $DoReserved )
+{
+    my $Cmd = "$CondorReserved";
+    die "Can't run '$Cmd'" if ( ! open( IN, "$Cmd|" )  );
+    while ( <IN> )
+    {
+	chomp;
+	my $Host = $_;
+	if ( defined $Absent{$Host} )
+	{
+	    delete $Absent{$Host};
+	}
+	$ReservedCount++;
+    }
+    close( IN );
+}
+
+# Dump it out - Print out entries in the roster that aren't in the
+# condor_status output.
+my @ClusterDown;
+if ( $DoPing )
+{
+    my %PingOk;
+
+    # Build up a temp absent list
+    my @TempAbsent = keys %Absent;
+    while( $#TempAbsent >= 0 )
+    {
+	my $PingCmd = "pingfilt";
+	my $HostCount = 0;
+	my $Host;
+	while ( $Host = shift( @TempAbsent ) )
+	{
+	    if ( ( length($PingCmd) + length ($Host) + 2 ) > 2000 )
+	    {
+		unshift @TempAbsent, $Host;
+		last;
+	    }
+	    $PingCmd = $PingCmd . " $Host";
+	    $HostCount++;
+	}
+
+	# If there are hosts in our list to ping...
+	if ( $HostCount )
+	{
+	    die "Can't run pingfilt" if ( ! open( IN, "$PingCmd|") );
+	    while( <IN> )
+	    {
+		chomp;
+		$PingOk{$_} = 1;
+	    }
+	    close( IN );
+	}
+    }
+
+    # Now, remove the unreachable hosts from the absent list
+    foreach my $Host ( keys %Absent )
+    {
+	# If it's down, remove it from the absent list
+	if ( ! defined $PingOk{$Host} )
+	{
+	    delete $Absent{$Host};
+
+	    # However, if it's in the cluster, note it..
+	    if ( exists( $ClusterNodes{$Host} ) )
+	    {
+		push( @ClusterDown, $Host );
+	    }
+	}
+    }
+}
+
+# Ok, now dump out the results
+my $AbsentCount = 0;
+foreach my $Host ( sort keys %Absent )
+{
+    print "$Host\n";
+    $AbsentCount++;
+}
+
+# Report cluster hosts that are down
+if ( $DoClusterCheck )
+{
+    foreach my $Host ( @ClusterDown )
+    {
+	print "Cluster '$Host' is down!\n";
+    }
+}
+print "# Summary\n";
+print "#   $RosterCount machine in the roster\n";
+print "#   $ClusterCount cluster nodes ";
+print "($ReservedCount reserved) " if ( $DoReserved );
+print "(" . ($#ClusterDown + 1) . " down) " if ( $DoClusterCheck );
+print "\n#   $AbsentCount hosts absent\n";
+
+# ******************************************************
+# Dump out usage
+# ******************************************************
+sub Usage ( $ )
+{
+    my $Unknown = shift;
+
+    print "$Program: unknown option '$Unknown'\n" if ( $Unknown ne "" );
+    printf "usage: $Program %s\n", join (" ", sort keys %Options);
+    print "use '-h' for more help\n";
+    exit 1;
+
+} # usage ()
+# ******************************************************
+
+# ******************************************************
+# Dump out help
+# ******************************************************
+sub Help ( )
+{
+    my ($opt, $text);
+
+    printf "usage: $Program %s\n", join (" ", sort keys %Options);
+    foreach $opt (sort {lc($a) cmp lc($b) } keys %Options)
+    {
+	printf ("  %15s : %-40s\n", $opt, $Options{$opt} );
+    }
+    exit 0;
+
+} # help ()
+# ******************************************************

@@ -22,6 +22,7 @@
 
 #include "common.h"
 #include "indexfile.h"
+#include <iostream>
 
 BEGIN_NAMESPACE( classad );
 

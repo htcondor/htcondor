@@ -23,6 +23,8 @@
 #ifndef _RES_STATE_H
 #define _RES_STATE_H
 
+#include "condor_state.h"
+
 class ResState
 {
 public:

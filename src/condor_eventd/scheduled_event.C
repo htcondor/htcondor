@@ -27,6 +27,7 @@
 #include "condor_query.h"
 #include "get_daemon_addr.h"
 #include "condor_config.h"
+#include "daemon.h"
 
 #include "scheduled_event.h"
 
@@ -131,7 +132,7 @@ ScheduledEvent::TimeOfEvent()
 	short tomorrow = current_tm->tm_wday+1;
 	if (tomorrow == 7) tomorrow = 0;
 	short yesterday = current_tm->tm_wday-1;
-	if (yesterday = -1) yesterday = 6;
+	if (yesterday == -1) yesterday = 6;
 
 	if (current_timeofday <= timeofday &&
 		daymask & (1<<(current_tm->tm_wday))) { // event is today
@@ -167,7 +168,8 @@ ScheduledEvent::ActivateEvent()
 
 	// stash event end time before we activate the event, because once
 	// we activate it, the time will move to the next event
-	EndTime = TimeOfEvent()+duration;
+	StartTime = TimeOfEvent();
+	EndTime = StartTime+duration;
 
 	if (DeactivateTid >= 0) {
 		dprintf(D_ALWAYS,
@@ -182,27 +184,32 @@ ScheduledEvent::ActivateEvent()
 								   "ScheduledEvent::DeactivateEvent()", this);
 
 	active = true;
+
+	return 0;
 }
 
 int ScheduledShutdownEvent::SlowStartInterval = -1;
 int ScheduledShutdownEvent::EventInterval = -1;
+int ScheduledShutdownEvent::NumScheduledShutdownEvents = 0;
+Router ScheduledShutdownEvent::NetRouter;
+NetworkCapacity ScheduledShutdownEvent::NetCap;
+NetworkReservations ScheduledShutdownEvent::NetRes;
+int ScheduledShutdownEvent::SimulateShutdowns = 0;
 
 static int CleanupShutdownModeConfig(const char startd_machine[],
 									 const char startd_addr[]);
 static int CleanupShutdownModeConfigs();
 static int CleanupTid = -1;
-
-static const char ShutdownConstraint[] =
-"(%s) && "
-"(((ImageSize > 0) && (State != \"Preempting\")) || " // need to be vacated
-" (EndDownTime =?= UNDEFINED) || " // need to be put into shutdown state
-" (EndDownTime < CurrentTime))"; // need to be put into shutdown state
+static int StartdValidWindow = 600;
+static int RescheduleInterval = 60;
 
 ScheduledShutdownEvent::ScheduledShutdownEvent(const char name[],
-											   const char record[], int offset)
+											   const char record[],
+											   bool runtime, bool standard,
+											   int offset)
 	: ScheduledEvent(name, record, offset), StartdList(NULL),
-	  constraint(NULL), rank(NULL), ShutdownList(NULL), VacateList(NULL),
-	  TimeoutTid(-1)
+	  constraint(NULL), ShutdownList(NULL), VacateList(NULL), TimeoutTid(-1),
+	  RuntimeConfig(runtime), StandardJobsOnly(standard)
 {
 	type = SHUTDOWN;
 	valid = false;
@@ -241,63 +248,23 @@ ScheduledShutdownEvent::ScheduledShutdownEvent(const char name[],
 	while(isdigit(record[++offset])); // skip the duration field
 	while(isspace(record[++offset])); // skip the whitespace
 
-	// read the BANDWIDTH section of the record
-	errno = 0;
-	bandwidth = atof(record+offset);
-	if (errno) {
-		dprintf(D_ALWAYS,
-				"Error parsing bandwidth field of event record %s.\n",
-				name);
-		return;
-	}
-
-	while(!isspace(record[++offset])); // skip the bandwidth field
-	while(isspace(record[++offset])); // skip the whitespace
-
 	int len;
 	for (len = 0; record[offset+len] != '\0' &&
 			 !isspace(record[offset+len]); len++);
 	char *tmp = (char *)malloc(len+1);
 	strncpy(tmp, record+offset, len);
 	tmp[len] = '\0';
-	char *admin_constraint = param(tmp);
-	if (!admin_constraint) {
+	constraint = param(tmp);
+	if (!constraint) {
 		dprintf(D_ALWAYS, "%s undefined.\n", tmp);
 		free(tmp);
 		return;
 	}
-	constraint = (char *)malloc(strlen(admin_constraint)+
-								strlen(ShutdownConstraint));
-	sprintf(constraint, ShutdownConstraint, admin_constraint);
-	dprintf(D_FULLDEBUG, "%s: %s\n", tmp, admin_constraint);
-	free(admin_constraint);
+	dprintf(D_FULLDEBUG, "%s: %s\n", tmp, constraint);
 	free(tmp);
 
-	offset += len;			// skip the constraint field
-	while(isspace(record[++offset])); // skip the whitespace
+	if (NumScheduledShutdownEvents == 0) {
 
-	for (len = 0; record[offset+len] != '\0' &&
-			 !isspace(record[offset+len]); len++);
-	tmp = (char *)malloc(len+1);
-	strncpy(tmp, record+offset, len);
-	tmp[len] = '\0';
-	char *admin_rank = param(tmp);
-	if (!admin_rank) {
-		dprintf(D_ALWAYS, "%s undefined.\n", tmp);
-		free(tmp);
-		return;
-	}
-	if (Parse(admin_rank, rank)) {
-		dprintf(D_ALWAYS, "Parse error in %s.\n", tmp);
-		free(tmp);
-		free(admin_rank);
-		return;
-	}
-	dprintf(D_FULLDEBUG, "%s: %s\n", tmp, admin_rank);
-	free(tmp);
-	free(admin_rank);
-
-	if (SlowStartInterval < 0) {
 		tmp = param("EVENTD_SHUTDOWN_SLOW_START_INTERVAL");
 		if (tmp) {
 			SlowStartInterval = atoi(tmp);
@@ -307,9 +274,7 @@ ScheduledShutdownEvent::ScheduledShutdownEvent(const char name[],
 		} else {
 			SlowStartInterval = 0;
 		}
-	}
 
-	if (EventInterval < 0) {
 		tmp = param("EVENTD_INTERVAL");
 		if (tmp) {
 			EventInterval = atoi(tmp);
@@ -317,7 +282,70 @@ ScheduledShutdownEvent::ScheduledShutdownEvent(const char name[],
 		} else {
 			EventInterval = 900;
 		}
+
+		
+		tmp = param("EVENTD_ROUTING_INFO");
+		if (tmp) {
+			if (NetRouter.LoadRoutingTable(tmp) < 0) {
+				dprintf(D_ALWAYS, "Failed to load EVENTD_ROUTING_INFO.  "
+						"No network scheduling will be performed.\n");
+				free(tmp);
+				return;
+			}
+			free(tmp);
+		} else {
+			dprintf(D_ALWAYS, "EVENTD_ROUTING_INFO undefined.  "
+					"No network scheduling will be performed.\n");
+			return;
+		}
+
+		tmp = param("EVENTD_CAPACITY_INFO");
+		if (tmp) {
+			if (NetCap.LoadNetworkCapacity(tmp) < 0) {
+				dprintf(D_ALWAYS, "Failed to load EVENTD_CAPACITY_INFO.  "
+						"No network scheduling will be performed.\n");
+				free(tmp);
+				return;
+			}
+			free(tmp);
+		} else {
+			dprintf(D_ALWAYS, "EVENTD_CAPACITY_INFO undefined.  "
+					"No network scheduling will be performed.\n");
+			return;
+		}
+		NetRes.BindRouter(&NetRouter);
+		NetRes.BindCapacity(&NetCap);
+
+		tmp = param("EVENTD_SIMULATE_SHUTDOWNS");
+		SimulateShutdowns = 0;
+		if (tmp) {
+			if (tmp[0] == 'T' || tmp[0] == 't') {
+				SimulateShutdowns = 1;
+				dprintf(D_FULLDEBUG,
+						"Simulating shutdowns.  No commands will be sent.\n");
+			}
+			free(tmp);
+		}
+
+		tmp = param("UPDATE_INTERVAL");
+		if (tmp) {
+			StartdValidWindow = atoi(tmp);
+			StartdValidWindow *= 2;
+			free(tmp);
+		} else {
+			StartdValidWindow = 600;
+		}
+
+		tmp = param("EVENTD_MIN_RESCHEDULE_INTERVAL");
+		if (tmp) {
+			RescheduleInterval = atoi(tmp);
+			free(tmp);
+		} else {
+			RescheduleInterval = 60;
+		}
 	}
+
+	NumScheduledShutdownEvents++;
 
 	// start a periodic cleanup timer if we haven't already
 	if (CleanupTid < 0) {
@@ -337,11 +365,13 @@ ScheduledShutdownEvent::ScheduledShutdownEvent(const char name[],
 		int firstCleanup = (CleanupInterval < 600) ? CleanupInterval : 600;
 		CleanupTid =
 			daemonCore->Register_Timer(firstCleanup, CleanupInterval,
-									   (Event)CleanupShutdownModeConfigs,
+									   (Event)&CleanupShutdownModeConfigs,
 									   "CleanupShutdownModeConfigs");
 	}
 
+	last_schedule_update = 0;
 	valid = true;
+	earliest_vacate = 0;
 }
 
 ScheduledShutdownEvent::~ScheduledShutdownEvent()
@@ -353,49 +383,33 @@ ScheduledShutdownEvent::~ScheduledShutdownEvent()
 	if (StartdList) delete StartdList;
 	if (ShutdownList) delete ShutdownList;
 	if (VacateList) delete VacateList;
-	if (rank) delete rank;
+	NumScheduledShutdownEvents--;
+	schedule.Rewind();
+	for (ShutdownRecord *rec = schedule.Next(); rec; rec = schedule.Next()) {
+		NetRes.CancelReservation(rec->id);
+		delete rec;
+	}
+}
+
+static int
+ScheduleCompar(const ScheduledShutdownEvent::ShutdownRecord **r1,
+			   const ScheduledShutdownEvent::ShutdownRecord **r2)
+{
+	return ((*r1)->vacate_duration) - ((*r2)->vacate_duration);
 }
 
 int
 ScheduledShutdownEvent::TimeNeeded()
 {
-	ClassAd		*ad;
+	StartTime = TimeOfEvent();
 
-	if (GetStartdList() < 0) return -1;
-	time_t current_time = time(0);
-	double TotalRequiredCheckpoints = 0.0;
-	StartdList->Open();
-	while ((ad = StartdList->Next()) != NULL) {
-		int ImageSize = 0, JobUniverse = 1, etime = 0;
-		ad->LookupInteger(ATTR_JOB_UNIVERSE, JobUniverse);
-		if (JobUniverse == 1 &&
-			ad->LookupInteger(ATTR_IMAGE_SIZE, ImageSize) == 1) {
-			TotalRequiredCheckpoints += ImageSize;
-		}
+	UpdateSchedule();
+
+	if (schedule.IsEmpty()) {
+		return 0;
 	}
 	
-	return (int)(TotalRequiredCheckpoints/128/bandwidth);
-}
-
-int
-ShutdownSortFunc(ClassAd *m1, ClassAd *m2, void *r)
-{
-	ExprTree *rank = (ExprTree *)r;
-	float val1=0.0, val2=0.0;
-	EvalResult	result;
-	rank->EvalTree(m1, m2, &result);
-	if (result.type == LX_INTEGER) {
-		val1 = (float)result.i;
-	} else if (result.type == LX_FLOAT) {
-		val1 = result.f;
-	}
-	rank->EvalTree(m2, m1, &result);
-	if (result.type == LX_INTEGER) {
-		val2 = (float)result.i;
-	} else if (result.type == LX_FLOAT) {
-		val2 = result.f;
-	}
-	return (val1 < val2);
+	return StartTime-earliest_vacate;
 }
 
 int
@@ -416,7 +430,7 @@ ScheduledShutdownEvent::ActivateEvent()
 		}
 	}
 
-	// initialize our list of shutdown machines and vacated resources
+	// Initialize our list of shutdown machines and vacated resources.
 	// These lists are used to ensure that we shutdown/vacate each
 	// machine/resource at most once.  Without it, we will waste time
 	// contacting machines multiple times in a number of cases: (1)
@@ -431,6 +445,7 @@ ScheduledShutdownEvent::ActivateEvent()
 	if (VacateList) delete VacateList;
 	VacateList = new StringList;
 
+	time_t current_time = time(0);
 	ClassAd *ad;
 	StartdList->Open();
 	while ((ad = StartdList->Next()) != NULL) {
@@ -438,6 +453,15 @@ ScheduledShutdownEvent::ActivateEvent()
 		// just put this machine into shutdown mode (i.e., an SMP
 		// startd will have multiple startd ClassAds), we put it in
 		// shutdown mode here
+		int last_heard_from = 0;
+		ad->LookupInteger(ATTR_LAST_HEARD_FROM, last_heard_from);
+		if (current_time - last_heard_from > StartdValidWindow) {
+			char startd_name[ATTRLIST_MAX_EXPRESSION];
+			startd_name[0] = '\0';
+			ad->LookupString(ATTR_NAME, startd_name);
+			dprintf(D_ALWAYS, "ClassAd for %s is %d seconds old!\n",
+					startd_name, current_time - last_heard_from);
+		}
 		int etime;
 		if (ad->LookupInteger("EndDownTime", etime) != 1 ||
 			etime < EndTime) {
@@ -445,7 +469,7 @@ ScheduledShutdownEvent::ActivateEvent()
 			char startd_machine[ATTRLIST_MAX_EXPRESSION];
 			if (ad->LookupString(ATTR_STARTD_IP_ADDR, startd_addr) != 1 ||
 				ad->LookupString(ATTR_MACHINE, startd_machine) != 1) {
-				dprintf(D_ALWAYS, "Malformed startd classad in "
+				dprintf(D_ALWAYS, "Malformed startd ClassAd in "
 						"ScheduledShutdownEvent::Timeout()\n");
 				continue;
 			}
@@ -457,8 +481,7 @@ ScheduledShutdownEvent::ActivateEvent()
 		}
 	}
 
-	// set timer to start shutting down the machines
-
+	// set timer to start vacating
 	if (TimeoutTid >= 0) {
 		dprintf(D_ALWAYS, "Warning: Timer was set for inactive "
 				"SHUTDOWN event %s!\n", id);
@@ -474,6 +497,8 @@ ScheduledShutdownEvent::ActivateEvent()
 	delete StartdList;
 	StartdList = NULL;
 	
+	num_records_past_deadline = 0;
+
 	return 0;
 }
 
@@ -485,41 +510,82 @@ ScheduledShutdownEvent::Timeout()
 		return -1;
 	}
 	
+	time_t current_time = time(0);
+	// updating the schedule is expensive (collector query plus any network
+	// scheduling), so don't do it more than once per RescheduleInterval
+	if (forceScheduleUpdate ||
+		(current_time - last_schedule_update > RescheduleInterval)) {
+		UpdateSchedule();
+	}
+	forceScheduleUpdate = false;
+	
+	// perform any scheduled vacates
+	schedule.Rewind();
+	ShutdownRecord *rec;
+	for (rec = schedule.Next(); rec && rec->vacate_time <= current_time;
+		 rec = schedule.Next()) {
+		if (Vacate(rec->startd_name, rec->startd_addr) == 0) {
+			VacateList->append(rec->startd_name);
+		}
+		// remove the shutdown record even if we failed to vacate the 
+		// resource; we will reschedule the vacate in UpdateSchedule()
+		// if the job is still running
+		RemoveRecord(rec);
+		delete rec;
+		current_time = time(0);	// in case vacate is slow
+	}
+
+	// set timer for next scheduled vacates
+	int next_vacate;
+	if (rec) {
+		next_vacate = rec->vacate_time-current_time;
+	} else {
+		// check every EVENTD_INTERVAL to see if there is any new work to do
+		next_vacate = EventInterval;
+	}
+
+	// make sure we call Timeout() at StartTime so we can vacate jobs
+	// with no checkpoint files
+	int time_to_start = StartTime - current_time;
+	if (time_to_start > 0 && time_to_start < next_vacate) {
+		forceScheduleUpdate = true;
+		next_vacate = time_to_start;
+	}
+
+	if (daemonCore->Reset_Timer(TimeoutTid, next_vacate) < 0) {
+		dprintf(D_ALWAYS, "Failed to reset timer for SHUTDOWN event %s!\n",
+				id);
+		TimeoutTid = -1;
+		return -1;
+	}
+
+	// Make sure that all startds are in shutdown mode.
 	if (StartdList == NULL) {
 		if (GetStartdList() < 0) {
-			// can't contact collector, so try again in EventInterval seconds
-			if (daemonCore->Reset_Timer(TimeoutTid, EventInterval) < 0) {
-				dprintf(D_ALWAYS, "Failed to reset timer for SHUTDOWN event "
-						"%s!\n", id);
-				TimeoutTid = -1;
-				return -1;
-			}
-			return -1;
+			return -1;			// Oh well, try again next time...
 		}
 	}
 
-	// in which order should we shutdown the machines?
-	if (rank) {
-		StartdList->Sort((SortFunctionType)ShutdownSortFunc, (void *)rank);
-	}
-
-	// vacate the first job in the list
-	int time_to_vacate = 0;
 	ClassAd *ad;
 	StartdList->Open();
 	while ((ad = StartdList->Next()) != NULL) {
+		int last_heard_from = 0;
+		ad->LookupInteger(ATTR_LAST_HEARD_FROM, last_heard_from);
+		if (current_time - last_heard_from > StartdValidWindow) {
+			char startd_name[ATTRLIST_MAX_EXPRESSION];
+			startd_name[0] = '\0';
+			ad->LookupString(ATTR_NAME, startd_name);
+			dprintf(D_ALWAYS, "ClassAd for %s is %d seconds old!\n",
+					startd_name, current_time - last_heard_from);
+		}
 		char startd_addr[ATTRLIST_MAX_EXPRESSION];
-		char startd_name[ATTRLIST_MAX_EXPRESSION];
-		char startd_state[ATTRLIST_MAX_EXPRESSION];
 		char startd_machine[ATTRLIST_MAX_EXPRESSION];
 		if (ad->LookupString(ATTR_STARTD_IP_ADDR, startd_addr) != 1 ||
-			ad->LookupString(ATTR_MACHINE, startd_machine) != 1 ||
-			ad->LookupString(ATTR_NAME, startd_name) != 1) {
-			dprintf(D_ALWAYS, "Malformed startd classad in "
+			ad->LookupString(ATTR_MACHINE, startd_machine) != 1) {
+			dprintf(D_ALWAYS, "Malformed startd ClassAd in "
 					"ScheduledShutdownEvent::Timeout()\n");
 			continue;
 		}
-		// make sure all startds are in shutdown mode
 		int etime = 0;
 		if ((ad->LookupInteger("EndDownTime", etime) != 1 ||
 			 etime < EndTime) && !ShutdownList->contains(startd_machine)) {
@@ -527,56 +593,6 @@ ScheduledShutdownEvent::Timeout()
 				ShutdownList->append(startd_machine);
 			}
 		}
-		// we keep looping to verify that all startds are in shutdown mode
-		// but we only want to vacate one big job in this loop, so we
-		// continue if we have already vacated a job
-		if (time_to_vacate > 0) continue;
-		int ImageSize = 0, JobUniverse;
-		// only send vacates to startds that have jobs (i.e., which
-		// have ImageSize and JobUniverse defined), which are still in
-		// the claimed state, and to which we haven't already sent a
-		// vacate
-		if (ad->LookupString(ATTR_STATE, startd_state) != 1 ||
-			strcmp(startd_state, "Claimed") != MATCH ||
-			ad->LookupInteger(ATTR_IMAGE_SIZE, ImageSize) != 1 || 
-			ad->LookupInteger(ATTR_JOB_UNIVERSE, JobUniverse) != 1 ||
-			VacateList->contains(startd_name)) {
-			continue;
-		}
-		ReliSock sock;
-		sock.timeout(10);
-		if (!sock.connect(startd_addr, 0)) {
-			dprintf(D_ALWAYS, "Failed to connect to startd %s %s.\n",
-					startd_name, startd_addr);
-			continue;
-		}
-		sock.encode();
-		int cmd = VACATE_CLAIM;
-		if (!sock.code(cmd) || !sock.put(startd_name) || !sock.eom()) {
-			dprintf(D_ALWAYS, "Failed to send VACATE_CLAIM to %s %s.\n",
-					startd_name, startd_addr);
-			continue;
-		}
-		dprintf(D_ALWAYS, "Sent VACATE_CLAIM to %s.\n", startd_name);
-		VacateList->append(startd_name);
-		if (JobUniverse == 1) {
-			time_to_vacate += (int)(double(ImageSize)/128.0/bandwidth);
-		}
-		dprintf(D_FULLDEBUG, "Estimating %d seconds of vacating time "
-				"for %s.\n", time_to_vacate, startd_name);
-	}
-
-	if (!time_to_vacate) {
-		// we didn't vacate anyone, so simply check every EVENTD_INTERVAL
-		// to see if there is any new work to do
-		time_to_vacate = EventInterval;
-	}
-
-	if (daemonCore->Reset_Timer(TimeoutTid, time_to_vacate) < 0) {
-		dprintf(D_ALWAYS, "Failed to reset timer for SHUTDOWN event %s!\n",
-				id);
-		TimeoutTid = -1;
-		return -1;
 	}
 
 	// make sure to get an updated StartdList next time
@@ -606,51 +622,347 @@ ScheduledShutdownEvent::GetStartdList()
 	return 0;
 }
 
+void
+ScheduledShutdownEvent::UpdateSchedule()
+{
+	if (GetStartdList() < 0) return;
+
+	// Walk through list of startds, building up list of scheduling changes
+	// and vacating jobs with no checkpoints if it is time to do so.
+	time_t current_time = time(0);
+	ClassAd *ad;
+	ShutdownRecord **SchedulingChanges = NULL;
+	bool AnyCancelled = false;
+	int NumSchedulingChanges = 0;
+	int NumStartds = 0;
+	StartdList->Open();
+	while ((ad = StartdList->Next()) != NULL) {
+		NumStartds++;
+		char startdName[128];
+		if (!ad->LookupString(ATTR_NAME, startdName)) {
+			dprintf(D_ALWAYS, "Could not lookup %s\n", ATTR_NAME);
+			continue;
+		}
+		char startdMachine[128];
+		if (!ad->LookupString(ATTR_MACHINE, startdMachine)) {
+			dprintf(D_ALWAYS, "Could not lookup %s\n", ATTR_MACHINE);
+			continue;
+		}
+		// If we have already vacated this vm, then we don't need to
+		// try to schedule a vacate.  Note that the VacateList is only
+		// up-to-date if we are active.
+		if (active && VacateList && VacateList->contains(startdName)) {
+			continue;
+		}
+		// If we're setting runtime configs, then the startd may have
+		// restarted, removing the configuration.  To detect this
+		// case, check if the startd classad has no EndDownTime
+		// attribute (or an old one) even though we think we've shut
+		// it down.  In that case, we don't want to vacate the job.
+		if (active && RuntimeConfig) {
+			int etime;
+			if ((!ad->LookupInteger("EndDownTime", etime) ||
+				 etime < EndTime) && ShutdownList->contains(startdMachine)) {
+				continue;
+			}
+		}
+		// Write a debugging message if we get a stale ad, so we know that
+		// an ad may be timed out soon.
+		int last_heard_from = 0;
+		ad->LookupInteger(ATTR_LAST_HEARD_FROM, last_heard_from);
+		if (current_time - last_heard_from > StartdValidWindow) {
+			dprintf(D_ALWAYS, "ClassAd for %s is %d seconds old!\n",
+					startdName, current_time - last_heard_from);
+		}
+		// we only need to vacate the startd if it is claimed
+		char state[20];
+		if (!ad->LookupString(ATTR_STATE, state)) {
+			dprintf(D_ALWAYS, "Could not lookup %s for %s\n", ATTR_STATE,
+					startdName);
+			continue;
+		}
+		if (strcmp(state, "Claimed")) {
+			if (DeleteRecord(startdName)) {
+				AnyCancelled = true;
+				dprintf(D_FULLDEBUG, "Cancelling vacate of %s, now in %s "
+						"state.\n",	startdName, state);
+			}
+			continue;
+		}
+		int CkptSize=0, ExecutableSize=0, JobUniverse = CONDOR_UNIVERSE_STANDARD;
+		ad->LookupInteger(ATTR_JOB_UNIVERSE, JobUniverse);
+		ad->LookupInteger(ATTR_IMAGE_SIZE, CkptSize);
+		ad->LookupInteger(ATTR_EXECUTABLE_SIZE, ExecutableSize);
+		CkptSize -= ExecutableSize;
+		char startdAddr[128];
+		if (!ad->LookupString(ATTR_STARTD_IP_ADDR, startdAddr)) {
+			dprintf(D_ALWAYS, "Could not lookup %s for %s\n",
+					ATTR_STARTD_IP_ADDR, startdName);
+			continue;
+		}
+		if (JobUniverse != CONDOR_UNIVERSE_STANDARD && StandardJobsOnly) continue;
+		// We don't need to get a network reservation to vacate jobs
+		// which don't have checkpoints.  We still need to vacate
+		// these jobs though, so we make sure that UpdateSchedule() is
+		// called at StartTime by Timeout(), and if we have reached
+		// StartTime, we go ahead and vacate the jobs here.
+		if (JobUniverse != CONDOR_UNIVERSE_STANDARD || CkptSize <= 0) {
+			if (DeleteRecord(startdName)) {
+				AnyCancelled = true;
+				dprintf(D_FULLDEBUG, "Cancelling pre-scheduled vacate of %s.  "
+						"New job has est. ckpt size of zero.\n", startdName);
+			}
+			if (active && current_time >= StartTime) {
+				if (Vacate(startdName, startdAddr) == 0) {
+					VacateList->append(startdName);
+				}
+			}
+			continue;
+		}
+		char startdIP[128];
+		strcpy(startdIP, startdAddr+1);	// skip the leading '<'
+		char *colon = strchr(startdIP, ':');
+		if (!colon) {
+			dprintf(D_ALWAYS, "Invalid %s: %s for %s\n", ATTR_STARTD_IP_ADDR,
+					startdAddr, startdName);
+			continue;
+		}
+		*colon = '\0';
+		char ckptServer[128], ckptServerIP[16];
+		if (!ad->EvalString(ATTR_CKPT_SERVER, NULL, ckptServer)) {
+			dprintf(D_ALWAYS, "Failed to evaluate %s for %s\n",
+					ATTR_CKPT_SERVER, startdName);
+			continue;
+		}
+		struct hostent *hp = gethostbyname(ckptServer);
+		if (!hp) {
+			dprintf(D_ALWAYS, "DNS lookup for %s %s failed!\n",
+					ATTR_CKPT_SERVER, ckptServer);
+			continue;
+		}
+		struct in_addr ckpt_dest = *((struct in_addr *)hp->h_addr);
+		strcpy(ckptServerIP, inet_ntoa(ckpt_dest));
+		// We don't need a network reservation to transfer the checkpoint
+		// to/from the same machine.
+		if (!strcmp(startdIP, ckptServerIP)) {
+			if (DeleteRecord(startdName)) {
+				AnyCancelled = true;
+				dprintf(D_FULLDEBUG, "Cancelling pre-scheduled vacate of %s.  "
+						"Checkpoint will be stored locally now.\n",
+						startdName);
+			}
+			if (active && current_time >= StartTime) {
+				if (Vacate(startdName, startdAddr) == 0) {
+					VacateList->append(startdName);
+				}
+			}
+			continue;
+		}
+		ShutdownRecord *rec = LookupRecord(startdName);
+		if (rec) {
+			if (rec->ckpt_size != CkptSize) {
+				dprintf(D_FULLDEBUG, "Rescheduling vacate of %s due to new "
+						"checkpoint size (%d vs. %d).\n", rec->startd_name,
+						CkptSize, rec->ckpt_size);
+			} else if (strcmp(rec->startd_ip, startdIP)) {
+				dprintf(D_FULLDEBUG, "Rescheduling vacate of %s due to new "
+						"startd IP (%s vs. %s).\n", rec->startd_name,
+						startdIP, rec->startd_ip);
+			} else if (strcmp(rec->ckpt_server_ip, ckptServerIP)) {
+				dprintf(D_FULLDEBUG, "Rescheduling vacate of %s due to new "
+						"checkpoint server (%s vs. %s).\n", rec->startd_name,
+						ckptServerIP, rec->ckpt_server_ip);
+			} else {
+				rec->timestamp = current_time;
+				continue;		// no change in schedule
+			}
+			AnyCancelled = true;
+			RemoveRecord(rec);
+			delete rec;
+		}
+		int duration = 
+			NetRes.TransferDuration(double(CkptSize)*1024,
+									startdIP, ckptServerIP);
+		if (duration <= 0) {
+			// Something went seriously wrong.
+			dprintf(D_ALWAYS, "Network routing failure from %s to %s!\n",
+					startdIP, ckptServerIP);
+			continue;
+		}
+		rec = new ShutdownRecord(startdName, startdAddr, startdIP,
+								 ckptServerIP, CkptSize, 0, duration,
+								 NetRes.NewID(), current_time);
+
+		if (NumSchedulingChanges == 0) {
+			SchedulingChanges =
+				new ShutdownRecord* [StartdList->MyLength()];
+		}
+		SchedulingChanges[NumSchedulingChanges++] = rec;
+	}
+
+	// remove stale records
+	schedule.Rewind();
+	for (ShutdownRecord *rec = schedule.Next(); rec; rec = schedule.Next()) {
+		if (current_time - rec->timestamp > StartdValidWindow) {
+			NetRes.CancelReservation(rec->id);
+			dprintf(D_FULLDEBUG, "Scheduled vacate of %s at %d cancelled.  "
+					"ClassAd timed out.\n",
+					rec->startd_name, (int)rec->vacate_time);
+			schedule.DeleteCurrent();
+			delete rec;
+		}
+	}
+
+	// implement any needed scheduling changes
+	if (NumSchedulingChanges) {
+		// sort SchedulingChanges by vacate_duration, so we schedule shorter
+		// transfers nearer to StartTime
+		qsort((void *)SchedulingChanges, NumSchedulingChanges,
+			  sizeof(ShutdownRecord *),
+			  (int (*)(const void *, const void *))ScheduleCompar);
+
+		for (int i=0; i < NumSchedulingChanges; i++) {
+			double rate = 0.0;
+			time_t end_time = StartTime; // xfer must end before shutdown start
+			ShutdownRecord *rec = SchedulingChanges[i];
+			int rval =
+				NetRes.ReserveCapacity(double(rec->ckpt_size)*1024,
+									   rec->startd_ip, rec->ckpt_server_ip,
+									   false,
+									   &rec->vacate_time, &end_time,
+									   rec->id, "", &rate);
+			if (rval != 1) {
+				// We failed to schedule the transfer before the deadline.
+				// We still need to perform the transfer, so find the
+				// earliest avialable transfer window.
+				rec->vacate_time = current_time;
+				end_time = 0;
+				rval = NetRes.ReserveCapacity(double(rec->ckpt_size)*1024,
+											  rec->startd_ip,
+											  rec->ckpt_server_ip,
+											  true,
+											  &rec->vacate_time, &end_time,
+											  rec->id, "", &rate);
+				if (rval == 1) num_records_past_deadline++;
+			}
+			if (rval == 1) {
+				if (schedule.IsEmpty() || earliest_vacate > rec->vacate_time) {
+					earliest_vacate = rec->vacate_time;
+				}
+				InsertRecord(rec);
+				dprintf(D_FULLDEBUG, "Vacate of %s (%s --> %s at %.0f Mb/s) "
+						"scheduled from %d to %d.\n", rec->startd_name,
+						rec->startd_ip, rec->ckpt_server_ip, rate,
+						(int)rec->vacate_time, (int)end_time);
+			} else {
+				// We should always find a schedule.  This is a serious error.
+				dprintf(D_ALWAYS, "Network scheduling failure for %.0f bytes "
+						"from %s to %s by %s!\n", double(rec->ckpt_size)*1024,
+						rec->startd_ip,	rec->ckpt_server_ip, ctime(&EndTime));
+				delete rec;
+			}
+		}
+
+		delete [] SchedulingChanges;
+	}
+
+	// if we cancelled any scheduled vacates, try to reschedule any
+	// transfers which are past the deadline
+	if (AnyCancelled && num_records_past_deadline > 0) {
+		schedule.Rewind();
+		for (ShutdownRecord *rec = schedule.Next(); rec;
+			 rec = schedule.Next()) {
+			if (rec->vacate_time+rec->vacate_duration > StartTime) {
+				ShutdownRecord *nrec =
+					new ShutdownRecord(rec->startd_name, rec->startd_addr,
+									   rec->startd_ip, rec->ckpt_server_ip,
+									   rec->ckpt_size, 0, rec->vacate_duration,
+									   rec->id, rec->timestamp);
+				double rate = 0.0;
+				time_t end_time = StartTime; // xfer must end b4 shutdwn start
+				int rval =
+					NetRes.ReserveCapacity(double(nrec->ckpt_size)*1024,
+										   nrec->startd_ip,
+										   nrec->ckpt_server_ip,
+										   false,
+										   &nrec->vacate_time, &end_time,
+										   NetRes.NewID(), "", &rate);
+				if (rval == 1) { // we can meet the deadline now!
+					dprintf(D_FULLDEBUG, "Rescheduling vacate of %s before "
+							"deadline!\nVacate of %s (%s --> %s at %.0f "
+							"Mb/s) scheduled from %d to %d.\n",
+							nrec->startd_name,
+							nrec->startd_name, nrec->startd_ip,
+							nrec->ckpt_server_ip, rate,
+							(int)nrec->vacate_time, (int)end_time);
+					num_records_past_deadline--;
+					NetRes.CancelReservation(rec->id); // delete old record
+					schedule.DeleteCurrent();
+					delete rec;
+					if (schedule.IsEmpty() ||
+						earliest_vacate > nrec->vacate_time) {
+						earliest_vacate = nrec->vacate_time;
+					}
+					InsertRecord(nrec);	// insert new record
+				} else {
+					delete nrec; // no new schedule
+				}
+			}
+		}
+	}
+
+	last_schedule_update = current_time;
+	dprintf(D_FULLDEBUG, "%s: Query returned %d startd ClassAds.\n",
+			id, NumStartds);
+}
+
 static const char ShutdownConfig[] =
 "EndDownTime = %d\n"
 "Shutdown = (CurrentTime < EndDownTime)\n"
 "START : ($(START)) && ($(Shutdown) == False)\n"
 "STARTD_EXPRS = $(STARTD_EXPRS), EndDownTime\n";
 
-static const char ShutdownAdminId[] = "ScheduledShutdownEvent";
+static const char StandardShutdownConfig[] =
+"EndDownTime = %d\n"
+"Shutdown = (CurrentTime < EndDownTime)\n"
+"START : ($(START)) && (($(Shutdown) == False) || (TARGET.JobUniverse != 1))\n"
+"STARTD_EXPRS = $(STARTD_EXPRS), EndDownTime\n";
+
+static const char ShutdownAdminId[] = "eventd_shutdown";
 
 int
 ScheduledShutdownEvent::EnterShutdownMode(const char startd_name[],
 										  const char startd_addr[])
 {
-	ReliSock sock;
-	sock.timeout(10);
-	if (!sock.connect((char *)startd_addr, 0)) {
-		dprintf(D_ALWAYS, "Failed to connect to %s %s.\n", startd_name,
-				startd_addr);
-		return -1;
-	}
-	sock.encode();
-	int cmd = DC_CONFIG_PERSIST;
-	char *config = (char *)malloc(strlen(ShutdownConfig)+20);
-	sprintf(config, ShutdownConfig, EndTime+SlowStartPos);
-	if (!sock.code(cmd) || !sock.put((char *)ShutdownAdminId) ||
-		!sock.code(config) || !sock.eom()) {
-		dprintf(D_ALWAYS, "Failed to send DC_CONFIG_PERSIST to "
-				"%s %s.\n", startd_name, startd_addr);
+	if (!SimulateShutdowns) {
+		int cmd = (RuntimeConfig) ? DC_CONFIG_RUNTIME : DC_CONFIG_PERSIST;
+		char *config;
+		if (StandardJobsOnly) {
+			config = (char *)malloc(strlen(StandardShutdownConfig)+20);
+			sprintf(config, StandardShutdownConfig, (int)EndTime+SlowStartPos);
+		} else {
+			config = (char *)malloc(strlen(ShutdownConfig)+20);
+			sprintf(config, ShutdownConfig, (int)EndTime+SlowStartPos);
+		}
+		Daemon startd(DT_STARTD, startd_addr, NULL);
+		Sock *sock = startd.startCommand(cmd, Stream::reli_sock, 10);
+		if (!sock || !sock->put((char *)ShutdownAdminId) ||
+			!sock->code(config) || !sock->eom()) {
+			dprintf(D_ALWAYS, "Failed to send DC_CONFIG_PERSIST to "
+					"%s %s.\n", startd_name, startd_addr);
+			free(config);
+			delete sock;
+			return -1;
+		}
 		free(config);
-		return -1;
-	}
-	free(config);
-	sock.close();
-	if (!sock.connect((char *)startd_addr, 0)) {
-		dprintf(D_ALWAYS, "Failed to connect to %s %s.\n", startd_name,
-				startd_addr);
-		return -1;
-	}
-	sock.encode();
-	cmd = DC_RECONFIG;
-	if (!sock.code(cmd) || !sock.eom()) {
-		dprintf(D_ALWAYS, "Failed to send DC_RECONFIG to %s %s.\n",
-				startd_name, startd_addr);
-		return -1;
-	}
+		delete sock;
 
+		if (!startd.sendCommand(DC_RECONFIG, Stream::reli_sock, 10)) {
+			dprintf(D_ALWAYS, "Failed to send DC_RECONFIG to %s %s.\n",
+					startd_name, startd_addr);
+			return -1;
+		}
+	}
 	dprintf(D_ALWAYS, "Placed %s in shutdown mode until %d.\n",
 			startd_name, EndTime+SlowStartPos);
 	SlowStartPos += SlowStartInterval;
@@ -658,34 +970,126 @@ ScheduledShutdownEvent::EnterShutdownMode(const char startd_name[],
 	return 0;
 }
 
+int
+ScheduledShutdownEvent::Vacate(char startd_name[], char startd_addr[])
+{
+	if (!SimulateShutdowns) {
+		Daemon startd(DT_STARTD, startd_addr, NULL);
+		Sock *sock = startd.startCommand(VACATE_CLAIM, Stream::reli_sock, 10);
+		if (!sock || !sock->put(startd_name) || !sock->eom()) {
+			dprintf(D_ALWAYS, "Failed to send VACATE_CLAIM to %s %s.\n",
+					startd_name, startd_addr);
+			delete sock;
+			return -1;
+		}
+		delete sock;
+	}
+	dprintf(D_ALWAYS, "Sent VACATE_CLAIM to %s.\n", startd_name);
+
+	return 0;
+}
+
+ScheduledShutdownEvent::ShutdownRecord::
+ShutdownRecord(const char name[], const char addr[], const char startd_IP[],
+			   const char ckpt_server_IP[], int size, time_t vtime,
+			   int duration,  int new_id, time_t tstamp) 
+{
+	startd_name = strdup(name);
+	startd_addr = strdup(addr);
+	strcpy(startd_ip, startd_IP);
+	strcpy(ckpt_server_ip, ckpt_server_IP);
+	ckpt_size = size;
+	vacate_time = vtime;
+	vacate_duration = duration;
+	id = new_id;
+	timestamp = tstamp;
+	
+}
+
+ScheduledShutdownEvent::ShutdownRecord::~ShutdownRecord()
+{
+	free(startd_name);
+	free(startd_addr);
+}
+
+ScheduledShutdownEvent::ShutdownRecord *
+ScheduledShutdownEvent::LookupRecord(const char startd_name[])
+{
+	schedule.Rewind();
+	for (ShutdownRecord *rec = schedule.Next(); rec; rec = schedule.Next()) {
+		if (!strcmp(rec->startd_name, startd_name)) {
+			return rec;
+		}
+	}
+	return NULL;
+}
+
+void
+ScheduledShutdownEvent::InsertRecord(ShutdownRecord *new_rec)
+{
+	// insert in order of vacate_time
+	schedule.Rewind();
+	ShutdownRecord *rec = NULL;
+	for (rec = schedule.Next(); rec && rec->vacate_time < new_rec->vacate_time;
+		 rec = schedule.Next());
+	if (rec) schedule.Insert(new_rec);
+	else schedule.Append(new_rec);
+}
+
+void
+ScheduledShutdownEvent::RemoveRecord(ShutdownRecord *r)
+{
+	schedule.Rewind();
+	for (ShutdownRecord *rec = schedule.Next(); rec; rec = schedule.Next()) {
+		if (r == rec) {
+			NetRes.CancelReservation(rec->id);
+			schedule.DeleteCurrent();
+			return;
+		}
+	}
+}
+
+bool
+ScheduledShutdownEvent::DeleteRecord(const char startd_name[])
+{
+	schedule.Rewind();
+	for (ShutdownRecord *rec = schedule.Next(); rec; rec = schedule.Next()) {
+		if (!strcmp(rec->startd_name, startd_name)) {
+			NetRes.CancelReservation(rec->id);
+			schedule.DeleteCurrent();
+			delete rec;
+			return true;
+		}
+	}
+	return false;
+}
+
 static int
 CleanupShutdownModeConfig(const char startd_machine[],
 						  const char startd_addr[])
 {
-	ReliSock sock;
-	sock.timeout(10);
-	if (!sock.connect((char *)startd_addr, 0)) {
-		dprintf(D_ALWAYS, "Failed to connect to %s %s.\n", startd_machine,
-				startd_addr);
-		return -1;
-	}
-	sock.encode();
-	int cmd = DC_CONFIG_PERSIST;
-	if (!sock.code(cmd) || !sock.put((char *)ShutdownAdminId) ||
-		!sock.put("") || !sock.eom()) {
+	Daemon startd(DT_STARTD, startd_addr, NULL);
+	Sock *sock = startd.startCommand(DC_CONFIG_PERSIST, Stream::safe_sock, 10);
+	if (!sock || !sock->put((char *)ShutdownAdminId) ||
+		!sock->put("") || !sock->eom()) {
 		dprintf(D_ALWAYS, "Failed to send DC_CONFIG_PERSIST to "
 				"%s %s.\n", startd_machine, startd_addr);
+		delete sock;
 		return -1;
 	}
-	sock.close();
-	if (!sock.connect((char *)startd_addr, 0)) {
-		dprintf(D_ALWAYS, "Failed to connect to %s %s.\n", startd_machine,
-				startd_addr);
+	delete sock;
+
+	sock = startd.startCommand(DC_CONFIG_RUNTIME, Stream::safe_sock, 10);
+	if (!sock || !sock->put((char *)ShutdownAdminId) ||
+		!sock->put("") || !sock->eom()) {
+		dprintf(D_ALWAYS, "Failed to send DC_CONFIG_RUNTIME to "
+				"%s %s.\n", startd_machine, startd_addr);
+		delete sock;
 		return -1;
 	}
-	sock.encode();
-	cmd = DC_RECONFIG;
-	if (!sock.code(cmd) || !sock.eom()) {
+	delete sock;
+
+	if (!startd.sendCommand(DC_RECONFIG, Stream::safe_sock, 10)) {
 		dprintf(D_ALWAYS, "Failed to send DC_RECONFIG to %s %s.\n",
 				startd_machine, startd_addr);
 		return -1;
@@ -721,7 +1125,7 @@ CleanupShutdownModeConfigs()
 		char startd_machine[ATTRLIST_MAX_EXPRESSION];
 		if (ad->LookupString(ATTR_STARTD_IP_ADDR, startd_addr) != 1 ||
 			ad->LookupString(ATTR_MACHINE, startd_machine) != 1) {
-			dprintf(D_ALWAYS, "Malformed startd classad in "
+			dprintf(D_ALWAYS, "Malformed startd ClassAd in "
 					"CleanupShutdownModeConfigs()\n");
 			continue;
 		}

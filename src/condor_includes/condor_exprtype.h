@@ -78,6 +78,8 @@ typedef enum
 
   LX_EXPR,
 
+  LX_TIME,
+
   NOT_KEYWORD
 } LexemeType;
 

@@ -26,7 +26,6 @@
 
 #include "os_proc.h"
 #include "killfamily.h"
-#include "file_transfer.h"
 
 
 /* forward reference */
@@ -43,13 +42,13 @@ public:
 		/// Destructor
 	virtual ~VanillaProc();
 
-		/** Transfer files; call OsProc::StartJob(), make a new 
-			ProcFamily with new process as head. */
+		/** call OsProc::StartJob(), make a new ProcFamily with new
+			process as head. */
 	virtual int StartJob();
 
-		/** Upload files if requested; call OsProc::JobExit(); 
-			make certain all decendants are dead with family->hardkill() */
-	virtual int JobExit(int pid, int status);
+		/** call OsProc::JobCleanup(); make certain all decendants are
+			dead with family->hardkill() */
+	virtual int JobCleanup(int pid, int status);
 
 		/** Call family->suspend() */
 	virtual void Suspend();
@@ -63,31 +62,24 @@ public:
 		/** Do a family->hardkill(); */
 	virtual bool ShutdownFast();
 
-protected:
-	virtual int UpdateShadow();
+		/** Publish all attributes we care about for updating the
+			shadow into the given ClassAd.  This function is just
+			virtual, not pure virtual, since OsProc and any derived
+			classes should implement a version of this that publishes
+			any info contained in each class, and each derived version
+			should also call it's parent's version, too.
+			@param ad pointer to the classad to publish into
+			@return true if success, false if failure
+		*/
+	virtual bool PublishUpdateAd( ClassAd* ad );
 
-	int TransferCompleted(FileTransfer *);
+protected:
 
 private:
 	ProcFamily *family;
-	FileTransfer *filetrans;
 
 	// timer id for periodically taking a ProcFamily snapshot
 	int snapshot_tid;
-
-	// timer id for periodically sending info on job to Shadow
-	int shadowupdate_tid;
-
-	// UDP socket back to the shadow command port
-	SafeSock *shadowsock;
-
-	// the real job executable name (after ATTR_JOB_CMD
-	// is switched to condor_exec).
-	char jobtmp[_POSIX_PATH_MAX];
-
-	// if true, transfer files at vacate time (in addtion to job exit)
-	bool TransferAtVacate;
-
 };
 
 #endif

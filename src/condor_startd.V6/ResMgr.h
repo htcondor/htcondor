@@ -32,6 +32,8 @@
 
 #include "simplelist.h"
 #include "extArray.h"
+#include "Resource.h"
+#include "starter_mgr.h"
 
 typedef int (Resource::*ResourceMember)();
 typedef float (Resource::*ResourceFloatMember)();
@@ -50,6 +52,19 @@ private:
 	ExtArray<bool> free_ids;
 };
 
+// A name / ClassAd pair to manage together
+class NamedClassAd
+{
+  public:
+	NamedClassAd( const char *name, ClassAd *ad = NULL );
+	~NamedClassAd( void );
+	char *GetName( void ) { return myName; };
+	ClassAd *GetAd( void ) { return myClassAd; };
+	void ReplaceAd( ClassAd *newAd );
+  private:
+	char	*myName;
+	ClassAd	*myClassAd;
+};
 
 class ResMgr : public Service
 {
@@ -111,6 +126,12 @@ public:
 	// function.  
 	void resource_sort( ComparisonFunc );
 
+	// Manipulate the supplemental Class Ad list
+	int		adlist_register( const char *name );
+	int		adlist_replace( const char *name, ClassAd *ad );
+	int		adlist_delete( const char *name );
+	int		adlist_publish( ClassAd *resAd, amask_t mask );
+
 	// Methods to control various timers
 	void	check_polling( void );	// See if we need to poll frequently
 	int		start_update_timer(void); // Timer for updating the CM(s)
@@ -144,6 +165,8 @@ public:
 	void		markShutdown() { is_shutting_down = true; };
 	bool		isShuttingDown() { return is_shutting_down; };
 
+	StarterMgr starter_mgr;
+
 private:
 
 	Resource**	resources;		// Array of pointers to Resource objects
@@ -160,6 +183,7 @@ private:
 	int		num_updates;
 	int		up_tid;		// DaemonCore timer id for update timer
 	int		poll_tid;	// DaemonCore timer id for polling timer
+	time_t	startTime;		// Time that we started
 
 	StringList**	type_strings;	// Array of StringLists that
 		// define the resource types specified in the config file.  
@@ -170,6 +194,9 @@ private:
 		// Data members we need to handle dynamic reconfig:
 	SimpleList<CpuAttributes*>		alloc_list;		
 	SimpleList<Resource*>			destroy_list;
+
+	// List of Supplemental ClassAds to publish
+	SimpleList<NamedClassAd*>		extra_ads;
 
 		// Builds a CpuAttributes object to represent the virtual
 		// machine described by the given machine type.

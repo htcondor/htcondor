@@ -74,27 +74,59 @@ class UniShadow : public BaseShadow
 	void init( ClassAd *jobAd, char schedd_addr[], char host[], 
 			   char capability[], char cluster[], char proc[]);
 	
-		/** Makes the job go away.  Updates the job's classAd in the
-			Q manager, sends email to the user if requested, and
-			calls DC_Exit().  It doesn't return.
-			@param reason The reason this job exited.
-			@param exitStatus Status upon exit.
-		 */
-	void shutDown( int reason, int exitStatus );
-	
 		/**
 		 */
 	int handleJobRemoval(int sig);
 
+		/// Log an execute event to the UserLog
+	void logExecuteEvent( void );
+
+		/** Return the exit reason for this shadow's job.  Since we've
+			only got 1 RemoteResource, we can just return its value.
+		*/
+	int getExitReason( void );
+
 	float bytesSent();
 	float bytesReceived();
 
+	int updateFromStarter(int command, Stream *s);
+
+	struct rusage getRUsage( void );
+
+	int getImageSize( void );
+
+	int getDiskUsage( void );
+
+	bool exitedBySignal( void );
+
+	int exitSignal( void );
+
+	int exitCode( void );
+
+		/** This function is specifically used for spawning MPI jobs.
+			So, if for some bizzare reason, it gets called for a
+			non-MPI shadow, we should return falure.
+		*/
+	bool setMpiMasterInfo( char* ) { return false; };
+
+		/** If desired, send the user email now that this job has
+			terminated.  This has all the job statistics from the run,
+			and lots of other useful info.
+		*/
+	virtual void emailTerminateEvent( int exitReason );
+
+		/** Do all work to cleanup before this shadow can exit.  We've
+			only got 1 RemoteResource to kill the starter on.
+		*/
+	virtual void cleanUp( void );
+
+		/** Do a graceful shutdown of the remote starter */
+	virtual void gracefulShutDown( void );
+
+	virtual void resourceBeganExecution( RemoteResource* rr );
+
  private:
-
 	RemoteResource *remRes;
-
-	int UpdateFromStarter(int command, Stream *s);
-
 };
 
 

@@ -81,6 +81,7 @@ void Accountant::Initialize()
   char* tmp;
   NiceUserPriorityFactor=10000000;
   RemoteUserPriorityFactor=10000;
+  DefaultPriorityFactor=1;
   HalfLifePeriod=86400;
 
   // get half life period
@@ -107,6 +108,14 @@ void Accountant::Initialize()
 	  free(tmp);
   }
 
+  // get default priority factor
+
+  tmp = param("DEFAULT_PRIO_FACTOR");
+  if(tmp) {
+	  DefaultPriorityFactor=(float)atof(tmp);
+	  free(tmp);
+  }
+
   // get accountant local domain
 
   tmp = param("ACCOUNTANT_LOCAL_DOMAIN");
@@ -118,27 +127,35 @@ void Accountant::Initialize()
       RemoteUserPriorityFactor=1;
   }
 
-  dprintf(D_ALWAYS,"PRIORITY_HALFLIFE=%f\n",HalfLifePeriod);
-  dprintf(D_ALWAYS,"NICE_USER_PRIO_FACTOR=%f\n",NiceUserPriorityFactor);
-  dprintf(D_ALWAYS,"REMOTE_PRIO_FACTOR=%f\n",RemoteUserPriorityFactor);
-  dprintf(D_ALWAYS,"ACCOUNTANT_LOCAL_DOMAIN=%s\n",
-				  AccountantLocalDomain.Value());
-
-  // get log filename
+  tmp = param("MAX_ACCOUNTANT_DATABASE_SIZE");
+  if( tmp ) {
+	  MaxAcctLogSize = atoi( tmp );
+	  free(tmp);
+  } else {
+	  MaxAcctLogSize = 1000000;
+  }
 
   tmp = param("SPOOL");
-  MyString OldLogFileName;
   if(tmp) {
 	  LogFileName=tmp;
-      OldLogFileName=LogFileName+"/Accountant.log";
 	  LogFileName+="/Accountantnew.log";
-	  free(tmp);
+	  free( tmp );
   } else {
 	  EXCEPT( "SPOOL not defined!" );
   }
+
+  dprintf(D_ACCOUNTANT,"PRIORITY_HALFLIFE=%f\n",HalfLifePeriod);
+  dprintf(D_ACCOUNTANT,"NICE_USER_PRIO_FACTOR=%f\n",NiceUserPriorityFactor);
+  dprintf(D_ACCOUNTANT,"REMOTE_PRIO_FACTOR=%f\n",RemoteUserPriorityFactor);
+  dprintf(D_ACCOUNTANT,"DEFAULT_PRIO_FACTOR=%f\n",DefaultPriorityFactor);
+  dprintf(D_ACCOUNTANT,"ACCOUNTANT_LOCAL_DOMAIN=%s\n",
+				  AccountantLocalDomain.Value());
+  dprintf( D_ACCOUNTANT, "MAX_ACCOUNTANT_DATABASE_SIZE=%d\n",
+		   MaxAcctLogSize );
+
   if (!AcctLog) {
     AcctLog=new ClassAdLog(LogFileName.Value());
-    dprintf(D_FULLDEBUG,"Accountant::Initialize - LogFileName=%s\n",
+    dprintf(D_ACCOUNTANT,"Accountant::Initialize - LogFileName=%s\n",
 					LogFileName.Value());
   }
 
@@ -169,17 +186,7 @@ int Accountant::GetResourcesUsed(const MyString& CustomerName)
 
 float Accountant::GetPriority(const MyString& CustomerName) 
 {
-  float PriorityFactor=0;
-  GetAttributeFloat(CustomerRecord+CustomerName,PriorityFactorAttr,PriorityFactor);
-  if (PriorityFactor<1) {
-    if (strncmp(CustomerName.Value(),NiceUserName,strlen(NiceUserName))==0)
-      PriorityFactor=NiceUserPriorityFactor;
-    else if (AccountantLocalDomain!=GetDomain(CustomerName))
-      PriorityFactor=RemoteUserPriorityFactor;
-    else
-      PriorityFactor=1;
-    SetAttributeFloat(CustomerRecord+CustomerName,PriorityFactorAttr,PriorityFactor);
-  }
+  float PriorityFactor=GetPriorityFactor(CustomerName);
   float Priority=MinPriority;
   GetAttributeFloat(CustomerRecord+CustomerName,PriorityAttr,Priority);
   if (Priority<MinPriority) {
@@ -190,12 +197,32 @@ float Accountant::GetPriority(const MyString& CustomerName)
 }
 
 //------------------------------------------------------------------
+// Return the priority factor of a customer
+//------------------------------------------------------------------
+
+float Accountant::GetPriorityFactor(const MyString& CustomerName) 
+{
+  float PriorityFactor=0;
+  GetAttributeFloat(CustomerRecord+CustomerName,PriorityFactorAttr,PriorityFactor);
+  if (PriorityFactor<1) {
+    if (strncmp(CustomerName.Value(),NiceUserName,strlen(NiceUserName))==0)
+      PriorityFactor=NiceUserPriorityFactor;
+    else if (AccountantLocalDomain!=GetDomain(CustomerName))
+      PriorityFactor=RemoteUserPriorityFactor;
+    else
+      PriorityFactor=DefaultPriorityFactor;
+    SetAttributeFloat(CustomerRecord+CustomerName,PriorityFactorAttr,PriorityFactor);
+  }
+  return PriorityFactor;
+}
+
+//------------------------------------------------------------------
 // Reset the Accumulated usage for all users
 //------------------------------------------------------------------
 
 void Accountant::ResetAllUsage() 
 {
-  dprintf(D_FULLDEBUG,"Accountant::ResetAllUsage\n");
+  dprintf(D_ACCOUNTANT,"Accountant::ResetAllUsage\n");
   time_t T=time(0);
   HashKey HK;
   char key[_POSIX_PATH_MAX];
@@ -217,7 +244,7 @@ void Accountant::ResetAllUsage()
 
 void Accountant::ResetAccumulatedUsage(const MyString& CustomerName) 
 {
-  dprintf(D_FULLDEBUG,"Accountant::ResetAccumulatedUsage - CustomerName=%s\n",CustomerName.Value());
+  dprintf(D_ACCOUNTANT,"Accountant::ResetAccumulatedUsage - CustomerName=%s\n",CustomerName.Value());
   SetAttributeFloat(CustomerRecord+CustomerName,AccumulatedUsageAttr,0);
   SetAttributeInt(CustomerRecord+CustomerName,BeginUsageTimeAttr,time(0));
 }
@@ -228,7 +255,7 @@ void Accountant::ResetAccumulatedUsage(const MyString& CustomerName)
 
 void Accountant::SetPriorityFactor(const MyString& CustomerName, float PriorityFactor) 
 {
-  dprintf(D_FULLDEBUG,"Accountant::SetPriorityFactor - CustomerName=%s, PriorityFactor=%8.3f\n",CustomerName.Value(),PriorityFactor);
+  dprintf(D_ACCOUNTANT,"Accountant::SetPriorityFactor - CustomerName=%s, PriorityFactor=%8.3f\n",CustomerName.Value(),PriorityFactor);
   SetAttributeFloat(CustomerRecord+CustomerName,PriorityFactorAttr,PriorityFactor);
 }
 
@@ -238,7 +265,7 @@ void Accountant::SetPriorityFactor(const MyString& CustomerName, float PriorityF
 
 void Accountant::SetPriority(const MyString& CustomerName, float Priority) 
 {
-  dprintf(D_FULLDEBUG,"Accountant::SetPriority - CustomerName=%s, Priority=%8.3f\n",CustomerName.Value(),Priority);
+  dprintf(D_ACCOUNTANT,"Accountant::SetPriority - CustomerName=%s, Priority=%8.3f\n",CustomerName.Value(),Priority);
   SetAttributeFloat(CustomerRecord+CustomerName,PriorityAttr,Priority);
 }
 
@@ -256,13 +283,13 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
 
 void Accountant::AddMatch(const MyString& CustomerName, const MyString& ResourceName, time_t T)
 {
-  // dprintf(D_FULLDEBUG,"Accountant::AddMatch - CustomerName=%s, ResourceName=%s\n",CustomerName.Value(),ResourceName.Value());
+  // dprintf(D_ACCOUNTANT,"Accountant::AddMatch - CustomerName=%s, ResourceName=%s\n",CustomerName.Value(),ResourceName.Value());
 
   // Check if the resource is used
   MyString RemoteUser;
   if (GetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,RemoteUser)) {
     if (CustomerName==RemoteUser) {
-      // dprintf(D_FULLDEBUG,"Match already existed!\n");
+      // dprintf(D_ACCOUNTANT,"Match already existed!\n");
       return;
     }
     RemoveMatch(ResourceName,T);
@@ -284,7 +311,7 @@ void Accountant::AddMatch(const MyString& CustomerName, const MyString& Resource
   SetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,CustomerName);
   SetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,T);
 
-  dprintf(D_ALWAYS,"(ACCOUNTANT) Adding match between customer %s and resource %s\n",CustomerName.Value(),ResourceName.Value());
+  dprintf(D_ACCOUNTANT,"(ACCOUNTANT) Adding match between customer %s and resource %s\n",CustomerName.Value(),ResourceName.Value());
 }
 
 //------------------------------------------------------------------
@@ -298,7 +325,7 @@ void Accountant::RemoveMatch(const MyString& ResourceName)
 
 void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
 {
-  dprintf(D_FULLDEBUG,"Accountant::RemoveMatch - ResourceName=%s\n",ResourceName.Value());
+  dprintf(D_ACCOUNTANT,"Accountant::RemoveMatch - ResourceName=%s\n",ResourceName.Value());
 
   MyString CustomerName;
   if (GetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,CustomerName)) {
@@ -317,7 +344,7 @@ void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
     if (StartTime<LastUpdateTime) StartTime=LastUpdateTime;
     UnchargedTime+=T-StartTime;
     SetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
-  dprintf(D_ALWAYS,"(ACCOUNTANT) Removing match between customer %s and resource %s\n",CustomerName.Value(),ResourceName.Value());
+  dprintf(D_ACCOUNTANT,"(ACCOUNTANT) Removing match between customer %s and resource %s\n",CustomerName.Value(),ResourceName.Value());
   }
   
   DeleteClassAd(ResourceRecord+ResourceName);
@@ -382,7 +409,7 @@ void Accountant::UpdatePriorities()
   LastUpdateTime=T;
   SetAttributeInt(AcctRecord,LastUpdateTimeAttr,LastUpdateTime);
 
-  dprintf(D_ALWAYS,"(ACCOUNTANT) Updating priorities - AgingFactor=%8.3f , TimePassed=%d\n",AgingFactor,TimePassed);
+  dprintf(D_ACCOUNTANT,"(ACCOUNTANT) Updating priorities - AgingFactor=%8.3f , TimePassed=%d\n",AgingFactor,TimePassed);
 
   HashKey HK;
   char key[_POSIX_PATH_MAX];
@@ -418,20 +445,35 @@ void Accountant::UpdatePriorities()
     if (RecentUsage>0) SetAttributeInt(key,LastUsageTimeAttr,T);
     SetAttributeInt(key,UnchargedTimeAttr,0);
 
-    dprintf(D_FULLDEBUG,"CustomerName=%s , Old Priority=%5.3f , New Priority=%5.3f , ResourcesUsed=%d\n",key,OldPrio,Priority,ResourcesUsed);
-    dprintf(D_FULLDEBUG,"RecentUsage=%8.3f, UnchargedTime=%d, AccumulatedUsage=%5.3f, BeginUsageTime=%d\n",RecentUsage,UnchargedTime,AccumulatedUsage,BeginUsageTime);
+    dprintf(D_ACCOUNTANT,"CustomerName=%s , Old Priority=%5.3f , New Priority=%5.3f , ResourcesUsed=%d\n",key,OldPrio,Priority,ResourcesUsed);
+    dprintf(D_ACCOUNTANT,"RecentUsage=%8.3f, UnchargedTime=%d, AccumulatedUsage=%5.3f, BeginUsageTime=%d\n",RecentUsage,UnchargedTime,AccumulatedUsage,BeginUsageTime);
 
     if (Priority<MinPriority && ResourcesUsed==0 && AccumulatedUsage==0) DeleteClassAd(key);
   }
 
   // Check if the log needs to be truncated
   struct stat statbuf;
-  if (stat(LogFileName.Value(),&statbuf)) {
-    dprintf(D_ALWAYS,"Warning!! ERROR in Accountant::UpdatePriorities - can't stat the log file");
-  }
-  else if (statbuf.st_size>300000) {
-    AcctLog->TruncLog();
-    dprintf(D_FULLDEBUG,"Accountant::UpdatePriorities - truncating log (prev size=%d)\n",statbuf.st_size);
+  if( stat(LogFileName.Value(),&statbuf) ) {
+    dprintf( D_ALWAYS, "ERROR in Accountant::UpdatePriorities - "
+			 "can't stat database (%s)", LogFileName.Value() );
+  } else if( statbuf.st_size > MaxAcctLogSize ) {
+	  AcctLog->TruncLog();
+	  dprintf( D_ACCOUNTANT, "Accountant::UpdatePriorities - "
+			   "truncating database (prev size=%d)\n", 
+			   statbuf.st_size ); 
+		  // Now that we truncated, check the size, and allow it to
+		  // grow to at least double in size before truncating again.
+	  if( stat(LogFileName.Value(),&statbuf) ) {
+		  dprintf( D_ALWAYS, "ERROR in Accountant::UpdatePriorities - "
+				   "can't stat database (%s)", LogFileName.Value() );
+	  } else {
+		  if( statbuf.st_size * 2 > MaxAcctLogSize ) {
+			  MaxAcctLogSize = statbuf.st_size * 2;
+			  dprintf( D_ACCOUNTANT, "Database has grown, expanding "
+					   "MAX_ACCOUNTANT_DATABASE_SIZE to %d\n", 
+					   MaxAcctLogSize );
+		  }
+	  }
   }
 }
 
@@ -442,7 +484,7 @@ void Accountant::UpdatePriorities()
 
 void Accountant::CheckMatches(ClassAdList& ResourceList) 
 {
-  dprintf(D_FULLDEBUG,"(Accountant) Checking Matches\n");
+  dprintf(D_ACCOUNTANT,"(Accountant) Checking Matches\n");
 
   ClassAd* ResourceAd;
   HashKey HK;
@@ -459,14 +501,14 @@ void Accountant::CheckMatches(ClassAdList& ResourceList)
     ResourceName=key+ResourceRecord.Length();
     ResourceAd=FindResourceAd(ResourceName, ResourceList);
     if (!ResourceAd) {
-      dprintf(D_FULLDEBUG,"Resource %s class-ad wasn't found in the resource list.\n",ResourceName.Value());
+      dprintf(D_ACCOUNTANT,"Resource %s class-ad wasn't found in the resource list.\n",ResourceName.Value());
       RemoveMatch(ResourceName);
     }
 	else {
       ad->LookupString(RemoteUserAttr.Value(),key);
       CustomerName=key;
       if (!CheckClaimedOrMatched(ResourceAd, CustomerName)) {
-        dprintf(D_FULLDEBUG,"Resource %s was not claimed by %s - removing match\n",ResourceName.Value(),CustomerName.Value());
+        dprintf(D_ACCOUNTANT,"Resource %s was not claimed by %s - removing match\n",ResourceName.Value(),CustomerName.Value());
         RemoveMatch(ResourceName);
       }
     }
@@ -488,7 +530,7 @@ void Accountant::CheckMatches(ClassAdList& ResourceList)
 
 AttrList* Accountant::ReportState(const MyString& CustomerName) {
 
-  dprintf(D_FULLDEBUG,"Reporting State for customer %s\n",CustomerName.Value());
+  dprintf(D_ACCOUNTANT,"Reporting State for customer %s\n",CustomerName.Value());
 
   HashKey HK;
   char key[200];
@@ -528,7 +570,7 @@ AttrList* Accountant::ReportState(const MyString& CustomerName) {
 
 AttrList* Accountant::ReportState() {
 
-  dprintf(D_FULLDEBUG,"Reporting State\n");
+  dprintf(D_ACCOUNTANT,"Reporting State\n");
 
   HashKey HK;
   char key[200];
@@ -649,7 +691,7 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& Custo
 
   if (string_to_state(state)==matched_state) return 1;
   if (string_to_state(state)!=claimed_state) {
-    dprintf(D_FULLDEBUG,"State was %s - not claimed or matched\n",state);
+    dprintf(D_ACCOUNTANT,"State was %s - not claimed or matched\n",state);
     return 0;
   }
 
@@ -660,7 +702,7 @@ int Accountant::CheckClaimedOrMatched(ClassAd* ResourceAd, const MyString& Custo
   }
 
   if (CustomerName!=MyString(RemoteUser)) {
-    dprintf(D_FULLDEBUG,"Remote user for startd ad: %s does not match customer name\n",RemoteUser);
+    dprintf(D_ACCOUNTANT,"Remote user for startd ad: %s does not match customer name\n",RemoteUser);
     return 0;
   }
 

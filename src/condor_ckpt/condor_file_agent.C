@@ -3,6 +3,7 @@
 #include "condor_file_local.h"
 #include "condor_debug.h"
 #include "condor_error.h"
+#include "condor_syscall_mode.h"
 
 #define KB 1024
 #define TRANSFER_BLOCK_SIZE (32*KB)
@@ -19,10 +20,15 @@ CondorFileAgent::~CondorFileAgent()
 	delete original;
 }
 
-int CondorFileAgent::open( const char *url, int flags, int mode )
+int CondorFileAgent::open( const char *url_in, int flags, int mode )
 {
 	int pos=0, chunk=0, result=0;
 	int local_flags;
+	char junk[_POSIX_PATH_MAX];
+	char sub_url[_POSIX_PATH_MAX];
+
+	strcpy( url, url_in );
+	sscanf( url, "%[^:]:%s",junk,sub_url );
 
 	// First, fudge the flags.  Even if the file is opened
 	// write-only, we must open it read/write to get the 
@@ -51,13 +57,18 @@ int CondorFileAgent::open( const char *url, int flags, int mode )
 
 	// Open the original file.
 
-	result = original->open(url,flags,mode);
+	result = original->open(sub_url,flags,mode);
 	if(result<0) return -1;
 
 	// Choose where to store the file.
+	// Notice that tmpnam() may do funny syscalls to make sure that
+	// the name is not in use.  So, it must be done in local mode.
 	// Eventually, this should be in a Condor spool directory.
 
+	int scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
 	tmpnam(local_filename);
+	SetSyscalls(scm);
+
 	sprintf(local_url,"local:%s\n",local_filename);
 
 	// Open the local copy, with a private mode.
@@ -70,7 +81,9 @@ int CondorFileAgent::open( const char *url, int flags, int mode )
 	// If we get into trouble and can't clean up properly,
 	// the file system will free it for us.
 
+	scm = SetSyscalls(SYS_LOCAL|SYS_UNMAPPED);
 	unlink( local_filename );
+	SetSyscalls(scm);
 
 	// If the file has not been opened for append,
 	// then yank all of the data in.
@@ -88,8 +101,6 @@ int CondorFileAgent::open( const char *url, int flags, int mode )
 			pos += chunk;
 		} while(chunk==TRANSFER_BLOCK_SIZE);		
 	}
-
-	local_copy->set_size( original->get_size());
 
 	// Return success!
 
@@ -110,7 +121,6 @@ int CondorFileAgent::close()
 		dprintf(D_ALWAYS,"CondorFileAgent: Copying %s back into %s\n",local_copy->get_url(),original->get_url());
 
 		original->ftruncate(local_copy->get_size());
-		original->set_size(local_copy->get_size());
 
 		do {
 			chunk = local_copy->read(pos,buffer,TRANSFER_BLOCK_SIZE);
@@ -179,6 +189,33 @@ int CondorFileAgent::fsync()
 	return local_copy->fsync();
 }
 
+int CondorFileAgent::flush()
+{
+	return local_copy->flush();
+}
+
+int CondorFileAgent::fstat(struct stat *buf)
+{
+	struct stat local;
+	int ret, ret2;
+
+	ret = original->fstat(buf);
+	if (ret != 0){
+		return ret;
+	}
+
+	ret2 = local_copy->fstat(&local);
+	if (ret2 != 0){
+		return ret2;
+	}
+
+	buf->st_size = local.st_size;
+	buf->st_atime = local.st_atime;
+	buf->st_mtime = local.st_mtime;
+
+	return ret2;
+}
+
 int CondorFileAgent::is_readable()
 {
 	return original->is_readable();
@@ -189,9 +226,9 @@ int CondorFileAgent::is_writeable()
 	return original->is_writeable();
 }
 
-void CondorFileAgent::set_size(size_t size)
+int CondorFileAgent::is_seekable()
 {
-	local_copy->set_size(size);
+	return 1;
 }
 
 int CondorFileAgent::get_size()
@@ -201,7 +238,7 @@ int CondorFileAgent::get_size()
 
 char * CondorFileAgent::get_url()
 {
-	return original->get_url();
+	return url;
 }
 
 int CondorFileAgent::get_unmapped_fd()

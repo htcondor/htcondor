@@ -95,16 +95,18 @@ class UserLog {
         @param c the condor ID cluster to put into each ULogEvent
         @param p the condor ID proc    to put into each ULogEvent
         @param s the condor ID subproc to put into each ULogEvent
+		@return true on success
     */
-    void initialize(const char *owner, const char *file, int c, int p, int s);
+    bool initialize(const char *owner, const char *file, int c, int p, int s);
     
     /** Initialize the log file.
         @param file the path name of the log file to be written (copied)
         @param c the condor ID cluster to put into each ULogEvent
         @param p the condor ID proc    to put into each ULogEvent
         @param s the condor ID subproc to put into each ULogEvent
+		@return true on success
     */
-    void initialize(const char *file, int c, int p, int s);
+    bool initialize(const char *file, int c, int p, int s);
     
     /** Initialize the condorID, which will fill in the condorID
         for each ULogEvent passed to writeEvent().
@@ -112,8 +114,9 @@ class UserLog {
         @param c the condor ID cluster to put into each ULogEvent
         @param p the condor ID proc    to put into each ULogEvent
         @param s the condor ID subproc to put into each ULogEvent
+		@return true on success
     */
-    void initialize(int c, int p, int s);
+    bool initialize(int c, int p, int s);
 
     /** Write an event to the log file.  Caution: if the log file is
         not initialized, then no event will be written, and this function
@@ -161,13 +164,13 @@ class ReadUserLog
   public:
 
     ///
-    inline ReadUserLog() : _fd(-1), _fp(0) {}
+    inline ReadUserLog() : _fd(-1), _fp(0), is_locked(false) {}
 
     ///
     ReadUserLog (const char * filename);
                                       
     ///
-    inline ~ReadUserLog() { if (_fp) fclose(_fp); }
+    inline ~ReadUserLog() { if (_fp) fclose(_fp); if(is_locked) lock->release(); }
 
     /** Initialize the log file.  This function will abort the program
         (by calling EXCEPT) if it can't open the log file.
@@ -195,11 +198,19 @@ class ReadUserLog
 
     /// Get the log's file descriptor
     inline int getfd() const { return _fd; }
+	inline FILE *getfp() const { return _fp; }
+
+	void outputFilePos(const char *pszWhereAmI);
+
+	void Lock();
+	void Unlock();
 
     private:
 
     /** The log's file descriptor */  int    _fd;
     /** The log's file pointer    */  FILE * _fp;
+    /** The log file lock         */  FileLock* lock;
+	/** Is the file locked?       */  bool is_locked;
 };
 
 #endif /* __cplusplus */

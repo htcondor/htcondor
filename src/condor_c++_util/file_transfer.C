@@ -33,10 +33,21 @@
 #include "directory.h"
 #include "condor_config.h"
 #include "condor_ckpt_name.h"
+#include "condor_string.h"
 #include "util_lib_proto.h"
-#include "condor_uid.h"
+#include "daemon.h"
+#include "daemon_types.h"
 
 #define COMMIT_FILENAME ".ccommit.con"
+
+// Filenames are case insensitive on Win32, but case sensitive on Unix
+#ifdef WIN32
+#	define file_strcmp _stricmp
+#	define file_contains contains_anycase
+#else
+#	define file_strcmp strcmp
+#	define file_contains contains
+#endif
 
 TranskeyHashTable* FileTransfer::TranskeyTable = NULL;
 TransThreadHashTable *FileTransfer::TransThreadTable = NULL;
@@ -76,6 +87,7 @@ FileTransfer::FileTransfer()
 	InputFiles = NULL;
 	OutputFiles = NULL;
 	IntermediateFiles = NULL;
+	SpooledIntermediateFiles = NULL;
 	FilesToSend = NULL;
 	ExecFile = NULL;
 	TransSock = NULL;
@@ -95,6 +107,9 @@ FileTransfer::FileTransfer()
 #ifdef WIN32
 	perm_obj = NULL;
 #endif
+	desired_priv_state = PRIV_UNKNOWN;
+	want_priv_change = false;
+	did_init = false;
 }
 
 FileTransfer::~FileTransfer()
@@ -115,6 +130,7 @@ FileTransfer::~FileTransfer()
 	if (InputFiles) delete InputFiles;
 	if (OutputFiles) delete OutputFiles;
 	if (IntermediateFiles) delete IntermediateFiles;
+	if (SpooledIntermediateFiles) delete SpooledIntermediateFiles;
 	// Note: do _not_ delete FileToSend!  It points to OutputFile or Intermediate.
 	if (TransSock) free(TransSock);
 	if (TransKey) {
@@ -141,11 +157,24 @@ FileTransfer::~FileTransfer()
 }
 
 int
-FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
+FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv ) 
 {
 	char buf[ATTRLIST_MAX_EXPRESSION];
+    Value v;
+
+	if( did_init ) {
+			// no need to except, just quietly return success
+		return 1;
+	}
 
 	dprintf(D_FULLDEBUG,"entering FileTransfer::Init\n");
+
+	desired_priv_state = priv;
+    if ( priv == PRIV_UNKNOWN ) {
+        want_priv_change = false;
+    } else {
+        want_priv_change = true;
+    }
 
 	if (Iwd) {
 		EXCEPT("FileTransfer::Init called twice!");
@@ -262,8 +291,8 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 	}
 	if (Ad->EvaluateAttrString(ATTR_JOB_INPUT,buf, ATTRLIST_MAX_EXPRESSION)) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
-		if ( strcmp(buf,NULL_FILE) != 0 ) {			
-			if ( !InputFiles->contains(buf) )
+		if ( file_strcmp(buf,NULL_FILE) != 0 ) {			
+			if ( !InputFiles->file_contains(buf) )
 				InputFiles->append(buf);			
 		}
 	}
@@ -285,8 +314,11 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 			SpoolSpace = strdup( gen_ckpt_name(Spool,Cluster,Proc,0) );
 			TmpSpoolSpace = (char*)malloc( strlen(SpoolSpace) + 10 );
 			sprintf(TmpSpoolSpace,"%s.tmp",SpoolSpace);
-			//priv_state priv = set_condor_priv();
+
+			priv_state old_priv = set_condor_priv();
+			
 			if( (mkdir(SpoolSpace,0777) < 0) ) {
+				// mkdir can return 17 = EEXIST (dirname exists) or 2 = ENOENT (path not found)
 				dprintf( D_FULLDEBUG, 
 						 "FileTransfer::Init(): mkdir(%s) failed, errno: %d\n",
 						 SpoolSpace, errno );
@@ -302,7 +334,7 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 				// we can access an executable in the spool dir
 				ExecFile = strdup(source);
 			}
-			//set_priv(priv);
+			set_priv( old_priv );
 
 		}
 		if ( !ExecFile ) {
@@ -319,8 +351,19 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 #endif
 			ExecFile = strdup(buf);
 		}
-		if ( !InputFiles->contains(ExecFile) )
+
+		// If we don't already have this on our list of things to transfer, 
+		// and we haven't set TRANSFER_EXECTUABLE to false, send it along.
+		// If we didn't set TRANSFER_EXECUTABLE, default to true 
+
+		bool xferExec;
+		if( !Ad->EvaluateAttrBool(ATTR_TRANSFER_EXECUTABLE, xferExec)) {
+			xferExec=true;
+		}
+
+		if ( xferExec && !InputFiles->contains(ExecFile) ) {
 			InputFiles->append(ExecFile);	
+		}	
 	}
 
 	// Set OutputFiles to be ATTR_TRANSFER_OUTPUT_FILES if specified.
@@ -335,9 +378,9 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 	// and now check stdout/err
 	if (Ad->EvaluateAttrString(ATTR_JOB_OUTPUT, buf, ATTRLIST_MAX_EXPRESSION)) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
-		if ( strcmp(buf,NULL_FILE) != 0 ) {
+		if ( file_strcmp(buf,NULL_FILE) != 0 ) {
 			if ( OutputFiles ) {
-				if ( !OutputFiles->contains(buf) )
+				if ( !OutputFiles->file_contains(buf) )
 					OutputFiles->append(buf);
 			} else
 				OutputFiles = new StringList(buf,",");
@@ -345,9 +388,9 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 	}
 	if (Ad->EvaluateAttrString(ATTR_JOB_ERROR, buf, ATTRLIST_MAX_EXPRESSION)) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
-		if ( strcmp(buf,NULL_FILE) != 0 ) {
+		if ( file_strcmp(buf,NULL_FILE) != 0 ) {
 			if ( OutputFiles ) {
-				if ( !OutputFiles->contains(buf) )
+				if ( !OutputFiles->file_contains(buf) )
 					OutputFiles->append(buf);
 			} else
 				OutputFiles = new StringList(buf,",");
@@ -359,6 +402,52 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 		return 0;		
 	}
 	TransSock = strdup(buf);
+
+
+	// If we are acting as the server side and we are uploading
+	// any changed files, make a list of "intermediate" files
+	// stored in our spool space (i.e. if transfer_files=ALWAYS).
+	// This list is stored in the ClassAd which is sent to the 
+	// client side, so that when the client does a final transfer
+	// it can send changed files from that run + all intermediate
+	// files.  -Todd Tannenbaum <tannenba@cs.wisc.edu> 6/8/01
+	buf[0] = '\0';
+	if ( IsServer() && upload_changed_files ) {
+		CommitFiles();
+		MyString filelist;
+		const char* current_file = NULL;
+		bool print_comma = false;
+		Directory spool_space( SpoolSpace, PRIV_CONDOR );
+		while ( (current_file=spool_space.Next()) ) {
+			if ( print_comma ) {
+				filelist += ",";
+			} else {
+				print_comma = true;
+			}
+			filelist += current_file;			
+		}
+		if ( print_comma ) {
+			// we know that filelist has at least one entry, so
+			// insert it as an attribute into the ClassAd which
+			// will get sent to our peer.
+			sprintf(buf,"\"%s\"",filelist.Value());
+            v.SetStringValue(buf);
+            // Needs work Hao
+			//Ad->InsertOrUpdate( string(ATTR_TRANSFER_INTERMEDIATE_FILES), Literal::MakeLiteral(v));
+			dprintf(D_FULLDEBUG,"%s\n",buf);
+		}
+	}
+	if ( IsClient() && upload_changed_files ) {
+        string s;
+        if (Ad->EvaluateAttrString(ATTR_TRANSFER_INTERMEDIATE_FILES, s)) {
+            if ( s.length() > 0 ) {
+                SpooledIntermediateFiles = strnewp(s.data());
+            }
+		}
+		dprintf(D_FULLDEBUG,"%s=\"%s\"\n",
+				ATTR_TRANSFER_INTERMEDIATE_FILES,buf);
+	}
+	
 
 	// if we are acting as the server side, insert this key 
 	// into our hashtable if it is not already there.
@@ -378,15 +467,16 @@ FileTransfer::Init(ClassAd *Ad, bool want_check_perms)
 		}
 	}
 
+	did_init = true;
 	return 1;
 }
 
 int
 FileTransfer::DownloadFiles(bool blocking)
 {
-	ReliSock sock;
 	int ret_value;
-	
+	ReliSock sock;
+
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DownloadFiles\n");
 
 	if (ActiveTransferTid >= 0) {
@@ -404,13 +494,17 @@ FileTransfer::DownloadFiles(bool blocking)
 		EXCEPT("FileTransfer: DownloadFiles called on server side");
 	}
 
-	if ( !sock.connect(TransSock,0) )
-		return 0;
+	Daemon d(TransSock);
+
+    if ( !sock.connect(TransSock,0) ) {
+        EXCEPT("Unable to connect to server %s\n", TransSock);
+    }
+
+    d.startCommand(FILETRANS_UPLOAD, &sock, 0);
 
 	sock.encode();
 
-	if (!sock.snd_int(FILETRANS_UPLOAD,0) ||
-		!sock.code(TransKey) ||
+	if ( !sock.code(TransKey) ||
 		!sock.end_of_message() ) {
 		return 0;
 	}
@@ -437,7 +531,8 @@ FileTransfer::DownloadFiles(bool blocking)
 int
 FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 {
-	ReliSock sock;
+    ReliSock sock;
+
 	StringList changed_files(NULL,",");
 
 	dprintf(D_FULLDEBUG,
@@ -462,64 +557,65 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 	// set flag saying if this is the last upload (i.e. job exited)
 	m_final_transfer_flag = final_transfer ? 1 : 0;
 
-	// if this is the last upload, we want to fudge with 
-	// last_download_time so we do not send back just the files which
-	// changed (if upload_changed_files is true), since we want to 
-	// send back _all_ output files irregardless of if they were modified
-	// since the last file transfer.  Note: if last_download_time is
-	// zero, leave it that way, since that signifies we did not download
-	// anything.
-	if ( final_transfer && (last_download_time > 0) ) {
-		last_download_time = 1;  // pretend we downloaded in 1970!  ;^)
-	}
-
-	FilesToSend = NULL;
 	if (IntermediateFiles) delete(IntermediateFiles);
 	IntermediateFiles = NULL;
+	FilesToSend = NULL;
+
 	if ( upload_changed_files && last_download_time > 0 ) {
 		// Here we will upload only files in the Iwd which have changed
 		// since we downloaded last.  We only do this if 
 		// upload_changed_files it true, and if last_download_time > 0
 		// which means we have already downloaded something.
-		Directory dir(Iwd);
+
+		// If this is the file transfer, be certain to send back
+		// not only the files which have been modified during this run,
+		// but also the files which have been modified during
+		// previous runs (i.e. the SpooledIntermediateFiles).
+		if ( final_transfer && SpooledIntermediateFiles ) {
+			IntermediateFiles = 
+				new StringList(SpooledIntermediateFiles,",");
+			FilesToSend = IntermediateFiles;
+		}
+	
+		Directory* dir;
+		if( want_priv_change ) {
+			dir = new Directory( Iwd, desired_priv_state );
+		} else {
+			dir = new Directory( Iwd );
+		}
 		const char *f;
-		while ( (f=dir.Next()) ) {
+		while ( (f=dir->Next()) ) {
 			// don't send back condor_exec.exe
-			if ( strcmp(f,CONDOR_EXEC)==MATCH )
+			if ( file_strcmp(f,CONDOR_EXEC)==MATCH )
 				continue;
-			if ( strcmp(f,"condor_exec.bat")==MATCH )
+			if ( file_strcmp(f,"condor_exec.bat")==MATCH )
 				continue;
-			
-			// don't send back any input files on the final transfer.
-			// compare the filename to the basename of the files listed
-			// in the transfer_file_input attribute.
-			bool is_input_file = false;
-			const char *fname;
-			if ( final_transfer && InputFiles ) {				
-				InputFiles->rewind();
-				while ( (fname=InputFiles->next()) ) {
-					if ( strcmp(basename(fname), f) == MATCH ) {
-						is_input_file = true;
-						break;
-					}
-				}
-				if ( is_input_file ) {
-					continue;
-				}
-			}
-				
+
+			// for now, skip all subdirectory names until we add
+			// subdirectory support into FileTransfer.
+			if ( dir->IsDirectory() )
+				continue;
+							
 			// if this file is has been modified since last download,
 			// add it to the list of files to transfer.
-			if ( dir.GetModifyTime() > last_download_time ) {
-				dprintf(D_FULLDEBUG,"Sending changed file %s, mod=%ld, dow=%ld\n",
-					f,dir.GetModifyTime(),last_download_time);
+			if ( dir->GetModifyTime() > last_download_time ) {
+				dprintf( D_FULLDEBUG, 
+						 "Sending changed file %s, mod=%ld, dow=%ld\n",	
+						 f, dir->GetModifyTime(), last_download_time );
 				if (!IntermediateFiles) {
+					// Initialize it with intermediate files
+					// which we already have spooled.  We want to send
+					// back these files + any that have changed this time.
 					IntermediateFiles = new StringList(NULL,",");
 					FilesToSend = IntermediateFiles;
 				}
-				IntermediateFiles->append(f);
+				// now append changed file to list only if not already there 
+				if ( IntermediateFiles->file_contains(f) == FALSE ) {
+					IntermediateFiles->append(f);
+				}
 			}
 		}
+		delete dir;
 	} else {
 		// Here we want to upload the files listed in OutputFiles.
 		FilesToSend = OutputFiles;
@@ -532,21 +628,26 @@ FileTransfer::UploadFiles(bool blocking, bool final_transfer)
 		return 1;
 	}
 
-	if ( !sock.connect(TransSock,0) )
-		return 0;
+	Daemon d(TransSock);
+
+    if ( !sock.connect(TransSock,0) ) {
+        EXCEPT("Unable to connect to server %s\n", TransSock);
+    }
+
+	d.startCommand(FILETRANS_DOWNLOAD, &sock);
 
 	sock.encode();
 
-	if (!sock.snd_int(FILETRANS_DOWNLOAD,0) ||
-		!sock.code(TransKey) ||
+	if ( !sock.code(TransKey) ||
 		!sock.end_of_message() ) {
 		return 0;
 	}
 
-	dprintf(D_FULLDEBUG,
-					"FileTransfer::UploadFiles: sent TransKey=%s\n",TransKey);
+	dprintf( D_FULLDEBUG,
+			 "FileTransfer::UploadFiles: sent TransKey=%s\n", TransKey );
+	int retval = Upload(&sock,blocking);
 
-	return( Upload(&sock,blocking) );
+	return( retval );
 }
 
 int
@@ -596,7 +697,8 @@ FileTransfer::HandleCommands(Service *, int command, Stream *s)
 			// previous commit which may have been prematurely aborted.
 			{
 			transobject->CommitFiles();
-			Directory spool_space(transobject->SpoolSpace);
+			Directory spool_space( transobject->SpoolSpace,
+								   PRIV_CONDOR );
 			while ( spool_space.Next() ) {
 				transobject->InputFiles->append( spool_space.GetFullPath() );
 			}
@@ -734,6 +836,19 @@ FileTransfer::DownloadThread(void *arg, Stream *s)
 	return (total_bytes >= 0);
 }
 
+
+/*
+  Define a macro to restore our priv state (if needed) and return.  We
+  do this so we don't leak priv states in functions where we need to
+  be in our desired state.
+*/
+
+#define return_and_resetpriv(i)                     \
+    if( saved_priv != PRIV_UNKNOWN )                \
+        _set_priv(saved_priv,__FILE__,__LINE__,1);  \
+    return i;
+
+
 int
 FileTransfer::DoDownload(ReliSock *s)
 {
@@ -742,6 +857,8 @@ FileTransfer::DoDownload(ReliSock *s)
 	char* p_filename = filename;
 	char fullname[_POSIX_PATH_MAX];
 	int final_transfer;
+
+	priv_state saved_priv = PRIV_UNKNOWN;
 
 	// we want to tell get_file() to perform an fsync (i.e. flush to disk)
 	// the files we download if we are the client & we will need to upload
@@ -760,23 +877,30 @@ FileTransfer::DoDownload(ReliSock *s)
 
 	// find out if this is the final download.  if so, we put the files
 	// into the user's Iwd instead of our SpoolSpace.
-	if (!s->code(final_transfer))
-		return -1;
-	if (!s->end_of_message())
-		return -1;
-	
+	if( !s->code(final_transfer) ) {
+		return_and_resetpriv( -1 );
+	}
+	if( !s->end_of_message() ) {
+		return_and_resetpriv( -1 );
+	}	
 	for (;;) {
-		if (!s->code(reply))
-			return -1;
-		if (!s->end_of_message())
-			return -1;
-		if ( !reply )
+		if( !s->code(reply) ) {
+			return_and_resetpriv( -1 );
+		}
+		if( !s->end_of_message() ) {
+			return_and_resetpriv( -1 );
+		}
+		if( !reply ) {
 			break;
-		if ( !s->code(p_filename) )
-			return -1;
-
-		if ( final_transfer || IsClient() ) {
+		}
+		if( !s->code(p_filename) ) {
+			return_and_resetpriv( -1 );
+		}
+		if( final_transfer || IsClient() ) {
 			sprintf(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,filename);
+			if( want_priv_change ) {
+				saved_priv = set_priv( desired_priv_state );
+			}
 #ifdef WIN32
 			// check for write permission on this file, if we are supposed to check
 			if ( perm_obj && (perm_obj->write_access(fullname) != 1) ) {
@@ -784,11 +908,13 @@ FileTransfer::DoDownload(ReliSock *s)
 				dprintf(D_ALWAYS,"DoDownload: Permission denied to write file %s!\n",
 					fullname);
 				dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
-				return -1;
+				return_and_resetpriv( -1 );
 			}
 #endif
 		} else {
-			sprintf(fullname,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,filename);			
+			sprintf(fullname,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,filename);
+				// We *need* to be in condor_priv for this.
+			saved_priv = set_condor_priv();
 		}
 	
 		// On WinNT and apparently, some Unix, too, even doing an
@@ -800,28 +926,22 @@ FileTransfer::DoDownload(ReliSock *s)
 		// time of the file we just wrote backwards in time by a few
 		// minutes!  MLOP!! Since we are doing this, we may as well
 		// not bother to fsync every file.
-		if ( ((bytes = s->get_file(fullname)) < 0) )
-			return -1;
-
+		if( ((bytes = s->get_file(fullname)) < 0) ) {
+			return_and_resetpriv( -1 );
+		}
 		if ( want_fsync ) {
-#ifdef WIN32
-			struct _utimbuf timewrap;
-#else
 			struct utimbuf timewrap;
-#endif
+
 			time_t current_time = time(NULL);
 			timewrap.actime = current_time;		// set access time to now
 			timewrap.modtime = current_time - 180;	// set modify time to 3 min ago
-#ifdef WIN32
-			_utime(fullname,&timewrap);
-#else
-			utime(fullname,&timewrap);
-#endif
 
+			utime(fullname,&timewrap);
 		}
 
-		if ( !s->end_of_message() )
-			return -1;
+		if( !s->end_of_message() ) {
+			return_and_resetpriv( -1 );
+		}
 		total_bytes += bytes;
 	}
 
@@ -843,7 +963,7 @@ FileTransfer::DoDownload(ReliSock *s)
 		{
 			dprintf(D_ALWAYS, 
 				"FileTransfer::DoDownload failed to write commit file\n");
-			return -1;
+			return_and_resetpriv( -1 );
 		}
 
 		memset(buf,0,sizeof(buf));
@@ -855,7 +975,7 @@ FileTransfer::DoDownload(ReliSock *s)
 		CommitFiles();
 	}
 
-	return total_bytes;
+	return_and_resetpriv( total_bytes );
 }
 
 void
@@ -864,18 +984,21 @@ FileTransfer::CommitFiles()
 	char buf[_POSIX_PATH_MAX];
 	char newbuf[_POSIX_PATH_MAX];
 	const char *file;
-	Directory tmpspool(TmpSpoolSpace);
 
 	if ( IsClient() ) {
 		return;
 	}
-	
+
+		// We *need* to be condor_priv for all of this
+	Directory tmpspool( TmpSpoolSpace, PRIV_CONDOR );
+	priv_state saved_priv = set_condor_priv();
+
 	sprintf(buf,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,COMMIT_FILENAME);
 	if ( access(buf,F_OK) >= 0 ) {
 		// the commit file exists, so commit the files.
 		while ( (file=tmpspool.Next()) ) {
 			// don't commit the commit file!
-			if ( strcmp(file,COMMIT_FILENAME) == MATCH )
+			if ( file_strcmp(file,COMMIT_FILENAME) == MATCH )
 				continue;
 			sprintf(buf,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,file);
 			sprintf(newbuf,"%s%c%s",SpoolSpace,DIR_DELIM_CHAR,file);
@@ -889,6 +1012,7 @@ FileTransfer::CommitFiles()
 	// We have now commited the files in tmpspool, if we were supposed to.
 	// So now blow away tmpspool.
 	tmpspool.Remove_Entire_Directory();
+	set_priv( saved_priv );
 }
 
 int
@@ -964,16 +1088,22 @@ FileTransfer::DoUpload(ReliSock *s)
 	
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DoUpload\n");
 
+	priv_state saved_priv = PRIV_UNKNOWN;
+	if( want_priv_change ) {
+		saved_priv = set_priv( desired_priv_state );
+	}
+
 	s->encode();
 
 	// tell the server if this is the final transfer our not.
 	// if it is the final transfer, the server places the files
 	// into the user's Iwd.  if not, the files go into SpoolSpace.
-	if (!s->code(m_final_transfer_flag))
-		return -1;
-	if (!s->end_of_message())
-		return -1;
-
+	if( !s->code(m_final_transfer_flag) ) {
+		return_and_resetpriv( -1 );
+	}
+	if( !s->end_of_message() ) {
+		return_and_resetpriv( -1 );
+	}
 	if ( filelist ) {
 		filelist->rewind();
 	}
@@ -982,16 +1112,16 @@ FileTransfer::DoUpload(ReliSock *s)
 
 		dprintf(D_FULLDEBUG,"DoUpload: send file %s\n",filename);
 
-		if (!s->snd_int(1,FALSE)) {
+		if( !s->snd_int(1,FALSE) ) {
 			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
-			return -1;
+			return_and_resetpriv( -1 );
 		}
-		if (!s->end_of_message()) {
+		if( !s->end_of_message() ) {
 			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
-			return -1;
+			return_and_resetpriv( -1 );
 		}
 
-		if ( ExecFile && ( strcmp(ExecFile,filename)==0 ) ) {
+		if ( ExecFile && ( file_strcmp(ExecFile,filename)==0 ) ) {
 			// this file is the job executable
 			is_the_executable = true;
 			basefilename = (char *)CONDOR_EXEC ;
@@ -1001,12 +1131,12 @@ FileTransfer::DoUpload(ReliSock *s)
 			basefilename = basename(filename);
 		}
 
-		if ( !s->code(basefilename) ) {
+		if( !s->code(basefilename) ) {
 			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
-			return -1;
+			return_and_resetpriv( -1 );
 		}
 
-		if ( filename[0] != '/' && filename[0] != '\\' && filename[1] != ':' ){
+		if( filename[0] != '/' && filename[0] != '\\' && filename[1] != ':' ){
 			sprintf(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,filename);
 		} else {
 			strcpy(fullname,filename);
@@ -1016,24 +1146,28 @@ FileTransfer::DoUpload(ReliSock *s)
 		// do not check the executable, since it is likely sitting in the SPOOL
 		// directory.
 #ifdef WIN32
-		if ( perm_obj && !is_the_executable &&
+		if( perm_obj && !is_the_executable &&
 			(perm_obj->read_access(fullname) != 1) ) {
 			// we do _not_ have permission to read this file!!
 			dprintf(D_ALWAYS,"DoUpload: Permission denied to read file %s!\n",
 				fullname);
 			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
-			return -1;
+			return_and_resetpriv( -1 );
 		}
 #endif
 
-		if ( ((bytes = s->put_file(fullname)) < 0) ) {
-			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
-			return -1;
+		if( ((bytes = s->put_file(fullname)) < 0) ) {
+			/* if we fail to transfer a file, EXCEPT so the other side can */
+			/* try again. SC2000 hackery. _WARNING_ - I think Keller changed */
+			/* all of this. -epaulson 11/22/2000 */
+			EXCEPT("DoUpload: Failed to send file %s, exiting at %d\n",
+				fullname,__LINE__);
+			return_and_resetpriv( -1 );
 		}
 
-		if ( !s->end_of_message() ) {
+		if( !s->end_of_message() ) {
 			dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
-			return -1;
+			return_and_resetpriv( -1 );
 		}
 
 		total_bytes += bytes;
@@ -1046,7 +1180,7 @@ FileTransfer::DoUpload(ReliSock *s)
 
 	bytesSent += total_bytes;
 
-	return total_bytes;
+	return_and_resetpriv( total_bytes );
 }
 
 int
@@ -1072,3 +1206,19 @@ FileTransfer::Continue()
 
 	return result;
 }
+
+
+bool
+FileTransfer::addOutputFile( const char* filename )
+{
+	if( ! OutputFiles ) {
+		return false;
+	}
+	if( OutputFiles->contains(filename) ) {
+		return true;
+	}
+	OutputFiles->append( filename );
+	return true;
+}
+
+

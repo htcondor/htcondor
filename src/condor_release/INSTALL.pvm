@@ -32,3 +32,6 @@ Installing the PVM Contrib Module
    untar the pvm.tar directly into your release directory, and you're
    done installing the PVM contrib module. Again, see the 6.1 manual
    for instructions on how to use PVM in Condor.
+
+   Note: The PVM contrib module is only compatible with a Condor
+   installation of the same version number.

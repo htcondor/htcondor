@@ -1,0 +1,42 @@
+----------------------------------------------------------------------
+DEBUGGING
+----------------------------------------------------------------------
+
+For debugging the starter, you can put: "StarterWaitForDebug = 1" in
+your job ad.  If the starter sees this attribute in the job ad, it
+will put itself into an infinite loop as soon as possible after
+getting the job ad from the shadow.  Then, you can attach with a
+debugger, set "starter_should_wait" to 0, and continue.  
+
+NOTE: if you also use "ShadowWaitForDebug=1", you must attach to the
+shadow and continue that for the starter to even be spawned.
+
+
+----------------------------------------------------------------------
+What's up with the execute directory?
+----------------------------------------------------------------------
+
+1) the execute directory should be world-writable with the sticky bit
+   set for the following reasons:
+   a) the starter will create the dir_<pid> directory as the user, so
+      that it will be owned by that user.  so, any random user needs
+      to be able to create a subdirectory of execute.
+   b) the starter can't just create the directory as root and then
+      chown() it b/c the execute directory might be on NFS, and root
+      wouldn't necessarily have permission to either create the
+      directory or chown() it.
+   c) we want the sticky bit so that users can't delete dir_<pid>
+      directories owned by other users
+
+2) who should own the execute directory?
+   it doesn't really matter, since it should be chmod(1777).
+   root.root or condor.condor would both work.
+
+3) why isn't the dir_<pid> directory created w/ mode 700? 
+   b/c if the execute directory is NFS and we're running as root, when
+   we chdir to dir_<pid> (which is the cwd of the starter once that
+   directory exists), we'll have all kinds of bad permission errors if
+   the starter can't access its own cwd.  so long as execute might be
+   on NFS and root is a 2nd class citizen on NFS, we should just leave
+   dir_<pid> as mode 755.
+

@@ -38,7 +38,9 @@ to match your environment.  In particular, the site-specific config file named
 certain to edit the definitions for  CCompiler, CPlusCompiler, Demangler, 
 GccVersion, and Top inside of "site.def".  If you are not going to compile 
 with GNU gcc/g++ (bad idea), you will also need to customize CrtLibPath.
-
+If you are compiling Kerberos support, you will need to have WANT_KERBEROS
+defined as true in the site.def and also update the location of the Kerberos
+libraries.
 
 Using imake
 -----------

@@ -1,26 +1,43 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-2001 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+ ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
 #ifndef DAG_H
 #define DAG_H
 
 #include "condor_common.h"
 #include "list.h"
 #include "job.h"
+#include "scriptQ.h"
 #include "user_log.c++.h"          /* from condor_c++_util/ directory */
 #include "condor_constants.h"      /* from condor_includes/ directory */
+#include "HashTable.h"
+#include "../condor_daemon_core.V6/condor_daemon_core.h"
 
-// Termination Queue Item (TQI).
-class TQI {
-  public:
-    inline TQI () : parent(NULL) {}
-    inline TQI (Job * p) : parent(p) {}
-    inline TQI (Job * p, const SimpleList<JobID_t> & c) :
-        parent(p), children(c) {}
+// for DAGMAN_RUN_POST_ON_FAILURE config setting
+extern bool run_post_on_failure;
 
-    void Print () const;
-
-    Job                 * parent;   // The job that terminated
-    SimpleList<JobID_t>   children; // Children net yet seen in log
-};
-
+// for the Condor job id of the DAGMan job
+extern char* DAGManJobId;
 
 //------------------------------------------------------------------------
 /** A Dag instance stores information about a job dependency graph,
@@ -37,12 +54,15 @@ class Dag {
   
     /** Create a DAG
         @param condorLog the condor log where job events are being written to
-        @param lockFileName the name of the lock file
-        @param numJobsRunningMax the maximum number of jobs to submit to Condor
+        @param maxJobsSubmitted the maximum number of jobs to submit to Condor
                at one time
+        @param maxPreScripts the maximum number of PRE scripts to spawn at
+		       one time
+        @param maxPostScripts the maximum number of POST scripts to spawn at
+		       one time
     */
-    Dag (const char *condorLog, const char *lockFileName,
-         const int  numJobsRunningMax);
+    Dag( const char* condorLog, const int maxJobsSubmitted,
+		 const int maxPreScripts, const int maxPostScripts );
 
     ///
     ~Dag();
@@ -65,10 +85,9 @@ class Dag {
     bool AddDependency (Job * parent, Job * child);
   
     /** Blocks until the Condor Log file grows.
-        @param checkInterval Number of seconds between checks
         @return true: log file grew, false: timeout or shrinkage
     */
-    bool DetectLogGrowth (int checkInterval = 2);
+    bool DetectLogGrowth();
 
     /** Force the Dag to process all new events in the condor log file.
         This may cause the state of some jobs to change.
@@ -98,9 +117,7 @@ class Dag {
 
     /// Print the list of jobs to stdout (for debugging).
     void PrintJobList() const;
-
-    //
-    void Print_TermQ () const;
+    void PrintJobList( Job::status_t status ) const;
 
     /** @return the total number of jobs in the DAG
      */
@@ -116,7 +133,28 @@ class Dag {
 
     /** @return the number of jobs currently submitted to Condor
      */
-    inline int NumJobsRunning() const { return _numJobsRunning; }
+    inline int NumJobsSubmitted() const { return _numJobsSubmitted; }
+
+    /** @return the number of jobs ready to submit to Condor
+     */
+    inline int NumJobsReady() const { return _readyQ->Number(); }
+
+    /** @return the number of PRE scripts currently running
+     */
+    inline int NumPreScriptsRunning() const
+		{ return _preScriptQ->NumScriptsRunning(); }
+
+    /** @return the number of POST scripts currently running
+     */
+    inline int NumPostScriptsRunning() const
+		{ return _postScriptQ->NumScriptsRunning(); }
+
+    /** @return the total number of PRE/POST scripts currently running
+     */
+    inline int NumScriptsRunning() const
+		{ return NumPreScriptsRunning() + NumPostScriptsRunning(); }
+
+	inline bool Done() const { return NumJobsDone() == NumJobs(); }
 
     /** Remove all jobs (using condor_rm) that are currently running.
         All jobs currently marked Job::STATUS_SUBMITTED will be fed
@@ -134,21 +172,33 @@ class Dag {
     */
     void Rescue (const char * rescue_file, const char * datafile) const;
 
+	int PreScriptReaper( Job* job, int status );
+	int PostScriptReaper( Job* job, int status );
+
+	void PrintReadyQ( debug_level_t level ) const;
+
+	
+    /* Detects cycle within dag submitted by user
+	   @return true if there is cycle
+	*/
+	bool isCycle ();
+
+	// max number of PRE & POST scripts to run at once (0 means no limit)
+    int _maxPreScripts;
+    int _maxPostScripts;
+	
+	
   protected:
 
-    /*  Submit job to Condor.  If job is not submittable (!job->CanSubmit())
-        then function will return false for failure
-        @return true on success, false on failure
+    /* Prepares to submit job by running its PRE Script if one exists,
+       otherwise adds job to _readyQ and calls SubmitReadyJobs()
+	   @return true on success, false on failure
     */
-    bool Submit (Job * job);
+    bool StartNode( Job *node );
 
-    /*  Submit job with ID jobID to Condor
-        @return true on success, false on failure
-    */
-    // bool Submit (JobID_t jobID);
-
-    //  Update the state of a job to "Done", and run child jobs if possible.
-    void TerminateJob (Job * job);
+    // add job to termination queue and report termination to all
+    // child jobs by removing job ID from each child's waiting queue
+    void TerminateJob( Job* job, bool bootstrap = false );
   
     /*  Get the first appearing job in the termination queue marked SUBMITTED.
         This function is called by ProcessLogEvents when a SUBMIT log
@@ -162,10 +212,18 @@ class Dag {
     Job * GetSubmittedJob (bool recovery);
 
     /*  Submit all ready jobs, provided they are not waiting on a parent job.
-        @return true: success, false: fatal error
+        @return number of jobs successfully submitted
     */
-    bool SubmitReadyJobs ();
+    int SubmitReadyJobs();
   
+	void PrintEvent( debug_level_t level, const char* eventName, Job* job,
+					 CondorID condorID );
+
+	void RestartNode( Job *node, bool recovery );
+
+	/* DFS number the jobs in the DAG in order to detect cycle*/
+	void DFSVisit (Job * job);
+	
     // name of consolidated condor log
     char        * _condorLogName;
 
@@ -178,19 +236,8 @@ class Dag {
     //  Last known size of condor log, used by DetectLogGrowth()
     off_t         _condorLogSize;
 
-    /*  used for recovery purposes presence of file indicates
-        abnormal termination
-    */
-    char        * _lockFileName;
-
     /// List of Job objects
     List<Job>     _jobs;
-
-    //
-    List<TQI>    _termQ;
-
-    // For debugging
-    bool         _termQLock;
 
     // Number of Jobs that are done (completed execution)
     int _numJobsDone;
@@ -199,12 +246,24 @@ class Dag {
     int _numJobsFailed;
 
     // Number of Jobs currently running (submitted to Condor)
-    int _numJobsRunning;
+    int _numJobsSubmitted;
 
-    /*  Maximum number of jobs to run at once.  Non-negative.  Zero means
+    /*  Maximum number of jobs to submit at once.  Non-negative.  Zero means
         unlimited
     */
-    int _numJobsRunningMax;
+    int _maxJobsSubmitted;
+
+	// queue of jobs ready to be submitted to Condor
+	SimpleList<Job*>* _readyQ;
+
+	// queue of submitted jobs not yet matched with submit events in
+	// the Condor job log
+    Queue<Job*>* _submitQ;
+
+	ScriptQ* _preScriptQ;
+	ScriptQ* _postScriptQ;
+	
+	int DFS_ORDER; 
 };
 
 #endif /* #ifndef DAG_H */

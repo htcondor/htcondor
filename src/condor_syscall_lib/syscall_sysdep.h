@@ -3,13 +3,15 @@
 
 #if defined(LINUX)
 #   if defined(GLIBC) 
-#		if defined(GLIBC20)
-#			define MMAP_T char*
-#			define GLIBC_CONST 
-#		else
+#		if defined(GLIBC21)
 #			define MMAP_T void*
 			/* The man page on a glibc21 machine is wrong, there is no const */
 #			define GLIBC_CONST 
+#		elif defined(GLIBC20)
+#			define MMAP_T char*
+#			define GLIBC_CONST 
+#		else
+#			die "You need to define MMAP_T and GLIBC_CONST"
 #		endif
 #   else
 #		define MMAP_T void*
@@ -49,7 +51,11 @@
 #endif
 
 #if defined(LINUX)
-#	define SYNC_RETURNS_VOID 0
+#	if defined(GLIBC22)
+#		define SYNC_RETURNS_VOID 1
+#	else
+#		define SYNC_RETURNS_VOID 0
+#	endif
 #else /* Solaris, IRIX, Alpha, DUX4.0 all confirmed... */
 #	define SYNC_RETURNS_VOID 1
 #endif

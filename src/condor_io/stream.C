@@ -27,6 +27,17 @@
 #include "condor_io.h"
 #include "condor_debug.h"
 
+#if defined(CONDOR_BLOWFISH_ENCRYPTION)
+#include "condor_crypt_blowfish.h"
+#endif 
+#if defined(CONDOR_3DES_ENCRYPTION)
+#include "condor_crypt_3des.h"
+#endif
+
+#if defined(CONDOR_MD)
+#include "condor_md.h"                // Message authentication stuff
+#endif
+
 /* The macro definition and file was added for debugging purposes */
 
 int putcount =0;
@@ -54,7 +65,30 @@ static int shipcount =0;
 **	CODE ROUTINES
 */
 
+Stream :: Stream(stream_code c) : 
+    _code(c), 
+    _coding(stream_encode),
+    crypto_(NULL),                // I love individual coding style!
+    encrypt_(false),              // You put _ in the front, I put in the
+    mdMode_(MD_OFF),            // back, very consistent, isn't it?	
+    mdKey_(0)
+{
+	allow_empty_message_flag = FALSE;
+}
 
+int
+Stream::code( void *&)
+{
+	/* This is a noop just to make stub generation happy. All of the functions
+		that wish to use this overload we don't support or ignore. -psilord */
+	return TRUE;
+}
+
+Stream :: ~Stream()
+{
+    delete crypto_;
+    delete mdKey_;
+}
 
 int 
 Stream::code( char	&c)
@@ -335,7 +369,7 @@ Stream::code(STARTUP_INFO &start)
 	STREAM_ASSERT(code(start.uid));
 	STREAM_ASSERT(code(start.gid));
 	STREAM_ASSERT(code(start.virt_pid));
-	signal_t temp = (signal_t)start.soft_kill_sig;
+	condor_signal_t temp = (condor_signal_t)start.soft_kill_sig;
 	STREAM_ASSERT(code(temp));
 	start.soft_kill_sig = (int)temp;
 #endif
@@ -384,33 +418,6 @@ Stream::code(StartdRec &rec)
 	return TRUE;
 }
 
-#if !defined(WIN32)
-
-/*
-**	UNIX TYPES
-*/
-
-extern "C" int sig_num_encode( int sig_num );
-extern "C" int sig_num_decode( int sig_num );
-
-int 
-Stream::code(signal_t &sig_num)
-{
-	int real_sig_num, rval;
-	
-	if (_coding == stream_encode) {
-		real_sig_num = sig_num_encode((int)sig_num);
-	}
-
-	rval = code(real_sig_num);
-
-	if (_coding == stream_decode) {
-		sig_num = (signal_t)sig_num_decode(real_sig_num);
-	}
-
-	return rval;
-}
-
 extern "C" int open_flags_encode( int flags );
 extern "C" int open_flags_decode( int flags );
 
@@ -431,6 +438,55 @@ Stream::code(open_flags_t &flags)
 
 	return rval;
 }
+
+extern "C" int errno_num_encode( int errno_num );
+extern "C" int errno_num_decode( int errno_num );
+
+int 
+Stream::code(condor_errno_t &errno_num)
+{
+	int real_errno_num, rval;
+	
+	if (_coding == stream_encode) {
+		real_errno_num = errno_num_encode((int)errno_num);
+	}
+
+	rval = code(real_errno_num);
+
+	if (_coding == stream_decode) {
+		errno_num = (condor_errno_t)errno_num_decode(real_errno_num);
+	}
+
+	return rval;
+}
+
+#if !defined(WIN32)
+
+/*
+**	UNIX TYPES
+*/
+
+extern "C" int sig_num_encode( int sig_num );
+extern "C" int sig_num_decode( int sig_num );
+
+int 
+Stream::code(condor_signal_t &sig_num)
+{
+	int real_sig_num, rval;
+	
+	if (_coding == stream_encode) {
+		real_sig_num = sig_num_encode((int)sig_num);
+	}
+
+	rval = code(real_sig_num);
+
+	if (_coding == stream_decode) {
+		sig_num = (condor_signal_t)sig_num_decode(real_sig_num);
+	}
+
+	return rval;
+}
+
 
 extern "C" int fcntl_cmd_encode( int cmd );
 extern "C" int fcntl_cmd_decode( int cmd );
@@ -582,8 +638,42 @@ Stream::code(struct utimbuf &ut)
 int 
 Stream::code(struct rlimit &rl)
 {
+#ifdef LINUX
+	// Oh crap, Cedar is too damn smart for us.  
+	// The issue is Linux changed the type for rlimits
+	// from a signed long (RedHat 6.2 and before) into
+	// an unsigned long (starting w/ RedHat 7.x).  So if
+	// the shadow is on RedHat 7.2 and sends the results
+	// of getrlimits to a RedHat 6.2 syscall lib, for instance,
+	// it could overflow.  And Cedar is sooo smart.  Sooo very, very
+	// smart.  It return an error if there is an overflow, which
+	// in turn causes an ASSERT to fail in senders/receivers land,
+	// which is bad news for us.  Thus this hack.  -Todd,Erik,Hao Feb 2002
+	//
+	// Note: This has the unfortunate side effect of limitting the 'rlimit'
+	// that Condor supports to 2^31.  -Nick
+	if( is_encode() ) {
+		const unsigned long MAX_RLIMIT = 0x7fffffffLU;
+		long				max_rlimit = (long) MAX_RLIMIT;
+	
+		if ( ((unsigned long)rl.rlim_cur) > MAX_RLIMIT ) {
+			STREAM_ASSERT(code(max_rlimit));
+		} else {
+			STREAM_ASSERT(code(rl.rlim_cur));
+		}
+		if ( ((unsigned long)rl.rlim_max) > MAX_RLIMIT ) {
+			STREAM_ASSERT(code(max_rlimit));
+		} else {
+		STREAM_ASSERT(code(rl.rlim_max));
+		}
+	} else {
+		STREAM_ASSERT(code(rl.rlim_cur));
+		STREAM_ASSERT(code(rl.rlim_max));
+	}
+#else
 	STREAM_ASSERT(code(rl.rlim_cur));
 	STREAM_ASSERT(code(rl.rlim_max));
+#endif
 
 	return TRUE;
 }
@@ -723,6 +813,7 @@ Stream::put( int		i)
   getcount =0;
   putcount +=4;
   NETWORK_TRACE("put int " << i << " c(" << putcount << ") ");
+  //dprintf(D_ALWAYS, "put(int) required\n");
 
 	switch(_code){
 		case internal:
@@ -1089,11 +1180,22 @@ Stream::put( char	*s)
 		case internal:
 		case external:
 			if (!s){
-				if (put_bytes(BIN_NULL_CHAR, 1) != 1) return FALSE;
+                            if (get_encryption()) {
+                                len = 1;
+                                if (put(len) == FALSE) {
+                                    return FALSE;
+                                }
+                            }
+                            if (put_bytes(BIN_NULL_CHAR, 1) != 1) return FALSE;
 			}
 			else{
-				len = strlen(s)+1;
-				if (put_bytes(s, len) != len) return FALSE;
+                            len = strlen(s)+1;
+                            if (get_encryption()) {
+                                if (put(len) == FALSE) {
+                                    return FALSE;
+                                }
+                            }
+                            if (put_bytes(s, len) != len) return FALSE;
 			}
 			break;
 
@@ -1115,10 +1217,22 @@ Stream::put( char	*s, int		l)
 		case internal:
 		case external:
 			if (!s){
-				if (put_bytes(BIN_NULL_CHAR, 1) != 1) return FALSE;
+                            if (get_encryption()) {
+                                int len = 1;
+                                if (put(len) == FALSE) {
+                                    return FALSE;
+                                }
+                            }
+
+                            if (put_bytes(BIN_NULL_CHAR, 1) != 1) return FALSE;
 			}
 			else{
-				if (put_bytes(s, l) != l) return FALSE;
+                            if (get_encryption()) {
+                                if (put(l) == FALSE) {
+                                    return FALSE;
+                                }
+                            }
+                            if (put_bytes(s, l) != l) return FALSE;
 			}
 			break;
 
@@ -1524,33 +1638,77 @@ Stream::get( double	&d)
 
 
 
+/* Get the next string from the UDP port
+ * This function copies the next string arrived at the UDP port
+ * to the arg 's'. When a message has not been received, its behaviour
+ * is dependent on the current value of 'timeout', which can be set by
+ * 'timeout(int)'. If 'timeout' is 0, it blocks until a message is ready
+ * at the port, otherwise, it returns FALSE after waiting that amount of time.
+ *
+ * Notice: This function allocates space for the arg 's' when s = NULL,
+ *         hence calling function must free memory pointed by s after using it
+ */
 int 
 Stream::get( char	*&s)
 {
 	char	c;
-	void	*tmp_ptr;
+	void 	*tmp_ptr = 0;
+    int     len;
+
+
 
 	switch(_code){
 		case internal:
 		case external:
-			if (!peek(c)) return FALSE;
-			if (c == '\255'){
-				/* s = (char *)0; */
-				if (get_bytes(&c, 1) != 1) return FALSE;
-				if (s) s[0] = '\0';
-			}
-			else{
-				/* tmp_ptr = s; */
-				if (get_ptr(tmp_ptr, '\0') <= 0) return FALSE;
-				if (s) {
-					strcpy(s, (char *)tmp_ptr);
-				}
-				else {
-					s = strdup((char *)tmp_ptr);
-				}
-			}
-			break;
-
+                    // For 6.2 compatibility, we had to put this code back 
+                    if (!get_encryption()) {
+                        if (!peek(c)) return FALSE;
+                        if (c == '\255'){
+                            /* s = (char *)0; */
+                            if (get_bytes(&c, 1) != 1) return FALSE;
+                            if (s) s[0] = '\0';
+                        }
+                        else{
+                            /* tmp_ptr = s; */
+                            if (get_ptr(tmp_ptr, '\0') <= 0) return FALSE;
+                            if (s) {
+                                strcpy(s, (char *)tmp_ptr);
+                                //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
+                            }
+                            else {
+                                s = strdup((char *)tmp_ptr);
+                                //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
+                            }
+                        }
+                    }
+                    else { // 6.3 with encryption support
+                        // First, get length
+                        if (get(len) == FALSE) {
+                            return FALSE;
+                        }
+                        
+                        tmp_ptr = malloc(len);
+                        if (get_bytes((char *) tmp_ptr, len) != len) {
+                            return FALSE;
+                        }
+                        
+                        if (*((char *)tmp_ptr) == '\255') {
+                            if (s) s[0] = '\0';
+                        }
+                        else {
+                            if (s) {
+                                strcpy(s, (char *)tmp_ptr);
+                                //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
+                            }
+                            else {
+                                s = strdup((char *)tmp_ptr);
+                                //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
+                            }
+                        }
+                        free(tmp_ptr);
+                    }
+                    break;
+                        
 		case ascii:
 			return FALSE;
 	}
@@ -1560,30 +1718,65 @@ Stream::get( char	*&s)
 
 
 
+/*
+ * Do not FREE memory pointed by the arg 's' when you call this function with s = NULL
+ */
 int 
 Stream::get( char	*&s, int		&l)
 {
 	char	c;
-	void	*tmp_ptr;
+	void	*tmp_ptr = 0;
+        int     len;
 
 	switch(_code){
 		case internal:
 		case external:
+                    if (!get_encryption()) {
 			if (!peek(c)) return FALSE;
 			if (c == '\255'){
 				/* s = (char *)0; */
-				if (get_bytes(&c, 1) != 1) return FALSE;
-				if (s) s[0] = '\0';
+                            if (get_bytes(&c, 1) != 1) return FALSE;
+                            if (s) s[0] = '\0';
 			}
 			else{
 				/* tmp_ptr = s; */
-				if ((l = get_ptr(tmp_ptr, '\0')) <= 0) return FALSE;
-				if (s)
-					strcpy(s, (char *)tmp_ptr);
-				else
-					s = (char *)tmp_ptr;
+                            if ((l = get_ptr(tmp_ptr, '\0')) <= 0) return FALSE;
+                            if (s) {
+                                strcpy(s, (char *)tmp_ptr);
+                                //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
+                            } else {
+                                s = (char *)tmp_ptr;
+                                //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
+                            }
 			}
-			break;
+                    }
+                    else { // 6.3 with encryption support
+                        // First, get length
+                        if (get(len) == FALSE) {
+                            return FALSE;
+                        }
+                        
+                        tmp_ptr = malloc(len);
+                        if (get_bytes((char *)tmp_ptr, len) != len) {
+                            return FALSE;
+                        }
+                        
+                        if (*((char*)tmp_ptr) == '\255') {
+                            if (s) s[0] = '\0';
+                        }
+                        else {
+                            if (s) {
+                                strcpy(s, (char *)tmp_ptr);
+                                //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
+                            }
+                            else {
+                                s = strdup((char *)tmp_ptr);
+                                //cout << "Stream::get(s): tmp_ptr: " << (char *)tmp_ptr << endl;
+                            }
+                        }
+                        free(tmp_ptr);
+                    }
+                    break;
 
 		case ascii:
 			return FALSE;
@@ -1632,3 +1825,186 @@ Stream::rcv_int(
 
 	return TRUE;
 }
+
+void 
+Stream::allow_one_empty_message()
+{
+	allow_empty_message_flag = TRUE;
+}
+
+
+bool 
+Stream::get_encryption() const
+{
+    return (crypto_ != 0);
+}
+
+bool 
+Stream::wrap(unsigned char* d_in,int l_in, 
+                    unsigned char*& d_out,int& l_out)
+{    
+    bool code = false;
+#if defined(CONDOR_ENCRYPTION)
+    if (get_encryption()) {
+        code = crypto_->encrypt(d_in, l_in, d_out, l_out);
+    }
+#endif
+    return code;
+}
+
+bool 
+Stream::unwrap(unsigned char* d_in,int l_in,
+                      unsigned char*& d_out, int& l_out)
+{
+    bool code = false;
+#if defined(CONDOR_ENCRYPTION)
+    if (get_encryption()) {
+        code = crypto_->decrypt(d_in, l_in, d_out, l_out);
+    }
+#endif
+    return code;
+}
+
+void Stream::resetCrypto()
+{
+#if defined(CONDOR_ENCRYPTION)
+  if (get_encryption()) {
+    crypto_->resetState();
+  }
+#endif
+}
+
+bool 
+Stream::initialize_crypto(KeyInfo * key) 
+{
+    delete crypto_;
+    crypto_ = 0;
+
+    // Will try to do a throw/catch later on
+    if (key) {
+        switch (key->getProtocol()) 
+        {
+#ifdef CONDOR_BLOWFISH_ENCRYPTION
+        case CONDOR_BLOWFISH :
+            crypto_ = new Condor_Crypt_Blowfish(*key);
+            break;
+#endif
+#ifdef CONDOR_3DES_ENCRYPTION
+        case CONDOR_3DES:
+            crypto_ = new Condor_Crypt_3des(*key);
+            break;
+#endif
+        default:
+            break;
+        }
+    }
+
+    return (crypto_ != 0);
+}
+
+bool Stream::set_MD_mode(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId)
+{
+    mdMode_ = mode;
+    delete mdKey_;
+    mdKey_ = 0;
+    if (key) {
+      mdKey_  = new KeyInfo(*key);
+    }
+
+    return init_MD(mode, mdKey_, keyId);
+}
+
+const KeyInfo& Stream :: get_crypto_key() const
+{
+#if defined(CONDOR_ENCRYPTION)
+    if (crypto_) {
+        return crypto_->get_key();
+    }
+#endif
+    ASSERT(0);	// This does not return...
+	return  crypto_->get_key();  // just to make compiler happy...
+}
+
+const KeyInfo& Stream :: get_md_key() const
+{
+#if defined(CONDOR_ENCRYPTION)
+    if (mdKey_) {
+        return *mdKey_;
+    }
+#endif
+    ASSERT(0);
+    return *mdKey_;
+}
+
+
+bool 
+Stream::set_crypto_key(KeyInfo * key, const char * keyId)
+{
+    bool inited = true;
+#if defined(CONDOR_ENCRYPTION)
+
+    if (key != 0) {
+        inited = initialize_crypto(key);
+    }
+    else {
+        // We are turning encryption off
+        if (crypto_) {
+            delete crypto_;
+            crypto_ = 0;
+        }
+        ASSERT(keyId == 0);
+        inited = true;
+    }
+
+    // More check should be done here. what if keyId is NULL?
+    if (inited) {
+        set_encryption_id(keyId);
+    }
+    /* 
+    // Now, if TCP, the first packet need to contain the key for verification purposes
+    // This key is encrypted with itself (along with rest of the packet).
+    if (type() == reli_sock) {
+        char * data = NULL;
+        int length;
+        static int PADDING_LEN = 24;
+        length = key->getKeyLength() + PADDING_LEN; // Pad with 24 bytes of random data
+        data = (char *)malloc(length + 1);
+        if (data == NULL) {
+            dprintf(D_NETWORK, "Out of memory!\n");
+            return false;
+        }
+    
+        if (_coding == stream_encode) {
+            // generate random data
+            unsigned char * ran = Condor_Crypt_Base::randomKey(PADDING_LEN);
+            memcpy(data, ran, PADDING_LEN);
+            memcpy(data+PADDING_LEN, key->getKeyData(), key->getKeyLength());
+            free(ran);
+            if (put_bytes(data, length) != length) {
+                // the crypto module is initialized, but send failed.
+                // For now, we also flag this as an error
+                inited = false;
+            }
+        }
+        else {
+            if (get_bytes(data, length) == length) {
+                // Only the first key->getKeyLength() are inspected
+                if (memcmp(data+PADDING_LEN, key->getKeyData(), key->getKeyLength()) != 0) {
+                    // this is definitely an error!
+                    inited = false;
+                }
+                else {
+                    inited = true;
+                }
+            }
+            else {
+                inited = false; 
+            }
+        } 
+    }
+    */
+#endif /* CONDOR_3DES_ENCRYPTION or CONDOR_BLOWFISH_ENCRYPTION */
+
+    return inited;
+}
+

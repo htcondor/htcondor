@@ -26,10 +26,21 @@
 #define STREAM_H
 
 #include "condor_common.h"
-
+#include "condor_crypt.h"             // For now, we include it
+#include "CryptKey.h"                 // KeyInfo
 // This #define is a desperate move. GNU g++ seems to choke at runtime on our
 // inline function for eom.  Someday not needed ?
 #define eom end_of_message
+
+enum CONDOR_MD_MODE {
+    MD_OFF        = 0,         // off
+    MD_ALWAYS_ON,              // always on, condor will check MAC automatically
+    MD_EXPLICIT                // user needs to call checkMAC explicitly
+};
+
+const int CLEAR_HEADER     = 0;
+const int MD_IS_ON         = 1;
+const int ENCRYPTION_IS_ON = 2;
 
 #include "proc.h"
 
@@ -58,14 +69,7 @@
 */
 
 //@{
-
-///
-enum signal_t { __signal_t_dummy_value = INT_MAX };
-///
-enum open_flags_t { __open_flags_t_dummy_value = INT_MAX };
-///
-enum fcntl_cmd_t { __fcntl_cmd_t_dummy_value = INT_MAX };
-
+	/// look in cedar_enums.h
 //@}
 
 
@@ -216,6 +220,8 @@ public:
     //@{
 
     ///
+	int code(void *&);
+    ///
 	int code(char &);
     ///
 	int code(unsigned char &);
@@ -273,9 +279,12 @@ public:
 	int code(open_flags_t &);
     ///
 	int code(struct stat &);
+    ///
+	int code(condor_errno_t &);
+
 #if !defined(WIN32)
     ///
-	int code(signal_t &);
+	int code(condor_signal_t &);
     ///
 	int code(fcntl_cmd_t &);
     ///
@@ -340,9 +349,12 @@ public:
 	int code(struct stat *x)		{ return code(*x); }
     ///
 	int code(open_flags_t *x)		{ return code(*x); }
+    ///
+	int code(condor_errno_t *x)		{ return code(*x); }
+
 #if !defined(WIN32)
     ///
-	int code(signal_t *x)			{ return code(*x); }
+	int code(condor_signal_t *x)			{ return code(*x); }
     ///
 	int code(fcntl_cmd_t *x) 		{ return code(*x); }
     ///
@@ -416,7 +428,7 @@ public:
 	*/
 
     ///
-	virtual ~Stream() {} 
+	virtual ~Stream(); 
 
 	/** @name Byte Operations. Virtually defined by each stream
      */
@@ -461,6 +473,9 @@ public:
 	virtual int end_of_message() = 0;
 //	int eom() { return end_of_message(); }
 
+	///
+	virtual void allow_one_empty_message();
+
 	/// set a timeout for an underlying socket
 	virtual int timeout(int) = 0;
 
@@ -476,12 +491,94 @@ public:
     int snd_int(int val, int end_of_record);
     ///
 	int rcv_int(int &val, int end_of_record);
-    //@}
 
+        //------------------------------------------
+        // Encryption support below
+        //------------------------------------------
+        bool set_crypto_key(KeyInfo * key, const char * keyId=0);
+        //------------------------------------------
+        // PURPOSE: set sock to use a particular encryptio
+        // REQUIRE: KeyInfo -- a wrapper for keyData, if key == NULL
+        //          encryption is disabled. I don't like this somehow
+        // RETURNS: true -- success; false -- failure
+        //------------------------------------------
+
+        bool get_encryption() const;
+        //------------------------------------------
+        // PURPOSE: Return encryption mode
+        // REQUIRE: None
+        // RETURNS: true -- on, false -- off
+        //------------------------------------------
+
+        bool wrap(unsigned char* input, int input_len, 
+                  unsigned char*& output, int& outputlen);
+        //------------------------------------------
+        // PURPOSE: encrypt some data
+        // REQUIRE: Protocol, keydata. set_encryption_procotol
+        //          must have been called and encryption_mode is on
+        // RETURNS: TRUE -- success, FALSE -- failure
+        //------------------------------------------
+
+        bool unwrap(unsigned char* input, int input_len, 
+                    unsigned char*& output, int& outputlen);
+        //------------------------------------------
+        // PURPOSE: decrypt some data
+        // REQUIRE: Protocol, keydata. set_encryption_procotol
+        //          must have been called and encryption_mode is on
+        // RETURNS: TRUE -- success, FALSE -- failure
+        //------------------------------------------
+
+        //----------------------------------------------------------------------
+        // MAC/MD related stuff
+        //----------------------------------------------------------------------
+        bool set_MD_mode(CONDOR_MD_MODE mode, KeyInfo * key = 0, const char * keyid = 0);    
+        //virtual bool set_MD_off() = 0;
+        //------------------------------------------
+        // PURPOSE: set mode for MAC (on or off)
+        // REQUIRE: mode -- see the enumeration defined above
+        //          key  -- an optional key for the MAC. if null (by default)
+        //                  all CEDAR does is send a Message Digest over
+        //                  When key is specified, this is essentially a MAC
+        // RETURNS: true -- success; false -- false
+        //------------------------------------------
+
+        bool isOutgoing_MD5_on() const { return (mdMode_ == MD_ALWAYS_ON); }
+        //------------------------------------------
+        // PURPOSE: whether MD is turned on or not
+        // REQUIRE: None
+        // RETURNS: true -- MD is on; 
+        //          false -- MD is off
+        //------------------------------------------
+
+        virtual const char * isIncomingDataMD5ed() = 0;
+        //------------------------------------------
+        // PURPOSE: To check to see if incoming data
+        //          has MD5 checksum/. NOTE! Currently,
+        //          this method should be used with UDP only!
+        // REQUIRE: None
+        // RETURNS: NULL -- data does not contain MD5
+        //          key id -- if the data is checksumed
+        //------------------------------------------
+    //@}
+ private:
+        bool initialize_crypto(KeyInfo * key);
+        //------------------------------------------
+        // PURPOSE: initialize crypto
+        // REQUIRE: KeyInfo
+        // RETURNS: None
+        //------------------------------------------
+        
 /*
 **		PRIVATE INTERFACE TO ALL STREAMS
 */
 protected:
+
+        virtual bool init_MD(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId) = 0;
+        virtual bool set_encryption_id(const char * keyId) = 0;
+        const KeyInfo& get_crypto_key() const;
+        const KeyInfo& get_md_key() const;
+      
+        void resetCrypto();
 
 	// serialize object (save/restore object state to an ascii string)
 	//
@@ -501,17 +598,19 @@ protected:
 
 	//	constructor
 	//
-	Stream(stream_code c=external)
-		: _code(c), _coding(stream_encode)
-		{}
-
-
+	Stream(stream_code c=external);
 	/*
 	**	Data structures
 	*/
 
-	stream_code		_code;
-	stream_coding	_coding;
+        Condor_Crypt_Base * crypto_;         // The actual crypto
+        CONDOR_MD_MODE      mdMode_;        // MAC mode
+        KeyInfo           * mdKey_;
+        bool                encrypt_;        // Encryption mode
+	stream_code	    _code;
+	stream_coding	    _coding;
+
+	int allow_empty_message_flag;
 };
 
 

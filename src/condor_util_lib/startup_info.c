@@ -34,19 +34,7 @@ display_startup_info( const STARTUP_INFO *s, int flags )
 
 	dprintf( flags, "\tVersion Number: %d\n", s->version_num );
 	dprintf( flags, "\tId: %d.%d\n", s->cluster, s->proc );
-	switch( s->job_class ) {
-		case STANDARD:
-			dprintf( flags, "\tJobClass: Standard\n" );
-			break;
-		case PVM:
-			dprintf( flags, "\tJobClass: PVM\n" );
-			break;
-		case MPI:
-			dprintf( flags, "\tJobClass: MPI\n" );
-			break;
-		default:
-			dprintf( flags, "\tJobClass: UNKNOWN (%d)\n", s->job_class );
-	}
+	dprintf( flags, "\tJobClass: %s\n", CondorUniverseName(s->job_class) );
 	dprintf( flags, "\tUid: %d\n", s->uid );
 	dprintf( flags, "\tGid: %d\n", s->gid );
 	dprintf( flags, "\tVirtPid: %d\n", s->virt_pid );

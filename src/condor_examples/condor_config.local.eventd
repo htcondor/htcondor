@@ -21,26 +21,28 @@
 ##  For example:
 ##
 ##  EVENT_LIST	= TestEvent, TestEvent2
-##  TestEvent	= SHUTDOWN W 16:00 1:00 2.5 TestEventConstraint TestEventRank
-##  TestEvent2	= SHUTDOWN F 14:00 0:30 6.0 TestEventConstraint2 TestEventRank
+##  TestEvent	= SHUTDOWN_RUNTIME MTWRFSU 2:00 1:00 TestEventConstraint
+##  TestEvent2	= SHUTDOWN MTWRF 14:00 0:30 TestEventConstraint2
 ##  TestEventConstraint		= (Arch == "INTEL")
 ##  TestEventConstraint2	= (True)
-##  TestEventRank		= (0 - ImageSize)
 ##
-##  In this example, the "TestEvent" is a SHUTDOWN type event, which
-##  specifies that all machines whose startd ads match the constraint
-##  (Arch == "INTEL") should be shutdown for one hour starting at
-##  16:00 every Wednesday, and no more than 2.5 Mb/s of bandwidth
-##  should be used to vacate jobs in anticipation of the shutdown
-##  event.  According to the TestEventRank, jobs will be vacated in
-##  reverse order of their ImageSize (larger jobs first, smaller jobs
-##  last).  "TestEvent2" is a SHUTDOWN type event, which specifies
-##  that all machines should be shutdown for 30 minutes starting at
-##  14:00 every Friday, and no more than 6.0 Mb/s of bandwidth should
-##  be used to vacate jobs in anticipation of the shutdown event.
+##  In this example, the "TestEvent" is a SHUTDOWN_RUNTIME type event,
+##  which specifies that all machines whose startd ads match the
+##  constraint (Arch == "INTEL") should be shutdown for one hour
+##  starting at 2:00 every Wednesday.  "TestEvent2" is a SHUTDOWN type
+##  event, which specifies that all machines should be shutdown for 30
+##  minutes starting at 14:00 every Friday.
 EVENT_LIST	=
 
+##  Where is the network routing table configuration file the eventd
+##  should use to schedule network bandwidth for shutdown events?
+##  See the eventd section in the manual for more details.
+EVENTD_ROUTING_INFO = $(ETC)/eventd.routes.dat
 
+##  Where is the bandwidth limit configuration file the eventd should
+##  use to schedule network bandwidth for shutdown events?
+##  See the eventd section in the manual for more details.
+EVENTD_CAPACITY_INFO = $(ETC)/eventd.capinfo.dat
 
 ######################################################################
 ######################################################################
@@ -52,7 +54,7 @@ EVENT_LIST	=
 ##  What daemons do you want to run on this machine?
 ##  We must add EVENTD to the DAEMON_LIST to run the condor_eventd on
 ##  this machine.
-DAEMON_LIST	= MASTER, EVENTD, STARTD, SCHEDD
+DAEMON_LIST	= $(DAEMON_LIST), EVENTD
 
 ##  Where is the binary for the daemon?
 EVENTD		= $(SBIN)/condor_eventd

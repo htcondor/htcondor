@@ -27,6 +27,7 @@
 #include "condor_qmgr.h"         // need to talk to schedd's qmgr
 #include "condor_attributes.h"   // for ATTR_ ClassAd stuff
 #include "condor_email.h"        // for email.
+#include "metric_units.h"
 
 extern "C" char* d_format_time(double);
 
@@ -40,18 +41,23 @@ UniShadow::~UniShadow() {
 	if ( remRes ) delete remRes;
 }
 
+
 int
-UniShadow::UpdateFromStarter(int command, Stream *s)
+UniShadow::updateFromStarter(int command, Stream *s)
 {
 	ClassAd updateAd;
 	ClassAd *jobad = getJobAd();
 	char buf[300];
-	int int_value;
-	float float_value;
+	int int_val;
+	struct rusage rusage_val;
 	
 	// get info from the starter encapsulated in a ClassAd
 	s->decode();
-	updateAd.get(*s);
+	if( ! updateAd.initFromStream(*s) ) {
+		dprintf( D_ALWAYS, "ERROR in UniShadow::updateFromStarter:"
+				 "Can't read ClassAd, aborting.\n" );
+		return FALSE;
+	}
 	s->end_of_message();
 
 	if ( !jobad ) {
@@ -59,78 +65,47 @@ UniShadow::UpdateFromStarter(int command, Stream *s)
 		return FALSE;
 	}
 
-	// update the schedd queue and our jobad with the info from the starter
-	if ( ConnectQ(getScheddAddr(), SHADOW_QMGMT_TIMEOUT) ) {
+	int prev_image = remRes->getImageSize();
+	int prev_disk = remRes->getDiskUsage();
+	struct rusage prev_rusage = remRes->getRUsage();
 
-		// update image size
-		if ( updateAd.LookupInteger(ATTR_IMAGE_SIZE, int_value) == 1 ) 
-		{
-			// lookup old image size
-			int previous_size = 0;
-			jobad->LookupInteger(ATTR_IMAGE_SIZE, previous_size);
-			
-			// if new image size is larger, update it
-			if ( int_value > previous_size ) {
+		// Stick everything we care about in our RemoteResource. 
+	remRes->updateFromStarter( &updateAd );
 
-				SetAttributeInt(getCluster(),getProc(),ATTR_IMAGE_SIZE,
-					int_value);
-				sprintf(buf,"%s=%d",ATTR_IMAGE_SIZE,int_value);
-				jobad->InsertOrUpdate(buf);
+		// Now, update our local copy of the job classad for
+		// anything that's changed. 
+	int_val = remRes->getImageSize();
+	if( int_val > prev_image ) {
+		sprintf( buf, "%s=%d", ATTR_IMAGE_SIZE, int_val );
+		jobad->Insert( buf );
 
-				// also update the User Log with an image size event
-				JobImageSizeEvent event;
-				event.size = int_value;
-				if (!uLog.writeEvent (&event)) {
-					dprintf (D_ALWAYS, 
-						"Unable to log ULOG_IMAGE_SIZE event\n");
-				}
-			}
+			// also update the User Log with an image size event
+		JobImageSizeEvent event;
+		event.size = int_val;
+		if (!uLog.writeEvent (&event)) {
+			dprintf( D_ALWAYS, "Unable to log ULOG_IMAGE_SIZE event\n" );
 		}
+	}
 
-		// update disk usage size
-		if ( updateAd.LookupInteger(ATTR_DISK_USAGE, int_value) == 1 ) 
-		{
-			// lookup old disk usage size
-			int previous_size = 0;
-			jobad->LookupInteger(ATTR_DISK_USAGE, previous_size);
-			
-			// if new disk usage size is larger, update it
-			if ( int_value > previous_size ) {
+	int_val = remRes->getDiskUsage();
+	if( int_val > prev_disk ) {
+		sprintf( buf, "%s=%d", ATTR_DISK_USAGE, int_val );
+		jobad->Insert( buf );
+	}
 
-				SetAttributeInt(getCluster(),getProc(),ATTR_DISK_USAGE,
-					int_value);
-				sprintf(buf,"%s=%d",ATTR_DISK_USAGE,int_value);
-				jobad->InsertOrUpdate(buf);
-			}
-		}
+	rusage_val = remRes->getRUsage();
+	if( rusage_val.ru_stime.tv_sec > prev_rusage.ru_stime.tv_sec ) {
+		sprintf( buf, "%s=%f", ATTR_JOB_REMOTE_SYS_CPU,
+				 (float)rusage_val.ru_stime.tv_sec );
+		jobad->Insert( buf );
+	}
+	if( rusage_val.ru_utime.tv_sec > prev_rusage.ru_utime.tv_sec ) {
+		sprintf( buf, "%s=%f", ATTR_JOB_REMOTE_USER_CPU,
+				 (float)rusage_val.ru_utime.tv_sec );
+		jobad->Insert( buf );
+	}
 
-		// update remote sys cpu
-		if ( updateAd.LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, 
-			float_value) == 1 ) 
-		{
-			SetAttributeFloat(getCluster(),getProc(),ATTR_JOB_REMOTE_SYS_CPU,
-				float_value);
-			sprintf(buf,"%s=%f",ATTR_JOB_REMOTE_SYS_CPU,float_value);
-			jobad->InsertOrUpdate(buf);
-		}
-			
-		// update remote user cpu
-		if ( updateAd.LookupFloat(ATTR_JOB_REMOTE_USER_CPU, 
-			float_value) == 1 ) 
-		{
-			SetAttributeFloat(getCluster(),getProc(),ATTR_JOB_REMOTE_USER_CPU,
-				float_value);
-			sprintf(buf,"%s=%f",ATTR_JOB_REMOTE_USER_CPU,float_value);
-			jobad->InsertOrUpdate(buf);
-		}
-
-		// close our connection to the queue
-		DisconnectQ(NULL);
-
-		return TRUE;
-	}		
-
-	return FALSE;
+	return TRUE;
 }
 
 
@@ -141,19 +116,11 @@ void UniShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 		EXCEPT("No jobAd defined!");
 	}
 
-		// Register command which gets updates from the starter
-		// on the job's image size, cpu usage, etc.  
-		// Eventually this belongs in Remote Resource so we handle
-		// this properly for parallel jobs.
-	daemonCore->Register_Command( SHADOW_UPDATEINFO, "SHADOW_UPDATEINFO",
-			(CommandHandlercpp)&UniShadow::UpdateFromStarter, 
-			"UniShadow::UpdateFromStarter", this, WRITE);
-
-
 		// we're only dealing with one host, so this is trivial:
-	remRes->setExecutingHost( host );
-	remRes->setCapability( capability );
-	remRes->setMachineName( "Unknown" );
+	remRes->setStartdInfo( host, capability );
+		// for now, set this to the sinful string.  when the starter
+		// spawns, it'll do an RSC to register a real hostname...
+	remRes->setMachineName( host );
 	
 		// base init takes care of lots of stuff:
 	baseInit( jobAd, schedd_addr, cluster, proc );
@@ -161,133 +128,171 @@ void UniShadow::init( ClassAd *jobAd, char schedd_addr[], char host[],
 		// In this case we just pass the pointer along...
 	remRes->setJobAd( jobAd );
 	
-		// yak with startd:
-	if ( remRes->requestIt() == -1 ) {
-		shutDown( JOB_NOT_STARTED, 0 );
+		// Register command which gets updates from the starter
+		// on the job's image size, cpu usage, etc.  Each kind of
+		// shadow implements it's own version of this to deal w/ it
+		// properly depending on parallel vs. serial jobs, etc. 
+	daemonCore->
+		Register_Command( SHADOW_UPDATEINFO, "SHADOW_UPDATEINFO",
+						  (CommandHandlercpp)&UniShadow::updateFromStarter, 
+						  "UniShadow::updateFromStarter", this, DAEMON );
+
+		// finally, we can attempt to activate our claim.
+	if( ! remRes->activateClaim() ) {
+			// we're screwed, give up:
+		shutDown( JOB_NOT_STARTED );
 	}
-
-		// Make an execute event:
-	ExecuteEvent event;
-	strcpy( event.executeHost, host );
-	if ( !uLog.writeEvent(&event)) {
-		dprintf(D_ALWAYS, "Unable to log ULOG_EXECUTE event\n");
-	}
-
-		// Register the remote instance's claimSock for remote
-		// system calls.  It's a bit funky, but works.
-	daemonCore->Register_Socket(remRes->getClaimSock(), "RSC Socket", 
-		(SocketHandlercpp)&RemoteResource::handleSysCalls, "HandleSyscalls", 
-								remRes);
-
 }
 
-void UniShadow::shutDown( int reason, int exitStatus ) 
-{
 
-		// Deactivate the claim
+void
+UniShadow::logExecuteEvent( void )
+{
+	ExecuteEvent event;
+	char* sinful = event.executeHost;
+	remRes->getStartdAddress( sinful );
+	if( !uLog.writeEvent(&event) ) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_EXECUTE event: "
+				 "can't write to UserLog!\n" );
+	}
+}
+
+
+void
+UniShadow::cleanUp( void )
+{
+		// Deactivate (fast) the claim
 	if ( remRes ) {
 		remRes->killStarter();
 	}
+}
 
-		// exit now if there is no job ad
-	if ( !getJobAd() ) {
-		DC_Exit( reason );
+
+void
+UniShadow::gracefulShutDown( void )
+{
+		// Deactivate (gracefully) the claim
+	if ( remRes ) {
+		remRes->killStarter( true );
 	}
-	
-		// if we are being called from the exception handler, return
-		// now.
-	if ( reason == JOB_EXCEPTION ) {
+}
+
+
+int
+UniShadow::getExitReason( void )
+{
+	if( remRes ) {
+		return remRes->getExitReason();
+	}
+	return -1;
+}
+
+
+void
+UniShadow::emailTerminateEvent( int exitReason )
+{
+	FILE* mailer;
+	mailer = shutDownEmail( exitReason );
+	if( ! mailer ) {
+			// nothing to do
 		return;
 	}
 
-		// write stuff to user log:
-	endingUserLog( exitStatus, reason, remRes );
-
-		// returns a mailer if desired
-	FILE* mailer;
-	mailer = shutDownEmail( reason, exitStatus );
-	if ( mailer ) {
 		// gather all the info out of the job ad which we want to 
 		// put into the email message.
-		char JobName[_POSIX_PATH_MAX];
-		JobName[0] = '\0';
-		jobAd->LookupString( ATTR_JOB_CMD, JobName );
+	char JobName[_POSIX_PATH_MAX];
+	JobName[0] = '\0';
+	jobAd->LookupString( ATTR_JOB_CMD, JobName );
 
-		char Args[_POSIX_ARG_MAX];
-		Args[0] = '\0';
-		jobAd->LookupString(ATTR_JOB_ARGUMENTS, Args);
+	char Args[_POSIX_ARG_MAX];
+	Args[0] = '\0';
+	jobAd->LookupString(ATTR_JOB_ARGUMENTS, Args);
+	
+	int had_core = FALSE;
+	jobAd->LookupBool( ATTR_JOB_CORE_DUMPED, had_core );
 
-		int q_date = 0;
-		jobAd->LookupInteger(ATTR_Q_DATE,q_date);
-
-		float remote_sys_cpu = 0.0;
-		jobAd->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, remote_sys_cpu);
-
-		float remote_user_cpu = 0.0;
-		jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, remote_user_cpu);
-
-		int image_size = 0;
-		jobAd->LookupInteger(ATTR_IMAGE_SIZE, image_size);
-
-		int shadow_bday = 0;
-		jobAd->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
-
-		float previous_runs = 0;
-		jobAd->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, previous_runs );
-
-		time_t arch_time=0;	/* time_t is 8 bytes some archs and 4 bytes on other
-								archs, and this means that doing a (time_t*)
-								cast on & of a 4 byte int makes my life hell.
-								So we fix it by assigning the time we want to
-								a real time_t variable, then using ctime()
-								to convert it to a string */
-
-
-		fprintf( mailer, "Your Condor job %d.%d \n",getCluster(),getProc());
-		if ( JobName[0] ) {
-			fprintf(mailer,"\t%s %s\n",JobName,Args);
-		}
-		
-		fprintf(mailer,"has ");
-		remRes->printExit( mailer );
-
-		arch_time = q_date;
-        fprintf(mailer, "\n\nSubmitted at:        %s", ctime(&arch_time));
-
-        if( reason == JOB_EXITED ) {
-                double real_time = time(NULL) - q_date;
-				arch_time = time(NULL);
-                fprintf(mailer, "Completed at:        %s", ctime(&arch_time));
-
-                fprintf(mailer, "Real Time:           %s\n", 
-					d_format_time(real_time));
-        }
-        fprintf( mailer, "\n" );
-
-		fprintf(mailer, "Virtual Image Size:  %d Kilobytes\n\n", image_size);
-
-        double rutime = remote_user_cpu;
-        double rstime = remote_sys_cpu;
-        double trtime = rutime + rstime;
-		double wall_time = time(NULL) - shadow_bday;
-		fprintf(mailer, "Statistics from last run:\n");
-		fprintf(mailer, "Allocation/Run time:     %s\n",d_format_time(wall_time) );
-        fprintf(mailer, "Remote User CPU Time:    %s\n", d_format_time(rutime) );
-        fprintf(mailer, "Remote System CPU Time:  %s\n", d_format_time(rstime) );
-        fprintf(mailer, "Total Remote CPU Time:   %s\n\n", d_format_time(trtime));
-
-		double total_wall_time = previous_runs + wall_time;
-		fprintf(mailer, "Statistics totaled from all runs:\n");
-		fprintf(mailer, "Allocation/Run time:     %s\n",
-										d_format_time(total_wall_time) );
-
-		email_close(mailer);
+	int q_date = 0;
+	jobAd->LookupInteger(ATTR_Q_DATE,q_date);
+	
+	float remote_sys_cpu = 0.0;
+	jobAd->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, remote_sys_cpu);
+	
+	float remote_user_cpu = 0.0;
+	jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, remote_user_cpu);
+	
+	int image_size = 0;
+	jobAd->LookupInteger(ATTR_IMAGE_SIZE, image_size);
+	
+	int shadow_bday = 0;
+	jobAd->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
+	
+	float previous_runs = 0;
+	jobAd->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, previous_runs );
+	
+	time_t arch_time=0;	/* time_t is 8 bytes some archs and 4 bytes on other
+						   archs, and this means that doing a (time_t*)
+						   cast on & of a 4 byte int makes my life hell.
+						   So we fix it by assigning the time we want to
+						   a real time_t variable, then using ctime()
+						   to convert it to a string */
+	
+	time_t now = time(NULL);
+	
+	fprintf( mailer, "Your Condor job %d.%d \n",getCluster(),getProc());
+	if ( JobName[0] ) {
+		fprintf(mailer,"\t%s %s\n",JobName,Args);
+	}
+	
+	fprintf(mailer,"has ");
+	remRes->printExit( mailer );
+	
+	if( had_core ) {
+		fprintf( mailer, "Core file is: %s\n", getCoreName() );
 	}
 
-	remRes->dprintfSelf( D_FULLDEBUG );
+	arch_time = q_date;
+	fprintf(mailer, "\n\nSubmitted at:        %s", ctime(&arch_time));
 	
-		// does not return.
-	DC_Exit( reason );
+	if( exitReason == JOB_EXITED || exitReason == JOB_COREDUMPED ) {
+		double real_time = now - q_date;
+		arch_time = now;
+		fprintf(mailer, "Completed at:        %s", ctime(&arch_time));
+		
+		fprintf(mailer, "Real Time:           %s\n", 
+				d_format_time(real_time));
+	}	
+
+
+	fprintf( mailer, "\n" );
+	
+	fprintf(mailer, "Virtual Image Size:  %d Kilobytes\n\n", image_size);
+	
+	double rutime = remote_user_cpu;
+	double rstime = remote_sys_cpu;
+	double trtime = rutime + rstime;
+	double wall_time = now - shadow_bday;
+	fprintf(mailer, "Statistics from last run:\n");
+	fprintf(mailer, "Allocation/Run time:     %s\n",d_format_time(wall_time) );
+	fprintf(mailer, "Remote User CPU Time:    %s\n", d_format_time(rutime) );
+	fprintf(mailer, "Remote System CPU Time:  %s\n", d_format_time(rstime) );
+	fprintf(mailer, "Total Remote CPU Time:   %s\n\n", d_format_time(trtime));
+	
+	double total_wall_time = previous_runs + wall_time;
+	fprintf(mailer, "Statistics totaled from all runs:\n");
+	fprintf(mailer, "Allocation/Run time:     %s\n",
+			d_format_time(total_wall_time) );
+
+		// TODO: deal w/ total bytes
+	float network_bytes;
+	network_bytes = bytesSent();
+	fprintf(mailer, "\nNetwork:\n" );
+	fprintf(mailer, "%10s Run Bytes Received By Job\n", 
+			metric_units(network_bytes) );
+	network_bytes = bytesReceived();
+	fprintf(mailer, "%10s Run Bytes Sent By Job\n",
+			metric_units(network_bytes) );
+
+	email_close(mailer);
 }
 
 int UniShadow::handleJobRemoval(int sig) {
@@ -298,13 +303,77 @@ int UniShadow::handleJobRemoval(int sig) {
 	return 0;
 }
 
-float UniShadow::bytesSent()
+
+float
+UniShadow::bytesSent()
 {
 	return remRes->bytesSent();
 }
 
-float UniShadow::bytesReceived()
+
+float
+UniShadow::bytesReceived()
 {
-	return remRes->bytesRecvd();
+	return remRes->bytesReceived();
 }
+
+
+struct rusage
+UniShadow::getRUsage( void ) 
+{
+	return remRes->getRUsage();
+}
+
+
+int
+UniShadow::getImageSize( void )
+{
+	return remRes->getImageSize();
+}
+
+
+int
+UniShadow::getDiskUsage( void )
+{
+	return remRes->getDiskUsage();
+}
+
+
+bool
+UniShadow::exitedBySignal( void )
+{
+	return remRes->exitedBySignal();
+}
+
+
+int
+UniShadow::exitSignal( void )
+{
+	return remRes->exitSignal();
+}
+
+
+int
+UniShadow::exitCode( void )
+{
+	return remRes->exitCode();
+}
+
+
+void
+UniShadow::resourceBeganExecution( RemoteResource* rr )
+{
+	ASSERT( rr == remRes );
+
+		// We've only got one remote resource, so if it's started
+		// executing, we can safely log our execute event
+	logExecuteEvent();
+
+		// Start the timer for the periodic user job policy  
+	shadow_user_policy.startTimer();
+
+		// Start the timer for updating the job queue for this job 
+	startQueueUpdateTimer();
+}
+
 

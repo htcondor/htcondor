@@ -29,6 +29,7 @@
 #include "condor_debug.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"
+#include "daemon.h"
 #include "my_hostname.h"
 #include "my_username.h"
 #include "get_daemon_addr.h"
@@ -56,11 +57,7 @@ strcmp_until( const char *s1, const char *s2, const char until ) {
 Qmgr_connection *
 ConnectQ(char *qmgr_location, int timeout, bool read_only )
 {
-	int		rval, fd, cmd, ok, is_local = FALSE;
-	char	tmp_file[255];
-#if !defined(WIN32)
-	struct  passwd *pwd;
-#endif
+	int		rval, ok, is_local = FALSE;
 	char*	scheddAddr = get_schedd_addr(0);
 	char*	localScheddAddr = NULL;
 
@@ -90,16 +87,14 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
 		return( NULL );
 	}
 
-		// no connection active as of now; create a new one
+    // no connection active as of now; create a new one
 	if(scheddAddr) {
-		qmgmt_sock = new ReliSock();
-		if ( timeout > 0 && qmgmt_sock ) {
-			qmgmt_sock->timeout(timeout);
-		}
-		ok = qmgmt_sock && qmgmt_sock->connect(scheddAddr, QMGR_PORT);
-		if( !ok ) {
-			dprintf(D_ALWAYS, "Can't connect to queue manager\n");
-		}
+        Daemon d (scheddAddr);
+        qmgmt_sock = (ReliSock*) d.startCommand (QMGMT_CMD, Stream::reli_sock, timeout);
+        ok = (int)qmgmt_sock;
+        if( !ok ) {
+            dprintf(D_ALWAYS, "Can't connect to queue manager\n");
+        }
 	} else {
 		ok = FALSE;
 		if( qmgr_location ) {
@@ -131,6 +126,7 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
 		free(localScheddAddr);
 	}
 
+    // This could be a problem
 	char *username = my_username();
 
 	if ( !username ) {
@@ -140,33 +136,43 @@ ConnectQ(char *qmgr_location, int timeout, bool read_only )
 		return( 0 );
 	}
 
-	dprintf(D_FULLDEBUG,"Connecting to queue as user \"%s\"\n", username );
+    // This is really stupid. Why are we authenticate first and 
+    // then reauthenticate again? Looks like the schedd is calling
+    // Q_SOCK->unAuthenticate(), which forces the client to 
+    // reauthenticate. Have to fix this.  Hao 2/2002
+
+    // Okay, let's fix it. Hao
+    qmgmt_sock->setOwner( username );
+
+	//dprintf(D_FULLDEBUG,"Connecting to queue as user \"%s\"\n", username );
 
 	/* Get the schedd to handle Q ops. */
-	qmgmt_sock->encode();
-	cmd = QMGMT_CMD;
-	qmgmt_sock->code(cmd);
-	
-	if ( read_only ) {
-		rval = InitializeReadOnlyConnection( username );
-	} else {
-		rval = InitializeConnection( username );
-	}
+
+    /* Get rid of all the code below */
+
+    if (!qmgmt_sock->isAuthenticated()) {
+        if ( read_only ) {
+            rval = InitializeReadOnlyConnection( username );
+        } else {
+            rval = InitializeConnection( username );
+        }
+
+        if (rval < 0) {
+            delete qmgmt_sock;
+            qmgmt_sock = NULL;
+            return 0;
+        }
+
+        if ( !read_only ) {
+            if (!qmgmt_sock->authenticate()) {
+                delete qmgmt_sock;
+                qmgmt_sock = NULL;
+                return 0;
+            }
+        }
+    }
+
 	free( username );
-
-	if (rval < 0) {
-		delete qmgmt_sock;
-		qmgmt_sock = NULL;
-		return 0;
-	}
-
-	if ( !read_only ) {
-		if (!qmgmt_sock->authenticate()) {
-			delete qmgmt_sock;
-			qmgmt_sock = NULL;
-			return 0;
-		}
-	}
 
 	return &connection;
 }
@@ -228,8 +234,6 @@ WalkJobQueue(scan_func func)
 int
 rusage_to_float(struct rusage ru, float *utime, float *stime )
 {
-	float rval;
-
 	if ( utime )
 		*utime = (float) ru.ru_utime.tv_sec;
 
@@ -249,6 +253,15 @@ float_to_rusage(float utime, float stime, struct rusage *ru)
 	return 0;
 }
 
+// I looked at this code for a while today, trying to figure out how
+// to get GetAttributeString() to create a new string of the correct
+// size so that we can get any size environment. Then I realized that
+// no one calls this code. shadow_common.c now contains MakeProc() which 
+// replaces this code. Thefore, I have #if-ed it out, to help other
+// people avoid similar confusion. 
+// Sincerely,
+// Alain Roy, 30-Oct-2001
+#if 0
 #if !defined(WIN32)
 int
 GetProc(int cl, int pr, PROC *p)
@@ -348,4 +361,5 @@ GetProc(int cl, int pr, PROC *p)
 	}
 	return 0;
 }
+#endif
 #endif

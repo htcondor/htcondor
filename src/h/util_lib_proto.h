@@ -54,13 +54,16 @@ void ProcessLogging ( int request, int extraInteger );
 void detach ( void );
 int do_connect ( const char *host, const char *service, u_int port );
 int udp_connect ( char *host, u_int port );
-/* void dprintf_init ( int fd ); change */
 void dprintf ( int flags, char* fmt, ... );
 FILE * debug_lock ( void );
 void debug_unlock ( void );
 void _EXCEPT_ ( char *fmt, ... );
 int flock ( int fd, int op );
 int getdtablesize ( void );
+
+#ifndef WIN32  // on WIN32, it messes with our macro in condor_sys_nt.h
+char* strupr( char* );
+#endif
 
 #ifndef WIN32	// on WIN32, it messes with our getwd macro in condor_sys_nt.h
 char * getwd ( char *path );
@@ -81,11 +84,10 @@ int free_status_line ( STATUS_LINE *line );
 int print_header ( FILE *fp );
 char * format_seconds ( int t_sec );
 char * substr ( char *string, char *pattern );
-int update_rusage ( register struct rusage *ru1, register struct rusage *ru2 );
+void update_rusage( register struct rusage *ru1, register struct rusage *ru2 );
 int sysapi_swap_space ( void );
 int sysapi_disk_space(const char *filename);
 int calc_disk_needed( PROC * proc );
-char *GetEnvParam( char * param, char * env_string );
 PROC *ConstructProc( int, PROC *);
 
 #else /* HAS_PROTO */
@@ -106,7 +108,6 @@ void ProcessLogging ();
 void detach ();
 int do_connect ();
 int udp_connect ();
-void dprintf_init ();
 void dprintf ();
 FILE * debug_lock ();
 void debug_unlock ();
@@ -138,7 +139,6 @@ int update_rusage ();
 int sysapi_swap_space ();
 int sysapi_disk_space();
 int calc_disk_needed();
-char *GetEnvParam();
 PROC *ConstructProc();
 
 #endif /* HAS_PROTO */

@@ -24,12 +24,14 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "environ.h"
+#include "condor_environ.h"
+
 
 inline int
 is_white( char ch )
 {
 	switch( ch ) {
-	  case ';':
+	  case env_delimiter:
 	  case '\n':
 	  case ' ':
 	  case '\t':
@@ -59,11 +61,11 @@ Environ::~Environ()
 }
 
 void
-Environ::add_string( char *str )
+Environ::add_string( const char *str )
 {
-	char	*ptr;
-	char	*buf;
-	char	*dst;
+	const char *ptr;
+	char       *buf;
+	char       *dst;
 
 	 // dprintf( D_ALWAYS, "Adding compound string \"%s\"\n", str );
 
@@ -77,7 +79,7 @@ Environ::add_string( char *str )
 			return;
 		}
 		dst = buf;
-		while( *ptr && *ptr != '\n' && *ptr !=';' ) {
+		while( *ptr && *ptr != '\n' && *ptr != env_delimiter ) {
 			*dst++ = *ptr++;
 		}
 		*dst = '\0';
@@ -143,7 +145,13 @@ Environ::get_vector()
 }
 
 char *
-Environ::getenv( char *str )
+Environ::getenv( CONDOR_ENVIRON logical )
+{
+	return getenv( EnvGetName( logical ) );
+}
+
+char *
+Environ::getenv( const char *str )
 {
 	char	*ptr;
 	char	*answer;

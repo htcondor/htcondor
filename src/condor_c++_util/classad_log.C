@@ -35,6 +35,22 @@
 template class HashTable<HashKey, ClassAd*>;
 template class HashBucket<HashKey,ClassAd*>;
 
+/***** Prevent calling free multiple times in this code *****/
+/* This fixes bugs where we would segfault when reading in
+ * a corrupted log file, because memory would be deallocated
+ * both in ReadBody and in the destructor. 
+ * To fix this, we make certain all calls to free() in this
+ * file reset the pointer to NULL so we know now to call
+ * it again. */
+#ifdef free
+#undef free
+#endif
+#define free(ptr) \
+if (ptr) free(ptr); \
+ptr = NULL;
+/************************************************************/
+
+
 ClassAdLog::ClassAdLog() : table(1024, hashFunction)
 {
 	log_filename[0] = '\0';
@@ -225,7 +241,7 @@ ClassAdLog::LookupInTransaction(const char *key, const char *name, char *&val)
 			char *lkey = ((LogSetAttribute *)log)->get_key();
 			if (strcmp(lkey, key) == 0) {
 				char *lname = ((LogSetAttribute *)log)->get_name();
-				if (strcmp(lname, name) == 0) {
+				if (stricmp(lname, name) == 0) {
 					if (ValFound) {
 						free(val);
 					}
@@ -242,7 +258,7 @@ ClassAdLog::LookupInTransaction(const char *key, const char *name, char *&val)
 			char *lkey = ((LogDeleteAttribute *)log)->get_key();
 			if (strcmp(lkey, key) == 0) {
 				char *lname = ((LogDeleteAttribute *)log)->get_name();
-				if (strcmp(lname, name) == 0) {
+				if (stricmp(lname, name) == 0) {
 					if (ValFound) {
 						free(val);
 					}
@@ -269,38 +285,42 @@ ClassAdLog::LogState(int fd)
 {
 	LogRecord	*log=NULL;
 	ClassAd		*ad=NULL;
-	ExprTree	*expr=NULL;
 	HashKey		hashval;
 	char		key[_POSIX_PATH_MAX];
-	char		*attr_name = NULL;
-	char		attr_val[ATTRLIST_MAX_EXPRESSION];
+    string      my, target;
 
 	table.startIterations();
 	while(table.iterate(ad) == 1) {
 		table.getCurrentKey(hashval);
 		hashval.sprint(key);
-		log = new LogNewClassAd(key, ad->GetMyTypeName(), ad->GetTargetTypeName());
+        ad->EvaluateAttrString(ATTR_TARGET_TYPE, target);
+        ad->EvaluateAttrString(ATTR_MY_TYPE, my);
+ 
+		log = new LogNewClassAd(key, my.data(), target.data());
 		if (log->Write(fd) < 0) {
 			EXCEPT("write to %s failed, errno = %d", log_filename, errno);
 		}
 		delete log;
+        /* Needs work Hao
 		ad->ResetName();
 		attr_name = ad->NextName();
 		while (attr_name) {
-			attr_val[0] = 0;
+			attr_val = NULL;
 			expr = ad->Lookup(attr_name);
 			if (expr) {
-				expr->RArg()->PrintToStr(attr_val);
+				expr->RArg()->PrintToNewStr(&attr_val);
 				log = new LogSetAttribute(key, attr_name, attr_val);
 				if (log->Write(fd) < 0) {
 					EXCEPT("write to %s failed, errno = %d", log_filename,
 						   errno);
 				}
+				free(attr_val);
 				delete log;
 				delete [] attr_name;
 				attr_name = ad->NextName();
 			}
 		}
+        */
 	}
 	if (fsync(fd) < 0) {
 		EXCEPT("fsync of %s failed, errno = %d", log_filename, errno);
@@ -326,9 +346,10 @@ int
 LogNewClassAd::Play(void *data_structure)
 {
 	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
-	ClassAd	*ad = new ClassAd();
-	ad->SetMyTypeName(mytype);
-	ad->SetTargetTypeName(targettype);
+	ClassAd	*ad = new ClassAd();   
+    // Needs work Hao
+	//ad->SetMyTypeName(mytype);
+	//ad->SetTargetTypeName(targettype);
 	return table->insert(HashKey(key), ad);
 }
 
@@ -429,12 +450,13 @@ LogSetAttribute::Play(void *data_structure)
 	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
 	int rval;
 	ClassAd *ad;
+    Value v;
+
 	if (table->lookup(HashKey(key), ad) < 0)
 		return -1;
-	char *tmp_expr = new char [strlen(name) + strlen(value) + 4];
-	sprintf(tmp_expr, "%s = %s", name, value);
-	rval = ad->Insert(tmp_expr);
-	delete [] tmp_expr;
+    v.SetStringValue(value);
+	rval = ad->Insert( string(name), Literal::MakeLiteral(v));
+
 	return rval;
 }
 

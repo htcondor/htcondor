@@ -42,6 +42,8 @@
 #include "reli_sock.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"  // god only knows why I must include this!
+#include "condor_distribution.h"
+#include "condor_environ.h"
 
 // uncomment for poop to be left on hard drive.
 // #define MAKE_DROPPINGS
@@ -57,22 +59,33 @@ int main ( int argc, char *argv[] ) {
 	}
 #endif
 
+	char *tmp;
     char *buf = new char[1024];
+	myDistro->Init( argc, argv );
     sprintf ( buf, "%s", argv[1] );
     for ( int i=2 ; i<argc ; i++ ) {
         strcat( buf, " " );
+			// Now, we've got to check for "\-" in the argument, and
+			// if we find it, replace it with just "-", since mpich
+			// seems to have started to try to escape some of its args
+			// so it behaves nicely with the Unix shell, but that
+			// doesn't work for us... 
+			// NOTE: we've got to escape the '\' here! :)
+		while( (tmp = strstr(argv[i], "\\-")) ) {
+			*tmp = ' ';
+		}
         strcat( buf, argv[i] );
     }
 
-    char *shadow = NULL;
-    shadow = getenv( "MPI_SHADOW_SINFUL" );
+	const char	*envName = EnvGetName( ENV_MPI_SHADOW_SINFUL );
+    char *shadow = getenv( envName );
 
 #ifdef MAKE_DROPPINGS
 	if ( droppings ) {
 		fprintf ( fp, "\n\n" );
 
 		if ( shadow ) {
-			fprintf ( fp, "MPI_SHADOW_SINFUL = %s\n", shadow );
+			fprintf ( fp, "%s = %s\n", envName, shadow );
 			fprintf ( fp, "args: %s\n", buf );
 		}
 		else {

@@ -31,6 +31,7 @@ int pseudo_register_arch( const char *arch );
 int pseudo_register_opsys( const char *opsys );
 int pseudo_register_ckpt_server( const char *host );
 int pseudo_register_syscall_version( const char *version );
+int pseudo_register_begin_execution( void );
 int pseudo_get_ckpt_mode( int sig );
 int pseudo_getppid();
 int pseudo_getpid();
@@ -64,6 +65,7 @@ int pseudo_put_file_stream(
 int pseudo_startup_info_request( STARTUP_INFO *s );
 int pseudo_get_std_file_info( int which, char *logical_name );
 int pseudo_std_file_info( int which, char *name, int *pipe_fd );
+int pseudo_get_file_info_new( const char *logical_name, char *actual_url );
 int pseudo_get_file_info( const char *logical_name, char *actual_url );
 int pseudo_file_info( const char *name, int *pipe_fd, char *extern_path );
 int pseudo_get_buffer_info( int *bytes, int *block_size, int *prefetch_bytes );
@@ -98,6 +100,7 @@ void display_startup_info( const STARTUP_INFO *, int );
 
 int pseudo_getrusage(int who, struct rusage *use_p );
 int pseudo_sync();
+int pseudo_statfs( const char *path, struct statfs *buf );
 
 END_C_DECLS
 

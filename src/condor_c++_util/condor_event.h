@@ -35,8 +35,6 @@
 #   endif
 #endif   /* IRIX */
 
-#define GENERIC_EVENT 1
-
 /* Since this is a Condor API header file, we want to minimize our
    reliance on other Condor files to ease distribution.  -Jim B. */
 
@@ -49,20 +47,31 @@
 //----------------------------------------------------------------------------
 /** Enumeration of all possible events.
     If you modify this enum, you must also modify ULogEventNumberNames array
+	WARNING: DO NOT CHANGE THE NUMBERS OF EXISTING EVENTS !!!
+	         ^^^^^^           
 */
 enum ULogEventNumber {
-    /** Job submitted             */  ULOG_SUBMIT,
-    /** Job now running           */  ULOG_EXECUTE,
-    /** Error in executable       */  ULOG_EXECUTABLE_ERROR,
-    /** Job was checkpointed      */  ULOG_CHECKPOINTED,
-    /** Job evicted from machine  */  ULOG_JOB_EVICTED,
-    /** Job terminated            */  ULOG_JOB_TERMINATED,
-    /** Image size of job updated */  ULOG_IMAGE_SIZE,
-    /** Shadow threw an exception */  ULOG_SHADOW_EXCEPTION,
-#if defined(GENERIC_EVENT)
-    /** Generic Log Event         */  ULOG_GENERIC,
-#endif      
-    /** Job Aborted               */  ULOG_JOB_ABORTED
+    /** Job submitted             */  ULOG_SUBMIT 					= 0,
+    /** Job now running           */  ULOG_EXECUTE 					= 1,
+    /** Error in executable       */  ULOG_EXECUTABLE_ERROR 		= 2,
+    /** Job was checkpointed      */  ULOG_CHECKPOINTED 			= 3,
+    /** Job evicted from machine  */  ULOG_JOB_EVICTED 				= 4,
+    /** Job terminated            */  ULOG_JOB_TERMINATED 			= 5,
+    /** Image size of job updated */  ULOG_IMAGE_SIZE 				= 6,
+    /** Shadow threw an exception */  ULOG_SHADOW_EXCEPTION 		= 7,
+    /** Generic Log Event         */  ULOG_GENERIC 					= 8,
+    /** Job Aborted               */  ULOG_JOB_ABORTED 				= 9,
+	/** Job was suspended         */  ULOG_JOB_SUSPENDED 			= 10,
+	/** Job was unsuspended       */  ULOG_JOB_UNSUSPENDED 			= 11,
+	/** Job was held              */  ULOG_JOB_HELD 				= 12,
+	/** Job was released          */  ULOG_JOB_RELEASED 			= 13,
+    /** Parallel Node executed    */  ULOG_NODE_EXECUTE 			= 14,
+    /** Parallel Node terminated  */  ULOG_NODE_TERMINATED 			= 15,
+    /** POST script terminated    */  ULOG_POST_SCRIPT_TERMINATED 	= 16,
+	/** Job Submitted to Globus   */  ULOG_GLOBUS_SUBMIT 			= 17,
+	/** Globus Submit failed      */  ULOG_GLOBUS_SUBMIT_FAILED 	= 18,
+	/** Globus Resource Up        */  ULOG_GLOBUS_RESOURCE_UP 		= 19,
+	/** Globus Resource Down      */  ULOG_GLOBUS_RESOURCE_DOWN 	= 20,
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
@@ -242,10 +251,11 @@ class SubmitEvent : public ULogEvent
 
     /// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
     char submitHost[128];
+
+	// user-supplied text to include in the log event
+    char* submitEventLogNotes;
 };
 
-
-#if defined(GENERIC_EVENT)
 
 //----------------------------------------------------------------------------
 /** Framework for a Generic User Log Event object.
@@ -282,7 +292,6 @@ class GenericEvent : public ULogEvent
     /// A string with unspecified format.
     char info[128];
 };
-#endif /* ifdef GENERIC_EVENT */
 
 //----------------------------------------------------------------------------
 /** This event occurs when a job begins running on a machine.
@@ -402,12 +411,18 @@ class JobAbortedEvent : public ULogEvent
         @return 0 for failure, 1 for success
     */
     virtual int writeEvent (FILE *);
+
+	const char* getReason();
+	void setReason( const char* );
+
+ private:
+	char* reason;
 };
 
 
 //----------------------------------------------------------------------------
 /** Framework for an Evicted Event object.
-    Below is an example Evicted Log entry for Condor v6.<p>
+    Below is an example Evicted Log entry for Condor v6<p>
 
 <PRE>
 004 (5164.000.000) 10/20 17:08:13 Job was evicted.
@@ -417,7 +432,44 @@ class JobAbortedEvent : public ULogEvent
 ...
 </PRE>
 
+<p> However, the evict event might also look like this:
+
+<PRE>
+004 (3236.000.000) 03/28 19:28:07 Job was evicted.
+    (0) Job terminated and was requeued
+        Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+        Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+    29  -  Run Bytes Sent By Job
+    144  -  Run Bytes Received By Job
+    (0) Abnormal termination (signal 9)
+    (1) Corefile in: /some/interesting/path/core.3236.0
+    The OnExitRemove expression 'ExitBySignal == False' evaluated to False
+...
+</PRE>
+
+<p>or like this:
+
+<PRE>
+004 (3236.000.000) 03/28 19:28:07 Job was evicted.
+    (0) Job terminated and was requeued
+        Usr 0 00:00:00, Sys 0 00:00:00  -  Run Remote Usage
+        Usr 0 00:00:00, Sys 0 00:00:00  -  Run Local Usage
+    29  -  Run Bytes Sent By Job
+    144  -  Run Bytes Received By Job
+    (1) Normal termination (return value 3)
+    The OnExitRemove expression 'ExitCode == 0' evaluated to False
+...
+</PRE>
+
+
+
+<p> In this case, the event shows that the job terminated but was
+requeued due to the user-specified policy expressions.  The old
+parsing code will just see this as an eviction w/o checkpoint.
+However, the new code will correctly parse the other useful info out
+of it.  
 */
+
 class JobEvictedEvent : public ULogEvent
 {
   public:
@@ -446,12 +498,113 @@ class JobEvictedEvent : public ULogEvent
 
 	/// bytes sent by the job over network for the run
 	float sent_bytes;
+
 	/// bytes received by the job over the network for the run
 	float recvd_bytes;
+
+    /// Did it terminate and get requeued?
+    bool    terminate_and_requeued;
+
+	/// Did it terminate normally? (only valid for requeue eviction) 
+    bool    normal;
+
+    /// return value (valid only on normal exit)
+    int     return_value;
+
+    /// The signal that terminated it (valid only on abnormal exit)
+    int     signal_number;
+
+	const char* getReason();
+	void setReason( const char* );
+
+	const char* getCoreFile();
+	void setCoreFile( const char* );
+
+ private:
+	char* reason;
+	char* core_file;
+
 };
 
 
 //----------------------------------------------------------------------------
+
+/** This is an abstract base class for TerminatedEvents.  Both
+	JobTerminatedEvent and NodeTerminatedEvent are derived from this.  
+*/
+class TerminatedEvent : public ULogEvent
+{
+  public:
+    ///
+    TerminatedEvent();
+    ///
+    ~TerminatedEvent();
+
+    /** Read the body of the next Terminated event.
+		This is pure virtual to make sure this is an abstract base class
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent( FILE * file ) = 0;
+
+    /** Read the body of the next Terminated event.
+        @param file the non-NULL readable log file
+		@param header the header to use for this event (either "Job"
+		or "Node")
+        @return 0 for failure, 1 for success
+    */
+    int readEvent( FILE *, const char* header );
+
+
+    /** Write the body of the next Terminated event.
+		This is pure virtual to make sure this is an abstract base class
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE * file) = 0;
+
+    /** Write the body of the next Terminated event.
+        @param file the non-NULL writable log file
+		@param header the header to use for this event (either "Job"
+		or "Node")
+        @return 0 for failure, 1 for success
+    */
+    int writeEvent( FILE * file, const char* header );
+
+    /// Did it terminate normally?
+    bool    normal;
+
+    /// return value (valid only on normal exit)
+    int     returnValue;
+
+    /// The signal that terminated it (valid only on abnormal exit)
+    int     signalNumber;
+
+	const char* getCoreFile();
+	void setCoreFile( const char* );
+
+    /** Local  usage for the run */    rusage  run_local_rusage;
+    /** Remote usage for the run */    rusage  run_remote_rusage;
+    /** Total Local  rusage      */    rusage  total_local_rusage;
+    /** Total Remote rusage      */    rusage  total_remote_rusage;
+
+	/// bytes sent by the job over network for the run
+	float sent_bytes;
+	/// bytes received by the job over the network for the run
+	float recvd_bytes;
+	/// total bytes sent by the job over network for the lifetime of the job
+	float total_sent_bytes;
+	/// total bytes received by the job over the network for the lifetime
+	/// of the job
+	float total_recvd_bytes;
+
+ private:
+
+	char* core_file;
+
+};
+
+
 /** Framework for a single Job Terminated Event Log object.
     Below is an example Job Termination Event Log entry for Condor v6.<p>
 
@@ -465,7 +618,7 @@ class JobEvictedEvent : public ULogEvent
 ...
 </PRE>
 */
-class JobTerminatedEvent : public ULogEvent
+class JobTerminatedEvent : public TerminatedEvent
 {
   public:
     ///
@@ -484,36 +637,182 @@ class JobTerminatedEvent : public ULogEvent
         @return 0 for failure, 1 for success
     */
     virtual int writeEvent (FILE *);
-
-
-    /// Did the job terminate normally?
-    bool    normal;
-
-    /// Job's return value (valid only on normal exit)
-    int     returnValue;
-
-    /// The signal that terminated the job (valid only on abnormal exit)
-    int     signalNumber;
-
-    /// name of core file
-    char    coreFile[_POSIX_PATH_MAX];
-
-    /** Local  usage for the run */    rusage  run_local_rusage;
-    /** Remote usage for the run */    rusage  run_remote_rusage;
-    /** Total Local  rusage      */    rusage  total_local_rusage;
-    /** Total Remote rusage      */    rusage  total_remote_rusage;
-
-	/// bytes sent by the job over network for the run
-	float sent_bytes;
-	/// bytes received by the job over the network for the run
-	float recvd_bytes;
-	/// total bytes sent by the job over network for the lifetime of the job
-	float total_sent_bytes;
-	/// total bytes received by the job over the network for the lifetime
-	/// of the job
-	float total_recvd_bytes;
 };
 
+
+class NodeTerminatedEvent : public TerminatedEvent
+{
+  public:
+    ///
+    NodeTerminatedEvent();
+    ///
+    ~NodeTerminatedEvent();
+
+    /** Read the body of the next Terminated event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next Terminated event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+		/// node identifier for this event
+	int node;
+};
+
+
+class PostScriptTerminatedEvent : public ULogEvent
+{
+ public:
+    ///
+    PostScriptTerminatedEvent();
+    ///
+    ~PostScriptTerminatedEvent();
+
+    /** Read the body of the next Terminated event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    int readEvent( FILE* file );
+
+    /** Write the body of the next Terminated event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    int writeEvent( FILE* file );
+
+    /// did it exit normally
+    bool normal;
+
+    /// return value (valid only on normal exit)
+    int returnValue;
+
+    /// terminating signal (valid only on abnormal exit)
+    int signalNumber;
+};
+
+
+
+//----------------------------------------------------------------------------
+/** Framework for a GlobusSubmitEvent object.  Occurs when a Globus Universe
+    job is actually submitted to a Globus Gatekeeper (and the submit is 
+	committed if using a recent version of Globus which understands the
+	two-phase commit protocol).
+*/
+class GlobusSubmitEvent : public ULogEvent
+{
+  public:
+    ///
+    GlobusSubmitEvent();
+    ///
+    ~GlobusSubmitEvent();
+
+    /** Read the body of the next Submit event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next Submit event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+    /// Globus Resource Manager (Gatekeeper) Conctact String
+    char* rmContact;
+
+	/// Globus Job Manager Contact String
+    char* jmContact;
+
+	/// If true, then the JobManager supports restart recovery
+	bool restartableJM;
+};
+
+//----------------------------------------------------------------------------
+/** Framework for a GlobusSubmitiAbortedEvent object.  Occurs when a Globus 
+	Universe job is is removed from the queue because it was unable to be
+	sucessfully submitted to a Globus Gatekeeper after a certain number of 
+	attempts.
+*/
+class GlobusSubmitFailedEvent : public ULogEvent
+{
+  public:
+    ///
+    GlobusSubmitFailedEvent();
+    ///
+    ~GlobusSubmitFailedEvent();
+
+    /** Read the body of the next SubmitAborted event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next SubmitAborted event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+    /// Globus Resource Manager (Gatekeeper) Conctact String
+    char* reason;
+
+};
+
+class GlobusResourceUpEvent : public ULogEvent
+{
+  public:
+    ///
+    GlobusResourceUpEvent();
+    ///
+    ~GlobusResourceUpEvent();
+
+    /** Read the body of the next ResoruceUp event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next SubmitAborted event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+    /// Globus Resource Manager (Gatekeeper) Conctact String
+    char* rmContact;
+
+};
+
+class GlobusResourceDownEvent : public ULogEvent
+{
+  public:
+    ///
+    GlobusResourceDownEvent();
+    ///
+    ~GlobusResourceDownEvent();
+
+    /** Read the body of the next SubmitAborted event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next SubmitAborted event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+    /// Globus Resource Manager (Gatekeeper) Conctact String
+    char* rmContact;
+
+};
 
 //----------------------------------------------------------------------------
 /** Framework for a JobImageSizeEvent object.  Occurs when the image size of a
@@ -574,6 +873,165 @@ class ShadowExceptionEvent : public ULogEvent
 	/// bytes received by the job over the network for the run
 	float recvd_bytes;
 };
-    
+
+//----------------------------------------------------------------------------
+/** Framework for a JobSuspended event object.  Occurs if the starter
+	suspends a job.
+*/
+class JobSuspendedEvent : public ULogEvent
+{
+  public:
+    ///
+    JobSuspendedEvent ();
+    ///
+    ~JobSuspendedEvent ();
+
+    /** Read the body of the next JobSuspendedEvent event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next JobSuspendedEvent event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+	/// How many pids the starter suspended
+	int num_pids;
+};
+
+//----------------------------------------------------------------------------
+/** Framework for a JobUnsuspended event object.  Occurs if the starter
+	unsuspends a job.
+*/
+class JobUnsuspendedEvent : public ULogEvent
+{
+  public:
+    ///
+    JobUnsuspendedEvent ();
+    ///
+    ~JobUnsuspendedEvent ();
+
+    /** Read the body of the next JobUnsuspendedEvent event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next JobUnsuspendedEvent event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+	/** We don't have a number of jobs unsuspended in here because since this
+		is such a hack(the starter isn't supposed to write to the client log
+		socket), we can't allow the starter to write to the socket AFTER it
+		unsuspends the jobs. Otherwise it would have been nice to know if the
+		starter unsuspended the same number of jobs it suspended. Alas.
+	*/
+};
+
+//------------------------------------------------------------------------
+/** Framework for a JobHeld event object.  Occurs if the job goes on hold.
+*/
+class JobHeldEvent : public ULogEvent
+{
+  public:
+    ///
+    JobHeldEvent ();
+    ///
+    ~JobHeldEvent ();
+
+    /** Read the body of the next JobHeldEvent event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next JobHeldEvent event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+		/// @return pointer to our copy of the reason, or NULL if not set
+	const char* getReason();
+
+		/// makes a copy of the string in our "reason" member
+	void setReason( const char* );
+
+ private:
+
+		/// why the job was held 
+	char* reason;
+};
+
+//------------------------------------------------------------------------
+/** Framework for a JobReleased event object.  Occurs if the job becomes
+	released from the held state.
+*/
+class JobReleasedEvent : public ULogEvent
+{
+  public:
+    ///
+    JobReleasedEvent ();
+    ///
+    ~JobReleasedEvent ();
+
+    /** Read the body of the next JobReleasedEvent event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next JobReleasedEvent event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+		/// @return pointer to our copy of the reason, or NULL if not set
+	const char* getReason();
+
+		/// makes a copy of the string in our "reason" member
+	void setReason( const char* );
+
+ private:
+
+		/// why the job was released
+	char* reason;
+};
+
+/* MPI events */
+class NodeExecuteEvent : public ULogEvent
+{
+  public:
+    ///
+    NodeExecuteEvent();
+    ///
+    ~NodeExecuteEvent();
+
+    /** Read the body of the next Execute event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next Execute event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+    /// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
+    char executeHost[128];
+
+		/// Node identifier
+	int node;
+};
+
 #endif // __CONDOR_EVENT_H__
 

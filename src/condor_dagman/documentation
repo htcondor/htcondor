@@ -1,6 +1,6 @@
 /** @name DAGMan API Documentation
     DAGMan (Directed Acyclic Graph Manager) is a meta-scheduler for Condor.
-    In manages dependencies between jobs at a higher level than the Condor
+    It manages dependencies between jobs at a higher level than the Condor
     Scheduler.  Future plans include exporting a linkable DAGMan API, allowing
     an outside programmer to create, control, and manipulate a DAG through
     the DAGMan API.<p>

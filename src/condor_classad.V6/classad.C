@@ -1184,6 +1184,16 @@ Flatten( const ExprTree *tree , Value &val , ExprTree *&fexpr ) const
 	return( tree->Flatten( state , val , fexpr ) );
 }
 
+bool ClassAd::	// NAC
+FlattenAndInline( const ExprTree *tree , Value &val , ExprTree *&fexpr ) const
+{
+	EvalState	state;
+
+	state.SetScopes( this );
+	state.flattenAndInline = true;
+	return( tree->Flatten( state , val , fexpr ) );
+}
+
 bool ClassAdIterator::
 NextAttribute( string &attr, const ExprTree *&expr )
 {

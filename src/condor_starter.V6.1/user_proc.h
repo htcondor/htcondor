@@ -37,7 +37,7 @@ class UserProc : public Service
 public:
 		/// Constructor
 	UserProc() : JobAd(NULL), JobPid(-1), Cluster(-1), Proc(-1),
-		Requested_Exit(0) {};
+		exit_status(-1), requested_exit(false) {};
 
 		/// Destructor
 	virtual ~UserProc() {};
@@ -51,10 +51,28 @@ public:
 		*/
 	virtual int StartJob() = 0;
 
-		/** Job exits. Starter deletes object if JobExit returns 1.
-		    @return 1 if exit handled, 0 if pid doesn't match
+		/** A pid exited.  If this UserProc wants to do any cleanup
+			now that this pid has exited, it does so here.  If we
+			return 1, the starter will consider this UserProc done,
+			remove it from the active job list, and put it in a list
+			of jobs that are already cleaned up.
+		    @return 1 if our UserProc is no longer active, 0 if it is
+		*/
+	virtual int JobCleanup(int pid, int status) = 0;
+
+		/** Job exits.  Starter has decided it's done with everything
+			it needs to do, and we can now tell the shadow we've
+			exited so the job can leave the queue.
+		    @return true on success, false on failure
 		*/ 
-	virtual int JobExit(int pid, int status) = 0;
+	virtual bool JobExit( void ) = 0;
+
+		/** Publish all attributes we care about for updating the
+			shadow into the given ClassAd.
+			@param ad pointer to the classad to publish into
+			@return true if success, false if failure
+		*/
+	virtual bool PublishUpdateAd( ClassAd* ad ) = 0;
 
 		/** Suspend. */
 	virtual void Suspend() = 0;
@@ -84,12 +102,18 @@ public:
 			@return true if job has been started, false if not. */
 	bool JobStarted() { return JobPid > 0; }
 
+		/** Was this job requested to exit by the starter, or did it 
+			exit on its own?
+		*/
+	bool RequestedExit( void ) { return requested_exit; };
+
 protected:
 	ClassAd *JobAd;
 	int JobPid;
 	int Cluster;
 	int Proc;
-	int Requested_Exit;
+	int exit_status;
+	bool requested_exit;
 };
 
-#endif
+#endif /* _CONDOR_USER_PROC_H */

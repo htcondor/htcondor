@@ -31,7 +31,9 @@
 #ifndef _RES_ATTRIBUTES_H
 #define _RES_ATTRIBUTES_H
 
-typedef char amask_t;
+class Resource;
+
+typedef int amask_t;
 
 const amask_t A_PUBLIC	= 1;
 const amask_t A_PRIVATE	= 2;
@@ -40,7 +42,13 @@ const amask_t A_TIMEOUT	= 8;
 const amask_t A_UPDATE	= 16;
 const amask_t A_SHARED	= 32;
 const amask_t A_SUMMED	= 64;
-const amask_t A_ALL		= (A_UPDATE | A_TIMEOUT | A_STATIC | A_SHARED | A_SUMMED);
+const amask_t A_EVALUATED = 128; 
+/*
+  NOTE: We don't want A_EVALUATED in A_ALL, since it's a special bit
+  that only applies to the Resource class, and it shouldn't be set
+  unless we explicity ask for it.
+*/
+const amask_t A_ALL		= (A_UPDATE | A_TIMEOUT | A_STATIC | A_SHARED | A_SUMMED );
 
 #define IS_PUBLIC(mask)		((mask) & A_PUBLIC)
 #define IS_PRIVATE(mask)	((mask) & A_PRIVATE)
@@ -49,6 +57,7 @@ const amask_t A_ALL		= (A_UPDATE | A_TIMEOUT | A_STATIC | A_SHARED | A_SUMMED);
 #define IS_UPDATE(mask)		((mask) & A_UPDATE)
 #define IS_SHARED(mask)		((mask) & A_SHARED)
 #define IS_SUMMED(mask)		((mask) & A_SUMMED)
+#define IS_EVALUATED(mask)	((mask) & A_EVALUATED)
 #define IS_ALL(mask)		((mask) & A_ALL)
 
 
@@ -186,5 +195,5 @@ private:
 
 void deal_with_benchmarks( Resource* );
 
-#endif _RES_ATTRIBUTES_H
+#endif /* _RES_ATTRIBUTES_H */
 

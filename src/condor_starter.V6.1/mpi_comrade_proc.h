@@ -29,9 +29,10 @@
 #include "vanilla_proc.h"
 
 /** Mostly, this class is a wrapper around VanillaProc, with the
-	exception that Suspends really cause the job to exit.  The notion
-	for this class is that all the mpi nodes are "comrades"  (none
-	of this master-slave stuff...).  */
+	exception that Suspends really cause the job to exit, and that we
+	have to keep track of the MPI Node (a.k.a. "MPI Rank") of this
+	task.  The notion for this class is that all the mpi nodes are
+	"comrades" (none of this master-slave stuff...). */
 
 class MPIComradeProc : public VanillaProc
 {
@@ -40,17 +41,36 @@ class MPIComradeProc : public VanillaProc
     MPIComradeProc( ClassAd * jobAd );
     virtual ~MPIComradeProc();
 
+		/** Pull the MPI Node out of the job ClassAd and save it.
+			Then, just call VanillaProc::StartJob() to do the real
+			work. */
     virtual int StartJob();
 
-    virtual int JobExit( int pid, int status );
+		/** We don't need to do anything special, but because C++ is
+			lame, we need to define this.  MPIMasterProc wants to
+			implement its own version, and everyone just wants to call
+			up the class hierarchy.  However, there's no way in C++ to
+			say "climb up my class hierarchy and call this function
+			for the next class that implements it."  So, everyone
+			really has to define their own and explicitly call their
+			parent's, even if they have nothing special to add.
+		*/
+    virtual int JobCleanup( int pid, int status );
 
+		/** MPI tasks shouldn't be suspended.  So, if we get a
+			suspend, instead of sending the MPI task a SIGSTOP, we
+			tell it to shutdown, instead. */
     virtual void Suspend();
 
+		/** This is here just so we can print out a log message, since
+			we don't expect this will ever get called. */
     virtual void Continue();
 
-    virtual bool ShutDownGraceful();
+		/** Publish our MPI Node. */
+	virtual bool PublishUpdateAd( ClassAd* ad );
 
-    virtual bool ShutdownFast();
+ protected:
+	int Node;
 
 };
 

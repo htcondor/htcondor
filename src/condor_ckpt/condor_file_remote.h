@@ -15,6 +15,7 @@ files should go in CondorFileBasic.
 class CondorFileRemote : public CondorFileBasic {
 public:
 	CondorFileRemote();
+	virtual ~CondorFileRemote();
 
 	virtual int read(int offset, char *data, int length);
 	virtual int write(int offset, char *data, int length);

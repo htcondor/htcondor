@@ -29,6 +29,7 @@
 #include "sig_install.h"
 #include "get_daemon_addr.h"
 #include "condor_attributes.h"
+#include "condor_distribution.h"
 
 void
 usage(char name[])
@@ -56,6 +57,7 @@ main(int argc, char *argv[])
 	int nextarg = 1, cluster, proc;
 	bool UseConstraint = false;
 
+	myDistro->Init( argc, argv );
 	config();
 
 #if !defined(WIN32)

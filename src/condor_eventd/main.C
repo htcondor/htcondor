@@ -33,14 +33,14 @@
 char *mySubSystem = "EVENTD";
 
 int
-main_init(int argc, char *argv[])
+main_init(int, char *[])
 {
 	EventD->Config();
 	return TRUE;
 }
 
 int
-main_config()
+main_config( bool is_full )
 {
 	EventD->Config();
 	return TRUE;
@@ -50,10 +50,18 @@ int
 main_shutdown_fast()
 {
 	DC_Exit(0);
+	return TRUE;
 }
 
 int
 main_shutdown_graceful()
 {
 	DC_Exit(0);
+	return TRUE;
+}
+
+
+void
+main_pre_dc_init( int argc, char* argv[] )
+{
 }

@@ -22,6 +22,7 @@
 ****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
 #include "condor_common.h"
 #include "classad_collection.h"
+#include "condor_distribution.h"
 
 /*template class Set<RankedClassAd>;*/
 /*template class Set<int>;*/
@@ -33,6 +34,7 @@
 int
 main(int argc, char *argv[])
 {
+	myDistro->Init( argc, argv );
 	if (argc != 2) {
 		fprintf(stderr, "usage: %s collection-file\n", argv[0]);
 	}

@@ -55,15 +55,8 @@
 //     ExprTree* RArg()
 //         Return the right argument or NULL.
 //
-//     void Copy()
-//         Increment the reference count of this node and all its children.
-//
 //     void Display()
 //         Display the expression on stdout.
-//
-//     operator delete(void* tree) 
-//         If the reference count of "tree" is greater than 0, then it is
-//         decremented; otherwise, memory of "tree" is freed.
 //
 //     operator ==(ExprTree& tree)
 //     operator >(ExprTree& tree)
@@ -78,6 +71,13 @@
 #define _ASTBASE_H_
 
 #include "condor_exprtype.h"
+#include "string_list.h"
+
+#define USE_STRING_SPACE_IN_CLASSADS
+
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+#include "stringSpace.h"
+#endif
 
 class AttrList;
 class EvalResult;
@@ -86,7 +86,6 @@ class ExprTree
 {
     public :
 
-        void            	operator delete(void*);
 		virtual int	    	operator ==(ExprTree&);
 		virtual int	    	operator >(ExprTree&);
 		virtual int	    	operator >=(ExprTree&);
@@ -94,15 +93,19 @@ class ExprTree
 		virtual int	    	operator <=(ExprTree&);
 
         LexemeType			MyType() { return type; }
-		int					MyRef()	 { return ref; }
 		virtual ExprTree*   LArg()   { return NULL; }
 		virtual ExprTree*   RArg()   { return NULL; }
-        ExprTree*           Copy();       // increment the ref counter
+		virtual ExprTree*   DeepCopy(void) const = 0;
         virtual void        Display();    // display the expression
+		virtual int         CalcPrintToStr(void) {return 0;}
+		virtual void        PrintToNewStr(char **str);
 		virtual void        PrintToStr(char*) {} // print the expr to a string
 
 		int         		EvalTree(AttrList*, EvalResult*);
 		int         		EvalTree(AttrList*, AttrList*, EvalResult*);
+		virtual void        GetReferences(const AttrList *base_attrlist,
+										  StringList &internal_references,
+										  StringList &external_references) const;
 
 		char                unit;         // unit of the expression
 
@@ -115,18 +118,44 @@ class ExprTree
 		// and now init sumFlag as well... not sure if it should be
 		// FALSE or TRUE! but it needs to be initialized -Todd, 9/10
 		// and now init evalFlag as well (to detect circular eval'n) -Rajesh
-		ExprTree::ExprTree():unit('\0'), sumFlag(FALSE), evalFlag(FALSE) {};
-
+		// We no longer initialze sumFlag, because it has been removed. 
+		// It's not used, that's why you couldn't figure out how to initialize
+		// it, Todd.-Alain 26-Sep-2001
+		ExprTree::ExprTree():unit('\0'), evalFlag(FALSE)
+		{
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+			if (string_space_references == 0) {
+				string_space = new StringSpace;
+			}
+			string_space_references++;
+#endif
+			return;
+		}
+		virtual ~ExprTree()
+		{
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+			string_space_references--;
+			if (string_space_references == 0) {
+				delete string_space;
+				string_space = NULL;
+			}
+#endif
+			return;
+		}
 
     protected :
+		virtual void        CopyBaseExprTree(class ExprTree *const recipient) const;
 		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
 		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
 
-		int                 ref;          // number of ptrs to this expr
 		LexemeType	    	type;         // lexeme type of the node
-		int                 cardinality;  // number of children
-		int		    		sumFlag;      // used by the SumTree functions
 		bool				evalFlag;	  // to check for circular evaluation
+
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+		static StringSpace  *string_space;
+		static int          string_space_references;
+#endif
+
 };
 
 class VariableBase : public ExprTree
@@ -134,11 +163,15 @@ class VariableBase : public ExprTree
     public :
   
 	  	VariableBase(char*);
+	    virtual ~VariableBase();
 
 		virtual int	    operator ==(ExprTree&);
 
 		virtual void	Display();
 		char*	const	Name() { return name; }
+		virtual void    GetReferences(const AttrList *base_attrlist,
+									  StringList &internal_references,
+									  StringList &external_references) const;
 
 		friend	class	ExprTree;
 
@@ -146,6 +179,9 @@ class VariableBase : public ExprTree
 		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
 		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
 
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+        int                 stringSpaceIndex;
+#endif 
   		char*               name;
 };
 
@@ -198,6 +234,7 @@ class StringBase : public ExprTree
     public :
 
 	StringBase(char*);
+	virtual ~StringBase();
 
 	virtual int	    operator ==(ExprTree&);
 
@@ -210,13 +247,40 @@ class StringBase : public ExprTree
 		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
 		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
 
-   	char*           value;
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+        int                 stringSpaceIndex;
+#endif 
+		char*           value;
+};
+
+class ISOTimeBase : public ExprTree
+{
+    public :
+
+	ISOTimeBase(char*);
+	virtual ~ISOTimeBase();
+
+	virtual int	    operator ==(ExprTree&);
+
+	virtual void	Display();
+	char*	const	Value();
+
+	friend	class	ExprTree;
+
+    protected :
+		virtual int         _EvalTree(class AttrList*, EvalResult*) = 0;
+		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*) = 0;
+
+#ifdef USE_STRING_SPACE_IN_CLASSADS
+        int                 stringSpaceIndex;
+#endif 
+		char                *time;
 };
 
 class BooleanBase : public ExprTree
 {
     public :
-
+	  
   	BooleanBase(int);
 	virtual int	    operator ==(ExprTree&);
 
@@ -236,7 +300,6 @@ class UndefinedBase : public ExprTree
     public :
 
   	UndefinedBase();
-
 	virtual void        Display();
 
     protected :
@@ -261,19 +324,21 @@ class BinaryOpBase : public ExprTree
 {
     public :
 
+		virtual ~BinaryOpBase();
 		virtual int		      operator ==(ExprTree&);
 		
 		virtual ExprTree*     LArg()   { return lArg; }
 		virtual ExprTree*     RArg()   { return rArg; }
 
-		virtual ExprTree*		Copy();
-
-		friend  ExprTree;
+		virtual void            GetReferences(const AttrList *base_attrlist,
+											  StringList &internal_references,
+											  StringList &external_references) const;
+		friend  class         ExprTree;
 		friend	class	      AttrList;
 		friend	class	      AggOp;
 
     protected :
-		virtual int         _EvalTree(class AttrList*, EvalResult*);
+		virtual int         _EvalTree(AttrList*, EvalResult*);
 		virtual int         _EvalTree(AttrList*, AttrList*, EvalResult*);
 
 		ExprTree* 	      lArg;
@@ -383,6 +448,9 @@ class AssignOpBase : public BinaryOpBase
     public :
   	AssignOpBase(ExprTree*, ExprTree*);
   	virtual void        Display();
+	virtual void        GetReferences(const AttrList *base_attlrlist,
+									  StringList &internal_references,
+									  StringList &external_references) const;
 };
 
 #endif

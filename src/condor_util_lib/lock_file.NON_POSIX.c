@@ -82,6 +82,9 @@ int do_block;
 	  case LOCK_UN:         /* this shud be the corrct case : dhruba */
 		op = LOCK_UN;
 		break;
+      default:
+			  /* unknown lock type, fail immediately */
+		return -1;
 	}
 
 	if( !do_block ) {
@@ -110,7 +113,6 @@ lock_file( int fd, LOCK_TYPE type, int do_block )
 {
 	struct flock	f;
 	int				cmd;
-	int				status;
 
 	if( do_block ) {
 		cmd = F_SETLKW;		/* blocking */
@@ -135,6 +137,9 @@ lock_file( int fd, LOCK_TYPE type, int do_block )
 	  case LOCK_UN:         /* this shud be the corrct case : dhruba */
 		f.l_type = F_UNLCK;
 		break;
+      default:
+			  /* unknown lock type, fail immediately */
+		return -1;
 	}
 
 		/* be signal safe */
@@ -146,4 +151,4 @@ lock_file( int fd, LOCK_TYPE type, int do_block )
 	return 0;
 }
 
-#endif CONDOR_USE_FLOCK
+#endif /* CONDOR_USE_FLOCK */

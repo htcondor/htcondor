@@ -1,39 +1,27 @@
-NAME = condor_shadow.v61
+NAME = condor_shadow
 all_target($(NAME))
 
-CFLAGS = $(STD_C_FLAGS)
-C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
+CFLAGS = $(STD_C_FLAGS) -Wall
+C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS) -Wall
 
 LIB = $(DAEMONCORE_LIB) $(STD_LIBS)
 
-#if NEEDS_FAKE_GETMNT
-#define FAKE_GETMNT_OBJ getmnt.o
-#else
-#define FAKE_GETMNT_OBJ
-#endif
-
 OBJ = shadow_v61_main.o baseshadow.o shadow.o mpishadow.o \
 	remoteresource.o mpiresource.o pseudo_ops.o NTreceivers.o \
-	shadow_v61_instantiate.o \
-	FAKE_GETMNT_OBJ 
+	shadow_v61_instantiate.o shadow_initializer.o \
+	shadow_user_policy.o
 
 c_plus_target($(NAME),$(OBJ),$(LIB))
 release_target($(NAME),$(RELEASE_DIR)/sbin,EXECUTABLE_MODE)
-strip_target($(NAME),$(STRIP_CONTRIB)/sbin,EXECUTABLE_MODE)
-static_target($(NAME),$(OBJ),$(LIB),$(STATIC_CONTRIB)/sbin)
+strip_target($(NAME),$(STRIP_DIR)/sbin,EXECUTABLE_MODE)
+static_target($(NAME),$(OBJ),$(LIB),$(STATIC_DIR)/sbin)
 pure_c_plus_target($(NAME).pure,$(OBJ),$(LIB))
 purecov_c_plus_target($(NAME).pc,$(OBJ),$(LIB))
 html_target( baseshadow.h shadow.h mpishadow.h remoteresource.h )
 
+#if 0
 IMPORT_LINKS = ../../config/import_links
-#import(../condor_syscall_lib,receivers.o)
-#import(../condor_syscall_lib,extern_path.o)
-
-#if NEEDS_FAKE_GETMNT
-import(../condor_util_lib,getmnt.o)
+import(../condor_syscall_lib,receivers.o)
+import(../condor_syscall_lib,extern_path.o)
 #endif
-
-
-
-
 

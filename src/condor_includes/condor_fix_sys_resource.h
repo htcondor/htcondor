@@ -65,7 +65,7 @@ int __getrusage(int, struct rusage * );
 
 /* on a glibc 2.1 machine r_lim_t is defined, so we undef it and let the typdef
 	through */
-#if defined(LINUX) && defined(GLIBC21)
+#if defined(LINUX) && (defined(GLIBC21) || defined(GLIBC22))
 #	undef rlim_t
 #else
 	typedef long rlim_t;

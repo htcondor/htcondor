@@ -42,7 +42,7 @@ extern "C" {
 /*
 **	Important external variables
 */
-extern int	errno;
+extern DLL_IMPORT_MAGIC int	errno;
 
 extern int	_EXCEPT_Line;			/* Line number of the exception           */
 extern char	*_EXCEPT_File;			/* File name of the exception             */

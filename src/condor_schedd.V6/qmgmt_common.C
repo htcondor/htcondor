@@ -51,7 +51,7 @@ SetAttributeFloat(int cl, int pr, const char *name, float val)
 }
 
 int
-SetAttributeString(int cl, int pr, const char *name, char *val)
+SetAttributeString(int cl, int pr, const char *name, const char *val)
 {
 	char buf[1000];
 	int rval;
@@ -84,7 +84,8 @@ SetAttributeFloatByConstraint(const char *con, const char *name, float val)
 }
 
 int
-SetAttributeStringByConstraint(const char *con, const char *name, char *val)
+SetAttributeStringByConstraint(const char *con, const char *name,
+							   const char *val)
 {
 	char buf[1000];
 	int rval;

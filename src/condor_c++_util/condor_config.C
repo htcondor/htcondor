@@ -60,6 +60,15 @@
 #include "my_hostname.h"
 #include "condor_version.h"
 #include "util_lib_proto.h"
+#include "my_username.h"
+#ifdef WIN32
+#	include "ntsysinfo.h"		// for WinNT getppid
+#endif
+#include "directory.h"			// for StatInfo
+#include "condor_scanner.h"		// for MAXVARNAME, etc
+#include "condor_distribution.h"
+#include "condor_environ.h"
+#include "MyString.h"
 
 extern "C" {
 	
@@ -78,7 +87,7 @@ void clear_config();
 void reinsert_specials(char*);
 void process_file(char*, char*, char*);
 void process_locals( char*, char*);
-int  process_runtime_configs();
+static int  process_runtime_configs();
 void check_params();
 
 // External variables
@@ -90,7 +99,7 @@ extern char* mySubSystem;
 // Global variables
 BUCKET	*ConfigTab[TABLESIZE];
 static char* tilde = NULL;
-extern char **environ;
+extern DLL_IMPORT_MAGIC char **environ;
 
 static char* _FileName_ = __FILE__;
 
@@ -224,26 +233,33 @@ real_config(char* host, int wantsQuiet)
 		// Try to find the global config file
 	if( ! (config_file = find_global()) ) {
 		if( wantsQuiet ) {
-			fprintf( stderr, "Condor error: can't find config file.\n" ); 
+			fprintf( stderr, "%s error: can't find config file.\n",
+					 myDistro->GetCap() ); 
 			exit( 1 );
 		}
-		fprintf(stderr,"\nNeither the environment variable CONDOR_CONFIG,\n" );
-#ifndef WIN32
-		fprintf(stderr,"/etc/condor/, nor ~condor/ contain a condor_config "
-				"file.\n" );
-#else
-		fprintf(stderr,"nor the registry contains a path to a condor_config "
-				"file.\n" );
-#endif
-		fprintf( stderr,"Either set CONDOR_CONFIG to point to a valid config "
-				"file,\n" );
-		fprintf( stderr,"or put a \"condor_config\" file in %s.\n", 
-#ifndef WIN32
-				 "/etc/condor or ~condor/" 
-#else
-				 "the registry at:\n HKEY_LOCAL_MACHINE\\Software\\Condor\\CONDOR_CONFIG"
-#endif
-				 );
+		fprintf(stderr,"\nNeither the environment variable %s_CONFIG,\n",
+				myDistro->GetUc() );
+#	  if defined UNIX
+		fprintf(stderr,"/etc/%s/, nor ~%s/ contain a %s_config file.\n",
+				myDistro->Get(), myDistro->Get(), myDistro->Get() );
+#	  elif defined WIN32
+		fprintf(stderr,"nor the registry contains a path to a %s_config "
+				"file.\n", myDistro->Get() );
+#	  else
+#		error "Unknown O/S"
+#	  endif
+		fprintf( stderr,"Either set %s_CONFIG to point to a valid config "
+				"file,\n", myDistro->GetUc() );
+#	  if defined UNIX
+		fprintf( stderr,"or put a \"%s_config\" file in /etc/%s or ~%s/\n",
+				 myDistro->Get(), myDistro->Get(), myDistro->Get() );
+#	  elif defined WIN32
+		fprintf( stderr,"or put a \"%s_config\" file in the registry at:\n"
+				 " HKEY_LOCAL_MACHINE\\Software\\%s\\%s_CONFIG",
+				 myDistro->Get(), myDistro->Get(), myDistro->GetUc() );
+#	  else
+#		error "Unknown O/S"
+#	  endif
 		fprintf( stderr, "Exiting.\n\n" );
 		exit( 1 );
 	}
@@ -281,40 +297,50 @@ real_config(char* host, int wantsQuiet)
 
 		// Now, insert any macros defined in the environment.  Note we do
 		// this before the root config file!
-	{
-		char varname[10240];
-		char *thisvar;
-		int i,j;
-		char *varvalue;
+	for( int i = 0; environ[i]; i++ ) {
+		char magic_prefix[MAX_DISTRIBUTION_NAME + 3];	// case-insensitive
+		strcpy( magic_prefix, "_" );
+		strcat( magic_prefix, myDistro->Get() );
+		strcat( magic_prefix, "_" );
+		int prefix_len = strlen( magic_prefix );
 
-		for (i=0; environ[i]; i++) {
-		
-			if (strncmp(environ[i],"_condor_",8)!=0) 
-				continue;
-
-			thisvar = environ[i];
-
-			varname[8] = '\0';
-			for (j=0; thisvar[j] && thisvar[j] != '='; j++) {
-				varname[j] = thisvar[j];
-			}
-			varname[j] = '\0';
-			
-			if ( varname[8] && (varvalue=getenv(varname)) ) {
-				//dprintf(D_ALWAYS,"TODD at line %d insert var %s val %s\n",__LINE__,&(varname[8]), varvalue);
-
-				if ( !strncmp( &( varname[8] ), "START_owner", 11 ) ) {
-					char *tmp = (char *) malloc( strlen( varvalue ) 
-								+ strlen( "Owner == \"   \"" ) );
-					sprintf( tmp, "Owner == \"%s\"", varvalue );
-					insert( "START", tmp, ConfigTab, TABLESIZE );
-					free( tmp );
-				}
-				else {
-					insert( &(varname[8]), varvalue, ConfigTab, TABLESIZE );
-				}
-			}
+		// proceed only if we see the magic prefix
+		if( strncasecmp( environ[i], magic_prefix, prefix_len ) != 0 ) {
+			continue;
 		}
+
+		char *varname = strdup( environ[i] );
+		if( !varname ) {
+			EXCEPT( "Out of memory in %s:%s\n", __FILE__, __LINE__ );
+		}
+
+		// isolate variable name by finding & nulling the '='
+		int equals_offset = strchr( varname, '=' ) - varname;
+		varname[equals_offset] = '\0';
+		// isolate value by pointing to everything after the '='
+		char *varvalue = varname + equals_offset + 1;
+//		assert( !strcmp( varvalue, getenv( varname ) ) );
+		// isolate Condor macro_name by skipping magic prefix
+		char *macro_name = varname + prefix_len;
+
+		// special macro START_owner needs to be expanded (for the
+		// glide-in code) [which should probably be fixed to use
+		// the general mechanism and set START itself --pfc]
+		if( !strcmp( macro_name, "START_owner" ) ) {
+			char *pretext = "Owner == \"";
+			char *posttext = "\"";
+			char *tmp = (char *)malloc( strlen( pretext ) + strlen( varvalue )
+										+ strlen( posttext ) );
+			sprintf( tmp, "%s%s%s", pretext, varvalue, posttext );
+			insert( "START", tmp, ConfigTab, TABLESIZE );
+			free( tmp );
+		}
+		// ignore "_CONDOR_" without any macro name attached
+		else if( macro_name[0] != '\0' ) {
+			insert( macro_name, varvalue, ConfigTab, TABLESIZE );
+		}
+
+		free( varname );
 	}
 
 		// Re-insert the special macros.  We don't want the user to 
@@ -322,7 +348,7 @@ real_config(char* host, int wantsQuiet)
 	reinsert_specials( host );
 
 		// Try to find and read the global root config file
-	if( config_file = find_global_root() ) {
+	if( (config_file = find_global_root()) ) {
 		process_file( config_file, "global root config file", host );
 
 			// Re-insert the special macros.  We don't want the user
@@ -433,12 +459,12 @@ init_tilde()
 		free( tilde );
 		tilde = NULL;
 	}
-#if !defined(WIN32)
+# if defined UNIX
 	struct passwd *pw;
-	if( (pw=getpwnam( "condor" )) ) {
+	if( (pw=getpwnam( myDistro->Get() )) ) {
 		tilde = strdup( pw->pw_dir );
 	} 
-#endif
+# endif
 }
 
 
@@ -453,14 +479,18 @@ get_tilde()
 char*
 find_global()
 {
-	return find_file( "CONDOR_CONFIG", "condor_config" );
+	char	file[256];
+	sprintf( file, "%s_config", myDistro->Get() );
+	return find_file( EnvGetName( ENV_CONFIG), file );
 }
 
 
 char*
 find_global_root()
 {
-	return find_file( "CONDOR_CONFIG_ROOT", "condor_config.root" );
+	char	file[256];
+	sprintf( file, "%s_config.root", myDistro->Get() );
+	return find_file( EnvGetName( ENV_CONFIG_ROOT ), file );
 }
 
 
@@ -475,25 +505,47 @@ find_file(const char *env_name, const char *file_name)
 		// If we were given an environment variable name, try that first. 
 	if( env_name && (env = getenv( env_name )) ) {
 		config_file = strdup( env );
-		if( (fd = open( config_file, O_RDONLY)) < 0 ) {
-			fprintf( stderr, "File specified in %s environment ", env_name );
-			fprintf( stderr, "variable:\n\"%s\" does not exist.", config_file ); 
-			fprintf( stderr, "  Trying fall back options...\n" ); 
+		StatInfo si( config_file );
+		switch( si.Error() ) {
+		case SIGood:
+			if( si.IsDirectory() ) {
+				fprintf( stderr, "File specified in %s environment "
+						 "variable:\n\"%s\" is a directory.  "
+						 "Please specify a file.\n", env_name,
+						 config_file );  
+				free( config_file );
+				exit( 1 );
+			}
+				// Otherwise, we're happy
+			return config_file;
+			break;
+		case SINoFile:
+			fprintf( stderr, "File specified in %s environment "
+					 "variable:\n\"%s\" does not exist.\n",
+					 env_name, config_file );  
 			free( config_file );
-			config_file = NULL;
-		} else {
-			close( fd );
+			exit( 1 );
+			break;
+		case SIFailure:
+			fprintf( stderr, "Cannot stat file specified in %s "
+					 "environment variable:\n\"%s\", errno: %d\n", 
+					 env_name, config_file, si.Errno() );
+			free( config_file );
+			exit( 1 );
+			break;
 		}
 	}
 
-#ifndef WIN32
-	// Only look in /etc/condor and in ~condor on Unix.
+# ifdef UNIX
+	// Only look in /etc/condor, ~condor, and $GLOBUS_LOCATION/etc on Unix.
+
 	if( ! config_file ) {
-			// try /etc/condor/file_name
-		config_file = (char *)malloc( (strlen(file_name) + 14) * sizeof(char) ); 
-		config_file[0] = '\0';
-		strcat( config_file, "/etc/condor/" );
-		strcat( config_file, file_name );
+		// try /etc/condor/file_name
+		MyString	str( "/etc/" );
+		str += myDistro->Get();
+		str += "/";
+		str += file_name;
+		config_file = strdup( str.Value() );
 		if( (fd = open( config_file, O_RDONLY )) < 0 ) {
 			free( config_file );
 			config_file = NULL;
@@ -502,9 +554,9 @@ find_file(const char *env_name, const char *file_name)
 		}
 	}
 	if( ! config_file && tilde ) {
-			// try ~condor/file_name
+		// try ~condor/file_name
 		config_file = (char *)malloc( 
-						 (strlen(tilde) + strlen(file_name) + 2) * sizeof(char) ); 
+			(strlen(tilde) + strlen(file_name) + 2) * sizeof(char) ); 
 		config_file[0] = '\0';
 		strcat( config_file, tilde );
 		strcat( config_file, "/" );
@@ -516,11 +568,35 @@ find_file(const char *env_name, const char *file_name)
 			close( fd );
 		}
 	}
-#else	/* of ifndef WIN32 */
+    // For Condor-G, also check off of GLOBUS_LOCATION.
+	if( ! config_file ) {
+		char *globus_location;      
+	
+		if( (globus_location = getenv("GLOBUS_LOCATION")) ) {
+	
+			config_file = (char *)malloc( ( strlen(globus_location) +
+                                            strlen("/etc/") +   
+                                            strlen(file_name) + 3 ) 
+                                          * sizeof(char) );	
+			config_file[0] = '\0';
+			strcat(config_file, globus_location);
+			strcat(config_file, "/etc/");
+			strcat(config_file, file_name); 
+			if( (fd = open( config_file, O_RDONLY)) < 0 ) {
+				free( config_file );
+				config_file = NULL;
+			} else {
+				close( fd );
+			}
+		}
+	} 
+# elif defined WIN32	// ifdef UNIX
 	// Only look in the registry on WinNT.
-	HKEY handle;
+	HKEY	handle;
+	char	regKey[256];
 
-	if ( !config_file && RegOpenKeyEx(HKEY_LOCAL_MACHINE,"Software\\Condor",
+	sprintf( regKey, "Software\\%s", myDistro->GetCap() );
+	if ( !config_file && RegOpenKeyEx(HKEY_LOCAL_MACHINE, regKey,
 		0, KEY_READ, &handle) == ERROR_SUCCESS ) {
 		// We have found a registry key for Condor, which
 		// means this user has a pulse and has actually run the
@@ -549,7 +625,9 @@ find_file(const char *env_name, const char *file_name)
 			}
 		}
 	}
-#endif   /* of Win32 */
+# else
+#	error "Unknown O/S"
+# endif		/* ifdef UNIX / Win32 */
 
 	return config_file;
 }
@@ -660,9 +738,42 @@ param( const char *name )
 	if( val == NULL || val[0] == '\0' ) {
 		return( NULL );
 	}
-	return( expand_macro(val, ConfigTab, TABLESIZE) );
+
+	// Ok, now expand it out...
+	val = expand_macro( val, ConfigTab, TABLESIZE );
+
+	// If it returned an empty string, free it before returning NULL
+	if( val == NULL ) {
+		return NULL;
+	} else if ( val[0] == '\0' ) {
+		free( val );
+		return( NULL );
+	} else {
+		return val;
+	}
 }
 
+/*
+** Return the integer value associated with the named paramter.
+** If the value is not defined or not a valid integer, then
+** return the default_value argument.
+*/
+
+int
+param_integer( const char *name, int default_value )
+{
+	int result;
+	int fields;
+	char *string;
+
+	string = lookup_macro( name, ConfigTab, TABLESIZE );
+	if(!string) return default_value;
+
+	fields = sscanf(string,"%d",&result);
+	if(fields==1) return result;
+
+	return default_value;
+}
 
 char *
 macro_expand( const char *str )
@@ -702,6 +813,10 @@ param_in_pattern( char *parameter, char *pattern )
 void
 reinsert_specials( char* host )
 {
+	static unsigned int reinsert_pid = 0;
+	static unsigned int reinsert_ppid = 0;
+	char buf[40];
+
 	if( tilde ) {
 		insert( "tilde", tilde, ConfigTab, TABLESIZE );
 	}
@@ -712,6 +827,37 @@ reinsert_specials( char* host )
 	}
 	insert( "full_hostname", my_full_hostname(), ConfigTab, TABLESIZE );
 	insert( "subsystem", mySubSystem, ConfigTab, TABLESIZE );
+
+	// Insert login-name for our euid as "username"
+	char *myusernm = my_username();
+	insert( "username", myusernm, ConfigTab, TABLESIZE );
+	free(myusernm);
+
+	// Insert values for "pid" and "ppid".  Use static values since
+	// this is expensive to re-compute on Windows.
+	// Note: we have to resort to ifdef WIN32 crap even though 
+	// DaemonCore can nicely give us this information.  We do this
+	// because the config code is used by the tools as well as daemons.
+	if (!reinsert_pid) {
+#ifdef WIN32
+		reinsert_pid = ::GetCurrentProcessId();
+#else
+		reinsert_pid = getpid();
+#endif
+	}
+	sprintf(buf,"%u",reinsert_pid);
+	insert( "pid", buf, ConfigTab, TABLESIZE );
+	if ( !reinsert_ppid ) {
+#ifdef WIN32
+		CSysinfo system_hackery;
+		reinsert_ppid = system_hackery.GetParentPID(reinsert_pid);
+#else
+		reinsert_ppid = getppid();
+#endif
+	}
+	sprintf(buf,"%u",reinsert_ppid);
+	insert( "ppid", buf, ConfigTab, TABLESIZE );
+	insert( "ip_address", my_ip_string(), ConfigTab, TABLESIZE );
 }
 
 
@@ -736,8 +882,9 @@ check_params()
 			// it _and_ the special file we use that maps workstation
 			// models to CPU types doesn't exist either.  Print a
 			// verbose message and exit.  -Derek Wright 8/14/98
-		fprintf( stderr, "ERROR: Condor must know if you are running " 
-				 "on an HPPA1 or an HPPA2 CPU.\n" );
+		fprintf( stderr, "ERROR: %s must know if you are running "
+				 "on an HPPA1 or an HPPA2 CPU.\n",
+				 myDistro->Get() );
 		fprintf( stderr, "Normally, we look in %s for your model.\n",
 				 "/opt/langtools/lib/sched.models" );
 		fprintf( stderr, "This file lists all HP models and the "
@@ -789,9 +936,9 @@ set_toplevel_runtime_config()
 		} else {
 			tmp = param("LOG");
 			if (!tmp) {
-				dprintf( D_ALWAYS, "Condor error: neither %s nor LOG is "
+				dprintf( D_ALWAYS, "%s error: neither %s nor LOG is "
 						 "specified in the configuration file.\n",
-						 filename_parameter );
+						 myDistro->GetCap(), filename_parameter );
 				exit( 1 );
 			}
 			sprintf(toplevel_runtime_config, "%s%c.config.%s", tmp,
@@ -897,7 +1044,7 @@ set_persistent_config(char *admin, char *config)
 	}
 	PersistAdminList.rewind();
 	bool first_time = true;
-	while (tmp = PersistAdminList.next()) {
+	while( (tmp = PersistAdminList.next()) ) {
 		if (!first_time) {
 			if (write(fd, ", ", 2) != 2) {
 				dprintf( D_ALWAYS, "write failed with errno %d in "
@@ -999,6 +1146,8 @@ set_runtime_config(char *admin, char *config)
 ** were defined, and -1 on error.  persistent configs are also processed
 ** by this function.
 */
+extern "C" {
+
 static int
 process_runtime_configs()
 {
@@ -1077,5 +1226,7 @@ process_runtime_configs()
 
 	return (int)processed;
 }
+
+} // end of extern "C" 
 
 /* End code for runtime support for modifying a daemon's config file. */

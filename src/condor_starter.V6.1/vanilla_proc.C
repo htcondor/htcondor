@@ -31,19 +31,13 @@
 #include "vanilla_proc.h"
 #include "starter.h"
 #include "syscall_numbers.h"
-#include "directory.h"
 
 extern CStarter *Starter;
 
-VanillaProc::VanillaProc( ClassAd *jobAd ) : OsProc()
+VanillaProc::VanillaProc( ClassAd *jobAd ) : OsProc( jobAd )
 {
 	family = NULL;
-	filetrans = NULL;
-    JobAd = jobAd;
 	snapshot_tid = -1;
-	shadowupdate_tid = -1;
-	shadowsock = NULL;
-	TransferAtVacate = false;
 }
 
 VanillaProc::~VanillaProc()
@@ -51,39 +45,17 @@ VanillaProc::~VanillaProc()
 	if (family) {
 		delete family;
 	}
-
-	if (filetrans) {
-		delete filetrans;
-	}
-
 	if ( snapshot_tid != -1 ) {
 		daemonCore->Cancel_Timer(snapshot_tid);
 		snapshot_tid = -1;
 	}
-
-	if ( shadowupdate_tid != -1 ) {
-		daemonCore->Cancel_Timer(shadowupdate_tid);
-		shadowupdate_tid = -1;
-	}
-
-	if ( shadowsock ) {
-		delete shadowsock;
-	}
-
 }
 
-int
-VanillaProc::TransferCompleted(FileTransfer *ftrans)
-{
-	char tmp[_POSIX_ARG_MAX];
 
-	// Make certain the file transfer succeeded.  It is 
-	// completely wrong to ASSERT here if it failed since
-	// we are a _multi_ starter -- it is just a quick hack
-	// to get WinNT out the door.
-	if ( ftrans ) {
-		ASSERT( (ftrans->GetInfo()).success );
-	}
+int
+VanillaProc::StartJob()
+{
+	dprintf(D_FULLDEBUG,"in VanillaProc::StartJob()\n");
 
 	// vanilla jobs, unlike standard jobs, are allowed to run 
 	// shell scripts (or as is the case on NT, batch files).  so
@@ -92,7 +64,9 @@ VanillaProc::TransferCompleted(FileTransfer *ftrans)
 #ifdef WIN32
 	char argstmp[_POSIX_ARG_MAX];
 	char systemshell[_POSIX_PATH_MAX];
+	char tmp[_POSIX_PATH_MAX];
 
+	char* jobtmp = Starter->GetOrigJobName();
 	int joblen = strlen(jobtmp);
 	if ( joblen > 5 && 
 			( (stricmp(".bat",&(jobtmp[joblen-4])) == 0) || 
@@ -135,7 +109,8 @@ VanillaProc::TransferCompleted(FileTransfer *ftrans)
 #ifdef WIN32
 		// we only support running jobs as user nobody for the first pass
 		char nobody_login[60];
-		sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
+		//sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
+		sprintf(nobody_login,"condor-run-%d",daemonCore->getpid());
 		// set ProcFamily to find decendants via a common login name
 		family->setFamilyLogin(nobody_login);
 #endif
@@ -145,215 +120,68 @@ VanillaProc::TransferCompleted(FileTransfer *ftrans)
 			(TimerHandlercpp)&ProcFamily::takesnapshot, 
 			"ProcFamily::takesnapshot", family);
 
-		// update the shadow every 20 minutes.  years of study say
-		// this is the optimal value. :^).
-		shadowupdate_tid = daemonCore->Register_Timer(8,(20*60)+6,
-			(TimerHandlercpp)&VanillaProc::UpdateShadow,
-			"VanillaProc::UpdateShadow", this);
-
 		return TRUE;
-	} else {
-		// failure
-		// return FALSE;
-
-		// DREADFUL HACK:  for now, if we fail to start the job,
-		// do an EXCEPT.  Of course this is wrong for a multi-starter,
-		// this is just a quick hack to get the first pass at WinNT
-		// Condor out the door.
-		EXCEPT("Failed to start job");
-
-	}	
-
+	}
 	return FALSE;
 }
 
-int
-VanillaProc::StartJob()
+
+bool
+VanillaProc::PublishUpdateAd( ClassAd* ad )
 {
-	int ret_value;
-	char tmp[_POSIX_ARG_MAX];
-	int change_iwd = true;
+	dprintf( D_FULLDEBUG, "In VanillaProc::PublishUpdateAd()\n" );
 
-	dprintf(D_FULLDEBUG,"in VanillaProc::StartJob()\n");
-
-		/* setup value for TransferAtVacate and also determine if
-		   we should change our working directory */
-	tmp[0] = '\0';
-	JobAd->LookupString(ATTR_TRANSFER_FILES,tmp);
-		// if set to "ALWAYS", then set TransferAtVacate to true
-	switch ( tmp[0] ) {
-	case 'a':
-	case 'A':
-		TransferAtVacate = true;
-		break;
-	case 'n':  /* for "Never" */
-	case 'N':
-		change_iwd = false;  // It's true otherwise...
-		break;
-	}
-
-#ifdef WIN32
-	// taken from OsProc::StartJob for now, here we create the user and
-	// set the acls on the starter directory _before_ we start placing
-	// files in there.
-	{	
-		// we only support running jobs as user nobody for the first pass
-		char nobody_login[60];
-		sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
-		init_user_nobody_loginname(nobody_login);
-		init_user_ids("nobody");
-		{
-			perm dirperm;
-			dirperm.init(nobody_login);
-			int ret_val = dirperm.set_acls(Starter->GetWorkingDir());
-			if ( ret_val < 0 ) {
-				EXCEPT("UNABLE TO SET PREMISSIONS ON STARTER DIRECTORY");
-			}
-		}
-	}
-#endif
-
-	// for now, stash the executable in jobtmp, and switch the ad to 
-	// say the executable is condor_exec
-	jobtmp[0] = '\0';
-	JobAd->LookupString(ATTR_JOB_CMD,jobtmp);
-
-		// if requested in the jobad, transfer files over.  
-	if ( change_iwd ) {
-		// reset iwd of job to the starter directory
-		sprintf(tmp,"%s=\"%s\"",ATTR_JOB_IWD,Starter->GetWorkingDir());
-		JobAd->InsertOrUpdate(tmp);		
-	
-			// rename executable to 'condor_exec'
-		sprintf(tmp,"%s=\"%s\"",ATTR_JOB_CMD,CONDOR_EXEC);
-		JobAd->InsertOrUpdate(tmp);		
-
-		filetrans = new FileTransfer();
-		ASSERT( filetrans->Init(JobAd) );
-		filetrans->RegisterCallback(
-				  (FileTransferHandler)&VanillaProc::TransferCompleted,this);
-		ret_value = filetrans->DownloadFiles(false); // do not block
-
-	} else {
-			/* no file transfer desired, thus the file transfer is "done".
-			   We assume that transfer_files == Never means that we want 
-			   to live in the submit directory, so we DON'T change the 
-			   ATTR_JOB_CMD or the ATTR_JOB_IWD.  This is important 
-			   to MPI!  -MEY 12-8-1999  */
-		ret_value = TransferCompleted(NULL);
-	}
-
-	return ret_value;
-}
-
-int
-VanillaProc::UpdateShadow()
-{
 	unsigned long max_image;
 	long sys_time, user_time;
-	unsigned int execsz = 0;
-	ClassAd ad;
 	char buf[200];
-
-	if ( ShadowAddr[0] == '\0' ) {
-		// we do not have an address for the shadow
-		return FALSE;
-	}
 
 	if ( !family ) {
 		// we do not have a job family beneath us 
-		return FALSE;
+		dprintf( D_FULLDEBUG, "Leaving VanillaProc::PublishUpdateAd(): "
+				 "No job family!\n" );
+		return false;
 	}
 
-	if ( !shadowsock ) {
-		shadowsock = new SafeSock();
-		ASSERT(shadowsock);
-		shadowsock->connect(ShadowAddr);
-	}
+		// Gather the info we care about
+	family->get_cpu_usage( sys_time, user_time );
+	family->get_max_imagesize( max_image );
+	num_pids = family->size();
 
+		// Publish it into the ad.
+	sprintf( buf, "%s=%lu", ATTR_JOB_REMOTE_SYS_CPU, sys_time );
+	ad->InsertOrUpdate( buf );
+	sprintf( buf, "%s=%lu", ATTR_JOB_REMOTE_USER_CPU, user_time );
+	ad->InsertOrUpdate( buf );
+	sprintf( buf, "%s=%lu", ATTR_IMAGE_SIZE, max_image );
+	ad->InsertOrUpdate( buf );
 
-	family->get_cpu_usage(sys_time,user_time);
-	family->get_max_imagesize(max_image);
-
-	// create an ad
-	sprintf(buf,"%s=%lu",ATTR_JOB_REMOTE_SYS_CPU,sys_time);
-	ad.InsertOrUpdate(buf);
-	sprintf(buf,"%s=%lu",ATTR_JOB_REMOTE_USER_CPU,user_time);
-	ad.InsertOrUpdate(buf);
-	sprintf(buf,"%s=%lu",ATTR_IMAGE_SIZE,max_image);
-	ad.InsertOrUpdate(buf);
-
-	// if there is a filetrans object, then let's send the current
-	// size of the starter execute directory back to the shadow.  this
-	// way the ATTR_DISK_USAGE will be updated, and we won't end
-	// up on a machine without enough local disk space.
-	if ( filetrans ) {
-		Directory starter_dir(Starter->GetWorkingDir(),PRIV_USER);
-		execsz = starter_dir.GetDirectorySize();
-		sprintf(buf,"%s=%u",ATTR_DISK_USAGE, (execsz+1023)/1024 ); 
-		ad.InsertOrUpdate(buf);
-	}
-
-	// send it to the shadow
-	dprintf(D_FULLDEBUG,
-		"Sending shadow update, user_time=%lu, image=%lu, execsz=%u\n",
-		user_time,max_image,execsz);
-	shadowsock->snd_int(SHADOW_UPDATEINFO,FALSE);
-	ad.put(*shadowsock);
-	shadowsock->end_of_message();
-	
-	return TRUE;
+		// Now, call our parent class's version
+	return OsProc::PublishUpdateAd( ad );
 }
 
+
 int
-VanillaProc::JobExit(int pid, int status)
+VanillaProc::JobCleanup(int pid, int status)
 {
-	dprintf(D_FULLDEBUG,"in VanillaProc::JobExit()\n");
+	dprintf(D_FULLDEBUG,"in VanillaProc::JobCleanup()\n");
 
 	// ok, the parent exited.  make certain all decendants are dead.
 	family->hardkill();
 
-	// update the shadow one last time, then cancel timers & close sockets
-	UpdateShadow();
-	daemonCore->Cancel_Timer(snapshot_tid);
-	daemonCore->Cancel_Timer(shadowupdate_tid);
-	delete shadowsock;
+	if( snapshot_tid >= 0 ) {
+		daemonCore->Cancel_Timer(snapshot_tid);
+	}
 	snapshot_tid = -1;
-	shadowupdate_tid = -1;
-	shadowsock = NULL;
 
-	// transfer output files back if requested job really finished.
-	// may as well do this in the foreground, 
-	// since we do not want to be interrupted by anything short of a hardkill.
-	if ( filetrans && 
-		((Requested_Exit != TRUE) || TransferAtVacate) ) {
-		// The user job may have created files only readable by the user,
-		// so set_user_priv here.
-		// true if job exited on its own
-		bool final_transfer = (Requested_Exit != TRUE);	
-		priv_state saved_priv = set_user_priv();
-		// this will block
-		ASSERT( filetrans->UploadFiles(true, final_transfer) );	
-
-		set_priv(saved_priv);
-	}
-
-	if ( OsProc::JobExit(pid,status) ) {
-		return 1;
-	}
-
-	return 0;
+		// This will reset num_pids for us, too.
+	return OsProc::JobCleanup( pid, status );
 }
+
 
 void
 VanillaProc::Suspend()
 {
 	dprintf(D_FULLDEBUG,"in VanillaProc::Suspend()\n");
-
-	// suspend any filetransfer activity
-	if ( filetrans ) {
-		filetrans->Suspend();
-	}
 
 	// suspend the user job
 	if ( family ) {
@@ -368,11 +196,6 @@ void
 VanillaProc::Continue()
 {
 	dprintf(D_FULLDEBUG,"in VanillaProc::Continue()\n");
-
-	// resume any filetransfer activity
-	if ( filetrans ) {
-		filetrans->Continue();
-	}
 
 	// resume user job
 	if ( family ) {
@@ -422,13 +245,7 @@ VanillaProc::ShutdownFast()
 	// We purposely do not do a SIGCONT here, since there is no sense
 	// in potentially swapping the job back into memory if our next
 	// step is to hard kill it.
-
-
-	// Despite what the user wants, do not transfer back any files 
-	// on a ShutdownFast.
-	TransferAtVacate = false;	
-	
-	Requested_Exit = TRUE;
+	requested_exit = true;
 	family->hardkill();
 	return false;	// shutdown is pending, so return false
 }

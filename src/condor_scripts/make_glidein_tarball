@@ -1,4 +1,4 @@
-#!/s/std/bin/perl
+#!/usr/bin/env perl
 
 # This script is used to package up the appropriate "glidein" tarball
 # for use with condor_glidein.  It must contain the master, startd and

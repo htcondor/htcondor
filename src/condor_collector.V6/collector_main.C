@@ -35,7 +35,7 @@ int main_init(int argc, char *argv[])
 
 //-------------------------------------------------------------
 
-int main_config()
+int main_config( bool is_full )
 {
 	Daemon->Config();
 	return TRUE;
@@ -58,3 +58,10 @@ int main_shutdown_graceful()
 	DC_Exit(0);
 	return TRUE;	// to satisfy c++
 }
+
+
+void
+main_pre_dc_init( int argc, char* argv[] )
+{
+}
+

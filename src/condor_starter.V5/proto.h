@@ -74,9 +74,7 @@ void suspend_alarm();
 void resume_alarm();
 void init_shadow_connections();
 void init_logging();
-void read_config_files( void );
 void move_to_execute_directory();
-void set_resource_limits();
 void close_unused_file_descriptors();
 void init_signal_masks();
 void init_shadow_connections();
@@ -124,6 +122,18 @@ extern "C" {
 	void AllowAsynchEvents();
 	void BlockAsynchEvents();
 	char *sig_name( int );
-	int  REMOTE_syscall( int, ... );
 	ReliSock	 *init_syscall_connection( int );
+
+	/* these are the remote system calls that we use in the starter */
+	int REMOTE_CONDOR_image_size(int kbytes);
+	int REMOTE_CONDOR_subproc_status(int id, int *status, 
+		struct rusage *use_p);
+	int REMOTE_CONDOR_reallyexit(int *status, struct rusage *use_p);
+	int REMOTE_CONDOR_send_rusage(struct rusage *use_p);
+	int REMOTE_CONDOR_startup_info_request(STARTUP_INFO *s);
+	int REMOTE_CONDOR_register_fs_domain(char *domain);
+	int REMOTE_CONDOR_register_uid_domain(char *domain);
+	int REMOTE_CONDOR_register_ckpt_server(char *host);
+	int REMOTE_CONDOR_register_arch(char *arch);
+	int REMOTE_CONDOR_register_opsys(char *opsys);
 }

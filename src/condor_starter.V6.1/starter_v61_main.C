@@ -24,8 +24,12 @@
 #include "condor_common.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_io.h"
+#include "condor_attributes.h"
+#include "condor_version.h"
 #include "starter.h"
 #include "condor_debug.h"
+#include "condor_config.h"
+#include "java_detect.h"
 
 extern "C" int exception_cleanup(int,int,char*);	/* Our function called by EXCEPT */
 
@@ -41,6 +45,50 @@ usage()
 }
 
 /* DaemonCore interface implementation */
+
+
+void
+printClassAd( void )
+{
+	printf( "%s = True\n", ATTR_IS_DAEMON_CORE );
+	printf( "%s = True\n", ATTR_HAS_FILE_TRANSFER );
+	printf( "%s = True\n", ATTR_HAS_MPI );
+	printf( "%s = \"%s\"\n", ATTR_VERSION, CondorVersion() );
+
+	config(true);
+
+	ClassAd *ad = java_detect();
+	if(ad) {
+		int gotone=0;
+		float mflops;
+		char str[ATTRLIST_MAX_EXPRESSION];
+
+		if(ad->LookupString(ATTR_JAVA_VENDOR,str)) {
+			printf("%s = \"%s\"\n",ATTR_JAVA_VENDOR,str);
+			gotone++;
+		}
+		if(ad->LookupString(ATTR_JAVA_VERSION,str)) {
+			printf("%s = \"%s\"\n",ATTR_JAVA_VERSION,str);
+			gotone++;
+		}
+		if(ad->LookupFloat(ATTR_JAVA_MFLOPS,mflops)) {
+			printf("%s = %f\n", ATTR_JAVA_MFLOPS,mflops);
+			gotone++;
+		}
+		if(gotone>0) printf( "%s = True\n",ATTR_HAS_JAVA);		
+		delete ad;
+	}
+}
+
+void
+main_pre_dc_init( int argc, char* argv[] )
+{
+	if( argc == 2 && strincmp(argv[1],"-cl",3) == MATCH ) {
+		printClassAd();
+		exit(0);
+	}
+}
+
 
 char *mySubSystem = "STARTER";
 
@@ -79,14 +127,21 @@ main_init(int argc, char *argv[])
 		DC_Exit(1);
 	}
 	syscall_sock = (ReliSock *)socks[0];
+		/* Set a timeout on remote system calls.  This is needed in
+		   case the user job exits in the middle of a remote system
+		   call, leaving the shadow blocked.  -Jim B. */
+	syscall_sock->timeout(300);
 
-	Starter->Init(argv[1]);
+	if(!Starter->Init(argv[1])) {
+		dprintf(D_ALWAYS, "Unable to start job.\n");
+		DC_Exit(1);
+	}
 
 	return 0;
 }
 
 int
-main_config()
+main_config( bool is_full )
 {
 	Starter->Config();
 	return 0;

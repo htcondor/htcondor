@@ -1,4 +1,4 @@
-#!/s/std/bin/perl
+#!/usr/bin/env perl
 
 ###########################################################################
 #
@@ -23,22 +23,26 @@ print "\n";
 $submit = 1;
 $force = 0;
 $max_jobs = 0;
+$max_pre = 0;
+$max_post = 0;
 $notification = "";
+$NoPostFail = 0;
+$dagman_debug = 3;
 while( $_ = shift ) {
   SWITCH: {	    
-    if( /^-no_s.*/ ) {
+    if( /^-no_s.*/i ) {
 	$submit = 0;
 	last SWITCH;
     } 
-    if( /^-v.*/ ) {
+    if( /^-v.*/i ) {
 	$verbose = 1;
 	last SWITCH;
     } 
-    if( /^-f.*/ ) {
+    if( /^-f.*/i ) {
 	$force = 1;
 	last SWITCH;
     } 
-    if( /^-not.*/ ) {
+    if( /^-not.*/i ) {
 	$notification = shift;
 	if( ! grep(/$notification/i, ("always", "complete", "error", "never")) ) {
 	    print "Invalid argument to -notification option: $notification\n";
@@ -46,14 +50,14 @@ while( $_ = shift ) {
 	}
 	last SWITCH;
     }
-    if( /^-l.*/ ) {
+    if( /^-l.*/i ) {
 	$job_log = shift;
 	if( ! $job_log ) {
 	    &usage();
 	}
 	last SWITCH;
     }
-    if( /^-m.*/ ) {
+    if( /^-maxj.*/i ) {
 	$max_jobs = shift;
 	if( ! $max_jobs ) {
 	    &usage();
@@ -64,6 +68,54 @@ while( $_ = shift ) {
 	    &usage();
 	}
 	last SWITCH;
+    }
+    if( /^-MaxPr.*/i ) {
+	$max_pre = shift;
+	if( ! $max_pre ) {
+	    &usage();
+	}
+	if( !($max_pre =~ /^\d+$/) ) {
+	    print "ERROR: Invalid argument \"$max_pre\" to -MaxPre.\n",
+	    "You must specify a number.\n\n";
+	    &usage();
+	}
+	last SWITCH;
+    }
+    if( /^-MaxPo.*/i ) {
+	$max_post = shift;
+	if( ! $max_post ) {
+	    &usage();
+	}
+	if( !($max_post =~ /^\d+$/) ) {
+	    print "ERROR: Invalid argument \"$max_post\" to -MaxPost.\n",
+	    "You must specify a number.\n\n";
+	    &usage();
+	}
+	last SWITCH;
+    }
+    if( /^-NoPostFail.*/i ) {
+	$NoPostFail = 1;
+	last SWITCH;
+    }
+    if( /^-r/i ) {
+	$remote_schedd = shift;
+	if( ! $remote_schedd ) {
+	    &usage();
+	}
+	$remote_schedd = "-r $remote_schedd";
+	last SWITCH;
+    }
+    if( /^-d.*/i ) {
+	$dagman_debug = shift;
+        if( ! $dagman_debug ) {
+            &usage();
+        }
+        if( !($dagman_debug =~ /^\d+$/) ) {
+            print "ERROR: Invalid argument \"$dagman_debug\" to -debug.\n",
+            "You must specify a number.\n\n";
+            &usage();
+        }
+        last SWITCH;
     }
     $dagfile = $_;
   }
@@ -80,8 +132,16 @@ if( ! $dagfile ) {
     $rescue_file = "$dagfile.rescue";
 }
 
-# Figure out if condor_dagman is installed, and if so, where. 
-chop( $dagman_path = `which condor_dagman` );
+
+# See if there is an executable 'condor_dagman' anywhere in our path.
+foreach $dir ( split /:/, $ENV{PATH} )
+{
+    $cur_path = "$dir/condor_dagman";
+    if( -x $cur_path ) {
+        $dagman_path = $cur_path;
+        last;
+    }
+}
 -x $dagman_path || 
     die "Can't find the condor_dagman exectuable in your PATH, aborting.\n";
 
@@ -120,7 +180,7 @@ print "\n";
 print "Condor Log file for all jobs of this DAG : $job_log\n";
 
 if( $submit ) {
-    print `condor_submit $sub_file`;
+    print `condor_submit $remote_schedd $sub_file`;
 } else {
     print "-no_submit given, not submitting DAG to Condor.  You can do this with:\n";
     print "\"condor_submit $sub_file\"\n";
@@ -140,9 +200,14 @@ sub usage {
     print "    -no_submit          (DAG is not submitted to Condor)\n";
     print "    -verbose            (Verbose error messages from condor_submit_dag)\n";
     print "    -force              (Overwrite files condor_submit_dag uses if they exist)\n";
+    print "    -r schedd_name      (Submit to the specified remote schedd)\n";
     print "    -maxjobs number     (Maximum number of jobs ever submitted at once)\n";
+    print "    -MaxPre number      (Maximum number of PRE scripts to run at once)\n";
+    print "    -MaxPost number     (Maximum number of POST scripts to run at once)\n";
+    print "    -NoPostFail         (Don't run POST scripts after failed jobs)\n";
     print "    -log filename       (Specify the log file shared by all jobs in the DAG)\n";
-    print "    -notification value (Determines how much email you get from Condor\n";
+    print "    -notification value (Determines how much email you get from Condor)\n";
+    print "    -debug number       (Determines how verbosely DAGMan logs its work)\n";
     print "         about the life of the condor_dagman job.  'value' must be\n";
     print "         one of \"always\", \"never\", \"error\", or \"complete\".\n";
     print "         See the condor_submit man page for details.)\n";
@@ -150,7 +215,7 @@ sub usage {
 }
 
 sub parse_dag_file {
-    local( %cmd_files, %log_names, $log_name, $had_error, $did_one, $len, $max );
+    local( %cmd_files, %log_names, $log_name, $had_error, $did_one, $len );
     $had_error = 0;
     $did_one = 0;
     open( DAG, "<$dagfile" ) || die "Can't open $dagfile for reading: $!\n";
@@ -161,7 +226,7 @@ sub parse_dag_file {
 			$nextdl =~ s/^\s*//;			# remove the beginning whitespace
 			$_ = $thisdl ." ". $nextdl;		# slam them together
 		}
-	if( /^job\s*(\S*)\s*(\S*)$/i ) {
+	if( /^job\s+(\S+)\s+(\S+)/i ) {
 	    $cmd_files{$2} = 1;
 	}
     }
@@ -224,7 +289,6 @@ sub parse_dag_file {
 
 sub write_submit_file {
     local( $args );
-    local( $path ) = $ENV{PATH};
 
     open( SUBMIT, ">$sub_file" ) 
 	|| die "Can't open $sub_file for writing: $!\n";
@@ -233,17 +297,28 @@ sub write_submit_file {
     print SUBMIT "# Generated by condor_submit_dag $dagfile\n";
     print SUBMIT "universe\t= scheduler\n";
     print SUBMIT "executable\t= $dagman_path\n";
-    print SUBMIT "output\t\t= $debug_log\n";
+    print SUBMIT "getenv\t\t= True\n";
+    print SUBMIT "output\t\t= $lib_log\n";
     print SUBMIT "error\t\t= $lib_log\n";
     print SUBMIT "log\t\t= $sched_log\n";
-    $args = "-f -t -l . -Debug 3 -Lockfile $dagfile.lock";
+    print SUBMIT "remove_kill_sig\t= SIGUSR1\n";
+    $args = "-f -l . -Debug $dagman_debug -Lockfile $dagfile.lock";
     $args = $args . " -Condorlog $job_log -Dag $dagfile";
     $args = $args . " -Rescue $rescue_file";
     if( $max_jobs ) {
 	$args = $args . " -MaxJobs $max_jobs";
     }
+    if( $max_pre ) {
+	$args = $args . " -MaxPre $max_pre";
+    }
+    if( $max_post ) {
+	$args = $args . " -MaxPost $max_post";
+    }
+    if( $NoPostFail == 1 ) {
+	$args = $args . " -NoPostFail";
+    }
     print SUBMIT "arguments\t= $args\n";
-    print SUBMIT "environment\t= PATH=$path\n";
+    print SUBMIT "environment\t= _CONDOR_DAGMAN_LOG=$debug_log;_CONDOR_MAX_DAGMAN_LOG=0\n";
     if( $notification ) {
 	print SUBMIT "notification\t= $notification\n";
     }

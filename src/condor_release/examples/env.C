@@ -38,7 +38,7 @@ const int MATCH = 0;	// for strcmp()
 class StrVector {
 public:
 	StrVector( int max );
-	Init( int max );			// hack to fix constructor error
+	void Init( int max );			// hack to fix constructor error
 	void Add( const char *str );
 	char *Get( int idx );
 private:

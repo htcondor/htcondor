@@ -46,9 +46,10 @@ int ConnectToServer(request_type type);
 
 int IsLocal(const char* path);
 
-int FileExists(const char *path, const char *filename);
+int FileExists(const char *filename, const char *owner, const char *schedd);
 
 int RequestStore(const char*     owner,
+				 const char*     schedd,
 				 const char*     filename,
 				 size_t          len,
 				 struct in_addr* server_IP,
@@ -56,6 +57,7 @@ int RequestStore(const char*     owner,
 
 
 int RequestRestore(const char*     owner,
+				   const char*     schedd,
 				   const char*     filename,
 				   size_t*         len,
 				   struct in_addr* server_IP,
@@ -63,6 +65,7 @@ int RequestRestore(const char*     owner,
 
 
 int RequestService(const char*     owner,
+				   const char*     schedd,
 				   const char*     filename,
 				   const char*     new_filename,
 				   service_type    type,
@@ -73,17 +76,21 @@ int RequestService(const char*     owner,
 
 
 int FileOnServer(const char* owner,
+				 const char* schedd,
 				 const char* filename);
 
 
 int RemoveLocalOrRemoteFile(const char* owner,
+							const char* schedd,
 							const char* filename);
 
 int RemoveRemoteFile(const char* owner,
+					 const char* schedd,
 					 const char* filename);
 
 
 int RenameRemoteFile(const char* owner,
+					 const char* schedd,
 					 const char* filename,
 					 const char* new_filename);
 

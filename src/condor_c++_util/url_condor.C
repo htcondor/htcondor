@@ -89,7 +89,6 @@ FindURLProtocolForName(const char *name)
 {
 	char	*ptr;
 	URLProtocol	*this_protocol;
-	int		rval;
 
 	include_urls();
 

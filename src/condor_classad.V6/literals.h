@@ -86,10 +86,10 @@ class Literal : public ExprTree
     	Literal ();
 
   	private:
-		friend FunctionCall;
-		friend ClassAd;
-		friend ExprList;
-		friend Operation;
+		friend class FunctionCall;
+		friend class ClassAd;
+		friend class ExprList;
+		friend class Operation;
 
 		virtual void _SetParentScope( const ClassAd* ){ }
 		virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;

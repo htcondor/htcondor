@@ -28,6 +28,7 @@
  */
 #define _STARTD_NO_DECLARE_GLOBALS 1
 #include "startd.h"
+#include "startd_cronmgr.h"
 
 // Define global variables
 
@@ -46,6 +47,7 @@ StringList *startd_job_exprs = NULL;
 
 // Hosts
 Daemon*	Collector = NULL;
+Daemon* View_Collector = NULL;
 char*	condor_view_host = NULL;
 char*	accountant_host = NULL;
 
@@ -67,10 +69,21 @@ int		startd_noclaim_shutdown = 0;
     // # of seconds we can go without being claimed before we "pull
     // the plug" and tell the master to shutdown.
 
+bool	compute_avail_stats = false;
+	// should the startd compute vm availability statistics; currently 
+	// false by default
+
 char* Name = NULL;
 
+int		pid_snapshot_interval = 50;
+    // How often do we take snapshots of the pid families? 
 
 char*	mySubSystem = "STARTD";
+
+int main_reaper = 0;
+
+// Cron stuff
+StartdCronMgr	*Cronmgr;
 
 // Define static variables
 static	int old_polling_interval;
@@ -82,7 +95,7 @@ static	int old_polling_interval;
 void usage( char* );
 int main_init( int argc, char* argv[] );
 int init_params(int);
-int main_config();
+int main_config( bool is_full );
 int finish_main_config();
 int main_shutdown_fast();
 int main_shutdown_graceful();
@@ -106,7 +119,6 @@ int
 main_init( int, char* argv[] )
 {
 	int		skip_benchmarks = FALSE;
-	int		rval;
 	char*	tmp = NULL;
 	char**	ptr; 
 
@@ -143,6 +155,9 @@ main_init( int, char* argv[] )
 		// Instantiate the Resource Manager object.
 	resmgr = new ResMgr;
 
+		// find all the starters we care about and get their classads. 
+	resmgr->starter_mgr.init();
+
 		// Read in global parameters from the config file.
 		// We do this after we instantiate the resmgr, so we can know
 		// what num_cpus is, but before init_resources(), so we can
@@ -158,6 +173,10 @@ main_init( int, char* argv[] )
 		// thus it must be initialized.
 	command_x_event( 0, 0, 0 );
 #endif
+
+		// Do a little sanity checking and cleanup
+	check_perms();
+	cleanup_execute_dir( 0 );	// 0 indicates we should clean everything.
 
 		// Instantiate Resource objects in the ResMgr
 	resmgr->init_resources();
@@ -184,9 +203,14 @@ main_init( int, char* argv[] )
 
 	resmgr->walk( &(Resource::init_classad) );
 
-		// Do a little sanity checking and cleanup
-	check_perms();
-	cleanup_execute_dir( 0 );	// 0 indicates we should clean everything.
+	// Startup Cron
+	Cronmgr = new StartdCronMgr( );
+	Cronmgr->Reconfig( );
+
+		// Now that we have our classads, we can compute things that
+		// need to be evaluated
+	resmgr->walk( &(Resource::compute), A_EVALUATED );
+	resmgr->walk( &(Resource::refresh_classad), A_PUBLIC | A_EVALUATED ); 
 
 		// If we EXCEPT, don't leave any starters lying around.
 	_EXCEPT_Cleanup = do_cleanup;
@@ -205,25 +229,25 @@ main_init( int, char* argv[] )
 		// you need WRITE permission.
 	daemonCore->Register_Command( ALIVE, "ALIVE", 
 								  (CommandHandler)command_handler,
-								  "command_handler", 0, WRITE,
+								  "command_handler", 0, DAEMON,
 								  D_FULLDEBUG ); 
 	daemonCore->Register_Command( RELEASE_CLAIM, "RELEASE_CLAIM", 
 								  (CommandHandler)command_handler,
-								  "command_handler", 0, WRITE );
+								  "command_handler", 0, DAEMON );
 	daemonCore->Register_Command( DEACTIVATE_CLAIM,
 								  "DEACTIVATE_CLAIM",  
 								  (CommandHandler)command_handler,
-								  "command_handler", 0, WRITE );
+								  "command_handler", 0, DAEMON );
 	daemonCore->Register_Command( DEACTIVATE_CLAIM_FORCIBLY, 
 								  "DEACTIVATE_CLAIM_FORCIBLY", 
 								  (CommandHandler)command_handler,
-								  "command_handler", 0, WRITE );
+								  "command_handler", 0, DAEMON );
 	daemonCore->Register_Command( PCKPT_FRGN_JOB, "PCKPT_FRGN_JOB", 
 								  (CommandHandler)command_handler,
-								  "command_handler", 0, WRITE );
+								  "command_handler", 0, DAEMON );
 	daemonCore->Register_Command( REQ_NEW_PROC, "REQ_NEW_PROC", 
 								  (CommandHandler)command_handler,
-								  "command_handler", 0, WRITE );
+								  "command_handler", 0, DAEMON );
 
 		// These commands are special and need their own handlers
 		// READ permission commands
@@ -245,21 +269,21 @@ main_init( int, char* argv[] )
 		// WRITE permission commands
 	daemonCore->Register_Command( ACTIVATE_CLAIM, "ACTIVATE_CLAIM",
 								  (CommandHandler)command_activate_claim,
-								  "command_activate_claim", 0, WRITE );
+								  "command_activate_claim", 0, DAEMON );
 	daemonCore->Register_Command( REQUEST_CLAIM, "REQUEST_CLAIM", 
 								  (CommandHandler)command_request_claim,
-								  "command_request_claim", 0, WRITE );
+								  "command_request_claim", 0, DAEMON );
 	daemonCore->Register_Command( X_EVENT_NOTIFICATION,
 								  "X_EVENT_NOTIFICATION",
 								  (CommandHandler)command_x_event,
-								  "command_x_event", 0, WRITE,
+								  "command_x_event", 0, DAEMON,
 								  D_FULLDEBUG ); 
 	daemonCore->Register_Command( PCKPT_ALL_JOBS, "PCKPT_ALL_JOBS", 
 								  (CommandHandler)command_pckpt_all,
-								  "command_pckpt_all", 0, WRITE );
+								  "command_pckpt_all", 0, DAEMON );
 	daemonCore->Register_Command( PCKPT_JOB, "PCKPT_JOB", 
 								  (CommandHandler)command_name_handler,
-								  "command_name_handler", 0, WRITE );
+								  "command_name_handler", 0, DAEMON );
 
 		// OWNER permission commands
 	daemonCore->Register_Command( VACATE_ALL_CLAIMS,
@@ -287,9 +311,11 @@ main_init( int, char* argv[] )
 		//////////////////////////////////////////////////
 		// Reapers 
 		//////////////////////////////////////////////////
-	rval = daemonCore->Register_Reaper( "reaper_starters", 
+	main_reaper = daemonCore->Register_Reaper( "reaper_starters", 
 		(ReaperHandler)reaper, "reaper" );
-	assert(rval == 1);	// we assume reaper id 1 for now
+	assert(main_reaper != FALSE);
+
+	daemonCore->Set_Default_Reaper( main_reaper );
 
 #if defined( OSF1 ) || defined (IRIX) || defined(WIN32)
 		// Pretend we just got an X event so we think our console idle
@@ -312,7 +338,7 @@ main_init( int, char* argv[] )
 
 
 int
-main_config()
+main_config( bool is_full )
 {
 	bool done_allocating;
 
@@ -342,6 +368,9 @@ finish_main_config( void )
 	if( old_polling_interval != polling_interval ) {
 		resmgr->walk( &(Resource::resize_load_queue) );
 	}
+	dprintf( D_FULLDEBUG, "MainConfig finish\n" );
+	Cronmgr->Reconfig( );
+	resmgr->starter_mgr.init();
 
 		// Re-evaluate and update the CM for each resource (again, we
 		// don't need to recompute, since we just did that, so we call
@@ -403,6 +432,13 @@ init_params( int first_time)
 		free( condor_view_host );
 	}
 	condor_view_host = param( "CONDOR_VIEW_HOST" );
+
+    if (View_Collector) {
+        delete View_Collector;
+    }
+    if (condor_view_host) {
+        View_Collector = new Daemon(condor_view_host, CONDOR_VIEW_PORT);
+    }
 
 	tmp = param( "POLLING_INTERVAL" );
 	if( tmp == NULL ) {
@@ -501,7 +537,16 @@ init_params( int first_time)
 	if( tmp ) {
 		startd_noclaim_shutdown = atoi( tmp );
 		free( tmp );
-	} 
+	}
+
+	compute_avail_stats = false;
+	tmp = param( "STARTD_COMPUTE_AVAIL_STATS" );
+	if( tmp ) {
+		if( tmp[0] == 'T' || tmp[0] == 't' ) {
+			compute_avail_stats = true;
+		}
+		free( tmp );
+	}
 
 	tmp = param( "STARTD_NAME" );
 	if( tmp ) {
@@ -510,6 +555,12 @@ init_params( int first_time)
 		}
 		Name = build_valid_daemon_name( tmp );
 		dprintf( D_FULLDEBUG, "Using %s for name\n", Name );
+		free( tmp );
+	}
+
+	tmp = param( "PID_SNAPSHOT_INTERVAL" );
+	if( tmp ) {
+		pid_snapshot_interval = atoi( tmp );
 		free( tmp );
 	}
 
@@ -547,7 +598,7 @@ main_shutdown_fast()
 		// various commands. 
 	resmgr->markShutdown();
 
-	daemonCore->Reset_Reaper( 1, "shutdown_reaper", 
+	daemonCore->Reset_Reaper( main_reaper, "shutdown_reaper", 
 								 (ReaperHandler)shutdown_reaper,
 								 "shutdown_reaper" );
 
@@ -571,7 +622,7 @@ main_shutdown_graceful()
 		// various commands. 
 	resmgr->markShutdown();
 
-	daemonCore->Reset_Reaper( 1, "shutdown_reaper", 
+	daemonCore->Reset_Reaper( main_reaper, "shutdown_reaper", 
 								 (ReaperHandler)shutdown_reaper,
 								 "shutdown_reaper" );
 
@@ -591,10 +642,10 @@ reaper(Service *, int pid, int status)
 	Resource* rip;
 
 	if( WIFSIGNALED(status) ) {
-		dprintf(D_ALWAYS, "pid %d died on %s\n",
-				pid, daemonCore->GetExceptionString(status));
+		dprintf(D_FAILURE|D_ALWAYS, "Starter pid %d died on signal %d (%s)\n",
+				pid, WTERMSIG(status), daemonCore->GetExceptionString(status));
 	} else {
-		dprintf(D_ALWAYS, "pid %d exited with status %d\n",
+		dprintf(D_FAILURE|D_ALWAYS, "Starter pid %d exited with status %d\n",
 				pid, WEXITSTATUS(status));
 	}
 	rip = resmgr->get_by_pid(pid);
@@ -625,7 +676,7 @@ do_cleanup(int,int,char*)
 		check_free();		
 			// Otherwise, quickly kill all the active starters.
 		resmgr->walk( &(Resource::kill_claim) );
-		dprintf( D_ALWAYS, "Exiting because of fatal exception.\n" );
+		dprintf( D_FAILURE|D_ALWAYS, "startd exiting because of fatal exception.\n" );
 	}
 
 #ifdef WIN32
@@ -648,3 +699,10 @@ check_free()
 	} 
 	return TRUE;
 }
+
+
+void
+main_pre_dc_init( int argc, char* argv[] )
+{
+}
+

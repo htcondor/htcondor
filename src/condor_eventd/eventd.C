@@ -67,7 +67,7 @@ EventDaemon::Config()
 	free(tmp);
 
 	NumEvents = event_list.number();
-	EventList = new (ScheduledEvent *)[NumEvents];
+	EventList = new ScheduledEvent* [NumEvents];
 
 	event_list.rewind();
 	char *item;
@@ -147,7 +147,8 @@ EventDaemon::Timeout()
 			}
 		}
 	}
-	if (!EventActive && TimeToNearestEvent > MaxEventPreparation) {
+	if (MaxEventPreparation > 0 && !EventActive &&
+		TimeToNearestEvent > MaxEventPreparation) {
 		dprintf(D_FULLDEBUG, "All events are a long way off.\n");
 		dprintf(D_FULLDEBUG, "Next Timeout() will occur in %d seconds.\n",
 				TimeToNearestEvent-MaxEventPreparation);
@@ -155,13 +156,30 @@ EventDaemon::Timeout()
 								TimeToNearestEvent-MaxEventPreparation,
 								EventInterval);
 	}
+
+	return 0;
 }
 
 ScheduledEvent *
 EventDaemon::NewEvent(const char name[], const char record[])
 {
 	if (strncmp(record, "SHUTDOWN", 8) == 0) {
-		return new ScheduledShutdownEvent(name, record+8);
+			// handle RUNTIME and STANDARD options
+		bool RuntimeConfig = false;
+		bool StandardJobsOnly = false;
+		int offset = 8;
+		while (record[offset] == '_') {
+			offset++;
+			if (strncmp(&(record[offset]), "RUNTIME", 7) == 0) {
+				RuntimeConfig = true;
+				offset += 7;
+			} else if (strncmp(&(record[offset]), "STANDARD", 8) == 0) {
+				StandardJobsOnly = true;
+				offset += 8;
+			}
+		}
+		return new ScheduledShutdownEvent(name, record+offset, RuntimeConfig,
+										  StandardJobsOnly);
 	}
 
 	dprintf(D_ALWAYS, "Unknown event type in event %s.\n", name);

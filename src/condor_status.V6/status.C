@@ -35,6 +35,9 @@
 #include "extArray.h"
 #include "sig_install.h"
 #include "string_list.h"
+#include "condor_string.h"   // for strnewp()
+#include "print_wrapped_text.h"
+#include "condor_distribution.h"
 
 // global variables
 ClassAdPrintMask pm;
@@ -44,6 +47,7 @@ AdTypes		type 	= (AdTypes) -1;
 ppOption	ppStyle	= PP_NOTSET;
 int			wantOnlyTotals 	= 0;
 int			summarySize = -1;
+bool        expert = false;
 Mode		mode	= MODE_NOTSET;
 int			diagnose = 0;
 char*		direct = NULL;
@@ -54,6 +58,7 @@ char		*myName;
 StringList	*sortConstraints = NULL;
 ExtArray<ExprTree*> sortLessThanExprs( 4 );
 ExtArray<ExprTree*> sortEqualExprs( 4 );
+bool            javaMode = false;
 
 // instantiate templates
 template class ExtArray<ExprTree*>;
@@ -64,8 +69,8 @@ void firstPass  (int, char *[]);
 void secondPass (int, char *[]);
 void prettyPrint(ClassAdList &, TrackTotals *);
 int  matchPrefix(const char *, const char *);
-int  lessThanFunc(ClassAd*,ClassAd*,void*);
-int  customLessThanFunc(ClassAd*,ClassAd*,void*);
+int  lessThanFunc(AttrList*,AttrList*,void*);
+int  customLessThanFunc(AttrList*,AttrList*,void*);
 
 extern "C" int SetSyscalls (int) {return 0;}
 extern	void setPPstyle (ppOption, int, char *);
@@ -80,6 +85,7 @@ main (int argc, char *argv[])
 #endif
 
 	// initialize to read from config file
+	myDistro->Init( argc, argv );
 	myName = argv[0];
 	config();
 
@@ -125,6 +131,14 @@ main (int argc, char *argv[])
 		setPPstyle(PP_COLLECTOR_NORMAL, 0, DEFAULT);
 		break;
 
+	  case STORAGE_AD:
+		setPPstyle(PP_STORAGE_NORMAL, 0, DEFAULT);
+		break;
+
+	  case ANY_AD:
+		setPPstyle(PP_ANY_NORMAL, 0, DEFAULT);
+		break;
+
 	  default:
 		setPPstyle(PP_VERBOSE, 0, DEFAULT);
 	}
@@ -137,6 +151,8 @@ main (int argc, char *argv[])
 	  case MODE_SCHEDD_NORMAL: 
 	  case MODE_SCHEDD_SUBMITTORS:
 	  case MODE_COLLECTOR_NORMAL:
+	  case MODE_STORAGE_NORMAL:
+	  case MODE_ANY_NORMAL:
 		break;
 
 
@@ -164,6 +180,14 @@ main (int argc, char *argv[])
 	  default:
 		break;
 	}	
+
+	if(javaMode) {
+		sprintf( buffer, "TARGET.%s == TRUE", ATTR_HAS_JAVA );
+		if (diagnose) {
+			printf ("Adding constraint [%s]\n", buffer);
+		}
+		query->addANDConstraint (buffer);
+	}
 									
 	// second pass:  add regular parameters and constraints
 	if (diagnose) {
@@ -219,6 +243,8 @@ main (int argc, char *argv[])
 		case MODE_CKPT_SRVR_NORMAL:
 		case MODE_COLLECTOR_NORMAL:
 		case MODE_LICENSE_NORMAL:
+		case MODE_STORAGE_NORMAL:
+		case MODE_ANY_NORMAL:
 				// These have to go to the collector, anyway.
 			break;
 		default:
@@ -239,8 +265,48 @@ main (int argc, char *argv[])
 //	printf("addr = %s\n", addr);
 
 	if ((q = query->fetchAds (result, addr)) != Q_OK) {
-		fprintf (stderr, "Error:  Could not fetch ads --- error %s\n", 
-					getStrQueryResult(q));
+		if (q == Q_COMMUNICATION_ERROR) {
+			char error_message[1000];
+			char *log_directory, *collector_host;
+
+			log_directory = param("LOG");
+			if (addr != NULL) {
+				collector_host = addr; 
+			} else {
+				collector_host = param("COLLECTOR_HOST");
+			}
+			sprintf(error_message, 
+					"Error: Couldn't contact the condor_collector on %s.",
+					collector_host ? collector_host : "your central manager");
+			print_wrapped_text(error_message, stderr);
+			if (!expert) {
+				fprintf(stderr, "\n");
+				print_wrapped_text("Extra Info: the condor_collector is a process "
+								   "that runs on the central manager of your Condor "
+								   "pool and collects the status of all the machines "
+								   "and jobs in the Condor pool. "
+								   "The condor_collector might not be running, "
+								   "it might be refusing to communicate with you, "
+								   "there might be a network problem, or there may be "
+								   "some other problem. Check with your system "
+								   "administrator to fix this problem.", stderr);
+				fprintf(stderr, "\n");
+				sprintf(error_message, 
+						"If you are the system administrator, check that the "
+						"condor_collector is running on %s, check the HOSTALLOW "
+						"configuration in your condor_config, and check the "
+						"MasterLog and CollectorLog files in your log directory "
+						"for possible clues as to why the condor_collector "
+						"is not responding. Also see the Troubleshooting "
+						"section of the manual.", 
+						collector_host ? collector_host : "your central manager");
+				print_wrapped_text(error_message, stderr);
+			}
+		}
+		else {
+			fprintf (stderr, "Error:  Could not fetch ads --- %s\n", 
+					 getStrQueryResult(q));
+		}
 		exit (1);
 	}
 
@@ -281,7 +347,9 @@ usage ()
 		"\t-ckptsrvr\t\tDisplay checkpoint server attributes\n"
 		"\t-claimed\t\tPrint information about claimed resources\n"
 //		"\t-collector\t\tSame as -world\n"
+		"\t-debug\t\t\tDisplay debugging info to console\n"
 		"\t-direct <host>\t\tGet attributes directly from the given daemon\n"
+		"\t-java\t\t\tDisplay Java-capable hosts\n"
 		"\t-license\t\tDisplay attributes of licenses\n"
 		"\t-master\t\t\tDisplay daemon master attributes\n"
 		"\t-pool <name>\t\tGet information from collector <name>\n"
@@ -289,6 +357,8 @@ usage ()
 		"\t-schedd\t\t\tDisplay attributes of schedds\n"
 		"\t-server\t\t\tDisplay important attributes of resources\n"
 		"\t-startd\t\t\tDisplay resource attributes\n"
+		"\t-storage\t\t\tDisplay network storage resources\n"
+		"\t-any\t\t\tDisplay any resources\n"
 		"\t-state\t\t\tDisplay state of resources\n"
 		"\t-submitters\t\tDisplay information about request submitters\n"
 //		"\t-world\t\t\tDisplay all pools reporting to UW collector\n"
@@ -297,6 +367,8 @@ usage ()
 		"\t-sort <attr>\t\tSort entries by named attribute\n"
 		"\t-total\t\t\tDisplay totals only\n"
 		"\t-verbose\t\tSame as -long\n" 
+		"\t-xml\t\t\tDisplay entire classads, but in XML\n" 
+		"\t-expert\t\t\tDisplay shorter error messages\n" 
 		"    and [custom-opts ...] are one or more of\n"
 		"\t-constraint <const>\tAdd constraint on classads\n"
 		"\t-format <fmt> <attr>\tRegister display format and attribute\n",
@@ -325,14 +397,30 @@ firstPass (int argc, char *argv[])
 			}
 			i++;
 			if( ! argv[i] ) {
-				fprintf( stderr, "%s: -pool requires another argument\n", 
+				fprintf( stderr, "%s: -pool requires a hostname as an argument.\n", 
 						 myName ); 
+				if (!expert) {
+					printf("\n");
+					print_wrapped_text("Extra Info: The hostname should be the central "
+									   "manager of the Condor pool you wish to work with.",
+									   stderr);
+					printf("\n");
+				}
 				fprintf( stderr, "Use \"%s -help\" for details\n", myName ); 
 				exit( 1 );
 			}
 			pool = get_full_hostname( (const char *)argv[i]);
 			if( !pool ) {
 				fprintf( stderr, "Error:  unknown host %s\n", argv[i] );
+				if (!expert) {
+					printf("\n");
+					print_wrapped_text("Extra Info: You specified a hostname for a pool "
+									   "(the -pool argument). That should be the Internet "
+									   "host name for the central manager of the pool, "
+									   "but it does not seem to "
+									   "be a valid hostname. (The DNS lookup failed.)",
+									   stderr);
+				}
 				exit( 1 );
 			} 
 		} else
@@ -373,6 +461,11 @@ firstPass (int argc, char *argv[])
 		if (matchPrefix (argv[i], "-diagnose")) {
 			diagnose = 1;
 		} else
+		if (matchPrefix (argv[i], "-debug")) {
+			// dprintf to console
+			Termlog = 1;
+			dprintf_config ("TOOL", 2 );
+		} else
 		if (matchPrefix (argv[i], "-help")) {
 			usage ();
 			exit (1);
@@ -380,8 +473,14 @@ firstPass (int argc, char *argv[])
 		if (matchPrefix (argv[i],"-long") || matchPrefix (argv[i],"-verbose")) {
 			setPPstyle (PP_VERBOSE, i, argv[i]);
 		} else
+		if (matchPrefix (argv[i],"-xml")){
+			setPPstyle (PP_XML, i, argv[i]);
+		} else
 		if (matchPrefix (argv[i], "-run") || matchPrefix(argv[i], "-claimed")) {
 			setMode (MODE_STARTD_RUN, i, argv[i]);
+		} else
+		if (matchPrefix (argv[i], "-java") || matchPrefix(argv[i], "-java")) {
+			javaMode = true;
 		} else
 		if (matchPrefix (argv[i], "-server")) {
 			setPPstyle (PP_STARTD_SERVER, i, argv[i]);
@@ -397,6 +496,12 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i], "-license")) {
 			setMode (MODE_LICENSE_NORMAL, i, argv[i]);
+		} else
+		if (matchPrefix (argv[i], "-storage")) {
+			setMode (MODE_STORAGE_NORMAL, i, argv[i]);
+		} else
+		if (matchPrefix (argv[i], "-any")) {
+			setMode (MODE_ANY_NORMAL, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i], "-sort")) {
 			i++;
@@ -445,6 +550,9 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i], "-total")) {
 			wantOnlyTotals = 1;
+		} else
+		if (matchPrefix(argv[i], "-expert")) {
+			expert = true;
 		} else
 		if (*argv[i] == '-') {
 			fprintf (stderr, "Error:  Unknown option %s\n", argv[i]);
@@ -500,9 +608,19 @@ secondPass (int argc, char *argv[])
 			}
 
 			if( !(daemonname = get_daemon_name(argv[i])) ) {
-				fprintf( stderr, "%s: unknown host %s\n",
-						 argv[0], get_host_part(argv[i]) );
-				exit(1);
+				if ( (mode==MODE_SCHEDD_SUBMITTORS) && strchr(argv[i],'@') ) {
+					// For a submittor query, it is possible that the
+					// hostname is really a UID_DOMAIN.  And there is
+					// no requirement that UID_DOMAIN actually have
+					// an inverse lookup in DNS...  so if get_daemon_name()
+					// fails with a fully qualified submittor lookup, just
+					// use what we are given and do not flag an error.
+					daemonname = strnewp(argv[i]);
+				} else {
+					fprintf( stderr, "%s: unknown host %s\n",
+								 argv[0], get_host_part(argv[i]) );
+					exit(1);
+				}
 			}
 
 			switch (mode) {
@@ -512,6 +630,8 @@ secondPass (int argc, char *argv[])
 			  case MODE_MASTER_NORMAL:
 			  case MODE_COLLECTOR_NORMAL:
 			  case MODE_CKPT_SRVR_NORMAL:
+			  case MODE_STORAGE_NORMAL:
+			  case MODE_ANY_NORMAL:
     		  case MODE_STARTD_AVAIL:
 				sprintf(buffer,"(TARGET.%s==\"%s\") || (TARGET.%s==\"%s\")", 
 						 ATTR_NAME, daemonname, ATTR_MACHINE, daemonname );
@@ -558,7 +678,7 @@ matchPrefix (const char *s1, const char *s2)
 
 
 int
-lessThanFunc(ClassAd *ad1, ClassAd *ad2, void *)
+lessThanFunc(AttrList *ad1, AttrList *ad2, void *)
 {
 	char 	buf1[128];
 	char	buf2[128];
@@ -610,7 +730,7 @@ lessThanFunc(ClassAd *ad1, ClassAd *ad2, void *)
 }
 
 int
-customLessThanFunc( ClassAd *ad1, ClassAd *ad2, void *)
+customLessThanFunc( AttrList *ad1, AttrList *ad2, void *)
 {
 
 //	EvalResult 	result;
@@ -668,3 +788,8 @@ customLessThanFunc( ClassAd *ad1, ClassAd *ad2, void *)
 	mad.RemoveRightAd();							// END NAC
 	return 0;
 }
+
+
+
+
+

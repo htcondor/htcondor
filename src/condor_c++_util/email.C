@@ -26,6 +26,7 @@
 #include "condor_debug.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
+#include "condor_config.h"
 #include "my_hostname.h"
 
 extern "C" {
@@ -76,17 +77,34 @@ email_user_open( ClassAd *jobAd, const char *subject )
 	}
 
     if ( strchr(email_addr,'@') == NULL ) {
-			// No host name specified; add uid domain. 
-			// Note: UID_DOMAIN is set to the fullhostname by default.
-		char domain[256];
-		domain[0] = '\0';
-		if ( (!jobAd->EvaluateAttrString(ATTR_UID_DOMAIN, domain, 256)) ||
-			 (domain[0] == '\0') ) {
-				// No uid domain!  Use fullhostname
-			strcat( domain, my_full_hostname() );
-		}
+			// No host name specified; add a domain. 
+		char* domain = NULL;
+
+			// First, we check for EMAIL_DOMAIN in the config file
+		domain = param( "EMAIL_DOMAIN" );
+
+			// If that's not defined, we look for UID_DOMAIN in the
+			// job ad
+		if( ! domain ) {
+            string s;
+            if (jobAd->EvaluateAttrString( ATTR_UID_DOMAIN, s )) {
+                domain = strdup(s.data());
+            }
+        }
+
+			// If that's not there, look for UID_DOMAIN in the config
+			// file
+		if( ! domain ) {
+			domain = param( "UID_DOMAIN" );
+		} 
+
+			// Now, we can append the domain to our address.
         strcat( email_addr, "@" );
         strcat( email_addr, domain );
+
+			// No matter what method we used above to find the domain,
+			// we've got to free() it now so we don't leak memory.
+		free( domain );
     }
 
     return email_open( email_addr, subject );

@@ -68,7 +68,9 @@ int		run_preen(Service*);
 void	usage(const char* );
 int		main_shutdown_graceful();
 int		main_shutdown_fast();
-int		main_config();
+int		main_config( bool is_full );
+int		agent_starter(ReliSock *);
+int		handle_agent_fetch_log(ReliSock *);
 int		admin_command_handler(Service *, int, Stream *);
 int		handle_subsys_command(int, Stream *);
 
@@ -89,6 +91,7 @@ int		preen_interval;
 int		new_bin_delay;
 char	*MasterName = NULL;
 Daemon	*Collector = NULL;
+StringList *secondary_collectors = NULL;
 
 int		ceiling = 3600;
 float	e_factor = 2.0;								// exponential factor
@@ -105,6 +108,7 @@ int		PublishObituaries;
 int		Lines;
 int		AllowAdminCommands = FALSE;
 int		StartDaemons = TRUE;
+int		GotDaemonsOff = FALSE;
 
 char	*default_daemon_list[] = {
 	"MASTER",
@@ -255,6 +259,12 @@ main_init( int argc, char* argv[] )
 								  (CommandHandler)admin_command_handler, 
 								  "admin_command_handler", 0, ADMINISTRATOR );
 
+	/*
+	daemonCore->Register_Command( START_AGENT, "START_AGENT",
+					  (CommandHandler)admin_command_handler, 
+					  "admin_command_handler", 0, ADMINISTRATOR );
+	*/
+
 	_EXCEPT_Cleanup = DoCleanup;
 
 #if !defined(WIN32)
@@ -292,7 +302,7 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 			 "Got admin command (%d) and allowing it.\n", cmd );
 	switch( cmd ) {
 	case RECONFIG:
-		daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGHUP );
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGHUP );
 		return TRUE;
 	case RESTART:
 		daemons.immediate_restart = TRUE;
@@ -308,10 +318,10 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 		daemons.DaemonsOff( 1 );
 		return TRUE;
 	case MASTER_OFF:
-		daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGTERM );
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
 		return TRUE;
 	case MASTER_OFF_FAST:
-		daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGQUIT );
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
 		return TRUE;
 
 			// These commands are special, since they all need to read
@@ -322,6 +332,16 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 	case DAEMON_OFF_FAST:
 		return handle_subsys_command( cmd, stream );
 
+			// This function is also special, since it needs to read
+			// off more info.  So, it is handled with a special function.
+	case START_AGENT:
+		if (daemonCore->Create_Thread(
+				(ThreadStartFunc)&agent_starter, (void*)stream, 0 )) {
+			return TRUE;
+		} else {
+			dprintf( D_ALWAYS, "ERROR: unable to create agent thread!\n");
+			return FALSE;
+		}
 	default: 
 		EXCEPT( "Unknown admin command (%d) in handle_admin_commands",
 				cmd );
@@ -329,6 +349,71 @@ admin_command_handler( Service*, int cmd, Stream* stream )
 	return FALSE;
 }
 
+int
+agent_starter( ReliSock * s )
+{
+	ReliSock* stream = (ReliSock*)s;
+	char *subsys = NULL;
+
+	stream->decode();
+	if( ! stream->code(subsys) ||
+		! stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "Can't read subsystem name\n" );
+		free( subsys );
+		return FALSE;
+	}
+
+	dprintf ( D_ALWAYS, "Starting agent '%s'\n", subsys );
+
+	if( stricmp(subsys, "fetch_log") == 0 ) {
+		free (subsys);
+		return handle_agent_fetch_log( stream );
+	}
+
+	// default:
+
+	free (subsys);
+	dprintf( D_ALWAYS, "WARNING: unrecognized agent name\n" );
+	return FALSE;
+}
+
+int
+handle_agent_fetch_log (ReliSock* stream) {
+
+	char *daemon_name = NULL;
+	char *daemon_paramname = NULL;
+	char *daemon_filename = NULL;
+	int  res = FALSE;
+
+	if( ! stream->code(daemon_name) ||
+		! stream->end_of_message()) {
+		dprintf( D_ALWAYS, "ERROR: fetch_log can't read daemon name\n" );
+		free( daemon_name );
+		return FALSE;
+	}
+
+	dprintf( D_ALWAYS, "INFO: daemon_name: %s\n", daemon_name );
+
+	daemon_paramname = (char*)malloc (strlen(daemon_name) + 5);
+	strcpy (daemon_paramname, daemon_name);
+	strcat (daemon_paramname, "_LOG");
+
+	dprintf( D_ALWAYS, "INFO: daemon_paramname: %s\n", daemon_paramname );
+
+	if( (daemon_filename = param(daemon_paramname)) ) {
+		dprintf( D_ALWAYS, "INFO: daemon_filename: %s\n", daemon_filename );
+		stream->encode();
+		res = (stream->put_file(daemon_filename) < 0);
+		free (daemon_filename);
+	} else {
+		dprintf( D_ALWAYS, "ERROR: fetch_log can't param for log name\n" );
+	}
+
+	free (daemon_paramname);
+	free (daemon_name);
+
+	return res;
+}
 
 int
 handle_subsys_command( int cmd, Stream* stream )
@@ -442,6 +527,11 @@ init_params()
 		}
 		free( tmp );
 	} 
+		// If we were sent the daemons_off command, don't forget that
+		// here. 
+	if( GotDaemonsOff ) {
+		StartDaemons = FALSE;
+	}
 
 	PublishObituaries = TRUE;
 	tmp = param("PUBLISH_OBITUARIES");
@@ -506,9 +596,16 @@ init_params()
 	tmp = param( "MASTER_CHECK_NEW_EXEC_INTERVAL" );
     if( tmp ) {
         check_new_exec_interval = atoi( tmp );
+		if( tmp[0] != '0' && check_new_exec_interval == 0 ) { 
+				// They put something there other than "0", but atoi()
+				// got confused.  Warn them and set it.
+			dprintf( D_ALWAYS, "Warning, can't parse value in "
+					 "%s: \"%s\", using default of 5 minutes\n",
+					 "MASTER_CHECK_NEW_EXEC_INTERVAL", tmp );
+			check_new_exec_interval = 5 * MINUTE;
+		}
 		free( tmp );
-    }
-	if( !check_new_exec_interval ) {
+    } else {
         check_new_exec_interval = 5 * MINUTE;
     }
 
@@ -565,6 +662,16 @@ init_params()
 		free( FS_Preen );
 	}
 	FS_Preen = param( "PREEN" );
+
+	tmp = param( "SECONDARY_COLLECTOR_LIST" );
+	if( tmp ) {
+		if (secondary_collectors) delete secondary_collectors;
+		secondary_collectors = new StringList(tmp);
+		free(tmp);
+	} else {
+		if (secondary_collectors) delete secondary_collectors;
+		secondary_collectors = NULL;
+	}
 }
 
 
@@ -701,7 +808,7 @@ get_lock( char* file_name )
  ** them to do so also.
  */
 int
-main_config()
+main_config( bool is_full )
 {
 		// Re-read the config files and create a new classad
 	init_classad(); 
@@ -725,6 +832,8 @@ main_config()
 	} else {
 		daemons.DaemonsOff();
 	}
+    // Invalide session if necessary
+    daemonCore->invalidateSessionCache();
 		// Re-register our timers, since their intervals might have
 		// changed.
 	daemons.StartTimers();
@@ -875,3 +984,9 @@ void StartConfigServer()
 	sleep(5); 
 }
 #endif
+
+
+void
+main_pre_dc_init( int argc, char* argv[] )
+{
+}

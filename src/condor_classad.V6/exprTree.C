@@ -127,6 +127,8 @@ EvalState( )
 {
 	rootAd = NULL;
 	curAd  = NULL;
+
+	flattenAndInline = false;	// NAC
 }
 
 EvalState::

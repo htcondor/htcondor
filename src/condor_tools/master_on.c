@@ -32,13 +32,30 @@
 #include <stdio.h>
 #include <string.h>
 #include <syslog.h>
+#include <afs/stds.h>
+#include <afs/afs.h>
+#include <sys/syscall.h>
 extern int errno;
 
 static char* master_path = "/unsup/condor/sbin/condor_master";
 
 int
-main( int argc, char* argv[] ) 
+main( int argc, char* argv[], char *env[] )
 {
+    int errcode;
+
+	// Shed our "invoker's" AFS tokens
+    if ( syscall(AFS_SYSCALL, AFSCALL_SETPAG) < 0 ) {
+		fprintf( stderr, "error: Can't shed our AFS tokens"
+				 " errno: %d (%s)\n",
+				 errno, strerror(errno) );
+		exit( 1 );
+	}
+
+	// Flush my environment
+	*env = NULL;
+
+	// Here we go!
 	if( setuid(0) < 0 ) {
 		fprintf( stderr, "error: can't set uid to root, errno: %d (%s)\n",
 				 errno, strerror(errno) );

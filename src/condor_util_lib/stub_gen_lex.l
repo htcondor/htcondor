@@ -1,6 +1,6 @@
 %p 10000
 %n 1500
-%a 4000
+%a 4500
 %e 2500
 %o 5000
 %{
@@ -66,7 +66,7 @@ fhandle_t			return grab( TYPE_NAME );
 key_t				return grab( TYPE_NAME );
 open_flags_t		return grab( TYPE_NAME );
 fcntl_cmd_t			return grab( TYPE_NAME );
-signal_t			return grab( TYPE_NAME );
+condor_signal_t		return grab( TYPE_NAME );
 socklen_t			return grab( TYPE_NAME );
 Psocklen_t			return grab( TYPE_NAME );
 fd_set				return grab( TYPE_NAME );

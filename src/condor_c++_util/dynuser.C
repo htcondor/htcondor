@@ -1,9 +1,34 @@
+/***************************Copyright-DO-NOT-REMOVE-THIS-LINE**
+ * CONDOR Copyright Notice
+ *
+ * See LICENSE.TXT for additional notices and disclaimers.
+ *
+ * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
+ * No use of the CONDOR Software Program Source Code is authorized 
+ * without the express consent of the CONDOR Team.  For more information 
+ * contact: CONDOR Team, Attention: Professor Miron Livny, 
+ * 7367 Computer Sciences, 1210 W. Dayton St., Madison, WI 53706-1685, 
+ * (608) 262-0856 or miron@cs.wisc.edu.
+ *
+ * U.S. Government Rights Restrictions: Use, duplication, or disclosure 
+ * by the U.S. Government is subject to restrictions as set forth in 
+ * subparagraph (c)(1)(ii) of The Rights in Technical Data and Computer 
+ * Software clause at DFARS 252.227-7013 or subparagraphs (c)(1) and 
+ * (2) of Commercial Computer Software-Restricted Rights at 48 CFR 
+ * 52.227-19, as applicable, CONDOR Team, Attention: Professor Miron 
+ * Livny, 7367 Computer Sciences, 1210 W. Dayton St., Madison, 
+ * WI 53706-1685, (608) 262-0856 or miron@cs.wisc.edu.
+****************************Copyright-DO-NOT-REMOVE-THIS-LINE**/
+
 #include "condor_common.h"
+#include "condor_uid.h"
 #include "dynuser.h"
 #include <windows.h>
 #include <lmaccess.h>
 #include <lmerr.h>
 #include <lmwksta.h>
+#include <lmapibuf.h>
 
 
 ////
@@ -14,8 +39,8 @@
 
 dynuser::dynuser() {
 	psid =(PSID) &sidBuffer;
-	sidBufferSize = 100;
-	domainBufferSize = 80;
+	sidBufferSize = max_sid_length;
+	domainBufferSize = max_domain_length;
 	logon_token = NULL;
 	accountname = NULL;
 	password = NULL;
@@ -86,12 +111,19 @@ bool dynuser::createuser(char *username){
 dynuser::~dynuser() {
 
 	if ( accountname_t ) {
-		NET_API_STATUS nerr = NetUserDel(0,accountname_t);
 
-		if (nerr != NERR_Success) {
-			dprintf(D_ALWAYS,"dynuser: Removing user %s FAILED!\n",accountname);
+		bool success;
+		if ( accountname ) {
+			success = deleteuser(accountname);
 		} else {
+			// should never happen
+			success = false;
+		}
+
+		if (success) {
 			dprintf(D_FULLDEBUG,"dynuser: Removed user %s\n",accountname);
+		} else {
+			dprintf(D_ALWAYS,"dynuser: Removing user %s FAILED!\n",accountname);
 		}
 	}
 
@@ -100,7 +132,10 @@ dynuser::~dynuser() {
 	if ( password )			delete [] password;
 	if ( password_t )		delete [] password_t;
 	
-	if ( logon_token )		CloseHandle ( logon_token );
+	if ( logon_token )	{
+		CloseHandle ( logon_token );
+		logon_token = NULL;
+	}
 }
 
 
@@ -258,6 +293,35 @@ bool dynuser::add_users_group() {
 	return false;
 }
 
+
+////
+//
+// dynuser::del_users_group:  remove the user from the "users" group
+//
+////
+
+bool dynuser::del_users_group() {
+	// Add this user to group "users"
+	LOCALGROUP_MEMBERS_INFO_0 lmi;
+
+	lmi.lgrmi0_sid = this->psid;
+
+	NET_API_STATUS nerr = NetLocalGroupDelMembers(
+	  NULL,				// LPWSTR servername,      
+	  L"Users",			// LPWSTR LocalGroupName,  
+	  0,				// DWORD level,            
+	  (LPBYTE) &lmi,	// LPBYTE buf,             
+	  1				// DWORD membercount       
+	);
+
+	if ( NERR_Success == nerr ) {
+		return true;
+	}
+
+	dprintf(D_ALWAYS,"dynuser::del_users_group() NetLocalGroupDelMembers failed\n");	
+	return false;
+}
+
 #if 0
 // Dump the groups...
 bool dynuser::dump_groups() {
@@ -301,18 +365,48 @@ bool dynuser::dump_groups() {
 void dynuser::update_psid() {
 	SID_NAME_USE snu;
 
+	sidBufferSize = max_sid_length;
+	domainBufferSize = max_domain_length;
+
 	if ( !LookupAccountName( 0,				// Domain
 		accountname,						// Acocunt name
 		psid, &sidBufferSize,				// Sid
 		domainBuffer, &domainBufferSize,	// Domain
 		&snu ) )							// SID TYPE
 	{
-		EXCEPT("dynuser:Lookup Account Name %s failed!",accountname);
+		dprintf(D_ALWAYS,"dynuser::update_psid() LookupAccountName(%s) failed!\n", accountname);
+		// EXCEPT("dynuser:Lookup Account Name %s failed!",accountname);
 	}
 }
 
 
 bool dynuser::deleteuser(char* username ) {
+
+	bool retval = true;
+
+	if (!username) {
+		return false;
+	}
+
+	// Must be privledged user to go deleting accounts, buster!!!
+	priv_state old_priv = set_root_priv();
+
+	// Close any token we may have to the account we are about to delete
+	if ( accountname && strcmp(accountname,username)==0 ) {
+		if ( logon_token )	{
+			// logon token is a handle to the account we are about to kill,
+			// so we need to close it.  But first, check if the priv state
+			// code (in uids.C) has a copy of this handle.  If so, clear it
+			// out.
+			if ( logon_token == priv_state_get_handle() ) {
+				uninit_user_ids();
+			}
+			CloseHandle ( logon_token );
+			logon_token = NULL;
+		}
+	}
+
+	// allocate working buffers if needed
 	if (!accountname) 
 		accountname = new char[100];
 	if (!accountname_t)
@@ -321,14 +415,171 @@ bool dynuser::deleteuser(char* username ) {
 	strcpy( accountname, username);	// Used to add condor-run-, but not anymore.
 	
 	this->update_t( );				// Make the accountname_t and password_t accounts
+	this->update_psid();			// Updates our psid;
 
-	NET_API_STATUS nerr = NetUserDel( NULL, accountname_t);
+
+	// get machine name
+	// Todd <tannenba@cs.wisc.edu> - not needed; we'll just pass a NULL
+	// to LsaOpenPolicy to specify the local machine. - 1/02
+#if 0
+	UNICODE_STRING machine;
+	{
+		PWKSTA_INFO_100 pwkiWorkstationInfo;
+		DWORD netret = NetWkstaGetInfo( NULL, 100, 
+			(LPBYTE *)&pwkiWorkstationInfo);
+		if ( netret != NERR_Success ) {
+			EXCEPT("dynuser::deleteuser(): Cannot determine workstation name\n");
+		}
+		InitString( machine, 
+			(wchar_t *)pwkiWorkstationInfo->wki100_computername);
+	}
+#endif
+
+	// open a policy
+	LSA_HANDLE hPolicy = 0;
+	LSA_OBJECT_ATTRIBUTES oa;//	= { sizeof oa };
+	ZeroMemory(&oa, sizeof(oa));
+	if (LsaOpenPolicy(NULL,		// Computer Name (NULL == this machine?)
+		&oa,						// Object Attributes
+		POLICY_LOOKUP_NAMES | POLICY_CREATE_ACCOUNT | POLICY_ALL_ACCESS, // Type of access required
+		&hPolicy ) != STATUS_SUCCESS)					// Pointer to the policy handles
+	{
+		dprintf(D_ALWAYS,"dynuser::deleteuser() LsaOpenPolicy failed\n");
+		retval = false;
+	}
+
+	SetLastError(0);
+
+	// according to microsoft docs, LsaRemoveAccountRights will remove
+	// the account and all rights if the 3rd param is TRUE, so NetUserDel
+	// doesn't need to be called.  But "only from a certain perspective", says
+	// Richter in "Programming Server-Side Applications for Microsoft Windows 2000".
+	// Confusing, eh?  So we call NetUserDel as well after we blow away the rights.
+	NTSTATUS result;
+	result = LsaRemoveAccountRights( hPolicy, psid, 1, 0, 0 );
+	if (!retval || result != STATUS_SUCCESS) {
+		// Failed to remove all Account Rights
+
+		dprintf(D_ALWAYS,"dynuser: LsaRemoveAccountRights Failed winerr=%ul\n",
+			LsaNtStatusToWinError(result));
+
+		// We do NOT do a NetUserDel here, since we want to either remove
+		// all traces of the account or nothing at all.  We don't want to remove
+		// just the visible part and leave policy crap bloating the registry behind
+		// the scenes.
+
+	} else {
+
+		// Able to remove all Account Rights, so remove account as well.
+
+        NET_API_STATUS nerr = NetUserDel( NULL, accountname_t );
+        if ( nerr != NERR_Success && nerr != NERR_UserNotFound ) {			
+			dprintf(D_ALWAYS,"dynuser::deleteuser() failed! nerr=%d\n", nerr);
+			retval = false;
+		} else {
+			dprintf(D_FULLDEBUG,
+				"dynuser::deleteuser() Successfully deleted user %s\n", 
+				 username);
+		}
+
+
+	}
+
+	LsaClose( hPolicy );
+
 
 	// Delete accountname_t so destructor does not try to remove the account again
 	delete [] accountname_t;
 	accountname_t = NULL;
 	
-	if ( nerr != NERR_Success ) return false;
-	
-	return true;
+	// Set our priv state back how it used to be
+	set_priv(old_priv);
+
+	return retval;
+
+}
+
+
+// this function will remove all accounts starting with user_prefix
+
+bool dynuser::cleanup_condor_users(char* user_prefix) {
+
+	LPUSER_INFO_10 pBuf = NULL;
+	LPUSER_INFO_10 pTmpBuf;
+	DWORD dwEntriesRead = 0;
+	DWORD dwTotalEntries = 0;
+	DWORD dwResumeHandle = 0;
+	DWORD dwTotalCount = 0;
+	NET_API_STATUS nStatus;
+
+	bool retval = true;
+
+
+    // check for valid user_prefix
+	if (!user_prefix || !*user_prefix) {
+		dprintf(D_ALWAYS,"dynuser::cleanup_condor_users() called with no user_prefix\n");
+		return false;
+	}
+
+	do {
+		nStatus = NetUserEnum(NULL,                     // NULL means local server
+								10,                     // accounts, names, and comments
+								FILTER_NORMAL_ACCOUNT,  // global users
+								(LPBYTE*)&pBuf,
+								MAX_PREFERRED_LENGTH,   // buffer size
+								&dwEntriesRead,
+								&dwTotalEntries,
+								&dwResumeHandle);
+
+		// If the call succeeds,
+		if ((nStatus == NERR_Success) || (nStatus == ERROR_MORE_DATA)) {
+			if ((pTmpBuf = pBuf) != NULL) {
+		
+				// Loop through the entries.
+				for (DWORD i = 0; (i < dwEntriesRead); i++) {
+					assert(pTmpBuf != NULL);
+
+					if (pTmpBuf == NULL) {
+						dprintf(D_ALWAYS,"dynuser::cleanup_condor_users() Access violation\n");
+						retval = false;
+						break;
+					}
+
+					// convert from unicode to ascii
+					char buf[1024]; // this is the max size sprintf will print into anyways
+					wsprintf(buf, "%ws", pTmpBuf->usri10_name);
+
+					
+					if (strnicmp( buf, user_prefix, strlen(user_prefix)) == 0) {
+						dprintf(D_FULLDEBUG,"dynuser::cleanup_condor_users() Found orphaned account: %s\n", buf);
+						{
+							dynuser du;
+							retval = retval && du.deleteuser(buf);
+						}
+					}
+
+					pTmpBuf++;
+					dwTotalCount++;
+				}
+			}
+		} else {
+			dprintf(D_ALWAYS,"dynuser::cleanup_condor_users() Got bad status (%d) from NetUserEnum\n", nStatus);
+			retval = false;
+		}
+
+		// Free the allocated buffer.
+		if (pBuf != NULL) {
+			NetApiBufferFree(pBuf);
+			pBuf = NULL;
+		}
+	} while (nStatus == ERROR_MORE_DATA);
+
+
+	// Check again for allocated memory.
+	if (pBuf != NULL) {
+		NetApiBufferFree(pBuf);
+		pBuf = NULL;
+	}
+
+	return retval;
 }

@@ -27,7 +27,7 @@
 #include "except.h"
 
 #ifndef LINT
-#endif LINT
+#endif /* LINT */
 
 void
 detach()

@@ -1,4 +1,4 @@
-#!/s/std/bin/perl
+#!/usr/bin/env perl
 
 # This perl script is used by our build environment to make
 # a soft-link directory tree.  The first arg is the name of the

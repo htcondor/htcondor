@@ -86,4 +86,4 @@ int	accept_request_claim( Resource* );
 // Activate a claim with a given starter
 int activate_claim( Resource*, Stream* ); 
 
-#endif _STARTD_COMMAND_H
+#endif /* _STARTD_COMMAND_H */

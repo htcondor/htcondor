@@ -31,6 +31,10 @@
 double	get_time();
 extern int	Syscalls;
 
+/* remote systems calls we use in this file */
+extern int REMOTE_CONDOR_extern_name(char *path, char *buf, int bufsize);
+extern int REMOTE_CONDOR_getwd(char *path_name);
+
 #define CHUNK_SIZE 4096
 
 
@@ -42,7 +46,7 @@ send_file( const char *local, const char *remote, int perm )
 {
 
 	int		remote_fd, local_fd;
-	char	buf[ CHUNK_SIZE ];
+	char	buf[ CHUNK_SIZE + 50 ];
 	int		nbytes, bytes_to_go;
 	size_t	len;
 	double	start, finish;
@@ -111,7 +115,7 @@ int
 get_file( const char *remote, const char *local, int mode )
 {
 	int		remote_fd, local_fd;
-	char	buf[ CHUNK_SIZE ];
+	char	buf[ CHUNK_SIZE + 50];
 	int		nbytes, bytes_to_go;
 	size_t	len;
 	double	start, finish;
@@ -123,8 +127,9 @@ get_file( const char *remote, const char *local, int mode )
 		/* open the remote file */
 	remote_fd = open_file_stream( remote, O_RDONLY, &len );
 	if( remote_fd < 0 ) {
-		dprintf( D_ALWAYS, "open_file_stream(%s,O_RDONLY,0x%x) failed\n",
-														remote, &len );
+		dprintf( D_ALWAYS, "Failed to open \"%s\" remotely, errno = %d\n",
+				 remote, errno );
+		return -1;
 	}
 
 		/* open the local file */
@@ -138,7 +143,7 @@ get_file( const char *remote, const char *local, int mode )
 	for(bytes_to_go = len; bytes_to_go; bytes_to_go -= nbytes ) {
 		nbytes = MIN( CHUNK_SIZE, bytes_to_go );
 		nbytes = read( remote_fd, buf, nbytes );
-		if( nbytes < 0 ) {
+		if( nbytes <= 0 ) {
 			dprintf( D_ALWAYS, "Can't read fd %d, errno = %d\n",
 														remote_fd, errno );
 			(void)close( local_fd );
@@ -193,7 +198,7 @@ find_physical_host( const char *path, int flags )
 
 		/* Try to find the pathname as given */
 	/* if( extern_name(path,answer,sizeof(answer)) >= 0 ) { */
-	if( REMOTE_syscall(CONDOR_extern_name,path,answer,sizeof(answer)) >= 0 ) {
+	if( REMOTE_CONDOR_extern_name(path,answer,sizeof(answer)) >= 0 ) {
 		if( ptr=strchr(answer,':') ) { /* dhaval 9/25 */
 			*ptr = '\0';
 		}
@@ -213,11 +218,11 @@ find_physical_host( const char *path, int flags )
 			*ptr = '\0';
 		}
 	} else {
-		REMOTE_syscall( CONDOR_getwd, dir );
+		REMOTE_CONDOR_getwd( dir );
 	}
 
 	/* if( extern_name(dir,answer,sizeof(answer)) >= 0 ) { */
-	if( REMOTE_syscall(CONDOR_extern_name,dir,answer,sizeof(answer)) >= 0 ) {
+	if( REMOTE_CONDOR_extern_name(dir,answer,sizeof(answer)) >= 0 ) {
 		if( ptr=strchr(answer,':') ) { /* dhaval 9/25 */
 			*ptr = '\0';
 		}

@@ -63,6 +63,10 @@ int _sysapi_config = 0;
 /* needed by ncpus.c */
 int _sysapi_ncpus = 0;
 
+/* needed by phys_mem.c */
+int _sysapi_memory = 0;
+int _sysapi_reserve_memory = 0;
+
 
 BEGIN_C_DECLS
 
@@ -84,6 +88,10 @@ sysapi_reconfig(void)
     tmp = param( "CONSOLE_DEVICES" );
     if( tmp ) {
         _sysapi_console_devices = new StringList();
+		if (_sysapi_console_devices == NULL)
+		{
+			EXCEPT( "Out of memory in sysapi_reconfig()!" );
+		}
         _sysapi_console_devices->initializeFromString( tmp );
         free( tmp );
     }
@@ -117,6 +125,20 @@ sysapi_reconfig(void)
 	tmp = param( "NUM_CPUS" );
 	if( tmp ) {
 		_sysapi_ncpus = atoi( tmp );
+		free( tmp );
+	}
+
+	_sysapi_memory = 0;
+	tmp = param( "MEMORY" );
+	if( tmp ) {
+		_sysapi_memory = atoi( tmp );
+		free( tmp );
+	}
+
+	_sysapi_reserve_memory = 0;
+	tmp = param( "RESERVED_MEMORY" );
+	if( tmp ) {
+		_sysapi_reserve_memory = atoi( tmp );
 		free( tmp );
 	}
 

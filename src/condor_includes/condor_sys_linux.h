@@ -28,7 +28,9 @@
 #endif
 
 #if defined(GLIBC)
-#define _GNU_SOURCE
+# ifndef _GNU_SOURCE
+#  define _GNU_SOURCE
+# endif
 #endif
 
 #include <sys/types.h>
@@ -67,6 +69,11 @@
 #include <sys/stat.h>
 #include <sys/vfs.h>
 
+/* This headerfile must be included before sys/wait.h because on glibc22
+	machines sys/wait.h brings in sys/resource.h and we need to modify
+	a few prototypes in sys/resource.h to be POSIX compliant.
+	-psilord 4/25/2001 */
+#include "condor_fix_sys_resource.h"
 #include <sys/wait.h>
 /* Some versions of Linux don't define WCOREFLG, but we need it */
 #if !defined( WCOREFLG )
@@ -96,7 +103,6 @@ int __writev(int, const struct iovec *, size_t);
 END_C_DECLS
 #endif /* GLIBC */
 
-#include "condor_fix_sys_resource.h"
 
 #if defined(LINUX) && defined(GLIBC21)
 #include <search.h>
@@ -105,6 +111,9 @@ END_C_DECLS
 /* swapon and swapoff prototypes */
 #include <linux/swap.h>
 
+/* include stuff for malloc control */
+#include <malloc.h>
+
 /****************************************
 ** Condor-specific system definitions
 ***************************************/
@@ -112,7 +121,12 @@ END_C_DECLS
 #define HAS_U_TYPES	1
 #define SIGSET_CONST	/* nothing */
 
+#if defined(GLIBC22)
+	#define SYNC_RETURNS_VOID 1
+#endif
+
 /* typedef long long off64_t; */
+
 typedef void* MMAP_T;
 
 #endif /* CONDOR_SYS_LINUX_H */

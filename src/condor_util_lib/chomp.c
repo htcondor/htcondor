@@ -5,7 +5,7 @@ char *
 chomp( char *buffer ) {
 	int size;
 
-	if ( size = strlen( buffer ) ) {
+	if( (size = strlen(buffer)) ) {
 		if ( buffer[size-1] == '\n' ) {
 			buffer[size-1] = '\0';
 		}

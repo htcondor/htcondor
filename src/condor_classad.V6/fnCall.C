@@ -380,28 +380,28 @@ testMember(const char *name,const ArgumentList &argList, EvalState &state,
 		return false;
 	}
 
-		// if the first arg (a list) is undefined, or the second arg is
+		// if the second arg (a list) is undefined, or the first arg is
 		// undefined and we're supposed to test for strict comparison, the 
 		// result is 'undefined'
-    if( arg0.IsUndefinedValue() || ( !useIS && arg1.IsUndefinedValue() ) ) {
+    if( arg1.IsUndefinedValue() || ( !useIS && arg0.IsUndefinedValue() ) ) {
         val.SetUndefinedValue();
         return true;
     }
 
-		// arg0 must be a list; arg1 must be comparable
-    if( !arg0.IsListValue() || arg1.IsListValue() || arg1.IsClassAdValue() ) {
+		// arg1 must be a list; arg0 must be comparable
+    if( !arg1.IsListValue() || arg0.IsListValue() || arg0.IsClassAdValue() ) {
         val.SetErrorValue();
         return true;
     }
 
-		// if we're using strict comparison, arg1 can't be 'error'
-	if( !useIS && arg1.IsErrorValue( ) ) {
+		// if we're using strict comparison, arg0 can't be 'error'
+	if( !useIS && arg0.IsErrorValue( ) ) {
 		val.SetErrorValue( );
 		return( true );
 	}
 
     // check for membership
-	arg0.IsListValue( el );
+	arg1.IsListValue( el );
 	ExprListIterator itr( el );
 	while( ( tree = itr.CurrentExpr( ) ) ) {
 		if( !tree->Evaluate( state, cArg ) ) {
@@ -409,7 +409,7 @@ testMember(const char *name,const ArgumentList &argList, EvalState &state,
 			return( false );
 		}
 		Operation::Operate(useIS ? Operation::IS_OP : Operation::EQUAL_OP, 
-			cArg, arg1, val );
+			cArg, arg0, val );
 		if( val.IsBooleanValue( b ) && b ) {
 			return true;
 		}
@@ -635,7 +635,7 @@ sumAvg(const char *name, const ArgumentList &argList,
 	} else if (listVal.IsUndefinedValue()) {
 		val.SetUndefinedValue();
 		return true;
-	} else if (!listVal.IsListValue(listToSum)) {
+	} else if (!listVal.IsListValue((const ExprList *)listToSum)) {
 		val.SetErrorValue();
 		return( true );
 	}
@@ -718,7 +718,7 @@ minMax(const char *fn, const ArgumentList &argList,
 	} else if (listVal.IsUndefinedValue()) {
 		val.SetUndefinedValue();
 		return true;
-	} else if (!listVal.IsListValue(listToBound)) {
+	} else if (!listVal.IsListValue((const ExprList *)listToBound)) {
 		val.SetErrorValue();
 		return true;
 	}
@@ -835,7 +835,7 @@ listCompare(
 	} else if (listVal.IsUndefinedValue()) {
 		val.SetUndefinedValue();
 		return true;
-	} else if (!listVal.IsListValue(listToCompare)) {
+	} else if (!listVal.IsListValue((const ExprList *)listToCompare)) {
 		val.SetErrorValue();
 		return true;
 	}

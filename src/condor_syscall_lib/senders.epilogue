@@ -1,240 +1,248 @@
+/* Converted case statements to function calls instead. -psilord */
+
 #ifdef LINK_PVM   
 	// only include CONDOR_work_request when compiling up the PVM
 	// starter.  It is used to send startup job info between the PVM
 	// starter and shadow.  we do not want it in the regular condor_syscall_lib
 	// because it sends Class Ads, and we do not want to force users to
 	// link their STANDARD universe jobs with the classad library. -Todd 12/97
-	case CONDOR_work_request:
-	  {
-		ClassAd *ad;
-		char *a_out;
-		char *targ;
-		char *orig;
-		signal_t *kill_sig;
+int
+REMOTE_CONDOR_work_request(ClassAd *ad, char *a_out, char *targ, char *orig,
+	condor_signal_t *kill_sig)
+{
+	int scm;
+	int rval;
+	condor_errno_t terrno;
+	sigset_t    omask;
 
-		CurrentSysCall = CONDOR_work_request;
+	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+	omask = _condor_signals_disable();
 
-		ad = va_arg( ap, ClassAd *);
-		a_out = va_arg( ap, char *);
-		targ = va_arg( ap, char *);
-		orig = va_arg( ap, char *);
-		kill_sig = (signal_t *) va_arg( ap, int *);
+	CurrentSysCall = CONDOR_work_request;
 
-		syscall_sock->encode();
-		assert( syscall_sock->code(CurrentSysCall) );
+	syscall_sock->encode();
+	assert( syscall_sock->code(CurrentSysCall) );
+	assert( syscall_sock->end_of_message() );
+
+	syscall_sock->decode();
+	assert( syscall_sock->code(rval) );
+	if( rval < 0 ) {
+		assert( syscall_sock->code(terrno) );
 		assert( syscall_sock->end_of_message() );
-
-		syscall_sock->decode();
-		assert( syscall_sock->code(rval) );
-		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
-			assert( syscall_sock->end_of_message() );
-			errno = terrno;
-			break;
-		}
-		assert( syscall_sock->code(kill_sig) );
-		assert( syscall_sock->code(orig) );
-		assert( syscall_sock->code(targ) );
-		assert( syscall_sock->code(a_out) );
-		assert( ad->get(*syscall_sock) );
-		assert( syscall_sock->end_of_message() );
-		break;
+		_condor_signals_enable( omask );
+		SetSyscalls( scm );
+		errno = (int)terrno;
+		return rval;
 	}
-#endif
+	assert( syscall_sock->code(kill_sig) );
+	assert( syscall_sock->code(orig) );
+	assert( syscall_sock->code(targ) );
+	assert( syscall_sock->code(a_out) );
+	assert( ad->initFromStream(*syscall_sock) );
+	assert( syscall_sock->end_of_message() );
 
-	case CONDOR_send_file:
-	  {
-		char	*local;
-		char	*remote;
-		mode_t		mode;
-		int		loc_fd;
-		int		read_status = 0, write_status;
-		char	buf[ CONDOR_IO_BUF_SIZE ];
-		int		len;
-		int		bytes_to_go;
-		int		file_size;
-
-		CurrentSysCall = CONDOR_send_file;
-
-		local = va_arg( ap, char *);
-		remote = va_arg( ap, char *);
-		mode = va_arg( ap, mode_t );
-
-			/* Do the local open */
-		if( (loc_fd = open(local,O_RDONLY)) < 0 ) {
-			rval = -1;
-			break;
-		}
-
-			/* Send over the file name, and mode */
-		syscall_sock->encode();
-		assert( syscall_sock->code(CurrentSysCall) );
-		assert( syscall_sock->code(mode) );
-		assert( syscall_sock->code(remote) );
-		assert( syscall_sock->end_of_message() );
-
-			/* Grab the result of the remote open */
-		syscall_sock->decode();
-		assert( syscall_sock->code(rval) );
-		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
-			assert( syscall_sock->end_of_message() );
-			errno = terrno;
-			rval = -1;
-			break;
-		}
-		assert( syscall_sock->end_of_message() );
-
-			/* Send file length */
-		file_size = lseek( loc_fd, 0, 2 );
-		lseek( loc_fd, 0, 0 );
-		syscall_sock->encode();
-		assert( syscall_sock->code(file_size) );
-
-			/* Transfer the data */
-		for( bytes_to_go = file_size; bytes_to_go; bytes_to_go -= len ) {
-			len = bytes_to_go < sizeof(buf) ? bytes_to_go : sizeof(buf);
-			read_status = read( loc_fd, buf, len );
-			assert( syscall_sock->code_bytes_bool(buf,len) );
-		}
-		(void)close( loc_fd );
-
-			/* As a check, re-send the length */
-		assert( syscall_sock->code(file_size) );
-		assert( syscall_sock->end_of_message() );
-
-
-			/* Get cumulative status from remote writes */
-		syscall_sock->decode();
-		assert( syscall_sock->code(write_status) );
-		if( write_status < 0 ) {
-			assert( syscall_sock->code(terrno) );
-			assert( syscall_sock->end_of_message() );
-			errno = terrno;
-			rval = write_status;
-			break;
-		}
-		assert( syscall_sock->end_of_message() );
-
-			/* If we had a local error on the reads, we had to ignore
-			   it until now to avoid getting out of sync with the
-			   shadow - now we can deal with it.
-			*/
-		if( read_status < 0 ) {
-			rval = read_status;
-			break;
-		}
-
-			/* Everything worked - status is cumulative status from
-			   remote writes.
-			*/
-		rval = write_status;
-		break;
-	}
-
-	case CONDOR_get_file:
-	  {
-		char	*remote;
-		char	*local;
-		int		mode;
-		int		loc_fd;
-		int		open_status, write_status = 0, read_status;
-		char	buf[ CONDOR_IO_BUF_SIZE ];
-		int		checksum;
-		int		len;
-		int		file_size;
-		int		bytes_to_go;
-		int		scm;
-		int		close_status;
-
-		CurrentSysCall = CONDOR_get_file;
-
-			/* Marshall the arguments */
-		remote = va_arg( ap, char *);
-		local = va_arg( ap, char *);
-		mode = va_arg( ap, int );
-
-			/* Open local file for writing */
-		loc_fd = open( local, O_WRONLY|O_CREAT|O_TRUNC, mode );
-		if( loc_fd < 0 ) {
-			rval = -1;
-			break;
-		}
-
-			/* Send over the file name */
-		syscall_sock->encode();
-		assert( syscall_sock->code(CurrentSysCall) );
-		assert( syscall_sock->code(remote) );
-		assert( syscall_sock->end_of_message() );
-
-			/* Grab the result of the remote open */
-		syscall_sock->decode();
-		assert( syscall_sock->code(rval) );
-		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
-			assert( syscall_sock->end_of_message() );
-			errno = terrno;
-			rval = -1;
-			break;
-		}
-
-			/* Get the size of the file */
-		assert( syscall_sock->code(file_size) );
-
-			/* Transfer the data */
-		for( bytes_to_go = file_size; bytes_to_go; bytes_to_go -= len ) {
-			len = bytes_to_go < sizeof(buf) ? bytes_to_go : sizeof(buf);
-			assert( syscall_sock->code_bytes_bool(buf,len) );
-			write_status = write( loc_fd, buf, len );
-		}
-		close_status = close( loc_fd );
-		if( close_status < 0 ) {
-			dprintf( D_ALWAYS,
-				"Close of \"%s\" failed - errno = %d\n", local, errno
-			);
-		}
-
-			/* Should get file size again as a check */
-		assert( syscall_sock->code(checksum) );
-		assert( checksum == file_size );
-
-			/* Get status from remote reads */
-		assert( syscall_sock->code(read_status) );
-		if( read_status < 0 ) {
-			assert( syscall_sock->code(terrno) );
-			assert( syscall_sock->end_of_message() );
-			errno = terrno;
-			rval = -1;
-			break;
-		}
-		assert( syscall_sock->end_of_message() );
-
-			/* Wrapup */
-		if( write_status >= 0 && read_status >= 0 && close_status >= 0 ) {
-			dprintf( D_ALWAYS,
-				"CONDOR_get_file: transferred %d bytes\n", file_size );
-			rval = 0;
-		} else {
-			rval = -1;
-		}
-
-		break;
-	}
-
-	  default:
-		char text[1024];
-		sprintf(text,"%s -- system call not supported", _condor_syscall_name( syscall_num ) );
-		REMOTE_syscall( CONDOR_report_error, text);
-		errno = EINVAL;
-		rval = -1;
-		break;
-	}
-#if defined(USE_STUB_CLUMPS) || defined(IRIX)
-	}
-#endif 
-
-	_condor_signals_enable();
-
+	_condor_signals_enable( omask );
 	SetSyscalls( scm );
 	return rval;
 }
+#endif
+
+int
+REMOTE_CONDOR_send_file(char *local, char *remote, mode_t mode)
+{
+	int		loc_fd;
+	int		read_status = 0, write_status;
+	char	buf[ CONDOR_IO_BUF_SIZE ];
+	int		len;
+	int		bytes_to_go;
+	int		file_size;
+	int scm;
+	int rval;
+	condor_errno_t terrno;
+	sigset_t    omask;
+
+
+	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+	omask = _condor_signals_disable();
+
+	CurrentSysCall = CONDOR_send_file;
+
+		/* Do the local open */
+	if( (loc_fd = open(local,O_RDONLY)) < 0 ) {
+		rval = -1;
+		_condor_signals_enable( omask );
+		SetSyscalls( scm );
+		return rval;
+	}
+
+		/* Send over the file name, and mode */
+	syscall_sock->encode();
+	assert( syscall_sock->code(CurrentSysCall) );
+	assert( syscall_sock->code(mode) );
+	assert( syscall_sock->code(remote) );
+	assert( syscall_sock->end_of_message() );
+
+		/* Grab the result of the remote open */
+	syscall_sock->decode();
+	assert( syscall_sock->code(rval) );
+	if( rval < 0 ) {
+		assert( syscall_sock->code(terrno) );
+		assert( syscall_sock->end_of_message() );
+		rval = -1;
+		_condor_signals_enable( omask );
+		SetSyscalls( scm );
+		errno = (int)terrno;
+		return rval;
+	}
+	assert( syscall_sock->end_of_message() );
+
+		/* Send file length */
+	file_size = lseek( loc_fd, 0, 2 );
+	lseek( loc_fd, 0, 0 );
+	syscall_sock->encode();
+	assert( syscall_sock->code(file_size) );
+
+		/* Transfer the data */
+	for( bytes_to_go = file_size; bytes_to_go; bytes_to_go -= len ) {
+		len = bytes_to_go < sizeof(buf) ? bytes_to_go : sizeof(buf);
+		read_status = read( loc_fd, buf, len );
+		assert( syscall_sock->code_bytes_bool(buf,len) );
+	}
+	(void)close( loc_fd );
+
+		/* As a check, re-send the length */
+	assert( syscall_sock->code(file_size) );
+	assert( syscall_sock->end_of_message() );
+
+
+		/* Get cumulative status from remote writes */
+	syscall_sock->decode();
+	assert( syscall_sock->code(write_status) );
+	if( write_status < 0 ) {
+		assert( syscall_sock->code(terrno) );
+		assert( syscall_sock->end_of_message() );
+		rval = write_status;
+		_condor_signals_enable( omask );
+		SetSyscalls( scm );
+		errno = (int)terrno;
+		return rval;
+	}
+	assert( syscall_sock->end_of_message() );
+
+		/* If we had a local error on the reads, we had to ignore
+		   it until now to avoid getting out of sync with the
+		   shadow - now we can deal with it.
+		*/
+	if( read_status < 0 ) {
+		rval = read_status;
+		_condor_signals_enable( omask );
+		SetSyscalls( scm );
+		return rval;
+	}
+
+		/* Everything worked - status is cumulative status from
+		   remote writes.
+		*/
+	rval = write_status;
+	_condor_signals_enable( omask );
+	SetSyscalls( scm );
+	return rval;
+}
+
+int
+REMOTE_CONDOR_get_file(char *remote, char *local, int mode)
+{
+	int		loc_fd;
+	int		open_status, write_status = 0, read_status;
+	char	buf[ CONDOR_IO_BUF_SIZE ];
+	int		checksum;
+	int		len;
+	int		file_size;
+	int		bytes_to_go;
+	int		scm;
+	int		close_status;
+	int		rval;
+	sigset_t	omask;
+	condor_errno_t	terrno;
+
+	scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+	omask = _condor_signals_disable();
+
+	CurrentSysCall = CONDOR_get_file;
+
+		/* Open local file for writing */
+	loc_fd = open( local, O_WRONLY|O_CREAT|O_TRUNC, mode );
+	if( loc_fd < 0 ) {
+		rval = -1;
+		_condor_signals_enable( omask );
+		SetSyscalls( scm );
+		return rval;
+	}
+
+		/* Send over the file name */
+	syscall_sock->encode();
+	assert( syscall_sock->code(CurrentSysCall) );
+	assert( syscall_sock->code(remote) );
+	assert( syscall_sock->end_of_message() );
+
+		/* Grab the result of the remote open */
+	syscall_sock->decode();
+	assert( syscall_sock->code(rval) );
+	if( rval < 0 ) {
+		assert( syscall_sock->code(terrno) );
+		assert( syscall_sock->end_of_message() );
+		rval = -1;
+		_condor_signals_enable( omask );
+		SetSyscalls( scm );
+		errno = (int)terrno;
+		return rval;
+	}
+
+		/* Get the size of the file */
+	assert( syscall_sock->code(file_size) );
+
+		/* Transfer the data */
+	for( bytes_to_go = file_size; bytes_to_go; bytes_to_go -= len ) {
+		len = bytes_to_go < sizeof(buf) ? bytes_to_go : sizeof(buf);
+		assert( syscall_sock->code_bytes_bool(buf,len) );
+		write_status = write( loc_fd, buf, len );
+	}
+	close_status = close( loc_fd );
+	if( close_status < 0 ) {
+		dprintf( D_ALWAYS,
+			"Close of \"%s\" failed - errno = %d\n", local, errno
+		);
+	}
+
+		/* Should get file size again as a check */
+	assert( syscall_sock->code(checksum) );
+	assert( checksum == file_size );
+
+		/* Get status from remote reads */
+	assert( syscall_sock->code(read_status) );
+	if( read_status < 0 ) {
+		assert( syscall_sock->code(terrno) );
+		assert( syscall_sock->end_of_message() );
+		rval = -1;
+		_condor_signals_enable( omask );
+		SetSyscalls( scm );
+		errno = (int)terrno;
+		return rval;
+	}
+	assert( syscall_sock->end_of_message() );
+
+	/* Wrapup */
+	if( write_status >= 0 && read_status >= 0 && close_status >= 0 ) {
+		dprintf( D_ALWAYS,
+			"CONDOR_get_file: transferred %d bytes\n", file_size );
+		rval = 0;
+	} else {
+		rval = -1;
+	}
+
+	_condor_signals_enable( omask );
+	SetSyscalls( scm );
+	return rval;
+}
+
+} /* end of extern "C" from prologue */

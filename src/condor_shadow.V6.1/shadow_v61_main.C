@@ -28,16 +28,18 @@
 #include "mpishadow.h"
 #include "exit.h"
 #include "condor_debug.h"
+#include "condor_version.h"
 #include "condor_attributes.h"
 #include "condor_qmgr.h"
+#include "shadow_initializer.h"
 
-BaseShadow *Shadow;
+BaseShadow *Shadow = NULL;
+ShadowInitializer *shad_init = NULL;
 
 static void
 usage()
 {
-	printf( "Usage: condor_shadow schedd_addr host"
-			 "capability cluster proc\n" );
+	printf( "Usage: condor_shadow schedd_addr host capability cluster proc\n" );
 	exit( JOB_SHADOW_USAGE );
 }
 
@@ -94,59 +96,25 @@ main_init(int argc, char *argv[])
 							(ReaperHandler)&dummy_reaper,
 							"dummy_reaper",NULL);
 
-		// We have to figure out what sort of shadow to make.
-		// That's why so much processing goes on here....
-
-		// Get the jobAd from the schedd:
-	ClassAd *jobAd = NULL;
-	char schedd_addr[128];
-	int cluster, proc;
-	strncpy ( schedd_addr, argv[1], 128 );
-	cluster = atoi(argv[4]);
-	proc = atoi(argv[5]);
-
-		// talk to the schedd to get job ad & set remote host:
-	if (!ConnectQ(schedd_addr, SHADOW_QMGMT_TIMEOUT, true)) {
-		EXCEPT("Failed to connect to schedd!");
+	/* Get the job ad and figure what kind of shadow to instantiate. */
+	shad_init = new ShadowInitializer(argc, argv);
+	if (shad_init == NULL)
+	{
+		EXCEPT("Out of memory in main_init()!");
 	}
-	jobAd = GetJobAd(cluster, proc);
-	DisconnectQ(NULL);
-	if (!jobAd) {
-		dprintf( D_ALWAYS, "errno: %d\n", errno );
-		EXCEPT("Failed to get job ad from schedd.");
-	}
-
-	int universe;
-	if (jobAd->LookupInteger(ATTR_JOB_UNIVERSE, universe) < 0) {
-			// change to standard when they work...
-		universe = VANILLA;
-	}
-	
-	switch ( universe ) {
-	case VANILLA:
-	case STANDARD:
-		Shadow = new UniShadow();
-		break;
-	case MPI:
-		Shadow = new MPIShadow();
-		break;
-	case PVM:
-		EXCEPT( "PVM...hopefully one day..." );
-//		Shadow = new PVMShadow();
-		break;
-	default:
-		dprintf ( D_ALWAYS, "Unknown universe: %d.\n", universe );
-		EXCEPT( "Universe not supported" );
-	}
-
-	Shadow->init( jobAd, argv[1], argv[2], argv[3], argv[4], argv[5]);
-
+	shad_init->Bootstrap();
 	return 0;
 }
 
 int
-main_config()
+main_config( bool is_full )
 {
+	if (Shadow == NULL)
+	{
+		dprintf(D_ALWAYS,
+			"Failed to config shadow because it is of unknown type.\n");
+		return 0;
+	}
 	Shadow->config();
 	return 0;
 }
@@ -154,16 +122,61 @@ main_config()
 int
 main_shutdown_fast()
 {
-	Shadow->shutDown(JOB_NOT_CKPTED, 0);
+	if (Shadow == NULL)
+	{
+		dprintf(D_ALWAYS,
+			"Failed to fast shutdown shadow because it is of unknown type.\n");
+		return 0;
+	}
+	Shadow->shutDown( JOB_NOT_CKPTED );
 	return 0;
 }
 
 int
 main_shutdown_graceful()
 {
-	// should request a graceful shutdown from startd here
-	exit(0);	// temporary
+	Shadow->gracefulShutDown();
 	return 0;
 }
 
+
+void
+dumpClassad( const char* header, ClassAd* ad, int debug_flag )
+{
+	if( ! header  ) {
+		dprintf( D_ALWAYS, "ERROR: called dumpClassad() w/ NULL header\n" ); 
+		return;
+	}
+	if( ! ad  ) {
+		dprintf( D_ALWAYS, "ERROR: called dumpClassad(\"%s\") w/ NULL ad\n", 
+				 header );   
+		return;
+	}
+	if( DebugFlags & debug_flag ) {
+		dprintf( debug_flag, "*** ClassAd Dump: %s ***\n", header );  
+		ad->dPrint( debug_flag );
+		dprintf( debug_flag, "--- End of ClassAd ---\n" );
+	}
+}
+
+
+void
+printClassAd( void )
+{
+	printf( "%s = True\n", ATTR_IS_DAEMON_CORE );
+	printf( "%s = True\n", ATTR_HAS_FILE_TRANSFER );
+	printf( "%s = True\n", ATTR_HAS_MPI );
+	printf( "%s = True\n", ATTR_HAS_JAVA );
+	printf( "%s = \"%s\"\n", ATTR_VERSION, CondorVersion() );
+}
+
+
+void
+main_pre_dc_init( int argc, char* argv[] )
+{
+	if( argc == 2 && strincmp(argv[1],"-cl",3) == MATCH ) {
+		printClassAd();
+		exit(0);
+	}
+}
 

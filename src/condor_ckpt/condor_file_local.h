@@ -15,6 +15,7 @@ go in CondorFileBasic.
 class CondorFileLocal : public CondorFileBasic {
 public:
 	CondorFileLocal();
+	virtual ~CondorFileLocal();
 
 	virtual int read(int offset, char *data, int length);
 	virtual int write(int offset, char *data, int length);

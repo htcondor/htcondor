@@ -23,7 +23,12 @@
 #ifndef __EXPR_TREE_H__
 #define __EXPR_TREE_H__
 
+#if (__GNUC__<3)
 #include <hash_map>
+#else
+#include <ext/hash_map>
+using namespace __gnu_cxx;
+#endif
 #include "common.h"
 #include "value.h"
 
@@ -48,6 +53,8 @@ class EvalState {
 		EvalCache	cache;
 		ClassAd		*rootAd;
 		ClassAd 	*curAd;
+
+		bool		flattenAndInline;	// NAC
 };
 
 /** A node of the expression tree, which may be a literal, attribute reference,

@@ -25,6 +25,8 @@
 #include "condor_debug.h"
 #include "condor_syscall_mode.h"
 #include "condor_uid.h"
+#include "condor_environ.h"
+#include "condor_distribution.h"
 
 /* See condor_uid.h for description. */
 static char* CondorUserName = NULL;
@@ -44,9 +46,6 @@ static char *priv_state_name[] = {
 /* Start Common Bits */
 #define HISTORY_LENGTH 32
 
-
-
-
 static struct {
 	time_t		timestamp;
 	priv_state	priv;
@@ -54,6 +53,17 @@ static struct {
 	int			line;
 } priv_history[HISTORY_LENGTH];
 static int ph_head=0, ph_count=0;
+
+
+const char*
+priv_to_string( priv_state p )
+{
+	if( p < _priv_state_threshold ) {
+		return priv_state_name[p];
+	}
+	return "PRIV_INVALID";
+}
+
 
 void
 log_priv(priv_state prev, priv_state new_priv, char file[], int line)
@@ -88,6 +98,12 @@ display_priv_log(void)
 }
 
 
+priv_state
+get_priv()
+{
+	return CurrentPrivState;
+}
+
 /* End Common Bits */
 
 
@@ -98,7 +114,7 @@ display_priv_log(void)
 
 // Lots of functions just stubs on Win NT for now....
 void init_condor_ids() {}
-void set_user_ids(uid_t uid, gid_t gid) {}
+int set_user_ids(uid_t uid, gid_t gid) { return FALSE; }
 uid_t get_my_uid() { return 999999; }
 gid_t get_my_gid() { return 999999; }
 
@@ -129,12 +145,19 @@ void init_user_nobody_loginname(const char *login)
 	NobodyLoginName = strdup(login);
 }
 
-void init_user_ids(const char username[]) 
+const char *get_user_nobody_loginname()
+{
+    return NobodyLoginName;
+}
+
+int
+init_user_ids(const char username[]) 
 {
 	if ( strcmp(username,"nobody") != 0 ) {
+		// we want something *other* than "nobody".
 		// here we call routines to deal with password server
 		// or as Jeff says: "insert hand waving here"  :^)
-		return;
+		return FALSE;
 	}
 
 	// at this point, we know we want a user nobody, so
@@ -144,7 +167,7 @@ void init_user_ids(const char username[])
 		// we already have a user nobody handle created
 		// so just make it the CurrUserHandle
 		CurrUserHandle = DynUser.get_token();
-		return;
+		return TRUE;
 	}
 
 	if ( !NobodyLoginName ) {
@@ -158,6 +181,7 @@ void init_user_ids(const char username[])
 
 	// we created a new user, now just stash the token
 	CurrUserHandle = DynUser.get_token();
+	return TRUE;
 }
 
 priv_state
@@ -199,8 +223,11 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 					RevertToSelf();
 				}
 				ImpersonateLoggedOnUser(CurrUserHandle);
+			} else {
+				// We do not have a CurrUserHandle.  So don't record ourselves
+				// as in a user priv state.... switch back to what we were.
+				CurrentPrivState = PrevPrivState;
 			}
-
 			break;
 		case PRIV_UNKNOWN:		/* silently ignore */
 			break;
@@ -304,11 +331,11 @@ is_root( void )
 
 #ifndef FALSE
 #define FALSE 0
-#endif FALSE
+#endif /* FALSE */
 
 #ifndef TRUE
 #define TRUE 1
-#endif TRUE
+#endif /* TRUE */
 
 #define ROOT 0
 
@@ -359,7 +386,7 @@ init_condor_ids()
 		free( CondorUserName );
 	}
 
-	pwd=getpwnam("condor");
+	pwd=getpwnam( myDistro->Get() );
 	if( pwd ) {
 		RealCondorUid = pwd->pw_uid;
 		RealCondorGid = pwd->pw_gid;
@@ -371,25 +398,26 @@ init_condor_ids()
 	/* If we're root, set the Condor Uid and Gid to the value
 	   specified in the "CONDOR_IDS" environment variable */
 	if( MyUid == ROOT ) {
-		if( (buf = getenv( "CONDOR_IDS" )) ) {	
+		const char	*envName = EnvGetName( ENV_UG_IDS ); 
+		if( (buf = getenv( envName )) ) {	
 			if( sscanf(buf, "%d.%d", &CondorUid, &CondorGid) != 2 ) {
-				fprintf(stderr, "ERROR: badly formed value in CONDOR_IDS ");
+				fprintf(stderr, "ERROR: badly formed value in %s ", envName );
 				fprintf(stderr, "environment variable.\n");
-				fprintf(stderr, "Please set CONDOR_IDS to ");
+				fprintf(stderr, "Please set %s to ", envName);
 				fprintf(stderr, "the '.' seperated uid, gid pair that\n");
-				fprintf(stderr, "should be used by Condor.\n");
+				fprintf(stderr, "should be used by %s.\n", myDistro->Get() );
 				exit(1);
 			}
 			pwd = getpwuid( CondorUid );
 			if( pwd ) {
 				CondorUserName = strdup( pwd->pw_name );
 			} else {
-				fprintf( stderr, "ERROR: the uid specified in CONDOR_IDS " );
+				fprintf( stderr, "ERROR: the uid specified in %s ", envName );
 				fprintf( stderr, "environment variable (%d)\n", CondorUid );
 				fprintf(stderr, "does not exist in your password information.\n" );
-				fprintf(stderr, "Please set CONDOR_IDS to ");
+				fprintf(stderr, "Please set %s to ", envName);
 				fprintf(stderr, "the '.' seperated uid, gid pair that\n");
-				fprintf(stderr, "should be used by Condor.\n");
+				fprintf(stderr, "should be used by %s.\n", myDistro->Get() );
 				exit(1);
 			}
 		} else {
@@ -397,11 +425,11 @@ init_condor_ids()
 			if( RealCondorUid > 0 ) {
 				CondorUid = RealCondorUid;
 				CondorGid = RealCondorGid;
-				CondorUserName = strdup( "condor" );
+				CondorUserName = strdup( myDistro->Get() );
 			} else {
 				fprintf(stderr,
 						"Can't find \"condor\" in the password file and\n"
-						"CONDOR_IDS environment variable not set\n"); 
+						"%s environment variable not set\n", envName); 
 				exit(1);
 			}
 		}
@@ -435,12 +463,23 @@ init_condor_ids()
 	CondorIdsInited = TRUE;
 }
 
-static void
-set_user_ids_implementation( uid_t uid, gid_t gid, const char *username )
+
+static int
+set_user_ids_implementation( uid_t uid, gid_t gid, const char *username, 
+							 int is_quiet ) 
 {
-	if(UserIdsInited && UserUid != uid) {
-		dprintf(D_ALWAYS, "warning: setting UserUid to %d, was %d previosly\n",
-				uid, UserUid);
+	if( uid == 0 || gid == 0 ) {
+			// NOTE: we want this dprintf() even if we're in quiet
+			// mode, since we should *never* be allowing this.
+		dprintf( D_ALWAYS, "ERROR: Attempt to initialize user_priv " 
+				 "with root privileges rejected\n" );
+		return FALSE;
+	}
+
+	if( UserIdsInited && UserUid != uid && !is_quiet ) {
+		dprintf( D_ALWAYS, 
+				 "warning: setting UserUid to %d, was %d previosly\n",
+				 uid, UserUid );
 	}
 	UserUid = uid;
 	UserGid = gid;
@@ -465,11 +504,75 @@ set_user_ids_implementation( uid_t uid, gid_t gid, const char *username )
 	} else {
 		UserName = NULL;
 	}
+	return TRUE;
 }
 
 
-void
-init_user_ids( const char username[] )
+/*
+  Initialize the correct uid/gid for user "nobody".  Most of the
+  special-case logic for this code came from
+  condor_starter.V5/starter_common.C: determine_user_ids()
+*/
+int
+init_nobody_ids( int is_quiet )
+{
+    struct passwd *pwd_entry = NULL;
+	int nobody_uid = -1;
+	int nobody_gid = -1;
+
+	if( (pwd_entry = getpwnam("nobody")) == NULL ) {
+#ifdef HPUX
+		// the HPUX9 release does not have a default entry for nobody,
+		// so we'll help condor admins out a bit here...
+		nobody_uid = 59999;
+		nobody_gid = 59999;
+#else
+		if( ! is_quiet ) {
+			dprintf( D_ALWAYS, 
+					 "Can't find UID for \"nobody\" in passwd file\n" );
+		}
+		return FALSE;
+#endif
+	}
+
+	nobody_uid = pwd_entry->pw_uid;
+	nobody_gid = pwd_entry->pw_gid;
+
+#ifdef HPUX
+	// HPUX9 has a bug in that getpwnam("nobody") always returns
+	// a gid of 60001, no matter what the group file (or NIS) says!
+	// on top of that, legal UID/GIDs must be -1<x<60000, so unless we
+	// patch here, we will generate an EXCEPT later when we try a
+	// setgid().  -Todd Tannenbaum, 3/95
+	if( (nobody_uid > 59999) || (nobody_uid < 0) ) {
+		nobody_uid = 59999;
+	}
+	if( (nobody_gid > 59999) || (nobody_gid < 0) ) {
+		nobody_gid = 59999;
+	}
+#endif
+
+#ifdef IRIX
+		// Same weirdness on IRIX.  60001 is the default uid for
+		// nobody, lets hope that works.
+	if( (nobody_uid >= UID_MAX ) || (nobody_uid < 0) ) {
+		nobody_uid = 60001;
+	}
+	if( (nobody_gid >= UID_MAX) || (nobody_gid < 0) ) {
+		nobody_gid = 60001;
+	}
+#endif
+
+		// Now we know what the uid/gid for nobody should *really* be,
+		// so we can actually initialize this as the "user" priv.
+	return set_user_ids_implementation( (uid_t)nobody_uid,
+										(gid_t)nobody_gid, "nobody",
+										is_quiet );
+}
+
+
+int
+init_user_ids_implementation( const char username[], int is_quiet )
 {
     struct passwd       *pwd;
 	int					scm;
@@ -481,20 +584,48 @@ init_user_ids( const char username[] )
 	*/
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
 
+	if( ! stricmp(username, "nobody") ) {
+			// There's so much special logic for user nobody that it's
+			// all in a seperate function now.
+		return init_nobody_ids( is_quiet );
+	}
+
 	if( (pwd=getpwnam(username)) == NULL ) {
-		dprintf( D_ALWAYS, "%s not in passwd file\n", username );
-		return;
+		if( ! is_quiet ) {
+			dprintf( D_ALWAYS, "%s not in passwd file\n", username );
+		}
+		return FALSE;
 	}
 	(void)endpwent();
 	(void)SetSyscalls( scm );
-	set_user_ids_implementation( pwd->pw_uid, pwd->pw_gid, username );
+	return set_user_ids_implementation( pwd->pw_uid, pwd->pw_gid,
+										username, is_quiet ); 
 }
 
 
-void
+int
+init_user_ids( const char username[] ) {
+	return init_user_ids_implementation( username, 0 );
+}
+
+
+int
+init_user_ids_quiet( const char username[] ) {
+	return init_user_ids_implementation( username, 1 );
+}
+
+
+int
 set_user_ids(uid_t uid, gid_t gid)
 {
-	set_user_ids_implementation( uid, gid, NULL );
+	return set_user_ids_implementation( uid, gid, NULL, 0 );
+}
+
+
+int
+set_user_ids_quiet(uid_t uid, gid_t gid)
+{
+	return set_user_ids_implementation( uid, gid, NULL, 1 );
 }
 
 
@@ -503,7 +634,6 @@ uninit_user_ids()
 {
 	UserIdsInited = FALSE;
 }
-
 
 
 priv_state
@@ -517,6 +647,16 @@ _set_priv(priv_state s, char file[], int line, int dologging)
 		return PRIV_USER_FINAL;
 	}
 	CurrentPrivState = s;
+
+		// If we haven't already done so, we want to try to init the
+		// condor ids, since that's where we figure out if we're root
+		// or not, and therefore, initialize the SwitchIds variable
+		// to the right thing (there's no need to try switching unless
+		// we were started as root).
+	if( !CondorIdsInited ) {
+		init_condor_ids();
+	}
+
 	if (SwitchIds) {
 		switch (s) {
 		case PRIV_ROOT:
@@ -703,7 +843,7 @@ set_user_egid()
 		errno = 0;
 		if( (initgroups(UserName, UserGid) < 0) ) {
 			dprintf( D_ALWAYS, 
-					 "set_user_rgid - ERROR: initgroups(%s, %d) failed, "
+					 "set_user_egid - ERROR: initgroups(%s, %d) failed, "
 					 "errno: %d\n", UserName, UserGid, errno );
 		}			
 	}
@@ -785,13 +925,3 @@ is_root( void )
 }
 
 #endif  /* #if defined(WIN32) */
-
-
-
-
-
-
-
-
-
-

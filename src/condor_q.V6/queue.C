@@ -3,7 +3,7 @@
  *
  * See LICENSE.TXT for additional notices and disclaimers.
  *
- * Copyright (c)1990-1998 CONDOR Team, Computer Sciences Department, 
+ * Copyright (c)1990-2001 CONDOR Team, Computer Sciences Department, 
  * University of Wisconsin-Madison, Madison, WI.  All Rights Reserved.  
  * No use of the CONDOR Software Program Source Code is authorized 
  * without the express consent of the CONDOR Team.  For more information 
@@ -50,11 +50,12 @@
 #include "basename.h"
 #include "metric_units.h"
 #include "condor_classad_analysis.h"
+#include "globus_utils.h"
+#include "print_wrapped_text.h"
+#include "condor_distribution.h"
 
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
-extern  void short_print_to_buffer(char*,int,int,const char*,int,int,int,int,
-							int, const char *);
 static  void processCommandLineArguments(int, char *[]);
 
 static  bool process_buffer_line( ClassAd * );
@@ -70,7 +71,9 @@ static	bool show_queue (char* scheddAddr, char* scheddName, char* scheddMachine)
 static	bool show_queue_buffered (char* scheddAddr, char* scheddName,
 								  char* scheddMachine);
 
-static 	int verbose = 0, summarize = 1, global = 0, show_io = 0;
+static 	int verbose = 0, summarize = 1, global = 0, show_io = 0, dag = 0;
+static  int use_xml = 0;
+static  bool expert = false;
 static 	int malformed, unexpanded, running, idle, held;
 
 static const float PriorityDelta = 0.5;  // NAC - from condor_accountant.h
@@ -83,16 +86,29 @@ static	ClassAdList	scheddList;
 
 static  ClassAdAnalyzer analyzer;	// NAC
 
+static char* format_owner( char*, ClassAd* );
+
 // clusterProcString is the container where the output strings are
 //    stored.  We need the cluster and proc so that we can sort in an
 //    orderly manner (and don't need to rely on the cluster.proc to be
 //    available....)
 
-typedef struct {
+class clusterProcString {
+public:
+	clusterProcString();
+	int parent_cluster;
+	int parent_proc;
 	int cluster;
 	int proc;
 	char * string;
-} clusterProcString;
+};
+
+clusterProcString::
+clusterProcString() {
+	// these need to be initialized so that sorting works
+	parent_cluster = 0;
+	parent_proc = 0;
+}
 
 static  ExtArray<clusterProcString *> *output_buffer;
 static	bool		output_buffer_empty = true;
@@ -145,7 +161,9 @@ int main (int argc, char **argv)
 	char		*tmp;
 
 	// load up configuration file
+	myDistro->Init( argc, argv );
 	config();
+
 
 #if !defined(WIN32)
 	install_sig_handler(SIGPIPE, SIG_IGN );
@@ -182,7 +200,35 @@ int main (int argc, char **argv)
 							scheddMachine ) );
 			}
 		} else {
-			fprintf( stderr, "Can't display queue of local schedd\n" );
+			int text_position = 0;
+			char error_message[1024];
+			print_wrapped_text("Error: Couldn't contact the local "
+							   "condor_schedd process.",
+							   stderr);
+			if (!expert) {
+				char *log_directory = NULL;
+				log_directory = param("LOG");
+				fprintf(stderr, "\n");
+				print_wrapped_text("Extra Info: the condor_schedd is the local process "
+								   "that runs "
+								   "on this machine and monitors your job "
+								   "submissions. Either it "
+								   "isn't running, or it is failing to "
+								   "communicate. Check with your system administrator "
+								   "to see why.", stderr);
+				fprintf(stderr, "\n");
+				sprintf(error_message, 
+						"If you are the system administrator, check the "
+						"MasterLog and SchedLog in %s "
+						"for possible clues as to why the condor_schedd "
+						"is misbehaving. Also see the Troubleshooting "
+						"section of the manual.", 
+						log_directory ? log_directory : "your Condor log directory");
+				print_wrapped_text(error_message, stderr);
+                if (log_directory) {
+                    free(log_directory);
+                }
+			}
 			exit( 1 );
 		}
   	}
@@ -257,39 +303,88 @@ processCommandLineArguments (int argc, char *argv[])
 	
 	for (i = 1; i < argc; i++)
 	{
-		// if the argument begins with a '-', use only the part following
+		if( *argv[i] != '-' ) {
+			// no dash means this arg is a cluster/proc, proc, or owner
+			if( sscanf( argv[i], "%d.%d", &cluster, &proc ) == 2 ) {
+				sprintf( constraint, "((%s == %d) && (%s == %d))", 
+						 ATTR_CLUSTER_ID, cluster, ATTR_PROC_ID, proc );
+				Q.addOR( constraint );
+				summarize = 0;
+			} 
+			else if( sscanf ( argv[i], "%d", &cluster ) == 1 ) {
+				sprintf( constraint, "(%s == %d)", ATTR_CLUSTER_ID, cluster );
+				Q.addOR( constraint );
+				summarize = 0;
+			} 
+			else if( Q.add( CQ_OWNER, argv[i] ) != Q_OK ) {
+				// this error doesn't seem very helpful... can't we say more?
+				fprintf( stderr, "Error: Argument %d (%s)\n", i, argv[i] );
+				exit( 1 );
+			}
+			continue;
+		}
+
+		// the argument began with a '-', so use only the part after
 		// the '-' for prefix matches
-		if (*argv[i] == '-') 
-			arg = argv[i]+1;
-		else
-			arg = argv[i];
+		arg = argv[i]+1;
 
 		if (match_prefix (arg, "long")) {
 			verbose = 1;
 			summarize = 0;
 		} 
 		else
+		if (match_prefix (arg, "xml")) {
+			use_xml = 1;
+			verbose = 1;
+			summarize = 0;
+		}
+		else
 		if (match_prefix (arg, "pool")) {
 			if( pool ) {
 				delete [] pool;
 			}
-			i++;
-			if( ! (argv[i] && *argv[i]) ) {
-				fprintf( stderr, 
-						 "Error: Argument -pool requires another parameter\n" );
+            if( ++i >= argc ) {
+				fprintf( stderr,
+						 "Error: Argument -pool requires a hostname as an argument.\n" );
+				if (!expert) {
+					printf("\n");
+					print_wrapped_text("Extra Info: The hostname should be the central "
+									   "manager of the Condor pool you wish to work with.",
+									   stderr);
+				}
 				exit(1);
 			}
 			pool = get_full_hostname((const char *)argv[i]);
 			if( ! pool ) {
-				fprintf( stderr, "%s: unknown host %s\n", 
-						 argv[0], argv[i] );
+				fprintf( stderr, "Error: Unknown host %s\n", argv[i] );
+				if (!expert) {
+					printf("\n");
+					print_wrapped_text("Extra Info: You specified a hostname for a pool "
+									   "(the -pool argument). That should be the Internet "
+									   "host name for the central manager of the pool, "
+									   "but it does not seem to "
+									   "be a valid hostname. (The DNS lookup failed.)",
+									   stderr);
+				}
 				exit(1);
 			}
 		} 
 		else
 		if (match_prefix (arg, "D")) {
+			if( ++i >= argc ) {
+				fprintf( stderr, 
+						 "Error: Argument -D requires a list of flags as an argument.\n" );
+				if (!expert) {
+					printf("\n");
+					print_wrapped_text("Extra Info: You need to specify debug flags "
+									   "as a quoted string. Common flags are D_ALL, and "
+									   "D_ALWAYS.",
+									   stderr);
+				}
+				exit( 1 );
+			}
 			Termlog = 1;
-			set_debug_flags( argv[++i] );
+			set_debug_flags( argv[i] );
 		} 
 		else
 		if (match_prefix (arg, "name")) {
@@ -297,19 +392,38 @@ processCommandLineArguments (int argc, char *argv[])
 			if (querySubmittors) {
 				// cannot query both schedd's and submittors
 				fprintf (stderr, "Cannot query both schedd's and submitters\n");
+				if (!expert) {
+					printf("\n");
+					print_wrapped_text("Extra Info: You cannot specify both -name and "
+									   "-submitter. -name implies you want to only query "
+									   "the local schedd, while -submitter implies you want "
+									   "to find everything in the entire pool for a given"
+									   "submitter.",
+									   stderr);
+				}
 				exit(1);
 			}
 
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
 				fprintf( stderr, 
-						 "Error: Argument -name requires another parameter\n" );
+						 "Error: Argument -name requires the name of a schedd as a parameter.\n" );
 				exit(1);
 			}
 
 			if( !(daemonname = get_daemon_name(argv[i+1])) ) {
-				fprintf( stderr, "%s: unknown host %s\n",
-						 argv[0], get_host_part(argv[i+1]) );
+				fprintf( stderr, "Error: unknown host %s\n",
+						 get_host_part(argv[i+1]) );
+				if (!expert) {
+					printf("\n");
+					print_wrapped_text("Extra Info: The name given with the -name "
+									   "should be the name of a condor_schedd process. "
+									   "Normally it is either a hostname, or "
+									   "\"name@hostname\". "
+									   "In either case, the hostname should be the Internet "
+									   "host name, but it appears that it wasn't.",
+									   stderr);
+				}
 				exit(1);
 			}
 			sprintf (constraint, "%s == \"%s\"", ATTR_NAME, daemonname);
@@ -330,13 +444,22 @@ processCommandLineArguments (int argc, char *argv[])
 			if (querySchedds) {
 				// cannot query both schedd's and submittors
 				fprintf (stderr, "Cannot query both schedd's and submitters\n");
+				if (!expert) {
+					printf("\n");
+					print_wrapped_text("Extra Info: You cannot specify both -name and "
+									   "-submitter. -name implies you want to only query "
+									   "the local schedd, while -submitter implies you want "
+									   "to find everything in the entire pool for a given"
+									   "submitter.",
+									   stderr);
+				}
 				exit(1);
 			}
 			
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -submitter requires another "
-							"parameter\n");
+				fprintf( stderr, "Error: Argument -submitter requires the name of a "
+						 "user.\n");
 				exit(1);
 			}
 				
@@ -347,7 +470,7 @@ processCommandLineArguments (int argc, char *argv[])
 				*at = '\0';
 			} else {
 				// no ... add UID_DOMAIN
-				char *uid_domain = param("UID_DOMAIN");
+				char *uid_domain = param( "UID_DOMAIN" );
 				if (uid_domain == NULL)
 				{
 					EXCEPT ("No 'UID_DOMAIN' found in config file");
@@ -440,20 +563,6 @@ processCommandLineArguments (int argc, char *argv[])
 			i+=2;
 		}
 		else
-		if (sscanf (argv[i], "%d.%d", &cluster, &proc) == 2) {
-			sprintf (constraint, "((%s == %d) && (%s == %d))", 
-									ATTR_CLUSTER_ID, cluster,
-									ATTR_PROC_ID, proc);
-			Q.addOR (constraint);
-			summarize = 0;
-		} 
-		else
-		if (sscanf (argv[i], "%d", &cluster) == 1) {
-			sprintf (constraint, "(%s == %d)", ATTR_CLUSTER_ID, cluster);
-			Q.addOR (constraint);
-			summarize = 0;
-		} 
-		else
 		if (match_prefix (arg, "global")) {
 			global = 1;
 		} 
@@ -473,13 +582,14 @@ processCommandLineArguments (int argc, char *argv[])
 		}
 		else
 		if (match_prefix( arg, "goodput")) {
-			cputime = false;
+			// goodput and show_io require the same column
+			// real-estate, so they're mutually exclusive
 			goodput = true;
+			show_io = false;
 		}
 		else
 		if (match_prefix( arg, "cputime")) {
 			cputime = true;
-			goodput = false;
 			JOB_TIME = "CPU_TIME";
 		}
 		else
@@ -492,15 +602,28 @@ processCommandLineArguments (int argc, char *argv[])
 			globus = true;
 		}
 		else
+		if( match_prefix( arg, "debug" ) ) {
+			// dprintf to console
+			Termlog = 1;
+			dprintf_config ("TOOL", 2 );
+		}
+		else
 		if (match_prefix(arg,"io")) {
+			// goodput and show_io require the same column
+			// real-estate, so they're mutually exclusive
 			show_io = true;
+			goodput = false;
 		}   
+		else if( match_prefix( arg, "dag" ) ) {
+			dag = true;
+		}   
+		else if (match_prefix(arg, "expert")) {
+			expert = true;
+		}
 		else {
-			// assume name of owner of job
-			if (Q.add (CQ_OWNER, argv[i]) != Q_OK) {
-				fprintf (stderr, "Error: Argument %d (%s)\n", i, argv[i]);
-				exit (1);
-			}
+			fprintf( stderr, "Error: unrecognized argument -%s\n", arg );
+			usage(argv[0]);
+			exit( 1 );
 		}
 	}
 }
@@ -552,11 +675,6 @@ job_time(float cpu_time,ClassAd *ad)
 	return total_wall_time;
 }
 
-static void io_header()
-{
-	printf("%-8s %-8s %8s %8s %8s %10s %8s %8s\n", "ID","OWNER","READ","WRITE","SEEK","XPUT","BUFSIZE","BLKSIZE");
-}
-
 static void
 io_display(ClassAd *ad)
 {
@@ -586,14 +704,15 @@ buffer_io_display( ClassAd *ad )
 	ad->EvaluateAttrInt( ATTR_BUFFER_SIZE, buffer_size );				// NAC
 	ad->EvaluateAttrInt( ATTR_BUFFER_BLOCK_SIZE, block_size );			// NAC
 
-	sprintf(return_buff, "%4d.%-3d %-8s",cluster,proc,owner);
+	sprintf( return_buff, "%4d.%-3d %-14s", cluster, proc,
+			 format_owner( owner, ad ) );
 
 	/* If the jobAd values are not set, OR the values are all zero,
 	   report no data collected.  This could be true for a vanilla
 	   job, or for a standard job that has not checkpointed yet. */
 
 	if(wall_clock<0 || (!read_bytes && !write_bytes && !seek_count) ) {
-		strcat(return_buff, "          [ no i/o data collected yet ]\n");
+		strcat(return_buff, "   [ no i/o data collected ]\n");
 	} else {
 		if(wall_clock==0) wall_clock=1;
 
@@ -623,8 +742,8 @@ bufferJobShort( ClassAd *ad ) {
 	int cluster, proc, date, status, prio, image_size;
 	float utime;
 	double utimeD;
-	char owner[64], cmd[10240], args[10240];
-	char buffer[10240];	
+	char owner[64], cmd[ATTRLIST_MAX_EXPRESSION], args[ATTRLIST_MAX_EXPRESSION];
+	char buffer[ATTRLIST_MAX_EXPRESSION];
 	if (!ad->EvaluateAttrInt( ATTR_CLUSTER_ID,  cluster )			||	// NAC
 		!ad->EvaluateAttrInt( ATTR_PROC_ID,  proc )					||	// NAC
 		!ad->EvaluateAttrInt( ATTR_Q_DATE,  date )					||	// NAC
@@ -656,35 +775,47 @@ bufferJobShort( ClassAd *ad ) {
 		sprintf( buffer, "%s", basename(cmd) );
 	}
 	utime = job_time(utime,ad);
-	short_print_to_buffer (return_buff, cluster, proc, owner, date, (int)utime,
-					status, prio, image_size, buffer); 
 
-	switch (status)
-	{
-		case UNEXPANDED: unexpanded++; break;
-		case IDLE:       idle++;       break;
-		case RUNNING:    running++;    break;
-		case HELD:		 held++;	   break;
-	}
+	sprintf( return_buff,
+			 "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %-18.18s\n",
+			 cluster,
+			 proc,
+			 format_owner( owner, ad ),
+			 format_date( (time_t)date ),
+			 /* In the next line of code there is an (int) typecast. This
+			 	has to be there otherwise the compiler produces incorrect code
+				here and performs a structural typecast from the float to an
+				int(like how a union works) and passes a garbage number to the
+				format_time function. The compiler is *supposed* to do a
+				functional typecast, meaning generate code that changes the
+				float to an int legally. Apparently, that isn't happening here.
+				-psilord 09/06/01 */
+			 format_time( (int)utime ),
+			 encode_status( status ),
+			 prio,
+			 (image_size / 1024.0),
+			 buffer );
+
 	return return_buff;
 }
 
 static void 
 short_header (void)
 {
-	if ( goodput || run ) {
-		printf( " %-7s %-14s %11s %12s %-16s\n", "ID", "OWNER",
-				"SUBMITTED", JOB_TIME,
-				run ? "HOST(S)" : "GOODPUT CPU_UTIL   Mb/s" );
+	printf( " %-7s %-14s ", "ID", dag ? "OWNER/NODENAME" : "OWNER" );
+	if( goodput ) {
+		printf( "%11s %12s %-16s\n", "SUBMITTED", JOB_TIME,
+				"GOODPUT CPU_UTIL   Mb/s" );
 	} else if ( globus ) {
-		printf( " %-7s %-14s %-7s %-8s %-18s  %-18s\n", 
-			"ID", "OWNER", "STATUS", "MANAGER", "HOST", "EXECUTABLE" );
+		printf( "%-7s %-8s %-18s  %-18s\n", "STATUS",
+				"MANAGER", "HOST", "EXECUTABLE" );
 	} else if ( show_io ) {
-		io_header();
+		printf( "%8s %8s %8s %10s %8s %8s\n",
+				"READ", "WRITE", "SEEK", "XPUT", "BUFSIZE", "BLKSIZE" );
+	} else if( run ) {
+		printf( "%11s %12s %-16s\n", "SUBMITTED", JOB_TIME, "HOST(S)" );
 	} else {
-		printf( " %-7s %-14s %11s %12s %-2s %-3s %-4s %-18s\n",
-			"ID",
-			"OWNER",
+		printf( "%11s %12s %-2s %-3s %-4s %-18s\n",
 			"SUBMITTED",
 			JOB_TIME,
 			"ST",
@@ -702,8 +833,38 @@ format_remote_host (char *, ClassAd *ad)	// NAC
 	static char result[MAXHOSTNAMELEN];
 	static char unknownHost [] = "[????????????????]";
 	char* tmp;
-
 	struct sockaddr_in sin;
+
+	int universe = CONDOR_UNIVERSE_STANDARD;
+	ad->EvaluateAttrInt( ATTR_JOB_UNIVERSE, universe );
+	if (universe == CONDOR_UNIVERSE_SCHEDULER &&
+		string_to_sin(scheddAddr, &sin) == 1) {
+		if( (tmp = sin_to_hostname(&sin, NULL)) ) {
+			strcpy( result, tmp );
+			return result;
+		} else {
+			return unknownHost;
+		}
+	} else if (universe == CONDOR_UNIVERSE_PVM) {
+		int current_hosts;
+		if (ad->EvaluateAttrInt( ATTR_CURRENT_HOSTS, current_hosts )) {
+			if (current_hosts == 1) {
+				sprintf(result, "1 host");
+			} else {
+				sprintf(result, "%d hosts", current_hosts);
+			}
+			return result;
+		}
+	} else if (universe == CONDOR_UNIVERSE_GLOBUS) {
+        string tmp;
+		if (ad->EvaluateAttrString( ATTR_GLOBUS_RESOURCE, tmp)) {
+            strncpy(result, tmp.data(), MAXHOSTNAMELEN);
+			return result;
+        }
+		else
+			return unknownHost;
+	}
+
 	if ( ad->EvaluateAttrString( ATTR_REMOTE_HOST, result, MAXHOSTNAMELEN ) ) {
 		if( is_valid_sinful(result) && 
 			(string_to_sin(result, &sin) == 1) ) {  
@@ -715,9 +876,9 @@ format_remote_host (char *, ClassAd *ad)	// NAC
 		}
 		return result;
 	} else {
-		int universe = STANDARD;
+		int universe = CONDOR_UNIVERSE_STANDARD;
 		ad->EvaluateAttrInt( ATTR_JOB_UNIVERSE, universe );	// NAC
-		if (universe == SCHED_UNIVERSE &&
+		if (universe == CONDOR_UNIVERSE_SCHEDULER &&
 			string_to_sin(scheddAddr, &sin) == 1) {
 			if( (tmp = sin_to_hostname(&sin, NULL)) ) {
 				strcpy( result, tmp );
@@ -725,7 +886,7 @@ format_remote_host (char *, ClassAd *ad)	// NAC
 			} else {
 				return unknownHost;
 			}
-		} else if (universe == PVM) {
+		} else if (universe == CONDOR_UNIVERSE_PVM) {
 			int current_hosts;
 			if ( ad->EvaluateAttrInt( ATTR_CURRENT_HOSTS, current_hosts ) ) {
 				if (current_hosts == 1) {
@@ -812,7 +973,32 @@ format_cpu_util (float utime, ClassAd *ad)
 static char *
 format_owner (char *owner, ClassAd *ad)
 {
-	static char result[15];
+	static char result[15] = "";
+
+	// [this is a somewhat kludgey place to implement DAG formatting,
+	// but for a variety of reasons (maintainability, allowing future
+	// changes to be made in only one place, etc.), Todd & I decided
+	// it's the best way to do it given the existing code...  --pfc]
+
+	// if -dag is specified, check whether this job was started by a
+	// DAGMan (by seeing if it has a valid DAGManJobId attribute), and
+	// if so, print DAGNodeName in place of owner
+
+	// (we need to check that the DAGManJobId is valid because DAGMan
+	// >= v6.3 inserts "unknown..." into DAGManJobId when run under a
+	// pre-v6.3 schedd)
+
+	//char dagman_job_id[ATTRLIST_MAX_EXPRESSION];
+	//char dag_node_name[ATTRLIST_MAX_EXPRESSION];
+    string dagman_job_id, dag_node_name;
+
+	if( dag && ad->EvaluateAttrString( ATTR_DAGMAN_JOB_ID, dagman_job_id ) &&
+		(dagman_job_id.find("unknown" ) != 0) &&
+		ad->EvaluateAttrString( ATTR_DAG_NODE_NAME, dag_node_name ) ) {
+		sprintf( result, " |-%-11.11s", dag_node_name.data() );
+		return result;
+	}
+
 	int niceUser;
 	if ( ad->EvaluateAttrInt( ATTR_NICE_USER, niceUser ) && niceUser ) {// NAC
 		char tmp[100];
@@ -826,73 +1012,47 @@ format_owner (char *owner, ClassAd *ad)
 	return result;
 }
 
-
 static char *
-format_globusHostJMAndExec( char  *globusArgs, ClassAd * )
+format_globusStatus( int globusStatus, AttrList *ad )
 {
 	static char result[64];
-	char	host[80], jobManager[80], exec[10240];
-	char	*tmp, *jm, *ex;
-	int		i, p;
 
-	strcpy( result, "[?????] [?????]\n" );
+	strcpy( result, GlobusJobStatusName( globusStatus ) );
 
-	if( ( tmp = strstr( globusArgs, "jobmanager-" ) ) == NULL ) {
-		return( result );
-	} 
+	return result;
+}
 
-	jm = tmp + 11; // 11==strlen("jobmanager-")
+static char *
+format_globusHostAndJM( char  *globusResource, AttrList *ad )
+{
+	static char result[64];
+	char	host[80] = "[?????]";
+	char	jm[80] = "fork";
+	char	*tmp;
+	int	p;
 
-		// A.  Get the HOST part
-		// scan backwards until (')
-	while( *tmp != '\'' ) {
-			// make sure we don't overrun the beginning of the string
-		if( tmp == globusArgs ) return( result );
-		tmp--;
+	if ( globusResource != NULL ) {
+		// copy the hostname
+		p = strcspn( globusResource, ":/" );
+		if ( p > sizeof(host) )
+			p = sizeof(host) - 1;
+		strncpy( host, globusResource, p );
+		host[p] = '\0';
+
+		if ( ( tmp = strstr( globusResource, "jobmanager-" ) ) != NULL ) {
+			tmp += 11; // 11==strlen("jobmanager-")
+
+			// copy the jobmanager name
+			p = strcspn( tmp, ":" );
+			if ( p > sizeof(jm) )
+				p = sizeof(jm) - 1;
+			strncpy( jm, tmp, p );
+			jm[p] = '\0';
+		}
 	}
-	tmp++;
-	i = 0;
-	while( *tmp != ':' && i < sizeof(host)-1 ) {
-			// make sure we don't overrun the end of the string
-		if( *tmp == '\0' ) return( result );
-		host[i] = *tmp;
-		tmp++;
-		i++;
-	}
-	host[i] = '\0';
 
-		// B.  Get the JOBMANAGER part
-	i = 0;
-	while( *jm != ':' && i < sizeof(jobManager)-1 ) {
-			// make sure we don't overrun the end of the string
-		if( *jm == '\0' ) return( result );
-		jobManager[i] = *jm;
-		jm++;
-		i++;
-	}
-	jobManager[i] = '\0';
-		
-		// C.  Get the globus executable
-	if( ( tmp = strstr( globusArgs, "&(executable=" ) ) == NULL ) {
-		return( result );
-	}
-	ex = tmp + 13;	// 13==strlen("&(executable=")
-	i = 0;
-	p = 1;
-	while( p > 0 && i < sizeof(exec)-1 ) {
-			// make sure we don't overrun the end of the string
-		if( *ex == '\0' ) return( result );
-		exec[i] = *ex;
-		ex++;
-		i++;
-		if( *ex == '(' ) p++;
-		if( *ex == ')' ) p--;
-	}
-	exec[i] = '\0';
-
-		// done --- pack components into the result string and return
-	sprintf( result, " %-8.8s %-18.18s  %-18.18s\n", jobManager, host, 
-		basename(exec) );
+	// done --- pack components into the result string and return
+	sprintf( result, " %-8.8s %-18.18s  ", jm, host );
 	return( result );
 }
 
@@ -927,6 +1087,8 @@ usage (char *myName)
 		"\t\t-cputime\t\tDisplay CPU_TIME instead of RUN_TIME\n"
 		"\t\t-currentrun\t\tDisplay times only for current run\n"
 		"\t\t-io\t\t\tShow information regarding I/O\n"
+		"\t\t-dag\t\t\tSort DAG jobs under their DAGMan\n"
+		"\t\t-expert\t\t\tDisplay shorter error messages\n"
 		"\t\trestriction list\n"
 		"\twhere each restriction may be one of\n"
 		"\t\t<cluster>\t\tGet information about specific cluster\n"
@@ -943,6 +1105,15 @@ output_sorter( const void * va, const void * vb ) {
 
 	a = ( clusterProcString ** ) va;
 	b = ( clusterProcString ** ) vb;
+
+	// when -dag is specified, we want to display DAG jobs under the
+	// DAGMan that started them, so we sort first by parent_cluster,
+	// which is zero for non-DAG jobs (and the DAGMan jobs themselves)
+
+	if ((*a)->parent_cluster < (*b)->parent_cluster ) { return -1; }
+	if ((*a)->parent_cluster > (*b)->parent_cluster ) { return  1; }
+	if ((*a)->parent_proc    < (*b)->parent_proc    ) { return -1; }
+	if ((*a)->parent_proc    > (*b)->parent_proc    ) { return  1; }
 
 	if ((*a)->cluster < (*b)->cluster ) { return -1; }
 	if ((*a)->cluster > (*b)->cluster ) { return  1; }
@@ -979,7 +1150,7 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 			mask.registerFormat ( (FloatCustomFmt) format_cpu_time,
 								  ATTR_JOB_REMOTE_USER_CPU,
 								  "[??????????]");
-			if ( run ) {
+			if( run && !goodput ) {
 				mask.registerFormat(" ", "*bogus*", " "); // force space
 				// We send in ATTR_OWNER since we know it is always
 				// defined, and we need to make sure
@@ -1010,10 +1181,12 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 			mask.registerFormat ("%-3d ", ATTR_PROC_ID);
 			mask.registerFormat ( (StringCustomFmt) format_owner,
 								  ATTR_OWNER, "[????????????] " );
-			mask.registerFormat( "%7s ", "GlobusStatus" );
+			mask.registerFormat( (IntCustomFmt) format_globusStatus,
+								 ATTR_GLOBUS_STATUS, "[?????]" );
 			mask.registerFormat( (StringCustomFmt)
-								 format_globusHostJMAndExec,
-								 "GlobusArgs", "[?????] [?????]\n" );
+								 format_globusHostAndJM,
+								 ATTR_GLOBUS_RESOURCE, "fork    [?????]" );
+			mask.registerFormat( "%-18.18s\n", ATTR_JOB_CMD );
 			setup_mask = true;
 			usingPrintMask = true;
 		}
@@ -1029,6 +1202,17 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 		delete output_buffer;
 
 		return false;
+	}
+
+	// before sorting, for non-DAGMan-spawned jobs (i.e., those whose
+	// parent_cluster is zero), set parent_cluster equal to cluster so
+	// that they sort properly against parent DAGMan jobs
+	for( int i = 0; i <= output_buffer->getlast(); i++ ) {
+		clusterProcString* cps = (*output_buffer)[i];
+		if( cps && cps->parent_cluster == 0 ) {
+			cps->parent_cluster = cps->cluster;
+			cps->parent_proc = cps->proc;
+		}
 	}
 
 	// If this is a global, don't print anything if this schedd is empty.
@@ -1081,10 +1265,21 @@ show_queue_buffered( char* scheddAddr, char* scheddName, char* scheddMachine )
 static bool
 process_buffer_line( ClassAd *job )
 {
+	int status = 0;
+
 	clusterProcString * tempCPS = new clusterProcString;
 	(*output_buffer)[output_buffer->getlast()+1] = tempCPS;
 	job->EvaluateAttrInt( ATTR_CLUSTER_ID, tempCPS->cluster );
 	job->EvaluateAttrInt( ATTR_PROC_ID, tempCPS->proc );
+	job->EvaluateAttrInt( ATTR_JOB_STATUS, status );
+
+	switch (status)
+	{
+		case UNEXPANDED: unexpanded++; break;
+		case IDLE:       idle++;       break;
+		case RUNNING:    running++;    break;
+		case HELD:		 held++;	   break;
+	}
 
 	if( analyze ) {
   		tempCPS->string = strnewp( doRunAnalysisToBuffer( job ) );
@@ -1155,24 +1350,27 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 			// initialize counters
 		malformed = 0; idle = 0; running = 0; unexpanded = 0, held = 0;
 		
-		if( verbose ) {
-			jobs.PrintClassAdList();	// NAC
+		if( verbose || use_xml ) {
+			jobs.PrintClassAdList( );
+			//jobs.fPrintAttrListList( stdout, use_xml ? true : false);
 		} else if( customFormat ) {
 			summarize = false;
 			mask.display( stdout, &jobs );
 		} else if( globus ) {
 			summarize = false;
-			printf( " %-7s %-14s %-7s %-8s %-18s  %-18s\n", 
+			printf( " %-7s %-14s %-11s %-8s %-18s  %-18s\n", 
 				"ID", "OWNER", "STATUS", "MANAGER", "HOST", "EXECUTABLE" );
 			if (!setup_mask) {
 				mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
 				mask.registerFormat ("%-3d ", ATTR_PROC_ID);
 				mask.registerFormat ( (StringCustomFmt) format_owner,
 									  ATTR_OWNER, "[????????????] " );
-				mask.registerFormat( "%7s ", "GlobusStatus" );
+				mask.registerFormat( (IntCustomFmt) format_globusStatus,
+									 ATTR_GLOBUS_STATUS, "[?????]" );
 				mask.registerFormat( (StringCustomFmt)
-									 format_globusHostJMAndExec,
-									 "GlobusArgs", "[?????] [?????]\n" );
+									 format_globusHostAndJM,
+									 ATTR_GLOBUS_RESOURCE, "fork    [?????]" );
+				mask.registerFormat( "%-18.18s\n", ATTR_JOB_CMD );
 				setup_mask = true;
 				usingPrintMask = true;
 			}
@@ -1220,7 +1418,7 @@ show_queue( char* scheddAddr, char* scheddName, char* scheddMachine )
 			}
 			mask.display(stdout, &jobs);
 		} else if( show_io ) {
-			io_header();
+			short_header();
 			jobs.Open();
 			while( (job=jobs.Next()) ) {
 				io_display( job );
@@ -1292,12 +1490,10 @@ setupAnalysis()
 	
 
 	// setup condition expressions
-    sprintf( buffer, "MY.%s > MY.%s || MY.%s is undefined", ATTR_RANK,	// NAC
-			 ATTR_CURRENT_RANK, ATTR_CURRENT_RANK );					// NAC
+	sprintf( buffer, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);	// NAC
 	parser.ParseExpression( buffer, stdRankCondition );					// NAC
 	
-    sprintf( buffer, "MY.%s >= MY.%s || MY.%s is undefined", ATTR_RANK, // NAC
-			 ATTR_CURRENT_RANK, ATTR_CURRENT_RANK );					// NAC
+	sprintf( buffer, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK ); 	// NAC
 	parser.ParseExpression( buffer, preemptRankCondition );				// NAC
 
 	sprintf( buffer, "MY.%s > TARGET.%s + %f", ATTR_REMOTE_USER_PRIO, 
@@ -1336,24 +1532,26 @@ fetchSubmittorPrios()
 	Daemon	negotiator( DT_NEGOTIATOR, pool, pool );
 
 	// connect to negotiator
-	ReliSock sock;
-	sock.connect( negotiator.addr(), 0 );
+	Sock* sock;
 
-	sock.encode();
-	if( !sock.put( GET_PRIORITY ) || !sock.end_of_message() ) {
+	if (!(sock = negotiator.startCommand( GET_PRIORITY, Stream::reli_sock, 0))) {
 		fprintf( stderr, 
 				 "(1) Error:  Could not get priorities from negotiator (%s)\n",
 				 negotiator.fullHostname() );
 		exit( 1 );
 	}
 
-	sock.decode();
-	if( ( !getOldClassAdNoTypes( &sock, ad ) ) || !sock.end_of_message() ) {
+	sock->eom();
+	sock->decode();
+	if( !getOldClassAdNoTypes(sock, ad) || !sock->end_of_message() ) {
 		fprintf( stderr, 
 				 "(2) Error:  Could not get priorities from negotiator (%s)\n",
 				 negotiator.fullHostname() );
 		exit( 1 );
 	}
+	sock->close();
+	delete sock;
+
 
 	i = 1;
 	while( i ) {
@@ -1521,9 +1719,18 @@ doRunAnalysisToBuffer( ClassAd *request )
 		request->SetParentScope( NULL );							// NAC
 
 		root = new ClassAd( );										// NAC
-		root->Insert( "TARGET", offer );							// NAC
-		root->Insert( "MY", request );
+		root->Insert( "MY", offer );								// NAC
+		root->Insert( "TARGET", request );
+		request->SetParentScope( root );
+		offer->SetParentScope( request );
 
+			// FOR BACK COMPATIBILITY
+			// Add conditional operators to offer Rank expression if needed
+		ExprTree* rankExpr = offer->Lookup( ATTR_RANK );
+		ExprTree* newRankExpr = analyzer.AddExplicitConditionals( rankExpr );
+		if( newRankExpr != NULL ) {
+			offer->Insert( ATTR_RANK, newRankExpr );
+		}
 
 		// 3. Is there a remote user?
 		if( !offer->EvaluateAttrString( ATTR_REMOTE_USER, remoteUser, 128 ) ) {
@@ -1639,6 +1846,28 @@ doRunAnalysisToBuffer( ClassAd *request )
 				 available );
 	}
 
+	int last_match_time=0, last_rej_match_time=0;
+	request->EvaluateAttrInt(ATTR_LAST_MATCH_TIME, last_match_time);
+	request->EvaluateAttrInt(ATTR_LAST_REJ_MATCH_TIME, last_rej_match_time);
+	if (last_match_time) {
+		time_t t = (time_t)last_match_time;
+		sprintf( return_buff, "%s\tLast successful match: %s",
+				 return_buff, ctime(&t) );
+	} else if (last_rej_match_time) {
+		strcat( return_buff, "\tNo successful match recorded.\n" );
+	}
+	if (last_rej_match_time > last_match_time) {
+		time_t t = (time_t)last_rej_match_time;
+		sprintf( return_buff, "%s\tLast failed match: %s",
+				 return_buff, ctime(&t) );
+        string buf;
+		request->EvaluateAttrString( ATTR_LAST_REJ_MATCH_REASON, buf);
+		if (buf.length() > 0) {
+			sprintf( return_buff, "%s\tReason for last match failure: %s\n",
+					 return_buff, buf.data() );
+		}
+	}
+
 	if( niceUser ) {
 		sprintf( return_buff, 
 				 "%s\n\t(*)  Since this is a \"nice-user\" job, this job "
@@ -1702,20 +1931,19 @@ static char*
 fixSubmittorName( char *name, int niceUser )
 {
 	static 	bool initialized = false;
-	static	char uid_domain[64];
+	static	char * uid_domain = 0;
 	static	char buffer[128];
 
 	if( !initialized ) {
-		char *tmp = param( "UID_DOMAIN" );
-		if( !tmp ) {
-			fprintf( stderr, "Error:  UID_DOMAIN not found in config file\n" );
+		uid_domain = param( "UID_DOMAIN" );
+		if( !uid_domain ) {
+			fprintf( stderr, "Error: UID_DOMAIN not found in config file\n" );
 			exit( 1 );
 		}
-		strncpy( uid_domain , tmp , 63);
-		free( tmp );
 		initialized = true;
 	}
 
+    // potential buffer overflow! Hao
 	if( strchr( name , '@' ) ) {
 		sprintf( buffer, "%s%s%s", 
 					niceUser ? NiceUserName : "",

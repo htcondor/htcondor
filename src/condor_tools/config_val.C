@@ -46,13 +46,16 @@
 #include "string_list.h"
 #include "get_daemon_addr.h"
 #include "get_full_hostname.h"
+#include "daemon.h"
 #include "daemon_types.h"
 #include "internet.h"
+#include "condor_distribution.h"
 
 char	*MyName;
 char	*mySubSystem = NULL;
 StringList params;
 daemon_t dt = DT_MASTER;
+bool	mixedcase = false;
 
 // The pure-tools (PureCoverage, Purify, etc) spit out a bunch of
 // stuff to stderr, which is where we normally put our error
@@ -118,6 +121,7 @@ usage()
 char* GetRemoteParam( char*, char*, char*, char* );
 void  SetRemoteParam( char*, char*, char*, char*, ModeType );
 
+int
 main( int argc, char* argv[] )
 {
 	char	*value, *tmp, *foo, *host = NULL;
@@ -129,6 +133,7 @@ main( int argc, char* argv[] )
 	ModeType mt = CONDOR_QUERY;
 
 	MyName = argv[0];
+	myDistro->Init( argc, argv );
 
 	for( i=1; i<argc; i++ ) {
 		if( match_prefix( argv[i], "-host" ) ) {
@@ -200,6 +205,8 @@ main( int argc, char* argv[] )
 			mt = CONDOR_RUNTIME_SET;
 		} else if( match_prefix( argv[i], "-runset" ) ) {
 			mt = CONDOR_RUNTIME_UNSET;
+		} else if( match_prefix( argv[i], "-mixedcase" ) ) {
+			mixedcase = true;
 		} else if( match_prefix( argv[i], "-" ) ) {
 			usage();
 		} else {
@@ -284,32 +291,31 @@ main( int argc, char* argv[] )
 		}
 	}
 	my_exit( 0 );
+	return 0;
 }
 
 
 char*
 GetRemoteParam( char* name, char* addr, char* pool, char* param_name ) 
 {
-	ReliSock s;
+    ReliSock s;
 	s.timeout( 30 );
 	char	*val = NULL;
-	int 	cmd = CONFIG_VAL;
 	
 	if( !name ) {
 		name = "";
 	}
 
-	if( ! s.connect( addr, 0 ) ) {
+    if( ! s.connect( addr, 0 ) ) {
 		fprintf( stderr, "Can't connect to %s on %s %s\n", 
 				 daemonString(dt), name, addr );
 		my_exit(1);
 	}
 
+	Daemon d(addr);
+	d.startCommand (CONFIG_VAL, &s, 30);
+
 	s.encode();
-	if( !s.code(cmd) ) {
-		fprintf( stderr, "Can't send command CONFIG_VAL (%d)\n", cmd );
-		return NULL;
-	}
 	if( !s.code(param_name) ) {
 		fprintf( stderr, "Can't send request (%s)\n", param_name );
 		return NULL;
@@ -329,6 +335,7 @@ GetRemoteParam( char* name, char* addr, char* pool, char* param_name )
 		fprintf( stderr, "Can't receive end of message\n" );
 		return NULL;
 	}
+
 	return val;
 }
 
@@ -413,23 +420,26 @@ SetRemoteParam( char* name, char* addr, char* pool, char* param_value,
 		my_exit( 1 );
 	}
 
+	if (!mixedcase) {
+		lower_case(param_name);		// make the config name case insensitive
+	}
+
 		// We need a version with a newline at the end to make
 		// everything cool at the other end.
 	char* buf = (char*)malloc( strlen(param_value) + 2 );
 	sprintf( buf, "%s\n", param_value );
 
-	s.timeout( 30 );
+    s.timeout( 30 );
 	if( ! s.connect( addr, 0 ) ) {
 		fprintf( stderr, "Can't connect to %s on %s %s\n", 
 				 daemonString(dt), name, addr );
 		my_exit(1);
 	}
 
+	Daemon d(addr);
+	d.startCommand (cmd, &s);
+
 	s.encode();
-	if( !s.code(cmd) ) {
-		fprintf( stderr, "Can't send DC_CONFIG command (%d)\n", cmd );
-		my_exit(1);
-	}
 	if( !s.code(param_name) ) {
 		fprintf( stderr, "Can't send config name (%s)\n", param_name );
 		my_exit(1);
@@ -485,6 +495,7 @@ SetRemoteParam( char* name, char* addr, char* pool, char* param_value,
 				 "%s.\n",
 				 param_value, daemonString(dt), name, addr );
 	}
+
 	free( buf );
 	free( param_name );
 }

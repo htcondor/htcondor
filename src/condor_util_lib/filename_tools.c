@@ -62,7 +62,7 @@ void filename_url_parse( char *input, char *method, char *server, int *port, cha
 
 /* Copy in to out, removing whitespace. */
 
-static void eat_space( char *in, char *out )
+static void eat_space( const char *in, char *out )
 {
 	while(1) {
 		switch(*in) {
@@ -86,20 +86,26 @@ static void eat_space( char *in, char *out )
 Copy from in to out, stopping at null or delim.  If the amount
 to copy exceeds length, eat the rest silently.  Return a
 pointer to the delimiter, or return null at end of string.
+The character can be escaped with a backslash.
 */
 
 static char * copy_upto( char *in, char *out, char delim, int length )
 {
 	int copied=0;
+	int escape=0;
 
 	while(1) {
 		if( *in==0 ) {
 			*out=0;
 			return 0;
-		} else if(*in==delim) {
+		} else if( *in=='\\' && !escape ) {
+			escape=1;
+			in++;
+		} else if( *in==delim && !escape ) {
 			*out=0;
 			return in;
 		} else {
+			escape=0;
 			if(copied<length) {
 				*out++ = *in++;
 				copied++;
@@ -111,7 +117,7 @@ static char * copy_upto( char *in, char *out, char delim, int length )
 }
 
 
-int filename_remap_find( char *input, char *filename, char *output )
+int filename_remap_find( const char *input, const char *filename, char *output )
 {
 	char name[_POSIX_PATH_MAX];
 	char url[_POSIX_PATH_MAX];
@@ -147,3 +153,22 @@ int filename_remap_find( char *input, char *filename, char *output )
 	free(buffer);
 	return 0;
 }
+
+int filename_split( const char *path, char *dir, char *file )
+{
+	char *last_slash;
+
+	last_slash = strrchr(path,'/');
+	if(last_slash) {
+		strncpy(dir,path,(last_slash-path));
+		dir[(last_slash-path)] = 0;
+       		last_slash++;
+		strcpy(file,last_slash);
+		return 1;
+	} else {
+		strcpy(file,path);
+		strcpy(dir,".");
+		return 0;
+	}
+}
+

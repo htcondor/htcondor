@@ -31,6 +31,9 @@
 
 const int _ENDPOINT_BUF_SIZE = 16;
 
+// Some error codes.  These should go to condor_errno.h once it is there.
+const int CEDAR_EWOULDBLOCK = 666;
+
 #if !defined(WIN32)
 #  ifndef SOCKET
 #    define SOCKET int
@@ -39,6 +42,18 @@ const int _ENDPOINT_BUF_SIZE = 16;
 #    define INVALID_SOCKET -1
 #  endif
 #endif /* not WIN32 */
+
+
+#ifdef WIN32
+class SockInitializer {
+	private:
+		bool called_from_init;
+	public:
+		SockInitializer();
+		~SockInitializer();
+		void init();
+};
+#endif  /* of WIN32 */
 
 /*
 We want to define a callback function to be invoked when certain actions happen upon a stream.  CedarHandler is the type of a callback function.   The following notation is a little strange.  It reads: Define a new type called "CedarHandler" to be "a function returning void with single argument pointer to Stream"
@@ -65,6 +80,8 @@ class Sock : public Stream {
 public:
 
 	friend class DaemonCore;
+	friend class Daemon;
+	friend class SecMan;
 
 	/*
 	**	Methods
@@ -81,16 +98,28 @@ public:
 		IP and Port.
 		@param port The port to connect to.  If host is in the form <IP:PORT>,
 		then the port parameter is ignored.
+		@param do_not_block If false, then the connect call will block until
+		completion or until timeout.  If true, then the connect call will
+		return immediately with TRUE, FALSE, or CEDAR_EWOULDBLOCK.  If 
+		CEDAR_EWOULDBLOCK is returned, the user should call 
+		do_connect_finish() when select says this socket is writeable to 
+		find out if the CEDAR connection process has really completed.  
+		In Condor this is usually accomplished by calling DaemonCore's
+		Register_Socket() method.
+		@return TRUE if connection succeeded, FALSE on failure, or 
+		CEDAR_EWOULDBLOCK if parameter do_not_block is set to true and 
+		the call would block.
+		@see do_connect_finish
 	*/
-	virtual int connect(char *host, int port=0) = 0;
+	virtual int connect(char *host, int port=0, bool do_not_block = false) = 0;
 
 	/** Connect the socket to a remote peer.
 		@param host Hostname of the peer, either a DNS name or IP address.
 		@param service The name of a service that represents a port address,
 		which can be passed to getportbyserv().
 	*/
-	inline int connect(char *host, char *service) { 
-		return connect(host,getportbyserv(service)); 
+	inline int connect(char *host, char *service, bool do_not_block = false) { 
+		return connect(host,getportbyserv(service),do_not_block); 
 	}
 
 
@@ -98,6 +127,7 @@ public:
 
 	int set_async_handler( CedarHandler *handler );
 
+	
 	//	Socket services
 	//
 
@@ -107,12 +137,20 @@ public:
 #endif
 	int bind(int =0);
     int setsockopt(int, int, const char*, int); 
-	
+
+	/**  Set the size of the operating system buffers (in the IP stack) for
+		 this socket.
+		 @param desired_size The desired size of the buffer in bytes.  If 
+		 desired_size is greater than the maximum allowed by the operating system,
+		 the size will be set to the maximum allowed.
+		 @param set_write_buf if false, then only the size of the receive buffer
+		 is changed; if true, then both the send and receive buffers are resized
+		 @return the actual/resulting size of the buffer in bytes
+	*/
 	int set_os_buffers(int desired_size, bool set_write_buf = false);
 	
 	inline int bind(char *s) { return bind(getportbyserv(s)); }
 	int close();
-
 	/** if any operation takes more than sec seconds, timeout
         call timeout(0) to set blocking mode (default)
         @param sec the number of seconds to wait before timing out
@@ -145,8 +183,11 @@ public:
 	/// local file descriptor (fd) of this socket
 	int get_file_desc();
 
+	/// is a non-blocking connect outstanding?
+	bool is_connect_pending() { return _state == sock_connect_pending; }
+
     /// 
-	virtual ~Sock() {}
+	virtual ~Sock();
 
 	/// Copy constructor -- this also dups the underlying socket
 	Sock(const Sock &);
@@ -155,6 +196,7 @@ public:
 //	PRIVATE INTERFACE TO ALL SOCKS
 //
 protected:
+	
 
 
 	/*
@@ -162,7 +204,8 @@ protected:
 	*/
 
 	enum sock_state { sock_virgin, sock_assigned, sock_bound, sock_connect,
-						sock_writemsg, sock_readmsg, sock_special };
+						sock_writemsg, sock_readmsg, sock_special, 
+						sock_connect_pending };
 
 
 	/*
@@ -177,13 +220,42 @@ protected:
     /**
         @param host the host to connect to, can be sinful form with port, in
         @param port the port to connect to, ignored if host contains a port
+		@param non_blocking_flag if set to true, do not block
+		@return FALSE on failure, TRUE if connected, CEDAR_EWOULDBLOCK if
+			non_blocking_flag is set to true and connection was not immediate.
     */
-	int do_connect(char *host, int port);
+	int do_connect(char *host, int port, bool non_blocking_flag = false);
+
+	bool do_connect_finish();
+
 
 	inline SOCKET get_socket (void) { return _sock; }
 	char * serialize(char *);
 	char * serialize() const;
-
+    char * serializeCryptoInfo(char * buf);
+    char * serializeCryptoInfo() const;
+    char * serializeMdInfo(char * buf);
+    char * serializeMdInfo() const;
+        
+	virtual void setFullyQualifiedUser(char * u);
+	///
+	virtual const char * getFullyQualifiedUser();
+	///
+	virtual int encrypt(bool);
+	///
+	virtual int hdr_encrypt();
+	///
+	virtual bool is_hdr_encrypt();
+    ///
+	virtual int authenticate(int clientFlags = 0);
+    ///
+	virtual int authenticate(KeyInfo *&ki, int clientFlags = 0);
+    ///
+	virtual int isAuthenticated();
+    ///
+	virtual void unAuthenticate();
+    ///
+	virtual bool is_encrypt();
 #ifdef WIN32
 	int set_inheritable( int flag );
 #else
@@ -204,8 +276,26 @@ protected:
 	struct sockaddr_in _who;	// endpoint of "connection"
 
 private:
-		// Buffer to hold the string version of our endpoint's IP address. 
+	int _condor_read(SOCKET fd, char *buf, int sz, int timeout);
+	int _condor_write(SOCKET fd, char *buf, int sz, int timeout);
+	int bindWithin(const int low, const int high);
+	///
+	// Buffer to hold the string version of our endpoint's IP address. 
 	char _endpoint_ip_buf[_ENDPOINT_BUF_SIZE];	
+
+	// struct to hold state info for do_connect() method
+	struct connect_state_struct {
+			int timeout_interval;
+			bool connect_failed, failed_once;
+			time_t timeout_time;
+			int	old_timeout_value;
+			bool non_blocking_flag;
+			char *host;
+			int port;
+	} connect_state;
+
+	bool do_connect_tryit();
+
 };
 
 #endif /* SOCK_H */

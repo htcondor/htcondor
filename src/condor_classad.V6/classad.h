@@ -28,6 +28,10 @@
 #include <vector>
 #include "exprTree.h"
 
+#ifdef __cplusplus
+#include <string>
+using namespace std;
+#endif
 
 BEGIN_NAMESPACE( classad );
 
@@ -406,6 +410,9 @@ class ClassAd : public ExprTree
 			@return true if the flattening was successful, and false otherwise.
 		*/
 		bool Flatten( const ExprTree* expr, Value& val, ExprTree *&fexpr )const;
+
+		bool FlattenAndInline( const ExprTree* expr, Value& val,	// NAC
+							   ExprTree *&fexpr )const;				// NAC
 		
 #if defined( EXPERIMENTAL )
 		bool GetExternalReferences( const ExprTree *tree, References &refs );

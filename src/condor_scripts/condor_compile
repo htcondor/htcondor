@@ -3,17 +3,28 @@
 #	Author Todd Tannenbaum, 6/97
 #	Copyright 1997 by the Condor Team, All Rights Reserved.
 #	mailto:condor-admin@cs.wisc.edu  http://www.cs.wisc.edu/condor
-
 # --------------------------------------------------
 
+
+# First, make sure we can find condor_config_val.  If not, print 
+# out an error message so the user can fix the problem, instead of
+# having condor_compile fail in mysterious ways.
+CONDOR_LIBDIR=`condor_config_val LIB 2> /dev/null`
+if [ $? != 0 ]; then
+    echo "ERROR: Cannot execute condor_config_val"
+    echo "You must put the directory that contains condor_config_val"
+    echo "in your \$PATH for condor_compile to work."
+    exit 1
+fi
 
 # Here are the default paths/directories to use.
 # These defaults can be overidden with command-line args.
 # Customize these if desired.  The defaults provided should be
 # correct for most installations, however.
+
 CONDOR_LIBDIR=`condor_config_val LIB`
 CONDOR_CLIB=$CONDOR_LIBDIR/libcondorsyscall.a
-STATIC_ZLIB=/usr/lib/libz.a
+STATIC_ZLIB=$CONDOR_LIBDIR/libz.a
 CONDOR_ZCLIB=$CONDOR_LIBDIR/libcondorzsyscall.a
 CONDOR_RT0=$CONDOR_LIBDIR/condor_rt0.o
 CONDOR_CPLUS=$CONDOR_LIBDIR/libcondorc++support.a
@@ -23,7 +34,9 @@ CONDOR_SPECIAL_CLIB=/not-there-bull
 # if I am on a linux box, determine where I should be looking
 LINUX_LIB=
 if [ `uname` = "Linux" ]; then
-	if [ -f /lib/libc-2.1* ]; then
+	if [ -f /lib/libc-2.2* ]; then
+		LINUX_LIB="glibc22"
+	elif [ -f /lib/libc-2.1* ]; then
 		LINUX_LIB="glibc21"
 	elif [ -f /lib/libc-2.0* ]; then
 		LINUX_LIB="glibc20"
@@ -91,6 +104,7 @@ do
 		# Reset anything based off of the libdir by default
 		CONDOR_CLIB=$CONDOR_LIBDIR/libcondorsyscall.a
 		CONDOR_ZCLIB=$CONDOR_LIBDIR/libcondorzsyscall.a
+		STATIC_ZLIB=$CONDOR_LIBDIR/libz.a
 		CONDOR_RT0=$CONDOR_LIBDIR/condor_rt0.o
 		CONDOR_CPLUS=$CONDOR_LIBDIR/libcondorc++support.a
 		CONDOR_LD_DIR=$CONDOR_LIBDIR
@@ -121,9 +135,19 @@ if [ `uname` = "Linux" ]; then
 	fi
 fi
 
-if [ -r $STATIC_ZLIB -a -r $CONDOR_ZCLIB ]; then
-	CONDOR_CLIB="$CONDOR_ZCLIB $STATIC_ZLIB"
+#
+# If the compressed ckpt library is available, use it.
+#
+
+if [ -r $CONDOR_ZCLIB ]; then
+	CONDOR_CLIB="$CONDOR_ZCLIB"
 fi
+
+#
+# However, we still always need the compression library for other purposes.
+#
+
+CONDOR_CLIB="$CONDOR_CLIB $STATIC_ZLIB"
 
 if [ -r $CONDOR_SPECIAL_CLIB ]; then
 	CONDOR_CLIB="$CONDOR_SPECIAL_CLIB"
@@ -366,11 +390,11 @@ case $os in
 	
 	OSF1 )
 		if [ $myname = "cc" ]; then
-			exec $ARGS -tul -h$CONDOR_LD_DIR -B
+			exec $ARGS -tl -h$CONDOR_LD_DIR -B
 		fi
 
 		if [ $myname = "CC" ]; then
-			exec $ARGS -tul -h$CONDOR_LD_DIR -B
+			exec $ARGS -tl -h$CONDOR_LD_DIR -B
 		fi
 
 		if [ $myname = "cxx" ]; then
@@ -378,19 +402,19 @@ case $os in
 		fi
 
 		if [ $myname = "c89" ]; then
-			exec $ARGS -tul -h$CONDOR_LD_DIR -B
+			exec $ARGS -tl -h$CONDOR_LD_DIR -B
 		fi
 
 		if [ $myname = "f77" ]; then
-			exec $ARGS -tul -h$CONDOR_LD_DIR -B
+			exec $ARGS -tl -h$CONDOR_LD_DIR -B
 		fi 
 	
 		if [ $myname = "f90" ]; then	
-			exec $ARGS -tul -h$CONDOR_LD_DIR -B
+			exec $ARGS -tl -h$CONDOR_LD_DIR -B
 		fi 
 
 		if [ $myname = "KCC" ]; then	
-			exec $ARGS --backend -tul --backend \
+			exec $ARGS --backend -tl --backend \
 			-h$CONDOR_LD_DIR --backend -B
 		fi 
 
@@ -402,19 +426,23 @@ case $os in
 		fi
 
 		if [ $myname = "CC" ]; then
-			exec $ARGS -tl,$CONDOR_LD_DIR/ld
+			exec $ARGS +A -tl,$CONDOR_LD_DIR/ld
+		fi
+
+		if [ $myname = "aCC" ]; then
+			exec $ARGS +A -tl,$CONDOR_LD_DIR/ld
 		fi
 
 		if [ $myname = "c89" ]; then
-			exec $ARGS -tl,$CONDOR_LIBDIR/ld
+			exec $ARGS -tl,$CONDOR_LD_DIR/ld
 		fi
 
 		if [ $myname = "f77" ]; then
-			exec $ARGS -tl,$CONDOR_LIBDIR/ld
+			exec $ARGS -tl,$CONDOR_LD_DIR/ld
 		fi 
 
 		if [ $myname = "fort77" ]; then
-			exec $ARGS -tl,$CONDOR_LIBDIR/ld
+			exec $ARGS -tl,$CONDOR_LD_DIR/ld
 		fi 
 		
 		;;

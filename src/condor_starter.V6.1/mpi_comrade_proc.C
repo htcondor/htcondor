@@ -23,28 +23,51 @@
 
 #include "condor_common.h"
 #include "mpi_comrade_proc.h"
+#include "condor_attributes.h"
 
 
 MPIComradeProc::MPIComradeProc( ClassAd * jobAd ) : VanillaProc( jobAd )
 {
     dprintf ( D_FULLDEBUG, "Constructor of MPIComradeProc::MPIComradeProc\n" );
+	Node = -1;
 }
 
 MPIComradeProc::~MPIComradeProc()  {}
 
+
 int 
-MPIComradeProc::StartJob() { 
+MPIComradeProc::StartJob()
+{ 
 	dprintf(D_FULLDEBUG,"in MPIComradeProc::StartJob()\n");
+
+	if ( !JobAd ) {
+		dprintf ( D_ALWAYS, "No JobAd in MPIComradeProc::StartJob()!\n" ); 
+		return 0;
+	}
+		// Grab ATTR_NODE out of the job ad and stick it in our
+		// protected member so we can insert it back on updates, etc. 
+	if( JobAd->LookupInteger(ATTR_NODE, Node) != 1 ) {
+		dprintf( D_ALWAYS, "ERROR in MPIComradeProc::StartJob(): "
+				 "No %s in job ad, aborting!\n", ATTR_NODE );
+		return 0;
+	} else {
+		dprintf( D_FULLDEBUG, "Found %s = %d in job ad\n", ATTR_NODE, 
+				 Node ); 
+	}
+
     dprintf(D_PROTOCOL, "#11 - Comrade starting up....\n" );
+
         // special args already in ad; simply start it up
     return VanillaProc::StartJob();
 }
 
-int 
-MPIComradeProc::JobExit( int pid, int status ) { 
-	dprintf(D_FULLDEBUG,"in MPIComradeProc::JobExit()\n");
-    return VanillaProc::JobExit( pid, status );
+
+int
+MPIComradeProc::JobCleanup( int pid, int status )
+{ 
+	return VanillaProc::JobCleanup( pid, status );
 }
+
 
 void 
 MPIComradeProc::Suspend() { 
@@ -53,8 +76,9 @@ MPIComradeProc::Suspend() {
            we walk off the job and notify the shadow immediately! */
 	dprintf(D_FULLDEBUG,"in MPIComradeProc::Suspend()\n");
 		// must do this so that we exit...
-	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGQUIT );
+	daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
 }
+
 
 void 
 MPIComradeProc::Continue() { 
@@ -63,14 +87,16 @@ MPIComradeProc::Continue() {
     VanillaProc::Continue();
 }
 
-bool 
-MPIComradeProc::ShutDownGraceful() { 
-	dprintf(D_FULLDEBUG,"in MPIComradeProc::ShutDownGraceful()\n");
-	return VanillaProc::ShutdownGraceful();
-}
 
 bool
-MPIComradeProc::ShutdownFast() {
-	dprintf(D_FULLDEBUG,"in MPIComradeProc::ShutDownFast()\n");
-    return VanillaProc::ShutdownFast();
+MPIComradeProc::PublishUpdateAd( ClassAd* ad )
+{
+	dprintf( D_FULLDEBUG, "In MPIComradeProc::PublishUpdateAd()\n" );
+	char buf[64];
+	sprintf( buf, "%s = %d", ATTR_NODE, Node );
+	ad->Insert( buf );
+
+		// Now, call our parent class's version
+	return VanillaProc::PublishUpdateAd( ad );
 }
+

@@ -23,10 +23,15 @@
 
 #include "condor_common.h"
 #include "startd.h"
+#include "classad_merge.h"
+
+// Instantiate the Named Class Ad list
+template class SimpleList<NamedClassAd*>;
 
 
 ResMgr::ResMgr()
 {
+	startTime = time( NULL );
 	coll_sock = NULL;
 	view_sock = NULL;
 	totals_classad = NULL;
@@ -94,13 +99,41 @@ ResMgr::init_config_classad( void )
 		// Now, bring in things that we might need
 	configInsert( config_classad, "PERIODIC_CHECKPOINT", false );
 	configInsert( config_classad, "RunBenchmarks", false );
-	configInsert( config_classad, "Rank", false );
+	configInsert( config_classad, ATTR_RANK, false );
 	configInsert( config_classad, "SUSPEND_VANILLA", false );
 	configInsert( config_classad, "CONTINUE_VANILLA", false );
 	configInsert( config_classad, "PREEMPT_VANILLA", false );
 	configInsert( config_classad, "KILL_VANILLA", false );
 	configInsert( config_classad, "WANT_SUSPEND_VANILLA", false );
 	configInsert( config_classad, "WANT_VACATE_VANILLA", false );
+
+		// Next, try the IS_OWNER expression.  If it's not there, give
+		// them a resonable default, instead of leaving it undefined. 
+	if( ! configInsert(config_classad, ATTR_IS_OWNER, false) ) {
+		char* tmp = (char*) malloc( strlen(ATTR_IS_OWNER) + 21 ); 
+		if( ! tmp ) {
+			EXCEPT( "Out of memory!" );
+		}
+		sprintf( tmp, "%s = (START =?= False)", ATTR_IS_OWNER );
+		config_classad->Insert( tmp );
+		free( tmp );
+	}
+		// Next, try the CpuBusy expression.  If it's not there, try
+		// what's defined in cpu_busy (for backwards compatibility).  
+		// If that's not there, give them a default of "False",
+		// instead of leaving it undefined.
+	if( ! configInsert(config_classad, ATTR_CPU_BUSY, false) ) {
+		if( ! configInsert(config_classad, "cpu_busy", ATTR_CPU_BUSY,
+						   false) ) { 
+			char* tmp = (char*) malloc( strlen(ATTR_CPU_BUSY) + 9 ); 
+			if( ! tmp ) {
+				EXCEPT( "Out of memory!" );
+			}
+			sprintf( tmp, "%s = False", ATTR_CPU_BUSY );
+			config_classad->Insert( tmp );
+			free( tmp );
+		}
+	}
 
 		// Now, bring in anything the user has said to include
 	config_fill_ad( config_classad );
@@ -286,6 +319,8 @@ ResMgr::reconfig_resources( void )
 		// See if there's anything to destroy, and if so, do it. 
 	destroy_list.Rewind();
 	while( destroy_list.Next(rip) ) {
+		rip->dprintf( D_ALWAYS,
+					  "State change: resource no longer needed by configuration\n" );
 		rip->set_destination_state( delete_state );
 	}
 
@@ -689,13 +724,9 @@ ResMgr::init_socks( void )
 		delete view_sock;
 		view_sock = NULL;
 	}
-	if( condor_view_host ) {
-		view_sock = new SafeSock;
-		if (!view_sock->connect( condor_view_host, CONDOR_VIEW_PORT )) {
-			dprintf(D_ALWAYS, "Failed to connect to condor view server "
-					"<%s:%d>\n", condor_view_host, CONDOR_VIEW_PORT);
-		}
-	}
+    if (View_Collector) {
+        view_sock = View_Collector->safeSock();
+    }
 }
 
 
@@ -815,6 +846,105 @@ ResMgr::resource_sort( ComparisonFunc compar )
 }
 
 
+// Methods to manipulate the supplemental ClassAd list
+int
+ResMgr::adlist_register( const char *name )
+{
+	NamedClassAd	*cur;
+
+	// Walk through the list
+	extra_ads.Rewind( );
+	while ( extra_ads.Current( cur ) ) {
+		if ( ! strcmp( cur->GetName( ), name ) ) {
+			// Do nothing
+			return 0;
+		}
+		extra_ads.Next( cur );
+	}
+
+	// No match found; insert it into the list
+	dprintf( D_JOB, "Adding '%s' to the Supplimental ClassAd list\n", name );
+	if (  ( cur = new NamedClassAd( name, NULL ) ) != NULL ) {
+		extra_ads.Append( cur );
+		return 0;
+	}
+
+	// new failed; bad
+	return -1;
+}
+
+int
+ResMgr::adlist_replace( const char *name, ClassAd *newAd )
+{
+	NamedClassAd	*cur;
+
+	// Walk through the list
+	extra_ads.Rewind( );
+	while ( extra_ads.Next( cur ) ) {
+		if ( ! strcmp( cur->GetName( ), name ) ) {	
+			dprintf( D_FULLDEBUG, "Replacing ClassAd for '%s'\n", name );	
+			cur->ReplaceAd( newAd );
+			return 0;
+		}
+	}
+
+	// No match found; insert it into the list
+	if (  ( cur = new NamedClassAd( name, newAd ) ) != NULL ) {
+		dprintf( D_FULLDEBUG,
+				 "Adding '%s' to the 'extra' ClassAd list\n", name );
+		extra_ads.Append( cur );
+		return 0;
+	}
+
+	// new failed; bad
+	delete newAd;		// The caller expects us to always free the memory
+	return -1;
+}
+
+int
+ResMgr::adlist_delete( const char *name )
+{
+	NamedClassAd	*cur;
+
+	// Walk through the list
+	extra_ads.Rewind( );
+	while ( extra_ads.Next( cur ) ) {
+		if ( ! strcmp( cur->GetName( ), name ) ) {
+			dprintf( D_FULLDEBUG, "Deleting ClassAd for '%s'\n", name );	
+			extra_ads.DeleteCurrent( );
+			return 0;
+		}
+	}
+
+	// No match found; done
+	return 0;
+}
+
+int
+ResMgr::adlist_publish( ClassAd *resAd, amask_t mask )
+{
+	NamedClassAd	*cur;
+
+	// Check the mask
+	if (  ( mask & ( A_PUBLIC | A_UPDATE ) ) != ( A_PUBLIC | A_UPDATE )  ) {
+		return 0;
+	}
+
+	// Walk through the list
+	extra_ads.Rewind( );
+	while ( extra_ads.Next( cur ) ) {
+		ClassAd	*ad = cur->GetAd( );
+		if ( NULL != ad ) {
+			dprintf( D_FULLDEBUG,
+					 "Publishing ClassAd for '%s'\n", cur->GetName() );
+			MergeClassAds( resAd, ad, true );
+		}
+	}
+
+	// Done
+	return 0;
+}
+
 bool
 ResMgr::in_use( void )
 {
@@ -839,7 +969,8 @@ ResMgr::get_by_pid( pid_t pid )
 	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
-		if( resources[i]->r_starter->pid() == pid ) {
+		if( resources[i]->r_starter &&
+			resources[i]->r_starter->pid() == pid ) {
 			return resources[i];
 		}
 	}
@@ -955,6 +1086,11 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad )
 {
 	int num = 0;
 
+	// Publish our "epoch" time
+	char	tmp [80];
+	sprintf( tmp, "%s=%ld", ATTR_DAEMON_START_TIME, (long) startTime );
+	public_ad->InsertOrUpdate( tmp );
+
 	if( coll_sock ) {
 		if( DebugFlags & D_FULLDEBUG ) {
 			dprintf( D_FULLDEBUG, 
@@ -964,10 +1100,11 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad )
 					 "Collector Daemon Object: %s (%s)\n",
 					 Collector->addr(), Collector->fullHostname() );
 		}
-		if( send_classad_to_sock(cmd, coll_sock, public_ad, private_ad) ) {
+
+		if( send_classad_to_sock(cmd, Collector, public_ad, private_ad) ) {
 			num++;
 		} else {
-			dprintf( D_ALWAYS,
+			dprintf( D_FAILURE|D_ALWAYS,
 					 "Error sending UDP update to the collector (%s)\n", 
 					 Collector->fullHostname() );
 		}
@@ -980,7 +1117,7 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad )
 					 "Attempting to send update to view collector <%s:%d>\n", 
 					 view_sock->endpoint_ip_str(), view_sock->endpoint_port() );
 		}
-		if( send_classad_to_sock(cmd, view_sock, public_ad, NULL) ) {
+		if( send_classad_to_sock(cmd, View_Collector, public_ad, NULL) ) {
 			num++;
 		} else {
 			dprintf( D_ALWAYS, 
@@ -1065,7 +1202,22 @@ ResMgr::compute( amask_t how_much )
 	assign_load();
 	assign_keyboard();
 
-		// Now that we're done assigning, display all values 
+		// Now that everything has actually been computed, we can
+		// refresh our internal classad with all the current values of
+		// everything so that when we evaluate our state or any other
+		// expressions, we've got accurate data to evaluate.
+	walk( &(Resource::refresh_classad), how_much );
+
+		// Now that we have an updated internal classad for each
+		// resource, we can "compute" anything where we need to 
+		// evaluate classad expressions to get the answer.
+	walk( &(Resource::compute), A_EVALUATED );
+
+		// Next, we can publish any results from that to our internal
+		// classads to make sure those are still up-to-date
+	walk( &(Resource::refresh_classad), A_EVALUATED );
+
+		// Now that we're done, we can display all the values.
 	walk( &(Resource::display), how_much );
 }
 
@@ -1079,6 +1231,8 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 		sprintf( line, "%s=%d", ATTR_TOTAL_VIRTUAL_MACHINES, num_vms() );
 		cp->Insert( line ); 
 	}
+
+	starter_mgr.publish( cp, how_much );
 }
 
 
@@ -1216,10 +1370,17 @@ ResMgr::start_poll_timer( void )
 void
 ResMgr::cancel_poll_timer( void )
 {
+	int rval;
 	if( poll_tid != -1 ) {
-		daemonCore->Cancel_Timer( poll_tid );
+		rval = daemonCore->Cancel_Timer( poll_tid );
+		if( rval < 0 ) {
+			dprintf( D_ALWAYS, "Failed to cancel polling timer (%d): "
+					 "daemonCore error\n", poll_tid );
+		} else {
+			dprintf( D_FULLDEBUG, "Canceled polling timer (%d)\n",
+					 poll_tid );
+		}
 		poll_tid = -1;
-		dprintf( D_FULLDEBUG, "Canceled polling timer.\n" );
 	}
 }
 
@@ -1295,6 +1456,9 @@ ResMgr::deleteResource( Resource* rip )
 		// Tell the collector this Resource is gone.
 	rip->final_update();
 
+		// Log a message that we're going away
+	rip->dprintf( D_ALWAYS, "Resource no longer needed, deleting\n" );
+
 		// At last, we can delete the object itself.
 	delete rip;
 
@@ -1313,6 +1477,9 @@ ResMgr::makeAdList( ClassAdList *list )
 	ClassAd* ad;
 	int i;
 
+		// Make sure everything is current
+	compute( A_TIMEOUT | A_UPDATE );
+
 		// We want to insert ATTR_LAST_HEARD_FROM into each ad.  The
 		// collector normally does this, so if we're servicing a
 		// QUERY_STARTD_ADS commannd, we need to do this ourselves or
@@ -1323,7 +1490,7 @@ ResMgr::makeAdList( ClassAdList *list )
 
 	for( i=0; i<nresources; i++ ) {
 		ad = new ClassAd;
-		resources[i]->publish( ad, A_PUBLIC | A_ALL );
+		resources[i]->publish( ad, A_PUBLIC | A_ALL | A_EVALUATED ); 
 		ad->Insert( buf );
 		list->Insert( ad );
 	}
@@ -1394,7 +1561,7 @@ ResMgr::check_use( void )
 				 "No resources have been claimed for %d seconds\n", 
 				 startd_noclaim_shutdown );
 		dprintf( D_ALWAYS, "Shutting down Condor on this machine.\n" );
-		daemonCore->Send_Signal( daemonCore->getppid(), DC_SIGTERM );
+		daemonCore->Send_Signal( daemonCore->getppid(), SIGTERM );
 	}
 }
 
@@ -1499,3 +1666,28 @@ IdDispenser::insert( int id )
 	free_ids[id] = true;
 }
 
+// Named classAds
+NamedClassAd::NamedClassAd( const char *name, ClassAd *ad )
+{
+	myName = strdup( name );
+	myClassAd = ad;
+}
+
+// Destructor
+NamedClassAd::~NamedClassAd( )
+{
+	free( myName );
+	delete myClassAd;
+}
+
+// Replace existing ad
+void
+NamedClassAd::ReplaceAd( ClassAd *newAd )
+{
+	
+	if ( NULL != myClassAd ) {
+		delete myClassAd;
+		myClassAd = NULL;
+	}
+	myClassAd = newAd;
+}

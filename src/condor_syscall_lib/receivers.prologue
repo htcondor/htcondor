@@ -20,6 +20,25 @@
 #include "pseudo_ops.h"
 #include "../condor_shadow.V6/job_report.h"
 
+	/*
+	Have assert() really call EXCEPT instead of doing a sigabrt 
+	and dumping core.  This change results in a shadow exception when
+	communication with the remote job is interrupted in the middle of 
+	a remote system call, instead of the shadow dumping core in the
+	user's current working directory.
+	Note: the definition to CONDOR_ASSERT() macro is in condor_debug.h
+	-Todd <tannenba@cs.wisc.edu> 10/10/2000
+	*/
+#ifdef assert
+#	undef assert
+#endif
+#define assert(cond) CONDOR_ASSERT(cond)
+
+/* get rid of the access remap to access_euid for the syscall library */
+#ifdef access
+#	undef access
+#endif
+
 #if defined(Solaris)
 extern "C" {
 	int flock( int, int );
@@ -30,12 +49,37 @@ extern "C" {
 extern "C" {
 	int statfs( char*, struct statfs*, int );
 	int flock( int, int );
+	int fstatfs ( int fd, struct statfs *buf, int len );
+	int getdirentries ( int fd, struct dirent *buf, size_t nbytes, off_t *basep );
+	int getfsstat ( struct statfs buf[], long bufsize, int flags );
+	int table ( int id, int index, char *addr, int nel, unsigned int lel );
+	int getdomainname ( char *name, int namelen );
+	int getaddressconf ( struct addressconf *buf, size_t length );
+	int uswitch ( int cmd, int value ); 
 }
 #endif
 
 #if defined(HPUX)
 extern "C" {
 	int flock( int, int );
+}
+#endif
+
+#if defined(LINUX)
+extern "C" {
+	
+	ssize_t getdirentries(int fd, char *buf, size_t nbytes, off_t *basep);
+
+	/*
+	There is no public interface to getdents in the Linux C library.
+	So, here we provide one based on a better-known public function.
+	*/
+
+	static int getdents( int fd, struct dirent *buf, size_t nbytes ) {
+		off_t basep;
+		basep = lseek(fd,0,SEEK_CUR);
+		return getdirentries(fd,(char*)buf,nbytes,&basep);
+	}
 }
 #endif
 
@@ -67,7 +111,16 @@ do_REMOTE_syscall()
 
 	syscall_sock->decode();
 
-	ASSERT( syscall_sock->code(condor_sysnum) );
+	rval = syscall_sock->code(condor_sysnum);
+	if(!rval) {
+		char *error;
+		if(errno==0) {
+			error = "disconnected";
+		} else {
+			error = strerror(errno);
+		}
+		EXCEPT("Unable to talk to job: %s\n",error);
+	}
 
 #if defined(SYSCALL_DEBUG)
 	sprintf( SyscallLabel, "%-6d", condor_sysnum );
@@ -94,15 +147,12 @@ do_REMOTE_syscall(ReliSock *sock, int process)
 	int condor_sysnum;
 	int rval;
 	int	read_ok;
-	extern int SyscallSockClosed;
 
 	syscall_sock->decode();
 
-	/* SyscallSockClosed = FALSE; */
 	read_ok = syscall_sock->code(condor_sysnum);
 
 	if( !read_ok ) {
-		/* ASSERT( SyscallSockClosed ); */
 		dprintf( D_ALWAYS, 
 		"Failed to get syscall_code for proc %d removing..\n", process);
 
@@ -120,10 +170,10 @@ do_REMOTE_syscall(ReliSock *sock, int process)
                 char *a_out;
                 char *targ;
                 char *orig;
-                signal_t *kill_sig;
-                int terrno;
+                condor_signal_t *kill_sig;
+                condor_errno_t terrno;
 
-                kill_sig = (signal_t *)malloc( (unsigned)INT_SIZE );
+                kill_sig = (condor_signal_t *)malloc( (unsigned)INT_SIZE );
                 orig = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
                 targ = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
                 a_out = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
@@ -132,8 +182,8 @@ do_REMOTE_syscall(ReliSock *sock, int process)
 
                 errno = 0;
                 rval = pseudo_work_request( ad, a_out, targ, orig, (int *)kill_sig );
-                terrno = errno;
-                dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno);
+                terrno = (condor_errno_t)errno;
+                dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, (int)terrno);
 
                 syscall_sock->encode();
                 assert( syscall_sock->code(rval) );
@@ -159,7 +209,7 @@ do_REMOTE_syscall(ReliSock *sock, int process)
 	case CONDOR_startup_info_request:
 	  {
 		STARTUP_INFO *s;
-		int terrno;
+		condor_errno_t terrno;
 
 		s = (STARTUP_INFO *)malloc( (unsigned)STARTUP_INFO_SIZE );
 		memset( s, 0, (unsigned)STARTUP_INFO_SIZE );
@@ -167,9 +217,8 @@ do_REMOTE_syscall(ReliSock *sock, int process)
 
 		errno = 0;
 		rval = pseudo_startup_info_request( s );
-		terrno = errno;
-		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
-
+		terrno = (condor_errno_t)errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, (int)terrno );
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
 		if( rval < 0 ) {

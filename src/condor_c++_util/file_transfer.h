@@ -29,6 +29,7 @@
 #ifdef WIN32
 #include "perm.h"
 #endif
+#include "condor_uid.h"
 
 class FileTransfer;	// forward declatation
 
@@ -55,7 +56,8 @@ class FileTransfer {
 		a check is perfomed to see if the ATTR_OWNER attribute defined in the
 		ClassAd has the neccesary read/write permission.
 		@return 1 on success, 0 on failure */
-	int Init(ClassAd *Ad, bool check_file_perms = false);
+	int Init( ClassAd *Ad, bool check_file_perms = false, 
+			  priv_state priv = PRIV_UNKNOWN );
 
 	/** @return 1 on success, 0 on failure */
 	int DownloadFiles(bool blocking=true);
@@ -105,6 +107,16 @@ class FileTransfer {
 
 	float TotalBytesReceived() { return bytesRcvd; };
 
+		/** Add the given filename to our list of output files to
+			transfer back.  If we're not managing a list of output
+			files, we return failure.  If we already have this file,
+			we immediately return success.  Otherwise, we append the
+			given filename to our list and return success.
+			@param filename Name of file to add to our list
+			@return false if we don't have a list, else true
+		*/
+	bool addOutputFile( const char* filename );
+
   protected:
 
 	int Download(ReliSock *s, bool blocking);
@@ -128,6 +140,7 @@ class FileTransfer {
 	StringList* OutputFiles;
 	StringList* IntermediateFiles;
 	StringList* FilesToSend;
+	char* SpooledIntermediateFiles;
 	char* ExecFile;
 	char* TransSock;
 	char* TransKey;
@@ -146,11 +159,14 @@ class FileTransfer {
 #ifdef WIN32
 	perm* perm_obj;
 #endif		
+    priv_state desired_priv_state;
+	bool want_priv_change;
 	static TranskeyHashTable* TranskeyTable;
 	static TransThreadHashTable* TransThreadTable;
 	static int CommandsRegistered;
 	static int SequenceNum;
 	static int ReaperId;
+	bool did_init;
 };
 
 #endif

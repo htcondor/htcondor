@@ -39,9 +39,14 @@
 // Initialize static members in the class
 int CSysinfo::reference_count = 0;
 HINSTANCE CSysinfo::hNtDll = NULL;
+HINSTANCE CSysinfo::hKernel32Dll = NULL;
 CSysinfo::FPNtQuerySystemInformation CSysinfo::NtQuerySystemInformation = NULL;
 CSysinfo::FPNtOpenThread CSysinfo::NtOpenThread = NULL;
 CSysinfo::FPNtClose CSysinfo::NtClose = NULL;
+CSysinfo::FPCreateToolhelp32Snapshot CSysinfo::CreateToolhelp32Snapshot = NULL;
+CSysinfo::FPThread32First CSysinfo::Thread32First = NULL;
+CSysinfo::FPThread32Next CSysinfo::Thread32Next = NULL;
+bool CSysinfo::IsWin2k = false;
 DWORD* CSysinfo::memptr = NULL;
 DWORD CSysinfo::memptr_size = 0x10000;
 
@@ -75,6 +80,43 @@ CSysinfo::CSysinfo()
 						memptr_size, 
 						MEM_COMMIT,
 						PAGE_READWRITE); 
+
+
+		// Figure out if we are running on Win2k or above
+		OSVERSIONINFO info;
+		info.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+		if (GetVersionEx(&info) > 0) {
+			if ( info.dwPlatformId ==  VER_PLATFORM_WIN32_NT  &&
+				 info.dwMajorVersion >= 5 ) 
+			{
+				IsWin2k = true;
+			}
+		}
+
+		// If this is Win2k, map in some additional functions
+		if ( IsWin2k ) {
+			hKernel32Dll = LoadLibrary("kernel32.dll");
+			if ( !hKernel32Dll ) {
+				EXCEPT("cannot load kernel32.dll library");
+			}
+
+			CreateToolhelp32Snapshot = (FPCreateToolhelp32Snapshot) 
+				GetProcAddress(hKernel32Dll,"CreateToolhelp32Snapshot");
+			if ( !CreateToolhelp32Snapshot ) {
+				EXCEPT("cannot get address for CreateToolhelp32Snapshot");
+			}
+			Thread32First = (FPThread32First) 
+				GetProcAddress(hKernel32Dll,"Thread32First");
+			if ( !Thread32First ) {
+				EXCEPT("cannot get address for Thread32First");
+			}
+			Thread32Next = (FPThread32Next) 
+				GetProcAddress(hKernel32Dll,"Thread32Next");
+			if ( !Thread32Next ) {
+				EXCEPT("cannot get address for Thread32Next");
+			}
+		}
+
 	}
 	reference_count++;
 }
@@ -175,18 +217,61 @@ int CSysinfo::GetTIDs (pid_t pid, ExtArray<DWORD> & tids,
 #endif
 int CSysinfo::GetTIDs (pid_t pid, ExtArray<DWORD> & tids)
 {
-	DWORD *block;
-	DWORD s;
-	Refresh();
-	block = FindBlock (pid);
-	if (!block)
-		return 0;
-	for (s=0; s < *(block+1); s++)
-	{
-		tids[s] = *(block+43+s*16);	
-		// tstatus[s] = *(block+48+s*16) + (*(block+47+s*16)<<8);
+	DWORD s = 0;
+
+	if ( !IsWin2k ) {
+		/*** Window NT 4.0 Specific Code -- this does not work on Win2k! ***/
+		DWORD *block;
+		Refresh();
+		block = FindBlock (pid);
+		if (!block)
+			return 0;
+		for (s=0; s < *(block+1); s++)
+		{
+			tids[s] = *(block+43+s*16);	
+			// tstatus[s] = *(block+48+s*16) + (*(block+47+s*16)<<8);
+		}
+		return (int)s;
 	}
-	return (int)s;
+			
+	/******** Win2k Specific Code -- use spiffy new Toolhelp32 calls ***/
+
+	HANDLE        hThreadSnap = NULL; 
+    THREADENTRY32 te32        = {0}; 
+ 
+    // Take a snapshot of all threads currently in the system. 
+
+    hThreadSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0); 
+    if (hThreadSnap == (HANDLE)-1) 
+	{
+		// dprintf(D_DAEMONCORE,"CreateToolhelp32Snapshot failed\n");
+        return 0;
+	}
+ 
+    // Fill in the size of the structure before using it. 
+
+    te32.dwSize = sizeof(THREADENTRY32); 
+ 
+    // Walk the thread snapshot to find all threads of the process. 
+    // If the thread belongs to the process, add its information 
+    // to the list.
+    if (Thread32First(hThreadSnap, &te32)) 
+    { 
+        do 
+        { 
+            if (te32.th32OwnerProcessID == pid) 
+            { 
+				tids[s] = te32.th32ThreadID;	
+				s++;
+            } 
+        } 
+        while (Thread32Next(hThreadSnap, &te32)); 
+    } 
+ 
+    // Do not forget to clean up the snapshot object. 
+	CloseHandle (hThreadSnap); 
+	
+	return (int)s;		
 }
 
 pid_t CSysinfo::FindThreadProcess (DWORD find_tid)

@@ -25,26 +25,6 @@
 #include "killfamily.h"
 #include "../condor_procapi/procapi.h"
 
-// We do all this stuff here so killfamily.C can be linked in
-// with program using DaemonCore as well as programs which are
-// completely DaemonCore ignorant (like the old starter).
-#ifdef WANT_DC_PM
-#	ifdef SIGCONT
-#		undef SIGCONT
-#	endif
-#	define SIGCONT DC_SIGCONT
-
-#	ifdef SIGSTOP
-#		undef SIGSTOP
-#	endif
-#	define SIGSTOP DC_SIGSTOP
-
-#	ifdef SIGKILL
-#		undef SIGKILL
-#	endif
-#	define SIGKILL DC_SIGKILL
-#endif // of WANT_DC_PM
-
 ProcFamily::ProcFamily( pid_t pid, priv_state priv, int test_only )
 {
 	daddy_pid = pid;
@@ -55,15 +35,13 @@ ProcFamily::ProcFamily( pid_t pid, priv_state priv, int test_only )
 	exited_cpu_user_time = 0;
 	exited_cpu_sys_time = 0;
 	max_image_size = 0;
-#ifdef WITH_DAEMONCORE
-	dc_tid = -1;
-#endif
 
 	searchLogin = NULL;
 
 #ifdef WIN32
 	// Always find the family via the Condor run login on NT, for now
-	searchLogin = strdup("condor-run-dir");
+	//searchLogin = strdup("condor-run-dir");
+	searchLogin = strdup("condor-run-");
 
 	// On Win32, all ProcFamily activity needs to be done as LocalSystem
 	mypriv = PRIV_ROOT;
@@ -79,11 +57,6 @@ ProcFamily::~ProcFamily()
 	if ( old_pids ) {
 		delete old_pids;
 	}
-#ifdef WITH_DAEMONCORE
-	if( dc_tid >= 0 ) {
-		daemonCore->Cancel_Timer( dc_tid );
-	}
-#endif
 	if ( searchLogin ) {
 		free(searchLogin);
 	}
@@ -183,7 +156,7 @@ ProcFamily::safe_kill(pid_t inpid,int sig)
 	}
 
 	if ( !test_only_flag ) {
-#ifdef WANT_DC_PM
+#ifdef WIN32
 		if ( daemonCore->Send_Signal(inpid,sig) == FALSE ) {
 			dprintf(D_PROCFAMILY,
 				"ProcFamily::safe_kill: Send_Signal(%d,%d) failed\n",
@@ -195,11 +168,12 @@ ProcFamily::safe_kill(pid_t inpid,int sig)
 				"ProcFamily::safe_kill: kill(%d,%d) failed, errno=%d\n",
 				inpid,sig,errno);
 		}
-#endif
+#endif // WIN32
 	}
 
 	set_priv(priv);
 }
+
 
 void
 ProcFamily::spree(int sig,KILLFAMILY_DIRECTION direction)
@@ -252,6 +226,7 @@ ProcFamily::getPidFamilyByLogin(pid_t *pidFamily)
 #ifndef WIN32
 	// Not yet implemented on Unix.
 	EXCEPT("getPidFamilyByLogin not implemented");
+	return 0;
 #else
 	// Win32 version
 	ExtArray<pid_t> pids(256);
@@ -436,12 +411,19 @@ ProcFamily::takesnapshot()
 
 			// assume pid exited unless we figure out otherwise below
 			currpid_exited = true;
-
-			found_it = true;
+			found_it = false;
 
 			// see if currpid exists in our new list
-			for (j=0;pidfamily[j] != currpid;j++) {
-				if ( pidfamily[j] == 0 ) {
+			for( j=0 ;; j++ ) {
+				if( pidfamily[j] == currpid ) {
+						// Found it, so it certainly didn't exit!
+					currpid_exited = false;
+					found_it = true;
+						// Now that we've found this pid in the new
+						// list, we can break out of the for() loop,
+					break;
+				}
+				if( pidfamily[j] == 0 ) {
 					
 					// currpid does not exist in our new pidfamily list !
 					found_it = false;
@@ -579,6 +561,13 @@ ProcFamily::currentfamily( pid_t* & ptr  )
 {
 	pid_t* tmp;
 	int i;
+
+	if( family_size <= 0 ) {
+		dprintf( D_ALWAYS, 
+				 "ProcFamily::currentfamily: ERROR: family_size is 0\n" );
+		ptr = NULL;
+		return 0;
+	}
 	tmp = new pid_t[ family_size ];
 	if( !tmp ) {
 		EXCEPT( "Out of memory!" );
@@ -605,27 +594,3 @@ ProcFamily::display()
 		"ProcFamily: alive_cpu_user = %ld, exited_cpu = %ld, max_image = %luk\n",
 		alive_cpu_user_time, exited_cpu_user_time, max_image_size);
 }
-
-
-#ifdef WITH_DAEMONCORE
-// This can't exist until everything that uses ProcFamily links with 
-// DaemonCore, and the V5 starter breaks that.  
-bool
-ProcFamily::takePeriodicSnapshot( int start, int period )
-{
-	if( dc_tid >= 0 ) {
-		daemonCore->Cancel_Timer( dc_tid );
-	}
-	dc_tid = daemonCore->
-		Register_Timer( start, period, 
-						(TimerHandlercpp)&ProcFamily::takesnapshot,
-						"ProcFamily::takesnapshot", this );
-	if( dc_tid < 0 ) {
-			// Error creating the timer
-		dc_tid = -1;
-		return false;
-	}
-	return true;
-}
-#endif /* WITH_DAEMONCORE */
-

@@ -11,6 +11,8 @@
 #include "condor_io.h"
 #include "condor_attributes.h"
 #include "condor_email.h"
+#include "condor_classad_lookup.h"
+#include "condor_query.h"
 
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "../condor_status.V6/status_types.h"
@@ -55,6 +57,9 @@ int CollectorDaemon::machinesOwner;
 ClassAd* CollectorDaemon::ad;
 SafeSock CollectorDaemon::updateSock;
 int CollectorDaemon::UpdateTimerId;
+
+ClassAd *CollectorDaemon::query_any_result;
+ClassAd CollectorDaemon::query_any_request;
 
 //---------------------------------------------------------
 
@@ -103,43 +108,54 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_query,"receive_query",NULL,READ);
 	daemonCore->Register_Command(QUERY_COLLECTOR_ADS,"QUERY_COLLECTOR_ADS",
 		(CommandHandler)receive_query,"receive_query",NULL,ADMINISTRATOR);
+	daemonCore->Register_Command(QUERY_STORAGE_ADS,"QUERY_STORAGE_ADS",
+		(CommandHandler)receive_query,"receive_query",NULL,READ);
+	daemonCore->Register_Command(QUERY_ANY_ADS,"QUERY_ANY_ADS",
+		(CommandHandler)receive_query,"receive_query",NULL,READ);
 	
 	// install command handlers for invalidations
 	daemonCore->Register_Command(INVALIDATE_STARTD_ADS,"INVALIDATE_STARTD_ADS",
-		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,WRITE);
+		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,DAEMON);
 	daemonCore->Register_Command(INVALIDATE_SCHEDD_ADS,"INVALIDATE_SCHEDD_ADS",
-		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,WRITE);
+		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,DAEMON);
 	daemonCore->Register_Command(INVALIDATE_MASTER_ADS,"INVALIDATE_MASTER_ADS",
-		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,WRITE);
+		(CommandHandler)receive_invalidation,"receive_invalidation",NULL,DAEMON);
 	daemonCore->Register_Command(INVALIDATE_CKPT_SRVR_ADS,
 		"INVALIDATE_CKPT_SRVR_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,WRITE);
+		"receive_invalidation",NULL,DAEMON);
 	daemonCore->Register_Command(INVALIDATE_SUBMITTOR_ADS,
 		"INVALIDATE_SUBMITTOR_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,WRITE);
+		"receive_invalidation",NULL,DAEMON);
 	daemonCore->Register_Command(INVALIDATE_LICENSE_ADS,
 		"INVALIDATE_LICENSE_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,WRITE);
+		"receive_invalidation",NULL,DAEMON);
 	daemonCore->Register_Command(INVALIDATE_COLLECTOR_ADS,
 		"INVALIDATE_COLLECTOR_ADS", (CommandHandler)receive_invalidation,
-		"receive_invalidation",NULL,ALLOW);
+		"receive_invalidation",NULL,DAEMON);
+	daemonCore->Register_Command(INVALIDATE_STORAGE_ADS,
+		"INVALIDATE_STORAGE_ADS", (CommandHandler)receive_invalidation,
+		"receive_invalidation",NULL,DAEMON);
 
 	// install command handlers for updates
 	daemonCore->Register_Command(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
+		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 	daemonCore->Register_Command(UPDATE_SCHEDD_AD,"UPDATE_SCHEDD_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
+		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 	daemonCore->Register_Command(UPDATE_SUBMITTOR_AD,"UPDATE_SUBMITTOR_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
+		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 	daemonCore->Register_Command(UPDATE_LICENSE_AD,"UPDATE_LICENSE_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
+		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 	daemonCore->Register_Command(UPDATE_MASTER_AD,"UPDATE_MASTER_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
+		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 	daemonCore->Register_Command(UPDATE_CKPT_SRVR_AD,"UPDATE_CKPT_SRVR_AD",
-		(CommandHandler)receive_update,"receive_update",NULL,WRITE);
+		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 	daemonCore->Register_Command(UPDATE_COLLECTOR_AD,"UPDATE_COLLECTOR_AD",
 		(CommandHandler)receive_update,"receive_update",NULL,ALLOW);
+	daemonCore->Register_Command(UPDATE_STORAGE_AD,"UPDATE_STORAGE_AD",
+		(CommandHandler)receive_update,"receive_update",NULL,DAEMON);
 
+	// ClassAd evaluations use this function to resolve names
+	ClassAdLookupRegister( process_global_query, this );
 }
 
 int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
@@ -152,7 +168,7 @@ int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
 
 	sock->decode();
 	sock->timeout(ClientTimeout);
-    if (!ad.get((Stream &)*sock) || !sock->eom())
+    if( !ad.initFromStream(*sock) || !sock->eom() )
     {
         dprintf(D_ALWAYS,"Failed to receive query on TCP: aborting\n");
         return FALSE;
@@ -204,6 +220,16 @@ int CollectorDaemon::receive_query(Service* s, int command, Stream* sock)
 		whichAds = COLLECTOR_AD;
 		break;
 
+	  case QUERY_STORAGE_ADS:
+		dprintf (D_FULLDEBUG,"Got QUERY_STORAGE_ADS\n");
+		whichAds = STORAGE_AD;
+		break;
+
+	  case QUERY_ANY_ADS:
+		dprintf (D_FULLDEBUG,"Got QUERY_ANY_ADS\n");
+		whichAds = ANY_AD;
+		break;
+
 	  default:
 		dprintf(D_ALWAYS,"Unknown command %d in process_query()\n", command);
 		whichAds = (AdTypes) -1;
@@ -226,7 +252,7 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 
 	sock->decode();
 	sock->timeout(ClientTimeout);
-    if (!ad.get((Stream &)*sock) || !sock->eom())
+    if( !ad.initFromStream(*sock) || !sock->eom() )
     {
         dprintf(D_ALWAYS,"Failed to receive query on TCP: aborting\n");
         return FALSE;
@@ -271,6 +297,11 @@ int CollectorDaemon::receive_invalidation(Service* s, int command, Stream* sock)
 	  case INVALIDATE_COLLECTOR_ADS:
 		dprintf (D_ALWAYS, "Got INVALIDATE_COLLECTOR_ADS\n");
 		whichAds = COLLECTOR_AD;
+		break;
+
+	  case INVALIDATE_STORAGE_ADS:
+		dprintf (D_ALWAYS, "Got INVALIDATE_STORAGE_ADS\n");
+		whichAds = STORAGE_AD;
 		break;
 
 	  default:
@@ -346,6 +377,48 @@ int CollectorDaemon::query_scanFunc (ClassAd *ad)
     return 1;
 }
 
+/*
+Examine the given ad, and see if it satisfies the query.
+If so, return zero, causing the scan to stop.
+Otherwise, return 1.
+*/
+
+int CollectorDaemon::select_by_match( ClassAd *ad )
+{
+	if(ad<CollectorEngine::THRESHOLD) {
+		return 1;
+	}
+
+	if( query_any_request <= *ad ) {
+		query_any_result = ad;
+		return 0;
+	}
+	return 1;
+}
+
+/*
+This function is called by the global reference mechanism.
+It convert the constraint string into a query ad, and runs
+a global query, returning a duplicate of the ad matched.
+On failure, it returns 0.
+*/
+
+ClassAd * CollectorDaemon::process_global_query( const char *constraint, void *arg )
+{
+	CondorQuery query(ANY_AD);
+
+       	query.addANDConstraint(constraint);
+	query.getQueryAd(query_any_request);
+	query_any_request.SetTargetTypeName (ANY_ADTYPE);
+	query_any_result = 0;
+
+	if(!collector.walkHashTable(ANY_AD,select_by_match)) {
+		return new ClassAd(*query_any_result);
+	} else {
+		return 0;
+	}
+}
+
 void CollectorDaemon::process_query (AdTypes whichAds, ClassAd &query, Stream *sock)
 {
 	int		more;
@@ -358,6 +431,7 @@ void CollectorDaemon::process_query (AdTypes whichAds, ClassAd &query, Stream *s
 	__numAds__ = 0;
 	__sock__ = sock;
 	sock->encode();
+
 	if (!collector.walkHashTable (whichAds, query_scanFunc))
 	{
 		dprintf (D_ALWAYS, "Error sending query response\n");
@@ -466,6 +540,19 @@ void CollectorDaemon::reportToDevelopers (void)
 	char	buffer[128];
 	FILE	*mailer;
 	TrackTotals	totals( PP_STARTD_NORMAL );
+
+    // compute machine information
+    machinesTotal = 0;
+    machinesUnclaimed = 0;
+    machinesClaimed = 0;
+    machinesOwner = 0;
+    if (!collector.walkHashTable (STARTD_AD, reportMiniStartdScanFunc)) {
+            dprintf (D_ALWAYS, "Error counting machines in devel report \n");
+    }
+
+    // If we don't have any machines reporting to us, bail out early
+    if(machinesTotal == 0) 	
+        return; 
 
 	if( ( normalTotals = new TrackTotals( PP_STARTD_NORMAL ) ) == NULL ) {
 		dprintf( D_ALWAYS, "Didn't send monthly report (failed totals)\n" );
@@ -620,6 +707,11 @@ int CollectorDaemon::sendCollectorAd()
             dprintf (D_ALWAYS, "Error making collector ad (startd scan) \n");
     }
 
+    // If we don't have any machines, then bail out. You oftentimes see people
+    // run a collector on each macnine in their pool. Duh.
+    if(machinesTotal == 0) {
+		return 1;
+	} 
     // insert values into the ad
     char line[100];
     sprintf(line,"%s = %d",ATTR_RUNNING_JOBS,submittorRunningJobs);

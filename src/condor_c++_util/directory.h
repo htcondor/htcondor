@@ -146,10 +146,17 @@ public:
 	*/
 	bool IsDirectory() { return isdirectory; }
 
+	/** Determine if the file is has the execute bit set at all.
+		@return true if the file has the user, group or other execute bit
+		set; false if the execute bit is not set.
+	*/
+	bool IsExecutable() { return isexecutable; }
+
 private:
 	si_error_t si_error;
 	int si_errno;
 	bool isdirectory;
+	bool isexecutable;
 	time_t access_time;
 	time_t modify_time;
 	time_t create_time;

@@ -52,8 +52,10 @@ static const char *fltKeywords[] =
 };
 
 // need this global variable to hold information reqd by the scan function
-static ClassAdList *__list;
-static ClassAd     *__query;
+// 30-Dec-2001: These no longer seem needed--nothing refers to them, there
+// doesn't seem to be a scan function.
+//static ClassAdList *__list;
+//static ClassAd     *__query;
 
 
 CondorQ::
@@ -353,7 +355,7 @@ int JobSort(ClassAd *job1, ClassAd *job2, void *data)
   Encode a status from a PROC structure as a single letter suited for
   printing.
 */
-static char
+const char
 encode_status( int status )
 {
 	switch( status ) {
@@ -406,30 +408,3 @@ short_print(
 		cmd
 	);
 }
-
-void
-short_print_to_buffer(
-	char *buffer,
-	int cluster,
-	int proc,
-	const char *owner,
-	int date,
-	int time,
-	int status,
-	int prio,
-	int image_size,
-	const char *cmd
-	) {
-	sprintf( buffer, "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %-18.18s\n",
-		cluster,
-		proc,
-		owner,
-		format_date((time_t)date),
-		format_time(time),
-		encode_status(status),
-		prio,
-		image_size/1024.0,
-		cmd
-	);
-}
-	

@@ -33,6 +33,8 @@
 #include "condor_debug.h"
 #include "condor_uid.h"
 
+int _condor_mkargv( int* argc, char* argv[], char* line );
+
 
 /* 
    This should default to 0 so we only get dprintf() messages if we
@@ -41,17 +43,36 @@
 */
 int		DebugFlags			= 0;		
 
+/*
+   This is a global flag that tells us if we've successfully ran
+   dprintf_config() or otherwise setup dprintf() to print where we
+   want it to go.  This is used by EXCEPT() to know if it can safely
+   call dprintf(), or if it should just use printf(), instead.
+*/
+int		_condor_dprintf_works = 0;
 
 char *_condor_DebugFlagNames[] = {
 	"D_ALWAYS", "D_SYSCALLS", "D_CKPT", "D_XDR", "D_MALLOC", "D_LOAD",
 	"D_EXPR", "D_PROC", "D_JOB", "D_MACHINE", "D_FULLDEBUG", "D_NFS",
 	"D_UPDOWN", "D_AFS", "D_PREEMPT", "D_PROTOCOL",	"D_PRIV",
-	"D_TAPENET", "D_DAEMONCORE", "D_COMMAND", "D_BANDWIDTH", "D_NETWORK",
-	"D_KEYBOARD", "D_PROCFAMILY", "D_IDLE", "D_MATCH", "D_UNDEF26",
-	"D_UNDEF27", "D_UNDEF28", "D_FDS", "D_SECONDS", "D_NOHEADER",
+	"D_SECURITY", "D_DAEMONCORE", "D_COMMAND", "D_BANDWIDTH", "D_NETWORK",
+	"D_KEYBOARD", "D_PROCFAMILY", "D_IDLE", "D_MATCH", "D_ACCOUNTANT",
+	"D_FAILURE", "D_UNDEF28", "D_FDS", "D_SECONDS", "D_NOHEADER",
 };
 
 
+/*
+   The real dprintf(), called by both the user job and all the daemons
+   and tools.  To actually log the message, we call
+   _condor_dprintf_va(), which is implemented differently for the user
+   job and everything else.  If dprintf() has been configured (with
+   dprintf_config() or it's equivalent in the user job), this will
+   show up where we want it.  If not, we'll just drop the message in
+   the bit bucket.  Someday, when we clean up dprintf() more
+   effectively, we'll want to call _condor_sprintf_va() (defined
+   below) if dprintf hasn't been configured so we'll still see
+   the messages going to stderr, instead of being dropped.
+*/
 void
 dprintf(int flags, char* fmt, ...)
 {
@@ -101,4 +122,39 @@ _condor_set_debug_flags( char *strflags )
 		}
 	}
 }
+
+
+#if 0
+/*
+   Until we know the difference between D_ALWAYS and D_ERROR, we don't
+   really want to do this stuff below, since there are lots of
+   D_ALWAYS messages we really don't want to see in the tools.  For
+   now, all we really care about is the dprintf() from EXCEPT(), which
+   we handle in except.c, anyway.
+*/
+
+/* 
+   This method is called by dprintf() if we haven't already configured
+   dprintf() to tell it where and what to log.  It this prints all
+   debug messages we care about to the given fp, usually stderr.  In
+   addition, there's no date/time header printed in this case (it's
+   equivalent to always having D_NOHEADER defined), to avoid clutter. 
+   Derek Wright <wright@cs.wisc.edu>
+*/
+void
+_condor_sprintf_va( int flags, FILE* fp, char* fmt, va_list args )
+{
+		/* 
+		   For now, only log D_ALWAYS if we're dumping to stderr.
+		   Once we have ToolCore and can easily set the debug flags for
+		   all command-line tools, and *everything* is just using
+		   dprintf() again, we should compare against DebugFlags.
+		   Derek Wright <wright@cs.wisc.edu>
+		*/
+    if( ! (flags & D_ALWAYS) ) {
+        return;
+    }
+	vfprintf( fp, fmt, args );
+}
+#endif /* 0 */
 

@@ -5,9 +5,12 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "globus_utils.h"
+#include "gahp-client.h"
 #include "globusresource.h"
 
 #define JM_COMMIT_TIMEOUT	300
+
+class GlobusResource;
 
 class GlobusJob : public Service
 {
@@ -24,32 +27,55 @@ class GlobusJob : public Service
 	void NotifyResourceUp();
 	void UpdateCondorState( int new_state );
 	void UpdateGlobusState( int new_state, int new_error_code );
+	void GramCallback( int new_state, int new_error_code );
+	void GetCallbacks();
+	void ClearCallbacks();
 	GlobusResource *GetResource();
 	int syncIO();
 
-	void setProbeInterval( int new_interval );
+	static int probeInterval;
+	static int submitInterval;
+	static int restartInterval;
+	static int gahpCallTimeout;
 
-	static probeInterval;
+	static void setProbeInterval( int new_interval )
+		{ probeInterval = new_interval; }
+	static void setSubmitInterval( int new_interval )
+		{ submitInterval = new_interval; }
+	static void setRestartInterval( int new_interval )
+		{ restartInterval = new_interval; }
+	static void setGahpCallTimeout( int new_timeout )
+		{ gahpCallTimeout = new_timeout; }
 
 	// New variables
 	bool resourceDown;
+	bool resourceStateKnown;
 	int condorState;
 	int gmState;
 	int globusState;
 	int globusStateErrorCode;
+	int globusStateBeforeFailure;
+	int callbackGlobusState;
+	int callbackGlobusStateErrorCode;
 	bool jmUnreachable;
 	GlobusResource *myResource;
 	int evaluateStateTid;
 	time_t lastProbeTime;
 	time_t enteredCurrentGmState;
 	time_t enteredCurrentGlobusState;
+	time_t lastSubmitAttempt;
 	int numSubmitAttempts;
 	int syncedOutputSize;
 	int syncedErrorSize;
+	int shadowBirthday;
+	char *holdReason;
+	int submitFailureCode;
+	int lastRestartReason;
+	time_t lastRestartAttempt;
+	int numRestartAttempts;
+	int numRestartAttemptsThisSubmit;
 
 	GahpClient gahp;
-
-	const char *errorString();
 
 	char *buildRSL( ClassAd *classad );
 
@@ -59,11 +85,16 @@ class GlobusJob : public Service
 	char *localOutput;
 	char *localError;
 	int globusError;
-	int jmFailureCode;
 	char *userLogFile;
 	int exitValue;
 	bool submitLogged;
 	bool executeLogged;
+	bool submitFailedLogged;
+	bool terminateLogged;
+	bool abortLogged;
+	bool evictLogged;
+	bool holdLogged;
+
 	bool stateChanged;
 	bool newJM;		// This means a jobmanager that supports restart
 					// and two-phase commit

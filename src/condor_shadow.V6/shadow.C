@@ -31,12 +31,18 @@
 #include "internet.h"
 #include "condor_uid.h"
 #include "condor_adtypes.h"
+#include "condor_version.h"
 #include "condor_attributes.h"
 #include "condor_config.h"
 #include "my_hostname.h"
 #include "../condor_ckpt_server/server_interface.h"
 #include "sig_install.h"
 #include "job_report.h"
+#include "../condor_c++_util/directory.h"
+#include "condor_distribution.h"
+#include "condor_environ.h"
+
+#include "user_job_policy.h"
 
 #if defined(AIX31) || defined(AIX32)
 #include "syscall.aix.h"
@@ -66,9 +72,18 @@ int	UsePipes;
 char* mySubSystem = "SHADOW";
 
 extern "C" {
+#if defined(LINUX) && defined(GLIBC22)
+	/* XXX fix declarations as well.  */
+	void reaper(int);
+	void handle_sigusr1(int);
+	void handle_sigquit(int);
+#else
 	void reaper();
 	void handle_sigusr1();
 	void handle_sigquit();
+#endif
+
+
 	void unblock_signal(int sig);
 	void block_signal(int sig);
 	void display_errors( FILE *fp );
@@ -80,14 +95,14 @@ extern "C" {
 				int *jobstatus, char *coredir );
 	void get_local_rusage( struct rusage *bsd_rusage );
 	void NotifyUser( char *buf, PROC *proc );
-	void MvTmpCkpt();
-	FILE	*fdopen();
-	int		whoami();
+	FILE	*fdopen(int, const char *);
+	int		whoami(FILE*);
 	void update_job_status( struct rusage *localp, struct rusage *remotep );
 	void update_job_rusage( struct rusage *localp, struct rusage *remotep );
 	int DoCleanup();
 	int unlink_local_or_ckpt_server( char* );
 	int update_rusage( struct rusage*, struct rusage* );
+	void HoldJob( const char * );
 }
 
 extern int part_send_job( int test_starter, char *host, int &reason,
@@ -96,6 +111,8 @@ extern int part_send_job( int test_starter, char *host, int &reason,
 extern int send_cmd_to_startd(char *sin_host, char *capability, int cmd);
 extern int InitJobAd(int cluster, int proc);
 extern int MakeProc(ClassAd *ad, PROC *p);
+static bool periodic_policy(void);
+static void static_policy(void);
 
 extern int do_REMOTE_syscall();
 extern int do_REMOTE_syscall1(int);
@@ -104,8 +121,6 @@ extern int do_REMOTE_syscall3(int);
 extern int do_REMOTE_syscall4(int);
 extern int do_REMOTE_syscall5(int);
 
-extern "C" void RequestRSCBandwidth();
-
 #if !defined(AIX31) && !defined(AIX32)
 char *strcpy();
 #endif
@@ -113,9 +128,8 @@ char *strcpy();
 #include "user_log.c++.h"
 UserLog ULog;
 
-#define SMALL_STRING 128
-char My_Filesystem_Domain[ SMALL_STRING ];
-char My_UID_Domain[ SMALL_STRING ];
+char * My_Filesystem_Domain;
+char * My_UID_Domain;
 int  UseAFS;
 int  UseNFS;
 int  UseCkptServer;
@@ -126,16 +140,25 @@ int  PeriodicSync;
 int  SlowCkptSpeed;
 char *CkptServerHost = NULL;
 char *LastCkptServer = NULL;
+int  ShadowBDate = -1;
 int  LastRestartTime = -1;		// time_t when job last restarted from a ckpt
 								// or completed a periodic ckpt
 int  LastCkptTime = -1;			// time when job last completed a ckpt
 int  NumCkpts = 0;				// count of completed checkpoints
 int  NumRestarts = 0;			// count of attempted checkpoint restarts
 int  CommittedTime = 0;			// run-time committed in checkpoints
-bool ManageBandwidth = false;	// notify negotiator about network usage?
-int	 BWInterval = 0;			// how often do we request RSC bandwidth?
+
+#ifdef WANT_NETMAN
+extern bool ManageBandwidth;	// notify negotiator about network usage?
+extern int NetworkHorizon;		// how often do we request network bandwidth?
+extern "C" void file_stream_child_exit(pid_t pid);
+extern "C" void abort_file_stream_transfer();
+extern "C" void RequestRSCBandwidth();
+#endif
 
 extern char *Executing_Arch, *Executing_OpSys;
+
+extern char *IpcFile;
 
 int		MyPid;
 int		LogPipe;
@@ -150,13 +173,11 @@ GENERIC_PROC GenProc;
 
 extern "C"  void initializeUserLog();
 extern "C"  void log_termination(struct rusage *, struct rusage *);
-extern "C"  void log_execute(char *);
 extern "C"  void log_except(char *);
 
 char	*Spool = NULL;
 char	*ExecutingHost = NULL;
 char	*GlobalCap = NULL;
-char	*MailerPgm = NULL;
 
 // count of total network bytes previously send and received for this
 // job from previous runs (i.e., includes ckpt transfers)
@@ -186,27 +207,26 @@ int		HadErr = 0;
 
 #ifdef NOTDEF
 int		InitialJobStatus = -1;
-#endif NOTDEF
+#endif /* NOTDEF */
 
 int JobStatus;
 struct rusage JobRusage;
-struct rusage AccumRusage;
-int ExitReason = JOB_EXITED;		/* Schedd counts on knowing exit reason */
+int ExitReason = JOB_EXCEPTION;		/* Schedd counts on knowing exit reason */
+volatile int check_static_policy = 1;	/* don't check if condor_rm'ed */
 int JobExitStatus = 0;                 /* the job's exit status */
 int MaxDiscardedRunTime = 3600;
 
 extern "C" int ExceptCleanup(int,int,char*);
-int Termlog;
-
-time_t	RunTime;
+extern int Termlog;
 
 ReliSock	*sock_RSC1 = NULL, *RSC_ShadowInit(int rscsock, int errsock);
-ReliSock	*RSC_MyShadowInit(int rscsock, int errsock);;
+ReliSock	*RSC_MyShadowInit(int rscsock, int errsock);
 int HandleLog();
+void RemoveNewShadowDroppings(char *cluster, char *proc);
 
 int MainSymbolExists = 1;
 
-int
+void
 usage()
 {
 	dprintf( D_ALWAYS, "Usage: shadow schedd_addr host capability cluster proc\n" );
@@ -231,18 +251,37 @@ usage()
 
 extern ClassAd *JobAd;
 
-char*		schedd = NULL;
+char		*schedd = NULL, *scheddName = NULL;
+
+
+void
+printClassAd( void )
+{
+	printf( "%s = False\n", ATTR_IS_DAEMON_CORE );
+	printf( "%s = True\n", ATTR_HAS_REMOTE_SYSCALLS );
+	printf( "%s = True\n", ATTR_HAS_CHECKPOINTING );
+	printf( "%s = True\n", ATTR_HAS_OLD_VANILLA );
+	printf( "%s = \"%s\"\n", ATTR_VERSION, CondorVersion() );
+}
+
 
 /*ARGSUSED*/
-main(int argc, char *argv[], char *envp[])
+int
+main(int argc, char *argv[] )
 {
-	char	*tmp;
+	char	*tmp = NULL;
 	int		reserved_swap, free_swap;
-	char	*host, *cluster, *proc;
-	char	*my_fs_domain, *my_uid_domain, *use_afs, *use_nfs;
-	char	*use_ckpt_server;
+	char	*host = NULL, *cluster = NULL, *proc = NULL;
+	char	*use_afs = NULL, *use_nfs = NULL;
+	char	*use_ckpt_server = NULL;
 	char	*capability;
 	int		i;
+
+	myDistro->Init( argc, argv );
+	if( argc == 2 && strincmp(argv[1], "-cl", 3) == MATCH ) {
+		printClassAd();
+		exit( 0 );
+	}
 
 	/* on OSF/1 as installed currently on our machines, attempts to read from
 	   the FILE * returned by popen() fail if the underlying file descriptor
@@ -281,7 +320,7 @@ main(int argc, char *argv[], char *envp[])
 		}
 	}
 
-	LastRestartTime = time(0);
+	ShadowBDate = LastRestartTime = time(0);
 
 	/* Start up with condor.condor privileges. */
 	set_condor_priv();
@@ -294,7 +333,10 @@ main(int argc, char *argv[], char *envp[])
 	dprintf_config( mySubSystem, SHADOW_LOG );
 	DebugId = whoami;
 
-	dprintf( D_ALWAYS, "********** Shadow starting up **********\n" );
+	dprintf( D_ALWAYS, "******* Standard Shadow starting up *******\n" );
+	dprintf( D_ALWAYS, "** %s\n", CondorVersion() );
+	dprintf( D_ALWAYS, "** %s\n", CondorPlatform() );
+	dprintf( D_ALWAYS, "*******************************************\n" );
 
 	if( (tmp=param("RESERVED_SWAP")) == NULL ) {
 		reserved_swap = 5 * 1024;			/* 5 megabytes */
@@ -320,7 +362,7 @@ main(int argc, char *argv[], char *envp[])
     {
         dprintf(D_FULLDEBUG, "argv[%d] = %s\n", i, argv[i]);
     }
-	if( argc != 6 ) {
+	if( argc < 6 ) {
 		usage();
 	}
 
@@ -329,12 +371,14 @@ main(int argc, char *argv[], char *envp[])
 	while( x ) {
 
 	}
-#endif WAIT_FOR_DEBUGGER
+#endif /* WAIT_FOR_DEBUGGER */
 
 	if( strcmp("-pipe",argv[1]) == 0 ) {
 		capability = argv[2];
 		cluster = argv[3];
 		proc = argv[4];
+		// read the big comment in the function for why this is here.
+		RemoveNewShadowDroppings(cluster, proc);
 		pipe_setup( cluster, proc, capability );
 	} else {
 		schedd = argv[1];
@@ -342,8 +386,17 @@ main(int argc, char *argv[], char *envp[])
 		capability = argv[3];
 		cluster = argv[4];
 		proc = argv[5];
+		if ( argc > 6 ) {
+			IpcFile = argv[6];
+			dprintf(D_FULLDEBUG,"Setting IpcFile to %s\n",IpcFile);
+		} else {
+			IpcFile = NULL;
+		}
+		// read the big comment in the function for why this is here.
+		RemoveNewShadowDroppings(cluster, proc);
 		regular_setup( host, cluster, proc, capability );
 	}
+	scheddName = getenv( EnvGetName( ENV_SCHEDD_NAME ) );
 
 	GlobalCap = strdup(capability);
 
@@ -356,25 +409,17 @@ main(int argc, char *argv[], char *envp[])
 	// initialize the user log
 	initializeUserLog();
 
-	my_fs_domain = param( "FILESYSTEM_DOMAIN" );
-	if( my_fs_domain ) {
-		strcpy( My_Filesystem_Domain, my_fs_domain );
-	} else {
-		strcpy( My_Filesystem_Domain, my_full_hostname() );
-	}
-	dprintf( D_ALWAYS, "My_Filesystem_Domain = \"%s\"\n", My_Filesystem_Domain );
+	My_Filesystem_Domain = param( "FILESYSTEM_DOMAIN" ); 
+	dprintf( D_ALWAYS, "My_Filesystem_Domain = \"%s\"\n", 
+			 My_Filesystem_Domain );
 
-	my_uid_domain = param( "UID_DOMAIN" );
-	if( (my_uid_domain) && (strcasecmp(my_uid_domain,"none") != 0) ) {
-		strcpy( My_UID_Domain, my_uid_domain );
-	} else {
-		strcpy( My_UID_Domain, my_full_hostname() );
-	}
+	My_UID_Domain = param( "UID_DOMAIN" ); 
 	dprintf( D_ALWAYS, "My_UID_Domain = \"%s\"\n", My_UID_Domain );
 
 	use_afs = param( "USE_AFS" );
 	if( use_afs && (use_afs[0] == 'T' || use_afs[0] == 't') ) {
 		UseAFS = TRUE;
+        free( use_afs );
 	} else {
 		UseAFS = FALSE;
 	}
@@ -382,6 +427,7 @@ main(int argc, char *argv[], char *envp[])
 	use_nfs = param( "USE_NFS" );
 	if( use_nfs && (use_nfs[0] == 'T' || use_nfs[0] == 't') ) {
 		UseNFS = TRUE;
+        free( use_nfs );
 	} else {
 		UseNFS = FALSE;
 	}
@@ -389,7 +435,7 @@ main(int argc, char *argv[], char *envp[])
 	// if job specifies a checkpoint server host, this overrides
 	// the config file parameters
 	tmp = (char *)malloc(_POSIX_PATH_MAX);
-	if (JobAd->LookupString(ATTR_USE_CKPT_SERVER, tmp) == 1) {
+	if (JobAd->LookupString(ATTR_CKPT_SERVER, tmp) == 1) {
 		if (CkptServerHost) free(CkptServerHost);
 		UseCkptServer = TRUE;
 		CkptServerHost = strdup(tmp);
@@ -398,7 +444,9 @@ main(int argc, char *argv[], char *envp[])
 	} else {
 		free(tmp);
 		use_ckpt_server = param( "USE_CKPT_SERVER" );
-		if (CkptServerHost) free(CkptServerHost);
+		if (CkptServerHost) {
+            free(CkptServerHost);
+        }
 		CkptServerHost = param( "CKPT_SERVER_HOST" );
 		if( !CkptServerHost ||
 			(use_ckpt_server && (use_ckpt_server[0] == 'F' ||
@@ -410,7 +458,9 @@ main(int argc, char *argv[], char *envp[])
 				// We've got a checkpoint server, so let's use it.
 			UseCkptServer = TRUE;
 		}
-		if (use_ckpt_server) free(use_ckpt_server);
+		if (use_ckpt_server) {
+            free(use_ckpt_server);
+        }
 
 		StarterChoosesCkptServer = TRUE; // True by default
 		if( (tmp = param("STARTER_CHOOSES_CKPT_SERVER")) ) {
@@ -446,23 +496,31 @@ main(int argc, char *argv[], char *envp[])
 	} else {
 		CompressPeriodicCkpt = FALSE;
 	}
-	if (tmp) free(tmp);
+	if (tmp) {
+        free(tmp);
+    }
 
 	tmp = param( "PERIODIC_MEMORY_SYNC" );
 	if (tmp && (tmp[0] == 'T' || tmp[0] == 't')) {
 		PeriodicSync = TRUE;
+        free(tmp);
 	} else {
 		PeriodicSync = FALSE;
 	}
-	if (tmp) free(tmp);
+	if (tmp) {
+        free(tmp);
+    }
 
 	tmp = param( "COMPRESS_VACATE_CKPT" );
 	if (tmp && (tmp[0] == 'T' || tmp[0] == 't')) {
 		CompressVacateCkpt = TRUE;
+        free(tmp);
 	} else {
 		CompressVacateCkpt = FALSE;
 	}
-	if (tmp) free(tmp);
+	if (tmp) {
+        free(tmp);
+    }
 
 	tmp = param( "SLOW_CKPT_SPEED" );
 	if (tmp) {
@@ -472,6 +530,7 @@ main(int argc, char *argv[], char *envp[])
 		SlowCkptSpeed = 0;
 	}
 
+#ifdef WANT_NETMAN
 	tmp = param("MANAGE_BANDWIDTH");
 	if (!tmp) {
 		ManageBandwidth = false;
@@ -482,19 +541,15 @@ main(int argc, char *argv[], char *envp[])
 			ManageBandwidth = false;
 		}
 		free(tmp);
-		tmp = param("RSC_BANDWIDTH_INTERVAL");
+		tmp = param("NETWORK_HORIZON");
 		if (!tmp) {
-			BWInterval = 300;	// should be equal to NETWORK_HORIZON
+			NetworkHorizon = 300;
 		} else {
-			BWInterval = atoi(tmp);
+			NetworkHorizon = atoi(tmp);
 			free(tmp);
 		}
 	}
-
-	MailerPgm = param( "MAIL" );
-	if( MailerPgm == NULL ) {
-		MailerPgm = "/bin/mail";
-	}
+#endif
 
 	// Install signal handlers such that all signals are blocked when inside
 	// the handler.
@@ -509,6 +564,7 @@ main(int argc, char *argv[], char *envp[])
 		// SIGQUIT is sent for a fast shutdow.
 	install_sig_handler_with_mask( SIGQUIT, &fullset, handle_sigquit );
 
+
 	/* Here we block the async signals.  We do this mainly because on HPUX,
 	 * XDR wigs out if it is interrupted by a signal.  We do it on all
 	 * platforms because it seems like a safe idea.  We unblock the signals
@@ -520,7 +576,29 @@ main(int argc, char *argv[], char *envp[])
 
 	Wrapup();
 
-	dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
+	/* HACK! WHOOO!!!!! Throw the old shadow away already! */
+	/* This will figure out whether or not the job should go on hold AFTER the
+		job has exited for whatever reason, or if the job should be allowed
+		to exit. It modifies ExitReason approriately for job holding, or, get
+		this, just EXCEPTs if the jobs is supposed to go into idle state and
+		not leave. :) */
+	/* Small change by Todd : only check the static policy if the job really
+	   exited of its own accord -- we don't want to even evaluate the static
+	   policy if the job exited because it was preempted, for instance */
+	if (check_static_policy && 
+		(ExitReason == JOB_EXITED || ExitReason == JOB_KILLED 
+		     	|| ExitReason == JOB_COREDUMPED)) 
+	{
+		static_policy();
+	}
+    if( My_UID_Domain ) {
+        free( My_UID_Domain );
+    }
+    if( My_Filesystem_Domain ) {
+        free( My_Filesystem_Domain );
+    }
+	dprintf( D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
+		ExitReason );
 	exit( ExitReason );
 }
 
@@ -533,8 +611,8 @@ HandleSyscalls()
 	register int	cnt;
 	fd_set 			readfds;
 	int 			nfds = -1;
-	priv_state		priv;
-	time_t			last_bw_update = time(0);
+
+	time_t			periodic_interval_len = 20; /* secs, empirically found :) */
 
 	nfds = (RSC_SOCK > CLIENT_LOG ) ? (RSC_SOCK + 1) : (CLIENT_LOG + 1);
 
@@ -551,6 +629,12 @@ HandleSyscalls()
 	dprintf(D_SYSCALLS, "Shadow: Starting to field syscall requests\n");
 	errno = 0;
 
+	time_t current_time = time(0);
+	time_t next_periodic_update = current_time + periodic_interval_len;
+#if WANT_NETMAN
+	time_t next_bw_update = current_time + NetworkHorizon;
+#endif
+	
 	for(;;) {	/* get a request and fulfill it */
 
 		FD_ZERO(&readfds);
@@ -558,9 +642,23 @@ HandleSyscalls()
 		FD_SET(CLIENT_LOG, &readfds);
 
 		struct timeval *ptimer = NULL, timer;
-		if (ManageBandwidth) {
-			timer.tv_sec = BWInterval;
+		timer.tv_sec = next_periodic_update - current_time;
+		timer.tv_usec = 0;
+		ptimer = &timer;
+#if WANT_NETMAN
+		if (ManageBandwidth && next_bw_update > current_time) {
+			timer.tv_sec = next_bw_update - current_time;
 			timer.tv_usec = 0;
+			ptimer = &timer;
+		}
+#endif
+		/* if the current timer is set for a time longer than this, than
+			truncate the timer required to the periodic limit. After 
+			inspection of the bandwidth timer, it seems that it will recorrect
+			itself if select comes out of the loop before the timer goes off
+			anyway to handle syscalls */
+		if ( timer.tv_sec > periodic_interval_len) {
+			timer.tv_sec = next_periodic_update - current_time;
 			ptimer = &timer;
 		}
 
@@ -602,13 +700,29 @@ HandleSyscalls()
 			exit(1);
 		}
 
-		if (ManageBandwidth) {
-			time_t current_time = time(0);
-			if (current_time > last_bw_update + BWInterval) {
-				RequestRSCBandwidth();
-				last_bw_update = current_time;
+		current_time = time(0);
+
+		/* if this is true, then do the periodic_interval_len events */
+		if (current_time >= next_periodic_update) {
+			next_periodic_update = current_time + periodic_interval_len;
+
+			/* evaluate some attributes for policies like determining what to
+			do if a job suspends wierdly or some such thing. This function
+			has the possibility of making the shadow exit with JOB_SHOULD_HOLD
+			or futzing up some global variables about how the job could've
+			exited and letting Wraup take care of it. */
+			if (periodic_policy() == true)
+			{
+				break;
 			}
 		}
+
+#if WANT_NETMAN
+		if (ManageBandwidth && current_time >= next_bw_update) {
+			RequestRSCBandwidth();
+			next_bw_update = current_time + NetworkHorizon;
+		}
+#endif
 
 #if defined(SYSCALL_DEBUG)
 		strcpy( SyscallLabel, "shadow" );
@@ -700,6 +814,138 @@ Wrapup( )
 	}
 }
 
+/* evaluate various periodic checks during the running of the shadow and
+	perform actions based upon what special attributes evaluate to. */
+bool periodic_policy(void)
+{
+	ClassAd *result;
+	int val;
+	int action;
+	char buf[4096];
+
+	/* See what the user job policy has in store for me. */
+	result = user_job_policy(JobAd);
+	
+	result->EvalBool(ATTR_USER_POLICY_ERROR, result, val);
+	if (val == 1)
+	{
+		dprintf(D_ALWAYS, "There was an error in the periodic policy\n");
+		delete result;
+		return false;
+	}
+
+	result->EvalBool(ATTR_TAKE_ACTION, result, val);
+	if (val == 1)
+	{
+		result->LookupString(ATTR_USER_POLICY_FIRING_EXPR, buf);
+
+		result->LookupInteger(ATTR_USER_POLICY_ACTION, action);
+		switch(action)
+		{
+			case REMOVE_JOB:
+				dprintf(D_ALWAYS, "Periodic Policy: removing job because %s "
+					"has become true\n", buf);
+				/* set some yucky global variables */
+				JobStatus = 0;
+				JobExitStatus = 0;
+				delete result;
+				return true;
+				break;
+
+			case HOLD_JOB:
+				sprintf(buf, "Periodic Policy: holding job because %s has "
+					"become true\n", buf);
+
+				sprintf(buf, "Your job has been held because %s has become "
+					"true\n", ATTR_PERIODIC_HOLD_CHECK);
+
+				delete result;
+
+				/* This exits */
+				HoldJob(buf);
+				break;
+
+			default:
+				dprintf(D_ALWAYS, "WARNING! Ignoring unknown action type in "
+						"periodic_policy()\n");
+				delete result;
+				return false;
+				break;
+		}
+	}
+
+	delete result;
+	return false;
+}
+
+/* After the job exits, look into the classad to see if certain things are
+	true or not */
+void static_policy(void)
+{
+	ClassAd *result;
+	int val;
+	int action;
+	char buf[4096];
+
+	/* See what the user job policy has in store for me. */
+	result = user_job_policy(JobAd);
+	
+	result->EvalBool(ATTR_USER_POLICY_ERROR, result, val);
+	if (val == 1)
+	{
+		dprintf(D_ALWAYS, "There was an error in the static policy\n");
+		delete result;
+		return;
+	}
+
+	result->EvalBool(ATTR_TAKE_ACTION, result, val);
+	if (val == 1)
+	{
+		result->LookupString(ATTR_USER_POLICY_FIRING_EXPR, buf);
+
+		result->LookupInteger(ATTR_USER_POLICY_ACTION, action);
+		switch(action)
+		{
+			case REMOVE_JOB:
+				dprintf(D_ALWAYS, "Static Policy: removing job because %s has "
+					"become true\n", buf);
+
+				/* do nothing, the nasty old shadow logic takes it from here. */
+
+				delete result;
+				return;
+				break;
+
+			case HOLD_JOB:
+				dprintf(D_ALWAYS, "Static Policy: holding job because %s has "
+					"become true\n", buf);
+
+				delete result;
+
+				sprintf(buf, "Your job has been held because %s has become "
+					"true\n", ATTR_PERIODIC_HOLD_CHECK);
+
+				/* This exits */
+				HoldJob(buf);
+				return;
+				break;
+
+			default:
+				dprintf(D_ALWAYS, "WARNING! Ignoring unknown action type in "
+						"periodic_policy()\n");
+				delete result;
+				return;
+				break;
+		}
+	}
+
+	delete result;
+
+	dprintf( D_ALWAYS, "Static policy: don't remove on exit\n" );
+	EXCEPT( "Job didn't exit under conditions specifed in %s",
+		ATTR_ON_EXIT_REMOVE_CHECK );
+}
+
 void
 update_job_rusage( struct rusage *localp, struct rusage *remotep )
 {
@@ -741,6 +987,27 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 	int		status = -1;
 	float utime = 0.0;
 	float stime = 0.0;
+	int tot_sus=0, cum_sus=0, last_sus=0;
+
+	// If the job completed, and there is no HISTORY file specified,
+	// the don't bother to update the job ClassAd since it is about to be
+	// flushed into the bit bucket by the schedd anyway.
+	char *myHistoryFile = param("HISTORY");
+	if ((Proc->status == COMPLETED) && (myHistoryFile==NULL)) {
+		return;
+	}
+
+	if (myHistoryFile) {
+		free(myHistoryFile);
+	}
+
+	if (!JobAd)
+	{
+		EXCEPT( "update_job_status(): No job ad\n");
+	}
+	JobAd->LookupInteger(ATTR_TOTAL_SUSPENSIONS, tot_sus);
+	JobAd->LookupInteger(ATTR_CUMULATIVE_SUSPENSION_TIME, cum_sus);
+	JobAd->LookupInteger(ATTR_LAST_SUSPENSION_TIME, last_sus);
 
 	//new syntax, can use filesystem to authenticate
 	if (!ConnectQ(schedd, SHADOW_QMGMT_TIMEOUT) ||
@@ -754,6 +1021,15 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 		dprintf( D_ALWAYS, "update_job_status(): Job %d.%d has been removed "
 				 "by condor_rm\n", Proc->id.cluster, Proc->id.proc );
 	} else {
+
+		SetAttributeInt(Proc->id.cluster, Proc->id.proc, 
+			ATTR_TOTAL_SUSPENSIONS, tot_sus);
+
+		SetAttributeInt(Proc->id.cluster, Proc->id.proc, 
+			ATTR_CUMULATIVE_SUSPENSION_TIME, cum_sus);
+
+		SetAttributeInt(Proc->id.cluster, Proc->id.proc, 
+			ATTR_LAST_SUSPENSION_TIME, last_sus);
 
 		update_job_rusage( localp, remotep );
 
@@ -852,9 +1128,38 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 			SetAttributeInt(Proc->id.cluster, Proc->id.proc,
 							ATTR_JOB_COMMITTED_TIME, CommittedTime);
 		}
+
+		// if the job completed, then update the exit code/signal attributes
+		if (Proc->status == COMPLETED)
+		{
+			int exit_code, exit_signal, exit_by_signal;
+
+			// only new style ads have ATTR_ON_EXIT_BY_SIGNAL, so only
+			// SetAttribute for those types of ads
+			if (JobAd->LookupInteger(ATTR_ON_EXIT_BY_SIGNAL, exit_by_signal)==1)
+			{
+				SetAttributeInt(Proc->id.cluster, Proc->id.proc,
+			   		ATTR_ON_EXIT_BY_SIGNAL, exit_by_signal);
+
+				if (exit_by_signal == 1) /* exited via signal */
+				{
+					JobAd->LookupInteger(ATTR_ON_EXIT_SIGNAL, exit_signal);
+					SetAttributeInt(Proc->id.cluster, Proc->id.proc,
+						   			ATTR_ON_EXIT_SIGNAL, exit_signal);
+				}
+				else
+				{
+					JobAd->LookupInteger(ATTR_ON_EXIT_CODE, exit_code);
+					SetAttributeInt(Proc->id.cluster, Proc->id.proc,
+						   			ATTR_ON_EXIT_CODE, exit_code);
+				}
+			}
+		}
 	}
 
-	DisconnectQ(0);
+	if (!DisconnectQ(0)) {
+		EXCEPT("Failed to commit updated job queue status!");
+	}
 }
 
 /*
@@ -863,7 +1168,7 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 ** remote starter, and the scheduler will send back an aux port number to
 ** be used for out of band (error) traffic.
 */
-int
+void
 #if defined(NEW_PROC)
 send_job( PROC *proc, char *host, char *cap)
 #else
@@ -880,7 +1185,8 @@ send_job( V2_PROC *proc, char *host, char *cap)
 	retval = part_send_job(0, host, reason, capability, schedd, proc, sd1, sd2, NULL);
 	if (retval == -1) {
 		DoCleanup();
-		dprintf( D_ALWAYS, "********** Shadow Exiting **********\n" );
+		dprintf( D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
+			reason);
 		exit( reason );
 	}
 	if( sd1 != RSC_SOCK ) {
@@ -899,13 +1205,11 @@ send_job( V2_PROC *proc, char *host, char *cap)
 }
 
 
-extern char	*SigNames[];
-
 /*
 ** Opens job queue (Q), and reads in process structure (Proc) as side
 ** affects.
 */
-int
+void
 start_job( char *cluster_id, char *proc_id )
 {
 	int		cluster_num;
@@ -936,7 +1240,8 @@ start_job( char *cluster_id, char *proc_id )
 	if( Proc->status != RUNNING ) {
 		dprintf( D_ALWAYS, "Shadow: Asked to run proc %d.%d, but status = %d\n",
 							Proc->id.cluster, Proc->id.proc, Proc->status );
-		dprintf(D_ALWAYS, "********** Shadow Exiting **********\n" );
+		dprintf(D_ALWAYS, "********** Shadow Exiting(%d) **********\n",
+			JOB_BAD_STATUS);
 		exit( JOB_BAD_STATUS );	/* don't cleanup here */
 	}
 #endif
@@ -945,7 +1250,7 @@ start_job( char *cluster_id, char *proc_id )
 	RemoteUsage = Proc->remote_usage[0];
 	ImageSize = Proc->image_size;
 
-	if (Proc->universe != STANDARD) {
+	if (Proc->universe != CONDOR_UNIVERSE_STANDARD) {
 		strcpy( CkptName, "" );
 		strcpy( TmpCkptName, "" );
 	} else {
@@ -982,6 +1287,10 @@ DoCleanup()
 															TmpCkptName);
 		(void) unlink_local_or_ckpt_server( TmpCkptName );
 	}
+
+#if WANT_NETMAN
+	abort_file_stream_transfer(); // if we've got one
+#endif
 
 	return 0;
 }
@@ -1044,7 +1353,8 @@ send_quit( char *host, char *capability )
 		dprintf( D_ALWAYS, "Shadow: Can't connect to condor_startd on %s\n",
 				 host );
 		DoCleanup();
-		dprintf( D_ALWAYS, "********** Shadow Parent Exiting **********\n" );
+		dprintf( D_ALWAYS, "********** Shadow Parent Exiting(%d) **********\n",
+			JOB_NOT_STARTED);
 		exit( JOB_NOT_STARTED );
 	}
 }
@@ -1057,6 +1367,9 @@ regular_setup( char *host, char *cluster, char *proc, char *capability )
 		"Hostname = \"%s\", Job = %s.%s\n",
 		host, cluster, proc
 	);
+	if( Spool ) {
+		free( Spool );
+	}
 	Spool = param( "SPOOL" );
 	if( Spool == NULL ) {
 		EXCEPT( "Spool directory not specified in config file" );
@@ -1078,6 +1391,9 @@ pipe_setup( char *cluster, char *proc, char *capability )
 	UsePipes = TRUE;
 	dprintf( D_ALWAYS, "Job = %s.%s\n", cluster, proc );
 
+	if( Spool ) {
+		free( Spool );
+	}
 	Spool = param( "SPOOL" );
 	if( Spool == NULL ) {
 		EXCEPT( "Spool directory not specified in config file" );
@@ -1118,8 +1434,13 @@ open_named_pipe( const char *name, int mode, int target_fd )
 	}
 }
 
+#if defined(LINUX) && defined(GLIBC22)
+void
+reaper(int unused)
+#else
 void
 reaper()
+#endif
 {
 	pid_t		pid;
 	int			status;
@@ -1145,6 +1466,11 @@ reaper()
 				pid, WTERMSIG(status)
 			);
 		}
+#if WANT_NETMAN
+			// tell the file_stream code whenever a child exits, so it
+			// can do some cleanup with its children
+		file_stream_child_exit(pid);
+#endif
 	}
 
 #ifdef HPUX
@@ -1169,11 +1495,17 @@ display_uids()
   the schedd already knows this job should be removed.
   Cleaned up, clarified and simplified on 5/12/00 by Derek Wright
 */
+#if defined(LINUX) && defined(GLIBC22)
+void
+handle_sigusr1( int unused )
+#else
 void
 handle_sigusr1( void )
+#endif
 {
 	dprintf( D_ALWAYS, 
 			 "Shadow received SIGUSR1 (rm command from schedd)\n" );
+	check_static_policy = 0;
 	send_quit( ExecutingHost, GlobalCap );
 }
 
@@ -1188,10 +1520,16 @@ handle_sigusr1( void )
   startd, to force the job to quickly vacate.
   Cleaned up, clarified and simplified on 5/12/00 by Derek Wright
 */
+#if defined(LINUX) && defined(GLIBC22)
+void
+handle_sigquit( int unused )
+#else
 void
 handle_sigquit( void )
+#endif
 {
 	dprintf( D_ALWAYS, "Shadow recieved SIGQUIT (fast shutdown)\n" ); 
+	check_static_policy = 0;
 	send_quit( ExecutingHost, GlobalCap );
 }
 
@@ -1212,4 +1550,93 @@ count_open_fds( const char *file, int line )
 	dprintf( D_ALWAYS,
 		"At %d in %s %d files are open\n", line, file, open_files );
 	return open_files;
+}
+
+void RemoveNewShadowDroppings(char *cluster, char *proc)
+{
+	char names[2][1024] = {0};
+	int j;
+	char *ckpt_name;
+	char *myspool;
+	struct stat buf;
+	int clusternum, procnum;
+
+	/* XXX I'm sorry.
+		There are some incompatibilities between the new
+		shadow and the old shadow. The new shadow now makes a
+		_directory_ with the usual ckeckpoint name because there
+		might eventually be more than one file that has to get
+		checkpointed with a job. The old shadow is dumb, and it
+		only makes a _file_ named the usual checkpoint name. So a
+		contention happens when we are using opsys/arch to choose
+		an executable name for both NT and UNIX between vanilla
+		only jobs and standard universe jobs. What happens is
+		that the old shadow gets back a correct stat() on the new
+		shadow created directory but misinterprets it as a file
+		and hilarity ensues. So, my nasty hack is to make the
+		old shadow determine if the file it found is actually
+		a directory and if so, then remove it and everything
+		underneath it.	I somehow feel that this might bite us
+		in the ass in the future, so each time the shadow does
+		this, it logs it so a human can figure out what happened.
+		I don't have to worry about the converse issue of a new
+		shadow starting up with an old file-based checkpoint
+		because whomever adds standard universe support to
+		the new shadow will have to do something intelligent,
+		and our submit program places expressions into the
+		requirements attribute in the job forcing a checkpointed
+		job to always run on the architecture it checkpointed
+		on. 
+
+		-psilord 7/30/01
+	*/
+
+	myspool = param("SPOOL");
+	if (myspool == NULL)
+	{
+		EXCEPT ("RemoveNewShadowDroppings(): No Spool directory!?!\n");
+	}
+	clusternum = atoi(cluster);
+	procnum = atoi(proc);
+	if (clusternum < 0 || procnum < 0) /* sanity checks */
+	{
+		dprintf(D_ALWAYS, "RemoveNewShadowDroppings(): Asked to deal with "
+			"negative cluster or proc numbers. Ignoring.\n");
+		free(myspool);
+		return;
+	}
+	ckpt_name = gen_ckpt_name( myspool, clusternum, procnum, 0 );
+
+	strcpy(names[0], ckpt_name);
+	strcpy(names[1], ckpt_name);
+	strcat(names[1], ".tmp");
+	
+	for (j = 0; j < 2; j++)
+	{
+		if (stat(names[j], &buf) == 0) {
+			/* ok, we have a hit, let's see if it is a directory... */
+			if (IsDirectory(names[j]) == true) {
+				/* it is, so blow away everything inside it */
+				{
+					Directory todd_droppings(names[j]);
+					if (todd_droppings.Remove_Entire_Directory() == false) {
+						dprintf(D_ALWAYS, "RemoveNewShadowDroppings(): Old "
+							"shadow failed to remove new shadow ckpt directory "
+							"contents: %s\n", names[j]);
+						}
+				}
+				/* now delete the directory itself */
+				if (rmdir(names[j]) < 0) {
+					dprintf(D_ALWAYS, "RemoveNewShadowDroppings(): Old shadow "
+						"failed to remove new shadow ckpt directory: %s (%s)\n",
+						names[j], strerror(errno));
+				} else {
+					dprintf(D_ALWAYS, "RemoveNewShadowDroppings(): Old shadow "
+						"removed new shadow ckpt directory: %s\n", names[j]);
+				}
+			}
+		}
+	}
+
+	free(myspool);
 }

@@ -53,6 +53,8 @@ public:
   float GetPriority(const MyString& CustomerName); // get priority for a customer
   void SetPriority(const MyString& CustomerName, float Priority); // set priority for a customer
 
+  float GetPriorityFactor(const MyString& CustomerName); // get priority factor for a customer
+
   void SetPriorityFactor(const MyString& CustomerName, float PriorityFactor);
   void ResetAccumulatedUsage(const MyString& CustomerName);
   void ResetAllUsage();
@@ -85,9 +87,11 @@ private:
   float MinPriority;        // Minimum priority (if no resources used)
   float NiceUserPriorityFactor;
   float RemoteUserPriorityFactor;
+  float DefaultPriorityFactor;
   MyString AccountantLocalDomain;
   float HalfLifePeriod;     // The time in sec in which the priority is halved by aging
   MyString LogFileName;      // Name of Log file
+  int	MaxAcctLogSize;		// Max size of log file
 
   //--------------------------------------------------------
   // Data members

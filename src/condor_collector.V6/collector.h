@@ -26,6 +26,8 @@ public:
 	static int receive_update(Service*, int, Stream*);
 
 	static void process_query(AdTypes, ClassAd&, Stream*);
+	static ClassAd * process_global_query( const char *constraint, void *arg );
+	static int select_by_match( ClassAd *ad );
 	static void process_invalidation(AdTypes, ClassAd&, Stream*);
 
 	static int query_scanFunc(ClassAd*);
@@ -50,6 +52,9 @@ protected:
 	static int ClientTimeout;
 	static int QueryTimeout;
 	static char* CollectorName;
+
+	static ClassAd query_any_request;
+	static ClassAd *query_any_result;
 
 	static ClassAd* __query__;
 	static Stream* __sock__;

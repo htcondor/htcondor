@@ -140,7 +140,7 @@ Connect( const string &addr, int port, bool useTCP )
 	if( serverSock && !Disconnect( ) ) return( false );
 
 		// create a socket ...
-	if( !( serverSock = useTCP ? new ReliSock( ) : new SafeSock ) ) {
+	if( !( serverSock = useTCP ? (Sock *)new ReliSock( ) : (Sock *)new SafeSock ) ) {
 		CondorErrno = ERR_MEM_ALLOC_FAILED;
 		CondorErrMsg = "";
 		return( false );
@@ -608,7 +608,7 @@ _GetViewNames( int command, const ViewName &view, vector<string>& viewNames)
 
 	if( !ack->EvaluateAttr( command==ClassAdCollOp_GetPartitionedViewNames ? 
 			ATTR_PARTITIONED_VIEWS:ATTR_SUBORDINATE_VIEWS, val ) ||
-			!val.IsListValue( el ) ) {
+			!val.IsListValue( (const ExprList *)el ) ) {
 		CondorErrno = ERR_BAD_SERVER_ACK;
 		CondorErrMsg = "bad server ack --- bad or missing view names";
 		return( false );
@@ -1054,7 +1054,7 @@ _GetAllxxxTransactions( int command, vector<string>& xactions )
 
 	if( !ack->EvaluateAttr( command==ClassAdCollOp_GetAllActiveTransactions ? 
 			"ActiveTransactions":"CommittedTransactions", val ) ||
-			!val.IsListValue( el ) ) {
+			!val.IsListValue( (const ExprList *)el ) ) {
 		CondorErrno = ERR_BAD_SERVER_ACK;
 		CondorErrMsg = "bad server ack --- bad or missing transaction names";
 		return( false );

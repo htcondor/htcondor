@@ -26,12 +26,19 @@
 
 extern char *mySubSystem;
 extern "C" char *CondorVersion(void);
+extern "C" char *CondorPlatform(void);
 
-CondorVersionInfo::CondorVersionInfo(char *versionstring, char *subsystem)
+CondorVersionInfo::CondorVersionInfo(const char *versionstring, 
+									 char *subsystem, char *platformstring)
 {
 	myversion.MajorVer = 0;
+	myversion.Arch = NULL;
+	myversion.OpSys = NULL;
+	myversion.Libc = NULL;
 	mysubsys = NULL;
 	string_to_VersionData(versionstring,myversion);
+	string_to_PlatformData(platformstring,myversion);
+
 	if ( subsystem ) {
 		mysubsys = strdup(subsystem);
 	} else {
@@ -42,6 +49,9 @@ CondorVersionInfo::CondorVersionInfo(char *versionstring, char *subsystem)
 CondorVersionInfo::~CondorVersionInfo()
 {
 	if (mysubsys) free(mysubsys);
+ 	if(myversion.Arch) free(myversion.Arch);
+ 	if(myversion.OpSys) free(myversion.OpSys);
+ 	if(myversion.Libc) free(myversion.Libc);
 }
 
 	
@@ -172,6 +182,7 @@ CondorVersionInfo::is_valid(const char* VersionString)
 	return ret_value;		
 }
 
+
 char *
 CondorVersionInfo::get_version_from_file(const char* filename, 
 										 char *ver, int maxlen)
@@ -248,6 +259,81 @@ CondorVersionInfo::get_version_from_file(const char* filename,
 	}
 }
 
+char *
+CondorVersionInfo::get_platform_from_file(const char* filename, 
+										 char *platform, int maxlen)
+{
+	bool must_free = false;
+
+	if (!filename)
+		return NULL;
+	
+	if (platform && maxlen < 40 )
+		return NULL;
+
+	maxlen--;	// save room for the NULL character at the end
+
+#ifdef WIN32
+	static const char *readonly = "rb";	// need binary-mode on NT
+#else
+	static const char *readonly = "r";
+#endif
+
+	FILE *fp = fopen(filename,readonly);
+
+	if ( !fp ) {
+		// file not found
+		return NULL;
+	}
+		
+	if (!platform) {
+		if ( !(platform = (char *)malloc(100)) ) {
+			// out of memory
+			return NULL;
+		}
+		must_free = true;
+		maxlen = 100;
+	}
+
+	int i = 0;
+	bool got_verstring = false;
+	const char* platprefix = CondorPlatform();
+	int ch;
+	while( (ch=fgetc(fp)) != EOF ) {
+		if ( ch != platprefix[i] ) {
+			i = 0;
+			if ( ch != platprefix[0] ) {
+				continue;
+			}
+		}
+
+		platform[i++] = ch;
+
+		if ( ch == ':' ) {
+			while ( (i < maxlen) && ((ch=fgetc(fp)) != EOF) ) {
+				platform[i++] = ch;
+				if ( ch == '$' ) {
+					got_verstring = true;
+					platform[i] = '\0';
+					break;
+				}
+			}
+			break;
+		}
+	}
+
+	fclose(fp);
+
+	if ( got_verstring ) {
+		return platform;
+	} else {
+		// could not find it
+		if ( must_free ) {
+			free( platform );
+		}
+		return NULL;
+	}
+}
 							
 bool
 CondorVersionInfo::string_to_VersionData(const char *verstring, 
@@ -335,4 +421,57 @@ CondorVersionInfo::string_to_VersionData(const char *verstring,
 
 	return true;
 }
+
+							
+bool
+CondorVersionInfo::string_to_PlatformData(const char *platformstring, 
+									 VersionData_t & ver)
+{
+	// platformstring looks like "$CondorPlatform: INTEL-LINUX-GLIBC21 $"
+
+	if ( !platformstring ) {
+		// Use our own version number. 
+		platformstring = CondorPlatform();
+
+		// If we already computed myversion, we're done.
+		if ( myversion.Arch ) {
+			ver = myversion;
+			return true;
+		}
+	}
+
+	if ( strncmp(platformstring,"$CondorPlatform: ",17) != 0 ) {
+		return false;
+	}
+
+	char *ptr = strchr(platformstring,' ');
+	ptr++;		// skip space after the colon
+
+	char *tempStr = strdup(ptr);	
+	char *token; 
+        token = strtok(tempStr, "-");
+        if(token) ver.Arch = strdup(token);
+		
+        token = strtok(NULL, "-");
+        if(token) ver.OpSys = strdup(token);
+
+        token = strtok(NULL, "-");
+	if(token) ver.Libc = strdup(token);
+
+	if(ver.OpSys) {
+		token = strchr(ver.OpSys, '$');
+		if(token) *token = '\0';
+	}		
+
+	if(ver.Libc) {
+		token = strchr(ver.Libc, '$');
+		if(token) *token = '\0';
+	}		
+
+
+	free(tempStr);
+
+	return true;
+}
+
 

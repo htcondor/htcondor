@@ -25,6 +25,7 @@
 #define _CONDOR_OS_PROC_H
 
 #include "user_proc.h"
+#include "basename.h"
 
 /** This is a generic sort of "OS" process, the base for other types
 	of jobs.
@@ -34,7 +35,7 @@ class OsProc : public UserProc
 {
 public:
 		/// Constructor
-	OsProc();
+	OsProc( ClassAd* jobAd );
 
 		/// Destructor
 	virtual ~OsProc();
@@ -50,30 +51,61 @@ public:
 			do a CONDOR_job_exit remote syscall.  
 			@param pid The pid that exited.
 			@param status Its status
-			@return 1 if pid matches, 0 otherwise
+		    @return 1 if our OsProc is no longer active, 0 if it is
 		*/
-	virtual int JobExit(int pid, int status);
+	virtual int JobCleanup( int pid, int status );
 
-		/// Send a DC_SIGSTOP
+		/** In this function, we determine what protocol to use to
+			send the shadow a CONDOR_job_exit remote syscall, which
+			will cause the job to leave the queue and the shadow to
+			exit.  We can't send this until we're all done transfering
+			files and cleaning up everything. 
+		*/
+	virtual bool JobExit( void );
+
+		/** Publish all attributes we care about for updating the
+			shadow into the given ClassAd.  This function is just
+			virtual, not pure virtual, since OsProc and any derived
+			classes should implement a version of this that publishes
+			any info contained in each class, and each derived version
+			should also call it's parent's version, too.
+			@param ad pointer to the classad to publish into
+			@return true if success, false if failure
+		*/
+	virtual bool PublishUpdateAd( ClassAd* ad );
+
+		/// Send a SIGSTOP
 	virtual void Suspend();
 
-		/// Send a DC_SIGCONT
+		/// Send a SIGCONT
 	virtual void Continue();
 
-		/// Send a DC_SIGTERM
+		/// Send a SIGTERM
 	virtual bool ShutdownGraceful();
 
-		/// Send a DC_SIGKILL
+		/// Send a SIGKILL
 	virtual bool ShutdownFast();
+
+		/// rename a core file created by this process
+	bool renameCoreFile( void );
 
 protected:
 
 	// flag to TRUE is job suspended, else FALSE
 	int job_suspended;
+	
+		/// Number of pids under this OsProc
+	int num_pids;
 
-	// sinfull string of our shadow
-	char ShadowAddr[35];
+	bool dumped_core;
+	char* job_iwd;
 
+	void initKillSigs( void );
+
+	int soft_kill_sig;
+	int rm_kill_sig;
 };
 
+// a little helper function that will move to the util lib later
+int nullFile(const char *filename);
 #endif

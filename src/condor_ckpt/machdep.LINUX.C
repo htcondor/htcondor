@@ -106,11 +106,22 @@ stack_start_addr()
 
 /*
   Return ending address of stack segment.
+
+  This value is a constant for any given Linux system, but depends
+  on the memory configuration given when the kernel was compiled.
+  On 1GB systems, this will be 0xc0000000.  On 2GB systems, it will
+  be 0x80000000, and so on.
+
+  The environment is always stored very close to the top of the stack,
+  so we nab that value and lop off any page offset.  That gives us the
+  bottom of the topmost page, i.e. 0x7ffff000.  To get the entire
+  contents of that page, we add one more page and subtract one, i.e.
+  0x7ffffff.
 */
 long
 stack_end_addr()
 {
-	return (long)0xbfffffff;
+	return (((long)*environ)&PAGE_MASK) + PAGE_SIZE - 1;
 }
 
 /*

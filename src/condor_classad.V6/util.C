@@ -145,12 +145,12 @@ bool putOldClassAd ( Stream *sock, ClassAd& ad )
 	int numExprs=0;
 	ClassAdIterator itor(ad);
 	while( !itor.IsAfterLast( ) ) {
-		itor.CurrentAttribute( buf, expr );
+		itor.CurrentAttribute( buf, (const ExprTree *)expr );
 		if( strcasecmp( "MyType", buf.c_str( ) ) != 0 && 
 				strcasecmp( "TargetType", buf.c_str( ) ) != 0 ) {
 			numExprs++;
 		}
-		itor.NextAttribute( buf, expr );
+		itor.NextAttribute( buf, (const ExprTree *) expr );
 	}
 	
 	sock->encode( );
@@ -158,8 +158,8 @@ bool putOldClassAd ( Stream *sock, ClassAd& ad )
 		return false;
 	}
 		
-	for( itor.ToFirst(); !itor.IsAfterLast(); itor.NextAttribute(buf,expr) ) {
-		itor.CurrentAttribute( buf, expr );
+	for( itor.ToFirst(); !itor.IsAfterLast(); itor.NextAttribute(buf, (const ExprTree *) expr) ) {
+		itor.CurrentAttribute( buf, (const ExprTree *) expr );
 		if( strcasecmp( "MyType", buf.c_str( ) ) == 0 || 
 				strcasecmp( "TargetType", buf.c_str( ) ) == 0 ) {
 			continue;

@@ -23,6 +23,15 @@
 #ifndef CONDOR_SYS_NT_H
 #define CONDOR_SYS_NT_H
 
+// Disable warning about protected copy constr or assignment ops
+#pragma warning( disable : 4661 )  
+
+// Disable performance warning about casting to a bool
+#pragma warning( disable : 4800 )  
+
+// Disable warnings about multiple template instantiations (done for gcc)
+#pragma warning( disable : 4660 )  
+
 // #define NOGDI
 #define NOSOUND
 #include <winsock2.h>
@@ -55,6 +64,9 @@ typedef DWORD pid_t;
 #define strncasecmp _strnicmp
 #define strincmp _strnicmp
 #define strdup _strdup
+#define strupr _strupr
+#define strlwr _strlwr
+#define snprintf _snprintf
 #define chdir _chdir
 #define fsync _commit
 #define access _access
@@ -62,6 +74,8 @@ typedef DWORD pid_t;
 #define execv _execv
 #define putenv _putenv
 #define itoa _itoa
+#define utime _utime
+#define utimbuf _utimbuf
 #define R_OK 4
 #define W_OK 2
 #define X_OK 4
@@ -85,6 +99,7 @@ typedef DWORD pid_t;
 #include <stdio.h>
 #include <limits.h>
 #include <math.h>
+#include <float.h>   // for DBL_MAX and other constants
 #include <errno.h>
 #include "condor_file_lock.h"
 #include "condor_fix_assert.h"
@@ -99,6 +114,14 @@ typedef DWORD pid_t;
 #define rint(num) floor(num + .5)
 
 #define ETIMEDOUT ERROR_TIMEOUT
+
+/* Some missing ERRNO values.... */
+#ifndef ETXTBSY
+#	define ETXTBSY EBUSY
+#endif
+#ifndef EWOULDBLOCK
+#	define EWOULDBLOCK EAGAIN
+#endif
 
 typedef fd_set *SELECT_FDSET_PTR;
 
@@ -120,6 +143,32 @@ struct rusage {
     long    ru_nvcsw;       /* voluntary context switches */
     long    ru_nivcsw;      /* involuntary " */
 };
+
+	/* Throw in signal values. Don't do values > 20. */
+
+#define	SIGHUP		1	/* Hangup (POSIX).  */
+#define	SIGINT		2	/* Interrupt (ANSI).  */
+#define	SIGQUIT		3	/* Quit (POSIX).  */
+#define	SIGILL		4	/* Illegal instruction (ANSI).  */
+#define	SIGTRAP		5	/* Trace trap (POSIX).  */
+#define	SIGABRT		6	/* Abort (ANSI).  */
+#define	SIGIOT		6	/* IOT trap (4.2 BSD).  */
+#define	SIGBUS		7	/* BUS error (4.2 BSD).  */
+#define	SIGFPE		8	/* Floating-point exception (ANSI).  */
+#define	SIGKILL		9	/* Kill, unblockable (POSIX).  */
+#define	SIGUSR1		10	/* User-defined signal 1 (POSIX).  */
+#define	SIGSEGV		11	/* Segmentation violation (ANSI).  */
+#define	SIGUSR2		12	/* User-defined signal 2 (POSIX).  */
+#define	SIGPIPE		13	/* Broken pipe (POSIX).  */
+#define	SIGALRM		14	/* Alarm clock (POSIX).  */
+#define	SIGTERM		15	/* Termination (ANSI).  */
+#define	SIGSTKFLT	16	/* Stack fault.  */
+#define	SIGCLD		SIGCHLD	/* Same as SIGCHLD (System V).  */
+#define	SIGCHLD		17	/* Child status has changed (POSIX).  */
+#define	SIGCONT		18	/* Continue (POSIX).  */
+#define	SIGSTOP		19	/* Stop, unblockable (POSIX).  */
+#define	SIGTSTP		20	/* Keyboard stop (POSIX).  */
+
 
 #endif /* CONDOR_SYS_NT_H */
 

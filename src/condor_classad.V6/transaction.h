@@ -23,7 +23,12 @@
 #ifndef __XACTION_H__
 #define __XACTION_H__
 
+#if (__GNUC__<3)
 #include <hash_map>
+#else
+#include <ext/hash_map>
+#endif
+
 #include <list>
 #include <string>
 #include "sink.h"

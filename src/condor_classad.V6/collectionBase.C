@@ -24,7 +24,7 @@
 #include "collection.h"
 #include "collectionBase.h"
 #include "transaction.h"
-
+#include <iostream>
 #include "sink.h"
 
 BEGIN_NAMESPACE( classad )

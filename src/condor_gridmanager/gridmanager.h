@@ -8,6 +8,7 @@
 #include "classad_hashtable.h"
 #include "list.h"
 
+#include "gahp-client.h"
 #include "globusresource.h"
 #include "globusjob.h"
 
@@ -24,13 +25,19 @@
 #define UA_LOG_EVICT_EVENT			0x0200
 #define UA_UPDATE_STDOUT_SIZE		0x0400
 #define UA_UPDATE_STDERR_SIZE		0x0800
+#define UA_HOLD_JOB					0x1000
+#define UA_FORGET_JOB				0x2000
 
 extern char *gramCallbackContact;
 extern char *ScheddAddr;
 extern char *X509Proxy;
 extern bool useDefaultProxy;
 
+extern time_t Proxy_Expiration_Time;
+
 extern GahpClient GahpMain;
+
+extern char *gassServerUrl;
 
 // initialization
 void Init();
@@ -43,14 +50,16 @@ bool addScheddUpdateAction( GlobusJob *job, int actions, int request_id = 0 );
 void removeScheddUpdateAction( GlobusJob *job );
 void rehashJobContact( GlobusJob *job, const char *old_contact,
 					   const char *new_contact );
-void DeleteJob( GlobusJob *job );
-void DeleteResource( GlobusResource *resource );
+
+void gramCallbackHandler( void *user_arg, char *job_contact, int state,
+						  int errorcode );
 
 UserLog *InitializeUserLog( GlobusJob * );
-bool WriteExecuteToUserLog( GlobusJob * );
-bool WriteAbortToUserLog( GlobusJob * );
-bool WriteTerminateToUserLog( GlobusJob * );
-bool WriteEvictToUserLog( GlobusJob * );
+bool WriteExecuteEventToUserLog( GlobusJob * );
+bool WriteAbortEventToUserLog( GlobusJob * );
+bool WriteTerminateEventToUserLog( GlobusJob * );
+bool WriteEvictEventToUserLog( GlobusJob * );
+bool WriteHoldEventToUserLog( GlobusJob * );
 bool WriteGlobusSubmitEventToUserLog( GlobusJob * );
 bool WriteGlobusSubmitFailedEventToUserLog( GlobusJob * );
 bool WriteGlobusResourceUpEventToUserLog( GlobusJob * );

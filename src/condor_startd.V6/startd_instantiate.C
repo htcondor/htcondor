@@ -27,7 +27,9 @@
 
 class Resource;
 class CpuAttributes;
+class Starter;
 
 template class ExtArray<bool>;
+template class SimpleList<Starter*>;
 template class SimpleList<Resource*>;
 template class SimpleList<CpuAttributes*>;

@@ -27,7 +27,6 @@
 
 BEGIN_NAMESPACE( classad );
 
-class Value;
 class Literal;
 class ExprList;
 class ClassAd;

@@ -32,6 +32,10 @@
 #include "condor_debug.h"
 #include "internet.h"
 #include "my_hostname.h"
+#include "condor_config.h"
+#include "get_port_range.h"
+
+int bindWithin(const int fd, const int low_port, const int high_port);
 
 
 /* Convert a string of the form "<xx.xx.xx.xx:pppp>" to a sockaddr_in  TCP */
@@ -250,6 +254,25 @@ same_host(const char *h1, const char *h2)
 
 
 /*
+  Return TRUE if the given domain contains the given hostname, FALSE
+  if not.  Origionally taken from condor_starter.V5/starter_common.C. 
+  Moved here on 1/18/02 by Derek Wright.
+*/
+int
+host_in_domain( const char *host, const char *domain )
+{
+	const char	*ptr;
+
+	for( ptr=host; *ptr; ptr++ ) {
+		if( strcmp(ptr,domain) == MATCH ) {
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+
+/*
   is_ipaddr() returns TRUE if buf is an ascii IP address (like
   "144.11.11.11") and false if not (like "cs.wisc.edu").  Allow
   wildcard "*".  If we return TRUE, and we were passed in a non-NULL 
@@ -399,7 +422,7 @@ char*
 string_to_ipstr( const char* addr ) 
 {
 	char *tmp;
-	static char result[16];
+	static char result[MAXHOSTNAMELEN];
 	char sinful[MAXHOSTNAMELEN];
 
 	if( ! (addr && is_valid_sinful(addr)) ) {
@@ -455,16 +478,61 @@ _condor_local_bind( int fd )
 	 * This function should go away when everything uses CEDAR.
 	 */
 #ifndef WIN32
-	struct sockaddr_in sin;
-	memset( (char *)&sin, 0, sizeof(sin) );
-	sin.sin_family = AF_INET;
-	sin.sin_port = 0;
-	sin.sin_addr.s_addr = htonl(my_ip_addr());
-	if( bind(fd, (struct sockaddr*)&sin, sizeof(sin)) < 0 ) {
-		dprintf( D_ALWAYS, "ERROR: bind(%s:%d) failed, errno: %d\n",
-				 inet_ntoa(sin.sin_addr), sin.sin_port, errno );
-		return 0;
+	int lowPort, highPort;
+	if ( get_port_range(&lowPort, &highPort) == TRUE ) {
+		if ( bindWithin(fd, lowPort, highPort) == TRUE )
+            return TRUE;
+        else
+			return FALSE;
+	} else {
+		struct sockaddr_in sin;
+		memset( (char *)&sin, 0, sizeof(sin) );
+		sin.sin_family = AF_INET;
+		sin.sin_port = 0;
+		sin.sin_addr.s_addr = htonl(INADDR_ANY);
+		if( bind(fd, (struct sockaddr*)&sin, sizeof(sin)) < 0 ) {
+			dprintf( D_ALWAYS, "ERROR: bind(%s:%d) failed, errno: %d\n",
+					 inet_ntoa(sin.sin_addr), sin.sin_port, errno );
+			return FALSE;
+		}
 	}
 #endif  /* of ifndef WIN32 */
-	return 1;
+	return TRUE;
+}
+
+
+int bindWithin(const int fd, const int low_port, const int high_port)
+{
+	int start_trial, this_trial;
+	int pid, range;
+
+	// Use hash function with pid to get the starting point
+    pid = (int) getpid();
+    range = high_port - low_port + 1;
+    // this line must be changed to use the hash function of condor
+    start_trial = low_port + (pid * 173/*some prime number*/ % range);
+
+    this_trial = start_trial;
+	do {
+		struct sockaddr_in sin;
+
+		memset(&sin, 0, sizeof(sin));
+		sin.sin_family = AF_INET;
+		sin.sin_addr.s_addr = htonl(INADDR_ANY);
+		sin.sin_port = htons((u_short)this_trial++);
+
+		if (bind(fd, (struct sockaddr *)&sin, sizeof(sin)) == 0) { // success
+			dprintf(D_NETWORK, "_condor_local_bind - bound to %d...\n", this_trial-1);
+			return TRUE;
+		} else {
+            dprintf(D_NETWORK, "_condor_local_bind - failed to bind: %s\n", strerror(errno));
+        }
+		if ( this_trial > high_port )
+			this_trial = low_port;
+    } while(this_trial != start_trial);
+
+	dprintf(D_ALWAYS, "_condor_local_bind::bindWithin - failed to bind any port within (%d ~ %d)\n",
+	        low_port, high_port);
+
+	return FALSE;
 }

@@ -34,7 +34,7 @@
 #include "my_hostname.h"
 
 extern "C" {
-	char *calc_subnet_name();
+	char* calc_subnet_name(char*);
 	char* getwd( char* );
 }
 
@@ -56,7 +56,7 @@ XferSummary::~XferSummary()
 
 }
 
-int
+void
 XferSummary::init()
 {
 	// Get the collector host name from the config file
@@ -87,7 +87,7 @@ XferSummary::init()
 	}
 }
 
-int
+void
 XferSummary::Result(transferinfo *tinfo, bool success_flag,
 					struct in_addr peer, int bytes_transferred)
 {

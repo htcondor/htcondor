@@ -5,7 +5,7 @@
 ##  This file contains the settings you must put in the local config
 ##  file of your CondorView server machine.  These enable the
 ##  historical data collection features in the newer version of the 
-##  condor_collector.  You must install the seperate CondorView client
+##  condor_collector.  You must install the separate CondorView client
 ##  contrib module to get the tools to query and display this
 ##  information.  
 ##
@@ -27,7 +27,7 @@
 ##  is a limit to the maximum space required for the files created by
 ##  the CondorView server (see below).  This directory must be
 ##  writable by whatever user the CondorView collector is running as
-##  (usually "condor").  Note: This should be a seperate directory,
+##  (usually "condor").  Note: This should be a separate directory,
 ##  not the same as either the SPOOL or LOG directories you have
 ##  already setup for Condor.  There are a few problems putting these
 ##  files into either of those directories.

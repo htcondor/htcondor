@@ -26,7 +26,10 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_accountant.h"
 #include "condor_io.h"
-#include "usagemon.h"
+
+#ifdef WANT_NETMAN
+#include "../condor_netman/netman.h"
+#endif
 
 class Matchmaker : public Service
 {
@@ -49,24 +52,31 @@ class Matchmaker : public Service
 		int SET_PRIORITY_commandHandler(int, Stream*);
 		int GET_PRIORITY_commandHandler(int, Stream*);
 		int GET_RESLIST_commandHandler(int, Stream*);
+#ifdef WANT_NETMAN
+		int REQUEST_NETWORK_commandHandler(int, Stream*);
+#endif
 
 		// timeout handler (for periodic negotiations)
 		int negotiationTime ();
 
 	private:
 		// auxillary functions
-		bool obtainAdsFromCollector (ClassAdList&, ClassAdList&, ClassAdList&, ClassAdList&);	
-		int  negotiate(char *, char *, double, int,
-			ClassAdList &, ClassAdList &, int );
-		ClassAd *matchmakingAlgorithm(char*,ClassAd&,ClassAdList&,double=-1.0);
+		bool obtainAdsFromCollector (ClassAdList&, ClassAdList&, ClassAdList&, ClassAdList& );	
+		int  negotiate(char *, char *, double, double, int,
+			ClassAdList &, ClassAdList &, int, bool );
+		ClassAd *matchmakingAlgorithm(char*,char*,ClassAd&,ClassAdList&,
+									  double=-1.0, double=1.0, bool=false);
 		int matchmakingProtocol(ClassAd &request, ClassAd *offer, 
-						ClassAdList &startdPvtAds, Sock *sock, char* scheddName,
+						ClassAdList &startdPvtAds, Sock *sock,
+						char* scheddName, char* scheddAddr,
 						int send_ad_to_schedd);
-		void calculateNormalizationFactor (ClassAdList &, double &, double &);
+		void calculateNormalizationFactor (ClassAdList &, double &, double &,
+										   double &, double &);
 		char *getCapability (char *, char *, ClassAdList &);
 		void addRemoteUserPrios( ClassAdList& );
 
-		friend int comparisonFunction (ClassAd *, ClassAd *, void *);
+		friend int comparisonFunction (AttrList *, AttrList *,
+										void *);
 
 		// configuration information
 		char *AccountantHost;		// who (if at all) is the accountant?
@@ -75,8 +85,19 @@ class Matchmaker : public Service
 		ExprTree *PreemptionReq;	// only preempt if true
 		ExprTree *PreemptionRank; 	// rank preemption candidates
 
-		// network usage
-		UsageMonitor NetUsage;
+#ifdef WANT_NETMAN
+		// allocate network capacity
+		NetworkManager netman;
+		bool allocNetworkShares;
+#endif
+
+		// diagnostics
+									// did we reject the last match b/c of
+		bool rejForNetwork; 		//   - limited network capacity?
+		bool rejForNetworkShare;	//   - limited network fair-share?
+		bool rejPreemptForPrio;		//   - insufficient prio to preempt?
+		bool rejPreemptForPolicy; 	//   - PREEMPTION_REQUIREMENTS == False?
+		bool rejPreemptForRank;		//   - startd RANKs new job lower?
 
 		// rank condition on matches
 		ExprTree *rankCondStd;// no preemption or machine rank-preemption 

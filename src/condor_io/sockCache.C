@@ -23,7 +23,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "sockCache.h"
-
+#include "daemon.h"
 
 SocketCache::
 SocketCache(int size)
@@ -78,10 +78,11 @@ invalidateSock (char *sock)
 
 
 bool SocketCache::
-getReliSock (Sock *&sock, char *addr, int timeOut)
+getReliSock (Sock *&sock, char *addr, int cmd, int timeOut)
 {
 	ReliSock	*rSock;
 	int			slot;
+    Daemon schedd (DT_SCHEDD, addr, 0);
 
     for (int i = 0; i < cacheSize; i++)
     {
@@ -89,6 +90,9 @@ getReliSock (Sock *&sock, char *addr, int timeOut)
 		{
 			sock = sockCache[i].sock;
 			sock->timeout(timeOut);
+            if (!sock->put(cmd)) {
+                return false;
+            }
 			return true;
 		}
 	}
@@ -96,19 +100,10 @@ getReliSock (Sock *&sock, char *addr, int timeOut)
 	// increment timestamp
 	timeStamp++;
 
-	if (!(rSock = new ReliSock))
-	{
-		delete rSock;
+    if ((rSock = (ReliSock*)(schedd.startCommand(cmd, Stream::reli_sock, timeOut))) ==0 ) {
 		return false;
 	}
 
-	rSock->timeout(timeOut);
-	if (!rSock->connect(addr, 0))
-	{
-		delete rSock;
-		return false;
-	}
-		
 	slot = getCacheSlot();
 
 	sockCache[slot].valid 		= true;
@@ -123,10 +118,11 @@ getReliSock (Sock *&sock, char *addr, int timeOut)
 
 
 bool SocketCache::
-getSafeSock (Sock *&sock, char *addr, int timeOut)
+getSafeSock (Sock *&sock, char *addr, int cmd, int timeOut)
 {
 	SafeSock	*sSock;
 	int			slot;
+    Daemon schedd (DT_SCHEDD, addr, 0);
 
     for (int i = 0; i < cacheSize; i++)
     {
@@ -134,6 +130,7 @@ getSafeSock (Sock *&sock, char *addr, int timeOut)
 		{
 			sock = sockCache[i].sock;
 			sock->timeout(timeOut);
+            schedd.startCommand(cmd, sock, timeOut);
 			return true;
 		}
 	}
@@ -141,16 +138,7 @@ getSafeSock (Sock *&sock, char *addr, int timeOut)
 	// increment timestamp
 	timeStamp++;
 
-	if (!(sSock = new SafeSock))
-	{
-		delete sSock;
-		return false;
-	}
-
-	sSock->timeout(timeOut);
-	if (!sSock->connect(addr, 0))
-	{
-		delete sSock;
+    if ((sSock = (SafeSock*)(schedd.startCommand(cmd, Stream::safe_sock, timeOut))) ==0) {
 		return false;
 	}
 		

@@ -41,20 +41,25 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "condor_config.h"
 #include "except.h"
 #include "exit.h"
 #include "condor_uid.h"
 #include "basename.h"
-
+#include "get_mysubsystem.h"
 
 FILE *debug_lock(int debug_level);
 FILE *open_debug_file( int debug_level, char flags[] );
 void debug_unlock(int debug_level);
 void preserve_log_file(int debug_level);
-void _condor_dprintf_exit();
+void _condor_dprintf_exit( int error_code, const char* msg );
+void _condor_set_debug_flags( char *strflags );
+int _condor_mkargv( int* argc, char* argv[], char* line );
 
-extern	int		errno;
+
+extern	DLL_IMPORT_MAGIC int		errno;
 extern	int		DebugFlags;
+
 
 FILE	*DebugFP = 0;
 
@@ -100,7 +105,6 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 {
 	struct tm *tm, *localtime();
 	time_t clock;
-	int scm;
 #if !defined(WIN32)
 	sigset_t	mask, omask;
 	mode_t		old_umask;
@@ -141,12 +145,6 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 	EnterCriticalSection(_condor_dprintf_critsec);
 #endif
 
-	saved_errno = errno;
-
-	saved_flags = DebugFlags;       /* Limit recursive calls */
-	DebugFlags = 0;
-
-
 #if !defined(WIN32) /* signals and umasks don't exist in WIN32 */
 
 	/* Block any signal handlers which might try to print something */
@@ -155,10 +153,8 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 	sigdelset( &mask, SIGBUS );
 	sigdelset( &mask, SIGFPE );
 	sigdelset( &mask, SIGILL );
-	sigdelset( &mask, SIGQUIT );
 	sigdelset( &mask, SIGSEGV );
 	sigdelset( &mask, SIGTRAP );
-	sigdelset( &mask, SIGCHLD );
 	sigprocmask( SIG_BLOCK, &mask, &omask );
 
 		/* Make sure our umask is reasonable, in case we're the shadow
@@ -168,7 +164,22 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 
 #endif
 
+	saved_errno = errno;
+
+	saved_flags = DebugFlags;       /* Limit recursive calls */
+	DebugFlags = 0;
+
+
 	/* log files owned by condor system acct */
+
+		/* If we're in PRIV_USER_FINAL, there's a good chance we won't
+		   be able to write to the log file.  We can't rely on Condor
+		   code to refrain from calling dprintf() after switching to
+		   PRIV_USER_FINAL.  So, we check here and simply don't try to
+		   log anything when we're in PRIV_USER_FINAL, to avoid
+		   exit(DPRINTF_ERROR). */
+	if (get_priv() == PRIV_USER_FINAL) return;
+
 		/* avoid priv macros so we can bypass priv logging */
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
@@ -190,14 +201,9 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 
 				/* Print the message with the time and a nice identifier */
 				if( ((saved_flags|flags) & D_NOHEADER) == 0 ) {
-					if( (saved_flags|flags) & D_SECONDS ) {
-						fprintf( DebugFP, "%d/%d %02d:%02d:%02d ", 
-								 tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, 
-								 tm->tm_min, tm->tm_sec );
-					} else {
-						fprintf( DebugFP, "%d/%d %02d:%02d ", tm->tm_mon + 1,
-								 tm->tm_mday, tm->tm_hour, tm->tm_min );
-					}
+					fprintf( DebugFP, "%d/%d %02d:%02d:%02d ", 
+							 tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, 
+							 tm->tm_min, tm->tm_sec );
 
 					if ( (saved_flags|flags) & D_FDS ) {
 						fprintf ( DebugFP, "(fd:%d) ", fileno(DebugFP) );
@@ -221,6 +227,9 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 		/* restore privileges */
 	_set_priv(priv, __FILE__, __LINE__, 0);
 
+	errno = saved_errno;
+	DebugFlags = saved_flags;
+
 #if !defined(WIN32) // signals and umasks don't exist in WIN32
 
 		/* restore umask */
@@ -230,9 +239,6 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 	(void) sigprocmask( SIG_SETMASK, &omask, 0 );
 
 #endif
-
-	errno = saved_errno;
-	DebugFlags = saved_flags;
 
 #ifdef WIN32
 	LeaveCriticalSection(_condor_dprintf_critsec);
@@ -244,9 +250,10 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 FILE *
 debug_lock(int debug_level)
 {
-	int			length, open_errno, retry = 0;
+	int			length, save_errno, retry = 0;
 	priv_state	priv;
 	char*		dirpath = NULL;
+	char msg_buf[_POSIX_PATH_MAX];
 
 	if ( DebugFP == NULL ) {
 		DebugFP = stderr;
@@ -259,8 +266,8 @@ debug_lock(int debug_level)
 		if( LockFd < 0 ) {
 			LockFd = open(DebugLock,O_CREAT|O_WRONLY,0660);
 			if( LockFd < 0 ) {
-				open_errno = errno;
-				if( errno == ENOENT ) {
+				save_errno = errno;
+				if( save_errno == ENOENT ) {
 						/* 
 						   No directory: Try to create the directory
 						   itself, first as condor, then as root.  If
@@ -308,22 +315,23 @@ debug_lock(int debug_level)
 					LockFd = open(DebugLock,O_CREAT|O_WRONLY,0660);
 				}
 				if( LockFd < 0 ) {
-					fprintf( stderr, "Can't open \"%s\", errno: %d (%s)\n",
-							 DebugLock, open_errno, strerror(open_errno) );
-					_condor_dprintf_exit();
+					sprintf( msg_buf, "Can't open \"%s\"\n", DebugLock );
+					_condor_dprintf_exit( save_errno, msg_buf );
 				}
 			}
 		}
 
+		errno = 0;
 #ifdef WIN32
 		if( lock_file(LockFd,WRITE_LOCK,TRUE) < 0 ) 
 #else
 		if( flock(LockFd,LOCK_EX) < 0 ) 
 #endif
 		{
-			fprintf( stderr, "Can't get exclusive lock on \"%s\"\n",
-					 DebugLock);
-			_condor_dprintf_exit();
+			save_errno = errno;
+			sprintf( msg_buf, "Can't get exclusive lock on \"%s\", "
+					 "LockFd: %d\n", DebugLock, LockFd );
+			_condor_dprintf_exit( save_errno, msg_buf );
 		}
 	}
 
@@ -335,12 +343,14 @@ debug_lock(int debug_level)
 		if( DebugFP == NULL ) {
 			if (debug_level > 0) return NULL;
 #if !defined(WIN32)
+			save_errno = errno;
 			if( errno == EMFILE ) {
 				_condor_fd_panic( __LINE__, __FILE__ );
 			}
 #endif
-			fprintf(stderr, "Could not open DebugFile <%s>\n", DebugFile);
-			_condor_dprintf_exit();
+			sprintf( msg_buf, "Could not open DebugFile \"%s\"\n", 
+					 DebugFile[debug_level] );
+			_condor_dprintf_exit( save_errno, msg_buf );
 		}
 			/* Seek to the end */
 		if( (length=lseek(fileno(DebugFP),0,2)) < 0 ) {
@@ -349,8 +359,9 @@ debug_lock(int debug_level)
 				DebugFP = NULL;
 				return NULL;
 			}
-			fprintf( DebugFP, "Can't seek to end of DebugFP file\n" );
-			_condor_dprintf_exit();
+			save_errno = errno;
+			sprintf( msg_buf, "Can't seek to end of DebugFP file\n" );
+			_condor_dprintf_exit( save_errno, msg_buf );
 		}
 
 			/* If it's too big, preserve it and start a new one */
@@ -370,6 +381,8 @@ void
 debug_unlock(int debug_level)
 {
 	priv_state priv;
+	char msg_buf[_POSIX_PATH_MAX];
+	int flock_errno = 0;
 
 	if( DebugUnlockBroken ) {
 		return;
@@ -381,21 +394,18 @@ debug_unlock(int debug_level)
 
 	if( DebugLock ) {
 			/* Don't forget to unlock the file */
+		errno = 0;
 #if defined(WIN32)
 		if ( lock_file(LockFd,UN_LOCK,TRUE) < 0 )
 #else
 		if( flock(LockFd,LOCK_UN) < 0 ) 
 #endif
 		{
-			if (DebugFP) {
-				fprintf( DebugFP,"Can't release exclusive lock on \"%s\"\n",
-						 DebugLock );
-			} else {
-				fprintf( stderr,"Can't release exclusive lock on \"%s\"\n",
-						 DebugLock );
-			}				
+			flock_errno = errno;
+			sprintf( msg_buf, "Can't release exclusive lock on \"%s\"\n", 
+					 DebugLock );
 			DebugUnlockBroken = 1;
-			_condor_dprintf_exit();
+			_condor_dprintf_exit( flock_errno, msg_buf );
 		}
 	}
 
@@ -418,6 +428,9 @@ preserve_log_file(int debug_level)
 	priv_state	priv;
 	int			still_in_old_file = FALSE;
 	int			failed_to_rotate = FALSE;
+	int			save_errno;
+	struct stat buf;
+	char msg_buf[_POSIX_PATH_MAX];
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
@@ -453,7 +466,7 @@ preserve_log_file(int debug_level)
 			/* now truncate the original by reopening _not_ with append */
 			DebugFP = open_debug_file(debug_level, "w");
 			if ( DebugFP ==  NULL ) {
-				still_in_old_file == TRUE;
+				still_in_old_file = TRUE;
 			}
 		}
 	}
@@ -467,19 +480,30 @@ preserve_log_file(int debug_level)
 	** it for all platforms as there is no need for atomicity.  --RR
     */
 
-	if (link (DebugFile[debug_level], old) < 0)
-		_condor_dprintf_exit();
+	errno = 0;
+	if( link(DebugFile[debug_level], old) < 0 ) {
+		save_errno = errno;
+		sprintf( msg_buf, "Can't link(%s,%s)\n",
+				 DebugFile[debug_level], old );
+		_condor_dprintf_exit( save_errno, msg_buf );
+	}
 
-	if (unlink (DebugFile[debug_level]) < 0)
-		_condor_dprintf_exit();
+	errno = 0;
+	if( unlink(DebugFile[debug_level]) < 0 ) {
+		save_errno = errno;
+		sprintf( msg_buf, "Can't unlink(%s)\n", DebugFile[debug_level] ); 
+		_condor_dprintf_exit( save_errno, msg_buf );
+	}
 
 	/* double check the result of the rename */
 	{
-		struct stat buf;
+		errno = 0;
 		if (stat (DebugFile[debug_level], &buf) >= 0)
 		{
-			/* Debug file exists! */
-			_condor_dprintf_exit();
+			save_errno = errno;
+			sprintf( msg_buf, "unlink(%s) succeeded but file still exists!", 
+					 DebugFile[debug_level] );
+			_condor_dprintf_exit( save_errno, msg_buf );
 		}
 	}
 
@@ -489,7 +513,12 @@ preserve_log_file(int debug_level)
 		DebugFP = open_debug_file(debug_level, "a");
 	}
 
-	if (DebugFP == NULL) _condor_dprintf_exit();
+	if( DebugFP == NULL ) {
+		save_errno = errno;
+		sprintf( msg_buf, "Can't open file for debug level %d\n",
+				 debug_level ); 
+		_condor_dprintf_exit( save_errno, msg_buf );
+	}
 
 	if ( !still_in_old_file ) {
 		fprintf (DebugFP, "Now in new log file %s\n", DebugFile[debug_level]);
@@ -514,10 +543,17 @@ _condor_fd_panic( int line, char* file )
 {
 	priv_state	priv;
 	int i;
+	char msg_buf[_POSIX_PATH_MAX];
+	char panic_msg[_POSIX_PATH_MAX];
+	int save_errno;
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
-/* Just to be extra paranoid, let's nuke a bunch of fds. */
+	sprintf( panic_msg, 
+			 "**** PANIC -- OUT OF FILE DESCRIPTORS at line %d in %s",
+			 line, file );
+
+		/* Just to be extra paranoid, let's nuke a bunch of fds. */
 	for ( i=0 ; i<50 ; i++ ) {
 		(void)close( i );
 	}
@@ -526,15 +562,17 @@ _condor_fd_panic( int line, char* file )
 	}
 
 	if( DebugFP == NULL ) {
-		_condor_dprintf_exit();
+		save_errno = errno;
+		sprintf( msg_buf, "Can't open \"%s\"\n%s\n", DebugFile[0],
+				 panic_msg ); 
+		_condor_dprintf_exit( save_errno, msg_buf );
 	}
 		/* Seek to the end */
 	(void)lseek( fileno(DebugFP), 0, 2 );
-
-	fprintf( DebugFP,
-	"**** PANIC -- OUT OF FILE DESCRIPTORS at line %d in %s\n", line, file );
+	fprintf( DebugFP, "%s\n", panic_msg );
 	(void)fflush( DebugFP );
-	_condor_dprintf_exit();
+
+	_condor_dprintf_exit( 0, panic_msg );
 }
 #endif
 	
@@ -575,16 +613,17 @@ open_debug_file(int debug_level, char flags[])
 {
 	FILE		*fp;
 	priv_state	priv;
+	char msg_buf[_POSIX_PATH_MAX];
+	int save_errno;
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
 	/* Note: The log file shouldn't need to be group writeable anymore,
 	   since PRIV_CONDOR changes euid now. */
 
-#if !defined(WIN32)
 	errno = 0;
-#endif
 	if( (fp=fopen(DebugFile[debug_level],flags)) == NULL ) {
+		save_errno = errno;
 #if !defined(WIN32)
 		if( errno == EMFILE ) {
 			_condor_fd_panic( __LINE__, __FILE__ );
@@ -594,11 +633,11 @@ open_debug_file(int debug_level, char flags[])
 			DebugFP = stderr;
 		}
 		fprintf( DebugFP, "Can't open \"%s\"\n", DebugFile[debug_level] );
-#if !defined(WIN32)
-		fprintf( DebugFP, "errno = %d, euid = %d, egid = %d\n",
-				 errno, geteuid(), getegid() );
-#endif
-		if (debug_level == 0) _condor_dprintf_exit();
+		if( debug_level == 0 ) {
+			sprintf( msg_buf, "Can't open \"%s\"\n",
+					 DebugFile[debug_level] );
+			_condor_dprintf_exit( save_errno, msg_buf );
+		}
 		return NULL;
 	}
 
@@ -609,8 +648,59 @@ open_debug_file(int debug_level, char flags[])
 
 /* dprintf() hit some fatal error and is going to exit. */
 void
-_condor_dprintf_exit()
+_condor_dprintf_exit( int error_code, const char* msg )
 {
+	char* tmp;
+	FILE* fail_fp;
+	char buf[_POSIX_PATH_MAX];
+	char header[_POSIX_PATH_MAX];
+	char tail[_POSIX_PATH_MAX];
+	int wrote_warning = FALSE;
+	struct tm *tm;
+	time_t clock;
+
+	(void)time( (time_t *)&clock );
+	tm = localtime( (time_t *)&clock );
+
+	sprintf( header, "%d/%d %02d:%02d:%02d "
+			 "dprintf() had a fatal error in pid %d\n", 
+			 tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, 
+			 tm->tm_min, tm->tm_sec, (int)getpid() );
+	tail[0] = '\0';
+	if( error_code ) {
+		sprintf( tail, "errno: %d (%s)\n", error_code,
+				 strerror(error_code) );
+	}
+#ifndef WIN32			
+	sprintf( buf, "euid: %d, ruid: %d\n", (int)geteuid(),
+			 (int)getuid() );
+	strcat( tail, buf );
+#endif
+
+	tmp = param( "LOG" );
+	if( tmp ) {
+		sprintf( buf, "%s/dprintf_failure.%s", tmp, get_mySubSystem() );
+		fail_fp = fopen( buf, "w" );
+		if( fail_fp ) {
+			fprintf( fail_fp, "%s", header );
+			fprintf( fail_fp, "%s", msg );
+			if( tail[0] ) {
+				fprintf( fail_fp, "%s", tail );
+			}
+			fclose( fail_fp );
+			wrote_warning = TRUE;
+		} 
+		free( tmp );
+	}
+	if( ! wrote_warning ) {
+		fprintf( stderr, "%s", header );
+		fprintf( stderr, "%s", msg );
+		if( tail[0] ) {
+			fprintf( stderr, "%s", tail );
+		}
+
+	}
+
 		/* First, set a flag so we know not to try to keep using
 		   dprintf during the rest of this */
 	DprintfBroken = 1;
@@ -626,29 +716,9 @@ _condor_dprintf_exit()
 
 		/* Actually exit now */
 	fflush (stderr);
-	exit(DPRINTF_ERROR);
+
+	exit(DPRINTF_ERROR); 
 }
-
-
-#if !defined(WIN32)	// Need to port this to WIN32.  It is used when logging to a socket.
-/*
-** Initialize the DebugFP to a specific file number.  */
-void
-dprintf_init( int fd )
-{
-	FILE *fp;
-
-	errno = 0;
-	fp = fdopen( fd, "a" );
-
-	if( fp != NULL ) {
-		DebugFP = fp;
-	} else {
-		fprintf(stderr, "dprintf_init: failed to fdopen(%d)\n", fd );
-		_condor_dprintf_exit();
-	}
-}
-#endif /* ! LOOSE32 */
 
 
 /*

@@ -5,7 +5,8 @@
 
 LIBC = LibC
 SIMPLE_LIBC = SimpleLibC
-EGCS_LIBC = EgcsLibc
+EGCS_LIBC = LIB_GCC
+
 CRT0 = Crt0
 
 TOP = Top
@@ -27,11 +28,26 @@ DOC_TREE =		$(TOP)/doc
 INCLUDE_DIR =		../h
 NEW_INCLUDE_DIR =	../condor_includes
 C_PLUS_INCLUDE =	../condor_c++_util
+DAEMONCLIENT_INCLUDE =	../condor_daemon_client
+
 #ifdef X11Include
 X11_INCLUDE = X11Include
 #else
-X11_INCLUDE =           /usr/X11R6/include	
+X11_INCLUDE = /usr/X11R6/include	
 #endif
+
+#ifdef GLOBUS_FLAVOR
+GlobusFlavor = GLOBUS_FLAVOR
+#else
+GlobusFlavor = gcc32dbg
+#endif
+
+#ifdef NEED_SNPRINTF
+SNPRINTF_FLAGS = -DNEED_SNPRINTF
+#else
+SNPRINTF_FLAGS = 
+#endif
+
 
 #if !defined( CLinker )
 #define CLinker CCompiler
@@ -53,22 +69,44 @@ X11_INCLUDE =           /usr/X11R6/include
 #define TestPlatformLdFlags
 #endif
 
+#if !defined(PurifyPlatformLdFlags)
+#define PurifyPlatformLdFlags
+#endif
+
 #if !defined(Strip)
 #define Strip strip
 #endif
 
+/*
+   These next few lines are not supposed to be pre-processor
+   directives, but GNU-make understood directives.  They don't want a
+   # in front of them.  If you're having problems at these lines,
+   you're probably not using gmake.  -peter keller 9/8/2000
+*/
+ifdef DEBUG_BUILD
+CC =  $(DEBUG_BUILD) CCompiler
+CPlusPlus = $(DEBUG_BUILD) CPlusCompiler
+C_LINK = $(DEBUG_BUILD) CLinker
+CC_LINK = $(DEBUG_BUILD) CPlusLinker
+else
+CC = CCompiler
+CPlusPlus = CPlusCompiler
+C_LINK = CLinker
+CC_LINK = CPlusLinker
+endif
+
+JAVAC = JavaCompiler
+JAR = JarTool
+
 LIBX = XLibPath
 LIBXEXT = XExtLibPath
-CC = CCompiler
-C_LINK = CLinker
-CPlusPlus = CPlusCompiler
 STRIP = Strip
-CC_LINK = CPlusLinker
 STATIC	= StaticFlag
 MKDEPEND = MkDepend
 STAR	= *
 
 PLATFORM_LDFLAGS = PlatformLdFlags
+PURIFY_PLATFORM_LDFLAGS = PurifyPlatformLdFlags
 TEST_PLATFORM_LDFLAGS = TestPlatformLdFlags
 
 ##########
@@ -158,7 +196,7 @@ endif
 #endif
 
 #ifndef FORTRAN_HAS_RECURSION
-#define FORTRAN_HAS_RECURSION YES
+#define FORTRAN_HAS_RECURSION NO
 #endif
 
 #ifndef HAS_INET_NTOA
@@ -190,18 +228,6 @@ DEBUG_FLAG = DebugFlag
 #define PlatformFlags
 #endif
 
-#if !defined( ImakeArchFlag )
-#define ImakeArchFlag
-#endif
-
-#if !defined( ImakeOpsysFlag )
-#define ImakeOpsysFlag
-#endif
-
-#if !defined( ImakeOtherFlag )
-#define ImakeOtherFlag
-#endif
-
 #if !defined( VendorCTestFlags )
 #define VendorCTestFlags
 #endif
@@ -214,39 +240,150 @@ DEBUG_FLAG = DebugFlag
 #define VendorFTestFlags
 #endif
 
-#if !defined( GSS_AUTHENTICATION )
+#if WANT_CONDOR_G && HAS_GLOBUS
 
-#  define GssAuthentication
-#  define ImakeGssFlag
+  #define NEEDS_GSI YES
+
+  CONDOR_G_FLAGS = -DCONDOR_G
 
 #else
+ CONDOR_G_FLAGS =
+#endif /*HasGlobus && WantCondorG */
 
-#  define GssAuthentication -DGSS_AUTHENTICATION \
-          -I$(GLOBUS_DIR)/include -I$(SSL_DIR)/include 
-#  define ImakeGssFlag -DGSS_AUTHENTICATION
+GLOBUS_LIB = $(GlobusPath)/lib/libglobus_gass_server_ez_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_gass_transfer_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_duroc_control_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_duct_control_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_duroc_common_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_duct_common_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_rsl_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_gram_client_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_nexus_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_gram_protocol_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_dc_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_mp_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_io_$(GlobusFlavor).a \
+    $(GlobusPath)/lib/libglobus_common_$(GlobusFlavor).a
 
-  SSL_DIR = /p/condor/workspaces/ssl
-  GLOBUS_DIR = /p/condor/workspaces/globus
-  AUTH2_LIB = $(GLOBUS_DIR)/lib/libglobus_gss_assist.a \
-    $(GLOBUS_DIR)/lib/libglobus_gss.a \
-    $(GLOBUS_DIR)/lib/libglobus_gaa.a \
-    $(SSL_DIR)/lib/libssl.a $(SSL_DIR)/lib/libcrypto.a 
+/* X509 Authentication requires globus*/
+#if WANT_X509 && HAS_GSI
+  #define NEEDS_GSI YES
+  X509_FLAGS = -DX509_AUTHENTICATION
+  X509_LIB =
+#else
+  X509_FLAGS =
+  X509_LIB   = 
+#endif /* WANT_X509 && HAS_GSI */
 
-#endif /* !defined( GSS_AUTHENTICATION ) */
+/* Kerberos */
+#if HAS_KERBEROS && WANT_KERBEROS
+  KERBEROS_FLAG = -DKERBEROS_AUTHENTICATION -I$(KERBEROS_INCLUDE)
+#else
+  KERBEROS_FLAG = 
+#endif /* !defined(WANT_KERBEROS) */
 
-AUTH_FLAGS = GssAuthentication
+/* Encryption */
+#if WANT_3DES && HAS_OPENSSL
+  #define CONDOR_3DES_ENCRYPTION YES
+  3DES_FLAGS = -DCONDOR_3DES_ENCRYPTION
+  #define NEEDS_OPENSSL YES
+  #define WANT_ENCRYPTION YES
+#else
+  3DES_FLAGS =
+#endif
 
-#define ImakeFlags ImakeArchFlag ImakeOpsysFlag ImakeOtherFlag ImakeGssFlag
-#define IMAKE_FLAGS ImakeFlags -I../../config -s Makefile
+#if WANT_BLOWFISH && HAS_OPENSSL
+  #define CONDOR_BLOWFISH_ENCRYPTION YES
+  BLOWFISH_FLAGS = -DCONDOR_BLOWFISH_ENCRYPTION
+  #define NEEDS_OPENSSL YES
+  #define WANT_ENCRYPTION YES
+#else
+  BLOWFISH_FLAGS =
+#endif
+
+#if WANT_ENCRYPTION
+  #define CONDOR_ENCRYPTION YES
+  ENCRYPTION_FLAGS = -DCONDOR_ENCRYPTION $(3DES_FLAGS) $(BLOWFISH_FLAGS)
+  ENCRYPTION_LIB =
+#else
+  ENCRYPTION_FLAGS =
+  ENCRYPTION_LIB =
+#endif
+
+#if WANT_MD && HAS_OPENSSL
+  #define NEEDS_OPENSSL YES
+  #define CONDOR_MD YES
+  MD_FLAGS = -DCONDOR_MD
+  MD_LIB =
+#else
+  MD_FLAGS = 
+  MD_LIB =
+#endif
+
+#if NEEDS_GSI && HAS_GSI
+  /* Make sure that USE_GLOBUS_OPENSSL is set */
+  #define NEEDS_OPENSSL YES
+  GSI_FLAGS = -DCONDOR_GSI
+  GSI_LIB   = $(GlobusPath)/lib/libglobus_gss_assist_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_gssapi_gsi_$(GlobusFlavor).a \
+	      $(GlobusPath)/lib/libglobus_ssl_utils_$(GlobusFlavor).a
+#else
+  GSI_FLAGS =
+  GSI_LIB   =
+#endif
+
+#if NEEDS_OPENSSL && HAS_OPENSSL
+  #if USE_GLOBUS_OPENSSL
+    OPENSSL_FLAGS = -I$(OpenSSLPath)/include/$(GlobusFlavor)
+    OPENSSL_LIB = $(OpenSSLPath)/lib/libssl_$(GlobusFlavor).a \
+		  $(OpenSSLPath)/lib/libcrypto_$(GlobusFlavor).a
+    OPENSSL_MD_LIB = $(OpenSSLPath)/lib/libcrypto_$(GlobusFlavor).a 
+  #else
+    OPENSSL_FLAGS = -I$(OpenSSLPath)/include
+    OPENSSL_LIB = $(OpenSSLPath)/lib/libssl.a $(OpenSSLPath)/lib/libcrypto.a
+    OPENSSL_MD_LIB = $(OpenSSLPath)/lib/libcrypto.a 
+  #endif
+#else
+  OPENSSL_FLAGS =
+  OPENSSL_LIB =
+  OPENSSL_MD_LIB =
+#endif
+
+/* Collect all the security-related variables into a single variable */
+SECURITY_FLAGS = $(X509_FLAGS) $(KERBEROS_FLAG) $(ENCRYPTION_FLAGS) \
+		 $(MD_FLAGS) $(GSI_FLAGS) $(OPENSSL_FLAGS)
+SECURITY_LIB   = $(X509_LIB) $(KERBEROS_LIB) $(ENCRYPTION_LIB) \
+		 $(MD_LIB) $(GSI_LIB) $(OPENSSL_LIB)
+
+#if WANT_NETMAN
+NETMAN_LIB = ../condor_netman/libnetman.a
+NETMAN_FLAGS = -DWANT_NETMAN
+#else
+NETMAN_LIB =
+NETMAN_FLAGS =
+#endif
 
 VENDOR_C_FLAGS = CFlags -I$(INCLUDE_DIR) -I$(NEW_INCLUDE_DIR) \
 		 -I$(C_PLUS_INCLUDE) XInclude -D$(ARCH_FLAG)=$(ARCH_FLAG) \
-		 -D$(OS_FLAG)=$(OS_FLAG) \
-		 $(SITE_C_FLAGS) $(AUTH_FLAGS)
+		 -D$(OS_FLAG)=$(OS_FLAG) $(SITE_C_FLAGS) $(CONDOR_G_FLAGS) \
+		 $(SECURITY_FLAGS) $(NETMAN_FLAGS) $(SNPRINTF_FLAGS)\
+		 -I$(DAEMONCLIENT_INCLUDE)
 
-STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) PlatformFlags PlatformGccFlags
+/*
+Generally, compile with -fPIC for position-independent code.
+However, leave it as a separate Make variable so that particular
+modules that cannot use it (i.e. checkpointing) can turn it off.
+
+This is commented out by default.
+This will only be activated for special builds done by hand to
+make the SDK.
+*/
+
+/* CC_PIC_FLAG = -fPIC */
+
+STD_C_FLAGS = $(VENDOR_C_FLAGS) $(DEBUG_FLAG) $(CC_PIC_FLAG) PlatformFlags PlatformGccFlags
 STD_C_PLUS_FLAGS  = $(STD_C_FLAGS)
-INST_C_PLUS_FLAGS = $(C_PLUS_FLAGS) -w
+INST_C_PLUS_FLAGS = $(C_PLUS_FLAGS)
 NON_INST_C_PLUS_FLAGS = -fno-implicit-templates $(C_PLUS_FLAGS)
 
 TESTSUITE_FLAGS_GCC =  $(STD_C_FLAGS)
@@ -270,6 +407,7 @@ DAEMONCORE_LIB = ../condor_daemon_core.V6/daemon_core.a
 
 ALL_LDFLAGS = -lm $(LDFLAGS) $(PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
 TEST_LDFLAGS = -lm $(LDFLAGS) $(TEST_PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
+PURIFY_LDFLAGS = -lm $(LDFLAGS) $(PURIFY_PLATFORM_LDFLAGS) $(SITE_LDFLAGS)
 
 STD_LIBS = \
   $(CUTIL_LIB) \
@@ -282,7 +420,6 @@ STD_LIBS = \
   $(IO_LIB) \
   $(CPLUS_LIB) \
   $(CUTIL_LIB) \
-  $(AUTH2_LIB) \
   $(SYSAPI_LIB) \
   $(CPLUS_LIB) \
   $(CUTIL_LIB) \
@@ -292,5 +429,6 @@ STD_LIBS = \
   $(CPLUS_LIB) \
   $(IO_LIB) \
   $(CPLUS_LIB) \
-  $(CUTIL_LIB)
+  $(CUTIL_LIB) \
+  $(SECURITY_LIB)
 

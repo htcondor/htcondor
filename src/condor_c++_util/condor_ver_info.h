@@ -42,14 +42,16 @@ public:
 		@param versionstring See condor_version.C for format.
 		@param subssytem One of SHADOW, STARTER, TOOL, SCHEDD, COLLECTOR, etc.
 	*/
-	CondorVersionInfo::CondorVersionInfo(char *versionstring = NULL, 
-		char *subsystem = NULL);
+	CondorVersionInfo::CondorVersionInfo(const char *versionstring = NULL, 
+		char *subsystem = NULL, char *platformstring = NULL);
 
 	/// Destructor.
 	CondorVersionInfo::~CondorVersionInfo();
 
 	static char *get_version_from_file(const char* filename, 
 							char *ver = NULL, int maxlen = 0);
+	static char *get_platform_from_file(const char* filename, 
+							char *platform = NULL, int maxlen = 0);
 
 	/** Return the first number in the version ID.
 		@return -1 on error */
@@ -63,6 +65,16 @@ public:
 		@return -1 on error */
 	int getSubMinorVer() 
 		{ return myversion.MajorVer > 5 ? myversion.SubMinorVer : -1; }
+
+ 
+ 	/** Return the Arch this version is built for. */
+ 	char *getArchVer() 
+ 		{ return myversion.Arch; }	
+ 	char *getOpSysVer() 
+ 		{ return myversion.OpSys; }	
+ 	char *getLibcVer()
+ 		{ return myversion.Libc; }	
+
 	
 	/** Report if this version id represents a stable or developer series 
 		release.
@@ -90,6 +102,9 @@ public:
 		int SubMinorVer;
 		int Scalar;
 		time_t BuildDate;
+		char *Arch;
+		char *OpSys;
+		char *Libc;
 	} VersionData_t;
 
 
@@ -99,6 +114,7 @@ private:
 	char *mysubsys;
 
 	bool string_to_VersionData(const char *,VersionData_t &);
+	bool string_to_PlatformData(const char *,VersionData_t &);
 };
 
 

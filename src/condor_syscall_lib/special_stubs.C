@@ -33,6 +33,7 @@
 #include "condor_debug.h"
 #include "exit.h"
 #include "shared_utils.h"
+#include "get_port_range.h"
 
 extern	ReliSock* syscall_sock;
 
@@ -102,18 +103,35 @@ _condor_dprintf_va( int flags, char* fmt, va_list args )
 }
 
 
-/* 
-   This is called by the dprintf_init() linked in with the user job in
-   case of fatal error.  The regular _condor_dprintf_exit() has many
-   more concerns.  We can just exit, though we want to use Suicide()
-   so we send ourselves SIGKILL, instead of actually exiting.  If we
-   exit, we leave the job queue, which isn't what we want.  Hopefully,
-   we'll never get here.
-*/
-void
-_condor_dprintf_exit( void )
+int get_port_range(int *low_port, int *high_port)
 {
-	Suicide();
+	char *low = NULL, *high = NULL;
+
+	if ( (low = getenv("_condor_LOWPORT")) == NULL ) {
+        dprintf(D_NETWORK, "_condor_LOWPORT undefined\n");
+		return FALSE;
+    }
+	if ( (high = getenv("_condor_HIGHPORT")) == NULL ) {
+		free(low);
+        dprintf(D_ALWAYS, "_condor_LOWPORT is defined but _condor_HIGHPORT undefined!\n");
+		return FALSE;
+	}
+
+	*low_port = atoi(low);
+	*high_port = atoi(high);
+
+	if(*low_port < 1024 || *high_port < 1024 || *low_port > *high_port) {
+		dprintf(D_ALWAYS, "get_port_range - invalid LOWPORT(%d) \
+		                   and/or HIGHPORT(%d)\n",
+		                   *low_port, *high_port);
+		free(low);
+		free(high);
+		return FALSE;
+	}
+
+	free(low);
+	free(high);
+	return TRUE;
 }
 
 

@@ -1,0 +1,30 @@
+#! /usr/bin/env perl
+#! /usr/bin/perl -w
+use strict;
+# use warnings;
+
+# How to run the cluster tool...
+my $CondorClusterTool = "/unsup/condor/bin/condor_cluster_tool";
+my $CondorClusterToolArgs = "check";
+
+# Run the cluster tool...
+my $Cmd = "$CondorClusterTool $CondorClusterToolArgs";
+die "Can't run '$Cmd'" if ( ! open( IN, "$Cmd|" )  );
+while ( <IN> )
+{
+    chomp;
+    if ( /(.*): Condor is (\w+)/ )
+    {
+	my $Host = $1;
+	my $Status = $2;
+	if ( /reserved/ )
+	{
+	    if ( $Status eq "on" )
+	    {
+		# print STDERR "$Host: Reserved and on!\n";
+	    }
+	    print "$Host\n";
+	}
+    }
+}
+close( IN );

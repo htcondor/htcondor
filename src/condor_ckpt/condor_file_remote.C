@@ -7,6 +7,14 @@
 #include "syscall_numbers.h"
 #include "image.h"
 
+/* Here are the remote system calls we use in this file */
+extern "C" int REMOTE_CONDOR_lseekread(int fd, off_t offset, int whence, 
+	void *buf, size_t len);
+extern "C" int REMOTE_CONDOR_lseekwrite(int fd, off_t offset, int whence, 
+	void *buf, size_t len);
+extern "C" int REMOTE_CONDOR_ftruncate(int fd, off_t length);
+
+
 /* A CondorFileRemote is a CondorFileBasic that does syscalls in remote and unmapped mode. */
 
 CondorFileRemote::CondorFileRemote()
@@ -14,11 +22,15 @@ CondorFileRemote::CondorFileRemote()
 {
 }
 
+CondorFileRemote::~CondorFileRemote()
+{
+}
+
 /* A read results in a CONDOR_lseekread */
 
 int CondorFileRemote::read(int pos, char *data, int length) 
 {
-       	return REMOTE_syscall( CONDOR_lseekread, fd, pos, SEEK_SET, data, length );
+	return REMOTE_CONDOR_lseekread( fd, pos, SEEK_SET, data, length );
 }
 
 /* A write results in a CONDOR_lseekwrite */
@@ -26,11 +38,11 @@ int CondorFileRemote::read(int pos, char *data, int length)
 int CondorFileRemote::write(int pos, char *data, int length)
 {
 	int result;
-	result = REMOTE_syscall( CONDOR_lseekwrite, fd, pos, SEEK_SET, data, length );
+	result = REMOTE_CONDOR_lseekwrite( fd, pos, SEEK_SET, data, length );
 
 	if(result>0) {
 		if((pos+result)>get_size()) {
-			set_size(pos+result);
+			size = pos+result;
 		}
 	}
 
@@ -70,7 +82,7 @@ int CondorFileRemote::fcntl( int cmd, int arg )
 
 		default:
 
-			_condor_warning("fcntl(%d,%d,...) is not supported for remote files.",fd,cmd);
+			_condor_warning(CONDOR_WARNING_KIND_UNSUP,"fcntl(%d,%d,...) is not supported for remote files.",fd,cmd);
 			errno = EINVAL;
 			return -1;
 	}
@@ -78,7 +90,7 @@ int CondorFileRemote::fcntl( int cmd, int arg )
 
 int CondorFileRemote::ioctl( int cmd, int arg )
 {
-	_condor_warning("ioctl(%d,%d,...) is not supported for remote files.",fd,cmd);
+	_condor_warning(CONDOR_WARNING_KIND_UNSUP,"ioctl(%d,%d,...) is not supported for remote files.",fd,cmd);
 	errno = EINVAL;
 	return -1;
 }
@@ -91,8 +103,8 @@ in an infinite loop.
 
 int CondorFileRemote::ftruncate( size_t s )
 {
-	set_size(s);
-	return REMOTE_syscall( CONDOR_ftruncate, fd, s );
+	size = s;
+	return REMOTE_CONDOR_ftruncate( fd, s );
 }
 
 /* This file cannot be accessed locally */

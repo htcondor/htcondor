@@ -70,11 +70,11 @@ typedef int JOB_CLASS;
 	// N.B. This name table *must* match the above enumerator.
 #if defined(INSERT_TABLES)
 static NAME_VALUE	JobClassNames[] = {
-	{ STANDARD,		"STANDARD"	},
-	{ PVM,			"PVM",		},
-	{ VANILLA,		"VANILLA",	},
-    { PVMD,			"PVMD",		},
-	{ -1,			"(UNKNOWN)"	}
+	{ CONDOR_UNIVERSE_STANDARD, "STANDARD"  },
+	{ CONDOR_UNIVERSE_PVM,      "PVM",      },
+	{ CONDOR_UNIVERSE_VANILLA,  "VANILLA",  },
+	{ CONDOR_UNIVERSE_PVMD,     "PVMD",     },
+	{ -1,                       "(UNKNOWN)" }
 };
 NameTable JobClasses( JobClassNames );
 #endif
@@ -131,7 +131,8 @@ public:
 	void	*bsd_exit_status();		// BSD style exit status for shadow
 	void	*accumulated_rusage();	// accumulated so far
 	void	*guaranteed_rusage();	// guaranteed by xfer of ckpt or termination
-	void set_times(int u_time, int s_time) { user_time = u_time; sys_time = s_time; }
+	void set_times(int u_time, int s_time) { user_time = u_time; sys_time = s_time; };
+	int get_num_pids_suspended(void) { return pids_suspended; }; 
 
 
 protected:
@@ -202,6 +203,8 @@ private:
 
 	ProcFamily *family;
 
+	// number of pids that are currently suspended
+	int		pids_suspended;
 };
 
 

@@ -1,7 +1,6 @@
 #include "condor_common.h"
 #include "condor_config.h"
 
-
 int
 main(int argc, char* argv[]) 
 {

@@ -45,8 +45,6 @@ extern "C" {
 int
 InitializeConnection( const char *owner )
 {
-	int	rval;
-
 	CurrentSysCall = CONDOR_InitializeConnection;
 
 	qmgmt_sock->encode();
@@ -59,8 +57,6 @@ InitializeConnection( const char *owner )
 int
 InitializeReadOnlyConnection( const char *owner )
 {
-	int	rval;
-
 	CurrentSysCall = CONDOR_InitializeReadOnlyConnection;
 
 	qmgmt_sock->encode();
@@ -258,6 +254,29 @@ SetAttribute( int cluster_id, int proc_id, char *attr_name, char *attr_value )
 	return rval;
 }
 
+int
+BeginTransaction()
+{
+	int	rval;
+
+		CurrentSysCall = CONDOR_BeginTransaction;
+
+		qmgmt_sock->encode();
+		assert( qmgmt_sock->code(CurrentSysCall) );
+		assert( qmgmt_sock->end_of_message() );
+
+		qmgmt_sock->decode();
+		assert( qmgmt_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( qmgmt_sock->code(terrno) );
+			assert( qmgmt_sock->end_of_message() );
+			errno = terrno;
+			return rval;
+		}
+		assert( qmgmt_sock->end_of_message() );
+
+	return rval;
+}
 
 int
 CloseConnection()
@@ -479,8 +498,6 @@ GetJobAd( int cluster_id, int proc_id )
 			errno = terrno;
 			return NULL;
 		}
-//		ClassAd *ad = new ClassAd;
-//		assert( ad->get(*qmgmt_sock) );
 		ClassAd *ad;								// NAC
 		assert( ad = getOldClassAd( qmgmt_sock ) );	// NAC
 		assert( qmgmt_sock->end_of_message() );
@@ -509,8 +526,6 @@ GetJobByConstraint( char *constraint )
 			errno = terrno;
 			return NULL;
 		}
-//		ClassAd *ad = new ClassAd;
-//		assert( ad->get(*qmgmt_sock) );
 		ClassAd *ad;								// NAC
 		assert( ad = getOldClassAd( qmgmt_sock ) );	// NAC
 		assert( qmgmt_sock->end_of_message() );
@@ -540,8 +555,6 @@ GetNextJob( int initScan )
 			return NULL;
 		}
 		
-//		ClassAd *ad = new ClassAd;
-//		assert( ad->get(*qmgmt_sock) );
 		ClassAd *ad;								// NAC
 		assert( ad = getOldClassAd( qmgmt_sock ) );	// NAC
 		assert( qmgmt_sock->end_of_message() );
@@ -572,8 +585,6 @@ GetNextJobByConstraint( char *constraint, int initScan )
 			return NULL;
 		}
 
-//		ClassAd *ad = new ClassAd;
-//		assert( ad->get(*qmgmt_sock) );
 		ClassAd *ad;								// NAC
 		assert( ad = getOldClassAd( qmgmt_sock ) );	// NAC
 		assert( qmgmt_sock->end_of_message() );

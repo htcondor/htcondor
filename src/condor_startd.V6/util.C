@@ -25,22 +25,30 @@
 #include "startd.h"
 #include "directory.h"
 #include "dynuser.h"	// used in cleanup_execute_dir() for WinNT
+#include "daemon.h"
 
 void
 check_perms()
 {
 	struct stat st;
 	mode_t mode;
+#ifdef WIN32
+	mode_t desired_mode = _S_IREAD | _S_IWRITE;
+#else
+	mode_t desired_mode = (0777 | S_ISVTX);
+#endif
+		// We want execute to be world-writable w/ the sticky bit set.  
 
 	if (stat(exec_path, &st) < 0) {
-		EXCEPT("stat exec path");
+		EXCEPT( "stat exec path (%s), errno: %d", exec_path, errno ); 
 	}
 
-	if ((st.st_mode & 0777) != 0777) {
+	if ((st.st_mode & desired_mode) != desired_mode) {
 		dprintf(D_FULLDEBUG, "Changing permission on %s\n", exec_path);
-		mode = st.st_mode | 0777;
+		mode = st.st_mode | desired_mode;
 		if (chmod(exec_path, mode) < 0) {
-			EXCEPT("chmod exec path");
+			EXCEPT( "chmod exec path (%s), errno: %d", exec_path,
+					errno );  
 		}
 	}
 }
@@ -50,15 +58,18 @@ void
 cleanup_execute_dir(int pid)
 {
 	char buf[2048];
+	char pathbuf[2048];
 
 #if defined(WIN32)
+
 	dynuser nobody_login;
 
 	if( pid ) {
 		// before removing subdir, remove any nobody-user account associtated
 		// with this starter pid.  this account might have been left around
 		// if the starter did not clean up completely.
-		sprintf(buf,"condor-run-dir_%d",pid);
+		//sprintf(buf,"condor-run-dir_%d",pid);
+		sprintf(buf,"condor-run-%d",pid);
 		if ( nobody_login.deleteuser(buf) ) {
 			dprintf(D_FULLDEBUG,"Removed account %s left by starter\n",buf);
 		}
@@ -74,33 +85,141 @@ cleanup_execute_dir(int pid)
 		// get rid of everything in the execute directory
 		Directory dir(exec_path);
 
-		// loop through the subdirs we find, and remove any nobody
-		// accounts left laying about by the starter.
-		const char *curdir = dir.Next();
-		while (curdir) {
-			if ( dir.IsDirectory() && (strncmp(curdir,"dir_",4)==0) ) {
-				sprintf(buf,"condor-run-%s",curdir);
-				if ( nobody_login.deleteuser(buf) ) {
-					dprintf(D_FULLDEBUG,
-						"Removed account %s left by starter\n",buf);
-				}
-			}
-			curdir = dir.Next();
-		}	
+		// remove all users matching this prefix
+		nobody_login.cleanup_condor_users("condor-run-");
+
 		// now that we took care of any old nobody accounts, blow away
 		// everything in the execute directory.
 		dir.Remove_Entire_Directory();
 	}
-#else
+
+#else /* UNIX */
+
+	struct stat st;
+	priv_state priv;
+
 	if( pid ) {
-		sprintf( buf, "/bin/rm -rf %.256s/dir_%d",
-				exec_path, pid );
+			// We're trying to delete a specific subdirectory, either
+			// b/c a starter just exited and we might need to clean up
+			// after it, or because we're in a recursive call.
+
+		sprintf( pathbuf, "%.512s/dir_%d", exec_path, pid );
+
+			// stat() the directory so we know what user owns it, if
+			// it's a symlink, etc.
+		errno = 0;
+		if( lstat(pathbuf, &st) < 0 ) {
+				// woah, stat() failed.  let's hope errno is the right
+				// thing:
+			if( errno != ENOENT ) {
+				dprintf( D_ALWAYS, "Error in cleanup_execute_dir(): "
+						 "stat(%s) failed with errno: %d\n", pathbuf,
+						 errno );
+					// what else can we do here?
+			} else {
+					// stat() said the directory is already gone.
+					// this probably means we're dealing with an old
+					// starter that cleans up after itself...  let the
+					// log know, at least.
+				dprintf( D_FULLDEBUG, "cleanup_execute_dir(): "
+						 "%s does not exist\n", pathbuf );
+			}
+				// either way, if the directory is gone, we're done. 
+			return;
+		}
+
+			// If we're here, stat() worked, so the directory is here.
+			// See what user owns the directory, and try to become
+			// that user to do the remove.  This avoids executing
+			// stuff as root which is good both for security reasons,
+			// and in case the directory lives on NFS and root doesn't
+			// have permission to do the remove, anyway.
+
+			// First, make sure the thing we're looking at isn't a
+			// symlink.  If it is, someone's probably trying to mess
+			// with us, so don't let them get away with it.
+		if( S_ISLNK(st.st_mode) ) {
+			dprintf( D_ALWAYS, "Error in cleanup_execute_dir(): "
+					 "%s is a symlink, ignoring!\n", pathbuf );
+			return;
+		}
+
+			// Make sure it's not owned by root, since that would also
+			// be Bad(tm).
+		if( st.st_uid == 0 ) {
+				// Nothing should be owned by root in here...  we
+				// certainly don't want to go deleting it, since
+				// someone might be trying to exploit a security hole.
+			dprintf( D_ALWAYS, "Error in cleanup_execute_dir(): "
+					 "%s is owned by root, ignoring!\n", pathbuf );
+			return;
+		}
+
+			// ok, things are actually safe to do the remove:
+		uninit_user_ids();	// clear out whatever was there to avoid
+			                // dprintf() warnings...
+		set_user_ids( st.st_uid, st.st_gid );
+		sprintf( buf, "/bin/rm -rf %s", pathbuf );
+		priv = set_user_priv();
+		system( buf );
+		set_priv( priv );
+		return;
+
 	} else {
-		sprintf( buf, "/bin/rm -rf %.256s/condor_exec* %.256s/dir_*",
-				 exec_path, exec_path );
-	}
-	system( buf );
-#endif
+			// We were called in cleanup-everything mode and we're not
+			// trying to get rid of a specific directory.  So, we've
+			// got to iterate through the entire execute directory,
+			// and try to delete each subdirectory individually.
+			// recursion to the rescue...
+
+		char* path_to_remove;
+		char* tmp;
+		double tmp_pid;
+		Directory exec_dir( exec_path );
+		exec_dir.Rewind();
+		while( (path_to_remove = (char*)exec_dir.Next()) ) { 
+				// if we're here, there's something left in the
+				// directory.  
+			if( (tmp = strstr(path_to_remove, "dir_")) ) {
+					// the thing we're looking at is a starter's
+					// temporary directory, so pull out the pid and
+					// call ourselves recursively to handle that
+					// specific subdir
+				if( sscanf(tmp, "dir_%lf", &tmp_pid) == 1 ) {
+						// we found the right pid, call ourselves to
+						// clean this directory up.
+					if ( tmp_pid > INT_MAX ) {
+							// Something's whacked here.  Someone's
+							// probably trying to mess with us, so
+							// just print a warning and ignore it.
+						dprintf( D_ALWAYS, 
+								 "Warning in cleanup_execute_dir(): "
+								 "invalid path \"%s\": pid is too large to "
+								 "be legitimate, ignoring\n",
+								 path_to_remove ); 
+						continue;
+					}
+					cleanup_execute_dir( (int)tmp_pid );
+				} else { 
+						// couldn't parse this path, move on.
+					dprintf( D_ALWAYS, "Error in cleanup_execute_dir(): "
+							 "failed to parse path \"%s\", ignoring\n",
+							 path_to_remove ); 
+				}
+			} else {
+					// we're not trying to delete a "dir_<pid>"
+					// directory.  nothing else should be in here, so
+					// print a log message about it and let the admin
+					// check it out.
+				dprintf( D_ALWAYS, "Warning in cleanup_execute_dir(): "
+						 "%s contains unknown entry \"%s\", ignoring\n", 
+						 exec_path, path_to_remove );
+			}
+		}
+			// nothing left in the directory, we're done.
+		return;
+	} // end of else clause for if(pid)
+#endif  /* UNIX */
 }
 
 
@@ -169,15 +288,30 @@ command_to_string( int cmd )
 }
 
 
-int
+bool
 reply( Stream* s, int cmd )
 {
 	s->encode();
 	if( !s->code( cmd ) || !s->end_of_message() ) {
-		return FALSE;
+		return false;
 	} else {
-		return TRUE;
+		return true;
 	}
+}
+
+
+bool
+refuse( Stream* s )
+{
+	s->end_of_message();
+	s->encode();
+	if( !s->put(NOT_OK) ) {
+		return false;
+	} 
+	if( !s->end_of_message() ) {
+		return false;
+	}
+	return true;
 }
 
 
@@ -226,7 +360,20 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose )
 bool
 configInsert( ClassAd* ad, const char* attr, bool is_fatal )
 {
-	char* val = param( attr );
+	return configInsert( ad, attr, attr, is_fatal );
+}
+
+
+/*
+  This version just allows for the name of the thing you're looking
+  for in the config file to be different than the classad attribute
+  name you want to insert it as.
+*/
+bool
+configInsert( ClassAd* ad, const char* param_name, 
+			  const char* attr, bool is_fatal ) 
+{
+	char* val = param( param_name );
 	char* tmp;
 	if( ! val ) {
 		if( is_fatal ) {
@@ -255,19 +402,22 @@ configInsert( ClassAd* ad, const char* attr, bool is_fatal )
 
 
 int
-send_classad_to_sock( int cmd, Sock* sock, ClassAd* pubCA, ClassAd*
+send_classad_to_sock( int cmd, Daemon * d, ClassAd* pubCA, ClassAd*
 					  privCA )  
 {
-	sock->encode();
-	if( ! sock->put( cmd ) ) {
+    Sock * sock = d->safeSock();
+    if (! d->startCommand(cmd, sock)) {
 		dprintf( D_ALWAYS, "Can't send command\n");
 		sock->end_of_message();
+		delete sock;
 		return FALSE;
 	}
+
 	if( pubCA ) {
 		if( ! pubCA->put( *sock ) ) {
 			dprintf( D_ALWAYS, "Can't send public classad\n");
 			sock->end_of_message();
+			delete sock;
 			return FALSE;
 		}
 	}
@@ -275,13 +425,17 @@ send_classad_to_sock( int cmd, Sock* sock, ClassAd* pubCA, ClassAd*
 		if( ! privCA->put( *sock ) ) {
 			dprintf( D_ALWAYS, "Can't send private classad\n");
 			sock->end_of_message();
+			delete sock;
 			return FALSE;
 		}
 	}
 	if( ! sock->end_of_message() ) {
 		dprintf( D_ALWAYS, "Can't send end_of_message\n");
+		delete sock;
 		return FALSE;
 	}
+
+	delete sock;
 	return TRUE;
 }
 

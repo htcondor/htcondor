@@ -31,10 +31,7 @@
 extern "C" {
 #endif
 
-int get_var( register char *value, register char **leftp, 
-			 register char **namep, register char **rightp, char *self=NULL );
-
-char *getline_implementation( FILE *, int );
+static char *getline_implementation( FILE *, int );
 
 int		ConfigLineNo;
 
@@ -55,7 +52,13 @@ condor_isalnum(int c)
 #define ISIDCHAR(c)		(isalnum(c) || ((c) == '_'))
 #endif
 
+// $$ expressions may also contain a colon
+#define ISDDCHAR(c) ( ISIDCHAR(c) || ((c)==':') )
+
 #define ISOP(c)		(((c) == '=') || ((c) == ':'))
+
+// Magic macro to represent a dollar sign, i.e. $(DOLLAR)="$"
+#define DOLLAR_ID "DOLLAR"
 
 int Read_config( char* config_file, BUCKET** table, 
 				 int table_size, int expand_flag )
@@ -382,6 +385,8 @@ lower_case( register char	*str )
 ** If self is not NULL, then we only expand references to to the parameter
 ** specified by self.  This is used when we want to expand self-references
 ** only.
+** Also expand references of the form "left$ENV(middle)right",
+** replacing $ENV(middle) with getenv(middle).
 */
 char *
 expand_macro( const char *value, BUCKET **table, int table_size, char *self )
@@ -390,20 +395,45 @@ expand_macro( const char *value, BUCKET **table, int table_size, char *self )
 	char *left, *name, *tvalue, *right;
 	char *rval;
 
-	while( get_var(tmp, &left, &name, &right, self) ) {
-		tvalue = lookup_macro( name, table, table_size );
-		if( tvalue == NULL ) {
-			// FREE( tmp );
-			// return( NULL );
-			// Returning NULL here is bad news.  If there is a macro
-			// not defined, we should EXCEPT so a human knows there is
-			// a faulty expression in the config file.
-			EXCEPT("Cannot expand macro %s!",name);
+	bool all_done = false;
+	while( !all_done ) {		// loop until all done expanding
+		all_done = true;
+
+		if( !self && get_env(tmp, &left, &name, &right) ) {
+			all_done = false;
+			tvalue = getenv(name);
+			if( tvalue == NULL ) {
+				EXCEPT("Can't find %s in environment!",name);
+			}
+
+			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
+											  strlen(right) + 1));
+			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
+			FREE( tmp );
+			tmp = rval;
 		}
 
-		rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
+		if( get_var(tmp, &left, &name, &right, self) ) {
+			all_done = false;
+			tvalue = lookup_macro( name, table, table_size );
+			if( tvalue == NULL ) {
+				tvalue = "";
+			}
+
+			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
+											  strlen(right) + 1));
+			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
+			FREE( tmp );
+			tmp = rval;
+		}
+	}
+
+	// Now, deal with the special $(DOLLAR) macro.
+	if (!self)
+	while( get_var(tmp, &left, &name, &right, DOLLAR_ID) ) {
+		rval = (char *)MALLOC( (unsigned)(strlen(left) + 1 +
 										  strlen(right) + 1));
-		(void)sprintf( rval, "%s%s%s", left, tvalue, right );
+		(void)sprintf( rval, "%s$%s", left, right );
 		FREE( tmp );
 		tmp = rval;
 	}
@@ -412,11 +442,70 @@ expand_macro( const char *value, BUCKET **table, int table_size, char *self )
 }
 
 /*
+** Same as get_var() below, but finds $ENV() references.
+*/
+int
+get_env( register char *value, register char **leftp, 
+		 register char **namep, register char **rightp )
+{
+	char *left, *left_end, *name, *right;
+	char *tvalue;
+
+	tvalue = value;
+	left = value;
+
+	for(;;) {
+tryagain:
+		if (tvalue) {
+			value = (char *)strstr( (const char *)tvalue, "$ENV" );
+		}
+		
+		if( value == NULL ) {
+			return( 0 );
+		}
+
+		value += 4;
+		if( *value == '(' ) {
+			left_end = value - 4;
+			name = ++value;
+			while( *value && *value != ')' ) {
+				char c = *value++;
+				if( !ISIDCHAR(c) ) {
+					tvalue = name;
+					goto tryagain;
+				}
+			}
+
+			if( *value == ')' ) {
+				right = value;
+				break;
+			} else {
+				tvalue = name;
+				goto tryagain;
+			}
+		} else {
+			tvalue = value;
+			goto tryagain;
+		}
+	}
+
+	*left_end = '\0';
+	*right++ = '\0';
+
+	*leftp = left;
+	*namep = name;
+	*rightp = right;
+
+	return( 1 );
+}
+
+/*
 ** If self is not NULL, then only look for the parameter specified by self.
 */
 int
 get_var( register char *value, register char **leftp, 
-		 register char **namep, register char **rightp, char *self )
+		 register char **namep, register char **rightp, char *self,
+		 bool getdollardollar)
 {
 	char *left, *left_end, *name, *right;
 	char *tvalue;
@@ -427,19 +516,56 @@ get_var( register char *value, register char **leftp,
 
 	for(;;) {
 tryagain:
-		value = (char *)strchr( (const char *)tvalue, '$' );
+		if (tvalue) {
+			value = (char *)strchr( (const char *)tvalue, '$' );
+		}
+		
 		if( value == NULL ) {
 			return( 0 );
 		}
 
+			// Do not treat $$(foo) as a macro unless
+			// getdollardollar = true.  This is for
+			// condor_submit, so it does not try to expand
+			// macros when we do "executable = foo.$$(arch)"
+			// If getdollardollar is true, than only get
+			// macros with two dollar signs, i.e. $$(foo).
+		if ( getdollardollar ) {
+			if ( *++value != '$' ) {
+				// this is not a $$ macro
+				tvalue = value;
+				goto tryagain;
+			}
+		} else {
+			// here getdollardollar is false, so ignore
+			// any $$(foo) macro.
+			if ( (*(value + sizeof(char))) == '$' ) {
+				value++; // skip current $
+				value++; // skip following $
+				tvalue = value;
+				goto tryagain;
+			}
+		}
+
 		if( *++value == '(' ) {
-			left_end = value - 1;
+			if ( getdollardollar ) {
+				left_end = value - 2;
+			} else {
+				left_end = value - 1;
+			}
 			name = ++value;
 			while( *value && *value != ')' ) {
 				char c = *value++;
-				if( !ISIDCHAR(c) ) {
-					tvalue = name;
-					goto tryagain;
+				if( getdollardollar ) {
+					if( !ISDDCHAR(c) ) {
+						tvalue = name;
+						goto tryagain;
+					}
+				} else {
+					if( !ISIDCHAR(c) ) {
+						tvalue = name;
+						goto tryagain;
+					}
 				}
 			}
 
@@ -451,7 +577,16 @@ tryagain:
 				// identifier.
 				int namelen = value-name;
 				if( !self || ( namelen == selflen &&
-							   strncmp( name, self, namelen ) == MATCH ) ) {
+							   strincmp( name, self, namelen ) == MATCH ) ) {
+						// $(DOLLAR) has special meaning; it is
+						// set to "$" and is _not_ recursively
+						// expanded.  To implement this, we have
+						// get_var() ignore $(DOLLAR) and we then
+						// handle it in expand_macro().
+					if ( !self && strincmp(name,DOLLAR_ID,namelen) == MATCH ) {
+						tvalue = name;
+						goto tryagain;
+					}
 					right = value;
 					break;
 				} else {
