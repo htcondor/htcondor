@@ -516,7 +516,10 @@ static bool EvalBool(ClassAd *ad, const char *constraint)
 		dprintf(D_ALWAYS, "can't parse constraint: %s\n", constraint);
 		return false;
 	}
-	if (!tree->EvalTree(ad, &result)) {
+
+	// Evaluate constraint with ad in the target scope so that constraints
+	// have the same semantics as the collector queries.  --RR
+	if (!tree->EvalTree(NULL, ad, &result)) {
 		dprintf(D_ALWAYS, "can't evaluate constraint: %s\n", constraint);
 		return false;
 	}
