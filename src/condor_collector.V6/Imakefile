@@ -3,7 +3,6 @@ all_target(collector_engine.a $(NAME))
 
 CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
-LDFLAGS = -lm RpcLib SocketLib
 LIB = collector_engine.a $(DAEMONCORE_LIB) $(STD_LIBS)
 
 ENGINE_OBJ = hashkey.o collector_engine.o

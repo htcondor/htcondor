@@ -9,7 +9,7 @@ X_LIB = -lX11 -lXext
 #else
 X_LIB = XExtLibPath XLibPath
 #endif
-LDFLAGS = $(X_LIB) SocketLib
+LDFLAGS = $(X_LIB)
 
 OBJ = kbdd.o XInterface.o
 

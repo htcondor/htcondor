@@ -2,7 +2,6 @@ all_target(libacct.a condor_accountant)
 
 C_PLUS_FLAGS = $(STD_C_PLUS_FLAGS)
 CFLAGS = $(STD_C_FLAGS)
-LDFLAGS = SocketLib
 LIB = libacct.a $(DAEMONCORE_LIB) $(STD_LIBS)
 
 LIB_OBJ = Accountant.o
