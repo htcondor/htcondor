@@ -28,6 +28,7 @@
 #include "killfamily.h"
 #include "HashTable.h"
 #include "condor_classad.h"
+#include "classad_collection_types.h"
 #include "ad_printmask.h"
 #include "Set.h"
 #include "condor_distribution.h"
@@ -47,13 +48,13 @@ template class SimpleList<int>;
 template class SimpleList<float>;
 template class ExtArray<char *>;
 template class ExtArray<ProcFamily::a_pid>;
-//template class HashTable<int, BaseCollection*>;
+template class HashTable<int, BaseCollection*>;
 //template class HashBucket<int, BaseCollection*>;
 template class Set<MyString>;
 template class SetElem<MyString>;
 template class Set<int>;
 template class SetElem<int>;
-//template class Set<RankedClassAd>;
+template class Set<RankedClassAd>;
 //template class SetElem<RankedClassAd>;
 template class HashTable<MyString, int>;
 template class HashBucket<MyString,int>;
