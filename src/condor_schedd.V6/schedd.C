@@ -1754,7 +1754,7 @@ Scheduler::reaper(int sig, int code, struct sigcontext* scp)
     }
 	if( ExitWhenDone && NShadowRecs == 0 ) {
 		dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
-		exit(0);
+		kill( getpid(), SIGKILL );
 	}
 	unblock_signal(SIGALRM);
 }
@@ -2064,7 +2064,7 @@ Scheduler::sigterm_handler()
     dprintf( D_ALWAYS, "Performing graceful shut down.\n" );
 	if( NShadowRecs == 0 ) {
 		dprintf( D_ALWAYS, "All shadows are gone, exiting.\n" );
-		exit(0);
+		kill( getpid(), SIGKILL );  
 	} else {
 			/* 
 			   There are shadows running, so set a flag that tells the
@@ -2088,7 +2088,7 @@ Scheduler::sigquit_handler()
 		kill( ShadowRecs[i].pid, SIGKILL );
 	}
 	dprintf( D_ALWAYS, "All shadows have been killed, exiting.\n" );
-	exit(0);
+	kill( getpid(), SIGKILL );
 }
 
 

@@ -315,13 +315,13 @@ event_sigterm(int sig)
 		resmgr_vacateall();
 		while (resmgr_resourceinuse()) sigpause(0);
 	}
-	exit(0);
+	kill( getpid(), SIGKILL );
 }
 
 void event_sigquit(int sig)
 {
 	dprintf(D_ALWAYS, "Killed by SIGQUIT\n");
-	exit(0);
+	kill( getpid(), SIGKILL );
 }
 
 void event_sigint(int sig)	/* sigint_handler */
