@@ -306,6 +306,9 @@ int GlobusJob::doEvaluateState()
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_UNKNOWN_SIGNAL_TYPE ) {
 					newJM = true;
 					gmState = GM_REGISTER;
+				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_CONTACT_NOT_FOUND ) {
+					newJM = true;
+					gmState = GM_RESTART;
 				} else if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_INVALID_JOB_QUERY ||
 							rc == GLOBUS_GRAM_PROTOCOL_ERROR_JOB_QUERY_DENIAL ) {
 					newJM = false;
@@ -434,6 +437,7 @@ int GlobusJob::doEvaluateState()
 			// Start a new gram submission for this job.
 			char *job_contact;
 			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
+				holdReason = strdup( "Maximum submit attempts exceeded" );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -1005,7 +1009,7 @@ int GlobusJob::doEvaluateState()
 			// forgetting about current submission and trying again.
 			// TODO: Let our action here be dictated by the user preference
 			// expressed in the job ad.
-			if ( (jobContact != NULL || globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED) && condorState != REMOVED ) {
+			if ( (jobContact != NULL || (globusState == GLOBUS_GRAM_PROTOCOL_JOB_STATE_FAILED && globusStateErrorCode != GLOBUS_GRAM_PROTOCOL_ERROR_JOB_UNSUBMITTED)) && condorState != REMOVED ) {
 				gmState = GM_HOLD;
 				break;
 			}
