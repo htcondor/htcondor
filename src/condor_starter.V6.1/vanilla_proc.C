@@ -34,10 +34,9 @@
 
 extern CStarter *Starter;
 
-VanillaProc::VanillaProc( ClassAd *jobAd ) : OsProc()
+VanillaProc::VanillaProc( ClassAd *jobAd ) : OsProc( jobAd )
 {
 	family = NULL;
-    JobAd = jobAd;
 	snapshot_tid = -1;
 }
 
