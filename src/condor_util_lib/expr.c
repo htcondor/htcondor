@@ -1746,6 +1746,10 @@ CONTEXT *context;
 		if( strcmp(name,context->data[i]->data[0]->s_val) == MATCH )
 		{
 			/* found where to delete */
+			/* Actually, AND should not be passed for the following
+			   statement.  However the passed in value is ignored
+			   ( explanation given in delete_expr function )
+			   -- sriram */
 			return delete_expr(context->data[i], expr,AND);
 		}
 	}
@@ -1779,12 +1783,83 @@ int operator;
 
 		if ( flag == TRUE ) /* matching pattern found */
 		{
-			/* replace this tree with an appripriate boolean */
+			/* The following section is wrong - note if there is
+			   a case like A B == C D == && in the context, where
+			   A B == is the expression to be deleted then it will
+			   fail since there is no operator after ==.
+
+			   Fix - after searching for a matching expression,
+			   traverse the list till the first operator is
+			   reached, then set end to point to the (operator-1)th
+			   element.
+
+			   Another assumption which is wrong is that delete_stmt
+			   always deletes expr assuming AND as the operator.
+			   The operator should be figured out ( by looking at
+			   the expression ) and the appropriate action should
+			   be taken
+
+			   -- sriram
+			*/
+
+			/* replace this tree with an appropriate boolean */
+
+			/* - wrong ( sriram )
+
 			if (expr->data[end+1]->type != operator )
 			{
+				dprintf(D_ALWAYS, "Comparing %d and %d\n",expr->data[end+1]->type,operator);
 				dprintf(D_ALWAYS, " Types do not match\n");
 				return FALSE;
 			}
+			*/
+
+			int iIndex = loop, fIsNot = 0;
+			ELEM* pElem;
+
+			/* Before an expression is deleted we should know whether
+			   the expression has a NOT performed on it.  If the
+			   requirements is just REQ A B == NOT Gets , then
+			   we should set A B == to 0 so that the REQ becomes
+			   T
+
+			   -- sriram
+			*/
+
+			if (expr->data[iIndex]->type == NOT )
+				fIsNot = 1;
+			for (;iIndex < expr->len-1;iIndex++)
+			{
+				int elemType = expr->data[iIndex]->type;
+				if ( elemType == AND ||
+				     elemType == OR ||
+				     elemType == GETS )
+				{
+					operator = elemType;
+					break;
+				}
+			}
+			
+
+			pElem = expr->data[end];
+			switch(operator)
+			{
+				case AND:
+				case GETS:
+					pElem->type = BOOL;
+					pElem->b_val = (fIsNot)?0:1;
+					break;
+				case OR:
+					pElem->type = BOOL;
+					pElem->b_val = (fIsNot)?1:0;
+					break;
+				default:
+					dprintf(D_ALWAYS,"Unknown operator:dont know how to delete\n");
+					break;
+			}
+
+			/*
+					
 			switch ( expr->data[end+1]->type )
 			{
 				case AND : 	
@@ -1799,6 +1874,9 @@ int operator;
 					dprintf(D_ALWAYS, "Do not know how to delete\n");
 					break;
 			}
+
+			*/
+
 			/* remove unnecessary elements */
 			for ( i=start; i < end-1; i++ )
 				if ( expr->data[i] ) free (expr->data[i]);
