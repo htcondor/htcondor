@@ -31,7 +31,7 @@
 void
 usage(char name[])
 {
-	fprintf(stderr, "Usage: %s [-arch] -[opsys] [-libc]\n", name);
+	fprintf(stderr, "Usage: %s [-syscall] [-arch] -[opsys] [-libc]\n", name);
 	exit(1);
 }
 
@@ -39,31 +39,53 @@ int
 main(int argc, char *argv[])
 {
 
-	CondorVersionInfo version;
+	CondorVersionInfo *version;
 	if (argc < 2) {
 		printf("%s\n%s\n", CondorVersion(), CondorPlatform());
 		exit(0);
 	}
 
+	version = new CondorVersionInfo;
 	for(int i = 1; i < argc; i++ ) {
 
+		if (argv[i][0] == '-' && argv[i][1] == 's') {
+			char *path, *fullpath, *vername, *platform;
+			config();
+			path = param("LIB");
+			if(path != NULL) {
+				fullpath = (char *)malloc(strlen(path) + 24);
+				strcpy(fullpath, path);
+				strcat(fullpath, "/libcondorsyscall.a");
+				
+				vername = NULL;
+				vername = version->get_version_from_file(fullpath, vername);
+				platform = NULL;
+				platform = version->get_platform_from_file(fullpath, platform);
+
+				delete version;
+				version = new CondorVersionInfo(vername, NULL, platform);
+				free(path);
+				free(fullpath);
+			}
+
+		}
 		if (argv[i][0] == '-' && argv[i][1] == 'l') {
 			char *libc;
-			libc = version.getLibcVer();
+			libc = version->getLibcVer();
 
 			if(libc){
-				printf("%s\n", version.getLibcVer() );
+				printf("%s\n", libc );
 			} else {
 				printf("LIBC is not defined on this platform\n"); 
 			}
 		}
 
 		if (argv[i][0] == '-' && argv[i][1] == 'a') {
-			printf("%s\n", version.getArchVer() );
+			printf("%s\n", version->getArchVer() );
 		}
 
 		if (argv[i][0] == '-' && argv[i][1] == 'o') {
-			printf("%s\n", version.getOpSysVer() );
+			printf("%s\n", version->getOpSysVer() );
 		}
 	}
 	return 0;
