@@ -322,8 +322,10 @@ class Scheduler : public Service
     HashTable <int, ExtArray<match_rec*>*> *storedMatches;
     friend int mpiHashFunc( const int& cluster, int numbuckets );
     static const int MPIShadowSockTimeout;
+		// Remove all startds from a given match.
+	void nuke_mpi ( shadow_rec *srec );
 
-		// put state into ClassAd return it.
+		// put state into ClassAd return it.  Used for condor_squawk
 	int	dumpState(int, Stream *);
 	int intoAd ( ClassAd *ad, char *lhs, char *rhs );
 	int intoAd ( ClassAd *ad, char *lhs, int rhs );
