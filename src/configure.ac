@@ -1305,17 +1305,11 @@ CONDOR_EXTERNAL_VERSION([zlib],[1.1.3])
 
 CONDOR_EXTERNAL_VERSION([pvm],[3.4.2])
 
-# AC_MSG_CHECKING([classads])
-# _cv_ext_classads_version="classads-0.9.7"
-# AC_MSG_RESULT([$_cv_ext_classads_version])
-# AC_SUBST(ext_classads_version,$_cv_ext_classads_version)
 CONDOR_EXTERNAL_VERSION([classads],[0.9.7])
 
-# AC_MSG_CHECKING([srb])
-# _cv_ext_srb_version="srb-3.2.1"
-# AC_MSG_RESULT([$_cv_ext_srb_version])
-# AC_SUBST(ext_srb_version,$_cv_ext_srb_version)
 CONDOR_EXTERNAL_VERSION([srb],[3.2.1])
+
+CONDOR_EXTERNAL_VERSION([gsoap],[2.7])
 
 else
 # if there's no externals at all, we still need to define these to
@@ -1325,10 +1319,6 @@ else
 fi
 # end of if $ac_cv_has_externals = "YES" 
 
-AC_MSG_CHECKING([gsoap])
-_cv_ext_gsoap_version="gsoap-2.7"
-AC_MSG_RESULT([$_cv_ext_gsoap_version])
-AC_SUBST(ext_gsoap_version,$_cv_ext_gsoap_version)
 
 
 ############################################################
