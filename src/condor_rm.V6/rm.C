@@ -380,7 +380,7 @@ void ProcArg(const char* arg)
 					 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release", c);
 			} else {
 				fprintf(stderr, "Cluster %d %s.\n", c,
-					(mode==REMOVED)?"has been marked for removal.":
+					(mode==REMOVED)?"has been marked for removal":
 						(mode==HELD)?"held":"released");
 				nToProcess = -1;
 			}
@@ -418,7 +418,7 @@ void ProcArg(const char* arg)
 					 c, p);
 				} else {
 					fprintf(stdout, "Job %d.%d %s.\n", c, p,
-						(mode==REMOVED)?"has been marked for removal.":
+						(mode==REMOVED)?"has been marked for removal":
 							(mode==HELD)?"held":"released");
 					if ( mode != IDLE && nToProcess != -1 ) {
 						nToProcess++;
@@ -452,7 +452,7 @@ void ProcArg(const char* arg)
 				 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release",arg );
 		} else {
 			fprintf(stdout, "User %s's job(s) %s.\n", arg,
-				(mode==REMOVED)?"have been marked for removal.":
+				(mode==REMOVED)?"have been marked for removal":
 					(mode==HELD)?"held":"released");
 			nToProcess = -1;
 		}
@@ -477,8 +477,8 @@ handle_constraint( const char *constraint )
 				 (mode==REMOVED)?"remove":(mode==HELD)?"hold":"release",
 				 constraint);
 	} else {
-		fprintf( stdout, "Jobs matching constraint %s %s\n", constraint,
-				(mode==REMOVED)?"have been marked for removal.":
+		fprintf( stdout, "Jobs matching constraint %s %s.\n", constraint,
+				(mode==REMOVED)?"have been marked for removal":
 					(mode==HELD)?"held":"released");
 		nToProcess = -1;
 	}
