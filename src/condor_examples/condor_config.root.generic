@@ -18,6 +18,8 @@
 ######################################################################
 
 ##  Where is the machine-specific root config file for each host?
+##  If you are using a condor_config.root file, THIS IS VERY IMPORTANT
+##  TO KEEP DEFINED! (and it must exist)
 LOCAL_ROOT_CONFIG_FILE	= $(LOCAL_DIR)/condor_config.root.local
 #LOCAL_ROOT_CONFIG_FILE	= $(RELEASE_DIR)/etc/$(HOSTNAME).root
 
