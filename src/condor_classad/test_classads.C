@@ -26,6 +26,7 @@
 #include "condor_xml_classads.h"
 #include "stringSpace.h"
 #include "condor_scanner.h" 
+#include "iso_dates.h"
 
 /*----------------------------------------------------------
  *
@@ -41,7 +42,7 @@ extern StringSpace classad_string_space; // for debugging only!
 #define NUMBER_OF_CLASSAD_STRINGS (sizeof(classad_strings)/sizeof(char *))
 char *classad_strings[] = 
 {
-	"A = 1, B=2, C = 3",
+	"A = 1, B=2, C = 3, D='2001-04-05T12:14:15'",
 	"A = 1, B=2, C = 3, D = \"alain\", MyType=\"foo\", TargetType=\"blah\"",
 
 	"Rank = (Memory >= 50)",
@@ -153,6 +154,12 @@ void test_token_float(const Token *token, float number,
     int line_number, TestResults *test_results);
 void test_string_value(ClassAd *classad, const char *attribute_name,
     const char *expected_value, int line_number,
+    TestResults *results);
+void test_time_string_value(ClassAd *classad, const char *attribute_name,
+    const char *expected_value, int line_number,
+    TestResults *results);
+void test_time_value(ClassAd *classad, const char *attribute_name,
+    const struct tm  &expected_time, int line_number,
     TestResults *results);
 void test_mytype(ClassAd *classad, const char *expected_value, 
 	int line_number, TestResults *results);
@@ -276,7 +283,19 @@ main(
 		test_integer_value(classads[0], "C", 3, __LINE__, &test_results);
 		test_mytype(classads[0], "", __LINE__, &test_results);
 		test_targettype(classads[0], "", __LINE__, &test_results);
-		
+		test_time_string_value(classads[0], "D", "2001-04-05T12:14:15",
+							   __LINE__, &test_results);
+		{
+			struct tm  time;
+			time.tm_year = 101; // year 2001
+			time.tm_mon  = 03;  // that's april, not march. 
+			time.tm_mday = 05;
+			time.tm_hour = 12;
+			time.tm_min  = 14;
+			time.tm_sec  = 15;
+			test_time_value(classads[0], "D", time, __LINE__, &test_results);
+		}
+
 		test_string_value(classads[1], "D", "alain", __LINE__, &test_results);
 		test_mytype(classads[1], "foo", __LINE__, &test_results);
 		test_targettype(classads[1], "blah", __LINE__, &test_results);
@@ -496,7 +515,7 @@ test_scanner(
     TestResults *results) // OUT: Modified to reflect result of test
 {
 	Token token;
-	char  *input = "Rank = ((Owner == \"Alain\") || (Memory < 500)) 5.4";
+	char  *input = "Rank = ((Owner == \"Alain\") || (Memory < 500)) 5.4 '2001-10-10'";
 	char  *current;
 
 	current = input;
@@ -566,6 +585,10 @@ test_scanner(
 
 	test_token_type(&token, LX_FLOAT, __LINE__, results);
 	test_token_float(&token, 5.4, __LINE__, results);
+	Scanner(current, token);
+
+	test_token_type(&token, LX_TIME, __LINE__, results);
+	test_token_text(&token, "2001-10-10", __LINE__, results);
 	Scanner(current, token);
 
 	// end
@@ -756,7 +779,50 @@ test_string_value(
 	if (found_string && !strcmp(expected_value, actual_value)) {
 		printf("Passed: ");
 		print_truncated_string(attribute_name, 40);
-		printf("is \"");
+		printf(" is \"");
+		print_truncated_string(expected_value, 40);
+		printf(" \" in line %d\n", line_number);
+		results->AddResult(true);
+	} else if (!found_string) {
+		printf("Failed: Attribute \"%s\" is not found.\n", attribute_name);
+		results->AddResult(false);
+	} else {
+		printf("Failed: ");
+		print_truncated_string(attribute_name, 40);
+		printf(" is: ");
+		print_truncated_string(actual_value, 30);
+		printf("\" not \"");
+		print_truncated_string(expected_value, 30);
+		printf("\" in line %d\n", line_number);
+		results->AddResult(false);
+	}
+	free(actual_value);
+	return;
+}
+
+/***************************************************************
+ *
+ * Function: test_time_string_value
+ * Purpose:  Given a classad, test that an attribute within the
+ *           classad has the time string we expect.
+ *
+ ***************************************************************/
+void 
+test_time_string_value(
+    ClassAd     *classad,        // IN: The ClassAd we're examining
+	const char  *attribute_name, // IN: The attribute we're examining
+	const char  *expected_value, // IN: The string we're expecting
+	int         line_number,     // IN: The line number to print
+    TestResults *results)        // OUT: Modified to reflect result of test
+{
+	int         found_string;
+	char        *actual_value;
+
+	found_string = classad->LookupTime(attribute_name, &actual_value);
+	if (found_string && !strcmp(expected_value, actual_value)) {
+		printf("Passed: ");
+		print_truncated_string(attribute_name, 40);
+		printf(" is \"");
 		print_truncated_string(expected_value, 40);
 		printf("\" in line %d\n", line_number);
 		results->AddResult(true);
@@ -774,6 +840,61 @@ test_string_value(
 		results->AddResult(false);
 	}
 	free(actual_value);
+	return;
+}
+
+/***************************************************************
+ *
+ * Function: test_time_value
+ * Purpose:  Given a classad, test that an attribute within the
+ *           classad has the time we expect.
+ *
+ ***************************************************************/
+void 
+test_time_value(
+    ClassAd          *classad,        // IN: The ClassAd we're examining
+	const char       *attribute_name, // IN: The attribute we're examining
+	const struct tm  &expected_time,  // IN: The string we're expecting
+	int              line_number,     // IN: The line number to print
+    TestResults      *results)        // OUT: Modified to reflect result of test
+{
+	int         found_time;
+	struct tm   actual_time;
+	bool        is_utc;
+
+	found_time = classad->LookupTime(attribute_name, &actual_time, &is_utc);
+	if (found_time 
+		&& actual_time.tm_year == expected_time.tm_year
+		&& actual_time.tm_mon  == expected_time.tm_mon
+		&& actual_time.tm_mday == expected_time.tm_mday
+		&& actual_time.tm_hour == expected_time.tm_hour
+		&& actual_time.tm_min  == expected_time.tm_min
+		&& actual_time.tm_sec  == expected_time.tm_sec) {
+		printf("Passed: ");
+		print_truncated_string(attribute_name, 40);
+		printf(" has correct time in line %d\n", line_number);
+		results->AddResult(true);
+	} else if (!found_time) {
+		printf("Failed: Attribute \"%s\" is not found.\n", attribute_name);
+		results->AddResult(false);
+	} else {
+		char *t1, *t2;
+		bool is_utc;
+		t1 = time_to_iso8601(actual_time, ISO8601_ExtendedFormat, 
+						ISO8601_DateAndTime, &is_utc);
+		t2 = time_to_iso8601(expected_time, ISO8601_ExtendedFormat, 
+						ISO8601_DateAndTime, &is_utc);
+		printf("Failed: ");
+		print_truncated_string(attribute_name, 40);
+		printf(" is: ");
+		print_truncated_string(t1, 30);
+		printf("\" not \"");
+		print_truncated_string(t2, 30);
+		printf("\" in line %d\n", line_number);
+		results->AddResult(false);
+		free(t1);
+		free(t2);
+	}
 	return;
 }
 
