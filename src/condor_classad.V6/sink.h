@@ -45,6 +45,10 @@ class ClassAdUnParser
 		// flag before doing an XMLUnparse
 		void setXMLUnparse(bool doXMLUnparse);
 
+		// The default delimiter for strings is '\"'
+		// This can be changed to '\'' to unparse quoted attributes, with this function
+		void setDelimiter(char delim);
+
 		/** Unparse a value 
 		 * 	@param buffer The string to unparse to
 		 * 	@param val The value to unparse
@@ -74,12 +78,16 @@ class ClassAdUnParser
 					std::vector< std::pair< std::string, ExprTree*> >& attrlist );
 		virtual void UnparseAux( std::string &buffer, std::vector<ExprTree*>& );
 
+		// to unparse attribute names (quoted & unquoted attributes)
+		virtual void UnparseAux( std::string &buffer, std::string identifier);
+
 		// table of string representation of operators
 		static char *opString[];
 
  protected:
 		bool oldClassAd;
 		bool xmlUnparse;
+		char delimiter; // string delimiter - initialized to '\"' in the constructor
 };
 
 

@@ -29,11 +29,14 @@ extern  time_t timezone;
 
 BEGIN_NAMESPACE( classad )
 
+static bool identifierNeedsQuoting( const string & );
+
 ClassAdUnParser::
 ClassAdUnParser()
 {
 	oldClassAd = false;
 	xmlUnparse = false;
+	delimiter = '\"';
 	return;
 }
 
@@ -91,6 +94,12 @@ setXMLUnparse(bool doXMLUnparse)
 	return;
 }
 
+void ClassAdUnParser::
+setDelimiter(char delim) 
+{
+	delimiter = delim;
+	return;
+}
 
 
 void ClassAdUnParser::
@@ -107,7 +116,17 @@ Unparse( string &buffer, const Value &val )
 			val.IsStringValue( s );
 			buffer += '"';
 			for( string::const_iterator itr=s.begin( ); itr!=s.end( ); itr++ ) {
-				switch( *itr ) {
+				if(*itr == delimiter) {
+					if(delimiter == '\"') {
+						buffer += "\\\""; 
+						continue;
+					}
+					else {
+						buffer += "\\\'"; 
+						continue;
+					}   
+				}
+			    switch( *itr ) {
 					case '\a': buffer += "\\a"; break;
 					case '\b': buffer += "\\b"; break;
 					case '\f': buffer += "\\f"; break;
@@ -117,13 +136,13 @@ Unparse( string &buffer, const Value &val )
 					case '\v': buffer += "\\v"; break;
 					case '\\': buffer += "\\\\"; break;
 					case '\?': buffer += "\\?"; break;
-					case '\'': buffer += "\\\'"; break;
-					case '\"': buffer += "\\\""; break;
+					case '\'': buffer += "\'"; break;
+					case '\"': buffer += "\""; break;
 
 					default:
 						if( !isprint( *itr ) ) {
 							// print octal representation
-							sprintf( tempBuf, "\\%o", (unsigned char)*itr );
+							sprintf( tempBuf, "\\%03o", (unsigned char)*itr );
 							buffer += tempBuf;
 						} else {
 							if (!xmlUnparse) {
@@ -150,16 +169,12 @@ Unparse( string &buffer, const Value &val )
 			return;
 		}
 		case Value::REAL_VALUE: {
-			double	r;
-			val.IsRealValue( r );
-			sprintf( tempBuf, "%g", r );
-			if (strchr(tempBuf, '.') == NULL) {
-				// There is no decimal in there, so when
-				// we reparse this later, we'll think it's
-				// an integer unless we tack an a .0
-				strcat(tempBuf, ".0");
-			}
+			union { double d; long long l; } u;
+			val.IsRealValue(u.d);   
+			sprintf(tempBuf, "%016llx", u.l);
+			buffer += "ieee754(\"";
 			buffer += tempBuf;
+			buffer += "\")";
 			return;
 		}
 		case Value::BOOLEAN_VALUE: {
@@ -177,49 +192,37 @@ Unparse( string &buffer, const Value &val )
 			return;
 		}
 		case Value::ABSOLUTE_TIME_VALUE: {
-			struct  tm tms;
-			char    ascTimeBuf[32], timeZoneBuf[32];
-			time_t	asecs;
+			struct  tm *tms;
+			time_t t;
+			char    TimeBuf[32], sign;
+			abstime_t	asecs;
+			int tzsecs;
 			val.IsAbsoluteTimeValue( asecs );
 
-				// format:  `Wed Nov 11 13:11:47 1998 (CST) -6:00`
-				// we use localtime()/asctime() instead of ctime() 
-				// because we need the timezone name from strftime() 
-				// which needs a 'normalized' struct tm.  localtime() 
-				// does this for us.
-
-				// get the asctime()-like segment; but remove \n
-			localtime_r( &asecs, &tms );
-			asctime_r( &tms, ascTimeBuf );
-			//asctime_r( &tms, ascTimeBuf, 31 );
-			ascTimeBuf[24] = '\0';
-			buffer += "'";
-			buffer += ascTimeBuf;
-			buffer += " (";
-
-				// get the timezone name
-			if( !strftime( timeZoneBuf, 31, "%Z", &tms ) ) {
-				buffer += "<error:strftime>";
-				return;
+			buffer += "absTime(\"";
+			tzsecs = asecs.offset;  
+			t = asecs.secs + timezone + tzsecs;
+			if (tzsecs > 0) { 
+				sign = '+';         // timezone offset's sign
+			} else {
+				sign = '-';
+				tzsecs = -tzsecs;
 			}
-			buffer += timeZoneBuf;
-			buffer += ") ";
-			
-				// output the offSet (use the relative time format)
-				// wierd:  POSIX says regions west of GMT have positive
-				// offSets.We use negative offSets to not confuse users.
-			Value relTime;
-			string	relTimeBuf;
-			relTime.SetRelativeTimeValue( -timezone );
-			Unparse( relTimeBuf, relTime );
-			buffer += relTimeBuf.substr(1,relTimeBuf.size()-2) + "'";
+			tms = localtime(&t);
+			strftime(TimeBuf, sizeof(TimeBuf), "%Y-%m-%dT%H:%M:%S", tms);
+			buffer += TimeBuf;
+			sprintf(TimeBuf, "%c%02d%02d", sign, tzsecs / 3600, (tzsecs / 60) % 60);
+			buffer += TimeBuf;
+			buffer += "\")";
+		
 			return;
 		}
 		case Value::RELATIVE_TIME_VALUE: {
 			time_t	rsecs;
 			int		days, hrs, mins, secs;
 			val.IsRelativeTimeValue( rsecs );
-			buffer += '\'';
+		      
+			buffer += "relTime(\"";
 			if( rsecs < 0 ) {
 				buffer += "-";
 				rsecs = -rsecs;
@@ -233,18 +236,25 @@ Unparse( string &buffer, const Value &val )
 			mins = mins / 60;
 
 			if( days ) {
-				sprintf( tempBuf, "%dd", days );
-				buffer += tempBuf;
+		       sprintf( tempBuf, "%d+%02d:%02d:%02d\")", days, hrs, mins, secs );
+			  buffer += tempBuf;
+			  return;
 			}
-
-			sprintf( tempBuf, "%02d:%02d", hrs, mins );
-			buffer += tempBuf;
-			
-			if( secs ) {
-				sprintf( tempBuf, ":%02d", secs );
-				buffer += tempBuf;
+			if(hrs) {
+		      sprintf( tempBuf, "%02d:%02d:%02d\")", hrs, mins, secs );
+			  buffer += tempBuf;
+			  return;
+			}	  
+			if(mins) {
+		      sprintf( tempBuf, "%02d:%02d\")", mins, secs );
+			  buffer += tempBuf;
+			  return;
+			}	  
+			else {
+			  sprintf( tempBuf, "%02d\")", secs );
+			  buffer += tempBuf;
 			}
-			buffer += '\'';
+		  
 			return;
 		}
 		case Value::CLASSAD_VALUE: {
@@ -357,7 +367,7 @@ UnparseAux( string &buffer, const ExprTree *expr, string &attrName, bool absolut
 		return;
 	}
 	if( absolute ) buffer += ".";
-	buffer += attrName;
+	UnparseAux(buffer,attrName);
 }
 
 void ClassAdUnParser::
@@ -463,7 +473,8 @@ UnparseAux( string &buffer, vector< pair<string,ExprTree*> >& attrs )
 		buffer += "[ ";
 	}					// NAC
 	for( itr=attrs.begin( ); itr!=attrs.end( ); itr++ ) {
-		buffer += itr->first + " = ";
+	  UnparseAux( buffer, itr->first ); 
+	  buffer += " = ";
 		Unparse( buffer, itr->second );
 //		if( itr+1 != attrs.end( ) ) buffer += "; ";
 		if( itr+1 != attrs.end( ) ) buffer += delim;	// NAC
@@ -489,6 +500,30 @@ UnparseAux( string &buffer, vector<ExprTree*>& exprs )
 		if( itr+1 != exprs.end( ) ) buffer += ',';
 	}
 	buffer += " }";
+}
+
+
+/* To unparse the identifier strings
+ * based on the character content, 
+ * it's unparsed either as a quoted attribute or non-quoted attribute 
+ */
+void ClassAdUnParser::
+UnparseAux( string &buffer, string identifier )
+{
+	Value  val;
+	string idstr;
+
+	val.SetStringValue(identifier);
+	setDelimiter('\''); // change the delimiter from string-literal mode to quoted attribute mode
+	Unparse(idstr,val);
+	setDelimiter('\"'); // set delimiter back to default setting
+	idstr.erase(0,1);
+	idstr.erase(idstr.length()-1,1);
+	if (identifierNeedsQuoting(idstr)) {
+		idstr.insert(0,"'");
+		idstr += "'";
+	}
+	buffer += idstr;
 }
 
 // back compatibility only - NAC
@@ -650,9 +685,31 @@ UnparseAux( string &buffer, vector< pair<string,ExprTree*> >& attrs )
 	for( itr=attrs.begin( ); itr!=attrs.end( ); itr++ ) {
 		if( classadIndent > 0 ) {
 			buffer += '\n' + string( indentLevel, ' ' );
-		}
-		buffer += itr->first + " = ";
+		} 
+		ClassAdUnParser::UnparseAux( buffer, itr->first );
+		buffer +=  " = ";
 		Unparse( buffer, itr->second );
+		// if the expression is a real-literal node, then it is unparsed as...
+		// ieee754("...")  /* xx.xxx */
+		if((itr->second)->GetKind() == ExprTree::LITERAL_NODE) {
+			Value val;
+			Value::NumberFactor factor;
+			((Literal *)itr->second)->GetComponents(val, factor);
+			double r;
+			if(val.IsRealValue(r)) {
+				char tempBuf[20];
+				sprintf( tempBuf, "%g", r );
+				if ((strchr(tempBuf, '.') == NULL)  && !isnan(r)){
+					// There is no decimal in there, so when
+					// we reparse this later, we'll think it's
+					// an integer unless we tack an a .0
+					strcat(tempBuf, ".0");
+				}
+				buffer += "/* ";
+				buffer += tempBuf;
+				buffer += " */";
+			} 
+		}
 		if( itr+1 != attrs.end( ) ) buffer += "; ";
 	}
 	if( classadIndent > 0 ) {
@@ -693,5 +750,29 @@ UnparseAux( string &buffer, vector<ExprTree*>& exprs )
 	}
 }
 
+/* Checks whether string qualifies to be a non-quoted attribute */
+static bool 
+identifierNeedsQuoting( const string &str )
+{
+	bool  needs_quoting;
+	const char *ch = str.c_str( );
+
+	// must start with [a-zA-Z_]
+	if( !isalpha( *ch ) && *ch != '_' ) {
+		needs_quoting = false;
+	} else {
+
+		// all other characters must be [a-zA-Z0-9_]
+		ch++;
+		while( isalnum( *ch ) || *ch == '_' ) {
+			ch++;
+		}
+
+		// needs quoting if we found a special character
+		// before the end of the string.
+		needs_quoting =  !(*ch == '\0' );
+	}
+	return needs_quoting;
+}
 
 END_NAMESPACE // classad
