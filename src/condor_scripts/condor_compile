@@ -11,11 +11,11 @@
 # Customize these if desired.  The defaults provided should be
 # correct for most installations, however.
 CONDOR_LIBDIR=`condor_config_val LIB`
-CONDOR_CLIB=$CONDOR_LIBDIR/condor_syscall_lib.a
+CONDOR_CLIB=$CONDOR_LIBDIR/libcondorsyscall.a
 STATIC_ZLIB=/usr/lib/libz.a
-CONDOR_ZCLIB=$CONDOR_LIBDIR/condor_syscall_zlib.a
+CONDOR_ZCLIB=$CONDOR_LIBDIR/libcondorzsyscall.a
 CONDOR_RT0=$CONDOR_LIBDIR/condor_rt0.o
-CONDOR_CPLUS=$CONDOR_LIBDIR/c_plus_alloc.o
+CONDOR_CPLUS=$CONDOR_LIBDIR/libcondorc++support.a
 CONDOR_LD_DIR=$CONDOR_LIBDIR
 
 # --------------------------------------------------
@@ -46,7 +46,7 @@ do
 		continue
 	fi
 
-	if [ $1 = "-condor_plus_alloc" ]; then
+	if [ $1 = "-condor_c++_support" ]; then
 		shift
 		CONDOR_CPLUS=$1
 		shift
@@ -61,8 +61,8 @@ do
 	fi
 
 	if [ $1 = "-condor_standalone" ]; then
-		CONDOR_CLIB=$CONDOR_LIBDIR/libckpt.a
-		CONDOR_ZCLIB=$CONDOR_LIBDIR/libzckpt.a
+		CONDOR_CLIB=$CONDOR_LIBDIR/libcondorckpt.a
+		CONDOR_ZCLIB=$CONDOR_LIBDIR/libcondorzckpt.a
 		shift
 		continue
 	fi
@@ -72,10 +72,10 @@ do
 		CONDOR_LIBDIR=$1
 		shift
 		# Reset anything based off of the libdir by default
-		CONDOR_CLIB=$CONDOR_LIBDIR/condor_syscall_lib.a
-		CONDOR_ZCLIB=$CONDOR_LIBDIR/condor_syscall_zlib.a
+		CONDOR_CLIB=$CONDOR_LIBDIR/libcondorsyscall.a
+		CONDOR_ZCLIB=$CONDOR_LIBDIR/libcondorzsyscall.a
 		CONDOR_RT0=$CONDOR_LIBDIR/condor_rt0.o
-		CONDOR_CPLUS=$CONDOR_LIBDIR/c_plus_alloc.o
+		CONDOR_CPLUS=$CONDOR_LIBDIR/libcondorc++support.a
 		CONDOR_LD_DIR=$CONDOR_LIBDIR
 		continue
 	fi
@@ -319,6 +319,10 @@ case $os in
 	Linux )
 		# Linux's system compilers are GNU 
 		if [ $myname = "cc" ]; then
+			exec $ARGS -B$CONDOR_LD_DIR/
+		fi 
+
+		if [ $myname = "CC" ]; then
 			exec $ARGS -B$CONDOR_LD_DIR/
 		fi 
 
