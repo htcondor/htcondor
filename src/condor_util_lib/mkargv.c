@@ -26,10 +26,8 @@
 
 #include <ctype.h>
 
-mkargv( argc, argv, line )
-int		*argc;
-char	*argv[];
-char	*line;
+int
+_condor_mkargv( int* argc, char* argv[], char* line )
 {
 	int		count, instring;
 	char	*ptr;
