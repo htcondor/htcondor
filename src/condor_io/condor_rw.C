@@ -158,7 +158,7 @@ int condor_write(SOCKET fd, char *buf, int sz, int timeout) {
 			FD_ZERO( &writefds );
 			FD_SET( fd, &writefds );
 
-			nfound = select( nfds, 0, &writefds, 0, &timer );
+			nfound = select( nfds, 0, &writefds, &writefds, &timer );
 			
 			switch(nfound) {
 			  case 0:
