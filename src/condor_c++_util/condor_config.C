@@ -764,6 +764,47 @@ param_integer( const char *name, int default_value )
 	return default_value;
 }
 
+/*
+** Return the boolean value associated with the named paramter.
+** The parameter value is expected to be set to the string
+** "TRUE" or "FALSE" (no quotes, case insensitive).
+** If the value is not defined or not a valid, then
+** return the default_value argument.
+*/
+
+bool
+param_boolean( const char *name, const bool default_value )
+{
+	bool result;
+	char *string;
+
+	string = param( name );
+	if( ! string ) {
+		return default_value;
+	}
+
+	switch ( string[0] ) {
+		case 'T':
+		case 't':
+		case '1':
+			result = true;
+			break;
+		case 'F':
+		case 'f':
+		case '0':
+			result = false;
+			break;
+		default:
+			result = default_value;
+			break;
+	}
+
+	free( string );
+	
+	return result;
+}
+
+
 char *
 macro_expand( const char *str )
 {
