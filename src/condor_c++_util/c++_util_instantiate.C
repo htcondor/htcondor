@@ -52,3 +52,4 @@ template class SetElem<RankedClassAd>;
 template class HashTable<MyString, int>;
 template class HashBucket<MyString,int>;
 template class HashTable<MyString, MyString>;
+template class HashBucket<MyString, MyString>;
