@@ -71,7 +71,7 @@ int		main_config();
 int		admin_command_handler(Service *, int, Stream *);
 int		handle_subsys_command(int, Stream *);
 
-extern "C" int	DoCleanup();
+extern "C" int	DoCleanup(int,int,char*);
 
 #if 0
 int		GetConfig(char*, char*);
@@ -141,7 +141,7 @@ usage( const char* name )
 }
 
 int
-DoCleanup()
+DoCleanup(int,int,char*)
 {
 	static int already_excepted = FALSE;
 
