@@ -4,8 +4,6 @@
 #include "classad_collection.h"
 #include "classad_collection_ops.h"
 
-static char *_FileName_ = __FILE__;
-
 BEGIN_NAMESPACE( classad )
 
 static int  hashFunction( const MyString&, int );

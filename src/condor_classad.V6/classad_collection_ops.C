@@ -25,8 +25,6 @@
 #include "classad_collection_ops.h"
 #include "classad_collection.h"
 
-static char *_FileName_ = __FILE__;
-
 BEGIN_NAMESPACE( classad )
 
 //------------------------------------------------------------------------
