@@ -28,26 +28,10 @@
 */ 
 
 #include "condor_common.h"
-
-#if defined(AIX32)
-#	include  <sys/statfs.h>
-#	include  <sys/utsname.h>
-#	include "condor_fdset.h"
-#endif
-
-
-#if	defined(SUNOS40) || defined(SUNOS41) || defined(CMOS)
-#include <sys/core.h>
-#endif 
-
-#undef _POSIX_SOURCE
-#include "condor_types.h"
-
 #include "condor_sys.h"
 #include "condor_rsc.h"
 #include "trace.h"
 #include "condor_debug.h"
-#include "debug.h"
 #include "fileno.h"
 #include "condor_io.h"
 #include "clib.h"
@@ -153,16 +137,35 @@ FILE	*log_fp;
 }
 #endif
 
+/*
+  This handles log messages coming in on the Log Socket.  A message
+  is defined as terminating with a newline or a NULL.  HandleLog is
+  called whenever there is something to read on the Log Sock, which
+  might not include a full message.  We handle this with a static
+  buffer, oldbuf.  We read from the LogSock into buf.  We then walk
+  through buf.  Everytime we get to the end of a valid message, we
+  print it out.  When we get to the end of the bytes we've read, if we
+  haven't just printed out a message, we're left with an incomplete
+  message.  We store this into oldbuf to be printed out after the next
+  read (or the next time HandleLog is called if there's nothing else
+  on the wire yet).   Author: Todd Tannenbaum.  Cleaned up on 12/22/97
+  by Derek and Todd.
+*/
 HandleLog()
 {
-	char *nlp;
+	int nli;			// New Line Index
 	char buf[ BUFSIZ ];
 	int len,i,done;
-	static char oldbuf[ BUFSIZ ];
+	static char oldbuf[ BUFSIZ + 1 ];
+	static int first_time = 1;
+	if( first_time ) {
+		first_time = 0;
+		memset( oldbuf, 0, sizeof(oldbuf) );
+	}
+	memset( buf, 0, sizeof(buf) );
 
 	for(;;) {
 		errno = 0;
-
 		len=read(LogSock,buf,sizeof(buf)-1);
 		if ( len < 0 ) {
 			if ( errno == EINTR )
@@ -177,8 +180,8 @@ HandleLog()
 			// some platforms return 0 instead of -1/EAGAIN like POSIX says...
 			return 0;
 		}
-
-		nlp = buf;
+		buf[len]='\0';
+		nli = 0;
 		done = 1;
 		for (i=0;i<len;i++) {
 			switch ( buf[i] ) {
@@ -186,25 +189,25 @@ HandleLog()
 					buf[i] = '\0';
 					// NOTICE: no break here, we fall thru....
 				case '\0' :
-					if ( nlp[0] != '\0' ) {
-						dprintf(D_ALWAYS,"Read: %s%s\n",oldbuf,nlp);
+					if ( buf[nli] != '\0' ) {
+						dprintf(D_ALWAYS,"Read: %s%s\n",oldbuf,&(buf[nli]));
 					}
-					nlp = &(buf[i+1]);
+					nli = i+1;
 					oldbuf[0] = '\0';
 					done = 1;
 					break;
 				default :
+					if( buf[nli] == '\0' ) {
+						nli = i;
+					}
 					done = 0;
 			}
 		}
-
-
 		if ( !done ) {
-			/* we did not receive the entire line - store the first part */
-			buf[ BUFSIZ - 1 ]  = '\0';  /* make certain strcpy does not SEGV */
-			strcpy(oldbuf,buf);
+				/* we did not receive the entire line - store the first part */
+			memcpy( oldbuf, &buf[nli], len-nli );
+			oldbuf[ (len-nli) ] = '\0';
 		}
-
 	}
 }
 
