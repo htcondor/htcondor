@@ -394,6 +394,8 @@ OpenFileTable::DoSocket(int addr_family, int type, int protocol )
 	if( LocalSysCalls() ) {
 #if defined(LINUX)
 		real_fd = syscall( SYS_socketcall, addr_family, type, protocol );
+#elif defined(Solaris)
+		real_fd = socket( addr_family, type, protocol );
 #else
 		real_fd = syscall( SYS_socket, addr_family, type, protocol );
 #endif
