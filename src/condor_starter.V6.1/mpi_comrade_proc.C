@@ -62,12 +62,6 @@ MPIComradeProc::StartJob()
 }
 
 
-int 
-MPIComradeProc::JobExit( int pid, int status ) { 
-	dprintf(D_FULLDEBUG,"in MPIComradeProc::JobExit()\n");
-    return VanillaProc::JobExit( pid, status );
-}
-
 void 
 MPIComradeProc::Suspend() { 
         /* We Comrades don't ever want to be suspended.  We 
@@ -78,23 +72,12 @@ MPIComradeProc::Suspend() {
 	daemonCore->Send_Signal( daemonCore->getpid(), DC_SIGQUIT );
 }
 
+
 void 
 MPIComradeProc::Continue() { 
 	dprintf(D_FULLDEBUG,"in MPIComradeProc::Continue() (!)\n");    
         // really should never get here, but just in case.....
     VanillaProc::Continue();
-}
-
-bool 
-MPIComradeProc::ShutDownGraceful() { 
-	dprintf(D_FULLDEBUG,"in MPIComradeProc::ShutDownGraceful()\n");
-	return VanillaProc::ShutdownGraceful();
-}
-
-bool
-MPIComradeProc::ShutdownFast() {
-	dprintf(D_FULLDEBUG,"in MPIComradeProc::ShutDownFast()\n");
-    return VanillaProc::ShutdownFast();
 }
 
 
