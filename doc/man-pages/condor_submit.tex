@@ -401,26 +401,28 @@ output. Standard error output, (if any), from all three programs will
 appear in 'foo.error'.
 
 \begin{verbatim}
-      ####################                                                   
-      #                                                                      
-      # Example 1: queueing multiple jobs with differing                       
-      # command line arguments and stdout files.                             
+      ####################
+      #
+      # Example 1: queueing multiple jobs with differing
+      # command line arguments and output files.
       #                                                                      
       ####################                                                   
                                                                          
       Executable     = foo                                                   
-      Error   = foo.error                                                    
                                                                          
       Arguments      = 15 2000                                               
       Output  = foo.out1                                                     
+      Error   = foo.err1
       Queue                                                                  
                                                                          
       Arguments      = 30 2000                                               
       Output  = foo.out2                                                     
+      Error   = foo.err2
       Queue                                                                  
                                                                          
       Arguments      = 45 6000                                               
       Output  = foo.out3                                                     
+      Error   = foo.err3
       Queue                   
 \end{verbatim}
 
@@ -446,7 +448,7 @@ cluster will be written into file ``foo.log''.
                                                                           
       Executable     = foo                                                    
       Requirements   = Memory >= 32 && OpSys == "IRIX6" && Arch =="SGI"     
-      Rank		     = Memory >= 64
+      Rank           = Memory >= 64
       Image_Size     = 28 Meg                                                 
                                                                           
       Error   = err.$(Process)                                                
