@@ -175,7 +175,7 @@ static BOOLEAN condor_migrate_from( const char *fd_no );
 static BOOLEAN condor_exit( const char *status );
 static int open_tcp_stream( unsigned int ip_addr, unsigned short port );
 void display_ip_addr( unsigned int addr );
-void open_std_file( int which );
+void open_std_files();
 void _condor_set_iwd();
 int open_file_stream( const char *local_path, int flags, size_t *len );
 int open_ckpt_file( const char *name, int flags, size_t n_bytes );
@@ -410,9 +410,7 @@ MAIN( int argc, char *argv[], char **envp )
 		SetSyscalls( SYS_REMOTE | SYS_MAPPED );
 
 		get_ckpt_name();
-		open_std_file( 0 );
-		open_std_file( 1 );
-		open_std_file( 2 );
+		open_std_files();
 	
 	} else {
 
@@ -782,33 +780,43 @@ display_ip_addr( unsigned int addr )
 }
 
 /*
-  Open a standard file (0, 1, or 2), given its fd number.
+  Open the three standard streams.
 */
+
 void
-open_std_file( int fd )
+open_std_files()
 {
-	char	logical_name[ _POSIX_PATH_MAX ];
+	char	logical_name[3][_POSIX_PATH_MAX];
 	int	result;
 	int	new_fd;
 	int	flags;
+	int	fd;
 
-	result = REMOTE_syscall(CONDOR_get_std_file_info,fd,logical_name);
-	if(result==0) {
+	for( fd=0; fd<3; fd++ ) {
+		result = REMOTE_syscall(CONDOR_get_std_file_info,fd,logical_name[fd]);
+		if(result!=0) _condor_error_fatal("Couldn't get info on standard file %d",fd );
+
 		close(fd);
-		if(fd==0) {
-			flags = O_RDONLY;
+
+		/* Special case: */
+		/* If stderr has the same name as stdout, then dup it. */
+
+		if( (fd==2) && !strcmp( logical_name[1], logical_name[2] ) ) {
+			dup2(1,2);
 		} else {
-			flags = O_WRONLY;
+			if(fd==0) {
+				flags = O_RDONLY;
+			} else {
+				flags = O_WRONLY;
+			}
+			new_fd = open(logical_name[fd],flags,0);
+			if(new_fd<0) {
+				_condor_error_retry("Couldn't open standard file '%s'", logical_name );
+			}
+			if(new_fd!=fd) {
+				dup2(fd,new_fd);
+			}
 		}
-		new_fd = open(logical_name,flags,0);
-		if(new_fd<0) {
-			_condor_error_retry("Couldn't open standard file '%s'", logical_name );
-		}
-		if(new_fd!=fd) {
-			dup2(fd,new_fd);
-		}
-	} else {
-		_condor_error_fatal("Couldn't get info on standard file %d",fd );
 	}
 }
 
