@@ -25,8 +25,29 @@
 
 
 Value::
+Value()
+{
+	valueType = UNDEFINED_VALUE;
+	integerValue = 0;
+	realValue = 0.0;
+	strValue = NULL;
+}
+
+
+Value::
 ~Value()
 {
+}
+
+
+const Value& Value::
+operator=( const Value& val )
+{
+	valueType = val.valueType;
+	integerValue = val.integerValue;
+	realValue = val.realValue;
+	strValue = val.strValue;
+	return( *this );
 }
 
 

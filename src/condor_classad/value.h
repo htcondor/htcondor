@@ -42,7 +42,7 @@ class Value
 {
 	public:
 		// ctor/dtor
-		Value()	{ valueType = UNDEFINED_VALUE; }
+	    Value();
 		~Value();
 
 		// modifiers
@@ -63,6 +63,9 @@ class Value
 
 		bool isNumber (int    &);
 		bool isNumber  (double &);
+
+		// operators
+		const Value &operator= (const Value &);
 
 	private:
 		ValueType 	valueType;		// the type of the value
