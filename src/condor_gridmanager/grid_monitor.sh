@@ -20,7 +20,7 @@ $| = 1;
 # How old can the status file get before we don't want to use it any more.
 # In seconds.
 # --max-status-age=SECONDS
-my $MAX_STATUS_FILE_AGE = 60;
+my $MAX_STATUS_FILE_AGE = 60*3;
 
 # Time is seconds between when an agent is started and we expect
 # results.  If the results don't show up, we assume something went wrong
@@ -29,7 +29,7 @@ my $MAX_STATUS_FILE_AGE = 60;
 # (Note: we don't kill the agent even if it exceeds the time, it may yet
 # get back to us.  The newly started agent should detect the existing
 # agent and silently bail out.)
-my $MAX_AGENT_START_BEFORE_OUTPUT = 60*2;
+my $MAX_AGENT_START_BEFORE_OUTPUT = 60*6;
 
 # What do we call the agent?  Used in user messages.
 my $GRID_AGENT_NAME = 'grid_manager_monitor_agent';
