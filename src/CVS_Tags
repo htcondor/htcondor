@@ -1,3 +1,7 @@
+02/10/05 V6_6-merge-34
+   The state of the V6_6-branch for a merge into V6_7_4-branch. This merge
+   picks up two bug fixes and a bunch of tests.
+
 2/3/05 V6_7-condorg_gt4-merge-1
    The state of the V6_7-condorg_gt4-branch when merged back into
    V6_7-branch. This represents our initial support for submitting jobs to 

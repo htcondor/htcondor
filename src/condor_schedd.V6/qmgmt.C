@@ -28,6 +28,7 @@
 #include "condor_config.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
+#include "basename.h"
 #include "qmgmt.h"
 #include "condor_qmgr.h"
 #include "log_transaction.h"
@@ -2275,13 +2276,22 @@ SendSpoolFile(char *filename)
 {
 	char path[_POSIX_PATH_MAX];
 
-	if (strchr(filename, '/') != NULL || strchr(filename, '\\') != NULL) {
-		dprintf(D_ALWAYS, "ReceiveFile called with a path (%s)!\n",
+		/* We are passed in a filename to use to save the ICKPT file.
+		   However, we should NOT trust this filename since it comes from 
+		   the client!  So here we generate what we think the filename should
+		   be based upon the current active_cluster_num in the transaction.
+		   If the client does not send what we are expecting, we do the
+		   paranoid thing and abort.  Once we are certain that my understanding
+		   of this is correct, we could even just ignore the passed-in 
+		   filename parameter completely. -Todd Tannenbaum, 2/2005
+		*/
+	strcpy(path,gen_ckpt_name(Spool,active_cluster_num,ICKPT,0));
+	if ( filename && strcmp(filename,basename(path)) ) {
+		dprintf(D_ALWAYS, 
+				"ERROR SendSpoolFile aborted due to suspicious path (%s)!\n",
 				filename);
 		return -1;
 	}
-
-	sprintf(path, "%s/%s", Spool, filename);
 
 	if ( !Q_SOCK ) {
 		EXCEPT( "SendSpoolFile called when Q_SOCK is NULL" );

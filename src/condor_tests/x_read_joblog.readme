@@ -1,0 +1,14 @@
+
+There is an assumption of one execute event per lower level
+Condor log file. dbtime when issued --thisstep and --nextstep will use these
+names and this program to ascertain that previous step worked
+and what platform it worked on.
+
+This information is used to rewrite the submit file for the next step so
+there is a valid requirements field. The placeholder "PIPELINEBUILD"
+must be converted to "Machine == x.y.z.x" for the job to run when the
+system is set up this way.
+
+In the other way of running things Ads place job on identical architecture
+but the machines can vary. If we can be sure of which host we run on then
+we can do redimentatry staging to same host once the process starts.

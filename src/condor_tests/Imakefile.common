@@ -24,6 +24,12 @@ TESTCLASS_DECL(env)
 TESTCLASS_DECL(quick)
 TESTCLASS_DECL(critical)
 TESTCLASS_DECL(long)
+TESTCLASS_DECL(filexfer)
+TESTCLASS_DECL(dagman)
+TESTCLASS_DECL(performance)
+TESTCLASS_DECL(condorc)
+TESTCLASS_DECL(core)
+TESTCLASS_DECL(lib)
 
 
 /***************************************************

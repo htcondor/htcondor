@@ -36,14 +36,14 @@ $ENV{PATH} = "/nmi/bin:/usr/local/condor/bin:/usr/local/condor/sbin:"
 GetOptions (
     'help'            => $opt_help,
     'nightly'         => $opt_nightly,
-    'tag'             => $opt_tag,
-    'module'          => $opt_module,
+    'tag=s'           => $opt_tag,
+    'module=s'        => $opt_module,
     'notify'          => $opt_notify,
+    'platforms=s'     => $opt_platforms,
+    'buildid=s'       => $opt_buildid,
 );
 
 
-#format of test_ids file
-#109 BUILD-V6_6-branch-2004-9-27 V6_6_BUILD
 
 # database parameters
 my $database = "history";
@@ -57,6 +57,9 @@ my $notify;
 my %ids;
 my @platforms;
 my $gid;
+
+#format of test_ids file
+#109 BUILD-V6_6-branch-2004-9-27 V6_6_BUILD
 my $workspace = "/tmp/condor_test." . "$$";
 
 if ( defined($opt_help) ) {
@@ -78,34 +81,45 @@ my $NIGHTLY_IDS_FILE = "$cwd/test_ids";
 mkdir($workspace) || die "Can't create workspace $workspace: $!\n";
 chdir($workspace) || die "Can't chdir($workspace): $!\n";
 
-if ( defined($opt_tag) or defined($opt_module) ) {
-    print "Sorry --tag and --module not supported yet.\n";
-    print_usage();
-    exit 1;
-}
-#if ( defined($opt_nightly) ) {
-else {
-    if ( defined($opt_tag) or defined($opt_module) ) {
-        print "You can not have --tag and --nightly at the same time\n";
+if (defined $opt_buildid) {
+    if (not defined($opt_tag) ) {
+        print "ERROR: You need to specify --tag while using --runid\n";
         print_usage();
         exit 1;
     }
+    $ids{$opt_buildid} = $opt_tag;
+    if (not defined $opt_module) {
+        print "ERROR: You need to specify --module while using --runid\n";
+        print_usage();
+        exit 1;
+    }
+    $ids{$opt_buildid} .= " $opt_module";
+}
+elsif (defined $opt_nightly) {
     %ids = &get_nightlyids();
+    # Check that the $NIGHTLY_IDS_FILE exists
+    die "$NIGHTLY_IDS_FILE does not exist.\n" if (not -f $NIGHTLY_IDS_FILE);
+}
+else {
+    print "ERROR: Specify --buildid=<run id to test> or --nightly\n";
+    print_usage();
+    exit 1;
 }
 
-# Check that the $NIGHTLY_IDS_FILE exists
-(-f $NIGHTLY_IDS_FILE)  ||  die "$NIGHTLY_IDS_FILE does not exist, no tests run\n";
-
-
 while ( my($id, $tag_module_string) = each(%ids) ) {
-    @platforms = &get_platforms($id);
+    if (defined ($opt_platforms)) {
+        @platforms = split (/\s*\,\s*/, $opt_platforms);
+    }
+    else {
+        @platforms = &get_platforms($id);
+    }
     $gid = &get_gid($id);
     my $cmdfile = &generate_cmdfile($id, $tag_module_string, @platforms);
     print "Submitting condor test suite run for build $id ($tag_module_string) ...\n";
     CondorGlue::run( "/nmi/bin/nmi_submit $cmdfile", 0 );
 } 
 chdir($cwd);
-
+system("rm -rf $workspace");
 exit 0;
 
 
@@ -141,7 +155,7 @@ sub generate_cmdfile() {
     
     CondorGlue::printIdentifiers( *CMDFILE, $tag );
 
-    print CMDFILE "sources = $runidfile, $gluefile\n";
+    print CMDFILE "inputs = $runidfile, $gluefile\n";
     print CMDFILE "pre_all = nmi_glue/test/pre_all\n";
     print CMDFILE "platform_pre = nmi_glue/test/platform_pre\n";
     print CMDFILE "remote_pre_declare = nmi_glue/test/remote_pre_declare\n";
@@ -241,6 +255,12 @@ This screen
 
 --nightly (default)
 This pulls the nightly tags file from http://www.cs.wisc.edu/condor/nwo-build-tags and submits builds for all the tags
+
+--runid 
+build runid to test
+
+--platforms
+Comma sperated list of platforms to run tests on
 
 --tag
 condor source code tag to be fetched from cvs

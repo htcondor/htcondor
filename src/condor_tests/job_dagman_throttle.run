@@ -1,0 +1,65 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = 'job_dagman_throttle.dag';
+$testname = 'Condor submit dag - throttle test - scheduler U';
+$maxjobs = 4;
+$dagman_args = "-v -maxjobs $maxjobs";
+
+my $killedchosen = 0;
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+$abnormal = sub 
+{
+
+	die "Want to see only submit, execute and successful completion\n";
+};
+
+$aborted = sub 
+{
+	die "Abort event NOT expected\n";
+};
+
+$held = sub 
+{
+	die "Held event NOT expected\n";
+};
+
+$executed = sub
+{
+	print "Good. We need the dag to run\n";
+};
+
+$submitted = sub
+{
+	print "submitted: This test will see submit, executing and successful completion\n";
+};
+
+$success = sub
+{
+	print "executed successfully\n";
+	my $result = `./x_read_joblog.exe $joblog MAXJOBS $maxjobs`;
+	if( $result != 0)
+	{
+		die "MAXJOBS of $maxjobs exceeded\n";
+	}
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExecute($testname, $executed);
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

@@ -1,0 +1,90 @@
+#! /usr/bin/env perl
+use CondorTest;
+use Cwd;
+use Sys::Hostname;
+
+$cmd = 'job_core_macros-dollardollar_van.cmd';
+$testname = 'condor_submit macros - vanilla U';
+
+
+$ExitSuccessBase = sub {
+	my %info = @_;
+
+};
+
+my @lines;
+
+sub load_up_lines
+{
+	open(IN,"<job_core_macros-dollardollar_van.out") || die "Can not open job_core_macros-dollardollar_van.out: $!\n";
+	while(<IN>)
+	{
+		chomp;
+		push @lines, $_;
+	}
+};
+
+$success = sub
+{
+    my %args = @_;
+	my $cluster = $args{"cluster"};
+
+	load_up_lines();
+	foreach my $item ( @lines )
+	{
+		print "ARG -$item-\n";
+	}
+
+	Condor::ParseMachineAds( $lines[2] );
+	%ads = Condor::FetchMachineAds();
+	my $machinemem = Condor::FetchMachineAdValue("memory");
+	my $wontbethere = Condor::FetchMachineAdValue("wontbethere");
+
+	print "Alternate value is ---$wontbethere---\n";
+	if( $machinemem ne undef)
+	{
+		if($machinemem eq $lines[1])
+		{
+			print "Good macro and condor_status agree --$machinemem--!\n";
+			print "$lines[4] should match too\n";
+			if( $lines[4] =~ /^\s*MEMORY\s+=\s+(\d+)$/ )
+			{
+				print "Memory = $1\n";
+				if( $1 eq $machinemem)
+				{
+					print "We are happy......\n";
+				}
+				else
+				{
+					die "Memory via the environment failed\n";
+				}
+			}
+			else
+			{
+				die "not finding matching memory value from environment\n";
+			}
+		}
+		else
+		{
+			die "machine $machine MISMATCH $machinemem/$lines[1]\n";
+		}
+	}
+	else
+	{
+		die "Can't get memory Ad for machine $machine to compare to $lines[1]\n";
+	}
+
+};
+
+#CondorTest::RegisterExecute($testname, $execute);
+#CondorTest::RegisterExitedSuccess( $testname, \&CondorTest::DefaultOutputTest );
+CondorTest::RegisterExitedSuccess( $testname, $success );
+
+
+if( CondorTest::RunTest($testname, $cmd, 0) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+

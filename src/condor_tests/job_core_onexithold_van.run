@@ -1,0 +1,24 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$testname = 'Condor ON_EXIT_HOLD policy test - vanilla U';
+
+my $nostatus = CondorTest::verbose_system("job_core_onexithold-false_van.pl");
+my $willstatus = CondorTest::verbose_system("job_core_onexithold-true_van.pl");
+
+if($nostatus != 0)
+{
+	print "ON_EXIT_HOLD: failed no trigger test\n";
+}
+
+if($willstatus != 0)
+{
+	print "ON_EXIT_HOLD: failed trigger test\n";
+}
+
+if(($willstatus != 0) || ($nostatus != 0))
+{
+	die "Failed one ON_EXIT_HOLD test\n";
+}
+
+

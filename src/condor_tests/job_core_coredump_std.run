@@ -2,7 +2,7 @@
 
 use CondorTest;
 
-$cmd1 = 'job_core_coredump_std.cmd';
+$cmd1 = 'job_core_coredump-yes_std.cmd';
 $handle1 = 'Create Core File';
 $wants_core{$handle1} = 1;
 
@@ -58,6 +58,12 @@ if( CondorTest::RunTest($handle2, $cmd2, 0) ) {
 } else {
     die "$handle2: CondorTest::RunTest() failed\n";
 }
+
+my %listoftests; 
+$listoftests{"corename"} = "job_core_coredump_std";
+$listoftests{"tests"} = [ "job_core_coredump-yes_std", "job_core_coredump-none_std"];
+$listoftests{"extensions"} = [ ".cmd", ".cmd.out", ".err", ".out", ".log"];
+CondorTest::MergeOutputFiles(\%listoftests);
 
 exit(0);
 

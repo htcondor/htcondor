@@ -1,0 +1,24 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$testname = 'Condor streamout policy test - vanilla U';
+
+my $nostatus = CondorTest::verbose_system("job_core_streamout-false_van.pl");
+my $willstatus = CondorTest::verbose_system("job_core_streamout-true_van.pl");
+
+if($nostatus != 0)
+{
+	print "streamout: failed no trigger test\n";
+}
+
+if($willstatus != 0)
+{
+	print "streamout: failed trigger test\n";
+}
+
+if(($willstatus != 0) || ($nostatus != 0))
+{
+	die "Failed one streamout test\n";
+}
+
+

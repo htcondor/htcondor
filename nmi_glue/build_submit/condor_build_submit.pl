@@ -25,12 +25,13 @@ BEGIN {
 use lib "$LIBDIR";
 use CondorGlue;
 
-CondorGlue::Initialize();
+CondorGlue::Initialize("build");
 
 my $default_platforms = 
     "x86_rh_9, " .
     "x86_rh_8.0, " .
     "x86_rh_7.2, " .
+    "ia64_sles_8, " .
     "sun4u_sol_5.9, " .
     "sun4u_sol_5.8, " .
     "ppc_aix_5.2, " .

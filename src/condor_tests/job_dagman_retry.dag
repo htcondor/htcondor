@@ -1,0 +1,3 @@
+Job     NODERET         job_dagman_retry-node.cmd
+Script POST NODERET     ./x_dagman_retry-monitor.pl $RETURN
+Retry	NODERET	1

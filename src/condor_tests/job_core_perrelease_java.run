@@ -1,0 +1,24 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$testname = 'Condor PERIODIC_RELEASE policy test - java U';
+
+my $nostatus = CondorTest::verbose_system("job_core_perrelease-false_java.pl");
+my $willstatus = CondorTest::verbose_system("job_core_perrelease-true_java.pl");
+
+if($nostatus != 0)
+{
+	print "PERIODIC_RELEASE: failed no trigger test\n";
+}
+
+if($willstatus != 0)
+{
+	print "PERIODIC_RELEASE: failed trigger test\n";
+}
+
+if(($willstatus != 0) || ($nostatus != 0))
+{
+	die "Failed one PERIODIC_RELEASE test\n";
+}
+
+

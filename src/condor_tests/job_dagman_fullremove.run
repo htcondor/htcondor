@@ -1,0 +1,72 @@
+#! /usr/bin/env perl
+use CondorTest;
+
+$cmd = 'job_dagman_fullremove.dag';
+$testname = 'Condor submit dag - full cleanup of dag test - scheduler U';
+$dagman_args = "-v";
+
+my $killedchosen = 0;
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+my $joblog;
+
+$abnormal = sub 
+{
+
+	die "Want to see only submit, execute and successful completion\n";
+};
+
+$aborted = sub 
+{
+	print "Abort event expected\n";
+	my $result = `./x_read_joblog.exe $joblog FULLREMOVE`;
+	if( $result != 0)
+	{
+		die "Not all dag nodes removed!\n";
+	}
+	print "x_read_joblog verified all removed!\n";
+};
+
+$held = sub 
+{
+	die "Held event NOT expected\n";
+};
+
+$executed = sub
+{
+	print "Good. We need the remove the dag to test full removal\n";
+	my %info = @_;
+	my $cluster = $info{cluster};
+	sleep 2;
+	CondorTest::verbose_system("condor_rm $cluster");
+};
+
+$submitted = sub
+{
+	$joblog = "job_dagman_fullremove.log";
+	print "submitted: This test will see submit, executing and abort\n";
+};
+
+$success = sub
+{
+	die "executed successfully not supposed to happen\n";
+};
+
+CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExecute($testname, $executed);
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+	print "$testname: SUCCESS\n";
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+
