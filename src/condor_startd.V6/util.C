@@ -223,7 +223,7 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose )
 bool
 configInsert( ClassAd* ad, const char* attr, bool is_fatal )
 {
-	char* val = param( (char*)attr );
+	char* val = param( attr );
 	char* tmp;
 	if( ! val ) {
 		if( is_fatal ) {
