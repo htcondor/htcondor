@@ -808,8 +808,6 @@ int Sock::close()
 int Sock::timeout(int sec)
 {
 	int t = _timeout;
-	int on = 1;
-	int off = 0;
 
 	_timeout = sec;
 
@@ -1030,13 +1028,13 @@ char * Sock::serialize() const
 char * Sock::serialize(char *buf)
 {
 	char *ptmp;
-	int i, len = 0;
+	int i;
 	SOCKET passed_sock;
 
 	ASSERT(buf);
 
 	// here we want to restore our state from the incoming buffer
-	sscanf(buf,"%u*%d*%d*",&passed_sock,&_state,&_timeout);
+	sscanf(buf,"%u*%d*%d*",&passed_sock,(int*)&_state,&_timeout);
 
 	// replace _sock with the one from the buffer _only_ if _sock
 	// is currently invalid.  if it is not invalid, it has already
@@ -1176,7 +1174,6 @@ So, we will throw all of our knives at once and ignore return values.
 static void make_fd_async( int fd )
 {
 	int bits;
-	int on=1;
 	int pid = getpid();
 
 	/* Make the owner of this fd be this process */
