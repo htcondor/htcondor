@@ -341,8 +341,8 @@ caInsert( ClassAd* target, ClassAd* source, const char* attr, int verbose )
 	}
 //	tree->PrintToStr( buf );
 	unp.Unparse( bufString, tree );
-	strcpy( buf, bufString.c_str( ) );
-
+	sprintf( buf, "%s=%s", attr, bufString.c_str( );
+	
 	if( ! target->Insert( buf ) ) {
 		dprintf( D_ALWAYS, "caInsert: Can't insert %s into target classad.\n",
 				 attr );
