@@ -264,7 +264,7 @@ OwnerCheck(ClassAd *ad, char *test_owner)
 	}
 
 	// If we don't have an Owner attribute, how can we deny service?
-	if (ad->LookupString(ATTR_OWNER, my_owner) < 0) {
+	if (ad->LookupString(ATTR_OWNER, my_owner) == 0) {
 		return 1;
 	}
 	if (strcmp(my_owner, test_owner) != 0) {
@@ -678,7 +678,8 @@ GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, float *val
 		return -1;
 	}
 
-	return ad->LookupFloat(attr_name, *val);
+	if (ad->LookupFloat(attr_name, *val) == 1) return 0;
+	return -1;
 }
 
 
@@ -707,7 +708,8 @@ GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 		return -1;
 	}
 
-	return ad->LookupInteger(attr_name, *val);
+	if (ad->LookupInteger(attr_name, *val) == 1) return 0;
+	return -1;
 }
 
 
@@ -736,7 +738,8 @@ GetAttributeString(int cluster_id, int proc_id, const char *attr_name, char *val
 		return -1;
 	}
 
-	return ad->LookupString(attr_name, val);
+	if (ad->LookupString(attr_name, val) == 1) return 0;
+	return -1;
 }
 
 
