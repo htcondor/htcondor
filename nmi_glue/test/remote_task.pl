@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 ######################################################################
-# $Id: remote_task.pl,v 1.1.2.10 2004-06-25 01:44:29 wright Exp $
+# $Id: remote_task.pl,v 1.1.2.11 2004-06-25 02:21:25 wright Exp $
 # run a test in the Condor testsuite
 # return val is the status of the test
 # 0 = built and passed
@@ -16,6 +16,9 @@
 ###### use the special c_die() method so we return 3!!!!        ######
 ######################################################################
 
+if( ! defined $ENV{_NMI_TASKNAME} ) {
+    die "_NMI_TASKNAME not in environment, can't test anything!\n";
+}
 my $fulltestname = $ENV{_NMI_TASKNAME};
 if( ! $fulltestname ) {
     # if we have no task, just return success immediately
