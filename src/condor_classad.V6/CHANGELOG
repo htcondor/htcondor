@@ -1,4 +1,11 @@
-Changes for version 0.9.7: (released 28-Oct-2004)
+Changes for version 0.9.7: (released 28-Oct-2004) 
+
+* The ClassAd tarball (and corresponding directory within the tarball)
+  that is downloaded has changed it's format from
+  classads_<version>.tar.gz to classads-version.tar.gz. This allows
+  the ClassAd library to be used more easily in Condor--I hope it
+  doesn't cause anyone problems.
+
 * The name of the classad library now depends on the compile time
   options. There are four possible names:
 
