@@ -2377,6 +2377,13 @@ Scheduler::actOnJobs(int, Stream* s)
 							ATTR_JOB_STATUS_ON_RELEASE, &on_release_status);
 					sprintf( status_str, "%d", on_release_status );
 				}
+				if( action == JA_REMOVE_X_JOBS ) {
+					if( SetAttribute( tmp_id.cluster, tmp_id.proc,
+									  ATTR_JOB_LEAVE_IN_QUEUE, "False" ) < 0 ) {
+						results.record( tmp_id, AR_PERMISSION_DENIED );
+						continue;
+					}
+				}
 				if( SetAttribute(tmp_id.cluster, tmp_id.proc,
 								 ATTR_JOB_STATUS, status_str) < 0 ) {
 					results.record( tmp_id, AR_PERMISSION_DENIED );
