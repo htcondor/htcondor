@@ -415,6 +415,27 @@ void parse_resource_manager_string( const char *string, char **host,
 	}
 }
 
+/* Returns true (non-0) if path looks like an URL that Globus
+   (specifically, globus-url-copy) can handle
+
+   Expected use: is the input/stdout file actually a Globus URL
+   that we can just hand off to Globus instead of a local file
+   that we need to rewrite as a Globus URL.
+
+   Probably doesn't make sense to use if universe != globus
+*/
+int
+is_globus_friendly_url(const char * path)
+{
+	// Should this be more aggressive and allow anything with ://?
+	return 
+		strstr(path, "http://") == path ||
+		strstr(path, "https://") == path ||
+		strstr(path, "ftp://") == path ||
+		strstr(path, "gsiftp://") == path ||
+		0;
+}
+
 #if 0 /* We're not currently using these functions */
 
 /*

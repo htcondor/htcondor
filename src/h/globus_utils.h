@@ -255,6 +255,10 @@ void parse_resource_manager_string( const char *string, char **host,
 									char **port, char **service,
 									char **subject );
 
+/* Returns true (non-0) if path looks like an URL that Globus
+   (specifically, globus-url-copy) can handle */
+int is_globus_friendly_url(const char * path);
+
 #if 0
 int check_globus_rm_contacts( char* resource );
 #endif
