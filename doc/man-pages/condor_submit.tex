@@ -472,7 +472,7 @@ file_remaps = "very.big = local:/bigdisk/bigfile ; dataset.1 = other.dataset"
 
 \item[buffer\_files $=$ $<$ `` name $=$ (size,block-size) ; name2 $=$ (size,block-size) ... '' $>$ ]
 \item[buffer\_size $=$ $<$bytes-in-buffer$>$]
-\item[buffer\_block\_size $=$ $<$bytes-in-block$>$]\\
+\item[buffer\_block\_size $=$ $<$bytes-in-block$>$]
 Condor keeps a buffer of recently-used data for each file a job accesses.
 This buffer is used both to cache commonly-used data and to consolidate small
 reads and writes into larger operations that get better throughput.
