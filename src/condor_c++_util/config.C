@@ -26,7 +26,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_string.h"
-#include "condor_classad.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -65,8 +64,6 @@ int Read_config( char* config_file, BUCKET** table,
 	char			*name, *value, *rhs;
 	char			*ptr;
 	char			op;
-	ClassAdParser	parser;
-	ExprTree		*expr;
 
 	ConfigLineNo = 0;
 
