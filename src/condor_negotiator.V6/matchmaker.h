@@ -90,12 +90,18 @@ class Matchmaker : public Service
 		friend int comparisonFunction (AttrList *, AttrList *,
 										void *);
 
+		float EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
+		                              ClassAd &request,ClassAd *resource);
+
+
 		// configuration information
 		char *AccountantHost;		// who (if at all) is the accountant?
 		int  NegotiatorInterval;	// interval between negotiation cycles
 		int  NegotiatorTimeout;		// timeouts for communication
 		ExprTree *PreemptionReq;	// only preempt if true
 		ExprTree *PreemptionRank; 	// rank preemption candidates
+		ExprTree *NegotiatorPreJobRank;  // rank applied before job rank
+		ExprTree *NegotiatorPostJobRank; // rank applied after job rank
 
 		typedef HashTable<MyString, MapEntry*> AdHash;
 		AdHash *stashedAds;	

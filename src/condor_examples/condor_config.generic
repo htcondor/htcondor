@@ -488,6 +488,8 @@ KILL			= $(UWCS_KILL)
 PERIODIC_CHECKPOINT	= $(UWCS_PERIODIC_CHECKPOINT)
 PREEMPTION_REQUIREMENTS	= $(UWCS_PREEMPTION_REQUIREMENTS)
 PREEMPTION_RANK		= $(UWCS_PREEMPTION_RANK)
+NEGOTIATOR_PRE_JOB_RANK = $(UWCS_NEGOTIATOR_PRE_JOB_RANK)
+NEGOTIATOR_POST_JOB_RANK = $(UWCS_NEGOTIATOR_POST_JOB_RANK)
 
 #####################################################################
 ## This is the UWisc - CS Department Configuration.
@@ -558,21 +560,46 @@ UWCS_PERIODIC_CHECKPOINT	= $(LastCkpt) > (3 * $(HOUR))
 #			    ($(LastCkpt) > (6 * $(HOUR))) ) || \ 
 #			  ( $(LastCkpt) > (12 * $(HOUR)) )
 
+##  The rank expressions used by the negotiator are configured below.
+##  This is the order in which ranks are applied by the negotiator:
+##    1. NEGOTIATOR_PRE_JOB_RANK
+##    2. rank in job ClassAd
+##    3. NEGOTIATOR_POST_JOB_RANK
+##    4. cause of preemption (0=user priority,1=startd rank,2=no preemption)
+##    5. PREEMPTION_RANK
+
+##  The NEGOTIATOR_PRE_JOB_RANK expression overrides all other ranks
+##  that are used to pick a match from the set of possibilities.
+##  The following expression matches jobs to unclaimed resources
+##  whenever possible, regardless of the job-supplied rank.
+UWCS_NEGOTIATOR_PRE_JOB_RANK = RemoteOwner =?= UNDEFINED
+
+##  The NEGOTIATOR_POST_JOB_RANK expression chooses between
+##  resources that are equally preferred by the job.
+##  The following example expression steers jobs toward
+##  faster machines and tends to fill a cluster of multi-processors
+##  breadth-first instead of depth-first.  In this example,
+##  the expression is chosen to have no effect when preemption
+##  would take place, allowing control to pass on to
+##  PREEMPTION_RANK.
+#UWCS_NEGOTIATOR_POST_JOB_RANK = \
+# (RemoteOwner =?= UNDEFINED) * (KFlops - VirtualMachineID)
+
 ##  The negotiator will not preempt a job running on a given machine
 ##  unless the PREEMPTION_REQUIREMENTS expression evaluates to true
 ##  and the owner of the idle job has a better priority than the owner
 ##  of the running job.  This expression defaults to true.
 UWCS_PREEMPTION_REQUIREMENTS = $(StateTimer) > (1 * $(HOUR)) && RemoteUserPrio > SubmittorPrio * 1.2
 
-##  The PREEMPTION_RANK expression is used to rank machines which the 
-##  job ranks the same.  For example, if the job has no preference, it
-##  is usually preferable to preempt a job with a small ImageSize
-##  instead of a job with a large ImageSize.  The default is to rank
-##  all preemptable matches the same.  However, the negotiator will  
-##  always prefer to match the job with an idle machine over a      
-##  preemptable machine, if the job has no preference between them. 
+##  The PREEMPTION_RANK expression is used in a case where preemption
+##  is the only option and all other negotiation ranks are equal.  For
+##  example, if the job has no preference, it is usually preferable to
+##  preempt a job with a small ImageSize instead of a job with a large
+##  ImageSize.  The default is to rank all preemptable matches the
+##  same.  However, the negotiator will always prefer to match the job
+##  with an idle machine over a preemptable machine, if all other
+##  negotiation ranks are equal.
 UWCS_PREEMPTION_RANK = (RemoteUserPrio * 1000000) - TARGET.ImageSize
-
 
 #####################################################################
 ##  This is a Configuration that will cause your Condor jobs to

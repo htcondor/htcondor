@@ -57,6 +57,8 @@ Matchmaker ()
 	AccountantHost  = NULL;
 	PreemptionReq = NULL;
 	PreemptionRank = NULL;
+	NegotiatorPreJobRank = NULL;
+	NegotiatorPostJobRank = NULL;
 	sockCache = NULL;
 
 	sprintf (buf, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
@@ -80,6 +82,8 @@ Matchmaker::
 	delete rankCondPrioPreempt;
 	delete PreemptionReq;
 	delete PreemptionRank;
+	delete NegotiatorPreJobRank;
+	delete NegotiatorPostJobRank;
 	delete sockCache;
 }
 
@@ -195,6 +199,32 @@ reinitialize ()
 	}
 
 	dprintf (D_ALWAYS,"PREEMPTION_RANK = %s\n", (tmp?tmp:"None"));
+
+	if( tmp ) free( tmp );
+
+	if (NegotiatorPreJobRank) delete NegotiatorPreJobRank;
+	NegotiatorPreJobRank = NULL;
+	tmp = param("NEGOTIATOR_PRE_JOB_RANK");
+	if( tmp ) {
+		if( Parse(tmp, NegotiatorPreJobRank) ) {
+			EXCEPT ("Error parsing NEGOTIATOR_PRE_JOB_RANK expression: %s", tmp);
+		}
+	}
+
+	dprintf (D_ALWAYS,"NEGOTIATOR_PRE_JOB_RANK = %s\n", (tmp?tmp:"None"));
+
+	if( tmp ) free( tmp );
+
+	if (NegotiatorPostJobRank) delete NegotiatorPostJobRank;
+	NegotiatorPostJobRank = NULL;
+	tmp = param("NEGOTIATOR_POST_JOB_RANK");
+	if( tmp ) {
+		if( Parse(tmp, NegotiatorPostJobRank) ) {
+			EXCEPT ("Error parsing NEGOTIATOR_POST_JOB_RANK expression: %s", tmp);
+		}
+	}
+
+	dprintf (D_ALWAYS,"NEGOTIATOR_POST_JOB_RANK = %s\n", (tmp?tmp:"None"));
 
 	if( tmp ) free( tmp );
 
@@ -1141,6 +1171,29 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 	return MM_RESUME;
 }
 
+float Matchmaker::
+EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
+                        ClassAd &request,ClassAd *resource)
+{
+	EvalResult result;
+	float rank = -(FLT_MAX);
+
+	if(expr && expr->EvalTree(resource,&request,&result)) {
+		if( result.type == LX_FLOAT ) {
+			rank = result.f;
+		} else if( result.type == LX_INTEGER ) {
+			rank = result.i;
+		} else {
+			dprintf(D_ALWAYS, "Failed to evaluate %s "
+			                  "expression to a float.\n",expr_name);
+		}
+	} else if(expr) {
+		dprintf(D_ALWAYS, "Failed to evaluate %s "
+		                  "expression.\n",expr_name);
+	}
+	return rank;
+}
+
 	// the order of values in this enumeration is important!
 enum PreemptState {PRIO_PREEMPTION,RANK_PREEMPTION,NO_PREEMPTION};
 
@@ -1153,11 +1206,15 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 		// to store values pertaining to a particular candidate offer
 	ClassAd 		*candidate;
 	double			candidateRankValue;
+	double			candidatePreJobRankValue;
+	double			candidatePostJobRankValue;
 	double			candidatePreemptRankValue;
 	PreemptState	candidatePreemptState;
 		// to store the best candidate so far
 	ClassAd 		*bestSoFar = NULL;	
 	double			bestRankValue = -(FLT_MAX);
+	double			bestPreJobRankValue = -(FLT_MAX);
+	double			bestPostJobRankValue = -(FLT_MAX);
 	double			bestPreemptRankValue = -(FLT_MAX);
 	PreemptState	bestPreemptState = (PreemptState)-1;
 	bool			newBestFound;
@@ -1322,52 +1379,63 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 		}
 #endif
 
+		candidatePreJobRankValue = EvalNegotiatorMatchRank(
+		  "NEGOTIATOR_PRE_JOB_RANK",NegotiatorPreJobRank,
+		  request,candidate);
+
 		// calculate the request's rank of the offer
 		if(!request.EvalFloat(ATTR_RANK,candidate,tmp)) {
 			tmp = 0.0;
 		}
 		candidateRankValue = tmp;
 
+		candidatePostJobRankValue = EvalNegotiatorMatchRank(
+		  "NEGOTIATOR_POST_JOB_RANK",NegotiatorPostJobRank,
+		  request,candidate);
+
+		candidatePreemptRankValue = -(FLT_MAX);
+		if(candidatePreemptState != NO_PREEMPTION) {
+			candidatePreemptRankValue = EvalNegotiatorMatchRank(
+			  "PREEMPTION_RANK",PreemptionRank,
+			  request,candidate);
+		}
+
 		// the quality of a match is determined by a lexicographic sort on
 		// the following values, but more is better for each component
+		//  1. negotiator pre job rank
 		//  1. job rank of offer 
-		//	2. preemption state (2=no preempt, 1=rank-preempt, 0=prio-preempt)
-		//  3. preemption rank (if preempting)
-		newBestFound = false;
-		candidatePreemptRankValue = -(FLT_MAX);
-		if( candidatePreemptState != NO_PREEMPTION ) {
-			// calculate the preemption rank
-			if( PreemptionRank &&
-			   		PreemptionRank->EvalTree(candidate,&request,&result) ) {
-				if( result.type == LX_FLOAT ) {
-					candidatePreemptRankValue = result.f;
-				} else if( result.type == LX_INTEGER ) {
-					candidatePreemptRankValue = result.i;
-				} else {
-					dprintf(D_ALWAYS, "Failed to evaluate PREEMPTION_RANK "
-							"expression to a float.\n");
-				}
-			} else if( PreemptionRank ) {
-				dprintf(D_ALWAYS, "Failed to evaluate PREEMPTION_RANK "
-					"expression.\n");
-			}
-		}
-		if( ( candidateRankValue > bestRankValue ) || 	// first by job rank
-				( candidateRankValue==bestRankValue && 	// then by preempt state
-				candidatePreemptState > bestPreemptState ) ) {
-			newBestFound = true;
-		} else if( candidateRankValue==bestRankValue && // then by preempt rank
-				candidatePreemptState==bestPreemptState && 
-				bestPreemptState != NO_PREEMPTION ) {
-				// check if the preemption rank is better than the best
-			if( candidatePreemptRankValue > bestPreemptRankValue ) {
-				newBestFound = true;
-			}
-		} 
+		//  2. negotiator post job rank
+		//	3. preemption state (2=no preempt, 1=rank-preempt, 0=prio-preempt)
+		//  4. preemption rank (if preempting)
 
-		if( newBestFound ) {
+		newBestFound = false;
+		if(candidatePreJobRankValue < bestPreJobRankValue);
+		else if(candidatePreJobRankValue > bestPreJobRankValue) {
+			newBestFound = true;
+		}
+		else if(candidateRankValue < bestRankValue);
+		else if(candidateRankValue > bestRankValue) {
+			newBestFound = true;
+		}
+		else if(candidatePostJobRankValue < bestPostJobRankValue);
+		else if(candidatePostJobRankValue > bestPostJobRankValue) {
+			newBestFound = true;
+		}
+		else if(candidatePreemptState < bestPreemptState);
+		else if(candidatePreemptState > bestPreemptState) {
+			newBestFound = true;
+		}
+		//NOTE: if NO_PREEMPTION, PreemptRank is a constant
+		else if(candidatePreemptRankValue < bestPreemptRankValue);
+		else if(candidatePreemptRankValue > bestPreemptRankValue) {
+			newBestFound = true;
+		}
+
+		if( newBestFound || !bestSoFar ) {
 			bestSoFar = candidate;
+			bestPreJobRankValue = candidatePreJobRankValue;
 			bestRankValue = candidateRankValue;
+			bestPostJobRankValue = candidatePostJobRankValue;
 			bestPreemptState = candidatePreemptState;
 			bestPreemptRankValue = candidatePreemptRankValue;
 		}
