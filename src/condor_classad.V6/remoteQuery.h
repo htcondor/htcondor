@@ -40,26 +40,26 @@ public:
 	RemoteCollectionQuery( );
 	~RemoteCollectionQuery( );
 
-	bool Connect( const string &serverAddr, int port );
+	bool Connect( const std::string &serverAddr, int port );
 	void Disconnect( );
 
 	void SetWantResults( bool b ) { wantResults = b; }
 	bool GetWantResults( ) const { return( wantResults ); }
 	void SetWantPostlude( bool b ) { wantPostlude = b; }
 	bool GetWantPostlude( ) const { return( wantPostlude ); }
-	void SetProjectionAttrs( const vector<string> & );
-	void GetProjectionAttrs( vector<string> & ) const;
+	void SetProjectionAttrs( const vector<std::string> & );
+	void GetProjectionAttrs( vector<std::string> & ) const;
 	void SetAccumulate( bool b ) { accumulate = b; }
 	bool GetAccumulate( ) const { return( accumulate ); }
 
-	bool PostQuery( const string &viewName, ExprTree *constraint=NULL );
+	bool PostQuery( const std::string &viewName, ExprTree *constraint=NULL );
 	void ClearResults( );
 
 	bool ToFirst( );
 	bool IsAtFirst( ) const;
-	bool Next( string &key, ClassAd *&ad );
-	bool Current( string &key, ClassAd *&ad );
-	bool Prev( string &key, ClassAd *&ad );
+	bool Next( std::string &key, ClassAd *&ad );
+	bool Current( std::string &key, ClassAd *&ad );
+	bool Prev( std::string &key, ClassAd *&ad );
 	bool ToAfterLast( );
 	bool IsAfterLast( ) const;
 
@@ -68,9 +68,9 @@ public:
 private:
 	ReliSock					serverSock;
 	bool						wantResults,wantPostlude,accumulate,finished;
-	vector<string>				projectionAttrs;
-	list<pair<string,ClassAd*> >results;
-	list<pair<string,ClassAd*> >::iterator itr;
+	vector<std::string>				projectionAttrs;
+	std::list<pair<std::string,ClassAd*> >results;
+	std::list<pair<std::string,ClassAd*> >::iterator itr;
 	ClassAd						postlude;
 	ClassAdParser				parser;
 };
