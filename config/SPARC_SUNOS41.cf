@@ -69,6 +69,7 @@
 
 #define CCompiler cc
 #define CPlusCompiler g++
+#define StaticFlag -static
 #define UnixName /vmunix			/* pathname of the system executable */
 #define syscall_lib syscall_lib_bsd
 #define PsAllFlag -ax				/* "Ps" flag when you want everything */
