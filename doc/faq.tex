@@ -495,7 +495,8 @@ so it contains all the routines it needs.
 
 \item[Why aren't any or all of my jobs running?]
 
-Problems like the following are often reported to us:
+\index{job!not running, why?}
+\underline{Problems like the following} are often reported to us:
 
 \begin{verbatim}
 > I have submitted 100 jobs to my pool, and only 18 appear to be
@@ -529,6 +530,58 @@ Check the ShadowLog on the submit machine for warnings or errors.
 \item Look at the NegotiatorLog during the negotiation for the user.
 Look for messages about priority, "no more machines", or similar.
 
+\end{enumerate}
+
+\underline{Another problem} shows itself
+with statements within the log file produced by the \Condor{schedd}
+daemon (given by \MacroU{SCHEDD\_LOG})
+that say the following:
+
+\begin{verbatim}
+Swap Space Estimate Reached, 0 jobs matched, 13 jobs idle
+\end{verbatim}
+
+Condor computes the total swap space on your submit machine.
+It then tries to limit the total number of jobs it
+will spawn based on an estimate of the size of the \Condor{shadow}
+daemon's memory footprint and a configurable amount of swap space
+that should be reserved.
+This is done to avoid the
+situation within a very large pool
+in which all the jobs are submitted from a single host.
+The huge number of \Condor{shadow} processes would
+overwhelm the submit machine,
+it would run out of swap space, and thrash.
+
+Things can go wrong if a machine has a lot of physical memory and
+little or no swap space.
+Condor does not consider the physical memory size,
+so the situation occurs where Condor thinks
+it has no swap space to work with,
+and it will not run the submitted jobs.
+
+To see how much swap space Condor thinks a given machine has, use
+the output of a \Condor{status} command of the following form:
+
+\begin{verbatim}
+condor_status -schedd [hostname] -long | grep VirtualMemory
+\end{verbatim}
+
+If the value listed is 0, then this is what is confusing Condor.
+There are two ways to fix the problem:
+
+\begin{enumerate}
+\item Configure your machine with some real swap space.
+
+\item Disable this check within Condor.
+Define the amount of reserved swap space for the submit machine to 0.
+Set \Macro{RESERVED\_SWAP} to 0 in the configuration file:
+
+\begin{verbatim}
+RESERVED_SWAP = 0
+\end{verbatim}
+
+and then send a \Condor{restart} to the submit machine.
 \end{enumerate}
 
 \item[Why does the \Attr{requirements} expression for the job I submitted\\
