@@ -1292,38 +1292,26 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 		case GM_FAILED: {
 			// The jobmanager's job state has moved to FAILED. Send a
 			// commit if necessary and take appropriate action.
-			if ( globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_TTL_EXPIRED ||
-				 globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_JM_STOPPED ) {
-				globusError = 0;
-				gmState = GM_RESTART;
-			} else if ( globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_COMMIT_TIMED_OUT ) {
-				rehashJobContact( this, jobContact, NULL );
-				free( jobContact );
-				myResource->CancelSubmit( this );
-				jobContact = NULL;
-				UpdateJobAdString( ATTR_GLOBUS_CONTACT_STRING,
-								   NULL_JOB_CONTACT );
-				jmVersion = GRAM_V_UNKNOWN;
-				UpdateJobAdInt( ATTR_GLOBUS_GRAM_VERSION,
-								jmVersion );
-				addScheddUpdateAction( this, UA_UPDATE_JOB_AD, 0 );
+			if ( globusStateErrorCode ==
+				 GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED ) {
 
-				if ( condorState == REMOVED ) {
-					gmState = GM_DELETE;
-				} else {
-					gmState = GM_CLEAR_REQUEST;
-				}
-			} else if ( globusStateErrorCode == GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED ) {
 				gmState = GM_PROXY_EXPIRED;
-			} else if ( jmVersion >= GRAM_V_1_6  &&
-						globusStateErrorCode != GLOBUS_GRAM_PROTOCOL_ERROR_USER_CANCELLED ) {
+
+			} else if ( FailureIsRestartable( globusStateErrorCode ) ) {
+
 				// The job may still be submitted and/or recoverable,
 				// so stop the jobmanager and restart it.
-				globusError = globusStateErrorCode;
-				gmState = GM_STOP_AND_RESTART;
-				break;
+				if ( FailureNeedsCommit( globusStateErrorCode ) ) {
+					globusError = globusStateErrorCode;
+					gmState = GM_STOP_AND_RESTART;
+				} else {
+					gmState = GM_RESTART;
+				}
+
 			} else {
-				if ( jmVersion >= GRAM_V_1_5 ) {
+
+				if ( FailureNeedsCommit( globusStateErrorCode ) ) {
+
 					// Sending a COMMIT_END here means we no longer care
 					// about this job submission. Either we know the job
 					// isn't pending/running or the user has told us to
@@ -1348,15 +1336,9 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 						gmState = GM_STOP_AND_RESTART;
 						break;
 					}
+
 				}
 
-				// Since we just sent a COMMIT_END, there is no state file
-				// to restart from, so there's no reason to keep the job
-				// contact around. We clear it here in case this failure
-				// triggers a hold on the job, so the contact is not in
-				// the held classad. That way, we don't waste our time
-				// with a restart doomed to failure when the job is
-				// released or removed.
 				rehashJobContact( this, jobContact, NULL );
 				free( jobContact );
 				myResource->CancelSubmit( this );
@@ -1368,19 +1350,12 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 								jmVersion );
 				addScheddUpdateAction( this, UA_UPDATE_JOB_AD, 0 );
 
-				// TODO: Evaluate if the failure is permanent or temporary
-				//   if it's temporary, try a restart, but put a limit so
-				//   that we don't go into an infinite restart loop. If we
-				//   do decide to try a restart, we need to stop the
-				//   jobmanager instead of sending COMMIT_END.
-				// Note: Up through globus 2.0 beta, the FAILED state
-				//   following a cancel request has an error code of 0
-				//   instead of GLOBUS_GRAM_PROTOCOL_ERROR_USER_CANCELLED
 				if ( condorState == REMOVED ) {
 					gmState = GM_DELETE;
 				} else {
 					gmState = GM_CLEAR_REQUEST;
 				}
+
 			}
 			} break;
 		case GM_DELETE: {
@@ -2274,4 +2249,39 @@ void GlobusJob::DeleteOutput()
 	}
 
 	umask( old_umask );
+}
+
+bool GlobusJob::FailureIsRestartable( int error_code )
+{
+	if ( jmVersion == GRAM_V_1_0 ) {
+		return false;
+	}
+	switch( error_code ) {
+	case GLOBUS_GRAM_PROTOCOL_ERROR_STAGING_EXECUTABLE:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_COMMIT_TIMED_OUT:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_USER_CANCELLED:
+		return false;
+	case GLOBUS_GRAM_PROTOCOL_ERROR_STAGE_OUT_FAILED:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_TTL_EXPIRED:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_JM_STOPPED:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED:
+	default:
+		return true;
+	}
+}
+
+bool GlobusJob::FailureNeedsCommit( int error_code )
+{
+	if ( jmVersion == GRAM_V_1_0 ) {
+		return false;
+	}
+	switch( error_code ) {
+	case GLOBUS_GRAM_PROTOCOL_ERROR_COMMIT_TIMED_OUT:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_TTL_EXPIRED:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_JM_STOPPED:
+	case GLOBUS_GRAM_PROTOCOL_ERROR_USER_PROXY_EXPIRED:
+		return false;
+	default:
+		return true;
+	}
 }
