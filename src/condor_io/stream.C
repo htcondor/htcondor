@@ -639,15 +639,25 @@ Stream::code(struct rlimit &rl)
 	// smart.  It return an error if there is an overflow, which
 	// in turn causes an ASSERT to fail in senders/receivers land,
 	// which is bad news for us.  Thus this hack.  -Todd,Erik,Hao Feb 2002
-	long oh_crap = 0x7fffffff;
-	if ( ((unsigned long)rl.rlim_cur) > oh_crap ) {
-		STREAM_ASSERT(code(oh_crap));
+	//
+	// Note: This has the unfortunate side effect of limitting the 'rlimit'
+	// that Condor supports to 2^31.  -Nick
+	if( is_encode() ) {
+		const unsigned long MAX_RLIMIT = 0x7fffffffLU;
+		long				max_rlimit = (long) MAX_RLIMIT;
+	
+		if ( ((unsigned long)rl.rlim_cur) > MAX_RLIMIT ) {
+			STREAM_ASSERT(code(max_rlimit));
+		} else {
+			STREAM_ASSERT(code(rl.rlim_cur));
+		}
+		if ( ((unsigned long)rl.rlim_max) > MAX_RLIMIT ) {
+			STREAM_ASSERT(code(max_rlimit));
+		} else {
+		STREAM_ASSERT(code(rl.rlim_max));
+		}
 	} else {
 		STREAM_ASSERT(code(rl.rlim_cur));
-	}
-	if ( ((unsigned long)rl.rlim_max) > oh_crap ) {
-		STREAM_ASSERT(code(oh_crap));
-	} else {
 		STREAM_ASSERT(code(rl.rlim_max));
 	}
 #elif
