@@ -1024,40 +1024,68 @@ pre_open( int, int, int ) { return 0; }
   Open a standard file (0, 1, or 2), given its fd number.
 */
 void
-open_std_file( int which )
+open_std_file( int fd )
 {
-	char	name[ _POSIX_PATH_MAX ];
+	char	logical_name[ _POSIX_PATH_MAX ];
+	char	physical_name[ _POSIX_PATH_MAX ];
 	char	buf[ _POSIX_PATH_MAX + 50 ];
-	int		pipe_fd;
-	int		answer;
-	int		status;
+	char	*file_name;
+	int	flags;
+	int	success;
+	int	real_fd;
+	FILE	*debug;
 
-	status =  REMOTE_syscall( CONDOR_std_file_info, which, name, &pipe_fd );
-	if( status == IS_PRE_OPEN ) {
-		EXCEPT( "Don't know how to deal with pipelined VANILLA jobs" );
-	} else {
-		switch( which ) {			/* it's an ordinary file */
-		  case 0:
-			answer = open( name, O_RDONLY, 0 );
-			break;
-		  case 1:
-		  case 2:
-			answer = open( name, O_WRONLY|O_TRUNC, 0 );
-				// Some things, like /dev/null, can't be truncated, so
-				// try again w/o O_TRUNC. Jim, Todd and Derek 5/26/99
-			if( answer < 0 ) {
-				answer = open( name, O_WRONLY, 0 );
-			}
-			break;
-		}
+	success = REMOTE_syscall( CONDOR_get_std_file_info, fd, logical_name );
+	if(success<0) {
+		EXCEPT("Couldn't get standard file info");
 	}
-	if( answer < 0 ) {
-		sprintf( buf, "Can't open \"%s\" - %s", name, strerror(errno) );
-		REMOTE_syscall(CONDOR_report_error, buf );
+
+	success = REMOTE_syscall( CONDOR_get_file_info_new, logical_name, physical_name );
+	if(success<0) {
+		EXCEPT("Couldn't map standard file to physical name");
+	}
+
+	if(fd==0) {
+		flags = O_RDONLY;
+	} else {
+		flags = O_WRONLY|O_TRUNC;
+	}
+
+	/* The starter doesn't have the whole elaborate url mechanism. */
+	/* So, just strip off the pathname from the end */
+
+	file_name = strrchr(physical_name,':');
+	if(file_name) {
+		file_name++;
+	} else {
+		file_name = physical_name;
+	}
+
+	/* Check to see if appending is forced */
+
+	if(strstr(physical_name,"append:")) {
+		flags = flags | O_APPEND;
+		flags = flags & ~O_TRUNC;
+	}
+
+	/* Now, really open the file. */
+
+	real_fd = open(file_name,flags,0);
+	if(real_fd<0) {
+		// Some things, like /dev/null, can't be truncated, so
+		// try again w/o O_TRUNC. Jim, Todd and Derek 5/26/99
+		flags = flags & ~O_TRUNC;
+		real_fd = open(file_name,flags,0);
+	}
+
+	if(real_fd<0) {
+		sprintf(buf,"Can't open \"%s\": %s", file_name,strerror(errno));
+		dprintf(D_ALWAYS,buf);
+		REMOTE_syscall(CONDOR_report_error, buf);
 		exit( 4 );
 	} else {
-		if( answer != which ) {
-			dup2( answer, which );
+		if( real_fd != fd ) {
+			dup2( real_fd, fd );
 		}
 	}
 }
@@ -1189,8 +1217,8 @@ set_iwd()
 			EXCEPT("Connection timed out for 30 minutes on chdir(%s)", iwd);
 		}
 			
-		sprintf( buf, "Can't open working directory \"%s\", errno = %d", iwd,
-			    errno );
+		sprintf( buf, "Can't open working directory \"%s\": %s", iwd,
+			    strerror(errno) );
 		REMOTE_syscall( CONDOR_report_error, buf );
 		exit( 4 );
 	}
