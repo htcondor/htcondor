@@ -5,8 +5,6 @@
 
 .PHONY: all client java-client release clean dist-clean
 
-all: release
-
 client:
 	$(MAKE) -C client
 	mkdir -p lib
