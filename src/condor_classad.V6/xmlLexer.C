@@ -406,14 +406,25 @@ GrabText(void)
 						current_token.text += entity_text;
 						break;
 					} else if (ch == ';') {
-						// End of an entity, do the comparison
-						entity_text += ch;
 						bool replaced_entity = false;
-						for (unsigned int i = 0; i < NUMBER_OF_ENTITIES; i++){
-							if (!strcmp(entity_text.c_str(), entities[i].name)) {
-								current_token.text += entities[i].replacement_text;
+						if (entity_text[1] == '#') {
+							// We have a numeric entity, like &#65; for 'A'
+							const char *number_string = entity_text.c_str();
+							int number = atoi(number_string+2); // +2 to skip &#
+							if (number <= 255) {
+								current_token.text += number;
+								printf("current_token = %s\n", current_token.text.c_str());
 								replaced_entity = true;
-								break;
+							}
+						} else {
+							// Non-numeric entity, do a comparison
+							entity_text += ch;
+							for (unsigned int i = 0; i < NUMBER_OF_ENTITIES; i++){
+								if (!strcmp(entity_text.c_str(), entities[i].name)) {
+									current_token.text += entities[i].replacement_text;
+									replaced_entity = true;
+									break;
+								}
 							}
 						}
 						if (!replaced_entity) {
