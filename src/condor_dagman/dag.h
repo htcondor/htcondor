@@ -196,6 +196,7 @@ class Dag {
 
 	void PrintReadyQ( debug_level_t level ) const;
 
+	bool RemoveNode( const char *name, MyString &whynot );
 	
     /* Detects cycle within dag submitted by user
 	   @return true if there is cycle

@@ -1487,3 +1487,86 @@ bool Dag::Add( Job& job )
 {
 	return _jobs.Append(job);
 }
+
+
+bool
+Dag::RemoveNode( const char *name, MyString &whynot )
+{
+	if( !name ) {
+		whynot = "name == NULL";
+		return false;
+	}
+	Job *node = GetJob( name );
+	if( !node ) {
+		whynot = "does not exist in DAG";
+		return false;
+	}
+	if( node->IsActive() ) {
+		whynot.sprintf( "is active (%s)", node->GetStatusName() );
+		return false;
+	}
+	if( !node->IsEmpty( Job::Q_CHILDREN ) ||
+		!node->IsEmpty( Job::Q_PARENTS ) ) {
+		whynot.sprintf( "dependencies exist" );
+		return false;
+	}
+
+		// now we know it's okay to remove, and can do the deed...
+
+	Job* candidate = NULL;
+	bool removed = false;
+
+	if( node->GetStatus() == Job::STATUS_DONE ) {
+		_numJobsDone--;
+		ASSERT( _numJobsDone >= 0 );
+	}
+	else if( node->GetStatus() == Job::STATUS_ERROR ) {
+		_numJobsFailed--;
+		ASSERT( _numJobsFailed >= 0 );
+	}
+	else if( node->GetStatus() == Job::STATUS_READY ) {
+		ASSERT( _readyQ );
+		ASSERT( _readyQ->IsMember( node ) );
+
+		debug_printf( DEBUG_VERBOSE, "=== Ready Queue (Before) ===" );
+		PrintReadyQ( DEBUG_VERBOSE );
+
+			// remove node from ready queue
+		removed = false;
+		_readyQ->Rewind();
+		while( _readyQ->Next( candidate ) ) {
+			ASSERT( candidate );
+			if( candidate == node ) {
+				_readyQ->DeleteCurrent();
+				removed = true;
+			continue;
+			}
+		}
+		ASSERT( removed );
+		ASSERT( !_readyQ->IsMember( node ) );
+		debug_printf( DEBUG_VERBOSE, "=== Ready Queue (After) ===" );
+		PrintReadyQ( DEBUG_VERBOSE );
+	}
+	else {
+		debug_printf( DEBUG_QUIET, "ERROR: node %s in unexpected state (%s)\n",
+					  node->GetJobName(), node->GetStatusName() );
+			// bail b/c DAG state is likely corrupt...
+		ASSERT( false );
+	}
+
+		// remove node from job queue
+	removed = false;
+	_jobs.Rewind();
+	while( _jobs.Next( candidate ) ) {
+		ASSERT( candidate );
+        if( candidate == node ) {
+			_jobs.DeleteCurrent();
+			removed = true;
+			continue;
+		}
+	}
+	ASSERT( removed );
+
+	whynot = "n/a";
+	return true;
+}
