@@ -10,7 +10,52 @@ Each release series is covered in its own section.
 \subsection{\label{sec:History-6-1}Development Release Series 6.1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Please see the 6.1 manual for the 6.1 version history.
+This is the first development release.
+You should only install it if you really know what you are doing.
+Development releases will come out quickly, with lots of new features
+being added, many bugs fixed, etc.  
+It should not be used for a production pool.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:New-6-1-0}Version 6.1.0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{itemize}
+
+\item Support has been added to the \condor{startd} to run multiple
+jobs on SMP machines.
+See section~\ref{sec:Configuring-SMP} on
+page~\pageref{sec:Configuring-SMP} for details about setting up and
+configuring SMP support.
+
+\item The expressions that control the \condor{startd} policy for
+vacating, jobs has been simplified.
+See section~\ref{sec:Configuring-Policy} on
+page~\pageref{sec:Configuring-Policy} for complete details on the new
+policy expressions, and section~\ref{sec:V60-Policy-diffs} on
+page~\pageref{sec:V60-Policy-diffs} for an explaination of what's
+different from the version 6.0 expressions.
+
+\item The \condor{collector} now can store historical information
+about your pool state.
+This information can be viewed and queried with the \Condor{view}
+tool, which is available as a seperate contrib module.
+
+\item \condor{userprio} now has the notion of \Term{user factors} as a
+way to create different groups of users in different priority levels.
+See section~\ref{sec:UserPrio} on page~\pageref{sec:UserPrio} for
+details. 
+
+\item The \condor{schedd} has been enhanced to enable ``flocking'',
+where it seeks matches with machines in multiple pools if its requests
+cannot be serviced in the local pool.
+See section~\ref{sec:Flocking} on page~\pageref{sec:Flocking} for more
+details.
+
+\item The \condor{schedd} has been enhanced to enable \condor{q} and
+other interactive tools better response time.
+
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:History-6-0}Stable Release Series 6.0}
