@@ -3295,6 +3295,7 @@ Scheduler::StartJobHandler()
 
 	shadow_path = strdup( shadow_obj->path() );
 	sh_is_dc = (int)shadow_obj->isDC();
+	delete( shadow_obj );
 
 #endif /* ! WIN32 */
 
