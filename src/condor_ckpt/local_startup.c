@@ -64,6 +64,7 @@ static char *_FileName_ = __FILE__;
 int main( int argc, char *argv[], char **envp );
 
 extern int DebugFlags;
+extern volatile int InRestart;
 int _condor_in_file_stream;
 
 static char	*executable_name;
@@ -109,6 +110,7 @@ MAIN( int argc, char *argv[], char **envp )
 		argc -= 2;
 		argv += 2;
 		SetSyscalls( SYS_LOCAL | SYS_MAPPED );
+		InRestart = FALSE;
 #if defined(HPUX9)
 		return(_start( argc, argv, envp ));
 #else
