@@ -759,9 +759,11 @@ negotiate( char *scheddName, char *scheddAddr, double priority, double share,
 		if ( i >= scheddLimit ) {
 			if ( ignore_schedd_limit ) {
 				only_consider_startd_rank = true;
-				dprintf (D_ALWAYS, 	
-					"    Over schedd resource limit (%d) ... "
+				if ( i == scheddLimit ) {  // print message only once
+					dprintf (D_ALWAYS, 	
+						"    Over schedd resource limit (%d) ... "
 					    "only consider startd ranks\n", scheddLimit);
+				}
 			} else {
 				dprintf (D_ALWAYS, 	
 				"    Reached schedd resource limit: %d ... stopping\n", i);
@@ -1056,12 +1058,8 @@ matchmakingAlgorithm(char *scheddName, char *scheddAddr, ClassAd &request,
 		// not prefer it, just continue with the next offer ad....  we can
 		// skip all the below logic about preempt for user-priority, etc.
 		if ( only_for_startdrank ) {
-			if( rankCondStd->EvalTree(candidate, &request, &result) && 
-					result.type == LX_INTEGER && result.i == TRUE ) {
-					// offer strictly prefers this request to the one
-					// currently being serviced
-				candidatePreemptState = RANK_PREEMPTION;
-			} else {
+			if ( !(rankCondStd->EvalTree(candidate, &request, &result) && 
+					result.type == LX_INTEGER && result.i == TRUE) ) {
 					// offer does not strictly prefer this request.
 					// try the next offer since only_for_statdrank flag is set
 				continue;
