@@ -37,6 +37,14 @@
 #define FD_ZERO(p)     memset((char *)(p), 0, sizeof(*(p)))
 #define HAS_U_TYPES
 
+/* Include sysmisc.h for the proc library now, but it needs to _not_
+ * have _XOPEN_SOURCE_EXTENDED defined, cuz we need struct sigaltstack. 
+ * And we must include it
+ * _after_ we have included sys/types.h.  Sigh.  -Todd 8/19/98 */
+#undef _XOPEN_SOURCE_EXTENDED
+#include <sys/sysmisc.h>
+#define _XOPEN_SOURCE_EXTENDED
+
 #include <unistd.h>
 #if defined(pipe)
 #	undef pipe
