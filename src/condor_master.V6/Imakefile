@@ -7,8 +7,8 @@ CFLAGS = $(STD_C_FLAGS)
 C_PLUS_FLAGS =  $(STD_C_PLUS_FLAGS) -DNEW_PROC -Wall
 #endif
 
-SRC = master.C path.c daemon.C
-OBJ = master.o path.o daemon.o
+SRC = master.C daemon.C
+OBJ = master.o daemon.o
 UTIL_LIB = ../condor_util_lib/util_lib.a
 CLASS_LIB = ../condor_c++_util/cplus_lib.a
 DAEMON_CORE_LIB = ../condor_daemon_core.V6/daemon_core.a
