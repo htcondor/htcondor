@@ -326,7 +326,7 @@ int DaemonCore::Register_Command(int command, char* command_descrip, CommandHand
 	return(command);
 }
 
-int DaemonCore::Cancel_Command( int command ) 
+int DaemonCore::Cancel_Command( int ) 
 {
 	// stub
 
@@ -686,7 +686,7 @@ int DaemonCore::Register_Reaper(int rid, char* reap_descrip, ReaperHandler handl
 	return rid;
 }
 
-int DaemonCore::Cancel_Reaper( int rid )
+int DaemonCore::Cancel_Reaper( int )
 {
 	// stub
 
@@ -1362,7 +1362,6 @@ int DaemonCore::Create_Process(
 	ReliSock rsock;	// tcp command socket for new child
 	SafeSock ssock;	// udp command socket for new child
 	pid_t newpid;
-	struct linger linger = {0,0};
 #ifdef WIN32
 	STARTUPINFO si;
 	PROCESS_INFORMATION piProcess;
@@ -1447,7 +1446,6 @@ int DaemonCore::Create_Process(
 			if( (!rsock.setsockopt(SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on))) ||
 				(!ssock.setsockopt(SOL_SOCKET, SO_REUSEADDR, (char*)&on, sizeof(on))) ) {
 				dprintf(D_ALWAYS,"ERROR: setsockopt() SO_REUSEADDR failed\n");
-				int crap = GetLastError();
 				return FALSE;
 			}
 
