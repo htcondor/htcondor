@@ -25,3 +25,27 @@
 	files.  Runs on OSF/1, HP-UX9, Ultrix4.2a, Ultrix 4.3a, SunOs 4.1.3
 	and compiles on Aix 3.2.  Haven't tried to get to run on AIX yet
 	because I need to build a syscall() routine there.
+04/19/94	DecAlpha_Almost
+	Applies to
+		src/condor_ckpt
+		src/condor_syscall_lib
+		src/h
+		src/condor_includes
+		src/condor_c++_util
+		src/condor_util_lib
+		src/condor_xdr_lib
+		src/condor_test_suite
+		src/condor_starter.Alpha
+		src/condor_shadow.Alpha
+		config
+	Mostly working version of remote system calls.  Works with or
+	without starter, but in either case only in "debugging" mode -
+	the mode where we use named pipes to simulate the TCP
+	connections to the shadow.
+4/26/94 DecApha_CKPT_Local_Remote
+	This one works for both local and remote checkpoint/restart on the
+	alpha.  Only tested in the "debugging" mode where we use named
+	pipes to communicate with the shadow.  Also not tested under the
+	starter, but in the mode where the user program makes its shadow
+	connections itself and reads the command stream from a file.
+	Contains many "hacks" to get the remote restart to work.
