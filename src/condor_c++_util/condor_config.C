@@ -687,6 +687,27 @@ param( const char *name )
 	return( expand_macro(val, ConfigTab, TABLESIZE) );
 }
 
+/*
+** Return the integer value associated with the named paramter.
+** If the value is not defined or not a valid integer, then
+** return the default_value argument.
+*/
+
+int
+param_integer( const char *name, int default_value )
+{
+	int result;
+	int fields;
+	char *string;
+
+	string = lookup_macro( name, ConfigTab, TABLESIZE );
+	if(!string) return default_value;
+
+	fields = sscanf(string,"%d",&result);
+	if(fields==1) return result;
+
+	return default_value;
+}
 
 char *
 macro_expand( const char *str )
