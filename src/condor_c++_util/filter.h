@@ -66,6 +66,8 @@
 #define FILTER_H
 
 #include "condor_constants.h"
+#include "condor_jobqueue.h"
+#include "list.h"
 
 class FilterObj;
 

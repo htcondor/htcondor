@@ -1,8 +1,9 @@
 #ifndef PROC_OBJ_H
 #define PROC_OBJ_H
+#include "condor_constants.h"
+#include "condor_jobqueue.h"
 #include "list.h"
 #include "filter.h"
-#include "condor_constants.h"
 
 	// A function which takes a pointer to a PROC struct and returns
 	// a boolean, e.g. whether to add the PROC to a list.
