@@ -1199,14 +1199,20 @@ static void make_fd_async( int fd )
 	#endif
 
 	#if defined(FIOASYNC) && !defined(linux)
+		{
 		/* In some versions of linux, FIOASYNC results in
 		   _synchronous_ I/O.  Bug!  Fortunately, FASYNC
 		   is defined in these cases. */
-		ioctl( fd, FIOASYNC, &on );
-	#endif
+			int on = 1;
+			ioctl( fd, FIOASYNC, &on );
+		}
+    #endif
 
 	#if defined(FIOSSAIOSTAT)
-		ioctl( fd, FIOSSAIOSTAT, &on );
+		{
+			int on = 1; 
+			ioctl( fd, FIOSSAIOSTAT, &on );
+		}
 	#endif
 }
 
