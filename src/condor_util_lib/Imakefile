@@ -109,11 +109,9 @@ GETMNT_OBJ = getmnt.o
 
 all_target( util_lib.a stub_gen )
 
-libauth_io.a:
-	(cd ../condor_io ; make libauth_io.a )
-
-auth_sock.o: ../condor_io/auth_sock.C libauth_io.a
-	gcc $(CFLAGS) -c ../condor_io/auth_sock.C $(AUTH2_LIB)
+auth_sock.o: ../condor_io/auth_sock.C 
+	(cd ../condor_io ; make auth_sock.o )
+	cp ../condor_io/auth_sock.o .
 
 test.o: test.c
 	gcc $(CFLAGS) -c test.c
