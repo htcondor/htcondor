@@ -76,7 +76,7 @@ END_C_DECLS
 ****************************************/
 #define HAS_U_TYPES				1
 
-#if defined( Solaris26) 
+#if !defined( Solaris251 ) 
 #	define HAS_64BIT_STRUCTS	1
 #	define HAS_64BIT_SYSCALLS	1
 #	define HAS_F_DUP2FD			1
