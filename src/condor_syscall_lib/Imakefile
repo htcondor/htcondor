@@ -1,13 +1,36 @@
-CFLAGS = $(STD_C_FLAGS)
-EXTRACT = FORK.o KILL.o SIGACTION.o
+CFLAGS = $(STD_C_FLAGS) -DNEW_PROC
+EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
+		  MMAP.o PIPE.o
 STUBS = switches.o switches.special.o
-UTIL = syscall_mode.o remote_syscall.o debug_init.o senders.o
-LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL)
-all_target(condor_syscall_lib.a receivers.o)
+UTIL = syscall_mode.o remote_syscall.o syscall_connect.o senders.o
+NAME_TAB = ../h/syscall_numbers.o
+LIB_OBJ = $(EXTRACT) $(STUBS) $(UTIL) $(NAME_TAB)
+all_target(condor_syscall_lib.a condor_rt0.o)
+stubs: switches.c senders.c receivers.c
 
+uppercase_target($(SIMPLE_LIBC),geteuid.o,GETEUID.o,geteuid,GETEUID)
+uppercase_target($(SIMPLE_LIBC),getppid.o,GETPPID.o,getppid,GETPPID)
+uppercase_target($(SIMPLE_LIBC),getegid.o,GETEGID.o,getegid,GETEGID)
+uppercase_target($(SIMPLE_LIBC),getwd.o,GETWD.o,getwd,GETWD)
 uppercase_target($(SIMPLE_LIBC),fork.o,FORK.o,fork,FORK)
 uppercase_target($(SIMPLE_LIBC),kill.o,KILL.o,kill,KILL)
 uppercase_target($(SIMPLE_LIBC),sigaction.o,SIGACTION.o,sigaction,SIGACTION)
+uppercase_target($(SIMPLE_LIBC),mmap.o,MMAP.o,mmap,MMAP)
+uppercase_target($(SIMPLE_LIBC),pipe.o,PIPE.o,pipe,PIPE)
+
+CMNT
+CMNT Create a replacement for crt0.o to be linked with condor programs.
+CMNT N.B. This is done differently than other objects in that we start out
+CMNT with a copy of crt0.o, and change the name of "main" to "MAIN".
+CMNT
+condor_rt0.o: Crt0 ToUpper
+	ToUpper Crt0 condor_rt0.o main MAIN
+release:: condor_rt0.o
+	COPY_LIBRARY( condor_rt0.o, $(RELEASE_DIR)/lib )
+clean::
+	rm -f condor_rt0.o
+
+
 library_target(condor_syscall_lib.a,$(LIB_OBJ),release)
 program_target(ToUpper,ToUpper.o,$(NULL),release)
 
@@ -21,7 +44,7 @@ senders.c: syscall.tmpl stub_gen senders.prologue senders.epilogue
 	stub_gen -mode senders -p senders.prologue -e senders.epilogue \
 	> senders.c
 
-receivers.c: syscall.tmpl stub_gen
+receivers.c: syscall.tmpl stub_gen receivers.prologue receivers.epilogue
 	/usr/ucb/cpp -DRECEIVER < syscall.tmpl | \
 	stub_gen -mode receivers -p receivers.prologue -e receivers.epilogue \
 	> receivers.c
@@ -33,6 +56,6 @@ y.tab.c: stub_gen_yacc.y scanner.h
 	yacc -d stub_gen_yacc.y
 
 clean::
-	rm -f lex.yy.c y.tab.c y.tab.h switches.c senders.c
+	rm -f lex.yy.c y.tab.c y.tab.h switches.c senders.c receivers.c *.o
 
 program_target(stub_gen,y.tab.o lex.yy.o,$(NULL),no_realeas)
