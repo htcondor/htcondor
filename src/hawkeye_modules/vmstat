@@ -1,0 +1,139 @@
+#! /usr/bin/perl -w
+use strict;
+
+# Update the module include path
+BEGIN
+{
+    my $Dir = $0;
+    if ( $Dir =~ /(.*)\/.*/ )
+    {
+	push @INC, "$1";
+    }
+}
+use HawkeyePublish;
+use HawkeyeLib;
+
+# Setup the hawkeye stuff
+my $Hawkeye;
+my $Period = 30;
+
+# Main logic
+$| = 1;
+my $Reconfig = 0;
+my $RunOnce = 0;
+Init();
+$SIG{HUP} = sub{ print STDERR "Got HUP\n"; $Reconfig = 1; };
+while( 1 )
+{
+    Configure( );
+    $Reconfig = 0;
+    RunIt();
+    if ( $RunOnce )
+    {
+	exit 0;
+    }
+}
+
+sub Init {
+    # Parse command line args
+    foreach my $Arg ( @ARGV )
+    {
+	if ( $Arg =~ /^-1$/ ) {
+	    $RunOnce = 1;
+	} elsif ( $Arg =~ /^-c$/ ) {
+	    HawkeyeLib::HardConfig( "vmstat", "_period" );
+	}
+    }
+
+    HawkeyeLib::DoConfig( );
+
+    # Setup the hawkeye stuff
+    $Hawkeye = HawkeyePublish->new;
+    $Hawkeye->Quiet( 1 );
+    $Hawkeye->AutoIndexSet( 1 );
+}
+
+sub Configure {
+    ### Valid fields are:
+    ###   pid, user, priority, nice, size, rss, share, status, lib,
+    ###    cpu,mem,time,command
+    ###
+    ### Examples
+    ###
+    ###  10:pid,command
+    ###  15:*
+
+    #ReadConfig();
+    my $ConfigStringPeriod =
+	HawkeyeLib::ReadConfig( "vmstat", "_period", "30" );
+
+    # Check the config time string
+    if ( $ConfigStringPeriod =~ /(\d+)([sSmMhH]?)/ )
+    {
+	$Period = $1;
+	if ( ( $2 eq "s" ) || ( $2 eq "S" ) )
+	{
+	    # Do nothing
+	}
+	elsif ( ( $2 eq "m" ) || ( $2 eq "M" ) )
+	{
+	    $Period *= 60;
+	}
+	elsif ( ( $2 eq "h" ) || ( $2 eq "H" ) )
+	{
+	    $Period *= 3600;
+	}
+    }
+    else
+    {
+	print STDERR "Ignoring top config time '$ConfigStringPeriod'\n";
+    }
+}
+
+
+# Gather info from vmstat, iostat, etc., & publish it...
+sub RunIt {
+    my @NameTable = (
+		     "NumProcsRun",
+		     "NumProcsUnint",
+		     "NumProcsSwapped",
+		     "VmUsedKb",
+		     "VmFreeKb",
+		     "VmBuffKb",
+		     "VmCacheKb",
+		     "SwapInKbSec",
+		     "SwapOutKbSec",
+		     "IoInBlkSec",
+		     "IoOutBlkSec",
+		     "SysIntruptsSec",
+		     "SysContextSec",
+		     "CpuUserPct",
+		     "CpuSysPct",
+		     "CpuIdlePct"
+		    );
+
+    # Start things off
+    my $Hash = HawkeyeHash->new( \$Hawkeye, "" );
+
+    # Run vmstat...
+    my $Cmd = "/usr/bin/vmstat $Period";
+    die "Can't run '$Cmd'" if ( ! open( IN, "$Cmd|" ) );
+    while ( <IN> )
+    {
+	next if ( /[a-zA-Z]/ );
+	my @VmStat = split;
+	if ( $#VmStat != $#NameTable )
+	{
+	    die "Field mismatch: Expect $#NameTable, found $#VmStat";
+	}
+	foreach my $Offset ( 0 .. $#VmStat )
+	{
+	    $Hash->Add( $NameTable[$Offset], "n", $VmStat[$Offset] );
+	}
+	# Ok, summary is done...
+	$Hash->Store( );
+	$Hawkeye->Publish( );
+    }
+    close( IN );
+
+}
