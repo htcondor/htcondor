@@ -37,7 +37,6 @@
 #define _CONDOR_STARTER_MGR_H
 
 #include "Starter.h"
-#include "string_list.h"
 #include "simplelist.h"
 
 
