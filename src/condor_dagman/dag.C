@@ -45,15 +45,15 @@ Dag::Dag( const char* condorLogName, const int maxJobsSubmitted,
     _maxPreScripts        (maxPreScripts),
     _maxPostScripts       (maxPostScripts),
     _condorLogName        (NULL),
-    _dapLogName           (NULL),
     _condorLogInitialized (false),
     _condorLogSize        (0),
+    _dapLogName           (NULL),
+    _dapLogInitialized    (false),             //<--DAP
+    _dapLogSize           (0),                 //<--DAP
     _numJobsDone          (0),
     _numJobsFailed        (0),
     _numJobsSubmitted     (0),
-    _maxJobsSubmitted     (maxJobsSubmitted),
-    _dapLogInitialized    (false),             //<--DAP
-    _dapLogSize           (0)                  //<--DAP
+    _maxJobsSubmitted     (maxJobsSubmitted)
 {
 	ASSERT( condorLogName || dapLogName );
 	if( condorLogName ) {
