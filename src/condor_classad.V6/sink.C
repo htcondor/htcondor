@@ -668,7 +668,7 @@ UnparseAux(string &buffer,Operation::OpKind op,ExprTree *op1,ExprTree *op2,
 			buffer += " ) ";
 		}
 	} else {
-		Unparse( buffer, t1 );
+		Unparse( buffer, op1 );
 	}
 	buffer += opString[op];
 	if( op2->GetKind( ) == ExprTree::OP_NODE ) {
@@ -679,7 +679,7 @@ UnparseAux(string &buffer,Operation::OpKind op,ExprTree *op1,ExprTree *op2,
 			buffer += " ) ";
 		}
 	} else {
-		Unparse( buffer, t1 );
+		Unparse( buffer, op2 );
 	}
 }
 
