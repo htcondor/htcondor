@@ -74,19 +74,17 @@ class UniShadow : public BaseShadow
 	void init( ClassAd *jobAd, char schedd_addr[], char host[], 
 			   char capability[], char cluster[], char proc[]);
 	
-		/** Makes the job go away.  Updates the job's classAd in the
-			Q manager, sends email to the user if requested, and
-			calls DC_Exit().  It doesn't return.
-			@param reason The reason this job exited.
-		 */
-	void shutDown( int reason );
-	
 		/**
 		 */
 	int handleJobRemoval(int sig);
 
 		/// Log an execute event to the UserLog
 	void logExecuteEvent( void );
+
+		/** Return the exit reason for this shadow's job.  Since we've
+			only got 1 RemoteResource, we can just return its value.
+		*/
+	int getExitReason( void );
 
 	float bytesSent();
 	float bytesReceived();
@@ -110,6 +108,17 @@ class UniShadow : public BaseShadow
 			non-MPI shadow, we should return falure.
 		*/
 	bool setMpiMasterInfo( char* ) { return false; };
+
+		/** If desired, send the user email now that this job has
+			terminated.  This has all the job statistics from the run,
+			and lots of other useful info.
+		*/
+	virtual void emailTerminateEvent( int exitReason );
+
+		/** Do all work to cleanup before this shadow can exit.  We've
+			only got 1 RemoteResource to kill the starter on.
+		*/
+	virtual void cleanUp( void );
 
  private:
 	RemoteResource *remRes;
