@@ -238,6 +238,21 @@ ResMgr::get_by_any_cap( char* cap )
 }
 
 
+Resource*
+ResMgr::get_by_name( char* name )
+{
+	int i;
+	for( i = 0; i < nresources; i++ ) {
+		if( !strcmp(resources[i]->r_name, name) ) {
+			return resources[i];
+		}
+	}
+	return NULL;
+}
+
+
+
+
 State
 ResMgr::state()
 {

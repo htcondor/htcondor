@@ -108,6 +108,7 @@ public:
 	Resource*	get_by_pid(int);		// Find rip by pid of starter
 	Resource*	get_by_cur_cap(char*);	// Find rip by r_cur->capab
 	Resource*	get_by_any_cap(char*);	// Find rip by r_cur or r_pre
+	Resource*	get_by_name(char*);		// Find rip by r_name
 	State	state();					// Return the machine state
 
 	int	force_benchmark();		// Force a resource to benchmark
