@@ -29,6 +29,25 @@ keyboard daemon is not allowed to attach to the X server, the state of
 a machine may be incorrectly set to idle when a user is, in fact,
 using the machine.
 
+In some environments, the keyboard daemon will not be able to connect to the X
+server because the user currently logged into the system keeps there
+authentication token for using the X server in a place that no local user on
+the current machine can get to.  This may be the case if you are running AFS
+and have the user's X authority file in an AFS home directory.  There may also
+be cases where you cannot run the daemon with super user privileges because of
+political reasons, but you would still like to be able to monitor X activity.
+In this case, you will need to change your XDM configuration in order to start
+up the keyboard daemon with the permissions of the currently logging in user.
+The specifics of this process are beyond the scope of the manual, however your
+system administrator should understand how to go about implementing this.  The
+important things to remember are to start the daemon with the -t and the -f
+options ( -f means run the daemon in the foreground, and -t means output
+the logging information to STDERR instead of the condor log files which users
+don't have permission to write to. )  You will also want to make sure to
+shutdown the program once the user logs out.  This can be done by saving the
+process id of the daemon, and sending a
+\Env{SIGTERM} to this process id when the user logs out.  
+
 To see how well the keyboard daemon is working on your system, review
 the log for the daemon and look for successful connections to the X
 server.  If you see none, you may have a situation where the keyboard
