@@ -20,6 +20,8 @@ class GlobusResource : public Service
 	void RegisterJob( GlobusJob *job );
 	void UnregisterJob( GlobusJob *job );
 	void RequestPing( GlobusJob *job );
+	bool RequestSubmit( GlobusJob *job );
+	bool CancelSubmit( GlobusJob *job );
 
 	bool IsEmpty();
 	bool IsDown();
@@ -27,6 +29,9 @@ class GlobusResource : public Service
 
 	static void setProbeInterval( int new_interval )
 		{ probeInterval = new_interval; }
+
+	static void setSubmitLimit( int new_limit )
+		{ submitLimit = new_limit; }
 
  private:
 	int DoPing();
@@ -37,7 +42,10 @@ class GlobusResource : public Service
 	int pingTimerId;
 	List<GlobusJob> registeredJobs;
 	List<GlobusJob> pingRequesters;
+	List<GlobusJob> submitsInProgress;
+	List<GlobusJob> submitsQueued;
 	static int probeInterval;
+	static int submitLimit;
 
 	GahpClient gahp;
 };

@@ -410,6 +410,11 @@ int GlobusJob::doEvaluateState()
 			}
 			now = time(NULL);
 			if ( now >= lastSubmitAttempt + submitInterval ) {
+				// Once RequestSubmit() is called at least once, you must
+				// CancelRequest() once you're done with the request call
+				if ( myResource->RequestSubmit(this) == false ) {
+					break;
+				}
 				rc = gahp.globus_gram_client_job_request( 
 										myResource->ResourceName(), RSL,
 										GLOBUS_GRAM_PROTOCOL_JOB_STATE_ALL,
@@ -418,6 +423,7 @@ int GlobusJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
+				myResource->CancelSubmit(this);
 				lastSubmitAttempt = time(NULL);
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
 					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {
@@ -666,6 +672,11 @@ int GlobusJob::doEvaluateState()
 				char buffer[1024];
 				struct stat file_status;
 
+				// Once RequestSubmit() is called at least once, you must
+				// CancelRequest() once you're done with the request call
+				if ( myResource->RequestSubmit(this) == false ) {
+					break;
+				}
 				sprintf( rsl, "&(restart=%s)(remote_io_url=%s)", jobContact,
 						 gassServerUrl );
 				if ( localOutput ) {
@@ -694,6 +705,7 @@ int GlobusJob::doEvaluateState()
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
 				}
+				myResource->CancelSubmit(this);
 				lastRestartAttempt = time(NULL);
 				if ( rc == GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED ||
 					 rc == GAHPCLIENT_COMMAND_TIMED_OUT ) {

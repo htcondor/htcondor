@@ -308,6 +308,17 @@ Reconfig()
 	}
 	GlobusResource::setProbeInterval( tmp_int );
 
+	tmp_int = -1;
+	tmp = param("GRIDMANAGER_MAX_PENDING_SUBMITS");
+	if ( tmp ) {
+		tmp_int = atoi(tmp);
+		free(tmp);
+	}
+	if ( tmp_int < 0 ) {
+		tmp_int = 5; // default limit is 5
+	}
+	GlobusResource::setSubmitLimit( tmp_int );
+
 	checkProxy_interval = -1;
 	tmp = param("GRIDMANAGER_CHECKPROXY_INTERVAL");
 	if ( tmp ) {

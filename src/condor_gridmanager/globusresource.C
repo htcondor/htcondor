@@ -10,6 +10,7 @@ template class Item<GlobusJob>;
 
 
 int GlobusResource::probeInterval = 300;	// default value
+int GlobusResource::submitLimit = 5;		// default value
 
 GlobusResource::GlobusResource( char *resource_name )
 {
@@ -46,6 +47,7 @@ void GlobusResource::RegisterJob( GlobusJob *job )
 
 void GlobusResource::UnregisterJob( GlobusJob *job )
 {
+	CancelSubmit( job );
 	registeredJobs.Delete( job );
 	pingRequesters.Delete( job );
 }
@@ -54,6 +56,63 @@ void GlobusResource::RequestPing( GlobusJob *job )
 {
 	pingRequesters.Append( job );
 	daemonCore->Reset_Timer( pingTimerId, 0 );
+}
+
+bool GlobusResource::RequestSubmit( GlobusJob *job )
+{
+	GlobusJob *jobptr;
+
+	submitsQueued.Rewind();
+	while ( submitsQueued.Next( jobptr ) ) {
+		if ( jobptr == job ) {
+dprintf(D_FULLDEBUG,"*** Job %d.%d already in submitsQueued\n",job->procID.cluster,job->procID.proc);
+			return false;
+		}
+	}
+
+	submitsInProgress.Rewind();
+	while ( submitsInProgress.Next( jobptr ) ) {
+		if ( jobptr == job ) {
+dprintf(D_FULLDEBUG,"*** Job %d.%d already in submitsInProgress\n",job->procID.cluster,job->procID.proc);
+			return true;
+		}
+	}
+
+	if ( submitsInProgress.Length() < submitLimit &&
+		 submitsQueued.Length() > 0 ) {
+		EXCEPT("In GlobusResource for %s, SubmitsQueued is not empty and SubmitsToProgress is not full\n");
+	}
+	if ( submitsInProgress.Length() < submitLimit ) {
+		submitsInProgress.Append( job );
+dprintf(D_FULLDEBUG,"*** Job %d.%d appended to submitsInProgress\n",job->procID.cluster,job->procID.proc);
+		return true;
+	} else {
+		submitsQueued.Append( job );
+dprintf(D_FULLDEBUG,"*** Job %d.%d appended to submitsQueued\n",job->procID.cluster,job->procID.proc);
+		return false;
+	}
+}
+
+bool GlobusResource::CancelSubmit( GlobusJob *job )
+{
+	if ( submitsQueued.Delete( job ) ) {
+dprintf(D_FULLDEBUG,"*** Job %d.%d removed from submitsQueued\n",job->procID.cluster,job->procID.proc);
+		return true;
+	}
+
+	if ( submitsInProgress.Delete( job ) ) {
+dprintf(D_FULLDEBUG,"*** Job %d.%d removed from submitsInProgress\n",job->procID.cluster,job->procID.proc);
+		if ( submitsQueued.Length() > 0 ) {
+			GlobusJob *queued_job = submitsQueued.Head();
+			submitsQueued.Delete( queued_job );
+			submitsInProgress.Append( queued_job );
+			queued_job->SetEvaluateState();
+dprintf(D_FULLDEBUG,"*** Job %d.%d moved to submitsInProgress\n",queued_job->procID.cluster,queued_job->procID.proc);
+		}
+		return true;
+	}
+
+	return false;
 }
 
 bool GlobusResource::IsEmpty()
