@@ -936,7 +936,7 @@ MPIShadow::replaceNode ( ClassAd *ad, int nodenum ) {
 
 	ClassAd::iterator adIter;
 	ClassAdUnParser unp;
-	string rhstring;
+	std::string rhstring;
 //	ad->ResetExpr();
 //	while( (tree = ad->NextExpr()) ) {
 	for( adIter = ad->begin( ); adIter != ad->end( ); adIter++ ) {

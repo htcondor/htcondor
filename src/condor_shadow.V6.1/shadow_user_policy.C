@@ -169,7 +169,7 @@ ShadowUserPolicy::doAction( int action, bool is_periodic )
 //	ExprTree *tree, *rhs = NULL;
 	ExprTree *tree;
 	ClassAdUnParser unp;
-	string bufString;
+	std::string bufString;
 
 	tree = job_ad->Lookup( firing_expr );
 //	if( tree && (rhs=tree->RArg()) ) {

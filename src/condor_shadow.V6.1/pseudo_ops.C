@@ -559,7 +559,7 @@ pseudo_ulog( ClassAd *ad )
 	ClassAdUnParser unp;
 
 	if(!event) {
-		string add_str;
+		std::string add_str;
 		unp.Unparse( add_str, ad );
 		dprintf(
 		  D_ALWAYS,
@@ -597,7 +597,7 @@ pseudo_ulog( ClassAd *ad )
 	}
 
 	if( !Shadow->uLog.writeEvent( event ) ) {
-		string add_str;
+		std::string add_str;
 		unp.Unparse( add_str, ad );
 		dprintf(
 		  D_ALWAYS,
@@ -624,7 +624,7 @@ pseudo_get_job_attr( const char *name, char *expr )
 	ClassAd *ad = thisRemoteResource->getJobAd();
 	ExprTree *e = ad->Lookup(name);
 	ClassAdUnParser unp;
-	string expr_string;
+	std::string expr_string;
 	if(e) {
 		expr[0] = 0;
 		unp.Unparse( expr_string, e );
