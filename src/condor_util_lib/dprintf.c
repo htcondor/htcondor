@@ -61,7 +61,6 @@
 #	include "fake_flock.h"
 #endif
 
-
 FILE	*debug_lock();
 FILE	*fdopen();
 
@@ -137,12 +136,7 @@ va_dcl
 	long *clock;
 	int scm;
 #if !defined(OSF1)
-#define POSIX_SIGS 1
-#if POSIX_SIGS
 	sigset_t	mask, omask;
-#else
-	int	omask;
-#endif
 #endif
 	int saved_errno;
 	int	saved_flags;
@@ -166,19 +160,16 @@ va_dcl
 	scm = SetSyscalls( SYS_LOCAL | SYS_RECORDED );
 
 #if !defined(OSF1)
-#if POSIX_SIGS
+		/* Block any signal handlers which might try to print something */
 	sigfillset( &mask );
+	sigdelset( &mask, SIGABRT );
+	sigdelset( &mask, SIGBUS );
+	sigdelset( &mask, SIGFPE );
+	sigdelset( &mask, SIGILL );
+	sigdelset( &mask, SIGQUIT );
+	sigdelset( &mask, SIGSEGV );
 	sigdelset( &mask, SIGTRAP );
 	sigprocmask( SIG_SETMASK, &mask, &omask );
-#else
-		/* Block any signal handlers which might try to print something */
-	if( ! InDBX ) {
-		/* Blocking signals makes dbx hang */
-		omask = sigblock( ~0 );
-	} else {
-		omask = sigblock( 0 );
-	}
-#endif
 #endif
 
 		/* Open and lock the log file */
@@ -211,12 +202,8 @@ va_dcl
 	debug_unlock();
 
 #if !defined(OSF1)
-#if POSIX_SIGS
-	(void) sigprocmask( SIG_SETMASK, &omask, 0 );
-#else
 		/* Let them signal handlers go!! */
-	(void) sigsetmask( omask );
-#endif
+	(void) sigprocmask( SIG_SETMASK, &omask, 0 );
 #endif
 
 	(void) SetSyscalls( scm );
