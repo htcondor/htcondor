@@ -33,5 +33,6 @@ struct JobUpdateEvent {
 extern List<JobUpdateEvent> JobUpdateEventQueue;
 
 void addJobUpdateEvent( GlobusJob *job, int event, int subtype = 0 );
+void setUpdate();
 
 #endif
