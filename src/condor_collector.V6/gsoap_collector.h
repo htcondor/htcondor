@@ -1,9 +1,11 @@
-#import "gsoap_daemon_core_types.h"
-
 //gsoap condor service name: condorCollector
 //gsoap condor service style: document
 //gsoap condor service encoding: literal
 //gsoap condor service namespace: urn:condor
+
+#import "gsoap_daemon_core_types.h"
+
+#import "gsoap_daemon_core.h"
 
 int condor__queryStartdAds(char *constraint,
 						   struct condor__ClassAdStructArray & result);

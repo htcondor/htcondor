@@ -151,3 +151,9 @@ int condor__getInfoAd(struct soap *soap,void *,struct condor__ClassAdStruct & ad
 	return SOAP_OK;
 
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// TODO : This should move into daemonCore once we figure out how we wanna link
+///////////////////////////////////////////////////////////////////////////////
+
+#include "../condor_daemon_core.V6/soap_daemon_core.cpp"
