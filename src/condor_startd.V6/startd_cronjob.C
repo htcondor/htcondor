@@ -70,7 +70,7 @@ StartdCronJob::Initialize( )
 	AddEnv( EnvStr.GetCStr() );
 
 	// And, run the "main" Initialize function
-	CondorCronJob::Initialize( );
+	return CondorCronJob::Initialize( );
 }
 
 // Process a line of input
