@@ -1177,46 +1177,111 @@ XCOMM End translation of func(DEPS)
 XCOMM Begin translation of func(RUN)		@@\
 DEP_SYMLINK_EXT(name,run)			@@\
 DEPS(name,Condor.pm CondorTest.pm)		@@\
-run_list:: Concat(run_list_,name)		@@\
-Concat(run_list_,name):: safe_append.pl name.run	@@\
-	@perl safe_append.pl -v -f run_list -a name	@@\
+list_all:: Concat(list_all__,name)		@@\
+Concat(list_all__,name):: safe_append.pl name.run	@@\
+	@perl safe_append.pl -v -f list_all -a name	@@\
 XCOMM End translation of func(RUN)
 #endif /* RUN */
 
 
+/*
+   TESTCLASS_DECL() is used to declare a new testclass in the test
+   suite.  However, exactly what it has to do depends on if it's in
+   the top-level Imakefile or in the compiler specific subdirs.  In
+   the compiler specific subdirs, it just has to define a dummy rule
+   for the given testclass so that "make [testclass]" will have at
+   least 1 target, and will work, even if there are no tests to build
+   for that class.  In the top-level, it has to find all the compiler
+   subdirectories (by depending on the compiler_list), and for each
+   one in the list, cd into the corresponding subdirectory and invoke
+   "make [testclass]".
+
+   There are some things this rule will do in common, regardless of if
+   it's in the top-level or a compiler subdirectory.  These tasks are
+   put in a common rule, TESTCLASS_DECL_BASE(), so they can be shared.
+*/
 #ifndef TESTCLASS_DECL
 #ifdef FLAGS_MACRO_NAME
-#define TESTCLASS_DECL(testclass)		@@\
+#define TESTCLASS_DECL(classname)		@@\
 XCOMM Begin translation of func(TESTCLASS_DECL)	@@\
-testclass::					@@\
+TESTCLASS_DECL_BASE(classname)			@@\
+classname::					@@\
 	@/bin/true				@@\
 XCOMM End translation of func(TESTCLASS_DECL)
 #else /* ! FLAGS_MACRO_NAME */
-#define TESTCLASS_DECL(testclass)		@@\
+#define TESTCLASS_DECL(classname)		@@\
 XCOMM Begin translation of func(TESTCLASS_DECL)	@@\
-testclass:: compiler_list			@@\
+TESTCLASS_DECL_BASE(classname)			@@\
+classname:: compiler_list			@@\
 	for X in `cat compiler_list` ; do \	@@\
 	    make $$X/Makefile; \		@@\
-	     cd $$X; make testclass; cd ..; \	@@\
+	     cd $$X; make classname; cd ..; \	@@\
 	done					@@\
 XCOMM End translation of func(TESTCLASS_DECL)
 #endif /* FLAGS_MACRO_NAME */
 #endif /* TESTCLASS_DECL */
 
-
-#ifndef TESTCLASS
-#define TESTCLASS(name,testclass)		@@\
-XCOMM Begin translation of func(TESTCLASS)	@@\
-testclass:: name				@@\
+/*
+   This rule contains common stuff for both versions of
+   TESTCLASS_DECL().  See the comment above for why there are two.
+   This rule handles all the testclass list related work.  In
+   particular, it ensures that the "all_lists" target depends on
+   making a list for this class, it adds this class to the master list
+   of all testclasses ("list_testclass"), it initializes the list for
+   this specific testclass ("list_[classname]"), and cleans up all of
+   the above on "make clean".
+*/
+#ifndef TESTCLASS_DECL_BASE
+#define TESTCLASS_DECL_BASE(classname)		@@\
+XCOMM Begin translation of func(TESTCLASS_DECL_BASE) @@\
+all_lists:: Concat(list_,classname)		@@\
+list_testclass:: Concat(list_testclass_,classname)	@@\
+Concat(list_testclass_,classname):: safe_append.pl	@@\
+	@perl safe_append.pl -v -f list_testclass -a classname	@@\
+Concat(list_,classname):: list_testclass	@@\
+	touch Concat(list_,classname)		@@\
 clean::						@@\
-	rm -f class_list Concat(testclass,_list) @@\
-class_list:: Concat(testclass,_list)		@@\
-class_list:: Concat(class_list_,name)		@@\
-Concat(class_list_,name):: safe_append.pl	@@\
-	@perl safe_append.pl -v -f class_list -a testclass	@@\
-Concat(testclass,_list):: Concat3(list_,testclass,name)	@@\
-Concat3(list_,testclass,name):: safe_append.pl	@@\
-	@perl safe_append.pl -v -f Concat(testclass,_list) -a name	@@\
+	rm -f list_testclass Concat(list_,classname) @@\
+XCOMM End translation of func(TESTCLASS_DECL_BASE)
+#endif /* TESTCLASS_DECL_BASE */
+
+
+/*
+   This rule is how a given test is added to a specific testclass.
+   It ensures that the "all_lists" target depends on this testclass's
+   list, which helps us catch errors early in the build process.  It
+   also ensures that the classname itself depends on this test
+   (e.g. "TESTCLASS(foo,bar)" will ensure that "make bar" will build
+   test foo), and it verifies that this testclass has been properly
+   declared with a TESTCLASS_DECL() rule.  It does this final step by
+   depending on the master list of testclasses (which is only created
+   and populated by TESTCLASS_DECL() rules), and it greps through that
+   list to find the given testclass this rule is envoked with.  If
+   this rule is being called with a testclass not in the master list,
+   make will fail with a verbose error message.  If it's being called
+   with a valid testclass, it appends the given testname into the list
+   for the given classname.
+*/
+#ifndef TESTCLASS
+#define TESTCLASS(testname,classname)		@@\
+XCOMM Begin translation of func(TESTCLASS)	@@\
+all:: Concat(list_,classname)			@@\
+all_lists:: Concat(list_,classname)		@@\
+classname:: Concat4(list_,classname,__,testname)	@@\
+classname:: testname				@@\
+Concat(list_,classname):: Concat4(list_,classname,__,testname)	@@\
+Concat4(list_,classname,__,testname):: list_testclass safe_append.pl	@@\
+	@grep classname list_testclass > /dev/null; \	@@\
+	if test $$? -ne 0 ; then \		@@\
+	   CLASSNAME=str(classname); \		@@\
+	   TESTNAME=str(testname); \		@@\
+	   echo "ERROR: testclass \"$$CLASSNAME\" is not declared!"; \ @@\
+	   echo "ERROR: test \"$$TESTNAME\" is in this testclass!"; \ @@\
+	   echo "A) add a TESTCLASS_DECL() rule for \"$$CLASSNAME\", or"; \ @@\
+	   echo "B) put \"$$TESTNAME\" in a different testclass"; \ @@\
+	   exit 1; \				@@\
+	fi					@@\
+	@perl safe_append.pl -v -f Concat(list_,classname) -a testname  @@\
 XCOMM End translation of func(TESTCLASS)
 #endif /* TESTCLASS */
 
