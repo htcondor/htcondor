@@ -363,6 +363,7 @@ checkProxy()
 	ASSERT(X509Proxy);
 	int seconds_left = x509_proxy_seconds_until_expire(X509Proxy);
 	time_t current_expiration_time = now + seconds_left;
+	static time_t last_expiration_time = 0;
 
 	if ( seconds_left < 0 ) {
 		// Proxy file is gone. Since the GASS needs the proxy file for
@@ -379,28 +380,43 @@ checkProxy()
 			"Condor-G proxy cert valid for %s\n",format_time(seconds_left));
 	}
 
+	if ( last_expiration_time == 0 ) {
+		// First time through....
+		last_expiration_time = Proxy_Expiration_Time;
+	}
+
 	// If our proxy expired in the past, make it seem like it expired
 	// right now so we don't have to deal with time_t negative overflows
 	if ( now > Proxy_Expiration_Time ) {
 		Proxy_Expiration_Time = now;
 	}
+	if ( now > last_expiration_time ) {
+		last_expiration_time = now;
+	}
 
 	// Check if we have a refreshed proxy
-	if ( current_expiration_time > Proxy_Expiration_Time ) {
+	if ( (current_expiration_time > Proxy_Expiration_Time) &&
+		 (current_expiration_time > last_expiration_time) ) 
+	{
 		// We have a refreshed proxy!
 		dprintf(D_FULLDEBUG,"New proxy found, valid for %s\n",
 				format_time(seconds_left));
-		Proxy_Expiration_Time = current_expiration_time;
+		last_expiration_time = current_expiration_time;
 
-		GahpMain.globus_gram_client_set_credentials( X509Proxy );
-
-		// signal every job
-		GlobusJob *next_job;
-
-		JobsByProcID.startIterations();
-
-		while ( JobsByProcID.iterate( next_job ) != 0 ) {
-			next_job->SetEvaluateState();
+		// Try to refresh the proxy cached in the gahp server
+		int res = GahpMain.globus_gram_client_set_credentials( X509Proxy );
+		if ( res == 0  ) {
+			// Success!  Gahp server has refreshed the proxy
+			Proxy_Expiration_Time = current_expiration_time;
+			// signal every job, in case some were waiting for a new proxy
+			GlobusJob *next_job;
+			JobsByProcID.startIterations();
+			while ( JobsByProcID.iterate( next_job ) != 0 ) {
+				next_job->SetEvaluateState();
+			}
+		} else {
+			// Failed to refresh proxy in the gahp server
+			dprintf(D_FULLDEBUG,"Failed to reset credentials to new proxy\n");
 		}
 	}
 
@@ -415,8 +431,9 @@ checkProxy()
 
 		char *formated_minproxy = strdup(format_time(minProxy_time));
 		dprintf(D_ALWAYS,
-			"ERROR: Condor-G proxy expiring; valid for %s - minimum allowed is %s\n",
-			X509Proxy, format_time((int)(Proxy_Expiration_Time - now) ), 
+			"ERROR: Condor-G proxy expiring; "
+			"valid for %s - minimum allowed is %s\n",
+			format_time((int)(Proxy_Expiration_Time - now) ), 
 			formated_minproxy);
 		free(formated_minproxy);
 
