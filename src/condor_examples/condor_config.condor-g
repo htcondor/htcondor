@@ -461,7 +461,7 @@ RESERVED_DISK		= 5
 #DC_DAEMON_LIST = MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD
 
 ##  Where are the binaries for these daemons?
-MASTER				= $(BIN)/condor_master
+MASTER				= $(SBIN)/condor_master
 SCHEDD				= $(SBIN)/condor_schedd
 NEGOTIATOR			= $(SBIN)/condor_negotiator
 COLLECTOR			= $(SBIN)/condor_collector
