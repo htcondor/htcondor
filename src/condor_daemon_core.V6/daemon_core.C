@@ -5256,6 +5256,7 @@ DaemonCore::Inherit( void )
 						FALSE, ppid );
 		assert(pidtmp->hProcess);
 		pidtmp->hThread = NULL;		// do not allow child to suspend parent
+		pidtmp->deallocate = 0L;
 #endif
 		assert( pidTable->insert(ppid,pidtmp) == 0 );
 #ifdef WIN32
@@ -5863,6 +5864,9 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	// If process is NT and is remote, we are passed the exit status.
 	// If process is NT and is local, we need to fetch the exit status here.
 #ifdef WIN32
+	
+	pidentry->deallocate = 0L; // init deallocate on WIN32
+
 	if ( pidentry->is_local ) {
 		DWORD winexit;
 	
