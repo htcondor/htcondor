@@ -2648,8 +2648,8 @@ DedicatedScheduler::computeSchedule( void )
 					idle_candidates->markScheduled();
 					delete idle_candidates;
 					idle_candidates = NULL;
-					delete idle_candidate_jobs;
-					idle_candidate_jobs = NULL;
+					delete idle_candidates_jobs;
+					idle_candidates_jobs = NULL;
 				}
 			
 				if( limbo_candidates ) {
