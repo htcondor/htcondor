@@ -30,6 +30,8 @@
 #ifndef SOCK_H
 #define SOCK_H
 
+#include "stream.h"
+
 /*
 **	B A S E    S O C K
 */
