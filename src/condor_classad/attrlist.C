@@ -184,6 +184,9 @@ AttrList(FILE *file, char *delimitor, int &isEOF, int &error, int &empty)
 
 			// parse the expression in the string
 		if( Parse( buffer, tree ) || Insert( tree ) == FALSE ) {
+				// print out where we barfed to the log file
+			dprintf(D_ALWAYS,"failed to create classad; bad expr = %s\n",
+				buffer);
 				// read until delimitor or EOF; whichever comes first
 			while( strncmp( buffer, delimitor, delimLen ) && !feof( file ) ) {
 				fgets( buffer, delimLen+1, file );
