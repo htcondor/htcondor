@@ -37,13 +37,21 @@ comma-delimited string.
 
 \item The relative priority of a user's own jobs in the local
 \condor{schedd} queue is no longer limited to the range -20 to +20,
-but can be integer value.
+but can be any integer value.
+
+\item Added the \Condor{dagman} arguments {-noeventchecks} and
+{-allowlogerror} to \Condor{submit\_dag}.
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Removed case-sensitivity of command-line argument names in
+\Condor{submit\_dag}.
+
+\item Fixed the {-r} (remote schedd) option in \Condor{submit\_dag}.
 
 % Karen's rewrite of Derek's prose
 \item Condor versions 6.7.1 through 6.7.4 exhibit a bug in

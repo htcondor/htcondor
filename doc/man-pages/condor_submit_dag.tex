@@ -11,6 +11,9 @@
 \oOpt{-nopostfail}
 \oOptArg{-storklog}{LogFileName}
 \oOptArg{-notification}{value}
+\oOpt{-noeventchecks}
+\oOpt{-allowlogerror}
+\oOptArg{-r}{schedd\_name}
 \oOptArg{-debug}{level}
 \Arg{DAGInputFile}
 
@@ -66,6 +69,16 @@ description.
      \Condor{submit} manual page on page~\pageref{man-condor-submit}
      for specification of \Arg{value}.
      }
+  \OptItem{\Opt{-noeventchecks}}{This optional argument turns off
+     extra checking of event consistency within \Condor{dagman}.}
+  \OptItem{\Opt{-allowlogerror}}{This optional argument has
+     \Condor{dagman} try to run the specified DAG, even in the case
+     of detected errors in the user log specification. }
+  \OptItem{\OptArg{-r}{schedd\_name}}{Submit to a remote schedd. The jobs
+    will be submitted to the schedd on the specified remote host. On Unix
+    systems, the Condor administrator for you site must override the default
+    AUTHENTICATION\_METHODS configuration setting to enable remote file system
+    (FS\_REMOTE) authentication.}
   \OptItem{\OptArg{-debug}{level}}{
      Passes the the \Arg{level} of debugging output desired to
      \Condor{dagman}.  \Arg{level} is an integer, with values of
