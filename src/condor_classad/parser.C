@@ -116,8 +116,8 @@ Match(LexemeType t, char*& s, int& count)
 int 
 ParseFactor(char*& s, ExprTree*& newTree, int& count)
 {
-    Token*		t = LookToken(s);	// next token
-	ExprTree	*expr;
+    Token*		t     = LookToken(s); // next token
+	ExprTree	*expr = NULL;
  
     switch(t->type)
     {
@@ -241,9 +241,9 @@ ParseFactor(char*& s, ExprTree*& newTree, int& count)
 int 
 ParseX4(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 {
-    Token*			t = LookToken(s);	// next token
-    ExprTree*		subTree;
-    ExprTree*		rArg;
+    Token*			t       = LookToken(s);	// next token
+    ExprTree*		subTree = NULL;
+    ExprTree*		rArg    = NULL;
 
     switch(t->type)
     {
@@ -287,7 +287,7 @@ ParseX4(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 int 
 ParseMultOp(char*& s, ExprTree*& newTree, int& count)
 {
-    ExprTree*	lArg;
+    ExprTree*	lArg = NULL;
 
     if(ParseFactor(s, lArg, count))
     {
@@ -300,9 +300,9 @@ ParseMultOp(char*& s, ExprTree*& newTree, int& count)
 int 
 ParseX3(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 {
-    Token*			t = LookToken(s);
-    ExprTree*		subTree;
-    ExprTree*		rArg;
+    Token*			t       = LookToken(s);
+    ExprTree*		subTree = NULL;
+    ExprTree*		rArg    = NULL;
 
     switch(t->type)
     {
@@ -347,7 +347,7 @@ int
 ParseAddOp(char*& s, ExprTree*& newTree, int& count)
 {
     Token*		t;
-    ExprTree*	lArg;
+    ExprTree*	lArg = NULL;
     char*		tmp;
 
     if(ParseMultOp(s, lArg, count))
@@ -378,9 +378,9 @@ ParseAddOp(char*& s, ExprTree*& newTree, int& count)
 int 
 ParseX2p5(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 {
-    Token*		t = LookToken(s);
-    ExprTree*	subTree;
-    ExprTree*	rArg;
+    Token*		t       = LookToken(s);
+    ExprTree*	subTree = NULL;
+    ExprTree*	rArg    = NULL;
 
     switch(t->type) {
         case LX_LT:
@@ -435,7 +435,7 @@ ParseX2p5(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 int 
 ParseEqualityOp(char*& s, ExprTree*& newTree, int& count)
 {
-    ExprTree*	lArg;
+    ExprTree*	lArg = NULL;
 
     if(ParseAddOp(s, lArg, count)) {
         return ParseX2p5(lArg, s, newTree, count);
@@ -448,9 +448,9 @@ ParseEqualityOp(char*& s, ExprTree*& newTree, int& count)
 int 
 ParseX2(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 {
-    Token*		t = LookToken(s);
-    ExprTree*	subTree;
-    ExprTree*	rArg;
+    Token*		t       = LookToken(s);
+    ExprTree*	subTree = NULL;
+    ExprTree*	rArg    = NULL;
 
     switch(t->type) {
         case LX_META_EQ :
@@ -505,7 +505,7 @@ ParseX2(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 int 
 ParseSimpleExpr(char*& s, ExprTree*& newTree, int& count)
 {
-    ExprTree*	lArg;
+    ExprTree*	lArg = NULL;
 
     if(ParseEqualityOp(s, lArg, count)) {
         return ParseX2(lArg, s, newTree, count);
@@ -518,9 +518,9 @@ ParseSimpleExpr(char*& s, ExprTree*& newTree, int& count)
 int 
 ParseX1p5(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 {
-    Token*		t = LookToken(s);
-    ExprTree*	subTree;
-    ExprTree*	rArg;
+    Token*		t       = LookToken(s);
+    ExprTree*	subTree = NULL;
+    ExprTree*	rArg    = NULL;
 
     if( t->type == LX_AND ) {
         Match(LX_AND, s, count);
@@ -542,7 +542,7 @@ ParseX1p5(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 int 
 ParseAndExpr(char*& s, ExprTree*& newTree, int& count)
 {
-    ExprTree*	lArg;
+    ExprTree*	lArg = NULL;
 
     if(ParseSimpleExpr(s, lArg, count)) {
         return ParseX1p5(lArg, s, newTree, count);
@@ -555,9 +555,9 @@ ParseAndExpr(char*& s, ExprTree*& newTree, int& count)
 int 
 ParseX1(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 {
-    Token*		t = LookToken(s);
-    ExprTree*	subTree;
-    ExprTree*	rArg;
+    Token*		t       = LookToken(s);
+    ExprTree*	subTree = NULL;
+    ExprTree*	rArg    = NULL;
 
     if( t->type == LX_OR ) {
         Match(LX_OR, s, count);
@@ -578,7 +578,7 @@ ParseX1(ExprTree* lArg, char*& s, ExprTree*& newTree, int& count)
 int 
 ParseExpr(char*& s, ExprTree*& newTree, int& count)
 {
-    ExprTree*	lArg;
+    ExprTree*	lArg = NULL;
 
     if(ParseAndExpr(s, lArg, count)) {
         return ParseX1(lArg, s, newTree, count);
@@ -591,8 +591,8 @@ int
 ParseAssignExpr(char*& s, ExprTree*& newTree, int& count)
 {
     Token*	t;
-    ExprTree* 	lArg;
-    ExprTree* 	rArg;
+    ExprTree* 	lArg = NULL;
+    ExprTree* 	rArg = NULL;
 
     if(ParseExpr(s, lArg, count))
     {
@@ -633,6 +633,8 @@ Parse(const char* s, ExprTree*& tree)
 	char   *tmp;
 	int    count;
 
+	tree = NULL;
+
 	// Make a copy of the string we're parsing.  Unlike the old
 	// version (see below) we don't bite the dust when the string is
 	// really long. But I'm unsure why the original author of this
@@ -648,7 +650,11 @@ Parse(const char* s, ExprTree*& tree)
     if(ParseAssignExpr(tmp, tree, count))
     {
 		count = 0;
-    }
+    } else if (tree != NULL) {
+		delete tree;
+		tree = NULL;
+	}
+
 	nextToken().reset();
 	free(str);
     return count;
