@@ -31,12 +31,19 @@
 #define XDR_BLOCKSIZ (1024*4)
 #define UDP_BLOCKSIZ (16 * 1024)
 
+#if defined(SUNOS41) || defined(ULTRIX43) || defined(IRIX5)
+#	define xdr_mode_t(x,v)	xdr_u_short(x,(u_short *)v)
+#elif defined(OSF1)
+#	define xdr_mode_t(x,v)	xdr_u_int(x,(u_int *)v)
+#elif defined(AIX32)
+#	define xdr_mode_t(x,v)	xdr_u_long(x,(u_long *)v)
+#endif
+
 #if defined(OSF1)
 #	define xdr_dev_t(x,v)	xdr_int(x,(int *)v)
 #	define xdr_ino_t(x,v)	xdr_u_int(x,(u_int *)v)
 #	define xdr_time_t(x,v)	xdr_int(x,(int *)v)
 #	define xdr_uid_t(x,v)	xdr_u_int(x,(u_int *)v)
-#	define xdr_mode_t(x,v)	xdr_u_int(x,(u_int *)v)
 #	define xdr_gid_t(x,v)	xdr_u_int(x,(u_int *)v)
 #	define xdr_key_t(x,v)	xdr_int(x,(int *)v)
 #else
@@ -44,7 +51,6 @@
 #	define xdr_ino_t(x,v)	xdr_u_long(x,(u_long *)v)
 #	define xdr_time_t(x,v)	xdr_long(x,(long *)v)
 #	define xdr_uid_t(x,v)	xdr_u_long(x,(u_long *)v)
-#	define xdr_mode_t(x,v)	xdr_u_long(x,(u_long *)v)
 #	define xdr_gid_t(x,v)	xdr_u_long(x,(u_long *)v)
 #	define xdr_key_t(x,v)	xdr_long(x,(long *)v)
 #endif
