@@ -12,14 +12,14 @@ questions about Condor.
 \index{Condor!getting|(}
 \index{Condor!binaries|(}
 
-\subsection{Where can I download Condor?}
+\subsection*{Where can I download Condor?}
 
 Condor can be downloaded from
-\Url{http://www.cs.wisc.edu/condor/downloads} (Madison, Wisconsin,
-USA) or \Url{http://www.bo.infn.it/condor-mirror/downloads} (a mirror
+\URL{http://www.cs.wisc.edu/condor/downloads} (Madison, Wisconsin,
+USA) or \URL{http://www.bo.infn.it/condor-mirror/downloads} (a mirror
 site at the Istituto Nazionale di Fisica Nucleare in Bologna, Italy).
 
-\subsection{When I click to download Condor, it sends me back to the downloads page!}
+\subsection*{When I click to download Condor, it sends me back to the downloads page!}
 
 If you are trying to download Condor through a web proxy, try
 disabling it.
@@ -27,14 +27,14 @@ Our web site uses the ``referring page'' as you navigate through our
 download menus in order to give you the right version of Condor, but
 sometimes proxies block this information from reaching our web site.
 
-\subsection{What platforms do you support?}
+\subsection*{What platforms do you support?}
 
 See Section~\ref{sec:Availability}, on
 page~\pageref{sec:Availability}.
 
 \index{Condor!binaries|)}
 
-\subsection{Do you distribute source code?}
+\subsection*{Do you distribute source code?}
 \index{Condor!source code|(}
 
 At this time we do \Bold{not} distribute source code publicly, but
@@ -46,7 +46,7 @@ you.
 \index{Condor!source code|)}
 
 %%%%%%%%%%%%%%%%
-\subsection{How do I upgrade the Unix machines in my pool from 6.2.x to 6.4.x?}
+\subsection*{How do I upgrade the Unix machines in my pool from 6.2.x to 6.4.x?}
 \index{upgrade!version 6.2.x to version 6.4.x}
 
 This series of steps explains how to upgrade a pool of machines
@@ -212,7 +212,7 @@ Add the path name to this directory to the
 
 %%%%%%%%%%%%%%%%
 
-\subsection{What is ``Personal Condor''?}
+\subsection*{What is ``Personal Condor''?}
 \index{Condor!Personal|(}
 \index{Personal Condor|(}
 
@@ -232,7 +232,7 @@ more information on flocking.
 \index{Condor!distribution|)}
 \index{Condor!getting|)}
 
-\subsection{What do I do now? My installation of Condor does not work.}
+\subsection*{What do I do now? My installation of Condor does not work.}
 
 What to do to get Condor running properly depends on what sort of
 error occurs. 
@@ -299,20 +299,20 @@ Condor to use.
 
 \section{Setting up Condor}
 
-\subsection{How do I set up a central manager on a machine with multiple
+\subsection*{How do I set up a central manager on a machine with multiple
 network interfaces?}
 
 Please see section~\ref{sec:Multiple-Interfaces} on 
 page~\pageref{sec:Multiple-Interfaces}.
 
-\subsection{How do I get more than one job to run on my SMP machine?}
+\subsection*{How do I get more than one job to run on my SMP machine?}
 
 Condor will automatically recognize a SMP machine and advertise each
 CPU of the machine separately.
 For more details, see section~\ref{sec:Configuring-SMP} on
 page~\pageref{sec:Configuring-SMP}.
 
-\subsection{How do I set up my machines so that only certain users's
+\subsection*{How do I set up my machines so that only certain users's
 jobs will run on them?}
 
 Restrictions on what jobs will run on a given resource can be easily
@@ -327,7 +327,7 @@ machine's Condor configuration file:
 To configure multiple machines to do so, simply create a common
 configuration file containing this requirement for them to share.
 
-\subsection{How do I configure Condor to run my jobs only on machines
+\subsection*{How do I configure Condor to run my jobs only on machines
 that have the right packages installed?}
 \index{running a job!on only certain machines|(}
 
@@ -361,7 +361,7 @@ running anywhere!
 
 \index{running a job!on only certain machines|)}
 
-\subsection{How do I configure Condor to only run jobs at night?}
+\subsection*{How do I configure Condor to only run jobs at night?}
 
 A commonly requested policy for running batch jobs is to only allow
 them to run at night, or at other pre-specified times of the day.
@@ -377,7 +377,7 @@ Policy''
 \index{running a job!at certain times of day|)}
 
 
-\subsection{Why will the \Condor{master} not run when a local
+\subsection*{Why will the \Condor{master} not run when a local
 configuration file is missing?}
 
 If a \Macro{LOCAL\_CONFIG\_FILE} 
@@ -421,17 +421,17 @@ If supplied it with an empty file, the \Condor{master} works fine.
 
 \section{Running Condor Jobs}
 
-\subsection{I'm at the University of Wisconsin-Madison Computer
+\subsection*{I'm at the University of Wisconsin-Madison Computer
 Science Dept., and I am having problems!}
 
-Please see the web page \Url{http://www.cs.wisc.edu/condor/uwcs}.
+Please see the web page \URL{http://www.cs.wisc.edu/condor/uwcs}.
 As
 it explains, your home directory is in AFS, which by default has
 access control restrictions which can prevent Condor jobs from running
 properly.
 The above URL will explain how to solve the problem.
 
-\subsection{I'm getting a lot of email from Condor.  Can I just delete it all?}
+\subsection*{I'm getting a lot of email from Condor.  Can I just delete it all?}
 
 Generally you shouldn't ignore \Bold{all} of the mail Condor sends,
 but you can reduce the amount you get by telling Condor that you don't
@@ -445,7 +445,7 @@ See the Notification parameter in the \Condor{q} man page on
 page~\pageref{man-condor-submit-notification} of this manual for more
 information.
 
-\subsection{Why will my vanilla jobs only run on the machine where I
+\subsection*{Why will my vanilla jobs only run on the machine where I
 submitted them from?}
 
 Check the following:
@@ -469,7 +469,7 @@ See Section~\ref{sec:Non-Root}, on page~\pageref{sec:Non-Root}.
 
 \end{enumerate}
 
-\subsection{My job starts but exits right away with signal 9.}
+\subsection*{My job starts but exits right away with signal 9.}
 
 \index{job!exiting!signal 9 \(Unix\)|(}
 
@@ -482,7 +482,7 @@ so it contains all the routines it needs.
 
 \index{job!exiting!signal 9 \(Unix\)|)}
 
-\subsection{Why aren't any or all of my jobs running?}
+\subsection*{Why aren't any or all of my jobs running?}
 
 Problems like the following are often reported to us:
 
@@ -520,7 +520,7 @@ Look for messages about priority, "no more machines", or similar.
 
 \end{enumerate}
 
-\subsection{Can I submit my standard universe SPARC Solaris 2.6 jobs
+\subsection*{Can I submit my standard universe SPARC Solaris 2.6 jobs
 and have them run on a SPARC Solaris 2.7 machine?}
 \index{Solaris26}
 \index{Solaris27}
@@ -530,7 +530,7 @@ and SPARC Solaris 2.6 and between SPARC Solaris 2.7 and SPARC Solaris
 2.8, but not between SPARC Solaris 2.6 and SPARC Solaris 2.7.  We may
 implement support for this feature in a future release of Condor.
 
-\subsection{Why do my vanilla jobs keep cycling between suspended and
+\subsection*{Why do my vanilla jobs keep cycling between suspended and
 unsuspended?}
 \index{vanilla jobs!cycling between suspended and unsuspended}
 
@@ -557,7 +557,7 @@ The above policy says to only suspend the job if the cpu has been busy
 with non-Condor load at least three minutes and it has been at least 90
 seconds since the start of the job.
 
-\subsection{Why might my job be preempted (evicted)?}
+\subsection*{Why might my job be preempted (evicted)?}
 
 There are four circumstances under which Condor may evict a job.
 They are controlled by different expressions.
@@ -608,7 +608,7 @@ with the shutdown.
 
 \section{Condor on Windows NT / Windows 2000}
 
-\subsection{Will Condor work on a network of mixed Unix and NT machines?}
+\subsection*{Will Condor work on a network of mixed Unix and NT machines?}
 
 You can have a Condor pool that consists of both Unix and NT machines.
 
@@ -641,7 +641,7 @@ NT or Unix machines.}
 \end{enumerate}
 
 
-\subsection{Job submitted from Unix to execute on NT do not work properly.}
+\subsection*{Job submitted from Unix to execute on NT do not work properly.}
 A difficulty with defaults causes jobs submitted from Unix for execution
 on an NT platform to remain in the queue, but make no progress.
 For jobs with this problem, log files will contain error messages
@@ -657,7 +657,7 @@ into the submit description file for jobs submitted from a Unix
 machine for execution on a Windows NT machine.
 
 
-\subsection{When I run \Condor{status} I get a communication error, or the
+\subsection*{When I run \Condor{status} I get a communication error, or the
 Condor daemon log files report a failure to bind.}
 
 Condor uses the first network interface it sees on your machine.
@@ -675,7 +675,7 @@ Condor config file:
 Where ``ip-address'' is the IP address of the interface you wish
 Condor to use.
 
-\subsection{My job starts but exits right away with status 128.}
+\subsection*{My job starts but exits right away with status 128.}
 \index{job!exiting!status 128 \(NT\)|(}
 
 This can occur when the machine your job is running on is missing a
@@ -688,7 +688,7 @@ in Explorer, choose Quickview, and look under ``Import List''.
 
 \index{job!exiting!status 128 \(NT\)|)}
 
-\subsection{Why does the startd crash on CondorNT with the error\\
+\subsection*{Why does the startd crash on CondorNT with the error\\
 "caInsert: Can't insert CpuBusy into target classad."?}
 
 \index{decimal point!problems with}
@@ -701,7 +701,7 @@ however we have users who have fixed the problem by
 changing the following registry value to a period instead of a comma:
 \verb@HKEY_USERS\.DEFAULT\Control Panel\International\sDecimal@
 
-\subsection{How can I access network files with Condor on NT?}
+\subsection*{How can I access network files with Condor on NT?}
 
 Features to allow Condor NT to work well with a network file server are 
 coming very soon.  However, there are a couple of work-arounds which you 
@@ -982,7 +982,7 @@ A basic installation script for use with the Inno Setup installation
 package compiler can be found in the Install folder.
 \end{verbatim}
 
-\subsection{Does Condor run under Windows 2000?}
+\subsection*{Does Condor run under Windows 2000?}
 
 Condor does run under Windows 2000 Professional and Server.
 
@@ -993,7 +993,7 @@ A Personal Condor installation will \emph{not} work.
 
 \section{Troubleshooting}
 
-\subsection{What happens if the central manager crashes?} 
+\subsection*{What happens if the central manager crashes?} 
 \index{crashes|(}
 \index{recovery from crashes|(}
 
@@ -1008,7 +1008,7 @@ back online.
 \index{recovery from crashes|)}
 
 
-\subsection{When I ssh/telnet to a machine to check particulars of how
+\subsection*{When I ssh/telnet to a machine to check particulars of how
 Condor is doing something, it is always vacating or unclaimed when I
 know a job had been running there!}
 
@@ -1019,7 +1019,7 @@ there, Condor notices activity on the tty allocated to your connection
 and then vacates the job.
 
 
-\subsection{What is wrong? I get no output from \Condor{status}, but
+\subsection*{What is wrong? I get no output from \Condor{status}, but
 the Condor daemons are running.} 
 One likely error message within the collector log of the form
 \begin{verbatim}
@@ -1091,7 +1091,7 @@ Use the solutions given above.
 
 \section{Other questions}
 
-\subsection{Is Condor Y2K-compliant?}
+\subsection*{Is Condor Y2K-compliant?}
 \index{Condor!Y2K|(}
 \index{Y2K|(}
 
@@ -1108,7 +1108,7 @@ correct and their display bugs do not affect the operation of Condor.
 \index{Condor!Y2K|)}
 \index{Y2K|)}
 
-\subsection{Is there a Condor mailing-list?}
+\subsection*{Is there a Condor mailing-list?}
 \index{Condor!mailing-list|(}
 \index{Condor!new versions, notification of|(}
 
@@ -1124,7 +1124,7 @@ of:
 \index{Condor!new versions, notification of|)}
 
 
-\subsection{What is the process for upgrading from 6.0 to 6.2?}
+\subsection*{What is the process for upgrading from 6.0 to 6.2?}
 \index{upgrading!6.0 to 6.2}
 
 The usual process for upgrading is to copy the original 6.0 binaries
@@ -1142,7 +1142,7 @@ the 6.2 supplied libraries. Backwards compatibility to 6.0 from 6.2 had
 been intentionally broken because of an evolution of features that the
 standard universe now supports.
 
-\subsection{My question isn't in the FAQ!}
+\subsection*{My question isn't in the FAQ!}
 
 If you have any questions that are not listed in this FAQ, try looking
 through the rest of the manual.
