@@ -68,10 +68,9 @@ int hashFunction (const HashKey &key, int numBuckets)
     return bkt;
 }
 
-int getIpAddr( ClassAd *ad,
-			   const char * attrname,
+int getIpAddr( const ClassAd *ad,
+			   const char *attrname,
 			   const char *attrold,
-			   sockaddr_in *from,
 			   MyString &ip )
 {
 	ExprTree	*tree;
@@ -97,12 +96,8 @@ int getIpAddr( ClassAd *ad,
 	// If no valid string, do our own thing..
 	if ( ip.Length() == 0 )
 	{
-		ip = sin_to_string( from );
-
-		buf2.sprintf( "%s = \"%s\"", attrname, ip.GetCStr() );
-		ad->Insert( buf2.GetCStr() );
-		dprintf (D_ALWAYS , "WARNING: No %s; inferring address %s\n",
-				 attrname, buf2.GetCStr() );
+		dprintf (D_ALWAYS, "No IP address in classAd \n");
+		return -1;
 	}
 
 	return 0;
@@ -136,7 +131,10 @@ makeStartdAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 		return false;
 	}
 
-	getIpAddr( ad, ATTR_STARTD_IP_ADDR, "STARTD_IP_ADDR", from, buffer );
+	if ( getIpAddr( ad, ATTR_STARTD_IP_ADDR, "STARTD_IP_ADDR", buffer ) < 0 ) {
+		dprintf (D_ALWAYS, "Error: Invalid StartAd\n");
+		return false;
+	}
 	if ( parseIpPort (buffer, hk.ip_addr) < 0 ) {
 		return false;
 	}
@@ -172,7 +170,10 @@ makeScheddAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	}
 
 	// get the IP and port of the schedd 
-	getIpAddr( ad, ATTR_SCHEDD_IP_ADDR, "SCHEDD_IP_ADDR", from, buffer );
+	if ( getIpAddr( ad, ATTR_SCHEDD_IP_ADDR, "SCHEDD_IP_ADDR", buffer ) < 0 ) {
+		dprintf (D_ALWAYS, "Error: Invalid SchedAd\n");
+		return false;
+	}
 	if ( parseIpPort (buffer, hk.ip_addr) < 0 ) {
 		return false;
 	}
@@ -208,7 +209,10 @@ makeLicenseAdHashKey (HashKey &hk, ClassAd *ad, sockaddr_in *from)
 	}
 	
 	// get the IP and port of the startd 
-	getIpAddr( ad, ATTR_MY_ADDRESS, NULL, from, buffer );
+	if ( getIpAddr( ad, ATTR_MY_ADDRESS, NULL, buffer ) < 0 ) {
+		dprintf (D_ALWAYS, "Error: Invalid LicenseAd\n");
+		return false;
+	}
 	if ( parseIpPort (buffer, hk.ip_addr) < 0 ) {
 		return false;
 	}
