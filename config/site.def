@@ -82,7 +82,7 @@ the soft links.  The links will point back to Top/src/... */
 #define WANT_NETMAN	YES
 
 #define WANT_X509       YES
-#define WANT_KERBEROS   NO
+#define WANT_KERBEROS   YES
 #define WANT_MD         YES
 #define WANT_3DES       YES
 #define WANT_BLOWFISH   YES
