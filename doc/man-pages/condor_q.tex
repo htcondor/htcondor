@@ -5,7 +5,7 @@
 \oOpt{-global} 
 \oOptArg{-submitter}{submitter}
 \oOptArg{-name}{name} 
-\oOptArg{-pool}{hostname}
+\oOptArg{-pool}{centralmanagerhostname[:portnumber]}
 \oOpt{-analyze}
 \oOpt{-run}
 \oOpt{-goodput}
@@ -149,9 +149,11 @@ per machine basis.
     \OptItem{\Opt{-global}}{Get queues of all the submitters in the system}
 	\OptItem{\OptArg{-submitter}{submitter}}{List jobs of specific submitter 
 		from all the queues in the pool}
-	\OptItem{\OptArg{-pool}{hostname}}{Use hostname as the central manager to 
-		locate schedds. (The default is the \Macro{COLLECTOR\_HOST} specified
-		in the configuration file.}
+	\OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
+	       {Use the \Argnm{centralmanagerhostname} as 
+	       the central manager to 
+	       locate schedds. (The default is the \Macro{COLLECTOR\_HOST}
+	       specified in the configuration file.}
 	\OptItem{\Opt{-analyze}}{Perform an approximate analysis to determine how
 		many resources are available to run the requested jobs}
 	\OptItem{\Opt{-run}}{Get information about running jobs.}

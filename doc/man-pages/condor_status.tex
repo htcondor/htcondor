@@ -50,8 +50,10 @@ options} may be specified.
     \OptItem{\Opt{-java}}{(Query option) Display only Java-capable resources.}
     \OptItem{\Opt{-master}}{(Query option) Query \Condor{master} ads and display
 		daemon master attributes}
-    \OptItem{\OptArg{-pool}{hostname}}{Query the specified central manager. 
-		(\Condor{status} queries \Macro{COLLECTOR\_HOST} by default)}
+    \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
+    {(Query option) Query the specified central manager using an
+        optional port number. 
+	(\Condor{status} queries \Macro{COLLECTOR\_HOST} by default)}
     \OptItem{\Opt{-schedd}}{(Query option) Query \Condor{schedd} ads and display
 		attributes}
     \OptItem{\Opt{-server}}{(Query option) Query \Condor{startd} ads and 

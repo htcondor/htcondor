@@ -1,7 +1,7 @@
 \begin{ManPage}{\label{man-condor-userprio}\Condor{userprio}}{1}
 {Manage user priorities} 
 \Synopsis \SynProg{\Condor{userprio}}
-\oOptArg{-pool}{hostname}
+\oOptArg{-pool}{centralmanagerhostname[:portnumber]}
 \oOpt{-all}
 \oOpt{-usage}
 \oOptArg{-setprio}{username value}
@@ -73,8 +73,9 @@ for further explanation.
 
 \begin{Options}
 
-\OptItem{\OptArg{-pool}{hostname}}
-	{Contact the specified hostname instead of the local central manager. This
+\OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
+	{Contact specified \Arg{centralmanagerhostname} with an optional
+	port number instead of the local central manager. This
 can be used to check other pools.}
 
 \OptItem{\Opt{-all}}

@@ -3,7 +3,7 @@
 \Synopsis \SynProg{\Condor{stats}}
 \oOptArg{-f}{filename}
 \oOpt{-orgformat}
-\oOptArg{-pool}{hostname}
+\oOptArg{-pool}{centralmanagerhostname[:portnumber]}
 \oArg{query-type}
 \oOpt{time-range}
 
@@ -75,8 +75,8 @@ no information will be available and the query will not be responded to.
 
 \begin{Options}
     \OptItem{\OptArg{-f}{filename}}{Write the information to a file instead of the standard output.}
-    \OptItem{\OptArg{-pool}{hostname}}{Contact the specified central manager instead of the local
-             one.}
+    \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
+    {Contact the specified central manager instead of the local one.}
     \OptItem{\Opt{-orgformat}}{Display the information in the same format it is actually stored.}
     \OptItem{\Opt{-lastday}}{Get information for the last day.}
     \OptItem{\Opt{-lastweek}}{Get information for the last week.}

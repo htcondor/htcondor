@@ -2,7 +2,7 @@
 {Send a classad to the collector daemon}
 \Synopsis \SynProg{\Condor{advertise}}
 \ToolArgsBase
-\oOptArg{-pool}{centralmanagerhostname}
+\oOptArg{-pool}{centralmanagerhostname[:portname]}
 \oOpt{-debug}
 \Arg{update-command}
 \Arg{classad-filename}
@@ -32,8 +32,10 @@ The \Arg{update-command} may be one of the following strings:
 
 \begin{Options}
     \ToolArgsBaseDesc
-    \OptItem{\OptArgnm{-pool}{centralmanagerhostname}}{Specify a pool by
-            giving the central manager's hostname.  The default is the
+    \OptItem{\OptArgnm{-pool}{centralmanagerhostname[:portname]}}
+            {Specify a pool by
+            giving the central manager's hostname and an optional port
+	    number.  The default is the
 	    \MacroNI{COLLECTOR\_HOST} specified in the configuration file.}
     \OptItem{\Opt{-debug}}{Print debugging information as the command
             executes.}

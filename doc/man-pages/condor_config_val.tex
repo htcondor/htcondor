@@ -79,8 +79,9 @@ cause all the Condor daemons in your pool to exit.
 \begin{Options}
 	\OptItem{\OptArg{-name}{daemon\_name}}{ Query the specified
 	daemon for its configuration. }
-	\OptItem{\OptArg{-pool}{hostname}}{ Use the given central
-	manager to find daemons. }
+	\OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
+	   { Use the given central manager and an optional port number
+	   to find daemons. }
 	\OptItem{\OptArg{-address}{\Sinful{ip:port}}}{ Connect to the
 	given ip/port. }
 	\OptItem{\Opt{-master \Bar -schedd \Bar -startd \Bar
