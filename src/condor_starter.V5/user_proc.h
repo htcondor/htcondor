@@ -106,10 +106,7 @@ public:
 
 		// Handle files associated with a process
 	int  fetch_ckpt();		// get checkpoint from submitting machine
-	void store_ckpt();		// send checkpoint to submitting machine
 	void store_core();		// send abnormal core to submitting machine
-	int  update_ckpt();		// create "ckpt.tmp" from "ckpt" and "core"
-	void commit_ckpt();		// mv "ckpt.tmp" to "ckpt"
 	virtual void delete_files();	// clean up files on executing machine
 
 		// Process control
