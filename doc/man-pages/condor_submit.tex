@@ -196,6 +196,7 @@ respect to relative path names.
 
 \item[should\_transfer\_files = $<$YES \Bar\ NO \Bar\ IF\_NEEDED $>$] 
 \index{submit commands!should\_transfer\_files}
+\index{file transfer mechanism}
 The \Opt{should\_transfer\_files} setting is used to define if Condor
 should transfer files to and from the remote machine where your job
 runs.
@@ -221,6 +222,7 @@ page~\pageref{sec:file-transfer}.
 
 Note that \Opt{should\_transfer\_files} is not supported
 for jobs submitted to the globus universe.
+
 %%%%%%%%%%%%%%%%%%%
 %% when_to_transfer_output
 %%%%%%%%%%%%%%%%%%%
@@ -235,9 +237,11 @@ machine only when the job completes (exits on its own).
 The \Arg{ON\_EXIT\_OR\_EVICT} option is intended for fault tolerant
 jobs which periodically save their own state and can restart where
 they left off.
-In this case, files are transfered to the submit machine any time the
+In this case, files are spooled to the submit machine any time the
 job leaves a remote site, either because it exited on its own, or was
 evicted by the Condor system for any reason prior to job completion.
+The files spooled back are placed in a directory defined by
+the value of the \MacroNI{SPOOL} configuration variable.
 Any output files transferred back to the submit machine are
 automatically sent back out again as input files if the job restarts.
 

@@ -710,11 +710,18 @@ what each step is for, and suggests how to answer the questions
 
 \item[STEP 5: File system and UID domains.]
 
-     While Condor does not depend on a shared file system or common UID
-     space for running jobs in the standard universe,
-     vanilla jobs (ones that are not relinked with the Condor
-     libraries) do need a shared file system and a common UID space.  
-     Therefore, it is very important for you to correctly configure
+     Condor does not depend on a shared file system and common UID
+     space for running jobs outside the standard universe.
+     Jobs can specify file transfer within the submit description file.
+     See
+     section~\ref{sec:file-transfer} on page~\pageref{sec:file-transfer}
+     for information on properly setting up file transfer for jobs.
+
+     To utilize the convenience of a shared file system (such as NFS),
+     a common UID space is needed.  
+     This is one in which there is a unique mapping of user names to
+     UIDs across all machines in the common UID space.
+     It is important to correctly configure
      Condor with respect to a shared file system.
      For complete details on what these settings do and how you
      should answer the questions, read
@@ -730,8 +737,8 @@ what each step is for, and suggests how to answer the questions
      \MacroUNI{FULL\_HOSTNAME}, indicating that each machine is in its
      own domain.
 
-     For the UID domain, Condor needs to know if all users across all
-     the machines in your pool have a unique UID.  
+     For the UID domain, Condor needs to know if all user names across all
+     the machines in the pool have a unique UID.  
      If so, \Macro{UID\_DOMAIN} will be set to the domain name of the
      machine running \condor{install}. 
      If not, \MacroNI{UID\_DOMAIN} will be set to

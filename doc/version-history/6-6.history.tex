@@ -58,6 +58,40 @@ raven.cs.wisc.edu
 ...
 \end{verbatim}
 
+\item Windows bug fixes:
+\begin{itemize}
+
+\item Fixed a bug in that would cause Condor to fail to gracefully
+shutdown user jobs that are console applications (including batch
+scripts).
+
+\item Fixed an issue that would prevent \Condor{store\_cred} to succeed
+if the user did not have \verb@NETWORK@ logon rights.
+
+\item Fixed a bug that would cause the \Condor{startd} to crash under
+certain conditions during job eviction. This bug was introduced in Condor
+version 6.6.6.
+
+\item Fixed a bug that would cause \Condor{dagman} to crash if it was
+submitted as a non-Administrator user.
+
+\end{itemize}
+
+\item Fixed a bug that was causing \Condor{startd} to fail to start up
+with the message, "caInsert: Can't insert CpuBusy into target classad."
+
+\item Fixed a long-standing bug in Condor regarding the configuration
+  settings \Macro{LOWPORT} and \Macro{HIGHPORT}.
+  When these were enabled (to restrict Condor's port usage to a
+  specified range), Condor would fail to set the
+  \texttt{SO\_KEEPALIVE} option on sockets it created.
+  This meant that in the case of a hard machine failure (such as a
+  sudden power outage, etc) on one machine, Condor daemons
+  communicating with that machine would never notice it had died.
+  Now, the \texttt{SO\_KEEPALIVE} option is properly set on all
+  sockets, even with \MacroNI{LOWPORT} and \MacroNI{HIGHPORT}
+  defined. 
+
 \end{itemize}
 
 \noindent Known Bugs:

@@ -1,0 +1,115 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:High-Availability}
+Configuring Condor for the High Availability of Daemons} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{High Availability}
+In the case that a key machine no longer functions,
+Condor can be configured such that another machine assumes
+the key functions.
+This is called \emph{High Availability}.
+
+While \emph{High Availability} is generally applicable,
+there is currently one specialized case for its use.
+For a pool where all jobs are submitted through
+a single machine in the pool,
+and there are lots of jobs,
+this machine becoming nonfunctional means that
+jobs stop running.
+The \Condor{schedd} daemon maintains the job queue.
+No job queue due to having a nonfunctional machine
+implies that no jobs can be run.
+This situation is worsened by using one machine
+as the single submission point.
+For each Condor job (taken from the queue) that is executed,
+a \Condor{shadow} process runs on the machine where submitted
+to handle input/output functionality.
+If this machine becomes nonfunctional, none of the jobs can
+continue.
+The entire pool stops running jobs.
+
+The goal of \emph{High Availability} in this special case is
+to transfer the \Condor{schedd} daemon to run on another
+designated machine.
+Jobs caused to stop without finishing can be restarted from the
+beginning, or can continue execution using the most recent checkpoint.
+New jobs can enter the job queue.
+Without \emph{High Availability},
+the job queue would remain intact, but further progress on jobs
+would wait until the machine running the \Condor{schedd} daemon
+became available (after fixing whatever caused it to become
+unavailable).
+
+Condor uses its flexible configuration mechanisms to allow
+the transfer of the \Condor{schedd} daemon from one machine
+to another.
+The configuration specifies
+which machines are chosen to run the \Condor{schedd} daemon.
+To prevent multiple \Condor{schedd} daemons from running at the same time,
+a lock (semaphore-like) is held over the job queue.
+This synchronizes  the situation in which control is
+transferred to a secondary machine,
+and the primary machine returns to functionality.
+Configuration variables also determine time intervals at which 
+the lock expires,
+and periods of time that pass between polling to check
+for expired locks.
+
+To specify a single machine that would take over, if the
+machine running the \Condor{schedd} daemon stops working,
+the following additions are made to the local configuration
+of any and all machines that are able to run the \Condor{schedd} daemon
+(becoming the single pool submission point): 
+
+\begin{verbatim}
+MASTER_HA_LIST = SCHEDD
+SPOOL = /share/spool
+HA_LOCK_URL = file:/share/spool
+\end{verbatim}
+
+Configuration macro \Macro{MASTER\_HA\_LIST} identifies the 
+\Condor{schedd} daemon as the daemon that is to be watched
+to make sure that it is running.
+Each machine with this configuration must have access to the
+lock (the job queue) which synchronizes which single machine does run the
+\Condor{schedd} daemon.
+This lock and the job queue must both be located in a shared file space,
+and is currently specified only with a file URL.
+The configuration specifies the shared space
+(\MacroNI{SPOOL}),
+and the URL of the lock.
+
+As Condor starts on machines that are configured to run
+the single \Condor{schedd} daemon, 
+the \Condor{master} daemon of the
+first machine that looks at (polls) the lock
+notices that no lock is held.
+This implies that no \Condor{schedd} daemon is running.
+This \Condor{master} daemon acquires the lock
+and runs the \Condor{schedd} daemon.
+Other machines with this same capability to run the
+\Condor{schedd} daemon look at (poll) the lock, 
+but do not run the daemon, as the lock is held.
+The machine running the \Condor{schedd} daemon renews the
+lock periodically.
+
+If the machine running the \Condor{schedd} daemon fails to renew
+the lock (because the machine is not functioning),
+the lock times out (becomes stale).
+The lock is released by the \Condor{master} daemon
+if \Condor{off} or \Prog{condor\_off -schedd} is
+executed, or when the \Condor{master} daemon knows that the
+\Condor{schedd} daemon is no longer running.
+As other machines capable of running the \Condor{schedd} daemon
+look at the lock (poll), one machine will be the first
+to notice that the lock has timed out or been released.
+This machine (correctly) interprets this situation as the
+\Condor{schedd} daemon is no longer running.
+This machine's \Condor{master} daemon then acquires the lock
+and runs the \Condor{schedd} daemon.
+
+See 
+section~\ref{sec:Master-Config-File-Entries},
+in the section on \Condor{master} Configuration File Macros
+for details relating to the configuration variables
+used to set timing and polling intervals.
