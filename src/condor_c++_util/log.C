@@ -42,290 +42,166 @@ LogRecord::~LogRecord()
 }
 
 int
-LogRecord::readstring(int fd, char * &str)
+LogRecord::readword(int fd, char * &str)
 {
-  char	buf[1000];
-  int		i;
-  int		rval;
-  
-  for (i = 0; i < sizeof(buf) - 1; i++) {
-    rval = read(fd, &(buf[i]), 1);
-    if (rval < 0) {
-      return rval;
-    }
-    if (buf[i] == '\0') {
-      break;
-    }
-  }
-  buf[i] = '\0';
-  str = strdup(buf);
-  return i;
+	char	buf[1000];
+	int		i;
+	int		rval;
+
+	// ignore leading whitespace
+	do {
+		rval = read(fd, &(buf[0]), 1);
+		if (rval <= 0) {
+			return -1;
+		}
+	} while (isspace(buf[0]));
+
+	// read until whitespace
+	for (i = 1; i < sizeof(buf) - 1; i++) {
+		rval = read(fd, &(buf[i]), 1);
+		if (rval < 0) {
+			return rval;
+		}
+		if (rval == 0) break;
+		if (isspace(buf[i])) break;
+		if (buf[i] == '\0') break;	// shouldn't get '\0'
+	}
+	buf[i] = '\0';
+	str = strdup(buf);
+	return i;
 }
 
 int
-LogRecord::readstring(FILE *fp, char * &str)
+LogRecord::readline(int fd, char * &str)
 {
-  char	buf[1000];
-  int		i;
-  int		rval;
-  
-  for (i = 0; i < sizeof(buf) - 1; i++) {
-    buf[i] = getc(fp);
-    if (buf[i] == EOF) {
-      break;
-    }
-  }
-  buf[i] = '\0';
-  str = strdup(buf);
-  return i;
-  
+	char	buf[1000];
+	int		i;
+	int		rval;
+
+	// ignore leading whitespace
+	do {
+		rval = read(fd, &(buf[0]), 1);
+		if (rval < 0) {
+			return rval;
+		}
+	} while (isspace(buf[0]));
+
+	// read until newline
+	for (i = 1; i < sizeof(buf) - 1; i++) {
+		rval = read(fd, &(buf[i]), 1);
+		if (rval < 0) {
+			return rval;
+		}
+		if (rval == 0) break;
+		if (buf[i] == '\n') break;
+		if (buf[i] == '\0') break;	// shouldn't get '\0'
+	}
+	buf[i] = '\0';
+	str = strdup(buf);
+	return i;
 }
 
-
-int 
+int
 LogRecord::Write(int fd)
 {
-	WriteHeader(fd);
-	WriteBody(fd);
-	WriteTail(fd);
+	int rval;
+
+	rval = WriteHeader(fd);
+	rval += WriteBody(fd);
+	rval += WriteTail(fd);
+
+	return rval;
 }
 
-
-int
-LogRecord::Write(XDR *xdrs)
-{
-	xdrs->x_op = XDR_ENCODE;
-	WriteHeader(xdrs);
-	WriteBody(xdrs);
-	WriteTail(xdrs);
-}
 
 int
 LogRecord::Write(FILE *fp)
 {
-	WriteHeader(fp);
-	WriteBody(fp);
-	WriteTail(fp);
+	return WriteHeader(fp) + WriteBody(fp) + WriteTail(fp);
 }
 
 
 int
 LogRecord::Read(int fd)
 {
-	ReadHeader(fd);
-	ReadBody(fd);
-	ReadTail(fd);
+	return ReadHeader(fd) + ReadBody(fd) + ReadTail(fd);
 }
 
-
-int
-LogRecord::Read(XDR *xdrs)
-{
-	xdrs->x_op = XDR_DECODE;
-
-	ReadHeader(xdrs);
-	ReadBody(xdrs);
-	ReadTail(xdrs);
-}
 
 int
 LogRecord::Read(FILE *fp)
 {
-	ReadHeader(fp);
-	ReadBody(fp);
-	ReadTail(fp);
+	return ReadHeader(fp) + ReadBody(fp) + ReadTail(fp);
 }
 
 
 int
 LogRecord::WriteHeader(int fd)
 {
-	int	rval, tot;
+	char op[20];
 
-	rval = write(fd, &op_type, sizeof(op_type));
-	if (rval < 0) {
-		return rval;
-	}
-	tot = rval;
-	rval = write(fd, &body_size, sizeof(body_size));
-	if (rval < 0) {
-		return rval;
-	}
-	tot += rval;
-	return tot;
-}
+	sprintf(op, "%d ", op_type);
 
-
-int 
-LogRecord::WriteTail(int fd)
-{
-	int	rval, tot;
-	
-
-	rval = write(fd, &op_type, sizeof(op_type));
-	if (rval < 0) {
-		return rval;
-	}
-	tot = rval;
-	rval = write(fd, &body_size, sizeof(body_size));
-	if (rval < 0) {
-		return rval;
-	}
-	tot += rval;
-	return tot;
-}
-
-
-
-
-int
-LogRecord::ReadHeader(int fd)
-{
-	int	rval, tot;
-
-	rval = read(fd, &op_type, sizeof(op_type));
-	if (rval < 0) {
-		return rval;
-	}
-	tot = rval;
-	rval = read(fd, &body_size, sizeof(body_size));
-	if (rval < 0) {
-		return rval;
-	}
-	tot += rval;
-	return tot;
-}
-
-
-int LogRecord::ReadTail(int fd)
-{
-	int	rval, tot;
-
-	rval = read(fd, &op_type, sizeof(op_type));
-	if (rval < 0) {
-		return rval;
-	}
-	tot = rval;
-	rval = read(fd, &body_size, sizeof(body_size));
-	if (rval < 0) {
-		return rval;
-	}
-	tot += rval;
-	return tot;
-}
-
-
-int
-LogRecord::WriteHeader(XDR *xdrs)
-{
-	int	rval, tot;
-
-	rval = xdr_int(xdrs, &op_type);
-	if (!rval) {
-		return rval;
-	}
-	rval = xdr_int(xdrs, &body_size);
-	return rval;
-}
-
-
-int LogRecord::WriteTail(XDR *xdrs)
-{
-	return WriteHeader(xdrs);
-}
-
-
-int
-LogRecord::ReadHeader(XDR *xdrs)
-{
-	return WriteHeader(xdrs);
-}
-
-
-int LogRecord::ReadTail(XDR *xdrs)
-{
-	return WriteTail(xdrs);
+	return write(fd, op, strlen(op));
 }
 
 
 int
 LogRecord::WriteHeader(FILE *fp)
 {
-	int	rval, tot;
-
-	rval = fprintf(fp, "%d ", op_type);
-	if (rval < 0) {
-		return rval;
-	}
-	tot = rval;
-	rval = fprintf(fp, "%d\n",body_size);
-	if (rval < 0) {
-		return rval;
-	}
-	tot += rval;
-	return tot;
+	return fprintf(fp, "%d ", op_type);
 }
 
 
+int
+LogRecord::WriteTail(int fd)
+{
+	return write(fd, "\n", 1);
+}
 
 
-int 
+int
 LogRecord::WriteTail(FILE *fp)
 {
-	int	rval, tot;
-
-	rval = fprintf(fp, "\n%d ", op_type);
-	if (rval < 0) {
-		return rval;
-	}
-	tot = rval;
-	rval = fprintf(fp, "%d\n", body_size);
-
-	if (rval < 0) {
-		return rval;
-	}
-	tot += rval;
-	return tot;
+	return fprintf(fp, "\n");
 }
 
+
+int
+LogRecord::ReadHeader(int fd)
+{
+	int	rval;
+	char *op = NULL;
+
+	rval = readword(fd, op);
+	if (rval < 0) {
+		return rval;
+	}
+	op_type = atoi(op);
+	free(op);
+	return rval;
+}
 
 
 int
 LogRecord::ReadHeader(FILE *fp)
 {
-	int	rval, tot;
-
-	rval = fscanf(fp,"%d ", &op_type);
-	if (rval < 0) {
-		return rval;
-	}
-	tot = rval;
-	rval = fscanf(fp,"%d", &body_size);
-	if (rval < 0) {
-		return rval;
-	}
-	tot += rval;
-	return tot;
+	return fscanf(fp, "%d ", &op_type);
 }
 
 
-int LogRecord::ReadTail(FILE *fp)
+int
+LogRecord::ReadTail(FILE *fp)
 {
-	int	rval, tot;
-
-	rval = fscanf(fp,"\n%d ", &op_type);
-	if (rval < 0) {
-		return rval;
-	}
-	tot = rval;
-	rval = fscanf(fp,"%d", &body_size);
-	if (rval < 0) {
-		return rval;
-	}
-	tot += rval;
-	return tot;
+	return 0;
 }
 
+
+int
+LogRecord::ReadTail(int fd)
+{
+	return 0;
+}
 
 
 LogRecord *
@@ -340,34 +216,9 @@ ReadLogEntry(int fd)
 		return 0;
 	}
 	log_rec = InstantiateLogEntry(fd, head_only.get_op_type());
-	head_only.ReadTail(fd);
-	return log_rec;
-}
-
-
-LogRecord *
-ReadLogEntry(FILE *fp)
-{
-	LogRecord		*log_rec;
-	LogRecord		head_only;
-	int				rval;
-
-	rval = head_only.ReadHeader(fp);
-	if (rval < 0) {
+	if (head_only.ReadTail(fd) < 0) {
+		delete log_rec;
 		return 0;
 	}
-	log_rec = InstantiateLogEntry(fp, head_only.get_op_type());
-	head_only.ReadTail(fp);
 	return log_rec;
 }
-
-
-
-
-
-
-
-
-
-
-

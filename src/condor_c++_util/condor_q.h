@@ -59,4 +59,6 @@ class CondorQ
 	int getAndFilterAds (ClassAd &, ClassAdList &);
 };
 
+int JobSort(ClassAd *job1, ClassAd *job2, void *data);
+
 #endif

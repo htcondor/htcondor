@@ -29,7 +29,7 @@ static const char *fltKeywords[] =
 
 // scan function to walk the job queue
 extern "C" getJobAdAndInsert (int, int);
-int getJobAd(int cluster_id, int proc_id, ClassAd *new_ad);
+extern "C" int getJobAd(int cluster_id, int proc_id, ClassAd *new_ad);
 
 // need this global variable to hold information reqd by the scan function
 static ClassAdList *__list;
@@ -148,38 +148,34 @@ fetchQueueFromHost (ClassAdList &list, char *host)
 }
 
 int CondorQ::
-getAndFilterAds (ClassAd &ad, ClassAdList &list)
+getAndFilterAds (ClassAd &queryad, ClassAdList &list)
 {
-	__list = &list;
-	__query = &ad;
+	char		constraint[_POSIX_PATH_MAX];	/* yuk! */
+	ExprTree	*tree;
+	ClassAd		*ad = new ClassAd;
 
-	WalkJobQueue (getJobAdAndInsert);
+	constraint[0] = '\0';
+	tree = queryad.Lookup(ATTR_REQUIREMENTS);
+	if (!tree) {
+		return Q_INVALID_QUERY;
+	}
+	tree->RArg()->PrintToStr(constraint);
+
+	if (GetNextJobByConstraint(constraint, ad, 1) == 0) {
+		list.Insert(ad);
+		ad = new ClassAd;
+		while(GetNextJobByConstraint(constraint, ad, 0) == 0) {
+			list.Insert(ad);
+			ad = new ClassAd;
+		}
+	}
+	delete ad;
 
 	return Q_OK;
 }
 
 
-getJobAdAndInsert(int cluster_id, int proc_id)
-{
-	int rval;
-    ClassAd *new_ad = new ClassAd;
-
-	rval = getJobAd(cluster_id, proc_id, new_ad);
-
-	if (rval != 0) {
-		delete new_ad;
-		return rval;
-	}
-
-	// iff the job ad matches the query, insert it into the list
-	if ((*new_ad) >= (*__query))
-		__list->Insert (new_ad);
-	else
-		delete new_ad;
-
-    return 0;
-}
-
+#if 0 /* getJobAd is now part of qmgmt API */
 getJobAd(int cluster_id, int proc_id, ClassAd *new_ad)
 {
     char    buf[1000];
@@ -205,6 +201,21 @@ getJobAd(int cluster_id, int proc_id, ClassAd *new_ad)
 	new_ad->SetTargetTypeName (STARTD_ADTYPE);
 
 	return 0;
+}
+#endif
+
+int JobSort(ClassAd *job1, ClassAd *job2, void *data)
+{
+	int cluster1=0, cluster2=0, proc1=0, proc2=0;
+
+	job1->LookupInteger(ATTR_CLUSTER_ID, cluster1);
+	job2->LookupInteger(ATTR_CLUSTER_ID, cluster2);
+	if (cluster1 < cluster2) return 1;
+	if (cluster1 > cluster2) return 0;
+	job1->LookupInteger(ATTR_PROC_ID, proc1);
+	job2->LookupInteger(ATTR_PROC_ID, proc2);
+	if (proc1 < proc2) return 1;
+	else return 0;
 }
 
 /* queue printing routines moved here from proc_obj.C, which is being

@@ -1,0 +1,493 @@
+/* 
+** Copyright 1997 by Condor Team
+** 
+** Permission to use, copy, modify, and distribute this software and its
+** documentation for any purpose and without fee is hereby granted,
+** provided that the above copyright notice appear in all copies and that
+** both that copyright notice and this permission notice appear in
+** supporting documentation, and that the names of the University of
+** Wisconsin and the copyright holders not be used in advertising or
+** publicity pertaining to distribution of the software without specific,
+** written prior permission.  The University of Wisconsin and the 
+** copyright holders make no representations about the suitability of this
+** software for any purpose.  It is provided "as is" without express
+** or implied warranty.
+** 
+** THE UNIVERSITY OF WISCONSIN AND THE COPYRIGHT HOLDERS DISCLAIM ALL
+** WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES
+** OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE UNIVERSITY OF
+** WISCONSIN OR THE COPYRIGHT HOLDERS BE LIABLE FOR ANY SPECIAL, INDIRECT
+** OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+** OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+** OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE
+** OR PERFORMANCE OF THIS SOFTWARE.
+** 
+** Author:  Jim Basney (based on Jim Pruyne's QMGMT library)
+**
+*/ 
+
+#define _POSIX_SOURCE
+
+#include "condor_common.h"
+#include "classad_log.h"
+#include "condor_debug.h"
+
+ClassAdLog::ClassAdLog() : table(1024, hashFunction)
+{
+	log_filename[0] = '\0';
+	active_transaction = NULL;
+	log_fd = -1;
+}
+
+ClassAdLog::ClassAdLog(const char *filename) : table(1024, hashFunction)
+{
+	strcpy(log_filename, filename);
+	active_transaction = NULL;
+
+	log_fd = open(log_filename, O_RDWR | O_CREAT, 0600);
+	if (log_fd < 0) {
+		return;
+	}
+
+	// Read all of the log records
+	LogRecord		*log_rec;
+	while ((log_rec = ReadLogEntry(log_fd)) != 0) {
+		switch (log_rec->get_op_type()) {
+		case CondorLogOp_BeginTransaction:
+			if (active_transaction) {
+				dprintf(D_ALWAYS, "Warning: Encountered nested transactions in %s, "
+						"log may be bogus...", filename);
+			} else {
+				active_transaction = new Transaction();
+			}
+			delete log_rec;
+			break;
+		case CondorLogOp_EndTransaction:
+			if (!active_transaction) {
+				dprintf(D_ALWAYS, "Warning: Encountered unmatched end transaction in %s, "
+						"log may be bogus...", filename);
+			} else {
+				active_transaction->Commit(-1, table); // commit in memory only
+				delete active_transaction;
+				active_transaction = NULL;
+			}
+			delete log_rec;
+			break;
+		default:
+			if (active_transaction) {
+				active_transaction->AppendLog(log_rec);
+			} else {
+				log_rec->Play(table);
+				delete log_rec;
+			}
+		}
+	}
+	if (active_transaction) {	// abort incomplete transaction
+		delete active_transaction;
+		active_transaction = NULL;
+	}
+	TruncLog();
+}
+
+ClassAdLog::~ClassAdLog()
+{
+	if (active_transaction) delete active_transaction;
+}
+
+void
+ClassAdLog::AppendLog(LogRecord *log)
+{
+	if (active_transaction) {
+		active_transaction->AppendLog(log);
+	} else {
+		log->Write(log_fd);
+		fsync(log_fd);
+		log->Play(table);
+	}
+}
+
+void
+ClassAdLog::TruncLog()
+{
+	char	tmp_log_filename[_POSIX_PATH_MAX];
+	int new_log_fd;
+
+	sprintf(tmp_log_filename, "%s.tmp", log_filename);
+	new_log_fd = open(tmp_log_filename, O_RDWR | O_CREAT, 0600);
+	if (new_log_fd < 0) {
+		dprintf(D_ALWAYS, "failed to truncate log: open(%s) returns %d\n",
+				tmp_log_filename, new_log_fd);
+		return;
+	}
+	LogState(new_log_fd);
+	close(log_fd);
+#if defined(WIN32)
+	close(new_log_fd);	// avoid sharing violation on move
+	if (MoveFileEx(tmp_log_filename, log_filename, MOVEFILE_REPLACE_EXISTING) == 0) {
+		dprintf(D_ALWAYS, "failed to truncate log: MoveFileEx failed with error %d\n",
+			GetLastError());
+		return;
+	}
+	log_fd = open(log_filename, O_RDWR | O_APPEND, 0600);
+#else
+	log_fd = new_log_fd;
+	if (rename(tmp_log_filename, log_filename) < 0) {
+		dprintf(D_ALWAYS, "failed to truncate log: rename(%s, %s) returns errno %d\n",
+				tmp_log_filename, log_filename, errno);
+		return;
+	}
+#endif
+}
+
+void
+ClassAdLog::BeginTransaction()
+{
+	assert(!active_transaction);
+	active_transaction = new Transaction();
+	LogBeginTransaction *log = new LogBeginTransaction;
+	active_transaction->AppendLog(log);
+}
+
+void
+ClassAdLog::AbortTransaction()
+{
+	// Sometimes we do an AbortTransaction() when we don't know if there was
+	// an active transaction.  This is allowed.
+	if (active_transaction) {
+		delete active_transaction;
+		active_transaction = NULL;
+	}
+}
+
+void
+ClassAdLog::CommitTransaction()
+{
+	assert(active_transaction);
+	LogEndTransaction *log = new LogEndTransaction;
+	active_transaction->AppendLog(log);
+	active_transaction->Commit(log_fd, table);
+	delete active_transaction;
+	active_transaction = NULL;
+}
+
+void
+ClassAdLog::LogState(int fd)
+{
+	LogRecord	*log=NULL;
+	ClassAd		*ad=NULL;
+	ExprTree	*expr=NULL;
+	HashKey		hashval;
+	char		key[_POSIX_PATH_MAX];
+	char		*attr_name = NULL;
+	char		attr_val[_POSIX_PATH_MAX];
+
+	table.startIterations();
+	while(table.iterate(ad) == 1) {
+		table.getCurrentKey(hashval);
+		hashval.sprint(key);
+		log = new LogNewClassAd(key, ad->GetMyTypeName(), ad->GetTargetTypeName());
+		log->Write(fd);
+		delete log;
+		ad->ResetName();
+		attr_name = ad->NextName();
+		while (attr_name) {
+			attr_val[0] = 0;
+			expr = ad->Lookup(attr_name);
+			if (expr) {
+				expr->RArg()->PrintToStr(attr_val);
+				log = new LogSetAttribute(key, attr_name, attr_val);
+				log->Write(fd);
+				delete log;
+				attr_name = ad->NextName();
+			}
+		}
+	}
+	fsync(fd);
+}
+
+LogNewClassAd::LogNewClassAd(const char *k, char *m, char *t)
+{
+	op_type = CondorLogOp_NewClassAd;
+	key = strdup(k);
+	mytype = strdup(m);
+	targettype = strdup(t);
+}
+
+LogNewClassAd::~LogNewClassAd()
+{
+	free(key);
+	free(mytype);
+	free(targettype);
+}
+
+int
+LogNewClassAd::Play(ClassAdHashTable &table)
+{
+	ClassAd	*ad = new ClassAd();
+	ad->SetMyTypeName(mytype);
+	ad->SetTargetTypeName(targettype);
+	return table.insert(HashKey(key), ad);
+}
+
+
+int
+LogNewClassAd::ReadBody(int fd)
+{
+	int rval, rval1;
+	free(key);
+	rval = readword(fd, key);
+	if (rval < 0) return rval;
+	free(mytype);
+	rval1 = readword(fd, mytype);
+	if (rval1 < 0) return rval1;
+	rval += rval1;
+	free(targettype);
+	rval1 = readword(fd, targettype);
+	if (rval1 < 0) return rval1;
+	return rval + rval1;
+}
+
+
+int
+LogNewClassAd::WriteBody(int fd)
+{
+	int rval, rval1;
+	rval = write(fd, key, strlen(key));
+	if (rval < 0) return rval;
+	rval1 = write(fd, " ", 1);
+	if (rval1 < 0) return rval1;
+	rval += rval1;
+	rval1 = write(fd, mytype, strlen(mytype));
+	if (rval1 < 0) return rval1;
+	rval += rval1;
+	rval1 = write(fd, " ", 1);
+	if (rval1 < 0) return rval1;
+	rval += rval1;
+	rval1 = write(fd, targettype, strlen(targettype));
+	if (rval1 < 0) return rval1;
+	return rval + rval1;
+}
+
+LogDestroyClassAd::LogDestroyClassAd(const char *k)
+{
+	op_type = CondorLogOp_DestroyClassAd;
+	key = strdup(k);
+}
+
+
+LogDestroyClassAd::~LogDestroyClassAd()
+{
+	free(key);
+}
+
+
+int
+LogDestroyClassAd::Play(ClassAdHashTable &table)
+{
+	HashKey hkey(key);
+	ClassAd *ad;
+	if (table.lookup(hkey, ad) < 0) {
+		return -1;
+	}
+	delete ad;
+	return table.remove(hkey);
+}
+
+
+int
+LogDestroyClassAd::ReadBody(int fd)
+{
+	free(key);
+	return readword(fd, key);
+}
+
+
+LogSetAttribute::LogSetAttribute(const char *k, const char *n, char *val)
+{
+	op_type = CondorLogOp_SetAttribute;
+	key = strdup(k);
+	name = strdup(n);
+	value = strdup(val);
+}
+
+
+LogSetAttribute::~LogSetAttribute()
+{
+	free(key);
+	free(name);
+	free(value);
+}
+
+
+int
+LogSetAttribute::Play(ClassAdHashTable &table)
+{
+	int rval;
+	ClassAd *ad;
+	if (table.lookup(HashKey(key), ad) < 0)
+		return -1;
+	char *tmp_expr = new char [strlen(name) + strlen(value) + 4];
+	sprintf(tmp_expr, "%s = %s", name, value);
+	rval = ad->Insert(tmp_expr);
+	delete tmp_expr;
+	return rval;
+}
+
+
+int
+LogSetAttribute::WriteBody(int fd)
+{
+	int		rval, rval1;
+
+	rval = write(fd, key, strlen(key));
+	if (rval < 0) {
+		return rval;
+	}
+	rval1 = write(fd, " ", 1);
+	if (rval1 < 0) {
+		return rval1;
+	}
+	rval1 += rval;
+	rval = write(fd, name, strlen(name));
+	if (rval < 0) {
+		return rval;
+	}
+	rval1 += rval;
+	rval = write(fd, " ", 1);
+	if (rval < 0) {
+		return rval;
+	}
+	rval1 += rval;
+	rval = write(fd, value, strlen(value));
+	if (rval < 0) {
+		return rval;
+	}
+	return rval1 + rval;
+}
+
+
+int
+LogSetAttribute::ReadBody(int fd)
+{
+	int rval, rval1;
+
+	free(key);
+	rval1 = readword(fd, key);
+	if (rval1 < 0) {
+		return rval1;
+	}
+
+	free(name);
+	rval = readword(fd, name);
+	if (rval < 0) {
+		return rval;
+	}
+	rval1 += rval;
+
+	free(value);
+	rval = readline(fd, value);
+	if (rval < 0) {
+		return rval;
+	}
+	return rval + rval1;
+}
+
+
+LogDeleteAttribute::LogDeleteAttribute(const char *k, const char *n)
+{
+	op_type = CondorLogOp_DeleteAttribute;
+	key = strdup(k);
+	name = strdup(n);
+}
+
+
+LogDeleteAttribute::~LogDeleteAttribute()
+{
+	free(key);
+	free(name);
+}
+
+
+int
+LogDeleteAttribute::Play(ClassAdHashTable &table)
+{
+	ClassAd *ad;
+	if (table.lookup(HashKey(key), ad) < 0)
+		return -1;
+	return ad->Delete(name);
+}
+
+
+int
+LogDeleteAttribute::WriteBody(int fd)
+{
+	int		rval, rval1;
+
+	rval = write(fd, key, strlen(key));
+	if (rval < 0) {
+		return rval;
+	}
+	rval1 = write(fd, " ", 1);
+	if (rval1 < 0) {
+		return rval1;
+	}
+	rval1 += rval;
+	rval = write(fd, name, strlen(name));
+	if (rval < 0) {
+		return rval;
+	}
+	return rval1 + rval;
+}
+
+
+int
+LogDeleteAttribute::ReadBody(int fd)
+{
+	int rval, rval1;
+
+	free(key);
+	rval1 = readword(fd, key);
+	if (rval1 < 0) {
+		return rval1;
+	}
+
+	free(name);
+	rval = readword(fd, name);
+	if (rval < 0) {
+		return rval;
+	}
+	return rval + rval1;
+}
+
+
+LogRecord	*
+InstantiateLogEntry(int fd, int type)
+{
+	LogRecord	*log_rec;
+
+	switch(type) {
+	    case CondorLogOp_NewClassAd:
+		    log_rec = new LogNewClassAd("", "", "");
+			break;
+	    case CondorLogOp_DestroyClassAd:
+		    log_rec = new LogDestroyClassAd("");
+			break;
+	    case CondorLogOp_SetAttribute:
+		    log_rec = new LogSetAttribute("", "", "");
+			break;
+	    case CondorLogOp_DeleteAttribute:
+		    log_rec = new LogDeleteAttribute("", "");
+			break;
+		case CondorLogOp_BeginTransaction:
+			log_rec = new LogBeginTransaction();
+			break;
+		case CondorLogOp_EndTransaction:
+			log_rec = new LogEndTransaction();
+			break;
+	    default:
+		    return 0;
+			break;
+	}
+	log_rec->ReadBody(fd);
+	return log_rec;
+}

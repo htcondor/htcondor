@@ -1,0 +1,41 @@
+#if !defined(_LOG_TRANSACTION_H)
+#define _LOG_TRANSACTION_H
+
+#include "log.h"
+
+class LogPtrListEntry {
+public:
+	LogPtrListEntry(LogRecord *my_ptr) { ptr = my_ptr; next = 0; }
+	LogRecord *GetPtr() { return ptr; }
+	LogPtrListEntry *GetNext() { return next; }
+	void SetNext(LogPtrListEntry *n) { next = n; }
+private:
+	LogRecord	*ptr;
+	LogPtrListEntry *next;
+};
+
+class LogPtrList {
+public:
+	LogPtrList() { head = 0; last = 0; last_find = 0;}
+	~LogPtrList();
+	void NewEntry(LogRecord *ptr);
+	LogPtrListEntry *FindEntry(LogRecord *ptr);
+	int IsInList(LogRecord *ptr) { return (FindEntry(ptr) != 0); }
+	LogRecord *FirstEntry();
+	LogRecord *NextEntry(LogRecord *ptr);
+private:
+	LogPtrListEntry *head;
+	LogPtrListEntry *last;
+	LogPtrListEntry *last_find;
+};
+
+
+class Transaction {
+public:
+	void Commit(int fd, ClassAdHashTable &table);
+	void AppendLog(LogRecord *);
+private:
+	LogPtrList op_log;
+};
+
+#endif
