@@ -21,3 +21,10 @@
 
 #define PlatformFlags	-DSolaris26
 
+/*
+#define IS_EGCS_BUILD	YES
+#define EgcsPath /s/egcs-1.1.2/sun4x_56/lib/gcc-lib/sparc-sun-solaris2.6/egcs-2.91.66
+*/
+
+#define PlatformLdFlags -ldl -lkstat -lelf -lsocket -lnsl -lm -lc \
+  -Xlinker -B -Xlinker static -lstdc++ -lgcc 
