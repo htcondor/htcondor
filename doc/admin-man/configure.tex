@@ -485,6 +485,39 @@ system.
   for \MacroU{HOSTNAME} and \MacroU{FULL\_HOSTNAME} and inserts them
   into its configuration table.
 
+%%%%%%%%%%%%%%%%%%
+\item[\Macro{NETWORK\_INTERFACE}] \label{param:NetworkInterface}
+  For systems with multiple network interfaces, Condor chooses the
+  first one defined.  To choose a network interface other than the
+  first one, this macro is defined by giving the IP address
+  to use.
+
+\item[\Macro{CM\_IP\_ADDR}] \label{param:CMIPAddr}
+  If neither \MacroNI{COLLECTOR\_HOST} nor 
+  \MacroNI{COLLECTOR\_IP\_ADDR} macros are defined, then this
+  macro will be used to determine the IP address of the central
+  manager (collector daemon).
+  This macro is defined by an IP address.
+
+\item[\Macro{HIGHPORT}] \label{param:HighPort}
+  Specifies an upper limit of given port numbers for Condor to use,
+  such that Condor is restricted to a range of port numbers.
+  If this macro is not explicitly specified, then Condor will
+  not restrict the port numbers that it uses. Condor will use
+  system-assigned port numbers.
+  For this macro to work, both \MacroNI{HIGHPORT} and
+  \MacroNI{LOWPORT} (given below) must be defined.
+
+\item[\Macro{LOWPORT}] \label{param:LowPort}
+  Specifies a lower limit of given port numbers for Condor to use,
+  such that Condor is restricted to a range of port numbers.
+  If this macro is not explicitly specified, then Condor will
+  not restrict the port numbers that it uses. Condor will use
+  system-assigned port numbers.
+  For this macro to work, both \MacroNI{HIGHPORT} (given above) and
+  \MacroNI{LOWPORT} must be defined.
+%%%%%%%%%%%%%%%%%%
+
 \item[\Macro{EMAIL\_DOMAIN}] \label{param:EmailDomain}
   By default, if a user does not specify \AdAttr{notify\_user} in the
   submit description file, any email Condor sends about that job will
