@@ -86,6 +86,7 @@ const char ATTR_JOB_REMOTE_USER_CPU		 [] = "RemoteUserCpu";
 const char ATTR_JOB_REMOTE_WALL_CLOCK	 [] = "RemoteWallClockTime";
 const char ATTR_JOB_ROOT_DIR			 [] = "RootDir";
 const char ATTR_JOB_START                [] = "JobStart";
+const char ATTR_JOB_START_DATE			 [] = "JobStartDate";
 const char ATTR_JOB_STATUS               [] = "JobStatus";
 const char ATTR_JOB_UNIVERSE             [] = "JobUniverse";
 const char ATTR_KEYBOARD_IDLE            [] = "KeyboardIdle";
