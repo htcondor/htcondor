@@ -592,6 +592,9 @@ daemon::Exited( int status )
 	} else {
 		sprintf( buf2, "exited with status %d", WEXITSTATUS(status) );
 	}
+	if ( daemonCore->Was_Not_Responding(pid) ) {
+		sprintf( buf2, "was killed because it was no longer responding");
+	}
 	dprintf( D_ALWAYS, "%s%s\n", buf1, buf2 );
 
 		// For good measure, try to clean up any dead/hung children of
@@ -602,6 +605,10 @@ daemon::Exited( int status )
 #else
 	Killpg( SIGKILL ) ;	
 #endif
+
+		// Set flag saying if it exited cuz it was not responding
+	was_not_responding = daemonCore->Was_Not_Responding(pid);
+
 		// Mark this daemon as gone.
 	pid = 0;
 	CancelAllTimers();
@@ -650,21 +657,32 @@ daemon::Obituary( int status )
         return;
     }
 
-    if( WIFSIGNALED(status) ) {
-        fprintf( mailer, "\"%s\" on \"%s\" died due to signal %d\n",
-				process_name, my_full_hostname(), WTERMSIG(status) );
-        /*
-		   fprintf( mailer, "(%s core was produced)\n",
-		   status->w_coredump ? "a" : "no" );
-		   */
-    } else {
-        fprintf( mailer,
-				"\"%s\" on \"%s\" exited with status %d\n",
-				process_name, my_full_hostname(), WEXITSTATUS(status) );
-    }
+	fprintf( mailer, "\"%s\" on \"%s\" ",process_name,
+		my_full_hostname());
+
+	if ( was_not_responding ) {
+		fprintf( mailer, "was killed because\nit was no longer responding.\n");
+	} else {
+		if( WIFSIGNALED(status) ) {
+			fprintf( mailer, "died due to signal %d.\n",WTERMSIG(status) );
+		} else {
+			fprintf( mailer,"exited with status %d.\n",WEXITSTATUS(status) );
+		}
+	}
+
+	fprintf( mailer, 
+		"Condor will automatically restart this process in %d seconds.\n",
+		NextStart());
+
 
 	if( log_name ) {
 		email_asciifile_tail( mailer, log_name, Lines );
+	}
+
+	// on NT, we will now email the last entry in our pseudo-core file,
+	// since it is ascii...  note: email_corefile_tail() is a no-op on Unix
+	if ( WIFSIGNALED(status) ) {
+		email_corefile_tail( mailer );
 	}
 
 	email_close(mailer);
@@ -704,7 +722,8 @@ daemon::Killpg( int sig )
 		return;
 	}
 #ifdef WANT_DC_PM
-	dprintf( D_ALWAYS, "Killing process groups not supported with DC_PM.\n" );
+	dprintf( D_FULLDEBUG, 
+		"Killing process groups not supported with DC_PM.\n" );
 	return;
 #else
 	priv_state priv = set_root_priv();
