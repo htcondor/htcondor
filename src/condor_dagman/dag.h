@@ -350,6 +350,15 @@ class Dag {
 
 	/* DFS number the jobs in the DAG in order to detect cycle*/
 	void DFSVisit (Job * job);
+
+		/** Check whether we got an exit value that should abort the DAG.
+			@param The job associated with either the PRE script, POST
+				script, or "main" job that just finished.
+			@param The exit value of the relevant script or job.
+			@param The "type" of script or job we're dealing with (PRE
+				script, POST script, or node).
+		*/
+	static void CheckForDagAbort(Job *job, int exitVal, const char *type);
 	
 		// The DAG file name.
 	char *		_dagFile;

@@ -43,6 +43,7 @@ static bool parse_node( Dagman &dm, Job::job_type_t nodeType,
 static bool parse_script(char *endline, Dag *dag, char *filename, int lineNumber);
 static bool parse_parent(Dag *dag, char *filename, int lineNumber);
 static bool parse_retry(Dag *dag, char *filename, int lineNumber);
+static bool parse_abort(Dag *dag, char *filename, int lineNumber);
 static bool parse_dot(Dag *dag, char *filename, int lineNumber);
 static bool parse_vars(Dag *dag, char *filename, int lineNumber);
 
@@ -57,7 +58,7 @@ isKeyWord( const char *token )
 {
     static const char * keywords[] = {
         "JOB", "PARENT", "CHILD", "PRE", "POST", "DONE", "Retry", "SCRIPT",
-		"DOT", "DAP"
+		"DOT", "DAP", "ABORT-DAG-ON"
     };
     static const unsigned int numKeyWords = sizeof(keywords) / 
 		                                    sizeof(const char *);
@@ -109,6 +110,9 @@ bool parse (Dagman &dm, char *filename, Dag *dag) {
 		if (line[0] == 0)       continue;  // Ignore blank lines
 		if (line[0] == COMMENT) continue;  // Ignore comments
 
+			// Note: strtok() could be replaced by MyString::Tokenize(),
+			// which is much safer, but I don't want to deal with that
+			// right now.  wenger 2005-02-02.
 		char *token = strtok(line, DELIMITERS);
 		bool parsed_line_successfully;
 
@@ -147,6 +151,12 @@ bool parse (Dagman &dm, char *filename, Dag *dag) {
 			parsed_line_successfully = parse_retry(dag, filename, lineNumber);
 		} 
 
+		// Handle an Abort spec
+		// Example Syntax is:  ABORT-DAG-ON JobName 2
+		else if( strcasecmp( token, "ABORT-DAG-ON" ) == 0 ) {
+			parsed_line_successfully = parse_abort(dag, filename, lineNumber);
+		} 
+
 		// Handle a Dot spec
 		// Example syntax is: Dot dotfile [UPDATE | DONT-UPDATE] 
 		//                    [OVERWRITE | DONT-OVERWRITE]
@@ -164,8 +174,8 @@ bool parse (Dagman &dm, char *filename, Dag *dag) {
 		// None of the above means that there was bad input.
 		else {
 			debug_printf( DEBUG_QUIET, "%s (line %d): "
-				"Expected JOB, SCRIPT, or PARENT token\n",
-				filename, lineNumber );
+				"Expected JOB, DAP, SCRIPT, PARENT, RETRY, ABORT-DAG-ON, "
+				"DOT or VARS token\n", filename, lineNumber );
 			parsed_line_successfully = false;
 		}
 		
@@ -524,6 +534,70 @@ parse_retry(
         }
     }
 	
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+// 
+// Function: parse_abort
+// Purpose:  Parse a line of the format "ABORT-DAG-ON jobname exit_value"
+// 
+//-----------------------------------------------------------------------------
+static bool 
+parse_abort(
+	Dag  *dag, 
+	char *filename, 
+	int  lineNumber)
+{
+	const char *example = "ABORT-DAG-ON JobName 3";
+	
+	char *jobName = strtok( NULL, DELIMITERS );
+	if( jobName == NULL ) {
+		debug_printf( DEBUG_QUIET,
+					  "%s (line %d): Missing job name\n",
+					  filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+	
+	Job *job = dag->GetJob( jobName );
+	if( job == NULL ) {
+		debug_printf( DEBUG_QUIET, 
+					  "%s (line %d): Unknown Job %s\n",
+					  filename, lineNumber, jobName );
+		return false;
+	}
+	
+	char *abortValStr = strtok( NULL, DELIMITERS );
+	if( abortValStr == NULL ) {
+		debug_printf( DEBUG_QUIET, 
+					  "%s (line %d): Missing abort-on value\n",
+					  filename, lineNumber );
+		exampleSyntax( example );
+		return false;
+	}
+	
+	int abortVal;
+	char *tmp;
+	abortVal = (int)strtol( abortValStr, &tmp, 10 );
+	if( tmp == abortValStr ) {
+		debug_printf( DEBUG_QUIET,
+					  "%s (line %d): Invalid abort-on value \"%s\"\n",
+					  filename, lineNumber, abortValStr );
+		exampleSyntax( example );
+		return false;
+	} else {
+		if ( abortVal == 0 ) {
+			debug_printf( DEBUG_QUIET,
+					  	"%s (line %d): Abort-on value of 0 not allowed\n",
+					  	filename, lineNumber, abortValStr );
+			exampleSyntax( example );
+			return false;
+		}
+		job->abort_dag_val = abortVal;
+		job->have_abort_dag_val = true;
+	}
+
 	return true;
 }
 

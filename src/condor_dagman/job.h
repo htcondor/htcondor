@@ -283,6 +283,13 @@ class Job {
     // indicates whether retry_abort_val has been set
     bool have_retry_abort_val;
 
+		// Special return code indicating that the entire DAG should be
+		// aborted.
+	int abort_dag_val;
+
+		// Indicates whether abort_dag_val was set.
+	bool have_abort_dag_val;
+
 	// somewhat kludgey, but this indicates to Dag::TerminateJob()
 	// whether Dag::_numJobsDone has been incremented for this node
 	// yet or not (since that method can now be called more than once

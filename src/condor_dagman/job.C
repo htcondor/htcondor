@@ -110,6 +110,7 @@ Init( const char* jobName, const char* cmdFile )
     _submitTries = 0;
     have_retry_abort_val = false;
     retry_abort_val = 0xdeadbeef;
+    have_abort_dag_val = false;
 	_visited = false;
 
     MyString logFile = ReadMultipleUserLogs::loadLogFileNameFromSubFile(_cmdFile);

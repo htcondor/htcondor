@@ -69,7 +69,7 @@ static void Usage() {
             "\twhere N is Maximum # of Jobs to run at once "
             "(0 means unlimited)\n"
             "\tdefault -Debug is -Debug %d\n", DEBUG_NORMAL);
-	DC_Exit( 1 );
+	DC_Exit( EXIT_ERROR );
 }
 
 //---------------------------------------------------------------------------
@@ -127,7 +127,7 @@ main_config( bool is_full )
 int
 main_shutdown_fast()
 {
-    DC_Exit( 1 );
+    DC_Exit( EXIT_ERROR );
     return FALSE;
 }
 
@@ -135,11 +135,11 @@ main_shutdown_fast()
 // shutdown gracefully
 int main_shutdown_graceful() {
     dagman.CleanUp();
-	DC_Exit( 1 );
+	DC_Exit( EXIT_ERROR );
     return FALSE;
 }
 
-int main_shutdown_rescue() {
+int main_shutdown_rescue( int exitVal ) {
 	debug_printf( DEBUG_QUIET, "Aborting DAG...\n" );
 	if( dagman.dag ) {
 		debug_printf( DEBUG_NORMAL, "Writing Rescue DAG to %s...\n",
@@ -161,7 +161,8 @@ int main_shutdown_rescue() {
 		}
 	}
 	unlink( lockFileName ); 
-	main_shutdown_graceful();
+    dagman.CleanUp();
+	DC_Exit( exitVal );
 	return false;
 }
 
@@ -170,14 +171,14 @@ int main_shutdown_rescue() {
 // the schedd will send if the DAGMan job is removed from the queue
 int main_shutdown_remove(Service *, int) {
     debug_printf( DEBUG_NORMAL, "Received SIGUSR1\n" );
-	main_shutdown_rescue();
+	main_shutdown_rescue( EXIT_ABORT );
 	return false;
 }
 
 void ExitSuccess() {
 	unlink( lockFileName ); 
     dagman.CleanUp();
-	DC_Exit( 0 );
+	DC_Exit( EXIT_OKAY );
 }
 
 void condor_event_timer();
@@ -533,7 +534,7 @@ void condor_event_timer () {
     if( dagman.dag->DetectCondorLogGrowth() ) {
 		if( dagman.dag->ProcessLogEvents( dagman, CONDORLOG ) == false ) {
 			dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
-			main_shutdown_rescue();
+			main_shutdown_rescue( EXIT_ERROR );
 			return;
         }
     }
@@ -542,7 +543,7 @@ void condor_event_timer () {
       if( dagman.dag->ProcessLogEvents( dagman, DAPLOG ) == false ) {
 debug_printf( DEBUG_NORMAL, "ProcessLogEvents(DAPLOG) returned false\n");
 	dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
-	main_shutdown_rescue();
+	main_shutdown_rescue( EXIT_ERROR );
 	return;
       }
     }
@@ -603,7 +604,7 @@ debug_printf( DEBUG_NORMAL, "ProcessLogEvents(DAPLOG) returned false\n");
 			debug_printf( DEBUG_QUIET, "ERROR: a cycle exists in the DAG\n" );
 		}
 
-		main_shutdown_rescue();
+		main_shutdown_rescue( EXIT_ERROR );
 		return;
     }
 }

@@ -683,6 +683,11 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 
 			job->_Status = Job::STATUS_ERROR;
 
+			if( job->_scriptPost == NULL ||
+					run_post_on_failure == FALSE ) {
+				CheckForDagAbort(job, job->retval, "node");
+			}
+
 			if( job->GetRetries() < job->GetRetryMax() ) {
 				RestartNode( job, recovery );
 				return;
@@ -794,6 +799,8 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 						termEvent->returnValue );
 
 			job->_Status = Job::STATUS_ERROR;
+
+			CheckForDagAbort(job, termEvent->returnValue, "POST script");
 
 			if( job->GetRetries() < job->GetRetryMax() ) {
 				RestartNode( job, recovery );
@@ -1238,6 +1245,8 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 			sprintf( job->error_text, "PRE Script failed with status %d",
 					 WEXITSTATUS(status) );
             job->retval = WEXITSTATUS( status );
+
+			CheckForDagAbort(job, WEXITSTATUS( status ), "PRE script");
 		}
 
         job->_Status = Job::STATUS_ERROR;
@@ -1721,6 +1730,17 @@ Dag::isCycle ()
 		}		
 	}
 	return cycle;
+}
+
+void
+Dag::CheckForDagAbort(Job *job, int exitVal, const char *type)
+{
+	if ( job->have_abort_dag_val &&
+				exitVal == job->abort_dag_val ) {
+		debug_printf( DEBUG_QUIET, "Aborting DAG because we got "
+				"the ABORT exit value from a %s\n", type);
+		main_shutdown_rescue( exitVal );
+	}
 }
 
 //===========================================================================

@@ -25,6 +25,16 @@
 
 #include "dag.h"
 
+	// Don't change these values!  Doing so would break some DAGs.
+enum exit_value {
+	EXIT_OKAY = 0,
+	EXIT_ERROR = 1,
+	EXIT_ABORT = 2, // condor_rm'ed or hit special abort DAG exit code
+};
+
+
+int main_shutdown_rescue( int exitVal );
+
 class Dagman {
   public:
 	Dagman();
