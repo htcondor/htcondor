@@ -108,3 +108,15 @@
 		checkpoint file:		from submitting to executing machine
 		checkpoint file:		from executing machine to submitting machine
 		(abnormal) core file:	from executing machine to submitting machine
+
+6/27/94 bp_Alpha_Alpha (Branch Point Tag)
+	Alpha release of Condor for Dec Alpha.  This is (very close to) the
+	code released on the net as "Condor_5.1a_DecAlpha".  (This branch
+	point should have been created at the release date, but was created
+	later.)
+
+6/27/94 Alpha_Alpha (Branch Point Tag)
+	Alpha release of Condor for Dec Alpha.  This tag refers to the 
+	latest code on the Alpha_Alpha branch.  It is intended for any
+	minor fixes which may be needed for that distribution, not
+	general development.
