@@ -166,18 +166,15 @@ toSink (Sink &dest)
 
 		case LIST_VALUE:
 			// sanity check
-			if (!listValue)
-			{
+			if (!listValue) {
 				clear();
 				return false;
 			}
 			listValue->Rewind();
 			if (!dest.sendToSink((void*)" { ", 3)) return false;
-			while ((val = listValue->Next()))
-			{
+			while ((val = listValue->Next())) {
 				if (!val->toSink(dest)) return false;
-				if (!listValue->AtEnd())
-				{
+				if (!listValue->AtEnd()) {
 					if (!dest.sendToSink((void*)" , ", 3)) return false;
 				}
 			}
@@ -186,8 +183,7 @@ toSink (Sink &dest)
 
 		case CLASSAD_VALUE:
 			// sanity check
-			if (!classadValue)
-			{
+			if (!classadValue) {
 				clear();
 				return false;
 			}
@@ -307,7 +303,8 @@ clear()
 			break;
 
 		case CLASSAD_VALUE:
-			if( classadValue ) delete classadValue;
+			// classad values live in the evaluation environment --- don't
+			// delete them
 			classadValue = NULL;
 			break;
 
@@ -355,9 +352,9 @@ copyFrom( EvalValue &val )
 			return;
 
 		case CLASSAD_VALUE:
-			clear();
-			classadValue = new ClassAd( (*val.classadValue) );
-			valueType = CLASSAD_VALUE;
+			setClassAdValue( val.classadValue );
+			val.classadValue = NULL;
+			val.valueType = UNDEFINED_VALUE;
 			return;
 
 		default:
@@ -387,8 +384,7 @@ clearList()
 	Value *val;
 
 	Rewind();
-	while ((val = Next()))
-	{
+	while ((val = Next())) {
 		delete val;
 		DeleteCurrent ();
 	}
@@ -405,8 +401,7 @@ copy (ValueList *list)
 
 	// copy all values in the list
 	list->Rewind();
-	while ((val = list->Next()))
-	{
+	while ((val = list->Next())) {
 		newVal = new Value;
 		newVal->copyFrom(*val);
 		Append (newVal);
@@ -422,8 +417,7 @@ isMember (Value &val)
 	int	  i = 0;
 
 	Rewind();
-	while ((v = Next()))
-	{
+	while ((v = Next())) {
 		Operation::operate(EQUAL_OP, *v, val, result);
 		if (result.isIntegerValue(i) && i)
 			return true;
@@ -441,8 +435,7 @@ isExactMember (Value &val)
 	int	  i = 0;
 
 	Rewind();
-	while ((v = Next()))
-	{
+	while ((v = Next())) {
 		Operation::operate(META_EQUAL_OP, *v, val, result);
 		if (result.isIntegerValue(i) && i)
 			return true;

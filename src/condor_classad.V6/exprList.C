@@ -96,9 +96,10 @@ appendExpression (ExprTree *tree)
 void ExprList::
 _evaluate (EvalState &state, EvalValue &val)
 {
-	ExprTree *tree;
-	Value	 *v;
-	ValueList *vl = new ValueList;
+	ExprTree 	*tree;
+	EvalValue	ev;
+	Value	 	*v;
+	ValueList 	*vl = new ValueList;
 
 	if (vl == NULL) {
 		val.setUndefinedValue();
@@ -108,7 +109,8 @@ _evaluate (EvalState &state, EvalValue &val)
 	exprList.Rewind();
 	while ((tree = exprList.Next())) {
 		v = new Value;
-		tree->evaluate (state, *v);
+		tree->evaluate (state, ev);
+		v->copyFrom( ev );
 		vl->Append (v);
 	}
 		
