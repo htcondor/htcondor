@@ -216,7 +216,9 @@ sub RunIt( $ )
 	foreach my $Offset ( 0 .. $#VmStat )
 	{
 	    next if ( @{$Table}[$Offset] =~ /^\*/ );
-	    $Hash->Add( @{$Table}[$Offset], "n", $VmStat[$Offset] );
+	    $Hash->Add( @{$Table}[$Offset],
+			HawkeyePublish::TypeNumber,
+			$VmStat[$Offset] );
 	}
 
 	# Ok, summary is done...
