@@ -38,7 +38,7 @@ void usage(void);
 
 int main(int argc, char *argv[]) {
 	
-	char* pw;
+	char* pw = NULL;
 	char* my_name = my_username();		// we're only stashing the current user
 	char* my_domain = my_domainname();
 	char my_full_name[_POSIX_PATH_MAX];
@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
 			pw = get_password();
 			if ( pw ) {
 				result = addCredential( my_full_name, pw );			
-				ZeroMemory(pw, MAX_PASSWORD_LENGTH+1);
+				ZeroMemory(pw, MAX_PASSWORD_LENGTH);
 				delete[] pw;
 				if ( result == FAILURE_BAD_PASSWORD ) {
 					fprintf(stdout, "\n\nPassword is invalid for this account"
