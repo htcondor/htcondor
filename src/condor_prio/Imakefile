@@ -11,5 +11,5 @@ LIBDIRS = ../condor_util_lib ../condor_xdr_lib ../condor_c++_util
 all_target(condor_prio)
 tags_target($(SRC),$(LIBDIRS))
 depend_target($(SRC))
-c_plus_target(condor_prio,$(OBJ),$(LIB),release)
-setgid_target(condor_prio)
+c_plus_target(condor_prio,$(OBJ),$(LIB))
+release_target(condor_prio,$(RELEASE_DIR)/bin,SET_GID_MODE)

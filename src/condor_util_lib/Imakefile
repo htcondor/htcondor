@@ -115,7 +115,9 @@ test.o: test.c
 test: test.o util_lib.a
 	gcc $(CFLAGS) -o test test.o util_lib.a
 
-library_target(util_lib.a,ObjectFiles,dont_release)
+library_target(util_lib.a,ObjectFiles)
+release_library(util_lib.a,$(RELEASE_DIR)/lib)
+
 tags_target(SourceFiles,$(NULL))
 depend_target(SourceFiles)
 

@@ -19,7 +19,10 @@ TEST_LIBS = cplus_lib.a ../condor_util_lib/util_lib.a
 
 all_target( cplus_lib.a )
 
-library_target( cplus_lib.a,$(OBJ),dont_release )
-c_plus_target(test_locks,test_locks.o,$(TEST_LIBS),dont_release)
+library_target( cplus_lib.a,$(OBJ))
+release_library(cplus_lib.a,$(RELEASE_DIR)/lib)
+
+c_plus_target(test_locks,test_locks.o,$(TEST_LIBS))
+
 tags_target($(SRC),$(NULL))
 depend_target($(SRC))

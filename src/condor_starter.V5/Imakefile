@@ -91,8 +91,8 @@ TOY_LIB =  $(UTIL_LIB) $(XDR_LIB)
 all_target(condor_starter test_it hound)
 tags_target($(SRC),$(LIBDIRS))
 depend_target($(SRC))
-c_plus_target(test_it,test_it.o,$(NULL),no_release)
-c_plus_target(hound,hound.o,$(NULL),no_release)
+c_plus_target(test_it,test_it.o,$(NULL))
+c_plus_target(hound,hound.o,$(NULL))
 
 #if IS_R6000_AIX31 || IS_R6000_AIX32
 G++_DIR = /usr/gnu/lib/gcc-lib/rs6000-ibm-aix/2.5.0
@@ -116,7 +116,8 @@ clean::
 release::
  	cp condor_starter $(RELEASE_DIR)/bin
 #else
-c_plus_target(condor_starter,$(OBJ),$(LIB),release)
+c_plus_target(condor_starter,$(OBJ),$(LIB))
+release_target(condor_starter,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 #endif
 
-c_plus_target(toy,$(TOY_OBJ),$(TOY_LIB),dont_release)
+c_plus_target(toy,$(TOY_OBJ),$(TOY_LIB))

@@ -15,4 +15,5 @@ LIBDIRS = ../condor_util_lib ../condor_xdr_lib
 all_target(condor_kbdd)
 tags_target($(SRC),$(LIBDIRS))
 depend_target($(SRC))
-program_target(condor_kbdd,$(OBJ),$(LIB),release)
+program_target(condor_kbdd,$(OBJ),$(LIB))
+release_target(condor_kbdd,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)

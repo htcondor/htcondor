@@ -19,21 +19,34 @@ all_target( $(PROGRAMS) )
 tags_target($(SRC),$(LIBDIRS))
 depend_target($(SRC))
 
-c_plus_target(condor_summary,summary.o,$(LIB),release)
-setgid_target(condor_summary)
+c_plus_target(condor_summary,summary.o,$(LIB))
+release_target(condor_summary,$(RELEASE_DIR)/bin,SET_GID_MODE)
 
-c_plus_target(condor_history,history.o,$(LIB),release)
-setgid_target(condor_history)
+c_plus_target(condor_history,history.o,$(LIB))
+release_target(condor_history,$(RELEASE_DIR)/bin,SET_GID_MODE)
 
-c_plus_target(condor_preen,preen.o,$(LIB),release)
-setgid_target(condor_preen)
+c_plus_target(condor_preen,preen.o,$(LIB))
+release_target(condor_preen,$(RELEASE_DIR)/bin,SET_GID_MODE)
 
-c_plus_target(condor_customize,custom.o custom_main.o,$(LIB),release)
+c_plus_target(condor_customize,custom.o custom_main.o,$(LIB))
+release_target(condor_customize,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
-program_target(config_val,config_val.o,$(LIB),release)
-program_target(condor_reconfig_schedd,reconfig_schedd.o,$(LIB),release)
-program_target(condor_reschedule,reschedule.o,$(LIB),release)
-program_target(condor_status,status.o print_status.o,$(LIB),release)
-program_target(condor_vacate,vacate.o,$(LIB),release)
-program_target(watch_status,watch_status.o,$(LIB),release)
-program_target(block_jobs,block_jobs.o,$(LIB),dont_release)
+program_target(config_val,config_val.o,$(LIB))
+release_target(config_val,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+
+program_target(condor_reconfig_schedd,reconfig_schedd.o,$(LIB))
+release_target(condor_reconfig_schedd,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+
+program_target(condor_reschedule,reschedule.o,$(LIB))
+release_target(condor_reschedule,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+
+program_target(condor_status,status.o print_status.o,$(LIB))
+release_target(condor_status,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+
+program_target(condor_vacate,vacate.o,$(LIB))
+release_target(condor_vacate,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+
+program_target(watch_status,watch_status.o,$(LIB))
+release_target(watch_status,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
+
+program_target(block_jobs,block_jobs.o,$(LIB))
