@@ -125,6 +125,7 @@ void SigUser1Handler(int);
 
 
 void SigTermHandler(int);
+void SigHupHandler(int);
 
 
 

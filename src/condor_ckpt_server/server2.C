@@ -93,6 +93,7 @@ void Server::Init()
 	char        hostname[100];
 	int         buf_size, len;
 #endif
+	static bool first_time = true;
 	
 	num_store_xfers = 0;
 	num_restore_xfers = 0;
@@ -176,19 +177,21 @@ void Server::Init()
 
 	max_replicate_xfers = max_store_xfers/5;
 
-	store_req_sd = SetUpPort(CKPT_SVR_STORE_REQ_PORT);
-	restore_req_sd = SetUpPort(CKPT_SVR_RESTORE_REQ_PORT);
-	service_req_sd = SetUpPort(CKPT_SVR_SERVICE_REQ_PORT);
-	replicate_req_sd = SetUpPort(CKPT_SVR_REPLICATE_REQ_PORT);
-	max_req_sd_plus1 = store_req_sd;
-	if (restore_req_sd > max_req_sd_plus1)
-		max_req_sd_plus1 = restore_req_sd;
-	if (service_req_sd > max_req_sd_plus1)
-		max_req_sd_plus1 = service_req_sd;
-	if (replicate_req_sd > max_req_sd_plus1)
-		max_req_sd_plus1 = replicate_req_sd;
-	max_req_sd_plus1++;
-	InstallSigHandlers();
+	if (first_time) {
+		store_req_sd = SetUpPort(CKPT_SVR_STORE_REQ_PORT);
+		restore_req_sd = SetUpPort(CKPT_SVR_RESTORE_REQ_PORT);
+		service_req_sd = SetUpPort(CKPT_SVR_SERVICE_REQ_PORT);
+		replicate_req_sd = SetUpPort(CKPT_SVR_REPLICATE_REQ_PORT);
+		max_req_sd_plus1 = store_req_sd;
+		if (restore_req_sd > max_req_sd_plus1)
+			max_req_sd_plus1 = restore_req_sd;
+		if (service_req_sd > max_req_sd_plus1)
+			max_req_sd_plus1 = service_req_sd;
+		if (replicate_req_sd > max_req_sd_plus1)
+			max_req_sd_plus1 = replicate_req_sd;
+		max_req_sd_plus1++;
+		InstallSigHandlers();
+	}
 	SetUpPeers();
 	xfer_summary.init();
 #ifdef DEBUG
@@ -257,6 +260,8 @@ void Server::Init()
 			max_restore_xfers);
 	Log(log_msg);
 #endif
+
+	first_time = false;
 }
 
 
@@ -1906,6 +1911,17 @@ void InstallSigHandlers()
 		cerr << "ERROR:" << endl << endl;
 		exit(SIGNAL_HANDLER_ERROR);
     }
+	sig_info.sa_handler = (SIG_HANDLER) SigHupHandler;
+	sigemptyset(&sig_info.sa_mask);
+	sig_info.sa_flags = 0;
+	if (sigaction(SIGHUP, &sig_info, NULL) < 0) {
+		cerr << endl << "ERROR:" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR: cannot install SIGHUP signal handler" << endl;
+		cerr << "ERROR:" << endl;
+		cerr << "ERROR:" << endl << endl;
+		exit(SIGNAL_HANDLER_ERROR);
+    }
 	sig_info.sa_handler = (SIG_HANDLER) SIG_IGN;
 	sigemptyset(&sig_info.sa_mask);
 	sig_info.sa_flags = 0;
@@ -1960,6 +1976,15 @@ void SigTermHandler(int)
   BlockSignals();
   cout << "SIGTERM trapped; Shutting down" << endl << endl;
   server.NoMore();
+  UnblockSignals();
+}
+
+
+void SigHupHandler(int)
+{
+  BlockSignals();
+  dprintf(D_ALWAYS, "SIGHUP trapped; Re-initializing\n");
+  server.Init();
   UnblockSignals();
 }
 
