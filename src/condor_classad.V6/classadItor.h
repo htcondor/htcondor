@@ -20,8 +20,8 @@
  *
  *********************************************************************/
 
-#ifndef CLASSAD_ITOR
-#define CLASSAD_ITOR
+#ifndef __CLASSAD_ITOR_H__
+#define __CLASSAD_ITOR_H__
 
 BEGIN_NAMESPACE( classad );
 

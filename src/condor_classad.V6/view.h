@@ -20,10 +20,10 @@
  *
  *********************************************************************/
 
-#if !defined( VIEW_H )
-#define VIEW_H
+#ifndef __VIEW_H__
+#define __VIEW_H__
 
-	// STL includes
+// STL includes
 #include <string>
 #include <set>
 #include <hash_map>

@@ -20,8 +20,8 @@
  *
  *********************************************************************/
 
-#if !defined COLLECTION_H
-#define COLLECTION_H
+#ifndef __COLLECTION_H__
+#define __COLLECTION_H__
 
 #include "view.h"
 #include "source.h"

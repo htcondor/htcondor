@@ -20,8 +20,8 @@
  *
  *********************************************************************/
 
-#if !defined( COLLECTION_BASE_H )
-#define COLLECTION_BASE_H
+#ifndef __COLLECTION_BASE_H__
+#define __COLLECTION_BASE_H__
 
 #include "collection.h"
 

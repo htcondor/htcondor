@@ -20,8 +20,8 @@
  *
  *********************************************************************/
 
-#ifndef __DUMPER_H__
-#define __DUMPER_H__
+#ifndef __SINK_H__
+#define __SINK_H__
 
 #include "common.h"
 #include "exprTree.h"

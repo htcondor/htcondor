@@ -20,8 +20,8 @@
  *
  *********************************************************************/
 
-#ifndef CLASSAD_ERRNO_H
-#define CLASSAD_ERRNO_H
+#ifndef __CLASSAD_ERRNO_H__
+#define __CLASSAD_ERRNO_H__
 
 #include "common.h"
 

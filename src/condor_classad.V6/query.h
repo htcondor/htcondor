@@ -20,8 +20,8 @@
  *
  *********************************************************************/
 
-#if !defined( QUERY_H )
-#define QUERY_H
+#ifndef __QUERY_H__
+#define __QUERY_H__
 
 #include <vector>
 #include <list>

@@ -20,8 +20,8 @@
  *
  *********************************************************************/
 
-#if !defined( XACTION_H )
-#define XACTION_H
+#ifndef __XACTION_H__
+#define __XACTION_H__
 
 #include <hash_map>
 #include <list>
