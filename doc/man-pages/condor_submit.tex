@@ -651,6 +651,13 @@ the mistake of requesting multiple Condor jobs to write to the
 same file, and/or if the user alters any files that need to be accessed
 by a Condor job which is still in the queue (i.e. compressing of data or
 output files before a Condor job has completed is a common mistake).
+
+\item To disable checkpointing for Standard Universe jobs, include the
+line:
+\begin{verbatim}
+      +WantCheckpoint = False
+\end{verbatim}
+in the submit-description file before the queue command(s).
 \end{itemize}
 
 \SeeAlso
