@@ -106,7 +106,6 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 	bool			newBestFound;
 		// to store results of evaluations
 	char			remoteUser[128];
-	char			remoteHost[256];
 	EvalResult		result;
 	float			tmp;
 	
@@ -430,6 +429,8 @@ usage(char *name)
 	exit(1);
 }
 
+
+int
 main(int argc, char *argv[])
 {
 	ClassAdList startdAds;
@@ -576,7 +577,6 @@ main(int argc, char *argv[])
 		if(WantMachineNames) {
 			if (offer->LookupString (ATTR_MACHINE, remoteHost) ) {
 				int virtMachCount;
-				int virtMachID;
 				int vmCountThusFar;
 
 				HashKey key(remoteHost);
