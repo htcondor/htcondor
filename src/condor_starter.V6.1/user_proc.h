@@ -27,27 +27,53 @@
 
 class ClassAd;
 
+/** This class is a base class for the various types of startable
+	processes.  It defines a bunch of pure virtual functions that 
+	are to be implemented in child classes.
 
+ */
 class UserProc : public Service
 {
 public:
+		/// Constructor
 	UserProc() : JobAd(NULL), JobPid(-1), Cluster(-1), Proc(-1),
 		Requested_Exit(0) {};
-	// virtual ~UserProc();
 
-		// StartJob: returns 1 on success, 0 on failure
-		//   Starter deletes object if StartJob returns 0
+		/// Destructor
+	virtual ~UserProc() {};
+
+		/** Pure virtual functions: */
+			//@{
+
+		/** Start this job.  Starter should delete this object if 
+			StartJob returns 0.
+			@return 1 on success, 0 on failure.
+		*/
 	virtual int StartJob() = 0;
-		// JobExit: returns 1 if exit handled, 0 if pid doesn't match
-		//   Starter deletes object if JobExit returns 1
+
+		/** Job exits. Starter deletes object if JobExit returns 1.
+		    @return 1 if exit handled, 0 if pid doesn't match
+		*/ 
 	virtual int JobExit(int pid, int status) = 0;
 
+		/** Suspend. */
 	virtual void Suspend() = 0;
+
+		/** Continue. */
 	virtual void Continue() = 0;
-	virtual void ShutdownGraceful() = 0;	// a.k.a. soft kill
-	virtual void ShutdownFast() = 0;		// a.k.a. hard kill
+
+		/** Graceful shutdown, aka soft kill. */
+	virtual void ShutdownGraceful() = 0;
+
+		/** Fast shutdown, aka hard kill. */
+	virtual void ShutdownFast() = 0;
+		//@}
+
+		/** Checkpoint */
 	virtual void Ckpt() {};
 
+		/** Returns the pid of this job.
+			@return The pid. */
 	int GetJobPid() { return JobPid; }
 
 protected:

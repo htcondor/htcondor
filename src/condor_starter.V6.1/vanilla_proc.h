@@ -28,23 +28,36 @@
 #include "killfamily.h"
 #include "file_transfer.h"
 
+/** The Vanilla-type job process class.  Uses procfamily to do its
+	dirty work.
+ */
 class VanillaProc : public OsProc
 {
 public:
+		/// Constructor
 	VanillaProc();
+		/// Destructor
 	virtual ~VanillaProc();
 
-		// StartJob: returns 1 on success, 0 on failure
-		//   Starter deletes object if StartJob returns 0
+		/** Transfer files; call OsProc::StartJob(), make a new 
+			ProcFamily with new process as head. */
 	virtual int StartJob();
-		// JobExit: returns 1 if exit handled, 0 if pid doesn't match
-		//   Starter deletes object if JobExit returns 1
+
+		/** Upload files if requested; call OsProc::JobExit(); 
+			make certain all decendants are dead with family->hardkill() */
 	virtual int JobExit(int pid, int status);
 
+		/** Call family->suspend() */
 	virtual void Suspend();
+
+		/** Cass family->resume() */
 	virtual void Continue();
-	virtual void ShutdownGraceful();		// a.k.a. soft kill
-	virtual void ShutdownFast();		// a.k.a. hard kill
+
+		/** Take a family snapshot, call OsProc::ShutDownGraceful() */
+	virtual void ShutdownGraceful();
+
+		/** Do a family->hardkill(); */
+	virtual void ShutdownFast();
 private:
 	ProcFamily *family;
 	FileTransfer *filetrans;

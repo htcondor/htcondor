@@ -44,9 +44,7 @@ REMOTE_syscall( int syscall_num, ... )
 	int		rval=-1;
 	va_list ap;
 
-
 	va_start( ap, syscall_num );
-
 	
 	switch( syscall_num ) {
 
@@ -55,6 +53,7 @@ REMOTE_syscall( int syscall_num, ... )
 		char *uiddomain;
 		char *fsdomain;
 		char *address;
+		char *fullHostname;
 		int key;
 
 		CurrentSysCall = CONDOR_register_machine_info;
@@ -62,6 +61,7 @@ REMOTE_syscall( int syscall_num, ... )
 		uiddomain = va_arg( ap, char *);
 		fsdomain = va_arg( ap, char *);
 		address = va_arg( ap, char *);
+		fullHostname = va_arg( ap, char *);
 		key = va_arg( ap, int);
 
 		syscall_sock->encode();
@@ -69,6 +69,7 @@ REMOTE_syscall( int syscall_num, ... )
 		assert( syscall_sock->code(uiddomain) );
 		assert( syscall_sock->code(fsdomain) );
 		assert( syscall_sock->code(address) );
+		assert( syscall_sock->code(fullHostname) );
 		assert( syscall_sock->code(key) );
 		assert( syscall_sock->end_of_message() );
 

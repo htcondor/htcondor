@@ -25,13 +25,14 @@
 #include "condor_debug.h"
 #include "condor_syscall_mode.h"   // moronic: must go before condor_config
 #include "condor_config.h"
-//#include "condor_sys.h"
 #if defined(__GNUG__)
 #pragma implementation "list.h"
 #endif
 #include "starter.h"
 #include "vanilla_proc.h"
 #include "syscall_numbers.h"
+#include "my_hostname.h"
+#include "condor_string.h"  // for strnewp
 
 static char *_FileName_ = __FILE__; /* Used by EXCEPT (see except.h)    */
 
@@ -83,7 +84,8 @@ CStarter::Init(char peer[])
 		this);
 
 	// move to working directory
-	sprintf(WorkingDir, "%s%cdir_%d", Execute, DIR_DELIM_CHAR, daemonCore->getpid());
+	sprintf(WorkingDir, "%s%cdir_%d", Execute, DIR_DELIM_CHAR, 
+			daemonCore->getpid());
 	if (mkdir(WorkingDir,0777) < 0) {
 		EXCEPT("mkdir(%s)", WorkingDir);
 	}
@@ -93,8 +95,13 @@ CStarter::Init(char peer[])
 	dprintf( D_FULLDEBUG, "Done moving to directory \"%s\"\n", WorkingDir );
 
 	// init environment info
+	char *mfhn = strnewp ( my_full_hostname() );
+	dprintf ( D_FULLDEBUG, "asdf\n" );
 	REMOTE_syscall(CONDOR_register_machine_info, UIDDomain, FSDomain,
-				   daemonCore->InfoCommandSinfulString(), Key);
+				   daemonCore->InfoCommandSinfulString(), 
+				   mfhn, Key);
+	delete [] mfhn;
+	dprintf ( D_FULLDEBUG, "ffdsa\n" );
 
 	set_resource_limits();
 
@@ -211,6 +218,9 @@ CStarter::Reaper(int pid, int exit_status)
 	int all_jobs = 0;
 	UserProc *job;
 
+		/* This shifts exit_status back to where it should be (MEY) */
+	exit_status = exit_status >> 8;
+
 	dprintf(D_ALWAYS,"Job exited, pid=%d, status=%d\n",pid,exit_status);
 	JobList.Rewind();
 	while ((job = JobList.Next()) != NULL) {
@@ -233,3 +243,4 @@ CStarter::Reaper(int pid, int exit_status)
 	}
 	return 0;
 }
+

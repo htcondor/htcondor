@@ -29,7 +29,6 @@
 #include "starter.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_attributes.h"
-//#include "condor_sys.h"
 #include "condor_syscall_mode.h"
 #include "syscall_numbers.h"
 #include "exit.h"
@@ -59,16 +58,15 @@ OsProc::StartJob()
 
 	dprintf(D_FULLDEBUG,"in OsProc::StartJob()\n");
 
-#if 0
-	if (JobAd) delete JobAd;
-	JobAd = new ClassAd();
+#ifndef WIN32
+		// 60001 = nobody , 4046 = yoderme
+	set_user_ids( 4046, 4046 );
+#endif
 
-	if (REMOTE_syscall(CONDOR_get_job_info, JobAd) < 0) {
-		dprintf(D_ALWAYS, 
-				"Failed to get job info from Shadow.  Aborting StartJob.\n");
+	if ( !JobAd ) {
+		dprintf ( D_ALWAYS, "No JobAd in OsProc::StartJob()!\n" );
 		return 0;
 	}
-#endif
 
 	if (JobAd->LookupInteger(ATTR_CLUSTER_ID, Cluster) != 1) {
 		dprintf(D_ALWAYS, "%s not found in JobAd.  Aborting StartJob.\n", 
@@ -90,68 +88,102 @@ OsProc::StartJob()
 		return 0;
 	}
 
+	if ( chmod ( JobName, S_IRWXU | S_IRWXO | S_IRWXG ) == -1 ) {
+		dprintf ( D_ALWAYS, "Failed to chmod condor_exec.  Huh?\n" );
+		return 0;
+	}
+
 	// get job universe
 
 	// init_user_ids
 	char Executable[_POSIX_PATH_MAX];
 	if (JobAd->LookupString(ATTR_JOB_CMD, Executable) != 1) {
-		dprintf(D_ALWAYS, "%s not found in JobAd.  Aborting DC_StartCondorJob.\n",
-				ATTR_JOB_CMD);
+		dprintf(D_ALWAYS, "%s not found in JobAd.  "
+				"Aborting DC_StartCondorJob.\n", ATTR_JOB_CMD);
 		return 0;
 	}
 
 	char Args[_POSIX_PATH_MAX];
-	if (JobAd->LookupString(ATTR_JOB_ARGUMENTS, Args) != 1) {
-		dprintf(D_ALWAYS, "%s not found in JobAd.  Aborting DC_StartCondorJob.\n",
-				ATTR_JOB_CMD);
+	char tmp[_POSIX_PATH_MAX];
+	if (JobAd->LookupString(ATTR_JOB_ARGUMENTS, tmp) != 1) {
+		dprintf(D_ALWAYS, "%s not found in JobAd.  "
+				"Aborting DC_StartCondorJob.\n", ATTR_JOB_CMD);
 		return 0;
 	}
+		// for now, simply prepend "condor_exec" to the args - this
+		// becomes argv[0].  This should be made smarter later....
+	strcpy ( Args, "condor_exec" );
+	strcat ( Args, " " );
+	strcat ( Args, tmp );
 
 	char Env[ATTRLIST_MAX_EXPRESSION];
 	if (JobAd->LookupString(ATTR_JOB_ENVIRONMENT, Env) != 1) {
-		dprintf(D_ALWAYS, "%s not found in JobAd.  Aborting DC_StartCondorJob.\n",
-				ATTR_JOB_ENVIRONMENT);
+		dprintf(D_ALWAYS, "%s not found in JobAd.  "
+				"Aborting DC_StartCondorJob.\n", ATTR_JOB_ENVIRONMENT);
 		return 0;
 	}
 
 	char Cwd[_POSIX_PATH_MAX];
 	if (JobAd->LookupString(ATTR_JOB_IWD, Cwd) != 1) {
-		dprintf(D_ALWAYS, "%s not found in JobAd.  Aborting DC_StartCondorJob.\n",
-				ATTR_JOB_IWD);
+		dprintf(D_ALWAYS, "%s not found in JobAd.  "
+				"Aborting DC_StartCondorJob.\n", ATTR_JOB_IWD);
 		return 0;
 	}
 
 	// handle stdin, stdout, and stderr redirection
-	char filename[_POSIX_PATH_MAX];
 	int fds[3];
 	fds[0] = -1; fds[1] = -1; fds[2] = -1;
+	char filename[_POSIX_PATH_MAX];
+	char infile[_POSIX_PATH_MAX];
+	char outfile[_POSIX_PATH_MAX];
+	char errfile[_POSIX_PATH_MAX];
+
+		// we have to prepend the full path...
+	sprintf ( infile, "%s%c%", Cwd, DIR_DELIM_CHAR );
+	sprintf ( outfile, "%s%c%", Cwd, DIR_DELIM_CHAR );
+	sprintf ( errfile, "%s%c%", Cwd, DIR_DELIM_CHAR );
+
+		// in order to open these files we must have the user's privs:
+	priv_state priv;
+	priv = set_user_priv();
 
 	if (JobAd->LookupString(ATTR_JOB_INPUT, filename) == 1) {
-		if ( strcmp(filename,"NUL") != 0 &&
-			(fds[0]=open(filename,O_RDONLY,0)) < 0 ) {
-			dprintf(D_ALWAYS,"failed to open stdin file %s\n",
-				filename);
+		if ( strcmp(filename,"NUL") != 0 ) {
+			strcat ( infile, filename );
+			if ( (fds[0]=open( infile, O_RDONLY ) ) < 0 ) {
+				dprintf(D_ALWAYS,"failed to open stdin file %s, errno %d\n",
+						infile, errno);
+			}
+		dprintf ( D_ALWAYS, "Input file: %s\n", infile );
 		}
 	}
 
 	if (JobAd->LookupString(ATTR_JOB_OUTPUT, filename) == 1) {
-		if ( strcmp(filename,"NUL") != 0 &&
-			(fds[1]=open(filename,O_WRONLY | O_CREAT,666)) < 0 ) {
-			dprintf(D_ALWAYS,"failed to open stdout file %s\n",
-				filename);
+		if ( strcmp(filename,"NUL") != 0 ) {
+			strcat ( outfile, filename );
+			if ( (fds[1]=open( outfile, O_WRONLY | O_CREAT, 0666)) < 0 ) {
+				dprintf(D_ALWAYS,"failed to open stdout file %s, errno %d\n",
+						outfile, errno);
+			}
+			dprintf ( D_ALWAYS, "Output file: %s\n", outfile );
 		}
 	}
 
 	if (JobAd->LookupString(ATTR_JOB_ERROR, filename) == 1) {
-		if ( strcmp(filename,"NUL") != 0 &&
-			(fds[2]=open(filename,O_WRONLY | O_CREAT,666)) < 0 ) {
-			dprintf(D_ALWAYS,"failed to open stderr file %s\n",
-				filename);
+		if ( strcmp(filename,"NUL") != 0 ) {
+			strcat ( errfile, filename );
+			if ( (fds[2]=open( errfile, O_WRONLY | O_CREAT, 0666)) < 0 ) {
+				dprintf(D_ALWAYS,"failed to open stderr file %s, errno %d\n",
+						errfile, errno);
+			}
+			dprintf ( D_ALWAYS, "Error file: %s\n", errfile );
 		}
 	}
 
+	set_priv ( priv );
+
 	JobPid = daemonCore->Create_Process(JobName, Args, PRIV_USER_FINAL, 1,
-									  FALSE, Env, NULL, TRUE, NULL, fds );
+				   FALSE, Env, Cwd, TRUE, NULL, fds );
 
 	// now close the descriptors in fds array.  our child has inherited
 	// them already, so we should close them so we do not leak descriptors.
@@ -225,3 +257,12 @@ OsProc::ShutdownFast()
 	Requested_Exit = TRUE;
 	daemonCore->Send_Signal(JobPid, DC_SIGKILL);
 }
+
+
+
+
+
+
+
+
+

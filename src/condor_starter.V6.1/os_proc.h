@@ -26,24 +26,45 @@
 
 #include "user_proc.h"
 
+/** This is a generic sort of "OS" process, the base for other types
+	of jobs.
 
+*/
 class OsProc : public UserProc
 {
 public:
+		/// Constructor
 	OsProc();
+
+		/// Destructor
 	virtual ~OsProc();
 
-		// StartJob: returns 1 on success, 0 on failure
-		//   Starter deletes object if StartJob returns 0
+		/** Here we do things like set_user_ids(), get the executable, 
+			get the args, env, cwd from the classad, open the input,
+			output, error files for re-direction, and (finally) call
+			daemonCore->Create_Process().
+		 */
 	virtual int StartJob();
-		// JobExit: returns 1 if exit handled, 0 if pid doesn't match
-		//   Starter deletes object if JobExit returns 1
+
+		/** In this function, we determine if pid == our pid, and if so
+			do a CONDOR_job_exit remote syscall.  
+			@param pid The pid that exited.
+			@param status Its status
+			@return 1 if pid matches, 0 otherwise
+		*/
 	virtual int JobExit(int pid, int status);
 
+		/// Send a DC_SIGSTOP
 	virtual void Suspend();
+
+		/// Send a DC_SIGCONT
 	virtual void Continue();
-	virtual void ShutdownGraceful();	// a.k.a. soft kill
-	virtual void ShutdownFast();		// a.k.a. hard kill
+
+		/// Send a DC_SIGTERM
+	virtual void ShutdownGraceful();
+
+		/// Send a DC_SIGKILL
+	virtual void ShutdownFast();
 protected:
 	int job_suspended;
 };

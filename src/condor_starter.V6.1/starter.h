@@ -32,22 +32,65 @@
 void set_resource_limits();
 extern ReliSock *syscall_sock;
 
+/** The starter class.  Basically, this class does some initialization
+	stuff and manages a set of UserProc instances, each of which 
+	represent a running job.
+
+	@see UserProc
+ */
 class CStarter : public Service
 {
 public:
+		/// Constructor
 	CStarter();
+		/// Destructor
 	virtual ~CStarter();
 
+		/** This is called at the end of main_init().  It calls Config(), 
+			registers a bunch of signals, registers a reaper, makes 
+			the starter's working dir and moves there, does a 
+			register_machine_info remote syscall, sets resource 
+			limits, then calls StartJob()
+		    @param peer The sumbitting machine (sinful string)
+		*/
 	virtual void Init(char peer[]);
+
+		/** Params for "EXECUTE", "UID_DOMAIN", and "FILESYSTEM_DOMAIN".
+		 */
 	virtual void Config();
-	virtual int ShutdownGraceful(int);	// vacate job(s)
-	virtual int ShutdownFast(int);		// kill job(s) immediately
-	virtual void StartJob();			// request job info and start job
+
+		/** Walk through list of jobs, call ShutDownGraceful on each.
+			@return 1 if no jobs running, 0 otherwise 
+		*/
+	virtual int ShutdownGraceful(int);
+
+		/** Walk through list of jobs, call ShutDownFast on each.
+			@return 1 if no jobs running, 0 otherwise 
+		*/
+	virtual int ShutdownFast(int);
+
+		/** For now, make a VanillaProc class instance and call
+			StartJob on it.  Append it to the JobList.
+		*/
+	virtual void StartJob();
+
+		/** Call Suspend() on all elements in JobList */
 	virtual int Suspend(int);
+
+		/** Call Continue() on all elements in JobList */
 	virtual int Continue(int);
+
+		/** To do */
 	virtual int PeriodicCkpt(int);
+
+		/** Handles the exiting of user jobs.  If we're shutting down
+			and there are no jobs left alive, we exit ourselves.
+			@param pid The pid that died.
+			@param exit_status The exit status of the dead pid
+		*/
 	virtual int Reaper(int pid, int exit_status);
 
+		/** Return the Working dir */
 	const char *GetWorkingDir() const { return WorkingDir; }
 
 protected:
@@ -64,3 +107,5 @@ private:
 };
 
 #endif
+
+

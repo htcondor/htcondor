@@ -26,7 +26,6 @@
 #include "condor_debug.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "condor_attributes.h"
-//#include "condor_sys.h"
 #include "condor_syscall_mode.h"
 #include "exit.h"
 #include "vanilla_proc.h"
@@ -34,13 +33,6 @@
 #include "syscall_numbers.h"
 
 extern CStarter *Starter;
-
-
-
-/* 
- * Vanilla class implementation.  It just uses procfamily to do
- * its dirty work.
- */
 
 VanillaProc::VanillaProc()
 {
@@ -167,3 +159,11 @@ VanillaProc::ShutdownFast()
 	Requested_Exit = TRUE;
 	family->hardkill();
 }
+
+
+
+
+
+
+
+

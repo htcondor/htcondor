@@ -72,7 +72,10 @@ main_init(int argc, char *argv[])
 	_EXCEPT_Cleanup = exception_cleanup;
 
 	Stream **socks = daemonCore->GetInheritedSocks();
-	if (socks[0] == NULL || socks[1] != NULL || socks[0]->type() != Stream::reli_sock) {
+	if (socks[0] == NULL || 
+		socks[1] != NULL || 
+		socks[0]->type() != Stream::reli_sock) 
+	{
 		dprintf(D_ALWAYS, "Failed to inherit remote system call socket.\n");
 		DC_Exit(1);
 	}
