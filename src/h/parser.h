@@ -7,8 +7,6 @@
 
 #include "scanner.h"
 
-#define TRUE 1
-#define FALSE 0
 #define TABLE_SIZE 20
 
 static token next_t;

@@ -5,6 +5,8 @@
 #ifndef _TYPE_H
 #define _TYPE_H
 
+#define TRUE  1
+#define FALSE 0
 
 typedef enum
 {
