@@ -178,6 +178,36 @@ do_Q_request(ReliSock *syscall_sock)
 		return 0;
 	}
 
+	case CONDOR_SetAttributeByConstraint:
+	  {
+		char *attr_name=NULL;
+		char *attr_value=NULL;
+		char *constraint=NULL;
+		int terrno;
+
+		assert( syscall_sock->code(constraint) );
+		dprintf( D_SYSCALLS, "  constraint = %s\n",constraint);
+		assert( syscall_sock->code(attr_value) );
+		assert( syscall_sock->code(attr_name) );
+		assert( syscall_sock->end_of_message() );;
+
+		errno = 0;
+		rval = SetAttributeByConstraint( constraint, attr_name, attr_value );
+		terrno = errno;
+		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+		syscall_sock->encode();
+		assert( syscall_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( syscall_sock->code(terrno) );
+		}
+		free( (char *)constraint );
+		free( (char *)attr_value );
+		free( (char *)attr_name );
+		assert( syscall_sock->end_of_message() );;
+		return 0;
+	}
+
 	case CONDOR_SetAttribute:
 	  {
 		int cluster_id;

@@ -178,6 +178,34 @@ DestroyClusterByConstraint( char *constraint )
 
 
 int
+SetAttributeByConstraint( char *constraint, char *attr_name, char *attr_value )
+{
+	int	rval;
+
+		CurrentSysCall = CONDOR_SetAttributeByConstraint;
+
+		qmgmt_sock->encode();
+		assert( qmgmt_sock->code(CurrentSysCall) );
+		assert( qmgmt_sock->code(constraint) );
+		assert( qmgmt_sock->code(attr_value) );
+		assert( qmgmt_sock->code(attr_name) );
+		assert( qmgmt_sock->end_of_message() );
+
+		qmgmt_sock->decode();
+		assert( qmgmt_sock->code(rval) );
+		if( rval < 0 ) {
+			assert( qmgmt_sock->code(terrno) );
+			assert( qmgmt_sock->end_of_message() );
+			errno = terrno;
+			return rval;
+		}
+		assert( qmgmt_sock->end_of_message() );
+
+	return rval;
+}
+
+
+int
 SetAttribute( int cluster_id, int proc_id, char *attr_name, char *attr_value )
 {
 	int	rval;
