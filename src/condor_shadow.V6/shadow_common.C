@@ -82,7 +82,6 @@
 #include "condor_fix_string.h"
 #include "sched.h"
 #include "debug.h"
-#include "except.h"
 #include "fileno.h"
 #include "files.h"
 #include "exit.h"

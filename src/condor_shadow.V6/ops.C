@@ -81,7 +81,6 @@
 #include "condor_rsc.h"
 #include "trace.h"
 #include "condor_debug.h"
-#include "except.h"
 #include "debug.h"
 #include "fileno.h"
 #include "condor_io.h"
