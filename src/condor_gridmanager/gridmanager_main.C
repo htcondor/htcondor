@@ -48,7 +48,7 @@ usage( char *name )
 }
 
 int
-main_init( int argc, char **argv )
+main_init( int argc, char ** const argv )
 {
 
 	dprintf(D_FULLDEBUG,
