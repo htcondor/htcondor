@@ -77,14 +77,14 @@ main( int argc, char *argv[] )
 		}
 
 		sock.encode();
-		cmd = PCKPT_FRGN_JOB;
+		cmd = PCKPT_ALL_JOBS;
 		if (!sock.code(cmd) || !sock.eom()) {
-			dprintf(D_ALWAYS, "Can't send PCKPT_FRGN_JOB command to "
+			dprintf(D_ALWAYS, "Can't send PCKPT_ALL_JOBS command to "
 					"condor startd (%s)\n", startdAddr);
 			continue;
 		}
 		
-		printf( "Sent PCKPT_FRGN_JOB command to startd on %s\n", argv[i] );
+		printf( "Sent PCKPT_ALL_JOBS command to startd on %s\n", argv[i] );
 
 	}
 
