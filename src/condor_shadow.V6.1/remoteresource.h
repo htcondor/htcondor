@@ -38,7 +38,7 @@
 enum ResourceState {
 		/// Before the job begins execution
 	RR_PRE, 
-		/// While it's running (after requestIt() succeeds...)
+		/// While it's running (after activateClaim() succeeds...)
 	RR_EXECUTING,
 		/** We've told the job to go away, but haven't received 
 			confirmation that it's really dead.  This state is 
@@ -99,11 +99,13 @@ class RemoteResource : public Service {
 			an ACTIVATE_CLAIM command on it.  The capability, starternum
 			and Job ClassAd are pushed, and the executing host's 
 			full machine name and (hopefully) an OK are returned.
-			@param starterVersion The version number of the starter wanted.
-			                  The default is 2.
-			@return true if everthing went ok, false if error.				  
+			@param starterVersion The version number of the starter
+                   wanted. The default is 2.
+			@return OK if claim is active, NOT_OK if claim was
+                    refused, CONDOR_TRY_AGAIN if we need to try again 
+			        later. 
 		 */ 
-	virtual bool requestIt( int starterVersion = 2 );
+	virtual int activateClaim( int starterVersion = 2 );
 
 		/** Here we tell the remote starter to kill itself in a gentle manner.
 			@return true on success, false if a problem occurred.

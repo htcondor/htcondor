@@ -40,9 +40,9 @@ class MpiResource : public RemoteResource {
 		/// Destructor
 	~MpiResource() {};
 
-		/** Call RemoteResource::requestIt() and log a
+		/** Call RemoteResource::activateClaim() and log a
 			NodeExecuteEvent */
-	virtual bool requestIt( int starterVersion = 2 );
+	virtual int activateClaim( int starterVersion = 2 );
 
 		/** Special format... */
 	virtual void printExit( FILE *fp );
