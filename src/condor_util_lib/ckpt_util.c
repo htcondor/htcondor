@@ -94,6 +94,66 @@ stream_file_xfer( int src_fd, int dst_fd, size_t n_bytes )
 }
 
 
+ssize_t
+multi_stream_file_xfer( int src_fd, int dst_fd_cnt, int *dst_fd_list,
+					   size_t n_bytes )
+{
+	char		buf[4096];
+	ssize_t		bytes_written;
+	ssize_t		bytes_read;
+	ssize_t		bytes_moved = 0;
+	size_t		bytes_to_go = n_bytes;
+	size_t		read_size;
+	int			dont_know_file_size;
+	int			i;
+
+	if (n_bytes == -1) {
+		dont_know_file_size = 1;
+	} else {
+		dont_know_file_size = 0;
+	}
+
+	for(;;) {
+
+			/* Read a block of the file */
+		read_size = sizeof(buf) < bytes_to_go ? sizeof(buf) : bytes_to_go;
+		bytes_read = read( src_fd, buf, read_size );
+		if( bytes_read <= 0 ) {
+			if (dont_know_file_size) {
+				return bytes_moved;
+			} else {
+				return -1;
+			}
+		}
+
+			/* Send it */
+		for (i = 0; i < dst_fd_cnt; i++) {
+			bytes_written = write( dst_fd_list[i], buf, bytes_read );
+			if( bytes_written != bytes_read ) {
+				dprintf(D_ALWAYS, "Chocked sending to one fd in my list(%d)\n",
+						dst_fd_list[i]);
+				dst_fd_list[i] = dst_fd_list[dst_fd_cnt - 1];
+				dst_fd_cnt--;
+				if (dst_fd_cnt == 0) {
+					return -1;
+				}
+			}
+		}
+
+			/* Accumulate */
+		bytes_moved += bytes_written;
+		bytes_to_go -= bytes_written;
+		if( bytes_to_go == 0 ) {
+			dprintf( D_FULLDEBUG,
+				"\tChild Shadow: STREAM FILE XFER COMPLETE - %d bytes\n",
+				bytes_moved
+			);
+			return bytes_moved;
+		}
+	}
+}
+
+
 int
 create_socket(sin, listen_count)
 struct sockaddr_in *sin;
@@ -124,4 +184,37 @@ int             listen_count;
 	get_inet_address(&(sin->sin_addr));  /* from internet.c */
 	
 	return socket_fd;
+}
+
+
+int
+create_socket_url(url_buf, listen_count)
+char	*url_buf;
+int		listen_count;
+{
+	struct sockaddr_in	sin;
+	int		sock_fd;
+
+	sock_fd = create_socket(&sin, listen_count);
+	if (sock_fd >= 0) {
+		sprintf(url_buf, "cbstp:%s", sin_to_string(&sin));
+	}
+	return sock_fd;
+}
+
+
+int
+wait_for_connections(sock_fd, count, return_list)
+int		sock_fd;
+int		count;
+int		*return_list;
+{
+	int		i;
+	struct sockaddr from;
+	int		from_len = sizeof(from); /* FIX : dhruba */
+
+	for (i = 0; i < count; i++) {
+		return_list[i] = tcp_accept_timeout(sock_fd, &from, &from_len, 300);
+	}
+	return i;
 }
