@@ -1280,6 +1280,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) got a callback, retrying STDIO_SIZE\n",procID.clust
 						globusStateErrorCode != GLOBUS_GRAM_PROTOCOL_ERROR_USER_CANCELLED ) {
 				// The job may still be submitted and/or recoverable,
 				// so stop the jobmanager and restart it.
+				globusError = globusStateErrorCode;
 				gmState = GM_STOP_AND_RESTART;
 				break;
 			} else {
