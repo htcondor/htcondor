@@ -1482,7 +1482,7 @@ Scheduler::contactStartd( char* capability, char *user,
 	char to_startd[256];
 	sprintf ( to_startd, "to startd %s", server );
 	daemonCore->Register_Socket( sock, "<Startd Contact Socket>",
-								 (SocketHandlercpp)startdContactSockHandler,
+								 (SocketHandlercpp)&startdContactSockHandler,
 								 to_startd, this, ALLOW );
 
 	daemonCore->Register_DataPtr( mrec );
@@ -2350,7 +2350,7 @@ Scheduler::pushMPIMatches( char *shadow,
     
     if ( !s.connect( shadow ) ) {
         dprintf ( D_ALWAYS, "Failed to contact mpi shadow.\n" );
-        return NULL;
+        return 0;
     }
     
     int cmd = TAKE_MATCH;
@@ -2358,7 +2358,7 @@ Scheduler::pushMPIMatches( char *shadow,
     if ( !s.code( cmd ) ||
          !s.code( procs ) ) {
         dprintf ( D_ALWAYS, "Failed to push cmd or procs\n" );
-        return NULL;
+        return 0;
     }
     
     dprintf ( D_PROTOCOL, "Pushed TAKE_MATCH, %d to Mpi Shadow\n", procs);
@@ -2370,7 +2370,7 @@ Scheduler::pushMPIMatches( char *shadow,
         if ( !s.code( i ) ||
              !s.code( inproc ) ) {
             dprintf ( D_ALWAYS, "Failed to push proc num, inproc.\n" );
-            return NULL;
+            return 0;
         }
         dprintf ( D_FULLDEBUG, "Pushed proc %d, num %d.\n", i, inproc );
 
@@ -2383,7 +2383,7 @@ Scheduler::pushMPIMatches( char *shadow,
                 dprintf ( D_ALWAYS, "Failed to send host, cap to shadow\n" );
                 delete [] p;
                 delete [] c;
-                return NULL;
+                return 0;
             }
             dprintf ( D_PROTOCOL, "Pushed %s %s to mpi shadow\n", p, c );
         }
@@ -2393,12 +2393,12 @@ Scheduler::pushMPIMatches( char *shadow,
     
     if ( !s.end_of_message() ) {
         dprintf ( D_ALWAYS, "Failure in sending eom to mpi shadow.\n" );
-        return NULL;
+        return 0;
     }
     
     if( !s.close() ) {
         dprintf ( D_ALWAYS, "Failure to close mpi shadow sock.\n" );
-        return NULL;
+        return 0;
     }
     
     return 1;
