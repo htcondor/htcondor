@@ -38,6 +38,15 @@ class Authentication;
 class Condor_MD_MAC;
 /** The ReliSock class implements the Sock interface with TCP. */
 
+// Define a 'filesize_t' type and FILESIZE_T_FORMAT printf format string
+#if defined HAS_INT64_T
+  typedef uint64_t filesize_t;
+# define FILESIZE_T_FORMAT "%" PRIu64
+
+#else
+  typedef unsigned long filesize_t;
+# define FILESIZE_T_FORMAT "%lu"
+#endif
 
 class ReliSock : public Sock {
 	friend class Authentication;
@@ -106,14 +115,14 @@ public:
     ///
 	int get_bytes_nobuffer(char *buffer, int max_length, int receive_size=1);
 
-    /// returns -1 on failure, else number of bytes transferred
-	int get_file(const char *destination, bool flush_buffers=false);
-    /// returns -1 on failure, else number of bytes transferred
-	int get_file(int fd, bool flush_buffers=false);
-    /// returns -1 on failure, else number of bytes transferred
-	int put_file(const char *source);
-    /// returns -1 on failure, else number of bytes transferred
-	int put_file( int fd );
+    /// returns -1 on failure, 0 for ok
+	int get_file( filesize_t *size, const char *destination, bool flush_buffers=false);
+    /// returns -1 on failure, 0 for ok
+	int get_file( filesize_t *size, int fd, bool flush_buffers=false);
+    /// returns -1 on failure, 0 for ok
+	int put_file( filesize_t *size, const char *source);
+    /// returns -1 on failure, 0 for ok
+	int put_file( filesize_t *size, int fd );
     ///
 	float get_bytes_sent() { return _bytes_sent; }
     ///

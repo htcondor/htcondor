@@ -149,6 +149,7 @@ int main( int argc, char *argv[] )
 	int result = -1;
 	int exitcode = 1;
 	char *reason=0;
+	filesize_t filesize;
 
 	sock->decode();
 	sock->code(result);
@@ -158,7 +159,7 @@ int main( int argc, char *argv[] )
 			reason = "permission denied";
 			break;
 		case DC_FETCH_LOG_RESULT_SUCCESS:
-			result = sock->get_file(1,0);
+			result = sock->get_file(&filesize,1,0);
 			if(result>=0) {
 				exitcode = 0;
 			} else {

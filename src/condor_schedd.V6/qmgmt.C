@@ -2185,8 +2185,9 @@ SendSpoolFile(char *filename)
 	Q_SOCK->eom();
 
 	/* Read file size from client. */
+	filesize_t	size;
 	Q_SOCK->decode();
-	if (Q_SOCK->get_file(path) < 0) {
+	if (Q_SOCK->get_file(&size, path) < 0) {
 		dprintf(D_ALWAYS, "Failed to receive file from client in SendSpoolFile.\n");
 		Q_SOCK->eom();
 		return -1;

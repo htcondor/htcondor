@@ -599,7 +599,9 @@ handle_fetch_log( Service *service, int cmd, Stream *s )
 	result = DC_FETCH_LOG_RESULT_SUCCESS;
 	stream->code(result);
 
-	total_bytes = stream->put_file(fd);
+	filesize_t size;
+	stream->put_file(&size, fd);
+	total_bytes += size;
 
 	stream->end_of_message();
 

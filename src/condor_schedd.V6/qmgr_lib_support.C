@@ -190,8 +190,9 @@ FreeJobAd(ClassAd *&ad)
 int
 SendSpoolFileBytes(char *filename)
 {
+	filesize_t	size;
 	qmgmt_sock->encode();
-	if (qmgmt_sock->put_file(filename) < 0) {		
+	if (qmgmt_sock->put_file(&size, filename) < 0) {		
 		return -1;
 	}
 

@@ -1040,7 +1040,8 @@ FileTransfer::DownloadThread(void *arg, Stream *s)
 int
 FileTransfer::DoDownload(ReliSock *s)
 {
-	int reply, bytes, total_bytes = 0;
+	int reply;
+	filesize_t bytes, total_bytes = 0;
 	char filename[_POSIX_PATH_MAX];
 	char* p_filename = filename;
 	char fullname[_POSIX_PATH_MAX];
@@ -1117,7 +1118,7 @@ FileTransfer::DoDownload(ReliSock *s)
 		// minutes!  MLOP!! Since we are doing this, we may as well
 		// not bother to fsync every file.
 //		dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload fullname=%s\n",fullname);
-		if( ((bytes = s->get_file(fullname)) < 0) ) {
+		if( s->get_file( &bytes, fullname ) < 0 ) {
 			return_and_resetpriv( -1 );
 		}
 		if ( want_fsync ) {
@@ -1222,8 +1223,7 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 	TransferStart = time(NULL);
 
 	if (blocking) {
-
-		Info.bytes = DoUpload((ReliSock *)s);
+		DoUpload( &Info.bytes, (ReliSock *)s);
 		Info.duration = time(NULL)-TransferStart;
 		Info.success = (Info.bytes >= 0);
 		Info.in_progress = false;
@@ -1263,22 +1263,24 @@ FileTransfer::UploadThread(void *arg, Stream *s)
 {
 	dprintf(D_FULLDEBUG,"entering FileTransfer::UploadThread\n");
 	FileTransfer * myobj = ((upload_info *)arg)->myobj;
-	int total_bytes = myobj->DoUpload((ReliSock *)s);
+	filesize_t	total_bytes;
+	int status = myobj->DoUpload( &total_bytes, (ReliSock *)s);
 	write(myobj->TransferPipe[1],	// write end
 			(char *)&total_bytes, sizeof(int));
-	return (total_bytes >= 0);
+	return ( status >= 0 );
 }
 
 int
-FileTransfer::DoUpload(ReliSock *s)
+FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 {
 	char *filename;
 	char *basefilename;
 	char fullname[_POSIX_PATH_MAX];
-	int bytes, total_bytes=0;
+	filesize_t bytes;
 	bool is_the_executable;
 	StringList * filelist = FilesToSend;
-	
+
+	*total_bytes = 0;
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DoUpload\n");
 
 	priv_state saved_priv = PRIV_UNKNOWN;
@@ -1373,7 +1375,7 @@ FileTransfer::DoUpload(ReliSock *s)
 		}
 #endif
 
-		if( ((bytes = s->put_file(fullname)) < 0) ) {
+		if( s->put_file( &bytes, fullname ) < 0 ) {
 			/* if we fail to transfer a file, EXCEPT so the other side can */
 			/* try again. SC2000 hackery. _WARNING_ - I think Keller changed */
 			/* all of this. -epaulson 11/22/2000 */
@@ -1387,7 +1389,7 @@ FileTransfer::DoUpload(ReliSock *s)
 			return_and_resetpriv( -1 );
 		}
 
-		total_bytes += bytes;
+		*total_bytes += bytes;
 	}
 
 	// tell our peer we have nothing more to send
@@ -1395,9 +1397,9 @@ FileTransfer::DoUpload(ReliSock *s)
 
 	dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
 
-	bytesSent += total_bytes;
+	bytesSent += *total_bytes;
 
-	return_and_resetpriv( total_bytes );
+	return_and_resetpriv( 0 );
 }
 
 int

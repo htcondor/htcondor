@@ -103,7 +103,7 @@ class FileTransfer {
 	struct FileTransferInfo {
 		FileTransferInfo() : bytes(0), duration(0), type(NoType),
 			success(true), in_progress(false) {}
-		int bytes;
+		filesize_t bytes;
 		time_t duration;
 		TransferType type;
 		bool success;
@@ -167,7 +167,7 @@ class FileTransfer {
 			@return -1 on failure, bytes transferred otherwise
 		*/
 	int DoDownload(ReliSock *s);
-	int DoUpload(ReliSock *s);
+	int DoUpload( filesize_t *total_bytes, ReliSock *s);
 
 	void CommitFiles();
 	void ComputeFilesToSend();
