@@ -2440,9 +2440,6 @@ These macros affect \Condor{preen}.
 These macros affect the \Condor{collector}.
 \begin{description}
   
-\item[\Macro{COLLECTOR\_PORT}] \label{param:CollectorPort}
-  The port that the \Condor{collector} uses. Defaults to 9618.
-
 \item[\Macro{CLASSAD\_LIFETIME}] \label{param:ClassadLifetime} This
   macro determines how long a ClassAd can remain in the collector
   before it is discarded as stale information.  The ClassAds sent to
@@ -2488,13 +2485,6 @@ These macros affect the \Condor{collector}.
   It should be about 20 characters long.  For example, the name of the
   UW-Madison Computer Science Condor Pool is ``UW-Madison CS''.  
 
-\item[\Macro{CONDOR\_VIEW\_PORT}] \label{param:CondorViewPort}
-  The port that the Condor View Collector runs on. Defaults to 9618.
-  See section~\ref{sec:CondorView-Client-Install}
-  and
-  section~\ref{sec:Contrib-CondorView-Install}
-  for more information about the Condor View Collector.
-
 \item[\Macro{CONDOR\_DEVELOPERS\_COLLECTOR}]
   \label{param:CondorDevelopersCollector} By default, every pool sends
   periodic updates to a central \Condor{collector} at UW-Madison with
@@ -2506,25 +2496,6 @@ These macros affect the \Condor{collector}.
   By default, they will be sent to condor.cs.wisc.edu.  If you don't want
   these updates to be sent from your pool, set this macro to
   NONE. 
-
-\item[\Macro{CONDOR\_DEVELOPERS\_COLLECTOR\_PORT}]
-  \label{param:CondorDevelopersCollectorPort}
-   The port that the Developers Collector runs on.
-   Defaults to 9618.
-   This is used for the updates to the Condor Developer's collector,
-   which is normally condor.cs.wisc.edu.
-   Configure this to be a different machine with
-   \MacroNI{CONDOR\_DEVELOPERS\_COLLECTOR},
-   and a different port with \MacroNI{CONDOR\_DEVELOPERS\_COLLECTOR\_PORT}.
-   We recommend that you leave both of these alone;
-   they allow the Condor team to get a feeling for how
-   many active Condor pools are in the world,
-   and the team can report this
-   information to funding agencies to convince them to give us more money.
-   Set \MacroNI{CONDOR\_DEVELOPERS\_COLLECTOR} to NONE to
-   eliminate reporting.
-   Theoretically, you could set up your own Developer's Collector,
-   if you had a \Condor{collector} that you set up to monitor several pools.
 
 \item[\Macro{COLLECTOR\_SOCKET\_BUFSIZE}] 
   \label{param:CollectorSocketBufsize} This specifies the buffer size, in
