@@ -135,11 +135,13 @@ MAIN( int argc, char *argv[], char **envp )
   we will get an error on the "write" if something goes wrong.
 */
 int
-open_write_stream( const char * ckpt_file, size_t n_bytes )
+open_ckpt_file( const char *ckpt_file, int flags, size_t n_bytes )
 {
-	int		fd;
-
-	return open( ckpt_file, O_CREAT | O_TRUNC | O_WRONLY, 0664 );
+	if( flags & O_WRONLY ) {
+		return open( ckpt_file, O_CREAT | O_TRUNC | O_WRONLY, 0664 );
+	} else {
+		return open( ckpt_file, O_RDONLY );
+	}
 }
 
 void
