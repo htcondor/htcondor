@@ -16,6 +16,7 @@ Resource::Resource( Sock* coll_sock, Sock* alt_sock )
 	this->alt_sock = alt_sock;
 	up_tid = -1;
 	poll_tid = -1;
+	kill_tid = -1;
 }
 
 
@@ -23,6 +24,7 @@ Resource::~Resource()
 {
 	daemonCore->Cancel_Timer( up_tid );
 	this->cancel_poll_timer();
+	this->cancel_kill_timer();
 
 	delete r_state;
 	delete r_classad;
@@ -63,7 +65,7 @@ Resource::kill_claim()
 		return change_state( owner_state );
 	default:
 			// In other states, try direct kill.  See above.
-		return r_starter->kill( DC_SIGHARDKILL );
+		return hardkill_starter();
 	}
 	return TRUE;
 }
@@ -133,7 +135,7 @@ Resource::deactivate_claim_forcibly()
 {
 	dprintf(D_ALWAYS, "Called deactivate_claim_forcibly()\n");
 	if( state() == claimed_state ) {
-		return r_starter->kill( DC_SIGHARDKILL );
+		return hardkill_starter();
 	} else {
 		return FALSE;
 	}
@@ -141,9 +143,27 @@ Resource::deactivate_claim_forcibly()
 
 
 int
-Resource::hardkill_claim()
+Resource::hardkill_starter()
 {
+	if( ! r_starter->active() ) {
+		return TRUE;
+	}
 	if( r_starter->kill( DC_SIGHARDKILL ) < 0 ) {
+		r_starter->killpg( DC_SIGKILL );
+		return FALSE;
+	} else {
+		start_kill_timer();
+		return TRUE;
+	}
+}
+
+
+int
+Resource::sigkill_starter()
+{
+		// Now that the timer has gone off, clear out the tid.
+	kill_tid = -1;
+	if( r_starter->active() ) {
 		return r_starter->killpg( DC_SIGKILL );
 	}
 	return TRUE;
@@ -177,7 +197,7 @@ Resource::in_use()
 	State s = state();
 	if( s == owner_state || s == unclaimed_state ) {
 		return false;
-	} 
+	}
 	return true;
 }
 
@@ -190,6 +210,10 @@ Resource::starter_exited()
 
 		// Let our starter object know it's starter has exited.
 	r_starter->exited();
+
+		// Now that this starter has exited, cancel the timer that
+		// would send it SIGKILL.
+	cancel_kill_timer();
 
 	State s = state();
 	switch( s ) {
@@ -394,6 +418,18 @@ Resource::update()
 }
 
 
+void
+Resource::final_update() 
+{
+	ClassAd public_ad;
+	this->make_public_ad( &public_ad );
+	r_reqexp->unavail();
+	r_state->update( &public_ad );
+	r_reqexp->update( &public_ad );
+	send_classad_to_sock( coll_sock, &public_ad, NULL );
+}
+
+
 int
 Resource::eval_and_update()
 {
@@ -451,6 +487,36 @@ Resource::cancel_poll_timer()
 		daemonCore->Cancel_Timer( poll_tid );
 		poll_tid = -1;
 		dprintf( D_FULLDEBUG, "Canceled polling timer.\n" );
+	}
+}
+
+
+int
+Resource::start_kill_timer()
+{
+	if( kill_tid >= 0 ) {
+			// Timer already started.
+		return TRUE;
+	}
+	kill_tid = 
+		daemonCore->Register_Timer( killing_timeout,
+									0, 
+									(TimerHandlercpp)sigkill_starter,
+									"sigkill_starter", this );
+	if( kill_tid < 0 ) {
+		EXCEPT( "Can't register DaemonCore timer" );
+	}
+	return TRUE;
+}
+
+
+void
+Resource::cancel_kill_timer()
+{
+	if( kill_tid != -1 ) {
+		daemonCore->Cancel_Timer( kill_tid );
+		kill_tid = -1;
+		dprintf( D_FULLDEBUG, "Canceled kill timer.\n" );
 	}
 }
 
