@@ -27,6 +27,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 
 #include "condor_collector.h"
+#include "collector_stats.h"
 #include "hashkey.h"
 
 class CollectorEngine : public Service
@@ -100,9 +101,7 @@ class CollectorEngine : public Service
 						   ClassAd*,HashKey&, char*, int & );
 
 	// Statistics
-	int		updates_total;
-	int		updates_sequenced;
-	int		updates_dropped;
+	CollectorStats	*stats;
 
   public:
 	// pointer values for representing master states

@@ -74,10 +74,7 @@ CollectorEngine () :
 	masterCheckInterval = 10800;
 	housekeeperTimerID = -1;
 	masterCheckTimerID = -1;
-
-	updates_total = 0;
-	updates_sequenced = 0;
-	updates_dropped = 0;
+	stats = new CollectorStats( 0, 0 );
 }
 
 
@@ -649,14 +646,16 @@ updateClassAd (CollectorHashTable &hashTable,
 	// this time stamped ad is the new ad
 	new_ad = ad;
 
-	// Count the update
-	updates_total++;
-
 	// check if it already exists in the hash table ...
-	if (hashTable.lookup (hk, old_ad) == -1)
+	if ( hashTable.lookup (hk, old_ad) == -1)
     {	 	
 		// no ... new ad
 		dprintf (D_ALWAYS, "%s: Inserting ** %s\n", adType, hashString);
+
+		// Update statistics
+		stats->update( label, NULL, new_ad );
+
+		// Now, store it away
 		if (hashTable.insert (hk, new_ad) == -1)
 		{
 			EXCEPT ("Error inserting ad (out of memory)");
@@ -670,6 +669,9 @@ updateClassAd (CollectorHashTable &hashTable,
 		// yes ... old ad must be updated
 		dprintf (D_FULLDEBUG, "%s: Updating ... %s\n", adType, hashString);
 
+		// Update statistics
+		stats->update( label, old_ad, new_ad );
+
 		// check if it has special status (master ads)
 		if (old_ad < CollectorEngine::THRESHOLD)
 		{
@@ -682,27 +684,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		}
 		else
 		{
-			// Check the sequence numbers..
-			int	new_seq, old_seq;
-			int	new_stime, old_stime;
-			int	dropped = 0;
-
-			// Compare sequence numbers..
-			if ( new_ad->LookupInteger( ATTR_UPDATE_SEQUENCE_NUMBER, new_seq ) &&
-				 old_ad->LookupInteger( ATTR_UPDATE_SEQUENCE_NUMBER, old_seq ) &&
-				 new_ad->LookupInteger( ATTR_DAEMON_START_TIME, new_stime ) &&
-				 old_ad->LookupInteger( ATTR_DAEMON_START_TIME, old_stime ) )
-			{
-
-				int		expected = old_seq + 1;
-				if (  ( new_stime == old_stime ) && ( expected != new_seq ) )
-				{
-					dprintf( D_ALWAYS, "  Drop: expected %d, got %d\n", expected, new_seq );
-					dropped = ( new_seq < expected ) ? 1 : ( new_seq - expected );
-				}
-			}
-			updates_sequenced++;
-			updates_dropped += dropped;
+			// Now, finally, store the new ClassAd
 			old_ad->ExchangeExpressions (new_ad);
 			delete new_ad;
 		}
@@ -950,19 +932,10 @@ masterCheck ()
 }
 
 // Publish statistics into our ClassAd
-int CollectorEngine::
-publishStats( ClassAd *ad )
+int
+CollectorEngine::publishStats( ClassAd *ad )
 {
-    char line[100];
-
-    sprintf(line,"%s = %d", ATTR_UPDATESTATS_TOTAL, updates_total);
-    ad->Insert(line);
-    sprintf(line,"%s = %d", ATTR_UPDATESTATS_SEQUENCED, updates_sequenced );
-    ad->Insert(line);
-    sprintf(line,"%s = %d", ATTR_UPDATESTATS_LOST, updates_dropped);
-    ad->Insert(line);
-
-	return 0;
+	return stats->publishGlobal( ad );
 }
 
 static void
