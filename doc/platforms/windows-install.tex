@@ -2,8 +2,8 @@
 \subsection{\label{sec:Windows-Install}Installation on Windows}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{installation!Windows NT|(}
-\index{Windows NT!installation|(}
+\index{installation!Windows|(}
+\index{Windows!installation|(}
 This section contains the instructions for installing the Microsoft
 Windows version of Condor at your site.  
 The install program will set you up with a slightly customized configuration
@@ -31,7 +31,7 @@ a single file such as:
   condor-6.6.0-winnt40-x86.exe
 \end{verbatim}
 
-\index{Windows NT!installation!initial file size}
+\index{Windows!installation!initial file size}
 This file is approximately 20 Mbytes in size, and may be
 removed once Condor is fully installed.
 
@@ -59,7 +59,7 @@ disk space could be desired to be able to run jobs with large data files.
 Condor under Windows } 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{Windows NT!installation!preparation}
+\index{Windows!installation!preparation}
 Before you install the Windows version of Condor at your site,
 there are two major
 decisions to make about the basic layout of your pool.
@@ -105,7 +105,7 @@ on the other machines within the pool.
 \item{Do I have enough disk space for Condor?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{Windows NT!installation!required disk space}
+\index{Windows!installation!required disk space}
 The Condor release directory takes up a fair amount of space.
 The size requirement for the release
 directory is approximately 50 Mbytes.
@@ -120,7 +120,7 @@ of free space.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:nt-install-procedure}
-Installation Procedure using the included Setup Program}
+Installation Procedure using the included Set Up Program}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % condor MUST be run as local system
@@ -199,7 +199,7 @@ The Condor installation is completed by answering questions and choosing options
      \item[Size of pool]
        Condor needs to know if this a Personal Condor installation,
        or if there will be more than one machine in the pool.
-\index{Windows NT!installation!Personal Condor}
+\index{Windows!installation!Personal Condor}
 \index{Personal Condor}
        A Personal Condor pool
        implies that there is only one machine in the pool.
@@ -224,7 +224,7 @@ The Condor installation is completed by answering questions and choosing options
 
 \item[STEP 4: Where will Condor be installed?]
 
-\index{Windows NT!installation!location of files}
+\index{Windows!installation!location of files}
 The next step is where the destination of the Condor files will be
 decided.
 It is recommended that Condor be installed in the location shown as the default in the dialog box:
@@ -410,7 +410,7 @@ are available.
 \subsubsection{\label{sec:NT-Manual-Install}Manual Installation Condor on Windows}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{Windows NT!manual install|(}
+\index{Windows!manual install}
 If you are to install Condor on many different machines, you may wish
 to use some other mechanism to install Condor on additional machines
 rather than running the Setup program described above on each machine.
@@ -472,13 +472,12 @@ drive letter), no matter who is logged into the machine.
 
 \end{description}
 
-\index{manual installation!Windows NT|)}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{nt-installed-now-what}
 Condor is installed... now what?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Windows NT!starting the Condor service|(}
+\index{Windows!starting the Condor service}
 
 After the installation of Condor is completed, the Condor service
 must be started.  If you used the GUI-based setup program to install
@@ -499,9 +498,8 @@ Or, alternatively you can enter the following command from a command prompt:
 \begin{verbatim}
          net start condor
 \end{verbatim}
-\index{Windows NT!starting the Condor service|)}
 
-\index{Windows NT!Condor daemon names}
+\index{Windows!Condor daemon names}
 Run the Task Manager (Control-Shift-Escape) to check that Condor
 services are running.  The following tasks should
 be running:  
@@ -518,8 +516,8 @@ Also, you should now be able to open up a new cmd (DOS prompt) window, and
 the Condor bin directory should be in your path, so you can issue the normal
 Condor commands, such as \condor{q} and \condor{status}.
 
-\index{installation!Windows NT|)}
-\index{Windows NT!installation|)}
+\index{installation!Windows|)}
+\index{Windows!installation|)}
 
 \subsubsection{\label{nt-running-now-what}
 Condor is running... now what?}

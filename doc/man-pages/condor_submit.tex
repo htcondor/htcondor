@@ -96,7 +96,7 @@ input the program requires (that is, this file becomes \File{stdin}).
 If not specified, the default value
 of \File{/dev/null} is used for submission to a Unix machine.
 If not specified, input is ignored
-for submission to an NT machine.
+for submission to a Windows machine.
 For globus universe jobs, \Opt{input} may be a URL that the Globus
 tool \Prog{globus\_url\_copy} understands.
 
@@ -112,7 +112,7 @@ any information the program would normally write to the screen
 If not specified, the default value of
 \File{/dev/null} is used for submission to a Unix machine.
 If not specified, output is ignored
-for submission to an NT machine.
+for submission to a Windows machine.
 More than one job should not use the same output
 file, since this will cause one job to overwrite the output of
 another.
@@ -131,7 +131,7 @@ error messages the program would normally write to the screen
 If not specified, the default value of
 \File{/dev/null} is used for submission to a Unix machine.
 If not specified, error messages are ignored
-for submission to an NT machine.
+for submission to a Windows machine.
 More than one job should not use the same error file, since
 this will cause one job to overwrite the errors of another.
 For globus universe jobs, \Opt{error} may be a URL that the Globus
@@ -690,7 +690,7 @@ of the form :
 Multiple environment variables can be specified by separating them with a
 semicolon (;) when submitting from a Unix platform.
 Multiple environment variables can be specified by separating them with a
-vertical bar (\Bar) when submitting from an NT platform.
+vertical bar (\Bar) when submitting from a Windows platform.
 These environment variables will be placed (as given) into the
 job's environment before execution. The length of all characters
 specified in the environment is currently limited to 10240 characters.  
