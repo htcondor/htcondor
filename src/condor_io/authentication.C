@@ -556,9 +556,70 @@ Authentication::authenticate_nt()
 void 
 Authentication::setupEnv( char *hostAddr )
 {
-	char tmpstring[1024];
+	char buffer[1024];
+	char *pbuf;
+	int tryGss = 0;
+	int needfree = 0;
+		//if cert not in ENV, and not in config file, don't try GSS auth
+	if ( getenv( "X509_USER_CERT" ) ) {
+			//simply assume that if USER_CERT is specified, it's all set up.
+		tryGss = 1;
+	}
+	else {
+			//try env first (some progs might have it set), else param for it
+		if ( ( pbuf = getenv( "X509_DIRECTORY" ) )
+				|| ( needfree = 1, pbuf = param( "X509_DIRECTORY" ) ) )
+		{
+			tryGss = 1;
+
+			//set defaults for CERT_DIR, USER_CERT, and USER_KEY if not in ENV
+			sprintf( buffer, "X509_CERT_DIR=%s/certdir", pbuf );
+			putenv( strdup( buffer ) );
+
+			sprintf( buffer, "X509_USER_CERT=%s/usercert.pem", pbuf );
+			putenv( strdup( buffer ) );
+
+			sprintf(buffer,"X509_USER_KEY=%s/userkey.pem", pbuf );
+			putenv( strdup( buffer ) );
+
+			sprintf(buffer,"SSLEAY_CONF=%s/condor_ssl.cnf", pbuf );
+			putenv( strdup( buffer ) );
+
+			//don't need to do anything with X509_USER_PROXY, submit should 
+			//have put that into the environment already...
+
+			if ( needfree ) {
+				free( pbuf );
+			}
+		}
+	}
 
 	if ( mySock->isClient() ) {
+			//client needs to know name of the schedd, I stashed hostAddr in 
+			//applicable ReliSock::ReliSock() or ReliSock::connect(), which 
+			//should only be called by clients. 
+		sockaddr_in sin;
+		char *hostname;
+
+		if ( hostAddr[0] != '<' ) { //not already sinful
+			if ( strchr( hostAddr, ':' ) ) { //already has port info
+				sprintf( buffer, "<%s>", hostAddr );
+			}
+			else {
+				//add a bogus port number (0) because we just want hostname
+				sprintf( buffer, "<%s:0>", hostAddr );
+			}
+		}
+		else {
+			strcpy( buffer, hostAddr );
+		}
+		
+		if ( string_to_sin( buffer, &sin ) 
+				&& ( hostname = sin_to_hostname( &sin, NULL ) ) ) 
+		{
+			sprintf( buffer, "CONDOR_GATEKEEPER=/CN=schedd@%s", hostname );
+			putenv( strdup( buffer ) );
+		}
 		canUseFlags |= (int) CAUTH_CLAIMTOBE;
 #if defined(WIN32)
 		canUseFlags |= (int) CAUTH_NTSSPI;
@@ -567,39 +628,15 @@ Authentication::setupEnv( char *hostAddr )
 
 			//RendezvousDirectory is for use by shared-filesystem filesys auth.
 			//if user specfied RENDEZVOUS_DIRECTORY, extract it
-		char *tmpDir = NULL;
-		if ( (tmpDir = getenv( "RENDEZVOUS_DIRECTORY" ) ) ) {
-			RendezvousDirectory = strnewp( tmpDir );
+		if ( ( pbuf = getenv( "RENDEZVOUS_DIRECTORY" ) ) ) {
+			RendezvousDirectory = strnewp( pbuf );
 			canUseFlags |= (int) CAUTH_FILESYSTEM_REMOTE;
 		}
-#endif
+		if ( tryGss ) {
+			canUseFlags |= CAUTH_GSS;
+		}
 
-			//client needs to know name of the schedd, I stashed hostAddr in 
-			//applicable ReliSock::ReliSock() or ReliSock::connect(), which 
-			//should only be called by clients. 
-		sockaddr_in sin;
-		char *hostname;
-		char tmpStr[1024];
-
-		if ( hostAddr[0] != '<' ) { //not already sinful
-			if ( strchr( hostAddr, ':' ) ) { //already has port info
-				sprintf( tmpStr, "<%s>", hostAddr );
-			}
-			else {
-				//add a bogus port number (0) because we just want hostname
-				sprintf( tmpStr, "<%s:0>", hostAddr );
-			}
-		}
-		else {
-			strcpy( tmpStr, hostAddr );
-		}
-		
-		if ( string_to_sin( tmpStr, &sin ) 
-				&& ( hostname = sin_to_hostname( &sin, NULL ) ) ) 
-		{
-			sprintf( tmpstring, "CONDOR_GATEKEEPER=/CN=schedd@%s", hostname );
-			putenv( strdup( tmpstring ) );
-		}
+#endif defined WIN32
 	}
 	else {   //server
 		if ( serverShouldTry ) {
@@ -607,58 +644,7 @@ Authentication::setupEnv( char *hostAddr )
 			serverShouldTry = NULL;
 		}
 		serverShouldTry = param( "AUTHENTICATION_METHODS" );
-
-		char *X509CertDir = NULL;
-
-		if( (X509CertDir = param("X509_CERT_DIR")) ) {
-			char tmpstring[MAXPATHLEN];
-			sprintf( tmpstring, "X509_CERT_DIR=%.*s/",MAXPATHLEN, X509CertDir );
-			putenv( strdup( tmpstring ) );
-		}
 	}
-
-#if defined(GSS_AUTHENTICATION)
-	char *CertDir = NULL;
-
-	if ( !( CertDir = getenv( "X509_CERT_DIR" ) ) ) {
-		return;
-	}
-	struct stat statbuf;
-	int canTryGSS = 1;
-
-	if ( stat( CertDir, &statbuf ) ) {
-		canTryGSS = 0;
-	}
-	else if ( !( statbuf.st_mode & ( S_IFDIR | S_IREAD ) ) ) {
-		canTryGSS = 0;
-	}
-
-	if ( !canTryGSS ) {
-		if ( mySock->isClient() ) {
-			fprintf( stderr, "\nunable to read x509 directory %s\n", CertDir );
-		}
-		else {
-			dprintf( D_ALWAYS, "unable to read x509 directory %s\n", CertDir );
-		}
-		return;
-	}
-
-	sprintf( tmpstring, "X509_USER_CERT=%s/newcert.pem", CertDir );
-	putenv( strdup( tmpstring ) );
-
-	sprintf(tmpstring,"X509_USER_KEY=%s/private/newkey.pem",CertDir);
-	putenv( strdup( tmpstring ) );
-
-	sprintf(tmpstring,"SSLEAY_CONF=%s/condor_ssl.cnf",CertDir);
-	putenv( strdup( tmpstring ) );
-
-	//if they got this far, might as well let 'em try to use GSS
-	//only for client because canTryGSS/canTryFilesystem, for server
-	//should be parsed in schedd from config file.
-	if ( mySock->isClient() ) {
-		canUseFlags |= CAUTH_GSS;
-	}
-#endif
 }
 
 int

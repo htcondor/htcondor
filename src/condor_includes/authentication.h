@@ -42,7 +42,7 @@
 
 /**
     To use GSS ReliSock, you must define the following environment
-	 variable: X509_CERT_DIR. This is read and other necessary vars
+	 variable: X509_DIRECTORY. This is read and other necessary vars
 	 are set in member methods.
  */
 
