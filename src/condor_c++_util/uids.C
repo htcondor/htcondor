@@ -248,6 +248,7 @@ static uid_t CondorUid, UserUid, MyUid, RealCondorUid;
 static gid_t CondorGid, UserGid, MyGid, RealCondorGid;
 static int CondorIdsInited = FALSE;
 static int UserIdsInited = FALSE;
+static char* UserName = NULL;
 
 static int set_condor_euid();
 static int set_condor_egid();
@@ -376,9 +377,9 @@ init_condor_ids()
 }
 
 static void
-set_user_ids_implementation(uid_t uid, gid_t gid, const char *username)
+set_user_ids_implementation( uid_t uid, gid_t gid, const char *username )
 {
-	if (UserIdsInited && UserUid != uid) {
+	if(UserIdsInited && UserUid != uid) {
 		dprintf(D_ALWAYS, "warning: setting UserUid to %d, was %d previosly\n",
 				uid, UserUid);
 	}
@@ -390,23 +391,26 @@ set_user_ids_implementation(uid_t uid, gid_t gid, const char *username)
 	// EXCEPT or log an error if we do not find it; it is OK for the
 	// user not to be in the passwd file for a so-called SOFT_UID_DOMAIN.
 	if ( !username ) {
-		struct passwd *	pwd = getpwuid( CondorUid );
+		struct passwd *	pwd = getpwuid( UserUid );
 		if( pwd ) {
 			username = pwd->pw_name;
 		}
 	}
 
-	// now if we have a username, call initgroups with it so the 
-	// user can access files belonging to any group he is a member of.
-	// if we did not call initgroups here, the user could only access
-	// files belonging to his/her default group.
-	if ( username ) {
-		initgroups(username, UserGid);
+		// Finally, save the username so we can call initgroups later.
+	if( UserName ) {
+		free( UserName );
+	}
+	if( username ) {
+		UserName = strdup( username );
+	} else {
+		UserName = NULL;
 	}
 }
 
+
 void
-init_user_ids(const char username[])
+init_user_ids( const char username[] )
 {
     struct passwd       *pwd;
 	int					scm;
@@ -419,19 +423,19 @@ init_user_ids(const char username[])
 	scm = SetSyscalls( SYS_LOCAL | SYS_UNRECORDED );
 
 	if( (pwd=getpwnam(username)) == NULL ) {
-		dprintf(D_ALWAYS, "%s not in passwd file\n", username );
+		dprintf( D_ALWAYS, "%s not in passwd file\n", username );
 		return;
 	}
 	(void)endpwent();
 	(void)SetSyscalls( scm );
-	set_user_ids_implementation(pwd->pw_uid, pwd->pw_gid,username);
+	set_user_ids_implementation( pwd->pw_uid, pwd->pw_gid, username );
 }
 
 
 void
 set_user_ids(uid_t uid, gid_t gid)
 {
-	set_user_ids_implementation(uid,gid,NULL);
+	set_user_ids_implementation( uid, gid, NULL );
 }
 
 
@@ -661,7 +665,21 @@ set_user_egid()
 		dprintf(D_ALWAYS, "set_user_egid() called when UserIds not inited!\n");
 		return -1;
 	}
-
+	
+		// Now, call initgroups with the right username so the user
+		// can access files belonging to any group (s)he is a member
+		// of.  If we did not call initgroups here, the user could
+		// only access files belonging to his/her default group, and
+		// might be left with access to the groups that root belongs
+		// to, which is a serious security problem.
+	if( UserName ) {
+		errno = 0;
+		if( (initgroups(UserName, UserGid) < 0) ) {
+			dprintf( D_ALWAYS, 
+					 "set_user_rgid - ERROR: initgroups(%s, %d) failed, "
+					 "errno: %d\n", UserName, UserGid, errno );
+		}			
+	}
 	return SET_EFFECTIVE_GID(UserGid);
 }
 
@@ -686,6 +704,20 @@ set_user_rgid()
 		return -1;
 	}
 
+		// Now, call initgroups with the right username so the user
+		// can access files belonging to any group (s)he is a member
+		// of.  If we did not call initgroups here, the user could
+		// only access files belonging to his/her default group, and
+		// might be left with access to the groups that root belongs
+		// to, which is a serious security problem.
+	if( UserName ) {
+		errno = 0;
+		if( (initgroups(UserName, UserGid) < 0) ) {
+			dprintf( D_ALWAYS, 
+					 "set_user_rgid - ERROR: initgroups(%s, %d) failed, "
+					 "errno: %d\n", UserName, UserGid, errno );
+		}			
+	}
 	return SET_REAL_GID(UserGid);
 }
 
