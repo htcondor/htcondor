@@ -142,8 +142,8 @@
 
 #if defined(sgi)
 #undef sgi
-#define Platform SGI_IRIX53
-#define PlatformIncludeFile <SGI_IRIX53.cf>
+#define Platform SGI_IRIX62
+#define PlatformIncludeFile <SGI_IRIX62.cf>
 #endif
 
 #if defined(hpux) && defined(hp9000s800)
