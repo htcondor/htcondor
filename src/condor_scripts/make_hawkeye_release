@@ -3,7 +3,7 @@ use strict;
 
 # Version info, dirs, etc
 my $HawkeyeVersion = "";
-my $Temp = "../tmp";
+my $Temp = "../tmp-$$";
 my $HawkeyeRelease = "hawkeye_release";
 my @BinDirs = ( "bin", "sbin" );
 my $Modules = "hawkeye_modules";
