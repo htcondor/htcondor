@@ -675,7 +675,7 @@ GlobusResource::ReadMonitorJobStatusFile()
 		if ( sscanf( buff, "%s %d", contact, &status ) == 2 &&
 			 *contact != '\0' && status > 0 ) {
 			int rc;
-			GlobusJob *job;
+			GlobusJob *job = NULL;
 
 			rc = JobsByContact.lookup( HashKey( globusJobId(contact) ), job );
 			if ( rc == 0 & job != NULL ) {
