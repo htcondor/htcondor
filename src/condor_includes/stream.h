@@ -176,6 +176,7 @@
    for the enum to make sure sizeof(enum) == sizeof(int). */
 enum signal_t { __signal_t_dummy_value = INT_MAX };
 enum open_flags_t { __open_flags_t_dummy_value = INT_MAX };
+enum fcntl_cmd_t { __fcntl_cmd_t_dummy_value = INT_MAX };
 
 class Stream {
 
@@ -245,6 +246,7 @@ public:
 
 	int code(signal_t &);
 	int code(open_flags_t &);
+	int code(fcntl_cmd_t &);
 	int code(struct rusage &);
 	int code(struct stat &);
 	int code(struct statfs &);
@@ -275,7 +277,7 @@ public:
 	
 	int code(signal_t *x)			{ return code(*x); }
 	int code(open_flags_t *x)		{ return code(*x); }
-
+	int code(fcntl_cmd_t *x) 		{ return code(*x); }
 	int code(struct rusage *x)		{ return code(*x); }
 	int code(struct stat *x)		{ return code(*x); }
 	int code(struct statfs *x)		{ return code(*x); }

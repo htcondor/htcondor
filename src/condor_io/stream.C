@@ -440,6 +440,26 @@ int Stream::code(open_flags_t &flags)
 	return rval;
 }
 
+extern "C" int fcntl_cmd_encode( int cmd );
+extern "C" int fcntl_cmd_decode( int cmd );
+
+int Stream::code(fcntl_cmd_t &cmd)
+{
+	int real_cmd, rval;
+
+	if (_coding == stream_encode) {
+		real_cmd = fcntl_cmd_encode((int)cmd);
+	}
+
+	rval = code(real_cmd);
+
+	if (_coding == stream_decode) {
+		cmd = (fcntl_cmd_t)fcntl_cmd_decode((int)real_cmd);
+	}
+
+	return rval;
+}
+
 int Stream::code(struct rusage &r)
 {
 	STREAM_ASSERT(code(r.ru_utime));
