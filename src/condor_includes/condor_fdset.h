@@ -1,10 +1,6 @@
 #if !defined(_FDSET_H)
 #define _FDSET_H
 
-#if !defined( IRIX62 ) /* for IRIX62, need to include _after_ select.h below */
-#include "condor_fix_timeval.h"
-#endif
-
 #ifndef NBBY
 #define NBBY 8
 #endif
@@ -42,13 +38,11 @@
 #	    include <sys/select.h>	/* IRIX defines all we need here, so use it! */
 #		undef _BSD_TYPES
 #	endif
-#   include "condor_fix_timeval.h"  /* we skipped it for IRIX62 above.. */
 #elif defined( IRIX53 )
 #	undef _DEFINE_FD_SET 
 #else
 #	error "Don't know how to build fd_set for this platform"
 #endif
-
 
 #if defined( _DEFINE_FD_SET )
 #	define	howmany(x, y)	(((x)+((y)-1))/(y))
@@ -72,6 +66,18 @@ int select (int , fd_set *, fd_set *, fd_set *, struct timeval *);
 
 #if !defined(AIX32)
 #define NFDS(x) (x)
+#endif
+
+
+/*
+   In HPUX9, the select call takes (int *) params, wheras SunOS, Solaris
+   take (fd_set *) params.  We define an intermediate type to handle
+   this.    -- Rajesh
+*/
+#if defined (HPUX9) && !defined(HPUX10)
+typedef int *SELECT_FDSET_PTR;
+#else
+typedef fd_set *SELECT_FDSET_PTR;
 #endif
 
 #if defined(__cplusplus)
