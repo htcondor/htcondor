@@ -515,6 +515,9 @@ startd_exit()
 	if ( resmgr ) {
 		dprintf( D_FULLDEBUG, "About to send final update to the central manager\n" );	
 		resmgr->final_update();
+		if ( resmgr->m_attr ) {
+			resmgr->m_attr->final_idle_dprintf();
+		}
 		delete resmgr;
 		resmgr = NULL;
 	}
