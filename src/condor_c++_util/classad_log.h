@@ -144,4 +144,5 @@ private:
 	virtual int ReadBody(int fd) { return 0; }
 };
 
+LogRecord *InstantiateLogEntry(int fd, int type);
 #endif

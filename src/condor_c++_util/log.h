@@ -51,6 +51,5 @@ private:
 	LogRecord *prev;
 };
 
-LogRecord *ReadLogEntry(int fd);
-LogRecord *InstantiateLogEntry(int fd, int type);
+LogRecord *ReadLogEntry(int fd, LogRecord* (*InstantiateLogEntry)(int fd, int type));
 #endif

@@ -51,7 +51,7 @@ ClassAdLog::ClassAdLog(const char *filename) : table(1024, hashFunction)
 
 	// Read all of the log records
 	LogRecord		*log_rec;
-	while ((log_rec = ReadLogEntry(log_fd)) != 0) {
+	while ((log_rec = ReadLogEntry(log_fd, InstantiateLogEntry)) != 0) {
 		switch (log_rec->get_op_type()) {
 		case CondorLogOp_BeginTransaction:
 			if (active_transaction) {

@@ -205,7 +205,7 @@ LogRecord::ReadTail(int fd)
 
 
 LogRecord *
-ReadLogEntry(int fd)
+ReadLogEntry(int fd, LogRecord* (*InstantiateLogEntry)(int fd, int type))
 {
 	LogRecord		*log_rec;
 	LogRecord		head_only;
