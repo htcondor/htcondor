@@ -61,12 +61,12 @@ URL_OBJ = url_condor.o include_urls.o cbstp_url.o file_url.o http_url.o \
 	cfilter_url.o filter_url.o mailto_url.o
 
 SRC =	ToUpper.c image.C machdep.$(OS).C file_state.C tmp_stack.C \
-	syscall_mode.c local_startup.c fake_remote_syscall.c \
+	syscall_mode.c local_startup.c fake_remote_syscall.c fake_hooks.c \
 	$(SAVE_SIGSTATE_SRC)
 
 #if DOES_CHECKPOINTING
 OBJ =	image.o machdep.$(OS).o file_state.o tmp_stack.o syscall_mode.o \
-	local_startup.o fake_remote_syscall.o \
+	local_startup.o fake_remote_syscall.o fake_hooks.o \
 	$(SAVE_SIGSTATE_OBJ) $(EXTRACT) \
 	$(ASSEMBLER_OBJ) $(UTIL_OBJ) $(URL_OBJ)
 #else
