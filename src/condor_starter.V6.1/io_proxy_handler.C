@@ -102,7 +102,6 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 	char path[CHIRP_LINE_MAX];
 	char newpath[CHIRP_LINE_MAX];
 	char flags_string[CHIRP_LINE_MAX];
-	char whence_string[CHIRP_LINE_MAX];
 	int result, offset, whence, length, flags, mode, fd;
 
 	dprintf(D_SYSCALLS,"IOProxyHandler: request: %s\n",line);
