@@ -79,6 +79,7 @@ MAIN( int argc, char *argv[], char **envp )
 {
 	char	buf[_POSIX_PATH_MAX];
 	static char	init_working_dir[_POSIX_PATH_MAX];
+	static char	init_working_dir2[_POSIX_PATH_MAX]; /* Greger */
 	int		i;
 	DebugFlags = D_NOHEADER | D_ALWAYS;
 
@@ -87,7 +88,11 @@ MAIN( int argc, char *argv[], char **envp )
 	getcwd( init_working_dir, sizeof(init_working_dir) );
 	if (argv[0][0] == '/') {
 		executable_name = argv[0];
+		/* Greger */
+		strcpy(init_working_dir2, init_working_dir);
 	} else {
+		/* Greger */
+		strcpy(init_working_dir2, init_working_dir);
 		strcat(init_working_dir, "/");
 		strcat(init_working_dir, argv[0]);
 		executable_name = init_working_dir;
@@ -107,7 +112,7 @@ MAIN( int argc, char *argv[], char **envp )
 			restart();
 		}
 #endif
-		Set_CWD( init_working_dir );
+		Set_CWD( init_working_dir2 );
 		argc -= 2;
 		argv += 2;
 		SetSyscalls( SYS_LOCAL | SYS_MAPPED );

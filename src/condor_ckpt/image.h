@@ -136,11 +136,7 @@ extern "C" void _condor_prestart( int syscall_mode );
 #include "setjmp.h"
 extern "C" {
 	int SETJMP( jmp_buf env );
-#if defined(LINUX)
-	void LONGJMP( const jmp_buf env, int retval );
-#else
 	void LONGJMP( jmp_buf env, int retval );
-#endif
 }
 
 long data_start_addr();
@@ -159,6 +155,16 @@ void patch_registers( void  *);
      void display_prmap();
 	 extern "C" int open_ckpt_file( const char *name,
 								   int flags, size_t n_bytes );
+#endif
+#if defined(LINUX)
+extern "C" {
+     int find_map_for_addr(long addr);
+     int num_segments( );
+     int segment_bounds( int seg_num, RAW_ADDR &start, RAW_ADDR &end,
+	int &prot );
+     void display_prmap();
+     unsigned long find_correct_vm_addr(unsigned long, unsigned long, int);
+};
 #endif
 
 #	define JMP_BUF_SP(env) (((long *)(env))[JmpBufSP_Index()])

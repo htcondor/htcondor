@@ -40,7 +40,12 @@ static jmp_buf Env;
 // machines. This is required so that double's can be pushed
 // on the stack without any alignment problems.
 
+#if defined(LINUX)
+/* Not sure why I have to do this... */
+const int	TmpStackSize = sizeof(char)*65536/sizeof(double);
+#else
 const int	TmpStackSize = sizeof(char)*4096/sizeof(double);
+#endif
 static double	TmpStack[ TmpStackSize ];
 void
 ExecuteOnTmpStk( void (*func)() )

@@ -439,11 +439,7 @@ _SIGPROCMASK( int how, const sigset_t *set, sigset_t *oset)
 #endif
 
 #if defined(SYS_sigprocmask)
-#if defined(LINUX)
-sigprocmask( int how, sigset_t *set, sigset_t *oset)
-#else
 sigprocmask( int how, const sigset_t *set, sigset_t *oset)
-#endif
 {
 	sigset_t tmp, *my_set;
 
@@ -473,7 +469,7 @@ sigprocmask( int how, const sigset_t *set, sigset_t *oset)
 #if defined (SYS_sigsuspend)
 int
 sigsuspend(set)
-#if defined(SUNOS41) || defined(LINUX)
+#if defined(SUNOS41)
 sigset_t *set;
 #else
 const sigset_t *set;

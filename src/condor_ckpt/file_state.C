@@ -61,6 +61,9 @@
 #include <assert.h>
 #include "condor_sys.h"
 #include "condor_file_info.h"
+#if defined(LINUX)
+#include <sys/socketcall.h>
+#endif
 
 #include "condor_debug.h"
 static char *_FileName_ = __FILE__;
@@ -415,11 +418,28 @@ OpenFileTable::DoSocket(int addr_family, int type, int protocol )
 	int	user_fd;
 	int	real_fd;
 	char	buf[ _POSIX_PATH_MAX ];
+#if defined(LINUX)
+	unsigned long	socket_args[4] = {
+		(unsigned long)addr_family,
+		(unsigned long)type,
+		(unsigned long)protocol
+	};
+#endif
 
 		// Try to create the socket
 	if( LocalSysCalls() ) {
 #if defined(LINUX)
-		real_fd = syscall( SYS_socketcall, addr_family, type, protocol );
+		// Linux combines syscalls such as socket, accept, recv, send, ...
+		// into a single system call - SYS_socketcall.  Parameters are
+		// passed through the third argument to syscall, in this case
+		// socket_args.  The type of call (socket, accept,...) is given
+		// as the second argument.  The valid types are listed in
+		// /usr/include/sys/socketcall.h  The kernel source warns that
+		// this interface may change in the future so that this
+		// code may need adjustment! - Greger
+		real_fd = syscall( SYS_socketcall, SYS_SOCKET, socket_args );
+		fprintf(stderr, "Socketcall returned %d, errno=%d\n",
+			real_fd, errno);
 #elif defined(Solaris)
 		real_fd = socket( addr_family, type, protocol );
 #else
@@ -611,6 +631,7 @@ OpenFileTable::Restore()
 
 			f->real_fd = open( f->pathname, mode );
 			if( f->real_fd < 0 ) {
+				fprintf(stderr, "i=%d, filename=%s\n", i, f->pathname);
 				perror( "open" );
 				abort();
 			}
@@ -950,6 +971,13 @@ int
 socket( int addr_family, int type, int protocol )
 {
 	int		rval;
+#if defined(LINUX)
+	unsigned long	socket_args[4] = {
+		(unsigned long)addr_family,
+		(unsigned long)type,
+		(unsigned long)protocol
+	};
+#endif
 
 	if( MappingFileDescriptors() ) {
 		rval =  FileTab->DoSocket( addr_family, type, protocol );
@@ -958,7 +986,15 @@ socket( int addr_family, int type, int protocol )
 
 	if( LocalSysCalls() ) {
 #if defined(LINUX)
-		rval =  syscall( SYS_socketcall, addr_family, type, protocol );
+		// Linux combines syscalls such as socket, accept, recv, send, ...
+		// into a single system call - SYS_socketcall.  Parameters are
+		// passed through the third argument to syscall, in this case
+		// socket_args.  The type of call (socket, accept,...) is given
+		// as the second argument.  The valid types are listed in
+		// /usr/include/sys/socketcall.h  The kernel source warns that
+		// this interface may change in the future so that this
+		// code may need adjustment! - Greger
+		rval =  syscall( SYS_socketcall, SYS_SOCKET, socket_args );
 #else
 		rval =  syscall( SYS_socket, addr_family, type, protocol );
 #endif

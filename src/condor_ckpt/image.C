@@ -26,6 +26,10 @@
 **
 */ 
 
+#if defined(LINUX)
+#define SHARED_CKPTS 1
+#endif
+
 #if !defined(Solaris)
 #define _POSIX_SOURCE
 #endif
@@ -280,7 +284,7 @@ _install_signal_handler( int sig, SIG_HANDLER handler )
 void
 Image::Save()
 {
-#if !defined(Solaris) && !defined(IRIX53)
+#if !defined(Solaris) && !defined(LINUX) && !defined(IRIX53)
 	RAW_ADDR	stack_start, stack_end;
 #else
 	RAW_ADDR	addr_start, addr_end;
@@ -293,7 +297,7 @@ Image::Save()
 
 	head.Init();
 
-#if !defined(Solaris) && !defined(IRIX53)
+#if !defined(Solaris) && !defined(LINUX) && !defined(IRIX53)
 
 		// Set up data segment
 	data_start = data_start_addr();
@@ -352,6 +356,9 @@ Image::Save()
 				"returned -1");
 			break;
 		case 0:
+#if defined(LINUX)
+			addr_end=find_correct_vm_addr(addr_start, addr_end, prot);
+#endif
 			AddSegment( "SHARED LIB", addr_start, addr_end, prot);
 			break;
 		case 1:
@@ -883,6 +890,64 @@ SegMap::Read( int fd, ssize_t pos )
 			exit(4);
 		}
 	}		
+#elif defined(LINUX) && defined (SHARED_CKPTS)
+	else if ( mystrcmp(name,"SHARED LIB") == 0) {
+		/*
+		fprintf(stderr, "LINUX IS RESTORING A SHARED_LIB SEG\n");
+		fflush(stderr);
+		*/
+		int zfd, segSize = len;
+		/*if ((zfd = linux_open_syscall("/dev/zero", O_RDWR)) == -1) {*/
+		if ((zfd = SYSCALL(SYS_open, "/dev/zero", O_RDWR)) == -1) {
+			perror("open");
+			exit(2);
+		}
+
+	  /* Some notes about mmap:
+	     - The MAP_FIXED flag will ensure that the memory allocated is
+	       exactly what was requested.
+	     - Both the addr and off parameters must be aligned and sized
+	       according to the value returned by getpagesize() when MAP_FIXED
+	       is used.  If the len parameter is not a multiple of the page
+	       size for the machine, then the system will automatically round
+	       up. 
+	     - Protections must allow writing, so that the dll data can be
+	       copied into memory. 
+	     - Memory should be private, so we don't mess with any other
+	       processes that might be accessing the same library. */
+
+		/*
+		fprintf(stderr, "Calling mmap(loc = 0x%lx, size = 0x%lx, "
+			"prot = %d, fd = %d, offset = 0)\n", core_loc, segSize,
+			prot|PROT_WRITE, zfd);
+		*/
+
+		long status;
+		if ((status=MMAP((void *)core_loc, (size_t)segSize,
+				prot|PROT_WRITE,
+				MAP_PRIVATE|MAP_FIXED, zfd,
+				(off_t)0)) == -1) {
+			perror("mmap");
+			fprintf(stderr, "Attempted to mmap /dev/zero at "
+				"address 0x%lx, size 0x%lx\n", core_loc,
+				segSize);
+			fprintf(stderr, "Current segmap dump follows\n");
+			display_prmap();
+			exit(3);
+		}
+		/*
+		fprintf(stderr, "mmap returned 0x%x\n",status);
+		fflush(stderr);
+		*/
+
+		/*if (linux_close_syscall(zfd) < 0) {*/
+		if (SYSCALL(SYS_close, zfd) < 0) {
+			perror("close");
+			exit(4);
+		}
+	}		
+
+
 #endif		
 
 		// This overwrites an entire segment of our address space
@@ -895,13 +960,15 @@ SegMap::Read( int fd, ssize_t pos )
 	ptr = (char *)saved_core_loc;
 	while( bytes_to_go ) {
 		read_size = bytes_to_go > 4096 ? 4096 : bytes_to_go;
-#if defined(Solaris) || defined(IRIX53)
+#if defined(Solaris) || defined(IRIX53) || defined(LINUX)
 		nbytes =  SYSCALL(SYS_read, fd, (void *)ptr, read_size );
 #else
 		nbytes =  syscall( SYS_read, fd, (void *)ptr, read_size );
 #endif
 		if( nbytes < 0 ) {
-			fprintf(stderr, "in Segmap::Read(): fd = %d\n");
+			fprintf(stderr, "in Segmap::Read(): fd = %d, read_size=%d\n", fd,
+				read_size);
+			fprintf(stderr, "Error=%d, core_loc=%x\n", errno, core_loc);
 			return -1;
 		}
 		bytes_to_go -= nbytes;
