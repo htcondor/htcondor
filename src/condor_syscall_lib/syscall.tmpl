@@ -133,6 +133,17 @@
 	similar changes.
 */
 
+
+#if defined(LINUX)
+#       if defined(GLIBC) 
+#               define MMAP_T char*
+#		define GLIBC_CONST 
+#       else
+#               define MMAP_T void*
+#		define GLIBC_CONST const
+#       endif
+#endif
+
 #if defined(OSF1)
 #define SYSCALL_PTR	void
 #define INV_SYSCALL_PTR	char
@@ -717,9 +728,9 @@ not_supported{
 		ALLOC_PATH( path2 );
 	}
 
-#if defined(LINUX) || defined(OSF1)
+#if defined(LINUX)
 	int readlink( const char *path, char *buf, size_t buf_size ) {
-#elif defined(AIX32) || defined(IRIX62)
+#elif defined(AIX32) || defined(IRIX62) || defined(OSF1)
 	int readlink( const char *path, char *buf, int buf_size ) {
 #else
 	int readlink( const char *path, void *buf, int buf_size ) {
@@ -759,7 +770,7 @@ not_supported{
 	}
 #endif
 
-#if defined(OSF1) || defined(LINUX)
+#if defined(LINUX)
 	int gethostname( char *address, size_t address_len ) {
 #else 
 	int gethostname( char *address, int address_len ) {
@@ -871,7 +882,7 @@ not_supported{
 		alloc( rlp, RLIMIT_SIZE );
 	}
 	int getrlimit( int resource, struct rlimit *rlp ) {
-		in code( rlp );
+		out code( rlp );
 		alloc( rlp, RLIMIT_SIZE );
 	}
 	pid_t setsid();
@@ -1053,8 +1064,8 @@ not_supported {
 	int madvise( INV_SYSCALL_PTR * addr, size_t len, int behav );
 	int msync( void * addr, size_t len, int flags );
 #	elif defined(LINUX)
-	int mprotect( void * addr, size_t len, int prot );
-	int msync( void * addr, size_t len, int flags );
+	int mprotect( GLIBC_CONST MMAP_T addr, size_t len, int prot );
+	int msync( MMAP_T addr, size_t len, int flags );
 #	else
 	char * mmap( char * a, size_t l, int p, int f, map(int fd),
 														off_t o ) : extract;
@@ -1101,12 +1112,21 @@ not_supported {
 #if defined(LINUX)
 	int mount( const char *spec, const char *dir, const char *fstyp,
 		unsigned long rwflag, const void *data );
+	int umount( const char* dir );
 	int acct( const char *path );
 	int reboot( int magic, int magic_too, int flag );
 	int sethostname( const char *address, size_t address_len );
 	int settimeofday( const struct timeval *tp, const struct timezone *tzp );
 	int setdomainname( const char *name, size_t namelen );
 	int swapon( const char *path, int swapflags );
+	int swapoff( const char *path );
+	int bdflush( int func, long data );
+	caddr_t create_module( const char* name, size_t size );
+	caddr_t delete_module( const char* name ); 
+	int init_module( const char* name, struct module* image ); 
+	int iopl( int level );
+	void idle();
+	int ioperm( unsigned long from, unsigned long num, int turn_on );
 #else
 #if defined(Solaris)
 		int mount( const char *spec, const char *dir, int mflag, int fstyp, char *pt, int len );
@@ -1141,12 +1161,25 @@ not_supported {
 	pid_t fork() : extract;
 	int pipe( int fd[] ) : extract;
 #endif
+	/* Other fork()-like calls */
+#if defined(LINUX)
+	pid_t clone(void *sp, unsigned long flags);
+#elif defined(Solaris)
+	pid_t fork1();
+#endif
 	pid_t vfork();
+
 	int execve( const char *path, char * const argv[], char * const envp [] );
 	int execv( const char *path, char * const argv[] );
 	int exec_with_loader( int flags, const char *loader, const char *file,
 					  char * const argv[], char * const envp[] );
+
 	pid_t wait4( pid_t pid, int *status, int options, struct rusage *ru );
+	pid_t wait(int *status);
+#if defined(LINUX)
+	pid_t waitpid(pid_t pid, int *status, int options);
+#endif
+
 #if defined(Solaris)
 	int ptrace( int req, long process, int address, int data);
 #else
@@ -1154,7 +1187,11 @@ not_supported {
 						unsigned long data );
 #endif
 	int setpgid( pid_t process_id, pid_t gid );
+#if defined(OSF1)
+	int setpgrp( pid_t process_id , pid_t process_group_id );
+#else 
 	pid_t setpgrp( );
+#endif
 }
 
 	/* Calls relating to sockets - implies multiple communicating processes */
