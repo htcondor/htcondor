@@ -184,6 +184,12 @@ main_init( int, char* [] )
 		// Reapers (not yet, since we're doing it outside DC)
 		//////////////////////////////////////////////////
 
+#if defined( OSF1 ) || defined (IRIX62) 
+		// Pretend we just got an X event so we think our console idle
+		// is something, even if we haven't heard from the kbdd yet.
+	command_x_event( 0, 0, 0 );
+#endif
+
 		// Walk through all resources and start an update timer for
 		// each one.  
 	resmgr->walk( Resource::start_update_timer );
