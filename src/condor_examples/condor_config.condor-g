@@ -132,9 +132,6 @@ DAEMON_LIST                     = MASTER, SCHEDD
 ##  To let others flock to you, define FLOCK_FROM.
 ## 
 ##  To flock to others, define FLOCK_TO.
-## 
-##  (and if they are running a condor_view server, then you can also
-##  define FLOCK_VIEW_SERVERS).
 
 ##  FLOCK_FROM defines the machines where you would like to grant
 ##  people access to your pool via flocking. (i.e. you are granting
@@ -164,19 +161,6 @@ FLOCK_COLLECTOR_HOSTS = $(FLOCK_TO)
 #FLOCK_NEGOTIATOR_HOSTS = condor.cs.wisc.edu, condor-negotiator.friendly.domain
 #FLOCK_COLLECTOR_HOSTS =  condor.cs.wisc.edu, condor-collector.friendly.domain
 
-##  (optional) FLOCK_VIEW_SERVERS is used if you would like to report
-##  your usage in a remote pool to a remote condor-view server.  If so,
-##  FLOCK_VIEW_SERVERS should contain a list of hostnames where the
-##  condor-view server is running in the pools to which you want your
-##  jobs to flock.  The order of this list must correspond to the
-##  order of the FLOCK_COLLECTOR_HOSTS and FLOCK_NEGOTIATOR_HOSTS
-##  lists.  List items may be empty for pools which don't use a
-##  separate condor-view server.  FLOCK_VIEW_SERVER may be left
-##  undefined if no remote pools use separate condor-view servers.
-##  Note: It is required that the same hostname does not appear twice
-##  in the FLOCK_VIEW_SERVERS list and that the CONDOR_VIEW_HOST does
-##  not appear in the FLOCK_VIEW_SERVERS list.
-#FLOCK_VIEW_SERVERS = condor-view.cs.wisc.edu, condor-view.friendly.domain
 
 ##--------------------------------------------------------------------
 ##  Host/IP access levels
