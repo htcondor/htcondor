@@ -514,6 +514,11 @@ _condor_disable_uid_switching()
 }
 
 void
+clear_passwd_cache() {
+	pcache.reset();
+}
+
+void
 init_condor_ids()
 {
 	int scm;

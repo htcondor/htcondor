@@ -54,6 +54,9 @@ class passwd_cache {
 		passwd_cache();
 		~passwd_cache();
 
+		/* clear all contents of cache and start over */
+		void reset();
+
 		/* Inserts given user's uid into uid table.
 		 * returns true on success. */
 		bool cache_uid(const char* user);

@@ -26,6 +26,7 @@ elements from getting stale. */
 
 #include "condor_common.h"
 #include "passwd_cache.h"
+#include "condor_config.h"
 
 int compute_user_hash(const MyString &key, int numBuckets) {
     return ( key.Hash() % numBuckets );
@@ -35,12 +36,12 @@ passwd_cache::passwd_cache() {
 
 	uid_table = new UidHashTable(10, compute_user_hash);
 	group_table = new GroupHashTable(10, compute_user_hash);
-		/* figure out the max number of groups a user can have */
-//	Entry_lifetime = paramInteger("NIS_CACHE_ENTRY_LIFETIME", 3600);
-	Entry_lifetime = 60*60*1; /* seconds */
+		/* set the number of seconds until a cache entry expires */
+	Entry_lifetime = param_integer("PASSWD_CACHE_REFRESH", 3600);
 }
+void
+passwd_cache::reset() {
 
-passwd_cache::~passwd_cache() {
 	group_entry *gent;
 	uid_entry *uent;
 	MyString index;
@@ -51,13 +52,18 @@ passwd_cache::~passwd_cache() {
 		delete gent;
 		group_table->remove(index);
 	}
-	delete group_table;
 
 	uid_table->startIterations();
 	while ( uid_table->iterate(index, uent) ) {
 		delete uent;
 		uid_table->remove(index);
 	}
+}
+
+passwd_cache::~passwd_cache() {
+
+	reset();
+	delete group_table;
 	delete uid_table;
 }
 
