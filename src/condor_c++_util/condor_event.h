@@ -59,6 +59,8 @@ enum ULogEventNumber {
     /** Job terminated            */  ULOG_JOB_TERMINATED,
     /** Image size of job updated */  ULOG_IMAGE_SIZE,
     /** Shadow threw an exception */  ULOG_SHADOW_EXCEPTION,
+	/** Job was suspended         */  ULOG_JOB_SUSPENDED,
+	/** Job was unsuspended       */  ULOG_JOB_UNSUSPENDED,
 #if defined(GENERIC_EVENT)
     /** Generic Log Event         */  ULOG_GENERIC,
 #endif      
@@ -645,8 +647,67 @@ class ShadowExceptionEvent : public ULogEvent
 	/// bytes received by the job over the network for the run
 	float recvd_bytes;
 };
-    
 
+//----------------------------------------------------------------------------
+/** Framework for a JobSuspended event object.  Occurs if the starter
+	suspends a job.
+*/
+class JobSuspendedEvent : public ULogEvent
+{
+  public:
+    ///
+    JobSuspendedEvent ();
+    ///
+    ~JobSuspendedEvent ();
+
+    /** Read the body of the next JobSuspendedEvent event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next JobSuspendedEvent event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+	/// How many pids the starter suspended
+	int num_pids;
+};
+
+//----------------------------------------------------------------------------
+/** Framework for a JobUnsuspended event object.  Occurs if the starter
+	unsuspends a job.
+*/
+class JobUnsuspendedEvent : public ULogEvent
+{
+  public:
+    ///
+    JobUnsuspendedEvent ();
+    ///
+    ~JobUnsuspendedEvent ();
+
+    /** Read the body of the next JobUnsuspendedEvent event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next JobUnsuspendedEvent event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+	/** We don't have a number of jobs unsuspended in here because since this
+		is such a hack(the starter isn't supposed to write to the client log
+		socket), we can't allow the starter to write to the socket AFTER it
+		unsuspends the jobs. Otherwise it would have been nice to know if the
+		starter unsuspended the same number of jobs it suspended. Alas.
+	*/
+};
+    
 class NodeExecuteEvent : public ULogEvent
 {
   public:
@@ -673,7 +734,6 @@ class NodeExecuteEvent : public ULogEvent
 		/// Node identifier
 	int node;
 };
-
 
 #endif // __CONDOR_EVENT_H__
 

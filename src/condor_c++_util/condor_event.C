@@ -43,7 +43,9 @@ const char * ULogEventNumberNames[] = {
 	"ULOG_JOB_EVICTED     ", // Job evicted from machine
 	"ULOG_JOB_TERMINATED  ", // Job terminated
 	"ULOG_IMAGE_SIZE      ", // Image size of job updated
-	"ULOG_SHADOW_EXCEPTION"  // Shadow threw an exception
+	"ULOG_SHADOW_EXCEPTION", // Shadow threw an exception
+	"ULOG_JOB_SUSPENDED   ", // Job was suspended
+	"ULOG_JOB_UNSUSPENDED "  // Job was unsuspended
 #if defined(GENERIC_EVENT)
 	,"ULOG_GENERIC        "
 #endif	    
@@ -766,6 +768,72 @@ writeEvent (FILE *file)
 				 recvd_bytes) < 0)
 		return 1;				// backwards compatibility
 	
+	return 1;
+}
+
+JobSuspendedEvent::
+JobSuspendedEvent ()
+{
+	eventNumber = ULOG_JOB_SUSPENDED;
+}
+
+JobSuspendedEvent::
+~JobSuspendedEvent ()
+{
+}
+
+int JobSuspendedEvent::
+readEvent (FILE *file)
+{
+	if (fscanf (file, "Job was suspended.\n\t") == EOF)
+		return 0;
+	if (fscanf (file, "Number of processes actually suspended: %d\n",
+			&num_pids) == EOF)
+		return 1;				// backwards compatibility
+
+	return 1;
+}
+
+
+int JobSuspendedEvent::
+writeEvent (FILE *file)
+{
+	if (fprintf (file, "Job was suspended.\n\t") < 0)
+		return 0;
+	if (fprintf (file, "Number of processes actually suspended: %d\n", 
+			num_pids) < 0)
+		return 0;
+
+	return 1;
+}
+
+JobUnsuspendedEvent::
+JobUnsuspendedEvent ()
+{
+	eventNumber = ULOG_JOB_UNSUSPENDED;
+}
+
+JobUnsuspendedEvent::
+~JobUnsuspendedEvent ()
+{
+}
+
+int JobUnsuspendedEvent::
+readEvent (FILE *file)
+{
+	if (fscanf (file, "Job was unsuspended.\n") == EOF)
+		return 0;
+
+	return 1;
+}
+
+
+int JobUnsuspendedEvent::
+writeEvent (FILE *file)
+{
+	if (fprintf (file, "Job was unsuspended.\n") < 0)
+		return 0;
+
 	return 1;
 }
 
