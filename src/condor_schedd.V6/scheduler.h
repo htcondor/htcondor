@@ -79,6 +79,7 @@ class Scheduler : public Service
 	// negotiation
 	void			negotiate(XDR*, struct sockaddr_in*);
 	void			reschedule_negotiator(XDR*, struct sockaddr_in*);
+	void			vacate_service(XDR *, struct sockaddr_in*);
 
 	// job managing
 	void			abort_job(XDR*, struct sockaddr_in*);
