@@ -16,161 +16,6 @@ Opsys=""
 Other=""
 Other2=""
 
-# perform some irix specific initialization to determine ABI type
-if [ "$os" = "IRIX" ]; then
-	if [ "$osrelease" = "6.5" ]; then
-		# Let's default the build for 6.5 to mips3 and N32
-		IsMipsVersion=3
-		IsMipsABI=N32
-	else
-		IsMipsVersion=2
-		IsMipsABI=O32
-	fi
-fi
-
-##################################################
-# Determine compiler features and variousl compiler related libraries
-##################################################
-
-# Which gcc am I using?
-CompilerPath=`which gcc`
-
-# Find libgcc.a ( needed for all platforms )
-tmp=`gcc -print-libgcc-file-name`
-LibGcc="-DLIB_GCC=$tmp"
-
-# discover the version of gcc I have
-tmp=`((gcc -v) 2>&1) | tail -1 | perl  -ne '{/.*gcc version\s*(\S*).*/; print "$1\n"}'`
-
-
-case "$tmp" in
-	"egcs-2.91.66" )
-		CompilerKind="-DIS_C_COMP_KIND_EGCS"
-		CompilerMajor="-DIS_C_COMP_MAJOR_EGCS_2"
-		CompilerMinor="-DIS_C_COMP_MINOR_EGCS_2_91"
-		CompilerPatch="-DIS_C_COMP_PATCH_EGCS_2_91_66"
-		;;
-	"2.95.3" )
-		CompilerKind="-DIS_C_COMP_KIND_GCC"
-		CompilerMajor="-DIS_C_COMP_MAJOR_GCC_2"
-		CompilerMinor="-DIS_C_COMP_MINOR_GCC_2_95"
-		CompilerPatch="-DIS_C_COMP_PATCH_GCC_2_95_3"
-		;;
-	"2.95.4" )
-		CompilerKind="-DIS_C_COMP_KIND_GCC"
-		CompilerMajor="-DIS_C_COMP_MAJOR_GCC_2"
-		CompilerMinor="-DIS_C_COMP_MINOR_GCC_2_95"
-		CompilerPatch="-DIS_C_COMP_PATCH_GCC_2_95_4"
-		;;
-	"2.96" )
-		CompilerKind="-DIS_C_COMP_KIND_GCC"
-		CompilerMajor="-DIS_C_COMP_MAJOR_GCC_2"
-		CompilerMinor="-DIS_C_COMP_MINOR_GCC_2_96"
-		CompilerPatch="-DIS_C_COMP_PATCH_GCC_2_96_0"
-		;;
-	"3.0" )
-		CompilerKind="-DIS_C_COMP_KIND_GCC"
-		CompilerMajor="-DIS_C_COMP_MAJOR_GCC_3"
-		CompilerMinor="-DIS_C_COMP_MINOR_GCC_3_0"
-		CompilerPatch="-DIS_C_COMP_PATCH_GCC_3_0_0"
-		;;
-	"3.1" )
-		CompilerKind="-DIS_C_COMP_KIND_GCC"
-		CompilerMajor="-DIS_C_COMP_MAJOR_GCC_3"
-		CompilerMinor="-DIS_C_COMP_MINOR_GCC_3_1"
-		CompilerPatch="-DIS_C_COMP_PATCH_GCC_3_1_0"
-		;;
-	"3.2" )
-		CompilerKind="-DIS_C_COMP_KIND_GCC"
-		CompilerMajor="-DIS_C_COMP_MAJOR_GCC_3"
-		CompilerMinor="-DIS_C_COMP_MINOR_GCC_3_2"
-		CompilerPatch="-DIS_C_COMP_PATCH_GCC_3_2_0"
-		;;
-	"3.2.1" )
-		CompilerKind="-DIS_C_COMP_KIND_GCC"
-		CompilerMajor="-DIS_C_COMP_MAJOR_GCC_3"
-		CompilerMinor="-DIS_C_COMP_MINOR_GCC_3_2"
-		CompilerPatch="-DIS_C_COMP_PATCH_GCC_3_2_1"
-		;;
-	"3.2.2" )
-		CompilerKind="-DIS_C_COMP_KIND_GCC"
-		CompilerMajor="-DIS_C_COMP_MAJOR_GCC_3"
-		CompilerMinor="-DIS_C_COMP_MINOR_GCC_3_2"
-		CompilerPatch="-DIS_C_COMP_PATCH_GCC_3_2_2"
-		;;
-	"3.3" )
-		CompilerKind="-DIS_C_COMP_KIND_GCC"
-		CompilerMajor="-DIS_C_COMP_MAJOR_GCC_3"
-		CompilerMinor="-DIS_C_COMP_MINOR_GCC_3_3"
-		CompilerPatch="-DIS_C_COMP_PATCH_GCC_3_3_0"
-		;;
-	* )
-		echo "I didn't recognize your version of gcc, please fix condor_imake!"
-		exit 1;
-		;;
-esac	
-
-CompilerID="$CompilerKind $CompilerMajor $CompilerMinor $CompilerPatch"
-
-# Find/define crt[01].o for each architecture we support
-case "$os" in 
-	"SunOS" | "Linux")
-		CRT_BEGIN=`gcc -print-file-name=crt1.o`
-		;;
-
-	"HP-UX" )
-		echo HP-UX
-		if [ $os = "HP-UX" -a "$osrelease" = "B.10.20" ] ; then
-			CRT_BEGIN=/lib/crt0.o
-		elif [ $os = "HP-UX" -a "$osversion" = "B.11.00" ] ; then
-			# we support only 64-bit compilations of condor on hpux 11.00
-			CRT_BEGIN=/usr/ccs/lib/pa20_64/crt0.o
-		fi
-		;;
-
-	"IRIX" )
-		case "$IsMipsABI" in
-			"N64" )
-				IrixBaseLibPath=/usr/lib64
-				;;
-			"N32" )
-				IrixBaseLibPath=/usr/lib32
-				;;
-			"O32" )
-				IrixBaseLibPath=/usr/lib32
-				;;
-		esac
-
-		case "$IsMipsVersion" in
-			"2" )
-				IrixLibPath=$IrixBaseLibPath
-				;;
-			"3" )
-				IrixLibPath="$IrixBaseLibPath/mips3"
-				;;
-			"4" )
-				IrixLibPath="$IrixBaseLibPath/mips4"
-				;;
-		esac
-
-		CRT_BEGIN="$IrixLibPath/crt1.o"
-		;;
-	
-	"OSF1" )
-		CRT_BEGIN=/usr/lib/cmplrs/cc/crt0.o
-		;;
-	
-	"AIX" )
-		CRT_BEGIN=/lib/crt0.o
-		;;
-esac
-CrtBegin="-DCRT_BEGIN=$CRT_BEGIN"
-
-# Find libstdc++.a, it is required we link with the archive version of this
-# library so the binaries can run on machines with no gcc install.
-tmp=`gcc --print-file-name=libstdc++.a`
-StdCpp="-DLIB_STDCPP=$tmp"
-
 ##################################################
 # Determine operating system flavors
 ##################################################
@@ -369,35 +214,15 @@ if [ "X$verbose_info" = "X1" ]; then
 			;;
 	esac
 	echo
-	echo "Compiler Path:"
-	echo "--------------"
-	echo "$CompilerPath"
-	echo
-	echo "Compiler Identification:"
-	echo "------------------------"
-	echo "$CompilerID"
-	echo
-	echo "Libgcc:"
-	echo "-------"
-	echo "$LibGcc"
-	echo
-	echo "CrtBegin:"
-	echo "---------"
-	echo "$CrtBegin"
-	echo
-	echo "StdCpp:"
-	echo "---------"
-	echo "$StdCpp"
-	echo
 fi
 
 ##################################################
 # Finally, call imake with all the flags
 ##################################################
 if [ $verbose_info = 0 ]; then
-	echo ${IMAKE} -s Makefile $ArchFlag $Opsys $Other $Other2 $LibGcc $CrtBegin $StdCpp $CompilerID -I../config -I../../config $*
+	echo ${IMAKE} -s Makefile $ArchFlag $Opsys $Other $Other2 -I../config -I../../config $*
 fi
 
-${IMAKE} -s Makefile $ArchFlag $Opsys $Other $Other2 $LibGcc $CrtBegin $StdCpp $CompilerID -I../config -I../../config $*
+${IMAKE} -s Makefile $ArchFlag $Opsys $Other $Other2 -I../config -I../../config $*
 
 
