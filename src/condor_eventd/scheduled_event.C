@@ -28,6 +28,7 @@
 #include "condor_config.h"
 #include "dc_collector.h"
 #include "daemon.h"
+#include "daemon_list.h"
 
 #include "scheduled_event.h"
 
@@ -616,7 +617,7 @@ ScheduledShutdownEvent::GetStartdList()
 		return -1;
 	}
 
-	CollectorList collectors = CollectorList::create();
+	CollectorList * collectors = CollectorList::create();
 	if (collectors->query (StartdQuery, *StartdList) != Q_OK ) {
 		delete collectors;
 		return -1;
