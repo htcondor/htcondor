@@ -88,7 +88,7 @@ char	*MyName;
 
 char	*Log;
 int		PollingFrequency;
-int		Foreground;
+int		Foreground = 0;
 int		Termlog;
 
 #ifdef X_EXTENSIONS
@@ -107,6 +107,7 @@ int		argc;
 char	*argv[];
 {
 	char	**ptr;
+	char	config_file[MAXPATHLEN] = ""; 
 	int		error_handler(), io_error_handler();
 #ifdef X_EXTENSIONS
 	int		first_event, first_error;
@@ -117,29 +118,33 @@ char	*argv[];
 	set_condor_euid(__FILE__,__LINE__);
 #endif NFSFIX
 
-	MyName = *argv;
-	config( MyName, 0 );
-	init_params();
-
-	if( argc > 3 ) {
-		usage( argv[0] );
-	}
 	for( ptr=argv+1; *ptr; ptr++ ) {
 		if( ptr[0][0] != '-' ) {
 			usage( argv[0] );
 		}
 		switch( ptr[0][1] ) {
 			case 'f':
-				Foreground++;
+				Foreground = 1;
 				break;
 			case 't':
 				Termlog++;
 				break;
+			case 'c':
+				strcpy(config_file, *(++ptr));
+				break; 
 			default:
 				usage( argv[0] );
 		}
 	}
 
+	MyName = *argv;
+	config( MyName, 0 );
+	init_params();
+
+	if( argc > 5 ) {
+		usage( argv[0] );
+	}
+	
 		/* This is so if we dump core it'll go in the log directory */
 	if( chdir(Log) < 0 ) {
 		EXCEPT( "chdir to log directory <%s>", Log );
@@ -276,7 +281,7 @@ init_params()
 	if( param("KBDD_DEBUG") == NULL ) {
 		EXCEPT( "KBDD_DEBUG not defined in config file\n" );
 	}
-	Foreground = boolean( "KBDD_DEBUG", "Foreground" );
+	Foreground += boolean( "KBDD_DEBUG", "Foreground" );
 
 #ifdef X_EXTENSIONS
     tmp = param("USE_X_IDLE_EXTENSION");
