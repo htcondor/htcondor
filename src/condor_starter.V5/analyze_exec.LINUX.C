@@ -24,19 +24,26 @@
 ** 
 ** Author:  Mike Greger
 **
+** Added capability for ELF binary format July 27, 1996
+**
 */ 
 
 /****************************************************************
 Purpose:
-	The checkpoint (a.out) file transferred from the submitting machine
+	The checkpoint file transferred from the submitting machine
 	should be a valid LINUX executable file, and should have been linked
-	with the Condor remote execution library.  Here we check the
-	magic numbers to determine if we have a valid executable file, and
-	also look for a well known symbol from the Condor library (MAIN)
-	to ensure proper linking.
+	with the Condor remote execution library.  Any executable format
+	supported by the BFD library will be detected.  For now, the
+	accepted formats are a.out and ELF.  We also look for a well known 
+	symbol from the Condor library (REMOTE_syscall) to ensure proper linking.
+
 Portability:
-	This code depends upon the executable format for LINUX 1.1.x systems,
+	This code depends upon executable formats for LINUX 2.0.x systems, 
 	and is not portable to other systems.
+	Requires libbfd and liberty and correct bfd.h and ansidecl.h.
+	Some versions of these headers are badly broken.  Get a new
+	binutils for correct versions.  I have tested with binutils 
+	2.6.0.14 only.  Please back up old versions just in case!!
 ******************************************************************/
 
 #define _POSIX_SOURCE
@@ -47,96 +54,117 @@ Portability:
 #include "condor_jobqueue.h"
 #include "condor_syscall_mode.h"
 #include <sys/file.h>
-#include <a.out.h>
+#include <bfd.h>
 
 static char *_FileName_ = __FILE__;     /* Used by EXCEPT (see except.h)     */
 
-
-
-
-	extern "C" {
-		int nlist( char *FileName, struct nlist *N1);
-	}
-
-int magic_check( char *a_out )
+int magic_check( char *executable )
 {
-	int		exec_fd;
-	int		nbytes;
-	struct exec 	file_hdr;
+	bfd		*bfdp;
+	long	storage_needed;
 
 
-	if( (exec_fd=open(a_out,O_RDONLY,0)) < 0 ) {
-		dprintf( D_ALWAYS, "open(%s,O_RDONLY,0)", a_out );
+	bfd_init();
+	if((bfdp=bfd_openr(executable, 0))!=NULL) {
+		dprintf(D_ALWAYS, "\n\nbfdopen(%s) succeeded\n", executable);
+		// We only want objects, not cores, ...
+		if(bfd_check_format(bfdp, bfd_object)) {
+			dprintf(D_ALWAYS, "File type=bfd_object\n");
+			// Make sure it is an executable object.
+			// FIXME - Make sure this eliminates .o files...
+			if(bfd_get_file_flags(bfdp) & EXEC_P)
+				dprintf(D_ALWAYS, "This file is executable\n");
+			else
+				dprintf(D_ALWAYS, "This file is NOT executable\n");
+			bfd_close(bfdp);
+			return 0;
+		} else {
+			dprintf(D_ALWAYS, "File type unknown!\n");
+			bfd_close(bfdp);
+			return -1;
+		}
+	} else {
+		dprintf(D_ALWAYS, "bfdopen(%s) failed\n", executable);
 		return -1;
 	}
-
-	errno = 0;
-        nbytes = read( exec_fd, (char *)&file_hdr, sizeof(file_hdr) );
-        if( nbytes != sizeof(file_hdr) ) {
-                dprintf(D_ALWAYS,
-                        "Error on read(%d,0x%x,%d), nbytes = %d, errno = %d\n",
-                        exec_fd, (char *)&file_hdr, sizeof(file_hdr), nbytes, errno
-                );
-                close( exec_fd );
-                return -1;
-        }
-        close( exec_fd );
-
-        if( N_MAGIC(file_hdr) != QMAGIC ) {
-                dprintf( D_ALWAYS, "\"%s\": BAD MAGIC NUMBER\n", a_out );
-                return -1;
-        }
-        if( N_MACHTYPE(file_hdr) != M_386 ) {
-                dprintf( D_ALWAYS, "\"%s\": NOT COMPILED FOR ix86 ARCHITECTURE\n", a_out );
-                return -1;
-        }
-
-	return 0;
 }
 
 /*
   - Check to see that the checkpoint file is linked with the Condor
-  - library by looking for the symbol "MAIN".
-
-  As we move into the new checkpointing and remote system call mechanisms
-  the use of "MAIN" may dissappear.  It seems what we really want to
-  know here is whether the executable is linked for remote system
-  calls.  We should therefore look for a symbol which must be present
-  if that is the case.
+  - library by looking for the symbol "REMOTE_syscall".
 */
-int symbol_main_check( char *name )
+int symbol_main_check( char *executable )
 {
-	int		status;
-	struct nlist	nl[2];
+	bfd		*bfdp;
+	long	storage_needed;
+	asymbol	**symbol_table;
+	long	number_of_symbols;
+	long	i;
 
-	nl[0].n_un.n_name = "MAIN";
-	nl[1].n_un.n_name = "";
 
-        status = nlist( name, nl );
-        if( status < 0 ) {
-                dprintf(D_ALWAYS, "Error: nlist(\"%s\",0x%x) returns %d, errno = %d\n",
-			name, nl, status, errno);
-                return(0); /* May have been stripped */
-        }
+	bfd_init();
+	if((bfdp=bfd_openr(executable, 0))!=NULL) {
+		dprintf(D_ALWAYS, "\n\nbfdopen(%s)\n", executable);
+		if(bfd_check_format(bfdp, bfd_object)) {
+			storage_needed=bfd_get_symtab_upper_bound(bfdp);
+			// Calculate storage needed for the symtab
+			if(storage_needed < 0) {
+				dprintf(D_ALWAYS, "Read of symbol table failed");
+				bfd_close(bfdp);
+				return -1;
+			} else if(storage_needed==0) {
+				dprintf(D_ALWAYS, "Executable has been stripped??");
+				bfd_close(bfdp);
+				return 0;
+			}
+			dprintf(D_ALWAYS, "storage_needed=%d\n", storage_needed);
+			symbol_table=(asymbol **)malloc(storage_needed);
+			if(!symbol_table) {
+				dprintf(D_ALWAYS, "malloc failed");
+				bfd_close(bfdp);
+				return -1;
+			}
 
-        if( nl[0].n_type == 0 ) {
-                 dprintf( D_ALWAYS, "No symbol \"MAIN\" in executable(%s)\n", name);
-		 return(-1);
-        }
+			// Get number of syms in the symbol table
+			number_of_symbols=bfd_canonicalize_symtab(bfdp, symbol_table);
+			dprintf(D_ALWAYS, "number_of_symbols=%d\n", number_of_symbols);
+			if(number_of_symbols < 0) {
+				dprintf(D_ALWAYS, "Error reading symbol table");
+				bfd_close(bfdp);
+				free(symbol_table);
+				return -1;
+			}
 
-        dprintf( D_ALWAYS, "Symbol MAIN check - OK\n" );
-	return 0;
+			// Search for the REMOTE_syscall sym
+			for(i=0;i<number_of_symbols;i++) {
+				if(strcmp(bfd_asymbol_name(symbol_table[i]), "REMOTE_syscall")==0) {
+        			dprintf( D_ALWAYS, "Symbol REMOTE_syscall check - OK\n" );
+					bfd_close(bfdp);
+					free(symbol_table);
+					return 0;
+				}
+			}
+		}
+	} else {
+		dprintf(D_ALWAYS, "bfdopen(%s) failed in symbol check\n", executable);
+		return -1;
+	}
 }
 
+
+// Are these even used???
 int
 calc_hdr_blocks()
 {
+	/*
 	return(sizeof(struct exec));
+	*/
 }
 
 int
 calc_text_blocks( char *name )
 {
+	/*
 	int		exec_fd;
 	struct exec	exec_struct;
 
@@ -146,4 +174,5 @@ calc_text_blocks( char *name )
 	}
 
 	return exec_struct.a_text / 1024;
+	*/
 }

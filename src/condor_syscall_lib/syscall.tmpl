@@ -427,7 +427,7 @@ int rename( const char *from, const char *to ) : pseudo {
 
 #if !defined( CLIP )
 
-#	if !defined(AIX32)
+#	if !defined(AIX32) && !defined(LINUX)
 	int fstat( map(int fd), struct stat *buf ) {
 			out xdr_stat( buf );
 			alloc( buf, STAT_SIZE );
@@ -445,6 +445,7 @@ int rename( const char *from, const char *to ) : pseudo {
 			alloc( buf, STAT_SIZE );
 		}
 #	endif
+
 
 #if defined(LINUX)
 	int mknod( const char *path, mode_t mode, dev_t device ) {

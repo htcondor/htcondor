@@ -1,5 +1,12 @@
 #include <unistd.h>
 
+#define PIPE(x) (__libc_pipe(x))
+#define FORK(x) (__libc_fork(x))
+#define GETEGID(x)  (__libc_getegid(x))
+#define GETPPID(x)  (__libc_getppid(x))
+#define GETEUID(x)  (__libc_geteuid(x))
+
+
 #define REMAP_LINUX_ZERO(old,new) \
 new( arg_1 ) \
 { \

@@ -39,6 +39,13 @@
 #endif
 #endif 
 
+#if defined(LINUX)
+#include <sys/stat.h>
+#include <unistd.h>
+int _xstat(int, const char *, struct stat *);
+int _fxstat(int, int, struct stat *);
+int _lxstat(int, const char *, struct stat *);
+#endif
 
 	/* Temporary - need to get real PSEUDO definitions brought in... */
 #define PSEUDO_getwd	1
@@ -67,10 +74,10 @@
 static int fake_readv( int fd, const struct iovec *iov, int iovcnt );
 static int fake_writev( int fd, const struct iovec *iov, int iovcnt );
 
-/*Local fake readv, writev's for linux.  Linux does not have a SYS_readv	*/
-/*or SYS_writev									*/
+#if 0
 static int linux_fake_readv( int fd, const struct iovec *iov, int iovcnt );
 static int linux_fake_writev( int fd, const struct iovec *iov, int iovcnt );
+#endif
 
 char	*getwd( char * );
 
@@ -279,11 +286,7 @@ readv( int fd, struct iovec *iov, int iovcnt )
 	}
 
 	if( LocalSysCalls() ) {
-		#if defined(LINUX)
-		rval = linux_fake_readv( user_fd, iov, iovcnt );
-		#else
 		rval = syscall( SYS_readv, user_fd, iov, iovcnt );
-		#endif
 	} else {
 		rval = fake_readv( user_fd, iov, iovcnt );
 	}
@@ -319,6 +322,7 @@ fake_readv( int fd, const struct iovec *iov, int iovcnt )
 	return rval;
 }
 
+#if 0
 /*Fake local readv for Linux						*/
 static int
 linux_fake_readv( int fd, const struct iovec *iov, int iovcnt )
@@ -341,6 +345,7 @@ linux_fake_readv( int fd, const struct iovec *iov, int iovcnt )
 
 	return rval;
 }
+#endif
 
 
 /*
@@ -369,11 +374,7 @@ writev( int fd, struct iovec *iov, int iovcnt )
 	}
 
 	if( LocalSysCalls() ) {
-		#if defined(LINUX)
-		rval = linux_fake_writev( user_fd, iov, iovcnt );
-		#else
 		rval = syscall( SYS_writev, user_fd, iov, iovcnt );
-		#endif
 	} else {
 		rval = fake_writev( user_fd, iov, iovcnt );
 	}
@@ -409,6 +410,7 @@ fake_writev( int fd, const struct iovec *iov, int iovcnt )
 	return rval;
 }
 
+#if 0
 /*Fake local writev for Linux						*/
 static int
 linux_fake_writev( int fd, const struct iovec *iov, int iovcnt )
@@ -431,6 +433,7 @@ linux_fake_writev( int fd, const struct iovec *iov, int iovcnt )
 
 	return rval;
 }
+#endif
 
 #if defined(SUNOS41)
 #	include <sys/termio.h>
@@ -624,10 +627,12 @@ void ldr_atexit() {}
 statements on alphas but have not enclosed it in ifdefs since it will not
 harm to other platforms */
 
+#if !defined(LINUX)
 __write(int fd, char *buf, int size)
 {
 return write(fd,buf,size);
 }
+#endif
 
 /* These are similar additions as above.  This problem cropped up for 
    FORTRAN programs on Solaris 2.4 and OSF1.  -Jim B. */
@@ -646,10 +651,12 @@ _read( int fd, void *buf, size_t len )
 	return read(fd,buf,len);
 }
 
+#if !defined(LINUX)
 __read( int fd, void *buf, size_t len )
 {
 	return read(fd,buf,len);
 }
+#endif
 #endif
 
 #if defined( SYS_lseek )
@@ -659,10 +666,12 @@ _lseek( int fd, off_t offset, int whence )
 	return lseek(fd,offset,whence);
 }
 
+#if !defined(LINUX)
 __lseek( int fd, off_t offset, int whence )
 {
 	return lseek(fd,offset,whence);
 }
+#endif
 #endif
 
 #if defined(OSF1)
@@ -705,6 +714,60 @@ ftruncate( int fd, off_t length )
 
 #endif /* defined(OSF1) */
 #endif /* !defined(HPUX9) */
+
+#if defined(SYS_prev_stat) && defined(LINUX)
+int _xstat(int version, const char *path, struct stat *buf)
+{
+    int rval;
+
+    if( LocalSysCalls() ) {
+        rval = syscall( SYS_prev_stat, path, buf );
+    } else {
+        rval = REMOTE_syscall( CONDOR_stat, path, buf );
+    }
+
+    return rval;
+}
+#endif
+
+#if defined(SYS_prev_fstat) && defined(LINUX)
+int _fxstat(int version, int fd, struct stat *buf)
+{
+    int rval;
+    int user_fd;
+    int use_local_access = FALSE;
+
+    if( (user_fd=MapFd(fd)) < 0 ) {
+        return (int)-1;
+    }
+    if( LocalAccess(fd) ) {
+        use_local_access = TRUE;
+    }
+
+    if( LocalSysCalls() || use_local_access ) {
+        rval = syscall( SYS_prev_fstat, user_fd, buf );
+    } else {
+        rval = REMOTE_syscall( CONDOR_fstat, user_fd, buf );
+    }
+
+    return rval;
+}
+#endif
+
+#if defined(SYS_prev_lstat) && defined(LINUX)
+int _lxstat(int version, const char *path, struct stat *buf)
+{
+    int rval;
+
+    if( LocalSysCalls() ) {
+        rval = syscall( SYS_prev_lstat, path, buf );
+    } else {
+        rval = REMOTE_syscall( CONDOR_lstat, path, buf );
+    }
+
+    return rval;
+}
+#endif
 
 #if defined(OSF1) || defined(IRIX53)
 char *getcwd ( char *buffer, size_t size )

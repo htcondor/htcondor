@@ -1,4 +1,97 @@
+#if defined(LINUX)
+#if defined( SYS_stat ) || defined(SYS_prev_stat)
+    case CONDOR_stat:
+      {
+        char *path;
+        struct stat *buf;
+        int terrno;
 
+        buf = (struct stat *)malloc( (unsigned)STAT_SIZE );
+        path = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
+        assert( xdr_string(xdr_syscall,&path, _POSIX_PATH_MAX) );
+
+        errno = 0;
+        rval = stat( path, buf );
+        terrno = errno;
+        dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+        xdr_syscall->x_op = XDR_ENCODE;
+        assert( xdr_int(xdr_syscall,&rval) );
+        if( rval < 0 ) {
+            assert( xdr_int(xdr_syscall,&terrno) );
+        }
+        if( rval >= 0 ) {
+            assert( xdr_stat(xdr_syscall,buf) );
+        }
+        free( (char *)buf );
+        free( (char *)path );
+        assert( xdrrec_endofrecord(xdr_syscall,TRUE) );;
+        return 0;
+    }
+#endif
+
+
+#if defined( SYS_fstat ) || defined(SYS_prev_fstat)
+    case CONDOR_fstat:
+      {
+        int fd;
+        struct stat *buf;
+        int terrno;
+
+        assert( xdr_int(xdr_syscall,&fd) );
+        buf = (struct stat *)malloc( (unsigned)STAT_SIZE );
+
+        errno = 0;
+        rval = fstat( fd, buf );
+        terrno = errno;
+        dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+        xdr_syscall->x_op = XDR_ENCODE;
+        assert( xdr_int(xdr_syscall,&rval) );
+        if( rval < 0 ) {
+            assert( xdr_int(xdr_syscall,&terrno) );
+        }
+        if( rval >= 0 ) {
+            assert( xdr_stat(xdr_syscall,buf) );
+        }
+        free( (char *)buf );
+        assert( xdrrec_endofrecord(xdr_syscall,TRUE) );;
+        return 0;
+    }
+#endif
+
+
+#if defined( SYS_lstat ) || defined(SYS_prev_lstat)
+    case CONDOR_lstat:
+      {
+        char *path;
+        struct stat *buf;
+        int terrno;
+
+        buf = (struct stat *)malloc( (unsigned)STAT_SIZE );
+        path = (char *)malloc( (unsigned)_POSIX_PATH_MAX );
+        assert( xdr_string(xdr_syscall,&path, _POSIX_PATH_MAX) );
+
+        errno = 0;
+        rval = lstat( path, buf );
+        terrno = errno;
+        dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+
+        xdr_syscall->x_op = XDR_ENCODE;
+        assert( xdr_int(xdr_syscall,&rval) );
+        if( rval < 0 ) {
+            assert( xdr_int(xdr_syscall,&terrno) );
+        }
+        if( rval >= 0 ) {
+            assert( xdr_stat(xdr_syscall,buf) );
+        }
+        free( (char *)buf );
+        free( (char *)path );
+        assert( xdrrec_endofrecord(xdr_syscall,TRUE) );;
+        return 0;
+    }
+#endif
+#endif
 }	/* End of switch on system call number */
 }	/* End of do_REMOTE_syscall() procedure */
 

@@ -34,9 +34,7 @@ EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
 EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o  \
 		  MMAP.o PIPE.o
 #	elif IS_I386_LINUX
-EXTRACT = FORK.o KILL.o SIGACTION.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
-		MMAP.o PIPE.o \
-		__GETEUID.o __GETEGID.o __GETPPID.o __KILL.o \
+EXTRACT = GETWD.o MMAP.o SYSCALL.o __GETEUID.o __GETEGID.o __GETPPID.o \
 		__FORK.o __PIPE.o __SIGACT.o ____SIG.o ____SIG2.o
 #	elif IS_ALPHA_OSF1
 EXTRACT = FORK.o KILL.o GETEUID.o GETPPID.o GETEGID.o GETWD.o \
@@ -202,6 +200,9 @@ uppercase_target($(SIMPLE_LIBC),__pipe.o,__PIPE.o,__pipe,__PIPE)
 uppercase_target($(SIMPLE_LIBC),____sig.o,____SIG.o,___sig_restore,___SIG_RESTORE)
 uppercase_target($(SIMPLE_LIBC),____sig.o,____SIG2.o,___masksig_restore,___MASKSIG_RESTORE)
 
+#if (IS_I386_LINUX)
+uppercase_target($(SIMPLE_LIBC),syscall.o,SYSCALL.o,syscall,SYSCALL)
+#endif
 
 
 release_target( condor_rt0.o, $(RELEASE_DIR)/lib, OBJECT_MODE )
@@ -212,7 +213,7 @@ release_library(condor_syscall_lib.a,$(RELEASE_DIR)/lib)
 
 #if IS_ALPHA_OSF1
 CPP = /usr/ucb/cpp
-#elif IS_I386-LINUX
+#elif IS_I386_LINUX
 CPP = /lib/cpp
 #else
 CPP = ansi_cpp -
