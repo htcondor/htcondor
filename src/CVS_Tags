@@ -1,3 +1,11 @@
+11/10/04 V6_7_3-pre-2004-11-10
+   The state of the V6_7-branch for another snapshot release given to
+   CORE (see condor_support #1168).  This was just a regular
+   V6_7-branch nightly build after the last of the changes from the
+   V6_7-mirror-2-branch were merged back in.  I took the binaries from
+   imola build id 606.  The version string in this release is:
+   $CondorVersion: 6.7.3 Nov 10 2004 PRE-RELEASE-UWCS $
+
 11/09/04 V6_7-post_merge-V6_7-mirror-2-merge-3
    The state of the V6_7-branch after merging in the
    V6_7-mirror-2-branch as tagged at V6_7-mirror-2-merge-3
