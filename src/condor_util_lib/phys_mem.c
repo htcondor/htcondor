@@ -194,53 +194,23 @@ calc_phys_memory()
 #elif defined(OSF1)
 
 #include "condor_common.h"
-#include "condor_uid.h"
-#include <paths.h>
-#include <fcntl.h>
-#include <nlist.h>
 
-struct nlist nl[] = { 
-    { "_physmem", },
-    { 0, },
-};
+/* Need these two to avoid compiler warning since <sys/table.h>
+   includes a stupid version of <net/if.h> that does forward decls of
+   struct mbuf and struct rtentry for C++, but not C. -Derek 6/3/98 */
+#include <sys/mbuf.h>
+#include <net/route.h>
 
-int calc_phys_memory()
+#include <sys/table.h>
+
+int
+calc_phys_memory()
 {
-    int i;
-    int kmem;
-    unsigned int physmem;
-    priv_state      priv;
-    
-    priv = set_root_priv();
-
-    i = nlist(_PATH_UNIX, nl);
-    if( i == -1 )
-    {
-	return -1;
-    }
-    if(( nl[0].n_type == 0 ) || ( nl[0].n_value == 0)) 
-    {
-	return -1;
-    }
-    kmem = open(_PATH_KMEM, O_RDONLY, 0);
-    if ( kmem == -1 )
-    {
-	return -1;
-    }
-    i = lseek(kmem, nl[0].n_value, SEEK_SET);
-    if ( i == -1 )
-    {
-	return -1;
-    }
-    i = read(kmem, &physmem, sizeof(physmem));
-    if ( i == -1 )
-    {
-	return -1;
-    }
-    physmem = ctob(physmem);
-    set_priv(priv);
-
-    return (int)(physmem / ( 1024 * 1024) );
+	struct tbl_pmemstats s;
+	if (table(TBL_PMEMSTATS,0,(void *)&s,1,sizeof(s)) < 0) {
+		return -1;
+	}
+	return s.physmem/(1024*1024);
 }
 
 #else	/* Don't know how to do this on other than SunOS and HPUX yet */
