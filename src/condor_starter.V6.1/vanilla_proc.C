@@ -192,27 +192,6 @@ VanillaProc::StartJob()
 		break;
 	}
 
-#ifdef WIN32
-	// taken from OsProc::StartJob for now, here we create the user and
-	// set the acls on the starter directory _before_ we start placing
-	// files in there.
-	{	
-		// we only support running jobs as user nobody for the first pass
-		char nobody_login[60];
-		sprintf(nobody_login,"condor-run-dir_%d",daemonCore->getpid());
-		init_user_nobody_loginname(nobody_login);
-		init_user_ids("nobody");
-		{
-			perm dirperm;
-			dirperm.init(nobody_login);
-			int ret_val = dirperm.set_acls(Starter->GetWorkingDir());
-			if ( ret_val < 0 ) {
-				EXCEPT("UNABLE TO SET PREMISSIONS ON STARTER DIRECTORY");
-			}
-		}
-	}
-#endif
-
 	// for now, stash the executable in jobtmp, and switch the ad to 
 	// say the executable is condor_exec
 	jobtmp[0] = '\0';
@@ -229,7 +208,7 @@ VanillaProc::StartJob()
 		JobAd->InsertOrUpdate(tmp);		
 
 		filetrans = new FileTransfer();
-		ASSERT( filetrans->Init(JobAd) );
+		ASSERT( filetrans->Init(JobAd, false, PRIV_USER) );
 		filetrans->RegisterCallback(
 				  (FileTransferHandler)&VanillaProc::TransferCompleted,this);
 		ret_value = filetrans->DownloadFiles(false); // do not block
@@ -246,64 +225,88 @@ VanillaProc::StartJob()
 	return ret_value;
 }
 
+
 int
 VanillaProc::UpdateShadow()
 {
-	unsigned long max_image;
-	long sys_time, user_time;
-	unsigned int execsz = 0;
 	ClassAd ad;
-	char buf[200];
+
+	dprintf( D_FULLDEBUG, "Entering VanillaProc::UpdateShadow()\n" );
 
 	if ( ShadowAddr[0] == '\0' ) {
 		// we do not have an address for the shadow
-		return FALSE;
-	}
-
-	if ( !family ) {
-		// we do not have a job family beneath us 
+		dprintf( D_FULLDEBUG, "Leaving VanillaProc::UpdateShadow(): "
+				 "No ShadowAddr!\n" );
 		return FALSE;
 	}
 
 	if ( !shadowsock ) {
 		shadowsock = new SafeSock();
-		ASSERT(shadowsock);
-		shadowsock->connect(ShadowAddr);
+		ASSERT( shadowsock );
+		shadowsock->connect( ShadowAddr );
 	}
 
+		// Publish all the info we care about into the ad.  This
+		// method is virtual, so we'll get all the goodies from
+		// derived classes, as well.
+	PublishUpdateAd( &ad );
 
-	family->get_cpu_usage(sys_time,user_time);
-	family->get_max_imagesize(max_image);
+		// Send it to the shadow
+	shadowsock->snd_int( SHADOW_UPDATEINFO, FALSE );
+	ad.put( *shadowsock );
+	shadowsock->end_of_message();
+	
+	dprintf( D_FULLDEBUG, "Leaving VanillaProc::UpdateShadow(): success\n" );
 
-	// create an ad
-	sprintf(buf,"%s=%lu",ATTR_JOB_REMOTE_SYS_CPU,sys_time);
-	ad.InsertOrUpdate(buf);
-	sprintf(buf,"%s=%lu",ATTR_JOB_REMOTE_USER_CPU,user_time);
-	ad.InsertOrUpdate(buf);
-	sprintf(buf,"%s=%lu",ATTR_IMAGE_SIZE,max_image);
-	ad.InsertOrUpdate(buf);
+	return TRUE;
+}
+
+
+
+bool
+VanillaProc::PublishUpdateAd( ClassAd* ad )
+{
+	dprintf( D_FULLDEBUG, "In VanillaProc::PublishUpdateAd()\n" );
+
+	unsigned long max_image;
+	long sys_time, user_time;
+	unsigned int execsz = 0;
+	char buf[200];
 
 	// if there is a filetrans object, then let's send the current
 	// size of the starter execute directory back to the shadow.  this
 	// way the ATTR_DISK_USAGE will be updated, and we won't end
 	// up on a machine without enough local disk space.
 	if ( filetrans ) {
-		Directory starter_dir(Starter->GetWorkingDir(),PRIV_USER);
+		Directory starter_dir( Starter->GetWorkingDir(), PRIV_USER );
 		execsz = starter_dir.GetDirectorySize();
-		sprintf(buf,"%s=%u",ATTR_DISK_USAGE, (execsz+1023)/1024 ); 
-		ad.InsertOrUpdate(buf);
+		sprintf( buf, "%s=%u", ATTR_DISK_USAGE, (execsz+1023)/1024 ); 
+		ad->InsertOrUpdate( buf );
 	}
 
-	// send it to the shadow
-	dprintf(D_FULLDEBUG,
-		"Sending shadow update, user_time=%lu, image=%lu, execsz=%u\n",
-		user_time,max_image,execsz);
-	shadowsock->snd_int(SHADOW_UPDATEINFO,FALSE);
-	ad.put(*shadowsock);
-	shadowsock->end_of_message();
-	
-	return TRUE;
+	if ( !family ) {
+		// we do not have a job family beneath us 
+		dprintf( D_FULLDEBUG, "Leaving VanillaProc::PublishUpdateAd(): "
+				 "No job family!\n" );
+		return false;
+	}
+
+		// Gather the info we care about
+	family->get_cpu_usage( sys_time, user_time );
+	family->get_max_imagesize( max_image );
+
+		// Publish it into the ad.
+	sprintf( buf, "%s=%lu", ATTR_JOB_REMOTE_SYS_CPU, sys_time );
+	ad->InsertOrUpdate( buf );
+	sprintf( buf, "%s=%lu", ATTR_JOB_REMOTE_USER_CPU, user_time );
+	ad->InsertOrUpdate( buf );
+	sprintf( buf, "%s=%lu", ATTR_IMAGE_SIZE, max_image );
+	ad->InsertOrUpdate( buf );
+
+		// Now, call our parent class's version
+	return OsProc::PublishUpdateAd( ad );
 }
+
 
 int
 VanillaProc::JobExit(int pid, int status)
@@ -313,8 +316,6 @@ VanillaProc::JobExit(int pid, int status)
 	// ok, the parent exited.  make certain all decendants are dead.
 	family->hardkill();
 
-	// update the shadow one last time, then cancel timers & close sockets
-	UpdateShadow();
 	daemonCore->Cancel_Timer(snapshot_tid);
 	daemonCore->Cancel_Timer(shadowupdate_tid);
 	delete shadowsock;
