@@ -36,6 +36,8 @@
 #include "condor_random_num.h"
 #include "SafeMsg.h"
 
+static const int SAFE_SOCK_HASH_BUCKET_SIZE = 7;
+static const int SAFE_SOCK_MAX_BTW_PKT_ARVL = 10;
 
 /*
 **	S A F E    S O C K
@@ -59,8 +61,9 @@ public:
 	/** Connect to a host on a port
         @param port the port to connect to, ignorred if s includes port
         @param s can be a hostname or sinful string
-	**/
-	virtual int connect(char *s, int port=0);
+		@param do_not_block if True, call returns immediately
+    **/
+	virtual int connect(char *s, int port=0, bool do_not_block = false);
 
 	//
 	inline int connect(char *h, char *s) { return connect(h,getportbyserv(s));}
@@ -110,9 +113,6 @@ public:
 
 // next line should be uncommented after testing
 protected:
-	static const int HASH_BUCKET_SIZE = 7;
-	static const int MAX_BTW_PKT_ARVL = 10;
-
 	static _condorMsgID _outMsgID;
 
 	enum safesock_state { safesock_none, safesock_listen };
@@ -132,7 +132,7 @@ protected:
 
 	safesock_state	_special_state;
 	_condorOutMsg _outMsg;
-	_condorInMsg *_inMsgs[HASH_BUCKET_SIZE];
+	_condorInMsg *_inMsgs[SAFE_SOCK_HASH_BUCKET_SIZE];
 	_condorPacket _shortMsg;
 	bool _msgReady;
 	_condorInMsg *_longMsg;
@@ -145,4 +145,6 @@ protected:
 	unsigned long _avgSwhole;
 	unsigned long _avgSdeleted;
 };
+
+
 #endif /* SAFE_SOCK_H */
