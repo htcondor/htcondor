@@ -156,6 +156,7 @@ void 	log_submit();
 void 	get_time_conv( int &hours, int &minutes );
 char *	my_hostname();
 int     SaveClassAd (ClassAd &);
+void	InsertJobExpr (char *expr);
 
 extern "C" {
 
@@ -251,22 +252,22 @@ main( int argc, char *argv[] )
 	ProcId = -1;
 
 	(void) sprintf (buffer, "Q_Date = %d", (int)time ((time_t *) 0));
-	ASSERT (job.InsertOrUpdate (buffer));
+	InsertJobExpr (buffer);
 
 	(void) sprintf (buffer, "Completion_date = 0");
-	ASSERT (job.InsertOrUpdate (buffer));
+	InsertJobExpr (buffer);
 
 	(void) sprintf (buffer, "Owner = \"%s\"", get_owner());
-	ASSERT (job.InsertOrUpdate (buffer));
+	InsertJobExpr (buffer);
 
 	(void) sprintf (buffer, "Local_CPU = 0.0");
-	ASSERT (job.InsertOrUpdate (buffer));
+	InsertJobExpr (buffer);
 
 	(void) sprintf (buffer, "Remote_CPU = 0.0");
-	ASSERT (job.InsertOrUpdate (buffer));
+	InsertJobExpr (buffer);
 
 	(void) sprintf (buffer, "Exit_status = 0");
-	ASSERT (job.InsertOrUpdate (buffer));
+	InsertJobExpr (buffer);
 
 	//  Parse the file and queue the jobs 
 	if( read_condor_file(fp) < 0 ) {
@@ -356,33 +357,34 @@ SetExecutable()
 	check_path_length(ename, Executable);
 
 	(void) sprintf (buffer, "Cmd = \"%s\"", ename);
-	ASSERT (job.InsertOrUpdate (buffer));
+	InsertJobExpr (buffer);
 
-	ASSERT (job.InsertOrUpdate ("MinHosts = 1"));
-	ASSERT (job.InsertOrUpdate ("MaxHosts = 1"));
+	InsertJobExpr ("MinHosts = 1");
+	InsertJobExpr ("MaxHosts = 1");
+	InsertJobExpr ("CurrentHosts = 0");
 
 	(void) sprintf (buffer, "Status = %d", UNEXPANDED);
-	ASSERT (job.InsertOrUpdate (buffer));
+	InsertJobExpr (buffer);
 
 	SetUniverse();
 	
 	switch(JobUniverse) 
 	{
 	  case STANDARD:
-		ASSERT (job.InsertOrUpdate ("Remote_syscalls = 1"));
-		ASSERT (job.InsertOrUpdate ("Checkpoint = 1"));
+		InsertJobExpr ("Remote_syscalls = 1");
+		InsertJobExpr ("Checkpoint = 1");
 		break;
 	  case PVM:
-		ASSERT (job.InsertOrUpdate ("Remote_syscalls = 1"));
-		ASSERT (job.InsertOrUpdate ("Checkpoint = 0"));
+		InsertJobExpr ("Remote_syscalls = 1");
+		InsertJobExpr ("Checkpoint = 0");
 		break;
 	  case PIPE:
-		ASSERT (job.InsertOrUpdate ("Remote_syscalls = 1"));
-		ASSERT (job.InsertOrUpdate ("Checkpoint = 0"));
+		InsertJobExpr ("Remote_syscalls = 1");
+		InsertJobExpr ("Checkpoint = 0");
 		break;
 	  case VANILLA:
-		ASSERT (job.InsertOrUpdate ("Remote_syscalls = 0"));
-		ASSERT (job.InsertOrUpdate ("Checkpoint = 0"));
+		InsertJobExpr ("Remote_syscalls = 0");
+		InsertJobExpr ("Checkpoint = 0");
 		break;
 	  default:
 		EXCEPT( "Unknown universe (%d)", JobUniverse );
@@ -413,8 +415,8 @@ SetUniverse()
 
 		JobUniverse = PVM;
 		(void) sprintf (buffer, "Universe = %d", PVM);
-		ASSERT (job.InsertOrUpdate (buffer));
-		ASSERT (job.InsertOrUpdate ("Checkpoint = 0"));
+		InsertJobExpr (buffer);
+		InsertJobExpr ("Checkpoint = 0");
 
 		mach_count = condor_param(MachineCount);
 
@@ -427,7 +429,7 @@ SetUniverse()
 
 			tmp = atoi(mach_count);
 			(void) sprintf (buffer, "MinHosts = %d", tmp);
-			ASSERT (job.InsertOrUpdate (buffer));
+			InsertJobExpr (buffer);
 			
 			for ( ; !isdigit(*ptr) && *ptr; ptr++) ;
 			if (*ptr != '\0') {
@@ -435,7 +437,7 @@ SetUniverse()
 			}
 
 			(void) sprintf (buffer, "MaxHosts = %d", tmp);
-			ASSERT (job.InsertOrUpdate (buffer));
+			InsertJobExpr (buffer);
 		}
 		return;
 	};
@@ -443,21 +445,21 @@ SetUniverse()
 	if( univ && stricmp(univ,"pipe") == MATCH ) {
 		JobUniverse = PIPE;
 		(void) sprintf (buffer, "Universe = %d", PIPE);
-		ASSERT (job.InsertOrUpdate (buffer));
-		ASSERT (job.InsertOrUpdate ("Checkpoint = 0"));
+		InsertJobExpr (buffer);
+		InsertJobExpr ("Checkpoint = 0");
 		return;
 	};
 
 	if( univ && stricmp(univ,"vanilla") == MATCH ) {
 		JobUniverse = VANILLA;
 		(void) sprintf (buffer, "Universe = %d", VANILLA);
-		ASSERT (job.InsertOrUpdate (buffer));
+		InsertJobExpr (buffer);
 		return;
 	};
 
 	JobUniverse = STANDARD;
 	(void) sprintf (buffer, "Universe = %d", STANDARD);
-	ASSERT (job.InsertOrUpdate (buffer));
+	InsertJobExpr (buffer);
 
 	return;
 }
@@ -511,7 +513,7 @@ SetImageSize()
 	}
 
 	(void)sprintf (buffer, "Image_size = %d", mem_req > size ? mem_req : size);
-	ASSERT (job.InsertOrUpdate (buffer));
+	InsertJobExpr (buffer);
 }
 
 /*
@@ -575,17 +577,17 @@ SetStdFile( int which_file )
 	{
 	  case 0:
 		(void) sprintf (buffer, "In = \"%s\"", macro_value);
-		ASSERT (job.InsertOrUpdate (buffer));
+		InsertJobExpr (buffer);
 		check_open( macro_value, O_RDONLY );
 		break;
 	  case 1:
 		(void) sprintf (buffer, "Out = \"%s\"", macro_value);
-		ASSERT (job.InsertOrUpdate (buffer));
+		InsertJobExpr (buffer);
 		check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
 		break;
 	  case 2:
 		(void) sprintf (buffer, "Err = \"%s\"", macro_value);
-		ASSERT (job.InsertOrUpdate (buffer));
+		InsertJobExpr (buffer);
 		check_open( macro_value, O_WRONLY|O_CREAT|O_TRUNC );
 		break;
 	}
@@ -599,7 +601,7 @@ SetPriority()
 
 	if( prio == NULL ) 
 	{
-		ASSERT (job.InsertOrUpdate ("Prio = 0"));
+		InsertJobExpr ("Prio = 0");
 	} 
 	else 
 	{
@@ -609,7 +611,7 @@ SetPriority()
 			EXCEPT("Priority must be in the range -20 thru 20 (%d)", prioval );
 		}
 		(void) sprintf (buffer, "Prio = %d", prioval);
-		ASSERT (job.InsertOrUpdate (buffer));
+		InsertJobExpr (buffer);
 	}
 }
 
@@ -633,7 +635,7 @@ SetNotification()
 	}
 
 	(void) sprintf (buffer, "Notification = %d", notification);
-	ASSERT (job.InsertOrUpdate (buffer));
+	InsertJobExpr (buffer);
 }
 
 void
@@ -644,7 +646,7 @@ SetNotifyUser()
 	if (who)
 	{
 		(void) sprintf (buffer, "NotifyUser = \"%s\"", who);
-		ASSERT (job.InsertOrUpdate (buffer));
+		InsertJobExpr (buffer);
 	}
 }
 	
@@ -658,7 +660,7 @@ SetArguments()
 	}
 
 	sprintf (buffer, "Args = \"%s\"", args);
-	ASSERT (job.InsertOrUpdate (buffer));
+	InsertJobExpr (buffer);
 }
 
 #if defined(ALPHA)
@@ -716,7 +718,7 @@ SetEnvironment()
 	}
 
 	(void) sprintf (buffer, "Env = \"%s\"", envvalue);
-	ASSERT (job.InsertOrUpdate (buffer));
+	InsertJobExpr (buffer);
 }
 
 void
@@ -726,7 +728,7 @@ SetRootDir()
 
 	if( rootdir == NULL ) 
 	{
-		ASSERT (job.InsertOrUpdate ("Rootdir = \"/\""));
+		InsertJobExpr ("Rootdir = \"/\"");
 		(void) strcpy (JobRootdir, "/");
 	} 
 	else 
@@ -738,7 +740,7 @@ SetRootDir()
 		check_path_length(rootdir, RootDir);
 
 		(void) sprintf (buffer, "Rootdir = \"%s\"", rootdir);
-		ASSERT (job.InsertOrUpdate (buffer));
+		InsertJobExpr (buffer);
 		(void) strcpy (JobRootdir, rootdir);
 	}
 }
@@ -761,7 +763,7 @@ SetRequirements()
 	(void) sprintf (buffer, "Requirements = %s", tmp);
 	strcpy (JobRequirements, tmp);
 
-	ASSERT (job.InsertOrUpdate (buffer));
+	InsertJobExpr (buffer);
 }
 
 void
@@ -798,12 +800,12 @@ SetPreferences()
 				
 	if( preferences[0] == '\0' ) 
 	{
-		ASSERT (job.InsertOrUpdate ("Preferences = TRUE"));
+		InsertJobExpr ("Preferences = TRUE");
 	} 
 	else 
 	{
 		(void) sprintf (buffer, "Preferences = %s", preferences);
-		ASSERT (job.InsertOrUpdate (buffer));
+		InsertJobExpr (buffer);
 	}
 }
 
@@ -840,7 +842,7 @@ SetIWD()
 	check_iwd( iwd );
 
 	(void) sprintf (buffer, "Iwd = \"%s\"", iwd);
-	ASSERT (job.InsertOrUpdate (buffer));
+	InsertJobExpr (buffer);
 	strcpy (JobIwd, iwd);
 }
 
@@ -956,7 +958,7 @@ read_condor_file( FILE *fp )
 				exit (1);
 			}
 			sprintf (buffer, "%s = %s", name, exValue);
-			ASSERT (job.InsertOrUpdate (buffer));
+			InsertJobExpr (buffer);
 			free (exValue);
 		} 
 
@@ -1365,7 +1367,11 @@ InsertJobExpr (char *expr)
 
 	if (retval)
 	{
-		fprintf (stderr, "Parse error in expression: %s\n", expr);
+		fprintf (stderr, "Parse error in expression: \n\t%s\n\t", expr);
+		while (retval--) {
+			fputc( ' ', stderr );
+		}
+		fprintf (stderr, "^^^\n");
 		EXCEPT ("Error in submit file");
 	}
 
