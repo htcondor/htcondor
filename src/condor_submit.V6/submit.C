@@ -352,7 +352,7 @@ void TestFilePermissions( char *scheddAddr = NULL )
 	{
 		result = attempt_access((char *)name.Value(), ACCESS_WRITE, uid, gid, scheddAddr );
 		if( result == FALSE ) {
-			fprintf(stderr, "\nWARNING: File %s is not writeable by condor.\n", 
+			fprintf(stderr, "\nWARNING: File %s is not writeable by condor.\n",
 					name.Value());
 		}
 	}
@@ -2938,10 +2938,8 @@ SetGlobusParams()
 	}
 
 	if (tmp = condor_param (ATTR_MYPROXY_PASSWORD)) {
-		if (myproxy_password != NULL) {
-			sprintf (buff, "%s = %s", ATTR_MYPROXY_PASSWORD, tmp );
-			free( tmp );
-			InsertJobExpr ( buff );
+		if (myproxy_password == NULL) {
+			myproxy_password = tmp;
 		}
 	}
 
