@@ -77,18 +77,18 @@ Condor_Auth_Base :: ~Condor_Auth_Base()
     }
 }
 
-int Condor_Auth_Base :: wrap(const char * input, 
-                         int          input_len, 
-                         char*&       output, 
-                         int&         output_len)
+int Condor_Auth_Base :: wrap(char *   input, 
+                             int      input_len, 
+                             char*&   output, 
+                             int&     output_len)
 {
     return FALSE;
 }
     
-int Condor_Auth_Base :: unwrap(const char* input, 
-                               int         input_len, 
-                               char*&      output, 
-                               int&        output_len)
+int Condor_Auth_Base :: unwrap(char*   input, 
+                               int     input_len, 
+                               char*&  output, 
+                               int&    output_len)
 {
     return FALSE;
 }
