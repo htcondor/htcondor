@@ -48,6 +48,7 @@ class GridManager : public Service
 	bool WriteAbortToUserLog( GlobusJob * );
 	bool WriteTerminateToUserLog( GlobusJob * );
 	bool WriteEvictToUserLog( GlobusJob * );
+	bool WriteGlobusSubmitEventToUserLog( GlobusJob * );
 
 
 	// This is public because it needs to be accessible from main_init()

@@ -30,6 +30,7 @@
 #include "condor_attributes.h"
 #include "condor_config.h"
 #include "format_time.h"  // for format_time and friends
+#include "condor_string.h"	// for strnewp and friends
 
 #include "globus_gram_client.h"
 #include "globus_gss_assist.h"
@@ -430,7 +431,7 @@ GridManager::checkProxy()
 		char *formated_minproxy = strdup(format_time(minProxy_time));
 		dprintf(D_ALWAYS,
 			"ERROR: Condor-G proxy expiring; valid for %s - minimum allowed is %s\n",
-			X509Proxy, format_time( Initial_Proxy_Expiration_Time - now ), 
+			X509Proxy, format_time((int)(Initial_Proxy_Expiration_Time - now) ), 
 			formated_minproxy);
 		free(formated_minproxy);
 
@@ -1189,6 +1190,11 @@ GridManager::updateSchedd()
 		handled = false;
 
 		switch ( curr_event->event) {
+		case JOB_UE_SUBMITTED:
+			if ( curr_job->jobState != G_UNSUBMITTED ) {
+				WriteGlobusSubmitEventToUserLog( curr_job );
+			}
+			break;
 		case JOB_UE_RUNNING:
 			if ( !curr_job->executeLogged ) {
 				WriteExecuteToUserLog( curr_job );
@@ -1868,6 +1874,37 @@ GridManager::WriteEvictToUserLog( GlobusJob *job )
 
 	if (!rc) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_EVICTED event\n" );
+		return false;
+	}
+
+	return true;
+}
+
+
+bool
+GridManager::WriteGlobusSubmitEventToUserLog( GlobusJob *job )
+{
+	UserLog *ulog = InitializeUserLog( job );
+	if ( ulog == NULL ) {
+		// User doesn't want a log
+		return true;
+	}
+
+	dprintf( D_FULLDEBUG, 
+		"Writing globus submit record to user logfile=%s job=%d.%d owner=%s\n",
+			 job->userLogFile, job->procID.cluster, job->procID.proc, Owner );
+
+	GlobusSubmitEvent event;
+
+	event.rmContact =  strnewp(job->rmContact);
+	event.jmContact = strnewp(job->jobContact);
+	event.restartableJM = job->newJM;
+
+	int rc = ulog->writeEvent(&event);
+	delete ulog;
+
+	if (!rc) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_GLOBUS_SUBMIT event\n" );
 		return false;
 	}
 
