@@ -71,12 +71,6 @@ class SimpleList
 };
 
 template <class ObjType>
-ostream & operator << (ostream & out, const SimpleList<ObjType> & list) {
-  list.Display(out);
-  return out;
-}
-
-template <class ObjType>
 SimpleList<ObjType>::
 SimpleList (): maximum_size(1), size(0)
 {
