@@ -656,7 +656,6 @@ GlobusResource::SubmitMonitorJob()
 		MyString buff;
 
 		buff.sprintf( "%s/grid-monitor-job-status.%s.%d.%d",
-gahp_server.
 		              GridmanagerScratchDir,
 		              resourceName, getpid(), g_MonitorUID );
 		monitorJobStatusFile = strdup( buff.Value() );
