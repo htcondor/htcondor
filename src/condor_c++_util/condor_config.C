@@ -920,7 +920,9 @@ reinsert_specials( char* host )
 	extra_info->AddInternalParam("full_hostname");
 	extra_info->AddInternalParam("subsystem");
 
-	// Insert login-name for our euid as "username"
+	// Insert login-name for our real uid as "username".  At the time
+	// we're reading in the config file, the priv state code is not
+	// initialized, so our euid will always be the same as our ruid.
 	char *myusernm = my_username();
 	insert( "username", myusernm, ConfigTab, TABLESIZE );
 	free(myusernm);
