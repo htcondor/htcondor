@@ -45,12 +45,13 @@
 
 #define FTP_PORT	21
 static char *uname = "anonymous";
-static char *passwd = "CondorURLFTP";
+static char *passwd = "CondorURLFTP@localhost.edu";
 
 #define FTP_LOGIN_RESP	220
 #define FTP_PASSWD_RESP 331
 #define FTP_PASV_RESP	227
 #define FTP_TYPE_RESP	200
+#define FTP_CONNECTED_RESP 150
 
 extern int readline(int, char *);
 
@@ -59,14 +60,18 @@ char *get_ftpd_response(int sock_fd, int resp_val)
 {
 	static char	resp[1024];
 	int				ftp_resp_num;
+	int				read_count;
 
 	do {
-		if (readline(sock_fd, resp) < 0) {
+		if ((read_count = readline(sock_fd, resp)) < 0) {
 			close(sock_fd);
 			return 0;
 		}
+		resp[read_count] = '\0';
+/*		printf("ftpd responded: %s", resp); */
 		sscanf(resp, "%d", &ftp_resp_num);
 	} while (ftp_resp_num != resp_val);
+/*	fflush(stdout); */
 	return resp;
 }
 
@@ -88,9 +93,9 @@ int open_ftp( const char *name, int flags, size_t n_bytes )
 	int		rval;
 
 	/* We can only read via http */
-	if (flags & O_WRONLY) {
+/*	if (flags & O_WRONLY) {
 		return -1;
-	}
+	} */
 
 	sock_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock_fd < 0) {
@@ -161,7 +166,14 @@ int open_ftp( const char *name, int flags, size_t n_bytes )
 		return -1;
 	}
 
-	sprintf(ftp_cmd, "RETR %s\n", name);
+	if (flags == O_RDONLY) {
+		sprintf(ftp_cmd, "RETR %s\n", name);
+	} else if (flags == O_WRONLY) {
+		sprintf(ftp_cmd, "STOR %s\n", name);
+	} else {
+		close(sock_fd);
+		return -1;
+	}
 	write(sock_fd, ftp_cmd, strlen(ftp_cmd));
 
 	for ( ; *ftp_resp != '(' ; ftp_resp++) 
@@ -174,6 +186,9 @@ int open_ftp( const char *name, int flags, size_t n_bytes )
 	sprintf(ftp_cmd, "cbstp:<%d.%d.%d.%d:%d>", ip_addr[0], ip_addr[1], 
 		   ip_addr[2], ip_addr[3], port[0] << 8 | port[1]);
 	rval = open_url(ftp_cmd, flags, n_bytes);
+	if (flags == O_WRONLY) {
+		get_ftpd_response(sock_fd, FTP_CONNECTED_RESP);
+	}
 	close(sock_fd);
 	return rval;
 }
