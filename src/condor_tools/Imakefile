@@ -14,8 +14,8 @@ PREEN_OBJ = preenV5.o
 #endif
 
 SRC =  \
-	config_val.c history.C $(PREEN_SRC) reconfig_schedd.c reschedule.c status.C \
-	summary.C vacate.c block_jobs.c custom.C custom_main.C  info.c\
+	config_val.c history.C $(PREEN_SRC) reconfig_schedd.c reschedule.C status.C \
+	summary.C vacate.C block_jobs.c custom.C custom_main.C  info.c\
 	jobQueueCheck.C 
 
 LIB= ../condor_c++_util/cplus_lib.a ../condor_util_lib/util_lib.a $(CLASSAD_LIB) ../condor_xdr_lib/xdr_lib.a RpcLib KernLib SocketLib
@@ -56,13 +56,13 @@ release_target(config_val,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 program_target(condor_reconfig_schedd,reconfig_schedd.o,$(LIB))
 release_target(condor_reconfig_schedd,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
-program_target(condor_reschedule,reschedule.o,$(LIB))
+c_plus_target(condor_reschedule,reschedule.o,$(LIB))
 release_target(condor_reschedule,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
 c_plus_target(condor_status,status.o status_aggregates.o status_include.o,$(LIB))
 release_target(condor_status,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
-program_target(condor_vacate,vacate.o,$(LIB))
+c_plus_target(condor_vacate,vacate.o,$(LIB))
 release_target(condor_vacate,$(RELEASE_DIR)/bin,EXECUTABLE_MODE)
 
 program_target(condor_checkpoint,checkpoint.o,$(LIB))
