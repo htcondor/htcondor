@@ -50,6 +50,7 @@ OsProc::OsProc()
 	exit_status = -1;
 	requested_exit = false;
 	job_suspended = FALSE;
+	num_pids = 0;
 }
 
 OsProc::~OsProc()
@@ -271,6 +272,8 @@ OsProc::StartJob()
 		return 0;
 	}
 
+	num_pids++;
+
 	dprintf(D_ALWAYS,"Create_Process succeeded, pid=%d\n",JobPid);
 
 	return 1;
@@ -291,6 +294,7 @@ OsProc::JobCleanup( int pid, int status )
 		exit_status = status;
 		return 1;
 	}
+	num_pids = 0;
 	return 0;
 }
 
@@ -395,6 +399,17 @@ bool
 OsProc::PublishUpdateAd( ClassAd* ad ) 
 {
 	dprintf( D_FULLDEBUG, "Inside OsProc::PublishUpdateAd()\n" );
-		// Nothing special for us to do.
+	char buf[128];
+
+	if( job_suspended ) {
+		sprintf( buf, "%s=\"suspended\"", ATTR_JOB_STATE );
+	} else {
+		sprintf( buf, "%s=\"running\"", ATTR_JOB_STATE );
+	}
+	ad->Insert( buf );
+
+	sprintf( buf, "%s=%d", ATTR_NUM_PIDS, num_pids );
+	ad->Insert( buf );
+
 	return true;
 }
