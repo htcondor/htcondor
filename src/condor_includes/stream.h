@@ -159,9 +159,13 @@ public:
 	//
 
 	int code(char &);
+	int code(unsigned char &);
 	int code(int &);
+	int code(unsigned int &);
 	int code(long &);
+	int code(unsigned long &);
 	int code(short &);
+	int code(unsigned short &);
 	int code(float &);
 	int code(double &);
 	int code(char *&);
@@ -172,9 +176,13 @@ public:
 	//
 
 	int put(char);
+	int put(unsigned char);
 	int put(int);
+	int put(unsigned int);
 	int put(long);
+	int put(unsigned long);
 	int put(short);
+	int put(unsigned short);
 	int put(float);
 	int put(double);
 	int put(char *);
@@ -185,9 +193,13 @@ public:
 	//
 
 	int get(char &);
+	int get(unsigned char &);
 	int get(int &);
+	int get(unsigned int &);
 	int get(long &);
+	int get(unsigned long &);
 	int get(short &);
+	int get(unsigned short &);
 	int get(float &);
 	int get(double &);
 	int get(char *&);
