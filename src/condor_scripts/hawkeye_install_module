@@ -352,17 +352,17 @@ sub ReadConfigFiles( )
 	    $Modules = $Config{ModulesDir};
 	}
 	# 2. Look for HAWKEYE_DIR in config
-	elsif ( ( $HawkeyeDir ) && ( -d $HawkeyeDir ) )
+	elsif ( ( defined $HawkeyeDir ) && ( -d $HawkeyeDir ) )
 	{
 	    $Modules = "\$(HAWKEYE_DIR)/modules";
 	}
 	# 3. Look for HAWKEYE in config
-	elsif ( ( $Hawkeye ) && ( -d $Hawkeye ) )
+	elsif ( ( defined $Hawkeye ) && ( -d $Hawkeye ) )
 	{
 	    $Modules = "\$(HAWKEYE)/modules";
 	}
 	# 4. Look for RELEASE_DIR in config
-	elsif ( $ReleaseDir )
+	elsif ( defined $ReleaseDir )
 	{
 	    $Modules = "\$(RELEASE_DIR)/modules";
 	}
@@ -400,9 +400,9 @@ sub ReadConfigFiles( )
     print "Found modules directory '$Config{ModulesDir}'\n";
 
     # Jobs defined?
-    my $CronJobsVar = uc( $ConfigMacros->Get( "STARTD_CRON_NAME" ) . "_JOBS" );
+    my $CronJobsVar = uc( $Config{CronName} . "_JOBS" );
     my $Jobs = $ConfigMacros->Expand( $CronJobsVar );
-    if ( ! $Jobs )
+    if ( ! defined $Jobs )
     {
 	$ConfigFiles->AddText( "$CronJobsVar = " );
 	$ConfigMacros->Set( "$CronJobsVar", "" );
@@ -419,24 +419,24 @@ sub ReadConfigFiles( )
     # Try to find the file that last definied the job list
     if ( $Config{ConfigFile}{Updated} eq "" )
     {
-	my $Pat = "(?i)^\\s*$CronJobsVar\\s+=";
-	my @List = $ConfigFiles->GrepText_l( "$Pat" );
-	print "Looking for $CronJobsVar: " .scalar(@List)." matches $Pat\n";
-	if ( scalar @List )
+	my $Info = $ConfigMacros->GetInfo( $CronJobsVar );
+	if ( ( $Info ) && ( $Info->{File} ) )
 	{
-	    $Config{ConfigFile}{Updated} = pop( @List )->{File};
+	    $Config{ConfigFile}{Updated} = $Info->{File};
+	    print "Found '$CronJobsVar' in "
+		. $Info->{File} . " line " . $Info->{Line} . "\n";
 	}
     }
 
     # Try to find the file that last defined STARTD_CRON_NAME
     if ( $Config{ConfigFile}{Updated} eq "" )
     {
-	my $Pat = "^\\s*START_CRON_NAME\\s+=";
-	my @List = $ConfigFiles->GrepText_l( $Pat );
-	print "Looking for STARTD_CRON_NAME: " .scalar(@List)." matches $Pat\n";
-	if ( scalar @List )
+	my $Info = $ConfigMacros->GetInfo( "STARTD_CRON_NAME" );
+	if ( ( $Info ) && ( $Info->{File} ) )
 	{
-	    $Config{ConfigFile}{Updated} = pop( @List )->{File};
+	    $Config{ConfigFile}{Updated} = $Info->{File};
+	    print "Found 'STARTD_CRON_NAME' in "
+		. $Info->{File} . " line " . $Info->{Line} . "\n";
 	}
     }
 
@@ -446,7 +446,6 @@ sub ReadConfigFiles( )
     {
 	my $Pat = "(jobs|joblist|hawkeye)\$";
 	my @List = $ConfigFiles->GrepNames( $Pat );
-	print "Looking for jobs def: " .scalar(@List)." matches $Pat\n";
 	if ( scalar @List )
 	{
 	    $Config{ConfigFile}{Updated} = shift( @List );
@@ -1043,7 +1042,8 @@ sub ConfigureModule( $ )
 	else
 	{
 	    print "  $OldFileName line $OldLineNum:\n";
-	    print "  Previous configuration for $Name found; import it [Y/n]? ";
+	    print "  Previous configuration for $Name found;".
+		" import it [Y/n]? ";
 	    $_ = <>;
 	    $Import = /^n/i ? 0 : 1;
 	}
@@ -1085,7 +1085,7 @@ sub ConfigureModule( $ )
 		my $Current = $ConfigMacros->Expand( $ParamName );
 		$Param->{Current} = $Current;
 		$Param->{Default} = $Current
-		    if ( $Current and $Current ne "" );
+		    if ( defined $Current and $Current ne "" );
 	    }
 	    print "  Done\n";
 	}
@@ -1098,6 +1098,7 @@ sub ConfigureModule( $ )
 
     # Give the user an update
     my @Required;
+    $#{@{$Data->{Options}}} = -1 if ( ! $Data->{Options} );
     print "  Logical name: $Name\n";
     print "  Options: " . join( " ", @{$Data->{Options}} ) . "\n";
     print "  ClassAd prefix: " . $Data->{Prefix} . "\n";

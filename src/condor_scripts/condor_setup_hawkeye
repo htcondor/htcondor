@@ -91,6 +91,7 @@ my %InstallFiles = (
 		    "HawkeyeLib.pm" => "ModulesDir",
 		    "HawkeyePublish.pm" => "ModulesDir",
 		    "condor_install_module" => "SbinDir",
+		    "CondorConfig.pm" => "SbinDir",
 		   );
 
 
@@ -225,7 +226,10 @@ sub CommandLine( @ )
 sub FindConfigFile( )
 {
     my $Base = $ConfigFiles->FindConfig( $ConfigEnv,
-					 $Config{ConfigFile}{Base} );
+					 $Config{ConfigFile}{Base},
+					 $Distribution,
+				       );
+
     # Finally, let's go check the config
     if ( $Base eq "" )
     {
@@ -254,7 +258,7 @@ sub ReadConfigFiles( )
 
     # Add basic things to the config if they're not defined...
     my $Tmp = $ConfigMacros->Expand( "STARTD_CRON_NAME" );
-    if ( $Tmp )
+    if ( defined $Tmp )
     {
 	$Config{CronName} = $Tmp;
     }
@@ -269,7 +273,7 @@ sub ReadConfigFiles( )
     # Figure out where the modules go
     {
 	my $Modules = $ConfigMacros->Get( "MODULES" );
-	if ( ! $Modules )
+	if ( ! defined $Modules )
 	{
 	    my $Hawkeye = $ConfigMacros->Expand( "HAWKEYE" );
 	    my $HawkeyeDir = $ConfigMacros->Expand( "HAWKEYE_DIR" );
@@ -344,9 +348,9 @@ sub ReadConfigFiles( )
     }
 
     # Jobs defined?
-    my $CronJobsVar = $Config{CronName} . "_JOBS";
-    my $Jobs = $ConfigMacros->Expand( $CronJobsVar );
-    if ( ! $Jobs )
+    my $CronJobsVar = uc( $Config{CronName} . "_JOBS" );
+    my $Jobs = $ConfigMacros->Get( $CronJobsVar );
+    if ( ! defined $Jobs )
     {
 	$ConfigFiles->AddText( "$CronJobsVar = " );
 	$ConfigMacros->Set( $CronJobsVar, "" );
@@ -354,7 +358,7 @@ sub ReadConfigFiles( )
 
     # Find the "sbin" & "bin" directories
     my $Sbin = $ConfigMacros->Expand( "SBIN" );
-    if ( ( ! $Sbin ) || ( $Sbin eq "" ) )
+    if ( ( ! defined $Sbin ) || ( $Sbin eq "" ) )
     {
 	print STDERR "SBIN not defined in config.  Giving up.\n";
 	exit 1;
@@ -362,7 +366,7 @@ sub ReadConfigFiles( )
     $Config{SbinDir} = $Sbin;
 
     my $Bin = $ConfigMacros->Expand( "BIN" );
-    if ( ( ! $Bin ) || ( $Bin eq "" ) )
+    if ( ( ! defined $Bin ) || ( $Bin eq "" ) )
     {
 	print STDERR "BIN not defined in config.  Giving up.\n";
 	exit 1;
@@ -393,16 +397,30 @@ sub FindConfigToUpdate( )
     if ( ! $Raw )
     {
 	my $File = $ConfigMacros->Expand( "INSTALL_MODULE_CONFIG_FILE" );
-	$Raw = $File if ( ! $File );
+	$Raw = $File if ( ! defined $File );
+    }
+
+    # Try to find the file that last definied the job list
+    if ( ! $Raw )
+    {
+	my $Info = $ConfigMacros->GetInfo( $Config{CronName} );
+	if ( ( $Info ) && ( $Info->{File} ) )
+	{
+	    $Raw = $Info->{File};
+	    print "Found '$Config{CronName}' in "
+		. $Info->{File} . " line " . $Info->{Line} . "\n";
+	}
     }
 
     # Try to find the file that last defined STARTD_CRON_NAME
     if ( ! $Raw )
     {
-	my @Match = $ConfigFiles->GrepText_l( "^\\s*STARTD_CRON_NAME\\s+=" );
-	if ( scalar @Match )
+	my $Info = $ConfigMacros->GetInfo( "STARTD_CRON_NAME" );
+	if ( ( $Info ) && ( $Info->{File} ) )
 	{
-	    $Raw = pop( @Match )->{File};
+	    $Raw = $Info->{File};
+	    print "Found STARTD_CRON_NAME in "
+		. $Info->{File} . " line " . $Info->{Line} . "\n";
 	}
     }
 
@@ -467,6 +485,12 @@ sub FindConfigToUpdate( )
 sub InstallFiles( )
 {
     # Extract the tarball
+    my $CurDir = $ENV{PWD};
+    my $Dir = "/tmp/condor_setup_hawkeye.$$";
+    mkdir( $Dir ) or die "Can't create '$Dir'\n";
+    chdir( $Dir ) or die "Can't chdir to '$Dir'\n";
+    print "Using temp dir '$Dir'\n";
+
     print "Extracting release tarball... ";
     my $TarBall = "$Config{SourceDir}/release.tar";
     system( "tar xf $TarBall" );
@@ -479,8 +503,7 @@ sub InstallFiles( )
 	my $Full = "./" . $File;
 	if ( ! -f $Full )
 	{
-	    print STDERR "\nUnable to access $File in $Config{SourceDir}\n";
-	    print STDERR "You may need to specify --source=<dir>\n";
+	    print STDERR "\nUnable to access $File; Bad 'release.dir'?\n";
 	    exit 1;
 	}
 	print "$File -> $Config{$Dest} ...";
@@ -517,6 +540,9 @@ HCV_1
 	chmod( 0755, $File );
 	print "Ok\n";
     }
+
+    chdir( $CurDir );
+    rmdir( $Dir );
 
     # Done
     return 1;
