@@ -110,8 +110,10 @@ sub generate_cmdfile() {
     print "++module is $module\n";
  
     my $release = $tag;
-    $release =~ s/BUILD-V//;
+    $release =~ s/BUILD-//;
+    my $desc = $release;
     $release =~ s/-branch-.*//;
+    $release =~ s/V//;
     my @versions = split("_", $release);
     if( ! $versions[2] ) {
         $versions[2] = "x";
@@ -152,7 +154,7 @@ sub generate_cmdfile() {
 
     # Generate the cmdfile
     open(CMDFILE, ">$cmdfile") || die "Can't open $cmdfile for writing.";
-    print CMDFILE "description = TEST: $tag\n";
+    print CMDFILE "description = $desc\n";
     print CMDFILE "run_type = test\n";
     print CMDFILE "project = condor\n";
     print CMDFILE "project_release = $vers_string\n";
