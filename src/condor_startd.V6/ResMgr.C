@@ -1087,9 +1087,18 @@ ResMgr::state( void )
 		return owner_state;
 	}
 	State s;
+	Resource* rip;
 	int i, is_owner = 0;
 	for( i = 0; i < nresources; i++ ) {
-		switch( (s = resources[i]->state()) ) {
+		rip = resources[i];
+			// if there are *any* COD claims at all (active or not),
+			// we should say this machine is claimed so preen doesn't
+			// try to clean up directories for the COD claim(s).
+		if( rip->r_cod_mgr->numClaims() > 0 ) {
+			return claimed_state;
+		}
+		s = rip->state();
+		switch( s ) {
 		case claimed_state:
 		case preempting_state:
 			return s;
