@@ -841,6 +841,7 @@ dc_reconfig( bool is_full )
 void
 dc_config_auth()
 {
+#if !defined(SKIP_AUTHENTICATION) && defined(GSI_AUTHENTICATION)
     // First, if there is X509_USER_PROXY, we clear it
     int i,j;
     char *temp=NULL,*temp1=NULL;
@@ -874,6 +875,9 @@ dc_config_auth()
         sprintf( buffer, "X509_RUN_AS_SERVER=1");
         putenv (strdup(buffer));
 
+        sprintf( buffer, "%s=%s/certificates", STR_GSI_CERT_DIR, pbuf);
+        putenv( strdup( buffer ) );
+
         sprintf( buffer, "%s=%s/usercert.pem", STR_GSI_USER_CERT, pbuf);
         putenv( strdup ( buffer ) );
 
@@ -892,6 +896,7 @@ dc_config_auth()
         putenv( strdup (buffer) );
         free(pbuf);
     }
+#endif
 }
 
 int
